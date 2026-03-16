@@ -108,11 +108,12 @@ namespace gui::utils
 	bool create_shortcut(const std::string& name,
 	                     const std::string& path,
 	    [[maybe_unused]] const std::string& serial,
-	    [[maybe_unused]] const std::string& target_cli_args,
+	                     const std::string& target_cli_args,
 	    [[maybe_unused]] const std::string& description,
-	    [[maybe_unused]] const std::string& src_icon_path,
+	                     const std::string& src_icon_path,
 	    [[maybe_unused]] const std::string& target_icon_dir,
-	    shortcut_location location)
+	                     const std::string& src_banner_path,
+	                     shortcut_location location)
 	{
 		if (name.empty())
 		{
@@ -187,9 +188,9 @@ namespace gui::utils
 
 		if (location == shortcut_location::steam)
 		{
-			sys_log.notice("Creating %s shortcut with arguments '%s' and icon path '%s'", location, target_cli_args, target_icon_path);
+			sys_log.notice("Creating %s shortcut with arguments '%s'", location, target_cli_args);
 			steam_shortcut steam_sc{};
-			steam_sc.add_shortcut(simple_name, rpcs3_path, working_dir, target_cli_args, target_icon_path);
+			steam_sc.add_shortcut(simple_name, rpcs3_path, working_dir, target_cli_args, target_icon_path, src_icon_path, src_banner_path);
 			return steam_sc.write_file();
 		}
 
@@ -363,10 +364,9 @@ namespace gui::utils
 		}
 		plist_file.close();
 
-		std::string target_icon_path;
 		if (!src_icon_path.empty())
 		{
-			target_icon_path = resources_dir;
+			std::string target_icon_path = resources_dir;
 			if (!create_square_shortcut_icon_file(path, src_icon_path, resources_dir, target_icon_path, 512))
 			{
 				// Error is logged in create_square_shortcut_icon_file
@@ -377,7 +377,7 @@ namespace gui::utils
 		if (location == shortcut_location::steam)
 		{
 			steam_shortcut steam_sc{};
-			steam_sc.add_shortcut(simple_name, launcher_path, macos_dir, ""/*target_cli_args are already in the launcher*/, target_icon_path);
+			steam_sc.add_shortcut(simple_name, link_path, macos_dir, ""/*target_cli_args are already in the launcher*/, "", src_icon_path, src_banner_path);
 			return steam_sc.write_file();
 		}
 
@@ -403,10 +403,10 @@ namespace gui::utils
 
 		if (location == shortcut_location::steam)
 		{
-			sys_log.notice("Creating %s shortcut with arguments '%s' and icon path '%s'", location, target_cli_args, target_icon_path);
+			sys_log.notice("Creating %s shortcut with arguments '%s'", location, target_cli_args);
 			const std::string working_dir{fs::get_executable_dir()};
 			steam_shortcut steam_sc{};
-			steam_sc.add_shortcut(simple_name, exe_path, working_dir, target_cli_args, target_icon_path);
+			steam_sc.add_shortcut(simple_name, exe_path, working_dir, target_cli_args, target_icon_path, src_icon_path, src_banner_path);
 			return steam_sc.write_file();
 		}
 
@@ -530,6 +530,7 @@ namespace gui::utils
 				{
 					sys_log.error("Failed to remove steam shortcut for '%s'", simple_name);
 				}
+
 				continue;
 			}
 #ifdef _WIN32

@@ -10,7 +10,7 @@ screenshot_item::screenshot_item(QWidget* parent)
 	{
 		m_thread.reset(QThread::create([this]()
 		{
-			const QPixmap pixmap = gui::utils::get_centered_pixmap(icon_path, icon_size, 0, 0, 1.0, Qt::SmoothTransformation);
+			const QPixmap pixmap = gui::utils::get_aligned_pixmap(icon_path, icon_size, 1.0, Qt::SmoothTransformation, gui::utils::align_h::center, gui::utils::align_v::center);
 			Q_EMIT signal_icon_update(pixmap);
 		}));
 		m_thread->start();
