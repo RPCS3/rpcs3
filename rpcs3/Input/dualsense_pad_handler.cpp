@@ -723,7 +723,12 @@ std::unordered_map<u32, u16> dualsense_pad_handler::get_button_values(const std:
 		keyBuffer[DualSenseKeyCodes::Right] = 0;
 		break;
 	default:
-		fmt::throw_exception("dualsense dpad state encountered unexpected input");
+		keyBuffer[DualSenseKeyCodes::Up]    = 0;
+		keyBuffer[DualSenseKeyCodes::Down]  = 0;
+		keyBuffer[DualSenseKeyCodes::Left]  = 0;
+		keyBuffer[DualSenseKeyCodes::Right] = 0;
+		dualsense_log.warning("dpad state encountered unexpected input: 0x%x", data);
+		break;
 	}
 
 	data = (is_simple_mode ? input.z : input.buttons[0]) >> 4;
