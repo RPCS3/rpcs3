@@ -69,6 +69,11 @@ namespace rsx
 					add_element(spacer_element);
 				}
 			}
+			else
+			{
+				// Left align
+				add_spacer(menu_entry_height);
+			}
 
 			add_element(icon_view);
 			add_element(text_stack);
