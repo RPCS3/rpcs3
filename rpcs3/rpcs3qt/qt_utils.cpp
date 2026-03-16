@@ -272,7 +272,7 @@ namespace gui
 				.arg(text.replace("\n", "<br>"));
 		}
 
-		QPixmap get_centered_pixmap(QPixmap pixmap, const QSize& icon_size, int offset_x, int offset_y, qreal device_pixel_ratio, Qt::TransformationMode mode)
+		QPixmap get_aligned_pixmap(QPixmap pixmap, const QSize& icon_size, qreal device_pixel_ratio, Qt::TransformationMode mode, align_h h_alignment, align_v v_alignment)
 		{
 			// Create empty canvas for expanded image
 			QPixmap exp_img(icon_size);
@@ -282,22 +282,34 @@ namespace gui
 			// Load scaled pixmap
 			pixmap = pixmap.scaled(icon_size, Qt::KeepAspectRatio, mode);
 
-			// Define offset for raw image placement
-			QPoint offset(offset_x + icon_size.width() / 2 - pixmap.width() / 2,
-			              offset_y + icon_size.height() / 2 - pixmap.height() / 2);
+			QRect target(QPoint(0, 0), pixmap.size());
+
+			switch (h_alignment)
+			{
+			case align_h::left:   target.moveLeft(0); break;
+			case align_h::center: target.moveCenter(QPoint(icon_size.width() / 2, target.center().y())); break;
+			case align_h::right:  target.moveRight(icon_size.width()); break;
+			}
+
+			switch (v_alignment)
+			{
+			case align_v::top:    target.moveTop(0); break;
+			case align_v::center: target.moveCenter(QPoint(target.center().x(), icon_size.height() / 2)); break;
+			case align_v::bottom: target.moveBottom(icon_size.height()); break;
+			}
 
 			// Place raw image inside expanded image
 			QPainter painter(&exp_img);
 			painter.setRenderHint(QPainter::SmoothPixmapTransform);
-			painter.drawPixmap(offset, pixmap);
+			painter.drawPixmap(target, pixmap);
 			painter.end();
 
 			return exp_img;
 		}
 
-		QPixmap get_centered_pixmap(const QString& path, const QSize& icon_size, int offset_x, int offset_y, qreal device_pixel_ratio, Qt::TransformationMode mode)
+		QPixmap get_aligned_pixmap(const QString& path, const QSize& icon_size, qreal device_pixel_ratio, Qt::TransformationMode mode, align_h h_alignment, align_v v_alignment)
 		{
-			return get_centered_pixmap(QPixmap(path), icon_size, offset_x, offset_y, device_pixel_ratio, mode);
+			return get_aligned_pixmap(QPixmap(path), icon_size, device_pixel_ratio, mode, h_alignment, v_alignment);
 		}
 
 		QImage get_opaque_image_area(const QString& path)

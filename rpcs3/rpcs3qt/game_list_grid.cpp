@@ -92,7 +92,7 @@ void game_list_grid::populate(
 
 			if (const QPixmap pixmap = item->get_movie_image(frame); item->get_active() && !pixmap.isNull())
 			{
-				item->set_icon(gui::utils::get_centered_pixmap(pixmap, m_icon_size, 0, 0, 1.0, Qt::FastTransformation));
+				item->set_icon(gui::utils::get_aligned_pixmap(pixmap, m_icon_size, 1.0, Qt::FastTransformation, gui::utils::align_h::center, gui::utils::align_v::center));
 				return;
 			}
 

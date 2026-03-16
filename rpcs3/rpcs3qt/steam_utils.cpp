@@ -1,7 +1,11 @@
 #include "stdafx.h"
 #include "steam_utils.h"
+#include "qt_utils.h"
 
 #include <filesystem>
+#include <map>
+#include <QtConcurrent>
+#include <QFutureWatcher>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -20,7 +24,9 @@ namespace gui::utils
 			const std::string& exe,
 			const std::string& start_dir,
 			const std::string& launch_options,
-			const std::string& icon_path)
+			const std::string& icon_path,
+			const std::string& banner_small_path,
+			const std::string& banner_large_path)
 	{
 		shortcut_entry entry{};
 		entry.app_name = app_name;
@@ -28,6 +34,8 @@ namespace gui::utils
 		entry.start_dir = quote(fix_slashes(start_dir), false);
 		entry.launch_options = launch_options;
 		entry.icon = quote(fix_slashes(icon_path), false);
+		entry.banner_small = banner_small_path;
+		entry.banner_large = banner_large_path;
 		entry.appid = steam_appid(exe, app_name);
 
 		m_entries_to_add.push_back(std::move(entry));
@@ -395,14 +403,86 @@ namespace gui::utils
 			return false;
 		}
 
+		const std::string grid_dir = user_dir + "grid/";
+		if (!fs::create_path(grid_dir))
+		{
+			sys_log.error("Failed to create steam shortcut grid dir '%s': '%s'", grid_dir, fs::g_tls_error);
+		}
+
+		QFutureWatcher<void>* future_watcher = new QFutureWatcher<void>();
+		future_watcher->setFuture(QtConcurrent::map(m_entries_to_add, [&grid_dir](const shortcut_entry& entry)
+		{
+			std::string banner_small_path;
+			std::string banner_large_path;
+
+			for (const std::string& path : { entry.banner_small, entry.banner_large })
+			{
+				if (fs::is_file(path))
+				{
+					banner_small_path = path;
+					break;
+				}
+			}
+
+			for (const std::string& path : { entry.banner_large, entry.banner_small })
+			{
+				if (fs::is_file(path))
+				{
+					banner_large_path = path;
+					break;
+				}
+			}
+
+			if (QPixmap banner; load_icon(banner, banner_large_path, ""))
+			{
+				create_steam_banner(steam_banner::cover, banner_large_path, banner, grid_dir, entry.appid);
+				create_steam_banner(steam_banner::wide_cover, banner_large_path, banner, grid_dir, entry.appid);
+				create_steam_banner(steam_banner::background, banner_large_path, banner, grid_dir, entry.appid);
+			}
+
+			if (QPixmap banner; load_icon(banner, banner_small_path, ""))
+			{
+				create_steam_banner(steam_banner::logo, banner_small_path, banner, grid_dir, entry.appid);
+				create_steam_banner(steam_banner::icon, banner_small_path, banner, grid_dir, entry.appid);
+			}
+		}));
+
+		future_watcher->waitForFinished();
+		future_watcher->deleteLater();
+
 		for (const shortcut_entry& entry : m_entries_to_add)
 		{
 			sys_log.success("Created steam shortcut for '%s'", entry.app_name);
 		}
+
 		for (const shortcut_entry& entry : removed_entries)
 		{
+			const auto remove_banner = [&entry, &grid_dir](steam_banner banner)
+			{
+				const std::string banner_path = get_steam_banner_path(banner, grid_dir, entry.appid);
+
+				if (fs::is_file(banner_path))
+				{
+					if (fs::remove_file(banner_path))
+					{
+						sys_log.notice("Removed steam shortcut banner '%s'", banner_path);
+					}
+					else
+					{
+						sys_log.error("Failed to remove steam shortcut banner '%s': error='%s'", banner_path, fs::g_tls_error);
+					}
+				}
+			};
+
+			remove_banner(steam_banner::cover);
+			remove_banner(steam_banner::wide_cover);
+			remove_banner(steam_banner::background);
+			remove_banner(steam_banner::logo);
+			remove_banner(steam_banner::icon);
+
 			sys_log.success("Removed steam shortcut(s) for '%s'", entry.app_name);
 		}
+
 		return true;
 	}
 
@@ -653,6 +733,47 @@ namespace gui::utils
 
 		return "";
 #endif
+	}
+
+	std::string steam_shortcut::get_steam_banner_path(steam_banner banner, const std::string& grid_dir, u32 appid)
+	{
+		switch (banner)
+		{
+		case steam_banner::cover: return fmt::format("%s%dp.png", grid_dir, appid);
+		case steam_banner::wide_cover: return fmt::format("%s%d.png", grid_dir, appid);
+		case steam_banner::background: return fmt::format("%s%d_hero.png", grid_dir, appid);
+		case steam_banner::logo: return fmt::format("%s%d_logo.png", grid_dir, appid);
+		case steam_banner::icon: return fmt::format("%s%d_icon.png", grid_dir, appid);
+		}
+
+		return {};
+	}
+
+	void steam_shortcut::create_steam_banner(steam_banner banner, const std::string& src_path, const QPixmap& src_icon, const std::string& grid_dir, u32 appid)
+	{
+		const std::string dst_path = get_steam_banner_path(banner, grid_dir, appid);
+		QSize size = src_icon.size();
+
+		if (banner == steam_banner::cover)
+		{
+			size = QSize(600, 900); // We want to center the icon vertically in the portrait
+		}
+
+		if (size == src_icon.size())
+		{
+			if (!fs::copy_file(src_path, dst_path, true))
+			{
+				sys_log.error("Failed to copy steam shortcut banner from '%s' to '%s': '%s'", src_path, dst_path, fs::g_tls_error);
+			}
+			return;
+		}
+
+		const QPixmap scaled = gui::utils::get_aligned_pixmap(src_icon, size, 1.0, Qt::SmoothTransformation, gui::utils::align_h::center, gui::utils::align_v::center);
+
+		if (!scaled.save(QString::fromStdString(dst_path)))
+		{
+			sys_log.error("Failed to save steam shortcut banner to '%s'", dst_path);
+		}
 	}
 
 	std::string steam_shortcut::get_last_active_steam_user(const std::string& steam_path)

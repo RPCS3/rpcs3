@@ -1512,6 +1512,7 @@ void game_list_actions::CreateShortcuts(const std::vector<game_info>& games, con
 		for (gui::utils::shortcut_location location : locations)
 		{
 			std::string destination;
+			std::string banner_path;
 
 			switch (location)
 			{
@@ -1522,8 +1523,22 @@ void game_list_actions::CreateShortcuts(const std::vector<game_info>& games, con
 				destination = "application menu";
 				break;
 			case gui::utils::shortcut_location::steam:
+			{
 				destination = "Steam";
+
+				// Try to find a nice banner for steam
+				const std::string sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(gameinfo->info.path);
+
+				for (const std::string& filename : { "PIC1.PNG", "PIC3.PNG" })
+				{
+					if (const std::string filepath = fmt::format("%s/%s", sfo_dir, filename); fs::is_file(filepath))
+					{
+						banner_path = filepath;
+						break;
+					}
+				}
 				break;
+			}
 #ifdef _WIN32
 			case gui::utils::shortcut_location::rpcs3_shortcuts:
 				destination = "/games/shortcuts/";
@@ -1538,7 +1553,7 @@ void game_list_actions::CreateShortcuts(const std::vector<game_info>& games, con
 #endif
 			const std::string target_cli_args = fmt::format("--no-gui \"%s%s%s:%s\"", percent, cli_arg_token, percent, cli_arg_value);
 
-			if (!gameid_token_value.empty() && gui::utils::create_shortcut(gameinfo->info.name, gameinfo->icon_in_archive ? gameinfo->info.path : "", gameinfo->info.serial, target_cli_args, gameinfo->info.name, gameinfo->info.icon_path, target_icon_dir, location))
+			if (!gameid_token_value.empty() && gui::utils::create_shortcut(gameinfo->info.name, gameinfo->icon_in_archive ? gameinfo->info.path : "", gameinfo->info.serial, target_cli_args, gameinfo->info.name, gameinfo->info.icon_path, target_icon_dir, banner_path, location))
 			{
 				game_list_log.success("Created %s shortcut for %s", destination, QString::fromStdString(gameinfo->info.name).simplified());
 			}

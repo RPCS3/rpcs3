@@ -4,6 +4,7 @@
 #include "Utilities/StrFmt.h"
 #include <variant>
 #include <expected>
+#include <QPixmap>
 
 namespace gui::utils
 {
@@ -18,7 +19,9 @@ namespace gui::utils
 			const std::string& exe,
 			const std::string& start_dir,
 			const std::string& launch_options,
-			const std::string& icon_path);
+			const std::string& icon_path,
+			const std::string& banner_small_path,
+			const std::string& banner_large_path);
 
 		void remove_shortcut(
 			const std::string& app_name,
@@ -45,6 +48,15 @@ namespace gui::utils
 			End = 0x08,
 		};
 
+		enum class steam_banner
+		{
+			cover,
+			wide_cover,
+			background,
+			logo,
+			icon
+		};
+
 		struct shortcut_entry
 		{
 			std::string app_name;
@@ -52,6 +64,8 @@ namespace gui::utils
 			std::string start_dir;
 			std::string launch_options;
 			std::string icon;
+			std::string banner_small;
+			std::string banner_large;
 			u32 appid = 0;
 
 			std::string build_binary_blob(usz index) const;
@@ -96,6 +110,9 @@ namespace gui::utils
 		static std::string steamid64_to_32(const std::string& steam_id);
 		static std::string get_steam_path();
 		static std::string get_last_active_steam_user(const std::string& steam_path);
+		
+		static std::string get_steam_banner_path(steam_banner banner, const std::string& grid_dir, u32 appid);
+		static void create_steam_banner(steam_banner banner, const std::string& src_path, const QPixmap& src_icon, const std::string& grid_dir, u32 appid);
 
 		std::vector<shortcut_entry> m_entries_to_add;
 		std::vector<shortcut_entry> m_entries_to_remove;
