@@ -103,7 +103,8 @@ namespace rsx
 				ensure(dynamic_cast<home_menu_page*>(m_tabs->get_selected()))->on_activate();
 				break;
 			case pad_button::circle:
-				action = page_navigation::exit;
+				set_current_page(this->parent);
+				action = this->parent ? page_navigation::back : page_navigation::exit;
 				sound = sound_effect::cancel;
 				break;
 			default:
