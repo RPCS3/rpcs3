@@ -334,7 +334,12 @@ std::unordered_map<u32, u16> ds4_pad_handler::get_button_values(const std::share
 		keyBuffer[DS4KeyCodes::Right] = 0;
 		break;
 	default:
-		fmt::throw_exception("ds4 dpad state encountered unexpected input");
+		keyBuffer[DS4KeyCodes::Up] = 0;
+		keyBuffer[DS4KeyCodes::Down] = 0;
+		keyBuffer[DS4KeyCodes::Left] = 0;
+		keyBuffer[DS4KeyCodes::Right] = 0;
+		ds4_log.warning("dpad state encountered unexpected input: 0x%x", dpadState);
+		break;
 	}
 
 	// square, cross, circle, triangle
