@@ -166,6 +166,8 @@ void fmt_class_string<cfg_mode>::format(std::string& out, u64 arg)
 
 void Emulator::CallFromMainThread(std::function<void()>&& func, atomic_t<u32>* wake_up, bool track_emu_state, u64 stop_ctr, std::source_location src_loc) const
 {
+	ensure(func);
+
 	std::function<void()> final_func = [this, before = IsStopped(true), track_emu_state, thread_name = thread_ctrl::get_name(), src = src_loc
 		, count = (stop_ctr == umax ? +m_stop_ctr : stop_ctr), func = std::move(func)]
 	{
@@ -179,7 +181,7 @@ void Emulator::CallFromMainThread(std::function<void()>&& func, atomic_t<u32>* w
 		}
 	};
 
-	m_cb.call_from_main_thread(std::move(final_func), wake_up);
+	ensure(m_cb.call_from_main_thread)(std::move(final_func), wake_up);
 }
 
 void Emulator::BlockingCallFromMainThread(std::function<void()>&& func, bool track_emu_state, std::source_location src_loc) const
