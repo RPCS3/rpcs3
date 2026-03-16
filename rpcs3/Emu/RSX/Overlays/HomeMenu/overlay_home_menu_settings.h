@@ -10,6 +10,8 @@ namespace rsx
 {
 	namespace overlays
 	{
+		void play_sound(sound_effect sound, std::optional<f32> volume);
+
 		struct home_menu_settings : public home_menu_page
 		{
 		public:
@@ -81,13 +83,22 @@ namespace rsx
 
 				add_item(elem, [this, setting, elem = elem.get()](pad_button btn) -> page_navigation
 				{
-					if (btn != pad_button::cross)
+					if (!setting)
 					{
+						// Nothing we can do with this
 						return page_navigation::stay;
 					}
 
-					if (!setting)
+					switch (btn)
 					{
+					case pad_button::cross:
+						// We process only 'accept' inputs. The rest are handled by the popup hook.
+						break;
+					case pad_button::select:
+						setting->set(setting->def);
+						rsx_log.notice("User reset the value for setting '%s' to default", setting->get_name());
+						return page_navigation::stay;
+					default:
 						return page_navigation::stay;
 					}
 
@@ -106,8 +117,26 @@ namespace rsx
 
 						if (!setting || result != page_navigation::exit)
 						{
+							switch (button)
+							{
+							case pad_button::dpad_up:
+							case pad_button::ls_up:
+							case pad_button::dpad_down:
+							case pad_button::ls_down:
+								play_sound(sound_effect::cursor);
+								break;
+							default:
+								break;
+							}
+
 							return result;
 						}
+
+						// We're closing. Check if we should play an accept or reject sound
+						play_sound(
+							(button == pad_button::cross)
+							? sound_effect::accept
+							: sound_effect::cancel);
 
 						const auto previous = fmt::format("%s", setting->get());
 						const std::vector<std::string> list = setting->to_list();
