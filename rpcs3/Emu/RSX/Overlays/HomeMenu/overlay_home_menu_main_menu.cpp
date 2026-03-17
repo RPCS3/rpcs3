@@ -135,7 +135,7 @@ namespace rsx
 				{
 					// Make sure we keep the game window opened
 					Emu.SetContinuousMode(true);
-					Emu.Restart(false);
+					Emu.Restart(true);
 				});
 				return page_navigation::exit;
 			});

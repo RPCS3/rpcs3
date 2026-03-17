@@ -959,11 +959,6 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 		return result;
 	};
 
-	if (m_path_original.empty() || config_mode != cfg_mode::continuous)
-	{
-		m_path_original = m_path;
-	}
-
 	m_path_old = m_path;
 
 	m_config_mode = config_mode;
@@ -973,6 +968,11 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 	if (direct || !fs::is_dir(path))
 	{
 		m_path = path;
+
+		if (config_mode != cfg_mode::continuous || m_path_original.empty())
+		{
+			m_path_original = m_path;
+		}
 
 		return restore_on_no_boot(Load(title_id));
 	}
@@ -984,6 +984,12 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 	{
 		ensure(!elf.empty());
 		m_path = elf;
+
+		if (config_mode != cfg_mode::continuous || m_path_original.empty())
+		{
+			m_path_original = m_path;
+		}
+
 		result = Load(title_id);
 	}
 
@@ -3999,6 +4005,13 @@ game_boot_result Emulator::Restart(bool graceful)
 			ensure(!m_path_real.empty());
 			ensure(!m_path_real.starts_with(iso_device::virtual_device_name));
 			m_path = m_path_real;
+		}
+
+		// If continuous mode changed the path, restart from the original executable
+		if (!m_path_original.empty() && m_path_original != m_path)
+		{
+			sys_log.notice("Restart: Resetting boot path from '%s' to original '%s'", m_path, m_path_original);
+			m_path = m_path_original;
 		}
 
 		// Allow Boot (guarded by GracefulShutdown, which is the scope of this callback)
