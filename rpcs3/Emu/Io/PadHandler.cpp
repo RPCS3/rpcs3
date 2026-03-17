@@ -11,12 +11,11 @@ PadHandlerBase::PadHandlerBase(pad_handler type) : m_type(type)
 {
 }
 
-std::vector<std::set<u32>> PadHandlerBase::find_key_combos(const std::unordered_map<u32, std::string>& map, const cfg::string& cfg_string, bool fallback)
+std::vector<std::set<u32>> PadHandlerBase::find_key_combos(const std::unordered_map<u32, std::string>& map, const std::string& cfg_string, const std::string& fallback)
 {
 	std::vector<std::set<u32>> key_codes;
 
-	const std::string& def = cfg_string.def;
-	const std::vector<std::vector<std::string>> combos = cfg_pad::get_buttons(cfg_string.to_string());
+	const std::vector<std::vector<std::string>> combos = cfg_pad::get_buttons(cfg_string);
 	u32 def_code = umax;
 
 	for (const std::vector<std::string>& names : combos)
@@ -32,7 +31,7 @@ std::vector<std::set<u32>> PadHandlerBase::find_key_combos(const std::unordered_
 					keys.insert(code);
 				}
 
-				if (fallback && name == def)
+				if (!fallback.empty() && name == fallback)
 					def_code = code;
 			}
 		}
@@ -48,10 +47,10 @@ std::vector<std::set<u32>> PadHandlerBase::find_key_combos(const std::unordered_
 		return key_codes;
 	}
 
-	if (fallback)
+	if (!fallback.empty())
 	{
 		if (!combos.empty())
-			input_log.error("FindKeyCode for [name = %s] returned with [def_code = %d] for [def = %s]", cfg_string.to_string(), def_code, def);
+			input_log.error("FindKeyCode for [name = %s] returned with [def_code = %d] for [fallback = %s]", cfg_string, def_code, fallback);
 
 		if (def_code != umax)
 		{
@@ -60,6 +59,11 @@ std::vector<std::set<u32>> PadHandlerBase::find_key_combos(const std::unordered_
 	}
 
 	return {};
+}
+
+std::vector<std::set<u32>> PadHandlerBase::find_key_combos(const std::unordered_map<u32, std::string>& map, const cfg::string& cfg_string, bool fallback)
+{
+	return find_key_combos(map, cfg_string.to_string(), fallback ? cfg_string.def : "");
 }
 
 std::set<u32> PadHandlerBase::find_key_codes(const std::unordered_map<u32, std::string>& map, const std::vector<std::string>& names)
@@ -289,7 +293,7 @@ cfg_pad* PadHandlerBase::get_config(const std::string& pad_id)
 	return nullptr;
 }
 
-PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::string& pad_id, const pad_callback& callback, const pad_fail_callback& fail_callback, gui_call_type call_type, const std::vector<std::string>& /*buttons*/)
+PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::string& pad_id, const pad_callback& callback, const pad_fail_callback& fail_callback, gui_call_type call_type, const std::vector<std::string>& buttons)
 {
 	if (call_type == gui_call_type::blacklist)
 		blacklist.clear();
@@ -391,12 +395,12 @@ PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::stri
 
 	if (callback)
 	{
-		pad_preview_values preview_values = get_preview_values(data);
+		pad_preview_values preview_values = get_preview_values(data, buttons);
 		pad_capabilities capabilities = get_capabilities(pad_id);
 		const u32 battery_level = get_battery_level(pad_id);
 
 		if (pressed_button.value > 0)
-			callback(pressed_button.value, pressed_button.name, pad_id, battery_level, std::move(preview_values), std::move(capabilities));
+			callback(pressed_button.value, std::move(pressed_button.name), pad_id, battery_level, std::move(preview_values), std::move(capabilities));
 		else
 			callback(0, "", pad_id, battery_level, std::move(preview_values), std::move(capabilities));
 	}
