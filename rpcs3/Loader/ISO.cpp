@@ -611,7 +611,7 @@ void load_iso(const std::string& path)
 
 void unload_iso()
 {
-	sys_log.notice("Unoading iso");
+	sys_log.notice("Unloading iso");
 
 	fs::set_virtual_device("iso_overlay_fs_dev", stx::shared_ptr<iso_device>());
 }
