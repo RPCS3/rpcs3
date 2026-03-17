@@ -1,5 +1,7 @@
 #pragma once
 
+struct gui_game_info;
+
 namespace gui::utils
 {
 	enum class shortcut_location
@@ -21,6 +23,9 @@ namespace gui::utils
 	                     const std::string& target_icon_dir,
 	                     const std::string& src_banner_path,
 	                     shortcut_location shortcut_location);
+
+	bool create_shortcuts(const std::shared_ptr<gui_game_info>& game,
+	                      const std::set<gui::utils::shortcut_location>& locations);
 
 	void remove_shortcuts(const std::string& name, const std::string& serial);
 }
