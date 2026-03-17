@@ -90,12 +90,12 @@ struct pad_capabilities
 };
 
 using pad_preview_values = std::array<int, 6>;
-using pad_callback = std::function<void(u16 /*button_value*/, std::string /*button_name*/, std::string /*pad_name*/, u32 /*battery_level*/, pad_preview_values, pad_capabilities)>;
+using pad_callback = std::function<void(std::map<std::string, u16>&& /*pressed_buttons*/, std::array<std::pair<std::string, u16>, 2>&& /*pressed_sticks*/, std::string /*pad_name*/, u32 /*battery_level*/, pad_preview_values&&, pad_capabilities&&)>;
 using pad_fail_callback = std::function<void(std::string /*pad_name*/)>;
 
 using motion_preview_values = std::array<u16, 4>;
-using motion_callback = std::function<void(std::string /*pad_name*/, motion_preview_values /*preview_values*/)>;
-using motion_fail_callback = std::function<void(std::string /*pad_name*/, motion_preview_values /*preview_values*/)>;
+using motion_callback = std::function<void(std::string /*pad_name*/, motion_preview_values&& /*preview_values*/)>;
+using motion_fail_callback = std::function<void(std::string /*pad_name*/, motion_preview_values&& /*preview_values*/)>;
 
 class PadHandlerBase
 {

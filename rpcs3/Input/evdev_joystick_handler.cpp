@@ -422,15 +422,15 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 	if (call_type != gui_call_type::blacklist && call_type != gui_call_type::reset_input && !has_new_event)
 	{
 		if (callback)
-			callback(0, "", padId, 0, preview_values, get_capabilities(padId));
+			callback({}, {}, padId, 0, std::move(preview_values), get_capabilities(padId));
 		return connection::no_data;
 	}
 
-	struct
-	{
-		u16 value = 0;
-		std::string name;
-	} pressed_button{};
+	// Check for each button in our list if its corresponding (maybe remapped) button or axis was pressed.
+	// Return the new value if the button was pressed (aka. its value was bigger than 0 or the defined threshold)
+	// Get all the legally pressed buttons. We only accept one value for axis though, otherwise it will get messy.
+	std::map<std::string, u16> pressed_buttons;
+	std::array<std::pair<std::string, u16>, 2> pressed_sticks{};
 
 	const auto set_button_press = [&](const u32 code, const std::string& name, std::string_view type, u16 threshold, int ev_type, bool is_rev_axis)
 	{
@@ -497,9 +497,20 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 
 		const u16 diff = value > min_value ? value - min_value : 0;
 
-		if (diff > button_press_threshold && value > pressed_button.value)
+		if (diff > button_press_threshold)
 		{
-			pressed_button = { .value = value, .name = name };
+			if (ev_type == EV_ABS)
+			{
+				if (pressed_sticks[0].second < value)
+				{
+					pressed_sticks[0] = {name, value};
+				}
+			}
+			else
+			{
+				u16& pressed_value = pressed_buttons[name];
+				pressed_value = std::max(pressed_value, value);
+			}
 		}
 	};
 
@@ -546,10 +557,7 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 	{
 		pad_capabilities capabilities = get_capabilities(padId);
 
-		if (pressed_button.value > 0)
-			callback(pressed_button.value, pressed_button.name, padId, 0, std::move(preview_values), std::move(capabilities));
-		else
-			callback(0, "", padId, 0, std::move(preview_values), std::move(capabilities));
+		callback(std::move(pressed_buttons), std::move(pressed_sticks), padId, 0, std::move(preview_values), std::move(capabilities));
 	}
 
 	return connection::connected;
