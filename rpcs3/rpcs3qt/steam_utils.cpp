@@ -435,13 +435,13 @@ namespace gui::utils
 
 			if (QPixmap banner; load_icon(banner, banner_large_path, ""))
 			{
-				create_steam_banner(steam_banner::cover, banner_large_path, banner, grid_dir, entry.appid);
 				create_steam_banner(steam_banner::wide_cover, banner_large_path, banner, grid_dir, entry.appid);
 				create_steam_banner(steam_banner::background, banner_large_path, banner, grid_dir, entry.appid);
 			}
 
 			if (QPixmap banner; load_icon(banner, banner_small_path, ""))
 			{
+				create_steam_banner(steam_banner::cover, banner_small_path, banner, grid_dir, entry.appid);
 				create_steam_banner(steam_banner::logo, banner_small_path, banner, grid_dir, entry.appid);
 				create_steam_banner(steam_banner::icon, banner_small_path, banner, grid_dir, entry.appid);
 			}
