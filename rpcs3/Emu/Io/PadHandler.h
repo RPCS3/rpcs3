@@ -193,6 +193,9 @@ protected:
 	std::shared_ptr<Pad> m_pad_for_pad_settings;
 
 	// Search an unordered map for a string value and return the found combo
+	static std::vector<std::set<u32>> find_key_combos(const std::unordered_map<u32, std::string>& map, const std::string& cfg_string, const std::string& fallback);
+
+	// Search an unordered map for a string value and return the found combo
 	static std::vector<std::set<u32>> find_key_combos(const std::unordered_map<u32, std::string>& map, const cfg::string& cfg_string, bool fallback = true);
 
 	// Search an unordered map for string values and return the found key codes
@@ -315,7 +318,7 @@ private:
 	virtual void get_extended_info(const pad_ensemble& /*binding*/) {}
 	virtual void apply_pad_data(const pad_ensemble& /*binding*/) {}
 	virtual std::unordered_map<u32, u16> get_button_values(const std::shared_ptr<PadDevice>& /*device*/) { return {}; }
-	virtual pad_preview_values get_preview_values(const std::unordered_map<u32, u16>& /*data*/) { return {}; }
+	virtual pad_preview_values get_preview_values(const std::unordered_map<u32, u16>& /*data*/, const std::vector<std::string>& /*buttons*/){ return {}; }
 
 	void get_orientation(const pad_ensemble& binding) const;
 

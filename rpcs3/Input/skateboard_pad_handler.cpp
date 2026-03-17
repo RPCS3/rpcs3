@@ -328,7 +328,7 @@ void skateboard_pad_handler::get_extended_info(const pad_ensemble& binding)
 	set_raw_orientation(*pad);
 }
 
-pad_preview_values skateboard_pad_handler::get_preview_values(const std::unordered_map<u32, u16>& /*data*/)
+pad_preview_values skateboard_pad_handler::get_preview_values(const std::unordered_map<u32, u16>& /*data*/, const std::vector<std::string>& /*buttons*/)
 {
 	// There is no proper user interface for skateboard values yet
 	return {};

@@ -177,7 +177,7 @@ private:
 	bool get_is_right_stick(const std::shared_ptr<PadDevice>& device, u32 keyCode) override;
 	bool get_is_touch_pad_motion(const std::shared_ptr<PadDevice>& device, u32 keyCode) override;
 	std::unordered_map<u32, u16> get_button_values(const std::shared_ptr<PadDevice>& device) override;
-	pad_preview_values get_preview_values(const std::unordered_map<u32, u16>& data) override;
+	pad_preview_values get_preview_values(const std::unordered_map<u32, u16>& data, const std::vector<std::string>& buttons) override;
 
 	u32 get_battery_color(int power_level, u32 brightness) const;
 	void set_rumble(SDLDevice* dev, u8 speed_large, u8 speed_small);
