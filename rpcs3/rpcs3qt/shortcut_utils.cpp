@@ -117,7 +117,8 @@ namespace gui::utils
 	                     const std::string& src_icon_path,
 	    [[maybe_unused]] const std::string& target_icon_dir,
 	                     const std::string& src_banner_path,
-	                     shortcut_location location)
+	                     shortcut_location location,
+	                     std::shared_ptr<iso_archive> archive)
 	{
 		if (name.empty())
 		{
@@ -194,7 +195,7 @@ namespace gui::utils
 		{
 			sys_log.notice("Creating %s shortcut with arguments '%s'", location, target_cli_args);
 			steam_shortcut steam_sc{};
-			steam_sc.add_shortcut(simple_name, rpcs3_path, working_dir, target_cli_args, target_icon_path, src_icon_path, src_banner_path);
+			steam_sc.add_shortcut(simple_name, rpcs3_path, working_dir, target_cli_args, target_icon_path, src_icon_path, src_banner_path, archive);
 			return steam_sc.write_file();
 		}
 
@@ -381,7 +382,7 @@ namespace gui::utils
 		if (location == shortcut_location::steam)
 		{
 			steam_shortcut steam_sc{};
-			steam_sc.add_shortcut(simple_name, link_path, macos_dir, ""/*target_cli_args are already in the launcher*/, "", src_icon_path, src_banner_path);
+			steam_sc.add_shortcut(simple_name, link_path, macos_dir, ""/*target_cli_args are already in the launcher*/, "", src_icon_path, src_banner_path, archive);
 			return steam_sc.write_file();
 		}
 
@@ -410,7 +411,7 @@ namespace gui::utils
 			sys_log.notice("Creating %s shortcut with arguments '%s'", location, target_cli_args);
 			const std::string working_dir{fs::get_executable_dir()};
 			steam_shortcut steam_sc{};
-			steam_sc.add_shortcut(simple_name, exe_path, working_dir, target_cli_args, target_icon_path, src_icon_path, src_banner_path);
+			steam_sc.add_shortcut(simple_name, exe_path, working_dir, target_cli_args, target_icon_path, src_icon_path, src_banner_path, archive);
 			return steam_sc.write_file();
 		}
 
@@ -473,10 +474,17 @@ namespace gui::utils
 
 		const std::string dev_flash = g_cfg_vfs.get_dev_flash();
 		const bool is_iso = is_file_iso(game->info.path);
+		std::shared_ptr<iso_archive> archive;
+
+		const auto file_exists = [&archive](const std::string& path)
+		{
+			return archive ? archive->is_file(path) : fs::is_file(path);
+		};
 
 		if (is_iso)
 		{
 			gameid_token_value = game->info.serial;
+			archive = std::make_shared<iso_archive>(game->info.path);
 		}
 		else if (game->info.category == "DG" && !fs::is_file(rpcs3::utils::get_hdd0_dir() + "/game/" + game->info.serial + "/USRDIR/EBOOT.BIN"))
 		{
@@ -529,11 +537,11 @@ namespace gui::utils
 			if (location == gui::utils::shortcut_location::steam)
 			{
 				// Try to find a nice banner for steam
-				const std::string sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(game->info.path);
+				const std::string sfo_dir = is_iso ? "PS3_GAME" : rpcs3::utils::get_sfo_dir_from_game_path(game->info.path);
 
-				for (const std::string& filename : {"PIC1.PNG", "PIC3.PNG", "PIC0.PNG", "PIC2.PNG", "ICON0.PNG"})
+				for (const std::string& filename : {"PIC1.PNG"s, "PIC3.PNG"s, "PIC0.PNG"s, "PIC2.PNG"s, "ICON0.PNG"s})
 				{
-					if (const std::string filepath = fmt::format("%s/%s", sfo_dir, filename); fs::is_file(filepath))
+					if (const std::string filepath = fmt::format("%s/%s", sfo_dir, filename); file_exists(filepath))
 					{
 						banner_path = filepath;
 						break;
@@ -548,7 +556,7 @@ namespace gui::utils
 #endif
 			const std::string target_cli_args = fmt::format("--no-gui \"%s%s%s:%s\"", percent, cli_arg_token, percent, cli_arg_value);
 
-			if (!gameid_token_value.empty() && create_shortcut(game->info.name, game->icon_in_archive ? game->info.path : "", game->info.serial, target_cli_args, game->info.name, game->info.icon_path, target_icon_dir, banner_path, location))
+			if (!gameid_token_value.empty() && create_shortcut(game->info.name, game->icon_in_archive ? game->info.path : "", game->info.serial, target_cli_args, game->info.name, game->info.icon_path, target_icon_dir, banner_path, location, archive))
 			{
 				sys_log.success("Created %s shortcut for %s", location, QString::fromStdString(game->info.name).simplified());
 			}
