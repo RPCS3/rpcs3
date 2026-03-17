@@ -51,30 +51,30 @@ inline bool CreateConfigFile(const QString& dir, const QString& name)
 	return true;
 }
 
-void pad_settings_dialog::pad_button::insert_key(const std::string& key, binding_mode mode)
+void pad_settings_dialog::pad_button::insert_button(const std::string& button, binding_mode mode)
 {
-	std::vector<std::vector<std::string>> combos;
+	std::vector<pad::combo> combos;
 	if (mode != binding_mode::single)
 	{
-		combos = cfg_pad::get_buttons(m_keys);
+		combos = cfg_pad::get_combos(m_button_string);
 	}
 
 	if (combos.empty() || mode != binding_mode::combo)
 	{
-		combos.push_back({key});
+		combos.push_back(pad::combo({button}));
 	}
 	else if (mode == binding_mode::combo)
 	{
-		combos.back().push_back(key);
+		combos.back().add_button(button);
 	}
 
-	update(cfg_pad::get_buttons(combos));
+	update(cfg_pad::get_button_string(combos));
 }
 
-void pad_settings_dialog::pad_button::update(const std::string& keys)
+void pad_settings_dialog::pad_button::update(const std::string& button_string)
 {
-	m_keys = keys;
-	QString new_text = QString::fromStdString(keys);
+	m_button_string = button_string;
+	QString new_text = QString::fromStdString(button_string);
 	m_text = new_text.replace(",", ", ").replace("&", " + ");
 }
 
@@ -622,7 +622,7 @@ void pad_settings_dialog::InitButtons()
 				{
 					if (value == 0) continue;
 
-					m_cfg_entries[m_button_id].insert_key(key, mode);
+					m_cfg_entries[m_button_id].insert_button(key, mode);
 
 					// Switch to combo mode for all further keys
 					mode = binding_mode::combo;
@@ -632,7 +632,7 @@ void pad_settings_dialog::InitButtons()
 				{
 					if (value == 0) continue;
 
-					m_cfg_entries[m_button_id].insert_key(key, mode);
+					m_cfg_entries[m_button_id].insert_button(key, mode);
 
 					// Switch to combo mode for all further keys
 					mode = binding_mode::combo;
@@ -674,16 +674,16 @@ void pad_settings_dialog::InitButtons()
 
 			const std::vector<std::string> buttons =
 			{
-				m_cfg_entries[button_ids::id_pad_l2].keys(),
-				m_cfg_entries[button_ids::id_pad_r2].keys(),
-				m_cfg_entries[button_ids::id_pad_lstick_left].keys(),
-				m_cfg_entries[button_ids::id_pad_lstick_right].keys(),
-				m_cfg_entries[button_ids::id_pad_lstick_down].keys(),
-				m_cfg_entries[button_ids::id_pad_lstick_up].keys(),
-				m_cfg_entries[button_ids::id_pad_rstick_left].keys(),
-				m_cfg_entries[button_ids::id_pad_rstick_right].keys(),
-				m_cfg_entries[button_ids::id_pad_rstick_down].keys(),
-				m_cfg_entries[button_ids::id_pad_rstick_up].keys()
+				m_cfg_entries[button_ids::id_pad_l2].button_string(),
+				m_cfg_entries[button_ids::id_pad_r2].button_string(),
+				m_cfg_entries[button_ids::id_pad_lstick_left].button_string(),
+				m_cfg_entries[button_ids::id_pad_lstick_right].button_string(),
+				m_cfg_entries[button_ids::id_pad_lstick_down].button_string(),
+				m_cfg_entries[button_ids::id_pad_lstick_up].button_string(),
+				m_cfg_entries[button_ids::id_pad_rstick_left].button_string(),
+				m_cfg_entries[button_ids::id_pad_rstick_right].button_string(),
+				m_cfg_entries[button_ids::id_pad_rstick_down].button_string(),
+				m_cfg_entries[button_ids::id_pad_rstick_up].button_string()
 			};
 
 			// Check if this is the first call during a remap
@@ -1023,7 +1023,7 @@ void pad_settings_dialog::keyPressEvent(QKeyEvent* keyEvent)
 	}
 	else
 	{
-		m_cfg_entries[m_button_id].insert_key(keyboard_pad_handler::GetKeyName(keyEvent, false), m_binding_mode);
+		m_cfg_entries[m_button_id].insert_button(keyboard_pad_handler::GetKeyName(keyEvent, false), m_binding_mode);
 	}
 
 	ReactivateButtons();
@@ -1050,7 +1050,7 @@ void pad_settings_dialog::mouseReleaseEvent(QMouseEvent* event)
 	}
 	else
 	{
-		m_cfg_entries[m_button_id].insert_key((static_cast<keyboard_pad_handler*>(m_handler.get()))->GetMouseName(event), m_binding_mode);
+		m_cfg_entries[m_button_id].insert_button((static_cast<keyboard_pad_handler*>(m_handler.get()))->GetMouseName(event), m_binding_mode);
 	}
 
 	ReactivateButtons();
@@ -1112,7 +1112,7 @@ void pad_settings_dialog::wheelEvent(QWheelEvent* event)
 		}
 	}
 
-	m_cfg_entries[m_button_id].insert_key((static_cast<keyboard_pad_handler*>(m_handler.get()))->GetMouseName(key), m_binding_mode);
+	m_cfg_entries[m_button_id].insert_button((static_cast<keyboard_pad_handler*>(m_handler.get()))->GetMouseName(key), m_binding_mode);
 	ReactivateButtons();
 }
 
@@ -1163,7 +1163,7 @@ void pad_settings_dialog::mouseMoveEvent(QMouseEvent* event)
 
 		if (key != 0)
 		{
-			m_cfg_entries[m_button_id].insert_key((static_cast<keyboard_pad_handler*>(m_handler.get()))->GetMouseName(key), m_binding_mode);
+			m_cfg_entries[m_button_id].insert_button((static_cast<keyboard_pad_handler*>(m_handler.get()))->GetMouseName(key), m_binding_mode);
 			ReactivateButtons();
 		}
 	}
@@ -2110,7 +2110,7 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 	// Check for duplicate button choices
 	if (m_handler->m_type != pad_handler::null)
 	{
-		std::set<std::string> unique_keys;
+		std::set<std::string> unique_button_strings;
 		for (const auto& [id, button] : m_cfg_entries)
 		{
 			// Let's ignore special keys, unless we're using a keyboard
@@ -2120,13 +2120,13 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 				continue;
 			}
 
-			for (const std::vector<std::string>& combo : cfg_pad::get_buttons(button.keys()))
+			for (const pad::combo& combo : cfg_pad::get_combos(button.button_string()))
 			{
-				for (const std::string& key : combo)
+				for (const std::string& button_string : combo.buttons())
 				{
-					if (const auto& [it, ok] = unique_keys.insert(key); !ok)
+					if (const auto& [it, ok] = unique_button_strings.insert(button_string); !ok)
 					{
-						m_duplicate_buttons[m_last_player_id] = key;
+						m_duplicate_buttons[m_last_player_id] = button_string;
 						break;
 					}
 				}
@@ -2137,7 +2137,7 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 	// Apply buttons
 	for (const auto& entry : m_cfg_entries)
 	{
-		entry.second.cfg_text()->from_string(entry.second.keys());
+		entry.second.cfg_text()->from_string(entry.second.button_string());
 	}
 
 	// Apply rest of config

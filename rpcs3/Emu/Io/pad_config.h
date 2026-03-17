@@ -5,10 +5,42 @@
 #include "Utilities/Config.h"
 
 #include <array>
+#include <vector>
 
 namespace pad
 {
 	constexpr static std::string_view keyboard_device_name = "Keyboard";
+
+	struct combo
+	{
+	public:
+		combo() = default;
+		combo(std::set<std::string> buttons) : m_buttons(std::move(buttons)) {}
+
+		const std::set<std::string>& buttons() const
+		{
+			return m_buttons;
+		}
+
+		void add_button(const std::string& button)
+		{
+			if (button.empty()) return;
+			m_buttons.insert(button);
+		}
+
+		bool operator==(const combo& other) const
+		{
+			return m_buttons == other.m_buttons;
+		}
+
+		bool operator<(const combo& other) const
+		{
+			return m_buttons < other.m_buttons;
+		}
+
+	private:
+		std::set<std::string> m_buttons;
+	};
 }
 
 struct cfg_sensor final : cfg::node
@@ -25,8 +57,8 @@ struct cfg_pad final : cfg::node
 	cfg_pad() {};
 	cfg_pad(node* owner, const std::string& name) : cfg::node(owner, name) {}
 
-	static std::vector<std::vector<std::string>> get_buttons(std::string_view str);
-	static std::string get_buttons(std::vector<std::vector<std::string>> vec);
+	static std::vector<pad::combo> get_combos(std::string_view button_string);
+	static std::string get_button_string(std::vector<pad::combo>& combos);
 
 	u8 get_motor_speed(VibrateMotor& motor, f32 multiplier) const;
 	u8 get_large_motor_speed(std::array<VibrateMotor, 2>& motors) const;

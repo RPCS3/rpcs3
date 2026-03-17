@@ -895,13 +895,13 @@ std::vector<std::set<u32>> keyboard_pad_handler::GetKeyCombos(const cfg::string&
 {
 	std::vector<std::set<u32>> res;
 
-	for (const std::vector<std::string>& combo : cfg_pad::get_buttons(cfg_string.to_string()))
+	for (const pad::combo& combo : cfg_pad::get_combos(cfg_string.to_string()))
 	{
 		std::set<u32> key_codes;
 
-		for (const std::string& key_name : combo)
+		for (const std::string& button : combo.buttons())
 		{
-			if (u32 code = GetKeyCode(QString::fromStdString(key_name)); code != Qt::NoButton)
+			if (u32 code = GetKeyCode(QString::fromStdString(button)); code != Qt::NoButton)
 			{
 				key_codes.insert(code);
 			}
@@ -1051,7 +1051,7 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 
 	const auto find_combos = [this](const cfg::string& name)
 	{
-		std::vector<std::set<u32>> combos = find_key_combos(mouse_list, name, false);
+		std::vector<std::set<u32>> combos = find_key_combos(mouse_list, name);
 		for (const std::set<u32>& combo : GetKeyCombos(name)) combos.push_back(combo);
 
 		if (!combos.empty())

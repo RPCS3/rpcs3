@@ -5,15 +5,15 @@
 
 extern std::string g_input_config_override;
 
-std::vector<std::vector<std::string>> cfg_pad::get_buttons(std::string_view str)
+std::vector<pad::combo> cfg_pad::get_combos(std::string_view button_string)
 {
-	if (str.empty())
+	if (button_string.empty())
 		return {};
 
 	// Handle special case: string contains separator itself as configured value (it's why I don't use fmt::split here)
 	const auto split = [](std::string_view str, char sep)
 	{
-		std::vector<std::string> vec;
+		std::set<std::string> buttons;
 		bool was_sep = true;
 		usz btn_start = 0ULL;
 		usz i = 0ULL;
@@ -27,7 +27,7 @@ std::vector<std::vector<std::string>> cfg_pad::get_buttons(std::string_view str)
 				if (!was_sep)
 				{
 					was_sep = true;
-					vec.push_back(std::string(str.substr(btn_start, i - btn_start)));
+					buttons.insert(std::string(str.substr(btn_start, i - btn_start)));
 					continue;
 				}
 			}
@@ -40,54 +40,47 @@ std::vector<std::vector<std::string>> cfg_pad::get_buttons(std::string_view str)
 		
 			if (i == (str.size() - 1))
 			{
-				vec.push_back(std::string(str.substr(btn_start, i - btn_start + 1)));
+				buttons.insert(std::string(str.substr(btn_start, i - btn_start + 1)));
 			}
 		}
 
-		// Remove duplicates
-		std::sort(vec.begin(), vec.end());
-		vec.erase(std::unique(vec.begin(), vec.end()), vec.end());
-
-		return vec;
+		return buttons;
 	};
 
-	std::vector<std::vector<std::string>> res;
+	std::vector<pad::combo> combos;
 
 	// Get all combos (seperated by ',')
-	const std::vector<std::string> vec = split(str, ',');
+	const std::set<std::string> combo_strings = split(button_string, ',');
 
-	for (const std::string& combo : vec)
+	for (const std::string& combo_string : combo_strings)
 	{
 		// Get all keys for this combo (seperated by '&')
-		std::vector<std::string> keys = split(combo, '&');
-		if (!keys.empty())
+		std::set<std::string> combo = split(combo_string, '&');
+		if (!combo.empty())
 		{
-			res.push_back(std::move(keys));
+			combos.push_back(pad::combo{std::move(combo)});
 		}
 	}
 
-	return res;
+	return combos;
 }
 
-std::string cfg_pad::get_buttons(std::vector<std::vector<std::string>> vec)
+std::string cfg_pad::get_button_string(std::vector<pad::combo>& combos)
 {
-	std::vector<std::string> combos;
+	std::vector<std::string> combo_strings;
 
 	// Remove duplicates
-	std::sort(vec.begin(), vec.end());
-	vec.erase(std::unique(vec.begin(), vec.end()), vec.end());
+	std::sort(combos.begin(), combos.end());
+	combos.erase(std::unique(combos.begin(), combos.end()), combos.end());
 
-	for (std::vector<std::string>& combo : vec)
+	for (const pad::combo& combo : combos)
 	{
-		std::sort(combo.begin(), combo.end());
-		combo.erase(std::unique(combo.begin(), combo.end()), combo.end());
-
 		// Merge all keys for this combo (seperated by '&')
-		combos.push_back(fmt::merge(combo, "&"));
+		combo_strings.push_back(fmt::merge(combo.buttons(), "&"));
 	}
 
 	// Merge combos (seperated by ',')
-	return fmt::merge(combos, ",");
+	return fmt::merge(combo_strings, ",");
 }
 
 u8 cfg_pad::get_motor_speed(VibrateMotor& motor, f32 multiplier) const

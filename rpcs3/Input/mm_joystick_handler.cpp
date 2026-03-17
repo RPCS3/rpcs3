@@ -232,7 +232,7 @@ pad_preview_values mm_joystick_handler::get_preview_values(const std::unordered_
 		u16 value{};
 
 		// The DS3 Button is considered pressed if any configured button combination is pressed
-		for (const std::set<u32>& codes : find_key_combos(button_list, str, std::string()))
+		for (const std::set<u32>& codes : find_key_combos(button_list, str))
 		{
 			bool combo_pressed = !codes.empty();
 			u16 combo_val = 0;

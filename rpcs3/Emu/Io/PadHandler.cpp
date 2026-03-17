@@ -11,30 +11,15 @@ PadHandlerBase::PadHandlerBase(pad_handler type) : m_type(type)
 {
 }
 
-std::vector<std::set<u32>> PadHandlerBase::find_key_combos(const std::unordered_map<u32, std::string>& map, const std::string& cfg_string, const std::string& fallback)
+std::vector<std::set<u32>> PadHandlerBase::find_key_combos(const std::unordered_map<u32, std::string>& map, const std::string& cfg_string)
 {
 	std::vector<std::set<u32>> key_codes;
 
-	const std::vector<std::vector<std::string>> combos = cfg_pad::get_buttons(cfg_string);
-	u32 def_code = umax;
+	const std::vector<pad::combo> combos = cfg_pad::get_combos(cfg_string);
 
-	for (const std::vector<std::string>& names : combos)
+	for (const pad::combo& combo : combos)
 	{
-		std::set<u32> keys;
-
-		for (const std::string& nam : names)
-		{
-			for (const auto& [code, name] : map)
-			{
-				if (name == nam)
-				{
-					keys.insert(code);
-				}
-
-				if (!fallback.empty() && name == fallback)
-					def_code = code;
-			}
-		}
+		std::set<u32> keys = find_key_codes(map, combo);
 
 		if (!keys.empty())
 		{
@@ -42,39 +27,18 @@ std::vector<std::set<u32>> PadHandlerBase::find_key_combos(const std::unordered_
 		}
 	}
 
-	if (!key_codes.empty())
-	{
-		return key_codes;
-	}
-
-	if (!fallback.empty())
-	{
-		if (!combos.empty())
-			input_log.error("FindKeyCode for [name = %s] returned with [def_code = %d] for [fallback = %s]", cfg_string, def_code, fallback);
-
-		if (def_code != umax)
-		{
-			return {{ def_code }};
-		}
-	}
-
-	return {};
+	return key_codes;
 }
 
-std::vector<std::set<u32>> PadHandlerBase::find_key_combos(const std::unordered_map<u32, std::string>& map, const cfg::string& cfg_string, bool fallback)
-{
-	return find_key_combos(map, cfg_string.to_string(), fallback ? cfg_string.def : "");
-}
-
-std::set<u32> PadHandlerBase::find_key_codes(const std::unordered_map<u32, std::string>& map, const std::vector<std::string>& names)
+std::set<u32> PadHandlerBase::find_key_codes(const std::unordered_map<u32, std::string>& map, const pad::combo& combo)
 {
 	std::set<u32> key_codes;
 
-	for (const std::string& name : names)
+	for (const std::string& button_name : combo.buttons())
 	{
-		for (const auto& [code, nam] : map)
+		for (const auto& [code, name] : map)
 		{
-			if (nam == name)
+			if (button_name == name)
 			{
 				key_codes.insert(code);
 				break;
@@ -82,12 +46,7 @@ std::set<u32> PadHandlerBase::find_key_codes(const std::unordered_map<u32, std::
 		}
 	}
 
-	if (!key_codes.empty())
-	{
-		return key_codes;
-	}
-
-	return {};
+	return key_codes;
 }
 
 s32 PadHandlerBase::MultipliedInput(s32 raw_value, s32 multiplier)
