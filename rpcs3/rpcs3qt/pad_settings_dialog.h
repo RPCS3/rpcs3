@@ -199,9 +199,9 @@ private:
 
 		struct input_values
 		{
-			std::string button_name;
 			u32 button_id = button_ids::id_pad_begin;
-			u16 val = 0;
+			std::map<std::string, u16> buttons;
+			std::array<std::pair<std::string, u16>, 2> sticks{};
 		};
 		std::vector<input_values> values;
 	} m_input_callback_data;
@@ -273,10 +273,10 @@ protected:
 	void showEvent(QShowEvent* event) override;
 
 	/** Handle keyboard handler input */
-	void keyPressEvent(QKeyEvent *keyEvent) override;
-	void mouseReleaseEvent(QMouseEvent *event) override;
-	void mouseMoveEvent(QMouseEvent *event) override;
-	void wheelEvent(QWheelEvent *event) override;
+	void keyPressEvent(QKeyEvent* keyEvent) override;
+	void mouseReleaseEvent(QMouseEvent* event) override;
+	void mouseMoveEvent(QMouseEvent* event) override;
+	void wheelEvent(QWheelEvent* event) override;
 	bool eventFilter(QObject* object, QEvent* event) override;
 	void closeEvent(QCloseEvent* event) override;
 };

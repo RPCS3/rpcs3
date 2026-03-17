@@ -334,12 +334,9 @@ PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::stri
 
 	// Check for each button in our list if its corresponding (maybe remapped) button or axis was pressed.
 	// Return the new value if the button was pressed (aka. its value was bigger than 0 or the defined threshold)
-	// Get all the legally pressed buttons and use the one with highest value (prioritize first)
-	struct
-	{
-		u16 value = 0;
-		std::string name;
-	} pressed_button{};
+	// Get all the legally pressed buttons. We only accept one value per stick though, otherwise it will get messy.
+	std::map<std::string, u16> pressed_buttons;
+	std::array<std::pair<std::string, u16>, 2> pressed_sticks{};
 
 	for (const auto& [keycode, name] : button_list)
 	{
@@ -356,7 +353,9 @@ PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::stri
 		}
 
 		const bool is_trigger = get_is_left_trigger(device, keycode) || get_is_right_trigger(device, keycode);
-		const bool is_stick   = !is_trigger && (get_is_left_stick(device, keycode) || get_is_right_stick(device, keycode));
+		const bool is_left_stick = !is_trigger && get_is_left_stick(device, keycode);
+		const bool is_right_stick = !is_trigger && !is_left_stick && get_is_right_stick(device, keycode);
+		const bool is_stick = is_left_stick || is_right_stick;
 		const bool is_touch_motion = !is_trigger && !is_stick && get_is_touch_pad_motion(device, keycode);
 		const bool is_button = !is_trigger && !is_stick && !is_touch_motion;
 
@@ -374,9 +373,27 @@ PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::stri
 
 			const u16 diff = value > min_value ? value - min_value : 0;
 
-			if (diff > button_press_threshold && value > pressed_button.value)
+			if (diff > button_press_threshold)
 			{
-				pressed_button = { .value = value, .name = name };
+				if (is_left_stick)
+				{
+					if (pressed_sticks[0].second < value)
+					{
+						pressed_sticks[0] = { name, value };
+					}
+				}
+				else if (is_right_stick)
+				{
+					if (pressed_sticks[1].second < value)
+					{
+						pressed_sticks[1] = { name, value };
+					}
+				}
+				else
+				{
+					u16& pressed_value = pressed_buttons[name];
+					pressed_value = std::max(pressed_value, value);
+				}
 			}
 		}
 	}
@@ -399,10 +416,7 @@ PadHandlerBase::connection PadHandlerBase::get_next_button_press(const std::stri
 		pad_capabilities capabilities = get_capabilities(pad_id);
 		const u32 battery_level = get_battery_level(pad_id);
 
-		if (pressed_button.value > 0)
-			callback(pressed_button.value, std::move(pressed_button.name), pad_id, battery_level, std::move(preview_values), std::move(capabilities));
-		else
-			callback(0, "", pad_id, battery_level, std::move(preview_values), std::move(capabilities));
+		callback(std::move(pressed_buttons), std::move(pressed_sticks), pad_id, battery_level, std::move(preview_values), std::move(capabilities));
 	}
 
 	return status;
