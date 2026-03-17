@@ -2,7 +2,11 @@
 #include "shortcut_utils.h"
 #include "steam_utils.h"
 #include "qt_utils.h"
+#include "gui_game_info.h"
+
 #include "Emu/VFS.h"
+#include "Emu/vfs_config.h"
+#include "Emu/system_utils.hpp"
 #include "Utilities/File.h"
 #include "Utilities/StrUtil.h"
 #include "Loader/ISO.h"
@@ -458,6 +462,104 @@ namespace gui::utils
 
 		return true;
 #endif
+	}
+
+	bool create_shortcuts(const std::shared_ptr<gui_game_info>& game,
+	                      const std::set<gui::utils::shortcut_location>& locations)
+	{
+		if (!game || locations.empty()) return false;
+
+		std::string gameid_token_value;
+
+		const std::string dev_flash = g_cfg_vfs.get_dev_flash();
+		const bool is_iso = is_file_iso(game->info.path);
+
+		if (is_iso)
+		{
+			gameid_token_value = game->info.serial;
+		}
+		else if (game->info.category == "DG" && !fs::is_file(rpcs3::utils::get_hdd0_dir() + "/game/" + game->info.serial + "/USRDIR/EBOOT.BIN"))
+		{
+			const usz ps3_game_dir_pos = fs::get_parent_dir(game->info.path).size();
+			std::string relative_boot_dir = game->info.path.substr(ps3_game_dir_pos);
+
+			if (usz char_pos = relative_boot_dir.find_first_not_of(fs::delim); char_pos != umax)
+			{
+				relative_boot_dir = relative_boot_dir.substr(char_pos);
+			}
+			else
+			{
+				relative_boot_dir.clear();
+			}
+
+			if (!relative_boot_dir.empty())
+			{
+				if (relative_boot_dir != "PS3_GAME")
+				{
+					gameid_token_value = game->info.serial + "/" + relative_boot_dir;
+				}
+				else
+				{
+					gameid_token_value = game->info.serial;
+				}
+			}
+		}
+		else
+		{
+			gameid_token_value = game->info.serial;
+		}
+
+		const std::string target_icon_dir = fmt::format("%sIcons/game_icons/%s/", fs::get_config_dir(), game->info.serial);
+
+		if (!fs::create_path(target_icon_dir))
+		{
+			sys_log.error("Failed to create shortcut path %s (%s)", QString::fromStdString(game->info.name).simplified(), target_icon_dir, fs::g_tls_error);
+			return false;
+		}
+
+		bool success = true;
+		const bool is_vsh = game->info.path.starts_with(dev_flash);
+		const std::string cli_arg_token = is_vsh ? "RPCS3_VFS" : "RPCS3_GAMEID";
+		const std::string cli_arg_value = is_vsh ? ("dev_flash/" + game->info.path.substr(dev_flash.size())) : gameid_token_value;
+
+		for (gui::utils::shortcut_location location : locations)
+		{
+			std::string banner_path;
+
+			if (location == gui::utils::shortcut_location::steam)
+			{
+				// Try to find a nice banner for steam
+				const std::string sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(game->info.path);
+
+				for (const std::string& filename : { "PIC1.PNG", "PIC3.PNG" })
+				{
+					if (const std::string filepath = fmt::format("%s/%s", sfo_dir, filename); fs::is_file(filepath))
+					{
+						banner_path = filepath;
+						break;
+					}
+				}
+			}
+
+#ifdef __linux__
+			const std::string percent = location == gui::utils::shortcut_location::steam ? "%" : "%%";
+#else
+			const std::string percent = "%";
+#endif
+			const std::string target_cli_args = fmt::format("--no-gui \"%s%s%s:%s\"", percent, cli_arg_token, percent, cli_arg_value);
+
+			if (!gameid_token_value.empty() && create_shortcut(game->info.name, game->icon_in_archive ? game->info.path : "", game->info.serial, target_cli_args, game->info.name, game->info.icon_path, target_icon_dir, banner_path, location))
+			{
+				sys_log.success("Created %s shortcut for %s", location, QString::fromStdString(game->info.name).simplified());
+			}
+			else
+			{
+				sys_log.error("Failed to create %s shortcut for %s", location, QString::fromStdString(game->info.name).simplified());
+				success = false;
+			}
+		}
+
+		return success;
 	}
 
 	void remove_shortcuts(const std::string& name, [[maybe_unused]] const std::string& serial)
