@@ -1,6 +1,7 @@
 #pragma once
 
 struct gui_game_info;
+class iso_archive;
 
 namespace gui::utils
 {
@@ -22,7 +23,8 @@ namespace gui::utils
 	                     const std::string& src_icon_path,
 	                     const std::string& target_icon_dir,
 	                     const std::string& src_banner_path,
-	                     shortcut_location shortcut_location);
+	                     shortcut_location shortcut_location,
+	                     std::shared_ptr<iso_archive> archive = nullptr);
 
 	bool create_shortcuts(const std::shared_ptr<gui_game_info>& game,
 	                      const std::set<gui::utils::shortcut_location>& locations);

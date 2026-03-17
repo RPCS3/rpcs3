@@ -93,6 +93,8 @@ public:
 	iso_file open(const std::string& path);
 
 	psf::registry open_psf(const std::string& path);
+
+	const std::string& path() const { return m_path; }
 };
 
 class iso_device : public fs::device_base

@@ -6,6 +6,8 @@
 #include <expected>
 #include <QPixmap>
 
+class iso_archive;
+
 namespace gui::utils
 {
 	class steam_shortcut
@@ -21,7 +23,8 @@ namespace gui::utils
 			const std::string& launch_options,
 			const std::string& icon_path,
 			const std::string& banner_small_path,
-			const std::string& banner_large_path);
+			const std::string& banner_large_path,
+			std::shared_ptr<iso_archive> archive);
 
 		void remove_shortcut(
 			const std::string& app_name,
@@ -68,6 +71,8 @@ namespace gui::utils
 			std::string banner_large;
 			u32 appid = 0;
 
+			std::shared_ptr<iso_archive> iso;
+
 			std::string build_binary_blob(usz index) const;
 		};
 
@@ -112,7 +117,7 @@ namespace gui::utils
 		static std::string get_last_active_steam_user(const std::string& steam_path);
 		
 		static std::string get_steam_banner_path(steam_banner banner, const std::string& grid_dir, u32 appid);
-		static void create_steam_banner(steam_banner banner, const std::string& src_path, const QPixmap& src_icon, const std::string& grid_dir, u32 appid);
+		static void create_steam_banner(steam_banner banner, const std::string& src_path, const QPixmap& src_icon, const std::string& grid_dir, const shortcut_entry& entry);
 
 		std::vector<shortcut_entry> m_entries_to_add;
 		std::vector<shortcut_entry> m_entries_to_remove;
