@@ -192,14 +192,11 @@ protected:
 
 	std::shared_ptr<Pad> m_pad_for_pad_settings;
 
-	// Search an unordered map for a string value and return the found combo
-	static std::vector<std::set<u32>> find_key_combos(const std::unordered_map<u32, std::string>& map, const std::string& cfg_string, const std::string& fallback);
+	// Search an unordered map for a string value and return the found combos
+	static std::vector<std::set<u32>> find_key_combos(const std::unordered_map<u32, std::string>& map, const std::string& cfg_string);
 
-	// Search an unordered map for a string value and return the found combo
-	static std::vector<std::set<u32>> find_key_combos(const std::unordered_map<u32, std::string>& map, const cfg::string& cfg_string, bool fallback = true);
-
-	// Search an unordered map for string values and return the found key codes
-	static std::set<u32> find_key_codes(const std::unordered_map<u32, std::string>& map, const std::vector<std::string>& names);
+	// Search an unordered map for a combo and return the found key codes
+	static std::set<u32> find_key_codes(const std::unordered_map<u32, std::string>& map, const pad::combo& combo);
 
 	// Get normalized trigger value based on the range defined by a threshold
 	u16 NormalizeTriggerInput(u16 value, u32 threshold) const;

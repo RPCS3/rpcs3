@@ -93,16 +93,16 @@ class pad_settings_dialog : public QDialog
 			update(*cfg_text);
 		}
 
-		void insert_key(const std::string& key, binding_mode mode);
-		void update(const std::string& keys);
+		void insert_button(const std::string& button, binding_mode mode);
+		void update(const std::string& button_string);
 
 		cfg::string* cfg_text() const { return m_cfg_text; }
-		const std::string& keys() const { return m_keys; }
+		const std::string& button_string() const { return m_button_string; }
 		const QString& text() const { return m_text; }
 
 	private:
 		cfg::string* m_cfg_text = nullptr;
-		std::string m_keys;
+		std::string m_button_string;
 		QString m_text;
 	};
 
