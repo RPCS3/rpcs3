@@ -760,7 +760,7 @@ void ps_move_handler::get_extended_info(const pad_ensemble& binding)
 	handle_external_device(binding);
 }
 
-pad_preview_values ps_move_handler::get_preview_values(const std::unordered_map<u32, u16>& data)
+pad_preview_values ps_move_handler::get_preview_values(const std::unordered_map<u32, u16>& data, const std::vector<std::string>& /*buttons*/)
 {
 	return {
 		std::max(::at32(data, ps_move_key_codes::L2), ::at32(data, ps_move_key_codes::t)),

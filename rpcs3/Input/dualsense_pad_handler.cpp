@@ -782,7 +782,7 @@ std::unordered_map<u32, u16> dualsense_pad_handler::get_button_values(const std:
 	return keyBuffer;
 }
 
-pad_preview_values dualsense_pad_handler::get_preview_values(const std::unordered_map<u32, u16>& data)
+pad_preview_values dualsense_pad_handler::get_preview_values(const std::unordered_map<u32, u16>& data, const std::vector<std::string>& /*buttons*/)
 {
 	return {
 		::at32(data, L2),

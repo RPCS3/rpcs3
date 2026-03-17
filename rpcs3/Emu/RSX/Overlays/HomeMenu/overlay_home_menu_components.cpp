@@ -5,7 +5,7 @@ namespace rsx
 {
 	namespace overlays
 	{
-		home_menu_entry::home_menu_entry(home_menu::fa_icon icon, const std::string& text, u16 width)
+		home_menu_entry::home_menu_entry(home_menu::fa_icon icon, const std::string& text, u16 width, text_align alignment)
 		{
 			auto text_stack = std::make_unique<vertical_layout>();
 			auto padding    = std::make_unique<spacer>();
@@ -15,7 +15,7 @@ namespace rsx
 			title->set_size(width, menu_entry_height);
 			title->set_font("Arial", 14);
 			title->set_wrap_text(true);
-			title->align_text(text_align::center);
+			title->align_text(alignment);
 
 			// Make back color transparent for text
 			title->back_color.a = 0.f;
@@ -42,16 +42,37 @@ namespace rsx
 			}
 
 			const auto image_size_with_padding = icon_view->w + 16;
-			if (width > image_size_with_padding)
+			if (alignment == text_align::center)
+			{
+				if (width > image_size_with_padding)
+				{
+					auto text = text_stack->m_items.back().get();
+					static_cast<label*>(text)->auto_resize(false, width - image_size_with_padding);
+
+					const auto content_w = text->w + image_size_with_padding;
+					const auto offset = (std::max<u16>(width, content_w) - content_w) / 2;
+
+					// For autosized containers, just set the initial size, let the packing grow it automatically
+					this->set_size(offset, menu_entry_height);
+				}
+			}
+			else if (alignment == text_align::right)
 			{
 				auto text = text_stack->m_items.back().get();
 				static_cast<label*>(text)->auto_resize(false, width - image_size_with_padding);
 
-				const auto content_w = text->w + image_size_with_padding;
-				const auto offset = (std::max<u16>(width, content_w) - content_w) / 2;
-
-				// For autosized containers, just set the initial size, let the packing grow it automatically
-				this->set_size(offset, menu_entry_height);
+				if (const u16 combined_w = (text->w + image_size_with_padding); combined_w < width)
+				{
+					// Insert a spacer
+					std::unique_ptr<overlay_element> spacer_element = std::make_unique<spacer>();
+					spacer_element->set_size(combined_w, icon_view->h);
+					add_element(spacer_element);
+				}
+			}
+			else
+			{
+				// Left align
+				add_spacer(menu_entry_height);
 			}
 
 			add_element(icon_view);

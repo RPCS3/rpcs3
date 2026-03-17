@@ -103,7 +103,8 @@ namespace rsx
 				ensure(dynamic_cast<home_menu_page*>(m_tabs->get_selected()))->on_activate();
 				break;
 			case pad_button::circle:
-				action = page_navigation::exit;
+				set_current_page(this->parent);
+				action = this->parent ? page_navigation::back : page_navigation::exit;
 				sound = sound_effect::cancel;
 				break;
 			default:
@@ -180,7 +181,7 @@ namespace rsx
 			add_signed_slider(&g_cfg.core.max_spurs_threads, localized_string_id::HOME_MENU_SETTINGS_ADVANCED_MAX_SPURS_THREADS, "", 1);
 
 			add_unsigned_slider(&g_cfg.video.driver_wakeup_delay, localized_string_id::HOME_MENU_SETTINGS_ADVANCED_DRIVER_WAKE_UP_DELAY, " µs", 20, {}, {}, g_cfg.video.driver_wakeup_delay.min, 800);
-			add_signed_slider(&g_cfg.video.vblank_rate, localized_string_id::HOME_MENU_SETTINGS_ADVANCED_VBLANK_FREQUENCY, " Hz", 30);
+			add_signed_slider(&g_cfg.video.vblank_rate, localized_string_id::HOME_MENU_SETTINGS_ADVANCED_VBLANK_FREQUENCY, " Hz", 30, {}, 30);
 			add_checkbox(&g_cfg.video.vblank_ntsc, localized_string_id::HOME_MENU_SETTINGS_ADVANCED_VBLANK_NTSC);
 
 			apply_layout();

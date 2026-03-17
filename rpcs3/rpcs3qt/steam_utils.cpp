@@ -2,6 +2,8 @@
 #include "steam_utils.h"
 #include "qt_utils.h"
 
+#include "Loader/ISO.h"
+
 #include <filesystem>
 #include <map>
 #include <QtConcurrent>
@@ -26,7 +28,8 @@ namespace gui::utils
 			const std::string& launch_options,
 			const std::string& icon_path,
 			const std::string& banner_small_path,
-			const std::string& banner_large_path)
+			const std::string& banner_large_path,
+			std::shared_ptr<iso_archive> archive)
 	{
 		shortcut_entry entry{};
 		entry.app_name = app_name;
@@ -37,6 +40,7 @@ namespace gui::utils
 		entry.banner_small = banner_small_path;
 		entry.banner_large = banner_large_path;
 		entry.appid = steam_appid(exe, app_name);
+		entry.iso = archive;
 
 		m_entries_to_add.push_back(std::move(entry));
 	}
@@ -415,9 +419,14 @@ namespace gui::utils
 			std::string banner_small_path;
 			std::string banner_large_path;
 
+			const auto file_exists = [&entry](const std::string& path)
+			{
+				return entry.iso ? entry.iso->is_file(path) : fs::is_file(path);
+			};
+
 			for (const std::string& path : { entry.banner_small, entry.banner_large })
 			{
-				if (fs::is_file(path))
+				if (file_exists(path))
 				{
 					banner_small_path = path;
 					break;
@@ -426,24 +435,32 @@ namespace gui::utils
 
 			for (const std::string& path : { entry.banner_large, entry.banner_small })
 			{
-				if (fs::is_file(path))
+				if (file_exists(path))
 				{
 					banner_large_path = path;
 					break;
 				}
 			}
 
-			if (QPixmap banner; load_icon(banner, banner_large_path, ""))
+			if (QPixmap banner; load_icon(banner, banner_large_path, entry.iso ? entry.iso->path() : ""))
 			{
-				create_steam_banner(steam_banner::cover, banner_large_path, banner, grid_dir, entry.appid);
-				create_steam_banner(steam_banner::wide_cover, banner_large_path, banner, grid_dir, entry.appid);
-				create_steam_banner(steam_banner::background, banner_large_path, banner, grid_dir, entry.appid);
+				create_steam_banner(steam_banner::wide_cover, banner_large_path, banner, grid_dir, entry);
+				create_steam_banner(steam_banner::background, banner_large_path, banner, grid_dir, entry);
+			}
+			else
+			{
+				sys_log.warning("Failed to load large steam banner file '%s'", banner_large_path);
 			}
 
-			if (QPixmap banner; load_icon(banner, banner_small_path, ""))
+			if (QPixmap banner; load_icon(banner, banner_small_path, entry.iso ? entry.iso->path() : ""))
 			{
-				create_steam_banner(steam_banner::logo, banner_small_path, banner, grid_dir, entry.appid);
-				create_steam_banner(steam_banner::icon, banner_small_path, banner, grid_dir, entry.appid);
+				create_steam_banner(steam_banner::cover, banner_small_path, banner, grid_dir, entry);
+				create_steam_banner(steam_banner::logo, banner_small_path, banner, grid_dir, entry);
+				create_steam_banner(steam_banner::icon, banner_small_path, banner, grid_dir, entry);
+			}
+			else
+			{
+				sys_log.warning("Failed to load small steam banner file '%s'", banner_small_path);
 			}
 		}));
 
@@ -749,9 +766,9 @@ namespace gui::utils
 		return {};
 	}
 
-	void steam_shortcut::create_steam_banner(steam_banner banner, const std::string& src_path, const QPixmap& src_icon, const std::string& grid_dir, u32 appid)
+	void steam_shortcut::create_steam_banner(steam_banner banner, const std::string& src_path, const QPixmap& src_icon, const std::string& grid_dir, const shortcut_entry& entry)
 	{
-		const std::string dst_path = get_steam_banner_path(banner, grid_dir, appid);
+		const std::string dst_path = get_steam_banner_path(banner, grid_dir, entry.appid);
 		QSize size = src_icon.size();
 
 		if (banner == steam_banner::cover)
@@ -761,7 +778,16 @@ namespace gui::utils
 
 		if (size == src_icon.size())
 		{
-			if (!fs::copy_file(src_path, dst_path, true))
+			if (entry.iso)
+			{
+				// TODO: fs::copy_file does not support copy from an unmounted iso archive
+				if (!src_icon.save(QString::fromStdString(dst_path)))
+				{
+					sys_log.error("Failed to save steam shortcut banner to '%s'", dst_path);
+				}
+				return;
+			}
+			else if (!fs::copy_file(src_path, dst_path, true))
 			{
 				sys_log.error("Failed to copy steam shortcut banner from '%s' to '%s': '%s'", src_path, dst_path, fs::g_tls_error);
 			}
