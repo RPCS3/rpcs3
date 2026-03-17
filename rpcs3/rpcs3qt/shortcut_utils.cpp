@@ -531,7 +531,7 @@ namespace gui::utils
 				// Try to find a nice banner for steam
 				const std::string sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(game->info.path);
 
-				for (const std::string& filename : { "PIC1.PNG", "PIC3.PNG" })
+				for (const std::string& filename : {"PIC1.PNG", "PIC3.PNG", "PIC0.PNG", "PIC2.PNG", "ICON0.PNG"})
 				{
 					if (const std::string filepath = fmt::format("%s/%s", sfo_dir, filename); fs::is_file(filepath))
 					{
