@@ -502,6 +502,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		}
 	}
 
+	m_emu_settings->EnhanceComboBox(ui->vsyncMode, emu_settings_type::VSync);
+	SubscribeTooltip(ui->vsyncMode, tooltips.settings.vsync);
+
 	m_emu_settings->EnhanceComboBox(ui->antiAliasing, emu_settings_type::MSAA);
 	SubscribeTooltip(ui->gb_antiAliasing, tooltips.settings.anti_aliasing);
 
@@ -603,9 +606,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	// Checkboxes: main options
 	m_emu_settings->EnhanceCheckBox(ui->dumpColor, emu_settings_type::WriteColorBuffers);
 	SubscribeTooltip(ui->dumpColor, tooltips.settings.dump_color);
-
-	m_emu_settings->EnhanceCheckBox(ui->vsync, emu_settings_type::VSync);
-	SubscribeTooltip(ui->vsync, tooltips.settings.vsync);
 
 	m_emu_settings->EnhanceCheckBox(ui->stretchToDisplayArea, emu_settings_type::StretchToDisplayArea);
 	SubscribeTooltip(ui->stretchToDisplayArea, tooltips.settings.stretch_to_display_area);

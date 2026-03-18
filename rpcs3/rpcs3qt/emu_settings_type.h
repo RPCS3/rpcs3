@@ -278,7 +278,7 @@ inline static const std::map<emu_settings_type, cfg_location> settings_location 
 	{ emu_settings_type::ReadColorBuffers,           { "Video", "Read Color Buffers"}},
 	{ emu_settings_type::ReadDepthBuffer,            { "Video", "Read Depth Buffer"}},
 	{ emu_settings_type::HandleRSXTiledMemory,       { "Video", "Handle RSX Memory Tiling"}},
-	{ emu_settings_type::VSync,                      { "Video", "VSync"}},
+	{ emu_settings_type::VSync,                      { "Video", "VSync Mode"}},
 	{ emu_settings_type::DebugOutput,                { "Video", "Debug output"}},
 	{ emu_settings_type::DebugOverlay,               { "Video", "Debug overlay"}},
 	{ emu_settings_type::RenderdocCompatibility,     { "Video", "Renderdoc Compatibility Mode"}},
