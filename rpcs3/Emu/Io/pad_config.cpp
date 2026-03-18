@@ -83,6 +83,27 @@ std::string cfg_pad::get_button_string(std::vector<pad::combo>& combos)
 	return fmt::merge(combo_strings, ",");
 }
 
+std::string cfg_pad::make_button_string(const std::unordered_map<u32, std::string>& button_list, const std::vector<std::set<u32>>& button_combos)
+{
+	std::vector<pad::combo> combos;
+
+	for (const std::set<u32>& button_combo : button_combos)
+	{
+		if (button_combo.empty()) continue;
+
+		pad::combo combo {};
+
+		for (u32 button : button_combo)
+		{
+			combo.add_button(::at32(button_list, button));
+		}
+
+		combos.push_back(std::move(combo));
+	}
+
+	return get_button_string(combos);
+}
+
 u8 cfg_pad::get_motor_speed(VibrateMotor& motor, f32 multiplier) const
 {
 	// If motor is small, use either 0 or 255.

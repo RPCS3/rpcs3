@@ -59,6 +59,7 @@ struct cfg_pad final : cfg::node
 
 	static std::vector<pad::combo> get_combos(std::string_view button_string);
 	static std::string get_button_string(std::vector<pad::combo>& combos);
+	static std::string make_button_string(const std::unordered_map<u32, std::string>& button_list, const std::vector<std::set<u32>>& button_combos);
 
 	u8 get_motor_speed(VibrateMotor& motor, f32 multiplier) const;
 	u8 get_large_motor_speed(std::array<VibrateMotor, 2>& motors) const;

@@ -121,7 +121,7 @@ void sdl_pad_handler::init_config(cfg_pad* cfg)
 	cfg->rs_up.def    = ::at32(button_list, SDLKeyCodes::RSYPos);
 	cfg->start.def    = ::at32(button_list, SDLKeyCodes::Start);
 	cfg->select.def   = ::at32(button_list, SDLKeyCodes::Back);
-	cfg->ps.def       = ::at32(button_list, SDLKeyCodes::Guide);
+	cfg->ps.def       = cfg_pad::make_button_string(button_list, {{SDLKeyCodes::Guide}, {SDLKeyCodes::Start, SDLKeyCodes::Back}});
 	cfg->square.def   = ::at32(button_list, SDLKeyCodes::West);
 	cfg->cross.def    = ::at32(button_list, SDLKeyCodes::South);
 	cfg->circle.def   = ::at32(button_list, SDLKeyCodes::East);

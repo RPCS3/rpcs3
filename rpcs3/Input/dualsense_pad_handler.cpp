@@ -235,7 +235,7 @@ void dualsense_pad_handler::init_config(cfg_pad* cfg)
 	cfg->rs_up.def    = ::at32(button_list, DualSenseKeyCodes::RSYPos);
 	cfg->start.def    = ::at32(button_list, DualSenseKeyCodes::Options);
 	cfg->select.def   = ::at32(button_list, DualSenseKeyCodes::Share);
-	cfg->ps.def       = ::at32(button_list, DualSenseKeyCodes::PSButton);
+	cfg->ps.def       = cfg_pad::make_button_string(button_list, {{DualSenseKeyCodes::PSButton}, {DualSenseKeyCodes::Options, DualSenseKeyCodes::Share}});
 	cfg->square.def   = ::at32(button_list, DualSenseKeyCodes::Square);
 	cfg->cross.def    = ::at32(button_list, DualSenseKeyCodes::Cross);
 	cfg->circle.def   = ::at32(button_list, DualSenseKeyCodes::Circle);

@@ -101,7 +101,7 @@ void xinput_pad_handler::init_config(cfg_pad* cfg)
 	cfg->rs_up.def    = ::at32(button_list, XInputKeyCodes::RSYPos);
 	cfg->start.def    = ::at32(button_list, XInputKeyCodes::Start);
 	cfg->select.def   = ::at32(button_list, XInputKeyCodes::Back);
-	cfg->ps.def       = ::at32(button_list, XInputKeyCodes::Guide);
+	cfg->ps.def       = cfg_pad::make_button_string(button_list, {{XInputKeyCodes::Guide}, {XInputKeyCodes::Start, XInputKeyCodes::Back}});
 	cfg->square.def   = ::at32(button_list, XInputKeyCodes::X);
 	cfg->cross.def    = ::at32(button_list, XInputKeyCodes::A);
 	cfg->circle.def   = ::at32(button_list, XInputKeyCodes::B);
