@@ -252,6 +252,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 	if (info.emu_flip)
 	{
 		evaluate_cpu_usage_reduction_limits();
+		update_swap_interval();
 	}
 
 	// Get window state
