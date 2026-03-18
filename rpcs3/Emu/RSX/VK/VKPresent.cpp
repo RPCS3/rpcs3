@@ -135,6 +135,7 @@ bool VKGSRender::reinitialize_swapchain()
 
 	swapchain_unavailable = false;
 	should_reinitialize_swapchain = false;
+	m_vsync_mode = g_cfg.video.vsync;
 	return true;
 }
 
@@ -423,6 +424,11 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		{
 			swapchain_unavailable = true;
 		}
+	}
+
+	if (m_vsync_mode != g_cfg.video.vsync)
+	{
+		swapchain_unavailable = true;
 	}
 
 	if (swapchain_unavailable || should_reinitialize_swapchain)

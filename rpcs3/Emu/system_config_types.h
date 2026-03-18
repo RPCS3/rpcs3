@@ -363,3 +363,10 @@ enum class xfloat_accuracy
 	relaxed, // Approximate accuracy for only the "FCGT", "FNMS", "FREST" AND "FRSQEST" instructions
 	inaccurate
 };
+
+enum class vsync_mode
+{
+	off,
+	adaptive,
+	full,
+};
