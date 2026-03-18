@@ -459,4 +459,12 @@ namespace rsx::assembler::FP
 
 		return result;
 	}
+
+	// Invert execution mask on an instruction
+	void invert_conditional_execution_mask(Instruction* instruction)
+	{
+		// We want to invert src0.exec_if_gt|lt|eq which should be at bit offset 18-20
+		constexpr u32 inv_mask = (0b111 << 18u);
+		instruction->bytecode[1] = instruction->bytecode[1] ^ inv_mask;
+	}
 }
