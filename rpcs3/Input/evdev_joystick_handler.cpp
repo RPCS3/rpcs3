@@ -88,7 +88,7 @@ void evdev_joystick_handler::init_config(cfg_pad* cfg)
 	cfg->rs_up.def    = ::at32(rev_axis_list, ABS_RY);
 	cfg->start.def    = ::at32(button_list, BTN_START);
 	cfg->select.def   = ::at32(button_list, BTN_SELECT);
-	cfg->ps.def       = ::at32(button_list, BTN_MODE);
+	cfg->ps.def       = cfg_pad::make_button_string(button_list, {{BTN_MODE}, {BTN_START, BTN_SELECT}});
 	cfg->square.def   = ::at32(button_list, BTN_X);
 	cfg->cross.def    = ::at32(button_list, BTN_A);
 	cfg->circle.def   = ::at32(button_list, BTN_B);
