@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "CFG.h"
+#include "FPOpcodes.h"
 
 #include "Emu/RSX/Common/simple_array.hpp"
 #include "Emu/RSX/Program/RSXFragmentProgram.h"
@@ -211,7 +212,14 @@ namespace rsx::assembler
 
 				auto parent = bb;
 				bb = safe_insert_block(parent, pc + 1u, EdgeType::IF);
-				if (end_addr != else_addr)
+
+				if (else_addr == pc + 1u)
+				{
+					// Empty IF block. We co-opt the ELSE block as the IF and invert the condition.
+					auto& inst = parent->instructions.back();
+					FP::invert_conditional_execution_mask(&inst);
+				}
+				else if (end_addr != else_addr)
 				{
 					else_blocks.push_back(safe_insert_block(parent, else_addr, EdgeType::ELSE));
 				}
