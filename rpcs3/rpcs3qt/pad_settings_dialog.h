@@ -152,7 +152,7 @@ private:
 	QButtonGroup* m_pad_buttons = nullptr;
 	atomic_t<u32> m_button_id = button_ids::id_pad_begin;
 	std::map<int /*id*/, pad_button /*info*/> m_cfg_entries;
-	std::map<int /*id*/, std::string> m_duplicate_buttons;
+	std::map<int /*id*/, std::string> m_duplicate_combos;
 
 	// Real time stick values
 	int m_lx = 0;

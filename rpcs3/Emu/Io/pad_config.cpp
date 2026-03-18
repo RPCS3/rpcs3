@@ -76,7 +76,7 @@ std::string cfg_pad::get_button_string(std::vector<pad::combo>& combos)
 	for (const pad::combo& combo : combos)
 	{
 		// Merge all keys for this combo (seperated by '&')
-		combo_strings.push_back(fmt::merge(combo.buttons(), "&"));
+		combo_strings.push_back(combo.to_string());
 	}
 
 	// Merge combos (seperated by ',')

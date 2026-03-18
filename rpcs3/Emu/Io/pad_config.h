@@ -28,6 +28,11 @@ namespace pad
 			m_buttons.insert(button);
 		}
 
+		std::string to_string() const
+		{
+			return fmt::merge(m_buttons, "&");
+		}
+
 		bool operator==(const combo& other) const
 		{
 			return m_buttons == other.m_buttons;
