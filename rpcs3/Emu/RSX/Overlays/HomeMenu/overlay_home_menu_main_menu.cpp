@@ -194,6 +194,7 @@ namespace rsx
 			label_widget->set_size(m_sidebar->w, 60);
 			label_widget->set_font("Arial", 16);
 			label_widget->back_color.a = 0.f;
+			label_widget->set_margin(8, 0);
 			label_widget->set_padding(16, 4, 16, 4);
 			label_widget->auto_resize();
 			label_widget->set_size(label_widget->w, 60);
@@ -213,6 +214,7 @@ namespace rsx
 			auto icon_view = std::make_unique<image_view>();
 			icon_view->set_raw_image(icon_info);
 			icon_view->set_size(42, 60);
+			icon_view->set_margin(8, 0);
 			icon_view->set_padding(18, 0, 18, 18);
 
 			const u16 packed_width = icon_view->padding_left + icon_view->w + label_widget->w + 18; // rpad
