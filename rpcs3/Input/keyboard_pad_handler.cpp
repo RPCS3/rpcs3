@@ -86,8 +86,6 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 	{
 		const auto register_new_button_value = [code, pressed, value](Button& btn) -> u16
 		{
-			u16 actual_value = 0;
-
 			// Make sure we keep this button pressed until all related keys are released.
 			if (pressed)
 			{
@@ -96,7 +94,15 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 			else
 			{
 				btn.m_pressed_keys.erase(code);
+
+				// Optimization: just skip the whole combo parsing if there are no keys pressed
+				if (btn.m_pressed_keys.empty())
+				{
+					return 0;
+				}
 			}
+
+			u16 actual_value = 0;
 
 			// Get the max value of all pressed keys for this DS3 button
 			for (const std::set<u32>& key_codes : btn.m_key_combos)
@@ -262,7 +268,7 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 			{
 				const u16 actual_value = pressed ? MultipliedInput(value, is_left_stick ? l_stick_multiplier : r_stick_multiplier) : value;
 
-				const auto register_new_stick_value = [&](bool is_max)
+				const auto register_new_stick_value = [&](bool is_max) -> std::pair<bool, u16>
 				{
 					const std::vector<std::set<u32>>& key_combos = is_max ? stick.m_key_combos_max : stick.m_key_combos_min;
 					std::map<u32, u16>& pressed_keys = is_max ? stick.m_pressed_keys_max : stick.m_pressed_keys_min;
