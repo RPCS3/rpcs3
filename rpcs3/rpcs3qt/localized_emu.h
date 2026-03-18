@@ -234,6 +234,7 @@ private:
 		case localized_string_id::HOME_MENU_SETTINGS_AUDIO_TIME_STRETCHING: return tr("Enable Time Stretching", "Audio");
 		case localized_string_id::HOME_MENU_SETTINGS_AUDIO_TIME_STRETCHING_THRESHOLD: return tr("Time Stretching Threshold", "Audio");
 		case localized_string_id::HOME_MENU_SETTINGS_VIDEO: return tr("Video");
+		case localized_string_id::HOME_MENU_SETTINGS_VIDEO_VSYNC: return tr("VSync", "Video");
 		case localized_string_id::HOME_MENU_SETTINGS_VIDEO_FRAME_LIMIT: return tr("Frame Limit", "Video");
 		case localized_string_id::HOME_MENU_SETTINGS_VIDEO_ANISOTROPIC_OVERRIDE: return tr("Anisotropic Filter Override", "Video");
 		case localized_string_id::HOME_MENU_SETTINGS_VIDEO_OUTPUT_SCALING: return tr("Output Scaling", "Video");

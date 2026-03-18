@@ -152,6 +152,8 @@ namespace rsx
 		home_menu_settings_video::home_menu_settings_video(s16 x, s16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent)
 			: home_menu_settings_page(x, y, width, height, use_separators, parent, get_localized_string(localized_string_id::HOME_MENU_SETTINGS_VIDEO))
 		{
+			add_dropdown(&g_cfg.video.vsync, localized_string_id::HOME_MENU_SETTINGS_VIDEO_VSYNC);
+
 			add_dropdown(&g_cfg.video.frame_limit, localized_string_id::HOME_MENU_SETTINGS_VIDEO_FRAME_LIMIT);
 			add_unsigned_slider(&g_cfg.video.anisotropic_level_override, localized_string_id::HOME_MENU_SETTINGS_VIDEO_ANISOTROPIC_OVERRIDE, "x", 2, {{0, "Auto"}}, {14});
 
