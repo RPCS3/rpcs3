@@ -2102,7 +2102,7 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 		return;
 	}
 
-	m_duplicate_buttons[m_last_player_id].clear();
+	m_duplicate_combos[m_last_player_id].clear();
 
 	auto& player = g_cfg_input.player[m_last_player_id];
 	m_last_player_id = new_player_id;
@@ -2110,7 +2110,7 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 	// Check for duplicate button choices
 	if (m_handler->m_type != pad_handler::null)
 	{
-		std::set<std::string> unique_button_strings;
+		std::set<std::string> unique_combo_strings;
 		for (const auto& [id, button] : m_cfg_entries)
 		{
 			// Let's ignore special keys, unless we're using a keyboard
@@ -2122,13 +2122,12 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 
 			for (const pad::combo& combo : cfg_pad::get_combos(button.button_string()))
 			{
-				for (const std::string& button_string : combo.buttons())
+				std::string combo_string = combo.to_string();
+
+				if (const auto& [it, ok] = unique_combo_strings.insert(combo_string); !ok)
 				{
-					if (const auto& [it, ok] = unique_button_strings.insert(button_string); !ok)
-					{
-						m_duplicate_buttons[m_last_player_id] = button_string;
-						break;
-					}
+					m_duplicate_combos[m_last_player_id] = std::move(combo_string);
+					break;
 				}
 			}
 		}
@@ -2212,16 +2211,16 @@ void pad_settings_dialog::save(bool check_duplicates)
 
 	if (check_duplicates)
 	{
-		for (const auto& [player_id, key] : m_duplicate_buttons)
+		for (const auto& [player_id, combo] : m_duplicate_combos)
 		{
-			if (!key.empty())
+			if (!combo.empty())
 			{
 				int result = QMessageBox::Yes;
 				m_gui_settings->ShowConfirmationBox(
 					tr("Warning!"),
-					tr("The %0 button <b>%1</b> of <b>Player %2</b> was assigned at least twice.<br>Please consider adjusting the configuration.<br><br>Continue anyway?<br>")
+					tr("The %0 button or combo <b>%1</b> of <b>Player %2</b> was assigned at least twice.<br>Please consider adjusting the configuration.<br><br>Continue anyway?<br>")
 						.arg(QString::fromStdString(g_cfg_input.player[player_id]->handler.to_string()))
-						.arg(QString::fromStdString(key))
+						.arg(QString::fromStdString(combo))
 						.arg(player_id + 1),
 					gui::ib_same_buttons, &result, this);
 
