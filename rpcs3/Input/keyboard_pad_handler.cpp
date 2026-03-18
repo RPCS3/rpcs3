@@ -6,6 +6,7 @@
 #include "Input/product_info.h"
 #include "rpcs3qt/gs_frame.h"
 
+#include <algorithm>
 #include <QApplication>
 
 bool keyboard_pad_handler::Init()
@@ -284,10 +285,10 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 						pressed_keys.erase(code);
 					}
 
+					// Get the value of all the combos for this stick direction
 					bool any_combo_pressed = false;
 					u16 new_val = 0;
 
-					// Get the min/max value of all pressed keys for this stick
 					for (const std::set<u32>& key_codes : key_combos)
 					{
 						if (key_codes.empty()) continue;
@@ -315,25 +316,29 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 						}
 					}
 
+					// Make sure we keep this combo pressed until all related keys are released.
 					if (any_combo_pressed)
 					{
-						if (pressed_combos.contains(code))
-						{
-							u16& pressed_val = pressed_combos[code];
-							pressed_val = is_max ? std::max(new_val, pressed_val) : std::min(new_val, pressed_val);
-							new_val = pressed_val;
-						}
-						else
-						{
-							pressed_combos[code] = new_val;
-						}
+						new_val = std::ceil(new_val / 2.0f);
+
+						pressed_combos[code] = new_val;
 					}
 					else
 					{
 						pressed_combos.erase(code);
+
+						if (pressed_combos.empty())
+						{
+							return std::pair(false, 0);
+						}
 					}
 
-					return std::pair(any_combo_pressed, static_cast<u16>(std::ceil(new_val / 2.0f)));
+					// Get the min/max value of all pressed combos for this stick
+					const auto min_max_it = is_max
+						? std::max_element(pressed_combos.cbegin(), pressed_combos.cend(), [](const auto& a, const auto& b) { return a.second < b.second; })
+						: std::min_element(pressed_combos.cbegin(), pressed_combos.cend(), [](const auto& a, const auto& b) { return a.second < b.second; });
+
+					return std::pair(!pressed_combos.empty(), min_max_it->second);
 				};
 
 				if (is_max)
