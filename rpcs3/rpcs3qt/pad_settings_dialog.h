@@ -216,7 +216,7 @@ private:
 
 	std::pair<QStringList, QString> get_config_files();
 
-	void save(bool check_duplicates);
+	bool save(bool check_duplicates);
 	void SaveExit();
 	void CancelExit();
 

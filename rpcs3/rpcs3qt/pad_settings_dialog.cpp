@@ -2205,7 +2205,7 @@ void pad_settings_dialog::ApplyCurrentPlayerConfig(int new_player_id)
 	cfg.product_id.set(info.product_id);
 }
 
-void pad_settings_dialog::save(bool check_duplicates)
+bool pad_settings_dialog::save(bool check_duplicates)
 {
 	ApplyCurrentPlayerConfig(m_last_player_id);
 
@@ -2225,7 +2225,9 @@ void pad_settings_dialog::save(bool check_duplicates)
 					gui::ib_same_buttons, &result, this);
 
 				if (result == QMessageBox::No)
-					return;
+				{
+					return false;
+				}
 
 				break;
 			}
@@ -2238,13 +2240,16 @@ void pad_settings_dialog::save(bool check_duplicates)
 	g_cfg_input_configs.save();
 
 	g_cfg_input.save(m_title_id, m_config_file);
+
+	return true;
 }
 
 void pad_settings_dialog::SaveExit()
 {
-	save(true);
-
-	QDialog::accept();
+	if (save(true))
+	{
+		QDialog::accept();
+	}
 }
 
 void pad_settings_dialog::CancelExit()
