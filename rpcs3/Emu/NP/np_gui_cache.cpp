@@ -63,7 +63,7 @@ namespace np
 			np_gui_cache.error("Cache mismatch: tried to remove a member but it wasn't in the room");
 	}
 
-	error_code gui_cache_manager::get_room_member_list(const SceNpRoomId& room_id, u32 buf_len, vm::ptr<void> data)
+	error_code gui_cache_manager::get_room_member_list(const SceNpRoomId& room_id, u32 buf_len, vm::ptr<void> data) const
 	{
 		std::lock_guard lock(mutex);
 

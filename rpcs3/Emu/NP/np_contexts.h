@@ -20,12 +20,12 @@ struct generic_async_transaction_context
 
 	generic_async_transaction_context(const SceNpCommunicationId& communicationId, const SceNpCommunicationPassphrase& passphrase, u64 timeout);
 
-	std::optional<s32> get_transaction_status();
+	std::optional<s32> get_transaction_status() const;
 	void abort_transaction();
 	error_code wait_for_completion();
 	void set_result_and_wake(error_code err);
 
-	shared_mutex mutex;
+	mutable shared_mutex mutex;
 	std::condition_variable_any wake_cond, completion_cond;
 	std::optional<error_code> result;
 	SceNpCommunicationId communicationId;
