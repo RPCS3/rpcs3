@@ -8,14 +8,23 @@
 #include <QAudioOutput>
 #include <QFile>
 
-static video_source* s_audio_source = nullptr;
-static std::unique_ptr<QMediaPlayer> s_audio_player = nullptr;
-static std::unique_ptr<QAudioOutput> s_audio_output = nullptr;
-static std::unique_ptr<QBuffer> s_audio_buffer = nullptr;
-static std::unique_ptr<QByteArray> s_audio_data = nullptr;
+struct qt_audio_instance
+{
+	static constexpr u32 gui_index = 0;
+	static constexpr u32 emu_index = 1;
 
-qt_video_source::qt_video_source()
+	video_source* source = nullptr;
+	std::unique_ptr<QMediaPlayer> player;
+	std::unique_ptr<QAudioOutput> output;
+	std::unique_ptr<QBuffer> buffer;
+	std::unique_ptr<QByteArray> data;
+};
+
+static std::array<qt_audio_instance, 2> s_audio_instance = {};
+
+qt_video_source::qt_video_source(bool is_emulation)
 	: video_source()
+	, m_audio_instance_index(is_emulation ? qt_audio_instance::emu_index : qt_audio_instance::gui_index)
 {
 }
 
@@ -216,18 +225,21 @@ void qt_video_source::stop_movie()
 
 void qt_video_source::start_audio()
 {
-	if (m_audio_path.isEmpty() || s_audio_source == this) return;
+	if (m_audio_path.isEmpty()) return;
 
-	if (!s_audio_player)
+	qt_audio_instance& audio = ::at32(s_audio_instance, m_audio_instance_index);
+	if (audio.source == this) return;
+
+	if (!audio.player)
 	{
-		s_audio_output = std::make_unique<QAudioOutput>();
-		s_audio_player = std::make_unique<QMediaPlayer>();
-		s_audio_player->setAudioOutput(s_audio_output.get());
+		audio.output = std::make_unique<QAudioOutput>();
+		audio.player = std::make_unique<QMediaPlayer>();
+		audio.player->setAudioOutput(audio.output.get());
 	}
 
 	if (m_iso_path.empty())
 	{
-		s_audio_player->setSource(QUrl::fromLocalFile(m_audio_path));
+		audio.player->setSource(QUrl::fromLocalFile(m_audio_path));
 	}
 	else
 	{
@@ -236,18 +248,18 @@ void qt_video_source::start_audio()
 		const auto audio_size = audio_file.size();
 		if (audio_size == 0) return;
 
-		std::unique_ptr<QByteArray> old_audio_data = std::move(s_audio_data);
-		s_audio_data = std::make_unique<QByteArray>(audio_size, 0);
-		audio_file.read(s_audio_data->data(), audio_size);
+		std::unique_ptr<QByteArray> old_audio_data = std::move(audio.data);
+		audio.data = std::make_unique<QByteArray>(audio_size, 0);
+		audio_file.read(audio.data->data(), audio_size);
 
-		if (!s_audio_buffer)
+		if (!audio.buffer)
 		{
-			s_audio_buffer = std::make_unique<QBuffer>();
+			audio.buffer = std::make_unique<QBuffer>();
 		}
 
-		s_audio_buffer->setBuffer(s_audio_data.get());
-		s_audio_buffer->open(QIODevice::ReadOnly);
-		s_audio_player->setSourceDevice(s_audio_buffer.get());
+		audio.buffer->setBuffer(audio.data.get());
+		audio.buffer->open(QIODevice::ReadOnly);
+		audio.player->setSourceDevice(audio.buffer.get());
 
 		if (old_audio_data)
 		{
@@ -255,26 +267,27 @@ void qt_video_source::start_audio()
 		}
 	}
 
-	s_audio_output->setVolume(g_cfg.audio.volume.get() / 100.0f);
-	s_audio_player->play();
-	s_audio_source = this;
+	audio.output->setVolume(g_cfg.audio.volume.get() / 100.0f);
+	audio.player->play();
+	audio.source = this;
 }
 
 void qt_video_source::stop_audio()
 {
-	if (s_audio_source != this) return;
+	qt_audio_instance& audio = ::at32(s_audio_instance, m_audio_instance_index);
+	if (audio.source != this) return;
 
-	s_audio_source = nullptr;
+	audio.source = nullptr;
 
-	if (s_audio_player)
+	if (audio.player)
 	{
-		s_audio_player->stop();
-		s_audio_player.reset();
+		audio.player->stop();
+		audio.player.reset();
 	}
 
-	s_audio_output.reset();
-	s_audio_buffer.reset();
-	s_audio_data.reset();
+	audio.output.reset();
+	audio.buffer.reset();
+	audio.data.reset();
 }
 
 QPixmap qt_video_source::get_movie_image(const QVideoFrame& frame) const
@@ -331,14 +344,19 @@ qt_video_source_wrapper::~qt_video_source_wrapper()
 	});
 }
 
+void qt_video_source_wrapper::init_video_source()
+{
+	if (!m_qt_video_source)
+	{
+		m_qt_video_source = std::make_unique<qt_video_source>(true);
+	}
+}
+
 void qt_video_source_wrapper::set_video_path(const std::string& video_path)
 {
 	Emu.CallFromMainThread([this, path = video_path]()
 	{
-		if (!m_qt_video_source)
-		{
-			m_qt_video_source = std::make_unique<qt_video_source>();
-		}
+		init_video_source();
 
 		m_qt_video_source->m_image_change_callback = [this](const QVideoFrame& frame)
 		{
@@ -375,10 +393,7 @@ void qt_video_source_wrapper::set_audio_path(const std::string& audio_path)
 {
 	Emu.CallFromMainThread([this, path = audio_path]()
 	{
-		if (!m_qt_video_source)
-		{
-			m_qt_video_source = std::make_unique<qt_video_source>();
-		}
+		init_video_source();
 
 		m_qt_video_source->set_audio_path(path);
 	});

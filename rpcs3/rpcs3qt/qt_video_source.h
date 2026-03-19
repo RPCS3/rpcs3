@@ -14,7 +14,7 @@
 class qt_video_source : public video_source
 {
 public:
-	qt_video_source();
+	qt_video_source(bool is_emulation = false);
 	virtual ~qt_video_source();
 
 	void set_iso_path(const std::string& iso_path);
@@ -50,6 +50,7 @@ protected:
 
 	QString m_video_path;
 	QString m_audio_path;
+	u32 m_audio_instance_index = 0;
 	std::string m_iso_path; // path of the source archive
 	QByteArray m_video_data{};
 	QImage m_image{};
@@ -80,5 +81,7 @@ public:
 	void get_image(std::vector<u8>& data, int& w, int& h, int& ch, int& bpp) override;
 
 private:
+	void init_video_source();
+
 	std::unique_ptr<qt_video_source> m_qt_video_source;
 };
