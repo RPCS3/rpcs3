@@ -621,20 +621,23 @@ void game_list_frame::OnParsingFinished()
 			game.icon_in_archive = archive && archive->exists(game.info.icon_path);
 		}
 
-		if (std::string movie_path = game_icon_path + game.info.serial + "/hover.gif"; file_exists(movie_path))
+		if (play_hover_movies)
 		{
-			game.info.movie_path = std::move(movie_path);
-			game.has_hover_gif = true;
-		}
-		else if (std::string movie_path = sfo_dir + "/" + localized_movie; file_exists(movie_path))
-		{
-			game.info.movie_path = std::move(movie_path);
-			game.has_hover_pam = true;
-		}
-		else if (std::string movie_path = sfo_dir + "/ICON1.PAM"; file_exists(movie_path))
-		{
-			game.info.movie_path = std::move(movie_path);
-			game.has_hover_pam = true;
+			if (std::string movie_path = game_icon_path + game.info.serial + "/hover.gif"; file_exists(movie_path))
+			{
+				game.info.movie_path = std::move(movie_path);
+				game.has_hover_gif = true;
+			}
+			else if (std::string movie_path = sfo_dir + "/" + localized_movie; file_exists(movie_path))
+			{
+				game.info.movie_path = std::move(movie_path);
+				game.has_hover_pam = true;
+			}
+			else if (std::string movie_path = sfo_dir + "/ICON1.PAM"; file_exists(movie_path))
+			{
+				game.info.movie_path = std::move(movie_path);
+				game.has_hover_pam = true;
+			}
 		}
 
 		if (std::string audio_path = sfo_dir + "/SND0.AT3"; file_exists(audio_path))
