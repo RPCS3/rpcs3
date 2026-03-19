@@ -21,7 +21,7 @@ namespace rsx
 			std::vector<std::shared_ptr<overlay>> m_iface_list;
 			std::vector<std::shared_ptr<overlay>> m_dirty_list;
 
-			shared_mutex m_list_mutex;
+			mutable shared_mutex m_list_mutex;
 			lf_queue<u32> m_uids_to_remove;
 			lf_queue<u32> m_type_ids_to_remove;
 			atomic_t<u32> m_pending_removals_count = 0;
@@ -130,11 +130,11 @@ namespace rsx
 			void dispose(const std::vector<u32>& uids);
 
 			// Returns pointer to the object matching the given uid
-			std::shared_ptr<overlay> get(u32 uid);
+			std::shared_ptr<overlay> get(u32 uid) const;
 
 			// Returns pointer to the first object matching the given type
 			template <typename T>
-			std::shared_ptr<T> get()
+			std::shared_ptr<T> get() const
 			{
 				reader_lock lock(m_list_mutex);
 
