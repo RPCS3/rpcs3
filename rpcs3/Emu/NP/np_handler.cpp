@@ -1441,7 +1441,7 @@ namespace np
 		return req_id;
 	}
 
-	u32 np_handler::get_players_history_count(u32 options)
+	u32 np_handler::get_players_history_count(u32 options) const
 	{
 		const bool all_history = (options == SCE_NP_BASIC_PLAYERS_HISTORY_OPTIONS_ALL);
 
@@ -1459,7 +1459,7 @@ namespace np
 			}));
 	}
 
-	bool np_handler::get_player_history_entry(u32 options, u32 index, SceNpId* npid)
+	bool np_handler::get_player_history_entry(u32 options, u32 index, SceNpId* npid) const
 	{
 		const bool all_history = (options == SCE_NP_BASIC_PLAYERS_HISTORY_OPTIONS_ALL);
 
