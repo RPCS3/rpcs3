@@ -218,6 +218,7 @@ namespace rsx::assembler
 					// Empty IF block. We co-opt the ELSE block as the IF and invert the condition.
 					auto& inst = parent->instructions.back();
 					FP::invert_conditional_execution_mask(&inst);
+					rsx_log.warning("CFG: Condition at L%u was inverted to cover empty IF block.");
 				}
 				else if (end_addr != else_addr)
 				{
