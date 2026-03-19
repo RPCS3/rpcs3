@@ -3180,7 +3180,7 @@ namespace rpcn
 		}
 	}
 
-	std::optional<shared_ptr<std::pair<std::string, message_data>>> rpcn_client::get_message(u64 id)
+	std::optional<shared_ptr<std::pair<std::string, message_data>>> rpcn_client::get_message(u64 id) const
 	{
 		{
 			std::lock_guard lock(mutex_messages);
@@ -3238,21 +3238,21 @@ namespace rpcn
 		active_messages.erase(id);
 	}
 
-	u32 rpcn_client::get_num_friends()
+	u32 rpcn_client::get_num_friends() const
 	{
 		std::lock_guard lock(mutex_friends);
 
 		return ::size32(friend_infos.friends);
 	}
 
-	u32 rpcn_client::get_num_blocks()
+	u32 rpcn_client::get_num_blocks() const
 	{
 		std::lock_guard lock(mutex_friends);
 
 		return ::size32(friend_infos.blocked);
 	}
 
-	std::optional<std::string> rpcn_client::get_friend_by_index(u32 index)
+	std::optional<std::string> rpcn_client::get_friend_by_index(u32 index) const
 	{
 		std::lock_guard lock(mutex_friends);
 
@@ -3270,7 +3270,7 @@ namespace rpcn
 		return it->first;
 	}
 
-	std::optional<std::pair<std::string, friend_online_data>> rpcn_client::get_friend_presence_by_index(u32 index)
+	std::optional<std::pair<std::string, friend_online_data>> rpcn_client::get_friend_presence_by_index(u32 index) const
 	{
 		std::lock_guard lock(mutex_friends);
 
@@ -3284,7 +3284,7 @@ namespace rpcn
 		return std::optional(*it);
 	}
 
-	std::optional<std::pair<std::string, friend_online_data>> rpcn_client::get_friend_presence_by_npid(const std::string& npid)
+	std::optional<std::pair<std::string, friend_online_data>> rpcn_client::get_friend_presence_by_npid(const std::string& npid) const
 	{
 		std::lock_guard lock(mutex_friends);
 		const auto it = friend_infos.friends.find(npid);

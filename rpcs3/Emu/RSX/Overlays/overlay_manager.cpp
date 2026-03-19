@@ -68,7 +68,7 @@ namespace rsx
 			m_list_mutex.unlock_shared();
 		}
 
-		std::shared_ptr<overlay> display_manager::get(u32 uid)
+		std::shared_ptr<overlay> display_manager::get(u32 uid) const
 		{
 			reader_lock lock(m_list_mutex);
 
