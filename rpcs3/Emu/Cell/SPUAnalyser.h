@@ -13,6 +13,7 @@ struct spu_itype
 	static constexpr struct quadrop_tag{} _quadrop{}; // 4-op Instructions
 	static constexpr struct xfloat_tag{} xfloat{}; // Instructions producing xfloat values
 	static constexpr struct zregmod_tag{} zregmod{}; // Instructions not modifying any GPR
+	static constexpr struct pure_tag{} pure{}; // Instructions that always produce the same values as long as arguments are equal
 
 	enum class type : unsigned char
 	{
@@ -300,6 +301,12 @@ struct spu_itype
 	friend constexpr bool operator &(type value, zregmod_tag)
 	{
 		return (value >= HEQ && value <= STQR) || (value >= BR && value <= BIHNZ);
+	}
+
+	// Test for instructions which always produce the same values as long as arguments and immediate values are equal
+	friend constexpr bool operator &(type value, pure_tag)
+	{
+		return (value >= ILH && value <= CLGTI);
 	}
 };
 
