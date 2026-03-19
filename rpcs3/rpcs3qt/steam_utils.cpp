@@ -346,7 +346,9 @@ namespace gui::utils
 				const auto launch_options = entry.value<std::string>("LaunchOptions");
 				const auto icon = entry.value<std::string>("icon");
 
-				if (appid.has_value() && appid.value() == it->appid &&
+				const bool appid_matches = appid.has_value() && appid.value() == it->appid;
+
+				if (appid_matches &&
 					exe.has_value() && exe.value() == it->exe &&
 					start_dir.has_value() && start_dir.value() == it->start_dir &&
 					launch_options.has_value() && launch_options.value() == it->launch_options &&
@@ -357,6 +359,11 @@ namespace gui::utils
 				}
 				else
 				{
+					if (appid_matches)
+					{
+						sys_log.notice("Entry '%s' already exists in steam shortcut file '%s' but with other parameters. Creating an additional one...", it->app_name, file_path);
+					}
+
 					it++;
 				}
 			}
@@ -369,7 +376,7 @@ namespace gui::utils
 
 		if (m_entries_to_add.empty() && removed_entries.empty())
 		{
-			sys_log.notice("No matching entries found in steam shortcut file '%s'.", file_path);
+			sys_log.notice("Nothing to add or remove in steam shortcut file '%s'.", file_path);
 			return true;
 		}
 
