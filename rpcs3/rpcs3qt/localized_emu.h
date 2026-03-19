@@ -255,6 +255,7 @@ private:
 		case localized_string_id::HOME_MENU_SETTINGS_ADVANCED_MAX_CPU_PREEMPTIONS: return tr("Max Power Saving CPU-Preemptions", "Advanced");
 		case localized_string_id::HOME_MENU_SETTINGS_ADVANCED_ACCURATE_RSX_RESERVATION_ACCESS: return tr("Accurate RSX reservation access", "Advanced");
 		case localized_string_id::HOME_MENU_SETTINGS_ADVANCED_SLEEP_TIMERS_ACCURACY: return tr("Sleep Timers Accuracy", "Advanced");
+		case localized_string_id::HOME_MENU_SETTINGS_ADVANCED_RSX_MEMORY_TILING: return tr("Handle RSX Memory Tiling", "Advanced");
 		case localized_string_id::HOME_MENU_SETTINGS_ADVANCED_MAX_SPURS_THREADS: return tr("Max SPURS Threads", "Advanced");
 		case localized_string_id::HOME_MENU_SETTINGS_ADVANCED_DRIVER_WAKE_UP_DELAY: return tr("Driver Wake-Up Delay", "Advanced");
 		case localized_string_id::HOME_MENU_SETTINGS_ADVANCED_VBLANK_FREQUENCY: return tr("VBlank Frequency", "Advanced");
