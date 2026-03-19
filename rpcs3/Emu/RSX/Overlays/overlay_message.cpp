@@ -31,7 +31,7 @@ namespace rsx
 			m_visible_duration = expiration;
 			m_refs = std::move(refs);
 
-			m_text.set_font("Arial", 14);
+			m_text.set_font("Arial", 12);
 			m_text.set_text(msg_id);
 			m_text.set_padding(4, 8, 4, 8);
 			m_text.auto_resize();
