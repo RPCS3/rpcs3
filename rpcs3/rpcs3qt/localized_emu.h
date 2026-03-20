@@ -181,6 +181,8 @@ private:
 		case localized_string_id::CELL_NP_SENDMESSAGE_DIALOG_CONFIRMATION: return tr("Send message to %0 ?\n\nSubject:", "SENDMESSAGE_DIALOG").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_NP_SENDMESSAGE_DIALOG_CONFIRMATION_INVITE: return tr("Send invite to %0 ?\n\nSubject:", "SENDMESSAGE_DIALOG").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_NP_SENDMESSAGE_DIALOG_CONFIRMATION_ADD_FRIEND: return tr("Send friend request to %0 ?\n\nSubject:", "SENDMESSAGE_DIALOG").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_NP_MESSAGE_INVITE_RECEIVED: return tr("Received an invite from %0").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_NP_MESSAGE_OTHER_RECEIVED: return tr("Received a message from %0").arg(std::forward<Args>(args)...);
 		case localized_string_id::RECORDING_ABORTED: return tr("Recording aborted!");
 		case localized_string_id::RPCN_NO_ERROR: return tr("RPCN: No Error");
 		case localized_string_id::RPCN_ERROR_INVALID_INPUT: return tr("RPCN: Invalid Input (Wrong Host/Port)");
