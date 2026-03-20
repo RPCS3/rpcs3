@@ -134,7 +134,6 @@ protected:
 private:
 	void ConfigureGuiFromSettings();
 	void RepaintToolBarIcons();
-	void RepaintThumbnailIcons();
 	void CreateActions();
 	void CreateConnects();
 	void CreateDockWindows();
