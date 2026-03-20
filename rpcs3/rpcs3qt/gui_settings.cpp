@@ -17,6 +17,7 @@ namespace gui
 {
 	QString stylesheet;
 	bool custom_stylesheet_active = false;
+	f32 volume = 1.0f;
 
 	QString get_savestate_list_column_name(savestate_list_columns col)
 	{

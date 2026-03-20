@@ -3675,6 +3675,8 @@ void main_window::ConfigureGuiFromSettings()
 	m_recent_game.entries = gui_settings::Var2List(m_gui_settings->GetValue(gui::rg_entries));
 	m_recent_save.entries = gui_settings::Var2List(m_gui_settings->GetValue(gui::rs_entries));
 
+	gui::volume = std::clamp(m_gui_settings->GetValue(gui::gui_volume).toFloat() * 100.0f, 0.0f, 100.0f);
+
 	const auto update_recent_games_menu = [this](bool is_savestate)
 	{
 		recent_game_wrapper& rgw = is_savestate ? m_recent_save : m_recent_game;
