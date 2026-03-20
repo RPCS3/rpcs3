@@ -215,6 +215,7 @@ void game_list_frame::LoadSettings()
 	m_prefer_game_data_icons = m_gui_settings->GetValue(gui::gl_pref_gd_icon).toBool();
 	m_show_custom_icons = m_gui_settings->GetValue(gui::gl_custom_icon).toBool();
 	m_play_hover_movies = m_gui_settings->GetValue(gui::gl_hover_gifs).toBool();
+	m_play_hover_music = m_gui_settings->GetValue(gui::gl_hover_music).toBool();
 
 	m_game_list->sync_header_actions(m_column_acts, [this](int col) { return m_gui_settings->GetGamelistColVisibility(static_cast<gui::game_list_columns>(col)); });
 }
@@ -482,7 +483,7 @@ void game_list_frame::Refresh(const bool from_drive, const std::vector<std::stri
 	{
 		m_game_grid->clear_list();
 		const int scroll_position = m_game_list->verticalScrollBar()->value();
-		m_game_list->populate(matching_apps, m_notes, m_titles, selected_items, m_play_hover_movies);
+		m_game_list->populate(matching_apps, m_notes, m_titles, selected_items, m_play_hover_movies, m_play_hover_music);
 		m_game_list->sort(m_game_data.size(), m_sort_column, m_col_sort_order);
 		RepaintIcons();
 
@@ -498,7 +499,7 @@ void game_list_frame::Refresh(const bool from_drive, const std::vector<std::stri
 	else
 	{
 		m_game_list->clear_list();
-		m_game_grid->populate(matching_apps, m_notes, m_titles, selected_items, m_play_hover_movies);
+		m_game_grid->populate(matching_apps, m_notes, m_titles, selected_items, m_play_hover_movies, m_play_hover_music);
 		RepaintIcons();
 	}
 }
@@ -521,7 +522,10 @@ void game_list_frame::OnParsingFinished()
 	const std::string localized_icon = fmt::format("ICON0_%02d.PNG", language_index);
 	const std::string localized_movie = fmt::format("ICON1_%02d.PAM", language_index);
 
-	const auto add_game = [this, localized_title, localized_icon, localized_movie, dev_flash, cat_unknown_localized = localized.category.unknown.toStdString(), cat_unknown = cat::cat_unknown.toStdString(), game_icon_path, _hdd, play_hover_movies = m_play_hover_movies, show_custom_icons = m_show_custom_icons](const std::string& dir_or_elf)
+	const auto add_game = [this, localized_title, localized_icon, localized_movie, dev_flash, game_icon_path, _hdd,
+	                       cat_unknown_localized = localized.category.unknown.toStdString(), cat_unknown = cat::cat_unknown.toStdString(),
+	                       play_hover_movies = m_play_hover_movies, play_hover_music = m_play_hover_music, show_custom_icons = m_show_custom_icons]
+	                       (const std::string& dir_or_elf)
 	{
 		std::unique_ptr<iso_archive> archive;
 		if (is_file_iso(dir_or_elf))
@@ -640,10 +644,13 @@ void game_list_frame::OnParsingFinished()
 			}
 		}
 
-		if (std::string audio_path = sfo_dir + "/SND0.AT3"; file_exists(audio_path))
+		if (play_hover_music)
 		{
-			game.info.audio_path = std::move(audio_path);
-			game.has_audio_file = true;
+			if (std::string audio_path = sfo_dir + "/SND0.AT3"; file_exists(audio_path))
+			{
+				game.info.audio_path = std::move(audio_path);
+				game.has_audio_file = true;
+			}
 		}
 
 		const QString serial = QString::fromStdString(game.info.serial);
@@ -1390,6 +1397,16 @@ void game_list_frame::SetPlayHoverGifs(bool play)
 	{
 		m_play_hover_movies = play;
 		m_gui_settings->SetValue(gui::gl_hover_gifs, play);
+		Refresh(true);
+	}
+}
+
+void game_list_frame::SetPlayHoverMusic(bool play)
+{
+	if (m_play_hover_music != play)
+	{
+		m_play_hover_music = play;
+		m_gui_settings->SetValue(gui::gl_hover_music, play);
 		Refresh(true);
 	}
 }

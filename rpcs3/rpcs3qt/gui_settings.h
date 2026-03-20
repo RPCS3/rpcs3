@@ -217,6 +217,7 @@ namespace gui
 	const gui_save gl_pref_gd_icon = gui_save(game_list, "pref_gd_icon", false);
 	const gui_save gl_custom_icon  = gui_save(game_list, "custom_icon",  true);
 	const gui_save gl_hover_gifs   = gui_save(game_list, "hover_gifs",   true);
+	const gui_save gl_hover_music  = gui_save(game_list, "hover_music",  true);
 
 	const gui_save fs_emulator_dir_list = gui_save(fs, "emulator_dir_list", QStringList());
 	const gui_save fs_dev_hdd0_list     = gui_save(fs, "dev_hdd0_list",     QStringList());

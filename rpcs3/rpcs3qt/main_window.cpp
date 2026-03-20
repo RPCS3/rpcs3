@@ -3424,6 +3424,7 @@ void main_window::CreateConnects()
 	connect(ui->actionPreferGameDataIcons, &QAction::triggered, m_game_list_frame, &game_list_frame::SetPreferGameDataIcons);
 	connect(ui->showCustomIconsAct, &QAction::triggered, m_game_list_frame, &game_list_frame::SetShowCustomIcons);
 	connect(ui->playHoverGifsAct, &QAction::triggered, m_game_list_frame, &game_list_frame::SetPlayHoverGifs);
+	connect(ui->playHoverMusicAct, &QAction::triggered, m_game_list_frame, &game_list_frame::SetPlayHoverMusic);
 
 	connect(m_game_list_frame, &game_list_frame::RequestIconSizeChange, this, [this](int val)
 	{
@@ -3730,6 +3731,7 @@ void main_window::ConfigureGuiFromSettings()
 	ui->actionPreferGameDataIcons->setChecked(m_gui_settings->GetValue(gui::gl_pref_gd_icon).toBool());
 	ui->showCustomIconsAct->setChecked(m_gui_settings->GetValue(gui::gl_custom_icon).toBool());
 	ui->playHoverGifsAct->setChecked(m_gui_settings->GetValue(gui::gl_hover_gifs).toBool());
+	ui->playHoverMusicAct->setChecked(m_gui_settings->GetValue(gui::gl_hover_music).toBool());
 
 	m_is_list_mode = m_gui_settings->GetValue(gui::gl_listMode).toBool();
 
