@@ -13,6 +13,7 @@ namespace gui
 {
 	extern QString stylesheet;
 	extern bool custom_stylesheet_active;
+	extern f32 volume;
 
 	enum custom_roles
 	{
@@ -138,6 +139,8 @@ namespace gui
 	const QString update_bkg  = "background";
 
 	const QColor gl_icon_color = QColor(240, 240, 240, 255);
+
+	const gui_save gui_volume = gui_save(main_window, "guiVolume", 1.0f);
 
 	const gui_save rg_freeze  = gui_save(main_window, "recentGamesFrozen", false);
 	const gui_save rg_entries = gui_save(main_window, "recentGamesNames",  QVariant::fromValue(q_pair_list()));

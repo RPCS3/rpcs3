@@ -1,7 +1,9 @@
 #include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
+#include "Emu/Audio/audio_utils.h"
 #include "qt_video_source.h"
+#include "gui_settings.h"
 
 #include "Loader/ISO.h"
 
@@ -267,7 +269,14 @@ void qt_video_source::start_audio()
 		}
 	}
 
-	audio.output->setVolume(g_cfg.audio.volume.get() / 100.0f);
+	f32 volume = gui::volume;
+
+	if (m_audio_instance_index == qt_audio_instance::emu_index)
+	{
+		volume = audio::get_volume();
+	}
+
+	audio.output->setVolume(std::clamp(volume, 0.0f, 1.0f));
 	audio.player->play();
 	audio.source = this;
 }
