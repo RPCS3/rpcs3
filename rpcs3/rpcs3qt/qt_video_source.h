@@ -10,6 +10,7 @@
 #include <QVideoSink>
 #include <QVideoFrame>
 #include <QPixmap>
+#include <QTimer>
 
 class qt_video_source : public video_source
 {
@@ -29,6 +30,7 @@ public:
 	void set_active(bool active) override;
 	bool get_active() const override { return m_active; }
 
+	void start_movie_timer();
 	void start_movie();
 	void stop_movie();
 
@@ -51,11 +53,13 @@ protected:
 	QString m_video_path;
 	QString m_audio_path;
 	u32 m_audio_instance_index = 0;
+	u32 m_video_timer_timeout_ms = 0;
 	std::string m_iso_path; // path of the source archive
 	QByteArray m_video_data{};
 	QImage m_image{};
 	std::vector<u8> m_image_path;
 
+	std::unique_ptr<QTimer> m_video_timer;
 	std::unique_ptr<QBuffer> m_video_buffer;
 	std::unique_ptr<QMediaPlayer> m_media_player;
 	std::unique_ptr<QVideoSink> m_video_sink;
