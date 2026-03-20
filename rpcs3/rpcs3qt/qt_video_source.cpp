@@ -27,6 +27,7 @@ static std::array<qt_audio_instance, 2> s_audio_instance = {};
 qt_video_source::qt_video_source(bool is_emulation)
 	: video_source()
 	, m_audio_instance_index(is_emulation ? qt_audio_instance::emu_index : qt_audio_instance::gui_index)
+	, m_video_timer_timeout_ms(is_emulation ? 0 : 1000)
 {
 }
 
@@ -56,7 +57,7 @@ void qt_video_source::set_active(bool active)
 
 	if (active)
 	{
-		start_movie();
+		start_movie_timer();
 	}
 	else
 	{
@@ -187,6 +188,27 @@ void qt_video_source::init_movie()
 	}
 }
 
+void qt_video_source::start_movie_timer()
+{
+	if (m_video_timer_timeout_ms == 0)
+	{
+		start_movie();
+		return;
+	}
+
+	if (!m_video_timer)
+	{
+		m_video_timer = std::make_unique<QTimer>();
+		QObject::connect(m_video_timer.get(), &QTimer::timeout, m_video_timer.get(), [this]()
+		{
+			if (!m_active) return;
+			start_movie();
+		});
+	}
+
+	m_video_timer->start(m_video_timer_timeout_ms);
+}
+
 void qt_video_source::start_movie()
 {
 	init_movie();
@@ -210,6 +232,7 @@ void qt_video_source::start_movie()
 void qt_video_source::stop_movie()
 {
 	m_active = false;
+	m_video_timer.reset();
 
 	if (m_movie)
 	{
