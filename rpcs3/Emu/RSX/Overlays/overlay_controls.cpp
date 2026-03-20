@@ -407,12 +407,6 @@ namespace rsx
 
 		void overlay_element::set_text(localized_string_id id)
 		{
-			if (id == localized_string_id::INVALID)
-			{
-				set_text("");
-				return;
-			}
-
 			set_unicode_text(get_localized_u32string(id));
 		}
 

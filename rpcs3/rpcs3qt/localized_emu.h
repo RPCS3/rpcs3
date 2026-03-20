@@ -38,6 +38,7 @@ private:
 	{
 		switch (id)
 		{
+		case localized_string_id::RSX_OVERLAYS_SPINNER_NO_TEXT: return "";
 		case localized_string_id::RSX_OVERLAYS_TROPHY_BRONZE: return tr("You have earned a bronze trophy.\n%0", "Trophy text").arg(std::forward<Args>(args)...);
 		case localized_string_id::RSX_OVERLAYS_TROPHY_SILVER: return tr("You have earned a silver trophy.\n%0", "Trophy text").arg(std::forward<Args>(args)...);
 		case localized_string_id::RSX_OVERLAYS_TROPHY_GOLD: return tr("You have earned a gold trophy.\n%0", "Trophy text").arg(std::forward<Args>(args)...);
