@@ -185,6 +185,7 @@ namespace rsx
 			add_unsigned_slider(&g_cfg.video.driver_wakeup_delay, localized_string_id::HOME_MENU_SETTINGS_ADVANCED_DRIVER_WAKE_UP_DELAY, " µs", 20, {}, {}, g_cfg.video.driver_wakeup_delay.min, 800);
 			add_signed_slider(&g_cfg.video.vblank_rate, localized_string_id::HOME_MENU_SETTINGS_ADVANCED_VBLANK_FREQUENCY, " Hz", 30, {}, 30);
 			add_checkbox(&g_cfg.video.vblank_ntsc, localized_string_id::HOME_MENU_SETTINGS_ADVANCED_VBLANK_NTSC);
+			add_checkbox(&g_cfg.video.handle_tiled_memory, localized_string_id::HOME_MENU_SETTINGS_ADVANCED_RSX_MEMORY_TILING);
 
 			apply_layout();
 		}
