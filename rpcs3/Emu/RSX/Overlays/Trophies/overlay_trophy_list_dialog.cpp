@@ -2,6 +2,7 @@
 #include "../overlay_manager.h"
 #include "overlay_trophy_list_dialog.h"
 #include "Emu/Cell/Modules/sceNpTrophy.h"
+#include "Emu/system_config.h"
 #include "Emu/System.h"
 #include "Emu/VFS.h"
 
@@ -58,11 +59,11 @@ namespace rsx
 
 			padding->set_size(1, 1);
 			header_text->set_size(800, 40);
-			header_text->set_font("Arial", 16);
+			header_text->set_font(g_cfg.video.ui.font.to_string(), 16);
 			header_text->set_wrap_text(true);
 
 			subtext->set_size(800, 0);
-			subtext->set_font("Arial", 14);
+			subtext->set_font(g_cfg.video.ui.font.to_string(), 14);
 			subtext->set_wrap_text(true);
 			static_cast<label*>(subtext.get())->auto_resize(true);
 
@@ -97,7 +98,7 @@ namespace rsx
 			m_dim_background->back_color.a = 0.9f;
 
 			m_description = std::make_unique<label>();
-			m_description->set_font("Arial", 20);
+			m_description->set_font(g_cfg.video.ui.font.to_string(), 20);
 			m_description->set_pos(20, 37);
 			m_description->set_text("Select trophy"); // Fallback. I don't think this will ever be used, so I won't localize it.
 			m_description->auto_resize();
@@ -108,7 +109,7 @@ namespace rsx
 			m_show_hidden_trophies_button->set_image_resource(resource_config::standard_image_resource::square);
 			m_show_hidden_trophies_button->set_size(120, 30);
 			m_show_hidden_trophies_button->set_pos(180, trophy_list_y + trophy_list_h + 20);
-			m_show_hidden_trophies_button->set_font("Arial", 16);
+			m_show_hidden_trophies_button->set_font(g_cfg.video.ui.font.to_string(), 16);
 
 			fade_animation.duration_sec = 0.15f;
 

@@ -221,6 +221,13 @@ struct cfg_root : cfg::node
 
 		} perf_overlay{ this };
 
+		struct native_ui : cfg::node
+		{
+			native_ui(cfg::node* _this) : cfg::node(_this, "Native UI") {}
+
+			cfg::string font{ this, "Font", "Arial", false };
+		} ui{ this };
+
 		struct node_shader_preloading_dialog : cfg::node
 		{
 			node_shader_preloading_dialog(cfg::node* _this) : cfg::node(_this, "Shader Loading Dialog") {}

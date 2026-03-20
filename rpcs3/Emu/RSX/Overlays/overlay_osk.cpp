@@ -473,7 +473,7 @@ namespace rsx
 			{
 				if (const font* fnt = elem.get_font())
 				{
-					elem.set_font(fnt->get_name().data(), get_scaled(fnt->get_size_pt()));
+					elem.set_font(fnt->get_name(), get_scaled(fnt->get_size_pt()));
 				}
 			};
 
@@ -1250,7 +1250,7 @@ namespace rsx
 				{
 					if (const font* fnt = elem.get_font())
 					{
-						elem.set_font(fnt->get_name().data(), get_scaled(fnt->get_size_pt()));
+						elem.set_font(fnt->get_name(), get_scaled(fnt->get_size_pt()));
 					}
 				};
 				scale_font(label);

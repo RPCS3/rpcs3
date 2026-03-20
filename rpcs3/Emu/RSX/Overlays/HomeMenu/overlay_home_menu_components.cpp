@@ -13,7 +13,7 @@ namespace rsx
 
 			padding->set_size(1, 1);
 			title->set_size(width, menu_entry_height);
-			title->set_font("Arial", 14);
+			title->set_font(g_cfg.video.ui.font.to_string(), 14);
 			title->set_wrap_text(true);
 			title->align_text(alignment);
 

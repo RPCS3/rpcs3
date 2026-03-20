@@ -17,7 +17,7 @@ namespace rsx
 			set_pos(x, y);
 
 			m_label.align_text(text_align::center);
-			m_label.set_font("Arial", 16);
+			m_label.set_font(g_cfg.video.ui.font.to_string(), 16);
 			m_label.back_color.a = 0.0f;
 
 			if (g_cfg.sys.enter_button_assignment == enter_button_assign::circle)
@@ -37,8 +37,8 @@ namespace rsx
 			m_accept_btn.set_text(localized_string_id::RSX_OVERLAYS_LIST_SELECT);
 			m_cancel_btn.set_text(localized_string_id::RSX_OVERLAYS_LIST_CANCEL);
 
-			m_accept_btn.set_font("Arial", 16);
-			m_cancel_btn.set_font("Arial", 16);
+			m_accept_btn.set_font(g_cfg.video.ui.font.to_string(), 16);
+			m_cancel_btn.set_font(g_cfg.video.ui.font.to_string(), 16);
 		}
 
 		compiled_resource& home_menu_message_box::get_compiled()

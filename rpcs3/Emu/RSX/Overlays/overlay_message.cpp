@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "overlay_message.h"
 #include "Emu/Cell/timers.hpp"
+#include "Emu/system_config.h"
 
 namespace rsx
 {
@@ -31,7 +32,7 @@ namespace rsx
 			m_visible_duration = expiration;
 			m_refs = std::move(refs);
 
-			m_text.set_font("Arial", 12);
+			m_text.set_font(g_cfg.video.ui.font.to_string(), 12);
 			m_text.set_text(msg_id);
 			m_text.set_padding(4, 8, 4, 8);
 			m_text.auto_resize();

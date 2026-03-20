@@ -52,7 +52,7 @@ namespace rsx
 				m_deny_btn->set_image_resource(resource_config::standard_image_resource::triangle);
 				m_deny_btn->set_pos(180, height + 20);
 				m_deny_btn->set_text(localized_string_id::RSX_OVERLAYS_LIST_DENY);
-				m_deny_btn->set_font("Arial", 16);
+				m_deny_btn->set_font(g_cfg.video.ui.font.to_string(), 16);
 
 				m_cancel_btn->set_pos(330, height + 20);
 			}
@@ -64,8 +64,8 @@ namespace rsx
 			m_accept_btn->set_text(localized_string_id::RSX_OVERLAYS_LIST_SELECT);
 			m_cancel_btn->set_text(localized_string_id::RSX_OVERLAYS_LIST_CANCEL);
 
-			m_accept_btn->set_font("Arial", 16);
-			m_cancel_btn->set_font("Arial", 16);
+			m_accept_btn->set_font(g_cfg.video.ui.font.to_string(), 16);
+			m_cancel_btn->set_font(g_cfg.video.ui.font.to_string(), 16);
 
 			auto_resize = false;
 			back_color  = {0.15f, 0.15f, 0.15f, 0.8f};

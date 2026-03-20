@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "../overlay_manager.h"
 #include "overlay_sendmessage_dialog.h"
+#include "Emu/system_config.h"
 #include "Emu/System.h"
 #include "Emu/NP/rpcn_client.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
@@ -26,7 +27,7 @@ namespace rsx
 
 			padding->set_size(1, 1);
 			text_label->set_size(800, 40);
-			text_label->set_font("Arial", 16);
+			text_label->set_font(g_cfg.video.ui.font.to_string(), 16);
 			text_label->set_wrap_text(true);
 
 			// Make back color transparent for text
@@ -48,7 +49,7 @@ namespace rsx
 			m_dim_background->back_color.a = 0.5f;
 
 			m_description = std::make_unique<label>();
-			m_description->set_font("Arial", 20);
+			m_description->set_font(g_cfg.video.ui.font.to_string(), 20);
 			m_description->set_pos(20, 37);
 			m_description->set_text(get_localized_string(localized_string_id::CELL_NP_SENDMESSAGE_DIALOG_TITLE));
 			m_description->auto_resize();

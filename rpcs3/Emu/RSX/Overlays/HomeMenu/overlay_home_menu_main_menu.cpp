@@ -192,7 +192,7 @@ namespace rsx
 		{
 			auto label_widget = std::make_unique<label>(title.data());
 			label_widget->set_size(m_sidebar->w, 60);
-			label_widget->set_font("Arial", 16);
+			label_widget->set_font(g_cfg.video.ui.font.to_string(), 16);
 			label_widget->back_color.a = 0.f;
 			label_widget->set_margin(8, 0);
 			label_widget->set_padding(16, 4, 16, 4);

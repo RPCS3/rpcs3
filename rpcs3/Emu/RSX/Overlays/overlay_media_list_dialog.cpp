@@ -3,6 +3,7 @@
 #include "overlay_manager.h"
 #include "overlay_media_list_dialog.h"
 
+#include "Emu/system_config.h"
 #include "Emu/Cell/Modules/cellMusic.h"
 #include "Emu/VFS.h"
 #include "Utilities/StrUtil.h"
@@ -115,11 +116,11 @@ namespace rsx
 
 			padding->set_size(1, 1);
 			header_text->set_size(800, 40);
-			header_text->set_font("Arial", 16);
+			header_text->set_font(g_cfg.video.ui.font.to_string(), 16);
 			header_text->set_wrap_text(true);
 
 			subtext->set_size(800, 0);
-			subtext->set_font("Arial", 14);
+			subtext->set_font(g_cfg.video.ui.font.to_string(), 14);
 			subtext->set_wrap_text(true);
 			static_cast<label*>(subtext.get())->auto_resize(true);
 
@@ -152,7 +153,7 @@ namespace rsx
 			m_dim_background->back_color.a = 0.5f;
 
 			m_description = std::make_unique<label>();
-			m_description->set_font("Arial", 20);
+			m_description->set_font(g_cfg.video.ui.font.to_string(), 20);
 			m_description->set_pos(20, 37);
 			m_description->set_text("Select media"); // Fallback. I don't think this will ever be used, so I won't localize it.
 			m_description->auto_resize();
@@ -315,7 +316,7 @@ namespace rsx
 			if (m_list->m_items.empty())
 			{
 				m_no_media_text = std::make_unique<label>(get_localized_string(localized_string_id::RSX_OVERLAYS_MEDIA_DIALOG_EMPTY));
-				m_no_media_text->set_font("Arial", 20);
+				m_no_media_text->set_font(g_cfg.video.ui.font.to_string(), 20);
 				m_no_media_text->align_text(overlay_element::text_align::center);
 				m_no_media_text->set_pos(m_list->x, m_list->y + m_list->h / 2);
 				m_no_media_text->set_size(m_list->w, 30);

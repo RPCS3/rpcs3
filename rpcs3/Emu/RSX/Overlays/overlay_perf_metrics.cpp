@@ -443,7 +443,7 @@ namespace rsx
 					const float elapsed_frame = static_cast<float>(m_frametime_timer.GetElapsedTimeInMilliSec());
 					m_frametime_timer.Start();
 					m_frametime_graph.record_datapoint(elapsed_frame, do_update);
-					m_frametime_graph.set_title(fmt::format("Frametime: %4.1f", elapsed_frame).c_str());
+					m_frametime_graph.set_title(fmt::format("Frametime: %4.1f", elapsed_frame));
 				}
 
 				if (m_force_repaint)
@@ -518,7 +518,7 @@ namespace rsx
 						if (m_is_initialised && m_framerate_graph_enabled)
 						{
 							m_fps_graph.record_datapoint(m_fps, true);
-							m_fps_graph.set_title(fmt::format("Framerate: %04.1f", m_fps).c_str());
+							m_fps_graph.set_title(fmt::format("Framerate: %04.1f", m_fps));
 						}
 						break;
 					}
@@ -657,19 +657,19 @@ namespace rsx
 			overlay_element::set_size(_w, _h);
 		}
 
-		void graph::set_title(const char* title)
+		void graph::set_title(std::string&& title)
 		{
-			m_title = title;
+			m_title = std::move(title);
 		}
 
-		void graph::set_font(const char* font_name, u16 font_size)
+		void graph::set_font(std::string_view font_name, u16 font_size)
 		{
 			m_label.set_font(font_name, font_size);
 		}
 
 		void graph::set_font_size(u16 font_size)
 		{
-			const auto font_name = m_label.get_font()->get_name().data();
+			const auto font_name = m_label.get_font()->get_name();
 			m_label.set_font(font_name, font_size);
 		}
 

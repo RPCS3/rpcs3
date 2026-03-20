@@ -22,7 +22,7 @@ namespace rsx
 
 			text_display.set_size(1100, 40);
 			text_display.set_pos(90, 364);
-			text_display.set_font("Arial", 16);
+			text_display.set_font(g_cfg.video.ui.font.to_string(), 16);
 			text_display.align_text(overlay_element::text_align::center);
 			text_display.set_wrap_text(true);
 			text_display.back_color.a = 0.f;
@@ -40,12 +40,12 @@ namespace rsx
 			btn_ok.set_text(localized_string_id::RSX_OVERLAYS_MSG_DIALOG_YES);
 			btn_ok.set_size(140, 30);
 			btn_ok.set_pos(545, 420);
-			btn_ok.set_font("Arial", 16);
+			btn_ok.set_font(g_cfg.video.ui.font.to_string(), 16);
 
 			btn_cancel.set_text(localized_string_id::RSX_OVERLAYS_MSG_DIALOG_NO);
 			btn_cancel.set_size(140, 30);
 			btn_cancel.set_pos(685, 420);
-			btn_cancel.set_font("Arial", 16);
+			btn_cancel.set_font(g_cfg.video.ui.font.to_string(), 16);
 
 			if (g_cfg.sys.enter_button_assignment == enter_button_assign::circle)
 			{

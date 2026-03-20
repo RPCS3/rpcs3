@@ -39,9 +39,9 @@ namespace rsx
 			m_save_btn.set_text(localized_string_id::HOME_MENU_SETTINGS_SAVE_BUTTON);
 			m_discard_btn.set_text(localized_string_id::HOME_MENU_SETTINGS_DISCARD_BUTTON);
 
-			m_reset_btn.set_font("Arial", 16);
-			m_save_btn.set_font("Arial", 16);
-			m_discard_btn.set_font("Arial", 16);
+			m_reset_btn.set_font(g_cfg.video.ui.font.to_string(), 16);
+			m_save_btn.set_font(g_cfg.video.ui.font.to_string(), 16);
+			m_discard_btn.set_font(g_cfg.video.ui.font.to_string(), 16);
 
 			set_pos(x, y);
 		}
