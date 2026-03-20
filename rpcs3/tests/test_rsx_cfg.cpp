@@ -251,4 +251,29 @@ namespace rsx::assembler
 		EXPECT_EQ(SRC0{ .HEX = graph.blocks.front().instructions[0].bytecode[1] }.exec_if_gr, 1);
 		EXPECT_EQ(SRC0{ .HEX = graph.blocks.front().instructions[0].bytecode[1] }.exec_if_eq, 1);
 	}
+
+	TEST(CFG, FpToCFG_SkipOverImmediateOperand)
+	{
+		auto ir = FPIR::from_source(
+			"MOV R0, #{ 0.25 };"    // NOP with real dst and one literal input
+			"MOV R0, R1;"           // False merge block.
+		);
+
+		RSXFragmentProgram program{};
+		auto bytecode = ir.compile();
+		program.data = bytecode.data();
+
+		ASSERT_EQ(bytecode.size(), 12);
+
+		// Patch the first instruction to be a NOP with a literal as input
+		const u32 decoded_d0 = ((bytecode[0] & 0xFF00FF00u) >> 16u) | ((bytecode[0] & 0x00FF00FFu) << 16u);
+		OPDEST d0{ .HEX = decoded_d0 };
+		d0.opcode = RSX_FP_OPCODE_NOP;
+		bytecode[0] = ((d0.HEX & 0xFF00FF00u) >> 16u) | ((d0.HEX & 0x00FF00FFu) << 16u);
+
+		FlowGraph graph = deconstruct_fragment_program(program);
+
+		ASSERT_EQ(graph.blocks.size(), 1);
+		ASSERT_EQ(graph.blocks.front().instructions.size(), 1);
+	}
 }

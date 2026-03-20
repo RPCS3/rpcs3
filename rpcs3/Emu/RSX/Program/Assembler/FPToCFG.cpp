@@ -165,6 +165,14 @@ namespace rsx::assembler
 
 			if (opcode == RSX_FP_OPCODE_NOP)
 			{
+				if (includes_literal_constant())
+				{
+					// Verified behavior on real hardware
+					// If any input on a non-flow-control instruction is of literal type the next instruction is assumed to be data
+					// You can actually use this behavior to mask off instructions completely
+					pc++;
+				}
+
 				pc++;
 				continue;
 			}
