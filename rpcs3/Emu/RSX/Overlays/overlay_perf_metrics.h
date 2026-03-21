@@ -41,6 +41,8 @@ namespace rsx
 			u32 m_margin_y{}; // vertical distance to the screen border relative to the screen_quadrant in px
 			u32 m_padding{};  // space between overlay elements
 			f32 m_opacity{};  // 0..1
+			u16 m_virtual_width{virtual_width};
+			u16 m_virtual_height{virtual_height};
 
 			bool m_center_x{}; // center the overlay horizontally
 			bool m_center_y{}; // center the overlay vertically
@@ -101,6 +103,9 @@ namespace rsx
 			void set_body_colors(std::string color, std::string background);
 			void set_title_colors(std::string color, std::string background);
 			void force_next_update();
+			void set_render_viewport(u32 width, u32 height) override;
+			u16 get_virtual_width() const override { return m_virtual_width; }
+			u16 get_virtual_height() const override { return m_virtual_height; }
 
 			void update(u64 timestamp_us) override;
 
