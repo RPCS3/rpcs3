@@ -31,6 +31,14 @@ namespace rsx
 			triangle_fan = 4
 		};
 
+		enum class sdf_function : u8
+		{
+			none = 0,
+			ellipse,
+			box,
+			rounded_box,
+		};
+
 		struct image_info_base
 		{
 			int w = 0, h = 0, channels = 0;
@@ -95,6 +103,20 @@ namespace rsx
 
 		struct compiled_resource
 		{
+			struct sdf_config_t
+			{
+				sdf_function func = sdf_function::none;
+
+				f32 cx; // Center x
+				f32 cy; // Center y
+				f32 hx; // Half-size in X
+				f32 hy; // Half-size in Y
+				f32 br; // Border radius
+				f32 bw; // Border width
+
+				color4f border_color;
+			};
+
 			struct command_config
 			{
 				primitive_type primitives = primitive_type::quad_list;
@@ -104,6 +126,8 @@ namespace rsx
 				bool disable_vertex_snap = false;
 				f32 pulse_sinus_offset = 0.0f; // The current pulse offset
 				f32 pulse_speed_modifier = 0.005f;
+
+				sdf_config_t sdf_config;
 
 				areaf clip_rect = {};
 				bool clip_region = false;
@@ -171,6 +195,9 @@ namespace rsx
 			f32 pulse_sinus_offset = 0.0f; // The current pulse offset
 			f32 pulse_speed_modifier = 0.005f;
 
+			u8 border_size = 0;
+			color4f border_color = { 0.f, 0.f, 0.f, 1.f };
+
 			// Analog to command_config::get_sinus_value
 			// Apply modifier for sinus pulse. Resets the pulse. For example:
 			//     0 -> reset to 0.5 rising
@@ -237,6 +264,8 @@ namespace rsx
 
 		protected:
 			bool m_is_compiled = false; // Only use m_is_compiled as a getter in is_compiled() if possible
+
+			void configure_sdf(compiled_resource::command_config& config, sdf_function func);
 		};
 
 		struct layout_container : public overlay_element
@@ -317,9 +346,14 @@ namespace rsx
 		struct rounded_rect : public overlay_element
 		{
 			u8 radius = 5;
-			u8 num_control_points = 8; // Smoothness control
 
 			using overlay_element::overlay_element;
+			compiled_resource& get_compiled() override;
+		};
+
+		struct ellipse : public rounded_rect
+		{
+			using rounded_rect::rounded_rect;
 			compiled_resource& get_compiled() override;
 		};
 

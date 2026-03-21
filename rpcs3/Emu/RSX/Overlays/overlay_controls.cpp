@@ -585,6 +585,18 @@ namespace rsx
 			return result;
 		}
 
+		void overlay_element::configure_sdf(compiled_resource::command_config& config, sdf_function func)
+		{
+			config.sdf_config.func = func;
+			config.sdf_config.cx = margin_left + x + (w / 2.f);
+			config.sdf_config.cy = margin_top + y + (h / 2.f);
+			config.sdf_config.hx = w / 2.f;
+			config.sdf_config.hy = h / 2.f;
+			config.sdf_config.br = 0.f;
+			config.sdf_config.bw = border_size;
+			config.sdf_config.border_color = border_color;
+		}
+
 		compiled_resource& overlay_element::get_compiled()
 		{
 			if (is_compiled())
@@ -608,6 +620,14 @@ namespace rsx
 			config.pulse_glow = pulse_effect_enabled;
 			config.pulse_sinus_offset = pulse_sinus_offset;
 			config.pulse_speed_modifier = pulse_speed_modifier;
+
+			if (border_size != 0 &&
+				border_color.a > 0.f &&
+				w > border_size &&
+				h > border_size)
+			{
+				configure_sdf(config, sdf_function::box);
+			}
 
 			auto& verts = compiled_resources_temp.draw_commands.front().verts;
 			verts.resize(4);
@@ -1095,82 +1115,33 @@ namespace rsx
 				return compiled_resources;
 			}
 
-#ifdef __APPLE__
-			if (true)
-#else
-			if (radius == 0 || radius > (w / 2))
-#endif
+			overlay_element::get_compiled();
+			auto& config = compiled_resources.draw_commands.front().config;
+			configure_sdf(config, sdf_function::rounded_box);
+			config.sdf_config.br = radius;
+
+			m_is_compiled = true;
+			return compiled_resources;
+		}
+
+		compiled_resource& ellipse::get_compiled()
+		{
+			if (is_compiled())
 			{
-				// Invalid radius
-				compiled_resources = overlay_element::get_compiled();
+				return compiled_resources;
+			}
+
+			compiled_resources.clear();
+
+			if (!is_visible())
+			{
 				m_is_compiled = true;
 				return compiled_resources;
 			}
 
-			compiled_resource compiled_resources_temp = {};
-			compiled_resources_temp.append({}); // Bg horizontal mid
-			compiled_resources_temp.append({}); // Bg horizontal top
-			compiled_resources_temp.append({}); // Bg horizontal bottom
-			compiled_resources_temp.append({}); // Bg upper-left
-			compiled_resources_temp.append({}); // Bg lower-left
-			compiled_resources_temp.append({}); // Bg upper-right
-			compiled_resources_temp.append({}); // Bg lower-right
-
-			for (auto& draw_cmd : compiled_resources_temp.draw_commands)
-			{
-				auto& config = draw_cmd.config;
-				config.color = back_color;
-				config.disable_vertex_snap = true;
-				config.pulse_glow = pulse_effect_enabled;
-				config.pulse_sinus_offset = pulse_sinus_offset;
-				config.pulse_speed_modifier = pulse_speed_modifier;
-			}
-
-			auto& bg0 = compiled_resources_temp.draw_commands[0];
-			auto& bg1 = compiled_resources_temp.draw_commands[1];
-			auto& bg2 = compiled_resources_temp.draw_commands[2];
-
-			bg0.verts.emplace_back(f32(x), f32(y + radius), 0.f, 0.f);
-			bg0.verts.emplace_back(f32(x + w), f32(y + radius), 0.f, 0.f);
-			bg0.verts.emplace_back(f32(x), f32(y + h) - radius, 0.f, 0.f);
-			bg0.verts.emplace_back(f32(x + w), f32(y + h) - radius, 0.f, 0.f);
-
-			bg1.verts.emplace_back(f32(x + radius), f32(y), 0.f, 0.f);
-			bg1.verts.emplace_back(f32(x + w) - radius, f32(y), 0.f, 0.f);
-			bg1.verts.emplace_back(f32(x + radius), f32(y + radius), 0.f, 0.f);
-			bg1.verts.emplace_back(f32(x + w) - radius, f32(y + radius), 0.f, 0.f);
-
-			bg2.verts.emplace_back(f32(x + radius), f32(y + h) - radius, 0.f, 0.f);
-			bg2.verts.emplace_back(f32(x + w) - radius, f32(y + h) - radius, 0.f, 0.f);
-			bg2.verts.emplace_back(f32(x + radius), f32(y + h), 0.f, 0.f);
-			bg2.verts.emplace_back(f32(x + w) - radius, f32(y + h), 0.f, 0.f);
-
-			// Generate the quadrants
-			const f32 corners[4][2] =
-			{
-				{ f32(x + radius), f32(y + radius) },
-				{ f32(x + radius), f32(y + h) - radius },
-				{ f32(x + w) - radius, f32(y + radius) },
-				{ f32(x + w) - radius, f32(y + h) - radius }
-			};
-
-			const f32 radius_f = static_cast<f32>(radius);
-			const f32 scale[4][2] =
-			{
-				{ -radius_f, -radius_f },
-				{ -radius_f, +radius_f },
-				{ +radius_f, -radius_f },
-				{ +radius_f, +radius_f }
-			};
-
-			for (int i = 0; i < 4; ++i)
-			{
-				auto& command = compiled_resources_temp.draw_commands[i + 3];
-				command.config.primitives = rsx::overlays::primitive_type::triangle_fan;
-				command.verts = generate_unit_quadrant(num_control_points, corners[i], scale[i]);
-			}
-
-			compiled_resources.add(std::move(compiled_resources_temp), margin_left, margin_top);
+			rounded_rect::get_compiled();
+			auto& config = compiled_resources.draw_commands.front().config;
+			configure_sdf(config, sdf_function::ellipse);
 
 			m_is_compiled = true;
 			return compiled_resources;
