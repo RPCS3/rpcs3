@@ -237,11 +237,6 @@ QLabel#gamelist_icon_background_color {
 	color: transparent;
 }
 
-/* Set Windows Taskbar Thumbnail colors */
-QLabel#thumbnail_icon_color {
-	color: #262626;
-}
-
 /* Set Log colors */
 QPlainTextEdit#log_frame {
 	background-color: #000; /* Black */

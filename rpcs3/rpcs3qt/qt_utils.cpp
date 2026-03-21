@@ -312,45 +312,6 @@ namespace gui
 			return get_aligned_pixmap(QPixmap(path), icon_size, device_pixel_ratio, mode, h_alignment, v_alignment);
 		}
 
-		QImage get_opaque_image_area(const QString& path)
-		{
-			QImage image = QImage(path);
-
-			int w_min = 0;
-			int w_max = image.width();
-			int h_min = 0;
-			int h_max = image.height();
-
-			for (int y = 0; y < image.height(); ++y)
-			{
-				const QRgb* row = reinterpret_cast<const QRgb*>(image.constScanLine(y));
-				bool row_filled = false;
-
-				for (int x = 0; x < image.width(); ++x)
-				{
-					if (qAlpha(row[x]))
-					{
-						row_filled = true;
-						w_min = std::max(w_min, x);
-
-						if (w_max > x)
-						{
-							w_max = x;
-							x = w_min;
-						}
-					}
-				}
-
-				if (row_filled)
-				{
-					h_max = std::min(h_max, y);
-					h_min = y;
-				}
-			}
-
-			return image.copy(QRect(QPoint(w_max, h_max), QPoint(w_min, h_min)));
-		}
-
 		// taken from https://stackoverflow.com/a/30818424/8353754
 		// because size policies won't work as expected (see similar bugs in Qt bugtracker)
 		void resize_combo_box_view(QComboBox* combo)
