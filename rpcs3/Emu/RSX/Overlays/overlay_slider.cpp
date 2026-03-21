@@ -29,7 +29,7 @@ namespace rsx::overlays
 		// Base components
 		auto background = std::make_unique<rounded_rect>();
 		auto foreground = std::make_unique<rounded_rect>();
-		auto indicator = std::make_unique<rounded_rect>();
+		auto indicator = std::make_unique<ellipse>();
 		auto value_label = std::make_unique<label>();
 		auto min_label = std::make_unique<label>();
 		auto max_label = std::make_unique<label>();
