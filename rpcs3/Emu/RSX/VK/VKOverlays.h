@@ -132,6 +132,8 @@ namespace vk
 		areaf m_clip_region;
 		coordf m_viewport;
 
+		rsx::overlays::compiled_resource::sdf_config_t m_sdf_config{};
+
 		std::vector<std::unique_ptr<vk::image>> resources;
 		std::unordered_map<u64, std::unique_ptr<vk::image>> font_cache;
 		std::unordered_map<u64, std::unique_ptr<vk::image_view>> view_cache;
