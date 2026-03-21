@@ -679,8 +679,7 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 			break;
 		}
 
-		if (rsx::assembler::FP::get_operand_count(opcode) > 0 &&
-			is_any_src_constant(inst))
+		if (is_any_src_constant(inst))
 		{
 			// Instruction references constant, skip one slot occupied by data
 			index++;
