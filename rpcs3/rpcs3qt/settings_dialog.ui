@@ -3550,6 +3550,13 @@
                 </layout>
                </item>
                <item>
+                <widget class="QCheckBox" name="perfOverlayUseWindowSpace">
+                 <property name="text">
+                  <string>Use Window Space</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QWidget" name="perf_overlay_update_interval" native="true">
                  <layout class="QVBoxLayout" name="layout_perf_overlay_update_interval">
                   <property name="leftMargin">

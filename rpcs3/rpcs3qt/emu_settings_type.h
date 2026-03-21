@@ -127,6 +127,7 @@ enum class emu_settings_type
 	PerfOverlayMarginY,
 	PerfOverlayCenterX,
 	PerfOverlayCenterY,
+	PerfOverlayUseWindowSpace,
 
 	// Shader Loading Dialog
 	ShaderLoadBgEnabled,
@@ -342,6 +343,7 @@ inline static const std::map<emu_settings_type, cfg_location> settings_location 
 	{ emu_settings_type::PerfOverlayMarginY,               { "Video", "Performance Overlay", "Vertical Margin (px)" } },
 	{ emu_settings_type::PerfOverlayCenterX,               { "Video", "Performance Overlay", "Center Horizontally" } },
 	{ emu_settings_type::PerfOverlayCenterY,               { "Video", "Performance Overlay", "Center Vertically" } },
+	{ emu_settings_type::PerfOverlayUseWindowSpace, 	   { "Video", "Performance Overlay", "Performance Overlay Use Window Space"}},
 
 	// Shader Loading Dialog
 	{ emu_settings_type::ShaderLoadBgEnabled,      { "Video", "Shader Loading Dialog", "Allow custom background" } },

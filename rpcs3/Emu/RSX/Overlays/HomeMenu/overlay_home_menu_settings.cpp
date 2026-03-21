@@ -256,6 +256,7 @@ namespace rsx
 			add_unsigned_slider(&g_cfg.video.perf_overlay.margin_y, localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_MARGIN_Y, " px", 1);
 			add_unsigned_slider(&g_cfg.video.perf_overlay.font_size, localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_FONT_SIZE, " px", 1);
 			add_unsigned_slider(&g_cfg.video.perf_overlay.opacity, localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_OPACITY, " %", 1);
+			add_checkbox(&g_cfg.video.perf_overlay.perf_overlay_use_window_space, localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_USE_WINDOW_SPACE);
 
 			apply_layout();
 		}

@@ -290,6 +290,7 @@ private:
 		case localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_MARGIN_Y: return tr("Vertical Margin", "Performance Overlay");
 		case localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_FONT_SIZE: return tr("Font Size", "Performance Overlay");
 		case localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_OPACITY: return tr("Opacity", "Performance Overlay");
+		case localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_USE_WINDOW_SPACE: return tr("Use Window Space", "Performance Overlay");
 		case localized_string_id::HOME_MENU_SETTINGS_DEBUG: return tr("Debug");
 		case localized_string_id::HOME_MENU_SETTINGS_DEBUG_OVERLAY: return tr("Debug Overlay", "Debug");
 		case localized_string_id::HOME_MENU_SETTINGS_DEBUG_INPUT_OVERLAY: return tr("Input Debug Overlay", "Debug");
