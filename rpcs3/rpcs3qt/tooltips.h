@@ -169,8 +169,8 @@ public:
 		const QString perf_overlay_update_interval         = tr("Sets the time interval in which the performance overlay is being updated (measured in milliseconds).\nSetting this to 16 milliseconds will refresh the performance overlay at roughly 60Hz.\nThe performance overlay refresh rate does not affect the frame graph statistics and can only be as fast as the current game allows.");
 		const QString perf_overlay_font_size               = tr("Sets the font size of the performance overlay (measured in pixels).");
 		const QString perf_overlay_opacity                 = tr("Sets the opacity of the performance overlay (measured in %).");
-		const QString perf_overlay_margin_x                = tr("Sets the horizontal distance to the screen border relative to the screen quadrant (measured in pixels).");
-		const QString perf_overlay_margin_y                = tr("Sets the vertical distance to the screen border relative to the screen quadrant (measured in pixels).");
+		const QString perf_overlay_margin_x                = tr("Sets the horizontal distance to the screen border relative to the screen quadrant (measured as a percentage of the window width).");
+		const QString perf_overlay_margin_y                = tr("Sets the vertical distance to the screen border relative to the screen quadrant (measured as a percentage of the window height).");
 		const QString perf_overlay_center_x                = tr("Centers the performance overlay horizontally and overrides the horizontal margin.");
 		const QString perf_overlay_center_y                = tr("Centers the performance overlay vertically and overrides the vertical margin.");
 		const QString perf_overlay_use_window_space		   = tr("Position overlay relative to the full window surface, enabling placement outside game's framebuffer area.");

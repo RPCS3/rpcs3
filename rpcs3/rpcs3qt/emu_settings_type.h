@@ -339,11 +339,11 @@ inline static const std::map<emu_settings_type, cfg_location> settings_location 
 	{ emu_settings_type::PerfOverlayUpdateInterval,        { "Video", "Performance Overlay", "Metrics update interval (ms)" } },
 	{ emu_settings_type::PerfOverlayFontSize,              { "Video", "Performance Overlay", "Font size (px)" } },
 	{ emu_settings_type::PerfOverlayOpacity,               { "Video", "Performance Overlay", "Opacity (%)" } },
-	{ emu_settings_type::PerfOverlayMarginX,               { "Video", "Performance Overlay", "Horizontal Margin (px)" } },
-	{ emu_settings_type::PerfOverlayMarginY,               { "Video", "Performance Overlay", "Vertical Margin (px)" } },
+	{ emu_settings_type::PerfOverlayMarginX,               { "Video", "Performance Overlay", "Horizontal Margin (%)" } },
+	{ emu_settings_type::PerfOverlayMarginY,               { "Video", "Performance Overlay", "Vertical Margin (%)" } },
 	{ emu_settings_type::PerfOverlayCenterX,               { "Video", "Performance Overlay", "Center Horizontally" } },
 	{ emu_settings_type::PerfOverlayCenterY,               { "Video", "Performance Overlay", "Center Vertically" } },
-	{ emu_settings_type::PerfOverlayUseWindowSpace, 	   { "Video", "Performance Overlay", "Performance Overlay Use Window Space"}},
+	{ emu_settings_type::PerfOverlayUseWindowSpace, 	   { "Video", "Performance Overlay", "Use Window Space"}},
 
 	// Shader Loading Dialog
 	{ emu_settings_type::ShaderLoadBgEnabled,      { "Video", "Shader Loading Dialog", "Allow custom background" } },

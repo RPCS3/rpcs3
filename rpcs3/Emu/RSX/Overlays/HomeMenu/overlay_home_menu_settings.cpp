@@ -252,8 +252,8 @@ namespace rsx
 			add_dropdown(&g_cfg.video.perf_overlay.position, localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_POSITION);
 			add_checkbox(&g_cfg.video.perf_overlay.center_x, localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_CENTER_X);
 			add_checkbox(&g_cfg.video.perf_overlay.center_y, localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_CENTER_Y);
-			add_unsigned_slider(&g_cfg.video.perf_overlay.margin_x, localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_MARGIN_X, " px", 1);
-			add_unsigned_slider(&g_cfg.video.perf_overlay.margin_y, localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_MARGIN_Y, " px", 1);
+			add_float_slider(&g_cfg.video.perf_overlay.margin_x, localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_MARGIN_X, " %", 0.25f);
+			add_float_slider(&g_cfg.video.perf_overlay.margin_y, localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_MARGIN_Y, " %", 0.25f);
 			add_unsigned_slider(&g_cfg.video.perf_overlay.font_size, localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_FONT_SIZE, " px", 1);
 			add_unsigned_slider(&g_cfg.video.perf_overlay.opacity, localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_OPACITY, " %", 1);
 			add_checkbox(&g_cfg.video.perf_overlay.perf_overlay_use_window_space, localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_USE_WINDOW_SPACE);

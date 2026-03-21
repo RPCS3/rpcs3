@@ -1950,10 +1950,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	// SpinBoxes
 
-	m_emu_settings->EnhanceSpinBox(ui->perfOverlayMarginX, emu_settings_type::PerfOverlayMarginX, "", tr("px", "Performance overlay margin x"));
+	m_emu_settings->EnhanceDoubleSpinBox(ui->perfOverlayMarginX, emu_settings_type::PerfOverlayMarginX, "", tr("%", "Performance overlay margin x"));
 	SubscribeTooltip(ui->perfOverlayMarginX, tooltips.settings.perf_overlay_margin_x);
 
-	m_emu_settings->EnhanceSpinBox(ui->perfOverlayMarginY, emu_settings_type::PerfOverlayMarginY, "", tr("px", "Performance overlay margin y"));
+	m_emu_settings->EnhanceDoubleSpinBox(ui->perfOverlayMarginY, emu_settings_type::PerfOverlayMarginY, "", tr("%", "Performance overlay margin y"));
 	SubscribeTooltip(ui->perfOverlayMarginY, tooltips.settings.perf_overlay_margin_y);
 
 	// Global settings (gui_settings)

@@ -6,6 +6,7 @@
 #include "Emu/Cell/PPUThread.h"
 
 #include <algorithm>
+#include <cmath>
 #include <utility>
 
 #include "util/cpu_stats.hpp"
@@ -116,10 +117,22 @@ namespace rsx
 			}
 			const u16 overlay_width = std::max(m_body.w, graph_width);
 			const u16 overlay_height = static_cast<u16>(m_body.h + graph_height);
+			const auto percent_to_margin_px = [](f32 margin_percent, u16 virtual_size, u16 overlay_size) -> u32
+			{
+				if (overlay_size >= virtual_size)
+				{
+					return 0;
+				}
+
+				const u32 max_margin = virtual_size - overlay_size;
+				const u32 margin_px = static_cast<u32>(std::lround((std::clamp(margin_percent, 0.0f, 100.0f) / 100.0f) * max_margin));
+				return std::min(margin_px, max_margin);
+			};
+
 			const positionu margin
 			{
-				overlay_width	>= m_virtual_width	? 0u : std::min(m_margin_x, static_cast<u32>(m_virtual_width	- overlay_width)),
-				overlay_height	>= m_virtual_height	? 0u : std::min(m_margin_y, static_cast<u32>(m_virtual_height	- overlay_height))
+				percent_to_margin_px(m_margin_x, m_virtual_width, overlay_width),
+				percent_to_margin_px(m_margin_y, m_virtual_height, overlay_height)
 			};
 
 			switch (m_quadrant)
@@ -387,7 +400,7 @@ namespace rsx
 			m_force_repaint = true;
 		}
 
-		void perf_metrics_overlay::set_margins(u32 margin_x, u32 margin_y, bool center_x, bool center_y)
+		void perf_metrics_overlay::set_margins(f32 margin_x, f32 margin_y, bool center_x, bool center_y)
 		{
 			if (m_margin_x == margin_x && m_margin_y == margin_y && m_center_x == center_x && m_center_y == center_y)
 				return;
