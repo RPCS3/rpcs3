@@ -99,7 +99,7 @@ namespace rsx::overlays
 		}
 
 		auto ellipse_part = std::make_unique<rounded_rect>();
-		auto circle_part = std::make_unique<rounded_rect>();
+		auto circle_part = std::make_unique<ellipse>();
 
 		ellipse_part->set_size(dim * 2, dim / 2);
 		ellipse_part->set_pos(0, dim / 4);
