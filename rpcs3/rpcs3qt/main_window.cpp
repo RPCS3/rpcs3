@@ -213,8 +213,6 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 	m_shortcut_handler = new shortcut_handler(gui::shortcuts::shortcut_handler_id::main_window, this, m_gui_settings);
 	connect(m_shortcut_handler, &shortcut_handler::shortcut_activated, this, &main_window::handle_shortcut);
 
-	show(); // needs to be done before creating the thumbnail toolbar
-
 	// enable play options if a recent game exists
 	const bool enable_play_last = !m_recent_game.actions.isEmpty() && m_recent_game.actions.first();
 
@@ -278,6 +276,8 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 	m_game_list_frame->Refresh(true);
 
 	update_gui_pad_thread();
+
+	show();
 
 	return true;
 }
@@ -1795,17 +1795,6 @@ void main_window::SaveWindowState() const
 	}
 }
 
-void main_window::RepaintThumbnailIcons()
-{
-	const QColor color = gui::utils::get_foreground_color();
-	[[maybe_unused]] const QColor new_color = gui::utils::get_label_color("thumbnail_icon_color", color, color);
-
-	[[maybe_unused]] const auto icon = [&new_color](const QString& path)
-	{
-		return gui::utils::get_colorized_icon(QPixmap::fromImage(gui::utils::get_opaque_image_area(path)), Qt::black, new_color);
-	};
-}
-
 void main_window::RepaintToolBarIcons()
 {
 	const QColor color = gui::utils::get_foreground_color();
@@ -2311,7 +2300,6 @@ void main_window::RepaintGui()
 	}
 
 	RepaintToolBarIcons();
-	RepaintThumbnailIcons();
 
 	Q_EMIT RequestDialogRepaint();
 }
