@@ -399,8 +399,9 @@ namespace gl
 
 	void ui_overlay_renderer::run(gl::command_context& cmd_, const areau& viewport, GLuint target, rsx::overlays::overlay& ui, bool flip_vertically)
 	{
+		ui.set_render_viewport(viewport.width(), viewport.height());
 		program_handle.uniforms["viewport"] = color4f(static_cast<f32>(viewport.width()), static_cast<f32>(viewport.height()), static_cast<f32>(viewport.x1), static_cast<f32>(viewport.y1));
-		program_handle.uniforms["ui_scale"] = color4f(static_cast<f32>(ui.virtual_width), static_cast<f32>(ui.virtual_height), 1.f, 1.f);
+		program_handle.uniforms["ui_scale"] = color4f(static_cast<f32>(ui.get_virtual_width()), static_cast<f32>(ui.get_virtual_height()), 1.f, 1.f);
 
 		saved_sampler_state save_30(30, m_sampler);
 		saved_sampler_state save_31(31, m_sampler);
