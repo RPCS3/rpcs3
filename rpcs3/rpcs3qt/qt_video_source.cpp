@@ -199,6 +199,7 @@ void qt_video_source::start_movie_timer()
 	if (!m_video_timer)
 	{
 		m_video_timer = std::make_unique<QTimer>();
+		m_video_timer->setSingleShot(true);
 		QObject::connect(m_video_timer.get(), &QTimer::timeout, m_video_timer.get(), [this]()
 		{
 			if (!m_active) return;
