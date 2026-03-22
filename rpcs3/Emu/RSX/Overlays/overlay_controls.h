@@ -115,6 +115,11 @@ namespace rsx
 				f32 bw; // Border width
 
 				color4f border_color;
+
+				// Transform a SDF definition from one reference frame to another
+				// Target viewport - your actual render area
+				// Virtual viewport - the internal design viewport
+				void transform(const areaf& target_viewport, const sizef& virtual_viewport);
 			};
 
 			struct command_config

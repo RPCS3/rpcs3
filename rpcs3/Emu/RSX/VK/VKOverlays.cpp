@@ -660,6 +660,7 @@ namespace vk
 			m_disable_vertex_snap = command.config.disable_vertex_snap;
 
 			m_sdf_config = command.config.sdf_config;
+			m_sdf_config.transform(static_cast<areaf>(viewport), { m_scale_offset.x, m_scale_offset.y });
 
 			vk::image_view* src = nullptr;
 			switch (command.config.texture_ref)

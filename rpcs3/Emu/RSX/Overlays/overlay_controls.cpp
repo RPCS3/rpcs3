@@ -54,6 +54,40 @@ namespace rsx
 			return result;
 		}
 
+		void compiled_resource::sdf_config_t::transform(const areaf& target_viewport, const sizef& virtual_viewport)
+		{
+			const f32 scale_x = target_viewport.width() / virtual_viewport.width;
+			const f32 scale_y = target_viewport.height() / virtual_viewport.height;
+
+			// Ideally the average should match the x and y scaling but arithmetic drift shifts the values around a bit.
+			// Also we need a way to define perfect circles when the aspect ratio is not respected.
+			const f32 scale_av = (scale_x + scale_y) / 2;
+
+			hx *= scale_x;
+			hy *= scale_y;
+			br *= scale_av;
+			bw *= scale_av;
+
+			// Account for flipped viewport
+			if (target_viewport.x2 < target_viewport.x1)
+			{
+				cx = target_viewport.width() -  (cx * scale_x) + target_viewport.x2;
+			}
+			else
+			{
+				cx = cx * scale_x + target_viewport.x1;
+			}
+
+			if (target_viewport.y2 < target_viewport.y1)
+			{
+				cy = target_viewport.height() - (cy * scale_y) + target_viewport.y2;
+			}
+			else
+			{
+				cy = cy * scale_y + target_viewport.y1;
+			}
+		}
+
 		image_info::image_info(const std::string& filename, bool grayscaled)
 		{
 			fs::file f(filename, fs::read + fs::isfile);
