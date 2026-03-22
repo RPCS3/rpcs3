@@ -621,11 +621,16 @@ namespace rsx
 
 		void overlay_element::configure_sdf(compiled_resource::command_config& config, sdf_function func)
 		{
+			const f32 rx = padding_left + static_cast<f32>(x);
+			const f32 rw = static_cast<f32>(w) - (padding_left + padding_right);
+			const f32 ry = padding_top + static_cast<f32>(y);
+			const f32 rh = static_cast<f32>(h) - (padding_top + padding_bottom);
+
 			config.sdf_config.func = func;
-			config.sdf_config.cx = margin_left + x + (w / 2.f);
-			config.sdf_config.cy = margin_top + y + (h / 2.f);
-			config.sdf_config.hx = w / 2.f;
-			config.sdf_config.hy = h / 2.f;
+			config.sdf_config.cx = margin_left + rx + (rw / 2.f);
+			config.sdf_config.cy = margin_top + ry + (rh / 2.f);
+			config.sdf_config.hx = rw / 2.f;
+			config.sdf_config.hy = rh / 2.f;
 			config.sdf_config.br = 0.f;
 			config.sdf_config.bw = border_size;
 			config.sdf_config.border_color = border_color;
