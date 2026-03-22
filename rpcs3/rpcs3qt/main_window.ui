@@ -372,6 +372,7 @@
      <addaction name="actionPreferGameDataIcons"/>
      <addaction name="showCustomIconsAct"/>
      <addaction name="playHoverGifsAct"/>
+     <addaction name="playHoverMusicAct"/>
     </widget>
     <widget class="QMenu" name="menuGame_List_View">
      <property name="title">
@@ -1522,6 +1523,17 @@
   <action name="bootIsoAct">
    <property name="text">
     <string>Boot ISO</string>
+   </property>
+  </action>
+  <action name="playHoverMusicAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Play Hover Music</string>
    </property>
   </action>
  </widget>
