@@ -34,22 +34,22 @@ namespace rsx::overlays
 		auto min_label = std::make_unique<label>();
 		auto max_label = std::make_unique<label>();
 
-		indicator->radius = slider_indicator_radius;
+		indicator->border_radius = slider_indicator_radius;
 		indicator->set_size(slider_indicator_dia + 2, slider_indicator_dia + 2);
 		indicator->set_padding(2);
 		indicator->set_pos(0, -2);
 		indicator->back_color = color4f(1.f);
 
-		background->radius = slider_rail_thickness / 2;
+		background->border_radius = slider_rail_thickness / 2;
 		background->back_color = this->back_color;
 		background->back_color.a = 1.f;
 		background->set_size(w, slider_rail_thickness);
-		background->set_pos(0, (slider_indicator_dia / 2) - background->radius);
+		background->set_pos(0, (slider_indicator_dia / 2) - background->border_radius);
 
-		foreground->radius = slider_cover_thickness / 2;
+		foreground->border_radius = slider_cover_thickness / 2;
 		foreground->back_color = this->fore_color;
 		foreground->set_size(0, slider_cover_thickness);
-		foreground->set_pos(0, (slider_indicator_dia / 2) - foreground->radius);
+		foreground->set_pos(0, (slider_indicator_dia / 2) - foreground->border_radius);
 
 		value_label->set_padding(2);
 		value_label->set_font(slider_label_font_family, slider_label_font_size);

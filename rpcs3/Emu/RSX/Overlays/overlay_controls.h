@@ -350,7 +350,7 @@ namespace rsx
 
 		struct rounded_rect : public overlay_element
 		{
-			u8 radius = 5;
+			u16 border_radius = 5;
 
 			using overlay_element::overlay_element;
 			compiled_resource& get_compiled() override;

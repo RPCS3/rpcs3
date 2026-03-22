@@ -84,7 +84,7 @@ namespace rsx::overlays
 
 	void switchbox::set_size(u16 w, u16 h)
 	{
-		const u16 dim = std::max<u16>(std::min(w, h), 14) & ~1u;
+		const u16 dim = std::max<u16>(std::min(w, h), 14);
 		box_layout::set_size(w, h);
 
 		clear_items();
@@ -99,7 +99,7 @@ namespace rsx::overlays
 		ellipse_part->set_size(dim * 2, dim);
 		ellipse_part->set_padding(1);
 		ellipse_part->set_pos(0, 0);
-		ellipse_part->radius = (dim - 2) / 2;
+		ellipse_part->border_radius = (dim - 2) / 2;
 
 		circle_part->set_size(dim, dim);
 		circle_part->set_padding(4);
