@@ -88,6 +88,7 @@ public Q_SLOTS:
 	void SetPreferGameDataIcons(bool enabled);
 	void SetShowCustomIcons(bool show);
 	void SetPlayHoverGifs(bool play);
+	void SetPlayHoverMusic(bool play);
 	void FocusAndSelectFirstEntryIfNoneIs();
 
 private Q_SLOTS:
@@ -204,5 +205,6 @@ private:
 	bool m_prefer_game_data_icons = false;
 	bool m_show_custom_icons = true;
 	bool m_play_hover_movies = true;
+	bool m_play_hover_music = true;
 	std::optional<auto_typemap<game_list_frame>> m_refresh_funcs_manage_type{std::in_place};
 };
