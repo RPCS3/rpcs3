@@ -8,7 +8,7 @@ namespace rsx::overlays
 	constexpr u16 slider_indicator_radius = 8;
 	constexpr u16 slider_indicator_dia = slider_indicator_radius * 2;
 	constexpr const char* slider_label_font_family = "Arial";
-	constexpr int slider_label_font_size = 10;
+	constexpr int slider_label_font_size = 11;
 
 	void slider::init()
 	{
