@@ -84,7 +84,7 @@ namespace rsx::overlays
 
 	void switchbox::set_size(u16 w, u16 h)
 	{
-		const u16 dim = std::max<u16>(std::min(w, h), 15);
+		const u16 dim = std::max<u16>(std::min(w, h), 14) & ~1u;
 		box_layout::set_size(w, h);
 
 		clear_items();
