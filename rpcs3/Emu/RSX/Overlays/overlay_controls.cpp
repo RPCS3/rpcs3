@@ -293,6 +293,12 @@ namespace rsx
 				{
 					v += vertex(x_offset, y_offset, 0.f, 0.f);
 				}
+
+				if (draw_commands[n].config.sdf_config.func != sdf_function::none)
+				{
+					draw_commands[n].config.sdf_config.cx += x_offset;
+					draw_commands[n].config.sdf_config.cy += y_offset;
+				}
 			}
 		}
 
@@ -307,6 +313,12 @@ namespace rsx
 				for (auto &v : draw_commands[n].verts)
 				{
 					v += vertex(x_offset, y_offset, 0.f, 0.f);
+				}
+
+				if (draw_commands[n].config.sdf_config.func != sdf_function::none)
+				{
+					draw_commands[n].config.sdf_config.cx += x_offset;
+					draw_commands[n].config.sdf_config.cy += y_offset;
 				}
 
 				draw_commands[n].config.clip_rect = clip_rect;
@@ -621,14 +633,14 @@ namespace rsx
 
 		void overlay_element::configure_sdf(compiled_resource::command_config& config, sdf_function func)
 		{
-			const f32 rx = padding_left + static_cast<f32>(x);
+			const f32 rx = static_cast<f32>(x) + padding_left;
 			const f32 rw = static_cast<f32>(w) - (padding_left + padding_right);
-			const f32 ry = padding_top + static_cast<f32>(y);
+			const f32 ry = static_cast<f32>(y) + padding_top;
 			const f32 rh = static_cast<f32>(h) - (padding_top + padding_bottom);
 
 			config.sdf_config.func = func;
-			config.sdf_config.cx = margin_left + rx + (rw / 2.f);
-			config.sdf_config.cy = margin_top + ry + (rh / 2.f);
+			config.sdf_config.cx = rx + (rw / 2.f);
+			config.sdf_config.cy = ry + (rh / 2.f);
 			config.sdf_config.hx = rw / 2.f;
 			config.sdf_config.hy = rh / 2.f;
 			config.sdf_config.br = 0.f;
