@@ -68,7 +68,10 @@ namespace rsx
 			br *= scale_av;
 			bw *= scale_av;
 
-			// Account for flipped viewport
+			// Border radius clamp
+			br = std::min({ br, hx, hy });
+
+			// Compute the function's origin. Account for flipped viewports as well.
 			if (target_viewport.x2 < target_viewport.x1)
 			{
 				cx = target_viewport.width() -  (cx * scale_x) + target_viewport.x2;
@@ -1171,7 +1174,7 @@ namespace rsx
 			overlay_element::get_compiled();
 			auto& config = compiled_resources.draw_commands.front().config;
 			configure_sdf(config, sdf_function::rounded_box);
-			config.sdf_config.br = radius;
+			config.sdf_config.br = std::min({ static_cast<f32>(border_radius), config.sdf_config.hx, config.sdf_config.hy });
 
 			m_is_compiled = true;
 			return compiled_resources;
