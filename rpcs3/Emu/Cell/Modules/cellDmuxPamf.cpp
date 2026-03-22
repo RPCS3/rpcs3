@@ -10,6 +10,7 @@
 
 #include "cellDmuxPamf.h"
 #include <ranges>
+#include <climits>
 
 vm::gvar<CellDmuxCoreOps> g_cell_dmux_core_ops_pamf;
 vm::gvar<CellDmuxCoreOps> g_cell_dmux_core_ops_raw_es;
