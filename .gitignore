@@ -69,6 +69,9 @@ CMakeSettings.json
 *PVS-Studio*
 PVS/*
 
+# Zed Editor files
+.zed/*
+
 # Ignore other system generated files
 x64/*
 rpcs3/x64/*
