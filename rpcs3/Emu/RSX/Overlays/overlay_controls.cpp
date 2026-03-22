@@ -646,6 +646,8 @@ namespace rsx
 			config.sdf_config.br = 0.f;
 			config.sdf_config.bw = border_size;
 			config.sdf_config.border_color = border_color;
+
+			config.disable_vertex_snap = true;
 		}
 
 		compiled_resource& overlay_element::get_compiled()
