@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "overlay_slider.h"
+#include "Emu/system_config.h"
 
 namespace rsx::overlays
 {
@@ -7,7 +8,6 @@ namespace rsx::overlays
 	constexpr u16 slider_cover_thickness = 6;
 	constexpr u16 slider_indicator_radius = 8;
 	constexpr u16 slider_indicator_dia = slider_indicator_radius * 2;
-	constexpr const char* slider_label_font_family = "Arial";
 	constexpr int slider_label_font_size = 10;
 
 	void slider::init()
@@ -52,7 +52,7 @@ namespace rsx::overlays
 		foreground->set_pos(0, (slider_indicator_dia / 2) - foreground->radius);
 
 		value_label->set_padding(2);
-		value_label->set_font(slider_label_font_family, slider_label_font_size);
+		value_label->set_font(g_cfg.video.ui.font.to_string(), slider_label_font_size);
 		value_label->set_text(m_formatter(m_current_value));
 		value_label->auto_resize();
 		value_label->back_color.a = 0.f;
@@ -60,14 +60,14 @@ namespace rsx::overlays
 
 		min_label->fore_color = color4f(0.75f, 0.75f, 0.75f, 1.f);
 		min_label->back_color.a = 0.f;
-		min_label->set_font(slider_label_font_family, slider_label_font_size);
+		min_label->set_font(g_cfg.video.ui.font.to_string(), slider_label_font_size);
 		min_label->set_text(m_formatter(m_min_value));
 		min_label->set_pos(0, (value_label->h / 2) + slider_indicator_radius + 8); // Margin = Text Height + Indicator Rad (gets to half point) - Text Height / 2 (Offset back to box origin)
 		min_label->auto_resize();
 
 		max_label->fore_color = color4f(0.75f, 0.75f, 0.75f, 1.f);
 		max_label->back_color.a = 0.f;
-		max_label->set_font(slider_label_font_family, slider_label_font_size);
+		max_label->set_font(g_cfg.video.ui.font.to_string(), slider_label_font_size);
 		max_label->set_text(m_formatter(m_max_value));
 		max_label->set_pos(0, (value_label->h / 2) + slider_indicator_radius + 8); // Margin
 		max_label->auto_resize();

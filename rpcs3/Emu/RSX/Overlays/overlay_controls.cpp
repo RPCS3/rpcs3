@@ -461,7 +461,7 @@ namespace rsx
 			set_text(container.str);
 		}
 
-		void overlay_element::set_font(const char* font_name, u16 font_size)
+		void overlay_element::set_font(std::string_view font_name, u16 font_size)
 		{
 			font_ref = fontmgr::get(font_name, font_size);
 			m_is_compiled = false;

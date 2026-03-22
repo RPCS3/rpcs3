@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "overlay_trophy_notification.h"
 #include "Emu/Cell/ErrorCodes.h"
+#include "Emu/system_config.h"
 
 namespace rsx
 {
@@ -46,7 +47,7 @@ namespace rsx
 
 			text_view.set_pos(139, 69);
 			text_view.set_padding(0, 0, 0, 0);
-			text_view.set_font("Arial", 14);
+			text_view.set_font(g_cfg.video.ui.font.to_string(), 14);
 			text_view.align_text(overlay_element::text_align::center);
 			text_view.back_color.a = 0.f;
 

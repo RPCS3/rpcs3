@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "overlay_select.h"
+#include "Emu/system_config.h"
 
 namespace rsx::overlays
 {
@@ -26,7 +27,7 @@ namespace rsx::overlays
 			auto label = dynamic_cast<overlays::label*>(labels.back().get());
 			label->set_padding(8, 0, 0, 0);
 			label->set_text(option);
-			label->set_font("Arial", 14);
+			label->set_font(g_cfg.video.ui.font.to_string(), 14);
 			label->set_padding(4);
 			label->back_color.a = 0.f;
 			label->auto_resize();
@@ -50,7 +51,7 @@ namespace rsx::overlays
 			label->set_padding(8, 0, 0, 0);
 			label->set_unicode_text(option);
 			label->set_padding(4);
-			label->set_font("Arial", 14);
+			label->set_font(g_cfg.video.ui.font.to_string(), 14);
 			label->back_color.a = 0.f;
 			label->auto_resize();
 		}
@@ -153,7 +154,7 @@ namespace rsx::overlays
 		arrow->back_color = color4f(0.8f, 0.8f, 0.8f, 1.f);
 
 		auto textfield = std::make_unique<label>();
-		textfield->set_font("Arial", 14);
+		textfield->set_font(g_cfg.video.ui.font.to_string(), 14);
 		textfield->align_text(text_align::left);
 		textfield->back_color.a = 0.f;
 

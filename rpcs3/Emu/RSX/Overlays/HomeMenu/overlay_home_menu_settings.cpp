@@ -40,7 +40,7 @@ namespace rsx
 			// Custom tab header. Matches the main menu style
 			std::unique_ptr<overlay_element> label_widget = std::make_unique<label>(page->title);
 			label_widget->set_size(300, 60);
-			label_widget->set_font("Arial", 16);
+			label_widget->set_font(g_cfg.video.ui.font.to_string(), 16);
 			label_widget->back_color.a = 0.f;
 			label_widget->set_padding(16, 4, 16, 4);
 

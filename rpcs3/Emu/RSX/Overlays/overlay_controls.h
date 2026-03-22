@@ -246,7 +246,7 @@ namespace rsx
 			virtual void set_unicode_text(const std::u32string& text);
 			void set_text(localized_string_id id);
 			void set_text(const localized_string& container);
-			virtual void set_font(const char* font_name, u16 font_size);
+			virtual void set_font(std::string_view font_name, u16 font_size);
 			virtual void align_text(text_align align);
 			virtual void set_wrap_text(bool state);
 			virtual font* get_font() const;
@@ -427,8 +427,8 @@ namespace rsx
 			graph();
 			void set_pos(s16 _x, s16 _y) override;
 			void set_size(u16 _w, u16 _h) override;
-			void set_title(const char* title);
-			void set_font(const char* font_name, u16 font_size) override;
+			void set_title(std::string&& title);
+			void set_font(std::string_view font_name, u16 font_size) override;
 			void set_font_size(u16 font_size);
 			void set_count(u32 datapoint_count);
 			void set_color(color4f color);

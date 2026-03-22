@@ -2,6 +2,7 @@
 #include "overlay_save_dialog.h"
 #include "overlay_video.h"
 #include "Utilities/date_time.h"
+#include "Emu/system_config.h"
 
 namespace rsx
 {
@@ -29,11 +30,11 @@ namespace rsx
 
 			padding->set_size(1, 1);
 			header_text->set_size(800, 40);
-			header_text->set_font("Arial", 16);
+			header_text->set_font(g_cfg.video.ui.font.to_string(), 16);
 			header_text->set_wrap_text(true);
 
 			subtext->set_size(800, 0);
-			subtext->set_font("Arial", 14);
+			subtext->set_font(g_cfg.video.ui.font.to_string(), 14);
 			subtext->set_wrap_text(true);
 			static_cast<label*>(subtext.get())->auto_resize(true);
 
@@ -51,7 +52,7 @@ namespace rsx
 				// Detail info actually exists
 				std::unique_ptr<overlay_element> detail = std::make_unique<label>(text3);
 				detail->set_size(800, 0);
-				detail->set_font("Arial", 12);
+				detail->set_font(g_cfg.video.ui.font.to_string(), 12);
 				detail->set_wrap_text(true);
 				detail->back_color.a = 0.f;
 				static_cast<label*>(detail.get())->auto_resize(true);
@@ -90,11 +91,11 @@ namespace rsx
 
 			m_list->set_pos(20, 85);
 
-			m_description->set_font("Arial", 20);
+			m_description->set_font(g_cfg.video.ui.font.to_string(), 20);
 			m_description->set_pos(20, 37);
 			m_description->set_text(localized_string_id::RSX_OVERLAYS_SAVE_DIALOG_TITLE);
 
-			m_time_thingy->set_font("Arial", 14);
+			m_time_thingy->set_font(g_cfg.video.ui.font.to_string(), 14);
 			m_time_thingy->set_pos(1000, 30);
 			m_time_thingy->set_text(date_time::current_time());
 
@@ -287,7 +288,7 @@ namespace rsx
 			if (m_list->m_items.empty())
 			{
 				m_no_saves_text = std::make_unique<label>(get_localized_string(localized_string_id::CELL_SAVEDATA_NO_DATA));
-				m_no_saves_text->set_font("Arial", 20);
+				m_no_saves_text->set_font(g_cfg.video.ui.font.to_string(), 20);
 				m_no_saves_text->align_text(overlay_element::text_align::center);
 				m_no_saves_text->set_pos(m_list->x, m_list->y + m_list->h / 2);
 				m_no_saves_text->set_size(m_list->w, 30);

@@ -6,6 +6,7 @@
 #include "Emu/RSX/Overlays/overlay_slider.h"
 
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Utilities/Config.h"
 
 #include "overlay_home_icons.h"
@@ -64,7 +65,7 @@ namespace rsx
 
 				padding->set_size(1, 1);
 				title->set_size(available_width, menu_entry_height);
-				title->set_font("Arial", 16);
+				title->set_font(g_cfg.video.ui.font.to_string(), 16);
 				title->set_wrap_text(true);
 				title->align_text(text_align::left);
 

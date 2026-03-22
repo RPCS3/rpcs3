@@ -3,6 +3,7 @@
 #include "overlay_friends_list_dialog.h"
 #include "Emu/NP/rpcn_config.h"
 #include "Emu/vfs_config.h"
+#include "Emu/system_config.h"
 
 namespace rsx
 {
@@ -78,11 +79,11 @@ namespace rsx
 
 			padding->set_size(1, 1);
 			header_text->set_size(800, 40);
-			header_text->set_font("Arial", 16);
+			header_text->set_font(g_cfg.video.ui.font.to_string(), 16);
 			header_text->set_wrap_text(true);
 
 			subtext->set_size(800, 0);
-			subtext->set_font("Arial", 14);
+			subtext->set_font(g_cfg.video.ui.font.to_string(), 14);
 			subtext->set_wrap_text(true);
 			static_cast<label*>(subtext.get())->auto_resize(true);
 
@@ -125,7 +126,7 @@ namespace rsx
 			m_message_box->visible = false;
 
 			m_description = std::make_unique<label>();
-			m_description->set_font("Arial", 20);
+			m_description->set_font(g_cfg.video.ui.font.to_string(), 20);
 			m_description->set_pos(20, 37);
 			m_description->set_text("Select user"); // Fallback. I don't think this will ever be used, so I won't localize it.
 			m_description->auto_resize();
@@ -138,12 +139,12 @@ namespace rsx
 			m_extra_btn.set_image_resource(resource_config::standard_image_resource::triangle);
 			m_extra_btn.set_pos(330, m_list->y + m_list->h + 20);
 			m_extra_btn.set_text("");
-			m_extra_btn.set_font("Arial", 16);
+			m_extra_btn.set_font(g_cfg.video.ui.font.to_string(), 16);
 
 			m_page_btn.set_image_resource(resource_config::standard_image_resource::square);
 			m_page_btn.set_pos(m_list->x + m_list->w - (30 + 120), m_list->y + m_list->h + 20);
 			m_page_btn.set_text(get_localized_string(localized_string_id::HOME_MENU_FRIENDS_NEXT_LIST));
-			m_page_btn.set_font("Arial", 16);
+			m_page_btn.set_font(g_cfg.video.ui.font.to_string(), 16);
 		}
 
 		void friends_list_dialog::update(u64 timestamp_us)
