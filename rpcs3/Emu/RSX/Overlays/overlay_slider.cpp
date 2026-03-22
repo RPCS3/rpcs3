@@ -36,6 +36,7 @@ namespace rsx::overlays
 
 		indicator->radius = slider_indicator_radius;
 		indicator->set_size(slider_indicator_dia, slider_indicator_dia);
+		indicator->set_padding(2);
 		indicator->back_color = color4f(1.f);
 
 		background->radius = slider_rail_thickness / 2;
