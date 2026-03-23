@@ -261,6 +261,7 @@ void qt_video_source::start_audio()
 		audio.output = std::make_unique<QAudioOutput>();
 		audio.player = std::make_unique<QMediaPlayer>();
 		audio.player->setAudioOutput(audio.output.get());
+		audio.player->setLoops(QMediaPlayer::Infinite);
 	}
 
 	if (m_iso_path.empty())
