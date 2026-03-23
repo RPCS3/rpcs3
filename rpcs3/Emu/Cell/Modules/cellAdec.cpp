@@ -261,7 +261,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 		savestate = lpcm_dec_state::waiting_for_output_mutex_lock;
 		output_mutex_lock:
 
-		error_occurred |= static_cast<u32>(sys_mutex_lock(ppu, output_mutex, 0) != CELL_OK);
+		error_occurred |= static_cast<u32>(lv2_syscall<sys_mutex_lock>(ppu, output_mutex, 0) != CELL_OK);
 
 		if (ppu.state & cpu_flag::again)
 		{
@@ -273,7 +273,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 			savestate = lpcm_dec_state::waiting_for_output_cond_wait;
 			output_cond_wait:
 
-			ensure(sys_cond_wait(ppu, output_consumed, 0) == CELL_OK); // Error code isn't checked on LLE
+			ensure(lv2_syscall<sys_cond_wait>(ppu, output_consumed, 0) == CELL_OK); // Error code isn't checked on LLE
 
 			if (ppu.state & cpu_flag::again)
 			{
@@ -287,7 +287,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 		savestate = lpcm_dec_state::queue_mutex_lock;
 		queue_mutex_lock:
 
-		ensure(sys_mutex_lock(ppu, queue_mutex, 0) == CELL_OK); // Error code isn't checked on LLE
+		ensure(lv2_syscall<sys_mutex_lock>(ppu, queue_mutex, 0) == CELL_OK); // Error code isn't checked on LLE
 
 		if (ppu.state & cpu_flag::again)
 		{
@@ -703,7 +703,7 @@ error_code LpcmDecContext::send_command(ppu_thread& ppu, auto&&... args)
 {
 	ppu.state += cpu_flag::wait;
 
-	if (error_code ret = sys_mutex_lock(ppu, queue_size_mutex, 0); ret != CELL_OK)
+	if (error_code ret = lv2_syscall<sys_mutex_lock>(ppu, queue_size_mutex, 0); ret != CELL_OK)
 	{
 		return ret;
 	}
@@ -720,7 +720,7 @@ error_code LpcmDecContext::send_command(ppu_thread& ppu, auto&&... args)
 		*lpcm_param = { args... };
 	}
 
-	if (error_code ret = sys_mutex_lock(ppu, queue_mutex, 0); ret != CELL_OK)
+	if (error_code ret = lv2_syscall<sys_mutex_lock>(ppu, queue_mutex, 0); ret != CELL_OK)
 	{
 		ensure(sys_mutex_unlock(ppu, queue_size_mutex) == CELL_OK); // Error code isn't checked on LLE
 		return ret;
@@ -740,14 +740,14 @@ error_code LpcmDecContext::send_command(ppu_thread& ppu, auto&&... args)
 
 inline error_code LpcmDecContext::release_output(ppu_thread& ppu)
 {
-	if (error_code ret = sys_mutex_lock(ppu, output_mutex, 0); ret != CELL_OK)
+	if (error_code ret = lv2_syscall<sys_mutex_lock>(ppu, output_mutex, 0); ret != CELL_OK)
 	{
 		return ret;
 	}
 
 	output_locked = false;
 
-	if (error_code ret = sys_cond_signal(ppu, output_consumed); ret != CELL_OK)
+	if (error_code ret = lv2_syscall<sys_cond_signal>(ppu, output_consumed); ret != CELL_OK)
 	{
 		return ret; // LLE doesn't unlock the mutex
 	}
@@ -865,8 +865,8 @@ error_code _CellAdecCoreOpClose_lpcm(ppu_thread& ppu, vm::ptr<LpcmDecContext> ha
 
 	cellAdec.notice("_CellAdecCoreOpClose_lpcm(handle=*0x%x)", handle);
 
-	if (error_code ret = sys_mutex_lock(ppu, handle->queue_size_mutex, 0); ret != CELL_OK
-		|| (ret = sys_mutex_lock(ppu, handle->queue_mutex, 0)) != CELL_OK)
+	if (error_code ret = lv2_syscall<sys_mutex_lock>(ppu, handle->queue_size_mutex, 0); ret != CELL_OK
+		|| (ret = lv2_syscall<sys_mutex_lock>(ppu, handle->queue_mutex, 0)) != CELL_OK)
 	{
 		return ret;
 	}
@@ -1091,7 +1091,7 @@ error_code AdecContext::set_pcm_item(s32 pcm_handle, vm::ptr<void> pcm_addr, u32
 
 error_code AdecContext::link_frame(ppu_thread& ppu, s32 pcm_handle)
 {
-	ensure(sys_mutex_lock(ppu, mutex, 0) == CELL_OK); // Error code isn't checked on LLE
+	ensure(lv2_syscall<sys_mutex_lock>(ppu, mutex, 0) == CELL_OK); // Error code isn't checked on LLE
 
 	if (verify_pcm_handle(pcm_handle) == static_cast<s32>(CELL_ADEC_ERROR_FATAL))
 	{
@@ -1125,7 +1125,7 @@ error_code AdecContext::link_frame(ppu_thread& ppu, s32 pcm_handle)
 
 error_code AdecContext::unlink_frame(ppu_thread& ppu, s32 pcm_handle)
 {
-	ensure(sys_mutex_lock(ppu, mutex, 0) == CELL_OK); // Error code isn't checked on LLE
+	ensure(lv2_syscall<sys_mutex_lock>(ppu, mutex, 0) == CELL_OK); // Error code isn't checked on LLE
 
 	if (verify_pcm_handle(pcm_handle) == static_cast<s32>(CELL_ADEC_ERROR_FATAL))
 	{
