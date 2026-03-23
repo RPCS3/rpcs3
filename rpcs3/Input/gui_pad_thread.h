@@ -65,7 +65,7 @@ protected:
 	atomic_t<bool> m_allow_global_input = false;
 	static atomic_t<bool> m_reset;
 
-	std::array<bool, static_cast<u32>(pad_button::pad_button_max_enum)> m_last_button_state{};
+	std::map<pad_button, bool> m_last_button_state{};
 
 	steady_clock::time_point m_timestamp;
 	steady_clock::time_point m_initial_timestamp;
