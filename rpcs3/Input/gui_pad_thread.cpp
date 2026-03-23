@@ -137,7 +137,7 @@ bool gui_pad_thread::init()
 	for (usz i = 0; i < g_cfg_input.player.size(); i++)
 	{
 		std::shared_ptr<PadHandlerBase> handler;
-		gui_pad_thread::InitPadConfig(g_cfg_input.player[i]->config, g_cfg_input.player[i]->handler, handler);
+		gui_pad_thread::init_pad_config(g_cfg_input.player[i]->config, g_cfg_input.player[i]->handler, handler);
 	}
 
 	// Reload with proper defaults
@@ -153,12 +153,16 @@ bool gui_pad_thread::init()
 		cfg_player* cfg = g_cfg_input.player[i];
 
 		const pad_handler handler_type = cfg->handler.get();
-		std::shared_ptr<PadHandlerBase> cur_pad_handler = GetHandler(handler_type);
+		std::shared_ptr<PadHandlerBase> cur_pad_handler = get_handler(handler_type);
 
 		if (!cur_pad_handler)
 		{
 			continue;
 		}
+
+		// Disable stick anti-deadzone. We are not trying to emulate the PS3's behavior here.
+		cfg->config.lstick_anti_deadzone.set(0);
+		cfg->config.rstick_anti_deadzone.set(0);
 
 		cur_pad_handler->Init();
 
@@ -229,7 +233,7 @@ bool gui_pad_thread::init()
 	return true;
 }
 
-std::shared_ptr<PadHandlerBase> gui_pad_thread::GetHandler(pad_handler type)
+std::shared_ptr<PadHandlerBase> gui_pad_thread::get_handler(pad_handler type)
 {
 	switch (type)
 	{
@@ -265,14 +269,14 @@ std::shared_ptr<PadHandlerBase> gui_pad_thread::GetHandler(pad_handler type)
 	return nullptr;
 }
 
-void gui_pad_thread::InitPadConfig(cfg_pad& cfg, pad_handler type, std::shared_ptr<PadHandlerBase>& handler)
+void gui_pad_thread::init_pad_config(cfg_pad& cfg, pad_handler type, std::shared_ptr<PadHandlerBase>& handler)
 {
 	// We need to restore the original defaults first.
 	cfg.restore_defaults();
 
 	if (!handler)
 	{
-		handler = GetHandler(type);
+		handler = get_handler(type);
 	}
 
 	if (handler)
