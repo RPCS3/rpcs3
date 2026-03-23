@@ -109,9 +109,8 @@ bool gui_pad_thread::init()
 {
 	m_handler.reset();
 	m_pad.reset();
+	m_last_button_state.clear();
 
-	// Initialize last button states as pressed to avoid unwanted button presses when starting the thread.
-	m_last_button_state.fill(true);
 	m_timestamp = steady_clock::now();
 	m_initial_timestamp = steady_clock::now();
 	m_last_auto_repeat_button = pad_button::pad_button_max_enum;
@@ -412,7 +411,18 @@ void gui_pad_thread::process_input()
 			return;
 		}
 
-		bool& last_state = m_last_button_state[static_cast<u32>(button_id)];
+		if (!m_last_button_state.contains(button_id))
+		{
+			// Ignore button presses and releases if there was no release detected at least once.
+			if (!pressed)
+			{
+				m_last_button_state[button_id] = false;
+			}
+
+			return;
+		}
+
+		bool& last_state = m_last_button_state[button_id];
 
 		if (pressed)
 		{
