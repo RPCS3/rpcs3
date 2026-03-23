@@ -19,8 +19,8 @@ public:
 
 	void update_settings(const std::shared_ptr<gui_settings>& settings);
 
-	static std::shared_ptr<PadHandlerBase> GetHandler(pad_handler type);
-	static void InitPadConfig(cfg_pad& cfg, pad_handler type, std::shared_ptr<PadHandlerBase>& handler);
+	static std::shared_ptr<PadHandlerBase> get_handler(pad_handler type);
+	static void init_pad_config(cfg_pad& cfg, pad_handler type, std::shared_ptr<PadHandlerBase>& handler);
 
 	static void reset()
 	{
