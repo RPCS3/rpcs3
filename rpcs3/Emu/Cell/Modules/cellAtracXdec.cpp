@@ -295,7 +295,7 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 		{
 			savestate = atracxdec_state::initial;
 
-			ensure(sys_mutex_lock(ppu, queue_mutex, 0) == CELL_OK);
+			ensure(lv2_syscall<sys_mutex_lock>(ppu, queue_mutex, 0) == CELL_OK);
 
 			if (ppu.state & cpu_flag::again)
 			{
@@ -310,7 +310,7 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 			savestate = atracxdec_state::waiting_for_cmd;
 			label1_wait_for_cmd_state:
 
-			ensure(sys_cond_wait(ppu, queue_not_empty, 0) == CELL_OK);
+			ensure(lv2_syscall<sys_cond_wait>(ppu, queue_not_empty, 0) == CELL_OK);
 
 			if (ppu.state & cpu_flag::again)
 			{
@@ -327,7 +327,7 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 		savestate = atracxdec_state::checking_run_thread_1;
 		label2_check_run_thread_1_state:
 
-		ensure(sys_mutex_lock(ppu, run_thread_mutex, 0) == CELL_OK);
+		ensure(lv2_syscall<sys_mutex_lock>(ppu, run_thread_mutex, 0) == CELL_OK);
 
 		if (ppu.state & cpu_flag::again)
 		{
@@ -392,7 +392,7 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 
 			cellAtracXdec.trace("Waiting for output to be consumed...");
 
-			ensure(sys_mutex_lock(ppu, output_mutex, 0) == CELL_OK);
+			ensure(lv2_syscall<sys_mutex_lock>(ppu, output_mutex, 0) == CELL_OK);
 
 			if (ppu.state & cpu_flag::again)
 			{
@@ -404,7 +404,7 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 				savestate = atracxdec_state::waiting_for_output;
 				label4_wait_for_output_state:
 
-				ensure(sys_cond_wait(ppu, output_consumed, 0) == CELL_OK);
+				ensure(lv2_syscall<sys_cond_wait>(ppu, output_consumed, 0) == CELL_OK);
 
 				if (ppu.state & cpu_flag::again)
 				{
@@ -417,7 +417,7 @@ void AtracXdecContext::exec(ppu_thread& ppu)
 			savestate = atracxdec_state::checking_run_thread_2;
 			label5_check_run_thread_2_state:
 
-			ensure(sys_mutex_lock(ppu, run_thread_mutex, 0) == CELL_OK);
+			ensure(lv2_syscall<sys_mutex_lock>(ppu, run_thread_mutex, 0) == CELL_OK);
 
 			if (ppu.state & cpu_flag::again)
 			{
@@ -680,7 +680,7 @@ error_code AtracXdecContext::send_command(ppu_thread& ppu, auto&&... args)
 
 	if (!signal)
 	{
-		ensure(sys_mutex_lock(ppu, queue_mutex, 0) == CELL_OK);
+		ensure(lv2_syscall<sys_mutex_lock>(ppu, queue_mutex, 0) == CELL_OK);
 
 		if (ppu.state & cpu_flag::again)
 		{
@@ -708,7 +708,7 @@ error_code AtracXdecContext::send_command(ppu_thread& ppu, auto&&... args)
 		ensure(sys_mutex_unlock(ppu, queue_mutex) == CELL_OK);
 	}
 
-	ensure(sys_cond_signal(ppu, queue_not_empty) == CELL_OK);
+	ensure(lv2_syscall<sys_cond_signal>(ppu, queue_not_empty) == CELL_OK);
 
 	if (ppu.state & cpu_flag::again)
 	{
@@ -794,9 +794,9 @@ error_code _CellAdecCoreOpOpenExt_atracx(ppu_thread& ppu, vm::ptr<AtracXdecConte
 	ensure(sys_mutex_create(ppu, handle.ptr(&AtracXdecContext::output_mutex), mutex_attr) == CELL_OK);
 	ensure(sys_cond_create(ppu, handle.ptr(&AtracXdecContext::output_consumed), handle->output_mutex, cond_attr) == CELL_OK);
 
-	ensure(sys_mutex_lock(ppu, handle->output_mutex, 0) == CELL_OK);
+	ensure(lv2_syscall<sys_mutex_lock>(ppu, handle->output_mutex, 0) == CELL_OK);
 	handle->output_locked = false;
-	ensure(sys_cond_signal(ppu, handle->output_consumed) == CELL_OK);
+	ensure(lv2_syscall<sys_cond_signal>(ppu, handle->output_consumed) == CELL_OK);
 	ensure(sys_mutex_unlock(ppu, handle->output_mutex) == CELL_OK);
 
 	const vm::var<char[]> _name = vm::make_str("HLE ATRAC3plus decoder");
@@ -829,19 +829,19 @@ error_code _CellAdecCoreOpClose_atracx(ppu_thread& ppu, vm::ptr<AtracXdecContext
 
 	ensure(!!handle); // Not checked on LLE
 
-	ensure(sys_mutex_lock(ppu, handle->run_thread_mutex, 0) == CELL_OK);
+	ensure(lv2_syscall<sys_mutex_lock>(ppu, handle->run_thread_mutex, 0) == CELL_OK);
 	handle->run_thread = false;
 	ensure(sys_mutex_unlock(ppu, handle->run_thread_mutex) == CELL_OK);
 
 	handle->send_command<AtracXdecCmdType::close>(ppu);
 
-	ensure(sys_mutex_lock(ppu, handle->output_mutex, 0) == CELL_OK);
+	ensure(lv2_syscall<sys_mutex_lock>(ppu, handle->output_mutex, 0) == CELL_OK);
 	handle->output_locked = false;
 	ensure(sys_mutex_unlock(ppu, handle->output_mutex) == CELL_OK);
-	ensure(sys_cond_signal(ppu, handle->output_consumed) == CELL_OK);
+	ensure(lv2_syscall<sys_cond_signal>(ppu, handle->output_consumed) == CELL_OK);
 
 	vm::var<u64> thread_ret;
-	ensure(sys_ppu_thread_join(ppu, static_cast<u32>(handle->thread_id), +thread_ret) == CELL_OK);
+	ensure(lv2_syscall<sys_ppu_thread_join>(ppu, static_cast<u32>(handle->thread_id), +thread_ret) == CELL_OK);
 
 	error_code ret = sys_cond_destroy(ppu, handle->queue_not_empty);
 	ret = ret ? ret : sys_cond_destroy(ppu, handle->run_thread_cond);
@@ -921,7 +921,7 @@ error_code _CellAdecCoreOpReleasePcm_atracx(ppu_thread& ppu, vm::ptr<AtracXdecCo
 
 	if (!signal)
 	{
-		ensure(sys_mutex_lock(ppu, handle->output_mutex, 0) == CELL_OK);
+		ensure(lv2_syscall<sys_mutex_lock>(ppu, handle->output_mutex, 0) == CELL_OK);
 
 		if (ppu.state & cpu_flag::again)
 		{
@@ -931,7 +931,7 @@ error_code _CellAdecCoreOpReleasePcm_atracx(ppu_thread& ppu, vm::ptr<AtracXdecCo
 		handle->output_locked = false;
 	}
 
-	ensure(sys_cond_signal(ppu, handle->output_consumed) == CELL_OK);
+	ensure(lv2_syscall<sys_cond_signal>(ppu, handle->output_consumed) == CELL_OK);
 
 	if (ppu.state & cpu_flag::again)
 	{
