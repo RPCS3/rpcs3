@@ -888,6 +888,14 @@ bool cpu_thread::check_state() noexcept
 				store = true;
 			}
 
+			if (flags & cpu_flag::req_exit)
+			{
+				// A request for the thread to quit has been made
+				flags -= cpu_flag::req_exit;
+				flags += cpu_flag::exit;
+				store = true;
+			}
+
 			// Can't process dbg_step if we only paused temporarily
 			if (cpu_can_stop && flags & cpu_flag::dbg_step)
 			{
@@ -1157,13 +1165,13 @@ void cpu_thread::notify()
 
 cpu_thread& cpu_thread::operator=(thread_state)
 {
-	if (state & cpu_flag::exit)
+	if (state & (cpu_flag::exit + cpu_flag::req_exit))
 	{
 		// Must be notified elsewhere or self-raised
 		return *this;
 	}
 
-	const auto old = state.fetch_add(cpu_flag::exit);
+	const auto old = state.fetch_add(cpu_flag::req_exit);
 
 	if (old & cpu_flag::wait && old.none_of(cpu_flag::again + cpu_flag::exit))
 	{
