@@ -38,6 +38,39 @@
 
 LOG_CHANNEL(gui_log, "GUI");
 
+template <>
+void fmt_class_string<gui_pad_thread::mouse_button>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](gui_pad_thread::mouse_button value)
+	{
+		switch (value)
+		{
+		case gui_pad_thread::mouse_button::none: return "Mouse none";
+		case gui_pad_thread::mouse_button::left: return "Mouse left";
+		case gui_pad_thread::mouse_button::right: return "Mouse right";
+		case gui_pad_thread::mouse_button::middle: return "Mouse middle";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<gui_pad_thread::mouse_wheel>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](gui_pad_thread::mouse_wheel value)
+	{
+		switch (value)
+		{
+		case gui_pad_thread::mouse_wheel::none: return "Wheel none";
+		case gui_pad_thread::mouse_wheel::vertical: return "Wheel vertical";
+		case gui_pad_thread::mouse_wheel::horizontal: return "Wheel horizontal";
+		}
+
+		return unknown;
+	});
+}
+
 atomic_t<bool> gui_pad_thread::m_reset = false;
 
 gui_pad_thread::gui_pad_thread()
@@ -76,9 +109,8 @@ bool gui_pad_thread::init()
 {
 	m_handler.reset();
 	m_pad.reset();
+	m_last_button_state.clear();
 
-	// Initialize last button states as pressed to avoid unwanted button presses when starting the thread.
-	m_last_button_state.fill(true);
 	m_timestamp = steady_clock::now();
 	m_initial_timestamp = steady_clock::now();
 	m_last_auto_repeat_button = pad_button::pad_button_max_enum;
@@ -104,7 +136,7 @@ bool gui_pad_thread::init()
 	for (usz i = 0; i < g_cfg_input.player.size(); i++)
 	{
 		std::shared_ptr<PadHandlerBase> handler;
-		gui_pad_thread::InitPadConfig(g_cfg_input.player[i]->config, g_cfg_input.player[i]->handler, handler);
+		gui_pad_thread::init_pad_config(g_cfg_input.player[i]->config, g_cfg_input.player[i]->handler, handler);
 	}
 
 	// Reload with proper defaults
@@ -120,12 +152,16 @@ bool gui_pad_thread::init()
 		cfg_player* cfg = g_cfg_input.player[i];
 
 		const pad_handler handler_type = cfg->handler.get();
-		std::shared_ptr<PadHandlerBase> cur_pad_handler = GetHandler(handler_type);
+		std::shared_ptr<PadHandlerBase> cur_pad_handler = get_handler(handler_type);
 
 		if (!cur_pad_handler)
 		{
 			continue;
 		}
+
+		// Disable stick anti-deadzone. We are not trying to emulate the PS3's behavior here.
+		cfg->config.lstick_anti_deadzone.set(0);
+		cfg->config.rstick_anti_deadzone.set(0);
 
 		cur_pad_handler->Init();
 
@@ -196,7 +232,7 @@ bool gui_pad_thread::init()
 	return true;
 }
 
-std::shared_ptr<PadHandlerBase> gui_pad_thread::GetHandler(pad_handler type)
+std::shared_ptr<PadHandlerBase> gui_pad_thread::get_handler(pad_handler type)
 {
 	switch (type)
 	{
@@ -232,14 +268,14 @@ std::shared_ptr<PadHandlerBase> gui_pad_thread::GetHandler(pad_handler type)
 	return nullptr;
 }
 
-void gui_pad_thread::InitPadConfig(cfg_pad& cfg, pad_handler type, std::shared_ptr<PadHandlerBase>& handler)
+void gui_pad_thread::init_pad_config(cfg_pad& cfg, pad_handler type, std::shared_ptr<PadHandlerBase>& handler)
 {
 	// We need to restore the original defaults first.
 	cfg.restore_defaults();
 
 	if (!handler)
 	{
-		handler = GetHandler(type);
+		handler = get_handler(type);
 	}
 
 	if (handler)
@@ -294,8 +330,10 @@ void gui_pad_thread::process_input()
 
 	constexpr u64 ms_threshold = 500;
 
-	const auto on_button_pressed = [this](pad_button button_id, bool pressed, u16 value)
+	const auto on_button_pressed = [this](pad_button button_id, bool pressed, bool auto_repeat, u16 value)
 	{
+		gui_log.trace("gui_pad_thread::on_button_pressed: btn=%s, pressed=%d, auto_repeat=%d, value=%d", button_id, pressed, auto_repeat, value);
+
 		if (button_id == m_mouse_boost_button)
 		{
 			m_boost_mouse = pressed;
@@ -373,7 +411,18 @@ void gui_pad_thread::process_input()
 			return;
 		}
 
-		bool& last_state = m_last_button_state[static_cast<u32>(button_id)];
+		if (!m_last_button_state.contains(button_id))
+		{
+			// Ignore button presses and releases if there was no release detected at least once.
+			if (!pressed)
+			{
+				m_last_button_state[button_id] = false;
+			}
+
+			return;
+		}
+
+		bool& last_state = m_last_button_state[button_id];
 
 		if (pressed)
 		{
@@ -390,7 +439,7 @@ void gui_pad_thread::process_input()
 					m_last_auto_repeat_button = is_auto_repeat_button ? button_id : pad_button::pad_button_max_enum;
 				}
 
-				on_button_pressed(static_cast<pad_button>(button_id), true, value);
+				on_button_pressed(static_cast<pad_button>(button_id), true, false, value);
 			}
 			else if (is_auto_repeat_button)
 			{
@@ -400,7 +449,7 @@ void gui_pad_thread::process_input()
 				{
 					// The auto-repeat button was pressed for at least the given threshold in ms and will trigger at an interval.
 					m_timestamp = steady_clock::now();
-					on_button_pressed(static_cast<pad_button>(button_id), true, value);
+					on_button_pressed(static_cast<pad_button>(button_id), true, true, value);
 				}
 				else if (m_last_auto_repeat_button == pad_button::pad_button_max_enum)
 				{
@@ -410,7 +459,7 @@ void gui_pad_thread::process_input()
 			}
 			else if (is_mouse_move_button)
 			{
-				on_button_pressed(static_cast<pad_button>(button_id), pressed, value);
+				on_button_pressed(static_cast<pad_button>(button_id), true, false, value);
 			}
 		}
 		else if (last_state)
@@ -421,7 +470,7 @@ void gui_pad_thread::process_input()
 				m_last_auto_repeat_button = pad_button::pad_button_max_enum;
 			}
 
-			on_button_pressed(static_cast<pad_button>(button_id), false, value);
+			on_button_pressed(static_cast<pad_button>(button_id), false, false, value);
 		}
 
 		last_state = pressed;
@@ -618,7 +667,7 @@ void gui_pad_thread::send_key_event(u32 key, bool pressed)
 
 void gui_pad_thread::send_mouse_button_event(mouse_button btn, bool pressed)
 {
-	gui_log.trace("gui_pad_thread::send_mouse_button_event: btn=%d, pressed=%d", static_cast<int>(btn), pressed);
+	gui_log.trace("gui_pad_thread::send_mouse_button_event: btn=%s, pressed=%d", btn, pressed);
 
 #ifdef _WIN32
 	INPUT input{};
@@ -684,7 +733,7 @@ void gui_pad_thread::send_mouse_button_event(mouse_button btn, bool pressed)
 
 void gui_pad_thread::send_mouse_wheel_event(mouse_wheel wheel, int delta)
 {
-	gui_log.trace("gui_pad_thread::send_mouse_wheel_event: wheel=%d, delta=%d", static_cast<int>(wheel), delta);
+	gui_log.trace("gui_pad_thread::send_mouse_wheel_event: wheel=%s, delta=%d", wheel, delta);
 
 	if (!delta)
 	{
