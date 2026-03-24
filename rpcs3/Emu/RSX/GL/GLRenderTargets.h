@@ -98,7 +98,7 @@ namespace gl
 		bool matches_dimensions(u16 _width, u16 _height) const
 		{
 			//Use forward scaling to account for rounding and clamping errors
-			const auto [scaled_w, scaled_h] = rsx::apply_resolution_scale<true>(_width, _height);
+			const auto [scaled_w, scaled_h] = rsx::apply_resolution_scale<true>(resolution_scaling_config, _width, _height);
 			return (scaled_w == width()) && (scaled_h == height());
 		}
 
@@ -138,11 +138,12 @@ struct gl_render_target_traits
 		u32 address,
 		rsx::surface_color_format surface_color_format,
 		usz width, usz height, usz pitch,
-		rsx::surface_antialiasing antialias
+		rsx::surface_antialiasing antialias,
+		const rsx::surface_scaling_config_t& resolution_scaling_config
 	)
 	{
 		auto format = rsx::internals::surface_color_format_to_gl(surface_color_format);
-		const auto [width_, height_] = rsx::apply_resolution_scale<true>(static_cast<u16>(width), static_cast<u16>(height));
+		const auto [width_, height_] = rsx::apply_resolution_scale<true>(resolution_scaling_config, static_cast<u16>(width), static_cast<u16>(height));
 
 		u8 samples;
 		rsx::surface_sample_layout sample_layout;
@@ -162,6 +163,7 @@ struct gl_render_target_traits
 
 		result->set_name(fmt::format("RTV_%u@0x%x", result->id(), address));
 		result->set_aa_mode(antialias);
+		result->set_resolution_scaling_config(resolution_scaling_config);
 		result->set_native_pitch(static_cast<u32>(width) * get_format_block_size_in_bytes(surface_color_format) * result->samples_x);
 		result->set_surface_dimensions(static_cast<u16>(width), static_cast<u16>(height), static_cast<u32>(pitch));
 		result->set_format(surface_color_format);
@@ -182,11 +184,12 @@ struct gl_render_target_traits
 			u32 address,
 			rsx::surface_depth_format2 surface_depth_format,
 			usz width, usz height, usz pitch,
-			rsx::surface_antialiasing antialias
+			rsx::surface_antialiasing antialias,
+			const rsx::surface_scaling_config_t& resolution_scaling_config
 		)
 	{
 		auto format = rsx::internals::surface_depth_format_to_gl(surface_depth_format);
-		const auto [width_, height_] = rsx::apply_resolution_scale<true>(static_cast<u16>(width), static_cast<u16>(height));
+		const auto [width_, height_] = rsx::apply_resolution_scale<true>(resolution_scaling_config, static_cast<u16>(width), static_cast<u16>(height));
 
 		u8 samples;
 		rsx::surface_sample_layout sample_layout;
@@ -206,6 +209,7 @@ struct gl_render_target_traits
 
 		result->set_name(fmt::format("DSV_%u@0x%x", result->id(), address));
 		result->set_aa_mode(antialias);
+		result->set_resolution_scaling_config(resolution_scaling_config);
 		result->set_surface_dimensions(static_cast<u16>(width), static_cast<u16>(height), static_cast<u32>(pitch));
 		result->set_format(surface_depth_format);
 		result->set_native_pitch(static_cast<u32>(width) * get_format_block_size_in_bytes(surface_depth_format) * result->samples_x);
@@ -230,8 +234,11 @@ struct gl_render_target_traits
 		if (!sink)
 		{
 			auto internal_format = static_cast<GLenum>(ref->get_internal_format());
-			const auto [new_w, new_h] = rsx::apply_resolution_scale<true>(prev.width, prev.height,
-				ref->get_surface_width<rsx::surface_metrics::pixels>(), ref->get_surface_height<rsx::surface_metrics::pixels>());
+			const auto [new_w, new_h] = rsx::apply_resolution_scale<true>(
+				ref->resolution_scaling_config,
+				prev.width, prev.height,
+				ref->get_surface_width<rsx::surface_metrics::pixels>(),
+				ref->get_surface_height<rsx::surface_metrics::pixels>());
 
 			sink = std::make_unique<gl::render_target>(new_w, new_h, ref->samples(), internal_format, ref->format_class());
 			sink->add_ref();
@@ -239,6 +246,9 @@ struct gl_render_target_traits
 			sink->memory_usage_flags = rsx::surface_usage_flags::storage;
 			sink->state_flags = rsx::surface_state_flags::erase_bkgnd;
 			sink->format_info = ref->format_info;
+
+			sink->sample_layout = ref->sample_layout;
+			sink->resolution_scaling_config = ref->resolution_scaling_config;
 
 			sink->set_name(fmt::format("SINK_%u@0x%x", sink->id(), address));
 			sink->set_spp(ref->get_spp());

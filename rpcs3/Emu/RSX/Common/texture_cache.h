@@ -2413,9 +2413,13 @@ namespace rsx
 				// 2. The image has to have been generated on the GPU (fbo or blit target only)
 
 				rsx::simple_array<copy_region_descriptor> sections;
-				const bool use_upscaling = (result.upload_context == rsx::texture_upload_context::framebuffer_storage && g_cfg.video.resolution_scale_percent != 100);
+				const bool use_upscaling = (result.upload_context == rsx::texture_upload_context::framebuffer_storage);
+				auto to_surface_type = [](const copy_region_descriptor& rgn) -> typename surface_store_type::surface_type
+				{
+					return static_cast<typename surface_store_type::surface_type>(rgn.src);
+				};
 
-				if (!helpers::append_mipmap_level(sections, result, attributes, 0, use_upscaling, attributes)) [[unlikely]]
+				if (!helpers::append_mipmap_level(to_surface_type, sections, result, attributes, 0, use_upscaling, attributes)) [[unlikely]]
 				{
 					// Abort if mip0 is not compatible
 					return result;
@@ -2445,7 +2449,7 @@ namespace rsx
 						options, range, extended_dimension, m_rtts, std::forward<Args>(extras)...);
 
 					if (!ret.validate() ||
-						!helpers::append_mipmap_level(sections, ret, attr2, subsurface, use_upscaling, attributes))
+						!helpers::append_mipmap_level(to_surface_type, sections, ret, attr2, subsurface, use_upscaling, attributes))
 					{
 						// Abort
 						break;
@@ -2778,7 +2782,7 @@ namespace rsx
 					surf->template get_surface_height<rsx::surface_metrics::pixels>() != surf->height())
 				{
 					// Must go through a scaling operation due to resolution scaling being present
-					ensure(g_cfg.video.resolution_scale_percent != 100);
+					ensure(src_subres.surface->resolution_scaling_config.scale_percent != 100);
 					use_null_region = false;
 				}
 			}
@@ -3389,8 +3393,8 @@ namespace rsx
 			{
 				const auto surface_width = src_subres.surface->template get_surface_width<rsx::surface_metrics::pixels>();
 				const auto surface_height = src_subres.surface->template get_surface_height<rsx::surface_metrics::pixels>();
-				std::tie(src_area.x1, src_area.y1) = rsx::apply_resolution_scale<false>(src_area.x1, src_area.y1, surface_width, surface_height);
-				std::tie(src_area.x2, src_area.y2) = rsx::apply_resolution_scale<true>(src_area.x2, src_area.y2, surface_width, surface_height);
+				std::tie(src_area.x1, src_area.y1) = rsx::apply_resolution_scale<false>(src_subres.surface->resolution_scaling_config, src_area.x1, src_area.y1, surface_width, surface_height);
+				std::tie(src_area.x2, src_area.y2) = rsx::apply_resolution_scale<true>(src_subres.surface->resolution_scaling_config, src_area.x2, src_area.y2, surface_width, surface_height);
 
 				// The resource is of surface type; possibly disabled AA emulation
 				src_subres.surface->transform_blit_coordinates(rsx::surface_access::transfer_read, src_area);
@@ -3400,8 +3404,8 @@ namespace rsx
 			{
 				const auto surface_width = dst_subres.surface->template get_surface_width<rsx::surface_metrics::pixels>();
 				const auto surface_height = dst_subres.surface->template get_surface_height<rsx::surface_metrics::pixels>();
-				std::tie(dst_area.x1, dst_area.y1) = rsx::apply_resolution_scale<false>(dst_area.x1, dst_area.y1, surface_width, surface_height);
-				std::tie(dst_area.x2, dst_area.y2) = rsx::apply_resolution_scale<true>(dst_area.x2, dst_area.y2, surface_width, surface_height);
+				std::tie(dst_area.x1, dst_area.y1) = rsx::apply_resolution_scale<false>(dst_subres.surface->resolution_scaling_config, dst_area.x1, dst_area.y1, surface_width, surface_height);
+				std::tie(dst_area.x2, dst_area.y2) = rsx::apply_resolution_scale<true>(dst_subres.surface->resolution_scaling_config, dst_area.x2, dst_area.y2, surface_width, surface_height);
 
 				// The resource is of surface type; possibly disabled AA emulation
 				dst_subres.surface->transform_blit_coordinates(rsx::surface_access::transfer_write, dst_area);
