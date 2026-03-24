@@ -3160,7 +3160,11 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 
 	if (async_op)
 	{
-		std::thread{perform_kill}.detach();
+		std::thread{[perform_kill]()
+		{
+			thread_base::set_name("Perform Kill");
+			perform_kill();
+		}}.detach();
 	}
 	else
 	{
