@@ -398,6 +398,7 @@ namespace rsx
 			surface_antialiasing antialias,
 			usz width, usz height, usz pitch,
 			u8 bpp,
+			const rsx::surface_scaling_config_t& scaling_config,
 			Args&&... extra_params)
 		{
 			surface_storage_type old_surface_storage;
@@ -531,7 +532,7 @@ namespace rsx
 			if (!new_surface)
 			{
 				ensure(store);
-				new_surface_storage = Traits::create_new_surface(address, format, width, height, pitch, antialias, std::forward<Args>(extra_params)...);
+				new_surface_storage = Traits::create_new_surface(address, format, width, height, pitch, antialias, scaling_config, std::forward<Args>(extra_params)...);
 				new_surface = Traits::get(new_surface_storage);
 				Traits::prepare_surface_for_drawing(command_list, new_surface);
 				allocate_rsx_memory(new_surface);
@@ -842,11 +843,13 @@ namespace rsx
 			surface_color_format color_format,
 			surface_antialiasing antialias,
 			usz width, usz height, usz pitch,
+			const rsx::surface_scaling_config_t& scaling_config,
 			Args&&... extra_params)
 		{
 			return bind_surface_address<false>(
 				command_list, address, color_format, antialias,
 				width, height, pitch, get_format_block_size_in_bytes(color_format),
+				scaling_config,
 				std::forward<Args>(extra_params)...);
 		}
 
@@ -857,12 +860,14 @@ namespace rsx
 			surface_depth_format2 depth_format,
 			surface_antialiasing antialias,
 			usz width, usz height, usz pitch,
+			const rsx::surface_scaling_config_t& scaling_config,
 			Args&&... extra_params)
 		{
 			return bind_surface_address<true>(
 				command_list, address, depth_format, antialias,
 				width, height, pitch,
 				get_format_block_size_in_bytes(depth_format),
+				scaling_config,
 				std::forward<Args>(extra_params)...);
 		}
 
@@ -969,6 +974,7 @@ namespace rsx
 			surface_raster_type raster_type,
 			const std::array<u32, 4> &surface_addresses, u32 address_z,
 			const std::array<u32, 4> &surface_pitch, u32 zeta_pitch,
+			const rsx::surface_scaling_config_t& scaling_config,
 			Args&&... extra_params)
 		{
 			u32 clip_width = clip_horizontal_reg;
@@ -998,7 +1004,7 @@ namespace rsx
 
 					m_bound_render_targets[surface_index] = std::make_pair(surface_addresses[surface_index],
 						bind_address_as_render_targets(command_list, surface_addresses[surface_index], color_format, antialias,
-							clip_width, clip_height, surface_pitch[surface_index], std::forward<Args>(extra_params)...));
+							clip_width, clip_height, surface_pitch[surface_index], scaling_config, std::forward<Args>(extra_params)...));
 
 					m_bound_render_target_ids.push_back(surface_index);
 				}
@@ -1014,7 +1020,7 @@ namespace rsx
 			{
 				m_bound_depth_stencil = std::make_pair(address_z,
 					bind_address_as_depth_stencil(command_list, address_z, depth_format, antialias,
-						clip_width, clip_height, zeta_pitch, std::forward<Args>(extra_params)...));
+						clip_width, clip_height, zeta_pitch, scaling_config, std::forward<Args>(extra_params)...));
 			}
 			else
 			{

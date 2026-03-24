@@ -996,6 +996,12 @@ namespace rsx
 		fifo_ctrl = std::make_unique<::rsx::FIFO::FIFO_control>(this);
 		fifo_ctrl->set_get(ctrl->get);
 
+		resolution_scaling_config =
+		{
+			.scale_percent = static_cast<u16>(g_cfg.video.resolution_scale_percent),
+			.min_scalable_dimension = static_cast<u16>(g_cfg.video.min_scalable_dimension),
+		};
+
 		last_guest_flip_timestamp = get_system_time() - 1000000;
 
 		vblank_count = 0;
@@ -1940,8 +1946,8 @@ namespace rsx
 			m_graphics_state.set(rsx::rtt_config_valid);
 		}
 
-		std::tie(region.x1, region.y1) = rsx::apply_resolution_scale<false>(x1, y1, m_framebuffer_layout.width, m_framebuffer_layout.height);
-		std::tie(region.x2, region.y2) = rsx::apply_resolution_scale<true>(x2, y2, m_framebuffer_layout.width, m_framebuffer_layout.height);
+		std::tie(region.x1, region.y1) = rsx::apply_resolution_scale<false>(resolution_scaling_config, x1, y1, m_framebuffer_layout.width, m_framebuffer_layout.height);
+		std::tie(region.x2, region.y2) = rsx::apply_resolution_scale<true>(resolution_scaling_config, x2, y2, m_framebuffer_layout.width, m_framebuffer_layout.height);
 
 		return true;
 	}

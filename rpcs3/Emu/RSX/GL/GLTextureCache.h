@@ -287,6 +287,7 @@ namespace gl
 			u32 transfer_width = width;
 			u32 transfer_height = height;
 			u32 transfer_x = 0, transfer_y = 0;
+			u16 resolution_scale_percent = 100;
 
 			if (context == rsx::texture_upload_context::framebuffer_storage)
 			{
@@ -295,9 +296,10 @@ namespace gl
 				target_texture = surface->get_surface(rsx::surface_access::transfer_read);
 				transfer_width *= surface->samples_x;
 				transfer_height *= surface->samples_y;
+				resolution_scale_percent = surface->resolution_scaling_config.scale_percent;
 			}
 
-			if ((rsx::get_resolution_scale_percent() != 100 && context == rsx::texture_upload_context::framebuffer_storage) ||
+			if ((resolution_scale_percent != 100 && context == rsx::texture_upload_context::framebuffer_storage) ||
 				(vram_texture->pitch() != rsx_pitch))
 			{
 				areai src_area = { 0, 0, 0, 0 };
