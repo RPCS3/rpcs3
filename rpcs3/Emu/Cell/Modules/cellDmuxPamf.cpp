@@ -1154,6 +1154,19 @@ void dmux_pamf_spu_context::save(utils::serial& ar)
 
 // PPU thread
 
+template <auto Syscall>
+static auto lv2_syscall(ppu_thread& ppu, auto&&... args)
+{
+	const auto ret = Syscall(ppu, std::forward<decltype(args)>(args)...);
+
+	if (ppu.test_stopped())
+	{
+		ppu.state += cpu_flag::again;
+	}
+
+	return ret;
+}
+
 template <DmuxPamfCommandType type>
 void DmuxPamfContext::send_spu_command_and_wait(ppu_thread& ppu, bool waiting_for_spu_state, auto&&... cmd_params)
 {
@@ -1195,7 +1208,7 @@ error_code DmuxPamfContext::wait_au_released_or_stream_reset(ppu_thread& ppu, u6
 		goto label1_waiting_for_au_released_state;
 	}
 
-	if (sys_mutex_lock(ppu, mutex, 0) != CELL_OK)
+	if (lv2_syscall<sys_mutex_lock>(ppu, mutex, 0) != CELL_OK)
 	{
 		return CELL_DMUX_PAMF_ERROR_FATAL;
 	}
@@ -1214,7 +1227,7 @@ error_code DmuxPamfContext::wait_au_released_or_stream_reset(ppu_thread& ppu, u6
 			savestate = dmux_pamf_state::waiting_for_au_released;
 			label1_waiting_for_au_released_state:
 
-			if (sys_cond_wait(ppu, cond, 0) != CELL_OK)
+			if (lv2_syscall<sys_cond_wait>(ppu, cond, 0) != CELL_OK)
 			{
 				sys_mutex_unlock(ppu, mutex);
 				return CELL_DMUX_PAMF_ERROR_FATAL;
@@ -1240,7 +1253,7 @@ error_code DmuxPamfContext::wait_au_released_or_stream_reset(ppu_thread& ppu, u6
 template <bool reset>
 error_code DmuxPamfContext::set_au_reset(ppu_thread& ppu)
 {
-	if (sys_mutex_lock(ppu, mutex, 0) != CELL_OK)
+	if (lv2_syscall<sys_mutex_lock>(ppu, mutex, 0) != CELL_OK)
 	{
 		return CELL_DMUX_PAMF_ERROR_FATAL;
 	}
@@ -1358,7 +1371,7 @@ void DmuxPamfContext::exec(ppu_thread& ppu)
 			savestate = dmux_pamf_state::starting_demux_done;
 			label4_starting_demux_done_state:
 
-			if (sys_mutex_lock(ppu, mutex, 0) != CELL_OK)
+			if (lv2_syscall<sys_mutex_lock>(ppu, mutex, 0) != CELL_OK)
 			{
 				savestate = dmux_pamf_state::starting_demux_done_mutex_lock_error;
 				label5_starting_demux_done_mutex_lock_error_state:
@@ -1423,7 +1436,7 @@ void DmuxPamfContext::exec(ppu_thread& ppu)
 		{
 		case DmuxPamfEventType::au_found:
 		{
-			if (sys_mutex_lock(ppu, mutex, 0) != CELL_OK)
+			if (lv2_syscall<sys_mutex_lock>(ppu, mutex, 0) != CELL_OK)
 			{
 				savestate = dmux_pamf_state::sending_fatal_err;
 				continue;
@@ -1537,7 +1550,7 @@ void DmuxPamfContext::exec(ppu_thread& ppu)
 			savestate = dmux_pamf_state::demux_done_mutex_lock;
 			label15_demux_done_mutex_lock_state:
 
-			if (sys_mutex_lock(ppu, mutex, 0) != CELL_OK)
+			if (lv2_syscall<sys_mutex_lock>(ppu, mutex, 0) != CELL_OK)
 			{
 				savestate = dmux_pamf_state::sending_fatal_err;
 				continue;
@@ -1552,7 +1565,7 @@ void DmuxPamfContext::exec(ppu_thread& ppu)
 				savestate = dmux_pamf_state::demux_done_cond_signal;
 				label16_demux_done_cond_signal_state:
 
-				if (sys_cond_signal_all(ppu, cond) != CELL_OK)
+				if (lv2_syscall<sys_cond_signal_all>(ppu, cond) != CELL_OK)
 				{
 					sys_mutex_unlock(ppu, mutex);
 
@@ -1578,7 +1591,7 @@ void DmuxPamfContext::exec(ppu_thread& ppu)
 		}
 		case DmuxPamfEventType::flush_done:
 		{
-			if (sys_mutex_lock(ppu, mutex, 0) != CELL_OK)
+			if (lv2_syscall<sys_mutex_lock>(ppu, mutex, 0) != CELL_OK)
 			{
 				savestate = dmux_pamf_state::sending_fatal_err;
 				continue;
@@ -1632,7 +1645,7 @@ void DmuxPamfContext::exec(ppu_thread& ppu)
 			savestate = dmux_pamf_state::resuming_demux_mutex_lock;
 			label17_resuming_demux_mutex_lock_state:
 
-			if (sys_mutex_lock(ppu, mutex, 0) != CELL_OK)
+			if (lv2_syscall<sys_mutex_lock>(ppu, mutex, 0) != CELL_OK)
 			{
 				savestate = dmux_pamf_state::sending_fatal_err;
 				continue;
@@ -2118,7 +2131,7 @@ error_code DmuxPamfContext::reset_stream(ppu_thread& ppu)
 	switch (savestate)
 	{
 	case 0:
-		if (sys_mutex_lock(ppu, mutex, 0) != CELL_OK)
+		if (lv2_syscall<sys_mutex_lock>(ppu, mutex, 0) != CELL_OK)
 		{
 			return CELL_DMUX_PAMF_ERROR_FATAL;
 		}
@@ -2149,7 +2162,7 @@ error_code DmuxPamfContext::reset_stream(ppu_thread& ppu)
 		[[fallthrough]];
 
 	case 2:
-		if (const error_code ret = sys_cond_signal_to(ppu, cond, static_cast<u32>(thread_id)); ret != CELL_OK && ret != static_cast<s32>(CELL_EPERM))
+		if (const error_code ret = lv2_syscall<sys_cond_signal_to>(ppu, cond, static_cast<u32>(thread_id)); ret != CELL_OK && ret != static_cast<s32>(CELL_EPERM))
 		{
 			sys_mutex_unlock(ppu, mutex);
 			return CELL_DMUX_PAMF_ERROR_FATAL;
@@ -2216,7 +2229,7 @@ error_code _CellDmuxCoreOpCreateThread(ppu_thread& ppu, vm::ptr<CellDmuxPamfHand
 
 error_code DmuxPamfContext::join_thread(ppu_thread& ppu)
 {
-	if (sys_mutex_lock(ppu, mutex, 0) != CELL_OK)
+	if (lv2_syscall<sys_mutex_lock>(ppu, mutex, 0) != CELL_OK)
 	{
 		return CELL_DMUX_PAMF_ERROR_FATAL;
 	}
@@ -2232,7 +2245,7 @@ error_code DmuxPamfContext::join_thread(ppu_thread& ppu)
 		return CELL_DMUX_PAMF_ERROR_FATAL;
 	}
 
-	return sys_ppu_thread_join(ppu, static_cast<u32>(thread_id), +vm::var<u64>{}) == CELL_OK ? static_cast<error_code>(CELL_OK) : CELL_DMUX_PAMF_ERROR_FATAL;
+	return lv2_syscall<sys_ppu_thread_join>(ppu, static_cast<u32>(thread_id), +vm::var<u64>{}) == CELL_OK ? static_cast<error_code>(CELL_OK) : CELL_DMUX_PAMF_ERROR_FATAL;
 }
 
 error_code _CellDmuxCoreOpJoinThread(ppu_thread& ppu, vm::ptr<CellDmuxPamfHandle> handle)
@@ -2265,7 +2278,7 @@ error_code DmuxPamfContext::set_stream(ppu_thread& ppu, vm::cptr<u8> stream_addr
 
 	if (!waiting_for_spu_state)
 	{
-		if (sys_mutex_lock(ppu, mutex, 0) != CELL_OK)
+		if (lv2_syscall<sys_mutex_lock>(ppu, mutex, 0) != CELL_OK)
 		{
 			return CELL_DMUX_PAMF_ERROR_FATAL;
 		}
@@ -2321,7 +2334,7 @@ error_code DmuxPamfElementaryStream::release_au(ppu_thread& ppu, vm::ptr<u8> au_
 	switch (savestate)
 	{
 	case 0:
-		if (sys_mutex_lock(ppu, demuxer->mutex, 0) != CELL_OK)
+		if (lv2_syscall<sys_mutex_lock>(ppu, demuxer->mutex, 0) != CELL_OK)
 		{
 			return CELL_DMUX_PAMF_ERROR_FATAL;
 		}
@@ -2347,7 +2360,7 @@ error_code DmuxPamfElementaryStream::release_au(ppu_thread& ppu, vm::ptr<u8> au_
 		[[fallthrough]];
 
 	case 2:
-		if (const error_code ret = sys_cond_signal_to(ppu, demuxer->cond, static_cast<u32>(demuxer->thread_id)); ret != CELL_OK && ret != static_cast<s32>(CELL_EPERM))
+		if (const error_code ret = lv2_syscall<sys_cond_signal_to>(ppu, demuxer->cond, static_cast<u32>(demuxer->thread_id)); ret != CELL_OK && ret != static_cast<s32>(CELL_EPERM))
 		{
 			sys_mutex_unlock(ppu, demuxer->mutex);
 			return CELL_DMUX_PAMF_ERROR_FATAL;
@@ -2462,7 +2475,7 @@ error_code DmuxPamfContext::enable_es(ppu_thread& ppu, u16 stream_id, u16 privat
 			return CELL_DMUX_PAMF_ERROR_ARG;
 		}
 
-		if (const error_code ret = sys_mutex_lock(ppu, mutex, 0); ret != CELL_OK)
+		if (const error_code ret = lv2_syscall<sys_mutex_lock>(ppu, mutex, 0); ret != CELL_OK)
 		{
 			return CELL_DMUX_PAMF_ERROR_FATAL;
 		}
@@ -2615,7 +2628,7 @@ error_code DmuxPamfElementaryStream::disable_es(ppu_thread& ppu)
 	switch (savestate)
 	{
 	case 0:
-		if (sys_mutex_lock(ppu, dmux->mutex, 0) != CELL_OK)
+		if (lv2_syscall<sys_mutex_lock>(ppu, dmux->mutex, 0) != CELL_OK)
 		{
 			return CELL_DMUX_PAMF_ERROR_FATAL;
 		}
@@ -2660,7 +2673,7 @@ error_code DmuxPamfElementaryStream::disable_es(ppu_thread& ppu)
 		[[fallthrough]];
 
 	case 2:
-		if (const error_code ret = sys_cond_signal_to(ppu, dmux->cond, static_cast<u32>(dmux->thread_id)); ret != CELL_OK && ret != static_cast<s32>(CELL_EPERM))
+		if (const error_code ret = lv2_syscall<sys_cond_signal_to>(ppu, dmux->cond, static_cast<u32>(dmux->thread_id)); ret != CELL_OK && ret != static_cast<s32>(CELL_EPERM))
 		{
 			sys_mutex_unlock(ppu, dmux->mutex);
 			return CELL_DMUX_PAMF_ERROR_FATAL;
@@ -2699,7 +2712,7 @@ error_code DmuxPamfElementaryStream::flush_es(ppu_thread& ppu) const
 
 	if (!waiting_for_spu_state)
 	{
-		if (sys_mutex_lock(ppu, demuxer->mutex, 0) != CELL_OK)
+		if (lv2_syscall<sys_mutex_lock>(ppu, demuxer->mutex, 0) != CELL_OK)
 		{
 			return CELL_DMUX_PAMF_ERROR_FATAL;
 		}
@@ -2742,7 +2755,7 @@ error_code DmuxPamfElementaryStream::reset_es(ppu_thread& ppu) const
 
 	if (!waiting_for_spu_state)
 	{
-		if (sys_mutex_lock(ppu, demuxer->mutex, 0) != CELL_OK)
+		if (lv2_syscall<sys_mutex_lock>(ppu, demuxer->mutex, 0) != CELL_OK)
 		{
 			return CELL_DMUX_PAMF_ERROR_FATAL;
 		}
@@ -2798,7 +2811,7 @@ error_code DmuxPamfContext::reset_stream_and_wait_done(ppu_thread& ppu)
 		return {};
 	}
 
-	if (sys_mutex_lock(ppu, mutex, 0) != CELL_OK)
+	if (lv2_syscall<sys_mutex_lock>(ppu, mutex, 0) != CELL_OK)
 	{
 		return CELL_DMUX_PAMF_ERROR_FATAL;
 	}
@@ -2810,7 +2823,7 @@ error_code DmuxPamfContext::reset_stream_and_wait_done(ppu_thread& ppu)
 
 	while (sequence_state != DmuxPamfSequenceState::dormant)
 	{
-		if (sys_cond_wait(ppu, cond, 0) != CELL_OK)
+		if (lv2_syscall<sys_cond_wait>(ppu, cond, 0) != CELL_OK)
 		{
 			sys_mutex_unlock(ppu, mutex);
 			return CELL_DMUX_PAMF_ERROR_FATAL;
