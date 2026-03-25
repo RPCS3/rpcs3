@@ -229,6 +229,7 @@ public:
 		const QString uuid               = tr("This is the ID used for hardware statistics.\nIt should only be reset if you change your hardware configuration or if you copied RPCS3 to another PC.");
 		const QString pad_navigation     = tr("Use the game pad that is configured for player 1 to navigate in the GUI.");
 		const QString global_navigation  = tr("Keep control over pad navigation if RPCS3 is not the active window.");
+		const QString gui_volume         = tr("Set the audio volume of the user interface. This does not affect the ingame audio.");
 
 		// input
 

@@ -2190,6 +2190,16 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			m_gui_settings->SetValue(gui::nav_global, checked);
 		});
 
+		// Audio
+		SubscribeTooltip(ui->gb_gui_volume, tooltips.settings.gui_volume);
+		connect(ui->guiVolume, &QSlider::valueChanged, [this](int value)
+		{
+			ui->guiVolumeLabel->setText(tr("User Interface: %0 %", "GUI volume").arg(value));
+			gui::volume = std::clamp(value / 100.0f, 0.0f, 1.0f);
+			m_gui_settings->SetValue(gui::gui_volume, gui::volume);
+		});
+		ui->guiVolume->setValue(std::clamp(m_gui_settings->GetValue(gui::gui_volume).toFloat() * 100.0f, 0.0f, 100.0f));
+
 		// Discord:
 		SubscribeTooltip(ui->useRichPresence, tooltips.settings.use_rich_presence);
 		SubscribeTooltip(ui->discordState, tooltips.settings.discord_state);

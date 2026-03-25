@@ -513,7 +513,7 @@
             </item>
             <item>
              <widget class="QWidget" name="widget_gpu_4" native="true">
-              <layout class="QHBoxLayout" name="widget_gpu_4_layout" stretch="1,1">
+              <layout class="QHBoxLayout" name="widget_gpu_4_layout" stretch="1">
                <property name="leftMargin">
                 <number>0</number>
                </property>
@@ -3996,6 +3996,56 @@
                  <property name="text">
                   <string>Allow Global Pad Navigation</string>
                  </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_gui_volume">
+              <property name="title">
+               <string>Volume</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_gui_volume_layout">
+               <item>
+                <widget class="QWidget" name="gui_volume" native="true">
+                 <layout class="QVBoxLayout" name="layout_gui_volume">
+                  <property name="leftMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>0</number>
+                  </property>
+                  <item>
+                   <widget class="QLabel" name="guiVolumeLabel">
+                    <property name="text">
+                     <string>GUI: 0%</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QSlider" name="guiVolume">
+                    <property name="maximum">
+                     <number>100</number>
+                    </property>
+                    <property name="orientation">
+                     <enum>Qt::Orientation::Horizontal</enum>
+                    </property>
+                    <property name="tickPosition">
+                     <enum>QSlider::TickPosition::TicksBelow</enum>
+                    </property>
+                    <property name="tickInterval">
+                     <number>50</number>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
                 </widget>
                </item>
               </layout>

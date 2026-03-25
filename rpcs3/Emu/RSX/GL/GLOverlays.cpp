@@ -399,9 +399,12 @@ namespace gl
 
 	void ui_overlay_renderer::run(gl::command_context& cmd_, const areau& viewport, GLuint target, rsx::overlays::overlay& ui, bool flip_vertically)
 	{
-		ui.set_render_viewport(viewport.width(), viewport.height());
-		program_handle.uniforms["viewport"] = color4f(static_cast<f32>(viewport.width()), static_cast<f32>(viewport.height()), static_cast<f32>(viewport.x1), static_cast<f32>(viewport.y1));
-		program_handle.uniforms["ui_scale"] = color4f(static_cast<f32>(ui.get_virtual_width()), static_cast<f32>(ui.get_virtual_height()), 1.f, 1.f);
+    ui.set_render_viewport(viewport.width(), viewport.height());
+		const auto ui_scale = color4f(static_cast<f32>(ui.virtual_width), static_cast<f32>(ui.virtual_height), 1.f, 1.f);
+		const auto ui_viewport = color4f(static_cast<f32>(viewport.width()), static_cast<f32>(viewport.height()), static_cast<f32>(viewport.x1), static_cast<f32>(viewport.y1));
+
+		program_handle.uniforms["viewport"] = ui_viewport;
+		program_handle.uniforms["ui_scale"] = ui_scale;
 
 		saved_sampler_state save_30(30, m_sampler);
 		saved_sampler_state save_31(31, m_sampler);
@@ -459,12 +462,24 @@ namespace gl
 				.texture_mode(texture_mode)
 				.clip_fragments(cmd.config.clip_region)
 				.pulse_glow(cmd.config.pulse_glow)
+				.set_sdf(cmd.config.sdf_config.func)
 				.get();
 
 			program_handle.uniforms["timestamp"] = cmd.config.get_sinus_value();
 			program_handle.uniforms["albedo"] = cmd.config.color;
 			program_handle.uniforms["clip_bounds"] = cmd.config.clip_rect;
 			program_handle.uniforms["blur_intensity"] = static_cast<f32>(cmd.config.blur_strength);
+
+			if (cmd.config.sdf_config.func != rsx::overlays::sdf_function::none)
+			{
+				auto sdf_config = cmd.config.sdf_config;
+				sdf_config.transform(static_cast<areaf>(viewport).flipped_vertical(), {ui_scale.x, ui_scale.y});
+
+				program_handle.uniforms["sdf_params"] = color4f(sdf_config.hx, sdf_config.hy, sdf_config.br, sdf_config.bw);
+				program_handle.uniforms["sdf_origin"] = color2f(sdf_config.cx, sdf_config.cy);
+				program_handle.uniforms["sdf_border_color"] = sdf_config.border_color;
+			}
+
 			overlay_pass::run(cmd_, viewport, target, gl::image_aspect::color, true);
 		}
 
