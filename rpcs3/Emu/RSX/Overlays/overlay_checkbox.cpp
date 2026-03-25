@@ -99,7 +99,7 @@ namespace rsx::overlays
 		ellipse_part->set_size(dim * 2, dim);
 		ellipse_part->set_padding(1);
 		ellipse_part->set_pos(0, 0);
-		ellipse_part->border_radius = (dim - 2) / 2;
+		ellipse_part->border_radius = (dim - 4) / 2; // Avoid perfect capsule shape since we want a border and perfect capsules can have a false border along the midline due to subgroup shenanigans
 
 		circle_part->set_size(dim, dim);
 		circle_part->set_padding(4);
