@@ -5,6 +5,7 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "util/shared_ptr.hpp"
 
+#include <cstring>
 #include <set>
 
 error_code sceNpInit(u32 poolsize, vm::ptr<void> poolptr);
@@ -1285,6 +1286,11 @@ struct SceNpId
 	u8 reserved[8];
 };
 
+inline bool operator<(const SceNpId& lhs, const SceNpId& rhs) noexcept
+{
+    return std::memcmp(&lhs, &rhs, sizeof(SceNpId)) < 0;
+}
+
 CHECK_SIZE_ALIGN(SceNpId, 0x24, 1);
 
 // Online Name structure
@@ -1696,6 +1702,11 @@ struct SceNpRoomId
 	u8 opt[28];
 	u8 reserved[8];
 };
+
+inline bool operator<(const SceNpRoomId& lhs, const SceNpRoomId& rhs) noexcept
+{
+    return std::memcmp(&lhs, &rhs, sizeof(SceNpRoomId)) < 0;
+}
 
 struct SceNpMatchingAttr
 {
