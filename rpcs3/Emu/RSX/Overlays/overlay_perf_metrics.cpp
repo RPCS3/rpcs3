@@ -115,6 +115,7 @@ namespace rsx
 			{
 				graph_height += m_padding;
 			}
+
 			const u16 overlay_width = std::max(m_body.w, graph_width);
 			const u16 overlay_height = static_cast<u16>(m_body.h + graph_height);
 			const auto percent_to_margin_px = [](f32 margin_percent, u16 virtual_size, u16 overlay_size) -> u32
@@ -450,15 +451,24 @@ namespace rsx
 			m_force_update = true;
 		}
 
-		void perf_metrics_overlay::set_render_viewport(u32 width, u32 height)
+		void perf_metrics_overlay::set_render_viewport(u16 width, u16 height)
 		{
 			u16 new_virtual_width = virtual_width;
 			u16 new_virtual_height = virtual_height;
 
 			if (use_window_space && width > 0 && height > 0)
 			{
-				new_virtual_width = static_cast<u16>(std::min<u32>(width, std::numeric_limits<u16>::max()));
-				new_virtual_height = static_cast<u16>(std::min<u32>(height, std::numeric_limits<u16>::max()));
+				const double scale_x = static_cast<double>(width) / virtual_width;
+				const double scale_y = static_cast<double>(height) / virtual_height;
+				const double scale = std::min(scale_x, scale_y);
+
+				new_virtual_width = static_cast<u16>(std::min<u32>(
+					static_cast<u32>(std::lround(width / scale)),
+					std::numeric_limits<u16>::max()));
+
+				new_virtual_height = static_cast<u16>(std::min<u32>(
+					static_cast<u32>(std::lround(height / scale)),
+					std::numeric_limits<u16>::max()));
 			}
 
 			if (m_virtual_width == new_virtual_width && m_virtual_height == new_virtual_height)

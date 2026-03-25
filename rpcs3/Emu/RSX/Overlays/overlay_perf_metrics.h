@@ -103,7 +103,7 @@ namespace rsx
 			void set_body_colors(std::string color, std::string background);
 			void set_title_colors(std::string color, std::string background);
 			void force_next_update();
-			void set_render_viewport(u32 width, u32 height) override;
+			void set_render_viewport(u16 width, u16 height) override;
 			u16 get_virtual_width() const override { return m_virtual_width; }
 			u16 get_virtual_height() const override { return m_virtual_height; }
 

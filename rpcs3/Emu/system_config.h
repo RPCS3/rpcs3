@@ -209,8 +209,8 @@ struct cfg_root : cfg::node
 			cfg::uint<4, 36> font_size{ this, "Font size (px)", 10, true };
 			cfg::_enum<screen_quadrant> position{ this, "Position", screen_quadrant::top_left, true };
 			cfg::string font{ this, "Font", "n023055ms.ttf", true };
-			cfg::_float<0, 100> margin_x{ this, "Horizontal Margin (%)", 1.5, true }; // horizontal distance to the window border relative to the screen_quadrant in percent of the window width
-			cfg::_float<0, 100> margin_y{ this, "Vertical Margin (%)", 4.5, true }; // vertical distance to the window border relative to the screen_quadrant in percent of the window height
+			cfg::_float<0, 100> margin_x{ this, "Horizontal Margin (%)", 4, true }; // horizontal distance to the window border relative to the screen_quadrant in percent of the window width
+			cfg::_float<0, 100> margin_y{ this, "Vertical Margin (%)", 7, true }; // vertical distance to the window border relative to the screen_quadrant in percent of the window height
 			cfg::_bool center_x{ this, "Center Horizontally", false, true };
 			cfg::_bool center_y{ this, "Center Vertically", false, true };
 			cfg::uint<0, 100> opacity{ this, "Opacity (%)", 70, true };

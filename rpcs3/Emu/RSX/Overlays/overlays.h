@@ -58,9 +58,9 @@ namespace rsx
 			virtual compiled_resource get_compiled() = 0;
 
 			void refresh() const;
-			virtual u16 get_virtual_width()		const { return virtual_width;}
-			virtual u16 get_virtual_height()	const { return virtual_height;}
-			virtual void set_render_viewport(u32 /*width*/, u32 /*height*/) {}
+			virtual u16 get_virtual_width() const { return virtual_width; }
+			virtual u16 get_virtual_height() const { return virtual_height; }
+			virtual void set_render_viewport(u16 /*width*/, u16 /*height*/) {}
 		};
 
 		// Interactable UI element
