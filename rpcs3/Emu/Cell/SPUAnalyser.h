@@ -13,6 +13,7 @@ struct spu_itype
 	static constexpr struct quadrop_tag{} _quadrop{}; // 4-op Instructions
 	static constexpr struct xfloat_tag{} xfloat{}; // Instructions producing xfloat values
 	static constexpr struct zregmod_tag{} zregmod{}; // Instructions not modifying any GPR
+	static constexpr struct pure_tag{} pure{}; // Instructions that always produce the same values as long as arguments are equal
 
 	enum class type : unsigned char
 	{
@@ -158,6 +159,15 @@ struct spu_itype
 		CUFLT,
 		FRDS, // xfloat_tag last
 
+		CFLTS,
+		CFLTU,
+		FCEQ,
+		FCMEQ,
+		FCGT,
+		FCMGT, // floating_tag last
+		FSCRWR,
+		FSCRRD,
+
 		DFA,
 		DFS,
 		DFM,
@@ -167,20 +177,11 @@ struct spu_itype
 		DFNMA,
 		FESD,
 
-		CFLTS,
-		CFLTU,
-		FCEQ,
-		FCMEQ,
-		FCGT,
-		FCMGT,
-		FSCRWR,
-		FSCRRD,
-
 		DFCEQ,
 		DFCMEQ,
 		DFCGT,
 		DFCMGT,
-		DFTSV, // floating_tag last
+		DFTSV,
 
 		SHLH, // shiftrot_tag first
 		SHLHI,
@@ -248,10 +249,10 @@ struct spu_itype
 		return value >= BR && value <= BISL;
 	}
 
-	// Test for floating point instruction
+	// Test for floating point instruction (32-bit float)
 	friend constexpr bool operator &(type value, floating_tag)
 	{
-		return value >= FMA && value <= DFTSV;
+		return value >= FMA && value <= FCMGT;
 	}
 
 	// Test for 4-op instruction
@@ -301,7 +302,15 @@ struct spu_itype
 	{
 		return (value >= HEQ && value <= STQR) || (value >= BR && value <= BIHNZ);
 	}
+
+	// Test for instructions which always produce the same values as long as arguments and immediate values are equal
+	friend constexpr bool operator &(type value, pure_tag)
+	{
+		return (value >= ILH && value <= CLGTI);
+	}
 };
+
+using spu_itype_t = spu_itype::type;
 
 struct spu_iflag
 {
@@ -527,6 +536,8 @@ struct spu_iflag
 		return value;
 	}
 };
+
+using spu_iflag_t = spu_iflag::flag;
 
 #define NAME(x) static constexpr const char& x = *#x
 

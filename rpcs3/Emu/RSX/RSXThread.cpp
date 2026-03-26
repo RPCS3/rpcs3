@@ -2774,9 +2774,9 @@ namespace rsx
 		recovered_fifo_cmds_history.push({fifo_ctrl->last_cmd(), current_time});
 	}
 
-	std::string thread::dump_misc() const
+	void thread::dump_misc(std::string& ret, std::any& custom_data) const
 	{
-		std::string ret = cpu_thread::dump_misc();
+		cpu_thread::dump_misc(ret, custom_data);
 
 		const auto flags = +state;
 
@@ -2789,8 +2789,6 @@ namespace rsx
 		{
 			fmt::append(ret, "\n");
 		}
-
-		return ret;
 	}
 
 	std::vector<std::pair<u32, u32>> thread::dump_callstack_list() const

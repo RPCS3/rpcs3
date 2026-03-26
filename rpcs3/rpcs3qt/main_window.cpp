@@ -128,7 +128,7 @@ extern void qt_events_aware_op(int repeat_duration_ms, std::function<bool()> wra
 			}
 			else
 			{
-				QTimer::singleShot(repeat_duration_ms, *check_iteration);
+				QTimer::singleShot(repeat_duration_ms, event_loop, *check_iteration);
 			}
 		});
 
@@ -138,7 +138,7 @@ extern void qt_events_aware_op(int repeat_duration_ms, std::function<bool()> wra
 			event_loop = new QEventLoop();
 
 			// Queue event initially
-			QTimer::singleShot(0, *check_iteration);
+			QTimer::singleShot(0, event_loop, *check_iteration);
 
 			// Event loop
 			event_loop->exec();
