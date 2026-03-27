@@ -58,6 +58,18 @@ static inline vm::cptr<CellDmuxCoreOps> get_core_ops()
 	return vm::cptr<CellDmuxCoreOps>::make(*ppu_module_manager::cellDmuxPamf.variables.find(0x28b2b7b2)->second.export_addr);
 }
 
+template <auto Syscall>
+static auto lv2_syscall(ppu_thread& ppu, auto&&... args)
+{
+	const auto ret = Syscall(ppu, std::forward<decltype(args)>(args)...);
+
+	if (ppu.test_stopped())
+	{
+		ppu.state += cpu_flag::again;
+	}
+
+	return ret;
+}
 
 // Callbacks for cellDmuxPamf
 
@@ -76,9 +88,9 @@ static error_code notify_demux_done(ppu_thread& ppu, vm::ptr<void> core_handle, 
 
 	ensure(!!handle); // Not checked on LLE
 
-	ensure(sys_mutex_lock(ppu, handle->_dx_mhd, 0) == CELL_OK); // Failing this check on LLE would result in it dereferencing an invalid pointer.
+	ensure(lv2_syscall<sys_mutex_lock>(ppu, handle->_dx_mhd, 0) == CELL_OK); // Failing this check on LLE would result in it dereferencing an invalid pointer.
 	handle->dmux_state = DMUX_STOPPED;
-	ensure(sys_mutex_unlock(ppu, handle->_dx_mhd) == CELL_OK); // Failing this check on LLE would result in it dereferencing an invalid pointer.
+	ensure(lv2_syscall<sys_mutex_unlock>(ppu, handle->_dx_mhd) == CELL_OK); // Failing this check on LLE would result in it dereferencing an invalid pointer.
 
 	if (handle->_this)
 	{
@@ -162,7 +174,7 @@ static error_code notify_es_au_found(ppu_thread& ppu, vm::ptr<void> core_es_hand
 		return CELL_OK;
 	}
 
-	if (const error_code ret = sys_mutex_lock(ppu, es_handle->_dx_mes, 0); ret != CELL_OK)
+	if (const error_code ret = lv2_syscall<sys_mutex_lock>(ppu, es_handle->_dx_mes, 0); ret != CELL_OK)
 	{
 		fatal_err(es_handle->is_enabled, ret);
 		return 1;
@@ -171,7 +183,7 @@ static error_code notify_es_au_found(ppu_thread& ppu, vm::ptr<void> core_es_hand
 	// Check if the access unit queue is full. One slot is reserved for the access unit produced by flushing the stream, so that flushing always succeeds.
 	if (!es_handle->is_enabled || es_handle->au_queue.allocated_size >= es_handle->au_queue.max_size - !es_handle->flush_started)
 	{
-		if (const error_code ret = sys_mutex_unlock(ppu, es_handle->_dx_mes); ret != CELL_OK)
+		if (const error_code ret = lv2_syscall<sys_mutex_unlock>(ppu, es_handle->_dx_mes); ret != CELL_OK)
 		{
 			fatal_err(es_handle->is_enabled, ret);
 			return 1;
@@ -182,7 +194,7 @@ static error_code notify_es_au_found(ppu_thread& ppu, vm::ptr<void> core_es_hand
 
 	DmuxAuInfo& _au_info = get_au_queue_elements(es_handle)[es_handle->au_queue.back].au_info;
 
-	if (const error_code ret = sys_mutex_unlock(ppu, es_handle->_dx_mes); ret != CELL_OK)
+	if (const error_code ret = lv2_syscall<sys_mutex_unlock>(ppu, es_handle->_dx_mes); ret != CELL_OK)
 	{
 		fatal_err(es_handle->is_enabled, ret);
 		return 1;
@@ -196,7 +208,7 @@ static error_code notify_es_au_found(ppu_thread& ppu, vm::ptr<void> core_es_hand
 		return CELL_OK;
 	}
 
-	if (const error_code ret = sys_mutex_lock(ppu, es_handle->_dx_mes, 0); ret != CELL_OK)
+	if (const error_code ret = lv2_syscall<sys_mutex_lock>(ppu, es_handle->_dx_mes, 0); ret != CELL_OK)
 	{
 		fatal_err(es_handle->is_enabled, ret);
 		return CELL_OK; // LLE returns CELL_OK
@@ -204,7 +216,7 @@ static error_code notify_es_au_found(ppu_thread& ppu, vm::ptr<void> core_es_hand
 
 	if (!es_handle->is_enabled)
 	{
-		if (const error_code ret = sys_mutex_unlock(ppu, es_handle->_dx_mes); ret != CELL_OK)
+		if (const error_code ret = lv2_syscall<sys_mutex_unlock>(ppu, es_handle->_dx_mes); ret != CELL_OK)
 		{
 			fatal_err(es_handle->is_enabled, ret);
 		}
@@ -216,7 +228,7 @@ static error_code notify_es_au_found(ppu_thread& ppu, vm::ptr<void> core_es_hand
 	es_handle->au_queue.allocated_size++;
 	es_handle->au_queue.size++;
 
-	if (const error_code ret = sys_mutex_unlock(ppu, es_handle->_dx_mes); ret != CELL_OK)
+	if (const error_code ret = lv2_syscall<sys_mutex_unlock>(ppu, es_handle->_dx_mes); ret != CELL_OK)
 	{
 		fatal_err(es_handle->is_enabled, ret);
 		return CELL_OK; // LLE returns CELL_OK
@@ -405,7 +417,7 @@ static error_code open(ppu_thread& ppu, vm::cptr<CellDmuxType> demuxerType, vm::
 		.name_u64 = "_dx_mhd"_u64
 	}};
 
-	if (const error_code ret = sys_mutex_create(ppu, handle.ptr(&DmuxContext::_dx_mhd), mutex_attr); ret != CELL_OK)
+	if (const error_code ret = lv2_syscall<sys_mutex_create>(ppu, handle.ptr(&DmuxContext::_dx_mhd), mutex_attr); ret != CELL_OK)
 	{
 		return ret;
 	}
@@ -510,7 +522,7 @@ error_code cellDmuxOpen2(ppu_thread& ppu, vm::cptr<CellDmuxType2> demuxerType2, 
 
 static error_code disable_es(ppu_thread& ppu, DmuxEsContext& esHandle)
 {
-	if (const error_code ret = sys_mutex_lock(ppu, esHandle._dx_mes, 0); ret != CELL_OK)
+	if (const error_code ret = lv2_syscall<sys_mutex_lock>(ppu, esHandle._dx_mes, 0); ret != CELL_OK)
 	{
 		return ret;
 	}
@@ -519,15 +531,15 @@ static error_code disable_es(ppu_thread& ppu, DmuxEsContext& esHandle)
 
 	esHandle.is_enabled = false;
 
-	if (const error_code ret = sys_mutex_unlock(ppu, esHandle._dx_mes); ret != CELL_OK)
+	if (const error_code ret = lv2_syscall<sys_mutex_unlock>(ppu, esHandle._dx_mes); ret != CELL_OK)
 	{
 		return ret;
 	}
 
 	error_code ret;
-	while ((ret = sys_mutex_destroy(ppu, esHandle._dx_mes)) == static_cast<s32>(CELL_EBUSY))
+	while ((ret = lv2_syscall<sys_mutex_destroy>(ppu, esHandle._dx_mes)) == static_cast<s32>(CELL_EBUSY))
 	{
-		sys_timer_usleep(ppu, 200);
+		lv2_syscall<sys_timer_usleep>(ppu, 200);
 	}
 
 	if (ret != CELL_OK)
@@ -560,7 +572,7 @@ error_code cellDmuxClose(ppu_thread& ppu, vm::ptr<DmuxContext> demuxerHandle)
 
 	demuxerHandle->_this = vm::null;
 
-	if (const error_code ret = sys_mutex_lock(ppu, demuxerHandle->_dx_mhd, 0); ret != CELL_OK)
+	if (const error_code ret = lv2_syscall<sys_mutex_lock>(ppu, demuxerHandle->_dx_mhd, 0); ret != CELL_OK)
 	{
 		demuxerHandle->_this = demuxerHandle;
 		return ret;
@@ -570,7 +582,7 @@ error_code cellDmuxClose(ppu_thread& ppu, vm::ptr<DmuxContext> demuxerHandle)
 	{
 		if (const error_code ret = disable_es(ppu, *es_handle); ret != CELL_OK)
 		{
-			ensure(sys_mutex_unlock(ppu, demuxerHandle->_dx_mhd) == CELL_OK); // Not checked on LLE
+			ensure(lv2_syscall<sys_mutex_unlock>(ppu, demuxerHandle->_dx_mhd) == CELL_OK); // Not checked on LLE
 			demuxerHandle->_this = demuxerHandle;
 			return ret;
 		}
@@ -579,9 +591,9 @@ error_code cellDmuxClose(ppu_thread& ppu, vm::ptr<DmuxContext> demuxerHandle)
 		demuxerHandle->enabled_es_num--;
 	}
 
-	error_code ret = sys_mutex_unlock(ppu, demuxerHandle->_dx_mhd);
+	error_code ret = lv2_syscall<sys_mutex_unlock>(ppu, demuxerHandle->_dx_mhd);
 	ret = ret ? ret : get_error(get_core_ops()->close(ppu, demuxerHandle->core_handle));
-	ret = ret ? ret : sys_mutex_destroy(ppu, demuxerHandle->_dx_mhd);
+	ret = ret ? ret : lv2_syscall<sys_mutex_destroy>(ppu, demuxerHandle->_dx_mhd);
 
 	if (ret != CELL_OK)
 	{
@@ -615,7 +627,7 @@ error_code cellDmuxSetStream(ppu_thread& ppu, vm::ptr<DmuxContext> demuxerHandle
 		return CELL_DMUX_ERROR_BUSY;
 	}
 
-	if (const error_code ret = sys_mutex_lock(ppu, demuxerHandle->_dx_mhd, 0); ret != CELL_OK)
+	if (const error_code ret = lv2_syscall<sys_mutex_lock>(ppu, demuxerHandle->_dx_mhd, 0); ret != CELL_OK)
 	{
 		return ret;
 	}
@@ -623,7 +635,7 @@ error_code cellDmuxSetStream(ppu_thread& ppu, vm::ptr<DmuxContext> demuxerHandle
 	if (const error_code ret = get_error(get_core_ops()->setStream(ppu, demuxerHandle->core_handle, streamAddress, streamSize, discontinuity, userData));
 		ret != CELL_OK)
 	{
-		const error_code mutex_unlock_ret = sys_mutex_unlock(ppu, demuxerHandle->_dx_mhd);
+		const error_code mutex_unlock_ret = lv2_syscall<sys_mutex_unlock>(ppu, demuxerHandle->_dx_mhd);
 		return mutex_unlock_ret ? mutex_unlock_ret : ret;
 	}
 
@@ -631,7 +643,7 @@ error_code cellDmuxSetStream(ppu_thread& ppu, vm::ptr<DmuxContext> demuxerHandle
 	demuxerHandle->dmux_state = DMUX_RUNNING;
 	demuxerHandle->user_data = userData;
 
-	return sys_mutex_unlock(ppu, demuxerHandle->_dx_mhd);
+	return lv2_syscall<sys_mutex_unlock>(ppu, demuxerHandle->_dx_mhd);
 }
 
 error_code cellDmuxResetStream(ppu_thread& ppu, vm::ptr<DmuxContext> demuxerHandle)
@@ -652,14 +664,14 @@ error_code cellDmuxResetStream(ppu_thread& ppu, vm::ptr<DmuxContext> demuxerHand
 		return CELL_DMUX_ERROR_ARG;
 	}
 
-	if (const error_code ret = sys_mutex_lock(ppu, demuxerHandle->_dx_mhd, 0); ret != CELL_OK)
+	if (const error_code ret = lv2_syscall<sys_mutex_lock>(ppu, demuxerHandle->_dx_mhd, 0); ret != CELL_OK)
 	{
 		return ret;
 	}
 
 	const u32 dmux_status = demuxerHandle->dmux_state;
 
-	if (const error_code ret = sys_mutex_unlock(ppu, demuxerHandle->_dx_mhd); ret != CELL_OK)
+	if (const error_code ret = lv2_syscall<sys_mutex_unlock>(ppu, demuxerHandle->_dx_mhd); ret != CELL_OK)
 	{
 		return ret;
 	}
@@ -774,14 +786,14 @@ error_code cellDmuxEnableEs(ppu_thread& ppu, vm::ptr<DmuxContext> demuxerHandle,
 		return CELL_DMUX_ERROR_ARG;
 	}
 
-	if (const error_code ret = sys_mutex_lock(ppu, demuxerHandle->_dx_mhd, 0); ret != CELL_OK)
+	if (const error_code ret = lv2_syscall<sys_mutex_lock>(ppu, demuxerHandle->_dx_mhd, 0); ret != CELL_OK)
 	{
 		return ret;
 	}
 
 	if (demuxerHandle->enabled_es_num >= demuxerHandle->max_enabled_es_num)
 	{
-		const error_code mutex_unlock_ret = sys_mutex_unlock(ppu, demuxerHandle->_dx_mhd);
+		const error_code mutex_unlock_ret = lv2_syscall<sys_mutex_unlock>(ppu, demuxerHandle->_dx_mhd);
 		return mutex_unlock_ret ? mutex_unlock_ret : CELL_DMUX_ERROR_ARG;
 	}
 
@@ -789,13 +801,13 @@ error_code cellDmuxEnableEs(ppu_thread& ppu, vm::ptr<DmuxContext> demuxerHandle,
 
 	if (const error_code ret = cellDmuxQueryEsAttr(ppu, demuxerHandle.ptr(&DmuxContext::dmux_type), esFilterId, esSpecificInfo, es_attr); ret != CELL_OK)
 	{
-		const error_code mutex_unlock_ret = sys_mutex_unlock(ppu, demuxerHandle->_dx_mhd);
+		const error_code mutex_unlock_ret = lv2_syscall<sys_mutex_unlock>(ppu, demuxerHandle->_dx_mhd);
 		return mutex_unlock_ret ? mutex_unlock_ret : ret;
 	}
 
 	if (es_attr->memSize > esResourceInfo->memSize)
 	{
-		const error_code mutex_unlock_ret = sys_mutex_unlock(ppu, demuxerHandle->_dx_mhd);
+		const error_code mutex_unlock_ret = lv2_syscall<sys_mutex_unlock>(ppu, demuxerHandle->_dx_mhd);
 		return mutex_unlock_ret ? mutex_unlock_ret : CELL_DMUX_ERROR_ARG;
 	}
 
@@ -804,7 +816,7 @@ error_code cellDmuxEnableEs(ppu_thread& ppu, vm::ptr<DmuxContext> demuxerHandle,
 
 	if (const error_code ret = get_error(get_core_ops()->queryEsAttr(ppu, es_filter_id, esSpecificInfo, core_es_attr)); ret != CELL_OK)
 	{
-		const error_code mutex_unlock_ret = sys_mutex_unlock(ppu, demuxerHandle->_dx_mhd);
+		const error_code mutex_unlock_ret = lv2_syscall<sys_mutex_unlock>(ppu, demuxerHandle->_dx_mhd);
 		return mutex_unlock_ret ? mutex_unlock_ret : ret;
 	}
 
@@ -829,16 +841,16 @@ error_code cellDmuxEnableEs(ppu_thread& ppu, vm::ptr<DmuxContext> demuxerHandle,
 		.name_u64 = "_dx_mes"_u64
 	}};
 
-	if (const error_code ret = sys_mutex_create(ppu, es_handle.ptr(&DmuxEsContext::_dx_mes), mutex_attr); ret != CELL_OK)
+	if (const error_code ret = lv2_syscall<sys_mutex_create>(ppu, es_handle.ptr(&DmuxEsContext::_dx_mes), mutex_attr); ret != CELL_OK)
 	{
-		ensure(sys_mutex_unlock(ppu, demuxerHandle->_dx_mhd) == CELL_OK); // Not checked on LLE
+		ensure(lv2_syscall<sys_mutex_unlock>(ppu, demuxerHandle->_dx_mhd) == CELL_OK); // Not checked on LLE
 		return ret;
 	}
 
-	if (const error_code ret = sys_mutex_lock(ppu, es_handle->_dx_mes, 0); ret != CELL_OK)
+	if (const error_code ret = lv2_syscall<sys_mutex_lock>(ppu, es_handle->_dx_mes, 0); ret != CELL_OK)
 	{
-		ensure(sys_mutex_destroy(ppu, es_handle->_dx_mes) == CELL_OK);    // Not checked on LLE
-		ensure(sys_mutex_unlock(ppu, demuxerHandle->_dx_mhd) == CELL_OK); // Not checked on LLE
+		ensure(lv2_syscall<sys_mutex_destroy>(ppu, es_handle->_dx_mes) == CELL_OK);    // Not checked on LLE
+		ensure(lv2_syscall<sys_mutex_unlock>(ppu, demuxerHandle->_dx_mhd) == CELL_OK); // Not checked on LLE
 		return ret;
 	}
 
@@ -853,22 +865,22 @@ error_code cellDmuxEnableEs(ppu_thread& ppu, vm::ptr<DmuxContext> demuxerHandle,
 		esSpecificInfo, core_es_handle));
 		ret != CELL_OK)
 	{
-		const error_code mutex_unlock_ret = sys_mutex_unlock(ppu, es_handle->_dx_mes);
-		const error_code mutex_destroy_ret = sys_mutex_destroy(ppu, es_handle->_dx_mes);
+		const error_code mutex_unlock_ret = lv2_syscall<sys_mutex_unlock>(ppu, es_handle->_dx_mes);
+		const error_code mutex_destroy_ret = lv2_syscall<sys_mutex_destroy>(ppu, es_handle->_dx_mes);
 
 		if (mutex_unlock_ret != CELL_OK)
 		{
-			ensure(sys_mutex_unlock(ppu, demuxerHandle->_dx_mhd) == CELL_OK); // Not checked on LLE
+			ensure(lv2_syscall<sys_mutex_unlock>(ppu, demuxerHandle->_dx_mhd) == CELL_OK); // Not checked on LLE
 			return mutex_unlock_ret;
 		}
 
 		if (mutex_destroy_ret != CELL_OK)
 		{
-			ensure(sys_mutex_unlock(ppu, demuxerHandle->_dx_mhd) == CELL_OK); // Not checked on LLE
+			ensure(lv2_syscall<sys_mutex_unlock>(ppu, demuxerHandle->_dx_mhd) == CELL_OK); // Not checked on LLE
 			return mutex_destroy_ret;
 		}
 
-		const error_code mutex_unlock_ret2 = sys_mutex_unlock(ppu, demuxerHandle->_dx_mhd);
+		const error_code mutex_unlock_ret2 = lv2_syscall<sys_mutex_unlock>(ppu, demuxerHandle->_dx_mhd);
 		return mutex_unlock_ret2 ? mutex_unlock_ret2 : ret;
 	}
 
@@ -906,14 +918,14 @@ error_code cellDmuxEnableEs(ppu_thread& ppu, vm::ptr<DmuxContext> demuxerHandle,
 	*get_es_handles(demuxerHandle).rbegin() = es_handle;
 	*esHandle = es_handle;
 
-	if (const error_code ret = sys_mutex_unlock(ppu, es_handle->_dx_mes); ret != CELL_OK)
+	if (const error_code ret = lv2_syscall<sys_mutex_unlock>(ppu, es_handle->_dx_mes); ret != CELL_OK)
 	{
-		ensure(sys_mutex_destroy(ppu, es_handle->_dx_mes) == CELL_OK);    // Not checked on LLE
-		ensure(sys_mutex_unlock(ppu, demuxerHandle->_dx_mhd) == CELL_OK); // Not checked on LLE
+		ensure(lv2_syscall<sys_mutex_destroy>(ppu, es_handle->_dx_mes) == CELL_OK);    // Not checked on LLE
+		ensure(lv2_syscall<sys_mutex_unlock>(ppu, demuxerHandle->_dx_mhd) == CELL_OK); // Not checked on LLE
 		return ret;
 	}
 
-	return sys_mutex_unlock(ppu, demuxerHandle->_dx_mhd);
+	return lv2_syscall<sys_mutex_unlock>(ppu, demuxerHandle->_dx_mhd);
 }
 
 error_code cellDmuxDisableEs(ppu_thread& ppu, vm::ptr<DmuxEsContext> esHandle)
@@ -934,14 +946,14 @@ error_code cellDmuxDisableEs(ppu_thread& ppu, vm::ptr<DmuxEsContext> esHandle)
 		return CELL_DMUX_ERROR_ARG;
 	}
 
-	if (const error_code ret = sys_mutex_lock(ppu, esHandle->dmux_handle->_dx_mhd, 0); ret != CELL_OK)
+	if (const error_code ret = lv2_syscall<sys_mutex_lock>(ppu, esHandle->dmux_handle->_dx_mhd, 0); ret != CELL_OK)
 	{
 		return ret;
 	}
 
 	if (const error_code ret = disable_es(ppu, *esHandle); ret != CELL_OK)
 	{
-		ensure(sys_mutex_unlock(ppu, esHandle->dmux_handle->_dx_mhd) == CELL_OK); // Not checked on LLE
+		ensure(lv2_syscall<sys_mutex_unlock>(ppu, esHandle->dmux_handle->_dx_mhd) == CELL_OK); // Not checked on LLE
 		return ret;
 	}
 
@@ -952,7 +964,7 @@ error_code cellDmuxDisableEs(ppu_thread& ppu, vm::ptr<DmuxEsContext> esHandle)
 	esHandle->dmux_handle->enabled_es_num--;
 	*es_handles.rbegin() = vm::null;
 
-	return sys_mutex_unlock(ppu, esHandle->dmux_handle->_dx_mhd);
+	return lv2_syscall<sys_mutex_unlock>(ppu, esHandle->dmux_handle->_dx_mhd);
 }
 
 error_code cellDmuxResetEs(ppu_thread& ppu, vm::ptr<DmuxEsContext> esHandle)
@@ -973,14 +985,14 @@ error_code cellDmuxResetEs(ppu_thread& ppu, vm::ptr<DmuxEsContext> esHandle)
 		return CELL_DMUX_ERROR_ARG;
 	}
 
-	if (const error_code ret = sys_mutex_lock(ppu, esHandle->dmux_handle->_dx_mhd, 0); ret != CELL_OK)
+	if (const error_code ret = lv2_syscall<sys_mutex_lock>(ppu, esHandle->dmux_handle->_dx_mhd, 0); ret != CELL_OK)
 	{
 		return ret;
 	}
 
 	const u32 dmux_status = esHandle->dmux_handle->dmux_state;
 
-	if (const error_code ret = sys_mutex_unlock(ppu, esHandle->dmux_handle->_dx_mhd); ret != CELL_OK)
+	if (const error_code ret = lv2_syscall<sys_mutex_unlock>(ppu, esHandle->dmux_handle->_dx_mhd); ret != CELL_OK)
 	{
 		return ret;
 	}
@@ -990,14 +1002,14 @@ error_code cellDmuxResetEs(ppu_thread& ppu, vm::ptr<DmuxEsContext> esHandle)
 		return CELL_DMUX_ERROR_SEQ;
 	}
 
-	if (const error_code ret = sys_mutex_lock(ppu, esHandle->_dx_mes, 0); ret != CELL_OK)
+	if (const error_code ret = lv2_syscall<sys_mutex_lock>(ppu, esHandle->_dx_mes, 0); ret != CELL_OK)
 	{
 		return ret;
 	}
 
 	if (const error_code ret = get_error(get_core_ops()->resetEs(ppu, esHandle->core_es_handle)); ret != CELL_OK)
 	{
-		const error_code mutex_unlock_ret = sys_mutex_unlock(ppu, esHandle->_dx_mes);
+		const error_code mutex_unlock_ret = lv2_syscall<sys_mutex_unlock>(ppu, esHandle->_dx_mes);
 		return mutex_unlock_ret ? mutex_unlock_ret : ret;
 	}
 
@@ -1019,7 +1031,7 @@ error_code cellDmuxResetEs(ppu_thread& ppu, vm::ptr<DmuxEsContext> esHandle)
 	esHandle->au_queue.back = 0;
 	esHandle->au_queue.allocated_back = 0;
 
-	return sys_mutex_unlock(ppu, esHandle->_dx_mes);
+	return lv2_syscall<sys_mutex_unlock>(ppu, esHandle->_dx_mes);
 }
 
 template <bool is_peek>
@@ -1030,7 +1042,7 @@ static error_code pop_au(ppu_thread& ppu, vm::ptr<DmuxEsContext> esHandle, vm::c
 		return CELL_DMUX_ERROR_ARG;
 	}
 
-	if (const error_code ret = sys_mutex_lock(ppu, esHandle->_dx_mes, 0); ret != CELL_OK)
+	if (const error_code ret = lv2_syscall<sys_mutex_lock>(ppu, esHandle->_dx_mes, 0); ret != CELL_OK)
 	{
 		return ret;
 	}
@@ -1042,7 +1054,7 @@ static error_code pop_au(ppu_thread& ppu, vm::ptr<DmuxEsContext> esHandle, vm::c
 
 	if (esHandle->au_queue.size <= 0)
 	{
-		const error_code mutex_unlock_ret = sys_mutex_unlock(ppu, esHandle->_dx_mes);
+		const error_code mutex_unlock_ret = lv2_syscall<sys_mutex_unlock>(ppu, esHandle->_dx_mes);
 		return mutex_unlock_ret ? mutex_unlock_ret : CELL_DMUX_ERROR_EMPTY;
 	}
 
@@ -1064,7 +1076,7 @@ static error_code pop_au(ppu_thread& ppu, vm::ptr<DmuxEsContext> esHandle, vm::c
 		esHandle->au_queue.size--;
 	}
 
-	return sys_mutex_unlock(ppu, esHandle->_dx_mes);
+	return lv2_syscall<sys_mutex_unlock>(ppu, esHandle->_dx_mes);
 }
 
 error_code cellDmuxGetAu(ppu_thread& ppu, vm::ptr<DmuxEsContext> esHandle, vm::cpptr<CellDmuxAuInfo> auInfo, vm::cpptr<void> auSpecificInfo)
@@ -1113,7 +1125,7 @@ error_code cellDmuxReleaseAu(ppu_thread& ppu, vm::ptr<DmuxEsContext> esHandle)
 		return CELL_DMUX_ERROR_ARG;
 	}
 
-	if (const error_code ret = sys_mutex_lock(ppu, esHandle->_dx_mes, 0); ret != CELL_OK)
+	if (const error_code ret = lv2_syscall<sys_mutex_lock>(ppu, esHandle->_dx_mes, 0); ret != CELL_OK)
 	{
 		return ret;
 	}
@@ -1125,7 +1137,7 @@ error_code cellDmuxReleaseAu(ppu_thread& ppu, vm::ptr<DmuxEsContext> esHandle)
 	{
 		if (esHandle->error_count == 0u)
 		{
-			const error_code mutex_unlock_ret = sys_mutex_unlock(ppu, esHandle->_dx_mes);
+			const error_code mutex_unlock_ret = lv2_syscall<sys_mutex_unlock>(ppu, esHandle->_dx_mes);
 			return mutex_unlock_ret ? mutex_unlock_ret : CELL_DMUX_ERROR_SEQ;
 		}
 
@@ -1167,14 +1179,14 @@ error_code cellDmuxReleaseAu(ppu_thread& ppu, vm::ptr<DmuxEsContext> esHandle)
 
 		esHandle->error_count++;
 
-		const error_code mutex_unlock_ret = sys_mutex_unlock(ppu, esHandle->_dx_mes);
+		const error_code mutex_unlock_ret = lv2_syscall<sys_mutex_unlock>(ppu, esHandle->_dx_mes);
 		return mutex_unlock_ret ? mutex_unlock_ret : ret;
 	}
 
 	esHandle->error_count = 0;
 	esHandle->error_mem_size = 0;
 
-	return sys_mutex_unlock(ppu, esHandle->_dx_mes);
+	return lv2_syscall<sys_mutex_unlock>(ppu, esHandle->_dx_mes);
 }
 
 error_code cellDmuxFlushEs(ppu_thread& ppu, vm::ptr<DmuxEsContext> esHandle)
@@ -1195,14 +1207,14 @@ error_code cellDmuxFlushEs(ppu_thread& ppu, vm::ptr<DmuxEsContext> esHandle)
 		return CELL_DMUX_ERROR_ARG;
 	}
 
-	if (const error_code ret = sys_mutex_lock(ppu, esHandle->dmux_handle->_dx_mhd, 0); ret != CELL_OK)
+	if (const error_code ret = lv2_syscall<sys_mutex_lock>(ppu, esHandle->dmux_handle->_dx_mhd, 0); ret != CELL_OK)
 	{
 		return ret;
 	}
 
 	const u32 dmux_state = esHandle->dmux_handle->dmux_state;
 
-	if (const error_code ret = sys_mutex_unlock(ppu, esHandle->dmux_handle->_dx_mhd); ret != CELL_OK)
+	if (const error_code ret = lv2_syscall<sys_mutex_unlock>(ppu, esHandle->dmux_handle->_dx_mhd); ret != CELL_OK)
 	{
 		return ret;
 	}
