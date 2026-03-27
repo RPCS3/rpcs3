@@ -3996,7 +3996,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 	}));
 }
 
-game_boot_result Emulator::Restart(bool graceful)
+game_boot_result Emulator::Restart(bool graceful, bool reset_path)
 {
 	if (m_state == system_state::stopping)
 	{
@@ -4004,7 +4004,7 @@ game_boot_result Emulator::Restart(bool graceful)
 		return game_boot_result::still_running;
 	}
 
-	Emu.after_kill_callback = [this]
+	Emu.after_kill_callback = [this, reset_path]
 	{
 		// Reset boot path in case of ISO
 		if (m_path.starts_with(iso_device::virtual_device_name))
@@ -4016,7 +4016,7 @@ game_boot_result Emulator::Restart(bool graceful)
 		}
 
 		// If continuous mode changed the path, restart from the original executable
-		if (!m_path_original.empty() && m_path_original != m_path)
+		if (reset_path && !m_path_original.empty() && m_path_original != m_path)
 		{
 			sys_log.notice("Restart: Resetting boot path from '%s' to original '%s'", m_path, m_path_original);
 			m_path = m_path_original;
