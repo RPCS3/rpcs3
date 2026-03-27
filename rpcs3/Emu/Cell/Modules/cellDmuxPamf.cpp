@@ -999,6 +999,10 @@ void dmux_pamf_spu_context::operator()() // cellSpursMain()
 			ensure(stream_info_queue->pop(stream_info));
 
 			set_stream({ stream_info.stream_addr.get_ptr(), stream_info.stream_size }, stream_info.continuity);
+
+			// Delay demuxing a bit
+			// Prevents White Knight Chronicles II FMVs from freezing, since events are otherwise fired before the game has finished initializing FMV playback
+			thread_ctrl::wait_for(1'500);
 		}
 
 		process_next_pack();
