@@ -663,9 +663,11 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		auto ui_renderer = vk::get_overlay_pass<vk::ui_overlay_renderer>();
 		std::lock_guard lock(*m_overlay_manager);
 
+		const areau display_area = {0, 0, static_cast<u32>(m_swapchain_dims.width), static_cast<u32>(m_swapchain_dims.height)};
 		for (const auto& view : m_overlay_manager->get_views())
 		{
-			ui_renderer->run(*m_current_command_buffer, area, fbo, single_target_pass, m_texture_upload_buffer_ring_info, *view.get());
+			const areau render_area = view->use_window_space ? display_area : area;
+			ui_renderer->run(*m_current_command_buffer, render_area, fbo, single_target_pass, m_texture_upload_buffer_ring_info, *view.get());
 		}
 	};
 

@@ -628,7 +628,11 @@ namespace vk
 	void ui_overlay_renderer::run(vk::command_buffer& cmd, const areau& viewport, vk::framebuffer* target, VkRenderPass render_pass,
 			vk::data_heap& upload_heap, rsx::overlays::overlay& ui)
 	{
-		m_scale_offset = color4f(ui.virtual_width, ui.virtual_height, 1.f, 1.f);
+		ui.set_render_viewport(
+		    static_cast<u16>(std::min<u32>(viewport.width(), std::numeric_limits<u16>::max())),
+		    static_cast<u16>(std::min<u32>(viewport.height(), std::numeric_limits<u16>::max()))
+		);
+		m_scale_offset = color4f(ui.get_virtual_width(), ui.get_virtual_height(), 1.f, 1.f);
 		m_viewport = { { static_cast<f32>(viewport.x1), static_cast<f32>(viewport.y1) }, { static_cast<f32>(viewport.width()), static_cast<f32>(viewport.height()) } };
 
 		std::vector<vk::image_view*> image_views

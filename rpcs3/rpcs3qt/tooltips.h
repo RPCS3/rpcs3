@@ -169,10 +169,11 @@ public:
 		const QString perf_overlay_update_interval         = tr("Sets the time interval in which the performance overlay is being updated (measured in milliseconds).\nSetting this to 16 milliseconds will refresh the performance overlay at roughly 60Hz.\nThe performance overlay refresh rate does not affect the frame graph statistics and can only be as fast as the current game allows.");
 		const QString perf_overlay_font_size               = tr("Sets the font size of the performance overlay (measured in pixels).");
 		const QString perf_overlay_opacity                 = tr("Sets the opacity of the performance overlay (measured in %).");
-		const QString perf_overlay_margin_x                = tr("Sets the horizontal distance to the screen border relative to the screen quadrant (measured in pixels).");
-		const QString perf_overlay_margin_y                = tr("Sets the vertical distance to the screen border relative to the screen quadrant (measured in pixels).");
+		const QString perf_overlay_margin_x                = tr("Sets the horizontal distance to the screen border relative to the screen quadrant (measured in %).");
+		const QString perf_overlay_margin_y                = tr("Sets the vertical distance to the screen border relative to the screen quadrant (measured in %).");
 		const QString perf_overlay_center_x                = tr("Centers the performance overlay horizontally and overrides the horizontal margin.");
 		const QString perf_overlay_center_y                = tr("Centers the performance overlay vertically and overrides the vertical margin.");
+		const QString perf_overlay_use_window_space		   = tr("Position overlay relative to the full window surface, enabling placement outside game's render area.");
 
 		const QString shader_load_bg_enabled   = tr("Shows a background image during the native shader loading dialog/loading screen.\nBy default the used image will be <gamedir>/PS3_GAME/PIC1.PNG.");
 		const QString shader_load_bg_darkening = tr("Changes the background image darkening effect strength of the native shader loading dialog.\nThis may be used to improve readability and/or aesthetics.");

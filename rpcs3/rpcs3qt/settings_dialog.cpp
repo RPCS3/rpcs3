@@ -1875,6 +1875,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	});
 	ui->perfOverlayMarginY->setEnabled(!ui->perfOverlayCenterY->isChecked());
 
+	m_emu_settings->EnhanceCheckBox(ui->perfOverlayUseWindowSpace, emu_settings_type::PerfOverlayUseWindowSpace);
+	SubscribeTooltip(ui->perfOverlayUseWindowSpace, tooltips.settings.perf_overlay_use_window_space);
+
 	m_emu_settings->EnhanceCheckBox(ui->perfOverlayFramerateGraphEnabled, emu_settings_type::PerfOverlayFramerateGraphEnabled);
 	SubscribeTooltip(ui->perfOverlayFramerateGraphEnabled, tooltips.settings.perf_overlay_framerate_graph_enabled);
 
@@ -1901,6 +1904,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->perfOverlayMarginY->setEnabled(enabled && !ui->perfOverlayCenterY->isChecked());
 		ui->perfOverlayCenterX->setEnabled(enabled);
 		ui->perfOverlayCenterY->setEnabled(enabled);
+		ui->perfOverlayUseWindowSpace->setEnabled(enabled);
 		ui->perfOverlayFramerateGraphEnabled->setEnabled(enabled);
 		ui->perfOverlayFrametimeGraphEnabled->setEnabled(enabled);
 		ui->perf_overlay_framerate_datapoints->setEnabled(enabled);
@@ -1946,10 +1950,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	// SpinBoxes
 
-	m_emu_settings->EnhanceSpinBox(ui->perfOverlayMarginX, emu_settings_type::PerfOverlayMarginX, "", tr("px", "Performance overlay margin x"));
+	m_emu_settings->EnhanceDoubleSpinBox(ui->perfOverlayMarginX, emu_settings_type::PerfOverlayMarginX, "", tr("%", "Performance overlay margin x"));
 	SubscribeTooltip(ui->perfOverlayMarginX, tooltips.settings.perf_overlay_margin_x);
 
-	m_emu_settings->EnhanceSpinBox(ui->perfOverlayMarginY, emu_settings_type::PerfOverlayMarginY, "", tr("px", "Performance overlay margin y"));
+	m_emu_settings->EnhanceDoubleSpinBox(ui->perfOverlayMarginY, emu_settings_type::PerfOverlayMarginY, "", tr("%", "Performance overlay margin y"));
 	SubscribeTooltip(ui->perfOverlayMarginY, tooltips.settings.perf_overlay_margin_y);
 
 	// Global settings (gui_settings)
