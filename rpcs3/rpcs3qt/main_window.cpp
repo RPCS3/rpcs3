@@ -2538,7 +2538,7 @@ void main_window::CreateConnects()
 		{
 			Emu.after_kill_callback = []()
 			{
-				Emu.Restart();
+				Emu.Restart(true, false);
 			};
 
 			// Make sure we keep the game window opened

@@ -362,7 +362,7 @@ void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKey
 		{
 			Emu.after_kill_callback = []()
 			{
-				Emu.Restart();
+				Emu.Restart(true, false);
 			};
 
 			// Make sure we keep the game window opened
