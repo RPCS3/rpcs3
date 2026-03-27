@@ -858,7 +858,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->vulkansched->setEnabled(is_vulkan);
 	};
 
-	const auto apply_fsr_specific_options = [r_creator, this]()
+	const auto apply_fsr_specific_options = [this]()
 	{
 		const auto [text, value] = get_data(ui->outputScalingMode, ui->outputScalingMode->currentIndex());
 		const bool fsr_selected = static_cast<output_scaling_mode>(value) == output_scaling_mode::fsr;
@@ -2095,7 +2095,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	connect(ui->edit_button_game_window_title_format, &QAbstractButton::clicked, [get_game_window_title, set_game_window_title, this]()
 	{
-		auto get_game_window_title_label = [get_game_window_title, set_game_window_title, this](const QString& format)
+		auto get_game_window_title_label = [get_game_window_title](const QString& format)
 		{
 			const QString game_window_title = get_game_window_title(format);
 

@@ -575,7 +575,7 @@ void savestate_manager_dialog::ShowGameTableContextMenu(const QPoint& pos)
 	if (!name.isEmpty())
 	{
 		QAction* copy_name = new QAction(tr("&Copy Name"), menu);
-		connect(copy_name, &QAction::triggered, this, [this, name]()
+		connect(copy_name, &QAction::triggered, this, [name]()
 		{
 			QApplication::clipboard()->setText(name);
 		});
