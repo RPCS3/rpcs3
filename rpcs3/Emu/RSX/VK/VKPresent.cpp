@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "VKGSRender.h"
 #include "vkutils/buffer_object.h"
+#include "vkutils/memory.h"
 #include "Emu/RSX/Overlays/overlay_manager.h"
 #include "Emu/RSX/Overlays/overlay_debug_overlay.h"
 #include "Emu/Cell/Modules/cellVideoOut.h"
@@ -973,7 +974,22 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 	if (active_res_scaling_config != this->resolution_scaling_config)
 	{
+		// First, try to reclaim any memory since the res scale upgrade is so memory intensive
+		if (const auto severity = vk::vmm_determine_memory_load_severity();
+			severity > rsx::problem_severity::low && m_rtts.handle_memory_pressure(*m_current_command_buffer, severity))
+		{
+			flush_command_queue(true);
+		}
+
+		// Then apply the change
 		m_rtts.sync_scaling_config(*m_current_command_buffer, active_res_scaling_config);
 		this->resolution_scaling_config = active_res_scaling_config;
+
+		// Finally reclaim any unused resources
+		if (const auto severity = vk::vmm_determine_memory_load_severity();
+			severity > rsx::problem_severity::low && m_rtts.handle_memory_pressure(*m_current_command_buffer, severity))
+		{
+			flush_command_queue(true);
+		}
 	}
 }
