@@ -1474,7 +1474,7 @@ namespace rsx
 		{
 			auto process_list_function = [&](surface_ranged_map& data, const utils::address_range32& range)
 			{
-				std::vector<Traits::surface_type> surfaces_to_clone;
+				std::vector<surface_type> surfaces_to_clone;
 
 				for (auto It = data.begin_range(range); It != data.end();)
 				{
