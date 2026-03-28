@@ -23,7 +23,6 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonDocument>
-#include <QRegularExpression>
 #include <QTextBrowser>
 #include <QThread>
 
@@ -67,11 +66,12 @@ void update_manager::check_for_updates(bool automatic, bool check_only, bool aut
 	if (automatic)
 	{
 		// Don't check for updates on local builds
-		if (rpcs3::is_local_build())
-		{
-			update_log.notice("Skipped automatic update check: this is a local build");
-			return;
-		}
+		// TEST: commented out — revert before merging
+		// if (rpcs3::is_local_build())
+		// {
+		// 	update_log.notice("Skipped automatic update check: this is a local build");
+		// 	return;
+		// }
 #ifdef __linux__
 		// Don't check for updates on startup if RPCS3 is not running from an AppImage.
 		if (!::getenv("APPIMAGE"))
@@ -114,7 +114,8 @@ void update_manager::check_for_updates(bool automatic, bool check_only, bool aut
 	const utils::OS_version os = utils::get_OS_version();
 
 	const std::string url = fmt::format("https://update.rpcs3.net/?api=v3&c=%s&os_type=%s&os_arch=%s&os_version=%i.%i.%i",
-		rpcs3::get_commit_and_hash().second, os.type, os.arch, os.version_major, os.version_minor, os.version_patch);
+		"9b6bc7c1", os.type, os.arch, os.version_major, os.version_minor, os.version_patch); 
+	    // TEST: hardcoded hash — revert to rpcs3::get_commit_and_hash().second before merging
 
 	m_downloader->start(url, true, !automatic, true, tr("Checking For Updates"), true);
 }
@@ -284,6 +285,13 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 						update_log.notice("JSON changelog entry does not contain a title string.");
 					}
 
+					if (QJsonValue pr = changelog_entry["pr"]; pr.isDouble())
+					{
+						entry.pr = pr.toInt();
+					}
+
+					update_log.notice("Changelog entry: version='%s', title='%s', pr=%d", entry.version, entry.title, entry.pr);
+
 					m_update_info.changelog.push_back(std::move(entry));
 				}
 				else
@@ -299,6 +307,19 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 		else
 		{
 			update_log.notice("JSON does not contain a changelog section.");
+		}
+	}
+
+	// TEST: assign PR numbers to entries — remove before merging
+	{
+		static const int test_prs[] = {18459, 18103, 18419, 18456, 18395, 18453, 18302, 18445};
+		const int test_count = static_cast<int>(sizeof(test_prs) / sizeof(test_prs[0]));
+		for (int i = 0; i < static_cast<int>(m_update_info.changelog.size()) && i < test_count; i++)
+		{
+			if (m_update_info.changelog[i].pr == 0)
+			{
+				m_update_info.changelog[i].pr = test_prs[i];
+			}
 		}
 	}
 
@@ -366,10 +387,7 @@ void update_manager::update(bool auto_accept)
 				.arg(support_message);
 		}
 
-		// Build HTML changelog with clickable PR links
-		// Technique adapted from shadPS4 Emulator Project (shadps4-qtlauncher)
-		// Original: Copyright 2024 shadPS4 Emulator Project, GPL-2.0-or-later
-		// Used here under GPL-2.0 (compatible with RPCS3's GPL-2.0-only)
+		// Build HTML changelog with clickable PR links when available
 		QString changelog_html;
 
 		for (const changelog_data& entry : m_update_info.changelog)
@@ -380,28 +398,14 @@ void update_manager::update(bool auto_accept)
 			if (!changelog_html.isEmpty())
 				changelog_html += QStringLiteral("<br>");
 
-			changelog_html += tr("&nbsp;&nbsp;&bull; %0: %1").arg(version_str, title_str);
-		}
-
-		// Convert PR references like (#1234) into clickable GitHub links
-		if (!changelog_html.isEmpty())
-		{
-			const QRegularExpression re(QStringLiteral("\\(\\#(\\d+)\\)"));
-			QString linked_changelog;
-			qsizetype last_index = 0;
-			QRegularExpressionMatchIterator it = re.globalMatch(changelog_html);
-
-			while (it.hasNext())
+			if (entry.pr > 0)
 			{
-				const QRegularExpressionMatch match = it.next();
-				linked_changelog += changelog_html.mid(last_index, match.capturedStart() - last_index);
-				const QString pr_num = match.captured(1);
-				linked_changelog += QStringLiteral("(<a href=\"https://github.com/RPCS3/rpcs3/pull/%0\">#%0</a>)").arg(pr_num);
-				last_index = match.capturedEnd();
+				changelog_html += tr("&nbsp;&nbsp;&bull; %0: %1 (<a href=\"https://github.com/RPCS3/rpcs3/pull/%2\">#%2</a>)").arg(version_str, title_str, QString::number(entry.pr));
 			}
-
-			linked_changelog += changelog_html.mid(last_index);
-			changelog_html = linked_changelog;
+			else
+			{
+				changelog_html += tr("&nbsp;&nbsp;&bull; %0: %1").arg(version_str, title_str);
+			}
 		}
 
 		QMessageBox mb(QMessageBox::Icon::Question, tr("Update Available"), update_message, QMessageBox::Yes | QMessageBox::No, m_downloader->get_progress_dialog() ? m_downloader->get_progress_dialog() : m_parent);
