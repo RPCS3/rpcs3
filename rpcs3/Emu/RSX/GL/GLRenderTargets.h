@@ -229,13 +229,14 @@ struct gl_render_target_traits
 	void clone_surface(
 		gl::command_context& cmd,
 		std::unique_ptr<gl::render_target>& sink, gl::render_target* ref,
-		u32 address, barrier_descriptor_t& prev)
+		u32 address, barrier_descriptor_t& prev,
+		const rsx::surface_scaling_config_t& scaling_config)
 	{
 		if (!sink)
 		{
 			auto internal_format = static_cast<GLenum>(ref->get_internal_format());
 			const auto [new_w, new_h] = rsx::apply_resolution_scale<true>(
-				ref->resolution_scaling_config,
+				scaling_config,
 				prev.width, prev.height,
 				ref->get_surface_width<rsx::surface_metrics::pixels>(),
 				ref->get_surface_height<rsx::surface_metrics::pixels>());
@@ -248,7 +249,7 @@ struct gl_render_target_traits
 			sink->format_info = ref->format_info;
 
 			sink->sample_layout = ref->sample_layout;
-			sink->resolution_scaling_config = ref->resolution_scaling_config;
+			sink->resolution_scaling_config = scaling_config;
 
 			sink->set_name(fmt::format("SINK_%u@0x%x", sink->id(), address));
 			sink->set_spp(ref->get_spp());
@@ -385,6 +386,7 @@ struct gl_render_target_traits
 		gl::texture::internal_format format,
 		usz width, usz height,
 		rsx::surface_antialiasing antialias,
+		const rsx::surface_scaling_config_t& scaling_config,
 		bool check_refs = false)
 	{
 		if (check_refs && surface->has_refs())
@@ -392,7 +394,8 @@ struct gl_render_target_traits
 
 		return surface->get_internal_format() == format &&
 			surface->get_spp() == get_format_sample_count(antialias) &&
-			surface->matches_dimensions(static_cast<u16>(width), static_cast<u16>(height));
+			surface->matches_dimensions(static_cast<u16>(width), static_cast<u16>(height)) &&
+			surface->resolution_scaling_config == scaling_config;
 	}
 
 	static
@@ -401,10 +404,11 @@ struct gl_render_target_traits
 		rsx::surface_color_format format,
 		usz width, usz height,
 		rsx::surface_antialiasing antialias,
+		const rsx::surface_scaling_config_t& scaling_config,
 		bool check_refs=false)
 	{
 		const auto internal_fmt = rsx::internals::surface_color_format_to_gl(format).internal_format;
-		return int_surface_matches_properties(surface, internal_fmt, width, height, antialias, check_refs);
+		return int_surface_matches_properties(surface, internal_fmt, width, height, antialias, scaling_config, check_refs);
 	}
 
 	static
@@ -413,10 +417,11 @@ struct gl_render_target_traits
 		rsx::surface_depth_format2 format,
 		usz width, usz height,
 		rsx::surface_antialiasing antialias,
+		const rsx::surface_scaling_config_t& scaling_config,
 		bool check_refs = false)
 	{
 		const auto internal_fmt = rsx::internals::surface_depth_format_to_gl(format).internal_format;
-		return int_surface_matches_properties(surface, internal_fmt, width, height, antialias, check_refs);
+		return int_surface_matches_properties(surface, internal_fmt, width, height, antialias, scaling_config, check_refs);
 	}
 
 	static
