@@ -1487,7 +1487,7 @@ namespace rsx
 
 					// Perform a test scaling and check if anything is different after scaling
 					// There are many cases where this will avoid creating new surfaces
-					const auto [new_w, new_h] = rsx::apply_inverse_resolution_scale<true>(
+					const auto [new_w, new_h] = rsx::apply_resolution_scale<true>(
 						active_config,
 						surface->template get_surface_width<>(),
 						surface->template get_surface_height<>());
