@@ -442,11 +442,15 @@ void update_manager::update(bool auto_accept)
 				changelog_browser->setOpenExternalLinks(true);
 				changelog_browser->setReadOnly(true);
 				changelog_browser->setFrameShape(QFrame::NoFrame);
+				changelog_browser->setLineWrapMode(QTextBrowser::NoWrap);
+				changelog_browser->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 				changelog_browser->setHtml(QStringLiteral("<h3>%0</h3>%1").arg(tr("Changelog:"), changelog_html));
 
-				// DPI-aware sizing: use font metrics for height, let width fill the dialog
+				// Size to fit content: width from document, height from font metrics
+				const int content_width = static_cast<int>(changelog_browser->document()->idealWidth()) + 5;
 				const QFontMetrics fm = changelog_browser->fontMetrics();
-				const int browser_height = fm.height() * 12;
+				const int browser_height = fm.height() * 8;
+				changelog_browser->setMinimumWidth(content_width);
 				changelog_browser->setMinimumHeight(browser_height);
 				changelog_browser->setMaximumHeight(browser_height);
 				changelog_browser->setVisible(false);
@@ -458,9 +462,8 @@ void update_manager::update(bool auto_accept)
 				grid->addWidget(toggle_btn, row++, 0, 1, cols);
 				grid->addWidget(changelog_browser, row++, 0, 1, cols);
 
-				// Pre-size the dialog to fit the changelog width
-				const int browser_width = fm.horizontalAdvance(QStringLiteral("m")) * 55;
-				mb.setMinimumWidth(browser_width);
+				// Pre-size dialog to fit the widest changelog entry
+				mb.setMinimumWidth(content_width + 40);
 
 				QObject::connect(toggle_btn, &QPushButton::clicked, [changelog_browser, toggle_btn, &mb, show_text, hide_text]()
 				{
