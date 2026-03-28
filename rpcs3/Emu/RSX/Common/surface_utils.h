@@ -554,10 +554,14 @@ namespace rsx
 			}
 
 			// Apply resolution scale if needed
-			if (resolution_scaling_config.scale_percent != 100)
+			if (resolution_scaling_config.scale_percent != 100 ||
+				region.source->resolution_scaling_config.scale_percent != 100)
 			{
-				auto [src_width, src_height] = rsx::apply_resolution_scale<true>(resolution_scaling_config, slice.width, slice.height, slice.source->width(), slice.source->height());
-				auto [dst_width, dst_height] = rsx::apply_resolution_scale<true>(resolution_scaling_config, slice.width, slice.height, slice.target->width(), slice.target->height());
+				const auto& src_res_scale = region.source->resolution_scaling_config;
+				const auto& dst_res_scale = resolution_scaling_config;
+
+				auto [src_width, src_height] = rsx::apply_resolution_scale<true>(src_res_scale, slice.width, slice.height, slice.source->width(), slice.source->height());
+				auto [dst_width, dst_height] = rsx::apply_resolution_scale<true>(dst_res_scale, slice.width, slice.height, slice.target->width(), slice.target->height());
 
 				slice.transfer_scale_x *= f32(dst_width) / src_width;
 				slice.transfer_scale_y *= f32(dst_height) / src_height;
@@ -565,8 +569,8 @@ namespace rsx
 				slice.width = src_width;
 				slice.height = src_height;
 
-				std::tie(slice.src_x, slice.src_y) = rsx::apply_resolution_scale<false>(resolution_scaling_config, slice.src_x, slice.src_y, slice.source->width(), slice.source->height());
-				std::tie(slice.dst_x, slice.dst_y) = rsx::apply_resolution_scale<false>(resolution_scaling_config, slice.dst_x, slice.dst_y, slice.target->width(), slice.target->height());
+				std::tie(slice.src_x, slice.src_y) = rsx::apply_resolution_scale<false>(src_res_scale, slice.src_x, slice.src_y, slice.source->width(), slice.source->height());
+				std::tie(slice.dst_x, slice.dst_y) = rsx::apply_resolution_scale<false>(dst_res_scale, slice.dst_x, slice.dst_y, slice.target->width(), slice.target->height());
 			}
 		}
 

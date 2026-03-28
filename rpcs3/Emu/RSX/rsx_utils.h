@@ -220,6 +220,12 @@ namespace rsx
 		u16 min_scalable_dimension = 0;
 
 		f32 scale_factor() const { return scale_percent * 0.01f; }
+
+		bool operator == (const surface_scaling_config_t& that) const
+		{
+			return this->scale_percent == that.scale_percent &&
+				this->min_scalable_dimension == that.min_scalable_dimension;
+		}
 	};
 
 	template <typename T>

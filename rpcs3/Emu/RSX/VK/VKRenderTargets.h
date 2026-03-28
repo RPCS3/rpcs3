@@ -337,12 +337,13 @@ namespace vk
 		static void clone_surface(
 			vk::command_buffer& cmd,
 			std::unique_ptr<vk::render_target>& sink, vk::render_target* ref,
-			u32 address, barrier_descriptor_t& prev)
+			u32 address, barrier_descriptor_t& prev,
+			const rsx::surface_scaling_config_t& scaling_config)
 		{
 			if (!sink)
 			{
 				const auto [new_w, new_h] = rsx::apply_resolution_scale<true>(
-					ref->resolution_scaling_config,
+					scaling_config,
 					prev.width, prev.height,
 					ref->get_surface_width<rsx::surface_metrics::pixels>(), ref->get_surface_height<rsx::surface_metrics::pixels>());
 
@@ -363,7 +364,7 @@ namespace vk
 				sink->add_ref();
 
 				sink->sample_layout = ref->sample_layout;
-				sink->resolution_scaling_config = ref->resolution_scaling_config;
+				sink->resolution_scaling_config = scaling_config;
 
 				sink->set_spp(ref->get_spp());
 				sink->format_info = ref->format_info;
@@ -521,6 +522,7 @@ namespace vk
 			VkFormat format,
 			usz width, usz height,
 			rsx::surface_antialiasing antialias,
+			const rsx::surface_scaling_config_t& scaling_config,
 			bool check_refs)
 		{
 			if (check_refs && surface->has_refs())
@@ -531,7 +533,8 @@ namespace vk
 
 			return (surface->info.format == format &&
 				surface->get_spp() == get_format_sample_count(antialias) &&
-				surface->matches_dimensions(static_cast<u16>(width), static_cast<u16>(height)));
+				surface->matches_dimensions(static_cast<u16>(width), static_cast<u16>(height))) &&
+				surface->resolution_scaling_config == scaling_config;
 		}
 
 		static bool surface_matches_properties(
@@ -539,10 +542,11 @@ namespace vk
 			rsx::surface_color_format format,
 			usz width, usz height,
 			rsx::surface_antialiasing antialias,
+			const rsx::surface_scaling_config_t& scaling_config,
 			bool check_refs = false)
 		{
 			VkFormat vk_format = vk::get_compatible_surface_format(format).first;
-			return int_surface_matches_properties(surface, vk_format, width, height, antialias, check_refs);
+			return int_surface_matches_properties(surface, vk_format, width, height, antialias, scaling_config, check_refs);
 		}
 
 		static bool surface_matches_properties(
@@ -550,11 +554,12 @@ namespace vk
 			rsx::surface_depth_format2 format,
 			usz width, usz height,
 			rsx::surface_antialiasing antialias,
+			const rsx::surface_scaling_config_t& scaling_config,
 			bool check_refs = false)
 		{
 			auto device = vk::get_current_renderer();
 			VkFormat vk_format = vk::get_compatible_depth_surface_format(device->get_formats_support(), format);
-			return int_surface_matches_properties(surface, vk_format, width, height, antialias, check_refs);
+			return int_surface_matches_properties(surface, vk_format, width, height, antialias, scaling_config, check_refs);
 		}
 
 		static void spill_buffer(std::unique_ptr<vk::buffer>& /*bo*/)
