@@ -64,6 +64,13 @@ namespace rsx
 		{
 			if (fade_animation.active) return;
 
+			if (button_press == pad_button::ps)
+			{
+				rsx_log.notice("User pressed PS button to close home menu");
+				begin_close(false);
+				return;
+			}
+
 			// Increase auto repeat interval for some buttons
 			switch (button_press)
 			{
@@ -105,28 +112,7 @@ namespace rsx
 			case page_navigation::exit:
 			case page_navigation::exit_for_screenshot:
 			{
-				fade_animation.current = color4f(1.f);
-				fade_animation.end = color4f(0.f);
-				fade_animation.active = true;
-
-				fade_animation.on_finish = [this, navigation]
-				{
-					close(true, true);
-
-					if (g_cfg.misc.pause_during_home_menu)
-					{
-						Emu.BlockingCallFromMainThread([]()
-						{
-							Emu.Resume();
-						});
-					}
-
-					if (navigation == page_navigation::exit_for_screenshot)
-					{
-						rsx_log.notice("Taking screenshot after exiting home menu");
-						g_user_asked_for_screenshot = true;
-					}
-				};
+				begin_close(navigation == page_navigation::exit_for_screenshot);
 				break;
 			}
 			case page_navigation::stay:
@@ -134,6 +120,32 @@ namespace rsx
 				break;
 			}
 			}
+		}
+
+		void home_menu_dialog::begin_close(bool take_screenshot)
+		{
+			fade_animation.current = color4f(1.f);
+			fade_animation.end = color4f(0.f);
+			fade_animation.active = true;
+
+			fade_animation.on_finish = [this, take_screenshot]
+			{
+				close(true, true);
+
+				if (g_cfg.misc.pause_during_home_menu)
+				{
+					Emu.BlockingCallFromMainThread([]()
+					{
+						Emu.Resume();
+					});
+				}
+
+				if (take_screenshot)
+				{
+					rsx_log.notice("Taking screenshot after exiting home menu");
+					g_user_asked_for_screenshot = true;
+				}
+			};
 		}
 
 		compiled_resource home_menu_dialog::get_compiled()
