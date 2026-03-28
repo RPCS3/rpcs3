@@ -153,6 +153,7 @@ namespace rsx
 			: home_menu_settings_page(x, y, width, height, use_separators, parent, get_localized_string(localized_string_id::HOME_MENU_SETTINGS_VIDEO))
 		{
 			add_unsigned_slider(&g_cfg.video.resolution_scale_percent, localized_string_id::HOME_MENU_SETTINGS_VIDEO_RESOLUTION_SCALE_PERCENT, "%", 25);
+			add_unsigned_slider(&g_cfg.video.min_scalable_dimension, localized_string_id::HOME_MENU_SETTINGS_VIDEO_RESOLUTION_SCALE_THRESHOLD, "px", 1);
 
 			add_dropdown(&g_cfg.video.vsync, localized_string_id::HOME_MENU_SETTINGS_VIDEO_VSYNC);
 
