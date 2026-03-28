@@ -417,6 +417,18 @@ void update_manager::update(bool auto_accept)
 		{
 			const int cols = grid->columnCount();
 
+			// Center existing content above the changelog
+			for (int r = 0; r < grid->rowCount(); r++)
+			{
+				for (int c = 0; c < cols; c++)
+				{
+					if (QLayoutItem* item = grid->itemAtPosition(r, c))
+					{
+						item->setAlignment(Qt::AlignHCenter);
+					}
+				}
+			}
+
 			QDialogButtonBox* button_box = mb.findChild<QDialogButtonBox*>();
 
 			if (button_box)
@@ -432,11 +444,11 @@ void update_manager::update(bool auto_accept)
 				changelog_browser->setFrameShape(QFrame::NoFrame);
 				changelog_browser->setHtml(QStringLiteral("<h3>%0</h3>%1").arg(tr("Changelog:"), changelog_html));
 
-				// DPI-aware sizing: use font metrics instead of hardcoded pixels
+				// DPI-aware sizing: use font metrics for height, let width fill the dialog
 				const QFontMetrics fm = changelog_browser->fontMetrics();
-				const int browser_width  = fm.horizontalAdvance(QStringLiteral("m")) * 60;
 				const int browser_height = fm.height() * 12;
-				changelog_browser->setFixedSize(browser_width, browser_height);
+				changelog_browser->setMinimumHeight(browser_height);
+				changelog_browser->setMaximumHeight(browser_height);
 				changelog_browser->setVisible(false);
 
 				const QString show_text = tr("Show Changelog");
@@ -446,13 +458,15 @@ void update_manager::update(bool auto_accept)
 				grid->addWidget(toggle_btn, row++, 0, 1, cols);
 				grid->addWidget(changelog_browser, row++, 0, 1, cols);
 
-				QObject::connect(toggle_btn, &QPushButton::clicked, [changelog_browser, toggle_btn, &mb, show_text, hide_text, browser_width]()
+				// Pre-size the dialog to fit the changelog width
+				const int browser_width = fm.horizontalAdvance(QStringLiteral("m")) * 55;
+				mb.setMinimumWidth(browser_width);
+
+				QObject::connect(toggle_btn, &QPushButton::clicked, [changelog_browser, toggle_btn, &mb, show_text, hide_text]()
 				{
 					const bool becoming_visible = !changelog_browser->isVisible();
 					changelog_browser->setVisible(becoming_visible);
 					toggle_btn->setText(becoming_visible ? hide_text : show_text);
-
-					mb.setMinimumWidth(becoming_visible ? browser_width + 20 : 0);
 					mb.adjustSize();
 				});
 			}
