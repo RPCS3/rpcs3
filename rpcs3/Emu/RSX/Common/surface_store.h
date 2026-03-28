@@ -132,7 +132,7 @@ namespace rsx
 					free_rsx_memory(Traits::get(sink));
 				}
 
-				Traits::clone_surface(cmd, sink, region.source, new_address, region);
+				Traits::clone_surface(cmd, sink, region.source, new_address, region, region.source->resolution_scaling_config);
 				allocate_rsx_memory(Traits::get(sink));
 
 				if (invalidated) [[unlikely]]
@@ -449,7 +449,7 @@ namespace rsx
 					}
 				}
 
-				if (Traits::surface_matches_properties(surface, format, width, height, antialias))
+				if (Traits::surface_matches_properties(surface, format, width, height, antialias, scaling_config))
 				{
 					if (!pitch_compatible)
 					{
@@ -496,7 +496,7 @@ namespace rsx
 				for (auto It = invalidated_resources.begin(); It != invalidated_resources.end(); It++)
 				{
 					auto &surface = *It;
-					if (Traits::surface_matches_properties(surface, format, width, height, antialias, true))
+					if (Traits::surface_matches_properties(surface, format, width, height, antialias, scaling_config, true))
 					{
 						new_surface_storage = std::move(surface);
 						Traits::notify_surface_reused(new_surface_storage);
@@ -1467,6 +1467,95 @@ namespace rsx
 					// We didn't release enough resources, scan the active RTTs as well
 					collapse_dirty_surfaces(cmd, memory_pressure);
 				}
+			}
+		}
+
+		void sync_scaling_config(command_list_type cmd, const rsx::surface_scaling_config_t& active_config)
+		{
+			auto process_list_function = [&](surface_ranged_map& data, const utils::address_range32& range)
+			{
+				std::vector<Traits::surface_type> surfaces_to_clone;
+
+				for (auto It = data.begin_range(range); It != data.end();)
+				{
+					auto surface = Traits::get(It->second);
+					if (surface->get_resolution_scaling_config() == active_config)
+					{
+						++It;
+						continue;
+					}
+
+					surfaces_to_clone.push_back(surface);
+
+					// Invalidate the previous surface
+					invalidate(It->second);
+					It = data.erase(It);
+				}
+
+				for (auto& surface : surfaces_to_clone)
+				{
+					// Enqueue the memory transfer
+					surface_storage_type sink{};
+					deferred_clipped_region<surface_type> copy{};
+					copy.width = surface->template get_surface_width<>();
+					copy.height = surface->template get_surface_height<>();
+					copy.transfer_scale_x = 1.f;
+					copy.transfer_scale_y = 1.f;
+					copy.target = nullptr;
+					copy.source = surface;
+
+					Traits::clone_surface(cmd, sink, surface, surface->base_addr, copy, active_config);
+					allocate_rsx_memory(Traits::get(sink));
+
+					// Replace with the new one
+					ensure(copy.target == Traits::get(sink));
+					data.emplace(surface->get_memory_range(), std::move(sink));
+				}
+			};
+
+			const auto rtt_bind_backup = m_bound_render_targets;
+			const auto dsv_bind_backup = m_bound_depth_stencil;
+
+			// Unbind everything. We'll restore it later
+			for (auto& rtt_bind : m_bound_render_targets)
+			{
+				rtt_bind = {};
+			}
+
+			m_bound_depth_stencil = {};
+
+			process_list_function(m_render_targets_storage, m_render_targets_memory_range);
+			process_list_function(m_depth_stencil_storage, m_depth_stencil_memory_range);
+
+			// Restore bindings.
+			for (int i = 0; i < 4; ++i)
+			{
+				const auto address = rtt_bind_backup[i].first;
+				if (!address)
+				{
+					continue;
+				}
+
+				auto rtt = m_render_targets_storage.find(address);
+				ensure(rtt != m_render_targets_storage.end());
+
+				m_bound_render_targets[i] =
+				{
+					address,
+					Traits::get(rtt->second)
+				};
+			}
+
+			if (const auto ds_address = dsv_bind_backup.first)
+			{
+				auto ds = m_depth_stencil_storage.find(ds_address);
+				ensure(ds != m_depth_stencil_storage.end());
+
+				m_bound_depth_stencil =
+				{
+					ds_address,
+					Traits::get(ds->second)
+				};
 			}
 		}
 	};
