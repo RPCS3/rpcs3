@@ -380,7 +380,7 @@ void update_manager::update(bool auto_accept)
 			if (!changelog_html.isEmpty())
 				changelog_html += QStringLiteral("<br>");
 
-			changelog_html += QStringLiteral("&nbsp;&nbsp;&bull; ") + tr("%0: %1").arg(version_str, title_str);
+			changelog_html += tr("&nbsp;&nbsp;&bull; %0: %1").arg(version_str, title_str);
 		}
 
 		// Convert PR references like (#1234) into clickable GitHub links
