@@ -14,11 +14,17 @@
 #include <QApplication>
 #include <QCheckBox>
 #include <QDateTime>
+#include <QDialogButtonBox>
+#include <QFontMetrics>
+#include <QGridLayout>
 #include <QMessageBox>
+#include <QPushButton>
 #include <QLabel>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonDocument>
+#include <QRegularExpression>
+#include <QTextBrowser>
 #include <QThread>
 
 #if defined(_WIN32) || defined(__APPLE__)
@@ -333,7 +339,7 @@ void update_manager::update(bool auto_accept)
 			if (m_update_info.diff_msec < 0)
 			{
 				// This usually means that the current version was marked as broken and won't be shipped anymore, so we need to downgrade to avoid certain bugs.
-				update_message = tr("A better version of RPCS3 is available!<br><br>Current version: %0 (%1)<br>Better version: %2 (%3)<br>%4<br>Do you want to update?")
+				update_message = tr("A better version of RPCS3 is available!<br><br>Current version: %0 (%1)<br>Better version: %2 (%3)<br>%4")
 					.arg(m_update_info.old_version)
 					.arg(m_update_info.cur_date)
 					.arg(m_update_info.new_version)
@@ -342,7 +348,7 @@ void update_manager::update(bool auto_accept)
 			}
 			else
 			{
-				update_message = tr("A new version of RPCS3 is available!<br><br>Current version: %0 (%1)<br>Latest version: %2 (%3)<br>Your version is %4 behind.<br>%5<br>Do you want to update?")
+				update_message = tr("A new version of RPCS3 is available!<br><br>Current version: %0 (%1)<br>Latest version: %2 (%3)<br>Your version is %4 behind.<br>%5")
 					.arg(m_update_info.old_version)
 					.arg(m_update_info.cur_date)
 					.arg(m_update_info.new_version)
@@ -353,43 +359,115 @@ void update_manager::update(bool auto_accept)
 		}
 		else
 		{
-			update_message = tr("You're currently using a custom or PR build.<br><br>Latest version: %0 (%1)<br>The latest version is %2 old.<br>%3<br>Do you want to update to the latest official RPCS3 version?")
+			update_message = tr("You're currently using a custom or PR build.<br><br>Latest version: %0 (%1)<br>The latest version is %2 old.<br>%3")
 				.arg(m_update_info.new_version)
 				.arg(m_update_info.lts_date)
 				.arg(localized.GetVerboseTimeByMs(std::abs(m_update_info.diff_msec), true))
 				.arg(support_message);
 		}
 
-		QString changelog_content;
+		// Build HTML changelog with clickable PR links
+		// Technique adapted from shadPS4 Emulator Project (shadps4-qtlauncher)
+		// Original: Copyright 2024 shadPS4 Emulator Project, GPL-2.0-or-later
+		// Used here under GPL-2.0 (compatible with RPCS3's GPL-2.0-only)
+		QString changelog_html;
 
 		for (const changelog_data& entry : m_update_info.changelog)
 		{
-			if (!changelog_content.isEmpty())
-				changelog_content.append('\n');
-			changelog_content.append(tr("• %0: %1").arg(entry.version.isEmpty() ? tr("N/A") : entry.version, entry.title.isEmpty() ? tr("N/A") : entry.title));
+			const QString version_str = entry.version.isEmpty() ? tr("N/A") : entry.version;
+			const QString title_str   = entry.title.isEmpty()   ? tr("N/A") : entry.title;
+
+			if (!changelog_html.isEmpty())
+				changelog_html += QStringLiteral("<br>");
+
+			changelog_html += QStringLiteral("&nbsp;&nbsp;&bull; ") + tr("%0: %1").arg(version_str, title_str);
+		}
+
+		// Convert PR references like (#1234) into clickable GitHub links
+		if (!changelog_html.isEmpty())
+		{
+			const QRegularExpression re(QStringLiteral("\\(\\#(\\d+)\\)"));
+			QString linked_changelog;
+			qsizetype last_index = 0;
+			QRegularExpressionMatchIterator it = re.globalMatch(changelog_html);
+
+			while (it.hasNext())
+			{
+				const QRegularExpressionMatch match = it.next();
+				linked_changelog += changelog_html.mid(last_index, match.capturedStart() - last_index);
+				const QString pr_num = match.captured(1);
+				linked_changelog += QStringLiteral("(<a href=\"https://github.com/RPCS3/rpcs3/pull/%0\">#%0</a>)").arg(pr_num);
+				last_index = match.capturedEnd();
+			}
+
+			linked_changelog += changelog_html.mid(last_index);
+			changelog_html = linked_changelog;
 		}
 
 		QMessageBox mb(QMessageBox::Icon::Question, tr("Update Available"), update_message, QMessageBox::Yes | QMessageBox::No, m_downloader->get_progress_dialog() ? m_downloader->get_progress_dialog() : m_parent);
 		mb.setTextFormat(Qt::RichText);
 		mb.setCheckBox(new QCheckBox(tr("Don't show again for this version")));
 
-		if (!changelog_content.isEmpty())
+		// Rearrange the layout: checkbox, then changelog, then prompt, then buttons
+		if (QGridLayout* grid = qobject_cast<QGridLayout*>(mb.layout()))
 		{
-			mb.setInformativeText(tr("To see the changelog, please click \"Show Details\"."));
-			mb.setDetailedText(tr("Changelog:\n\n%0").arg(changelog_content));
+			const int cols = grid->columnCount();
 
-			// Smartass hack to make the unresizeable message box wide enough for the changelog
-			const int changelog_width = QLabel(changelog_content).sizeHint().width();
-			if (QLabel(update_message).sizeHint().width() < changelog_width)
+			QDialogButtonBox* button_box = mb.findChild<QDialogButtonBox*>();
+
+			if (button_box)
+				grid->removeWidget(button_box);
+
+			int row = grid->rowCount();
+
+			if (!changelog_html.isEmpty())
 			{
-				update_message += " &nbsp;";
-				while (QLabel(update_message).sizeHint().width() < changelog_width)
+				QTextBrowser* changelog_browser = new QTextBrowser(&mb);
+				changelog_browser->setOpenExternalLinks(true);
+				changelog_browser->setReadOnly(true);
+				changelog_browser->setFrameShape(QFrame::NoFrame);
+				changelog_browser->setHtml(QStringLiteral("<h3>%0</h3>%1").arg(tr("Changelog:"), changelog_html));
+
+				// DPI-aware sizing: use font metrics instead of hardcoded pixels
+				const QFontMetrics fm = changelog_browser->fontMetrics();
+				const int browser_width  = fm.horizontalAdvance(QStringLiteral("m")) * 60;
+				const int browser_height = fm.height() * 12;
+				changelog_browser->setFixedSize(browser_width, browser_height);
+				changelog_browser->setVisible(false);
+
+				const QString show_text = tr("Show Changelog");
+				const QString hide_text = tr("Hide Changelog");
+
+				QPushButton* toggle_btn = new QPushButton(show_text, &mb);
+				grid->addWidget(toggle_btn, row++, 0, 1, cols);
+				grid->addWidget(changelog_browser, row++, 0, 1, cols);
+
+				QObject::connect(toggle_btn, &QPushButton::clicked, [changelog_browser, toggle_btn, &mb, show_text, hide_text, browser_width]()
 				{
-					update_message += "&nbsp;";
-				}
+					const bool becoming_visible = !changelog_browser->isVisible();
+					changelog_browser->setVisible(becoming_visible);
+					toggle_btn->setText(becoming_visible ? hide_text : show_text);
+
+					mb.setMinimumWidth(becoming_visible ? browser_width + 20 : 0);
+					mb.adjustSize();
+				});
 			}
 
-			mb.setText(update_message);
+			// Horizontal separator before the prompt
+			QFrame* separator = new QFrame(&mb);
+			separator->setFrameShape(QFrame::HLine);
+			separator->setFrameShadow(QFrame::Sunken);
+			grid->addWidget(separator, row++, 0, 1, cols);
+
+			// "Do you want to update?" label
+			const QString prompt_text = m_update_info.hash_found
+				? tr("Do you want to update?")
+				: tr("Do you want to update to the latest official RPCS3 version?");
+			QLabel* prompt_label = new QLabel(prompt_text, &mb);
+			grid->addWidget(prompt_label, row++, 0, 1, cols);
+
+			if (button_box)
+				grid->addWidget(button_box, row, 0, 1, cols);
 		}
 
 		update_log.notice("Asking user for permission to update...");
