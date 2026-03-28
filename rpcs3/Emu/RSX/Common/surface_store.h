@@ -1523,8 +1523,12 @@ namespace rsx
 					allocate_rsx_memory(Traits::get(sink));
 
 					// Replace with the new one
-					ensure(copy.target == Traits::get(sink));
+					auto new_surface = Traits::get(sink);
+					ensure(copy.target == new_surface);
 					data.emplace(surface->get_memory_range(), std::move(sink));
+
+					// Force barrier to reduce VRAM pressure
+					new_surface->memory_barrier(cmd, rsx::surface_access::memory_read);
 				}
 			};
 
