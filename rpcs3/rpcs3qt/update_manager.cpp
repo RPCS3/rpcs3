@@ -450,7 +450,7 @@ void update_manager::update(bool auto_accept)
 				const int content_width = fm.horizontalAdvance(longest_line) + 40;
 				const int entry_count = static_cast<int>(m_update_info.changelog.size());
 				const int visible_entries = entry_count > 6 ? 6 : entry_count;
-				const int browser_height = fm.height() * (visible_entries + 2); // +2 for "Changelog:" heading
+				const int browser_height = fm.height() * (visible_entries + 4); // +4 for heading + spacing
 				changelog_browser->setMinimumWidth(content_width);
 				changelog_browser->setMinimumHeight(browser_height);
 				changelog_browser->setMaximumHeight(browser_height);
@@ -468,7 +468,11 @@ void update_manager::update(bool auto_accept)
 					const bool becoming_visible = !changelog_browser->isVisible();
 					changelog_browser->setVisible(becoming_visible);
 					toggle_btn->setText(becoming_visible ? hide_text : show_text);
+
+					// Keep width locked, only adjust height
+					const int w = mb.width();
 					mb.adjustSize();
+					mb.setFixedWidth(w);
 				});
 			}
 
@@ -489,12 +493,18 @@ void update_manager::update(bool auto_accept)
 				grid->addWidget(button_box, row, 0, 1, cols);
 		}
 
-		// Force dialog width to fit the widest changelog entry before showing
-		if (!longest_line.isEmpty())
+		// Lock dialog width to expanded size before showing
+		if (QTextBrowser* browser = mb.findChild<QTextBrowser*>())
 		{
-			const QFontMetrics fm = mb.fontMetrics();
-			const int dialog_width = fm.horizontalAdvance(longest_line) + 100;
-			mb.setFixedWidth(dialog_width);
+			// Temporarily show changelog to measure the full expanded width
+			browser->setVisible(true);
+			mb.adjustSize();
+			const int expanded_width = mb.width();
+
+			// Collapse and lock width so it stays consistent
+			browser->setVisible(false);
+			mb.setFixedWidth(expanded_width);
+			mb.adjustSize();
 		}
 
 		update_log.notice("Asking user for permission to update...");
