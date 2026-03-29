@@ -2837,7 +2837,7 @@ bool Emulator::Pause(bool freeze_emulation, bool show_resume_message)
 		auto msg_ref = std::make_shared<atomic_t<u32>>(1);
 
 		// No timeout
-		rsx::overlays::queue_message(status == system_state::paused ? localized_string_id::EMULATION_PAUSED_RESUME_WITH_START : localized_string_id::EMULATION_FROZEN, -1, msg_ref);
+		rsx::overlays::queue_message(status == system_state::paused ? localized_string_id::EMULATION_PAUSED_RESUME_WITH_START : localized_string_id::EMULATION_FROZEN, umax, msg_ref);
 		m_pause_msgs_refs.emplace_back(msg_ref);
 
 		auto refresh_l = [this, msg_ref, status]()

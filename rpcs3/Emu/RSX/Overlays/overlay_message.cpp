@@ -90,7 +90,7 @@ namespace rsx
 			return m_loc_id == id;
 		}
 
-		bool message_item::text_matches(const std::u32string& text) const
+		bool message_item::text_matches(std::u32string_view text) const
 		{
 			return m_text.text == text;
 		}
