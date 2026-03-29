@@ -12,6 +12,23 @@ game_list::game_list() : QTableWidget(), game_list_base()
 	{
 		Q_EMIT IconReady(game, item);
 	};
+
+	connect(this, &QTableWidget::currentCellChanged, this, [this](int new_row, int /*new_col*/, int prev_row, int /*prev_column*/)
+	{
+		if (new_row == prev_row) return;
+
+		// Stop movie of last selected row unless it's the hover item
+		if (movie_item* old_item = static_cast<movie_item*>(item(prev_row, 0)); old_item && old_item != m_last_hover_item)
+		{
+			old_item->set_active(false);
+		}
+
+		// Start move of new selected row
+		if (movie_item* new_item = static_cast<movie_item*>(item(new_row, 0)))
+		{
+			new_item->set_active(true);
+		}
+	});
 }
 
 void game_list::sync_header_actions(std::map<int, QAction*>& actions, std::function<bool(int)> get_visibility)
@@ -130,19 +147,23 @@ void game_list::mouseMoveEvent(QMouseEvent* event)
 {
 	movie_item* new_item = static_cast<movie_item*>(itemAt(event->pos()));
 
+	// Check if the mouse is above a new item
 	if (new_item != m_last_hover_item)
 	{
-		if (m_last_hover_item)
+		// Stop movie of last hover item unless it's the selected row
+		if (m_last_hover_item && m_last_hover_item->row() != currentRow())
 		{
 			m_last_hover_item->set_active(false);
 		}
+
+		// Start move of new hover item
 		if (new_item)
 		{
 			new_item->set_active(true);
 		}
-	}
 
-	m_last_hover_item = new_item;
+		m_last_hover_item = new_item;
+	}
 
 	QTableWidget::mouseMoveEvent(event);
 }
@@ -177,6 +198,13 @@ void game_list::keyPressEvent(QKeyEvent* event)
 
 void game_list::leaveEvent(QEvent* event)
 {
+	// Stop movie of selected row
+	if (movie_item* icon_item = static_cast<movie_item*>(item(currentRow(), 0)))
+	{
+		icon_item->set_active(false);
+	}
+
+	// Stop movie of hover item
 	if (m_last_hover_item)
 	{
 		m_last_hover_item->set_active(false);
