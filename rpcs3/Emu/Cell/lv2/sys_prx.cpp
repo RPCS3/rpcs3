@@ -63,7 +63,7 @@ extern const std::map<std::string_view, int> g_prx_list
 	{ "libcelpenc.sprx", 0 },
 	{ "libddpdec.sprx", 0 },
 	{ "libdivxdec.sprx", 0 },
-	{ "libdmux.sprx", 0 },
+	{ "libdmux.sprx", 1 },
 	{ "libdmuxpamf.sprx", 1 },
 	{ "libdtslbrdec.sprx", 0 },
 	{ "libfiber.sprx", 0 },
