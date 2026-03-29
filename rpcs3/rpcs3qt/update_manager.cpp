@@ -389,7 +389,6 @@ void update_manager::update(bool auto_accept)
 
 		// Build HTML changelog with clickable PR links when available
 		QString changelog_html;
-		QString longest_line;
 
 		for (const changelog_data& entry : m_update_info.changelog)
 		{
@@ -399,23 +398,13 @@ void update_manager::update(bool auto_accept)
 			if (!changelog_html.isEmpty())
 				changelog_html += QStringLiteral("<br>");
 
-			// Build plain text version to measure width
-			QString plain_line;
-
 			if (entry.pr > 0)
 			{
 				changelog_html += tr("&nbsp;&nbsp;&bull; %0: %1 (<a href=\"https://github.com/RPCS3/rpcs3/pull/%2\">#%2</a>)").arg(version_str, title_str, QString::number(entry.pr));
-				plain_line = tr("  • %0: %1 (#%2)").arg(version_str, title_str, QString::number(entry.pr));
 			}
 			else
 			{
 				changelog_html += tr("&nbsp;&nbsp;&bull; %0: %1").arg(version_str, title_str);
-				plain_line = tr("  • %0: %1").arg(version_str, title_str);
-			}
-
-			if (plain_line.length() > longest_line.length())
-			{
-				longest_line = plain_line;
 			}
 		}
 
@@ -445,13 +434,21 @@ void update_manager::update(bool auto_accept)
 				changelog_browser->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 				changelog_browser->setHtml(QStringLiteral("<h3>%0</h3>%1").arg(tr("Changelog:"), changelog_html));
 
-				// Measure the widest entry using font metrics for reliable pre-sizing
-				const QFontMetrics fm = changelog_browser->fontMetrics();
-				const int content_width = fm.horizontalAdvance(longest_line) + 40;
+				// Let Qt measure the actual rendered HTML content
+				const int doc_width = static_cast<int>(changelog_browser->document()->idealWidth()) + 20;
+				const int doc_height = static_cast<int>(changelog_browser->document()->size().height()) + 10;
+
+				// For >6 entries, subtract the excess entry heights from the full document height
 				const int entry_count = static_cast<int>(m_update_info.changelog.size());
-				const int visible_entries = entry_count > 6 ? 6 : entry_count;
-				const int browser_height = fm.height() * (visible_entries + 4); // +4 for heading + spacing
-				changelog_browser->setMinimumWidth(content_width);
+				int browser_height = doc_height;
+
+				if (entry_count > 6)
+				{
+					const QFontMetrics fm = changelog_browser->fontMetrics();
+					browser_height = doc_height - (entry_count - 6) * fm.lineSpacing();
+				}
+
+				changelog_browser->setMinimumWidth(doc_width);
 				changelog_browser->setMinimumHeight(browser_height);
 				changelog_browser->setMaximumHeight(browser_height);
 				changelog_browser->setVisible(false);
@@ -493,15 +490,12 @@ void update_manager::update(bool auto_accept)
 				grid->addWidget(button_box, row, 0, 1, cols);
 		}
 
-		// Lock dialog width to expanded size before showing
+		// Lock dialog width: temporarily expand to measure, then collapse
 		if (QTextBrowser* browser = mb.findChild<QTextBrowser*>())
 		{
-			// Temporarily show changelog to measure the full expanded width
 			browser->setVisible(true);
 			mb.adjustSize();
 			const int expanded_width = mb.width();
-
-			// Collapse and lock width so it stays consistent
 			browser->setVisible(false);
 			mb.setFixedWidth(expanded_width);
 			mb.adjustSize();
