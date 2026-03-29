@@ -751,11 +751,11 @@ std::pair<u64, u64> utils::get_memory_usage()
 
 	while (std::getline(proc, line))
 	{
-		if (line.rfind("MemTotal:", 0) == 0)
+		if (line.rfind("MemTotal:", 0) == 0 && line.find("kB") != std::string::npos)
 		{
 			mem_total = std::stoull(line.substr(line.find_first_of("0123456789"))) * 1024;
 		}
-		else if (line.rfind("MemAvailable:", 0) == 0)
+		else if (line.rfind("MemAvailable:", 0) == 0 && line.find("kB") != std::string::npos)
 		{
 			mem_available = std::stoull(line.substr(line.find_first_of("0123456789"))) * 1024;
 			break;
