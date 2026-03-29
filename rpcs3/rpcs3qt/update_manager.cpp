@@ -389,6 +389,7 @@ void update_manager::update(bool auto_accept)
 
 		// Build HTML changelog with clickable PR links when available
 		QString changelog_html;
+		QString longest_line;
 
 		for (const changelog_data& entry : m_update_info.changelog)
 		{
@@ -398,13 +399,23 @@ void update_manager::update(bool auto_accept)
 			if (!changelog_html.isEmpty())
 				changelog_html += QStringLiteral("<br>");
 
+			// Build plain text version to measure width
+			QString plain_line;
+
 			if (entry.pr > 0)
 			{
 				changelog_html += tr("&nbsp;&nbsp;&bull; %0: %1 (<a href=\"https://github.com/RPCS3/rpcs3/pull/%2\">#%2</a>)").arg(version_str, title_str, QString::number(entry.pr));
+				plain_line = tr("  • %0: %1 (#%2)").arg(version_str, title_str, QString::number(entry.pr));
 			}
 			else
 			{
 				changelog_html += tr("&nbsp;&nbsp;&bull; %0: %1").arg(version_str, title_str);
+				plain_line = tr("  • %0: %1").arg(version_str, title_str);
+			}
+
+			if (plain_line.length() > longest_line.length())
+			{
+				longest_line = plain_line;
 			}
 		}
 
@@ -416,18 +427,6 @@ void update_manager::update(bool auto_accept)
 		if (QGridLayout* grid = qobject_cast<QGridLayout*>(mb.layout()))
 		{
 			const int cols = grid->columnCount();
-
-			// Center existing content above the changelog
-			for (int r = 0; r < grid->rowCount(); r++)
-			{
-				for (int c = 0; c < cols; c++)
-				{
-					if (QLayoutItem* item = grid->itemAtPosition(r, c))
-					{
-						item->setAlignment(Qt::AlignHCenter);
-					}
-				}
-			}
 
 			QDialogButtonBox* button_box = mb.findChild<QDialogButtonBox*>();
 
@@ -446,10 +445,12 @@ void update_manager::update(bool auto_accept)
 				changelog_browser->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 				changelog_browser->setHtml(QStringLiteral("<h3>%0</h3>%1").arg(tr("Changelog:"), changelog_html));
 
-				// Size to fit content: width from document, height from font metrics
-				const int content_width = static_cast<int>(changelog_browser->document()->idealWidth()) + 5;
+				// Measure the widest entry using font metrics for reliable pre-sizing
 				const QFontMetrics fm = changelog_browser->fontMetrics();
-				const int browser_height = fm.height() * 8;
+				const int content_width = fm.horizontalAdvance(longest_line) + 40;
+				const int entry_count = static_cast<int>(m_update_info.changelog.size());
+				const int visible_entries = entry_count > 6 ? 6 : entry_count;
+				const int browser_height = fm.height() * (visible_entries + 2); // +2 for "Changelog:" heading
 				changelog_browser->setMinimumWidth(content_width);
 				changelog_browser->setMinimumHeight(browser_height);
 				changelog_browser->setMaximumHeight(browser_height);
@@ -463,7 +464,7 @@ void update_manager::update(bool auto_accept)
 				grid->addWidget(changelog_browser, row++, 0, 1, cols);
 
 				// Pre-size dialog to fit the widest changelog entry
-				mb.setMinimumWidth(content_width + 40);
+				mb.setMinimumWidth(content_width + 60);
 
 				QObject::connect(toggle_btn, &QPushButton::clicked, [changelog_browser, toggle_btn, &mb, show_text, hide_text]()
 				{
