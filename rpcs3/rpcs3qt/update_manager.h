@@ -29,6 +29,7 @@ private:
 
 	struct changelog_data
 	{
+		int pr = 0;
 		QString version;
 		QString title;
 	};

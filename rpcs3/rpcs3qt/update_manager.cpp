@@ -14,11 +14,16 @@
 #include <QApplication>
 #include <QCheckBox>
 #include <QDateTime>
+#include <QDialogButtonBox>
+#include <QFontMetrics>
+#include <QGridLayout>
 #include <QMessageBox>
+#include <QPushButton>
 #include <QLabel>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonDocument>
+#include <QTextBrowser>
 #include <QThread>
 
 #if defined(_WIN32) || defined(__APPLE__)
@@ -61,11 +66,12 @@ void update_manager::check_for_updates(bool automatic, bool check_only, bool aut
 	if (automatic)
 	{
 		// Don't check for updates on local builds
-		if (rpcs3::is_local_build())
-		{
-			update_log.notice("Skipped automatic update check: this is a local build");
-			return;
-		}
+		// TEST: commented out — revert before merging
+		// if (rpcs3::is_local_build())
+		// {
+		// 	update_log.notice("Skipped automatic update check: this is a local build");
+		// 	return;
+		// }
 #ifdef __linux__
 		// Don't check for updates on startup if RPCS3 is not running from an AppImage.
 		if (!::getenv("APPIMAGE"))
@@ -108,7 +114,8 @@ void update_manager::check_for_updates(bool automatic, bool check_only, bool aut
 	const utils::OS_version os = utils::get_OS_version();
 
 	const std::string url = fmt::format("https://update.rpcs3.net/?api=v3&c=%s&os_type=%s&os_arch=%s&os_version=%i.%i.%i",
-		rpcs3::get_commit_and_hash().second, os.type, os.arch, os.version_major, os.version_minor, os.version_patch);
+		"9b6bc7c1", os.type, os.arch, os.version_major, os.version_minor, os.version_patch); 
+	    // TEST: hardcoded hash — revert to rpcs3::get_commit_and_hash().second before merging
 
 	m_downloader->start(url, true, !automatic, true, tr("Checking For Updates"), true);
 }
@@ -278,6 +285,13 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 						update_log.notice("JSON changelog entry does not contain a title string.");
 					}
 
+					if (QJsonValue pr = changelog_entry["pr"]; pr.isDouble())
+					{
+						entry.pr = pr.toInt();
+					}
+
+					update_log.notice("Changelog entry: version='%s', title='%s', pr=%d", entry.version, entry.title, entry.pr);
+
 					m_update_info.changelog.push_back(std::move(entry));
 				}
 				else
@@ -293,6 +307,19 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 		else
 		{
 			update_log.notice("JSON does not contain a changelog section.");
+		}
+	}
+
+	// TEST: assign PR numbers to entries — remove before merging
+	{
+		static const int test_prs[] = {18459, 18103, 18419, 18456, 18395, 18453, 18302, 18445};
+		const int test_count = static_cast<int>(sizeof(test_prs) / sizeof(test_prs[0]));
+		for (int i = 0; i < static_cast<int>(m_update_info.changelog.size()) && i < test_count; i++)
+		{
+			if (m_update_info.changelog[i].pr == 0)
+			{
+				m_update_info.changelog[i].pr = test_prs[i];
+			}
 		}
 	}
 
@@ -333,7 +360,7 @@ void update_manager::update(bool auto_accept)
 			if (m_update_info.diff_msec < 0)
 			{
 				// This usually means that the current version was marked as broken and won't be shipped anymore, so we need to downgrade to avoid certain bugs.
-				update_message = tr("A better version of RPCS3 is available!<br><br>Current version: %0 (%1)<br>Better version: %2 (%3)<br>%4<br>Do you want to update?")
+				update_message = tr("A better version of RPCS3 is available!<br><br>Current version: %0 (%1)<br>Better version: %2 (%3)<br>%4")
 					.arg(m_update_info.old_version)
 					.arg(m_update_info.cur_date)
 					.arg(m_update_info.new_version)
@@ -342,7 +369,7 @@ void update_manager::update(bool auto_accept)
 			}
 			else
 			{
-				update_message = tr("A new version of RPCS3 is available!<br><br>Current version: %0 (%1)<br>Latest version: %2 (%3)<br>Your version is %4 behind.<br>%5<br>Do you want to update?")
+				update_message = tr("A new version of RPCS3 is available!<br><br>Current version: %0 (%1)<br>Latest version: %2 (%3)<br>Your version is %4 behind.<br>%5")
 					.arg(m_update_info.old_version)
 					.arg(m_update_info.cur_date)
 					.arg(m_update_info.new_version)
@@ -353,43 +380,115 @@ void update_manager::update(bool auto_accept)
 		}
 		else
 		{
-			update_message = tr("You're currently using a custom or PR build.<br><br>Latest version: %0 (%1)<br>The latest version is %2 old.<br>%3<br>Do you want to update to the latest official RPCS3 version?")
+			update_message = tr("You're currently using a custom or PR build.<br><br>Latest version: %0 (%1)<br>The latest version is %2 old.<br>%3")
 				.arg(m_update_info.new_version)
 				.arg(m_update_info.lts_date)
 				.arg(localized.GetVerboseTimeByMs(std::abs(m_update_info.diff_msec), true))
 				.arg(support_message);
 		}
 
-		QString changelog_content;
+		// Build HTML changelog with clickable PR links when available
+		QString changelog_html;
 
 		for (const changelog_data& entry : m_update_info.changelog)
 		{
-			if (!changelog_content.isEmpty())
-				changelog_content.append('\n');
-			changelog_content.append(tr("• %0: %1").arg(entry.version.isEmpty() ? tr("N/A") : entry.version, entry.title.isEmpty() ? tr("N/A") : entry.title));
+			const QString version_str = entry.version.isEmpty() ? tr("N/A") : entry.version;
+			const QString title_str   = entry.title.isEmpty()   ? tr("N/A") : entry.title;
+
+			if (!changelog_html.isEmpty())
+				changelog_html += QStringLiteral("<br>");
+
+			if (entry.pr > 0)
+			{
+				changelog_html += tr("&nbsp;&nbsp;&bull; %0: %1 (<a href=\"https://github.com/RPCS3/rpcs3/pull/%2\">#%2</a>)").arg(version_str, title_str, QString::number(entry.pr));
+			}
+			else
+			{
+				changelog_html += tr("&nbsp;&nbsp;&bull; %0: %1").arg(version_str, title_str);
+			}
 		}
 
 		QMessageBox mb(QMessageBox::Icon::Question, tr("Update Available"), update_message, QMessageBox::Yes | QMessageBox::No, m_downloader->get_progress_dialog() ? m_downloader->get_progress_dialog() : m_parent);
 		mb.setTextFormat(Qt::RichText);
 		mb.setCheckBox(new QCheckBox(tr("Don't show again for this version")));
 
-		if (!changelog_content.isEmpty())
+		// Rearrange the layout: checkbox, then changelog, then prompt, then buttons
+		if (QGridLayout* grid = qobject_cast<QGridLayout*>(mb.layout()))
 		{
-			mb.setInformativeText(tr("To see the changelog, please click \"Show Details\"."));
-			mb.setDetailedText(tr("Changelog:\n\n%0").arg(changelog_content));
+			const int cols = grid->columnCount();
 
-			// Smartass hack to make the unresizeable message box wide enough for the changelog
-			const int changelog_width = QLabel(changelog_content).sizeHint().width();
-			if (QLabel(update_message).sizeHint().width() < changelog_width)
+			// Center existing content above the changelog
+			for (int r = 0; r < grid->rowCount(); r++)
 			{
-				update_message += " &nbsp;";
-				while (QLabel(update_message).sizeHint().width() < changelog_width)
+				for (int c = 0; c < cols; c++)
 				{
-					update_message += "&nbsp;";
+					if (QLayoutItem* item = grid->itemAtPosition(r, c))
+					{
+						item->setAlignment(Qt::AlignHCenter);
+					}
 				}
 			}
 
-			mb.setText(update_message);
+			QDialogButtonBox* button_box = mb.findChild<QDialogButtonBox*>();
+
+			if (button_box)
+				grid->removeWidget(button_box);
+
+			int row = grid->rowCount();
+
+			if (!changelog_html.isEmpty())
+			{
+				QTextBrowser* changelog_browser = new QTextBrowser(&mb);
+				changelog_browser->setOpenExternalLinks(true);
+				changelog_browser->setReadOnly(true);
+				changelog_browser->setFrameShape(QFrame::NoFrame);
+				changelog_browser->setLineWrapMode(QTextBrowser::NoWrap);
+				changelog_browser->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+				changelog_browser->setHtml(QStringLiteral("<h3>%0</h3>%1").arg(tr("Changelog:"), changelog_html));
+
+				// Size to fit content: width from document, height from font metrics
+				const int content_width = static_cast<int>(changelog_browser->document()->idealWidth()) + 5;
+				const QFontMetrics fm = changelog_browser->fontMetrics();
+				const int browser_height = fm.height() * 8;
+				changelog_browser->setMinimumWidth(content_width);
+				changelog_browser->setMinimumHeight(browser_height);
+				changelog_browser->setMaximumHeight(browser_height);
+				changelog_browser->setVisible(false);
+
+				const QString show_text = tr("Show Changelog");
+				const QString hide_text = tr("Hide Changelog");
+
+				QPushButton* toggle_btn = new QPushButton(show_text, &mb);
+				grid->addWidget(toggle_btn, row++, 0, 1, cols);
+				grid->addWidget(changelog_browser, row++, 0, 1, cols);
+
+				// Pre-size dialog to fit the widest changelog entry
+				mb.setMinimumWidth(content_width + 40);
+
+				QObject::connect(toggle_btn, &QPushButton::clicked, [changelog_browser, toggle_btn, &mb, show_text, hide_text]()
+				{
+					const bool becoming_visible = !changelog_browser->isVisible();
+					changelog_browser->setVisible(becoming_visible);
+					toggle_btn->setText(becoming_visible ? hide_text : show_text);
+					mb.adjustSize();
+				});
+			}
+
+			// Horizontal separator before the prompt
+			QFrame* separator = new QFrame(&mb);
+			separator->setFrameShape(QFrame::HLine);
+			separator->setFrameShadow(QFrame::Sunken);
+			grid->addWidget(separator, row++, 0, 1, cols);
+
+			// "Do you want to update?" label
+			const QString prompt_text = m_update_info.hash_found
+				? tr("Do you want to update?")
+				: tr("Do you want to update to the latest official RPCS3 version?");
+			QLabel* prompt_label = new QLabel(prompt_text, &mb);
+			grid->addWidget(prompt_label, row++, 0, 1, cols);
+
+			if (button_box)
+				grid->addWidget(button_box, row, 0, 1, cols);
 		}
 
 		update_log.notice("Asking user for permission to update...");
