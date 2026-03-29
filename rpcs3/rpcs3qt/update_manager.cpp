@@ -15,7 +15,6 @@
 #include <QCheckBox>
 #include <QDateTime>
 #include <QDialogButtonBox>
-#include <QFontMetrics>
 #include <QGridLayout>
 #include <QMessageBox>
 #include <QPushButton>
@@ -389,23 +388,37 @@ void update_manager::update(bool auto_accept)
 
 		// Build HTML changelog with clickable PR links when available
 		QString changelog_html;
+		QString changelog_html_capped; // First 6 entries only, for height measurement
+		int changelog_count = 0;
 
 		for (const changelog_data& entry : m_update_info.changelog)
 		{
 			const QString version_str = entry.version.isEmpty() ? tr("N/A") : entry.version;
 			const QString title_str   = entry.title.isEmpty()   ? tr("N/A") : entry.title;
 
-			if (!changelog_html.isEmpty())
-				changelog_html += QStringLiteral("<br>");
+			QString entry_html;
 
 			if (entry.pr > 0)
 			{
-				changelog_html += tr("&nbsp;&nbsp;&bull; %0: %1 (<a href=\"https://github.com/RPCS3/rpcs3/pull/%2\">#%2</a>)").arg(version_str, title_str, QString::number(entry.pr));
+				entry_html = tr("&nbsp;&nbsp;&bull; %0: %1 (<a href=\"https://github.com/RPCS3/rpcs3/pull/%2\">#%2</a>)").arg(version_str, title_str, QString::number(entry.pr));
 			}
 			else
 			{
-				changelog_html += tr("&nbsp;&nbsp;&bull; %0: %1").arg(version_str, title_str);
+				entry_html = tr("&nbsp;&nbsp;&bull; %0: %1").arg(version_str, title_str);
 			}
+
+			if (!changelog_html.isEmpty())
+				changelog_html += QStringLiteral("<br>");
+			changelog_html += entry_html;
+
+			if (changelog_count < 6)
+			{
+				if (!changelog_html_capped.isEmpty())
+					changelog_html_capped += QStringLiteral("<br>");
+				changelog_html_capped += entry_html;
+			}
+
+			changelog_count++;
 		}
 
 		QMessageBox mb(QMessageBox::Icon::Question, tr("Update Available"), update_message, QMessageBox::Yes | QMessageBox::No, m_downloader->get_progress_dialog() ? m_downloader->get_progress_dialog() : m_parent);
@@ -434,23 +447,22 @@ void update_manager::update(bool auto_accept)
 				changelog_browser->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 				changelog_browser->setHtml(QStringLiteral("<h3>%0</h3>%1").arg(tr("Changelog:"), changelog_html));
 
-				// Let Qt measure the actual rendered HTML content
-				const int doc_width = static_cast<int>(changelog_browser->document()->idealWidth()) + 20;
-				const int doc_height = static_cast<int>(changelog_browser->document()->size().height()) + 10;
+				// Measure height for 6 entries directly
+				int browser_height;
 
-				// For >6 entries, subtract the excess entry heights from the full document height
-				const int entry_count = static_cast<int>(m_update_info.changelog.size());
-				int browser_height = doc_height;
-
-				if (entry_count > 6)
+				if (changelog_count > 6)
 				{
-					const QFontMetrics fm = changelog_browser->fontMetrics();
-					browser_height = doc_height - (entry_count - 6) * fm.lineSpacing();
+					// Temporarily render only 6 entries to get exact pixel height
+					changelog_browser->setHtml(QStringLiteral("<h3>%0</h3>%1").arg(tr("Changelog:"), changelog_html_capped));
+					browser_height = static_cast<int>(changelog_browser->document()->size().height()) + 10;
+					changelog_browser->setHtml(QStringLiteral("<h3>%0</h3>%1").arg(tr("Changelog:"), changelog_html));
+				}
+				else
+				{
+					browser_height = static_cast<int>(changelog_browser->document()->size().height()) + 10;
 				}
 
-				changelog_browser->setMinimumWidth(doc_width);
-				changelog_browser->setMinimumHeight(browser_height);
-				changelog_browser->setMaximumHeight(browser_height);
+				changelog_browser->setFixedSize(500, browser_height);
 				changelog_browser->setVisible(false);
 
 				const QString show_text = tr("Show Changelog");
@@ -465,11 +477,7 @@ void update_manager::update(bool auto_accept)
 					const bool becoming_visible = !changelog_browser->isVisible();
 					changelog_browser->setVisible(becoming_visible);
 					toggle_btn->setText(becoming_visible ? hide_text : show_text);
-
-					// Keep width locked, only adjust height
-					const int w = mb.width();
 					mb.adjustSize();
-					mb.setFixedWidth(w);
 				});
 			}
 
@@ -486,19 +494,9 @@ void update_manager::update(bool auto_accept)
 			QLabel* prompt_label = new QLabel(prompt_text, &mb);
 			grid->addWidget(prompt_label, row++, 0, 1, cols);
 
+			// Re-add button box at the bottom
 			if (button_box)
 				grid->addWidget(button_box, row, 0, 1, cols);
-		}
-
-		// Lock dialog width: temporarily expand to measure, then collapse
-		if (QTextBrowser* browser = mb.findChild<QTextBrowser*>())
-		{
-			browser->setVisible(true);
-			mb.adjustSize();
-			const int expanded_width = mb.width();
-			browser->setVisible(false);
-			mb.setFixedWidth(expanded_width);
-			mb.adjustSize();
 		}
 
 		update_log.notice("Asking user for permission to update...");
