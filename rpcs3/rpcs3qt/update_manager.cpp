@@ -463,9 +463,6 @@ void update_manager::update(bool auto_accept)
 				grid->addWidget(toggle_btn, row++, 0, 1, cols);
 				grid->addWidget(changelog_browser, row++, 0, 1, cols);
 
-				// Pre-size dialog to fit the widest changelog entry
-				mb.setMinimumWidth(content_width + 60);
-
 				QObject::connect(toggle_btn, &QPushButton::clicked, [changelog_browser, toggle_btn, &mb, show_text, hide_text]()
 				{
 					const bool becoming_visible = !changelog_browser->isVisible();
@@ -490,6 +487,14 @@ void update_manager::update(bool auto_accept)
 
 			if (button_box)
 				grid->addWidget(button_box, row, 0, 1, cols);
+		}
+
+		// Force dialog width to fit the widest changelog entry before showing
+		if (!longest_line.isEmpty())
+		{
+			const QFontMetrics fm = mb.fontMetrics();
+			const int dialog_width = fm.horizontalAdvance(longest_line) + 100;
+			mb.setFixedWidth(dialog_width);
 		}
 
 		update_log.notice("Asking user for permission to update...");
