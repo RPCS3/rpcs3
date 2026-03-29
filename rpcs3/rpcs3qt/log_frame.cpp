@@ -113,6 +113,8 @@ static gui_listener s_gui_listener;
 log_frame::log_frame(std::shared_ptr<gui_settings> _gui_settings, QWidget* parent)
 	: custom_dock_widget(tr("Log"), parent), m_gui_settings(std::move(_gui_settings))
 {
+	setObjectName("logger");
+
 	const int max_block_count_log = m_gui_settings->GetValue(gui::l_limit).toInt();
 	const int max_block_count_tty = m_gui_settings->GetValue(gui::l_limit_tty).toInt();
 
