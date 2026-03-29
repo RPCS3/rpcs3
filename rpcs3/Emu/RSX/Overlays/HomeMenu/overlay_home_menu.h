@@ -25,6 +25,7 @@ namespace rsx
 			overlay_element m_dim_background{};
 			label m_description{};
 			label m_time_display{};
+			void begin_close(bool take_screenshot);
 
 			animation_color_interpolate fade_animation{};
 		};
