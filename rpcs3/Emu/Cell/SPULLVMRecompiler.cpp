@@ -2323,7 +2323,7 @@ public:
 					llvm::Value* loop_dictator_after_adjustment{};
 
 					spu_opcode_t reg_target{};
-					reg_target.rt = reduced_loop_info->cond_val_register_idx;
+					reg_target.rt = static_cast<u32>(reduced_loop_info->cond_val_register_idx);
 
 					if (reg_target.rt != reduced_loop_info->cond_val_register_idx)
 					{
@@ -2375,7 +2375,7 @@ public:
 					else
 					{
 						spu_opcode_t reg_incr{};
-						reg_incr.rt = reduced_loop_info->cond_val_incr;
+						reg_incr.rt = static_cast<u32>(reduced_loop_info->cond_val_incr);
 
 						if (reg_incr.rt != reduced_loop_info->cond_val_incr)
 						{
@@ -2425,7 +2425,7 @@ public:
 					else
 					{
 						spu_opcode_t reg_target2{};
-						reg_target2.rt = reduced_loop_info->cond_val_register_argument_idx;
+						reg_target2.rt = static_cast<u32>(reduced_loop_info->cond_val_register_argument_idx);
 
 						if (reg_target2.rt != reduced_loop_info->cond_val_register_argument_idx)
 						{
