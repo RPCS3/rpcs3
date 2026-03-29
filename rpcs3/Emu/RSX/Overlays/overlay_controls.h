@@ -242,8 +242,8 @@ namespace rsx
 			// NOTE: Functions as a simple position offset. Top left corner is the anchor.
 			virtual void set_margin(u16 left, u16 top);
 			virtual void set_margin(u16 margin);
-			virtual void set_text(const std::string& text);
-			virtual void set_unicode_text(const std::u32string& text);
+			virtual void set_text(std::string_view text);
+			virtual void set_unicode_text(std::u32string_view text);
 			void set_text(localized_string_id id);
 			void set_text(const localized_string& container);
 			virtual void set_font(const char* font_name, u16 font_size);
