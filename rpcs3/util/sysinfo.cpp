@@ -6,6 +6,7 @@
 
 #if defined(ARCH_ARM64)
 #include "Emu/CPU/Backends/AArch64/AArch64Common.h"
+#include <arm_sve.h>
 #endif
 
 #ifdef _WIN32
@@ -542,6 +543,59 @@ bool utils::has_sve2()
 		return IsProcessorFeaturePresent(PF_ARM_SVE2_INSTRUCTIONS_AVAILABLE) != 0;
 #endif
 	}();
+	return g_value;
+}
+
+bool utils::has_lut()
+{
+	static const bool g_value = []() -> bool
+	{
+#if defined(__linux__)
+		return (getauxval(AT_HWCAP2) & HWCAP2_LUT) != 0;
+#elif defined(__APPLE__)
+		int val = 0;
+		size_t len = sizeof(val);
+		sysctlbyname("hw.optional.arm.FEAT_LUT", &val, &len, nullptr, 0);
+		return val != 0;
+#elif defined(_WIN32)
+		return 0;
+#else
+		return 0;
+#endif
+	}();
+	return g_value;
+}
+
+bool utils::has_i8mm()
+{
+	static const bool g_value = []() -> bool
+	{
+#if defined(__linux__)
+		return (getauxval(AT_HWCAP2) & HWCAP2_I8MM) != 0;
+#elif defined(__APPLE__)
+		int val = 0;
+		size_t len = sizeof(val);
+		sysctlbyname("hw.optional.arm.FEAT_I8MM", &val, &len, nullptr, 0);
+		return val != 0;
+#elif defined(_WIN32)
+		return IsProcessorFeaturePresent(PF_ARM_V86_I8MM_INSTRUCTIONS_AVAILABLE) != 0;
+#else
+		return 0;
+#endif
+	}();
+	return g_value;
+}
+
+#if defined(_MSC_VER)
+#define sve_func
+#else
+#define sve_func __attribute__((__target__("+sve")))
+#endif
+
+// svcntb returns sve length in bytes, our function retuns length in bits
+sve_func int utils::sve_length()
+{
+	static const int g_value = static_cast<int>(svcntb() * 8);
 	return g_value;
 }
 

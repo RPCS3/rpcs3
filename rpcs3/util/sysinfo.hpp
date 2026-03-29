@@ -64,6 +64,12 @@ namespace utils
 	bool has_sve();
 
 	bool has_sve2();
+
+	bool has_lut();
+	
+	bool has_i8mm();
+
+	int sve_length();
 #endif
 	std::string get_cpu_brand();
 
