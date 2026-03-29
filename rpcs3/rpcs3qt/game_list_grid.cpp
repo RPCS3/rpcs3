@@ -21,7 +21,7 @@ game_list_grid::game_list_grid()
 		Q_EMIT IconReady(game, item);
 	};
 
-	connect(this, &game_list_grid::IconReady, this, [this](const game_info& game, const movie_item_base* item)
+	connect(this, &game_list_grid::IconReady, this, [](const game_info& game, const movie_item_base* item)
 	{
 		if (game && item && game->item == item) item->image_change_callback();
 	}, Qt::QueuedConnection); // The default 'AutoConnection' doesn't seem to work in this specific case...

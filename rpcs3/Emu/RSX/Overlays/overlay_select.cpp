@@ -144,7 +144,7 @@ namespace rsx::overlays
 
 		auto background = std::make_unique<rounded_rect>();
 		background->set_size(w, h);
-		background->radius = std::min(h / 4, 5);
+		background->border_radius = std::min(h / 4, 5);
 		background->back_color = color4f(0.3f, 0.3f, 0.3f, 1.0f);
 
 		const u16 arrow_size = std::min<u16>(h / 2, max_dropdown_arrow_dimension);

@@ -8,6 +8,7 @@
 #include "Loader/ISO.h"
 
 #include <QAudioOutput>
+#include <QPropertyAnimation>
 #include <QFile>
 
 struct qt_audio_instance
@@ -24,10 +25,17 @@ struct qt_audio_instance
 
 static std::array<qt_audio_instance, 2> s_audio_instance = {};
 
+static constexpr int emu_timeout_start_ms = 0;
+static constexpr int gui_timeout_start_ms = 1000;
+static constexpr int gui_fade_in_ms = 2000;
+static constexpr int gui_fade_out_ms = 1000;
+
+static_assert(gui_fade_out_ms <= gui_timeout_start_ms);
+
 qt_video_source::qt_video_source(bool is_emulation)
 	: video_source()
 	, m_audio_instance_index(is_emulation ? qt_audio_instance::emu_index : qt_audio_instance::gui_index)
-	, m_video_timer_timeout_ms(is_emulation ? 0 : 1000)
+	, m_video_timer_timeout_ms(is_emulation ? emu_timeout_start_ms : gui_timeout_start_ms)
 {
 }
 
@@ -199,6 +207,7 @@ void qt_video_source::start_movie_timer()
 	if (!m_video_timer)
 	{
 		m_video_timer = std::make_unique<QTimer>();
+		m_video_timer->setSingleShot(true);
 		QObject::connect(m_video_timer.get(), &QTimer::timeout, m_video_timer.get(), [this]()
 		{
 			if (!m_active) return;
@@ -260,6 +269,7 @@ void qt_video_source::start_audio()
 		audio.output = std::make_unique<QAudioOutput>();
 		audio.player = std::make_unique<QMediaPlayer>();
 		audio.player->setAudioOutput(audio.output.get());
+		audio.player->setLoops(QMediaPlayer::Infinite);
 	}
 
 	if (m_iso_path.empty())
@@ -299,7 +309,13 @@ void qt_video_source::start_audio()
 		volume = audio::get_volume();
 	}
 
-	audio.output->setVolume(std::clamp(volume, 0.0f, 1.0f));
+	QPropertyAnimation* fade_in = new QPropertyAnimation(audio.output.get(), "volume", audio.output.get());
+	fade_in->setDuration(gui_fade_in_ms);
+	fade_in->setStartValue(0.0);
+	fade_in->setEndValue(std::clamp(volume, 0.0f, 1.0f));
+	fade_in->setEasingCurve(QEasingCurve::InSine);
+	fade_in->start(QAbstractAnimation::DeleteWhenStopped);
+
 	audio.player->play();
 	audio.source = this;
 }
@@ -311,15 +327,42 @@ void qt_video_source::stop_audio()
 
 	audio.source = nullptr;
 
-	if (audio.player)
+	QMediaPlayer* player = audio.player.release();
+	QAudioOutput* output = audio.output.release();
+	QBuffer* buffer = audio.buffer.release();
+	QByteArray* data = audio.data.release();
+
+	const auto reset_player = [=]()
 	{
-		audio.player->stop();
-		audio.player.reset();
+		if (player)
+		{
+			player->stop();
+			delete player;
+		}
+
+		if (output) delete output;
+		if (buffer) delete buffer;
+		if (data) delete data;
+	};
+
+	if (output)
+	{
+		QPropertyAnimation* fade_out = new QPropertyAnimation(output, "volume", output);
+		fade_out->setDuration(gui_fade_out_ms);
+		fade_out->setEasingCurve(QEasingCurve::OutSine);
+		fade_out->setStartValue(output->volume());
+		fade_out->setEndValue(0.0);
+
+		QObject::connect(fade_out, &QPropertyAnimation::finished, [reset_player]()
+		{
+			reset_player();
+		});
+
+		fade_out->start(QAbstractAnimation::DeleteWhenStopped);
+		return;
 	}
 
-	audio.output.reset();
-	audio.buffer.reset();
-	audio.data.reset();
+	reset_player();
 }
 
 QPixmap qt_video_source::get_movie_image(const QVideoFrame& frame) const

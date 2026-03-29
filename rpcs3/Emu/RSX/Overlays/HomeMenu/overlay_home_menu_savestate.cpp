@@ -26,7 +26,7 @@ namespace rsx
 				{
 					if (!suspend_mode)
 					{
-						Emu.after_kill_callback = []() { Emu.Restart(); };
+						Emu.after_kill_callback = []() { Emu.Restart(true, false); };
 
 						// Make sure we keep the game window opened
 						Emu.SetContinuousMode(true);

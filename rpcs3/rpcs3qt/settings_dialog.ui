@@ -3524,7 +3524,14 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QSpinBox" name="perfOverlayMarginX"/>
+                  <widget class="QDoubleSpinBox" name="perfOverlayMarginX">
+                   <property name="decimals">
+                    <number>1</number>
+                   </property>
+                   <property name="singleStep">
+                    <double>0.5</double>
+                   </property>
+                  </widget>
                  </item>
                 </layout>
                </item>
@@ -3545,9 +3552,23 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QSpinBox" name="perfOverlayMarginY"/>
+                  <widget class="QDoubleSpinBox" name="perfOverlayMarginY">
+                   <property name="decimals">
+                    <number>1</number>
+                   </property>
+                   <property name="singleStep">
+                    <double>0.5</double>
+                   </property>
+                  </widget>
                  </item>
                 </layout>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="perfOverlayUseWindowSpace">
+                 <property name="text">
+                  <string>Use Window Space</string>
+                 </property>
+                </widget>
                </item>
                <item>
                 <widget class="QWidget" name="perf_overlay_update_interval" native="true">

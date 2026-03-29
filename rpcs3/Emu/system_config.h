@@ -161,10 +161,10 @@ struct cfg_root : cfg::node
 		cfg::_bool precise_zpass_count{ this, "Accurate ZCULL stats", true };
 		cfg::_int<1, 8> consecutive_frames_to_draw{ this, "Consecutive Frames To Draw", 1, true};
 		cfg::_int<1, 8> consecutive_frames_to_skip{ this, "Consecutive Frames To Skip", 1, true};
-		cfg::_int<25, 800> resolution_scale_percent{ this, "Resolution Scale", 100 };
+		cfg::uint<25, 800> resolution_scale_percent{ this, "Resolution Scale", 100, true };
 		cfg::uint<0, 16> anisotropic_level_override{ this, "Anisotropic Filter Override", 0, true };
 		cfg::_float<-32, 32> texture_lod_bias{ this, "Texture LOD Bias Addend", 0, true };
-		cfg::_int<1, 1024> min_scalable_dimension{ this, "Minimum Scalable Dimension", 16 };
+		cfg::uint<1, 1024> min_scalable_dimension{ this, "Minimum Scalable Dimension", 16, true };
 		cfg::_int<0, 16> shader_compiler_threads_count{ this, "Shader Compiler Threads", 0 };
 		cfg::_int<0, 30000000> driver_recovery_timeout{ this, "Driver Recovery Timeout", 1000000, true };
 		cfg::uint<0, 16667> driver_wakeup_delay{ this, "Driver Wake-Up Delay", 0, true };
@@ -209,8 +209,8 @@ struct cfg_root : cfg::node
 			cfg::uint<4, 36> font_size{ this, "Font size (px)", 10, true };
 			cfg::_enum<screen_quadrant> position{ this, "Position", screen_quadrant::top_left, true };
 			cfg::string font{ this, "Font", "n023055ms.ttf", true };
-			cfg::uint<0, 1280> margin_x{ this, "Horizontal Margin (px)", 50, true }; // horizontal distance to the screen border relative to the screen_quadrant in px
-			cfg::uint<0, 720> margin_y{ this, "Vertical Margin (px)", 50, true }; // vertical distance to the screen border relative to the screen_quadrant in px
+			cfg::_float<0, 100> margin_x{ this, "Horizontal Margin (%)", 4, true }; // horizontal distance to the window border relative to the screen_quadrant in percent of the window width
+			cfg::_float<0, 100> margin_y{ this, "Vertical Margin (%)", 7, true }; // vertical distance to the window border relative to the screen_quadrant in percent of the window height
 			cfg::_bool center_x{ this, "Center Horizontally", false, true };
 			cfg::_bool center_y{ this, "Center Vertically", false, true };
 			cfg::uint<0, 100> opacity{ this, "Opacity (%)", 70, true };
@@ -218,6 +218,7 @@ struct cfg_root : cfg::node
 			cfg::string background_body{ this, "Body Background (hex)", "#002339FF", true };
 			cfg::string color_title{ this, "Title Color (hex)", "#F26C24FF", true };
 			cfg::string background_title{ this, "Title Background (hex)", "#00000000", true };
+			cfg::_bool perf_overlay_use_window_space{this, "Use Window Space", false, true};
 
 		} perf_overlay{ this };
 
