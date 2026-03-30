@@ -218,9 +218,9 @@ void operator < (const vector3_base<T>& lhs, T rhs)
 using vector3i = vector3_base<int>;
 using vector3f = vector3_base<float>;
 
-std::string utf8_to_ascii8(const std::string& utf8_string);
-std::string utf16_to_ascii8(const std::u16string& utf16_string);
-std::u16string ascii8_to_utf16(const std::string& ascii_string);
-std::u32string utf8_to_u32string(const std::string& utf8_string);
-std::u16string u32string_to_utf16(const std::u32string& utf32_string);
-std::u32string utf16_to_u32string(const std::u16string& utf16_string);
+std::string utf8_to_ascii8(std::string_view utf8_string);
+std::string utf16_to_ascii8(std::u16string_view utf16_string);
+std::u16string ascii8_to_utf16(std::string_view ascii_string);
+std::u32string utf8_to_u32string(std::string_view utf8_string);
+std::u16string u32string_to_utf16(std::u32string_view utf32_string);
+std::u32string utf16_to_u32string(std::u16string_view utf16_string);
