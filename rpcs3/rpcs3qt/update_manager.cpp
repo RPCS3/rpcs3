@@ -447,19 +447,19 @@ void update_manager::update(bool auto_accept)
 				changelog_browser->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 				changelog_browser->setHtml(QStringLiteral("<h3>%0</h3>%1").arg(tr("Changelog:"), changelog_html));
 
-				// Measure height for 6 entries directly
+				// Measure height for 6 entries directly.
 				int browser_height;
 
 				if (changelog_count > 6)
 				{
 					// Temporarily render only 6 entries to get exact pixel height
 					changelog_browser->setHtml(QStringLiteral("<h3>%0</h3>%1").arg(tr("Changelog:"), changelog_html_capped));
-					browser_height = static_cast<int>(changelog_browser->document()->size().height()) + 10;
+					browser_height = static_cast<int>(changelog_browser->document()->size().height());
 					changelog_browser->setHtml(QStringLiteral("<h3>%0</h3>%1").arg(tr("Changelog:"), changelog_html));
 				}
 				else
 				{
-					browser_height = static_cast<int>(changelog_browser->document()->size().height()) + 10;
+					browser_height = static_cast<int>(changelog_browser->document()->size().height());
 				}
 
 				changelog_browser->setFixedSize(500, browser_height);
@@ -471,6 +471,9 @@ void update_manager::update(bool auto_accept)
 				QPushButton* toggle_btn = new QPushButton(show_text, &mb);
 				grid->addWidget(toggle_btn, row++, 0, 1, cols);
 				grid->addWidget(changelog_browser, row++, 0, 1, cols);
+
+				// Pre-size dialog so it doesn't resize when toggling
+				mb.setMinimumWidth(540);
 
 				QObject::connect(toggle_btn, &QPushButton::clicked, [changelog_browser, toggle_btn, &mb, show_text, hide_text]()
 				{
