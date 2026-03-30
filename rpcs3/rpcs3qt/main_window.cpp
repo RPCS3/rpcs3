@@ -3119,9 +3119,9 @@ void main_window::CreateConnects()
 		m_game_list_frame->Refresh(true); // New user may have different games unlocked.
 	});
 
-	connect(ui->actionManage_Screenshots, &QAction::triggered, this, []
+	connect(ui->actionManage_Screenshots, &QAction::triggered, this, [this]
 	{
-		screenshot_manager_dialog* screenshot_manager = new screenshot_manager_dialog();
+		screenshot_manager_dialog* screenshot_manager = new screenshot_manager_dialog(m_game_list_frame ? m_game_list_frame->GetGameInfo() : std::vector<game_info>{});
 		screenshot_manager->show();
 	});
 
@@ -3512,11 +3512,8 @@ void main_window::CreateDockWindows()
 	m_mw->setContextMenuPolicy(Qt::PreventContextMenu);
 
 	m_game_list_frame = new game_list_frame(m_gui_settings, m_emu_settings, m_persistent_settings, m_mw);
-	m_game_list_frame->setObjectName("gamelist");
 	m_debugger_frame = new debugger_frame(m_gui_settings, m_mw);
-	m_debugger_frame->setObjectName("debugger");
 	m_log_frame = new log_frame(m_gui_settings, m_mw);
-	m_log_frame->setObjectName("logger");
 
 	m_mw->addDockWidget(Qt::LeftDockWidgetArea, m_game_list_frame);
 	m_mw->addDockWidget(Qt::LeftDockWidgetArea, m_log_frame);

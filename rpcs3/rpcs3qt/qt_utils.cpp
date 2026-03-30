@@ -279,6 +279,11 @@ namespace gui
 			exp_img.setDevicePixelRatio(device_pixel_ratio);
 			exp_img.fill(Qt::transparent);
 
+			if (pixmap.isNull())
+			{
+				return exp_img;
+			}
+
 			// Load scaled pixmap
 			pixmap = pixmap.scaled(icon_size, Qt::KeepAspectRatio, mode);
 
