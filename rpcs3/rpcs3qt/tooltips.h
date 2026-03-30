@@ -159,6 +159,7 @@ public:
 		const QString use_native_interface         = tr("Enables use of native HUD within the game window that can interact with game controllers.\nWhen disabled, regular Qt dialogs are used instead.\nCurrently, the on-screen keyboard only supports the English key layout.");
 		const QString record_with_overlays         = tr("Enables recording with overlays.\nThis also affects screenshots.");
 		const QString pause_during_home_menu       = tr("When enabled, opening the home menu will also pause emulation.\nWhile most games pause themselves while the home menu is shown, some do not.\nIn that case it can be helpful to pause the emulation whenever the home menu is open.");
+		const QString play_music_during_boot       = tr("Play music during boot sequence if available.");
 
 		const QString perf_overlay_enabled                 = tr("Enables or disables the performance overlay.");
 		const QString perf_overlay_framerate_graph_enabled = tr("Enables or disables the framerate graph.");
