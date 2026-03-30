@@ -6087,17 +6087,17 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 			u32 ra = s_reg_max, rb = s_reg_max, rc = s_reg_max;
 
-			if (m_use_ra.test(pos / 4))
+			if (::at32(m_use_ra, pos / 4))
 			{
 				ra = op.ra;
 			}
 
-			if (m_use_rb.test(pos / 4))
+			if (::at32(m_use_rb, pos / 4))
 			{
 				rb = op.rb;
 			}
 
-			if (m_use_rc.test(pos / 4))
+			if (::at32(m_use_rc, pos / 4))
 			{
 				rc = op.rc;
 			}
@@ -6361,11 +6361,11 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					const auto& b = ::at32(m_bbs, reduced_loop->loop_pc); 
 					const auto& b2 = ::at32(m_bbs, bpc); 
 
-					if (!reduced_loop->loop_dicts.test(i))
+					if (!::at32(reduced_loop->loop_dicts, i))
 					{
-						if (b.reg_use[i] || (!b.reg_mod.test(i) && b2.reg_use[i]))
+						if (b.reg_use[i] || (!::at32(b.reg_mod, i) && b2.reg_use[i]))
 						{
-							if ((b.reg_use[i] && b.reg_mod.test(i)) || b2.reg_mod.test(i))
+							if ((b.reg_use[i] && ::at32(b.reg_mod, i)) || ::at32(b2.reg_mod, i))
 							{
 								reduced_loop->is_constant_expression = false;
 								reduced_loop->loop_writes.set(i);
@@ -6598,7 +6598,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 				for (u32 i = 0; i < reg->regs.size() && reduced_loop->active; i++)
 				{
-					if (reg->regs.test(i))
+					if (::at32(reg->regs, i))
 					{
 						if (0) if (i == op_rt || reg->modified == 0)
 						{
@@ -6644,11 +6644,11 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 						auto reg_org = reduced_loop->find_reg(i);
 						u32 reg_index = i;
 
-						if (reg_org && !cond_val_incr_before_cond && reg_org->modified == 0 && reg_org->regs.count() - 1u <= 1u && !reg_org->regs.test(i))
+						if (reg_org && !cond_val_incr_before_cond && reg_org->modified == 0 && reg_org->regs.count() - 1u <= 1u && !::at32(reg_org->regs, i))
 						{
 							for (u32 j = 0; j <= s_reg_127; j++)
 							{
-								if (reg_org->regs.test(j))
+								if (::at32(reg_org->regs, j))
 								{
 									if (const auto reg_found = reduced_loop->find_reg(j))
 									{
@@ -7040,11 +7040,11 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 						const auto& b = ::at32(m_bbs, reduced_loop->loop_pc); 
 						const auto& b2 = ::at32(m_bbs, bpc); 
 
-						if (!reduced_loop->loop_dicts.test(i))
+						if (!::at32(reduced_loop->loop_dicts, i))
 						{
-							if (b.reg_use[i] || (!b.reg_mod.test(i) && b2.reg_use[i]))
+							if (b.reg_use[i] || (!::at32(b.reg_mod, i) && b2.reg_use[i]))
 							{
-								if ((b.reg_use[i] && b.reg_mod.test(i)) || b2.reg_mod.test(i))
+								if ((b.reg_use[i] && ::at32(b.reg_mod, i)) || ::at32(b2.reg_mod, i))
 								{
 									reduced_loop->is_constant_expression = false;
 									reduced_loop->loop_writes.set(i);
@@ -8298,17 +8298,17 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 				u32 ra = s_reg_max, rb = s_reg_max, rc = s_reg_max;
 
-				if (m_use_ra.test(pos / 4))
+				if (::at32(m_use_ra, pos / 4))
 				{
 					ra = op.ra;
 				}
 
-				if (m_use_rb.test(pos / 4))
+				if (::at32(m_use_rb, pos / 4))
 				{
 					rb = op.rb;
 				}
 
-				if (m_use_rc.test(pos / 4))
+				if (::at32(m_use_rc, pos / 4))
 				{
 					rc = op.rc;
 				}
@@ -8575,7 +8575,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 			for (u32 i = 0; i < s_reg_max; i++)
 			{
-				if (pattern.loop_writes.test(i))
+				if (::at32(pattern.loop_writes, i))
 				{
 					if (regs.size() != 1)
 					{
@@ -8585,7 +8585,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					fmt::append(regs, " r%u-w", i);
 				}
 
-				if (pattern.loop_args.test(i))
+				if (::at32(pattern.loop_args, i))
 				{
 					if (regs.size() != 1)
 					{
