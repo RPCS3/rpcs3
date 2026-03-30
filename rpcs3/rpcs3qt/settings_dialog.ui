@@ -3038,6 +3038,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="showFatalErrorHints">
+                 <property name="text">
+                  <string>Show fatal error hints</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="showMouseAndKeyboardToggleHint">
                  <property name="text">
                   <string>Show mouse and keyboard toggle hint</string>
