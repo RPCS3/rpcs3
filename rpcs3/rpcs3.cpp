@@ -69,6 +69,7 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 #include "rpcs3_version.h"
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
+#include "Emu/RSX/Overlays/overlay_message.h"
 #include <thread>
 #include <charconv>
 
@@ -312,7 +313,8 @@ public:
 	{
 		if (msg == logs::level::fatal || (msg == logs::level::always && m_log_always))
 		{
-			std::string _msg = "RPCS3: ";
+			static const std::string rpcs3_prefix =  "RPCS3: ";
+			std::string _msg = rpcs3_prefix;
 
 			if (!prefix.empty())
 			{
@@ -351,7 +353,11 @@ public:
 #endif
 			if (msg == logs::level::fatal)
 			{
+				std::string overlay_msg = "Fatal error: " + _msg.substr(rpcs3_prefix.size());
+				fmt::trim_back(overlay_msg, " \t\n");
+
 				// Pause emulation if fatal error encountered
+				rsx::overlays::queue_message(overlay_msg, umax);
 				Emu.Pause(true);
 			}
 		}

@@ -46,6 +46,7 @@
 #include "welcome_dialog.h"
 #include "music_player_dialog.h"
 #include "sound_effect_manager_dialog.h"
+#include "recording_settings_dialog.h"
 
 #include <thread>
 #include <unordered_set>
@@ -3128,6 +3129,12 @@ void main_window::CreateConnects()
 	{
 		sound_effect_manager_dialog* dlg = new sound_effect_manager_dialog();
 		dlg->show();
+	});
+
+	connect(ui->actionRecording, &QAction::triggered, this, [this]
+	{
+		recording_settings_dialog* dlg = new recording_settings_dialog(this);
+		dlg->open();
 	});
 
 	connect(ui->toolsCgDisasmAct, &QAction::triggered, this, [this]
