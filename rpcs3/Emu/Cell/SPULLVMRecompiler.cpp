@@ -180,7 +180,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 		bool is_gpr_not_NaN_hint(u32 i) const noexcept
 		{
-			return block_wide_reg_store_elimination && bb->reg_maybe_float[i] && bb->reg_use[i] >= 3 && !bb->reg_mod[i];
+			return block_wide_reg_store_elimination && ::at32(bb->reg_maybe_float, i) && ::at32(bb->reg_use, i) >= 3 && !::at32(bb->reg_mod, i);
 		}
 	};
 
@@ -2535,6 +2535,11 @@ public:
 								const auto cond_nans = m_ir->CreateICmpEQ(elem, m_ir->getInt64(0));
 								condition = m_ir->CreateAnd(cond_nans, condition);
 								prev_i = umax;
+							}
+
+							if (is_last)
+							{
+								break;
 							}
 						}
 					}
