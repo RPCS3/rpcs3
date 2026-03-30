@@ -3119,9 +3119,9 @@ void main_window::CreateConnects()
 		m_game_list_frame->Refresh(true); // New user may have different games unlocked.
 	});
 
-	connect(ui->actionManage_Screenshots, &QAction::triggered, this, []
+	connect(ui->actionManage_Screenshots, &QAction::triggered, this, [this]
 	{
-		screenshot_manager_dialog* screenshot_manager = new screenshot_manager_dialog();
+		screenshot_manager_dialog* screenshot_manager = new screenshot_manager_dialog(m_game_list_frame ? m_game_list_frame->GetGameInfo() : std::vector<game_info>{});
 		screenshot_manager->show();
 	});
 
