@@ -290,6 +290,7 @@
     <addaction name="separator"/>
     <addaction name="confShortcutsAct"/>
     <addaction name="actionManage_SoundEffects"/>
+    <addaction name="actionRecording"/>
     <addaction name="separator"/>
     <addaction name="confAutopauseManagerAct"/>
    </widget>
@@ -1534,6 +1535,11 @@
    </property>
    <property name="text">
     <string>Play Hover Music</string>
+   </property>
+  </action>
+  <action name="actionRecording">
+   <property name="text">
+    <string>Recording</string>
    </property>
   </action>
  </widget>
