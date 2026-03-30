@@ -1286,7 +1286,7 @@ extern bool ppu_patch(u32 addr, u32 value)
 {
 	if (addr % 4)
 	{
-		ppu_log.fatal("Patch failed at 0x%x: unanligned memory address.", addr);
+		ppu_log.fatal("Patch failed at 0x%x: unaligned memory address.", addr);
 		return false;
 	}
 

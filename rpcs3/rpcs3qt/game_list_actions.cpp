@@ -908,7 +908,7 @@ void game_list_actions::BatchActionBySerials(progress_dialog* pdlg, const std::s
 
 	const int serials_size = ::narrow<int>(serials.size());
 
-	*iterate_over_serial = [=, this, index_ptr = index](int index)
+	*iterate_over_serial = [=, index_ptr = index](int index)
 	{
 		if (index == serials_size)
 		{

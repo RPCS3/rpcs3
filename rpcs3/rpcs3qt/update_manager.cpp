@@ -23,7 +23,6 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QTextBrowser>
-#include <QThread>
 
 #if defined(_WIN32) || defined(__APPLE__)
 #include <7z.h>

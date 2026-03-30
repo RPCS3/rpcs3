@@ -207,7 +207,7 @@ bool emu_settings::ValidateSettings(bool cleanup)
 	bool is_clean = true;
 
 	std::function<void(int, YAML::Node&, std::vector<std::string>&, cfg::_base*)> search_level;
-	search_level = [&search_level, &is_clean, &cleanup, this](int level, YAML::Node& yml_node, std::vector<std::string>& keys, cfg::_base* cfg_base)
+	search_level = [&search_level, &is_clean, &cleanup](int level, YAML::Node& yml_node, std::vector<std::string>& keys, cfg::_base* cfg_base)
 	{
 		if (!yml_node || !yml_node.IsMap())
 		{

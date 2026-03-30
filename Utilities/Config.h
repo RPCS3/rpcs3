@@ -393,7 +393,7 @@ namespace cfg
 
 		void set(const s64& value)
 		{
-			ensure(value >= Min && value <= Max);
+			if (value < Min || value > Max) fmt::throw_exception("'%s': value %d out of bounds (min=%d, max=%d)", m_name, value, Min, Max);
 			m_value = static_cast<int_type>(value);
 		}
 
@@ -484,7 +484,7 @@ namespace cfg
 
 		void set(const f64& value)
 		{
-			ensure(value >= Min && value <= Max);
+			if (value < Min || value > Max) fmt::throw_exception("'%s': value %d out of bounds (min=%d, max=%d)", m_name, value, Min, Max);
 			m_value = static_cast<float_type>(value);
 		}
 
@@ -571,7 +571,7 @@ namespace cfg
 
 		void set(const u64& value)
 		{
-			ensure(value >= Min && value <= Max);
+			if (value < Min || value > Max) fmt::throw_exception("'%s': value %d out of bounds (min=%d, max=%d)", m_name, value, Min, Max);
 			m_value = static_cast<int_type>(value);
 		}
 
