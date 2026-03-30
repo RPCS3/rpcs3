@@ -289,8 +289,6 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 						entry.pr = pr.toInt();
 					}
 
-					update_log.notice("Changelog entry: version='%s', title='%s', pr=%d", entry.version, entry.title, entry.pr);
-
 					m_update_info.changelog.push_back(std::move(entry));
 				}
 				else
@@ -311,7 +309,7 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 
 	// TEST: assign PR numbers to entries — remove before merging
 	{
-		static const int test_prs[] = {18459, 18103, 18419, 18456, 18395, 18453, 18302, 18445};
+		static const int test_prs[] = {18459, 18103, 18419, 18456};
 		const int test_count = static_cast<int>(sizeof(test_prs) / sizeof(test_prs[0]));
 		for (int i = 0; i < static_cast<int>(m_update_info.changelog.size()) && i < test_count; i++)
 		{
@@ -473,13 +471,18 @@ void update_manager::update(bool auto_accept)
 				grid->addWidget(button_box, row, 0, 1, cols);
 		}
 
-		update_log.notice("Asking user for permission to update...");
-
-		// Lock dialog width so it doesn't resize when toggling changelog
-		if (mb.findChild<QTextBrowser*>())
+		// Pad message text to match changelog width
+		if (!changelog_html.isEmpty())
 		{
-			mb.setFixedWidth(540);
+			const int target_width = 500;
+			while (QLabel(update_message).sizeHint().width() < target_width)
+			{
+				update_message += QStringLiteral("&nbsp;");
+			}
+			mb.setText(update_message);
 		}
+
+		update_log.notice("Asking user for permission to update...");
 
 		if (mb.exec() == QMessageBox::No)
 		{
