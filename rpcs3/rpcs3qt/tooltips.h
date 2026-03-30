@@ -154,6 +154,7 @@ public:
 		const QString show_pressure_intensity_toggle_hint = tr("Shows pressure intensity toggle hint using the native overlay.");
 		const QString show_analog_limiter_toggle_hint = tr("Shows analog limiter toggle hint using the native overlay.");
 		const QString show_mouse_and_keyboard_toggle_hint = tr("Shows mouse and keyboard toggle hint using the native overlay.");
+		const QString show_fatal_error_hints       = tr("Shows fatal error hints using the native overlay.");
 		const QString show_capture_hints           = tr("Shows screenshot and recording hints using the native overlay.");
 		const QString use_native_interface         = tr("Enables use of native HUD within the game window that can interact with game controllers.\nWhen disabled, regular Qt dialogs are used instead.\nCurrently, the on-screen keyboard only supports the English key layout.");
 		const QString record_with_overlays         = tr("Enables recording with overlays.\nThis also affects screenshots.");
