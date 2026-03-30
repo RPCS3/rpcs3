@@ -2957,7 +2957,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			if (g_cfg.core.spu_block_size == spu_block_size_type::safe)
 			{
 				// Stop on special instructions (TODO)
-				m_targets[pos];
+				m_targets[pos].push_back(SPU_LS_SIZE);
 				next_block();
 				break;
 			}
@@ -2978,7 +2978,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				spu_log.error("[0x%x] Invalid interrupt flags (DE)", pos);
 			}
 
-			m_targets[pos];
+			m_targets[pos].push_back(SPU_LS_SIZE);
 			next_block();
 			break;
 		}
@@ -3278,7 +3278,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			{
 				if (type == spu_itype::BI || g_cfg.core.spu_block_size == spu_block_size_type::safe || is_no_return)
 				{
-					m_targets[pos];
+					m_targets[pos].push_back(SPU_LS_SIZE);
 				}
 				else
 				{
@@ -3291,6 +3291,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			else
 			{
 				m_targets[pos].push_back(pos + 4);
+				m_targets[pos].push_back(SPU_LS_SIZE);
 				add_block(pos + 4);
 			}
 
