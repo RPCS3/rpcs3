@@ -418,6 +418,11 @@ namespace glsl
 				enabled_options.push_back("_ENABLE_DEPTH_FORMAT_RECONSTRUCTION");
 			}
 
+			if (props.require_msaa_ops)
+			{
+				enabled_options.push_back("_ENABLE_TEXTURE_MULTISAMPLE");
+			}
+
 			program_common::define_glsl_switches(OS, enabled_options);
 			enabled_options.clear();
 
