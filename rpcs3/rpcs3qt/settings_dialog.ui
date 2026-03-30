@@ -3010,6 +3010,13 @@
               </property>
               <layout class="QVBoxLayout" name="gb_overlay_settings_layout">
                <item>
+                <widget class="QCheckBox" name="playMusicDuringBoot">
+                 <property name="text">
+                  <string>Play music during boot sequence</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="recordWithOverlays">
                  <property name="text">
                   <string>Record and screenshot with overlays</string>

@@ -1829,6 +1829,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	ui->enableGamemode->setVisible(false);
 #endif
 
+	m_emu_settings->EnhanceCheckBox(ui->playMusicDuringBoot, emu_settings_type::PlayMusicDuringBoot);
+	SubscribeTooltip(ui->playMusicDuringBoot, tooltips.settings.play_music_during_boot);
+
 	m_emu_settings->EnhanceCheckBox(ui->showShaderCompilationHint, emu_settings_type::ShowShaderCompilationHint);
 	SubscribeTooltip(ui->showShaderCompilationHint, tooltips.settings.show_shader_compilation_hint);
 

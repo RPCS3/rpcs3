@@ -364,6 +364,7 @@ struct cfg_root : cfg::node
 		cfg::_bool silence_all_logs{ this, "Silence All Logs", false, true };
 		cfg::string title_format{ this, "Window Title Format", "FPS: %F | %R | %V | %T [%t]", true };
 		cfg::_bool pause_during_home_menu{this, "Pause Emulation During Home Menu", false, false };
+		cfg::_bool play_music_during_boot{this, "Play music during boot sequence", true, true };
 		cfg::_bool enable_gamemode{ this, "Enable GameMode", false, false };
 
 	} misc{ this };
