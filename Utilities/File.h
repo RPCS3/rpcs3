@@ -683,6 +683,7 @@ namespace fs
 		notempty,
 		readonly,
 		isdir,
+		notdir,
 		toolong,
 		nospace,
 		xdev,
