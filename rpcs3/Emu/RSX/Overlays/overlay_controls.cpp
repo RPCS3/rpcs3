@@ -431,25 +431,25 @@ namespace rsx
 			m_is_compiled = false;
 		}
 
-		void overlay_element::set_text(const std::string& text)
+		void overlay_element::set_text(std::string_view text)
 		{
 			std::u32string new_text = utf8_to_u32string(text);
 			const bool is_dirty = this->text != new_text;
-			this->text = std::move(new_text);
 
 			if (is_dirty)
 			{
+				this->text = std::move(new_text);
 				m_is_compiled = false;
 			}
 		}
 
-		void overlay_element::set_unicode_text(const std::u32string& text)
+		void overlay_element::set_unicode_text(std::u32string_view text)
 		{
 			const bool is_dirty = this->text != text;
-			this->text = text;
 
 			if (is_dirty)
 			{
+				this->text = text;
 				m_is_compiled = false;
 			}
 		}

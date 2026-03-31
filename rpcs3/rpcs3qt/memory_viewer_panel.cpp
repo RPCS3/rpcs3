@@ -504,6 +504,8 @@ memory_viewer_panel::memory_viewer_panel(QWidget* parent, std::shared_ptr<CPUDis
 
 			m_search_thread = QThread::create([this, wstr, m_modes = m_modes]()
 			{
+				thread_base::set_name("MemViewerSearch");
+
 				gui_log.notice("Searching for %s (mode: %s)", wstr, m_modes);
 
 				u64 found = 0;

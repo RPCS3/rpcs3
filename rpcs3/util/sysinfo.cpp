@@ -743,7 +743,26 @@ std::pair<u64, u64> utils::get_memory_usage()
 	status.dwLength = sizeof(status);
 	::GlobalMemoryStatusEx(&status);
 	return { status.ullTotalPhys, status.ullTotalPhys - status.ullAvailPhys };
+#elif __linux__
+	std::ifstream proc("/proc/meminfo");
+	std::string line;
+	uint64_t mem_total = get_total_memory();
+	uint64_t mem_available = 0;
 
+	while (std::getline(proc, line))
+	{
+		if (line.rfind("MemTotal:", 0) == 0 && line.find("kB") != std::string::npos)
+		{
+			mem_total = std::stoull(line.substr(line.find_first_of("0123456789"))) * 1024;
+		}
+		else if (line.rfind("MemAvailable:", 0) == 0 && line.find("kB") != std::string::npos)
+		{
+			mem_available = std::stoull(line.substr(line.find_first_of("0123456789"))) * 1024;
+			break;
+		}
+	}
+
+	return { mem_total, mem_total - mem_available };
 #else
 	// TODO
 	return { get_total_memory(), 0 };
