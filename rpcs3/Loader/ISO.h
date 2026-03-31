@@ -75,26 +75,25 @@ public:
 	void rewind() override;
 };
 
-// represents the .iso file itself.
+// Represents the .iso file itself
 class iso_archive
 {
 private:
 	std::string m_path;
-	iso_fs_node m_root {};
 	fs::file m_file;
+	iso_fs_node m_root {};
 
 public:
 	iso_archive(const std::string& path);
+
+	const std::string& path() const { return m_path; }
 
 	iso_fs_node* retrieve(const std::string& path);
 	bool exists(const std::string& path);
 	bool is_file(const std::string& path);
 
 	iso_file open(const std::string& path);
-
 	psf::registry open_psf(const std::string& path);
-
-	const std::string& path() const { return m_path; }
 };
 
 class iso_device : public fs::device_base
@@ -111,6 +110,7 @@ public:
 	{
 		fs_prefix = device_name;
 	}
+
 	~iso_device() override = default;
 
 	const std::string& get_loaded_iso() const { return iso_path; }
