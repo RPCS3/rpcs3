@@ -38,6 +38,7 @@ game_list_table::game_list_table(game_list_frame* frame, std::shared_ptr<persist
 	horizontalHeader()->setStretchLastSection(true);
 	horizontalHeader()->setDefaultSectionSize(150);
 	horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
+	horizontalHeader()->setSectionsMovable(true);
 	setContextMenuPolicy(Qt::CustomContextMenu);
 	setAlternatingRowColors(true);
 	setColumnCount(static_cast<int>(gui::game_list_columns::count));
@@ -72,6 +73,8 @@ void game_list_table::restore_layout(const QByteArray& state)
 		// Nothing to do
 	}
 
+	// Re-apply after restoreState() since it resets setSectionsMovable to false
+	horizontalHeader()->setSectionsMovable(true);
 	// Make sure no columns are squished
 	fix_narrow_columns();
 
