@@ -1,10 +1,13 @@
 #pragma once
+#include <set>
 
 struct gui_game_info;
 class iso_archive;
 
 namespace gui::utils
 {
+	class steam_shortcut;
+
 	enum class shortcut_location
 	{
 		desktop,
@@ -24,10 +27,11 @@ namespace gui::utils
 	                     const std::string& target_icon_dir,
 	                     const std::string& src_banner_path,
 	                     shortcut_location shortcut_location,
+	                     std::shared_ptr<steam_shortcut> steam_sc = nullptr,
 	                     std::shared_ptr<iso_archive> archive = nullptr);
 
-	bool create_shortcuts(const std::shared_ptr<gui_game_info>& game,
-	                      const std::set<gui::utils::shortcut_location>& locations);
+	bool batch_create_shortcuts(const std::vector<std::shared_ptr<gui_game_info>>& games,
+	                            const std::set<shortcut_location>& locations);
 
-	void remove_shortcuts(const std::string& name, const std::string& serial);
+	void batch_remove_shortcuts(const std::vector<std::pair<std::string /*name*/, std::string /*serial*/>>& games);
 }

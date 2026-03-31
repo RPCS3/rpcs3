@@ -112,7 +112,7 @@ void skateboard_pad_handler::init_config(cfg_pad* cfg)
 	cfg->rs_up.def    = ::at32(button_list, skateboard_key_codes::none);
 	cfg->start.def    = ::at32(button_list, skateboard_key_codes::start);
 	cfg->select.def   = ::at32(button_list, skateboard_key_codes::select);
-	cfg->ps.def       = ::at32(button_list, skateboard_key_codes::ps);
+	cfg->ps.def       = cfg_pad::make_button_string(button_list, {{skateboard_key_codes::ps}, {skateboard_key_codes::start, skateboard_key_codes::select}});
 	cfg->square.def   = ::at32(button_list, skateboard_key_codes::square);
 	cfg->cross.def    = ::at32(button_list, skateboard_key_codes::cross);
 	cfg->circle.def   = ::at32(button_list, skateboard_key_codes::circle);

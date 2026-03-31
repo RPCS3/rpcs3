@@ -73,6 +73,7 @@ void GLGSRender::set_viewport()
 {
 	// NOTE: scale offset matrix already contains the viewport transformation
 	const auto [clip_width, clip_height] = rsx::apply_resolution_scale<true>(
+		resolution_scaling_config,
 		rsx::method_registers.surface_clip_width(), rsx::method_registers.surface_clip_height());
 
 	glViewport(0, 0, clip_width, clip_height);
@@ -138,8 +139,7 @@ void GLGSRender::on_init_thread()
 	gl::init();
 	gl::set_command_context(gl_state);
 
-	// Enable adaptive vsync if vsync is requested
-	gl::set_swapinterval(g_cfg.video.vsync ? -1 : 0);
+	update_swap_interval();
 
 	if (g_cfg.video.debug_output)
 		gl::enable_debugging();
@@ -580,6 +580,33 @@ void GLGSRender::on_exit()
 	gl::set_primary_context_thread(false);
 }
 
+void GLGSRender::update_swap_interval()
+{
+	const vsync_mode current_mode = g_cfg.video.vsync;
+	if (current_mode == m_vsync_mode)
+	{
+		return;
+	}
+
+	// Enable adaptive vsync if vsync is requested
+	int swap_interval = 0;
+	switch (current_mode)
+	{
+	default:
+	case vsync_mode::off:
+		break;
+	case vsync_mode::adaptive:
+		swap_interval = -1;
+		break;
+	case vsync_mode::full:
+		swap_interval = 1;
+		break;
+	}
+
+	gl::set_swapinterval(swap_interval);
+	m_vsync_mode = current_mode;
+}
+
 void GLGSRender::clear_surface(u32 arg)
 {
 	if (skip_current_frame) return;
@@ -910,7 +937,7 @@ void GLGSRender::load_program_env()
 		m_draw_processor.fill_scale_offset_data(buf, false);
 		m_draw_processor.fill_user_clip_data(buf + 64);
 		*(reinterpret_cast<u32*>(buf + 68)) = rsx::method_registers.transform_branch_bits();
-		*(reinterpret_cast<f32*>(buf + 72)) = rsx::method_registers.point_size() * rsx::get_resolution_scale();
+		*(reinterpret_cast<f32*>(buf + 72)) = rsx::method_registers.point_size() * resolution_scaling_config.scale_factor();
 		*(reinterpret_cast<f32*>(buf + 76)) = rsx::method_registers.clip_min();
 		*(reinterpret_cast<f32*>(buf + 80)) = rsx::method_registers.clip_max();
 

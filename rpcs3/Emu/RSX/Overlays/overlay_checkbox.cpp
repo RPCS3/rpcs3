@@ -84,7 +84,7 @@ namespace rsx::overlays
 
 	void switchbox::set_size(u16 w, u16 h)
 	{
-		const u16 dim = std::min(w, h);
+		const u16 dim = std::max<u16>(std::min(w, h), 14);
 		box_layout::set_size(w, h);
 
 		clear_items();
@@ -93,21 +93,17 @@ namespace rsx::overlays
 		m_back_ellipse = nullptr;
 		m_front_circle = nullptr;
 
-		if (dim < 4)
-		{
-			return;
-		}
-
 		auto ellipse_part = std::make_unique<rounded_rect>();
-		auto circle_part = std::make_unique<rounded_rect>();
+		auto circle_part = std::make_unique<ellipse>();
 
-		ellipse_part->set_size(dim * 2, dim / 2);
-		ellipse_part->set_pos(0, dim / 4);
-		ellipse_part->radius = dim / 4;
+		ellipse_part->set_size(dim * 2, dim);
+		ellipse_part->set_padding(1);
+		ellipse_part->set_pos(0, 0);
+		ellipse_part->border_radius = (dim - 4) / 2; // Avoid perfect capsule shape since we want a border and perfect capsules can have a false border along the midline due to subgroup shenanigans
 
 		circle_part->set_size(dim, dim);
+		circle_part->set_padding(4);
 		circle_part->set_pos(0, 0);
-		circle_part->radius = dim / 2;
 
 		m_back_ellipse = add_element(ellipse_part);
 		m_front_circle = add_element(circle_part);
@@ -130,13 +126,18 @@ namespace rsx::overlays
 
 		if (m_is_checked)
 		{
-			m_back_ellipse->back_color = this->fore_color * 0.5f;
+			m_back_ellipse->border_color.a = 0.f;
+			m_back_ellipse->border_size = 0;
+			m_back_ellipse->back_color = this->fore_color * 0.75f;
 			m_back_ellipse->back_color.a = 1.f;
-			m_front_circle->back_color = this->fore_color;
+			m_front_circle->back_color = color4f(1.f);
 			m_front_circle->set_pos(this->x + m_front_circle->w, this->y);
 		}
 		else
 		{
+			m_back_ellipse->border_color = this->back_color * 0.75f;
+			m_back_ellipse->border_color.a = 1.f;
+			m_back_ellipse->border_size = 1;
 			m_back_ellipse->back_color = this->back_color * 0.5f;
 			m_back_ellipse->back_color.a = 1.f;
 			m_front_circle->back_color = this->back_color;

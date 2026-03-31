@@ -242,7 +242,7 @@ namespace rpcn
 		std::mutex mutex_packets_to_send;
 
 		// Friends related
-		shared_mutex mutex_friends;
+		mutable shared_mutex mutex_friends;
 		std::set<std::pair<friend_cb_func, void*>> friend_cbs;
 		friend_data friend_infos;
 
@@ -304,11 +304,11 @@ namespace rpcn
 		std::optional<ErrorType> add_friend(const std::string& friend_username);
 		bool remove_friend(const std::string& friend_username);
 
-		u32 get_num_friends();
-		u32 get_num_blocks();
-		std::optional<std::string> get_friend_by_index(u32 index);
-		std::optional<std::pair<std::string, friend_online_data>> get_friend_presence_by_index(u32 index);
-		std::optional<std::pair<std::string, friend_online_data>> get_friend_presence_by_npid(const std::string& npid);
+		u32 get_num_friends() const;
+		u32 get_num_blocks() const;
+		std::optional<std::string> get_friend_by_index(u32 index) const;
+		std::optional<std::pair<std::string, friend_online_data>> get_friend_presence_by_index(u32 index) const;
+		std::optional<std::pair<std::string, friend_online_data>> get_friend_presence_by_npid(const std::string& npid) const;
 
 		std::vector<std::pair<rpcn::NotificationType, std::vector<u8>>> get_notifications();
 		std::map<u32, std::pair<rpcn::CommandType, std::vector<u8>>> get_replies();
@@ -316,7 +316,7 @@ namespace rpcn
 		std::map<std::string, friend_online_data> get_presence_states();
 
 		std::vector<u64> get_new_messages();
-		std::optional<shared_ptr<std::pair<std::string, message_data>>> get_message(u64 id);
+		std::optional<shared_ptr<std::pair<std::string, message_data>>> get_message(u64 id) const;
 		std::vector<std::pair<u64, shared_ptr<std::pair<std::string, message_data>>>> get_messages_and_register_cb(SceNpBasicMessageMainType type, bool include_bootable, message_cb_func cb_func, void* cb_param);
 		void remove_message_cb(message_cb_func cb_func, void* cb_param);
 		void mark_message_used(u64 id);
@@ -445,7 +445,7 @@ namespace rpcn
 				return (void_cb_func < void_other_cb_func) || ((!(void_other_cb_func < void_cb_func)) && (cb_param < other.cb_param));
 			}
 		};
-		shared_mutex mutex_messages;
+		mutable shared_mutex mutex_messages;
 		std::set<message_cb_t> message_cbs;
 		std::unordered_map<u64, shared_ptr<std::pair<std::string, message_data>>> messages; // msg id / (sender / message)
 		std::set<u64> active_messages;                                                           // msg id of messages that have not been discarded

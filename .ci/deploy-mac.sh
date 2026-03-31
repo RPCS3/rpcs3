@@ -21,7 +21,7 @@ rm -rf "rpcs3.app/Contents/Frameworks/QtPdf.framework" \
 "rpcs3.app/Contents/Frameworks/QtVirtualKeyboard.framework" \
 "rpcs3.app/Contents/Plugins/platforminputcontexts" \
 "rpcs3.app/Contents/Plugins/virtualkeyboard" \
-"rpcs3.app/Contents/Resources/git"
+"rpcs3.app/Contents/Resources/git" || true
 
 ../../.ci/optimize-mac.sh rpcs3.app
 
@@ -49,7 +49,7 @@ QT_TRANS="$WORKDIR/qt-downloader/$QT_VER/clang_64/translations"
 cp $QT_TRANS/qt_*.qm rpcs3.app/Contents/translations
 cp $QT_TRANS/qtbase_*.qm rpcs3.app/Contents/translations
 cp $QT_TRANS/qtmultimedia_*.qm rpcs3.app/Contents/translations
-rm -f rpcs3.app/Contents/translations/qt_help_*.qm
+rm -f rpcs3.app/Contents/translations/qt_help_*.qm || true
 
 # Need to do this rename hack due to case insensitive filesystem
 mv rpcs3.app RPCS3_.app

@@ -54,7 +54,7 @@ game_list_table::game_list_table(game_list_frame* frame, std::shared_ptr<persist
 		}
 	});
 
-	connect(this, &game_list::IconReady, this, [this](const game_info& game, const movie_item_base* item)
+	connect(this, &game_list::IconReady, this, [](const game_info& game, const movie_item_base* item)
 	{
 		if (game && item && game->item == item) item->image_change_callback();
 	});
@@ -207,7 +207,8 @@ void game_list_table::populate(
 	const std::map<QString, QString>& notes_map,
 	const std::map<QString, QString>& title_map,
 	const std::set<std::string>& selected_item_ids,
-	bool play_hover_movies)
+	bool play_hover_movies,
+	bool play_hover_music)
 {
 	clear_list();
 
@@ -299,26 +300,23 @@ void game_list_table::populate(
 			}
 		});
 
-		if (play_hover_movies && (game->has_hover_gif || game->has_hover_pam || game->has_audio_file))
+		bool check_iso = false;
+
+		if (play_hover_movies && (game->has_hover_gif || game->has_hover_pam))
 		{
-			bool check_iso = false;
+			icon_item->set_video_path(game->info.movie_path);
+			check_iso |= !fs::exists(game->info.movie_path);
+		}
 
-			if (game->has_hover_gif || game->has_hover_pam)
-			{
-				icon_item->set_video_path(game->info.movie_path);
-				check_iso |= !fs::exists(game->info.movie_path);
-			}
+		if (play_hover_music && game->has_audio_file)
+		{
+			icon_item->set_audio_path(game->info.audio_path);
+			check_iso |= !fs::exists(game->info.audio_path);
+		}
 
-			if (game->has_audio_file)
-			{
-				icon_item->set_audio_path(game->info.audio_path);
-				check_iso |= !fs::exists(game->info.audio_path);
-			}
-
-			if (check_iso && is_file_iso(game->info.path))
-			{
-				icon_item->set_iso_path(game->info.path);
-			}
+		if (check_iso && is_file_iso(game->info.path))
+		{
+			icon_item->set_iso_path(game->info.path);
 		}
 
 		icon_item->setData(Qt::UserRole, index, true);

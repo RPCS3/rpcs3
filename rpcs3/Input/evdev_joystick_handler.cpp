@@ -88,7 +88,7 @@ void evdev_joystick_handler::init_config(cfg_pad* cfg)
 	cfg->rs_up.def    = ::at32(rev_axis_list, ABS_RY);
 	cfg->start.def    = ::at32(button_list, BTN_START);
 	cfg->select.def   = ::at32(button_list, BTN_SELECT);
-	cfg->ps.def       = ::at32(button_list, BTN_MODE);
+	cfg->ps.def       = cfg_pad::make_button_string(button_list, {{BTN_MODE}, {BTN_START, BTN_SELECT}});
 	cfg->square.def   = ::at32(button_list, BTN_X);
 	cfg->cross.def    = ::at32(button_list, BTN_A);
 	cfg->circle.def   = ::at32(button_list, BTN_B);
@@ -373,7 +373,7 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 
 	const auto find_value = [&, this](const std::string& str)
 	{
-		const std::vector<std::vector<std::string>> combos = cfg_pad::get_buttons(str);
+		const std::vector<pad::combo> combos = cfg_pad::get_combos(str);
 
 		u16 value{};
 
@@ -385,19 +385,19 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 			}
 		};
 
-		for (const std::vector<std::string>& names : combos)
+		for (const pad::combo& combo : combos)
 		{
-			for (const u32 code : find_key_codes(rev_axis_list, names))
+			for (const u32 code : find_key_codes(rev_axis_list, combo))
 			{
 				set_value(code, true);
 			}
 
-			for (const u32 code : find_key_codes(axis_list, names))
+			for (const u32 code : find_key_codes(axis_list, combo))
 			{
 				set_value(code, false);
 			}
 
-			for (const u32 code : find_key_codes(button_list, names))
+			for (const u32 code : find_key_codes(button_list, combo))
 			{
 				set_value(code, false);
 			}
@@ -1379,37 +1379,37 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 
 	const auto find_buttons = [&](const cfg::string& name) -> std::vector<std::set<u32>>
 	{
-		const std::vector<std::vector<std::string>> str_combos = cfg_pad::get_buttons(name.to_string());
+		const std::vector<pad::combo> combos = cfg_pad::get_combos(name.to_string());
 
 		// In evdev we store indices to an EvdevButton vector in our pad objects instead of the usual key codes.
-		std::vector<std::set<u32>> combos;
+		std::vector<std::set<u32>> index_combos;
 
-		for (const std::vector<std::string>& names : str_combos)
+		for (const pad::combo& combo : combos)
 		{
 			std::set<u32> indices;
 
-			for (const u32 code : find_key_codes(axis_list, names))
+			for (const u32 code : find_key_codes(axis_list, combo))
 			{
 				indices.insert(register_evdevbutton(code, true, false));
 			}
 
-			for (const u32 code : find_key_codes(rev_axis_list, names))
+			for (const u32 code : find_key_codes(rev_axis_list, combo))
 			{
 				indices.insert(register_evdevbutton(code, true, true));
 			}
 
-			for (const u32 code : find_key_codes(button_list, names))
+			for (const u32 code : find_key_codes(button_list, combo))
 			{
 				indices.insert(register_evdevbutton(code, false, false));
 			}
 
 			if (!indices.empty())
 			{
-				combos.push_back(std::move(indices));
+				index_combos.push_back(std::move(indices));
 			}
 		}
 
-		return combos;
+		return index_combos;
 	};
 
 	const auto find_motion_button = [&](const cfg_sensor& sensor) -> evdev_sensor

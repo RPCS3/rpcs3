@@ -567,6 +567,32 @@ struct llvm_placeholder_t
 	}
 };
 
+template <typename T, typename U = llvm_common_t<llvm_value_t<T>>>
+struct llvm_place_stealer_t
+{
+	// TODO: placeholder extracting actual constant values (u64, f64, vector, etc)
+
+	using type = T;
+
+	static constexpr bool is_ok = true;
+
+	llvm::Value* eval(llvm::IRBuilder<>*) const
+	{
+		return nullptr;
+	}
+
+	std::tuple<> match(llvm::Value*& value, llvm::Module*) const
+	{
+		if (value && value->getType() == llvm_value_t<T>::get_type(value->getContext()))
+		{
+			return {};
+		}
+
+		value = nullptr;
+		return {};
+	}
+};
+
 template <typename T, bool ForceSigned = false>
 struct llvm_const_int
 {
@@ -3228,6 +3254,12 @@ public:
 	}
 
 	template <typename T>
+	static llvm_place_stealer_t<T> match_stealer()
+	{
+		return {};
+	}
+
+	template <typename T>
 		requires requires { typename llvm_common_t<T>; }
 	static auto match_expr(llvm::Value* v, llvm::Module* _m, T&& expr)
 	{
@@ -3949,6 +3981,15 @@ public:
 	void erase_stores(Args... args)
 	{
 		erase_stores({args.value...});
+	}
+
+	// Debug breakpoint
+	void debugtrap()
+	{
+		const auto _rty = llvm::Type::getVoidTy(m_context);
+		const auto type = llvm::FunctionType::get(_rty, {}, false);
+		const auto func = llvm::cast<llvm::Function>(m_ir->GetInsertBlock()->getParent()->getParent()->getOrInsertFunction("llvm.debugtrap", type).getCallee());
+		m_ir->CreateCall(func);
 	}
 
 	template <typename T, typename U>

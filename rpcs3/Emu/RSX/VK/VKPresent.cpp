@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "VKGSRender.h"
 #include "vkutils/buffer_object.h"
+#include "vkutils/memory.h"
 #include "Emu/RSX/Overlays/overlay_manager.h"
 #include "Emu/RSX/Overlays/overlay_debug_overlay.h"
 #include "Emu/Cell/Modules/cellVideoOut.h"
@@ -135,6 +136,7 @@ bool VKGSRender::reinitialize_swapchain()
 
 	swapchain_unavailable = false;
 	should_reinitialize_swapchain = false;
+	m_vsync_mode = g_cfg.video.vsync;
 	return true;
 }
 
@@ -340,6 +342,7 @@ vk::viewable_image* VKGSRender::get_present_source(/* inout */ vk::present_surfa
 				image_to_flip = section.surface->get_surface(rsx::surface_access::transfer_read);
 
 				std::tie(info->width, info->height) = rsx::apply_resolution_scale<true>(
+					resolution_scaling_config,
 					std::min(surface_width, info->width),
 					std::min(surface_height, info->height));
 			}
@@ -423,6 +426,11 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		{
 			swapchain_unavailable = true;
 		}
+	}
+
+	if (m_vsync_mode != g_cfg.video.vsync)
+	{
+		swapchain_unavailable = true;
 	}
 
 	if (swapchain_unavailable || should_reinitialize_swapchain)
@@ -544,7 +552,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 		if (avconfig.stereo_enabled) [[unlikely]]
 		{
-			const auto [unused, min_expected_height] = rsx::apply_resolution_scale<true>(RSX_SURFACE_DIMENSION_IGNORED, buffer_height + 30);
+			const auto [unused, min_expected_height] = rsx::apply_resolution_scale<true>(resolution_scaling_config, RSX_SURFACE_DIMENSION_IGNORED, buffer_height + 30);
 			if (image_to_flip->height() < min_expected_height)
 			{
 				// Get image for second eye
@@ -559,7 +567,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			else
 			{
 				// Account for possible insets
-				const auto [unused2, scaled_buffer_height] = rsx::apply_resolution_scale<true>(RSX_SURFACE_DIMENSION_IGNORED, buffer_height);
+				const auto [unused2, scaled_buffer_height] = rsx::apply_resolution_scale<true>(resolution_scaling_config, RSX_SURFACE_DIMENSION_IGNORED, buffer_height);
 				buffer_height = std::min<u32>(image_to_flip->height() - min_expected_height, scaled_buffer_height);
 			}
 		}
@@ -656,9 +664,11 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		auto ui_renderer = vk::get_overlay_pass<vk::ui_overlay_renderer>();
 		std::lock_guard lock(*m_overlay_manager);
 
+		const areau display_area = {0, 0, static_cast<u32>(m_swapchain_dims.width), static_cast<u32>(m_swapchain_dims.height)};
 		for (const auto& view : m_overlay_manager->get_views())
 		{
-			ui_renderer->run(*m_current_command_buffer, area, fbo, single_target_pass, m_texture_upload_buffer_ring_info, *view.get());
+			const areau render_area = view->use_window_space ? display_area : area;
+			ui_renderer->run(*m_current_command_buffer, render_area, fbo, single_target_pass, m_texture_upload_buffer_ring_info, *view.get());
 		}
 	};
 
@@ -929,7 +939,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 				"Texture uploads: %12u (%u from CPU - %02u%%, %u copies avoided)\n"
 				"Vertex cache hits: %10u/%u (%u%%)\n"
 				"Program cache lookup ellision: %u/%u (%u%%)",
-				info.stats.framebuffer_stats.to_string(!backend_config.supports_hw_msaa),
+				info.stats.framebuffer_stats.to_string(resolution_scaling_config, !backend_config.supports_hw_msaa),
 				get_load(), info.stats.draw_calls, info.stats.submit_count, info.stats.setup_time, info.stats.vertex_upload_time,
 				info.stats.textures_upload_time, info.stats.draw_exec_time, info.stats.flip_time,
 				num_dirty_textures, texture_memory_size, tmp_texture_memory_size,
@@ -954,4 +964,32 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 	m_frame->flip(m_context);
 	rsx::thread::flip(info);
+
+	// Data sync
+	const rsx::surface_scaling_config_t active_res_scaling_config =
+	{
+		.scale_percent = static_cast<u16>(g_cfg.video.resolution_scale_percent),
+		.min_scalable_dimension = static_cast<u16>(g_cfg.video.min_scalable_dimension),
+	};
+
+	if (active_res_scaling_config != this->resolution_scaling_config)
+	{
+		// First, try to reclaim any memory since the res scale upgrade is so memory intensive
+		if (const auto severity = vk::vmm_determine_memory_load_severity();
+			severity > rsx::problem_severity::low && m_rtts.handle_memory_pressure(*m_current_command_buffer, severity))
+		{
+			flush_command_queue(true);
+		}
+
+		// Then apply the change
+		m_rtts.sync_scaling_config(*m_current_command_buffer, active_res_scaling_config);
+		this->resolution_scaling_config = active_res_scaling_config;
+
+		// Finally reclaim any unused resources
+		if (const auto severity = vk::vmm_determine_memory_load_severity();
+			severity > rsx::problem_severity::low && m_rtts.handle_memory_pressure(*m_current_command_buffer, severity))
+		{
+			flush_command_queue(true);
+		}
+	}
 }

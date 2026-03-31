@@ -502,6 +502,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		}
 	}
 
+	m_emu_settings->EnhanceComboBox(ui->vsyncMode, emu_settings_type::VSync);
+	SubscribeTooltip(ui->vsyncMode, tooltips.settings.vsync);
+
 	m_emu_settings->EnhanceComboBox(ui->antiAliasing, emu_settings_type::MSAA);
 	SubscribeTooltip(ui->gb_antiAliasing, tooltips.settings.anti_aliasing);
 
@@ -603,9 +606,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	// Checkboxes: main options
 	m_emu_settings->EnhanceCheckBox(ui->dumpColor, emu_settings_type::WriteColorBuffers);
 	SubscribeTooltip(ui->dumpColor, tooltips.settings.dump_color);
-
-	m_emu_settings->EnhanceCheckBox(ui->vsync, emu_settings_type::VSync);
-	SubscribeTooltip(ui->vsync, tooltips.settings.vsync);
 
 	m_emu_settings->EnhanceCheckBox(ui->stretchToDisplayArea, emu_settings_type::StretchToDisplayArea);
 	SubscribeTooltip(ui->stretchToDisplayArea, tooltips.settings.stretch_to_display_area);
@@ -858,7 +858,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->vulkansched->setEnabled(is_vulkan);
 	};
 
-	const auto apply_fsr_specific_options = [r_creator, this]()
+	const auto apply_fsr_specific_options = [this]()
 	{
 		const auto [text, value] = get_data(ui->outputScalingMode, ui->outputScalingMode->currentIndex());
 		const bool fsr_selected = static_cast<output_scaling_mode>(value) == output_scaling_mode::fsr;
@@ -1829,6 +1829,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	ui->enableGamemode->setVisible(false);
 #endif
 
+	m_emu_settings->EnhanceCheckBox(ui->playMusicDuringBoot, emu_settings_type::PlayMusicDuringBoot);
+	SubscribeTooltip(ui->playMusicDuringBoot, tooltips.settings.play_music_during_boot);
+
 	m_emu_settings->EnhanceCheckBox(ui->showShaderCompilationHint, emu_settings_type::ShowShaderCompilationHint);
 	SubscribeTooltip(ui->showShaderCompilationHint, tooltips.settings.show_shader_compilation_hint);
 
@@ -1846,6 +1849,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->showMouseAndKeyboardToggleHint, emu_settings_type::ShowMouseAndKeyboardToggleHint);
 	SubscribeTooltip(ui->showMouseAndKeyboardToggleHint, tooltips.settings.show_mouse_and_keyboard_toggle_hint);
+
+	m_emu_settings->EnhanceCheckBox(ui->showFatalErrorHints, emu_settings_type::ShowFatalErrorHints);
+	SubscribeTooltip(ui->showFatalErrorHints, tooltips.settings.show_fatal_error_hints);
 
 	m_emu_settings->EnhanceCheckBox(ui->showCaptureHints, emu_settings_type::ShowCaptureHints);
 	SubscribeTooltip(ui->showCaptureHints, tooltips.settings.show_capture_hints);
@@ -1875,6 +1881,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	});
 	ui->perfOverlayMarginY->setEnabled(!ui->perfOverlayCenterY->isChecked());
 
+	m_emu_settings->EnhanceCheckBox(ui->perfOverlayUseWindowSpace, emu_settings_type::PerfOverlayUseWindowSpace);
+	SubscribeTooltip(ui->perfOverlayUseWindowSpace, tooltips.settings.perf_overlay_use_window_space);
+
 	m_emu_settings->EnhanceCheckBox(ui->perfOverlayFramerateGraphEnabled, emu_settings_type::PerfOverlayFramerateGraphEnabled);
 	SubscribeTooltip(ui->perfOverlayFramerateGraphEnabled, tooltips.settings.perf_overlay_framerate_graph_enabled);
 
@@ -1901,6 +1910,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->perfOverlayMarginY->setEnabled(enabled && !ui->perfOverlayCenterY->isChecked());
 		ui->perfOverlayCenterX->setEnabled(enabled);
 		ui->perfOverlayCenterY->setEnabled(enabled);
+		ui->perfOverlayUseWindowSpace->setEnabled(enabled);
 		ui->perfOverlayFramerateGraphEnabled->setEnabled(enabled);
 		ui->perfOverlayFrametimeGraphEnabled->setEnabled(enabled);
 		ui->perf_overlay_framerate_datapoints->setEnabled(enabled);
@@ -1946,10 +1956,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	// SpinBoxes
 
-	m_emu_settings->EnhanceSpinBox(ui->perfOverlayMarginX, emu_settings_type::PerfOverlayMarginX, "", tr("px", "Performance overlay margin x"));
+	m_emu_settings->EnhanceDoubleSpinBox(ui->perfOverlayMarginX, emu_settings_type::PerfOverlayMarginX, "", tr("%", "Performance overlay margin x"));
 	SubscribeTooltip(ui->perfOverlayMarginX, tooltips.settings.perf_overlay_margin_x);
 
-	m_emu_settings->EnhanceSpinBox(ui->perfOverlayMarginY, emu_settings_type::PerfOverlayMarginY, "", tr("px", "Performance overlay margin y"));
+	m_emu_settings->EnhanceDoubleSpinBox(ui->perfOverlayMarginY, emu_settings_type::PerfOverlayMarginY, "", tr("%", "Performance overlay margin y"));
 	SubscribeTooltip(ui->perfOverlayMarginY, tooltips.settings.perf_overlay_margin_y);
 
 	// Global settings (gui_settings)
@@ -2091,7 +2101,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	connect(ui->edit_button_game_window_title_format, &QAbstractButton::clicked, [get_game_window_title, set_game_window_title, this]()
 	{
-		auto get_game_window_title_label = [get_game_window_title, set_game_window_title, this](const QString& format)
+		auto get_game_window_title_label = [get_game_window_title](const QString& format)
 		{
 			const QString game_window_title = get_game_window_title(format);
 
@@ -2185,6 +2195,16 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		{
 			m_gui_settings->SetValue(gui::nav_global, checked);
 		});
+
+		// Audio
+		SubscribeTooltip(ui->gb_gui_volume, tooltips.settings.gui_volume);
+		connect(ui->guiVolume, &QSlider::valueChanged, [this](int value)
+		{
+			ui->guiVolumeLabel->setText(tr("User Interface: %0 %", "GUI volume").arg(value));
+			gui::volume = std::clamp(value / 100.0f, 0.0f, 1.0f);
+			m_gui_settings->SetValue(gui::gui_volume, gui::volume);
+		});
+		ui->guiVolume->setValue(std::clamp(m_gui_settings->GetValue(gui::gui_volume).toFloat() * 100.0f, 0.0f, 100.0f));
 
 		// Discord:
 		SubscribeTooltip(ui->useRichPresence, tooltips.settings.use_rich_presence);

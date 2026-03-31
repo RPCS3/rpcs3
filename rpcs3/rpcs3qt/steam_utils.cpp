@@ -71,6 +71,8 @@ namespace gui::utils
 		}
 
 		const std::vector<u8> data = vdf.to_vector<u8>();
+		vdf.close();
+
 		usz last_pos = 0;
 		usz pos = 0;
 
@@ -346,7 +348,9 @@ namespace gui::utils
 				const auto launch_options = entry.value<std::string>("LaunchOptions");
 				const auto icon = entry.value<std::string>("icon");
 
-				if (appid.has_value() && appid.value() == it->appid &&
+				const bool appid_matches = appid.has_value() && appid.value() == it->appid;
+
+				if (appid_matches &&
 					exe.has_value() && exe.value() == it->exe &&
 					start_dir.has_value() && start_dir.value() == it->start_dir &&
 					launch_options.has_value() && launch_options.value() == it->launch_options &&
@@ -357,6 +361,11 @@ namespace gui::utils
 				}
 				else
 				{
+					if (appid_matches)
+					{
+						sys_log.notice("Entry '%s' already exists in steam shortcut file '%s' but with other parameters. Creating an additional one...", it->app_name, file_path);
+					}
+
 					it++;
 				}
 			}
@@ -369,7 +378,7 @@ namespace gui::utils
 
 		if (m_entries_to_add.empty() && removed_entries.empty())
 		{
-			sys_log.notice("No matching entries found in steam shortcut file '%s'.", file_path);
+			sys_log.notice("Nothing to add or remove in steam shortcut file '%s'.", file_path);
 			return true;
 		}
 
@@ -500,7 +509,15 @@ namespace gui::utils
 			sys_log.success("Removed steam shortcut(s) for '%s'", entry.app_name);
 		}
 
+		update_steam_input_config(user_dir);
+
 		return true;
+	}
+
+	bool steam_shortcut::steam_installed()
+	{
+		const std::string path = get_steam_path();
+		return !path.empty() && fs::is_dir(path);
 	}
 
 	u32 steam_shortcut::crc32(const std::string& data)
@@ -518,12 +535,6 @@ namespace gui::utils
 		}
 
 		return ~crc;
-	}
-
-	bool steam_shortcut::steam_installed()
-	{
-		const std::string path = get_steam_path();
-		return !path.empty() && fs::is_dir(path);
 	}
 
 	u32 steam_shortcut::steam_appid(const std::string& exe, const std::string& name)
@@ -660,8 +671,177 @@ namespace gui::utils
 		return str;
 	}
 
+	void steam_shortcut::update_steam_input_config(const std::string& user_dir)
+	{
+		if (m_entries_to_add.empty() && m_entries_to_remove.empty())
+		{
+			return;
+		}
+
+		const std::string vdf_path = user_dir + "localconfig.vdf";
+		const std::string backup_path = fs::get_config_dir() + "/localconfig.vdf.backup";
+
+		if (fs::is_file(vdf_path) && !fs::copy_file(vdf_path, backup_path, true))
+		{
+			sys_log.error("Failed to backup steam localconfig file '%s'", vdf_path);
+			return;
+		}
+
+		fs::file vdf(vdf_path);
+		if (!vdf)
+		{
+			sys_log.error("update_steam_input_config: Failed to open steam localconfig file '%s': %s", vdf_path, fs::g_tls_error);
+			return;
+		}
+
+		std::string content = vdf.to_string();
+		vdf.close();
+
+		static const std::string app_section_start = "\n\t\"apps\"\n\t{";
+		static const std::string app_section_end = "\n\t}\n";
+		static const std::string entry_section_end = "\n\t\t}";
+
+		bool nothing_to_remove = m_entries_to_remove.empty();
+
+		usz app_pos = content.rfind(app_section_start);
+		if (app_pos == umax)
+		{
+			if (!nothing_to_remove)
+			{
+				// We don't have to remove anything because this section did not exist
+				sys_log.notice("update_steam_input_config: Could not find \"apps\" section. No need to remove anything.");
+				nothing_to_remove = true;
+			}
+
+			if (m_entries_to_add.empty())
+			{
+				return; // Nothing to do anyway
+			}
+
+			const usz insert_pos = content.rfind("\n}");
+			if (insert_pos == umax)
+			{
+				sys_log.error("update_steam_input_config: Could not find main section end");
+				return;
+			}
+
+			sys_log.notice("update_steam_input_config: Inserting missing \"apps\" section");
+			content.insert(insert_pos, fmt::format("%s\n\t}", app_section_start));
+
+			app_pos = content.rfind(app_section_start);
+			ensure(app_pos != umax);
+		}
+
+		const usz search_start = app_pos + app_section_start.size();
+
+		const usz insert_pos = content.find(app_section_end, search_start);
+		if (insert_pos == umax)
+		{
+			sys_log.error("update_steam_input_config: Could not find apps section end");
+			return;
+		}
+
+		const auto appid_string = [](s32 signed_appid)
+		{
+			return fmt::format("\n\t\t\"%d\"\n", signed_appid);
+		};
+
+		const auto find_entry = [&content, &appid_string, search_start, insert_pos](s32 signed_appid) -> usz
+		{
+			const usz pos = content.find(appid_string(signed_appid), search_start);
+			if (pos >= insert_pos) return umax;
+			return pos;
+		};
+
+		bool dirty = false;
+
+		for (const shortcut_entry& entry : m_entries_to_remove)
+		{
+			constexpr bool removal_diabled = true; // Disabled for now. Steam doesn't seem to remove the entries either
+			if constexpr (removal_diabled)
+			{
+				break;
+			}
+
+			if (nothing_to_remove)
+			{
+				break;
+			}
+
+			const s32 signed_appid = static_cast<s32>(entry.appid);
+			const usz pos = find_entry(signed_appid);
+
+			if (pos == umax)
+			{
+				// does not exist, do nothing
+				sys_log.notice("update_steam_input_config: Entry for '%s' with appid '%d' does not exist. Skipping removal", entry.app_name, signed_appid);
+				continue;
+			}
+
+			// Find the opening brace of this entry
+			const usz pos_brace_open = content.find('{', pos);
+			if (pos_brace_open == umax || pos_brace_open >= insert_pos)
+			{
+				sys_log.error("update_steam_input_config: Can't find opening brace for entry for '%s' with appid '%d'.", entry.app_name, signed_appid);
+				continue;
+			}
+
+			// Find the closing brace
+			const usz pos_brace_close = content.find(entry_section_end, pos_brace_open);
+			if (pos_brace_close == umax || pos_brace_close >= insert_pos)
+			{
+				sys_log.error("update_steam_input_config: Can't find closing brace for entry for '%s' with appid '%d'.", entry.app_name, signed_appid);
+				continue;
+			}
+
+			// Include the closing brace line
+			const usz erase_end = pos_brace_close + entry_section_end.size();
+
+			// Erase the whole block
+			content.erase(pos, erase_end - pos);
+
+			sys_log.notice("update_steam_input_config: Removed '%s' with appid '%d'", entry.app_name, signed_appid);
+
+			dirty = true;
+		}
+
+		for (const shortcut_entry& entry : m_entries_to_add)
+		{
+			const s32 signed_appid = static_cast<s32>(entry.appid);
+			const usz pos = find_entry(signed_appid);
+
+			if (pos != umax)
+			{
+				// already exists, do nothing
+				sys_log.notice("update_steam_input_config: Entry for '%s' with appid '%d' already exists", entry.app_name, signed_appid);
+				continue;
+			}
+
+			sys_log.notice("update_steam_input_config: Inserting '%s' with appid '%d'", entry.app_name, signed_appid);
+			content.insert(insert_pos, fmt::format(
+				"%s"
+				"\t\t{\n"
+				"\t\t\t\"UseSteamControllerConfig\"\t\t\"0\"\n"
+				//"\t\t\t\"SteamControllerRumble\"\t\t\"-1\"\n"
+				//"\t\t\t\"SteamControllerRumbleIntensity\"\t\t\"320\"\n"
+				"\t\t}", appid_string(signed_appid)));
+
+			dirty = true;
+		}
+
+		if (dirty && !fs::write_file(vdf_path, fs::rewrite, content))
+		{
+			sys_log.error("Failed to update steam localconfig '%s': '%s'", vdf_path, fs::g_tls_error);
+
+			if (!fs::copy_file(backup_path, vdf_path, true))
+			{
+				sys_log.error("Failed to restore steam localconfig backup: '%s'", fs::g_tls_error);
+			}
+		}
+	}
+
 #ifdef _WIN32
-	std::string get_registry_string(const wchar_t* key, const wchar_t* name)
+	static std::string get_registry_string(const wchar_t* key, const wchar_t* name)
 	{
 		HKEY hkey = NULL;
 		LSTATUS status = RegOpenKeyW(HKEY_CURRENT_USER, key, &hkey);
@@ -825,6 +1005,7 @@ namespace gui::utils
 		// }
 
 		const std::string content = vdf.to_string();
+		vdf.close();
 
 		usz user_count = 0;
 

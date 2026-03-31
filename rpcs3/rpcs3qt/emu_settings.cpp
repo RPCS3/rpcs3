@@ -207,7 +207,7 @@ bool emu_settings::ValidateSettings(bool cleanup)
 	bool is_clean = true;
 
 	std::function<void(int, YAML::Node&, std::vector<std::string>&, cfg::_base*)> search_level;
-	search_level = [&search_level, &is_clean, &cleanup, this](int level, YAML::Node& yml_node, std::vector<std::string>& keys, cfg::_base* cfg_base)
+	search_level = [&search_level, &is_clean, &cleanup](int level, YAML::Node& yml_node, std::vector<std::string>& keys, cfg::_base* cfg_base)
 	{
 		if (!yml_node || !yml_node.IsMap())
 		{
@@ -1499,6 +1499,13 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case xfloat_accuracy::inaccurate: return tr("Inaccurate XFloat");
 		}
 		break;
+	case emu_settings_type::VSync:
+		switch (static_cast<vsync_mode>(index))
+		{
+		case vsync_mode::off: return tr("Disabled", "VSync Mode");
+		case vsync_mode::adaptive: return tr("Adaptive", "VSync Mode");
+		case vsync_mode::full: return tr("Full", "VSync Mode");
+		}
 	default:
 		break;
 	}

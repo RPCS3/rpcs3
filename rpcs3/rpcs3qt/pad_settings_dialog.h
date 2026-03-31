@@ -93,16 +93,16 @@ class pad_settings_dialog : public QDialog
 			update(*cfg_text);
 		}
 
-		void insert_key(const std::string& key, binding_mode mode);
-		void update(const std::string& keys);
+		void insert_button(const std::string& button, binding_mode mode);
+		void update(const std::string& button_string);
 
 		cfg::string* cfg_text() const { return m_cfg_text; }
-		const std::string& keys() const { return m_keys; }
+		const std::string& button_string() const { return m_button_string; }
 		const QString& text() const { return m_text; }
 
 	private:
 		cfg::string* m_cfg_text = nullptr;
-		std::string m_keys;
+		std::string m_button_string;
 		QString m_text;
 	};
 
@@ -152,7 +152,7 @@ private:
 	QButtonGroup* m_pad_buttons = nullptr;
 	atomic_t<u32> m_button_id = button_ids::id_pad_begin;
 	std::map<int /*id*/, pad_button /*info*/> m_cfg_entries;
-	std::map<int /*id*/, std::string> m_duplicate_buttons;
+	std::map<int /*id*/, std::string> m_duplicate_combos;
 
 	// Real time stick values
 	int m_lx = 0;
@@ -216,7 +216,7 @@ private:
 
 	std::pair<QStringList, QString> get_config_files();
 
-	void save(bool check_duplicates);
+	bool save(bool check_duplicates);
 	void SaveExit();
 	void CancelExit();
 

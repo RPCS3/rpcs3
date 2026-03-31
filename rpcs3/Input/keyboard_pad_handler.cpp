@@ -6,6 +6,7 @@
 #include "Input/product_info.h"
 #include "rpcs3qt/gs_frame.h"
 
+#include <algorithm>
 #include <QApplication>
 
 bool keyboard_pad_handler::Init()
@@ -86,8 +87,6 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 	{
 		const auto register_new_button_value = [code, pressed, value](Button& btn) -> u16
 		{
-			u16 actual_value = 0;
-
 			// Make sure we keep this button pressed until all related keys are released.
 			if (pressed)
 			{
@@ -96,7 +95,15 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 			else
 			{
 				btn.m_pressed_keys.erase(code);
+
+				// Optimization: just skip the whole combo parsing if there are no keys pressed
+				if (btn.m_pressed_keys.empty())
+				{
+					return 0;
+				}
 			}
+
+			u16 actual_value = 0;
 
 			// Get the max value of all pressed keys for this DS3 button
 			for (const std::set<u32>& key_codes : btn.m_key_combos)
@@ -262,7 +269,7 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 			{
 				const u16 actual_value = pressed ? MultipliedInput(value, is_left_stick ? l_stick_multiplier : r_stick_multiplier) : value;
 
-				const auto register_new_stick_value = [&](bool is_max)
+				const auto register_new_stick_value = [&](bool is_max) -> std::pair<bool, u16>
 				{
 					const std::vector<std::set<u32>>& key_combos = is_max ? stick.m_key_combos_max : stick.m_key_combos_min;
 					std::map<u32, u16>& pressed_keys = is_max ? stick.m_pressed_keys_max : stick.m_pressed_keys_min;
@@ -278,10 +285,10 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 						pressed_keys.erase(code);
 					}
 
+					// Get the value of all the combos for this stick direction
 					bool any_combo_pressed = false;
 					u16 new_val = 0;
 
-					// Get the min/max value of all pressed keys for this stick
 					for (const std::set<u32>& key_codes : key_combos)
 					{
 						if (key_codes.empty()) continue;
@@ -309,25 +316,29 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 						}
 					}
 
+					// Make sure we keep this combo pressed until all related keys are released.
 					if (any_combo_pressed)
 					{
-						if (pressed_combos.contains(code))
-						{
-							u16& pressed_val = pressed_combos[code];
-							pressed_val = is_max ? std::max(new_val, pressed_val) : std::min(new_val, pressed_val);
-							new_val = pressed_val;
-						}
-						else
-						{
-							pressed_combos[code] = new_val;
-						}
+						new_val = std::ceil(new_val / 2.0f);
+
+						pressed_combos[code] = new_val;
 					}
 					else
 					{
 						pressed_combos.erase(code);
+
+						if (pressed_combos.empty())
+						{
+							return std::pair(false, 0);
+						}
 					}
 
-					return std::pair(any_combo_pressed, static_cast<u16>(std::ceil(new_val / 2.0f)));
+					// Get the min/max value of all pressed combos for this stick
+					const auto min_max_it = is_max
+						? std::max_element(pressed_combos.cbegin(), pressed_combos.cend(), [](const auto& a, const auto& b) { return a.second < b.second; })
+						: std::min_element(pressed_combos.cbegin(), pressed_combos.cend(), [](const auto& a, const auto& b) { return a.second < b.second; });
+
+					return std::pair(!pressed_combos.empty(), min_max_it->second);
 				};
 
 				if (is_max)
@@ -895,13 +906,13 @@ std::vector<std::set<u32>> keyboard_pad_handler::GetKeyCombos(const cfg::string&
 {
 	std::vector<std::set<u32>> res;
 
-	for (const std::vector<std::string>& combo : cfg_pad::get_buttons(cfg_string.to_string()))
+	for (const pad::combo& combo : cfg_pad::get_combos(cfg_string.to_string()))
 	{
 		std::set<u32> key_codes;
 
-		for (const std::string& key_name : combo)
+		for (const std::string& button : combo.buttons())
 		{
-			if (u32 code = GetKeyCode(QString::fromStdString(key_name)); code != Qt::NoButton)
+			if (u32 code = GetKeyCode(QString::fromStdString(button)); code != Qt::NoButton)
 			{
 				key_codes.insert(code);
 			}
@@ -1051,7 +1062,7 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 
 	const auto find_combos = [this](const cfg::string& name)
 	{
-		std::vector<std::set<u32>> combos = find_key_combos(mouse_list, name, false);
+		std::vector<std::set<u32>> combos = find_key_combos(mouse_list, name);
 		for (const std::set<u32>& combo : GetKeyCombos(name)) combos.push_back(combo);
 
 		if (!combos.empty())

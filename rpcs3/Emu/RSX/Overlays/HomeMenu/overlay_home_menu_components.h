@@ -16,7 +16,7 @@ namespace rsx
 	{
 		static constexpr u16 menu_entry_height = 40;
 		static constexpr u16 menu_entry_margin = 30;
-		static constexpr u16 menu_checkbox_size = 20;
+		static constexpr u16 menu_checkbox_size = 24;
 		static constexpr u16 element_height = 25;
 
 		enum class page_navigation

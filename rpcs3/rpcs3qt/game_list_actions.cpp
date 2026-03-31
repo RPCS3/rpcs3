@@ -846,16 +846,19 @@ bool game_list_actions::RemoveContentList(const std::string& serial, bool is_int
 			RemoveContentBySerial(rpcs3::utils::get_icons_dir(), serial, "icons");
 	}
 
-	// Remove shortcuts in "games/shortcuts" folder and from desktop / start menu (if any)
+	// Remove shortcuts in "games/shortcuts" folder and from desktop / start menu / Steam (if any)
 	if (content_types & SHORTCUTS)
 	{
 		if (const auto it = m_content_info.name_list.find(serial); it != m_content_info.name_list.cend())
 		{
+			std::vector<std::pair<std::string, std::string>> games;
 			for (const std::string& name : it->second)
 			{
-				// Remove all shortcuts
-				gui::utils::remove_shortcuts(name, serial);
+				games.push_back(std::pair(name, serial));
 			}
+
+			// Batch remove all shortcuts
+			gui::utils::batch_remove_shortcuts(games);
 		}
 	}
 
@@ -905,7 +908,7 @@ void game_list_actions::BatchActionBySerials(progress_dialog* pdlg, const std::s
 
 	const int serials_size = ::narrow<int>(serials.size());
 
-	*iterate_over_serial = [=, this, index_ptr = index](int index)
+	*iterate_over_serial = [=, index_ptr = index](int index)
 	{
 		if (index == serials_size)
 		{
@@ -1452,15 +1455,7 @@ void game_list_actions::CreateShortcuts(const std::vector<game_info>& games, con
 		return;
 	}
 
-	bool success = true;
-
-	for (const game_info& gameinfo : games)
-	{
-		if (!gui::utils::create_shortcuts(gameinfo, locations))
-		{
-			success = false;
-		}
-	}
+	const bool success = gui::utils::batch_create_shortcuts(games, locations);
 
 #ifdef _WIN32
 	if (locations.size() == 1 && locations.contains(gui::utils::shortcut_location::rpcs3_shortcuts))

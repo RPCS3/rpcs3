@@ -734,3 +734,19 @@ void fmt_class_string<time_format>::format(std::string& out, u64 arg)
 		return unknown;
 	});
 }
+
+template <>
+void fmt_class_string<vsync_mode>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](vsync_mode value)
+	{
+		switch (value)
+		{
+		case vsync_mode::off: return "Disabled";
+		case vsync_mode::adaptive: return "Adaptive";
+		case vsync_mode::full: return "Full";
+		}
+
+		return unknown;
+	});
+}

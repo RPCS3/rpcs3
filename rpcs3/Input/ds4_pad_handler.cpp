@@ -162,7 +162,7 @@ void ds4_pad_handler::init_config(cfg_pad* cfg)
 	cfg->rs_up.def    = ::at32(button_list, DS4KeyCodes::RSYPos);
 	cfg->start.def    = ::at32(button_list, DS4KeyCodes::Options);
 	cfg->select.def   = ::at32(button_list, DS4KeyCodes::Share);
-	cfg->ps.def       = ::at32(button_list, DS4KeyCodes::PSButton);
+	cfg->ps.def       = cfg_pad::make_button_string(button_list, {{DS4KeyCodes::PSButton}, {DS4KeyCodes::Options, DS4KeyCodes::Share}});
 	cfg->square.def   = ::at32(button_list, DS4KeyCodes::Square);
 	cfg->cross.def    = ::at32(button_list, DS4KeyCodes::Cross);
 	cfg->circle.def   = ::at32(button_list, DS4KeyCodes::Circle);
