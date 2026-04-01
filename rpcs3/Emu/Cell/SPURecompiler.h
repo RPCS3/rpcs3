@@ -11,6 +11,17 @@
 #include <string>
 #include <deque>
 
+// std::bitset
+template <typename CT, typename T>
+	requires requires(std::remove_cvref_t<CT>& x, T&& y) { x.count(); x.test(y); x.flip(y); }
+[[nodiscard]] constexpr bool at32(CT&& container, T&& index, std::source_location src_loc = std::source_location::current())
+{
+	const usz csv = container.size();
+	if (csv <= std::forward<T>(index)) [[unlikely]]
+		fmt::raw_range_error(src_loc, format_object_simplified(index), csv);
+	return container[std::forward<T>(index)];
+}
+
 // Helper class
 class spu_cache
 {
@@ -421,7 +432,7 @@ public:
 					return true;
 				}
 
-				return regs.count() == 1 && regs.test(reg_val);
+				return regs.count() == 1 && ::at32(regs, reg_val);
 			}
 
 			bool is_loop_dictator(u32 reg_val, bool test_predictable = false, bool should_predictable = true) const
@@ -431,7 +442,7 @@ public:
 					return false;
 				}
 
-				if (regs.count() >= 1 && regs.test(reg_val))
+				if (regs.count() >= 1 && ::at32(regs, reg_val))
 				{
 					if (!test_predictable)
 					{
@@ -490,7 +501,7 @@ public:
 					return false;
 				}
 
-				if (regs.count() - (regs.test(reg_val) ? 1 : 0))
+				if (regs.count() - (::at32(regs, reg_val) ? 1 : 0))
 				{
 					return false;
 				}
