@@ -221,6 +221,7 @@ namespace rsx
 		home_menu_settings_overlays::home_menu_settings_overlays(s16 x, s16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent)
 			: home_menu_settings_page(x, y, width, height, use_separators, parent, get_localized_string(localized_string_id::HOME_MENU_SETTINGS_OVERLAYS))
 		{
+			add_checkbox(&g_cfg.misc.play_music_during_boot, localized_string_id::HOME_MENU_SETTINGS_OVERLAYS_PLAY_MUSIC_DURING_BOOT);
 			add_checkbox(&g_cfg.misc.show_trophy_popups, localized_string_id::HOME_MENU_SETTINGS_OVERLAYS_SHOW_TROPHY_POPUPS);
 			add_checkbox(&g_cfg.misc.show_rpcn_popups, localized_string_id::HOME_MENU_SETTINGS_OVERLAYS_SHOW_RPCN_POPUPS);
 			add_checkbox(&g_cfg.misc.show_shader_compilation_hint, localized_string_id::HOME_MENU_SETTINGS_OVERLAYS_SHOW_SHADER_COMPILATION_HINT);
@@ -229,6 +230,7 @@ namespace rsx
 			add_checkbox(&g_cfg.misc.show_pressure_intensity_toggle_hint, localized_string_id::HOME_MENU_SETTINGS_OVERLAYS_SHOW_PRESSURE_INTENSITY_TOGGLE_HINT);
 			add_checkbox(&g_cfg.misc.show_analog_limiter_toggle_hint, localized_string_id::HOME_MENU_SETTINGS_OVERLAYS_SHOW_ANALOG_LIMITER_TOGGLE_HINT);
 			add_checkbox(&g_cfg.misc.show_mouse_and_keyboard_toggle_hint, localized_string_id::HOME_MENU_SETTINGS_OVERLAYS_SHOW_MOUSE_AND_KB_TOGGLE_HINT);
+			add_checkbox(&g_cfg.misc.show_fatal_error_hints, localized_string_id::HOME_MENU_SETTINGS_OVERLAYS_SHOW_FATAL_ERROR_HINTS);
 			add_checkbox(&g_cfg.video.record_with_overlays, localized_string_id::HOME_MENU_SETTINGS_OVERLAYS_RECORD_WITH_OVERLAYS);
 
 			apply_layout();

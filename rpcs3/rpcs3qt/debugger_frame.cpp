@@ -58,6 +58,7 @@ debugger_frame::debugger_frame(std::shared_ptr<gui_settings> gui_settings, QWidg
 	: custom_dock_widget(tr("Debugger [Press F1 for Help]"), parent)
 	, m_gui_settings(std::move(gui_settings))
 {
+	setObjectName("debugger");
 	setContentsMargins(0, 0, 0, 0);
 
 	m_update = new QTimer(this);

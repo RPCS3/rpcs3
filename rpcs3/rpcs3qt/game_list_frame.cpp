@@ -40,6 +40,8 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	, m_emu_settings(std::move(emu_settings))
 	, m_persistent_settings(std::move(persistent_settings))
 {
+	setObjectName("gamelist");
+
 	m_game_list_actions = std::make_shared<game_list_actions>(this, m_gui_settings);
 
 	m_icon_size       = gui::gl_icon_size_min; // ensure a valid size
