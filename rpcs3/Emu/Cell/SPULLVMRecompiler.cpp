@@ -2542,9 +2542,24 @@ public:
 								break;
 							}
 						}
-					}
 
-					//condition = m_ir->getInt1(0);
+						// TODO: Optimze so constant evalatuated cases will not be checked
+						const bool is_cond_need_runtime_verify = compare == ICmpInst::ICMP_NE && (!m_reduced_loop_info->cond_val_is_immediate || m_reduced_loop_info->cond_val_incr % 2 == 0);
+
+						if (is_cond_need_runtime_verify)
+						{
+							// Verify that it is actually possible to finish the loop and it is not an infinite loop
+
+							// First: create a mask of the bits that definitely do not change between iterations (0 results in umax which is accurate here)
+							const auto no_change_bits = m_ir->CreateAnd(m_ir->CreateNot(cond_val_incr), m_ir->CreateSub(cond_val_incr, m_ir->getIntN(type_bits, 1)));
+
+							// Compare that when the mask applied to both the result and the original value is the same
+							const auto cond_verify = m_ir->CreateICmpEQ(m_ir->CreateAnd(loop_dictator_after_adjustment, no_change_bits), m_ir->CreateAnd(loop_argument, no_change_bits));
+
+							// Amend condition
+							condition = m_ir->CreateAnd(cond_verify, condition);
+						}
+					}
 
 					m_ir->CreateCondBr(condition, optimization_block, block_optimization_next);
 				};
