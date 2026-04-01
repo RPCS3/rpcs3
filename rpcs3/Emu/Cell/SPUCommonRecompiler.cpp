@@ -6731,6 +6731,13 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 							break;
 						}
 
+						if (reg_index != i && ::at32(reg->regs, reg_index))
+						{
+							// Unimplemented
+							break_reduced_loop_pattern(30, reduced_loop->discard());
+							break;
+						}
+
 						u32 cond_val_incr = static_cast<s32>(reg_org->IMM);
 
 						if (reg_org->mod1_type == spu_itype::AI || reg_org->mod1_type == spu_itype::AHI)
