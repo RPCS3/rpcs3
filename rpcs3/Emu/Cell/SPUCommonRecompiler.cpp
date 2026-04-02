@@ -6194,7 +6194,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				{
 					const auto arg = reduced_loop->find_reg(reg);
 
-					if (arg && reg != op_rt)
+					if (arg && arg->regs.count() != 0)
 					{
 						if (reg_first == reg)
 						{
@@ -6215,6 +6215,12 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 						org.add_register_origin(reg);
 					}
 				}
+			}
+
+			if (type & spu_itype::memory || type == spu_itype::RDCH || type == spu_itype::RCHCNT)
+			{
+				// Register external origin
+				org.add_register_origin(s_reg_max);
 			}
 
 			*ensure(reduced_loop->find_reg(op_rt)) = org;
