@@ -364,7 +364,7 @@ public:
 
 		struct origin_t
 		{
-			std::bitset<s_reg_max> regs{};
+			std::bitset<s_reg_max + 1> regs{};
 			u32 modified = 0;
 			spu_itype_t mod1_type = spu_itype::UNK;
 			spu_itype_t mod2_type = spu_itype::UNK;
