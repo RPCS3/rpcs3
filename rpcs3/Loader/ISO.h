@@ -4,12 +4,84 @@
 
 #include "Utilities/File.h"
 #include "util/types.hpp"
+#include "Crypto/aes.h"
+
+const int ISO_SECTOR_SIZE = 2048;
 
 bool is_file_iso(const std::string& path);
 bool is_file_iso(const fs::file& path);
 
 void load_iso(const std::string& path);
 void unload_iso();
+
+/*
+- Hijacked the "iso_archive::iso_archive" method to test if the ".iso" file is encrypted and sets a flag.
+  The flag is set according to the first matching encryption type in the order below:
+  - Redump type: ".dkey" file, with the same name of the ".iso" file, exists in the same folder of the ".iso" file
+  - 3k3y type:   3k3y watermark exists at 0xF70
+  If the flag is set then the "iso_file::read" method will decrypt the data on the fly
+
+- Supported ISO encryption type:
+  - Decrypted (.iso)
+  - 3k3y (decrypted / encrypted) (.iso)
+  - Redump (encrypted) (.iso & .dkey)
+
+- Unsupported ISO encryption type:
+  - Encrypted split ISO files
+*/
+
+// Struct to store ISO region information (storing addrs instead of lba since we need to compare the addr anyway,
+// so would have to multiply or divide every read if storing lba)
+struct iso_region_info
+{
+	bool encrypted;
+	u64 region_first_addr;
+	u64 region_last_addr;
+};
+
+// Enum to decide ISO encryption type
+enum iso_encryption_type
+{
+	ENC_TYPE_NONE,
+	ENC_TYPE_3K3Y_DEC,
+	ENC_TYPE_3K3Y_ENC,
+	ENC_TYPE_REDUMP
+};
+
+struct iso_sector
+{
+	u64 archive_first_addr = 0;
+	u64 offset = 0;
+	u64 size = 0;
+	u8 buf[ISO_SECTOR_SIZE];
+};
+
+// ISO file decryption functions
+unsigned char asciischar_to_byte(char input);
+void keystr_to_keyarr(const char (&str)[32], unsigned char (&arr)[16]);
+u32 char_arr_BE_to_uint(unsigned char* arr);
+void reset_iv(unsigned char (&iv)[16], u32 lba);
+void decrypt_data(aes_context& aes, unsigned char* data, u32 sector_count, u32 start_lba);
+
+// ISO file decryption class
+class iso_file_decryption
+{
+private:
+	aes_context m_aes_dec;
+	iso_encryption_type m_enc_type = ENC_TYPE_NONE;
+	size_t m_region_count = 0;
+	iso_region_info* m_region_info = nullptr;
+
+	void reset(void);
+
+public:
+	~iso_file_decryption();
+
+	iso_encryption_type get_enc_type() const { return m_enc_type; }
+
+	bool init(const std::string& path);
+	bool decrypt(u64 offset, void* buffer, u64 size, const std::string& name);
+};
 
 struct iso_extent_info
 {
@@ -38,16 +110,17 @@ class iso_file : public fs::file_base
 {
 private:
 	fs::file m_file;
+	std::shared_ptr<iso_file_decryption> m_dec;
 	iso_fs_metadata m_meta {};
 	u64 m_pos = 0;
 
 	std::pair<u64, iso_extent_info> get_extent_pos(u64 pos) const;
-	u64 file_offset(u64 pos) const;
 	u64 local_extent_remaining(u64 pos) const;
 	u64 local_extent_size(u64 pos) const;
+	u64 file_offset(u64 pos) const;
 
 public:
-	iso_file(fs::file&& iso_handle, const iso_fs_node& node);
+	iso_file(fs::file&& iso_handle, std::shared_ptr<iso_file_decryption> iso_dec, const iso_fs_node& node);
 
 	fs::stat_t get_stat() override;
 	bool trunc(u64 length) override;
@@ -75,45 +148,47 @@ public:
 	void rewind() override;
 };
 
-// represents the .iso file itself.
+// Represents the .iso file itself
 class iso_archive
 {
 private:
 	std::string m_path;
-	iso_fs_node m_root {};
 	fs::file m_file;
+	std::shared_ptr<iso_file_decryption> m_dec;
+	iso_fs_node m_root {};
 
 public:
 	iso_archive(const std::string& path);
+
+	const std::string& path() const { return m_path; }
+	const std::shared_ptr<iso_file_decryption> get_dec() { return m_dec; }
 
 	iso_fs_node* retrieve(const std::string& path);
 	bool exists(const std::string& path);
 	bool is_file(const std::string& path);
 
 	iso_file open(const std::string& path);
-
 	psf::registry open_psf(const std::string& path);
-
-	const std::string& path() const { return m_path; }
 };
 
 class iso_device : public fs::device_base
 {
 private:
+	std::string m_path;
 	iso_archive m_archive;
-	std::string iso_path;
 
 public:
 	inline static std::string virtual_device_name = "/vfsv0_virtual_iso_overlay_fs_dev";
 
 	iso_device(const std::string& iso_path, const std::string& device_name = virtual_device_name)
-		: m_archive(iso_path), iso_path(iso_path)
+		: m_path(iso_path), m_archive(iso_path)
 	{
 		fs_prefix = device_name;
 	}
+
 	~iso_device() override = default;
 
-	const std::string& get_loaded_iso() const { return iso_path; }
+	const std::string& get_loaded_iso() const { return m_path; }
 
 	bool stat(const std::string& path, fs::stat_t& info) override;
 	bool statfs(const std::string& path, fs::device_stat& info) override;
