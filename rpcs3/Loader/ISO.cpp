@@ -44,7 +44,7 @@ bool is_file_iso(const fs::file& file)
 		&& magic[4] == '1';
 }
 
-// keystr_to_keyarr (&& asciischar_to_byte): Convert a hex string into a byte array
+// asciischar_to_byte() and keystr_to_keyarr(): Convert a hex string into a byte array
 static unsigned char asciischar_to_byte(char input)
 {
 	if (input >= '0' && input <= '9')
@@ -84,10 +84,10 @@ static void reset_iv(unsigned char (&iv)[16], u32 lba)
 	iv[15] = (lba & 0x000000FF) >> 0;
 }
 
-// Main function that will decrypt the sector(s) (needs to be a multiple of 2048)
+// Main function that will decrypt the sector(s) (needs to be a multiple of ISO_SECTOR_SIZE)
 static void decrypt_data(aes_context& aes, unsigned char* data, u32 sector_count, u32 start_lba)
 {
-	// Micro optimization, only ever used by decrypt_data(...)
+	// Micro optimization, only ever used by "decrypt_data()"
 	unsigned char iv_[16];
 
 	for (u32 i = 0; i < sector_count; ++i)
@@ -132,7 +132,7 @@ bool iso_file_decryption::init(const std::string& path)
 	unsigned char sec0_sec1[ISO_SECTOR_SIZE * 2] = {0};
 
 	//
-	// Store the ISO region information (needed by both the Redump type (only on "decrypt()" method) and 3k3y type)
+	// Store the ISO region information (needed by both the "Redump" type (only on "decrypt()" method) and "3k3y" type)
 	//
 
 	bool region_info_stored = false;
