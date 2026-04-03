@@ -43,6 +43,7 @@
 
 #include <functional>
 #include <unordered_map>
+#include <source_location>
 
 // Helper function
 llvm::Value* peek_through_bitcasts(llvm::Value*);
@@ -3239,7 +3240,7 @@ public:
 	}
 
 	// Bitcast with immediate constant folding
-	llvm::Value* bitcast(llvm::Value* val, llvm::Type* type) const;
+	llvm::Value* bitcast(llvm::Value* val, llvm::Type* type, std::source_location src_loc = std::source_location::current()) const;
 
 	template <typename T>
 	llvm::Value* bitcast(llvm::Value* val)
