@@ -11,7 +11,7 @@
 
 LOG_CHANNEL(sys_log, "SYS");
 
-const int ISO_SECTOR_SIZE = 2048;
+const u64 ISO_SECTOR_SIZE = 2048;
 
 struct iso_sector
 {
@@ -139,7 +139,7 @@ bool iso_file_decryption::init(const std::string& path)
 
 	if (fs::file iso_file(path); iso_file)
 	{
-		if (iso_file.size() >= static_cast<u64>(ISO_SECTOR_SIZE) * 2)
+		if (iso_file.size() >= ISO_SECTOR_SIZE * 2)
 		{
 			if (iso_file.read(sec0_sec1, sizeof(sec0_sec1)) == sizeof(sec0_sec1))
 			{
@@ -160,9 +160,9 @@ bool iso_file_decryption::init(const std::string& path)
 					{
 						// Store the region information in address format
 						m_region_info[i].encrypted = (i % 2 == 1);
-						m_region_info[i].region_first_addr = (i == 0 ? 0LL : m_region_info[i - 1].region_last_addr + 1LL);
-						m_region_info[i].region_last_addr = static_cast<u64>(char_arr_BE_to_uint(sec0_sec1 + 12 + (i * 4))
-							- (i % 2 == 1 ? 1LL : 0LL)) * ISO_SECTOR_SIZE + ISO_SECTOR_SIZE - 1LL;
+						m_region_info[i].region_first_addr = (i == 0 ? 0ULL : m_region_info[i - 1].region_last_addr + 1ULL);
+						m_region_info[i].region_last_addr = (static_cast<u64>(char_arr_BE_to_uint(sec0_sec1 + 12 + (i * 4)))
+							- (i % 2 == 1 ? 1ULL : 0ULL)) * ISO_SECTOR_SIZE + ISO_SECTOR_SIZE - 1ULL;
 
 						region_info_stored = true;
 					}
@@ -309,13 +309,13 @@ bool iso_file_decryption::decrypt(u64 offset, void* buffer, u64 size, const std:
 	// If it's a 3k3y iso and 0xF70 data is being requested, we should null it out
 	if (m_enc_type == ENC_TYPE_3K3Y_DEC || m_enc_type == ENC_TYPE_3K3Y_ENC)
 	{
-		if (offset + size >= 0xF70LL && offset <= 0x1070LL)
+		if (offset + size >= 0xF70ULL && offset <= 0x1070ULL)
 		{
 			// Zero out the 0xF70 - 0x1070 overlap
 			unsigned char* buf = reinterpret_cast<unsigned char*>(buffer);
-			unsigned char* buf_overlap_start = offset < 0xF70LL ? buf + 0xF70LL - offset : buf;
+			unsigned char* buf_overlap_start = offset < 0xF70ULL ? buf + 0xF70ULL - offset : buf;
 
-			memset(buf_overlap_start, 0x00, offset + size < 0x1070LL ? size - (buf_overlap_start - buf) : 0x100 - (buf_overlap_start - buf));
+			memset(buf_overlap_start, 0x00, offset + size < 0x1070ULL ? size - (buf_overlap_start - buf) : 0x100ULL - (buf_overlap_start - buf));
 		}
 
 		// If it's a decrypted iso then return, otherwise go on to the decryption logic
