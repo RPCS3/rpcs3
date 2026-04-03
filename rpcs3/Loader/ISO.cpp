@@ -11,6 +11,16 @@
 
 LOG_CHANNEL(sys_log, "SYS");
 
+const int ISO_SECTOR_SIZE = 2048;
+
+struct iso_sector
+{
+	u64 archive_first_addr = 0;
+	u64 offset = 0;
+	u64 size = 0;
+	u8 buf[ISO_SECTOR_SIZE];
+};
+
 bool is_file_iso(const std::string& path)
 {
 	if (path.empty() || fs::is_dir(path))
@@ -131,7 +141,7 @@ bool iso_file_decryption::init(const std::string& path)
 
 	if (fs::file iso_file(path); iso_file)
 	{
-		if (iso_file.size() >= (u64)(ISO_SECTOR_SIZE) * 2)
+		if (iso_file.size() >= static_cast<u64>(ISO_SECTOR_SIZE) * 2)
 		{
 			if (iso_file.read(sec0_sec1, sizeof(sec0_sec1)) == sizeof(sec0_sec1))
 			{
@@ -304,10 +314,10 @@ bool iso_file_decryption::decrypt(u64 offset, void* buffer, u64 size, const std:
 		if (offset + size >= 0xF70LL && offset <= 0x1070LL)
 		{
 			// Zero out the 0xF70 - 0x1070 overlap
-			unsigned char* bufb = reinterpret_cast<unsigned char*>(buffer);
-			unsigned char* buf_overlap_start = offset < 0xF70LL ? bufb + 0xF70LL - offset : bufb;
+			unsigned char* buf = reinterpret_cast<unsigned char*>(buffer);
+			unsigned char* buf_overlap_start = offset < 0xF70LL ? buf + 0xF70LL - offset : buf;
 
-			memset(buf_overlap_start, 0x00, offset + size < 0x1070LL ? size - (buf_overlap_start - bufb) : 0x100 - (buf_overlap_start - bufb));
+			memset(buf_overlap_start, 0x00, offset + size < 0x1070LL ? size - (buf_overlap_start - buf) : 0x100 - (buf_overlap_start - buf));
 		}
 
 		// If it's a decrypted iso then return, otherwise go on to the decryption logic
@@ -343,8 +353,8 @@ bool iso_file_decryption::decrypt(u64 offset, void* buffer, u64 size, const std:
 			{
 				sys_log.error("decrypt(): %s: Encryption assumptions were not met, code needs to be updated, your game is probably about to crash - offset: 0x%lx, size: 0x%lx",
 					name,
-					(unsigned long int)offset,
-					(unsigned long int)size);
+					static_cast<unsigned long int>(offset),
+					static_cast<unsigned long int>(size);
 			}*/
 
 			return true;
@@ -354,9 +364,9 @@ bool iso_file_decryption::decrypt(u64 offset, void* buffer, u64 size, const std:
 	sys_log.error("decrypt(): %s: LBA request wasn't in the 'm_region_info' for an encrypted iso? - RP: 0x%lx, RC: 0x%lx, LR: (0x%016lx - 0x%016lx)",
 		name,
 		offset,
-		(unsigned long int)m_region_count,
-		(unsigned long int)((m_region_count > 0) ? m_region_info[m_region_count - 1].region_first_addr : 0),
-		(unsigned long int)((m_region_count > 0) ? m_region_info[m_region_count - 1].region_last_addr : 0));
+		static_cast<unsigned long int>(m_region_count),
+		static_cast<unsigned long int>(m_region_count > 0 ? m_region_info[m_region_count - 1].region_first_addr : 0),
+		static_cast<unsigned long int>(m_region_count > 0 ? m_region_info[m_region_count - 1].region_last_addr : 0));
 
 	return true;
 }
@@ -690,8 +700,6 @@ bool iso_archive::is_file(const std::string& path)
 
 iso_file iso_archive::open(const std::string& path)
 {
-	const auto file_node = retrieve(path);
-
 	return iso_file(fs::file(m_path), m_dec, *ensure(retrieve(path)));
 }
 
@@ -806,12 +814,11 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 
 	// If it's an encrypted type
 
-	// IMPORTANT NOTE (temporary implementation):
+	// IMPORTANT NOTE:
 	//
-	// Current "iso_file_decryption::decrypt()" method requires that reads always start at the beginning
-	// of a sector and that all reads will be multiples of ISO_SECTOR_SIZE.
-	// Both are easy fixes, but, code can be more simple + efficient if these two conditions are true
-	// (which they look to be from initial testing)
+	// For performance reasons, current "iso_file_decryption::decrypt()" method requires that reads always start at the beginning of a sector and
+	// that all reads will be multiples of ISO_SECTOR_SIZE.
+	// Both are easy fixes, but, code can be more simple + efficient if these two conditions are true (which they look to be from initial testing)
 	//
 	//
 	// TODO:
@@ -820,15 +827,19 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 	// That will allow to avoid to read and decrypt again the entire sector on a further call to "read_at()" method
 	// if trying to read the previously not requested bytes (marked with "x" in the picture below)
 	//
-	//                         ---------------------------------------
-	//                         |               buffer                |
-	//                         ---------------------------------------
-	//                         '     '                             ' '
-	// ---------------------------------------------------------------------------------------------------------------
-	// | sec 0   | sec 1   |xxx'#####|#########|#########|#########|#'xxxxxxx|         |         | sec n-1 | sec n   |
-	// ---------------------------------------------------------------------------------------------------------------
-	//                     '         '                             '         '
-	//                     |first sec|                             |last sec |
+	//                                -------------------------------------------------------------------
+	//           file on iso archive: |     '                                     '                     |
+	//                                -------------------------------------------------------------------
+	//                                      '                                     '
+	//                                      ---------------------------------------
+	//                              buffer: |                                     |
+	//                                      ---------------------------------------
+	//                                      '     '                             ' '
+	//              ---------------------------------------------------------------------------------------------------------------
+	// iso archive: | sec 0   | sec 1   |xxx'#####|#########|#########|#########|#'xxxxxxx|         | ...     | sec n-1 | sec n   |
+	//              ---------------------------------------------------------------------------------------------------------------
+	//                                  '         '                             '         '
+	//                                  |first sec|                             |last sec |
 
 	const u64 archive_last_offset = archive_first_offset + max_size - 1;
 	iso_sector first_sec, last_sec;

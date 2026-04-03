@@ -6,8 +6,6 @@
 #include "util/types.hpp"
 #include "Crypto/aes.h"
 
-const int ISO_SECTOR_SIZE = 2048;
-
 bool is_file_iso(const std::string& path);
 bool is_file_iso(const fs::file& path);
 
@@ -47,21 +45,6 @@ enum iso_encryption_type
 	ENC_TYPE_3K3Y_ENC,
 	ENC_TYPE_REDUMP
 };
-
-struct iso_sector
-{
-	u64 archive_first_addr = 0;
-	u64 offset = 0;
-	u64 size = 0;
-	u8 buf[ISO_SECTOR_SIZE];
-};
-
-// ISO file decryption functions
-unsigned char asciischar_to_byte(char input);
-void keystr_to_keyarr(const char (&str)[32], unsigned char (&arr)[16]);
-u32 char_arr_BE_to_uint(unsigned char* arr);
-void reset_iv(unsigned char (&iv)[16], u32 lba);
-void decrypt_data(aes_context& aes, unsigned char* data, u32 sector_count, u32 start_lba);
 
 // ISO file decryption class
 class iso_file_decryption
