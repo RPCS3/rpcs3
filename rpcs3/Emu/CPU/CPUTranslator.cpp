@@ -210,7 +210,7 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 #endif
 }
 
-llvm::Value* cpu_translator::bitcast(llvm::Value* val, llvm::Type* type) const
+llvm::Value* cpu_translator::bitcast(llvm::Value* val, llvm::Type* type, std::source_location src_loc) const
 {
 	uint s1 = type->getScalarSizeInBits();
 	uint s2 = val->getType()->getScalarSizeInBits();
@@ -222,7 +222,7 @@ llvm::Value* cpu_translator::bitcast(llvm::Value* val, llvm::Type* type) const
 
 	if (s1 != s2)
 	{
-		fmt::throw_exception("cpu_translator::bitcast(): incompatible type sizes (%u vs %u)", s1, s2);
+		fmt::throw_exception("cpu_translator::bitcast(): incompatible type sizes (%u vs %u)\nCalled from: %s", s1, s2, src_loc);
 	}
 
 	if (val->getType() == type)
