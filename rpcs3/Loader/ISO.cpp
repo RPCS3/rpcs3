@@ -388,8 +388,8 @@ inline T read_both_endian_int(fs::file& file)
 	return out;
 }
 
-// assumed that directory_entry is at file head
-std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& file, bool names_in_ucs2 = false)
+// Assumed that directory entry is at file head
+static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& file, bool names_in_ucs2 = false)
 {
 	const auto start_pos = file.pos();
 	const u8 entry_length = file.read<u8>();
@@ -489,7 +489,7 @@ static void iso_form_hierarchy(fs::file& file, iso_fs_node& node, bool use_ucs2_
 
 	// Assuming the directory spans a single extent
 	const auto& directory_extent = node.metadata.extents[0];
-	const u64 end_pos = directory_extent.size + (directory_extent.start * ISO_SECTOR_SIZE);
+	const u64 end_pos = (directory_extent.start * ISO_SECTOR_SIZE) + directory_extent.size;
 
 	file.seek(directory_extent.start * ISO_SECTOR_SIZE);
 
@@ -586,10 +586,15 @@ iso_archive::iso_archive(const std::string& path)
 			// Skip the rest of descriptor's data
 			m_file.seek(155, fs::seek_cur);
 
-			m_root = iso_fs_node
+			const auto node = iso_read_directory_entry(m_file, use_ucs2_decoding);
+
+			if (node)
 			{
-				.metadata = iso_read_directory_entry(m_file, use_ucs2_decoding).value(),
-			};
+				m_root = iso_fs_node
+				{
+					.metadata = node.value()
+				};
+			}
 		}
 
 		m_file.seek(descriptor_start + ISO_SECTOR_SIZE);
@@ -696,7 +701,7 @@ psf::registry iso_archive::open_psf(const std::string& path)
 iso_file::iso_file(fs::file&& iso_handle, std::shared_ptr<iso_file_decryption> iso_dec, const iso_fs_node& node)
 	: m_file(std::move(iso_handle)), m_dec(iso_dec), m_meta(node.metadata)
 {
-	m_file.seek(ISO_SECTOR_SIZE * node.metadata.extents[0].start);
+	m_file.seek(node.metadata.extents[0].start * ISO_SECTOR_SIZE);
 }
 
 fs::stat_t iso_file::get_stat()
@@ -791,9 +796,10 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 
 	// IMPORTANT NOTE:
 	//
-	// For performance reasons, current "iso_file_decryption::decrypt()" method requires that reads always start at the beginning of a sector and
-	// that all reads will be multiples of ISO_SECTOR_SIZE.
-	// Both are easy fixes, but, code can be more simple + efficient if these two conditions are true (which they look to be from initial testing)
+	// For performance reasons, current "iso_file_decryption::decrypt()" method requires that reads always
+	// start at the beginning of a sector and that all reads will be multiples of ISO_SECTOR_SIZE.
+	// Both are easy fixes, but, code can be more simple + efficient if these two conditions are true
+	// (which they look to be from initial testing)
 	//
 	//
 	// TODO:

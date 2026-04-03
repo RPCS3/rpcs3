@@ -14,7 +14,7 @@ void unload_iso();
 
 /*
 - Hijacked the "iso_archive::iso_archive" method to test if the ".iso" file is encrypted and sets a flag.
-  The flag is set according to the first matching encryption type in the order below:
+  The flag is set according to the first matching encryption type found in the following order:
   - Redump type: ".dkey" file, with the same name of the ".iso" file, exists in the same folder of the ".iso" file
   - 3k3y type:   3k3y watermark exists at 0xF70
   If the flag is set then the "iso_file::read" method will decrypt the data on the fly
@@ -94,7 +94,7 @@ class iso_file : public fs::file_base
 private:
 	fs::file m_file;
 	std::shared_ptr<iso_file_decryption> m_dec;
-	iso_fs_metadata m_meta {};
+	iso_fs_metadata m_meta;
 	u64 m_pos = 0;
 
 	std::pair<u64, iso_extent_info> get_extent_pos(u64 pos) const;
