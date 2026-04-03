@@ -2798,12 +2798,6 @@ public:
 					if (m_reduced_loop_info && m_reduced_loop_info->loop_may_update.test(i))
 					{
 						m_block->reg[i] = m_block->reg_save_and_restore[i];
-
-						if (m_block->reg[i])
-						{
-							m_block->reg[i] = m_ir->CreateAdd(bitcast(m_block->reg[i], get_type<u32[4]>()), splat<u32[4]>(1).eval(m_ir));
-							m_block->reg[i] = m_ir->CreateAdd(bitcast(m_block->reg[i], get_type<u32[4]>()), splat<u32[4]>(0 - 1).eval(m_ir));
-						}
 					}
 				}
 
