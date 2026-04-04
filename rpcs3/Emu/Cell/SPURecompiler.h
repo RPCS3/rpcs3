@@ -361,10 +361,12 @@ public:
 		std::bitset<s_reg_max> loop_args;
 		std::bitset<s_reg_max> loop_dicts;
 		std::bitset<s_reg_max> loop_writes;
+		std::bitset<s_reg_max> loop_may_update;
+		std::bitset<s_reg_max> gpr_not_nans;
 
 		struct origin_t
 		{
-			std::bitset<s_reg_max> regs{};
+			std::bitset<s_reg_max + 1> regs{};
 			u32 modified = 0;
 			spu_itype_t mod1_type = spu_itype::UNK;
 			spu_itype_t mod2_type = spu_itype::UNK;
@@ -678,6 +680,11 @@ public:
 			}
 
 			return true;
+		}
+
+		bool is_gpr_not_NaN_hint(u32 i) const noexcept
+		{
+			return ::at32(gpr_not_nans, i);
 		}
 
 		origin_t get_reg(u32 reg_val) noexcept

@@ -60,6 +60,7 @@ const extern spu_decoder<spu_iflag> g_spu_iflag;
 #pragma GCC diagnostic pop
 #endif
 
+#pragma optimize("", off)
 #ifdef ARCH_ARM64
 #include "Emu/CPU/Backends/AArch64/AArch64JIT.h"
 #endif
@@ -152,6 +153,9 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		// Current register values
 		std::array<llvm::Value*, s_reg_max> reg{};
 
+		// Opimization: restoring register state for registers that would be rewritten in other blocks
+		std::array<llvm::Value*, s_reg_max> reg_save_and_restore{};
+
 		// PHI nodes created for this block (if any)
 		std::array<llvm::PHINode*, s_reg_max> phi{};
 
@@ -177,11 +181,6 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 			const usz first_id = store_context_first_id[i];
 			return counter != 1 && first_id != umax && counter < first_id;
 		}
-
-		bool is_gpr_not_NaN_hint(u32 i) const noexcept
-		{
-			return block_wide_reg_store_elimination && ::at32(bb->reg_maybe_float, i) && ::at32(bb->reg_use, i) >= 3 && !::at32(bb->reg_mod, i);
-		}
 	};
 
 	struct function_info
@@ -197,10 +196,13 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	};
 
 	// Current block
-	block_info* m_block;
+	block_info* m_block = nullptr;
 
 	// Current function or chunk
-	function_info* m_finfo;
+	function_info* m_finfo = nullptr;
+
+	// Reduced Loop Pattern information (if available)
+	reduced_loop_t* m_reduced_loop_info = nullptr;
 
 	// All blocks in the current function chunk
 	std::unordered_map<u32, block_info, value_hash<u32, 2>> m_blocks;
@@ -2280,7 +2282,7 @@ public:
 				}
 
 				const bool is_reduced_loop = m_inst_attrs[(baddr - start) / 4] == inst_attr::reduced_loop;
-				const auto reduced_loop_info = is_reduced_loop ? std::static_pointer_cast<reduced_loop_t>(ensure(m_patterns.at(baddr - start).info_ptr)) : nullptr;
+				m_reduced_loop_info = is_reduced_loop ? std::static_pointer_cast<reduced_loop_t>(ensure(m_patterns.at(baddr - start).info_ptr)).get() : nullptr;
 
 				BasicBlock* block_optimization_phi_parent =  nullptr;
 				const auto block_optimization_inner = is_reduced_loop ? BasicBlock::Create(m_context, fmt::format("b-loop-it-0x%x", m_pos), m_function) : nullptr;
@@ -2290,11 +2292,24 @@ public:
 				std::array<llvm::PHINode*, s_reg_max> reduced_loop_phi_nodes{};
 				std::array<llvm::Value*, s_reg_max> reduced_loop_init_regs{};
 
-				auto make_reduced_loop_condition = [&](llvm::BasicBlock* optimization_block, bool is_second_time, u32 reserve_iterations)
+				// Reserve additional iteration for rare case where GPR may not be rewritten after the iteration
+				// So that it would have to be rewritten by future code
+				// This avoids using additional PHI connectors
+				const u32 reserve_iterations = m_reduced_loop_info && m_reduced_loop_info->loop_may_update.count() != 0 ? 3 : 2;
+
+				for (u32 i = 0; i < s_reg_max; i++)
+				{
+					if (m_reduced_loop_info && m_reduced_loop_info->loop_may_update.test(i))
+					{
+						m_block->reg_save_and_restore[i] = m_block->reg[i];
+					}
+				}
+
+				auto make_reduced_loop_condition = [&](llvm::BasicBlock* optimization_block, bool is_second_time)
 				{
 					llvm::ICmpInst::Predicate compare{};
 
-					switch (reduced_loop_info->cond_val_compare)
+					switch (m_reduced_loop_info->cond_val_compare)
 					{
 					case CMP_SLESS:  compare = ICmpInst::ICMP_SLT; break;
 					case CMP_SGREATER: compare = ICmpInst::ICMP_SGT; break;
@@ -2323,11 +2338,11 @@ public:
 					llvm::Value* loop_dictator_after_adjustment{};
 
 					spu_opcode_t reg_target{};
-					reg_target.rt = static_cast<u32>(reduced_loop_info->cond_val_register_idx);
+					reg_target.rt = static_cast<u32>(m_reduced_loop_info->cond_val_register_idx);
 
-					if (reg_target.rt != reduced_loop_info->cond_val_register_idx)
+					if (reg_target.rt != m_reduced_loop_info->cond_val_register_idx)
 					{
-						fmt::throw_exception("LLVM: Reduced Loop Pattern: Illegal condition register index: 0x%llx", reduced_loop_info->cond_val_register_idx);
+						fmt::throw_exception("LLVM: Reduced Loop Pattern: Illegal condition register index: 0x%llx", m_reduced_loop_info->cond_val_register_idx);
 					}
 
 					if (!m_block->reg[reg_target.rt])
@@ -2335,7 +2350,7 @@ public:
 						m_block->reg[reg_target.rt] = reduced_loop_init_regs[reg_target.rt];
 					}
 
-					switch (reduced_loop_info->cond_val_mask)
+					switch (m_reduced_loop_info->cond_val_mask)
 					{
 					case u8{umax}:
 					{
@@ -2360,28 +2375,28 @@ public:
 					}
 					default:
 					{
-						fmt::throw_exception("LLVM: Reduced Loop Pattern: Illegal condition bit mask: 0x%llx", reduced_loop_info->cond_val_mask);
+						fmt::throw_exception("LLVM: Reduced Loop Pattern: Illegal condition bit mask: 0x%llx", m_reduced_loop_info->cond_val_mask);
 					}
 					}
 
-					const u32 type_bits = std::popcount(reduced_loop_info->cond_val_mask);
+					const u32 type_bits = std::popcount(m_reduced_loop_info->cond_val_mask);
 
 					llvm::Value* cond_val_incr = nullptr;
 
-					if (reduced_loop_info->cond_val_incr_is_immediate)
+					if (m_reduced_loop_info->cond_val_incr_is_immediate)
 					{
-						cond_val_incr = m_ir->getIntN(type_bits, reduced_loop_info->cond_val_incr & reduced_loop_info->cond_val_mask);
+						cond_val_incr = m_ir->getIntN(type_bits, m_reduced_loop_info->cond_val_incr & m_reduced_loop_info->cond_val_mask);
 					}
 					else
 					{
 						spu_opcode_t reg_incr{};
-						reg_incr.rt = static_cast<u32>(reduced_loop_info->cond_val_incr);
+						reg_incr.rt = static_cast<u32>(m_reduced_loop_info->cond_val_incr);
 
-						if (reg_incr.rt != reduced_loop_info->cond_val_incr)
+						if (reg_incr.rt != m_reduced_loop_info->cond_val_incr)
 						{
-							fmt::throw_exception("LLVM: Reduced Loop Pattern: Illegal increment arguemnt register index: 0x%llx", reduced_loop_info->cond_val_incr);
+							fmt::throw_exception("LLVM: Reduced Loop Pattern: Illegal increment arguemnt register index: 0x%llx", m_reduced_loop_info->cond_val_incr);
 						}
-						switch (reduced_loop_info->cond_val_mask)
+						switch (m_reduced_loop_info->cond_val_mask)
 						{
 						case u8{umax}:
 						{
@@ -2407,7 +2422,7 @@ public:
 						}
 					}
 
-					if (reduced_loop_info->cond_val_incr_before_cond && !reduced_loop_info->cond_val_incr_before_cond_taken_in_account)
+					if (m_reduced_loop_info->cond_val_incr_before_cond && !m_reduced_loop_info->cond_val_incr_before_cond_taken_in_account)
 					{
 						loop_dictator_after_adjustment = m_ir->CreateAdd(loop_dictator_before_adjustment, cond_val_incr);
 					}
@@ -2418,21 +2433,21 @@ public:
 
 					llvm::Value* loop_argument = nullptr;
 
-					if (reduced_loop_info->cond_val_is_immediate)
+					if (m_reduced_loop_info->cond_val_is_immediate)
 					{
-						loop_argument = m_ir->CreateTrunc(m_ir->getInt64(reduced_loop_info->cond_val_min & reduced_loop_info->cond_val_mask), loop_dictator_before_adjustment->getType());
+						loop_argument = m_ir->CreateTrunc(m_ir->getInt64(m_reduced_loop_info->cond_val_min & m_reduced_loop_info->cond_val_mask), loop_dictator_before_adjustment->getType());
 					}
 					else
 					{
 						spu_opcode_t reg_target2{};
-						reg_target2.rt = static_cast<u32>(reduced_loop_info->cond_val_register_argument_idx);
+						reg_target2.rt = static_cast<u32>(m_reduced_loop_info->cond_val_register_argument_idx);
 
-						if (reg_target2.rt != reduced_loop_info->cond_val_register_argument_idx)
+						if (reg_target2.rt != m_reduced_loop_info->cond_val_register_argument_idx)
 						{
-							fmt::throw_exception("LLVM: Reduced Loop Pattern: Illegal condition arguemnt register index: 0x%llx", reduced_loop_info->cond_val_register_argument_idx);
+							fmt::throw_exception("LLVM: Reduced Loop Pattern: Illegal condition arguemnt register index: 0x%llx", m_reduced_loop_info->cond_val_register_argument_idx);
 						}
 
-						switch (reduced_loop_info->cond_val_mask)
+						switch (m_reduced_loop_info->cond_val_mask)
 						{
 						case u8{umax}:
 						{
@@ -2464,7 +2479,7 @@ public:
 					{
 						condition = m_ir->CreateICmp(compare, loop_dictator_after_adjustment, loop_argument);
 					}
-					// else if ((reduced_loop_info->cond_val_compare == CMP_LGREATER || (reduced_loop_info->cond_val_compare == CMP_LGREATER_EQUAL && reduced_loop_info->cond_val_is_immediate && reduced_loop_info->cond_val_incr)) && cond_val_incr->getSExtValue() < 0)
+					// else if ((m_reduced_loop_info->cond_val_compare == CMP_LGREATER || (m_reduced_loop_info->cond_val_compare == CMP_LGREATER_EQUAL && m_reduced_loop_info->cond_val_is_immediate && m_reduced_loop_info->cond_val_incr)) && cond_val_incr->getSExtValue() < 0)
 					// {
 					// 	const auto cond_val_incr_multiplied = m_ir->CreateMul(cond_val_incr, reserve_iterations - 1);
 					// 	condition = m_ir->CreateICmp(compare, select(m_ir->CreateICmpUGE(cond_val_incr_multiplied, loop_dictator_after_adjustment), m_ir->CreateAdd(loop_dictator_after_adjustment, cond_val_incr_multiplied), m_ir->getIntN(type_bits, 0)), loop_argument);
@@ -2493,7 +2508,7 @@ public:
 						{
 							const bool is_last = !(count <= 20 && i < s_reg_max);
 
-							if (is_last || m_block->is_gpr_not_NaN_hint(i))
+							if (is_last || m_reduced_loop_info->is_gpr_not_NaN_hint(i))
 							{
 								count++;
 
@@ -2542,9 +2557,24 @@ public:
 								break;
 							}
 						}
-					}
 
-					//condition = m_ir->getInt1(0);
+						// TODO: Optimze so constant evalatuated cases will not be checked
+						const bool is_cond_need_runtime_verify = compare == ICmpInst::ICMP_NE && (!m_reduced_loop_info->cond_val_is_immediate || m_reduced_loop_info->cond_val_incr % 2 == 0);
+
+						if (is_cond_need_runtime_verify)
+						{
+							// Verify that it is actually possible to finish the loop and it is not an infinite loop
+
+							// First: create a mask of the bits that definitely do not change between iterations (0 results in umax which is accurate here)
+							const auto no_change_bits = m_ir->CreateAnd(m_ir->CreateNot(cond_val_incr), m_ir->CreateSub(cond_val_incr, m_ir->getIntN(type_bits, 1)));
+
+							// Compare that when the mask applied to both the result and the original value is the same
+							const auto cond_verify = m_ir->CreateICmpEQ(m_ir->CreateAnd(loop_dictator_after_adjustment, no_change_bits), m_ir->CreateAnd(loop_argument, no_change_bits));
+
+							// Amend condition
+							condition = m_ir->CreateAnd(cond_verify, condition);
+						}
+					}
 
 					m_ir->CreateCondBr(condition, optimization_block, block_optimization_next);
 				};
@@ -2555,7 +2585,7 @@ public:
 					{
 						llvm::Type* type = g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate && bb.reg_maybe_xf[i] ? get_type<f64[4]>() : get_reg_type(i);
 
-						if (i < reduced_loop_info->loop_dicts.size() && (reduced_loop_info->loop_dicts.test(i) || reduced_loop_info->loop_writes.test(i)))
+						if (i < m_reduced_loop_info->loop_dicts.size() && (m_reduced_loop_info->loop_dicts.test(i) || m_reduced_loop_info->loop_writes.test(i)))
 						{
 							// Connect registers which are used and then modified by the block
 							auto value = m_block->reg[i];
@@ -2567,7 +2597,7 @@ public:
 
 							reduced_loop_init_regs[i] = value;
 						}
-						else if (i < reduced_loop_info->loop_dicts.size() && reduced_loop_info->loop_args.test(i))
+						else if (i < m_reduced_loop_info->loop_dicts.size() && m_reduced_loop_info->loop_args.test(i))
 						{
 							// Load registers used as arguments of the loop
 							if (!m_block->reg[i])
@@ -2580,8 +2610,8 @@ public:
 					const auto prev_insert_block = m_ir->GetInsertBlock();
 
 					block_optimization_phi_parent = prev_insert_block;
-	
-					make_reduced_loop_condition(block_optimization_inner, false, 2);
+
+					make_reduced_loop_condition(block_optimization_inner, false);
 					m_ir->SetInsertPoint(block_optimization_inner);
 
 					for (u32 i = 0; i < s_reg_max; i++)
@@ -2611,7 +2641,7 @@ public:
 
 				for (u32 iteration_emit = 0; is_reduced_loop; m_pos += 4)
 				{
-					if (m_pos != baddr && m_block_info[m_pos / 4] && reduced_loop_info->loop_end < m_pos)
+					if (m_pos != baddr && m_block_info[m_pos / 4] && m_reduced_loop_info->loop_end < m_pos)
 					{
 						fmt::throw_exception("LLVM: Reduced Loop Pattern: Exit(1) too early at 0x%x", m_pos);
 					}
@@ -2667,8 +2697,8 @@ public:
 							}
 						}
 
-						ensure(!!m_block->reg[reduced_loop_info->cond_val_register_idx]);
-						make_reduced_loop_condition(block_optimization_inner, true, 2);
+						ensure(!!m_block->reg[m_reduced_loop_info->cond_val_register_idx]);
+						make_reduced_loop_condition(block_optimization_inner, true);
 						m_ir->SetInsertPoint(block_optimization_next);
 						m_block->block_wide_reg_store_elimination = false;
 
@@ -2762,6 +2792,16 @@ public:
 						masked_times[masked_op] = {ensure(m_block->reg[reg_rt]), inst_times};
 					}
 				}
+
+				for (u32 i = 0; i < s_reg_max; i++)
+				{
+					if (m_reduced_loop_info && m_reduced_loop_info->loop_may_update.test(i))
+					{
+						m_block->reg[i] = m_block->reg_save_and_restore[i];
+					}
+				}
+
+				m_reduced_loop_info = nullptr;
 
 				// Emit instructions
 				for (m_pos = baddr; m_pos >= start && m_pos < end && !m_ir->GetInsertBlock()->getTerminator(); m_pos += 4)
@@ -6978,7 +7018,7 @@ public:
 
 	value_t<f32[4]> clamp_smax(value_t<f32[4]> v, u32 gpr = s_reg_max)
 	{
-		if (m_block && gpr < s_reg_max && m_block->block_wide_reg_store_elimination && m_block->is_gpr_not_NaN_hint(gpr))
+		if (m_reduced_loop_info && gpr < s_reg_max && m_reduced_loop_info->is_gpr_not_NaN_hint(gpr))
 		{
 			return v;
 		}
@@ -7129,12 +7169,12 @@ public:
 				}
 			}
 
-			if (m_block && m_block->block_wide_reg_store_elimination && m_block->is_gpr_not_NaN_hint(op.ra))
+			if (m_reduced_loop_info && m_reduced_loop_info->is_gpr_not_NaN_hint(op.ra))
 			{
 				safe_finite_compare.set(0);
 			}
 
-			if (m_block && m_block->block_wide_reg_store_elimination && m_block->is_gpr_not_NaN_hint(op.rb))
+			if (m_reduced_loop_info && m_reduced_loop_info->is_gpr_not_NaN_hint(op.rb))
 			{
 				safe_finite_compare.set(1);
 			}
@@ -7328,8 +7368,8 @@ public:
 			}
 		});
 
-		const u32 a_notnan = m_block && m_block->block_wide_reg_store_elimination && m_block->is_gpr_not_NaN_hint(op.ra) ? 1 : 0;
-		const u32 b_notnan = m_block && m_block->block_wide_reg_store_elimination && m_block->is_gpr_not_NaN_hint(op.rb) ? 1 : 0;
+		const u32 a_notnan = m_reduced_loop_info && m_reduced_loop_info->is_gpr_not_NaN_hint(op.ra) ? 1 : 0;
+		const u32 b_notnan = m_reduced_loop_info && m_reduced_loop_info->is_gpr_not_NaN_hint(op.rb) ? 1 : 0;
 
 		if (op.ra == op.rb && !m_interp_magn)
 		{
@@ -7765,8 +7805,8 @@ public:
 		const auto [a, b, c] = get_vrs<f32[4]>(op.ra, op.rb, op.rc);
 		static const auto MT = match<f32[4]>();
 
-		const u32 a_notnan = m_block && m_block->block_wide_reg_store_elimination && m_block->is_gpr_not_NaN_hint(op.ra) ? 1 : 0;
-		const u32 b_notnan = m_block && m_block->block_wide_reg_store_elimination && m_block->is_gpr_not_NaN_hint(op.rb) ? 1 : 0;
+		const u32 a_notnan = m_reduced_loop_info && m_reduced_loop_info->is_gpr_not_NaN_hint(op.ra) ? 1 : 0;
+		const u32 b_notnan = m_reduced_loop_info && m_reduced_loop_info->is_gpr_not_NaN_hint(op.rb) ? 1 : 0;
 
 		auto check_sqrt_pattern_for_float = [&](f32 float_value) -> bool
 		{
