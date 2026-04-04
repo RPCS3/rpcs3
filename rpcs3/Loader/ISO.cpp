@@ -283,12 +283,16 @@ bool iso_file_decryption::init(const std::string& path)
 	{
 	case iso_encryption_type::ENC_TYPE_REDUMP:
 		sys_log.warning("init(): Set 'enc type': REDUMP, 'reg count': %u: %s", m_region_info.size(), path);
+		break;
 	case iso_encryption_type::ENC_TYPE_3K3Y_ENC:
 		sys_log.warning("init(): Set 'enc type': 3K3Y_ENC, 'reg count': %u: %s", m_region_info.size(), path);
+		break;
 	case iso_encryption_type::ENC_TYPE_3K3Y_DEC:
 		sys_log.warning("init(): Set 'enc type': 3K3Y_DEC, 'reg count': %u: %s", m_region_info.size(), path);
+		break;
 	default: // If encryption type was not set for any reason
 		sys_log.warning("init(): Set 'enc type': NONE, 'reg count': %u: %s", m_region_info.size(), path);
+		break;
 	}
 
 	return true;
