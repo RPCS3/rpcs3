@@ -12,6 +12,8 @@
 
 #include "util/asm.hpp"
 
+#include <QApplication>
+#include <QClipboard>
 #include <QMouseEvent>
 #include <QWheelEvent>
 #include <QVBoxLayout>
@@ -33,6 +35,7 @@ debugger_list::debugger_list(QWidget* parent, std::shared_ptr<gui_settings> gui_
 
 	setSizeAdjustPolicy(QListWidget::AdjustToContents);
 	setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+	setSelectionMode(QAbstractItemView::ExtendedSelection);
 
 	connect(this, &QListWidget::currentRowChanged, this, [this](int row)
 	{
@@ -172,6 +175,8 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool direct)
 	{
 		// The user wants to survey a specific memory location, do not interfere from this point forth
 		m_follow_thread = false;
+
+		clearSelection();
 	}
 
 	m_dirty_flag = false;
@@ -191,14 +196,6 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool direct)
 	if (select_addr)
 	{
 		m_selected_instruction = addr;
-	}
-
-	for (uint i = 0; i < m_item_count; ++i)
-	{
-		if (auto list_item = item(i); list_item->isSelected())
-		{
-			list_item->setSelected(false);
-		}
 	}
 
 	if (!m_disasm || (cpu && cpu->state.all_of(cpu_flag::exit + cpu_flag::wait)))
@@ -339,6 +336,19 @@ void debugger_list::keyPressEvent(QKeyEvent* event)
 	if (!isActiveWindow())
 	{
 		QListWidget::keyPressEvent(event);
+		return;
+	}
+
+	if (event->key() == Qt::Key_C && event->modifiers() == Qt::ControlModifier)
+	{
+		QStringList lines;
+		for (int row = 0; row < count(); ++row)
+		{
+			if (const QListWidgetItem* it = item(row); it && it->isSelected())
+				lines << it->text();
+		}
+		if (!lines.isEmpty())
+			QApplication::clipboard()->setText(lines.join('\n'));
 		return;
 	}
 
