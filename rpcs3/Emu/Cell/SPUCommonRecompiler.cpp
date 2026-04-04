@@ -6194,7 +6194,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				{
 					const auto arg = reduced_loop->find_reg(reg);
 
-					if (arg && reg != op_rt)
+					if (arg && arg->regs.count() != 0)
 					{
 						if (reg_first == reg)
 						{
@@ -6215,6 +6215,12 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 						org.add_register_origin(reg);
 					}
 				}
+			}
+
+			if (type & spu_itype::memory || type == spu_itype::RDCH || type == spu_itype::RCHCNT)
+			{
+				// Register external origin
+				org.add_register_origin(s_reg_max);
 			}
 
 			*ensure(reduced_loop->find_reg(op_rt)) = org;
@@ -6359,25 +6365,54 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					}
 				}
 
+				std::array<u32, s_reg_max> reg_use{};
+				std::bitset<s_reg_max> reg_maybe_float{};
+				std::bitset<s_reg_max> reg_mod{};
+
+				for (auto it = m_bbs.find(reduced_loop->loop_pc); it != m_bbs.end() && it->first <= bpc; it++)
+				{
+					for (u32 i = 0; i < s_reg_max; i++)
+					{
+						if (!reg_mod[i])
+						{
+							reg_use[i] += it->second.reg_use[i];
+						}
+					}
+
+					reg_maybe_float |= it->second.reg_maybe_float;
+					reg_mod |= it->second.reg_mod;
+
+					// Note: update when sup_conds are implemented
+					if (it->first == bpc && it->first != reduced_loop->loop_pc)
+					{
+						reduced_loop->loop_may_update |= it->second.reg_mod;
+					}
+				}
+
 				for (u32 i = 0; i < s_reg_max; i++)
 				{
-					const auto& b = ::at32(m_bbs, reduced_loop->loop_pc); 
-					const auto& b2 = ::at32(m_bbs, bpc); 
-
 					if (!::at32(reduced_loop->loop_dicts, i))
 					{
-						if (b.reg_use[i] || (!::at32(b.reg_mod, i) && b2.reg_use[i]))
+						if (reg_use[i] && reg_mod[i])
 						{
-							if ((b.reg_use[i] && ::at32(b.reg_mod, i)) || ::at32(b2.reg_mod, i))
+							reduced_loop->is_constant_expression = false;
+							reduced_loop->loop_writes.set(i);
+							reduced_loop->loop_may_update.reset(i);
+						}
+						else if (reg_use[i])
+						{
+							reduced_loop->loop_args.set(i);
+
+							if (reg_use[i] >= 3 && reg_maybe_float[i])
 							{
-								reduced_loop->is_constant_expression = false;
-								reduced_loop->loop_writes.set(i);
-							}
-							else
-							{
-								reduced_loop->loop_args.set(i);
+								reduced_loop->gpr_not_nans.set(i);
 							}
 						}
+					}
+					else
+					{
+						// Cleanup
+						reduced_loop->loop_may_update.reset(i);
 					}
 				}
 
@@ -6731,6 +6766,13 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 							break;
 						}
 
+						if (reg_index != i && ::at32(reg->regs, reg_index))
+						{
+							// Unimplemented
+							break_reduced_loop_pattern(30, reduced_loop->discard());
+							break;
+						}
+
 						u32 cond_val_incr = static_cast<s32>(reg_org->IMM);
 
 						if (reg_org->mod1_type == spu_itype::AI || reg_org->mod1_type == spu_itype::AHI)
@@ -7049,25 +7091,54 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 						}
 					}
 
+					std::array<u32, s_reg_max> reg_use{};
+					std::bitset<s_reg_max> reg_maybe_float{};
+					std::bitset<s_reg_max> reg_mod{};
+
+					for (auto it = m_bbs.find(reduced_loop->loop_pc); it != m_bbs.end() && it->first <= bpc; it++)
+					{
+						for (u32 i = 0; i < s_reg_max; i++)
+						{
+							if (!reg_mod[i])
+							{
+								reg_use[i] += it->second.reg_use[i];
+							}
+						}
+
+						reg_maybe_float |= it->second.reg_maybe_float;
+						reg_mod |= it->second.reg_mod;
+
+						// Note: update when sup_conds are implemented
+						if (it->first == bpc && it->first != reduced_loop->loop_pc)
+						{
+							reduced_loop->loop_may_update |= it->second.reg_mod;
+						}
+					}
+
 					for (u32 i = 0; i < s_reg_max; i++)
 					{
-						const auto& b = ::at32(m_bbs, reduced_loop->loop_pc); 
-						const auto& b2 = ::at32(m_bbs, bpc); 
-
 						if (!::at32(reduced_loop->loop_dicts, i))
 						{
-							if (b.reg_use[i] || (!::at32(b.reg_mod, i) && b2.reg_use[i]))
+							if (reg_use[i] && reg_mod[i])
 							{
-								if ((b.reg_use[i] && ::at32(b.reg_mod, i)) || ::at32(b2.reg_mod, i))
+								reduced_loop->is_constant_expression = false;
+								reduced_loop->loop_writes.set(i);
+								reduced_loop->loop_may_update.reset(i);
+							}
+							else if (reg_use[i])
+							{
+								reduced_loop->loop_args.set(i);
+
+								if (reg_use[i] >= 3 && reg_maybe_float[i])
 								{
-									reduced_loop->is_constant_expression = false;
-									reduced_loop->loop_writes.set(i);
-								}
-								else
-								{
-									reduced_loop->loop_args.set(i);
+									reduced_loop->gpr_not_nans.set(i);
 								}
 							}
+						}
+						else
+						{
+							// Cleanup
+							reduced_loop->loop_may_update.reset(i);
 						}
 					}
 
@@ -8607,6 +8678,16 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					}
 
 					fmt::append(regs, " r%u-r", i);
+				}
+
+				if (::at32(pattern.loop_may_update, i))
+				{
+					if (regs.size() != 1)
+					{
+						regs += ",";
+					}
+
+					fmt::append(regs, " r%u-m", i);
 				}
 			}
 
