@@ -281,10 +281,7 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 						update_log.notice("JSON changelog entry does not contain a title string.");
 					}
 
-					if (QJsonValue pr = changelog_entry["pr"]; pr.isDouble())
-					{
-						entry.pr = pr.toInt();
-					}
+					entry.pr = changelog_entry["pr"].toInt();
 
 					m_update_info.changelog.push_back(std::move(entry));
 				}
