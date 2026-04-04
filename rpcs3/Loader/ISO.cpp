@@ -38,65 +38,65 @@ bool is_file_iso(const fs::file& file)
 const int ISO_BLOCK_SIZE = 2048;
 
 template<typename T>
-inline T retrieve_endian_int(const u8* buf)
+inline T read_both_endian_int(fs::file& file)
 {
-	T out {};
+	T out;
 
-	if constexpr (std::endian::little == std::endian::native)
+	if (std::endian::little == std::endian::native)
 	{
-		// first half = little-endian copy
-		std::memcpy(&out, buf, sizeof(T));
+		out = file.read<T>();
+		file.seek(sizeof(T), fs::seek_cur);
 	}
 	else
 	{
-		// second half = big-endian copy
-		std::memcpy(&out, buf + sizeof(T), sizeof(T));
+		file.seek(sizeof(T), fs::seek_cur);
+		out = file.read<T>();
 	}
 
 	return out;
 }
 
 // assumed that directory_entry is at file head
-std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& file, bool names_in_ucs2 = false)
+static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, bool names_in_ucs2 = false)
 {
-	const auto start_pos = file.pos();
-	const u8 entry_length = file.read<u8>();
+	const auto start_pos = entry.pos();
+	const u8 entry_length = entry.read<u8>();
 
 	if (entry_length == 0) return std::nullopt;
 
 	// Batch this set of file reads. This reduces overall time spent in iso_read_directory_entry by ~38%
 	constexpr usz read_size = 1 + 4 * sizeof(u32) + 8 + 6 + 1;
-	const std::array<u8, read_size> data = file.read<std::array<u8, read_size>>();
-	u32 pos = 1;
+	const std::array<u8, read_size> data = entry.read<std::array<u8, read_size>>();
+	fs::file file(data.data(), data.size());
 
-	const u32 start_sector = retrieve_endian_int<u32>(&data[pos]);
-	pos += 2 * sizeof(u32);
-
-	const u32 file_size = retrieve_endian_int<u32>(&data[pos]);
-	pos += 2 * sizeof(u32);
+	file.seek(1, fs::seek_cur);
+	const u32 start_sector = read_both_endian_int<u32>(file);
+	const u32 file_size = read_both_endian_int<u32>(file);
 
 	std::tm file_date = {};
-	file_date.tm_year = ::at32(data, pos++);
-	file_date.tm_mon = ::at32(data, pos++) - 1;
-	file_date.tm_mday = ::at32(data, pos++);
-	file_date.tm_hour = ::at32(data, pos++);
-	file_date.tm_min = ::at32(data, pos++);
-	file_date.tm_sec = ::at32(data, pos++);
-	const s16 timezone_value = ::at32(data, pos++);
+	file_date.tm_year = file.read<u8>();
+	file_date.tm_mon = file.read<u8>() - 1;
+	file_date.tm_mday = file.read<u8>();
+	file_date.tm_hour = file.read<u8>();
+	file_date.tm_min = file.read<u8>();
+	file_date.tm_sec = file.read<u8>();
+	const s16 timezone_value = file.read<u8>();
 	const s16 timezone_offset = (timezone_value - 50) * 15 * 60;
 
 	const std::time_t date_time = std::mktime(&file_date) + timezone_offset;
 
-	const u8 flags = ::at32(data, pos++);
+	const u8 flags = file.read<u8>();
 
 	// 2nd flag bit indicates whether a given fs node is a directory
 	const bool is_directory = flags & 0b00000010;
 	const bool has_more_extents = flags & 0b10000000;
 
-	const u8 file_name_length = data.back();
+	file.seek(6, fs::seek_cur);
+
+	const u8 file_name_length = file.read<u8>();
 
 	std::string file_name;
-	file.read(file_name, file_name_length);
+	entry.read(file_name, file_name_length);
 
 	if (file_name_length == 1 && file_name[0] == 0)
 	{
@@ -132,7 +132,7 @@ std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& file, bool nam
 	}
 
 	// skip the rest of the entry.
-	file.seek(entry_length + start_pos);
+	entry.seek(entry_length + start_pos);
 
 	return iso_fs_metadata
 	{
