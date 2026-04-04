@@ -57,8 +57,6 @@ private:
 	void reset();
 
 public:
-	~iso_file_decryption();
-
 	iso_encryption_type get_enc_type() const { return m_enc_type; }
 
 	bool init(const std::string& path);

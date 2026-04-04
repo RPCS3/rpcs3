@@ -75,7 +75,6 @@ static void decrypt_data(aes_context& aes, unsigned char* data, u32 sector_count
 		if (aes_crypt_cbc(&aes, AES_DECRYPT, ISO_SECTOR_SIZE, iv.data(), &data[ISO_SECTOR_SIZE * i], &data[ISO_SECTOR_SIZE * i]) != 0)
 		{
 			sys_log.error("decrypt_data(): Error decrypting data (decrypt_data() > aes_crypt_cbc())");
-
 			return;
 		}
 	}
@@ -85,11 +84,6 @@ void iso_file_decryption::reset()
 {
 	m_enc_type = iso_encryption_type::NONE;
 	m_region_info.clear();
-}
-
-iso_file_decryption::~iso_file_decryption()
-{
-	reset();
 }
 
 bool iso_file_decryption::init(const std::string& path)
@@ -107,60 +101,49 @@ bool iso_file_decryption::init(const std::string& path)
 	// Store the ISO region information (needed by both the "Redump" type (only on "decrypt()" method) and "3k3y" type)
 	//
 
-	bool region_info_stored = false;
+	fs::file iso_file(path);
 
-	if (fs::file iso_file(path); iso_file)
-	{
-		if (iso_file.size() >= sec0_sec1.size())
-		{
-			if (iso_file.read(sec0_sec1.data(), sec0_sec1.size()) == sec0_sec1.size())
-			{
-				// NOTE:
-				//
-				// Following checks and assigned values are based on PS3 ISO specification.
-				// E.g. all even regions (0, 2, 4 etc.) are always unencrypted while the odd ones are encrypted
-
-				size_t region_count = char_arr_BE_to_uint(sec0_sec1.data());
-
-				// Ensure the region count is a proper value
-				if (region_count > 0 && region_count < 32)
-				{
-					m_region_info.resize(region_count * 2 - 1);
-
-					for (size_t i = 0; i < m_region_info.size(); ++i)
-					{
-						// Store the region information in address format
-						m_region_info[i].encrypted = (i % 2 == 1);
-						m_region_info[i].region_first_addr = (i == 0 ? 0ULL : m_region_info[i - 1].region_last_addr + 1ULL);
-						m_region_info[i].region_last_addr = (static_cast<u64>(char_arr_BE_to_uint(sec0_sec1.data() + 12 + (i * 4)))
-							- (i % 2 == 1 ? 1ULL : 0ULL)) * ISO_SECTOR_SIZE + ISO_SECTOR_SIZE - 1ULL;
-
-						region_info_stored = true;
-					}
-				}
-				else // It's non-PS3ISO
-				{
-					sys_log.error("init(): Failed to read region information: %s", path);
-				}
-			}
-			else
-			{
-				sys_log.error("init(): Failed to read file: %s", path);
-			}
-		}
-		else
-		{
-			sys_log.error("init(): Found only %ull sector(s) (minimum required is 2): %s", iso_file.size(), path);
-		}
-	}
-	else
+	if (!iso_file)
 	{
 		sys_log.error("init(): Failed to open file: %s", path);
+		return false;
 	}
 
-	if (!region_info_stored)
+	if (iso_file.size() < sec0_sec1.size())
 	{
+		sys_log.error("init(): Found only %ull sector(s) (minimum required is 2): %s", iso_file.size(), path);
 		return false;
+	}
+
+	if (iso_file.read(sec0_sec1.data(), sec0_sec1.size()) != sec0_sec1.size())
+	{
+		sys_log.error("init(): Failed to read file: %s", path);
+		return false;
+	}
+
+	// NOTE:
+	//
+	// Following checks and assigned values are based on PS3 ISO specification.
+	// E.g. all even regions (0, 2, 4 etc.) are always unencrypted while the odd ones are encrypted
+
+	size_t region_count = char_arr_BE_to_uint(sec0_sec1.data());
+
+	// Ensure the region count is a proper value
+	if (region_count < 1 || region_count > 31) // It's non-PS3ISO
+	{
+		sys_log.error("init(): Failed to read region information: %s", path);
+		return false;
+	}
+
+	m_region_info.resize(region_count * 2 - 1);
+
+	for (size_t i = 0; i < m_region_info.size(); ++i)
+	{
+		// Store the region information in address format
+		m_region_info[i].encrypted = (i % 2 == 1);
+		m_region_info[i].region_first_addr = (i == 0 ? 0ULL : m_region_info[i - 1].region_last_addr + 1ULL);
+		m_region_info[i].region_last_addr = (static_cast<u64>(char_arr_BE_to_uint(sec0_sec1.data() + 12 + (i * 4)))
+			- (i % 2 == 1 ? 1ULL : 0ULL)) * ISO_SECTOR_SIZE + ISO_SECTOR_SIZE - 1ULL;
 	}
 
 	//
@@ -215,7 +198,7 @@ bool iso_file_decryption::init(const std::string& path)
 	// Check for 3k3y type
 	//
 
-	// If encryption type is still set to none (sec0_sec1 will be zeroed out if it didn't succeed above)
+	// If encryption type is still set to none
 	if (m_enc_type == iso_encryption_type::NONE)
 	{
 		// The 3k3y watermarks located at 0xF70: (D|E)ncrypted 3K BLD
