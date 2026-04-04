@@ -32,13 +32,13 @@ void unload_iso();
 // so would have to multiply or divide every read if storing lba)
 struct iso_region_info
 {
-	bool encrypted;
-	u64 region_first_addr;
-	u64 region_last_addr;
+	bool encrypted = false;
+	u64 region_first_addr = 0;
+	u64 region_last_addr = 0;
 };
 
 // Enum to decide ISO encryption type
-enum iso_encryption_type
+enum class iso_encryption_type
 {
 	ENC_TYPE_NONE,
 	ENC_TYPE_3K3Y_DEC,
@@ -51,11 +51,10 @@ class iso_file_decryption
 {
 private:
 	aes_context m_aes_dec;
-	iso_encryption_type m_enc_type = ENC_TYPE_NONE;
-	size_t m_region_count = 0;
-	iso_region_info* m_region_info = nullptr;
+	iso_encryption_type m_enc_type = iso_encryption_type::ENC_TYPE_NONE;
+	std::vector<iso_region_info> m_region_info;
 
-	void reset(void);
+	void reset();
 
 public:
 	~iso_file_decryption();

@@ -11,14 +11,14 @@
 
 LOG_CHANNEL(sys_log, "SYS");
 
-const u64 ISO_SECTOR_SIZE = 2048;
+constexpr u64 ISO_SECTOR_SIZE = 2048;
 
 struct iso_sector
 {
 	u64 archive_first_addr = 0;
 	u64 offset = 0;
 	u64 size = 0;
-	u8 buf[ISO_SECTOR_SIZE];
+	std::array<u8, ISO_SECTOR_SIZE> buf {};
 };
 
 bool is_file_iso(const std::string& path)
@@ -47,7 +47,7 @@ bool is_file_iso(const fs::file& file)
 // asciischar_to_byte() and keystr_to_keyarr(): Convert a hex string into a byte array
 static unsigned char asciischar_to_byte(char input)
 {
-	if (input >= '0' && input <= '9')
+	if (std::isdigit(input))
 		return input - '0';
 	if (input >= 'A' && input <= 'F')
 		return input - 'A' + 10;
@@ -68,15 +68,15 @@ static void keystr_to_keyarr(const char (&str)[32], unsigned char (&arr)[16])
 }
 
 // Convert 4 bytes in big-endian format to an unsigned integer
-static u32 char_arr_BE_to_uint(unsigned char* arr)
+static u32 char_arr_BE_to_uint(const u8* arr)
 {
 	return arr[0] << 24 | arr[1] << 16 | arr[2] << 8 | arr[3];
 }
 
 // Reset the iv to a particular lba
-static void reset_iv(unsigned char (&iv)[16], u32 lba)
+static void reset_iv(std::array<u8, 16>& iv, u32 lba)
 {
-	memset(iv, 0, 12);
+	memset(iv.data(), 0, 12);
 
 	iv[12] = (lba & 0xFF000000) >> 24;
 	iv[13] = (lba & 0x00FF0000) >> 16;
@@ -88,13 +88,13 @@ static void reset_iv(unsigned char (&iv)[16], u32 lba)
 static void decrypt_data(aes_context& aes, unsigned char* data, u32 sector_count, u32 start_lba)
 {
 	// Micro optimization, only ever used by "decrypt_data()"
-	unsigned char iv_[16];
+	std::array<u8, 16> iv;
 
 	for (u32 i = 0; i < sector_count; ++i)
 	{
-		reset_iv(iv_, start_lba + i);
+		reset_iv(iv, start_lba + i);
 
-		if (aes_crypt_cbc(&aes, AES_DECRYPT, ISO_SECTOR_SIZE, &iv_[0], &data[ISO_SECTOR_SIZE * i], &data[ISO_SECTOR_SIZE * i]) != 0)
+		if (aes_crypt_cbc(&aes, AES_DECRYPT, ISO_SECTOR_SIZE, iv.data(), &data[ISO_SECTOR_SIZE * i], &data[ISO_SECTOR_SIZE * i]) != 0)
 		{
 			sys_log.error("decrypt_data(): Error decrypting data (decrypt_data() > aes_crypt_cbc())");
 
@@ -103,16 +103,10 @@ static void decrypt_data(aes_context& aes, unsigned char* data, u32 sector_count
 	}
 }
 
-void iso_file_decryption::reset(void)
+void iso_file_decryption::reset()
 {
-	m_enc_type = ENC_TYPE_NONE;
-	m_region_count = 0;
-
-	if (m_region_info != NULL)
-	{
-		delete[] m_region_info;
-		m_region_info = NULL;
-	}
+	m_enc_type = iso_encryption_type::ENC_TYPE_NONE;
+	m_region_info.clear();
 }
 
 iso_file_decryption::~iso_file_decryption()
@@ -129,7 +123,7 @@ bool iso_file_decryption::init(const std::string& path)
 		return false;
 	}
 
-	unsigned char sec0_sec1[ISO_SECTOR_SIZE * 2] = {0};
+	std::array<u8, ISO_SECTOR_SIZE * 2> sec0_sec1 {};
 
 	//
 	// Store the ISO region information (needed by both the "Redump" type (only on "decrypt()" method) and "3k3y" type)
@@ -139,29 +133,28 @@ bool iso_file_decryption::init(const std::string& path)
 
 	if (fs::file iso_file(path); iso_file)
 	{
-		if (iso_file.size() >= ISO_SECTOR_SIZE * 2)
+		if (iso_file.size() >= sec0_sec1.size())
 		{
-			if (iso_file.read(sec0_sec1, sizeof(sec0_sec1)) == sizeof(sec0_sec1))
+			if (iso_file.read(sec0_sec1.data(), sec0_sec1.size()) == sec0_sec1.size())
 			{
 				// NOTE:
 				//
 				// Following checks and assigned values are based on PS3 ISO specification.
 				// E.g. all even regions (0, 2, 4 etc.) are always unencrypted while the odd ones are encrypted
 
-				size_t region_count = char_arr_BE_to_uint(sec0_sec1);
+				size_t region_count = char_arr_BE_to_uint(sec0_sec1.data());
 
 				// Ensure the region count is a proper value
 				if (region_count > 0 && region_count < 32)
 				{
-					m_region_count = region_count * 2 - 1;
-					m_region_info = new iso_region_info[m_region_count];
+					m_region_info.resize(region_count * 2 - 1);
 
-					for (size_t i = 0; i < m_region_count; ++i)
+					for (size_t i = 0; i < m_region_info.size(); ++i)
 					{
 						// Store the region information in address format
 						m_region_info[i].encrypted = (i % 2 == 1);
 						m_region_info[i].region_first_addr = (i == 0 ? 0ULL : m_region_info[i - 1].region_last_addr + 1ULL);
-						m_region_info[i].region_last_addr = (static_cast<u64>(char_arr_BE_to_uint(sec0_sec1 + 12 + (i * 4)))
+						m_region_info[i].region_last_addr = (static_cast<u64>(char_arr_BE_to_uint(sec0_sec1.data() + 12 + (i * 4)))
 							- (i % 2 == 1 ? 1ULL : 0ULL)) * ISO_SECTOR_SIZE + ISO_SECTOR_SIZE - 1ULL;
 
 						region_info_stored = true;
@@ -197,7 +190,7 @@ bool iso_file_decryption::init(const std::string& path)
 	//
 
 	std::string key_path;
-	size_t ext_pos = path.rfind('.');
+	const usz ext_pos = path.rfind('.');
 
 	// If no file extension is provided, set "key_path" appending ".dkey" to "path".
 	// Otherwise, replace the extension (e.g. ".iso") with ".dkey"
@@ -209,7 +202,7 @@ bool iso_file_decryption::init(const std::string& path)
 		char key_str[32];
 		unsigned char key[16];
 
-		u64 key_len = key_file.read(key_str, sizeof(key_str));
+		const u64 key_len = key_file.read(key_str, sizeof(key_str));
 
 		if (key_len == sizeof(key_str) || key_len == sizeof(key))
 		{
@@ -224,11 +217,11 @@ bool iso_file_decryption::init(const std::string& path)
 
 			if (aes_setkey_dec(&m_aes_dec, key, 128) == 0)
 			{
-				m_enc_type = ENC_TYPE_REDUMP; // SET ENCRYPTION TYPE: REDUMP
+				m_enc_type = iso_encryption_type::ENC_TYPE_REDUMP; // SET ENCRYPTION TYPE: REDUMP
 			}
 		}
 
-		if (m_enc_type == ENC_TYPE_NONE) // If encryption type was not set to REDUMP for any reason
+		if (m_enc_type == iso_encryption_type::ENC_TYPE_NONE) // If encryption type was not set to REDUMP for any reason
 		{
 			sys_log.error("init(): Failed to process key file: %s", key_path);
 		}
@@ -243,7 +236,7 @@ bool iso_file_decryption::init(const std::string& path)
 	//
 
 	// If encryption type is still set to none (sec0_sec1 will be zeroed out if it didn't succeed above)
-	if (m_enc_type == ENC_TYPE_NONE)
+	if (m_enc_type == iso_encryption_type::ENC_TYPE_NONE)
 	{
 		// The 3k3y watermarks located at 0xF70: (D|E)ncrypted 3K BLD
 		static const unsigned char k3k3y_enc_watermark[16] =
@@ -270,30 +263,33 @@ bool iso_file_decryption::init(const std::string& path)
 				{
 					if (aes_setkey_dec(&m_aes_dec, key, 128) == 0)
 					{
-						m_enc_type = ENC_TYPE_3K3Y_ENC; // SET ENCRYPTION TYPE: 3K3Y_ENC
+						m_enc_type = iso_encryption_type::ENC_TYPE_3K3Y_ENC; // SET ENCRYPTION TYPE: 3K3Y_ENC
 					}
 				}
 			}
 
-			if (m_enc_type == ENC_TYPE_NONE) // If encryption type was not set to 3K3Y_ENC for any reason
+			if (m_enc_type == iso_encryption_type::ENC_TYPE_NONE) // If encryption type was not set to 3K3Y_ENC for any reason
 			{
 				sys_log.error("init(): Failed to set encryption type to 3K3Y_ENC: %s", path);
 			}
 		}
 		else if (memcmp(&k3k3y_dec_watermark[0], &sec0_sec1[0xF70], sizeof(k3k3y_dec_watermark)) == 0)
 		{
-			m_enc_type = ENC_TYPE_3K3Y_DEC; // SET ENCRYPTION TYPE: 3K3Y_DEC
+			m_enc_type = iso_encryption_type::ENC_TYPE_3K3Y_DEC; // SET ENCRYPTION TYPE: 3K3Y_DEC
 		}
 	}
 
-	if (m_enc_type == ENC_TYPE_REDUMP)
-		sys_log.warning("init(): Set 'enc type': REDUMP, 'reg count': %u: %s", m_region_count, path);
-	else if (m_enc_type == ENC_TYPE_3K3Y_ENC)
-		sys_log.warning("init(): Set 'enc type': 3K3Y_ENC, 'reg count': %u: %s", m_region_count, path);
-	else if (m_enc_type == ENC_TYPE_3K3Y_DEC)
-		sys_log.warning("init(): Set 'enc type': 3K3Y_DEC, 'reg count': %u: %s", m_region_count, path);
-	else if (m_enc_type == ENC_TYPE_NONE) // If encryption type was not set for any reason
-		sys_log.warning("init(): Set 'enc type': NONE, 'reg count': %u: %s", m_region_count, path);
+	switch (m_enc_type)
+	{
+	case iso_encryption_type::ENC_TYPE_REDUMP:
+		sys_log.warning("init(): Set 'enc type': REDUMP, 'reg count': %u: %s", m_region_info.size(), path);
+	case iso_encryption_type::ENC_TYPE_3K3Y_ENC:
+		sys_log.warning("init(): Set 'enc type': 3K3Y_ENC, 'reg count': %u: %s", m_region_info.size(), path);
+	case iso_encryption_type::ENC_TYPE_3K3Y_DEC:
+		sys_log.warning("init(): Set 'enc type': 3K3Y_DEC, 'reg count': %u: %s", m_region_info.size(), path);
+	default: // If encryption type was not set for any reason
+		sys_log.warning("init(): Set 'enc type': NONE, 'reg count': %u: %s", m_region_info.size(), path);
+	}
 
 	return true;
 }
@@ -301,13 +297,13 @@ bool iso_file_decryption::init(const std::string& path)
 bool iso_file_decryption::decrypt(u64 offset, void* buffer, u64 size, const std::string& name)
 {
 	// If it's a non-encrypted type, nothing more to do
-	if (m_enc_type == ENC_TYPE_NONE)
+	if (m_enc_type == iso_encryption_type::ENC_TYPE_NONE)
 	{
 		return true;
 	}
 
 	// If it's a 3k3y iso and 0xF70 data is being requested, we should null it out
-	if (m_enc_type == ENC_TYPE_3K3Y_DEC || m_enc_type == ENC_TYPE_3K3Y_ENC)
+	if (m_enc_type == iso_encryption_type::ENC_TYPE_3K3Y_DEC || m_enc_type == iso_encryption_type::ENC_TYPE_3K3Y_ENC)
 	{
 		if (offset + size >= 0xF70ULL && offset <= 0x1070ULL)
 		{
@@ -319,19 +315,19 @@ bool iso_file_decryption::decrypt(u64 offset, void* buffer, u64 size, const std:
 		}
 
 		// If it's a decrypted iso then return, otherwise go on to the decryption logic
-		if (m_enc_type == ENC_TYPE_3K3Y_DEC)
+		if (m_enc_type == iso_encryption_type::ENC_TYPE_3K3Y_DEC)
 		{
 			return true;
 		}
 	}
 
 	// If it's an encrypted type, check if the request lies in an encrypted range
-	for (size_t i = 0; i < m_region_count; ++i)
+	for (const iso_region_info& info : m_region_info)
 	{
-		if (offset >= m_region_info[i].region_first_addr && offset <= m_region_info[i].region_last_addr)
+		if (offset >= info.region_first_addr && offset <= info.region_last_addr)
 		{
 			// We found the region, decrypt if needed
-			if (!m_region_info[i].encrypted)
+			if (!info.encrypted)
 			{
 				return true;
 			}
@@ -362,9 +358,9 @@ bool iso_file_decryption::decrypt(u64 offset, void* buffer, u64 size, const std:
 	sys_log.error("decrypt(): %s: LBA request wasn't in the 'm_region_info' for an encrypted iso? - RP: 0x%lx, RC: 0x%lx, LR: (0x%016lx - 0x%016lx)",
 		name,
 		offset,
-		static_cast<unsigned long int>(m_region_count),
-		static_cast<unsigned long int>(m_region_count > 0 ? m_region_info[m_region_count - 1].region_first_addr : 0),
-		static_cast<unsigned long int>(m_region_count > 0 ? m_region_info[m_region_count - 1].region_last_addr : 0));
+		static_cast<unsigned long int>(m_region_info.size()),
+		static_cast<unsigned long int>(!m_region_info.empty() ? m_region_info.back().region_first_addr : 0),
+		static_cast<unsigned long int>(!m_region_info.empty() ? m_region_info.back().region_last_addr : 0));
 
 	return true;
 }
@@ -780,7 +776,7 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 	const u64 total_size = this->size();
 
 	// If it's a non-encrypted type
-	if (m_dec->get_enc_type() == ENC_TYPE_NONE)
+	if (m_dec->get_enc_type() == iso_encryption_type::ENC_TYPE_NONE)
 	{
 		u64 total_read = m_file.read_at(archive_first_offset, buffer, max_size);
 
@@ -835,7 +831,7 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 	u64 sec_count = (last_sec.archive_first_addr - first_sec.archive_first_addr) / ISO_SECTOR_SIZE + 1;
 	u64 sec_inner_size = (sec_count - 2) * ISO_SECTOR_SIZE;
 
-	if (m_file.read_at(first_sec.archive_first_addr, first_sec.buf, ISO_SECTOR_SIZE) != ISO_SECTOR_SIZE)
+	if (m_file.read_at(first_sec.archive_first_addr, first_sec.buf.data(), ISO_SECTOR_SIZE) != ISO_SECTOR_SIZE)
 	{
 		sys_log.error("read_at(): %s: Error reading from file", m_meta.name);
 
@@ -844,8 +840,8 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 	}
 
 	// Decrypt read buffer (if needed) and copy to destination buffer
-	m_dec->decrypt(first_sec.archive_first_addr, first_sec.buf, ISO_SECTOR_SIZE, m_meta.name);
-	memcpy(buffer, first_sec.buf + first_sec.offset, first_sec.size);
+	m_dec->decrypt(first_sec.archive_first_addr, first_sec.buf.data(), ISO_SECTOR_SIZE, m_meta.name);
+	memcpy(buffer, first_sec.buf.data() + first_sec.offset, first_sec.size);
 
 	// If the sector was already read, decrypted and copied to destination buffer, nothing more to do
 	if (sec_count < 2)
@@ -853,7 +849,7 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 		return max_size;
 	}
 
-	if (m_file.read_at(last_sec.archive_first_addr, last_sec.buf, ISO_SECTOR_SIZE) != ISO_SECTOR_SIZE)
+	if (m_file.read_at(last_sec.archive_first_addr, last_sec.buf.data(), ISO_SECTOR_SIZE) != ISO_SECTOR_SIZE)
 	{
 		sys_log.error("read_at(): %s: Error reading from file", m_meta.name);
 
@@ -862,8 +858,8 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 	}
 
 	// Decrypt read buffer (if needed) and copy to destination buffer
-	m_dec->decrypt(last_sec.archive_first_addr, last_sec.buf, ISO_SECTOR_SIZE, m_meta.name);
-	memcpy(reinterpret_cast<u8*>(buffer) + max_size - last_sec.size, last_sec.buf, last_sec.size);
+	m_dec->decrypt(last_sec.archive_first_addr, last_sec.buf.data(), ISO_SECTOR_SIZE, m_meta.name);
+	memcpy(reinterpret_cast<u8*>(buffer) + max_size - last_sec.size, last_sec.buf.data(), last_sec.size);
 
 	// If the sector was already read, decrypted and copied to destination buffer, nothing more to do
 	if (sec_count < 3)
