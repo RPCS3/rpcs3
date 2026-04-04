@@ -8,6 +8,7 @@
 #include <cmath>
 #include <filesystem>
 #include <stack>
+#include "Utilities/Timer.h"
 
 LOG_CHANNEL(sys_log, "SYS");
 
@@ -37,19 +38,19 @@ bool is_file_iso(const fs::file& file)
 const int ISO_BLOCK_SIZE = 2048;
 
 template<typename T>
-inline T read_both_endian_int(fs::file& file)
+inline T retrieve_endian_int(const u8* buf)
 {
-	T out;
+	T out {};
 
-	if (std::endian::little == std::endian::native)
+	if constexpr (std::endian::little == std::endian::native)
 	{
-		out = file.read<T>();
-		file.seek(sizeof(T), fs::seek_cur);
+		// first half = little-endian copy
+		std::memcpy(&out, buf, sizeof(T));
 	}
 	else
 	{
-		file.seek(sizeof(T), fs::seek_cur);
-		out = file.read<T>();
+		// second half = big-endian copy
+		std::memcpy(&out, buf + sizeof(T), sizeof(T));
 	}
 
 	return out;
@@ -63,31 +64,36 @@ std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& file, bool nam
 
 	if (entry_length == 0) return std::nullopt;
 
-	file.seek(1, fs::seek_cur);
-	const u32 start_sector = read_both_endian_int<u32>(file);
-	const u32 file_size = read_both_endian_int<u32>(file);
+	// Batch this set of file reads. This reduces overall time spent in iso_read_directory_entry by ~38%
+	constexpr usz read_size = 1 + 4 * sizeof(u32) + 8 + 6 + 1;
+	const std::array<u8, read_size> data = file.read<std::array<u8, read_size>>();
+	u32 pos = 1;
+
+	const u32 start_sector = retrieve_endian_int<u32>(&data[pos]);
+	pos += 2 * sizeof(u32);
+
+	const u32 file_size = retrieve_endian_int<u32>(&data[pos]);
+	pos += 2 * sizeof(u32);
 
 	std::tm file_date = {};
-	file_date.tm_year = file.read<u8>();
-	file_date.tm_mon = file.read<u8>() - 1;
-	file_date.tm_mday = file.read<u8>();
-	file_date.tm_hour = file.read<u8>();
-	file_date.tm_min = file.read<u8>();
-	file_date.tm_sec = file.read<u8>();
-	const s16 timezone_value = file.read<u8>();
+	file_date.tm_year = ::at32(data, pos++);
+	file_date.tm_mon = ::at32(data, pos++) - 1;
+	file_date.tm_mday = ::at32(data, pos++);
+	file_date.tm_hour = ::at32(data, pos++);
+	file_date.tm_min = ::at32(data, pos++);
+	file_date.tm_sec = ::at32(data, pos++);
+	const s16 timezone_value = ::at32(data, pos++);
 	const s16 timezone_offset = (timezone_value - 50) * 15 * 60;
 
 	const std::time_t date_time = std::mktime(&file_date) + timezone_offset;
 
-	const u8 flags = file.read<u8>();
+	const u8 flags = ::at32(data, pos++);
 
 	// 2nd flag bit indicates whether a given fs node is a directory
 	const bool is_directory = flags & 0b00000010;
 	const bool has_more_extents = flags & 0b10000000;
 
-	file.seek(6, fs::seek_cur);
-
-	const u8 file_name_length = file.read<u8>();
+	const u8 file_name_length = data.back();
 
 	std::string file_name;
 	file.read(file_name, file_name_length);
@@ -180,6 +186,7 @@ void iso_form_hierarchy(fs::file& file, iso_fs_node& node, bool use_ucs2_decodin
 				selected_node->metadata.extents.push_back(entry->extents[0]);
 
 				extent_added = true;
+				break;
 			}
 		}
 
@@ -254,7 +261,9 @@ iso_archive::iso_archive(const std::string& path)
 	}
 	while (descriptor_type != 255);
 
+	Timer timer {};
 	iso_form_hierarchy(m_file, m_root, use_ucs2_decoding);
+	sys_log.error("iso_form_hierarchy: %.2f (%s)", timer.GetElapsedTimeInMilliSec(), path);
 }
 
 iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
