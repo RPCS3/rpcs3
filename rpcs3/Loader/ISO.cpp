@@ -65,9 +65,10 @@ static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, 
 
 	// Batch this set of file reads. This reduces overall time spent in iso_read_directory_entry by ~41%
 #pragma pack(push, 1)
-	struct entry_header
+	struct iso_entry_header
 	{
-		u8 padding;
+		//u8 entry_length; // Handled separately
+		u8 extended_attribute_length;
 		std::array<u8, 8> start_sector;
 		std::array<u8, 8> file_size;
 		u8 year;
@@ -78,12 +79,15 @@ static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, 
 		u8 second;
 		u8 timezone_value;
 		u8 flags;
-		std::array<u8, 6> padding2;
+		u8 file_unit_size;
+		u8 interleave;
+		std::array<u8, 4> volume_sequence_number;
 		u8 file_name_length;
+		//u8 file_name[file_name_length]; // Handled separately
 	};
 #pragma pack(pop)
 
-	const entry_header header = entry.read<entry_header>();
+	const iso_entry_header header = entry.read<iso_entry_header>();
 
 	const u32 start_sector = retrieve_endian_int<u32>(header.start_sector.data());
 	const u32 file_size = retrieve_endian_int<u32>(header.file_size.data());
