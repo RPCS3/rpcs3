@@ -2,6 +2,7 @@
 
 #include "ISO.h"
 #include "Emu/VFS.h"
+#include "Crypto/utils.h"
 
 #include <codecvt>
 #include <algorithm>
@@ -42,29 +43,6 @@ bool is_file_iso(const fs::file& file)
 	return magic[0] == 'C' && magic[1] == 'D'
 		&& magic[2] == '0' && magic[3] == '0'
 		&& magic[4] == '1';
-}
-
-// asciischar_to_byte() and keystr_to_keyarr(): Convert a hex string into a byte array
-static unsigned char asciischar_to_byte(char input)
-{
-	if (std::isdigit(input))
-		return input - '0';
-	if (input >= 'A' && input <= 'F')
-		return input - 'A' + 10;
-	if (input >= 'a' && input <= 'f')
-		return input - 'a' + 10;
-
-	sys_log.error("asciischar_to_byte(): Error converting data to byte array");
-
-	return 0x00;
-}
-
-static void keystr_to_keyarr(const char (&str)[32], unsigned char (&arr)[16])
-{
-	for (size_t i = 0; i < sizeof(arr); ++i)
-	{
-		arr[i] = (asciischar_to_byte(str[i * 2]) * 16) + asciischar_to_byte(str[(i * 2) + 1]);
-	}
 }
 
 // Convert 4 bytes in big-endian format to an unsigned integer
@@ -206,13 +184,15 @@ bool iso_file_decryption::init(const std::string& path)
 
 		if (key_len == sizeof(key_str) || key_len == sizeof(key))
 		{
+			// If the key read from the key file is 16 bytes long instead of 32, consider the file as
+			// binary (".key") and so not needing any further conversion from hex string to bytes
 			if (key_len == sizeof(key))
 			{
 				memcpy(key, key_str, sizeof(key));
 			}
 			else
 			{
-				keystr_to_keyarr(key_str, key);
+				hex_to_bytes(key, std::string_view(key_str, key_len), key_len);
 			}
 
 			if (aes_setkey_dec(&m_aes_dec, key, 128) == 0)
