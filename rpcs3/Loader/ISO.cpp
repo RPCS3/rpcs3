@@ -8,7 +8,6 @@
 #include <cmath>
 #include <filesystem>
 #include <stack>
-#include "Utilities/Timer.h"
 
 LOG_CHANNEL(sys_log, "SYS");
 
@@ -271,9 +270,7 @@ iso_archive::iso_archive(const std::string& path)
 	}
 	while (descriptor_type != 255);
 
-	Timer timer {};
 	iso_form_hierarchy(m_file, m_root, use_ucs2_decoding);
-	sys_log.error("iso_form_hierarchy: %.2f (%s)", timer.GetElapsedTimeInMilliSec(), path);
 }
 
 iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
