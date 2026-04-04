@@ -83,7 +83,7 @@ static void decrypt_data(aes_context& aes, unsigned char* data, u32 sector_count
 
 void iso_file_decryption::reset()
 {
-	m_enc_type = iso_encryption_type::ENC_TYPE_NONE;
+	m_enc_type = iso_encryption_type::NONE;
 	m_region_info.clear();
 }
 
@@ -197,11 +197,11 @@ bool iso_file_decryption::init(const std::string& path)
 
 			if (aes_setkey_dec(&m_aes_dec, key, 128) == 0)
 			{
-				m_enc_type = iso_encryption_type::ENC_TYPE_REDUMP; // SET ENCRYPTION TYPE: REDUMP
+				m_enc_type = iso_encryption_type::REDUMP; // SET ENCRYPTION TYPE: REDUMP
 			}
 		}
 
-		if (m_enc_type == iso_encryption_type::ENC_TYPE_NONE) // If encryption type was not set to REDUMP for any reason
+		if (m_enc_type == iso_encryption_type::NONE) // If encryption type was not set to REDUMP for any reason
 		{
 			sys_log.error("init(): Failed to process key file: %s", key_path);
 		}
@@ -216,7 +216,7 @@ bool iso_file_decryption::init(const std::string& path)
 	//
 
 	// If encryption type is still set to none (sec0_sec1 will be zeroed out if it didn't succeed above)
-	if (m_enc_type == iso_encryption_type::ENC_TYPE_NONE)
+	if (m_enc_type == iso_encryption_type::NONE)
 	{
 		// The 3k3y watermarks located at 0xF70: (D|E)ncrypted 3K BLD
 		static const unsigned char k3k3y_enc_watermark[16] =
@@ -243,34 +243,34 @@ bool iso_file_decryption::init(const std::string& path)
 				{
 					if (aes_setkey_dec(&m_aes_dec, key, 128) == 0)
 					{
-						m_enc_type = iso_encryption_type::ENC_TYPE_3K3Y_ENC; // SET ENCRYPTION TYPE: 3K3Y_ENC
+						m_enc_type = iso_encryption_type::ENC_3K3Y; // SET ENCRYPTION TYPE: ENC_3K3Y
 					}
 				}
 			}
 
-			if (m_enc_type == iso_encryption_type::ENC_TYPE_NONE) // If encryption type was not set to 3K3Y_ENC for any reason
+			if (m_enc_type == iso_encryption_type::NONE) // If encryption type was not set to ENC_3K3Y for any reason
 			{
-				sys_log.error("init(): Failed to set encryption type to 3K3Y_ENC: %s", path);
+				sys_log.error("init(): Failed to set encryption type to ENC_3K3Y: %s", path);
 			}
 		}
 		else if (memcmp(&k3k3y_dec_watermark[0], &sec0_sec1[0xF70], sizeof(k3k3y_dec_watermark)) == 0)
 		{
-			m_enc_type = iso_encryption_type::ENC_TYPE_3K3Y_DEC; // SET ENCRYPTION TYPE: 3K3Y_DEC
+			m_enc_type = iso_encryption_type::DEC_3K3Y; // SET ENCRYPTION TYPE: DEC_3K3Y
 		}
 	}
 
 	switch (m_enc_type)
 	{
-	case iso_encryption_type::ENC_TYPE_REDUMP:
+	case iso_encryption_type::REDUMP:
 		sys_log.warning("init(): Set 'enc type': REDUMP, 'reg count': %u: %s", m_region_info.size(), path);
 		break;
-	case iso_encryption_type::ENC_TYPE_3K3Y_ENC:
-		sys_log.warning("init(): Set 'enc type': 3K3Y_ENC, 'reg count': %u: %s", m_region_info.size(), path);
+	case iso_encryption_type::ENC_3K3Y:
+		sys_log.warning("init(): Set 'enc type': ENC_3K3Y, 'reg count': %u: %s", m_region_info.size(), path);
 		break;
-	case iso_encryption_type::ENC_TYPE_3K3Y_DEC:
-		sys_log.warning("init(): Set 'enc type': 3K3Y_DEC, 'reg count': %u: %s", m_region_info.size(), path);
+	case iso_encryption_type::DEC_3K3Y:
+		sys_log.warning("init(): Set 'enc type': DEC_3K3Y, 'reg count': %u: %s", m_region_info.size(), path);
 		break;
-	case iso_encryption_type::ENC_TYPE_NONE: // If encryption type was not set for any reason
+	case iso_encryption_type::NONE: // If encryption type was not set for any reason
 		sys_log.warning("init(): Set 'enc type': NONE, 'reg count': %u: %s", m_region_info.size(), path);
 		break;
 	}
@@ -281,13 +281,13 @@ bool iso_file_decryption::init(const std::string& path)
 bool iso_file_decryption::decrypt(u64 offset, void* buffer, u64 size, const std::string& name)
 {
 	// If it's a non-encrypted type, nothing more to do
-	if (m_enc_type == iso_encryption_type::ENC_TYPE_NONE)
+	if (m_enc_type == iso_encryption_type::NONE)
 	{
 		return true;
 	}
 
 	// If it's a 3k3y iso and 0xF70 data is being requested, we should null it out
-	if (m_enc_type == iso_encryption_type::ENC_TYPE_3K3Y_DEC || m_enc_type == iso_encryption_type::ENC_TYPE_3K3Y_ENC)
+	if (m_enc_type == iso_encryption_type::DEC_3K3Y || m_enc_type == iso_encryption_type::ENC_3K3Y)
 	{
 		if (offset + size >= 0xF70ULL && offset <= 0x1070ULL)
 		{
@@ -299,7 +299,7 @@ bool iso_file_decryption::decrypt(u64 offset, void* buffer, u64 size, const std:
 		}
 
 		// If it's a decrypted iso then return, otherwise go on to the decryption logic
-		if (m_enc_type == iso_encryption_type::ENC_TYPE_3K3Y_DEC)
+		if (m_enc_type == iso_encryption_type::DEC_3K3Y)
 		{
 			return true;
 		}
@@ -760,7 +760,7 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 	const u64 total_size = this->size();
 
 	// If it's a non-encrypted type
-	if (m_dec->get_enc_type() == iso_encryption_type::ENC_TYPE_NONE)
+	if (m_dec->get_enc_type() == iso_encryption_type::NONE)
 	{
 		u64 total_read = m_file.read_at(archive_first_offset, buffer, max_size);
 

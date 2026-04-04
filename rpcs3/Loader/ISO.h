@@ -40,10 +40,10 @@ struct iso_region_info
 // Enum to decide ISO encryption type
 enum class iso_encryption_type
 {
-	ENC_TYPE_NONE,
-	ENC_TYPE_3K3Y_DEC,
-	ENC_TYPE_3K3Y_ENC,
-	ENC_TYPE_REDUMP
+	NONE,
+	DEC_3K3Y,
+	ENC_3K3Y,
+	REDUMP
 };
 
 // ISO file decryption class
@@ -51,7 +51,7 @@ class iso_file_decryption
 {
 private:
 	aes_context m_aes_dec;
-	iso_encryption_type m_enc_type = iso_encryption_type::ENC_TYPE_NONE;
+	iso_encryption_type m_enc_type = iso_encryption_type::NONE;
 	std::vector<iso_region_info> m_region_info;
 
 	void reset();
