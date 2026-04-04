@@ -64,12 +64,11 @@ void update_manager::check_for_updates(bool automatic, bool check_only, bool aut
 	if (automatic)
 	{
 		// Don't check for updates on local builds
-		// TEST: commented out — revert before merging
-		// if (rpcs3::is_local_build())
-		// {
-		// 	update_log.notice("Skipped automatic update check: this is a local build");
-		// 	return;
-		// }
+		if (rpcs3::is_local_build())
+		{
+			update_log.notice("Skipped automatic update check: this is a local build");
+			return;
+		}
 #ifdef __linux__
 		// Don't check for updates on startup if RPCS3 is not running from an AppImage.
 		if (!::getenv("APPIMAGE"))
@@ -112,8 +111,7 @@ void update_manager::check_for_updates(bool automatic, bool check_only, bool aut
 	const utils::OS_version os = utils::get_OS_version();
 
 	const std::string url = fmt::format("https://update.rpcs3.net/?api=v3&c=%s&os_type=%s&os_arch=%s&os_version=%i.%i.%i",
-		"9b6bc7c1", os.type, os.arch, os.version_major, os.version_minor, os.version_patch); 
-	    // TEST: hardcoded hash — revert to rpcs3::get_commit_and_hash().second before merging
+		rpcs3::get_commit_and_hash().second, os.type, os.arch, os.version_major, os.version_minor, os.version_patch);
 
 	m_downloader->start(url, true, !automatic, true, tr("Checking For Updates"), true);
 }
@@ -303,19 +301,6 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 		else
 		{
 			update_log.notice("JSON does not contain a changelog section.");
-		}
-	}
-
-	// TEST: assign PR numbers to entries — remove before merging
-	{
-		static const int test_prs[] = {18459, 18103, 18419, 18456};
-		const int test_count = static_cast<int>(sizeof(test_prs) / sizeof(test_prs[0]));
-		for (int i = 0; i < static_cast<int>(m_update_info.changelog.size()) && i < test_count; i++)
-		{
-			if (m_update_info.changelog[i].pr == 0)
-			{
-				m_update_info.changelog[i].pr = test_prs[i];
-			}
 		}
 	}
 
