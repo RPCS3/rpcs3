@@ -49,6 +49,7 @@
 
 #include <memory>
 #include <regex>
+#include <shared_mutex>
 
 #include "Utilities/JIT.h"
 
@@ -166,6 +167,8 @@ void fmt_class_string<cfg_mode>::format(std::string& out, u64 arg)
 
 void Emulator::CallFromMainThread(std::function<void()>&& func, atomic_t<u32>* wake_up, bool track_emu_state, u64 stop_ctr, std::source_location src_loc) const
 {
+	ensure(func);
+
 	std::function<void()> final_func = [this, before = IsStopped(true), track_emu_state, thread_name = thread_ctrl::get_name(), src = src_loc
 		, count = (stop_ctr == umax ? +m_stop_ctr : stop_ctr), func = std::move(func)]
 	{
@@ -179,7 +182,7 @@ void Emulator::CallFromMainThread(std::function<void()>&& func, atomic_t<u32>* w
 		}
 	};
 
-	m_cb.call_from_main_thread(std::move(final_func), wake_up);
+	ensure(m_cb.call_from_main_thread)(std::move(final_func), wake_up);
 }
 
 void Emulator::BlockingCallFromMainThread(std::function<void()>&& func, bool track_emu_state, std::source_location src_loc) const
@@ -957,11 +960,6 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 		return result;
 	};
 
-	if (m_path_original.empty() || config_mode != cfg_mode::continuous)
-	{
-		m_path_original = m_path;
-	}
-
 	m_path_old = m_path;
 
 	m_config_mode = config_mode;
@@ -971,6 +969,11 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 	if (direct || !fs::is_dir(path))
 	{
 		m_path = path;
+
+		if (config_mode != cfg_mode::continuous || m_path_original.empty())
+		{
+			m_path_original = m_path;
+		}
 
 		return restore_on_no_boot(Load(title_id));
 	}
@@ -982,6 +985,12 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 	{
 		ensure(!elf.empty());
 		m_path = elf;
+
+		if (config_mode != cfg_mode::continuous || m_path_original.empty())
+		{
+			m_path_original = m_path;
+		}
+
 		result = Load(title_id);
 	}
 
@@ -1329,18 +1338,18 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				argv.emplace_back(m_path);
 			}
 
-			resolve_path_as_vfs_path =  true;
+			resolve_path_as_vfs_path = true;
 		}
 		else if (m_path.starts_with(game_id_boot_prefix))
 		{
 			// Try to boot a game through game ID only
-			m_title_id = m_path.substr(game_id_boot_prefix.size());
-			m_title_id = m_title_id.substr(0, m_title_id.find_first_of(fs::delim));
+			const std::string_view boot_suffix = std::string_view(m_path).substr(game_id_boot_prefix.size());
+			m_title_id = boot_suffix.substr(0, boot_suffix.find_first_of(fs::delim));
 
 			if (m_title_id.size() < 3 && m_title_id.find_first_not_of('.') == umax)
 			{
 				// Do not allow if TITLE_ID result in path redirection
-				sys_log.fatal("Game directory not found using GAMEID token. ('%s')", m_title_id);
+				sys_log.fatal("Game directory not found using GAMEID token. (m_path='%s', title_id='%s')", m_title_id);
 				return game_boot_result::invalid_file_or_folder;
 			}
 
@@ -1361,19 +1370,27 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				title_path = std::move(game_path);
 			}
 
-			for (std::string test_path :
+			if (is_file_iso(title_path))
 			{
-				rpcs3::utils::get_hdd0_dir() + "game/" + m_title_id + "/USRDIR/EBOOT.BIN"
-				, tail.empty() ? "" : title_path + tail + "/USRDIR/EBOOT.BIN"
-				, title_path + "/PS3_GAME/USRDIR/EBOOT.BIN"
-				, title_path + "/USRDIR/EBOOT.BIN"
-			})
+				m_path = std::move(title_path);
+				ok = true;
+			}
+			else
 			{
-				if (!test_path.empty() && fs::is_file(test_path))
+				for (std::string test_path :
 				{
-					m_path = std::move(test_path);
-					ok = true;
-					break;
+					rpcs3::utils::get_hdd0_dir() + "game/" + m_title_id + "/USRDIR/EBOOT.BIN"
+					, tail.empty() ? "" : title_path + tail + "/USRDIR/EBOOT.BIN"
+					, title_path + "/PS3_GAME/USRDIR/EBOOT.BIN"
+					, title_path + "/USRDIR/EBOOT.BIN"
+				})
+				{
+					if (!test_path.empty() && fs::is_file(test_path))
+					{
+						m_path = std::move(test_path);
+						ok = true;
+						break;
+					}
 				}
 			}
 
@@ -2820,7 +2837,7 @@ bool Emulator::Pause(bool freeze_emulation, bool show_resume_message)
 		auto msg_ref = std::make_shared<atomic_t<u32>>(1);
 
 		// No timeout
-		rsx::overlays::queue_message(status == system_state::paused ? localized_string_id::EMULATION_PAUSED_RESUME_WITH_START : localized_string_id::EMULATION_FROZEN, -1, msg_ref);
+		rsx::overlays::queue_message(status == system_state::paused ? localized_string_id::EMULATION_PAUSED_RESUME_WITH_START : localized_string_id::EMULATION_FROZEN, umax, msg_ref);
 		m_pause_msgs_refs.emplace_back(msg_ref);
 
 		auto refresh_l = [this, msg_ref, status]()
@@ -3059,7 +3076,7 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 		std::vector<stx::shared_ptr<named_thread<ppu_thread>>> ppu_thread_list;
 
 		// If EXITGAME signal is not read, force kill after a second.
-		constexpr int loop_timeout_ms = 50;
+		constexpr int loop_timeout_ms = 16;
 		int kill_timeout_ms = 1000;
 		int elapsed_ms = 0;
 
@@ -3076,8 +3093,10 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 				Resume();
 			}, nullptr, true, read_counter);
 
+			std::shared_lock rlock(id_manager::g_mutex, std::defer_lock); 
+
 			// Check if the EXITGAME signal was read. We allow the game to terminate itself if that's the case.
-			if (!read_sysutil_signal && read_counter != get_sysutil_cb_manager_read_count())
+			if (!read_sysutil_signal && read_counter != get_sysutil_cb_manager_read_count() && rlock.try_lock())
 			{
 				sys_log.notice("The game received the exit request. Waiting for it to terminate itself...");
 				kill_timeout_ms += 5000; // Grant a couple more seconds
@@ -3087,7 +3106,12 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 				idm::select<named_thread<ppu_thread>>([&](u32 id, cpu_thread&)
 				{
 					ppu_thread_list.emplace_back(idm::get_unlocked<named_thread<ppu_thread>>(id));
-				});
+				}, idm::unlocked);
+			}
+
+			if (rlock)
+			{
+				rlock.unlock();
 			}
 
 			if (static_cast<u64>(info) != m_stop_ctr || Emu.IsStopped())
@@ -3136,7 +3160,11 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 
 	if (async_op)
 	{
-		std::thread{perform_kill}.detach();
+		std::thread{[perform_kill]()
+		{
+			thread_base::set_name("Perform Kill");
+			perform_kill();
+		}}.detach();
 	}
 	else
 	{
@@ -3972,7 +4000,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 	}));
 }
 
-game_boot_result Emulator::Restart(bool graceful)
+game_boot_result Emulator::Restart(bool graceful, bool reset_path)
 {
 	if (m_state == system_state::stopping)
 	{
@@ -3980,7 +4008,7 @@ game_boot_result Emulator::Restart(bool graceful)
 		return game_boot_result::still_running;
 	}
 
-	Emu.after_kill_callback = [this]
+	Emu.after_kill_callback = [this, reset_path]
 	{
 		// Reset boot path in case of ISO
 		if (m_path.starts_with(iso_device::virtual_device_name))
@@ -3989,6 +4017,13 @@ game_boot_result Emulator::Restart(bool graceful)
 			ensure(!m_path_real.empty());
 			ensure(!m_path_real.starts_with(iso_device::virtual_device_name));
 			m_path = m_path_real;
+		}
+
+		// If continuous mode changed the path, restart from the original executable
+		if (reset_path && !m_path_original.empty() && m_path_original != m_path)
+		{
+			sys_log.notice("Restart: Resetting boot path from '%s' to original '%s'", m_path, m_path_original);
+			m_path = m_path_original;
 		}
 
 		// Allow Boot (guarded by GracefulShutdown, which is the scope of this callback)

@@ -290,6 +290,7 @@
     <addaction name="separator"/>
     <addaction name="confShortcutsAct"/>
     <addaction name="actionManage_SoundEffects"/>
+    <addaction name="actionRecording"/>
     <addaction name="separator"/>
     <addaction name="confAutopauseManagerAct"/>
    </widget>
@@ -372,6 +373,7 @@
      <addaction name="actionPreferGameDataIcons"/>
      <addaction name="showCustomIconsAct"/>
      <addaction name="playHoverGifsAct"/>
+     <addaction name="playHoverMusicAct"/>
     </widget>
     <widget class="QMenu" name="menuGame_List_View">
      <property name="title">
@@ -1379,7 +1381,7 @@
   </action>
   <action name="confShortcutsAct">
    <property name="text">
-    <string>Shortcuts</string>
+    <string>Keyboard Shortcuts</string>
    </property>
   </action>
   <action name="toolsSystemCommandsAct">
@@ -1522,6 +1524,22 @@
   <action name="bootIsoAct">
    <property name="text">
     <string>Boot ISO</string>
+   </property>
+  </action>
+  <action name="playHoverMusicAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Play Hover Music</string>
+   </property>
+  </action>
+  <action name="actionRecording">
+   <property name="text">
+    <string>Recording</string>
    </property>
   </action>
  </widget>

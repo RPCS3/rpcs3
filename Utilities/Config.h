@@ -30,6 +30,9 @@ namespace cfg
 	// Internal hack
 	std::vector<std::string> try_to_enum_list(decltype(&fmt_class_string<int>::format) func);
 
+	// Internal hack
+	size_t try_to_enum_size(decltype(&fmt_class_string<int>::format) func);
+
 	// Config tree entry type.
 	enum class type : unsigned
 	{
@@ -312,6 +315,11 @@ namespace cfg
 		{
 			return try_to_enum_list(&fmt_class_string<T>::format);
 		}
+
+		size_t size() const
+		{
+			return try_to_enum_size(&fmt_class_string<T>::format);
+		}
 	};
 
 	// Signed 32/64-bit integer entry with custom Min/Max range.
@@ -385,7 +393,7 @@ namespace cfg
 
 		void set(const s64& value)
 		{
-			ensure(value >= Min && value <= Max);
+			if (value < Min || value > Max) fmt::throw_exception("'%s': value %d out of bounds (min=%d, max=%d)", m_name, value, Min, Max);
 			m_value = static_cast<int_type>(value);
 		}
 
@@ -476,7 +484,7 @@ namespace cfg
 
 		void set(const f64& value)
 		{
-			ensure(value >= Min && value <= Max);
+			if (value < Min || value > Max) fmt::throw_exception("'%s': value %d out of bounds (min=%d, max=%d)", m_name, value, Min, Max);
 			m_value = static_cast<float_type>(value);
 		}
 
@@ -563,7 +571,7 @@ namespace cfg
 
 		void set(const u64& value)
 		{
-			ensure(value >= Min && value <= Max);
+			if (value < Min || value > Max) fmt::throw_exception("'%s': value %d out of bounds (min=%d, max=%d)", m_name, value, Min, Max);
 			m_value = static_cast<int_type>(value);
 		}
 

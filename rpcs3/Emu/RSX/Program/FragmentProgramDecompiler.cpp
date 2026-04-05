@@ -868,7 +868,10 @@ std::string FragmentProgramDecompiler::BuildCode()
 	if (!m_is_valid_ucode)
 	{
 		// If the code is broken, do not compile. Simply NOP main and write empty outputs
+		m_parr.params[PF_PARAM_UNIFORM].clear();
 		insertHeader(OS);
+		OS << "\n";
+		insertConstants(OS);
 		OS << "\n";
 		OS << "void main()\n";
 		OS << "{\n";

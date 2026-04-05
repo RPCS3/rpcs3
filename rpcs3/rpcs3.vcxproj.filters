@@ -291,6 +291,12 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_pad_settings_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_recording_settings_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_recording_settings_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_rsx_debugger.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
@@ -439,6 +445,9 @@
       <Filter>Gui\game window</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\pad_settings_dialog.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\recording_settings_dialog.cpp">
       <Filter>Gui\settings</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\log_frame.cpp">
@@ -1275,6 +1284,12 @@
     <ClCompile Include="Input\mouse_gyro_handler.cpp">
       <Filter>Io</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\log_level_dialog.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\steam_utils.cpp">
+      <Filter>Gui\utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1296,6 +1311,9 @@
       <Filter>Generated Files</Filter>
     </ClInclude>
     <ClInclude Include="QTGeneratedFiles\ui_pad_led_settings_dialog.h">
+      <Filter>Generated Files</Filter>
+    </ClInclude>
+    <ClInclude Include="QTGeneratedFiles\ui_recording_settings_dialog.h">
       <Filter>Generated Files</Filter>
     </ClInclude>
     <ClInclude Include="QTGeneratedFiles\ui_settings_dialog.h">
@@ -1517,6 +1535,12 @@
     <ClInclude Include="Input\mouse_gyro_handler.h">
       <Filter>Io</Filter>
     </ClInclude>
+    <ClInclude Include="rpcs3qt\log_level_dialog.h">
+      <Filter>Gui\settings</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\steam_utils.h">
+      <Filter>Gui\utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -1541,6 +1565,9 @@
       <Filter>Form Files</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\settings_dialog.ui">
+      <Filter>Form Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\recording_settings_dialog.ui">
       <Filter>Form Files</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\welcome_dialog.ui">
@@ -1583,6 +1610,9 @@
       <Filter>Gui\settings</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\pad_led_settings_dialog.h">
+      <Filter>Gui\settings</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\recording_settings_dialog.h">
       <Filter>Gui\settings</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\log_frame.h">

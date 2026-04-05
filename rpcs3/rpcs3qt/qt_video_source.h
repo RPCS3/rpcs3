@@ -10,16 +10,19 @@
 #include <QVideoSink>
 #include <QVideoFrame>
 #include <QPixmap>
+#include <QTimer>
 
 class qt_video_source : public video_source
 {
 public:
-	qt_video_source();
+	qt_video_source(bool is_emulation = false);
 	virtual ~qt_video_source();
 
 	void set_iso_path(const std::string& iso_path);
 	void set_video_path(const std::string& video_path) override;
+	void set_audio_path(const std::string& audio_path) override;
 	const QString& video_path() const { return m_video_path; }
+	const QString& audio_path() const { return m_audio_path; }
 
 	void get_image(std::vector<u8>& data, int& w, int& h, int& ch, int& bpp) override;
 	bool has_new() const override { return m_has_new; }
@@ -27,8 +30,12 @@ public:
 	void set_active(bool active) override;
 	bool get_active() const override { return m_active; }
 
+	void start_movie_timer();
 	void start_movie();
 	void stop_movie();
+
+	void start_audio();
+	void stop_audio();
 
 	QPixmap get_movie_image(const QVideoFrame& frame) const;
 
@@ -44,11 +51,15 @@ protected:
 	atomic_t<bool> m_has_new = false;
 
 	QString m_video_path;
+	QString m_audio_path;
+	u32 m_audio_instance_index = 0;
+	u32 m_video_timer_timeout_ms = 0;
 	std::string m_iso_path; // path of the source archive
 	QByteArray m_video_data{};
 	QImage m_image{};
 	std::vector<u8> m_image_path;
 
+	std::unique_ptr<QTimer> m_video_timer;
 	std::unique_ptr<QBuffer> m_video_buffer;
 	std::unique_ptr<QMediaPlayer> m_media_player;
 	std::unique_ptr<QVideoSink> m_video_sink;
@@ -67,11 +78,14 @@ public:
 	virtual ~qt_video_source_wrapper();
 
 	void set_video_path(const std::string& video_path) override;
+	void set_audio_path(const std::string& audio_path) override;
 	void set_active(bool active) override;
 	bool get_active() const override;
 	bool has_new() const override { return m_qt_video_source && m_qt_video_source->has_new(); }
 	void get_image(std::vector<u8>& data, int& w, int& h, int& ch, int& bpp) override;
 
 private:
+	void init_video_source();
+
 	std::unique_ptr<qt_video_source> m_qt_video_source;
 };

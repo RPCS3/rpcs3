@@ -140,6 +140,32 @@ bool verify_mself(const fs::file& mself_file)
 	return true;
 }
 
+// TODO: May not be thread-safe (or even, process-safe)
+bool has_non_directory_components(std::string_view path)
+{
+	std::string path0{path};
+
+	while (true)
+	{
+		const std::string sub_path = fs::get_parent_dir(path0);
+
+		if (sub_path.size() >= path0.size())
+		{
+			break;
+		}
+
+		fs::stat_t stat{};
+		if (fs::get_stat(sub_path, stat))
+		{
+			return !stat.is_directory;
+		}
+
+		path0 = std::move(sub_path);
+	}
+
+	return false;
+}
+
 lv2_fs_mount_info_map::lv2_fs_mount_info_map()
 {
 	for (auto mp = &g_mp_sys_dev_root; mp; mp = mp->next) // Scan and keep track of pre-mounted devices
@@ -899,11 +925,18 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 
 		switch (auto error = fs::g_tls_error)
 		{
+		case fs::error::notdir: return {CELL_ENOTDIR};
 		case fs::error::noent: return {CELL_ENOENT};
-		default: sys_fs.error("lv2_file::open(): unknown error %s", error); break;
-		}
+		default:
+		{
+			if (has_non_directory_components(local_path))
+			{
+				return {CELL_ENOTDIR};
+			}
 
-		return {CELL_EIO};
+			fmt::throw_exception("unknown error %s", error);
+		}
+		}
 	}
 
 	if (flags & CELL_FS_O_MSELF && !verify_mself(file))
@@ -1374,8 +1407,12 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 		}
 		default:
 		{
-			sys_fs.error("sys_fs_opendir(): unknown error %s", error);
-			return {CELL_EIO, path};
+			if (has_non_directory_components(local_path))
+			{
+				return { CELL_ENOTDIR, path };
+			}
+
+			fmt::throw_exception("unknown error %s", error);
 		}
 		}
 	}
@@ -1558,6 +1595,10 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 	{
 		switch (auto error = fs::g_tls_error)
 		{
+		case fs::error::notdir:
+		{
+			return { CELL_ENOTDIR, path};
+		}
 		case fs::error::noent:
 		{
 			// Try to analyse split file (TODO)
@@ -1597,8 +1638,12 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 		}
 		default:
 		{
-			sys_fs.error("sys_fs_stat(): unknown error %s", error);
-			return {CELL_EIO, path};
+			if (has_non_directory_components(local_path))
+			{
+				return { CELL_ENOTDIR, path };
+			}
+
+			fmt::throw_exception("unknown error %s", error);
 		}
 		}
 	}
@@ -1724,6 +1769,10 @@ error_code sys_fs_mkdir(ppu_thread& ppu, vm::cptr<char> path, s32 mode)
 	{
 		switch (auto error = fs::g_tls_error)
 		{
+		case fs::error::notdir:
+		{
+			return { CELL_ENOTDIR, path};
+		}
 		case fs::error::noent:
 		{
 			return {mp == &g_mp_sys_dev_hdd1 ? sys_fs.warning : sys_fs.error, CELL_ENOENT, path};
@@ -1732,10 +1781,16 @@ error_code sys_fs_mkdir(ppu_thread& ppu, vm::cptr<char> path, s32 mode)
 		{
 			return {sys_fs.warning, CELL_EEXIST, path};
 		}
-		default: sys_fs.error("sys_fs_mkdir(): unknown error %s", error);
-		}
+		default:
+		{
+			if (has_non_directory_components(local_path))
+			{
+				return { CELL_ENOTDIR, path };
+			}
 
-		return {CELL_EIO, path}; // ???
+			fmt::throw_exception("unknown error %s", error);
+		}
+		}
 	}
 
 	sys_fs.notice("sys_fs_mkdir(): directory %s created", path);
@@ -1795,12 +1850,19 @@ error_code sys_fs_rename(ppu_thread& ppu, vm::cptr<char> from, vm::cptr<char> to
 	{
 		switch (auto error = fs::g_tls_error)
 		{
+		case fs::error::notdir: return {CELL_ENOTDIR, from};
 		case fs::error::noent: return {CELL_ENOENT, from};
 		case fs::error::exist: return {CELL_EEXIST, to};
-		default: sys_fs.error("sys_fs_rename(): unknown error %s", error);
-		}
+		default:
+		{
+			if (has_non_directory_components(local_from))
+			{
+				return {CELL_ENOTDIR, from};
+			}
 
-		return {CELL_EIO, from}; // ???
+			fmt::throw_exception("unknown error %s", error);
+		}
+		}
 	}
 
 	sys_fs.notice("sys_fs_rename(): %s renamed to %s", from, to);
@@ -1850,12 +1912,19 @@ error_code sys_fs_rmdir(ppu_thread& ppu, vm::cptr<char> path)
 	{
 		switch (auto error = fs::g_tls_error)
 		{
+		case fs::error::notdir: return {CELL_ENOTDIR, path};
 		case fs::error::noent: return {CELL_ENOENT, path};
 		case fs::error::notempty: return {CELL_ENOTEMPTY, path};
-		default: sys_fs.error("sys_fs_rmdir(): unknown error %s", error);
-		}
+		default:
+		{
+			if (has_non_directory_components(local_path))
+			{
+				return { CELL_ENOTDIR, path };
+			}
 
-		return {CELL_EIO, path}; // ???
+			fmt::throw_exception("unknown error %s", error);
+		}
+		}
 	}
 
 	sys_fs.notice("sys_fs_rmdir(): directory %s removed", path);
@@ -1906,14 +1975,24 @@ error_code sys_fs_unlink(ppu_thread& ppu, vm::cptr<char> path)
 	{
 		switch (auto error = fs::g_tls_error)
 		{
+		case fs::error::notdir:
+		{
+			return { CELL_ENOTDIR, path };
+		}
 		case fs::error::noent:
 		{
 			return {mp == &g_mp_sys_dev_hdd1 ? sys_fs.warning : sys_fs.error, CELL_ENOENT, path};
 		}
-		default: sys_fs.error("sys_fs_unlink(): unknown error %s", error);
-		}
+		default:
+		{
+			if (has_non_directory_components(local_path))
+			{
+				return { CELL_ENOTDIR, path };
+			}
 
-		return {CELL_EIO, path}; // ???
+			fmt::throw_exception("unknown error %s", error);
+		}
+		}
 	}
 
 	sys_fs.notice("sys_fs_unlink(): file %s deleted", path);
@@ -2632,10 +2711,8 @@ error_code sys_fs_lseek(ppu_thread& ppu, u32 fd, s64 offset, s32 whence, vm::ptr
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::inval: return {CELL_EINVAL, "fd=%u, offset=0x%x, whence=%d", fd, offset, whence};
-		default: sys_fs.error("sys_fs_lseek(): unknown error %s", error);
+		default: fmt::throw_exception("unknown error %s", error);
 		}
-
-		return CELL_EIO; // ???
 	}
 
 	lock.unlock();
@@ -2751,10 +2828,16 @@ error_code sys_fs_get_block_size(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u
 		{
 		case fs::error::exist: return {CELL_EISDIR, path};
 		case fs::error::noent: return {CELL_ENOENT, path};
-		default: sys_fs.error("sys_fs_get_block_size(): unknown error %s", error);
-		}
+		default:
+		{
+			if (has_non_directory_components(local_path))
+			{
+				return { CELL_ENOTDIR, path };
+			}
 
-		return {CELL_EIO, path}; // ???
+			fmt::throw_exception("unknown error %s", error);
+		}
+		}
 	}
 
 	static_cast<void>(ppu.test_stopped());
@@ -2805,14 +2888,24 @@ error_code sys_fs_truncate(ppu_thread& ppu, vm::cptr<char> path, u64 size)
 	{
 		switch (auto error = fs::g_tls_error)
 		{
+		case fs::error::notdir:
+		{
+			return { CELL_ENOTDIR, path};
+		}
 		case fs::error::noent:
 		{
 			return {mp == &g_mp_sys_dev_hdd1 ? sys_fs.warning : sys_fs.error, CELL_ENOENT, path};
 		}
-		default: sys_fs.error("sys_fs_truncate(): unknown error %s", error);
-		}
+		default:
+		{
+			if (has_non_directory_components(local_path))
+			{
+				return { CELL_ENOTDIR, path };
+			}
 
-		return {CELL_EIO, path}; // ???
+			fmt::throw_exception("unknown error %s", error);
+		}
+		}
 	}
 
 	return CELL_OK;
@@ -2858,10 +2951,11 @@ error_code sys_fs_ftruncate(ppu_thread& ppu, u32 fd, u64 size)
 		switch (auto error = fs::g_tls_error)
 		{
 		case fs::error::ok:
-		default: sys_fs.error("sys_fs_ftruncate(): unknown error %s", error);
+		default:
+		{
+			fmt::throw_exception("unknown error %s", error);
 		}
-
-		return CELL_EIO; // ???
+		}
 	}
 
 	return CELL_OK;
@@ -2907,6 +3001,10 @@ error_code sys_fs_chmod(ppu_thread&, vm::cptr<char> path, s32 mode)
 	{
 		switch (auto error = fs::g_tls_error)
 		{
+		case fs::error::notdir:
+		{
+			return { CELL_ENOTDIR, path};
+		}
 		case fs::error::noent:
 		{
 			// Try to locate split files
@@ -2920,8 +3018,12 @@ error_code sys_fs_chmod(ppu_thread&, vm::cptr<char> path, s32 mode)
 		}
 		default:
 		{
-			sys_fs.error("sys_fs_chmod(): unknown error %s", error);
-			return {CELL_EIO, path};
+			if (has_non_directory_components(local_path))
+			{
+				return { CELL_ENOTDIR, path };
+			}
+
+			fmt::throw_exception("unknown error %s", error);
 		}
 		}
 	}
@@ -3053,14 +3155,24 @@ error_code sys_fs_utime(ppu_thread& ppu, vm::cptr<char> path, vm::cptr<CellFsUti
 	{
 		switch (auto error = fs::g_tls_error)
 		{
+		case fs::error::notdir:
+		{
+			return { CELL_ENOTDIR, path};
+		}
 		case fs::error::noent:
 		{
 			return {mp == &g_mp_sys_dev_hdd1 ? sys_fs.warning : sys_fs.error, CELL_ENOENT, path};
 		}
-		default: sys_fs.error("sys_fs_utime(): unknown error %s", error);
-		}
+		default:
+		{
+			if (has_non_directory_components(local_path))
+			{
+				return { CELL_ENOTDIR, path };
+			}
 
-		return {CELL_EIO, path}; // ???
+			fmt::throw_exception("unknown error %s", error);
+		}
+		}
 	}
 
 	return CELL_OK;

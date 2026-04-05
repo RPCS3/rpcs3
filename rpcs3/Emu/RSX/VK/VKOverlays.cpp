@@ -434,7 +434,7 @@ namespace vk
 		}
 	}
 
-	vk::image_view* ui_overlay_renderer::find_font(rsx::overlays::font* font, vk::command_buffer& cmd, vk::data_heap& upload_heap)
+	vk::image_view* ui_overlay_renderer::find_font(const rsx::overlays::font* font, vk::command_buffer& cmd, vk::data_heap& upload_heap)
 	{
 		const auto image_size = font->get_glyph_data_dimensions();
 
@@ -462,7 +462,7 @@ namespace vk
 				true, false, bytes.data(), -1);
 	}
 
-	vk::image_view* ui_overlay_renderer::find_temp_image(rsx::overlays::image_info_base* desc, vk::command_buffer& cmd, vk::data_heap& upload_heap, u32 owner_uid)
+	vk::image_view* ui_overlay_renderer::find_temp_image(const rsx::overlays::image_info_base* desc, vk::command_buffer& cmd, vk::data_heap& upload_heap, u32 owner_uid)
 	{
 		const bool dirty = std::exchange(desc->dirty, false);
 		const u64 key = reinterpret_cast<u64>(desc);
@@ -510,7 +510,7 @@ namespace vk
 				glsl::input_type_push_constant,
 				0,
 				0,
-				glsl::push_constant_ref {.offset = 68, .size = 12 }
+				glsl::push_constant_ref {.offset = 68, .size = 60 }
 			)
 		);
 		return result;
@@ -527,6 +527,10 @@ namespace vk
 		// 68: uint fragment_config;
 		// 72: float timestamp;
 		// 76: float blur_intensity;
+		// 80: vec4 sdf_params;
+		// 96: vec2 sdf_origin;
+		// 104: vec2 reserved;
+		// 112: vec4 sdf_border_color;
 
 		f32 push_buf[32];
 		// 1. Vertex config (00 - 63)
@@ -557,13 +561,24 @@ namespace vk
 			.texture_mode(m_texture_type)
 			.clip_fragments(m_clip_enabled)
 			.pulse_glow(m_pulse_glow)
+			.set_sdf(m_sdf_config.func)
 			.get();
 
 		push_buf[0] = std::bit_cast<f32>(frag_config);
 		push_buf[1] = m_time;
 		push_buf[2] = m_blur_strength;
+		push_buf[3] = m_sdf_config.hx;
+		push_buf[4] = m_sdf_config.hy;
+		push_buf[5] = m_sdf_config.br;
+		push_buf[6] = m_sdf_config.bw;
+		push_buf[7] = m_sdf_config.cx;
+		push_buf[8] = m_sdf_config.cy;
+		push_buf[9] = 0.f;
+		push_buf[10] = 0.f;
 
-		vkCmdPushConstants(cmd, program->layout(), VK_SHADER_STAGE_FRAGMENT_BIT, 68, 12, push_buf);
+		std::memcpy(push_buf + 11, m_sdf_config.border_color.rgba, 16);
+
+		vkCmdPushConstants(cmd, program->layout(), VK_SHADER_STAGE_FRAGMENT_BIT, 68, 60, push_buf);
 	}
 
 	void ui_overlay_renderer::set_primitive_type(rsx::overlays::primitive_type type)
@@ -613,7 +628,11 @@ namespace vk
 	void ui_overlay_renderer::run(vk::command_buffer& cmd, const areau& viewport, vk::framebuffer* target, VkRenderPass render_pass,
 			vk::data_heap& upload_heap, rsx::overlays::overlay& ui)
 	{
-		m_scale_offset = color4f(ui.virtual_width, ui.virtual_height, 1.f, 1.f);
+		ui.set_render_viewport(
+		    static_cast<u16>(std::min<u32>(viewport.width(), std::numeric_limits<u16>::max())),
+		    static_cast<u16>(std::min<u32>(viewport.height(), std::numeric_limits<u16>::max()))
+		);
+		m_scale_offset = color4f(ui.get_virtual_width(), ui.get_virtual_height(), 1.f, 1.f);
 		m_viewport = { { static_cast<f32>(viewport.x1), static_cast<f32>(viewport.y1) }, { static_cast<f32>(viewport.width()), static_cast<f32>(viewport.height()) } };
 
 		std::vector<vk::image_view*> image_views
@@ -644,6 +663,9 @@ namespace vk
 			m_clip_region = command.config.clip_rect;
 			m_disable_vertex_snap = command.config.disable_vertex_snap;
 
+			m_sdf_config = command.config.sdf_config;
+			m_sdf_config.transform(static_cast<areaf>(viewport), { m_scale_offset.x, m_scale_offset.y });
+
 			vk::image_view* src = nullptr;
 			switch (command.config.texture_ref)
 			{
@@ -660,7 +682,7 @@ namespace vk
 					: rsx::overlays::texture_sampling_mode::font3D;
 				break;
 			case rsx::overlays::image_resource_id::raw_image:
-				src = find_temp_image(static_cast<rsx::overlays::image_info_base*>(command.config.external_data_ref), cmd, upload_heap, ui.uid);
+				src = find_temp_image(static_cast<const rsx::overlays::image_info_base*>(command.config.external_data_ref), cmd, upload_heap, ui.uid);
 				break;
 			default:
 				src = view_cache[command.config.texture_ref].get();

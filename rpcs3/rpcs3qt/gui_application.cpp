@@ -154,6 +154,12 @@ bool gui_application::Init()
 	// Force init the emulator
 	InitializeEmulator(m_active_user, m_show_gui);
 
+	// Create callbacks from the emulator, which reference the handlers.
+	InitializeCallbacks();
+
+	// Create connects to propagate events throughout Gui.
+	InitializeConnects();
+
 	// Create the main window
 	if (m_show_gui)
 	{
@@ -164,13 +170,22 @@ bool gui_application::Init()
 		const auto index    = codes.indexOf(language);
 
 		LoadLanguage(index < 0 ? QLocale(QLocale::English).bcp47Name() : ::at32(codes, index));
+
+		connect(m_main_window, &main_window::RequestLanguageChange, this, &gui_application::LoadLanguage);
+		connect(m_main_window, &main_window::RequestGlobalStylesheetChange, this, &gui_application::OnChangeStyleSheetRequest);
+		connect(m_main_window, &main_window::NotifyEmuSettingsChange, this, [this](){ OnEmuSettingsChange(); });
+		connect(m_main_window, &main_window::NotifyShortcutHandlers, this, &gui_application::OnShortcutChange);
+
+		connect(this, &gui_application::OnEmulatorRun, m_main_window, &main_window::OnEmuRun);
+		connect(this, &gui_application::OnEmulatorStop, m_main_window, &main_window::OnEmuStop);
+		connect(this, &gui_application::OnEmulatorPause, m_main_window, &main_window::OnEmuPause);
+		connect(this, &gui_application::OnEmulatorResume, m_main_window, &main_window::OnEmuResume);
+		connect(this, &gui_application::OnEmulatorReady, m_main_window, &main_window::OnEmuReady);
+		connect(this, &gui_application::OnEnableDiscEject, m_main_window, &main_window::OnEnableDiscEject);
+		connect(this, &gui_application::OnEnableDiscInsert, m_main_window, &main_window::OnEnableDiscInsert);
+
+		connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, this, [this](){ OnChangeStyleSheetRequest(); });
 	}
-
-	// Create callbacks from the emulator, which reference the handlers.
-	InitializeCallbacks();
-
-	// Create connects to propagate events throughout Gui.
-	InitializeConnects();
 
 	if (m_gui_settings->GetValue(gui::ib_show_welcome).toBool())
 	{
@@ -437,24 +452,6 @@ void gui_application::InitializeConnects()
 	connect(this, &gui_application::OnEmulatorPause, this, &gui_application::StopPlaytime);
 	connect(this, &gui_application::OnEmulatorResume, this, &gui_application::StartPlaytime);
 	connect(this, &QGuiApplication::applicationStateChanged, this, &gui_application::OnAppStateChanged);
-
-	if (m_main_window)
-	{
-		connect(m_main_window, &main_window::RequestLanguageChange, this, &gui_application::LoadLanguage);
-		connect(m_main_window, &main_window::RequestGlobalStylesheetChange, this, &gui_application::OnChangeStyleSheetRequest);
-		connect(m_main_window, &main_window::NotifyEmuSettingsChange, this, [this](){ OnEmuSettingsChange(); });
-		connect(m_main_window, &main_window::NotifyShortcutHandlers, this, &gui_application::OnShortcutChange);
-
-		connect(this, &gui_application::OnEmulatorRun, m_main_window, &main_window::OnEmuRun);
-		connect(this, &gui_application::OnEmulatorStop, m_main_window, &main_window::OnEmuStop);
-		connect(this, &gui_application::OnEmulatorPause, m_main_window, &main_window::OnEmuPause);
-		connect(this, &gui_application::OnEmulatorResume, m_main_window, &main_window::OnEmuResume);
-		connect(this, &gui_application::OnEmulatorReady, m_main_window, &main_window::OnEmuReady);
-		connect(this, &gui_application::OnEnableDiscEject, m_main_window, &main_window::OnEnableDiscEject);
-		connect(this, &gui_application::OnEnableDiscInsert, m_main_window, &main_window::OnEnableDiscInsert);
-
-		connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, this, [this](){ OnChangeStyleSheetRequest(); });
-	}
 
 #ifdef WITH_DISCORD_RPC
 	connect(this, &gui_application::OnEmulatorRun, [this](bool /*start_playtime*/)
@@ -740,8 +737,8 @@ void gui_application::InitializeCallbacks()
 	callbacks.get_msg_dialog  = [this]() -> std::shared_ptr<MsgDialogBase> { return m_show_gui ? std::make_shared<msg_dialog_frame>() : nullptr; };
 	callbacks.get_osk_dialog  = [this]() -> std::shared_ptr<OskDialogBase> { return m_show_gui ? std::make_shared<osk_dialog_frame>() : nullptr; };
 	callbacks.get_save_dialog = []() -> std::unique_ptr<SaveDialogBase> { return std::make_unique<save_data_dialog>(); };
-	callbacks.get_sendmessage_dialog = [this]() -> std::shared_ptr<SendMessageDialogBase> { return std::make_shared<sendmessage_dialog_frame>(); };
-	callbacks.get_recvmessage_dialog = [this]() -> std::shared_ptr<RecvMessageDialogBase> { return std::make_shared<recvmessage_dialog_frame>(); };
+	callbacks.get_sendmessage_dialog = []() -> std::shared_ptr<SendMessageDialogBase> { return std::make_shared<sendmessage_dialog_frame>(); };
+	callbacks.get_recvmessage_dialog = []() -> std::shared_ptr<RecvMessageDialogBase> { return std::make_shared<recvmessage_dialog_frame>(); };
 	callbacks.get_trophy_notification_dialog = [this]() -> std::unique_ptr<TrophyNotificationBase> { return std::make_unique<trophy_notification_helper>(m_game_window); };
 
 	callbacks.on_run    = [this](bool start_playtime) { OnEmulatorRun(start_playtime); };
@@ -842,7 +839,7 @@ void gui_application::InitializeCallbacks()
 		};
 	}
 
-	callbacks.on_emulation_stop_no_response = [this](std::shared_ptr<atomic_t<bool>> closed_successfully, int seconds_waiting_already)
+	callbacks.on_emulation_stop_no_response = [](std::shared_ptr<atomic_t<bool>> closed_successfully, int seconds_waiting_already)
 	{
 		const std::string terminate_message = tr("Stopping emulator took too long."
 			"\nSome thread has probably deadlocked. Aborting.").toStdString();
@@ -852,7 +849,7 @@ void gui_application::InitializeCallbacks()
 			report_fatal_error(terminate_message);
 		}
 
-		Emu.CallFromMainThread([this, closed_successfully, seconds_waiting_already, terminate_message]
+		Emu.CallFromMainThread([closed_successfully, seconds_waiting_already, terminate_message]
 		{
 			const auto seconds = std::make_shared<int>(seconds_waiting_already);
 

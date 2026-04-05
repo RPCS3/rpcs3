@@ -888,6 +888,14 @@ bool cpu_thread::check_state() noexcept
 				store = true;
 			}
 
+			if (flags & cpu_flag::req_exit)
+			{
+				// A request for the thread to quit has been made
+				flags -= cpu_flag::req_exit;
+				flags += cpu_flag::exit;
+				store = true;
+			}
+
 			// Can't process dbg_step if we only paused temporarily
 			if (cpu_can_stop && flags & cpu_flag::dbg_step)
 			{
@@ -1157,13 +1165,13 @@ void cpu_thread::notify()
 
 cpu_thread& cpu_thread::operator=(thread_state)
 {
-	if (state & cpu_flag::exit)
+	if (state & (cpu_flag::exit + cpu_flag::req_exit))
 	{
 		// Must be notified elsewhere or self-raised
 		return *this;
 	}
 
-	const auto old = state.fetch_add(cpu_flag::exit);
+	const auto old = state.fetch_add(cpu_flag::req_exit);
 
 	if (old & cpu_flag::wait && old.none_of(cpu_flag::again + cpu_flag::exit))
 	{
@@ -1322,8 +1330,9 @@ extern std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu, shared_ptr<
 void cpu_thread::dump_all(std::string& ret) const
 {
 	std::any func_data;
+	std::any misc_data;
 
-	ret += dump_misc();
+	dump_misc(ret, misc_data);
 	ret += '\n';
 	dump_regs(ret, func_data);
 	ret += '\n';
@@ -1371,9 +1380,9 @@ std::vector<std::pair<u32, u32>> cpu_thread::dump_callstack_list() const
 	return {};
 }
 
-std::string cpu_thread::dump_misc() const
+void cpu_thread::dump_misc(std::string& ret, std::any& /*custom_data*/) const
 {
-	return fmt::format("Type: %s; State: %s\n", get_class() == thread_class::ppu ? "PPU" : get_class() == thread_class::spu ? "SPU" : "RSX", state.load());
+	fmt::append(ret, "%s[0x%x]; State: %s\n", get_class() == thread_class::ppu ? "PPU" : get_class() == thread_class::spu ? "SPU" : "RSX", id, state.load());
 }
 
 bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept

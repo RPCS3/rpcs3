@@ -656,11 +656,6 @@ QLabel#color_button {
 	background: transparent;
 }
 
-/* Set Windows Taskbar Thumbnail colors */
-QLabel#thumbnail_icon_color {
-	color: #370048;
-}
-
 /* Debugger colors */
 QLabel#debugger_frame_breakpoint {
 	color: #000; /* Font Color: Black */

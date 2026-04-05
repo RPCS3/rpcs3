@@ -884,7 +884,7 @@ static s16 fetch_sdl_as_axis(SDL_Joystick* joystick, const sdl_mapping& mapping)
 	return 0;
 }
 
-static s16 fetch_sdl_axis_avg(std::map<u64, std::vector<SDL_Joystick*>>& joysticks, const sdl_mapping& mapping)
+static s16 fetch_sdl_axis_avg(const std::map<u64, std::vector<SDL_Joystick*>>& joysticks, const sdl_mapping& mapping)
 {
 	constexpr s16 MAX = 0x7FFF;
 	constexpr s16 MIN = -0x8000;
@@ -910,7 +910,7 @@ static s16 fetch_sdl_axis_avg(std::map<u64, std::vector<SDL_Joystick*>>& joystic
 	return std::clamp<s16>(sdl_joysticks_total_value / static_cast<s32>(joysticks_of_type->second.size()), MIN, MAX);
 }
 
-static bool sdl_to_logitech_g27_button(std::map<u64, std::vector<SDL_Joystick*>>& joysticks, const sdl_mapping& mapping)
+static bool sdl_to_logitech_g27_button(const std::map<u64, std::vector<SDL_Joystick*>>& joysticks, const sdl_mapping& mapping)
 {
 	auto joysticks_of_type = joysticks.find(mapping.device_type_id);
 	if (joysticks_of_type == joysticks.end())
@@ -931,32 +931,21 @@ static bool sdl_to_logitech_g27_button(std::map<u64, std::vector<SDL_Joystick*>>
 	return pressed;
 }
 
-static u16 sdl_to_logitech_g27_steering(std::map<u64, std::vector<SDL_Joystick*>>& joysticks, const sdl_mapping& mapping)
+static u16 sdl_to_logitech_g27_steering(const std::map<u64, std::vector<SDL_Joystick*>>& joysticks, const sdl_mapping& mapping)
 {
 	const s16 avg = fetch_sdl_axis_avg(joysticks, mapping);
 	const u16 unsigned_avg = avg + 0x8000;
 	return unsigned_avg * (0xFFFF >> 2) / 0xFFFF;
 }
 
-static u8 sdl_to_logitech_g27_pedal(std::map<u64, std::vector<SDL_Joystick*>>& joysticks, const sdl_mapping& mapping)
+static u8 sdl_to_logitech_g27_pedal(const std::map<u64, std::vector<SDL_Joystick*>>& joysticks, const sdl_mapping& mapping)
 {
 	const s16 avg = fetch_sdl_axis_avg(joysticks, mapping);
 	const u16 unsigned_avg = avg + 0x8000;
 	return unsigned_avg * 0xFF / 0xFFFF;
 }
 
-static inline void set_bit(u8* buf, int bit_num, bool set)
-{
-	const int byte_num = bit_num / 8;
-	bit_num %= 8;
-	const u8 mask = 1 << bit_num;
-	if (set)
-		buf[byte_num] = buf[byte_num] | mask;
-	else
-		buf[byte_num] = buf[byte_num] & (~mask);
-}
-
-void usb_device_logitech_g27::transfer_dfex(u32 buf_size, u8* buf, UsbTransfer* transfer)
+void usb_device_logitech_g27::transfer_dfex(u32 buf_size, u8* buf, UsbTransfer* transfer) const
 {
 	DFEX_data data{};
 	ensure(buf_size >= sizeof(data));
@@ -990,7 +979,7 @@ void usb_device_logitech_g27::transfer_dfex(u32 buf_size, u8* buf, UsbTransfer* 
 	std::memcpy(buf, &data, sizeof(data));
 }
 
-void usb_device_logitech_g27::transfer_dfp(u32 buf_size, u8* buf, UsbTransfer* transfer)
+void usb_device_logitech_g27::transfer_dfp(u32 buf_size, u8* buf, UsbTransfer* transfer) const
 {
 	DFP_data data{};
 	ensure(buf_size >= sizeof(data));
@@ -1026,7 +1015,7 @@ void usb_device_logitech_g27::transfer_dfp(u32 buf_size, u8* buf, UsbTransfer* t
 	std::memcpy(buf, &data, sizeof(data));
 }
 
-void usb_device_logitech_g27::transfer_dfgt(u32 buf_size, u8* buf, UsbTransfer* transfer)
+void usb_device_logitech_g27::transfer_dfgt(u32 buf_size, u8* buf, UsbTransfer* transfer) const
 {
 	DFGT_data data{};
 	ensure(buf_size >= sizeof(data));
@@ -1068,7 +1057,7 @@ void usb_device_logitech_g27::transfer_dfgt(u32 buf_size, u8* buf, UsbTransfer* 
 	std::memcpy(buf, &data, sizeof(data));
 }
 
-void usb_device_logitech_g27::transfer_g25(u32 buf_size, u8* buf, UsbTransfer* transfer)
+void usb_device_logitech_g27::transfer_g25(u32 buf_size, u8* buf, UsbTransfer* transfer) const
 {
 	G25_data data{};
 	ensure(buf_size >= sizeof(data));
@@ -1116,7 +1105,7 @@ void usb_device_logitech_g27::transfer_g25(u32 buf_size, u8* buf, UsbTransfer* t
 	std::memcpy(buf, &data, sizeof(data));
 }
 
-void usb_device_logitech_g27::transfer_g27(u32 buf_size, u8* buf, UsbTransfer* transfer)
+void usb_device_logitech_g27::transfer_g27(u32 buf_size, u8* buf, UsbTransfer* transfer) const
 {
 	G27_data data{};
 	ensure(buf_size >= sizeof(data));

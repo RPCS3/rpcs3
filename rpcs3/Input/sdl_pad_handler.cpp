@@ -65,16 +65,6 @@ sdl_pad_handler::sdl_pad_handler() : PadHandlerBase(pad_handler::sdl)
 		{ SDLKeyCodes::RSXPos,   "RS X+"    },
 		{ SDLKeyCodes::RSYPos,   "RS Y+"    },
 		{ SDLKeyCodes::RSYNeg,   "RS Y-"    },
-		{ SDLKeyCodes::PressureCross,    "South" }, // Same name as non-pressure button
-		{ SDLKeyCodes::PressureCircle,   "East" },  // Same name as non-pressure button
-		{ SDLKeyCodes::PressureSquare,   "West" },  // Same name as non-pressure button
-		{ SDLKeyCodes::PressureTriangle, "North" }, // Same name as non-pressure button
-		{ SDLKeyCodes::PressureL1,       "LB" },    // Same name as non-pressure button
-		{ SDLKeyCodes::PressureR1,       "RB" },    // Same name as non-pressure button
-		{ SDLKeyCodes::PressureUp,       "Up" },    // Same name as non-pressure button
-		{ SDLKeyCodes::PressureDown,     "Down" },  // Same name as non-pressure button
-		{ SDLKeyCodes::PressureLeft,     "Left" },  // Same name as non-pressure button
-		{ SDLKeyCodes::PressureRight,    "Right" }, // Same name as non-pressure button
 	};
 
 	init_configs();
@@ -131,7 +121,7 @@ void sdl_pad_handler::init_config(cfg_pad* cfg)
 	cfg->rs_up.def    = ::at32(button_list, SDLKeyCodes::RSYPos);
 	cfg->start.def    = ::at32(button_list, SDLKeyCodes::Start);
 	cfg->select.def   = ::at32(button_list, SDLKeyCodes::Back);
-	cfg->ps.def       = ::at32(button_list, SDLKeyCodes::Guide);
+	cfg->ps.def       = cfg_pad::make_button_string(button_list, {{SDLKeyCodes::Guide}, {SDLKeyCodes::Start, SDLKeyCodes::Back}});
 	cfg->square.def   = ::at32(button_list, SDLKeyCodes::West);
 	cfg->cross.def    = ::at32(button_list, SDLKeyCodes::South);
 	cfg->circle.def   = ::at32(button_list, SDLKeyCodes::East);
@@ -881,17 +871,17 @@ void sdl_pad_handler::set_rumble(SDLDevice* dev, u8 speed_large, u8 speed_small)
 	}
 }
 
-bool sdl_pad_handler::get_is_left_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
+bool sdl_pad_handler::get_is_left_trigger(const std::shared_ptr<PadDevice>& /*device*/, u32 keyCode)
 {
 	return keyCode == SDLKeyCodes::LT;
 }
 
-bool sdl_pad_handler::get_is_right_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
+bool sdl_pad_handler::get_is_right_trigger(const std::shared_ptr<PadDevice>& /*device*/, u32 keyCode)
 {
 	return keyCode == SDLKeyCodes::RT;
 }
 
-bool sdl_pad_handler::get_is_left_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
+bool sdl_pad_handler::get_is_left_stick(const std::shared_ptr<PadDevice>& /*device*/, u32 keyCode)
 {
 	switch (keyCode)
 	{
@@ -905,7 +895,7 @@ bool sdl_pad_handler::get_is_left_stick(const std::shared_ptr<PadDevice>& /*devi
 	}
 }
 
-bool sdl_pad_handler::get_is_right_stick(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
+bool sdl_pad_handler::get_is_right_stick(const std::shared_ptr<PadDevice>& /*device*/, u32 keyCode)
 {
 	switch (keyCode)
 	{
@@ -919,7 +909,7 @@ bool sdl_pad_handler::get_is_right_stick(const std::shared_ptr<PadDevice>& /*dev
 	}
 }
 
-bool sdl_pad_handler::get_is_touch_pad_motion(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
+bool sdl_pad_handler::get_is_touch_pad_motion(const std::shared_ptr<PadDevice>& /*device*/, u32 keyCode)
 {
 	switch (keyCode)
 	{
@@ -933,12 +923,40 @@ bool sdl_pad_handler::get_is_touch_pad_motion(const std::shared_ptr<PadDevice>& 
 	}
 }
 
-std::unordered_map<u64, u16> sdl_pad_handler::get_button_values(const std::shared_ptr<PadDevice>& device)
+std::unordered_map<u32, u16> sdl_pad_handler::get_button_values(const std::shared_ptr<PadDevice>& device)
 {
-	std::unordered_map<u64, u16> values;
+	std::unordered_map<u32, u16> values;
 	SDLDevice* dev = static_cast<SDLDevice*>(device.get());
 	if (!dev || !dev->sdl.gamepad)
 		return values;
+
+	static const std::map<SDLKeyCodes, SDLKeyCodes> button_to_pressure =
+	{
+		{ SDLKeyCodes::South, SDLKeyCodes::PressureCross },
+		{ SDLKeyCodes::East, SDLKeyCodes::PressureCircle },
+		{ SDLKeyCodes::West, SDLKeyCodes::PressureSquare },
+		{ SDLKeyCodes::North, SDLKeyCodes::PressureTriangle },
+		{ SDLKeyCodes::LB, SDLKeyCodes::PressureL1 },
+		{ SDLKeyCodes::RB, SDLKeyCodes::PressureR1 },
+		{ SDLKeyCodes::Up, SDLKeyCodes::PressureUp },
+		{ SDLKeyCodes::Down, SDLKeyCodes::PressureDown },
+		{ SDLKeyCodes::Left, SDLKeyCodes::PressureLeft },
+		{ SDLKeyCodes::Right, SDLKeyCodes::PressureRight }
+	};
+
+	static const std::map<SDLKeyCodes, SDLKeyCodes> pressure_to_button =
+	{
+		{ SDLKeyCodes::PressureCross, SDLKeyCodes::South },
+		{ SDLKeyCodes::PressureCircle, SDLKeyCodes::East },
+		{ SDLKeyCodes::PressureSquare, SDLKeyCodes::West },
+		{ SDLKeyCodes::PressureTriangle, SDLKeyCodes::North },
+		{ SDLKeyCodes::PressureL1, SDLKeyCodes::LB },
+		{ SDLKeyCodes::PressureR1, SDLKeyCodes::RB },
+		{ SDLKeyCodes::PressureUp, SDLKeyCodes::Up },
+		{ SDLKeyCodes::PressureDown, SDLKeyCodes::Down },
+		{ SDLKeyCodes::PressureLeft, SDLKeyCodes::Left },
+		{ SDLKeyCodes::PressureRight, SDLKeyCodes::Right }
+	};
 
 	std::set<SDLKeyCodes> pressed_pressure_buttons;
 
@@ -964,20 +982,6 @@ std::unordered_map<u64, u16> sdl_pad_handler::get_button_values(const std::share
 			case SDLKeyCodes::LB:
 			case SDLKeyCodes::RB:
 			{
-				static const std::map<SDLKeyCodes, SDLKeyCodes> button_to_pressure =
-				{
-					{ SDLKeyCodes::South, SDLKeyCodes::PressureCross },
-					{ SDLKeyCodes::East, SDLKeyCodes::PressureCircle },
-					{ SDLKeyCodes::West, SDLKeyCodes::PressureSquare },
-					{ SDLKeyCodes::North, SDLKeyCodes::PressureTriangle },
-					{ SDLKeyCodes::LB, SDLKeyCodes::PressureL1 },
-					{ SDLKeyCodes::RB, SDLKeyCodes::PressureR1 },
-					{ SDLKeyCodes::Up, SDLKeyCodes::PressureUp },
-					{ SDLKeyCodes::Down, SDLKeyCodes::PressureDown },
-					{ SDLKeyCodes::Left, SDLKeyCodes::PressureLeft },
-					{ SDLKeyCodes::Right, SDLKeyCodes::PressureRight }
-				};
-
 				if (value)
 				{
 					pressed_pressure_buttons.insert(::at32(button_to_pressure, key_code));
@@ -1025,7 +1029,7 @@ std::unordered_map<u64, u16> sdl_pad_handler::get_button_values(const std::share
 			if (dev->sdl.is_ds3_with_pressure_buttons)
 			{
 				// Get pressure button value from axis
-				if (const int key_code = SDLKeyCodes::PressureBegin + 1 + axis_id - SDL_GAMEPAD_AXIS_COUNT;
+				if (int key_code = SDLKeyCodes::PressureBegin + 1 + axis_id - SDL_GAMEPAD_AXIS_COUNT;
 					key_code > SDLKeyCodes::PressureBegin && key_code < SDLKeyCodes::PressureEnd)
 				{
 					// We need to get the joystick value directly for axis >= SDL_GAMEPAD_AXIS_COUNT
@@ -1036,9 +1040,14 @@ std::unordered_map<u64, u16> sdl_pad_handler::get_button_values(const std::share
 
 					value = static_cast<s16>(ScaledInput(value, SDL_JOYSTICK_AXIS_MIN, SDL_JOYSTICK_AXIS_MAX, 0.0f, 255.0f));
 
-					if (value <= 0 && pressed_pressure_buttons.contains(static_cast<SDLKeyCodes>(key_code)))
+					if (pressed_pressure_buttons.contains(static_cast<SDLKeyCodes>(key_code)))
 					{
-						value = 1;
+						if (value <= 0)
+						{
+							value = 1;
+						}
+
+						key_code = ::at32(pressure_to_button, static_cast<SDLKeyCodes>(key_code));
 					}
 
 					values[key_code] = Clamp0To255(value);
@@ -1086,7 +1095,7 @@ std::unordered_map<u64, u16> sdl_pad_handler::get_button_values(const std::share
 	return values;
 }
 
-pad_preview_values sdl_pad_handler::get_preview_values(const std::unordered_map<u64, u16>& data)
+pad_preview_values sdl_pad_handler::get_preview_values(const std::unordered_map<u32, u16>& data, const std::vector<std::string>& /*buttons*/)
 {
 	return {
 		::at32(data, LT),

@@ -23,6 +23,20 @@ namespace gui
 {
 	namespace utils
 	{
+		enum class align_h
+		{
+			left,
+			center,
+			right
+		};
+
+		enum class align_v
+		{
+			top,
+			center,
+			bottom
+		};
+
 		class circle_pixmap : public QPixmap
 		{
 		public:
@@ -112,14 +126,11 @@ namespace gui
 			qobj.setFont(font);
 		}
 
-		// Returns a scaled, centered QPixmap
-		QPixmap get_centered_pixmap(QPixmap pixmap, const QSize& icon_size, int offset_x, int offset_y, qreal device_pixel_ratio, Qt::TransformationMode mode);
+		// Returns a scaled, aligned QPixmap
+		QPixmap get_aligned_pixmap(QPixmap pixmap, const QSize& icon_size, qreal device_pixel_ratio, Qt::TransformationMode mode, align_h h_alignment, align_v v_alignment);
 
-		// Returns a scaled, centered QPixmap
-		QPixmap get_centered_pixmap(const QString& path, const QSize& icon_size, int offset_x, int offset_y, qreal device_pixel_ratio, Qt::TransformationMode mode);
-
-		// Returns the part of the image loaded from path that is inside the bounding box of its opaque areas
-		QImage get_opaque_image_area(const QString& path);
+		// Returns a scaled, aligned QPixmap
+		QPixmap get_aligned_pixmap(const QString& path, const QSize& icon_size, qreal device_pixel_ratio, Qt::TransformationMode mode, align_h h_alignment, align_v v_alignment);
 
 		// Workaround: resize the dropdown combobox items
 		void resize_combo_box_view(QComboBox* combo);

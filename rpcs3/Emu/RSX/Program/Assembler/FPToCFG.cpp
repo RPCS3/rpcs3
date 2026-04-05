@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "CFG.h"
+#include "FPOpcodes.h"
 
 #include "Emu/RSX/Common/simple_array.hpp"
 #include "Emu/RSX/Program/RSXFragmentProgram.h"
@@ -164,6 +165,14 @@ namespace rsx::assembler
 
 			if (opcode == RSX_FP_OPCODE_NOP)
 			{
+				if (includes_literal_constant())
+				{
+					// Verified behavior on real hardware
+					// If any input on a non-flow-control instruction is of literal type the next instruction is assumed to be data
+					// You can actually use this behavior to mask off instructions completely
+					pc++;
+				}
+
 				pc++;
 				continue;
 			}
@@ -211,7 +220,15 @@ namespace rsx::assembler
 
 				auto parent = bb;
 				bb = safe_insert_block(parent, pc + 1u, EdgeType::IF);
-				if (end_addr != else_addr)
+
+				if (else_addr == pc + 1u)
+				{
+					// Empty IF block. We co-opt the ELSE block as the IF and invert the condition.
+					auto& inst = parent->instructions.back();
+					FP::invert_conditional_execution_mask(&inst);
+					rsx_log.warning("CFG: Condition at L%u was inverted to cover empty IF block.");
+				}
+				else if (end_addr != else_addr)
 				{
 					else_blocks.push_back(safe_insert_block(parent, else_addr, EdgeType::ELSE));
 				}

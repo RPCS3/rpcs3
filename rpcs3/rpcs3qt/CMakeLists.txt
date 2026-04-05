@@ -53,6 +53,7 @@ add_library(rpcs3_ui STATIC
     localized.cpp
     localized_emu.cpp
     log_frame.cpp
+    log_level_dialog.cpp
     log_viewer.cpp
     main_window.cpp
     memory_string_searcher.cpp
@@ -82,6 +83,7 @@ add_library(rpcs3_ui STATIC
     qt_video_source.cpp
     raw_mouse_settings_dialog.cpp
     register_editor_dialog.cpp
+    recording_settings_dialog.cpp
     recvmessage_dialog_frame.cpp
     render_creator.cpp
     rpcn_settings_dialog.cpp
@@ -103,6 +105,7 @@ add_library(rpcs3_ui STATIC
     shortcut_settings.cpp
     skylander_dialog.cpp
     sound_effect_manager_dialog.cpp
+    steam_utils.cpp
     syntax_highlighter.cpp
     system_cmd_dialog.cpp
     table_item_delegate.cpp
@@ -133,6 +136,7 @@ add_library(rpcs3_ui STATIC
     patch_creator_dialog.ui
     patch_manager_dialog.ui
     ps_move_tracker_dialog.ui
+    recording_settings_dialog.ui
     settings_dialog.ui
     shortcut_dialog.ui
     welcome_dialog.ui

@@ -9,7 +9,7 @@ namespace rsx
 	template <typename T>
 	concept SpanLike = requires(T t)
 	{
-		{ t.data() } -> std::convertible_to<void*>;
+		{ t.data() } -> std::convertible_to<const void*>;
 		{ t.size_bytes() } -> std::convertible_to<usz>;
 	};
 
@@ -71,9 +71,10 @@ namespace rsx
 			return static_cast<T*>(m_ptr);
 		}
 
-		usz size() const
+		template <Integral T = usz>
+		T size() const
 		{
-			return m_size;
+			return static_cast<T>(m_size);
 		}
 
 		template<typename T>

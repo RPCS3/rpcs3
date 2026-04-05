@@ -19,7 +19,6 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonDocument>
-#include <QThread>
 
 #if defined(_WIN32) || defined(__APPLE__)
 #include <7z.h>
@@ -110,7 +109,7 @@ void update_manager::check_for_updates(bool automatic, bool check_only, bool aut
 	const std::string url = fmt::format("https://update.rpcs3.net/?api=v3&c=%s&os_type=%s&os_arch=%s&os_version=%i.%i.%i",
 		rpcs3::get_commit_and_hash().second, os.type, os.arch, os.version_major, os.version_minor, os.version_patch);
 
-	m_downloader->start(url, true, !automatic, tr("Checking For Updates"), true);
+	m_downloader->start(url, true, !automatic, true, tr("Checking For Updates"), true);
 }
 
 bool update_manager::handle_json(bool automatic, bool check_only, bool auto_accept, const QByteArray& data)
@@ -440,7 +439,7 @@ void update_manager::update(bool auto_accept)
 	});
 
 	update_log.notice("Downloading update...");
-	m_downloader->start(m_request_url, true, true, tr("Downloading Update"), true, m_expected_size);
+	m_downloader->start(m_request_url, true, true, false, tr("Downloading Update"), true, m_expected_size);
 }
 
 bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)

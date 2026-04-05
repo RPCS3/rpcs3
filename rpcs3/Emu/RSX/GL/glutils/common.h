@@ -76,10 +76,30 @@ namespace gl
 		}
 	};
 
-	// Very useful util when capturing traces with RenderDoc
-	static inline void push_debug_label(const char* label)
+	template <GLenum Ns>
+	struct named_object
 	{
-		glInsertEventMarkerEXT(static_cast<GLsizei>(strlen(label)), label);
+	protected:
+		GLuint m_id = GL_NONE;
+		std::string m_name = "Unnamed";
+
+	public:
+		void set_name(std::string_view name)
+		{
+			m_name = name.data();
+			glObjectLabel(Ns, m_id, static_cast<GLsizei>(name.length()), name.data());
+		}
+
+		std::string_view name() const
+		{
+			return m_name;
+		}
+	};
+
+	// Very useful util when capturing traces with RenderDoc
+	static inline void push_debug_label(std::string_view label)
+	{
+		glInsertEventMarkerEXT(static_cast<GLsizei>(label.size()), label.data());
 	}
 
 	// Checks if GL state is still valid

@@ -214,7 +214,7 @@ namespace vk
 			const auto local_memory_usage = vmm_get_application_memory_usage(mem_info.device_local);
 
 			constexpr u64 _1M = 0x100000;
-			const auto res_scale = rsx::get_resolution_scale();
+			const auto res_scale = rsx::get_current_renderer()->resolution_scaling_config.scale_factor();
 			const auto mem_threshold_1 = static_cast<u64>(256 * res_scale * res_scale) * _1M;
 			const auto mem_threshold_2 = static_cast<u64>(64 * res_scale * res_scale) * _1M;
 

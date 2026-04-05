@@ -68,7 +68,9 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 #include "util/media_utils.h"
 #include "rpcs3_version.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/system_utils.hpp"
+#include "Emu/RSX/Overlays/overlay_message.h"
 #include <thread>
 #include <charconv>
 
@@ -131,7 +133,7 @@ std::set<std::string> get_one_drive_paths()
 		do
 		{
 			path_buffer.resize(path_buffer.size() + MAX_PATH);
-			DWORD buffer_size = static_cast<DWORD>(path_buffer.size() - 1);
+			DWORD buffer_size = static_cast<DWORD>((path_buffer.size() - 1) * sizeof(wchar_t));
 			status = RegQueryValueExW(hkey, L"UserFolder", NULL, &type, reinterpret_cast<LPBYTE>(path_buffer.data()), &buffer_size);
 		}
 		while (status == ERROR_MORE_DATA);
@@ -197,6 +199,10 @@ std::set<std::string> get_one_drive_paths()
 
 		fmt::append(buf, "\nBuild: \"%s\"", rpcs3::get_verbose_version());
 		fmt::append(buf, "\nDate: \"%s\"", std::chrono::system_clock::now());
+
+		const auto [total, current] = utils::get_memory_usage();
+
+		fmt::append(buf, "\nRAM Usage: %dMB/%dMB (%dMB free)", current / (1024 * 1024), total / (1024 * 1024), (total - current) / (1024 * 1024));
 	}
 
 	std::string_view text = s_is_error_launch ? _text : buf;
@@ -308,7 +314,8 @@ public:
 	{
 		if (msg == logs::level::fatal || (msg == logs::level::always && m_log_always))
 		{
-			std::string _msg = "RPCS3: ";
+			static const std::string rpcs3_prefix =  "RPCS3: ";
+			std::string _msg = rpcs3_prefix;
 
 			if (!prefix.empty())
 			{
@@ -347,6 +354,13 @@ public:
 #endif
 			if (msg == logs::level::fatal)
 			{
+				if (g_cfg.misc.show_fatal_error_hints)
+				{
+					std::string overlay_msg = "Fatal error: " + _msg.substr(rpcs3_prefix.size());
+					fmt::trim_back(overlay_msg, " \t\n");
+					rsx::overlays::queue_message(overlay_msg, umax);
+				}
+
 				// Pause emulation if fatal error encountered
 				Emu.Pause(true);
 			}

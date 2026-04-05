@@ -362,6 +362,27 @@ std::vector<std::string> cfg::try_to_enum_list(decltype(&fmt_class_string<int>::
 	return result;
 }
 
+size_t cfg::try_to_enum_size(decltype(&fmt_class_string<int>::format) func)
+{
+	size_t result = 0;
+	for (u64 i = 0;; i++)
+	{
+		std::string var;
+		func(var, i);
+
+		std::string hex;
+		fmt_class_string<u64>::format(hex, i);
+		if (var == hex)
+		{
+			break;
+		}
+
+		result++;
+	}
+
+	return result;
+}
+
 void cfg::encode(YAML::Emitter& out, const cfg::_base& rhs)
 {
 	switch (rhs.get_type())
@@ -416,7 +437,7 @@ void cfg::encode(YAML::Emitter& out, const cfg::_base& rhs)
 		out << YAML::BeginMap;
 		for (const auto& np : static_cast<const log_entry&>(rhs).get_map())
 		{
-			if (np.second == logs::level::notice) continue;
+			if (np.second == logs::level::_default) continue;
 			out << YAML::Key << np.first;
 			out << YAML::Value << fmt::format("%s", np.second);
 		}

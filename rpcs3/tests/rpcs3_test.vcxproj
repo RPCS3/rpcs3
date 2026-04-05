@@ -86,7 +86,15 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="test_dmux_pamf.h">
+      <ExcludedFromBuild>true</ExcludedFromBuild>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
     <ClCompile Include="test.cpp" />
+    <ClCompile Include="test_dmux_pamf.cpp">
+      <ExcludedFromBuild>true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="test_fmt.cpp" />
     <ClCompile Include="test_rsx_cfg.cpp" />
     <ClCompile Include="test_rsx_fp_asm.cpp" />

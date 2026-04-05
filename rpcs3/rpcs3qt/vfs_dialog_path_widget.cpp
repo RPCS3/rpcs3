@@ -81,7 +81,7 @@ vfs_dialog_path_widget::vfs_dialog_path_widget(const QString& name, const QStrin
 		item->setCheckState(Qt::CheckState::Checked);
 	});
 
-	connect(m_dir_list, &QListWidget::currentRowChanged, this, [this, button_remove_dir](int row)
+	connect(m_dir_list, &QListWidget::currentRowChanged, this, [button_remove_dir](int row)
 	{
 		button_remove_dir->setEnabled(row > 0);
 	});

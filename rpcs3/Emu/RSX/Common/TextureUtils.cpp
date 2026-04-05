@@ -244,7 +244,7 @@ struct copy_unmodified_block_swizzled
 			}
 
 			const u32 size_in_block = padded_width * padded_height * depth * 2;
-			rsx::simple_array<U> tmp(size_in_block * words_per_block);
+			rsx::simple_array<U, sizeof(u128)> tmp(size_in_block * words_per_block);
 
 			if (words_per_block == 1) [[likely]]
 			{

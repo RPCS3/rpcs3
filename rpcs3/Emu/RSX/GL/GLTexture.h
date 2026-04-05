@@ -14,18 +14,20 @@ namespace gl
 {
 	struct pixel_buffer_layout
 	{
-		GLenum format;
-		GLenum type;
-		u8     size;
-		bool   swap_bytes;
-		u8     alignment;
+		GLenum format = GL_RGBA;
+		GLenum type = GL_UNSIGNED_BYTE;
+		u32    row_length = 0;
+		u8     block_size = 0;
+		bool   swap_bytes = false;
+		u8     alignment = 0;
+		u8     reserved;
 	};
 
 	struct image_memory_requirements
 	{
-		u64 image_size_in_texels;
-		u64 image_size_in_bytes;
-		u64 memory_required;
+		u64 image_size_in_texels = 0;
+		u64 image_size_in_bytes = 0;
+		u64 memory_required = 0;
 	};
 
 	struct clear_cmd_info
@@ -86,5 +88,6 @@ namespace gl
 		extern std::unique_ptr<texture> g_vis_texture;
 	}
 
+	void init_global_texture_resources();
 	void destroy_global_texture_resources();
 }

@@ -522,9 +522,9 @@ void fmt_class_string<shader_mode>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
-		case shader_mode::recompiler: return "Shader Recompiler";
-		case shader_mode::async_recompiler: return "Async Shader Recompiler";
-		case shader_mode::async_with_interpreter: return "Async with Shader Interpreter";
+		case shader_mode::recompiler: return "Legacy Recompiler (single-threaded)";
+		case shader_mode::async_recompiler: return "Async Recompiler (multi-threaded)";
+		case shader_mode::async_with_interpreter: return "Async Recompiler with Shader Interpreter";
 		case shader_mode::interpreter_only: return "Shader Interpreter only";
 		}
 
@@ -729,6 +729,22 @@ void fmt_class_string<time_format>::format(std::string& out, u64 arg)
 		{
 		case time_format::clock12: return "clock12";
 		case time_format::clock24: return "clock24";
+		}
+
+		return unknown;
+	});
+}
+
+template <>
+void fmt_class_string<vsync_mode>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](vsync_mode value)
+	{
+		switch (value)
+		{
+		case vsync_mode::off: return "Disabled";
+		case vsync_mode::adaptive: return "Adaptive";
+		case vsync_mode::full: return "Full";
 		}
 
 		return unknown;

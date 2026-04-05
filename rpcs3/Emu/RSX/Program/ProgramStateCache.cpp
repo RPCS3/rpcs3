@@ -675,10 +675,11 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 			// Otherwise we would need to follow the execution chain
 			result.has_branch_instructions = true;
 			break;
+		default:
+			break;
 		}
 
-		if (rsx::assembler::FP::get_operand_count(opcode) > 0 &&
-			is_any_src_constant(inst))
+		if (is_any_src_constant(inst))
 		{
 			// Instruction references constant, skip one slot occupied by data
 			index++;

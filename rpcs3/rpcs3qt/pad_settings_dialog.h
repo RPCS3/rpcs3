@@ -78,13 +78,32 @@ class pad_settings_dialog : public QDialog
 		id_remove_config_file
 	};
 
+	enum class binding_mode
+	{
+		single,
+		multi,
+		combo
+	};
+
 	struct pad_button
 	{
-		cfg::string* cfg_text = nullptr;
-		std::string keys;
-		QString text;
+		pad_button() {}
+		pad_button(cfg::string* cfg_text) : m_cfg_text(ensure(cfg_text))
+		{
+			update(*cfg_text);
+		}
 
-		void insert_key(const std::string& key, bool append_key);
+		void insert_button(const std::string& button, binding_mode mode);
+		void update(const std::string& button_string);
+
+		cfg::string* cfg_text() const { return m_cfg_text; }
+		const std::string& button_string() const { return m_button_string; }
+		const QString& text() const { return m_text; }
+
+	private:
+		cfg::string* m_cfg_text = nullptr;
+		std::string m_button_string;
+		QString m_text;
 	};
 
 	const QString Disconnected_suffix = tr(" (disconnected)");
@@ -133,7 +152,7 @@ private:
 	QButtonGroup* m_pad_buttons = nullptr;
 	atomic_t<u32> m_button_id = button_ids::id_pad_begin;
 	std::map<int /*id*/, pad_button /*info*/> m_cfg_entries;
-	std::map<int /*id*/, std::string> m_duplicate_buttons;
+	std::map<int /*id*/, std::string> m_duplicate_combos;
 
 	// Real time stick values
 	int m_lx = 0;
@@ -161,7 +180,7 @@ private:
 	static constexpr int MAX_SECONDS = 5;
 	int m_seconds = MAX_SECONDS;
 	QTimer m_remap_timer;
-	bool m_enable_multi_binding = false;
+	binding_mode m_binding_mode = binding_mode::single;
 
 	// Mouse Move
 	QPoint m_last_pos;
@@ -180,9 +199,9 @@ private:
 
 		struct input_values
 		{
-			std::string button_name;
 			u32 button_id = button_ids::id_pad_begin;
-			u16 val = 0;
+			std::map<std::string, u16> buttons;
+			std::array<std::pair<std::string, u16>, 2> sticks{};
 		};
 		std::vector<input_values> values;
 	} m_input_callback_data;
@@ -197,7 +216,7 @@ private:
 
 	std::pair<QStringList, QString> get_config_files();
 
-	void save(bool check_duplicates);
+	bool save(bool check_duplicates);
 	void SaveExit();
 	void CancelExit();
 
@@ -254,10 +273,10 @@ protected:
 	void showEvent(QShowEvent* event) override;
 
 	/** Handle keyboard handler input */
-	void keyPressEvent(QKeyEvent *keyEvent) override;
-	void mouseReleaseEvent(QMouseEvent *event) override;
-	void mouseMoveEvent(QMouseEvent *event) override;
-	void wheelEvent(QWheelEvent *event) override;
+	void keyPressEvent(QKeyEvent* keyEvent) override;
+	void mouseReleaseEvent(QMouseEvent* event) override;
+	void mouseMoveEvent(QMouseEvent* event) override;
+	void wheelEvent(QWheelEvent* event) override;
 	bool eventFilter(QObject* object, QEvent* event) override;
 	void closeEvent(QCloseEvent* event) override;
 };

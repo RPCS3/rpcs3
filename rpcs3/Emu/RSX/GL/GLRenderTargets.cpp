@@ -141,7 +141,8 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 		m_framebuffer_layout.width, m_framebuffer_layout.height,
 		m_framebuffer_layout.target, m_framebuffer_layout.aa_mode, m_framebuffer_layout.raster_type,
 		m_framebuffer_layout.color_addresses, m_framebuffer_layout.zeta_address,
-		m_framebuffer_layout.actual_color_pitch, m_framebuffer_layout.actual_zeta_pitch);
+		m_framebuffer_layout.actual_color_pitch, m_framebuffer_layout.actual_zeta_pitch,
+		resolution_scaling_config);
 
 	std::array<GLuint, 4> color_targets;
 	GLuint depth_stencil_target;
@@ -448,7 +449,7 @@ void gl::render_target::load_memory(gl::command_context& cmd)
 	subres.data = { vm::get_super_ptr<const std::byte>(base_addr), static_cast<std::span<const std::byte>::size_type>(rsx_pitch * surface_height * samples_y) };
 
 	// TODO: MSAA support
-	if (g_cfg.video.resolution_scale_percent == 100 && spp == 1) [[likely]]
+	if (resolution_scaling_config.scale_percent == 100 && spp == 1) [[likely]]
 	{
 		gl::upload_texture(cmd, this, get_gcm_format(), is_swizzled, { subres });
 	}
@@ -689,6 +690,8 @@ gl::viewable_image* gl::render_target::get_resolve_target_safe(gl::command_conte
 			static_cast<GLenum>(get_internal_format()),
 			format_class()
 		));
+
+		resolve_surface->set_name(fmt::format("MSAA_Resolve_%u@0x%x", resolve_surface->id(), base_addr));
 	}
 
 	return static_cast<gl::viewable_image*>(resolve_surface.get());

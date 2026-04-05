@@ -135,6 +135,7 @@
     <ClCompile Include="Emu\RSX\NV47\HW\nv406e.cpp" />
     <ClCompile Include="Emu\RSX\NV47\HW\nv4097.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\FriendsList\overlay_friends_list_dialog.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_icons.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_components.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_message_box.cpp" />
@@ -145,6 +146,8 @@
     <ClCompile Include="Emu\RSX\Overlays\Network\overlay_recvmessage_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\Network\overlay_sendmessage_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_animated_icon.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_audio.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_checkbox.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_controls.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_cursor.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_debug_overlay.cpp" />
@@ -152,6 +155,9 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_media_list_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_osk_panel.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_compile_notification.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_select.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_slider.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\overlay_tabs.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_user_list_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_utils.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_video.cpp" />
@@ -694,6 +700,7 @@
     <ClInclude Include="Emu\RSX\NV47\HW\common.h" />
     <ClInclude Include="Emu\RSX\NV47\HW\nv47_sync.hpp" />
     <ClInclude Include="Emu\RSX\Overlays\FriendsList\overlay_friends_list_dialog.h" />
+    <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_icons.h" />
     <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu.h" />
     <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_components.h" />
     <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_message_box.h" />
@@ -704,6 +711,9 @@
     <ClInclude Include="Emu\RSX\Overlays\Network\overlay_recvmessage_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\Network\overlay_sendmessage_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_animated_icon.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_arrow.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_audio.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_checkbox.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_cursor.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_debug_overlay.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_edit_text.hpp" />
@@ -712,6 +722,9 @@
     <ClInclude Include="Emu\RSX\Overlays\overlay_manager.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_media_list_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_progress_bar.hpp" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_select.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_slider.h" />
+    <ClInclude Include="Emu\RSX\Overlays\overlay_tabs.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_video.h" />
     <ClInclude Include="Emu\RSX\Overlays\Trophies\overlay_trophy_list_dialog.h" />
     <ClInclude Include="Emu\RSX\Program\Assembler\CFG.h" />

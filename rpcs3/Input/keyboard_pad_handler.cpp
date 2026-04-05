@@ -6,6 +6,7 @@
 #include "Input/product_info.h"
 #include "rpcs3qt/gs_frame.h"
 
+#include <algorithm>
 #include <QApplication>
 
 bool keyboard_pad_handler::Init()
@@ -84,24 +85,50 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 
 	for (auto& pad : m_pads_internal)
 	{
-		const auto register_new_button_value = [&](std::map<u32, u16>& pressed_keys) -> u16
+		const auto register_new_button_value = [code, pressed, value](Button& btn) -> u16
 		{
-			u16 actual_value = 0;
-
 			// Make sure we keep this button pressed until all related keys are released.
 			if (pressed)
 			{
-				pressed_keys[code] = value;
+				btn.m_pressed_keys[code] = value;
 			}
 			else
 			{
-				pressed_keys.erase(code);
+				btn.m_pressed_keys.erase(code);
+
+				// Optimization: just skip the whole combo parsing if there are no keys pressed
+				if (btn.m_pressed_keys.empty())
+				{
+					return 0;
+				}
 			}
 
-			// Get the max value of all pressed keys for this button
-			for (const auto& [key, val] : pressed_keys)
+			u16 actual_value = 0;
+
+			// Get the max value of all pressed keys for this DS3 button
+			for (const std::set<u32>& key_codes : btn.m_key_combos)
 			{
-				actual_value = std::max(actual_value, val);
+				if (key_codes.empty()) continue;
+
+				// Every key in this combination has to be pressed for this button to be considered pressed
+				u16 combo_value = 0;
+				const bool combo_pressed = std::all_of(key_codes.cbegin(), key_codes.cend(), [&btn, &combo_value](u32 key_code)
+				{
+					const auto it = btn.m_pressed_keys.find(key_code);
+					if (it == btn.m_pressed_keys.cend() || it->second == 0)
+					{
+						return false; // This combo button is not pressed, so the combo is not pressed either.
+					}
+
+					// Take minimum combo value. Otherwise we will always end up with the max value.
+					combo_value = (combo_value == 0) ? it->second : std::min(combo_value, it->second);
+					return true;
+				});
+
+				if (combo_pressed)
+				{
+					actual_value = std::max(actual_value, combo_value);
+				}
 			}
 
 			return actual_value;
@@ -109,18 +136,23 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 
 		// Find out if special buttons are pressed (introduced by RPCS3).
 		// Activate the buttons here if possible since keys don't auto-repeat. This ensures that they are already pressed in the following loop.
-		if (pad.m_pressure_intensity_button_index >= 0)
-		{
-			Button& pressure_intensity_button = pad.m_buttons[pad.m_pressure_intensity_button_index];
 
-			if (pressure_intensity_button.m_key_codes.contains(code))
+		const auto update_special_button_press = [&pad, &register_new_button_value, code](s32 index)
+		{
+			if (index < 0) return;
+
+			Button& pressure_intensity_button = pad.m_buttons[index];
+
+			if (std::any_of(pressure_intensity_button.m_key_combos.cbegin(), pressure_intensity_button.m_key_combos.cend(), [code](const std::set<u32>& key_codes){ return key_codes.contains(code); }))
 			{
-				const u16 actual_value = register_new_button_value(pressure_intensity_button.m_pressed_keys);
+				const u16 actual_value = register_new_button_value(pressure_intensity_button);
 
 				pressure_intensity_button.m_pressed = actual_value > 0;
 				pressure_intensity_button.m_value = actual_value;
 			}
-		}
+		};
+
+		update_special_button_press(pad.m_pressure_intensity_button_index);
 
 		const bool adjust_pressure = pad.get_pressure_intensity_button_active(m_pressure_intensity_toggle_mode, pad.m_player_id);
 		const bool adjust_pressure_changed = pad.m_adjust_pressure_last != adjust_pressure;
@@ -130,18 +162,7 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 			pad.m_adjust_pressure_last = adjust_pressure;
 		}
 
-		if (pad.m_analog_limiter_button_index >= 0)
-		{
-			Button& analog_limiter_button = pad.m_buttons[pad.m_analog_limiter_button_index];
-
-			if (analog_limiter_button.m_key_codes.contains(code))
-			{
-				const u16 actual_value = register_new_button_value(analog_limiter_button.m_pressed_keys);
-
-				analog_limiter_button.m_pressed = actual_value > 0;
-				analog_limiter_button.m_value = actual_value;
-			}
-		}
+		update_special_button_press(pad.m_analog_limiter_button_index);
 
 		const bool analog_limiter_enabled = pad.get_analog_limiter_button_active(m_analog_limiter_toggle_mode, pad.m_player_id);
 		const bool analog_limiter_changed = pad.m_analog_limiter_enabled_last != analog_limiter_enabled;
@@ -158,21 +179,22 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 		{
 			// Ignore special buttons
 			if (static_cast<s32>(i) == pad.m_pressure_intensity_button_index ||
-				static_cast<s32>(i) == pad.m_analog_limiter_button_index)
+				static_cast<s32>(i) == pad.m_analog_limiter_button_index ||
+				static_cast<s32>(i) == pad.m_orientation_reset_button_index)
 				continue;
 
 			Button& button = pad.m_buttons[i];
 
 			bool update_button = true;
 
-			if (!button.m_key_codes.contains(code))
+			if (std::none_of(button.m_key_combos.cbegin(), button.m_key_combos.cend(), [code](const std::set<u32>& key_codes){ return key_codes.contains(code); }))
 			{
 				// Handle pressure changes anyway
 				update_button = adjust_pressure_changed;
 			}
 			else
 			{
-				button.m_actual_value = register_new_button_value(button.m_pressed_keys);
+				button.m_actual_value = register_new_button_value(button);
 
 				// to get the fastest response time possible we don't wanna use any lerp with factor 1
 				if (button.m_analog)
@@ -220,8 +242,8 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 
 			const bool is_left_stick = i < 2;
 
-			const bool is_max = stick.m_key_codes_max.contains(code);
-			const bool is_min = stick.m_key_codes_min.contains(code);
+			const bool is_max = std::any_of(stick.m_key_combos_max.cbegin(), stick.m_key_combos_max.cend(), [code](const std::set<u32>& combo) { return combo.contains(code); });
+			const bool is_min = std::any_of(stick.m_key_combos_min.cbegin(), stick.m_key_combos_min.cend(), [code](const std::set<u32>& combo) { return combo.contains(code); });
 
 			if (!is_max && !is_min)
 			{
@@ -229,8 +251,8 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 					continue;
 
 				// Update already pressed sticks
-				const bool is_min_pressed = !stick.m_pressed_keys_min.empty();
-				const bool is_max_pressed = !stick.m_pressed_keys_max.empty();
+				const bool is_min_pressed = !stick.m_pressed_combos_min.empty();
+				const bool is_max_pressed = !stick.m_pressed_combos_max.empty();
 
 				const u32 stick_multiplier = is_left_stick ? l_stick_multiplier : r_stick_multiplier;
 
@@ -246,43 +268,91 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 			else
 			{
 				const u16 actual_value = pressed ? MultipliedInput(value, is_left_stick ? l_stick_multiplier : r_stick_multiplier) : value;
-				u16 normalized_value = std::ceil(actual_value / 2.0);
 
-				const auto register_new_stick_value = [&](std::map<u32, u16>& pressed_keys, bool is_max)
+				const auto register_new_stick_value = [&](bool is_max) -> std::pair<bool, u16>
 				{
+					const std::vector<std::set<u32>>& key_combos = is_max ? stick.m_key_combos_max : stick.m_key_combos_min;
+					std::map<u32, u16>& pressed_keys = is_max ? stick.m_pressed_keys_max : stick.m_pressed_keys_min;
+					std::map<u32, u16>& pressed_combos = is_max ? stick.m_pressed_combos_max : stick.m_pressed_combos_min;
+
 					// Make sure we keep this stick pressed until all related keys are released.
 					if (pressed)
 					{
-						pressed_keys[code] = normalized_value;
+						pressed_keys[code] = actual_value;
 					}
 					else
 					{
 						pressed_keys.erase(code);
 					}
 
-					// Get the min/max value of all pressed keys for this stick
-					for (const auto& [key, val] : pressed_keys)
+					// Get the value of all the combos for this stick direction
+					bool any_combo_pressed = false;
+					u16 new_val = 0;
+
+					for (const std::set<u32>& key_codes : key_combos)
 					{
-						normalized_value = is_max ? std::max(normalized_value, val) : std::min(normalized_value, val);
+						if (key_codes.empty()) continue;
+
+						// Every key in this combination has to be pressed for this button to be considered pressed
+						u16 combo_value = 0;
+						const bool combo_pressed = std::all_of(key_codes.cbegin(), key_codes.cend(), [&pressed_keys, &combo_value, is_max, i, pressed](u32 key_code)
+						{
+							const auto it = pressed_keys.find(key_code);
+							if (it == pressed_keys.cend() || it->second == 0)
+							{
+								return false; // This combo button is not pressed, so the combo is not pressed either.
+							}
+
+							// Take minimum combo value. Otherwise we will always end up with the max value.
+							combo_value = (combo_value == 0) ? it->second : std::min(combo_value, it->second);
+							return true;
+						});
+
+						if (combo_pressed)
+						{
+							// Take minimum combo value. Otherwise we will always end up with the max value.
+							new_val = (new_val == 0) ? combo_value : std::min(new_val, combo_value);
+							any_combo_pressed = true;
+						}
 					}
+
+					// Make sure we keep this combo pressed until all related keys are released.
+					if (any_combo_pressed)
+					{
+						new_val = std::ceil(new_val / 2.0f);
+
+						pressed_combos[code] = new_val;
+					}
+					else
+					{
+						pressed_combos.erase(code);
+
+						if (pressed_combos.empty())
+						{
+							return std::pair(false, 0);
+						}
+					}
+
+					// Get the min/max value of all pressed combos for this stick
+					const auto min_max_it = is_max
+						? std::max_element(pressed_combos.cbegin(), pressed_combos.cend(), [](const auto& a, const auto& b) { return a.second < b.second; })
+						: std::min_element(pressed_combos.cbegin(), pressed_combos.cend(), [](const auto& a, const auto& b) { return a.second < b.second; });
+
+					return std::pair(!pressed_combos.empty(), min_max_it->second);
 				};
 
 				if (is_max)
 				{
-					register_new_stick_value(stick.m_pressed_keys_max, true);
+					const std::pair<bool, u16> stick_value = register_new_stick_value(true);
 
-					const bool is_max_pressed = !stick.m_pressed_keys_max.empty();
-
-					m_stick_max[i] = is_max_pressed ? std::min<int>(128 + normalized_value, 255) : 128;
+					m_stick_max[i] = stick_value.first ? std::min<int>(128 + stick_value.second, 255) : 128;
 				}
 
 				if (is_min)
 				{
-					register_new_stick_value(stick.m_pressed_keys_min, false);
+					const std::pair<bool, u16> stick_value = register_new_stick_value(false);
 
-					const bool is_min_pressed = !stick.m_pressed_keys_min.empty();
-
-					m_stick_min[i] = is_min_pressed ? std::min<u8>(normalized_value, 128) : 0;
+					m_stick_min[i] = stick_value.first ? std::min<u8>(stick_value.second, 128) : 0;
 				}
 			}
 
@@ -832,17 +902,29 @@ std::string keyboard_pad_handler::GetKeyName(const u32& keyCode)
 	return QKeySequence(keyCode).toString(QKeySequence::NativeText).toStdString();
 }
 
-std::set<u32> keyboard_pad_handler::GetKeyCodes(const cfg::string& cfg_string)
+std::vector<std::set<u32>> keyboard_pad_handler::GetKeyCombos(const cfg::string& cfg_string)
 {
-	std::set<u32> key_codes;
-	for (const std::string& key_name : cfg_pad::get_buttons(cfg_string.to_string()))
+	std::vector<std::set<u32>> res;
+
+	for (const pad::combo& combo : cfg_pad::get_combos(cfg_string.to_string()))
 	{
-		if (u32 code = GetKeyCode(QString::fromStdString(key_name)); code != Qt::NoButton)
+		std::set<u32> key_codes;
+
+		for (const std::string& button : combo.buttons())
 		{
-			key_codes.insert(code);
+			if (u32 code = GetKeyCode(QString::fromStdString(button)); code != Qt::NoButton)
+			{
+				key_codes.insert(code);
+			}
+		}
+
+		if (!key_codes.empty())
+		{
+			res.push_back(std::move(key_codes));
 		}
 	}
-	return key_codes;
+
+	return res;
 }
 
 u32 keyboard_pad_handler::GetKeyCode(const QString& keyName)
@@ -978,23 +1060,37 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 	m_pressure_intensity_toggle_mode = cfg->pressure_intensity_toggle_mode.get();
 	m_pressure_intensity_deadzone = cfg->pressure_intensity_deadzone.get();
 
-	const auto find_keys = [this](const cfg::string& name)
+	const auto find_combos = [this](const cfg::string& name)
 	{
-		std::set<u32> keys = FindKeyCodes<u32, u32>(mouse_list, name, false);
-		for (const u32& key : GetKeyCodes(name)) keys.insert(key);
+		std::vector<std::set<u32>> combos = find_key_combos(mouse_list, name);
+		for (const std::set<u32>& combo : GetKeyCombos(name)) combos.push_back(combo);
 
-		if (!keys.empty())
+		if (!combos.empty())
 		{
-			if (!m_mouse_move_used && (keys.contains(mouse::move_left) || keys.contains(mouse::move_right) || keys.contains(mouse::move_up) || keys.contains(mouse::move_down)))
+			if (!m_mouse_move_used)
 			{
-				m_mouse_move_used = true;
+				if (std::any_of(combos.cbegin(), combos.cend(), [](const std::set<u32>& keys)
+					{
+						return keys.contains(mouse::move_left) || keys.contains(mouse::move_right) || keys.contains(mouse::move_up) || keys.contains(mouse::move_down);
+					}))
+				{
+					m_mouse_move_used = true;
+				}
 			}
-			else if (!m_mouse_wheel_used && (keys.contains(mouse::wheel_left) || keys.contains(mouse::wheel_right) || keys.contains(mouse::wheel_up) || keys.contains(mouse::wheel_down)))
+
+			if (!m_mouse_wheel_used)
 			{
-				m_mouse_wheel_used = true;
+				if (std::any_of(combos.cbegin(), combos.cend(), [](const std::set<u32>& keys)
+					{
+						return keys.contains(mouse::wheel_left) || keys.contains(mouse::wheel_right) || keys.contains(mouse::wheel_up) || keys.contains(mouse::wheel_down);
+					}))
+				{
+					m_mouse_wheel_used = true;
+				}
 			}
 		}
-		return keys;
+
+		return combos;
 	};
 
 	u32 pclass_profile = 0x0;
@@ -1022,48 +1118,48 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 
 	if (b_has_pressure_intensity_button)
 	{
-		pad->m_buttons.emplace_back(special_button_offset, find_keys(cfg->pressure_intensity_button), special_button_value::pressure_intensity);
+		pad->m_buttons.emplace_back(special_button_offset, find_combos(cfg->pressure_intensity_button), special_button_value::pressure_intensity);
 		pad->m_pressure_intensity_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
 	}
 
 	if (b_has_analog_limiter_button)
 	{
-		pad->m_buttons.emplace_back(special_button_offset, find_keys(cfg->analog_limiter_button), special_button_value::analog_limiter);
+		pad->m_buttons.emplace_back(special_button_offset, find_combos(cfg->analog_limiter_button), special_button_value::analog_limiter);
 		pad->m_analog_limiter_button_index = static_cast<s32>(pad->m_buttons.size()) - 1;
 	}
 
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_keys(cfg->left),     CELL_PAD_CTRL_LEFT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_keys(cfg->down),     CELL_PAD_CTRL_DOWN);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_keys(cfg->right),    CELL_PAD_CTRL_RIGHT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_keys(cfg->up),       CELL_PAD_CTRL_UP);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_keys(cfg->start),    CELL_PAD_CTRL_START);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_keys(cfg->r3),       CELL_PAD_CTRL_R3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_keys(cfg->l3),       CELL_PAD_CTRL_L3);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_keys(cfg->select),   CELL_PAD_CTRL_SELECT);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_keys(cfg->ps),       CELL_PAD_CTRL_PS);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_keys(cfg->square),   CELL_PAD_CTRL_SQUARE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_keys(cfg->cross),    CELL_PAD_CTRL_CROSS);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_keys(cfg->circle),   CELL_PAD_CTRL_CIRCLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_keys(cfg->triangle), CELL_PAD_CTRL_TRIANGLE);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_keys(cfg->r1),       CELL_PAD_CTRL_R1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_keys(cfg->l1),       CELL_PAD_CTRL_L1);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_keys(cfg->r2),       CELL_PAD_CTRL_R2);
-	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_keys(cfg->l2),       CELL_PAD_CTRL_L2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_combos(cfg->left),     CELL_PAD_CTRL_LEFT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_combos(cfg->down),     CELL_PAD_CTRL_DOWN);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_combos(cfg->right),    CELL_PAD_CTRL_RIGHT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_combos(cfg->up),       CELL_PAD_CTRL_UP);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_combos(cfg->start),    CELL_PAD_CTRL_START);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_combos(cfg->r3),       CELL_PAD_CTRL_R3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_combos(cfg->l3),       CELL_PAD_CTRL_L3);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_combos(cfg->select),   CELL_PAD_CTRL_SELECT);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL1, find_combos(cfg->ps),       CELL_PAD_CTRL_PS);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_combos(cfg->square),   CELL_PAD_CTRL_SQUARE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_combos(cfg->cross),    CELL_PAD_CTRL_CROSS);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_combos(cfg->circle),   CELL_PAD_CTRL_CIRCLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_combos(cfg->triangle), CELL_PAD_CTRL_TRIANGLE);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_combos(cfg->r1),       CELL_PAD_CTRL_R1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_combos(cfg->l1),       CELL_PAD_CTRL_L1);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_combos(cfg->r2),       CELL_PAD_CTRL_R2);
+	pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_DIGITAL2, find_combos(cfg->l2),       CELL_PAD_CTRL_L2);
 
 	if (pad->m_class_type == CELL_PAD_PCLASS_TYPE_SKATEBOARD)
 	{
-		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, find_keys(cfg->ir_nose), CELL_PAD_CTRL_PRESS_TRIANGLE);
-		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, find_keys(cfg->ir_tail), CELL_PAD_CTRL_PRESS_CIRCLE);
-		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, find_keys(cfg->ir_left), CELL_PAD_CTRL_PRESS_CROSS);
-		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, find_keys(cfg->ir_right), CELL_PAD_CTRL_PRESS_SQUARE);
-		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, find_keys(cfg->tilt_left), CELL_PAD_CTRL_PRESS_L1);
-		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, find_keys(cfg->tilt_right), CELL_PAD_CTRL_PRESS_R1);
+		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, find_combos(cfg->ir_nose), CELL_PAD_CTRL_PRESS_TRIANGLE);
+		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, find_combos(cfg->ir_tail), CELL_PAD_CTRL_PRESS_CIRCLE);
+		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, find_combos(cfg->ir_left), CELL_PAD_CTRL_PRESS_CROSS);
+		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, find_combos(cfg->ir_right), CELL_PAD_CTRL_PRESS_SQUARE);
+		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, find_combos(cfg->tilt_left), CELL_PAD_CTRL_PRESS_L1);
+		pad->m_buttons.emplace_back(CELL_PAD_BTN_OFFSET_PRESS_PIGGYBACK, find_combos(cfg->tilt_right), CELL_PAD_CTRL_PRESS_R1);
 	}
 
-	pad->m_sticks[0] = AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  find_keys(cfg->ls_left), find_keys(cfg->ls_right));
-	pad->m_sticks[1] = AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  find_keys(cfg->ls_up),   find_keys(cfg->ls_down));
-	pad->m_sticks[2] = AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, find_keys(cfg->rs_left), find_keys(cfg->rs_right));
-	pad->m_sticks[3] = AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, find_keys(cfg->rs_up),   find_keys(cfg->rs_down));
+	pad->m_sticks[0] = AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_X,  find_combos(cfg->ls_left), find_combos(cfg->ls_right));
+	pad->m_sticks[1] = AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y,  find_combos(cfg->ls_up),   find_combos(cfg->ls_down));
+	pad->m_sticks[2] = AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X, find_combos(cfg->rs_left), find_combos(cfg->rs_right));
+	pad->m_sticks[3] = AnalogStick(CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y, find_combos(cfg->rs_up),   find_combos(cfg->rs_down));
 
 	pad->m_sensors[0] = AnalogSensor(CELL_PAD_BTN_OFFSET_SENSOR_X, 0, 0, 0, DEFAULT_MOTION_X);
 	pad->m_sensors[1] = AnalogSensor(CELL_PAD_BTN_OFFSET_SENSOR_Y, 0, 0, 0, DEFAULT_MOTION_Y);
