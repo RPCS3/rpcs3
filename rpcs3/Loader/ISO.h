@@ -15,9 +15,9 @@ void unload_iso();
 /*
 - Hijacked the "iso_archive::iso_archive" method to test if the ".iso" file is encrypted and sets a flag.
   The flag is set according to the first matching encryption type found following the order below:
-  - Redump type: ".dkey" or ".key" (as alternative) file, with the same name of the ".iso" file,
-                 exists in the same folder of the ".iso" file
-  - 3k3y type:   3k3y watermark exists at offset 0xF70
+  - Redump: ".dkey" or ".key" (as alternative) file, with the same name of the ".iso" file,
+            exists in the same folder of the ".iso" file
+  - 3k3y:   3k3y watermark exists at offset 0xF70
   If the flag is set then the "iso_file::read" method will decrypt the data on the fly
 
 - Supported ISO encryption type:

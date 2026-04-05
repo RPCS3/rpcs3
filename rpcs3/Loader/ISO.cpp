@@ -207,7 +207,7 @@ bool iso_file_decryption::init(const std::string& path)
 	// Check for 3k3y type
 	//
 
-	// If encryption type is still set to none
+	// If encryption type is still set to NONE
 	if (m_enc_type == iso_encryption_type::NONE)
 	{
 		// The 3k3y watermarks located at offset 0xF70: (D|E)ncrypted 3K BLD
