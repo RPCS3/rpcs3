@@ -948,7 +948,7 @@ namespace rsx
 					perf_overlay->set_update_interval(perf_settings.update_interval);
 					perf_overlay->set_font(perf_settings.font);
 					perf_overlay->set_font_size(perf_settings.font_size);
-					perf_overlay->set_margins(perf_settings.margin_x, perf_settings.margin_y, perf_settings.center_x.get(), perf_settings.center_y.get());
+					perf_overlay->set_margins(static_cast<f32>(perf_settings.margin_x.get()), static_cast<f32>(perf_settings.margin_y.get()), perf_settings.center_x.get(), perf_settings.center_y.get());
 					perf_overlay->use_window_space = perf_settings.perf_overlay_use_window_space.get();
 					perf_overlay->set_opacity(perf_settings.opacity / 100.f);
 					perf_overlay->set_body_colors(perf_settings.color_body, perf_settings.background_body);

@@ -2957,7 +2957,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			if (g_cfg.core.spu_block_size == spu_block_size_type::safe)
 			{
 				// Stop on special instructions (TODO)
-				m_targets[pos];
+				m_targets[pos].push_back(SPU_LS_SIZE);
 				next_block();
 				break;
 			}
@@ -2978,7 +2978,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				spu_log.error("[0x%x] Invalid interrupt flags (DE)", pos);
 			}
 
-			m_targets[pos];
+			m_targets[pos].push_back(SPU_LS_SIZE);
 			next_block();
 			break;
 		}
@@ -3011,7 +3011,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 			bool is_no_return = false;
 
-			if (pos_next >= lsa && pos_next < limit)
+			if (sl && pos_next >= lsa && pos_next < limit)
 			{
 				const u32 data_next = ls[pos_next / 4];
 				const auto type_next = g_spu_itype.decode(data_next);
@@ -3272,6 +3272,12 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			else if (type == spu_itype::BI && sync)
 			{
 				spu_log.notice("[0x%x] At 0x%x: ignoring indirect branch (SYNC)", entry_point, pos);
+			}
+
+			if (!(af & vf::is_const))
+			{
+				// Possible unknown target
+				m_targets[pos].emplace_back(SPU_LS_SIZE);
 			}
 
 			if (type == spu_itype::BI || sl || is_no_return)
@@ -3883,6 +3889,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			it->second.emplace_back(SPU_LS_SIZE);
 		}
 
+		std::sort(it->second.begin(), it->second.end());
 		it++;
 	}
 
@@ -6087,17 +6094,17 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 			u32 ra = s_reg_max, rb = s_reg_max, rc = s_reg_max;
 
-			if (m_use_ra.test(pos / 4))
+			if (::at32(m_use_ra, pos / 4))
 			{
 				ra = op.ra;
 			}
 
-			if (m_use_rb.test(pos / 4))
+			if (::at32(m_use_rb, pos / 4))
 			{
 				rb = op.rb;
 			}
 
-			if (m_use_rc.test(pos / 4))
+			if (::at32(m_use_rc, pos / 4))
 			{
 				rc = op.rc;
 			}
@@ -6187,7 +6194,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				{
 					const auto arg = reduced_loop->find_reg(reg);
 
-					if (arg && reg != op_rt)
+					if (arg && arg->regs.count() != 0)
 					{
 						if (reg_first == reg)
 						{
@@ -6208,6 +6215,12 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 						org.add_register_origin(reg);
 					}
 				}
+			}
+
+			if (type & spu_itype::memory || type == spu_itype::RDCH || type == spu_itype::RCHCNT)
+			{
+				// Register external origin
+				org.add_register_origin(s_reg_max);
 			}
 
 			*ensure(reduced_loop->find_reg(op_rt)) = org;
@@ -6312,10 +6325,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		case spu_itype::BI:
 		case spu_itype::BISL:
 		case spu_itype::BISLED:
-		case spu_itype::BIZ:
-		case spu_itype::BINZ:
-		case spu_itype::BIHZ:
-		case spu_itype::BIHNZ:
 		{
 			if (op.e || op.d)
 			{
@@ -6356,25 +6365,54 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					}
 				}
 
+				std::array<u32, s_reg_max> reg_use{};
+				std::bitset<s_reg_max> reg_maybe_float{};
+				std::bitset<s_reg_max> reg_mod{};
+
+				for (auto it = m_bbs.find(reduced_loop->loop_pc); it != m_bbs.end() && it->first <= bpc; it++)
+				{
+					for (u32 i = 0; i < s_reg_max; i++)
+					{
+						if (!reg_mod[i])
+						{
+							reg_use[i] += it->second.reg_use[i];
+						}
+					}
+
+					reg_maybe_float |= it->second.reg_maybe_float;
+					reg_mod |= it->second.reg_mod;
+
+					// Note: update when sup_conds are implemented
+					if (it->first == bpc && it->first != reduced_loop->loop_pc)
+					{
+						reduced_loop->loop_may_update |= it->second.reg_mod;
+					}
+				}
+
 				for (u32 i = 0; i < s_reg_max; i++)
 				{
-					const auto& b = ::at32(m_bbs, reduced_loop->loop_pc); 
-					const auto& b2 = ::at32(m_bbs, bpc); 
-
-					if (!reduced_loop->loop_dicts.test(i))
+					if (!::at32(reduced_loop->loop_dicts, i))
 					{
-						if (b.reg_use[i] || (!b.reg_mod.test(i) && b2.reg_use[i]))
+						if (reg_use[i] && reg_mod[i])
 						{
-							if ((b.reg_use[i] && b.reg_mod.test(i)) || b2.reg_mod.test(i))
+							reduced_loop->is_constant_expression = false;
+							reduced_loop->loop_writes.set(i);
+							reduced_loop->loop_may_update.reset(i);
+						}
+						else if (reg_use[i])
+						{
+							reduced_loop->loop_args.set(i);
+
+							if (reg_use[i] >= 3 && reg_maybe_float[i])
 							{
-								reduced_loop->is_constant_expression = false;
-								reduced_loop->loop_writes.set(i);
-							}
-							else
-							{
-								reduced_loop->loop_args.set(i);
+								reduced_loop->gpr_not_nans.set(i);
 							}
 						}
+					}
+					else
+					{
+						// Cleanup
+						reduced_loop->loop_may_update.reset(i);
 					}
 				}
 
@@ -6416,12 +6454,23 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		}
 		case spu_itype::BRHZ:
 		case spu_itype::BRHNZ:
-		{
-			const u32 next_pc = spu_branch_target(pos, 1);
-			const u32 target = spu_branch_target(pos, op.i16);
 
-			const bool is_u16_jump = type == spu_itype::BRHZ || type == spu_itype::BRHNZ;
-			const bool is_jump_zero = (type == spu_itype::BRZ || type == spu_itype::BRHZ) ^ reduced_loop->is_two_block_loop;
+		case spu_itype::BIZ:
+		case spu_itype::BINZ:
+		case spu_itype::BIHZ:
+		case spu_itype::BIHNZ:
+		{
+			if (type == spu_itype::spu_itype::BIZ || type == spu_itype::BINZ || type == spu_itype::BIHZ || type == spu_itype::BIHNZ)
+			{
+				if (op.e || op.d)
+				{
+					break_all_patterns(27);
+					break;
+				}
+			}
+
+			const bool is_u16_jump = type == spu_itype::BRHZ || type == spu_itype::BRHNZ || type == spu_itype::BIHZ || type == spu_itype::BIHNZ;
+			const bool is_jump_zero = (type == spu_itype::BRZ || type == spu_itype::BRHZ || type == spu_itype::BIZ || type == spu_itype::BIHZ) ^ reduced_loop->is_two_block_loop;
 
 			while (reduced_loop->active)
 			{
@@ -6598,7 +6647,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 				for (u32 i = 0; i < reg->regs.size() && reduced_loop->active; i++)
 				{
-					if (reg->regs.test(i))
+					if (::at32(reg->regs, i))
 					{
 						if (0) if (i == op_rt || reg->modified == 0)
 						{
@@ -6644,11 +6693,11 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 						auto reg_org = reduced_loop->find_reg(i);
 						u32 reg_index = i;
 
-						if (reg_org && !cond_val_incr_before_cond && reg_org->modified == 0 && reg_org->regs.count() - 1u <= 1u && !reg_org->regs.test(i))
+						if (reg_org && !cond_val_incr_before_cond && reg_org->modified == 0 && reg_org->regs.count() - 1u <= 1u && !::at32(reg_org->regs, i))
 						{
 							for (u32 j = 0; j <= s_reg_127; j++)
 							{
-								if (reg_org->regs.test(j))
+								if (::at32(reg_org->regs, j))
 								{
 									if (const auto reg_found = reduced_loop->find_reg(j))
 									{
@@ -6717,6 +6766,13 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 							break;
 						}
 
+						if (reg_index != i && ::at32(reg->regs, reg_index))
+						{
+							// Unimplemented
+							break_reduced_loop_pattern(30, reduced_loop->discard());
+							break;
+						}
+
 						u32 cond_val_incr = static_cast<s32>(reg_org->IMM);
 
 						if (reg_org->mod1_type == spu_itype::AI || reg_org->mod1_type == spu_itype::AHI)
@@ -6728,8 +6784,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 						{
 							reduced_loop->cond_val_incr_is_immediate = false;
 
-							const u32 op_ra = spu_opcode_t{reg->IMM}.ra;
-							const u32 op_rb = spu_opcode_t{reg->IMM}.rb;
+							const u32 op_ra = spu_opcode_t{reg_org->IMM}.ra;
+							const u32 op_rb = spu_opcode_t{reg_org->IMM}.rb;
 
 							if (!(op_ra == reg_index || op_rb == reg_index))
 							{
@@ -7035,25 +7091,54 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 						}
 					}
 
+					std::array<u32, s_reg_max> reg_use{};
+					std::bitset<s_reg_max> reg_maybe_float{};
+					std::bitset<s_reg_max> reg_mod{};
+
+					for (auto it = m_bbs.find(reduced_loop->loop_pc); it != m_bbs.end() && it->first <= bpc; it++)
+					{
+						for (u32 i = 0; i < s_reg_max; i++)
+						{
+							if (!reg_mod[i])
+							{
+								reg_use[i] += it->second.reg_use[i];
+							}
+						}
+
+						reg_maybe_float |= it->second.reg_maybe_float;
+						reg_mod |= it->second.reg_mod;
+
+						// Note: update when sup_conds are implemented
+						if (it->first == bpc && it->first != reduced_loop->loop_pc)
+						{
+							reduced_loop->loop_may_update |= it->second.reg_mod;
+						}
+					}
+
 					for (u32 i = 0; i < s_reg_max; i++)
 					{
-						const auto& b = ::at32(m_bbs, reduced_loop->loop_pc); 
-						const auto& b2 = ::at32(m_bbs, bpc); 
-
-						if (!reduced_loop->loop_dicts.test(i))
+						if (!::at32(reduced_loop->loop_dicts, i))
 						{
-							if (b.reg_use[i] || (!b.reg_mod.test(i) && b2.reg_use[i]))
+							if (reg_use[i] && reg_mod[i])
 							{
-								if ((b.reg_use[i] && b.reg_mod.test(i)) || b2.reg_mod.test(i))
+								reduced_loop->is_constant_expression = false;
+								reduced_loop->loop_writes.set(i);
+								reduced_loop->loop_may_update.reset(i);
+							}
+							else if (reg_use[i])
+							{
+								reduced_loop->loop_args.set(i);
+
+								if (reg_use[i] >= 3 && reg_maybe_float[i])
 								{
-									reduced_loop->is_constant_expression = false;
-									reduced_loop->loop_writes.set(i);
-								}
-								else
-								{
-									reduced_loop->loop_args.set(i);
+									reduced_loop->gpr_not_nans.set(i);
 								}
 							}
+						}
+						else
+						{
+							// Cleanup
+							reduced_loop->loop_may_update.reset(i);
 						}
 					}
 
@@ -8298,17 +8383,17 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 				u32 ra = s_reg_max, rb = s_reg_max, rc = s_reg_max;
 
-				if (m_use_ra.test(pos / 4))
+				if (::at32(m_use_ra, pos / 4))
 				{
 					ra = op.ra;
 				}
 
-				if (m_use_rb.test(pos / 4))
+				if (::at32(m_use_rb, pos / 4))
 				{
 					rb = op.rb;
 				}
 
-				if (m_use_rc.test(pos / 4))
+				if (::at32(m_use_rc, pos / 4))
 				{
 					rc = op.rc;
 				}
@@ -8575,7 +8660,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 			for (u32 i = 0; i < s_reg_max; i++)
 			{
-				if (pattern.loop_writes.test(i))
+				if (::at32(pattern.loop_writes, i))
 				{
 					if (regs.size() != 1)
 					{
@@ -8585,7 +8670,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					fmt::append(regs, " r%u-w", i);
 				}
 
-				if (pattern.loop_args.test(i))
+				if (::at32(pattern.loop_args, i))
 				{
 					if (regs.size() != 1)
 					{
@@ -8593,6 +8678,16 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					}
 
 					fmt::append(regs, " r%u-r", i);
+				}
+
+				if (::at32(pattern.loop_may_update, i))
+				{
+					if (regs.size() != 1)
+					{
+						regs += ",";
+					}
+
+					fmt::append(regs, " r%u-m", i);
 				}
 			}
 

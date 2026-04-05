@@ -507,6 +507,9 @@ void gui_pad_thread::process_input()
 			case CELL_PAD_CTRL_START:
 				button_id = pad_button::start;
 				break;
+			case CELL_PAD_CTRL_PS:
+				button_id = pad_button::ps;
+				break;
 			default:
 				break;
 			}
@@ -538,9 +541,6 @@ void gui_pad_thread::process_input()
 				break;
 			case CELL_PAD_CTRL_R2:
 				button_id = pad_button::R2;
-				break;
-			case CELL_PAD_CTRL_PS:
-				button_id = pad_button::ps;
 				break;
 			default:
 				break;

@@ -11,6 +11,17 @@
 #include <string>
 #include <deque>
 
+// std::bitset
+template <typename CT, typename T>
+	requires requires(std::remove_cvref_t<CT>& x, T&& y) { x.count(); x.test(y); x.flip(y); }
+[[nodiscard]] constexpr bool at32(CT&& container, T&& index, std::source_location src_loc = std::source_location::current())
+{
+	const usz csv = container.size();
+	if (csv <= std::forward<T>(index)) [[unlikely]]
+		fmt::raw_range_error(src_loc, format_object_simplified(index), csv);
+	return container[std::forward<T>(index)];
+}
+
 // Helper class
 class spu_cache
 {
@@ -350,10 +361,12 @@ public:
 		std::bitset<s_reg_max> loop_args;
 		std::bitset<s_reg_max> loop_dicts;
 		std::bitset<s_reg_max> loop_writes;
+		std::bitset<s_reg_max> loop_may_update;
+		std::bitset<s_reg_max> gpr_not_nans;
 
 		struct origin_t
 		{
-			std::bitset<s_reg_max> regs{};
+			std::bitset<s_reg_max + 1> regs{};
 			u32 modified = 0;
 			spu_itype_t mod1_type = spu_itype::UNK;
 			spu_itype_t mod2_type = spu_itype::UNK;
@@ -421,7 +434,7 @@ public:
 					return true;
 				}
 
-				return regs.count() == 1 && regs.test(reg_val);
+				return regs.count() == 1 && ::at32(regs, reg_val);
 			}
 
 			bool is_loop_dictator(u32 reg_val, bool test_predictable = false, bool should_predictable = true) const
@@ -431,7 +444,7 @@ public:
 					return false;
 				}
 
-				if (regs.count() >= 1 && regs.test(reg_val))
+				if (regs.count() >= 1 && ::at32(regs, reg_val))
 				{
 					if (!test_predictable)
 					{
@@ -490,7 +503,7 @@ public:
 					return false;
 				}
 
-				if (regs.count() - (regs.test(reg_val) ? 1 : 0))
+				if (regs.count() - (::at32(regs, reg_val) ? 1 : 0))
 				{
 					return false;
 				}
@@ -667,6 +680,11 @@ public:
 			}
 
 			return true;
+		}
+
+		bool is_gpr_not_NaN_hint(u32 i) const noexcept
+		{
+			return ::at32(gpr_not_nans, i);
 		}
 
 		origin_t get_reg(u32 reg_val) noexcept

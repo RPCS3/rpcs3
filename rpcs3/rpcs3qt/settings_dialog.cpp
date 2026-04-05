@@ -858,7 +858,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->vulkansched->setEnabled(is_vulkan);
 	};
 
-	const auto apply_fsr_specific_options = [r_creator, this]()
+	const auto apply_fsr_specific_options = [this]()
 	{
 		const auto [text, value] = get_data(ui->outputScalingMode, ui->outputScalingMode->currentIndex());
 		const bool fsr_selected = static_cast<output_scaling_mode>(value) == output_scaling_mode::fsr;
@@ -1829,6 +1829,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	ui->enableGamemode->setVisible(false);
 #endif
 
+	m_emu_settings->EnhanceCheckBox(ui->playMusicDuringBoot, emu_settings_type::PlayMusicDuringBoot);
+	SubscribeTooltip(ui->playMusicDuringBoot, tooltips.settings.play_music_during_boot);
+
 	m_emu_settings->EnhanceCheckBox(ui->showShaderCompilationHint, emu_settings_type::ShowShaderCompilationHint);
 	SubscribeTooltip(ui->showShaderCompilationHint, tooltips.settings.show_shader_compilation_hint);
 
@@ -1846,6 +1849,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->showMouseAndKeyboardToggleHint, emu_settings_type::ShowMouseAndKeyboardToggleHint);
 	SubscribeTooltip(ui->showMouseAndKeyboardToggleHint, tooltips.settings.show_mouse_and_keyboard_toggle_hint);
+
+	m_emu_settings->EnhanceCheckBox(ui->showFatalErrorHints, emu_settings_type::ShowFatalErrorHints);
+	SubscribeTooltip(ui->showFatalErrorHints, tooltips.settings.show_fatal_error_hints);
 
 	m_emu_settings->EnhanceCheckBox(ui->showCaptureHints, emu_settings_type::ShowCaptureHints);
 	SubscribeTooltip(ui->showCaptureHints, tooltips.settings.show_capture_hints);
@@ -2095,7 +2101,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	connect(ui->edit_button_game_window_title_format, &QAbstractButton::clicked, [get_game_window_title, set_game_window_title, this]()
 	{
-		auto get_game_window_title_label = [get_game_window_title, set_game_window_title, this](const QString& format)
+		auto get_game_window_title_label = [get_game_window_title](const QString& format)
 		{
 			const QString game_window_title = get_game_window_title(format);
 

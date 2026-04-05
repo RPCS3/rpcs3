@@ -173,7 +173,7 @@ namespace gui
 	const gui_save fd_save_log     = gui_save(main_window, "lastExplorePathSaveLog", "");
 
 	const gui_save mw_debugger         = gui_save(main_window, "debuggerVisible",  false);
-	const gui_save mw_logger           = gui_save(main_window, "loggerVisible",    true);
+	const gui_save mw_logger           = gui_save(main_window, "loggerVisible",    false);
 	const gui_save mw_gamelist         = gui_save(main_window, "gamelistVisible",  true);
 	const gui_save mw_toolBarVisible   = gui_save(main_window, "toolBarVisible",   true);
 	const gui_save mw_titleBarsVisible = gui_save(main_window, "titleBarsVisible", true);

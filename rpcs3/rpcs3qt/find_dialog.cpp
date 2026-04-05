@@ -15,7 +15,7 @@ find_dialog::find_dialog(QPlainTextEdit* edit, QWidget *parent, Qt::WindowFlags 
 
 	QCheckBox* cb_case_sensitive = new QCheckBox(tr("Case sensitive"));
 	cb_case_sensitive->setChecked(m_case_sensitive);
-	connect(cb_case_sensitive, &QCheckBox::toggled, this, [=](bool checked)
+	connect(cb_case_sensitive, &QCheckBox::toggled, this, [this](bool checked)
 	{
 		m_case_sensitive = checked;
 	});

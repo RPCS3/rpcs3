@@ -31,7 +31,7 @@ namespace rsx
 			compiled_resource& get_compiled() override;
 
 			bool id_matches(localized_string_id id) const;
-			bool text_matches(const std::u32string& text) const;
+			bool text_matches(std::u32string_view text) const;
 
 			void set_label_text(const std::string& text);
 

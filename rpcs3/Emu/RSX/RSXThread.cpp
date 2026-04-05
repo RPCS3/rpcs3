@@ -712,9 +712,12 @@ namespace rsx
 		{
 			m_overlay_manager = g_fxo->init<rsx::overlays::display_manager>(0);
 
-			if (const std::string audio_path = Emu.GetSfoDir(true) + "/SND0.AT3"; fs::is_file(audio_path))
+			if (g_cfg.misc.play_music_during_boot)
 			{
-				m_overlay_manager->start_audio(audio_path);
+				if (const std::string audio_path = Emu.GetSfoDir(true) + "/SND0.AT3"; fs::is_file(audio_path))
+				{
+					m_overlay_manager->start_audio(audio_path);
+				}
 			}
 		}
 
@@ -1868,6 +1871,7 @@ namespace rsx
 		}
 		default:
 			rsx_log.fatal("Unhandled framebuffer option changed 0x%x", opt);
+			break;
 		}
 	}
 
