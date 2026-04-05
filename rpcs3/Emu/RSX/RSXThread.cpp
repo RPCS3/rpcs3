@@ -2970,7 +2970,7 @@ namespace rsx
 
 			auto& cfg = g_fxo->get<gcm_config>();
 
-			std::unique_lock<shared_mutex> hle_lock;
+			std::optional<std::unique_lock<shared_mutex>> hle_lock;
 
 			for (u32 i = 0; i < std::size(unmap_status); i++)
 			{
@@ -3011,7 +3011,7 @@ namespace rsx
 
 			if (hle_lock)
 			{
-				hle_lock.unlock();
+				hle_lock->unlock();
 			}
 
 			// Pause RSX thread momentarily to handle unmapping
