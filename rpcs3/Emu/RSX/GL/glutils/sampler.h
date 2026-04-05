@@ -75,7 +75,7 @@ namespace gl
 			return (prop == m_propertiesf.end()) ? 0 : prop->second;
 		}
 
-		void apply(const rsx::fragment_texture& tex, const rsx::sampled_image_descriptor_base* sampled_image);
+		void apply(const rsx::fragment_texture& tex, const rsx::sampled_image_descriptor_base* sampled_image, bool allow_mipmaps = true);
 		void apply(const rsx::vertex_texture& tex, const rsx::sampled_image_descriptor_base* sampled_image);
 
 		void apply_defaults(GLenum default_filter = GL_NEAREST);
