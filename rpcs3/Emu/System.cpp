@@ -49,6 +49,7 @@
 
 #include <memory>
 #include <regex>
+#include <shared_mutex>
 
 #include "Utilities/JIT.h"
 
@@ -2836,7 +2837,7 @@ bool Emulator::Pause(bool freeze_emulation, bool show_resume_message)
 		auto msg_ref = std::make_shared<atomic_t<u32>>(1);
 
 		// No timeout
-		rsx::overlays::queue_message(status == system_state::paused ? localized_string_id::EMULATION_PAUSED_RESUME_WITH_START : localized_string_id::EMULATION_FROZEN, -1, msg_ref);
+		rsx::overlays::queue_message(status == system_state::paused ? localized_string_id::EMULATION_PAUSED_RESUME_WITH_START : localized_string_id::EMULATION_FROZEN, umax, msg_ref);
 		m_pause_msgs_refs.emplace_back(msg_ref);
 
 		auto refresh_l = [this, msg_ref, status]()
@@ -3075,7 +3076,7 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 		std::vector<stx::shared_ptr<named_thread<ppu_thread>>> ppu_thread_list;
 
 		// If EXITGAME signal is not read, force kill after a second.
-		constexpr int loop_timeout_ms = 50;
+		constexpr int loop_timeout_ms = 16;
 		int kill_timeout_ms = 1000;
 		int elapsed_ms = 0;
 
@@ -3092,8 +3093,10 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 				Resume();
 			}, nullptr, true, read_counter);
 
+			std::shared_lock rlock(id_manager::g_mutex, std::defer_lock); 
+
 			// Check if the EXITGAME signal was read. We allow the game to terminate itself if that's the case.
-			if (!read_sysutil_signal && read_counter != get_sysutil_cb_manager_read_count())
+			if (!read_sysutil_signal && read_counter != get_sysutil_cb_manager_read_count() && rlock.try_lock())
 			{
 				sys_log.notice("The game received the exit request. Waiting for it to terminate itself...");
 				kill_timeout_ms += 5000; // Grant a couple more seconds
@@ -3103,7 +3106,12 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 				idm::select<named_thread<ppu_thread>>([&](u32 id, cpu_thread&)
 				{
 					ppu_thread_list.emplace_back(idm::get_unlocked<named_thread<ppu_thread>>(id));
-				});
+				}, idm::unlocked);
+			}
+
+			if (rlock)
+			{
+				rlock.unlock();
 			}
 
 			if (static_cast<u64>(info) != m_stop_ctr || Emu.IsStopped())
@@ -3152,7 +3160,11 @@ void Emulator::GracefulShutdown(bool allow_autoexit, bool async_op, bool savesta
 
 	if (async_op)
 	{
-		std::thread{perform_kill}.detach();
+		std::thread{[perform_kill]()
+		{
+			thread_base::set_name("Perform Kill");
+			perform_kill();
+		}}.detach();
 	}
 	else
 	{
@@ -3988,7 +4000,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 	}));
 }
 
-game_boot_result Emulator::Restart(bool graceful)
+game_boot_result Emulator::Restart(bool graceful, bool reset_path)
 {
 	if (m_state == system_state::stopping)
 	{
@@ -3996,7 +4008,7 @@ game_boot_result Emulator::Restart(bool graceful)
 		return game_boot_result::still_running;
 	}
 
-	Emu.after_kill_callback = [this]
+	Emu.after_kill_callback = [this, reset_path]
 	{
 		// Reset boot path in case of ISO
 		if (m_path.starts_with(iso_device::virtual_device_name))
@@ -4008,7 +4020,7 @@ game_boot_result Emulator::Restart(bool graceful)
 		}
 
 		// If continuous mode changed the path, restart from the original executable
-		if (!m_path_original.empty() && m_path_original != m_path)
+		if (reset_path && !m_path_original.empty() && m_path_original != m_path)
 		{
 			sys_log.notice("Restart: Resetting boot path from '%s' to original '%s'", m_path, m_path_original);
 			m_path = m_path_original;

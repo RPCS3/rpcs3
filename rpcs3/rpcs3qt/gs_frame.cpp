@@ -15,6 +15,7 @@
 #include "Emu/Cell/Modules/cellScreenshot.h"
 #include "Emu/Cell/Modules/cellAudio.h"
 #include "Emu/Cell/lv2/sys_rsxaudio.h"
+#include "Emu/RSX/RSXThread.h"
 #include "Emu/RSX/rsx_utils.h"
 #include "Emu/RSX/Overlays/overlay_message.h"
 #include "Emu/Io/interception.h"
@@ -361,7 +362,7 @@ void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKey
 		{
 			Emu.after_kill_callback = []()
 			{
-				Emu.Restart();
+				Emu.Restart(true, false);
 			};
 
 			// Make sure we keep the game window opened
@@ -792,7 +793,7 @@ f64 gs_frame::client_display_rate()
 {
 	f64 rate = 20.; // Minimum is 20
 
-	Emu.BlockingCallFromMainThread([this, &rate]()
+	Emu.BlockingCallFromMainThread([&rate]()
 	{
 		const QList<QScreen*> screens = QGuiApplication::screens();
 
@@ -1040,7 +1041,7 @@ void gs_frame::take_screenshot(std::vector<u8>&& data, u32 sshot_width, u32 ssho
 
 					if (new_size.width != static_cast<u32>(img.width()) || new_size.height != static_cast<u32>(img.height()))
 					{
-						const int scale = rsx::get_resolution_scale_percent();
+						const int scale = rsx::get_current_renderer()->resolution_scaling_config.scale_percent;
 						const int x = (scale * manager.overlay_offset_x) / 100;
 						const int y = (scale * manager.overlay_offset_y) / 100;
 						const int width = (scale * overlay_img.width()) / 100;

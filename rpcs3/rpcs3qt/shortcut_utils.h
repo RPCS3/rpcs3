@@ -1,4 +1,5 @@
 #pragma once
+#include <set>
 
 struct gui_game_info;
 class iso_archive;

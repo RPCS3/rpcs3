@@ -253,7 +253,11 @@ namespace utils
 
 #ifdef __APPLE__
 #ifdef ARCH_ARM64
-		auto ptr = ::mmap(use_addr, size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE | MAP_JIT | c_map_noreserve, -1, 0);
+		// Memory mapping regions will be replaced by file-backed MAP_FIXED mappings
+		// (via shm::map), which is incompatible with MAP_JIT. Only use MAP_JIT for
+		// non-mapping regions that need JIT executable support.
+		const int jit_flag = is_memory_mapping ? 0 : MAP_JIT;
+		auto ptr = ::mmap(use_addr, size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE | jit_flag | c_map_noreserve, -1, 0);
 #else
 		auto ptr = ::mmap(use_addr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE | MAP_JIT | c_map_noreserve, -1, 0);
 #endif

@@ -17,7 +17,7 @@ namespace rsx
 
 			scroll_indicator_grip->set_pos(1, 0);
 			scroll_indicator_grip->set_size(5, 5);
-			scroll_indicator_grip->radius = 2;
+			scroll_indicator_grip->border_radius = 2;
 			scroll_indicator_track->set_size(7, height);
 
 			m_scroll_indicator = std::make_unique<box_layout>();

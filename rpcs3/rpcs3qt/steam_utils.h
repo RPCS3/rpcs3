@@ -103,6 +103,8 @@ namespace gui::utils
 
 		bool parse_file(const std::string& path);
 
+		void update_steam_input_config(const std::string& user_dir);
+
 		static u32 crc32(const std::string& data);
 		static u32 steam_appid(const std::string& exe, const std::string& name);
 
@@ -115,7 +117,7 @@ namespace gui::utils
 		static std::string steamid64_to_32(const std::string& steam_id);
 		static std::string get_steam_path();
 		static std::string get_last_active_steam_user(const std::string& steam_path);
-		
+
 		static std::string get_steam_banner_path(steam_banner banner, const std::string& grid_dir, u32 appid);
 		static void create_steam_banner(steam_banner banner, const std::string& src_path, const QPixmap& src_icon, const std::string& grid_dir, const shortcut_entry& entry);
 

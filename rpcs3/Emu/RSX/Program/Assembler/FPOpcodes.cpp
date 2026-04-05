@@ -343,7 +343,8 @@ namespace rsx::assembler::FP
 		std::unordered_set<u32> inputs;
 		SRC_Common src { .HEX = instruction->bytecode[operand + 1] };
 
-		if (src.reg_type != RSX_FP_REGISTER_TYPE_TEMP)
+		if (src.reg_type != RSX_FP_REGISTER_TYPE_TEMP &&
+			src.reg_type != RSX_FP_REGISTER_TYPE_INPUT)
 		{
 			return 0;
 		}

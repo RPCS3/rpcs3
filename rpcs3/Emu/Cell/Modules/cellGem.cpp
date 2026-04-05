@@ -1774,6 +1774,12 @@ public:
 
 	shared_mutex mutex;
 
+	gem_tracker& operator=(thread_state) noexcept
+	{
+		wake_up_tracker();
+		return *this;
+	}
+
 private:
 	atomic_t<u32> m_wake_up_tracker = 0;
 	atomic_t<u32> m_tracker_done = 0;

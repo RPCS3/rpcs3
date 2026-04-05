@@ -405,6 +405,8 @@ void ps_move_tracker_dialog::reset_camera()
 
 	m_tracker_thread.reset(QThread::create([this]()
 	{
+		thread_base::set_name("PS Move Tracker");
+
 		while (!m_stop_threads)
 		{
 			process_camera_frame();

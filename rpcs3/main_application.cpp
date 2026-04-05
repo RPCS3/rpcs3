@@ -70,10 +70,15 @@ void main_application::InitializeEmulator(const std::string& user, bool show_gui
 	const std::string firmware_version = utils::get_firmware_version();
 	const std::string firmware_string  = firmware_version.empty() ? "Missing Firmware" : ("Firmware version: " + firmware_version);
 	sys_log.always()("%s", firmware_string);
+
+	rpcs3::utils::configure_logs(Emu.IsStopped());
 }
 
 void main_application::OnEmuSettingsChange()
 {
+	// Change logging
+	rpcs3::utils::configure_logs(Emu.IsStopped());
+
 	if (Emu.IsRunning())
 	{
 		enable_display_sleep(!g_cfg.misc.prevent_display_sleep);
@@ -81,9 +86,6 @@ void main_application::OnEmuSettingsChange()
 
 	if (!Emu.IsStopped())
 	{
-		// Change logging (only allowed during gameplay)
-		rpcs3::utils::configure_logs();
-
 		// Force audio provider
 		g_cfg.audio.provider.set(Emu.IsVsh() ? audio_provider::rsxaudio : audio_provider::cell_audio);
 	}

@@ -340,7 +340,7 @@ Function* PPUTranslator::GetSymbolResolver(const ppu_module<lv2_obj>& info)
 
 	const auto ftype = FunctionType::get(get_type<void>(), {
 		get_type<u8*>(), // Exec base
-		m_ir->getPtrTy(), // PPU context
+		get_type<u8*>(), // PPU context
 		get_type<u64>(), // Segment address (for PRX)
 		get_type<u8*>(), // Memory base
 		get_type<u64>(), // r0
@@ -386,7 +386,7 @@ Function* PPUTranslator::GetSymbolResolver(const ppu_module<lv2_obj>& info)
 	const auto addr_array = new GlobalVariable(*m_module, addr_array_type, false, GlobalValue::PrivateLinkage, ConstantDataArray::get(m_context, vec_addrs));
 
 	// Create an array of function pointers
-	const auto func_table_type = ArrayType::get(m_ir->getPtrTy(), functions.size());
+	const auto func_table_type = ArrayType::get(get_type<u8*>(), functions.size());
 	const auto init_func_table = ConstantArray::get(func_table_type, functions);
 	const auto func_table = new GlobalVariable(*m_module, func_table_type, false, GlobalVariable::PrivateLinkage, init_func_table);
 
@@ -413,7 +413,7 @@ Function* PPUTranslator::GetSymbolResolver(const ppu_module<lv2_obj>& info)
 	const auto func_pc = ZExt(m_ir->CreateLoad(ptr_inst->getResultElementType(), ptr_inst), get_type<u64>());
 
 	ptr_inst = dyn_cast<GetElementPtrInst>(m_ir->CreateGEP(func_table->getValueType(), func_table, {m_ir->getInt64(0), index_value}));
-	assert(ptr_inst->getResultElementType() == m_ir->getPtrTy());
+	assert(ptr_inst->getResultElementType() == get_type<u8*>());
 
 	const auto faddr = m_ir->CreateLoad(ptr_inst->getResultElementType(), ptr_inst);
 	const auto pos_32 = m_reloc ? m_ir->CreateAdd(func_pc, m_seg0) : func_pc;
@@ -622,7 +622,7 @@ void PPUTranslator::CallFunction(u64 target, Value* indirect)
 		const auto pos = m_ir->CreateShl(indirect, 1);
 		const auto ptr = m_ir->CreatePtrAdd(m_exec, pos);
 		const auto val = m_ir->CreateLoad(get_type<u64>(), ptr);
-		callee = FunctionCallee(type, m_ir->CreateIntToPtr(val, m_ir->getPtrTy()));
+		callee = FunctionCallee(type, m_ir->CreateIntToPtr(val, get_type<u8*>()));
 
 		// Load new segment address
 		const auto seg_base_ptr = m_ir->CreatePtrAdd(m_exec, m_ir->getInt64(vm::g_exec_addr_seg_offset));
@@ -5414,7 +5414,7 @@ MDNode* PPUTranslator::CheckBranchProbability(u32 bo)
 void PPUTranslator::build_interpreter()
 {
 #define BUILD_VEC_INST(i) { \
-		m_function = llvm::cast<llvm::Function>(m_module->getOrInsertFunction("op_" #i, get_type<void>(), m_ir->getPtrTy()).getCallee()); \
+		m_function = llvm::cast<llvm::Function>(m_module->getOrInsertFunction("op_" #i, get_type<void>(), get_type<u8*>()).getCallee()); \
 		std::fill(std::begin(m_globals), std::end(m_globals), nullptr); \
 		std::fill(std::begin(m_locals), std::end(m_locals), nullptr); \
 		IRBuilder<> irb(BasicBlock::Create(m_context, "__entry", m_function)); \

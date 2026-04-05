@@ -46,6 +46,7 @@
 #include "welcome_dialog.h"
 #include "music_player_dialog.h"
 #include "sound_effect_manager_dialog.h"
+#include "recording_settings_dialog.h"
 
 #include <thread>
 #include <unordered_set>
@@ -128,7 +129,7 @@ extern void qt_events_aware_op(int repeat_duration_ms, std::function<bool()> wra
 			}
 			else
 			{
-				QTimer::singleShot(repeat_duration_ms, *check_iteration);
+				QTimer::singleShot(repeat_duration_ms, event_loop, *check_iteration);
 			}
 		});
 
@@ -138,7 +139,7 @@ extern void qt_events_aware_op(int repeat_duration_ms, std::function<bool()> wra
 			event_loop = new QEventLoop();
 
 			// Queue event initially
-			QTimer::singleShot(0, *check_iteration);
+			QTimer::singleShot(0, event_loop, *check_iteration);
 
 			// Event loop
 			event_loop->exec();
@@ -1734,7 +1735,7 @@ void main_window::DecryptSPRXLibraries()
 			dlg->set_button_enabled(QDialogButtonBox::StandardButton::Ok, text.size() - (text.indexOf('x') + 1) == 32);
 		});
 
-		connect(dlg, &QDialog::accepted, this, [this, iterate, dlg, mod_index, decrypter, repeat_count]()
+		connect(dlg, &QDialog::accepted, this, [iterate, dlg, mod_index, decrypter, repeat_count]()
 		{
 			std::string text = dlg->get_input_text().toStdString();
 
@@ -2538,7 +2539,7 @@ void main_window::CreateConnects()
 		{
 			Emu.after_kill_callback = []()
 			{
-				Emu.Restart();
+				Emu.Restart(true, false);
 			};
 
 			// Make sure we keep the game window opened
@@ -3120,14 +3121,20 @@ void main_window::CreateConnects()
 
 	connect(ui->actionManage_Screenshots, &QAction::triggered, this, [this]
 	{
-		screenshot_manager_dialog* screenshot_manager = new screenshot_manager_dialog();
+		screenshot_manager_dialog* screenshot_manager = new screenshot_manager_dialog(m_game_list_frame ? m_game_list_frame->GetGameInfo() : std::vector<game_info>{});
 		screenshot_manager->show();
 	});
 
-	connect(ui->actionManage_SoundEffects, &QAction::triggered, this, [this]
+	connect(ui->actionManage_SoundEffects, &QAction::triggered, this, []
 	{
 		sound_effect_manager_dialog* dlg = new sound_effect_manager_dialog();
 		dlg->show();
+	});
+
+	connect(ui->actionRecording, &QAction::triggered, this, [this]
+	{
+		recording_settings_dialog* dlg = new recording_settings_dialog(this);
+		dlg->open();
 	});
 
 	connect(ui->toolsCgDisasmAct, &QAction::triggered, this, [this]
@@ -3376,7 +3383,7 @@ void main_window::CreateConnects()
 		welcome->open();
 	});
 
-	connect(ui->supportAct, &QAction::triggered, this, [this]
+	connect(ui->supportAct, &QAction::triggered, this, []
 	{
 		QDesktopServices::openUrl(QUrl("https://rpcs3.net/patreon"));
 	});
@@ -3505,11 +3512,8 @@ void main_window::CreateDockWindows()
 	m_mw->setContextMenuPolicy(Qt::PreventContextMenu);
 
 	m_game_list_frame = new game_list_frame(m_gui_settings, m_emu_settings, m_persistent_settings, m_mw);
-	m_game_list_frame->setObjectName("gamelist");
 	m_debugger_frame = new debugger_frame(m_gui_settings, m_mw);
-	m_debugger_frame->setObjectName("debugger");
 	m_log_frame = new log_frame(m_gui_settings, m_mw);
-	m_log_frame->setObjectName("logger");
 
 	m_mw->addDockWidget(Qt::LeftDockWidgetArea, m_game_list_frame);
 	m_mw->addDockWidget(Qt::LeftDockWidgetArea, m_log_frame);

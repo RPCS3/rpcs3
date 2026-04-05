@@ -8,6 +8,7 @@
 #include "progress_dialog.h"
 
 #include "util/logs.hpp"
+#include "Utilities/Thread.h"
 
 #include <thread>
 
@@ -82,6 +83,8 @@ void downloader::start(const std::string& url, bool follow_location, bool show_p
 
 	m_thread = QThread::create([this]
 	{
+		thread_base::set_name("Downloader");
+
 		// Reset error buffer before we call curl_easy_perform
 		m_curl->reset_error_buffer();
 
