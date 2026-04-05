@@ -513,7 +513,7 @@
             </item>
             <item>
              <widget class="QWidget" name="widget_gpu_4" native="true">
-              <layout class="QHBoxLayout" name="widget_gpu_4_layout" stretch="1,1">
+              <layout class="QHBoxLayout" name="widget_gpu_4_layout" stretch="1">
                <property name="leftMargin">
                 <number>0</number>
                </property>
@@ -3010,6 +3010,13 @@
               </property>
               <layout class="QVBoxLayout" name="gb_overlay_settings_layout">
                <item>
+                <widget class="QCheckBox" name="playMusicDuringBoot">
+                 <property name="text">
+                  <string>Play music during boot sequence</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="recordWithOverlays">
                  <property name="text">
                   <string>Record and screenshot with overlays</string>
@@ -3034,6 +3041,13 @@
                 <widget class="QCheckBox" name="showCaptureHints">
                  <property name="text">
                   <string>Show capture hints</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="showFatalErrorHints">
+                 <property name="text">
+                  <string>Show fatal error hints</string>
                  </property>
                 </widget>
                </item>
@@ -3524,7 +3538,14 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QSpinBox" name="perfOverlayMarginX"/>
+                  <widget class="QDoubleSpinBox" name="perfOverlayMarginX">
+                   <property name="decimals">
+                    <number>1</number>
+                   </property>
+                   <property name="singleStep">
+                    <double>0.5</double>
+                   </property>
+                  </widget>
                  </item>
                 </layout>
                </item>
@@ -3545,9 +3566,23 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QSpinBox" name="perfOverlayMarginY"/>
+                  <widget class="QDoubleSpinBox" name="perfOverlayMarginY">
+                   <property name="decimals">
+                    <number>1</number>
+                   </property>
+                   <property name="singleStep">
+                    <double>0.5</double>
+                   </property>
+                  </widget>
                  </item>
                 </layout>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="perfOverlayUseWindowSpace">
+                 <property name="text">
+                  <string>Use Window Space</string>
+                 </property>
+                </widget>
                </item>
                <item>
                 <widget class="QWidget" name="perf_overlay_update_interval" native="true">
@@ -3975,6 +4010,56 @@
                  <property name="text">
                   <string>Allow Global Pad Navigation</string>
                  </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_gui_volume">
+              <property name="title">
+               <string>Volume</string>
+              </property>
+              <layout class="QVBoxLayout" name="gb_gui_volume_layout">
+               <item>
+                <widget class="QWidget" name="gui_volume" native="true">
+                 <layout class="QVBoxLayout" name="layout_gui_volume">
+                  <property name="leftMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>0</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>0</number>
+                  </property>
+                  <item>
+                   <widget class="QLabel" name="guiVolumeLabel">
+                    <property name="text">
+                     <string>GUI: 0%</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QSlider" name="guiVolume">
+                    <property name="maximum">
+                     <number>100</number>
+                    </property>
+                    <property name="orientation">
+                     <enum>Qt::Orientation::Horizontal</enum>
+                    </property>
+                    <property name="tickPosition">
+                     <enum>QSlider::TickPosition::TicksBelow</enum>
+                    </property>
+                    <property name="tickInterval">
+                     <number>50</number>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
                 </widget>
                </item>
               </layout>

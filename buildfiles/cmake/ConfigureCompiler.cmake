@@ -96,11 +96,6 @@ else()
 		# This hides our LLVM from mesa's LLVM, otherwise we get some unresolvable conflicts.
 		add_link_options(-Wl,--exclude-libs,ALL)
 	elseif(WIN32)
-		add_compile_definitions(__STDC_FORMAT_MACROS=1)
-
-		# Workaround for mingw64 (MSYS2)
-		add_link_options(-Wl,--allow-multiple-definition)
-
 		# Increase stack limit to 8 MB
 		add_link_options(-Wl,--stack -Wl,8388608)
 	endif()

@@ -737,8 +737,8 @@ void gui_application::InitializeCallbacks()
 	callbacks.get_msg_dialog  = [this]() -> std::shared_ptr<MsgDialogBase> { return m_show_gui ? std::make_shared<msg_dialog_frame>() : nullptr; };
 	callbacks.get_osk_dialog  = [this]() -> std::shared_ptr<OskDialogBase> { return m_show_gui ? std::make_shared<osk_dialog_frame>() : nullptr; };
 	callbacks.get_save_dialog = []() -> std::unique_ptr<SaveDialogBase> { return std::make_unique<save_data_dialog>(); };
-	callbacks.get_sendmessage_dialog = [this]() -> std::shared_ptr<SendMessageDialogBase> { return std::make_shared<sendmessage_dialog_frame>(); };
-	callbacks.get_recvmessage_dialog = [this]() -> std::shared_ptr<RecvMessageDialogBase> { return std::make_shared<recvmessage_dialog_frame>(); };
+	callbacks.get_sendmessage_dialog = []() -> std::shared_ptr<SendMessageDialogBase> { return std::make_shared<sendmessage_dialog_frame>(); };
+	callbacks.get_recvmessage_dialog = []() -> std::shared_ptr<RecvMessageDialogBase> { return std::make_shared<recvmessage_dialog_frame>(); };
 	callbacks.get_trophy_notification_dialog = [this]() -> std::unique_ptr<TrophyNotificationBase> { return std::make_unique<trophy_notification_helper>(m_game_window); };
 
 	callbacks.on_run    = [this](bool start_playtime) { OnEmulatorRun(start_playtime); };
@@ -839,7 +839,7 @@ void gui_application::InitializeCallbacks()
 		};
 	}
 
-	callbacks.on_emulation_stop_no_response = [this](std::shared_ptr<atomic_t<bool>> closed_successfully, int seconds_waiting_already)
+	callbacks.on_emulation_stop_no_response = [](std::shared_ptr<atomic_t<bool>> closed_successfully, int seconds_waiting_already)
 	{
 		const std::string terminate_message = tr("Stopping emulator took too long."
 			"\nSome thread has probably deadlocked. Aborting.").toStdString();
@@ -849,7 +849,7 @@ void gui_application::InitializeCallbacks()
 			report_fatal_error(terminate_message);
 		}
 
-		Emu.CallFromMainThread([this, closed_successfully, seconds_waiting_already, terminate_message]
+		Emu.CallFromMainThread([closed_successfully, seconds_waiting_already, terminate_message]
 		{
 			const auto seconds = std::make_shared<int>(seconds_waiting_already);
 

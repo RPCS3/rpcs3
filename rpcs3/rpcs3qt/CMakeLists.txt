@@ -83,6 +83,7 @@ add_library(rpcs3_ui STATIC
     qt_video_source.cpp
     raw_mouse_settings_dialog.cpp
     register_editor_dialog.cpp
+    recording_settings_dialog.cpp
     recvmessage_dialog_frame.cpp
     render_creator.cpp
     rpcn_settings_dialog.cpp
@@ -135,6 +136,7 @@ add_library(rpcs3_ui STATIC
     patch_creator_dialog.ui
     patch_manager_dialog.ui
     ps_move_tracker_dialog.ui
+    recording_settings_dialog.ui
     settings_dialog.ui
     shortcut_dialog.ui
     welcome_dialog.ui

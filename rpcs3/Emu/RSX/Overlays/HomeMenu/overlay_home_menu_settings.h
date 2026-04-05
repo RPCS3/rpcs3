@@ -10,8 +10,6 @@ namespace rsx
 {
 	namespace overlays
 	{
-		void play_sound(sound_effect sound, std::optional<f32> volume);
-
 		struct home_menu_settings : public home_menu_page
 		{
 		public:

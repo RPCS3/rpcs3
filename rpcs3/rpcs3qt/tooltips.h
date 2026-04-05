@@ -154,10 +154,12 @@ public:
 		const QString show_pressure_intensity_toggle_hint = tr("Shows pressure intensity toggle hint using the native overlay.");
 		const QString show_analog_limiter_toggle_hint = tr("Shows analog limiter toggle hint using the native overlay.");
 		const QString show_mouse_and_keyboard_toggle_hint = tr("Shows mouse and keyboard toggle hint using the native overlay.");
+		const QString show_fatal_error_hints       = tr("Shows fatal error hints using the native overlay.");
 		const QString show_capture_hints           = tr("Shows screenshot and recording hints using the native overlay.");
 		const QString use_native_interface         = tr("Enables use of native HUD within the game window that can interact with game controllers.\nWhen disabled, regular Qt dialogs are used instead.\nCurrently, the on-screen keyboard only supports the English key layout.");
 		const QString record_with_overlays         = tr("Enables recording with overlays.\nThis also affects screenshots.");
 		const QString pause_during_home_menu       = tr("When enabled, opening the home menu will also pause emulation.\nWhile most games pause themselves while the home menu is shown, some do not.\nIn that case it can be helpful to pause the emulation whenever the home menu is open.");
+		const QString play_music_during_boot       = tr("Play music during boot sequence if available.");
 
 		const QString perf_overlay_enabled                 = tr("Enables or disables the performance overlay.");
 		const QString perf_overlay_framerate_graph_enabled = tr("Enables or disables the framerate graph.");
@@ -169,10 +171,11 @@ public:
 		const QString perf_overlay_update_interval         = tr("Sets the time interval in which the performance overlay is being updated (measured in milliseconds).\nSetting this to 16 milliseconds will refresh the performance overlay at roughly 60Hz.\nThe performance overlay refresh rate does not affect the frame graph statistics and can only be as fast as the current game allows.");
 		const QString perf_overlay_font_size               = tr("Sets the font size of the performance overlay (measured in pixels).");
 		const QString perf_overlay_opacity                 = tr("Sets the opacity of the performance overlay (measured in %).");
-		const QString perf_overlay_margin_x                = tr("Sets the horizontal distance to the screen border relative to the screen quadrant (measured in pixels).");
-		const QString perf_overlay_margin_y                = tr("Sets the vertical distance to the screen border relative to the screen quadrant (measured in pixels).");
+		const QString perf_overlay_margin_x                = tr("Sets the horizontal distance to the screen border relative to the screen quadrant (measured in %).");
+		const QString perf_overlay_margin_y                = tr("Sets the vertical distance to the screen border relative to the screen quadrant (measured in %).");
 		const QString perf_overlay_center_x                = tr("Centers the performance overlay horizontally and overrides the horizontal margin.");
 		const QString perf_overlay_center_y                = tr("Centers the performance overlay vertically and overrides the vertical margin.");
+		const QString perf_overlay_use_window_space		   = tr("Position overlay relative to the full window surface, enabling placement outside game's render area.");
 
 		const QString shader_load_bg_enabled   = tr("Shows a background image during the native shader loading dialog/loading screen.\nBy default the used image will be <gamedir>/PS3_GAME/PIC1.PNG.");
 		const QString shader_load_bg_darkening = tr("Changes the background image darkening effect strength of the native shader loading dialog.\nThis may be used to improve readability and/or aesthetics.");
@@ -228,6 +231,7 @@ public:
 		const QString uuid               = tr("This is the ID used for hardware statistics.\nIt should only be reset if you change your hardware configuration or if you copied RPCS3 to another PC.");
 		const QString pad_navigation     = tr("Use the game pad that is configured for player 1 to navigate in the GUI.");
 		const QString global_navigation  = tr("Keep control over pad navigation if RPCS3 is not the active window.");
+		const QString gui_volume         = tr("Set the audio volume of the user interface. This does not affect the ingame audio.");
 
 		// input
 

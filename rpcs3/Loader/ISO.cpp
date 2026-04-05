@@ -585,10 +585,8 @@ std::unique_ptr<fs::dir_base> iso_device::open_dir(const std::string& path)
 
 	if (!node->metadata.is_directory)
 	{
-		// fs::dir::open -> ::readdir should return ENOTDIR when path is
-		// pointing to a file instead of a folder, which translates to error::unknown.
-		// doing the same here.
-		fs::g_tls_error = fs::error::unknown;
+		// fs::dir::open -> ::readdir should return ENOTDIR when path is pointing to a file instead of a folder.
+		fs::g_tls_error = fs::error::notdir;
 		return nullptr;
 	}
 

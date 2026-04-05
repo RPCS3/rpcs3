@@ -21,7 +21,7 @@ game_list_grid::game_list_grid()
 		Q_EMIT IconReady(game, item);
 	};
 
-	connect(this, &game_list_grid::IconReady, this, [this](const game_info& game, const movie_item_base* item)
+	connect(this, &game_list_grid::IconReady, this, [](const game_info& game, const movie_item_base* item)
 	{
 		if (game && item && game->item == item) item->image_change_callback();
 	}, Qt::QueuedConnection); // The default 'AutoConnection' doesn't seem to work in this specific case...
@@ -45,7 +45,8 @@ void game_list_grid::populate(
 	const std::map<QString, QString>& notes_map,
 	const std::map<QString, QString>& title_map,
 	const std::set<std::string>& selected_item_ids,
-	bool play_hover_movies)
+	bool play_hover_movies,
+	bool play_hover_music)
 {
 	clear_list();
 
@@ -109,26 +110,23 @@ void game_list_grid::populate(
 			}
 		});
 
-		if (play_hover_movies && (game->has_hover_gif || game->has_hover_pam || game->has_audio_file))
+		bool check_iso = false;
+
+		if (play_hover_movies && (game->has_hover_gif || game->has_hover_pam))
 		{
-			bool check_iso = false;
+			item->set_video_path(game->info.movie_path);
+			check_iso |= !fs::exists(game->info.movie_path);
+		}
 
-			if (game->has_hover_gif || game->has_hover_pam)
-			{
-				item->set_video_path(game->info.movie_path);
-				check_iso |= !fs::exists(game->info.movie_path);
-			}
+		if (play_hover_music && game->has_audio_file)
+		{
+			item->set_audio_path(game->info.audio_path);
+			check_iso |= !fs::exists(game->info.audio_path);
+		}
 
-			if (game->has_audio_file)
-			{
-				item->set_audio_path(game->info.audio_path);
-				check_iso |= !fs::exists(game->info.audio_path);
-			}
-
-			if (check_iso && is_file_iso(game->info.path))
-			{
-				item->set_iso_path(game->info.path);
-			}
+		if (check_iso && is_file_iso(game->info.path))
+		{
+			item->set_iso_path(game->info.path);
 		}
 
 		if (selected_item_ids.contains(game->info.path + game->info.icon_path))

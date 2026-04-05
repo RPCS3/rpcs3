@@ -46,6 +46,7 @@
 #include "welcome_dialog.h"
 #include "music_player_dialog.h"
 #include "sound_effect_manager_dialog.h"
+#include "recording_settings_dialog.h"
 
 #include <thread>
 #include <unordered_set>
@@ -128,7 +129,7 @@ extern void qt_events_aware_op(int repeat_duration_ms, std::function<bool()> wra
 			}
 			else
 			{
-				QTimer::singleShot(repeat_duration_ms, *check_iteration);
+				QTimer::singleShot(repeat_duration_ms, event_loop, *check_iteration);
 			}
 		});
 
@@ -138,7 +139,7 @@ extern void qt_events_aware_op(int repeat_duration_ms, std::function<bool()> wra
 			event_loop = new QEventLoop();
 
 			// Queue event initially
-			QTimer::singleShot(0, *check_iteration);
+			QTimer::singleShot(0, event_loop, *check_iteration);
 
 			// Event loop
 			event_loop->exec();
@@ -213,8 +214,6 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 	m_shortcut_handler = new shortcut_handler(gui::shortcuts::shortcut_handler_id::main_window, this, m_gui_settings);
 	connect(m_shortcut_handler, &shortcut_handler::shortcut_activated, this, &main_window::handle_shortcut);
 
-	show(); // needs to be done before creating the thumbnail toolbar
-
 	// enable play options if a recent game exists
 	const bool enable_play_last = !m_recent_game.actions.isEmpty() && m_recent_game.actions.first();
 
@@ -278,6 +277,8 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 	m_game_list_frame->Refresh(true);
 
 	update_gui_pad_thread();
+
+	show();
 
 	return true;
 }
@@ -1734,7 +1735,7 @@ void main_window::DecryptSPRXLibraries()
 			dlg->set_button_enabled(QDialogButtonBox::StandardButton::Ok, text.size() - (text.indexOf('x') + 1) == 32);
 		});
 
-		connect(dlg, &QDialog::accepted, this, [this, iterate, dlg, mod_index, decrypter, repeat_count]()
+		connect(dlg, &QDialog::accepted, this, [iterate, dlg, mod_index, decrypter, repeat_count]()
 		{
 			std::string text = dlg->get_input_text().toStdString();
 
@@ -1793,17 +1794,6 @@ void main_window::SaveWindowState() const
 		// Save splitter state
 		m_debugger_frame->SaveSettings();
 	}
-}
-
-void main_window::RepaintThumbnailIcons()
-{
-	const QColor color = gui::utils::get_foreground_color();
-	[[maybe_unused]] const QColor new_color = gui::utils::get_label_color("thumbnail_icon_color", color, color);
-
-	[[maybe_unused]] const auto icon = [&new_color](const QString& path)
-	{
-		return gui::utils::get_colorized_icon(QPixmap::fromImage(gui::utils::get_opaque_image_area(path)), Qt::black, new_color);
-	};
 }
 
 void main_window::RepaintToolBarIcons()
@@ -2311,7 +2301,6 @@ void main_window::RepaintGui()
 	}
 
 	RepaintToolBarIcons();
-	RepaintThumbnailIcons();
 
 	Q_EMIT RequestDialogRepaint();
 }
@@ -2550,7 +2539,7 @@ void main_window::CreateConnects()
 		{
 			Emu.after_kill_callback = []()
 			{
-				Emu.Restart();
+				Emu.Restart(true, false);
 			};
 
 			// Make sure we keep the game window opened
@@ -3132,14 +3121,20 @@ void main_window::CreateConnects()
 
 	connect(ui->actionManage_Screenshots, &QAction::triggered, this, [this]
 	{
-		screenshot_manager_dialog* screenshot_manager = new screenshot_manager_dialog();
+		screenshot_manager_dialog* screenshot_manager = new screenshot_manager_dialog(m_game_list_frame ? m_game_list_frame->GetGameInfo() : std::vector<game_info>{});
 		screenshot_manager->show();
 	});
 
-	connect(ui->actionManage_SoundEffects, &QAction::triggered, this, [this]
+	connect(ui->actionManage_SoundEffects, &QAction::triggered, this, []
 	{
 		sound_effect_manager_dialog* dlg = new sound_effect_manager_dialog();
 		dlg->show();
+	});
+
+	connect(ui->actionRecording, &QAction::triggered, this, [this]
+	{
+		recording_settings_dialog* dlg = new recording_settings_dialog(this);
+		dlg->open();
 	});
 
 	connect(ui->toolsCgDisasmAct, &QAction::triggered, this, [this]
@@ -3388,7 +3383,7 @@ void main_window::CreateConnects()
 		welcome->open();
 	});
 
-	connect(ui->supportAct, &QAction::triggered, this, [this]
+	connect(ui->supportAct, &QAction::triggered, this, []
 	{
 		QDesktopServices::openUrl(QUrl("https://rpcs3.net/patreon"));
 	});
@@ -3424,6 +3419,7 @@ void main_window::CreateConnects()
 	connect(ui->actionPreferGameDataIcons, &QAction::triggered, m_game_list_frame, &game_list_frame::SetPreferGameDataIcons);
 	connect(ui->showCustomIconsAct, &QAction::triggered, m_game_list_frame, &game_list_frame::SetShowCustomIcons);
 	connect(ui->playHoverGifsAct, &QAction::triggered, m_game_list_frame, &game_list_frame::SetPlayHoverGifs);
+	connect(ui->playHoverMusicAct, &QAction::triggered, m_game_list_frame, &game_list_frame::SetPlayHoverMusic);
 
 	connect(m_game_list_frame, &game_list_frame::RequestIconSizeChange, this, [this](int val)
 	{
@@ -3516,11 +3512,8 @@ void main_window::CreateDockWindows()
 	m_mw->setContextMenuPolicy(Qt::PreventContextMenu);
 
 	m_game_list_frame = new game_list_frame(m_gui_settings, m_emu_settings, m_persistent_settings, m_mw);
-	m_game_list_frame->setObjectName("gamelist");
 	m_debugger_frame = new debugger_frame(m_gui_settings, m_mw);
-	m_debugger_frame->setObjectName("debugger");
 	m_log_frame = new log_frame(m_gui_settings, m_mw);
-	m_log_frame->setObjectName("logger");
 
 	m_mw->addDockWidget(Qt::LeftDockWidgetArea, m_game_list_frame);
 	m_mw->addDockWidget(Qt::LeftDockWidgetArea, m_log_frame);
@@ -3674,6 +3667,8 @@ void main_window::ConfigureGuiFromSettings()
 	m_recent_game.entries = gui_settings::Var2List(m_gui_settings->GetValue(gui::rg_entries));
 	m_recent_save.entries = gui_settings::Var2List(m_gui_settings->GetValue(gui::rs_entries));
 
+	gui::volume = std::clamp(m_gui_settings->GetValue(gui::gui_volume).toFloat() * 100.0f, 0.0f, 100.0f);
+
 	const auto update_recent_games_menu = [this](bool is_savestate)
 	{
 		recent_game_wrapper& rgw = is_savestate ? m_recent_save : m_recent_game;
@@ -3730,6 +3725,7 @@ void main_window::ConfigureGuiFromSettings()
 	ui->actionPreferGameDataIcons->setChecked(m_gui_settings->GetValue(gui::gl_pref_gd_icon).toBool());
 	ui->showCustomIconsAct->setChecked(m_gui_settings->GetValue(gui::gl_custom_icon).toBool());
 	ui->playHoverGifsAct->setChecked(m_gui_settings->GetValue(gui::gl_hover_gifs).toBool());
+	ui->playHoverMusicAct->setChecked(m_gui_settings->GetValue(gui::gl_hover_music).toBool());
 
 	m_is_list_mode = m_gui_settings->GetValue(gui::gl_listMode).toBool();
 
