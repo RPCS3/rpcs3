@@ -729,8 +729,14 @@ void cpu_thread::operator()()
 		{
 			if (_this)
 			{
-				sys_log.warning("CPU Thread '%s' terminated abnormally!", name);
 				cleanup();
+
+				auto log_thread = named_thread("CPU Thread Cleanup Logger", [name = name]()
+				{
+					sys_log.warning("CPU Thread '%s' terminated abnormally!", name);
+				});
+
+				log_thread();
 			}
 		}
 	} cleanup;
