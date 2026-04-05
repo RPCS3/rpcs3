@@ -229,6 +229,9 @@ void usb_device_gametablet::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endp
 					case CELL_PAD_CTRL_LEFT:
 						left = true;
 						break;
+					case CELL_PAD_CTRL_PS:
+						gt.btn_ps |= 1;
+						break;
 					default:
 						break;
 					}
@@ -248,9 +251,6 @@ void usb_device_gametablet::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endp
 						break;
 					case CELL_PAD_CTRL_TRIANGLE:
 						gt.btn_triangle |= 1;
-						break;
-					case CELL_PAD_CTRL_PS:
-						gt.btn_ps |= 1;
 						break;
 					default:
 						break;
