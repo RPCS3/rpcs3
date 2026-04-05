@@ -51,7 +51,7 @@ static u32 char_arr_BE_to_uint(const u8* arr)
 	return arr[0] << 24 | arr[1] << 16 | arr[2] << 8 | arr[3];
 }
 
-// Reset the iv to a particular lba
+// Reset the iv to a particular LBA
 static void reset_iv(std::array<u8, 16>& iv, u32 lba)
 {
 	memset(iv.data(), 0, 12);
@@ -150,15 +150,24 @@ bool iso_file_decryption::init(const std::string& path)
 	// Check for Redump type
 	//
 
-	std::string key_path;
 	const usz ext_pos = path.rfind('.');
+	std::string key_path;
 
 	// If no file extension is provided, set "key_path" appending ".dkey" to "path".
 	// Otherwise, replace the extension (e.g. ".iso") with ".dkey"
 	key_path = ext_pos == umax ? path + ".dkey" : path.substr(0, ext_pos) + ".dkey";
 
+	fs::file key_file(key_path);
+
+	// If no ".dkey" file exists, try with ".key"
+	if (!key_file)
+	{
+		key_path = ext_pos == umax ? path + ".key" : path.substr(0, ext_pos) + ".key";
+		key_file = fs::file(key_path);
+	}
+
 	// Check if "key_path" exists and create the "m_aes_dec" context if so
-	if (fs::file key_file(key_path); key_file)
+	if (key_file)
 	{
 		char key_str[32];
 		unsigned char key[16];
@@ -201,7 +210,7 @@ bool iso_file_decryption::init(const std::string& path)
 	// If encryption type is still set to none
 	if (m_enc_type == iso_encryption_type::NONE)
 	{
-		// The 3k3y watermarks located at 0xF70: (D|E)ncrypted 3K BLD
+		// The 3k3y watermarks located at offset 0xF70: (D|E)ncrypted 3K BLD
 		static const unsigned char k3k3y_enc_watermark[16] =
 			{0x45, 0x6E, 0x63, 0x72, 0x79, 0x70, 0x74, 0x65, 0x64, 0x20, 0x33, 0x4B, 0x20, 0x42, 0x4C, 0x44};
 		static const unsigned char k3k3y_dec_watermark[16] =
@@ -269,7 +278,7 @@ bool iso_file_decryption::decrypt(u64 offset, void* buffer, u64 size, const std:
 		return true;
 	}
 
-	// If it's a 3k3y iso and 0xF70 data is being requested, we should null it out
+	// If it's a 3k3y ISO and data at offset 0xF70 is being requested, we should null it out
 	if (m_enc_type == iso_encryption_type::DEC_3K3Y || m_enc_type == iso_encryption_type::ENC_3K3Y)
 	{
 		if (offset + size >= 0xF70ULL && offset <= 0x1070ULL)
@@ -281,7 +290,7 @@ bool iso_file_decryption::decrypt(u64 offset, void* buffer, u64 size, const std:
 			memset(buf_overlap_start, 0x00, offset + size < 0x1070ULL ? size - (buf_overlap_start - buf) : 0x100ULL - (buf_overlap_start - buf));
 		}
 
-		// If it's a decrypted iso then return, otherwise go on to the decryption logic
+		// If it's a decrypted ISO then return, otherwise go on to the decryption logic
 		if (m_enc_type == iso_encryption_type::DEC_3K3Y)
 		{
 			return true;
@@ -322,7 +331,7 @@ bool iso_file_decryption::decrypt(u64 offset, void* buffer, u64 size, const std:
 		}
 	}
 
-	sys_log.error("decrypt(): %s: LBA request wasn't in the 'm_region_info' for an encrypted iso? - RP: 0x%lx, RC: 0x%lx, LR: (0x%016lx - 0x%016lx)",
+	sys_log.error("decrypt(): %s: LBA request wasn't in the 'm_region_info' for an encrypted ISO? - RP: 0x%lx, RC: 0x%lx, LR: (0x%016lx - 0x%016lx)",
 		name,
 		offset,
 		static_cast<unsigned long int>(m_region_info.size()),
@@ -528,7 +537,7 @@ iso_archive::iso_archive(const std::string& path)
 
 	if (!m_dec->init(path))
 	{
-		// Not iso... TODO: throw something??
+		// Not ISO... TODO: throw something??
 		return;
 	}
 
@@ -772,7 +781,7 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 	// if trying to read the previously not requested bytes (marked with "x" in the picture below)
 	//
 	//                                -------------------------------------------------------------------
-	//           file on iso archive: |     '                                     '                     |
+	//           file on ISO archive: |     '                                     '                     |
 	//                                -------------------------------------------------------------------
 	//                                      '                                     '
 	//                                      ---------------------------------------
@@ -780,7 +789,7 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 	//                                      ---------------------------------------
 	//                                      '     '                             ' '
 	//              ---------------------------------------------------------------------------------------------------------------
-	// iso archive: | sec 0   | sec 1   |xxx'#####|#########|#########|#########|#'xxxxxxx|         | ...     | sec n-1 | sec n   |
+	// ISO archive: | sec 0   | sec 1   |xxx'#####|#########|#########|#########|#'xxxxxxx|         | ...     | sec n-1 | sec n   |
 	//              ---------------------------------------------------------------------------------------------------------------
 	//                                  '         '                             '         '
 	//                                  |first sec|                             |last sec |
@@ -1014,7 +1023,7 @@ void iso_dir::rewind()
 
 void load_iso(const std::string& path)
 {
-	sys_log.notice("Loading iso '%s'", path);
+	sys_log.notice("Loading ISO '%s'", path);
 
 	fs::set_virtual_device("iso_overlay_fs_dev", stx::make_shared<iso_device>(path));
 
@@ -1023,7 +1032,7 @@ void load_iso(const std::string& path)
 
 void unload_iso()
 {
-	sys_log.notice("Unloading iso");
+	sys_log.notice("Unloading ISO");
 
 	fs::set_virtual_device("iso_overlay_fs_dev", stx::shared_ptr<iso_device>());
 }

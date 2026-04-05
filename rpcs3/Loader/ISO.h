@@ -14,22 +14,23 @@ void unload_iso();
 
 /*
 - Hijacked the "iso_archive::iso_archive" method to test if the ".iso" file is encrypted and sets a flag.
-  The flag is set according to the first matching encryption type found in the following order:
-  - Redump type: ".dkey" file, with the same name of the ".iso" file, exists in the same folder of the ".iso" file
-  - 3k3y type:   3k3y watermark exists at 0xF70
+  The flag is set according to the first matching encryption type found following the order below:
+  - Redump type: ".dkey" or ".key" (as alternative) file, with the same name of the ".iso" file,
+                 exists in the same folder of the ".iso" file
+  - 3k3y type:   3k3y watermark exists at offset 0xF70
   If the flag is set then the "iso_file::read" method will decrypt the data on the fly
 
 - Supported ISO encryption type:
   - Decrypted (.iso)
   - 3k3y (decrypted / encrypted) (.iso)
-  - Redump (encrypted) (.iso & .dkey)
+  - Redump (encrypted) (.iso + .dkey/.key)
 
 - Unsupported ISO encryption type:
   - Encrypted split ISO files
 */
 
-// Struct to store ISO region information (storing addrs instead of lba since we need to compare the addr anyway,
-// so would have to multiply or divide every read if storing lba)
+// Struct to store ISO region information (storing addresses instead of LBA since we need to compare
+// the address anyway, so would have to multiply or divide every read if storing LBA)
 struct iso_region_info
 {
 	bool encrypted = false;
