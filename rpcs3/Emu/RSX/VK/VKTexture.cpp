@@ -1304,6 +1304,15 @@ namespace vk
 			.image_bpp = bpp
 		};
 
+		// Pre-Transfer barrier
+		vk::insert_buffer_memory_barrier(
+			cmd,
+			scratch_buf->value,
+			tiled_data_scratch_offset, section_length,
+			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+			VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT
+		);
+
 		// Transfer
 		VkBufferCopy copy_rgn
 		{
@@ -1313,16 +1322,25 @@ namespace vk
 		};
 		vkCmdCopyBuffer(cmd, dma_mapping.second->value, scratch_buf->value, 1, &copy_rgn);
 
-		// Barrier
+		// Post-Transfer barrier
 		vk::insert_buffer_memory_barrier(
-			cmd, scratch_buf->value, linear_data_scratch_offset, section_length,
+			cmd, scratch_buf->value, tiled_data_scratch_offset, section_length,
 			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 			VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+
+		// Pre-Compute barrier
+		vk::insert_buffer_memory_barrier(
+			cmd,
+			scratch_buf->value,
+			linear_data_scratch_offset, static_cast<u32>(width) * height * bpp,
+			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+			VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_WRITE_BIT
+		);
 
 		// Detile
 		vk::get_compute_task<vk::cs_tile_memcpy<RSX_detiler_op::decode>>()->run(cmd, config);
 
-		// Barrier
+		// Post-Compute barrier
 		vk::insert_buffer_memory_barrier(
 			cmd, scratch_buf->value, linear_data_scratch_offset, static_cast<u32>(width) * height * bpp,
 			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
