@@ -177,7 +177,7 @@ namespace vk
 		return { scratch_buffer.get(), is_new };
 	}
 
-	vk::buffer* get_scratch_buffer(const vk::command_buffer& cmd, u64 min_required_size, bool zero_memory)
+	vk::buffer* get_scratch_buffer(const vk::command_buffer& cmd, u64 min_required_size, VkPipelineStageFlags dst_stage_flags, VkAccessFlags dst_access, bool zero_memory)
 	{
 		const auto [buf, init_mem] = get_scratch_buffer(cmd.get_queue_family(), min_required_size);
 
@@ -190,6 +190,12 @@ namespace vk
 			insert_buffer_memory_barrier(cmd, buf->value, 0, zero_length,
 				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT,
 				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT);
+		}
+		else if (dst_access != VK_ACCESS_NONE)
+		{
+			insert_buffer_memory_barrier(cmd, buf->value, 0, min_required_size,
+				VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT, dst_stage_flags,
+				VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT, dst_access);
 		}
 
 		return buf;

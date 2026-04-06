@@ -376,7 +376,7 @@ namespace vk
 		const auto min_scratch_size = calculate_working_buffer_size(src_length, src->aspect() | dst->aspect());
 
 		// Initialize scratch memory
-		auto scratch_buf = vk::get_scratch_buffer(cmd, min_scratch_size);
+		auto scratch_buf = vk::get_scratch_buffer(cmd, min_scratch_size, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT);
 
 		for (u32 mip_level = 0; mip_level < mipmaps; ++mip_level)
 		{
@@ -601,7 +601,7 @@ namespace vk
 					const auto dst_w = dst_rect.width();
 					const auto dst_h = dst_rect.height();
 
-					auto scratch_buf = vk::get_scratch_buffer(cmd, std::max(src_w, dst_w) * std::max(src_h, dst_h) * 4);
+					auto scratch_buf = vk::get_scratch_buffer(cmd, std::max(src_w, dst_w) * std::max(src_h, dst_h) * 4, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT);
 
 					//1. Copy unscaled to typeless surface
 					VkBufferImageCopy info{};
@@ -1124,7 +1124,7 @@ namespace vk
 						scratch_buf_size += (image_linear_size * 5) / 4;
 					}
 
-					scratch_buf = vk::get_scratch_buffer(cmd2, scratch_buf_size);
+					scratch_buf = vk::get_scratch_buffer(cmd2, scratch_buf_size, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT);
 					buffer_copies.reserve(subresource_layout.size());
 				}
 
@@ -1183,13 +1183,6 @@ namespace vk
 		{
 			ensure(scratch_buf);
 
-			// WAW hazard - complete previous work before executing any transfers
-			insert_buffer_memory_barrier(
-				cmd2, scratch_buf->value, 0, scratch_offset,
-				VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-				VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
-				VK_ACCESS_TRANSFER_WRITE_BIT);
-
 			if (upload_commands.size() > 1)
 			{
 				auto range_ptr = buffer_copies.data();
@@ -1199,8 +1192,9 @@ namespace vk
 					range_ptr += op.second;
 				}
 			}
-			else if (!buffer_copies.empty())
+			else
 			{
+				ensure(!buffer_copies.empty());
 				vkCmdCopyBuffer(cmd2, upload_buffer->value, scratch_buf->value, static_cast<u32>(buffer_copies.size()), buffer_copies.data());
 			}
 
@@ -1279,7 +1273,10 @@ namespace vk
 		vk::load_dma(range.start, section_length);
 
 		// Allocate scratch and prepare for the GPU job
-		const auto scratch_buf = vk::get_scratch_buffer(cmd, section_length * 3); // 0 = linear data, 1 = padding (deswz), 2 = tiled data
+		const auto scratch_buf = vk::get_scratch_buffer(cmd, section_length * 3,       // 0 = linear data, 1 = padding (deswz), 2 = tiled data
+			VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+			VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT);
+
 		const auto tiled_data_scratch_offset = section_length * 2;
 		const auto linear_data_scratch_offset = 0u;
 
@@ -1304,15 +1301,6 @@ namespace vk
 			.image_bpp = bpp
 		};
 
-		// Pre-Transfer barrier
-		vk::insert_buffer_memory_barrier(
-			cmd,
-			scratch_buf->value,
-			tiled_data_scratch_offset, section_length,
-			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-			VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT
-		);
-
 		// Transfer
 		VkBufferCopy copy_rgn
 		{
@@ -1327,15 +1315,6 @@ namespace vk
 			cmd, scratch_buf->value, tiled_data_scratch_offset, section_length,
 			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 			VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
-
-		// Pre-Compute barrier
-		vk::insert_buffer_memory_barrier(
-			cmd,
-			scratch_buf->value,
-			linear_data_scratch_offset, static_cast<u32>(width) * height * bpp,
-			VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-			VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT, VK_ACCESS_MEMORY_WRITE_BIT
-		);
 
 		// Detile
 		vk::get_compute_task<vk::cs_tile_memcpy<RSX_detiler_op::decode>>()->run(cmd, config);

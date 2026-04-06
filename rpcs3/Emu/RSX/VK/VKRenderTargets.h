@@ -598,7 +598,7 @@ namespace vk
 			const auto transfer_size = surface->get_memory_range().length();
 			if (transfer_size > max_copy_length || src_offset_in_buffer || surface->is_depth_surface())
 			{
-				auto scratch = vk::get_scratch_buffer(cmd, transfer_size * 4);
+				auto scratch = vk::get_scratch_buffer(cmd, transfer_size * 4, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT);
 				dest = scratch;
 			}
 
