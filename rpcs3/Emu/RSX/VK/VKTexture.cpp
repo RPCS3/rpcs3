@@ -990,7 +990,7 @@ namespace vk
 		auto pdev = vk::get_current_renderer();
 		rsx::texture_uploader_capabilities caps{ .supports_dxt = pdev->get_texture_compression_bc_support(), .alignment = heap_align };
 		rsx::texture_memory_info opt{};
-		bool check_caps = true;
+		bool check_hw_caps = !(image_setup_flags & source_is_userptr);
 
 		vk::buffer* scratch_buf = nullptr;
 		u32 scratch_offset = 0;
@@ -1015,13 +1015,13 @@ namespace vk
 			image_linear_size = row_pitch * layout.depth * (rsx::is_compressed_host_format(caps, format) ? layout.height_in_block : layout.height_in_texel);
 
 			// Only do GPU-side conversion if occupancy is good
-			if (check_caps)
+			if (check_hw_caps)
 			{
 				caps.supports_byteswap = (image_linear_size >= 1024) || (image_setup_flags & source_is_gpu_resident);
 				caps.supports_hw_deswizzle = caps.supports_byteswap;
 				caps.supports_zero_copy = caps.supports_byteswap;
 				caps.supports_vtc_decoding = false;
-				check_caps = false;
+				check_hw_caps = false;
 			}
 
 			auto buf_allocator = [&](usz) -> std::tuple<void*, usz>
