@@ -787,6 +787,14 @@ namespace vk
 			vkCmdClearDepthStencilImage(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
 		}
 
+		vk::insert_image_memory_barrier(
+			cmd,
+			image->handle(),
+			image->current_layout, image->current_layout,
+			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+			VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+			dst_range);
+
 		copy_transfer_regions_impl(cmd, image, sections_to_copy);
 
 		vk::change_image_layout(cmd, image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, dst_range);
@@ -821,6 +829,14 @@ namespace vk
 			VkClearDepthStencilValue clear = { 1.f, 0 };
 			vkCmdClearDepthStencilImage(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
 		}
+
+		vk::insert_image_memory_barrier(
+			cmd,
+			image->handle(),
+			image->current_layout, image->current_layout,
+			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+			VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+			dst_range);
 
 		copy_transfer_regions_impl(cmd, image, sections_to_copy);
 
@@ -860,6 +876,14 @@ namespace vk
 			}
 		}
 
+		vk::insert_image_memory_barrier(
+			cmd,
+			image->handle(),
+			image->current_layout, image->current_layout,
+			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+			VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+			dst_range);
+
 		copy_transfer_regions_impl(cmd, image, sections_to_copy);
 
 		vk::change_image_layout(cmd, image, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, dst_range);
@@ -895,6 +919,14 @@ namespace vk
 			VkClearDepthStencilValue clear = { 1.f, 0 };
 			vkCmdClearDepthStencilImage(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
 		}
+
+		vk::insert_image_memory_barrier(
+			cmd,
+			image->handle(),
+			image->current_layout, image->current_layout,
+			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+			VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+			dst_range);
 
 		copy_transfer_regions_impl(cmd, image, sections_to_copy);
 
@@ -1016,6 +1048,14 @@ namespace vk
 						VkClearDepthStencilValue clear{ 1.f, 255 };
 						vkCmdClearDepthStencilImage(cmd, image->value, image->current_layout, &clear, 1, &range);
 					}
+
+					vk::insert_image_memory_barrier(
+						cmd,
+						image->handle(),
+						image->current_layout, image->current_layout,
+						VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+						VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+						range);
 				}
 			}
 		}
