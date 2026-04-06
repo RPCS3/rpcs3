@@ -100,7 +100,7 @@ namespace vk
 		auto dma_sync_region = valid_range;
 		dma_mapping_handle dma_mapping = { 0, nullptr };
 
-		auto dma_sync = [&dma_sync_region, &dma_mapping](bool load, bool force = false)
+		auto dma_sync = [&](bool load, bool force = false)
 		{
 			if (dma_mapping.second && !force)
 			{
@@ -334,6 +334,14 @@ namespace vk
 			region.bufferOffset = dma_mapping.first;
 			vkCmdCopyImageToBuffer(cmd, src->value, src->current_layout, dma_mapping.second->value, 1, &region);
 		}
+
+		// Post-transfer barrier on dma layer
+		vk::insert_buffer_memory_barrier(
+			cmd, dma_mapping.second->value,
+			dma_mapping.first, dma_sync_region.length(),
+			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+			VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT
+		);
 
 		src->pop_layout(cmd);
 
