@@ -724,6 +724,7 @@ namespace vk
 				subres.height_in_block
 			);
 			subres.data = std::span(ext_data);
+			upload_flags |= source_is_userptr;
 #else
 			const auto [scratch_buf, linear_data_scratch_offset] = vk::detile_memory_block(cmd, tiled_region, range, subres.width_in_block, subres.height_in_block, get_bpp());
 
