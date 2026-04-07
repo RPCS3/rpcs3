@@ -557,6 +557,18 @@
                <item>
                 <widget class="QComboBox" name="stereoRenderMode"/>
                </item>
+               <item>
+                <widget class="QGroupBox" name="gb_screen_size">
+                 <property name="title">
+                  <string>Screen Size (Inch)</string>
+                 </property>
+                 <layout class="QVBoxLayout" name="layout_gb_screen_size">
+                  <item>
+                   <widget class="QSpinBox" name="sb_screen_size"/>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
               </layout>
              </widget>
             </item>
