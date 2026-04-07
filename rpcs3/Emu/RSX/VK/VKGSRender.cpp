@@ -505,9 +505,6 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 		m_occlusion_query_manager->set_control_flags(VK_QUERY_CONTROL_PRECISE_BIT, 0);
 	}
 
-	VkSemaphoreCreateInfo semaphore_info = {};
-	semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
 	// VRAM allocation
 	// This first set is bound persistently, so grow notifications are enabled.
 	m_attrib_ring_info.create(VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_default, "attrib buffer", 0x400000, VK_TRUE);
@@ -570,10 +567,13 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 		rsx_log.warning("Current driver may crash due to memory limitations (%uk)", m_texbuffer_view_size / 1024);
 	}
 
-	for (auto &ctx : frame_context_storage)
+	m_max_async_frames = m_swapchain->get_swap_image_count();
+	m_frame_context_storage.resize(m_max_async_frames);
+	m_current_frame = &m_frame_context_storage[0];
+
+	for (auto& ctx : m_frame_context_storage)
 	{
-		vkCreateSemaphore((*m_device), &semaphore_info, nullptr, &ctx.present_wait_semaphore);
-		vkCreateSemaphore((*m_device), &semaphore_info, nullptr, &ctx.acquire_signal_semaphore);
+		ctx.init(*m_device);
 	}
 
 	const auto& memory_map = m_device->get_memory_mapping();
@@ -611,8 +611,6 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, target_layout, range);
 
 	}
-
-	m_current_frame = &frame_context_storage[0];
 
 	m_texture_cache.initialize((*m_device), m_device->get_graphics_queue(),
 			m_texture_upload_buffer_ring_info);
@@ -830,16 +828,17 @@ VKGSRender::~VKGSRender()
 	if (m_current_frame == &m_aux_frame_context)
 	{
 		// Return resources back to the owner
-		m_current_frame = &frame_context_storage[m_current_queue_index];
+		m_current_frame = &m_frame_context_storage[m_current_queue_index];
 		m_current_frame->grab_resources(m_aux_frame_context);
 	}
 
-	// NOTE: aux_context uses descriptor pools borrowed from the main queues and any allocations will be automatically freed when pool is destroyed
-	for (auto &ctx : frame_context_storage)
+	// CPU frame contexts
+	for (auto &ctx : m_frame_context_storage)
 	{
-		vkDestroySemaphore((*m_device), ctx.present_wait_semaphore, nullptr);
-		vkDestroySemaphore((*m_device), ctx.acquire_signal_semaphore, nullptr);
+		ctx.destroy(*m_device);
 	}
+	m_current_frame = nullptr;
+	m_frame_context_storage.clear();
 
 	// Textures
 	m_rtts.destroy();
@@ -1153,6 +1152,7 @@ void VKGSRender::check_present_status()
 void VKGSRender::set_viewport()
 {
 	const auto [clip_width, clip_height] = rsx::apply_resolution_scale<true>(
+		resolution_scaling_config,
 		rsx::method_registers.surface_clip_width(), rsx::method_registers.surface_clip_height());
 
 	const auto zclip_near = rsx::method_registers.clip_min();
@@ -1542,7 +1542,7 @@ std::pair<volatile vk::host_data_t*, VkBuffer> VKGSRender::map_host_object_data(
 	return { m_host_dma_ctrl->host_ctx(), m_host_object_data->value };
 }
 
-bool VKGSRender::release_GCM_label(u32 address, u32 args)
+bool VKGSRender::release_GCM_label(u32 type, u32 address, u32 args)
 {
 	if (!backend_config.supports_host_gpu_labels)
 	{
@@ -1551,7 +1551,7 @@ bool VKGSRender::release_GCM_label(u32 address, u32 args)
 
 	auto host_ctx = ensure(m_host_dma_ctrl->host_ctx());
 
-	if (host_ctx->texture_loads_completed())
+	if (type == NV4097_TEXTURE_READ_SEMAPHORE_RELEASE && host_ctx->texture_loads_completed())
 	{
 		// All texture loads already seen by the host GPU
 		// Wait for all previously submitted labels to be flushed
@@ -1573,13 +1573,10 @@ bool VKGSRender::release_GCM_label(u32 address, u32 args)
 
 	const auto release_event_id = host_ctx->on_label_acquire();
 
+	vk::insert_global_memory_barrier(*m_current_command_buffer);
+
 	if (host_ctx->has_unflushed_texture_loads())
 	{
-		if (vk::is_renderpass_open(*m_current_command_buffer))
-		{
-			vk::end_renderpass(*m_current_command_buffer);
-		}
-
 		vkCmdUpdateBuffer(*m_current_command_buffer, mapping.second->value, mapping.first, 4, &write_data);
 		flush_command_queue();
 	}
@@ -1956,7 +1953,7 @@ void VKGSRender::load_program_env()
 		m_draw_processor.fill_scale_offset_data(buf, false);
 		m_draw_processor.fill_user_clip_data(buf + 64);
 		*(reinterpret_cast<u32*>(buf + 68)) = ctx->transform_branch_bits();
-		*(reinterpret_cast<f32*>(buf + 72)) = ctx->point_size() * rsx::get_resolution_scale();
+		*(reinterpret_cast<f32*>(buf + 72)) = ctx->point_size() * resolution_scaling_config.scale_factor();
 		*(reinterpret_cast<f32*>(buf + 76)) = ctx->clip_min();
 		*(reinterpret_cast<f32*>(buf + 80)) = ctx->clip_max();
 
@@ -2118,7 +2115,7 @@ void VKGSRender::load_program_env()
 
 	if (vk::emulate_conditional_rendering())
 	{
-		const vk::buffer& predicate = m_cond_render_buffer ? *m_cond_render_buffer : *vk::get_scratch_buffer(*m_current_command_buffer, 4);
+		const vk::buffer& predicate = m_cond_render_buffer ? *m_cond_render_buffer : *vk::get_scratch_buffer(*m_current_command_buffer, 4, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_ACCESS_NONE);
 		const u32 offset = cond_render_ctrl.hw_cond_active ? 0 : 4;
 		m_program->bind_uniform({ predicate, offset, 4 }, vk::glsl::binding_set_index_vertex, m_vs_binding_table->cr_pred_buffer_location);
 	}
@@ -2445,6 +2442,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		m_framebuffer_layout.target, m_framebuffer_layout.aa_mode, m_framebuffer_layout.raster_type,
 		m_framebuffer_layout.color_addresses, m_framebuffer_layout.zeta_address,
 		m_framebuffer_layout.actual_color_pitch, m_framebuffer_layout.actual_zeta_pitch,
+		resolution_scaling_config,
 		(*m_device), *m_current_command_buffer);
 
 	// Reset framebuffer information
@@ -2469,7 +2467,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		m_surface_info[i].samples = samples;
 	}
 
-	//Process depth surface as well
+	// Process depth surface as well
 	{
 		if (m_depth_surface_info.pitch && g_cfg.video.write_depth_buffer)
 		{
@@ -2486,7 +2484,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		m_depth_surface_info.samples = samples;
 	}
 
-	//Bind created rtts as current fbo...
+	// Bind created rtts as current fbo...
 	const auto draw_buffers = rsx::utility::get_rtt_indexes(m_framebuffer_layout.target);
 	m_draw_buffers.clear();
 	m_fbo_images.clear();
@@ -2624,7 +2622,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	m_cached_renderpass = vk::get_renderpass(*m_device, m_current_renderpass_key);
 
 	// Search old framebuffers for this same configuration
-	const auto [fbo_width, fbo_height] = rsx::apply_resolution_scale<true>(m_framebuffer_layout.width, m_framebuffer_layout.height);
+	const auto [fbo_width, fbo_height] = rsx::apply_resolution_scale<true>(resolution_scaling_config, m_framebuffer_layout.width, m_framebuffer_layout.height);
 
 	if (m_draw_fbo)
 	{
@@ -2637,6 +2635,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 	set_viewport();
 	set_scissor(clipped_scissor);
+	on_framebuffer_layout_updated();
 
 	check_zcull_status(true);
 }
@@ -2911,7 +2910,7 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 	else if (num_hw_queries > 0)
 	{
 		// We'll need to do some result aggregation using a compute shader.
-		auto scratch = vk::get_scratch_buffer(*m_current_command_buffer, num_hw_queries * 4);
+		vk::buffer* scratch = nullptr;
 
 		// Range latching. Because of how the query pool manages allocations using a stack, we get an inverse sequential set of handles/indices that we can easily group together.
 		// This drastically boosts performance on some drivers like the NVIDIA proprietary one that seems to have a rather high cost for every individual query transer command.
@@ -2919,6 +2918,11 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 
 		auto copy_query_range_impl = [&]()
 		{
+			if (!scratch)
+			{
+				scratch = vk::get_scratch_buffer(*m_current_command_buffer, num_hw_queries * 4, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT);
+			}
+
 			const auto count = (query_range.last - query_range.first + 1);
 			m_occlusion_query_manager->get_query_result_indirect(*m_current_command_buffer, query_range.first, count, scratch->value, dst_offset);
 			dst_offset += count * 4;
@@ -2965,7 +2969,7 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 		}
 
 		// Sanity check
-		ensure(dst_offset <= scratch->size());
+		ensure(scratch && dst_offset <= scratch->size());
 
 		if (!partial_eval)
 		{

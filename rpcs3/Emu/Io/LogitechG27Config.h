@@ -96,9 +96,11 @@ public:
 
 	emulated_logitech_g27_mapping dial_clockwise{this, "dial_clockwise", 0, sdl_mapping_type::button, 21, hat_component::none, false};
 	emulated_logitech_g27_mapping dial_anticlockwise{this, "dial_anticlockwise", 0, sdl_mapping_type::button, 22, hat_component::none, false};
+	emulated_logitech_g27_mapping dial_center{this, "dial_center", 0, sdl_mapping_type::button, 23, hat_component::none, false};
 
 	emulated_logitech_g27_mapping select{this, "select", 0, sdl_mapping_type::button, 8, hat_component::none, false};
-	emulated_logitech_g27_mapping pause{this, "pause", 0, sdl_mapping_type::button, 9, hat_component::none, false};
+	emulated_logitech_g27_mapping start{this, "pause", 0, sdl_mapping_type::button, 9, hat_component::none, false};
+	emulated_logitech_g27_mapping ps{this, "ps", 0, sdl_mapping_type::button, 24, hat_component::none, false};
 
 	emulated_logitech_g27_mapping shifter_1{this, "shifter_1", 0, sdl_mapping_type::button, 3, hat_component::none, false};
 	emulated_logitech_g27_mapping shifter_2{this, "shifter_2", 0, sdl_mapping_type::button, 0, hat_component::none, false};
@@ -107,9 +109,9 @@ public:
 	emulated_logitech_g27_mapping shifter_5{this, "shifter_5", 0, sdl_mapping_type::hat, 0, hat_component::up, false};
 	emulated_logitech_g27_mapping shifter_6{this, "shifter_6", 0, sdl_mapping_type::hat, 0, hat_component::down, false};
 	emulated_logitech_g27_mapping shifter_r{this, "shifter_r", 0, sdl_mapping_type::hat, 0, hat_component::left, false};
-	emulated_logitech_g27_mapping shifter_press{this, "shifter_press", 0, sdl_mapping_type::hat, 0, hat_component::right, false};
 
 	cfg::_bool reverse_effects{this, "reverse_effects", false};
+	cfg::uint<0, 4> compatibility_limit{this, "compatibility_limit", 4};
 	cfg::uint<0, 0xFFFFFFFFFFFFFFFF> ffb_device_type_id{this, "ffb_device_type_id", 0};
 	cfg::uint<0, 0xFFFFFFFFFFFFFFFF> led_device_type_id{this, "led_device_type_id", 0};
 

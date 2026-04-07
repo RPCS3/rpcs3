@@ -76,6 +76,20 @@ std::string derive_password(std::string_view user_password)
 	return derived_password;
 }
 
+std::shared_ptr<rpcn::rpcn_client> get_rpcn_connection(QWidget* parent)
+{
+	const auto rpcn = rpcn::rpcn_client::get_instance(0);
+
+	if (auto result = rpcn->wait_for_connection(); result != rpcn::rpcn_state::failure_no_failure)
+	{
+		const QString error_message = QObject::tr("Failed to connect to RPCN server:\n%0").arg(QString::fromStdString(rpcn::rpcn_state_to_string(result)));
+		QMessageBox::critical(parent, QObject::tr("Error Connecting to RPCN!"), error_message, QMessageBox::Ok);
+		return nullptr;
+	}
+
+	return rpcn;
+}
+
 rpcn_settings_dialog::rpcn_settings_dialog(QWidget* parent)
 	: QDialog(parent)
 {
@@ -171,8 +185,8 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 	QPushButton* btn_test     = new QPushButton(tr("Test Account"));
 	QLabel* label_npid        = new QLabel();
 
-	QCheckBox* checkbox_disable_ipv6 = new QCheckBox(tr("Disable IPv6"));
-	checkbox_disable_ipv6->setCheckState(g_cfg_rpcn.get_ipv6_support() ? Qt::Unchecked : Qt::Checked);
+	// QCheckBox* checkbox_disable_ipv6 = new QCheckBox(tr("Enable IPv6(Experimental)"));
+	// checkbox_disable_ipv6->setCheckState(g_cfg_rpcn.get_ipv6_support() ? Qt::Checked : Qt::Unchecked);
 
 	const auto update_npid_label = [label_npid]()
 	{
@@ -192,7 +206,7 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 	grp_buttons->setLayout(vbox_buttons);
 
 	vbox_global->addWidget(grp_buttons);
-	vbox_global->addWidget(checkbox_disable_ipv6);
+	// vbox_global->addWidget(checkbox_disable_ipv6);
 
 	setLayout(vbox_global);
 
@@ -279,15 +293,11 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 				return;
 
 			{
-				const auto rpcn = rpcn::rpcn_client::get_instance(0);
 				const auto avatar_url = "https://rpcs3.net/cdn/netplay/DefaultAvatar.png";
+				const auto rpcn = get_rpcn_connection(this);
 
-				if (auto result = rpcn->wait_for_connection(); result != rpcn::rpcn_state::failure_no_failure)
-				{
-					const QString error_message = tr("Failed to connect to RPCN server:\n%0").arg(QString::fromStdString(rpcn::rpcn_state_to_string(result)));
-					QMessageBox::critical(this, tr("Error Connecting"), error_message, QMessageBox::Ok);
+				if (!rpcn)
 					return;
-				}
 
 				if (auto error = rpcn->create_user(*username, *password, *username, avatar_url, *email); error != rpcn::ErrorType::NoError)
 				{
@@ -334,14 +344,11 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 
 	connect(btn_test, &QAbstractButton::clicked, this, [this]()
 		{
-			auto rpcn = rpcn::rpcn_client::get_instance(0);
+			const auto rpcn = get_rpcn_connection(this);
 
-			if (auto res = rpcn->wait_for_connection(); res != rpcn::rpcn_state::failure_no_failure)
-			{
-				const QString error_msg = tr("Failed to connect to RPCN:\n%0").arg(QString::fromStdString(rpcn::rpcn_state_to_string(res)));
-				QMessageBox::warning(this, tr("Error connecting to RPCN!"), error_msg, QMessageBox::Ok);
+			if (!rpcn)
 				return;
-			}
+
 			if (auto res = rpcn->wait_for_authentified(); res != rpcn::rpcn_state::failure_no_failure)
 			{
 				const QString error_msg = tr("Failed to authentify to RPCN:\n%0").arg(QString::fromStdString(rpcn::rpcn_state_to_string(res)));
@@ -352,11 +359,11 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 			QMessageBox::information(this, tr("RPCN Account Valid!"), tr("Your account is valid!"), QMessageBox::Ok);
 		});
 
-	connect(checkbox_disable_ipv6, &QCheckBox::checkStateChanged, this, [this](Qt::CheckState state)
-	{
-		g_cfg_rpcn.set_ipv6_support(state == Qt::Unchecked);
-		g_cfg_rpcn.save();
-	});
+	// connect(checkbox_disable_ipv6, &QCheckBox::checkStateChanged, this, [this](Qt::CheckState state)
+	// {
+	// 	g_cfg_rpcn.set_ipv6_support(state == Qt::Checked);
+	// 	g_cfg_rpcn.save();
+	// });
 }
 
 void rpcn_account_dialog::refresh_combobox()
@@ -657,6 +664,68 @@ const std::optional<std::string>& rpcn_ask_token_dialog::get_token() const
 	return m_token;
 }
 
+rpcn_confirm_delete_dialog::rpcn_confirm_delete_dialog(QWidget* parent)
+	: QDialog(parent)
+{
+	setWindowTitle(tr("Confirm Account Deletion"));
+	setObjectName("rpcn_confirm_delete_dialog");
+
+	QVBoxLayout* vbox_global = new QVBoxLayout();
+
+	QLabel* lbl_description = new QLabel(tr("Are you sure you want to delete RPCN account \"%1\"?\n\n"
+											"Important:\n"
+											"Deleting your account will blacklist your username and email for 3 months.\n"
+											"To confirm, type your username below and click \"Yes\".\n")
+			.arg(QString::fromStdString(g_cfg_rpcn.get_npid())));
+
+	QLineEdit* edit_for_delete = new QLineEdit();
+	edit_for_delete->setPlaceholderText(tr("Type your username to confirm"));
+
+	QPushButton* btn_yes = new QPushButton(tr("Yes"));
+	btn_yes->setEnabled(false);
+	QPushButton* btn_no = new QPushButton(tr("No"));
+	QDialogButtonBox* btn_box = new QDialogButtonBox(Qt::Horizontal);
+	btn_box->addButton(btn_yes, QDialogButtonBox::AcceptRole);
+	btn_box->addButton(btn_no, QDialogButtonBox::RejectRole);
+
+	vbox_global->addWidget(lbl_description);
+	vbox_global->addWidget(edit_for_delete);
+	vbox_global->addWidget(btn_box);
+
+	setLayout(vbox_global);
+
+	connect(edit_for_delete, &QLineEdit::textChanged, this, [btn_yes](const QString& text)
+		{
+			btn_yes->setEnabled(text == g_cfg_rpcn.get_npid());
+		});
+
+	connect(btn_box, &QDialogButtonBox::accepted, this, [this]()
+		{
+			const auto rpcn = get_rpcn_connection(this);
+
+			if (!rpcn)
+				return QDialog::reject();
+
+			if (auto error = rpcn->delete_account(); error != rpcn::ErrorType::NoError)
+			{
+				QString error_message;
+				switch (error)
+				{
+				case rpcn::ErrorType::LoginError: error_message = tr("Invalid login or password."); break;
+				case rpcn::ErrorType::LoginAlreadyLoggedIn: error_message = tr("Cannot delete a currently logged-in account."); break;
+				default: error_message = tr("An unknown error occurred."); break;
+				}
+				QMessageBox::critical(this, tr("Deletion Failed"), tr("Failed to delete the account:\n%1").arg(error_message), QMessageBox::Ok);
+				QDialog::reject();
+				return;
+			}
+
+			QMessageBox::information(this, tr("Account Deleted"), tr("Your account has been successfully deleted."), QMessageBox::Ok);
+			QDialog::accept();
+		});
+	connect(btn_box, &QDialogButtonBox::rejected, this, &QDialog::reject);
+}
+
 rpcn_account_edit_dialog::rpcn_account_edit_dialog(QWidget* parent)
 	: QDialog(parent)
 {
@@ -682,6 +751,7 @@ rpcn_account_edit_dialog::rpcn_account_edit_dialog(QWidget* parent)
 
 	QPushButton* btn_resendtoken     = new QPushButton(tr("Resend Token"), this);
 	QPushButton* btn_change_password = new QPushButton(tr("Change Password"), this);
+	QPushButton* btn_delete_account = new QPushButton(tr("Delete Account"), this);
 	QPushButton* btn_save            = new QPushButton(tr("Save"), this);
 
 	vbox_labels->addWidget(lbl_username);
@@ -694,6 +764,7 @@ rpcn_account_edit_dialog::rpcn_account_edit_dialog(QWidget* parent)
 
 	hbox_buttons->addWidget(btn_resendtoken);
 	hbox_buttons->addWidget(btn_change_password);
+	hbox_buttons->addWidget(btn_delete_account);
 	hbox_buttons->addStretch();
 	hbox_buttons->addWidget(btn_save);
 
@@ -727,6 +798,7 @@ rpcn_account_edit_dialog::rpcn_account_edit_dialog(QWidget* parent)
 		});
 	connect(btn_resendtoken, &QAbstractButton::clicked, this, &rpcn_account_edit_dialog::resend_token);
 	connect(btn_change_password, &QAbstractButton::clicked, this, &rpcn_account_edit_dialog::change_password);
+	connect(btn_delete_account, &QAbstractButton::clicked, this, &rpcn_account_edit_dialog::delete_account);
 
 	g_cfg_rpcn.load();
 
@@ -770,17 +842,13 @@ void rpcn_account_edit_dialog::resend_token()
 	if (!save_config())
 		return;
 
-	const auto rpcn = rpcn::rpcn_client::get_instance(0);
-
 	const std::string npid     = g_cfg_rpcn.get_npid();
 	const std::string password = g_cfg_rpcn.get_password();
 
-	if (auto result = rpcn->wait_for_connection(); result != rpcn::rpcn_state::failure_no_failure)
-	{
-		const QString error_message = tr("Failed to connect to RPCN server:\n%0").arg(QString::fromStdString(rpcn::rpcn_state_to_string(result)));
-		QMessageBox::critical(this, tr("Error Connecting!"), error_message, QMessageBox::Ok);
+	const auto rpcn = get_rpcn_connection(this);
+
+	if (!rpcn)
 		return;
-	}
 
 	if (auto error = rpcn->resend_token(npid, password); error != rpcn::ErrorType::NoError)
 	{
@@ -823,13 +891,10 @@ void rpcn_account_edit_dialog::change_password()
 			return;
 
 		{
-			const auto rpcn = rpcn::rpcn_client::get_instance(0);
-			if (auto result = rpcn->wait_for_connection(); result != rpcn::rpcn_state::failure_no_failure)
-			{
-				const QString error_message = tr("Failed to connect to RPCN server:\n%0").arg(QString::fromStdString(rpcn::rpcn_state_to_string(result)));
-				QMessageBox::critical(this, tr("Error Connecting!"), error_message, QMessageBox::Ok);
+			const auto rpcn = get_rpcn_connection(this);
+
+			if (!rpcn)
 				return;
-			}
 
 			if (auto error = rpcn->send_reset_token(*username, *email); error != rpcn::ErrorType::NoError)
 			{
@@ -868,13 +933,10 @@ void rpcn_account_edit_dialog::change_password()
 			return;
 
 		{
-			const auto rpcn = rpcn::rpcn_client::get_instance(0);
-			if (auto result = rpcn->wait_for_connection(); result != rpcn::rpcn_state::failure_no_failure)
-			{
-				const QString error_message = tr("Failed to connect to RPCN server:\n%0").arg(QString::fromStdString(rpcn::rpcn_state_to_string(result)));
-				QMessageBox::critical(this, tr("Error Connecting!"), error_message, QMessageBox::Ok);
+			const auto rpcn = get_rpcn_connection(this);
+
+			if (!rpcn)
 				return;
-			}
 
 			if (auto error = rpcn->reset_password(*username, *token, *password); error != rpcn::ErrorType::NoError)
 			{
@@ -901,6 +963,17 @@ void rpcn_account_edit_dialog::change_password()
 	default:
 		return;
 	}
+}
+
+void rpcn_account_edit_dialog::delete_account()
+{
+	if (g_cfg_rpcn.get_npid().empty() || g_cfg_rpcn.get_password().empty())
+	{
+		QMessageBox::warning(this, tr("Account Not Configured"), tr("Please configure your account in the settings before deleting it."), QMessageBox::Ok);
+		return;
+	}
+	rpcn_confirm_delete_dialog dlg_delete(this);
+	dlg_delete.exec();
 }
 
 void friend_callback(void* param, rpcn::NotificationType ntype, const std::string& username, bool status)
@@ -1057,14 +1130,11 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 	setLayout(vbox_global);
 
 	// Tries to connect to RPCN
-	m_rpcn = rpcn::rpcn_client::get_instance(0);
+	m_rpcn = get_rpcn_connection(this);
 
-	if (auto res = m_rpcn->wait_for_connection(); res != rpcn::rpcn_state::failure_no_failure)
-	{
-		const QString error_msg = tr("Failed to connect to RPCN:\n%0").arg(QString::fromStdString(rpcn::rpcn_state_to_string(res)));
-		QMessageBox::warning(parent, tr("Error connecting to RPCN!"), error_msg, QMessageBox::Ok);
+	if (!m_rpcn)
 		return;
-	}
+
 	if (auto res = m_rpcn->wait_for_authentified(); res != rpcn::rpcn_state::failure_no_failure)
 	{
 		const QString error_msg = tr("Failed to authentify to RPCN:\n%0").arg(QString::fromStdString(rpcn::rpcn_state_to_string(res)));
@@ -1192,13 +1262,10 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 
 			connect(accept_request_action, &QAction::triggered, this, [this, str_sel_friend]()
 				{
-					if (!m_rpcn->add_friend(str_sel_friend))
-					{
-						QMessageBox::critical(this, tr("Error adding a friend!"), tr("An error occurred while trying to add a friend!"), QMessageBox::Ok);
-					}
-					else
+					if (add_friend_with_error_dialog(str_sel_friend))
 					{
 						QMessageBox::information(this, tr("Friend added!"), tr("You've successfully added a friend!"), QMessageBox::Ok);
+						return;
 					}
 				});
 
@@ -1234,11 +1301,8 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 
 			connect(send_friend_request_action, &QAction::triggered, this, [this, str_sel_friend]()
 				{
-					if (!m_rpcn->add_friend(str_sel_friend))
-					{
-						QMessageBox::critical(this, tr("Error sending a friend request!"), tr("An error occurred while trying to send a friend request!"), QMessageBox::Ok);
+					if (!add_friend_with_error_dialog(str_sel_friend))
 						return;
-					}
 
 					QString qstr_friend = QString::fromStdString(str_sel_friend);
 					add_update_list(m_lst_requests, qstr_friend, m_icon_request_sent, QVariant(false));
@@ -1271,11 +1335,7 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 				QMessageBox::critical(this, tr("Error validating username!"), tr("The username you entered is invalid!"), QMessageBox::Ok);
 			}
 
-			if (!m_rpcn->add_friend(str_friend_username))
-			{
-				QMessageBox::critical(this, tr("Error adding friend!"), tr("An error occurred while adding a friend!"), QMessageBox::Ok);
-			}
-			else
+			if (add_friend_with_error_dialog(str_friend_username))
 			{
 				add_update_list(m_lst_requests, QString::fromStdString(str_friend_username), m_icon_request_sent, QVariant(false));
 				QMessageBox::information(this, tr("Friend added!"), tr("Friend was successfully added!"), QMessageBox::Ok);
@@ -1287,7 +1347,46 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 
 rpcn_friends_dialog::~rpcn_friends_dialog()
 {
-	m_rpcn->remove_friend_cb(friend_callback, this);
+	if (m_rpcn)
+	{
+		m_rpcn->remove_friend_cb(friend_callback, this);
+	}
+}
+
+bool rpcn_friends_dialog::add_friend_with_error_dialog(const std::string& friend_username)
+{
+	QString err_msg;
+	const auto opt_error = m_rpcn->add_friend(friend_username);
+
+	if (opt_error.has_value())
+	{
+		const auto error = opt_error.value();
+
+		if (error != rpcn::ErrorType::NoError)
+		{
+			switch (error)
+			{
+			case rpcn::ErrorType::NotFound: err_msg = tr("The specified username does not exist."); break;
+			case rpcn::ErrorType::InvalidInput: err_msg = tr("You cannot add yourself as a friend."); break;
+			case rpcn::ErrorType::Blocked: err_msg = tr("You or the other user have the other blocked."); break;
+			case rpcn::ErrorType::AlreadyFriend: err_msg = tr("You are already friends with this user."); break;
+			case rpcn::ErrorType::DbFail: err_msg = tr("A database error occurred. Please try again later."); break;
+			default: err_msg = tr("An unexpected error occurred."); break;
+			}
+		}
+	}
+	else
+	{
+		err_msg = tr("Failed to send the friend request.");
+	}
+
+	if (!err_msg.isEmpty())
+	{
+		QMessageBox::critical(this, tr("Friend Request Failed"), err_msg, QMessageBox::Ok);
+		return false;
+	}
+
+	return true;
 }
 
 bool rpcn_friends_dialog::is_ok() const

@@ -40,9 +40,10 @@ bool usb_device::set_configuration(u8 cfg_num)
 	return true;
 }
 
-bool usb_device::set_interface(u8 int_num)
+bool usb_device::set_interface(u8 int_num, u8 alt_num)
 {
 	current_interface = int_num;
+	current_altsetting = alt_num;
 	return true;
 }
 
@@ -141,9 +142,9 @@ bool usb_device_passthrough::set_configuration(u8 cfg_num)
 	return (libusb_set_configuration(lusb_handle, cfg_num) == LIBUSB_SUCCESS);
 };
 
-bool usb_device_passthrough::set_interface(u8 int_num)
+bool usb_device_passthrough::set_interface(u8 int_num, u8 alt_num)
 {
-	usb_device::set_interface(int_num);
+	usb_device::set_interface(int_num, alt_num);
 	return (libusb_claim_interface(lusb_handle, int_num) == LIBUSB_SUCCESS);
 }
 
@@ -290,7 +291,7 @@ void usb_device_emulated::control_transfer(u8 bmRequestType, u8 bRequest, u16 wV
 	case 0U /*silences warning*/ | LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_STANDARD | LIBUSB_RECIPIENT_INTERFACE: // 0x01
 		switch (bRequest)
 		{
-		case LIBUSB_REQUEST_SET_INTERFACE: usb_device::set_interface(::narrow<u8>(wIndex)); break;
+		case LIBUSB_REQUEST_SET_INTERFACE: usb_device::set_interface(::narrow<u8>(wIndex), ::narrow<u8>(wValue)); break;
 		default: sys_usbd.error("Unhandled control transfer(0x%02x): 0x%02x", bmRequestType, bRequest); break;
 		}
 		break;

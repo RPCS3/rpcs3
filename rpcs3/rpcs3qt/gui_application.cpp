@@ -20,6 +20,10 @@
 #include "_discord_utils.h"
 #endif
 
+#ifdef HAVE_SDL3
+#include "Input/sdl_camera_handler.h"
+#endif
+
 #include "Emu/Audio/audio_utils.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
 #include "Emu/Io/Null/null_camera_handler.h"
@@ -150,6 +154,12 @@ bool gui_application::Init()
 	// Force init the emulator
 	InitializeEmulator(m_active_user, m_show_gui);
 
+	// Create callbacks from the emulator, which reference the handlers.
+	InitializeCallbacks();
+
+	// Create connects to propagate events throughout Gui.
+	InitializeConnects();
+
 	// Create the main window
 	if (m_show_gui)
 	{
@@ -160,13 +170,22 @@ bool gui_application::Init()
 		const auto index    = codes.indexOf(language);
 
 		LoadLanguage(index < 0 ? QLocale(QLocale::English).bcp47Name() : ::at32(codes, index));
+
+		connect(m_main_window, &main_window::RequestLanguageChange, this, &gui_application::LoadLanguage);
+		connect(m_main_window, &main_window::RequestGlobalStylesheetChange, this, &gui_application::OnChangeStyleSheetRequest);
+		connect(m_main_window, &main_window::NotifyEmuSettingsChange, this, [this](){ OnEmuSettingsChange(); });
+		connect(m_main_window, &main_window::NotifyShortcutHandlers, this, &gui_application::OnShortcutChange);
+
+		connect(this, &gui_application::OnEmulatorRun, m_main_window, &main_window::OnEmuRun);
+		connect(this, &gui_application::OnEmulatorStop, m_main_window, &main_window::OnEmuStop);
+		connect(this, &gui_application::OnEmulatorPause, m_main_window, &main_window::OnEmuPause);
+		connect(this, &gui_application::OnEmulatorResume, m_main_window, &main_window::OnEmuResume);
+		connect(this, &gui_application::OnEmulatorReady, m_main_window, &main_window::OnEmuReady);
+		connect(this, &gui_application::OnEnableDiscEject, m_main_window, &main_window::OnEnableDiscEject);
+		connect(this, &gui_application::OnEnableDiscInsert, m_main_window, &main_window::OnEnableDiscInsert);
+
+		connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, this, [this](){ OnChangeStyleSheetRequest(); });
 	}
-
-	// Create callbacks from the emulator, which reference the handlers.
-	InitializeCallbacks();
-
-	// Create connects to propagate events throughout Gui.
-	InitializeConnects();
 
 	if (m_gui_settings->GetValue(gui::ib_show_welcome).toBool())
 	{
@@ -216,29 +235,74 @@ bool gui_application::Init()
 	return true;
 }
 
-void gui_application::SwitchTranslator(QTranslator& translator, const QString& filename, const QString& language_code)
+void gui_application::SwitchTranslator(const QString& language_code)
 {
 	// remove the old translator
-	removeTranslator(&translator);
+	removeTranslator(&m_translator);
+	for (QTranslator* qt_translator : m_qt_translators)
+	{
+		removeTranslator(qt_translator);
+		qt_translator->deleteLater();
+	}
+	m_qt_translators.clear();
 
+	const QString default_code = QLocale(QLocale::English).bcp47Name();
 	const QString lang_path = QLibraryInfo::path(QLibraryInfo::TranslationsPath) + QStringLiteral("/");
-	const QString file_path = lang_path + filename;
 
+	// Load qt translation files
+	const QDir dir(lang_path);
+	if (dir.exists())
+	{
+		QStringList qm_files = dir.entryList(QStringList() << QStringLiteral("qt*_%1.qm").arg(language_code), QDir::Files | QDir::Readable);
+		if (qm_files.empty())
+		{
+			qm_files = dir.entryList(QStringList() << QStringLiteral("qt*_%1.qm").arg(QLocale::languageToCode(QLocale(language_code).language())), QDir::Files | QDir::Readable);
+		}
+
+		for (const QString& qm_file : qm_files)
+		{
+			const QString file_path = lang_path + qm_file;
+			QTranslator* qt_translator = new QTranslator(this);
+
+			if (qt_translator->load(file_path))
+			{
+				gui_log.notice("Installing translation: '%s'", file_path);
+				installTranslator(qt_translator);
+				m_qt_translators.push_back(std::move(qt_translator));
+			}
+			else
+			{
+				gui_log.error("Failed to load translation: '%s'", file_path);
+				qt_translator->deleteLater();
+			}
+		}
+	}
+	else
+	{
+		gui_log.error("Qt translation dir '%s' does not exist", lang_path);
+	}
+
+	const QString file_path = lang_path + QStringLiteral("rpcs3_%1.qm").arg(language_code);
 	if (QFileInfo(file_path).isFile())
 	{
 		// load the new translator
-		if (translator.load(file_path))
+		if (m_translator.load(file_path))
 		{
-			installTranslator(&translator);
+			gui_log.notice("Installing translation: '%s'", file_path);
+			installTranslator(&m_translator);
+		}
+		else
+		{
+			gui_log.error("Failed to load translation: '%s'", file_path);
 		}
 	}
-	else if (QString default_code = QLocale(QLocale::English).bcp47Name(); language_code != default_code)
+	else if (language_code != default_code)
 	{
 		// show error, but ignore default case "en", since it is handled in source code
-		gui_log.error("No translation file found in: %s", file_path);
+		gui_log.error("No translation file found in: '%s'", file_path);
 
 		// reset current language to default "en"
-		set_language_code(std::move(default_code));
+		set_language_code(default_code);
 	}
 }
 
@@ -260,7 +324,7 @@ void gui_application::LoadLanguage(const QString& language_code)
 	// As per QT recommendations to avoid conflicts for POSIX functions
 	std::setlocale(LC_NUMERIC, "C");
 
-	SwitchTranslator(m_translator, QStringLiteral("rpcs3_%1.qm").arg(language_code), language_code);
+	SwitchTranslator(language_code);
 
 	if (m_main_window)
 	{
@@ -285,6 +349,7 @@ QStringList gui_application::GetAvailableLanguageCodes()
 	QStringList language_codes;
 
 	const QString language_path = QLibraryInfo::path(QLibraryInfo::TranslationsPath);
+	gui_log.notice("Checking languages in '%s'", language_path);
 
 	if (QFileInfo(language_path).isDir())
 	{
@@ -303,9 +368,14 @@ QStringList gui_application::GetAvailableLanguageCodes()
 			}
 			else
 			{
+				gui_log.notice("Found language '%s' (%s)", language_code, filename);
 				language_codes << language_code;
 			}
 		}
+	}
+	else
+	{
+		gui_log.error("Language dir not found: '%s'", language_path);
 	}
 
 	return language_codes;
@@ -382,24 +452,6 @@ void gui_application::InitializeConnects()
 	connect(this, &gui_application::OnEmulatorPause, this, &gui_application::StopPlaytime);
 	connect(this, &gui_application::OnEmulatorResume, this, &gui_application::StartPlaytime);
 	connect(this, &QGuiApplication::applicationStateChanged, this, &gui_application::OnAppStateChanged);
-
-	if (m_main_window)
-	{
-		connect(m_main_window, &main_window::RequestLanguageChange, this, &gui_application::LoadLanguage);
-		connect(m_main_window, &main_window::RequestGlobalStylesheetChange, this, &gui_application::OnChangeStyleSheetRequest);
-		connect(m_main_window, &main_window::NotifyEmuSettingsChange, this, [this](){ OnEmuSettingsChange(); });
-		connect(m_main_window, &main_window::NotifyShortcutHandlers, this, &gui_application::OnShortcutChange);
-
-		connect(this, &gui_application::OnEmulatorRun, m_main_window, &main_window::OnEmuRun);
-		connect(this, &gui_application::OnEmulatorStop, m_main_window, &main_window::OnEmuStop);
-		connect(this, &gui_application::OnEmulatorPause, m_main_window, &main_window::OnEmuPause);
-		connect(this, &gui_application::OnEmulatorResume, m_main_window, &main_window::OnEmuResume);
-		connect(this, &gui_application::OnEmulatorReady, m_main_window, &main_window::OnEmuReady);
-		connect(this, &gui_application::OnEnableDiscEject, m_main_window, &main_window::OnEnableDiscEject);
-		connect(this, &gui_application::OnEnableDiscInsert, m_main_window, &main_window::OnEnableDiscInsert);
-
-		connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, this, [this](){ OnChangeStyleSheetRequest(); });
-	}
 
 #ifdef WITH_DISCORD_RPC
 	connect(this, &gui_application::OnEmulatorRun, [this](bool /*start_playtime*/)
@@ -645,6 +697,12 @@ void gui_application::InitializeCallbacks()
 		{
 			return std::make_shared<qt_camera_handler>();
 		}
+#ifdef HAVE_SDL3
+		case camera_handler::sdl:
+		{
+			return std::make_shared<sdl_camera_handler>();
+		}
+#endif
 		}
 		return nullptr;
 	};
@@ -679,8 +737,8 @@ void gui_application::InitializeCallbacks()
 	callbacks.get_msg_dialog  = [this]() -> std::shared_ptr<MsgDialogBase> { return m_show_gui ? std::make_shared<msg_dialog_frame>() : nullptr; };
 	callbacks.get_osk_dialog  = [this]() -> std::shared_ptr<OskDialogBase> { return m_show_gui ? std::make_shared<osk_dialog_frame>() : nullptr; };
 	callbacks.get_save_dialog = []() -> std::unique_ptr<SaveDialogBase> { return std::make_unique<save_data_dialog>(); };
-	callbacks.get_sendmessage_dialog = [this]() -> std::shared_ptr<SendMessageDialogBase> { return std::make_shared<sendmessage_dialog_frame>(); };
-	callbacks.get_recvmessage_dialog = [this]() -> std::shared_ptr<RecvMessageDialogBase> { return std::make_shared<recvmessage_dialog_frame>(); };
+	callbacks.get_sendmessage_dialog = []() -> std::shared_ptr<SendMessageDialogBase> { return std::make_shared<sendmessage_dialog_frame>(); };
+	callbacks.get_recvmessage_dialog = []() -> std::shared_ptr<RecvMessageDialogBase> { return std::make_shared<recvmessage_dialog_frame>(); };
 	callbacks.get_trophy_notification_dialog = [this]() -> std::unique_ptr<TrophyNotificationBase> { return std::make_unique<trophy_notification_helper>(m_game_window); };
 
 	callbacks.on_run    = [this](bool start_playtime) { OnEmulatorRun(start_playtime); };
@@ -781,7 +839,7 @@ void gui_application::InitializeCallbacks()
 		};
 	}
 
-	callbacks.on_emulation_stop_no_response = [this](std::shared_ptr<atomic_t<bool>> closed_successfully, int seconds_waiting_already)
+	callbacks.on_emulation_stop_no_response = [](std::shared_ptr<atomic_t<bool>> closed_successfully, int seconds_waiting_already)
 	{
 		const std::string terminate_message = tr("Stopping emulator took too long."
 			"\nSome thread has probably deadlocked. Aborting.").toStdString();
@@ -791,7 +849,7 @@ void gui_application::InitializeCallbacks()
 			report_fatal_error(terminate_message);
 		}
 
-		Emu.CallFromMainThread([this, closed_successfully, seconds_waiting_already, terminate_message]
+		Emu.CallFromMainThread([closed_successfully, seconds_waiting_already, terminate_message]
 		{
 			const auto seconds = std::make_shared<int>(seconds_waiting_already);
 

@@ -39,6 +39,22 @@ namespace vk
 		VkDescriptorBufferInfoEx() = default;
 		VkDescriptorBufferInfoEx(const vk::buffer& buffer, u64 offset, u64 range);
 	};
+
+	struct VkFormatEx
+	{
+		VkFormat baseFormat = VK_FORMAT_UNDEFINED;
+		VkFormat* pViewFormats = nullptr;
+		u32 viewFormatCount = 0u;
+
+		VkFormatEx() = default;
+
+		VkFormatEx(VkFormat format)
+			: baseFormat(format)
+		{}
+
+		operator VkFormat() const { return baseFormat; }
+		bool is_mutable() const { return viewFormatCount != 0; }
+	};
 }
 
 // Re-export

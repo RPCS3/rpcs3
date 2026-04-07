@@ -44,7 +44,6 @@ struct screenshot_info
 	std::string get_photo_title() const;
 	std::string get_game_title() const;
 	std::string get_game_comment() const;
-	std::string get_screenshot_path(const std::string& date_path) const;
 };
 
 struct screenshot_manager : public screenshot_info

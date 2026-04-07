@@ -111,7 +111,7 @@ namespace np
 	}
 
 	ticket::ticket(std::vector<u8>&& raw_data)
-		: raw_data(raw_data)
+		: raw_data(std::move(raw_data))
 	{
 		parse();
 	}
@@ -254,7 +254,7 @@ namespace np
 
 		// Trim null characters
 		const auto& vec = node.data.data_vec;
-		auto it = std::find(vec.begin(), vec.end(), 0);
+		const auto it = std::find(vec.begin(), vec.end(), 0);
 		return std::string(vec.begin(), it);
 	}
 
@@ -387,7 +387,7 @@ namespace np
 			return;
 		}
 
-		if (nodes[0].id != 0x3000 && nodes[1].id != 0x3002)
+		if (nodes[0].id != 0x3000 || nodes[1].id != 0x3002)
 		{
 			ticket_log.error("The 2 blobs ids are incorrect");
 			return;
@@ -1024,7 +1024,7 @@ namespace np
 			}
 		}
 
-		nph_log.notice("basic_event: event:%d, from:%s(%s), size:%d", *event, static_cast<char*>(from->userId.handle.data), static_cast<char*>(from->name.data), *size);
+		nph_log.notice("basic_event: event:%d, from:%s(%s), size:%d", *event, np::npid_to_string(from->userId), static_cast<char*>(from->name.data), *size);
 
 		return CELL_OK;
 	}
@@ -1085,6 +1085,9 @@ namespace np
 
 	void np_handler::send_message(const message_data& msg_data, const std::set<std::string>& npids)
 	{
+		rpcn_log.notice("Sending message to \"%s\":", fmt::merge(npids, "\",\""));
+		msg_data.print();
+
 		get_rpcn()->send_message(msg_data, npids);
 	}
 
@@ -1124,6 +1127,7 @@ namespace np
 					case rpcn::CommandType::LeaveRoom: reply_leave_room(req_id, error, reply_data); break;
 					case rpcn::CommandType::SearchRoom: reply_search_room(req_id, error, reply_data); break;
 					case rpcn::CommandType::GetRoomDataExternalList: reply_get_roomdata_external_list(req_id, error, reply_data); break;
+					case rpcn::CommandType::GetRoomMemberDataExternalList: reply_get_room_member_data_external_list(req_id, error, reply_data); break;
 					case rpcn::CommandType::SetRoomDataExternal: reply_set_roomdata_external(req_id, error); break;
 					case rpcn::CommandType::GetRoomDataInternal: reply_get_roomdata_internal(req_id, error, reply_data); break;
 					case rpcn::CommandType::SetRoomDataInternal: reply_set_roomdata_internal(req_id, error); break;
@@ -1224,16 +1228,22 @@ namespace np
 				}
 
 				auto messages = rpcn->get_new_messages();
-				if (basic_handler_registered)
+
+				for (const auto msg_id : messages)
 				{
-					for (const auto msg_id : messages)
+					const auto opt_msg = rpcn->get_message(msg_id);
+
+					if (!opt_msg)
 					{
-						const auto opt_msg = rpcn->get_message(msg_id);
-						if (!opt_msg)
-						{
-							continue;
-						}
-						const auto& msg = opt_msg.value();
+						continue;
+					}
+
+					const auto& msg = opt_msg.value();
+					const localized_string_id loc_id = (msg->second.mainType == SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE) ? localized_string_id::CELL_NP_MESSAGE_INVITE_RECEIVED : localized_string_id::CELL_NP_MESSAGE_OTHER_RECEIVED;
+					rsx::overlays::queue_message(get_localized_string(loc_id, msg->first.c_str()), 6'000'000);
+
+					if (basic_handler_registered)
+					{
 						if (strncmp(msg->second.commId.data, basic_handler.context.data, sizeof(basic_handler.context.data) - 1) == 0)
 						{
 							u32 event;
@@ -1357,7 +1367,7 @@ namespace np
 
 	player_history& np_handler::get_player_and_set_timestamp(const SceNpId& npid, u64 timestamp)
 	{
-		std::string npid_str = std::string(npid.handle.data);
+		std::string npid_str = np::npid_to_string(npid);
 
 		if (!players_history.contains(npid_str))
 		{
@@ -1371,12 +1381,12 @@ namespace np
 		return history;
 	}
 
-	u32 np_handler::get_clan_ticket_ready()
+	u32 np_handler::get_clan_ticket_ready() const
 	{
 		return clan_ticket_ready.load();
 	}
 
-	ticket np_handler::get_clan_ticket()
+	ticket np_handler::get_clan_ticket() const
 	{
 		clan_ticket_ready.wait(0, atomic_wait_timeout{60'000'000'000}); // 60 seconds
 
@@ -1437,7 +1447,7 @@ namespace np
 		return req_id;
 	}
 
-	u32 np_handler::get_players_history_count(u32 options)
+	u32 np_handler::get_players_history_count(u32 options) const
 	{
 		const bool all_history = (options == SCE_NP_BASIC_PLAYERS_HISTORY_OPTIONS_ALL);
 
@@ -1455,7 +1465,7 @@ namespace np
 			}));
 	}
 
-	bool np_handler::get_player_history_entry(u32 options, u32 index, SceNpId* npid)
+	bool np_handler::get_player_history_entry(u32 options, u32 index, SceNpId* npid) const
 	{
 		const bool all_history = (options == SCE_NP_BASIC_PLAYERS_HISTORY_OPTIONS_ALL);
 
@@ -1463,14 +1473,13 @@ namespace np
 
 		if (all_history)
 		{
+			if (index >= players_history.size())
+				return false;
+
 			auto it = players_history.begin();
 			std::advance(it, index);
-
-			if (it != players_history.end())
-			{
-				string_to_npid(it->first, *npid);
-				return true;
-			}
+			string_to_npid(it->first, *npid);
+			return true;
 		}
 		else
 		{
@@ -1637,7 +1646,7 @@ namespace np
 			return SCE_NP_BASIC_ERROR_NOT_CONNECTED;
 		}
 
-		auto friend_infos = rpcn->get_friend_presence_by_npid(std::string(npid.handle.data));
+		auto friend_infos = rpcn->get_friend_presence_by_npid(np::npid_to_string(npid));
 		if (!friend_infos)
 		{
 			return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
@@ -1670,6 +1679,11 @@ namespace np
 	std::pair<error_code, std::vector<SceNpMatching2RoomMemberId>> np_handler::local_get_room_memberids(SceNpMatching2RoomId room_id, s32 sort_method)
 	{
 		return np_cache.get_memberids(room_id, sort_method);
+	}
+
+	std::pair<error_code, std::optional<SceNpMatching2SignalingOptParam>> np_handler::local_get_signaling_opt_param(SceNpMatching2RoomId room_id)
+	{
+		return np_cache.get_opt_param(room_id);
 	}
 
 	error_code np_handler::local_get_room_member_data(SceNpMatching2RoomId room_id, SceNpMatching2RoomMemberId member_id, const std::vector<SceNpMatching2AttributeId>& binattrs_list, SceNpMatching2RoomMemberDataInternal* ptr_member, u32 addr_data, u32 size_data, u32 ctx_id)
@@ -1757,6 +1771,18 @@ namespace np
 					return 0;
 				});
 		}
+	}
+
+	SceNpMatching2MemoryInfo np_handler::get_memory_info() const
+	{
+		auto [m_size, m_usage, m_max_usage] = np_memory.get_stats();
+
+		SceNpMatching2MemoryInfo mem_info{};
+		mem_info.totalMemSize = m_size;
+		mem_info.curMemUsage = m_usage;
+		mem_info.maxMemUsage = m_max_usage;
+
+		return mem_info;
 	}
 
 } // namespace np

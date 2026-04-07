@@ -8,7 +8,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/git-version.cmake)
 include(ConfigureCompiler)
 include(CheckFunctionExists)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 
 if(UNIX AND NOT APPLE AND NOT ANDROID)
     add_compile_definitions(DATADIR="${CMAKE_INSTALL_FULL_DATADIR}/rpcs3")
@@ -87,12 +87,6 @@ if (NOT ANDROID)
         message(FATAL_ERROR "RPCS3 requires either X11 or Wayland (or both) for Vulkan.")
     endif()
 
-    if(UNIX)
-        set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
-        find_package(Threads REQUIRED)
-        target_link_libraries(rpcs3_lib PRIVATE Threads::Threads)
-    endif()
-
     if(WIN32)
         target_link_libraries(rpcs3_lib PRIVATE ws2_32 Iphlpapi Winmm Psapi gdi32 setupapi)
     else()
@@ -148,8 +142,9 @@ if (NOT ANDROID)
             COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/GuiConfigs $<TARGET_FILE_DIR:rpcs3>/GuiConfigs
             COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/test $<TARGET_FILE_DIR:rpcs3>/test
             COMMAND "${WINDEPLOYQT_EXECUTABLE}" --no-compiler-runtime --no-opengl-sw --no-patchqt
-                --no-translations --no-system-d3d-compiler --no-system-dxc-compiler --no-quick-import
+                --no-system-d3d-compiler --no-system-dxc-compiler --no-quick-import
                 --plugindir "$<IF:$<CXX_COMPILER_ID:MSVC>,$<TARGET_FILE_DIR:rpcs3>/plugins,$<TARGET_FILE_DIR:rpcs3>/share/qt6/plugins>"
+                --translationdir "$<IF:$<CXX_COMPILER_ID:MSVC>,$<TARGET_FILE_DIR:rpcs3>/translations,$<TARGET_FILE_DIR:rpcs3>/share/qt6/translations>"
                 --verbose 0 "$<TARGET_FILE:rpcs3>")
     endif()
 
@@ -194,6 +189,7 @@ if(BUILD_RPCS3_TESTS)
             tests/test_address_range.cpp
             tests/test_rsx_cfg.cpp
             tests/test_rsx_fp_asm.cpp
+            tests/test_dmux_pamf.cpp
     )
 
     target_link_libraries(rpcs3_test
@@ -201,6 +197,7 @@ if(BUILD_RPCS3_TESTS)
             rpcs3_lib
             rpcs3_emu
             GTest::gtest
+            GTest::gmock
     )
 
     target_include_directories(rpcs3_test

@@ -20,21 +20,44 @@ R"(
 #define SEXT_MASK        (SEXT_R_MASK | SEXT_G_MASK | SEXT_B_MASK | SEXT_A_MASK)
 #define FILTERED_MASK    (FILTERED_MAG_BIT | FILTERED_MIN_BIT)
 
+#define FORMAT_FEATURE_SIGNED                 (1 << FORMAT_FEATURE_SIGNED_BIT)
+#define FORMAT_FEATURE_GAMMA                  (1 << FORMAT_FEATURE_GAMMA_BIT)
+#define FORMAT_FEATURE_BIASED_RENORMALIZATION (1 << FORMAT_FEATURE_BIASED_RENORMALIZATION_BIT)
+#define FORMAT_FEATURE_16BIT_CHANNELS         (1 << FORMAT_FEATURE_16BIT_CHANNELS_BIT)
+#define FORMAT_FEATURE_MASK (FORMAT_FEATURE_SIGNED | FORMAT_FEATURE_GAMMA | FORMAT_FEATURE_BIASED_RENORMALIZATION | FORMAT_FEATURE_16BIT_CHANNELS)
+
 #ifdef _ENABLE_TEXTURE_EXPAND
+	// NOTE: BX2 expansion overrides GAMMA correction
 	uint _texture_flag_override = 0;
-	#define _enable_texture_expand() _texture_flag_override = SIGN_EXPAND_MASK
-	#define _disable_texture_expand() _texture_flag_override = 0
-	#define TEX_FLAGS(index) (texture_parameters[index + texture_base_index].flags | _texture_flag_override)
+	uint _texture_flag_erase = 0;
+	bool _texture_bx2_active = false;
+	#define _enable_texture_expand(index) \
+		do { \
+			if (_test_bit(TEX_PARAM(index).flags, FORMAT_FEATURE_BIASED_RENORMALIZATION_BIT)) { \
+				_texture_flag_override = SIGN_EXPAND_MASK & (_get_bits(TEX_PARAM(index).remap, 16, 4) << EXPAND_A_BIT); \
+				_texture_flag_erase = GAMMA_CTRL_MASK; \
+				_texture_bx2_active = true; \
+			} \
+		} while (false)
+	#define _disable_texture_expand() \
+		do { \
+			_texture_flag_override = 0; \
+			_texture_flag_erase = 0; \
+			_texture_bx2_active = false; \
+		} while (false)
+	#define TEX_FLAGS(index) ((TEX_PARAM(index).flags & ~(_texture_flag_erase)) | _texture_flag_override)
+#elif defined(_ENABLE_TEXTURE_ALPHA_KILL) || defined(_ENABLE_FORMAT_CONVERSION) || defined(_ENABLE_DEPTH_FORMAT_RECONSTRUCTION) || defined(_ENABLE_TEXTURE_MULTISAMPLE)
+	#define TEX_FLAGS(index) (TEX_PARAM(index).flags)
 #else
-	#define TEX_FLAGS(index) texture_parameters[index + texture_base_index].flags
+	#define TEX_FLAGS(index) 0
 #endif
 
 #define TEX_NAME(index) tex##index
 #define TEX_NAME_STENCIL(index) tex##index##_stencil
 
-#define COORD_SCALE1(index, coord1) _texcoord_xform(coord1, texture_parameters[index + texture_base_index])
-#define COORD_SCALE2(index, coord2) _texcoord_xform(coord2, texture_parameters[index + texture_base_index])
-#define COORD_SCALE3(index, coord3) _texcoord_xform(coord3, texture_parameters[index + texture_base_index])
+#define COORD_SCALE1(index, coord1) _texcoord_xform(coord1, TEX_PARAM(index))
+#define COORD_SCALE2(index, coord2) _texcoord_xform(coord2, TEX_PARAM(index))
+#define COORD_SCALE3(index, coord3) _texcoord_xform(coord3, TEX_PARAM(index))
 #define COORD_PROJ1(index, coord2) COORD_SCALE1(index, coord2.x / coord2.y)
 #define COORD_PROJ2(index, coord3) COORD_SCALE2(index, coord3.xy / coord3.z)
 #define COORD_PROJ3(index, coord4) COORD_SCALE3(index, coord4.xyz / coord4.w)
@@ -57,9 +80,9 @@ R"(
 
 #ifdef _ENABLE_SHADOW
 #ifdef _EMULATED_TEXSHADOW
-	#define SHADOW_COORD(index, coord3) _texcoord_xform_shadow(coord3, texture_parameters[index + texture_base_index])
-	#define SHADOW_COORD4(index, coord4) _texcoord_xform_shadow(coord4, texture_parameters[index + texture_base_index])
-	#define SHADOW_COORD_PROJ(index, coord4) _texcoord_xform_shadow(coord4.xyz / coord4.w, texture_parameters[index + texture_base_index])
+	#define SHADOW_COORD(index, coord3) _texcoord_xform_shadow(coord3, TEX_PARAM(index))
+	#define SHADOW_COORD4(index, coord4) _texcoord_xform_shadow(coord4, TEX_PARAM(index))
+	#define SHADOW_COORD_PROJ(index, coord4) _texcoord_xform_shadow(coord4.xyz / coord4.w, TEX_PARAM(index))
 
 	#define TEX2D_SHADOW(index, coord3) texture(TEX_NAME(index), SHADOW_COORD(index, coord3))
 	#define TEX3D_SHADOW(index, coord4) texture(TEX_NAME(index), SHADOW_COORD4(index, coord4))
@@ -172,22 +195,34 @@ vec4 _texcoord_xform_shadow(const in vec4 coord4, const in sampler_info params)
 
 #endif // _EMULATE_SHADOW
 
+#ifdef _ENABLE_FORMAT_CONVERSION
+
 vec4 _sext_unorm8x4(const in vec4 x)
 {
 	// TODO: Handle clamped sign-extension
-	const vec4 bits = floor(fma(x, vec4(255.f), vec4(0.5f)));
-	const bvec4 sign_check = lessThan(bits, vec4(128.f));
-	const vec4 ret = _select(bits - 256.f, bits, sign_check);
-	return ret / 127.f;
+	const uint shift = 32 - 8; // sext 8-bit value into 32-bit container
+	const uvec4 ubits = uvec4(floor(fma(x, vec4(255.f), vec4(0.5f))));
+	const ivec4 ibits = ivec4(ubits << shift);
+	return (ibits >> shift) / 127.f;
+}
+
+vec4 _sext_unorm16x4(const in vec4 x)
+{
+	// TODO: Handle clamped sign-extension
+	const uint shift = 32 - 16; // sext 16-bit value into 32-bit container
+	const uvec4 ubits = uvec4(floor(fma(x, vec4(65535.f), vec4(0.5f))));
+	const ivec4 ibits = ivec4(ubits << shift);
+	return (ibits >> shift) / 32767.f;
 }
 
 vec4 _process_texel(in vec4 rgba, const in uint control_bits)
 {
-	if (control_bits == 0)
+	if ((control_bits & ~FORMAT_FEATURE_MASK) == 0u)
 	{
 		return rgba;
 	}
 
+#ifdef _ENABLE_TEXTURE_ALPHA_KILL
 	if (_test_bit(control_bits, ALPHAKILL))
 	{
 		// Alphakill
@@ -197,6 +232,7 @@ vec4 _process_texel(in vec4 rgba, const in uint control_bits)
 			return rgba;
 		}
 	}
+#endif
 
 	if (_test_bit(control_bits, RENORMALIZE))
 	{
@@ -208,34 +244,72 @@ vec4 _process_texel(in vec4 rgba, const in uint control_bits)
 	uvec4 mask;
 	vec4 convert;
 
-	uint op_mask = control_bits & uint(SIGN_EXPAND_MASK);
-	if (op_mask != 0u)
-	{
-		// Expand to signed normalized by decompressing the signal
-		mask = uvec4(op_mask) & uvec4(EXPAND_R_MASK, EXPAND_G_MASK, EXPAND_B_MASK, EXPAND_A_MASK);
-		convert = (rgba * 2.f - 1.f);
-		rgba = _select(rgba, convert, notEqual(mask, uvec4(0)));
-	}
+	uint op_mask = control_bits & uint(SEXT_MASK);
+	uint ch_mask = 0xFu;
 
-	op_mask = control_bits & uint(SEXT_MASK);
 	if (op_mask != 0u)
 	{
 		// Sign-extend the input signal
 		mask = uvec4(op_mask) & uvec4(SEXT_R_MASK, SEXT_G_MASK, SEXT_B_MASK, SEXT_A_MASK);
-		convert = _sext_unorm8x4(rgba);
+		if (_test_bit(control_bits, FORMAT_FEATURE_16BIT_CHANNELS_BIT))
+			convert = _sext_unorm16x4(rgba);
+		else
+			convert = _sext_unorm8x4(rgba);
 		rgba = _select(rgba, convert, notEqual(mask, uvec4(0)));
+		ch_mask &= ~(op_mask >> SEXT_A_BIT);
 	}
 
-	op_mask = control_bits & uint(GAMMA_CTRL_MASK);
+	op_mask = control_bits & uint(GAMMA_CTRL_MASK) & (ch_mask << GAMMA_A_BIT);
 	if (op_mask != 0u)
 	{
 		// Gamma correction
 		mask = uvec4(op_mask) & uvec4(GAMMA_R_MASK, GAMMA_G_MASK, GAMMA_B_MASK, GAMMA_A_MASK);
 		convert = srgb_to_linear(rgba);
-		return _select(rgba, convert, notEqual(mask, uvec4(0)));
+		rgba = _select(rgba, convert, notEqual(mask, uvec4(0)));
+		ch_mask &= ~(op_mask >> GAMMA_A_BIT);
+	}
+
+	op_mask = control_bits & uint(SIGN_EXPAND_MASK) & (ch_mask << EXPAND_A_BIT);
+	if (op_mask != 0u)
+	{
+		// Expand to signed normalized by decompressing the signal
+		mask = uvec4(op_mask) & uvec4(EXPAND_R_MASK, EXPAND_G_MASK, EXPAND_B_MASK, EXPAND_A_MASK);
+#ifdef _ENABLE_TEXTURE_EXPAND
+		if (_texture_bx2_active)
+			convert = (rgba * 2.f - 1.f);
+		else
+#endif
+		if (_test_bit(control_bits, FORMAT_FEATURE_16BIT_CHANNELS_BIT))
+			convert = (floor(fma(rgba, vec4(65535.f), vec4(0.5f))) - 32768.f) / 32767.f;
+		else
+			convert = (floor(fma(rgba, vec4(255.f), vec4(0.5f))) - 128.f) / 127.f;
+		rgba = _select(rgba, convert, notEqual(mask, uvec4(0)));
 	}
 
 	return rgba;
 }
+
+#elif defined(_ENABLE_TEXTURE_ALPHA_KILL)
+
+vec4 _process_texel(in vec4 rgba, const in uint control_bits)
+{
+	if (_test_bit(control_bits, ALPHAKILL))
+	{
+		// Alphakill
+		if (rgba.a < 0.000001)
+		{
+			_kill();
+			return rgba;
+		}
+	}
+
+	return rgba;
+}
+
+#else
+
+#define _process_texel(rgba, control) rgba
+
+#endif // _ENABLE_FORMAT_CONVERSION
 
 )"

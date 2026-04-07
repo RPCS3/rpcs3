@@ -634,7 +634,7 @@ u32 microphone_device::capture_audio()
 		if (ALCenum err = alcGetError(micdevice.device); err != ALC_NO_ERROR)
 		{
 			cellMic.error("Error getting number of captured samples of device '%s' (error=%s)", micdevice.name, fmt::alc_error{micdevice.device, err});
-			return CELL_MICIN_ERROR_FATAL;
+			return 0;
 		}
 
 		num_samples = std::min<u32>(num_samples, samples_in);

@@ -464,7 +464,7 @@ namespace rsx::assembler::FP
 		}
 	}
 
-	void RegisterDependencyPass::run(FlowGraph& graph)
+	bool RegisterDependencyPass::run(FlowGraph& graph)
 	{
 		DependencyPassContext ctx{};
 
@@ -480,5 +480,7 @@ namespace rsx::assembler::FP
 		{
 			insert_block_dependencies(ctx, &(*it));
 		}
+
+		return true;
 	}
 }

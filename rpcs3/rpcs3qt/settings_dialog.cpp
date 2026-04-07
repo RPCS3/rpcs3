@@ -23,13 +23,13 @@
 #include "emu_settings_type.h"
 #include "render_creator.h"
 #include "microphone_creator.h"
-#include "Emu/NP/rpcn_countries.h"
+#include "log_level_dialog.h"
 
+#include "Emu/NP/rpcn_countries.h"
 #include "Emu/GameInfo.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/title.h"
-
 #include "Emu/Audio/audio_device_enumerator.h"
 
 #include "Loader/PSF.h"
@@ -502,6 +502,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		}
 	}
 
+	m_emu_settings->EnhanceComboBox(ui->vsyncMode, emu_settings_type::VSync);
+	SubscribeTooltip(ui->vsyncMode, tooltips.settings.vsync);
+
 	m_emu_settings->EnhanceComboBox(ui->antiAliasing, emu_settings_type::MSAA);
 	SubscribeTooltip(ui->gb_antiAliasing, tooltips.settings.anti_aliasing);
 
@@ -603,9 +606,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	// Checkboxes: main options
 	m_emu_settings->EnhanceCheckBox(ui->dumpColor, emu_settings_type::WriteColorBuffers);
 	SubscribeTooltip(ui->dumpColor, tooltips.settings.dump_color);
-
-	m_emu_settings->EnhanceCheckBox(ui->vsync, emu_settings_type::VSync);
-	SubscribeTooltip(ui->vsync, tooltips.settings.vsync);
 
 	m_emu_settings->EnhanceCheckBox(ui->stretchToDisplayArea, emu_settings_type::StretchToDisplayArea);
 	SubscribeTooltip(ui->stretchToDisplayArea, tooltips.settings.stretch_to_display_area);
@@ -858,7 +858,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->vulkansched->setEnabled(is_vulkan);
 	};
 
-	const auto apply_fsr_specific_options = [r_creator, this]()
+	const auto apply_fsr_specific_options = [this]()
 	{
 		const auto [text, value] = get_data(ui->outputScalingMode, ui->outputScalingMode->currentIndex());
 		const bool fsr_selected = static_cast<output_scaling_mode>(value) == output_scaling_mode::fsr;
@@ -1555,6 +1555,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->enableSpuEventsBusyLoop, emu_settings_type::EnabledSPUEventsBusyLoop);
 	SubscribeTooltip(ui->enableSpuEventsBusyLoop, tooltips.settings.enable_spu_events_busy_loop);
 
+	m_emu_settings->EnhanceCheckBox(ui->disableHardwareTexelRemapping, emu_settings_type::DisableHWTexelRemapping);
+	SubscribeTooltip(ui->disableHardwareTexelRemapping, tooltips.settings.disable_hw_texel_remapping);
+
 	// Comboboxes
 
 	m_emu_settings->EnhanceComboBox(ui->maxSPURSThreads, emu_settings_type::MaxSPURSThreads, true);
@@ -1826,6 +1829,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	ui->enableGamemode->setVisible(false);
 #endif
 
+	m_emu_settings->EnhanceCheckBox(ui->playMusicDuringBoot, emu_settings_type::PlayMusicDuringBoot);
+	SubscribeTooltip(ui->playMusicDuringBoot, tooltips.settings.play_music_during_boot);
+
 	m_emu_settings->EnhanceCheckBox(ui->showShaderCompilationHint, emu_settings_type::ShowShaderCompilationHint);
 	SubscribeTooltip(ui->showShaderCompilationHint, tooltips.settings.show_shader_compilation_hint);
 
@@ -1843,6 +1849,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->showMouseAndKeyboardToggleHint, emu_settings_type::ShowMouseAndKeyboardToggleHint);
 	SubscribeTooltip(ui->showMouseAndKeyboardToggleHint, tooltips.settings.show_mouse_and_keyboard_toggle_hint);
+
+	m_emu_settings->EnhanceCheckBox(ui->showFatalErrorHints, emu_settings_type::ShowFatalErrorHints);
+	SubscribeTooltip(ui->showFatalErrorHints, tooltips.settings.show_fatal_error_hints);
 
 	m_emu_settings->EnhanceCheckBox(ui->showCaptureHints, emu_settings_type::ShowCaptureHints);
 	SubscribeTooltip(ui->showCaptureHints, tooltips.settings.show_capture_hints);
@@ -1872,6 +1881,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	});
 	ui->perfOverlayMarginY->setEnabled(!ui->perfOverlayCenterY->isChecked());
 
+	m_emu_settings->EnhanceCheckBox(ui->perfOverlayUseWindowSpace, emu_settings_type::PerfOverlayUseWindowSpace);
+	SubscribeTooltip(ui->perfOverlayUseWindowSpace, tooltips.settings.perf_overlay_use_window_space);
+
 	m_emu_settings->EnhanceCheckBox(ui->perfOverlayFramerateGraphEnabled, emu_settings_type::PerfOverlayFramerateGraphEnabled);
 	SubscribeTooltip(ui->perfOverlayFramerateGraphEnabled, tooltips.settings.perf_overlay_framerate_graph_enabled);
 
@@ -1898,6 +1910,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->perfOverlayMarginY->setEnabled(enabled && !ui->perfOverlayCenterY->isChecked());
 		ui->perfOverlayCenterX->setEnabled(enabled);
 		ui->perfOverlayCenterY->setEnabled(enabled);
+		ui->perfOverlayUseWindowSpace->setEnabled(enabled);
 		ui->perfOverlayFramerateGraphEnabled->setEnabled(enabled);
 		ui->perfOverlayFrametimeGraphEnabled->setEnabled(enabled);
 		ui->perf_overlay_framerate_datapoints->setEnabled(enabled);
@@ -1943,10 +1956,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	// SpinBoxes
 
-	m_emu_settings->EnhanceSpinBox(ui->perfOverlayMarginX, emu_settings_type::PerfOverlayMarginX, "", tr("px", "Performance overlay margin x"));
+	m_emu_settings->EnhanceDoubleSpinBox(ui->perfOverlayMarginX, emu_settings_type::PerfOverlayMarginX, "", tr("%", "Performance overlay margin x"));
 	SubscribeTooltip(ui->perfOverlayMarginX, tooltips.settings.perf_overlay_margin_x);
 
-	m_emu_settings->EnhanceSpinBox(ui->perfOverlayMarginY, emu_settings_type::PerfOverlayMarginY, "", tr("px", "Performance overlay margin y"));
+	m_emu_settings->EnhanceDoubleSpinBox(ui->perfOverlayMarginY, emu_settings_type::PerfOverlayMarginY, "", tr("%", "Performance overlay margin y"));
 	SubscribeTooltip(ui->perfOverlayMarginY, tooltips.settings.perf_overlay_margin_y);
 
 	// Global settings (gui_settings)
@@ -2088,7 +2101,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	connect(ui->edit_button_game_window_title_format, &QAbstractButton::clicked, [get_game_window_title, set_game_window_title, this]()
 	{
-		auto get_game_window_title_label = [get_game_window_title, set_game_window_title, this](const QString& format)
+		auto get_game_window_title_label = [get_game_window_title](const QString& format)
 		{
 			const QString game_window_title = get_game_window_title(format);
 
@@ -2162,9 +2175,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		SubscribeTooltip(ui->cb_custom_colors, tooltips.settings.custom_colors);
 		SubscribeTooltip(ui->cb_show_welcome, tooltips.settings.show_welcome);
 		SubscribeTooltip(ui->cb_show_exit_game, tooltips.settings.show_exit_game);
-		SubscribeTooltip(ui->cb_show_boot_game, tooltips.settings.show_boot_game);
 		SubscribeTooltip(ui->cb_show_pkg_install, tooltips.settings.show_pkg_install);
-		SubscribeTooltip(ui->cb_show_pup_install, tooltips.settings.show_pup_install);
 		SubscribeTooltip(ui->cb_show_obsolete_cfg_dialog, tooltips.settings.show_obsolete_cfg);
 		SubscribeTooltip(ui->cb_show_same_buttons_dialog, tooltips.settings.show_same_buttons);
 		SubscribeTooltip(ui->cb_show_restart_hint, tooltips.settings.show_restart_hint);
@@ -2176,7 +2187,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		SubscribeTooltip(ui->cb_global_pad_navigation, tooltips.settings.global_navigation);
 		ui->cb_pad_navigation->setChecked(m_gui_settings->GetValue(gui::nav_enabled).toBool());
 		ui->cb_global_pad_navigation->setChecked(m_gui_settings->GetValue(gui::nav_global).toBool());
-#if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
 		connect(ui->cb_pad_navigation, &QCheckBox::toggled, [this](bool checked)
 		{
 			m_gui_settings->SetValue(gui::nav_enabled, checked);
@@ -2185,9 +2195,16 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		{
 			m_gui_settings->SetValue(gui::nav_global, checked);
 		});
-#else
-		ui->gb_gui_pad_input->setEnabled(false);
-#endif
+
+		// Audio
+		SubscribeTooltip(ui->gb_gui_volume, tooltips.settings.gui_volume);
+		connect(ui->guiVolume, &QSlider::valueChanged, [this](int value)
+		{
+			ui->guiVolumeLabel->setText(tr("User Interface: %0 %", "GUI volume").arg(value));
+			gui::volume = std::clamp(value / 100.0f, 0.0f, 1.0f);
+			m_gui_settings->SetValue(gui::gui_volume, gui::volume);
+		});
+		ui->guiVolume->setValue(std::clamp(m_gui_settings->GetValue(gui::gui_volume).toFloat() * 100.0f, 0.0f, 100.0f));
 
 		// Discord:
 		SubscribeTooltip(ui->useRichPresence, tooltips.settings.use_rich_presence);
@@ -2270,9 +2287,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 		ui->cb_show_welcome->setChecked(m_gui_settings->GetValue(gui::ib_show_welcome).toBool());
 		ui->cb_show_exit_game->setChecked(m_gui_settings->GetValue(gui::ib_confirm_exit).toBool());
-		ui->cb_show_boot_game->setChecked(m_gui_settings->GetValue(gui::ib_confirm_boot).toBool());
 		ui->cb_show_pkg_install->setChecked(m_gui_settings->GetValue(gui::ib_pkg_success).toBool());
-		ui->cb_show_pup_install->setChecked(m_gui_settings->GetValue(gui::ib_pup_success).toBool());
 		ui->cb_show_obsolete_cfg_dialog->setChecked(m_gui_settings->GetValue(gui::ib_obsolete_cfg).toBool());
 		ui->cb_show_same_buttons_dialog->setChecked(m_gui_settings->GetValue(gui::ib_same_buttons).toBool());
 		ui->cb_show_restart_hint->setChecked(m_gui_settings->GetValue(gui::ib_restart_hint).toBool());
@@ -2302,17 +2317,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		connect(ui->cb_show_exit_game, &QCheckBox::toggled, [this](bool checked)
 		{
 			m_gui_settings->SetValue(gui::ib_confirm_exit, checked);
-		});
-		connect(ui->cb_show_boot_game, &QCheckBox::toggled, [this](bool checked)
-		{
 			m_gui_settings->SetValue(gui::ib_confirm_boot, checked);
 		});
 		connect(ui->cb_show_pkg_install, &QCheckBox::toggled, [this](bool checked)
 		{
 			m_gui_settings->SetValue(gui::ib_pkg_success, checked);
-		});
-		connect(ui->cb_show_pup_install, &QCheckBox::toggled, [this](bool checked)
-		{
 			m_gui_settings->SetValue(gui::ib_pup_success, checked);
 		});
 		connect(ui->cb_show_obsolete_cfg_dialog, &QCheckBox::toggled, [this](bool checked)
@@ -2492,6 +2501,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceComboBox(ui->vulkansched, emu_settings_type::VulkanAsyncSchedulerDriver);
 	SubscribeTooltip(ui->gb_vulkansched, tooltips.settings.vulkan_async_scheduler);
+
+	// Log levels
+	SubscribeTooltip(ui->gb_log_levels, tooltips.settings.log_levels);
+	connect(ui->pb_log_levels, &QAbstractButton::clicked, this, [this]()
+	{
+		log_level_dialog* dlg = new log_level_dialog(this, m_emu_settings);
+		dlg->open();
+	});
 
 	if (!restoreGeometry(m_gui_settings->GetValue(gui::cfg_geometry).toByteArray()))
 	{

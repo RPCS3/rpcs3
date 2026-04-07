@@ -4,6 +4,7 @@
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/RSX/Core/RSXReservationLock.hpp"
 #include "Emu/RSX/Common/tiled_dma_copy.hpp"
+#include "Emu/RSX/Host/MM.h"
 
 #include "context_accessors.define.h"
 
@@ -187,19 +188,26 @@ namespace rsx
 			const u32 in_offset = in_x * in_bpp + in_pitch * in_y;
 			const u32 out_offset = out_x * out_bpp + out_pitch * out_y;
 
-			const u32 src_line_length = (in_w * in_bpp);
+			const u32 src_line_length = (std::min<u32>(in_w, in_x + static_cast<u32>(std::ceil(clip_w / scale_x))) * in_bpp);
 
 			u32 src_address = 0;
 			const u32 dst_address = get_address(dst_offset, dst_dma, 1); // TODO: Add size
+
+			if (!dst_address)
+			{
+				rsx_log.error("NV3089_IMAGE_IN_SIZE: Unmapped dst_address (dst_offset=0x%x, dst_dma=0x%dx)", dst_offset, dst_dma);
+				RSX(ctx)->recover_fifo();
+				return { false, src_info, dst_info };
+			}
 
 			if (is_block_transfer && (clip_h == 1 || (in_pitch == out_pitch && src_line_length == in_pitch)))
 			{
 				const u32 nb_lines = std::min(clip_h, in_h);
 				const u32 data_length = nb_lines * src_line_length;
 
-				if (src_address = get_address(src_offset, src_dma, data_length);
-					!src_address || !dst_address)
+				if (src_address = get_address(src_offset, src_dma, data_length); !src_address)
 				{
+					rsx_log.error("NV3089_IMAGE_IN_SIZE: Unmapped src_address for in block transfer (src_offset=0x%x, src_dma=0x%x, data_length=0x%x)", src_offset, src_dma, data_length);
 					RSX(ctx)->recover_fifo();
 					return { false, src_info, dst_info };
 				}
@@ -221,9 +229,9 @@ namespace rsx
 				const u16 read_h = std::min(static_cast<u16>(clip_h / scale_y), in_h);
 				const u32 data_length = in_pitch * (read_h - 1) + src_line_length;
 
-				if (src_address = get_address(src_offset, src_dma, data_length);
-					!src_address || !dst_address)
+				if (src_address = get_address(src_offset, src_dma, data_length); !src_address)
 				{
+					rsx_log.error("NV3089_IMAGE_IN_SIZE: Unmapped src_address (src_offset=0x%x, src_dma=0x%x, data_length=0x%x)", src_offset, src_dma, data_length);
 					RSX(ctx)->recover_fifo();
 					return { false, src_info, dst_info };
 				}
@@ -574,9 +582,11 @@ namespace rsx
 			const u16 out_h = REGS(ctx)->blit_engine_output_height();
 
 			// Lock here. RSX cannot execute any locking operations from this point, including ZCULL read barriers
+			const u32 read_length = src.pitch * src.height;
+			const u32 write_length = dst.pitch * dst.clip_height;
 			auto res = ::rsx::reservation_lock<true>(
-				dst.rsx_address, dst.pitch * dst.clip_height,
-				src.rsx_address, src.pitch * src.height);
+				dst.rsx_address, write_length,
+				src.rsx_address, read_length);
 
 			if (!g_cfg.video.force_cpu_blit_processing &&
 				(dst.dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER || src.dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER) &&
@@ -585,6 +595,14 @@ namespace rsx
 				// HW-accelerated blit
 				return;
 			}
+
+			// Conservative MM flush
+			rsx::simple_array<utils::address_range64> flush_mm_ranges =
+			{
+				utils::address_range64::start_length(reinterpret_cast<u64>(dst.pixels), write_length),
+				utils::address_range64::start_length(reinterpret_cast<u64>(src.pixels), read_length)
+			};
+			rsx::mm_flush(flush_mm_ranges);
 
 			std::vector<u8> mirror_tmp;
 			bool src_is_temp = false;
@@ -612,7 +630,7 @@ namespace rsx
 			const bool interpolate = in_inter == blit_engine::transfer_interpolator::foh;
 
 			auto real_dst = dst.pixels;
-			const auto tiled_region = RSX(ctx)->get_tiled_memory_region(utils::address_range32::start_length(dst.rsx_address, dst.pitch * dst.clip_height));
+			const auto tiled_region = RSX(ctx)->get_tiled_memory_region(utils::address_range32::start_length(dst.rsx_address, write_length));
 			std::vector<u8> tmp;
 
 			if (tiled_region)

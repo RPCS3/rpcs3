@@ -1,5 +1,5 @@
 R"(
-vec4 texelFetch2DMS(in _MSAA_SAMPLER_TYPE_ tex, const in vec2 sample_count, const in ivec2 icoords, const in int index, const in ivec2 offset)
+vec4 texelFetch2DMS(in _MSAA_SAMPLER_TYPE_ tex, const in vec2 sample_count, const in ivec2 icoords, const in ivec2 offset)
 {
 	const vec2 resolve_coords = vec2(icoords + offset);
 	const vec2 aa_coords = floor(resolve_coords / sample_count);               // AA coords = real_coords / sample_count
@@ -8,15 +8,15 @@ vec4 texelFetch2DMS(in _MSAA_SAMPLER_TYPE_ tex, const in vec2 sample_count, cons
 	return texelFetch(tex, ivec2(aa_coords), int(sample_index));
 }
 
-vec4 sampleTexture2DMS(in _MSAA_SAMPLER_TYPE_ tex, const in vec2 coords, const in int index)
+vec4 sampleTexture2DMS(in _MSAA_SAMPLER_TYPE_ tex, const in vec2 coords, const in sampler_info tex_params)
 {
-	const uint flags = TEX_FLAGS(index);
-	const vec2 scaled_coords = COORD_SCALE2(index, coords);
+	const uint flags = tex_params.flags;
+	const vec2 scaled_coords = _texcoord_xform(coords, tex_params);
 	const vec2 normalized_coords = texture2DMSCoord(scaled_coords, flags);
 	const vec2 sample_count = vec2(2., textureSamples(tex) * 0.5);
 	const vec2 image_size = textureSize(tex) * sample_count;
 	const ivec2 icoords = ivec2(normalized_coords * image_size);
-	const vec4 sample0 = texelFetch2DMS(tex, sample_count, icoords, index, ivec2(0));
+	const vec4 sample0 = texelFetch2DMS(tex, sample_count, icoords, ivec2(0));
 
 	if (_get_bits(flags, FILTERED_MAG_BIT, 2) == 0)
 	{
@@ -35,7 +35,7 @@ vec4 sampleTexture2DMS(in _MSAA_SAMPLER_TYPE_ tex, const in vec2 coords, const i
 
 	vec4 a, b;
 	float factor;
-	const vec4 sample2 = texelFetch2DMS(tex, sample_count, icoords, index, ivec2(0, 1));     // Top left
+	const vec4 sample2 = texelFetch2DMS(tex, sample_count, icoords, ivec2(0, 1));     // Top left
 
 	if (no_filter.x)
 	{
@@ -46,21 +46,21 @@ vec4 sampleTexture2DMS(in _MSAA_SAMPLER_TYPE_ tex, const in vec2 coords, const i
 	else
 	{
 		// Filter required, sample more data
-		const vec4 sample1 = texelFetch2DMS(tex, sample_count, icoords, index, ivec2(1, 0));     // Bottom right
-		const vec4 sample3 = texelFetch2DMS(tex, sample_count, icoords, index, ivec2(1, 1));     // Top right
+		const vec4 sample1 = texelFetch2DMS(tex, sample_count, icoords, ivec2(1, 0));     // Bottom right
+		const vec4 sample3 = texelFetch2DMS(tex, sample_count, icoords, ivec2(1, 1));     // Top right
 
 		if (actual_step.x > uv_step.x)
 		{
 		    // Downscale in X, centered
 		    const vec3 weights = compute2x2DownsampleWeights(normalized_coords.x, uv_step.x, actual_step.x);
 
-		    const vec4 sample4 = texelFetch2DMS(tex, sample_count, icoords, index, ivec2(2, 0));    // Further bottom right
-		    a = fma(sample0, weights.xxxx, sample1 * weights.y) + (sample4 * weights.z);            // Weighted sum
+		    const vec4 sample4 = texelFetch2DMS(tex, sample_count, icoords, ivec2(2, 0));    // Further bottom right
+		    a = fma(sample0, weights.xxxx, sample1 * weights.y) + (sample4 * weights.z);     // Weighted sum
 
 		    if (!no_filter.y)
 		    {
-		        const vec4 sample5 = texelFetch2DMS(tex, sample_count, icoords, index, ivec2(2, 1));    // Further top right
-		        b = fma(sample2, weights.xxxx, sample3 * weights.y) + (sample5 * weights.z);            // Weighted sum
+		        const vec4 sample5 = texelFetch2DMS(tex, sample_count, icoords, ivec2(2, 1));    // Further top right
+		        b = fma(sample2, weights.xxxx, sample3 * weights.y) + (sample5 * weights.z);     // Weighted sum
 		    }
 		}
 		else if (actual_step.x < uv_step.x)

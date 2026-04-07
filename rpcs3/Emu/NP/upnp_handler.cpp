@@ -89,12 +89,10 @@ void upnp_handler::upnp_enable()
 
 		if (desc_xml)
 		{
-			IGDdatas igd_data{};
-			UPNPUrls igd_urls{};
-			parserootdesc(desc_xml, desc_xml_size, &igd_data);
+			parserootdesc(desc_xml, desc_xml_size, &m_igd_data);
 			free(desc_xml);
 			desc_xml = nullptr;
-			GetUPNPUrls(&igd_urls, &igd_data, dev->descURL, 1);
+			GetUPNPUrls(&m_igd_urls, &m_igd_data, dev->descURL, 1);
 
 			upnp_log.notice("Found UPnP device type:%s at %s", dev->st, dev->descURL);
 
@@ -116,24 +114,28 @@ void upnp_handler::upnp_enable()
 	freeUPNPDevlist(devlist);
 }
 
-void upnp_handler::add_port_redir(std::string_view addr, u16 internal_port, std::string_view protocol)
+void upnp_handler::add_port_redir(const std::string& addr, u16 internal_port, std::string_view protocol)
 {
 	if (!m_active)
 		return;
 
 	std::lock_guard lock(m_mutex);
 
-	u16 external_port = internal_port;
-	std::string internal_port_str = fmt::format("%d", internal_port);
+	if (m_bindings[std::string(protocol)].contains(internal_port))
+		return;
+
+	const std::string internal_port_str = fmt::format("%d", internal_port);
+	const std::string protocol_str(protocol);
+	const u32 max_port = std::min(static_cast<u32>(internal_port) + 100, 0xFFFFu);
 	int res = 0;
 
-	for (u16 external_port = internal_port; external_port < internal_port + 100; external_port++)
+	for (u32 external_port = internal_port; external_port <= max_port; external_port++)
 	{
 		std::string external_port_str = fmt::format("%d", external_port);
-		res = UPNP_AddPortMapping(m_igd_urls.controlURL, m_igd_data.first.servicetype, external_port_str.c_str(), internal_port_str.c_str(), addr.data(), "RPCS3", protocol.data(), nullptr, nullptr);
+		res = UPNP_AddPortMapping(m_igd_urls.controlURL, m_igd_data.first.servicetype, external_port_str.c_str(), internal_port_str.c_str(), addr.c_str(), "RPCS3", protocol_str.c_str(), nullptr, nullptr);
 		if (res == UPNPCOMMAND_SUCCESS)
 		{
-			m_bindings[std::string(protocol)][internal_port] = external_port;
+			m_bindings[protocol_str][static_cast<u16>(internal_port)] = external_port;
 			upnp_log.notice("Successfully bound %s:%d(%s) to IGD:%d", addr, internal_port, protocol, external_port);
 			return;
 		}
@@ -146,7 +148,7 @@ void upnp_handler::add_port_redir(std::string_view addr, u16 internal_port, std:
 		// }
 	}
 
-	upnp_log.error("Failed to bind %s:%d(%s) to IGD:(%d=>%d): %d", addr, internal_port, protocol, internal_port, external_port, res);
+	upnp_log.error("Failed to bind %s:%d(%s) to IGD:(%d=>%d): %d", addr, internal_port, protocol, internal_port, internal_port, res);
 }
 
 void upnp_handler::remove_port_redir(u16 internal_port, std::string_view protocol)
@@ -156,27 +158,28 @@ void upnp_handler::remove_port_redir(u16 internal_port, std::string_view protoco
 
 	std::lock_guard lock(m_mutex);
 
-	const std::string str_protocol(protocol);
+	const std::string protocol_str(protocol);
 
-	if (!m_bindings.contains(str_protocol) || !::at32(m_bindings, str_protocol).contains(internal_port))
+	if (!m_bindings.contains(protocol_str) || !::at32(m_bindings, protocol_str).contains(internal_port))
 	{
 		upnp_log.error("tried to unbind port mapping %d to IGD(%s) but it isn't bound", internal_port, protocol);
 		return;
 	}
 
-	const u16 external_port = ::at32(::at32(m_bindings, str_protocol), internal_port);
+	const u16 external_port = ::at32(::at32(m_bindings, protocol_str), internal_port);
 
 	remove_port_redir_external(external_port, protocol);
 
-	ensure(::at32(m_bindings, str_protocol).erase(internal_port));
+	ensure(::at32(m_bindings, protocol_str).erase(internal_port));
 	upnp_log.notice("Successfully deleted port mapping %d to IGD:%d(%s)", internal_port, external_port, protocol);
 }
 
 void upnp_handler::remove_port_redir_external(u16 external_port, std::string_view protocol, bool verbose)
 {
 	const std::string str_ext_port = fmt::format("%d", external_port);
+	const std::string protocol_str(protocol);
 
-	if (int res = UPNP_DeletePortMapping(m_igd_urls.controlURL, m_igd_data.first.servicetype, str_ext_port.c_str(), protocol.data(), nullptr); res != 0 && verbose)
+	if (int res = UPNP_DeletePortMapping(m_igd_urls.controlURL, m_igd_data.first.servicetype, str_ext_port.c_str(), protocol_str.c_str(), nullptr); res != 0 && verbose)
 		upnp_log.error("Failed to delete port mapping IGD:%s(%s): %d", str_ext_port, protocol, res);
 }
 

@@ -125,6 +125,7 @@ target_sources(rpcs3_emu PRIVATE
     ../Loader/PSF.cpp
     ../Loader/PUP.cpp
     ../Loader/TAR.cpp
+    ../Loader/ISO.cpp
     ../Loader/TROPUSR.cpp
     ../Loader/TRP.cpp
 )
@@ -422,6 +423,7 @@ target_sources(rpcs3_emu PRIVATE
     Io/TopShotFearmaster.cpp
     Io/Turntable.cpp
     Io/usb_device.cpp
+    Io/usb_microphone.cpp
     Io/usb_vfs.cpp
     Io/usio.cpp
     Io/LogitechG27.cpp
@@ -430,7 +432,7 @@ target_sources(rpcs3_emu PRIVATE
 
 # Np
 target_sources(rpcs3_emu PRIVATE
-    NP/fb_helpers.cpp
+    NP/pb_helpers.cpp
     NP/np_cache.cpp
     NP/np_gui_cache.cpp
     NP/np_contexts.cpp
@@ -450,6 +452,7 @@ target_sources(rpcs3_emu PRIVATE
     NP/upnp_config.cpp
     NP/upnp_handler.cpp
     NP/ip_address.cpp
+    NP/generated/np2_structs.pb.cc
 )
 
 # Memory
@@ -484,6 +487,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/NV47/HW/nv406e.cpp
     RSX/NV47/HW/nv4097.cpp
     RSX/Overlays/FriendsList/overlay_friends_list_dialog.cpp
+    RSX/Overlays/HomeMenu/overlay_home_icons.cpp
     RSX/Overlays/HomeMenu/overlay_home_menu.cpp
     RSX/Overlays/HomeMenu/overlay_home_menu_components.cpp
     RSX/Overlays/HomeMenu/overlay_home_menu_main_menu.cpp
@@ -497,6 +501,8 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Overlays/overlays.cpp
     RSX/Overlays/overlay_animated_icon.cpp
     RSX/Overlays/overlay_animation.cpp
+    RSX/Overlays/overlay_audio.cpp
+    RSX/Overlays/overlay_checkbox.cpp
     RSX/Overlays/overlay_compile_notification.cpp
     RSX/Overlays/overlay_controls.cpp
     RSX/Overlays/overlay_cursor.cpp
@@ -513,6 +519,9 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Overlays/overlay_perf_metrics.cpp
     RSX/Overlays/overlay_progress_bar.cpp
     RSX/Overlays/overlay_save_dialog.cpp
+    RSX/Overlays/overlay_select.cpp
+    RSX/Overlays/overlay_slider.cpp
+    RSX/Overlays/overlay_tabs.cpp
     RSX/Overlays/overlay_trophy_notification.cpp
     RSX/Overlays/overlay_user_list_dialog.cpp
     RSX/Overlays/overlay_utils.cpp
@@ -545,7 +554,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/rsx_vertex_data.cpp
 )
 
-if(NOT ANDROID)
+if(NOT ANDROID AND NOT APPLE)
     target_sources(rpcs3_emu PRIVATE
         RSX/GL/GLCommonDecompiler.cpp
         RSX/GL/GLCompute.cpp
@@ -636,6 +645,9 @@ if(TARGET 3rdparty_vulkan)
     endif()
 endif()
 
+if(NOT WIN32)
+    set(THREADS_PREFER_PTHREAD_FLAG ON)
+endif()
 find_package(Threads REQUIRED)
 
 target_link_libraries(rpcs3_emu
@@ -655,7 +667,7 @@ target_link_libraries(rpcs3_emu
         3rdparty::soundtouch
         3rdparty::miniupnpc
         3rdparty::libevdev
-        3rdparty::flatbuffers
+        3rdparty::protobuf
         3rdparty::pugixml
         3rdparty::vulkanmemoryallocator
         Threads::Threads
@@ -666,6 +678,7 @@ target_link_libraries(rpcs3_emu
         3rdparty::yaml-cpp
         3rdparty::zlib
         3rdparty::zstd
+        3rdparty::libcurl
 )
 
 if(APPLE)

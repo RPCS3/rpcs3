@@ -10,5 +10,6 @@ fi
 new_app="$1/"
 old_app="$2/"
 
-cp -Rf -p "$new_app" "$old_app"
+rm -rf "$old_app"
+mv "$new_app" "$old_app"
 open -n -a "$2" --args --updating

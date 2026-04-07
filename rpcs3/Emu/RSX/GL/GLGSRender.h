@@ -186,6 +186,8 @@ private:
 
 	gl::texture* get_present_source(gl::present_surface_info* info, const rsx::avconf& avconfig);
 
+	void update_swap_interval();
+
 public:
 	void set_viewport();
 	void set_scissor(bool clip_viewport);
@@ -206,7 +208,7 @@ public:
 	void discard_occlusion_query(rsx::reports::occlusion_query_info* query) override;
 
 	// DMA
-	bool release_GCM_label(u32 address, u32 data) override;
+	bool release_GCM_label(u32 type, u32 address, u32 data) override;
 	void enqueue_host_context_write(u32 offset, u32 size, const void* data);
 	void on_guest_texture_read();
 

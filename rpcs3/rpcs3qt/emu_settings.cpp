@@ -25,7 +25,37 @@ namespace
 {
 	static NEVER_INLINE void emit_data(YAML::Emitter& out, const YAML::Node& node)
 	{
-		// TODO
+		if (!node || node.IsNull())
+		{
+			// I chose to output a null when nothing is present so that recursive YAML Value calls can be matched to a null value instead of nothing
+			out << YAML::Null;
+			return;
+		}
+
+		if (node.IsMap())
+		{
+			std::vector<std::string> keys;
+			keys.reserve(node.size());
+
+			// generate vector of strings to be sorted using the as function from YAML documentation
+			for (const auto& pair : node)
+			{
+				keys.push_back(pair.first.Scalar());
+			}
+			std::sort(keys.begin(), keys.end());
+
+			// recursively generate sorted maps
+			out << YAML::BeginMap;
+			for (const std::string& key : keys)
+			{
+				out << YAML::Key << key;
+				out << YAML::Value;
+				emit_data(out, node[key]);
+			}
+			out << YAML::EndMap;
+			return;
+		}
+
 		out << node;
 	}
 
@@ -177,7 +207,7 @@ bool emu_settings::ValidateSettings(bool cleanup)
 	bool is_clean = true;
 
 	std::function<void(int, YAML::Node&, std::vector<std::string>&, cfg::_base*)> search_level;
-	search_level = [&search_level, &is_clean, &cleanup, this](int level, YAML::Node& yml_node, std::vector<std::string>& keys, cfg::_base* cfg_base)
+	search_level = [&search_level, &is_clean, &cleanup](int level, YAML::Node& yml_node, std::vector<std::string>& keys, cfg::_base* cfg_base)
 	{
 		if (!yml_node || !yml_node.IsMap())
 		{
@@ -877,7 +907,34 @@ std::string emu_settings::GetSetting(emu_settings_type type) const
 	return "";
 }
 
+std::map<std::string, std::string> emu_settings::GetMapSettingDefault(emu_settings_type type) const
+{
+	if (const auto node = cfg_adapter::get_node(m_default_settings, ::at32(settings_location, type)); node && node.IsMap())
+	{
+		return node.as<std::map<std::string, std::string>>();
+	}
+
+	cfg_log.fatal("GetMapSettingDefault(type=%d) could not retrieve the requested node", static_cast<int>(type));
+	return {};
+}
+
+std::map<std::string, std::string> emu_settings::GetMapSetting(emu_settings_type type) const
+{
+	if (const auto node = cfg_adapter::get_node(m_current_settings, ::at32(settings_location, type)); node && node.IsMap())
+	{
+		return node.as<std::map<std::string, std::string>>();
+	}
+
+	cfg_log.fatal("GetMapSetting(type=%d) could not retrieve the requested node", static_cast<int>(type));
+	return {};
+}
+
 void emu_settings::SetSetting(emu_settings_type type, const std::string& val) const
+{
+	cfg_adapter::get_node(m_current_settings, ::at32(settings_location, type)) = val;
+}
+
+void emu_settings::SetMapSetting(emu_settings_type type, const std::map<std::string, std::string>& val) const
 {
 	cfg_adapter::get_node(m_current_settings, ::at32(settings_location, type)) = val;
 }
@@ -997,9 +1054,9 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 	case emu_settings_type::ShaderMode:
 		switch (static_cast<shader_mode>(index))
 		{
-		case shader_mode::recompiler: return tr("Legacy (single threaded)", "Shader Mode");
-		case shader_mode::async_recompiler: return tr("Async (multi threaded)", "Shader Mode");
-		case shader_mode::async_with_interpreter: return tr("Async with Shader Interpreter", "Shader Mode");
+		case shader_mode::recompiler: return tr("Legacy Recompiler (single-threaded)", "Shader Mode");
+		case shader_mode::async_recompiler: return tr("Async Recompiler (multi-threaded)", "Shader Mode");
+		case shader_mode::async_with_interpreter: return tr("Async Recompiler with Shader Interpreter", "Shader Mode");
 		case shader_mode::interpreter_only: return tr("Shader Interpreter only", "Shader Mode");
 		}
 		break;
@@ -1119,6 +1176,9 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case camera_handler::null: return tr("Null", "Camera handler");
 		case camera_handler::fake: return tr("Fake", "Camera handler");
 		case camera_handler::qt: return tr("Qt", "Camera handler");
+#ifdef HAVE_SDL3
+		case camera_handler::sdl: return tr("SDL", "Camera handler");
+#endif
 		}
 		break;
 	case emu_settings_type::MusicHandler:
@@ -1439,6 +1499,13 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case xfloat_accuracy::inaccurate: return tr("Inaccurate XFloat");
 		}
 		break;
+	case emu_settings_type::VSync:
+		switch (static_cast<vsync_mode>(index))
+		{
+		case vsync_mode::off: return tr("Disabled", "VSync Mode");
+		case vsync_mode::adaptive: return tr("Adaptive", "VSync Mode");
+		case vsync_mode::full: return tr("Full", "VSync Mode");
+		}
 	default:
 		break;
 	}

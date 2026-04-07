@@ -13,6 +13,14 @@ class update_manager final :  public QObject
 {
 	Q_OBJECT
 
+public:
+	update_manager(QObject* parent, std::shared_ptr<gui_settings> gui_settings);
+	void check_for_updates(bool automatic, bool check_only, bool auto_accept, QWidget* parent = nullptr);
+	void update(bool auto_accept);
+
+Q_SIGNALS:
+	void signal_update_available(bool update_available);
+
 private:
 	downloader* m_downloader = nullptr;
 	QWidget* m_parent        = nullptr;
@@ -45,12 +53,4 @@ private:
 
 	bool handle_json(bool automatic, bool check_only, bool auto_accept, const QByteArray& data);
 	bool handle_rpcs3(const QByteArray& data, bool auto_accept);
-
-public:
-	update_manager(QObject* parent, std::shared_ptr<gui_settings> gui_settings);
-	void check_for_updates(bool automatic, bool check_only, bool auto_accept, QWidget* parent = nullptr);
-	void update(bool auto_accept);
-
-Q_SIGNALS:
-	void signal_update_available(bool update_available);
 };

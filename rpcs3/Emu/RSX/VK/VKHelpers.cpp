@@ -90,6 +90,7 @@ namespace vk
 		g_drv_no_primitive_restart = false;
 		g_drv_sanitize_fp_values = false;
 		g_drv_disable_fence_reset = false;
+		g_drv_strict_query_scopes = !!g_cfg.video.strict_rendering_mode;
 		g_drv_emulate_cond_render = (g_cfg.video.relaxed_zcull_sync && !g_render_device->get_conditional_render_support());
 		g_num_processed_frames = 0;
 		g_num_total_frames = 0;

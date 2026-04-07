@@ -14,6 +14,7 @@
 #include "Emu/Cell/timers.hpp"
 
 #include "Emu/Io/usb_device.h"
+#include "Emu/Io/usb_microphone.h"
 #include "Emu/Io/usb_vfs.h"
 #include "Emu/Io/Skylander.h"
 #include "Emu/Io/Infinity.h"
@@ -137,6 +138,7 @@ public:
 	const std::array<u8, 7>& get_new_location();
 	void connect_usb_device(std::shared_ptr<usb_device> dev, bool update_usb_devices = false);
 	void disconnect_usb_device(std::shared_ptr<usb_device> dev, bool update_usb_devices = false);
+	void reconnect_usb_device(u32 assigned_number);
 
 	// Map of devices actively handled by the ps3(device_id, device)
 	std::map<u32, std::pair<UsbInternalDevice, std::shared_ptr<usb_device>>> handled_devices;
@@ -184,6 +186,9 @@ private:
 		// Music devices
 		{0x1415, 0x0000, 0x0000, "Singstar Microphone", nullptr, nullptr},
 		// {0x1415, 0x0020, 0x0020, "SingStar Microphone Wireless", nullptr, nullptr}, // TODO: verifiy
+		// {0x12ba, 0x00f0, 0x00f0, "Bandfuse USB Guitar Adapter", nullptr, nullptr},
+		// {0x28aa, 0x0001, 0x0001, "Bandfuse USB Microphone", nullptr, nullptr},
+		// {0x046d, 0x0a03, 0x0a03, "Logitech Microphone", nullptr, nullptr},
 
 		{0x12BA, 0x00FF, 0x00FF, "Rocksmith Guitar Adapter", nullptr, nullptr},
 		{0x12BA, 0x0100, 0x0100, "Guitar Hero Guitar", nullptr, nullptr},
@@ -205,19 +210,23 @@ private:
 		{0x1BAD, 0x3430, 0x343F, "Harmonix Button Guitar - Wii", nullptr, nullptr},
 		{0x1BAD, 0x3530, 0x353F, "Harmonix Real Guitar - Wii", nullptr, nullptr},
 
-		//Top Shot Elite controllers
+		// Top Shot Elite controllers
 		{0x12BA, 0x04A0, 0x04A0, "Top Shot Elite", nullptr, nullptr},
 		{0x12BA, 0x04A1, 0x04A1, "Top Shot Fearmaster", nullptr, nullptr},
 		{0x12BA, 0x04B0, 0x04B0, "Rapala Fishing Rod", nullptr, nullptr},
 
 
-		// GT5 Wheels&co
+		// Wheels
 #ifdef HAVE_SDL3
 		{0x046D, 0xC283, 0xC29B, "lgFF_c283_c29b", &usb_device_logitech_g27::get_num_emu_devices, &usb_device_logitech_g27::make_instance},
 #else
 		{0x046D, 0xC283, 0xC29B, "lgFF_c283_c29b", nullptr, nullptr},
 #endif
+		{0x046D, 0xCA03, 0xCA03, "lgFF_ca03_ca03", nullptr, nullptr},
+		{0x044F, 0xB652, 0xB652, "Thrustmaster FGT FFB old", nullptr, nullptr},
 		{0x044F, 0xB653, 0xB653, "Thrustmaster RGT FFB Pro", nullptr, nullptr},
+		{0x044F, 0xB654, 0xB654, "Thrustmaster FGT FFB", nullptr, nullptr},
+		{0x044F, 0xb655, 0xb655, "Thrustmaster FGT Rumble 3-in-1", nullptr, nullptr},
 		{0x044F, 0xB65A, 0xB65A, "Thrustmaster F430", nullptr, nullptr},
 		{0x044F, 0xB65D, 0xB65D, "Thrustmaster FFB", nullptr, nullptr},
 		{0x044F, 0xB65E, 0xB65E, "Thrustmaster TRS", nullptr, nullptr},
@@ -225,7 +234,6 @@ private:
 
 		// GT6
 		{0x2833, 0x0001, 0x0001, "Oculus", nullptr, nullptr},
-		{0x046D, 0xCA03, 0xCA03, "lgFF_ca03_ca03", nullptr, nullptr},
 
 		// Buzz controllers
 		{0x054C, 0x1000, 0x1040, "buzzer0", &usb_device_buzz::get_num_emu_devices, &usb_device_buzz::make_instance},
@@ -239,14 +247,15 @@ private:
 		// uDraw GameTablet
 		{0x20D6, 0xCB17, 0xCB17, "uDraw GameTablet", nullptr, nullptr},
 
-		// DVB-T
+		// TV Tuners
 		{0x1415, 0x0003, 0x0003, "PlayTV SCEH-0036", nullptr, nullptr},
+		// {0x054c, 0x04b2, 0x04b2, "Torne CECH-ZD1 J", nullptr, nullptr},
 
 		// PSP Devices
 		{0x054C, 0x01C8, 0x01C8, "PSP Type A", nullptr, nullptr},
 		{0x054C, 0x01C9, 0x01C9, "PSP Type B", nullptr, nullptr},
 		{0x054C, 0x01CA, 0x01CA, "PSP Type C", nullptr, nullptr},
-		{0x054C, 0x01CB, 0x01CB, "PSP Type D", nullptr, nullptr},
+		{0x054C, 0x01CB, 0x01CB, "PSP Type D", nullptr, nullptr}, // UsbPspCm
 		{0x054C, 0x02D2, 0x02D2, "PSP Slim", nullptr, nullptr},
 
 		// 0x0900: "H050 USJ(C) PCB rev00", 0x0910: "USIO PCB rev00"
@@ -260,9 +269,6 @@ private:
 
 		// Tony Hawk RIDE Skateboard
 		{0x12BA, 0x0400, 0x0400, "Tony Hawk RIDE Skateboard Controller", nullptr, nullptr},
-
-		// PSP in UsbPspCm mode
-		{0x054C, 0x01CB, 0x01CB, "UsbPspcm", nullptr, nullptr},
 
 		// Sony Stereo Headsets
 		{0x12BA, 0x0032, 0x0032, "Wireless Stereo Headset", nullptr, nullptr},
@@ -548,6 +554,22 @@ usb_handler_thread::usb_handler_thread()
 		}
 	}
 
+	switch (g_cfg.audio.microphone_type)
+	{
+		case microphone_handler::null:
+			break;
+		case microphone_handler::standard:
+			usb_devices.push_back(std::make_shared<usb_device_mic>(0, get_new_location(), MicType::Logitech));
+			break;
+		case microphone_handler::real_singstar:
+		case microphone_handler::singstar:
+			usb_devices.push_back(std::make_shared<usb_device_mic>(0, get_new_location(), MicType::SingStar));
+			break;
+		case microphone_handler::rocksmith:
+			usb_devices.push_back(std::make_shared<usb_device_mic>(0, get_new_location(), MicType::Rocksmith));
+			break;
+	}
+
 	for (int i = 0; i < 8; i++) // Add VFS USB mass storage devices (/dev_usbXXX) to the USB device list
 	{
 		const auto usb_info = g_cfg_vfs.get_device(g_cfg_vfs.dev_usb, fmt::format("/dev_usb%03d", i));
@@ -636,6 +658,8 @@ void usb_handler_thread::operator()()
 		// Process asynchronous requests that are pending
 		libusb_handle_events_timeout_completed(ctx, &lusb_tv, nullptr);
 
+		u64 delay = 1'000;
+
 		// Process fake transfers
 		if (!fake_transfers.empty())
 		{
@@ -650,6 +674,13 @@ void usb_handler_thread::operator()()
 
 				if (transfer->expected_time > timestamp)
 				{
+					const u64 diff_time = transfer->expected_time - timestamp;
+
+					if (diff_time < delay)
+					{
+						delay = diff_time;
+					}
+
 					++it;
 					continue;
 				}
@@ -668,7 +699,7 @@ void usb_handler_thread::operator()()
 		if (handled_devices.empty())
 			thread_ctrl::wait_for(500'000);
 		else
-			thread_ctrl::wait_for(1'000);
+			thread_ctrl::wait_for(delay);
 	}
 }
 
@@ -878,7 +909,9 @@ std::pair<u32, UsbTransfer&> usb_handler_thread::get_free_transfer()
 
 	u32 transfer_id = get_free_transfer_id();
 	auto& transfer  = get_transfer(transfer_id);
-	transfer.busy   = true;
+
+	libusb_transfer* const transfer_buf = transfer.transfer;
+	transfer = {.transfer_id = transfer_id, .transfer = transfer_buf, .busy = true};
 
 	return {transfer_id, transfer};
 }
@@ -957,6 +990,21 @@ void usb_handler_thread::disconnect_usb_device(std::shared_ptr<usb_device> dev, 
 		{
 			return val == dev;
 		});
+	}
+}
+
+void usb_handler_thread::reconnect_usb_device(u32 assigned_number)
+{
+	std::lock_guard lock(mutex);
+	ensure(assigned_number != 0);
+	for (const auto& dev : usb_devices)
+	{
+		if (dev->assigned_number == assigned_number)
+		{
+			disconnect_usb_device(dev, false);
+			connect_usb_device(dev, false);
+			break;
+		}
 	}
 }
 
@@ -1046,6 +1094,16 @@ void connect_usb_controller(u8 index, input::product_type type)
 	}
 }
 
+void reconnect_usb(u32 assigned_number)
+{
+	auto usbh = g_fxo->try_get<named_thread<usb_handler_thread>>();
+	if (!usbh)
+	{
+		return;
+	}
+	usbh->reconnect_usb_device(assigned_number);
+}
+
 void handle_hotplug_event(bool connected)
 {
 	if (auto usbh = g_fxo->try_get<named_thread<usb_handler_thread>>())
@@ -1091,7 +1149,7 @@ error_code sys_usbd_finalize(ppu_thread& ppu, u32 handle)
 	// Forcefully awake all waiters
 	while (auto cpu = lv2_obj::schedule<ppu_thread>(usbh.sq, SYS_SYNC_FIFO))
 	{
-		// Special ternimation signal value
+		// Special termination signal value
 		cpu->gpr[4] = 4;
 		cpu->gpr[5] = 0;
 		cpu->gpr[6] = 0;
@@ -1115,11 +1173,15 @@ error_code sys_usbd_get_device_list(ppu_thread& ppu, u32 handle, vm::ptr<UsbInte
 		return CELL_EINVAL;
 
 	// TODO: was std::min<s32>
-	u32 i_tocopy = std::min<u32>(max_devices, ::size32(usbh.handled_devices));
+	const u32 i_tocopy = std::min<u32>(max_devices, ::size32(usbh.handled_devices));
+	u32 index = 0;
 
-	for (u32 index = 0; index < i_tocopy; index++)
+	for (const auto& [_, device] : usbh.handled_devices)
 	{
-		device_list[index] = usbh.handled_devices[index].first;
+		if (index == i_tocopy)
+			break;
+		
+		device_list[index++] = device.first;
 	}
 
 	return not_an_error(i_tocopy);
@@ -1351,7 +1413,7 @@ error_code sys_usbd_receive_event(ppu_thread& ppu, u32 handle, vm::ptr<u64> arg1
 
 		if (is_stopped(state))
 		{
-			std::lock_guard lock(usbh.mutex);
+			std::lock_guard lock(usbh.mutex_sq);
 
 			for (auto cpu = +usbh.sq; cpu; cpu = cpu->next_cpu)
 			{
@@ -1443,7 +1505,7 @@ error_code sys_usbd_transfer_data(ppu_thread& ppu, u32 handle, u32 id_pipe, vm::
 			case LIBUSB_REQUEST_SET_CONFIGURATION:
 			{
 				pipe.device->set_configuration(static_cast<u8>(+request->wValue));
-				pipe.device->set_interface(0);
+				pipe.device->set_interface(0, 0);
 				break;
 			}
 			default: break;
@@ -1486,7 +1548,7 @@ error_code sys_usbd_isochronous_transfer_data(ppu_thread& ppu, u32 handle, u32 i
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_usbd.todo("sys_usbd_isochronous_transfer_data(handle=0x%x, id_pipe=0x%x, iso_request=*0x%x)", handle, id_pipe, iso_request);
+	sys_usbd.trace("sys_usbd_isochronous_transfer_data(handle=0x%x, id_pipe=0x%x, iso_request=*0x%x)", handle, id_pipe, iso_request);
 
 	auto& usbh = g_fxo->get<named_thread<usb_handler_thread>>();
 
@@ -1500,7 +1562,20 @@ error_code sys_usbd_isochronous_transfer_data(ppu_thread& ppu, u32 handle, u32 i
 	const auto& pipe               = usbh.get_pipe(id_pipe);
 	auto&& [transfer_id, transfer] = usbh.get_free_transfer();
 
+	transfer.iso_request.buf = iso_request->buf;
+	transfer.iso_request.start_frame = iso_request->start_frame;
+	transfer.iso_request.num_packets = iso_request->num_packets;
+	for (u32 index = 0; index < iso_request->num_packets; index++)
+	{
+		transfer.iso_request.packets[index] = iso_request->packets[index];
+	}
+
 	pipe.device->isochronous_transfer(&transfer);
+
+	if (transfer.fake)
+	{
+		usbh.push_fake_transfer(&transfer);
+	}
 
 	// returns an identifier specific to the transfer
 	return not_an_error(transfer_id);
@@ -1516,7 +1591,7 @@ error_code sys_usbd_get_transfer_status(ppu_thread& ppu, u32 handle, u32 id_tran
 
 	std::lock_guard lock(usbh.mutex);
 
-	if (!usbh.is_init)
+	if (!usbh.is_init || id_transfer >= MAX_SYS_USBD_TRANSFERS)
 		return CELL_EINVAL;
 
 	const auto status = usbh.get_transfer_status(id_transfer);
@@ -1530,13 +1605,13 @@ error_code sys_usbd_get_isochronous_transfer_status(ppu_thread& ppu, u32 handle,
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_usbd.todo("sys_usbd_get_isochronous_transfer_status(handle=0x%x, id_transfer=0x%x, unk1=0x%x, request=*0x%x, result=*0x%x)", handle, id_transfer, unk1, request, result);
+	sys_usbd.trace("sys_usbd_get_isochronous_transfer_status(handle=0x%x, id_transfer=0x%x, unk1=0x%x, request=*0x%x, result=*0x%x)", handle, id_transfer, unk1, request, result);
 
 	auto& usbh = g_fxo->get<named_thread<usb_handler_thread>>();
 
 	std::lock_guard lock(usbh.mutex);
 
-	if (!usbh.is_init)
+	if (!usbh.is_init || id_transfer >= MAX_SYS_USBD_TRANSFERS)
 		return CELL_EINVAL;
 
 	const auto status = usbh.get_isochronous_transfer_status(id_transfer);

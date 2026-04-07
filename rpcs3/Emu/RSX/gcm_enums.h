@@ -454,9 +454,24 @@ namespace gcm
 		RSX_SHADER_CONTROL_UNKNOWN1 = 0x8000, // seemingly set when srgb packer is used??
 
 		// Custom
-		RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION = 0x10000, // Rasterizing triangles and not lines or points
-		RSX_SHADER_CONTROL_INSTANCED_CONSTANTS     = 0x20000, // Support instance ID offsets when loading constants
-		RSX_SHADER_CONTROL_INTERPRETER_MODEL       = 0x40000, // Compile internals expecting interpreter
+		RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION = 0x0010000, // Rasterizing triangles and not lines or points
+		RSX_SHADER_CONTROL_INSTANCED_CONSTANTS     = 0x0020000, // Support instance ID offsets when loading constants
+		RSX_SHADER_CONTROL_INTERPRETER_MODEL       = 0x0040000, // Compile internals expecting interpreter
+
+		RSX_SHADER_CONTROL_8BIT_FRAMEBUFFER        = 0x0080000, // Quantize outputs to 8-bit FBO
+		RSX_SHADER_CONTROL_SRGB_FRAMEBUFFER        = 0x0100000, // Outputs are SRGB. We could reuse UNKNOWN1 but we just keep the namespaces separate.
+
+		RSX_SHADER_CONTROL_TEXTURE_ALPHA_KILL      = 0x0200000, // Uses alpha kill on texture input
+		RSX_SHADER_CONTROL_ALPHA_TEST              = 0x0400000, // Uses alpha test on the outputs
+		RSX_SHADER_CONTROL_POLYGON_STIPPLE         = 0x0800000, // Uses polygon stipple for dithered rendering
+		RSX_SHADER_CONTROL_ALPHA_TO_COVERAGE       = 0x1000000, // Alpha to coverage
+
+		RSX_SHADER_CONTROL_DISABLE_EARLY_Z         = 0x2000000, // Do not allow early-Z optimizations on this shader
+
+		RSX_SHADER_CONTROL_TEXTURE_FORMAT_CONVERT  = 0x4000000, // Allow format conversions (BX2, SNORM, SRGB, RENORM)
+
+		// Meta
+		RSX_SHADER_CONTROL_META_USES_DISCARD       = (RSX_SHADER_CONTROL_USES_KIL | RSX_SHADER_CONTROL_TEXTURE_ALPHA_KILL | RSX_SHADER_CONTROL_ALPHA_TEST | RSX_SHADER_CONTROL_POLYGON_STIPPLE | RSX_SHADER_CONTROL_ALPHA_TO_COVERAGE)
 	};
 
 	// GCM Reports
@@ -954,6 +969,8 @@ namespace gcm
 		CELL_GCM_TEXTURE_LINEAR_LINEAR = 6,
 		CELL_GCM_TEXTURE_CONVOLUTION_MIN = 7,
 		CELL_GCM_TEXTURE_CONVOLUTION_MAG = 4,
+
+		// Convolution mode
 		CELL_GCM_TEXTURE_CONVOLUTION_QUINCUNX = 1,
 		CELL_GCM_TEXTURE_CONVOLUTION_GAUSSIAN = 2,
 		CELL_GCM_TEXTURE_CONVOLUTION_QUINCUNX_ALT = 3,
@@ -1807,7 +1824,7 @@ namespace rsx
 
 		enum class context_dma : u32
 		{
-			to_memory_get_report = CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_LOCAL,
+			report_location_local = CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_LOCAL,
 			report_location_main = CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN,
 			memory_host_buffer = CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER,
 		};

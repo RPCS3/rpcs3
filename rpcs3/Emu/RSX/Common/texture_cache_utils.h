@@ -79,7 +79,7 @@ namespace rsx
 
 		private:
 			// Members
-			block_list *block;
+			block_list* block = nullptr;
 			list_iterator list_it = {};
 			size_type idx = u32{umax};
 			size_type array_idx = 0;
@@ -705,9 +705,9 @@ namespace rsx
 		private:
 			// Members
 			address_range32 range;
-			section_bounds bounds;
+			section_bounds bounds {};
 
-			block_type *block = nullptr;
+			block_type* block = nullptr;
 			bool needs_overlap_check = true;
 			bool unowned_remaining = false;
 			unowned_iterator unowned_it = {};
@@ -1373,7 +1373,7 @@ namespace rsx
 				set_dirty(false);
 			}
 
-			if (context == rsx::texture_upload_context::framebuffer_storage && !Emu.IsStopped())
+			if (context == rsx::texture_upload_context::framebuffer_storage)
 			{
 				// Lock, unlock
 				auto surface = derived()->get_render_target();

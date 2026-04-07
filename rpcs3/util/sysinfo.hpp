@@ -54,12 +54,24 @@ namespace utils
 	bool has_appropriate_um_wait();
 
 	bool has_um_wait();
+#ifdef ARCH_ARM64
+	bool has_neon();
 
+	bool has_sha3();
+
+	bool has_dotprod();
+
+	bool has_sve();
+
+	bool has_sve2();
+#endif
 	std::string get_cpu_brand();
 
 	std::string get_system_info();
 
 	std::string get_firmware_version();
+
+	std::pair<u64, u64> get_memory_usage();
 
 	struct OS_version
 	{

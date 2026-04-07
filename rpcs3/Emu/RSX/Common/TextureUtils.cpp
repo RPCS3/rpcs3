@@ -244,7 +244,7 @@ struct copy_unmodified_block_swizzled
 			}
 
 			const u32 size_in_block = padded_width * padded_height * depth * 2;
-			rsx::simple_array<U> tmp(size_in_block * words_per_block);
+			rsx::simple_array<U, sizeof(u128)> tmp(size_in_block * words_per_block);
 
 			if (words_per_block == 1) [[likely]]
 			{
@@ -847,6 +847,17 @@ namespace rsx
 		}
 	}
 
+	bool texture_format_ex::hw_SNORM_possible() const
+	{
+		return (texel_remap_control & SEXT_MASK) == (get_host_format_snorm_mask(format()) << SEXT_OFFSET);
+	}
+
+	bool texture_format_ex::hw_SRGB_possible() const
+	{
+		return encoded_remap == RSX_TEXTURE_REMAP_IDENTITY &&
+			(texel_remap_control & GAMMA_CTRL_MASK) == GAMMA_RGB_MASK;
+	}
+
 	std::vector<rsx::subresource_layout> get_subresources_layout(const rsx::fragment_texture& texture)
 	{
 		return get_subresources_layout_impl(texture);
@@ -1200,26 +1211,84 @@ namespace rsx
 		fmt::throw_exception("Unknown format 0x%x", texture_format);
 	}
 
-	bool is_int8_remapped_format(u32 format)
+	rsx::flags32_t get_format_features(u32 texture_format)
 	{
-		switch (format)
+		switch (texture_format)
 		{
+		case CELL_GCM_TEXTURE_B8:
+		case CELL_GCM_TEXTURE_A1R5G5B5:
+		case CELL_GCM_TEXTURE_A4R4G4B4:
+		case CELL_GCM_TEXTURE_R5G6B5:
+		case CELL_GCM_TEXTURE_A8R8G8B8:
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
+		case CELL_GCM_TEXTURE_G8B8:
+		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
+		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
+		case CELL_GCM_TEXTURE_R6G5B5:
+		case CELL_GCM_TEXTURE_R5G5B5A1:
+		case CELL_GCM_TEXTURE_D1R5G5B5:
+		case CELL_GCM_TEXTURE_D8R8G8B8:
+			// Base texture formats - everything is supported
+			return RSX_FORMAT_FEATURE_SIGNED_COMPONENTS | RSX_FORMAT_FEATURE_GAMMA_CORRECTION | RSX_FORMAT_FEATURE_BIASED_NORMALIZATION;
+
 		case CELL_GCM_TEXTURE_DEPTH24_D8:
 		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
 		case CELL_GCM_TEXTURE_DEPTH16:
 		case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+			// Depth textures will hang the hardware if BX2 or GAMMA is active. ARGB8_SIGNED has no impact.
+			// UNSIGNED_REMAP=BIASED works on all formats including the float variants.
+			return RSX_FORMAT_FEATURE_BIASED_NORMALIZATION;
+
 		case CELL_GCM_TEXTURE_X16:
+			// X16 - GAMMA causes hangs. ARGB8_SIGNED is ignored. UNSIGNED_REMAP=BIASED works.
+			return RSX_FORMAT_FEATURE_BIASED_NORMALIZATION | RSX_FORMAT_FEATURE_16BIT_CHANNELS;
 		case CELL_GCM_TEXTURE_Y16_X16:
+			// X16 | Y16 - GAMMA causes hangs. ARGB8_SIGNED works. UNSIGNED_REMAP=BIASED also works.
+			return RSX_FORMAT_FEATURE_SIGNED_COMPONENTS | RSX_FORMAT_FEATURE_BIASED_NORMALIZATION | RSX_FORMAT_FEATURE_16BIT_CHANNELS;
+
 		case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
+			// GAMMA causes GPU hangs. ARGB8_SIGNED is ignored. UNSIGNED_REMAP=BIASED works.
+			return RSX_FORMAT_FEATURE_BIASED_NORMALIZATION;
+
 		case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
+			// GAMMA causes hangs. Other flags ignored.
+			return 0;
+
 		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
 		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
 		case CELL_GCM_TEXTURE_X32_FLOAT:
 		case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
-			// NOTE: Special data formats (XY, HILO, DEPTH) are not RGB formats
-			return false;
+			// Floating point textures. Nothing works.
+			return 0;
+		}
+		fmt::throw_exception("Unknown format 0x%x", texture_format);
+	}
+
+	/**
+	 * Returns a channel mask in ARGB that can be SNORM-converted
+	 * Some formats have a hardcoded constant in one lane which we cannot SNORM-interpret in hardware.
+	 */
+	u32 get_host_format_snorm_mask(u32 format)
+	{
+		switch (format)
+		{
+		case CELL_GCM_TEXTURE_B8:
+		case CELL_GCM_TEXTURE_R5G6B5:
+		case CELL_GCM_TEXTURE_R6G5B5:
+		case CELL_GCM_TEXTURE_D1R5G5B5:
+		case CELL_GCM_TEXTURE_D8R8G8B8:
+		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
+		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
+			// Hardcoded alpha formats
+			return 0b1110;
+
+		case CELL_GCM_TEXTURE_X16:
+			// This one is a mess. X and Z are hardcoded. Not supported.
+			// Fall through instead of throw
 		default:
-			return true;
+			return 0b1111;
 		}
 	}
 

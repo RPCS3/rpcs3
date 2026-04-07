@@ -138,7 +138,7 @@ private:
 	std::map<std::string, compat::status> m_compat_database;
 
 	/** Creates new map from the database */
-	bool ReadJSON(const QJsonObject& json_data, bool after_download);
+	bool handle_json(const QByteArray& data, bool after_download);
 
 public:
 	/** Handles reads, writes and downloads for the compatibility database */

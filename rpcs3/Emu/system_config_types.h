@@ -116,7 +116,10 @@ enum class camera_handler
 {
 	null,
 	fake,
-	qt
+	qt,
+#ifdef HAVE_SDL3
+	sdl,
+#endif
 };
 
 enum class camera_flip
@@ -359,4 +362,11 @@ enum class xfloat_accuracy
 	approximate,
 	relaxed, // Approximate accuracy for only the "FCGT", "FNMS", "FREST" AND "FRSQEST" instructions
 	inaccurate
+};
+
+enum class vsync_mode
+{
+	off,
+	adaptive,
+	full,
 };

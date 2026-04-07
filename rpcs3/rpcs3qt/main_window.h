@@ -10,6 +10,7 @@
 #include "update_manager.h"
 #include "settings.h"
 #include "shortcut_handler.h"
+#include "shortcut_utils.h"
 #include "Emu/config_mode.h"
 #include "Emu/System.h"
 
@@ -49,7 +50,6 @@ class main_window : public QMainWindow
 	bool m_save_slider_pos = false;
 	bool m_requested_show_logs_on_exit = false;
 	int m_other_slider_pos = 0;
-	std::function<void()> m_notify_batch_game_action_cb;
 
 	QIcon m_app_icon;
 	QIcon m_icon_play;
@@ -105,6 +105,7 @@ private Q_SLOTS:
 	void BootElf();
 	void BootTest();
 	void BootGame();
+	void BootISO();
 	void BootVSH();
 	void BootSavestate();
 	void BootRsxCapture(std::string path = "");
@@ -115,9 +116,6 @@ private Q_SLOTS:
 	void SetIconSizeActions(int idx) const;
 	void ResizeIcons(int index);
 
-	void RemoveHDD1Caches();
-	void RemoveAllCaches();
-	void RemoveSavestates();
 	void CleanUpGameList();
 
 	void RemoveFirmwareCache();
@@ -132,12 +130,10 @@ protected:
 	void dropEvent(QDropEvent* event) override;
 	void dragEnterEvent(QDragEnterEvent* event) override;
 	void dragMoveEvent(QDragMoveEvent* event) override;
-	void dragLeaveEvent(QDragLeaveEvent* event) override;
 
 private:
 	void ConfigureGuiFromSettings();
 	void RepaintToolBarIcons();
-	void RepaintThumbnailIcons();
 	void CreateActions();
 	void CreateConnects();
 	void CreateDockWindows();
@@ -149,6 +145,7 @@ private:
 	static bool InstallFileInExData(const std::string& extension, const QString& path, const std::string& filename);
 
 	bool HandlePackageInstallation(QStringList file_paths, bool from_boot);
+	void CreateShortCuts(const std::map<std::string, QString>& paths, std::set<gui::utils::shortcut_location> locations);
 
 	void HandlePupInstallation(const QString& file_path, const QString& dir_path = "");
 	void ExtractPup();

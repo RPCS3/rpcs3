@@ -152,7 +152,7 @@ void ps_move_handler::init_config(cfg_pad* cfg)
 	cfg->rs_up.def    = ::at32(button_list, ps_move_key_codes::none);
 	cfg->start.def    = ::at32(button_list, ps_move_key_codes::start);
 	cfg->select.def   = ::at32(button_list, ps_move_key_codes::select);
-	cfg->ps.def       = ::at32(button_list, ps_move_key_codes::ps);
+	cfg->ps.def       = cfg_pad::make_button_string(button_list, {{ps_move_key_codes::ps}, {ps_move_key_codes::start, ps_move_key_codes::select}});
 	cfg->square.def   = ::at32(button_list, ps_move_key_codes::square);
 	cfg->cross.def    = ::at32(button_list, ps_move_key_codes::cross);
 	cfg->circle.def   = ::at32(button_list, ps_move_key_codes::circle);
@@ -580,21 +580,21 @@ void ps_move_handler::handle_external_device(const pad_ensemble& binding)
 	move_data.external_device_write_requested = false;
 }
 
-bool ps_move_handler::get_is_left_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
+bool ps_move_handler::get_is_left_trigger(const std::shared_ptr<PadDevice>& /*device*/, u32 keyCode)
 {
 	// We also report the T button as left trigger
 	return keyCode == ps_move_key_codes::L2 || keyCode == ps_move_key_codes::t;
 }
 
-bool ps_move_handler::get_is_right_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
+bool ps_move_handler::get_is_right_trigger(const std::shared_ptr<PadDevice>& /*device*/, u32 keyCode)
 {
 	// We also report the Throttle button as right trigger
 	return keyCode == ps_move_key_codes::R2 || keyCode == ps_move_key_codes::throttle;
 }
 
-std::unordered_map<u64, u16> ps_move_handler::get_button_values(const std::shared_ptr<PadDevice>& device)
+std::unordered_map<u32, u16> ps_move_handler::get_button_values(const std::shared_ptr<PadDevice>& device)
 {
-	std::unordered_map<u64, u16> key_buf;
+	std::unordered_map<u32, u16> key_buf;
 	ps_move_device* dev = static_cast<ps_move_device*>(device.get());
 	if (!dev)
 		return key_buf;
@@ -760,7 +760,7 @@ void ps_move_handler::get_extended_info(const pad_ensemble& binding)
 	handle_external_device(binding);
 }
 
-pad_preview_values ps_move_handler::get_preview_values(const std::unordered_map<u64, u16>& data)
+pad_preview_values ps_move_handler::get_preview_values(const std::unordered_map<u32, u16>& data, const std::vector<std::string>& /*buttons*/)
 {
 	return {
 		std::max(::at32(data, ps_move_key_codes::L2), ::at32(data, ps_move_key_codes::t)),

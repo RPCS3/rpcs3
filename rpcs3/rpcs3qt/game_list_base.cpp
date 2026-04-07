@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "qt_utils.h"
 #include "game_list_base.h"
 
 #include <QDir>
@@ -48,7 +49,7 @@ void game_list_base::IconLoadFunction(game_info game, qreal device_pixel_ratio, 
 	static std::unordered_set<std::string> warn_once_list;
 	static shared_mutex s_mtx;
 
-	if (game->icon.isNull() && (game->info.icon_path.empty() || !game->icon.load(QString::fromStdString(game->info.icon_path))))
+	if (game->icon.isNull() && !gui::utils::load_icon(game->icon, game->info.icon_path, game->icon_in_archive ? game->info.path : ""))
 	{
 		if (game_list_log.warning)
 		{

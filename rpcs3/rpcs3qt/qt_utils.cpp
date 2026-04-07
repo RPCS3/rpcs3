@@ -12,6 +12,7 @@
 
 #include "Emu/system_utils.hpp"
 #include "Utilities/File.h"
+#include "Loader/ISO.h"
 #include <cmath>
 
 LOG_CHANNEL(gui_log, "GUI");
@@ -172,19 +173,43 @@ namespace gui
 			}
 			return res;
 		}
-		
-		QColor get_foreground_color()
+
+		QColor get_foreground_color(QWidget* widget)
 		{
+			if (widget)
+			{
+				widget->ensurePolished();
+				return widget->palette().color(QPalette::ColorRole::WindowText);
+			}
+
 			QLabel dummy_color;
 			dummy_color.ensurePolished();
 			return dummy_color.palette().color(QPalette::ColorRole::WindowText);
 		}
 
-		QColor get_background_color()
+		QColor get_background_color(QWidget* widget)
 		{
+			if (widget)
+			{
+				widget->ensurePolished();
+				return widget->palette().color(QPalette::ColorRole::Window);
+			}
+
 			QLabel dummy_color;
 			dummy_color.ensurePolished();
 			return dummy_color.palette().color(QPalette::ColorRole::Window);
+		}
+
+		QColor adjust_color_for_background(const QColor& fg, const QColor& bg)
+		{
+			const int diff = fg.lightness() - bg.lightness();
+
+			if (std::abs(diff) >= 40)
+			{
+				return fg;
+			}
+
+			return (bg.lightness() < 128) ? fg.lighter(180) : fg.darker(180);
 		}
 
 		QColor get_label_color(const QString& object_name, const QColor& fallback_light, const QColor& fallback_dark, QPalette::ColorRole color_role)
@@ -247,71 +272,49 @@ namespace gui
 				.arg(text.replace("\n", "<br>"));
 		}
 
-		QPixmap get_centered_pixmap(QPixmap pixmap, const QSize& icon_size, int offset_x, int offset_y, qreal device_pixel_ratio, Qt::TransformationMode mode)
+		QPixmap get_aligned_pixmap(QPixmap pixmap, const QSize& icon_size, qreal device_pixel_ratio, Qt::TransformationMode mode, align_h h_alignment, align_v v_alignment)
 		{
 			// Create empty canvas for expanded image
 			QPixmap exp_img(icon_size);
 			exp_img.setDevicePixelRatio(device_pixel_ratio);
 			exp_img.fill(Qt::transparent);
 
+			if (pixmap.isNull())
+			{
+				return exp_img;
+			}
+
 			// Load scaled pixmap
 			pixmap = pixmap.scaled(icon_size, Qt::KeepAspectRatio, mode);
 
-			// Define offset for raw image placement
-			QPoint offset(offset_x + icon_size.width() / 2 - pixmap.width() / 2,
-			              offset_y + icon_size.height() / 2 - pixmap.height() / 2);
+			QRect target(QPoint(0, 0), pixmap.size());
+
+			switch (h_alignment)
+			{
+			case align_h::left:   target.moveLeft(0); break;
+			case align_h::center: target.moveCenter(QPoint(icon_size.width() / 2, target.center().y())); break;
+			case align_h::right:  target.moveRight(icon_size.width()); break;
+			}
+
+			switch (v_alignment)
+			{
+			case align_v::top:    target.moveTop(0); break;
+			case align_v::center: target.moveCenter(QPoint(target.center().x(), icon_size.height() / 2)); break;
+			case align_v::bottom: target.moveBottom(icon_size.height()); break;
+			}
 
 			// Place raw image inside expanded image
 			QPainter painter(&exp_img);
 			painter.setRenderHint(QPainter::SmoothPixmapTransform);
-			painter.drawPixmap(offset, pixmap);
+			painter.drawPixmap(target, pixmap);
 			painter.end();
 
 			return exp_img;
 		}
 
-		QPixmap get_centered_pixmap(const QString& path, const QSize& icon_size, int offset_x, int offset_y, qreal device_pixel_ratio, Qt::TransformationMode mode)
+		QPixmap get_aligned_pixmap(const QString& path, const QSize& icon_size, qreal device_pixel_ratio, Qt::TransformationMode mode, align_h h_alignment, align_v v_alignment)
 		{
-			return get_centered_pixmap(QPixmap(path), icon_size, offset_x, offset_y, device_pixel_ratio, mode);
-		}
-
-		QImage get_opaque_image_area(const QString& path)
-		{
-			QImage image = QImage(path);
-
-			int w_min = 0;
-			int w_max = image.width();
-			int h_min = 0;
-			int h_max = image.height();
-
-			for (int y = 0; y < image.height(); ++y)
-			{
-				const QRgb* row = reinterpret_cast<const QRgb*>(image.constScanLine(y));
-				bool row_filled = false;
-
-				for (int x = 0; x < image.width(); ++x)
-				{
-					if (qAlpha(row[x]))
-					{
-						row_filled = true;
-						w_min = std::max(w_min, x);
-
-						if (w_max > x)
-						{
-							w_max = x;
-							x = w_min;
-						}
-					}
-				}
-
-				if (row_filled)
-				{
-					h_max = std::min(h_max, y);
-					h_min = y;
-				}
-			}
-
-			return image.copy(QRect(QPoint(w_max, h_max), QPoint(w_min, h_min)));
+			return get_aligned_pixmap(QPixmap(path), icon_size, device_pixel_ratio, mode, h_alignment, v_alignment);
 		}
 
 		// taken from https://stackoverflow.com/a/30818424/8353754
@@ -392,27 +395,46 @@ namespace gui
 			std::string icon_path = fs::get_config_dir() + "/Icons/game_icons/" + title_id + "/ICON0.PNG";
 			bool found_file       = fs::is_file(icon_path);
 
+			std::unique_ptr<QPixmap> pixmap;
+
 			if (!found_file)
 			{
 				// Get Icon for the gs_frame from path. this handles presumably all possible use cases
-				const QString qpath = QString::fromStdString(path);
-				const std::string path_list[] = { path, qpath.section("/", 0, -2, QString::SectionIncludeTrailingSep).toStdString(),
-					                              qpath.section("/", 0, -3, QString::SectionIncludeTrailingSep).toStdString() };
+				std::vector<std::string> path_list;
 
-				for (const std::string& pth : path_list)
+				const bool is_archive = is_file_iso(path);
+				if (is_archive)
 				{
-					if (!fs::is_dir(pth))
+					icon_path = "PS3_GAME/ICON0.PNG";
+
+					QPixmap px;
+					if (load_iso_icon(px, icon_path, path))
 					{
-						continue;
+						found_file = true;
+						pixmap = std::make_unique<QPixmap>(std::move(px));
 					}
+				}
+				else
+				{
+					const QString qpath = QString::fromStdString(path);
+					path_list = { path, qpath.section("/", 0, -2, QString::SectionIncludeTrailingSep).toStdString(),
+					                    qpath.section("/", 0, -3, QString::SectionIncludeTrailingSep).toStdString() };
 
-					const std::string sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(pth, title_id);
-					icon_path = sfo_dir + "/ICON0.PNG";
-					found_file = fs::is_file(icon_path);
-
-					if (found_file)
+					for (const std::string& pth : path_list)
 					{
-						break;
+						if (!fs::is_dir(pth))
+						{
+							continue;
+						}
+
+						const std::string sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(pth, title_id);
+						icon_path = sfo_dir + "/ICON0.PNG";
+						found_file = fs::is_file(icon_path);
+
+						if (found_file)
+						{
+							break;
+						}
 					}
 				}
 			}
@@ -420,7 +442,7 @@ namespace gui
 			if (found_file)
 			{
 				// load the image from path. It will most likely be a rectangle
-				const QImage source = QImage(QString::fromStdString(icon_path));
+				const QImage source = pixmap ? pixmap->toImage() : QImage(QString::fromStdString(icon_path));
 				const int edge_max = std::max(source.width(), source.height());
 
 				// create a new transparent image with square size and same format as source (maybe handle other formats than RGB32 as well?)
@@ -641,7 +663,7 @@ namespace gui
 			usz byte_unit = 0;
 			usz divisor = 1;
 #if defined(__APPLE__)
-			constexpr usz multiplier = 1000; 
+			constexpr usz multiplier = 1000;
 			static const QString s_units[]{"B", "kB", "MB", "GB", "TB", "PB"};
 #else
 			constexpr usz multiplier = 1024;
@@ -680,6 +702,36 @@ namespace gui
 			}
 
 			return QString("%1 days ago %2").arg(current_date - exctrated_date).arg(date.toString(fmt_relative));
+		}
+
+		bool load_iso_icon(QPixmap& icon, const std::string& icon_path, const std::string& archive_path)
+		{
+			if (icon_path.empty() || archive_path.empty()) return false;
+			if (!is_file_iso(archive_path)) return false;
+
+			iso_archive archive(archive_path);
+			if (!archive.exists(icon_path)) return false;
+
+			auto icon_file = archive.open(icon_path);
+			const auto icon_size = icon_file.size();
+			if (icon_size == 0) return false;
+
+			QByteArray data(icon_size, 0);
+			icon_file.read(data.data(), icon_size);
+
+			return icon.loadFromData(data);
+		}
+
+		bool load_icon(QPixmap& icon, const std::string& icon_path, const std::string& archive_path)
+		{
+			if (icon_path.empty()) return false;
+
+			if (archive_path.empty())
+			{
+				return icon.load(QString::fromStdString(icon_path));
+			}
+
+			return load_iso_icon(icon, icon_path, archive_path);
 		}
 
 		QString format_timestamp(s64 time, const QString& fmt)

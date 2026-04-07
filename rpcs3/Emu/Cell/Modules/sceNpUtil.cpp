@@ -65,7 +65,7 @@ struct sce_np_util_manager
 
 error_code sceNpUtilBandwidthTestInitStart([[maybe_unused]] ppu_thread& ppu, u32 prio, u32 stack)
 {
-	sceNpUtil.todo("sceNpUtilBandwidthTestInitStart(prio=%d, stack=%d)", prio, stack);
+	sceNpUtil.warning("sceNpUtilBandwidthTestInitStart(prio=%d, stack=%d)", prio, stack);
 
 	auto& util_manager = g_fxo->get<sce_np_util_manager>();
 	std::lock_guard lock(util_manager.mtx);

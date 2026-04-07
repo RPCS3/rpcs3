@@ -1020,6 +1020,8 @@ void patch_manager_dialog::dropEvent(QDropEvent* event)
 		return;
 	}
 
+	event->acceptProposedAction();
+
 	QMessageBox box(QMessageBox::Icon::Question, tr("Patch Manager"), tr("What do you want to do with the patch file?"), QMessageBox::StandardButton::Cancel, this);
 	QPushButton* button_yes = box.addButton(tr("Import"), QMessageBox::YesRole);
 	QPushButton* button_no = box.addButton(tr("Validate"), QMessageBox::NoRole);
@@ -1123,7 +1125,7 @@ void patch_manager_dialog::dragEnterEvent(QDragEnterEvent* event)
 {
 	if (is_valid_file(*event->mimeData()))
 	{
-		event->accept();
+		event->acceptProposedAction();
 	}
 }
 
@@ -1131,13 +1133,8 @@ void patch_manager_dialog::dragMoveEvent(QDragMoveEvent* event)
 {
 	if (is_valid_file(*event->mimeData()))
 	{
-		event->accept();
+		event->acceptProposedAction();
 	}
-}
-
-void patch_manager_dialog::dragLeaveEvent(QDragLeaveEvent* event)
-{
-	event->accept();
 }
 
 void patch_manager_dialog::download_update(bool automatic, bool auto_accept)
@@ -1166,7 +1163,7 @@ void patch_manager_dialog::download_update(bool automatic, bool auto_accept)
 		}
 	}
 
-	m_downloader->start(url, true, !m_download_automatic, tr("Downloading latest patches"));
+	m_downloader->start(url, true, !m_download_automatic, true, tr("Downloading latest patches"));
 }
 
 bool patch_manager_dialog::handle_json(const QByteArray& data)
@@ -1187,9 +1184,9 @@ bool patch_manager_dialog::handle_json(const QByteArray& data)
 		}
 
 		if (return_code != -1)
-			patch_log.error("Patch download error: %s return code: %d", error_message, return_code);
+			patch_log.error("Patch download error: %s, return code: %d", error_message, return_code);
 		else
-			patch_log.warning("Patch download error: %s return code: %d", error_message, return_code);
+			patch_log.warning("Patch download error: %s, return code: %d", error_message, return_code);
 
 		return false;
 	}

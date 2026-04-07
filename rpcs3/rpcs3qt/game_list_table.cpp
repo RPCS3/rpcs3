@@ -11,6 +11,8 @@
 #include "Emu/vfs_config.h"
 #include "Utilities/StrUtil.h"
 
+#include "Loader/ISO.h"
+
 #include <QHeaderView>
 #include <QScrollBar>
 #include <QStringBuilder>
@@ -24,7 +26,7 @@ game_list_table::game_list_table(game_list_frame* frame, std::shared_ptr<persist
 	setItemDelegate(new game_list_delegate(this));
 	setEditTriggers(QAbstractItemView::NoEditTriggers);
 	setSelectionBehavior(QAbstractItemView::SelectRows);
-	setSelectionMode(QAbstractItemView::SingleSelection);
+	setSelectionMode(QAbstractItemView::ExtendedSelection);
 	setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
 	setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
 	verticalScrollBar()->setSingleStep(20);
@@ -36,6 +38,7 @@ game_list_table::game_list_table(game_list_frame* frame, std::shared_ptr<persist
 	horizontalHeader()->setStretchLastSection(true);
 	horizontalHeader()->setDefaultSectionSize(150);
 	horizontalHeader()->setDefaultAlignment(Qt::AlignLeft);
+	horizontalHeader()->setSectionsMovable(true);
 	setContextMenuPolicy(Qt::CustomContextMenu);
 	setAlternatingRowColors(true);
 	setColumnCount(static_cast<int>(gui::game_list_columns::count));
@@ -52,7 +55,7 @@ game_list_table::game_list_table(game_list_frame* frame, std::shared_ptr<persist
 		}
 	});
 
-	connect(this, &game_list::IconReady, this, [this](const game_info& game, const movie_item_base* item)
+	connect(this, &game_list::IconReady, this, [](const game_info& game, const movie_item_base* item)
 	{
 		if (game && item && game->item == item) item->image_change_callback();
 	});
@@ -70,6 +73,8 @@ void game_list_table::restore_layout(const QByteArray& state)
 		// Nothing to do
 	}
 
+	// Re-apply after restoreState() since it resets setSectionsMovable to false
+	horizontalHeader()->setSectionsMovable(true);
 	// Make sure no columns are squished
 	fix_narrow_columns();
 
@@ -204,8 +209,9 @@ void game_list_table::populate(
 	const std::vector<game_info>& game_data,
 	const std::map<QString, QString>& notes_map,
 	const std::map<QString, QString>& title_map,
-	const std::string& selected_item_id,
-	bool play_hover_movies)
+	const std::set<std::string>& selected_item_ids,
+	bool play_hover_movies,
+	bool play_hover_music)
 {
 	clear_list();
 
@@ -219,7 +225,7 @@ void game_list_table::populate(
 
 	int row = 0;
 	int index = -1;
-	int selected_row = -1;
+	std::set<int> selected_rows;
 
 	const auto get_title = [&title_map](const QString& serial, const std::string& name) -> QString
 	{
@@ -277,6 +283,13 @@ void game_list_table::populate(
 					// Do not report size of apps inside /dev_flash (it does not make sense to do so)
 					game->info.size_on_disk = 0;
 				}
+				else if (is_file_iso(game->info.path))
+				{
+					fs::stat_t iso_stat;
+					fs::get_stat(game->info.path, iso_stat);
+
+					game->info.size_on_disk = iso_stat.size;
+				}
 				else
 				{
 					game->info.size_on_disk = fs::get_dir_size(game->info.path, 1, cancel.get());
@@ -290,9 +303,23 @@ void game_list_table::populate(
 			}
 		});
 
+		bool check_iso = false;
+
 		if (play_hover_movies && (game->has_hover_gif || game->has_hover_pam))
 		{
 			icon_item->set_video_path(game->info.movie_path);
+			check_iso |= !fs::exists(game->info.movie_path);
+		}
+
+		if (play_hover_music && game->has_audio_file)
+		{
+			icon_item->set_audio_path(game->info.audio_path);
+			check_iso |= !fs::exists(game->info.audio_path);
+		}
+
+		if (check_iso && is_file_iso(game->info.path))
+		{
+			icon_item->set_iso_path(game->info.path);
 		}
 
 		icon_item->setData(Qt::UserRole, index, true);
@@ -378,15 +405,29 @@ void game_list_table::populate(
 		setItem(row, static_cast<int>(gui::game_list_columns::compat),     compat_item);
 		setItem(row, static_cast<int>(gui::game_list_columns::dir_size),   new custom_table_widget_item(game_size != umax ? gui::utils::format_byte_size(game_size) : tr("Unknown"), Qt::UserRole, QVariant::fromValue<qulonglong>(game_size)));
 
-		if (selected_item_id == game->info.path + game->info.icon_path)
+		if (selected_item_ids.contains(game->info.path + game->info.icon_path))
 		{
-			selected_row = row;
+			selected_rows.insert(row);
 		}
 
 		row++;
 	}
 
-	selectRow(selected_row);
+	bool first_index = true;
+
+	for (int selected_row : selected_rows)
+	{
+		const QModelIndex index = model()->index(selected_row, 0);
+
+		selectionModel()->select(index, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+
+		if (first_index)
+		{
+			selectionModel()->setCurrentIndex(index, QItemSelectionModel::NoUpdate);
+			first_index = false;
+		}
+	}
+	Q_EMIT itemSelectionChanged();
 }
 
 void game_list_table::repaint_icons(std::vector<game_info>& game_data, const QColor& icon_color, const QSize& icon_size, qreal device_pixel_ratio)

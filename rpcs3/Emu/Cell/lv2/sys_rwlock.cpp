@@ -441,6 +441,8 @@ error_code sys_rwlock_wlock(ppu_thread& ppu, u32 rw_lock_id, u64 timeout)
 					continue;
 				}
 
+				ppu.state += cpu_flag::wait;
+
 				std::lock_guard lock(rwlock->mutex);
 
 				if (!rwlock->unqueue(rwlock->wq, &ppu))

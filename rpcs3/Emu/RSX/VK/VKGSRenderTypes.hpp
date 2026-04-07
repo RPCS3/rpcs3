@@ -23,7 +23,6 @@
 #define VK_INDEX_RING_BUFFER_SIZE_M 16
 
 #define VK_MAX_ASYNC_CB_COUNT 512
-#define VK_MAX_ASYNC_FRAMES 2
 
 #define FRAME_PRESENT_TIMEOUT 10000000ull // 10 seconds
 #define GENERAL_WAIT_TIMEOUT  2000000ull  // 2 seconds
@@ -185,6 +184,20 @@ namespace vk
 
 		data_heap_manager::managed_heap_snapshot_t heap_snapshot;
 		u64 last_frame_sync_time = 0;
+
+		void init(VkDevice dev)
+		{
+			VkSemaphoreCreateInfo semaphore_info = {};
+			semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+			vkCreateSemaphore(dev, &semaphore_info, nullptr, &present_wait_semaphore);
+			vkCreateSemaphore(dev, &semaphore_info, nullptr, &acquire_signal_semaphore);
+		}
+
+		void destroy(VkDevice dev)
+		{
+			vkDestroySemaphore(dev, present_wait_semaphore, nullptr);
+			vkDestroySemaphore(dev, acquire_signal_semaphore, nullptr);
+		}
 
 		// Copy shareable information
 		void grab_resources(frame_context_t& other)

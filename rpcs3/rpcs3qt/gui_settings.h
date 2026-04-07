@@ -13,6 +13,7 @@ namespace gui
 {
 	extern QString stylesheet;
 	extern bool custom_stylesheet_active;
+	extern f32 volume;
 
 	enum custom_roles
 	{
@@ -139,6 +140,8 @@ namespace gui
 
 	const QColor gl_icon_color = QColor(240, 240, 240, 255);
 
+	const gui_save gui_volume = gui_save(main_window, "guiVolume", 1.0f);
+
 	const gui_save rg_freeze  = gui_save(main_window, "recentGamesFrozen", false);
 	const gui_save rg_entries = gui_save(main_window, "recentGamesNames",  QVariant::fromValue(q_pair_list()));
 
@@ -170,7 +173,7 @@ namespace gui
 	const gui_save fd_save_log     = gui_save(main_window, "lastExplorePathSaveLog", "");
 
 	const gui_save mw_debugger         = gui_save(main_window, "debuggerVisible",  false);
-	const gui_save mw_logger           = gui_save(main_window, "loggerVisible",    true);
+	const gui_save mw_logger           = gui_save(main_window, "loggerVisible",    false);
 	const gui_save mw_gamelist         = gui_save(main_window, "gamelistVisible",  true);
 	const gui_save mw_toolBarVisible   = gui_save(main_window, "toolBarVisible",   true);
 	const gui_save mw_titleBarsVisible = gui_save(main_window, "titleBarsVisible", true);
@@ -217,6 +220,7 @@ namespace gui
 	const gui_save gl_pref_gd_icon = gui_save(game_list, "pref_gd_icon", false);
 	const gui_save gl_custom_icon  = gui_save(game_list, "custom_icon",  true);
 	const gui_save gl_hover_gifs   = gui_save(game_list, "hover_gifs",   true);
+	const gui_save gl_hover_music  = gui_save(game_list, "hover_music",  true);
 
 	const gui_save fs_emulator_dir_list = gui_save(fs, "emulator_dir_list", QStringList());
 	const gui_save fs_dev_hdd0_list     = gui_save(fs, "dev_hdd0_list",     QStringList());
@@ -237,6 +241,7 @@ namespace gui
 	const gui_save l_ansi_code = gui_save(logger, "ANSI_code", true);
 	const gui_save l_limit     = gui_save(logger, "limit",     1000);
 	const gui_save l_limit_tty = gui_save(logger, "TTY_limit", 1000);
+	const gui_save l_log_hide  = gui_save(logger, "Log hide",  false);
 
 	const gui_save d_splitterState = gui_save(debugger, "splitterState", QByteArray());
 
@@ -255,7 +260,7 @@ namespace gui
 	const gui_save m_discordState      = gui_save(meta, "discordState",      "");
 	const gui_save m_check_upd_start   = gui_save(meta, "checkUpdateStart",  update_on);
 
-	const gui_save gs_disableMouse      = gui_save(gs_frame, "disableMouse",          false);
+	const gui_save gs_disableMouse      = gui_save(gs_frame, "disableMouse",          true);
 	const gui_save gs_disableKbHotkeys  = gui_save(gs_frame, "disableKbHotkeys",      false);
 	const gui_save gs_showMouseFs       = gui_save(gs_frame, "showMouseInFullscreen", false);
 	const gui_save gs_lockMouseFs       = gui_save(gs_frame, "lockMouseInFullscreen", true);
@@ -314,7 +319,7 @@ namespace gui
 
 	const gui_save sc_shortcuts = gui_save(sc, "shortcuts", QVariantMap());
 
-	const gui_save nav_enabled = gui_save(navigation, "pad_input_enabled",      false);
+	const gui_save nav_enabled = gui_save(navigation, "pad_input_enabled",      true);
 	const gui_save nav_global  = gui_save(navigation, "allow_global_pad_input", false);
 }
 

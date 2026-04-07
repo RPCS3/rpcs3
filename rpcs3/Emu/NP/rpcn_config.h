@@ -4,13 +4,13 @@
 
 struct cfg_rpcn : cfg::node
 {
-	cfg::uint32 version{this, "Version", 1};
+	cfg::uint32 version{this, "Version", 2};
 	cfg::string host{this, "Host", "np.rpcs3.net"};
 	cfg::string npid{this, "NPID", ""};
 	cfg::string password{this, "Password", ""};
 	cfg::string token{this, "Token", ""};
 	cfg::string hosts{this, "Hosts", "Official RPCN Server|np.rpcs3.net"};
-	cfg::_bool ipv6_support{this, "IPv6 support", true};
+	cfg::_bool ipv6_support{this, "Experimental IPv6 support", false};
 
 	void load();
 	void save() const;

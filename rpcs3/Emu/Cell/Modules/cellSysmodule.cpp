@@ -406,6 +406,30 @@ error_code cellSysmoduleIsLoadedEx()
 	return CELL_OK;
 }
 
+error_code cellSysmoduleLoadModuleFile()
+{
+	UNIMPLEMENTED_FUNC(cellSysmodule);
+	return CELL_OK;
+}
+
+error_code cellSysmoduleUnloadModuleFile()
+{
+	UNIMPLEMENTED_FUNC(cellSysmodule);
+	return CELL_OK;
+}
+
+error_code cellSysmoduleSetDebugmode()
+{
+	UNIMPLEMENTED_FUNC(cellSysmodule);
+	return CELL_OK;
+}
+
+error_code cellSysmoduleSetInternalmode()
+{
+	UNIMPLEMENTED_FUNC(cellSysmodule);
+	return CELL_OK;
+}
+
 DECLARE(ppu_module_manager::cellSysmodule)("cellSysmodule", []()
 {
 	REG_FUNC(cellSysmodule, cellSysmoduleInitialize);
@@ -421,4 +445,8 @@ DECLARE(ppu_module_manager::cellSysmodule)("cellSysmodule", []()
 	REG_FUNC(cellSysmodule, cellSysmoduleUnloadModuleEx);
 	REG_FUNC(cellSysmodule, cellSysmoduleLoadModuleEx);
 	REG_FUNC(cellSysmodule, cellSysmoduleIsLoadedEx);
+	REG_FUNC(cellSysmodule, cellSysmoduleLoadModuleFile);
+	REG_FUNC(cellSysmodule, cellSysmoduleUnloadModuleFile);
+	REG_FUNC(cellSysmodule, cellSysmoduleSetDebugmode);
+	REG_FUNC(cellSysmodule, cellSysmoduleSetInternalmode);
 });

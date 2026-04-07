@@ -49,7 +49,7 @@ void headless_application::InitializeCallbacks()
 {
 	EmuCallbacks callbacks = CreateCallbacks();
 
-	callbacks.try_to_quit = [this](bool force_quit, std::function<void()> on_exit) -> bool
+	callbacks.try_to_quit = [](bool force_quit, std::function<void()> on_exit) -> bool
 	{
 		if (force_quit)
 		{
@@ -102,6 +102,9 @@ void headless_application::InitializeCallbacks()
 			return std::make_shared<null_camera_handler>();
 		}
 		case camera_handler::qt:
+#ifdef HAVE_SDL3
+		case camera_handler::sdl:
+#endif
 		{
 			fmt::throw_exception("Headless mode can not be used with this camera handler. Current handler: %s", g_cfg.io.camera.get());
 		}

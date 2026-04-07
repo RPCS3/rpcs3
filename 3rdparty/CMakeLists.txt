@@ -25,18 +25,8 @@ add_subdirectory(zstd EXCLUDE_FROM_ALL)
 # 7zip sdk
 add_subdirectory(7zip EXCLUDE_FROM_ALL)
 
-add_library(3rdparty_flatbuffers INTERFACE)
-if (USE_SYSTEM_FLATBUFFERS)
-	pkg_check_modules(FLATBUFFERS REQUIRED IMPORTED_TARGET flatbuffers>=2.0.0)
-	target_link_libraries(3rdparty_flatbuffers INTERFACE PkgConfig::FLATBUFFERS)
-	set(FBS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../rpcs3/Emu/NP/generated/")
-	execute_process(COMMAND flatc --cpp -o "${FBS_DIR}" "${FBS_DIR}/np2_structs.fbs" RESULT_VARIABLE FBS_CMD_ERROR)
-	if(FBS_CMD_ERROR AND NOT FBS_CMD_ERROR EQUAL 0)
-		message(FATAL_ERROR "flatc failed to regenerate flatbuffers headers.")
-	endif()
-else()
-	target_include_directories(3rdparty_flatbuffers SYSTEM INTERFACE flatbuffers/include)
-endif()
+# Protobuf
+add_subdirectory(protobuf EXCLUDE_FROM_ALL)
 
 # libPNG
 add_subdirectory(libpng EXCLUDE_FROM_ALL)
@@ -107,7 +97,7 @@ add_subdirectory(yaml-cpp)
 
 # OpenGL
 
-if (NOT ANDROID)
+if (NOT ANDROID AND NOT APPLE)
 	find_package(OpenGL REQUIRED OPTIONAL_COMPONENTS EGL)
 
 	add_library(3rdparty_opengl INTERFACE)
@@ -119,8 +109,6 @@ if (NOT ANDROID)
 		else()
 			target_link_libraries(3rdparty_opengl INTERFACE dxgi.lib d2d1.lib dwrite.lib)
 		endif()
-	elseif(APPLE)
-		target_link_libraries(3rdparty_opengl INTERFACE OpenGL::GL OpenGL::GLU)
 	else()
 		target_link_libraries(3rdparty_opengl INTERFACE OpenGL::GL OpenGL::GLU OpenGL::GLX)
 	endif()
@@ -335,7 +323,7 @@ endif()
 
 # GLEW
 add_library(3rdparty_glew INTERFACE)
-if(NOT MSVC AND NOT ANDROID)
+if(NOT MSVC AND NOT ANDROID AND NOT APPLE)
 	find_package(GLEW REQUIRED)
 	target_link_libraries(3rdparty_glew INTERFACE GLEW::GLEW)
 endif()
@@ -374,7 +362,7 @@ endif()
 add_library(3rdparty::zlib ALIAS 3rdparty_zlib)
 add_library(3rdparty::zstd ALIAS 3rdparty_zstd)
 add_library(3rdparty::7zip ALIAS 3rdparty_7zip)
-add_library(3rdparty::flatbuffers ALIAS 3rdparty_flatbuffers)
+add_library(3rdparty::protobuf ALIAS 3rdparty_protobuf)
 add_library(3rdparty::pugixml ALIAS pugixml)
 add_library(3rdparty::glslang ALIAS 3rdparty_glslang)
 add_library(3rdparty::yaml-cpp ALIAS yaml-cpp)

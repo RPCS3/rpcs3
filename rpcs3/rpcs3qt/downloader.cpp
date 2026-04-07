@@ -1,11 +1,16 @@
 #include <QApplication>
 #include <QThread>
+#include <QJsonObject>
+#include <QJsonDocument>
 
 #include "downloader.h"
 #include "curl_handle.h"
 #include "progress_dialog.h"
 
 #include "util/logs.hpp"
+#include "Utilities/Thread.h"
+
+#include <thread>
 
 LOG_CHANNEL(network_log, "NET");
 
@@ -31,7 +36,7 @@ downloader::~downloader()
 	}
 }
 
-void downloader::start(const std::string& url, bool follow_location, bool show_progress_dialog, const QString& progress_dialog_title, bool keep_progress_dialog_open, int expected_size)
+void downloader::start(const std::string& url, bool follow_location, bool show_progress_dialog, bool check_return_code, const QString& progress_dialog_title, bool keep_progress_dialog_open, int expected_size, bool again)
 {
 	network_log.notice("Starting download from URL: %s", url);
 
@@ -49,6 +54,21 @@ void downloader::start(const std::string& url, bool follow_location, bool show_p
 	m_curl_buf.clear();
 	m_curl_abort = false;
 
+	if (again)
+	{
+		m_download_attempts++;
+
+		if (m_progress_dialog && m_download_attempts > 1)
+		{
+			handle_buffer_update(0, 100);
+			m_progress_dialog->setLabelText(tr("Please wait... Trying again"));
+		}
+	}
+	else
+	{
+		m_download_attempts = 1;
+	}
+
 	CURLcode err = curl_easy_setopt(m_curl->get_curl(), CURLOPT_URL, url.c_str());
 	if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_URL, %s) error: %s", url, curl_easy_strerror(err));
 
@@ -63,6 +83,8 @@ void downloader::start(const std::string& url, bool follow_location, bool show_p
 
 	m_thread = QThread::create([this]
 	{
+		thread_base::set_name("Downloader");
+
 		// Reset error buffer before we call curl_easy_perform
 		m_curl->reset_error_buffer();
 
@@ -77,7 +99,7 @@ void downloader::start(const std::string& url, bool follow_location, bool show_p
 		}
 	});
 
-	connect(m_thread, &QThread::finished, this, [this]()
+	connect(m_thread, &QThread::finished, this, [=, this]()
 	{
 		if (m_curl_abort)
 		{
@@ -93,13 +115,28 @@ void downloader::start(const std::string& url, bool follow_location, bool show_p
 		if (m_curl_success)
 		{
 			network_log.notice("Download finished");
+
+			if (check_return_code && m_download_attempts < 3)
+			{
+				const QJsonObject json_data = QJsonDocument::fromJson(m_curl_buf).object();
+				const int return_code = json_data["return_code"].toInt(-255);
+
+				if (return_code == -255)
+				{
+					network_log.error("Error during download. Trying to download again (attempts=%d, return_code=%d)", m_download_attempts, return_code);
+					std::this_thread::sleep_for(500ms); // Wait for a little while
+					start(url, follow_location, show_progress_dialog, check_return_code, progress_dialog_title, keep_progress_dialog_open, expected_size, true);
+					return;
+				}
+			}
+
 			Q_EMIT signal_download_finished(m_curl_buf);
 		}
 	});
 
 	// The downloader's signals are expected to be disconnected and customized before start is called.
 	// Therefore we need to (re)connect its signal(s) here and not in the constructor.
-	connect(this, &downloader::signal_buffer_update, this, &downloader::handle_buffer_update);
+	connect(this, &downloader::signal_buffer_update, this, &downloader::handle_buffer_update, static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::UniqueConnection));
 
 	if (show_progress_dialog)
 	{
@@ -169,7 +206,7 @@ usz downloader::update_buffer(char* data, usz size)
 	const auto old_size = m_curl_buf.size();
 	const auto new_size = old_size + size;
 	m_curl_buf.resize(static_cast<int>(new_size));
-	memcpy(m_curl_buf.data() + old_size, data, size);
+	std::memcpy(m_curl_buf.data() + old_size, data, size);
 
 	int max = 0;
 
@@ -197,6 +234,5 @@ void downloader::handle_buffer_update(int size, int max) const
 	{
 		m_progress_dialog->SetRange(0, max > 0 ? max : m_progress_dialog->maximum());
 		m_progress_dialog->SetValue(size);
-		QApplication::processEvents();
 	}
 }

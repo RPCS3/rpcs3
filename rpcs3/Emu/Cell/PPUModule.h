@@ -283,6 +283,7 @@ public:
 	static const ppu_static_module libsnd3;
 	static const ppu_static_module libsynth2;
 	static const ppu_static_module sceNp;
+	static const ppu_static_module sceNpBasicLimited;
 	static const ppu_static_module sceNp2;
 	static const ppu_static_module sceNpClans;
 	static const ppu_static_module sceNpCommerce2;

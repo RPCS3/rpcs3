@@ -18,7 +18,7 @@
 #include <QSlider>
 #include <QComboBox>
 
-LOG_CHANNEL(logitech_g27_cfg_log, "LOGIG27");
+LOG_CHANNEL(logitech_g27_cfg_log, "logitech_g27");
 
 static const QString DEFAULT_STATUS = " ";
 
@@ -57,9 +57,11 @@ enum class mapping_device
 
 	DIAL_CLOCKWISE,
 	DIAL_ANTICLOCKWISE,
+	DIAL_CENTER,
 
 	SELECT,
-	PAUSE,
+	START,
+	PS,
 
 	SHIFTER_1,
 	SHIFTER_2,
@@ -68,7 +70,6 @@ enum class mapping_device
 	SHIFTER_5,
 	SHIFTER_6,
 	SHIFTER_R,
-	SHIFTER_PRESS,
 
 	// Enum count
 	COUNT
@@ -97,12 +98,14 @@ QString device_name(mapping_device dev)
 	case mapping_device::L3: return QObject::tr("L3");
 	case mapping_device::R2: return QObject::tr("R2");
 	case mapping_device::R3: return QObject::tr("R3");
-	case mapping_device::PLUS: return QObject::tr("L4");
-	case mapping_device::MINUS: return QObject::tr("L5");
-	case mapping_device::DIAL_CLOCKWISE: return QObject::tr("R4");
-	case mapping_device::DIAL_ANTICLOCKWISE: return QObject::tr("R5");
+	case mapping_device::PLUS: return QObject::tr("L4\nPlus");
+	case mapping_device::MINUS: return QObject::tr("L5\nMinus");
+	case mapping_device::DIAL_CLOCKWISE: return QObject::tr("R4\nDial CW");
+	case mapping_device::DIAL_ANTICLOCKWISE: return QObject::tr("R5\nDial CCW");
+	case mapping_device::DIAL_CENTER: return QObject::tr("Dial Center");
 	case mapping_device::SELECT: return QObject::tr("Select");
-	case mapping_device::PAUSE: return QObject::tr("Pause");
+	case mapping_device::START: return QObject::tr("Start");
+	case mapping_device::PS: return QObject::tr("PS");
 	case mapping_device::SHIFTER_1: return QObject::tr("Gear 1");
 	case mapping_device::SHIFTER_2: return QObject::tr("Gear 2");
 	case mapping_device::SHIFTER_3: return QObject::tr("Gear 3");
@@ -110,7 +113,6 @@ QString device_name(mapping_device dev)
 	case mapping_device::SHIFTER_5: return QObject::tr("Gear 5");
 	case mapping_device::SHIFTER_6: return QObject::tr("Gear 6");
 	case mapping_device::SHIFTER_R: return QObject::tr("Gear R");
-	case mapping_device::SHIFTER_PRESS: return QObject::tr("Shifter press");
 	case mapping_device::COUNT: return "";
 	}
 	return "";
@@ -144,8 +146,10 @@ emulated_logitech_g27_mapping& device_cfg(mapping_device dev)
 	case mapping_device::MINUS: return cfg.minus;
 	case mapping_device::DIAL_CLOCKWISE: return cfg.dial_clockwise;
 	case mapping_device::DIAL_ANTICLOCKWISE: return cfg.dial_anticlockwise;
+	case mapping_device::DIAL_CENTER: return cfg.dial_center;
 	case mapping_device::SELECT: return cfg.select;
-	case mapping_device::PAUSE: return cfg.pause;
+	case mapping_device::START: return cfg.start;
+	case mapping_device::PS: return cfg.ps;
 	case mapping_device::SHIFTER_1: return cfg.shifter_1;
 	case mapping_device::SHIFTER_2: return cfg.shifter_2;
 	case mapping_device::SHIFTER_3: return cfg.shifter_3;
@@ -153,7 +157,6 @@ emulated_logitech_g27_mapping& device_cfg(mapping_device dev)
 	case mapping_device::SHIFTER_5: return cfg.shifter_5;
 	case mapping_device::SHIFTER_6: return cfg.shifter_6;
 	case mapping_device::SHIFTER_R: return cfg.shifter_r;
-	case mapping_device::SHIFTER_PRESS: return cfg.shifter_press;
 	default: fmt::throw_exception("Unexpected mapping_device %d", static_cast<int>(dev));
 	}
 }
@@ -165,6 +168,7 @@ public:
 		: QWidget(parent)
 	{
 		auto layout = new QHBoxLayout(this);
+		layout->setContentsMargins(0, 0, 0, 0);
 		setLayout(layout);
 
 		QLabel* label = new QLabel(this);
@@ -245,6 +249,7 @@ public:
 
 		QWidget* horizontal_container = new QWidget(this);
 		QHBoxLayout* horizontal_layout = new QHBoxLayout(horizontal_container);
+		horizontal_layout->setContentsMargins(0, 0, 0, 0);
 		horizontal_container->setLayout(horizontal_layout);
 
 		layout->addWidget(horizontal_container);
@@ -542,6 +547,7 @@ void emulated_logitech_g27_settings_dialog::save_ui_state_to_config()
 
 	g_cfg_logitech_g27.enabled.set(m_enabled->isChecked());
 	g_cfg_logitech_g27.reverse_effects.set(m_reverse_effects->isChecked());
+	g_cfg_logitech_g27.compatibility_limit.set(m_compatibility_limit->currentData().toInt());
 
 	if (m_ffb_device->get_device_choice() == mapping_device::NONE)
 	{
@@ -591,6 +597,7 @@ void emulated_logitech_g27_settings_dialog::load_ui_state_from_config()
 
 	m_enabled->setChecked(g_cfg_logitech_g27.enabled.get());
 	m_reverse_effects->setChecked(g_cfg_logitech_g27.reverse_effects.get());
+	m_compatibility_limit->setCurrentIndex(4 - g_cfg_logitech_g27.compatibility_limit.get());
 }
 
 emulated_logitech_g27_settings_dialog::emulated_logitech_g27_settings_dialog(QWidget* parent)
@@ -650,6 +657,18 @@ emulated_logitech_g27_settings_dialog::emulated_logitech_g27_settings_dialog(QWi
 
 	m_reverse_effects = new QCheckBox(tr("Reverse force feedback effects"), this);
 	v_layout->addWidget(m_reverse_effects);
+
+	QHBoxLayout* compat_layout = new QHBoxLayout(this);
+	compat_layout->setContentsMargins(0, 0, 0, 0);
+	QLabel* compatibility_label = new QLabel(tr("Compatibility limit:"), this);
+	compat_layout->addWidget(compatibility_label);
+	m_compatibility_limit = new QComboBox(this);
+	m_compatibility_limit->addItem(tr("G27 (Default)"), static_cast<u8>(logitech_personality::g27));
+	m_compatibility_limit->addItem(tr("Driving Force GT"), static_cast<u8>(logitech_personality::driving_force_gt));
+	m_compatibility_limit->addItem(tr("G25"), static_cast<u8>(logitech_personality::g25));
+	m_compatibility_limit->addItem(tr("Driving Force Pro"), static_cast<u8>(logitech_personality::driving_force_pro));
+	compat_layout->addWidget(m_compatibility_limit);
+	v_layout->addLayout(compat_layout);
 
 	m_state_text = new QLabel(DEFAULT_STATUS, this);
 	v_layout->addWidget(m_state_text);

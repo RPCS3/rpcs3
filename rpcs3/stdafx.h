@@ -22,3 +22,7 @@
 #include <unordered_map> // IWYU pragma: export
 #include <algorithm>     // IWYU pragma: export
 #include <string_view>   // IWYU pragma: export
+
+#if defined(__INTELLISENSE__) && !defined(LLVM_AVAILABLE)
+#define LLVM_AVAILABLE
+#endif
