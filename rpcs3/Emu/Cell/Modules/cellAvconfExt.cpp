@@ -524,19 +524,11 @@ error_code cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<f32> screenSize)
 	{
 		// Return Playstation 3D display value
 		// Some games call this function when 3D is enabled
-		*screenSize = 24.f;
+		*screenSize = static_cast<f32>(g_cfg.video.screen_size.get());
 		return CELL_OK;
 	}
 
-	//	TODO: Use virtual screen size
-#ifdef _WIN32
-	//	HDC screen = GetDC(NULL);
-	//	float diagonal = roundf(sqrtf((powf(float(GetDeviceCaps(screen, HORZSIZE)), 2) + powf(float(GetDeviceCaps(screen, VERTSIZE)), 2))) * 0.0393f);
-#else
-	// TODO: Linux implementation, without using wx
-	// float diagonal = roundf(sqrtf((powf(wxGetDisplaySizeMM().GetWidth(), 2) + powf(wxGetDisplaySizeMM().GetHeight(), 2))) * 0.0393f);
-#endif
-
+	// Let's just return not set for now
 	return CELL_VIDEO_OUT_ERROR_VALUE_IS_NOT_SET;
 }
 

@@ -581,6 +581,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	// 3D
 	m_emu_settings->EnhanceComboBox(ui->stereoRenderMode, emu_settings_type::StereoRenderMode);
 	m_emu_settings->EnhanceCheckBox(ui->stereoRenderEnabled, emu_settings_type::StereoRenderEnabled);
+	m_emu_settings->EnhanceSpinBox(ui->sb_screen_size, emu_settings_type::ScreenSize);
 	SubscribeTooltip(ui->gb_stereo, tooltips.settings.stereo_render_mode);
 	if (game)
 	{
@@ -591,6 +592,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			const bool stereo_enabled = ui->stereoRenderEnabled->checkState() == Qt::CheckState::Checked;
 			ui->stereoRenderMode->setEnabled(stereo_allowed && stereo_enabled);
 			ui->stereoRenderEnabled->setEnabled(stereo_allowed);
+			ui->gb_screen_size->setEnabled(stereo_allowed && stereo_enabled);
 		};
 		connect(ui->resBox, &QComboBox::currentIndexChanged, this, [enable_3D_modes](int){ enable_3D_modes(); });
 		connect(ui->stereoRenderEnabled, &QCheckBox::checkStateChanged, this, [enable_3D_modes](Qt::CheckState){ enable_3D_modes(); });
