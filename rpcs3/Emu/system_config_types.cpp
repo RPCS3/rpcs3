@@ -681,6 +681,7 @@ void fmt_class_string<stereo_render_mode_options>::format(std::string& out, u64 
 			case stereo_render_mode_options::anaglyph_magenta_cyan: return "Anaglyph Magenta-Cyan";
 			case stereo_render_mode_options::anaglyph_trioscopic: return "Anaglyph Trioscopic";
 			case stereo_render_mode_options::anaglyph_amber_blue: return "Anaglyph Amber-Blue";
+			case stereo_render_mode_options::anaglyph_custom: return "Anaglyph Custom";
 			}
 
 			return unknown;

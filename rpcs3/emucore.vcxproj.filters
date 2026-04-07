@@ -1435,6 +1435,9 @@
     <ClCompile Include="Loader\iso_validation.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
+    <ClCompile Include="..\Utilities\stereo_config.cpp">
+      <Filter>Utilities</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2880,6 +2883,9 @@
     </ClInclude>
     <ClInclude Include="Loader\iso_validation.h">
       <Filter>Loader</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Utilities\stereo_config.h">
+      <Filter>Utilities</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

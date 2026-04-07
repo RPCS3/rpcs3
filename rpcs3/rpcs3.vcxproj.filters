@@ -1311,6 +1311,9 @@
     <ClCompile Include="rpcs3qt\iso_integrity.cpp">
       <Filter>Gui\game list</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\anaglyph_settings_dialog.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1561,6 +1564,9 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\steam_utils.h">
       <Filter>Gui\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\anaglyph_settings_dialog.h">
+      <Filter>Gui\settings</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

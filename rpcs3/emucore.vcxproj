@@ -59,6 +59,7 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\Utilities\stereo_config.cpp" />
     <ClCompile Include="..\Utilities\cheat_info.cpp" />
     <ClCompile Include="..\Utilities\date_time.cpp" />
     <ClCompile Include="..\Utilities\stack_trace.cpp" />
@@ -574,6 +575,7 @@
   <ItemGroup>
     <ClInclude Include="..\3rdparty\stblib\stb\stb_image.h" />
     <ClInclude Include="..\Utilities\address_range.h" />
+    <ClInclude Include="..\Utilities\stereo_config.h" />
     <ClInclude Include="..\Utilities\cheat_info.h" />
     <ClInclude Include="..\Utilities\deferred_op.hpp" />
     <ClInclude Include="..\Utilities\simple_ringbuf.h" />

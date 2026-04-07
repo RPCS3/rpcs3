@@ -234,6 +234,15 @@ struct cfg_root : cfg::node
 
 		} shader_preloading_dialog{ this };
 
+		struct anaglyph_matrices : cfg::node
+		{
+			anaglyph_matrices(cfg::node* _this) : cfg::node(_this, "Custom Anaglyph Matrices") {}
+
+			cfg::node_map_entry left{ this, "Matrix Left" };
+			cfg::node_map_entry right{ this, "Matrix Right" };
+
+		} custom_anaglyph_matrices{ this };
+
 	} video{ this };
 
 	struct node_audio : cfg::node

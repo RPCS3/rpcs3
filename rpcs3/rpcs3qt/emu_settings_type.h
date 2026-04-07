@@ -112,6 +112,10 @@ enum class emu_settings_type
 	RecordWithOverlays,
 	DisableHWTexelRemapping,
 
+	// Anaglyph Matrix
+	CustomAnaglyphMatrixLeft,
+	CustomAnaglyphMatrixRight,
+
 	// Performance Overlay
 	PerfOverlayEnabled,
 	PerfOverlayFramerateGraphEnabled,

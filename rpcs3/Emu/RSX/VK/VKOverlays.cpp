@@ -14,6 +14,7 @@
 #include "../Program/RSXOverlay.h"
 
 #include "util/fnv_hash.hpp"
+#include "Utilities/stereo_config.h"
 
 #include "Emu/Cell/timers.hpp"
 
@@ -911,17 +912,27 @@ namespace vk
 
 	void video_out_calibration_pass::update_uniforms(vk::command_buffer& cmd, vk::glsl::program* program)
 	{
-		vkCmdPushConstants(cmd, program->layout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, 16, config.data);
+		vkCmdPushConstants(cmd, program->layout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(config.data), config.data);
 	}
 
 	void video_out_calibration_pass::run(vk::command_buffer& cmd, const areau& viewport, vk::framebuffer* target,
 		const rsx::simple_array<vk::viewable_image*>& src, f32 gamma, bool limited_rgb,
-		bool stereo_enabled, stereo_render_mode_options stereo_mode, VkRenderPass render_pass)
+		bool stereo_enabled, VkRenderPass render_pass)
 	{
+		static stereo_config stereo_cfg = stereo_config(true);
+		stereo_cfg.update_from_config(stereo_enabled);
+		const auto& matrices = stereo_cfg.matrices();
+
 		config.gamma = gamma;
-		config.limit_range = limited_rgb? 1 : 0;
-		config.stereo_display_mode = stereo_enabled ? static_cast<u8>(stereo_mode) : 0;
+		config.limit_range = limited_rgb ? 1 : 0;
+		config.stereo_display_mode = static_cast<u8>(stereo_cfg.stereo_mode());
 		config.stereo_image_count = std::min(::size32(src), 2u);
+
+		for (u32 i = 0; i < 3; i++)
+		{
+			std::memcpy(config.left_anaglyph_matrix[i].rgba, matrices.left[i].rgb, sizeof(matrices.left[i].rgb));
+			std::memcpy(config.right_anaglyph_matrix[i].rgba, matrices.right[i].rgb, sizeof(matrices.right[i].rgb));
+		}
 
 		std::vector<vk::image_view*> views;
 		views.reserve(2);

@@ -558,6 +558,22 @@
                 <widget class="QComboBox" name="stereoRenderMode"/>
                </item>
                <item>
+                <widget class="QGroupBox" name="gb_anaglyph_settings">
+                 <property name="title">
+                  <string>Anaglyph Settings</string>
+                 </property>
+                 <layout class="QHBoxLayout" name="layout_gb_anaglyph_settings">
+                  <item>
+                   <widget class="QPushButton" name="pb_anaglyph_settings">
+                    <property name="text">
+                     <string>Configure</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+               <item>
                 <widget class="QGroupBox" name="gb_screen_size">
                  <property name="title">
                   <string>Screen Size (Inch)</string>
