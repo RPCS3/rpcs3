@@ -37,62 +37,82 @@ bool is_file_iso(const fs::file& file)
 const int ISO_BLOCK_SIZE = 2048;
 
 template<typename T>
-inline T read_both_endian_int(fs::file& file)
+inline T retrieve_endian_int(const u8* buf)
 {
-	T out;
+	T out {};
 
-	if (std::endian::little == std::endian::native)
+	if constexpr (std::endian::little == std::endian::native)
 	{
-		out = file.read<T>();
-		file.seek(sizeof(T), fs::seek_cur);
+		// first half = little-endian copy
+		std::memcpy(&out, buf, sizeof(T));
 	}
 	else
 	{
-		file.seek(sizeof(T), fs::seek_cur);
-		out = file.read<T>();
+		// second half = big-endian copy
+		std::memcpy(&out, buf + sizeof(T), sizeof(T));
 	}
 
 	return out;
 }
 
 // assumed that directory_entry is at file head
-std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& file, bool names_in_ucs2 = false)
+static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, bool names_in_ucs2 = false)
 {
-	const auto start_pos = file.pos();
-	const u8 entry_length = file.read<u8>();
+	const auto start_pos = entry.pos();
+	const u8 entry_length = entry.read<u8>();
 
 	if (entry_length == 0) return std::nullopt;
 
-	file.seek(1, fs::seek_cur);
-	const u32 start_sector = read_both_endian_int<u32>(file);
-	const u32 file_size = read_both_endian_int<u32>(file);
+	// Batch this set of file reads. This reduces overall time spent in iso_read_directory_entry by ~41%
+#pragma pack(push, 1)
+	struct iso_entry_header
+	{
+		//u8 entry_length; // Handled separately
+		u8 extended_attribute_length;
+		u8 start_sector[8];
+		u8 file_size[8];
+		u8 year;
+		u8 month;
+		u8 day;
+		u8 hour;
+		u8 minute;
+		u8 second;
+		u8 timezone_value;
+		u8 flags;
+		u8 file_unit_size;
+		u8 interleave;
+		u8 volume_sequence_number[4];
+		u8 file_name_length;
+		//u8 file_name[file_name_length]; // Handled separately
+	};
+#pragma pack(pop)
+	static_assert(sizeof(iso_entry_header) == 32);
+
+	const iso_entry_header header = entry.read<iso_entry_header>();
+
+	const u32 start_sector = retrieve_endian_int<u32>(header.start_sector);
+	const u32 file_size = retrieve_endian_int<u32>(header.file_size);
 
 	std::tm file_date = {};
-	file_date.tm_year = file.read<u8>();
-	file_date.tm_mon = file.read<u8>() - 1;
-	file_date.tm_mday = file.read<u8>();
-	file_date.tm_hour = file.read<u8>();
-	file_date.tm_min = file.read<u8>();
-	file_date.tm_sec = file.read<u8>();
-	const s16 timezone_value = file.read<u8>();
+	file_date.tm_year = header.year;
+	file_date.tm_mon = header.month - 1;
+	file_date.tm_mday = header.day;
+	file_date.tm_hour = header.hour;
+	file_date.tm_min = header.minute;
+	file_date.tm_sec = header.second;
+	const s16 timezone_value = header.timezone_value;
 	const s16 timezone_offset = (timezone_value - 50) * 15 * 60;
 
 	const std::time_t date_time = std::mktime(&file_date) + timezone_offset;
 
-	const u8 flags = file.read<u8>();
-
 	// 2nd flag bit indicates whether a given fs node is a directory
-	const bool is_directory = flags & 0b00000010;
-	const bool has_more_extents = flags & 0b10000000;
-
-	file.seek(6, fs::seek_cur);
-
-	const u8 file_name_length = file.read<u8>();
+	const bool is_directory = header.flags & 0b00000010;
+	const bool has_more_extents = header.flags & 0b10000000;
 
 	std::string file_name;
-	file.read(file_name, file_name_length);
+	entry.read(file_name, header.file_name_length);
 
-	if (file_name_length == 1 && file_name[0] == 0)
+	if (header.file_name_length == 1 && file_name[0] == 0)
 	{
 		file_name = ".";
 	}
@@ -104,7 +124,7 @@ std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& file, bool nam
 	{
 		// characters are stored in big endian format.
 		std::u16string utf16;
-		utf16.resize(file_name_length / 2);
+		utf16.resize(header.file_name_length / 2);
 
 		const u16* raw = reinterpret_cast<const u16*>(file_name.data());
 		for (size_t i = 0; i < utf16.size(); ++i, raw++)
@@ -120,13 +140,13 @@ std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& file, bool nam
 		file_name.erase(file_name.end() - 2, file_name.end());
 	}
 
-	if (file_name_length > 1 && file_name.ends_with("."))
+	if (header.file_name_length > 1 && file_name.ends_with("."))
 	{
 		file_name.pop_back();
 	}
 
 	// skip the rest of the entry.
-	file.seek(entry_length + start_pos);
+	entry.seek(entry_length + start_pos);
 
 	return iso_fs_metadata
 	{
@@ -180,6 +200,7 @@ void iso_form_hierarchy(fs::file& file, iso_fs_node& node, bool use_ucs2_decodin
 				selected_node->metadata.extents.push_back(entry->extents[0]);
 
 				extent_added = true;
+				break;
 			}
 		}
 

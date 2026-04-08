@@ -1731,24 +1731,34 @@ namespace rsx
 			}
 			case deferred_request_command::cubemap_unwrap:
 			{
-				rsx::simple_array<copy_region_descriptor> sections(6);
-				for (u16 n = 0; n < 6; ++n)
+				rsx::simple_array<copy_region_descriptor> sections(6 * desc.mipmaps);
+				for (u16 n = 0, section_id = 0; n < 6; ++n)
 				{
-					sections[n] =
+					u16 mip_w = desc.width, mip_h = desc.height;
+					u16 y_offset = static_cast<u16>(desc.slice_h * n);
+
+					for (u8 mip = 0; mip < desc.mipmaps; ++mip)
 					{
-						.src = desc.external_handle,
-						.xform = surface_transform::coordinate_transform,
-						.level = 0,
-						.src_x = 0,
-						.src_y = static_cast<u16>(desc.slice_h * n),
-						.dst_x = 0,
-						.dst_y = 0,
-						.dst_z = n,
-						.src_w = desc.width,
-						.src_h = desc.height,
-						.dst_w = desc.width,
-						.dst_h = desc.height
-					};
+						sections[section_id++] =
+						{
+							.src = desc.external_handle,
+							.xform = surface_transform::coordinate_transform,
+							.level = mip,
+							.src_x = 0,
+							.src_y = y_offset,
+							.dst_x = 0,
+							.dst_y = 0,
+							.dst_z = n,
+							.src_w = mip_w,
+							.src_h = mip_h,
+							.dst_w = mip_w,
+							.dst_h = mip_h
+						};
+
+						y_offset += mip_h;
+						mip_w = std::max<u16>(mip_w / 2, 1);
+						mip_h = std::max<u16>(mip_h / 2, 1);
+					}
 				}
 
 				result = generate_cubemap_from_images(cmd, desc.gcm_format, desc.width, sections, desc.remap);

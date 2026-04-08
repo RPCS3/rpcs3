@@ -471,6 +471,10 @@ void VKGSRender::load_texture_env()
 				// Clamp min and max lod
 				actual_mipmaps = static_cast<f32>(sampler_state->external_subresource_desc.sections_to_copy.size());
 			}
+			else if (sampler_state->external_subresource_desc.op == rsx::deferred_request_command::cubemap_unwrap)
+			{
+				actual_mipmaps = static_cast<f32>(sampler_state->external_subresource_desc.mipmaps);
+			}
 			else
 			{
 				actual_mipmaps = 1.f;

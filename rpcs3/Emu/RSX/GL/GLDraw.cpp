@@ -384,7 +384,21 @@ void GLGSRender::load_texture_env()
 			}
 		}
 
-		m_fs_sampler_states[i].apply(tex, fs_sampler_state[i].get());
+		u32 actual_mipcount = 1;
+		if (sampler_state->upload_context == rsx::texture_upload_context::shader_read)
+		{
+			actual_mipcount = tex.get_exact_mipmap_count();
+		}
+		else if (sampler_state->external_subresource_desc.op == rsx::deferred_request_command::mipmap_gather)
+		{
+			actual_mipcount = sampler_state->external_subresource_desc.sections_to_copy.size();
+		}
+		else if (sampler_state->external_subresource_desc.op == rsx::deferred_request_command::cubemap_unwrap)
+		{
+			actual_mipcount = sampler_state->external_subresource_desc.mipmaps;
+		}
+
+		m_fs_sampler_states[i].apply(tex, fs_sampler_state[i].get(), actual_mipcount > 1);
 
 		const auto texture_format = sampler_state->format_ex.format();
 		// Depth format redirected to BGRA8 resample stage. Do not filter to avoid bits leaking.
