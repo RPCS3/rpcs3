@@ -4357,16 +4357,6 @@ public:
 		{
 			switch (op.ra)
 			{
-			case SPU_WrOutMbox:
-			{
-				res.value = wait_rchcnt(::offset32(&spu_thread::ch_out_mbox), true);
-				break;
-			}
-			case SPU_WrOutIntrMbox:
-			{
-				res.value = wait_rchcnt(::offset32(&spu_thread::ch_out_intr_mbox), true);
-				break;
-			}
 			case SPU_RdSigNotify1:
 			{
 				res.value = wait_rchcnt(::offset32(&spu_thread::ch_snr1));

@@ -2115,7 +2115,7 @@ void VKGSRender::load_program_env()
 
 	if (vk::emulate_conditional_rendering())
 	{
-		const vk::buffer& predicate = m_cond_render_buffer ? *m_cond_render_buffer : *vk::get_scratch_buffer(*m_current_command_buffer, 4);
+		const vk::buffer& predicate = m_cond_render_buffer ? *m_cond_render_buffer : *vk::get_scratch_buffer(*m_current_command_buffer, 4, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_ACCESS_NONE);
 		const u32 offset = cond_render_ctrl.hw_cond_active ? 0 : 4;
 		m_program->bind_uniform({ predicate, offset, 4 }, vk::glsl::binding_set_index_vertex, m_vs_binding_table->cr_pred_buffer_location);
 	}
@@ -2910,7 +2910,7 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 	else if (num_hw_queries > 0)
 	{
 		// We'll need to do some result aggregation using a compute shader.
-		auto scratch = vk::get_scratch_buffer(*m_current_command_buffer, num_hw_queries * 4);
+		vk::buffer* scratch = nullptr;
 
 		// Range latching. Because of how the query pool manages allocations using a stack, we get an inverse sequential set of handles/indices that we can easily group together.
 		// This drastically boosts performance on some drivers like the NVIDIA proprietary one that seems to have a rather high cost for every individual query transer command.
@@ -2918,6 +2918,11 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 
 		auto copy_query_range_impl = [&]()
 		{
+			if (!scratch)
+			{
+				scratch = vk::get_scratch_buffer(*m_current_command_buffer, num_hw_queries * 4, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT);
+			}
+
 			const auto count = (query_range.last - query_range.first + 1);
 			m_occlusion_query_manager->get_query_result_indirect(*m_current_command_buffer, query_range.first, count, scratch->value, dst_offset);
 			dst_offset += count * 4;
@@ -2964,7 +2969,7 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 		}
 
 		// Sanity check
-		ensure(dst_offset <= scratch->size());
+		ensure(scratch && dst_offset <= scratch->size());
 
 		if (!partial_eval)
 		{
