@@ -185,16 +185,23 @@ std::set<std::string> get_one_drive_paths()
 			fmt::append(buf, "\nSerialized Object: %s", g_tls_serialize_name);
 		}
 
-		const system_state state = Emu.GetStatus(false);
-
-		if (state == system_state::stopped)
+		if (Emulator::IsAvailable())
 		{
-			fmt::append(buf, "\nEmulation is stopped");
+			const system_state state = Emu.GetStatus(false);
+
+			if (state == system_state::stopped)
+			{
+				fmt::append(buf, "\nEmulation is stopped");
+			}
+			else
+			{
+				const std::string name = Emu.GetTitleAndTitleID();
+				fmt::append(buf, "\nTitle: \"%s\" (emulation is %s)", name.empty() ? "N/A" : name.c_str(), state == system_state::stopping ? "stopping" : "running");
+			}
 		}
 		else
 		{
-			const std::string& name = Emu.GetTitleAndTitleID();
-			fmt::append(buf, "\nTitle: \"%s\" (emulation is %s)", name.empty() ? "N/A" : name.data(), state == system_state::stopping ? "stopping" : "running");
+			fmt::append(buf, "\nEmulation object is unavailable (process teardown)");
 		}
 
 		fmt::append(buf, "\nBuild: \"%s\"", rpcs3::get_verbose_version());
