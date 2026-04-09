@@ -1,4 +1,5 @@
 #pragma once
+#include "../rsx_utils.h"
 #include <util/types.hpp>
 #include <util/bless.hpp>
 #include <span>
@@ -81,7 +82,11 @@ namespace rsx
 		std::span<T> as_span() const
 		{
 			auto bytes = data();
-			ensure((reinterpret_cast<uintptr_t>(bytes) & (sizeof(T) - 1)) == 0, "IO buffer span cast requires naturally aligned pointers.");
+			if ((reinterpret_cast<uintptr_t>(bytes) & (sizeof(T) - 1)) != 0)
+			{
+				rsx_log.error("IO buffer span cast requires naturally aligned pointers: data=0x%x, sizeof(T)=%d, unalignment=0x%x", 
+					reinterpret_cast<uintptr_t>(bytes), sizeof(T), (reinterpret_cast<uintptr_t>(bytes) & (sizeof(T) - 1)));
+			}
 			return { utils::bless<T>(bytes), m_size / sizeof(T) };
 		}
 
