@@ -656,7 +656,7 @@ int run_rpcs3(int argc, char** argv)
 	// Initialize thread pool finalizer (on first use)
 	static_cast<void>(named_thread("", [](int) {}));
 
-	static std::unique_ptr<logs::listener> log_file;
+	std::unique_ptr<logs::listener> log_file;
 	{
 		// Check free space
 		fs::device_stat stats{};
@@ -669,8 +669,16 @@ int run_rpcs3(int argc, char** argv)
 		log_file = logs::make_file_listener(log_name, stats.avail_free / 4);
 	}
 
-	static std::unique_ptr<fatal_error_listener> fatal_listener = std::make_unique<fatal_error_listener>();
+	auto fatal_listener = std::make_unique<fatal_error_listener>();
 	logs::listener::add(fatal_listener.get());
+
+	struct log_listener_shutdown_guard
+	{
+		~log_listener_shutdown_guard()
+		{
+			logs::listener::shutdown_all();
+		}
+	} log_listener_shutdown;
 
 	{
 		// Write RPCS3 version
