@@ -3543,7 +3543,7 @@
                     <number>1</number>
                    </property>
                    <property name="singleStep">
-                    <double>0.5</double>
+                    <double>0.500000000000000</double>
                    </property>
                   </widget>
                  </item>
@@ -3571,7 +3571,7 @@
                     <number>1</number>
                    </property>
                    <property name="singleStep">
-                    <double>0.5</double>
+                    <double>0.500000000000000</double>
                    </property>
                   </widget>
                  </item>
@@ -4310,9 +4310,30 @@
               </widget>
              </item>
              <item>
+              <widget class="QCheckBox" name="disableAsyncHostMM">
+               <property name="text">
+                <string>Disable Asynchronous Memory Manager</string>
+               </property>
+              </widget>
+             </item>
+             <item>
               <widget class="QCheckBox" name="disableFIFOReordering">
                <property name="text">
                 <string>Disable FIFO Reordering</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="disableHardwareTexelRemapping">
+               <property name="text">
+                <string>Disable Hardware ColorSpace Remapping</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QCheckBox" name="disableOnDiskShaderCache">
+               <property name="text">
+                <string>Disable On-Disk Shader Cache</string>
                </property>
               </widget>
              </item>
@@ -4383,27 +4404,6 @@
               </widget>
              </item>
              <item>
-              <widget class="QCheckBox" name="disableAsyncHostMM">
-               <property name="text">
-                <string>Disable Asynchronous Memory Manager</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QCheckBox" name="disableOnDiskShaderCache">
-               <property name="text">
-                <string>Disable On-Disk Shader Cache</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QCheckBox" name="disableHardwareTexelRemapping">
-               <property name="text">
-                <string>Disable Hardware ColorSpace Remapping</string>
-               </property>
-              </widget>
-             </item>
-             <item>
               <spacer name="verticalSpacerDebugGPU">
                <property name="orientation">
                 <enum>Qt::Orientation::Vertical</enum>
@@ -4429,13 +4429,6 @@
             </property>
             <layout class="QVBoxLayout" name="gb_debug_core_layout">
              <item>
-              <widget class="QCheckBox" name="accurateDFMA">
-               <property name="text">
-                <string>Accurate DFMA</string>
-               </property>
-              </widget>
-             </item>
-             <item>
               <widget class="QCheckBox" name="alwaysStart">
                <property name="text">
                 <string>Automatically start games after boot</string>
@@ -4457,20 +4450,6 @@
               </widget>
              </item>
              <item>
-              <widget class="QCheckBox" name="ppuDebug">
-               <property name="text">
-                <string>PPU Debug</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QCheckBox" name="spuDebug">
-               <property name="text">
-                <string>SPU Debug</string>
-               </property>
-              </widget>
-             </item>
-             <item>
               <widget class="QCheckBox" name="mfcDebug">
                <property name="text">
                 <string>MFC Debug</string>
@@ -4478,58 +4457,23 @@
               </widget>
              </item>
              <item>
+              <widget class="QCheckBox" name="ppuDebug">
+               <property name="text">
+                <string>PPU Debug</string>
+               </property>
+              </widget>
+             </item>
+             <item>
               <widget class="QCheckBox" name="setDAZandFTZ">
                <property name="text">
-                <string>Set DAZ and FTZ</string>
+                <string>PPU Set DAZ and FTZ</string>
                </property>
               </widget>
              </item>
              <item>
-              <widget class="QCheckBox" name="accuratePPUSAT">
+              <widget class="QCheckBox" name="spuDebug">
                <property name="text">
-                <string>Accurate PPU Saturation Bit</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QCheckBox" name="accuratePPUNJ">
-               <property name="text">
-                <string>Accurate PPU Non-Java Mode</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QCheckBox" name="ppuNJFixup">
-               <property name="text">
-                <string>PPU Non-Java Mode Fixup</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QCheckBox" name="accuratePPUVNAN">
-               <property name="text">
-                <string>Accurate PPU Vector NaN Handling</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QCheckBox" name="accuratePPUFPCC">
-               <property name="text">
-                <string>Accurate PPU Float Condition Control</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QCheckBox" name="accurateClineStores">
-               <property name="text">
-                <string>Accurate Cache Line Stores</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QCheckBox" name="fixupPPUVNAN">
-               <property name="text">
-                <string>PPU Vector NaN Fixup</string>
+                <string>SPU Debug</string>
                </property>
               </widget>
              </item>
@@ -4555,6 +4499,87 @@
                 </size>
                </property>
               </spacer>
+             </item>
+             <item>
+              <widget class="QGroupBox" name="gb_debug_cpu">
+               <property name="title">
+                <string>CPU Accuracy</string>
+               </property>
+               <layout class="QVBoxLayout" name="gb_debug_cpu_layout">
+                <item>
+                  <widget class="QCheckBox" name="accurateDFMA">
+                  <property name="text">
+                    <string>Accurate PPU/SPU Double-Precision FMA</string>
+                  </property>
+                  </widget>
+                </item>
+                <item>
+                 <widget class="QCheckBox" name="accurateClineStores">
+                  <property name="text">
+                   <string>Accurate PPU/SPU Cache Line Stores</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QCheckBox" name="accuratePPUFPCC">
+                  <property name="text">
+                   <string>Accurate PPU Float Condition Control</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QCheckBox" name="accuratePPUSAT">
+                  <property name="text">
+                   <string>Accurate PPU Saturation Bit</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QCheckBox" name="accuratePPUNJ">
+                  <property name="text">
+                   <string>Accurate PPU Non-Java Mode</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QCheckBox" name="accuratePPUVNAN">
+                  <property name="text">
+                   <string>Accurate PPU Vector NaN Handling</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QCheckBox" name="ppuNJFixup">
+                  <property name="text">
+                   <string>Approximate PPU Non-Java Mode</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QCheckBox" name="PPUVNANfixup">
+                  <property name="text">
+                   <string>Approximate PPU Vector NaN Handling</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <spacer name="verticalSpacerDebugCore">
+                  <property name="orientation">
+                   <enum>Qt::Orientation::Vertical</enum>
+                  </property>
+                  <property name="sizeType">
+                   <enum>QSizePolicy::Policy::MinimumExpanding</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>0</width>
+                    <height>0</height>
+                   </size>
+                  </property>
+                 </spacer>
+                </item>
+               </layout>
+              </widget>
              </item>
             </layout>
            </widget>
