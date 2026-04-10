@@ -181,6 +181,7 @@ private:
 	std::vector<path_entry> m_path_entries;
 	shared_mutex m_path_mutex;
 	std::set<std::string> m_path_list;
+	std::unordered_set<std::string> m_scanned_iso_paths;
 	QSet<QString> m_serials;
 	QMutex m_games_mutex;
 	lf_queue<game_info> m_games;

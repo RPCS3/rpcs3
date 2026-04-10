@@ -5,6 +5,7 @@
 #include "util/types.hpp"
 
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 // Cached metadata extracted from an ISO during game list scanning.
@@ -25,4 +26,7 @@ namespace iso_cache
 
 	// Persists a populated cache entry to disk.
 	void save(const std::string& iso_path, const iso_metadata_cache_entry& entry);
+
+	// Remove cache entries for ISOs that are no longer in the scanned set.
+	void cleanup(const std::unordered_set<std::string>& valid_iso_paths);
 }

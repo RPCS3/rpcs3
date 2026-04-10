@@ -542,6 +542,9 @@ void game_list_frame::OnParsingFinished()
 			{
 				archive = std::make_unique<iso_archive>(dir_or_elf);
 			}
+			// Track this ISO path for cache cleanup after scan completes.
+			std::lock_guard lock(m_path_mutex);
+			m_scanned_iso_paths.insert(dir_or_elf);
 		}
 
 		const auto file_exists = [&archive, &cache_entry](const std::string& path)
@@ -892,6 +895,9 @@ void game_list_frame::OnRefreshFinished()
 	WaitAndAbortSizeCalcThreads();
 	WaitAndAbortRepaintThreads();
 
+	// Remove cache entries for ISOs that are no longer present in the scanned paths.
+	iso_cache::cleanup(m_scanned_iso_paths);
+
 	for (auto&& g : m_games.pop_all())
 	{
 		m_game_data.push_back(g);
@@ -978,6 +984,7 @@ void game_list_frame::OnRefreshFinished()
 	m_serials.clear();
 	m_path_list.clear();
 	m_path_entries.clear();
+	m_scanned_iso_paths.clear();
 
 	Refresh();
 

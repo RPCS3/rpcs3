@@ -6,6 +6,8 @@
 #include "util/fnv_hash.hpp"
 #include "Utilities/File.h"
 
+#include <unordered_set>
+
 LOG_CHANNEL(iso_cache_log, "ISOCache");
 
 namespace
@@ -125,6 +127,32 @@ namespace iso_cache
 			if (fs::file png_file(png_path, fs::rewrite); png_file)
 			{
 				png_file.write(entry.icon_data);
+			}
+		}
+	}
+
+	void cleanup(const std::unordered_set<std::string>& valid_iso_paths)
+	{
+		const std::string dir = get_cache_dir();
+
+		// Build a set of stems that should exist.
+		std::unordered_set<std::string> valid_stems;
+		for (const std::string& path : valid_iso_paths)
+		{
+			valid_stems.insert(get_cache_stem(path));
+		}
+
+		// Delete any cache files whose stem is not in the valid set.
+		fs::dir cache_dir(dir);
+		fs::dir_entry entry{};
+		while (cache_dir.read(entry))
+		{
+			if (entry.name == "." || entry.name == "..") continue;
+
+			const std::string stem = entry.name.substr(0, entry.name.find_last_of('.'));
+			if (valid_stems.find(stem) == valid_stems.end())
+			{
+				fs::remove_file(dir + entry.name);
 			}
 		}
 	}
