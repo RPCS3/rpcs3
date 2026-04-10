@@ -6,8 +6,6 @@
 #include "util/fnv_hash.hpp"
 #include "Utilities/File.h"
 
-#include <fmt/core.h>
-
 LOG_CHANNEL(iso_cache_log, "ISOCache");
 
 namespace
@@ -28,7 +26,7 @@ namespace
 			hash ^= static_cast<u8>(c);
 			hash *= rpcs3::fnv_prime;
 		}
-		return fmt::format("{:016x}", hash);
+		return fmt::format("%016llx", hash);
 	}
 }
 
@@ -99,7 +97,7 @@ namespace iso_cache
 
 		YAML::Emitter out;
 		out << YAML::BeginMap;
-		out << YAML::Key << "mtime"      << YAML::Value << entry.mtime;
+		out << YAML::Key << "mtime"      << YAML::Value << static_cast<long long>(entry.mtime);
 		out << YAML::Key << "icon_path"  << YAML::Value << entry.icon_path;
 		out << YAML::Key << "movie_path" << YAML::Value << entry.movie_path;
 		out << YAML::Key << "audio_path" << YAML::Value << entry.audio_path;
@@ -107,7 +105,7 @@ namespace iso_cache
 
 		if (fs::file yml_file(yml_path, fs::rewrite); yml_file)
 		{
-			yml_file.write(std::string_view(out.c_str(), out.size()));
+			yml_file.write(out.c_str(), out.size());
 		}
 		else
 		{
