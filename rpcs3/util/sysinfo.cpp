@@ -819,7 +819,6 @@ utils::OS_version utils::get_OS_version()
 			RegCloseKey(hKey);
 		}
 	}
-#endif
 #elif defined (__APPLE__)
 	res.version_major = Darwin_Version::getNSmajorVersion();
 	res.version_minor = Darwin_Version::getNSminorVersion();
