@@ -7,12 +7,12 @@
 #if defined(ARCH_ARM64)
 #include "Emu/CPU/Backends/AArch64/AArch64Common.h"
 #endif
-
 #ifdef _WIN32
 #include "windows.h"
 #include "sysinfoapi.h"
 #include "subauth.h"
 #include "stringapiset.h"
+DYNAMIC_IMPORT("ntdll.dll", RtlGetVersion, NTSTATUS(OSVERSIONINFOW* lpVersionInformation));
 #else
 #include <unistd.h>
 #include <sys/resource.h>
