@@ -74,6 +74,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	m_game_list->installEventFilter(this);
 	m_game_list->verticalScrollBar()->installEventFilter(this);
 
+	m_iso_integrity = new iso_integrity(this);
 	m_game_compat = new game_compatibility(m_gui_settings, this);
 	m_config_db = new config_database(m_gui_settings, this);
 

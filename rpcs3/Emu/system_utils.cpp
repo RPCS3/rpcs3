@@ -241,6 +241,21 @@ namespace rpcs3::utils
 		return cache_dir;
 	}
 
+	std::string get_redump_dir()
+	{
+		return fs::get_config_dir() /*+ "data/redump/"*/; // TO BE FINALIZED WITH A PROPER FOLDER!
+	}
+
+	std::string get_redump_db_path()
+	{
+		return get_redump_dir() + "redump.dat";
+	}
+
+	std::string get_redump_db_download_url()
+	{
+		return "http://redump.org/datfile/ps3/"; // TO BE FINALIZED WITH A PROPER URL!
+	}
+
 	std::string get_data_dir()
 	{
 		return fs::get_config_dir() + "data/";

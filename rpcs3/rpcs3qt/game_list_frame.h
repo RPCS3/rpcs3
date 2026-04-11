@@ -7,6 +7,7 @@
 #include "Utilities/mutex.h"
 #include "util/auto_typemap.hpp"
 #include "Emu/config_mode.h"
+#include "rpcs3qt/iso_integrity.h"
 
 #include <QMainWindow>
 #include <QStackedWidget>
@@ -54,6 +55,7 @@ public:
 
 	void SetShowHidden(bool show);
 
+	iso_integrity* GetIsoIntegrity() const { return m_iso_integrity; }
 	game_compatibility* GetGameCompatibility() const { return ensure(m_game_compat); }
 	config_database* GetConfigDatabase() const { return ensure(m_config_db); }
 	const std::vector<game_info>& GetGameInfo() const { return m_game_data; }
@@ -153,6 +155,7 @@ private:
 
 	// Game List
 	game_list_table* m_game_list = nullptr;
+	iso_integrity* m_iso_integrity = nullptr;
 	game_compatibility* m_game_compat = nullptr;
 	config_database* m_config_db = nullptr;
 	progress_dialog* m_progress_dialog = nullptr;
