@@ -794,38 +794,14 @@ utils::OS_version utils::get_OS_version()
 #endif
 
 #ifdef _WIN32
-	// RtlGetVersion has been exported by ntdll.dll since Windows XP
-	//
-	using RtlGetVersionPtr = NTSTATUS(WINAPI*)(PRTL_OSVERSIONINFOW);
-	const auto rtl_get_version = reinterpret_cast<RtlGetVersionPtr>(
-	    GetProcAddress(GetModuleHandleW(L"ntdll.dll"), "RtlGetVersion"));
+	OSVERSIONINFOW osvi{};
+	osvi.dwOSVersionInfoSize = sizeof(osvi);
 
-	// In the (extremely) unlikely case this function is not found, fall back to the registry
-	if (rtl_get_version)
-	{
-	    OSVERSIONINFOW osvi{};
-	    osvi.dwOSVersionInfoSize = sizeof(osvi);
-	    rtl_get_version(&osvi);
-	    res.version_major = osvi.dwMajorVersion;
-	    res.version_minor = osvi.dwMinorVersion;
-	    res.version_patch = osvi.dwBuildNumber;
-	}
-	else
-	{
-		HKEY hKey;
-		if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", 0, KEY_READ, &hKey) == ERROR_SUCCESS)
-		{
-			const auto [check_major, version_major] = read_reg_dword(hKey, "CurrentMajorVersionNumber");
-			const auto [check_minor, version_minor] = read_reg_dword(hKey, "CurrentMinorVersionNumber");
-			const auto [check_build, version_patch] = read_reg_sz(hKey, "CurrentBuildNumber");
-	
-			if (check_major) res.version_major = version_major;
-			if (check_minor) res.version_minor = version_minor;
-			if (check_build) res.version_patch = stoi(version_patch);
-	
-			RegCloseKey(hKey);
-		}
-	}
+	// According to MSDN, this API always returns STATUS_SUCCESS
+	RtlGetVersion(&osvi);
+	res.version_major = osvi.dwMajorVersion;
+	res.version_minor = osvi.dwMinorVersion;
+	res.version_patch = osvi.dwBuildNumber;
 #endif
 #elif defined (__APPLE__)
 	res.version_major = Darwin_Version::getNSmajorVersion();
