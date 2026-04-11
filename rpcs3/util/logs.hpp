@@ -98,6 +98,9 @@ namespace logs
 		// Flush log to disk
 		static void sync_all();
 
+		// Detach all listeners before controlled shutdown tears them down.
+		static void shutdown_all();
+
 		// Close file handle after flushing to disk (hazardous)
 		static void close_all_prematurely();
 	};
