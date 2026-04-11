@@ -7,12 +7,13 @@
 #if defined(ARCH_ARM64)
 #include "Emu/CPU/Backends/AArch64/AArch64Common.h"
 #endif
-
 #ifdef _WIN32
 #include "windows.h"
 #include "sysinfoapi.h"
 #include "subauth.h"
 #include "stringapiset.h"
+#include "util/dyn_lib.hpp"
+DYNAMIC_IMPORT("ntdll.dll", RtlGetVersion, NTSTATUS(OSVERSIONINFOW* lpVersionInformation));
 #else
 #include <unistd.h>
 #include <sys/resource.h>
@@ -794,29 +795,15 @@ utils::OS_version utils::get_OS_version()
 #endif
 
 #ifdef _WIN32
-	// GetVersionEx is deprecated, RtlGetVersion is kernel-mode only and AnalyticsInfo is UWP only.
-	// So we're forced to read PEB instead to get Windows version info. It's ugly but works.
-#if defined(ARCH_X64)
-	constexpr DWORD peb_offset = 0x60;
-	const INT_PTR peb = __readgsqword(peb_offset);
-	res.version_major = *reinterpret_cast<const DWORD*>(peb + 0x118);
-	res.version_minor = *reinterpret_cast<const DWORD*>(peb + 0x11c);
-	res.version_patch = *reinterpret_cast<const WORD*>(peb + 0x120);
-#else
-	HKEY hKey;
-	if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", 0, KEY_READ, &hKey) == ERROR_SUCCESS)
+	if (RtlGetVersion)
 	{
-		const auto [check_major, version_major] = read_reg_dword(hKey, "CurrentMajorVersionNumber");
-		const auto [check_minor, version_minor] = read_reg_dword(hKey, "CurrentMinorVersionNumber");
-		const auto [check_build, version_patch] = read_reg_sz(hKey, "CurrentBuildNumber");
-
-		if (check_major) res.version_major = version_major;
-		if (check_minor) res.version_minor = version_minor;
-		if (check_build) res.version_patch = stoi(version_patch);
-
-		RegCloseKey(hKey);
+	    OSVERSIONINFOW osvi{};
+	    osvi.dwOSVersionInfoSize = sizeof(osvi);
+	    RtlGetVersion(&osvi);
+	    res.version_major = osvi.dwMajorVersion;
+	    res.version_minor = osvi.dwMinorVersion;
+	    res.version_patch = osvi.dwBuildNumber;
 	}
-#endif
 #elif defined (__APPLE__)
 	res.version_major = Darwin_Version::getNSmajorVersion();
 	res.version_minor = Darwin_Version::getNSminorVersion();
