@@ -12,6 +12,7 @@
 #include "sysinfoapi.h"
 #include "subauth.h"
 #include "stringapiset.h"
+#include "util/dyn_lib.hpp"
 DYNAMIC_IMPORT("ntdll.dll", RtlGetVersion, NTSTATUS(OSVERSIONINFOW* lpVersionInformation));
 #else
 #include <unistd.h>
