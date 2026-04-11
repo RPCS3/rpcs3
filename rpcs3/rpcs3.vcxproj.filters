@@ -1290,6 +1290,15 @@
     <ClCompile Include="rpcs3qt\steam_utils.cpp">
       <Filter>Gui\utils</Filter>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_iso_integrity.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_iso_integrity.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\iso_integrity.cpp">
+      <Filter>Gui\game list</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -2051,5 +2060,10 @@
     <Text Include="CMakeLists.txt">
       <Filter>buildfiles\cmake</Filter>
     </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="rpcs3qt\iso_integrity.h">
+      <Filter>Gui\game list</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>

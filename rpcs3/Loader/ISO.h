@@ -47,6 +47,24 @@ enum class iso_encryption_type
 	REDUMP
 };
 
+// Enum returned by checking type
+enum class iso_type_status
+{
+	NOT_ISO,
+	REDUMP_ISO,
+	ERROR_OPENING_KEY,
+	ERROR_PROCESSING_KEY
+};
+
+// Enum returned by checking integrity
+enum class iso_integrity_status
+{
+	NO_MATCH,
+	FOUND_MATCH,
+	ERROR_OPENING_DB,
+	ERROR_PARSING_DB
+};
+
 // ISO file decryption class
 class iso_file_decryption
 {
@@ -58,6 +76,10 @@ private:
 	void reset();
 
 public:
+	static iso_type_status check_type(const std::string& path, std::string& key_path, aes_context* aes_ctx = nullptr);
+	static bool calculate_md5_hash(const std::string& path, std::string& hash);
+	static iso_integrity_status check_integrity(const std::string& path, const std::string& hash, std::string* game_name = nullptr);
+
 	iso_encryption_type get_enc_type() const { return m_enc_type; }
 
 	bool init(const std::string& path);

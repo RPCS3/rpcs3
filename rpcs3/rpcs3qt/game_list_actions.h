@@ -54,6 +54,7 @@ public:
 
 	void ShowRemoveGameDialog(const std::vector<game_info>& games);
 	void ShowGameInfoDialog(const std::vector<game_info>& games);
+	void ShowGameIntegrityDialog(const game_info& game);
 	void ShowDiskUsageDialog();
 
 	// NOTES:
@@ -97,6 +98,7 @@ private:
 	game_list_frame* m_game_list_frame = nullptr;
 	std::shared_ptr<gui_settings> m_gui_settings;
 	QFuture<void> m_disk_usage_future;
+	QFuture<void> m_game_integrity_future;
 
 	// NOTE:
 	//   m_content_info is used by:
