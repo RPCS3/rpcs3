@@ -2872,6 +2872,9 @@
     <ClInclude Include="Emu\RSX\Overlays\overlay_arrow.h">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\aligned_malloc.hpp">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Emu\RSX\Program\GLSLSnippets\GPUDeswizzle.glsl">
