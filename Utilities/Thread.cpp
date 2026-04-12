@@ -25,6 +25,8 @@
 #include <process.h>
 #include <sysinfoapi.h>
 
+#pragma comment(lib, "DbgHelp.lib")
+
 #include "stack_trace.h"
 #include "util/dyn_lib.hpp"
 
