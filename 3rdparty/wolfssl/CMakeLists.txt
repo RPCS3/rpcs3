@@ -19,8 +19,32 @@ else()
 	option(WOLFSSL_OPENSSLEXTRA "Enable extra OpenSSL API, size+ (default: disabled)" ON)
 	option(WOLFSSL_HARDEN "Enable Hardened build, Enables Timing Resistance and Blinding (default: enabled)" OFF)
 	option(WOLFSSL_ALT_CERT_CHAINS "Enable support for Alternate certification chains (default: disabled)" ON)
-
+	set(WOLFSSL_MD4 "yes" CACHE BOOL "" FORCE)
+	set(WOLFSSL_CURL "yes" CACHE BOOL "" FORCE)
+	set(WOLFSSL_DES_ECB "yes" CACHE BOOL "" FORCE)
+	
 	add_subdirectory(wolfssl EXCLUDE_FROM_ALL)
 
-	target_compile_definitions(wolfssl PUBLIC WOLFSSL_DES_ECB HAVE_WRITE_DUP FP_MAX_BITS=8192 WOLFSSL_NO_OPTIONS_H)
-endif()
+	target_compile_definitions(wolfssl PUBLIC WOLFSSL_DES_ECB HAVE_WRITE_DUP WOLFSSL_NO_OPTIONS_H)
+
+	if(MSVC AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+		# Disable 128-bit Math
+		set(WOLFSSL_ASM ON CACHE BOOL "" FORCE)
+		set(WOLFSSL_FAST_MATH OFF CACHE BOOL "" FORCE)
+		set(WOLFSSL_CURL ON)
+		target_compile_definitions(wolfssl PUBLIC 
+	        WOLFSSL_SP_NO_128BIT 
+	        FP_MAX_BITS=4096 
+	        OPENSSL_EXTRA 
+	        HAVE_ECC
+	        WOLFSSL_MD4
+	        WOLFSSL_MD5
+	        WOLFSSL_DES_ECB
+	    )
+
+		# Disable warnings
+		target_compile_options(wolfssl PRIVATE /w)
+	else()
+		target_compile_definitions(wolfssl PUBLIC FP_MAX_BITS=8192)
+	endif()
+ endif()
