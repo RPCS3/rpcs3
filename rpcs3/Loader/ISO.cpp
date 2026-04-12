@@ -2,7 +2,10 @@
 
 #include "ISO.h"
 #include "Emu/VFS.h"
+#include "EMU/system_utils.hpp"
 #include "Crypto/utils.h"
+#include "Crypto/md5.h"
+#include "Utilities/rXml.h"
 
 #include <codecvt>
 #include <algorithm>
@@ -27,25 +30,27 @@ struct iso_sector
 
 bool is_file_iso(const std::string& path)
 {
-	if (path.empty()) return false;
-	if (fs::is_dir(path)) return false;
+	if (path.empty() || fs::is_dir(path))
+	{
+		return false;
+	}
 
 	return is_file_iso(fs::file(path));
 }
 
 bool is_file_iso(const fs::file& file)
 {
-	if (!file) return false;
-	if (file.size() < 32768 + 6) return false;
+	if (!file || file.size() < 32768 + 6)
+	{
+		return false;
+	}
 
 	file.seek(32768);
 
 	char magic[5];
 	file.read_at(32768 + 1, magic, 5);
 
-	return magic[0] == 'C' && magic[1] == 'D'
-		&& magic[2] == '0' && magic[3] == '0'
-		&& magic[4] == '1';
+	return magic[0] == 'C' && magic[1] == 'D' && magic[2] == '0' && magic[3] == '0' && magic[4] == '1';
 }
 
 // Convert 4 bytes in big-endian format to an unsigned integer
@@ -155,6 +160,221 @@ void iso_file_decryption::reset()
 	m_region_info.clear();
 }
 
+iso_type_status iso_file_decryption::check_type(const std::string& path, std::string& key_path, aes_context* aes_ctx)
+{
+	if (!is_file_iso(path))
+	{
+		return iso_type_status::NOT_ISO;
+	}
+
+	// Remove file extension from file path
+	const usz ext_pos = path.rfind('.');
+	std::string name_path = ext_pos == umax ? path : path.substr(0, ext_pos);
+
+	// Detect file name (with no parent folder and no file extension)
+	const usz name_pos = name_path.rfind('/');
+	std::string name = name_pos == umax ? name_path : name_path.substr(name_pos);
+
+	// Open ".dkey" file
+	key_path = name_path + ".dkey";
+
+	fs::file key_file(key_path);
+
+	// If no ".dkey" file exists, try with ".key"
+	if (!key_file)
+	{
+		key_path = name_path + ".key";
+		key_file = fs::file(key_path);
+	}
+
+	// If no ".dkey" and ".key" file exists, try on default ISO keys folder
+	if (!key_file)
+	{
+		key_path = rpcs3::utils::get_redump_dir() + name + ".dkey";
+		key_file = fs::file(key_path);
+	}
+
+	// If no ".dkey" file exists, try with ".key"
+	if (!key_file)
+	{
+		key_path = rpcs3::utils::get_redump_dir() + name + ".key";
+		key_file = fs::file(key_path);
+	}
+
+	// If no ".dkey" and ".key" file exists
+	if (!key_file)
+	{
+		return iso_type_status::ERROR_OPENING_KEY;
+	}
+
+	char key_str[32];
+	std::array<u8, 16> key {};
+
+	const u64 key_len = key_file.read(key_str, sizeof(key_str));
+
+	if (key_len == sizeof(key_str) || key_len == sizeof(key))
+	{
+		// If the key read from the key file is 16 bytes long instead of 32, consider the file as
+		// binary (".key") and so not needing any further conversion from hex string to bytes
+		if (key_len == sizeof(key))
+		{
+			memcpy(key.data(), key_str, sizeof(key));
+		}
+		else
+		{
+			hex_to_bytes(key.data(), std::string_view(key_str, key_len), static_cast<unsigned int>(key_len));
+		}
+
+		aes_context aes_dec;
+
+		if (aes_ctx == nullptr)
+		{
+			aes_ctx = &aes_dec;
+		}
+
+		// Create the decryption context. If the context is successfully created, fill in "aes_ctx"
+		// (if not passed as nullptr) and return Redump ISO status
+		if (aes_setkey_dec(aes_ctx, key.data(), 128) == 0)
+		{
+			return iso_type_status::REDUMP_ISO;
+		}
+	}
+
+	return iso_type_status::ERROR_PROCESSING_KEY;
+}
+
+bool iso_file_decryption::calculate_md5_hash(const std::string& path, std::string& hash)
+{
+	fs::file iso_file(path);
+
+	// If no ISO file exists
+	if (!iso_file)
+	{
+		sys_log.error("calculate_md5_hash(): Failed to open file: %s", path);
+		return false;
+	}
+
+	constexpr u64 block_size = ISO_SECTOR_SIZE;
+	std::array<u8, block_size> buf;
+	u64 bytes_read;
+	mbedtls_md5_context md5_ctx;
+	unsigned char md5_hash[16];
+
+	mbedtls_md5_starts_ret(&md5_ctx);
+
+	do
+	{
+		bytes_read = iso_file.read(buf.data(), block_size);
+		mbedtls_md5_update_ret(&md5_ctx, buf.data(), bytes_read);
+	} while (bytes_read == block_size);
+
+	if (mbedtls_md5_finish_ret(&md5_ctx, md5_hash) != 0)
+	{
+		sys_log.error("calculate_md5_hash(): Failed to calculate MD5 hash on file: %s", path);
+		return false;
+	}
+
+	// Convert the MD5 hash to hex string
+	bytes_to_hex(hash, md5_hash, 16);
+	return true;
+}
+
+iso_integrity_status iso_file_decryption::check_integrity(const std::string& path, const std::string& hash, std::string* game_name)
+{
+	//
+	// Check for Redump db
+	//
+
+	const usz ext_pos = path.rfind('.');
+	std::string db_path;
+
+	// If no file extension is provided, set "db_path" appending ".dat" to "path".
+	// Otherwise, replace the extension (e.g. ".iso") with ".dat"
+	db_path = ext_pos == umax ? path + ".dat" : path.substr(0, ext_pos) + ".dat";
+
+	fs::file db_file(db_path);
+
+	// If no ".dat" file exists, try with default "redump.dat" file
+	if (!db_file)
+	{
+		db_path = rpcs3::utils::get_redump_db_path();
+		db_file = fs::file(db_path);
+	}
+
+	// If no db file exists
+	if (!db_file)
+	{
+		// An empty hash is used to simply test the presence (without any logging) of the Redump db
+		if (hash != "")
+		{
+			sys_log.error("check_integrity(): Failed to open file: %s", db_path);
+		}
+
+		return iso_integrity_status::ERROR_OPENING_DB;
+	}
+
+	if (hash == "")
+	{
+		return iso_integrity_status::NO_MATCH;
+	}
+
+	rXmlDocument db;
+
+	if (!db.Read(db_file.to_string()))
+	{
+		sys_log.error("check_integrity(): Failed to process file: %s", db_path);
+		return iso_integrity_status::ERROR_PARSING_DB;
+	}
+
+	std::shared_ptr<rXmlNode> db_base = db.GetRoot();
+
+	if (!db_base)
+	{
+		sys_log.error("check_integrity(): Failed to get 'root' node on file: %s", db_path);
+		return iso_integrity_status::ERROR_PARSING_DB;
+	}
+
+	if (const auto& node = db_base->GetChildren(); node && node->GetName() == "datafile")
+	{
+		db_base = node;
+	}
+	else
+	{
+		sys_log.error("check_integrity(): Failed to get 'datafile' node on file: %s", db_path);
+		return iso_integrity_status::ERROR_PARSING_DB;
+	}
+
+	//
+	// Check for a match on Redump db
+	//
+
+	for (auto node = db_base->GetChildren(); node; node = node->GetNext())
+	{
+		if (node->GetName() == "game")
+		{
+			for (auto child = node->GetChildren(); child; child = child->GetNext())
+			{
+				if (child->GetName() == "rom")
+				{
+					// If a match is found, Fill in "game_desc" and exit
+					if (hash == child->GetAttribute(std::string_view("md5")))
+					{
+						if (game_name != nullptr)
+						{
+							*game_name = node->GetAttribute(std::string_view("name"));
+						}
+
+						return iso_integrity_status::FOUND_MATCH;
+					}
+				}
+			}
+		}
+	}
+
+	// No match found
+	return iso_integrity_status::NO_MATCH;
+}
+
 bool iso_file_decryption::init(const std::string& path)
 {
 	reset();
@@ -219,57 +439,25 @@ bool iso_file_decryption::init(const std::string& path)
 	// Check for Redump type
 	//
 
-	const usz ext_pos = path.rfind('.');
 	std::string key_path;
 
-	// If no file extension is provided, set "key_path" appending ".dkey" to "path".
-	// Otherwise, replace the extension (e.g. ".iso") with ".dkey"
-	key_path = ext_pos == umax ? path + ".dkey" : path.substr(0, ext_pos) + ".dkey";
-
-	fs::file key_file(key_path);
-
-	// If no ".dkey" file exists, try with ".key"
-	if (!key_file)
+	// Try to detect the Redump type. If so, the decryption context is set into "m_aes_dec"
+	switch (check_type(path, key_path, &m_aes_dec))
 	{
-		key_path = ext_pos == umax ? path + ".key" : path.substr(0, ext_pos) + ".key";
-		key_file = fs::file(key_path);
-	}
-
-	// Check if "key_path" exists and create the "m_aes_dec" context if so
-	if (key_file)
-	{
-		char key_str[32];
-		unsigned char key[16];
-
-		const u64 key_len = key_file.read(key_str, sizeof(key_str));
-
-		if (key_len == sizeof(key_str) || key_len == sizeof(key))
-		{
-			// If the key read from the key file is 16 bytes long instead of 32, consider the file as
-			// binary (".key") and so not needing any further conversion from hex string to bytes
-			if (key_len == sizeof(key))
-			{
-				memcpy(key, key_str, sizeof(key));
-			}
-			else
-			{
-				hex_to_bytes(key, std::string_view(key_str, key_len), static_cast<unsigned int>(key_len));
-			}
-
-			if (aes_setkey_dec(&m_aes_dec, key, 128) == 0)
-			{
-				m_enc_type = iso_encryption_type::REDUMP; // SET ENCRYPTION TYPE: REDUMP
-			}
-		}
-
-		if (m_enc_type == iso_encryption_type::NONE) // If encryption type was not set to REDUMP for any reason
-		{
-			sys_log.error("init(): Failed to process key file: %s", key_path);
-		}
-	}
-	else
-	{
+	case iso_type_status::NOT_ISO:
+		sys_log.warning("init(): Failed to recognize ISO file: %s", path);
+		break;
+	case iso_type_status::REDUMP_ISO:
+		m_enc_type = iso_encryption_type::REDUMP; // SET ENCRYPTION TYPE: REDUMP
+		break;
+	case iso_type_status::ERROR_OPENING_KEY:
 		sys_log.warning("init(): Failed to open, or missing, key file: %s", key_path);
+		break;
+	case iso_type_status::ERROR_PROCESSING_KEY:
+		sys_log.error("init(): Failed to process key file: %s", key_path);
+		break;
+	default:
+		break;
 	}
 
 	//
@@ -401,12 +589,12 @@ inline T retrieve_endian_int(const u8* buf)
 
 	if constexpr (std::endian::little == std::endian::native)
 	{
-		// first half = little-endian copy
+		// First half = little-endian copy
 		std::memcpy(&out, buf, sizeof(T));
 	}
 	else
 	{
-		// second half = big-endian copy
+		// Second half = big-endian copy
 		std::memcpy(&out, buf + sizeof(T), sizeof(T));
 	}
 
@@ -602,6 +790,7 @@ static void iso_form_hierarchy(fs::file& file, iso_fs_node& node, bool use_ucs2_
 u64 iso_fs_metadata::size() const
 {
 	u64 total_size = 0;
+
 	for (const auto& extent : extents)
 	{
 		total_size += extent.size;
@@ -659,7 +848,10 @@ iso_archive::iso_archive(const std::string& path)
 
 iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
 {
-	if (passed_path.empty()) return nullptr;
+	if (passed_path.empty())
+	{
+		return nullptr;
+	}
 
 	const std::string path = std::filesystem::path(passed_path).string();
 	const std::string_view path_sv = path;
@@ -668,11 +860,16 @@ iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
 	size_t end = path_sv.find_first_of(fs::delim);
 
 	std::stack<iso_fs_node*> search_stack;
+
 	search_stack.push(&m_root);
 
 	do
 	{
-		if (search_stack.empty()) return nullptr;
+		if (search_stack.empty())
+		{
+			return nullptr;
+		}
+
 		const auto* top_entry = search_stack.top();
 
 		if (end == umax)
@@ -680,7 +877,7 @@ iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
 			end = path.size();
 		}
 
-		const std::string_view path_component = path_sv.substr(start, end-start);
+		const std::string_view path_component = path_sv.substr(start, end - start);
 
 		bool found = false;
 
@@ -691,6 +888,7 @@ iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
 		else if (path_component == "..")
 		{
 			search_stack.pop();
+
 			found = true;
 		}
 		else
@@ -707,14 +905,20 @@ iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
 			}
 		}
 
-		if (!found) return nullptr;
+		if (!found)
+		{
+			return nullptr;
+		}
 
 		start = end + 1;
 		end = path_sv.find_first_of(fs::delim, start);
 	}
 	while (start < path.size());
 
-	if (search_stack.empty()) return nullptr;
+	if (search_stack.empty())
+	{
+		return nullptr;
+	}
 
 	return search_stack.top();
 }
@@ -727,7 +931,11 @@ bool iso_archive::exists(const std::string& path)
 bool iso_archive::is_file(const std::string& path)
 {
 	const auto file_node = retrieve(path);
-	if (!file_node) return false;
+
+	if (!file_node)
+	{
+		return false;
+	}
 
 	return !file_node->metadata.is_directory;
 }
@@ -978,8 +1186,10 @@ u64 iso_file::seek(s64 offset, fs::seek_mode whence)
 		return -1;
 	}
 
-	const u64 result = m_file.seek(file_offset(m_pos));
-	if (result == umax) return umax;
+	if (m_file.seek(file_offset(new_pos)) == umax)
+	{
+		return umax;
+	}
 
 	m_pos = new_pos;
 	return m_pos;
@@ -988,6 +1198,7 @@ u64 iso_file::seek(s64 offset, fs::seek_mode whence)
 u64 iso_file::size()
 {
 	u64 extent_sizes = 0;
+
 	for (const auto& extent : m_meta.extents)
 	{
 		extent_sizes += extent.size;
@@ -1017,11 +1228,15 @@ bool iso_dir::read(fs::dir_entry& entry)
 		entry.size = selected.size();
 
 		m_pos++;
-
 		return true;
 	}
 
 	return false;
+}
+
+void iso_dir::rewind()
+{
+	m_pos = 0;
 }
 
 bool iso_device::stat(const std::string& path, fs::stat_t& info)
@@ -1029,6 +1244,7 @@ bool iso_device::stat(const std::string& path, fs::stat_t& info)
 	const auto relative_path = std::filesystem::relative(std::filesystem::path(path), std::filesystem::path(fs_prefix)).string();
 
 	const auto node = m_archive.retrieve(relative_path);
+
 	if (!node)
 	{
 		fs::g_tls_error = fs::error::noent;
@@ -1056,14 +1272,14 @@ bool iso_device::statfs(const std::string& path, fs::device_stat& info)
 	const auto relative_path = std::filesystem::relative(std::filesystem::path(path), std::filesystem::path(fs_prefix)).string();
 
 	const auto node = m_archive.retrieve(relative_path);
+
 	if (!node)
 	{
 		fs::g_tls_error = fs::error::noent;
 		return false;
 	}
 
-	const auto& meta = node->metadata;
-	const u64 size = meta.size();
+	const u64 size = node->metadata.size();
 
 	info = fs::device_stat
 	{
@@ -1073,7 +1289,7 @@ bool iso_device::statfs(const std::string& path, fs::device_stat& info)
 		.avail_free = 0
 	};
 
-	return false;
+	return true;
 }
 
 std::unique_ptr<fs::file_base> iso_device::open(const std::string& path, bs_t<fs::open_mode> mode)
@@ -1081,6 +1297,7 @@ std::unique_ptr<fs::file_base> iso_device::open(const std::string& path, bs_t<fs
 	const auto relative_path = std::filesystem::relative(std::filesystem::path(path), std::filesystem::path(fs_prefix)).string();
 
 	const auto node = m_archive.retrieve(relative_path);
+
 	if (!node)
 	{
 		fs::g_tls_error = fs::error::noent;
@@ -1101,6 +1318,7 @@ std::unique_ptr<fs::dir_base> iso_device::open_dir(const std::string& path)
 	const auto relative_path = std::filesystem::relative(std::filesystem::path(path), std::filesystem::path(fs_prefix)).string();
 
 	const auto node = m_archive.retrieve(relative_path);
+
 	if (!node)
 	{
 		fs::g_tls_error = fs::error::noent;
@@ -1115,11 +1333,6 @@ std::unique_ptr<fs::dir_base> iso_device::open_dir(const std::string& path)
 	}
 
 	return std::make_unique<iso_dir>(*node);
-}
-
-void iso_dir::rewind()
-{
-	m_pos = 0;
 }
 
 void load_iso(const std::string& path)

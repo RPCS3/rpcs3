@@ -364,6 +364,62 @@ void game_list_actions::ShowGameInfoDialog(const std::vector<game_info>& games)
 	QMessageBox::information(m_game_list_frame, tr("Game Info"), GetContentInfo(games).info);
 }
 
+void game_list_actions::ShowGameIntegrityDialog(const game_info& game)
+{
+	if (m_game_integrity_future.isRunning()) // Still running the last request
+		return;
+
+	// Game integrity check can take a while (in particular on non ssd/m.2 disks)
+	// so run it on a concurrent thread avoiding to block the entire GUI
+	m_game_integrity_future = QtConcurrent::run([this, path = game->info.path]()
+	{
+		QString text;
+		std::string hash, game_name;
+		bool info_dialog = false;
+
+		if (iso_file_decryption::calculate_md5_hash(path, hash) == 0)
+		{
+			text = "MD5 hash calculation failed!\n\nIntegrity check aborted";
+		}
+		else
+		{
+			text = "Integrity check completed!\n\n";
+
+			switch (iso_file_decryption::check_integrity(path, hash, &game_name))
+			{
+			case iso_integrity_status::NO_MATCH:
+				text += tr("Game check NOT PASSED\n\nNo match found on DB or game corrupted:\n - Hash: %0")
+					.arg(QString::fromStdString(hash));
+				break;
+			case iso_integrity_status::FOUND_MATCH:
+				text += tr("Game check PASSED\n\nMatch found on DB:\n - Game: %0\n - Hash: %1")
+					.arg(QString::fromStdString(game_name))
+					.arg(QString::fromStdString(hash));
+
+				info_dialog = true;
+				break;
+			default:
+				text += tr("Error parsing DB");
+				break;
+			}
+		}
+
+		Emu.CallFromMainThread([this, text, info_dialog]()
+		{
+			if (info_dialog)
+			{
+				sys_log.success("%s", text.toStdString());
+				QMessageBox::information(m_game_list_frame, tr("Game Integrity"), text);
+			}
+			else
+			{
+				sys_log.error("%s", text.toStdString());
+				QMessageBox::critical(m_game_list_frame, tr("Game Integrity"), text);
+			}
+		}, nullptr, false);
+	});
+}
+
 void game_list_actions::ShowDiskUsageDialog()
 {
 	if (m_disk_usage_future.isRunning()) // Still running the last request
