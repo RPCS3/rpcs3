@@ -244,36 +244,48 @@ llvm::Value* cpu_translator::bitcast(llvm::Value* val, llvm::Type* type, std::so
 		}
 	}
 
-	for (auto it = source_val->use_begin(); it != source_val->use_end(); ++it)
+	// Skip use iteration for values that don't have use lists
+#if LLVM_VERSION_MAJOR >= 21
+	if (source_val->hasUseList())
+#endif
 	{
-		llvm::Value* it_val = *it;
-
-		if (!it_val)
+		for (llvm::Value* it_val : source_val->uses())
 		{
-			continue;
-		}
-
-		llvm::CastInst* bci = llvm::dyn_cast_or_null<llvm::CastInst>(it_val);
-
-		// Walk through bitcasts
-		while (bci && bci->getOpcode() == llvm::Instruction::BitCast)
-		{
-			if (bci->getParent() != m_ir->GetInsertBlock())
+			if (!it_val)
 			{
-				break;
+				continue;
 			}
 
-			if (bci->getType() == type)
-			{
-				return bci;
-			}
+			llvm::CastInst* bci = llvm::dyn_cast_or_null<llvm::CastInst>(it_val);
 
-			if (bci->use_begin() == bci->use_end())
+			// Walk through bitcasts
+			while (bci && bci->getOpcode() == llvm::Instruction::BitCast)
 			{
-				break;
-			}
+				if (bci->getParent() != m_ir->GetInsertBlock())
+				{
+					break;
+				}
 
-			bci = llvm::dyn_cast_or_null<llvm::CastInst>(*bci->use_begin());
+				if (bci->getType() == type)
+				{
+					return bci;
+				}
+
+				// Check if bci has use list before accessing use_begin()
+#if LLVM_VERSION_MAJOR >= 21
+				if (!bci->hasUseList())
+				{
+					break;
+				}
+#endif
+
+				if (bci->use_begin() == bci->use_end())
+				{
+					break;
+				}
+
+				bci = llvm::dyn_cast_or_null<llvm::CastInst>(*bci->use_begin());
+			}
 		}
 	}
 
@@ -553,14 +565,25 @@ void cpu_translator::erase_stores(llvm::ArrayRef<llvm::Value*> args)
 {
 	for (auto v : args)
 	{
-		for (auto it = v->use_begin(); it != v->use_end(); ++it)
+		// Skip use iteration for values that don't have use lists
+#if LLVM_VERSION_MAJOR >= 21
+		if (!v->hasUseList())
+			continue;
+#endif
+
+		for (llvm::Value* i : v->uses())
 		{
-			llvm::Value* i = *it;
 			llvm::CastInst* bci = nullptr;
 
 			// Walk through bitcasts
 			while (i && (bci = llvm::dyn_cast<llvm::CastInst>(i)) && bci->getOpcode() == llvm::Instruction::BitCast)
 			{
+				// Check if bci has use list before accessing use_begin()
+#if LLVM_VERSION_MAJOR >= 21
+				if (!bci->hasUseList())
+					break;
+#endif
+
 				i = *bci->use_begin();
 			}
 
