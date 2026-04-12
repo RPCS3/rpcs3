@@ -30,7 +30,7 @@ namespace utils
 		return out.data();
 	}
 
-	std::vector<void*> get_backtrace(int max_depth)
+	std::vector<void*> get_backtrace(int max_depth, PCONTEXT ctx)
 	{
 		std::vector<void*> result = {};
 
@@ -38,34 +38,44 @@ namespace utils
 		const auto hThread = ::GetCurrentThread();
 
 		CONTEXT context{};
-		RtlCaptureContext(&context);
+		if (ctx)
+			context = *ctx;
+		else
+			RtlCaptureContext(&context);
 
 		STACKFRAME64 stack = {};
 		stack.AddrPC.Mode = AddrModeFlat;
 		stack.AddrStack.Mode = AddrModeFlat;
 		stack.AddrFrame.Mode = AddrModeFlat;
 #if defined(ARCH_X64)
+		const DWORD machineType = IMAGE_FILE_MACHINE_AMD64;
 		stack.AddrPC.Offset = context.Rip;
 		stack.AddrStack.Offset = context.Rsp;
 		stack.AddrFrame.Offset = context.Rbp;
 #elif defined(ARCH_ARM64)
+		const DWORD machineType = IMAGE_FILE_MACHINE_ARM64;
 		stack.AddrPC.Offset = context.Pc;
 		stack.AddrStack.Offset = context.Sp;
 		stack.AddrFrame.Offset = context.Fp;
+#else
+#error "Unsupported architecture"
 #endif
+
+		// StackWalk64 does not unwind correctly without this call
+		SymInitialize(hProcess, NULL, TRUE);
 
 		while (max_depth--)
 		{
 			if (!StackWalk64(
-				IMAGE_FILE_MACHINE_AMD64,
-				hProcess,
-				hThread,
-				&stack,
-				&context,
-				NULL,
-				SymFunctionTableAccess64,
-				SymGetModuleBase64,
-				NULL))
+					machineType,
+					hProcess,
+					hThread,
+					&stack,
+					&context,
+					NULL,
+					SymFunctionTableAccess64,
+					SymGetModuleBase64,
+					NULL))
 			{
 				break;
 			}
@@ -73,6 +83,7 @@ namespace utils
 			result.push_back(reinterpret_cast<void*>(stack.AddrPC.Offset));
 		}
 
+		SymCleanup(hProcess);
 		return result;
 	}
 
