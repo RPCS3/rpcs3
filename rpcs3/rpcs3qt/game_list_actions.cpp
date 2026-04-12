@@ -16,6 +16,8 @@
 
 #include "Input/pad_thread.h"
 
+#include <thread>
+
 #include <QApplication>
 #include <QCheckBox>
 #include <QtConcurrent>
@@ -371,7 +373,7 @@ void game_list_actions::ShowGameIntegrityDialog(const game_info& game)
 		return;
 
 	progress_dialog* pdlg = new progress_dialog(tr("ISO File Hash Calculation"), tr("Calculating hash"), tr("Cancel"),
-		0, 100, false, m_game_list_frame);
+		0, 100, true, m_game_list_frame);
 
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
@@ -453,7 +455,6 @@ void game_list_actions::ShowGameIntegrityDialog(const game_info& game)
 
 		// As last, close the progress bar (object was also configured to be automatically deleted on close)
 		pdlg->close();
-		pdlg->deleteLater();
 	});
 }
 
