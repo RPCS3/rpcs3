@@ -573,6 +573,16 @@ void game_list_frame::OnParsingFinished()
 		else if (!cache_entry.psf_data.empty())
 		{
 			psf = psf::load_object(fs::make_stream<std::vector<u8>>(std::vector<u8>(cache_entry.psf_data)), sfo_path);
+			// Fallback to archive scan if cached PSF is corrupted or missing critical fields.
+			const bool psf_valid = !psf::get_string(psf, "TITLE_ID", "").empty()
+				&& !psf::get_string(psf, "TITLE", "").empty()
+				&& !psf::get_string(psf, "CATEGORY", "").empty();
+			if (!psf_valid)
+			{
+				archive = std::make_unique<iso_archive>(dir_or_elf);
+				psf = archive->open_psf(sfo_path);
+				cache_entry = {}; // Reset so the cache gets rewritten after scan.
+			}
 		}
 		else
 		{
@@ -666,7 +676,7 @@ void game_list_frame::OnParsingFinished()
 
 		if (play_hover_movies)
 		{
-			if(!cache_entry.movie_path.empty() && !archive)
+			if (!cache_entry.movie_path.empty() && !archive)
 			{
 				// Cache hit — restore previously resolved movie path.
 				game.info.movie_path = cache_entry.movie_path;

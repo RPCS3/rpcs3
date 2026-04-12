@@ -14,7 +14,7 @@ namespace
 {
 	std::string get_cache_dir()
 	{
-		const std::string dir = fs::get_config_dir() + "iso_cache/";
+		const std::string dir = fs::get_cache_dir() + "cache/iso_cache/";
 		fs::create_path(dir);
 		return dir;
 	}
@@ -37,7 +37,7 @@ namespace iso_cache
 	bool load(const std::string& iso_path, iso_metadata_cache_entry& out_entry)
 	{
 		fs::stat_t iso_stat{};
-		if (!fs::get_stat(iso_path, iso_stat))
+		if (!fs::get_stat(iso_path, iso_stat) || iso_stat.is_directory)
 		{
 			return false;
 		}
@@ -105,9 +105,10 @@ namespace iso_cache
 		out << YAML::Key << "audio_path" << YAML::Value << entry.audio_path;
 		out << YAML::EndMap;
 
-		if (fs::file yml_file(yml_path, fs::rewrite); yml_file)
+		if (fs::pending_file yml_file(yml_path); yml_file.file)
 		{
-			yml_file.write(out.c_str(), out.size());
+			yml_file.file.write(out.c_str(), out.size());
+			yml_file.commit();
 		}
 		else
 		{
@@ -116,17 +117,19 @@ namespace iso_cache
 
 		if (!entry.psf_data.empty())
 		{
-			if (fs::file sfo_file(sfo_path, fs::rewrite); sfo_file)
+			if (fs::pending_file sfo_file(sfo_path); sfo_file.file)
 			{
-				sfo_file.write(entry.psf_data);
+				sfo_file.file.write(entry.psf_data);
+				sfo_file.commit();
 			}
 		}
 
 		if (!entry.icon_data.empty())
 		{
-			if (fs::file png_file(png_path, fs::rewrite); png_file)
+			if (fs::pending_file png_file(png_path); png_file.file)
 			{
-				png_file.write(entry.icon_data);
+				png_file.file.write(entry.icon_data);
+				png_file.commit();
 			}
 		}
 	}
