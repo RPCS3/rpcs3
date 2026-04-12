@@ -32,6 +32,18 @@ namespace utils
 
 	std::vector<void*> get_backtrace(int max_depth, PCONTEXT ctx)
 	{
+		static struct sym_initer_t
+		{
+			sym_initer_t() noexcept
+			{
+				SymInitialize(GetCurrentProcess(), NULL, TRUE);
+			}
+			~sym_initer_t() noexcept
+			{
+				SymCleanup(GetCurrentProcess());
+			}
+		} s_initer{};
+
 		std::vector<void*> result = {};
 
 		const auto hProcess = ::GetCurrentProcess();
@@ -61,9 +73,6 @@ namespace utils
 #error "Unsupported architecture"
 #endif
 
-		// StackWalk64 does not unwind correctly without this call
-		SymInitialize(hProcess, NULL, TRUE);
-
 		while (max_depth--)
 		{
 			if (!StackWalk64(
@@ -83,7 +92,6 @@ namespace utils
 			result.push_back(reinterpret_cast<void*>(stack.AddrPC.Offset));
 		}
 
-		SymCleanup(hProcess);
 		return result;
 	}
 
