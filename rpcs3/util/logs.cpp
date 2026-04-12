@@ -372,6 +372,16 @@ void logs::listener::sync_all()
 	}
 }
 
+void logs::listener::shutdown_all()
+{
+	std::lock_guard lock(g_mutex);
+
+	for (listener* lis = get_logger()->m_next.exchange(nullptr); lis;)
+	{
+		lis = lis->m_next.exchange(nullptr);
+	}
+}
+
 void logs::listener::close_all_prematurely()
 {
 	for (listener* lis = get_logger(); lis; lis = lis->m_next)

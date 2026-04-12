@@ -70,6 +70,8 @@ LOG_CHANNEL(sys_log, "SYS");
 // Preallocate 32 MiB
 stx::manual_typemap<void, 0x20'00000, 128> g_fixed_typemap;
 
+static constinit atomic_t<bool> s_emulator_available{false};
+
 std::string g_cfg_defaults;
 
 atomic_t<u64> g_watchdog_hold_ctr{0};
@@ -116,6 +118,21 @@ namespace atomic_wait
 namespace rsx
 {
 	void set_native_ui_flip();
+}
+
+Emulator::Emulator() noexcept
+{
+	s_emulator_available = true;
+}
+
+Emulator::~Emulator() noexcept
+{
+	s_emulator_available = false;
+}
+
+bool Emulator::IsAvailable() noexcept
+{
+	return s_emulator_available.load();
 }
 
 template<>

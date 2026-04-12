@@ -185,16 +185,23 @@ std::set<std::string> get_one_drive_paths()
 			fmt::append(buf, "\nSerialized Object: %s", g_tls_serialize_name);
 		}
 
-		const system_state state = Emu.GetStatus(false);
-
-		if (state == system_state::stopped)
+		if (Emulator::IsAvailable())
 		{
-			fmt::append(buf, "\nEmulation is stopped");
+			const system_state state = Emu.GetStatus(false);
+
+			if (state == system_state::stopped)
+			{
+				fmt::append(buf, "\nEmulation is stopped");
+			}
+			else
+			{
+				const std::string name = Emu.GetTitleAndTitleID();
+				fmt::append(buf, "\nTitle: \"%s\" (emulation is %s)", name.empty() ? "N/A" : name.c_str(), state == system_state::stopping ? "stopping" : "running");
+			}
 		}
 		else
 		{
-			const std::string& name = Emu.GetTitleAndTitleID();
-			fmt::append(buf, "\nTitle: \"%s\" (emulation is %s)", name.empty() ? "N/A" : name.data(), state == system_state::stopping ? "stopping" : "running");
+			fmt::append(buf, "\nEmulation object is unavailable (process teardown)");
 		}
 
 		fmt::append(buf, "\nBuild: \"%s\"", rpcs3::get_verbose_version());
@@ -656,7 +663,7 @@ int run_rpcs3(int argc, char** argv)
 	// Initialize thread pool finalizer (on first use)
 	static_cast<void>(named_thread("", [](int) {}));
 
-	static std::unique_ptr<logs::listener> log_file;
+	std::unique_ptr<logs::listener> log_file;
 	{
 		// Check free space
 		fs::device_stat stats{};
@@ -669,8 +676,16 @@ int run_rpcs3(int argc, char** argv)
 		log_file = logs::make_file_listener(log_name, stats.avail_free / 4);
 	}
 
-	static std::unique_ptr<fatal_error_listener> fatal_listener = std::make_unique<fatal_error_listener>();
+	auto fatal_listener = std::make_unique<fatal_error_listener>();
 	logs::listener::add(fatal_listener.get());
+
+	struct log_listener_shutdown_guard
+	{
+		~log_listener_shutdown_guard()
+		{
+			logs::listener::shutdown_all();
+		}
+	} log_listener_shutdown;
 
 	{
 		// Write RPCS3 version
