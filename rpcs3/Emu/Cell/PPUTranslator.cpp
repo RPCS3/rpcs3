@@ -1642,6 +1642,18 @@ void PPUTranslator::VPERM(ppu_opcode_t op)
 {
 	const auto [a, b, c] = get_vrs<u8[16]>(op.va, op.vb, op.vc);
 
+#ifdef ARCH_ARM64
+
+	if (op.ra == op.rb)
+	{
+		set_vr(op.vd, tbl(a, (~c & 0xf)));
+		return;
+	}
+
+	set_vr(op.vd, tbl2(b, a, (~c & 0x1f)));
+}
+#else
+
 	if (op.ra == op.rb)
 	{
 		set_vr(op.vd, pshufb(a, ~c & 0xf));
@@ -1658,6 +1670,7 @@ void PPUTranslator::VPERM(ppu_opcode_t op)
 	const auto i = eval(~c & 0x1f);
 	set_vr(op.vd, select(noncast<s8[16]>(c << 3) >= 0, pshufb(a, i), pshufb(b, i)));
 }
+#endif
 
 void PPUTranslator::VPKPX(ppu_opcode_t op)
 {
