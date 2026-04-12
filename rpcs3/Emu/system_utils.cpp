@@ -253,7 +253,7 @@ namespace rpcs3::utils
 
 	std::string get_redump_db_download_url()
 	{
-		return "http://redump.org/datfile/ps3/"; // TO BE FINALIZED WITH A PROPER URL!
+		return "https://api.rpcs3.net/redump/?api=v1";
 	}
 
 	std::string get_data_dir()

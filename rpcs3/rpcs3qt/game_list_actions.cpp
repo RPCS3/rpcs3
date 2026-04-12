@@ -370,23 +370,38 @@ void game_list_actions::ShowGameIntegrityDialog(const game_info& game)
 	if (m_game_integrity_future.isRunning()) // Still running the last request
 		return;
 
+	progress_dialog* pdlg = new progress_dialog(tr("ISO File Hash Calculation"), tr("Calculating hash"), tr("Cancel"),
+		0, 100, false, m_game_list_frame);
+
+	pdlg->setAutoClose(false);
+	pdlg->setAutoReset(false);
+	pdlg->open();
+
+	connect(pdlg, &progress_dialog::canceled, m_game_list_frame, [this]()
+	{
+		m_iso_validator->abort_hash();
+	});
+
+	// Initialize the validator (set also file size etc.)
+	m_iso_validator->init_hash(game->info.path);
+
 	// Game integrity check can take a while (in particular on non ssd/m.2 disks)
 	// so run it on a concurrent thread avoiding to block the entire GUI
-	m_game_integrity_future = QtConcurrent::run([this, path = game->info.path]()
+	m_game_integrity_future = QtConcurrent::run([this]()
 	{
 		QString text;
 		std::string hash, game_name;
 		bool info_dialog = false;
 
-		if (iso_file_decryption::calculate_md5_hash(path, hash) == 0)
+		if (m_iso_validator->calculate_hash(hash) != iso_hash_status::COMPLETED)
 		{
-			text = "MD5 hash calculation failed!\n\nIntegrity check aborted";
+			text = "Hash calculation failed!\n\nIntegrity check aborted";
 		}
 		else
 		{
 			text = "Integrity check completed!\n\n";
 
-			switch (iso_file_decryption::check_integrity(path, hash, &game_name))
+			switch (m_iso_validator->check_integrity(m_iso_validator->get_path(), hash, &game_name))
 			{
 			case iso_integrity_status::NO_MATCH:
 				text += tr("Game check NOT PASSED\n\nNo match found on DB or game corrupted:\n - Hash: %0")
@@ -418,6 +433,27 @@ void game_list_actions::ShowGameIntegrityDialog(const game_info& game)
 				QMessageBox::critical(m_game_list_frame, tr("Game Integrity"), text);
 			}
 		}, nullptr, false);
+	});
+
+	// Thread responsible to update the progress bar and to make cleanup when the hash calculation terminates
+	QtConcurrent::run([this, pdlg]()
+	{
+		int progress;
+
+		while (m_iso_validator->get_status() == iso_hash_status::INITIALIZED)
+		{
+			// Set progress in range 0-100
+			progress = m_iso_validator->get_size() ?
+				(static_cast<float>(m_iso_validator->get_bytes_read()) / m_iso_validator->get_size()) * 100 :
+				0;
+
+			pdlg->setValue(progress);
+			std::this_thread::sleep_for(1000ms); // Wait for a little while
+		}
+
+		// As last, close the progress bar (object was also configured to be automatically deleted on close)
+		pdlg->close();
+		pdlg->deleteLater();
 	});
 }
 
