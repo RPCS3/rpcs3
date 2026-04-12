@@ -16,6 +16,7 @@
 #include "Emu/system_utils.hpp"
 #include "Loader/PSF.h"
 #include "Loader/ISO.h"
+#include "Loader/iso_cache.h"
 #include "util/types.hpp"
 #include "Utilities/File.h"
 #include "util/sysinfo.hpp"
@@ -530,14 +531,29 @@ void game_list_frame::OnParsingFinished()
 	                       (const std::string& dir_or_elf)
 	{
 		std::unique_ptr<iso_archive> archive;
-		if (is_file_iso(dir_or_elf))
+		iso_metadata_cache_entry cache_entry{};
+		const bool is_iso = is_file_iso(dir_or_elf);
+		
+		if (is_iso)
 		{
-			archive = std::make_unique<iso_archive>(dir_or_elf);
+			// Only construct iso_archive (which walks the full directory tree)
+			// when no valid cache entry exists for this ISO path + mtime.
+			if (!iso_cache::load(dir_or_elf, cache_entry))
+			{
+				archive = std::make_unique<iso_archive>(dir_or_elf);
+			}
+			// Track this ISO path for cache cleanup after scan completes.
+			std::lock_guard lock(m_path_mutex);
+			m_scanned_iso_paths.insert(dir_or_elf);
 		}
 
-		const auto file_exists = [&archive](const std::string& path)
+		const auto file_exists = [&archive, &cache_entry](const std::string& path)
 		{
-			return archive ? archive->is_file(path) : fs::is_file(path);
+			if (archive) return archive->is_file(path);
+			// On cache hit, paths inside the ISO are not accessible via fs::is_file.
+			// Return false here — cache hit paths are handled separately.
+			if (!cache_entry.psf_data.empty()) return false;
+			return fs::is_file(path);
 		};
 
 		gui_game_info game{};
@@ -545,10 +561,34 @@ void game_list_frame::OnParsingFinished()
 
 		const Localized thread_localized;
 
-		const std::string sfo_dir = archive ? "PS3_GAME" : rpcs3::utils::get_sfo_dir_from_game_path(dir_or_elf);
+		const std::string sfo_dir = (archive || !cache_entry.psf_data.empty()) ? "PS3_GAME" : rpcs3::utils::get_sfo_dir_from_game_path(dir_or_elf);
 		const std::string sfo_path = sfo_dir + "/PARAM.SFO";
 
-		const psf::registry psf = archive ? archive->open_psf(sfo_path) : psf::load_object(sfo_path);
+		// Load PSF: from archive on cache miss, rehydrate from cached SFO bytes on hit.
+		psf::registry psf{};
+		if (archive)
+		{
+			psf = archive->open_psf(sfo_path);
+		}
+		else if (!cache_entry.psf_data.empty())
+		{
+			psf = psf::load_object(fs::make_stream<std::vector<u8>>(std::vector<u8>(cache_entry.psf_data)), sfo_path);
+			// Fallback to archive scan if cached PSF is corrupted or missing critical fields.
+			const bool psf_valid = !psf::get_string(psf, "TITLE_ID", "").empty()
+				&& !psf::get_string(psf, "TITLE", "").empty()
+				&& !psf::get_string(psf, "CATEGORY", "").empty();
+			if (!psf_valid)
+			{
+				archive = std::make_unique<iso_archive>(dir_or_elf);
+				psf = archive->open_psf(sfo_path);
+				cache_entry = {}; // Reset so the cache gets rewritten after scan.
+			}
+		}
+		else
+		{
+			psf = psf::load_object(sfo_path);
+		}
+
 		const std::string_view title_id = psf::get_string(psf, "TITLE_ID", "");
 
 		if (title_id.empty())
@@ -616,19 +656,32 @@ void game_list_frame::OnParsingFinished()
 
 		if (game.info.icon_path.empty())
 		{
-			if (std::string icon_path = sfo_dir + "/" + localized_icon; file_exists(icon_path))
+			if (!cache_entry.icon_path.empty())
+			{
+				// Cache hit — icon path already resolved on a previous scan.
+				game.info.icon_path = cache_entry.icon_path;
+				game.icon_in_archive = true;
+			}
+			else if (std::string icon_path = sfo_dir + "/" + localized_icon; file_exists(icon_path))
 			{
 				game.info.icon_path = std::move(icon_path);
+				game.icon_in_archive = archive && archive->exists(game.info.icon_path);
 			}
 			else
 			{
 				game.info.icon_path = sfo_dir + "/ICON0.PNG";
+				game.icon_in_archive = archive && archive->exists(game.info.icon_path);
 			}
-			game.icon_in_archive = archive && archive->exists(game.info.icon_path);
 		}
 
 		if (play_hover_movies)
 		{
+			if (!cache_entry.movie_path.empty() && !archive)
+			{
+				// Cache hit — restore previously resolved movie path.
+				game.info.movie_path = cache_entry.movie_path;
+				game.has_hover_pam = true;
+			}
 			if (std::string movie_path = game_icon_path + game.info.serial + "/hover.gif"; file_exists(movie_path))
 			{
 				game.info.movie_path = std::move(movie_path);
@@ -648,10 +701,45 @@ void game_list_frame::OnParsingFinished()
 
 		if (play_hover_music)
 		{
+			if(!cache_entry.audio_path.empty() && !archive)
+			{
+				// Cache hit — restore previously resolved audio path.
+				game.info.audio_path = cache_entry.audio_path;
+				game.has_audio_file = true;
+			}
 			if (std::string audio_path = sfo_dir + "/SND0.AT3"; file_exists(audio_path))
 			{
 				game.info.audio_path = std::move(audio_path);
 				game.has_audio_file = true;
+			}
+		}
+
+		// On cache miss for an ISO, persist the resolved metadata so subsequent
+		// launches skip iso_archive construction entirely.
+		if (archive && is_iso)
+		{
+			fs::stat_t iso_stat{};
+			if (fs::get_stat(dir_or_elf, iso_stat))
+			{
+				cache_entry.mtime      = iso_stat.mtime;
+				cache_entry.psf_data   = psf::save_object(psf);
+				cache_entry.icon_path  = game.info.icon_path;
+				cache_entry.movie_path = game.info.movie_path;
+				cache_entry.audio_path = game.info.audio_path;
+
+				// Cache raw icon bytes so load_iso_icon can skip archive open.
+				if (game.icon_in_archive)
+				{
+					auto icon_file = archive->open(game.info.icon_path);
+					const auto icon_size = icon_file.size();
+					if (icon_size > 0)
+					{
+						cache_entry.icon_data.resize(icon_size);
+						icon_file.read(cache_entry.icon_data.data(), icon_size);
+					}
+				}
+
+				iso_cache::save(dir_or_elf, cache_entry);
 			}
 		}
 
@@ -817,6 +905,9 @@ void game_list_frame::OnRefreshFinished()
 	WaitAndAbortSizeCalcThreads();
 	WaitAndAbortRepaintThreads();
 
+	// Remove cache entries for ISOs that are no longer present in the scanned paths.
+	iso_cache::cleanup(m_scanned_iso_paths);
+
 	for (auto&& g : m_games.pop_all())
 	{
 		m_game_data.push_back(g);
@@ -903,6 +994,7 @@ void game_list_frame::OnRefreshFinished()
 	m_serials.clear();
 	m_path_list.clear();
 	m_path_entries.clear();
+	m_scanned_iso_paths.clear();
 
 	Refresh();
 
