@@ -224,13 +224,14 @@ iso_type_status iso_file_decryption::check_type(const std::string& path, std::st
 
 		aes_context aes_dec;
 
+		// If "aes_ctx" not requested
 		if (!aes_ctx)
 		{
 			aes_ctx = &aes_dec;
 		}
 
 		// Create the decryption context. If the context is successfully created, fill in "aes_ctx"
-		// (if not passed as nullptr) and return Redump ISO status
+		// (if requested) and return REDUMP_ISO
 		if (aes_setkey_dec(aes_ctx, key.data(), 128) == 0)
 		{
 			return iso_type_status::REDUMP_ISO;

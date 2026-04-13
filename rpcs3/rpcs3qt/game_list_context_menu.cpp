@@ -17,6 +17,7 @@
 #include "Utilities/File.h"
 #include "Emu/system_utils.hpp"
 #include "Loader/ISO.h"
+#include "Loader/iso_validation.h"
 
 #include "QApplication"
 #include "QClipboard"

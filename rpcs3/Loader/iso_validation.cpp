@@ -66,7 +66,7 @@ iso_integrity_status iso_file_validation::check_integrity(const std::string& pat
 		return iso_integrity_status::ERROR_PARSING_DB;
 	}
 
-	if (const auto& node = db_base->GetChildren(); node && node->GetName() == "datafile")
+	if (const auto& node = db_base->GetChild(std::string_view("datafile")); node)
 	{
 		db_base = node;
 	}
@@ -84,20 +84,17 @@ iso_integrity_status iso_file_validation::check_integrity(const std::string& pat
 	{
 		if (node->GetName() == "game")
 		{
-			for (auto child = node->GetChildren(); child; child = child->GetNext())
+			if (const auto& child = node->GetChild(std::string_view("rom")); child)
 			{
-				if (child->GetName() == "rom")
+				// If a match is found, fill in "game_desc" (if requested) and return FOUND_MATCH
+				if (hash == child->GetAttribute(std::string_view("md5")))
 				{
-					// If a match is found, Fill in "game_desc" and exit
-					if (hash == child->GetAttribute(std::string_view("md5")))
+					if (game_name)
 					{
-						if (game_name)
-						{
-							*game_name = node->GetAttribute(std::string_view("name"));
-						}
-
-						return iso_integrity_status::FOUND_MATCH;
+						*game_name = node->GetAttribute(std::string_view("name"));
 					}
+
+					return iso_integrity_status::FOUND_MATCH;
 				}
 			}
 		}
