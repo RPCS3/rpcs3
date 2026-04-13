@@ -66,10 +66,10 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 	const bool is_current_running_game = game_list_actions::IsGameRunning(serial);
 
 	// Make Actions
-	QAction* boot = new QAction((gameinfo->has_custom_config || gameinfo->has_database_config)
+	QAction* boot = new QAction(gameinfo->has_custom_config
 		? (is_current_running_game
-			? tr("&Reboot with Global Configuration")
-			: tr("&Boot with Global Configuration"))
+			? (gameinfo->has_database_config ? tr("&Reboot with Database + Global Configuration") : tr("&Reboot with Global Configuration"))
+			: (gameinfo->has_database_config ? tr("&Boot with Database + Global Configuration") : tr("&Boot with Global Configuration")))
 		: (is_current_running_game
 			? tr("&Reboot")
 			: tr("&Boot")));
@@ -89,21 +89,7 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 			Q_EMIT m_game_list_frame->RequestBoot(gameinfo);
 		});
 	}
-
-	if (gameinfo->has_database_config)
-	{
-		QAction* boot_db = addAction(is_current_running_game
-			? tr("&Reboot with Database Configuration")
-			: tr("&Boot with Database Configuration"));
-		boot_db->setFont(font);
-		connect(boot_db, &QAction::triggered, m_game_list_frame, [this, gameinfo]
-		{
-			sys_log.notice("Booting from gamelist per context menu...");
-			Q_EMIT m_game_list_frame->RequestBoot(gameinfo, cfg_mode::database_config);
-		});
-	}
-	
-	if (!gameinfo->has_custom_config && !gameinfo->has_database_config)
+	else
 	{
 		boot->setFont(font);
 	}
@@ -616,7 +602,7 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 	connect(boot, &QAction::triggered, m_game_list_frame, [this, gameinfo]()
 	{
 		sys_log.notice("Booting from gamelist per context menu...");
-		Q_EMIT m_game_list_frame->RequestBoot(gameinfo, cfg_mode::global);
+		Q_EMIT m_game_list_frame->RequestBoot(gameinfo, cfg_mode::database_config);
 	});
 
 	const auto configure_game = [this, current_game, gameinfo](bool create_cfg_from_global_cfg, bool create_cfg_from_database)

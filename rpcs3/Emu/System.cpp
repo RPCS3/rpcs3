@@ -174,10 +174,9 @@ void fmt_class_string<cfg_mode>::format(std::string& out, u64 arg)
 		{
 		case cfg_mode::custom: return "custom config";
 		case cfg_mode::custom_selection: return "custom config selection";
-		case cfg_mode::global: return "global config";
+		case cfg_mode::database_config: return "database config";
 		case cfg_mode::config_override: return "config override";
 		case cfg_mode::continuous: return "continuous config";
-		case cfg_mode::database_config: return "database config";
 		case cfg_mode::default_config: return "default config";
 		}
 		return unknown;
