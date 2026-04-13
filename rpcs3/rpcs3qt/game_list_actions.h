@@ -2,7 +2,7 @@
 
 #include "gui_game_info.h"
 #include "shortcut_utils.h"
-#include "Loader/ISO.h"
+#include "Loader/ISO_validation.h"
 
 #include <QFuture>
 #include <QObject>

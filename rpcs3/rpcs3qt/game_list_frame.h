@@ -3,11 +3,12 @@
 #include "game_list.h"
 #include "game_list_actions.h"
 #include "custom_dock_widget.h"
+#include "iso_integrity.h"
+
 #include "Utilities/lockless.h"
 #include "Utilities/mutex.h"
 #include "util/auto_typemap.hpp"
 #include "Emu/config_mode.h"
-#include "rpcs3qt/iso_integrity.h"
 
 #include <QMainWindow>
 #include <QStackedWidget>

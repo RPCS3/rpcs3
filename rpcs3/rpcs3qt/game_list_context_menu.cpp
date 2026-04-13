@@ -605,8 +605,8 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 	if (QString::fromStdString(current_game.category) == cat::cat_disc_game)
 	{
 		std::string key_path;
-		iso_type_status iso_type = iso_file_decryption::check_type(current_game.path, key_path);
-		iso_integrity_status iso_db = iso_file_validation::check_integrity(current_game.path, "");
+		const iso_type_status iso_type = iso_file_decryption::check_type(current_game.path, key_path);
+		const iso_integrity_status iso_db = iso_file_validation::check_integrity(current_game.path, "");
 
 		// If it's an ISO file (e.g. even a decrypted ISO), always provide the entry on the context menu but disable
 		// it if the ISO does not support integrity check (e.g. non Redump ISO) or no integrity DB is found.
