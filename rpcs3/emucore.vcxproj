@@ -203,7 +203,7 @@
     </ClCompile>
     <ClCompile Include="Emu\vfs_config.cpp" />
     <ClCompile Include="Loader\disc.cpp" />
-    <ClCompile Include="Loader\ISO_validation.cpp" />
+    <ClCompile Include="Loader\iso_validation.cpp" />
     <ClCompile Include="util\emu_utils.cpp" />
     <ClCompile Include="util\serialization_ext.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
@@ -769,7 +769,7 @@
     <ClInclude Include="Emu\system_config_types.h" />
     <ClInclude Include="Emu\vfs_config.h" />
     <ClInclude Include="Loader\disc.h" />
-    <ClInclude Include="Loader\ISO_validation.h" />
+    <ClInclude Include="Loader\iso_validation.h" />
     <ClInclude Include="Loader\mself.hpp" />
     <ClInclude Include="util\atomic.hpp" />
     <ClInclude Include="util\bless.hpp" />
