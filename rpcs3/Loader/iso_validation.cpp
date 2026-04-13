@@ -66,7 +66,7 @@ iso_integrity_status iso_file_validation::check_integrity(const std::string& pat
 		return iso_integrity_status::ERROR_PARSING_DB;
 	}
 
-	if (const auto& node = db_base->GetChild(std::string_view("datafile")); node)
+	if (const auto node = db_base->GetChild(std::string_view("datafile")))
 	{
 		db_base = node;
 	}
@@ -84,7 +84,7 @@ iso_integrity_status iso_file_validation::check_integrity(const std::string& pat
 	{
 		if (node->GetName() == "game")
 		{
-			if (const auto& child = node->GetChild(std::string_view("rom")); child)
+			if (const auto child = node->GetChild(std::string_view("rom")))
 			{
 				// If a match is found, fill in "game_desc" (if requested) and return FOUND_MATCH
 				if (hash == child->GetAttribute(std::string_view("md5")))
@@ -142,7 +142,7 @@ iso_hash_status iso_file_validation::calculate_hash(std::string& hash)
 		return m_status;
 	}
 
-	constexpr u64 block_size = ISO_SECTOR_SIZE;
+	constexpr u64 block_size = ISO_SECTOR_SIZE * 2;
 	std::array<u8, block_size> buf;
 	u64 bytes_read;
 	mbedtls_md5_context md5_ctx;
