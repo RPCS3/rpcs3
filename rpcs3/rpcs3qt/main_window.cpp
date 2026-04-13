@@ -169,7 +169,7 @@ extern void qt_events_aware_op(int repeat_duration_ms, std::function<bool()> wra
 	}
 }
 
-main_window::main_window(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget *parent)
+main_window::main_window(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget* parent)
 	: QMainWindow(parent)
 	, ui(new Ui::main_window)
 	, m_gui_settings(gui_settings)
@@ -234,7 +234,7 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 
 	connect(ui->actionDownload_Update, &QAction::triggered, this, [this]
 	{
-		m_updater.update(false);
+		m_updater.update(false, true);
 	});
 
 #ifdef _WIN32
@@ -260,6 +260,25 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 #endif
 
 #ifdef RPCS3_UPDATE_SUPPORTED
+#ifndef _WIN32
+	connect(&m_updater, &update_manager::signal_download_additional_files, this, [this](bool auto_accept)
+	{
+		if (!m_game_list_frame) return;
+
+		connect(m_game_list_frame->GetGameCompatibility(), &game_compatibility::DownloadFinished, this, [this, auto_accept]()
+		{
+			connect(m_game_list_frame->GetConfigDatabase(), &config_database::download_finished, this, [this, auto_accept]()
+			{
+				m_updater.update(auto_accept, false);
+			}, Qt::ConnectionType::SingleShotConnection);
+
+			m_game_list_frame->GetConfigDatabase()->request_config_database(true);
+		}, Qt::ConnectionType::SingleShotConnection);
+
+		m_game_list_frame->GetGameCompatibility()->RequestCompatibility(true);
+	});
+#endif
+
 	if (const auto update_value = m_gui_settings->GetValue(gui::m_check_upd_start).toString(); update_value != gui::update_off)
 	{
 		const bool in_background = with_cli_boot || update_value == gui::update_bkg;

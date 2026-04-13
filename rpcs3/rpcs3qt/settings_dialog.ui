@@ -4519,11 +4519,11 @@
                </property>
                <layout class="QVBoxLayout" name="gb_debug_cpu_layout">
                 <item>
-                  <widget class="QCheckBox" name="accurateDFMA">
+                 <widget class="QCheckBox" name="accurateDFMA">
                   <property name="text">
-                    <string>Accurate PPU/SPU Double-Precision FMA</string>
+                   <string>Accurate PPU/SPU Double-Precision FMA</string>
                   </property>
-                  </widget>
+                 </widget>
                 </item>
                 <item>
                  <widget class="QCheckBox" name="accurateClineStores">
@@ -4575,7 +4575,7 @@
                  </widget>
                 </item>
                 <item>
-                 <spacer name="verticalSpacerDebugCore">
+                 <spacer name="verticalSpacerDebugCpu">
                   <property name="orientation">
                    <enum>Qt::Orientation::Vertical</enum>
                   </property>
