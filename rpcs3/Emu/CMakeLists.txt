@@ -161,7 +161,7 @@ if(WIN32)
         Audio/XAudio2/xaudio2_enumerator.cpp
     )
     target_compile_definitions(rpcs3_emu PRIVATE UNICODE _UNICODE _WIN32_WINNT=0x0A00)
-    target_link_libraries(rpcs3_emu PRIVATE pdh bcrypt)
+    target_link_libraries(rpcs3_emu PRIVATE pdh bcrypt dbghelp)
 endif()
 
 # Cell
