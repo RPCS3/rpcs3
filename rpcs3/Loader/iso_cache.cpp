@@ -91,6 +91,8 @@ namespace iso_cache
 
 	void save(const std::string& iso_path, const iso_metadata_cache_entry& entry)
 	{
+		iso_cache_log.notice("Saving cache for '%s'", iso_path);
+
 		const std::string stem     = get_cache_stem(iso_path);
 		const std::string dir      = get_cache_dir();
 		const std::string yml_path = dir + stem + ".yml";

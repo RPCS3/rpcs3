@@ -11,6 +11,7 @@
 #include <stack>
 
 LOG_CHANNEL(sys_log, "SYS");
+LOG_CHANNEL(iso_log, "ISO");
 
 constexpr u64 ISO_SECTOR_SIZE = 2048;
 
@@ -110,7 +111,7 @@ static bool decrypt_data(aes_context& aes, u64 offset, unsigned char* buffer, u6
 	// Partial (or even full) first sector
 	if (aes_crypt_cbc(&aes, AES_DECRYPT, cur_size, iv.data(), &buffer[cur_offset], &buffer[cur_offset]) != 0)
 	{
-		sys_log.error("decrypt_data(): Error decrypting data on first sector read");
+		iso_log.error("decrypt_data: Error decrypting data on first sector read");
 		return false;
 	}
 
@@ -130,7 +131,7 @@ static bool decrypt_data(aes_context& aes, u64 offset, unsigned char* buffer, u6
 
 		if (aes_crypt_cbc(&aes, AES_DECRYPT, ISO_SECTOR_SIZE, iv.data(), &buffer[cur_offset], &buffer[cur_offset]) != 0)
 		{
-			sys_log.error("decrypt_data(): Error decrypting data on inner sector(s) read");
+			iso_log.error("decrypt_data: Error decrypting data on inner sector(s) read");
 			return false;
 		}
 
@@ -142,7 +143,7 @@ static bool decrypt_data(aes_context& aes, u64 offset, unsigned char* buffer, u6
 	// Partial (or even full) last sector
 	if (aes_crypt_cbc(&aes, AES_DECRYPT, size - cur_offset, iv.data(), &buffer[cur_offset], &buffer[cur_offset]) != 0)
 	{
-		sys_log.error("decrypt_data(): Error decrypting data on last sector read");
+		iso_log.error("decrypt_data: Error decrypting data on last sector read");
 		return false;
 	}
 
@@ -164,8 +165,6 @@ bool iso_file_decryption::init(const std::string& path)
 		return false;
 	}
 
-	std::array<u8, ISO_SECTOR_SIZE * 2> sec0_sec1 {};
-
 	//
 	// Store the ISO region information (needed by both the "Redump" type (only on "decrypt()" method) and "3k3y" type)
 	//
@@ -174,19 +173,21 @@ bool iso_file_decryption::init(const std::string& path)
 
 	if (!iso_file)
 	{
-		sys_log.error("init(): Failed to open file: %s", path);
+		iso_log.error("init: Failed to open file: %s", path);
 		return false;
 	}
 
+	std::array<u8, ISO_SECTOR_SIZE * 2> sec0_sec1 {};
+
 	if (iso_file.size() < sec0_sec1.size())
 	{
-		sys_log.error("init(): Found only %ull sector(s) (minimum required is 2): %s", iso_file.size(), path);
+		iso_log.error("init: Found only %ull sector(s) (minimum required is 2): %s", iso_file.size(), path);
 		return false;
 	}
 
 	if (iso_file.read(sec0_sec1.data(), sec0_sec1.size()) != sec0_sec1.size())
 	{
-		sys_log.error("init(): Failed to read file: %s", path);
+		iso_log.error("init: Failed to read file: %s", path);
 		return false;
 	}
 
@@ -195,12 +196,12 @@ bool iso_file_decryption::init(const std::string& path)
 	// Following checks and assigned values are based on PS3 ISO specification.
 	// E.g. all even regions (0, 2, 4 etc.) are always unencrypted while the odd ones are encrypted
 
-	size_t region_count = char_arr_BE_to_uint(sec0_sec1.data());
+	const u32 region_count = char_arr_BE_to_uint(sec0_sec1.data());
 
 	// Ensure the region count is a proper value
 	if (region_count < 1 || region_count > 31) // It's non-PS3ISO
 	{
-		sys_log.error("init(): Failed to read region information: %s", path);
+		iso_log.error("init: Failed to read region information: '%s' (region_count=%d)", path, region_count);
 		return false;
 	}
 
@@ -264,12 +265,12 @@ bool iso_file_decryption::init(const std::string& path)
 
 		if (m_enc_type == iso_encryption_type::NONE) // If encryption type was not set to REDUMP for any reason
 		{
-			sys_log.error("init(): Failed to process key file: %s", key_path);
+			iso_log.error("init: Failed to process key file: %s", key_path);
 		}
 	}
 	else
 	{
-		sys_log.warning("init(): Failed to open, or missing, key file: %s", key_path);
+		iso_log.warning("init: Failed to open, or missing, key file: %s", key_path);
 	}
 
 	//
@@ -311,7 +312,7 @@ bool iso_file_decryption::init(const std::string& path)
 
 			if (m_enc_type == iso_encryption_type::NONE) // If encryption type was not set to ENC_3K3Y for any reason
 			{
-				sys_log.error("init(): Failed to set encryption type to ENC_3K3Y: %s", path);
+				iso_log.error("init: Failed to set encryption type to ENC_3K3Y: %s", path);
 			}
 		}
 		else if (memcmp(&k3k3y_dec_watermark[0], &sec0_sec1[0xF70], sizeof(k3k3y_dec_watermark)) == 0)
@@ -323,16 +324,16 @@ bool iso_file_decryption::init(const std::string& path)
 	switch (m_enc_type)
 	{
 	case iso_encryption_type::REDUMP:
-		sys_log.warning("init(): Set 'enc type': REDUMP, 'reg count': %u: %s", m_region_info.size(), path);
+		iso_log.warning("init: Set 'enc type': REDUMP, 'reg count': %u: %s", m_region_info.size(), path);
 		break;
 	case iso_encryption_type::ENC_3K3Y:
-		sys_log.warning("init(): Set 'enc type': ENC_3K3Y, 'reg count': %u: %s", m_region_info.size(), path);
+		iso_log.warning("init: Set 'enc type': ENC_3K3Y, 'reg count': %u: %s", m_region_info.size(), path);
 		break;
 	case iso_encryption_type::DEC_3K3Y:
-		sys_log.warning("init(): Set 'enc type': DEC_3K3Y, 'reg count': %u: %s", m_region_info.size(), path);
+		iso_log.warning("init: Set 'enc type': DEC_3K3Y, 'reg count': %u: %s", m_region_info.size(), path);
 		break;
 	case iso_encryption_type::NONE: // If encryption type was not set for any reason
-		sys_log.warning("init(): Set 'enc type': NONE, 'reg count': %u: %s", m_region_info.size(), path);
+		iso_log.warning("init: Set 'enc type': NONE, 'reg count': %u: %s", m_region_info.size(), path);
 		break;
 	}
 
@@ -384,7 +385,7 @@ bool iso_file_decryption::decrypt(u64 offset, void* buffer, u64 size, const std:
 		}
 	}
 
-	sys_log.error("decrypt(): %s: LBA request wasn't in the 'm_region_info' for an encrypted ISO? - RP: 0x%lx, RC: 0x%lx, LR: (0x%016lx - 0x%016lx)",
+	iso_log.error("decrypt: %s: LBA request wasn't in the 'm_region_info' for an encrypted ISO? - RP: 0x%lx, RC: 0x%lx, LR: (0x%016lx - 0x%016lx)",
 		name,
 		offset,
 		static_cast<unsigned long int>(m_region_info.size()),
@@ -492,7 +493,7 @@ static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, 
 
 		utf16.resize(header.file_name_length / 2);
 
-		for (size_t i = 0; i < utf16.size(); ++i, raw++)
+		for (usz i = 0; i < utf16.size(); ++i, raw++)
 		{
 			utf16[i] = *reinterpret_cast<const be_t<u16>*>(raw);
 		}
@@ -664,8 +665,8 @@ iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
 	const std::string path = std::filesystem::path(passed_path).string();
 	const std::string_view path_sv = path;
 
-	size_t start = 0;
-	size_t end = path_sv.find_first_of(fs::delim);
+	usz start = 0;
+	usz end = path_sv.find_first_of(fs::delim);
 
 	std::stack<iso_fs_node*> search_stack;
 	search_stack.push(&m_root);
@@ -907,7 +908,7 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 	{
 		if (total_read != first_sec.size_aligned)
 		{
-			sys_log.error("read_at(): %s: Error reading from file", m_meta.name);
+			iso_log.error("read_at: %s: Error reading from file", m_meta.name);
 
 			seek(m_pos, fs::seek_set);
 			return 0;
@@ -949,7 +950,7 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 
 	if (total_read != first_sec.size_aligned + last_sec.size_aligned + expected_inner_sector_read)
 	{
-		sys_log.error("read_at(): %s: Error reading from file", m_meta.name);
+		iso_log.error("read_at: %s: Error reading from file", m_meta.name);
 
 		seek(m_pos, fs::seek_set);
 		return 0;

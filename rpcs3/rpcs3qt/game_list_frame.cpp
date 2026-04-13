@@ -566,11 +566,7 @@ void game_list_frame::OnParsingFinished()
 
 		// Load PSF: from archive on cache miss, rehydrate from cached SFO bytes on hit.
 		psf::registry psf{};
-		if (archive)
-		{
-			psf = archive->open_psf(sfo_path);
-		}
-		else if (!cache_entry.psf_data.empty())
+		if (!cache_entry.psf_data.empty())
 		{
 			psf = psf::load_object(fs::make_stream<std::vector<u8>>(std::vector<u8>(cache_entry.psf_data)), sfo_path);
 			// Fallback to archive scan if cached PSF is corrupted or missing critical fields.
@@ -579,14 +575,23 @@ void game_list_frame::OnParsingFinished()
 				&& !psf::get_string(psf, "CATEGORY", "").empty();
 			if (!psf_valid)
 			{
+				game_list_log.warning("Cached psf for iso not valid: '%s'", game.info.path);
 				archive = std::make_unique<iso_archive>(dir_or_elf);
-				psf = archive->open_psf(sfo_path);
 				cache_entry = {}; // Reset so the cache gets rewritten after scan.
+				psf = {};
 			}
 		}
-		else
+
+		if (psf.empty())
 		{
-			psf = psf::load_object(sfo_path);
+			if (archive)
+			{
+				psf = archive->open_psf(sfo_path);
+			}
+			else
+			{
+				psf = psf::load_object(sfo_path);
+			}
 		}
 
 		const std::string_view title_id = psf::get_string(psf, "TITLE_ID", "");
@@ -676,16 +681,16 @@ void game_list_frame::OnParsingFinished()
 
 		if (play_hover_movies)
 		{
-			if (!cache_entry.movie_path.empty() && !archive)
-			{
-				// Cache hit — restore previously resolved movie path.
-				game.info.movie_path = cache_entry.movie_path;
-				game.has_hover_pam = true;
-			}
 			if (std::string movie_path = game_icon_path + game.info.serial + "/hover.gif"; file_exists(movie_path))
 			{
 				game.info.movie_path = std::move(movie_path);
 				game.has_hover_gif = true;
+			}
+			else if (!cache_entry.movie_path.empty() && !archive)
+			{
+				// Cache hit — restore previously resolved movie path.
+				game.info.movie_path = cache_entry.movie_path;
+				game.has_hover_pam = true;
 			}
 			else if (std::string movie_path = sfo_dir + "/" + localized_movie; file_exists(movie_path))
 			{
@@ -701,13 +706,13 @@ void game_list_frame::OnParsingFinished()
 
 		if (play_hover_music)
 		{
-			if(!cache_entry.audio_path.empty() && !archive)
+			if (!cache_entry.audio_path.empty() && !archive)
 			{
 				// Cache hit — restore previously resolved audio path.
 				game.info.audio_path = cache_entry.audio_path;
 				game.has_audio_file = true;
 			}
-			if (std::string audio_path = sfo_dir + "/SND0.AT3"; file_exists(audio_path))
+			else if (std::string audio_path = sfo_dir + "/SND0.AT3"; file_exists(audio_path))
 			{
 				game.info.audio_path = std::move(audio_path);
 				game.has_audio_file = true;
