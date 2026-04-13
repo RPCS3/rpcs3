@@ -127,6 +127,7 @@ target_sources(rpcs3_emu PRIVATE
     ../Loader/TAR.cpp
     ../Loader/ISO.cpp
     ../Loader/iso_cache.cpp
+    ../Loader/ISO_validation.cpp
     ../Loader/TROPUSR.cpp
     ../Loader/TRP.cpp
 )
