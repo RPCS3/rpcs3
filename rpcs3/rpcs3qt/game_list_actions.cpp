@@ -440,12 +440,10 @@ void game_list_actions::ShowGameIntegrityDialog(const game_info& game)
 	// Thread responsible to update the progress bar and to make cleanup when the hash calculation terminates
 	QtConcurrent::run([this, pdlg]()
 	{
-		int progress;
-
 		while (m_iso_validator->get_status() == iso_hash_status::INITIALIZED)
 		{
 			// Set progress in range 0-100
-			progress = m_iso_validator->get_size() ?
+			const int progress = m_iso_validator->get_size() ?
 				(static_cast<float>(m_iso_validator->get_bytes_read()) / m_iso_validator->get_size()) * 100 :
 				0;
 

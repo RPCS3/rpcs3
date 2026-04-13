@@ -1,7 +1,7 @@
 #include "iso_integrity.h"
 #include "gui_settings.h"
 
-#include "EMU/system_utils.hpp"
+#include "Emu/system_utils.hpp"
 
 LOG_CHANNEL(compat_log, "Compat");
 
