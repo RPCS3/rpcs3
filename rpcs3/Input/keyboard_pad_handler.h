@@ -9,7 +9,7 @@
 #include <vector>
 #include <unordered_map>
 
-enum mouse
+enum mouse : u32
 {
 	move_left   = 0x05555550,
 	move_right  = 0x05555551,
@@ -18,40 +18,41 @@ enum mouse
 	wheel_up    = 0x05555554,
 	wheel_down  = 0x05555555,
 	wheel_left  = 0x05555556,
-	wheel_right = 0x05555557
+	wheel_right = 0x05555557,
+	button      = 0x80000000
 };
 
 // Unique button names for the config files and our pad settings dialog
 const std::unordered_map<u32, std::string> mouse_list =
 {
 	{ Qt::NoButton       , ""             },
-	{ Qt::LeftButton     , "Mouse Left"   },
-	{ Qt::RightButton    , "Mouse Right"  },
-	{ Qt::MiddleButton   , "Mouse Middle" },
-	{ Qt::BackButton     , "Mouse Back"   },
-	{ Qt::ForwardButton  , "Mouse Fwd"    },
-	{ Qt::TaskButton     , "Mouse Task"   },
-	{ Qt::ExtraButton4   , "Mouse 4"      },
-	{ Qt::ExtraButton5   , "Mouse 5"      },
-	{ Qt::ExtraButton6   , "Mouse 6"      },
-	{ Qt::ExtraButton7   , "Mouse 7"      },
-	{ Qt::ExtraButton8   , "Mouse 8"      },
-	{ Qt::ExtraButton9   , "Mouse 9"      },
-	{ Qt::ExtraButton10  , "Mouse 10"     },
-	{ Qt::ExtraButton11  , "Mouse 11"     },
-	{ Qt::ExtraButton12  , "Mouse 12"     },
-	{ Qt::ExtraButton13  , "Mouse 13"     },
-	{ Qt::ExtraButton14  , "Mouse 14"     },
-	{ Qt::ExtraButton15  , "Mouse 15"     },
-	{ Qt::ExtraButton16  , "Mouse 16"     },
-	{ Qt::ExtraButton17  , "Mouse 17"     },
-	{ Qt::ExtraButton18  , "Mouse 18"     },
-	{ Qt::ExtraButton19  , "Mouse 19"     },
-	{ Qt::ExtraButton20  , "Mouse 20"     },
-	{ Qt::ExtraButton21  , "Mouse 21"     },
-	{ Qt::ExtraButton22  , "Mouse 22"     },
-	{ Qt::ExtraButton23  , "Mouse 23"     },
-	{ Qt::ExtraButton24  , "Mouse 24"     },
+	{ mouse::button + static_cast<u32>(Qt::LeftButton)     , "Mouse Left"   },
+	{ mouse::button + static_cast<u32>(Qt::RightButton)    , "Mouse Right"  },
+	{ mouse::button + static_cast<u32>(Qt::MiddleButton)   , "Mouse Middle" },
+	{ mouse::button + static_cast<u32>(Qt::BackButton)     , "Mouse Back"   },
+	{ mouse::button + static_cast<u32>(Qt::ForwardButton)  , "Mouse Fwd"    },
+	{ mouse::button + static_cast<u32>(Qt::TaskButton)     , "Mouse Task"   },
+	{ mouse::button + static_cast<u32>(Qt::ExtraButton4)   , "Mouse 4"      },
+	{ mouse::button + static_cast<u32>(Qt::ExtraButton5)   , "Mouse 5"      },
+	{ mouse::button + static_cast<u32>(Qt::ExtraButton6)   , "Mouse 6"      },
+	{ mouse::button + static_cast<u32>(Qt::ExtraButton7)   , "Mouse 7"      },
+	{ mouse::button + static_cast<u32>(Qt::ExtraButton8)   , "Mouse 8"      },
+	{ mouse::button + static_cast<u32>(Qt::ExtraButton9)   , "Mouse 9"      },
+	{ mouse::button + static_cast<u32>(Qt::ExtraButton10)  , "Mouse 10"     },
+	{ mouse::button + static_cast<u32>(Qt::ExtraButton11)  , "Mouse 11"     },
+	{ mouse::button + static_cast<u32>(Qt::ExtraButton12)  , "Mouse 12"     },
+	{ mouse::button + static_cast<u32>(Qt::ExtraButton13)  , "Mouse 13"     },
+	{ mouse::button + static_cast<u32>(Qt::ExtraButton14)  , "Mouse 14"     },
+	{ mouse::button + static_cast<u32>(Qt::ExtraButton15)  , "Mouse 15"     },
+	{ mouse::button + static_cast<u32>(Qt::ExtraButton16)  , "Mouse 16"     },
+	{ mouse::button + static_cast<u32>(Qt::ExtraButton17)  , "Mouse 17"     },
+	{ mouse::button + static_cast<u32>(Qt::ExtraButton18)  , "Mouse 18"     },
+	{ mouse::button + static_cast<u32>(Qt::ExtraButton19)  , "Mouse 19"     },
+	{ mouse::button + static_cast<u32>(Qt::ExtraButton20)  , "Mouse 20"     },
+	{ mouse::button + static_cast<u32>(Qt::ExtraButton21)  , "Mouse 21"     },
+	{ mouse::button + static_cast<u32>(Qt::ExtraButton22)  , "Mouse 22"     },
+	{ mouse::button + static_cast<u32>(Qt::ExtraButton23)  , "Mouse 23"     },
+	{ mouse::button + static_cast<u32>(Qt::ExtraButton24)  , "Mouse 24"     },
 
 	{ mouse::move_left   , "Mouse MLeft"  },
 	{ mouse::move_right  , "Mouse MRight" },
@@ -93,7 +94,7 @@ public:
 	static QStringList GetKeyNames(const QKeyEvent* keyEvent);
 	static std::string GetKeyName(const QKeyEvent* keyEvent, bool with_modifiers);
 	static std::string GetKeyName(const u32& keyCode);
-	static std::vector<std::set<u32>> GetKeyCombos(const cfg::string& cfg_string);
+	static std::vector<std::set<u32>> GetKeyCombos(const std::string& cfg_string);
 	static u32 GetKeyCode(const QString& keyName);
 
 	static int native_scan_code_from_string(const std::string& key);
