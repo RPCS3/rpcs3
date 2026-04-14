@@ -579,6 +579,10 @@ public:
 						IMM = spu_opcode_t{imm}.si10;
 						break;
 					}
+					default:
+					{
+						break;
+					}
 					}
 
 					if (!is_ok)
