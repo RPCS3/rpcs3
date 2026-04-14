@@ -5921,17 +5921,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				}
 			}
 
-			const auto prev_wi = wi - 1;
-			if (prev_wi != umax && ::at32(reg_state_it, prev_wi).reduced_loop.active)
-			{
-				const auto reduced_loop = &::at32(reg_state_it, prev_wi).reduced_loop;
-
-				for (const auto& [reg_num, reg] : reduced_loop->regs)
-				{
-					
-				}
-			}
-
 			if (wi < reg_state_it.size())
 			{
 				wa = ::at32(reg_state_it, wi).pc;
