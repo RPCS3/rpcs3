@@ -403,7 +403,9 @@ void game_list_actions::ShowGameIntegrityDialog(const game_info& game)
 		{
 			text = "Integrity check completed!\n\n";
 
-			switch (m_iso_validator->check_integrity(m_iso_validator->get_path(), hash, &game_name))
+			const QString db_path = m_gui_settings->GetSettingsDir() + QString::fromStdString(rpcs3::utils::get_redump_db_filename());
+
+			switch (m_iso_validator->check_integrity(m_iso_validator->get_path(), db_path.toStdString(), hash, &game_name))
 			{
 			case iso_integrity_status::NO_MATCH:
 				text += tr("Game check NOT PASSED\n\nNo match found on DB or game corrupted:\n - Hash: %0")

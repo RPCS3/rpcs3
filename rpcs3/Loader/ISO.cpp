@@ -187,14 +187,14 @@ iso_type_status iso_file_decryption::check_type(const std::string& path, std::st
 	// If no ".dkey" and ".key" file exists, try on default ISO keys folder
 	if (!key_file)
 	{
-		key_path = rpcs3::utils::get_redump_dir() + name + ".dkey";
+		key_path = rpcs3::utils::get_redump_key_dir() + name + ".dkey";
 		key_file = fs::file(key_path);
 	}
 
 	// If no ".dkey" file exists, try with ".key"
 	if (!key_file)
 	{
-		key_path = rpcs3::utils::get_redump_dir() + name + ".key";
+		key_path = rpcs3::utils::get_redump_key_dir() + name + ".key";
 		key_file = fs::file(key_path);
 	}
 

@@ -11,27 +11,13 @@
 
 LOG_CHANNEL(sys_log, "SYS");
 
-iso_integrity_status iso_file_validation::check_integrity(const std::string& path, const std::string& hash, std::string* game_name)
+iso_integrity_status iso_file_validation::check_integrity(const std::string& path, const std::string db_path, const std::string& hash, std::string* game_name)
 {
 	//
 	// Check for Redump db
 	//
 
-	const usz ext_pos = path.rfind('.');
-	std::string db_path;
-
-	// If no file extension is provided, set "db_path" appending ".dat" to "path".
-	// Otherwise, replace the extension (e.g. ".iso") with ".dat"
-	db_path = ext_pos == umax ? path + ".dat" : path.substr(0, ext_pos) + ".dat";
-
 	fs::file db_file(db_path);
-
-	// If no ".dat" file exists, try with default "redump.dat" file
-	if (!db_file)
-	{
-		db_path = rpcs3::utils::get_redump_db_path();
-		db_file = fs::file(db_path);
-	}
 
 	// If no db file exists
 	if (!db_file)

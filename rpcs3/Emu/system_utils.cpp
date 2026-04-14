@@ -241,14 +241,14 @@ namespace rpcs3::utils
 		return cache_dir;
 	}
 
-	std::string get_redump_dir()
+	std::string get_redump_key_dir()
 	{
-		return fs::get_config_dir() /*+ "data/redump/"*/; // TO BE FINALIZED WITH A PROPER FOLDER!
+		return get_data_dir() + "redump/";
 	}
 
-	std::string get_redump_db_path()
+	std::string get_redump_db_filename()
 	{
-		return get_redump_dir() + "redump.dat";
+		return "/redump.dat";
 	}
 
 	std::string get_redump_db_download_url()
