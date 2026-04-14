@@ -2617,8 +2617,6 @@ public:
 					{
 						if (auto init_val = reduced_loop_init_regs[i])
 						{
-							llvm::Type* type = g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate && bb.reg_maybe_xf[i] ? get_type<f64[4]>() : get_reg_type(i);
-
 							const auto _phi = m_ir->CreatePHI(init_val->getType(), 2, fmt::format("reduced_0x%05x_r%u", baddr, i));
 							_phi->addIncoming(init_val, prev_insert_block);
 
