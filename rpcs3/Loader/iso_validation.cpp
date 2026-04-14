@@ -9,7 +9,7 @@
 #include "Crypto/md5.h"
 #include "Crypto/utils.h"
 
-LOG_CHANNEL(sys_log, "SYS");
+LOG_CHANNEL(iso_log, "ISO");
 
 iso_integrity_status iso_file_validation::check_integrity(const std::string& path, const std::string db_path, const std::string& hash, std::string* game_name)
 {
@@ -25,7 +25,7 @@ iso_integrity_status iso_file_validation::check_integrity(const std::string& pat
 		// An empty hash is used to simply test the presence (without any logging) of the Redump db
 		if (!hash.empty())
 		{
-			sys_log.error("check_integrity(): Failed to open file: %s", db_path);
+			iso_log.error("check_integrity: Failed to open file: %s", db_path);
 		}
 
 		return iso_integrity_status::ERROR_OPENING_DB;
@@ -40,7 +40,7 @@ iso_integrity_status iso_file_validation::check_integrity(const std::string& pat
 
 	if (!db.Read(db_file.to_string()))
 	{
-		sys_log.error("check_integrity(): Failed to process file: %s", db_path);
+		iso_log.error("check_integrity: Failed to process file: %s", db_path);
 		return iso_integrity_status::ERROR_PARSING_DB;
 	}
 
@@ -48,7 +48,7 @@ iso_integrity_status iso_file_validation::check_integrity(const std::string& pat
 
 	if (!db_base)
 	{
-		sys_log.error("check_integrity(): Failed to get 'root' node on file: %s", db_path);
+		iso_log.error("check_integrity: Failed to get 'root' node on file: %s", db_path);
 		return iso_integrity_status::ERROR_PARSING_DB;
 	}
 
@@ -58,7 +58,7 @@ iso_integrity_status iso_file_validation::check_integrity(const std::string& pat
 	}
 	else
 	{
-		sys_log.error("check_integrity(): Failed to get 'datafile' node on file: %s", db_path);
+		iso_log.error("check_integrity: Failed to get 'datafile' node on file: %s", db_path);
 		return iso_integrity_status::ERROR_PARSING_DB;
 	}
 
@@ -97,7 +97,7 @@ bool iso_file_validation::init_hash(const std::string& path)
 	// If no ISO file exists
 	if (!iso_file)
 	{
-		sys_log.error("init_hash(): Failed to open file: %s", path);
+		iso_log.error("init_hash: Failed to open file: %s", path);
 		m_status = iso_hash_status::ABORTED;
 		return false;
 	}
@@ -113,7 +113,7 @@ iso_hash_status iso_file_validation::calculate_hash(std::string& hash)
 {
 	if (m_status != iso_hash_status::INITIALIZED)
 	{
-		sys_log.error("calculate_hash(): MD5 hash calculation already performed: %s", m_path);
+		iso_log.error("calculate_hash: MD5 hash calculation already performed: %s", m_path);
 		m_status = iso_hash_status::ABORTED;
 		return m_status;
 	}
@@ -123,7 +123,7 @@ iso_hash_status iso_file_validation::calculate_hash(std::string& hash)
 	// If no ISO file exists
 	if (!iso_file)
 	{
-		sys_log.error("calculate_hash(): Failed to open file: %s", m_path);
+		iso_log.error("calculate_hash: Failed to open file: %s", m_path);
 		m_status = iso_hash_status::ABORTED;
 		return m_status;
 	}
@@ -146,13 +146,13 @@ iso_hash_status iso_file_validation::calculate_hash(std::string& hash)
 
 	if (m_status == iso_hash_status::ABORTED)
 	{
-		sys_log.warning("calculate_hash(): MD5 hash calculation aborted by user: %s", m_path);
+		iso_log.warning("calculate_hash: MD5 hash calculation aborted by user: %s", m_path);
 		return m_status;
 	}
 
 	if (mbedtls_md5_finish_ret(&md5_ctx, md5_hash) != 0)
 	{
-		sys_log.error("calculate_hash(): Failed to calculate MD5 hash on file: %s", m_path);
+		iso_log.error("calculate_hash: Failed to calculate MD5 hash on file: %s", m_path);
 		m_status = iso_hash_status::ABORTED;
 		return m_status;
 	}

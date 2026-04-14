@@ -80,7 +80,7 @@ static bool decrypt_data(aes_context& aes, u64 offset, unsigned char* buffer, u6
 
 	//if ((size % 16) != 0)
 	//{
-	//	sys_log.error("decrypt_data(): Requested ciphertext blocks' size must be a multiple of 16 (%ull)", size);
+	//	iso_log.error("decrypt_data: Requested ciphertext blocks' size must be a multiple of 16 (%ull)", size);
 	//	return;
 	//}
 
@@ -311,7 +311,7 @@ bool iso_file_decryption::init(const std::string& path)
 	switch (check_type(path, key_path, &m_aes_dec))
 	{
 	case iso_type_status::NOT_ISO:
-		sys_log.warning("init(): Failed to recognize ISO file: %s", path);
+		iso_log.warning("init: Failed to recognize ISO file: %s", path);
 		break;
 	case iso_type_status::REDUMP_ISO:
 		m_enc_type = iso_encryption_type::REDUMP; // SET ENCRYPTION TYPE: REDUMP
@@ -320,7 +320,7 @@ bool iso_file_decryption::init(const std::string& path)
 		iso_log.warning("init: Failed to open, or missing, key file: %s", key_path);
 		break;
 	case iso_type_status::ERROR_PROCESSING_KEY:
-		sys_log.error("init(): Failed to process key file: %s", key_path);
+		iso_log.error("init: Failed to process key file: %s", key_path);
 		break;
 	default:
 		break;
