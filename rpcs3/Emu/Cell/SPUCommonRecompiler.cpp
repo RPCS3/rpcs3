@@ -6489,7 +6489,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				}
 
 				bool should_have_argument_dictator = false;
-				bool should_have_argument_increment = false;
 				bool cond_val_incr_before_cond = false;
 				bool ends_with_comparison = false;
 
@@ -6498,10 +6497,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				switch (reg->mod1_type)
 				{
 				case spu_itype::A:
-				{
-					should_have_argument_increment = true;
-					[[fallthrough]];
-				}
 				case spu_itype::AI:
 				case spu_itype::AHI:
 				{
@@ -6561,10 +6556,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					switch (reg->mod2_type)
 					{
 					case spu_itype::A:
-					{
-						should_have_argument_increment = true;
-						[[fallthrough]];
-					}
 					case spu_itype::AI:
 					case spu_itype::AHI:
 					{
