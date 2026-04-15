@@ -788,7 +788,7 @@ std::vector<pad_list_entry> keyboard_pad_handler::list_devices()
 
 std::string keyboard_pad_handler::GetMouseName(const QMouseEvent* event)
 {
-	return GetMouseName(event->button());
+	return GetMouseName(static_cast<u32>(mouse::button) + static_cast<u32>(event->button()));
 }
 
 std::string keyboard_pad_handler::GetMouseName(u32 button)
