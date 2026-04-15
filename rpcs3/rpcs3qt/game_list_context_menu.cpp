@@ -157,13 +157,13 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 
 	addSeparator();
 
+	QAction* create_game_database_config = (gameinfo->has_custom_config || !gameinfo->has_database_config) ? nullptr
+		: addAction(tr("&Create Custom Configuration From Database Settings"));
 	QAction* configure = addAction(gameinfo->has_custom_config
 		? tr("&Change Custom Configuration")
 		: tr("&Create Custom Configuration From Global Settings"));
 	QAction* create_game_default_config = gameinfo->has_custom_config ? nullptr
 		: addAction(tr("&Create Custom Configuration From Default Settings"));
-	QAction* create_game_database_config = (gameinfo->has_custom_config || !gameinfo->has_database_config) ? nullptr
-		: addAction(tr("&Create Custom Configuration From Database Settings"));
 	QAction* pad_configure = addAction(gameinfo->has_custom_pad_config
 		? tr("&Change Custom Gamepad Configuration")
 		: tr("&Create Custom Gamepad Configuration"));
