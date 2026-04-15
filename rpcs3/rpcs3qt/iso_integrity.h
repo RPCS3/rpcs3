@@ -1,6 +1,5 @@
 #pragma once
 
-#include "gui_settings.h"
 #include "downloader.h"
 
 class iso_integrity : public QObject
@@ -15,7 +14,7 @@ private:
 
 public:
 	// Handles download for the ISO integrity database
-	iso_integrity(const std::shared_ptr<gui_settings>& settings, QWidget* parent);
+	iso_integrity(QWidget* parent);
 
 	// Downloads and writes the database to file
 	void download();

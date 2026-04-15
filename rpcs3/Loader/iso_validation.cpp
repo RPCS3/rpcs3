@@ -11,12 +11,13 @@
 
 LOG_CHANNEL(iso_log, "ISO");
 
-iso_integrity_status iso_file_validation::check_integrity(const std::string& path, const std::string db_path, const std::string& hash, std::string* game_name)
+iso_integrity_status iso_file_validation::check_integrity(const std::string& path, const std::string& hash, std::string* game_name)
 {
 	//
 	// Check for Redump db
 	//
 
+	const std::string db_path = rpcs3::utils::get_redump_db_path();
 	fs::file db_file(db_path);
 
 	// If no db file exists

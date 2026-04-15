@@ -55,10 +55,10 @@ QByteArray iso_integrity::read_json(const QByteArray& data, bool after_download)
 	return QByteArray().fromStdString(json_data["redump"].toString().toStdString());
 };
 
-iso_integrity::iso_integrity(const std::shared_ptr<gui_settings>& settings, QWidget* parent)
+iso_integrity::iso_integrity(QWidget* parent)
 	: QObject(parent)
 {
-	m_filepath = settings->GetSettingsDir() + QString::fromStdString(rpcs3::utils::get_redump_db_filename());
+	m_filepath = QString::fromStdString(rpcs3::utils::get_redump_db_path());
 	m_downloader = new downloader(parent);
 
 	connect(m_downloader, &downloader::signal_download_finished, this, &iso_integrity::handle_download_finished);

@@ -613,8 +613,7 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 		// That is to highlight a Redump ISO from a non Redump ISO
 		if (iso_type != iso_type_status::NOT_ISO)
 		{
-			const QString db_path = m_gui_settings->GetSettingsDir() + QString::fromStdString(rpcs3::utils::get_redump_db_filename());
-			const iso_integrity_status iso_integrity = iso_file_validation::check_integrity(current_game.path, db_path.toStdString(), "");
+			const iso_integrity_status iso_integrity = iso_file_validation::check_integrity(current_game.path, "");
 
 			QAction* check_integrity = addAction(tr("&Check ISO Integrity"));
 

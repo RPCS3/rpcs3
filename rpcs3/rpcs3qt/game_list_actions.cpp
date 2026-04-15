@@ -391,6 +391,8 @@ void game_list_actions::ShowGameIntegrityDialog(const game_info& game)
 	// so run it on a concurrent thread avoiding to block the entire GUI
 	m_game_integrity_future = QtConcurrent::run([this]()
 	{
+		thread_base::set_name("Game Integrity");
+
 		QString text;
 		std::string hash, game_name;
 		bool info_dialog = false;
@@ -403,9 +405,7 @@ void game_list_actions::ShowGameIntegrityDialog(const game_info& game)
 		{
 			text = "Integrity check completed!\n\n";
 
-			const QString db_path = m_gui_settings->GetSettingsDir() + QString::fromStdString(rpcs3::utils::get_redump_db_filename());
-
-			switch (m_iso_validator->check_integrity(m_iso_validator->get_path(), db_path.toStdString(), hash, &game_name))
+			switch (m_iso_validator->check_integrity(m_iso_validator->get_path(), hash, &game_name))
 			{
 			case iso_integrity_status::NO_MATCH:
 				text += tr("Game check NOT PASSED\n\nNo match found on DB or game corrupted:\n - Hash: %0")
@@ -442,6 +442,8 @@ void game_list_actions::ShowGameIntegrityDialog(const game_info& game)
 	// Thread responsible to update the progress bar and to make cleanup when the hash calculation terminates
 	QtConcurrent::run([this, pdlg]()
 	{
+		thread_base::set_name("Game Integrity Progress");
+
 		while (m_iso_validator->get_status() == iso_hash_status::INITIALIZED)
 		{
 			// Set progress in range 0-100
