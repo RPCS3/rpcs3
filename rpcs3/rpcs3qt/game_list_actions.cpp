@@ -373,7 +373,7 @@ void game_list_actions::ShowGameIntegrityDialog(const game_info& game)
 		return;
 
 	progress_dialog* pdlg = new progress_dialog(tr("ISO File Hash Calculation"), tr("Calculating hash"), tr("Cancel"),
-		0, 100, true, m_game_list_frame);
+		0, 100, false, m_game_list_frame);
 
 	pdlg->setAutoClose(false);
 	pdlg->setAutoReset(false);
@@ -451,12 +451,20 @@ void game_list_actions::ShowGameIntegrityDialog(const game_info& game)
 				(static_cast<float>(m_iso_validator->get_bytes_read()) / m_iso_validator->get_size()) * 100 :
 				0;
 
-			pdlg->setValue(progress);
+			Emu.CallFromMainThread([this, pdlg, progress]()
+			{
+				pdlg->setValue(progress);
+			}, nullptr, false);
+
 			std::this_thread::sleep_for(1000ms); // Wait for a little while
 		}
 
-		// As last, close the progress bar (object was also configured to be automatically deleted on close)
-		pdlg->close();
+		Emu.CallFromMainThread([this, pdlg]()
+		{
+			// As last, close the progress bar (it will be already closed if the process was aborted) and delete the object
+			pdlg->close();
+			delete pdlg;
+		}, nullptr, false);
 	});
 }
 
