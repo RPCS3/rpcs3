@@ -58,6 +58,7 @@ enum class game_boot_result : u32
 	still_running,
 	already_added,
 	currently_restricted,
+	database_config_missing,
 };
 
 constexpr bool is_error(game_boot_result res)
@@ -145,6 +146,7 @@ class Emulator final
 
 	cfg_mode m_config_mode = cfg_mode::custom;
 	std::string m_config_path;
+	std::string m_db_config;
 	std::string m_path;
 	std::string m_path_old;
 	std::string m_path_original;
@@ -366,6 +368,11 @@ public:
 		return m_config_path;
 	}
 
+	const std::string& GetUsedDatabaseConfig() const
+	{
+		return m_db_config;
+	}
+
 	bool IsChildProcess() const
 	{
 		return m_config_mode == cfg_mode::continuous;
@@ -415,7 +422,7 @@ public:
 		return emulation_state_guard_t{this};
 	}
 
-	game_boot_result BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "");
+	game_boot_result BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "", const std::string& db_config = "");
 	bool BootRsxCapture(const std::string& path);
 
 	void SetForceBoot(bool force_boot);

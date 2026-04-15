@@ -103,7 +103,7 @@ public:
 	midi_creator m_midi_creator;
 
 	/** Loads the settings from path.*/
-	void LoadSettings(const std::string& title_id = "", bool create_config_from_global = true);
+	void LoadSettings(const std::string& title_id = "", bool create_config_from_global = true, const std::string& db_config = "");
 
 	/** Fixes all registered invalid settings after asking the user for permission.*/
 	void OpenCorrectionDialog(QWidget* parent = Q_NULLPTR);
