@@ -4,6 +4,7 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "Utilities/File.h"
 #include "Utilities/StrUtil.h"
+#include "Utilities/mutex.h"
 
 #include <string>
 
