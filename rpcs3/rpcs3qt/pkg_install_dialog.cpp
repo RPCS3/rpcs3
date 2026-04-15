@@ -24,7 +24,7 @@ enum Roles
 	DataSizeRole    = Qt::UserRole + 5,
 };
 
-pkg_install_dialog::pkg_install_dialog(const QStringList& paths, const game_compatibility* compat, QWidget* parent)
+pkg_install_dialog::pkg_install_dialog(const QStringList& paths, bool from_boot, const game_compatibility* compat, QWidget* parent)
 	: QDialog(parent)
 {
 	ensure(!paths.empty());
@@ -147,6 +147,11 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, const game_comp
 
 	buttons->button(QDialogButtonBox::Ok)->setText(tr("Install"));
 	buttons->button(QDialogButtonBox::Ok)->setDefault(true);
+
+	if (from_boot)
+	{
+		buttons->button(QDialogButtonBox::Cancel)->setText(tr("Skip"));
+	}
 
 	m_dir_list->sortItems();
 	m_dir_list->setCurrentRow(0);
