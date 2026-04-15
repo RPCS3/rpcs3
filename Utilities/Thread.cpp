@@ -2883,6 +2883,13 @@ void thread_base::exec()
 	}
 }
 
+void thread_ctrl::set_name(std::string name)
+{
+	ensure(g_tls_this_thread);
+	g_tls_this_thread->m_tname.store(make_single<std::string>(name));
+	g_tls_this_thread->set_name(std::move(name));
+}
+
 [[noreturn]] void thread_ctrl::emergency_exit(std::string_view reason)
 {
 	// Print stacktrace

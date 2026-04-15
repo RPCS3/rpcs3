@@ -129,7 +129,7 @@ public:
 	const native_entry entry_point;
 
 	// Set name for debugger
-	static void set_name(std::string);
+	static void set_name(std::string name);
 
 private:
 	// Thread handle (platform-specific)
@@ -232,11 +232,7 @@ public:
 	}
 
 	// Set current thread name (not recommended)
-	static void set_name(std::string name)
-	{
-		g_tls_this_thread->m_tname.store(make_single<std::string>(name));
-		g_tls_this_thread->set_name(std::move(name));
-	}
+	static void set_name(std::string name);
 
 	// Set thread name (not recommended)
 	template <typename T>

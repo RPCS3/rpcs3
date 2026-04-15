@@ -374,7 +374,7 @@ void game_list_actions::ShowDiskUsageDialog()
 	// so run it on a concurrent thread avoiding to block the entire GUI
 	m_disk_usage_future = QtConcurrent::run([this]()
 	{
-		thread_ctrl::set_name("Disk Usage");
+		thread_base::set_name("Disk Usage");
 
 		const std::vector<std::pair<std::string, u64>> vfs_disk_usage = rpcs3::utils::get_vfs_disk_usage();
 		const u64 cache_disk_usage = rpcs3::utils::get_cache_disk_usage();
