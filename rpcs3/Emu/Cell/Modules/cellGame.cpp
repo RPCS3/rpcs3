@@ -520,10 +520,11 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 				return CELL_GAMEDATA_ERROR_PARAM;
 			}
 
-			if (!fs::create_path(vfs::get(usrdir)))
-			{
-				return {CELL_GAME_ERROR_ACCESS_ERROR, usrdir};
-			}
+			// Nuked until correctly reversed engineered
+			//if (!fs::create_path(vfs::get(usrdir)))
+			//{
+			//	return {CELL_GAME_ERROR_ACCESS_ERROR, usrdir};
+			//}
 		}
 
 		// Nuked until correctly reversed engineered
