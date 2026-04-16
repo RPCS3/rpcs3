@@ -184,6 +184,7 @@ enum class emu_settings_type
 	ShowTrophyPopups,
 	ShowRpcnPopups,
 	UseNativeInterface,
+	UseRecursiveScan,
 	ShowShaderCompilationHint,
 	ShowPPUCompilationHint,
 	ShowAutosaveAutoloadHint,

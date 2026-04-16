@@ -4213,54 +4213,62 @@ u32 Emulator::AddGamesFromDir(const std::string& path)
 
 	m_games_config.set_save_on_dirty(false);
 
-	// search dropped path first or else the direct parent to an elf is wrongly skipped
+	// search for a game on the provided path first (game on ISO file or on folder type)
 	if (const game_boot_result error = AddGame(path); error == game_boot_result::no_errors)
 	{
 		games_added++;
 	}
 
-	std::vector<fs::dir_entry> entries;
-
-	for (auto&& dir_entry : fs::dir(path))
+	// search for games on subfolders only if not nested inside a discovered game folder
+	if (games_added == 0)
 	{
-		// Prefetch entries, it is unsafe to keep fs::dir for a long time or for many operations
-		entries.emplace_back(std::move(dir_entry));
-	}
+		std::vector<fs::dir_entry> entries;
 
-	auto path_it = entries.begin();
-
-	qt_events_aware_op(0, [&]()
-	{
-		// search direct subdirectories, that way we can drop one folder containing all games
-		for (; path_it != entries.end(); ++path_it)
+		for (auto&& dir_entry : fs::dir(path))
 		{
-			auto dir_entry = std::move(*path_it);
-
-			if (dir_entry.name == "." || dir_entry.name == "..")
-			{
-				continue;
-			}
-
-			const std::string dir_path = path + '/' + dir_entry.name;
-
-			if (!dir_entry.is_directory && !is_file_iso(dir_path))
-			{
-				continue;
-			}
-
-			if (const game_boot_result error = AddGame(dir_path); error == game_boot_result::no_errors)
-			{
-				games_added++;
-			}
-
-			// Process events
-			++path_it;
-			return false;
+			// Prefetch entries, it is unsafe to keep fs::dir for a long time or for many operations
+			entries.emplace_back(std::move(dir_entry));
 		}
 
-		// Exit loop
-		return true;
-	});
+		auto path_it = entries.begin();
+
+		qt_events_aware_op(0, [&]()
+		{
+			// search direct subdirectories, that way we can drop one folder containing all games
+			for (; path_it != entries.end(); ++path_it)
+			{
+				auto dir_entry = std::move(*path_it);
+
+				if (dir_entry.name == "." || dir_entry.name == "..")
+				{
+					continue;
+				}
+
+				const std::string dir_path = path + '/' + dir_entry.name;
+
+				if (!dir_entry.is_directory && !is_file_iso(dir_path))
+				{
+					continue;
+				}
+
+				if (const game_boot_result error = AddGame(dir_path); error == game_boot_result::no_errors)
+				{
+					games_added++;
+				}
+				else if (g_cfg.misc.use_recursive_scan)
+				{
+					games_added += AddGamesFromDir(dir_path);
+				}
+
+				// Process events
+				++path_it;
+				return false;
+			}
+
+			// Exit loop
+			return true;
+		});
+	}
 
 	m_games_config.set_save_on_dirty(true);
 
