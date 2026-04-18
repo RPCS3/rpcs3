@@ -4018,7 +4018,9 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			if (allow_autoexit)
 			{
-				Quit(g_cfg.misc.autoexit.get());
+				const bool autoexit = g_cfg.misc.autoexit.get();
+				sys_log.notice("Quit with main_window::closeEvent. (autoexit=%d)", autoexit);
+				Quit(autoexit);
 			}
 
 			if (after_kill_callback)

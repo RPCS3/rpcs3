@@ -3943,6 +3943,7 @@ void main_window::closeEvent(QCloseEvent* closeEvent)
 
 	Q_EMIT NotifyWindowCloseEvent(true);
 
+	gui_log.notice("Quit with main_window::closeEvent");
 	Emu.Quit(true);
 }
 
