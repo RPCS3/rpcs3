@@ -103,7 +103,7 @@ void downloader::start(const std::string& url, bool follow_location, bool show_p
 	{
 		if (m_curl_abort)
 		{
-			network_log.notice("Download aborted");
+			network_log.notice("Download aborted (url='%s')", url);
 			return;
 		}
 
@@ -114,7 +114,7 @@ void downloader::start(const std::string& url, bool follow_location, bool show_p
 
 		if (m_curl_success)
 		{
-			network_log.notice("Download finished");
+			network_log.notice("Download finished (url='%s')", url);
 
 			if (check_return_code && m_download_attempts < 3)
 			{
