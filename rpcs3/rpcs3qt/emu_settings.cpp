@@ -117,7 +117,7 @@ bool emu_settings::Init()
 	return true;
 }
 
-void emu_settings::LoadSettings(const std::string& title_id, bool create_config_from_global)
+void emu_settings::LoadSettings(const std::string& title_id, bool create_config_from_global, const std::string& db_config)
 {
 	m_title_id = title_id;
 
@@ -157,6 +157,22 @@ void emu_settings::LoadSettings(const std::string& title_id, bool create_config_
 			cfg_log.fatal("Failed to load global config %s:\n%s (%s)", global_config_path, global_error, fs::g_tls_error);
 			QMessageBox::critical(nullptr, tr("Config Error"), tr("Failed to load global config:\nFile: %0\nError: %1")
 				.arg(QString::fromStdString(global_config_path)).arg(QString::fromStdString(global_error)), QMessageBox::Ok);
+		}
+	}
+	else if (!db_config.empty())
+	{
+		// Add database config
+		auto [config, error] = yaml_load(db_config);
+
+		if (config && error.empty())
+		{
+			m_current_settings += config;
+		}
+		else
+		{
+			cfg_log.fatal("Failed to load database config for '%s':\n%s", title_id, error);
+			QMessageBox::critical(nullptr, tr("Config Error"), tr("Failed to load database config:\nError: %1")
+				.arg(QString::fromStdString(error)), QMessageBox::Ok);
 		}
 	}
 

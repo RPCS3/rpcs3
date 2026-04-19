@@ -5921,17 +5921,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				}
 			}
 
-			const auto prev_wi = wi - 1;
-			if (prev_wi != umax && ::at32(reg_state_it, prev_wi).reduced_loop.active)
-			{
-				const auto reduced_loop = &::at32(reg_state_it, prev_wi).reduced_loop;
-
-				for (const auto& [reg_num, reg] : reduced_loop->regs)
-				{
-					
-				}
-			}
-
 			if (wi < reg_state_it.size())
 			{
 				wa = ::at32(reg_state_it, wi).pc;
@@ -6143,8 +6132,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				break;
 			}
 			}
-
-			u32 reg_pos = SPU_LS_SIZE;
 
 			auto org = reduced_loop->get_reg(op_rt);
 
@@ -6491,7 +6478,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				}
 
 				bool should_have_argument_dictator = false;
-				bool should_have_argument_increment = false;
 				bool cond_val_incr_before_cond = false;
 				bool ends_with_comparison = false;
 
@@ -6500,10 +6486,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				switch (reg->mod1_type)
 				{
 				case spu_itype::A:
-				{
-					should_have_argument_increment = true;
-					[[fallthrough]];
-				}
 				case spu_itype::AI:
 				case spu_itype::AHI:
 				{
@@ -6563,10 +6545,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					switch (reg->mod2_type)
 					{
 					case spu_itype::A:
-					{
-						should_have_argument_increment = true;
-						[[fallthrough]];
-					}
 					case spu_itype::AI:
 					case spu_itype::AHI:
 					{
@@ -6772,8 +6750,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 							break_reduced_loop_pattern(30, reduced_loop->discard());
 							break;
 						}
-
-						u32 cond_val_incr = static_cast<s32>(reg_org->IMM);
 
 						if (reg_org->mod1_type == spu_itype::AI || reg_org->mod1_type == spu_itype::AHI)
 						{
@@ -6986,7 +6962,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 							// The loop dictator is the register that is not the argument
 							const u32 loop_arg_reg = reg_index == op_ra ? op_rb : op_ra;
-							const u32 loop_dict_reg = reg_index == op_ra ? op_ra : op_rb;
 							reduced_loop->cond_val_is_immediate = false;
 
 							if (found_loop_argument_for_dictator)
@@ -8639,8 +8614,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 		if (inst_attr attr = m_inst_attrs[(loop_pc - entry_point) / 4]; attr == inst_attr::none)
 		{
-			const u64 hash = loop_pc / 4 + read_from_ptr<be_t<u64>>(func_hash.data());
-
 			add_pattern(inst_attr::reduced_loop, loop_pc - result.entry_point, 0, std::make_shared<reduced_loop_t>(pattern));
 
 			std::string regs = "{";

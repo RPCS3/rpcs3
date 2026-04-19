@@ -24,7 +24,7 @@ enum Roles
 	DataSizeRole    = Qt::UserRole + 5,
 };
 
-pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibility* compat, QWidget* parent)
+pkg_install_dialog::pkg_install_dialog(const QStringList& paths, const game_compatibility* compat, QWidget* parent)
 	: QDialog(parent)
 {
 	ensure(!paths.empty());

@@ -10,12 +10,14 @@
 #include "game_list_table.h"
 #include "game_list_grid.h"
 #include "game_list_grid_item.h"
+#include "config_database.h"
 
 #include "Emu/System.h"
 #include "Emu/vfs_config.h"
 #include "Emu/system_utils.hpp"
 #include "Loader/PSF.h"
 #include "Loader/ISO.h"
+#include "Loader/iso_cache.h"
 #include "util/types.hpp"
 #include "Utilities/File.h"
 #include "util/sysinfo.hpp"
@@ -73,6 +75,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	m_game_list->verticalScrollBar()->installEventFilter(this);
 
 	m_game_compat = new game_compatibility(m_gui_settings, this);
+	m_config_db = new config_database(m_gui_settings, this);
 
 	m_central_widget = new QStackedWidget(this);
 	m_central_widget->addWidget(m_game_list);
@@ -197,6 +200,22 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		OnCompatFinished();
 		QMessageBox::warning(this, tr("Warning!"), tr("Failed to retrieve the online compatibility database!\nFalling back to local database.\n\n%0").arg(error));
+	});
+
+	connect(m_config_db, &config_database::download_started, this, [this]()
+	{
+		for (const auto& game : m_game_data)
+		{
+			game->has_database_config = false;
+		}
+		Refresh();
+	});
+	connect(m_config_db, &config_database::download_finished, this, &game_list_frame::OnConfigDatabaseFinished);
+	connect(m_config_db, &config_database::download_canceled, this, &game_list_frame::OnConfigDatabaseFinished);
+	connect(m_config_db, &config_database::download_error, this, [this](const QString& error)
+	{
+		OnConfigDatabaseFinished();
+		QMessageBox::warning(this, tr("Warning!"), tr("Failed to retrieve the online config database!\nFalling back to local database.\n\n%0").arg(error));
 	});
 
 	connect(m_game_list, &game_list::FocusToSearchBar, this, &game_list_frame::FocusToSearchBar);
@@ -530,14 +549,29 @@ void game_list_frame::OnParsingFinished()
 	                       (const std::string& dir_or_elf)
 	{
 		std::unique_ptr<iso_archive> archive;
-		if (is_file_iso(dir_or_elf))
+		iso_metadata_cache_entry cache_entry{};
+		const bool is_iso = is_file_iso(dir_or_elf);
+		
+		if (is_iso)
 		{
-			archive = std::make_unique<iso_archive>(dir_or_elf);
+			// Only construct iso_archive (which walks the full directory tree)
+			// when no valid cache entry exists for this ISO path + mtime.
+			if (!iso_cache::load(dir_or_elf, cache_entry))
+			{
+				archive = std::make_unique<iso_archive>(dir_or_elf);
+			}
+			// Track this ISO path for cache cleanup after scan completes.
+			std::lock_guard lock(m_path_mutex);
+			m_scanned_iso_paths.insert(dir_or_elf);
 		}
 
-		const auto file_exists = [&archive](const std::string& path)
+		const auto file_exists = [&archive, &cache_entry](const std::string& path)
 		{
-			return archive ? archive->is_file(path) : fs::is_file(path);
+			if (archive) return archive->is_file(path);
+			// On cache hit, paths inside the ISO are not accessible via fs::is_file.
+			// Return false here — cache hit paths are handled separately.
+			if (!cache_entry.psf_data.empty()) return false;
+			return fs::is_file(path);
 		};
 
 		gui_game_info game{};
@@ -545,10 +579,39 @@ void game_list_frame::OnParsingFinished()
 
 		const Localized thread_localized;
 
-		const std::string sfo_dir = archive ? "PS3_GAME" : rpcs3::utils::get_sfo_dir_from_game_path(dir_or_elf);
+		const std::string sfo_dir = (archive || !cache_entry.psf_data.empty()) ? "PS3_GAME" : rpcs3::utils::get_sfo_dir_from_game_path(dir_or_elf);
 		const std::string sfo_path = sfo_dir + "/PARAM.SFO";
 
-		const psf::registry psf = archive ? archive->open_psf(sfo_path) : psf::load_object(sfo_path);
+		// Load PSF: from archive on cache miss, rehydrate from cached SFO bytes on hit.
+		psf::registry psf{};
+		if (!cache_entry.psf_data.empty())
+		{
+			psf = psf::load_object(fs::make_stream<std::vector<u8>>(std::vector<u8>(cache_entry.psf_data)), sfo_path);
+			// Fallback to archive scan if cached PSF is corrupted or missing critical fields.
+			const bool psf_valid = !psf::get_string(psf, "TITLE_ID", "").empty()
+				&& !psf::get_string(psf, "TITLE", "").empty()
+				&& !psf::get_string(psf, "CATEGORY", "").empty();
+			if (!psf_valid)
+			{
+				game_list_log.warning("Cached psf for iso not valid: '%s'", game.info.path);
+				archive = std::make_unique<iso_archive>(dir_or_elf);
+				cache_entry = {}; // Reset so the cache gets rewritten after scan.
+				psf = {};
+			}
+		}
+
+		if (psf.empty())
+		{
+			if (archive)
+			{
+				psf = archive->open_psf(sfo_path);
+			}
+			else
+			{
+				psf = psf::load_object(sfo_path);
+			}
+		}
+
 		const std::string_view title_id = psf::get_string(psf, "TITLE_ID", "");
 
 		if (title_id.empty())
@@ -616,15 +679,22 @@ void game_list_frame::OnParsingFinished()
 
 		if (game.info.icon_path.empty())
 		{
-			if (std::string icon_path = sfo_dir + "/" + localized_icon; file_exists(icon_path))
+			if (!cache_entry.icon_path.empty())
+			{
+				// Cache hit — icon path already resolved on a previous scan.
+				game.info.icon_path = cache_entry.icon_path;
+				game.icon_in_archive = true;
+			}
+			else if (std::string icon_path = sfo_dir + "/" + localized_icon; file_exists(icon_path))
 			{
 				game.info.icon_path = std::move(icon_path);
+				game.icon_in_archive = archive && archive->exists(game.info.icon_path);
 			}
 			else
 			{
 				game.info.icon_path = sfo_dir + "/ICON0.PNG";
+				game.icon_in_archive = archive && archive->exists(game.info.icon_path);
 			}
-			game.icon_in_archive = archive && archive->exists(game.info.icon_path);
 		}
 
 		if (play_hover_movies)
@@ -633,6 +703,12 @@ void game_list_frame::OnParsingFinished()
 			{
 				game.info.movie_path = std::move(movie_path);
 				game.has_hover_gif = true;
+			}
+			else if (!cache_entry.movie_path.empty() && !archive)
+			{
+				// Cache hit — restore previously resolved movie path.
+				game.info.movie_path = cache_entry.movie_path;
+				game.has_hover_pam = true;
 			}
 			else if (std::string movie_path = sfo_dir + "/" + localized_movie; file_exists(movie_path))
 			{
@@ -648,10 +724,45 @@ void game_list_frame::OnParsingFinished()
 
 		if (play_hover_music)
 		{
-			if (std::string audio_path = sfo_dir + "/SND0.AT3"; file_exists(audio_path))
+			if (!cache_entry.audio_path.empty() && !archive)
+			{
+				// Cache hit — restore previously resolved audio path.
+				game.info.audio_path = cache_entry.audio_path;
+				game.has_audio_file = true;
+			}
+			else if (std::string audio_path = sfo_dir + "/SND0.AT3"; file_exists(audio_path))
 			{
 				game.info.audio_path = std::move(audio_path);
 				game.has_audio_file = true;
+			}
+		}
+
+		// On cache miss for an ISO, persist the resolved metadata so subsequent
+		// launches skip iso_archive construction entirely.
+		if (archive && is_iso)
+		{
+			fs::stat_t iso_stat{};
+			if (fs::get_stat(dir_or_elf, iso_stat))
+			{
+				cache_entry.mtime      = iso_stat.mtime;
+				cache_entry.psf_data   = psf::save_object(psf);
+				cache_entry.icon_path  = game.info.icon_path;
+				cache_entry.movie_path = game.info.movie_path;
+				cache_entry.audio_path = game.info.audio_path;
+
+				// Cache raw icon bytes so load_iso_icon can skip archive open.
+				if (game.icon_in_archive)
+				{
+					auto icon_file = archive->open(game.info.icon_path);
+					const auto icon_size = icon_file.size();
+					if (icon_size > 0)
+					{
+						cache_entry.icon_data.resize(icon_size);
+						icon_file.read(cache_entry.icon_data.data(), icon_size);
+					}
+				}
+
+				iso_cache::save(dir_or_elf, cache_entry);
 			}
 		}
 
@@ -708,6 +819,7 @@ void game_list_frame::OnParsingFinished()
 
 		game.localized_category = std::move(qt_cat);
 		game.compat = m_game_compat->GetCompatibility(game.info.serial);
+		game.has_database_config = m_config_db->has_config(game.info.serial);
 		game.has_custom_config = fs::is_file(rpcs3::utils::get_custom_config_path(game.info.serial));
 		game.has_custom_pad_config = fs::is_file(rpcs3::utils::get_custom_input_config_path(game.info.serial));
 
@@ -817,6 +929,9 @@ void game_list_frame::OnRefreshFinished()
 	WaitAndAbortSizeCalcThreads();
 	WaitAndAbortRepaintThreads();
 
+	// Remove cache entries for ISOs that are no longer present in the scanned paths.
+	iso_cache::cleanup(m_scanned_iso_paths);
+
 	for (auto&& g : m_games.pop_all())
 	{
 		m_game_data.push_back(g);
@@ -903,6 +1018,7 @@ void game_list_frame::OnRefreshFinished()
 	m_serials.clear();
 	m_path_list.clear();
 	m_path_entries.clear();
+	m_scanned_iso_paths.clear();
 
 	Refresh();
 
@@ -923,6 +1039,15 @@ void game_list_frame::OnCompatFinished()
 	for (const auto& game : m_game_data)
 	{
 		game->compat = m_game_compat->GetCompatibility(game->info.serial);
+	}
+	Refresh();
+}
+
+void game_list_frame::OnConfigDatabaseFinished()
+{
+	for (const auto& game : m_game_data)
+	{
+		game->has_database_config = m_config_db->has_config(game->info.serial);
 	}
 	Refresh();
 }

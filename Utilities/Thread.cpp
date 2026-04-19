@@ -25,6 +25,7 @@
 #include <process.h>
 #include <sysinfoapi.h>
 
+#include "stack_trace.h"
 #include "util/dyn_lib.hpp"
 
 DYNAMIC_IMPORT_RENAME("Kernel32.dll", SetThreadDescriptionImport, "SetThreadDescription", HRESULT(HANDLE hThread, PCWSTR lpThreadDescription));
@@ -1981,9 +1982,39 @@ static LONG exception_filter(PEXCEPTION_POINTERS pExp) noexcept
 	}
 
 	fmt::append(msg, "RPCS3 image base: %p.\n", GetModuleHandle(NULL));
+	
+#if defined(ARCH_X64)
+	fmt::append(msg, "RAX: %016llX	RBX: %016llX\n", pExp->ContextRecord->Rax, pExp->ContextRecord->Rbx);
+	fmt::append(msg, "RCX: %016llX	RDX: %016llX\n", pExp->ContextRecord->Rcx, pExp->ContextRecord->Rdx);
+	fmt::append(msg, "RSI: %016llX  RDI: %016llX\n", pExp->ContextRecord->Rsi, pExp->ContextRecord->Rdi);
+	fmt::append(msg, "RBP: %016llX  RSP: %016llX\n", pExp->ContextRecord->Rbp, pExp->ContextRecord->Rsp);
+	fmt::append(msg, "R8:  %016llX  R9:  %016llX\n", pExp->ContextRecord->R8,  pExp->ContextRecord->R9);
+	fmt::append(msg, "R10: %016llX  R11: %016llX\n", pExp->ContextRecord->R10, pExp->ContextRecord->R11);
+	fmt::append(msg, "R12: %016llX  R13: %016llX\n", pExp->ContextRecord->R12, pExp->ContextRecord->R13);
+	fmt::append(msg, "R14: %016llX  R15: %016llX\n", pExp->ContextRecord->R14, pExp->ContextRecord->R15);
+	fmt::append(msg, "RFLAGS: %08X\n", pExp->ContextRecord->EFlags);
+#elif defined(ARCH_ARM64)
+	for (int i = 0; i < 29; i += 2)
+	{
+		if (i + 1 < 29)
+			fmt::append(msg, "X%-2d: %016llX  X%-2d: %016llX\n", i, pExp->ContextRecord->X[i], i + 1, pExp->ContextRecord->X[i + 1]);
+		else
+			fmt::append(msg, "X%-2d: %016llX\n", i, pExp->ContextRecord->X[i]);
+	}
+	fmt::append(msg, "SP: %016llX  FP: %016llX  LR: %016llX\n", pExp->ContextRecord->Sp, pExp->ContextRecord->Fp, pExp->ContextRecord->Lr);
+	fmt::append(msg, "CPSR: %08X\n", pExp->ContextRecord->Cpsr);
+#endif
 
-	// TODO: print registers and the callstack
+	const auto stack_trace = utils::get_backtrace(64, pExp->ContextRecord);
+	const auto stack_symbols = utils::get_backtrace_symbols(stack_trace);
 
+	msg += "Stack Trace:\n";
+
+	for (const auto& symbol : stack_symbols)
+	{
+		fmt::append(msg, "%s\n", symbol);
+	}
+	
 	sys_log.fatal("\n%s", msg);
 	logs::listener::sync_all();
 
@@ -2850,6 +2881,13 @@ void thread_base::exec()
 			return;
 		}
 	}
+}
+
+void thread_ctrl::set_name(std::string name)
+{
+	ensure(g_tls_this_thread);
+	g_tls_this_thread->m_tname.store(make_single<std::string>(name));
+	g_tls_this_thread->set_name(std::move(name));
 }
 
 [[noreturn]] void thread_ctrl::emergency_exit(std::string_view reason)

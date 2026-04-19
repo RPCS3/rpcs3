@@ -519,6 +519,15 @@
     <ClCompile Include="rpcs3qt\progress_dialog.cpp">
       <Filter>Gui\misc dialogs</Filter>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_config_database.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_config_database.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\config_database.cpp">
+      <Filter>Gui\game list</Filter>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_game_compatibility.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
@@ -1650,6 +1659,9 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\save_manager_dialog.h">
       <Filter>Gui\save</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\config_database.h">
+      <Filter>Gui\game list</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\game_compatibility.h">
       <Filter>Gui\game list</Filter>

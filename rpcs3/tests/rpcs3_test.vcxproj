@@ -100,6 +100,7 @@
     <ClCompile Include="test_rsx_fp_asm.cpp" />
     <ClCompile Include="test_simple_array.cpp" />
     <ClCompile Include="test_address_range.cpp" />
+    <ClCompile Include="test_sys_fs.cpp" />
     <ClCompile Include="test_tuple.cpp" />
     <ClCompile Include="test_pair.cpp" />
   </ItemGroup>

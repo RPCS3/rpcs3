@@ -87,7 +87,7 @@ void remove_item(QComboBox* box, int data_value, int def_value)
 
 extern const std::map<std::string_view, int> g_prx_list;
 
-settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, int tab_index, QWidget* parent, const GameInfo* game, bool create_cfg_from_global_cfg)
+settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, int tab_index, QWidget* parent, const GameInfo* game, bool create_cfg_from_global_cfg, const std::string& db_config)
 	: QDialog(parent)
 	, m_tab_index(tab_index)
 	, ui(new Ui::settings_dialog)
@@ -132,7 +132,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	if (game)
 	{
-		m_emu_settings->LoadSettings(game->serial, create_cfg_from_global_cfg);
+		m_emu_settings->LoadSettings(game->serial, create_cfg_from_global_cfg, db_config);
 		setWindowTitle(tr("Settings: [%0] %1", "Settings dialog").arg(QString::fromStdString(game->serial)).arg(QString::fromStdString(game->name)));
 	}
 	else
@@ -581,6 +581,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	// 3D
 	m_emu_settings->EnhanceComboBox(ui->stereoRenderMode, emu_settings_type::StereoRenderMode);
 	m_emu_settings->EnhanceCheckBox(ui->stereoRenderEnabled, emu_settings_type::StereoRenderEnabled);
+	m_emu_settings->EnhanceSpinBox(ui->sb_screen_size, emu_settings_type::ScreenSize);
 	SubscribeTooltip(ui->gb_stereo, tooltips.settings.stereo_render_mode);
 	if (game)
 	{
@@ -591,6 +592,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			const bool stereo_enabled = ui->stereoRenderEnabled->checkState() == Qt::CheckState::Checked;
 			ui->stereoRenderMode->setEnabled(stereo_allowed && stereo_enabled);
 			ui->stereoRenderEnabled->setEnabled(stereo_allowed);
+			ui->gb_screen_size->setEnabled(stereo_allowed && stereo_enabled);
 		};
 		connect(ui->resBox, &QComboBox::currentIndexChanged, this, [enable_3D_modes](int){ enable_3D_modes(); });
 		connect(ui->stereoRenderEnabled, &QCheckBox::checkStateChanged, this, [enable_3D_modes](Qt::CheckState){ enable_3D_modes(); });

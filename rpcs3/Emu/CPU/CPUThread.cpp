@@ -61,6 +61,7 @@ void fmt_class_string<cpu_flag>::format(std::string& out, u64 arg)
 		case cpu_flag::notify: return "ntf";
 		case cpu_flag::yield: return "y";
 		case cpu_flag::preempt: return "PREEMPT";
+		case cpu_flag::req_exit: return "REQ-EXIT";
 		case cpu_flag::dbg_global_pause: return "G-PAUSE";
 		case cpu_flag::dbg_pause: return "PAUSE";
 		case cpu_flag::dbg_step: return "STEP";

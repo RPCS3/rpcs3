@@ -551,6 +551,7 @@
     <ClCompile Include="Loader\PUP.cpp" />
     <ClCompile Include="Loader\TAR.cpp" />
     <ClCompile Include="Loader\ISO.cpp" />
+    <ClCompile Include="Loader\iso_cache.cpp" />
     <ClCompile Include="Loader\mself.cpp" />
     <ClCompile Include="Loader\TROPUSR.cpp" />
     <ClCompile Include="Loader\TRP.cpp" />

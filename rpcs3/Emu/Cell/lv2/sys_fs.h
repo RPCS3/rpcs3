@@ -4,6 +4,7 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "Utilities/File.h"
 #include "Utilities/StrUtil.h"
+#include "Utilities/mutex.h"
 
 #include <string>
 
@@ -245,11 +246,15 @@ public:
 
 	lv2_fs_object& operator=(const lv2_fs_object&) = delete;
 
-	// Normalize a virtual path
-	static std::string get_normalized_path(std::string_view path);
+	// Get the device's root path (e.g. "/dev_hdd0") from a given path
+	// Cut the trail and return it in seccond argument
+	static std::pair<std::string_view, std::string> get_path_root_and_trail(std::string_view path);
 
 	// Get the device's root path (e.g. "/dev_hdd0") from a given path
-	static std::string get_device_root(std::string_view filename);
+	static std::string get_device_root(std::string_view filename)
+	{
+		return std::string{get_path_root_and_trail(filename).first};
+	}
 
 	// Filename can be either a path starting with '/' or a CELL_FS device name
 	// This should be used only when handling devices that are not mounted
