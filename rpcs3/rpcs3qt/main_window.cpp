@@ -984,7 +984,7 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 	const game_compatibility* compat = m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr;
 
 	// Let the user choose the packages to install and select the order in which they shall be installed.
-	pkg_install_dialog dlg(file_paths, compat, this);
+	pkg_install_dialog dlg(file_paths, from_boot, compat, this);
 	connect(&dlg, &QDialog::finished, this, [&](int result)
 	{
 		if (result != QDialog::Accepted)
@@ -1009,7 +1009,8 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 
 	if (canceled)
 	{
-		return false;
+		// return "true" if installation of optional packages (requested by some games at first boot) is skipped
+		return from_boot;
 	}
 
 	if (!from_boot)
