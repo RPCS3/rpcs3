@@ -1299,6 +1299,9 @@
     <ClCompile Include="rpcs3qt\steam_utils.cpp">
       <Filter>Gui\utils</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\emu_settings_type.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">

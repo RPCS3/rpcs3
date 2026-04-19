@@ -1531,7 +1531,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		std::string type_string;
 		if (const auto it = settings_location.find(type); it != settings_location.cend())
 		{
-			for (const char* loc : it->second)
+			for (const std::string& loc : it->second)
 			{
 				if (!type_string.empty()) type_string += ": ";
 				type_string += loc;
