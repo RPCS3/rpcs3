@@ -172,6 +172,7 @@ class Emulator final
 
 	bool m_continuous_mode = false;
 	bool m_has_gui = true;
+	bool m_add_database_config = false;
 
 	bool m_state_inspection_savestate = false;
 
