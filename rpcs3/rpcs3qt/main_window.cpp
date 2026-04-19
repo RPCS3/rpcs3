@@ -557,7 +557,7 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 
 	// Get database config if possible or if we are in database_config mode (to ensure we see an error on invalid use)
 	if (config_database* db = m_game_list_frame->GetConfigDatabase();
-		db->has_config(title_id) || config_mode == cfg_mode::database_config)
+		db->has_config(title_id))
 	{
 		const std::optional<std::string> config = db->get_config(title_id);
 

@@ -479,8 +479,9 @@ bool cfg::decode(const YAML::Node& data, cfg::_base& rhs, bool dynamic, bool str
 	{
 	case type::node:
 	{
-		if (data.IsScalar() || data.IsSequence())
+		if (!data.IsMap())
 		{
+			cfg_log.error("node node is not a map");
 			return false;
 		}
 
@@ -491,17 +492,22 @@ bool cfg::decode(const YAML::Node& data, cfg::_base& rhs, bool dynamic, bool str
 			if (!pair.first.IsScalar()) continue;
 
 			// Find the key among existing nodes
-			for (const auto& node : static_cast<node&>(rhs).get_nodes())
-			{
-				if (node->get_name() == pair.first.Scalar())
-				{
-					if (!decode(pair.second, *node, dynamic, strict) && strict)
-					{
-						success = false;
-					}
+			const auto& nodes = static_cast<node&>(rhs).get_nodes();
+			const auto it = std::find_if(nodes.cbegin(), nodes.cend(), [&pair](const auto& node) { return ensure(node)->get_name() == pair.first.Scalar(); });
 
-					break;
+			if (it == nodes.cend())
+			{
+				if (strict)
+				{
+					cfg_log.error("Unknown key found: '%s'", pair.first.Scalar());
+					success = false;
 				}
+				continue;
+			}
+
+			if (!decode(pair.second, *ensure(*it), dynamic, strict) && strict)
+			{
+				success = false;
 			}
 		}
 
@@ -513,7 +519,10 @@ bool cfg::decode(const YAML::Node& data, cfg::_base& rhs, bool dynamic, bool str
 
 		if (YAML::convert<decltype(values)>::decode(data, values))
 		{
-			rhs.from_list(std::move(values));
+			if (!rhs.from_list(std::move(values)) && strict)
+			{
+				return false;
+			}
 		}
 
 		break;
@@ -523,6 +532,7 @@ bool cfg::decode(const YAML::Node& data, cfg::_base& rhs, bool dynamic, bool str
 	{
 		if (!data.IsMap())
 		{
+			cfg_log.error("map node is not a map");
 			return false;
 		}
 
@@ -540,8 +550,9 @@ bool cfg::decode(const YAML::Node& data, cfg::_base& rhs, bool dynamic, bool str
 	}
 	case type::log:
 	{
-		if (data.IsScalar() || data.IsSequence())
+		if (!data.IsMap())
 		{
+			cfg_log.error("log node is not a map");
 			return false;
 		}
 
@@ -549,7 +560,18 @@ bool cfg::decode(const YAML::Node& data, cfg::_base& rhs, bool dynamic, bool str
 
 		for (const auto& pair : data)
 		{
-			if (!pair.first.IsScalar() || !pair.second.IsScalar()) continue;
+			if (!pair.first.IsScalar() || !pair.second.IsScalar())
+			{
+				if (strict)
+				{
+					if (!pair.first.IsScalar())
+						cfg_log.error("Key in map is not a scalar");
+					else
+						cfg_log.error("Value in map is not a scalar. key='%s'", pair.first.Scalar());
+					return false;
+				}
+				continue;
+			}
 
 			u64 value;
 			if (!cfg::try_to_enum_value(&value, &fmt_class_string<logs::level>::format, pair.second.Scalar(), pair.first.Scalar()) && strict)
@@ -567,6 +589,7 @@ bool cfg::decode(const YAML::Node& data, cfg::_base& rhs, bool dynamic, bool str
 	{
 		if (!data.IsMap())
 		{
+			cfg_log.error("device node is not a map");
 			return false;
 		}
 
@@ -574,13 +597,35 @@ bool cfg::decode(const YAML::Node& data, cfg::_base& rhs, bool dynamic, bool str
 
 		for (const auto& pair : data)
 		{
-			if (!pair.first.IsScalar() || !pair.second.IsMap()) continue;
+			if (!pair.first.IsScalar() || !pair.second.IsMap())
+			{
+				if (strict)
+				{
+					if (!pair.first.IsScalar())
+						cfg_log.error("Key in device map is not a scalar");
+					else
+						cfg_log.error("Value in device map is not a map. key='%s'", pair.first.Scalar());
+					return false;
+				}
+				continue;
+			}
 
 			device_info info{};
 
 			for (const auto& key_value : pair.second)
 			{
-				if (!key_value.first.IsScalar() || !key_value.second.IsScalar()) continue;
+				if (!key_value.first.IsScalar() || !key_value.second.IsScalar())
+				{
+					if (strict)
+					{
+						if (!key_value.first.IsScalar())
+							cfg_log.error("Key in device info map is not a scalar");
+						else
+							cfg_log.error("Value in device map is not a scalar. key='%s'", key_value.first.Scalar());
+						return false;
+					}
+					continue;
+				}
 
 				if (key_value.first.Scalar() == "Path")
 					info.path = key_value.second.Scalar();
