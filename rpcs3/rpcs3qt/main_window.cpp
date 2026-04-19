@@ -3250,7 +3250,7 @@ void main_window::CreateConnects()
 
 		m_gui_settings->SetValue(gui::fd_cfg_check, file_info.path());
 
-		config_checker* dlg = new config_checker(this, content, file_path.endsWith(".log") || file_path.endsWith(".log.gz"));
+		config_checker* dlg = new config_checker(this, content, (file_path.endsWith(".log") || file_path.endsWith(".log.gz")) ? config_checker::checker_mode::log : config_checker::checker_mode::config);
 		dlg->open();
 	});
 
