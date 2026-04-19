@@ -198,7 +198,7 @@ struct cfg_root : cfg::node
 		{
 			node_perf_overlay(cfg::node* _this) : cfg::node(_this, "Performance Overlay") {}
 
-			cfg::_bool perf_overlay_enabled{ this, "Enabled", false, true };
+			cfg::_bool enabled{ this, "Enabled", false, true };
 			cfg::_bool framerate_graph_enabled{ this, "Enable Framerate Graph", false, true };
 			cfg::_bool frametime_graph_enabled{ this, "Enable Frametime Graph", false, true };
 			cfg::uint<2, 6000> framerate_datapoint_count{ this, "Framerate datapoints", 50, true };
@@ -219,7 +219,7 @@ struct cfg_root : cfg::node
 			cfg::string background_body{ this, "Body Background (hex)", "#002339FF", true };
 			cfg::string color_title{ this, "Title Color (hex)", "#F26C24FF", true };
 			cfg::string background_title{ this, "Title Background (hex)", "#00000000", true };
-			cfg::_bool perf_overlay_use_window_space{this, "Use Window Space", false, true};
+			cfg::_bool use_window_space{this, "Use Window Space", false, true};
 
 		} perf_overlay{ this };
 
