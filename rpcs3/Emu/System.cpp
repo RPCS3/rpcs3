@@ -933,7 +933,7 @@ game_boot_result Emulator::GetElfPathFromDir(std::string& elf_path, const std::s
 	return game_boot_result::invalid_file_or_folder;
 }
 
-game_boot_result Emulator::BootGame(const std::string& path, const std::string& title_id, bool direct, cfg_mode config_mode, const std::string& config_path, const std::string& db_config)
+game_boot_result Emulator::BootGame(const std::string& path, const std::string& title_id, bool direct, cfg_mode config_mode, const std::string& config_path, const std::optional<std::string>& db_config)
 {
 	if (m_restrict_emu_state_change)
 	{
@@ -1565,8 +1565,23 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		sys_log.notice("Version: APP_VER=%s VERSION=%s", version_app, version_disc);
 
 		{
-			// We add the database configuration if it is set, unless we are using a mode that specifically selects a different configuration.
-			bool add_database_config = !m_db_config.empty() && (m_config_mode == cfg_mode::database_config || m_config_mode == cfg_mode::custom || m_config_mode == cfg_mode::continuous);
+			if (m_config_mode == cfg_mode::database_config || m_config_mode == cfg_mode::custom)
+			{
+				if (!m_db_config)
+				{
+					// Get database config if possible. This only happens if the database config hasn't been set by the UI (e.g. if booted with no-gui).
+					// We only know the title_id for sure at this point, so it doesn't make sense to retrieve it earlier.
+					m_db_config = Emu.GetCallbacks().get_database_config(m_title_id);
+				}
+
+				// We add the database configuration if it is set, unless we are using a mode that specifically selects a different configuration.
+				m_add_database_config = m_db_config && !m_db_config->empty();
+			}
+			else if (m_config_mode != cfg_mode::continuous)
+			{
+				// Reset flag unless in continuous mode
+				m_add_database_config = false;
+			}
 
 			if (m_config_mode == cfg_mode::custom_selection || (m_config_mode == cfg_mode::continuous && !m_config_path.empty()))
 			{
@@ -1610,7 +1625,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 						{
 							g_cfg.name = config_path;
 							m_config_path = config_path;
-							add_database_config = false; // A custom config exists. Do not add the database config.
+							m_add_database_config = false; // A custom config exists. Do not add the database config.
 							break;
 						}
 
@@ -1619,12 +1634,12 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				}
 			}
 
-			if (add_database_config)
+			if (m_add_database_config && m_db_config && !m_db_config->empty())
 			{
 				// Add database config
 				sys_log.notice("Applying database config");
 
-				if (g_cfg.from_string(m_db_config))
+				if (g_cfg.from_string(*m_db_config))
 				{
 					g_cfg.name = "database_config";
 				}
@@ -3373,7 +3388,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 		klic.clear();
 		hdd1.clear();
 		init_mem_containers = nullptr;
-		m_db_config.clear();
+		m_db_config = std::nullopt;
 		m_config_path.clear();
 		m_config_mode = cfg_mode::custom;
 		read_used_savestate_versions();
@@ -4018,7 +4033,9 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			if (allow_autoexit)
 			{
-				Quit(g_cfg.misc.autoexit.get());
+				const bool autoexit = g_cfg.misc.autoexit.get();
+				sys_log.notice("Quit with main_window::closeEvent. (autoexit=%d)", autoexit);
+				Quit(autoexit);
 			}
 
 			if (after_kill_callback)
