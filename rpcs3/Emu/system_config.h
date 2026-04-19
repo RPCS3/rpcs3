@@ -282,7 +282,7 @@ struct cfg_root : cfg::node
 		cfg::_bool paint_move_spheres{this, "Paint move spheres", false, true};
 		cfg::_bool allow_move_hue_set_by_game{this, "Allow move hue set by game", false, true};
 		cfg::_bool lock_overlay_input_to_player_one{this, "Lock overlay input to player one", false, true};
-		cfg::string midi_devices{this, "Emulated Midi devices", "ßßß@@@ßßß@@@ßßß@@@"};
+		cfg::string midi_devices{this, "Emulated Midi devices", "Keyboardßßß@@@Keyboardßßß@@@Keyboardßßß@@@"};
 		cfg::_bool load_sdl_mappings{ this, "Load SDL GameController Mappings", true };
 		cfg::_bool pad_debug_overlay{ this, "IO Debug overlay", false, true };
 		cfg::_bool mouse_debug_overlay{ this, "Mouse Debug overlay", false, true };
