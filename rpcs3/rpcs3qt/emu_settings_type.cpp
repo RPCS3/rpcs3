@@ -192,6 +192,7 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::ShowTrophyPopups,                get_cfg_location(local_cfg.misc.show_trophy_popups) },
 	{ emu_settings_type::ShowRpcnPopups,                  get_cfg_location(local_cfg.misc.show_rpcn_popups) },
 	{ emu_settings_type::UseNativeInterface,              get_cfg_location(local_cfg.misc.use_native_interface) },
+	{ emu_settings_type::UseRecursiveScan,                get_cfg_location(local_cfg.misc.use_recursive_scan) },
 	{ emu_settings_type::ShowShaderCompilationHint,       get_cfg_location(local_cfg.misc.show_shader_compilation_hint) },
 	{ emu_settings_type::ShowPPUCompilationHint,          get_cfg_location(local_cfg.misc.show_ppu_compilation_hint) },
 	{ emu_settings_type::ShowAutosaveAutoloadHint,        get_cfg_location(local_cfg.misc.show_autosave_autoload_hint) },
