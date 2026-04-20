@@ -12,6 +12,7 @@
 #include "patch_manager_dialog.h"
 #include "persistent_settings.h"
 #include "config_database.h"
+#include "config_checker.h"
 
 #include "Utilities/File.h"
 #include "Emu/system_utils.hpp"
@@ -167,6 +168,26 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 	QAction* pad_configure = addAction(gameinfo->has_custom_pad_config
 		? tr("&Change Custom Gamepad Configuration")
 		: tr("&Create Custom Gamepad Configuration"));
+
+	QAction* compare_config = addAction(tr("&Compare Configurations"));
+	connect(compare_config, &QAction::triggered, this, [this, serial]()
+	{
+		std::string db_config;
+		if (config_database* db = m_game_list_frame->GetConfigDatabase(); db->has_config(serial))
+		{
+			if (const std::optional<std::string> config = db->get_config(serial))
+			{
+				db_config = *config;
+			}
+			else
+			{
+				game_list_log.error("No database config found for '%s'", serial);
+			}
+		}
+		config_checker* dlg = new config_checker(m_game_list_frame, QString::fromStdString(serial), config_checker::checker_mode::gamelist, db_config);
+		dlg->open();
+	});
+
 	QAction* configure_patches = addAction(tr("&Manage Game Patches"));
 
 	addSeparator();

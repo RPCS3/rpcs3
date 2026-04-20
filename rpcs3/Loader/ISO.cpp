@@ -199,7 +199,7 @@ bool iso_file_decryption::init(const std::string& path)
 	const u32 region_count = char_arr_BE_to_uint(sec0_sec1.data());
 
 	// Ensure the region count is a proper value
-	if (region_count < 1 || region_count > 31) // It's non-PS3ISO
+	if (region_count < 1 || region_count > 127) // It's non-PS3ISO
 	{
 		iso_log.error("init: Failed to read region information: '%s' (region_count=%d)", path, region_count);
 		return false;

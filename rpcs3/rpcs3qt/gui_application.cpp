@@ -640,13 +640,15 @@ void gui_application::InitializeCallbacks()
 				on_exit();
 			}
 
+			const bool no_gui = !m_main_window;
+
 			if (m_main_window)
 			{
 				// Close main window in order to save its window state
 				m_main_window->close();
 			}
 
-			gui_log.notice("Quitting gui application");
+			gui_log.notice("Quitting gui application (force_quit=%d, no-gui=%d)", force_quit, no_gui);
 			quit();
 			return true;
 		}

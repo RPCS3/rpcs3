@@ -557,7 +557,7 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 
 	// Get database config if possible or if we are in database_config mode (to ensure we see an error on invalid use)
 	if (config_database* db = m_game_list_frame->GetConfigDatabase();
-		db->has_config(title_id) || config_mode == cfg_mode::database_config)
+		db->has_config(title_id))
 	{
 		const std::optional<std::string> config = db->get_config(title_id);
 
@@ -984,7 +984,7 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 	const game_compatibility* compat = m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr;
 
 	// Let the user choose the packages to install and select the order in which they shall be installed.
-	pkg_install_dialog dlg(file_paths, compat, this);
+	pkg_install_dialog dlg(file_paths, from_boot, compat, this);
 	connect(&dlg, &QDialog::finished, this, [&](int result)
 	{
 		if (result != QDialog::Accepted)
@@ -1009,7 +1009,8 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 
 	if (canceled)
 	{
-		return false;
+		// return "true" if installation of optional packages (requested by some games at first boot) is skipped
+		return from_boot;
 	}
 
 	if (!from_boot)
@@ -3249,7 +3250,7 @@ void main_window::CreateConnects()
 
 		m_gui_settings->SetValue(gui::fd_cfg_check, file_info.path());
 
-		config_checker* dlg = new config_checker(this, content, file_path.endsWith(".log") || file_path.endsWith(".log.gz"));
+		config_checker* dlg = new config_checker(this, content, (file_path.endsWith(".log") || file_path.endsWith(".log.gz")) ? config_checker::checker_mode::log : config_checker::checker_mode::config);
 		dlg->open();
 	});
 
@@ -3943,6 +3944,7 @@ void main_window::closeEvent(QCloseEvent* closeEvent)
 
 	Q_EMIT NotifyWindowCloseEvent(true);
 
+	gui_log.notice("Quit with main_window::closeEvent");
 	Emu.Quit(true);
 }
 

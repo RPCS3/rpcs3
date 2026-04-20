@@ -22,6 +22,7 @@ add_library(rpcs3_ui STATIC
     dimensions_dialog.cpp
     _discord_utils.cpp
     emu_settings.cpp
+    emu_settings_type.cpp
     elf_memory_dumping_dialog.cpp
     emulated_pad_settings_dialog.cpp
     emulated_logitech_g27_settings_dialog.cpp

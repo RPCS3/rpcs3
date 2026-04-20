@@ -837,6 +837,7 @@
     <ClCompile Include="rpcs3qt\breakpoint_list.cpp" />
     <ClCompile Include="rpcs3qt\call_stack_list.cpp" />
     <ClCompile Include="rpcs3qt\camera_settings_dialog.cpp" />
+    <ClCompile Include="rpcs3qt\emu_settings_type.cpp" />
     <ClCompile Include="rpcs3qt\gui_game_info.cpp" />
     <ClCompile Include="rpcs3qt\log_level_dialog.cpp" />
     <ClCompile Include="rpcs3qt\permissions.cpp" />
