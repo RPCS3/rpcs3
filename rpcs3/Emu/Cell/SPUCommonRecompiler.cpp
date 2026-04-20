@@ -3273,8 +3273,12 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			{
 				spu_log.notice("[0x%x] At 0x%x: ignoring indirect branch (SYNC)", entry_point, pos);
 			}
+			else if (!sl && op.e && !sync)
+			{
+				spu_log.warning("[0x%x] At 0x%x: Undetected interrupt branch target (ra=%d)", entry_point, pos, op.ra);
+			}
 
-			if (!(af & vf::is_const))
+			if (!(af & vf::is_const) || op.e)
 			{
 				// Possible unknown target
 				m_targets[pos].emplace_back(SPU_LS_SIZE);
