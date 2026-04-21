@@ -463,7 +463,7 @@ void game_list_actions::ShowGameIntegrityDialog(const game_info& game)
 		{
 			// As last, close the progress bar (it will be already closed if the process was aborted) and delete the object
 			pdlg->close();
-			delete pdlg;
+			pdlg->deleteLater();
 		}, nullptr, false);
 	});
 }

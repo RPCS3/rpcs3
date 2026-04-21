@@ -53,11 +53,7 @@ iso_integrity_status iso_file_validation::check_integrity(const std::string& pat
 		return iso_integrity_status::ERROR_PARSING_DB;
 	}
 
-	if (const auto node = db_base->GetChild(std::string_view("datafile")))
-	{
-		db_base = node;
-	}
-	else
+	if (db_base = db_base->GetChild(std::string_view("datafile")); !db_base)
 	{
 		iso_log.error("check_integrity: Failed to get 'datafile' node on file: %s", db_path);
 		return iso_integrity_status::ERROR_PARSING_DB;

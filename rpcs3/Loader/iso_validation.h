@@ -31,7 +31,7 @@ private:
 public:
 	static iso_integrity_status check_integrity(const std::string& path, const std::string& hash, std::string* game_name = nullptr);
 
-	std::string get_path() const { return m_path; }
+	const std::string& get_path() const { return m_path; }
 	u64 get_size() const { return m_size; }
 	u64 get_bytes_read() const { return m_bytes_read; }
 	iso_hash_status get_status() const { return m_status; }

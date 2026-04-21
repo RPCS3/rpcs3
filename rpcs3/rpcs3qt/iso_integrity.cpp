@@ -8,53 +8,6 @@
 
 LOG_CHANNEL(iso_log, "ISO");
 
-QByteArray iso_integrity::read_json(const QByteArray& data, bool after_download)
-{
-	QJsonParseError error {};
-	const QJsonDocument json_document = QJsonDocument::fromJson(data, &error);
-
-	if (!json_document.isObject())
-	{
-		iso_log.error("ISO Integrity database error - Invalid JSON: '%s'", error.errorString());
-		return {};
-	}
-
-	const QJsonObject json_data = json_document.object();
-	const int return_code = json_data["return_code"].toInt(-255);
-
-	if (return_code < 0)
-	{
-		if (after_download)
-		{
-			std::string error_message;
-
-			switch (return_code)
-			{
-			case -1: error_message = "Server Error - Internal Error"; break;
-			case -2: error_message = "Server Error - Maintenance Mode"; break;
-			case -255: error_message = "Server Error - Return code not found"; break;
-			default: error_message = "Server Error - Unknown Error"; break;
-			}
-
-			iso_log.error("%s: return code %d", error_message, return_code);
-		}
-		else
-		{
-			iso_log.error("ISO Integrity database error - Invalid: return code %d", return_code);
-		}
-
-		return {};
-	}
-
-	if (!json_data["redump"].isString())
-	{
-		iso_log.error("ISO Integrity database error - Unusable Redump string");
-		return {};
-	}
-
-	return QByteArray().fromStdString(json_data["redump"].toString().toStdString());
-};
-
 iso_integrity::iso_integrity(QWidget* parent)
 	: QObject(parent)
 {
@@ -111,3 +64,50 @@ void iso_integrity::handle_download_error(const QString& error)
 {
 	iso_log.error("", error.toStdString().c_str());
 }
+
+QByteArray iso_integrity::read_json(const QByteArray& data, bool after_download)
+{
+	QJsonParseError error{};
+	const QJsonDocument json_document = QJsonDocument::fromJson(data, &error);
+
+	if (!json_document.isObject())
+	{
+		iso_log.error("ISO Integrity database error - Invalid JSON: '%s'", error.errorString());
+		return {};
+	}
+
+	const QJsonObject json_data = json_document.object();
+	const int return_code = json_data["return_code"].toInt(-255);
+
+	if (return_code < 0)
+	{
+		if (after_download)
+		{
+			std::string error_message;
+
+			switch (return_code)
+			{
+			case -1: error_message = "Server Error - Internal Error"; break;
+			case -2: error_message = "Server Error - Maintenance Mode"; break;
+			case -255: error_message = "Server Error - Return code not found"; break;
+			default: error_message = "Server Error - Unknown Error"; break;
+			}
+
+			iso_log.error("%s: return code %d", error_message, return_code);
+		}
+		else
+		{
+			iso_log.error("ISO Integrity database error - Invalid: return code %d", return_code);
+		}
+
+		return {};
+	}
+
+	if (!json_data["redump"].isString())
+	{
+		iso_log.error("ISO Integrity database error - Unusable Redump string");
+		return {};
+	}
+
+	return QByteArray().fromStdString(json_data["redump"].toString().toStdString());
+};

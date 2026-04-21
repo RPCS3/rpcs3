@@ -166,36 +166,28 @@ iso_type_status iso_file_decryption::check_type(const std::string& path, std::st
 
 	// Remove file extension from file path
 	const usz ext_pos = path.rfind('.');
-	std::string name_path = ext_pos == umax ? path : path.substr(0, ext_pos);
+	const std::string name_path = ext_pos == umax ? path : path.substr(0, ext_pos);
 
 	// Detect file name (with no parent folder and no file extension)
 	const usz name_pos = name_path.rfind('/');
-	std::string name = name_pos == umax ? name_path : name_path.substr(name_pos);
+	const std::string name = name_pos == umax ? name_path : name_path.substr(name_pos);
+	fs::file key_file;
 
-	// Open ".dkey" file
-	key_path = name_path + ".dkey";
+	const std::array<std::string, 4> key_paths {
+		name_path + ".dkey",
+		name_path + ".key",
+		rpcs3::utils::get_redump_key_dir() + name + ".dkey",
+		rpcs3::utils::get_redump_key_dir() + name + ".key"};
 
-	fs::file key_file(key_path);
-
-	// If no ".dkey" file exists, try with ".key"
-	if (!key_file)
+	for (const std::string& path : key_paths)
 	{
-		key_path = name_path + ".key";
-		key_file = fs::file(key_path);
-	}
+		key_file = fs::file(path);
 
-	// If no ".dkey" and ".key" file exists, try on default ISO keys folder
-	if (!key_file)
-	{
-		key_path = rpcs3::utils::get_redump_key_dir() + name + ".dkey";
-		key_file = fs::file(key_path);
-	}
-
-	// If no ".dkey" file exists, try with ".key"
-	if (!key_file)
-	{
-		key_path = rpcs3::utils::get_redump_key_dir() + name + ".key";
-		key_file = fs::file(key_path);
+		if (key_file)
+		{
+			key_path = path;
+			break;
+		}
 	}
 
 	// If no ".dkey" and ".key" file exists
