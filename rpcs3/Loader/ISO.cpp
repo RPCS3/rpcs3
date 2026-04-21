@@ -177,7 +177,8 @@ iso_type_status iso_file_decryption::check_type(const std::string& path, std::st
 		name_path + ".dkey",
 		name_path + ".key",
 		rpcs3::utils::get_redump_key_dir() + name + ".dkey",
-		rpcs3::utils::get_redump_key_dir() + name + ".key"};
+		rpcs3::utils::get_redump_key_dir() + name + ".key"
+	};
 
 	for (const std::string& path : key_paths)
 	{
