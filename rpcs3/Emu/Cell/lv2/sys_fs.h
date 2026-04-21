@@ -341,7 +341,7 @@ struct lv2_file final : lv2_fs_object
 	};
 
 	// Open a file with wrapped logic of sys_fs_open
-	static open_raw_result_t open_raw(const std::string& path, s32 flags, s32 mode, lv2_file_type type = lv2_file_type::regular, const lv2_fs_mount_info& mp = g_mi_sys_not_found);
+	static open_raw_result_t open_raw(const std::string& path, s32 flags, bool has_write_access, lv2_file_type type = lv2_file_type::regular, const lv2_fs_mount_info& mp = g_mi_sys_not_found);
 	static open_result_t open(std::string_view vpath, s32 flags, s32 mode, const void* arg = {}, u64 size = 0);
 
 	// File reading with intermediate buffer
