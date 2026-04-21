@@ -177,7 +177,7 @@ bool FAudioBackend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSiz
 	{
 		if (!try_to_uint64(&devid, dev_id, 0, UINT32_MAX))
 		{
-			FAudio_.error("Invalid device ID format: '%s'", std::string(dev_id).c_str());
+			FAudio_.error("Invalid device ID format: '%s'", dev_id);
 			return false;
 		}
 	}
