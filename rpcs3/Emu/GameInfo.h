@@ -8,6 +8,7 @@ struct GameInfo
 	std::string path;
 	std::string icon_path;
 	std::string movie_path;
+	std::string audio_path;
 
 	std::string name;
 	std::string serial;

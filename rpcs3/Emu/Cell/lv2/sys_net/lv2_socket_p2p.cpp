@@ -364,7 +364,7 @@ s32 lv2_socket_p2p::shutdown([[maybe_unused]] s32 how)
 	return CELL_OK;
 }
 
-s32 lv2_socket_p2p::poll(sys_net_pollfd& sn_pfd, [[maybe_unused]] pollfd& native_pfd)
+void lv2_socket_p2p::poll(sys_net_pollfd& sn_pfd, [[maybe_unused]] pollfd& native_pfd)
 {
 	std::lock_guard lock(mutex);
 	ensure(vport);
@@ -381,8 +381,6 @@ s32 lv2_socket_p2p::poll(sys_net_pollfd& sn_pfd, [[maybe_unused]] pollfd& native
 	{
 		sn_pfd.revents |= SYS_NET_POLLOUT;
 	}
-
-	return sn_pfd.revents ? 1 : 0;
 }
 
 std::tuple<bool, bool, bool> lv2_socket_p2p::select(bs_t<lv2_socket::poll_t> selected, [[maybe_unused]] pollfd& native_pfd)

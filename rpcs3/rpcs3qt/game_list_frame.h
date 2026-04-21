@@ -18,6 +18,7 @@
 #include <optional>
 #include <set>
 
+class config_database;
 class game_list_table;
 class game_list_grid;
 class gui_settings;
@@ -53,7 +54,8 @@ public:
 
 	void SetShowHidden(bool show);
 
-	game_compatibility* GetGameCompatibility() const { return m_game_compat; }
+	game_compatibility* GetGameCompatibility() const { return ensure(m_game_compat); }
+	config_database* GetConfigDatabase() const { return ensure(m_config_db); }
 	const std::vector<game_info>& GetGameInfo() const { return m_game_data; }
 	std::shared_ptr<game_list_actions> actions() const { return m_game_list_actions; }
 	std::shared_ptr<gui_settings> get_gui_settings() const { return m_gui_settings; }
@@ -88,12 +90,14 @@ public Q_SLOTS:
 	void SetPreferGameDataIcons(bool enabled);
 	void SetShowCustomIcons(bool show);
 	void SetPlayHoverGifs(bool play);
+	void SetPlayHoverMusic(bool play);
 	void FocusAndSelectFirstEntryIfNoneIs();
 
 private Q_SLOTS:
 	void OnParsingFinished();
 	void OnRefreshFinished();
 	void OnCompatFinished();
+	void OnConfigDatabaseFinished();
 	void OnColClicked(int col);
 	void ShowContextMenu(const QPoint& pos);
 	void doubleClickedSlot(QTableWidgetItem* item);
@@ -150,6 +154,7 @@ private:
 	// Game List
 	game_list_table* m_game_list = nullptr;
 	game_compatibility* m_game_compat = nullptr;
+	config_database* m_config_db = nullptr;
 	progress_dialog* m_progress_dialog = nullptr;
 	std::map<int, QAction*> m_column_acts;
 	Qt::SortOrder m_col_sort_order{};
@@ -180,6 +185,7 @@ private:
 	std::vector<path_entry> m_path_entries;
 	shared_mutex m_path_mutex;
 	std::set<std::string> m_path_list;
+	std::unordered_set<std::string> m_scanned_iso_paths;
 	QSet<QString> m_serials;
 	QMutex m_games_mutex;
 	lf_queue<game_info> m_games;
@@ -204,5 +210,6 @@ private:
 	bool m_prefer_game_data_icons = false;
 	bool m_show_custom_icons = true;
 	bool m_play_hover_movies = true;
+	bool m_play_hover_music = true;
 	std::optional<auto_typemap<game_list_frame>> m_refresh_funcs_manage_type{std::in_place};
 };

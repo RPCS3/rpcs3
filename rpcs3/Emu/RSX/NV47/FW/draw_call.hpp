@@ -33,7 +33,7 @@ namespace rsx
 		u32 draw_command_barrier_mask = 0;
 
 		// Draw-time iterator to the draw_command_barriers struct
-		mutable rsx::simple_array<barrier_t>::iterator current_barrier_it;
+		mutable rsx::simple_array<barrier_t>::iterator current_barrier_it {};
 
 		// Subranges memory cache
 		mutable rsx::simple_array<draw_range_t> subranges_store;

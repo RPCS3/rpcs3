@@ -30,17 +30,9 @@ namespace gl
 
 	public:
 
-		void init()
-		{
-			blit_src.create();
-			blit_dst.create();
-		}
+		void init();
 
-		void destroy()
-		{
-			blit_dst.remove();
-			blit_src.remove();
-		}
+		void destroy();
 
 		void scale_image(gl::command_context& cmd, const texture* src, texture* dst, areai src_rect, areai dst_rect, bool linear_interpolation,
 			const rsx::typeless_xfer& xfer_info);

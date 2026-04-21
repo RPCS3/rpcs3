@@ -13,29 +13,29 @@ std::string wchar_to_utf8(std::wstring_view src);
 std::string utf16_to_utf8(std::u16string_view src);
 std::u16string utf8_to_utf16(std::string_view src);
 
-// Copy null-terminated string from a std::string or a char array to a char array with truncation
-template <typename D, typename T>
+// Copy null-terminated string from a std::basic_string or a char array to a char array with truncation
+template <typename D, typename T> requires requires (D& d, T& t) { std::declval<decltype(&t[0])&>() = &d[0]; }
 inline void strcpy_trunc(D&& dst, const T& src)
 {
 	const usz count = std::size(src) >= std::size(dst) ? std::max<usz>(std::size(dst), 1) - 1 : std::size(src);
-	std::memcpy(std::data(dst), std::data(src), count);
-	std::memset(std::data(dst) + count, 0, std::size(dst) - count);
+	std::copy_n(std::data(src), count, std::data(dst));
+	std::fill_n(std::data(dst) + count, std::size(dst) - count, std::remove_cvref_t<decltype(dst[0])>{});
 }
 
 // Convert string to signed integer
-bool try_to_int64(s64* out, std::string_view value, s64 min, s64 max);
+bool try_to_int64(s64* out, std::string_view value, s64 min, s64 max, std::string_view name = {});
 
 // Convert string to unsigned integer
-bool try_to_uint64(u64* out, std::string_view value, u64 min, u64 max);
+bool try_to_uint64(u64* out, std::string_view value, u64 min, u64 max, std::string_view name = {});
 
 // Convert string to unsigned int128_t
-bool try_to_uint128(u128* out, std::string_view value);
+bool try_to_uint128(u128* out, std::string_view value, std::string_view name = {});
 
 // Convert string to float
-bool try_to_float(f64* out, std::string_view value, f64 min, f64 max);
+bool try_to_float(f64* out, std::string_view value, f64 min, f64 max, std::string_view name = {});
 
 // Convert float to string locale independent
-bool try_to_string(std::string* out, const f64& value);
+bool try_to_string(std::string* out, f64 value, std::string_view name = {});
 
 // Get the file extension of a file path ("png", "jpg", etc.)
 std::string get_file_extension(const std::string& file_path);

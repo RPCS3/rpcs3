@@ -248,14 +248,14 @@ private:
 	void check_add_device(hid_device* hidDevice, hid_enumerated_device_view path, std::wstring_view wide_serial) override;
 	int send_output_report(DualSenseDevice* device) override;
 
-	bool get_is_left_trigger(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
-	bool get_is_right_trigger(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
-	bool get_is_left_stick(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
-	bool get_is_right_stick(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
-	bool get_is_touch_pad_motion(const std::shared_ptr<PadDevice>& device, u64 keyCode) override;
+	bool get_is_left_trigger(const std::shared_ptr<PadDevice>& device, u32 keyCode) override;
+	bool get_is_right_trigger(const std::shared_ptr<PadDevice>& device, u32 keyCode) override;
+	bool get_is_left_stick(const std::shared_ptr<PadDevice>& device, u32 keyCode) override;
+	bool get_is_right_stick(const std::shared_ptr<PadDevice>& device, u32 keyCode) override;
+	bool get_is_touch_pad_motion(const std::shared_ptr<PadDevice>& device, u32 keyCode) override;
 	PadHandlerBase::connection update_connection(const std::shared_ptr<PadDevice>& device) override;
-	std::unordered_map<u64, u16> get_button_values(const std::shared_ptr<PadDevice>& device) override;
-	pad_preview_values get_preview_values(const std::unordered_map<u64, u16>& data) override;
+	std::unordered_map<u32, u16> get_button_values(const std::shared_ptr<PadDevice>& device) override;
+	pad_preview_values get_preview_values(const std::unordered_map<u32, u16>& data, const std::vector<std::string>& buttons) override;
 	void get_extended_info(const pad_ensemble& binding) override;
 	void apply_pad_data(const pad_ensemble& binding) override;
 };

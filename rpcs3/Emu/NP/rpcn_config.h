@@ -4,7 +4,7 @@
 
 struct cfg_rpcn : cfg::node
 {
-	cfg::uint32 version{this, "Version", 1};
+	cfg::uint32 version{this, "Version", 2};
 	cfg::string host{this, "Host", "np.rpcs3.net"};
 	cfg::string npid{this, "NPID", ""};
 	cfg::string password{this, "Password", ""};

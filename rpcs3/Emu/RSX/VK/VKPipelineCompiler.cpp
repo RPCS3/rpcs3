@@ -220,9 +220,20 @@ namespace vk
 	{
 		if (num_worker_threads == 0)
 		{
-			// Select optimal number of compiler threads
+			// Select a conservative but modern default for async pipeline compilation.
+			// Older heuristics topped out too early on high-core CPUs and left large
+			// shader bursts queued longer than necessary.
 			const auto hw_threads = utils::get_thread_count();
-			if (hw_threads > 12)
+
+			if (hw_threads >= 24)
+			{
+				num_worker_threads = 12;
+			}
+			else if (hw_threads >= 16)
+			{
+				num_worker_threads = 8;
+			}
+			else if (hw_threads > 12)
 			{
 				num_worker_threads = 6;
 			}
@@ -238,6 +249,9 @@ namespace vk
 			{
 				num_worker_threads = 1;
 			}
+
+			rsx_log.notice("Async pipeline compiler auto-selected %d worker(s) for %u host thread(s).",
+				num_worker_threads, hw_threads);
 		}
 
 		ensure(num_worker_threads >= 1);

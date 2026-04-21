@@ -22,6 +22,13 @@ namespace gl
 	legacy_ring_buffer g_upload_transfer_buffer;
 	scratch_ring_buffer g_compute_decode_buffer;
 	scratch_ring_buffer g_deswizzle_scratch_buffer;
+	blitter g_blitter;
+
+	void init_global_texture_resources()
+	{
+		g_blitter.init();
+		g_hw_blitter = &g_blitter;
+	}
 
 	void destroy_global_texture_resources()
 	{
@@ -29,6 +36,8 @@ namespace gl
 		g_upload_transfer_buffer.remove();
 		g_compute_decode_buffer.remove();
 		g_deswizzle_scratch_buffer.remove();
+		g_blitter.destroy();
+		g_hw_blitter = nullptr;
 	}
 
 	template <typename WordType, bool SwapBytes>
@@ -157,42 +166,42 @@ namespace gl
 		case texture::internal_format::compressed_rgba_s3tc_dxt1:
 		case texture::internal_format::compressed_rgba_s3tc_dxt3:
 		case texture::internal_format::compressed_rgba_s3tc_dxt5:
-			return { GL_RGBA, GL_UNSIGNED_BYTE, 1, false };
+			return { .format = GL_RGBA, .type = GL_UNSIGNED_BYTE, .block_size = 1, .swap_bytes = false };
 		case texture::internal_format::r8:
-			return { GL_RED, GL_UNSIGNED_BYTE, 1, false };
+			return { .format = GL_RED, .type = GL_UNSIGNED_BYTE, .block_size = 1, .swap_bytes = false };
 		case texture::internal_format::r16:
-			return { GL_RED, GL_UNSIGNED_SHORT, 2, true };
+			return { .format = GL_RED, .type = GL_UNSIGNED_SHORT, .block_size = 2, .swap_bytes = true };
 		case texture::internal_format::r32f:
-			return { GL_RED, GL_FLOAT, 4, true };
+			return { .format = GL_RED, .type = GL_FLOAT, .block_size = 4, .swap_bytes = true };
 		case texture::internal_format::rg8:
-			return { GL_RG, GL_UNSIGNED_SHORT, 2, true };
+			return { .format = GL_RG, .type = GL_UNSIGNED_SHORT, .block_size = 2, .swap_bytes = true };
 		case texture::internal_format::rg16:
-			return { GL_RG, GL_UNSIGNED_SHORT, 2, true };
+			return { .format = GL_RG, .type = GL_UNSIGNED_SHORT, .block_size = 2, .swap_bytes = true };
 		case texture::internal_format::rg16f:
-			return { GL_RG, GL_HALF_FLOAT, 2, true };
+			return { .format = GL_RG, .type = GL_HALF_FLOAT, .block_size = 2, .swap_bytes = true };
 		case texture::internal_format::rgb565:
-			return { GL_RGB, GL_UNSIGNED_SHORT_5_6_5, 2, true };
+			return { .format = GL_RGB, .type = GL_UNSIGNED_SHORT_5_6_5, .block_size = 2, .swap_bytes = true };
 		case texture::internal_format::rgb5a1:
-			return { GL_RGB, GL_UNSIGNED_SHORT_5_5_5_1, 2, true };
+			return { .format = GL_RGB, .type = GL_UNSIGNED_SHORT_5_5_5_1, .block_size = 2, .swap_bytes = true };
 		case texture::internal_format::bgr5a1:
-			return { GL_RGB, GL_UNSIGNED_SHORT_1_5_5_5_REV, 2, true };
+			return { .format = GL_RGB, .type = GL_UNSIGNED_SHORT_1_5_5_5_REV, .block_size = 2, .swap_bytes = true };
 		case texture::internal_format::rgba4:
-			return { GL_BGRA, GL_UNSIGNED_SHORT_4_4_4_4, 2, false };
+			return { .format = GL_BGRA, .type = GL_UNSIGNED_SHORT_4_4_4_4, .block_size = 2, .swap_bytes = false };
 		case texture::internal_format::rgba8:
-			return { GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV, 4, true };
+			return { .format = GL_RGBA, .type = GL_UNSIGNED_INT_8_8_8_8_REV, .block_size = 4, .swap_bytes = true };
 		case texture::internal_format::bgra8:
-			return { GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, 4, true };
+			return { .format = GL_BGRA, .type = GL_UNSIGNED_INT_8_8_8_8_REV, .block_size = 4, .swap_bytes = true };
 		case texture::internal_format::rgba16f:
-			return { GL_RGBA, GL_HALF_FLOAT, 2, true };
+			return { .format = GL_RGBA, .type = GL_HALF_FLOAT, .block_size = 2, .swap_bytes = true };
 		case texture::internal_format::rgba32f:
-			return { GL_RGBA, GL_FLOAT, 4, true };
+			return { .format = GL_RGBA, .type = GL_FLOAT, .block_size = 4, .swap_bytes = true };
 		case texture::internal_format::depth16:
-			return { GL_DEPTH_COMPONENT, GL_UNSIGNED_SHORT, 2, true };
+			return { .format = GL_DEPTH_COMPONENT, .type = GL_UNSIGNED_SHORT, .block_size = 2, .swap_bytes = true };
 		case texture::internal_format::depth32f:
-			return { GL_DEPTH_COMPONENT, GL_FLOAT, 2, true };
+			return { .format = GL_DEPTH_COMPONENT, .type = GL_FLOAT, .block_size = 2, .swap_bytes = true };
 		case texture::internal_format::depth24_stencil8:
 		case texture::internal_format::depth32f_stencil8:
-			return { GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, 4, true };
+			return { .format = GL_DEPTH_STENCIL, .type = GL_UNSIGNED_INT_24_8, .block_size = 4, .swap_bytes = true };
 		default:
 			fmt::throw_exception("Unexpected internal format 0x%X", static_cast<u32>(format));
 		}
@@ -266,6 +275,44 @@ namespace gl
 		fmt::throw_exception("Unknown format 0x%x", texture_format);
 	}
 
+	GLenum get_compatible_snorm_format(GLenum base_format)
+	{
+		switch (base_format)
+		{
+		case GL_R8:
+			return GL_R8_SNORM;
+		case GL_RG8:
+			return GL_RG8_SNORM;
+		case GL_RGBA8:
+			return GL_RGBA8_SNORM;
+		case GL_R16:
+			return GL_R16_SNORM;
+		case GL_RG16:
+			return GL_RG16_SNORM;
+		case GL_RGBA16:
+			return GL_RGBA16_SNORM;
+		default:
+			return GL_NONE;
+		}
+	}
+
+	GLenum get_compatible_srgb_format(GLenum base_format)
+	{
+		switch (base_format)
+		{
+		case GL_RGBA8:
+			return GL_SRGB8_ALPHA8_EXT;
+		case GL_COMPRESSED_RGBA_S3TC_DXT1_EXT:
+			return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT1_EXT;
+		case GL_COMPRESSED_RGBA_S3TC_DXT3_EXT:
+			return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT3_EXT;
+		case GL_COMPRESSED_RGBA_S3TC_DXT5_EXT:
+			return GL_COMPRESSED_SRGB_ALPHA_S3TC_DXT5_EXT;
+		default:
+			return GL_NONE;
+		}
+	}
+
 	cs_shuffle_base* get_trivial_transform_job(const pixel_buffer_layout& pack_info)
 	{
 		if (!pack_info.swap_bytes)
@@ -273,7 +320,7 @@ namespace gl
 			return nullptr;
 		}
 
-		switch (pack_info.size)
+		switch (pack_info.block_size)
 		{
 		case 1:
 			return nullptr;
@@ -325,8 +372,10 @@ namespace gl
 				}
 			}
 
-			dst->bind(buffer::target::pixel_pack);
-			src->copy_to(reinterpret_cast<void*>(static_cast<uintptr_t>(dst_offset)), static_cast<texture::format>(pack_info.format), static_cast<texture::type>(pack_info.type), src_level, src_region, {});
+			pixel_pack_settings pack_settings{};
+			if (pack_info.alignment) pack_settings.alignment(pack_info.alignment);
+			if (pack_info.row_length) pack_settings.row_length(pack_info.row_length);
+			src->copy_to(*dst, dst_offset, static_cast<texture::format>(pack_info.format), static_cast<texture::type>(pack_info.type), src_level, src_region, pack_settings);
 			return false;
 		};
 
@@ -573,10 +622,12 @@ namespace gl
 			}
 
 			glBindBuffer(GL_SHADER_STORAGE_BUFFER, GL_NONE);
-			transfer_buf->bind(buffer::target::pixel_unpack);
 
-			dst->copy_from(reinterpret_cast<void*>(u64(out_offset)), static_cast<texture::format>(unpack_info.format),
-				static_cast<texture::type>(unpack_info.type), dst_level, dst_region, {});
+			pixel_unpack_settings unpack_settings{};
+			if (unpack_info.alignment) unpack_settings.alignment(unpack_info.alignment);
+			if (unpack_info.format) unpack_settings.row_length(unpack_info.row_length);
+			dst->copy_from(*transfer_buf, out_offset, static_cast<texture::format>(unpack_info.format),
+				static_cast<texture::type>(unpack_info.type), dst_level, dst_region, unpack_settings);
 		}
 	}
 
@@ -666,172 +717,168 @@ namespace gl
 				}
 				}
 			}
+
+			return;
 		}
-		else
+
+		std::pair<void*, u32> upload_scratch_mem = {}, compute_scratch_mem = {};
+		image_memory_requirements mem_info;
+		pixel_buffer_layout mem_layout;
+
+		std::span<std::byte> dst_buffer = staging_buffer;
+		u8 block_size_in_bytes = rsx::get_format_block_size_in_bytes(format);
+		u64 image_linear_size = staging_buffer.size();
+
+		const auto min_required_buffer_size = std::max<u64>(utils::align(image_linear_size * 4, 0x100000), 16 * 0x100000);
+
+		if (driver_caps.ARB_compute_shader_supported)
 		{
-			std::pair<void*, u32> upload_scratch_mem = {}, compute_scratch_mem = {};
-			image_memory_requirements mem_info;
-			pixel_buffer_layout mem_layout;
-
-			std::span<std::byte> dst_buffer = staging_buffer;
-			void* out_pointer = staging_buffer.data();
-			u8 block_size_in_bytes = rsx::get_format_block_size_in_bytes(format);
-			u64 image_linear_size = staging_buffer.size();
-
-			const auto min_required_buffer_size = std::max<u64>(utils::align(image_linear_size * 4, 0x100000), 16 * 0x100000);
-
-			if (driver_caps.ARB_compute_shader_supported)
+			if (g_upload_transfer_buffer.size() < static_cast<GLsizeiptr>(min_required_buffer_size))
 			{
-				if (g_upload_transfer_buffer.size() < static_cast<GLsizeiptr>(min_required_buffer_size))
-				{
-					g_upload_transfer_buffer.remove();
-					g_upload_transfer_buffer.create(gl::buffer::target::pixel_unpack, min_required_buffer_size);
-				}
-
-				if (g_compute_decode_buffer.size() < min_required_buffer_size)
-				{
-					g_compute_decode_buffer.remove();
-					g_compute_decode_buffer.create(gl::buffer::target::ssbo, min_required_buffer_size);
-				}
-
-				out_pointer = nullptr;
+				g_upload_transfer_buffer.remove();
+				g_upload_transfer_buffer.create(gl::buffer::target::pixel_unpack, min_required_buffer_size);
 			}
 
-			for (const rsx::subresource_layout& layout : input_layouts)
+			if (g_compute_decode_buffer.size() < min_required_buffer_size)
 			{
-				if (driver_caps.ARB_compute_shader_supported)
+				g_compute_decode_buffer.remove();
+				g_compute_decode_buffer.create(gl::buffer::target::ssbo, min_required_buffer_size);
+			}
+		}
+
+		for (const rsx::subresource_layout& layout : input_layouts)
+		{
+			if (driver_caps.ARB_compute_shader_supported)
+			{
+				u64 row_pitch = rsx::align2<u64, u64>(layout.width_in_block * block_size_in_bytes, caps.alignment);
+
+				// We're in the "else" branch, so "is_compressed_host_format()" is always false.
+				// Handle emulated compressed formats with host unpack (R8G8 compressed)
+				row_pitch = std::max<u64>(row_pitch, dst->pitch());
+
+				// FIXME: Double-check this logic; it seems like we should always use texels both here and for row_pitch.
+				image_linear_size = row_pitch * layout.height_in_texel * layout.depth;
+
+				compute_scratch_mem = { nullptr, g_compute_decode_buffer.alloc(static_cast<u32>(image_linear_size), 256) };
+				compute_scratch_mem.first = reinterpret_cast<void*>(static_cast<uintptr_t>(compute_scratch_mem.second));
+
+				g_upload_transfer_buffer.reserve_storage_on_heap(static_cast<u32>(image_linear_size));
+				upload_scratch_mem = g_upload_transfer_buffer.alloc_from_heap(static_cast<u32>(image_linear_size), 256);
+				dst_buffer = { reinterpret_cast<std::byte*>(upload_scratch_mem.first), image_linear_size };
+			}
+
+			rsx::io_buffer io_buf = dst_buffer;
+			caps.supports_hw_deswizzle = (is_swizzled && driver_caps.ARB_compute_shader_supported && image_linear_size > 1024);
+			auto op = upload_texture_subresource(io_buf, layout, format, is_swizzled, caps);
+
+			// Define upload region
+			coord3u region;
+			region.x = 0;
+			region.y = 0;
+			region.z = layout.layer;
+			region.width = layout.width_in_texel;
+			region.height = layout.height_in_texel;
+			region.depth = layout.depth;
+
+			if (!driver_caps.ARB_compute_shader_supported)
+			{
+				unpack_settings.swap_bytes(op.require_swap);
+				dst->copy_from(staging_buffer, static_cast<texture::format>(gl_format), static_cast<texture::type>(gl_type), layout.level, region, unpack_settings);
+				continue;
+			}
+
+			// 0. Preconf
+			mem_layout.alignment = static_cast<u8>(caps.alignment);
+			mem_layout.swap_bytes = op.require_swap;
+			mem_layout.format = gl_format;
+			mem_layout.type = gl_type;
+			mem_layout.block_size = block_size_in_bytes;
+
+			// 2. Upload memory to GPU
+			if (!op.require_deswizzle)
+			{
+				g_upload_transfer_buffer.unmap();
+				g_upload_transfer_buffer.copy_to(&g_compute_decode_buffer.get(), upload_scratch_mem.second, compute_scratch_mem.second, image_linear_size);
+			}
+			else
+			{
+				// 2.1 Copy data to deswizzle buf
+				if (g_deswizzle_scratch_buffer.size() < min_required_buffer_size)
 				{
-					u64 row_pitch = rsx::align2<u64, u64>(layout.width_in_block * block_size_in_bytes, caps.alignment);
-
-					// We're in the "else" branch, so "is_compressed_host_format()" is always false.
-					// Handle emulated compressed formats with host unpack (R8G8 compressed)
-					row_pitch = std::max<u64>(row_pitch, dst->pitch());
-
-					// FIXME: Double-check this logic; it seems like we should always use texels both here and for row_pitch.
-					image_linear_size = row_pitch * layout.height_in_texel * layout.depth;
-
-					compute_scratch_mem = { nullptr, g_compute_decode_buffer.alloc(static_cast<u32>(image_linear_size), 256) };
-					compute_scratch_mem.first = reinterpret_cast<void*>(static_cast<uintptr_t>(compute_scratch_mem.second));
-
-					g_upload_transfer_buffer.reserve_storage_on_heap(static_cast<u32>(image_linear_size));
-					upload_scratch_mem = g_upload_transfer_buffer.alloc_from_heap(static_cast<u32>(image_linear_size), 256);
-					dst_buffer = { reinterpret_cast<std::byte*>(upload_scratch_mem.first), image_linear_size };
+					g_deswizzle_scratch_buffer.remove();
+					g_deswizzle_scratch_buffer.create(gl::buffer::target::ssbo, min_required_buffer_size);
 				}
 
-				rsx::io_buffer io_buf = dst_buffer;
-				caps.supports_hw_deswizzle = (is_swizzled && driver_caps.ARB_compute_shader_supported && image_linear_size > 1024);
-				auto op = upload_texture_subresource(io_buf, layout, format, is_swizzled, caps);
+				u32 deswizzle_data_offset = g_deswizzle_scratch_buffer.alloc(static_cast<u32>(image_linear_size), 256);
+				g_upload_transfer_buffer.unmap();
+				g_upload_transfer_buffer.copy_to(&g_deswizzle_scratch_buffer.get(), upload_scratch_mem.second, deswizzle_data_offset, static_cast<u32>(image_linear_size));
 
-				// Define upload region
-				coord3u region;
-				region.x = 0;
-				region.y = 0;
-				region.z = layout.layer;
-				region.width = layout.width_in_texel;
-				region.height = layout.height_in_texel;
-				region.depth = layout.depth;
+				// 2.2 Apply compute transform to deswizzle input and dump it in compute_scratch_mem
+				const auto block_size = op.element_size * op.block_length;
 
-				if (driver_caps.ARB_compute_shader_supported)
+				if (op.require_swap)
 				{
-					// 0. Preconf
-					mem_layout.alignment = static_cast<u8>(caps.alignment);
-					mem_layout.swap_bytes = op.require_swap;
-					mem_layout.format = gl_format;
-					mem_layout.type = gl_type;
-					mem_layout.size = block_size_in_bytes;
+					mem_layout.swap_bytes = false;
 
-					// 2. Upload memory to GPU
-					if (!op.require_deswizzle)
+					switch (op.element_size)
 					{
-						g_upload_transfer_buffer.unmap();
-						g_upload_transfer_buffer.copy_to(&g_compute_decode_buffer.get(), upload_scratch_mem.second, compute_scratch_mem.second, image_linear_size);
+					case 1:
+						do_deswizzle_transformation<u8, true>(cmd, block_size,
+							&g_compute_decode_buffer.get(), compute_scratch_mem.second, &g_deswizzle_scratch_buffer.get(), deswizzle_data_offset,
+							static_cast<u32>(image_linear_size), layout.width_in_texel, layout.height_in_texel, layout.depth);
+						break;
+					case 2:
+						do_deswizzle_transformation<u16, true>(cmd, block_size,
+							&g_compute_decode_buffer.get(), compute_scratch_mem.second, &g_deswizzle_scratch_buffer.get(), deswizzle_data_offset,
+							static_cast<u32>(image_linear_size), layout.width_in_texel, layout.height_in_texel, layout.depth);
+						break;
+					case 4:
+						do_deswizzle_transformation<u32, true>(cmd, block_size,
+							&g_compute_decode_buffer.get(), compute_scratch_mem.second, &g_deswizzle_scratch_buffer.get(), deswizzle_data_offset,
+							static_cast<u32>(image_linear_size), layout.width_in_texel, layout.height_in_texel, layout.depth);
+						break;
+					default:
+						fmt::throw_exception("Unimplemented element size deswizzle");
 					}
-					else
-					{
-						// 2.1 Copy data to deswizzle buf
-						if (g_deswizzle_scratch_buffer.size() < min_required_buffer_size)
-						{
-							g_deswizzle_scratch_buffer.remove();
-							g_deswizzle_scratch_buffer.create(gl::buffer::target::ssbo, min_required_buffer_size);
-						}
-
-						u32 deswizzle_data_offset = g_deswizzle_scratch_buffer.alloc(static_cast<u32>(image_linear_size), 256);
-						g_upload_transfer_buffer.unmap();
-						g_upload_transfer_buffer.copy_to(&g_deswizzle_scratch_buffer.get(), upload_scratch_mem.second, deswizzle_data_offset, static_cast<u32>(image_linear_size));
-
-						// 2.2 Apply compute transform to deswizzle input and dump it in compute_scratch_mem
-						const auto block_size = op.element_size * op.block_length;
-
-						if (op.require_swap)
-						{
-							mem_layout.swap_bytes = false;
-
-							switch (op.element_size)
-							{
-							case 1:
-								do_deswizzle_transformation<u8, true>(cmd, block_size,
-									&g_compute_decode_buffer.get(), compute_scratch_mem.second, &g_deswizzle_scratch_buffer.get(), deswizzle_data_offset,
-									static_cast<u32>(image_linear_size), layout.width_in_texel, layout.height_in_texel, layout.depth);
-								break;
-							case 2:
-								do_deswizzle_transformation<u16, true>(cmd, block_size,
-									&g_compute_decode_buffer.get(), compute_scratch_mem.second, &g_deswizzle_scratch_buffer.get(), deswizzle_data_offset,
-									static_cast<u32>(image_linear_size), layout.width_in_texel, layout.height_in_texel, layout.depth);
-								break;
-							case 4:
-								do_deswizzle_transformation<u32, true>(cmd, block_size,
-									&g_compute_decode_buffer.get(), compute_scratch_mem.second, &g_deswizzle_scratch_buffer.get(), deswizzle_data_offset,
-									static_cast<u32>(image_linear_size), layout.width_in_texel, layout.height_in_texel, layout.depth);
-								break;
-							default:
-								fmt::throw_exception("Unimplemented element size deswizzle");
-							}
-						}
-						else
-						{
-							switch (op.element_size)
-							{
-							case 1:
-								do_deswizzle_transformation<u8, false>(cmd, block_size,
-									&g_compute_decode_buffer.get(), compute_scratch_mem.second, &g_deswizzle_scratch_buffer.get(), deswizzle_data_offset,
-									static_cast<u32>(image_linear_size), layout.width_in_texel, layout.height_in_texel, layout.depth);
-								break;
-							case 2:
-								do_deswizzle_transformation<u16, false>(cmd, block_size,
-									&g_compute_decode_buffer.get(), compute_scratch_mem.second, &g_deswizzle_scratch_buffer.get(), deswizzle_data_offset,
-									static_cast<u32>(image_linear_size), layout.width_in_texel, layout.height_in_texel, layout.depth);
-								break;
-							case 4:
-								do_deswizzle_transformation<u32, false>(cmd, block_size,
-									&g_compute_decode_buffer.get(), compute_scratch_mem.second, &g_deswizzle_scratch_buffer.get(), deswizzle_data_offset,
-									static_cast<u32>(image_linear_size), layout.width_in_texel, layout.height_in_texel, layout.depth);
-								break;
-							default:
-								fmt::throw_exception("Unimplemented element size deswizzle");
-							}
-						}
-
-						// Barrier
-						g_deswizzle_scratch_buffer.push_barrier(deswizzle_data_offset, static_cast<u32>(image_linear_size));
-					}
-
-					// 3. Update configuration
-					mem_info.image_size_in_texels = image_linear_size / block_size_in_bytes;
-					mem_info.image_size_in_bytes = image_linear_size;
-					mem_info.memory_required = 0;
-
-					// 4. Dispatch compute routines
-					copy_buffer_to_image(cmd, mem_layout, &g_compute_decode_buffer.get(), dst, compute_scratch_mem.first, layout.level, region, &mem_info);
-
-					// Barrier
-					g_compute_decode_buffer.push_barrier(compute_scratch_mem.second, static_cast<u32>(image_linear_size));
 				}
 				else
 				{
-					unpack_settings.swap_bytes(op.require_swap);
-					dst->copy_from(out_pointer, static_cast<texture::format>(gl_format), static_cast<texture::type>(gl_type), layout.level, region, unpack_settings);
+					switch (op.element_size)
+					{
+					case 1:
+						do_deswizzle_transformation<u8, false>(cmd, block_size,
+							&g_compute_decode_buffer.get(), compute_scratch_mem.second, &g_deswizzle_scratch_buffer.get(), deswizzle_data_offset,
+							static_cast<u32>(image_linear_size), layout.width_in_texel, layout.height_in_texel, layout.depth);
+						break;
+					case 2:
+						do_deswizzle_transformation<u16, false>(cmd, block_size,
+							&g_compute_decode_buffer.get(), compute_scratch_mem.second, &g_deswizzle_scratch_buffer.get(), deswizzle_data_offset,
+							static_cast<u32>(image_linear_size), layout.width_in_texel, layout.height_in_texel, layout.depth);
+						break;
+					case 4:
+						do_deswizzle_transformation<u32, false>(cmd, block_size,
+							&g_compute_decode_buffer.get(), compute_scratch_mem.second, &g_deswizzle_scratch_buffer.get(), deswizzle_data_offset,
+							static_cast<u32>(image_linear_size), layout.width_in_texel, layout.height_in_texel, layout.depth);
+						break;
+					default:
+						fmt::throw_exception("Unimplemented element size deswizzle");
+					}
 				}
+
+				// Barrier
+				g_deswizzle_scratch_buffer.push_barrier(deswizzle_data_offset, static_cast<u32>(image_linear_size));
 			}
+
+			// 3. Update configuration
+			mem_info.image_size_in_texels = image_linear_size / block_size_in_bytes;
+			mem_info.image_size_in_bytes = image_linear_size;
+			mem_info.memory_required = 0;
+
+			// 4. Dispatch compute routines
+			copy_buffer_to_image(cmd, mem_layout, &g_compute_decode_buffer.get(), dst, compute_scratch_mem.first, layout.level, region, &mem_info);
+
+			// Barrier
+			g_compute_decode_buffer.push_barrier(compute_scratch_mem.second, static_cast<u32>(image_linear_size));
 		}
 	}
 
@@ -1019,7 +1066,7 @@ namespace gl
 				skip_transform = (pack_info.format == unpack_info.format &&
 					pack_info.type == unpack_info.type &&
 					pack_info.swap_bytes == unpack_info.swap_bytes &&
-					pack_info.size == unpack_info.size);
+					pack_info.block_size == unpack_info.block_size);
 			}
 
 			if (skip_transform) [[likely]]
@@ -1100,7 +1147,7 @@ namespace gl
 				if (src->aspect() & image_aspect::depth)
 				{
 					// Source is depth, modify unpack rule
-					if (pack_info.size == 4 && unpack_info.size == 4)
+					if (pack_info.block_size == 4 && unpack_info.block_size == 4)
 					{
 						unpack_info.swap_bytes = !unpack_info.swap_bytes;
 					}
@@ -1108,7 +1155,7 @@ namespace gl
 				else
 				{
 					// Dest is depth, modify pack rule
-					if (pack_info.size == 4 && unpack_info.size == 4)
+					if (pack_info.block_size == 4 && unpack_info.block_size == 4)
 					{
 						pack_info.swap_bytes = !pack_info.swap_bytes;
 					}
@@ -1118,9 +1165,7 @@ namespace gl
 			// Start pack operation
 			pixel_pack_settings pack_settings{};
 			pack_settings.swap_bytes(pack_info.swap_bytes);
-
-			g_typeless_transfer_buffer.get().bind(buffer::target::pixel_pack);
-			src->copy_to(nullptr, static_cast<texture::format>(pack_info.format), static_cast<texture::type>(pack_info.type), 0, src_region, pack_settings);
+			src->copy_to(g_typeless_transfer_buffer.get(), 0, static_cast<texture::format>(pack_info.format), static_cast<texture::type>(pack_info.type), 0, src_region, pack_settings);
 
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
 
@@ -1128,8 +1173,7 @@ namespace gl
 			pixel_unpack_settings unpack_settings{};
 			unpack_settings.swap_bytes(unpack_info.swap_bytes);
 
-			g_typeless_transfer_buffer.get().bind(buffer::target::pixel_unpack);
-			dst->copy_from(nullptr, static_cast<texture::format>(unpack_info.format), static_cast<texture::type>(unpack_info.type), 0, dst_region, unpack_settings);
+			dst->copy_from(g_typeless_transfer_buffer.get(), 0, static_cast<texture::format>(unpack_info.format), static_cast<texture::type>(unpack_info.type), 0, dst_region, unpack_settings);
 			glBindBuffer(GL_PIXEL_UNPACK_BUFFER, GL_NONE);
 		}
 	}

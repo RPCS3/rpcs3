@@ -4,52 +4,12 @@
 
 #include "GLSLTypes.h"
 #include "ShaderParam.h"
+#include "../color_utils.h"
 
 struct RSXFragmentProgram;
 
 namespace rsx
 {
-	// TODO: Move this somewhere else once more compilers are supported other than glsl
-	enum texture_control_bits
-	{
-		GAMMA_A = 0,
-		GAMMA_R,
-		GAMMA_G,
-		GAMMA_B,
-		ALPHAKILL,
-		RENORMALIZE,
-		EXPAND_A,
-		EXPAND_R,
-		EXPAND_G,
-		EXPAND_B,
-		SEXT_A,
-		SEXT_R,
-		SEXT_G,
-		SEXT_B,
-		DEPTH_FLOAT,
-		DEPTH_COMPARE_OP,
-		DEPTH_COMPARE_1,
-		DEPTH_COMPARE_2,
-		FILTERED_MAG,
-		FILTERED_MIN,
-		UNNORMALIZED_COORDS,
-		CLAMP_TEXCOORDS_BIT,
-		WRAP_S,
-		WRAP_T,
-		WRAP_R,
-		FF_SIGNED_BIT,
-		FF_BIASED_RENORM_BIT,
-		FF_GAMMA_BIT,
-		FF_16BIT_CHANNELS_BIT,
-
-		GAMMA_CTRL_MASK = (1 << GAMMA_R) | (1 << GAMMA_G) | (1 << GAMMA_B) | (1 << GAMMA_A),
-		EXPAND_MASK = (1 << EXPAND_R) | (1 << EXPAND_G) | (1 << EXPAND_B) | (1 << EXPAND_A),
-		EXPAND_OFFSET = EXPAND_A,
-		SEXT_MASK = (1 << SEXT_R) | (1 << SEXT_G) | (1 << SEXT_B) | (1 << SEXT_A),
-		SEXT_OFFSET = SEXT_A,
-		FORMAT_FEATURES_OFFSET = FF_SIGNED_BIT,
-	};
-
 	enum ROP_control_bits : u32
 	{
 		// Commands. These trigger explicit action.

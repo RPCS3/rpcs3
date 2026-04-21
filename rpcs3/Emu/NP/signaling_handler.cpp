@@ -774,6 +774,7 @@ void signaling_handler::send_information_packets(u32 addr, u16 port, const SceNp
 	auto& sent_packet = sig_packet;
 	sent_packet.command = signal_info;
 
+	retire_packet(si, signal_info);
 	send_signaling_packet(sent_packet, addr, port);
 	queue_signaling_packet(sent_packet, si, steady_clock::now() + REPEAT_INFO_DELAY);
 	wake_up();
@@ -831,7 +832,7 @@ u32 signaling_handler::init_sig2(const SceNpId& npid, u64 room_id, u16 member_id
 	return conn_id;
 }
 
-std::optional<u32> signaling_handler::get_conn_id_from_npid(const SceNpId& npid)
+std::optional<u32> signaling_handler::get_conn_id_from_npid(const SceNpId& npid) const
 {
 	std::lock_guard lock(data_mutex);
 
@@ -842,7 +843,7 @@ std::optional<u32> signaling_handler::get_conn_id_from_npid(const SceNpId& npid)
 	return std::nullopt;
 }
 
-std::optional<signaling_info> signaling_handler::get_sig_infos(u32 conn_id)
+std::optional<signaling_info> signaling_handler::get_sig_infos(u32 conn_id) const
 {
 	std::lock_guard lock(data_mutex);
 	if (sig_peers.contains(conn_id))
@@ -851,7 +852,7 @@ std::optional<signaling_info> signaling_handler::get_sig_infos(u32 conn_id)
 	return std::nullopt;
 }
 
-std::optional<u32> signaling_handler::get_conn_id_from_addr(u32 addr, u16 port)
+std::optional<u32> signaling_handler::get_conn_id_from_addr(u32 addr, u16 port) const
 {
 	std::lock_guard lock(data_mutex);
 

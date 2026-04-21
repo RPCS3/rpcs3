@@ -711,6 +711,14 @@ namespace rsx
 		if (g_cfg.misc.use_native_interface && (g_cfg.video.renderer == video_renderer::opengl || g_cfg.video.renderer == video_renderer::vulkan))
 		{
 			m_overlay_manager = g_fxo->init<rsx::overlays::display_manager>(0);
+
+			if (g_cfg.misc.play_music_during_boot)
+			{
+				if (const std::string audio_path = Emu.GetSfoDir(true) + "/SND0.AT3"; fs::is_file(audio_path))
+				{
+					m_overlay_manager->start_audio(audio_path);
+				}
+			}
 		}
 
 		if (!_ar)
@@ -991,6 +999,12 @@ namespace rsx
 		fifo_ctrl = std::make_unique<::rsx::FIFO::FIFO_control>(this);
 		fifo_ctrl->set_get(ctrl->get);
 
+		resolution_scaling_config =
+		{
+			.scale_percent = static_cast<u16>(g_cfg.video.resolution_scale_percent),
+			.min_scalable_dimension = static_cast<u16>(g_cfg.video.min_scalable_dimension),
+		};
+
 		last_guest_flip_timestamp = get_system_time() - 1000000;
 
 		vblank_count = 0;
@@ -1099,6 +1113,11 @@ namespace rsx
 		if (g_cfg.core.thread_scheduler != thread_scheduler_mode::os)
 		{
 			thread_ctrl::set_thread_affinity_mask(thread_ctrl::get_affinity_mask(thread_class::rsx));
+		}
+
+		if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
+		{
+			manager->stop_audio();
 		}
 
 		while (!test_stopped())
@@ -1852,6 +1871,7 @@ namespace rsx
 		}
 		default:
 			rsx_log.fatal("Unhandled framebuffer option changed 0x%x", opt);
+			break;
 		}
 	}
 
@@ -1930,8 +1950,8 @@ namespace rsx
 			m_graphics_state.set(rsx::rtt_config_valid);
 		}
 
-		std::tie(region.x1, region.y1) = rsx::apply_resolution_scale<false>(x1, y1, m_framebuffer_layout.width, m_framebuffer_layout.height);
-		std::tie(region.x2, region.y2) = rsx::apply_resolution_scale<true>(x2, y2, m_framebuffer_layout.width, m_framebuffer_layout.height);
+		std::tie(region.x1, region.y1) = rsx::apply_resolution_scale<false>(resolution_scaling_config, x1, y1, m_framebuffer_layout.width, m_framebuffer_layout.height);
+		std::tie(region.x2, region.y2) = rsx::apply_resolution_scale<true>(resolution_scaling_config, x2, y2, m_framebuffer_layout.width, m_framebuffer_layout.height);
 
 		return true;
 	}
@@ -2315,89 +2335,28 @@ namespace rsx
 				case CELL_GCM_TEXTURE_R5G6B5:
 				case CELL_GCM_TEXTURE_R6G5B5:
 					texture_control |= (1 << texture_control_bits::RENORMALIZE);
+					current_fragment_program.ctrl |= RSX_SHADER_CONTROL_TEXTURE_FORMAT_CONVERT;
 					break;
 				default:
 					break;
 				}
 			}
 
-			if (const auto format_features = rsx::get_format_features(format); format_features != 0)
+			if (const auto& format_ex = sampler_descriptors[i]->format_ex; format_ex.features != 0)
 			{
-				// NOTE: The unsigned_remap=bias flag being set flags the texture as being compressed normal (2n-1 / BX2) (UE3)
-				// NOTE: The ARGB8_signed flag means to reinterpret the raw bytes as signed. This is different than unsigned_remap=bias which does range decompression.
-				// This is a separate method of setting the format to signed mode without doing so per-channel
-				// Precedence = SNORM > GAMMA > UNSIGNED_REMAP/BX2
-				// Games using mixed flags: (See Resistance 3 for GAMMA/BX2 relationship, UE3 for BX2 effect)
-				u32 argb8_signed = 0;
-				u32 unsigned_remap = 0;
-				u32 gamma = 0;
+				texture_control |= format_ex.texel_remap_control;
+				texture_control |= format_ex.features << texture_control_bits::FORMAT_FEATURES_OFFSET;
 
-				auto remap_channel_bits = [](const rsx::texture_channel_remap_t& remap, u32 bits) -> u32
+				if (format_ex.texel_remap_control)
 				{
-					if (!bits || remap.encoded == RSX_TEXTURE_REMAP_IDENTITY) [[ likely ]]
-					{
-						return bits;
-					}
-
-					u32 result = 0;
-					for (u8 channel = 0; channel < 4; ++channel)
-					{
-						switch (remap.control_map[channel])
-						{
-						case CELL_GCM_TEXTURE_REMAP_REMAP:
-							if (bits & (1u << remap.channel_map[channel]))
-							{
-								result |= (1u << channel);
-							}
-							break;
-						default:
-							break;
-						}
-					}
-					return result;
-				};
-
-				const auto texture_remap = tex.decoded_remap();
-				if (format_features & RSX_FORMAT_FEATURE_SIGNED_COMPONENTS)
-				{
-					// Tests show this is applied pre-readout. It's just a property of the incoming bytes and is therefore subject to remap.
-					argb8_signed = remap_channel_bits(texture_remap, tex.argb_signed());
+					current_fragment_program.ctrl |= RSX_SHADER_CONTROL_TEXTURE_FORMAT_CONVERT;
 				}
 
-				if (format_features & RSX_FORMAT_FEATURE_GAMMA_CORRECTION)
+				if (current_fp_metadata.bx2_texture_reads_mask)
 				{
-					// Tests show this is applied post-readout. It's a property of the final value stored in the register and is not remapped.
-					// NOTE: GAMMA correction has no algorithmic effect on constants (0 and 1) so we need not mask it out for correctness.
-					gamma = tex.gamma() & ~(argb8_signed);
-				}
+					current_fragment_program.ctrl |= RSX_SHADER_CONTROL_TEXTURE_FORMAT_CONVERT;
 
-				if (format_features & RSX_FORMAT_FEATURE_BIASED_NORMALIZATION)
-				{
-					// The renormalization flag applies to all channels. It is weaker than the other flags.
-					// This applies on input and is subject to remap overrides
-					if (tex.unsigned_remap() == CELL_GCM_TEXTURE_UNSIGNED_REMAP_BIASED)
-					{
-						unsigned_remap = remap_channel_bits(texture_remap, 0xF) & ~(argb8_signed | gamma);
-					}
-				}
-
-				u32 argb8_convert = gamma;
-
-				// The options are mutually exclusive
-				ensure((argb8_signed & gamma) == 0);
-				ensure((argb8_signed & unsigned_remap) == 0);
-				ensure((gamma & unsigned_remap) == 0);
-
-				// NOTE: Hardware tests show that remapping bypasses the channel swizzles completely
-				argb8_convert |= (argb8_signed << texture_control_bits::SEXT_OFFSET);
-				argb8_convert |= (unsigned_remap << texture_control_bits::EXPAND_OFFSET);
-				texture_control |= argb8_convert;
-
-				texture_control |= format_features << texture_control_bits::FORMAT_FEATURES_OFFSET;
-
-				if (current_fp_metadata.has_tex_bx2_conv)
-				{
-					const u32 remap_hi = remap_channel_bits(texture_remap, 0xFu);
+					const u32 remap_hi = tex.decoded_remap().shuffle_mask_bits(0xFu);
 					current_fragment_program.texture_params[i].remap &= ~(0xFu << 16u);
 					current_fragment_program.texture_params[i].remap |= (remap_hi << 16u);
 				}
@@ -2819,9 +2778,9 @@ namespace rsx
 		recovered_fifo_cmds_history.push({fifo_ctrl->last_cmd(), current_time});
 	}
 
-	std::string thread::dump_misc() const
+	void thread::dump_misc(std::string& ret, std::any& custom_data) const
 	{
-		std::string ret = cpu_thread::dump_misc();
+		cpu_thread::dump_misc(ret, custom_data);
 
 		const auto flags = +state;
 
@@ -2834,8 +2793,6 @@ namespace rsx
 		{
 			fmt::append(ret, "\n");
 		}
-
-		return ret;
 	}
 
 	std::vector<std::pair<u32, u32>> thread::dump_callstack_list() const
@@ -3013,7 +2970,7 @@ namespace rsx
 
 			auto& cfg = g_fxo->get<gcm_config>();
 
-			std::unique_lock<shared_mutex> hle_lock;
+			std::optional<std::unique_lock<shared_mutex>> hle_lock;
 
 			for (u32 i = 0; i < std::size(unmap_status); i++)
 			{
@@ -3054,7 +3011,7 @@ namespace rsx
 
 			if (hle_lock)
 			{
-				hle_lock.unlock();
+				hle_lock->unlock();
 			}
 
 			// Pause RSX thread momentarily to handle unmapping
@@ -3457,7 +3414,7 @@ namespace rsx
 		current_display_buffer = buffer;
 		m_queued_flip.emu_flip = true;
 		m_queued_flip.in_progress = true;
-		m_queued_flip.skip_frame |= g_cfg.video.disable_video_output && !g_cfg.video.perf_overlay.perf_overlay_enabled;
+		m_queued_flip.skip_frame |= g_cfg.video.disable_video_output && !g_cfg.video.perf_overlay.enabled;
 
 		flip(m_queued_flip);
 

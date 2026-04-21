@@ -69,7 +69,9 @@ class debugger_frame : public custom_dock_widget
 	u32 m_last_pc = -1;
 	std::vector<char> m_last_query_state;
 	std::string m_last_reg_state;
+	std::string m_last_misc_state;
 	std::any m_dump_reg_func_data;
+	std::any m_dump_misc_func_data;
 	std::vector<std::function<cpu_thread*()>> m_threads_info;
 	u32 m_last_step_over_breakpoint = -1;
 	u64 m_ui_update_ctr = 0;
@@ -79,6 +81,7 @@ class debugger_frame : public custom_dock_widget
 	std::shared_ptr<CPUDisAsm> m_disasm; // Only shared to allow base/derived functionality
 	shared_ptr<cpu_thread> m_cpu;
 	rsx::thread* m_rsx = nullptr;
+	u32 m_hw_ppu_idx = umax;
 	std::shared_ptr<utils::shm> m_spu_disasm_memory;
 	u32 m_spu_disasm_origin_eal = 0;
 	u32 m_spu_disasm_pc = 0;
@@ -107,8 +110,8 @@ public:
 	void UpdateUI();
 	void UpdateUnitList();
 
-	void DoUpdate();
-	void WritePanels();
+	void DoUpdate(cpu_thread* cpu0);
+	void WritePanels(cpu_thread* cpu);
 	void EnableButtons(bool enable);
 	void ShowGotoAddressDialog();
 	void PerformGoToRequest(const QString& text_argument);
@@ -138,7 +141,7 @@ private Q_SLOTS:
 	void OnSelectUnit();
 	void OnSelectSPUDisassembler();
 	void OnRegsContextMenu(const QPoint& pos);
-	void ShowPC(bool user_requested = false);
+	void ShowPC(bool user_requested = false, cpu_thread* cpu = nullptr);
 	void EnableUpdateTimer(bool enable) const;
 	void RunBtnPress();
 	void RegsShowMemoryViewerAction();

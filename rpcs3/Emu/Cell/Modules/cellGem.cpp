@@ -770,8 +770,8 @@ namespace gem
 					if constexpr (use_gain)
 					{
 						dst0[0] = static_cast<u8>(std::clamp(r * gain_r, 0.0f, 255.0f));
-						dst0[1] = static_cast<u8>(std::clamp(b * gain_b, 0.0f, 255.0f));
-						dst0[2] = static_cast<u8>(std::clamp(g * gain_g, 0.0f, 255.0f));
+						dst0[1] = static_cast<u8>(std::clamp(g * gain_g, 0.0f, 255.0f));
+						dst0[2] = static_cast<u8>(std::clamp(b * gain_b, 0.0f, 255.0f));
 					}
 					else
 					{
@@ -822,8 +822,8 @@ namespace gem
 					if constexpr (use_gain)
 					{
 						dst0[0] = static_cast<u8>(std::clamp(r * gain_r, 0.0f, 255.0f));
-						dst0[1] = static_cast<u8>(std::clamp(b * gain_b, 0.0f, 255.0f));
-						dst0[2] = static_cast<u8>(std::clamp(g * gain_g, 0.0f, 255.0f));
+						dst0[1] = static_cast<u8>(std::clamp(g * gain_g, 0.0f, 255.0f));
+						dst0[2] = static_cast<u8>(std::clamp(b * gain_b, 0.0f, 255.0f));
 					}
 					else
 					{
@@ -843,6 +843,53 @@ namespace gem
 			debayer_raw8_impl<true>(src, dst, alpha, gain_r, gain_g, gain_b);
 		else
 			debayer_raw8_impl<false>(src, dst, alpha, gain_r, gain_g, gain_b);
+	}
+
+	template <bool use_gain>
+	static inline void debayer_raw8_downscale_impl(const u8* src, u8* dst, u8 alpha, f32 gain_r, f32 gain_g, f32 gain_b)
+	{
+		constexpr u32 in_pitch = 640;
+		constexpr u32 out_pitch = 320 * 4;
+
+		// Simple debayer
+		for (s32 y = 0; y < 240; y++)
+		{
+			const u8* src0 = src + y * 2 * in_pitch;
+			const u8* src1 = src0 + in_pitch;
+
+			u8* dst0 = dst + y * out_pitch;
+
+			for (s32 x = 0; x < 320; x++, dst0 += 4, src0 += 2, src1 += 2)
+			{
+				const u8 b  = src0[0];
+				const u8 g0 = src0[1];
+				const u8 g1 = src1[0];
+				const u8 r  = src1[1];
+				const u8 g  = (g0 + g1) >> 1;
+
+				if constexpr (use_gain)
+				{
+					dst0[0] = static_cast<u8>(std::clamp(r * gain_r, 0.0f, 255.0f));
+					dst0[1] = static_cast<u8>(std::clamp(g * gain_g, 0.0f, 255.0f));
+					dst0[2] = static_cast<u8>(std::clamp(b * gain_b, 0.0f, 255.0f));
+				}
+				else
+				{
+					dst0[0] = r;
+					dst0[1] = g;
+					dst0[2] = b;
+				}
+				dst0[3] = alpha;
+			}
+		}
+	}
+
+	static void debayer_raw8_downscale(const u8* src, u8* dst, u8 alpha, f32 gain_r, f32 gain_g, f32 gain_b)
+	{
+		if (gain_r != 1.0f || gain_g != 1.0f || gain_b != 1.0f)
+			debayer_raw8_downscale_impl<true>(src, dst, alpha, gain_r, gain_g, gain_b);
+		else
+			debayer_raw8_downscale_impl<false>(src, dst, alpha, gain_r, gain_g, gain_b);
 	}
 
 	bool convert_image_format(CellCameraFormat input_format, const CellGemVideoConvertAttribute& vc,
@@ -881,9 +928,9 @@ namespace gem
 
 		const u8* src_data = video_data_in.data();
 		const u8 alpha = vc.alpha;
-		const f32 gain_r = vc.gain * vc.blue_gain;
+		const f32 gain_r = vc.gain * vc.red_gain;
 		const f32 gain_g = vc.gain * vc.green_gain;
-		const f32 gain_b = vc.gain * vc.red_gain;
+		const f32 gain_b = vc.gain * vc.blue_gain;
 
 		// Only RAW8 should be relevant for cellGem unless I'm mistaken
 		if (input_format == CELL_CAMERA_RAW8)
@@ -1183,34 +1230,7 @@ namespace gem
 			{
 			case CELL_CAMERA_RAW8:
 			{
-				const u32 in_pitch = width;
-				const u32 out_pitch = width * 4 / 2;
-
-				for (u32 y = 0; y < height - 1; y += 2)
-				{
-					const u8* src0 = src_data + y * in_pitch;
-					const u8* src1 = src0 + in_pitch;
-
-					u8* dst0 = video_data_out + (y / 2) * out_pitch;
-					u8* dst1 = dst0 + out_pitch;
-
-					for (u32 x = 0; x < width - 1; x += 2, src0 += 2, src1 += 2, dst0 += 4, dst1 += 4)
-					{
-						const u8 b  = src0[0];
-						const u8 g0 = src0[1];
-						const u8 g1 = src1[0];
-						const u8 r  = src1[1];
-
-						const u8 top[4] = { r, g0, b, alpha };
-						const u8 bottom[4] = { r, g1, b, alpha };
-
-						// Top-Left
-						std::memcpy(dst0, top, 4);
-
-						// Bottom-Left Pixel
-						std::memcpy(dst1, bottom, 4);
-					}
-				}
+				debayer_raw8_downscale(src_data, video_data_out, alpha, gain_r, gain_g, gain_b);
 				break;
 			}
 			case CELL_CAMERA_RGBA:
@@ -1609,13 +1629,8 @@ public:
 			return false;
 		}
 
-		if (!m_camera_info.bytesize)
-		{
-			cellGem.error("gem_tracker: unexpected image size: %d", m_camera_info.bytesize);
-			return false;
-		}
-
 		m_tracker.set_image_data(m_camera_info.buffer.get_ptr(), m_camera_info.bytesize, m_camera_info.width, m_camera_info.height, m_camera_info.format);
+		m_framenumber++; // using framenumber instead of timestamp since the timestamp could be identical
 		return true;
 	}
 
@@ -1648,6 +1663,7 @@ public:
 		}
 
 		auto& gem = g_fxo->get<gem_config>();
+		u64 last_framenumber = 0;
 
 		while (thread_ctrl::state() != thread_state::aborting)
 		{
@@ -1661,6 +1677,13 @@ public:
 				{
 					break;
 				}
+			}
+
+			if (std::exchange(last_framenumber, m_framenumber.load()) == last_framenumber)
+			{
+				cellGem.warning("Tracker woke up without new frame. Skipping processing (framenumber=%d)", last_framenumber);
+				tracker_done();
+				continue;
 			}
 
 			m_busy.release(true);
@@ -1751,9 +1774,16 @@ public:
 
 	shared_mutex mutex;
 
+	gem_tracker& operator=(thread_state) noexcept
+	{
+		wake_up_tracker();
+		return *this;
+	}
+
 private:
 	atomic_t<u32> m_wake_up_tracker = 0;
 	atomic_t<u32> m_tracker_done = 0;
+	atomic_t<u64> m_framenumber = 0;
 	atomic_t<bool> m_busy = false;
 	ps_move_tracker<false> m_tracker{};
 	CellCameraInfoEx m_camera_info{};
@@ -1873,21 +1903,10 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 	gem_state->pos[2] = controller.distance_mm;
 	gem_state->pos[3] = 0.f;
 
-	// TODO: calculate handle position based on our world coordinate and the angles
-	gem_state->handle_pos[0] = camera_x;
-	gem_state->handle_pos[1] = camera_y;
-	gem_state->handle_pos[2] = controller.distance_mm + 10.0f;
-	gem_state->handle_pos[3] = 0.f;
-
 	// Calculate orientation
-	if (g_cfg.io.move == move_handler::real || (g_cfg.io.move == move_handler::fake && move_data.orientation_enabled))
-	{
-		gem_state->quat[0] = move_data.quaternion.x();
-		gem_state->quat[1] = move_data.quaternion.y();
-		gem_state->quat[2] = move_data.quaternion.z();
-		gem_state->quat[3] = move_data.quaternion.w();
-	}
-	else
+	ps_move_data::vect<4> quat = move_data.quaternion;
+
+	if (g_cfg.io.move != move_handler::real && !(g_cfg.io.move == move_handler::fake && move_data.orientation_enabled))
 	{
 		const f32 max_angle_per_side_h = g_cfg.io.fake_move_rotation_cone_h / 2.0f;
 		const f32 max_angle_per_side_v = g_cfg.io.fake_move_rotation_cone_v / 2.0f;
@@ -1901,17 +1920,27 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 		const f32 cy = std::cos(yaw * 0.5f);
 		const f32 sy = std::sin(yaw * 0.5f);
 
-		const f32 q_x = sr * cp * cy - cr * sp * sy;
-		const f32 q_y = cr * sp * cy + sr * cp * sy;
-		const f32 q_z = cr * cp * sy - sr * sp * cy;
-		const f32 q_w = cr * cp * cy + sr * sp * sy;
-
-		gem_state->quat[0] = q_x;
-		gem_state->quat[1] = q_y;
-		gem_state->quat[2] = q_z;
-		gem_state->quat[3] = q_w;
+		quat.x() = sr * cp * cy - cr * sp * sy;
+		quat.y() = cr * sp * cy + sr * cp * sy;
+		quat.z() = cr * cp * sy - sr * sp * cy;
+		quat.w() = cr * cp * cy + sr * sp * sy;
 	}
 
+	gem_state->quat[0] = quat.x();
+	gem_state->quat[1] = quat.y();
+	gem_state->quat[2] = quat.z();
+	gem_state->quat[3] = quat.w();
+
+	// Calculate handle position based on our world coordinate and the current orientation
+	constexpr ps_move_data::vect<3> offset_local_mm({0.f, 0.f, -45.f}); // handle is ~45 mm below sphere
+	const ps_move_data::vect<3> offset_world = ps_move_data::rotate_vector(quat, offset_local_mm);
+
+	gem_state->handle_pos[0] = gem_state->pos[0] - offset_world.x(); // Flip x offset
+	gem_state->handle_pos[1] = gem_state->pos[1] - offset_world.y(); // Flip y offset
+	gem_state->handle_pos[2] = gem_state->pos[2] + offset_world.z();
+	gem_state->handle_pos[3] = 0.f;
+
+	// Calculate velocity
 	if constexpr (!ps_move_data::use_imu_for_velocity)
 	{
 		move_data.update_velocity(shared_data.frame_timestamp_us, gem_state->pos);
@@ -1920,6 +1949,10 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 		{
 			gem_state->vel[i] = move_data.vel_world[i];
 			gem_state->accel[i] = move_data.accel_world[i];
+
+			// TODO: maybe this also needs to be adjusted depending on the orientation
+			gem_state->handle_vel[i] = gem_state->vel[i];
+			gem_state->handle_accel[i] = gem_state->accel[i];
 		}
 	}
 
@@ -3612,7 +3645,7 @@ error_code cellGemReadExternalPortDeviceInfo(u32 gem_num, vm::ptr<u32> ext_id, v
 				if (!pad->move_data.external_device_read_requested)
 				{
 					*ext_id = controller.ext_id = pad->move_data.external_device_id;
-					std::memcpy(pad->move_data.external_device_read.data(), ext_info.get_ptr(), CELL_GEM_EXTERNAL_PORT_OUTPUT_SIZE);
+					std::memcpy(ext_info.get_ptr(), pad->move_data.external_device_read.data(), CELL_GEM_EXTERNAL_PORT_DEVICE_INFO_SIZE);
 					break;
 				}
 			}
@@ -3876,12 +3909,14 @@ error_code cellGemUpdateStart(vm::cptr<void> camera_frame, u64 timestamp)
 
 	gem.camera_frame = camera_frame.addr();
 
-	if (!tracker.set_image(gem.camera_frame))
+	const bool image_set = tracker.set_image(gem.camera_frame);
+
+	tracker.wake_up_tracker();
+
+	if (!image_set)
 	{
 		return not_an_error(CELL_GEM_NO_VIDEO);
 	}
-
-	tracker.wake_up_tracker();
 
 	return CELL_OK;
 }

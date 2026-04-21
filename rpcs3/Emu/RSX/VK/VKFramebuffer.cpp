@@ -45,7 +45,7 @@ namespace vk
 		for (const auto& e : image_list)
 		{
 			const VkImageSubresourceRange subres = { e->aspect(), 0, 1, 0, 1 };
-			image_views.push_back(std::make_unique<vk::image_view>(dev, e, VK_IMAGE_VIEW_TYPE_2D, vk::default_component_map, subres));
+			image_views.push_back(std::make_unique<vk::image_view>(dev, e, e->format(), VK_IMAGE_VIEW_TYPE_2D, vk::default_component_map, subres));
 		}
 
 		auto value = std::make_unique<vk::framebuffer_holder>(dev, renderpass, width, height, std::move(image_views));

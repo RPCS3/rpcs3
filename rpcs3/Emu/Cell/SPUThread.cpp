@@ -164,7 +164,7 @@ void fmt_class_string<spu_block_hash>::format(std::string& out, u64 arg)
 	out.resize(out.size() - 4);
 
 	// Print chunk address from lowest 16 bits
-	fmt::append(out, "...chunk-0x%05x", (arg & 0xffff) * 4);
+	fmt::append(out, "-0x%05x", (arg & 0xffff) * 4);
 }
 
 enum class spu_block_hash_short : u64{};
@@ -495,7 +495,8 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write);
 
 extern thread_local u64 g_tls_fault_spu;
 
-const spu_decoder<spu_itype> s_spu_itype;
+const extern spu_decoder<spu_itype> g_spu_itype;
+const extern spu_decoder<spu_iflag> g_spu_iflag;
 
 namespace vm
 {
@@ -598,7 +599,7 @@ std::array<u32, 2> op_branch_targets(u32 pc, spu_opcode_t op)
 {
 	std::array<u32, 2> res{spu_branch_target(pc + 4), umax};
 
-	switch (const auto type = s_spu_itype.decode(op.opcode))
+	switch (const auto type = g_spu_itype.decode(op.opcode))
 	{
 	case spu_itype::BR:
 	case spu_itype::BRA:
@@ -637,6 +638,54 @@ std::array<u32, 2> op_branch_targets(u32 pc, spu_opcode_t op)
 	}
 
 	return res;
+}
+
+std::tuple<u32, std::array<u32, 3>, u32> op_register_targets(u32 /*pc*/, spu_opcode_t op)
+{
+	std::tuple<u32, std::array<u32, 3>, u32> result{u32{umax}, std::array<u32, 3>{128, 128, 128}, op.opcode};
+
+	const auto type = g_spu_itype.decode(op.opcode);
+
+	if (type & spu_itype::zregmod)
+	{
+		std::get<2>(result) = 0;
+		return result;
+	}
+
+	std::get<0>(result) = type & spu_itype::_quadrop ? op.rt4 : op.rt;
+
+	spu_opcode_t op_masked = op;
+
+	if (type & spu_itype::_quadrop)
+	{
+		op_masked.rt4 = 0;
+	}
+	else
+	{
+		op_masked.rt = 0;
+	}
+
+	std::get<2>(result) = op_masked.opcode;
+
+	if (auto iflags = g_spu_iflag.decode(op.opcode))
+	{
+		if (+iflags & +spu_iflag::use_ra)
+		{
+			std::get<1>(result)[0] = op.ra;
+		}
+
+		if (+iflags & +spu_iflag::use_rb)
+		{
+			std::get<1>(result)[1] = op.rb;
+		}
+
+		if (+iflags & +spu_iflag::use_rc)
+		{
+			std::get<1>(result)[2] = op.rc;
+		}
+	}
+
+	return result;
 }
 
 void spu_int_ctrl_t::set(u64 ints)
@@ -988,7 +1037,7 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 					passed[i / 4] = true;
 
 					const spu_opcode_t op{_ref<u32>(i)};
-					const auto type = s_spu_itype.decode(op.opcode);
+					const auto type = g_spu_itype.decode(op.opcode);
 
 					if (start == 0 && type == spu_itype::STQD && op.ra == 1u && op.rt == 0u)
 					{
@@ -1090,11 +1139,62 @@ std::vector<std::pair<u32, u32>> spu_thread::dump_callstack_list() const
 	return call_stack_list;
 }
 
-std::string spu_thread::dump_misc() const
+void spu_thread::dump_misc(std::string& ret, std::any& custom_data) const
 {
-	std::string ret = cpu_thread::dump_misc();
+	cpu_thread::dump_misc(ret, custom_data);
 
-	fmt::append(ret, "Block Weight: %u (Retreats: %u)", block_counter, block_failure);
+	struct dump_misc_data_t
+	{
+		u32 cpu_id = umax;
+		u64 last_read_time = umax;
+		u64 last_block_counter = umax;
+		u64 update_count = 0;
+
+		std::pair<u64, u64> update(u64 current_block_counter, u64 current_timestamp = get_system_time())
+		{
+			const u64 diff_time = current_timestamp <= last_read_time ? 0 : current_timestamp - last_read_time;
+			const u64 diff_block = current_block_counter <= last_block_counter ? 0 : current_block_counter - last_block_counter;
+
+			if (last_read_time == umax || update_count >= 1000)
+			{
+				last_read_time = current_timestamp;
+				last_block_counter = current_block_counter;
+				update_count = 0;
+			}
+			else if (diff_time >= 100000 && diff_block >= 100)
+			{
+				// Update values to measure rate (but not fully so rate can be measured later)
+				last_read_time += diff_time / 10 * 9;
+				last_block_counter += diff_block / 10 * 9;
+				update_count++;
+			}
+
+			return {diff_time, diff_block};
+		}
+	};
+
+	dump_misc_data_t* func_data = std::any_cast<dump_misc_data_t>(&custom_data);
+
+	if (!func_data)
+	{
+		custom_data.reset();
+		custom_data = std::make_any<dump_misc_data_t>();
+		func_data = ensure(std::any_cast<dump_misc_data_t>(&custom_data));
+	}
+
+	if (func_data->cpu_id != this->id)
+	{
+		*func_data = {};
+		func_data->cpu_id = this->id;
+	}
+
+	const u64 current_block_counter = atomic_storage<u64>::load(block_counter);
+
+	const auto [diff_time, diff_block] = func_data->update(current_block_counter);
+
+	const u64 rate_of_diff = diff_block ? std::max<u64>(1, utils::rational_mul<u64>(diff_block, 1'000'000, std::max<u64>(diff_time, 1))) : 0;
+
+	fmt::append(ret, "Block Weight: log10(%u/second): %.1f (Retreats: %u)", rate_of_diff, std::log10(std::max<u64>(rate_of_diff, 10)), block_failure);
 
 	if (u64 hash = atomic_storage<u64>::load(block_hash))
 	{
@@ -1145,8 +1245,6 @@ std::string spu_thread::dump_misc() const
 			break;
 		}
 	}
-
-	return ret;
 }
 
 void spu_thread::cpu_on_stop()
@@ -3761,7 +3859,7 @@ bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_add
 
 		const u32 addr0 = spu_branch_target(addr);
 		const spu_opcode_t op{read_from_ptr<be_t<u32>>(ls_ptr, addr0 - base_addr)};
-		const auto type = s_spu_itype.decode(op.opcode);
+		const auto type = g_spu_itype.decode(op.opcode);
 
 		if (type == spu_itype::UNK || !op.opcode)
 		{
@@ -3907,7 +4005,7 @@ bool spu_thread::is_exec_code(u32 addr, std::span<const u8> ls_ptr, u32 base_add
 				// Test the validity of a single instruction of the optional target
 				// This function can't be too slow and is unlikely to improve results by a great deal
 				const u32 op0 = read_from_ptr<be_t<u32>>(ls_ptr, route_pc - base_addr);
-				const spu_itype::type type0 = s_spu_itype.decode(op0);
+				const spu_itype::type type0 = g_spu_itype.decode(op0);
 
 				if (type0 == spu_itype::UNK || !op0)
 				{
@@ -6878,7 +6976,7 @@ spu_exec_object spu_thread::capture_memory_as_elf(std::span<spu_memory_segment_d
 			const u32 op = read_from_ptr<be_t<u32>>(all_data, pc0 - 4);
 
 			// Try to find function entry (if they are placed sequentially search for BI $LR of previous function)
-			if (!op || op == 0x35000000u || s_spu_itype.decode(op) == spu_itype::UNK)
+			if (!op || op == 0x35000000u || g_spu_itype.decode(op) == spu_itype::UNK)
 			{
 				if (is_exec_code(pc0, { all_data.data(), SPU_LS_SIZE }))
 					break;

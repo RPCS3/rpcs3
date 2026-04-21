@@ -128,12 +128,6 @@ void fmt_class_string<clan::ClanRequestAction>::format(std::string& out, u64 arg
 
 namespace clan
 {
-	struct curl_memory
-	{
-		char* response;
-		size_t size;
-	};
-
 	size_t clans_client::curl_write_callback(void* data, size_t size, size_t nmemb, void* clientp)
 	{
 		const size_t realsize = size * nmemb;

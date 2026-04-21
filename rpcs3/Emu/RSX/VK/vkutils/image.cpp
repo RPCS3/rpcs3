@@ -23,7 +23,7 @@ namespace vk
 			break;
 		case VK_IMAGE_TYPE_2D:
 			longest_dim = std::max(info.extent.width, info.extent.height);
-			dim_limit = (info.flags == VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) ? gpu_limits.maxImageDimensionCube : gpu_limits.maxImageDimension2D;
+			dim_limit = (info.flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) ? gpu_limits.maxImageDimensionCube : gpu_limits.maxImageDimension2D;
 			break;
 		case VK_IMAGE_TYPE_3D:
 			longest_dim = std::max({ info.extent.width, info.extent.height, info.extent.depth });
@@ -47,7 +47,7 @@ namespace vk
 		const memory_type_info& memory_type,
 		u32 access_flags,
 		VkImageType image_type,
-		VkFormat format,
+		const VkFormatEx& format,
 		u32 width, u32 height, u32 depth,
 		u32 mipmaps, u32 layers,
 		VkSampleCountFlagBits samples,
@@ -59,7 +59,6 @@ namespace vk
 		rsx::format_class format_class)
 		: m_device(dev)
 	{
-		info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 		info.imageType = image_type;
 		info.format = format;
 		info.extent = { width, height, depth };
@@ -84,6 +83,16 @@ namespace vk
 			info.pQueueFamilyIndices = concurrency_queue_families.data();
 		}
 
+		VkImageFormatListCreateInfo format_list = { .sType = VK_STRUCTURE_TYPE_IMAGE_FORMAT_LIST_CREATE_INFO };
+		if (format.is_mutable())
+		{
+			info.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+
+			format_list.pViewFormats = format.pViewFormats;
+			format_list.viewFormatCount = format.viewFormatCount;
+			info.pNext = &format_list;
+		}
+
 		create_impl(dev, access_flags, memory_type, allocation_pool);
 		m_storage_aspect = get_aspect_flags(format);
 
@@ -100,6 +109,7 @@ namespace vk
 		}
 
 		m_format_class = format_class;
+		info.pNext = nullptr;
 	}
 
 	// TODO: Ctor that uses a provided memory heap
@@ -333,10 +343,10 @@ namespace vk
 		create_impl();
 	}
 
-	image_view::image_view(VkDevice dev, vk::image* resource, VkImageViewType view_type, const VkComponentMapping& mapping, const VkImageSubresourceRange& range)
+	image_view::image_view(VkDevice dev, vk::image* resource, VkFormat format, VkImageViewType view_type, const VkComponentMapping& mapping, const VkImageSubresourceRange& range)
 		: m_device(dev), m_resource(resource)
 	{
-		info.format = resource->info.format;
+		info.format = format == VK_FORMAT_UNDEFINED ? resource->format() : format;
 		info.image = resource->value;
 		info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		info.components = mapping;
@@ -350,7 +360,7 @@ namespace vk
 				info.viewType = VK_IMAGE_VIEW_TYPE_1D;
 				break;
 			case VK_IMAGE_TYPE_2D:
-				if (resource->info.flags == VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)
+				if (resource->info.flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)
 					info.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
 				else if (resource->info.arrayLayers == 1)
 					info.viewType = VK_IMAGE_VIEW_TYPE_2D;
@@ -377,6 +387,33 @@ namespace vk
 	image_view::~image_view()
 	{
 		vkDestroyImageView(m_device, value, nullptr);
+	}
+
+	image_view* image_view::as(VkFormat format)
+	{
+		if (this->format() == format)
+		{
+			return this;
+		}
+
+		auto self = this->m_root_view
+			? this->m_root_view
+			: this;
+
+		if (auto found = self->m_subviews.find(format);
+			found != self->m_subviews.end())
+		{
+			return found->second.get();
+		}
+
+		// Create a derived
+		auto view = std::make_unique<image_view>(m_device, info.image, info.viewType, format, info.components, info.subresourceRange);
+		view->m_resource = self->m_resource;
+		view->m_root_view = self;
+
+		auto ret = view.get();
+		self->m_subviews.emplace(format, std::move(view));
+		return ret;
 	}
 
 	u32 image_view::encoded_component_map() const
@@ -479,7 +516,7 @@ namespace vk
 		const VkImageSubresourceRange range = { aspect() & mask, 0, info.mipLevels, 0, info.arrayLayers };
 		ensure(range.aspectMask);
 
-		auto view = std::make_unique<vk::image_view>(*g_render_device, this, VK_IMAGE_VIEW_TYPE_MAX_ENUM, real_mapping, range);
+		auto view = std::make_unique<vk::image_view>(*g_render_device, this, format(), VK_IMAGE_VIEW_TYPE_MAX_ENUM, real_mapping, range);
 		auto result = view.get();
 		views.emplace(storage_key, std::move(view));
 		return result;

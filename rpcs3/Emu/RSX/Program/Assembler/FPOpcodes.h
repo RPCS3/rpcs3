@@ -131,5 +131,8 @@ namespace rsx::assembler
 
 		// Compile a register file annotated blob to register references
 		std::vector<RegisterRef> compile_register_file(const std::array<char, 48 * 8>& file);
+
+		// Invert execution mask on an instruction
+		void invert_conditional_execution_mask(Instruction* instruction);
 	}
 }

@@ -1163,12 +1163,21 @@ void patch_manager_dialog::download_update(bool automatic, bool auto_accept)
 		}
 	}
 
-	m_downloader->start(url, true, !m_download_automatic, tr("Downloading latest patches"));
+	m_downloader->start(url, true, !m_download_automatic, true, tr("Downloading latest patches"));
 }
 
 bool patch_manager_dialog::handle_json(const QByteArray& data)
 {
-	const QJsonObject json_data = QJsonDocument::fromJson(data).object();
+	QJsonParseError error {};
+	const QJsonDocument json_document = QJsonDocument::fromJson(data, &error);
+
+	if (!json_document.isObject())
+	{
+		patch_log.error("Patch download error - Invalid JSON: '%s'", error.errorString());
+		return false;
+	}
+
+	const QJsonObject json_data = json_document.object();
 	const int return_code       = json_data["return_code"].toInt(-255);
 
 	if (return_code < 0)
@@ -1184,9 +1193,9 @@ bool patch_manager_dialog::handle_json(const QByteArray& data)
 		}
 
 		if (return_code != -1)
-			patch_log.error("Patch download error: %s return code: %d", error_message, return_code);
+			patch_log.error("Patch download error: %s, return code: %d", error_message, return_code);
 		else
-			patch_log.warning("Patch download error: %s return code: %d", error_message, return_code);
+			patch_log.warning("Patch download error: %s, return code: %d", error_message, return_code);
 
 		return false;
 	}

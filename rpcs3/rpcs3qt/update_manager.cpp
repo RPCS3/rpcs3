@@ -19,7 +19,6 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonDocument>
-#include <QThread>
 
 #if defined(_WIN32) || defined(__APPLE__)
 #include <7z.h>
@@ -47,6 +46,8 @@
 
 LOG_CHANNEL(update_log, "UPDATER");
 
+constexpr bool allow_local_auto_update = false; // Set true for debugging the auto updater locally
+
 update_manager::update_manager(QObject* parent, std::shared_ptr<gui_settings> gui_settings)
 	: QObject(parent), m_gui_settings(std::move(gui_settings))
 {
@@ -61,7 +62,7 @@ void update_manager::check_for_updates(bool automatic, bool check_only, bool aut
 	if (automatic)
 	{
 		// Don't check for updates on local builds
-		if (rpcs3::is_local_build())
+		if (!allow_local_auto_update && rpcs3::is_local_build())
 		{
 			update_log.notice("Skipped automatic update check: this is a local build");
 			return;
@@ -110,14 +111,23 @@ void update_manager::check_for_updates(bool automatic, bool check_only, bool aut
 	const std::string url = fmt::format("https://update.rpcs3.net/?api=v3&c=%s&os_type=%s&os_arch=%s&os_version=%i.%i.%i",
 		rpcs3::get_commit_and_hash().second, os.type, os.arch, os.version_major, os.version_minor, os.version_patch);
 
-	m_downloader->start(url, true, !automatic, tr("Checking For Updates"), true);
+	m_downloader->start(url, true, !automatic, true, tr("Checking For Updates"), true);
 }
 
 bool update_manager::handle_json(bool automatic, bool check_only, bool auto_accept, const QByteArray& data)
 {
 	update_log.notice("Download of update info finished. automatic=%d, check_only=%d, auto_accept=%d", automatic, check_only, auto_accept);
 
-	const QJsonObject json_data = QJsonDocument::fromJson(data).object();
+	QJsonParseError error {};
+	const QJsonDocument json_document = QJsonDocument::fromJson(data, &error);
+
+	if (!json_document.isObject())
+	{
+		update_log.error("Update error - Invalid JSON: '%s'", error.errorString());
+		return false;
+	}
+
+	const QJsonObject json_data = json_document.object();
 	const int return_code       = json_data["return_code"].toInt(-255);
 
 	m_update_info.hash_found = true;
@@ -127,7 +137,7 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 		std::string error_message;
 		switch (return_code)
 		{
-		case -1: error_message = "Hash not found(Custom/PR build)"; break;
+		case -1: error_message = "Hash not found (Custom/PR build)"; break;
 		case -2: error_message = "Server Error - Maintenance Mode"; break;
 		case -3: error_message = "Server Error - Illegal Search"; break;
 		case -255: error_message = "Server Error - Return code not found"; break;
@@ -135,19 +145,17 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 		}
 
 		if (return_code != -1)
-			update_log.error("Update error: %s return code: %d", error_message, return_code);
+			update_log.error("Update error: %s, return code: %d", error_message, return_code);
 		else
-			update_log.warning("Update error: %s return code: %d", error_message, return_code);
+			update_log.warning("Update error: %s, return code: %d", error_message, return_code);
 
 		// If a user clicks "Check for Updates" with a custom build ask him if he's sure he wants to update to latest version
-		if (!automatic && return_code == -1)
-		{
-			m_update_info.hash_found = false;
-		}
-		else
+		if (!allow_local_auto_update && (automatic || return_code != -1))
 		{
 			return false;
 		}
+
+		m_update_info.hash_found = false;
 	}
 
 	const auto& current = json_data["current_build"];
@@ -303,17 +311,17 @@ bool update_manager::handle_json(bool automatic, bool check_only, bool auto_acce
 		return true;
 	}
 
-	update(auto_accept);
+	update(auto_accept, true);
 	return true;
 }
 
-void update_manager::update(bool auto_accept)
+void update_manager::update(bool auto_accept, bool is_first_call)
 {
 	update_log.notice("Updating with auto_accept=%d", auto_accept);
 
 	ensure(m_downloader);
 
-	if (!auto_accept)
+	if (!auto_accept && is_first_call)
 	{
 		if (!m_update_info.update_found)
 		{
@@ -417,6 +425,14 @@ void update_manager::update(bool auto_accept)
 		return;
 	}
 
+#ifndef _WIN32
+	if (is_first_call)
+	{
+		Q_EMIT signal_download_additional_files(auto_accept);
+		return;
+	}
+#endif
+
 	m_downloader->disconnect();
 
 	connect(m_downloader, &downloader::signal_download_error, this, [this](const QString& /*error*/)
@@ -440,7 +456,7 @@ void update_manager::update(bool auto_accept)
 	});
 
 	update_log.notice("Downloading update...");
-	m_downloader->start(m_request_url, true, true, tr("Downloading Update"), true, m_expected_size);
+	m_downloader->start(m_request_url, true, true, false, tr("Downloading Update"), true, m_expected_size);
 }
 
 bool update_manager::handle_rpcs3(const QByteArray& data, bool auto_accept)

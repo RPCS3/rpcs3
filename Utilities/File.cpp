@@ -117,6 +117,7 @@ static fs::error to_error(DWORD e)
 	case ERROR_NEGATIVE_SEEK: return fs::error::inval;
 	case ERROR_DIRECTORY: return fs::error::inval;
 	case ERROR_INVALID_NAME: return fs::error::inval;
+	case ERROR_INVALID_FUNCTION: return fs::error::inval;
 	case ERROR_SHARING_VIOLATION: return fs::error::acces;
 	case ERROR_DIR_NOT_EMPTY: return fs::error::notempty;
 	case ERROR_NOT_READY: return fs::error::noent;
@@ -165,6 +166,7 @@ static fs::error to_error(int e)
 	case ENOTEMPTY: return fs::error::notempty;
 	case EROFS: return fs::error::readonly;
 	case EISDIR: return fs::error::isdir;
+	case ENOTDIR: return fs::error::notdir;
 	case ENOSPC: return fs::error::nospace;
 	case EXDEV: return fs::error::xdev;
 	default: return fs::error::unknown;
@@ -584,7 +586,7 @@ namespace fs
 			if (!GetFileInformationByHandleEx(m_handle, FileIdInfo, &info, sizeof(info)))
 			{
 				// Try GetFileInformationByHandle as a fallback
-				BY_HANDLE_FILE_INFORMATION info2;
+				BY_HANDLE_FILE_INFORMATION info2{};
 				ensure(GetFileInformationByHandle(m_handle, &info2));
 
 				info = {};
@@ -1658,11 +1660,40 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 
 	// Check if the handle is actually valid.
 	// This can fail on empty mounted drives (e.g. with ERROR_NOT_READY or ERROR_INVALID_FUNCTION).
-	BY_HANDLE_FILE_INFORMATION info;
+	BY_HANDLE_FILE_INFORMATION info{};
 	if (!GetFileInformationByHandle(handle, &info))
 	{
+		const DWORD last_error = GetLastError();
 		CloseHandle(handle);
-		g_tls_error = to_error(GetLastError());
+
+		if (last_error == ERROR_INVALID_FUNCTION)
+		{
+			g_tls_error = fs::error::isdir;
+			return;
+		}
+	
+		g_tls_error = to_error(last_error);
+		return;
+	}
+
+	if (info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+	{
+		CloseHandle(handle);
+		g_tls_error = fs::error::isdir;
+		return;
+	}
+
+	if (info.dwFileAttributes & FILE_ATTRIBUTE_SYSTEM)
+	{
+		CloseHandle(handle);
+		g_tls_error = fs::error::acces;
+		return;
+	}
+
+	if ((mode & fs::write) && (info.dwFileAttributes & FILE_ATTRIBUTE_READONLY))
+	{
+		CloseHandle(handle);
+		g_tls_error = fs::error::readonly;
 		return;
 	}
 
@@ -2605,7 +2636,7 @@ bool fs::pending_file::commit(bool overwrite)
 	while (file_handle != INVALID_HANDLE_VALUE)
 	{
 		// Get file ID (used to check for hardlinks)
-		BY_HANDLE_FILE_INFORMATION file_info;
+		BY_HANDLE_FILE_INFORMATION file_info{};
 
 		if (!GetFileInformationByHandle(file_handle, &file_info) || file_info.nNumberOfLinks == 1)
 		{
@@ -2803,6 +2834,7 @@ void fmt_class_string<fs::error>::format(std::string& out, u64 arg)
 		case fs::error::notempty: return "Not empty";
 		case fs::error::readonly: return "Read only";
 		case fs::error::isdir: return "Is a directory";
+		case fs::error::notdir: return "Not a directory";
 		case fs::error::toolong: return "Path too long";
 		case fs::error::nospace: return "Not enough space on the device";
 		case fs::error::xdev: return "Device mismatch";

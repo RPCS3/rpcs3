@@ -381,7 +381,10 @@ namespace np
 		auto ctx = get_matching_context(ctx_id);
 
 		if (!ctx)
+		{
+			np_memory.free(edata.addr());
 			return;
+		}
 
 		gui_cache.add_room(room_info->room_status.id);
 

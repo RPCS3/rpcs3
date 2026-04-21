@@ -329,7 +329,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 							is_valid = false;
 							continue;
 						}
-						else if (serial.size() != 9 || !std::all_of(serial.begin(), serial.end(), [](char c) { return std::isalnum(c); }))
+						else if (serial.size() != 9 || !std::all_of(serial.begin(), serial.end(), [](char c) { return std::isalnum(static_cast<unsigned char>(c)); }))
 						{
 							append_log_message(log_messages, fmt::format("Error: Serial '%s' invalid (patch: %s, key: %s, location: %s, file: %s)", serial, description, main_key, get_yaml_node_location(serial_node), path), &patch_log.error);
 							is_valid = false;

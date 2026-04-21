@@ -29,6 +29,7 @@ enum class cpu_flag : u32
 	yield, // Thread is being requested to yield its execution time if it's running
 	preempt, // Thread is being requested to preempt the execution of all CPU threads
 
+	req_exit, // Request the thread to exit
 	dbg_global_pause, // Emulation paused
 	dbg_pause, // Thread paused
 	dbg_step, // Thread forced to pause after one step (one instruction, etc)
@@ -39,7 +40,7 @@ enum class cpu_flag : u32
 // Test stopped state
 constexpr bool is_stopped(bs_t<cpu_flag> state)
 {
-	return !!(state & (cpu_flag::stop + cpu_flag::exit + cpu_flag::again));
+	return !!(state & (cpu_flag::stop + cpu_flag::exit + cpu_flag::again + cpu_flag::req_exit));
 }
 
 // Test paused state
@@ -176,7 +177,7 @@ public:
 	virtual std::vector<std::pair<u32, u32>> dump_callstack_list() const;
 
 	// Get CPU dump of misc information
-	virtual std::string dump_misc() const;
+	virtual void dump_misc(std::string& ret, std::any& /*custom_data*/) const;
 
 	// Thread entry point function
 	virtual void cpu_task() = 0;

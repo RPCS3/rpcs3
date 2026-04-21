@@ -3,6 +3,7 @@
 #include "numbered_widget_item.h"
 #include "richtext_item_delegate.h"
 #include "qt_utils.h"
+#include "steam_utils.h"
 
 #include "Emu/system_utils.hpp"
 #include "Utilities/File.h"
@@ -23,17 +24,25 @@ enum Roles
 	DataSizeRole    = Qt::UserRole + 5,
 };
 
-pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibility* compat, QWidget* parent)
+pkg_install_dialog::pkg_install_dialog(const QStringList& paths, bool from_boot, const game_compatibility* compat, QWidget* parent)
 	: QDialog(parent)
 {
+	ensure(!paths.empty());
+
+	setWindowTitle(tr("PKG Installation"));
+	setObjectName("pkg_install_dialog");
+
 	m_dir_list = new QListWidget(this);
 	m_dir_list->setItemDelegate(new richtext_item_delegate(m_dir_list->itemDelegate()));
+
+	QStringList corrupt_paths;
 
 	for (const QString& path : paths)
 	{
 		const compat::package_info info = game_compatibility::GetPkgInfo(path, compat);
 		if (!info.is_valid)
 		{
+			corrupt_paths << path;
 			continue;
 		}
 
@@ -43,12 +52,14 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibil
 		QString accumulated_info;
 		QString tooltip;
 
-		const auto append_comma = [&accumulated_info]()
+		const auto append_info = [&accumulated_info](const QString& info)
 		{
 			if (!accumulated_info.isEmpty())
 			{
 				accumulated_info += ", ";
 			}
+
+			accumulated_info += info;
 		};
 
 		if (!info.title_id.isEmpty())
@@ -58,27 +69,23 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibil
 
 		if (info.type != compat::package_type::other)
 		{
-			append_comma();
-
 			if (info.type == compat::package_type::dlc)
 			{
-				accumulated_info += tr("DLC", "Package type info (DLC)");
+				append_info(tr("DLC", "Package type info (DLC)"));
 			}
 			else
 			{
-				accumulated_info += tr("Update", "Package type info (Update)");
+				append_info(tr("Update", "Package type info (Update)"));
 			}
 		}
 		else if (!info.local_cat.isEmpty())
 		{
-			append_comma();
-			accumulated_info += info.local_cat;
+			append_info(info.local_cat);
 		}
 
 		if (!info.version.isEmpty())
 		{
-			append_comma();
-			accumulated_info += tr("v.%0", "Version info").arg(info.version);
+			append_info(tr("v.%0", "Version info").arg(info.version));
 		}
 
 		if (info.changelog.isEmpty())
@@ -90,8 +97,7 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibil
 			tooltip = tr("Changelog:\n\n%0", "Changelog info").arg(info.changelog);
 		}
 
-		append_comma();
-		accumulated_info += file_info.fileName();
+		append_info(file_info.fileName());
 
 		const QString text = tr("<b>%0</b> (%1) - %2", "Package text").arg(info.title.simplified())
 			.arg(accumulated_info).arg(gui::utils::format_byte_size(info.data_size));
@@ -106,18 +112,8 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibil
 		item->setToolTip(tooltip);
 	}
 
-	m_dir_list->sortItems();
-	m_dir_list->setCurrentRow(0);
-	m_dir_list->setMinimumWidth((m_dir_list->sizeHintForColumn(0) * 125) / 100);
-
-	// Create contextual label (updated in connect(m_dir_list, &QListWidget::itemChanged ...))
-	QLabel* installation_info = new QLabel();
-	installation_info->setTextFormat(Qt::RichText); // Support HTML tags
-
 	// Create buttons
-	QDialogButtonBox* buttons = new QDialogButtonBox(QDialogButtonBox::Cancel | QDialogButtonBox::Ok);
-	buttons->button(QDialogButtonBox::Ok)->setText(tr("Install"));
-	buttons->button(QDialogButtonBox::Ok)->setDefault(true);
+	QDialogButtonBox* buttons = new QDialogButtonBox(corrupt_paths.isEmpty() ? (QDialogButtonBox::Cancel | QDialogButtonBox::Ok) : QDialogButtonBox::Cancel);
 
 	connect(buttons, &QDialogButtonBox::clicked, this, [this, buttons](QAbstractButton* button)
 	{
@@ -130,6 +126,40 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibil
 			reject();
 		}
 	});
+
+	if (!corrupt_paths.isEmpty())
+	{
+		m_dir_list->hide();
+
+		QString text = tr("Can not install packages. The following packages seem to be corrupt:") + "\n";
+
+		for (const QString& path : corrupt_paths)
+		{
+			text += "\n" + path;
+		}
+
+		QVBoxLayout* vbox = new QVBoxLayout;
+		vbox->addWidget(new QLabel(text));
+		vbox->addWidget(buttons);
+		setLayout(vbox);
+		return;
+	}
+
+	buttons->button(QDialogButtonBox::Ok)->setText(tr("Install"));
+	buttons->button(QDialogButtonBox::Ok)->setDefault(true);
+
+	if (from_boot)
+	{
+		buttons->button(QDialogButtonBox::Cancel)->setText(tr("Skip"));
+	}
+
+	m_dir_list->sortItems();
+	m_dir_list->setCurrentRow(0);
+	m_dir_list->setMinimumWidth((m_dir_list->sizeHintForColumn(0) * 125) / 100);
+
+	// Create contextual label (updated in connect(m_dir_list, &QListWidget::itemChanged ...))
+	QLabel* installation_info = new QLabel();
+	installation_info->setTextFormat(Qt::RichText); // Support HTML tags
 
 	QHBoxLayout* hbox = nullptr;
 	if (m_dir_list->count() > 1)
@@ -194,12 +224,21 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, game_compatibil
 	vbox->addWidget(precompile_check);
 	vbox->addWidget(desk_check);
 	vbox->addWidget(quick_check);
+
+	if (gui::utils::steam_shortcut::steam_installed())
+	{
+		const bool steam_running = gui::utils::steam_shortcut::is_steam_running();
+		QCheckBox* steam_check = new QCheckBox(steam_running ? tr("Add Steam Shortcut(s) (Steam must be closed)") : tr("Add Steam shortcut(s)"));
+		connect(steam_check, &QCheckBox::checkStateChanged, this, [this](Qt::CheckState state){ m_create_steam_shortcut = state != Qt::CheckState::Unchecked; });
+		steam_check->setEnabled(!steam_running);
+
+		vbox->addWidget(steam_check);
+	}
+
 	vbox->addWidget(installation_info);
 	vbox->addWidget(buttons);
 
 	setLayout(vbox);
-	setWindowTitle(tr("PKG Installation"));
-	setObjectName("pkg_install_dialog");
 	update_info(installation_info, buttons); // Just to show and check available and required size
 }
 

@@ -72,7 +72,7 @@ namespace gl
 	}
 
 	// Apply sampler state settings
-	void sampler_state::apply(const rsx::fragment_texture& tex, const rsx::sampled_image_descriptor_base* sampled_image)
+	void sampler_state::apply(const rsx::fragment_texture& tex, const rsx::sampled_image_descriptor_base* sampled_image, bool allow_mipmaps)
 	{
 		set_parameteri(GL_TEXTURE_WRAP_S, wrap_mode(tex.wrap_s()));
 		set_parameteri(GL_TEXTURE_WRAP_T, wrap_mode(tex.wrap_t()));
@@ -82,17 +82,39 @@ namespace gl
 		{
 			// NOTE: In OpenGL, the border texels are processed by the pipeline and will be swizzled by the texture view.
 			// Therefore, we pass the raw value here, and the texture view will handle the rest for us.
-			const auto encoded_color = tex.border_color();
-			if (get_parameteri(GL_TEXTURE_BORDER_COLOR) != encoded_color)
+			const bool sext_conv_required = (sampled_image->format_ex.texel_remap_control & rsx::SEXT_MASK) != 0;
+			const auto encoded_color = tex.border_color(sext_conv_required);
+			const auto host_features = sampled_image->format_ex.host_features;
+
+			if (get_parameteri(GL_TEXTURE_BORDER_COLOR) != encoded_color ||
+				get_parameteri(GL_TEXTURE_BORDER_VALUES_NV) != host_features)
 			{
 				m_propertiesi[GL_TEXTURE_BORDER_COLOR] = encoded_color;
-				const auto border_color = rsx::decode_border_color(encoded_color);
+				m_propertiesi[GL_TEXTURE_BORDER_VALUES_NV] = host_features;
+
+				auto border_color = rsx::decode_border_color(encoded_color);
+				if (sampled_image->format_ex.host_snorm_format_active()) [[ unlikely ]]
+				{
+					// Hardware SNORM is active
+					// Convert the border color in host space (2N - 1)
+					// HW does the conversion in integer space as (x - 128) / 127 which introduces a biasing error.
+					const float bias_v = 128.f / 255.f;
+					const float scale_v = 255.f / 127.f;
+
+					color4f scale{ 1.f }, bias{ 0.f };
+					const auto snorm_mask = tex.argb_signed();
+					if (snorm_mask & 1) { scale.a = scale_v; bias.a = -bias_v; }
+					if (snorm_mask & 2) { scale.r = scale_v; bias.r = -bias_v; }
+					if (snorm_mask & 4) { scale.g = scale_v; bias.g = -bias_v; }
+					if (snorm_mask & 8) { scale.b = scale_v; bias.b = -bias_v; }
+					border_color = (border_color + bias) * scale;
+				}
+
 				glSamplerParameterfv(sampler_handle, GL_TEXTURE_BORDER_COLOR, border_color.rgba);
 			}
 		}
 
-		if (sampled_image->upload_context != rsx::texture_upload_context::shader_read ||
-			tex.get_exact_mipmap_count() == 1)
+		if (!allow_mipmaps || tex.get_exact_mipmap_count() == 1)
 		{
 			GLint min_filter = tex_min_filter(tex.min_filter());
 

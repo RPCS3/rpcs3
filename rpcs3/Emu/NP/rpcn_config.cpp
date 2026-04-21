@@ -10,8 +10,7 @@ void cfg_rpcn::load()
 {
 	const std::string path = cfg_rpcn::get_path();
 
-	fs::file cfg_file(path, fs::read);
-	if (cfg_file)
+	if (fs::file cfg_file(path, fs::read); cfg_file)
 	{
 		rpcn_log.notice("Loading RPCN config. Path: %s", path);
 		from_string(cfg_file.to_string());

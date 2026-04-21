@@ -630,7 +630,7 @@ public:
 	virtual void dump_regs(std::string&, std::any& custom_data) const override;
 	virtual std::string dump_callstack() const override;
 	virtual std::vector<std::pair<u32, u32>> dump_callstack_list() const override;
-	virtual std::string dump_misc() const override;
+	virtual void dump_misc(std::string& ret, std::any& custom_data) const override;
 	virtual void cpu_task() override final;
 	virtual void cpu_on_stop() override;
 	virtual void cpu_return() override;

@@ -68,7 +68,9 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 #include "util/media_utils.h"
 #include "rpcs3_version.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/system_utils.hpp"
+#include "Emu/RSX/Overlays/overlay_message.h"
 #include <thread>
 #include <charconv>
 
@@ -131,7 +133,7 @@ std::set<std::string> get_one_drive_paths()
 		do
 		{
 			path_buffer.resize(path_buffer.size() + MAX_PATH);
-			DWORD buffer_size = static_cast<DWORD>(path_buffer.size() - 1);
+			DWORD buffer_size = static_cast<DWORD>((path_buffer.size() - 1) * sizeof(wchar_t));
 			status = RegQueryValueExW(hkey, L"UserFolder", NULL, &type, reinterpret_cast<LPBYTE>(path_buffer.data()), &buffer_size);
 		}
 		while (status == ERROR_MORE_DATA);
@@ -183,20 +185,31 @@ std::set<std::string> get_one_drive_paths()
 			fmt::append(buf, "\nSerialized Object: %s", g_tls_serialize_name);
 		}
 
-		const system_state state = Emu.GetStatus(false);
-
-		if (state == system_state::stopped)
+		if (Emulator::IsAvailable())
 		{
-			fmt::append(buf, "\nEmulation is stopped");
+			const system_state state = Emu.GetStatus(false);
+
+			if (state == system_state::stopped)
+			{
+				fmt::append(buf, "\nEmulation is stopped");
+			}
+			else
+			{
+				const std::string name = Emu.GetTitleAndTitleID();
+				fmt::append(buf, "\nTitle: \"%s\" (emulation is %s)", name.empty() ? "N/A" : name.c_str(), state == system_state::stopping ? "stopping" : "running");
+			}
 		}
 		else
 		{
-			const std::string& name = Emu.GetTitleAndTitleID();
-			fmt::append(buf, "\nTitle: \"%s\" (emulation is %s)", name.empty() ? "N/A" : name.data(), state == system_state::stopping ? "stopping" : "running");
+			fmt::append(buf, "\nEmulation object is unavailable (process teardown)");
 		}
 
 		fmt::append(buf, "\nBuild: \"%s\"", rpcs3::get_verbose_version());
 		fmt::append(buf, "\nDate: \"%s\"", std::chrono::system_clock::now());
+
+		const auto [total, current] = utils::get_memory_usage();
+
+		fmt::append(buf, "\nRAM Usage: %dMB/%dMB (%dMB free)", current / (1024 * 1024), total / (1024 * 1024), (total - current) / (1024 * 1024));
 	}
 
 	std::string_view text = s_is_error_launch ? _text : buf;
@@ -308,7 +321,8 @@ public:
 	{
 		if (msg == logs::level::fatal || (msg == logs::level::always && m_log_always))
 		{
-			std::string _msg = "RPCS3: ";
+			static const std::string rpcs3_prefix =  "RPCS3: ";
+			std::string _msg = rpcs3_prefix;
 
 			if (!prefix.empty())
 			{
@@ -347,6 +361,13 @@ public:
 #endif
 			if (msg == logs::level::fatal)
 			{
+				if (g_cfg.misc.show_fatal_error_hints)
+				{
+					std::string overlay_msg = "Fatal error: " + _msg.substr(rpcs3_prefix.size());
+					fmt::trim_back(overlay_msg, " \t\n");
+					rsx::overlays::queue_message(overlay_msg, umax);
+				}
+
 				// Pause emulation if fatal error encountered
 				Emu.Pause(true);
 			}
@@ -642,7 +663,7 @@ int run_rpcs3(int argc, char** argv)
 	// Initialize thread pool finalizer (on first use)
 	static_cast<void>(named_thread("", [](int) {}));
 
-	static std::unique_ptr<logs::listener> log_file;
+	std::unique_ptr<logs::listener> log_file;
 	{
 		// Check free space
 		fs::device_stat stats{};
@@ -655,8 +676,16 @@ int run_rpcs3(int argc, char** argv)
 		log_file = logs::make_file_listener(log_name, stats.avail_free / 4);
 	}
 
-	static std::unique_ptr<fatal_error_listener> fatal_listener = std::make_unique<fatal_error_listener>();
+	auto fatal_listener = std::make_unique<fatal_error_listener>();
 	logs::listener::add(fatal_listener.get());
+
+	struct log_listener_shutdown_guard
+	{
+		~log_listener_shutdown_guard()
+		{
+			logs::listener::shutdown_all();
+		}
+	} log_listener_shutdown;
 
 	{
 		// Write RPCS3 version

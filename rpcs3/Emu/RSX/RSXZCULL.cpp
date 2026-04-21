@@ -335,7 +335,7 @@ namespace rsx
 
 			auto scale_result = [](u32 value)
 			{
-				const auto scale = rsx::get_resolution_scale_percent();
+				const auto scale = get_current_renderer()->resolution_scaling_config.scale_percent;
 				const auto result = (value * 10000ull) / (scale * scale);
 				return std::max(1u, static_cast<u32>(result));
 			};

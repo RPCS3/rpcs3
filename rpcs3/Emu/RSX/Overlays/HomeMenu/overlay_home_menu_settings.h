@@ -1,6 +1,8 @@
 #pragma once
 
 #include "overlay_home_menu_page.h"
+#include "../overlay_tabs.h"
+
 #include "Emu/System.h"
 #include "Utilities/Config.h"
 
@@ -13,13 +15,20 @@ namespace rsx
 		public:
 			home_menu_settings(s16 x, s16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent);
 
+			page_navigation handle_button_press(pad_button button_press, bool is_auto_repeat, u64 auto_repeat_interval_ms) override;
+			compiled_resource& get_compiled() override;
+
 		private:
-			std::vector<std::shared_ptr<home_menu_page>> m_settings_pages;
+			void add_page(home_menu::fa_icon icon, std::shared_ptr<home_menu_page> page) override;
+
+			std::unique_ptr<tabbed_container> m_tabs;
 		};
 
 		struct home_menu_settings_page : public home_menu_page
 		{
 			using home_menu_page::home_menu_page;
+
+			bool show_reset_button() const override { return true; }
 
 			void add_checkbox(cfg::_bool* setting, localized_string_id loc_id)
 			{
@@ -27,19 +36,34 @@ namespace rsx
 
 				const std::string localized_text = get_localized_string(loc_id);
 				std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_checkbox>(setting, localized_text);
+				elem->set_size(this->w, menu_entry_height);
 
 				add_item(elem, [this, setting](pad_button btn) -> page_navigation
 				{
-					if (btn != pad_button::cross) return page_navigation::stay;
-
 					if (setting)
 					{
-						const bool value = !setting->get();
-						rsx_log.notice("User toggled checkbox in '%s'. Setting '%s' to %d", title, setting->get_name(), value);
-						setting->set(value);
-						Emu.GetCallbacks().update_emu_settings();
-						if (m_config_changed) *m_config_changed = true;
-						refresh();
+						bool value = setting->get();
+
+						switch (btn)
+						{
+						case pad_button::cross:
+							value = !value;
+							break;
+						case pad_button::select:
+							value = setting->def;
+							break;
+						default:
+							return page_navigation::stay;
+						}
+
+						if (value != setting->get())
+						{
+							rsx_log.notice("User toggled checkbox in '%s'. Setting '%s' to %d", title, setting->get_name(), value);
+							setting->set(value);
+							Emu.GetCallbacks().update_emu_settings();
+							if (m_config_changed) *m_config_changed = true;
+							refresh();
+						}
 					}
 
 					return page_navigation::stay;
@@ -53,39 +77,93 @@ namespace rsx
 
 				const std::string localized_text = get_localized_string(loc_id);
 				std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_dropdown<T>>(setting, localized_text);
+				elem->set_size(this->w, menu_entry_height);
 
-				add_item(elem, [this, setting](pad_button btn) -> page_navigation
+				add_item(elem, [this, setting, elem = elem.get()](pad_button btn) -> page_navigation
 				{
-					if (btn != pad_button::cross) return page_navigation::stay;
-
-					if (setting)
+					if (!setting)
 					{
-						usz new_index = 0;
-						const T value = setting->get();
-						const std::string val = fmt::format("%s", value);
-						const std::vector<std::string> list = setting->to_list();
+						// Nothing we can do with this
+						return page_navigation::stay;
+					}
 
-						for (usz i = 0; i < list.size(); i++)
+					switch (btn)
+					{
+					case pad_button::cross:
+						// We process only 'accept' inputs. The rest are handled by the popup hook.
+						break;
+					case pad_button::select:
+						setting->set(setting->def);
+						rsx_log.notice("User reset the value for setting '%s' to default", setting->get_name());
+						return page_navigation::stay;
+					default:
+						return page_navigation::stay;
+					}
+
+					// If we're receiving this, we need to open the popup and install the input hook
+					auto dropdown = ensure(dynamic_cast<home_menu_dropdown<T>*>(elem));
+					dropdown->open_popup(static_cast<const list_view*>(this));
+
+					auto render_fn = [dropdown]() -> compiled_resource&
+					{
+						return dropdown->render_popup();
+					};
+
+					auto input_fn = [this, dropdown, setting](pad_button button) -> page_navigation
+					{
+						const auto result = dropdown->handle_input(button);
+
+						if (!setting || result != page_navigation::exit)
 						{
-							const std::string& entry = list[i];
-							if (entry == val)
+							switch (button)
 							{
-								new_index = (i + 1) % list.size();
+							case pad_button::dpad_up:
+							case pad_button::ls_up:
+							case pad_button::dpad_down:
+							case pad_button::ls_down:
+								play_sound(sound_effect::cursor);
+								break;
+							default:
 								break;
 							}
+
+							return result;
 						}
-						if (const std::string& next_value = ::at32(list, new_index); setting->from_string(next_value))
+
+						// We're closing. Check if we should play an accept or reject sound
+						play_sound(
+							(button == pad_button::cross)
+							? sound_effect::accept
+							: sound_effect::cancel);
+
+						const auto previous = fmt::format("%s", setting->get());
+						const std::vector<std::string> list = setting->to_list();
+						const int selected_idx = dropdown->get_selected_index();
+
+						if (const std::string& next_value = ::at32(list, selected_idx); setting->from_string(next_value))
 						{
 							rsx_log.notice("User toggled dropdown in '%s'. Setting '%s' to %s", title, setting->get_name(), next_value);
+
+							if (next_value != previous)
+							{
+								Emu.GetCallbacks().update_emu_settings();
+								if (m_config_changed)
+								{
+									*m_config_changed = true;
+								}
+								refresh();
+							}
 						}
 						else
 						{
 							rsx_log.error("Can't toggle dropdown in '%s'. Setting '%s' to '%s' failed", title, setting->get_name(), next_value);
 						}
-						Emu.GetCallbacks().update_emu_settings();
-						if (m_config_changed) *m_config_changed = true;
-						refresh();
-					}
+
+						return result;
+					};
+
+					m_popup.get_compiled = render_fn;
+					m_popup.input_hook = input_fn;
 
 					return page_navigation::stay;
 				});
@@ -98,6 +176,7 @@ namespace rsx
 
 				const std::string localized_text = get_localized_string(loc_id);
 				std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_signed_slider<Min, Max>>(setting, localized_text, suffix, special_labels, minimum, maximum);
+				elem->set_size(this->w, menu_entry_height);
 
 				add_item(elem, [this, setting, step_size, minimum, maximum](pad_button btn) -> page_navigation
 				{
@@ -113,6 +192,9 @@ namespace rsx
 						case pad_button::dpad_right:
 						case pad_button::ls_right:
 							value = std::min(value + step_size, maximum);
+							break;
+						case pad_button::select:
+							value = setting->def;
 							break;
 						default:
 							return page_navigation::stay;
@@ -140,6 +222,7 @@ namespace rsx
 
 				const std::string localized_text = get_localized_string(loc_id);
 				std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_unsigned_slider<Min, Max>>(setting, localized_text, suffix, special_labels, minimum, maximum);
+				elem->set_size(this->w, menu_entry_height);
 
 				add_item(elem, [this, setting, step_size, minimum, maximum, exceptions](pad_button btn) -> page_navigation
 				{
@@ -163,6 +246,9 @@ namespace rsx
 								value = std::min(value + step_size, maximum);
 							}
 							while (exceptions.contains(value));
+							break;
+						case pad_button::select:
+							value = setting->def;
 							break;
 						default:
 							return page_navigation::stay;
@@ -189,6 +275,7 @@ namespace rsx
 
 				const std::string localized_text = get_localized_string(loc_id);
 				std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_float_slider<Min, Max>>(setting, localized_text, suffix, special_labels, minimum, maximum);
+				elem->set_size(this->w, menu_entry_height);
 
 				add_item(elem, [this, setting, step_size, minimum, maximum](pad_button btn) -> page_navigation
 				{
@@ -204,6 +291,9 @@ namespace rsx
 						case pad_button::dpad_right:
 						case pad_button::ls_right:
 							value = std::min(value + step_size, static_cast<f64>(maximum));
+							break;
+						case pad_button::select:
+							value = setting->def;
 							break;
 						default:
 							return page_navigation::stay;

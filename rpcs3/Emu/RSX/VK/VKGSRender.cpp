@@ -1152,6 +1152,7 @@ void VKGSRender::check_present_status()
 void VKGSRender::set_viewport()
 {
 	const auto [clip_width, clip_height] = rsx::apply_resolution_scale<true>(
+		resolution_scaling_config,
 		rsx::method_registers.surface_clip_width(), rsx::method_registers.surface_clip_height());
 
 	const auto zclip_near = rsx::method_registers.clip_min();
@@ -1952,7 +1953,7 @@ void VKGSRender::load_program_env()
 		m_draw_processor.fill_scale_offset_data(buf, false);
 		m_draw_processor.fill_user_clip_data(buf + 64);
 		*(reinterpret_cast<u32*>(buf + 68)) = ctx->transform_branch_bits();
-		*(reinterpret_cast<f32*>(buf + 72)) = ctx->point_size() * rsx::get_resolution_scale();
+		*(reinterpret_cast<f32*>(buf + 72)) = ctx->point_size() * resolution_scaling_config.scale_factor();
 		*(reinterpret_cast<f32*>(buf + 76)) = ctx->clip_min();
 		*(reinterpret_cast<f32*>(buf + 80)) = ctx->clip_max();
 
@@ -2114,7 +2115,7 @@ void VKGSRender::load_program_env()
 
 	if (vk::emulate_conditional_rendering())
 	{
-		const vk::buffer& predicate = m_cond_render_buffer ? *m_cond_render_buffer : *vk::get_scratch_buffer(*m_current_command_buffer, 4);
+		const vk::buffer& predicate = m_cond_render_buffer ? *m_cond_render_buffer : *vk::get_scratch_buffer(*m_current_command_buffer, 4, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_ACCESS_NONE);
 		const u32 offset = cond_render_ctrl.hw_cond_active ? 0 : 4;
 		m_program->bind_uniform({ predicate, offset, 4 }, vk::glsl::binding_set_index_vertex, m_vs_binding_table->cr_pred_buffer_location);
 	}
@@ -2441,6 +2442,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		m_framebuffer_layout.target, m_framebuffer_layout.aa_mode, m_framebuffer_layout.raster_type,
 		m_framebuffer_layout.color_addresses, m_framebuffer_layout.zeta_address,
 		m_framebuffer_layout.actual_color_pitch, m_framebuffer_layout.actual_zeta_pitch,
+		resolution_scaling_config,
 		(*m_device), *m_current_command_buffer);
 
 	// Reset framebuffer information
@@ -2620,7 +2622,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	m_cached_renderpass = vk::get_renderpass(*m_device, m_current_renderpass_key);
 
 	// Search old framebuffers for this same configuration
-	const auto [fbo_width, fbo_height] = rsx::apply_resolution_scale<true>(m_framebuffer_layout.width, m_framebuffer_layout.height);
+	const auto [fbo_width, fbo_height] = rsx::apply_resolution_scale<true>(resolution_scaling_config, m_framebuffer_layout.width, m_framebuffer_layout.height);
 
 	if (m_draw_fbo)
 	{
@@ -2908,7 +2910,7 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 	else if (num_hw_queries > 0)
 	{
 		// We'll need to do some result aggregation using a compute shader.
-		auto scratch = vk::get_scratch_buffer(*m_current_command_buffer, num_hw_queries * 4);
+		vk::buffer* scratch = nullptr;
 
 		// Range latching. Because of how the query pool manages allocations using a stack, we get an inverse sequential set of handles/indices that we can easily group together.
 		// This drastically boosts performance on some drivers like the NVIDIA proprietary one that seems to have a rather high cost for every individual query transer command.
@@ -2916,6 +2918,11 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 
 		auto copy_query_range_impl = [&]()
 		{
+			if (!scratch)
+			{
+				scratch = vk::get_scratch_buffer(*m_current_command_buffer, num_hw_queries * 4, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT);
+			}
+
 			const auto count = (query_range.last - query_range.first + 1);
 			m_occlusion_query_manager->get_query_result_indirect(*m_current_command_buffer, query_range.first, count, scratch->value, dst_offset);
 			dst_offset += count * 4;
@@ -2962,7 +2969,7 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 		}
 
 		// Sanity check
-		ensure(dst_offset <= scratch->size());
+		ensure(scratch && dst_offset <= scratch->size());
 
 		if (!partial_eval)
 		{

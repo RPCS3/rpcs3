@@ -4,6 +4,7 @@
 
 #include "Utilities/geometry.h"
 #include "Emu/RSX/Common/TextureUtils.h"
+#include "Emu/RSX/Common/io_buffer.h"
 
 //using enum rsx::format_class;
 using namespace ::rsx::format_class_;
@@ -58,7 +59,7 @@ namespace gl
 		GLuint num_layers;
 	};
 
-	class texture
+	class texture : public named_object<GL_TEXTURE>
 	{
 		friend class texture_view;
 
@@ -180,7 +181,6 @@ namespace gl
 		};
 
 	protected:
-		GLuint m_id = GL_NONE;
 		GLuint m_width = 0;
 		GLuint m_height = 0;
 		GLuint m_depth = 0;
@@ -321,39 +321,43 @@ namespace gl
 		}
 
 		// Data management
-		void copy_from(const void* src, texture::format format, texture::type type, int level, const coord3u region, const pixel_unpack_settings& pixel_settings);
+		void copy_from(const rsx::io_buffer& src, texture::format format, texture::type type, int level, const coord3u region, const pixel_unpack_settings& pixel_settings);
 
-		void copy_from(buffer& buf, u32 gl_format_type, u32 offset, u32 length);
+		void copy_from(buffer& buf, GLsizeiptr offset, texture::format format, texture::type type, int level, const coord3u region, const pixel_unpack_settings& pixel_settings);
 
 		void copy_from(buffer_view& view);
 
-		void copy_to(void* dst, texture::format format, texture::type type, int level, const coord3u& region, const pixel_pack_settings& pixel_settings) const;
+		void copy_to(const rsx::io_buffer& dst, texture::format format, texture::type type, int level, const coord3u& region, const pixel_pack_settings& pixel_settings) const;
+
+		void copy_to(buffer& buf, GLsizeiptr offset, texture::format format, texture::type type, int level, const coord3u& region, const pixel_pack_settings& pixel_settings) const;
 
 		// Convenience wrappers
-		void copy_from(const void* src, texture::format format, texture::type type, const pixel_unpack_settings& pixel_settings)
+		void copy_from(const rsx::io_buffer& src, texture::format format, texture::type type, const pixel_unpack_settings& pixel_settings)
 		{
 			const coord3u region = { {}, size3D() };
 			copy_from(src, format, type, 0, region, pixel_settings);
 		}
 
-		void copy_to(void* dst, texture::format format, texture::type type, const pixel_pack_settings& pixel_settings) const
+		void copy_to(const rsx::io_buffer& dst, texture::format format, texture::type type, const pixel_pack_settings& pixel_settings) const
 		{
 			const coord3u region = { {}, size3D() };
 			copy_to(dst, format, type, 0, region, pixel_settings);
 		}
 	};
 
-	class texture_view
+	class texture_view : public named_object<GL_TEXTURE>
 	{
 	protected:
-		GLuint m_id = GL_NONE;
 		GLenum m_target = 0;
 		GLenum m_format = 0;
 		GLenum m_view_format = 0;
 		GLenum m_aspect_flags = 0;
 		texture* m_image_data = nullptr;
 
-		GLenum component_swizzle[4] {};
+		GLenum component_swizzle[4]{};
+
+		std::unordered_map<GLenum, std::unique_ptr<texture_view>> m_subviews;
+		texture_view* m_root_view = nullptr;
 
 		texture_view() = default;
 
@@ -394,6 +398,8 @@ namespace gl
 		}
 
 		virtual ~texture_view();
+
+		texture_view* as(GLenum format);
 
 		GLuint id() const
 		{
@@ -457,6 +463,7 @@ namespace gl
 
 	class viewable_image : public texture
 	{
+	protected:
 		std::unordered_map<u64, std::unique_ptr<texture_view>> views;
 
 	public:

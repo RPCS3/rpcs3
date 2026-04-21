@@ -49,6 +49,11 @@ static bool has_waitv()
 #include <cstdint>
 #include <array>
 #include <random>
+#include <climits>
+
+#ifdef __linux__
+#include <pthread.h>
+#endif
 
 #include "asm.hpp"
 #include "endian.hpp"

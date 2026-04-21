@@ -493,6 +493,10 @@ inline FT build_function_asm(std::string_view name, F&& builder, ::jit_runtime* 
 	return reinterpret_cast<FT>(uptr(result));
 }
 
+#if defined(__INTELLISENSE__) && !defined(LLVM_AVAILABLE)
+#define LLVM_AVAILABLE
+#endif
+
 #ifdef LLVM_AVAILABLE
 
 namespace llvm

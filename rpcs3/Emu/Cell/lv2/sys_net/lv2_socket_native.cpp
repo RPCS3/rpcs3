@@ -1147,14 +1147,14 @@ s32 lv2_socket_native::shutdown(s32 how)
 	return -get_last_error(false);
 }
 
-s32 lv2_socket_native::poll(sys_net_pollfd& sn_pfd, pollfd& native_pfd)
+void lv2_socket_native::poll(sys_net_pollfd& sn_pfd, pollfd& native_pfd)
 {
 	// Check for fake packet for dns interceptions
 	auto& dnshook = g_fxo->get<np::dnshook>();
 	if (sn_pfd.events & SYS_NET_POLLIN && dnshook.is_dns(sn_pfd.fd) && dnshook.is_dns_queue(sn_pfd.fd))
 	{
 		sn_pfd.revents |= SYS_NET_POLLIN;
-		return 1;
+		return;
 	}
 	if (sn_pfd.events & ~(SYS_NET_POLLIN | SYS_NET_POLLOUT | SYS_NET_POLLERR))
 	{
@@ -1171,8 +1171,6 @@ s32 lv2_socket_native::poll(sys_net_pollfd& sn_pfd, pollfd& native_pfd)
 	{
 		native_pfd.events |= POLLOUT;
 	}
-
-	return 0;
 }
 
 std::tuple<bool, bool, bool> lv2_socket_native::select(bs_t<lv2_socket::poll_t> selected, pollfd& native_pfd)

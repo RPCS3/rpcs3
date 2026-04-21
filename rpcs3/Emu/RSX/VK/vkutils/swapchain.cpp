@@ -234,14 +234,19 @@ namespace vk
 		VkPresentModeKHR swapchain_present_mode = VK_PRESENT_MODE_FIFO_KHR;
 		std::vector<VkPresentModeKHR> preferred_modes;
 
-		if (!g_cfg.video.vk.force_fifo)
+		switch (g_cfg.video.vsync)
 		{
-			// List of preferred modes in decreasing desirability
-			// NOTE: Always picks "triple-buffered vsync" types if possible
-			if (!g_cfg.video.vsync)
-			{
-				preferred_modes = { VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_FIFO_RELAXED_KHR };
-			}
+		case vsync_mode::off:
+			preferred_modes = { VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_FIFO_RELAXED_KHR };
+			break;
+		case vsync_mode::adaptive:
+			preferred_modes = { VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_FIFO_RELAXED_KHR };
+			break;
+		case vsync_mode::full:
+		default:
+			// FIFO is guaranteed to be supported, no need to go through a preference chain
+			preferred_modes = {};
+			break;
 		}
 
 		bool mode_found = false;

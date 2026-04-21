@@ -303,7 +303,11 @@ namespace np
 
 		gui_cache.del_room(room_status->id);
 
-		gui_notifications.list.emplace(std::make_pair(gui_notifications.current_gui_ctx_id, req_id), gui_notification{.event = SCE_NP_MATCHING_EVENT_LEAVE_ROOM_DONE, .edata = std::move(edata)});
+		{
+			std::lock_guard lock(gui_notifications.mutex);
+			gui_notifications.list.emplace(std::make_pair(gui_notifications.current_gui_ctx_id, req_id), gui_notification{.event = SCE_NP_MATCHING_EVENT_LEAVE_ROOM_DONE, .edata = std::move(edata)});
+		}
+
 		ctx->queue_callback(req_id, SCE_NP_MATCHING_EVENT_LEAVE_ROOM_DONE, 0);
 	}
 
@@ -453,7 +457,11 @@ namespace np
 
 		extra_nps::print_SceNpMatchingRoom(room_info);
 
-		gui_notifications.list.emplace(std::make_pair(gui_notifications.current_gui_ctx_id, req_id), gui_notification{.event = SCE_NP_MATCHING_EVENT_GET_ROOM_SEARCH_FLAG_DONE, .edata = std::move(edata)});
+		{
+			std::lock_guard lock(gui_notifications.mutex);
+			gui_notifications.list.emplace(std::make_pair(gui_notifications.current_gui_ctx_id, req_id), gui_notification{.event = SCE_NP_MATCHING_EVENT_GET_ROOM_SEARCH_FLAG_DONE, .edata = std::move(edata)});
+		}
+
 		ctx->queue_callback(req_id, SCE_NP_MATCHING_EVENT_GET_ROOM_SEARCH_FLAG_DONE, 0);
 	}
 
@@ -548,7 +556,11 @@ namespace np
 
 		extra_nps::print_SceNpMatchingRoom(room_info);
 
-		gui_notifications.list.emplace(std::make_pair(gui_notifications.current_gui_ctx_id, req_id), gui_notification{.event = SCE_NP_MATCHING_EVENT_GET_ROOM_INFO_DONE, .edata = std::move(edata)});
+		{
+			std::lock_guard lock(gui_notifications.mutex);
+			gui_notifications.list.emplace(std::make_pair(gui_notifications.current_gui_ctx_id, req_id), gui_notification{.event = SCE_NP_MATCHING_EVENT_GET_ROOM_INFO_DONE, .edata = std::move(edata)});
+		}
+
 		ctx->queue_callback(req_id, SCE_NP_MATCHING_EVENT_GET_ROOM_INFO_DONE, 0);
 	}
 
@@ -581,9 +593,13 @@ namespace np
 
 		SceNpRoomId room_id{};
 		ensure(!resp->id().empty() && resp->id().size() == sizeof(SceNpRoomId::opt));
+		ctx->wakey = 0;
 		std::memcpy(room_id.opt, resp->id().data(), sizeof(SceNpRoomId::opt));
-		const auto [_, inserted] = pending_quickmatching.insert_or_assign(room_id, ctx->ctx_id);
-		ensure(inserted);
+		{
+			std::lock_guard lock(this->mutex_quickmatching);
+			const auto [_, inserted] = pending_quickmatching.insert_or_assign(room_id, ctx->ctx_id);
+			ensure(inserted);
+		}
 
 		// Now that the reply has been received, we start the wait for the notification
 		ctx->thread = std::make_unique<named_thread<std::function<void(SceNpRoomId)>>>("NP GUI Timeout Worker", [ctx, req_id, this](SceNpRoomId room_id)
@@ -615,7 +631,6 @@ namespace np
 				}
 			});
 
-		ctx->wakey = 0;
 		auto& thread = *ctx->thread;
 		thread(room_id);
 	}

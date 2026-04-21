@@ -2219,6 +2219,28 @@ void lv2_obj::prepare_for_sleep(cpu_thread& cpu)
 	cpu_counter::remove(&cpu);
 }
 
+ppu_thread* lv2_obj::get_running_ppu(u32 index)
+{
+	usz thread_count = g_cfg.core.ppu_threads;
+
+	if (index >= thread_count)
+	{
+		return nullptr;
+	}
+
+	auto target = atomic_storage<ppu_thread*>::load(g_ppu);
+
+	for (usz cur = 0; target; target = atomic_storage<ppu_thread*>::load(target->next_ppu), cur++)
+	{
+		if (cur == index)
+		{
+			return target;
+		}
+	}
+
+	return nullptr;
+}
+
 void lv2_obj::notify_all() noexcept
 {
 	for (auto cpu : g_to_notify)

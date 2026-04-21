@@ -485,6 +485,19 @@ struct AdecFrame
 
 CHECK_SIZE(AdecFrame, 0x68);
 
+template <auto Syscall>
+static auto lv2_syscall(ppu_thread& ppu, auto&&... args)
+{
+	const auto ret = Syscall(ppu, std::forward<decltype(args)>(args)...);
+
+	if (ppu.test_stopped())
+	{
+		ppu.state += cpu_flag::again;
+	}
+
+	return ret;
+}
+
 class AdecOutputQueue
 {
 	struct entry
@@ -511,10 +524,10 @@ public:
 		this->size = 0;
 
 		const vm::var<sys_mutex_attribute_t> mutex_attr = {{ SYS_SYNC_PRIORITY, SYS_SYNC_NOT_RECURSIVE, SYS_SYNC_NOT_PROCESS_SHARED, SYS_SYNC_NOT_ADAPTIVE, 0, 0, 0, { "_adem07"_u64 } }};
-		ensure(sys_mutex_create(ppu, _this.ptr(&AdecOutputQueue::mutex), mutex_attr) == CELL_OK); // Error code isn't checked on LLE
+		ensure(lv2_syscall<sys_mutex_create>(ppu, _this.ptr(&AdecOutputQueue::mutex), mutex_attr) == CELL_OK); // Error code isn't checked on LLE
 
 		const vm::var<sys_cond_attribute_t> cond_attr = {{ SYS_SYNC_NOT_PROCESS_SHARED, 0, 0, { "_adec05"_u64 } }};
-		ensure(sys_cond_create(ppu, _this.ptr(&AdecOutputQueue::cond), mutex, cond_attr) == CELL_OK); // Error code isn't checked on LLE
+		ensure(lv2_syscall<sys_cond_create>(ppu, _this.ptr(&AdecOutputQueue::cond), mutex, cond_attr) == CELL_OK); // Error code isn't checked on LLE
 
 		for (s32 i = 0; i < 4; i++)
 		{
@@ -524,12 +537,12 @@ public:
 
 	error_code finalize(ppu_thread& ppu) const
 	{
-		if (error_code ret = sys_cond_destroy(ppu, cond); ret != CELL_OK)
+		if (error_code ret = lv2_syscall<sys_cond_destroy>(ppu, cond); ret != CELL_OK)
 		{
 			return ret;
 		}
 
-		if (error_code ret = sys_mutex_destroy(ppu, mutex); ret != CELL_OK)
+		if (error_code ret = lv2_syscall<sys_mutex_destroy>(ppu, mutex); ret != CELL_OK)
 		{
 			return ret;
 		}
@@ -539,11 +552,11 @@ public:
 
 	error_code push(ppu_thread& ppu, vm::ptr<CellAdecPcmItem> pcm_item, s32 pcm_handle)
 	{
-		ensure(sys_mutex_lock(ppu, mutex, 0) == CELL_OK); // Error code isn't checked on LLE
+		ensure(lv2_syscall<sys_mutex_lock>(ppu, mutex, 0) == CELL_OK); // Error code isn't checked on LLE
 
 		if (entries[back].state != 0xff)
 		{
-			ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
+			ensure(lv2_syscall<sys_mutex_unlock>(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
 			return true; // LLE returns the result of the comparison above
 		}
 
@@ -554,13 +567,13 @@ public:
 		back = (back + 1) & 3;
 		size++;
 
-		ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
+		ensure(lv2_syscall<sys_mutex_unlock>(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
 		return CELL_OK;
 	}
 
 	const entry* pop(ppu_thread& ppu)
 	{
-		ensure(sys_mutex_lock(ppu, mutex, 0) == CELL_OK); // Error code isn't checked on LLE
+		ensure(lv2_syscall<sys_mutex_lock>(ppu, mutex, 0) == CELL_OK); // Error code isn't checked on LLE
 
 		if (ppu.state & cpu_flag::again) // Savestate was created while waiting on the mutex
 		{
@@ -569,7 +582,7 @@ public:
 
 		if (entries[front].state == 0xff)
 		{
-			ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
+			ensure(lv2_syscall<sys_mutex_unlock>(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
 			return nullptr;
 		}
 
@@ -581,15 +594,15 @@ public:
 		front = (front + 1) & 3;
 		size--;
 
-		ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
+		ensure(lv2_syscall<sys_mutex_unlock>(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
 		return ret;
 	}
 
 	const entry& peek(ppu_thread& ppu) const
 	{
-		ensure(sys_mutex_lock(ppu, mutex, 0) == CELL_OK); // Error code isn't checked on LLE
+		ensure(lv2_syscall<sys_mutex_lock>(ppu, mutex, 0) == CELL_OK); // Error code isn't checked on LLE
 		const entry& ret = entries[front];
-		ensure(sys_mutex_unlock(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
+		ensure(lv2_syscall<sys_mutex_unlock>(ppu, mutex) == CELL_OK); // Error code isn't checked on LLE
 		return ret;
 	}
 };
@@ -708,39 +721,39 @@ public:
 		const vm::var<sys_mutex_attribute_t> mutex_attr{{ SYS_SYNC_PRIORITY, SYS_SYNC_NOT_RECURSIVE, SYS_SYNC_NOT_PROCESS_SHARED, SYS_SYNC_NOT_ADAPTIVE, 0, 0, 0, { "_adem01"_u64 } }};
 		const vm::var<sys_cond_attribute_t> cond_attr{{ SYS_SYNC_NOT_PROCESS_SHARED, 0, 0, { "_adec01"_u64 } }};
 
-		if (error_code ret = sys_mutex_create(ppu, _this.ptr(&LpcmDecSemaphore::mutex), mutex_attr); ret != CELL_OK)
+		if (error_code ret = lv2_syscall<sys_mutex_create>(ppu, _this.ptr(&LpcmDecSemaphore::mutex), mutex_attr); ret != CELL_OK)
 		{
 			return ret;
 		}
 
-		return sys_cond_create(ppu, _this.ptr(&LpcmDecSemaphore::cond), mutex, cond_attr);
+		return lv2_syscall<sys_cond_create>(ppu, _this.ptr(&LpcmDecSemaphore::cond), mutex, cond_attr);
 	}
 
 	error_code finalize(ppu_thread& ppu) const
 	{
-		if (error_code ret = sys_cond_destroy(ppu, cond); ret != CELL_OK)
+		if (error_code ret = lv2_syscall<sys_cond_destroy>(ppu, cond); ret != CELL_OK)
 		{
 			return ret;
 		}
 
-		return sys_mutex_destroy(ppu, mutex);
+		return lv2_syscall<sys_mutex_destroy>(ppu, mutex);
 	}
 
 	error_code release(ppu_thread& ppu)
 	{
-		if (error_code ret = sys_mutex_lock(ppu, mutex, 0); ret != CELL_OK)
+		if (error_code ret = lv2_syscall<sys_mutex_lock>(ppu, mutex, 0); ret != CELL_OK)
 		{
 			return ret;
 		}
 
 		value++;
 
-		if (error_code ret = sys_cond_signal(ppu, cond); ret != CELL_OK)
+		if (error_code ret = lv2_syscall<sys_cond_signal>(ppu, cond); ret != CELL_OK)
 		{
 			return ret; // LLE doesn't unlock the mutex
 		}
 
-		return sys_mutex_unlock(ppu, mutex);
+		return lv2_syscall<sys_mutex_unlock>(ppu, mutex);
 	}
 
 	error_code acquire(ppu_thread& ppu, lpcm_dec_state& savestate)
@@ -752,7 +765,7 @@ public:
 
 		savestate = lpcm_dec_state::waiting_for_cmd_mutex_lock;
 
-		if (error_code ret = sys_mutex_lock(ppu, mutex, 0); ret != CELL_OK)
+		if (error_code ret = lv2_syscall<sys_mutex_lock>(ppu, mutex, 0); ret != CELL_OK)
 		{
 			return ret;
 		}
@@ -767,7 +780,7 @@ public:
 			savestate = lpcm_dec_state::waiting_for_cmd_cond_wait;
 			cond_wait:
 
-			if (error_code ret = sys_cond_wait(ppu, cond, 0); ret != CELL_OK)
+			if (error_code ret = lv2_syscall<sys_cond_wait>(ppu, cond, 0); ret != CELL_OK)
 			{
 				return ret; // LLE doesn't unlock the mutex
 			}
@@ -780,7 +793,7 @@ public:
 
 		value--;
 
-		return sys_mutex_unlock(ppu, mutex);
+		return lv2_syscall<sys_mutex_unlock>(ppu, mutex);
 	}
 };
 

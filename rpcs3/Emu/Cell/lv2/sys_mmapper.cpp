@@ -333,7 +333,7 @@ error_code sys_mmapper_allocate_shared_memory_ext(ppu_thread& ppu, u64 ipc_key, 
 	}
 	}
 
-	if (flags & ~SYS_MEMORY_PAGE_SIZE_MASK)
+	if (flags & ~SYS_MEMORY_GRANULARITY_MASK)
 	{
 		return CELL_EINVAL;
 	}
@@ -400,6 +400,11 @@ error_code sys_mmapper_allocate_shared_memory_from_container_ext(ppu_thread& ppu
 
 	sys_mmapper.todo("sys_mmapper_allocate_shared_memory_from_container_ext(ipc_key=0x%x, size=0x%x, flags=0x%x, cid=0x%x, entries=*0x%x, entry_count=0x%x, mem_id=*0x%x)", ipc_key, size, flags, cid, entries,
 		entry_count, mem_id);
+
+	if (size == 0)
+	{
+		return CELL_EALIGN;
+	}
 
 	switch (flags & SYS_MEMORY_PAGE_SIZE_MASK)
 	{
@@ -546,8 +551,7 @@ error_code sys_mmapper_free_address(ppu_thread& ppu, u32 addr)
 
 	// If a memory block is freed, remove it from page notification table.
 	auto& pf_entries = g_fxo->get<page_fault_notification_entries>();
-	std::lock_guard lock(pf_entries.mutex);
-
+	std::unique_lock lock(pf_entries.mutex);
 	auto ind_to_remove = pf_entries.entries.begin();
 	for (; ind_to_remove != pf_entries.entries.end(); ++ind_to_remove)
 	{
@@ -558,7 +562,11 @@ error_code sys_mmapper_free_address(ppu_thread& ppu, u32 addr)
 	}
 	if (ind_to_remove != pf_entries.entries.end())
 	{
+		u32 port_id = ind_to_remove->port_id;
 		pf_entries.entries.erase(ind_to_remove);
+		lock.unlock();
+		sys_event_port_disconnect(ppu, port_id);
+		sys_event_port_destroy(ppu, port_id);
 	}
 
 	return CELL_OK;
@@ -826,13 +834,14 @@ error_code sys_mmapper_enable_page_fault_notification(ppu_thread& ppu, u32 start
 
 	vm::var<u32> port_id(0);
 	error_code res = sys_event_port_create(ppu, port_id, SYS_EVENT_PORT_LOCAL, SYS_MEMORY_PAGE_FAULT_EVENT_KEY);
-	sys_event_port_connect_local(ppu, *port_id, event_queue_id);
 
 	if (res + 0u == CELL_EAGAIN)
 	{
 		// Not enough system resources.
 		return CELL_EAGAIN;
 	}
+
+	sys_event_port_connect_local(ppu, *port_id, event_queue_id);
 
 	auto& pf_entries = g_fxo->get<page_fault_notification_entries>();
 	std::unique_lock lock(pf_entries.mutex);

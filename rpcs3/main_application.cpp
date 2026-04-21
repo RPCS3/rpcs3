@@ -2,6 +2,8 @@
 #include "main_application.h"
 #include "display_sleep_control.h"
 #include "gamemode_control.h"
+#include "rpcs3qt/gui_settings.h"
+#include "rpcs3qt/config_database.h"
 
 #include "util/types.hpp"
 #include "util/logs.hpp"
@@ -70,10 +72,15 @@ void main_application::InitializeEmulator(const std::string& user, bool show_gui
 	const std::string firmware_version = utils::get_firmware_version();
 	const std::string firmware_string  = firmware_version.empty() ? "Missing Firmware" : ("Firmware version: " + firmware_version);
 	sys_log.always()("%s", firmware_string);
+
+	rpcs3::utils::configure_logs(Emu.IsStopped());
 }
 
 void main_application::OnEmuSettingsChange()
 {
+	// Change logging
+	rpcs3::utils::configure_logs(Emu.IsStopped());
+
 	if (Emu.IsRunning())
 	{
 		enable_display_sleep(!g_cfg.misc.prevent_display_sleep);
@@ -81,9 +88,6 @@ void main_application::OnEmuSettingsChange()
 
 	if (!Emu.IsStopped())
 	{
-		// Change logging (only allowed during gameplay)
-		rpcs3::utils::configure_logs();
-
 		// Force audio provider
 		g_cfg.audio.provider.set(Emu.IsVsh() ? audio_provider::rsxaudio : audio_provider::cell_audio);
 	}
@@ -405,6 +409,29 @@ EmuCallbacks main_application::CreateCallbacks()
 		}
 
 		return path + suffix;
+	};
+
+	callbacks.get_database_config = [](const std::string& title_id)
+	{
+		if (title_id.empty())
+			return std::string();
+
+		sys_log.notice("Trying to retrieve database config for: '%s'", title_id);
+
+		const auto settings = std::make_shared<gui_settings>();
+		config_database config_db(settings, nullptr);
+		config_db.request_config_database(false);
+
+		if (!config_db.has_config(title_id))
+			return std::string();
+
+		if (const auto config = config_db.get_config(title_id))
+		{
+			sys_log.notice("Found database config for: '%s'", title_id);
+			return config.value();
+		}
+
+		return std::string();
 	};
 
 	return callbacks;

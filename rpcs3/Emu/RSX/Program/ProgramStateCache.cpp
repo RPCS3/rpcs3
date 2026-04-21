@@ -651,7 +651,7 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 		case RSX_FP_OPCODE_TXB:
 		case RSX_FP_OPCODE_TXL:
 			result.referenced_textures_mask |= (1 << d0.tex_num);
-			result.has_tex_bx2_conv |= !!d0.exp_tex;
+			result.bx2_texture_reads_mask |= ((d0.exp_tex ? 1u : 0u) << d0.tex_num);
 			break;
 		case RSX_FP_OPCODE_PK4:
 		case RSX_FP_OPCODE_UP4:
@@ -675,10 +675,11 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 			// Otherwise we would need to follow the execution chain
 			result.has_branch_instructions = true;
 			break;
+		default:
+			break;
 		}
 
-		if (rsx::assembler::FP::get_operand_count(opcode) > 0 &&
-			is_any_src_constant(inst))
+		if (is_any_src_constant(inst))
 		{
 			// Instruction references constant, skip one slot occupied by data
 			index++;

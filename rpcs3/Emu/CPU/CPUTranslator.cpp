@@ -201,9 +201,16 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 		m_use_vnni = true;
 		m_use_gfni = true;
 	}
+
+#ifdef ARCH_ARM64
+	if (utils::has_dotprod())
+	{
+		m_use_dotprod = true;
+	}
+#endif
 }
 
-llvm::Value* cpu_translator::bitcast(llvm::Value* val, llvm::Type* type) const
+llvm::Value* cpu_translator::bitcast(llvm::Value* val, llvm::Type* type, std::source_location src_loc) const
 {
 	uint s1 = type->getScalarSizeInBits();
 	uint s2 = val->getType()->getScalarSizeInBits();
@@ -215,15 +222,81 @@ llvm::Value* cpu_translator::bitcast(llvm::Value* val, llvm::Type* type) const
 
 	if (s1 != s2)
 	{
-		fmt::throw_exception("cpu_translator::bitcast(): incompatible type sizes (%u vs %u)", s1, s2);
+		fmt::throw_exception("cpu_translator::bitcast(): incompatible type sizes (%u vs %u)\nCalled from: %s", s1, s2, src_loc);
 	}
 
-	if (const auto c1 = llvm::dyn_cast<llvm::Constant>(val))
+	if (val->getType() == type)
+	{
+		return val;
+	}
+
+	llvm::CastInst* i;
+	llvm::Value* source_val = val;
+
+	// Try to reuse older bitcasts
+	while ((i = llvm::dyn_cast_or_null<llvm::CastInst>(source_val)) && i->getOpcode() == llvm::Instruction::BitCast)
+	{
+		source_val = i->getOperand(0);
+
+		if (source_val->getType() == type)
+		{
+			return source_val;
+		}
+	}
+
+	// Skip use iteration for values that don't have use lists
+#if LLVM_VERSION_MAJOR >= 21
+	if (source_val->hasUseList())
+#endif
+	{
+		for (llvm::Value* it_val : source_val->uses())
+		{
+			if (!it_val)
+			{
+				continue;
+			}
+
+			llvm::CastInst* bci = llvm::dyn_cast_or_null<llvm::CastInst>(it_val);
+
+			// Walk through bitcasts
+			while (bci && bci->getOpcode() == llvm::Instruction::BitCast)
+			{
+				if (bci->getParent() != m_ir->GetInsertBlock())
+				{
+					break;
+				}
+
+				if (bci->getType() == type)
+				{
+					return bci;
+				}
+
+				// Check if bci has use list before accessing use_begin()
+#if LLVM_VERSION_MAJOR >= 21
+				if (!bci->hasUseList())
+				{
+					break;
+				}
+#endif
+
+				if (bci->use_begin() == bci->use_end())
+				{
+					break;
+				}
+
+				bci = llvm::dyn_cast_or_null<llvm::CastInst>(*bci->use_begin());
+			}
+		}
+	}
+
+	// Do bitcast on the source
+
+	if (const auto c1 = llvm::dyn_cast<llvm::Constant>(source_val))
 	{
 		return ensure(llvm::ConstantFoldCastOperand(llvm::Instruction::BitCast, c1, type, m_module->getDataLayout()));
 	}
 
-	return m_ir->CreateBitCast(val, type);
+	return m_ir->CreateBitCast(source_val, type);
 }
 
 template <>
@@ -492,14 +565,25 @@ void cpu_translator::erase_stores(llvm::ArrayRef<llvm::Value*> args)
 {
 	for (auto v : args)
 	{
-		for (auto it = v->use_begin(); it != v->use_end(); ++it)
+		// Skip use iteration for values that don't have use lists
+#if LLVM_VERSION_MAJOR >= 21
+		if (!v->hasUseList())
+			continue;
+#endif
+
+		for (llvm::Value* i : v->uses())
 		{
-			llvm::Value* i = *it;
 			llvm::CastInst* bci = nullptr;
 
 			// Walk through bitcasts
 			while (i && (bci = llvm::dyn_cast<llvm::CastInst>(i)) && bci->getOpcode() == llvm::Instruction::BitCast)
 			{
+				// Check if bci has use list before accessing use_begin()
+#if LLVM_VERSION_MAJOR >= 21
+				if (!bci->hasUseList())
+					break;
+#endif
+
 				i = *bci->use_begin();
 			}
 
