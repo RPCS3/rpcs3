@@ -4953,6 +4953,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 	struct reduced_statistics_t : stats_t
 	{
+		atomic_t<u64> secret_compatible = 0;
 	};
 
 	// Pattern structures
@@ -6420,6 +6421,23 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					}
 				}
 
+				bool is_secret = true;
+
+				for (u32 i = 0; i < s_reg_max; i++)
+				{
+					if (::at32(reduced_loop->loop_dicts, i) || ::at32(reduced_loop->loop_writes, i))
+					{
+						if (auto reg_it = reduced_loop->find_reg(i))
+						{
+							if (reg_it->regs.test(s_reg_max))
+							{
+								is_secret = false;
+							}
+						}
+					}
+				}
+
+				reduced_loop->is_secret = is_secret;
 				reduced_loop_all.emplace(reduced_loop->loop_pc, *reduced_loop);
 				reduced_loop->discard();
 			}
@@ -7134,6 +7152,23 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 						}
 					}
 
+					bool is_secret = true;
+
+					for (u32 i = 0; i < s_reg_max; i++)
+					{
+						if (::at32(reduced_loop->loop_dicts, i) || ::at32(reduced_loop->loop_writes, i))
+						{
+							if (auto reg_it = reduced_loop->find_reg(i))
+							{
+								if (reg_it->regs.test(s_reg_max))
+								{
+									is_secret = false;
+								}
+							}
+						}
+					}
+
+					reduced_loop->is_secret = is_secret;
 					reduced_loop_all.emplace(reduced_loop->loop_pc, *reduced_loop);
 					reduced_loop->discard();
 				}
@@ -8624,6 +8659,10 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 	for (const auto& [loop_pc, pattern] : reduced_loop_all)
 	{
+		auto& stats = g_fxo->get<reduced_statistics_t>();
+
+		stats.all++;
+
 		if (!pattern.active || pattern.loop_pc == SPU_LS_SIZE)
 		{
 			continue;
@@ -8631,20 +8670,22 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 		if (inst_attr attr = m_inst_attrs[(loop_pc - entry_point) / 4]; attr == inst_attr::none)
 		{
+			stats.single++;
+
 			add_pattern(inst_attr::reduced_loop, loop_pc - result.entry_point, 0, std::make_shared<reduced_loop_t>(pattern));
 
 			std::string regs = "{";
 
-			for (const auto& [reg_num, reg] : pattern.regs)
+			for (u32 i = 0; i < s_reg_max; i++)
 			{
-				if (reg.is_loop_dictator(reg_num))
+				if (::at32(pattern.loop_dicts, i))
 				{
 					if (regs.size() != 1)
 					{
 						regs += ",";
 					}
 
-					fmt::append(regs, " r%u", reg_num);
+					fmt::append(regs, " r%u", i);
 				}
 			}
 
@@ -8683,10 +8724,10 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 			regs += " }";
 
-			spu_log.success("Reduced Loop Pattern Detected! (REGS: %s, DICT: r%d, ARG: %s, Incr: %s (%s), CMP/Size: %s/%u, loop_pc=0x%x, 0x%x-%s)", regs, pattern.cond_val_register_idx
+			spu_log.success("Reduced Loop Pattern Detected! (REGS: %s, DICT: r%d, ARG: %s, Incr: %s (%s), CMP/Size: %s/%u, loop_pc=0x%x, 0x%x-%s) [All=%u/%u, Secret=%s/%u]", regs, pattern.cond_val_register_idx
 				, pattern.cond_val_is_immediate ? fmt::format("0x%x", pattern.cond_val_min) : fmt::format("r%d", pattern.cond_val_register_argument_idx)
 				, pattern.cond_val_incr_is_immediate ? fmt::format("%d", static_cast<s32>(pattern.cond_val_incr)) : fmt::format("r%d", pattern.cond_val_incr), pattern.cond_val_incr_before_cond ? "BEFORE" : "AFTER"
-				, pattern.cond_val_compare, std::popcount(pattern.cond_val_mask), loop_pc, entry_point, func_hash);
+				, pattern.cond_val_compare, std::popcount(pattern.cond_val_mask), loop_pc, entry_point, func_hash, +stats.single, +stats.all, pattern.is_secret ? "true" : "false", stats.secret_compatible.add_fetch(pattern.is_secret ? 1 : 0));
 		}
 	}
 
