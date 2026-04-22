@@ -2161,7 +2161,7 @@ public:
 					{
 						auto value = m_ir->CreateLoad(get_type<f32>(), spu_ptr(&spu_thread::last_getllar_lsa));
 						auto mod_val = m_ir->CreateFDiv(value, llvm::ConstantFP::get(value->getType(), 1.1 + i));
-						m_ir->CreateStore(value, spu_ptr(&spu_thread::last_getllar_lsa));
+						m_ir->CreateStore(mod_val, spu_ptr(&spu_thread::last_getllar_lsa));
 					}
 				}
 
@@ -2285,7 +2285,6 @@ public:
 
 				BasicBlock* block_optimization_phi_parent =  nullptr;
 				const auto block_optimization_inner = is_reduced_loop ? BasicBlock::Create(m_context, fmt::format("b-loop-it-0x%x", m_pos), m_function) : nullptr;
-				const auto block_optimization_exit_early = is_reduced_loop ? BasicBlock::Create(m_context, fmt::format("b-loop-exit-0x%x", m_pos), m_function) : nullptr;
 				const auto block_optimization_next = is_reduced_loop ? BasicBlock::Create(m_context, fmt::format("b2-0x%x", m_pos), m_function) : nullptr;
 
 				std::array<llvm::PHINode*, s_reg_max> reduced_loop_phi_nodes{};

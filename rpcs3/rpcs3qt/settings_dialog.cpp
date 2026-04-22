@@ -1819,6 +1819,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->useNativeInterface, emu_settings_type::UseNativeInterface);
 	SubscribeTooltip(ui->useNativeInterface, tooltips.settings.use_native_interface);
 
+	m_emu_settings->EnhanceCheckBox(ui->useRecursiveScan, emu_settings_type::UseRecursiveScan);
+	SubscribeTooltip(ui->useRecursiveScan, tooltips.settings.use_recursive_scan);
+
 #if defined(__linux__)
 #if defined(GAMEMODE_AVAILABLE)
 	m_emu_settings->EnhanceCheckBox(ui->enableGamemode, emu_settings_type::EnableGamemode);

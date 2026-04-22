@@ -861,7 +861,7 @@ error_code sys_fs_test(ppu_thread&, u32 arg1, u32 arg2, vm::ptr<u32> arg3, u32 a
 	return CELL_OK;
 }
 
-lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s32 flags, s32 /*mode*/, lv2_file_type type, const lv2_fs_mount_info& mp)
+lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s32 flags, bool has_write_access, lv2_file_type type, const lv2_fs_mount_info& mp)
 {
 	// TODO: other checks for path
 
@@ -888,7 +888,7 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 		}
 	}
 
-	if (flags & CELL_FS_O_CREAT)
+	if (flags & CELL_FS_O_CREAT && !mp.read_only)
 	{
 		open_mode += fs::create;
 
@@ -898,7 +898,7 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 		}
 	}
 
-	if (flags & CELL_FS_O_TRUNC)
+	if (flags & CELL_FS_O_TRUNC && !mp.read_only)
 	{
 		open_mode += fs::trunc;
 	}
@@ -906,6 +906,7 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 	if (flags & CELL_FS_O_MSELF)
 	{
 		open_mode = fs::read;
+
 		// mself can be mself or mself | rdonly
 		if (flags & ~(CELL_FS_O_MSELF | CELL_FS_O_RDONLY))
 		{
@@ -918,7 +919,7 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 		sys_fs.warning("lv2_file::open() called with CELL_FS_O_UNK flag enabled. FLAGS: %#o", flags);
 	}
 
-	if (mp.read_only)
+	if (mp.read_only || !has_write_access)
 	{
 		// Deactivate mutating flags on read-only FS
 		open_mode = fs::read;
@@ -970,12 +971,12 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 
 	if (!file)
 	{
-		if (mp.read_only)
+		if (mp.read_only || !has_write_access)
 		{
 			// Failed to create file on read-only FS (file doesn't exist)
-			if (flags & CELL_FS_O_ACCMODE && flags & CELL_FS_O_CREAT)
+			if (flags & CELL_FS_O_CREAT)
 			{
-				return {CELL_EPERM};
+				return {mp.read_only ? CELL_EPERM : CELL_EACCES};
 			}
 		}
 
@@ -988,6 +989,7 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 		{
 		case fs::error::notdir: return {CELL_ENOTDIR};
 		case fs::error::noent: return {CELL_ENOENT};
+		case fs::error::isdir: return {CELL_EISDIR};
 		default:
 		{
 			if (has_non_directory_components(local_path))
@@ -998,6 +1000,11 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 			fmt::throw_exception("unknown error %s", error);
 		}
 		}
+	}
+
+	if (flags & CELL_FS_O_TRUNC && (mp.read_only || !has_write_access))
+	{
+		return {mp.read_only ? CELL_EPERM : CELL_EACCES};
 	}
 
 	if (flags & CELL_FS_O_MSELF && !verify_mself(file))
@@ -1113,11 +1120,6 @@ lv2_file::open_result_t lv2_file::open(std::string_view vpath, s32 flags, s32 mo
 		return {CELL_ENOTMOUNTED, path};
 	}
 
-	if (flags & CELL_FS_O_CREAT && !has_fs_write_rights(vpath) && !fs::is_dir(local_path))
-	{
-		return {CELL_EACCES};
-	}
-
 	lv2_file_type type = lv2_file_type::regular;
 
 	if (size == 8)
@@ -1132,7 +1134,7 @@ lv2_file::open_result_t lv2_file::open(std::string_view vpath, s32 flags, s32 mo
 		}
 	}
 
-	auto [error, file] = open_raw(local_path, flags, mode, type, mp);
+	auto [error, file] = open_raw(local_path, flags, has_fs_write_rights(vpath), type, mp);
 
 	return {.error = error, .ppath = std::move(path), .real_path = std::move(local_path), .file = std::move(file), .type = type};
 }
@@ -1823,12 +1825,12 @@ error_code sys_fs_mkdir(ppu_thread& ppu, vm::cptr<char> path, s32 mode)
 		return {CELL_EROFS, path};
 	}
 
+	std::lock_guard lock(mp->mutex);
+
 	if (!fs::exists(local_path) && !has_fs_write_rights(path.get_ptr()))
 	{
 		return {CELL_EACCES, path};
 	}
-
-	std::lock_guard lock(mp->mutex);
 
 	if (!fs::create_dir(local_path))
 	{
@@ -1953,25 +1955,25 @@ error_code sys_fs_rmdir(ppu_thread& ppu, vm::cptr<char> path)
 
 	if (mp == &g_mp_sys_dev_root)
 	{
-		return {CELL_EPERM, path};
+		return {CELL_EPERM, vpath};
 	}
 
 	if (local_path.empty())
 	{
-		return {CELL_ENOTMOUNTED, path};
+		return {CELL_ENOTMOUNTED, vpath};
 	}
 
 	if (mp.read_only)
 	{
-		return {CELL_EROFS, path};
-	}
-
-	if (fs::is_dir(local_path) && !has_fs_write_rights(path.get_ptr()))
-	{
-		return {CELL_EACCES};
+		return {CELL_EROFS, vpath};
 	}
 
 	std::lock_guard lock(mp->mutex);
+
+	if (fs::is_dir(local_path) && !has_fs_write_rights(vpath))
+	{
+		return {CELL_EACCES, vpath};
+	}
 
 	if (!fs::remove_dir(local_path))
 	{
@@ -1984,7 +1986,7 @@ error_code sys_fs_rmdir(ppu_thread& ppu, vm::cptr<char> path)
 		{
 			if (has_non_directory_components(local_path))
 			{
-				return { CELL_ENOTDIR, path };
+				return { CELL_ENOTDIR, vpath };
 			}
 
 			fmt::throw_exception("unknown error %s", error);
@@ -1992,7 +1994,7 @@ error_code sys_fs_rmdir(ppu_thread& ppu, vm::cptr<char> path)
 		}
 	}
 
-	sys_fs.notice("sys_fs_rmdir(): directory %s removed", path);
+	sys_fs.notice("sys_fs_rmdir(): directory %s removed", vpath);
 	return CELL_OK;
 }
 
