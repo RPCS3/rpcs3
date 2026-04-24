@@ -13,6 +13,7 @@
 #include "Emu/system_utils.hpp"
 #include "Utilities/File.h"
 #include "Loader/ISO.h"
+#include "Loader/iso_cache.h"
 #include <cmath>
 
 LOG_CHANNEL(gui_log, "GUI");
@@ -708,6 +709,15 @@ namespace gui
 		{
 			if (icon_path.empty() || archive_path.empty()) return false;
 			if (!is_file_iso(archive_path)) return false;
+
+			// Check cache first — avoids constructing a full iso_archive just for the icon.
+			iso_metadata_cache_entry cache_entry{};
+			if (iso_cache::load(archive_path, cache_entry) && !cache_entry.icon_data.empty())
+			{
+				const QByteArray data(reinterpret_cast<const char*>(cache_entry.icon_data.data()),
+				                      static_cast<qsizetype>(cache_entry.icon_data.size()));
+				return icon.loadFromData(data);
+			}
 
 			iso_archive archive(archive_path);
 			if (!archive.exists(icon_path)) return false;

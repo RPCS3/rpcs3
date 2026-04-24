@@ -754,21 +754,31 @@ namespace vk
 		if (src != dst) dst->pop_layout(cmd);
 	}
 
-	template <typename WordType, bool SwapBytes>
-	cs_deswizzle_base* get_deswizzle_transformation(u32 block_size)
+	template <typename BaseType, typename BlockType>
+	cs_deswizzle_base* get_deswizzle_transformation_swapped(bool swap_bytes)
+	{
+		if (swap_bytes) [[ likely ]]
+		{
+			return vk::get_compute_task<cs_deswizzle_3d<BaseType, BlockType, true>>();
+		}
+
+		return vk::get_compute_task<cs_deswizzle_3d<BaseType, BlockType, false>>();
+	}
+
+	template <typename WordType>
+	cs_deswizzle_base* get_deswizzle_transformation(u32 block_size, bool swap_bytes)
 	{
 		switch (block_size)
 		{
 		case 1:
-			return vk::get_compute_task<cs_deswizzle_3d<u8, u8, false>>();
+			return get_deswizzle_transformation_swapped<u8, u8>(swap_bytes);
 		case 2:
-			return vk::get_compute_task<cs_deswizzle_3d<u16, WordType, SwapBytes>>();
+			return get_deswizzle_transformation_swapped<u16, WordType>(swap_bytes);
 		case 4:
-			return vk::get_compute_task<cs_deswizzle_3d<u32, WordType, SwapBytes>>();
 		case 8:
-			return vk::get_compute_task<cs_deswizzle_3d<u64, WordType, SwapBytes>>();
 		case 16:
-			return vk::get_compute_task<cs_deswizzle_3d<u128, WordType, SwapBytes>>();
+			// Maximum block size on RSX is 4 bytes. Wider blocks are stored as multiple texels.
+			return get_deswizzle_transformation_swapped<u32, WordType>(swap_bytes);
 		default:
 			fmt::throw_exception("Unreachable");
 		}
@@ -778,37 +788,22 @@ namespace vk
 	{
 		// NOTE: This has to be done individually for every LOD
 		vk::cs_deswizzle_base* job = nullptr;
-		const auto block_size = (word_size * word_count);
+		const u32 block_size = (word_size * word_count);
+		const u32 scale_x = std::max(block_size / 4u, 1u); // Virtual width multiplier. RSX only does texel sizes upto 32 bits.
 
-		if (!swap_bytes)
+		switch (word_size)
 		{
-			switch (word_size)
-			{
-			case 1:
-				job = get_deswizzle_transformation<u8, false>(block_size);
-				break;
-			case 2:
-				job = get_deswizzle_transformation<u16, false>(block_size);
-				break;
-			case 4:
-				job = get_deswizzle_transformation<u32, false>(block_size);
-				break;
-			default:
-				fmt::throw_exception("Unimplemented deswizzle for format.");
-			}
-		}
-		else
-		{
-			ensure(word_size == 2 || word_size == 4);
-
-			if (word_size == 4)
-			{
-				job = get_deswizzle_transformation<u32, true>(block_size);
-			}
-			else
-			{
-				job = get_deswizzle_transformation<u16, true>(block_size);
-			}
+		case 1:
+			job = get_deswizzle_transformation<u8>(block_size, swap_bytes);
+			break;
+		case 2:
+			job = get_deswizzle_transformation<u16>(block_size, swap_bytes);
+			break;
+		case 4:
+			job = get_deswizzle_transformation<u32>(block_size, swap_bytes);
+			break;
+		default:
+			fmt::throw_exception("Unimplemented deswizzle for format.");
 		}
 
 		ensure(job);
@@ -868,7 +863,7 @@ namespace vk
 			const u32 src_off32 = static_cast<u32>(src_offset);
 
 			job->run(cmd, scratch_buf, buf_off32, scratch_buf, src_off32, data_length,
-				section.imageExtent.width, section.imageExtent.height, section.imageExtent.depth, packet.second);
+				section.imageExtent.width * scale_x, section.imageExtent.height, section.imageExtent.depth, packet.second);
 		}
 
 		ensure(dst_offset <= scratch_buf->size());

@@ -2,6 +2,8 @@
 #include "main_application.h"
 #include "display_sleep_control.h"
 #include "gamemode_control.h"
+#include "rpcs3qt/gui_settings.h"
+#include "rpcs3qt/config_database.h"
 
 #include "util/types.hpp"
 #include "util/logs.hpp"
@@ -407,6 +409,29 @@ EmuCallbacks main_application::CreateCallbacks()
 		}
 
 		return path + suffix;
+	};
+
+	callbacks.get_database_config = [](const std::string& title_id)
+	{
+		if (title_id.empty())
+			return std::string();
+
+		sys_log.notice("Trying to retrieve database config for: '%s'", title_id);
+
+		const auto settings = std::make_shared<gui_settings>();
+		config_database config_db(settings, nullptr);
+		config_db.request_config_database(false);
+
+		if (!config_db.has_config(title_id))
+			return std::string();
+
+		if (const auto config = config_db.get_config(title_id))
+		{
+			sys_log.notice("Found database config for: '%s'", title_id);
+			return config.value();
+		}
+
+		return std::string();
 	};
 
 	return callbacks;

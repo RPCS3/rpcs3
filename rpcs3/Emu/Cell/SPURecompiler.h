@@ -540,13 +540,11 @@ public:
 					{
 					case spu_itype::XSBH:
 					{
-						const auto prev_type = modified == 1 ? mod1_type : mod2_type;
 						is_ok &= mod1_type == spu_itype::CEQB || mod1_type == spu_itype::CEQBI || mod1_type == spu_itype::CGTB || mod1_type == spu_itype::CGTBI || mod1_type == spu_itype::CLGTB || mod1_type == spu_itype::CLGTBI;
 						break;
 					}
 					case spu_itype::ANDI:
 					{
-						const auto prev_type = modified == 1 ? mod1_type : mod2_type;
 						is_ok &= mod1_type == spu_itype::CEQB || mod1_type == spu_itype::CEQBI || mod1_type == spu_itype::CGTB || mod1_type == spu_itype::CGTBI || mod1_type == spu_itype::CLGTB || mod1_type == spu_itype::CLGTBI;
 						is_ok &= (spu_opcode_t{imm}.si10 & 0xff) == 0xff;
 						break;
@@ -577,6 +575,10 @@ public:
 					{
 						is_ok = modified == 1 && (mod1_type == spu_itype::AI || mod1_type == spu_itype::AHI);
 						IMM = spu_opcode_t{imm}.si10;
+						break;
+					}
+					default:
+					{
 						break;
 					}
 					}

@@ -60,7 +60,6 @@ const extern spu_decoder<spu_iflag> g_spu_iflag;
 #pragma GCC diagnostic pop
 #endif
 
-#pragma optimize("", off)
 #ifdef ARCH_ARM64
 #include "Emu/CPU/Backends/AArch64/AArch64JIT.h"
 #endif
@@ -2162,7 +2161,7 @@ public:
 					{
 						auto value = m_ir->CreateLoad(get_type<f32>(), spu_ptr(&spu_thread::last_getllar_lsa));
 						auto mod_val = m_ir->CreateFDiv(value, llvm::ConstantFP::get(value->getType(), 1.1 + i));
-						m_ir->CreateStore(value, spu_ptr(&spu_thread::last_getllar_lsa));
+						m_ir->CreateStore(mod_val, spu_ptr(&spu_thread::last_getllar_lsa));
 					}
 				}
 
@@ -2286,7 +2285,6 @@ public:
 
 				BasicBlock* block_optimization_phi_parent =  nullptr;
 				const auto block_optimization_inner = is_reduced_loop ? BasicBlock::Create(m_context, fmt::format("b-loop-it-0x%x", m_pos), m_function) : nullptr;
-				const auto block_optimization_exit_early = is_reduced_loop ? BasicBlock::Create(m_context, fmt::format("b-loop-exit-0x%x", m_pos), m_function) : nullptr;
 				const auto block_optimization_next = is_reduced_loop ? BasicBlock::Create(m_context, fmt::format("b2-0x%x", m_pos), m_function) : nullptr;
 
 				std::array<llvm::PHINode*, s_reg_max> reduced_loop_phi_nodes{};
@@ -2618,8 +2616,6 @@ public:
 					{
 						if (auto init_val = reduced_loop_init_regs[i])
 						{
-							llvm::Type* type = g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate && bb.reg_maybe_xf[i] ? get_type<f64[4]>() : get_reg_type(i);
-
 							const auto _phi = m_ir->CreatePHI(init_val->getType(), 2, fmt::format("reduced_0x%05x_r%u", baddr, i));
 							_phi->addIncoming(init_val, prev_insert_block);
 
@@ -4357,6 +4353,16 @@ public:
 		{
 			switch (op.ra)
 			{
+			case SPU_WrOutMbox:
+			{
+				res.value = wait_rchcnt(::offset32(&spu_thread::ch_out_mbox), true);
+				break;
+			}
+			case SPU_WrOutIntrMbox:
+			{
+				res.value = wait_rchcnt(::offset32(&spu_thread::ch_out_intr_mbox), true);
+				break;
+			}
 			case SPU_RdSigNotify1:
 			{
 				res.value = wait_rchcnt(::offset32(&spu_thread::ch_snr1));

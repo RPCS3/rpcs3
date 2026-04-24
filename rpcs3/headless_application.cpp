@@ -58,7 +58,7 @@ void headless_application::InitializeCallbacks()
 				on_exit();
 			}
 
-			sys_log.notice("Quitting headless application");
+			sys_log.notice("Quitting headless application (force_quit=%d)", force_quit);
 			quit();
 			return true;
 		}

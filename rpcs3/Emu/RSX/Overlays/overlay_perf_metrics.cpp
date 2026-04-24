@@ -934,7 +934,7 @@ namespace rsx
 				auto& perf_settings = g_cfg.video.perf_overlay;
 				auto perf_overlay = manager->get<rsx::overlays::perf_metrics_overlay>();
 
-				if (perf_settings.perf_overlay_enabled)
+				if (perf_settings.enabled)
 				{
 					if (!perf_overlay)
 					{
@@ -949,7 +949,7 @@ namespace rsx
 					perf_overlay->set_font(perf_settings.font);
 					perf_overlay->set_font_size(perf_settings.font_size);
 					perf_overlay->set_margins(static_cast<f32>(perf_settings.margin_x.get()), static_cast<f32>(perf_settings.margin_y.get()), perf_settings.center_x.get(), perf_settings.center_y.get());
-					perf_overlay->use_window_space = perf_settings.perf_overlay_use_window_space.get();
+					perf_overlay->use_window_space = perf_settings.use_window_space.get();
 					perf_overlay->set_opacity(perf_settings.opacity / 100.f);
 					perf_overlay->set_body_colors(perf_settings.color_body, perf_settings.background_body);
 					perf_overlay->set_title_colors(perf_settings.color_title, perf_settings.background_title);

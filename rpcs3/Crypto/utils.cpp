@@ -23,7 +23,24 @@
 
 // Auxiliary functions (endian swap, xor).
 
-// Hex string conversion auxiliary functions.
+// Bytes conversion auxiliary function.
+void bytes_to_hex(std::string& hex_str, const unsigned char* data, unsigned int data_length)
+{
+	size_t str_length = data_length * 2;
+
+	hex_str.resize(str_length);
+
+	for (size_t i = 0; i < str_length; i += 2)
+	{
+		const auto [ptr, err] = std::to_chars(hex_str.data() + i, hex_str.data() + i + 2, *data++, 16);
+		if (err != std::errc())
+		{
+			fmt::throw_exception("Failed to read bytes: %s", std::make_error_code(err).message());
+		}
+	}
+}
+
+// Hex string conversion auxiliary function.
 void hex_to_bytes(unsigned char* data, std::string_view hex_str, unsigned int str_length)
 {
 	const auto strn_length = (str_length > 0) ? str_length : hex_str.size();

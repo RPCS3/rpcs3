@@ -145,11 +145,8 @@ void find_dialog::find(find_type type)
 
 			m_count_lines++;
 
-			int pos_count = 0;
-
 			for (int pos : positions)
 			{
-				pos_count++;
 				word_count++;
 
 				if (is_current_block && is_current_line && pos == current_pos)

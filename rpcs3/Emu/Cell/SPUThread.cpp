@@ -7219,6 +7219,12 @@ s64 spu_channel::pop_wait(cpu_thread& spu, bool pop)
 			{
 				if (u64 v = jostling_value.exchange(0); !(v & bit_occupy))
 				{
+					while (data & bit_wait)
+					{
+						// Wait until notifying thread finishes operation
+						busy_wait(500);
+					}
+
 					return static_cast<u32>(v);
 				}
 

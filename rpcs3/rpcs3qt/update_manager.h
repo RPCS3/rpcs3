@@ -16,10 +16,11 @@ class update_manager final :  public QObject
 public:
 	update_manager(QObject* parent, std::shared_ptr<gui_settings> gui_settings);
 	void check_for_updates(bool automatic, bool check_only, bool auto_accept, QWidget* parent = nullptr);
-	void update(bool auto_accept);
+	void update(bool auto_accept, bool is_first_call);
 
 Q_SIGNALS:
 	void signal_update_available(bool update_available);
+	void signal_download_additional_files(bool auto_accept);
 
 private:
 	downloader* m_downloader = nullptr;
@@ -29,6 +30,7 @@ private:
 
 	struct changelog_data
 	{
+		int pr = 0;
 		QString version;
 		QString title;
 	};

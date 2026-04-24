@@ -24,6 +24,7 @@ mkdir ./bin/config
 mkdir ./bin/config/input_configs
 curl -fsSL 'https://raw.githubusercontent.com/gabomdq/SDL_GameControllerDB/master/gamecontrollerdb.txt' 1> ./bin/config/input_configs/gamecontrollerdb.txt
 curl -fsSL 'https://rpcs3.net/compatibility?api=v1&export' | iconv -f ISO-8859-1 -t UTF-8 1> ./bin/GuiConfigs/compat_database.dat
+curl -fsSL 'https://api.rpcs3.net/config/?api=v1' | iconv -f ISO-8859-1 -t UTF-8 1> ./bin/GuiConfigs/config_database.dat
 
 # Download translations
 mkdir -p ./bin/share/qt6/translations

@@ -28,8 +28,8 @@ public:
 		const QString debug_console_mode           = tr("Increases the amount of usable system memory to match a DECR console and more.\nCauses some software to behave differently than on retail hardware.");
 		const QString accurate_rsx_access          = tr("Forces RSX pauses on SPU MFC_GETLLAR and SPU MFC_PUTLLUC operations.");
 		const QString accurate_spu_dma             = tr("Accurately processes SPU DMA operations.");
-		const QString fixup_ppunj                  = tr("Legacy option. Fixup result vector values in Non-Java Mode in PPU LLVM.\nIf unsure, do not modify this setting.");
 		const QString accurate_dfma                = tr("Use accurate double-precision FMA instructions in PPU and SPU backends.\nWhile disabling it might give a decent performance boost if your CPU doesn't support FMA, it may also introduce subtle bugs that otherwise do not occur.\nYou shouldn't disable it if your CPU supports FMA.");
+		const QString fixup_ppunj                  = tr("Legacy option. Fixup result vector values in Non-Java Mode in PPU LLVM.\nIf unsure, do not modify this setting.");
 		const QString fixup_ppuvnan                = tr("Fixup NaN results in vector instructions in PPU backends.\nIf unsure, do not modify this setting.");
 		const QString silence_all_logs             = tr("Stop writing any logs after game startup. Don't use unless you believe it's necessary.");
 		const QString read_color                   = tr("Initializes render target memory using vm memory.");
@@ -157,6 +157,7 @@ public:
 		const QString show_fatal_error_hints       = tr("Shows fatal error hints using the native overlay.");
 		const QString show_capture_hints           = tr("Shows screenshot and recording hints using the native overlay.");
 		const QString use_native_interface         = tr("Enables use of native HUD within the game window that can interact with game controllers.\nWhen disabled, regular Qt dialogs are used instead.\nCurrently, the on-screen keyboard only supports the English key layout.");
+		const QString use_recursive_scan           = tr("Enables use of recursive scan on subfolders when scanning games from the selected folder.\nWhen disabled, games are scanned only on the selected folder.");
 		const QString record_with_overlays         = tr("Enables recording with overlays.\nThis also affects screenshots.");
 		const QString pause_during_home_menu       = tr("When enabled, opening the home menu will also pause emulation.\nWhile most games pause themselves while the home menu is shown, some do not.\nIn that case it can be helpful to pause the emulation whenever the home menu is open.");
 		const QString play_music_during_boot       = tr("Play music during boot sequence if available.");

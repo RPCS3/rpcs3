@@ -56,19 +56,12 @@ namespace gl
 				data_length, width, height, depth, 1);
 			break;
 		case 4:
+		case 8:
+		case 16:
+			// RSX quirk - texels wider than 32 bits are treated as multiple texels!
 			gl::get_compute_task<gl::cs_deswizzle_3d<u32, WordType, SwapBytes>>()->run(
 				cmd, dst, dst_offset, src, src_offset,
-				data_length, width, height, depth, 1);
-			break;
-		case 8:
-			gl::get_compute_task<gl::cs_deswizzle_3d<u64, WordType, SwapBytes>>()->run(
-				cmd, dst, dst_offset, src, src_offset,
-				data_length, width, height, depth, 1);
-			break;
-		case 16:
-			gl::get_compute_task<gl::cs_deswizzle_3d<u128, WordType, SwapBytes>>()->run(
-				cmd, dst, dst_offset, src, src_offset,
-				data_length, width, height, depth, 1);
+				data_length, width * (block_size / 4), height, depth, 1);
 			break;
 		default:
 			fmt::throw_exception("Unreachable");

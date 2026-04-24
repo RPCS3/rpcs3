@@ -572,7 +572,7 @@ void keyboard_pad_handler::mousePressEvent(QMouseEvent* event)
 		return;
 	}
 
-	Key(event->button(), true);
+	Key(mouse::button + static_cast<u32>(event->button()), true);
 	event->ignore();
 }
 
@@ -583,7 +583,7 @@ void keyboard_pad_handler::mouseReleaseEvent(QMouseEvent* event)
 		return;
 	}
 
-	Key(event->button(), false, 0);
+	Key(mouse::button + static_cast<u32>(event->button()), false, 0);
 	event->ignore();
 }
 
@@ -788,7 +788,7 @@ std::vector<pad_list_entry> keyboard_pad_handler::list_devices()
 
 std::string keyboard_pad_handler::GetMouseName(const QMouseEvent* event)
 {
-	return GetMouseName(event->button());
+	return GetMouseName(static_cast<u32>(mouse::button) + static_cast<u32>(event->button()));
 }
 
 std::string keyboard_pad_handler::GetMouseName(u32 button)
@@ -902,13 +902,13 @@ std::string keyboard_pad_handler::GetKeyName(const u32& keyCode)
 	return QKeySequence(keyCode).toString(QKeySequence::NativeText).toStdString();
 }
 
-std::vector<std::set<u32>> keyboard_pad_handler::GetKeyCombos(const cfg::string& cfg_string)
+std::vector<std::set<u32>> keyboard_pad_handler::GetKeyCombos(const std::string& cfg_string)
 {
 	std::vector<std::set<u32>> res;
 
-	for (const pad::combo& combo : cfg_pad::get_combos(cfg_string.to_string()))
+	for (const pad::combo& combo : cfg_pad::get_combos(cfg_string))
 	{
-		std::set<u32> key_codes;
+		std::set<u32> key_codes = find_key_codes(mouse_list, combo);
 
 		for (const std::string& button : combo.buttons())
 		{
@@ -1062,8 +1062,7 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 
 	const auto find_combos = [this](const cfg::string& name)
 	{
-		std::vector<std::set<u32>> combos = find_key_combos(mouse_list, name);
-		for (const std::set<u32>& combo : GetKeyCombos(name)) combos.push_back(combo);
+		const std::vector<std::set<u32>> combos = GetKeyCombos(name.to_string());
 
 		if (!combos.empty())
 		{

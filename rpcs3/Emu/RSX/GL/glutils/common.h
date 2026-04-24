@@ -99,7 +99,10 @@ namespace gl
 	// Very useful util when capturing traces with RenderDoc
 	static inline void push_debug_label(std::string_view label)
 	{
-		glInsertEventMarkerEXT(static_cast<GLsizei>(label.size()), label.data());
+		if (glInsertEventMarkerEXT)
+		{
+			glInsertEventMarkerEXT(static_cast<GLsizei>(label.size()), label.data());
+		}
 	}
 
 	// Checks if GL state is still valid

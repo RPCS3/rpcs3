@@ -234,49 +234,42 @@ struct copy_unmodified_block_swizzled
 		if (std::is_same_v<T, U> && dst_pitch_in_block == width_in_block && words_per_block == 1 && !border)
 		{
 			rsx::convert_linear_swizzle_3d<T>(src.data(), dst.data(), width_in_block, row_count, depth);
+			return;
+		}
+
+		u32 padded_width, padded_height;
+		if (border)
+		{
+			padded_width = rsx::next_pow2(width_in_block + border + border);
+			padded_height = rsx::next_pow2(row_count + border + border);
 		}
 		else
 		{
-			u32 padded_width, padded_height;
-			if (border)
-			{
-				padded_width = rsx::next_pow2(width_in_block + border + border);
-				padded_height = rsx::next_pow2(row_count + border + border);
-			}
-			else
-			{
-				padded_width = width_in_block;
-				padded_height = row_count;
-			}
-
-			const u32 size_in_block = padded_width * padded_height * depth * 2;
-			rsx::simple_array<U, sizeof(u128)> tmp(size_in_block * words_per_block);
-
-			if (words_per_block == 1) [[likely]]
-			{
-				rsx::convert_linear_swizzle_3d<T>(src.data(), tmp.data(), padded_width, padded_height, depth);
-			}
-			else
-			{
-				switch (words_per_block * sizeof(T))
-				{
-				case 4:
-					rsx::convert_linear_swizzle_3d<u32>(src.data(), tmp.data(), padded_width, padded_height, depth);
-					break;
-				case 8:
-					rsx::convert_linear_swizzle_3d<u64>(src.data(), tmp.data(), padded_width, padded_height, depth);
-					break;
-				case 16:
-					rsx::convert_linear_swizzle_3d<u128>(src.data(), tmp.data(), padded_width, padded_height, depth);
-					break;
-				default:
-					fmt::throw_exception("Failed to decode swizzled format, words_per_block=%d, src_type_size=%d", words_per_block, sizeof(T));
-				}
-			}
-
-			std::span<const U> src_span = tmp;
-			copy_unmodified_block::copy_mipmap_level(dst, src_span, words_per_block, width_in_block, row_count, depth, border, dst_pitch_in_block, padded_width);
+			padded_width = width_in_block;
+			padded_height = row_count;
 		}
+
+		const u32 size_in_block = padded_width * padded_height * depth * 2;
+		rsx::simple_array<U, sizeof(u128)> tmp(size_in_block * words_per_block);
+
+		switch (const u16 block_size = words_per_block * sizeof(T))
+		{
+		case 1:
+			rsx::convert_linear_swizzle_3d<u8>(src.data(), tmp.data(), padded_width, padded_height, depth);
+			break;
+		case 2:
+			rsx::convert_linear_swizzle_3d<u16>(src.data(), tmp.data(), padded_width, padded_height, depth);
+			break;
+		case 4:
+		case 8:
+		case 16:
+			// Maximum block size on RSX is 4 bytes. Wider blocks are stored as multiple texels.
+			rsx::convert_linear_swizzle_3d<u32>(src.data(), tmp.data(), padded_width * (block_size / 4), padded_height, depth);
+			break;
+		}
+
+		std::span<const U> src_span = tmp;
+		copy_unmodified_block::copy_mipmap_level(dst, src_span, words_per_block, width_in_block, row_count, depth, border, dst_pitch_in_block, padded_width);
 	}
 };
 

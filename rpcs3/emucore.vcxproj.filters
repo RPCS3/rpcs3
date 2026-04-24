@@ -1429,6 +1429,9 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_select.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
+    <ClCompile Include="Loader\iso_validation.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2874,6 +2877,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Common\aligned_malloc.hpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Loader\iso_validation.h">
+      <Filter>Loader</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

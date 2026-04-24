@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Loader/PSF.h"
+#include "PSF.h"
 
 #include "Utilities/File.h"
 #include "util/types.hpp"
@@ -11,6 +11,8 @@ bool is_file_iso(const fs::file& path);
 
 void load_iso(const std::string& path);
 void unload_iso();
+
+constexpr u64 ISO_SECTOR_SIZE = 2048;
 
 /*
 - Hijacked the "iso_archive::iso_archive" method to test if the ".iso" file is encrypted and sets a flag.
@@ -47,6 +49,15 @@ enum class iso_encryption_type
 	REDUMP
 };
 
+// Enum returned by checking type
+enum class iso_type_status
+{
+	NOT_ISO,
+	REDUMP_ISO,
+	ERROR_OPENING_KEY,
+	ERROR_PROCESSING_KEY
+};
+
 // ISO file decryption class
 class iso_file_decryption
 {
@@ -58,6 +69,8 @@ private:
 	void reset();
 
 public:
+	static iso_type_status check_type(const std::string& path, std::string& key_path, aes_context* aes_ctx = nullptr);
+
 	iso_encryption_type get_enc_type() const { return m_enc_type; }
 
 	bool init(const std::string& path);

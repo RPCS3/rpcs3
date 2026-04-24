@@ -148,13 +148,13 @@ public:
 	void RequestCompatibility(bool online = false);
 
 	/** Returns the compatibility status for the requested title */
-	compat::status GetCompatibility(const std::string& title_id);
+	compat::status GetCompatibility(const std::string& title_id) const;
 
 	/** Returns the data for the requested status */
 	compat::status GetStatusData(const QString& status) const;
 
 	/** Returns package information like title, version, changelog etc. */
-	static compat::package_info GetPkgInfo(const QString& pkg_path, game_compatibility* compat);
+	static compat::package_info GetPkgInfo(const QString& pkg_path, const game_compatibility* compat);
 
 Q_SIGNALS:
 	void DownloadStarted();

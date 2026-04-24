@@ -13,9 +13,9 @@
 
 LOG_CHANNEL(compat_log, "Compat");
 
-game_compatibility::game_compatibility(std::shared_ptr<gui_settings> gui_settings, QWidget* parent)
+game_compatibility::game_compatibility(std::shared_ptr<gui_settings> settings, QWidget* parent)
 	: QObject(parent)
-	, m_gui_settings(std::move(gui_settings))
+	, m_gui_settings(std::move(settings))
 {
 	m_filepath = m_gui_settings->GetSettingsDir() + "/compat_database.dat";
 	m_downloader = new downloader(parent);
@@ -58,7 +58,7 @@ void game_compatibility::handle_download_finished(const QByteArray& content)
 		compat_log.success("Wrote database to file: %s", m_filepath);
 	}
 
-	// We have a new database in map, therefore refresh gamelist to new state
+	// We have a new database in map, therefore refresh game list to new state
 	Q_EMIT DownloadFinished();
 }
 
@@ -69,7 +69,16 @@ void game_compatibility::handle_download_canceled()
 
 bool game_compatibility::handle_json(const QByteArray& data, bool after_download)
 {
-	const QJsonObject json_data = QJsonDocument::fromJson(data).object();
+	QJsonParseError error {};
+	const QJsonDocument json_document = QJsonDocument::fromJson(data, &error);
+
+	if (!json_document.isObject())
+	{
+		compat_log.error("Database Error - Invalid JSON: '%s'", error.errorString());
+		return false;
+	}
+
+	const QJsonObject json_data = json_document.object();
 	const int return_code = json_data["return_code"].toInt(-255);
 
 	if (return_code < 0)
@@ -220,11 +229,11 @@ void game_compatibility::RequestCompatibility(bool online)
 
 	m_downloader->start(url, true, true, true, tr("Downloading Database"));
 
-	// We want to retrieve a new database, therefore refresh gamelist and indicate that
+	// We want to retrieve a new database, therefore refresh game list and indicate that
 	Q_EMIT DownloadStarted();
 }
 
-compat::status game_compatibility::GetCompatibility(const std::string& title_id)
+compat::status game_compatibility::GetCompatibility(const std::string& title_id) const
 {
 	if (m_compat_database.empty())
 	{
@@ -244,7 +253,7 @@ compat::status game_compatibility::GetStatusData(const QString& status) const
 	return ::at32(Status_Data, status);
 }
 
-compat::package_info game_compatibility::GetPkgInfo(const QString& pkg_path, game_compatibility* compat)
+compat::package_info game_compatibility::GetPkgInfo(const QString& pkg_path, const game_compatibility* compat)
 {
 	compat::package_info info;
 
