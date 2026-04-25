@@ -1375,7 +1375,7 @@ static error_code vdecOpen(ppu_thread& ppu, T type, U res, vm::cptr<CellVdecCb> 
 
 	if constexpr (std::is_same_v<std::decay_t<typename T::type>, CellVdecTypeEx>)
 	{
-		spec = type->codecSpecificInfo.get_ptr();
+		spec = type->codecSpecificInfo ? type->codecSpecificInfo.get_ptr() : nullptr;
 	}
 
 	VdecDecoderAttr attr;
