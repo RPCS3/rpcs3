@@ -133,6 +133,8 @@ namespace vk
 
 		operator VkPhysicalDevice() const;
 		operator VkInstance() const;
+
+		bool is_integrated_gpu() const { return props.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU; }
 	};
 
 	class render_device
