@@ -13,8 +13,10 @@ namespace vk
 {
 	enum data_heap_pool_flags
 	{
-		heap_pool_default = 0,
-		heap_pool_low_latency = 1,
+		heap_pool_default            = 0,
+		heap_pool_low_latency        = (1 << 0),
+		heap_pool_fixed_size         = (1 << 1),
+		heap_pool_force_vram_shadow  = (1 << 2),
 	};
 
 	class data_heap : public ::data_heap
@@ -23,6 +25,8 @@ namespace vk
 		usz initial_size = 0;
 		bool mapped = false;
 		void* _ptr = nullptr;
+
+		rsx::flags32_t m_flags = heap_pool_default;
 
 		bool notify_on_grow = false;
 		bool m_prefer_writethrough = false;
@@ -60,6 +64,7 @@ namespace vk
 
 		// Properties
 		bool is_dirty() const;
+		bool has_shadow() const { return !!shadow; }
 	};
 
 	extern data_heap* get_upload_heap();
