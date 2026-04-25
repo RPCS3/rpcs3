@@ -335,9 +335,17 @@ target_sources(rpcs3_emu PRIVATE
     Cell/Modules/HLE_PATCHES.cpp
     Cell/Modules/libad_async.cpp
     Cell/Modules/libad_core.cpp
+    Cell/Modules/libavcdec.cpp
+    Cell/Modules/libdivx311dec.cpp
+    Cell/Modules/libdivxdec.cpp
     Cell/Modules/libmedi.cpp
     Cell/Modules/libmixer.cpp
+    Cell/Modules/libmvcdec.cpp
+    Cell/Modules/libsjvtd.cpp
+    Cell/Modules/libsmvd2.cpp
+    Cell/Modules/libsmvd4.cpp
     Cell/Modules/libsnd3.cpp
+    Cell/Modules/libsvc1d.cpp
     Cell/Modules/libsynth2.cpp
     Cell/Modules/sceNp2.cpp
     Cell/Modules/sceNpClans.cpp

@@ -40,7 +40,7 @@ static std::array<serial_ver_t, 34> s_serial_versions;
 		return ::s_serial_versions[identifier].current_version;\
 	}
 
-SERIALIZATION_VER(global_version, 0,                            20) // For stuff not listed here
+SERIALIZATION_VER(global_version, 0,                            21) // For stuff not listed here
 SERIALIZATION_VER(ppu, 1,                                       1, 2/*PPU sleep order*/, 3/*PPU FNID and module*/)
 SERIALIZATION_VER(spu, 2,                                       1)
 SERIALIZATION_VER(lv2_sync, 3,                                  1)
@@ -325,7 +325,7 @@ std::string get_savestate_file(std::string_view title_id, std::string_view boot_
 					{
 						if (std::all_of(entry.begin() + uc_pos + 1, entry.begin() + dot_idx, [](char c) { return c >= '0' && c <= '9'; }))
 						{
-							save_files.emplace(entry, dir_entry.size);	
+							save_files.emplace(entry, dir_entry.size);
 						}
 					}
 				}
@@ -530,7 +530,7 @@ void clean_savestates(std::string_view title_id, std::string_view boot_path, usz
 		if (to_remove.empty())
 		{
 			break;
-		}	
+		}
 
 		if (!fs::remove_file(to_remove))
 		{
