@@ -236,17 +236,19 @@ namespace vk
 
 	void data_heap::sync(const vk::command_buffer& cmd)
 	{
-		if (!dirty_ranges.empty())
+		if (dirty_ranges.empty())
 		{
-			ensure(shadow);
-			ensure(heap);
-			vkCmdCopyBuffer(cmd, shadow->value, heap->value, ::size32(dirty_ranges), dirty_ranges.data());
-			dirty_ranges.clear();
-
-			insert_buffer_memory_barrier(cmd, heap->value, 0, heap->size(),
-				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
-				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+			return;
 		}
+
+		ensure(shadow);
+		ensure(heap);
+		vkCmdCopyBuffer(cmd, shadow->value, heap->value, ::size32(dirty_ranges), dirty_ranges.data());
+		dirty_ranges.clear();
+
+		insert_buffer_memory_barrier(cmd, heap->value, 0, heap->size(),
+			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
 	}
 
 	bool data_heap::is_dirty() const
