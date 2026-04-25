@@ -122,20 +122,22 @@ private:
 	u64 m_last_heap_sync_time = 0;
 	u32 m_texbuffer_view_size = 0;
 
-	vk::data_heap m_attrib_ring_info;                  // Vertex data
-	vk::data_heap m_fragment_constants_ring_info;      // Fragment program constants
-	vk::data_heap m_transform_constants_ring_info;     // Transform program constants
-	vk::data_heap m_fragment_env_ring_info;            // Fragment environment params
-	vk::data_heap m_vertex_env_ring_info;              // Vertex environment params
-	vk::data_heap m_fragment_texture_params_ring_info; // Fragment texture params
-	vk::data_heap m_vertex_layout_ring_info;           // Vertex layout structure
-	vk::data_heap m_index_buffer_ring_info;            // Index data
-	vk::data_heap m_texture_upload_buffer_ring_info;   // Texture upload heap
-	vk::data_heap m_raster_env_ring_info;              // Raster control such as polygon and line stipple
-	vk::data_heap m_instancing_buffer_ring_info;       // Instanced rendering data (constants indirection table + instanced constants)
+	vk::data_heap m_attrib_ring_info;                         // Vertex data
+	vk::data_heap m_fragment_constants_ring_info;             // Fragment program constants
+	vk::data_heap m_transform_constants_ring_info;            // Transform program constants
+	vk::data_heap m_fragment_env_ring_info;                   // Fragment environment params
+	vk::data_heap m_vertex_env_ring_info;                     // Vertex environment params
+	vk::data_heap m_fragment_texture_params_ring_info;        // Fragment texture params
+	vk::data_heap m_vertex_layout_ring_info;                  // Vertex layout structure
+	vk::data_heap m_index_buffer_ring_info;                   // Index data
+	vk::data_heap m_texture_upload_buffer_ring_info;          // Texture upload heap
+	vk::data_heap m_raster_env_ring_info;                     // Raster control such as polygon and line stipple
+	vk::data_heap m_instancing_buffer_ring_info;              // Instanced rendering data (constants indirection table + instanced constants)
 
-	vk::data_heap m_fragment_instructions_buffer;
-	vk::data_heap m_vertex_instructions_buffer;
+	vk::data_heap m_fragment_instructions_buffer;             // Interpreter FP block
+	vk::data_heap m_vertex_instructions_buffer;               // Interpreter VP block
+
+	rsx::simple_array<vk::data_heap*> m_flushable_data_heaps; // List of heaps that can be 'dirty' and need manual flush
 
 	VkDescriptorBufferInfoEx m_vertex_env_buffer_info {};
 	VkDescriptorBufferInfoEx m_fragment_env_buffer_info {};

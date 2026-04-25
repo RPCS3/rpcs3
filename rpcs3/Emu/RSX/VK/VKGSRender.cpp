@@ -535,6 +535,8 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 		std::ref(m_instancing_buffer_ring_info)
 	});
 
+	m_flushable_data_heaps = vk::data_heap_manager::to_list().filter(FN(x->has_shadow()));
+
 	const auto shadermode = g_cfg.video.shadermode.get();
 
 	if (shadermode == shader_mode::async_with_interpreter || shadermode == shader_mode::interpreter_only)
@@ -2297,32 +2299,16 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 
 	if (vk::test_status_interrupt(vk::heap_dirty))
 	{
-		if (m_attrib_ring_info.is_dirty() ||
-			m_fragment_env_ring_info.is_dirty() ||
-			m_vertex_env_ring_info.is_dirty() ||
-			m_fragment_texture_params_ring_info.is_dirty() ||
-			m_vertex_layout_ring_info.is_dirty() ||
-			m_fragment_constants_ring_info.is_dirty() ||
-			m_index_buffer_ring_info.is_dirty() ||
-			m_transform_constants_ring_info.is_dirty() ||
-			m_texture_upload_buffer_ring_info.is_dirty() ||
-			m_raster_env_ring_info.is_dirty() ||
-			m_instancing_buffer_ring_info.is_dirty())
+		if (const auto dirty_list = m_flushable_data_heaps.filter(FN(x->is_dirty()));
+			!dirty_list.empty())
 		{
 			auto secondary_command_buffer = m_secondary_cb_list.next();
 			secondary_command_buffer->begin();
 
-			m_attrib_ring_info.sync(*secondary_command_buffer);
-			m_fragment_env_ring_info.sync(*secondary_command_buffer);
-			m_vertex_env_ring_info.sync(*secondary_command_buffer);
-			m_fragment_texture_params_ring_info.sync(*secondary_command_buffer);
-			m_vertex_layout_ring_info.sync(*secondary_command_buffer);
-			m_fragment_constants_ring_info.sync(*secondary_command_buffer);
-			m_index_buffer_ring_info.sync(*secondary_command_buffer);
-			m_transform_constants_ring_info.sync(*secondary_command_buffer);
-			m_texture_upload_buffer_ring_info.sync(*secondary_command_buffer);
-			m_raster_env_ring_info.sync(*secondary_command_buffer);
-			m_instancing_buffer_ring_info.sync(*secondary_command_buffer);
+			for (auto& heap : dirty_list)
+			{
+				heap->sync(*secondary_command_buffer);
+			}
 
 			secondary_command_buffer->end();
 
