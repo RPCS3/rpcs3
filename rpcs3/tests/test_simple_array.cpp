@@ -378,6 +378,21 @@ namespace rsx
 		}
 	}
 
+	TEST(SimpleArray, ForEach)
+	{
+		rsx::simple_array<int> arr{
+			0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+		};
+		arr.for_each(FN(x += 10));
+
+		EXPECT_EQ(arr.size(), 10);
+
+		for (int i = 0; i < 10; ++i)
+		{
+			EXPECT_EQ(arr[i], i + 10);
+		}
+	}
+
 	TEST(AlignedAllocator, Alloc)
 	{
 		auto ptr = rsx::aligned_allocator::malloc<256>(16);

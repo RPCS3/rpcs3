@@ -634,5 +634,11 @@ namespace rsx
 			}
 			return accumulate;
 		}
+
+		template <typename F>
+		void for_each(F&& func)
+		{
+			std::for_each(begin(), end(), func);
+		}
 	};
 }
