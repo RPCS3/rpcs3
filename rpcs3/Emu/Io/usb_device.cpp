@@ -191,7 +191,7 @@ void usb_device_passthrough::interrupt_transfer(u32 buf_size, u8* buf, u32 endpo
 	// Zero-length bulk/interrupt IN URBs hang in libusb until the device sends a ZLP.
 	// The emulated path fake-completes these immediately with count=0; mirror that here
 	// so games that do drain-polls between transfers don't stall the worker thread.
-	if (buf_size == 0 && (endpoint & 0x80))
+	if (buf_size == 0 && (endpoint & LIBUSB_ENDPOINT_IN))
 	{
 		transfer->fake = true;
 		transfer->expected_count = 0;
@@ -204,7 +204,7 @@ void usb_device_passthrough::interrupt_transfer(u32 buf_size, u8* buf, u32 endpo
 	// stack routes both bulk and interrupt transfers through this method, but submitting
 	// an interrupt URB to a bulk endpoint fails with EINVAL on Linux.
 	const UsbDeviceEndpoint* ep_desc = find_endpoint(static_cast<u8>(endpoint));
-	const bool is_bulk = ep_desc && (ep_desc->bmAttributes & 0x03) == 0x02;
+	const bool is_bulk = ep_desc && (ep_desc->bmAttributes & LIBUSB_TRANSFER_TYPE_MASK) == LIBUSB_TRANSFER_TYPE_BULK;
 
 	if (is_bulk)
 	{
