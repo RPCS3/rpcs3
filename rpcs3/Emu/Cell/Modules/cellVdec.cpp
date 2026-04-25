@@ -30,6 +30,14 @@ extern "C"
 #endif
 
 #include "cellPamf.h"
+#include "libavcdec.h"
+#include "libdivx311dec.h"
+#include "libdivxdec.h"
+#include "libmvcdec.h"
+#include "libsjvtd.h"
+#include "libsmvd2.h"
+#include "libsmvd4.h"
+#include "libsvc1d.h"
 #include "cellVdec.h"
 
 #include <mutex>
@@ -56,6 +64,7 @@ void fmt_class_string<CellVdecError>::format(std::string& out, u64 arg)
 			STR_CASE(CELL_VDEC_ERROR_EMPTY);
 			STR_CASE(CELL_VDEC_ERROR_AU);
 			STR_CASE(CELL_VDEC_ERROR_PIC);
+			STR_CASE(CELL_VDEC_ERROR_UNK);
 			STR_CASE(CELL_VDEC_ERROR_FATAL);
 		}
 
@@ -663,279 +672,688 @@ extern void vdecEntry(ppu_thread& ppu, u32 vid)
 	ppu.state += cpu_flag::exit;
 }
 
-static error_code vdecQueryAttr(s32 type, u32 profile, u32 spec_addr /* may be 0 */, CellVdecAttr* attr)
+template <VdecSceDecoderType decoder_type>
+static consteval auto get_sce_decoder_ops()
 {
-	// Write 0 at start
-	attr->memSize = 0;
-
-	u32 decoderVerLower;
-	u32 memSize = 0;
-
-	const bool new_sdk = g_ps3_process_info.sdk_ver > 0x20FFFF;
-
-	switch (type)
+	if constexpr (decoder_type == VdecSceDecoderType::mpeg2)
 	{
-	case CELL_VDEC_CODEC_TYPE_AVC:
-	{
-		cellVdec.warning("cellVdecQueryAttr: AVC (profile=%d)", profile);
-
-		const vm::ptr<CellVdecAvcSpecificInfo> sinfo = vm::cast(spec_addr);
-
-		if (sinfo)
-		{
-			if (sinfo->thisSize != sizeof(CellVdecAvcSpecificInfo))
-			{
-				return { CELL_VDEC_ERROR_ARG, "Invalid AVC specific info size %d", sinfo->thisSize };
-			}
-		}
-
-		// TODO: sinfo
-
-		switch (profile)
-		{
-		case CELL_VDEC_AVC_LEVEL_1P0: memSize = new_sdk ? 0x70167D  : 0xA014FD ; break;
-		case CELL_VDEC_AVC_LEVEL_1P1: memSize = new_sdk ? 0x86CB7D  : 0xB6C9FD ; break;
-		case CELL_VDEC_AVC_LEVEL_1P2: memSize = new_sdk ? 0x9E307D  : 0xCE2D7D ; break;
-		case CELL_VDEC_AVC_LEVEL_1P3: memSize = new_sdk ? 0xA057FD  : 0xD054FD ; break;
-		case CELL_VDEC_AVC_LEVEL_2P0: memSize = new_sdk ? 0xA057FD  : 0xD054FD ; break;
-		case CELL_VDEC_AVC_LEVEL_2P1: memSize = new_sdk ? 0xE90DFD  : 0x1190AFD; break;
-		case CELL_VDEC_AVC_LEVEL_2P2: memSize = new_sdk ? 0x14E49FD : 0x17E46FD; break;
-		case CELL_VDEC_AVC_LEVEL_3P0: memSize = new_sdk ? 0x155B5FD : 0x185B17D; break;
-		case CELL_VDEC_AVC_LEVEL_3P1: memSize = new_sdk ? 0x1CD327D : 0x1FD2AFD; break;
-		case CELL_VDEC_AVC_LEVEL_3P2: memSize = new_sdk ? 0x2397B7D : 0x2696F7D; break;
-		case CELL_VDEC_AVC_LEVEL_4P0: memSize = new_sdk ? 0x33A5FFD : 0x36A527D; break;
-		case CELL_VDEC_AVC_LEVEL_4P1: memSize = new_sdk ? 0x33A5FFD : 0x36A527D; break;
-		case CELL_VDEC_AVC_LEVEL_4P2: memSize = new_sdk ? 0x33A5FFD : 0x36A527D; break;
-		default: return { CELL_VDEC_ERROR_ARG, "Invalid AVC profile level %d", profile };
-		}
-
-		decoderVerLower = 0x11300;
-		break;
-	}
-	case CELL_VDEC_CODEC_TYPE_MPEG2:
-	{
-		cellVdec.warning("cellVdecQueryAttr: MPEG2 (profile=%d)", profile);
-
-		const vm::ptr<CellVdecMpeg2SpecificInfo> sinfo = vm::cast(spec_addr);
-
-		if (sinfo)
-		{
-			if (sinfo->thisSize != sizeof(CellVdecMpeg2SpecificInfo))
-			{
-				return { CELL_VDEC_ERROR_ARG, "Invalid MPEG2 specific info size %d", sinfo->thisSize };
-			}
-		}
-
-		const u32 maxDecH = sinfo ? +sinfo->maxDecodedFrameHeight : 0;
-		const u32 maxDecW = sinfo ? +sinfo->maxDecodedFrameWidth : 0;
-
-		switch (profile)
-		{
-		case CELL_VDEC_MPEG2_MP_LL:
-		{
-			if (maxDecW > 352 || maxDecH > 288)
-			{
-				return { CELL_VDEC_ERROR_ARG, "Invalid max decoded frame size %dx%d for profile %d", maxDecH, maxDecW, profile };
-			}
-
-			memSize = new_sdk ? 0x11290B : 0x2A610B;
-			break;
-		}
-		case CELL_VDEC_MPEG2_MP_ML:
-		{
-			if (maxDecW > 720 || maxDecH > 576)
-			{
-				return { CELL_VDEC_ERROR_ARG, "Invalid max decoded frame size %dx%d for profile %d", maxDecH, maxDecW, profile };
-			}
-
-			memSize = new_sdk ? 0x2DFB8B : 0x47110B;
-			break;
-		}
-		case CELL_VDEC_MPEG2_MP_H14:
-		{
-			if (maxDecW > 1440 || maxDecH > 1152)
-			{
-				return { CELL_VDEC_ERROR_ARG, "Invalid max decoded frame size %dx%d for profile %d", maxDecH, maxDecW, profile };
-			}
-
-			memSize = new_sdk ? 0xA0270B : 0xB8F90B;
-			break;
-		}
-		case CELL_VDEC_MPEG2_MP_HL:
-		{
-			if (maxDecW > 1920 || maxDecH > 1152)
-			{
-				return { CELL_VDEC_ERROR_ARG, "Invalid max decoded frame size %dx%d for profile %d", maxDecH, maxDecW, profile };
-			}
-
-			memSize = new_sdk ? 0xD2F40B : 0xEB990B;
-			break;
-		}
-		default: return { CELL_VDEC_ERROR_ARG, "Invalid MPEG2 profile %d", profile };
-		}
-
-		decoderVerLower = 0x1030000;
-		break;
-	}
-	case CELL_VDEC_CODEC_TYPE_MPEG4:
-	{
-		cellVdec.warning("cellVdecQueryAttr: MPEG4 (profile=%d)", profile);
-
-		const vm::ptr<CellVdecMpeg4SpecificInfo> sinfo = vm::cast(spec_addr);
-
-		if (sinfo)
-		{
-			if (sinfo->thisSize != sizeof(CellVdecMpeg4SpecificInfo))
-			{
-				return { CELL_VDEC_ERROR_ARG, "Invalid MPEG4 specific info size %d", sinfo->thisSize };
-			}
-		}
-
-		const u32 maxDecH = sinfo ? +sinfo->maxDecodedFrameHeight : 0;
-		const u32 maxDecW = sinfo ? +sinfo->maxDecodedFrameWidth : 0;
-
-		switch (profile)
-		{
-		case CELL_VDEC_MPEG4_SP_L1:
-		{
-			if (maxDecW > 176 || maxDecH > 144)
-			{
-				return { CELL_VDEC_ERROR_ARG, "Invalid max decoded frame size %dx%d for profile %d", maxDecH, maxDecW, profile };
-			}
-
-			memSize = new_sdk ? 0x8B78B : 0xBB70B;
-			break;
-		}
-		case CELL_VDEC_MPEG4_SP_L2:
-		case CELL_VDEC_MPEG4_SP_L3:
-		{
-			if (maxDecW > 352 || maxDecH > 288)
-			{
-				return { CELL_VDEC_ERROR_ARG, "Invalid max decoded frame size %dx%d for profile %d", maxDecH, maxDecW, profile };
-			}
-
-			memSize = new_sdk ? 0xEFE0B : 0x11FD8B;
-			break;
-		}
-		case CELL_VDEC_MPEG4_SP_D1_NTSC:
-		{
-			if (maxDecW > 720 || maxDecH > 480)
-			{
-				return { CELL_VDEC_ERROR_ARG, "Invalid max decoded frame size %dx%d for profile %d", maxDecH, maxDecW, profile };
-			}
-
-			memSize = new_sdk ? 0x22DB0B : 0x25DA8B;
-			break;
-		}
-		case CELL_VDEC_MPEG4_SP_VGA:
-		{
-			if (maxDecW > 640 || maxDecH > 480)
-			{
-				return { CELL_VDEC_ERROR_ARG, "Invalid max decoded frame size %dx%d for profile %d", maxDecH, maxDecW, profile };
-			}
-
-			memSize = new_sdk ? 0x1FC00B : 0x22BF8B;
-			break;
-		}
-		case CELL_VDEC_MPEG4_SP_D1_PAL:
-		{
-			if (maxDecW > 720 || maxDecH > 576)
-			{
-				return { CELL_VDEC_ERROR_ARG, "Invalid max decoded frame size %dx%d for profile %d", maxDecH, maxDecW, profile };
-			}
-
-			memSize = new_sdk ? 0x28570B : 0x2B568B;
-			break;
-		}
-		default: return { CELL_VDEC_ERROR_ARG, "Invalid MPEG4 profile %d", profile };
-		}
-
-		decoderVerLower = 0x1080000;
-		break;
-	}
-	case CELL_VDEC_CODEC_TYPE_DIVX:
-	{
-		cellVdec.warning("cellVdecQueryAttr: DivX (profile=%d)", profile);
-
-		const vm::ptr<CellVdecDivxSpecificInfo2> sinfo = vm::cast(spec_addr);
-
-		if (sinfo)
-		{
-			if (sinfo->thisSize != sizeof(CellVdecDivxSpecificInfo) && sinfo->thisSize != sizeof(CellVdecDivxSpecificInfo2))
-			{
-				return { CELL_VDEC_ERROR_ARG, "Invalid DIVX specific info size %d", sinfo->thisSize };
-			}
-		}
-
-		// TODO: sinfo
-
-		//const u32 maxDecH = sinfo ? +sinfo->maxDecodedFrameHeight : 0;
-		//const u32 maxDecW = sinfo ? +sinfo->maxDecodedFrameWidth : 0;
-		u32 nrOfBuf = sinfo && sinfo->thisSize == sizeof(CellVdecDivxSpecificInfo2) ? +sinfo->numberOfDecodedFrameBuffer : 0;
-
-		if (nrOfBuf == 0)
-		{
-			nrOfBuf = 4;
-		}
-		else if (nrOfBuf == 2)
-		{
-			if (profile != CELL_VDEC_DIVX_QMOBILE && profile != CELL_VDEC_DIVX_MOBILE)
-			{
-				return { CELL_VDEC_ERROR_ARG, "Invalid number of decoded frame buffers %d for DIVX profile %d", nrOfBuf, profile };
-			}
-		}
-		else if (nrOfBuf != 4 && nrOfBuf != 3)
-		{
-			return { CELL_VDEC_ERROR_ARG, "Invalid number of decoded frame buffers %d for DIVX", nrOfBuf };
-		}
-
-		// TODO: change memSize based on buffercount.
-
-		switch (profile)
-		{
-		case CELL_VDEC_DIVX_QMOBILE     : memSize = new_sdk ? 0x11B720 : 0x1DEF30; break;
-		case CELL_VDEC_DIVX_MOBILE      : memSize = new_sdk ? 0x19A740 : 0x26DED0; break;
-		case CELL_VDEC_DIVX_HOME_THEATER: memSize = new_sdk ? 0x386A60 : 0x498060; break;
-		case CELL_VDEC_DIVX_HD_720      : memSize = new_sdk ? 0x692070 : 0x805690; break;
-		case CELL_VDEC_DIVX_HD_1080     : memSize = new_sdk ? 0xD78100 : 0xFC9870; break;
-		default: return { CELL_VDEC_ERROR_ARG, "Invalid DIVX profile %d", profile };
-		}
-
-		decoderVerLower = 0x30806;
-		break;
-	}
-	default: return { CELL_VDEC_ERROR_ARG, "Invalid codec type %d", type };
+		return VDEC_SCE_DECODER_OPS_MPEG2;
 	}
 
-	attr->decoderVerLower = decoderVerLower;
-	attr->decoderVerUpper = 0x4840010;
-	attr->memSize = !spec_addr ? ensure(memSize) : 4 * 1024 * 1024;
-	attr->cmdDepth = 4;
+	if constexpr (decoder_type == VdecSceDecoderType::mpeg4)
+	{
+		return VDEC_SCE_DECODER_OPS_MPEG4;
+	}
+
+	if constexpr (decoder_type == VdecSceDecoderType::vc1)
+	{
+		return VDEC_SCE_DECODER_OPS_VC1;
+	}
+
+	if constexpr (decoder_type == VdecSceDecoderType::jvt)
+	{
+		return VDEC_SCE_DECODER_OPS_JVT;
+	}
+}
+
+template <VdecSceDecoderType decoder_type>
+static std::optional<u32> get_internal_profile_level(u32 profile_level)
+{
+	if constexpr (decoder_type == VdecSceDecoderType::jvt)
+	{
+		switch (profile_level)
+		{
+		case CELL_VDEC_AVC_LEVEL_1P0: return 1;
+		case CELL_VDEC_AVC_LEVEL_1P1: return 2;
+		case CELL_VDEC_AVC_LEVEL_1P2: return 3;
+		case CELL_VDEC_AVC_LEVEL_1P3: return 4;
+		case CELL_VDEC_AVC_LEVEL_2P0: return 5;
+		case CELL_VDEC_AVC_LEVEL_2P1: return 6;
+		case CELL_VDEC_AVC_LEVEL_2P2: return 7;
+		case CELL_VDEC_AVC_LEVEL_3P0: return 8;
+		case CELL_VDEC_AVC_LEVEL_3P1: return 9;
+		case CELL_VDEC_AVC_LEVEL_3P2: return 10;
+		case CELL_VDEC_AVC_LEVEL_4P0: return 11;
+		case CELL_VDEC_AVC_LEVEL_4P1: return 12;
+		case CELL_VDEC_AVC_LEVEL_4P2: return 13;
+		default: return std::nullopt;
+		}
+	}
+
+	constexpr u32 max_profile_level =
+		decoder_type == VdecSceDecoderType::mpeg2 ? CELL_VDEC_MPEG2_MP_HL
+		: decoder_type == VdecSceDecoderType::mpeg4 ? CELL_VDEC_MPEG4_SP_D1_PAL
+		: decoder_type == VdecSceDecoderType::jvt ? CELL_VDEC_VC1_AP_L4 : 0;
+
+	return profile_level <= max_profile_level ? static_cast<std::optional<u32>>(profile_level + 1) : std::nullopt;
+}
+
+static bool check_frame_dimensions_mpeg2(u32 profile_level, be_t<u32>& max_decoded_frame_width, be_t<u32>& max_decoded_frame_height)
+{
+	const auto [max_width, max_height] = [&] -> std::pair<u32, u32>
+	{
+		switch (profile_level)
+		{
+		case SMVD2_MP_LL:  return {  352,  288 };
+		case SMVD2_MP_ML:  return {  720,  576 };
+		case SMVD2_MP_H14: return { 1440, 1152 };
+		case SMVD2_MP_HL:  return { 1920, 1152 };
+		default: fmt::throw_exception("Invalid profile level");
+		}
+	}();
+
+	if (max_decoded_frame_width > max_width || max_decoded_frame_height > max_height)
+	{
+		return false;
+	}
+
+	if (!max_decoded_frame_width || !max_decoded_frame_height)
+	{
+		max_decoded_frame_width = max_width;
+		max_decoded_frame_height = max_height;
+	}
+
+	return true;
+}
+
+template <VdecSceDecoderType decoder_type>
+static u32 get_version(ppu_thread& ppu)
+{
+	const vm::var<u32> version;
+
+	get_sce_decoder_ops<decoder_type>().get_version_number(ppu, +version);
+
+	return *version;
+}
+
+template <VdecSceDecoderType decoder_type, typename specific_info_t>
+static error_code get_memory_size(ppu_thread& ppu, u32 profile_level, const vm::var<u32>& mem_size, const specific_info_t* codec_specific_info)
+{
+	const std::optional profile_level_internal = get_internal_profile_level<decoder_type>(profile_level);
+
+	if (!profile_level_internal)
+	{
+		return CELL_VDEC_ERROR_ARG;
+	}
+
+	const auto ret = [&] -> std::optional<error_code>
+	{
+		if (!codec_specific_info)
+		{
+			return get_sce_decoder_ops<decoder_type>().get_memory_size(ppu, +mem_size, *profile_level_internal);
+		}
+
+		if (codec_specific_info->thisSize != sizeof(specific_info_t))
+		{
+			return std::nullopt;
+		}
+
+		if constexpr (decoder_type == VdecSceDecoderType::mpeg4)
+		{
+			if (codec_specific_info->maxDecodedFrameWidth == 0 || codec_specific_info->maxDecodedFrameHeight == 0)
+			{
+				return ppu_execute<&smvd4GetMemorySize>(ppu, +mem_size, *profile_level_internal);
+			}
+		}
+
+		const auto params
+		{
+			[&]
+			{
+				if constexpr (decoder_type == VdecSceDecoderType::mpeg2)
+				{
+					return vm::var<Smvd2Params>
+					{{
+						.unk1 = 5,
+						.unk2 = 2,
+						.unk3 = 0,
+						.max_decoded_frame_width = static_cast<u32>(codec_specific_info->maxDecodedFrameWidth),
+						.max_decoded_frame_height = static_cast<u32>(codec_specific_info->maxDecodedFrameHeight)
+					}};
+				}
+
+				if constexpr (decoder_type == VdecSceDecoderType::mpeg4)
+				{
+					return vm::var<Smvd4Params>
+					{{
+						.unk1 = 5,
+						.unk2 = 1,
+						.unk3 = 0,
+						.max_decoded_frame_width = static_cast<u32>(codec_specific_info->maxDecodedFrameWidth),
+						.max_decoded_frame_height = static_cast<u32>(codec_specific_info->maxDecodedFrameHeight)
+					}};
+				}
+
+				if constexpr (decoder_type == VdecSceDecoderType::vc1)
+				{
+					return vm::var<Svc1dParams>
+					{{
+						.unk1 = 5,
+						.unk2 = 3,
+						.unk3 = 0,
+						.max_decoded_frame_width = codec_specific_info->maxDecodedFrameWidth != 0 ? static_cast<u32>(codec_specific_info->maxDecodedFrameWidth) : umax,
+						.max_decoded_frame_height = codec_specific_info->maxDecodedFrameHeight != 0 ? static_cast<u32>(codec_specific_info->maxDecodedFrameHeight) : umax
+					}};
+				}
+
+				if constexpr (decoder_type == VdecSceDecoderType::jvt)
+				{
+					return vm::var<SjvtdParams>
+					{{
+						.unk1 = 6,
+						.unk2 = 4,
+						.unk3 = 0,
+						.max_decoded_frame_width = codec_specific_info->maxDecodedFrameWidth != 0 ? static_cast<s32>(codec_specific_info->maxDecodedFrameWidth) : -1,
+						.max_decoded_frame_height = codec_specific_info->maxDecodedFrameHeight != 0 ? static_cast<s32>(codec_specific_info->maxDecodedFrameHeight) : -1,
+						.enable_deblocking_filter = !codec_specific_info->disableDeblockingFilter,
+						.unk = umax,
+						.number_of_decoded_frame_buffer = codec_specific_info->numberOfDecodedFrameBuffer != 0 ? codec_specific_info->numberOfDecodedFrameBuffer : umax
+					}};
+				}
+			}()
+		};
+
+		if constexpr (decoder_type == VdecSceDecoderType::mpeg2)
+		{
+			if (!check_frame_dimensions_mpeg2(*profile_level_internal, params->max_decoded_frame_width, params->max_decoded_frame_height))
+			{
+				return std::nullopt;
+			}
+		}
+
+		return get_sce_decoder_ops<decoder_type>().get_memory_size_2(ppu, +mem_size, *profile_level_internal, +params);
+	}();
+
+	if (!ret)
+	{
+		return CELL_VDEC_ERROR_ARG;
+	}
+
+	if ((*ret & 0xffffffc0) == VDEC_SCE_DECODER_ERROR_BASE_MAP[std::to_underlying(decoder_type)])
+	{
+		return CELL_VDEC_ERROR_UNK;
+	}
+
+	if (*ret != CELL_OK || *mem_size > VDEC_SCE_DECODER_MAX_MEM_SIZE_MAP[std::to_underlying(decoder_type)][*profile_level_internal - 1])
+	{
+		return CELL_VDEC_ERROR_FATAL;
+	}
+
 	return CELL_OK;
 }
 
-error_code cellVdecQueryAttr(vm::cptr<CellVdecType> type, vm::ptr<CellVdecAttr> attr)
+template <VdecSceDecoderType decoder_type, typename specific_info_t>
+static error_code query_attr_mpeg_vc1_jvt(ppu_thread& ppu, VdecDecoderAttr& attr, u32 profile_level, const void* codec_specific_info)
 {
-	cellVdec.warning("cellVdecQueryAttr(type=*0x%x, attr=*0x%x)", type, attr);
+	attr.mem_size = 0;
+	attr.unk2 = 0x20;
 
-	if (!type || !attr)
+	const vm::var<u32> mem_size;
+
+	if (const error_code ret = get_memory_size<decoder_type, specific_info_t>(ppu, profile_level, mem_size, static_cast<const specific_info_t*>(codec_specific_info)); ret != CELL_OK)
 	{
-		return { CELL_VDEC_ERROR_ARG, "type=%d, attr=%d", !!type, !!attr };
+		return ret;
 	}
 
-	return vdecQueryAttr(type->codecType, type->profileLevel, 0, attr.get_ptr());
+	attr.mem_size = *mem_size + (5 * 0x50) + 0xa8 + 0x41580 + 0x3493;
+	attr.unk1 = VDEC_SCE_DECODER_UNK_MAP[std::to_underlying(decoder_type)].unk4;
+	attr.cmd_depth = 4;
+	attr.decoder_version = get_version<decoder_type>(ppu);
+
+	return CELL_OK;
 }
 
-error_code cellVdecQueryAttrEx(vm::cptr<CellVdecTypeEx> type, vm::ptr<CellVdecAttr> attr)
+template <bool is_mvc>
+static error_code query_memory_avc_mvc(ppu_thread& ppu, u32 profile_level, vm::ptr<AvcDecAttr> attr, const CellVdecAvcSpecificInfo* avc_specific_info)
 {
-	cellVdec.warning("cellVdecQueryAttrEx(type=*0x%x, attr=*0x%x)", type, attr);
+	const vm::var<AvcDecParams> avc_params{ AvcDecParams{} };
+
+	switch (profile_level)
+	{
+	case CELL_VDEC_AVC_LEVEL_1P0:
+	case CELL_VDEC_AVC_LEVEL_1P1:
+	case CELL_VDEC_AVC_LEVEL_1P2:
+	case CELL_VDEC_AVC_LEVEL_1P3:
+	case CELL_VDEC_AVC_LEVEL_2P0:
+	case CELL_VDEC_AVC_LEVEL_2P1:
+	case CELL_VDEC_AVC_LEVEL_2P2:
+	case CELL_VDEC_AVC_LEVEL_3P0:
+	case CELL_VDEC_AVC_LEVEL_3P1:
+	case CELL_VDEC_AVC_LEVEL_3P2:
+	case CELL_VDEC_AVC_LEVEL_4P0:
+	case CELL_VDEC_AVC_LEVEL_4P1:
+	case CELL_VDEC_AVC_LEVEL_4P2:
+		avc_params->profile_level = profile_level;
+		break;
+
+	case CELL_VDEC_AVC_LEVEL_UNK:
+		avc_params->profile_level = CELL_VDEC_AVC_LEVEL_4P2;
+		avc_params->disable_deblocking_filter = true;
+		break;
+
+	default:
+		return CELL_VDEC_ERROR_ARG;
+	}
+
+	if (avc_specific_info)
+	{
+		if (avc_specific_info->thisSize != sizeof(CellVdecAvcSpecificInfo))
+		{
+			return CELL_VDEC_ERROR_ARG;
+		}
+
+		avc_params->disable_deblocking_filter = avc_specific_info->disableDeblockingFilter;
+		avc_params->number_of_decoded_frame_buffer = avc_specific_info->numberOfDecodedFrameBuffer;
+
+		if (avc_specific_info->maxDecodedFrameWidth != 0 && avc_specific_info->maxDecodedFrameHeight != 0)
+		{
+			avc_params->max_decoded_frame_width = utils::aligned_div<u16>(avc_specific_info->maxDecodedFrameWidth, 0x10);
+			avc_params->max_decoded_frame_height = utils::aligned_div<u16>(avc_specific_info->maxDecodedFrameHeight, 0x10);
+		}
+	}
+
+	if (ppu_execute<is_mvc ? mvcDecQueryMemory : avcDecQueryMemory>(ppu, +avc_params, attr) != CELL_OK)
+	{
+		return CELL_VDEC_ERROR_FATAL;
+	}
+
+	const u32 max_mem_size = [&]
+	{
+		switch (profile_level)
+		{
+		case CELL_VDEC_AVC_LEVEL_1P0: return is_mvc ? 0x9e2980 : 0x6b6d80;
+		case CELL_VDEC_AVC_LEVEL_1P1: return is_mvc ? 0xbec300 : 0x822280;
+		case CELL_VDEC_AVC_LEVEL_1P2: return is_mvc ? 0xe44d00 : 0x998600;
+		case CELL_VDEC_AVC_LEVEL_1P3: // Same as below
+		case CELL_VDEC_AVC_LEVEL_2P0: return is_mvc ? 0xe72d00 : 0x9bad80;
+		case CELL_VDEC_AVC_LEVEL_2P1: return is_mvc ? 0x13f1380 : 0xe46380;
+		case CELL_VDEC_AVC_LEVEL_2P2: return is_mvc ? 0x1aba180 : 0x1499f80;
+		case CELL_VDEC_AVC_LEVEL_3P0: return is_mvc ? 0x1b58780 : 0x1510a00;
+		case CELL_VDEC_AVC_LEVEL_3P1: return is_mvc ? 0x28c6700 : 0x1c88380;
+		case CELL_VDEC_AVC_LEVEL_3P2: return is_mvc ? 0x3208700 : 0x234c800;
+		case CELL_VDEC_AVC_LEVEL_4P0: // Same as below
+		case CELL_VDEC_AVC_LEVEL_4P1:
+		case CELL_VDEC_AVC_LEVEL_4P2:
+		case CELL_VDEC_AVC_LEVEL_UNK: return is_mvc ? 0x487ed00 : 0x335ab00;
+		default: std::unreachable(); // Already checked above
+		}
+	}();
+
+	return attr->mem_size > max_mem_size ? static_cast<error_code>(CELL_VDEC_ERROR_FATAL) : CELL_OK;
+}
+
+template <bool is_mvc>
+static error_code query_attr_avc_mvc(ppu_thread& ppu, VdecDecoderAttr& attr, u32 profile_level, const void* avc_specific_info)
+{
+	const vm::var<AvcDecAttr> codec_attr;
+
+	if (const error_code ret = query_memory_avc_mvc<is_mvc>(ppu, profile_level, codec_attr, static_cast<const CellVdecAvcSpecificInfo*>(avc_specific_info)); ret != CELL_OK)
+	{
+		return ret;
+	}
+
+	attr.mem_size = 0x41580 + codec_attr->mem_size + (is_mvc ? 0x12fd : 0x89fd);
+	attr.unk1 = is_mvc ? 0x214 : 0x244;
+	attr.unk2 = 0x30;
+
+	const vm::var<u32> version;
+	ppu_execute<is_mvc ? mvcDecGetVersion : avcDecGetVersion>(ppu, +version);
+
+	attr.decoder_version = *version;
+
+	const vm::var<u32[]> unk{ 2 };
+	ppu_execute<is_mvc ? mvcDecQueryCharacteristics : avcDecQueryCharacteristics>(ppu, +unk);
+
+	const vm::var<s32> sdk_ver;
+	ensure(sys_process_get_sdk_version(sys_process_getpid(), sdk_ver) == CELL_OK); // Not checked on LLE
+
+	attr.cmd_depth = unk[0] - (*sdk_ver >= 0x130000);
+
+	return CELL_OK;
+}
+
+template <bool divx311>
+static error_code query_attr_divx(ppu_thread& ppu, VdecDecoderAttr& attr, u32 profile_level, const void* divx_specific_info)
+{
+	attr.mem_size = 0;
+	attr.unk2 = 0x20;
+
+	const vm::var<DivxDecParams> params;
+
+	if constexpr (!divx311)
+	{
+		switch (profile_level)
+		{
+		case CELL_VDEC_DIVX_QMOBILE:      *params = { .profile_level = 0, .max_decoded_frame_width =  176, .max_decoded_frame_height =  144, .number_of_decoded_frame_buffer = 4 }; break;
+		case CELL_VDEC_DIVX_MOBILE:       *params = { .profile_level = 0, .max_decoded_frame_width =  352, .max_decoded_frame_height =  288, .number_of_decoded_frame_buffer = 4 }; break;
+		case CELL_VDEC_DIVX_HOME_THEATER: *params = { .profile_level = 0, .max_decoded_frame_width =  720, .max_decoded_frame_height =  576, .number_of_decoded_frame_buffer = 4 }; break;
+		case CELL_VDEC_DIVX_HD_720:       *params = { .profile_level = 0, .max_decoded_frame_width = 1280, .max_decoded_frame_height =  720, .number_of_decoded_frame_buffer = 4 }; break;
+		case CELL_VDEC_DIVX_HD_1080:      *params = { .profile_level = 0, .max_decoded_frame_width = 1920, .max_decoded_frame_height = 1088, .number_of_decoded_frame_buffer = 4 }; break;
+		default: return CELL_VDEC_ERROR_ARG;
+		}
+	}
+	else
+	{
+		*params = { .profile_level = 0, .max_decoded_frame_width = 720, .max_decoded_frame_height = 576, .number_of_decoded_frame_buffer = 2 };
+	}
+
+	if (divx_specific_info)
+	{
+		const auto* const _divx_specific_info = static_cast<const CellVdecDivxSpecificInfo2*>(divx_specific_info);
+
+		if (((divx311 || _divx_specific_info->thisSize != sizeof(CellVdecDivxSpecificInfo)) && _divx_specific_info->thisSize != sizeof(CellVdecDivxSpecificInfo2))
+			|| _divx_specific_info->maxDecodedFrameWidth > (divx311 ? 1920 : +params->max_decoded_frame_width) || _divx_specific_info->maxDecodedFrameHeight > (divx311 ? 1088 : +params->max_decoded_frame_height)
+			|| (divx311 && _divx_specific_info->numberOfDecodedFrameBuffer != 0 && _divx_specific_info->numberOfDecodedFrameBuffer != 2))
+		{
+			return CELL_VDEC_ERROR_ARG;
+		}
+
+		if (_divx_specific_info->maxDecodedFrameWidth != 0 && _divx_specific_info->maxDecodedFrameHeight != 0)
+		{
+			params->max_decoded_frame_width = _divx_specific_info->maxDecodedFrameWidth;
+			params->max_decoded_frame_height = _divx_specific_info->maxDecodedFrameHeight;
+		}
+
+		if (_divx_specific_info->thisSize == sizeof(CellVdecDivxSpecificInfo2) && _divx_specific_info->numberOfDecodedFrameBuffer != 0)
+		{
+			params->number_of_decoded_frame_buffer = _divx_specific_info->numberOfDecodedFrameBuffer;
+		}
+	}
+
+	const vm::var<u32> mem_size;
+	const vm::var<u32> decoder_version;
+
+	if (ppu_execute<divx311 ? &divx311DecQueryAttr : &divxDecQueryAttr>(ppu, +params, +mem_size, +decoder_version) != CELL_OK)
+	{
+		return CELL_VDEC_ERROR_ARG;
+	}
+
+	if (divx311 && profile_level != CELL_VDEC_DIVX_UNK)
+	{
+		return CELL_VDEC_ERROR_ARG;
+	}
+
+	const u32 max_mem_size = [&]
+	{
+		switch (profile_level)
+		{
+		case CELL_VDEC_DIVX_QMOBILE:      return 0x1577be;
+		case CELL_VDEC_DIVX_MOBILE:       return 0x1e675e;
+		case CELL_VDEC_DIVX_HOME_THEATER: return 0x4108de;
+		case CELL_VDEC_DIVX_HD_720:       return 0x77df0e;
+		case CELL_VDEC_DIVX_HD_1080:      return 0xf420fe;
+		case CELL_VDEC_DIVX_UNK:          return 0x1ce600;
+		default: std::unreachable(); // Already checked above
+		}
+	}();
+
+	if (*mem_size > max_mem_size)
+	{
+		return CELL_VDEC_ERROR_ARG;
+	}
+
+	attr.mem_size = 0x41580 + (5 * 0x50) + 0xa8 + *mem_size + (divx311 ? 0x3500 : 0x34f8);
+	attr.unk1 = divx311 ? 0x18 : 0x20;
+	attr.cmd_depth = 4;
+	attr.decoder_version = *decoder_version;
+
+	return CELL_OK;
+}
+
+static inline bool check_codec_type(u32 codec_type)
+{
+	return codec_type <= CELL_VDEC_CODEC_TYPE_MPEG4 || (codec_type < CELL_VDEC_CODEC_TYPE_MAX && !(codec_type & 1));
+}
+
+static VdecDecoderSpecificOps get_decoder_specific_ops(u32 codec_type)
+{
+	// TODO remaining functions
+
+	switch (codec_type)
+	{
+	case CELL_VDEC_CODEC_TYPE_MPEG2:
+		return
+		{
+			query_attr_mpeg_vc1_jvt<VdecSceDecoderType::mpeg2, CellVdecMpeg2SpecificInfo>
+		};
+
+	case CELL_VDEC_CODEC_TYPE_AVC:
+		return
+		{
+			query_attr_avc_mvc<false>
+		};
+
+	case CELL_VDEC_CODEC_TYPE_MPEG4:
+		return
+		{
+			query_attr_mpeg_vc1_jvt<VdecSceDecoderType::mpeg4, CellVdecMpeg4SpecificInfo>
+		};
+
+	case CELL_VDEC_CODEC_TYPE_VC1:
+		return
+		{
+			query_attr_mpeg_vc1_jvt<VdecSceDecoderType::vc1, CellVdecVc1SpecificInfo>
+		};
+
+	case CELL_VDEC_CODEC_TYPE_DIVX:
+		return
+		{
+			query_attr_divx<false>
+		};
+
+	case CELL_VDEC_CODEC_TYPE_JVT:
+		return
+		{
+			query_attr_mpeg_vc1_jvt<VdecSceDecoderType::jvt, CellVdecAvcSpecificInfo>
+		};
+
+	case CELL_VDEC_CODEC_TYPE_DIVX3_11:
+		return
+		{
+			query_attr_divx<true>
+		};
+
+	case CELL_VDEC_CODEC_TYPE_MVC:
+	case CELL_VDEC_CODEC_TYPE_MVC2:
+		return
+		{
+			query_attr_avc_mvc<true>
+		};
+
+	default:
+		fmt::throw_exception("Invalid codec type");
+	}
+}
+
+static inline u32 get_unk_size_2(u32 unk)
+{
+	return (unk * 0x14) + 0x14;
+}
+
+static inline u32 get_unk_size(u32 unk1, u32 unk2)
+{
+	return ((unk2 + 0x90) * unk1) + (get_unk_size_2(unk1) * 2) + 0x40;
+}
+
+error_code cellVdecQueryAttr(ppu_thread& ppu, vm::cptr<CellVdecType> type, vm::ptr<CellVdecAttr> attr)
+{
+	cellVdec.notice("cellVdecQueryAttr(type=*0x%x, attr=*0x%x)", type, attr);
+
+	if (!type)
+	{
+		return CELL_VDEC_ERROR_ARG;
+	}
+
+	const vm::var<CellVdecTypeEx> type_ex{{ .codecType = type->codecType, .profileLevel = type->profileLevel, .codecSpecificInfo = vm::null }};
+	return cellVdecQueryAttrEx(ppu, type_ex, attr);
+}
+
+error_code cellVdecQueryAttrEx(ppu_thread& ppu, vm::cptr<CellVdecTypeEx> type, vm::ptr<CellVdecAttr> attr)
+{
+	cellVdec.notice("cellVdecQueryAttrEx(type=*0x%x, attr=*0x%x)", type, attr);
 
 	if (!type || !attr)
 	{
-		return { CELL_VDEC_ERROR_ARG, "type=%d, attr=%d", !!type, !!attr };
+		return CELL_VDEC_ERROR_ARG;
 	}
 
-	return vdecQueryAttr(type->codecType, type->profileLevel, type->codecSpecificInfo_addr, attr.get_ptr());
+	attr->memSize = 0;
+
+	if (!check_codec_type(type->codecType))
+	{
+		return CELL_VDEC_ERROR_ARG;
+	}
+
+	VdecDecoderAttr decoder_attr;
+
+	if (get_decoder_specific_ops(type->codecType).query_attr(ppu, decoder_attr, type->profileLevel, type->codecSpecificInfo ? type->codecSpecificInfo.get_ptr() : nullptr) != CELL_OK)
+	{
+		return CELL_VDEC_ERROR_ARG;
+	}
+
+	const u32 unk_size = get_unk_size(decoder_attr.unk2, decoder_attr.unk1);
+
+	u32 mem_size = decoder_attr.mem_size + 0x858 + unk_size;
+
+	const vm::var<s32> sdk_ver;
+	ensure(sys_process_get_sdk_version(sys_process_getpid(), sdk_ver) == CELL_OK); // Not checked on LLE
+
+	const bool new_sdk = *sdk_ver >= 0x210000;
+
+	const u32 max_mem_size = [&]
+	{
+		switch (type->codecType)
+		{
+		case CELL_VDEC_CODEC_TYPE_MPEG2:
+			switch (type->profileLevel)
+			{
+			case CELL_VDEC_MPEG2_MP_LL:  return new_sdk ? 0x11290b : 0x2a610b;
+			case CELL_VDEC_MPEG2_MP_ML:  return new_sdk ? 0x2dfb8b : 0x47110b;
+			case CELL_VDEC_MPEG2_MP_H14: return new_sdk ? 0xa0270b : 0xb8f90b;
+			case CELL_VDEC_MPEG2_MP_HL:  return new_sdk ? 0xd2f40b : 0xeb990b;
+			default: std::unreachable(); // Already checked in VdecDecoderSpecificOps::query_attr
+			}
+
+		case CELL_VDEC_CODEC_TYPE_AVC:
+			switch (type->profileLevel)
+			{
+			case CELL_VDEC_AVC_LEVEL_1P0: return new_sdk ? 0x7024fd : 0xa014fd;
+			case CELL_VDEC_AVC_LEVEL_1P1: return new_sdk ? 0x86d9fd : 0xb6c9fd;
+			case CELL_VDEC_AVC_LEVEL_1P2: return new_sdk ? 0x9e3d7d : 0xce2d7d;
+			case CELL_VDEC_AVC_LEVEL_1P3: // Same as below
+			case CELL_VDEC_AVC_LEVEL_2P0: return new_sdk ? 0xa064fd : 0xd054fd;
+			case CELL_VDEC_AVC_LEVEL_2P1: return new_sdk ? 0xe91afd : 0x1190afd;
+			case CELL_VDEC_AVC_LEVEL_2P2: return new_sdk ? 0x14e56fd : 0x17e46fd;
+			case CELL_VDEC_AVC_LEVEL_3P0: return new_sdk ? 0x155c17d : 0x185b17d;
+			case CELL_VDEC_AVC_LEVEL_3P1: return new_sdk ? 0x1cd3afd : 0x1fd2afd;
+			case CELL_VDEC_AVC_LEVEL_3P2: return new_sdk ? 0x2397f7d : 0x2696f7d;
+			case CELL_VDEC_AVC_LEVEL_4P0: // Same as below
+			case CELL_VDEC_AVC_LEVEL_4P1:
+			case CELL_VDEC_AVC_LEVEL_4P2:
+			case CELL_VDEC_AVC_LEVEL_UNK: return new_sdk ? 0x33a627d : 0x36a527d;
+			default: std::unreachable(); // Already checked in VdecDecoderSpecificOps::query_attr
+			}
+
+		case CELL_VDEC_CODEC_TYPE_MPEG4:
+			switch (type->profileLevel)
+			{
+			case CELL_VDEC_MPEG4_SP_L1:      return new_sdk ? 0x8b78b : 0xbb70b;
+			case CELL_VDEC_MPEG4_SP_L2: // Same as below
+			case CELL_VDEC_MPEG4_SP_L3:      return new_sdk ? 0xefe0b : 0x11fd8b;
+			case CELL_VDEC_MPEG4_SP_D1_NTSC: return new_sdk ? 0x22db0b : 0x25da8b;
+			case CELL_VDEC_MPEG4_SP_VGA:     return new_sdk ? 0x1fc00b : 0x22bf8b;
+			case CELL_VDEC_MPEG4_SP_D1_PAL:  return new_sdk ? 0x28570b : 0x2b568b;
+			default: std::unreachable(); // Already checked in VdecDecoderSpecificOps::query_attr
+			}
+
+		case CELL_VDEC_CODEC_TYPE_VC1:
+			switch (type->profileLevel)
+			{
+			case CELL_VDEC_VC1_SP_LL: return new_sdk ? 0x1fdefb : 0x291149;
+			case CELL_VDEC_VC1_SP_ML: return new_sdk ? 0x3298fb : 0x42a727;
+			case CELL_VDEC_VC1_MP_LL: return new_sdk ? 0x3d93fb : 0x42a727;
+			case CELL_VDEC_VC1_MP_ML: return new_sdk ? 0x9e383b : 0xa34efd;
+			case CELL_VDEC_VC1_MP_HL: return new_sdk ? 0x287197b : 0x28c4363;
+			case CELL_VDEC_VC1_AP_L0: return new_sdk ? 0x3298fb : 0x42a727;
+			case CELL_VDEC_VC1_AP_L1: return new_sdk ? 0x79db3b : 0xa34efd;
+			case CELL_VDEC_VC1_AP_L2: return new_sdk ? 0x12073fb : 0x184b857;
+			case CELL_VDEC_VC1_AP_L3: return new_sdk ? 0x202887b : 0x2b562fb;
+			case CELL_VDEC_VC1_AP_L4: return new_sdk ? 0x3949a7b : 0x4d0a77b;
+			default: std::unreachable(); // Already checked in VdecDecoderSpecificOps::query_attr
+			}
+
+		case CELL_VDEC_CODEC_TYPE_DIVX:
+			switch (type->profileLevel)
+			{
+			case CELL_VDEC_DIVX_QMOBILE:      return new_sdk ? 0x19e82e : 0x1def30;
+			case CELL_VDEC_DIVX_MOBILE:       return new_sdk ? 0x22d7ce : 0x26ded0;
+			case CELL_VDEC_DIVX_HOME_THEATER: return new_sdk ? 0x45794e : 0x498060;
+			case CELL_VDEC_DIVX_HD_720:       return new_sdk ? 0x7c4f7e : 0x805690;
+			case CELL_VDEC_DIVX_HD_1080:      return new_sdk ? 0xf8916e : 0xfc9870;
+			default: std::unreachable(); // Already checked in VdecDecoderSpecificOps::query_attr
+			}
+
+		case CELL_VDEC_CODEC_TYPE_JVT:
+			switch (type->profileLevel)
+			{
+			case CELL_VDEC_AVC_LEVEL_1P0: return new_sdk ? 0x3ca7db : 0x3c27db;
+			case CELL_VDEC_AVC_LEVEL_1P1: // Same as below
+			case CELL_VDEC_AVC_LEVEL_1P2:
+			case CELL_VDEC_AVC_LEVEL_1P3:
+			case CELL_VDEC_AVC_LEVEL_2P0: return new_sdk ? 0x7ca15b : 0x7c215b;
+			case CELL_VDEC_AVC_LEVEL_2P1: return new_sdk ? 0xd0055b : 0xcf855b;
+			case CELL_VDEC_AVC_LEVEL_2P2: // Same as below
+			case CELL_VDEC_AVC_LEVEL_3P0: return new_sdk ? 0x17ee15b : 0x17e615b;
+			case CELL_VDEC_AVC_LEVEL_3P1: return new_sdk ? 0x328f6db : 0x32876db;
+			case CELL_VDEC_AVC_LEVEL_3P2: return new_sdk ? 0x44e37db : 0x44db7db;
+			case CELL_VDEC_AVC_LEVEL_4P0: // Same as below
+			case CELL_VDEC_AVC_LEVEL_4P1:
+			case CELL_VDEC_AVC_LEVEL_4P2:
+			case CELL_VDEC_AVC_LEVEL_UNK: return new_sdk ? 0x6be11db : 0x6bd91db;
+			default: std::unreachable(); // Already checked in VdecDecoderSpecificOps::query_attr
+			}
+
+		case CELL_VDEC_CODEC_TYPE_DIVX3_11:
+			return 0x215578;
+
+		case CELL_VDEC_CODEC_TYPE_MVC:
+		case CELL_VDEC_CODEC_TYPE_MVC2:
+			switch (type->profileLevel)
+			{
+			case CELL_VDEC_AVC_LEVEL_1P0: return 0xa2e0fd;
+			case CELL_VDEC_AVC_LEVEL_1P1: return 0xc37a7d;
+			case CELL_VDEC_AVC_LEVEL_1P2: return 0xe9047d;
+			case CELL_VDEC_AVC_LEVEL_1P3: // Same as below
+			case CELL_VDEC_AVC_LEVEL_2P0: return 0xebe47d;
+			case CELL_VDEC_AVC_LEVEL_2P1: return 0x143cafd;
+			case CELL_VDEC_AVC_LEVEL_2P2: return 0x1b058fd;
+			case CELL_VDEC_AVC_LEVEL_3P0: return 0x1ba3efd;
+			case CELL_VDEC_AVC_LEVEL_3P1: return 0x2911e7d;
+			case CELL_VDEC_AVC_LEVEL_3P2: return 0x3253e7d;
+			case CELL_VDEC_AVC_LEVEL_4P0: // Same as below
+			case CELL_VDEC_AVC_LEVEL_4P1:
+			case CELL_VDEC_AVC_LEVEL_4P2:
+			case CELL_VDEC_AVC_LEVEL_UNK: return 0x48ca47d;
+			default: std::unreachable(); // Already checked in VdecDecoderSpecificOps::query_attr
+			}
+
+		default:
+			std::unreachable(); // Already checked above
+		}
+	}();
+
+	if (mem_size > max_mem_size)
+	{
+		cellVdec.warning("The required memory size is greater than expected"); // LLE prints an error to stdout
+	}
+	else if (!new_sdk)
+	{
+		mem_size = max_mem_size;
+	}
+
+	*attr = { .memSize = mem_size, .cmdDepth = decoder_attr.cmd_depth, .decoderVerUpper = 0x4890000, .decoderVerLower = decoder_attr.decoder_version };
+
+	return CELL_OK;
 }
 
 template <typename T, typename U>
@@ -953,23 +1371,23 @@ static error_code vdecOpen(ppu_thread& ppu, T type, U res, vm::cptr<CellVdecCb> 
 		                              res->memAddr, res->ppuThreadPriority, res->spuThreadPriority, res->ppuThreadStackSize, type->codecType };
 	}
 
-	u32 spec_addr = 0;
+	const void* spec = nullptr;
 
 	if constexpr (std::is_same_v<std::decay_t<typename T::type>, CellVdecTypeEx>)
 	{
-		spec_addr = type->codecSpecificInfo_addr;
+		spec = type->codecSpecificInfo.get_ptr();
 	}
 
-	CellVdecAttr attr{};
-	const error_code err = vdecQueryAttr(type->codecType, type->profileLevel, spec_addr, &attr);
+	VdecDecoderAttr attr;
+	const error_code err = get_decoder_specific_ops(type->codecType).query_attr(ppu, attr, type->profileLevel, spec);
 	if (err != CELL_OK)
 	{
 		return err;
 	}
 
-	if (attr.memSize > res->memSize)
+	if (attr.mem_size > res->memSize)
 	{
-		return { CELL_VDEC_ERROR_ARG, "attr.memSize=%d, res->memSize=%d", attr.memSize, res->memSize };
+		return { CELL_VDEC_ERROR_ARG, "attr.memSize=%d, res->memSize=%d", attr.mem_size, res->memSize };
 	}
 
 	// Create decoder context

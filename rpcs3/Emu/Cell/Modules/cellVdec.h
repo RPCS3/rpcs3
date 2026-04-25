@@ -9,10 +9,11 @@ enum CellVdecError : u32
 	CELL_VDEC_ERROR_EMPTY = 0x80610104,
 	CELL_VDEC_ERROR_AU    = 0x80610105,
 	CELL_VDEC_ERROR_PIC   = 0x80610106,
+	CELL_VDEC_ERROR_UNK   = 0x80610110,
 	CELL_VDEC_ERROR_FATAL = 0x80610180,
 };
 
-enum CellVdecCodecType : s32
+enum CellVdecCodecType : u32
 {
 	CELL_VDEC_CODEC_TYPE_MPEG2    = 0,
 	CELL_VDEC_CODEC_TYPE_AVC      = 1,
@@ -96,7 +97,7 @@ struct CellVdecTypeEx
 {
 	be_t<s32> codecType; // CellVdecCodecType
 	be_t<u32> profileLevel;
-	be_t<u32> codecSpecificInfo_addr;
+	vm::bcptr<void> codecSpecificInfo;
 };
 
 // Library Attributes
@@ -220,7 +221,7 @@ enum
 	CELL_VDEC_AVC_CCD_MAX = 128,
 };
 
-enum AVC_level : u8
+enum AVC_level : u32
 {
 	CELL_VDEC_AVC_LEVEL_1P0	= 10,
 	CELL_VDEC_AVC_LEVEL_1P1	= 11,
@@ -235,6 +236,7 @@ enum AVC_level : u8
 	CELL_VDEC_AVC_LEVEL_4P0	= 40,
 	CELL_VDEC_AVC_LEVEL_4P1	= 41,
 	CELL_VDEC_AVC_LEVEL_4P2	= 42,
+	CELL_VDEC_AVC_LEVEL_UNK	= 1042 // Same as 4.2, but disables the deblocking filter
 };
 
 struct CellVdecAvcSpecificInfo
@@ -399,6 +401,7 @@ enum DIVX_level : u8
 	CELL_VDEC_DIVX_HOME_THEATER              = 12,
 	CELL_VDEC_DIVX_HD_720                    = 13,
 	CELL_VDEC_DIVX_HD_1080                   = 14,
+	CELL_VDEC_DIVX_UNK                       = 15 // Only used for DivX version 3.11
 };
 
 struct CellVdecDivxSpecificInfo
@@ -695,3 +698,118 @@ struct CellVdecMpeg4SpecificInfo
 	be_t<u16> maxDecodedFrameWidth;
 	be_t<u16> maxDecodedFrameHeight;
 };
+
+enum VC1_level
+{
+	CELL_VDEC_VC1_SP_LL,
+	CELL_VDEC_VC1_SP_ML,
+	CELL_VDEC_VC1_MP_LL,
+	CELL_VDEC_VC1_MP_ML,
+	CELL_VDEC_VC1_MP_HL,
+	CELL_VDEC_VC1_AP_L0,
+	CELL_VDEC_VC1_AP_L1,
+	CELL_VDEC_VC1_AP_L2,
+	CELL_VDEC_VC1_AP_L3,
+	CELL_VDEC_VC1_AP_L4
+};
+
+struct CellVdecVc1SpecificInfo
+{
+	be_t<u32> thisSize;
+	be_t<u16> maxDecodedFrameWidth;
+	be_t<u16> maxDecodedFrameHeight;
+};
+
+struct VdecDecoderAttr
+{
+	be_t<u32> mem_size;
+	be_t<u32> unk1;
+	u8 cmd_depth;
+	be_t<u32> unk2;
+	be_t<u32> decoder_version;
+};
+
+struct VdecDecoderSpecificOps
+{
+	error_code (&query_attr)(ppu_thread& ppu, VdecDecoderAttr& attr, u32 profile_level, const void* codec_specific_info);
+	// TODO remaining functions
+};
+
+// Abstraction layer for decoders with "S...D" in their names
+
+enum class VdecSceDecoderType : u8
+{
+	mpeg2,
+	mpeg4,
+	vc1,
+	jvt
+};
+
+template <typename param_t>
+struct VdecSceDecoderOps
+{
+	error_code (&get_memory_size)(ppu_thread& ppu, vm::ptr<u32> memSize, u32 profileLevel);
+	error_code (&get_memory_size_2)(ppu_thread& ppu, vm::ptr<u32> memSize, u32 profileLevel, vm::cptr<param_t> params);
+	error_code (&get_version_number)(ppu_thread& ppu, vm::ptr<u32> version);
+	// TODO remaining functions
+};
+
+struct VdecSceDecoderUnk
+{
+	u32 unk1;
+	u32 unk2;
+	u32 unk3;
+	u32 unk4;
+};
+
+constexpr VdecSceDecoderOps<Smvd2Params> VDEC_SCE_DECODER_OPS_MPEG2 =
+{
+	.get_memory_size = ppu_execute<&smvd2GetMemorySize>,
+	.get_memory_size_2 = ppu_execute<&smvd2GetMemorySize2>,
+	.get_version_number = ppu_execute<&smvd2GetVersionNumber>,
+	// TODO remaining functions
+};
+
+constexpr VdecSceDecoderOps<Smvd4Params> VDEC_SCE_DECODER_OPS_MPEG4 =
+{
+	.get_memory_size = ppu_execute<&smvd4GetMemorySize>,
+	.get_memory_size_2 = ppu_execute<&smvd4GetMemorySize2>,
+	.get_version_number = ppu_execute<&smvd4GetVersionNumber>,
+	// TODO remaining functions
+};
+
+constexpr VdecSceDecoderOps<Svc1dParams> VDEC_SCE_DECODER_OPS_VC1 =
+{
+	.get_memory_size = ppu_execute<&svc1dGetMemorySize>,
+	.get_memory_size_2 = ppu_execute<&svc1dGetMemorySize2>,
+	.get_version_number = ppu_execute<&svc1dGetVersionNumber>,
+	// TODO remaining functions
+};
+
+constexpr VdecSceDecoderOps<SjvtdParams> VDEC_SCE_DECODER_OPS_JVT =
+{
+	.get_memory_size = ppu_execute<&sjvtdGetMemorySize>,
+	.get_memory_size_2 = ppu_execute<&sjvtdGetMemorySize2>,
+	.get_version_number = ppu_execute<&sjvtdGetVersionNumber>,
+	// TODO remaining functions
+};
+
+constexpr std::array VDEC_SCE_DECODER_ERROR_BASE_MAP = { 0x80615000u, 0x80615100u, 0x80615300u, 0x80615800u };
+
+constexpr std::array VDEC_SCE_DECODER_MAX_MEM_SIZE_MAP =
+{
+	std::array<u32, 13>{ 0xc8400, 0x295680, 0x9b8200, 0xce4f00 },
+	std::array<u32, 13>{ 0x44480, 0x44480, 0xa8b00, 0x1e6800, 0x1b4d00, 0x23e400 },
+	std::array<u32, 13>{ 0x1b44f0, 0x2dfef0, 0x38f9f0, 0x999e30, 0x2827f70, 0x2dfef0, 0x754130, 0x11bd9f0, 0x1fdee70, 0x3900070 },
+	std::array<u32, 13>{ 0x380fd0, 0x380fd0, 0x380fd0, 0x380fd0, 0x780950, 0xcb6d50, 0xcb6d50, 0x17a4950, 0x3245ed0, 0x4499fd0, 0x4499fd0, 0x4499fd0, 0x6b979d0 }
+};
+
+constexpr std::array VDEC_SCE_DECODER_UNK_MAP =
+{
+	VdecSceDecoderUnk{ .unk1 = 2, .unk2 = 0, .unk4 = 0x1c8 },
+	VdecSceDecoderUnk{ .unk1 = 1, .unk2 = 6, .unk4 =  0x38 },
+	VdecSceDecoderUnk{ .unk1 = 3, .unk2 = 6, .unk4 = 0x170 },
+	VdecSceDecoderUnk{ .unk1 = 4, .unk2 = 6, .unk4 = 0x160 }
+};
+
+error_code cellVdecQueryAttrEx(ppu_thread& ppu, vm::cptr<CellVdecTypeEx> type, vm::ptr<CellVdecAttr> attr);
