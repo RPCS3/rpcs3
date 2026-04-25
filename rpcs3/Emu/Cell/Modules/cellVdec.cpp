@@ -1102,7 +1102,7 @@ static error_code query_attr_divx(ppu_thread& ppu, VdecDecoderAttr& attr, u32 pr
 
 static inline bool check_codec_type(u32 codec_type)
 {
-	return codec_type <= CELL_VDEC_CODEC_TYPE_MPEG4 || (codec_type < CELL_VDEC_CODEC_TYPE_MAX && !(codec_type & 1));
+	return codec_type <= CELL_VDEC_CODEC_TYPE_MPEG4 || (codec_type < CELL_VDEC_CODEC_TYPE_MAX && (codec_type & 1));
 }
 
 static VdecDecoderSpecificOps get_decoder_specific_ops(u32 codec_type)
