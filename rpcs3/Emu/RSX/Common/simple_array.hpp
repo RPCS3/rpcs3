@@ -569,6 +569,21 @@ namespace rsx
 			return ret;
 		}
 
+		simple_array<Ty> filter(std::predicate<const Ty&> auto predicate) const
+		{
+			simple_array<Ty> result;
+			result.reserve(size());
+
+			for (auto it = begin(); it != end(); ++it)
+			{
+				if (predicate(*it))
+				{
+					result.push_back(*it);
+				}
+			}
+			return result;
+		}
+
 		simple_array<Ty>& sort(std::predicate<const Ty&, const Ty&> auto predicate)
 		{
 			if (_size < 2)

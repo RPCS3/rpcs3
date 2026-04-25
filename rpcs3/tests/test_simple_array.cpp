@@ -181,10 +181,30 @@ namespace rsx
 		EXPECT_FALSE(arr.any([](const int& val) { return val > 5; }));
 	}
 
+	TEST(SimpleArray, Filter)
+	{
+		const rsx::simple_array<int> arr{ 1, 2, 3, 4, 5, 6, 7, 8, 9, -1, -2 };
+		const auto result = arr.filter(FN(x > 5));
+		const auto result2 = arr.filter(FN(x < 0));
+		const auto result3 = arr.filter(FN(x == 10));
+
+		EXPECT_EQ(result.size(), 4);
+		EXPECT_EQ(result[0], 6);
+		EXPECT_EQ(result[1], 7);
+		EXPECT_EQ(result[2], 8);
+		EXPECT_EQ(result[3], 9);
+
+		EXPECT_EQ(result2.size(), 2);
+		EXPECT_EQ(result2[0], -1);
+		EXPECT_EQ(result2[1], -2);
+
+		EXPECT_EQ(result3.size(), 0);
+	}
+
 	TEST(SimpleArray, Sort)
 	{
 		rsx::simple_array<int> arr{ 5, 3, 1, 4, 2 };
-		arr.sort([](const int& a, const int& b) { return a < b; });
+		arr.sort(FN(x < y));
 
 		for (u32 i = 0; i < arr.size(); ++i)
 		{
