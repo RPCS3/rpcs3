@@ -1586,18 +1586,28 @@ namespace rsx
 
 				m_graphics_state.set(rsx::rtt_config_contested);
 
-				// TODO: Research clearing both depth AND color
-				// TODO: If context is creation_draw, deal with possibility of a lost buffer clear
-				if (depth_test_enabled || stencil_test_enabled || (!layout.color_write_enabled[index] && layout.zeta_write_enabled))
-				{
-					// Use address for depth data
-					layout.color_addresses[index] = 0;
-					continue;
-				}
-				else
+				if (g_cfg.video.fb_aliasing_bias == framebuffer_aliasing_bias::prefer_color
+					&& layout.color_write_enabled[index]
+					&& !layout.zeta_write_enabled)
 				{
 					// Use address for color data
 					layout.zeta_address = 0;
+				}
+				else
+				{
+					// TODO: Research clearing both depth AND color
+					// TODO: If context is creation_draw, deal with possibility of a lost buffer clear
+					if (depth_test_enabled || stencil_test_enabled || (!layout.color_write_enabled[index] && layout.zeta_write_enabled))
+					{
+						// Use address for depth data
+						layout.color_addresses[index] = 0;
+						continue;
+					}
+					else
+					{
+						// Use address for color data
+						layout.zeta_address = 0;
+					}
 				}
 			}
 
