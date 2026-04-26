@@ -16,7 +16,7 @@ QT_MM_URL="${QT_HOST}${QT_PREFIX}addons.qtmultimedia.${QT_PREFIX_2}qtmultimedia$
 QT_SVG_URL="${QT_HOST}${QT_PREFIX}${QT_PREFIX_2}qtsvg${QT_SUFFIX}"
 QT_TRANSLATIONS_URL="${QT_HOST}${QT_PREFIX}${QT_PREFIX_2}qttranslations${QT_SUFFIX}"
 LLVMLIBS_URL="https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win-${LLVM_VER}/llvmlibs_mt.7z"
-VULKAN_SDK_URL="https://sdk.lunarg.com/sdk/download/1.4.341.1/windows/vulkansdk-windows-X64-${VULKAN_VER}.exe"
+VULKAN_SDK_URL="https://www.dropbox.com/scl/fi/g2w92mv46pjxztcyrw9w2/vulkansdk-windows-X64-${VULKAN_VER}.exe?rlkey=cxih47sjebecumdt96qp74gj3&st=7eqiymt7&dl=1"
 CCACHE_URL="https://github.com/ccache/ccache/releases/download/v4.12.3/ccache-4.12.3-windows-x86_64.zip"
 
 DEP_URLS="         \
@@ -88,7 +88,7 @@ for url in $DEP_URLS; do
     *qt*) checksum=$(curl -fL "${url}.sha1"); algo="sha1"; outDir="$QTDIR/" ;;
     *llvm*) checksum=$(curl -fL "${url}.sha256"); algo="sha256"; outDir="./build/lib_ext/Release-x64" ;;
     *ccache*) checksum=$CCACHE_SHA; algo="sha256"; outDir="$CCACHE_BIN_DIR" ;;
-    *Vulkan*)
+    *vulkansdk*)
         # Vulkan setup needs to be run in batch environment
         # Need to subshell this or else it doesn't wait
         download_and_verify "$url" "$VULKAN_SDK_SHA" "sha256" "$fileName"
