@@ -4378,18 +4378,6 @@
               </widget>
              </item>
              <item>
-              <widget class="QGroupBox" name="gb_fbAliasingBias">
-               <property name="title">
-                <string>Framebuffer Aliasing Heuristic Bias</string>
-               </property>
-               <layout class="QVBoxLayout" name="gb_fbAliasingBias_layout">
-                <item>
-                 <widget class="QComboBox" name="fbAliasingBias"/>
-                </item>
-               </layout>
-              </widget>
-             </item>
-             <item>
               <widget class="QCheckBox" name="forceCpuBlitEmulation">
                <property name="text">
                 <string>Force CPU Blit Emulation</string>
@@ -4691,6 +4679,18 @@
                <layout class="QVBoxLayout" name="gb_vksched_layout">
                 <item>
                  <widget class="QComboBox" name="vulkansched"/>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item>
+              <widget class="QGroupBox" name="gb_fbAliasingBias">
+               <property name="title">
+                <string>Framebuffer Aliasing Heuristic Bias</string>
+               </property>
+               <layout class="QVBoxLayout" name="gb_fbAliasingBias_layout">
+                <item>
+                 <widget class="QComboBox" name="fbAliasingBias"/>
                 </item>
                </layout>
               </widget>
