@@ -21,7 +21,7 @@ The following tools are required to build RPCS3 on Windows 10 or later:
 
 - [Python 3.6+](https://www.python.org/downloads/) (add to PATH)
 - [Qt 6.11.0](https://www.qt.io/download-qt-installer) In case you can't download from the official installer, you can use [Another Qt installer](https://github.com/miurahr/aqtinstall) (In that case you will need to manually add the "qtmultimedia" module when installing Qt)
-- [Vulkan SDK 1.3.268.0](https://vulkan.lunarg.com/sdk/home) (see "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/windows/getting_started.html)) for now future SDKs don't work. You need precisely 1.3.268.0.
+- [Vulkan SDK 1.4.341.1](https://vulkan.lunarg.com/sdk/home) (see "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/windows/getting_started.html)). Note that future SDKs may not work.
 
 The `sln` solution available only on **Visual Studio** is the preferred building solution. It easily allows to build the **RPCS3** application in `Release` and `Debug` mode.
 
@@ -40,7 +40,7 @@ These are the essentials tools to build RPCS3 on Linux. Some of them can be inst
 - Clang 17+ or GCC 13+
 - [CMake 3.28.0+](https://www.cmake.org/download/)
 - [Qt 6.11.0](https://www.qt.io/download-qt-installer)
-- [Vulkan SDK 1.3.268.0](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/linux/getting_started.html)) for now future SDKs don't work. You need precisely 1.3.268.0.
+- [Vulkan SDK 1.4.341.1](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/linux/getting_started.html)). Note that future SDKs may not work.
 - [SDL3](https://github.com/libsdl-org/SDL/releases) (for the FAudio backend)
 
 **If you have an NVIDIA GPU, you may need to install the libglvnd package.**
