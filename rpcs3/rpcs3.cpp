@@ -85,7 +85,7 @@ static const bool s_init_locale = []()
 
 static semaphore<> s_qt_init;
 
-static atomic_t<bool> s_headless = false;
+atomic_t<bool> g_headless = false;
 static atomic_t<bool> s_no_gui = false;
 static atomic_t<char*> s_argv0 = nullptr;
 static bool s_is_error_launch = false;
@@ -214,7 +214,7 @@ std::set<std::string> get_one_drive_paths()
 
 	std::string_view text = s_is_error_launch ? _text : buf;
 
-	if (s_headless)
+	if (g_headless)
 	{
 		utils::attach_console(utils::console_stream::std_err, true);
 
@@ -977,7 +977,7 @@ int run_rpcs3(int argc, char** argv)
 	}
 	else if (headless_application* headless_app = qobject_cast<headless_application*>(app.data()))
 	{
-		s_headless = true;
+		g_headless = true;
 
 		headless_app->SetActiveUser(active_user);
 
@@ -1200,7 +1200,7 @@ int run_rpcs3(int argc, char** argv)
 			{
 				sys_log.error("Booting savestate '%s' failed: reason: %s", path, error);
 
-				if (s_headless || s_no_gui)
+				if (g_headless || s_no_gui)
 				{
 					report_fatal_error(fmt::format("Booting savestate '%s' failed!\n\nReason: %s", path, error));
 				}
@@ -1223,7 +1223,7 @@ int run_rpcs3(int argc, char** argv)
 			{
 				sys_log.error("Booting rsx capture '%s' failed", path);
 
-				if (s_headless || s_no_gui)
+				if (g_headless || s_no_gui)
 				{
 					report_fatal_error(fmt::format("Booting rsx capture '%s' failed!", path));
 				}
@@ -1332,20 +1332,20 @@ int run_rpcs3(int argc, char** argv)
 			{
 				sys_log.error("Booting '%s' with cli argument failed: reason: %s", path, error);
 
-				if (s_headless || s_no_gui)
+				if (g_headless || s_no_gui)
 				{
 					report_fatal_error(fmt::format("Booting '%s' failed!\n\nReason: %s", path, error));
 				}
 			}
 		});
 	}
-	else if (s_headless || s_no_gui)
+	else if (g_headless || s_no_gui)
 	{
 		// If launched from CMD
 		utils::attach_console(utils::console_stream::std_out | utils::console_stream::std_err, false);
 
-		sys_log.error("Cannot run %s mode without boot target. Terminating...", s_headless ? "headless" : "no-gui");
-		fprintf(stderr, "Cannot run %s mode without boot target. Terminating...\n", s_headless ? "headless" : "no-gui");
+		sys_log.error("Cannot run %s mode without boot target. Terminating...", g_headless ? "headless" : "no-gui");
+		fprintf(stderr, "Cannot run %s mode without boot target. Terminating...\n", g_headless ? "headless" : "no-gui");
 
 		if (s_no_gui)
 		{
