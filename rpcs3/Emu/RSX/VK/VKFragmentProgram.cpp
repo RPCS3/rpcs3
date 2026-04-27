@@ -97,7 +97,11 @@ void VKFragmentDecompilerThread::insertHeader(std::stringstream & OS)
 {
 	prepareBindingTable();
 
-	std::vector<const char*> required_extensions;
+	std::vector<const char*> required_extensions =
+	{
+		"GL_EXT_scalar_block_layout",
+		"GL_EXT_uniform_buffer_unsized_array"
+	};
 
 	if (device_props.has_native_half_support)
 	{
@@ -251,7 +255,7 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 	if (!properties.constant_offsets.empty())
 	{
-		OS << "layout(std430, set=1, binding=" << vk_prog->binding_table.cbuf_location << ") readonly buffer FragmentConstantsBuffer\n";
+		OS << "layout(std430, set=1, binding=" << vk_prog->binding_table.cbuf_location << ") uniform FragmentConstantsBuffer\n";
 		OS << "{\n";
 		OS << "	vec4 fc[];\n";
 		OS << "};\n";
@@ -259,12 +263,12 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	}
 
 	OS <<
-		"layout(std430, set=1, binding=" << vk_prog->binding_table.context_buffer_location << ") readonly buffer FragmentStateBuffer\n"
+		"layout(std430, set=1, binding=" << vk_prog->binding_table.context_buffer_location << ") uniform FragmentStateBuffer\n"
 		"{\n"
 		"	fragment_context_t fs_contexts[];\n"
 		"};\n\n";
 
-	OS << "layout(std430, set=1, binding=" << vk_prog->binding_table.tex_param_location << ") readonly buffer TextureParametersBuffer\n";
+	OS << "layout(std430, set=1, binding=" << vk_prog->binding_table.tex_param_location << ") uniform TextureParametersBuffer\n";
 	OS << "{\n";
 	OS << "	sampler_info texture_parameters[];\n";
 	OS << "};\n\n";
@@ -284,18 +288,18 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	{
 		in.location = vk_prog->binding_table.cbuf_location;
 		in.name = "FragmentConstantsBuffer";
-		in.type = vk::glsl::input_type_storage_buffer,
+		in.type = vk::glsl::input_type_uniform_buffer,
 		inputs.push_back(in);
 	}
 
 	in.location = vk_prog->binding_table.context_buffer_location;
 	in.name = "FragmentStateBuffer";
-	in.type = vk::glsl::input_type_storage_buffer;
+	in.type = vk::glsl::input_type_uniform_buffer;
 	inputs.push_back(in);
 
 	in.location = vk_prog->binding_table.tex_param_location;
 	in.name = "TextureParametersBuffer";
-	in.type = vk::glsl::input_type_storage_buffer;
+	in.type = vk::glsl::input_type_uniform_buffer;
 	inputs.push_back(in);
 
 	in.location = vk_prog->binding_table.polygon_stipple_params_location;

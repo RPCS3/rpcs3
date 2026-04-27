@@ -508,11 +508,11 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	// VRAM allocation
 	// This first set is bound persistently, so grow notifications are enabled.
 	m_attrib_ring_info.create(VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_default, "attrib buffer", 0x400000, VK_TRUE);
-	m_fragment_env_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "fragment env buffer", 0x10000, VK_TRUE);
+	m_fragment_env_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "fragment env buffer", 0x10000, VK_TRUE);
 	m_vertex_env_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "vertex env buffer", 0x10000, VK_TRUE);
-	m_fragment_texture_params_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "fragment texture params buffer", 0x10000, VK_TRUE);
+	m_fragment_texture_params_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "fragment texture params buffer", 0x10000, VK_TRUE);
 	m_vertex_layout_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "vertex layout buffer", 0x10000, VK_TRUE);
-	m_fragment_constants_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "fragment constants buffer", 0x10000, VK_TRUE);
+	m_fragment_constants_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "fragment constants buffer", 0x10000, VK_TRUE);
 	m_transform_constants_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, vk::heap_pool_default, "transform constants buffer", 0x10000, VK_TRUE);
 	m_raster_env_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "raster env buffer", 0x10000, VK_TRUE);
 	// Below here, we do not bind these persistently. Each draw call specifies the range manually so we do not need heap_grow notifications.
@@ -1934,6 +1934,7 @@ void VKGSRender::load_program_env()
 	}
 
 	const auto& ctx = REGS(m_ctx);
+	const auto& gpu_limits = m_device->gpu().get_limits();
 
 	const u32 fragment_constants_size = current_fp_metadata.program_constants_buffer_length;
 	const bool is_interpreter = m_shader_interpreter.is_interpreter(m_program);
@@ -2022,6 +2023,9 @@ void VKGSRender::load_program_env()
 				*ensure(m_fragment_prog), current_fragment_program, true);
 
 			m_fragment_constants_ring_info.unmap();
+
+			m_fragment_constants_buffer_info = m_fragment_constants_ring_info.window<16>(m_fragment_constants_dynamic_offset, fragment_constants_size, gpu_limits.maxUniformBufferRange);
+			m_fragment_constants_dynamic_offset -= m_fragment_constants_buffer_info.offset;
 		}
 	}
 
@@ -2032,15 +2036,21 @@ void VKGSRender::load_program_env()
 
 		m_draw_processor.fill_fragment_state_buffer(buf, current_fragment_program);
 		m_fragment_env_ring_info.unmap();
+
+		m_fragment_env_buffer_info = m_fragment_env_ring_info.window<32>(m_fragment_env_dynamic_offset, 32, gpu_limits.maxUniformBufferRange);
+		m_fragment_env_dynamic_offset -= m_fragment_env_buffer_info.offset;
 	}
 
 	if (update_fragment_texture_env)
 	{
-		m_texture_parameters_dynamic_offset = m_fragment_texture_params_ring_info.static_alloc<16, 768>();
+		m_texture_parameters_dynamic_offset = m_fragment_texture_params_ring_info.static_alloc<256, 768>();
 		auto buf = m_fragment_texture_params_ring_info.map(m_texture_parameters_dynamic_offset, 768);
 
 		current_fragment_program.texture_params.write_to(buf, current_fp_metadata.referenced_textures_mask);
 		m_fragment_texture_params_ring_info.unmap();
+
+		m_fragment_texture_params_buffer_info = m_fragment_texture_params_ring_info.window<768>(m_texture_parameters_dynamic_offset, 768, gpu_limits.maxUniformBufferRange);
+		m_texture_parameters_dynamic_offset -= m_fragment_texture_params_buffer_info.offset;
 	}
 
 	if (update_raster_env)
