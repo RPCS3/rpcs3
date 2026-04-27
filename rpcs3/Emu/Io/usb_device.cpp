@@ -188,23 +188,14 @@ void usb_device_passthrough::control_transfer(u8 bmRequestType, u8 bRequest, u16
 
 void usb_device_passthrough::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer)
 {
-	// Zero-length bulk/interrupt IN URBs hang in libusb until the device sends a ZLP.
-	// The emulated path fake-completes these immediately with count=0; mirror that here
-	// so games that do drain-polls between transfers don't stall the worker thread.
-	if (buf_size == 0 && (endpoint & LIBUSB_ENDPOINT_IN))
-	{
-		transfer->fake = true;
-		transfer->expected_count = 0;
-		transfer->expected_result = HC_CC_NOERR;
-		transfer->expected_time = get_timestamp() + 1'000;
-		return;
-	}
-
 	// Pick the libusb helper matching the endpoint's actual transfer type. The PS3 USB
 	// stack routes both bulk and interrupt transfers through this method, but submitting
 	// an interrupt URB to a bulk endpoint fails with EINVAL on Linux.
 	const UsbDeviceEndpoint* ep_desc = find_endpoint(static_cast<u8>(endpoint));
 	const bool is_bulk = ep_desc && (ep_desc->bmAttributes & LIBUSB_TRANSFER_TYPE_MASK) == LIBUSB_TRANSFER_TYPE_BULK;
+
+	sys_usbd.notice("USIO debug: submitting passthrough transfer endpoint=0x%x dir=%s size=0x%x type=%s",
+		endpoint, (endpoint & LIBUSB_ENDPOINT_IN) ? "IN" : "OUT", buf_size, is_bulk ? "bulk" : "interrupt");
 
 	if (is_bulk)
 	{
