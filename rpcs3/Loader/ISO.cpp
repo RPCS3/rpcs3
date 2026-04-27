@@ -485,20 +485,16 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 	switch (m_enc_type)
 	{
 	case iso_encryption_type::REDUMP:
-		sys_log.success("init(): Set 'enc type': REDUMP, 'reg count': %u: %s", m_region_info.size(), path);
-		// sys_log.warning("init(): Set 'enc type': REDUMP, 'reg count': %u: %s", m_region_info.size(), path);
+		iso_log.warning("init: Set 'enc type': REDUMP, 'reg count': %u: %s", m_region_info.size(), path);
 		break;
 	case iso_encryption_type::ENC_3K3Y:
-		sys_log.success("init(): Set 'enc type': ENC_3K3Y, 'reg count': %u: %s", m_region_info.size(), path);
-		// sys_log.warning("init(): Set 'enc type': ENC_3K3Y, 'reg count': %u: %s", m_region_info.size(), path);
+		iso_log.warning("init: Set 'enc type': ENC_3K3Y, 'reg count': %u: %s", m_region_info.size(), path);
 		break;
 	case iso_encryption_type::DEC_3K3Y:
-		sys_log.success("init(): Set 'enc type': DEC_3K3Y, 'reg count': %u: %s", m_region_info.size(), path);
-		// sys_log.warning("init(): Set 'enc type': DEC_3K3Y, 'reg count': %u: %s", m_region_info.size(), path);
+		iso_log.warning("init: Set 'enc type': DEC_3K3Y, 'reg count': %u: %s", m_region_info.size(), path);
 		break;
 	case iso_encryption_type::NONE: // If encryption type was not set for any reason
-		sys_log.success("init(): Set 'enc type': NONE, 'reg count': %u: %s", m_region_info.size(), path);
-		// sys_log.warning("init(): Set 'enc type': NONE, 'reg count': %u: %s", m_region_info.size(), path);
+		iso_log.warning("init: Set 'enc type': NONE, 'reg count': %u: %s", m_region_info.size(), path);
 		break;
 	}
 
