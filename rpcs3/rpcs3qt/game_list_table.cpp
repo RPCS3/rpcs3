@@ -283,12 +283,8 @@ void game_list_table::populate(
 					// Do not report size of apps inside /dev_flash (it does not make sense to do so)
 					game->info.size_on_disk = 0;
 				}
-				else if (is_file_iso(game->info.path))
+				else if (is_iso_file(game->info.path, &game->info.size_on_disk)) // If iso file, game->info.size_on_disk is also set
 				{
-					fs::stat_t iso_stat;
-					fs::get_stat(game->info.path, iso_stat);
-
-					game->info.size_on_disk = iso_stat.size;
 				}
 				else
 				{
@@ -317,7 +313,7 @@ void game_list_table::populate(
 			check_iso |= !fs::exists(game->info.audio_path);
 		}
 
-		if (check_iso && is_file_iso(game->info.path))
+		if (check_iso && is_iso_file(game->info.path))
 		{
 			icon_item->set_iso_path(game->info.path);
 		}

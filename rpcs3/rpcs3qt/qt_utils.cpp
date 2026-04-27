@@ -403,7 +403,7 @@ namespace gui
 				// Get Icon for the gs_frame from path. this handles presumably all possible use cases
 				std::vector<std::string> path_list;
 
-				const bool is_archive = is_file_iso(path);
+				const bool is_archive = is_iso_file(path);
 				if (is_archive)
 				{
 					icon_path = "PS3_GAME/ICON0.PNG";
@@ -708,11 +708,15 @@ namespace gui
 		bool load_iso_icon(QPixmap& icon, const std::string& icon_path, const std::string& archive_path)
 		{
 			if (icon_path.empty() || archive_path.empty()) return false;
-			if (!is_file_iso(archive_path)) return false;
 
-			// Check cache first — avoids constructing a full iso_archive just for the icon.
+			bool is_raw_device = false;
+			const bool is_archive = is_iso_file(archive_path, nullptr, &is_raw_device);
+
+			if (!is_archive) return false;
+
+			// With the exception of raw device, check cache first — avoids constructing a full iso_archive just for the icon.
 			iso_metadata_cache_entry cache_entry{};
-			if (iso_cache::load(archive_path, cache_entry) && !cache_entry.icon_data.empty())
+			if (!is_raw_device && iso_cache::load(archive_path, cache_entry) && !cache_entry.icon_data.empty())
 			{
 				const QByteArray data(reinterpret_cast<const char*>(cache_entry.icon_data.data()),
 				                      static_cast<qsizetype>(cache_entry.icon_data.size()));
@@ -723,11 +727,11 @@ namespace gui
 			if (!archive.exists(icon_path)) return false;
 
 			auto icon_file = archive.open(icon_path);
-			const auto icon_size = icon_file.size();
+			const auto icon_size = icon_file->size();
 			if (icon_size == 0) return false;
 
 			QByteArray data(icon_size, 0);
-			icon_file.read(data.data(), icon_size);
+			icon_file->read(data.data(), icon_size);
 
 			return icon.loadFromData(data);
 		}

@@ -638,7 +638,7 @@ void Emulator::Init()
 
 		const std::string games_common_dir = g_cfg_vfs.get(g_cfg_vfs.games_dir, emu_dir);
 
-		if (make_path_verbose(games_common_dir, true))
+		if (!is_iso_file(games_common_dir) && make_path_verbose(games_common_dir, true))
 		{
 			fs::write_file(games_common_dir + "/Disc Games Can Be Put Here For Automatic Detection.txt", fs::create + fs::excl + fs::write, ""s);
 
@@ -985,7 +985,7 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 	m_db_config = db_config;
 
 	// Handle files and special paths inside Load unmodified
-	if (direct || !fs::is_dir(path))
+	if (direct || !fs::is_dir(path) || fs::get_optical_raw_device(path))
 	{
 		m_path = path;
 
@@ -1201,7 +1201,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			std::string disc_info;
 			m_ar->serialize(argv.emplace_back(), disc_info, klic.emplace_back(), m_game_dir, hdd1);
 
-			launching_from_disc_archive = is_file_iso(disc_info);
+			launching_from_disc_archive = is_iso_file(disc_info);
 
 			sys_log.notice("Savestate: is iso archive = %d ('%s')", launching_from_disc_archive, disc_info);
 
@@ -1218,7 +1218,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				// Load /dev_bdvd/ from game list if available
 				if (std::string game_path = m_games_config.get_path(m_title_id); !game_path.empty())
 				{
-					if (is_file_iso(game_path))
+					if (is_iso_file(game_path))
 					{
 						game_path = iso_device::virtual_device_name + "/PS3_GAME/./";
 					}
@@ -1389,7 +1389,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				title_path = std::move(game_path);
 			}
 
-			if (is_file_iso(title_path))
+			if (is_iso_file(title_path))
 			{
 				m_path = std::move(title_path);
 				ok = true;
@@ -1480,7 +1480,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		}
 
 		const std::string resolved_path = GetCallbacks().resolve_path(m_path);
-		if (!launching_from_disc_archive && is_file_iso(m_path))
+		if (!launching_from_disc_archive && is_iso_file(m_path))
 		{
 			sys_log.notice("Loading iso archive '%s'", m_path);
 
@@ -1933,7 +1933,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			// Load /dev_bdvd/ from game list if available
 			if (std::string game_path = m_games_config.get_path(m_title_id); !game_path.empty())
 			{
-				if (is_file_iso(game_path))
+				if (is_iso_file(game_path))
 				{
 					sys_log.notice("Loading iso archive for patch ('%s')", game_path);
 
@@ -4246,7 +4246,7 @@ u32 Emulator::AddGamesFromDir(const std::string& path)
 
 				const std::string dir_path = path + '/' + dir_entry.name;
 
-				if (!dir_entry.is_directory && !is_file_iso(dir_path))
+				if (!dir_entry.is_directory && !is_iso_file(dir_path))
 				{
 					continue;
 				}
@@ -4283,7 +4283,7 @@ u32 Emulator::AddGamesFromDir(const std::string& path)
 game_boot_result Emulator::AddGame(const std::string& path)
 {
 	// Handle files directly
-	if (!fs::is_dir(path))
+	if (!fs::is_dir(path) || fs::get_optical_raw_device(path))
 	{
 		return AddGameToYml(path);
 	}
@@ -4354,7 +4354,7 @@ game_boot_result Emulator::AddGameToYml(const std::string& path)
 	}
 
 	std::unique_ptr<iso_archive> archive;
-	if (is_file_iso(path))
+	if (is_iso_file(path))
 	{
 		archive = std::make_unique<iso_archive>(path);
 	}

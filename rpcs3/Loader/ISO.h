@@ -6,8 +6,7 @@
 #include "util/types.hpp"
 #include "Crypto/aes.h"
 
-bool is_file_iso(const std::string& path);
-bool is_file_iso(const fs::file& path);
+bool is_iso_file(const std::string& path, u64* size = nullptr, bool* is_raw_device = nullptr);
 
 void load_iso(const std::string& path);
 void unload_iso();
@@ -58,6 +57,8 @@ enum class iso_type_status
 	ERROR_PROCESSING_KEY
 };
 
+class iso_archive;
+
 // ISO file decryption class
 class iso_file_decryption
 {
@@ -66,14 +67,15 @@ private:
 	iso_encryption_type m_enc_type = iso_encryption_type::NONE;
 	std::vector<iso_region_info> m_region_info;
 
-	void reset();
+	static iso_type_status get_key(const std::string& key_path, aes_context* aes_ctx = nullptr);
+	static iso_type_status retrieve_key(iso_archive& archive, std::string& key_path, aes_context& aes_ctx);
 
 public:
 	static iso_type_status check_type(const std::string& path, std::string& key_path, aes_context* aes_ctx = nullptr);
 
 	iso_encryption_type get_enc_type() const { return m_enc_type; }
 
-	bool init(const std::string& path);
+	bool init(const std::string& path, iso_archive* archive = nullptr);
 	bool decrypt(u64 offset, void* buffer, u64 size, const std::string& name);
 };
 
@@ -102,10 +104,11 @@ struct iso_fs_node
 
 class iso_file : public fs::file_base
 {
-private:
+protected:
 	fs::file m_file;
-	std::shared_ptr<iso_file_decryption> m_dec;
 	iso_fs_metadata m_meta;
+	bool m_raw_device = false;
+	void* m_buf = nullptr;
 	u64 m_pos = 0;
 
 	std::pair<u64, iso_extent_info> get_extent_pos(u64 pos) const;
@@ -114,7 +117,11 @@ private:
 	u64 file_offset(u64 pos) const;
 
 public:
-	iso_file(fs::file&& iso_handle, std::shared_ptr<iso_file_decryption> iso_dec, const iso_fs_node& node);
+	iso_file(const std::string& path, bs_t<fs::open_mode> mode);
+	iso_file(const std::string& path, bs_t<fs::open_mode> mode, const iso_fs_node& node);
+	virtual ~iso_file();
+
+	explicit operator bool() const { return m_file.operator bool(); }
 
 	fs::stat_t get_stat() override;
 	bool trunc(u64 length) override;
@@ -125,6 +132,19 @@ public:
 	u64 size() override;
 
 	void release() override;
+
+	friend class iso_file_decryption;
+};
+
+class iso_file_encrypted : public iso_file
+{
+private:
+	std::shared_ptr<iso_file_decryption> m_dec;
+
+public:
+	iso_file_encrypted(const std::string& path, bs_t<fs::open_mode> mode, const iso_fs_node& node, std::shared_ptr<iso_file_decryption> dec);
+
+	u64 read_at(u64 offset, void* buffer, u64 size) override;
 };
 
 class iso_dir : public fs::dir_base
@@ -147,22 +167,23 @@ class iso_archive
 {
 private:
 	std::string m_path;
-	fs::file m_file;
-	std::shared_ptr<iso_file_decryption> m_dec;
 	iso_fs_node m_root {};
+	std::shared_ptr<iso_file_decryption> m_dec;
 
 public:
 	iso_archive(const std::string& path);
 
 	const std::string& path() const { return m_path; }
-	const std::shared_ptr<iso_file_decryption> get_dec() { return m_dec; }
 
 	iso_fs_node* retrieve(const std::string& path);
 	bool exists(const std::string& path);
 	bool is_file(const std::string& path);
 
-	iso_file open(const std::string& path);
+	std::unique_ptr<fs::file_base> get_iso_file(const std::string& path, bs_t<fs::open_mode> mode, const iso_fs_node& node);
+	std::unique_ptr<fs::file_base> open(const std::string& path);
 	psf::registry open_psf(const std::string& path);
+
+	friend class iso_file;
 };
 
 class iso_device : public fs::device_base

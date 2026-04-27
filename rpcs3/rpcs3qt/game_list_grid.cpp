@@ -124,7 +124,7 @@ void game_list_grid::populate(
 			check_iso |= !fs::exists(game->info.audio_path);
 		}
 
-		if (check_iso && is_file_iso(game->info.path))
+		if (check_iso && is_iso_file(game->info.path))
 		{
 			item->set_iso_path(game->info.path);
 		}

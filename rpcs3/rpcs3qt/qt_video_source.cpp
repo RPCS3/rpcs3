@@ -113,11 +113,11 @@ void qt_video_source::init_movie()
 		{
 			iso_archive archive(m_iso_path);
 			auto movie_file = archive.open(m_video_path.toStdString());
-			const auto movie_size = movie_file.size();
+			const auto movie_size = movie_file->size();
 			if (movie_size == 0) return;
 
 			m_video_data = QByteArray(movie_size, 0);
-			movie_file.read(m_video_data.data(), movie_size);
+			movie_file->read(m_video_data.data(), movie_size);
 
 			m_video_buffer = std::make_unique<QBuffer>(&m_video_data);
 			m_video_buffer->open(QIODevice::ReadOnly);
@@ -156,14 +156,14 @@ void qt_video_source::init_movie()
 		{
 			iso_archive archive(m_iso_path);
 			auto movie_file = archive.open(m_video_path.toStdString());
-			const auto movie_size = movie_file.size();
+			const auto movie_size = movie_file->size();
 			if (movie_size == 0)
 			{
 				return;
 			}
 
 			m_video_data = QByteArray(movie_size, 0);
-			movie_file.read(m_video_data.data(), movie_size);
+			movie_file->read(m_video_data.data(), movie_size);
 		}
 
 		if (m_video_data.isEmpty())
@@ -280,12 +280,12 @@ void qt_video_source::start_audio()
 	{
 		iso_archive archive(m_iso_path);
 		auto audio_file = archive.open(m_audio_path.toStdString());
-		const auto audio_size = audio_file.size();
+		const auto audio_size = audio_file->size();
 		if (audio_size == 0) return;
 
 		std::unique_ptr<QByteArray> old_audio_data = std::move(audio.data);
 		audio.data = std::make_unique<QByteArray>(audio_size, 0);
-		audio_file.read(audio.data->data(), audio_size);
+		audio_file->read(audio.data->data(), audio_size);
 
 		if (!audio.buffer)
 		{

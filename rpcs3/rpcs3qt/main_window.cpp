@@ -4080,7 +4080,7 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 		const QString suffix_lo = info.suffix().toLower();
 
 		// check for directories first, only valid if all other paths led to directories until now.
-		if (info.isDir() || is_file_iso(path.toStdString()))
+		if (info.isDir() || is_iso_file(path.toStdString()))
 		{
 			if (type != drop_type::drop_dir && type != drop_type::drop_error)
 			{

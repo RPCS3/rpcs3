@@ -551,13 +551,14 @@ void game_list_frame::OnParsingFinished()
 	{
 		std::unique_ptr<iso_archive> archive;
 		iso_metadata_cache_entry cache_entry{};
-		const bool is_iso = is_file_iso(dir_or_elf);
+		bool is_raw_device = false;
+		const bool is_archive = is_iso_file(dir_or_elf, nullptr, &is_raw_device);
 		
-		if (is_iso)
+		if (is_archive)
 		{
-			// Only construct iso_archive (which walks the full directory tree)
-			// when no valid cache entry exists for this ISO path + mtime.
-			if (!iso_cache::load(dir_or_elf, cache_entry))
+			// Only construct iso_archive (which walks the full directory tree) in case of raw device or
+			// when no valid cache entry exists for this ISO path + mtime
+			if (is_raw_device || !iso_cache::load(dir_or_elf, cache_entry))
 			{
 				archive = std::make_unique<iso_archive>(dir_or_elf);
 			}
@@ -738,9 +739,9 @@ void game_list_frame::OnParsingFinished()
 			}
 		}
 
-		// On cache miss for an ISO, persist the resolved metadata so subsequent
-		// launches skip iso_archive construction entirely.
-		if (archive && is_iso)
+		// With the exception of raw device, on cache miss for an ISO, persist the resolved metadata so subsequent
+		// launches skip iso_archive construction entirely
+		if (archive && is_archive && !is_raw_device)
 		{
 			fs::stat_t iso_stat{};
 			if (fs::get_stat(dir_or_elf, iso_stat))
@@ -755,11 +756,11 @@ void game_list_frame::OnParsingFinished()
 				if (game.icon_in_archive)
 				{
 					auto icon_file = archive->open(game.info.icon_path);
-					const auto icon_size = icon_file.size();
+					const auto icon_size = icon_file->size();
 					if (icon_size > 0)
 					{
 						cache_entry.icon_data.resize(icon_size);
-						icon_file.read(cache_entry.icon_data.data(), icon_size);
+						icon_file->read(cache_entry.icon_data.data(), icon_size);
 					}
 				}
 
@@ -854,7 +855,11 @@ void game_list_frame::OnParsingFinished()
 
 		if (entry.is_from_yml)
 		{
-			if (fs::is_file(entry.path + "/PARAM.SFO"))
+			if (is_iso_file(entry.path))
+			{
+				push_path(entry.path, legit_paths);
+			}
+			else if (fs::is_file(entry.path + "/PARAM.SFO"))
 			{
 				push_path(entry.path, legit_paths);
 			}
@@ -886,10 +891,6 @@ void game_list_frame::OnParsingFinished()
 				}
 
 				add_disc_dir(entry.path, legit_paths);
-			}
-			else if (is_file_iso(entry.path))
-			{
-				push_path(entry.path, legit_paths);
 			}
 			else
 			{
