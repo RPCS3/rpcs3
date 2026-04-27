@@ -1113,6 +1113,14 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case msaa_level::_auto: return tr("Auto", "MSAA");
 		}
 		break;
+	case emu_settings_type::FramebufferAliasingBias:
+		switch (static_cast<framebuffer_aliasing_bias>(index))
+		{
+		case framebuffer_aliasing_bias::_auto: return tr("Auto", "Framebuffer Aliasing Heuristic Bias");
+		case framebuffer_aliasing_bias::prefer_color: return tr("Prefer Color", "Framebuffer Aliasing Heuristic Bias");
+		case framebuffer_aliasing_bias::prefer_depth: return tr("Prefer Depth", "Framebuffer Aliasing Heuristic Bias");
+		}
+		break;
 	case emu_settings_type::ShaderPrecisionQuality:
 		switch (static_cast<gpu_preset_level>(index))
 		{

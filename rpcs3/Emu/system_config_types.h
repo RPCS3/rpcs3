@@ -226,6 +226,13 @@ enum class msaa_level
 	_auto
 };
 
+enum class framebuffer_aliasing_bias
+{
+	_auto,
+	prefer_color,
+	prefer_depth,
+};
+
 enum class detail_level
 {
 	none,
