@@ -2,7 +2,6 @@
 #include "main_application.h"
 #include "display_sleep_control.h"
 #include "gamemode_control.h"
-#include "rpcs3qt/gui_settings.h"
 #include "rpcs3qt/config_database.h"
 
 #include "util/types.hpp"
@@ -418,8 +417,7 @@ EmuCallbacks main_application::CreateCallbacks()
 
 		sys_log.notice("Trying to retrieve database config for: '%s'", title_id);
 
-		const auto settings = std::make_shared<gui_settings>();
-		config_database config_db(settings, nullptr);
+		config_database config_db(nullptr);
 		config_db.request_config_database(false);
 
 		if (!config_db.has_config(title_id))

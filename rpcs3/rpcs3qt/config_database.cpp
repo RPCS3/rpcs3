@@ -6,17 +6,19 @@
 
 LOG_CHANNEL(gui_log, "GUI");
 
-config_database::config_database(std::shared_ptr<gui_settings> settings, QWidget* parent)
+config_database::config_database(QWidget* parent)
 	: QObject(parent)
-	, m_gui_settings(std::move(settings))
 {
-	m_filepath = m_gui_settings->GetSettingsDir() + "/config_database.dat";
-	m_downloader = new downloader(parent);
+	m_filepath = gui_settings::GetSettingsDir() + "config_database.dat";
 	request_config_database();
 
-	connect(m_downloader, &downloader::signal_download_error, this, &config_database::handle_download_error);
-	connect(m_downloader, &downloader::signal_download_finished, this, &config_database::handle_download_finished);
-	connect(m_downloader, &downloader::signal_download_canceled, this, &config_database::handle_download_canceled);
+	if (parent)
+	{
+		m_downloader = new downloader(parent);
+		connect(m_downloader, &downloader::signal_download_error, this, &config_database::handle_download_error);
+		connect(m_downloader, &downloader::signal_download_finished, this, &config_database::handle_download_finished);
+		connect(m_downloader, &downloader::signal_download_canceled, this, &config_database::handle_download_canceled);
+	}
 }
 
 config_database::~config_database()
@@ -89,7 +91,7 @@ void config_database::request_config_database(bool online)
 	const std::string url = "https://api.rpcs3.net/config/?api=v1";
 	gui_log.notice("Beginning config database download from: %s", url);
 
-	m_downloader->start(url, true, true, true, tr("Downloading Config Database"));
+	ensure(m_downloader)->start(url, true, true, true, tr("Downloading Config Database"));
 
 	Q_EMIT download_started();
 }

@@ -13,17 +13,19 @@
 
 LOG_CHANNEL(compat_log, "Compat");
 
-game_compatibility::game_compatibility(std::shared_ptr<gui_settings> settings, QWidget* parent)
+game_compatibility::game_compatibility(QWidget* parent)
 	: QObject(parent)
-	, m_gui_settings(std::move(settings))
 {
-	m_filepath = m_gui_settings->GetSettingsDir() + "/compat_database.dat";
-	m_downloader = new downloader(parent);
+	m_filepath = gui_settings::GetSettingsDir() + "compat_database.dat";
 	RequestCompatibility();
 
-	connect(m_downloader, &downloader::signal_download_error, this, &game_compatibility::handle_download_error);
-	connect(m_downloader, &downloader::signal_download_finished, this, &game_compatibility::handle_download_finished);
-	connect(m_downloader, &downloader::signal_download_canceled, this, &game_compatibility::handle_download_canceled);
+	if (parent)
+	{
+		m_downloader = new downloader(parent);
+		connect(m_downloader, &downloader::signal_download_error, this, &game_compatibility::handle_download_error);
+		connect(m_downloader, &downloader::signal_download_finished, this, &game_compatibility::handle_download_finished);
+		connect(m_downloader, &downloader::signal_download_canceled, this, &game_compatibility::handle_download_canceled);
+	}
 }
 
 void game_compatibility::handle_download_error(const QString& error)
@@ -227,7 +229,7 @@ void game_compatibility::RequestCompatibility(bool online)
 	const std::string url = "https://rpcs3.net/compatibility?api=v1&export";
 	compat_log.notice("Beginning compatibility database download from: %s", url);
 
-	m_downloader->start(url, true, true, true, tr("Downloading Database"));
+	ensure(m_downloader)->start(url, true, true, true, tr("Downloading Database"));
 
 	// We want to retrieve a new database, therefore refresh game list and indicate that
 	Q_EMIT DownloadStarted();

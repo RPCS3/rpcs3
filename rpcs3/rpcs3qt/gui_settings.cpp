@@ -106,7 +106,7 @@ namespace gui
 
 gui_settings::gui_settings(QObject* parent) : settings(parent)
 {
-	m_settings = std::make_unique<QSettings>(ComputeSettingsDir() + gui::Settings + ".ini", QSettings::Format::IniFormat, parent);
+	m_settings = std::make_unique<QSettings>(GetSettingsDir() + gui::Settings + ".ini", QSettings::Format::IniFormat, parent);
 }
 
 QStringList gui_settings::GetGameListCategoryFilters(bool is_list_mode) const
@@ -307,7 +307,7 @@ QColor gui_settings::GetCustomColor(int col) const
 QStringList gui_settings::GetStylesheetEntries() const
 {
 	const QStringList name_filter = QStringList("*.qss");
-	QStringList res = gui::utils::get_dir_entries(m_settings_dir, name_filter);
+	QStringList res = gui::utils::get_dir_entries(QDir(GetSettingsDir()), name_filter);
 #if !defined(_WIN32)
 	// Makes stylesheets load if using AppImage (App Bundle) or installed to /usr/bin
 #ifdef __APPLE__
