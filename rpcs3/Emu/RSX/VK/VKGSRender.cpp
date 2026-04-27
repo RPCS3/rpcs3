@@ -2016,7 +2016,7 @@ void VKGSRender::load_program_env()
 		// Fragment constants
 		if (fragment_constants_size)
 		{
-			m_fragment_constants_dynamic_offset = m_fragment_constants_ring_info.alloc<16>(fragment_constants_size);
+			m_fragment_constants_dynamic_offset = m_fragment_constants_ring_info.alloc<256>(fragment_constants_size);
 			auto buf = m_fragment_constants_ring_info.map(m_fragment_constants_dynamic_offset, fragment_constants_size);
 
 			m_prog_buffer->fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), fragment_constants_size },
