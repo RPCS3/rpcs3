@@ -20,7 +20,7 @@ namespace vk
 		heap_pool_force_vram_shadow  = (1 << 2),
 	};
 
-	class data_heap : public ::data_heap
+	class data_heap : public rsx::data_heap
 	{
 	private:
 		usz initial_size = 0;
@@ -41,6 +41,8 @@ namespace vk
 		bool grow(usz size) override;
 		bool can_allocate_heap(const vk::memory_type_info& target_heap, usz size, int max_usage_percent);
 
+		void* map_impl(usz offset, usz size);
+
 	public:
 		std::unique_ptr<buffer> heap;
 
@@ -51,8 +53,15 @@ namespace vk
 		void create(VkBufferUsageFlags usage, usz size, rsx::flags32_t flags, const char* name, usz guard = 0x10000, VkBool32 notify = VK_FALSE);
 		void destroy();
 
-		void* map(usz offset, usz size);
+		template <typename T = void>
+		T* map(usz offset, usz size)
+		{
+			return reinterpret_cast<T*>(map_impl(offset, size));
+		}
+
 		void unmap(bool force = false);
+
+		void sync(const vk::command_buffer& cmd);
 
 		template<int Alignment, typename T = char>
 			requires std::is_trivially_destructible_v<T>
@@ -62,8 +71,6 @@ namespace vk
 			const auto addr = alloc<Alignment>(size_bytes);
 			return { addr, reinterpret_cast<T*>(map(addr, size_bytes)) };
 		}
-
-		void sync(const vk::command_buffer& cmd);
 
 		template <usz Alignment>
 		VkDescriptorBufferInfoEx window(usz offset, usz range, u64 window_size) const

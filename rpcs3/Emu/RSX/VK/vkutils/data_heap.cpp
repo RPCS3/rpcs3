@@ -15,7 +15,7 @@ namespace vk
 
 	void data_heap::create(VkBufferUsageFlags usage, usz size, rsx::flags32_t flags, const char* name, usz guard, VkBool32 notify)
 	{
-		::data_heap::init(size, name, guard);
+		rsx::data_heap::init(size, name, guard);
 
 		const auto& memory_map = g_render_device->get_memory_mapping();
 
@@ -135,7 +135,7 @@ namespace vk
 		auto memory_index = m_prefer_writethrough ? memory_map.device_bar : memory_map.host_visible_coherent;
 
 		// Update heap information and reset the allocator
-		::data_heap::init(aligned_new_size, m_name, m_min_guard_size);
+		rsx::data_heap::init(aligned_new_size, m_name, m_min_guard_size);
 
 		// Discard old heap and create a new one. Old heap will be garbage collected when no longer needed
 		auto gc = get_resource_manager();
@@ -188,7 +188,7 @@ namespace vk
 		return after_usage < limit;
 	}
 
-	void* data_heap::map(usz offset, usz size)
+	void* data_heap::map_impl(usz offset, usz size)
 	{
 		if (!_ptr)
 		{
