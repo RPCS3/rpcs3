@@ -235,7 +235,7 @@ jobs:
           fetch-depth: 0
 
       - name: Setup NuGet
-        uses: nuget/setup-nuget@v2
+        uses: nuget/setup-nuget@v4
 
       - name: Restore NuGet packages
         run: nuget restore rpcs3.sln
