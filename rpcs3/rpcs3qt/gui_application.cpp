@@ -830,14 +830,13 @@ void gui_application::InitializeCallbacks()
 	{
 		callbacks.on_install_pkgs = [this](const std::vector<std::string>& pkgs)
 		{
-			ensure(m_main_window);
 			ensure(!pkgs.empty());
 			QStringList pkg_list;
 			for (const std::string& pkg : pkgs)
 			{
 				pkg_list << QString::fromStdString(pkg);
 			}
-			return m_main_window->InstallPackages(pkg_list, true);
+			return main_window::InstallPackages(m_main_window, pkg_list, true);
 		};
 	}
 
