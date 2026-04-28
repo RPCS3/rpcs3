@@ -1374,11 +1374,10 @@ u64 iso_file::write(const void* /*buffer*/, u64 /*size*/)
 
 u64 iso_file::seek(s64 offset, fs::seek_mode whence)
 {
-	const s64 total_size = size();
 	const s64 new_pos =
 		whence == fs::seek_set ? offset :
 		whence == fs::seek_cur ? offset + m_pos :
-		whence == fs::seek_end ? offset + total_size : -1;
+		whence == fs::seek_end ? offset + size() : -1;
 
 	if (new_pos < 0)
 	{
