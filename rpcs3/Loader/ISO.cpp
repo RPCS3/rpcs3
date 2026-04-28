@@ -36,7 +36,7 @@ static bool is_iso_file(const fs::file& file, u64* size = nullptr)
 
 	file.read_at(32768ULL + 1, magic, 5);
 
-	bool ret = magic[0] == 'C' && magic[1] == 'D' && magic[2] == '0' && magic[3] == '0' && magic[4] == '1';
+	const bool ret = magic[0] == 'C' && magic[1] == 'D' && magic[2] == '0' && magic[3] == '0' && magic[4] == '1';
 
 	if (size && ret)
 	{
@@ -48,12 +48,17 @@ static bool is_iso_file(const fs::file& file, u64* size = nullptr)
 
 bool is_iso_file(const std::string& path, u64* size, bool* is_raw_device)
 {
+	if (path.empty())
+	{
+		return false;
+	}
+
 	std::string new_path = path;
 
 	// "new_path" is updated with the raw device path in case "path" points to a BD drive
-	bool raw_device = fs::get_optical_raw_device(path, &new_path);
+	const bool raw_device = fs::get_optical_raw_device(path, &new_path);
 
-	if (path.empty() || (!raw_device && fs::is_dir(path)))
+	if (!raw_device && fs::is_dir(path))
 	{
 		return false;
 	}
@@ -86,7 +91,7 @@ static void reset_iv(std::array<u8, 16>& iv, u32 lba)
 }
 
 // Main function that will decrypt the sector(s)
-static bool decrypt_data(aes_context& aes, u64 offset, unsigned char* buffer, unsigned char* out_buffer, u64 size)
+static bool decrypt_data(aes_context& aes, u64 offset, const unsigned char* buffer, unsigned char* out_buffer, u64 size)
 {
 	// The following preliminary checks are good to be provided.
 	// Commented out to gain a bit of performance, just because we know the caller is providing values in the expected range
@@ -115,7 +120,7 @@ static bool decrypt_data(aes_context& aes, u64 offset, unsigned char* buffer, un
 	// Otherwise, the IV is based on sector's LBA
 	if (sector_offset != 0)
 	{
-		memcpy(iv.data(), buffer, 16);
+		std::memcpy(iv.data(), buffer, 16);
 		cur_offset = 16;
 	}
 	else
@@ -190,7 +195,7 @@ iso_type_status iso_file_decryption::get_key(const std::string& key_path, aes_co
 		// binary (".key") and so not needing any further conversion from hex string to bytes
 		if (key_len == sizeof(key))
 		{
-			memcpy(key.data(), key_str, sizeof(key));
+			std::memcpy(key.data(), key_str, sizeof(key));
 		}
 		else
 		{
@@ -271,7 +276,7 @@ iso_type_status iso_file_decryption::retrieve_key(iso_archive& archive, std::str
 
 	for (auto path_it = entries.begin(); path_it != entries.end(); path_it++)
 	{
-		auto dir_entry = std::move(*path_it);
+		const auto dir_entry = std::move(*path_it);
 
 		if (dir_entry.name == "." || dir_entry.name == ".." || dir_entry.is_directory)
 		{
@@ -293,7 +298,7 @@ iso_type_status iso_file_decryption::retrieve_key(iso_archive& archive, std::str
 		}
 
 		// If the decrypted data match the magic value
-		if (memcmp(magic_value.data(), dec_sec.data(), magic_value.size()) == 0)
+		if (std::memcmp(magic_value.data(), dec_sec.data(), magic_value.size()) == 0)
 		{
 			return iso_type_status::REDUMP_ISO;
 		}
@@ -447,12 +452,12 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 		static const unsigned char k3k3y_dec_watermark[16] =
 			{0x44, 0x6E, 0x63, 0x72, 0x79, 0x70, 0x74, 0x65, 0x64, 0x20, 0x33, 0x4B, 0x20, 0x42, 0x4C, 0x44};
 
-		if (memcmp(&k3k3y_enc_watermark[0], &sec0_sec1[0xF70], sizeof(k3k3y_enc_watermark)) == 0)
+		if (std::memcmp(&k3k3y_enc_watermark[0], &sec0_sec1[0xF70], sizeof(k3k3y_enc_watermark)) == 0)
 		{
 			// Grab D1 from the 3k3y sector
 			unsigned char key[16];
 
-			memcpy(key, &sec0_sec1[0xF80], 0x10);
+			std::memcpy(key, &sec0_sec1[0xF80], 0x10);
 
 			// Convert D1 to KEY and generate the "m_aes_dec" context
 			unsigned char key_d1[] = {0x38, 11, 0xcf, 11, 0x53, 0x45, 0x5b, 60, 120, 0x17, 0xab, 0x4f, 0xa3, 0xba, 0x90, 0xed};
@@ -476,7 +481,7 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 				iso_log.error("init: Failed to set encryption type to ENC_3K3Y: %s", path);
 			}
 		}
-		else if (memcmp(&k3k3y_dec_watermark[0], &sec0_sec1[0xF70], sizeof(k3k3y_dec_watermark)) == 0)
+		else if (std::memcmp(&k3k3y_dec_watermark[0], &sec0_sec1[0xF70], sizeof(k3k3y_dec_watermark)) == 0)
 		{
 			m_enc_type = iso_encryption_type::DEC_3K3Y; // SET ENCRYPTION TYPE: DEC_3K3Y
 		}
@@ -592,12 +597,10 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 	}
 
 	const u64 archive_first_offset = file_offset(offset);
-	const u64 archive_last_offset = archive_first_offset + max_size - 1;
-	u64 total_read;
+	const u64 archive_last_offset = archive_first_offset + max_size - 1;;
 
 	iso_sector first_sec, last_sec;
-	u64 offset_aligned;
-	u64 offset_aligned_first_out;
+	u64 offset_aligned_first_out = 0;
 
 	first_sec.lba_address = (archive_first_offset / ISO_SECTOR_SIZE) * ISO_SECTOR_SIZE;
 	first_sec.offset = archive_first_offset % ISO_SECTOR_SIZE;
@@ -613,7 +616,7 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 
 	if (!m_raw_device)
 	{
-		offset_aligned = first_sec.offset & ~0xF;
+		const u64 offset_aligned = first_sec.offset & ~0xF;
 		offset_aligned_first_out = (first_sec.offset + first_sec.size) & ~0xF;
 
 		first_sec.offset_aligned = offset_aligned != 0 ? offset_aligned - 16 : 0; // Eventually include the previous block (used as IV)
@@ -629,12 +632,12 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 		first_sec.address_aligned = first_sec.lba_address;
 	}
 
-	total_read = m_file.read_at(first_sec.address_aligned, &reinterpret_cast<u8*>(m_buf)[first_sec.offset_aligned], first_sec.size_aligned);
+	u64 total_read = m_file.read_at(first_sec.address_aligned, &reinterpret_cast<u8*>(m_buf)[first_sec.offset_aligned], first_sec.size_aligned);
 
 	m_dec->decrypt(first_sec.address_aligned, &reinterpret_cast<u8*>(m_buf)[first_sec.offset_aligned], first_sec.size_aligned, m_meta.name);
-	memcpy(buffer, &reinterpret_cast<u8*>(m_buf)[first_sec.offset], first_sec.size);
+	std::memcpy(buffer, &reinterpret_cast<u8*>(m_buf)[first_sec.offset], first_sec.size);
 
-	u64 sector_count = (last_sec.lba_address - first_sec.lba_address) / ISO_SECTOR_SIZE + 1;
+	const u64 sector_count = (last_sec.lba_address - first_sec.lba_address) / ISO_SECTOR_SIZE + 1;
 
 	if (sector_count < 2) // If no more sector(s)
 	{
@@ -658,7 +661,7 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 	{
 		if (!m_raw_device)
 		{
-			u64 inner_sector_size = (sector_count - 2) * ISO_SECTOR_SIZE;
+			const u64 inner_sector_size = (sector_count - 2) * ISO_SECTOR_SIZE;
 
 			total_read += m_file.read_at(first_sec.lba_address + ISO_SECTOR_SIZE, &reinterpret_cast<u8*>(buffer)[first_sec.size], inner_sector_size);
 
@@ -673,7 +676,7 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 				total_read += m_file.read_at(first_sec.lba_address + ISO_SECTOR_SIZE + inner_sector_offset, m_buf, ISO_SECTOR_SIZE);
 
 				m_dec->decrypt(first_sec.lba_address + ISO_SECTOR_SIZE + inner_sector_offset, m_buf, ISO_SECTOR_SIZE, m_meta.name);
-				memcpy(&reinterpret_cast<u8*>(buffer)[first_sec.size + inner_sector_offset], m_buf, ISO_SECTOR_SIZE);
+				std::memcpy(&reinterpret_cast<u8*>(buffer)[first_sec.size + inner_sector_offset], m_buf, ISO_SECTOR_SIZE);
 			}
 		}
 	}
@@ -696,7 +699,7 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 	total_read += m_file.read_at(last_sec.address_aligned, m_buf, last_sec.size_aligned);
 
 	m_dec->decrypt(last_sec.address_aligned, m_buf, last_sec.size_aligned, m_meta.name);
-	memcpy(&reinterpret_cast<u8*>(buffer)[max_size - last_sec.size], m_buf, last_sec.size);
+	std::memcpy(&reinterpret_cast<u8*>(buffer)[max_size - last_sec.size], m_buf, last_sec.size);
 
 	//
 	// As last, check for an unlikely reading error (decoding also failed due to use of partially initialized buffer)
@@ -1120,7 +1123,7 @@ psf::registry iso_archive::open_psf(const std::string& path)
 
 iso_file::iso_file(const std::string& path, bs_t<fs::open_mode> mode)
 {
-	m_file = std::move(fs::file(path, mode));
+	m_file = fs::file(path, mode);
 
 	if (!m_file)
 	{
@@ -1134,7 +1137,7 @@ iso_file::iso_file(const std::string& path, bs_t<fs::open_mode> mode)
 
 	m_file.seek(m_meta.extents[0].start * ISO_SECTOR_SIZE);
 
-	m_raw_device = fs::is_optical_raw_device(path) ? true : false;
+	m_raw_device = fs::is_optical_raw_device(path);
 
 	// IMPORTANT NOTE: It must be aligned (probably enough on multiple of 4) to support raw device, otherwise any read from file will fail
 #if defined(_WIN32)
@@ -1147,7 +1150,7 @@ iso_file::iso_file(const std::string& path, bs_t<fs::open_mode> mode)
 iso_file::iso_file(const std::string& path, bs_t<fs::open_mode> mode, const iso_fs_node& node)
 	: m_meta(node.metadata)
 {
-	m_file = std::move(fs::file(path, mode));
+	m_file = fs::file(path, mode);
 
 	if (!m_file)
 	{
@@ -1158,7 +1161,7 @@ iso_file::iso_file(const std::string& path, bs_t<fs::open_mode> mode, const iso_
 
 	m_file.seek(m_meta.extents[0].start * ISO_SECTOR_SIZE);
 
-	m_raw_device = fs::is_optical_raw_device(path) ? true : false;
+	m_raw_device = fs::is_optical_raw_device(path);
 
 	// IMPORTANT NOTE: It must be aligned (probably enough on multiple of 4) to support raw device, otherwise any read from file will fail
 #if defined(_WIN32)
@@ -1248,12 +1251,11 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 	}
 
 	const u64 archive_first_offset = file_offset(offset);
-	u64 total_read;
 
 	// If it's not a raw device
 	if (!m_raw_device)
 	{
-		total_read = m_file.read_at(archive_first_offset, buffer, max_size);
+		u64 total_read = m_file.read_at(archive_first_offset, buffer, max_size);
 
 		if (total_read != max_size)
 		{
@@ -1303,11 +1305,11 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 	// First sector
 	//
 
-	total_read = m_file.read_at(first_sec.lba_address, m_buf, ISO_SECTOR_SIZE);
+	u64 total_read = m_file.read_at(first_sec.lba_address, m_buf, ISO_SECTOR_SIZE);
 
-	memcpy(buffer, &reinterpret_cast<u8*>(m_buf)[first_sec.offset], first_sec.size);
+	std::memcpy(buffer, &reinterpret_cast<u8*>(m_buf)[first_sec.offset], first_sec.size);
 
-	u64 sector_count = (last_sec.lba_address - first_sec.lba_address) / ISO_SECTOR_SIZE + 1;
+	const u64 sector_count = (last_sec.lba_address - first_sec.lba_address) / ISO_SECTOR_SIZE + 1;
 
 	if (sector_count < 2) // If no more sector(s)
 	{
@@ -1335,7 +1337,7 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 		{
 			total_read += m_file.read_at(first_sec.lba_address + ISO_SECTOR_SIZE + sector_offset, m_buf, ISO_SECTOR_SIZE);
 
-			memcpy(&reinterpret_cast<u8*>(buffer)[first_sec.size + sector_offset], m_buf, ISO_SECTOR_SIZE);
+			std::memcpy(&reinterpret_cast<u8*>(buffer)[first_sec.size + sector_offset], m_buf, ISO_SECTOR_SIZE);
 		}
 	}
 
@@ -1345,7 +1347,7 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 
 	total_read += m_file.read_at(last_sec.address_aligned, m_buf, ISO_SECTOR_SIZE);
 
-	memcpy(&reinterpret_cast<u8*>(buffer)[max_size - last_sec.size], m_buf, last_sec.size);
+	std::memcpy(&reinterpret_cast<u8*>(buffer)[max_size - last_sec.size], m_buf, last_sec.size);
 
 	//
 	// As last, check for an unlikely reading error

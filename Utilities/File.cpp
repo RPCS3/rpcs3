@@ -1138,36 +1138,33 @@ bool fs::get_optical_raw_device(const std::string& path, std::string* raw_device
 
 #ifdef _WIN32
 	constexpr u32 BUF_SIZE = 1000;
-	WCHAR drive_list[MAX_PATH] = {0};
+	WCHAR drive_list[BUF_SIZE] = {0};
 
 	// GetLogicalDriveStrings() returns a double-null terminated list of null-terminated strings.
 	// E.g. A:\<nul>B:\<nul>C:\<nul><nul>
-	DWORD copied = GetLogicalDriveStrings(MAX_PATH, drive_list);
+	const DWORD copied = GetLogicalDriveStrings(BUF_SIZE, drive_list);
 
-	if (copied > 0 && copied <= MAX_PATH)
+	if (copied == 0 || copied > BUF_SIZE)
 	{
-		WCHAR* drive = drive_list;
+		return false;
+	}
 
-		while (*drive)
+	for (const WCHAR* drive = drive_list; drive && *drive; drive += wcslen(drive) + 1)
+	{
+		if (GetDriveType(drive) == DRIVE_CDROM)
 		{
-			if (GetDriveType(drive) == DRIVE_CDROM)
+			const std::wstring ws(drive);
+			const std::string s = std::string(ws.begin(), ws.end() - 1);
+
+			if (path.starts_with(s))
 			{
-				std::wstring ws(drive);
-				std::string s = std::string(ws.begin(), ws.end() - 1);
-
-				if (path.starts_with(s))
+				if (raw_device)
 				{
-					if (raw_device)
-					{
-						*raw_device = "\\\\.\\" + s;
-					}
-
-					return true;
+					*raw_device = "\\\\.\\" + s;
 				}
-			}
 
-			// Get the next drive
-			drive += wcslen(drive) + 1;
+				return true;
+			}
 		}
 	}
 

@@ -4237,7 +4237,7 @@ u32 Emulator::AddGamesFromDir(const std::string& path)
 			// search direct subdirectories, that way we can drop one folder containing all games
 			for (; path_it != entries.end(); ++path_it)
 			{
-				auto dir_entry = std::move(*path_it);
+				const auto dir_entry = std::move(*path_it);
 
 				if (dir_entry.name == "." || dir_entry.name == "..")
 				{

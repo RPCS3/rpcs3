@@ -216,7 +216,7 @@ namespace fs
 	// Check whether the path points to a raw device
 	bool is_optical_raw_device(const std::string& path);
 
-	// Check whether the path points to an optical drive. If so, provide the raw device
+	// Check whether the path points to an optical drive. If so, provide the raw device in "raw_device" if requested
 	bool get_optical_raw_device(const std::string& path, std::string* raw_device = nullptr);
 
 	// Get filesystem information
