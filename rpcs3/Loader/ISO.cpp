@@ -597,7 +597,7 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 	}
 
 	const u64 archive_first_offset = file_offset(offset);
-	const u64 archive_last_offset = archive_first_offset + max_size - 1;;
+	const u64 archive_last_offset = archive_first_offset + max_size - 1;
 
 	iso_sector first_sec, last_sec;
 	u64 offset_aligned_first_out = 0;
@@ -649,7 +649,6 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 			return 0;
 		}
 
-		m_pos = offset + max_size;
 		return max_size;
 	}
 
@@ -714,7 +713,6 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 		return 0;
 	}
 
-	m_pos = offset + max_size;
 	return max_size;
 }
 
@@ -1238,7 +1236,10 @@ u64 iso_file::file_offset(u64 pos) const
 
 u64 iso_file::read(void* buffer, u64 size)
 {
-	return read_at(m_pos, buffer, size);
+	const auto r = read_at(m_pos, buffer, size);
+
+	m_pos += r;
+	return r;
 }
 
 u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
@@ -1265,7 +1266,6 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 			return 0;
 		}
 
-		m_pos = offset + max_size;
 		return max_size;
 	}
 
@@ -1321,7 +1321,6 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 			return 0;
 		}
 
-		m_pos = offset + max_size;
 		return max_size;
 	}
 
@@ -1362,7 +1361,6 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 		return 0;
 	}
 
-	m_pos = offset + max_size;
 	return max_size;
 }
 
