@@ -509,7 +509,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	// This first set is bound persistently, so grow notifications are enabled.
 	m_attrib_ring_info.create(VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_default, "attrib buffer", 0x400000, VK_TRUE);
 	m_fragment_env_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "fragment env buffer", 0x10000, VK_TRUE);
-	m_vertex_env_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "vertex env buffer", 0x10000, VK_TRUE);
+	m_vertex_env_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_default, "vertex env buffer", 0x10000, VK_TRUE);
 	m_fragment_texture_params_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "fragment texture params buffer", 0x10000, VK_TRUE);
 	m_vertex_layout_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "vertex layout buffer", 0x10000, VK_TRUE);
 	m_fragment_constants_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "fragment constants buffer", 0x10000, VK_TRUE);
@@ -562,6 +562,11 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 
 	const auto& limits = m_device->gpu().get_limits();
 	m_texbuffer_view_size = std::min(limits.maxTexelBufferElements, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000u);
+
+	// Initialize bulk allocators
+	m_vertex_env_allocator = std::make_unique<rsx::data_heap::bulk_allocator<256, 96>>(
+		m_vertex_env_ring_info,
+		std::min<u32>(limits.maxUniformBufferRange / 96u, 1024u));
 
 	if (m_texbuffer_view_size < 0x800000)
 	{
@@ -1951,7 +1956,9 @@ void VKGSRender::load_program_env()
 	if (update_vertex_env)
 	{
 		// Vertex state. Note, we're now on std430 alignment here, not hardware alignment.
-		const auto [mem, buf] = m_vertex_env_ring_info.alloc_and_map<16, char>(96);
+		// Use the bulk allocator here
+		const auto mem = m_vertex_env_allocator->alloc();
+		auto buf = m_vertex_env_ring_info.map<char>(mem, 96);
 
 		m_draw_processor.fill_scale_offset_data(buf, false);
 		m_draw_processor.fill_user_clip_data(buf + 64);
@@ -1962,6 +1969,9 @@ void VKGSRender::load_program_env()
 
 		m_vertex_env_ring_info.unmap();
 		m_vertex_env_dynamic_offset = mem;
+
+		m_vertex_env_buffer_info = m_vertex_env_ring_info.window<256>(m_vertex_env_dynamic_offset, 96, gpu_limits.maxUniformBufferRange);
+		m_vertex_env_dynamic_offset -= m_vertex_env_buffer_info.offset;
 	}
 
 	if (update_instancing_data)
@@ -2288,6 +2298,11 @@ void VKGSRender::patch_transform_constants(rsx::context* /*ctx*/, u32 index, u32
 
 	rsx::io_buffer iobuf(allocate_mem);
 	upload_transform_constants(iobuf);
+
+	if (!iobuf.empty())
+	{
+		m_transform_constants_ring_info.unmap();
+	}
 }
 
 void VKGSRender::init_buffers(rsx::framebuffer_creation_context context, bool)

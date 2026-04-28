@@ -161,6 +161,8 @@ private:
 	u64 m_texture_parameters_dynamic_offset = 0;
 	u64 m_stipple_array_dynamic_offset = 0;
 
+	std::unique_ptr<rsx::data_heap::bulk_allocator<256, 96>> m_vertex_env_allocator;
+
 	std::vector<vk::frame_context_t> m_frame_context_storage;
 	u32 m_max_async_frames = 0u;
 	// Temp frame context to use if the real frame queue is overburdened. Only used for storage

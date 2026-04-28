@@ -75,6 +75,8 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 
 	OS <<
 		"#version 450\n\n"
+		"#extension GL_EXT_scalar_block_layout : require\n"
+		"#extension GL_EXT_uniform_buffer_unsized_array : require\n"
 		"#extension GL_ARB_separate_shader_objects : enable\n\n";
 
 	glsl::insert_subheader_block(OS);
@@ -88,7 +90,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 		"#define get_user_clip_config() get_vertex_context().user_clip_configuration_bits\n\n";
 
 	OS <<
-		"layout(std430, set=0, binding=" << vk_prog->binding_table.context_buffer_location << ") readonly restrict buffer VertexContextBuffer\n"
+		"layout(std430, set=0, binding=" << vk_prog->binding_table.context_buffer_location << ") uniform VertexContextBuffer\n"
 		"{\n"
 		"	vertex_context_t vertex_contexts[];\n"
 		"};\n\n";
@@ -96,7 +98,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 	const vk::glsl::program_input context_input
 	{
 		.domain = glsl::glsl_vertex_program,
-		.type = vk::glsl::input_type_storage_buffer,
+		.type = vk::glsl::input_type_uniform_buffer,
 		.set = vk::glsl::binding_set_index_vertex,
 		.location = vk_prog->binding_table.context_buffer_location,
 		.name = "VertexContextBuffer"
