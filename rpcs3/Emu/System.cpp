@@ -302,6 +302,15 @@ static void fixup_settings(const psf::registry* _psf)
 		}
 	}
 
+#if defined(ARCH_ARM64)
+	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
+	{
+		sys_log.warning("The setting '%s' is currently not supported on ARM64 builds and will therefore be changed from '%s' to '%s' during emulation.",
+			g_cfg.core.spu_decoder.get_name(), spu_decoder_type::asmjit, spu_decoder_type::llvm);
+		g_cfg.core.spu_decoder.set(spu_decoder_type::llvm);
+	}
+#endif
+
 	if (const u32 psf_resolution = _psf ? psf::get_integer(*_psf, "RESOLUTION", 0) : 0)
 	{
 		const std::map<video_resolution, u32> resolutions
