@@ -85,7 +85,9 @@ namespace vk
 
 			if (start_partition == end_partition) [[ likely ]]
 			{
-				m_cached_buffer_range = utils::address_range64::start_length(start_partition * aligned_window_size, aligned_window_size);
+				const u64 block_addr = start_partition * aligned_window_size;
+				const u64 block_end = std::min<u64>(block_addr + aligned_window_size, size());
+				m_cached_buffer_range = utils::address_range64::start_end(block_addr, block_end - 1);
 				return { *heap, m_cached_buffer_range.start, m_cached_buffer_range.length() };
 			}
 
