@@ -25,6 +25,35 @@ struct iso_sector
 	u64 size_aligned;
 };
 
+static void* get_aligned_buf()
+{
+	static thread_local struct aligned_buf
+	{
+		void* buf;
+
+		aligned_buf() noexcept
+		{
+			// IMPORTANT NOTE: It must be aligned (probably enough on multiple of 4) to support raw device, otherwise any read from file will fail
+#if defined(_WIN32)
+			buf = _aligned_malloc(ISO_SECTOR_SIZE, ISO_SECTOR_SIZE * 2);
+#else
+			buf = std::aligned_alloc(ISO_SECTOR_SIZE * 2, ISO_SECTOR_SIZE);
+#endif
+		}
+
+		~aligned_buf() noexcept
+		{
+#if defined(_WIN32)
+			_aligned_free(buf);
+#else
+			std::free(buf);
+#endif
+		}
+	} s_aligned_buf {};
+
+	return s_aligned_buf.buf;
+}
+
 static bool is_iso_file(const fs::file& file, u64* size = nullptr)
 {
 	if (!file || file.size() < 32768ULL + 6)
@@ -598,9 +627,8 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 
 	const u64 archive_first_offset = file_offset(offset);
 	const u64 archive_last_offset = archive_first_offset + max_size - 1;
-
 	iso_sector first_sec, last_sec;
-	u64 offset_aligned_first_out = 0;
+	void* aligned_buf = get_aligned_buf(); // thread-safe buffer
 
 	first_sec.lba_address = (archive_first_offset / ISO_SECTOR_SIZE) * ISO_SECTOR_SIZE;
 	first_sec.offset = archive_first_offset % ISO_SECTOR_SIZE;
@@ -613,6 +641,8 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 	//
 	// First sector
 	//
+
+	u64 offset_aligned_first_out = 0;
 
 	if (!m_raw_device)
 	{
@@ -632,10 +662,10 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 		first_sec.address_aligned = first_sec.lba_address;
 	}
 
-	u64 total_read = m_file.read_at(first_sec.address_aligned, &reinterpret_cast<u8*>(m_buf)[first_sec.offset_aligned], first_sec.size_aligned);
+	u64 total_read = m_file.read_at(first_sec.address_aligned, &reinterpret_cast<u8*>(aligned_buf)[first_sec.offset_aligned], first_sec.size_aligned);
 
-	m_dec->decrypt(first_sec.address_aligned, &reinterpret_cast<u8*>(m_buf)[first_sec.offset_aligned], first_sec.size_aligned, m_meta.name);
-	std::memcpy(buffer, &reinterpret_cast<u8*>(m_buf)[first_sec.offset], first_sec.size);
+	m_dec->decrypt(first_sec.address_aligned, &reinterpret_cast<u8*>(aligned_buf)[first_sec.offset_aligned], first_sec.size_aligned, m_meta.name);
+	std::memcpy(buffer, &reinterpret_cast<u8*>(aligned_buf)[first_sec.offset], first_sec.size);
 
 	const u64 sector_count = (last_sec.lba_address - first_sec.lba_address) / ISO_SECTOR_SIZE + 1;
 
@@ -644,8 +674,6 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 		if (total_read != first_sec.size_aligned)
 		{
 			iso_log.error("read_at: %s: Error reading from file (%llu/%llu)", m_meta.name, total_read, first_sec.size_aligned);
-
-			seek(m_pos, fs::seek_set);
 			return 0;
 		}
 
@@ -672,10 +700,10 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 
 			for (u64 i = 0; i < sector_count - 2; i++, inner_sector_offset += ISO_SECTOR_SIZE)
 			{
-				total_read += m_file.read_at(first_sec.lba_address + ISO_SECTOR_SIZE + inner_sector_offset, m_buf, ISO_SECTOR_SIZE);
+				total_read += m_file.read_at(first_sec.lba_address + ISO_SECTOR_SIZE + inner_sector_offset, aligned_buf, ISO_SECTOR_SIZE);
 
-				m_dec->decrypt(first_sec.lba_address + ISO_SECTOR_SIZE + inner_sector_offset, m_buf, ISO_SECTOR_SIZE, m_meta.name);
-				std::memcpy(&reinterpret_cast<u8*>(buffer)[first_sec.size + inner_sector_offset], m_buf, ISO_SECTOR_SIZE);
+				m_dec->decrypt(first_sec.lba_address + ISO_SECTOR_SIZE + inner_sector_offset, aligned_buf, ISO_SECTOR_SIZE, m_meta.name);
+				std::memcpy(&reinterpret_cast<u8*>(buffer)[first_sec.size + inner_sector_offset], aligned_buf, ISO_SECTOR_SIZE);
 			}
 		}
 	}
@@ -695,10 +723,10 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 		last_sec.size_aligned = ISO_SECTOR_SIZE;
 	}
 
-	total_read += m_file.read_at(last_sec.address_aligned, m_buf, last_sec.size_aligned);
+	total_read += m_file.read_at(last_sec.address_aligned, aligned_buf, last_sec.size_aligned);
 
-	m_dec->decrypt(last_sec.address_aligned, m_buf, last_sec.size_aligned, m_meta.name);
-	std::memcpy(&reinterpret_cast<u8*>(buffer)[max_size - last_sec.size], m_buf, last_sec.size);
+	m_dec->decrypt(last_sec.address_aligned, aligned_buf, last_sec.size_aligned, m_meta.name);
+	std::memcpy(&reinterpret_cast<u8*>(buffer)[max_size - last_sec.size], aligned_buf, last_sec.size);
 
 	//
 	// As last, check for an unlikely reading error (decoding also failed due to use of partially initialized buffer)
@@ -709,7 +737,6 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 		iso_log.error("read_at: %s: Error reading from file (%llu/%llu)", m_meta.name,
 			total_read, ISO_SECTOR_SIZE + ISO_SECTOR_SIZE + (sector_count - 2) * ISO_SECTOR_SIZE);
 
-		seek(m_pos, fs::seek_set);
 		return 0;
 	}
 
@@ -1136,13 +1163,6 @@ iso_file::iso_file(const std::string& path, bs_t<fs::open_mode> mode)
 	m_file.seek(m_meta.extents[0].start * ISO_SECTOR_SIZE);
 
 	m_raw_device = fs::is_optical_raw_device(path);
-
-	// IMPORTANT NOTE: It must be aligned (probably enough on multiple of 4) to support raw device, otherwise any read from file will fail
-#if defined(_WIN32)
-	m_buf = _aligned_malloc(ISO_SECTOR_SIZE, ISO_SECTOR_SIZE * 2);
-#else
-	m_buf = std::aligned_alloc(ISO_SECTOR_SIZE * 2, ISO_SECTOR_SIZE);
-#endif
 }
 
 iso_file::iso_file(const std::string& path, bs_t<fs::open_mode> mode, const iso_fs_node& node)
@@ -1160,22 +1180,6 @@ iso_file::iso_file(const std::string& path, bs_t<fs::open_mode> mode, const iso_
 	m_file.seek(m_meta.extents[0].start * ISO_SECTOR_SIZE);
 
 	m_raw_device = fs::is_optical_raw_device(path);
-
-	// IMPORTANT NOTE: It must be aligned (probably enough on multiple of 4) to support raw device, otherwise any read from file will fail
-#if defined(_WIN32)
-	m_buf = _aligned_malloc(ISO_SECTOR_SIZE, ISO_SECTOR_SIZE * 2);
-#else
-	m_buf = std::aligned_alloc(ISO_SECTOR_SIZE * 2, ISO_SECTOR_SIZE);
-#endif
-}
-
-iso_file::~iso_file()
-{
-#if defined(_WIN32)
-	_aligned_free(m_buf);
-#else
-	std::free(m_buf);
-#endif
 }
 
 fs::stat_t iso_file::get_stat()
@@ -1261,8 +1265,6 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 		if (total_read != max_size)
 		{
 			iso_log.error("read_at: %s: Error reading from file (%llu/%llu)", m_meta.name, total_read, max_size);
-
-			seek(m_pos, fs::seek_set);
 			return 0;
 		}
 
@@ -1292,6 +1294,7 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 
 	const u64 archive_last_offset = archive_first_offset + max_size - 1;
 	iso_sector first_sec, last_sec;
+	void* aligned_buf = get_aligned_buf(); // thread-safe buffer
 
 	first_sec.lba_address = (archive_first_offset / ISO_SECTOR_SIZE) * ISO_SECTOR_SIZE;
 	first_sec.offset = archive_first_offset % ISO_SECTOR_SIZE;
@@ -1305,9 +1308,9 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 	// First sector
 	//
 
-	u64 total_read = m_file.read_at(first_sec.lba_address, m_buf, ISO_SECTOR_SIZE);
+	u64 total_read = m_file.read_at(first_sec.lba_address, aligned_buf, ISO_SECTOR_SIZE);
 
-	std::memcpy(buffer, &reinterpret_cast<u8*>(m_buf)[first_sec.offset], first_sec.size);
+	std::memcpy(buffer, &reinterpret_cast<u8*>(aligned_buf)[first_sec.offset], first_sec.size);
 
 	const u64 sector_count = (last_sec.lba_address - first_sec.lba_address) / ISO_SECTOR_SIZE + 1;
 
@@ -1316,8 +1319,6 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 		if (total_read != ISO_SECTOR_SIZE)
 		{
 			iso_log.error("read_at: %s: Error reading from file (%llu/%llu)", m_meta.name, total_read, ISO_SECTOR_SIZE);
-
-			seek(m_pos, fs::seek_set);
 			return 0;
 		}
 
@@ -1334,9 +1335,9 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 
 		for (u64 i = 0; i < sector_count - 2; i++, sector_offset += ISO_SECTOR_SIZE)
 		{
-			total_read += m_file.read_at(first_sec.lba_address + ISO_SECTOR_SIZE + sector_offset, m_buf, ISO_SECTOR_SIZE);
+			total_read += m_file.read_at(first_sec.lba_address + ISO_SECTOR_SIZE + sector_offset, aligned_buf, ISO_SECTOR_SIZE);
 
-			std::memcpy(&reinterpret_cast<u8*>(buffer)[first_sec.size + sector_offset], m_buf, ISO_SECTOR_SIZE);
+			std::memcpy(&reinterpret_cast<u8*>(buffer)[first_sec.size + sector_offset], aligned_buf, ISO_SECTOR_SIZE);
 		}
 	}
 
@@ -1344,9 +1345,9 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 	// Last sector
 	//
 
-	total_read += m_file.read_at(last_sec.address_aligned, m_buf, ISO_SECTOR_SIZE);
+	total_read += m_file.read_at(last_sec.address_aligned, aligned_buf, ISO_SECTOR_SIZE);
 
-	std::memcpy(&reinterpret_cast<u8*>(buffer)[max_size - last_sec.size], m_buf, last_sec.size);
+	std::memcpy(&reinterpret_cast<u8*>(buffer)[max_size - last_sec.size], aligned_buf, last_sec.size);
 
 	//
 	// As last, check for an unlikely reading error
@@ -1357,7 +1358,6 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 		iso_log.error("read_at: %s: Error reading from file (%llu/%llu)", m_meta.name,
 			total_read, ISO_SECTOR_SIZE + ISO_SECTOR_SIZE + (sector_count - 2) * ISO_SECTOR_SIZE);
 
-		seek(m_pos, fs::seek_set);
 		return 0;
 	}
 

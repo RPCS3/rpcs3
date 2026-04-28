@@ -108,7 +108,6 @@ protected:
 	fs::file m_file;
 	iso_fs_metadata m_meta;
 	bool m_raw_device = false;
-	void* m_buf = nullptr;
 	u64 m_pos = 0;
 
 	std::pair<u64, iso_extent_info> get_extent_pos(u64 pos) const;
@@ -119,7 +118,6 @@ protected:
 public:
 	iso_file(const std::string& path, bs_t<fs::open_mode> mode);
 	iso_file(const std::string& path, bs_t<fs::open_mode> mode, const iso_fs_node& node);
-	virtual ~iso_file();
 
 	explicit operator bool() const { return m_file.operator bool(); }
 
