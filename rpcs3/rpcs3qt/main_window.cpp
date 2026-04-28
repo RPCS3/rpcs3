@@ -105,6 +105,7 @@
 LOG_CHANNEL(gui_log, "GUI");
 
 extern atomic_t<bool> g_user_asked_for_frame_capture;
+extern atomic_t<bool> g_headless;
 
 class CPUDisAsm;
 std::shared_ptr<CPUDisAsm> make_basic_ppu_disasm();
@@ -113,7 +114,7 @@ extern void qt_events_aware_op(int repeat_duration_ms, std::function<bool()> wra
 {
 	ensure(wrapped_op);
 
-	if (thread_ctrl::is_main())
+	if (thread_ctrl::is_main() && !g_headless)
 	{
 		// NOTE:
 		// I noticed that calling this from an Emu callback can cause the
