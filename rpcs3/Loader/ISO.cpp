@@ -649,7 +649,7 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 			return 0;
 		}
 
-		m_pos += max_size;
+		m_pos = offset + max_size;
 		return max_size;
 	}
 
@@ -714,7 +714,7 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 		return 0;
 	}
 
-	m_pos += max_size;
+	m_pos = offset + max_size;
 	return max_size;
 }
 
@@ -1265,7 +1265,7 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 			return 0;
 		}
 
-		m_pos += max_size;
+		m_pos = offset + max_size;
 		return max_size;
 	}
 
@@ -1321,7 +1321,7 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 			return 0;
 		}
 
-		m_pos += max_size;
+		m_pos = offset + max_size;
 		return max_size;
 	}
 
@@ -1362,7 +1362,7 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 		return 0;
 	}
 
-	m_pos += max_size;
+	m_pos = offset + max_size;
 	return max_size;
 }
 
