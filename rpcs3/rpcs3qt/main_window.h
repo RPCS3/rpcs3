@@ -75,8 +75,8 @@ public:
 	bool Init(bool with_cli_boot);
 	QIcon GetAppIcon() const;
 	void OnMissingFw();
-	bool InstallPackages(QStringList file_paths = {}, bool from_boot = false);
-	void InstallPup(QString file_path = "");
+	static bool InstallPackages(main_window* mw, QStringList file_paths = {}, bool from_boot = false);
+	static void InstallPup(main_window* mw, QString file_path = "");
 
 Q_SIGNALS:
 	void RequestLanguageChange(const QString& language);
@@ -142,12 +142,12 @@ private:
 	void PrecompileCachesFromInstalledPackages(const std::map<std::string, QString>& bootable_paths);
 	void ShowOptionalGamePreparations(const QString& title, const QString& message, std::map<std::string, QString> game_path);
 
-	static bool InstallFileInExData(const std::string& extension, const QString& path, const std::string& filename);
-
-	bool HandlePackageInstallation(QStringList file_paths, bool from_boot);
 	void CreateShortCuts(const std::map<std::string, QString>& paths, std::set<gui::utils::shortcut_location> locations);
 
-	void HandlePupInstallation(const QString& file_path, const QString& dir_path = "");
+	static bool InstallFileInExData(const std::string& extension, const QString& path, const std::string& filename);
+	static bool HandlePackageInstallation(main_window* mw, QStringList file_paths, bool from_boot);
+	static void HandlePupInstallation(main_window* mw, const QString& file_path, const QString& dir_path = "");
+
 	void ExtractPup();
 
 	void ExtractTar();
