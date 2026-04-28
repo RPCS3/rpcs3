@@ -411,11 +411,12 @@ namespace fs
 	class windows_file final : public file_base
 	{
 		HANDLE m_handle;
+		bool m_raw_device;
 		atomic_t<u64> m_pos {0};
 
 	public:
-		windows_file(HANDLE handle)
-			: m_handle(handle)
+		windows_file(HANDLE handle, bool raw_device = false)
+			: m_handle(handle), m_raw_device(raw_device)
 		{
 		}
 
@@ -575,12 +576,12 @@ namespace fs
 
 		u64 size() override
 		{
-			// NOTE: this can fail if we access a mounted empty drive (e.g. after unmounting an iso).
-			LARGE_INTEGER size;
-
-			// It will fail for a raw device.
-			if (GetFileSizeEx(m_handle, &size)) // "file::size"
+			if (!m_raw_device)
 			{
+				// NOTE: this can fail if we access a mounted empty drive (e.g. after unmounting an iso).
+				LARGE_INTEGER size;
+
+				ensure(GetFileSizeEx(m_handle, &size)); // "file::size"
 				return size.QuadPart;
 			}
 
@@ -1740,20 +1741,20 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		return;
 	}
 
+	// If path points to an optical raw device, complete the file opening
+	// (the following GetFileInformationByHandle() would always fail on a raw device).
+	if (is_optical_raw_device(path))
+	{
+		m_file = std::make_unique<windows_file>(handle, true);
+		return;
+	}
+
 	// Check if the handle is actually valid.
 	// This can fail on empty mounted drives (e.g. with ERROR_NOT_READY or ERROR_INVALID_FUNCTION).
-	// It always fails on raw devices.
 	BY_HANDLE_FILE_INFORMATION info{};
 
 	if (!GetFileInformationByHandle(handle, &info))
 	{
-		// If path points to an optical raw device, complete the file opening
-		if (is_optical_raw_device(path))
-		{
-			m_file = std::make_unique<windows_file>(handle);
-			return;
-		}
-
 		const DWORD last_error = GetLastError();
 		CloseHandle(handle);
 
