@@ -569,6 +569,7 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 			return;
 		}
 
+		gui_log.notice("Found database config for: '%s'", title_id);
 		db_config = *config;
 	}
 

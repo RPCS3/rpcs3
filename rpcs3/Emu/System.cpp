@@ -935,6 +935,8 @@ game_boot_result Emulator::GetElfPathFromDir(std::string& elf_path, const std::s
 
 game_boot_result Emulator::BootGame(const std::string& path, const std::string& title_id, bool direct, cfg_mode config_mode, const std::string& config_path, const std::optional<std::string>& db_config)
 {
+	sys_log.notice("Emulator::BootGame: path='%s', title_id='%s', direct=%d, config_mode='%s', config_path='%s', db_config=(set=%d, valid=%d)", path, title_id, direct, config_mode, config_path, db_config.has_value(), db_config && !db_config->empty());
+
 	if (m_restrict_emu_state_change)
 	{
 		return game_boot_result::currently_restricted;
@@ -1625,7 +1627,13 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 						{
 							g_cfg.name = config_path;
 							m_config_path = config_path;
-							m_add_database_config = false; // A custom config exists. Do not add the database config.
+
+							if (m_add_database_config)
+							{
+								// A custom config exists. Do not add the database config.
+								sys_log.notice("Found custom config. Ignoring database config");
+								m_add_database_config = false;
+							}
 							break;
 						}
 
