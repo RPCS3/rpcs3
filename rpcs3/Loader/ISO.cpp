@@ -384,7 +384,7 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 
 	if (!is_iso_file(iso_file))
 	{
-		iso_log.error("init: Failed to recognize ISO file: %s", path);
+		iso_log.error("init: Failed to recognize ISO file: '%s'", path);
 		return false;
 	}
 
@@ -395,13 +395,13 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 
 	if (iso_file.size() < sec0_sec1.size())
 	{
-		iso_log.error("init: Found only %llu sector(s) (minimum required is 2): %s", iso_file.size(), path);
+		iso_log.error("init: Found only %llu sector(s) (minimum required is 2): '%s'", iso_file.size(), path);
 		return false;
 	}
 
 	if (iso_file.read(sec0_sec1.data(), sec0_sec1.size()) != sec0_sec1.size())
 	{
-		iso_log.error("init: Failed to read file: %s", path);
+		iso_log.error("init: Failed to read file: '%s'", path);
 		return false;
 	}
 
@@ -415,7 +415,7 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 	// Ensure the region count is a proper value
 	if (region_count < 1 || region_count > 127) // It's non-PS3ISO
 	{
-		iso_log.error("init: Failed to read region information (region_count=%lu): %s", region_count, path);
+		iso_log.error("init: Failed to read region information (region_count=%lu): '%s'", region_count, path);
 		return false;
 	}
 
@@ -452,17 +452,17 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 	switch (status)
 	{
 	case iso_type_status::NOT_ISO:
-		iso_log.warning("init: Failed to recognize ISO file: %s", path);
+		iso_log.warning("init: Failed to recognize ISO file: '%s'", path);
 		break;
 	case iso_type_status::REDUMP_ISO:
-		iso_log.warning("init: Found matching key file: %s", key_path);
+		iso_log.warning("init: Found matching key file: '%s'", key_path);
 		m_enc_type = iso_encryption_type::REDUMP; // SET ENCRYPTION TYPE: REDUMP
 		break;
 	case iso_type_status::ERROR_OPENING_KEY:
-		iso_log.warning("init: Failed to open, or missing, key file: %s", key_path);
+		iso_log.warning("init: Failed to open, or missing, key file: '%s'", key_path);
 		break;
 	case iso_type_status::ERROR_PROCESSING_KEY:
-		iso_log.error("init: Failed to process key file: %s", key_path);
+		iso_log.error("init: Failed to process key file: '%s'", key_path);
 		break;
 	default:
 		break;
@@ -507,7 +507,7 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 
 			if (m_enc_type == iso_encryption_type::NONE) // If encryption type was not set to ENC_3K3Y for any reason
 			{
-				iso_log.error("init: Failed to set encryption type to ENC_3K3Y: %s", path);
+				iso_log.error("init: Failed to set encryption type to ENC_3K3Y: '%s'", path);
 			}
 		}
 		else if (std::memcmp(&k3k3y_dec_watermark[0], &sec0_sec1[0xF70], sizeof(k3k3y_dec_watermark)) == 0)
@@ -519,16 +519,16 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 	switch (m_enc_type)
 	{
 	case iso_encryption_type::REDUMP:
-		iso_log.warning("init: Set 'enc type': REDUMP, 'reg count': %u: %s", m_region_info.size(), path);
+		iso_log.warning("init: Set 'enc type': REDUMP, 'reg count': %u: '%s'", m_region_info.size(), path);
 		break;
 	case iso_encryption_type::ENC_3K3Y:
-		iso_log.warning("init: Set 'enc type': ENC_3K3Y, 'reg count': %u: %s", m_region_info.size(), path);
+		iso_log.warning("init: Set 'enc type': ENC_3K3Y, 'reg count': %u: '%s'", m_region_info.size(), path);
 		break;
 	case iso_encryption_type::DEC_3K3Y:
-		iso_log.warning("init: Set 'enc type': DEC_3K3Y, 'reg count': %u: %s", m_region_info.size(), path);
+		iso_log.warning("init: Set 'enc type': DEC_3K3Y, 'reg count': %u: '%s'", m_region_info.size(), path);
 		break;
 	case iso_encryption_type::NONE: // If encryption type was not set for any reason
-		iso_log.warning("init: Set 'enc type': NONE, 'reg count': %u: %s", m_region_info.size(), path);
+		iso_log.warning("init: Set 'enc type': NONE, 'reg count': %u: '%s'", m_region_info.size(), path);
 		break;
 	}
 
@@ -972,7 +972,7 @@ iso_archive::iso_archive(const std::string& path)
 	if (!iso_file || !is_iso_file(iso_file))
 	{
 		// Not ISO... TODO: throw something?
-		iso_log.error("iso_archive: Failed to recognize ISO file: %s", path);
+		iso_log.error("iso_archive: Failed to recognize ISO file: '%s'", path);
 		return;
 	}
 
@@ -1153,7 +1153,7 @@ iso_file::iso_file(const std::string& path, bs_t<fs::open_mode> mode)
 	if (!m_file)
 	{
 		// Should never happen... TODO: throw something?
-		iso_log.error("iso_file: Failed to open file: %s", path);
+		iso_log.error("iso_file: Failed to open file: '%s'", path);
 		return;
 	}
 
@@ -1173,7 +1173,7 @@ iso_file::iso_file(const std::string& path, bs_t<fs::open_mode> mode, const iso_
 	if (!m_file)
 	{
 		// Should never happen... TODO: throw something?
-		iso_log.error("iso_file: Failed to open file: %s", path);
+		iso_log.error("iso_file: Failed to open file: '%s'", path);
 		return;
 	}
 
