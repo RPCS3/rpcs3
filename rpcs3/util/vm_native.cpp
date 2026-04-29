@@ -346,7 +346,15 @@ namespace utils
 		ensure(::VirtualFree(pointer, size, MEM_DECOMMIT));
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
+#if defined(__APPLE__) && defined(ARCH_ARM64)
+		// Use MAP_FIXED without MAP_JIT to atomically replace the mapping.
+		// Apple rejects MAP_FIXED | MAP_JIT, but MAP_FIXED alone works and
+		// avoids the race condition of the previous munmap+mmap approach
+		// where another thread could claim the address range between the two calls.
 		ensure(::mmap(pointer, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE | c_map_noreserve, -1, 0) != reinterpret_cast<void*>(uptr{umax}));
+#else
+		ensure(::mmap(pointer, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE | c_map_noreserve, -1, 0) != reinterpret_cast<void*>(uptr{umax}));
+#endif
 
 		if constexpr (c_madv_no_dump != 0)
 		{
@@ -371,7 +379,13 @@ namespace utils
 		memory_commit(pointer, size, prot);
 #else
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
+#if defined(__APPLE__) && defined(ARCH_ARM64)
+		// Use MAP_FIXED without MAP_JIT to atomically replace the mapping.
+		// See memory_decommit for details on why the munmap+mmap approach is unsafe.
 		ensure(::mmap(pointer, size, +prot, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0) != reinterpret_cast<void*>(uptr{umax}));
+#else
+		ensure(::mmap(pointer, size, +prot, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0) != reinterpret_cast<void*>(uptr{umax}));
+#endif
 
 		if constexpr (c_madv_hugepage != 0)
 		{
