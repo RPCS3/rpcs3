@@ -121,6 +121,7 @@ namespace rsx
 }
 
 Emulator::Emulator() noexcept
+	: m_default_renderer(video_renderer::null)
 {
 	s_emulator_available = true;
 }
