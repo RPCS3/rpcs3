@@ -1745,6 +1745,17 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 	// (the following GetFileInformationByHandle() would always fail on a raw device).
 	if (is_optical_raw_device(path))
 	{
+		DISK_GEOMETRY_EX geometry;
+
+		// Try to retrieve information on content. If it fails, no disc is probably mounted so abort the file opening
+		if (!DeviceIoControl(handle, IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, nullptr, 0, &geometry, sizeof(geometry), nullptr, nullptr))
+		{
+			const DWORD last_error = GetLastError();
+			CloseHandle(handle);
+			g_tls_error = to_error(last_error);
+			return;
+		}
+
 		m_file = std::make_unique<windows_file>(handle, true);
 		return;
 	}
