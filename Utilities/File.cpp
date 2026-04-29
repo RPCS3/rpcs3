@@ -1127,6 +1127,13 @@ bool fs::is_optical_raw_device(const std::string& path)
 
 bool fs::get_optical_raw_device(const std::string& path, std::string* raw_device)
 {
+	// Skip a useless check to detect an optical raw device if navigating on subfolders (e.g. C:/subfolder_1/subfolder_2/), it means we are on a hdd/ssd.
+	// A path for an optical drive should include only the drive letter (e.g. E:/)
+	if (path.find_first_of(":") != path.find_last_not_of(delim))
+	{
+		return false;
+	}
+
 	if (fs::is_optical_raw_device(path))
 	{
 		if (raw_device)
