@@ -513,7 +513,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	m_fragment_texture_params_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "fragment texture params buffer", 0x10000, VK_TRUE);
 	m_vertex_layout_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "vertex layout buffer", 0x10000, VK_TRUE);
 	m_fragment_constants_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "fragment constants buffer", 0x10000, VK_TRUE);
-	m_transform_constants_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, vk::heap_pool_default, "transform constants buffer", 0x10000, VK_TRUE);
+	m_transform_constants_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, vk::heap_pool_default, "transform constants buffer", 0x10000, VK_TRUE);
 	m_raster_env_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "raster env buffer", 0x10000, VK_TRUE);
 	// Below here, we do not bind these persistently. Each draw call specifies the range manually so we do not need heap_grow notifications.
 	m_instancing_buffer_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, vk::heap_pool_default, "instancing data buffer");
@@ -2006,8 +2006,7 @@ void VKGSRender::load_program_env()
 		usz mem_offset = 0;
 		auto alloc_storage = [&](usz size) -> std::pair<void*, usz>
 		{
-			const auto alignment = m_device->gpu().get_limits().minStorageBufferOffsetAlignment;
-			mem_offset = m_transform_constants_ring_info.alloc<1>(utils::align(size, alignment));
+			mem_offset = m_transform_constants_ring_info.alloc<256>(size);
 			return std::make_pair(m_transform_constants_ring_info.map(mem_offset, size), size);
 		};
 
@@ -2018,6 +2017,9 @@ void VKGSRender::load_program_env()
 		{
 			m_transform_constants_ring_info.unmap();
 			m_xform_constants_dynamic_offset = mem_offset;
+
+			m_vertex_constants_buffer_info = m_transform_constants_ring_info.window<16>(m_xform_constants_dynamic_offset, io_buf.size(), gpu_limits.maxUniformBufferRange);
+			m_xform_constants_dynamic_offset -= m_vertex_constants_buffer_info.offset;
 		}
 	}
 

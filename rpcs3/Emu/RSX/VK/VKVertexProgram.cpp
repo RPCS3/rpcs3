@@ -199,14 +199,14 @@ void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std
 			{
 				if (!(m_prog.ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS))
 				{
-					OS << "layout(std430, set=0, binding=" << vk_prog->binding_table.cbuf_location << ") readonly restrict buffer VertexConstantsBuffer\n";
+					OS << "layout(std430, set=0, binding=" << vk_prog->binding_table.cbuf_location << ") uniform VertexConstantsBuffer\n";
 					OS << "{\n";
 					OS << "	vec4 vc[];\n";
 					OS << "};\n\n";
 
 					in.location = vk_prog->binding_table.cbuf_location;
 					in.name = "VertexConstantsBuffer";
-					in.type = vk::glsl::input_type_storage_buffer;
+					in.type = vk::glsl::input_type_uniform_buffer;
 
 					inputs.push_back(in);
 					continue;
