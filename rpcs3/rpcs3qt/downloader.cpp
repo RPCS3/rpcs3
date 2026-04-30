@@ -14,10 +14,16 @@
 
 LOG_CHANNEL(network_log, "NET");
 
-usz curl_write_cb_compat(char* ptr, usz /*size*/, usz nmemb, void* userdata)
+usz curl_write_cb(char* ptr, usz /*size*/, usz nmemb, void* userdata)
 {
 	downloader* download = static_cast<downloader*>(userdata);
-	return download->update_buffer(ptr, nmemb);
+	return ensure(download)->update_buffer(ptr, nmemb);
+}
+
+int curl_xferinfo_cb(void* userdata, curl_off_t /*dltotal*/, curl_off_t /*dlnow*/, curl_off_t /*ultotal*/, curl_off_t /*ulnow*/)
+{
+	const downloader* download = static_cast<const downloader*>(userdata);
+	return ensure(download)->aborted() ? 1 : 0;
 }
 
 downloader::downloader(QWidget* parent)
@@ -72,8 +78,8 @@ void downloader::start(const std::string& url, bool follow_location, bool show_p
 	CURLcode err = curl_easy_setopt(m_curl->get_curl(), CURLOPT_URL, url.c_str());
 	if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_URL, %s) error: %s", url, curl_easy_strerror(err));
 
-	err = curl_easy_setopt(m_curl->get_curl(), CURLOPT_WRITEFUNCTION, curl_write_cb_compat);
-	if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_WRITEFUNCTION, curl_write_cb_compat) error: %s", curl_easy_strerror(err));
+	err = curl_easy_setopt(m_curl->get_curl(), CURLOPT_WRITEFUNCTION, curl_write_cb);
+	if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_WRITEFUNCTION, curl_write_cb) error: %s", curl_easy_strerror(err));
 
 	err = curl_easy_setopt(m_curl->get_curl(), CURLOPT_WRITEDATA, this);
 	if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_WRITEDATA) error: %s", curl_easy_strerror(err));
@@ -81,7 +87,28 @@ void downloader::start(const std::string& url, bool follow_location, bool show_p
 	err = curl_easy_setopt(m_curl->get_curl(), CURLOPT_FOLLOWLOCATION, follow_location ? 1 : 0);
 	if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_FOLLOWLOCATION, %d) error: %s", follow_location, curl_easy_strerror(err));
 
-	m_thread = QThread::create([this]
+	err = curl_easy_setopt(m_curl->get_curl(), CURLOPT_CONNECTTIMEOUT, 10); // seconds
+	if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_CONNECTTIMEOUT) error: %s", curl_easy_strerror(err));
+
+	err = curl_easy_setopt(m_curl->get_curl(), CURLOPT_TIMEOUT, 0); // Infinite for now
+	if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_TIMEOUT) error: %s", curl_easy_strerror(err));
+
+	err = curl_easy_setopt(m_curl->get_curl(), CURLOPT_LOW_SPEED_LIMIT, 100); // bytes/sec
+	if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_LOW_SPEED_LIMIT) error: %s", curl_easy_strerror(err));
+
+	err = curl_easy_setopt(m_curl->get_curl(), CURLOPT_LOW_SPEED_TIME, 10); // seconds (the download will fail if the speed stays below CURLOPT_LOW_SPEED_LIMIT for n seconds)
+	if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_LOW_SPEED_TIME) error: %s", curl_easy_strerror(err));
+
+	err = curl_easy_setopt(m_curl->get_curl(), CURLOPT_XFERINFOFUNCTION, curl_xferinfo_cb);
+	if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_XFERINFOFUNCTION) error: %s", curl_easy_strerror(err));
+
+	err = curl_easy_setopt(m_curl->get_curl(), CURLOPT_XFERINFODATA, this);
+	if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_XFERINFODATA) error: %s", curl_easy_strerror(err));
+
+	err = curl_easy_setopt(m_curl->get_curl(), CURLOPT_NOPROGRESS, 0);
+	if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_NOPROGRESS) error: %s", curl_easy_strerror(err));
+
+	m_thread = QThread::create([this, url]
 	{
 		thread_base::set_name("Downloader");
 
@@ -91,12 +118,20 @@ void downloader::start(const std::string& url, bool follow_location, bool show_p
 		const CURLcode result = curl_easy_perform(m_curl->get_curl());
 		m_curl_success = result == CURLE_OK;
 
-		if (!m_curl_success && !m_curl_abort)
+		if (m_curl_success)
 		{
-			const std::string error = fmt::format("curl_easy_perform(): %s", m_curl->get_verbose_error(result));
-			network_log.error("%s", error);
-			Q_EMIT signal_download_error(QString::fromStdString(error));
+			return;
 		}
+
+		if (m_curl_abort)
+		{
+			network_log.notice("curl_easy_perform(): aborted (url='%s')", url);
+			return;
+		}
+
+		const std::string error = fmt::format("curl_easy_perform(): %s (url='%s')", m_curl->get_verbose_error(result), url);
+		network_log.error("%s", error);
+		Q_EMIT signal_download_error(QString::fromStdString(error));
 	});
 
 	connect(m_thread, &QThread::finished, this, [=, this]()
