@@ -179,6 +179,8 @@ namespace vk
 		std::stringstream builder;
 		builder <<
 		"#version 450\n"
+		"#extension GL_EXT_scalar_block_layout : require\n"
+		"#extension GL_EXT_uniform_buffer_unsized_array : require\n"
 		"#extension GL_ARB_separate_shader_objects : enable\n\n";
 
 		::glsl::insert_subheader_block(builder);
