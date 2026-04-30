@@ -57,9 +57,26 @@ rm -f rpcs3.app/Contents/translations/qt_help_*.qm || true
 mv rpcs3.app RPCS3_.app
 mv RPCS3_.app RPCS3.app
 
-# Hack
-install_name_tool -delete_rpath /opt/homebrew/lib RPCS3.app/Contents/MacOS/rpcs3 || true
-install_name_tool -delete_rpath /usr/local/lib RPCS3.app/Contents/MacOS/rpcs3 || true
+# Hack to fix rpath issues
+BIN="RPCS3.app/Contents/MacOS/rpcs3"
+install_name_tool -delete_rpath /opt/homebrew/lib $BIN || true
+install_name_tool -delete_rpath /usr/local/lib $BIN || true
+install_name_tool -add_rpath @executable_path/../Frameworks "$BIN" 2>/dev/null || true
+
+# Fix dylib IDs
+for lib in RPCS3.app/Contents/Frameworks/*.dylib; do
+  name=$(basename "$lib")
+  install_name_tool -id "@rpath/$name" "$lib"
+done
+
+# Rewrite any hardcoded Homebrew paths to use @rpath
+find "$BIN" -type f \( -perm +111 -o -name "*.dylib" \) | while read -r bin; do
+  otool -L "$bin" | grep -E "/opt/homebrew|/usr/local" | awk '{print $1}' | while read -r dep; do
+    base=$(basename "$dep")
+    echo "Fixing $dep -> @rpath/$base in $bin"
+    install_name_tool -change "$dep" "@rpath/$base" "$bin"
+  done
+done
 
 # NOTE: "--deep" is deprecated
 codesign --deep -fs - RPCS3.app
