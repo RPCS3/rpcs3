@@ -554,7 +554,7 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 
 	m_app_icon = gui::utils::get_app_icon_from_path(path, title_id);
 
-	std::string db_config;
+	std::optional<std::string> db_config = std::nullopt;
 
 	// Get database config if possible or if we are in database_config mode (to ensure we see an error on invalid use)
 	if (config_database* db = m_game_list_frame->GetConfigDatabase();
@@ -571,6 +571,10 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 
 		gui_log.notice("Found database config for: '%s'", title_id);
 		db_config = *config;
+	}
+	else if (!title_id.empty())
+	{
+		db_config = std::string(); // Set empty string to prevent another check in the emulator code
 	}
 
 	if (const auto error = Emu.BootGame(path, title_id, direct, config_mode, config_path, db_config); error != game_boot_result::no_errors)
@@ -4228,6 +4232,8 @@ void main_window::dropEvent(QDropEvent* event)
 		Emu.GracefulShutdown(false);
 
 		const std::string path = drop_paths.first().toStdString();
+
+		gui_log.notice("Booting from drag and drop...");
 
 		if (const auto error = Emu.BootGame(path, "", true); error != game_boot_result::no_errors)
 		{
