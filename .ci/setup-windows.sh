@@ -16,7 +16,7 @@ QT_MM_URL="${QT_HOST}${QT_PREFIX}addons.qtmultimedia.${QT_PREFIX_2}qtmultimedia$
 QT_SVG_URL="${QT_HOST}${QT_PREFIX}${QT_PREFIX_2}qtsvg${QT_SUFFIX}"
 QT_TRANSLATIONS_URL="${QT_HOST}${QT_PREFIX}${QT_PREFIX_2}qttranslations${QT_SUFFIX}"
 LLVMLIBS_URL="https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win-${LLVM_VER}/llvmlibs_mt.7z"
-VULKAN_SDK_URL="https://www.dropbox.com/scl/fi/g2w92mv46pjxztcyrw9w2/vulkansdk-windows-X64-${VULKAN_VER}.exe?rlkey=cxih47sjebecumdt96qp74gj3&st=7eqiymt7&dl=1"
+VULKAN_SDK_URL="https://www.dropbox.com/scl/fi/olpvqk4346ig7i8btadk5/vulkansdk-windows-X64-${VULKAN_VER}.exe?rlkey=huvssch6sy904qkg8ti9p65br&st=pztptdin&dl=1"
 CCACHE_URL="https://github.com/ccache/ccache/releases/download/v4.12.3/ccache-4.12.3-windows-x86_64.zip"
 
 DEP_URLS="         \
