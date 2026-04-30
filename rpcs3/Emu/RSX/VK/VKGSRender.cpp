@@ -568,6 +568,16 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 		m_vertex_env_ring_info,
 		std::min<u32>(limits.maxUniformBufferRange / 96u, 1024u));
 
+	m_transform_constants_allocator = std::make_unique<rsx::data_heap::bulk_allocator<256, 16>>(
+		m_transform_constants_ring_info,
+		std::min<u32>(limits.maxUniformBufferRange / 16u, 8192u)
+	);
+
+	m_fragment_constants_allocator = std::make_unique<rsx::data_heap::bulk_allocator<256, 16>>(
+		m_fragment_constants_ring_info,
+		std::min<u32>(limits.maxUniformBufferRange / 16u, 8192u)
+	);
+
 	if (m_texbuffer_view_size < 0x800000)
 	{
 		// Warn, only possibly expected on macOS
@@ -2006,7 +2016,7 @@ void VKGSRender::load_program_env()
 		usz mem_offset = 0;
 		auto alloc_storage = [&](usz size) -> std::pair<void*, usz>
 		{
-			mem_offset = m_transform_constants_ring_info.alloc<256>(size);
+			mem_offset = m_transform_constants_allocator->alloc_bytes(size);
 			return std::make_pair(m_transform_constants_ring_info.map(mem_offset, size), size);
 		};
 
@@ -2028,7 +2038,7 @@ void VKGSRender::load_program_env()
 		// Fragment constants
 		if (fragment_constants_size)
 		{
-			m_fragment_constants_dynamic_offset = m_fragment_constants_ring_info.alloc<256>(fragment_constants_size);
+			m_fragment_constants_dynamic_offset = m_fragment_constants_allocator->alloc_bytes(fragment_constants_size);
 			auto buf = m_fragment_constants_ring_info.map(m_fragment_constants_dynamic_offset, fragment_constants_size);
 
 			m_prog_buffer->fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), fragment_constants_size },

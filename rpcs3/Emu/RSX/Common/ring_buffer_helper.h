@@ -179,16 +179,27 @@ namespace rsx
 				, m_batch_size(batch_size)
 			{}
 
-			usz alloc()
+			usz alloc(u32 element_count = 1)
 			{
-				if (!m_capacity)
+				if (m_capacity < element_count)
 				{
+					ensure(element_count <= m_batch_size);
 					m_address = m_container.alloc<Alignment>(ElementSize * m_batch_size);
 					m_capacity = m_batch_size;
 				}
 
-				m_capacity--;
-				return std::exchange(m_address, m_address + ElementSize);
+				m_capacity -= element_count;
+				return std::exchange(m_address, m_address + (ElementSize * element_count));
+			}
+
+			usz alloc_bytes(usz size = ElementSize)
+			{
+				return alloc(static_cast<u32>(size / ElementSize));
+			}
+
+			u32 capacity() const
+			{
+				return m_capacity;
 			}
 
 		private:
