@@ -66,9 +66,6 @@
     <ClCompile Include="curl\lib\curl_range.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="curl\lib\curl_rtmp.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="curl\lib\curl_sasl.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -552,6 +549,21 @@
     <ClCompile Include="curl\lib\curlx\strdup.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="curl\lib\cf-dns.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\dnscache.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\protocol.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\thrdpool.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\thrdqueue.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="curl\include\curl\curl.h">
@@ -666,9 +678,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\curl_range.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="curl\lib\curl_rtmp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\curl_sasl.h">
@@ -1040,9 +1049,6 @@
     <ClInclude Include="curl\lib\curlx\base64.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="curl\lib\curlx\curlx.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="curl\lib\curlx\dynbuf.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -1119,6 +1125,24 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\curlx\strdup.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\cf-dns.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\dnscache.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\ftp-int.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\protocol.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\thrdpool.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\thrdqueue.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

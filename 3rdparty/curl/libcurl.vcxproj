@@ -66,6 +66,7 @@
     <ClCompile Include="curl\lib\asyn-thrdd.c" />
     <ClCompile Include="curl\lib\bufq.c" />
     <ClCompile Include="curl\lib\bufref.c" />
+    <ClCompile Include="curl\lib\cf-dns.c" />
     <ClCompile Include="curl\lib\cf-h1-proxy.c" />
     <ClCompile Include="curl\lib\cf-h2-proxy.c" />
     <ClCompile Include="curl\lib\cf-haproxy.c" />
@@ -107,7 +108,6 @@
     <ClCompile Include="curl\lib\curl_memrchr.c" />
     <ClCompile Include="curl\lib\curl_ntlm_core.c" />
     <ClCompile Include="curl\lib\curl_range.c" />
-    <ClCompile Include="curl\lib\curl_rtmp.c" />
     <ClCompile Include="curl\lib\curl_sasl.c" />
     <ClCompile Include="curl\lib\curl_sha512_256.c" />
     <ClCompile Include="curl\lib\curl_share.c" />
@@ -118,6 +118,7 @@
     <ClCompile Include="curl\lib\cw-pause.c" />
     <ClCompile Include="curl\lib\dict.c" />
     <ClCompile Include="curl\lib\dllmain.c" />
+    <ClCompile Include="curl\lib\dnscache.c" />
     <ClCompile Include="curl\lib\doh.c" />
     <ClCompile Include="curl\lib\dynhds.c" />
     <ClCompile Include="curl\lib\easy.c" />
@@ -172,6 +173,7 @@
     <ClCompile Include="curl\lib\pingpong.c" />
     <ClCompile Include="curl\lib\pop3.c" />
     <ClCompile Include="curl\lib\progress.c" />
+    <ClCompile Include="curl\lib\protocol.c" />
     <ClCompile Include="curl\lib\psl.c" />
     <ClCompile Include="curl\lib\rand.c" />
     <ClCompile Include="curl\lib\ratelimit.c" />
@@ -195,6 +197,8 @@
     <ClCompile Include="curl\lib\system_win32.c" />
     <ClCompile Include="curl\lib\telnet.c" />
     <ClCompile Include="curl\lib\tftp.c" />
+    <ClCompile Include="curl\lib\thrdpool.c" />
+    <ClCompile Include="curl\lib\thrdqueue.c" />
     <ClCompile Include="curl\lib\transfer.c" />
     <ClCompile Include="curl\lib\uint-bset.c" />
     <ClCompile Include="curl\lib\uint-hash.c" />
@@ -255,6 +259,7 @@
     <ClInclude Include="curl\lib\asyn.h" />
     <ClInclude Include="curl\lib\bufq.h" />
     <ClInclude Include="curl\lib\bufref.h" />
+    <ClInclude Include="curl\lib\cf-dns.h" />
     <ClInclude Include="curl\lib\cf-h1-proxy.h" />
     <ClInclude Include="curl\lib\cf-h2-proxy.h" />
     <ClInclude Include="curl\lib\cf-haproxy.h" />
@@ -275,7 +280,6 @@
     <ClInclude Include="curl\lib\curlx\base64.h" />
     <ClInclude Include="curl\lib\curlx\basename.h" />
     <ClInclude Include="curl\lib\curlx\binmode.h" />
-    <ClInclude Include="curl\lib\curlx\curlx.h" />
     <ClInclude Include="curl\lib\curlx\dynbuf.h" />
     <ClInclude Include="curl\lib\curlx\fopen.h" />
     <ClInclude Include="curl\lib\curlx\inet_ntop.h" />
@@ -309,7 +313,6 @@
     <ClInclude Include="curl\lib\curl_ntlm_core.h" />
     <ClInclude Include="curl\lib\curl_printf.h" />
     <ClInclude Include="curl\lib\curl_range.h" />
-    <ClInclude Include="curl\lib\curl_rtmp.h" />
     <ClInclude Include="curl\lib\curl_sasl.h" />
     <ClInclude Include="curl\lib\curl_setup.h" />
     <ClInclude Include="curl\lib\curl_setup_once.h" />
@@ -322,6 +325,7 @@
     <ClInclude Include="curl\lib\cw-out.h" />
     <ClInclude Include="curl\lib\cw-pause.h" />
     <ClInclude Include="curl\lib\dict.h" />
+    <ClInclude Include="curl\lib\dnscache.h" />
     <ClInclude Include="curl\lib\doh.h" />
     <ClInclude Include="curl\lib\dynhds.h" />
     <ClInclude Include="curl\lib\easyif.h" />
@@ -332,6 +336,7 @@
     <ClInclude Include="curl\lib\file.h" />
     <ClInclude Include="curl\lib\fileinfo.h" />
     <ClInclude Include="curl\lib\formdata.h" />
+    <ClInclude Include="curl\lib\ftp-int.h" />
     <ClInclude Include="curl\lib\ftp.h" />
     <ClInclude Include="curl\lib\ftplistparser.h" />
     <ClInclude Include="curl\lib\functypes.h" />
@@ -368,6 +373,7 @@
     <ClInclude Include="curl\lib\pingpong.h" />
     <ClInclude Include="curl\lib\pop3.h" />
     <ClInclude Include="curl\lib\progress.h" />
+    <ClInclude Include="curl\lib\protocol.h" />
     <ClInclude Include="curl\lib\psl.h" />
     <ClInclude Include="curl\lib\rand.h" />
     <ClInclude Include="curl\lib\ratelimit.h" />
@@ -395,6 +401,8 @@
     <ClInclude Include="curl\lib\system_win32.h" />
     <ClInclude Include="curl\lib\telnet.h" />
     <ClInclude Include="curl\lib\tftp.h" />
+    <ClInclude Include="curl\lib\thrdpool.h" />
+    <ClInclude Include="curl\lib\thrdqueue.h" />
     <ClInclude Include="curl\lib\transfer.h" />
     <ClInclude Include="curl\lib\uint-bset.h" />
     <ClInclude Include="curl\lib\uint-hash.h" />
