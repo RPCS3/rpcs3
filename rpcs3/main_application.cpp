@@ -412,16 +412,22 @@ EmuCallbacks main_application::CreateCallbacks()
 
 	callbacks.get_database_config = [](const std::string& title_id)
 	{
-		if (title_id.empty())
-			return std::string();
-
 		sys_log.notice("Trying to retrieve database config for: '%s'", title_id);
+
+		if (title_id.empty())
+		{
+			sys_log.warning("Cannot retrieve database config for empty title_id");
+			return std::string();
+		}
 
 		config_database config_db(nullptr);
 		config_db.request_config_database(false);
 
 		if (!config_db.has_config(title_id))
+		{
+			sys_log.notice("Cannot find database config for: '%s'", title_id);
 			return std::string();
+		}
 
 		if (const auto config = config_db.get_config(title_id))
 		{
@@ -429,6 +435,7 @@ EmuCallbacks main_application::CreateCallbacks()
 			return config.value();
 		}
 
+		sys_log.error("Failed to retrieve database config for: '%s'", title_id);
 		return std::string();
 	};
 
