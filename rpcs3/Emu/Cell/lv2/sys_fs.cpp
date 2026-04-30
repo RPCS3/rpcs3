@@ -1101,7 +1101,7 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 	return {.error = {}, .file = std::move(file)};
 }
 
-lv2_file::open_result_t lv2_file::open(std::string_view vpath, s32 flags, s32 mode, const void* arg, u64 size)
+lv2_file::open_result_t lv2_file::open(std::string_view vpath, s32 flags, s32 /*mode*/, const void* arg, u64 size)
 {
 	if (vpath.empty())
 	{

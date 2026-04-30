@@ -6625,7 +6625,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 				bool found_loop_dictator = false;
 				bool found_loop_argument_for_dictator = false;
-				u32 null_regs_found = 0;
+				//u32 null_regs_found = 0;
 
 				for (u32 i = 0; i < reg->regs.size() && reduced_loop->active; i++)
 				{
@@ -6730,7 +6730,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 							// 	break;
 							// }
 
-							null_regs_found++;
+							//null_regs_found++;
 							continue;
 						}
 

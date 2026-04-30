@@ -266,9 +266,10 @@ iso_type_status iso_file_decryption::retrieve_key(iso_archive& archive, std::str
 
 	for (const auto& magic : dec_magics)
 	{
-		if (node = archive.retrieve(magic.first))
+		if (iso_fs_node* _node = archive.retrieve(magic.first))
 		{
 			magic_value = magic.second;
+			node = _node;
 			break;
 		}
 	}

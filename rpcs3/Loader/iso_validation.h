@@ -29,7 +29,7 @@ private:
 	iso_hash_status m_status = iso_hash_status::INITIALIZED;
 
 public:
-	static iso_integrity_status check_integrity(const std::string& path, const std::string& hash, std::string* game_name = nullptr);
+	static iso_integrity_status check_integrity(const std::string& hash, std::string* game_name = nullptr);
 
 	const std::string& get_path() const { return m_path; }
 	u64 get_size() const { return m_size; }
