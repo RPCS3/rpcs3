@@ -17,7 +17,7 @@
 #include "Utilities/File.h"
 #include "Emu/system_utils.hpp"
 #include "Loader/ISO.h"
-#include "Loader/iso_validation.h"
+#include "Loader/content_validation.h"
 
 #include "QApplication"
 #include "QClipboard"
@@ -602,7 +602,10 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 
 	addSeparator();
 
-	// Check integrity
+	// Check Integrity menu
+	QMenu* check_integrity_menu = addMenu(tr("&Check Integrity"));
+
+	// Check disc game integrity
 	if (QString::fromStdString(current_game.category) == cat::cat_disc_game)
 	{
 		std::string key_path;
@@ -613,30 +616,80 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 		// That is to highlight a Redump ISO from a non Redump ISO
 		if (iso_type != iso_type_status::NOT_ISO)
 		{
-			const iso_integrity_status iso_integrity = iso_file_validation::check_integrity("");
+			const content_integrity_status iso_integrity = content_validation::check_integrity(content_file_type::ISO, "");
 
-			QAction* check_integrity = addAction(tr("&Check ISO Integrity"));
+			QAction* check_iso = check_integrity_menu->addAction(tr("&Check ISO Integrity"));
 
 			// If it's a Redump ISO and the integrity DB exists
-			if (iso_type == iso_type_status::REDUMP_ISO && iso_integrity != iso_integrity_status::ERROR_OPENING_DB)
+			if (iso_type == iso_type_status::REDUMP_ISO && iso_integrity != content_integrity_status::ERROR_OPENING_DB)
 			{
-				connect(check_integrity, &QAction::triggered, this, [this, gameinfo]()
+				connect(check_iso, &QAction::triggered, this, [this, gameinfo]()
 				{
-					m_game_list_actions->ShowGameIntegrityDialog(gameinfo);
+					m_game_list_actions->ShowGameIntegrityDialog(content_file_type::ISO, gameinfo);
 				});
 			}
 			else
 			{
-				check_integrity->setEnabled(false);
+				check_iso->setEnabled(false);
 			}
-
-			QAction* download_integrity = addAction(tr("&Download Integrity Database"));
-			connect(download_integrity, &QAction::triggered, m_game_list_frame, [this]
-			{
-				ensure(m_game_list_frame->GetIsoIntegrity())->download();
-			});
 		}
 	}
+	else // Check HDD game integrity
+	{
+		QAction* check_psn_content = check_integrity_menu->addAction(tr("&Check Game Integrity"));
+
+		// If the integrity DB exists
+		if (content_validation::check_integrity(content_file_type::PSN_CONTENT, "") != content_integrity_status::ERROR_OPENING_DB)
+		{
+			connect(check_psn_content, &QAction::triggered, this, [this, gameinfo]()
+			{
+				m_game_list_actions->ShowGameIntegrityDialog(content_file_type::PSN_CONTENT, gameinfo);
+			});
+		}
+		else
+		{
+			check_psn_content->setEnabled(false);
+		}
+	}
+
+	QAction* check_psn_dlc = check_integrity_menu->addAction(tr("&Check DLC Integrity"));
+
+	// If the integrity DB exists
+	if (content_validation::check_integrity(content_file_type::PSN_DLC, "") != content_integrity_status::ERROR_OPENING_DB)
+	{
+		connect(check_psn_dlc, &QAction::triggered, this, [this, gameinfo]()
+		{
+			m_game_list_actions->ShowGameIntegrityDialog(content_file_type::PSN_DLC, gameinfo);
+		});
+	}
+	else
+	{
+		check_psn_dlc->setEnabled(false);
+	}
+
+	QAction* check_psn_update = check_integrity_menu->addAction(tr("&Check Update Integrity"));
+
+	// If the integrity DB exists
+	if (content_validation::check_integrity(content_file_type::PSN_UPDATE, "") != content_integrity_status::ERROR_OPENING_DB)
+	{
+		connect(check_psn_update, &QAction::triggered, this, [this, gameinfo]()
+		{
+			m_game_list_actions->ShowGameIntegrityDialog(content_file_type::PSN_UPDATE, gameinfo);
+		});
+	}
+	else
+	{
+		check_psn_update->setEnabled(false);
+	}
+
+	QAction* download_integrity = addAction(tr("&Download Integrity Databases"));
+	connect(download_integrity, &QAction::triggered, m_game_list_frame, [this]
+	{
+		ensure(m_game_list_frame->GetIsoIntegrity())->download();
+		ensure(m_game_list_frame->GetPsnContentIntegrity())->download();
+		ensure(m_game_list_frame->GetPsnDlcIntegrity())->download();
+		ensure(m_game_list_frame->GetPsnUpdateIntegrity())->download();
+	});
 
 	QAction* check_compat = addAction(tr("&Check Game Compatibility"));
 	QAction* download_compat = addAction(tr("&Download Compatibility Database"));

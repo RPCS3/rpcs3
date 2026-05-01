@@ -23,6 +23,7 @@
 #include <QtConcurrent>
 #include <QDir>
 #include <QDirIterator>
+#include <QFileDialog>
 #include <QGridLayout>
 #include <QMessageBox>
 #include <QTimer>
@@ -367,17 +368,43 @@ void game_list_actions::ShowGameInfoDialog(const std::vector<game_info>& games)
 	QMessageBox::information(m_game_list_frame, tr("Game Info"), GetContentInfo(games).info);
 }
 
-void game_list_actions::ShowGameIntegrityDialog(const game_info& game)
+void game_list_actions::ShowGameIntegrityDialog(content_file_type file_type, const game_info& game)
 {
 	if (m_game_integrity_future.isRunning()) // Still running the last request
 		return;
 
+	const QString path_last_pkg = m_gui_settings->GetValue(gui::fd_install_pkg).toString();
+	QString path;
+
 	// Initialize the validator (set also file size etc.)
-	m_iso_validator->init_hash(game->info.path);
+	switch (file_type)
+	{
+	case content_file_type::ISO:
+		path = QString::fromStdString(game->info.path);
+		break;
+	case content_file_type::PSN_CONTENT:
+	case content_file_type::PSN_DLC:
+		path = QFileDialog::getOpenFileName(nullptr, tr("Select package or rap file to check"),
+			path_last_pkg, tr("All relevant (*.pkg *.PKG *.rap *.RAP *.edat *.EDAT);;Package files (*.pkg *.PKG);;Rap files (*.rap *.RAP);;Edat files (*.edat *.EDAT);;All files (*.*)"));
+		break;
+	case content_file_type::PSN_UPDATE:
+		path = QFileDialog::getOpenFileName(nullptr, tr("Select package to check"),
+			path_last_pkg, tr("All relevant (*.pkg *.PKG);;Package files (*.pkg *.PKG);;All files (*.*)"));
+		break;
+	default: // Let the following check on path length fail and exit
+		break;
+	}
+
+	if (path.isEmpty())
+	{
+		return;
+	}
+
+	m_game_validator->init_hash(path.toStdString());
 
 	// Game integrity check can take a while (in particular on non ssd/m.2 disks)
 	// so run it on a concurrent thread avoiding to block the entire GUI
-	m_game_integrity_future = QtConcurrent::run([this]()
+	m_game_integrity_future = QtConcurrent::run([this, file_type]()
 	{
 		thread_base::set_name("Game Integrity");
 
@@ -385,7 +412,7 @@ void game_list_actions::ShowGameIntegrityDialog(const game_info& game)
 		std::string hash, game_name;
 		bool info_dialog = false;
 
-		if (m_iso_validator->calculate_hash(hash) != iso_hash_status::COMPLETED)
+		if (m_game_validator->calculate_hash(hash) != content_hash_status::COMPLETED)
 		{
 			text = "Hash calculation failed!\n\nIntegrity check aborted";
 		}
@@ -393,13 +420,13 @@ void game_list_actions::ShowGameIntegrityDialog(const game_info& game)
 		{
 			text = "Integrity check completed!\n\n";
 
-			switch (m_iso_validator->check_integrity(hash, &game_name))
+			switch (m_game_validator->check_integrity(file_type, hash, &game_name))
 			{
-			case iso_integrity_status::NO_MATCH:
+			case content_integrity_status::NO_MATCH:
 				text += tr("Game check NOT PASSED\n\nNo match found on DB or game corrupted:\n - Hash: %0")
 					.arg(QString::fromStdString(hash));
 				break;
-			case iso_integrity_status::FOUND_MATCH:
+			case content_integrity_status::FOUND_MATCH:
 				text += tr("Game check PASSED\n\nMatch found on DB:\n - Game: %0\n - Hash: %1")
 					.arg(QString::fromStdString(game_name))
 					.arg(QString::fromStdString(hash));
@@ -427,7 +454,7 @@ void game_list_actions::ShowGameIntegrityDialog(const game_info& game)
 		}, nullptr, false);
 	});
 
-	progress_dialog* pdlg = new progress_dialog(tr("ISO File Hash Calculation"), tr("Calculating hash"), tr("Cancel"),
+	progress_dialog* pdlg = new progress_dialog(tr("File Hash Calculation"), tr("Calculating hash"), tr("Cancel"),
 		0, 100, false, m_game_list_frame);
 
 	pdlg->setAutoClose(false);
@@ -436,18 +463,18 @@ void game_list_actions::ShowGameIntegrityDialog(const game_info& game)
 
 	connect(pdlg, &progress_dialog::canceled, m_game_list_frame, [this]()
 	{
-		m_iso_validator->abort_hash();
+		m_game_validator->abort_hash();
 	});
 
 	QTimer* update_timer = new QTimer(m_game_list_frame);
 
 	connect(update_timer, &QTimer::timeout, m_game_list_frame, [this, pdlg, update_timer]()
 	{
-		if (m_iso_validator->get_status() == iso_hash_status::INITIALIZED)
+		if (m_game_validator->get_status() == content_hash_status::INITIALIZED)
 		{
 			// Set progress in range 0-100
-			const int progress = m_iso_validator->get_size() ?
-				(static_cast<float>(m_iso_validator->get_bytes_read()) / m_iso_validator->get_size()) * 100 :
+			const int progress = m_game_validator->get_size() ?
+				(static_cast<float>(m_game_validator->get_bytes_read()) / m_game_validator->get_size()) * 100 :
 				0;
 
 			pdlg->setValue(progress);
