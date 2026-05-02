@@ -4,7 +4,7 @@
 cd build || exit 1
 
 cd bin
-git clone --revision=32dceb35e2c95b46cec501033cbc3a1ddf32d6e8 https://github.com/KhronosGroup/MoltenVK.git
+git clone --revision=a075e5e417f87675ea3137b7365f3e5a99608d72 https://github.com/KhronosGroup/MoltenVK.git
 cd MoltenVK
 ./fetchDependencies --macos
 sudo xcode-select -switch /Applications/Xcode_16.2.app/Contents/Developer
