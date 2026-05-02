@@ -543,8 +543,14 @@ public:
 	// Add module (path to obj cache dir)
 	void add(std::unique_ptr<llvm::Module> _module, const std::string& path);
 
+	// Returns false after LLVM fatal recovery. The compiler must be discarded.
+	bool try_add(std::unique_ptr<llvm::Module> _module, const std::string& path, std::string& error);
+
 	// Add module (not cached)
 	void add(std::unique_ptr<llvm::Module> _module);
+
+	// Returns false after LLVM fatal recovery. The compiler must be discarded.
+	bool try_add(std::unique_ptr<llvm::Module> _module, std::string& error);
 
 	// Add object (path to obj file)
 	bool add(const std::string& path);
@@ -557,6 +563,9 @@ public:
 
 	// Finalize
 	void fin();
+
+	// Returns false after LLVM fatal recovery. The compiler must be discarded.
+	bool try_fin(std::string& error);
 
 	// Get compiled function address
 	u64 get(const std::string& name);

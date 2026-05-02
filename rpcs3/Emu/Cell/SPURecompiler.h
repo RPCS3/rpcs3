@@ -66,6 +66,16 @@ struct spu_program
 	bool operator<(const spu_program& rhs) const noexcept;
 };
 
+#ifdef ARCH_ARM64
+struct spu_llvm_compile_context
+{
+	bool use_tbl2 = true;
+	std::string llvm_error;
+};
+
+void spu_llvm_set_compile_context(spu_llvm_compile_context* context) noexcept;
+#endif
+
 class spu_item
 {
 public:
