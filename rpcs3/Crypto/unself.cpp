@@ -807,6 +807,8 @@ bool SELFDecrypter::LoadHeaders(bool isElf32, SelfAdditionalInfo* out_info)
 	self_f.seek(0);
 	sce_hdr.Load(self_f);
 
+	const usz self_size = self_f.size();
+
 	if (out_info)
 	{
 		*out_info = {};
@@ -880,8 +882,9 @@ bool SELFDecrypter::LoadHeaders(bool isElf32, SelfAdditionalInfo* out_info)
 
 	for(u32 i = 0; i < (isElf32 ? elf32_hdr.e_phnum : elf64_hdr.e_phnum); ++i)
 	{
-		if (self_f.pos() >= self_f.size())
+		if (self_f.pos() >= self_size)
 		{
+			// Read out of bounds (file is truncated or corrupted)
 			return false;
 		}
 
@@ -889,15 +892,23 @@ bool SELFDecrypter::LoadHeaders(bool isElf32, SelfAdditionalInfo* out_info)
 		m_seg_ext_hdr.back().Load(self_f);
 	}
 
-	if (m_ext_hdr.version_hdr_offset == 0 || utils::add_saturate<u64>(m_ext_hdr.version_hdr_offset, sizeof(version_header)) > self_f.size())
+	if (m_ext_hdr.version_hdr_offset == 0)
 	{
+		// 0.85 Selfs have version_hdr_offset set to 0
+	    m_version_hdr = {};
+	}
+	else if (utils::add_saturate<u64>(m_ext_hdr.version_hdr_offset, sizeof(version_header)) > self_size)
+	{
+		// Read out of bounds (file is truncated or corrupted)
 		return false;
 	}
+	else
+	{
+		// Read SCE version info.
+		self_f.seek(m_ext_hdr.version_hdr_offset);
 
-	// Read SCE version info.
-	self_f.seek(m_ext_hdr.version_hdr_offset);
-
-	m_version_hdr.Load(self_f);
+		m_version_hdr.Load(self_f);
+	}
 
 	// Read control info.
 	m_supplemental_hdr_arr.clear();
@@ -905,8 +916,9 @@ bool SELFDecrypter::LoadHeaders(bool isElf32, SelfAdditionalInfo* out_info)
 
 	for (u64 i = 0; i < m_ext_hdr.supplemental_hdr_size;)
 	{
-		if (self_f.pos() >= self_f.size())
+		if (self_f.pos() >= self_size)
 		{
+			// Read out of bounds (file is truncated or corrupted)
 			return false;
 		}
 
