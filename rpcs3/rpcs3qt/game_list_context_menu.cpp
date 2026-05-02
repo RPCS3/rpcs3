@@ -636,7 +636,7 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 	}
 	else // Check HDD game integrity
 	{
-		QAction* check_psn_content = check_integrity_menu->addAction(tr("&Check Game Integrity"));
+		QAction* check_psn_content = check_integrity_menu->addAction(tr("&Check Game PKG Integrity"));
 
 		// If the integrity DB exists
 		if (content_validation::check_integrity(content_file_type::PSN_CONTENT, "") != content_integrity_status::ERROR_OPENING_DB)
@@ -652,7 +652,7 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 		}
 	}
 
-	QAction* check_psn_dlc = check_integrity_menu->addAction(tr("&Check DLC Integrity"));
+	QAction* check_psn_dlc = check_integrity_menu->addAction(tr("&Check DLC PKG Integrity"));
 
 	// If the integrity DB exists
 	if (content_validation::check_integrity(content_file_type::PSN_DLC, "") != content_integrity_status::ERROR_OPENING_DB)
@@ -667,7 +667,7 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 		check_psn_dlc->setEnabled(false);
 	}
 
-	QAction* check_psn_update = check_integrity_menu->addAction(tr("&Check Update Integrity"));
+	QAction* check_psn_update = check_integrity_menu->addAction(tr("&Check Update PKG Integrity"));
 
 	// If the integrity DB exists
 	if (content_validation::check_integrity(content_file_type::PSN_UPDATE, "") != content_integrity_status::ERROR_OPENING_DB)

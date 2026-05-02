@@ -32,8 +32,6 @@ content_integrity_status content_validation::check_integrity(content_file_type f
 	case content_file_type::PSN_UPDATE:
 		db_path = rpcs3::utils::get_psn_update_db_path();
 		break;
-	default: // Let the following opening attempt fail and log the error message
-		break;
 	}
 
 	fs::file db_file(db_path);
@@ -62,6 +60,9 @@ content_integrity_status content_validation::check_integrity(content_file_type f
 		sys_log.error("check_integrity: Failed to process file: %s", db_path);
 		return content_integrity_status::ERROR_PARSING_DB;
 	}
+
+	// Close the file and work with the data loaded into the "db" document
+	db_file.close();
 
 	std::shared_ptr<rXmlNode> db_base = db.GetRoot();
 

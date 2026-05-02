@@ -33,8 +33,6 @@ content_integrity::content_integrity(QWidget* parent, content_file_type file_typ
 		m_url = rpcs3::utils::get_psn_update_db_download_url();
 		m_data_prefix = "psn_update";
 		break;
-	default: // Let the further download attempt fail and log the error message
-		break;
 	}
 
 	m_downloader = new downloader(parent);
