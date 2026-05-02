@@ -62,6 +62,16 @@ const extern spu_decoder<spu_iflag> g_spu_iflag;
 
 #ifdef ARCH_ARM64
 #include "Emu/CPU/Backends/AArch64/AArch64JIT.h"
+
+namespace
+{
+	thread_local spu_llvm_compile_context* g_spu_llvm_compile_context = nullptr;
+}
+
+void spu_llvm_set_compile_context(spu_llvm_compile_context* context) noexcept
+{
+	g_spu_llvm_compile_context = context;
+}
 #endif
 
 class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
@@ -1668,6 +1678,15 @@ public:
 			std::memcpy(&hash_start, output, sizeof(hash_start));
 			m_hash_start = hash_start;
 		}
+
+#ifdef ARCH_ARM64
+		m_use_tbl2 = !g_spu_llvm_compile_context || g_spu_llvm_compile_context->use_tbl2;
+
+		if (g_spu_llvm_compile_context)
+		{
+			g_spu_llvm_compile_context->llvm_error.clear();
+		}
+#endif
 
 		spu_log.notice("Building function 0x%x... (size %u, %s)", func.entry_point, func.data.size(), m_hash);
 
@@ -3478,17 +3497,63 @@ public:
 		} _jit_guard;
 #endif
 
-		if (g_cfg.core.spu_debug)
 		{
-			// Testing only
-			m_jit.add(std::move(_module), m_spurt->get_cache_path() + "llvm/");
-		}
-		else
-		{
-			m_jit.add(std::move(_module));
-		}
+#ifdef ARCH_ARM64
+			const bool recoverable = !!g_spu_llvm_compile_context;
 
-		m_jit.fin();
+			if (recoverable)
+			{
+				bool added = false;
+				std::string& llvm_error = g_spu_llvm_compile_context->llvm_error;
+
+				if (g_cfg.core.spu_debug)
+				{
+					// Testing only
+					added = m_jit.try_add(std::move(_module), m_spurt->get_cache_path() + "llvm/", llvm_error);
+				}
+				else
+				{
+					added = m_jit.try_add(std::move(_module), llvm_error);
+				}
+
+				if (!added || !m_jit.try_fin(llvm_error))
+				{
+					if (add_to_file)
+					{
+						add_loc->cached = 0;
+					}
+
+					return nullptr;
+				}
+			}
+			else
+			{
+				if (g_cfg.core.spu_debug)
+				{
+					// Testing only
+					m_jit.add(std::move(_module), m_spurt->get_cache_path() + "llvm/");
+				}
+				else
+				{
+					m_jit.add(std::move(_module));
+				}
+
+				m_jit.fin();
+			}
+#else
+			if (g_cfg.core.spu_debug)
+			{
+				// Testing only
+				m_jit.add(std::move(_module), m_spurt->get_cache_path() + "llvm/");
+			}
+			else
+			{
+				m_jit.add(std::move(_module));
+			}
+
+			m_jit.fin();
+#endif
+		}
 
 		// Register function pointer
 		const spu_function_t fn = reinterpret_cast<spu_function_t>(m_jit.get_engine().getPointerToFunction(main_func));
