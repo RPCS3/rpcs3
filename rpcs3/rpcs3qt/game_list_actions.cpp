@@ -373,38 +373,53 @@ void game_list_actions::ShowGameIntegrityDialog(content_file_type file_type, con
 	if (m_game_integrity_future.isRunning()) // Still running the last request
 		return;
 
-	const QString path_last_pkg = m_gui_settings->GetValue(gui::fd_install_pkg).toString();
 	QString path;
+	std::string db_id;
 
-	// Initialize the validator (set also file size etc.)
 	switch (file_type)
 	{
 	case content_file_type::ISO:
 		path = QString::fromStdString(game->info.path);
+		db_id = "REDUMP";
 		break;
-	case content_file_type::PSN_CONTENT:
-	case content_file_type::PSN_DLC:
+	default: // Auto-detect the file type
+		const QString path_last_pkg = m_gui_settings->GetValue(gui::fd_install_pkg).toString();
+
 		path = QFileDialog::getOpenFileName(nullptr, tr("Select package or rap file to check"),
 			path_last_pkg, tr("All relevant (*.pkg *.PKG *.rap *.RAP *.edat *.EDAT);;Package files (*.pkg *.PKG);;Rap files (*.rap *.RAP);;Edat files (*.edat *.EDAT);;All files (*.*)"));
-		break;
-	case content_file_type::PSN_UPDATE:
-		path = QFileDialog::getOpenFileName(nullptr, tr("Select package to check"),
-			path_last_pkg, tr("All relevant (*.pkg *.PKG);;Package files (*.pkg *.PKG);;All files (*.*)"));
-		break;
-	default: // Let the following check on path length fail and exit
+
+		if (path.isEmpty())
+		{
+			return;
+		}
+
+		compat::package_info info = game_compatibility::GetPkgInfo(path, m_game_list_frame->GetGameCompatibility());
+
+		switch (info.type)
+		{
+		case compat::package_type::update:
+			file_type = content_file_type::PSN_UPDATE;
+			db_id = "PSN UPDATE";
+			break;
+		case compat::package_type::dlc:
+			file_type = content_file_type::PSN_DLC;
+			db_id = "PSN DLC";
+			break;
+		case compat::package_type::other:
+			file_type = content_file_type::PSN_CONTENT;
+			db_id = "PSN CONTENT";
+			break;
+		}
+
 		break;
 	}
 
-	if (path.isEmpty())
-	{
-		return;
-	}
-
+	// Initialize the validator (set also file size etc.)
 	m_game_validator->init_hash(path.toStdString());
 
 	// Game integrity check can take a while (in particular on non ssd/m.2 disks)
 	// so run it on a concurrent thread avoiding to block the entire GUI
-	m_game_integrity_future = QtConcurrent::run([this, file_type]()
+	m_game_integrity_future = QtConcurrent::run([this, file_type, db_id]()
 	{
 		thread_base::set_name("Game Integrity");
 
@@ -423,18 +438,21 @@ void game_list_actions::ShowGameIntegrityDialog(content_file_type file_type, con
 			switch (m_game_validator->check_integrity(file_type, hash, &game_name))
 			{
 			case content_integrity_status::NO_MATCH:
-				text += tr("Game check NOT PASSED\n\nNo match found on DB or game corrupted:\n - Hash: %0")
+				text += tr("Game check NOT PASSED\n\nNo match found on '%0' DB or game corrupted:\n - Hash: %1")
+					.arg(QString::fromStdString(db_id))
 					.arg(QString::fromStdString(hash));
 				break;
 			case content_integrity_status::FOUND_MATCH:
-				text += tr("Game check PASSED\n\nMatch found on DB:\n - Game: %0\n - Hash: %1")
+				text += tr("Game check PASSED\n\nMatch found on '%0' DB:\n - Game: %1\n - Hash: %2")
+					.arg(QString::fromStdString(db_id))
 					.arg(QString::fromStdString(game_name))
 					.arg(QString::fromStdString(hash));
 
 				info_dialog = true;
 				break;
 			default:
-				text += tr("Error parsing DB");
+				text += tr("Error parsing '%0' DB or DB not existing")
+					.arg(QString::fromStdString(db_id));
 				break;
 			}
 		}

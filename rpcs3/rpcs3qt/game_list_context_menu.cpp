@@ -634,53 +634,16 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 			}
 		}
 	}
-	else // Check HDD game integrity
-	{
-		QAction* check_psn_content = check_integrity_menu->addAction(tr("&Check Game PKG Integrity"));
 
-		// If the integrity DB exists
-		if (content_validation::check_integrity(content_file_type::PSN_CONTENT, "") != content_integrity_status::ERROR_OPENING_DB)
-		{
-			connect(check_psn_content, &QAction::triggered, this, [this, gameinfo]()
-			{
-				m_game_list_actions->ShowGameIntegrityDialog(content_file_type::PSN_CONTENT, gameinfo);
-			});
-		}
-		else
-		{
-			check_psn_content->setEnabled(false);
-		}
-	}
+	// Check integrity for the other categories based on .PKG, .RAP and .EDAT (e.g. HDD game, DLC, Update)
+	QAction* check_psn_content = check_integrity_menu->addAction(tr("&Check Package Integrity"));
 
-	QAction* check_psn_dlc = check_integrity_menu->addAction(tr("&Check DLC PKG Integrity"));
-
-	// If the integrity DB exists
-	if (content_validation::check_integrity(content_file_type::PSN_DLC, "") != content_integrity_status::ERROR_OPENING_DB)
+	connect(check_psn_content, &QAction::triggered, this, [this, gameinfo]()
 	{
-		connect(check_psn_dlc, &QAction::triggered, this, [this, gameinfo]()
-		{
-			m_game_list_actions->ShowGameIntegrityDialog(content_file_type::PSN_DLC, gameinfo);
-		});
-	}
-	else
-	{
-		check_psn_dlc->setEnabled(false);
-	}
-
-	QAction* check_psn_update = check_integrity_menu->addAction(tr("&Check Update PKG Integrity"));
-
-	// If the integrity DB exists
-	if (content_validation::check_integrity(content_file_type::PSN_UPDATE, "") != content_integrity_status::ERROR_OPENING_DB)
-	{
-		connect(check_psn_update, &QAction::triggered, this, [this, gameinfo]()
-		{
-			m_game_list_actions->ShowGameIntegrityDialog(content_file_type::PSN_UPDATE, gameinfo);
-		});
-	}
-	else
-	{
-		check_psn_update->setEnabled(false);
-	}
+		// File type different than ISO as passed here (PSN_CONTENT) will be properly detected in
+		// ShowGameIntegrityDialog() based on the selected package file
+		m_game_list_actions->ShowGameIntegrityDialog(content_file_type::PSN_CONTENT, gameinfo);
+	});
 
 	QAction* download_integrity = addAction(tr("&Download Integrity Databases"));
 	connect(download_integrity, &QAction::triggered, m_game_list_frame, [this]
