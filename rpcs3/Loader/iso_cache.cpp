@@ -34,7 +34,7 @@ namespace
 
 namespace iso_cache
 {
-	bool load(const std::string& iso_path, iso_metadata_cache_entry& out_entry)
+	bool load(const std::string& iso_path, const std::string& cache_key, iso_metadata_cache_entry& out_entry)
 	{
 		fs::stat_t iso_stat{};
 		if (!fs::get_stat(iso_path, iso_stat) || iso_stat.is_directory)
@@ -42,7 +42,7 @@ namespace iso_cache
 			return false;
 		}
 
-		const std::string stem     = get_cache_stem(iso_path);
+		const std::string stem     = get_cache_stem(cache_key);
 		const std::string dir      = get_cache_dir();
 		const std::string yml_path = dir + stem + ".yml";
 		const std::string sfo_path = dir + stem + ".sfo";
@@ -89,11 +89,9 @@ namespace iso_cache
 		return true;
 	}
 
-	void save(const std::string& iso_path, const iso_metadata_cache_entry& entry)
+	void save(const std::string& iso_path, const std::string& cache_key, const iso_metadata_cache_entry& entry)
 	{
-		iso_cache_log.notice("Saving cache for '%s'", iso_path);
-
-		const std::string stem     = get_cache_stem(iso_path);
+		const std::string stem     = get_cache_stem(cache_key);
 		const std::string dir      = get_cache_dir();
 		const std::string yml_path = dir + stem + ".yml";
 		const std::string sfo_path = dir + stem + ".sfo";

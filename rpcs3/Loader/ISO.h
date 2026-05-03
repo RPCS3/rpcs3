@@ -172,7 +172,7 @@ public:
 	iso_archive(const std::string& path);
 
 	const std::string& path() const { return m_path; }
-
+	const iso_fs_node& root() const { return m_root; }
 	iso_fs_node* retrieve(const std::string& path);
 	bool exists(const std::string& path);
 	bool is_file(const std::string& path);

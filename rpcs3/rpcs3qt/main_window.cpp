@@ -3691,6 +3691,10 @@ void main_window::CreateDockWindows()
 
 	connect(m_game_list_frame, &game_list_frame::RequestBoot, this, [this](const game_info& game, cfg_mode config_mode, const std::string& config_path, const std::string& savestate)
 	{
+		if (!game->info.game_dir.empty())
+		{
+			Emu.SetGameDir(game->info.game_dir);
+		}
 		Boot(savestate.empty() ? game->info.path : savestate, game->info.serial, false, false, config_mode, config_path);
 	});
 
