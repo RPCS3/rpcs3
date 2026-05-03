@@ -3890,6 +3890,11 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 					tty_buffer.resize(tty_read_fd.read_at(m_tty_file_init_pos, tty_buffer.data(), tty_buffer.size()));
 					tty_read_fd.close();
 
+					if (!tty_buffer.empty() && std::isspace(tty_buffer.back()))
+					{
+						tty_buffer.resize(tty_buffer.find_last_not_of(" \f\n\r\t\v"sv) + 1);
+					}
+
 					if (!tty_buffer.empty())
 					{
 						// Mark start and end very clearly with RPCS3 put in it
@@ -3923,6 +3928,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 						std::string_view to_log = not_logged;
 						to_log = to_log.substr(0, 0x8000);
 						to_log = to_log.substr(0, utils::add_saturate<usz>(to_log.rfind("\n========== SPU BLOCK"sv), 1));
+						to_log = to_log.substr(0, utils::add_saturate<usz>(to_log.find_last_of("\n"sv), 1));
 						to_remove = to_log.size();
 
 						std::string new_log(to_log);
@@ -3975,6 +3981,11 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 							out_added += text_append.size();
 							iter = index + 1;
+						}
+
+						if (!new_log.empty() && std::isspace(new_log.back()))
+						{
+							new_log.resize(new_log.find_last_not_of(" \f\n\r\t\v"sv) + 1);
 						}
 
 						// Cannot log it all at once due to technical reasons, split it to 8MB at maximum of whole functions
