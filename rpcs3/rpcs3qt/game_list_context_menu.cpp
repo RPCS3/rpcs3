@@ -1018,6 +1018,15 @@ void game_list_context_menu::show_multi_selection_context_menu(const std::vector
 
 	addSeparator();
 
+	QAction* download_integrity = addAction(tr("&Download Integrity Databases"));
+	connect(download_integrity, &QAction::triggered, m_game_list_frame, [this]
+	{
+		ensure(m_game_list_frame->GetIsoIntegrity())->download();
+		ensure(m_game_list_frame->GetPsnContentIntegrity())->download();
+		ensure(m_game_list_frame->GetPsnDlcIntegrity())->download();
+		ensure(m_game_list_frame->GetPsnUpdateIntegrity())->download();
+	});
+
 	QAction* download_compat = addAction(tr("&Download Compatibility Database"));
 	connect(download_compat, &QAction::triggered, m_game_list_frame, [this]
 	{
