@@ -861,7 +861,38 @@ void game_list_frame::OnParsingFinished()
 		{
 			if (is_iso_file(entry.path))
 			{
-				push_path(entry.path, legit_paths);
+				iso_archive archive(entry.path);
+				const iso_fs_node& root = archive.root();
+				const std::regex ps3_gm_regex("^PS3_GM[[:digit:]]{2}$");
+				bool found = false;
+
+				for (const auto& child : root.children)
+				{
+					if (m_refresh_watcher.isCanceled())
+					{
+						break;
+					}
+
+					if (!child->metadata.is_directory)
+					{
+						continue;
+					}
+
+					const std::string& name = child->metadata.name;
+
+					if (name == "PS3_GAME" || std::regex_match(name, ps3_gm_regex))
+					{
+						add_game(entry.path, name);
+						found = true;
+					}
+				}
+
+				if (!found)
+				{
+					add_game(entry.path);
+				}
+
+				return;
 			}
 			else if (fs::is_file(entry.path + "/PARAM.SFO"))
 			{
@@ -895,41 +926,6 @@ void game_list_frame::OnParsingFinished()
 				}
 
 				add_disc_dir(entry.path, legit_paths);
-			}
-			else if (is_iso_file(entry.path))
-			{
-				iso_archive archive(entry.path);
-				const iso_fs_node& root = archive.root();
-				const std::regex ps3_gm_regex("^PS3_GM[[:digit:]]{2}$");
-				bool found = false;
-
-				for (const auto& child : root.children)
-				{
-					if (m_refresh_watcher.isCanceled())
-					{
-						break;
-					}
-
-					if (!child->metadata.is_directory)
-					{
-						continue;
-					}
-
-					const std::string& name = child->metadata.name;
-
-					if (name == "PS3_GAME" || std::regex_match(name, ps3_gm_regex))
-					{
-						add_game(entry.path, name);
-						found = true;
-					}
-				}
-
-				if (!found)
-				{
-					add_game(entry.path);
-				}
-
-				return;
 			}
 			else
 			{
