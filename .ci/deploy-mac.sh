@@ -61,7 +61,6 @@ mv RPCS3_.app RPCS3.app
 BIN="RPCS3.app/Contents/MacOS/rpcs3"
 install_name_tool -delete_rpath /opt/homebrew/lib $BIN || true
 install_name_tool -delete_rpath /usr/local/lib $BIN || true
-install_name_tool -add_rpath @executable_path/../Frameworks "$BIN" 2>/dev/null || true
 
 # Fix dylib IDs
 for lib in RPCS3.app/Contents/Frameworks/*.dylib; do
@@ -70,7 +69,7 @@ for lib in RPCS3.app/Contents/Frameworks/*.dylib; do
 done
 
 # Rewrite any hardcoded Homebrew paths to use @rpath
-find "$BIN" -type f \( -perm +111 -o -name "*.dylib" \) | while read -r bin; do
+find "RPCS3.app/Contents/" -type f \( -perm +111 -o -name "*.dylib" \) | while read -r bin; do
   otool -L "$bin" | grep -E "/opt/homebrew|/usr/local" | awk '{print $1}' | while read -r dep; do
     base=$(basename "$dep")
     echo "Fixing $dep -> @rpath/$base in $bin"
