@@ -178,10 +178,10 @@ namespace iso_cache
 
 		for (const auto& entry : subdirs_node)
 		{
-			const std::string name = entry.as<std::string>("");
+			std::string name = entry.as<std::string>("");
 			if (!name.empty())
 			{
-				out_subdirs.push_back(name);
+				out_subdirs.push_back(std::move(name));
 			}
 		}
 
