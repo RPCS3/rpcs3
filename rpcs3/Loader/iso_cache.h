@@ -29,7 +29,7 @@ namespace iso_cache
 	void save(const std::string& iso_path, const std::string& cache_key, const iso_metadata_cache_entry& entry);
 
 	bool load_index(const std::string& iso_path, std::vector<std::string>& out_subdirs);
-	void save_index(const std::string& iso_path, s64 mtime, const std::vector<std::string>& subdirs);
+	void save_index(const std::string& iso_path, const std::vector<std::string>& subdirs);
 
 	// Remove cache entries for ISOs that are no longer in the scanned set.
 	void cleanup(const std::unordered_set<std::string>& valid_iso_paths);

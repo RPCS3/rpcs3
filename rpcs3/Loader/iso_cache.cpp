@@ -20,7 +20,7 @@ namespace
 	}
 
 	// FNV-64 hash of the given key used as the cache filename stem.
-	std::string get_cache_stem(const std::string& key)
+	std::string get_cache_stem(std::string_view key)
 	{
 		usz hash = rpcs3::fnv_seed;
 		for (const char c : key)
@@ -188,14 +188,19 @@ namespace iso_cache
 		return !out_subdirs.empty();
 	}
 
-	void save_index(const std::string& iso_path, s64 mtime, const std::vector<std::string>& subdirs)
+	void save_index(const std::string& iso_path, const std::vector<std::string>& subdirs)
 	{
+		fs::stat_t iso_stat{};
+		if (!fs::get_stat(iso_path, iso_stat))
+		{
+			return;
+		}
 		const std::string dir      = get_cache_dir();
 		const std::string yml_path = dir + get_index_stem(iso_path) + ".yml";
 
 		YAML::Emitter out;
 		out << YAML::BeginMap;
-		out << YAML::Key << "mtime"   << YAML::Value << static_cast<long long>(mtime);
+		out << YAML::Key << "mtime"   << YAML::Value << static_cast<long long>(iso_stat.mtime);
 		out << YAML::Key << "subdirs" << YAML::Value << YAML::BeginSeq;
 		for (const std::string& s : subdirs)
 		{

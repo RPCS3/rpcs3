@@ -901,11 +901,9 @@ void game_list_frame::OnParsingFinished()
 					add_game(entry.path);
 					subdirs.push_back("PS3_GAME");
 				}
-
-				fs::stat_t iso_stat{};
-				if (fs::get_stat(entry.path, iso_stat))
+				if (!m_refresh_watcher.isCanceled())
 				{
-					iso_cache::save_index(entry.path, iso_stat.mtime, subdirs);
+					iso_cache::save_index(entry.path, subdirs);
 				}
 
 				return;
