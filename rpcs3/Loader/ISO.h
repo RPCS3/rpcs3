@@ -71,7 +71,7 @@ private:
 	static iso_type_status retrieve_key(iso_archive& archive, std::string& key_path, aes_context& aes_ctx);
 
 public:
-	static iso_type_status check_type(const std::string& path, std::string& key_path, aes_context* aes_ctx = nullptr);
+	static iso_type_status check_type(const std::string& path, std::string* key_path = nullptr, aes_context* aes_ctx = nullptr);
 
 	iso_encryption_type get_enc_type() const { return m_enc_type; }
 
@@ -173,6 +173,7 @@ public:
 
 	const std::string& path() const { return m_path; }
 	const iso_fs_node& root() const { return m_root; }
+
 	iso_fs_node* retrieve(const std::string& path);
 	bool exists(const std::string& path);
 	bool is_file(const std::string& path);
