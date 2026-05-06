@@ -618,6 +618,10 @@ QComboBox QAbstractItemView::item {
     border-radius: 4px;
 }
 
+QComboBox QAbstractItemView::item:hover {
+    background-color: #343434;
+}
+
 QComboBox QAbstractItemView::item:selected {
     background-color: #383838;
 }
