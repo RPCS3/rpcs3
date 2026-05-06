@@ -87,7 +87,7 @@ bool is_iso_file(const std::string& path, u64* size, bool* is_raw_device)
 	// "new_path" is updated with the raw device path in case "path" points to a BD drive
 	const bool raw_device = fs::get_optical_raw_device(path, &new_path);
 
-	if (!raw_device && fs::is_dir(path))
+	if (!raw_device && (!fs::exists(path) || fs::is_dir(path)))
 	{
 		return false;
 	}
