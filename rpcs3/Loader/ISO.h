@@ -116,7 +116,7 @@ protected:
 	u64 file_offset(u64 pos) const;
 
 public:
-	iso_file(const std::string& path, bs_t<fs::open_mode> mode);
+	iso_file(const std::string& path, bs_t<fs::open_mode> mode = fs::read);
 	iso_file(const std::string& path, bs_t<fs::open_mode> mode, const iso_fs_node& node);
 
 	explicit operator bool() const { return m_file.operator bool(); }

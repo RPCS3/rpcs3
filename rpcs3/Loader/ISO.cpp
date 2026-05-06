@@ -97,7 +97,7 @@ bool is_iso_file(const std::string& path, u64* size, bool* is_raw_device)
 		*is_raw_device = raw_device;
 	}
 
-	iso_file file(new_path, fs::read);
+	iso_file file(new_path);
 
 	return is_iso_file(file, size);
 }
@@ -385,7 +385,7 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 	// Store the ISO region information (needed by both the "Redump" type (only on "decrypt()" method) and "3k3y" type)
 	//
 
-	iso_file iso_file(path, fs::read);
+	iso_file iso_file(path);
 
 	if (!is_iso_file(iso_file))
 	{
@@ -979,7 +979,7 @@ iso_archive::iso_archive(const std::string& path)
 		return;
 	}
 
-	fs::file iso_file(std::make_unique<iso_file>(m_path, fs::read));
+	fs::file iso_file(std::make_unique<iso_file>(m_path));
 
 	u8 descriptor_type = -2;
 	bool use_ucs2_decoding = false;
