@@ -716,7 +716,7 @@ namespace gui
 
 			// With the exception of raw device, check cache first — avoids constructing a full iso_archive just for the icon.
 			iso_metadata_cache_entry cache_entry{};
-			if (!is_raw_device && iso_cache::load(archive_path, cache_entry) && !cache_entry.icon_data.empty())
+			if (!is_raw_device && iso_cache::load(archive_path, archive_path, cache_entry) && !cache_entry.icon_data.empty())
 			{
 				const QByteArray data(reinterpret_cast<const char*>(cache_entry.icon_data.data()),
 				                      static_cast<qsizetype>(cache_entry.icon_data.size()));

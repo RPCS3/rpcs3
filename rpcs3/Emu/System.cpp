@@ -1495,9 +1495,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 			// ISOs that are install discs will error if set to EBOOT.BIN
 			// so this should cover both of them
-			if (fs::exists(path + "PS3_GAME/USRDIR/EBOOT.BIN"))
+			if (fs::exists(path + m_game_dir + "/USRDIR/EBOOT.BIN"))
 			{
-				path = path + "PS3_GAME/USRDIR/EBOOT.BIN";
+				path = path + m_game_dir + "/USRDIR/EBOOT.BIN";
 			}
 
 			m_path_real = m_path;

@@ -550,21 +550,24 @@ void game_list_frame::OnParsingFinished()
 	const auto add_game = [this, localized_title, localized_icon, localized_movie, dev_flash, game_icon_path, _hdd,
 	                       cat_unknown_localized = localized.category.unknown.toStdString(), cat_unknown = cat::cat_unknown.toStdString(),
 	                       play_hover_movies = m_play_hover_movies, play_hover_music = m_play_hover_music, show_custom_icons = m_show_custom_icons]
-	                       (const std::string& dir_or_elf)
+	                       (const std::string& dir_or_elf, const std::string& game_dir = "PS3_GAME")
 	{
 		std::unique_ptr<iso_archive> archive;
 		iso_metadata_cache_entry cache_entry{};
 		bool is_raw_device = false;
 		const bool is_archive = is_iso_file(dir_or_elf, nullptr, &is_raw_device);
+		std::string iso_cache_key;
 		
 		if (is_archive)
 		{
+			iso_cache_key = (game_dir == "PS3_GAME") ? dir_or_elf : dir_or_elf + "//" + game_dir;
 			// Only construct iso_archive (which walks the full directory tree) in case of raw device or
 			// when no valid cache entry exists for this ISO path + mtime
-			if (is_raw_device || !iso_cache::load(dir_or_elf, cache_entry))
+			if (is_raw_device || !iso_cache::load(dir_or_elf, iso_cache_key, cache_entry))
 			{
 				archive = std::make_unique<iso_archive>(dir_or_elf);
 			}
+
 			// Track this ISO path for cache cleanup after scan completes.
 			std::lock_guard lock(m_path_mutex);
 			m_scanned_iso_paths.insert(dir_or_elf);
@@ -581,10 +584,11 @@ void game_list_frame::OnParsingFinished()
 
 		gui_game_info game{};
 		game.info.path = dir_or_elf;
+		game.info.game_dir = (game_dir == "PS3_GAME") ? "" : game_dir;
 
 		const Localized thread_localized;
 
-		const std::string sfo_dir = (archive || !cache_entry.psf_data.empty()) ? "PS3_GAME" : rpcs3::utils::get_sfo_dir_from_game_path(dir_or_elf);
+		const std::string sfo_dir = (archive || !cache_entry.psf_data.empty()) ? game_dir : rpcs3::utils::get_sfo_dir_from_game_path(dir_or_elf);
 		const std::string sfo_path = sfo_dir + "/PARAM.SFO";
 
 		// Load PSF: from archive on cache miss, rehydrate from cached SFO bytes on hit.
@@ -767,7 +771,7 @@ void game_list_frame::OnParsingFinished()
 					}
 				}
 
-				iso_cache::save(dir_or_elf, cache_entry);
+				iso_cache::save(dir_or_elf, (game_dir == "PS3_GAME") ? dir_or_elf : dir_or_elf + "//" + game_dir, cache_entry);
 			}
 		}
 
@@ -860,7 +864,52 @@ void game_list_frame::OnParsingFinished()
 		{
 			if (is_iso_file(entry.path))
 			{
-				push_path(entry.path, legit_paths);
+				std::vector<std::string> subdirs;
+
+				if (iso_cache::load_index(entry.path, subdirs))
+				{
+					for (const std::string& name : subdirs)
+					{
+						if (m_refresh_watcher.isCanceled()) break;
+						add_game(entry.path, name);
+					}
+
+					return;
+				}
+
+				iso_archive archive(entry.path);
+				const iso_fs_node& root = archive.root();
+				const std::regex ps3_gm_regex("^PS3_GM[[:digit:]]{2}$");
+
+				for (const auto& child : root.children)
+				{
+					if (m_refresh_watcher.isCanceled())
+					{
+						break;
+					}
+					if (!child->metadata.is_directory)
+					{
+						continue;
+					}
+
+					const std::string& name = child->metadata.name;
+					if (name == "PS3_GAME" || std::regex_match(name, ps3_gm_regex))
+					{
+						subdirs.push_back(name);
+						add_game(entry.path, name);
+					}
+				}
+				if (subdirs.empty())
+				{
+					add_game(entry.path);
+					subdirs.push_back("PS3_GAME");
+				}
+				if (!m_refresh_watcher.isCanceled())
+				{
+					iso_cache::save_index(entry.path, subdirs);
+				}
+
+				return;
 			}
 			else if (fs::is_file(entry.path + "/PARAM.SFO"))
 			{

@@ -252,19 +252,19 @@ void GLGSRender::on_init_thread()
 		const rsx::io_buffer src_buf = std::span<u32>(pixeldata);
 
 		// 1D
-		auto tex1D = std::make_unique<gl::texture>(GL_TEXTURE_1D, 1, 1, 1, 1, 1, GL_RGBA8, RSX_FORMAT_CLASS_COLOR);
+		auto tex1D = std::make_unique<gl::viewable_image>(GL_TEXTURE_1D, 1, 1, 1, 1, 1, GL_RGBA8, RSX_FORMAT_CLASS_COLOR);
 		tex1D->copy_from(src_buf, gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
 		// 2D
-		auto tex2D = std::make_unique<gl::texture>(GL_TEXTURE_2D, 1, 1, 1, 1, 1, GL_RGBA8, RSX_FORMAT_CLASS_COLOR);
+		auto tex2D = std::make_unique<gl::viewable_image>(GL_TEXTURE_2D, 1, 1, 1, 1, 1, GL_RGBA8, RSX_FORMAT_CLASS_COLOR);
 		tex2D->copy_from(src_buf, gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
 		// 3D
-		auto tex3D = std::make_unique<gl::texture>(GL_TEXTURE_3D, 1, 1, 1, 1, 1, GL_RGBA8, RSX_FORMAT_CLASS_COLOR);
+		auto tex3D = std::make_unique<gl::viewable_image>(GL_TEXTURE_3D, 1, 1, 1, 1, 1, GL_RGBA8, RSX_FORMAT_CLASS_COLOR);
 		tex3D->copy_from(src_buf, gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
 		// CUBE
-		auto texCUBE = std::make_unique<gl::texture>(GL_TEXTURE_CUBE_MAP, 1, 1, 1, 1, 1, GL_RGBA8, RSX_FORMAT_CLASS_COLOR);
+		auto texCUBE = std::make_unique<gl::viewable_image>(GL_TEXTURE_CUBE_MAP, 1, 1, 1, 1, 1, GL_RGBA8, RSX_FORMAT_CLASS_COLOR);
 		texCUBE->copy_from(src_buf, gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
 		m_null_textures[GL_TEXTURE_1D] = std::move(tex1D);
@@ -332,8 +332,6 @@ void GLGSRender::on_init_thread()
 	{
 		m_vertex_instructions_buffer->create(gl::buffer::target::ssbo, 16 * 0x100000);
 		m_fragment_instructions_buffer->create(gl::buffer::target::ssbo, 16 * 0x100000);
-
-		m_shader_interpreter.create();
 	}
 
 	if (gl_caps.vendor_AMD)
@@ -410,20 +408,31 @@ void GLGSRender::on_init_thread()
 		}
 	);
 
-	if (!m_overlay_manager)
+	if (shadermode == shader_mode::async_with_interpreter ||
+		shadermode == shader_mode::interpreter_only)
 	{
-		m_frame->hide();
-		m_shaders_cache->load(nullptr);
-		m_frame->show();
+		std::unique_ptr<rsx::shader_loading_dialog> dlg = m_overlay_manager
+			? std::make_unique<rsx::shader_loading_dialog_native>(this)
+			: std::make_unique<rsx::shader_loading_dialog>();
+		m_shader_interpreter.create(dlg.get());
+		dlg->close();
 	}
-	else
-	{
-		rsx::shader_loading_dialog_native dlg(this);
 
-		m_shaders_cache->load(&dlg);
+	if (shadermode != shader_mode::interpreter_only)
+	{
+		if (!m_overlay_manager)
+		{
+			m_frame->hide();
+			m_shaders_cache->load(nullptr);
+			m_frame->show();
+		}
+		else
+		{
+			rsx::shader_loading_dialog_native dlg(this);
+			m_shaders_cache->load(&dlg);
+		}
 	}
 }
-
 
 void GLGSRender::on_exit()
 {
@@ -1056,7 +1065,7 @@ void GLGSRender::load_program_env()
 		if (m_interpreter_state & rsx::fragment_program_dirty)
 		{
 			// Attach fragment buffer data
-			const auto fp_block_length = current_fp_metadata.program_ucode_length + 80;
+			const auto fp_block_length = current_fp_metadata.program_ucode_length + 16;
 			auto fp_mapping = m_fragment_instructions_buffer->alloc_from_heap(fp_block_length, 16);
 			auto fp_buf = static_cast<u8*>(fp_mapping.first);
 
@@ -1064,11 +1073,9 @@ void GLGSRender::load_program_env()
 			const auto control_masks = reinterpret_cast<u32*>(fp_buf);
 			control_masks[0] = rsx::method_registers.shader_control();
 			control_masks[1] = current_fragment_program.texture_state.texture_dimensions;
+			control_masks[2] = current_fp_metadata.referenced_textures_mask;
 
-			// Bind textures
-			m_shader_interpreter.update_fragment_textures(fs_sampler_state, current_fp_metadata.referenced_textures_mask, reinterpret_cast<u32*>(fp_buf + 16));
-
-			std::memcpy(fp_buf + 80, current_fragment_program.get_data(), current_fragment_program.ucode_length);
+			std::memcpy(fp_buf + 16, current_fragment_program.get_data(), current_fragment_program.ucode_length);
 
 			m_fragment_instructions_buffer->bind_range(GL_INTERPRETER_FRAGMENT_BLOCK, fp_mapping.second, fp_block_length);
 			m_fragment_instructions_buffer->notify();

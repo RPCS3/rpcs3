@@ -215,6 +215,8 @@ public:
 		m_cb = std::move(cb);
 	}
 
+	void SetGameDir(const std::string& game_dir) { m_game_dir = game_dir; }
+
 	const auto& GetCallbacks() const
 	{
 		return m_cb;

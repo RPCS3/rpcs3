@@ -550,6 +550,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Program/GLSLCommon.cpp
     RSX/Program/ProgramStateCache.cpp
     RSX/Program/program_util.cpp
+    RSX/Program/ShaderInterpreter.cpp
     RSX/Program/SPIRVCommon.cpp
     RSX/Program/VertexProgramDecompiler.cpp
     RSX/GSFrameBase.cpp

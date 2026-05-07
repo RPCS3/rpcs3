@@ -283,10 +283,10 @@ namespace gl
 		const auto range = utils::address_range32::start_length(start, length);
 		m_barriers.erase(std::remove_if(m_barriers.begin(), m_barriers.end(), [&range](auto& barrier_)
 		{
-			if (barrier_.range.overlaps(range))
+			if (barrier_->range.overlaps(range))
 			{
-				barrier_.signal.server_wait_sync();
-				barrier_.signal.destroy();
+				barrier_->signal.server_wait_sync();
+				barrier_->signal.destroy();
 				return true;
 			}
 
@@ -301,9 +301,9 @@ namespace gl
 			return;
 		}
 
-		barrier barrier_;
-		barrier_.range = utils::address_range32::start_length(start, length);
-		barrier_.signal.create();
-		m_barriers.emplace_back(barrier_);
+		auto barrier_ = std::make_unique<barrier>();
+		barrier_->range = utils::address_range32::start_length(start, length);
+		barrier_->signal.create();
+		m_barriers.emplace_back(std::move(barrier_));
 	}
 }

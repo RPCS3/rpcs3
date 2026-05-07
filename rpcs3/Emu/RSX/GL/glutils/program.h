@@ -7,6 +7,8 @@
 #include "Utilities/geometry.h"
 #include "Utilities/mutex.h"
 
+#include <span>
+
 namespace gl
 {
 	namespace glsl
@@ -55,7 +57,7 @@ namespace gl
 
 			const std::string& get_source() const { return source; }
 
-			fence get_compile_fence_sync() const { return m_compiled_fence; }
+			const fence& get_compile_fence_sync() const { return m_compiled_fence; }
 
 			bool created() const { return m_id != GL_NONE; }
 
@@ -91,6 +93,7 @@ namespace gl
 				void operator = (unsigned rhs) const { glProgramUniform1ui(m_program.id(), location(), rhs); }
 				void operator = (float rhs) const { glProgramUniform1f(m_program.id(), location(), rhs); }
 				void operator = (bool rhs) const { glProgramUniform1ui(m_program.id(), location(), rhs ? 1 : 0); }
+				void operator = (handle64_t rhs) const { glProgramUniformHandleui64ARB(m_program.id(), location(), rhs); }
 				void operator = (const color1i& rhs) const { glProgramUniform1i(m_program.id(), location(), rhs.r); }
 				void operator = (const color1f& rhs) const { glProgramUniform1f(m_program.id(), location(), rhs.r); }
 				void operator = (const color2i& rhs) const { glProgramUniform2i(m_program.id(), location(), rhs.r, rhs.g); }
@@ -101,18 +104,22 @@ namespace gl
 				void operator = (const color4f& rhs) const { glProgramUniform4f(m_program.id(), location(), rhs.r, rhs.g, rhs.b, rhs.a); }
 				void operator = (const areaf& rhs) const { glProgramUniform4f(m_program.id(), location(), rhs.x1, rhs.y1, rhs.x2, rhs.y2); }
 				void operator = (const areai& rhs) const { glProgramUniform4i(m_program.id(), location(), rhs.x1, rhs.y1, rhs.x2, rhs.y2); }
-				void operator = (const std::vector<int>& rhs) const { glProgramUniform1iv(m_program.id(), location(), ::size32(rhs), rhs.data()); }
+				void operator = (const std::span<const int>& rhs) const { glProgramUniform1iv(m_program.id(), location(), ::size32(rhs), rhs.data()); }
+				void operator = (const std::span<const handle64_t>& rhs) const { glProgramUniformHandleui64vARB(m_program.id(), location(), ::size32(rhs), rhs.data()); }
 			};
 
 			class uniforms_t
 			{
-				program& m_program;
+				program* m_program = nullptr;
 				std::unordered_map<std::string, GLint> locations;
 
 			public:
 				uniforms_t(program* program)
-					: m_program(*program)
+					: m_program(program)
 				{}
+
+				uniforms_t(uniforms_t&&) noexcept = default;
+				uniforms_t& operator = (uniforms_t&&) noexcept = default;
 
 				void clear() { locations.clear(); }
 
@@ -120,15 +127,17 @@ namespace gl
 
 				GLint location(const std::string& name);
 
-				uniform_t operator[](GLint location) { return{ m_program, location }; }
+				uniform_t operator[](GLint location) { return{ *m_program, location }; }
 
-				uniform_t operator[](const std::string& name) { return{ m_program, location(name) }; }
+				uniform_t operator[](const std::string& name) { return{ *m_program, location(name) }; }
 
 			} uniforms{ this };
 
 		public:
 			program() = default;
+
 			program(const program&) = delete;
+			program& operator = (const program&) = delete;
 
 			~program()
 			{
@@ -136,6 +145,13 @@ namespace gl
 				{
 					remove();
 				}
+			}
+
+			void swap(program&& other) noexcept
+			{
+				std::swap(m_id, other.m_id);
+				std::swap(m_fence, other.m_fence);
+				std::swap(uniforms, other.uniforms);
 			}
 
 			program& recreate()
@@ -171,6 +187,12 @@ namespace gl
 
 			program& attach(const shader& shader_)
 			{
+				if (const auto& comp_fence = shader_.get_compile_fence_sync();
+					!comp_fence.check_signaled())
+				{
+					comp_fence.server_wait_sync();
+				}
+
 				glAttachShader(m_id, shader_.id());
 				return *this;
 			}

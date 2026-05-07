@@ -219,6 +219,13 @@ namespace gl
 	texture::~texture()
 	{
 		gl::get_command_context()->unbind_texture(static_cast<GLenum>(m_target), m_id);
+
+		if (m_handle64)
+		{
+			glMakeTextureHandleNonResidentARB(m_handle64);
+			m_handle64 = GL_NONE;
+		}
+
 		glDeleteTextures(1, &m_id);
 		m_id = GL_NONE;
 	}

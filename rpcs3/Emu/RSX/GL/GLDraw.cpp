@@ -545,6 +545,93 @@ void GLGSRender::bind_texture_env()
 	}
 }
 
+void GLGSRender::bind_interpreter_texture_env()
+{
+	// Bind textures and resolve external copy operations
+	gl::command_context cmd{ gl_state };
+	const bool is_interpreter = m_shader_interpreter.is_interpreter(m_program);
+
+	for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
+	{
+		if (!(textures_ref & 1))
+		{
+			continue;
+		}
+
+		gl::texture_view* primary_view = nullptr;
+		gl::texture_view* stencil_mirror = nullptr;
+		auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
+
+		if (rsx::method_registers.fragment_textures[i].enabled() &&
+			sampler_state->validate())
+		{
+			if (primary_view = sampler_state->image_handle; !primary_view) [[unlikely]]
+			{
+				primary_view = m_gl_texture_cache.create_temporary_subresource(cmd, sampler_state->external_subresource_desc);
+			}
+		}
+
+		if (!primary_view)
+		{
+			const auto target = gl::get_target(current_fragment_program.get_texture_dimension(i));
+			primary_view = m_null_textures[target]->get_view(rsx::default_remap_vector);
+			stencil_mirror = primary_view;
+		}
+		else if (current_fragment_program.texture_state.redirected_textures & (1 << i))
+		{
+			auto root_texture = static_cast<gl::viewable_image*>(primary_view->image());
+			stencil_mirror = root_texture->get_view(rsx::default_remap_vector.with_encoding(gl::GL_REMAP_IDENTITY), gl::image_aspect::stencil);
+		}
+
+		if (is_interpreter) [[ unlikely ]]
+		{
+			m_shader_interpreter.bind_fragment_texture(i, primary_view->handle(), *sampler_state);
+			continue;
+		}
+
+		primary_view->bind(cmd, GL_FRAGMENT_TEXTURES_START + i);
+
+		if (stencil_mirror)
+		{
+			stencil_mirror->bind(cmd, GL_STENCIL_MIRRORS_START + i);
+		}
+	}
+
+	for (u32 textures_ref = current_vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
+	{
+		if (!(textures_ref & 1))
+		{
+			continue;
+		}
+
+		auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
+		gl::texture_view* view = nullptr;
+
+		if (rsx::method_registers.vertex_textures[i].enabled() &&
+			sampler_state->validate())
+		{
+			if (view = sampler_state->image_handle; !view)
+			{
+				view = m_gl_texture_cache.create_temporary_subresource(cmd, sampler_state->external_subresource_desc);
+			}
+		}
+
+		if (view) [[likely]]
+		{
+			view->bind(cmd, GL_VERTEX_TEXTURES_START + i);
+		}
+		else
+		{
+			cmd->bind_texture(GL_VERTEX_TEXTURES_START + i, GL_TEXTURE_2D, GL_NONE);
+		}
+	}
+
+	if (is_interpreter)
+	{
+		m_shader_interpreter.flush_texture_bindings();
+	}
+}
+
 void GLGSRender::emit_geometry(u32 sub_index)
 {
 	const auto do_heap_cleanup = [this]()

@@ -1138,15 +1138,15 @@ bool fs::get_optical_raw_device(const std::string& path, std::string* raw_device
 #ifdef _WIN32
 	// Skip a useless check to detect an optical raw device if navigating on subfolders (e.g. C:\subfolder_1\subfolder_2\),
 	// it means we are on a HDD/SSD. A path for an optical drive should include only the drive letter (e.g. E:\)
-	const size_t drive_delim = path.find_first_of(":");
+	const size_t drive_delim_pos = path.find_first_of(":");
 
-	if (drive_delim != umax && drive_delim != path.find_last_not_of(delim))
+	if (drive_delim_pos != 1 || drive_delim_pos != path.find_last_not_of(delim))
 	{
 		return false;
 	}
 
-	const std::string drive_letter = path.substr(0, drive_delim + 1); // e.g. "E:"
-	const std::string drive_path = drive_letter + "\\";               // e.g. "E:\"
+	const std::string drive_letter = path.substr(0, drive_delim_pos + 1); // e.g. "E:"
+	const std::string drive_path = drive_letter + "\\"; // e.g. "E:\"
 
 	if (GetDriveTypeA(drive_path.c_str()) == DRIVE_CDROM)
 	{

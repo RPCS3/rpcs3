@@ -203,10 +203,10 @@ namespace vk
 		return key.encoded;
 	}
 
-	u64 get_renderpass_key(VkFormat surface_format)
+	u64 get_renderpass_key(VkFormat surface_format, u8 sample_count)
 	{
 		renderpass_key_blob key(0);
-		key.sample_count = 1;
+		key.sample_count = sample_count;
 
 		switch (surface_format)
 		{
@@ -221,6 +221,27 @@ namespace vk
 			key.color_format = static_cast<u64>(surface_format);
 			key.layout_blob = static_cast<u64>(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 			break;
+		}
+
+		return key.encoded;
+	}
+
+	u64 get_renderpass_key(VkFormat color_format, VkFormat depth_format, u8 sample_count)
+	{
+		renderpass_key_blob key(0);
+		key.sample_count = sample_count;
+
+		u32 image_index = 0;
+		if (color_format != VK_FORMAT_UNDEFINED)
+		{
+			key.set_format(color_format);
+			key.set_layout(image_index++, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+		}
+
+		if (depth_format != VK_FORMAT_UNDEFINED)
+		{
+			key.set_format(depth_format);
+			key.set_layout(image_index++, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 		}
 
 		return key.encoded;

@@ -4,7 +4,7 @@
 cd build || exit 1
 
 cd bin
-git clone --revision=32dceb35e2c95b46cec501033cbc3a1ddf32d6e8 https://github.com/KhronosGroup/MoltenVK.git
+git clone --revision=a075e5e417f87675ea3137b7365f3e5a99608d72 https://github.com/KhronosGroup/MoltenVK.git
 cd MoltenVK
 ./fetchDependencies --macos
 sudo xcode-select -switch /Applications/Xcode_16.2.app/Contents/Developer
@@ -57,9 +57,25 @@ rm -f rpcs3.app/Contents/translations/qt_help_*.qm || true
 mv rpcs3.app RPCS3_.app
 mv RPCS3_.app RPCS3.app
 
-# Hack
-install_name_tool -delete_rpath /opt/homebrew/lib RPCS3.app/Contents/MacOS/rpcs3 || true
-install_name_tool -delete_rpath /usr/local/lib RPCS3.app/Contents/MacOS/rpcs3 || true
+# Hack to fix rpath issues
+BIN="RPCS3.app/Contents/MacOS/rpcs3"
+install_name_tool -delete_rpath /opt/homebrew/lib $BIN || true
+install_name_tool -delete_rpath /usr/local/lib $BIN || true
+
+# Fix dylib IDs
+for lib in RPCS3.app/Contents/Frameworks/*.dylib; do
+  name=$(basename "$lib")
+  install_name_tool -id "@rpath/$name" "$lib"
+done
+
+# Rewrite any hardcoded Homebrew paths to use @rpath
+find "RPCS3.app/Contents/" -type f \( -perm +111 -o -name "*.dylib" \) | while read -r bin; do
+  otool -L "$bin" | grep -E "/opt/homebrew|/usr/local" | awk '{print $1}' | while read -r dep; do
+    base=$(basename "$dep")
+    echo "Fixing $dep -> @rpath/$base in $bin"
+    install_name_tool -change "$dep" "@rpath/$base" "$bin"
+  done
+done
 
 # NOTE: "--deep" is deprecated
 codesign --deep -fs - RPCS3.app

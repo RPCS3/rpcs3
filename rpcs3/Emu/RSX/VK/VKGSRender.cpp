@@ -1237,18 +1237,31 @@ void VKGSRender::on_init_thread()
 	GSRender::on_init_thread();
 	zcull_ctrl.reset(static_cast<::rsx::reports::ZCULL_control*>(this));
 
-	if (!m_overlay_manager)
+	if (g_cfg.video.shadermode == shader_mode::async_with_interpreter ||
+		g_cfg.video.shadermode == shader_mode::interpreter_only)
 	{
-		m_frame->hide();
-		m_shaders_cache->load(nullptr);
-		m_frame->show();
+		std::unique_ptr<rsx::shader_loading_dialog> dlg = m_overlay_manager
+			? std::make_unique<rsx::shader_loading_dialog_native>(this)
+			: std::make_unique<rsx::shader_loading_dialog>();
+		m_shader_interpreter.preload(dlg.get());
+		dlg->close();
 	}
-	else
-	{
-		rsx::shader_loading_dialog_native dlg(this);
 
-		// TODO: Handle window resize messages during loading on GPUs without OUT_OF_DATE_KHR support
-		m_shaders_cache->load(&dlg);
+	if (g_cfg.video.shadermode != shader_mode::interpreter_only)
+	{
+		if (!m_overlay_manager)
+		{
+			m_frame->hide();
+			m_shaders_cache->load(nullptr);
+			m_frame->show();
+		}
+		else
+		{
+			rsx::shader_loading_dialog_native dlg(this);
+
+			// TODO: Handle window resize messages during loading on GPUs without OUT_OF_DATE_KHR support
+			m_shaders_cache->load(&dlg);
+		}
 	}
 }
 
@@ -2194,6 +2207,7 @@ std::pair<const vs_binding_table_t*, const fs_binding_table_t*> VKGSRender::get_
 	}
 
 	const auto& [vs, fs] = m_shader_interpreter.get_shaders();
+	ensure(vs && fs, "Invalid interpreter configuration");
 	return { &vs->binding_table, &fs->binding_table };
 }
 

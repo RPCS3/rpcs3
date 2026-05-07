@@ -171,6 +171,7 @@
     <ClCompile Include="Emu\RSX\Program\Assembler\Passes\FP\RegisterDependencyPass.cpp" />
     <ClCompile Include="Emu\RSX\Program\ProgramStateCache.cpp" />
     <ClCompile Include="Emu\RSX\Program\program_util.cpp" />
+    <ClCompile Include="Emu\RSX\Program\ShaderInterpreter.cpp" />
     <ClCompile Include="Emu\RSX\Program\SPIRVCommon.cpp" />
     <ClCompile Include="Emu\RSX\RSXDisAsm.cpp" />
     <ClCompile Include="Emu\RSX\RSXZCULL.cpp" />
@@ -1048,7 +1049,6 @@
     <ClInclude Include="Emu\RSX\Program\RSXVertexProgram.h" />
     <ClInclude Include="Emu\Memory\vm.h" />
     <ClInclude Include="Emu\Memory\vm_ptr.h" />
-    <ClInclude Include="Emu\Memory\vm_ref.h" />
     <ClInclude Include="Emu\Memory\vm_reservation.h" />
     <ClInclude Include="Emu\Memory\vm_var.h" />
     <ClInclude Include="Emu\RSX\rsx_methods.h" />
