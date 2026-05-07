@@ -373,106 +373,155 @@ void game_list_actions::ShowGameIntegrityDialog(content_file_type file_type, con
 	if (m_game_integrity_future.isRunning()) // Still running the last request
 		return;
 
-	QString path;
-	std::string db_id;
+	QStringList path_list;
 
 	switch (file_type)
 	{
 	case content_file_type::ISO:
-		path = QString::fromStdString(game->info.path);
-		db_id = "REDUMP";
+		path_list.push_back(QString::fromStdString(game->info.path));
 		break;
 	default: // Auto-detect the file type
 		const QString path_last_pkg = m_gui_settings->GetValue(gui::fd_install_pkg).toString();
 
-		path = QFileDialog::getOpenFileName(nullptr, tr("Select package or rap file to check"),
+		path_list = QFileDialog::getOpenFileNames(nullptr, tr("Select package or rap file to check"),
 			path_last_pkg, tr("All relevant (*.pkg *.PKG *.rap *.RAP *.edat *.EDAT);;Package files (*.pkg *.PKG);;Rap files (*.rap *.RAP);;Edat files (*.edat *.EDAT);;All files (*.*)"));
 
-		if (path.isEmpty())
+		if (path_list.isEmpty())
 		{
 			return;
-		}
-
-		compat::package_info info = game_compatibility::GetPkgInfo(path, m_game_list_frame->GetGameCompatibility());
-
-		switch (info.type)
-		{
-		case compat::package_type::update:
-			file_type = content_file_type::PSN_UPDATE;
-			db_id = "PSN UPDATE";
-			break;
-		case compat::package_type::dlc:
-			file_type = content_file_type::PSN_DLC;
-			db_id = "PSN DLC";
-			break;
-		case compat::package_type::other:
-			file_type = content_file_type::PSN_CONTENT;
-			db_id = "PSN CONTENT";
-			break;
 		}
 
 		break;
 	}
 
-	// Initialize the validator (set also file size etc.)
-	m_game_validator->init_hash(path.toStdString());
+	// Tell the progress bar thread how many hash will be checked
+	m_game_validator->set_count(path_list.size());
 
 	// Game integrity check can take a while (in particular on non ssd/m.2 disks)
 	// so run it on a concurrent thread avoiding to block the entire GUI
-	m_game_integrity_future = QtConcurrent::run([this, file_type, db_id]()
+	m_game_integrity_future = QtConcurrent::run([this, type = file_type, path_list]()
 	{
 		thread_base::set_name("Game Integrity");
 
-		QString text;
-		std::string hash, game_name;
-		bool info_dialog = false;
+		content_file_type file_type = type;
+		QString text_dialog, text_result;
+		std::string db_id, hash, game_name;
+		bool info_dialog = true;
 
-		if (m_game_validator->calculate_hash(hash) != content_hash_status::COMPLETED)
+		for (int i = 0; i < path_list.size(); i++)
 		{
-			text = "Hash calculation failed!\n\nIntegrity check aborted";
-		}
-		else
-		{
-			text = "Integrity check completed!\n\n";
+			bool use_fallback_db = false; // Set to "true" only for ".rap" and ".edat"
 
-			switch (m_game_validator->check_integrity(file_type, hash, &game_name))
+			if (file_type == content_file_type::ISO)
 			{
-			case content_integrity_status::NO_MATCH:
-				text += tr("Game check NOT PASSED\n\nNo match found on '%0' DB or game corrupted:\n - Hash: %1")
-					.arg(QString::fromStdString(db_id))
-					.arg(QString::fromStdString(hash));
-				break;
-			case content_integrity_status::FOUND_MATCH:
-				text += tr("Game check PASSED\n\nMatch found on '%0' DB:\n - Game: %1\n - Hash: %2")
-					.arg(QString::fromStdString(db_id))
-					.arg(QString::fromStdString(game_name))
-					.arg(QString::fromStdString(hash));
-
-				info_dialog = true;
-				break;
-			default:
-				text += tr("Error parsing '%0' DB or DB not existing")
-					.arg(QString::fromStdString(db_id));
-				break;
-			}
-		}
-
-		Emu.CallFromMainThread([this, text, info_dialog]()
-		{
-			if (info_dialog)
-			{
-				sys_log.success("%s", text.toStdString());
-				QMessageBox::information(m_game_list_frame, tr("Game Integrity"), text);
+				db_id = "REDUMP";
 			}
 			else
 			{
-				sys_log.error("%s", text.toStdString());
-				QMessageBox::critical(m_game_list_frame, tr("Game Integrity"), text);
+				compat::package_info info = game_compatibility::GetPkgInfo(path_list[i], m_game_list_frame->GetGameCompatibility());
+
+				switch (info.type)
+				{
+				case compat::package_type::update:
+					file_type = content_file_type::PSN_UPDATE;
+					db_id = "PSN UPDATE";
+					break;
+				case compat::package_type::dlc:
+					file_type = content_file_type::PSN_DLC;
+					db_id = "PSN DLC";
+					break;
+				case compat::package_type::other:
+					// NOTE: This is also always the default type for any ".rap" and ".edat" (not possible to detect type by file parsing)
+					file_type = content_file_type::PSN_CONTENT;
+					db_id = "PSN CONTENT";
+
+					// If no match for ".rap" or ".edat" will be found on default "PSN Content" DB, try on "PSN DLC" DB
+					if (path_list[i].endsWith(".rap", Qt::CaseInsensitive) || path_list[i].endsWith(".edat", Qt::CaseInsensitive))
+					{
+						use_fallback_db = true;
+					}
+
+					break;
+				}
+			}
+
+			// Initialize the validator (set also file size etc.)
+			m_game_validator->init_hash(path_list[i].toStdString());
+
+			if (m_game_validator->calculate_hash(hash) == content_hash_status::COMPLETED)
+			{
+				content_integrity_status integrity_status = m_game_validator->check_integrity(file_type, hash, &game_name);
+
+				// If no match for ".rap" or ".edat" is found on default "PSN Content" DB, try on "PSN DLC" DB
+				if (integrity_status == content_integrity_status::NO_MATCH && use_fallback_db)
+				{
+					db_id += " -> PSN DLC";
+					integrity_status = m_game_validator->check_integrity(content_file_type::PSN_DLC, hash, &game_name);
+				}
+
+				switch (integrity_status)
+				{
+				case content_integrity_status::NO_MATCH:
+					text_result += tr("Game check NOT PASSED\n\nNo match found on '%0' DB or game corrupted:\n - File: %1\n - Hash: %2\n\n\n")
+						.arg(QString::fromStdString(db_id))
+						.arg(QString::fromStdString(m_game_validator->get_name()))
+						.arg(QString::fromStdString(hash));
+
+					info_dialog = false;
+					break;
+				case content_integrity_status::FOUND_MATCH:
+					text_result += tr("Game check PASSED\n\nMatch found on '%0' DB:\n - File: %1\n - Hash: %2\n - Game: %3\n\n\n")
+						.arg(QString::fromStdString(db_id))
+						.arg(QString::fromStdString(m_game_validator->get_name()))
+						.arg(QString::fromStdString(hash))
+						.arg(QString::fromStdString(game_name));
+					break;
+				default:
+					text_result += tr("Error parsing '%0' DB or DB not existing:\n - File: %1\n - Hash: %2\n\n\n")
+						.arg(QString::fromStdString(db_id))
+						.arg(QString::fromStdString(m_game_validator->get_name()))
+						.arg(QString::fromStdString(hash));
+
+					info_dialog = false;
+					break;
+				}
+			}
+
+			if (m_game_validator->get_status() == content_hash_status::ABORTED)
+			{
+				break;
+			}
+		}
+
+		if (m_game_validator->get_status() == content_hash_status::ABORTED)
+		{
+			text_dialog = "Hash calculation failed!\n\nIntegrity check aborted";
+			info_dialog = false;
+		}
+		else
+		{
+			text_dialog = "Integrity check completed!\n\n" + text_result;
+		}
+
+		// Tell the progress bar thread to terminate
+		m_game_validator->set_count(0);
+
+		Emu.CallFromMainThread([this, text_dialog, info_dialog]()
+		{
+			if (info_dialog)
+			{
+				sys_log.success("%s", text_dialog.toStdString());
+				QMessageBox::information(m_game_list_frame, tr("Game Integrity"), text_dialog);
+			}
+			else
+			{
+				sys_log.error("%s", text_dialog.toStdString());
+				QMessageBox::critical(m_game_list_frame, tr("Game Integrity"), text_dialog);
 			}
 		}, nullptr, false);
 	});
 
-	progress_dialog* pdlg = new progress_dialog(tr("File Hash Calculation"), tr("Calculating hash"), tr("Cancel"),
+	progress_dialog* pdlg = new progress_dialog(tr("File Hash Calculation"), tr(""), tr("Cancel"),
 		0, 100, false, m_game_list_frame);
 
 	pdlg->setAutoClose(false);
@@ -488,7 +537,7 @@ void game_list_actions::ShowGameIntegrityDialog(content_file_type file_type, con
 
 	connect(update_timer, &QTimer::timeout, m_game_list_frame, [this, pdlg, update_timer]()
 	{
-		if (m_game_validator->get_status() == content_hash_status::INITIALIZED)
+		if (m_game_validator->get_count())
 		{
 			// Set progress in range 0-100
 			const int progress = m_game_validator->get_size() ?
@@ -496,6 +545,7 @@ void game_list_actions::ShowGameIntegrityDialog(content_file_type file_type, con
 				0;
 
 			pdlg->setValue(progress);
+			pdlg->setLabelText(tr("Calculating hash: %0").arg(m_game_validator->get_name()));
 		}
 		else
 		{

@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include "content_validation.h"
+#include "ISO.h"
 
 #include "Emu/system_utils.hpp"
 #include "Utilities/File.h"
@@ -108,18 +109,23 @@ content_integrity_status content_validation::check_integrity(content_file_type f
 
 bool content_validation::init_hash(const std::string& path)
 {
-	fs::file iso_file(path);
+	std::string new_path = path;
 
-	// If no ISO file exists
-	if (!iso_file)
+	fs::get_optical_raw_device(path, &new_path);
+
+	iso_file file(new_path);
+
+	// If no file exists
+	if (!file)
 	{
-		sys_log.error("init_hash: Failed to open file: %s", path);
+		sys_log.error("init_hash: Failed to open file: %s", new_path);
 		m_status = content_hash_status::ABORTED;
 		return false;
 	}
 
-	m_path = path;
-	m_size = iso_file.size();
+	m_path = new_path;
+	m_name = new_path.find_last_of(fs::delim) != umax ? new_path.substr(new_path.find_last_of(fs::delim) + 1) : new_path;
+	m_size = file.size();
 	m_bytes_read = 0;
 	m_status = content_hash_status::INITIALIZED;
 	return true;
@@ -134,10 +140,10 @@ content_hash_status content_validation::calculate_hash(std::string& hash)
 		return m_status;
 	}
 
-	fs::file iso_file(m_path);
+	iso_file file(m_path);
 
-	// If no ISO file exists
-	if (!iso_file)
+	// If no file exists
+	if (!file)
 	{
 		sys_log.error("calculate_hash: Failed to open file: %s", m_path);
 		m_status = content_hash_status::ABORTED;
@@ -154,7 +160,7 @@ content_hash_status content_validation::calculate_hash(std::string& hash)
 
 	do
 	{
-		bytes_read = iso_file.read(buf.data(), block_size);
+		bytes_read = file.read(buf.data(), block_size);
 		mbedtls_md5_update_ret(&md5_ctx, buf.data(), bytes_read);
 
 		m_bytes_read += bytes_read;

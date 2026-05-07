@@ -608,19 +608,19 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 	// Check disc game integrity
 	if (QString::fromStdString(current_game.category) == cat::cat_disc_game)
 	{
+		const bool raw_archive = is_iso_file(current_game.path);
 		const iso_type_status iso_type = iso_file_decryption::check_type(current_game.path);
 
 		// If it's an ISO file (e.g. even a decrypted ISO), always provide the entry on the context menu but disable
 		// it if the ISO does not support integrity check (e.g. non Redump ISO) or no integrity DB is found.
 		// That is to highlight a Redump ISO from a non Redump ISO
-		if (iso_type != iso_type_status::NOT_ISO)
+		if (raw_archive || iso_type != iso_type_status::NOT_ISO)
 		{
-			const content_integrity_status iso_integrity = content_validation::check_integrity(content_file_type::ISO, "");
-
 			QAction* check_iso = check_integrity_menu->addAction(tr("&Check ISO Integrity"));
 
 			// If it's a Redump ISO and the integrity DB exists
-			if (iso_type == iso_type_status::REDUMP_ISO && iso_integrity != content_integrity_status::ERROR_OPENING_DB)
+			if ((raw_archive || iso_type == iso_type_status::REDUMP_ISO) &&
+				content_validation::check_integrity(content_file_type::ISO, "") != content_integrity_status::ERROR_OPENING_DB)
 			{
 				connect(check_iso, &QAction::triggered, this, [this, gameinfo]()
 				{
