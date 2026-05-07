@@ -1125,13 +1125,6 @@ bool fs::is_optical_raw_device([[maybe_unused]] const std::string& path)
 
 bool fs::get_optical_raw_device(const std::string& path, std::string* raw_device)
 {
-	// Skip a useless check to detect an optical raw device if navigating on subfolders (e.g. C:/subfolder_1/subfolder_2/), it means we are on a hdd/ssd.
-	// A path for an optical drive should include only the drive letter (e.g. E:/)
-	if (path.find_first_of(":") != path.find_last_not_of(delim))
-	{
-		return false;
-	}
-
 	if (fs::is_optical_raw_device(path))
 	{
 		if (raw_device)
@@ -1143,38 +1136,27 @@ bool fs::get_optical_raw_device(const std::string& path, std::string* raw_device
 	}
 
 #ifdef _WIN32
-	constexpr u32 BUF_SIZE = 1000;
-	WCHAR drive_list[BUF_SIZE] = {0};
+	// Skip a useless check to detect an optical raw device if navigating on subfolders (e.g. C:\subfolder_1\subfolder_2\),
+	// it means we are on a HDD/SSD. A path for an optical drive should include only the drive letter (e.g. E:\)
+	const size_t drive_delim_pos = path.find_first_of(":");
 
-	// GetLogicalDriveStrings() returns a double-null terminated list of null-terminated strings.
-	// E.g. A:\<nul>B:\<nul>C:\<nul><nul>
-	const DWORD copied = GetLogicalDriveStrings(BUF_SIZE, drive_list);
-
-	if (copied == 0 || copied > BUF_SIZE)
+	if (drive_delim_pos != 1 || drive_delim_pos != path.find_last_not_of(delim))
 	{
 		return false;
 	}
 
-	for (const WCHAR* drive = drive_list; drive && *drive; drive += wcslen(drive) + 1)
+	const std::string drive_letter = path.substr(0, drive_delim_pos + 1); // e.g. "E:"
+	const std::string drive_path = drive_letter + "\\"; // e.g. "E:\"
+
+	if (GetDriveTypeA(drive_path.c_str()) == DRIVE_CDROM)
 	{
-		if (GetDriveType(drive) == DRIVE_CDROM)
+		if (raw_device)
 		{
-			const std::wstring ws(drive);
-			const std::string s = std::string(ws.begin(), ws.end() - 1);
-
-			if (path.starts_with(s))
-			{
-				if (raw_device)
-				{
-					*raw_device = "\\\\.\\" + s;
-				}
-
-				return true;
-			}
+			*raw_device = "\\\\.\\" + drive_letter;
 		}
-	}
 
-	return false;
+		return true;
+	}
 #endif
 	return false;
 }
