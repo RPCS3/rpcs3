@@ -528,7 +528,7 @@ void game_list_actions::ShowGameIntegrityDialog(content_file_type file_type, con
 		}, nullptr, false);
 	});
 
-	progress_dialog* pdlg = new progress_dialog(tr("File Hash Calculation"), tr(""), tr("Cancel"),
+	progress_dialog* pdlg = new progress_dialog(tr("File Hash Calculation"), "", tr("Cancel"),
 		0, 100, false, m_game_list_frame);
 
 	pdlg->setAutoClose(false);
