@@ -488,7 +488,7 @@ void game_list_actions::ShowGameIntegrityDialog(content_file_type file_type, con
 
 				if (i < path_list.size() - 1) // If it's not the last processed entry, add empty lines as separator
 				{
-					text_result += tr("\n\n\n");
+					text_result += "\n\n\n";
 				}
 			}
 
