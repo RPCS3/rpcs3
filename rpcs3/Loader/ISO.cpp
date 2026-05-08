@@ -54,7 +54,7 @@ static void* get_aligned_buf()
 	return s_aligned_buf.buf;
 }
 
-static bool is_iso_file(const fs::file& file, u64* size = nullptr)
+static bool is_iso_file(iso_file& file, u64* size = nullptr)
 {
 	if (!file || file.size() < 32768ULL + 6)
 	{
@@ -87,7 +87,7 @@ bool is_iso_file(const std::string& path, u64* size, bool* is_raw_device)
 	// "new_path" is updated with the raw device path in case "path" points to a BD drive
 	const bool raw_device = fs::get_optical_raw_device(path, &new_path);
 
-	if (!raw_device && fs::is_dir(path))
+	if (!raw_device && !fs::is_file(path))
 	{
 		return false;
 	}
@@ -97,7 +97,7 @@ bool is_iso_file(const std::string& path, u64* size, bool* is_raw_device)
 		*is_raw_device = raw_device;
 	}
 
-	fs::file file(std::make_unique<iso_file>(new_path, fs::read));
+	iso_file file(new_path);
 
 	return is_iso_file(file, size);
 }
@@ -337,7 +337,7 @@ iso_type_status iso_file_decryption::retrieve_key(iso_archive& archive, std::str
 	return iso_type_status::ERROR_OPENING_KEY;
 }
 
-iso_type_status iso_file_decryption::check_type(const std::string& path, std::string& key_path, aes_context* aes_ctx)
+iso_type_status iso_file_decryption::check_type(const std::string& path, std::string* key_path, aes_context* aes_ctx)
 {
 	if (!is_iso_file(path))
 	{
@@ -363,8 +363,12 @@ iso_type_status iso_file_decryption::check_type(const std::string& path, std::st
 	{
 		if (fs::is_file(path))
 		{
-			key_path = path;
-			return get_key(key_path, aes_ctx);
+			if (key_path)
+			{
+				*key_path = path;
+			}
+
+			return get_key(path, aes_ctx);
 		}
 	}
 
@@ -381,7 +385,7 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 	// Store the ISO region information (needed by both the "Redump" type (only on "decrypt()" method) and "3k3y" type)
 	//
 
-	fs::file iso_file(std::make_unique<iso_file>(path, fs::read));
+	iso_file iso_file(path);
 
 	if (!is_iso_file(iso_file))
 	{
@@ -390,7 +394,7 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 	}
 
 	// Reset the file position after it was changed by is_iso_file()
-	iso_file.seek(0);
+	iso_file.seek(0, fs::seek_set);
 
 	std::array<u8, ISO_SECTOR_SIZE * 2> sec0_sec1;
 
@@ -447,7 +451,7 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 	else
 	{
 		// Try to detect the Redump type. If so, the decryption context is set into "m_aes_dec"
-		status = check_type(path, key_path, &m_aes_dec);
+		status = check_type(path, &key_path, &m_aes_dec);
 	}
 
 	switch (status)
@@ -968,17 +972,14 @@ iso_archive::iso_archive(const std::string& path)
 	// "m_path" is updated with the raw device path in case "path" points to a BD drive
 	fs::get_optical_raw_device(path, &m_path);
 
-	fs::file iso_file(std::make_unique<iso_file>(m_path, fs::read));
-
-	if (!iso_file || !is_iso_file(iso_file))
+	if (!is_iso_file(m_path))
 	{
 		// Not ISO... TODO: throw something?
 		iso_log.error("iso_archive: Failed to recognize ISO file: '%s'", path);
 		return;
 	}
 
-	// Reset the file position after it was changed by is_iso_file()
-	iso_file.seek(0);
+	fs::file iso_file(std::make_unique<iso_file>(m_path));
 
 	u8 descriptor_type = -2;
 	bool use_ucs2_decoding = false;

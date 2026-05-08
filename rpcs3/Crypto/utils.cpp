@@ -37,6 +37,14 @@ void bytes_to_hex(std::string& hex_str, const unsigned char* data, unsigned int 
 		{
 			fmt::throw_exception("Failed to read bytes: %s", std::make_error_code(err).message());
 		}
+
+		// Padding handling for values ​​< 0x10 (e.g. 0x05 becomes "5" instead of "05")
+		// If to_chars only writes 1 character, we move to the right and put '0'
+		if (ptr == &hex_str[i] + 1)
+		{
+			hex_str[i + 1] = hex_str[i];
+			hex_str[i] = '0';
+		}
 	}
 }
 
