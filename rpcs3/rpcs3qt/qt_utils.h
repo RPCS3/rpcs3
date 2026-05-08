@@ -193,10 +193,10 @@ namespace gui
 		}
 
 		// Loads an icon from an (ISO) archive file.
-		bool load_iso_icon(QPixmap& icon, const std::string& icon_path, const std::string& archive_path);
+		bool load_iso_icon(QPixmap& icon, const std::string& icon_path, const std::string& archive_path, const std::string& game_dir = {});
 
 		// Loads an icon (optionally from an (ISO) archive file).
-		bool load_icon(QPixmap& icon, const std::string& icon_path, const std::string& archive_path);
+		bool load_icon(QPixmap& icon, const std::string& icon_path, const std::string& archive_path, const std::string& game_dir = {});
 
 		template <typename T>
 		void stop_future_watcher(QFutureWatcher<T>& watcher, bool cancel, std::shared_ptr<atomic_t<bool>> cancel_flag = nullptr)
