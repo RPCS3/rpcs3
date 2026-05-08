@@ -404,7 +404,7 @@ void game_list_actions::ShowGameIntegrityDialog(content_file_type file_type, con
 		thread_base::set_name("Game Integrity");
 
 		content_file_type file_type = type;
-		QString text_dialog, text_result;
+		QString text_result;
 		std::string db_id, hash, game_name;
 		bool info_dialog = true;
 
@@ -416,9 +416,17 @@ void game_list_actions::ShowGameIntegrityDialog(content_file_type file_type, con
 			{
 				db_id = "REDUMP";
 			}
+			else if (path_list[i].endsWith(".rap", Qt::CaseInsensitive) || path_list[i].endsWith(".edat", Qt::CaseInsensitive))
+			{
+				// NOTE: This is the default type for any ".rap" and ".edat" due to it's not possible to detect the type by file parsing.
+				//       If no match for ".rap" or ".edat" will be found on default "PSN Content" DB, we will try on "PSN DLC" DB
+				file_type = content_file_type::PSN_CONTENT;
+				db_id = "PSN CONTENT";
+				use_fallback_db = true;
+			}
 			else
 			{
-				compat::package_info info = game_compatibility::GetPkgInfo(path_list[i], m_game_list_frame->GetGameCompatibility());
+				const compat::package_info info = game_compatibility::GetPkgInfo(path_list[i], m_game_list_frame->GetGameCompatibility());
 
 				switch (info.type)
 				{
@@ -431,16 +439,8 @@ void game_list_actions::ShowGameIntegrityDialog(content_file_type file_type, con
 					db_id = "PSN DLC";
 					break;
 				case compat::package_type::other:
-					// NOTE: This is also always the default type for any ".rap" and ".edat" (not possible to detect type by file parsing)
 					file_type = content_file_type::PSN_CONTENT;
 					db_id = "PSN CONTENT";
-
-					// If no match for ".rap" or ".edat" will be found on default "PSN Content" DB, try on "PSN DLC" DB
-					if (path_list[i].endsWith(".rap", Qt::CaseInsensitive) || path_list[i].endsWith(".edat", Qt::CaseInsensitive))
-					{
-						use_fallback_db = true;
-					}
-
 					break;
 				}
 			}
@@ -462,7 +462,7 @@ void game_list_actions::ShowGameIntegrityDialog(content_file_type file_type, con
 				switch (integrity_status)
 				{
 				case content_integrity_status::NO_MATCH:
-					text_result += tr("Game check NOT PASSED\n\nNo match found on '%0' DB or game corrupted:\n - File: %1\n - Hash: %2\n\n\n")
+					text_result += tr("Game check NOT PASSED\n\nNo match found on '%0' DB or game corrupted:\n - File: %1\n - Hash: %2")
 						.arg(QString::fromStdString(db_id))
 						.arg(QString::fromStdString(m_game_validator->get_name()))
 						.arg(QString::fromStdString(hash));
@@ -470,20 +470,25 @@ void game_list_actions::ShowGameIntegrityDialog(content_file_type file_type, con
 					info_dialog = false;
 					break;
 				case content_integrity_status::FOUND_MATCH:
-					text_result += tr("Game check PASSED\n\nMatch found on '%0' DB:\n - File: %1\n - Hash: %2\n - Game: %3\n\n\n")
+					text_result += tr("Game check PASSED\n\nMatch found on '%0' DB:\n - File: %1\n - Hash: %2\n - Game: %3")
 						.arg(QString::fromStdString(db_id))
 						.arg(QString::fromStdString(m_game_validator->get_name()))
 						.arg(QString::fromStdString(hash))
 						.arg(QString::fromStdString(game_name));
 					break;
 				default:
-					text_result += tr("Error parsing '%0' DB or DB not existing:\n - File: %1\n - Hash: %2\n\n\n")
+					text_result += tr("Error parsing '%0' DB or DB not existing:\n - File: %1\n - Hash: %2")
 						.arg(QString::fromStdString(db_id))
 						.arg(QString::fromStdString(m_game_validator->get_name()))
 						.arg(QString::fromStdString(hash));
 
 					info_dialog = false;
 					break;
+				}
+
+				if (i < path_list.size() - 1) // If it's not the last processed entry, add empty lines as separator
+				{
+					text_result += tr("\n\n\n");
 				}
 			}
 
@@ -492,6 +497,8 @@ void game_list_actions::ShowGameIntegrityDialog(content_file_type file_type, con
 				break;
 			}
 		}
+
+		QString text_dialog;
 
 		if (m_game_validator->get_status() == content_hash_status::ABORTED)
 		{

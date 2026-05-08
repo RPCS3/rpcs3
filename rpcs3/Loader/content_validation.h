@@ -46,7 +46,7 @@ public:
 	const std::string& get_name() const	{ return m_name; }
 	u64 get_size() const { return m_size; }
 	u64 get_bytes_read() const { return m_bytes_read; }
-	u16 get_count() { return m_count; }
+	u16 get_count() const { return m_count; }
 	content_hash_status get_status() const { return m_status; }
 
 	void set_count(u16 count) { m_count = count; }
