@@ -10,15 +10,6 @@
 
 LOG_CHANNEL(camera_log, "Camera");
 
-#if !(SDL_VERSION_ATLEAST(3, 4, 0))
-namespace SDL_CameraPermissionState
-{
-	constexpr int SDL_CAMERA_PERMISSION_STATE_DENIED = -1;
-	constexpr int SDL_CAMERA_PERMISSION_STATE_PENDING = 0;
-	constexpr int SDL_CAMERA_PERMISSION_STATE_APPROVED = 1;
-}
-#endif
-
 template <>
 void fmt_class_string<SDL_CameraSpec>::format(std::string& out, u64 arg)
 {

@@ -23,7 +23,7 @@ struct serial_ver_t
 	std::set<u16> compatible_versions;
 };
 
-static std::array<serial_ver_t, 27> s_serial_versions;
+static std::array<serial_ver_t, 34> s_serial_versions;
 
 #define SERIALIZATION_VER(name, identifier, ...) \
 \
@@ -40,7 +40,7 @@ static std::array<serial_ver_t, 27> s_serial_versions;
 		return ::s_serial_versions[identifier].current_version;\
 	}
 
-SERIALIZATION_VER(global_version, 0,                            19) // For stuff not listed here
+SERIALIZATION_VER(global_version, 0,                            21) // For stuff not listed here
 SERIALIZATION_VER(ppu, 1,                                       1, 2/*PPU sleep order*/, 3/*PPU FNID and module*/)
 SERIALIZATION_VER(spu, 2,                                       1)
 SERIALIZATION_VER(lv2_sync, 3,                                  1)
@@ -85,6 +85,16 @@ SERIALIZATION_VER(LLE, 24,                                      1)
 SERIALIZATION_VER(HLE, 25,                                      1)
 
 SERIALIZATION_VER(cellSysutil, 26,                              1, 2/*AVC2 Muting,Volume*/)
+SERIALIZATION_VER(cellDmuxPamf, 27,                             1)
+
+// For future modules
+SERIALIZATION_VER(cellReserved1, 27,                             1)
+SERIALIZATION_VER(cellReserved2, 28,                             1)
+SERIALIZATION_VER(cellReserved3, 29,                             1)
+SERIALIZATION_VER(cellReserved4, 30,                             1)
+SERIALIZATION_VER(cellReserved6, 31,                             1)
+SERIALIZATION_VER(cellReserved7, 32,                             1)
+SERIALIZATION_VER(cellReserved8, 33,                             1)
 
 template <>
 void fmt_class_string<std::remove_cvref_t<decltype(s_serial_versions)>>::format(std::string& out, u64 arg)
@@ -315,7 +325,7 @@ std::string get_savestate_file(std::string_view title_id, std::string_view boot_
 					{
 						if (std::all_of(entry.begin() + uc_pos + 1, entry.begin() + dot_idx, [](char c) { return c >= '0' && c <= '9'; }))
 						{
-							save_files.emplace(entry, dir_entry.size);	
+							save_files.emplace(entry, dir_entry.size);
 						}
 					}
 				}
@@ -520,7 +530,7 @@ void clean_savestates(std::string_view title_id, std::string_view boot_path, usz
 		if (to_remove.empty())
 		{
 			break;
-		}	
+		}
 
 		if (!fs::remove_file(to_remove))
 		{

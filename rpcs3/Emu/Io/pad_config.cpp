@@ -5,30 +5,103 @@
 
 extern std::string g_input_config_override;
 
-std::vector<std::string> cfg_pad::get_buttons(std::string_view str)
+std::vector<pad::combo> cfg_pad::get_combos(std::string_view button_string)
 {
-	std::vector<std::string> vec = fmt::split(str, {","});
+	if (button_string.empty())
+		return {};
 
-	// Handle special case: string contains separator itself as configured value
-	if (str == "," || str.find(",,") != umax)
+	// Handle special case: string contains separator itself as configured value (it's why I don't use fmt::split here)
+	const auto split = [](std::string_view str, char sep)
 	{
-		vec.push_back(",");
+		std::set<std::string> buttons;
+		bool was_sep = true;
+		usz btn_start = 0ULL;
+		usz i = 0ULL;
+
+		for (; i < str.size(); i++)
+		{
+			const char c = str[i];
+
+			if (c == sep)
+			{
+				if (!was_sep)
+				{
+					was_sep = true;
+					buttons.insert(std::string(str.substr(btn_start, i - btn_start)));
+					continue;
+				}
+			}
+
+			if (was_sep)
+			{
+				was_sep = false;
+				btn_start = i;
+			}
+		
+			if (i == (str.size() - 1))
+			{
+				buttons.insert(std::string(str.substr(btn_start, i - btn_start + 1)));
+			}
+		}
+
+		return buttons;
+	};
+
+	std::vector<pad::combo> combos;
+
+	// Get all combos (seperated by ',')
+	const std::set<std::string> combo_strings = split(button_string, ',');
+
+	for (const std::string& combo_string : combo_strings)
+	{
+		// Get all keys for this combo (seperated by '&')
+		std::set<std::string> combo = split(combo_string, '&');
+		if (!combo.empty())
+		{
+			combos.push_back(pad::combo{std::move(combo)});
+		}
 	}
 
-	// Remove duplicates
-	std::sort(vec.begin(), vec.end());
-	vec.erase(std::unique(vec.begin(), vec.end()), vec.end());
-
-	return vec;
+	return combos;
 }
 
-std::string cfg_pad::get_buttons(std::vector<std::string> vec)
+std::string cfg_pad::get_button_string(std::vector<pad::combo>& combos)
 {
-	// Remove duplicates
-	std::sort(vec.begin(), vec.end());
-	vec.erase(std::unique(vec.begin(), vec.end()), vec.end());
+	std::vector<std::string> combo_strings;
 
-	return fmt::merge(vec, ",");
+	// Remove duplicates
+	std::sort(combos.begin(), combos.end());
+	combos.erase(std::unique(combos.begin(), combos.end()), combos.end());
+
+	for (const pad::combo& combo : combos)
+	{
+		// Merge all keys for this combo (seperated by '&')
+		combo_strings.push_back(combo.to_string());
+	}
+
+	// Merge combos (seperated by ',')
+	return fmt::merge(combo_strings, ",");
+}
+
+std::string cfg_pad::make_button_string(const std::unordered_map<u32, std::string>& button_list, const std::vector<std::set<u32>>& button_combos)
+{
+	std::vector<pad::combo> combos;
+
+	for (const std::set<u32>& button_combo : button_combos)
+	{
+		if (button_combo.empty()) continue;
+
+		pad::combo combo {};
+
+		for (u32 button : button_combo)
+		{
+			combo.add_button(::at32(button_list, button));
+		}
+
+		combos.push_back(std::move(combo));
+	}
+
+	return get_button_string(combos);
 }
 
 u8 cfg_pad::get_motor_speed(VibrateMotor& motor, f32 multiplier) const

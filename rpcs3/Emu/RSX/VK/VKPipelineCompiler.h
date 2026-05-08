@@ -64,6 +64,7 @@ namespace vk
 		using op_flags = rsx::flags32_t;
 
 		using callback_t = std::function<void(std::unique_ptr<glsl::program>&)>;
+		using graphics_pipe_create_callback_t = std::function<VkGraphicsPipelineCreateInfo()>;
 
 		pipe_compiler();
 		~pipe_compiler();
@@ -89,6 +90,12 @@ namespace vk
 			const std::vector<glsl::program_input>& vs_inputs = {},
 			const std::vector<glsl::program_input>& fs_inputs = {});
 
+		std::unique_ptr<glsl::program> compile(
+			graphics_pipe_create_callback_t get_create_info,
+			op_flags flags, callback_t callback,
+			const std::vector<glsl::program_input>& vs_inputs,
+			const std::vector<glsl::program_input>& fs_inputs);
+
 		void operator()();
 
 	private:
@@ -111,6 +118,7 @@ namespace vk
 		{
 			bool is_graphics_job;
 			callback_t callback_func;
+			graphics_pipe_create_callback_t create_info_func;
 
 			vk::pipeline_props graphics_data;
 			compute_pipeline_props compute_data;
@@ -133,6 +141,26 @@ namespace vk
 				graphics_modules[1] = modules[1];
 				is_graphics_job = true;
 				flags = flags_;
+
+				inputs.reserve(vs_in.size() + fs_in.size());
+				inputs.insert(inputs.end(), vs_in.begin(), vs_in.end());
+				inputs.insert(inputs.end(), fs_in.begin(), fs_in.end());
+			}
+
+			pipe_compiler_job(
+				graphics_pipe_create_callback_t pipe_info_create_fn,
+				const std::vector<glsl::program_input>& vs_in,
+				const std::vector<glsl::program_input>& fs_in,
+				op_flags flags_,
+				callback_t func)
+			{
+				callback_func = func;
+				create_info_func = pipe_info_create_fn;
+				is_graphics_job = true;
+				flags = flags_;
+
+				graphics_modules[0] = VK_NULL_HANDLE;
+				graphics_modules[1] = VK_NULL_HANDLE;
 
 				inputs.reserve(vs_in.size() + fs_in.size());
 				inputs.insert(inputs.end(), vs_in.begin(), vs_in.end());
@@ -174,6 +202,12 @@ namespace vk
 		std::unique_ptr<glsl::program> int_compile_graphics_pipe(
 			const vk::pipeline_props &create_info,
 			VkShaderModule modules[2],
+			const std::vector<glsl::program_input>& vs_inputs,
+			const std::vector<glsl::program_input>& fs_inputs,
+			op_flags flags);
+
+		std::unique_ptr<glsl::program> int_compile_graphics_pipe(
+			graphics_pipe_create_callback_t pipe_info_create_fn,
 			const std::vector<glsl::program_input>& vs_inputs,
 			const std::vector<glsl::program_input>& fs_inputs,
 			op_flags flags);

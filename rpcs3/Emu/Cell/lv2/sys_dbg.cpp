@@ -105,7 +105,7 @@ error_code sys_dbg_write_process_memory(s32 pid, u32 address, u32 size, vm::cptr
 			i += op_size;
 		}
 
-		if (!is_exec || i >= end)
+		if ((!is_exec || i >= end) && exec_update_size > 0)
 		{
 			// Commit executable data update
 			// The read memory is also super ptr so memmove can work correctly on all implementations

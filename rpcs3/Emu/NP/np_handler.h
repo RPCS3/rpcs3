@@ -257,12 +257,12 @@ namespace np
 		// Misc stuff
 		void req_ticket(u32 version, const SceNpId* npid, const char* service_id, const u8* cookie, u32 cookie_size, const char* entitlement_id, u32 consumed_count);
 		const ticket& get_ticket() const;
-		u32 get_clan_ticket_ready();
-		ticket get_clan_ticket();
+		u32 get_clan_ticket_ready() const;
+		ticket get_clan_ticket() const;
 		void add_player_to_history(const SceNpId* npid, const char* description);
 		u32 add_players_to_history(const SceNpId* npids, const char* description, u32 count);
-		u32 get_players_history_count(u32 options);
-		bool get_player_history_entry(u32 options, u32 index, SceNpId* npid);
+		u32 get_players_history_count(u32 options) const;
+		bool get_player_history_entry(u32 options, u32 index, SceNpId* npid) const;
 		SceNpMatching2MemoryInfo get_memory_info() const;
 		error_code abort_request(u32 req_id);
 
@@ -518,7 +518,7 @@ namespace np
 		player_history& get_player_and_set_timestamp(const SceNpId& npid, u64 timestamp);
 		void save_players_history();
 
-		shared_mutex mutex_history;
+		mutable shared_mutex mutex_history;
 		std::map<std::string, player_history> players_history; // npid / history
 
 		struct

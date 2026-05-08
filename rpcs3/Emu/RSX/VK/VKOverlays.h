@@ -132,6 +132,8 @@ namespace vk
 		areaf m_clip_region;
 		coordf m_viewport;
 
+		rsx::overlays::compiled_resource::sdf_config_t m_sdf_config{};
+
 		std::vector<std::unique_ptr<vk::image>> resources;
 		std::unordered_map<u64, std::unique_ptr<vk::image>> font_cache;
 		std::unordered_map<u64, std::unique_ptr<vk::image_view>> view_cache;
@@ -153,8 +155,8 @@ namespace vk
 
 		void remove_temp_resources(u32 key);
 
-		vk::image_view* find_font(rsx::overlays::font* font, vk::command_buffer& cmd, vk::data_heap& upload_heap);
-		vk::image_view* find_temp_image(rsx::overlays::image_info_base* desc, vk::command_buffer& cmd, vk::data_heap& upload_heap, u32 owner_uid);
+		vk::image_view* find_font(const rsx::overlays::font* font, vk::command_buffer& cmd, vk::data_heap& upload_heap);
+		vk::image_view* find_temp_image(const rsx::overlays::image_info_base* desc, vk::command_buffer& cmd, vk::data_heap& upload_heap, u32 owner_uid);
 
 		std::vector<vk::glsl::program_input> get_vertex_inputs() override;
 		std::vector<vk::glsl::program_input> get_fragment_inputs() override;

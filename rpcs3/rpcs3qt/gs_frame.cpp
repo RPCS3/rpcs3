@@ -15,6 +15,7 @@
 #include "Emu/Cell/Modules/cellScreenshot.h"
 #include "Emu/Cell/Modules/cellAudio.h"
 #include "Emu/Cell/lv2/sys_rsxaudio.h"
+#include "Emu/RSX/RSXThread.h"
 #include "Emu/RSX/rsx_utils.h"
 #include "Emu/RSX/Overlays/overlay_message.h"
 #include "Emu/Io/interception.h"
@@ -51,6 +52,7 @@ LOG_CHANNEL(screenshot_log, "SCREENSHOT");
 LOG_CHANNEL(mark_log, "MARK");
 LOG_CHANNEL(gui_log, "GUI");
 
+extern atomic_t<bool> g_user_asked_for_fullscreen;
 extern atomic_t<bool> g_user_asked_for_recording;
 extern atomic_t<bool> g_user_asked_for_screenshot;
 extern atomic_t<bool> g_user_asked_for_frame_capture;
@@ -150,6 +152,9 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 gs_frame::~gs_frame()
 {
 	g_user_asked_for_screenshot = false;
+	g_user_asked_for_recording = false;
+	g_user_asked_for_frame_capture = false;
+	g_user_asked_for_fullscreen = false;
 	pad::g_home_menu_requested = false;
 
 	// Save active screen to gui settings
@@ -201,12 +206,12 @@ void gs_frame::update_shortcuts()
 	}
 }
 
-void gs_frame::paintEvent(QPaintEvent *event)
+void gs_frame::paintEvent(QPaintEvent* event)
 {
 	Q_UNUSED(event)
 }
 
-void gs_frame::showEvent(QShowEvent *event)
+void gs_frame::showEvent(QShowEvent* event)
 {
 	// We have to calculate new window positions, since the frame is only known once the window was created.
 	// We will try to find the originally requested dimensions if possible by moving the frame.
@@ -357,7 +362,7 @@ void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKey
 		{
 			Emu.after_kill_callback = []()
 			{
-				Emu.Restart();
+				Emu.Restart(true, false);
 			};
 
 			// Make sure we keep the game window opened
@@ -788,7 +793,7 @@ f64 gs_frame::client_display_rate()
 {
 	f64 rate = 20.; // Minimum is 20
 
-	Emu.BlockingCallFromMainThread([this, &rate]()
+	Emu.BlockingCallFromMainThread([&rate]()
 	{
 		const QList<QScreen*> screens = QGuiApplication::screens();
 
@@ -801,7 +806,7 @@ f64 gs_frame::client_display_rate()
 	return rate;
 }
 
-void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
+void gs_frame::flip(draw_context_t /*context*/, bool /*skip_frame*/)
 {
 	static Timer fps_t;
 
@@ -838,6 +843,14 @@ void gs_frame::flip(draw_context_t, bool /*skip_frame*/)
 		Emu.CallFromMainThread([this]()
 		{
 			toggle_recording();
+		});
+	}
+
+	if (g_user_asked_for_fullscreen.exchange(false))
+	{
+		Emu.CallFromMainThread([this]()
+		{
+			toggle_fullscreen();
 		});
 	}
 }
@@ -1028,7 +1041,7 @@ void gs_frame::take_screenshot(std::vector<u8>&& data, u32 sshot_width, u32 ssho
 
 					if (new_size.width != static_cast<u32>(img.width()) || new_size.height != static_cast<u32>(img.height()))
 					{
-						const int scale = rsx::get_resolution_scale_percent();
+						const int scale = rsx::get_current_renderer()->resolution_scaling_config.scale_percent;
 						const int x = (scale * manager.overlay_offset_x) / 100;
 						const int y = (scale * manager.overlay_offset_y) / 100;
 						const int width = (scale * overlay_img.width()) / 100;

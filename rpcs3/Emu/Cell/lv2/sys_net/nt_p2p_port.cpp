@@ -249,8 +249,9 @@ bool nt_p2p_port::recv_data()
 
 			auto& bound_sockets = ::at32(bound_p2p_vports, dst_vport);
 
-			for (const auto sock_id : bound_sockets)
+			for (auto it = bound_sockets.begin(); it != bound_sockets.end();)
 			{
+				s32 sock_id = *it;
 				const auto sock = idm::check<lv2_socket>(sock_id, [&](lv2_socket& sock)
 					{
 						ensure(sock.get_type() == SYS_NET_SOCK_DGRAM_P2P);
@@ -262,11 +263,16 @@ bool nt_p2p_port::recv_data()
 				if (!sock)
 				{
 					sys_net.error("Socket %d found in bound_p2p_vports didn't exist!", sock_id);
-					bound_sockets.erase(sock_id);
+					it = bound_sockets.erase(it);
 					if (bound_sockets.empty())
 					{
 						bound_p2p_vports.erase(dst_vport);
+						break;
 					}
+				}
+				else
+				{
+					it++;
 				}
 			}
 

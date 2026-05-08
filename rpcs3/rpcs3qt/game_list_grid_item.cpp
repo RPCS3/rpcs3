@@ -77,6 +77,7 @@ bool game_list_grid_item::event(QEvent* event)
 		set_active(true);
 		break;
 	case QEvent::HoverLeave:
+	case QEvent::FocusOut:
 		set_active(false);
 		break;
 	default:

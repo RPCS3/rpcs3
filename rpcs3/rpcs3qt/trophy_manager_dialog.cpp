@@ -392,7 +392,7 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	m_trophy_table->create_header_actions(m_trophy_column_acts,
 		[this](int col) { return m_gui_settings->GetTrophylistColVisibility(static_cast<gui::trophy_list_columns>(col)); },
 		[this](int col, bool visible) { m_gui_settings->SetTrophylistColVisibility(static_cast<gui::trophy_list_columns>(col), visible); });
-	
+
 	m_game_table->create_header_actions(m_game_column_acts,
 		[this](int col) { return m_gui_settings->GetTrophyGamelistColVisibility(static_cast<gui::trophy_game_list_columns>(col)); },
 		[this](int col, bool visible) { m_gui_settings->SetTrophyGamelistColVisibility(static_cast<gui::trophy_game_list_columns>(col), visible); });
@@ -651,7 +651,7 @@ void trophy_manager_dialog::ResizeGameIcons()
 			const int trophy_index = item->data(GameUserRole::GameIndex).toInt();
 			QString trophy_icon_path = QString::fromStdString(m_trophies_db[trophy_index]->path);
 
-			item->set_icon_load_func([this, icon_path = std::move(trophy_icon_path), localized_icon, trophy_index, cancel = item->icon_loading_aborted(), dpr](int index)
+			item->set_icon_load_func([this, icon_path = std::move(trophy_icon_path), localized_icon, cancel = item->icon_loading_aborted(), dpr](int index)
 			{
 				if (cancel && cancel->load())
 				{
@@ -897,7 +897,7 @@ void trophy_manager_dialog::ShowTrophyTableContextMenu(const QPoint& pos)
 		if (!name.isEmpty() && !desc.isEmpty())
 		{
 			QAction* copy_both = new QAction(tr("&Copy Name + Description"), copy_menu);
-			connect(copy_both, &QAction::triggered, this, [this, name, desc]()
+			connect(copy_both, &QAction::triggered, this, [name, desc]()
 			{
 				QApplication::clipboard()->setText(name % QStringLiteral("\n\n") % desc);
 			});
@@ -907,7 +907,7 @@ void trophy_manager_dialog::ShowTrophyTableContextMenu(const QPoint& pos)
 		if (!name.isEmpty())
 		{
 			QAction* copy_name = new QAction(tr("&Copy Name"), copy_menu);
-			connect(copy_name, &QAction::triggered, this, [this, name]()
+			connect(copy_name, &QAction::triggered, this, [name]()
 			{
 				QApplication::clipboard()->setText(name);
 			});
@@ -917,7 +917,7 @@ void trophy_manager_dialog::ShowTrophyTableContextMenu(const QPoint& pos)
 		if (!desc.isEmpty())
 		{
 			QAction* copy_desc = new QAction(tr("&Copy Description"), copy_menu);
-			connect(copy_desc, &QAction::triggered, this, [this, desc]()
+			connect(copy_desc, &QAction::triggered, this, [desc]()
 			{
 				QApplication::clipboard()->setText(desc);
 			});
@@ -1038,7 +1038,7 @@ void trophy_manager_dialog::ShowGameTableContextMenu(const QPoint& pos)
 	if (!name.isEmpty())
 	{
 		QAction* copy_name = new QAction(tr("&Copy Name"), menu);
-		connect(copy_name, &QAction::triggered, this, [this, name]()
+		connect(copy_name, &QAction::triggered, this, [name]()
 		{
 			QApplication::clipboard()->setText(name);
 		});

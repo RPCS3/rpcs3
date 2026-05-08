@@ -61,15 +61,15 @@ struct cfg_root : cfg::node
 		cfg::uint<0, 16> mfc_transfers_shuffling{ this, "MFC Commands Shuffling Limit", 0 };
 		cfg::uint<0, 10000> mfc_transfers_timeout{ this, "MFC Commands Timeout", 0, true };
 		cfg::_bool mfc_shuffling_in_steps{ this, "MFC Commands Shuffling In Steps", false, true };
-		cfg::_enum<xfloat_accuracy> spu_xfloat_accuracy{ this, "XFloat Accuracy", xfloat_accuracy::approximate, false };
+		cfg::_enum<xfloat_accuracy> spu_xfloat_accuracy{ this, "SPU XFloat Accuracy", xfloat_accuracy::approximate, false };
 		cfg::_int<-1, 14> ppu_128_reservations_loop_max_length{ this, "Accurate PPU 128-byte Reservation Op Max Length", 0, true }; // -1: Always accurate, 0: Never accurate, 1-14: max accurate loop length
 		cfg::_int<-64, 64> stub_ppu_traps{ this, "Stub PPU Traps", 0, true }; // Hack, skip PPU traps for rare cases where the trap is continueable (specify relative instructions to skip)
 		cfg::_bool precise_spu_verification{ this, "Precise SPU Verification", false }; // Disables use of xorsum based spu verification if enabled.
 		cfg::_bool ppu_llvm_nj_fixup{ this, "PPU LLVM Java Mode Handling", true }; // Partially respect current Java Mode for alti-vec ops by PPU LLVM
+		cfg::_bool ppu_fix_vnan{ this, "PPU Vector NaN Handling", true }; // Accuracy. Partial.
 		cfg::_bool use_accurate_dfma{ this, "Use Accurate DFMA", true }; // Enable accurate double-precision FMA for CPUs which do not support it natively
 		cfg::_bool ppu_set_sat_bit{ this, "PPU Set Saturation Bit", false }; // Accuracy. If unset, completely disable saturation flag handling.
 		cfg::_bool ppu_use_nj_bit{ this, "PPU Accurate Non-Java Mode", false }; // Accuracy. If set, accurately emulate NJ flag. Implies NJ fixup.
-		cfg::_bool ppu_fix_vnan{ this, "PPU Fixup Vector NaN Values", false }; // Accuracy. Partial.
 		cfg::_bool ppu_set_vnan{ this, "PPU Accurate Vector NaN Values", false }; // Accuracy. Implies ppu_fix_vnan.
 		cfg::_bool ppu_set_fpcc{ this, "PPU Set FPCC Bits", false }; // Accuracy.
 
@@ -127,6 +127,7 @@ struct cfg_root : cfg::node
 		cfg::_enum<msaa_level> antialiasing_level{ this, "MSAA", msaa_level::_auto };
 		cfg::_enum<shader_mode> shadermode{ this, "Shader Mode", shader_mode::async_recompiler };
 		cfg::_enum<gpu_preset_level> shader_precision{ this, "Shader Precision", gpu_preset_level::high };
+		cfg::_enum<vsync_mode> vsync{ this, "VSync Mode", vsync_mode::off, true };
 
 		cfg::_bool write_color_buffers{ this, "Write Color Buffers" };
 		cfg::_bool write_depth_buffer{ this, "Write Depth Buffer" };
@@ -134,7 +135,6 @@ struct cfg_root : cfg::node
 		cfg::_bool read_depth_buffer{ this, "Read Depth Buffer" };
 		cfg::_bool handle_tiled_memory{ this, "Handle RSX Memory Tiling", false, true };
 		cfg::_bool log_programs{ this, "Log shader programs" };
-		cfg::_bool vsync{ this, "VSync" };
 		cfg::_bool debug_output{ this, "Debug output" };
 		cfg::_bool debug_overlay{ this, "Debug overlay", false, true };
 		cfg::_bool renderdoc_compatiblity{ this, "Renderdoc Compatibility Mode" };
@@ -142,6 +142,7 @@ struct cfg_root : cfg::node
 		cfg::_bool stretch_to_display_area{ this, "Stretch To Display Area", false, true };
 		cfg::_bool force_high_precision_z_buffer{ this, "Force High Precision Z buffer" };
 		cfg::_bool strict_rendering_mode{ this, "Strict Rendering Mode" };
+		cfg::_enum<framebuffer_aliasing_bias> fb_aliasing_bias{ this, "Framebuffer Aliasing Heuristic Bias", framebuffer_aliasing_bias::_auto, true };
 		cfg::_bool disable_zcull_queries{ this, "Disable ZCull Occlusion Queries", false, true };
 		cfg::_bool disable_video_output{ this, "Disable Video Output", false, true };
 		cfg::_bool disable_vertex_cache{ this, "Disable Vertex Cache", false };
@@ -157,14 +158,15 @@ struct cfg_root : cfg::node
 		cfg::_bool force_hw_MSAA_resolve{ this, "Force Hardware MSAA Resolve", false, true };
 		cfg::_bool stereo_enabled{ this, "3D Display Enabled", false };
 		cfg::_enum<stereo_render_mode_options> stereo_render_mode{ this, "3D Display Mode", stereo_render_mode_options::disabled, true };
+		cfg::_int<10, 99> screen_size{ this, "Screen size in inches", 24, false };
 		cfg::_bool debug_program_analyser{ this, "Debug Program Analyser", false };
 		cfg::_bool precise_zpass_count{ this, "Accurate ZCULL stats", true };
 		cfg::_int<1, 8> consecutive_frames_to_draw{ this, "Consecutive Frames To Draw", 1, true};
 		cfg::_int<1, 8> consecutive_frames_to_skip{ this, "Consecutive Frames To Skip", 1, true};
-		cfg::_int<25, 800> resolution_scale_percent{ this, "Resolution Scale", 100 };
+		cfg::uint<25, 800> resolution_scale_percent{ this, "Resolution Scale", 100, true };
 		cfg::uint<0, 16> anisotropic_level_override{ this, "Anisotropic Filter Override", 0, true };
 		cfg::_float<-32, 32> texture_lod_bias{ this, "Texture LOD Bias Addend", 0, true };
-		cfg::_int<1, 1024> min_scalable_dimension{ this, "Minimum Scalable Dimension", 16 };
+		cfg::uint<1, 1024> min_scalable_dimension{ this, "Minimum Scalable Dimension", 16, true };
 		cfg::_int<0, 16> shader_compiler_threads_count{ this, "Shader Compiler Threads", 0 };
 		cfg::_int<0, 30000000> driver_recovery_timeout{ this, "Driver Recovery Timeout", 1000000, true };
 		cfg::uint<0, 16667> driver_wakeup_delay{ this, "Driver Wake-Up Delay", 0, true };
@@ -176,17 +178,17 @@ struct cfg_root : cfg::node
 		cfg::_bool disable_async_host_memory_manager{ this, "Disable Asynchronous Memory Manager", false, true };
 		cfg::_enum<output_scaling_mode> output_scaling{ this, "Output Scaling Mode", output_scaling_mode::bilinear, true };
 		cfg::_bool record_with_overlays{ this, "Record With Overlays", true, true };
+		cfg::_bool disable_hardware_texel_remapping{ this, "Disable Hardware ColorSpace Remapping", false, true };
+		cfg::uint<0, 100> rcas_sharpening_intensity{ this, "FidelityFX CAS Sharpening Intensity", 50, true };
 
 		struct node_vk : cfg::node
 		{
 			node_vk(cfg::node* _this) : cfg::node(_this, "Vulkan") {}
 
 			cfg::string adapter{ this, "Adapter" };
-			cfg::_bool force_fifo{ this, "Force FIFO present mode" };
 			cfg::_bool force_primitive_restart{ this, "Force primitive restart flag" };
 			cfg::_enum<vk_exclusive_fs_mode> exclusive_fullscreen_mode{ this, "Exclusive Fullscreen Mode", vk_exclusive_fs_mode::unspecified};
-			cfg::_bool asynchronous_texture_streaming{ this, "Asynchronous Texture Streaming 2", false };
-			cfg::uint<0, 100> rcas_sharpening_intensity{ this, "FidelityFX CAS Sharpening Intensity", 50, true };
+			cfg::_bool asynchronous_texture_streaming{ this, "Asynchronous Texture Streaming", false };
 			cfg::_enum<vk_gpu_scheduler_mode> asynchronous_scheduler{ this, "Asynchronous Queue Scheduler", vk_gpu_scheduler_mode::safe };
 			cfg::uint<256, 65536> vram_allocation_limit{ this, "VRAM allocation limit (MB)", 65536, false };
 			cfg::_bool use_rebar_upload_heap{ this, "Use Re-BAR for GPU uploads", true, false };
@@ -197,7 +199,7 @@ struct cfg_root : cfg::node
 		{
 			node_perf_overlay(cfg::node* _this) : cfg::node(_this, "Performance Overlay") {}
 
-			cfg::_bool perf_overlay_enabled{ this, "Enabled", false, true };
+			cfg::_bool enabled{ this, "Enabled", false, true };
 			cfg::_bool framerate_graph_enabled{ this, "Enable Framerate Graph", false, true };
 			cfg::_bool frametime_graph_enabled{ this, "Enable Frametime Graph", false, true };
 			cfg::uint<2, 6000> framerate_datapoint_count{ this, "Framerate datapoints", 50, true };
@@ -209,8 +211,8 @@ struct cfg_root : cfg::node
 			cfg::uint<4, 36> font_size{ this, "Font size (px)", 10, true };
 			cfg::_enum<screen_quadrant> position{ this, "Position", screen_quadrant::top_left, true };
 			cfg::string font{ this, "Font", "n023055ms.ttf", true };
-			cfg::uint<0, 1280> margin_x{ this, "Horizontal Margin (px)", 50, true }; // horizontal distance to the screen border relative to the screen_quadrant in px
-			cfg::uint<0, 720> margin_y{ this, "Vertical Margin (px)", 50, true }; // vertical distance to the screen border relative to the screen_quadrant in px
+			cfg::_float<0, 100> margin_x{ this, "Horizontal Margin (%)", 4, true }; // horizontal distance to the window border relative to the screen_quadrant in percent of the window width
+			cfg::_float<0, 100> margin_y{ this, "Vertical Margin (%)", 7, true }; // vertical distance to the window border relative to the screen_quadrant in percent of the window height
 			cfg::_bool center_x{ this, "Center Horizontally", false, true };
 			cfg::_bool center_y{ this, "Center Vertically", false, true };
 			cfg::uint<0, 100> opacity{ this, "Opacity (%)", 70, true };
@@ -218,6 +220,7 @@ struct cfg_root : cfg::node
 			cfg::string background_body{ this, "Body Background (hex)", "#002339FF", true };
 			cfg::string color_title{ this, "Title Color (hex)", "#F26C24FF", true };
 			cfg::string background_title{ this, "Title Background (hex)", "#00000000", true };
+			cfg::_bool use_window_space{this, "Use Window Space", false, true};
 
 		} perf_overlay{ this };
 
@@ -248,7 +251,7 @@ struct cfg_root : cfg::node
 		cfg::string audio_device{ this, "Audio Device", "@@@default@@@", true };
 		cfg::_int<0, 200> volume{ this, "Master Volume", 100, true };
 		cfg::_bool enable_buffering{ this, "Enable Buffering", true, true };
-		cfg::_int <4, 250> desired_buffer_duration{ this, "Desired Audio Buffer Duration", 100, true };
+		cfg::_int <4, 250> desired_buffer_duration{ this, "Desired Audio Buffer Duration", 34, true };
 		cfg::_bool enable_time_stretching{ this, "Enable Time Stretching", false, true };
 		cfg::_bool disable_sampling_skip{ this, "Disable Sampling Skip", false, true };
 		cfg::_int<0, 100> time_stretching_threshold{ this, "Time Stretching Threshold", 75, true };
@@ -280,7 +283,7 @@ struct cfg_root : cfg::node
 		cfg::_bool paint_move_spheres{this, "Paint move spheres", false, true};
 		cfg::_bool allow_move_hue_set_by_game{this, "Allow move hue set by game", false, true};
 		cfg::_bool lock_overlay_input_to_player_one{this, "Lock overlay input to player one", false, true};
-		cfg::string midi_devices{this, "Emulated Midi devices", "ßßß@@@ßßß@@@ßßß@@@"};
+		cfg::string midi_devices{this, "Emulated Midi devices", "Keyboardßßß@@@Keyboardßßß@@@Keyboardßßß@@@"};
 		cfg::_bool load_sdl_mappings{ this, "Load SDL GameController Mappings", true };
 		cfg::_bool pad_debug_overlay{ this, "IO Debug overlay", false, true };
 		cfg::_bool mouse_debug_overlay{ this, "Mouse Debug overlay", false, true };
@@ -346,7 +349,7 @@ struct cfg_root : cfg::node
 		cfg::_bool autostart{ this, "Automatically start games after boot", true, true };
 		cfg::_bool autoexit{ this, "Exit RPCS3 when process finishes", false, true };
 		cfg::_bool autopause{ this, "Pause emulation on RPCS3 focus loss", false, true };
-		cfg::_bool start_fullscreen{ this, "Start games in fullscreen mode", false, true };
+		cfg::_bool start_fullscreen{ this, "Start games in fullscreen mode", true, true };
 		cfg::_bool prevent_display_sleep{ this, "Prevent display sleep while running games", true, true };
 		cfg::_bool show_trophy_popups{ this, "Show trophy popups", true, true };
 		cfg::_bool show_rpcn_popups{ this, "Show RPCN popups", true, true };
@@ -356,12 +359,15 @@ struct cfg_root : cfg::node
 		cfg::_bool show_pressure_intensity_toggle_hint{ this, "Show pressure intensity toggle hint", true, true };
 		cfg::_bool show_analog_limiter_toggle_hint{ this, "Show analog limiter toggle hint", true, true };
 		cfg::_bool show_mouse_and_keyboard_toggle_hint{ this, "Show mouse and keyboard toggle hint", true, true };
+		cfg::_bool show_fatal_error_hints{ this, "Show fatal error hints", false, true };
 		cfg::_bool show_capture_hints{ this, "Show capture hints", true, true };
 		cfg::_bool use_native_interface{ this, "Use native user interface", true };
+		cfg::_bool use_recursive_scan{this, "Use recursive scan", false};
 		cfg::string gdb_server{ this, "GDB Server", "127.0.0.1:2345" };
 		cfg::_bool silence_all_logs{ this, "Silence All Logs", false, true };
 		cfg::string title_format{ this, "Window Title Format", "FPS: %F | %R | %V | %T [%t]", true };
 		cfg::_bool pause_during_home_menu{this, "Pause Emulation During Home Menu", false, false };
+		cfg::_bool play_music_during_boot{this, "Play music during boot sequence", true, true };
 		cfg::_bool enable_gamemode{ this, "Enable GameMode", false, false };
 
 	} misc{ this };

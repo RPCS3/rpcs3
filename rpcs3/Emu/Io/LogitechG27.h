@@ -38,10 +38,7 @@ struct logitech_g27_ffb_slot
 	logitech_g27_ffb_state state = logitech_g27_ffb_state::inactive;
 	u64 last_update = 0;
 	SDL_HapticEffect last_effect {};
-
-	// TODO switch to SDL_HapticEffectID when it becomes available in a future SDL release
-	// Match the return of SDL_CreateHapticEffect for now
-	int effect_id = -1;
+	SDL_HapticEffectID effect_id = -1;
 };
 
 struct sdl_mapping
@@ -124,11 +121,11 @@ public:
 private:
 	void sdl_refresh();
 	void set_personality(logitech_personality personality, bool reconnect = false);
-	void transfer_dfex(u32 buf_size, u8* buf, UsbTransfer* transfer);
-	void transfer_dfp(u32 buf_size, u8* buf, UsbTransfer* transfer);
-	void transfer_dfgt(u32 buf_size, u8* buf, UsbTransfer* transfer);
-	void transfer_g25(u32 buf_size, u8* buf, UsbTransfer* transfer);
-	void transfer_g27(u32 buf_size, u8* buf, UsbTransfer* transfer);
+	void transfer_dfex(u32 buf_size, u8* buf, UsbTransfer* transfer) const;
+	void transfer_dfp(u32 buf_size, u8* buf, UsbTransfer* transfer) const;
+	void transfer_dfgt(u32 buf_size, u8* buf, UsbTransfer* transfer) const;
+	void transfer_g25(u32 buf_size, u8* buf, UsbTransfer* transfer) const;
+	void transfer_g27(u32 buf_size, u8* buf, UsbTransfer* transfer) const;
 
 	u32 m_controller_index = 0;
 
@@ -137,7 +134,7 @@ private:
 	logitech_g27_sdl_mapping m_mapping {};
 	bool m_reverse_effects = false;
 
-	std::mutex m_sdl_handles_mutex;
+	mutable std::mutex m_sdl_handles_mutex;
 	SDL_Joystick* m_led_joystick_handle = nullptr;
 	SDL_Haptic* m_haptic_handle = nullptr;
 	std::map<u64, std::vector<SDL_Joystick*>> m_joysticks;

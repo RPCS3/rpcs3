@@ -3,8 +3,6 @@
 
 #include "Emu/system_config.h"
 
-#include <QtConcurrent>
-
 LOG_CHANNEL(camera_log, "Camera");
 
 qt_camera_video_sink::qt_camera_video_sink(bool front_facing, QObject *parent)

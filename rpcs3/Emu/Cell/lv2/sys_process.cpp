@@ -473,7 +473,7 @@ void lv2_exitspawn(ppu_thread& ppu, std::vector<std::string>& argv, std::vector<
 		};
 
 		Emu.after_kill_callback = [func = std::move(func), argv = std::move(argv), envp = std::move(envp), data = std::move(data),
-			disc = std::move(disc), path = std::move(path), hdd1 = std::move(hdd1), old_config = Emu.GetUsedConfig(), klic]() mutable
+			disc = std::move(disc), path = std::move(path), hdd1 = std::move(hdd1), old_config = Emu.GetUsedConfig(), old_db_config = Emu.GetUsedDatabaseConfig(), klic]() mutable
 		{
 			Emu.argv = std::move(argv);
 			Emu.envp = std::move(envp);
@@ -489,7 +489,7 @@ void lv2_exitspawn(ppu_thread& ppu, std::vector<std::string>& argv, std::vector<
 
 			Emu.SetForceBoot(true);
 
-			auto res = Emu.BootGame(path, "", true, cfg_mode::continuous, old_config);
+			auto res = Emu.BootGame(path, "", true, cfg_mode::continuous, old_config, old_db_config);
 
 			if (res != game_boot_result::no_errors)
 			{

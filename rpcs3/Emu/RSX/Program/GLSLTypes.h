@@ -9,7 +9,7 @@ namespace glsl
 		glsl_compute_program = 2,
 
 		// Meta
-		glsl_invalid_program = 0xff
+		glsl_invalid_program = 7
 	};
 
 	enum glsl_rules : unsigned char
@@ -60,5 +60,6 @@ namespace glsl
 		bool require_tex3D_ops : 1;             // Include 3D texture stuff (including cubemap)
 		bool require_shadowProj_ops : 1;        // Include shadow2DProj projection textures (1D is unsupported anyway)
 		bool require_alpha_kill : 1;            // Include alpha kill checking code
+		bool require_color_format_convert : 1;  // Include colorspace conversion code
 	};
 };

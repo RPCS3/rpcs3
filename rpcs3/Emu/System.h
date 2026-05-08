@@ -58,6 +58,7 @@ enum class game_boot_result : u32
 	still_running,
 	already_added,
 	currently_restricted,
+	database_config_missing,
 };
 
 constexpr bool is_error(game_boot_result res)
@@ -114,6 +115,7 @@ struct EmuCallbacks
 	std::function<void()> check_microphone_permissions;
 	std::function<std::unique_ptr<class video_source>()> make_video_source;
 	std::function<void(bool)> enable_gamemode;
+	std::function<std::string(const std::string&)> get_database_config;
 };
 
 namespace utils
@@ -145,6 +147,7 @@ class Emulator final
 
 	cfg_mode m_config_mode = cfg_mode::custom;
 	std::string m_config_path;
+	std::optional<std::string> m_db_config; // std::nullopt means it has not been retrieved yet
 	std::string m_path;
 	std::string m_path_old;
 	std::string m_path_original;
@@ -169,6 +172,7 @@ class Emulator final
 
 	bool m_continuous_mode = false;
 	bool m_has_gui = true;
+	bool m_add_database_config = false;
 
 	bool m_state_inspection_savestate = false;
 
@@ -201,13 +205,17 @@ public:
 	static constexpr std::string_view game_id_boot_prefix = "%RPCS3_GAMEID%:";
 	static constexpr std::string_view vfs_boot_prefix = "%RPCS3_VFS%:";
 
-	Emulator() noexcept = default;
-	~Emulator() noexcept = default;
+	Emulator() noexcept;
+	~Emulator() noexcept;
+
+	static bool IsAvailable() noexcept;
 
 	void SetCallbacks(EmuCallbacks&& cb)
 	{
 		m_cb = std::move(cb);
 	}
+
+	void SetGameDir(const std::string& game_dir) { m_game_dir = game_dir; }
 
 	const auto& GetCallbacks() const
 	{
@@ -364,6 +372,12 @@ public:
 		return m_config_path;
 	}
 
+	const std::string& GetUsedDatabaseConfig() const
+	{
+		static std::string empty_db_config;
+		return m_db_config ? *m_db_config : empty_db_config;
+	}
+
 	bool IsChildProcess() const
 	{
 		return m_config_mode == cfg_mode::continuous;
@@ -413,7 +427,7 @@ public:
 		return emulation_state_guard_t{this};
 	}
 
-	game_boot_result BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "");
+	game_boot_result BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "", const std::optional<std::string>& db_config = std::nullopt);
 	bool BootRsxCapture(const std::string& path);
 
 	void SetForceBoot(bool force_boot);
@@ -442,7 +456,7 @@ public:
 	void Resume();
 	void GracefulShutdown(bool allow_autoexit = true, bool async_op = false, bool savestate = false, bool continuous_mode = false);
 	void Kill(bool allow_autoexit = true, bool savestate = false, savestate_stage* stage = nullptr);
-	game_boot_result Restart(bool graceful = true);
+	game_boot_result Restart(bool graceful = true, bool reset_path = true);
 	bool Quit(bool force_quit);
 	static void CleanUp();
 

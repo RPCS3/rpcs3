@@ -1347,7 +1347,10 @@ rpcn_friends_dialog::rpcn_friends_dialog(QWidget* parent)
 
 rpcn_friends_dialog::~rpcn_friends_dialog()
 {
-	m_rpcn->remove_friend_cb(friend_callback, this);
+	if (m_rpcn)
+	{
+		m_rpcn->remove_friend_cb(friend_callback, this);
+	}
 }
 
 bool rpcn_friends_dialog::add_friend_with_error_dialog(const std::string& friend_username)

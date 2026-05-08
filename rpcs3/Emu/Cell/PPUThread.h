@@ -145,7 +145,7 @@ public:
 	virtual void dump_regs(std::string&, std::any& custom_data) const override;
 	virtual std::string dump_callstack() const override;
 	virtual std::vector<std::pair<u32, u32>> dump_callstack_list() const override;
-	virtual std::string dump_misc() const override;
+	virtual void dump_misc(std::string& ret, std::any& custom_data) const override;
 	virtual void dump_all(std::string&) const override;
 	virtual void cpu_task() override final;
 	virtual void cpu_sleep() override;
@@ -431,20 +431,6 @@ struct ppu_gpr_cast_impl<vm::_ptr_base<T, AT>>
 	}
 
 	static inline vm::_ptr_base<T, AT> from(const u64 reg)
-	{
-		return vm::cast(ppu_gpr_cast_impl<AT>::from(reg));
-	}
-};
-
-template <typename T, typename AT>
-struct ppu_gpr_cast_impl<vm::_ref_base<T, AT>>
-{
-	static inline u64 to(const vm::_ref_base<T, AT>& value)
-	{
-		return ppu_gpr_cast_impl<AT>::to(value.addr());
-	}
-
-	static inline vm::_ref_base<T, AT> from(const u64 reg)
 	{
 		return vm::cast(ppu_gpr_cast_impl<AT>::from(reg));
 	}

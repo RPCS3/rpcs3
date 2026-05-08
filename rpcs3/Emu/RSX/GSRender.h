@@ -23,6 +23,8 @@ protected:
 	draw_context_t m_context = nullptr;
 	bool m_continuous_mode = false;
 
+	vsync_mode m_vsync_mode{};
+
 public:
 	~GSRender() override;
 

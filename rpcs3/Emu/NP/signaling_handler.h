@@ -63,9 +63,9 @@ public:
 
 	u32 init_sig1(const SceNpId& npid);
 	u32 init_sig2(const SceNpId& npid, u64 room_id, u16 member_id);
-	std::optional<signaling_info> get_sig_infos(u32 conn_id);
-	std::optional<u32> get_conn_id_from_npid(const SceNpId& npid);
-	std::optional<u32> get_conn_id_from_addr(u32 addr, u16 port);
+	std::optional<signaling_info> get_sig_infos(u32 conn_id) const;
+	std::optional<u32> get_conn_id_from_npid(const SceNpId& npid) const;
+	std::optional<u32> get_conn_id_from_addr(u32 addr, u16 port) const;
 
 	void add_sig_ctx(u32 ctx_id);
 	void remove_sig_ctx(u32 ctx_id);
@@ -128,12 +128,12 @@ private:
 	void retire_all_packets(std::shared_ptr<signaling_info>& si);
 	void stop_sig_nl(u32 conn_id, bool forceful);
 
-	shared_mutex data_mutex;
+	mutable shared_mutex data_mutex;
 	atomic_t<u32> wakey = 0;
 
 	signaling_packet sig_packet{};
 
-	std::map<steady_clock::time_point, queued_packet> qpackets; // (wakeup time, packet)
+	std::multimap<steady_clock::time_point, queued_packet> qpackets; // (wakeup time, packet)
 
 	u32 cur_conn_id = 1;
 	std::unordered_map<std::string, u32> npid_to_conn_id;               // (npid, conn_id)

@@ -15,7 +15,8 @@ namespace rsx
 			const bool suspend_mode = g_cfg.savestate.suspend_emu.get();
 
 			std::unique_ptr<overlay_element> save_state = std::make_unique<home_menu_entry>(
-				get_localized_string(suspend_mode ? localized_string_id::HOME_MENU_SAVESTATE_AND_EXIT : localized_string_id::HOME_MENU_SAVESTATE_SAVE));
+				suspend_mode ? home_menu::fa_icon::poweroff : home_menu::fa_icon::floppy,
+				get_localized_string(suspend_mode ? localized_string_id::HOME_MENU_SAVESTATE_AND_EXIT : localized_string_id::HOME_MENU_SAVESTATE_SAVE), width, text_align::left);
 
 			add_item(save_state, [suspend_mode](pad_button btn) -> page_navigation
 			{
@@ -25,7 +26,7 @@ namespace rsx
 				{
 					if (!suspend_mode)
 					{
-						Emu.after_kill_callback = []() { Emu.Restart(); };
+						Emu.after_kill_callback = []() { Emu.Restart(true, false); };
 
 						// Make sure we keep the game window opened
 						Emu.SetContinuousMode(true);
@@ -40,7 +41,7 @@ namespace rsx
 				if (boot_current_game_savestate(true, save_index))
 				{
 					const localized_string_id str_id = static_cast<localized_string_id>(static_cast<usz>(localized_string_id::HOME_MENU_RELOAD_SAVESTATE) + (save_index - 1));
-					std::unique_ptr<overlay_element> reload_state = std::make_unique<home_menu_entry>(get_localized_string(str_id));
+					std::unique_ptr<overlay_element> reload_state = std::make_unique<home_menu_entry>(home_menu::fa_icon::restart, get_localized_string(str_id), width, text_align::left);
 
 					add_item(reload_state, [save_index](pad_button btn) -> page_navigation
 					{

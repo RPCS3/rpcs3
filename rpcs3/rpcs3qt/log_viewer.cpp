@@ -201,7 +201,7 @@ void log_viewer::show_context_menu(const QPoint& pos)
 
 	connect(config, &QAction::triggered, this, [this]()
 	{
-		config_checker* dlg = new config_checker(this, m_full_log, true);
+		config_checker* dlg = new config_checker(this, m_full_log, config_checker::checker_mode::log);
 		dlg->open();
 	});
 

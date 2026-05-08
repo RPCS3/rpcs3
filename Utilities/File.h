@@ -66,13 +66,13 @@ namespace fs
 	// File attributes (TODO)
 	struct stat_t
 	{
-		bool is_directory;
-		bool is_symlink;
-		bool is_writable;
-		u64 size;
-		s64 atime;
-		s64 mtime;
-		s64 ctime;
+		bool is_directory = false;
+		bool is_symlink = false;
+		bool is_writable = false;
+		u64 size = 0;
+		s64 atime = 0;
+		s64 mtime = 0;
+		s64 ctime = 0;
 
 		using enable_bitcopy = std::true_type;
 
@@ -212,6 +212,12 @@ namespace fs
 
 	// Check whether the path points to an existing symlink
 	bool is_symlink(const std::string& path);
+
+	// Check whether the path points to a raw device
+	bool is_optical_raw_device(const std::string& path);
+
+	// Check whether the path points to an optical drive. If so, provide the raw device in "raw_device" if requested
+	bool get_optical_raw_device(const std::string& path, std::string* raw_device = nullptr);
 
 	// Get filesystem information
 	bool statfs(const std::string& path, device_stat& info);
@@ -683,6 +689,7 @@ namespace fs
 		notempty,
 		readonly,
 		isdir,
+		notdir,
 		toolong,
 		nospace,
 		xdev,

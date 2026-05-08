@@ -724,6 +724,7 @@ namespace vk
 				subres.height_in_block
 			);
 			subres.data = std::span(ext_data);
+			upload_flags |= source_is_userptr;
 #else
 			const auto [scratch_buf, linear_data_scratch_offset] = vk::detile_memory_block(cmd, tiled_region, range, subres.width_in_block, subres.height_in_block, get_bpp());
 
@@ -735,7 +736,7 @@ namespace vk
 #endif
 		}
 
-		if (g_cfg.video.resolution_scale_percent == 100 && spp == 1) [[likely]]
+		if (resolution_scaling_config.scale_percent == 100 && spp == 1) [[likely]]
 		{
 			push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 			vk::upload_image(cmd, this, { subres }, get_gcm_format(), is_swizzled, 1, aspect(), upload_heap, heap_align, upload_flags);
@@ -842,7 +843,7 @@ namespace vk
 	bool render_target::matches_dimensions(u16 _width, u16 _height) const
 	{
 		// Use forward scaling to account for rounding and clamping errors
-		const auto [scaled_w, scaled_h] = rsx::apply_resolution_scale<true>(_width, _height);
+		const auto [scaled_w, scaled_h] = rsx::apply_resolution_scale<true>(resolution_scaling_config, _width, _height);
 		return (scaled_w == width()) && (scaled_h == height());
 	}
 

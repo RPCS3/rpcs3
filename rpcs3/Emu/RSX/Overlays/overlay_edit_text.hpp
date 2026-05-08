@@ -26,8 +26,8 @@ namespace rsx
 
 			using label::label;
 
-			void set_text(const std::string& text) override;
-			void set_unicode_text(const std::u32string& text) override;
+			void set_text(std::string_view text) override;
+			void set_unicode_text(std::u32string_view text) override;
 
 			void set_placeholder(const std::u32string& placeholder_text);
 

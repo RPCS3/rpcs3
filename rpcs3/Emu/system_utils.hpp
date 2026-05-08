@@ -3,6 +3,7 @@
 #include "util/types.hpp"
 #include <string>
 #include <set>
+#include <vector>
 
 enum class game_content_type
 {
@@ -44,6 +45,10 @@ namespace rpcs3::utils
 	u64 get_cache_disk_usage();
 	std::string get_cache_dir();
 	std::string get_cache_dir(std::string_view module_path);
+
+	std::string	get_redump_db_path();
+	std::string get_redump_db_download_url();
+	std::string get_redump_key_dir();
 
 	std::string get_data_dir();
 	std::string get_icons_dir();

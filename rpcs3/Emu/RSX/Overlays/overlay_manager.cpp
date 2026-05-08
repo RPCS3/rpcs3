@@ -68,7 +68,7 @@ namespace rsx
 			m_list_mutex.unlock_shared();
 		}
 
-		std::shared_ptr<overlay> display_manager::get(u32 uid)
+		std::shared_ptr<overlay> display_manager::get(u32 uid) const
 		{
 			reader_lock lock(m_list_mutex);
 
@@ -165,6 +165,23 @@ namespace rsx
 				remove_type(type_id);
 				m_pending_removals_count--;
 			}
+		}
+
+		void display_manager::start_audio(const std::string& audio_path)
+		{
+			if (audio_path.empty())
+			{
+				m_audio_player.reset();
+				return;
+			}
+
+			m_audio_player = std::make_unique<audio_player>(audio_path);
+			m_audio_player->set_active(true);
+		}
+
+		void display_manager::stop_audio()
+		{
+			m_audio_player.reset();
 		}
 
 		void display_manager::on_overlay_activated(const std::shared_ptr<overlay>& /*item*/)

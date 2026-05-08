@@ -95,12 +95,12 @@ namespace rsx
 			}
 		}
 
-		void edit_text::set_text(const std::string& text)
+		void edit_text::set_text(std::string_view text)
 		{
 			set_unicode_text(utf8_to_u32string(text));
 		}
 
-		void edit_text::set_unicode_text(const std::u32string& text)
+		void edit_text::set_unicode_text(std::u32string_view text)
 		{
 			value = text;
 

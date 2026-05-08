@@ -418,7 +418,8 @@ namespace vk
 		{
 			initialize_image_contents = 1,
 			do_not_reuse = 2,
-			shareable = 4
+			shareable = 4,
+			mutable_format = 8
 		};
 
 		void on_section_destroyed(cached_texture_section& tex) override;

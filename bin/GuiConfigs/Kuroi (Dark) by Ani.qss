@@ -265,11 +265,6 @@ QLabel#gamelist_icon_background_color {
 	color: transparent;
 }
 
-/* Set Taskbar Thumbnail colors */
-QLabel#thumbnail_icon_color {
-	color: #444444;
-}
-
 /* Memory Viewer */
 QLabel#memory_viewer_address_panel {
 	color: #00cbff; /* Font Color: Blue */

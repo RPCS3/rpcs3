@@ -259,6 +259,10 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	for (u32 i = 0; i < frame_debug.command_queue.size(); i++)
 		m_list_captured_frame->insertRow(i);
 
+	// Fill the draw calls
+	for (u32 i = 0; i < frame_debug.draw_calls.size(); i++)
+		m_list_captured_draw_calls->insertRow(i);
+
 	restoreGeometry(m_gui_settings->GetValue(gui::rsx_geometry).toByteArray());
 
 	// Check for updates every ~100 ms

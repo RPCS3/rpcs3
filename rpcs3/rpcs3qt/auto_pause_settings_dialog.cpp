@@ -181,7 +181,7 @@ void auto_pause_settings_dialog::ShowContextMenu(const QPoint &pos)
 		OnEntryConfig(idx, true);
 	});
 	connect(remove, &QAction::triggered, this, &auto_pause_settings_dialog::OnRemove);
-	connect(config, &QAction::triggered, this, [=, this]() {OnEntryConfig(row, false); });
+	connect(config, &QAction::triggered, this, [=]() {OnEntryConfig(row, false); });
 
 	myMenu.exec(m_pause_list->viewport()->mapToGlobal(pos));
 }

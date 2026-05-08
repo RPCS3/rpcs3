@@ -226,6 +226,13 @@ enum class msaa_level
 	_auto
 };
 
+enum class framebuffer_aliasing_bias
+{
+	_auto,
+	prefer_color,
+	prefer_depth,
+};
+
 enum class detail_level
 {
 	none,
@@ -362,4 +369,11 @@ enum class xfloat_accuracy
 	approximate,
 	relaxed, // Approximate accuracy for only the "FCGT", "FNMS", "FREST" AND "FRSQEST" instructions
 	inaccurate
+};
+
+enum class vsync_mode
+{
+	off,
+	adaptive,
+	full,
 };

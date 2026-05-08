@@ -15,7 +15,9 @@ namespace gl
 			element_array = GL_ELEMENT_ARRAY_BUFFER,
 			uniform = GL_UNIFORM_BUFFER,
 			texture = GL_TEXTURE_BUFFER,
-			ssbo = GL_SHADER_STORAGE_BUFFER
+			ssbo = GL_SHADER_STORAGE_BUFFER,
+			copy_src = GL_COPY_READ_BUFFER,
+			copy_dst = GL_COPY_WRITE_BUFFER
 		};
 
 		enum class access
@@ -65,6 +67,8 @@ namespace gl
 				case target::uniform: pname = GL_UNIFORM_BUFFER_BINDING; break;
 				case target::texture: pname = GL_TEXTURE_BUFFER_BINDING; break;
 				case target::ssbo: pname = GL_SHADER_STORAGE_BUFFER_BINDING; break;
+				case target::copy_src: pname = GL_COPY_READ_BUFFER_BINDING; break;
+				case target::copy_dst: pname = GL_COPY_WRITE_BUFFER_BINDING; break;
 				default: fmt::throw_exception("Invalid binding state target (0x%x)", static_cast<int>(target_));
 				}
 
@@ -113,6 +117,7 @@ namespace gl
 
 		void data(GLsizeiptr size, const void* data_ = nullptr, GLenum usage = GL_STREAM_DRAW);
 		void sub_data(GLsizeiptr offset, GLsizeiptr length, const GLvoid* data);
+		void fill(GLsizeiptr offset, GLsizeiptr length, GLuint pattern);
 
 		GLubyte* map(GLsizeiptr offset, GLsizeiptr length, access access_);
 		void unmap();

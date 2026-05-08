@@ -868,7 +868,10 @@ std::string FragmentProgramDecompiler::BuildCode()
 	if (!m_is_valid_ucode)
 	{
 		// If the code is broken, do not compile. Simply NOP main and write empty outputs
+		m_parr.params[PF_PARAM_UNIFORM].clear();
 		insertHeader(OS);
+		OS << "\n";
+		insertConstants(OS);
 		OS << "\n";
 		OS << "void main()\n";
 		OS << "{\n";
@@ -1192,7 +1195,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 		if (dst.exp_tex)
 		{
 			properties.has_exp_tex_op = true;
-			AddCode("_enable_texture_expand();");
+			AddCode("_enable_texture_expand($_i);");
 		}
 
 		// Shadow proj

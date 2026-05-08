@@ -2,6 +2,7 @@
 #include "capabilities.h"
 
 #include "Utilities/StrUtil.h"
+#include "Emu/system_config.h"
 
 #include <unordered_set>
 
@@ -42,6 +43,8 @@ namespace gl
 		{
 			all_extensions.emplace(reinterpret_cast<const char*>(glGetStringi(GL_EXTENSIONS, i)));
 		}
+
+		RENDERDOC_debug = !!g_cfg.video.renderdoc_compatiblity;
 
 #define CHECK_EXTENSION_SUPPORT(extension_short_name)\
 	do {\

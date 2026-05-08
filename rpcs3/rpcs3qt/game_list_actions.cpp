@@ -6,14 +6,17 @@
 #include "qt_utils.h"
 #include "progress_dialog.h"
 
+#include "Utilities/Thread.h"
 #include "Utilities/File.h"
+#include "Loader/ISO.h"
 
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/VFS.h"
-#include "Emu/vfs_config.h"
 
 #include "Input/pad_thread.h"
+
+#include <thread>
 
 #include <QApplication>
 #include <QCheckBox>
@@ -364,6 +367,105 @@ void game_list_actions::ShowGameInfoDialog(const std::vector<game_info>& games)
 	QMessageBox::information(m_game_list_frame, tr("Game Info"), GetContentInfo(games).info);
 }
 
+void game_list_actions::ShowGameIntegrityDialog(const game_info& game)
+{
+	if (m_game_integrity_future.isRunning()) // Still running the last request
+		return;
+
+	// Initialize the validator (set also file size etc.)
+	m_iso_validator->init_hash(game->info.path);
+
+	// Game integrity check can take a while (in particular on non ssd/m.2 disks)
+	// so run it on a concurrent thread avoiding to block the entire GUI
+	m_game_integrity_future = QtConcurrent::run([this]()
+	{
+		thread_base::set_name("Game Integrity");
+
+		QString text;
+		std::string hash, game_name;
+		bool info_dialog = false;
+
+		if (m_iso_validator->calculate_hash(hash) != iso_hash_status::COMPLETED)
+		{
+			text = "Hash calculation failed!\n\nIntegrity check aborted";
+		}
+		else
+		{
+			text = "Integrity check completed!\n\n";
+
+			switch (m_iso_validator->check_integrity(hash, &game_name))
+			{
+			case iso_integrity_status::NO_MATCH:
+				text += tr("Game check NOT PASSED\n\nNo match found on DB or game corrupted:\n - Hash: %0")
+					.arg(QString::fromStdString(hash));
+				break;
+			case iso_integrity_status::FOUND_MATCH:
+				text += tr("Game check PASSED\n\nMatch found on DB:\n - Game: %0\n - Hash: %1")
+					.arg(QString::fromStdString(game_name))
+					.arg(QString::fromStdString(hash));
+
+				info_dialog = true;
+				break;
+			default:
+				text += tr("Error parsing DB");
+				break;
+			}
+		}
+
+		Emu.CallFromMainThread([this, text, info_dialog]()
+		{
+			if (info_dialog)
+			{
+				sys_log.success("%s", text.toStdString());
+				QMessageBox::information(m_game_list_frame, tr("Game Integrity"), text);
+			}
+			else
+			{
+				sys_log.error("%s", text.toStdString());
+				QMessageBox::critical(m_game_list_frame, tr("Game Integrity"), text);
+			}
+		}, nullptr, false);
+	});
+
+	progress_dialog* pdlg = new progress_dialog(tr("ISO File Hash Calculation"), tr("Calculating hash"), tr("Cancel"),
+		0, 100, false, m_game_list_frame);
+
+	pdlg->setAutoClose(false);
+	pdlg->setAutoReset(false);
+	pdlg->open();
+
+	connect(pdlg, &progress_dialog::canceled, m_game_list_frame, [this]()
+	{
+		m_iso_validator->abort_hash();
+	});
+
+	QTimer* update_timer = new QTimer(m_game_list_frame);
+
+	connect(update_timer, &QTimer::timeout, m_game_list_frame, [this, pdlg, update_timer]()
+	{
+		if (m_iso_validator->get_status() == iso_hash_status::INITIALIZED)
+		{
+			// Set progress in range 0-100
+			const int progress = m_iso_validator->get_size() ?
+				(static_cast<float>(m_iso_validator->get_bytes_read()) / m_iso_validator->get_size()) * 100 :
+				0;
+
+			pdlg->setValue(progress);
+		}
+		else
+		{
+			update_timer->stop();
+			update_timer->deleteLater();
+
+			// As last, close the progress bar (it will be already closed if the process was aborted) and delete the object
+			pdlg->close();
+			pdlg->deleteLater();
+		}
+	});
+
+	update_timer->start(500);
+}
+
 void game_list_actions::ShowDiskUsageDialog()
 {
 	if (m_disk_usage_future.isRunning()) // Still running the last request
@@ -373,6 +475,8 @@ void game_list_actions::ShowDiskUsageDialog()
 	// so run it on a concurrent thread avoiding to block the entire GUI
 	m_disk_usage_future = QtConcurrent::run([this]()
 	{
+		thread_base::set_name("Disk Usage");
+
 		const std::vector<std::pair<std::string, u64>> vfs_disk_usage = rpcs3::utils::get_vfs_disk_usage();
 		const u64 cache_disk_usage = rpcs3::utils::get_cache_disk_usage();
 
@@ -846,16 +950,19 @@ bool game_list_actions::RemoveContentList(const std::string& serial, bool is_int
 			RemoveContentBySerial(rpcs3::utils::get_icons_dir(), serial, "icons");
 	}
 
-	// Remove shortcuts in "games/shortcuts" folder and from desktop / start menu (if any)
+	// Remove shortcuts in "games/shortcuts" folder and from desktop / start menu / Steam (if any)
 	if (content_types & SHORTCUTS)
 	{
 		if (const auto it = m_content_info.name_list.find(serial); it != m_content_info.name_list.cend())
 		{
+			std::vector<std::pair<std::string, std::string>> games;
 			for (const std::string& name : it->second)
 			{
-				// Remove all shortcuts
-				gui::utils::remove_shortcuts(name, serial);
+				games.push_back(std::pair(name, serial));
 			}
+
+			// Batch remove all shortcuts
+			gui::utils::batch_remove_shortcuts(games);
 		}
 	}
 
@@ -905,7 +1012,7 @@ void game_list_actions::BatchActionBySerials(progress_dialog* pdlg, const std::s
 
 	const int serials_size = ::narrow<int>(serials.size());
 
-	*iterate_over_serial = [=, this, index_ptr = index](int index)
+	*iterate_over_serial = [=, index_ptr = index](int index)
 	{
 		if (index == serials_size)
 		{
@@ -1452,91 +1559,7 @@ void game_list_actions::CreateShortcuts(const std::vector<game_info>& games, con
 		return;
 	}
 
-	bool success = true;
-
-	for (const game_info& gameinfo : games)
-	{
-		std::string gameid_token_value;
-
-		const std::string dev_flash = g_cfg_vfs.get_dev_flash();
-
-		if (gameinfo->info.category == "DG" && !fs::is_file(rpcs3::utils::get_hdd0_dir() + "/game/" + gameinfo->info.serial + "/USRDIR/EBOOT.BIN"))
-		{
-			const usz ps3_game_dir_pos = fs::get_parent_dir(gameinfo->info.path).size();
-			std::string relative_boot_dir = gameinfo->info.path.substr(ps3_game_dir_pos);
-
-			if (usz char_pos = relative_boot_dir.find_first_not_of(fs::delim); char_pos != umax)
-			{
-				relative_boot_dir = relative_boot_dir.substr(char_pos);
-			}
-			else
-			{
-				relative_boot_dir.clear();
-			}
-
-			if (!relative_boot_dir.empty())
-			{
-				if (relative_boot_dir != "PS3_GAME")
-				{
-					gameid_token_value = gameinfo->info.serial + "/" + relative_boot_dir;
-				}
-				else
-				{
-					gameid_token_value = gameinfo->info.serial;
-				}
-			}
-		}
-		else
-		{
-			gameid_token_value = gameinfo->info.serial;
-		}
-
-#ifdef __linux__
-		const std::string target_cli_args = gameinfo->info.path.starts_with(dev_flash) ? fmt::format("--no-gui \"%%%%RPCS3_VFS%%%%:dev_flash/%s\"", gameinfo->info.path.substr(dev_flash.size()))
-		                                                                               : fmt::format("--no-gui \"%%%%RPCS3_GAMEID%%%%:%s\"", gameid_token_value);
-#else
-		const std::string target_cli_args = gameinfo->info.path.starts_with(dev_flash) ? fmt::format("--no-gui \"%%RPCS3_VFS%%:dev_flash/%s\"", gameinfo->info.path.substr(dev_flash.size()))
-		                                                                               : fmt::format("--no-gui \"%%RPCS3_GAMEID%%:%s\"", gameid_token_value);
-#endif
-		const std::string target_icon_dir = fmt::format("%sIcons/game_icons/%s/", fs::get_config_dir(), gameinfo->info.serial);
-
-		if (!fs::create_path(target_icon_dir))
-		{
-			game_list_log.error("Failed to create shortcut path %s (%s)", QString::fromStdString(gameinfo->info.name).simplified(), target_icon_dir, fs::g_tls_error);
-			success = false;
-			continue;
-		}
-
-		for (const gui::utils::shortcut_location& location : locations)
-		{
-			std::string destination;
-
-			switch (location)
-			{
-			case gui::utils::shortcut_location::desktop:
-				destination = "desktop";
-				break;
-			case gui::utils::shortcut_location::applications:
-				destination = "application menu";
-				break;
-#ifdef _WIN32
-			case gui::utils::shortcut_location::rpcs3_shortcuts:
-				destination = "/games/shortcuts/";
-				break;
-#endif
-			}
-
-			if (!gameid_token_value.empty() && gui::utils::create_shortcut(gameinfo->info.name, gameinfo->icon_in_archive ? gameinfo->info.path : "", gameinfo->info.serial, target_cli_args, gameinfo->info.name, gameinfo->info.icon_path, target_icon_dir, location))
-			{
-				game_list_log.success("Created %s shortcut for %s", destination, QString::fromStdString(gameinfo->info.name).simplified());
-			}
-			else
-			{
-				game_list_log.error("Failed to create %s shortcut for %s", destination, QString::fromStdString(gameinfo->info.name).simplified());
-				success = false;
-			}
-		}
-	}
+	const bool success = gui::utils::batch_create_shortcuts(games, locations);
 
 #ifdef _WIN32
 	if (locations.size() == 1 && locations.contains(gui::utils::shortcut_location::rpcs3_shortcuts))

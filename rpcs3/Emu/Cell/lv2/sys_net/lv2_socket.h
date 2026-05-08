@@ -104,7 +104,7 @@ public:
 	virtual void close()          = 0;
 	virtual s32 shutdown(s32 how) = 0;
 
-	virtual s32 poll(sys_net_pollfd& sn_pfd, pollfd& native_pfd)                           = 0;
+	virtual void poll(sys_net_pollfd& sn_pfd, pollfd& native_pfd) = 0;
 	virtual std::tuple<bool, bool, bool> select(bs_t<poll_t> selected, pollfd& native_pfd) = 0;
 
 	error_code abort_socket(s32 flags);

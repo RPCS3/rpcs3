@@ -37,10 +37,6 @@ QSlider#sizeSlider::handle:horizontal {
 QLabel#toolbar_icon_color {
 	color: rgba(64,64,64,255);
 }
-/* thumbnail icon color stylesheet */
-QLabel#thumbnail_icon_color {
-	color: rgba(0,100,231,255);
-}
 /* gamelist icon color stylesheet */
 QLabel#gamelist_icon_background_color {
 	color: rgba(209,209,209,255);

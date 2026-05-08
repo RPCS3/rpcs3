@@ -85,8 +85,8 @@ public:
 protected:
 	video_renderer m_renderer;
 
-	void paintEvent(QPaintEvent *event) override;
-	void showEvent(QShowEvent *event) override;
+	void paintEvent(QPaintEvent* event) override;
+	void showEvent(QShowEvent* event) override;
 
 	void close() override;
 	void reset() override;

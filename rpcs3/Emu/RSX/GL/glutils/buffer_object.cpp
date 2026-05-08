@@ -131,6 +131,11 @@ namespace gl
 		DSA_CALL2(NamedBufferSubData, m_id, offset, length, data);
 	}
 
+	void buffer::fill(GLsizeiptr offset, GLsizeiptr length, GLuint pattern)
+	{
+		DSA_CALL2(ClearNamedBufferSubData, m_id, GL_R32UI, offset, length, GL_RED, GL_UNSIGNED_INT, &pattern);
+	}
+
 	GLubyte* buffer::map(GLsizeiptr offset, GLsizeiptr length, access access_)
 	{
 		ensure(m_memory_type == memory_type::host_visible);
