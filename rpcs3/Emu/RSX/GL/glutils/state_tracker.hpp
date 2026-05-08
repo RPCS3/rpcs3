@@ -376,15 +376,12 @@ namespace gl
 
 		GLuint get_bound_texture(GLuint layer, GLenum target)
 		{
-			ensure(layer < 48);
-			return bound_textures[layer][target];
+			return ::at32(bound_textures, layer)[target];
 		}
 
 		void bind_texture(GLuint layer, GLenum target, GLuint name, GLboolean force = GL_FALSE)
 		{
-			ensure(layer < 48);
-
-			auto& bound = bound_textures[layer][target];
+			auto& bound = ::at32(bound_textures, layer)[target];
 			if (bound != name || force)
 			{
 				glActiveTexture(GL_TEXTURE0 + layer);

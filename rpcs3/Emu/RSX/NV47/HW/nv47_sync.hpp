@@ -13,13 +13,13 @@ namespace rsx
 	namespace util
 	{
 		template <bool FlushDMA, bool FlushPipe>
-		static void write_gcm_label(context* ctx, u32 address, u32 data)
+		static void write_gcm_label(context* ctx, u32 type, u32 address, u32 data)
 		{
 			const bool is_flip_sema = (address == (RSX(ctx)->label_addr + 0x10) || address == (RSX(ctx)->device_addr + 0x30));
 			if (!is_flip_sema)
 			{
 				// First, queue the GPU work. If it flushes the queue for us, the following routines will be faster.
-				const bool handled = RSX(ctx)->get_backend_config().supports_host_gpu_labels && RSX(ctx)->release_GCM_label(address, data);
+				const bool handled = RSX(ctx)->get_backend_config().supports_host_gpu_labels && RSX(ctx)->release_GCM_label(type, address, data);
 
 				if (vm::_ref<RsxSemaphore>(address) == data)
 				{

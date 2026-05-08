@@ -19,9 +19,9 @@ namespace rsx
 		class video_view final : public image_view
 		{
 		public:
-			video_view(const std::string& video_path, const std::string& thumbnail_path);
-			video_view(const std::string& video_path, const std::vector<u8>& thumbnail_buf);
-			video_view(const std::string& video_path, u8 thumbnail_id);
+			video_view(const std::string& video_path, const std::string& audio_path, const std::string& thumbnail_path);
+			video_view(const std::string& video_path, const std::string& audio_path, const std::vector<u8>& thumbnail_buf);
+			video_view(const std::string& video_path, const std::string& audio_path, u8 thumbnail_id);
 			virtual ~video_view();
 
 			void set_active(bool active);
@@ -30,7 +30,7 @@ namespace rsx
 			compiled_resource& get_compiled() override;
 
 		private:
-			void init_video(const std::string& video_path);
+			void init_video(const std::string& video_path, const std::string& audio_path);
 
 			usz m_buffer_index = 0;
 			std::array<std::unique_ptr<video_info>, 2> m_video_info; // double buffer

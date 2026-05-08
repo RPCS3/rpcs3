@@ -309,12 +309,21 @@ static void ppu_initialize_modules(ppu_linkage_info* link, utils::serial* ar = n
 		&ppu_module_manager::cellWMAPROdec,
 		&ppu_module_manager::libad_async,
 		&ppu_module_manager::libad_core,
+		&ppu_module_manager::libavcdec,
+		&ppu_module_manager::libdivx311dec,
+		&ppu_module_manager::libdivxdec,
 		&ppu_module_manager::libfs_utility_init,
 		&ppu_module_manager::libmedi,
 		&ppu_module_manager::libmixer,
+		&ppu_module_manager::libmvcdec,
+		&ppu_module_manager::libsjvtd,
+		&ppu_module_manager::libsmvd2,
+		&ppu_module_manager::libsmvd4,
 		&ppu_module_manager::libsnd3,
+		&ppu_module_manager::libsvc1d,
 		&ppu_module_manager::libsynth2,
 		&ppu_module_manager::sceNp,
+		&ppu_module_manager::sceNpBasicLimited,
 		&ppu_module_manager::sceNp2,
 		&ppu_module_manager::sceNpClans,
 		&ppu_module_manager::sceNpCommerce2,
@@ -1004,7 +1013,7 @@ static import_result_t ppu_load_imports(const ppu_module<lv2_obj>& _module, std:
 
 			// Check address
 			// TODO: The address of use should be extracted from analyser instead
-			if (fstub && fstub >= _module.segs[0].addr && fstub <= _module.segs[0].addr + _module.segs[0].size)
+			if (fstub && fstub >= _module.segs[0].addr && fstub < _module.segs[0].addr + _module.segs[0].size)
 			{
 				nid_to_use_addr.emplace(fnid, fstub);
 			}
@@ -1895,7 +1904,7 @@ shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_load, c
 	}
 	else
 	{
-		ppu_loader.error("Library %s: PRX library info not found");
+		ppu_loader.error("Library: PRX library info not found");
 	}
 
 	prx->start.set(prx->specials[0xbc9a0086]);
@@ -3200,7 +3209,7 @@ bool ppu_load_rel_exec(const ppu_rel_object& elf)
 
 	for (const auto& s : elf.shdrs)
 	{
-		if (s.sh_type != sec_type::sht_progbits)
+		if (s.sh_type == sec_type::sht_progbits)
 		{
 			memsize = utils::align<u32>(memsize + vm::cast(s.sh_size), 128);
 		}

@@ -1267,6 +1267,11 @@ struct SceNpOnlineId
 {
 	char data[SCE_NET_NP_ONLINEID_MAX_LENGTH + 1]; // char term;
 	char dummy[3];
+
+	bool operator<(const SceNpOnlineId& other) const
+	{
+		return memcmp(data, other.data, sizeof(data)) < 0;
+	}
 };
 
 // NP ID structure
@@ -1283,6 +1288,11 @@ struct SceNpId
 	};
 
 	u8 reserved[8];
+
+	bool operator<(const SceNpId& other) const
+	{
+		return handle < other.handle;
+	}
 };
 
 CHECK_SIZE_ALIGN(SceNpId, 0x24, 1);
@@ -1397,9 +1407,9 @@ struct SceNpBasicMessageDetails
 // Presence details of an user
 struct SceNpBasicPresenceDetails
 {
-	s8 title[SCE_NP_BASIC_PRESENCE_TITLE_SIZE_MAX];
-	s8 status[SCE_NP_BASIC_PRESENCE_STATUS_SIZE_MAX];
-	s8 comment[SCE_NP_BASIC_PRESENCE_COMMENT_SIZE_MAX];
+	char title[SCE_NP_BASIC_PRESENCE_TITLE_SIZE_MAX];
+	char status[SCE_NP_BASIC_PRESENCE_STATUS_SIZE_MAX];
+	char comment[SCE_NP_BASIC_PRESENCE_COMMENT_SIZE_MAX];
 	u8 data[SCE_NP_BASIC_MAX_PRESENCE_SIZE];
 	be_t<u32> size;
 	be_t<s32> state;
@@ -1410,9 +1420,9 @@ struct SceNpBasicPresenceDetails2
 {
 	be_t<u32> struct_size;
 	be_t<s32> state;
-	s8 title[SCE_NP_BASIC_PRESENCE_TITLE_SIZE_MAX];
-	s8 status[SCE_NP_BASIC_PRESENCE_EXTENDED_STATUS_SIZE_MAX];
-	s8 comment[SCE_NP_BASIC_PRESENCE_COMMENT_SIZE_MAX];
+	char title[SCE_NP_BASIC_PRESENCE_TITLE_SIZE_MAX];
+	char status[SCE_NP_BASIC_PRESENCE_EXTENDED_STATUS_SIZE_MAX];
+	char comment[SCE_NP_BASIC_PRESENCE_COMMENT_SIZE_MAX];
 	u8 data[SCE_NP_BASIC_MAX_PRESENCE_SIZE];
 	be_t<u32> size;
 };
@@ -1420,9 +1430,9 @@ struct SceNpBasicPresenceDetails2
 // Country/region code
 struct SceNpCountryCode
 {
-	s8 data[2];
-	s8 term;
-	s8 padding[1];
+	char data[2];
+	char term;
+	char padding[1];
 };
 
 // Date information
@@ -1451,8 +1461,8 @@ struct SceNpScoreGameInfo
 // Ranking comment structure
 struct SceNpScoreComment
 {
-	s8 data[SCE_NP_SCORE_COMMENT_MAXLEN];
-	s8 term[1];
+	char data[SCE_NP_SCORE_COMMENT_MAXLEN];
+	char term[1];
 };
 
 // Ranking information structure
@@ -1524,15 +1534,15 @@ struct SceNpScoreNpIdPcId
 // Basic clan information to be used in raking
 struct SceNpScoreClanBasicInfo
 {
-	s8 clanName[SCE_NP_CLANS_CLAN_NAME_MAX_LENGTH + 1];
-	s8 clanTag[SCE_NP_CLANS_CLAN_TAG_MAX_LENGTH + 1];
+	char clanName[SCE_NP_CLANS_CLAN_NAME_MAX_LENGTH + 1];
+	char clanTag[SCE_NP_CLANS_CLAN_TAG_MAX_LENGTH + 1];
 	u8 reserved[10];
 };
 
 // Clan member information handled in ranking
 struct SceNpScoreClansMemberDescription
 {
-	s8 description[SCE_NP_CLANS_CLAN_DESCRIPTION_MAX_LENGTH + 1];
+	char description[SCE_NP_CLANS_CLAN_DESCRIPTION_MAX_LENGTH + 1];
 };
 
 // Clan ranking information
@@ -1689,12 +1699,22 @@ struct SceNpLobbyId
 {
 	u8 opt[28];
 	u8 reserved[8];
+
+	bool operator<(const SceNpLobbyId& other) const
+	{
+		return memcmp(opt, other.opt, sizeof(opt)) < 0;
+	}
 };
 
 struct SceNpRoomId
 {
 	u8 opt[28];
 	u8 reserved[8];
+
+	bool operator<(const SceNpRoomId& other) const
+	{
+		return memcmp(opt, other.opt, sizeof(opt)) < 0;
+	}
 };
 
 struct SceNpMatchingAttr

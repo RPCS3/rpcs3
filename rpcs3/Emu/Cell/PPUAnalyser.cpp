@@ -2535,7 +2535,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 						// SLDI mnemonic
 						reg_state_t rs = get_reg(op.rs);
 
-						if (!rs.shift_left(op.sh32, reg_tag_allocator))
+						if (!rs.shift_left(sh, reg_tag_allocator))
 						{
 							unmap_reg(op.ra);
 						}

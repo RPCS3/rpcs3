@@ -48,6 +48,7 @@ private:
 		std::string game_name;
 		std::string game_icon_path;
 		std::string dir_path;
+		std::string archive_path;
 	};
 
 	bool LoadSavestateFolderToDB(std::unique_ptr<game_savestates_data>&& game_savestates);

@@ -74,7 +74,7 @@ enum
 };
 #endif
 
-inline int futex(volatile void* uaddr, int futex_op, uint val, const timespec* timeout = nullptr, uint mask = 0)
+inline int futex(volatile void* uaddr, int futex_op, uint val, const timespec* timeout = nullptr, [[maybe_unused]] uint mask = 0)
 {
 #ifdef __linux__
 	return syscall(SYS_futex, uaddr, futex_op, static_cast<int>(val), timeout, nullptr, static_cast<int>(mask));

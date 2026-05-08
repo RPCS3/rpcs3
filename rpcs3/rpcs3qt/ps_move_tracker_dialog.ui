@@ -17,7 +17,7 @@
    </sizepolicy>
   </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string>PS Move Tracker Settings</string>
   </property>
   <layout class="QVBoxLayout" name="main_layout" stretch="0,0">
    <item>

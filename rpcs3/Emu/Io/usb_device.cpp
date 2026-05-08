@@ -24,6 +24,22 @@ void usb_device::get_location(u8* location) const
 	memcpy(location, this->location.data(), 7);
 }
 
+const UsbDeviceEndpoint* usb_device::find_endpoint(u8 endpoint_addr) const
+{
+	for (const auto& config_node : device.subnodes)
+	{
+		if (config_node.bDescriptorType != USB_DESCRIPTOR_CONFIG)
+			continue;
+
+		for (const auto& node : config_node.subnodes)
+		{
+			if (node.bDescriptorType == USB_DESCRIPTOR_ENDPOINT && node._endpoint.bEndpointAddress == endpoint_addr)
+				return &node._endpoint;
+		}
+	}
+	return nullptr;
+}
+
 void usb_device::read_descriptors()
 {
 }
@@ -40,9 +56,10 @@ bool usb_device::set_configuration(u8 cfg_num)
 	return true;
 }
 
-bool usb_device::set_interface(u8 int_num)
+bool usb_device::set_interface(u8 int_num, u8 alt_num)
 {
 	current_interface = int_num;
+	current_altsetting = alt_num;
 	return true;
 }
 
@@ -87,6 +104,15 @@ void usb_device_passthrough::send_libusb_transfer(libusb_transfer* transfer)
 		default:
 		{
 			sys_usbd.error("Unexpected error from libusb_submit_transfer: %d(%s)", res, libusb_error_name(res));
+
+			// Mark as a failed fake transfer so the USB manager processes a completion
+			// instead of leaving the request stuck in the busy state forever.
+			UsbTransfer* usbd_transfer = static_cast<UsbTransfer*>(transfer->user_data);
+			usbd_transfer->busy = true;
+			usbd_transfer->fake = true;
+			usbd_transfer->expected_result = EHCI_CC_HALTED;
+			usbd_transfer->expected_count = 0;
+			usbd_transfer->expected_time = get_timestamp();
 			return;
 		}
 		}
@@ -141,9 +167,9 @@ bool usb_device_passthrough::set_configuration(u8 cfg_num)
 	return (libusb_set_configuration(lusb_handle, cfg_num) == LIBUSB_SUCCESS);
 };
 
-bool usb_device_passthrough::set_interface(u8 int_num)
+bool usb_device_passthrough::set_interface(u8 int_num, u8 alt_num)
 {
-	usb_device::set_interface(int_num);
+	usb_device::set_interface(int_num, alt_num);
 	return (libusb_claim_interface(lusb_handle, int_num) == LIBUSB_SUCCESS);
 }
 
@@ -162,7 +188,23 @@ void usb_device_passthrough::control_transfer(u8 bmRequestType, u8 bRequest, u16
 
 void usb_device_passthrough::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer)
 {
-	libusb_fill_interrupt_transfer(transfer->transfer, lusb_handle, endpoint, buf, buf_size, callback_transfer, transfer, 0);
+	// Pick the libusb helper matching the endpoint's actual transfer type. The PS3 USB
+	// stack routes both bulk and interrupt transfers through this method, but submitting
+	// an interrupt URB to a bulk endpoint fails with EINVAL on Linux.
+	const UsbDeviceEndpoint* ep_desc = find_endpoint(static_cast<u8>(endpoint));
+	const bool is_bulk = ep_desc && (ep_desc->bmAttributes & LIBUSB_TRANSFER_TYPE_MASK) == LIBUSB_TRANSFER_TYPE_BULK;
+
+	sys_usbd.notice("USIO debug: submitting passthrough transfer endpoint=0x%x dir=%s size=0x%x type=%s",
+		endpoint, (endpoint & LIBUSB_ENDPOINT_IN) ? "IN" : "OUT", buf_size, is_bulk ? "bulk" : "interrupt");
+
+	if (is_bulk)
+	{
+		libusb_fill_bulk_transfer(transfer->transfer, lusb_handle, endpoint, buf, buf_size, callback_transfer, transfer, 0);
+	}
+	else
+	{
+		libusb_fill_interrupt_transfer(transfer->transfer, lusb_handle, endpoint, buf, buf_size, callback_transfer, transfer, 0);
+	}
 	send_libusb_transfer(transfer->transfer);
 }
 
@@ -290,7 +332,7 @@ void usb_device_emulated::control_transfer(u8 bmRequestType, u8 bRequest, u16 wV
 	case 0U /*silences warning*/ | LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_STANDARD | LIBUSB_RECIPIENT_INTERFACE: // 0x01
 		switch (bRequest)
 		{
-		case LIBUSB_REQUEST_SET_INTERFACE: usb_device::set_interface(::narrow<u8>(wIndex)); break;
+		case LIBUSB_REQUEST_SET_INTERFACE: usb_device::set_interface(::narrow<u8>(wIndex), ::narrow<u8>(wValue)); break;
 		default: sys_usbd.error("Unhandled control transfer(0x%02x): 0x%02x", bmRequestType, bRequest); break;
 		}
 		break;

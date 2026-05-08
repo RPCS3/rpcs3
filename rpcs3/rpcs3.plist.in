@@ -12,16 +12,14 @@
 	<string>rpcs3.icns</string>
 	<key>CFBundleIdentifier</key>
 	<string>net.rpcs3.rpcs3</string>
-	<key>CFBundleLongVersionString</key>
-	<string>${RPCS3_GIT_TAG}</string>
 	<key>CFBundleName</key>
 	<string>RPCS3</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>${RPCS3_GIT_TAG}</string>
+	<string>${MACOSX_BUNDLE_SHORT_VERSION_STRING}</string>
 	<key>CFBundleVersion</key>
-	<string>${RPCS3_GIT_TAG}</string>
+	<string>${MACOSX_BUNDLE_BUNDLE_VERSION}</string>
  	<key>CFBundleSupportedPlatforms</key>
 	<array>
 		<string>MacOSX</string>

@@ -501,7 +501,7 @@ void fmt_class_string<blit_engine::context_dma>::format(std::string& out, u64 ar
 		switch (value)
 		{
 		case blit_engine::context_dma::report_location_main: return "report location main";
-		case blit_engine::context_dma::to_memory_get_report: return "to memory get report";
+		case blit_engine::context_dma::report_location_local: return "report location local";
 		case blit_engine::context_dma::memory_host_buffer: return "memory host buffer";
 		}
 

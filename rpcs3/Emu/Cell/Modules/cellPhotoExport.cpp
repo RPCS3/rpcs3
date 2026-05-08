@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/VFS.h"
 #include "cellSysutil.h"
@@ -107,30 +108,16 @@ bool check_photo_path(const std::string& file_path)
 	return true;
 }
 
-std::string get_available_photo_path(const std::string& filename)
+std::string get_available_photo_path(std::string_view filename)
 {
-	const std::string photo_dir = "/dev_hdd0/photo/";
-	std::string dst_path = vfs::get(photo_dir + filename);
-
-	// Do not overwrite existing files. Add a suffix instead.
-	for (u32 i = 0; fs::exists(dst_path); i++)
+	std::string_view extension = ".png";
+	if (const auto extension_start = filename.find_last_of('.');
+		extension_start != umax)
 	{
-		const std::string suffix = fmt::format("_%d", i);
-		std::string new_filename = filename;
-
-		if (const usz pos = new_filename.find_last_of('.'); pos != std::string::npos)
-		{
-			new_filename.insert(pos, suffix);
-		}
-		else
-		{
-			new_filename.append(suffix);
-		}
-
-		dst_path = vfs::get(photo_dir + new_filename);
+		extension = filename.substr(extension_start);
 	}
 
-	return dst_path;
+	return Emu.GetCallbacks().get_photo_path(fmt::format("%s%s", Emu.GetTitle(), extension));
 }
 
 

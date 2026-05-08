@@ -220,7 +220,7 @@ namespace gl
 				return (found->second >= 0);
 			}
 
-			auto result = glGetUniformLocation(m_program.id(), name.c_str());
+			auto result = glGetUniformLocation(m_program->id(), name.c_str());
 			locations[name] = result;
 
 			if (location)
@@ -247,7 +247,7 @@ namespace gl
 				}
 			}
 
-			auto result = glGetUniformLocation(m_program.id(), name.c_str());
+			auto result = glGetUniformLocation(m_program->id(), name.c_str());
 
 			if (result < 0)
 			{

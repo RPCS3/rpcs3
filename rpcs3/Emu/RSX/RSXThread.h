@@ -122,7 +122,7 @@ namespace rsx
 		std::unique_ptr<FIFO::FIFO_control> fifo_ctrl;
 		atomic_t<bool> rsx_thread_running{ false };
 		std::vector<std::pair<u32, u32>> dump_callstack_list() const override;
-		std::string dump_misc() const override;
+		void dump_misc(std::string& ret, std::any& custom_data) const override;
 
 	protected:
 		FIFO::flattening_helper m_flattener;
@@ -214,6 +214,8 @@ namespace rsx
 
 		atomic_bitmask_t<flip_request> async_flip_requested{};
 		u8 async_flip_buffer{ 0 };
+
+		surface_scaling_config_t resolution_scaling_config{};
 
 		void capture_frame(const std::string& name);
 		const backend_configuration& get_backend_config() const { return backend_config; }
@@ -380,7 +382,7 @@ namespace rsx
 		flags32_t read_barrier(u32 memory_address, u32 memory_range, bool unconditional);
 		virtual void write_barrier(u32 /*memory_address*/, u32 /*memory_range*/) {}
 		virtual void sync_hint(FIFO::interrupt_hint hint, reports::sync_hint_payload_t payload);
-		virtual bool release_GCM_label(u32 /*address*/, u32 /*value*/) { return false; }
+		virtual bool release_GCM_label(u32 /*type*/, u32 /*address*/, u32 /*value*/) { return false; }
 
 	protected:
 

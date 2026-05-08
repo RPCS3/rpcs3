@@ -487,6 +487,8 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 				{
 					ensure(cond.unqueue(cond.sq, &ppu));
 					ppu.state += cpu_flag::again;
+					cond.lwmutex_waiters--;
+					mutex->lwcond_waiters--;
 					return;
 				}
 

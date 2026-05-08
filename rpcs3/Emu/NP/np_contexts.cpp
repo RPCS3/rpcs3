@@ -17,10 +17,15 @@ generic_async_transaction_context::generic_async_transaction_context(const SceNp
 generic_async_transaction_context::~generic_async_transaction_context()
 {
 	if (thread.joinable())
-		thread.join();
+	{
+		if (std::this_thread::get_id() == thread.get_id())
+			thread.detach();
+		else
+			thread.join();
+	}
 }
 
-std::optional<s32> generic_async_transaction_context::get_transaction_status()
+std::optional<s32> generic_async_transaction_context::get_transaction_status() const
 {
 	std::lock_guard lock(mutex);
 	return result;
@@ -41,7 +46,7 @@ error_code generic_async_transaction_context::wait_for_completion()
 		return *result;
 	}
 
-	completion_cond.wait(lock);
+	completion_cond.wait(lock, [this] { return result.has_value(); });
 
 	return *result;
 }

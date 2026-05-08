@@ -174,20 +174,28 @@ bool lv2_config_service_listener::check_service(const lv2_config_service& servic
 	return true;
 }
 
-bool lv2_config_service_listener::notify(const shared_ptr<lv2_config_service_event>& event)
-{
-	service_events.emplace_back(event);
-	return event->notify();
-}
-
 bool lv2_config_service_listener::notify(const shared_ptr<lv2_config_service>& service)
 {
-	if (!check_service(*service))
-		return false;
+	{
+		std::lock_guard lock(mutex_service_events);
 
-	// Create service event and notify queue!
-	const auto event = lv2_config_service_event::create(handle, service, *this);
-	return notify(event);
+		if (!check_service(*service))
+			return false;
+
+		// Create service event and notify queue!
+		const auto event = lv2_config_service_event::create(handle, service, *this);
+		service_events.emplace_back(event);
+
+		if (!event->notify())
+		{
+			// If we fail to deliver the event to the queue just clean the event up or it'll hold the listener alive forever
+			g_fxo->get<lv2_config>().remove_service_event(event->id);
+			service_events.pop_back();
+			return false;
+		}
+	}
+	
+	return true;
 }
 
 void lv2_config_service_listener::notify_all()
@@ -267,7 +275,7 @@ void lv2_config_service_event::write(sys_config_service_event_t *dst) const
 {
 	const auto registered = service->is_registered();
 
-	dst->service_listener_handle = listener.get_id();
+	dst->service_listener_handle = listener_id;
 	dst->registered = registered;
 	dst->service_id = service->id;
 	dst->user_id = service->user_id;
@@ -346,7 +354,7 @@ error_code sys_config_get_service_event(u32 config_hdl, u32 event_id, vm::ptr<sy
 
 	// Find service_event object
 	const auto event = g_fxo->get<lv2_config>().find_event(event_id);
-	if (!event)
+	if (!event || event->handle != cfg)
 	{
 		return CELL_ESRCH;
 	}

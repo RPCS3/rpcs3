@@ -182,16 +182,8 @@ namespace vk
 			return found == m_generic_sampler_pool.end() ? nullptr : found->second.get();
 		}
 
-		const auto block = m_custom_color_sampler_pool.equal_range(key.base_key);
-		for (auto it = block.first; it != block.second; ++it)
-		{
-			if (it->second->key.border_color_key == key.border_color_key)
-			{
-				return it->second.get();
-			}
-		}
-
-		return nullptr;
+		const auto found = m_custom_color_sampler_pool.find(key);
+		return found == m_custom_color_sampler_pool.end() ? nullptr : found->second.get();
 	}
 
 	cached_sampler_object_t* sampler_pool_t::emplace(const sampler_pool_key_t& key, std::unique_ptr<cached_sampler_object_t>& object)
@@ -204,7 +196,7 @@ namespace vk
 			return iterator->second.get();
 		}
 
-		const auto [iterator, _unused] = m_custom_color_sampler_pool.emplace(key.base_key, std::move(object));
+		const auto [iterator, _unused] = m_custom_color_sampler_pool.emplace(key, std::move(object));
 		return iterator->second.get();
 	}
 

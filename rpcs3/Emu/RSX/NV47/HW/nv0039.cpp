@@ -14,7 +14,7 @@ namespace rsx
 	namespace nv0039
 	{
 		// Transfer with stride
-		inline void block2d_copy_with_stride(u8* dst, const u8* src, u32 width, u32 height, u32 src_pitch, u32 dst_pitch, u8 src_stride, u8 dst_stride)
+		inline void block2d_copy_with_stride(u8* dst, const u8* src, u32 width, u32 height, s32 src_pitch, s32 dst_pitch, u8 src_stride, u8 dst_stride)
 		{
 			for (u32 row = 0; row < height; ++row)
 			{
@@ -33,7 +33,7 @@ namespace rsx
 			}
 		}
 
-		inline void block2d_copy(u8* dst, const u8* src, u32 width, u32 height, u32 src_pitch, u32 dst_pitch)
+		inline void block2d_copy(u8* dst, const u8* src, u32 width, u32 height, s32 src_pitch, s32 dst_pitch)
 		{
 			for (u32 i = 0; i < height; ++i)
 			{

@@ -86,7 +86,7 @@ namespace rsx
 			RSX(ctx)->performance_counters.idle_time += (get_system_time() - start);
 		}
 
-		void semaphore_release(context* ctx, u32 /*reg*/, u32 arg)
+		void semaphore_release(context* ctx, u32 reg, u32 arg)
 		{
 			const u32 offset = REGS(ctx)->semaphore_offset_406e();
 
@@ -122,7 +122,7 @@ namespace rsx
 				arg = 1;
 			}
 
-			util::write_gcm_label<false, true>(ctx, addr, arg);
+			util::write_gcm_label<false, true>(ctx, reg, addr, arg);
 		}
 	}
 }

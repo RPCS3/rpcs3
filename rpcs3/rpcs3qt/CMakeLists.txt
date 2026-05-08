@@ -11,6 +11,7 @@ add_library(rpcs3_ui STATIC
     clans_settings_dialog.cpp
     config_adapter.cpp
     config_checker.cpp
+    config_database.cpp
     curl_handle.cpp
     custom_dialog.cpp
     custom_table_widget_item.cpp
@@ -21,6 +22,7 @@ add_library(rpcs3_ui STATIC
     dimensions_dialog.cpp
     _discord_utils.cpp
     emu_settings.cpp
+    emu_settings_type.cpp
     elf_memory_dumping_dialog.cpp
     emulated_pad_settings_dialog.cpp
     emulated_logitech_g27_settings_dialog.cpp
@@ -31,7 +33,9 @@ add_library(rpcs3_ui STATIC
     flow_widget_item.cpp
     game_compatibility.cpp
     game_list.cpp
+    game_list_actions.cpp
     game_list_base.cpp
+    game_list_context_menu.cpp
     game_list_delegate.cpp
     game_list_frame.cpp
     game_list_grid.cpp
@@ -46,11 +50,13 @@ add_library(rpcs3_ui STATIC
     input_dialog.cpp
     instruction_editor_dialog.cpp
     ipc_settings_dialog.cpp
+    iso_integrity.cpp
     kamen_rider_dialog.cpp
     kernel_explorer.cpp
     localized.cpp
     localized_emu.cpp
     log_frame.cpp
+    log_level_dialog.cpp
     log_viewer.cpp
     main_window.cpp
     memory_string_searcher.cpp
@@ -80,6 +86,7 @@ add_library(rpcs3_ui STATIC
     qt_video_source.cpp
     raw_mouse_settings_dialog.cpp
     register_editor_dialog.cpp
+    recording_settings_dialog.cpp
     recvmessage_dialog_frame.cpp
     render_creator.cpp
     rpcn_settings_dialog.cpp
@@ -101,6 +108,7 @@ add_library(rpcs3_ui STATIC
     shortcut_settings.cpp
     skylander_dialog.cpp
     sound_effect_manager_dialog.cpp
+    steam_utils.cpp
     syntax_highlighter.cpp
     system_cmd_dialog.cpp
     table_item_delegate.cpp
@@ -131,6 +139,7 @@ add_library(rpcs3_ui STATIC
     patch_creator_dialog.ui
     patch_manager_dialog.ui
     ps_move_tracker_dialog.ui
+    recording_settings_dialog.ui
     settings_dialog.ui
     shortcut_dialog.ui
     welcome_dialog.ui
@@ -146,6 +155,7 @@ add_library(rpcs3_ui STATIC
 
     ../Input/basic_keyboard_handler.cpp
     ../Input/basic_mouse_handler.cpp
+    ../Input/camera_video_sink.cpp
     ../Input/ds3_pad_handler.cpp
     ../Input/ds4_pad_handler.cpp
     ../Input/dualsense_pad_handler.cpp
@@ -154,6 +164,7 @@ add_library(rpcs3_ui STATIC
     ../Input/hid_pad_handler.cpp
     ../Input/keyboard_pad_handler.cpp
     ../Input/mm_joystick_handler.cpp
+    ../Input/mouse_gyro_handler.cpp
     ../Input/pad_thread.cpp
     ../Input/product_info.cpp
     ../Input/ps_move_calibration.cpp
@@ -162,8 +173,10 @@ add_library(rpcs3_ui STATIC
     ../Input/ps_move_tracker.cpp
     ../Input/raw_mouse_config.cpp
     ../Input/raw_mouse_handler.cpp
-    ../Input/sdl_pad_handler.cpp
+    ../Input/sdl_camera_handler.cpp
+    ../Input/sdl_camera_video_sink.cpp
     ../Input/sdl_instance.cpp
+    ../Input/sdl_pad_handler.cpp
     ../Input/skateboard_pad_handler.cpp
     ../Input/xinput_pad_handler.cpp
 
@@ -175,7 +188,10 @@ if(HAS_MEMORY_BREAKPOINTS)
 endif()
 
 if(WIN32)
-    target_sources(rpcs3_ui PUBLIC "../windows.qrc")
+    target_sources(rpcs3_ui PRIVATE "../windows.qrc")
+    set_source_files_properties("../windows.qrc" PROPERTIES 
+        RCC_OPTIONS "--include;${CMAKE_CURRENT_SOURCE_DIR}/../qt/etc/qt.conf"
+    )
     target_compile_definitions(rpcs3_ui PRIVATE UNICODE _UNICODE)
 endif()
 

@@ -2,6 +2,7 @@
 #include "stdafx.h"
 #include <span>
 #include "np_structs_extra.h"
+#include "np_helpers.h"
 
 LOG_CHANNEL(sceNp);
 LOG_CHANNEL(sceNp2);
@@ -13,7 +14,7 @@ namespace extra_nps
 	void print_SceNpUserInfo2(const SceNpUserInfo2* user)
 	{
 		sceNp2.warning("SceNpUserInfo2:");
-		sceNp2.warning("npid: %s", static_cast<const char*>(user->npId.handle.data));
+		sceNp2.warning("npid: %s", np::npid_to_string(user->npId));
 		sceNp2.warning("onlineName: *0x%x(%s)", user->onlineName, user->onlineName ? static_cast<const char*>(user->onlineName->data) : "");
 		sceNp2.warning("avatarUrl: *0x%x(%s)", user->avatarUrl, user->avatarUrl ? static_cast<const char*>(user->avatarUrl->data) : "");
 	}
@@ -195,11 +196,20 @@ namespace extra_nps
 		}
 	}
 
+	void print_SceNpMatching2RoomMemberDataExternal(const SceNpMatching2RoomMemberDataExternal* member)
+	{
+		sceNp2.warning("SceNpMatching2RoomMemberDataExternal:");
+		sceNp2.warning("next: *0x%x", member->next);
+		print_SceNpUserInfo2(&member->userInfo);
+		sceNp2.warning("joinDate: %lld", member->joinDate.tick);
+		sceNp2.warning("role: %d", member->role);
+	}
+
 	void print_SceNpMatching2RoomMemberDataInternal(const SceNpMatching2RoomMemberDataInternal* member)
 	{
 		sceNp2.warning("SceNpMatching2RoomMemberDataInternal:");
 		sceNp2.warning("next: *0x%x", member->next);
-		sceNp2.warning("npId: %s", member->userInfo.npId.handle.data);
+		sceNp2.warning("npId: %s", np::npid_to_string(member->userInfo.npId));
 		sceNp2.warning("onlineName: %s", member->userInfo.onlineName ? member->userInfo.onlineName->data : "");
 		sceNp2.warning("avatarUrl: %s", member->userInfo.avatarUrl ? member->userInfo.avatarUrl->data : "");
 		sceNp2.warning("joinDate: %lld", member->joinDate.tick);
@@ -397,6 +407,21 @@ namespace extra_nps
 		}
 	}
 
+	void print_SceNpMatching2GetRoomMemberDataExternalListResponse(const SceNpMatching2GetRoomMemberDataExternalListResponse* resp)
+	{
+		sceNp2.warning("SceNpMatching2GetRoomMemberDataExternalListResponse:");
+		sceNp2.warning("roomMemberDataExternalNum: %d", resp->roomMemberDataExternalNum);
+
+		vm::bptr<SceNpMatching2RoomMemberDataExternal> cur_member = resp->roomMemberDataExternal;
+
+		for (u32 i = 0; i < resp->roomMemberDataExternalNum && cur_member; i++)
+		{
+			sceNp2.warning("roomMemberDataExternal[%d]:", i);
+			print_SceNpMatching2RoomMemberDataExternal(cur_member.get_ptr());
+			cur_member = cur_member->next;
+		}
+	}
+
 	void print_SceNpMatching2GetLobbyInfoListRequest(const SceNpMatching2GetLobbyInfoListRequest* resp)
 	{
 		sceNp2.warning("SceNpMatching2GetLobbyInfoListRequest:");
@@ -436,7 +461,7 @@ namespace extra_nps
 	void print_SceNpScoreRankData(const SceNpScoreRankData* data)
 	{
 		sceNp.warning("sceNpScoreRankData:");
-		sceNp.warning("npId: %s", static_cast<const char*>(data->npId.handle.data));
+		sceNp.warning("npId: %s", np::npid_to_string(data->npId));
 		sceNp.warning("onlineName: %s", static_cast<const char*>(data->onlineName.data));
 		sceNp.warning("pcId: %d", data->pcId);
 		sceNp.warning("serialRank: %d", data->serialRank);
@@ -450,7 +475,7 @@ namespace extra_nps
 	void print_SceNpScoreRankData_deprecated(const SceNpScoreRankData_deprecated* data)
 	{
 		sceNp.warning("sceNpScoreRankData_deprecated:");
-		sceNp.warning("npId: %s", static_cast<const char*>(data->npId.handle.data));
+		sceNp.warning("npId: %s", np::npid_to_string(data->npId));
 		sceNp.warning("onlineName: %s", static_cast<const char*>(data->onlineName.data));
 		sceNp.warning("serialRank: %d", data->serialRank);
 		sceNp.warning("rank: %d", data->rank);
@@ -518,7 +543,7 @@ namespace extra_nps
 
 	void print_SceNpUserInfo(const SceNpUserInfo* data)
 	{
-		sceNp.warning("userId: %s", data->userId.handle.data);
+		sceNp.warning("userId: %s", np::npid_to_string(data->userId));
 		sceNp.warning("name: %s", data->name.data);
 		sceNp.warning("icon: %s", data->icon.data);
 	}
@@ -552,7 +577,7 @@ namespace extra_nps
 
 		if (data->kick_actor)
 		{
-			sceNp.warning("kick_actor: %s", data->kick_actor->handle.data);
+			sceNp.warning("kick_actor: %s", np::npid_to_string(*data->kick_actor));
 		}
 
 		sceNp.warning("opt: 0x%x", data->kick_actor);

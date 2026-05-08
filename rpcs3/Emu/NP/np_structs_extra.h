@@ -11,6 +11,7 @@ namespace extra_nps
 	void print_SceNpMatching2RangeFilter(const SceNpMatching2RangeFilter* filt);
 	void print_SceNpMatching2RoomDataInternal(const SceNpMatching2RoomDataInternal* room);
 	void print_SceNpMatching2RoomDataExternal(const SceNpMatching2RoomDataExternal* room);
+	void print_SceNpMatching2RoomMemberDataExternal(const SceNpMatching2RoomMemberDataExternal* room);
 	void print_SceNpMatching2RoomMemberDataInternal(const SceNpMatching2RoomMemberDataInternal* member);
 
 	void print_SceNpMatching2CreateJoinRoomRequest(const SceNpMatching2CreateJoinRoomRequest* req);
@@ -24,6 +25,7 @@ namespace extra_nps
 	void print_SceNpMatching2SetRoomMemberDataInternalRequest(const SceNpMatching2SetRoomMemberDataInternalRequest* req);
 	void print_SceNpMatching2GetRoomDataExternalListRequest(const SceNpMatching2GetRoomDataExternalListRequest* req);
 	void print_SceNpMatching2GetRoomDataExternalListResponse(const SceNpMatching2GetRoomDataExternalListResponse* resp);
+	void print_SceNpMatching2GetRoomMemberDataExternalListResponse(const SceNpMatching2GetRoomMemberDataExternalListResponse* resp);
 
 	void print_SceNpMatching2GetLobbyInfoListRequest(const SceNpMatching2GetLobbyInfoListRequest* resp);
 

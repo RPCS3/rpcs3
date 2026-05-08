@@ -1034,6 +1034,18 @@ s32 cellFsUnregisterL10nCallbacks()
 	return CELL_OK;
 }
 
+s32 cellFsGetDirent()
+{
+	cellFs.todo("cellFsGetDirent()");
+	return CELL_OK;
+}
+
+s32 cellFsGetDirentCount()
+{
+	cellFs.todo("cellFsGetDirentCount()");
+	return CELL_OK;
+}
+
 DECLARE(ppu_module_manager::cellFs)("sys_fs", []()
 {
 	REG_FUNC(sys_fs, cellFsAccess);
@@ -1065,6 +1077,8 @@ DECLARE(ppu_module_manager::cellFs)("sys_fs", []()
 	REG_FUNC(sys_fs, cellFsGetBlockSize);
 	REG_FUNC(sys_fs, cellFsGetBlockSize2);
 	REG_FUNC(sys_fs, cellFsGetDirectoryEntries);
+	REG_FUNC(sys_fs, cellFsGetDirent);
+	REG_FUNC(sys_fs, cellFsGetDirentCount);
 	REG_FUNC(sys_fs, cellFsGetFreeSize);
 	REG_FUNC(sys_fs, cellFsGetPath);
 	REG_FUNC(sys_fs, cellFsLink);

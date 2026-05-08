@@ -924,6 +924,9 @@
     <ClCompile Include="Emu\Io\usb_device.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Io\usb_microphone.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Io\usb_vfs.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
@@ -993,7 +996,7 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_utils.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\NP\fb_helpers.cpp">
+    <ClCompile Include="Emu\NP\pb_helpers.cpp">
       <Filter>Emu\NP</Filter>
     </ClCompile>
     <ClCompile Include="Emu\NP\np_cache.cpp">
@@ -1048,6 +1051,9 @@
       <Filter>Emu\NP</Filter>
     </ClCompile>
     <ClCompile Include="Emu\NP\ip_address.cpp">
+      <Filter>Emu\NP</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\NP\generated\np2_structs.pb.cc">
       <Filter>Emu\NP</Filter>
     </ClCompile>
     <ClCompile Include="Emu\NP\rpcn_config.cpp">
@@ -1393,6 +1399,9 @@
     <ClCompile Include="Emu\RSX\Program\Assembler\FPASM.cpp">
       <Filter>Emu\GPU\RSX\Program\Assembler</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Program\ShaderInterpreter.cpp">
+      <Filter>Emu\GPU\RSX\Program</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Io\ps_move_data.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
@@ -1401,6 +1410,30 @@
     </ClCompile>
     <ClCompile Include="Emu\NP\clans_client.cpp">
       <Filter>Emu\NP</Filter>
+    </ClCompile>
+    <ClCompile Include="Loader\ISO.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\overlay_audio.cpp">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\overlay_tabs.cpp">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_icons.cpp">
+      <Filter>Emu\GPU\RSX\Overlays\HomeMenu</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\overlay_checkbox.cpp">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\overlay_slider.cpp">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\overlay_select.cpp">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClCompile>
+    <ClCompile Include="Loader\iso_validation.cpp">
+      <Filter>Loader</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1546,9 +1579,6 @@
       <Filter>Emu\Memory</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Memory\vm_ptr.h">
-      <Filter>Emu\Memory</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\Memory\vm_ref.h">
       <Filter>Emu\Memory</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Memory\vm_reservation.h">
@@ -2121,6 +2151,9 @@
     <ClInclude Include="Emu\Io\usb_device.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Io\usb_microphone.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\Io\usb_vfs.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
@@ -2274,7 +2307,7 @@
     <ClInclude Include="Emu\NP\rpcn_client.h">
       <Filter>Emu\NP</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\NP\generated\np2_structs_generated.h">
+    <ClInclude Include="Emu\NP\generated\np2_structs.pb.h">
       <Filter>Emu\NP</Filter>
     </ClInclude>
     <ClInclude Include="Emu\NP\rpcn_config.h">
@@ -2746,7 +2779,7 @@
     <ClInclude Include="Emu\RSX\Host\MM.h">
       <Filter>Emu\GPU\RSX\Host Mini-Driver</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\NP\fb_helpers.h">
+    <ClInclude Include="Emu\NP\pb_helpers.h">
       <Filter>Emu\NP</Filter>
     </ClInclude>
     <ClInclude Include="Emu\NP\np_contexts.h">
@@ -2817,6 +2850,36 @@
     </ClInclude>
     <ClInclude Include="Emu\NP\clans_config.h">
       <Filter>Emu\NP</Filter>
+    </ClInclude>
+    <ClInclude Include="Loader\ISO.h">
+      <Filter>Loader</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_audio.h">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_tabs.h">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_icons.h">
+      <Filter>Emu\GPU\RSX\Overlays\HomeMenu</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_checkbox.h">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_slider.h">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_select.h">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\overlay_arrow.h">
+      <Filter>Emu\GPU\RSX\Overlays</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\aligned_malloc.hpp">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Loader\iso_validation.h">
+      <Filter>Loader</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

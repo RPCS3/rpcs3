@@ -146,6 +146,7 @@ void cg_disasm_window::dropEvent(QDropEvent* ev)
 {
 	if (IsValidFile(*ev->mimeData(), true))
 	{
+		ev->acceptProposedAction();
 		ShowDisasm();
 	}
 }
@@ -154,7 +155,7 @@ void cg_disasm_window::dragEnterEvent(QDragEnterEvent* ev)
 {
 	if (IsValidFile(*ev->mimeData()))
 	{
-		ev->accept();
+		ev->acceptProposedAction();
 	}
 }
 
@@ -162,11 +163,6 @@ void cg_disasm_window::dragMoveEvent(QDragMoveEvent* ev)
 {
 	if (IsValidFile(*ev->mimeData()))
 	{
-		ev->accept();
+		ev->acceptProposedAction();
 	}
-}
-
-void cg_disasm_window::dragLeaveEvent(QDragLeaveEvent* ev)
-{
-	ev->accept();
 }

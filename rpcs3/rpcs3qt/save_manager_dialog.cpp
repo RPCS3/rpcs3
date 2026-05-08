@@ -360,6 +360,11 @@ void save_manager_dialog::UpdateList()
 			icon_item->set_video_path(movie_path);
 		}
 
+		if (const std::string audio_path = dir_path + "SND0.AT3"; fs::is_file(audio_path))
+		{
+			icon_item->set_audio_path(audio_path);
+		}
+
 		icon_item->set_image_change_callback([this, icon_item](const QVideoFrame& frame)
 		{
 			if (!icon_item)
@@ -686,6 +691,7 @@ void save_manager_dialog::UpdateDetails()
 		const SaveDataEntry& save = ::at32(m_save_entries, idx);
 
 		m_details_icon->set_video_path(icon_item->video_path().toStdString());
+		m_details_icon->set_audio_path(icon_item->audio_path().toStdString());
 		m_details_icon->set_thumbnail(icon_item->data(SaveUserRole::Pixmap).value<QPixmap>());
 		m_details_icon->set_active(false);
 

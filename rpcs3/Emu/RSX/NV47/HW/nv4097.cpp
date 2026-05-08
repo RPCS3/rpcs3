@@ -306,7 +306,7 @@ namespace rsx
 			REGS(ctx)->decode(reg, REGS(ctx)->latch);
 		}
 
-		void set_aa_control(context* ctx, u32 reg, u32 arg)
+		void set_aa_control(context* ctx, u32 /*reg*/, u32 arg)
 		{
 			const auto latch = REGS(ctx)->latch;
 			if (arg == latch)
@@ -633,8 +633,16 @@ namespace rsx
 			case 2:
 				break;
 			default:
-				rsx_log.error("Unknown render mode %d", mode);
+			{
+				struct logged_t
+				{
+					atomic_t<u8> logged_cause[256]{};
+				};
+
+				const auto& is_error = ::at32(g_fxo->get<logged_t>().logged_cause, mode).try_inc(10);
+				(is_error ? rsx_log.error : rsx_log.trace)("Unknown render mode %d", mode);
 				return;
+			}
 			}
 
 			const u32 offset = arg & 0xffffff;
@@ -690,7 +698,7 @@ namespace rsx
 			});
 		}
 
-		void texture_read_semaphore_release(context* ctx, u32 /*reg*/, u32 arg)
+		void texture_read_semaphore_release(context* ctx, u32 reg, u32 arg)
 		{
 			// Pipeline barrier seems to be equivalent to a SHADER_READ stage barrier.
 			// Ideally the GPU only needs to have cached all textures declared up to this point before writing the label.
@@ -715,15 +723,15 @@ namespace rsx
 
 			if (g_cfg.video.strict_rendering_mode) [[ unlikely ]]
 			{
-				util::write_gcm_label<true, true>(ctx, addr, arg);
+				util::write_gcm_label<true, true>(ctx, reg, addr, arg);
 			}
 			else
 			{
-				util::write_gcm_label<true, false>(ctx, addr, arg);
+				util::write_gcm_label<true, false>(ctx, reg, addr, arg);
 			}
 		}
 
-		void back_end_write_semaphore_release(context* ctx, u32 /*reg*/, u32 arg)
+		void back_end_write_semaphore_release(context* ctx, u32 reg, u32 arg)
 		{
 			// Full pipeline barrier. GPU must flush pipeline before writing the label
 
@@ -744,7 +752,7 @@ namespace rsx
 			}
 
 			const u32 val = (arg & 0xff00ff00) | ((arg & 0xff) << 16) | ((arg >> 16) & 0xff);
-			util::write_gcm_label<true, true>(ctx, addr, val);
+			util::write_gcm_label<true, true>(ctx, reg, addr, val);
 		}
 
 		void sync(context* ctx, u32, u32)

@@ -15,6 +15,26 @@ struct ps_move_data
 		template <typename I>
 		const T& operator[](I i) const { return data[i]; }
 
+		vect<Size, T> operator*(f32 s) const
+		{
+			vect<Size, T> result = *this;
+			for (int i = 0; i < Size; ++i)
+			{
+				result[i] *= s;
+			}
+			return result;
+		}
+
+		vect<Size, T> operator+(const vect<Size, T>& other) const
+		{
+			vect<Size, T> result = *this;
+			for (int i = 0; i < Size; ++i)
+			{
+				result[i] += other[i];
+			}
+			return result;
+		}
+
 		T x() const requires (Size >= 1) { return data[0]; }
 		T y() const requires (Size >= 2) { return data[1]; }
 		T z() const requires (Size >= 3) { return data[2]; }
@@ -72,4 +92,7 @@ struct ps_move_data
 	void reset_sensors();
 	void update_orientation(f32 delta_time);
 	void update_velocity(u64 timestamp, be_t<f32> pos_world[4]);
+
+	// Rotate vector v by quaternion q
+	static vect<3> rotate_vector(const vect<4>& q, const vect<3>& v);
 };

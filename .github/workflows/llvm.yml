@@ -20,7 +20,7 @@ jobs:
     runs-on: windows-2025
     env:
       COMPILER: msvc
-      CCACHE_SHA: '1f39f3ad5aae3fe915e99ad1302633bc8f6718e58fa7c0de2b0ba7e080f0f08c'
+      CCACHE_SHA: '859141059ac950e1e8cd042c66f842f26b9e3a62a1669a69fe6ba180cb58bbdf'
       CCACHE_BIN_DIR: 'C:\ccache_bin'
       CCACHE_DIR: 'C:\ccache'
       CCACHE_INODECACHE: 'true'

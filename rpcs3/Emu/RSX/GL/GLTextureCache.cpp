@@ -152,6 +152,8 @@ namespace gl
 			dst = data.get();
 			dst->properties_encoding = match_key;
 			m_temporary_surfaces.emplace_back(std::move(data));
+
+			dst->set_name(fmt::format("[Temp View] id=%u, fmt=0x%x", dst->id(), gcm_format));
 		}
 
 		dst->add_ref();
@@ -178,6 +180,10 @@ namespace gl
 			// Apply base component map onto the new texture if a data cast has been done
 			auto components = get_component_mapping(gcm_format, rsx::component_order::default_);
 			dst->set_native_component_layout(components);
+		}
+		else
+		{
+			dst->set_native_component_layout(src->get_native_component_layout());
 		}
 
 		return dst->get_view(remap);

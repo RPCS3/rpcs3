@@ -219,7 +219,7 @@ void usb_device_topshotelite::control_transfer(u8 bmRequestType, u8 bRequest, u1
 
 extern bool is_input_allowed();
 
-static void set_sensor_pos(struct TopShotElite_data* ts, s32 led_lx, s32 led_ly, s32 led_rx, s32 led_ry, s32 detect_l, s32 detect_r)
+static void set_sensor_pos(TopShotElite_data* ts, s32 led_lx, s32 led_ly, s32 led_rx, s32 led_ry, s32 detect_l, s32 detect_r)
 {
 	ts->led_lx_hi = led_lx >> 2;
 	ts->led_lx_lo = led_lx & 0x3;
@@ -250,7 +250,7 @@ void usb_device_topshotelite::interrupt_transfer(u32 buf_size, u8* buf, u32 /*en
 	transfer->expected_result = HC_CC_NOERR;
 	transfer->expected_time = get_timestamp() + 4000;
 
-	struct TopShotElite_data ts{};
+	TopShotElite_data ts{};
 	ts.dpad = Dpad_None;
 	ts.stick_lx = ts.stick_ly = ts.stick_rx = ts.stick_ry = 0x7f;
 	if (m_mode)

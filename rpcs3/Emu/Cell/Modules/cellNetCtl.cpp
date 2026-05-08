@@ -192,7 +192,46 @@ error_code cellNetCtlDelHandler(s32 hid)
 
 error_code cellNetCtlGetInfo(s32 code, vm::ptr<CellNetCtlInfo> info)
 {
-	cellNetCtl.warning("cellNetCtlGetInfo(code=0x%x (%s), info=*0x%x)", code, InfoCodeToName(code), info);
+	bool log_it_once = false;
+
+	switch (code)
+	{
+	case CELL_NET_CTL_INFO_ETHER_ADDR:
+	case CELL_NET_CTL_INFO_DEVICE:
+	case CELL_NET_CTL_INFO_MTU:
+	case CELL_NET_CTL_INFO_LINK_TYPE:
+	case CELL_NET_CTL_INFO_IP_CONFIG:
+	case CELL_NET_CTL_INFO_IP_ADDRESS:
+	case CELL_NET_CTL_INFO_NETMASK:
+	case CELL_NET_CTL_INFO_DEFAULT_ROUTE:
+	case CELL_NET_CTL_INFO_HTTP_PROXY_CONFIG:
+	case CELL_NET_CTL_INFO_UPNP_CONFIG:
+	{
+		log_it_once = true;
+		break;
+	}
+	default:
+	{
+		break;
+	}
+	}
+
+	bool log_it = true;
+
+	if (log_it_once && vm::check_addr(info.addr()))
+	{
+		struct logged_t
+		{
+			std::array<atomic_t<bool>, 256> logged_code{};
+		};
+
+		if (g_fxo->get<logged_t>().logged_code[::narrow<u8>(code)].exchange(true))
+		{
+			log_it = false;
+		}
+	}
+
+	(log_it ? cellNetCtl.warning : cellNetCtl.trace)("cellNetCtlGetInfo(code=0x%x (%s), info=*0x%x)", code, InfoCodeToName(code), info);
 
 	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 

@@ -1438,6 +1438,13 @@ s32 cellSpursInitializeWithAttribute2(ppu_thread& ppu, vm::ptr<CellSpurs> spurs,
 		attr->swlIsPreem);
 }
 
+// Initialise SPURS
+s32 cellSpursInitializeForSpuSharing()
+{
+	cellSpurs.todo("cellSpursInitializeForSpuSharing()");
+	return CELL_OK;
+}
+
 /// Initialise SPURS attribute
 s32 _cellSpursAttributeInitialize(vm::ptr<CellSpursAttribute> attr, u32 revision, u32 sdkVersion, u32 nSpus, s32 spuPriority, s32 ppuPriority, b8 exitIfNoWork)
 {
@@ -5390,6 +5397,7 @@ DECLARE(ppu_module_manager::cellSpurs)("cellSpurs", [](ppu_static_module* _this)
 	REG_FUNC(cellSpurs, cellSpursInitialize);
 	REG_FUNC(cellSpurs, cellSpursInitializeWithAttribute);
 	REG_FUNC(cellSpurs, cellSpursInitializeWithAttribute2);
+	REG_FUNC(cellSpurs, cellSpursInitializeForSpuSharing);
 	REG_FUNC(cellSpurs, cellSpursFinalize);
 	REG_FUNC(cellSpurs, _cellSpursAttributeInitialize);
 	REG_FUNC(cellSpurs, cellSpursAttributeSetMemoryContainerForSpuThread);

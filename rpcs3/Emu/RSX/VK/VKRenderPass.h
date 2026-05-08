@@ -10,7 +10,8 @@ namespace vk
 
 	u64 get_renderpass_key(const std::vector<vk::image*>& images, const std::vector<u8>& input_attachment_ids = {});
 	u64 get_renderpass_key(const std::vector<vk::image*>& images, u64 previous_key);
-	u64 get_renderpass_key(VkFormat surface_format);
+	u64 get_renderpass_key(VkFormat surface_format, u8 sample_count = 1);
+	u64 get_renderpass_key(VkFormat color_format, VkFormat depth_format, u8 sample_count = 1);
 	VkRenderPass get_renderpass(VkDevice dev, u64 renderpass_key);
 
 	void clear_renderpass_cache(VkDevice dev);

@@ -61,6 +61,8 @@ public:
 	{
 		int row{};
 		int col{};
+
+		operator bool() const { return row >= 0 && col >= 0; }
 	};
 
 	explicit flow_layout(QWidget* parent, int margin = -1, bool dynamic_spacing = false, int hSpacing = -1, int vSpacing = -1);

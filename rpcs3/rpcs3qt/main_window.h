@@ -10,6 +10,7 @@
 #include "update_manager.h"
 #include "settings.h"
 #include "shortcut_handler.h"
+#include "shortcut_utils.h"
 #include "Emu/config_mode.h"
 #include "Emu/System.h"
 
@@ -69,7 +70,7 @@ class main_window : public QMainWindow
 	};
 
 public:
-	explicit main_window(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget *parent = nullptr);
+	explicit main_window(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget* parent = nullptr);
 	~main_window();
 	bool Init(bool with_cli_boot);
 	QIcon GetAppIcon() const;
@@ -104,6 +105,7 @@ private Q_SLOTS:
 	void BootElf();
 	void BootTest();
 	void BootGame();
+	void BootISO();
 	void BootVSH();
 	void BootSavestate();
 	void BootRsxCapture(std::string path = "");
@@ -114,9 +116,6 @@ private Q_SLOTS:
 	void SetIconSizeActions(int idx) const;
 	void ResizeIcons(int index);
 
-	void RemoveHDD1Caches();
-	void RemoveAllCaches();
-	void RemoveSavestates();
 	void CleanUpGameList();
 
 	void RemoveFirmwareCache();
@@ -131,12 +130,10 @@ protected:
 	void dropEvent(QDropEvent* event) override;
 	void dragEnterEvent(QDragEnterEvent* event) override;
 	void dragMoveEvent(QDragMoveEvent* event) override;
-	void dragLeaveEvent(QDragLeaveEvent* event) override;
 
 private:
 	void ConfigureGuiFromSettings();
 	void RepaintToolBarIcons();
-	void RepaintThumbnailIcons();
 	void CreateActions();
 	void CreateConnects();
 	void CreateDockWindows();
@@ -148,7 +145,7 @@ private:
 	static bool InstallFileInExData(const std::string& extension, const QString& path, const std::string& filename);
 
 	bool HandlePackageInstallation(QStringList file_paths, bool from_boot);
-	void CreateShortCuts(const std::map<std::string, QString>& paths, bool create_desktop_shortcuts, bool create_app_shortcut);
+	void CreateShortCuts(const std::map<std::string, QString>& paths, std::set<gui::utils::shortcut_location> locations);
 
 	void HandlePupInstallation(const QString& file_path, const QString& dir_path = "");
 	void ExtractPup();

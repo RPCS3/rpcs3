@@ -10,6 +10,6 @@ namespace rsx::assembler::FP
 	class RegisterDependencyPass : public CFGPass
 	{
 	public:
-		void run(FlowGraph& graph) override;
+		bool run(FlowGraph& graph) override;
 	};
 }

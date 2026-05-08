@@ -52,10 +52,6 @@
 	path = 3rdparty/wolfssl/wolfssl
 	url = ../../wolfSSL/wolfssl.git
 	ignore = dirty
-[submodule "3rdparty/flatbuffers"]
-	path = 3rdparty/flatbuffers
-	url = ../../google/flatbuffers.git
-	ignore = dirty
 [submodule "3rdparty/cubeb/cubeb"]
 	path = 3rdparty/cubeb/cubeb
 	url = ../../mozilla/cubeb.git
@@ -111,4 +107,8 @@
 [submodule "3rdparty/feralinteractive/feralinteractive"]
 	path = 3rdparty/feralinteractive/feralinteractive
 	url = ../../FeralInteractive/gamemode.git
+	ignore = dirty
+[submodule "3rdparty/protobuf/protobuf"]
+	path = 3rdparty/protobuf/protobuf
+	url = ../../protocolbuffers/protobuf.git
 	ignore = dirty

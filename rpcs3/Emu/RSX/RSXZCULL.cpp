@@ -82,7 +82,7 @@ namespace rsx
 		{
 			// NOTE: Only enable host queries if pixel count is active to save on resources
 			// Can optionally be enabled for either stats enabled or zpass enabled for accuracy
-			const bool data_stream_available = zpass_count_enabled; // write_enabled && (zpass_count_enabled || stats_enabled);
+			const bool data_stream_available = zpass_count_enabled; // surface_active && (zpass_count_enabled || stats_enabled);
 			if (host_queries_active && !data_stream_available)
 			{
 				// Stop
@@ -106,9 +106,9 @@ namespace rsx
 
 		void ZCULL_control::set_status(class ::rsx::thread* ptimer, bool surface_active, bool zpass_active, bool zcull_stats_active, bool flush_queue)
 		{
-			write_enabled = surface_active;
-			zpass_count_enabled = zpass_active;
-			stats_enabled = zcull_stats_active;
+			this->surface_active = surface_active;
+			this->zpass_count_enabled = zpass_active;
+			this->stats_enabled = zcull_stats_active;
 
 			check_state(ptimer, flush_queue);
 
@@ -260,9 +260,20 @@ namespace rsx
 				return;
 			}
 
+			// Discard any running queries. The results will never be read anyway.
+			if (m_current_task && m_current_task->active)
+			{
+				discard_occlusion_query(m_current_task);
+				free_query(m_current_task);
+				m_current_task->active = false;
+
+				allocate_new_query(ptimer);
+				begin_occlusion_query(m_current_task);
+			}
+
 			if (!m_pending_writes.empty())
 			{
-				//Remove any dangling/unclaimed queries as the information is lost anyway
+				// Remove any dangling/unclaimed queries as the information is lost anyway
 				auto valid_size = m_pending_writes.size();
 				for (auto It = m_pending_writes.rbegin(); It != m_pending_writes.rend(); ++It)
 				{
@@ -324,7 +335,7 @@ namespace rsx
 
 			auto scale_result = [](u32 value)
 			{
-				const auto scale = rsx::get_resolution_scale_percent();
+				const auto scale = get_current_renderer()->resolution_scaling_config.scale_percent;
 				const auto result = (value * 10000ull) / (scale * scale);
 				return std::max(1u, static_cast<u32>(result));
 			};
@@ -340,14 +351,14 @@ namespace rsx
 				}
 				break;
 			case CELL_GCM_ZCULL_STATS3:
-				value = (value || !write_enabled || !stats_enabled) ? 0 : u16{ umax };
+				value = (value || !surface_active || !stats_enabled) ? 0 : u16{ umax };
 				break;
 			case CELL_GCM_ZCULL_STATS2:
 			case CELL_GCM_ZCULL_STATS1:
 			case CELL_GCM_ZCULL_STATS:
 			default:
 				// Not implemented
-				value = (write_enabled && stats_enabled) ? -1 : 0;
+				value = (surface_active && stats_enabled) ? -1 : 0;
 				break;
 			}
 

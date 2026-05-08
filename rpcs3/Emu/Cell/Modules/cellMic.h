@@ -238,7 +238,7 @@ public:
 		if (over_size > Size)
 		{
 			m_tail += (over_size - Size);
-			if (m_tail > Size)
+			if (m_tail >= Size)
 				m_tail -= Size;
 
 			m_used = Size;

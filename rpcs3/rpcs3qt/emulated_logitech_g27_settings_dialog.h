@@ -5,6 +5,7 @@
 #include <QDialog>
 #include <QLabel>
 #include <QCheckBox>
+#include <QComboBox>
 #include <QScrollArea>
 
 #ifndef _MSC_VER
@@ -57,6 +58,7 @@ private:
 
 	QCheckBox* m_enabled = nullptr;
 	QCheckBox* m_reverse_effects = nullptr;
+	QComboBox* m_compatibility_limit = nullptr;
 
 	std::map<mapping_device, Mapping*> m_mappings;
 
