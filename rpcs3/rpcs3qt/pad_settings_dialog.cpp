@@ -152,6 +152,17 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 
 	ui->buttonBox->button(QDialogButtonBox::Reset)->setText(tr("Filter Noise"));
 
+	// Disambiguate "Left"/"Right" for offset direction labels from stick/DPad direction labels.
+	// This allows translators to use shorter abbreviations where screen space is tight
+	// (Squircle Values, Stick Multipliers, Stick Interpolation) while keeping full forms
+	// for the more spacious D-Pad and Stick binding areas.
+	ui->label_squircle_left->setText(tr("Left", "Offset direction"));
+	ui->label_squircle_right->setText(tr("Right", "Offset direction"));
+	ui->label_stick_multi_left->setText(tr("Left", "Offset direction"));
+	ui->label_stick_multi_right->setText(tr("Right", "Offset direction"));
+	ui->left_stick_lerp_label->setText(tr("Left", "Offset direction"));
+	ui->right_stick_lerp_label->setText(tr("Right", "Offset direction"));
+
 	connect(ui->buttonBox, &QDialogButtonBox::clicked, this, [this](QAbstractButton* button)
 	{
 		if (button == ui->buttonBox->button(QDialogButtonBox::Save))
