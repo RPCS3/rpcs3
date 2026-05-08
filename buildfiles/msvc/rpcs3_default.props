@@ -27,7 +27,6 @@
     <Link>
       <AdditionalDependencies>
         ws2_32.lib;
-        Iphlpapi.lib;
         Bcrypt.lib;
         avcodec.lib;
         avformat.lib;

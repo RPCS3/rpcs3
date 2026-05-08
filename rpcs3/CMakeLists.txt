@@ -88,7 +88,7 @@ if (NOT ANDROID)
     endif()
 
     if(WIN32)
-        target_link_libraries(rpcs3_lib PRIVATE ws2_32 Iphlpapi Winmm Psapi gdi32 setupapi)
+        target_link_libraries(rpcs3_lib PRIVATE ws2_32 Winmm Psapi gdi32 setupapi)
     else()
         target_link_libraries(rpcs3_lib PRIVATE ${CMAKE_DL_LIBS})
     endif()
@@ -188,6 +188,7 @@ if(BUILD_RPCS3_TESTS)
             tests/test_simple_array.cpp
             tests/test_address_range.cpp
             tests/test_sys_fs.cpp
+            tests/test_np_helpers.cpp
             tests/test_rsx_cfg.cpp
             tests/test_rsx_fp_asm.cpp
             tests/test_dmux_pamf.cpp

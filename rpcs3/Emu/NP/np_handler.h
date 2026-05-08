@@ -296,7 +296,8 @@ namespace np
 	private:
 		// Various generic helpers
 		bool discover_ip_address();
-		bool discover_ether_address();
+		std::array<u8, 6> resolve_ether_address() const;
+		void reset_ether_address();
 		bool error_and_disconnect(const std::string& error_msg);
 
 		// Notification handlers

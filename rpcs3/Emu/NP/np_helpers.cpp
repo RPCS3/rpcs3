@@ -1,8 +1,6 @@
-#include "Emu/Cell/Modules/sceNp.h"
 #include "stdafx.h"
-#include "util/types.hpp"
+#include "np_helpers.h"
 #include "Utilities/StrUtil.h"
-#include "rpcn_client.h"
 
 #ifdef _WIN32
 #include <WS2tcpip.h>
@@ -23,6 +21,133 @@ namespace np
 	std::string ether_to_string(const std::array<u8, 6>& ether)
 	{
 		return fmt::format("%02X:%02X:%02X:%02X:%02X:%02X", ether[0], ether[1], ether[2], ether[3], ether[4], ether[5]);
+	}
+
+	bool is_valid_ether_addr(const std::array<u8, 6>& ether)
+	{
+		return std::any_of(ether.begin(), ether.end(), [](u8 value) { return value != 0; }) &&
+			std::any_of(ether.begin(), ether.end(), [](u8 value) { return value != 0xff; }) &&
+			(ether[0] & 0x01) == 0;
+	}
+
+	namespace
+	{
+		std::optional<u8> hex_pair_to_byte(char high, char low)
+		{
+			const auto hex_to_nibble = [](char ch) -> std::optional<u8>
+			{
+				if (ch >= '0' && ch <= '9')
+				{
+					return static_cast<u8>(ch - '0');
+				}
+
+				if (ch >= 'A' && ch <= 'F')
+				{
+					return static_cast<u8>(ch - 'A' + 10);
+				}
+
+				if (ch >= 'a' && ch <= 'f')
+				{
+					return static_cast<u8>(ch - 'a' + 10);
+				}
+
+				return std::nullopt;
+			};
+
+			const auto high_nibble = hex_to_nibble(high);
+			const auto low_nibble = hex_to_nibble(low);
+
+			if (!high_nibble || !low_nibble)
+			{
+				return std::nullopt;
+			}
+
+			return static_cast<u8>((*high_nibble << 4) | *low_nibble);
+		}
+
+		u64 fnv1a64_append(u64 hash, u64 value)
+		{
+			constexpr u64 fnv_prime = 1099511628211ull;
+
+			for (usz i = 0; i < sizeof(value); i++)
+			{
+				hash ^= static_cast<u8>(value >> (i * 8));
+				hash *= fnv_prime;
+			}
+
+			return hash;
+		}
+
+		u64 fnv1a64_append(u64 hash, std::string_view value)
+		{
+			constexpr u64 fnv_prime = 1099511628211ull;
+
+			for (char ch : value)
+			{
+				hash ^= static_cast<u8>(ch);
+				hash *= fnv_prime;
+			}
+
+			return hash;
+		}
+	}
+
+	std::optional<std::array<u8, 6>> string_to_ether_addr(std::string_view str)
+	{
+		if (str.size() != 17)
+		{
+			return std::nullopt;
+		}
+
+		std::array<u8, 6> ether{};
+
+		for (usz i = 0; i < ether.size(); i++)
+		{
+			const usz pos = i * 3;
+
+			if (i != 5 && str[pos + 2] != ':')
+			{
+				return std::nullopt;
+			}
+
+			const auto byte = hex_pair_to_byte(str[pos], str[pos + 1]);
+
+			if (!byte)
+			{
+				return std::nullopt;
+			}
+
+			ether[i] = *byte;
+		}
+
+		if (!is_valid_ether_addr(ether))
+		{
+			return std::nullopt;
+		}
+
+		return ether;
+	}
+
+	std::array<u8, 6> generate_emulated_ether_addr(u128 console_psid, u32 user_id)
+	{
+		constexpr u64 fnv_offset_basis = 14695981039346656037ull;
+
+		u64 hash = fnv_offset_basis;
+		hash = fnv1a64_append(hash, "rpcs3-emulated-ethernet-v1");
+		hash = fnv1a64_append(hash, static_cast<u64>(console_psid));
+		hash = fnv1a64_append(hash, static_cast<u64>(console_psid >> 64));
+		hash = fnv1a64_append(hash, user_id);
+
+		std::array<u8, 6> ether{};
+		for (usz i = 0; i < ether.size(); i++)
+		{
+			ether[i] = static_cast<u8>(hash >> (i * 8));
+		}
+
+		ether[0] &= 0xfe; // Unicast.
+		ether[0] |= 0x02; // Locally administered.
+
+		return ether;
 	}
 
 	bool validate_communication_id(const SceNpCommunicationId& com_id)

@@ -2,12 +2,20 @@
 
 #include "util/types.hpp"
 #include "Emu/Cell/Modules/sceNp.h"
+
+#include <array>
+#include <optional>
+#include <string>
+#include <string_view>
 #include "rpcn_client.h"
 
 namespace np
 {
 	std::string ip_to_string(u32 addr);
 	std::string ether_to_string(const std::array<u8, 6>& ether);
+	bool is_valid_ether_addr(const std::array<u8, 6>& ether);
+	std::optional<std::array<u8, 6>> string_to_ether_addr(std::string_view str);
+	std::array<u8, 6> generate_emulated_ether_addr(u128 console_psid, u32 user_id);
 	bool validate_communication_id(const SceNpCommunicationId& com_id);
 	std::string communication_id_to_string(const SceNpCommunicationId& communicationId);
 	std::optional<SceNpCommunicationId> string_to_communication_id(std::string_view str);
