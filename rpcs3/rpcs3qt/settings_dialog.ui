@@ -2306,6 +2306,13 @@
               </widget>
              </item>
              <item>
+              <widget class="QCheckBox" name="derive_mac_from_psid">
+               <property name="text">
+                <string>Derive ethernet address from PSID</string>
+               </property>
+              </widget>
+             </item>
+             <item>
               <spacer name="networkTabSpacerLeft">
                <property name="orientation">
                 <enum>Qt::Orientation::Vertical</enum>

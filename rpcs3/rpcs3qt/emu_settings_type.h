@@ -210,6 +210,7 @@ enum class emu_settings_type
 	PSNStatus,
 	BindAddress,
 	EnableUpnp,
+	DeriveMacFromPsid,
 	PSNCountry,
 	EnableClans,
 

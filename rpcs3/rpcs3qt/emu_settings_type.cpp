@@ -219,6 +219,7 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::PSNStatus,      get_cfg_location(local_cfg.net.psn_status) },
 	{ emu_settings_type::BindAddress,    get_cfg_location(local_cfg.net.bind_address) },
 	{ emu_settings_type::EnableUpnp,     get_cfg_location(local_cfg.net.upnp_enabled) },
+	{ emu_settings_type::DeriveMacFromPsid, get_cfg_location(local_cfg.net.derive_mac_from_psid) },
 	{ emu_settings_type::PSNCountry,     get_cfg_location(local_cfg.net.country) },
 	{ emu_settings_type::EnableClans,    get_cfg_location(local_cfg.net.clans_enabled) },
 

@@ -332,6 +332,7 @@ struct cfg_root : cfg::node
 		cfg::string dns{this, "DNS address", "8.8.8.8"};
 		cfg::string swap_list{this, "IP swap list", ""};
 		cfg::_bool upnp_enabled{this, "UPNP Enabled", false};
+		cfg::_bool derive_mac_from_psid{this, "Derive MAC from PSID", false};
 
 		cfg::_enum<np_psn_status> psn_status{this, "PSN status", np_psn_status::disabled};
 		cfg::string country{this, "PSN Country", "us"};

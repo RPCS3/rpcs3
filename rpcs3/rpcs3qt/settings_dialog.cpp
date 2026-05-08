@@ -1432,14 +1432,19 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->enable_upnp, emu_settings_type::EnableUpnp);
 	SubscribeTooltip(ui->enable_upnp, tooltips.settings.enable_upnp);
 
+	m_emu_settings->EnhanceCheckBox(ui->derive_mac_from_psid, emu_settings_type::DeriveMacFromPsid);
+	SubscribeTooltip(ui->derive_mac_from_psid, tooltips.settings.derive_mac_from_psid);
+
 	// Comboboxes
 
 	connect(ui->netStatusBox, &QComboBox::currentIndexChanged, [this](int index)
 	{
 		if (index < 0) return;
 		const auto [text, value] = get_data(ui->netStatusBox, index);
-		ui->gb_edit_dns->setEnabled(static_cast<np_internet_status>(value) != np_internet_status::disabled);
-		ui->enable_upnp->setEnabled(static_cast<np_internet_status>(value) != np_internet_status::disabled);
+		const bool internet_enabled = static_cast<np_internet_status>(value) != np_internet_status::disabled;
+		ui->gb_edit_dns->setEnabled(internet_enabled);
+		ui->enable_upnp->setEnabled(internet_enabled);
+		ui->derive_mac_from_psid->setEnabled(internet_enabled);
 
 		if (static_cast<np_internet_status>(value) == np_internet_status::disabled)
 		{
