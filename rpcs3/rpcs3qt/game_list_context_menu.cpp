@@ -635,7 +635,7 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 	}
 
 	// Check integrity for the other categories based on .PKG, .RAP and .EDAT (e.g. HDD game, DLC, Update)
-	QAction* check_psn_content = check_integrity_menu->addAction(tr("&Check Package Integrity"));
+	QAction* check_psn_content = check_integrity_menu->addAction(tr("&Check Packages/Raps/Edats Integrity"));
 
 	connect(check_psn_content, &QAction::triggered, this, [this, gameinfo]()
 	{
