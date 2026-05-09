@@ -679,7 +679,9 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 	{
 		if (total_read != first_sec.size_aligned)
 		{
-			iso_log.error("read_at: %s: Error reading from file (%llu/%llu)", m_meta.name, total_read, first_sec.size_aligned);
+			iso_log.error("read_at: %s: Error reading from file - O: %llu (%llu), S: %llu/%llu/%llu (%llu), TR: %llu", m_meta.name,
+				offset, first_sec.address_aligned, first_sec.size_aligned, max_size, size, total_size, total_read);
+
 			return 0;
 		}
 
@@ -747,7 +749,8 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 
 	if (total_read != first_sec.size_aligned + last_sec.size_aligned + (sector_count - 2) * ISO_SECTOR_SIZE)
 	{
-		iso_log.error("read_at: %s: Error reading from file (%llu/%llu)", m_meta.name,
+		iso_log.error("read_at: %s: Error reading from file - O: %llu (%llu), S: %llu/%llu/%llu (%llu), TR: %llu/%llu", m_meta.name,
+			offset, first_sec.address_aligned, last_sec.size_aligned, max_size, size, total_size,
 			total_read, ISO_SECTOR_SIZE + ISO_SECTOR_SIZE + (sector_count - 2) * ISO_SECTOR_SIZE);
 
 		return 0;
@@ -1282,7 +1285,9 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 
 		if (total_read != max_size)
 		{
-			iso_log.error("read_at: %s: Error reading from file (%llu/%llu)", m_meta.name, total_read, max_size);
+			iso_log.error("read_at: %s: Error reading from file - O: %llu (%llu), S: %llu/%llu (%llu), TR: %llu", m_meta.name,
+				offset, archive_first_offset, max_size, size, total_size, total_read);
+
 			return 0;
 		}
 
@@ -1343,7 +1348,9 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 	{
 		if (total_read != ISO_SECTOR_SIZE)
 		{
-			iso_log.error("read_at: %s: Error reading from file (%llu/%llu)", m_meta.name, total_read, ISO_SECTOR_SIZE);
+			iso_log.error("read_at: %s: Error reading from file - O: %llu (%llu), S: %llu/%llu/%llu (%llu), TR: %llu", m_meta.name,
+				offset, first_sec.lba_address, ISO_SECTOR_SIZE, max_size, size, total_size, total_read);
+
 			return 0;
 		}
 
@@ -1387,8 +1394,9 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 
 	if (total_read != ISO_SECTOR_SIZE + ISO_SECTOR_SIZE + (sector_count - 2) * ISO_SECTOR_SIZE)
 	{
-		iso_log.error("read_at: %s: Error reading from file (%llu/%llu)", m_meta.name,
-			total_read, ISO_SECTOR_SIZE + ISO_SECTOR_SIZE + (sector_count - 2) * ISO_SECTOR_SIZE);
+		iso_log.error("read_at: %s: Error reading from file - O: %llu (%llu), S: %llu/%llu/%llu (%llu), TR: %llu/%llu", m_meta.name,
+			offset, first_sec.lba_address, ISO_SECTOR_SIZE, max_size, size, total_size,
+			total_read,	ISO_SECTOR_SIZE + ISO_SECTOR_SIZE + (sector_count - 2) * ISO_SECTOR_SIZE);
 
 		return 0;
 	}
