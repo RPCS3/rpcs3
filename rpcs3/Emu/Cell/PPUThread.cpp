@@ -2175,18 +2175,12 @@ void ppu_thread::cpu_task()
 		}
 		case ppu_cmd::lle_call:
 		{
-#ifdef __APPLE__
-			pthread_jit_write_protect_np(true);
-#endif
 			const vm::ptr<u32> opd(arg < 32 ? vm::cast(gpr[arg]) : vm::cast(arg));
 			cmd_pop(), fast_call(opd[0], opd[1]);
 			break;
 		}
 		case ppu_cmd::entry_call:
 		{
-#ifdef __APPLE__
-			pthread_jit_write_protect_np(true);
-#endif
 			cmd_pop(), fast_call(entry_func.addr, entry_func.rtoc, true);
 			break;
 		}
@@ -2197,9 +2191,6 @@ void ppu_thread::cpu_task()
 		}
 		case ppu_cmd::opd_call:
 		{
-#ifdef __APPLE__
-			pthread_jit_write_protect_np(true);
-#endif
 			const ppu_func_opd_t opd = cmd_get(1).as<ppu_func_opd_t>();
 			cmd_pop(1), fast_call(opd.addr, opd.rtoc);
 			break;
@@ -2218,9 +2209,6 @@ void ppu_thread::cpu_task()
 		}
 		case ppu_cmd::initialize:
 		{
-#ifdef __APPLE__
-			pthread_jit_write_protect_np(false);
-#endif
 			cmd_pop();
 
 			ppu_initialize();
@@ -2232,9 +2220,6 @@ void ppu_thread::cpu_task()
 
 			spu_cache::initialize();
 
-#ifdef __APPLE__
-			pthread_jit_write_protect_np(true);
-#endif
 #ifdef ARCH_ARM64
 			// Flush all cache lines after potentially writing executable code
 			asm("ISB");
@@ -2381,6 +2366,11 @@ void ppu_thread::cpu_wait(bs_t<cpu_flag> old)
 
 void ppu_thread::exec_task()
 {
+#ifdef __APPLE__
+	// Ensure correct state before executing JIT code
+	pthread_jit_write_protect_np(true);
+#endif
+
 	if (g_cfg.core.ppu_decoder != ppu_decoder_type::_static)
 	{
 		// HVContext push to allow recursion. This happens with guest callback invocations.
@@ -2462,9 +2452,6 @@ ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u3
 	syscall_history.data.resize(g_cfg.core.ppu_call_history ? syscall_history_max_size : 1);
 	syscall_history.count_debug_arguments = static_cast<u32>(g_cfg.core.ppu_call_history ? std::size(syscall_history.data[0].args) : 0);
 
-#ifdef __APPLE__
-	pthread_jit_write_protect_np(true);
-#endif
 #ifdef ARCH_ARM64
 	// Flush all cache lines after potentially writing executable code
 	asm("ISB");
@@ -4008,9 +3995,8 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 
 	named_thread_group workers("SPRX Worker ", std::min<u32>(software_thread_limit, cpu_thread_limit), [&]
 	{
-#ifdef __APPLE__
-		pthread_jit_write_protect_np(false);
-#endif
+		jit_write_guard jit_guard;
+
 		// Set low priority
 		thread_ctrl::scoped_priority low_prio(-1);
 		u32 inc_fdone = 1;
@@ -4236,9 +4222,6 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 			return;
 		}
 
-#ifdef __APPLE__
-		pthread_jit_write_protect_np(false);
-#endif
 		// Set low priority
 		thread_ctrl::scoped_priority low_prio(-1);
 
@@ -4617,6 +4600,8 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 		progress_dialog.emplace(get_localized_string(localized_string_id::PROGRESS_DIALOG_LOADING_PPU_MODULES));
 	}
 
+	jit_write_guard jit_guard;
+
 	// Permanently loaded compiled PPU modules (name -> data)
 	jit_module& jit_mod = g_fxo->get<jit_module_manager>().get(cache_path + "_" + std::to_string(std::bit_cast<usz>(info.segs[0].ptr)));
 
@@ -4797,9 +4782,6 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 		// Try to make the code fit in 16 bytes, may fail and fallback
 		if (*full_sample && abs_diff(*full_sample, reinterpret_cast<u64>(jit_runtime::peek(true) + 3 * 4)) < (128u << 20))
 		{
-#ifdef __APPLE__
-			pthread_jit_write_protect_np(false);
-#endif
 			u8* code = jit_runtime::alloc(12, 4, true);
 			code_ptr = reinterpret_cast<u64>(code);
 
@@ -4913,6 +4895,11 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 			c.br(call_target);
 #endif
 		}, runtime.get(), true);
+
+#ifdef __APPLE__
+		// Restore write-protection state (modified by build_function_asm)
+		pthread_jit_write_protect_np(false);
+#endif
 
 		// Full sample may exist already, but is very far away
 		// So in this case, a new sample is written
@@ -5307,9 +5294,8 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				// Set low priority
 				thread_ctrl::scoped_priority low_prio(-1);
 
-	#ifdef __APPLE__
-				pthread_jit_write_protect_np(false);
-	#endif
+				jit_write_guard jit_guard;
+
 				for (u32 i = (*work_cv)++; i < workload.size(); i = (*work_cv)++, (*work_done)++, g_progr_pdone++)
 				{
 					if (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped())
@@ -5332,10 +5318,6 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				}
 
 				core_lock.unlock();
-
-	#ifdef __APPLE__
-				pthread_jit_write_protect_np(true);
-	#endif
 			}
 		};
 
@@ -5487,10 +5469,6 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 		}
 	}
 
-#ifdef __APPLE__
-	// Symbol resolver is in JIT mem, so we must enable execution
-	pthread_jit_write_protect_np(true);
-#endif
 	{
 		usz index = umax;
 
@@ -5502,11 +5480,6 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 			sim(vm::g_exec_addr, info.segs[0].addr);
 		}
 	}
-
-#ifdef __APPLE__
-	// Symbol resolver is in JIT mem, so we must enable execution
-	pthread_jit_write_protect_np(false);
-#endif
 
 	// Find a BLR-only function in order to copy it to all BLRs (some games need it)
 	for (const auto& func : info.get_funcs())
