@@ -1835,6 +1835,17 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 			g_fxo->init<named_thread>("SPRX Loader"sv, [this, dir_queue, is_fast = m_precompilation_option.is_fast]() mutable
 			{
+#ifdef __APPLE__
+				// Apple Silicon W^X: SPRX Loader writes JIT code via ppu_initialize().
+				// Without entering write mode, writes to MAP_JIT pages segfault.
+				pthread_jit_write_protect_np(false);
+
+				// RAII guard so execute mode is restored on every exit path
+				// (return, exception, etc.).
+				struct jit_write_guard {
+					~jit_write_guard() { pthread_jit_write_protect_np(true); }
+				} _jit_guard;
+#endif
 				std::vector<ppu_module<lv2_obj>*> mod_list;
 
 				if (auto& _main = *ensure(g_fxo->try_get<main_ppu_module<lv2_obj>>()); !_main.path.empty())
