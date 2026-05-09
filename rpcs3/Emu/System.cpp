@@ -1893,7 +1893,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 				struct jit_write_guard
 				{
-					~jit_write_guard()
+					~jit_write_guard() noexcept
 					{
 						pthread_jit_write_protect_np(true);
 					}

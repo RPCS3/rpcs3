@@ -207,9 +207,7 @@ static void ghc_cpp_trampoline(u64 fn_target, native_asm& c, auto& args)
 
 DECLARE(spu_runtime::tr_dispatch) = []
 {
-#ifdef __APPLE__
-	pthread_jit_write_protect_np(false);
-#endif
+	jit_write_guard jit_guard;
 #if defined(ARCH_X64)
 	// Generate a special trampoline to spu_recompiler_base::dispatch with pause instruction
 	u8* const trptr = jit_runtime::alloc(32, 16);
@@ -237,6 +235,7 @@ DECLARE(spu_runtime::tr_dispatch) = []
 
 DECLARE(spu_runtime::tr_branch) = []
 {
+	jit_write_guard jit_guard;
 #if defined(ARCH_X64)
 	// Generate a trampoline to spu_recompiler_base::branch
 	u8* const trptr = jit_runtime::alloc(32, 16);
@@ -262,6 +261,7 @@ DECLARE(spu_runtime::tr_branch) = []
 
 DECLARE(spu_runtime::tr_interpreter) = []
 {
+	jit_write_guard jit_guard;
 #if defined(ARCH_X64)
 	u8* const trptr = jit_runtime::alloc(32, 16);
 	u8* raw = move_args_ghc_to_native(trptr);
@@ -283,6 +283,8 @@ DECLARE(spu_runtime::tr_interpreter) = []
 
 DECLARE(spu_runtime::g_dispatcher) = []
 {
+	jit_write_guard jit_guard;
+
 	// Allocate 2^20 positions in data area
 	const auto ptr = reinterpret_cast<std::remove_const_t<decltype(spu_runtime::g_dispatcher)>>(jit_runtime::alloc(sizeof(*g_dispatcher), 64, false));
 
@@ -296,6 +298,8 @@ DECLARE(spu_runtime::g_dispatcher) = []
 
 DECLARE(spu_runtime::tr_all) = []
 {
+	jit_write_guard jit_guard;
+
 #if defined(ARCH_X64)
 	u8* const trptr = jit_runtime::alloc(32, 16);
 	u8* raw = trptr;
@@ -834,6 +838,8 @@ void spu_cache::add(const spu_program& func)
 
 void spu_cache::initialize(bool build_existing_cache)
 {
+	jit_write_guard jit_guard;
+
 	spu_runtime::g_interpreter = spu_runtime::g_gateway;
 
 	if (g_cfg.core.spu_decoder == spu_decoder_type::_static || g_cfg.core.spu_decoder == spu_decoder_type::dynamic)
@@ -964,15 +970,7 @@ void spu_cache::initialize(bool build_existing_cache)
 		// every exit path (return, exception, etc.). Leaving a worker
 		// in write mode at teardown can leave per-thread state
 		// inconsistent on AArch64.
-		pthread_jit_write_protect_np(false);
-
-		struct jit_write_guard
-		{
-			~jit_write_guard()
-			{
-				pthread_jit_write_protect_np(true);
-			}
-		} _jit_guard;
+		jit_write_guard jit_guard;
 #endif
 		// Set low priority
 		thread_ctrl::scoped_priority low_prio(-1);
@@ -2207,6 +2205,9 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 		return;
 	}
 
+#if defined(__APPLE__)
+	pthread_jit_write_protect_np(false);
+#endif
 	auto program = spu.jit->analyse(spu._ptr<u32>(0), spu.pc);
 #ifdef ARCH_ARM64
 	const auto func = compile_spu_llvm_with_retry(spu.jit, program);
