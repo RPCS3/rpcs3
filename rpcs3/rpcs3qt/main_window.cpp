@@ -2298,11 +2298,13 @@ void main_window::UpdateLanguageActions(const QStringList& language_codes, const
 	{
 		const QLocale locale      = QLocale(code);
 		const QString locale_name = QLocale::languageToString(locale.language());
+		const QString territory   = QLocale::territoryToString(locale.territory());
+		const QString display_name = territory.isEmpty() ? locale_name : QString("%1 (%2)").arg(locale_name, territory);
 
 		// create new action
-		QAction* act = new QAction(locale_name, this);
+		QAction* act = new QAction(display_name, this);
 		act->setData(code);
-		act->setToolTip(locale_name);
+		act->setToolTip(display_name);
 		act->setCheckable(true);
 		act->setChecked(code == language_code);
 
