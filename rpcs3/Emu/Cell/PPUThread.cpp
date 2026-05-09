@@ -5484,17 +5484,56 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 	{
 		usz index = umax;
 
-		ppu_log.notice("Executing %u symbol resolvers", jit_mod.symbol_resolvers.size());
 
-		for (auto& sim : jit_mod.symbol_resolvers)
+#ifdef __APPLE__
+		named_thread sym_worker("PPU Symbol Resolver", [&]()
 		{
-			index++;
+			// jit_compiler::get() may write to executable memory (relocations)
+			pthread_jit_write_protect_np(false);
+#else
+		{
+#endif
+			if (is_first)
+			{
+				ppu_log.notice("Resolving %u symbol resolver functions", jit_mod.symbol_resolvers.size());
 
-			sim = ensure(!is_first ? sim : reinterpret_cast<void(*)(u8*, u64)>(jits[index]->get("__resolve_symbols")));
-			sim(vm::g_exec_addr, info.segs[0].addr);
+				for (auto& sim : jit_mod.symbol_resolvers)
+				{
+					index++;
 
-			ppu_log.notice("Executed symbol resolver #%u", index);
+					ensure(!sim);
+					sim = ensure(reinterpret_cast<void(*)(u8*, u64)>(jits[index]->get("__resolve_symbols")));
+
+					ppu_log.notice("Resolved symbol resolver function #%u", index);
+				}
+			}
+
+			ppu_log.notice("Executing %u symbol resolvers", jit_mod.symbol_resolvers.size());
+
+#ifdef __APPLE__
+			// Virtual memory mapped by MAP_JIT cannot be executed until pthread_jit_write_protect_np(true)
+			pthread_jit_write_protect_np(true);
+#endif
+
+			index = umax;
+
+			for (auto& sim : jit_mod.symbol_resolvers)
+			{
+				index++;
+
+				ensure(sim);
+				sim(vm::g_exec_addr, info.segs[0].addr);
+
+				ppu_log.notice("Executed symbol resolver #%u", index);
+			}
+
+#ifndef __APPLE__
 		}
+#else
+		});
+
+		sym_worker();
+#endif
 	}
 
 	// Find a BLR-only function in order to copy it to all BLRs (some games need it)
