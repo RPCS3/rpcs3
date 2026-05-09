@@ -241,7 +241,7 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 	MemoryManager1(std::function<u64(const std::string&)> symbols_cement = {}) noexcept
 		: m_symbols_cement(std::move(symbols_cement))
 	{
-		auto ptr = reinterpret_cast<u8*>(utils::memory_reserve(c_max_size * 3));
+		auto ptr = reinterpret_cast<u8*>(utils::memory_reserve(c_max_size * 3, true));
 		m_code_mems = ptr;
 		// ptr += c_max_size;
 		// m_data_ro_mems = ptr;
