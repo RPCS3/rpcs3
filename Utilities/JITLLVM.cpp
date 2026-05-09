@@ -260,7 +260,7 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 		// utils::memory_decommit(m_code_mems, how_much(code_ptr));
 		// utils::memory_decommit(m_data_ro_mems, how_much(data_ro_ptr));
 		// utils::memory_decommit(m_data_rw_mems, how_much(data_rw_ptr));
-		utils::memory_decommit(m_code_mems, c_max_size * 3);
+		utils::memory_decommit(m_code_mems, c_max_size * 3, true);
 	}
 
 	llvm::JITSymbol findSymbol(const std::string& name) override

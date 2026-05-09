@@ -44,10 +44,15 @@ namespace utils
 	void memory_commit(void* pointer, usz size, protection prot = protection::rw);
 
 	// Decommit all memory committed via commit_page_memory.
-	void memory_decommit(void* pointer, usz size);
+	void memory_decommit(void* pointer, usz size, bool can_be_jit = false);
 
 	// Decommit all memory and commit it again.
-	void memory_reset(void* pointer, usz size, protection prot = protection::rw);
+	void memory_reset(void* pointer, usz size, protection prot = protection::rw, bool can_be_jit = false);
+
+	inline void memory_reset(void* pointer, usz size, bool can_be_jit = false)
+	{
+		return memory_reset(pointer, size, protection::rw, can_be_jit);
+	}
 
 	// Free memory after reserved by memory_reserve, should specify original size
 	void memory_release(void* pointer, usz size);
