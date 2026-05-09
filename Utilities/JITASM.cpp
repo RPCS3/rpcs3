@@ -316,10 +316,10 @@ void jit_runtime::finalize() noexcept
 #endif
 	// Reset JIT memory
 #ifdef CAN_OVERCOMMIT
-	utils::memory_reset(get_jit_memory(), 0x80000000);
+	utils::memory_reset(get_jit_memory(), 0x80000000, true);
 	utils::memory_protect(get_jit_memory(), 0x40000000, utils::protection::wx);
 #else
-	utils::memory_decommit(get_jit_memory(), 0x80000000);
+	utils::memory_decommit(get_jit_memory(), 0x80000000, true);
 #endif
 
 	s_code_pos = 0;
