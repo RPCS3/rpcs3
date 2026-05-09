@@ -222,7 +222,7 @@ namespace utils
 		return _prot;
 	}
 
-	void* memory_reserve(usz size, void* use_addr, [[maybe_unused]] bool is_memory_mapping)
+	void* memory_reserve(usz size, void* use_addr, [[maybe_unused]] bool is_memory_mapping, [[maybe_unused]] bool can_be_jit)
 	{
 #ifdef _WIN32
 		if (is_memory_mapping && has_win10_memory_mapping_api())
@@ -251,15 +251,15 @@ namespace utils
 			size += 0x10000;
 		}
 
-#ifdef __APPLE__
-#ifdef ARCH_ARM64
 		// Memory mapping regions will be replaced by file-backed MAP_FIXED mappings
 		// (via shm::map), which is incompatible with MAP_JIT. Only use MAP_JIT for
 		// non-mapping regions that need JIT executable support.
-		const int jit_flag = is_memory_mapping ? 0 : MAP_JIT;
+#ifdef __APPLE__
+		const int jit_flag = is_memory_mapping || !can_be_jit ? 0 : MAP_JIT;
+#ifdef ARCH_ARM64
 		auto ptr = ::mmap(use_addr, size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE | jit_flag | c_map_noreserve, -1, 0);
 #else
-		auto ptr = ::mmap(use_addr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE | MAP_JIT | c_map_noreserve, -1, 0);
+		auto ptr = ::mmap(use_addr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE | jit_flag | c_map_noreserve, -1, 0);
 #endif
 #else
 		auto ptr = ::mmap(use_addr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE | c_map_noreserve, -1, 0);
