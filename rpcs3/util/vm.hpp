@@ -26,11 +26,15 @@ namespace utils
 		rx, // Read + execute
 	};
 
-	/**
-	* Reserve `size` bytes of virtual memory and returns it.
-	* The memory should be committed before usage.
-	*/
-	void* memory_reserve(usz size, void* use_addr = nullptr, bool is_memory_mapping = false);
+	// Reserve `size` bytes of virtual memory and returns it.
+	// The memory should be committed before usage.
+	void* memory_reserve(usz size, void* use_addr, bool is_memory_mapping = false, bool can_be_jit = false);
+
+	// Non-fixed address memory_reserve usage
+	inline void* memory_reserve(usz size, bool can_be_jit = false)
+	{
+		return memory_reserve(size, nullptr, false, can_be_jit);
+	}
 
 	/**
 	* Commit `size` bytes of virtual memory starting at pointer.
