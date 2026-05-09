@@ -623,13 +623,14 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 	//                                                '           '                                   '           '
 	//                                                | first sec |           inner sec(s)            | last sec  |
 
-	const u64 max_size = std::min(size, local_extent_remaining(offset));
+	u64 max_size = std::min(size, local_extent_remaining(offset));
 
 	if (max_size == 0)
 	{
 		return 0;
 	}
 
+	const u64 total_size = this->size();
 	const u64 archive_first_offset = file_offset(offset);
 	const u64 archive_last_offset = archive_first_offset + max_size - 1;
 	iso_sector first_sec, last_sec;
@@ -680,6 +681,13 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 		{
 			iso_log.error("read_at: %s: Error reading from file (%llu/%llu)", m_meta.name, total_read, first_sec.size_aligned);
 			return 0;
+		}
+
+		// If present, read the remaining chunk of data on next extent
+		if (size > max_size && (offset + max_size) < total_size)
+		{
+			iso_log.warning("read_at: %s: Extent limit reached reading from file (%llu/%llu)", m_meta.name, max_size, size);
+			max_size += read_at(offset + max_size, &reinterpret_cast<u8*>(buffer)[max_size], size - max_size);
 		}
 
 		return max_size;
@@ -743,6 +751,13 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 			total_read, ISO_SECTOR_SIZE + ISO_SECTOR_SIZE + (sector_count - 2) * ISO_SECTOR_SIZE);
 
 		return 0;
+	}
+
+	// If present, read the remaining chunk of data on next extent
+	if (size > max_size && (offset + max_size) < total_size)
+	{
+		iso_log.warning("read_at: %s: Extent limit reached reading from file (%llu/%llu)", m_meta.name, max_size, size);
+		max_size += read_at(offset + max_size, &reinterpret_cast<u8*>(buffer)[max_size], size - max_size);
 	}
 
 	return max_size;
@@ -1250,13 +1265,14 @@ u64 iso_file::read(void* buffer, u64 size)
 
 u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 {
-	const u64 max_size = std::min(size, local_extent_remaining(offset));
+	u64 max_size = std::min(size, local_extent_remaining(offset));
 
 	if (max_size == 0)
 	{
 		return 0;
 	}
 
+	const u64 total_size = this->size();
 	const u64 archive_first_offset = file_offset(offset);
 
 	// If it's not a raw device
@@ -1268,6 +1284,13 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 		{
 			iso_log.error("read_at: %s: Error reading from file (%llu/%llu)", m_meta.name, total_read, max_size);
 			return 0;
+		}
+
+		// If present, read the remaining chunk of data on next extent
+		if (size > max_size && (offset + max_size) < total_size)
+		{
+			iso_log.warning("read_at: %s: Extent limit reached reading from file (%llu/%llu)", m_meta.name, max_size, size);
+			max_size += read_at(offset + max_size, &reinterpret_cast<u8*>(buffer)[max_size], size - max_size);
 		}
 
 		return max_size;
@@ -1324,6 +1347,13 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 			return 0;
 		}
 
+		// If present, read the remaining chunk of data on next extent
+		if (size > max_size && (offset + max_size) < total_size)
+		{
+			iso_log.warning("read_at: %s: Extent limit reached reading from file (%llu/%llu)", m_meta.name, max_size, size);
+			max_size += read_at(offset + max_size, &reinterpret_cast<u8*>(buffer)[max_size], size - max_size);
+		}
+
 		return max_size;
 	}
 
@@ -1361,6 +1391,13 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 			total_read, ISO_SECTOR_SIZE + ISO_SECTOR_SIZE + (sector_count - 2) * ISO_SECTOR_SIZE);
 
 		return 0;
+	}
+
+	// If present, read the remaining chunk of data on next extent
+	if (size > max_size && (offset + max_size) < total_size)
+	{
+		iso_log.warning("read_at: %s: Extent limit reached reading from file (%llu/%llu)", m_meta.name, max_size, size);
+		max_size += read_at(offset + max_size, &reinterpret_cast<u8*>(buffer)[max_size], size - max_size);
 	}
 
 	return max_size;
