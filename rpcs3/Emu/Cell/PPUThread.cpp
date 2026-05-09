@@ -4473,6 +4473,16 @@ extern void ppu_initialize()
 
 bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_size)
 {
+	ppu_log.notice("Entering ppu_initialize(const ppu_module&..)");
+
+	struct log_guard
+	{
+		~log_guard() noexcept
+		{
+			ppu_log.notice("Leaving ppu_initialize(const ppu_module&..)");
+		}
+	} _log_guard;
+
 	if (g_cfg.core.ppu_decoder != ppu_decoder_type::llvm)
 	{
 		if (check_only || vm::base(info.segs[0].addr) != info.segs[0].ptr)
@@ -5367,6 +5377,8 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 		usz mod_index = umax;
 
+		ppu_log.notice("Loading %u modules", link_workload.size());
+
 		for (const auto& [obj_name, is_compiled] : link_workload)
 		{
 			mod_index++;
@@ -5395,7 +5407,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 			if (!is_compiled)
 			{
-				ppu_log.success("LLVM: Loaded module %s", obj_name);
+				ppu_log.success("LLVM: Loaded module #%u %s", mod_index, obj_name);
 			}
 		}
 	}
@@ -5436,12 +5448,16 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 	{
 		usz index = umax;
 
+		ppu_log.notice("Executing %u symbol resolvers", jit_mod.symbol_resolvers.size());
+
 		for (auto& sim : jit_mod.symbol_resolvers)
 		{
 			index++;
 
 			sim = ensure(!is_first ? sim : reinterpret_cast<void(*)(u8*, u64)>(jits[index]->get("__resolve_symbols")));
 			sim(vm::g_exec_addr, info.segs[0].addr);
+
+			ppu_log.notice("Executed symbol resolver #%u", index);
 		}
 	}
 
