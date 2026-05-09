@@ -1835,6 +1835,24 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 			g_fxo->init<named_thread>("SPRX Loader"sv, [this, dir_queue, is_fast = m_precompilation_option.is_fast]() mutable
 			{
+#ifdef __APPLE__
+				// Apple Silicon W^X: this thread invokes ppu_initialize()
+				// and ppu_precompile(), which write into MAP_JIT pages.
+				// Without enabling write mode here, these writes segfault
+				// before the game can boot (reproducible: RDR BLUS30418
+				// crashes ~12s into boot at 0x300010000). Pair the enable
+				// with an RAII guard so execute mode is restored on every
+				// exit path (return, exception, etc.).
+				pthread_jit_write_protect_np(false);
+
+				struct jit_write_guard
+				{
+					~jit_write_guard()
+					{
+						pthread_jit_write_protect_np(true);
+					}
+				} _jit_guard;
+#endif
 				std::vector<ppu_module<lv2_obj>*> mod_list;
 
 				if (auto& _main = *ensure(g_fxo->try_get<main_ppu_module<lv2_obj>>()); !_main.path.empty())

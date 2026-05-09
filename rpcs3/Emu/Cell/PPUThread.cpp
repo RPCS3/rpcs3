@@ -5289,7 +5289,19 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				thread_ctrl::scoped_priority low_prio(-1);
 
 	#ifdef __APPLE__
+				// Apple Silicon W^X: PPU LLVM worker enables write mode for
+				// JIT memory. Pair it with an RAII guard so execute mode
+				// is restored on every exit path (return, exception, etc.)
+				// to keep per-thread state consistent at teardown.
 				pthread_jit_write_protect_np(false);
+
+				struct jit_write_guard
+				{
+					~jit_write_guard()
+					{
+						pthread_jit_write_protect_np(true);
+					}
+				} _jit_guard;
 	#endif
 				for (u32 i = work_cv++; i < workload.size(); i = work_cv++, g_progr_pdone++)
 				{
@@ -5421,7 +5433,19 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 	// Jit can be null if the loop doesn't ever enter.
 #ifdef __APPLE__
+	// Apple Silicon W^X: this scope toggles write/execute mode multiple
+	// times below. Use an RAII guard so execute mode is always restored
+	// on every exit path, including the early "return compiled_new" at
+	// the empty-jits check and the normal return at function end.
 	pthread_jit_write_protect_np(false);
+
+	struct jit_write_guard
+	{
+		~jit_write_guard()
+		{
+			pthread_jit_write_protect_np(true);
+		}
+	} _jit_guard;
 #endif
 	// Try to patch all single and unregistered BLRs with the same function (TODO: Maybe generalize it into PIC code detection and patching)
 	ppu_intrp_func_t BLR_func = nullptr;
