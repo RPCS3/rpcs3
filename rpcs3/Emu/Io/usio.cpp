@@ -32,6 +32,7 @@ void fmt_class_string<usio_btn>::format(std::string& out, u64 arg)
 		case usio_btn::tekken_button3: return "Tekken Button 3";
 		case usio_btn::tekken_button4: return "Tekken Button 4";
 		case usio_btn::tekken_button5: return "Tekken Button 5";
+		case usio_btn::card_tapping: return "Card Tapping";
 		case usio_btn::count: return "Count";
 		}
 
@@ -42,6 +43,7 @@ void fmt_class_string<usio_btn>::format(std::string& out, u64 arg)
 struct usio_memory
 {
 	std::vector<u8> backup_memory;
+	std::array<std::array<u8, 0x40>, g_cfg_usio.players.size()> card_data{};
 
 	usio_memory() = default;
 	usio_memory(const usio_memory&) = delete;
@@ -175,6 +177,16 @@ void usb_device_usio::load_backup()
 	}
 
 	usio_backup_file.read(memory.backup_memory.data(), file_size);
+
+	for (usz i = 0; i < memory.card_data.size(); i++)
+	{
+		if (fs::file usio_card_file;
+			usio_card_file.open(fmt::format("%s/caches/usio_card_p%d.bin", rpcs3::utils::get_hdd1_dir(), i + 1), fs::read) &&
+			usio_card_file.size() == memory.card_data[i].size())
+		{
+			usio_card_file.read(memory.card_data[i].data(), memory.card_data[i].size());
+		}
+	}
 }
 
 void usb_device_usio::save_backup()
@@ -261,6 +273,10 @@ void usb_device_usio::translate_input_taiko()
 					if (pressed)
 						std::memcpy(input_buf.data() + 34 + offset, &c_hit, sizeof(u16));
 					break;
+				case usio_btn::card_tapping:
+					if (pressed)
+						tap_card(player);
+					break;
 				default:
 					break;
 				}
@@ -271,6 +287,8 @@ void usb_device_usio::translate_input_taiko()
 			digital_input |= 0x80;
 	};
 
+	for (usz i = 0; i < m_io_status.size(); i++)
+		m_io_status[i].card_tapped = false;
 	for (usz i = 0; i < g_cfg_usio.players.size(); i++)
 		translate_from_pad(i, i);
 
@@ -384,6 +402,10 @@ void usb_device_usio::translate_input_tekken()
 					if (pressed)
 						input |= 0x80000000ULL << shift;
 					break;
+				case usio_btn::card_tapping:
+					if (pressed)
+						tap_card(player);
+					break;
 				default:
 					break;
 				}
@@ -398,6 +420,8 @@ void usb_device_usio::translate_input_tekken()
 		}
 	};
 
+	for (usz i = 0; i < m_io_status.size(); i++)
+		m_io_status[i].card_tapped = false;
 	for (usz i = 0; i < g_cfg_usio.players.size(); i++)
 		translate_from_pad(i, i);
 
@@ -412,6 +436,194 @@ void usb_device_usio::translate_input_tekken()
 	input_buf[2] = 0b00010000; // DIP switches, 8 in total
 
 	response = std::move(input_buf);
+}
+
+void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
+{
+	static std::array<std::vector<u8>, 2> pending_response = {};
+	usz reader_index = 0;
+
+	const auto calculate_checksum = [](bool check, std::vector<u8>& data) -> bool
+	{
+		if (data.size() < 0x06)
+			return false;
+
+		const usz data_end = data.size() - 2;
+		u8 sum = data[3] + data[4];
+
+		for (usz i = 5; i < data_end; i++)
+			sum -= data[i];
+
+		if (check)
+			return *reinterpret_cast<le_t<u16>*>(&data[data_end]) == sum;
+
+		*reinterpret_cast<le_t<u16>*>(&data[data_end]) = sum;
+		return true;
+	};
+
+	switch (reg)
+	{
+	case 0x0080:
+	case 0x0090:
+	{
+		reader_index = reg == 0x0080 ? 0 : 1;
+		buf = {0x02, 0x03, 0x00, 0x00, 0xFF, 0x0F, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x07, 0x10, 0x00};
+		*reinterpret_cast<le_t<u16>*>(buf.data() + 2) = ::narrow<u16>(pending_response[reader_index].size());
+		break;
+	}
+	case 0x7000:
+	case 0x7800:
+	{
+		reader_index = reg == 0x7000 ? 0 : 1;
+		buf = std::move(pending_response[reader_index]);
+		pending_response[reader_index].clear(); // Ensure its empty state after being moved
+		break;
+	}
+	case 0x7400:
+	case 0x7C00:
+	{
+		if (!calculate_checksum(true, buf))
+			break;
+		reader_index = reg == 0x7400 ? 0 : 1;
+		const auto& status = ::at32(m_io_status, reader_index);
+		const usz card_player = reader_index * 2 + status.card_index;
+		const u8 payload_length = buf[3];
+		const u8 command = buf[4];
+		const u8* const payload = &buf[6];
+		switch (command)
+		{
+		case 0xE8:
+		{
+			pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x0D, 0xF3, 0xD5, 0x07, 0xDC, 0xF4, 0x3F, 0x11, 0x4D, 0x85, 0x61, 0xF1, 0x26, 0x6A, 0x87, 0xC9, 0x00};
+			break;
+		}
+		case 0xEE:
+		{
+			pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x0A, 0xF6, 0xD5, 0x07, 0xFF, 0x3F, 0x0E, 0xF1, 0xFF, 0x3F, 0x0E, 0xF1, 0xAA, 0x00};
+			break;
+		}
+		case 0xF1:
+		{
+			pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x03, 0xFD, 0xD5, 0x41, 0x00, 0xEA, 0x00};
+			break;
+		}
+		case 0xF2:
+		{
+			pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x02, 0xFE, 0xD5, 0x33, 0xF8, 0x00};
+			break;
+		}
+		case 0xF7:
+		{
+			pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x03, 0xFD, 0xD5, 0x4B, 0x00, 0xE0, 0x00};
+			break;
+		}
+		case 0xFA:
+		{
+			pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x02, 0xFE, 0xD5, 0x33, 0xF8, 0x00};
+			break;
+		}
+		case 0xFB:
+		{
+			if (payload_length >= 5)
+			{
+				if (*reinterpret_cast<const le_t<u16>*>(&payload[0]) == 0x0140)
+				{
+					if (payload[3] < 4)
+					{
+						pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x13, 0xED, 0xD5, 0x41, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xEA, 0x00};
+						std::memcpy(pending_response[reader_index].data() + 8, g_fxo->get<usio_memory>().card_data[card_player].data() + payload[3] * 0x10, 0x10);
+					}
+					else
+					{
+						pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x03, 0xFD, 0xD5, 0x41, 0x13, 0xD7, 0x00};
+					}
+				}
+				else
+				{
+					pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x03, 0xFD, 0xD5, 0x09, 0x00, 0x22, 0x00};
+				}
+			}
+			break;
+		}
+		case 0xFC:
+		{
+			if (payload_length >= 2)
+			{
+				switch (payload[0])
+				{
+				case 0x52:
+					pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x04, 0xFC, 0xD5, 0x53, 0x01, 0x00, 0xD7, 0x00};
+					break;
+				case 0x0E:
+					pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x02, 0xFE, 0xD5, 0x0F, 0x1C, 0x00};
+					break;
+				case 0x4A:
+					if (status.card_tapped)
+					{
+						pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x0C, 0xF4, 0xD5, 0x4B, 0x01, 0x01, 0x00, 0x04, 0x08, 0x04, 0x00, 0x00, 0x00, 0x00, 0xCE, 0x00};
+						std::memcpy(pending_response[reader_index].data() + 0x13, g_fxo->get<usio_memory>().card_data[card_player].data(), 4);
+					}
+					else
+					{
+						pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x03, 0xFD, 0xD5, 0x4B, 0x00, 0xE0, 0x00};
+					}
+					break;
+				case 0x32:
+					pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x02, 0xFE, 0xD5, 0x33, 0xF8, 0x00};
+					break;
+				default:
+					break;
+				}
+			}
+			break;
+		}
+		case 0xFD:
+		{
+			if (payload_length >= 2)
+			{
+				switch (payload[0])
+				{
+				case 0x18:
+					pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x02, 0xFE, 0xD5, 0x19, 0x12, 0x00};
+					break;
+				case 0x12:
+					pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x02, 0xFE, 0xD5, 0x13, 0x18, 0x00};
+					break;
+				default:
+					break;
+				}
+			}
+			break;
+		}
+		case 0xFE:
+		{
+			pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x05, 0xFB, 0xD5, 0x0D, 0x00, 0x06, 0x00, 0x18, 0x00};
+			break;
+		}
+		case 0xFF:
+		{
+			pending_response[reader_index] = {0x00, 0x00, 0xFF, 0x00, 0xFF, 0x00};
+			break;
+		}
+		default:
+		{
+			usio_log.trace("Unhandled card reader command: 0x%02X", command);
+			break;
+		}
+		}
+		calculate_checksum(false, pending_response[reader_index]);
+		break;
+	}
+	default:
+		break;
+	}
+}
+
+void usb_device_usio::tap_card(usz player)
+{
+	auto& status = ::at32(m_io_status, player / 2);
+	status.card_tapped = true;
+	status.card_index = player % 2;
 }
 
 void usb_device_usio::usio_write(u8 channel, u16 reg, std::vector<u8>& data)
@@ -461,6 +673,16 @@ void usb_device_usio::usio_write(u8 channel, u16 reg, std::vector<u8>& data)
 			usio_log.trace("SetHopperRequest(Hopper: %d, Limit: 0x%04X)", (reg - 0x4A) / 0x10, get_u16("SetHopperLimit"));
 			break;
 		}
+		case 0x0080:
+		case 0x008D:
+		case 0x0090:
+		case 0x009D:
+		case 0x7400:
+		case 0x7C00:
+		{
+			emulate_card_reader(data, reg);
+			break;
+		}
 		default:
 		{
 			usio_log.trace("Unhandled channel 0 register write(reg: 0x%04X, size: 0x%04X, data: %s)", reg, data.size(), fmt::buf_to_hexstring(data.data(), data.size()));
@@ -502,15 +724,11 @@ void usb_device_usio::usio_read(u8 channel, u16 reg, u16 size)
 			break;
 		}
 		case 0x0080:
-		{
-			// Card reader check - 1
-			response = {0x02, 0x03, 0x06, 0x00, 0xFF, 0x0F, 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x10, 0x00};
-			break;
-		}
+		case 0x0090:
 		case 0x7000:
+		case 0x7800:
 		{
-			// Card reader check - 2
-			// No data returned
+			emulate_card_reader(response, reg);
 			break;
 		}
 		case 0x1000:
