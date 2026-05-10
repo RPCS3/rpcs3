@@ -1,0 +1,128 @@
+# Compiled Object files
+*.slo
+*.lo
+*.o
+
+# Compiled Dynamic libraries
+*.so
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.opensdf
+*.sdf
+*.suo
+*.tlog
+*.idb
+*.pdb
+*.obj
+*.ilk
+*.pch
+
+*.log
+*.exe
+*.dll
+*.elf
+*.lastbuildstate
+*.unsuccessfulbuild
+*.res
+*.dump
+*.wav
+
+/build
+/build-*
+/lib
+/tmp
+/ipch
+/packages
+/rpcs3/Debug
+/rpcs3/Release
+
+!/bin
+/bin/*
+
+# Audio DLLs
+!/bin/soft_oal.dll
+!/bin/xaudio2_9redist.dll
+
+# Test Programs
+!/bin/test/
+
+# Themes
+!/bin/GuiConfigs/
+/bin/GuiConfigs/*.ini
+/bin/GuiConfigs/*.ini.*
+/bin/GuiConfigs/*.dat
+/bin/GuiConfigs/*.dat.*
+
+# Visual Studio Files
+.vs/*
+.vscode/*
+*.ipch
+*.vspx
+*.psess
+*.VC.*
+*.vcxproj.user
+enc_temp_folder/*
+CMakeSettings.json
+*PVS-Studio*
+PVS/*
+
+# Zed Editor files
+.zed/*
+
+# Ignore other system generated files
+x64/*
+rpcs3/x64/*
+rpcs3/git-version.h
+
+# cmake
+Makefile
+*CMakeFiles*
+CMakeCache.txt
+*cmake_install.cmake*
+CPackConfig.cmake
+CPackSourceConfig.cmake
+compile_commands.json
+
+# cotire
+rpcs3/cotire/*
+rpcs3/rpcs3_*_cotire.cmake
+rpcs3/Emu/rpcs3_emu_CXX_Release_cotire.cmake
+rpcs3/Emu/rpcs3_emu_CXX_cotire.cmake
+
+# kdevelop
+*.kdev4
+.kdev4/*
+
+# Qt
+moc_*.cpp
+qrc_*.cpp
+rpcs3_automoc.cpp
+ui_*.h
+rpcs3/rpcs3_autogen/*
+
+# QtCreator
+CMakeLists.txt.user
+*.autosave
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# CLion
+/.idea/*
+/cmake-build-*/
+
+# macOS
+.DS_Store
+
+# yaml-cpp
+yaml-cpp.pc
+
+_ReSharper.*/
+CMakeUserPresets.json
+
+.cache/
+.lldbinit

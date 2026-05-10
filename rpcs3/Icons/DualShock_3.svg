@@ -1,0 +1,36 @@
+<svg id="DualShock_3_SVG" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="400" height="250" viewBox="0,  0, 400, 250"><!-- DualShock 3 SVG by HerrHulaHoop -->
+<path id="MainOutline" d="M 116.5 41.6 C 116.9 40.5, 116 35.6, 115 29.9 C 112.7 14.7, 112.5 14.3, 108.9 12 C 108 11.4, 106.4 10.2, 105.4 9.3 C 100.4 4.6, 89 2.3, 77.4 3.5 C 70.7 4.2, 65.6 6.1, 62.2 9.2 C 61 10.2, 59.5 11.4, 58.7 11.9 C 56.8 13, 55 15.1, 54.6 16.8 C 54.2 18.1, 51.6 34, 50 42.4 M 25.4 74.2 C 22 81.1, 18.5 102.3, 10.4 159.5 C 8.1 175.6, 5.6 192.4, 4.8 196.7 C 3 207.4, 2.9 208.8, 3.4 212.7 C 7.2 241.6, 46.2 259.1, 69.4 242.3 C 77.3 236.6, 80.3 231.6, 103.5 186.3 L 110 174.1 M 292 173.5 C 292.5 174.5, 295 179.2, 297.9 184.9 C 308.1 205.1, 320.6 228.7, 323.2 232.6 C 335.6 250.8, 359.9 254.2, 380.5 240.4 C 394.5 231.1, 400.8 217.3, 398.1 202.1 C 396.5 193.4, 394.9 182.8, 390.4 151.1 C 383.3 101.3, 380 81.4, 376.8 75 M 351.9 42.3 C 351.8 40.5, 351 35.6, 350 29.9 C 347.7 14.7, 347.5 14.3, 343.9 11.5 C 343 10, 341.4 9.2, 342.6 9.8 C 335.4 4.6, 324 2.3, 312.4 3.5 C 305.7 4.2, 300.6 6.1, 297.1 9.2 C 296 10.2, 294.5 11.4, 293.7 11.9 C 291.8 13,  290.1 15.1, 289.6 16.8 C 289.2 18.1, 286.6 34, 285 42.4" stroke="black" fill="none" />
+<path id="LeftShoulder" d="M 107 10.6 C 94.4 6.7, 74.8 6.5, 60.5 10.6" stroke="black" fill="none" />
+<path id="RightShoulder" d="M 343.7 11.2 C 329.4 6.7, 309.8 6.5, 295.5 10.6" stroke="black" fill="none" />
+<path id="UpperLine1" d="M 116.5 41.6 H 186 A 80 80, 0, 0 0, 216.5 41.6 H 286" stroke="black" fill="none" />
+<line id="UpperLine2" x1="129" y1="52" x2="273" y2="52" stroke="black" fill="none" />
+<line id="LowerLine1" x1="181.5" y1="164" x2="220" y2="164" stroke="black" fill="none" />
+<line id="LowerLine2" x1="179" y1="170.5" x2="222.5" y2="170.5" stroke="black" fill="none" />
+<rect id="SelectButton" x="155" y="95" width="20" height="10" stroke="black" fill="none" />
+<text id="SelectText" x="150" y="90.5" font-family="sans-serif" font-size="8" font-weight="bold" fill="black">SELECT</text>
+<path id="StartButton" d="M 226 95 V 105 L 244 100 Z" stroke="black" fill="none" />
+<text id="StartText" x="222" y="90.5" font-family="sans-serif" font-size="8" font-weight="bold" fill="black">START</text>
+<circle id="PSButton" cx="201" cy="129" r="13" stroke="black" fill="none" />
+<circle id="RightJoystickOuter" cx="258" cy="154" r="39" stroke="black" fill="none" />
+<circle id="RightJoystickMiddle" cx="258" cy="154" r="30" stroke="black" fill="none" />
+<circle id="RightJoystickInner" cx="258" cy="154" r="27" stroke="black" fill="none" />
+<circle id="LeftJoystickOuter" cx="143.4" cy="154" r="39" stroke="black" fill="none" />
+<circle id="LeftJoystickMiddle" cx="143.4" cy="154" r="30" stroke="black" fill="none" />
+<circle id="LeftJoystickInner" cx="143.4" cy="154" r="27" stroke="black" fill="none" />
+<path id="RightFacebuttonCircle" d="M 297.3 152.5 A 61.8 61.8, 0, 1 0, 260 115" stroke="black" fill="none" />
+<path id="RightButtonBorder" d="M 301 76 H 278 A 6 6, 0, 0 0, 272 82 V 105 A 6 6, 0, 0 0, 278 111 H 301 V 134 A 6 6, 0, 0 0, 307 140 H 330 A 6 6, 0, 0 0, 336 134 V 111 H 359 A 6 6, 0, 0 0, 365 105 V 82 A 6 6, 0, 0 0, 359 76 H 336 V 53 A 6 6, 0, 0 0, 330 47 H 307 A 6 6, 0, 0 0, 301 53 V 76.5" stroke="black" fill="none" />
+<circle id="ButtonBorder1" cx="289.5" cy="93.5" r="13" stroke="black" fill="none" />
+<rect id="ButtonSquare" x="282" y="86.5" width="15" height="15" stroke="black" fill="none" />
+<circle id="ButtonBorder2" cx="347.5" cy="93.5" r="13" stroke="black" fill="none" />
+<circle id="ButtonCircle" cx="347.5" cy="93.5" r="9" stroke="black" fill="none" />
+<circle id="ButtonBorder3" cx="318.5" cy="64.5" r="13" stroke="black" fill="none" />
+<path id="ButtonTriangle" d="M 310 70 H 327 L 318.5 56 Z" stroke="black" fill="none" />
+<circle id="ButtonBorder4" cx="318.5" cy="122.5" r="13" stroke="black" fill="none" />
+<path id="ButtonCross" d="M 311.5 115.5 L 325.5 129.5 M 311.5 129.5 L 325.5 115.5" stroke="black" fill="none" />
+<path id="LeftDpadCircle" d="M 104.2 152.5 A 61.8 61.8, 0, 1 1, 142 115" stroke="black" fill="none" />
+<path id="LeftDpadBorder" d="M 66 76 H 43 A 6 6, 0, 0 0, 37 82 V 105 A 6 6, 0, 0 0, 43 111 H 66 V 134 A 6 6, 0, 0 0, 72 140 H 95 A 6 6, 0, 0 0, 101 134 V 111 H 124 A 6 6, 0, 0 0, 130 105 V 82 A 6 6, 0, 0 0, 124 76 H 101 V 53 A 6 6, 0, 0 0, 95 47 H 72 A 6 6, 0, 0 0, 66 53 V 76.5" stroke="black" fill="none" />
+<path id="DpadButtonLeft" d="M 52 85 H 69 L 75 93.5 L 69 102 H 52 Z M 48 88 V 99 L 43 93.5 Z" stroke="black" fill="none" />
+<path id="DpadButtonRight" d="M 115 85 H 98 L 92 93.5 L 98 102 H 115 Z M 119 88 V 99 L 124 93.5 Z" stroke="black" fill="none" />
+<path id="DpadButtonTop" d="M 75 62 V 79 L 83.5 85 L 92 79 V 62 Z M 78 58 H 89 L 83.5 53 Z" stroke="black" fill="none" />
+<path id="DpadButtonBottom" d="M 75 125 V 108 L 83.5 102 L 92 108 V 125 Z M 78 129 H 89 L 83.5 134 Z" stroke="black" fill="none" />
+</svg>

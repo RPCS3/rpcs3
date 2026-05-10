@@ -1,0 +1,227 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="Emu\RSX\VK\VKAsyncScheduler.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKCommandStream.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKCommonDecompiler.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKCompute.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKDataHeapManager.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKDMA.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKDraw.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKFormats.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKFragmentProgram.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKFramebuffer.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKGSRender.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKHelpers.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKMemAlloc.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKOverlays.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKPipelineCompiler.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKPresent.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKProgramPipeline.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKQueryPool.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKRenderPass.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKRenderTargets.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKResolveHelper.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKResourceManager.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKShaderInterpreter.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKTexture.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKTextureCache.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKVertexBuffers.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKVertexProgram.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VulkanAPI.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\chip_class.cpp">
+      <Filter>vkutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\vkutils\sampler.cpp">
+      <Filter>vkutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\vkutils\shared.cpp">
+      <Filter>vkutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\vkutils\buffer_object.cpp">
+      <Filter>vkutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\vkutils\commands.cpp">
+      <Filter>vkutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\vkutils\sync.cpp">
+      <Filter>vkutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\vkutils\memory.cpp">
+      <Filter>vkutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\vkutils\descriptors.cpp">
+      <Filter>vkutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\vkutils\device.cpp">
+      <Filter>vkutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\vkutils\image.cpp">
+      <Filter>vkutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\vkutils\data_heap.cpp">
+      <Filter>vkutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\vkutils\barriers.cpp">
+      <Filter>vkutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\vkutils\scratch.cpp">
+      <Filter>vkutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\vkutils\image_helpers.cpp">
+      <Filter>vkutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\upscalers\fsr1\fsr_pass.cpp">
+      <Filter>upscalers\fsr1</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\VKCommonPipelineLayout.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\instance.cpp">
+      <Filter>vkutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\vkutils\swapchain.cpp">
+      <Filter>vkutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\vkutils\ex.cpp">
+      <Filter>vkutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\VK\vkutils\unique_resource.cpp">
+      <Filter>vkutils</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Emu\RSX\VK\VKCommonDecompiler.h" />
+    <ClInclude Include="Emu\RSX\VK\VKCompute.h" />
+    <ClInclude Include="Emu\RSX\VK\VKDataHeapManager.h" />
+    <ClInclude Include="Emu\RSX\VK\VKDMA.h" />
+    <ClInclude Include="Emu\RSX\VK\VKFormats.h" />
+    <ClInclude Include="Emu\RSX\VK\VKFragmentProgram.h" />
+    <ClInclude Include="Emu\RSX\VK\VKFramebuffer.h" />
+    <ClInclude Include="Emu\RSX\VK\VKGSRender.h" />
+    <ClInclude Include="Emu\RSX\VK\VKHelpers.h" />
+    <ClInclude Include="Emu\RSX\VK\VKOverlays.h" />
+    <ClInclude Include="Emu\RSX\VK\VKProgramBuffer.h" />
+    <ClInclude Include="Emu\RSX\VK\VKRenderPass.h" />
+    <ClInclude Include="Emu\RSX\VK\VKRenderTargets.h" />
+    <ClInclude Include="Emu\RSX\VK\VKResolveHelper.h" />
+    <ClInclude Include="Emu\RSX\VK\VKResourceManager.h" />
+    <ClInclude Include="Emu\RSX\VK\VKShaderInterpreter.h" />
+    <ClInclude Include="Emu\RSX\VK\VKTextureCache.h" />
+    <ClInclude Include="Emu\RSX\VK\VKVertexProgram.h" />
+    <ClInclude Include="Emu\RSX\VK\VulkanAPI.h" />
+    <ClInclude Include="Emu\RSX\VK\VKCommandStream.h" />
+    <ClInclude Include="Emu\RSX\VK\VKQueryPool.h" />
+    <ClInclude Include="Emu\RSX\VK\VKPipelineCompiler.h" />
+    <ClInclude Include="Emu\RSX\VK\VKProgramPipeline.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\chip_class.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\pipeline_binding_table.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\sampler.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\shared.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\buffer_object.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\commands.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\sync.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\graphics_pipeline_state.hpp">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\device.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\instance.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\memory.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\query_pool.hpp">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\framebuffer_object.hpp">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\image.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\swapchain.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\descriptors.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\data_heap.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\barriers.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\scratch.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\image_helpers.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\VKAsyncScheduler.h" />
+    <ClInclude Include="Emu\RSX\VK\upscalers\bilinear_pass.hpp">
+      <Filter>upscalers</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\upscalers\fsr_pass.h">
+      <Filter>upscalers</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\upscalers\upscaling.h">
+      <Filter>upscalers</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\VKGSRenderTypes.hpp" />
+    <ClInclude Include="Emu\RSX\VK\upscalers\nearest_pass.hpp">
+      <Filter>upscalers</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\garbage_collector.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\VKCommonPipelineLayout.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\swapchain_win32.hpp">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\swapchain_unix.hpp">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\swapchain_macos.hpp">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\swapchain_android.hpp">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\swapchain_core.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\VKProcTable.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\ex.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\VK\vkutils\unique_resource.h">
+      <Filter>vkutils</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="vkutils">
+      <UniqueIdentifier>{2c6cb5a5-ed99-44fe-a0b6-7ba1949c8b29}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers">
+      <UniqueIdentifier>{7294bfa7-a561-4032-8b96-256afbb7476d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers\fsr1">
+      <UniqueIdentifier>{8387b0fc-178f-4c9c-9cf2-03df99ce4df2}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

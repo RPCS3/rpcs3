@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# git pre-commit hook that run git-clang-format when committing.
+# To use it install clang-format and python 2.7 then copy this
+# file to .git/hooks/ and remove the extension
+
+git clang-format --style=file --diff > style.patch
+git apply --index style.patch
+rm style.patch
+exit 0

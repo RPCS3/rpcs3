@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>pad_led_settings_dialog</class>
+ <widget class="QWidget" name="pad_led_settings_dialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>255</width>
+    <height>350</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>LED Settings</string>
+  </property>
+  <layout class="QVBoxLayout" name="pad_led_settings_dialog_layout">
+   <item>
+    <widget class="QGroupBox" name="gb_led_color">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>100</height>
+      </size>
+     </property>
+     <property name="title">
+      <string>LED Color</string>
+     </property>
+     <layout class="QVBoxLayout" name="gb_led_color_layout">
+      <item>
+       <widget class="QLabel" name="w_color_sample">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="b_colorpicker">
+        <property name="text">
+         <string>Select color</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="gb_player_led">
+     <property name="title">
+      <string>Player LED</string>
+     </property>
+     <layout class="QVBoxLayout" name="gb_player_led_layout">
+      <item>
+       <widget class="QCheckBox" name="cb_player_led">
+        <property name="text">
+         <string>Enable player LED</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="gb_battery_status">
+     <property name="title">
+      <string>In-game battery status</string>
+     </property>
+     <layout class="QVBoxLayout" name="gb_battery_status_layout">
+      <item>
+       <widget class="QCheckBox" name="cb_led_blink">
+        <property name="text">
+         <string>Blink LED when battery is low</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QCheckBox" name="cb_led_indicate">
+        <property name="text">
+         <string>Use LED as a battery indicator</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="gb_indicator_brightness">
+     <property name="title">
+      <string>LED battery indicator brightness</string>
+     </property>
+     <layout class="QHBoxLayout" name="gb_indicator_brightness_layout" stretch="2,1,13">
+      <item>
+       <widget class="QLabel" name="l_indicator_brightness">
+        <property name="text">
+         <string>100%</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QSlider" name="hs_indicator_brightness">
+        <property name="maximum">
+         <number>100</number>
+        </property>
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <spacer name="main_verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>0</width>
+       <height>0</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="bb_dialog_buttons">
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Apply|QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <layoutdefault spacing="6" margin="11"/>
+ <resources/>
+ <connections/>
+</ui>

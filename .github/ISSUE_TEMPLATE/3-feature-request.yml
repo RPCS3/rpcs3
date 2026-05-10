@@ -1,0 +1,36 @@
+name: Feature request
+description: If RPCS3 lacks a feature you would like to see
+title: "[Feature request] Enter a title here"
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please do not ask for help or report compatibility regressions here, use [RPCS3 Discord server](https://discord.gg/rpcs3) or [forums](https://forums.rpcs3.net/) instead.
+  - type: textarea
+    id: quick-summary
+    attributes:
+      label: Quick summary
+      description: Please briefly describe what feature you would like RPCS3 to have.
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: Please describe the feature as accurately as possible.
+    validations:
+      required: false
+  - type: markdown
+    attributes:
+      value: |
+        Please include the following information:
+        * What part of RPCS3 would be affected by your feature? (Gameplay, Debugging, UI, Patches, Installation, CI etc.)
+        * Why your feature is important to RPCS3.
+        * If the feature is implemented in other projects, attach screenshots.
+        * If this feature is something that a game is trying to use, upload a log file for it.
+
+        RPCS3's Log file will be ```RPCS3.log.gz``` (sometimes shows as RPCS3.log with zip icon) or ```RPCS3.log``` (sometimes shows as RPCS3 wtih notepad icon).
+        * On Windows it will be in the ```log``` folder inside your RPCS3 folder.
+        * On Linux it will be in ```~/.cache/rpcs3/```
+        * On MacOS it will be in ```~/Library/Caches/rpcs3```. If you're unable to locate it copy paste the path in Spotlight and hit enter.

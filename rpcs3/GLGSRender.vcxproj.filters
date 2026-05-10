@@ -1,0 +1,137 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="Emu\RSX\GL\GLDraw.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLTexture.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLHelpers.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLCommonDecompiler.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLFragmentProgram.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLGSRender.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLVertexProgram.cpp" />
+    <ClCompile Include="Emu\RSX\GL\OpenGL.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLPresent.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLRenderTargets.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLShaderInterpreter.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLVertexBuffers.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLPipelineCompiler.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLTextureCache.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLOverlays.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLCompute.cpp" />
+    <ClCompile Include="Emu\RSX\GL\glutils\buffer_object.cpp">
+      <Filter>glutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\glutils\ring_buffer.cpp">
+      <Filter>glutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\glutils\image.cpp">
+      <Filter>glutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\glutils\common.cpp">
+      <Filter>glutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\glutils\blitter.cpp">
+      <Filter>glutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\glutils\fbo.cpp">
+      <Filter>glutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\glutils\program.cpp">
+      <Filter>glutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\glutils\sampler.cpp">
+      <Filter>glutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\glutils\capabilities.cpp">
+      <Filter>glutils</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\upscalers\fsr1\fsr_pass.cpp">
+      <Filter>upscalers\fsr1</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\GL\GLDMA.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLResolveHelper.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Emu\RSX\GL\GLTexture.h" />
+    <ClInclude Include="Emu\RSX\GL\GLHelpers.h" />
+    <ClInclude Include="Emu\RSX\GL\GLCommonDecompiler.h" />
+    <ClInclude Include="Emu\RSX\GL\GLFragmentProgram.h" />
+    <ClInclude Include="Emu\RSX\GL\GLGSRender.h" />
+    <ClInclude Include="Emu\RSX\GL\GLProcTable.h" />
+    <ClInclude Include="Emu\RSX\GL\GLProgramBuffer.h" />
+    <ClInclude Include="Emu\RSX\GL\GLVertexProgram.h" />
+    <ClInclude Include="Emu\RSX\GL\OpenGL.h" />
+    <ClInclude Include="Emu\RSX\GL\GLTextureCache.h" />
+    <ClInclude Include="Emu\RSX\GL\GLRenderTargets.h" />
+    <ClInclude Include="Emu\RSX\GL\GLShaderInterpreter.h" />
+    <ClInclude Include="Emu\RSX\GL\GLOverlays.h" />
+    <ClInclude Include="Emu\RSX\GL\GLCompute.h" />
+    <ClInclude Include="Emu\RSX\GL\GLPipelineCompiler.h" />
+    <ClInclude Include="Emu\RSX\GL\glutils\buffer_object.h">
+      <Filter>glutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\glutils\ring_buffer.h">
+      <Filter>glutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\glutils\common.h">
+      <Filter>glutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\glutils\capabilities.h">
+      <Filter>glutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\glutils\image.h">
+      <Filter>glutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\glutils\state_tracker.hpp">
+      <Filter>glutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\glutils\pixel_settings.hpp">
+      <Filter>glutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\glutils\blitter.h">
+      <Filter>glutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\glutils\fbo.h">
+      <Filter>glutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\glutils\vao.hpp">
+      <Filter>glutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\glutils\program.h">
+      <Filter>glutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\glutils\sync.hpp">
+      <Filter>glutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\glutils\sampler.h">
+      <Filter>glutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\upscalers\upscaling.h">
+      <Filter>upscalers</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\upscalers\bilinear_pass.hpp">
+      <Filter>upscalers</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\upscalers\static_pass.hpp">
+      <Filter>upscalers</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\upscalers\nearest_pass.hpp">
+      <Filter>upscalers</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\upscalers\fsr_pass.h">
+      <Filter>upscalers</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\GLDMA.h" />
+    <ClInclude Include="Emu\RSX\GL\GLResolveHelper.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="glutils">
+      <UniqueIdentifier>{ed9ef6b7-efbb-4a8e-88a4-583b6655c141}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers">
+      <UniqueIdentifier>{4ce10cbf-4595-433a-a21a-035bf40bb4e5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="upscalers\fsr1">
+      <UniqueIdentifier>{d5626eff-1471-4810-9e57-0f8987f86d67}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

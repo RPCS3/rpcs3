@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>English</string>
+	<key>CFBundleExecutable</key>
+	<string>rpcs3</string>
+	<key>CFBundleGetInfoString</key>
+	<string>Open-source Sony PlayStation 3 emulator</string>
+	<key>CFBundleIconFile</key>
+	<string>rpcs3.icns</string>
+	<key>CFBundleIdentifier</key>
+	<string>net.rpcs3.rpcs3</string>
+	<key>CFBundleName</key>
+	<string>RPCS3</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>${MACOSX_BUNDLE_SHORT_VERSION_STRING}</string>
+	<key>CFBundleVersion</key>
+	<string>${MACOSX_BUNDLE_BUNDLE_VERSION}</string>
+ 	<key>CFBundleSupportedPlatforms</key>
+	<array>
+		<string>MacOSX</string>
+	</array>
+	<key>NSHumanReadableCopyright</key>
+	<string>Licensed under GPLv2</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.games</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.4</string>
+	<key>NSCameraUsageDescription</key>
+	<string>The camera will be used for PlayStation Eye emulation</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>The microphone will be used for Chat/SingStar emulation</string>
+</dict>
+</plist>

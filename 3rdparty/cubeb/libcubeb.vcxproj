@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="cubeb\src\cubeb.c" />
+    <ClCompile Include="cubeb\src\cubeb_log.cpp" />
+    <ClCompile Include="cubeb\src\cubeb_mixer.cpp" />
+    <ClCompile Include="cubeb\src\cubeb_resampler.cpp" />
+    <ClCompile Include="cubeb\src\cubeb_strings.c" />
+    <ClCompile Include="cubeb\src\cubeb_utils.cpp" />
+    <ClCompile Include="cubeb\src\cubeb_wasapi.cpp" />
+    <ClCompile Include="cubeb\src\cubeb_winmm.c" />
+    <ClCompile Include="cubeb\subprojects\speex\resample.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="cubeb\include\cubeb\cubeb.h" />
+    <ClInclude Include="cubeb\src\cubeb-internal.h" />
+    <ClInclude Include="cubeb\src\cubeb-speex-resampler.h" />
+    <ClInclude Include="cubeb\src\cubeb_array_queue.h" />
+    <ClInclude Include="cubeb\src\cubeb_assert.h" />
+    <ClInclude Include="cubeb\src\cubeb_log.h" />
+    <ClInclude Include="cubeb\src\cubeb_mixer.h" />
+    <ClInclude Include="cubeb\src\cubeb_resampler.h" />
+    <ClInclude Include="cubeb\src\cubeb_resampler_internal.h" />
+    <ClInclude Include="cubeb\src\cubeb_ringbuffer.h" />
+    <ClInclude Include="cubeb\src\cubeb_ring_array.h" />
+    <ClInclude Include="cubeb\src\cubeb_strings.h" />
+    <ClInclude Include="cubeb\src\cubeb_utils.h" />
+    <ClInclude Include="cubeb\src\cubeb_utils_win.h" />
+    <ClInclude Include="cubeb\subprojects\speex\arch.h" />
+    <ClInclude Include="cubeb\subprojects\speex\fixed_generic.h" />
+    <ClInclude Include="cubeb\subprojects\speex\resample_neon.h" />
+    <ClInclude Include="cubeb\subprojects\speex\resample_sse.h" />
+    <ClInclude Include="cubeb\subprojects\speex\speex_config_types.h" />
+    <ClInclude Include="cubeb\subprojects\speex\speex_resampler.h" />
+    <ClInclude Include="cubeb\subprojects\speex\stack_alloc.h" />
+    <ClInclude Include="extra\cubeb_export.h" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{fda7b080-03b0-48c8-b24f-88118981422a}</ProjectGuid>
+    <RootNamespace>libcubeb</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(SolutionDir)\buildfiles\msvc\common_default.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(SolutionDir)\buildfiles\msvc\common_default_macros.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(SolutionDir)\buildfiles\msvc\rpcs3_default.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(SolutionDir)\buildfiles\msvc\rpcs3_debug.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(SolutionDir)\buildfiles\msvc\rpcs3_release.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>$(SolutionDir)build\lib\$(Configuration)-$(Platform)\</OutDir>
+    <IntDir>$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(SolutionDir)build\lib\$(Configuration)-$(Platform)\</OutDir>
+    <IntDir>$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <WarningLevel>TurnOffAllWarnings</WarningLevel>
+      <SDLCheck>false</SDLCheck>
+      <PreprocessorDefinitions>OUTSIDE_SPEEX;RANDOM_PREFIX=speex;FLOATING_POINT;_USE_SSE;_USE_SSE2;EXPORT=;USE_WASAPI;USE_WINMM;CUBEB_WASAPI_USE_IAUDIOSTREAMVOLUME;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>./cubeb/subprojects/;./extra/;./cubeb/src/;./cubeb/include/;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

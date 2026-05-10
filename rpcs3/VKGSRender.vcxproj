@@ -1,0 +1,170 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Emu\RSX\VK\upscalers\bilinear_pass.hpp" />
+    <ClInclude Include="Emu\RSX\VK\upscalers\fsr_pass.h" />
+    <ClInclude Include="Emu\RSX\VK\upscalers\nearest_pass.hpp" />
+    <ClInclude Include="Emu\RSX\VK\upscalers\upscaling.h" />
+    <ClInclude Include="Emu\RSX\VK\VKAsyncScheduler.h" />
+    <ClInclude Include="Emu\RSX\VK\VKCommandStream.h" />
+    <ClInclude Include="Emu\RSX\VK\VKCommonDecompiler.h" />
+    <ClInclude Include="Emu\RSX\VK\VKCompute.h" />
+    <ClInclude Include="Emu\RSX\VK\VKDataHeapManager.h" />
+    <ClInclude Include="Emu\RSX\VK\VKDMA.h" />
+    <ClInclude Include="Emu\RSX\VK\VKFormats.h" />
+    <ClInclude Include="Emu\RSX\VK\VKFragmentProgram.h" />
+    <ClInclude Include="Emu\RSX\VK\VKFramebuffer.h" />
+    <ClInclude Include="Emu\RSX\VK\VKGSRender.h" />
+    <ClInclude Include="Emu\RSX\VK\VKGSRenderTypes.hpp" />
+    <ClInclude Include="Emu\RSX\VK\VKHelpers.h" />
+    <ClInclude Include="Emu\RSX\VK\VKOverlays.h" />
+    <ClInclude Include="Emu\RSX\VK\VKPipelineCompiler.h" />
+    <ClInclude Include="Emu\RSX\VK\VKProcTable.h" />
+    <ClInclude Include="Emu\RSX\VK\VKProgramBuffer.h" />
+    <ClInclude Include="Emu\RSX\VK\VKProgramPipeline.h" />
+    <ClInclude Include="Emu\RSX\VK\VKQueryPool.h" />
+    <ClInclude Include="Emu\RSX\VK\VKRenderPass.h" />
+    <ClInclude Include="Emu\RSX\VK\VKRenderTargets.h" />
+    <ClInclude Include="Emu\RSX\VK\VKResolveHelper.h" />
+    <ClInclude Include="Emu\RSX\VK\VKResourceManager.h" />
+    <ClInclude Include="Emu\RSX\VK\VKShaderInterpreter.h" />
+    <ClInclude Include="Emu\RSX\VK\VKCommonPipelineLayout.h" />
+    <ClInclude Include="Emu\RSX\VK\VKTextureCache.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\buffer_object.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\chip_class.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\commands.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\data_heap.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\descriptors.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\barriers.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\ex.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\framebuffer_object.hpp" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\garbage_collector.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\image.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\image_helpers.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\scratch.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\swapchain.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\swapchain_android.hpp" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\swapchain_core.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\swapchain_unix.hpp" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\swapchain_macos.hpp" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\swapchain_win32.hpp" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\sync.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\graphics_pipeline_state.hpp" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\memory.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\device.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\pipeline_binding_table.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\query_pool.hpp" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\sampler.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\shared.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\instance.h" />
+    <ClInclude Include="Emu\RSX\VK\vkutils\unique_resource.h" />
+    <ClInclude Include="Emu\RSX\VK\VKVertexProgram.h" />
+    <ClInclude Include="Emu\RSX\VK\VulkanAPI.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Emu\RSX\VK\upscalers\fsr1\fsr_pass.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKAsyncScheduler.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKCommandStream.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKCommonDecompiler.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKCompute.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKDataHeapManager.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKDMA.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKDraw.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKFormats.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKFragmentProgram.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKFramebuffer.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKGSRender.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKHelpers.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKOverlays.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKPipelineCompiler.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKPresent.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKProgramPipeline.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKQueryPool.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKRenderPass.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKRenderTargets.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKResolveHelper.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKResourceManager.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKShaderInterpreter.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKCommonPipelineLayout.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKTexture.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\barriers.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\buffer_object.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\chip_class.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\commands.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\data_heap.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\ex.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\image.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\image_helpers.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\instance.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\scratch.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\swapchain.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\sync.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\memory.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\descriptors.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\device.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\sampler.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\shared.cpp" />
+    <ClCompile Include="Emu\RSX\VK\vkutils\unique_resource.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKVertexBuffers.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKVertexProgram.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKTextureCache.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VKMemAlloc.cpp" />
+    <ClCompile Include="Emu\RSX\VK\VulkanAPI.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="emucore.vcxproj">
+      <Project>{c4a10229-4712-4bd2-b63e-50d93c67a038}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{3EE5F075-B546-42C4-B6A8-E3CCEF38B78D}</ProjectGuid>
+    <RootNamespace>VKGSRender</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(SolutionDir)\buildfiles\msvc\common_default.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <Import Project="$(SolutionDir)\buildfiles\msvc\common_default_macros.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(SolutionDir)\buildfiles\msvc\rpcs3_default.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(SolutionDir)\buildfiles\msvc\rpcs3_debug.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(SolutionDir)\buildfiles\msvc\rpcs3_release.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup />
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(VULKAN_SDK)\Include;$(SolutionDir)\3rdparty\glslang\glslang\Public;..\3rdparty\glslang\glslang;%(AdditionalIncludeDirectories);$(SolutionDir)3rdparty\GPUOpen\VulkanMemoryAllocator\include</AdditionalIncludeDirectories>
+      <AdditionalOptions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">/bigobj %(AdditionalOptions)</AdditionalOptions>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

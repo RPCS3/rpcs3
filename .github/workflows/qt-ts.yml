@@ -1,0 +1,34 @@
+name: Generate Translation Template
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - 'rpcs3/**'
+
+jobs:
+  Generate_Translation_Template:
+    name: Generate Translation Template
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@main
+
+      - name: Install Qt Tools
+        run: |
+          sudo apt update
+          sudo apt install -y qt6-l10n-tools
+
+      - name: Generate .ts file using lupdate (Qt)
+        working-directory: rpcs3
+        run: |
+          ../.ci/generate-qt-ts.sh
+
+      - name: Upload translation template
+        uses: actions/upload-artifact@main
+        with:
+          name: RPCS3_Translation_Template
+          path: translations/rpcs3_template.ts
+          compression-level: 0
