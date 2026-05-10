@@ -1,0 +1,215 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="asmjit\src\asmjit\core\archtraits.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\assembler.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\builder.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\codeholder.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\codewriter.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\compiler.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\constpool.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\cpuinfo.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\emithelper.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\emitter.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\emitterutils.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\environment.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\errorhandler.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\formatter.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\funcargscontext.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\func.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\globals.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\inst.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\jitallocator.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\jitruntime.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\logger.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\operand.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\osutils.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\ralocal.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\rapass.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\rastack.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\string.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\support.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\target.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\type.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\virtmem.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\zone.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\zonehash.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\zonelist.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\zonestack.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\zonetree.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\core\zonevector.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\x86\x86assembler.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\x86\x86builder.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\x86\x86compiler.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\x86\x86emithelper.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\x86\x86formatter.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\x86\x86func.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\x86\x86instapi.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\x86\x86instdb.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\x86\x86operand.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\x86\x86rapass.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\arm\a64assembler.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\arm\a64builder.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\arm\a64compiler.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\arm\a64emithelper.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\arm\a64formatter.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\arm\a64func.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\arm\a64instapi.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\arm\a64instdb.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\arm\a64operand.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\arm\a64rapass.cpp" />
+    <ClCompile Include="asmjit\src\asmjit\arm\armformatter.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="asmjit\src\asmjit\a64.h" />
+    <ClInclude Include="asmjit\src\asmjit\arm.h" />
+    <ClInclude Include="asmjit\src\asmjit\arm\armutils.h" />
+    <ClInclude Include="asmjit\src\asmjit\asmjit-scope-begin.h" />
+    <ClInclude Include="asmjit\src\asmjit\asmjit-scope-end.h" />
+    <ClInclude Include="asmjit\src\asmjit\asmjit.h" />
+    <ClInclude Include="asmjit\src\asmjit\core.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\api-build_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\api-config.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\archcommons.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\archtraits.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\assembler.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\builder.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\builder_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\codebuffer.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\codeholder.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\codewriter_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\compilerdefs.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\compiler.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\constpool.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\cpuinfo.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\emithelper_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\emitter.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\emitterutils_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\environment.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\errorhandler.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\formatter.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\formatter_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\funcargscontext_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\func.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\globals.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\inst.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\jitallocator.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\jitruntime.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\logger.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\misc_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\operand.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\osutils.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\osutils_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\raassignment_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\rabuilders_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\radefs_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\ralocal_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\rapass_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\rastack_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\string.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\support.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\support_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\target.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\type.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\virtmem.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\zone.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\zonehash.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\zonelist.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\zonestack.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\zonestring.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\zonetree.h" />
+    <ClInclude Include="asmjit\src\asmjit\core\zonevector.h" />
+    <ClInclude Include="asmjit\src\asmjit\x86.h" />
+    <ClInclude Include="asmjit\src\asmjit\x86\x86archtraits_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\x86\x86assembler.h" />
+    <ClInclude Include="asmjit\src\asmjit\x86\x86builder.h" />
+    <ClInclude Include="asmjit\src\asmjit\x86\x86compiler.h" />
+    <ClInclude Include="asmjit\src\asmjit\x86\x86emithelper_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\x86\x86emitter.h" />
+    <ClInclude Include="asmjit\src\asmjit\x86\x86formatter_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\x86\x86func_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\x86\x86globals.h" />
+    <ClInclude Include="asmjit\src\asmjit\x86\x86instapi_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\x86\x86instdb.h" />
+    <ClInclude Include="asmjit\src\asmjit\x86\x86instdb_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\x86\x86opcode_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\x86\x86operand.h" />
+    <ClInclude Include="asmjit\src\asmjit\x86\x86rapass_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\arm\a64archtraits_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\arm\a64assembler.h" />
+    <ClInclude Include="asmjit\src\asmjit\arm\a64builder.h" />
+    <ClInclude Include="asmjit\src\asmjit\arm\a64compiler.h" />
+    <ClInclude Include="asmjit\src\asmjit\arm\a64emithelper_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\arm\a64emitter.h" />
+    <ClInclude Include="asmjit\src\asmjit\arm\a64formatter_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\arm\a64func_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\arm\a64globals.h" />
+    <ClInclude Include="asmjit\src\asmjit\arm\a64instapi_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\arm\a64instdb.h" />
+    <ClInclude Include="asmjit\src\asmjit\arm\a64instdb_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\arm\a64operand.h" />
+    <ClInclude Include="asmjit\src\asmjit\arm\a64rapass_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\arm\a64utils.h" />
+    <ClInclude Include="asmjit\src\asmjit\arm\armformatter_p.h" />
+    <ClInclude Include="asmjit\src\asmjit\arm\armglobals.h" />
+    <ClInclude Include="asmjit\src\asmjit\arm\armoperand.h" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{AC40FF01-426E-4838-A317-66354CEFAE88}</ProjectGuid>
+    <RootNamespace>asmjit</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(SolutionDir)\buildfiles\msvc\common_default.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(SolutionDir)\buildfiles\msvc\common_default_macros.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>$(SolutionDir)build\lib\$(Configuration)-$(Platform)\</OutDir>
+    <IntDir>$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(SolutionDir)build\lib\$(Configuration)-$(Platform)\</OutDir>
+    <IntDir>$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
+  </PropertyGroup>
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(SolutionDir)\buildfiles\msvc\rpcs3_default.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(SolutionDir)\buildfiles\msvc\rpcs3_debug.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(SolutionDir)\buildfiles\msvc\rpcs3_release.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PreprocessorDefinitions>ASMJIT_STATIC;ASMJIT_NO_DEPRECATED;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
+      <WarningLevel Condition="'$(Configuration)|$(Platform)'=='Release|x64'">TurnOffAllWarnings</WarningLevel>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

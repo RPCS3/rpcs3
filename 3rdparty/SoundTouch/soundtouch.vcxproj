@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="soundtouch\include\FIFOSampleBuffer.h" />
+    <ClInclude Include="soundtouch\include\FIFOSamplePipe.h" />
+    <ClInclude Include="soundtouch\include\SoundTouch.h" />
+    <ClInclude Include="soundtouch\include\STTypes.h" />
+    <ClInclude Include="soundtouch\source\SoundTouch\AAFilter.h" />
+    <ClInclude Include="soundtouch\source\SoundTouch\FIRFilter.h" />
+    <ClInclude Include="soundtouch\source\SoundTouch\InterpolateCubic.h" />
+    <ClInclude Include="soundtouch\source\SoundTouch\InterpolateLinear.h" />
+    <ClInclude Include="soundtouch\source\SoundTouch\InterpolateShannon.h" />
+    <ClInclude Include="soundtouch\source\SoundTouch\RateTransposer.h" />
+    <ClInclude Include="soundtouch\source\SoundTouch\TDStretch.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="soundtouch\source\SoundTouch\AAFilter.cpp" />
+    <ClCompile Include="soundtouch\source\SoundTouch\FIFOSampleBuffer.cpp" />
+    <ClCompile Include="soundtouch\source\SoundTouch\FIRFilter.cpp" />
+    <ClCompile Include="soundtouch\source\SoundTouch\InterpolateCubic.cpp" />
+    <ClCompile Include="soundtouch\source\SoundTouch\InterpolateLinear.cpp" />
+    <ClCompile Include="soundtouch\source\SoundTouch\InterpolateShannon.cpp" />
+    <ClCompile Include="soundtouch\source\SoundTouch\RateTransposer.cpp" />
+    <ClCompile Include="soundtouch\source\SoundTouch\SoundTouch.cpp" />
+    <ClCompile Include="soundtouch\source\SoundTouch\sse_optimized.cpp" />
+    <ClCompile Include="soundtouch\source\SoundTouch\TDStretch.cpp" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{508c291a-3d18-49f5-b25d-f7c8db92cb21}</ProjectGuid>
+    <RootNamespace>soundtouch</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(SolutionDir)\buildfiles\msvc\common_default.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(SolutionDir)\buildfiles\msvc\common_default_macros.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(SolutionDir)\buildfiles\msvc\rpcs3_default.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(SolutionDir)\buildfiles\msvc\rpcs3_debug.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(SolutionDir)\buildfiles\msvc\rpcs3_release.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <WarningLevel>TurnOffAllWarnings</WarningLevel>
+      <SDLCheck>false</SDLCheck>
+      <PreprocessorDefinitions>SOUNDTOUCH_ALLOW_SSE;ST_NO_EXCEPTION_HANDLING;USE_MULTICH_ALWAYS;SOUNDTOUCH_FLOAT_SAMPLES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>./soundtouch/source/SoundTouch;./soundtouch/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DebugInformationFormat Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">ProgramDatabase</DebugInformationFormat>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

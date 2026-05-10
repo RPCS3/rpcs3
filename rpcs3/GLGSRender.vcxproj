@@ -1,0 +1,123 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <RootNamespace>GLGSRender</RootNamespace>
+    <ProjectGuid>{3384223A-6D97-4799-9862-359F85312892}</ProjectGuid>
+  </PropertyGroup>
+  <Import Project="$(SolutionDir)\buildfiles\msvc\common_default.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+  </PropertyGroup>
+  <Import Project="$(SolutionDir)\buildfiles\msvc\common_default_macros.props" />
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(SolutionDir)\buildfiles\msvc\rpcs3_default.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(SolutionDir)\buildfiles\msvc\rpcs3_debug.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(SolutionDir)\buildfiles\msvc\rpcs3_release.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <Optimization>MaxSpeed</Optimization>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectReference Include="emucore.vcxproj">
+      <Project>{c4a10229-4712-4bd2-b63e-50d93c67a038}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Emu\RSX\GL\GLCompute.h" />
+    <ClInclude Include="Emu\RSX\GL\GLDMA.h" />
+    <ClInclude Include="Emu\RSX\GL\GLOverlays.h" />
+    <ClInclude Include="Emu\RSX\GL\GLPipelineCompiler.h" />
+    <ClInclude Include="Emu\RSX\GL\GLCommonDecompiler.h" />
+    <ClInclude Include="Emu\RSX\GL\GLFragmentProgram.h" />
+    <ClInclude Include="Emu\RSX\GL\GLGSRender.h" />
+    <ClInclude Include="Emu\RSX\GL\GLProcTable.h" />
+    <ClInclude Include="Emu\RSX\GL\GLProgramBuffer.h" />
+    <ClInclude Include="Emu\RSX\GL\GLResolveHelper.h" />
+    <ClInclude Include="Emu\RSX\GL\glutils\blitter.h" />
+    <ClInclude Include="Emu\RSX\GL\glutils\buffer_object.h" />
+    <ClInclude Include="Emu\RSX\GL\glutils\capabilities.h" />
+    <ClInclude Include="Emu\RSX\GL\glutils\common.h" />
+    <ClInclude Include="Emu\RSX\GL\glutils\fbo.h" />
+    <ClInclude Include="Emu\RSX\GL\glutils\pixel_settings.hpp" />
+    <ClInclude Include="Emu\RSX\GL\glutils\program.h" />
+    <ClInclude Include="Emu\RSX\GL\glutils\ring_buffer.h" />
+    <ClInclude Include="Emu\RSX\GL\glutils\sampler.h" />
+    <ClInclude Include="Emu\RSX\GL\glutils\state_tracker.hpp" />
+    <ClInclude Include="Emu\RSX\GL\glutils\image.h" />
+    <ClInclude Include="Emu\RSX\GL\glutils\sync.hpp" />
+    <ClInclude Include="Emu\RSX\GL\glutils\vao.hpp" />
+    <ClInclude Include="Emu\RSX\GL\GLVertexProgram.h" />
+    <ClInclude Include="Emu\RSX\GL\GLHelpers.h" />
+    <ClInclude Include="Emu\RSX\GL\GLRenderTargets.h" />
+    <ClInclude Include="Emu\RSX\GL\GLShaderInterpreter.h" />
+    <ClInclude Include="Emu\RSX\GL\GLTextureCache.h" />
+    <ClInclude Include="Emu\RSX\GL\OpenGL.h" />
+    <ClInclude Include="Emu\RSX\GL\GLTexture.h" />
+    <ClInclude Include="Emu\RSX\GL\upscalers\bilinear_pass.hpp" />
+    <ClInclude Include="Emu\RSX\GL\upscalers\fsr_pass.h" />
+    <ClInclude Include="Emu\RSX\GL\upscalers\nearest_pass.hpp" />
+    <ClInclude Include="Emu\RSX\GL\upscalers\static_pass.hpp" />
+    <ClInclude Include="Emu\RSX\GL\upscalers\upscaling.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Emu\RSX\GL\GLCommonDecompiler.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLCompute.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLDMA.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLDraw.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLFragmentProgram.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLGSRender.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLOverlays.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLPipelineCompiler.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLResolveHelper.cpp" />
+    <ClCompile Include="Emu\RSX\GL\glutils\blitter.cpp" />
+    <ClCompile Include="Emu\RSX\GL\glutils\buffer_object.cpp" />
+    <ClCompile Include="Emu\RSX\GL\glutils\capabilities.cpp" />
+    <ClCompile Include="Emu\RSX\GL\glutils\common.cpp" />
+    <ClCompile Include="Emu\RSX\GL\glutils\fbo.cpp" />
+    <ClCompile Include="Emu\RSX\GL\glutils\program.cpp" />
+    <ClCompile Include="Emu\RSX\GL\glutils\ring_buffer.cpp" />
+    <ClCompile Include="Emu\RSX\GL\glutils\image.cpp" />
+    <ClCompile Include="Emu\RSX\GL\glutils\sampler.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLVertexProgram.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLHelpers.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLPresent.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLRenderTargets.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLShaderInterpreter.cpp" />
+    <ClCompile Include="Emu\RSX\GL\OpenGL.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLTexture.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLVertexBuffers.cpp" />
+    <ClCompile Include="Emu\RSX\GL\GLTextureCache.cpp" />
+    <ClCompile Include="Emu\RSX\GL\upscalers\fsr1\fsr_pass.cpp" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

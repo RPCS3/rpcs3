@@ -1,0 +1,78 @@
+name: Bug report
+description: If something doesn't work correctly in RPCS3
+title: "Enter a title here"
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # Summary
+        Please do not ask for help or report compatibility regressions here, use [RPCS3 Discord server](https://discord.gg/rpcs3) or [forums](https://forums.rpcs3.net/) instead.
+  - type: textarea
+    id: quick-summary
+    attributes:
+      label: Quick summary
+      description: Please briefly describe what is not working correctly.
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Details
+      description: |
+        Please describe the problem as accurately as possible.
+        Provide a comparison with a real PS3, if possible.
+    validations:
+      required: false
+  - type: markdown
+    attributes:
+      value: |
+        # Log files
+
+        Provide a log file that includes the bug you're reporting.
+
+        Obtaining the log file:
+        * Run the game until you find the regression.
+        * Completely close RPCS3 and locate the log file.
+
+        RPCS3's Log file will be ```RPCS3.log.gz``` (sometimes shows as RPCS3.log with zip icon) or ```RPCS3.log``` (sometimes shows as RPCS3 wtih notepad icon).
+        * On Windows it will be in the ```log``` folder inside your RPCS3 folder.
+        * On Linux it will be in ```~/.cache/rpcs3/```
+        * On MacOS it will be in ```~/Library/Caches/rpcs3```. If you're unable to locate it copy paste the path in Spotlight and hit enter.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Attach a log file
+      description: |
+        Drag & drop the files into this input field, or upload them to another service (f.ex. Dropbox, Mega) and provide a link.
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
+        # Other details
+        If you describe a graphical issue, please provide an RSX capture and/or a RenderDoc capture that demonstrate it.
+        * To create an RSX capture, use _Create_ _RSX_ _Capture_ under _Utilities_.
+        * Captures will be stored in RPCS3 folder → captures.
+        * To create a RenderDoc capture, please refer to [RenderDoc's documentation](https://renderdoc.org/docs/how/how_capture_frame.html).
+  - type: textarea
+    id: captures
+    attributes:
+      label: Attach capture files for visual issues
+      description: Compress your capture with 7z, Rar etc. and attach it here, or upload it to the cloud (Dropbox, Mega etc) and add a link to it.
+    validations:
+      required: false
+  - type: textarea
+    id: system-info
+    attributes:
+      label: System configuration
+      description: Provide information about your system, such as operating system, CPU and GPU model, GPU driver version and other information that describes your system configuration.
+    validations:
+      required: false
+  - type: textarea
+    id: other-details
+    attributes:
+      label: Other details
+      description: Include anything else you deem to be important.
+    validations:
+      required: false

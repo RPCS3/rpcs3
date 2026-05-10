@@ -1,0 +1,86 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "gcc",
+      "generator": "Ninja",
+      "binaryDir": "build-gcc",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "USE_NATIVE_INSTRUCTIONS": "ON",
+        "USE_PRECOMPILED_HEADERS": "ON",
+        "USE_FAUDIO": "OFF",
+        "USE_SYSTEM_CURL": "OFF",
+        "USE_SYSTEM_ZLIB": "OFF",
+        "USE_SYSTEM_LIBPNG": "OFF",
+        "USE_SYSTEM_OPENCV": "ON",
+        "BUILD_LLVM": "OFF",
+        "STATIC_LINK_LLVM": "ON"
+      }
+    },
+    {
+      "name": "clang",
+      "generator": "Ninja",
+      "binaryDir": "build-clang64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "USE_NATIVE_INSTRUCTIONS": "ON",
+        "USE_PRECOMPILED_HEADERS": "ON",
+        "USE_FAUDIO": "OFF",
+        "USE_SYSTEM_CURL": "OFF",
+        "USE_SYSTEM_ZLIB": "OFF",
+        "USE_SYSTEM_LIBPNG": "OFF",
+        "USE_SYSTEM_OPENCV": "ON",
+        "LLVM_ENABLE_LIBCXX": "ON",
+        "BUILD_LLVM": "OFF",
+        "STATIC_LINK_LLVM": "ON"
+      },
+      "environment": {
+        "CXX": "clang++",
+        "CC": "clang"
+      }
+    },
+    {
+      "name": "msvc",
+      "displayName": "Windows x64",
+      "generator": "Visual Studio 17 2022",
+      "binaryDir": "build-msvc",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_CONFIGURATION_TYPES": "Debug;Release",
+        "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
+        "USE_NATIVE_INSTRUCTIONS": "ON",
+        "USE_PRECOMPILED_HEADERS": "ON",
+        "USE_FAUDIO": "OFF",
+        "USE_SYSTEM_CURL": "OFF",
+        "USE_SYSTEM_ZLIB": "OFF",
+        "USE_SYSTEM_OPENAL": "OFF",
+        "USE_SYSTEM_OPENCV": "OFF",
+        "BUILD_LLVM": "ON",
+        "STATIC_LINK_LLVM": "ON"
+      },
+      "vendor": {
+        "microsoft.com/VisualStudioSettings/CMake/1.0": {
+          "hostOS": [
+            "Windows"
+          ]
+        }
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "msvc-debug",
+      "configurePreset": "msvc",
+      "configuration": "Debug"
+    },
+    {
+      "name": "msvc-release",
+      "configurePreset": "msvc",
+      "configuration": "Release"
+    }
+  ]
+}

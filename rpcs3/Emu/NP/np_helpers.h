@@ -1,0 +1,26 @@
+#pragma once
+
+#include "util/types.hpp"
+#include "Emu/Cell/Modules/sceNp.h"
+#include "rpcn_client.h"
+
+namespace np
+{
+	std::string ip_to_string(u32 addr);
+	std::string ether_to_string(const std::array<u8, 6>& ether);
+	bool validate_communication_id(const SceNpCommunicationId& com_id);
+	std::string communication_id_to_string(const SceNpCommunicationId& communicationId);
+	std::optional<SceNpCommunicationId> string_to_communication_id(std::string_view str);
+
+	void string_to_npid(std::string_view str, SceNpId& npid);
+	std::string npid_to_string(const SceNpId& npid);
+	void string_to_online_name(std::string_view str, SceNpOnlineName& online_name);
+	void string_to_avatar_url(std::string_view str, SceNpAvatarUrl& avatar_url);
+	void strings_to_userinfo(std::string_view npid, std::string_view online_name, std::string_view avatar_url, SceNpUserInfo& user_info);
+
+	template <typename T>
+	void onlinedata_to_presencedetails(const rpcn::friend_online_data& data, bool same_context, T& details);
+
+	bool is_valid_npid(const SceNpId& npid);
+	bool is_same_npid(const SceNpId& npid_1, const SceNpId& npid_2);
+}

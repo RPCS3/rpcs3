@@ -1,0 +1,52 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!-- Copyright 2018 RPCS3 -->
+<component type="desktop">
+    <!--Created with jdAppStreamEdit 8.0-->
+    <id>net.rpcs3.RPCS3</id>
+    <name>RPCS3</name>
+    <summary>Open-source Sony PlayStation 3 Emulator</summary>
+    <summary xml:lang="de">Quelloffener Sony PlayStation 3 Emulator</summary>
+    <developer_name>RPCS3 Developers</developer_name>
+    <launchable type="desktop-id">rpcs3.desktop</launchable>
+    <metadata_license>FSFAP</metadata_license>
+    <project_license>GPL-2.0-only</project_license>
+    <description>
+        <p>RPCS3 is an experimental open-source Sony PlayStation 3 emulator and debugger written in C++ for Windows and Linux. RPCS3 started development in May of 2011 by its founders DH and Hykem.
+The emulator is currently capable of running over 2500 commercial titles powered by Vulkan and OpenGL.</p>
+        <p xml:lang="de">RPCS3 ist ein experimenteller, quelloffener Emulator und Debugger für die Sony PlayStation 3, der in C++ für Windows und Linux entwickelt wurde. Die Entwicklung von RPCS3 begann im Mai 2011 durch seine Gründer DH und Hykem. Der Emulator ist derzeit in der Lage, über 2500 kommerzielle Titel mit Vulkan und OpenGL auszuführen.</p>
+        <p>The goal of this project is to experiment, research, and educate on the topic of PlayStation 3 emulation that can be performed on compatible devices and operating systems.
+All information was obtained legally by purchasing PlayStation 3 hardware and software. Additional information was obtained from various sources on the internet that include but is not limited to system hardware and software documentation.
+Most of this information can be found on the PlayStation 3 Developer Wiki.</p>
+        <p xml:lang="de">Das Ziel dieses Projekts besteht darin, auf dem Gebiet der PlayStation 3 Emulation auf kompatiblen Geräten und Betriebssystemen zu experimentieren, zu forschen und Wissen zu vermitteln. Alle Informationen wurden legal durch den Kauf von PlayStation 3 Hardware und Software erlangt. Zusätzliche Informationen wurden aus verschiedenen Quellen im Internet bezogen, einschließlich, aber nicht beschränkt auf System-Hardware- und Software-Dokumentation. Die meisten dieser Informationen sind im PlayStation 3 Developer Wiki zu finden.</p>
+    </description>
+    <screenshots>
+        <screenshot type="default">
+            <caption>RPCS3 running a game using the Vulkan backend</caption>
+            <image type="source">https://rpcs3.net/blog/wp-content/uploads/2017/05/progress/vklinux.jpg</image>
+        </screenshot>
+    </screenshots>
+    <url type="homepage">https://rpcs3.net</url>
+    <url type="bugtracker">https://github.com/RPCS3/rpcs3/issues</url>
+    <url type="faq">https://rpcs3.net/faq</url>
+    <url type="help">https://rpcs3.net/quickstart</url>
+    <url type="donation">https://www.patreon.com/Nekotekina</url>
+    <url type="vcs-browser">https://github.com/RPCS3/rpcs3</url>
+    <url type="contribute">https://github.com/RPCS3/rpcs3#contributing</url>
+    <categories>
+        <category>Game</category>
+        <category>Emulator</category>
+    </categories>
+    <recommends>
+        <control>gamepad</control>
+        <!-- 768 logical pixels is given as the value for small screens in the AppStream spec -->
+        <display_length compare="ge">768</display_length>
+    </recommends>
+    <content_rating type="oars-1.1"/>
+    <provides>
+        <binary>rpcs3</binary>
+    </provides>
+    <keywords>
+        <keyword>ps3</keyword>
+        <keyword>playstation</keyword>
+    </keywords>
+</component>

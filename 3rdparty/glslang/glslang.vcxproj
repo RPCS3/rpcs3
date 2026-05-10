@@ -1,0 +1,104 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{8F85B6CC-250F-4ACA-A617-E820A74E3E3C}</ProjectGuid>
+    <Keyword>MakeFileProj</Keyword>
+  </PropertyGroup>
+  <Import Project="..\..\buildfiles\msvc\common_default.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="..\..\buildfiles\msvc\common_default_macros.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros">
+    <CmakeGenerator>"Visual Studio $(VisualStudioVersion.Substring(0,2))"</CmakeGenerator>
+    <CmakeReleaseCLI>call vsdevcmd.bat -arch=amd64
+      cmake -G $(CmakeGenerator) -A x64 -DCMAKE_BUILD_TYPE="Release" -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded -DGLSLANG_TESTS=OFF -DENABLE_GLSLANG_BINARIES=OFF -DBUILD_EXTERNAL=OFF -DENABLE_SPVREMAPPER=OFF -DENABLE_HLSL=OFF -DENABLE_OPT=OFF -S glslang -B "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)"
+    </CmakeReleaseCLI>
+    <CmakeDebugCLI>call vsdevcmd.bat -arch=amd64
+      cmake -G $(CmakeGenerator) -A x64 -DCMAKE_BUILD_TYPE="Debug" -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDebug -DGLSLANG_TESTS=OFF -DENABLE_GLSLANG_BINARIES=OFF -DBUILD_EXTERNAL=OFF -DENABLE_SPVREMAPPER=OFF -DENABLE_HLSL=OFF -DENABLE_OPT=OFF -S glslang -B "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)"
+    </CmakeDebugCLI>
+    <CmakeCopyCLI>
+      echo Copying..
+      mkdir "$(SolutionDir)build\lib\$(Configuration)-$(Platform)\$(ProjectName)"
+      copy "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\SPIRV\$(CONFIGURATION)\*.lib" "$(SolutionDir)build\lib\$(Configuration)-$(Platform)\$(ProjectName)"
+      copy "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\glslang\OSDependent\Windows\$(CONFIGURATION)\*.lib" "$(SolutionDir)build\lib\$(Configuration)-$(Platform)\$(ProjectName)"
+      copy "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\glslang\$(CONFIGURATION)\*.lib" "$(SolutionDir)build\lib\$(Configuration)-$(Platform)\$(ProjectName)"
+    </CmakeCopyCLI>
+    <CmakeCleanCLI>
+      echo Cleaning..
+      rmdir /s /q "$(SolutionDir)build\lib\$(Configuration)-$(Platform)\$(ProjectName)"
+      rmdir /s /q "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)"
+    </CmakeCleanCLI>
+    <PropsAbsPath>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\..\buildfiles\msvc\common_default.props'))</PropsAbsPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(SolutionDir)build\lib\$(Configuration)-$(Platform)\</OutDir>
+    <IntDir>$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
+    <NMakeBuildCommandLine>
+      $(CmakeReleaseCLI)
+      msbuild.exe "$(IntDir)\ALL_BUILD.vcxproj" /t:build /p:Configuration=Release /p:ForceImportBeforeCppTargets="$(PropsAbsPath)" /m
+      $(CmakeCopyCLI)
+    </NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>
+      $(CmakeReleaseCLI)
+      msbuild.exe "$(IntDir)\ALL_BUILD.vcxproj" /t:rebuild /p:Configuration=Release /p:ForceImportBeforeCppTargets="$(PropsAbsPath)" /m
+      $(CmakeCopyCLI)
+    </NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine>
+      $(CmakeReleaseCLI)
+      msbuild.exe "$(IntDir)\ALL_BUILD.vcxproj" /t:clean /p:Configuration=Release /p:ForceImportBeforeCppTargets="$(PropsAbsPath)" /m
+      $(CmakeCleanCLI)
+    </NMakeCleanCommandLine>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <OutDir>$(SolutionDir)build\lib\$(Configuration)-$(Platform)\</OutDir>
+    <IntDir>$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
+    <NMakeBuildCommandLine>
+      $(CmakeDebugCLI)
+      msbuild.exe "$(IntDir)\ALL_BUILD.vcxproj" /t:build /p:Configuration=Debug /p:ForceImportBeforeCppTargets="$(PropsAbsPath)" /m
+      $(CmakeCopyCLI)
+    </NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>
+      $(CmakeDebugCLI)
+      msbuild.exe "$(IntDir)\ALL_BUILD.vcxproj" /t:rebuild /p:Configuration=Debug /p:ForceImportBeforeCppTargets="$(PropsAbsPath)" /m
+      $(CmakeCopyCLI)
+    </NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine>
+      $(CmakeDebugCLI)
+      msbuild.exe "$(IntDir)\ALL_BUILD.vcxproj" /t:clean /p:Configuration=Debug /p:ForceImportBeforeCppTargets="$(PropsAbsPath)" /m
+      $(CmakeCleanCLI)
+    </NMakeCleanCommandLine>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
