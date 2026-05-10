@@ -3463,7 +3463,19 @@ public:
 		}
 
 #if defined(__APPLE__)
+		// Apple Silicon W^X: enter write mode for JIT memory and pair
+		// it with an RAII guard so execute mode is restored on every
+		// exit path (the early "return nullptr" below would otherwise
+		// leave the thread in write mode permanently).
 		pthread_jit_write_protect_np(false);
+
+		struct jit_write_guard
+		{
+			~jit_write_guard()
+			{
+				pthread_jit_write_protect_np(true);
+			}
+		} _jit_guard;
 #endif
 
 		if (g_cfg.core.spu_debug)

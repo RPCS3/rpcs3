@@ -857,7 +857,20 @@ void spu_cache::initialize(bool build_existing_cache)
 	named_thread_group workers("SPU Worker ", worker_count, [&]() -> uint
 	{
 #ifdef __APPLE__
+		// Apple Silicon W^X: enable JIT write mode for this worker and
+		// pair it with an RAII guard so execute mode is restored on
+		// every exit path (return, exception, etc.). Leaving a worker
+		// in write mode at teardown can leave per-thread state
+		// inconsistent on AArch64.
 		pthread_jit_write_protect_np(false);
+
+		struct jit_write_guard
+		{
+			~jit_write_guard()
+			{
+				pthread_jit_write_protect_np(true);
+			}
+		} _jit_guard;
 #endif
 		// Set low priority
 		thread_ctrl::scoped_priority low_prio(-1);
