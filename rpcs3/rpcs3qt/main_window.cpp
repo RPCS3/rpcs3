@@ -2299,7 +2299,13 @@ void main_window::UpdateLanguageActions(const QStringList& language_codes, const
 		const QLocale locale      = QLocale(code);
 		const QString locale_name = QLocale::languageToString(locale.language());
 		const QString territory   = QLocale::territoryToString(locale.territory());
-		const QString display_name = (!territory.isEmpty() && code.contains('_')) ? QString("%1 (%2)").arg(locale_name, territory) : locale_name;
+
+		const bool is_unique = std::count_if(language_codes.cbegin(), language_codes.cend(), [&locale_name](const QString& code)
+		{
+			return locale_name == QLocale::languageToString(QLocale(code).language());
+		}) == 1;
+
+		const QString display_name = (!is_unique && !territory.isEmpty()) ? QString("%1 (%2)").arg(locale_name, territory) : locale_name;
 
 		// create new action
 		QAction* act = new QAction(display_name, this);
