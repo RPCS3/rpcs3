@@ -2135,6 +2135,37 @@ static void signal_handler(int /*sig*/, siginfo_t* info, void* uct) noexcept
 
 	append_thread_name(msg);
 
+#ifdef __APPLE__
+	thread_local bool s_tls_is_attempting_recovery = false;
+	thread_local bool s_tls_last_cause_is_executing = false;
+
+	if (reinterpret_cast<u64>(info->si_addr) < 0x10000)
+	{
+		// Do not recover from the virtual page of 0x0 (such as nullptr)
+	}
+	else if (is_executing || is_writing)
+	{
+		if (s_tls_is_attempting_recovery && s_tls_last_cause_is_executing != is_executing)
+		{
+			// Cause changed, inform recovery
+			s_tls_is_attempting_recovery = false;
+		}
+
+		if (!s_tls_is_attempting_recovery)
+		{
+			s_tls_last_cause_is_executing = is_executing;
+			s_tls_is_attempting_recovery = true;
+			pthread_jit_write_protect_np(is_executing ? true : false);
+
+			sys_log.error("\n%s", msg);
+			sys_log.notice("\n%s", dump_useful_thread_info());
+			sys_log.error("Attempting recovery using pthread_jit_write_protect_np()");
+			logs::listener::sync_all();
+			return;
+		}
+	}
+#endif
+
 	sys_log.fatal("\n%s", msg);
 	sys_log.notice("\n%s", dump_useful_thread_info());
 	logs::listener::sync_all();
