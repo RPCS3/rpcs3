@@ -4068,7 +4068,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			if (after_kill_callback)
 			{
 				// Make after_kill_callback empty before call
-				std::exchange(after_kill_callback, nullptr)();
+				std::exchange(ensure(after_kill_callback), nullptr)();
 			}
 		});
 	}));
@@ -4124,7 +4124,7 @@ game_boot_result Emulator::Restart(bool graceful, bool reset_path)
 	else
 	{
 		// Execute and empty the callback
-		std::exchange(Emu.after_kill_callback, nullptr)();
+		std::exchange(ensure(Emu.after_kill_callback), nullptr)();
 	}
 
 	return game_boot_result::no_errors;
