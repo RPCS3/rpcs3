@@ -3568,6 +3568,7 @@ void main_window::CreateDockWindows()
 	m_mw->setContextMenuPolicy(Qt::PreventContextMenu);
 
 	m_game_list_frame = new game_list_frame(m_gui_settings, m_emu_settings, m_persistent_settings, m_mw);
+	m_game_list_frame->setFeatures(m_game_list_frame->features() & ~QDockWidget::DockWidgetClosable);
 	m_debugger_frame = new debugger_frame(m_gui_settings, m_mw);
 	m_log_frame = new log_frame(m_gui_settings, m_mw);
 
