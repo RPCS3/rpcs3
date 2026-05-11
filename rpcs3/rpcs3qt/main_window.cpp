@@ -864,7 +864,7 @@ bool main_window::InstallFileInExData(const std::string& extension, const QStrin
 	return to.commit();
 }
 
-bool main_window::InstallPackages(QStringList file_paths, bool from_boot)
+bool main_window::InstallPackages(QStringList file_paths, bool from_boot, bool silent, bool no_precompile)
 {
 	if (file_paths.isEmpty())
 	{
@@ -963,19 +963,19 @@ bool main_window::InstallPackages(QStringList file_paths, bool from_boot)
 
 	if (from_boot)
 	{
-		return HandlePackageInstallation(file_paths, true);
+		return HandlePackageInstallation(file_paths, from_boot, silent, no_precompile);
 	}
 
 	// Handle further installations with a timeout. Otherwise the source explorer instance is not usable during the following file processing.
-	QTimer::singleShot(0, [this, paths = std::move(file_paths)]()
+	QTimer::singleShot(0, [this, paths = std::move(file_paths), silent, no_precompile]()
 	{
-		HandlePackageInstallation(paths, false);
+		HandlePackageInstallation(paths, false, silent, no_precompile);
 	});
 
 	return true;
 }
 
-bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_boot)
+bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_boot, bool silent, bool no_precompile)
 {
 	if (file_paths.empty())
 	{
@@ -990,28 +990,45 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 	const game_compatibility* compat = m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr;
 
 	// Let the user choose the packages to install and select the order in which they shall be installed.
-	pkg_install_dialog dlg(file_paths, from_boot, compat, this);
-	connect(&dlg, &QDialog::finished, this, [&](int result)
+	if (silent)
 	{
-		if (result != QDialog::Accepted)
+		for (const QString& path : file_paths)
 		{
-			canceled = true;
-			return;
+			const compat::package_info info = game_compatibility::GetPkgInfo(path, nullptr);
+			if (!info.is_valid)
+			{
+				gui_log.error("PKG is invalid or corrupt: %s", path.toStdString());
+				return false;
+			}
+			packages.push_back(info);
 		}
+		precompile_caches = !no_precompile;
+	}
+	else
+	{
+		pkg_install_dialog dlg(file_paths, from_boot, compat, this);
+		connect(&dlg, &QDialog::finished, this, [&](int result)
+		{
+			if (result != QDialog::Accepted)
+			{
+				canceled = true;
+				return;
+			}
 
-		packages = dlg.get_paths_to_install();
-		precompile_caches = dlg.precompile_caches();
+			packages = dlg.get_paths_to_install();
+			precompile_caches = dlg.precompile_caches();
 
-		if (dlg.create_desktop_shortcuts())
-			shortcut_locations.insert(gui::utils::shortcut_location::desktop);
+			if (dlg.create_desktop_shortcuts())
+				shortcut_locations.insert(gui::utils::shortcut_location::desktop);
 
-		if (dlg.create_app_shortcut())
-			shortcut_locations.insert(gui::utils::shortcut_location::applications);
+			if (dlg.create_app_shortcut())
+				shortcut_locations.insert(gui::utils::shortcut_location::applications);
 
-		if (dlg.create_steam_shortcut())
-			shortcut_locations.insert(gui::utils::shortcut_location::steam);
-	});
-	dlg.exec();
+			if (dlg.create_steam_shortcut())
+				shortcut_locations.insert(gui::utils::shortcut_location::steam);
+		});
+		dlg.exec();
+	}
 
 	if (canceled)
 	{
@@ -1191,39 +1208,45 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 
 		if (!bootable_paths_installed.empty())
 		{
-			m_game_list_frame->AddRefreshedSlot([this, shortcut_locations, precompile_caches, paths = std::move(bootable_paths_installed)](std::set<std::string>& claimed_paths) mutable
+			if (m_game_list_frame)
 			{
-				// Try to claim operations on ID
-				for (auto it = paths.begin(); it != paths.end();)
+				m_game_list_frame->AddRefreshedSlot([this, shortcut_locations, precompile_caches, paths = std::move(bootable_paths_installed)](std::set<std::string>& claimed_paths) mutable
 				{
-					std::string resolved_path = Emu.GetCallbacks().resolve_path(it->first);
-
-					if (resolved_path.empty() || claimed_paths.count(resolved_path))
+					// Try to claim operations on ID
+					for (auto it = paths.begin(); it != paths.end();)
 					{
-						it = paths.erase(it);
+						std::string resolved_path = Emu.GetCallbacks().resolve_path(it->first);
+
+						if (resolved_path.empty() || claimed_paths.count(resolved_path))
+						{
+							it = paths.erase(it);
+						}
+						else
+						{
+							claimed_paths.emplace(std::move(resolved_path));
+							it++;
+						}
 					}
-					else
+
+					CreateShortCuts(paths, shortcut_locations);
+
+					if (precompile_caches)
 					{
-						claimed_paths.emplace(std::move(resolved_path));
-						it++;
+						PrecompileCachesFromInstalledPackages(paths);
 					}
-				}
-
-				CreateShortCuts(paths, shortcut_locations);
-
-				if (precompile_caches)
-				{
-					PrecompileCachesFromInstalledPackages(paths);
-				}
-			});
+				});
+			}
 		}
 
-		m_game_list_frame->Refresh(true);
+		if (m_game_list_frame)
+		{
+			m_game_list_frame->Refresh(true);
+		}
 
 		std::this_thread::sleep_for(std::chrono::microseconds(100'000 - std::min<usz>(100'000, get_system_time() - start_time)));
 		pdlg.hide();
 
-		if (installed_a_whole_package_without_new_software)
+		if (!silent && installed_a_whole_package_without_new_software)
 		{
 			m_gui_settings->ShowInfoBox(tr("Success!"), tr("Successfully installed software from package(s)!"), gui::ib_pkg_success, this);
 		}
