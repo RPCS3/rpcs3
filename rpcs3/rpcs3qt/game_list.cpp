@@ -12,6 +12,27 @@ game_list::game_list() : QTableWidget(), game_list_base()
 	{
 		Q_EMIT IconReady(game, item);
 	};
+
+	// Activate video/music preview on selection change (keyboard/pad navigation)
+	connect(this, &QTableWidget::currentCellChanged, this, [this](int row, int /*column*/, int prev_row, int /*prev_column*/)
+	{
+		if (row == prev_row)
+			return;
+
+		if (m_last_hover_item)
+		{
+			m_last_hover_item->set_active(false);
+		}
+
+		movie_item* new_item = static_cast<movie_item*>(item(row, static_cast<int>(gui::game_list_columns::icon)));
+
+		if (new_item)
+		{
+			new_item->set_active(true);
+		}
+
+		m_last_hover_item = new_item;
+	});
 }
 
 void game_list::sync_header_actions(std::map<int, QAction*>& actions, std::function<bool(int)> get_visibility)
