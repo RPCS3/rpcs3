@@ -96,7 +96,6 @@ void stereo_config::update_from_config(bool stereo_enabled)
 
 	if (m_stereo_mode == stereo_render_mode_options::anaglyph_custom)
 	{
-		stereo_config::stereo_matrices custom_matrices {};
 		stereo_config::convert_matrix(m_custom_matrices.left, g_cfg.video.custom_anaglyph_matrices.left.get_map());
 		stereo_config::convert_matrix(m_custom_matrices.right, g_cfg.video.custom_anaglyph_matrices.right.get_map());
 	}
