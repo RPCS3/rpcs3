@@ -289,7 +289,7 @@ rpcn_account_dialog::rpcn_account_dialog(QWidget* parent)
 			if (!email)
 				return;
 
-			if (QMessageBox::question(this, tr("RPCN: Account Creation"), tr("You are about to create an account with:\n-Username:%0\n-Email:%1\n\nIs this correct?").arg(QString::fromStdString(*username)).arg(QString::fromStdString(*email))) != QMessageBox::Yes)
+			if (QMessageBox::question(this, tr("RPCN: Account Creation"), tr("You are about to create an account with:\n-Username: %0\n-Email: %1\n\nIs this correct?").arg(QString::fromStdString(*username)).arg(QString::fromStdString(*email))) != QMessageBox::Yes)
 				return;
 
 			{
