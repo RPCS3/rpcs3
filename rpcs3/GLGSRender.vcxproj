@@ -61,6 +61,7 @@
     <ClInclude Include="Emu\RSX\GL\GLProcTable.h" />
     <ClInclude Include="Emu\RSX\GL\GLProgramBuffer.h" />
     <ClInclude Include="Emu\RSX\GL\GLResolveHelper.h" />
+    <ClInclude Include="Emu\RSX\GL\glutils\barriers.h" />
     <ClInclude Include="Emu\RSX\GL\glutils\blitter.h" />
     <ClInclude Include="Emu\RSX\GL\glutils\buffer_object.h" />
     <ClInclude Include="Emu\RSX\GL\glutils\capabilities.h" />

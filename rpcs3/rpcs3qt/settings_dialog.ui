@@ -2728,6 +2728,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="emulateDepthCompare">
+                 <property name="text">
+                  <string>Emulate Special Depth Comparison</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="forceHwMSAAResolve">
                  <property name="text">
                   <string>Force Hardware MSAA Resolve</string>

@@ -84,6 +84,7 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::DisableOcclusionQueries,    get_cfg_location(local_cfg.video.disable_zcull_queries) },
 	{ emu_settings_type::DisableVideoOutput,         get_cfg_location(local_cfg.video.disable_video_output) },
 	{ emu_settings_type::DisableFIFOReordering,      get_cfg_location(local_cfg.video.disable_FIFO_reordering) },
+	{ emu_settings_type::EmulateDepthCompare,        get_cfg_location(local_cfg.video.emulate_depth_compare) },
 	{ emu_settings_type::StereoRenderEnabled,        get_cfg_location(local_cfg.video.stereo_enabled) },
 	{ emu_settings_type::StereoRenderMode,           get_cfg_location(local_cfg.video.stereo_render_mode) },
 	{ emu_settings_type::ScreenSize,                 get_cfg_location(local_cfg.video.screen_size) },

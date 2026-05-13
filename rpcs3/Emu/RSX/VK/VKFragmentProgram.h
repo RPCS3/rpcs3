@@ -75,6 +75,7 @@ public:
 		u32 polygon_stipple_params_location = umax;   // Polygon stipple settings
 		u32 ftex_location[16];                        // Texture locations array
 		u32 ftex_stencil_location[16];                // Texture stencil mirror array
+		u32 frag_depth_input_location = umax;         // Fragment depth compare
 
 	} binding_table;
 
