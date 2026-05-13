@@ -7205,7 +7205,22 @@ public:
 			const auto ai = eval(bitcast<s32[4]>(a));
 			const auto bi = eval(bitcast<s32[4]>(b));
 
+// Awful workaround to some awful LLVM codegen via inline assembly
+// Once it is solved upstream we should remove it - Whatcookie
+// https://github.com/llvm/llvm-project/issues/197360
+#if defined(ARCH_ARM64)
+			const auto select_bsl = [&](auto mask, auto t, auto f)
+			{
+				const auto asm_type = llvm::FunctionType::get(get_type<s32[4]>(), {get_type<s32[4]>(), get_type<s32[4]>(), get_type<s32[4]>()}, false);
+				const auto bsl_asm = llvm::InlineAsm::get(asm_type, "bsl $0.16b, $1.16b, $2.16b", "=w,w,w,0", false);
+
+				return value<s32[4]>(m_ir->CreateCall(asm_type, bsl_asm, {eval(sext<s32[4]>(t)).value, eval(sext<s32[4]>(f)).value, eval(sext<s32[4]>(mask)).value}));
+			};
+
+			return eval(sext<s32[4]>(fcmp_uno(a != b)) & select_bsl((ai & bi) >= 0, ai > bi, ai < bi));
+#else
 			return eval(sext<s32[4]>(fcmp_uno(a != b) & select((ai & bi) >= 0, ai > bi, ai < bi)));
+#endif		
 		};
 
 		set_vr(op.rt, fcgt(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb)));
