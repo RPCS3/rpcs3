@@ -37,6 +37,8 @@ namespace glsl
 		bool require_linear_to_srgb : 1;
 		bool require_fog_read : 1;
 		bool emulate_shadow_compare : 1;
+		bool emulate_depth_compare : 1;
+		bool depth_buffer_multisampled : 1;
 		bool low_precision_tests : 1;
 		bool disable_early_discard : 1;
 		bool supports_native_fp16 : 1;
