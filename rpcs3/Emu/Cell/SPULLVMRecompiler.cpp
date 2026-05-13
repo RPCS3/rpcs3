@@ -7148,8 +7148,8 @@ public:
 		{
 			const value_t<f32[4]> ab[2]{a, b};
 
-			std::bitset<2> safe_int_compare(0);
-			std::bitset<2> safe_finite_compare(0);
+			bit_set<2> safe_int_compare(0);
+			bit_set<2> safe_finite_compare(0);
 
 			for (u32 i = 0; i < 2; i++)
 			{
@@ -7192,12 +7192,12 @@ public:
 				return eval(sext<s32[4]>(bitcast<s32[4]>(a) > bitcast<s32[4]>(b)));
 			}
 
-			if  (safe_finite_compare.test(1))
+			if (safe_finite_compare.test(1u))
 			{
 				return eval(sext<s32[4]>(fcmp_uno(clamp_negative_smax(a) > b)));
 			}
 
-			if  (safe_finite_compare.test(0))
+			if (safe_finite_compare.test(0u))
 			{
 				return eval(sext<s32[4]>(fcmp_ord(a > clamp_smax(b))));
 			}
@@ -7247,7 +7247,7 @@ public:
 
 			const value_t<f32[4]> ab[2]{a, b};
 
-			std::bitset<2> safe_int_compare(0);
+			bit_set<2> safe_int_compare(0);
 
 			for (u32 i = 0; i < 2; i++)
 			{
@@ -7521,8 +7521,8 @@ public:
 
 			const value_t<f32[4]> ab[2]{a, b};
 
-			std::bitset<2> safe_float_compare(0);
-			std::bitset<2> safe_int_compare(0);
+			bit_set<2> safe_float_compare(0);
+			bit_set<2> safe_int_compare(0);
 
 			for (u32 i = 0; i < 2; i++)
 			{
@@ -7595,8 +7595,8 @@ public:
 
 			const value_t<f32[4]> ab[2]{a, b};
 
-			std::bitset<2> safe_float_compare(0);
-			std::bitset<2> safe_int_compare(0);
+			bit_set<2> safe_float_compare(0);
+			bit_set<2> safe_int_compare(0);
 
 			for (u32 i = 0; i < 2; i++)
 			{

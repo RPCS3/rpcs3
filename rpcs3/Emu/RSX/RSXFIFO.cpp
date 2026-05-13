@@ -12,7 +12,6 @@
 #include "util/asm.hpp"
 
 #include <thread>
-#include <bitset>
 
 using spu_rdata_t = std::byte[128];
 
@@ -689,7 +688,7 @@ namespace rsx
 			}
 
 			// Check for flow control
-			if (std::bitset<2> jump_type; jump_type
+			if (bit_set<2> jump_type; jump_type
 				.set(0, (cmd & RSX_METHOD_OLD_JUMP_CMD_MASK) == RSX_METHOD_OLD_JUMP_CMD)
 				.set(1, (cmd & RSX_METHOD_NEW_JUMP_CMD_MASK) == RSX_METHOD_NEW_JUMP_CMD)
 				.any())

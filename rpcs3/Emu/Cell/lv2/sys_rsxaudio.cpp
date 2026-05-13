@@ -9,7 +9,6 @@
 #include "sys_rsxaudio.h"
 
 #include <cmath>
-#include <bitset>
 #include <optional>
 
 #ifdef __linux__
@@ -1651,13 +1650,13 @@ void rsxaudio_backend_thread::set_mute_state(avport_bit muted_avports)
 
 u8 rsxaudio_backend_thread::gen_mute_state(avport_bit avports)
 {
-	std::bitset<SYS_RSXAUDIO_AVPORT_CNT> mute_state{0};
+	bit_set<SYS_RSXAUDIO_AVPORT_CNT> mute_state{0};
 
-	if (avports.hdmi_0)  mute_state[static_cast<u8>(RsxaudioAvportIdx::HDMI_0)]  = true;
-	if (avports.hdmi_1)  mute_state[static_cast<u8>(RsxaudioAvportIdx::HDMI_1)]  = true;
-	if (avports.avmulti) mute_state[static_cast<u8>(RsxaudioAvportIdx::AVMULTI)] = true;
-	if (avports.spdif_0) mute_state[static_cast<u8>(RsxaudioAvportIdx::SPDIF_0)] = true;
-	if (avports.spdif_1) mute_state[static_cast<u8>(RsxaudioAvportIdx::SPDIF_1)] = true;
+	if (avports.hdmi_0)  mute_state.set(static_cast<u8>(RsxaudioAvportIdx::HDMI_0),  true);
+	if (avports.hdmi_1)  mute_state.set(static_cast<u8>(RsxaudioAvportIdx::HDMI_1),  true);
+	if (avports.avmulti) mute_state.set(static_cast<u8>(RsxaudioAvportIdx::AVMULTI), true);
+	if (avports.spdif_0) mute_state.set(static_cast<u8>(RsxaudioAvportIdx::SPDIF_0), true);
+	if (avports.spdif_1) mute_state.set(static_cast<u8>(RsxaudioAvportIdx::SPDIF_1), true);
 
 	return static_cast<u8>(mute_state.to_ulong());
 }
@@ -1832,7 +1831,7 @@ u32 rsxaudio_backend_thread::write_data_callback(u32 bytes, void* buf)
 		return val;
 	});
 
-	const std::bitset<SYS_RSXAUDIO_AVPORT_CNT> mute_state{cb_cfg.mute_state};
+	const bit_set<SYS_RSXAUDIO_AVPORT_CNT> mute_state{cb_cfg.mute_state};
 
 	if (cb_cfg.ready && !mute_state[static_cast<u8>(cb_cfg.avport_idx)] && Emu.IsRunning())
 	{

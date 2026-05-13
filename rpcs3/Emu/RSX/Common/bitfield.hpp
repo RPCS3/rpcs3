@@ -2,12 +2,11 @@
 
 #include "util/atomic.hpp"
 #include <util/types.hpp>
-#include <bitset>
 
 namespace rsx
 {
 	template <int N>
-	void unpack_bitset(const std::bitset<N>& block, u64* values)
+	void unpack_bitset(const bit_set<N>& block, u64* values)
 	{
 		for (int bit = 0, n = -1, shift = 0; bit < N; ++bit, ++shift)
 		{
@@ -25,11 +24,11 @@ namespace rsx
 	}
 
 	template <int N>
-	void pack_bitset(std::bitset<N>& block, u64* values)
+	void pack_bitset(bit_set<N>& block, u64* values)
 	{
 		for (int n = 0, shift = 0; shift < N; ++n, shift += 64)
 		{
-			std::bitset<N> tmp = values[n];
+			bit_set<N> tmp = values[n];
 			tmp <<= shift;
 			block |= tmp;
 		}

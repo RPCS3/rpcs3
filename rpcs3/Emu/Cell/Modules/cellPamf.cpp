@@ -2,7 +2,6 @@
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 
-#include <bitset>
 #include "cellPamf.h"
 
 LOG_CHANNEL(cellPamf);
@@ -500,7 +499,7 @@ error_code pamfVerify(vm::cptr<PamfHeader> pAddr, u64 fileSize, vm::ptr<CellPamf
 
 	const auto streams = &pAddr->seq_info.grouping_periods.groups.streams;
 
-	std::bitset<16> channels_used[6]{};
+	std::array<bit_set<16>, 6> channels_used{};
 
 	u32 end_of_streams_addr = 0;
 	u32 next_ep_table_addr = 0;
@@ -516,14 +515,16 @@ error_code pamfVerify(vm::cptr<PamfHeader> pAddr, u64 fileSize, vm::ptr<CellPamf
 			return CELL_PAMF_ERROR_UNKNOWN_STREAM;
 		}
 
+		bit_set<16>& used_channels = ::at32(channels_used, *type);
+
 		// Every channel may only be used once per type
-		if (channels_used[*type].test(*ch))
+		if (used_channels.test(*ch))
 		{
 			return { CELL_PAMF_ERROR_INVALID_PAMF, "pamfVerify() failed: invalid channel" };
 		}
 
 		// Mark channel as used
-		channels_used[*type].set(*ch);
+		used_channels.set(*ch, true);
 
 		const u32 ep_offset = streams[stream_idx].ep_offset;
 		const u32 ep_num = streams[stream_idx].ep_num;

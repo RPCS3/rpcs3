@@ -1,6 +1,5 @@
 #include "stdafx.h"
 
-#include <bitset>
 #include <string>
 
 #include "cellSsl.h"
@@ -92,7 +91,7 @@ std::string getCert(const std::string& certPath, const int certID, const bool is
 			newID = certID - 1;
 	}
 
-	std::string filePath = fmt::format("%sCA%02d.cer", certPath, newID);
+	const std::string filePath = fmt::format("%sCA%02d.cer", certPath, newID);
 
 	if (!fs::exists(filePath))
 	{
@@ -106,7 +105,7 @@ error_code cellSslCertificateLoader(u64 flag, vm::ptr<char> buffer, u32 size, vm
 {
 	cellSsl.trace("cellSslCertificateLoader(flag=%llu, buffer=*0x%x, size=%zu, required=*0x%x)", flag, buffer, size, required);
 
-	const std::bitset<58> flagBits(flag);
+	const bit_set<58> flagBits(flag);
 	const std::string certPath = vfs::get("/dev_flash/data/cert/");
 
 	if (required)
@@ -114,10 +113,11 @@ error_code cellSslCertificateLoader(u64 flag, vm::ptr<char> buffer, u32 size, vm
 		*required = 0;
 		for (uint i = 1; i <= flagBits.size(); i++)
 		{
-			if (!flagBits[i-1])
+			if (!flagBits.test(i - 1))
 				continue;
+
 			// If we're loading cert 6 (the baltimore cert), then we need set that we're loading the 'normal' set of certs.
-			*required += ::size32(getCert(certPath, i, flagBits[BaltimoreCert-1]));
+			*required += ::size32(getCert(certPath, i, flagBits.test(BaltimoreCert - 1)));
 		}
 	}
 	else
@@ -125,14 +125,15 @@ error_code cellSslCertificateLoader(u64 flag, vm::ptr<char> buffer, u32 size, vm
 		std::string final;
 		for (uint i = 1; i <= flagBits.size(); i++)
 		{
-			if (!flagBits[i-1])
+			if (!flagBits.test(i - 1))
 				continue;
+
 			// If we're loading cert 6 (the baltimore cert), then we need set that we're loading the 'normal' set of certs.
-			final.append(getCert(certPath, i, flagBits[BaltimoreCert-1]));
+			final.append(getCert(certPath, i, flagBits.test(BaltimoreCert - 1)));
 		}
 
-		memset(buffer.get_ptr(), '\0', size - 1);
-		memcpy(buffer.get_ptr(), final.c_str(), final.size());
+		std::memset(buffer.get_ptr(), '\0', size - 1);
+		std::memcpy(buffer.get_ptr(), final.c_str(), final.size());
 	}
 
 	return CELL_OK;
