@@ -349,24 +349,24 @@ QPushButton:disabled {
 }
 
 
-QDialog QDialogButtonBox QPushButton {
+QDialog QDialogButtonBox QPushButton:default {
     color: #FFFFFF;
     background-color: #0067C0;
     border-color: #1473C5;
 }
 
-QDialog QDialogButtonBox QPushButton:hover {
+QDialog QDialogButtonBox QPushButton:default:hover {
     background-color: #1A76C6;
     border-color: #2C80CA;
 }
 
-QDialog QDialogButtonBox QPushButton:pressed {
+QDialog QDialogButtonBox QPushButton:default:pressed {
     color: #C2DAEF;
     background-color: #3284CB;
     border-color: #3284CB;
 }
 
-QDialog QDialogButtonBox QPushButton:disabled {
+QDialog QDialogButtonBox QPushButton:default:disabled {
     color: #FFFFFF;
     background-color: #C5C5C5;
     border-color: #C5C5C5;
@@ -614,12 +614,13 @@ QComboBox QAbstractItemView {
 QComboBox QAbstractItemView::item {
     color: #1B1B1B;
     padding: 4px 6px;
+    margin: 2px 0px;
     background-color: transparent;
     border-radius: 4px;
 }
 
 QComboBox QAbstractItemView::item:hover {
-    background-color: #F3F3F3;
+    background-color: #F0F0F0;
 }
 
 QComboBox QAbstractItemView::item:selected {
@@ -646,7 +647,7 @@ QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
     border-radius: 4px;
     width: 8px;
     height: 8px;
-    padding: 3px 4px;  
+    padding: 3px 4px;
 }
 
 QSpinBox::up-button:hover, QSpinBox::down-button:hover,
@@ -711,6 +712,16 @@ QSlider::handle:horizontal:pressed {
 
 QSlider::handle:horizontal:disabled {
     image: url("GuiConfigs/light/slider-handle-disabled.svg");
+}
+
+QSlider::sub-page:horizontal {
+    background-color: #1A76C6;
+    border-radius: 2px;
+    height: 4px;
+}
+
+QSlider::sub-page:horizontal:disabled {
+    background-color: #868788;
 }
 
 
