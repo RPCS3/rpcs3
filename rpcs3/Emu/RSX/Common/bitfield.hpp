@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util/atomic.hpp"
+#include "util/bit_set.hpp"
 #include <util/types.hpp>
 
 namespace rsx

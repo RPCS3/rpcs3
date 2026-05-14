@@ -1,6 +1,7 @@
 #pragma once
 
 #include "program_util.h"
+#include "util/bit_set.hpp"
 
 #include <vector>
 #include <set>

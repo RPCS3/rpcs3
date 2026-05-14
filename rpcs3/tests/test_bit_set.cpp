@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "util/types.hpp"
+#include "util/bit_set.hpp"
 
 namespace utils
 {

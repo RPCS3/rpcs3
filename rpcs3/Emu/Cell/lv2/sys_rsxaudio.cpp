@@ -4,6 +4,7 @@
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu//Audio/audio_utils.h"
+#include "util/bit_set.hpp"
 #include "util/video_provider.h"
 
 #include "sys_rsxaudio.h"

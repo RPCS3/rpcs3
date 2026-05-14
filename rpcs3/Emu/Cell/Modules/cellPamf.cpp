@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
+#include "util/bit_set.hpp"
 
 #include "cellPamf.h"
 

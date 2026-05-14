@@ -3,6 +3,7 @@
 #include "Utilities/File.h"
 #include "Utilities/lockless.h"
 #include "Utilities/address_range.h"
+#include "util/bit_set.hpp"
 #include "SPUThread.h"
 #include "SPUAnalyser.h"
 #include <vector>

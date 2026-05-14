@@ -780,9 +780,11 @@
     <ClInclude Include="Emu\system_config_types.h" />
     <ClInclude Include="Emu\vfs_config.h" />
     <ClInclude Include="Loader\disc.h" />
+    <ClInclude Include="Loader\iso_cache.h" />
     <ClInclude Include="Loader\iso_validation.h" />
     <ClInclude Include="Loader\mself.hpp" />
     <ClInclude Include="util\atomic.hpp" />
+    <ClInclude Include="util\bit_set.hpp" />
     <ClInclude Include="util\bless.hpp" />
     <ClInclude Include="util\pair.hpp" />
     <ClInclude Include="util\tuple.hpp" />

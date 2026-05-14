@@ -1,7 +1,7 @@
 #pragma once
 
 #include "find_dialog.h"
-#include "util/types.hpp"
+#include "util/bit_set.hpp"
 
 #include <QPlainTextEdit>
 #include <QDropEvent>
