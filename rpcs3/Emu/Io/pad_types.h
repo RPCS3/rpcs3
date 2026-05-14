@@ -441,6 +441,9 @@ struct AnalogStick
 	std::map<u32, u16> m_pressed_keys_max; // only used in keyboard_pad_handler
 	std::map<u32, u16> m_pressed_combos_min; // only used in keyboard_pad_handler
 	std::map<u32, u16> m_pressed_combos_max; // only used in keyboard_pad_handler
+	u8 m_stick_min = 0; // only used in keyboard_pad_handler
+	u8 m_stick_max = 128; // only used in keyboard_pad_handler
+	u8 m_stick_val = 128; // only used in keyboard_pad_handler
 
 	AnalogStick() {}
 	AnalogStick(u32 offset, std::vector<std::set<u32>> key_combos_min, std::vector<std::set<u32>> key_combos_max)
