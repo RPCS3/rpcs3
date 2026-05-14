@@ -17,7 +17,7 @@
 #include "Utilities/File.h"
 #include "Emu/system_utils.hpp"
 #include "Loader/ISO.h"
-#include "Loader/iso_validation.h"
+#include "Loader/content_validation.h"
 
 #include "QApplication"
 #include "QClipboard"
@@ -602,40 +602,56 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 
 	addSeparator();
 
-	// Check integrity
+	// Check Integrity menu
+	QMenu* check_integrity_menu = addMenu(tr("&Check Integrity"));
+
+	// Check disc game integrity
 	if (QString::fromStdString(current_game.category) == cat::cat_disc_game)
 	{
+		const bool raw_archive = is_iso_file(current_game.path);
 		const iso_type_status iso_type = iso_file_decryption::check_type(current_game.path);
 
 		// If it's an ISO file (e.g. even a decrypted ISO), always provide the entry on the context menu but disable
 		// it if the ISO does not support integrity check (e.g. non Redump ISO) or no integrity DB is found.
 		// That is to highlight a Redump ISO from a non Redump ISO
-		if (iso_type != iso_type_status::NOT_ISO)
+		if (raw_archive || iso_type != iso_type_status::NOT_ISO)
 		{
-			const iso_integrity_status iso_integrity = iso_file_validation::check_integrity("");
-
-			QAction* check_integrity = addAction(tr("&Check ISO Integrity"));
+			QAction* check_iso = check_integrity_menu->addAction(tr("&Check ISO Integrity"));
 
 			// If it's a Redump ISO and the integrity DB exists
-			if (iso_type == iso_type_status::REDUMP_ISO && iso_integrity != iso_integrity_status::ERROR_OPENING_DB)
+			if ((raw_archive || iso_type == iso_type_status::REDUMP_ISO) &&
+				content_validation::check_integrity(content_file_type::ISO, "") != content_integrity_status::ERROR_OPENING_DB)
 			{
-				connect(check_integrity, &QAction::triggered, this, [this, gameinfo]()
+				connect(check_iso, &QAction::triggered, this, [this, gameinfo]()
 				{
-					m_game_list_actions->ShowGameIntegrityDialog(gameinfo);
+					m_game_list_actions->ShowGameIntegrityDialog(content_file_type::ISO, gameinfo);
 				});
 			}
 			else
 			{
-				check_integrity->setEnabled(false);
+				check_iso->setEnabled(false);
 			}
-
-			QAction* download_integrity = addAction(tr("&Download Integrity Database"));
-			connect(download_integrity, &QAction::triggered, m_game_list_frame, [this]
-			{
-				ensure(m_game_list_frame->GetIsoIntegrity())->download();
-			});
 		}
 	}
+
+	// Check integrity for the other categories based on .PKG, .RAP and .EDAT (e.g. HDD game, DLC, Update)
+	QAction* check_psn_content = check_integrity_menu->addAction(tr("&Check Packages/Raps/Edats Integrity"));
+
+	connect(check_psn_content, &QAction::triggered, this, [this, gameinfo]()
+	{
+		// File type different than ISO as passed here (PSN_CONTENT) will be properly detected in
+		// ShowGameIntegrityDialog() based on the selected package file
+		m_game_list_actions->ShowGameIntegrityDialog(content_file_type::PSN_CONTENT, gameinfo);
+	});
+
+	QAction* download_integrity = addAction(tr("&Download Integrity Databases"));
+	connect(download_integrity, &QAction::triggered, m_game_list_frame, [this]
+	{
+		ensure(m_game_list_frame->GetIsoIntegrity())->download();
+		ensure(m_game_list_frame->GetPsnContentIntegrity())->download();
+		ensure(m_game_list_frame->GetPsnDlcIntegrity())->download();
+		ensure(m_game_list_frame->GetPsnUpdateIntegrity())->download();
+	});
 
 	QAction* check_compat = addAction(tr("&Check Game Compatibility"));
 	QAction* download_compat = addAction(tr("&Download Compatibility Database"));
@@ -1000,6 +1016,15 @@ void game_list_context_menu::show_multi_selection_context_menu(const std::vector
 	});
 
 	addSeparator();
+
+	QAction* download_integrity = addAction(tr("&Download Integrity Databases"));
+	connect(download_integrity, &QAction::triggered, m_game_list_frame, [this]
+	{
+		ensure(m_game_list_frame->GetIsoIntegrity())->download();
+		ensure(m_game_list_frame->GetPsnContentIntegrity())->download();
+		ensure(m_game_list_frame->GetPsnDlcIntegrity())->download();
+		ensure(m_game_list_frame->GetPsnUpdateIntegrity())->download();
+	});
 
 	QAction* download_compat = addAction(tr("&Download Compatibility Database"));
 	connect(download_compat, &QAction::triggered, m_game_list_frame, [this]
