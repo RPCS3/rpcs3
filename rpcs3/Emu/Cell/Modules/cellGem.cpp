@@ -2183,7 +2183,7 @@ static void ds3_input_to_ext(u32 gem_num, gem_config::gem_controller& controller
 
 	ext.status = controller.ext_status;
 
-	for (const AnalogStick& stick : pad->m_sticks_external)
+	for (const AnalogStickExternal& stick : pad->m_sticks_external)
 	{
 		switch (stick.m_offset)
 		{
@@ -2195,7 +2195,7 @@ static void ds3_input_to_ext(u32 gem_num, gem_config::gem_controller& controller
 		}
 	}
 
-	for (const Button& button : pad->m_buttons_external)
+	for (const ButtonExternal& button : pad->m_buttons_external)
 	{
 		if (!button.m_pressed)
 			continue;

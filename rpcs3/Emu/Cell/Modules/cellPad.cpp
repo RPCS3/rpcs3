@@ -418,7 +418,7 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 			}
 		};
 
-		for (const Button& button : pad->m_buttons_external)
+		for (const ButtonExternal& button : pad->m_buttons_external)
 		{
 			// here we check btns, and set pad accordingly,
 			// if something changed, set btnChanged
@@ -497,7 +497,7 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 			}
 		}
 
-		for (const AnalogStick& stick : pad->m_sticks_external)
+		for (const AnalogStickExternal& stick : pad->m_sticks_external)
 		{
 			switch (stick.m_offset)
 			{
