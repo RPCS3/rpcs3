@@ -25,6 +25,7 @@ namespace rsx::overlays::home_menu
 		gamepad,
 		settings_sliders,
 		settings_gauge,
+		usb,
 		bug,
 	};
 
