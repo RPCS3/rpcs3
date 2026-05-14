@@ -5184,7 +5184,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		// Check loop connector block (must jump to block-next or to loop-start)
 		u32 targets_count = 0;
 
-		for (u32 target : get_block_targets(first_pred_of_loop))
+		for (u32 target : get_block_targets(!invalid ? first_pred_of_loop : bpc))
 		{
 			valid = true;
 			targets_count++;
