@@ -2175,7 +2175,7 @@ public:
 						if (src > 0x40000)
 						{
 							// Use the xfloat hint to create 256-bit (4x double) PHI
-							llvm::Type* type = g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate && bb.reg_maybe_xf[i] ? get_type<f64[4]>() : get_reg_type(i);
+							llvm::Type* type = g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate && bb.reg_maybe_xf.test_unsafe(i) ? get_type<f64[4]>() : get_reg_type(i);
 
 							const auto _phi = m_ir->CreatePHI(type, ::size32(bb.preds), fmt::format("phi0x%05x_r%u", baddr, i));
 							m_block->phi[i] = _phi;
@@ -2581,7 +2581,7 @@ public:
 				{
 					for (u32 i = 0; i < s_reg_max; i++)
 					{
-						llvm::Type* type = g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate && bb.reg_maybe_xf[i] ? get_type<f64[4]>() : get_reg_type(i);
+						llvm::Type* type = g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate && bb.reg_maybe_xf.test_unsafe(i) ? get_type<f64[4]>() : get_reg_type(i);
 
 						if (i < m_reduced_loop_info->loop_dicts.size() && (m_reduced_loop_info->loop_dicts.test(i) || m_reduced_loop_info->loop_writes.test(i)))
 						{
@@ -7155,8 +7155,8 @@ public:
 			{
 				if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, __LINE__ + i); ok)
 				{
-					safe_int_compare.set(i);
-					safe_finite_compare.set(i);
+					safe_int_compare.set_unsafe(i);
+					safe_finite_compare.set_unsafe(i);
 
 					for (u32 j = 0; j < 4; j++)
 					{
@@ -7170,8 +7170,8 @@ public:
 							// Note: Technically this optimization is accurate for any positive value, but due to the fact that
 							// we don't produce "extended range" values the same way as real hardware, it's not safe to apply
 							// this optimization for values outside of the range of x86 floating point hardware.
-							safe_int_compare.reset(i);
-							if ((value & 0x7fffffffu) >= 0x7f7ffffeu) safe_finite_compare.reset(i);
+							safe_int_compare.reset_unsafe(i);
+							if ((value & 0x7fffffffu) >= 0x7f7ffffeu) safe_finite_compare.reset_unsafe(i);
 						}
 					}
 				}
@@ -7179,12 +7179,12 @@ public:
 
 			if (m_reduced_loop_info && m_reduced_loop_info->is_gpr_not_NaN_hint(op.ra))
 			{
-				safe_finite_compare.set(0);
+				safe_finite_compare.set_unsafe(0);
 			}
 
 			if (m_reduced_loop_info && m_reduced_loop_info->is_gpr_not_NaN_hint(op.rb))
 			{
-				safe_finite_compare.set(1);
+				safe_finite_compare.set_unsafe(1);
 			}
 
 			if (safe_int_compare.any())
@@ -7253,7 +7253,7 @@ public:
 			{
 				if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, __LINE__ + i); ok)
 				{
-					safe_int_compare.set(i);
+					safe_int_compare.set_unsafe(i);
 
 					for (u32 j = 0; j < 4; j++)
 					{
@@ -7263,7 +7263,7 @@ public:
 						if ((value & 0x7fffffffu) >= 0x7f7fffffu || !exponent)
 						{
 							// See above
-							safe_int_compare.reset(i);
+							safe_int_compare.reset_unsafe(i);
 						}
 					}
 				}
@@ -7528,8 +7528,8 @@ public:
 			{
 				if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, __LINE__ + i); ok)
 				{
-					safe_float_compare.set(i);
-					safe_int_compare.set(i);
+					safe_float_compare.set_unsafe(i);
+					safe_int_compare.set_unsafe(i);
 
 					for (u32 j = 0; j < 4; j++)
 					{
@@ -7539,13 +7539,13 @@ public:
 						// unsafe if nan
 						if (exponent == 255)
 						{
-							safe_float_compare.reset(i);
+							safe_float_compare.reset_unsafe(i);
 						}
 
 						// unsafe if denormal or 0
 						if (!exponent)
 						{
-							safe_int_compare.reset(i);
+							safe_int_compare.reset_unsafe(i);
 						}
 					}
 				}
@@ -7602,8 +7602,8 @@ public:
 			{
 				if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, __LINE__ + i); ok)
 				{
-					safe_float_compare.set(i);
-					safe_int_compare.set(i);
+					safe_float_compare.set_unsafe(i);
+					safe_int_compare.set_unsafe(i);
 
 					for (u32 j = 0; j < 4; j++)
 					{
@@ -7613,13 +7613,13 @@ public:
 						// unsafe if nan
 						if (exponent == 255)
 						{
-							safe_float_compare.reset(i);
+							safe_float_compare.reset_unsafe(i);
 						}
 
 						// unsafe if denormal or 0
 						if (!exponent)
 						{
-							safe_int_compare.reset(i);
+							safe_int_compare.reset_unsafe(i);
 						}
 					}
 				}

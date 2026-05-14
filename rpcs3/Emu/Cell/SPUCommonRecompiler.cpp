@@ -2868,10 +2868,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 	u32 lsa = entry_point;
 	u32 limit = SPU_LS_SIZE;
 
-	if (g_cfg.core.spu_block_size == spu_block_size_type::giga)
-	{
-	}
-
 	// Weak constant propagation context (for guessing branch targets)
 	std::array<bs_t<vf>, 128> vflags{};
 
@@ -4005,7 +4001,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				// Expand MFC_Cmd reg use
 				for (u8 reg : {s_reg_mfc_lsa, s_reg_mfc_tag, s_reg_mfc_size})
 				{
-					if (!block.reg_mod[reg])
+					if (!block.reg_mod.test_unsafe(reg))
 						block.reg_use[reg]++;
 				}
 			}
@@ -4013,11 +4009,11 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			// Register reg modification
 			if (u8 reg = m_regmod[ia / 4]; reg < s_reg_max)
 			{
-				block.reg_mod.set(reg);
-				block.reg_mod_xf.set(reg, type & spu_itype::xfloat);
+				block.reg_mod.set_unsafe(reg);
+				block.reg_mod_xf.set_unsafe(reg, type & spu_itype::xfloat);
 
 				if (type == spu_itype::SELB && (block.reg_mod_xf[op.ra] || block.reg_mod_xf[op.rb]))
-					block.reg_mod_xf.set(reg);
+					block.reg_mod_xf.set_unsafe(reg);
 
 				// Possible post-dominating register load
 				if (type == spu_itype::LQD && op.ra == s_reg_sp)
@@ -4059,13 +4055,13 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					{
 						if (i == s_reg_lr || (i >= 2 && i < s_reg_80) || i > s_reg_127)
 						{
-							if (!block.reg_mod[i])
+							if (!block.reg_mod.test_unsafe(i))
 								block.reg_use[i]++;
 
 							if (!is_tail)
 							{
-								block.reg_mod.set(i);
-								block.reg_mod_xf.set(i, false);
+								block.reg_mod.set_unsafe(i);
+								block.reg_mod_xf.set_unsafe(i, false);
 							}
 						}
 					}
@@ -4347,7 +4343,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				{
 					if (tb.chunk == block.chunk && tb.reg_origin[i] + 1)
 					{
-						const u32 expected = block.reg_mod[i] ? addr : block.reg_origin[i];
+						const u32 expected = block.reg_mod.test_unsafe(i) ? addr : block.reg_origin[i];
 
 						if (tb.reg_origin[i] == 0x80000000)
 						{
@@ -4364,7 +4360,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 					if (g_cfg.core.spu_block_size == spu_block_size_type::giga && tb.func == block.func && tb.reg_origin_abs[i] + 2)
 					{
-						const u32 expected = block.reg_mod[i] ? addr : block.reg_origin_abs[i];
+						const u32 expected = block.reg_mod.test_unsafe(i) ? addr : block.reg_origin_abs[i];
 
 						if (tb.reg_origin_abs[i] == 0x80000000)
 						{
@@ -4435,11 +4431,11 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			if (orig < 0x40000)
 			{
 				auto& src = ::at32(m_bbs, orig);
-				bb.reg_const.set(i, src.reg_const[i]);
+				bb.reg_const.set_unsafe(i, src.reg_const.test_unsafe(i));
 				bb.reg_val32[i] = src.reg_val32[i];
 			}
 
-			if (!bb.reg_save_dom[i] && bb.reg_use[i] && (orig == SPU_LS_SIZE || orig + 2 == 0))
+			if (!bb.reg_save_dom.test_unsafe(i) && bb.reg_use[i] && (orig == SPU_LS_SIZE || orig + 2 == 0))
 			{
 				// Destroy offset if external reg value is used
 				func.reg_save_off[i] = -1;
@@ -4573,7 +4569,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			{
 				// Clear const if reg is modified here
 				if (u8 reg = m_regmod[ia / 4]; reg < s_reg_max)
-					bb.reg_const.set(reg, false);
+					bb.reg_const.set_unsafe(reg, false);
 				break;
 			}
 			}
@@ -4581,7 +4577,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			// $SP is modified
 			if (m_regmod[ia / 4] == s_reg_sp)
 			{
-				if (bb.reg_const[s_reg_sp])
+				if (bb.reg_const.test_unsafe(s_reg_sp))
 				{
 					// Making $SP a constant is a funny thing too.
 					bb.stack_sub = 0x80000000;
@@ -4799,7 +4795,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				// Check $80..$127 (should be restored or unmodified)
 				for (u32 i = s_reg_80; is_ok && i <= s_reg_127; i++)
 				{
-					if (u32 orig = bb.reg_mod[i] ? addr : bb.reg_origin_abs[i]; orig < SPU_LS_SIZE)
+					if (u32 orig = bb.reg_mod.test_unsafe(i) ? addr : bb.reg_origin_abs[i]; orig < SPU_LS_SIZE)
 					{
 						auto& src = ::at32(m_bbs, orig);
 
@@ -6380,7 +6376,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				{
 					for (u32 i = 0; i < s_reg_max; i++)
 					{
-						if (!reg_mod[i])
+						if (!reg_mod.test_unsafe(i))
 						{
 							reg_use[i] += it->second.reg_use[i];
 						}
@@ -6400,26 +6396,26 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				{
 					if (!reduced_loop->loop_dicts.test(i))
 					{
-						if (reg_use[i] && reg_mod[i])
+						if (reg_use[i] && reg_mod.test_unsafe(i))
 						{
 							reduced_loop->is_constant_expression = false;
-							reduced_loop->loop_writes.set(i);
-							reduced_loop->loop_may_update.reset(i);
+							reduced_loop->loop_writes.set_unsafe(i);
+							reduced_loop->loop_may_update.reset_unsafe(i);
 						}
 						else if (reg_use[i])
 						{
-							reduced_loop->loop_args.set(i);
+							reduced_loop->loop_args.set_unsafe(i);
 
-							if (reg_use[i] >= 3 && reg_maybe_float[i])
+							if (reg_use[i] >= 3 && reg_maybe_float.test_unsafe(i))
 							{
-								reduced_loop->gpr_not_nans.set(i);
+								reduced_loop->gpr_not_nans.set_unsafe(i);
 							}
 						}
 					}
 					else
 					{
 						// Cleanup
-						reduced_loop->loop_may_update.reset(i);
+						reduced_loop->loop_may_update.reset_unsafe(i);
 					}
 				}
 
@@ -6427,11 +6423,11 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 				for (u32 i = 0; i < s_reg_max; i++)
 				{
-					if (::at32(reduced_loop->loop_dicts, i) || ::at32(reduced_loop->loop_writes, i))
+					if (reduced_loop->loop_dicts.test_unsafe(i) || reduced_loop->loop_writes.test_unsafe(i))
 					{
-						if (auto reg_it = reduced_loop->find_reg(i))
+						if (const auto reg_it = reduced_loop->find_reg(i))
 						{
-							if (reg_it->regs.test(s_reg_max))
+							if (reg_it->regs.test_unsafe(s_reg_max))
 							{
 								is_secret = false;
 							}
@@ -7111,7 +7107,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					{
 						for (u32 i = 0; i < s_reg_max; i++)
 						{
-							if (!reg_mod[i])
+							if (!reg_mod.test_unsafe(i))
 							{
 								reg_use[i] += it->second.reg_use[i];
 							}
@@ -7131,26 +7127,26 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					{
 						if (!reduced_loop->loop_dicts.test(i))
 						{
-							if (reg_use[i] && reg_mod[i])
+							if (reg_use[i] && reg_mod.test_unsafe(i))
 							{
 								reduced_loop->is_constant_expression = false;
-								reduced_loop->loop_writes.set(i);
-								reduced_loop->loop_may_update.reset(i);
+								reduced_loop->loop_writes.set_unsafe(i);
+								reduced_loop->loop_may_update.reset_unsafe(i);
 							}
 							else if (reg_use[i])
 							{
-								reduced_loop->loop_args.set(i);
+								reduced_loop->loop_args.set_unsafe(i);
 
-								if (reg_use[i] >= 3 && reg_maybe_float[i])
+								if (reg_use[i] >= 3 && reg_maybe_float.test_unsafe(i))
 								{
-									reduced_loop->gpr_not_nans.set(i);
+									reduced_loop->gpr_not_nans.set_unsafe(i);
 								}
 							}
 						}
 						else
 						{
 							// Cleanup
-							reduced_loop->loop_may_update.reset(i);
+							reduced_loop->loop_may_update.reset_unsafe(i);
 						}
 					}
 
@@ -7158,11 +7154,11 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 					for (u32 i = 0; i < s_reg_max; i++)
 					{
-						if (::at32(reduced_loop->loop_dicts, i) || ::at32(reduced_loop->loop_writes, i))
+						if (reduced_loop->loop_dicts.test_unsafe(i) || reduced_loop->loop_writes.test_unsafe(i))
 						{
-							if (auto reg_it = reduced_loop->find_reg(i))
+							if (const auto reg_it = reduced_loop->find_reg(i))
 							{
-								if (reg_it->regs.test(s_reg_max))
+								if (reg_it->regs.test_unsafe(s_reg_max))
 								{
 									is_secret = false;
 								}
@@ -8680,7 +8676,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 			for (u32 i = 0; i < s_reg_max; i++)
 			{
-				if (::at32(pattern.loop_dicts, i))
+				if (pattern.loop_dicts.test_unsafe(i))
 				{
 					if (regs.size() != 1)
 					{
@@ -8693,7 +8689,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 			for (u32 i = 0; i < s_reg_max; i++)
 			{
-				if (pattern.loop_writes.test(i))
+				if (pattern.loop_writes.test_unsafe(i))
 				{
 					if (regs.size() != 1)
 					{
@@ -8703,7 +8699,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					fmt::append(regs, " r%u-w", i);
 				}
 
-				if (pattern.loop_args.test(i))
+				if (pattern.loop_args.test_unsafe(i))
 				{
 					if (regs.size() != 1)
 					{
@@ -8713,7 +8709,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					fmt::append(regs, " r%u-r", i);
 				}
 
-				if (pattern.loop_may_update.test(i))
+				if (pattern.loop_may_update.test_unsafe(i))
 				{
 					if (regs.size() != 1)
 					{

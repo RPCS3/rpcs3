@@ -1081,11 +1081,22 @@ public:
 		return m_bitset[pos];
 	}
 
+	[[nodiscard]] bool test_unsafe(usz pos) const
+	{
+		return m_bitset[pos];
+	}
+
 	bit_set& set(usz pos, bool val = true, std::source_location src_loc = std::source_location::current())
 	{
 		if (pos >= Bits) [[unlikely]]
 			fmt::raw_range_error(src_loc, format_object_simplified(pos), Bits);
 
+		m_bitset[pos] = val;
+		return *this;
+	}
+
+	bit_set& set_unsafe(usz pos, bool val = true)
+	{
 		m_bitset[pos] = val;
 		return *this;
 	}
@@ -1096,6 +1107,12 @@ public:
 			fmt::raw_range_error(src_loc, format_object_simplified(pos), Bits);
 
 		m_bitset[pos] = false;
+		return *this;
+	}
+
+	bit_set& reset_unsafe(usz pos)
+	{
+		m_bitset.reset(pos);
 		return *this;
 	}
 
