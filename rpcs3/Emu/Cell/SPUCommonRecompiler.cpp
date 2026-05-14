@@ -1222,7 +1222,7 @@ void spu_cache::initialize(bool build_existing_cache)
 	}
 
 	// Initialize global cache instance
-	if (g_cfg.core.spu_cache && cache)
+	if (g_cfg.core.spu_cache && !spu_precompilation_enabled && cache)
 	{
 		g_fxo->get<spu_cache>() = std::move(cache);
 	}
@@ -1282,8 +1282,8 @@ spu_runtime::spu_runtime()
 			fs::remove_all(m_cache_path + "llvm/", false);
 		}
 
-		fs::file(m_cache_path + "spu.log", fs::rewrite);
-		fs::file(m_cache_path + "spu-ir.log", fs::rewrite);
+		fs::write_file(m_cache_path + "spu.log", fs::rewrite);
+		fs::write_file(m_cache_path + "spu-ir.log", fs::rewrite);
 	}
 }
 
@@ -3215,10 +3215,13 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 							jt_abs.clear();
 						}
 
+						// If this fails, this is a TODO to compare them in another way
 						ensure(jt_abs.size() != jt_rel.size());
 					}
 
-					if (jt_abs.size() >= jt_rel.size())
+					const bool abs_domainates = jt_abs.size() > jt_rel.size();
+
+					if (abs_domainates)
 					{
 						const u32 new_size = (start - lsa) / 4 + ::size32(jt_abs);
 
@@ -3236,8 +3239,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 						m_targets.emplace(pos, std::move(jt_abs));
 					}
-
-					if (jt_rel.size() >= jt_abs.size())
+					else
 					{
 						const u32 new_size = (start - lsa) / 4 + ::size32(jt_rel);
 
@@ -8766,6 +8768,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 void spu_recompiler_base::dump(const spu_program& result, std::string& out, u32 block_min, u32 block_max)
 {
+	block_max = std::min<u32>(block_max, SPU_LS_SIZE);
+
 	SPUDisAsm dis_asm(cpu_disasm_mode::dump, reinterpret_cast<const u8*>(result.data.data()), result.lower_bound);
 
 	std::string hash;

@@ -2637,7 +2637,7 @@ public:
 
 				for (u32 iteration_emit = 0; is_reduced_loop; m_pos += 4)
 				{
-					if (m_pos != baddr && m_block_info[m_pos / 4] && m_reduced_loop_info->loop_end < m_pos)
+					if (m_pos != baddr && m_pos != SPU_LS_SIZE && m_block_info[m_pos / 4] && m_reduced_loop_info->loop_end < m_pos)
 					{
 						fmt::throw_exception("LLVM: Reduced Loop Pattern: Exit(1) too early at 0x%x", m_pos);
 					}
@@ -3217,7 +3217,7 @@ public:
 
 							for (u32 target : m_bbs[cur].targets)
 							{
-								if (!m_block_info[target / 4])
+								if (target == SPU_LS_SIZE || !m_block_info[target / 4])
 								{
 									continue;
 								}
@@ -9066,7 +9066,7 @@ public:
 
 			for (u32 target : tfound->second)
 			{
-				if (m_block_info[target / 4])
+				if (target != SPU_LS_SIZE && m_block_info[target / 4])
 				{
 					targets.emplace(target, nullptr);
 				}

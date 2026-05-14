@@ -714,14 +714,14 @@ protected:
 	u64 m_hash_start;
 
 	// Bit indicating start of the block
-	std::bitset<0x10000> m_block_info;
+	std::bitset<SPU_LS_SIZE / 4> m_block_info;
 
 	// GPR modified by the instruction (-1 = not set)
-	std::array<u8, 0x10000> m_regmod;
+	std::array<u8, SPU_LS_SIZE / 4> m_regmod;
 
-	std::bitset<0x10000> m_use_ra;
-	std::bitset<0x10000> m_use_rb;
-	std::bitset<0x10000> m_use_rc;
+	std::bitset<SPU_LS_SIZE / 4> m_use_ra;
+	std::bitset<SPU_LS_SIZE / 4> m_use_rb;
+	std::bitset<SPU_LS_SIZE / 4> m_use_rc;
 
 	// List of possible targets for the instruction (entry shouldn't exist for simple instructions)
 	std::unordered_map<u32, std::vector<u32>, value_hash<u32, 2>> m_targets;
@@ -730,10 +730,10 @@ protected:
 	std::unordered_map<u32, std::vector<u32>, value_hash<u32, 2>> m_preds;
 
 	// List of function entry points and return points (set after BRSL, BRASL, BISL, BISLED)
-	std::bitset<0x10000> m_entry_info;
+	std::bitset<SPU_LS_SIZE / 4> m_entry_info;
 
 	// Set after return points and disjoint chunks
-	std::bitset<0x10000> m_ret_info;
+	std::bitset<SPU_LS_SIZE / 4> m_ret_info;
 
 	// Basic block information
 	struct block_info
