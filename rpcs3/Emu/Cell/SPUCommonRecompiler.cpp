@@ -4430,7 +4430,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 			if (orig < 0x40000)
 			{
-				auto& src = ::at32(m_bbs, orig);
+				const auto& src = ::at32(m_bbs, orig);
 				bb.reg_const.set_unsafe(i, src.reg_const.test_unsafe(i));
 				bb.reg_val32[i] = src.reg_val32[i];
 			}
@@ -4773,7 +4773,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				// Check $LR (alternative return registers are currently not supported)
 				if (u32 lr_orig = bb.reg_mod[s_reg_lr] ? addr : bb.reg_origin_abs[s_reg_lr]; lr_orig < SPU_LS_SIZE)
 				{
-					auto& src = ::at32(m_bbs, lr_orig);
+					const auto& src = ::at32(m_bbs, lr_orig);
 
 					if (src.reg_load_mod[s_reg_lr] != func.reg_save_off[s_reg_lr])
 					{
@@ -4797,7 +4797,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				{
 					if (u32 orig = bb.reg_mod.test_unsafe(i) ? addr : bb.reg_origin_abs[i]; orig < SPU_LS_SIZE)
 					{
-						auto& src = ::at32(m_bbs, orig);
+						const auto& src = ::at32(m_bbs, orig);
 
 						if (src.reg_load_mod[i] != func.reg_save_off[i])
 						{

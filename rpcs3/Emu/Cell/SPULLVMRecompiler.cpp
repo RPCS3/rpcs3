@@ -76,10 +76,10 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	u32 m_op_const_mask = -1;
 
 	// Current function chunk entry point
-	u32 m_entry;
+	u32 m_entry = 0;
 
 	// Main entry point offset
-	u32 m_base;
+	u32 m_base = 0;
 
 	// Module name
 	std::string m_hash;
@@ -91,26 +91,26 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	u32 m_next_op = 0;
 
 	// Current function (chunk)
-	llvm::Function* m_function;
+	llvm::Function* m_function{};
 
-	llvm::Value* m_thread;
-	llvm::Value* m_lsptr;
-	llvm::Value* m_interp_op;
-	llvm::Value* m_interp_pc;
-	llvm::Value* m_interp_table;
-	llvm::Value* m_interp_7f0;
-	llvm::Value* m_interp_regs;
+	llvm::Value* m_thread{};
+	llvm::Value* m_lsptr{};
+	llvm::Value* m_interp_op{};
+	llvm::Value* m_interp_pc{};
+	llvm::Value* m_interp_table{};
+	llvm::Value* m_interp_7f0{};
+	llvm::Value* m_interp_regs{};
 
 	// Helpers
-	llvm::Value* m_base_pc;
-	llvm::Value* m_interp_pc_next;
-	llvm::BasicBlock* m_interp_bblock;
+	llvm::Value* m_base_pc{};
+	llvm::Value* m_interp_pc_next{};
+	llvm::BasicBlock* m_interp_bblock{};
 
 	// i8*, contains constant vm::g_base_addr value
-	llvm::Value* m_memptr;
+	llvm::Value* m_memptr{};
 
 	// Pointers to registers in the thread context
-	std::array<llvm::Value*, s_reg_max> m_reg_addr;
+	std::array<llvm::Value*, s_reg_max> m_reg_addr{};
 
 	// Global variable (function table)
 	llvm::GlobalVariable* m_function_table{};
@@ -130,10 +130,10 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	// Chunk for external tail call (dispatch)
 	llvm::Function* m_dispatch{};
 
-	llvm::MDNode* m_md_unlikely;
-	llvm::MDNode* m_md_likely;
-	llvm::MDNode* m_md_spu_memory_domain;
-	llvm::MDNode* m_md_spu_context_domain;
+	llvm::MDNode* m_md_unlikely{};
+	llvm::MDNode* m_md_likely{};
+	llvm::MDNode* m_md_spu_memory_domain{};
+	llvm::MDNode* m_md_spu_context_domain{};
 
 	struct block_info
 	{

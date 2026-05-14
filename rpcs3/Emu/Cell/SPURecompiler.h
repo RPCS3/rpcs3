@@ -361,7 +361,7 @@ public:
 			spu_itype_t mod3_type = spu_itype::UNK;
 			u32 IMM = 0;
 
-private:
+		private:
 			// Internal, please access using fixed order
 			spu_itype_t access_type(u32 i) const
 			{
@@ -380,7 +380,7 @@ private:
 
 				return spu_itype::UNK;
 			}
-public:
+		public:
 
 			spu_itype_t reverse1_type()
 			{
@@ -697,15 +697,15 @@ public:
 protected:
 	spu_runtime* m_spurt{};
 
-	u32 m_pos;
-	u32 m_size;
-	u64 m_hash_start;
+	u32 m_pos = 0;
+	u32 m_size = 0;
+	u64 m_hash_start = 0;
 
 	// Bit indicating start of the block
 	bit_set<SPU_LS_SIZE / 4> m_block_info;
 
 	// GPR modified by the instruction (-1 = not set)
-	std::array<u8, SPU_LS_SIZE / 4> m_regmod;
+	std::array<u8, SPU_LS_SIZE / 4> m_regmod {};
 
 	bit_set<SPU_LS_SIZE / 4> m_use_ra;
 	bit_set<SPU_LS_SIZE / 4> m_use_rb;
