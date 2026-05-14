@@ -1222,7 +1222,7 @@ void spu_cache::initialize(bool build_existing_cache)
 	}
 
 	// Initialize global cache instance
-	if (g_cfg.core.spu_cache && cache)
+	if (g_cfg.core.spu_cache && !spu_precompilation_enabled && cache)
 	{
 		g_fxo->get<spu_cache>() = std::move(cache);
 	}
@@ -1282,8 +1282,8 @@ spu_runtime::spu_runtime()
 			fs::remove_all(m_cache_path + "llvm/", false);
 		}
 
-		fs::file(m_cache_path + "spu.log", fs::rewrite);
-		fs::file(m_cache_path + "spu-ir.log", fs::rewrite);
+		fs::write_file(m_cache_path + "spu.log", fs::rewrite);
+		fs::write_file(m_cache_path + "spu-ir.log", fs::rewrite);
 	}
 }
 
@@ -3215,10 +3215,13 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 							jt_abs.clear();
 						}
 
+						// If this fails, this is a TODO to compare them in another way
 						ensure(jt_abs.size() != jt_rel.size());
 					}
 
-					if (jt_abs.size() >= jt_rel.size())
+					const bool abs_domainates = jt_abs.size() > jt_rel.size();
+
+					if (abs_domainates)
 					{
 						const u32 new_size = (start - lsa) / 4 + ::size32(jt_abs);
 
@@ -3236,8 +3239,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 						m_targets.emplace(pos, std::move(jt_abs));
 					}
-
-					if (jt_rel.size() >= jt_abs.size())
+					else
 					{
 						const u32 new_size = (start - lsa) / 4 + ::size32(jt_rel);
 
@@ -4953,6 +4955,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 	struct reduced_statistics_t : stats_t
 	{
+		atomic_t<u64> secret_compatible = 0;
 	};
 
 	// Pattern structures
@@ -5183,7 +5186,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		// Check loop connector block (must jump to block-next or to loop-start)
 		u32 targets_count = 0;
 
-		for (u32 target : get_block_targets(first_pred_of_loop))
+		for (u32 target : get_block_targets(!invalid ? first_pred_of_loop : bpc))
 		{
 			valid = true;
 			targets_count++;
@@ -6420,6 +6423,23 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					}
 				}
 
+				bool is_secret = true;
+
+				for (u32 i = 0; i < s_reg_max; i++)
+				{
+					if (::at32(reduced_loop->loop_dicts, i) || ::at32(reduced_loop->loop_writes, i))
+					{
+						if (auto reg_it = reduced_loop->find_reg(i))
+						{
+							if (reg_it->regs.test(s_reg_max))
+							{
+								is_secret = false;
+							}
+						}
+					}
+				}
+
+				reduced_loop->is_secret = is_secret;
 				reduced_loop_all.emplace(reduced_loop->loop_pc, *reduced_loop);
 				reduced_loop->discard();
 			}
@@ -7134,6 +7154,23 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 						}
 					}
 
+					bool is_secret = true;
+
+					for (u32 i = 0; i < s_reg_max; i++)
+					{
+						if (::at32(reduced_loop->loop_dicts, i) || ::at32(reduced_loop->loop_writes, i))
+						{
+							if (auto reg_it = reduced_loop->find_reg(i))
+							{
+								if (reg_it->regs.test(s_reg_max))
+								{
+									is_secret = false;
+								}
+							}
+						}
+					}
+
+					reduced_loop->is_secret = is_secret;
 					reduced_loop_all.emplace(reduced_loop->loop_pc, *reduced_loop);
 					reduced_loop->discard();
 				}
@@ -8624,6 +8661,10 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 	for (const auto& [loop_pc, pattern] : reduced_loop_all)
 	{
+		auto& stats = g_fxo->get<reduced_statistics_t>();
+
+		stats.all++;
+
 		if (!pattern.active || pattern.loop_pc == SPU_LS_SIZE)
 		{
 			continue;
@@ -8631,20 +8672,22 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 		if (inst_attr attr = m_inst_attrs[(loop_pc - entry_point) / 4]; attr == inst_attr::none)
 		{
+			stats.single++;
+
 			add_pattern(inst_attr::reduced_loop, loop_pc - result.entry_point, 0, std::make_shared<reduced_loop_t>(pattern));
 
 			std::string regs = "{";
 
-			for (const auto& [reg_num, reg] : pattern.regs)
+			for (u32 i = 0; i < s_reg_max; i++)
 			{
-				if (reg.is_loop_dictator(reg_num))
+				if (::at32(pattern.loop_dicts, i))
 				{
 					if (regs.size() != 1)
 					{
 						regs += ",";
 					}
 
-					fmt::append(regs, " r%u", reg_num);
+					fmt::append(regs, " r%u", i);
 				}
 			}
 
@@ -8683,10 +8726,10 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 			regs += " }";
 
-			spu_log.success("Reduced Loop Pattern Detected! (REGS: %s, DICT: r%d, ARG: %s, Incr: %s (%s), CMP/Size: %s/%u, loop_pc=0x%x, 0x%x-%s)", regs, pattern.cond_val_register_idx
+			spu_log.success("Reduced Loop Pattern Detected! (REGS: %s, DICT: r%d, ARG: %s, Incr: %s (%s), CMP/Size: %s/%u, loop_pc=0x%x, 0x%x-%s) [All=%u/%u, Secret=%s/%u]", regs, pattern.cond_val_register_idx
 				, pattern.cond_val_is_immediate ? fmt::format("0x%x", pattern.cond_val_min) : fmt::format("r%d", pattern.cond_val_register_argument_idx)
 				, pattern.cond_val_incr_is_immediate ? fmt::format("%d", static_cast<s32>(pattern.cond_val_incr)) : fmt::format("r%d", pattern.cond_val_incr), pattern.cond_val_incr_before_cond ? "BEFORE" : "AFTER"
-				, pattern.cond_val_compare, std::popcount(pattern.cond_val_mask), loop_pc, entry_point, func_hash);
+				, pattern.cond_val_compare, std::popcount(pattern.cond_val_mask), loop_pc, entry_point, func_hash, +stats.single, +stats.all, pattern.is_secret ? "true" : "false", stats.secret_compatible.add_fetch(pattern.is_secret ? 1 : 0));
 		}
 	}
 
@@ -8725,6 +8768,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 void spu_recompiler_base::dump(const spu_program& result, std::string& out, u32 block_min, u32 block_max)
 {
+	block_max = std::min<u32>(block_max, SPU_LS_SIZE);
+
 	SPUDisAsm dis_asm(cpu_disasm_mode::dump, reinterpret_cast<const u8*>(result.data.data()), result.lower_bound);
 
 	std::string hash;
