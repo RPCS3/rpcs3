@@ -1346,26 +1346,43 @@ void keyboard_pad_handler::process()
 
 		// Normalize and apply pad squircling
 		// Copy sticks first. We don't want to modify the raw internal values
-		std::array<AnalogStick, 4> squircled_sticks = pad_internal.m_sticks;
+		std::array<u16, 4> squircled_sticks =
+		{
+			pad_internal.m_sticks[0].m_value,
+			pad_internal.m_sticks[1].m_value,
+			pad_internal.m_sticks[2].m_value,
+			pad_internal.m_sticks[3].m_value
+		};
 
 		// Apply squircling
 		if (cfg->lpadsquircling != 0)
 		{
-			u16& lx = squircled_sticks[0].m_value;
-			u16& ly = squircled_sticks[1].m_value;
+			u16& lx = squircled_sticks[0];
+			u16& ly = squircled_sticks[1];
 
 			ConvertToSquirclePoint(lx, ly, cfg->lpadsquircling);
 		}
 
 		if (cfg->rpadsquircling != 0)
 		{
-			u16& rx = squircled_sticks[2].m_value;
-			u16& ry = squircled_sticks[3].m_value;
+			u16& rx = squircled_sticks[2];
+			u16& ry = squircled_sticks[3];
 
 			ConvertToSquirclePoint(rx, ry, cfg->rpadsquircling);
 		}
 
-		pad->m_buttons = pad_internal.m_buttons;
-		pad->m_sticks = squircled_sticks; // Don't use std::move here. We assign values lockless, so std::move can lead to segfaults.
+		for (usz j = 0; j < pad->m_buttons.size(); j++)
+		{
+			const Button& btn_internal = pad_internal.m_buttons[j];
+			Button& btn = pad->m_buttons[j];
+
+			btn.m_value = btn_internal.m_value;
+			btn.m_pressed = btn_internal.m_pressed;
+		}
+
+		for (usz j = 0; j < pad->m_sticks.size(); j++)
+		{
+			pad->m_sticks[j].m_value = squircled_sticks[j];
+		}
 	}
 }
