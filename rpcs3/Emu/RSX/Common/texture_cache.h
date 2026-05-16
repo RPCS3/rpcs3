@@ -2613,7 +2613,7 @@ namespace rsx
 			const auto get_tiled_region = [&](const utils::address_range32& range)
 			{
 				auto rsxthr = rsx::get_current_renderer();
-				return rsxthr->get_tiled_memory_region(range);
+				return rsxthr->lv2_context->get_tiled_memory_region(range);
 			};
 
 			auto rtt_lookup = [&m_rtts, &cmd, &scale_x, &scale_y](u32 address, u32 width, u32 height, u32 pitch, u8 bpp, rsx::flags32_t access, bool allow_clipped) -> typename surface_store_type::surface_overlap_info

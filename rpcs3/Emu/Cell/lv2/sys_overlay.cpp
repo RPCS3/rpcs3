@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include "Emu/Cell/ErrorCodes.h"
+#include "Emu/Cell/PPUThread.h"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/VFS.h"
 #include "Emu/IdManager.h"
@@ -126,11 +127,13 @@ void lv2_overlay::save(utils::serial& ar)
 	ar(vpath, offset);
 }
 
-error_code sys_overlay_load_module(vm::ptr<u32> ovlmid, vm::cptr<char> path, u64 flags, vm::ptr<u32> entry)
+error_code sys_overlay_load_module(ppu_thread& ppu, vm::ptr<u32> ovlmid, vm::cptr<char> path, u64 flags, vm::ptr<u32> entry)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_overlay.warning("sys_overlay_load_module(ovlmid=*0x%x, path=%s, flags=0x%x, entry=*0x%x)", ovlmid, path, flags, entry);
 
-	if (!g_ps3_process_info.ppc_seg)
+	if (!ppu.has_ppc_seg)
 	{
 		// Process not permitted
 		return CELL_ENOSYS;
@@ -144,11 +147,13 @@ error_code sys_overlay_load_module(vm::ptr<u32> ovlmid, vm::cptr<char> path, u64
 	return overlay_load_module(ovlmid, path.get_ptr(), flags, entry);
 }
 
-error_code sys_overlay_load_module_by_fd(vm::ptr<u32> ovlmid, u32 fd, u64 offset, u64 flags, vm::ptr<u32> entry)
+error_code sys_overlay_load_module_by_fd(ppu_thread& ppu, vm::ptr<u32> ovlmid, u32 fd, u64 offset, u64 flags, vm::ptr<u32> entry)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_overlay.warning("sys_overlay_load_module_by_fd(ovlmid=*0x%x, fd=%d, offset=0x%llx, flags=0x%x, entry=*0x%x)", ovlmid, fd, offset, flags, entry);
 
-	if (!g_ps3_process_info.ppc_seg)
+	if (!ppu.has_ppc_seg)
 	{
 		// Process not permitted
 		return CELL_ENOSYS;
@@ -176,11 +181,13 @@ error_code sys_overlay_load_module_by_fd(vm::ptr<u32> ovlmid, u32 fd, u64 offset
 	return overlay_load_module(ovlmid, offset ? fmt::format("%s_x%x", file->name.data(), offset) : file->name.data(), flags, entry, lv2_file::make_view(file, offset), offset);
 }
 
-error_code sys_overlay_unload_module(u32 ovlmid)
+error_code sys_overlay_unload_module(ppu_thread& ppu, u32 ovlmid)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_overlay.warning("sys_overlay_unload_module(ovlmid=0x%x)", ovlmid);
 
-	if (!g_ps3_process_info.ppc_seg)
+	if (!ppu.has_ppc_seg)
 	{
 		// Process not permitted
 		return CELL_ENOSYS;

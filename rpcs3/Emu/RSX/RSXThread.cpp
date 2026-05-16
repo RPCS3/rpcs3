@@ -58,7 +58,7 @@ bool serialize<rsx::rsx_state>(utils::serial& ar, rsx::rsx_state& o)
 	// Work around for old RSX captures.
 	// RSX capture and savestates both call this method.
 	// We do not want to grab transform constants if it is not savestate capture.
-	const bool is_savestate_capture = thread_ctrl::get_current() && thread_ctrl::get_name() == "Emu State Capture Thread";
+	const bool is_savestate_capture = thread_ctrl::get_current() && thread_ctrl::get_name().find("Emu State Capture Thread") != umax;
 	if (GET_SERIALIZATION_VERSION(global_version) || is_savestate_capture)
 	{
 		ar(o.transform_constants);
@@ -130,6 +130,7 @@ namespace rsx
 
 	u32 get_address(u32 offset, u32 location, u32 size_to_check, std::source_location src_loc)
 	{
+		ensure(cpu_thread::get_current()->id_type() == 0x55);
 		const auto render = get_current_renderer();
 		std::string_view msg;
 
@@ -150,16 +151,16 @@ namespace rsx
 		case CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER:
 		case CELL_GCM_LOCATION_MAIN:
 		{
-			if (const u32 ea = render->iomap_table.get_addr(offset); ea != umax)
+			if (const u32 ea = render->lv2_context->iomap_table.get_addr(offset); ea != umax)
 			{
-				if (size_to_check <= 1 || (offset < render->main_mem_size && render->main_mem_size - offset >= size_to_check))
+				if (size_to_check <= 1 || (offset < render->lv2_context->main_mem_size && render->lv2_context->main_mem_size - offset >= size_to_check))
 				{
 					bool ok = true;
 
 					for (u32 offs_index = 0x100000; offs_index < size_to_check + (offset & 0xfffff); offs_index += 0x100000)
 					{
 						// This check does not check continuity but rather that it's mapped at all
-						if (render->iomap_table.get_addr(offset + offs_index) == umax)
+						if (render->lv2_context->iomap_table.get_addr(offset + offs_index) == umax)
 						{
 							ok = false;
 						}
@@ -183,7 +184,7 @@ namespace rsx
 		{
 			if (offset < sizeof(RsxReports::report) /*&& (offset % 0x10) == 0*/)
 			{
-				return render->label_addr + ::offset32(&RsxReports::report) + offset;
+				return render->lv2_context->label_addr + ::offset32(&RsxReports::report) + offset;
 			}
 
 			msg = "Local RSX REPORT offset out of range!"sv;
@@ -192,7 +193,7 @@ namespace rsx
 
 		case CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN:
 		{
-			if (const u32 ea = offset < 0x1000000 ? render->iomap_table.get_addr(0x0e000000 + offset) : -1; ea != umax)
+			if (const u32 ea = offset < 0x1000000 ? render->lv2_context->iomap_table.get_addr(0x0e000000 + offset) : -1; ea != umax)
 			{
 				if (!size_to_check || vm::check_addr(ea, 0, size_to_check))
 				{
@@ -230,7 +231,7 @@ namespace rsx
 		{
 			if (offset < sizeof(RsxReports::semaphore) /*&& (offset % 0x10) == 0*/)
 			{
-				return render->label_addr + offset;
+				return render->lv2_context->label_addr + offset;
 			}
 
 			msg = "DMA SEMAPHORE offset out of range!"sv;
@@ -242,7 +243,7 @@ namespace rsx
 		{
 			if (offset < 0x100000 /*&& (offset % 0x10) == 0*/)
 			{
-				return render->device_addr + offset;
+				return render->lv2_context->device_addr + offset;
 			}
 
 			// TODO: What happens here? It could wrap around or access other segments of rsx internal memory etc
@@ -635,12 +636,8 @@ namespace rsx
 		}
 
 		ar(m_draw_processor.m_element_push_buffer, fifo_ret_addr, saved_fifo_ret, zcull_surface_active, m_surface_info, m_depth_surface_info, m_framebuffer_layout);
-		ar(dma_address, iomap_table, restore_point, tiles, zculls, display_buffers, display_buffers_count, current_display_buffer);
-		ar(enable_second_vhandler, requested_vsync);
-		ar(device_addr, label_addr, main_mem_size, local_mem_size, rsx_event_port, driver_info);
-		ar(in_begin_end);
-		ar(display_buffers, display_buffers_count, current_display_buffer);
-		ar(unsent_gcm_events, rsx::method_registers.current_draw_clause);
+		
+		ar(in_begin_end, restore_point, requested_vsync, rsx::method_registers.current_draw_clause);
 
 		if (ar.is_writing() || version >= 2)
 		{
@@ -684,6 +681,31 @@ namespace rsx
 		{
 			restore_fifo_count = count;
 			ar(restore_fifo_cmd);
+		}
+
+		if (ar.is_writing())
+		{
+			u32 to_save = 0;
+
+			if (lv2_context)
+			{
+				idm::select<lv2_rsx_context>([&](u32 id, u32, lv2_rsx_context& ref)
+				{
+					if (&ref == lv2_context)
+					{
+						ensure(id == 0);
+						to_save = id;
+					}
+				});
+
+				ensure(id != 0);
+			}
+
+			ar(to_save);
+		}
+		else if (u32 ctx_id{ar})
+		{
+			lv2_context = ensure(idm::check_unlocked<lv2_rsx_context>(idm::id_index(ctx_id, nullptr)));
 		}
 	}
 
@@ -732,10 +754,9 @@ namespace rsx
 		serialized = true;
 		save(*_ar);
 
-		if (dma_address)
+		if (lv2_context)
 		{
-			ctrl = vm::_ptr<RsxDmaControl>(dma_address);
-			rsx_thread_running = true;
+			ctrl = vm::_ptr<RsxDmaControl>(lv2_context->dma_address);
 		}
 
 		if (g_cfg.savestate.start_paused)
@@ -967,7 +988,7 @@ namespace rsx
 
 		performance_counters.state = FIFO::state::empty;
 
-		const u64 event_flags = unsent_gcm_events.exchange(0);
+		const u64 event_flags = lv2_context->unsent_gcm_events.exchange(0);
 
 		if (Emu.IsStarting())
 		{
@@ -978,7 +999,7 @@ namespace rsx
 		}
 
 		// Wait for startup (TODO)
-		while (!rsx_thread_running || Emu.IsPausedOrReady())
+		while (!lv2_context || Emu.IsPausedOrReady())
 		{
 			// Execute backend-local tasks first
 			do_local_task(performance_counters.state);
@@ -1034,7 +1055,7 @@ namespace rsx
 			u64 local_vblank_count = 0;
 
 			// TODO: exit condition
-			while (!is_stopped() && !unsent_gcm_events && thread_ctrl::state() != thread_state::aborting)
+			while (!is_stopped() && thread_ctrl::state() != thread_state::aborting)
 			{
 				// Get current time
 				const u64 current = get_system_time();
@@ -1127,7 +1148,7 @@ namespace rsx
 			{
 				wait_pause();
 
-				if (!rsx_thread_running)
+				if (!lv2_context)
 				{
 					return;
 				}
@@ -1248,7 +1269,7 @@ namespace rsx
 				if (const u64 get_put = new_get_put.exchange(u64{umax});
 					get_put != umax)
 				{
-					vm::_ptr<atomic_be_t<u64>>(dma_address + ::offset32(&RsxDmaControl::put))->release(get_put);
+					vm::_ptr<atomic_be_t<u64>>(lv2_context->dma_address + ::offset32(&RsxDmaControl::put))->release(get_put);
 					fifo_ctrl->set_get(static_cast<u32>(get_put));
 					fifo_ctrl->abort();
 					fifo_ret_addr = RSX_CALL_STACK_EMPTY;
@@ -2477,17 +2498,16 @@ namespace rsx
 		m_graphics_state |= pipeline_state::all_dirty;
 	}
 
-	void thread::init(u32 ctrlAddress)
+	void thread::init(shared_ptr<lv2_rsx_context> _lv2_context)
 	{
-		dma_address = ctrlAddress;
-		ctrl = vm::_ptr<RsxDmaControl>(ctrlAddress);
+		ctrl = vm::_ptr<RsxDmaControl>(_lv2_context->dma_address);
 		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 		fifo_ret_addr = RSX_CALL_STACK_EMPTY;
 
-		vm::write32(device_addr + 0x30, 1);
-		std::memset(display_buffers, 0, sizeof(display_buffers));
+		vm::write32(_lv2_context->device_addr + 0x30, 1);
+		std::memset(_lv2_context->display_buffers, 0, sizeof(_lv2_context->display_buffers));
 
-		rsx_thread_running = true;
+		lv2_context = _lv2_context.get();
 	}
 
 	std::pair<u32, u32> thread::calculate_memory_requirements(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count)
@@ -2566,7 +2586,7 @@ namespace rsx
 			if (zeta_address)
 			{
 				//Find zeta address in bound zculls
-				for (const auto& zcull : zculls)
+				for (const auto& zcull : lv2_context->zculls)
 				{
 					if (zcull.bound &&
 						rsx::to_surface_depth_format(zcull.zFormat) == m_depth_surface_info.depth_format &&
@@ -2983,7 +3003,7 @@ namespace rsx
 		// we must block until RSX has invalidated the memory
 		// or lock m_mtx_task and do it ourselves
 
-		if (!rsx_thread_running)
+		if (!lv2_context)
 			return;
 
 		reader_lock lock(m_mtx_task);
@@ -3005,20 +3025,23 @@ namespace rsx
 		// Always flush MM if memory mapping is going to change.
 		rsx::mm_flush();
 
-		if (rsx_thread_running && address < rsx::constants::local_mem_base)
+		if (address < rsx::constants::local_mem_base)
 		{
+			const auto rsx_context = get_rsx_process_context();
+			auto& iomap_tbl = rsx_context->iomap_table;
+
 			// Each bit represents io entry to be unmapped
 			u64 unmap_status[512 / 64]{};
 
 			for (u32 ea = address >> 20, end = ea + (size >> 20); ea < end; ea++)
 			{
-				const u32 io = std::rotl<u32>(iomap_table.io[ea], 32 - 20);
+				const u32 io = std::rotl<u32>(iomap_tbl.io[ea], 32 - 20);
 
 				if (io + 1)
 				{
 					unmap_status[io / 64] |= 1ull << (io & 63);
-					iomap_table.io[ea].release(-1);
-					iomap_table.ea[io].release(-1);
+					iomap_tbl.io[ea].release(-1);
+					iomap_tbl.ea[io].release(-1);
 				}
 			}
 
@@ -3465,7 +3488,7 @@ namespace rsx
 
 		int_flip_index += flip_notification_count;
 
-		current_display_buffer = buffer;
+		lv2_context->current_display_buffer = buffer;
 		m_queued_flip.emu_flip = true;
 		m_queued_flip.in_progress = true;
 		m_queued_flip.skip_frame |= g_cfg.video.disable_video_output && !g_cfg.video.perf_overlay.enabled;
@@ -3482,7 +3505,7 @@ namespace rsx
 			{
 				sys_rsx_context_attribute(0x55555555, 0xFEC, buffer, 0, 0, 0);
 
-				if (unsent_gcm_events)
+				if (lv2_context->unsent_gcm_events)
 				{
 					// TODO: A proper fix
 					return;
@@ -3725,5 +3748,24 @@ namespace rsx
 		}
 
 		return *this;
+	}
+
+	void get_rsx_process_context(shared_ptr<lv2_rsx_context>& to_put)
+	{
+		if (to_put)
+		{
+			return;
+		}
+
+		ensure(id_manager::g_process);
+
+		idm::select<lv2_rsx_context>([&](u32 id, lv2_rsx_context&)
+			{
+				ensure(!to_put);
+
+				to_put = idm::get_unlocked<lv2_rsx_context>(id);
+			});
+
+		ensure(to_put);
 	}
 } // namespace rsx

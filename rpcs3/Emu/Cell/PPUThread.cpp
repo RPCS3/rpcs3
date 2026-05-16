@@ -171,7 +171,7 @@ extern void ppu_initialize();
 extern void ppu_finalize(const ppu_module<lv2_obj>& info, bool force_mem_release = false);
 extern bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only = false, u64 file_size = 0);
 static void ppu_initialize2(class jit_compiler& jit, const ppu_module<lv2_obj>& module_part, const std::string& cache_path, const std::string& obj_name);
-extern bool ppu_load_exec(const ppu_exec_object&, bool virtual_load, const std::string&, utils::serial* = nullptr);
+shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2_memory_container> mem_ct, bool virtual_load, const std::vector<std::string>& argv0, const std::vector<std::string>& envp0, const std::vector<u8>& data0, utils::serial* ar = nullptr);
 extern std::pair<shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, bool virtual_load, const std::string& path, s64 file_offset, utils::serial* = nullptr);
 extern void ppu_unload_prx(const lv2_prx&);
 extern shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, bool virtual_load, const std::string&, s64 file_offset, utils::serial* = nullptr);
@@ -915,12 +915,14 @@ struct ppu_far_jumps_t
 				{
 					auto& calls_info = ppu->hle_func_calls_with_toc_info;
 
+					const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
+
 					// Save LR and R2
 					// Set LR to the this ppu_return_from_far_jump branch for restoration of registers
 					// NOTE: In order to clean up this information all calls must return in order
 					auto& saved_info = calls_info.emplace_back();
 					saved_info.cia = pc;
-					saved_info.saved_lr = std::exchange(ppu->lr, g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(ppu_return_from_far_jump), true));
+					saved_info.saved_lr = std::exchange(ppu->lr, process->func_manager->func_addr(FIND_FUNC(ppu_return_from_far_jump), true));
 					saved_info.saved_r2 = std::exchange(ppu->gpr[2], opd.rtoc);
 				}
 			}
@@ -1238,7 +1240,9 @@ extern bool ppu_breakpoint(u32 addr, bool is_adding)
 	ppu_intrp_func_t func_original = 0;
 	ppu_intrp_func_t breakpoint = &ppu_break;
 
-	if (u32 hle_addr{}; g_fxo->is_init<ppu_function_manager>() && (hle_addr = g_fxo->get<ppu_function_manager>().addr))
+	const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
+
+	if (u32 hle_addr{}; process->func_manager && (hle_addr = process->func_manager->save_addr()))
 	{
 		// HLE function index
 		const u32 index = (addr - hle_addr) / 8;
@@ -1681,13 +1685,15 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 	const u32 _cia = this->cia;
 	const u64 gpr0 = this->gpr[0];
 
+	const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
+
 	for (
 		u64 sp = r1;
 		sp % 0x10 == 0u && sp >= stack_min && sp <= stack_max - ppu_stack_start_offset;
 		is_first = false
 		)
 	{
-		auto is_invalid = [](u64 addr)
+		auto is_invalid = [&](u64 addr)
 		{
 			if (addr > u32{umax} || addr % 4 || !vm::check_addr(static_cast<u32>(addr), vm::page_executable))
 			{
@@ -1695,7 +1701,8 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 			}
 
 			// Ignore HLE stop address
-			return addr == g_fxo->get<ppu_function_manager>().func_addr(1, true);
+
+			return addr == process->func_manager->func_addr(1, true);
 		};
 
 		if (is_first && !is_invalid(_lr))
@@ -2380,6 +2387,14 @@ void ppu_thread::cpu_wait(bs_t<cpu_flag> old)
 
 void ppu_thread::exec_task()
 {
+	// Set some localized process attributes
+	const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
+
+	has_root_perm = process->has_root_perm();
+	has_debug_or_root_perm = process->debug_or_root();
+	has_ppc_seg = process->ppc_seg;
+	sdk_version = process->sdk_ver;
+
 	if (g_cfg.core.ppu_decoder != ppu_decoder_type::_static)
 	{
 		// HVContext push to allow recursion. This happens with guest callback invocations.
@@ -4214,152 +4229,146 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 	// Join every thread
 	workers.join();
 
-	named_thread exec_worker("PPU Exec Worker", [&]
-	{
-		if (!possible_exec_file_paths)
-		{
-			return;
-		}
+// 	named_thread exec_worker("PPU Exec Worker", [&]
+// 	{
+// 		if (!possible_exec_file_paths)
+// 		{
+// 			return;
+// 		}
 
-#ifdef __APPLE__
-		pthread_jit_write_protect_np(false);
-#endif
-		// Set low priority
-		thread_ctrl::scoped_priority low_prio(-1);
+// #ifdef __APPLE__
+// 		pthread_jit_write_protect_np(false);
+// #endif
+// 		// Set low priority
+// 		thread_ctrl::scoped_priority low_prio(-1);
 
-		auto slice = possible_exec_file_paths.pop_all();
+// 		auto slice = possible_exec_file_paths.pop_all();
 
-		auto main_module = std::move(g_fxo->get<main_ppu_module<lv2_obj>>());
+// 		auto main_module = std::move(g_fxo->get<main_ppu_module<lv2_obj>>());
 
-		for (; slice; slice.pop_front(), g_progr_fdone++)
-		{
-			if (Emu.IsStopped())
-			{
-				continue;
-			}
+// 		for (; slice; slice.pop_front(), g_progr_fdone++)
+// 		{
+// 			if (Emu.IsStopped())
+// 			{
+// 				continue;
+// 			}
 
-			const auto& [path, _, file_size] = *slice;
+// 			const auto& [path, _, file_size] = *slice;
 
-			ppu_log.notice("Trying to load as executable: %s", path);
+// 			ppu_log.notice("Trying to load as executable: %s", path);
 
-			// Load SELF
-			fs::file src{path};
+// 			// Load SELF
+// 			fs::file src{path};
 
-			if (!src)
-			{
-				ppu_log.error("Failed to open '%s' (%s)", path, fs::g_tls_error);
-				continue;
-			}
+// 			if (!src)
+// 			{
+// 				ppu_log.error("Failed to open '%s' (%s)", path, fs::g_tls_error);
+// 				continue;
+// 			}
 
-			for (usz i = 0;; i++)
-			{
-				if (i > decrypt_klics.size())
-				{
-					src.close();
-					break;
-				}
+// 			for (usz i = 0;; i++)
+// 			{
+// 				if (i > decrypt_klics.size())
+// 				{
+// 					src.close();
+// 					break;
+// 				}
 
-				// Some files may fail to decrypt due to the lack of klic
-				u128 key = i == decrypt_klics.size() ? u128{} : decrypt_klics[i];
+// 				// Some files may fail to decrypt due to the lack of klic
+// 				u128 key = i == decrypt_klics.size() ? u128{} : decrypt_klics[i];
 
-				if (auto result = decrypt_self(src, i == decrypt_klics.size() ? nullptr : reinterpret_cast<const u8*>(&key)))
-				{
-					src = std::move(result);
-					break;
-				}
-			}
+// 				if (auto result = decrypt_self(src, i == decrypt_klics.size() ? nullptr : reinterpret_cast<const u8*>(&key)))
+// 				{
+// 					src = std::move(result);
+// 					break;
+// 				}
+// 			}
 
-			if (!src && !Emu.klic.empty() && src.open(path))
-			{
-				src = decrypt_self(src, reinterpret_cast<u8*>(&Emu.klic[0]));
+// 			if (!src && !Emu.klic.empty() && src.open(path))
+// 			{
+// 				src = decrypt_self(src, reinterpret_cast<u8*>(&Emu.klic[0]));
 
-				if (src)
-				{
-					ppu_log.error("Possible missed KLIC for precompilation of '%s', please report to developers.", path);
-				}
-			}
+// 				if (src)
+// 				{
+// 					ppu_log.error("Possible missed KLIC for precompilation of '%s', please report to developers.", path);
+// 				}
+// 			}
 
-			if (!src)
-			{
-				ppu_log.notice("Failed to decrypt '%s'", path);
+// 			if (!src)
+// 			{
+// 				ppu_log.notice("Failed to decrypt '%s'", path);
 
-				g_progr_ftotal_bits -= file_size;
+// 				g_progr_ftotal_bits -= file_size;
 
-				continue;
-			}
+// 				continue;
+// 			}
 
-			elf_error exec_err{};
+// 			elf_error exec_err{};
 
-			if (ppu_exec_object obj = src; (exec_err = obj, obj == elf_error::ok))
-			{
-				while (exec_err == elf_error::ok)
-				{
-					main_ppu_module<lv2_obj>& _main = g_fxo->get<main_ppu_module<lv2_obj>>();
-					_main = {};
+// 			if (ppu_exec_object obj = src; (exec_err = obj, obj == elf_error::ok))
+// 			{
+// 				while (exec_err == elf_error::ok)
+// 				{
+// 					main_ppu_module<lv2_obj>& _main = g_fxo->get<main_ppu_module<lv2_obj>>();
+// 					_main = {};
 
-					auto current_cache = std::move(g_fxo->get<spu_cache>());
+// 					auto current_cache = std::move(g_fxo->get<spu_cache>());
 
-					if (!ppu_load_exec(obj, true, path))
-					{
-						// Abort
-						exec_err = elf_error::header_type;
-						break;
-					}
+// 					if (!ppu_load_exec(obj, true, path))
+// 					{
+// 						// Abort
+// 						exec_err = elf_error::header_type;
+// 						break;
+// 					}
 
-					if (std::memcmp(main_module.sha1, _main.sha1, sizeof(_main.sha1)) == 0)
-					{
-						g_fxo->get<spu_cache>() = std::move(current_cache);
-						break;
-					}
+// 					if (std::memcmp(main_module.sha1, _main.sha1, sizeof(_main.sha1)) == 0)
+// 					{
+// 						g_fxo->get<spu_cache>() = std::move(current_cache);
+// 						break;
+// 					}
 
-					if (!_main.analyse(0, _main.elf_entry, _main.seg0_code_end, _main.applied_patches, std::vector<u32>{}, [](){ return Emu.IsStopped(); }))
-					{
-						g_fxo->get<spu_cache>() = std::move(current_cache);
-						break;
-					}
+// 					if (!_main.analyse(0, _main.elf_entry, _main.seg0_code_end, _main.applied_patches, std::vector<u32>{}, [](){ return Emu.IsStopped(); }))
+// 					{
+// 						g_fxo->get<spu_cache>() = std::move(current_cache);
+// 						break;
+// 					}
 
-					obj.clear(), src.close(); // Clear decrypted file and elf object memory
+// 					obj.clear(), src.close(); // Clear decrypted file and elf object memory
 
-					_main.name = ' '; // Make ppu_finalize work
-					Emu.ConfigurePPUCache();
-					ppu_initialize(_main, false, file_size);
-					spu_cache::initialize(false);
-					ppu_finalize(_main, true);
-					_main = {};
-					g_fxo->get<spu_cache>() = std::move(current_cache);
-					break;
-				}
+// 					_main.name = ' '; // Make ppu_finalize work
+// 					ppu_initialize(_main, false, file_size);
+// 					spu_cache::initialize(false);
+// 					ppu_finalize(_main, true);
+// 					_main = {};
+// 					g_fxo->get<spu_cache>() = std::move(current_cache);
+// 					break;
+// 				}
 
-				if (exec_err == elf_error::ok)
-				{
-					continue;
-				}
-			}
+// 				if (exec_err == elf_error::ok)
+// 				{
+// 					continue;
+// 				}
+// 			}
 
-			ppu_log.notice("Failed to precompile '%s' as executable (%s)", path, exec_err);
-		}
+// 			ppu_log.notice("Failed to precompile '%s' as executable (%s)", path, exec_err);
+// 		}
 
-		g_fxo->get<main_ppu_module<lv2_obj>>() = std::move(main_module);
-		g_fxo->get<spu_cache>().collect_funcs_to_precompile = true;
-		Emu.ConfigurePPUCache();
-	});
+// 		g_fxo->get<main_ppu_module<lv2_obj>>() = std::move(main_module);
+// 		g_fxo->get<spu_cache>().collect_funcs_to_precompile = true;
+// 	});
 
-	exec_worker();
+	//exec_worker();
 }
 
 extern void ppu_initialize()
 {
-	if (!g_fxo->is_init<main_ppu_module<lv2_obj>>())
-	{
-		return;
-	}
-
 	if (Emu.IsStopped())
 	{
 		return;
 	}
 
-	auto& _main = g_fxo->get<main_ppu_module<lv2_obj>>();
+	const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
+	auto& _main = *process;
 
 	std::optional<scoped_progress_dialog> progress_dialog(std::in_place, get_localized_string(localized_string_id::PROGRESS_DIALOG_ANALYZING_PPU_EXECUTABLE));
 
@@ -4383,7 +4392,7 @@ extern void ppu_initialize()
 	}
 
 	std::vector<ppu_module<lv2_obj>*> module_list;
-	module_list.emplace_back(&g_fxo->get<main_ppu_module<lv2_obj>>());
+	module_list.emplace_back(&_main);
 
 	const std::string firmware_sprx_path = vfs::get("/dev_flash/sys/external/");
 
@@ -4575,11 +4584,6 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 	// Get cache path for this executable
 	std::string cache_path;
 
-	if (!info.cache.empty())
-	{
-		cache_path = info.cache;
-	}
-	else
 	{
 		// New PPU cache location
 		cache_path = rpcs3::utils::get_cache_dir(info.path);

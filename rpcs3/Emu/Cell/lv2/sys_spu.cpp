@@ -943,7 +943,7 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 
 	sys_spu.warning("sys_spu_thread_group_create(id=*0x%x, num=%d, prio=%d, attr=*0x%x)", id, num, prio, attr);
 
-	const s32 min_prio = g_ps3_process_info.has_root_perm() ? 0 : 16;
+	const s32 min_prio = ppu.has_root_perm ? 0 : 16;
 
 	sys_spu_thread_group_attribute attr_data{};
 	{
@@ -1085,7 +1085,7 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 	}
 	else
 	{
-		ct = &g_fxo->get<lv2_memory_container>();
+		ct = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->parent_memory_container.get();
 
 		if (ct->take(mem_size) != mem_size)
 		{
@@ -1739,7 +1739,7 @@ error_code sys_spu_thread_group_set_priority(ppu_thread& ppu, u32 id, s32 priori
 		return CELL_ESRCH;
 	}
 
-	if (!group->has_scheduler_context || priority < (g_ps3_process_info.has_root_perm() ? 0 : 16) || priority > 255)
+	if (!group->has_scheduler_context || priority < (ppu.has_root_perm ? 0 : 16) || priority > 255)
 	{
 		return CELL_EINVAL;
 	}

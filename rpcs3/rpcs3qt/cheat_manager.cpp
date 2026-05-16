@@ -17,6 +17,7 @@
 #include "Emu/Cell/PPUAnalyser.h"
 #include "Emu/Cell/PPUInterpreter.h"
 #include "Emu/Cell/lv2/sys_sync.h"
+#include "Emu/Cell/lv2/sys_process.h"
 
 #include "util/yaml.hpp"
 #include "util/asm.hpp"
@@ -436,7 +437,8 @@ bool cheat_engine::is_addr_safe(const u32 offset)
 	if (Emu.IsStopped())
 		return false;
 
-	const auto ppum = g_fxo->try_get<main_ppu_module<lv2_obj>>();
+	const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
+	const auto ppum = process.get();
 
 	if (!ppum)
 	{

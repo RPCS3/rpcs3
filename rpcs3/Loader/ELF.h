@@ -5,6 +5,7 @@
 #include "../../Utilities/bit_set.h"
 
 #include <span>
+#include <any>
 
 enum class elf_os : u8
 {
@@ -261,6 +262,9 @@ public:
 	std::vector<shdata_t> shdrs{};
 
 	usz highest_offset = 0;
+
+	// Supplemnantry
+	mutable std::any encrypted_layer_data;
 
 public:
 	elf_object() = default;
@@ -541,6 +545,23 @@ public:
 	elf_error get_error() const
 	{
 		return m_error;
+	}
+
+	template <typename T> requires (std::is_copy_constructible_v<T>)
+	const T* get_encrypted_layer_data() const
+	{
+		return std::any_cast<const T>(&encrypted_layer_data);
+	}
+
+	const std::any& get_encrypted_layer_data() const
+	{
+		return encrypted_layer_data;
+	}
+
+	template <typename T> requires (std::is_copy_constructible_v<T>)
+	void set_encrypted_layer_data(const T* data) const
+	{
+		encrypted_layer_data = std::make_any<T>(*data);
 	}
 };
 

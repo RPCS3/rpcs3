@@ -86,7 +86,7 @@ private:
 	}
 
 public:
-	SAVESTATE_INIT_POS(4); // Dependency on PPUs
+	SAVESTATE_INIT_POS(4); // Dependancy on PPUs
 
 	lv2_obj() noexcept = default;
 	lv2_obj(u32 i) noexcept : exists{ i } {}

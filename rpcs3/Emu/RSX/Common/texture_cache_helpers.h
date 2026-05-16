@@ -193,9 +193,9 @@ namespace rsx
 				// Check if this is a blit to the output buffer
 				// TODO: This can be used to implement reference tracking to possibly avoid downscaling
 				const auto renderer = rsx::get_current_renderer();
-				for (u32 i = 0; i < renderer->display_buffers_count; ++i)
+				for (u32 i = 0; i < renderer->lv2_context->display_buffers_count; ++i)
 				{
-					const auto& buffer = renderer->display_buffers[i];
+					const auto& buffer = renderer->lv2_context->display_buffers[i];
 
 					if (!buffer.valid())
 					{

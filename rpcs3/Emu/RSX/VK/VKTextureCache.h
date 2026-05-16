@@ -286,7 +286,7 @@ namespace vk
 			const auto range = (context == rsx::texture_upload_context::framebuffer_storage) ? get_section_range() : get_confirmed_range();
 			auto flush_length = range.length();
 
-			const auto tiled_region = rsx::get_current_renderer()->get_tiled_memory_region(range);
+			const auto tiled_region = rsx::get_current_renderer()->lv2_context->get_tiled_memory_region(range);
 			if (tiled_region)
 			{
 				const auto available_tile_size = tiled_region.tile->size - (range.start - tiled_region.base_address);
