@@ -48,8 +48,6 @@ namespace rsx
 		if (sys_rsx_context_allocate(*this, contextInfo.ptr(&rsx_context::context_id), contextInfo.ptr(&rsx_context::dma_addr), contextInfo.ptr(&rsx_context::driver_info), contextInfo.ptr(&rsx_context::reports_addr), contextInfo->mem_handle, 0) != CELL_OK)
 			fmt::throw_exception("Capture Replay: sys_rsx_context_allocate failed!");
 
-		get_current_renderer()->main_mem_size = buffer_size;
-
 		if (sys_rsx_context_iomap(*this, contextInfo->context_id, 0, user_mem_addr, buffer_size, 0xf000000000000800ull) != CELL_OK)
 			fmt::throw_exception("Capture Replay: rsx io mapping failed!");
 

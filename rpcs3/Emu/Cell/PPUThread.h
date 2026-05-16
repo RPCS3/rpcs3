@@ -310,6 +310,11 @@ public:
 	// Hypervisor context data
 	rpcs3::hypervisor_context_t hv_ctx; // HV context for gate enter exit. Keep at a low struct offset.
 
+	u32 sdk_version = umax; // Local copy of lv2_process::sdk_ver
+	bool has_root_perm = false; // Local copy of lv2_process::has_root_perm
+	bool has_debug_or_root_perm = false; // Local copy of lv2_process::debug_or_root
+	bool has_ppc_seg = false; // Local copy of lv2_process::ppc_seg
+
 	u64 last_ftsc = 0;
 	u64 last_ftime = 0;
 	u32 last_faddr = 0;

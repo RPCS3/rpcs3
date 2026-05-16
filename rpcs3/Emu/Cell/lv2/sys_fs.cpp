@@ -92,7 +92,7 @@ void fmt_class_string<lv2_dir>::format(std::string& out, u64 arg)
 bool has_fs_write_rights(std::string_view vpath)
 {
 	// VSH has access to everything
-	const bool has_root_perm = g_ps3_process_info.has_root_perm();
+	const bool has_root_perm = lv2_process::has_process_root_perm();
 
 	const auto parent_dir = fs::get_parent_dir_view(vpath);
 	const auto [dev_root, trail] = lv2_fs_object::get_path_root_and_trail(parent_dir);
@@ -3485,9 +3485,12 @@ error_code sys_fs_newfs(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char>
 
 	std::string vfs_path;
 	const auto mp = lv2_fs_object::get_mp(device_name, &vfs_path);
+
+	const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
+
 	std::unique_lock lock(mp->mutex, std::defer_lock);
 
-	if (!g_ps3_process_info.has_root_perm() && mp != &g_mp_sys_dev_usb)
+	if (!ppu.has_root_perm && mp != &g_mp_sys_dev_usb)
 		return {CELL_EPERM, device_name};
 
 	if (mp == &g_mp_sys_no_device)
@@ -3504,7 +3507,7 @@ error_code sys_fs_newfs(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char>
 
 	if (mp == &g_mp_sys_dev_hdd1)
 	{
-		const std::string_view appname = g_ps3_process_info.get_cellos_appname();
+		const std::string_view appname = process->get_cellos_appname();
 		vfs_path = fmt::format("%s/caches/%s", vfs_path, appname.substr(0, appname.find_last_of('.')));
 	}
 
@@ -3547,11 +3550,13 @@ error_code sys_fs_mount(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char>
 
 	const auto [root_name, trail] = lv2_fs_object::get_path_root_and_trail(path_sv);
 
+	const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
+
 	std::string vfs_path;
 	const auto mp = lv2_fs_object::get_mp(device_name, &vfs_path);
 	std::unique_lock lock(mp->mutex, std::defer_lock);
 
-	if (!g_ps3_process_info.has_root_perm() && mp != &g_mp_sys_dev_usb)
+	if (!process->has_root_perm() && mp != &g_mp_sys_dev_usb)
 		return {CELL_EPERM, device_name};
 
 	if (mp == &g_mp_sys_no_device)
@@ -3568,7 +3573,7 @@ error_code sys_fs_mount(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char>
 
 	if (mp == &g_mp_sys_dev_hdd1)
 	{
-		const std::string_view appname = g_ps3_process_info.get_cellos_appname();
+		const std::string_view appname = process->get_cellos_appname();
 		vfs_path = fmt::format("%s/caches/%s", vfs_path, appname.substr(0, appname.find_last_of('.')));
 	}
 
@@ -3637,7 +3642,7 @@ error_code sys_fs_unmount(ppu_thread& ppu, vm::cptr<char> path, s32 unk1, s32 fo
 	const auto& mp = g_fxo->get<lv2_fs_mount_info_map>().lookup(vpath);
 	std::unique_lock lock(mp->mutex, std::defer_lock);
 
-	if (!g_ps3_process_info.has_root_perm() && mp != &g_mp_sys_dev_usb)
+	if (!ppu.has_root_perm && mp != &g_mp_sys_dev_usb)
 		return {CELL_EPERM, vpath};
 
 	if (mp == &g_mp_sys_no_device)

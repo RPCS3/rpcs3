@@ -11,6 +11,7 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/lv2/sys_lwmutex.h"
+#include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/lv2/sys_lwcond.h"
 #include "Emu/Cell/lv2/sys_mutex.h"
 #include "Emu/Cell/lv2/sys_cond.h"
@@ -222,6 +223,7 @@ void kernel_explorer::update()
 	{
 		{ process_info                   , tr("Process Info")},
 
+		{ SYS_PROCESS_OBJECT             , tr("Processes")},
 		{ SYS_MEM_OBJECT                 , tr("Shared Memory")},
 		{ virtual_memory                 , tr("Virtual Memory")},
 		{ SYS_MUTEX_OBJECT               , tr("Mutexes")},
@@ -314,7 +316,8 @@ void kernel_explorer::update()
 	root->setText(0, QString::fromStdString(fmt::format("Process 0x%08x: Total Memory Usage: 0x%x/0x%x (%0.2f/%0.2f MB)", process_getpid(), total_memory_usage, dct->size, 1. * total_memory_usage / (1024 * 1024)
 		, 1. * dct->size / (1024 * 1024))));
 
-	add_solid_node(find_node(root, additional_nodes::process_info), QString::fromStdString(fmt::format("Process Info, Sdk Version: 0x%08x, PPC SEG: %#x, SFO Category: %s (Fake: %s)", g_ps3_process_info.sdk_ver, g_ps3_process_info.ppc_seg, Emu.GetCat(), Emu.GetFakeCat())));
+	shared_ptr<lv2_process> process; // TODO
+	add_solid_node(find_node(root, additional_nodes::process_info), QString::fromStdString(fmt::format("Process Info, Sdk Version: 0x%08x, PPC SEG: %#x, SFO Category: %s (Fake: %s)", process->sdk_ver, process->ppc_seg, Emu.GetCat(), Emu.GetFakeCat())));
 
 	auto display_program_segments = [](QTreeWidgetItem* tree, const ppu_module<lv2_obj>& m)
 	{
@@ -837,7 +840,7 @@ void kernel_explorer::update()
 			break;
 		}
 
-		const auto base = rsx->dma_address;
+		const auto base = rsx->lv2_context->dma_address;
 
 		if (!base)
 		{
@@ -846,20 +849,20 @@ void kernel_explorer::update()
 
 		const QString branch_name = "RSX Context 0x55555555";
 		QTreeWidgetItem* rsx_tree = add_solid_node(rsx_context_node, branch_name,
-			branch_name + QString::fromStdString(fmt::format(u8", Local Size: %u MB, Base Addr: 0x%x, Device Addr: 0x%x, Handlers: 0x%x", rsx->local_mem_size >> 20, base, rsx->device_addr, +vm::_ref<RsxDriverInfo>(rsx->driver_info).handlers)));
+			branch_name + QString::fromStdString(fmt::format(u8", Local Size: %u MB, Base Addr: 0x%x, Device Addr: 0x%x, Handlers: 0x%x", rsx->local_mem_size >> 20, base, rsx->lv2_context->device_addr, +vm::_ref<RsxDriverInfo>(rsx->lv2_context->driver_info).handlers)));
 
 		QTreeWidgetItem* io_tree = add_volatile_node(rsx_tree, tr("IO-EA Table"));
 		QTreeWidgetItem* zc_tree = add_volatile_node(rsx_tree, tr("Zcull Bindings"));
 		QTreeWidgetItem* db_tree = add_volatile_node(rsx_tree, tr("Display Buffers"));
 
-		decltype(rsx->iomap_table) table;
-		decltype(rsx->display_buffers) dbs;
-		decltype(rsx->zculls) zcs;
+		decltype(rsx->lv2_context->iomap_table) table;
+		decltype(rsx->lv2_context->display_buffers) dbs;
+		decltype(rsx->lv2_context->zculls) zcs;
 		{
 			reader_lock lock(rsx->sys_rsx_mtx);
-			std::memcpy(&table, &rsx->iomap_table, sizeof(table));
-			std::memcpy(&dbs, rsx->display_buffers, sizeof(dbs));
-			std::memcpy(&zcs, &rsx->zculls, sizeof(zcs));
+			std::memcpy(&table, &rsx->lv2_context->iomap_table, sizeof(table));
+			std::memcpy(&dbs, rsx->lv2_context->display_buffers, sizeof(dbs));
+			std::memcpy(&zcs, &rsx->lv2_context->zculls, sizeof(zcs));
 		}
 
 		for (u32 i = 0, size_block = 0, first_ea = 0, first_io = 0;;)

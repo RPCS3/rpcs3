@@ -93,7 +93,7 @@ namespace vk
 		rsx_pitch = pitch;
 
 		const bool require_format_conversion = !!(src->aspect() & VK_IMAGE_ASPECT_STENCIL_BIT) || src->format() == VK_FORMAT_D32_SFLOAT;
-		const auto tiled_region = rsx::get_current_renderer()->get_tiled_memory_region(valid_range);
+		const auto tiled_region = rsx::get_current_renderer()->lv2_context->get_tiled_memory_region(valid_range);
 		const bool require_tiling = !!tiled_region;
 		const bool require_gpu_transform = require_format_conversion || pack_unpack_swap_bytes || require_tiling;
 
@@ -1245,7 +1245,7 @@ namespace vk
 		auto p_subresource_layout = &subresource_layout;
 		u32 heap_align = upload_heap_align_default;
 
-		if (auto tiled_region = rsx::get_current_renderer()->get_tiled_memory_region(rsx_range);
+		if (auto tiled_region = rsx::get_current_renderer()->lv2_context->get_tiled_memory_region(rsx_range);
 			context == rsx::texture_upload_context::blit_engine_src && tiled_region)
 		{
 			if (mipmaps > 1)

@@ -350,12 +350,12 @@ namespace rsx
 			u64& mem_indexer = frame_capture.memory_indexer;
 
 			frame_capture_data::display_buffers_state dbstate;
-			dbstate.count = rsx->display_buffers_count;
+			dbstate.count = rsx->lv2_context->display_buffers_count;
 
 			// should this only happen on flip?
-			for (u32 i = 0; i < rsx->display_buffers_count; ++i)
+			for (u32 i = 0; i < rsx->lv2_context->display_buffers_count; ++i)
 			{
-				const auto& db            = rsx->display_buffers[i];
+				const auto& db = rsx->lv2_context->display_buffers[i];
 				dbstate.buffers[i].height = db.height;
 				dbstate.buffers[i].width  = db.width;
 				dbstate.buffers[i].offset = db.offset;
@@ -374,24 +374,24 @@ namespace rsx
 			frame_capture_data::tile_state tilestate;
 			for (u32 i = 0; i < limits::tiles_count; ++i)
 			{
-				const auto tile = rsx->tiles[i].pack();
+				const auto tile = rsx->lv2_context->tiles[i].pack();
 				auto& tstate = tilestate.tiles[i];
 				tstate.tile = tile.tile;
 				tstate.limit = tile.limit;
-				tstate.pitch = rsx->tiles[i].bound ? u32{tile.pitch} : 0;
-				tstate.format = rsx->tiles[i].bound ? u32{tile.format} : 0;
+				tstate.pitch = rsx->lv2_context->tiles[i].bound ? u32{tile.pitch} : 0;
+				tstate.format = rsx->lv2_context->tiles[i].bound ? u32{tile.format} : 0;
 			}
 
 			for (u32 i = 0; i < limits::zculls_count; ++i)
 			{
-				const auto zc = rsx->zculls[i].pack();
+				const auto zc = rsx->lv2_context->zculls[i].pack();
 				auto& zcstate = tilestate.zculls[i];
 				zcstate.region = zc.region;
 				zcstate.size = zc.size;
 				zcstate.start = zc.start;
 				zcstate.offset = zc.offset;
-				zcstate.status0 = rsx->zculls[i].bound ? u32{zc.status0} : 0;
-				zcstate.status1 = rsx->zculls[i].bound ? u32{zc.status1} : 0;
+				zcstate.status0 = rsx->lv2_context->zculls[i].bound ? u32{zc.status0} : 0;
+				zcstate.status1 = rsx->lv2_context->zculls[i].bound ? u32{zc.status1} : 0;
 			}
 
 			const auto [ts_it, ts_inserted] = frame_capture.tile_map.try_emplace(tilestate, 0);

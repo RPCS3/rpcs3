@@ -15,7 +15,7 @@ namespace rsx
 			RSX(ctx)->sync();
 
 			// Write ref+get (get will be written again with the same value at command end)
-			auto& dma = *vm::_ptr<RsxDmaControl>(RSX(ctx)->dma_address);
+			auto& dma = *vm::_ptr<RsxDmaControl>(RSX(ctx)->lv2_context->dma_address);
 			dma.get.release(RSX(ctx)->fifo_ctrl->get_pos());
 			dma.ref.store(arg);
 		}
@@ -34,7 +34,7 @@ namespace rsx
 			if (sema == arg)
 			{
 				// Flip semaphore doesnt need wake-up delay
-				if (addr != RSX(ctx)->label_addr + 0x10)
+				if (addr != RSX(ctx)->lv2_context->label_addr + 0x10)
 				{
 					RSX(ctx)->flush_fifo();
 					RSX(ctx)->fifo_wake_delay(2);
@@ -120,14 +120,14 @@ namespace rsx
 			const u32 addr = get_address(offset, ctxt);
 
 			// TODO: Check if possible to write on reservations
-			if (RSX(ctx)->label_addr >> 28 != addr >> 28)
+			if (RSX(ctx)->lv2_context->label_addr >> 28 != addr >> 28)
 			{
 				rsx_log.error("NV406E semaphore unexpected address. Please report to the developers. (offset=0x%x, addr=0x%x)", offset, addr);
 				RSX(ctx)->recover_fifo();
 				return;
 			}
 
-			if (addr == RSX(ctx)->device_addr + 0x30 && !arg)
+			if (addr == RSX(ctx)->lv2_context->device_addr + 0x30 && !arg)
 			{
 				// HW flip synchronization related, 1 is not written without display queue command (TODO: make it behave as real hw)
 				arg = 1;

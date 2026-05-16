@@ -703,7 +703,7 @@ namespace vk
 		std::vector<u8> ext_data;
 #endif
 
-		if (auto tiled_region = rsx::get_current_renderer()->get_tiled_memory_region(range))
+		if (auto tiled_region = rsx::get_current_renderer()->lv2_context->get_tiled_memory_region(range))
 		{
 #if DEBUG_DMA_TILING
 			auto real_data = vm::get_super_ptr<u8>(range.start);

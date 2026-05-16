@@ -2,9 +2,7 @@
 #include "Emu/RSX/rsx_utils.h"
 #include "RSXContext.h"
 
-namespace rsx
-{
-	GCM_tile_reference GCM_context::get_tiled_memory_region(const utils::address_range32& range) const
+	rsx::GCM_tile_reference rsx::GCM_context::get_tiled_memory_region(const utils::address_range32& range) const
 	{
 		if (rsx::get_location(range.start) != CELL_GCM_LOCATION_MAIN)
 		{
@@ -39,6 +37,8 @@ namespace rsx
 		return {};
 	}
 
+namespace rsx
+{
 	utils::address_range32 GCM_tile_reference::tile_align(const utils::address_range32& range) const
 	{
 		const auto alignment = 64 * tile->pitch;
