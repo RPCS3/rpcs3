@@ -76,10 +76,10 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	u32 m_op_const_mask = -1;
 
 	// Current function chunk entry point
-	u32 m_entry;
+	u32 m_entry = 0;
 
 	// Main entry point offset
-	u32 m_base;
+	u32 m_base = 0;
 
 	// Module name
 	std::string m_hash;
@@ -91,26 +91,26 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	u32 m_next_op = 0;
 
 	// Current function (chunk)
-	llvm::Function* m_function;
+	llvm::Function* m_function{};
 
-	llvm::Value* m_thread;
-	llvm::Value* m_lsptr;
-	llvm::Value* m_interp_op;
-	llvm::Value* m_interp_pc;
-	llvm::Value* m_interp_table;
-	llvm::Value* m_interp_7f0;
-	llvm::Value* m_interp_regs;
+	llvm::Value* m_thread{};
+	llvm::Value* m_lsptr{};
+	llvm::Value* m_interp_op{};
+	llvm::Value* m_interp_pc{};
+	llvm::Value* m_interp_table{};
+	llvm::Value* m_interp_7f0{};
+	llvm::Value* m_interp_regs{};
 
 	// Helpers
-	llvm::Value* m_base_pc;
-	llvm::Value* m_interp_pc_next;
-	llvm::BasicBlock* m_interp_bblock;
+	llvm::Value* m_base_pc{};
+	llvm::Value* m_interp_pc_next{};
+	llvm::BasicBlock* m_interp_bblock{};
 
 	// i8*, contains constant vm::g_base_addr value
-	llvm::Value* m_memptr;
+	llvm::Value* m_memptr{};
 
 	// Pointers to registers in the thread context
-	std::array<llvm::Value*, s_reg_max> m_reg_addr;
+	std::array<llvm::Value*, s_reg_max> m_reg_addr{};
 
 	// Global variable (function table)
 	llvm::GlobalVariable* m_function_table{};
@@ -130,10 +130,10 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	// Chunk for external tail call (dispatch)
 	llvm::Function* m_dispatch{};
 
-	llvm::MDNode* m_md_unlikely;
-	llvm::MDNode* m_md_likely;
-	llvm::MDNode* m_md_spu_memory_domain;
-	llvm::MDNode* m_md_spu_context_domain;
+	llvm::MDNode* m_md_unlikely{};
+	llvm::MDNode* m_md_likely{};
+	llvm::MDNode* m_md_spu_memory_domain{};
+	llvm::MDNode* m_md_spu_context_domain{};
 
 	struct block_info
 	{
@@ -2175,7 +2175,7 @@ public:
 						if (src > 0x40000)
 						{
 							// Use the xfloat hint to create 256-bit (4x double) PHI
-							llvm::Type* type = g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate && bb.reg_maybe_xf[i] ? get_type<f64[4]>() : get_reg_type(i);
+							llvm::Type* type = g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate && bb.reg_maybe_xf.test_unsafe(i) ? get_type<f64[4]>() : get_reg_type(i);
 
 							const auto _phi = m_ir->CreatePHI(type, ::size32(bb.preds), fmt::format("phi0x%05x_r%u", baddr, i));
 							m_block->phi[i] = _phi;
@@ -2581,7 +2581,7 @@ public:
 				{
 					for (u32 i = 0; i < s_reg_max; i++)
 					{
-						llvm::Type* type = g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate && bb.reg_maybe_xf[i] ? get_type<f64[4]>() : get_reg_type(i);
+						llvm::Type* type = g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate && bb.reg_maybe_xf.test_unsafe(i) ? get_type<f64[4]>() : get_reg_type(i);
 
 						if (i < m_reduced_loop_info->loop_dicts.size() && (m_reduced_loop_info->loop_dicts.test(i) || m_reduced_loop_info->loop_writes.test(i)))
 						{
@@ -2637,7 +2637,7 @@ public:
 
 				for (u32 iteration_emit = 0; is_reduced_loop; m_pos += 4)
 				{
-					if (m_pos != baddr && m_block_info[m_pos / 4] && m_reduced_loop_info->loop_end < m_pos)
+					if (m_pos != baddr && m_pos != SPU_LS_SIZE && m_block_info[m_pos / 4] && m_reduced_loop_info->loop_end < m_pos)
 					{
 						fmt::throw_exception("LLVM: Reduced Loop Pattern: Exit(1) too early at 0x%x", m_pos);
 					}
@@ -3217,7 +3217,7 @@ public:
 
 							for (u32 target : m_bbs[cur].targets)
 							{
-								if (!m_block_info[target / 4])
+								if (target == SPU_LS_SIZE || !m_block_info[target / 4])
 								{
 									continue;
 								}
@@ -7148,15 +7148,15 @@ public:
 		{
 			const value_t<f32[4]> ab[2]{a, b};
 
-			std::bitset<2> safe_int_compare(0);
-			std::bitset<2> safe_finite_compare(0);
+			bit_set<2> safe_int_compare(0);
+			bit_set<2> safe_finite_compare(0);
 
 			for (u32 i = 0; i < 2; i++)
 			{
 				if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, __LINE__ + i); ok)
 				{
-					safe_int_compare.set(i);
-					safe_finite_compare.set(i);
+					safe_int_compare.set_unsafe(i);
+					safe_finite_compare.set_unsafe(i);
 
 					for (u32 j = 0; j < 4; j++)
 					{
@@ -7170,8 +7170,8 @@ public:
 							// Note: Technically this optimization is accurate for any positive value, but due to the fact that
 							// we don't produce "extended range" values the same way as real hardware, it's not safe to apply
 							// this optimization for values outside of the range of x86 floating point hardware.
-							safe_int_compare.reset(i);
-							if ((value & 0x7fffffffu) >= 0x7f7ffffeu) safe_finite_compare.reset(i);
+							safe_int_compare.reset_unsafe(i);
+							if ((value & 0x7fffffffu) >= 0x7f7ffffeu) safe_finite_compare.reset_unsafe(i);
 						}
 					}
 				}
@@ -7179,12 +7179,12 @@ public:
 
 			if (m_reduced_loop_info && m_reduced_loop_info->is_gpr_not_NaN_hint(op.ra))
 			{
-				safe_finite_compare.set(0);
+				safe_finite_compare.set_unsafe(0);
 			}
 
 			if (m_reduced_loop_info && m_reduced_loop_info->is_gpr_not_NaN_hint(op.rb))
 			{
-				safe_finite_compare.set(1);
+				safe_finite_compare.set_unsafe(1);
 			}
 
 			if (safe_int_compare.any())
@@ -7192,12 +7192,12 @@ public:
 				return eval(sext<s32[4]>(bitcast<s32[4]>(a) > bitcast<s32[4]>(b)));
 			}
 
-			if  (safe_finite_compare.test(1))
+			if (safe_finite_compare.test(1u))
 			{
 				return eval(sext<s32[4]>(fcmp_uno(clamp_negative_smax(a) > b)));
 			}
 
-			if  (safe_finite_compare.test(0))
+			if (safe_finite_compare.test(0u))
 			{
 				return eval(sext<s32[4]>(fcmp_ord(a > clamp_smax(b))));
 			}
@@ -7247,13 +7247,13 @@ public:
 
 			const value_t<f32[4]> ab[2]{a, b};
 
-			std::bitset<2> safe_int_compare(0);
+			bit_set<2> safe_int_compare(0);
 
 			for (u32 i = 0; i < 2; i++)
 			{
 				if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, __LINE__ + i); ok)
 				{
-					safe_int_compare.set(i);
+					safe_int_compare.set_unsafe(i);
 
 					for (u32 j = 0; j < 4; j++)
 					{
@@ -7263,7 +7263,7 @@ public:
 						if ((value & 0x7fffffffu) >= 0x7f7fffffu || !exponent)
 						{
 							// See above
-							safe_int_compare.reset(i);
+							safe_int_compare.reset_unsafe(i);
 						}
 					}
 				}
@@ -7521,15 +7521,15 @@ public:
 
 			const value_t<f32[4]> ab[2]{a, b};
 
-			std::bitset<2> safe_float_compare(0);
-			std::bitset<2> safe_int_compare(0);
+			bit_set<2> safe_float_compare(0);
+			bit_set<2> safe_int_compare(0);
 
 			for (u32 i = 0; i < 2; i++)
 			{
 				if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, __LINE__ + i); ok)
 				{
-					safe_float_compare.set(i);
-					safe_int_compare.set(i);
+					safe_float_compare.set_unsafe(i);
+					safe_int_compare.set_unsafe(i);
 
 					for (u32 j = 0; j < 4; j++)
 					{
@@ -7539,13 +7539,13 @@ public:
 						// unsafe if nan
 						if (exponent == 255)
 						{
-							safe_float_compare.reset(i);
+							safe_float_compare.reset_unsafe(i);
 						}
 
 						// unsafe if denormal or 0
 						if (!exponent)
 						{
-							safe_int_compare.reset(i);
+							safe_int_compare.reset_unsafe(i);
 						}
 					}
 				}
@@ -7595,15 +7595,15 @@ public:
 
 			const value_t<f32[4]> ab[2]{a, b};
 
-			std::bitset<2> safe_float_compare(0);
-			std::bitset<2> safe_int_compare(0);
+			bit_set<2> safe_float_compare(0);
+			bit_set<2> safe_int_compare(0);
 
 			for (u32 i = 0; i < 2; i++)
 			{
 				if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, __LINE__ + i); ok)
 				{
-					safe_float_compare.set(i);
-					safe_int_compare.set(i);
+					safe_float_compare.set_unsafe(i);
+					safe_int_compare.set_unsafe(i);
 
 					for (u32 j = 0; j < 4; j++)
 					{
@@ -7613,13 +7613,13 @@ public:
 						// unsafe if nan
 						if (exponent == 255)
 						{
-							safe_float_compare.reset(i);
+							safe_float_compare.reset_unsafe(i);
 						}
 
 						// unsafe if denormal or 0
 						if (!exponent)
 						{
-							safe_int_compare.reset(i);
+							safe_int_compare.reset_unsafe(i);
 						}
 					}
 				}
@@ -9066,7 +9066,7 @@ public:
 
 			for (u32 target : tfound->second)
 			{
-				if (m_block_info[target / 4])
+				if (target != SPU_LS_SIZE && m_block_info[target / 4])
 				{
 					targets.emplace(target, nullptr);
 				}

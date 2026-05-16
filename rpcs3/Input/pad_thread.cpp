@@ -313,7 +313,7 @@ void pad_thread::apply_copilots()
 		for (usz i = 0; i < pad->m_buttons.size(); i++)
 		{
 			const Button& src = pad->m_buttons[i];
-			Button& dst = pad->m_buttons_external[i];
+			ButtonExternal& dst = pad->m_buttons_external[i];
 
 			dst.m_offset = src.m_offset;
 			dst.m_outKeyCode = src.m_outKeyCode;
@@ -324,7 +324,7 @@ void pad_thread::apply_copilots()
 		for (usz i = 0; i < pad->m_sticks.size(); i++)
 		{
 			const AnalogStick& src = pad->m_sticks[i];
-			AnalogStick& dst = pad->m_sticks_external[i];
+			AnalogStickExternal& dst = pad->m_sticks_external[i];
 
 			dst.m_offset = src.m_offset;
 			dst.m_value = src.m_value;
@@ -343,7 +343,7 @@ void pad_thread::apply_copilots()
 				continue;
 			}
 
-			for (Button& button : pad->m_buttons_external)
+			for (ButtonExternal& button : pad->m_buttons_external)
 			{
 				for (const Button& other : copilot->m_buttons)
 				{
@@ -366,7 +366,7 @@ void pad_thread::apply_copilots()
 		}
 
 		// Merge sticks
-		for (AnalogStick& stick : pad->m_sticks_external)
+		for (AnalogStickExternal& stick : pad->m_sticks_external)
 		{
 			f32 accumulated_value = normalize(stick.m_value);
 

@@ -182,6 +182,7 @@ if(BUILD_RPCS3_TESTS)
     target_sources(rpcs3_test
         PRIVATE
             tests/test.cpp
+            tests/test_bit_set.cpp
             tests/test_fmt.cpp
             tests/test_pair.cpp
             tests/test_tuple.cpp

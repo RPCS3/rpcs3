@@ -262,8 +262,8 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 				const u16 actual_max_value = is_max_pressed ? MultipliedInput(255, stick_multiplier) : 255;
 				const u16 normalized_max_value = std::ceil(actual_max_value / 2.0);
 
-				m_stick_min[i] = is_min_pressed ? std::min<u8>(normalized_min_value, 128) : 0;
-				m_stick_max[i] = is_max_pressed ? std::min<int>(128 + normalized_max_value, 255) : 128;
+				stick.m_stick_min = is_min_pressed ? std::min<u8>(normalized_min_value, 128) : 0;
+				stick.m_stick_max = is_max_pressed ? std::min<int>(128 + normalized_max_value, 255) : 128;
 			}
 			else
 			{
@@ -345,25 +345,25 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 				{
 					const std::pair<bool, u16> stick_value = register_new_stick_value(true);
 
-					m_stick_max[i] = stick_value.first ? std::min<int>(128 + stick_value.second, 255) : 128;
+					stick.m_stick_max = stick_value.first ? std::min<int>(128 + stick_value.second, 255) : 128;
 				}
 
 				if (is_min)
 				{
 					const std::pair<bool, u16> stick_value = register_new_stick_value(false);
 
-					m_stick_min[i] = stick_value.first ? std::min<u8>(stick_value.second, 128) : 0;
+					stick.m_stick_min = stick_value.first ? std::min<u8>(stick_value.second, 128) : 0;
 				}
 			}
 
-			m_stick_val[i] = m_stick_max[i] - m_stick_min[i];
+			stick.m_stick_val = stick.m_stick_max - stick.m_stick_min;
 
 			const f32 stick_lerp_factor = is_left_stick ? m_l_stick_lerp_factor : m_r_stick_lerp_factor;
 
 			// to get the fastest response time possible we don't wanna use any lerp with factor 1
 			if (stick_lerp_factor >= 1.0f)
 			{
-				stick.m_value = m_stick_val[i];
+				stick.m_value = stick.m_stick_val;
 			}
 		}
 	}
@@ -380,12 +380,16 @@ void keyboard_pad_handler::release_all_keys()
 			button.m_actual_value = 0;
 		}
 
-		for (usz i = 0; i < pad.m_sticks.size(); i++)
+		for (AnalogStick& stick : pad.m_sticks)
 		{
-			m_stick_min[i] = 0;
-			m_stick_max[i] = 128;
-			m_stick_val[i] = 128;
-			pad.m_sticks[i].m_value = 128;
+			stick.m_value = 128;
+			stick.m_stick_min = 0;
+			stick.m_stick_max = 128;
+			stick.m_stick_val = 128;
+			stick.m_pressed_keys_min.clear();
+			stick.m_pressed_keys_max.clear();
+			stick.m_pressed_combos_min.clear();
+			stick.m_pressed_combos_max.clear();
 		}
 	}
 
@@ -1261,11 +1265,13 @@ void keyboard_pad_handler::process()
 					// we already applied the following values on keypress if we used factor 1
 					if (stick_lerp_factor < 1.0f)
 					{
-						const f32 v0 = static_cast<f32>(pad.m_sticks[j].m_value);
-						const f32 v1 = static_cast<f32>(m_stick_val[j]);
+						AnalogStick& stick = pad.m_sticks[j];
+
+						const f32 v0 = static_cast<f32>(stick.m_value);
+						const f32 v1 = static_cast<f32>(stick.m_stick_val);
 						const f32 res = get_lerped(v0, v1, stick_lerp_factor);
 
-						pad.m_sticks[j].m_value = static_cast<u16>(res);
+						stick.m_value = static_cast<u16>(res);
 					}
 				}
 			}
@@ -1346,26 +1352,43 @@ void keyboard_pad_handler::process()
 
 		// Normalize and apply pad squircling
 		// Copy sticks first. We don't want to modify the raw internal values
-		std::array<AnalogStick, 4> squircled_sticks = pad_internal.m_sticks;
+		std::array<u16, 4> squircled_sticks =
+		{
+			pad_internal.m_sticks[0].m_value,
+			pad_internal.m_sticks[1].m_value,
+			pad_internal.m_sticks[2].m_value,
+			pad_internal.m_sticks[3].m_value
+		};
 
 		// Apply squircling
 		if (cfg->lpadsquircling != 0)
 		{
-			u16& lx = squircled_sticks[0].m_value;
-			u16& ly = squircled_sticks[1].m_value;
+			u16& lx = squircled_sticks[0];
+			u16& ly = squircled_sticks[1];
 
 			ConvertToSquirclePoint(lx, ly, cfg->lpadsquircling);
 		}
 
 		if (cfg->rpadsquircling != 0)
 		{
-			u16& rx = squircled_sticks[2].m_value;
-			u16& ry = squircled_sticks[3].m_value;
+			u16& rx = squircled_sticks[2];
+			u16& ry = squircled_sticks[3];
 
 			ConvertToSquirclePoint(rx, ry, cfg->rpadsquircling);
 		}
 
-		pad->m_buttons = pad_internal.m_buttons;
-		pad->m_sticks = squircled_sticks; // Don't use std::move here. We assign values lockless, so std::move can lead to segfaults.
+		for (usz j = 0; j < pad->m_buttons.size(); j++)
+		{
+			const Button& btn_internal = pad_internal.m_buttons[j];
+			Button& btn = pad->m_buttons[j];
+
+			btn.m_value = btn_internal.m_value;
+			btn.m_pressed = btn_internal.m_pressed;
+		}
+
+		for (usz j = 0; j < pad->m_sticks.size(); j++)
+		{
+			pad->m_sticks[j].m_value = squircled_sticks[j];
+		}
 	}
 }

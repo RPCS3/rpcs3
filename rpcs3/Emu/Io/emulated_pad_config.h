@@ -93,7 +93,7 @@ public:
 		if (!pad || pad->is_copilot())
 			return;
 
-		for (const Button& button : pad->m_buttons_external)
+		for (const ButtonExternal& button : pad->m_buttons_external)
 		{
 			if (button.m_pressed || !press_only)
 			{
@@ -104,7 +104,7 @@ public:
 			}
 		}
 
-		for (const AnalogStick& stick : pad->m_sticks_external)
+		for (const AnalogStickExternal& stick : pad->m_sticks_external)
 		{
 			if (handle_input(func, stick.m_offset, get_axis_keycode(stick.m_offset, stick.m_value), stick.m_value, true, true))
 			{

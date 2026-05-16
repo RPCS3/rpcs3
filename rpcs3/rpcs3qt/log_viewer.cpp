@@ -40,7 +40,7 @@ log_viewer::log_viewer(std::shared_ptr<gui_settings> gui_settings)
 	m_path_last = m_gui_settings->GetValue(gui::fd_log_viewer).toString();
 	m_show_timestamps = m_gui_settings->GetValue(gui::lv_show_timestamps).toBool();
 	m_show_threads = m_gui_settings->GetValue(gui::lv_show_threads).toBool();
-	m_log_levels = std::bitset<32>(m_gui_settings->GetValue(gui::lv_log_levels).toUInt());
+	m_log_levels = bit_set<32>(m_gui_settings->GetValue(gui::lv_log_levels).toUInt());
 
 	m_log_text = new QPlainTextEdit(this);
 	m_log_text->setReadOnly(true);
