@@ -404,6 +404,8 @@ constexpr auto arg_updating     = "updating";
 constexpr auto arg_user_id      = "user-id";
 constexpr auto arg_installfw    = "installfw";
 constexpr auto arg_installpkg   = "installpkg";
+constexpr auto arg_pkg_silent   = "silent";
+constexpr auto arg_pkg_no_precompile = "no-precompile";
 constexpr auto arg_savestate    = "savestate";
 constexpr auto arg_rsx_capture  = "rsx-capture";
 constexpr auto arg_timer        = "high-res-timer";
@@ -829,6 +831,8 @@ int run_rpcs3(int argc, char** argv)
 	parser.addOption(installfw_option);
 	const QCommandLineOption installpkg_option(arg_installpkg, "Forces the emulator to install this pkg file.", "path", "");
 	parser.addOption(installpkg_option);
+	parser.addOption(QCommandLineOption(arg_pkg_silent, "Install PKG silently without the installation dialog."));
+	parser.addOption(QCommandLineOption(arg_pkg_no_precompile, "Skip cache precompilation after PKG install."));
 	const QCommandLineOption decrypt_option(arg_decrypt, "Decrypt PS3 binaries.", "path(s)", "");
 	parser.addOption(decrypt_option);
 	const QCommandLineOption user_id_option(arg_user_id, "Start RPCS3 as this user.", "user id", "");
@@ -1163,7 +1167,11 @@ int run_rpcs3(int argc, char** argv)
 				}
 				else
 				{
-					gui_app->m_main_window->InstallPackages({parser.value(installpkg_option)});
+					gui_app->m_main_window->InstallPackages(
+						{parser.value(installpkg_option)},
+						false,
+						parser.isSet(arg_pkg_silent),
+						parser.isSet(arg_pkg_no_precompile));
 				}
 			}
 			else
