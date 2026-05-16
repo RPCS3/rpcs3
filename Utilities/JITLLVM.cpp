@@ -710,6 +710,16 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 		attributes.push_back("+sve2");
 	else
 		attributes.push_back("-sve2");
+
+	if (utils::has_lut())
+        attributes.push_back("+lut");
+    else
+        attributes.push_back("-lut");
+
+    if (utils::has_i8mm())
+        attributes.push_back("+i8mm");
+    else
+        attributes.push_back("-i8mm");
 #endif
 
 	{
