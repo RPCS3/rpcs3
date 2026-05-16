@@ -4,6 +4,7 @@
 #include "Emu/Cell/lv2/sys_memory.h"
 #include "Emu/Cell/lv2/sys_mutex.h"
 #include "Emu/Cell/lv2/sys_ppu_thread.h"
+#include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "sysPrxForUser.h"
 #include "util/asm.hpp"
@@ -2005,7 +2006,7 @@ error_code DmuxPamfContext::open(ppu_thread& ppu, const CellDmuxPamfResource& re
 
 	_this->use_existing_spurs = !!res_spurs;
 
-	if (!res_spurs && g_fxo->get<lv2_memory_container>().take(0x40000) != 0x40000)
+	if (!res_spurs && idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->parent_memory_container->take(0x40000) != 0x40000)
 	{
 		return CELL_DMUX_PAMF_ERROR_FATAL;
 	}
@@ -2093,7 +2094,7 @@ error_code DmuxPamfContext::close(ppu_thread& ppu)
 
 	if (!use_existing_spurs)
 	{
-		g_fxo->get<lv2_memory_container>().free(0x40000);
+		idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->parent_memory_container->free(0x40000);
 	}
 
 	if (lv2_syscall<sys_cond_destroy>(ppu, cond) != CELL_OK

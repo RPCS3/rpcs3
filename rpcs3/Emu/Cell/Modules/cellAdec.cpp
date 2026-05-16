@@ -3,6 +3,7 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/lv2/sys_ppu_thread.h"
+#include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/savestate_utils.hpp"
 #include "sysPrxForUser.h"
 
@@ -841,7 +842,10 @@ error_code _CellAdecCoreOpOpenExt_lpcm(ppu_thread& ppu, vm::ptr<LpcmDecContext> 
 	handle->cmd_counter = 0;
 
 	const vm::var<char[]> _name = vm::make_str("HLE LPCM decoder");
-	const auto entry = g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(lpcmDecEntry));
+
+	const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
+
+	const auto entry = process->func_manager->func_addr(FIND_FUNC(lpcmDecEntry));
 
 	ret = ppu_execute<&sys_ppu_thread_create>(ppu, handle.ptr(&LpcmDecContext::thread_id), entry, handle.addr(), +res->ppuThreadPriority, +res->ppuThreadStackSize, SYS_PPU_THREAD_CREATE_JOINABLE, +_name);
 	ret = ret ? ret : lv2_syscall<sys_mutex_create>(ppu, handle.ptr(&LpcmDecContext::spurs_queue_pop_mutex), mutex_attr);

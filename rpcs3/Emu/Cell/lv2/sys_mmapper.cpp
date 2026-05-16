@@ -60,9 +60,15 @@ lv2_memory::lv2_memory(utils::serial& ar)
 	, flags(ar)
 	, key(ar)
 	, pshared(ar)
-	, ct([&](u32 id) -> lv2_memory_container*
+	, ct(lv2_memory_container::search(ar.pop<u32>()))
+	, shm([&](u32 mem_index) -> shared_ptr<std::shared_ptr<utils::shm>>
 	{
-		return id ? ensure(lv2_memory_container::search(id)) : nullptr;
+		if (mem_index != umax)
+		{
+			return make_single_value(::at32(g_fxo->get<vm::ps3_physical_memory_entries>().shm_list, mem_index));
+		}
+
+		return null_ptr;
 	}(ar.pop<u32>()))
 	, system_handle(ar)
 	, shm(null_ptr)
@@ -152,6 +158,10 @@ void lv2_memory::save_data(utils::serial& ar)
 		if (data)
 		{
 			ar(std::span<u8>(ensure((*data)->map_self()), size));
+		}
+		else
+		{
+			ar(::narrow<u32>(::at32(g_fxo->get<vm::ps3_physical_memory_entries>().map_lookup, data->get())));
 		}
 	}
 }
@@ -313,7 +323,7 @@ error_code sys_mmapper_allocate_shared_memory(ppu_thread& ppu, u64 ipc_key, u64 
 	}
 
 	// Get "default" memory container
-	auto& dct = g_fxo->get<lv2_memory_container>();
+	auto& dct = *idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->parent_memory_container;
 
 	if (auto error = create_lv2_shm(ipc_key != SYS_MMAPPER_NO_SHM_KEY, ipc_key, size, flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 : 0x100000, flags, &dct))
 	{
@@ -481,7 +491,7 @@ error_code sys_mmapper_allocate_shared_memory_ext(ppu_thread& ppu, u64 ipc_key, 
 
 		if (to_perm_check)
 		{
-			if (flags != SYS_MEMORY_PAGE_SIZE_64K || !g_ps3_process_info.debug_or_root())
+			if (flags != SYS_MEMORY_PAGE_SIZE_64K || !ppu.has_debug_or_root_perm)
 			{
 				return CELL_EPERM;
 			}
@@ -489,7 +499,7 @@ error_code sys_mmapper_allocate_shared_memory_ext(ppu_thread& ppu, u64 ipc_key, 
 	}
 
 	// Get "default" memory container
-	auto& dct = g_fxo->get<lv2_memory_container>();
+	auto& dct = *idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->parent_memory_container;
 
 	if (auto error = create_lv2_shm<true>(true, ipc_key, size, flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 : 0x100000, flags, &dct))
 	{
@@ -588,7 +598,7 @@ error_code sys_mmapper_allocate_shared_memory_from_container_ext(ppu_thread& ppu
 
 		if (to_perm_check)
 		{
-			if (flags != SYS_MEMORY_PAGE_SIZE_64K || !g_ps3_process_info.debug_or_root())
+			if (flags != SYS_MEMORY_PAGE_SIZE_64K || !ppu.has_debug_or_root_perm)
 			{
 				return CELL_EPERM;
 			}

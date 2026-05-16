@@ -25,7 +25,7 @@ u32 RSXDisAsm::disasm(u32 pc)
 		if (m_offset == vm::g_sudo_addr)
 		{
 			// Translation needed
-			pc = static_cast<const rsx::thread*>(m_cpu)->iomap_table.get_addr(pc);
+			pc = static_cast<const rsx::thread*>(m_cpu)->lv2_context->iomap_table.get_addr(pc);
 
 			if (pc == umax) return false;
 		}

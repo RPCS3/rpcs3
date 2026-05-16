@@ -864,7 +864,7 @@ error_code cellPadGetDataExtra(u32 port_no, vm::ptr<u32> device_type, vm::ptr<Ce
 	return CELL_OK;
 }
 
-error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
+error_code cellPadSetActDirect([[maybe_unused]] ppu_thread& ppu, u32 port_no, vm::ptr<CellPadActParam> param)
 {
 	cellPad.trace("cellPadSetActDirect(port_no=%d, param=*0x%x)", port_no, param);
 
@@ -879,7 +879,7 @@ error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
 	// Note: signed check unlike the usual unsigned check
-	if (static_cast<s32>(g_ps3_process_info.sdk_ver) > 0x1FFFFF)
+	//if (static_cast<s32>(ppu.sdk_version) > 0x1FFFFF)
 	{
 		// make sure reserved bits are 0
 		for (int i = 0; i < 6; i++)

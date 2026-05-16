@@ -49,7 +49,7 @@ error_code sys_sm_shutdown(ppu_thread& ppu, u16 op, vm::ptr<void> param, u64 siz
 
 	sys_sm.success("sys_sm_shutdown(op=0x%x, param=*0x%x, size=0x%x)", op, param, size);
 
-	if (!g_ps3_process_info.has_root_perm())
+	if (!ppu.has_root_perm)
 	{
 		return CELL_ENOSYS;
 	}
@@ -67,7 +67,7 @@ error_code sys_sm_shutdown(ppu_thread& ppu, u16 op, vm::ptr<void> param, u64 siz
 	case 0x1200:
 	{
 		sys_sm.success("Received reboot request from application");
-		lv2_exitspawn(ppu, Emu.argv, Emu.envp, Emu.data);
+		lv2_exitspawn(ppu, true, null_ptr, Emu.argv, Emu.envp, Emu.data);
 		break;
 	}
 	case 0x8201:

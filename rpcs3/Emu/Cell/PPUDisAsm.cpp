@@ -3,6 +3,7 @@
 #include "PPUFunction.h"
 #include "PPUAnalyser.h"
 #include "Emu/IdManager.h"
+#include "Emu/Cell/lv2/sys_process.h"
 
 #include "util/asm.hpp"
 
@@ -2793,7 +2794,9 @@ extern std::vector<std::string> g_ppu_function_names;
 
 void PPUDisAsm::UNK(ppu_opcode_t)
 {
-	if (u32 addr{}; g_fxo->is_init<ppu_function_manager>() && (addr = g_fxo->get<ppu_function_manager>().addr))
+	const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
+
+	if (u32 addr{}; process && process->func_manager && (addr = process->func_manager->save_addr()))
 	{
 		// HLE function index
 		const u32 index = (dump_pc - addr) / 8;

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "sys_hid.h"
+#include "sys_process.h"
 
 #include "Emu/Memory/vm_var.h"
 
@@ -141,7 +142,10 @@ error_code sys_hid_manager_is_process_permission_root(u32 pid)
 {
 	sys_hid.todo("sys_hid_manager_is_process_permission_root(pid=0x%x)", pid);
 
-	return not_an_error(g_ps3_process_info.has_root_perm());
+	const auto process = idm::get_unlocked<lv2_obj, lv2_process>(pid);
+
+	// Not found PID returs 0 instead of ESRCH
+	return not_an_error(process ? process->has_root_perm() : 0);
 }
 
 error_code sys_hid_manager_add_hot_key_observer(u32 event_queue, vm::ptr<u32> unk)

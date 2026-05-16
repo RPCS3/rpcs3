@@ -1946,16 +1946,6 @@ auto gen_ghc_cpp_trampoline(ppu_intrp_func_t fn_target)
 #error "Not implemented!"
 #endif
 
-ppu_function_manager::ppu_function_manager(utils::serial& ar)
-	: addr(ar)
-{
-}
-
-void ppu_function_manager::save(utils::serial& ar)
-{
-	ar(addr);
-}
-
 std::vector<ppu_intrp_func_t>& ppu_function_manager::access(bool ghc)
 {
 	static std::vector<ppu_intrp_func_t> list

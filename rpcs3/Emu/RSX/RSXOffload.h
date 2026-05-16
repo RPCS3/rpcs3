@@ -6,8 +6,13 @@
 
 #include <vector>
 
-template <typename T>
-class named_thread;
+struct default_tls_initializer;
+
+template <class T, class Tls>
+class named_thread_impl;
+
+template <class T>
+using named_thread = named_thread_impl<T, default_tls_initializer>;
 
 namespace rsx
 {

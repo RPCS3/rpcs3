@@ -6,7 +6,9 @@
 #include "PPUThread.h"
 #include "Emu/Cell/Common.h"
 #include "Emu/Cell/PPUFunction.h"
+#include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/PPUAnalyser.h"
+#include "Emu/Cell/PPUFunction.h"
 #include "Emu/Cell/timers.hpp"
 #include "Emu/IdManager.h"
 
@@ -6805,7 +6807,8 @@ auto UNK()
 			ppu.exec_bytes += ppu.cia - old_cia;
 
 			// HLE function index
-			const u32 index = (ppu.cia - g_fxo->get<ppu_function_manager>().addr) / 8;
+			const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
+			const u32 index = (ppu.cia - process->func_manager->save_addr()) / 8;
 
 			const auto& hle_funcs = ppu_function_manager::get();
 
