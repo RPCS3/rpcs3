@@ -9,6 +9,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/GDB.h"
 #include "Emu/Cell/lv2/sys_spu.h"
+#include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/RSX/RSXThread.h"
@@ -651,6 +652,8 @@ namespace cpu_counter
 
 void cpu_thread::operator()()
 {
+	const auto ptr6 = lv2_process::acquire_globals(id_manager::g_process);
+
 	const auto old_prefix = g_tls_log_prefix;
 
 	g_tls_this_thread = this;

@@ -34,8 +34,20 @@ enum class thread_state : u32
 	destroying_context = 7, // Special value assigned to destroy data explicitly before the destructor
 };
 
-template <class Context>
-class named_thread;
+struct default_tls_initializer
+{
+	std::shared_ptr<utils::serial> operator()() const noexcept;
+	void operator()(std::shared_ptr<utils::serial> serial) const noexcept;
+};
+
+template <class T, class Tls>
+class named_thread_impl;
+
+template <class T>
+using named_thread = named_thread_impl<T, default_tls_initializer>;
+
+template <class T>
+using named_thread = named_thread_impl<T, default_tls_initializer>;
 
 class thread_base;
 
@@ -149,6 +161,9 @@ private:
 	// Thread task queue (reversed linked list)
 	atomic_ptr<thread_future> m_taskq{};
 
+	// Function saving data for the TLS initializer
+	std::shared_ptr<utils::serial> m_serial;
+
 	// Start thread
 	void start();
 
@@ -166,11 +181,11 @@ private:
 
 	friend class thread_ctrl;
 
-	template <class Context>
-	friend class named_thread;
+	template <class T, class Tls>
+	friend class named_thread_impl;
 
 protected:
-	thread_base(native_entry, std::string name) noexcept;
+	thread_base(native_entry, std::string name, std::shared_ptr<utils::serial> serial) noexcept;
 
 	~thread_base() noexcept;
 
@@ -470,15 +485,15 @@ namespace stx
 }
 
 // Derived from the callable object Context, possibly a lambda
-template <class Context>
-class named_thread final : public Context, result_storage<Context>, thread_base
+template <class Context, class TlsInitializer>
+class named_thread_impl final : public Context, result_storage<Context>, thread_base
 {
 	using result = result_storage<Context>;
 	using thread = thread_base;
 
 	static u64 entry_point(thread_base* _base)
 	{
-		return static_cast<named_thread*>(_base)->entry_point2();
+		return static_cast<named_thread_impl*>(_base)->entry_point2();
 	}
 
 	u64 entry_point2()
@@ -488,12 +503,14 @@ class named_thread final : public Context, result_storage<Context>, thread_base
 			stx::g_launch_retainer.wait(value);
 		}
 
+		TlsInitializer()(m_serial);
+
 		thread::initialize([]()
 		{
 			if constexpr (!result::empty)
 			{
 				// Construct using default constructor in the case of failure
-				static_cast<result*>(static_cast<named_thread*>(thread_ctrl::get_current()))->init();
+				static_cast<result*>(static_cast<named_thread_impl*>(thread_ctrl::get_current()))->init();
 			}
 		});
 
@@ -545,18 +562,18 @@ class named_thread final : public Context, result_storage<Context>, thread_base
 public:
 	// Forwarding constructor with default name (also potentially the default constructor)
 	template <typename... Args> requires (std::is_constructible_v<Context, Args&&...>) && (!(std::is_same_v<std::remove_cvref_t<Args>, stx::launch_retainer> || ...)) && (NamedThreadName<Context>)
-	named_thread(Args&&... args) noexcept
+	named_thread_impl(Args&&... args) noexcept
 		: Context(std::forward<Args>(args)...)
-		, thread(trampoline, std::string(Context::thread_name))
+		, thread(trampoline, std::string(Context::thread_name), TlsInitializer()())
 	{
 		thread::start();
 	}
 
 	// Forwarding constructor with default name, does not automatically run the thread
 	template <typename... Args> requires (std::is_constructible_v<Context, Args&&...>) && (NamedThreadName<Context>)
-	named_thread(const stx::launch_retainer&, Args&&... args) noexcept
+	named_thread_impl(const stx::launch_retainer&, Args&&... args) noexcept
 		: Context(std::forward<Args>(args)...)
-		, thread(trampoline, std::string(Context::thread_name))
+		, thread(trampoline, std::string(Context::thread_name), TlsInitializer()())
 	{
 		// Create a stand-by thread context
 		m_sync |= static_cast<u32>(thread_state::finished);
@@ -564,24 +581,24 @@ public:
 
 	// Normal forwarding constructor
 	template <typename... Args> requires (std::is_constructible_v<Context, Args&&...>) && (!NamedThreadName<Context>)
-	named_thread(std::string name, Args&&... args) noexcept
+	named_thread_impl(std::string name, Args&&... args) noexcept
 		: Context(std::forward<Args>(args)...)
-		, thread(trampoline, std::move(name))
+		, thread(trampoline, std::move(name), TlsInitializer()())
 	{
 		thread::start();
 	}
 
 	// Lambda constructor, also the implicit deduction guide candidate
-	named_thread(std::string_view name, Context&& f) noexcept requires (!NamedThreadName<Context>)
+	named_thread_impl(std::string_view name, Context&& f) noexcept requires (!NamedThreadName<Context>)
 		: Context(std::forward<Context>(f))
-		, thread(trampoline, std::string(name))
+		, thread(trampoline, std::string(name), TlsInitializer()())
 	{
 		thread::start();
 	}
 
-	named_thread(const named_thread&) = delete;
+	named_thread_impl(const named_thread_impl&) = delete;
 
-	named_thread& operator=(const named_thread&) = delete;
+	named_thread_impl& operator=(const named_thread_impl&) = delete;
 
 	// Wait for the completion and access result (if not void)
 	[[nodiscard]] decltype(auto) operator()() noexcept
@@ -686,7 +703,7 @@ public:
 		return static_cast<thread_state>(thread::m_sync.load() & 3);
 	}
 
-	named_thread& operator=(thread_state s) noexcept
+	named_thread_impl& operator=(thread_state s) noexcept
 	{
 		if (s == thread_state::created)
 		{
@@ -734,7 +751,7 @@ public:
 	}
 
 	// Context type doesn't need virtual destructor
-	~named_thread() noexcept
+	~named_thread_impl() noexcept
 	{
 		// Assign aborting state forcefully and join thread
 		operator=(thread_state::finished);

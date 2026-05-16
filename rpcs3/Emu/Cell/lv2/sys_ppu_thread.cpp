@@ -57,7 +57,7 @@ void ppu_thread_exit(ppu_thread& ppu, ppu_opcode_t, be_t<u32>*, struct ppu_intrp
 	// Deallocate Stack Area
 	ensure(vm::dealloc(ppu.stack_addr, vm::stack) == ppu.stack_size);
 
-	if (auto dct = g_fxo->try_get<lv2_memory_container>())
+	if (auto dct = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->parent_memory_container)
 	{
 		dct->free(ppu.stack_size);
 	}
@@ -333,9 +333,18 @@ error_code sys_ppu_thread_set_priority(ppu_thread& ppu, u32 thread_id, s32 prio)
 
 	sys_ppu_thread.trace("sys_ppu_thread_set_priority(thread_id=0x%x, prio=%d)", thread_id, prio);
 
-	if (prio < (g_ps3_process_info.debug_or_root() ? -512 : 0) || prio > 3071)
+	if (prio < 0 || prio > 3071)
 	{
-		return CELL_EINVAL;
+		if (prio < -512 || prio > 3199)
+		{
+			return CELL_EINVAL;
+		}
+
+		// VSH and processes with debug permissions can create threads with priority lower than 0 or greater than 3071
+		if (!ppu.has_debug_or_root_perm)
+		{
+			return CELL_EINVAL;
+		}
 	}
 
 	if (thread_id == ppu.id)
@@ -440,7 +449,7 @@ error_code sys_ppu_thread_stop(ppu_thread& ppu, u32 thread_id)
 
 	sys_ppu_thread.todo("sys_ppu_thread_stop(thread_id=0x%x)", thread_id);
 
-	if (!g_ps3_process_info.has_root_perm())
+	if (!ppu.has_root_perm)
 	{
 		return CELL_ENOSYS;
 	}
@@ -461,7 +470,7 @@ error_code sys_ppu_thread_restart(ppu_thread& ppu)
 
 	sys_ppu_thread.todo("sys_ppu_thread_restart()");
 
-	if (!g_ps3_process_info.has_root_perm())
+	if (!ppu.has_root_perm)
 	{
 		return CELL_ENOSYS;
 	}
@@ -484,10 +493,20 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 		return CELL_EFAULT;
 	}
 
-	if (prio < (g_ps3_process_info.debug_or_root() ? -512 : 0) || prio > 3071)
+	if (prio < 0 || prio > 3071)
 	{
-		return CELL_EINVAL;
+		if (prio < -512 || prio > 3199)
+		{
+			return CELL_EINVAL;
+		}
+
+		// VSH and processes with debug permissions can create threads with priority lower than 0 or greater than 3071
+		if (!ppu.has_debug_or_root_perm)
+		{
+			return CELL_EINVAL;
+		}
 	}
+
 
 	if ((flags & 3) == 3) // Check two flags: joinable + interrupt not allowed
 	{
@@ -501,7 +520,7 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 	// 0 and UINT64_MAX both convert to 4096
 	const u64 stack_size = FN(x ? x : 4096)(utils::align<u64>(_stacksz, 4096));
 
-	auto& dct = g_fxo->get<lv2_memory_container>();
+	auto& dct = *idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->parent_memory_container;
 
 	// Try to obtain "physical memory" from the default container
 	if (!dct.take(stack_size))

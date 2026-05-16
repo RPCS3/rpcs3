@@ -1603,6 +1603,8 @@ static error_code AudioCreateNotifyEventQueue(ppu_thread& ppu, vm::ptr<u32> id, 
 	attr->type     = queue_type;
 	attr->name_u64 = 0;
 
+	const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
+
 	for (u64 i = 0; i < MAX_AUDIO_EVENT_QUEUES; i++)
 	{
 		// Create an event queue "bruteforcing" an available key
@@ -1610,7 +1612,7 @@ static error_code AudioCreateNotifyEventQueue(ppu_thread& ppu, vm::ptr<u32> id, 
 
 		// This originally reads from a global sdk value set by cellAudioInit
 		// So check initialization as well
-		const u32 queue_depth = g_fxo->get<cell_audio>().init && g_ps3_process_info.sdk_ver <= 0x35FFFF ? 2 : 8;
+		const u32 queue_depth = g_fxo->get<cell_audio>().init && process->sdk_ver <= 0x35FFFF ? 2 : 8;
 
 		if (CellError res{sys_event_queue_create(ppu, id, attr, key_value, queue_depth) + 0u})
 		{

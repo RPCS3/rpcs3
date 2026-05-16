@@ -221,6 +221,11 @@ namespace rpcs3::utils
 
 	std::string get_cache_dir(std::string_view module_path)
 	{
+		if (module_path.empty())
+		{
+			return get_cache_dir();
+		}
+
 		std::string cache_dir = get_cache_dir();
 
 		const std::string dev_flash = g_cfg_vfs.get_dev_flash();
@@ -231,11 +236,36 @@ namespace rpcs3::utils
 			// Add prefix for vsh
 			cache_dir += "vsh/";
 		}
-		else if (!in_dev_flash && !Emu.GetTitleID().empty() && Emu.GetCat() != "1P")
+		else if (!in_dev_flash && Emu.GetCat() != "1P")
 		{
-			// Add prefix for anything except dev_flash files, standalone elfs or PS1 classics
-			cache_dir += Emu.GetTitleID();
-			cache_dir += '/';
+			std::string_view old = module_path;
+			std::string_view parent = fs::get_parent_dir_view(module_path);
+			std::string title_id;
+
+			while (!parent.empty() && parent.size() < old.size())
+			{
+				std::string sfo_path{parent};
+				sfo_path += "/PARAM.SFO";
+
+				const auto [psf, error] = psf::load(sfo_path);
+
+				if (!psf.empty())
+				{
+					title_id = psf::get_string(psf, "TITLE_ID");
+					ensure(!title_id.empty());
+					break;
+				}
+
+				old = parent;
+				parent = fs::get_parent_dir_view(old);
+			}
+
+			if (!title_id.empty())
+			{
+				// Add prefix for anything except dev_flash files, standalone elfs or PS1 classics
+				cache_dir += title_id;
+				cache_dir += '/';
+			}
 		}
 
 		return cache_dir;

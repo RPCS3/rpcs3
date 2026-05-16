@@ -11,6 +11,7 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/lv2/sys_lwmutex.h"
+#include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/lv2/sys_lwcond.h"
 #include "Emu/Cell/lv2/sys_mutex.h"
 #include "Emu/Cell/lv2/sys_cond.h"
@@ -222,6 +223,7 @@ void kernel_explorer::update()
 	{
 		{ process_info                   , tr("Process Info")},
 
+		{ SYS_PROCESS_OBJECT             , tr("Processes")},
 		{ SYS_MEM_OBJECT                 , tr("Shared Memory")},
 		{ virtual_memory                 , tr("Virtual Memory")},
 		{ SYS_MUTEX_OBJECT               , tr("Mutexes")},
@@ -314,7 +316,8 @@ void kernel_explorer::update()
 	root->setText(0, QString::fromStdString(fmt::format("Process 0x%08x: Total Memory Usage: 0x%x/0x%x (%0.2f/%0.2f MB)", process_getpid(), total_memory_usage, dct->size, 1. * total_memory_usage / (1024 * 1024)
 		, 1. * dct->size / (1024 * 1024))));
 
-	add_solid_node(find_node(root, additional_nodes::process_info), QString::fromStdString(fmt::format("Process Info, Sdk Version: 0x%08x, PPC SEG: %#x, SFO Category: %s (Fake: %s)", g_ps3_process_info.sdk_ver, g_ps3_process_info.ppc_seg, Emu.GetCat(), Emu.GetFakeCat())));
+	shared_ptr<lv2_process> process; // TODO
+	add_solid_node(find_node(root, additional_nodes::process_info), QString::fromStdString(fmt::format("Process Info, Sdk Version: 0x%08x, PPC SEG: %#x, SFO Category: %s (Fake: %s)", process->sdk_ver, process->ppc_seg, Emu.GetCat(), Emu.GetFakeCat())));
 
 	auto display_program_segments = [](QTreeWidgetItem* tree, const ppu_module<lv2_obj>& m)
 	{

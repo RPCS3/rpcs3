@@ -3,10 +3,16 @@
 #include "Crypto/unself.h"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/ErrorCodes.h"
+#include "Emu/Cell/PPUAnalyser.h"
+
+#include "sys_sync.h"
 
 // Process Local Object Type
 enum : u32
 {
+	SYS_SPU_THREAD_GROUP_OBJECT      = 0x04,
+	SYS_PROCESS_OBJECT               = 0x05,
+	SYS_CONFIG_OBJECT                = 0x41,
 	SYS_MEM_OBJECT                   = 0x08,
 	SYS_MUTEX_OBJECT                 = 0x85,
 	SYS_COND_OBJECT                  = 0x86,
@@ -83,25 +89,78 @@ struct sys_exit2_param
 	vm::bpptr<char, u64, u64> args;
 };
 
-struct ps3_process_info_t
+namespace vm
 {
-	u32 sdk_ver;
-	u32 ppc_seg;
-	SelfAdditionalInfo self_info;
+	struct ps3_virtual_memory_object;
+};
+
+class ppu_function_manager;
+struct lv2_memory_container;
+
+struct lv2_process : public ppu_module<lv2_obj>
+{
+	static constexpr u32 id_base = 0x50000000;
+
+	u32 seg0_code_end = 0;
+	u32 elf_entry = 0;
+
+	u32 sdk_ver = umax;
+	u32 ppc_seg = 0;
+	SelfAdditionalInfo self_info{};
 	u32 ctrl_flags1 = 0;
 
+	std::string ELF_file_path;
+	std::array<u8, 256> ELF_file_hash{};
+
+	// shared_ptr so it will be initialized externally (incomplete typename)
+	std::shared_ptr<vm::ps3_virtual_memory_object> memory_4GB_model;
+
+	// Parent memory container (default for sys_memory_allocate etc)
+	// Current process is oblivious to its ID
+	shared_ptr<lv2_memory_container> parent_memory_container;
+
+	// HLE table manager
+	std::shared_ptr<ppu_function_manager> func_manager;
+
 	bool has_root_perm() const;
+	static bool has_process_root_perm();
 	bool has_debug_perm() const;
 	bool debug_or_root() const;
 	std::string_view get_cellos_appname() const;
-};
 
-extern ps3_process_info_t  g_ps3_process_info;
+	lv2_process() noexcept;
+	lv2_process(shared_ptr<lv2_memory_container> pp_memory) noexcept;
+	lv2_process(utils::serial&) noexcept;
+	void save(utils::serial&) noexcept;
+	
+	static std::shared_ptr<void> acquire_globals(u32 proc_id);
+	static void release_globals();
+
+	struct cleanup_t
+	{
+		cleanup_t() = default;
+
+		cleanup_t(const cleanup_t&) = delete;
+		int operator=(const cleanup_t&) = delete;
+
+		~cleanup_t() noexcept
+		{
+			lv2_process::release_globals();
+		}
+	};
+
+	static shared_ptr<lv2_memory_container> get_default_memory_container();
+};
 
 // Auxiliary functions
 s32 process_getpid();
 s32 process_get_sdk_version(u32 pid, s32& ver);
-void lv2_exitspawn(ppu_thread& ppu, std::vector<std::string>& argv, std::vector<std::string>& envp, std::vector<u8>& data);
+void lv2_exitspawn(ppu_thread& ppu, bool exit_current, std::vector<std::string>& argv, std::vector<std::string>& envp, std::vector<u8>& data);
+
+namespace vm
+{
+	std::shared_ptr<vm::ps3_virtual_memory_object> get_current_memory_object();
+}
 
 enum CellError : u32;
 CellError process_is_spu_lock_line_reservation_address(u32 addr, u64 flags);
@@ -123,4 +182,4 @@ error_code sys_process_detach_child(u64 unk);
 void _sys_process_exit(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3);
 void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> arg, u32 arg_size, u32 arg4);
 void sys_process_exit3(ppu_thread& ppu, s32 status);
-error_code sys_process_spawns_a_self2(vm::ptr<u32> pid, u32 primary_prio, u64 flags, vm::ptr<void> stack, u32 stack_size, u32 mem_id, vm::ptr<void> param_sfo, vm::ptr<void> dbg_data);
+error_code sys_process_spawns_a_self2(ppu_thread& ppu, vm::ptr<u32> pid, u32 primary_prio, u64 flags, vm::ptr<void> stack, u32 stack_size, u32 mem_id, vm::ptr<void> param_sfo, vm::ptr<void> dbg_data);
