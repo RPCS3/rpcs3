@@ -8,8 +8,61 @@ namespace rsx
 {
 	namespace overlays
 	{
-		static constexpr u16 trophy_list_y = 85;
-		static constexpr u16 trophy_list_h = 540;
+		static constexpr u16 sky_list_y = 85;
+		static constexpr u16 sky_list_h = 540;
+
+		struct skylander_list_entry : horizontal_layout
+		{
+		private:
+			std::string name;
+
+		public:
+			skylander_list_entry();
+		};
+
+		skylander_list_entry::skylander_list_entry()
+		{
+			std::unique_ptr<overlay_element> label_text = std::make_unique<label>("None");
+			std::unique_ptr<overlay_element> label_load = std::make_unique<label>("Load");
+			std::unique_ptr<overlay_element> load_image = std::make_unique<image_view>(30, 30);
+			std::unique_ptr<overlay_element> label_clear = std::make_unique<label>("Clear");
+			std::unique_ptr<overlay_element> clear_image = std::make_unique<image_view>(30, 30);
+			std::unique_ptr<overlay_element> label_create = std::make_unique<label>("Create");
+			std::unique_ptr<overlay_element> create_image = std::make_unique<image_view>(30, 30);
+
+			label_text->set_size(130, 30);
+			label_text->set_font("Arial", 16);
+			label_text->set_wrap_text(true);
+			label_text->back_color.a = 0.f;
+
+			label_load->set_size(100, 30);
+			label_load->set_font("Arial", 16);
+			label_load->set_wrap_text(true);
+			label_load->back_color.a = 0.f;
+
+			label_clear->set_size(100, 30);
+			label_clear->set_font("Arial", 16);
+			label_clear->set_wrap_text(true);
+			label_clear->back_color.a = 0.f;
+
+			label_create->set_size(100, 30);
+			label_create->set_font("Arial", 16);
+			label_create->set_wrap_text(true);
+			label_create->back_color.a = 0.f;
+
+			static_cast<image_view*>(load_image.get())->set_image_resource(resource_config::standard_image_resource::cross);
+			static_cast<image_view*>(clear_image.get())->set_image_resource(resource_config::standard_image_resource::square);
+			static_cast<image_view*>(create_image.get())->set_image_resource(resource_config::standard_image_resource::triangle);
+
+			this->pack_padding = 15;
+			add_element(label_text);
+			add_element(load_image);
+			add_element(label_load);
+			add_element(clear_image);
+			add_element(label_clear);
+			add_element(create_image);
+			add_element(label_create);
+		}
 
 		skylander_dialog::skylander_dialog()
 		{
@@ -25,13 +78,6 @@ namespace rsx
 			m_description->set_text("Emulated Skylander Portal");
 			m_description->auto_resize();
 			m_description->back_color.a = 0.f;
-
-			m_show_hidden_trophies_button = std::make_unique<image_button>();
-			m_show_hidden_trophies_button->set_text(m_show_hidden_trophies ? localized_string_id::HOME_MENU_TROPHY_HIDE_HIDDEN_TROPHIES : localized_string_id::HOME_MENU_TROPHY_SHOW_HIDDEN_TROPHIES);
-			m_show_hidden_trophies_button->set_image_resource(resource_config::standard_image_resource::square);
-			m_show_hidden_trophies_button->set_size(120, 30);
-			m_show_hidden_trophies_button->set_pos(180, trophy_list_y + trophy_list_h + 20);
-			m_show_hidden_trophies_button->set_font("Arial", 16);
 
 			fade_animation.duration_sec = 0.15f;
 
@@ -59,17 +105,22 @@ namespace rsx
 				play_sound(sound_effect::cancel);
 				close_dialog = true;
 				break;
+			case pad_button::cross:
+				// load
+				break;
 			case pad_button::square:
+				// clear
+				break;
+			case pad_button::triangle:
+				// create
 				break;
 			case pad_button::dpad_up:
 			case pad_button::ls_up:
+				m_list->select_previous();
 				break;
 			case pad_button::dpad_down:
 			case pad_button::ls_down:
-				break;
-			case pad_button::L1:
-				break;
-			case pad_button::R1:
+				m_list->select_next();
 				break;
 			default:
 				rsx_log.trace("[ui] Button %d pressed", static_cast<u8>(button_press));
@@ -103,9 +154,15 @@ namespace rsx
 
 			compiled_resource result;
 			result.add(m_dim_background->get_compiled());
-
+			if (m_list_dirty.exchange(false))
+			{
+				reload();
+			}
+			if (m_list)
+			{
+				result.add(m_list->get_compiled());
+			}
 			result.add(m_description->get_compiled());
-			result.add(m_show_hidden_trophies_button->get_compiled());
 
 			fade_animation.apply(result);
 
@@ -137,6 +194,41 @@ namespace rsx
 			{
 				notify->wait(0, atomic_wait_timeout{1'000'000});
 			}
+		}
+
+		void skylander_dialog::reload()
+		{
+			s32 selected_index = 0;
+
+			std::vector<std::unique_ptr<overlay_element>> entries;
+			for (u8 sky_slot = 0; sky_slot < 8; ++sky_slot)
+			{
+				auto entry = std::make_unique<skylander_list_entry>();
+				entries.emplace_back(std::move(entry));
+			}
+
+			// Recreate list
+			if (m_list)
+			{
+				status_flags |= status_bits::invalidate_image_cache;
+			}
+
+			m_list = std::make_unique<list_view>(virtual_width - 2 * 20, sky_list_h);
+			m_list->set_pos(20, sky_list_y);
+			m_list->set_cancel_only(true);
+
+			for (auto& entry : entries)
+			{
+				m_list->add_entry(entry);
+			}
+
+			if (!m_list->m_items.empty())
+			{
+				m_list->select_entry(selected_index);
+			}
+
+			m_description->set_text("Emulated Skylander Portal");
+			m_description->auto_resize();
 		}
 	} // namespace overlays
 } // namespace rsx
