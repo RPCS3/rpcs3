@@ -19,7 +19,6 @@ namespace rsx
 			add_page(home_menu::fa_icon::settings, std::make_shared<home_menu_settings_advanced>(x, y, width, height, use_separators, nullptr));
 			add_page(home_menu::fa_icon::settings_sliders, std::make_shared<home_menu_settings_overlays>(x, y, width, height, use_separators, nullptr));
 			add_page(home_menu::fa_icon::settings_gauge, std::make_shared<home_menu_settings_performance_overlay>(x, y, width, height, use_separators, nullptr));
-			add_page(home_menu::fa_icon::usb, std::make_shared<home_menu_settings_usb_devices>(x, y, width, height, use_separators, nullptr));
 			add_page(home_menu::fa_icon::bug, std::make_shared<home_menu_settings_debug>(x, y, width, height, use_separators, nullptr));
 
 			// Select the first item
@@ -260,13 +259,6 @@ namespace rsx
 			add_unsigned_slider(&g_cfg.video.perf_overlay.font_size, localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_FONT_SIZE, " px", 1);
 			add_unsigned_slider(&g_cfg.video.perf_overlay.opacity, localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_OPACITY, " %", 1);
 			add_checkbox(&g_cfg.video.perf_overlay.use_window_space, localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_USE_WINDOW_SPACE);
-
-			apply_layout();
-		}
-
-		home_menu_settings_usb_devices::home_menu_settings_usb_devices(s16 x, s16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent)
-			: home_menu_settings_page(x, y, width, height, use_separators, parent, get_localized_string(localized_string_id::HOME_MENU_SETTINGS_USB_DEVICES))
-		{
 
 			apply_layout();
 		}
