@@ -19,6 +19,9 @@ if [ "$DEPLOY_APPIMAGE" = "true" ]; then
 
     APPIMAGE_EXTRACT_AND_RUN=1 linuxdeploy --appdir AppDir --plugin qt --plugin checkrt
 
+    # Restore App Icon
+    ln -sr ./AppDir/rpcs3.svg ./AppDir/.DirIcon
+    
     # Remove libwayland-client because it has platform-dependent exports and breaks other OSes
     rm -f ./AppDir/usr/lib/libwayland-client.so*
 
