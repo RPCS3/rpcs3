@@ -1360,6 +1360,9 @@
     <ClCompile Include="Emu\RSX\Overlays\Trophies\overlay_trophy_list_dialog.cpp">
       <Filter>Emu\GPU\RSX\Overlays\Trophies</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\USBDevices\overlay_skylander_dialog.cpp">
+      <Filter>Emu\GPU\RSX\Overlays\USBDevices</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Audio\audio_utils.cpp">
       <Filter>Emu\Audio</Filter>
     </ClCompile>
@@ -2832,6 +2835,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\Trophies\overlay_trophy_list_dialog.h">
       <Filter>Emu\GPU\RSX\Overlays\Trophies</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\USBDevices\overlay_skylander_dialog.h">
+      <Filter>Emu\GPU\RSX\Overlays\USBDevices</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Audio\audio_utils.h">
       <Filter>Emu\Audio</Filter>

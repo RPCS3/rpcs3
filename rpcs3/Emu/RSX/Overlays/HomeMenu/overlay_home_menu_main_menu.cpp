@@ -5,6 +5,7 @@
 #include "overlay_home_menu_savestate.h"
 #include "Emu/RSX/Overlays/FriendsList/overlay_friends_list_dialog.h"
 #include "Emu/RSX/Overlays/Trophies/overlay_trophy_list_dialog.h"
+#include "Emu/RSX/Overlays/USBDevices/overlay_skylander_dialog.h"
 #include "Emu/RSX/Overlays/overlay_manager.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
@@ -95,6 +96,21 @@ namespace rsx
 					return page_navigation::stay;
 				});
 			}
+
+			add_item(home_menu::fa_icon::usb, get_localized_string(localized_string_id::HOME_MENU_SETTINGS_USB_DEVICES), [](pad_button btn) -> page_navigation
+			{
+				if (btn != pad_button::cross) return page_navigation::stay;
+
+				rsx_log.notice("User selected devices in home menu");
+				Emu.CallFromMainThread([]()
+				{
+					if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
+					{
+						manager->create<rsx::overlays::skylander_dialog>()->show();
+					}
+				});
+				return page_navigation::stay;
+			});
 
 			add_item(home_menu::fa_icon::screenshot, get_localized_string(localized_string_id::HOME_MENU_SCREENSHOT), [](pad_button btn) -> page_navigation
 			{
