@@ -12,7 +12,7 @@ namespace rsx
 		static constexpr u16 sky_list_y = 85;
 		static constexpr u16 sky_list_h = 540;
 
-		skylander_list_entry::skylander_list_entry(std::string name)
+		skylander_dialog::skylander_list_entry::skylander_list_entry(std::string name)
 		{
 			std::unique_ptr<overlay_element> label_text = std::make_unique<label>(name);
 			std::unique_ptr<overlay_element> label_load = std::make_unique<label>("Load");
@@ -47,7 +47,7 @@ namespace rsx
 			static_cast<image_view*>(create_image.get())->set_image_resource(resource_config::standard_image_resource::triangle);
 
 			this->pack_padding = 15;
-			skylander_name = add_element(label_text);
+			add_element(label_text);
 			add_element(load_image);
 			add_element(label_load);
 			add_element(clear_image);
