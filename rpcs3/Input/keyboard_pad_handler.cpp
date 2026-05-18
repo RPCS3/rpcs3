@@ -829,7 +829,21 @@ QStringList keyboard_pad_handler::GetKeyNames(const QKeyEvent* keyEvent)
 	if (keyEvent->modifiers() & Qt::KeypadModifier)
 	{
 		list.append("Num"); // helper object, not used as actual key
-		list.append(QKeySequence(keyEvent->key() | Qt::KeypadModifier).toString(QKeySequence::NativeText));
+
+		// Qt does not produce "Num+X" for numpad operator keys (/, *, -, +, ,) — it just outputs
+		// the bare character. Add explicit "Num+X" names so the is_num_key filter can distinguish
+		// them from the equivalent regular keyboard keys during binding and gameplay lookup.
+		switch (keyEvent->key())
+		{
+		case Qt::Key_Slash:    list.append("Num+/");     break;
+		case Qt::Key_Asterisk: list.append("Num+*");     break;
+		case Qt::Key_Minus:    list.append("Num+-");     break;
+		case Qt::Key_Plus:     list.append("Num++");     break;
+		case Qt::Key_Comma:    list.append("Num+,");     break;
+		default:
+			list.append(QKeySequence(keyEvent->key() | Qt::KeypadModifier).toString(QKeySequence::NativeText));
+			break;
+		}
 	}
 
 	// Handle special cases
@@ -856,7 +870,13 @@ QStringList keyboard_pad_handler::GetKeyNames(const QKeyEvent* keyEvent)
 		list.append("Meta");
 		break;
 	default:
-		list.append(QKeySequence(keyEvent->key()).toString(QKeySequence::NativeText));
+		// If this is a numpad key that already has a proper "Num+X" name from native_scan_code_to_string,
+		// skip appending the bare key name (e.g. "/", "*", "-", "+", ",") to avoid it being used
+		// instead of the numpad-specific name during input binding and gameplay lookup.
+		if (!(keyEvent->modifiers() & Qt::KeypadModifier) || native_scan_code_to_string(keyEvent->nativeScanCode()).empty())
+		{
+			list.append(QKeySequence(keyEvent->key()).toString(QKeySequence::NativeText));
+		}
 		break;
 	}
 
@@ -890,6 +910,20 @@ std::string keyboard_pad_handler::GetKeyName(const QKeyEvent* keyEvent, bool wit
 	case Qt::Key_Down: return "↓";
 #endif
 	default:
+		// For numpad operator keys, Qt does not produce a "Num+X" name via QKeySequence even with
+		// KeypadModifier set. Return the explicit name so bindings are saved/matched correctly.
+		if (keyEvent->modifiers() & Qt::KeypadModifier)
+		{
+			switch (keyEvent->key())
+			{
+			case Qt::Key_Slash:    return "Num+/";
+			case Qt::Key_Asterisk: return "Num+*";
+			case Qt::Key_Minus:    return "Num+-";
+			case Qt::Key_Plus:     return "Num++";
+			case Qt::Key_Comma:    return "Num+,";
+			default: break;
+			}
+		}
 		break;
 	}
 
