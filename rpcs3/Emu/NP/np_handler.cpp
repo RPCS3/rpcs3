@@ -1615,7 +1615,7 @@ namespace np
 			return;
 
 		std::lock_guard lock(mutex_rpcn);
-		if (!rpcn)
+		if (!rpcn || !rpcn->is_authentified())
 			return;
 
 		rpcn->unlock_trophy(communication_id, trophy_id, timestamp);
@@ -1629,7 +1629,7 @@ namespace np
 			return {};
 
 		std::lock_guard lock(mutex_rpcn);
-		if (!rpcn)
+		if (!rpcn || !rpcn->is_authentified())
 			return {};
 
 		return rpcn->sync_trophies(communication_id, local_unlocked);
