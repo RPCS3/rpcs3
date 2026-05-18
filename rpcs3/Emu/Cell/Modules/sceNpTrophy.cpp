@@ -14,6 +14,7 @@
 #include "sceNp.h"
 #include "sceNpTrophy.h"
 #include "cellSysutil.h"
+#include "Emu/NP/np_handler.h"
 
 #include "Utilities/StrUtil.h"
 
@@ -39,6 +40,7 @@ struct trophy_context_t
 	SAVESTATE_INIT_POS(42);
 
 	std::string trp_name;
+	SceNpCommunicationId comm_id{};   // set at CreateContext, not serialized
 	std::unique_ptr<TROPUSRLoader> tropusr;
 	bool read_only = false;
 
@@ -506,6 +508,7 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 
 	// set trophy context parameters (could be passed to constructor through make_ptr call)
 	ctxt->trp_name = name;
+	ctxt->comm_id  = *commId;  // stored for RPCN trophy sync/unlock
 	ctxt->read_only = !!(options & SCE_NP_TROPHY_OPTIONS_CREATE_CONTEXT_READ_ONLY);
 	*context = idm::last_id();
 
@@ -714,7 +717,42 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 
 	ensure(tropusr->Load(trophyUsrPath, trophyConfPath).success);
 
-	lock2.unlock();
+	if (g_cfg.net.psn_status == np_psn_status::psn_rpcn)
+	{
+		const SceNpCommunicationId ctx_comm_id = ctxt->comm_id;
+		const u32 trophy_count = tropusr->GetTrophiesCount();
+
+		std::vector<std::pair<s32, u64>> local_unlocked;
+		local_unlocked.reserve(trophy_count);
+		for (u32 i = 0; i < trophy_count; i++)
+		{
+			if (tropusr->GetTrophyUnlockState(static_cast<s32>(i)))
+				local_unlocked.emplace_back(static_cast<s32>(i), u64{0});
+		}
+
+		// Release lock before the blocking network call
+		lock2.unlock();
+
+		auto& np = g_fxo->get<np::np_handler>();
+		const auto srv_trophies = np.rpcn_trophy_sync(ctx_comm_id, local_unlocked);
+
+		bool changed = false;
+		for (const auto& [tid, ts] : srv_trophies)
+		{
+			if (tid >= 0 && tid < static_cast<s32>(trophy_count) && !tropusr->GetTrophyUnlockState(tid))
+			{
+				tropusr->UnlockTrophy(tid, ts, ts);
+				changed = true;
+			}
+		}
+
+		if (changed && !tropusr->Save(trophyUsrPath))
+			sceNpTrophy.error("sceNpTrophyRegisterContext(): Failed to save trophy data after RPCN sync");
+	}
+	else
+	{
+		lock2.unlock();
+	}
 
 	lv2_obj::sleep(ppu);
 	{
@@ -1108,6 +1146,15 @@ error_code sceNpTrophyUnlockTrophy(ppu_thread& ppu, u32 context, u32 handle, s32
 			// Enqueue popup for the holy platinum trophy
 			show_trophy_notification(ctxt, unlocked_platinum_id);
 		}
+	}
+
+	if (g_cfg.net.psn_status == np_psn_status::psn_rpcn)
+	{
+		auto& np = g_fxo->get<np::np_handler>();
+		np.rpcn_trophy_unlock(ctxt->comm_id, trophyId, tick->tick);
+
+		if (unlocked_platinum_id != SCE_NP_TROPHY_INVALID_TROPHY_ID)
+			np.rpcn_trophy_unlock(ctxt->comm_id, static_cast<s32>(unlocked_platinum_id), tick->tick);
 	}
 
 	return CELL_OK;
