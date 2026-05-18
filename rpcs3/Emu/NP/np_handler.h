@@ -420,7 +420,7 @@ namespace np
 
 		// IP & DNS info
 		std::string hostname = "localhost";
-		std::array<u8, 6> ether_address{};
+		std::array<u8, 6> ether_address{0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
 		be_t<u32> local_ip_addr{};
 		be_t<u32> public_ip_addr{};
 		be_t<u32> dns_ip = 0x08080808;
