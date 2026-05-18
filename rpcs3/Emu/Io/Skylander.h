@@ -2,6 +2,7 @@
 
 #include "Emu/Io/usb_device.h"
 #include "Utilities/mutex.h"
+#include <optional>
 #include <queue>
 
 struct skylander
@@ -11,8 +12,11 @@ struct skylander
 	std::queue<u8> queued_status;
 	std::array<u8, 0x40 * 0x10> data{};
 	u32 last_id = 0;
+	u8 ui_slot = 0xFF;
 	void save();
 };
+
+extern const std::map<const std::pair<const u16, const u16>, const std::string> list_skylanders;
 
 class sky_portal
 {
@@ -26,16 +30,18 @@ public:
 	void write_block(u8 sky_num, u8 block, const u8* to_write_buf, u8* reply_buf);
 
 	bool remove_skylander(u8 sky_num);
-	u8 load_skylander(u8* buf, fs::file in_file);
+	u8 load_skylander(u8 ui_slot, u8* buf, fs::file in_file);
+	std::optional<std::tuple<u8, u16, u16>> get_skylander(u8 ui_slot);
 
 protected:
 	shared_mutex sky_mutex;
 
-	bool activated       = true;
+	bool activated = true;
 	u8 interrupt_counter = 0;
 	u8 r = 0, g = 0, b = 0;
 
 	skylander skylanders[8];
+	std::optional<std::tuple<u8, u16, u16>> ui_skylanders[8];
 };
 
 extern sky_portal g_skyportal;

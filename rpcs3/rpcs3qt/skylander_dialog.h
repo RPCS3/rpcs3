@@ -1,6 +1,5 @@
 #pragma once
 
-#include <optional>
 #include "util/types.hpp"
 
 #include <QDialog>
@@ -42,7 +41,6 @@ protected:
 
 protected:
 	QLineEdit* edit_skylanders[UI_SKY_NUM]{};
-	static std::optional<std::tuple<u8, u16, u16>> sky_slots[UI_SKY_NUM];
 
 private:
 	static skylander_dialog* inst;

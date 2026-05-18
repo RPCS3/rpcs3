@@ -7,6 +7,24 @@ namespace rsx
 {
 	namespace overlays
 	{
+		struct skylander_list_entry : horizontal_layout
+		{
+		private:
+			overlay_element* skylander_name = nullptr;
+
+		public:
+			skylander_list_entry();
+			void set_text(std::string_view text) override
+			{
+				rsx_log.notice("[ui] Setting skylander name to %s", text.data());
+				if (skylander_name)
+				{
+					static_cast<label*>(skylander_name)->set_text(text);
+					static_cast<label*>(skylander_name)->auto_resize();
+				}
+			}
+		};
+
 		struct skylander_dialog : public user_interface
 		{
 		private:
