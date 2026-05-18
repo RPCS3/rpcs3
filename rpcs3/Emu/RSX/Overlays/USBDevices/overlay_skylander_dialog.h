@@ -13,10 +13,9 @@ namespace rsx
 			overlay_element* skylander_name = nullptr;
 
 		public:
-			skylander_list_entry();
+			skylander_list_entry(std::string name);
 			void set_text(std::string_view text) override
 			{
-				rsx_log.notice("[ui] Setting skylander name to %s", text.data());
 				if (skylander_name)
 				{
 					static_cast<label*>(skylander_name)->set_text(text);
@@ -29,6 +28,7 @@ namespace rsx
 		{
 		private:
 			void reload();
+			void clear_skylander(u8 sky_slot);
 
 			std::unique_ptr<overlay_element> m_dim_background;
 			std::unique_ptr<list_view> m_list;

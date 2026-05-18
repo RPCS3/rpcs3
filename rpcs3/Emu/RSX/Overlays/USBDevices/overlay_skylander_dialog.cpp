@@ -12,9 +12,9 @@ namespace rsx
 		static constexpr u16 sky_list_y = 85;
 		static constexpr u16 sky_list_h = 540;
 
-		skylander_list_entry::skylander_list_entry()
+		skylander_list_entry::skylander_list_entry(std::string name)
 		{
-			std::unique_ptr<overlay_element> label_text = std::make_unique<label>("None");
+			std::unique_ptr<overlay_element> label_text = std::make_unique<label>(name);
 			std::unique_ptr<overlay_element> label_load = std::make_unique<label>("Load");
 			std::unique_ptr<overlay_element> load_image = std::make_unique<image_view>(30, 30);
 			std::unique_ptr<overlay_element> label_clear = std::make_unique<label>("Clear");
@@ -102,6 +102,7 @@ namespace rsx
 				break;
 			case pad_button::square:
 				// clear
+				clear_skylander(m_list->get_selected_index());
 				break;
 			case pad_button::triangle:
 				// create
@@ -152,26 +153,6 @@ namespace rsx
 			}
 			if (m_list)
 			{
-				if (!m_list->m_items.empty())
-				{
-					for (u8 sky_slot = 0; sky_slot < 8; sky_slot++)
-					{
-						if (const auto& slot_infos = g_skyportal.get_skylander(sky_slot))
-						{
-							auto entry = m_list->m_items[sky_slot].get();
-							const auto& [portal_slot, sky_id, sky_var] = slot_infos.value();
-							const auto found_sky = list_skylanders.find(std::make_pair(sky_id, sky_var));
-							if (found_sky != list_skylanders.cend())
-							{
-								entry->set_text(found_sky->second);
-							}
-							else
-							{
-								entry->set_text(fmt::format("Unknown (Id:%d Var:%d)", sky_id, sky_var));
-							}
-						}
-					}
-				}
 				result.add(m_list->get_compiled());
 			}
 			result.add(m_description->get_compiled());
@@ -210,13 +191,28 @@ namespace rsx
 
 		void skylander_dialog::reload()
 		{
-			s32 selected_index = 0;
+			s32 selected_index = m_list ? m_list->get_selected_index() : 0;
 
 			std::vector<std::unique_ptr<overlay_element>> entries;
 			for (u8 sky_slot = 0; sky_slot < 8; ++sky_slot)
 			{
-				auto entry = std::make_unique<skylander_list_entry>();
-				entries.emplace_back(std::move(entry));
+				if (const auto& slot_infos = g_skyportal.get_skylander(sky_slot))
+				{
+					const auto& [portal_slot, sky_id, sky_var] = slot_infos.value();
+					const auto found_sky = list_skylanders.find(std::make_pair(sky_id, sky_var));
+					if (found_sky != list_skylanders.cend())
+					{
+						entries.emplace_back(std::make_unique<skylander_list_entry>(found_sky->second));
+					}
+					else
+					{
+						entries.emplace_back(std::make_unique<skylander_list_entry>(fmt::format("Unknown (Id:%d Var:%d)", sky_id, sky_var)));
+					}
+				}
+				else
+				{
+					entries.emplace_back(std::make_unique<skylander_list_entry>("None"));
+				}
 			}
 
 			// Recreate list
@@ -241,6 +237,20 @@ namespace rsx
 
 			m_description->set_text("Emulated Skylander Portal");
 			m_description->auto_resize();
+		}
+
+		void skylander_dialog::clear_skylander(u8 sky_slot)
+		{
+			ensure(sky_slot < 8);
+
+			if (const auto& slot_infos = g_skyportal.get_skylander(sky_slot))
+			{
+				const auto& [cur_slot, id, var] = slot_infos.value();
+				if (g_skyportal.remove_skylander(cur_slot))
+				{
+					m_list_dirty = true;
+				}
+			}
 		}
 	} // namespace overlays
 } // namespace rsx
