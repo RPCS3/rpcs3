@@ -734,7 +734,11 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 		lock2.unlock();
 
 		auto& np = g_fxo->get<np::np_handler>();
-		const auto srv_trophies = np.rpcn_trophy_sync(ctx_comm_id, local_unlocked);
+
+		// Skip the network sync entirely when the user has no unlocked trophies
+		std::vector<std::pair<s32, u64>> srv_trophies;
+		if (!local_unlocked.empty())
+			srv_trophies = np.rpcn_trophy_sync(ctx_comm_id, local_unlocked);
 
 		bool changed = false;
 		for (const auto& [tid, ts] : srv_trophies)
