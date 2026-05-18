@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "../overlay_manager.h"
 #include "overlay_skylander_dialog.h"
+#include "Emu/Io/Skylander.h"
 #include "Emu/System.h"
 #include "Emu/VFS.h"
 
@@ -10,15 +11,6 @@ namespace rsx
 	{
 		static constexpr u16 sky_list_y = 85;
 		static constexpr u16 sky_list_h = 540;
-
-		struct skylander_list_entry : horizontal_layout
-		{
-		private:
-			std::string name;
-
-		public:
-			skylander_list_entry();
-		};
 
 		skylander_list_entry::skylander_list_entry()
 		{
@@ -55,7 +47,7 @@ namespace rsx
 			static_cast<image_view*>(create_image.get())->set_image_resource(resource_config::standard_image_resource::triangle);
 
 			this->pack_padding = 15;
-			add_element(label_text);
+			skylander_name = add_element(label_text);
 			add_element(load_image);
 			add_element(label_load);
 			add_element(clear_image);
@@ -160,6 +152,26 @@ namespace rsx
 			}
 			if (m_list)
 			{
+				if (!m_list->m_items.empty())
+				{
+					for (u8 sky_slot = 0; sky_slot < 8; sky_slot++)
+					{
+						if (const auto& slot_infos = g_skyportal.get_skylander(sky_slot))
+						{
+							auto entry = m_list->m_items[sky_slot].get();
+							const auto& [portal_slot, sky_id, sky_var] = slot_infos.value();
+							const auto found_sky = list_skylanders.find(std::make_pair(sky_id, sky_var));
+							if (found_sky != list_skylanders.cend())
+							{
+								entry->set_text(found_sky->second);
+							}
+							else
+							{
+								entry->set_text(fmt::format("Unknown (Id:%d Var:%d)", sky_id, sky_var));
+							}
+						}
+					}
+				}
 				result.add(m_list->get_compiled());
 			}
 			result.add(m_description->get_compiled());
