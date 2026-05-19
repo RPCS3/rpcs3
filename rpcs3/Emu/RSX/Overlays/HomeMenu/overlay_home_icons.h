@@ -26,6 +26,8 @@ namespace rsx::overlays::home_menu
 		settings_sliders,
 		settings_gauge,
 		usb,
+		file,
+		folder,
 		bug,
 	};
 
