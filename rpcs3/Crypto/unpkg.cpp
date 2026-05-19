@@ -807,7 +807,7 @@ bool package_reader::set_install_path()
 	}
 
 	// TODO: Verify whether other content types require appending title ID
-	//Added theme content type not require appending title ID
+	// Append title ID depending on content type
 	if (m_metadata.content_type != PKG_CONTENT_TYPE_THEME && m_metadata.content_type != PKG_CONTENT_TYPE_LICENSE)
 		dir += m_install_dir + '/';
 
