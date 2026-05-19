@@ -807,7 +807,8 @@ bool package_reader::set_install_path()
 	}
 
 	// TODO: Verify whether other content types require appending title ID
-	if (m_metadata.content_type != PKG_CONTENT_TYPE_LICENSE)
+	//Added theme content type not require appending title ID
+	if (m_metadata.content_type != PKG_CONTENT_TYPE_THEME && m_metadata.content_type != PKG_CONTENT_TYPE_LICENSE)
 		dir += m_install_dir + '/';
 
 	// If false, an existing directory is being overwritten: cannot cancel the operation
