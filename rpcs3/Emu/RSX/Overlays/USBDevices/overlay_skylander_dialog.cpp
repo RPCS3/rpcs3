@@ -365,11 +365,15 @@ namespace rsx
 						if (!sky_file)
 						{
 							rsx_log.error("Failed to open skylander file: %s", full_path);
+							close_dialog = true;
+							break;
 						}
 						std::array<u8, 0x40 * 0x10> data;
 						if (sky_file.read(data.data(), data.size()) != data.size())
 						{
 							rsx_log.error("Failed to read skylander file: %s", full_path);
+							close_dialog = true;
+							break;
 						}
 						if (const auto skylander = g_skyportal.get_skylander(slot))
 						{
