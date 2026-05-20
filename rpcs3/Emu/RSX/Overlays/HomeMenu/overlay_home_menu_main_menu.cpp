@@ -10,6 +10,7 @@
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/Cell/Modules/sceNpTrophy.h"
+#include "Emu/Io/Skylander.h"
 
 extern atomic_t<bool> g_user_asked_for_recording;
 
@@ -97,20 +98,23 @@ namespace rsx
 				});
 			}
 
-			add_item(home_menu::fa_icon::usb, get_localized_string(localized_string_id::HOME_MENU_SETTINGS_USB_DEVICES), [](pad_button btn) -> page_navigation
+			if (g_skyportal.is_active())
 			{
-				if (btn != pad_button::cross) return page_navigation::stay;
-
-				rsx_log.notice("User selected devices in home menu");
-				Emu.CallFromMainThread([]()
+				add_item(home_menu::fa_icon::usb, get_localized_string(localized_string_id::HOME_MENU_SETTINGS_SKYLANDER_MANAGER), [](pad_button btn) -> page_navigation
 				{
-					if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
+					if (btn != pad_button::cross) return page_navigation::stay;
+
+					rsx_log.notice("User selected devices in home menu");
+					Emu.CallFromMainThread([]()
 					{
-						manager->create<rsx::overlays::skylander_dialog>()->show();
-					}
+						if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
+						{
+							manager->create<rsx::overlays::skylander_dialog>()->show();
+						}
+					});
+					return page_navigation::stay;
 				});
-				return page_navigation::stay;
-			});
+			}
 
 			add_item(home_menu::fa_icon::screenshot, get_localized_string(localized_string_id::HOME_MENU_SCREENSHOT), [](pad_button btn) -> page_navigation
 			{

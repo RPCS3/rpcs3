@@ -630,7 +630,7 @@ bool sky_portal::remove_skylander(u8 sky_num)
 		thesky.queued_status.push(2);
 		thesky.queued_status.push(0);
 		thesky.sky_file.close();
-		ui_skylanders[thesky.ui_slot] = std::nullopt;
+		::at32(ui_skylanders, thesky.ui_slot) = std::nullopt;
 		thesky.ui_slot = 0xFF;
 		return true;
 	}
@@ -646,7 +646,7 @@ u8 sky_portal::load_skylander(u8 ui_slot, u8* buf, fs::file in_file)
 	u8 found_slot  = 0xFF;
 
 	// mimics spot retaining on the portal
-	for (u8 i = 0; i < 8; i++)
+	for (u8 i = 0; i < MAX_SKYLANDERS; i++)
 	{
 		if ((skylanders[i].status & 1) == 0)
 		{
@@ -665,7 +665,7 @@ u8 sky_portal::load_skylander(u8 ui_slot, u8* buf, fs::file in_file)
 
 	ensure(found_slot != 0xFF);
 
-	ui_skylanders[ui_slot] = std::make_tuple(found_slot, reinterpret_cast<le_t<u16>&>(buf[0x10]), reinterpret_cast<le_t<u16>&>(buf[0x1C]));
+	::at32(ui_skylanders, ui_slot) = std::make_tuple(found_slot, reinterpret_cast<le_t<u16>&>(buf[0x10]), reinterpret_cast<le_t<u16>&>(buf[0x1C]));
 	skylander& thesky = skylanders[found_slot];
 	memcpy(thesky.data.data(), buf, thesky.data.size());
 	thesky.sky_file = std::move(in_file);
@@ -678,9 +678,10 @@ u8 sky_portal::load_skylander(u8 ui_slot, u8* buf, fs::file in_file)
 	return found_slot;
 }
 
-std::optional<std::tuple<u8, u16, u16>> sky_portal::get_skylander(u8 ui_slot)
+std::optional<std::tuple<u8, u16, u16>> sky_portal::get_skylander(u8 ui_slot) const
 {
-	return ui_skylanders[ui_slot];
+	//std::lock_guard lock(sky_mutex);
+	return ::at32(ui_skylanders, ui_slot);
 }
 
 usb_device_skylander::usb_device_skylander(const std::array<u8, 7>& location)
@@ -777,7 +778,7 @@ void usb_device_skylander::control_transfer(u8 bmRequestType, u8 bRequest, u16 w
 				ensure(buf_size == 3 || buf_size == 32);
 
 				const u8 sky_num = buf[1] & 0xF;
-				ensure(sky_num < 8);
+				ensure(sky_num < MAX_SKYLANDERS);
 				const u8 block = buf[2];
 				ensure(block < 0x40);
 
@@ -813,7 +814,7 @@ void usb_device_skylander::control_transfer(u8 bmRequestType, u8 bRequest, u16 w
 				ensure(buf_size == 19 || buf_size == 32);
 
 				const u8 sky_num = buf[1] & 0xF;
-				ensure(sky_num < 8);
+				ensure(sky_num < MAX_SKYLANDERS);
 				const u8 block = buf[2];
 				ensure(block < 0x40);
 

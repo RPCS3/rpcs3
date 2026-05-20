@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "Utilities/File.h"
 #include "skylander_dialog.h"
-#include "Emu/Io/Skylander.h"
 
 #include <QLabel>
 #include <QGroupBox>
@@ -212,7 +211,7 @@ skylander_dialog::skylander_dialog(QWidget* parent)
 	QGroupBox* group_skylanders = new QGroupBox(tr("Active Portal Skylanders:"));
 	QVBoxLayout* vbox_group     = new QVBoxLayout();
 
-	for (auto i = 0; i < UI_SKY_NUM; i++)
+	for (auto i = 0; i < MAX_SKYLANDERS; i++)
 	{
 		if (i != 0)
 		{
@@ -255,9 +254,12 @@ skylander_dialog::~skylander_dialog()
 
 skylander_dialog* skylander_dialog::get_dlg(QWidget* parent)
 {
-	if (inst == nullptr) {
+	if (inst == nullptr)
+	{
 		inst = new skylander_dialog(parent);
-	} else {
+	}
+	else
+	{
 		inst->update_edits();
 	}
 
@@ -321,7 +323,7 @@ void skylander_dialog::load_skylander_path(u8 slot, const QString& path)
 
 void skylander_dialog::update_edits()
 {
-	for (auto i = 0; i < UI_SKY_NUM; i++)
+	for (auto i = 0; i < MAX_SKYLANDERS; i++)
 	{
 		QString display_string;
 		if (const auto& sd = g_skyportal.get_skylander(i))
