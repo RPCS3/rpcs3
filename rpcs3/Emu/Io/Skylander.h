@@ -5,6 +5,8 @@
 #include <optional>
 #include <queue>
 
+constexpr auto MAX_SKYLANDERS = 8;
+
 struct skylander
 {
 	fs::file sky_file;
@@ -31,17 +33,19 @@ public:
 
 	bool remove_skylander(u8 sky_num);
 	u8 load_skylander(u8 ui_slot, u8* buf, fs::file in_file);
-	std::optional<std::tuple<u8, u16, u16>> get_skylander(u8 ui_slot);
+	std::optional<std::tuple<u8, u16, u16>> get_skylander(u8 ui_slot) const;
+
+	bool is_active() const { return activated; }
 
 protected:
 	shared_mutex sky_mutex;
 
-	bool activated = true;
+	bool activated = false;
 	u8 interrupt_counter = 0;
 	u8 r = 0, g = 0, b = 0;
 
-	skylander skylanders[8];
-	std::optional<std::tuple<u8, u16, u16>> ui_skylanders[8];
+	std::array<skylander, MAX_SKYLANDERS> skylanders {};
+	std::array<std::optional<std::tuple<u8, u16, u16>>, MAX_SKYLANDERS> ui_skylanders {};
 };
 
 extern sky_portal g_skyportal;

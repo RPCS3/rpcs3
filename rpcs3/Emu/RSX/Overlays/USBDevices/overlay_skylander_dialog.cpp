@@ -15,48 +15,17 @@ namespace rsx
 
 		static std::string last_skylander_path = "";
 
-		skylander_dialog::skylander_list_entry::skylander_list_entry(std::string name)
+		skylander_dialog::skylander_list_entry::skylander_list_entry(std::string_view name)
 		{
 			std::unique_ptr<overlay_element> label_text = std::make_unique<label>(name);
-			std::unique_ptr<overlay_element> label_load = std::make_unique<label>("Load");
-			std::unique_ptr<overlay_element> load_image = std::make_unique<image_view>(30, 30);
-			std::unique_ptr<overlay_element> label_clear = std::make_unique<label>("Clear");
-			std::unique_ptr<overlay_element> clear_image = std::make_unique<image_view>(30, 30);
-			std::unique_ptr<overlay_element> label_create = std::make_unique<label>("Create");
-			std::unique_ptr<overlay_element> create_image = std::make_unique<image_view>(30, 30);
 
 			label_text->set_size(130, 30);
 			label_text->set_font("Arial", 16);
 			label_text->set_wrap_text(true);
 			label_text->back_color.a = 0.f;
 
-			label_load->set_size(100, 30);
-			label_load->set_font("Arial", 16);
-			label_load->set_wrap_text(true);
-			label_load->back_color.a = 0.f;
-
-			label_clear->set_size(100, 30);
-			label_clear->set_font("Arial", 16);
-			label_clear->set_wrap_text(true);
-			label_clear->back_color.a = 0.f;
-
-			label_create->set_size(100, 30);
-			label_create->set_font("Arial", 16);
-			label_create->set_wrap_text(true);
-			label_create->back_color.a = 0.f;
-
-			static_cast<image_view*>(load_image.get())->set_image_resource(resource_config::standard_image_resource::cross);
-			static_cast<image_view*>(clear_image.get())->set_image_resource(resource_config::standard_image_resource::square);
-			static_cast<image_view*>(create_image.get())->set_image_resource(resource_config::standard_image_resource::triangle);
-
 			this->pack_padding = 15;
 			add_element(label_text);
-			add_element(load_image);
-			add_element(label_load);
-			add_element(clear_image);
-			add_element(label_clear);
-			add_element(create_image);
-			add_element(label_create);
 		}
 
 		skylander_dialog::skylander_dialog()
@@ -70,9 +39,30 @@ namespace rsx
 			m_description = std::make_unique<label>();
 			m_description->set_font("Arial", 20);
 			m_description->set_pos(20, 37);
-			m_description->set_text("Emulated Skylander Portal");
+			m_description->set_text(get_localized_string(localized_string_id::HOME_MENU_SETTINGS_SKYLANDER_MANAGER));
 			m_description->auto_resize();
 			m_description->back_color.a = 0.f;
+
+			m_load_button = std::make_unique<image_button>();
+			m_load_button->set_text(localized_string_id::HOME_MENU_SETTINGS_SKYLANDER_LOAD);
+			m_load_button->set_image_resource(resource_config::standard_image_resource::cross);
+			m_load_button->set_size(120, 30);
+			m_load_button->set_pos(180, sky_list_y + sky_list_h + 20);
+			m_load_button->set_font("Arial", 16);
+
+			m_clear_button = std::make_unique<image_button>();
+			m_clear_button->set_text(localized_string_id::HOME_MENU_SETTINGS_SKYLANDER_CLEAR);
+			m_clear_button->set_image_resource(resource_config::standard_image_resource::square);
+			m_clear_button->set_size(120, 30);
+			m_clear_button->set_pos(360, sky_list_y + sky_list_h + 20);
+			m_clear_button->set_font("Arial", 16);
+
+			m_create_button = std::make_unique<image_button>();
+			m_create_button->set_text(localized_string_id::HOME_MENU_SETTINGS_SKYLANDER_CREATE);
+			m_create_button->set_image_resource(resource_config::standard_image_resource::triangle);
+			m_create_button->set_size(120, 30);
+			m_create_button->set_pos(540, sky_list_y + sky_list_h + 20);
+			m_create_button->set_font("Arial", 16);
 
 			fade_animation.duration_sec = 0.15f;
 
@@ -160,6 +150,9 @@ namespace rsx
 				result.add(m_list->get_compiled());
 			}
 			result.add(m_description->get_compiled());
+			result.add(m_load_button->get_compiled());
+			result.add(m_clear_button->get_compiled());
+			result.add(m_create_button->get_compiled());
 
 			fade_animation.apply(result);
 
@@ -195,10 +188,10 @@ namespace rsx
 
 		void skylander_dialog::reload()
 		{
-			s32 selected_index = m_list ? m_list->get_selected_index() : 0;
+			const s32 selected_index = m_list ? m_list->get_selected_index() : 0;
 
 			std::vector<std::unique_ptr<overlay_element>> entries;
-			for (u8 sky_slot = 0; sky_slot < 8; ++sky_slot)
+			for (u8 sky_slot = 0; sky_slot < MAX_SKYLANDERS; ++sky_slot)
 			{
 				if (const auto& slot_infos = g_skyportal.get_skylander(sky_slot))
 				{
@@ -239,13 +232,13 @@ namespace rsx
 				m_list->select_entry(selected_index);
 			}
 
-			m_description->set_text("Emulated Skylander Portal");
+			m_description->set_text(get_localized_string(localized_string_id::HOME_MENU_SETTINGS_SKYLANDER_MANAGER));
 			m_description->auto_resize();
 		}
 
 		void skylander_dialog::clear_skylander(u8 sky_slot)
 		{
-			ensure(sky_slot < 8);
+			ensure(sky_slot < MAX_SKYLANDERS);
 
 			if (const auto& slot_infos = g_skyportal.get_skylander(sky_slot))
 			{
@@ -259,7 +252,7 @@ namespace rsx
 
 		void skylander_dialog::load_skylander(u8 slot)
 		{
-			ensure(slot < 8);
+			ensure(slot < MAX_SKYLANDERS);
 
 			Emu.CallFromMainThread([this, slot]()
 				{
@@ -274,7 +267,7 @@ namespace rsx
 				});
 		}
 
-		skylander_load_dialog::skylander_file_list_entry::skylander_file_list_entry(skylander_file_type type, std::string file_name)
+		skylander_load_dialog::skylander_file_list_entry::skylander_file_list_entry(skylander_file_type type, const std::string& file_name)
 			: file_name(file_name), type(type)
 		{
 			if (type == skylander_file_type::folder)
@@ -285,9 +278,11 @@ namespace rsx
 			{
 				icon_data = rsx::overlays::resource_config::load_icon("home/32/file-solid.png");
 			}
-			std::unique_ptr<overlay_element> image = std::make_unique<image_view>(30, 30);
-			static_cast<image_view*>(image.get())->set_raw_image(icon_data.get());
-			std::unique_ptr<overlay_element> label_text = std::make_unique<label>(file_name);
+			auto image = std::make_unique<image_view>(30, 30);
+			image->set_raw_image(icon_data.get());
+			image->set_padding(4, 4, 4, 4);
+
+			auto label_text = std::make_unique<label>(file_name);
 			label_text->set_size(400, 30);
 			label_text->set_font("Arial", 16);
 			label_text->set_wrap_text(true);
@@ -309,7 +304,7 @@ namespace rsx
 			m_description = std::make_unique<label>();
 			m_description->set_font("Arial", 20);
 			m_description->set_pos(20, 37);
-			m_description->set_text("Emulated Skylander Portal");
+			m_description->set_text(get_localized_string(localized_string_id::HOME_MENU_SETTINGS_SKYLANDER_LOAD));
 			m_description->auto_resize();
 			m_description->back_color.a = 0.f;
 
@@ -344,13 +339,13 @@ namespace rsx
 				play_sound(sound_effect::accept);
 				if (m_list && !m_list->m_items.empty())
 				{
-					auto selected_entry = static_cast<const skylander_file_list_entry*>(m_list->get_selected_entry());
+					const auto selected_entry = static_cast<const skylander_file_list_entry*>(m_list->get_selected_entry());
 					rsx_log.notice("Selected skylander file entry: %s (type: %d)", selected_entry->get_file_name(), static_cast<u8>(selected_entry->get_type()));
 					if (selected_entry->get_type() == skylander_file_type::folder)
 					{
 						if (selected_entry->get_file_name() == "..")
 						{
-							auto last_slash_pos = last_skylander_path.find_last_of('/', last_skylander_path.length() - 2);
+							const auto last_slash_pos = last_skylander_path.find_last_of('/', last_skylander_path.length() - 2);
 							if (last_slash_pos != std::string::npos)
 							{
 								last_skylander_path = last_skylander_path.substr(0, last_slash_pos + 1);
@@ -364,16 +359,17 @@ namespace rsx
 					}
 					else if (selected_entry->get_type() == skylander_file_type::file)
 					{
-						rsx_log.notice("Loading skylander from file: %s", last_skylander_path + selected_entry->get_file_name());
-						fs::file sky_file(last_skylander_path + selected_entry->get_file_name(), fs::read + fs::write + fs::lock);
+						std::string full_path = last_skylander_path + selected_entry->get_file_name();
+						rsx_log.notice("Loading skylander from file: %s", full_path);
+						fs::file sky_file(full_path, fs::read + fs::write + fs::lock);
 						if (!sky_file)
 						{
-							rsx_log.error("Failed to open skylander file: %s", last_skylander_path + selected_entry->get_file_name());
+							rsx_log.error("Failed to open skylander file: %s", full_path);
 						}
 						std::array<u8, 0x40 * 0x10> data;
 						if (sky_file.read(data.data(), data.size()) != data.size())
 						{
-							rsx_log.error("Failed to read skylander file: %s", last_skylander_path + selected_entry->get_file_name());
+							rsx_log.error("Failed to read skylander file: %s", full_path);
 						}
 						if (const auto skylander = g_skyportal.get_skylander(slot))
 						{
@@ -478,7 +474,7 @@ namespace rsx
 
 		void skylander_load_dialog::reload()
 		{
-			s32 selected_index = 0;
+			const s32 selected_index = 0;
 
 			std::vector<std::unique_ptr<overlay_element>> entries;
 
@@ -525,7 +521,7 @@ namespace rsx
 				m_list->select_entry(selected_index);
 			}
 
-			m_description->set_text("Select Skylander File");
+			m_description->set_text(get_localized_string(localized_string_id::HOME_MENU_SETTINGS_SKYLANDER_LOAD));
 			m_description->auto_resize();
 		}
 	} // namespace overlays

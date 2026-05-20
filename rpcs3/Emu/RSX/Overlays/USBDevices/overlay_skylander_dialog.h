@@ -7,14 +7,13 @@ namespace rsx
 {
 	namespace overlays
 	{
-
 		struct skylander_dialog : public user_interface
 		{
 		private:
 			struct skylander_list_entry : horizontal_layout
 			{
 			public:
-				skylander_list_entry(std::string name);
+				skylander_list_entry(std::string_view name);
 			};
 
 			void reload();
@@ -24,6 +23,9 @@ namespace rsx
 			std::unique_ptr<overlay_element> m_dim_background;
 			std::unique_ptr<list_view> m_list;
 			std::unique_ptr<label> m_description;
+			std::unique_ptr<image_button> m_load_button;
+			std::unique_ptr<image_button> m_clear_button;
+			std::unique_ptr<image_button> m_create_button;
 
 			animation_color_interpolate fade_animation;
 
@@ -39,6 +41,7 @@ namespace rsx
 
 			void show();
 		};
+
 		enum class skylander_file_type
 		{
 			folder,
@@ -56,10 +59,17 @@ namespace rsx
 				skylander_file_type type;
 
 			public:
-				skylander_file_list_entry(skylander_file_type type, std::string file_name);
-				std::string get_file_name() const { return file_name; }
-				skylander_file_type get_type() const { return type; }
+				skylander_file_list_entry(skylander_file_type type, const std::string& file_name);
+				const std::string get_file_name() const
+				{
+					return file_name;
+				}
+				skylander_file_type get_type() const
+				{
+					return type;
+				}
 			};
+
 			void reload();
 
 			u8 slot = 0xff;
