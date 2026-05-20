@@ -6430,8 +6430,6 @@ extern void resume_spu_thread_group_from_waiting(spu_thread& spu, std::array<sha
 
 bool spu_thread::stop_and_signal(u32 code)
 {
-	spu_log.trace("stop_and_signal(code=0x%x)", code);
-
 	auto set_status_npc = [&]()
 	{
 		status_npc.atomic_op([&](status_npc_sync_var& state)
@@ -6445,6 +6443,8 @@ bool spu_thread::stop_and_signal(u32 code)
 
 	if (get_type() >= spu_type::raw)
 	{
+		spu_log.warning("stop_and_signal(code=0x%x)", code);
+
 		// Save next PC and current SPU Interrupt Status
 		state += cpu_flag::stop + cpu_flag::wait + cpu_flag::ret;
 		set_status_npc();
