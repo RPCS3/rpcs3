@@ -558,7 +558,7 @@ void sky_portal::get_status(u8* reply_buf)
 
 	u16 status = 0;
 
-	for (int i = 7; i >= 0; i--)
+	for (int i = MAX_SKYLANDERS - 1; i >= 0; i--)
 	{
 		auto& s = skylanders[i];
 
@@ -680,7 +680,7 @@ u8 sky_portal::load_skylander(u8 ui_slot, u8* buf, fs::file in_file)
 
 std::optional<std::tuple<u8, u16, u16>> sky_portal::get_skylander(u8 ui_slot) const
 {
-	//std::lock_guard lock(sky_mutex);
+	std::lock_guard lock(sky_mutex);
 	return ::at32(ui_skylanders, ui_slot);
 }
 

@@ -203,12 +203,12 @@ namespace rsx
 					}
 					else
 					{
-						entries.emplace_back(std::make_unique<skylander_list_entry>(fmt::format("Unknown (Id:%d Var:%d)", sky_id, sky_var)));
+						entries.emplace_back(std::make_unique<skylander_list_entry>(get_localized_string(localized_string_id::HOME_MENU_SETTINGS_SKYLANDER_UNKNOWN) + fmt::format(" (Id:%d Var:%d)", sky_id, sky_var)));
 					}
 				}
 				else
 				{
-					entries.emplace_back(std::make_unique<skylander_list_entry>("None"));
+					entries.emplace_back(std::make_unique<skylander_list_entry>(get_localized_string(localized_string_id::HOME_MENU_SETTINGS_SKYLANDER_NO_SKYLANDER)));
 				}
 			}
 
@@ -359,7 +359,7 @@ namespace rsx
 					}
 					else if (selected_entry->get_type() == skylander_file_type::file)
 					{
-						std::string full_path = last_skylander_path + selected_entry->get_file_name();
+						const std::string full_path = last_skylander_path + selected_entry->get_file_name();
 						rsx_log.notice("Loading skylander from file: %s", full_path);
 						fs::file sky_file(full_path, fs::read + fs::write + fs::lock);
 						if (!sky_file)

@@ -39,7 +39,7 @@ protected:
 	void update_edits();
 
 protected:
-	QLineEdit* edit_skylanders[MAX_SKYLANDERS]{};
+	std::array<QLineEdit*, MAX_SKYLANDERS> edit_skylanders{};
 
 private:
 	static skylander_dialog* inst;
