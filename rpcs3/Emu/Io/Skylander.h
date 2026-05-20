@@ -38,7 +38,7 @@ public:
 	bool is_active() const { return activated; }
 
 protected:
-	shared_mutex sky_mutex;
+	mutable shared_mutex sky_mutex;
 
 	bool activated = false;
 	u8 interrupt_counter = 0;

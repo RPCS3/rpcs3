@@ -60,7 +60,7 @@ namespace rsx
 
 			public:
 				skylander_file_list_entry(skylander_file_type type, const std::string& file_name);
-				const std::string get_file_name() const
+				const std::string& get_file_name() const
 				{
 					return file_name;
 				}

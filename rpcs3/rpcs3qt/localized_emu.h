@@ -300,6 +300,8 @@ private:
 		case localized_string_id::HOME_MENU_SETTINGS_SKYLANDER_LOAD: return tr("Load Skylander");
 		case localized_string_id::HOME_MENU_SETTINGS_SKYLANDER_LOAD_FILE: return tr("Select Skylander File");
 		case localized_string_id::HOME_MENU_SETTINGS_SKYLANDER_MANAGER: return tr("Skylander Manager");
+		case localized_string_id::HOME_MENU_SETTINGS_SKYLANDER_NO_SKYLANDER: return tr("None");
+		case localized_string_id::HOME_MENU_SETTINGS_SKYLANDER_UNKNOWN: return tr("Unknown");
 		case localized_string_id::HOME_MENU_SETTINGS_DEBUG: return tr("Debug");
 		case localized_string_id::HOME_MENU_SETTINGS_DEBUG_OVERLAY: return tr("Debug Overlay", "Debug");
 		case localized_string_id::HOME_MENU_SETTINGS_DEBUG_INPUT_OVERLAY: return tr("Input Debug Overlay", "Debug");

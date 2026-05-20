@@ -220,8 +220,8 @@ skylander_dialog::skylander_dialog(QWidget* parent)
 
 		QHBoxLayout* hbox_skylander = new QHBoxLayout();
 		QLabel* label_skyname       = new QLabel(QString(tr("Skylander %1")).arg(i + 1));
-		edit_skylanders[i]          = new QLineEdit();
-		edit_skylanders[i]->setEnabled(false);
+		::at32(edit_skylanders, i)  = new QLineEdit();
+		::at32(edit_skylanders, i)->setEnabled(false);
 
 		QPushButton* clear_btn  = new QPushButton(tr("Clear"));
 		QPushButton* create_btn = new QPushButton(tr("Create"));
@@ -232,7 +232,7 @@ skylander_dialog::skylander_dialog(QWidget* parent)
 		connect(load_btn, &QAbstractButton::clicked, this, [this, i]() { load_skylander(i); });
 
 		hbox_skylander->addWidget(label_skyname);
-		hbox_skylander->addWidget(edit_skylanders[i]);
+		hbox_skylander->addWidget(::at32(edit_skylanders, i));
 		hbox_skylander->addWidget(clear_btn);
 		hbox_skylander->addWidget(create_btn);
 		hbox_skylander->addWidget(load_btn);
@@ -344,6 +344,6 @@ void skylander_dialog::update_edits()
 			display_string = tr("None");
 		}
 
-		edit_skylanders[i]->setText(display_string);
+		::at32(edit_skylanders, i)->setText(display_string);
 	}
 }
