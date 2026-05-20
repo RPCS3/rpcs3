@@ -31,6 +31,8 @@ protected:
 
 class anaglyph_settings_dialog : public QDialog
 {
+	Q_OBJECT
+
 public:
 	anaglyph_settings_dialog(QWidget* parent, std::shared_ptr<emu_settings> emu_settings);
 
