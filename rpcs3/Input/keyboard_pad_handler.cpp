@@ -1011,7 +1011,7 @@ int keyboard_pad_handler::native_scan_code_from_string([[maybe_unused]] const st
 	if (key == "Num+8" || key == "Num+Up") return 72;
 	if (key == "Num+9" || key == "Num+PgUp") return 73;
 	if (key == "Num+," || key == "Num+Del") return 83;
-	if (key == "Num+/") return 309;
+	if (key == "Num+/") return 57397;
 	if (key == "Num+*") return 55;
 	if (key == "Num+-") return 74;
 	if (key == "Num++") return 78;
@@ -1049,7 +1049,7 @@ std::string keyboard_pad_handler::native_scan_code_to_string(int native_scan_cod
 	case 72: return "Num+8"; // Also "Num+Up" depending on numlock
 	case 73: return "Num+9"; // Also "Num+PgUp" depending on numlock
 	case 83: return "Num+,"; // Also "Num+Del" depending on numlock
-	case 309: return "Num+/";
+	case 57397: return "Num+/";
 	case 55: return "Num+*";
 	case 74: return "Num+-";
 	case 78: return "Num++";
