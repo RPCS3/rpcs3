@@ -46,6 +46,14 @@
 
 #include <libusb.h>
 
+#ifdef _WIN32
+#if LIBUSB_WINDOWS_HOTPLUG && LIBUSB_API_VERSION >= 0x0100010C
+#define SYS_USBD_HOTPLUG_SUPPORTED 1
+#endif
+#elif LIBUSB_API_VERSION >= 0x01000102
+#define SYS_USBD_HOTPLUG_SUPPORTED 1
+#endif
+
 LOG_CHANNEL(sys_usbd);
 
 cfg_buzz g_cfg_buzz;
@@ -154,6 +162,7 @@ public:
 	ppu_thread* sq{};
 
 	atomic_t<u64> usb_hotplug_timeout = umax;
+	atomic_t<bool> hotplug_supported = false;
 
 	static constexpr auto thread_name = "Usb Manager Thread"sv;
 
@@ -216,7 +225,6 @@ private:
 		{0x12BA, 0x04A0, 0x04A0, "Top Shot Elite", nullptr, nullptr},
 		{0x12BA, 0x04A1, 0x04A1, "Top Shot Fearmaster", nullptr, nullptr},
 		{0x12BA, 0x04B0, 0x04B0, "Rapala Fishing Rod", nullptr, nullptr},
-
 
 		// Wheels
 #ifdef HAVE_SDL3
@@ -294,13 +302,9 @@ private:
 
 	libusb_context* ctx = nullptr;
 
-#ifndef _WIN32
-#if LIBUSB_API_VERSION >= 0x01000102
+#if SYS_USBD_HOTPLUG_SUPPORTED
 	libusb_hotplug_callback_handle callback_handle {};
 #endif
-#endif
-
-	bool hotplug_supported = false;
 };
 
 void LIBUSB_CALL callback_transfer(struct libusb_transfer* transfer)
@@ -313,14 +317,12 @@ void LIBUSB_CALL callback_transfer(struct libusb_transfer* transfer)
 	usbh.transfer_complete(transfer);
 }
 
-#ifndef _WIN32
-#if LIBUSB_API_VERSION >= 0x01000102
-static int LIBUSB_CALL hotplug_callback(libusb_context* /*ctx*/, libusb_device * /*dev*/, libusb_hotplug_event event, void * /*user_data*/)
+#if SYS_USBD_HOTPLUG_SUPPORTED
+static int LIBUSB_CALL hotplug_callback(libusb_context* /*ctx*/, libusb_device* /*dev*/, libusb_hotplug_event event, void* /*user_data*/)
 {
-	handle_hotplug_event(event == LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED);
+	handle_hotplug_event(event == LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED, true);
 	return 0;
 }
-#endif
 #endif
 
 #if LIBUSB_API_VERSION >= 0x0100010A
@@ -463,9 +465,7 @@ usb_handler_thread::usb_handler_thread()
 		return;
 	}
 
-#ifdef _WIN32
-	hotplug_supported = true;
-#elif LIBUSB_API_VERSION >= 0x01000102
+#if SYS_USBD_HOTPLUG_SUPPORTED
 	if (libusb_has_capability(LIBUSB_CAP_HAS_HOTPLUG))
 	{
 		if (int res = libusb_hotplug_register_callback(ctx, static_cast<libusb_hotplug_event>(LIBUSB_HOTPLUG_EVENT_DEVICE_ARRIVED |
@@ -480,6 +480,8 @@ usb_handler_thread::usb_handler_thread()
 			hotplug_supported = true;
 		}
 	}
+#elif defined(_WIN32)
+	hotplug_supported = true;
 #endif
 
 	for (u32 index = 0; index < MAX_SYS_USBD_TRANSFERS; index++)
@@ -627,11 +629,9 @@ usb_handler_thread::~usb_handler_thread()
 			libusb_free_transfer(transfers[index].transfer);
 	}
 
-#ifndef _WIN32
-#if LIBUSB_API_VERSION >= 0x01000102
+#if SYS_USBD_HOTPLUG_SUPPORTED
 	if (ctx && hotplug_supported)
 		libusb_hotplug_deregister_callback(ctx, callback_handle);
-#endif
 #endif
 
 	if (ctx)
@@ -654,7 +654,7 @@ void usb_handler_thread::operator()()
 			// every 4 seconds.
 			// On systems where hotplug is native, we wait a little bit for devices to settle before we start the scan
 			perform_scan();
-			usb_hotplug_timeout = hotplug_supported ? umax : get_system_time() + 4'000'000ull;
+			usb_hotplug_timeout = hotplug_supported ? umax : (get_system_time() + 4'000'000ull);
 		}
 
 		// Process asynchronous requests that are pending
@@ -1106,14 +1106,17 @@ void reconnect_usb(u32 assigned_number)
 	usbh->reconnect_usb_device(assigned_number);
 }
 
-void handle_hotplug_event(bool connected)
+void handle_hotplug_event(bool connected, bool source_is_libusb)
 {
 	if (auto usbh = g_fxo->try_get<named_thread<usb_handler_thread>>())
 	{
+		if (usbh->hotplug_supported && !source_is_libusb) return;
+
+		sys_usbd.notice("handle_hotplug_event: connected=%d", connected);
+
 		usbh->usb_hotplug_timeout = get_system_time() + (connected ? 1'000'000ull : 0);
 	}
 }
-
 
 error_code sys_usbd_initialize(ppu_thread& ppu, vm::ptr<u32> handle)
 {
