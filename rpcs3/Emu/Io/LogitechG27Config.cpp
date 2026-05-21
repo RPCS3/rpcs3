@@ -39,6 +39,22 @@ void fmt_class_string<hat_component>::format(std::string& out, u64 arg)
 	});
 }
 
+template <>
+void fmt_class_string<g27_ffb_direction_type>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](g27_ffb_direction_type value)
+	{
+		switch (value)
+		{
+		case g27_ffb_direction_type::cartesian: return "cartesian";
+		case g27_ffb_direction_type::steering_axis: return "steering_axis";
+		case g27_ffb_direction_type::polar: return "polar";
+		}
+
+		return unknown;
+	});
+}
+
 emulated_logitech_g27_config g_cfg_logitech_g27;
 
 LOG_CHANNEL(cfg_log, "CFG");

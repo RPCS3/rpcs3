@@ -266,12 +266,30 @@ static const std::map<logitech_personality,
 }
 };
 
-// ref: https://github.com/libsdl-org/SDL/issues/7941, need to use SDL_HAPTIC_STEERING_AXIS for some windows drivers
-static constexpr SDL_HapticDirection STEERING_DIRECTION =
+// Configurable because some Windows DirectInput drivers silently ignore
+// SDL_HAPTIC_STEERING_AXIS; see https://github.com/libsdl-org/SDL/issues/7941 .
+static SDL_HapticDirection make_steering_direction()
 {
-	.type = SDL_HAPTIC_STEERING_AXIS,
-	.dir = {0, 0, 0}
-};
+	SDL_HapticDirection dir{};
+	switch (g_cfg_logitech_g27.ffb_direction_type.get())
+	{
+	case g27_ffb_direction_type::cartesian:
+		dir.type = SDL_HAPTIC_CARTESIAN;
+		dir.dir[0] = 1;
+		break;
+	case g27_ffb_direction_type::polar:
+		dir.type = SDL_HAPTIC_POLAR;
+		dir.dir[0] = 0;
+		break;
+	case g27_ffb_direction_type::steering_axis:
+	default:
+		dir.type = SDL_HAPTIC_STEERING_AXIS;
+		dir.dir[0] = 0;
+		break;
+	}
+	return dir;
+}
+#define STEERING_DIRECTION make_steering_direction()
 
 void usb_device_logitech_g27::set_personality(logitech_personality personality, bool reconnect)
 {
@@ -298,6 +316,8 @@ usb_device_logitech_g27::usb_device_logitech_g27(u32 controller_index, const std
 {
 	set_personality(logitech_personality::driving_force_ex);
 
+	g_cfg_logitech_g27.load();
+
 	m_default_spring_effect.type = SDL_HAPTIC_SPRING;
 	m_default_spring_effect.condition.direction = STEERING_DIRECTION;
 	m_default_spring_effect.condition.length = SDL_HAPTIC_INFINITY;
@@ -308,8 +328,6 @@ usb_device_logitech_g27::usb_device_logitech_g27(u32 controller_index, const std
 		m_default_spring_effect.condition.right_coeff[i] = 0x7FFF;
 		m_default_spring_effect.condition.left_coeff[i] = 0x7FFF;
 	}
-
-	g_cfg_logitech_g27.load();
 
 	m_enabled = g_cfg_logitech_g27.enabled.get() && sdl_instance::get_instance().initialize();
 
