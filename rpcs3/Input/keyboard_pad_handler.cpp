@@ -870,13 +870,7 @@ QStringList keyboard_pad_handler::GetKeyNames(const QKeyEvent* keyEvent)
 		list.append("Meta");
 		break;
 	default:
-		// If this is a numpad key that already has a proper "Num+X" name from native_scan_code_to_string,
-		// skip appending the bare key name (e.g. "/", "*", "-", "+", ",") to avoid it being used
-		// instead of the numpad-specific name during input binding and gameplay lookup.
-		if (!(keyEvent->modifiers() & Qt::KeypadModifier) || native_scan_code_to_string(keyEvent->nativeScanCode()).empty())
-		{
-			list.append(QKeySequence(keyEvent->key()).toString(QKeySequence::NativeText));
-		}
+		list.append(QKeySequence(keyEvent->key()).toString(QKeySequence::NativeText));
 		break;
 	}
 
