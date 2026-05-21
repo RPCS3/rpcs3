@@ -835,11 +835,11 @@ QStringList keyboard_pad_handler::GetKeyNames(const QKeyEvent* keyEvent)
 		// them from the equivalent regular keyboard keys during binding and gameplay lookup.
 		switch (keyEvent->key())
 		{
-		case Qt::Key_Slash:    list.append("Num+/");     break;
-		case Qt::Key_Asterisk: list.append("Num+*");     break;
-		case Qt::Key_Minus:    list.append("Num+-");     break;
-		case Qt::Key_Plus:     list.append("Num++");     break;
-		case Qt::Key_Comma:    list.append("Num+,");     break;
+		case Qt::Key_Slash:    list.append("Num+/"); break;
+		case Qt::Key_Asterisk: list.append("Num+*"); break;
+		case Qt::Key_Minus:    list.append("Num+-"); break;
+		case Qt::Key_Plus:     list.append("Num++"); break;
+		case Qt::Key_Comma:    list.append("Num+,"); break;
 		default:
 			list.append(QKeySequence(keyEvent->key() | Qt::KeypadModifier).toString(QKeySequence::NativeText));
 			break;
