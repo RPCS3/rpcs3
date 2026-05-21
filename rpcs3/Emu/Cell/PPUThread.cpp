@@ -5336,11 +5336,26 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 			, thread_op(work_cv, workload, cpu, info, cache_path, g_fxo->get<jit_core_allocator>().sem)
 			, [&](u32 /*thread_index*/, thread_op& op)
 		{
+			const bool to_lock = work_cv < workload.size() && (cpu ? !cpu->state.all_of(cpu_flag::exit) : !Emu.IsStopped());
+
+			if (!to_lock)
+			{
+				return false;
+			}
+
 			// Allocate "core"
 			op.core_lock.lock();
 
 			// Second check before creating another thread
-			return work_cv < workload.size() && (cpu ? !cpu->state.all_of(cpu_flag::exit) : !Emu.IsStopped());
+			const bool to_unlock = !(work_cv < workload.size() && (cpu ? !cpu->state.all_of(cpu_flag::exit) : !Emu.IsStopped()));
+
+			if (to_unlock)
+			{
+				op.core_lock.unlock();
+				return false;
+			}
+
+			return true;
 		});
 
 		threads.join();
