@@ -64,6 +64,7 @@
 #include "util/v128.hpp"
 #include "util/simd.hpp"
 #include "util/sysinfo.hpp"
+#include "util/fnv_hash.hpp"
 
 #include "Utilities/sema.h"
 
@@ -3472,9 +3473,6 @@ struct jit_core_allocator
 	// Initialize global semaphore with the max number of threads
 	::semaphore<0x7fff> sem{std::max<s16>(thread_count, 1)};
 
-	// Mutex for special extra-large modules to compile alone
-	shared_mutex shared_mtx;
-
 	static s16 limit()
 	{
 		return static_cast<s16>(std::min<s32>(0x7fff, utils::get_thread_count()));
@@ -3500,11 +3498,28 @@ namespace
 			std::unordered_map<std::string, jit_module> map;
 		};
 
-		std::array<bucket_t, 30> buckets;
+		std::array<bucket_t, 256> buckets;
 
 		bucket_t& get_bucket(std::string_view sv)
 		{
-			return buckets[std::hash<std::string_view>()(sv) % std::size(buckets)];
+			const std::string& cache_path = fs::get_cache_dir();
+	
+			if (sv.starts_with(cache_path))
+			{
+				sv = sv.substr(cache_path.size());
+			}
+
+			const usz hash = rpcs3::hash_array(sv.data(), sv.size());
+
+			usz final_index = 0;
+
+			for  (usz i = 0; i < sizeof(hash); i++)
+			{
+				final_index ^= (hash >> (i * 8)) % 256;
+			}
+
+			final_index ^= sv.size();
+			return buckets[final_index % std::size(buckets)];
 		}
 
 		jit_module& get(const std::string& name)
@@ -4127,9 +4142,12 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 					continue;
 				}
 
+				std::unique_lock lock(g_fxo->get<jit_core_allocator>().sem);
+
 				if (auto prx = ppu_load_prx(obj, true, path, offset))
 				{
 					obj.clear(), src.close(); // Clear decrypted file and elf object memory
+					lock.unlock();
 					ppu_initialize(*prx, false, file_size);
 					ppu_finalize(*prx, true);
 					continue;
@@ -5300,19 +5318,6 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 					// Keep allocating workload
 					const auto& [obj_name, part] = std::as_const(workload)[i];
-
-					std::shared_lock rlock(g_fxo->get<jit_core_allocator>().shared_mtx, std::defer_lock);
-					std::unique_lock lock(g_fxo->get<jit_core_allocator>().shared_mtx, std::defer_lock);
-
-					if (false && part.jit_bounds && part.parent->funcs.size() >= 0x8000)
-					{
-						// Make a large symbol-resolving function compile alone because it has massive memory requirements
-						lock.lock();
-					}
-					else
-					{
-						rlock.lock();
-					}
 
 					ppu_log.warning("LLVM: Compiling module %s%s", cache_path, obj_name);
 
