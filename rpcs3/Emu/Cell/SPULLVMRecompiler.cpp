@@ -6218,7 +6218,12 @@ public:
 
 	void MPY(spu_opcode_t op)
 	{
+#ifdef ARCH_ARM64
+		const auto [a, b] = get_vrs<s32[4]>(op.ra, op.rb);
+		set_vr(op.rt, smull(zshuffle(bitcast<s16[8]>(a), 0, 2, 4, 6), zshuffle(bitcast<s16[8]>(b), 0, 2, 4, 6)));
+#else
 		set_vr(op.rt, (get_vr<s32[4]>(op.ra) << 16 >> 16) * (get_vr<s32[4]>(op.rb) << 16 >> 16));
+#endif
 	}
 
 	void MPYH(spu_opcode_t op)
@@ -6233,7 +6238,12 @@ public:
 
 	void MPYS(spu_opcode_t op)
 	{
+#ifdef ARCH_ARM64
+		const auto [a, b] = get_vrs<s32[4]>(op.ra, op.rb);
+		set_vr(op.rt, smull(zshuffle(bitcast<s16[8]>(a), 0, 2, 4, 6), zshuffle(bitcast<s16[8]>(b), 0, 2, 4, 6)) >> 16);
+#else
 		set_vr(op.rt, (get_vr<s32[4]>(op.ra) << 16 >> 16) * (get_vr<s32[4]>(op.rb) << 16 >> 16) >> 16);
+#endif
 	}
 
 	void CEQH(spu_opcode_t op)
@@ -6243,7 +6253,12 @@ public:
 
 	void MPYU(spu_opcode_t op)
 	{
+#ifdef ARCH_ARM64
+		const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
+		set_vr(op.rt, umull(zshuffle(bitcast<u16[8]>(a), 0, 2, 4, 6), zshuffle(bitcast<u16[8]>(b), 0, 2, 4, 6)));
+#else
 		set_vr(op.rt, mpyu(get_vr(op.ra), get_vr(op.rb)));
+#endif
 	}
 
 	void CEQB(spu_opcode_t op)
@@ -6385,12 +6400,20 @@ public:
 
 	void MPYI(spu_opcode_t op)
 	{
+#ifdef ARCH_ARM64
+		set_vr(op.rt, smull(zshuffle(bitcast<s16[8]>(get_vr<s32[4]>(op.ra)), 0, 2, 4, 6), get_imm<s16[4]>(op.si10)));
+#else
 		set_vr(op.rt, (get_vr<s32[4]>(op.ra) << 16 >> 16) * get_imm<s32[4]>(op.si10));
+#endif
 	}
 
 	void MPYUI(spu_opcode_t op)
 	{
+#ifdef ARCH_ARM64
+		set_vr(op.rt, umull(zshuffle(bitcast<u16[8]>(get_vr<u32[4]>(op.ra)), 0, 2, 4, 6), get_imm<u16[4]>(op.si10)));
+#else
 		set_vr(op.rt, (get_vr(op.ra) << 16 >> 16) * (get_imm(op.si10) & 0xffff));
+#endif
 	}
 
 	void CEQI(spu_opcode_t op)
@@ -6904,7 +6927,12 @@ public:
 
 	void MPYA(spu_opcode_t op)
 	{
+#ifdef ARCH_ARM64
+		const auto [a, b] = get_vrs<s32[4]>(op.ra, op.rb);
+		set_vr(op.rt4, smull(zshuffle(bitcast<s16[8]>(a), 0, 2, 4, 6), zshuffle(bitcast<s16[8]>(b), 0, 2, 4, 6)) + get_vr<s32[4]>(op.rc));
+#else
 		set_vr(op.rt4, (get_vr<s32[4]>(op.ra) << 16 >> 16) * (get_vr<s32[4]>(op.rb) << 16 >> 16) + get_vr<s32[4]>(op.rc));
+#endif
 	}
 
 	void FSCRRD(spu_opcode_t op) //

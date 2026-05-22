@@ -901,7 +901,7 @@ std::string keyboard_pad_handler::GetKeyName(const QKeyEvent* keyEvent, bool wit
 	return QKeySequence(keyEvent->key()).toString(QKeySequence::NativeText).toStdString();
 }
 
-std::string keyboard_pad_handler::GetKeyName(const u32& keyCode)
+std::string keyboard_pad_handler::GetKeyName(u32 keyCode)
 {
 	return QKeySequence(keyCode).toString(QKeySequence::NativeText).toStdString();
 }
