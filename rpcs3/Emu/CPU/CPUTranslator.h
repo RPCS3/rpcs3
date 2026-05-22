@@ -3790,8 +3790,81 @@ template <typename T1, typename T2, typename T3>
 
 		return from_sve_vector(result, fixed_type);
 	}
-	
-template <typename T1, typename T2>
+
+	template <typename T, typename T1, typename T2>
+	value_t<T> sve_mull(llvm::Intrinsic::ID id, T1 a, T2 b)
+	{
+		value_t<T> result;
+
+		const auto fixed_type = llvm::cast<llvm::FixedVectorType>(get_type<T>());
+		const auto scalable_type = llvm::ScalableVectorType::get(fixed_type->getElementType(), fixed_type->getNumElements());
+		const auto data0 = to_sve_vector(a.eval(m_ir));
+		const auto data1 = to_sve_vector(b.eval(m_ir));
+		const std::array<llvm::Type*, 1> types{scalable_type};
+
+		result.value = from_sve_vector(m_ir->CreateIntrinsic(id, types, {data0, data1}), fixed_type);
+		return result;
+	}
+
+	template <typename T, typename T0, typename T1, typename T2>
+	value_t<T> sve_mlal(llvm::Intrinsic::ID id, T0 acc, T1 a, T2 b)
+	{
+		value_t<T> result;
+
+		const auto fixed_type = llvm::cast<llvm::FixedVectorType>(get_type<T>());
+		const auto scalable_type = llvm::ScalableVectorType::get(fixed_type->getElementType(), fixed_type->getNumElements());
+		const auto data0 = to_sve_vector(acc.eval(m_ir));
+		const auto data1 = to_sve_vector(a.eval(m_ir));
+		const auto data2 = to_sve_vector(b.eval(m_ir));
+		const std::array<llvm::Type*, 1> types{scalable_type};
+
+		result.value = from_sve_vector(m_ir->CreateIntrinsic(id, types, {data0, data1, data2}), fixed_type);
+		return result;
+	}
+
+	template <typename T1, typename T2>
+	value_t<s32[4]> sve_smullb(T1 a, T2 b)
+	{
+		return sve_mull<s32[4]>(llvm::Intrinsic::aarch64_sve_smullb, a, b);
+	}
+
+	template <typename T1, typename T2>
+	value_t<s32[4]> sve_smullt(T1 a, T2 b)
+	{
+		return sve_mull<s32[4]>(llvm::Intrinsic::aarch64_sve_smullt, a, b);
+	}
+
+	template <typename T1, typename T2>
+	value_t<u32[4]> sve_umullb(T1 a, T2 b)
+	{
+		return sve_mull<u32[4]>(llvm::Intrinsic::aarch64_sve_umullb, a, b);
+	}
+
+	template <typename T1, typename T2>
+	value_t<u32[4]> sve_umullt(T1 a, T2 b)
+	{
+		return sve_mull<u32[4]>(llvm::Intrinsic::aarch64_sve_umullt, a, b);
+	}
+
+	template <typename T0, typename T1, typename T2>
+	value_t<s32[4]> sve_smlalb(T0 acc, T1 a, T2 b)
+	{
+		return sve_mlal<s32[4]>(llvm::Intrinsic::aarch64_sve_smlalb, acc, a, b);
+	}
+
+	template <typename T0, typename T1, typename T2>
+	value_t<s32[4]> sve_smlalt(T0 acc, T1 a, T2 b)
+	{
+		return sve_mlal<s32[4]>(llvm::Intrinsic::aarch64_sve_smlalt, acc, a, b);
+	}
+
+	template <typename T0, typename T1, typename T2>
+	value_t<u32[4]> sve_umlalt(T0 acc, T1 a, T2 b)
+	{
+		return sve_mlal<u32[4]>(llvm::Intrinsic::aarch64_sve_umlalt, acc, a, b);
+	}
+
+	template <typename T1, typename T2>
 	auto addp(T1 a, T2 b)
 	{
 		using T_vector = typename is_llvm_expr<T1>::type;
