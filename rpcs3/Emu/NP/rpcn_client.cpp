@@ -2623,8 +2623,6 @@ namespace rpcn
 	{
 		const u32 count = static_cast<u32>(local_unlocked.size());
 
-		if (count == 0)
-			return {};
 		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + count * (sizeof(s32) + sizeof(u64))), reply_data;
 
 		rpcn_client::write_communication_id(communication_id, data);
