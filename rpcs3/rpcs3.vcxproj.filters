@@ -579,6 +579,12 @@
     <ClCompile Include="rpcs3qt\call_stack_list.cpp">
       <Filter>Gui\debugger</Filter>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_anaglyph_settings_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_anaglyph_settings_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_breakpoint_list.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
@@ -1311,6 +1317,9 @@
     <ClCompile Include="rpcs3qt\content_integrity.cpp">
       <Filter>Gui\game list</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\anaglyph_settings_dialog.cpp">
+      <Filter>Gui\settings</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1561,6 +1570,9 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\steam_utils.h">
       <Filter>Gui\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\anaglyph_settings_dialog.h">
+      <Filter>Gui\settings</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

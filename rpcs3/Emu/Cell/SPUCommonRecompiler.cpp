@@ -857,7 +857,20 @@ void spu_cache::initialize(bool build_existing_cache)
 	named_thread_group workers("SPU Worker ", worker_count, [&]() -> uint
 	{
 #ifdef __APPLE__
+		// Apple Silicon W^X: enable JIT write mode for this worker and
+		// pair it with an RAII guard so execute mode is restored on
+		// every exit path (return, exception, etc.). Leaving a worker
+		// in write mode at teardown can leave per-thread state
+		// inconsistent on AArch64.
 		pthread_jit_write_protect_np(false);
+
+		struct jit_write_guard
+		{
+			~jit_write_guard()
+			{
+				pthread_jit_write_protect_np(true);
+			}
+		} _jit_guard;
 #endif
 		// Set low priority
 		thread_ctrl::scoped_priority low_prio(-1);
@@ -1209,7 +1222,7 @@ void spu_cache::initialize(bool build_existing_cache)
 	}
 
 	// Initialize global cache instance
-	if (g_cfg.core.spu_cache && cache)
+	if (g_cfg.core.spu_cache && !spu_precompilation_enabled && cache)
 	{
 		g_fxo->get<spu_cache>() = std::move(cache);
 	}
@@ -1269,8 +1282,8 @@ spu_runtime::spu_runtime()
 			fs::remove_all(m_cache_path + "llvm/", false);
 		}
 
-		fs::file(m_cache_path + "spu.log", fs::rewrite);
-		fs::file(m_cache_path + "spu-ir.log", fs::rewrite);
+		fs::write_file(m_cache_path + "spu.log", fs::rewrite);
+		fs::write_file(m_cache_path + "spu-ir.log", fs::rewrite);
 	}
 }
 
@@ -2855,10 +2868,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 	u32 lsa = entry_point;
 	u32 limit = SPU_LS_SIZE;
 
-	if (g_cfg.core.spu_block_size == spu_block_size_type::giga)
-	{
-	}
-
 	// Weak constant propagation context (for guessing branch targets)
 	std::array<bs_t<vf>, 128> vflags{};
 
@@ -2892,7 +2901,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				// Check for redundancy
 				if (!m_block_info[target / 4])
 				{
-					m_block_info[target / 4] = true;
+					m_block_info.set(target / 4, true);
 					workload.push_back(target);
 				}
 
@@ -3067,7 +3076,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					}
 					else
 					{
-						m_entry_info[target / 4] = true;
+						m_entry_info.set(target / 4, true);
 						add_block(target);
 					}
 				}
@@ -3078,8 +3087,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 				if (!is_no_return && sl && g_cfg.core.spu_block_size != spu_block_size_type::safe)
 				{
-					m_ret_info[pos / 4 + 1] = true;
-					m_entry_info[pos / 4 + 1] = true;
+					m_ret_info.set(pos / 4 + 1, true);
+					m_entry_info.set(pos / 4 + 1, true);
 					m_targets[pos].push_back(pos + 4);
 					add_block(pos + 4);
 				}
@@ -3202,10 +3211,13 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 							jt_abs.clear();
 						}
 
+						// If this fails, this is a TODO to compare them in another way
 						ensure(jt_abs.size() != jt_rel.size());
 					}
 
-					if (jt_abs.size() >= jt_rel.size())
+					const bool abs_domainates = jt_abs.size() > jt_rel.size();
+
+					if (abs_domainates)
 					{
 						const u32 new_size = (start - lsa) / 4 + ::size32(jt_abs);
 
@@ -3223,8 +3235,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 						m_targets.emplace(pos, std::move(jt_abs));
 					}
-
-					if (jt_rel.size() >= jt_abs.size())
+					else
 					{
 						const u32 new_size = (start - lsa) / 4 + ::size32(jt_rel);
 
@@ -3292,8 +3303,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				}
 				else
 				{
-					m_ret_info[pos / 4 + 1] = true;
-					m_entry_info[pos / 4 + 1] = true;
+					m_ret_info.set(pos / 4 + 1, true);
+					m_entry_info.set(pos / 4 + 1, true);
 					m_targets[pos].push_back(pos + 4);
 					add_block(pos + 4);
 				}
@@ -3360,15 +3371,15 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 			if (!is_no_return && g_cfg.core.spu_block_size != spu_block_size_type::safe)
 			{
-				m_ret_info[pos / 4 + 1] = true;
-				m_entry_info[pos / 4 + 1] = true;
+				m_ret_info.set(pos / 4 + 1, true);
+				m_entry_info.set(pos / 4 + 1, true);
 				m_targets[pos].push_back(pos + 4);
 				add_block(pos + 4);
 			}
 
 			if (!is_no_return && g_cfg.core.spu_block_size == spu_block_size_type::giga && !sync)
 			{
-				m_entry_info[target / 4] = true;
+				m_entry_info.set(target / 4, true);
 				add_block(target);
 			}
 			else
@@ -3394,7 +3405,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 			if (g_cfg.core.spu_block_size == spu_block_size_type::giga && !sync)
 			{
-				m_entry_info[target / 4] = true;
+				m_entry_info.set(target / 4, true);
 			}
 			else
 			{
@@ -3699,7 +3710,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 			// Bit array used to deduplicate workload list
 			workload.push_back(pair.first);
-			m_bits[pair.first / 4] = true;
+			m_bits.set(pair.first / 4, true);
 
 			for (usz i = 0; !reachable && i < workload.size(); i++)
 			{
@@ -3731,7 +3742,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 							if (new_pred >= lsa && new_pred < limit && !m_bits[new_pred / 4])
 							{
 								workload.push_back(new_pred);
-								m_bits[new_pred / 4] = true;
+								m_bits.set(new_pred / 4, true);
 							}
 						}
 					}
@@ -3754,7 +3765,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 			for (u32 pred : workload)
 			{
-				m_bits[pred / 4] = false;
+				m_bits.set(pred / 4, false);
 			}
 
 			if (!reachable && pair.first < limit)
@@ -3813,9 +3824,9 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 		if (addr < lsa || addr >= limit || !result.data[(addr - lsa) / 4])
 		{
-			m_block_info[addr / 4] = false;
-			m_entry_info[addr / 4] = false;
-			m_ret_info[addr / 4] = false;
+			m_block_info.set(addr / 4, false);
+			m_entry_info.set(addr / 4, false);
+			m_ret_info.set(addr / 4, false);
 			m_preds.erase(addr);
 		}
 	}
@@ -3841,7 +3852,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		if (it->second.empty() && !m_entry_info[it->first / 4])
 		{
 			// If not an entry point, remove the block completely
-			m_block_info[it->first / 4] = false;
+			m_block_info.set(it->first / 4, false);
 			it = m_preds.erase(it);
 			continue;
 		}
@@ -3949,7 +3960,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			if (type == spu_itype::STQD && op.ra == s_reg_sp && !block.reg_mod[op.rt] && !block.reg_use[op.rt])
 			{
 				// Register saved onto the stack before use
-				block.reg_save_dom[op.rt] = true;
+				block.reg_save_dom.set(op.rt, true);
 
 				reg_save = op.rt;
 			}
@@ -3979,7 +3990,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 						if (reg_save != reg && block.reg_save_dom[reg])
 						{
 							// Register is still used after saving; probably not eligible for optimization
-							block.reg_save_dom[reg] = false;
+							block.reg_save_dom.set(reg, false);
 						}
 					}
 				}
@@ -3990,7 +4001,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				// Expand MFC_Cmd reg use
 				for (u8 reg : {s_reg_mfc_lsa, s_reg_mfc_tag, s_reg_mfc_size})
 				{
-					if (!block.reg_mod[reg])
+					if (!block.reg_mod.test_unsafe(reg))
 						block.reg_use[reg]++;
 				}
 			}
@@ -3998,11 +4009,11 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			// Register reg modification
 			if (u8 reg = m_regmod[ia / 4]; reg < s_reg_max)
 			{
-				block.reg_mod.set(reg);
-				block.reg_mod_xf.set(reg, type & spu_itype::xfloat);
+				block.reg_mod.set_unsafe(reg);
+				block.reg_mod_xf.set_unsafe(reg, type & spu_itype::xfloat);
 
 				if (type == spu_itype::SELB && (block.reg_mod_xf[op.ra] || block.reg_mod_xf[op.rb]))
-					block.reg_mod_xf.set(reg);
+					block.reg_mod_xf.set_unsafe(reg);
 
 				// Possible post-dominating register load
 				if (type == spu_itype::LQD && op.ra == s_reg_sp)
@@ -4044,13 +4055,13 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					{
 						if (i == s_reg_lr || (i >= 2 && i < s_reg_80) || i > s_reg_127)
 						{
-							if (!block.reg_mod[i])
+							if (!block.reg_mod.test_unsafe(i))
 								block.reg_use[i]++;
 
 							if (!is_tail)
 							{
-								block.reg_mod.set(i);
-								block.reg_mod_xf[i] = false;
+								block.reg_mod.set_unsafe(i);
+								block.reg_mod_xf.set_unsafe(i, false);
 							}
 						}
 					}
@@ -4091,8 +4102,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		{
 			const u32 addr = emp.first->first;
 			spu_log.error("[0x%05x] Fixed first function at 0x%05x", entry_point, addr);
-			m_entry_info[addr / 4] = true;
-			m_ret_info[addr / 4] = false;
+			m_entry_info.set(addr / 4, true);
+			m_ret_info.set(addr / 4, false);
 		}
 	}
 
@@ -4131,9 +4142,9 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					if (!m_entry_info[target / 4] || m_ret_info[target / 4])
 					{
 						// Create new function entry (likely a tail call)
-						m_entry_info[target / 4] = true;
+						m_entry_info.set(target / 4, true);
 
-						m_ret_info[target / 4] = false;
+						m_ret_info.set(target / 4, false);
 
 						m_funcs.try_emplace(target);
 
@@ -4231,10 +4242,10 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 		for (u32 entry : new_entries)
 		{
-			m_entry_info[entry / 4] = true;
+			m_entry_info.set(entry / 4, true);
 
 			// Acknowledge artificial (reversible) chunk entry point
-			m_ret_info[entry / 4] = true;
+			m_ret_info.set(entry / 4, true);
 		}
 
 		for (auto& bb : m_bbs)
@@ -4332,7 +4343,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				{
 					if (tb.chunk == block.chunk && tb.reg_origin[i] + 1)
 					{
-						const u32 expected = block.reg_mod[i] ? addr : block.reg_origin[i];
+						const u32 expected = block.reg_mod.test_unsafe(i) ? addr : block.reg_origin[i];
 
 						if (tb.reg_origin[i] == 0x80000000)
 						{
@@ -4349,7 +4360,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 					if (g_cfg.core.spu_block_size == spu_block_size_type::giga && tb.func == block.func && tb.reg_origin_abs[i] + 2)
 					{
-						const u32 expected = block.reg_mod[i] ? addr : block.reg_origin_abs[i];
+						const u32 expected = block.reg_mod.test_unsafe(i) ? addr : block.reg_origin_abs[i];
 
 						if (tb.reg_origin_abs[i] == 0x80000000)
 						{
@@ -4419,12 +4430,12 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 			if (orig < 0x40000)
 			{
-				auto& src = ::at32(m_bbs, orig);
-				bb.reg_const[i] = src.reg_const[i];
+				const auto& src = ::at32(m_bbs, orig);
+				bb.reg_const.set_unsafe(i, src.reg_const.test_unsafe(i));
 				bb.reg_val32[i] = src.reg_val32[i];
 			}
 
-			if (!bb.reg_save_dom[i] && bb.reg_use[i] && (orig == SPU_LS_SIZE || orig + 2 == 0))
+			if (!bb.reg_save_dom.test_unsafe(i) && bb.reg_use[i] && (orig == SPU_LS_SIZE || orig + 2 == 0))
 			{
 				// Destroy offset if external reg value is used
 				func.reg_save_off[i] = -1;
@@ -4459,25 +4470,25 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			{
 			case spu_itype::IL:
 			{
-				bb.reg_const[op.rt] = true;
+				bb.reg_const.set(op.rt, true);
 				bb.reg_val32[op.rt] = op.si16;
 				break;
 			}
 			case spu_itype::ILA:
 			{
-				bb.reg_const[op.rt] = true;
+				bb.reg_const.set(op.rt, true);
 				bb.reg_val32[op.rt] = op.i18;
 				break;
 			}
 			case spu_itype::ILHU:
 			{
-				bb.reg_const[op.rt] = true;
+				bb.reg_const.set(op.rt, true);
 				bb.reg_val32[op.rt] = op.i16 << 16;
 				break;
 			}
 			case spu_itype::ILH:
 			{
-				bb.reg_const[op.rt] = true;
+				bb.reg_const.set(op.rt, true);
 				bb.reg_val32[op.rt] = op.i16 << 16 | op.i16;
 				break;
 			}
@@ -4488,37 +4499,37 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			}
 			case spu_itype::ORI:
 			{
-				bb.reg_const[op.rt] = bb.reg_const[op.ra];
+				bb.reg_const.set(op.rt, bb.reg_const[op.ra]);
 				bb.reg_val32[op.rt] = bb.reg_val32[op.ra] | op.si10;
 				break;
 			}
 			case spu_itype::OR:
 			{
-				bb.reg_const[op.rt] = bb.reg_const[op.ra] && bb.reg_const[op.rb];
+				bb.reg_const.set(op.rt, bb.reg_const[op.ra] && bb.reg_const[op.rb]);
 				bb.reg_val32[op.rt] = bb.reg_val32[op.ra] | bb.reg_val32[op.rb];
 				break;
 			}
 			case spu_itype::AI:
 			{
-				bb.reg_const[op.rt] = bb.reg_const[op.ra];
+				bb.reg_const.set(op.rt, bb.reg_const[op.ra]);
 				bb.reg_val32[op.rt] = bb.reg_val32[op.ra] + op.si10;
 				break;
 			}
 			case spu_itype::A:
 			{
-				bb.reg_const[op.rt] = bb.reg_const[op.ra] && bb.reg_const[op.rb];
+				bb.reg_const.set(op.rt, bb.reg_const[op.ra] && bb.reg_const[op.rb]);
 				bb.reg_val32[op.rt] = bb.reg_val32[op.ra] + bb.reg_val32[op.rb];
 				break;
 			}
 			case spu_itype::SFI:
 			{
-				bb.reg_const[op.rt] = bb.reg_const[op.ra];
+				bb.reg_const.set(op.rt, bb.reg_const[op.ra]);
 				bb.reg_val32[op.rt] = op.si10 - bb.reg_val32[op.ra];
 				break;
 			}
 			case spu_itype::SF:
 			{
-				bb.reg_const[op.rt] = bb.reg_const[op.ra] && bb.reg_const[op.rb];
+				bb.reg_const.set(op.rt, bb.reg_const[op.ra] && bb.reg_const[op.rb]);
 				bb.reg_val32[op.rt] = bb.reg_val32[op.rb] - bb.reg_val32[op.ra];
 				break;
 			}
@@ -4551,14 +4562,14 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				}
 
 				// Clear const
-				bb.reg_const[op.rt] = false;
+				bb.reg_const.set(op.rt, false);
 				break;
 			}
 			default:
 			{
 				// Clear const if reg is modified here
 				if (u8 reg = m_regmod[ia / 4]; reg < s_reg_max)
-					bb.reg_const[reg] = false;
+					bb.reg_const.set_unsafe(reg, false);
 				break;
 			}
 			}
@@ -4566,7 +4577,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			// $SP is modified
 			if (m_regmod[ia / 4] == s_reg_sp)
 			{
-				if (bb.reg_const[s_reg_sp])
+				if (bb.reg_const.test_unsafe(s_reg_sp))
 				{
 					// Making $SP a constant is a funny thing too.
 					bb.stack_sub = 0x80000000;
@@ -4762,7 +4773,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				// Check $LR (alternative return registers are currently not supported)
 				if (u32 lr_orig = bb.reg_mod[s_reg_lr] ? addr : bb.reg_origin_abs[s_reg_lr]; lr_orig < SPU_LS_SIZE)
 				{
-					auto& src = ::at32(m_bbs, lr_orig);
+					const auto& src = ::at32(m_bbs, lr_orig);
 
 					if (src.reg_load_mod[s_reg_lr] != func.reg_save_off[s_reg_lr])
 					{
@@ -4784,9 +4795,9 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				// Check $80..$127 (should be restored or unmodified)
 				for (u32 i = s_reg_80; is_ok && i <= s_reg_127; i++)
 				{
-					if (u32 orig = bb.reg_mod[i] ? addr : bb.reg_origin_abs[i]; orig < SPU_LS_SIZE)
+					if (u32 orig = bb.reg_mod.test_unsafe(i) ? addr : bb.reg_origin_abs[i]; orig < SPU_LS_SIZE)
 					{
-						auto& src = ::at32(m_bbs, orig);
+						const auto& src = ::at32(m_bbs, orig);
 
 						if (src.reg_load_mod[i] != func.reg_save_off[i])
 						{
@@ -4940,6 +4951,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 	struct reduced_statistics_t : stats_t
 	{
+		atomic_t<u64> secret_compatible = 0;
 	};
 
 	// Pattern structures
@@ -5170,7 +5182,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		// Check loop connector block (must jump to block-next or to loop-start)
 		u32 targets_count = 0;
 
-		for (u32 target : get_block_targets(first_pred_of_loop))
+		for (u32 target : get_block_targets(!invalid ? first_pred_of_loop : bpc))
 		{
 			valid = true;
 			targets_count++;
@@ -6087,17 +6099,17 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 			u32 ra = s_reg_max, rb = s_reg_max, rc = s_reg_max;
 
-			if (::at32(m_use_ra, pos / 4))
+			if (m_use_ra.test(pos / 4))
 			{
 				ra = op.ra;
 			}
 
-			if (::at32(m_use_rb, pos / 4))
+			if (m_use_rb.test(pos / 4))
 			{
 				rb = op.rb;
 			}
 
-			if (::at32(m_use_rc, pos / 4))
+			if (m_use_rc.test(pos / 4))
 			{
 				rc = op.rc;
 			}
@@ -6357,14 +6369,14 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 				}
 
 				std::array<u32, s_reg_max> reg_use{};
-				std::bitset<s_reg_max> reg_maybe_float{};
-				std::bitset<s_reg_max> reg_mod{};
+				bit_set<s_reg_max> reg_maybe_float{};
+				bit_set<s_reg_max> reg_mod{};
 
 				for (auto it = m_bbs.find(reduced_loop->loop_pc); it != m_bbs.end() && it->first <= bpc; it++)
 				{
 					for (u32 i = 0; i < s_reg_max; i++)
 					{
-						if (!reg_mod[i])
+						if (!reg_mod.test_unsafe(i))
 						{
 							reg_use[i] += it->second.reg_use[i];
 						}
@@ -6382,31 +6394,48 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 				for (u32 i = 0; i < s_reg_max; i++)
 				{
-					if (!::at32(reduced_loop->loop_dicts, i))
+					if (!reduced_loop->loop_dicts.test(i))
 					{
-						if (reg_use[i] && reg_mod[i])
+						if (reg_use[i] && reg_mod.test_unsafe(i))
 						{
 							reduced_loop->is_constant_expression = false;
-							reduced_loop->loop_writes.set(i);
-							reduced_loop->loop_may_update.reset(i);
+							reduced_loop->loop_writes.set_unsafe(i);
+							reduced_loop->loop_may_update.reset_unsafe(i);
 						}
 						else if (reg_use[i])
 						{
-							reduced_loop->loop_args.set(i);
+							reduced_loop->loop_args.set_unsafe(i);
 
-							if (reg_use[i] >= 3 && reg_maybe_float[i])
+							if (reg_use[i] >= 3 && reg_maybe_float.test_unsafe(i))
 							{
-								reduced_loop->gpr_not_nans.set(i);
+								reduced_loop->gpr_not_nans.set_unsafe(i);
 							}
 						}
 					}
 					else
 					{
 						// Cleanup
-						reduced_loop->loop_may_update.reset(i);
+						reduced_loop->loop_may_update.reset_unsafe(i);
 					}
 				}
 
+				bool is_secret = true;
+
+				for (u32 i = 0; i < s_reg_max; i++)
+				{
+					if (reduced_loop->loop_dicts.test_unsafe(i) || reduced_loop->loop_writes.test_unsafe(i))
+					{
+						if (const auto reg_it = reduced_loop->find_reg(i))
+						{
+							if (reg_it->regs.test_unsafe(s_reg_max))
+							{
+								is_secret = false;
+							}
+						}
+					}
+				}
+
+				reduced_loop->is_secret = is_secret;
 				reduced_loop_all.emplace(reduced_loop->loop_pc, *reduced_loop);
 				reduced_loop->discard();
 			}
@@ -6629,7 +6658,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 				for (u32 i = 0; i < reg->regs.size() && reduced_loop->active; i++)
 				{
-					if (::at32(reg->regs, i))
+					if (reg->regs.test(i))
 					{
 						if (0) if (i == op_rt || reg->modified == 0)
 						{
@@ -6675,11 +6704,11 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 						auto reg_org = reduced_loop->find_reg(i);
 						u32 reg_index = i;
 
-						if (reg_org && !cond_val_incr_before_cond && reg_org->modified == 0 && reg_org->regs.count() - 1u <= 1u && !::at32(reg_org->regs, i))
+						if (reg_org && !cond_val_incr_before_cond && reg_org->modified == 0 && reg_org->regs.count() - 1u <= 1u && !reg_org->regs.test(i))
 						{
 							for (u32 j = 0; j <= s_reg_127; j++)
 							{
-								if (::at32(reg_org->regs, j))
+								if (reg_org->regs.test(j))
 								{
 									if (const auto reg_found = reduced_loop->find_reg(j))
 									{
@@ -6748,7 +6777,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 							break;
 						}
 
-						if (reg_index != i && ::at32(reg->regs, reg_index))
+						if (reg_index != i && reg->regs.test(reg_index))
 						{
 							// Unimplemented
 							break_reduced_loop_pattern(30, reduced_loop->discard());
@@ -7071,14 +7100,14 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					}
 
 					std::array<u32, s_reg_max> reg_use{};
-					std::bitset<s_reg_max> reg_maybe_float{};
-					std::bitset<s_reg_max> reg_mod{};
+					bit_set<s_reg_max> reg_maybe_float{};
+					bit_set<s_reg_max> reg_mod{};
 
 					for (auto it = m_bbs.find(reduced_loop->loop_pc); it != m_bbs.end() && it->first <= bpc; it++)
 					{
 						for (u32 i = 0; i < s_reg_max; i++)
 						{
-							if (!reg_mod[i])
+							if (!reg_mod.test_unsafe(i))
 							{
 								reg_use[i] += it->second.reg_use[i];
 							}
@@ -7096,31 +7125,48 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 					for (u32 i = 0; i < s_reg_max; i++)
 					{
-						if (!::at32(reduced_loop->loop_dicts, i))
+						if (!reduced_loop->loop_dicts.test(i))
 						{
-							if (reg_use[i] && reg_mod[i])
+							if (reg_use[i] && reg_mod.test_unsafe(i))
 							{
 								reduced_loop->is_constant_expression = false;
-								reduced_loop->loop_writes.set(i);
-								reduced_loop->loop_may_update.reset(i);
+								reduced_loop->loop_writes.set_unsafe(i);
+								reduced_loop->loop_may_update.reset_unsafe(i);
 							}
 							else if (reg_use[i])
 							{
-								reduced_loop->loop_args.set(i);
+								reduced_loop->loop_args.set_unsafe(i);
 
-								if (reg_use[i] >= 3 && reg_maybe_float[i])
+								if (reg_use[i] >= 3 && reg_maybe_float.test_unsafe(i))
 								{
-									reduced_loop->gpr_not_nans.set(i);
+									reduced_loop->gpr_not_nans.set_unsafe(i);
 								}
 							}
 						}
 						else
 						{
 							// Cleanup
-							reduced_loop->loop_may_update.reset(i);
+							reduced_loop->loop_may_update.reset_unsafe(i);
 						}
 					}
 
+					bool is_secret = true;
+
+					for (u32 i = 0; i < s_reg_max; i++)
+					{
+						if (reduced_loop->loop_dicts.test_unsafe(i) || reduced_loop->loop_writes.test_unsafe(i))
+						{
+							if (const auto reg_it = reduced_loop->find_reg(i))
+							{
+								if (reg_it->regs.test_unsafe(s_reg_max))
+								{
+									is_secret = false;
+								}
+							}
+						}
+					}
+
+					reduced_loop->is_secret = is_secret;
 					reduced_loop_all.emplace(reduced_loop->loop_pc, *reduced_loop);
 					reduced_loop->discard();
 				}
@@ -8362,17 +8408,17 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 				u32 ra = s_reg_max, rb = s_reg_max, rc = s_reg_max;
 
-				if (::at32(m_use_ra, pos / 4))
+				if (m_use_ra.test(pos / 4))
 				{
 					ra = op.ra;
 				}
 
-				if (::at32(m_use_rb, pos / 4))
+				if (m_use_rb.test(pos / 4))
 				{
 					rb = op.rb;
 				}
 
-				if (::at32(m_use_rc, pos / 4))
+				if (m_use_rc.test(pos / 4))
 				{
 					rc = op.rc;
 				}
@@ -8611,6 +8657,10 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 	for (const auto& [loop_pc, pattern] : reduced_loop_all)
 	{
+		auto& stats = g_fxo->get<reduced_statistics_t>();
+
+		stats.all++;
+
 		if (!pattern.active || pattern.loop_pc == SPU_LS_SIZE)
 		{
 			continue;
@@ -8618,26 +8668,28 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 		if (inst_attr attr = m_inst_attrs[(loop_pc - entry_point) / 4]; attr == inst_attr::none)
 		{
+			stats.single++;
+
 			add_pattern(inst_attr::reduced_loop, loop_pc - result.entry_point, 0, std::make_shared<reduced_loop_t>(pattern));
 
 			std::string regs = "{";
 
-			for (const auto& [reg_num, reg] : pattern.regs)
+			for (u32 i = 0; i < s_reg_max; i++)
 			{
-				if (reg.is_loop_dictator(reg_num))
+				if (pattern.loop_dicts.test_unsafe(i))
 				{
 					if (regs.size() != 1)
 					{
 						regs += ",";
 					}
 
-					fmt::append(regs, " r%u", reg_num);
+					fmt::append(regs, " r%u", i);
 				}
 			}
 
 			for (u32 i = 0; i < s_reg_max; i++)
 			{
-				if (::at32(pattern.loop_writes, i))
+				if (pattern.loop_writes.test_unsafe(i))
 				{
 					if (regs.size() != 1)
 					{
@@ -8647,7 +8699,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					fmt::append(regs, " r%u-w", i);
 				}
 
-				if (::at32(pattern.loop_args, i))
+				if (pattern.loop_args.test_unsafe(i))
 				{
 					if (regs.size() != 1)
 					{
@@ -8657,7 +8709,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					fmt::append(regs, " r%u-r", i);
 				}
 
-				if (::at32(pattern.loop_may_update, i))
+				if (pattern.loop_may_update.test_unsafe(i))
 				{
 					if (regs.size() != 1)
 					{
@@ -8670,10 +8722,10 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 			regs += " }";
 
-			spu_log.success("Reduced Loop Pattern Detected! (REGS: %s, DICT: r%d, ARG: %s, Incr: %s (%s), CMP/Size: %s/%u, loop_pc=0x%x, 0x%x-%s)", regs, pattern.cond_val_register_idx
+			spu_log.success("Reduced Loop Pattern Detected! (REGS: %s, DICT: r%d, ARG: %s, Incr: %s (%s), CMP/Size: %s/%u, loop_pc=0x%x, 0x%x-%s) [All=%u/%u, Secret=%s/%u]", regs, pattern.cond_val_register_idx
 				, pattern.cond_val_is_immediate ? fmt::format("0x%x", pattern.cond_val_min) : fmt::format("r%d", pattern.cond_val_register_argument_idx)
 				, pattern.cond_val_incr_is_immediate ? fmt::format("%d", static_cast<s32>(pattern.cond_val_incr)) : fmt::format("r%d", pattern.cond_val_incr), pattern.cond_val_incr_before_cond ? "BEFORE" : "AFTER"
-				, pattern.cond_val_compare, std::popcount(pattern.cond_val_mask), loop_pc, entry_point, func_hash);
+				, pattern.cond_val_compare, std::popcount(pattern.cond_val_mask), loop_pc, entry_point, func_hash, +stats.single, +stats.all, pattern.is_secret ? "true" : "false", stats.secret_compatible.add_fetch(pattern.is_secret ? 1 : 0));
 		}
 	}
 
@@ -8712,6 +8764,8 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 void spu_recompiler_base::dump(const spu_program& result, std::string& out, u32 block_min, u32 block_max)
 {
+	block_max = std::min<u32>(block_max, SPU_LS_SIZE);
+
 	SPUDisAsm dis_asm(cpu_disasm_mode::dump, reinterpret_cast<const u8*>(result.data.data()), result.lower_bound);
 
 	std::string hash;

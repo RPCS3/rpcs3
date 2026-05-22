@@ -24,6 +24,7 @@
 #include "render_creator.h"
 #include "microphone_creator.h"
 #include "log_level_dialog.h"
+#include "anaglyph_settings_dialog.h"
 
 #include "Emu/NP/rpcn_countries.h"
 #include "Emu/GameInfo.h"
@@ -45,7 +46,7 @@
 
 LOG_CHANNEL(cfg_log, "CFG");
 
-std::pair<QString, int> get_data(const QComboBox* box, int index)
+static std::pair<QString, int> get_data(const QComboBox* box, int index)
 {
 	if (!box) return {};
 
@@ -57,7 +58,7 @@ std::pair<QString, int> get_data(const QComboBox* box, int index)
 	return { var_list[0].toString(), var_list[1].toInt() };
 }
 
-int find_item(const QComboBox* box, int value)
+static int find_item(const QComboBox* box, int value)
 {
 	for (int i = 0; box && i < box->count(); i++)
 	{
@@ -70,7 +71,7 @@ int find_item(const QComboBox* box, int value)
 	return -1;
 }
 
-void remove_item(QComboBox* box, int data_value, int def_value)
+static void remove_item(QComboBox* box, int data_value, int def_value)
 {
 	if (!box) return;
 
@@ -593,9 +594,15 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			ui->stereoRenderMode->setEnabled(stereo_allowed && stereo_enabled);
 			ui->stereoRenderEnabled->setEnabled(stereo_allowed);
 			ui->gb_screen_size->setEnabled(stereo_allowed && stereo_enabled);
+			ui->gb_anaglyph_settings->setEnabled(stereo_allowed && stereo_enabled);
 		};
 		connect(ui->resBox, &QComboBox::currentIndexChanged, this, [enable_3D_modes](int){ enable_3D_modes(); });
 		connect(ui->stereoRenderEnabled, &QCheckBox::checkStateChanged, this, [enable_3D_modes](Qt::CheckState){ enable_3D_modes(); });
+		connect(ui->pb_anaglyph_settings, &QAbstractButton::clicked, [this]()
+		{
+			anaglyph_settings_dialog* dlg = new anaglyph_settings_dialog(this, m_emu_settings);
+			dlg->open();
+		});
 		enable_3D_modes();
 	}
 	else
@@ -603,6 +610,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->stereoRenderMode->setCurrentIndex(find_item(ui->stereoRenderMode, static_cast<int>(g_cfg.video.stereo_render_mode.def)));
 		ui->stereoRenderEnabled->setChecked(false);
 		ui->gb_stereo->setEnabled(false);
+		ui->gb_anaglyph_settings->setEnabled(false);
 	}
 
 	// Checkboxes: main options
@@ -1424,14 +1432,19 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->enable_upnp, emu_settings_type::EnableUpnp);
 	SubscribeTooltip(ui->enable_upnp, tooltips.settings.enable_upnp);
 
+	m_emu_settings->EnhanceCheckBox(ui->derive_mac_from_psid, emu_settings_type::DeriveMacFromPsid);
+	SubscribeTooltip(ui->derive_mac_from_psid, tooltips.settings.derive_mac_from_psid);
+
 	// Comboboxes
 
 	connect(ui->netStatusBox, &QComboBox::currentIndexChanged, [this](int index)
 	{
 		if (index < 0) return;
 		const auto [text, value] = get_data(ui->netStatusBox, index);
-		ui->gb_edit_dns->setEnabled(static_cast<np_internet_status>(value) != np_internet_status::disabled);
-		ui->enable_upnp->setEnabled(static_cast<np_internet_status>(value) != np_internet_status::disabled);
+		const bool internet_enabled = static_cast<np_internet_status>(value) != np_internet_status::disabled;
+		ui->gb_edit_dns->setEnabled(internet_enabled);
+		ui->enable_upnp->setEnabled(internet_enabled);
+		ui->derive_mac_from_psid->setEnabled(internet_enabled);
 
 		if (static_cast<np_internet_status>(value) == np_internet_status::disabled)
 		{
@@ -2443,6 +2456,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->disableVertexCache, emu_settings_type::DisableVertexCache);
 	SubscribeTooltip(ui->disableVertexCache, tooltips.settings.disable_vertex_cache);
+
+	m_emu_settings->EnhanceCheckBox(ui->emulateDepthCompare, emu_settings_type::EmulateDepthCompare);
+	SubscribeTooltip(ui->emulateDepthCompare, tooltips.settings.emulate_depth_compare);
 
 	m_emu_settings->EnhanceCheckBox(ui->forceHwMSAAResolve, emu_settings_type::ForceHwMSAAResolve);
 	SubscribeTooltip(ui->forceHwMSAAResolve, tooltips.settings.force_hw_MSAA);

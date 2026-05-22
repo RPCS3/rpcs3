@@ -147,6 +147,7 @@ struct cfg_root : cfg::node
 		cfg::_bool disable_video_output{ this, "Disable Video Output", false, true };
 		cfg::_bool disable_vertex_cache{ this, "Disable Vertex Cache", false };
 		cfg::_bool disable_FIFO_reordering{ this, "Disable FIFO Reordering", false };
+		cfg::_bool emulate_depth_compare{ this, "Emulate Special Depth Comparison", false };
 		cfg::_bool frame_skip_enabled{ this, "Enable Frame Skip", false, true };
 		cfg::_bool force_cpu_blit_processing{ this, "Force CPU Blit", false, true }; // Debugging option
 		cfg::_bool disable_on_disk_shader_cache{ this, "Disable On-Disk Shader Cache", false };
@@ -233,6 +234,15 @@ struct cfg_root : cfg::node
 			cfg::uint<0, 100> blur_strength{ this, "Blur effect strength", 0, true };
 
 		} shader_preloading_dialog{ this };
+
+		struct anaglyph_matrices : cfg::node
+		{
+			anaglyph_matrices(cfg::node* _this) : cfg::node(_this, "Custom Anaglyph Matrices") {}
+
+			cfg::node_map_entry left{ this, "Matrix Left" };
+			cfg::node_map_entry right{ this, "Matrix Right" };
+
+		} custom_anaglyph_matrices{ this };
 
 	} video{ this };
 
@@ -323,6 +333,7 @@ struct cfg_root : cfg::node
 		cfg::string dns{this, "DNS address", "8.8.8.8"};
 		cfg::string swap_list{this, "IP swap list", ""};
 		cfg::_bool upnp_enabled{this, "UPNP Enabled", false};
+		cfg::_bool derive_mac_from_psid{this, "Derive MAC from PSID", false};
 
 		cfg::_enum<np_psn_status> psn_status{this, "PSN status", np_psn_status::disabled};
 		cfg::string country{this, "PSN Country", "us"};

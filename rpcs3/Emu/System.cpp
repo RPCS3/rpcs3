@@ -1835,6 +1835,24 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 			g_fxo->init<named_thread>("SPRX Loader"sv, [this, dir_queue, is_fast = m_precompilation_option.is_fast]() mutable
 			{
+#ifdef __APPLE__
+				// Apple Silicon W^X: this thread invokes ppu_initialize()
+				// and ppu_precompile(), which write into MAP_JIT pages.
+				// Without enabling write mode here, these writes segfault
+				// before the game can boot (reproducible: RDR BLUS30418
+				// crashes ~12s into boot at 0x300010000). Pair the enable
+				// with an RAII guard so execute mode is restored on every
+				// exit path (return, exception, etc.).
+				pthread_jit_write_protect_np(false);
+
+				struct jit_write_guard
+				{
+					~jit_write_guard()
+					{
+						pthread_jit_write_protect_np(true);
+					}
+				} _jit_guard;
+#endif
 				std::vector<ppu_module<lv2_obj>*> mod_list;
 
 				if (auto& _main = *ensure(g_fxo->try_get<main_ppu_module<lv2_obj>>()); !_main.path.empty())
@@ -3872,6 +3890,11 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 					tty_buffer.resize(tty_read_fd.read_at(m_tty_file_init_pos, tty_buffer.data(), tty_buffer.size()));
 					tty_read_fd.close();
 
+					if (!tty_buffer.empty() && std::isspace(tty_buffer.back()))
+					{
+						tty_buffer.resize(tty_buffer.find_last_not_of(" \f\n\r\t\v"sv) + 1);
+					}
+
 					if (!tty_buffer.empty())
 					{
 						// Mark start and end very clearly with RPCS3 put in it
@@ -3905,6 +3928,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 						std::string_view to_log = not_logged;
 						to_log = to_log.substr(0, 0x8000);
 						to_log = to_log.substr(0, utils::add_saturate<usz>(to_log.rfind("\n========== SPU BLOCK"sv), 1));
+						to_log = to_log.substr(0, utils::add_saturate<usz>(to_log.find_last_of("\n"sv), 1));
 						to_remove = to_log.size();
 
 						std::string new_log(to_log);
@@ -3957,6 +3981,11 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 							out_added += text_append.size();
 							iter = index + 1;
+						}
+
+						if (!new_log.empty() && std::isspace(new_log.back()))
+						{
+							new_log.resize(new_log.find_last_not_of(" \f\n\r\t\v"sv) + 1);
 						}
 
 						// Cannot log it all at once due to technical reasons, split it to 8MB at maximum of whole functions
@@ -4050,8 +4079,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			if (after_kill_callback)
 			{
 				// Make after_kill_callback empty before call
-				const auto callback = std::move(after_kill_callback);
-				callback();
+				std::exchange(ensure(after_kill_callback), nullptr)();
 			}
 		});
 	}));
@@ -4107,7 +4135,7 @@ game_boot_result Emulator::Restart(bool graceful, bool reset_path)
 	else
 	{
 		// Execute and empty the callback
-		::as_rvalue(std::move(Emu.after_kill_callback))();
+		std::exchange(ensure(Emu.after_kill_callback), nullptr)();
 	}
 
 	return game_boot_result::no_errors;

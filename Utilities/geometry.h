@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cmath>
 #include <type_traits>
 
@@ -1027,3 +1028,6 @@ using color1u = color1_base<unsigned int>;
 using color1i = color1_base<int>;
 using color1f = color1_base<float>;
 using color1d = color1_base<double>;
+
+using mat3f = color3_base<float>[3];
+static_assert(sizeof(mat3f) == sizeof(float) * 3 * 3);

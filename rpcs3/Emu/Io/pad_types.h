@@ -421,6 +421,14 @@ struct Button
 	}
 };
 
+struct ButtonExternal
+{
+	u32 m_offset = 0;
+	u32 m_outKeyCode = 0;
+	u16 m_value    = 0;
+	bool m_pressed = false;
+};
+
 struct AnalogStick
 {
 	u32 m_offset = 0;
@@ -433,6 +441,9 @@ struct AnalogStick
 	std::map<u32, u16> m_pressed_keys_max; // only used in keyboard_pad_handler
 	std::map<u32, u16> m_pressed_combos_min; // only used in keyboard_pad_handler
 	std::map<u32, u16> m_pressed_combos_max; // only used in keyboard_pad_handler
+	u8 m_stick_min = 0; // only used in keyboard_pad_handler
+	u8 m_stick_max = 128; // only used in keyboard_pad_handler
+	u8 m_stick_val = 128; // only used in keyboard_pad_handler
 
 	AnalogStick() {}
 	AnalogStick(u32 offset, std::vector<std::set<u32>> key_combos_min, std::vector<std::set<u32>> key_combos_max)
@@ -440,6 +451,12 @@ struct AnalogStick
 		, m_key_combos_min(std::move(key_combos_min))
 		, m_key_combos_max(std::move(key_combos_max))
 	{}
+};
+
+struct AnalogStickExternal
+{
+	u32 m_offset = 0;
+	u16 m_value = 128;
 };
 
 struct AnalogSensor
@@ -519,8 +536,8 @@ struct Pad
 	std::array<AnalogSensor, 4> m_sensors{};
 	std::array<VibrateMotor, 2> m_vibrate_motors{};
 
-	std::vector<Button> m_buttons_external;
-	std::array<AnalogStick, 4> m_sticks_external{};
+	std::vector<ButtonExternal> m_buttons_external;
+	std::array<AnalogStickExternal, 4> m_sticks_external{};
 
 	std::vector<std::shared_ptr<Pad>> copilots;
 

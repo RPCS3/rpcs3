@@ -2016,6 +2016,7 @@ void main_window::OnEmuStop()
 	ui->batchRemoveSPUCachesAct->setEnabled(true);
 	ui->removeHDD1CachesAct->setEnabled(true);
 	ui->removeAllCachesAct->setEnabled(true);
+	ui->removeFirmwareCacheAct->setEnabled(true);
 	ui->removeSavestatesAct->setEnabled(true);
 	ui->cleanUpGameListAct->setEnabled(true);
 
@@ -2070,6 +2071,7 @@ void main_window::OnEmuReady()
 	ui->batchRemoveSPUCachesAct->setEnabled(false);
 	ui->removeHDD1CachesAct->setEnabled(false);
 	ui->removeAllCachesAct->setEnabled(false);
+	ui->removeFirmwareCacheAct->setEnabled(false);
 	ui->removeSavestatesAct->setEnabled(false);
 	ui->cleanUpGameListAct->setEnabled(false);
 
@@ -2298,11 +2300,19 @@ void main_window::UpdateLanguageActions(const QStringList& language_codes, const
 	{
 		const QLocale locale      = QLocale(code);
 		const QString locale_name = QLocale::languageToString(locale.language());
+		const QString territory   = QLocale::territoryToString(locale.territory());
+
+		const bool is_unique = std::count_if(language_codes.cbegin(), language_codes.cend(), [&locale_name](const QString& code)
+		{
+			return locale_name == QLocale::languageToString(QLocale(code).language());
+		}) == 1;
+
+		const QString display_name = (!is_unique && !territory.isEmpty()) ? QString("%1 (%2)").arg(locale_name, territory) : locale_name;
 
 		// create new action
-		QAction* act = new QAction(locale_name, this);
+		QAction* act = new QAction(display_name, this);
 		act->setData(code);
-		act->setToolTip(locale_name);
+		act->setToolTip(display_name);
 		act->setCheckable(true);
 		act->setChecked(code == language_code);
 
@@ -3560,6 +3570,7 @@ void main_window::CreateDockWindows()
 	m_mw->setContextMenuPolicy(Qt::PreventContextMenu);
 
 	m_game_list_frame = new game_list_frame(m_gui_settings, m_emu_settings, m_persistent_settings, m_mw);
+	m_game_list_frame->setFeatures(m_game_list_frame->features() & ~QDockWidget::DockWidgetClosable);
 	m_debugger_frame = new debugger_frame(m_gui_settings, m_mw);
 	m_log_frame = new log_frame(m_gui_settings, m_mw);
 

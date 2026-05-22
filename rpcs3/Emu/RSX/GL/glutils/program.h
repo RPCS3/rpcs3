@@ -104,6 +104,7 @@ namespace gl
 				void operator = (const color4f& rhs) const { glProgramUniform4f(m_program.id(), location(), rhs.r, rhs.g, rhs.b, rhs.a); }
 				void operator = (const areaf& rhs) const { glProgramUniform4f(m_program.id(), location(), rhs.x1, rhs.y1, rhs.x2, rhs.y2); }
 				void operator = (const areai& rhs) const { glProgramUniform4i(m_program.id(), location(), rhs.x1, rhs.y1, rhs.x2, rhs.y2); }
+				void operator = (const mat3f& rhs) const { glProgramUniformMatrix3fv(m_program.id(), location(), 1, GL_FALSE, &rhs[0].rgb[0]); }
 				void operator = (const std::span<const int>& rhs) const { glProgramUniform1iv(m_program.id(), location(), ::size32(rhs), rhs.data()); }
 				void operator = (const std::span<const handle64_t>& rhs) const { glProgramUniformHandleui64vARB(m_program.id(), location(), ::size32(rhs), rhs.data()); }
 			};

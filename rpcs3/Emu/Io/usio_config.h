@@ -21,6 +21,7 @@ enum class usio_btn
 	tekken_button3,
 	tekken_button4,
 	tekken_button5,
+	card_tapping,
 
 	count
 };
@@ -46,6 +47,7 @@ struct cfg_usio final : public emulated_pad_config<usio_btn>
 	cfg_pad_btn<usio_btn> tekken_button3{this, "Tekken Button 3", usio_btn::tekken_button3, pad_button::cross};
 	cfg_pad_btn<usio_btn> tekken_button4{this, "Tekken Button 4", usio_btn::tekken_button4, pad_button::circle};
 	cfg_pad_btn<usio_btn> tekken_button5{this, "Tekken Button 5", usio_btn::tekken_button5, pad_button::R1};
+	cfg_pad_btn<usio_btn> card_tapping{this, "Card Tapping", usio_btn::card_tapping, pad_button::L1};
 };
 
 struct cfg_usios final : public emulated_pads_config<cfg_usio, 4>

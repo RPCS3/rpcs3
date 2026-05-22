@@ -1132,11 +1132,9 @@ void game_list_actions::BatchActionBySerials(progress_dialog* pdlg, const std::s
 			return false;
 		}
 
-		if (action(serial))
+		if (!action(serial))
 		{
-			const int done = index_ptr->load();
-			pdlg->setLabelText(progressLabel.arg(done + 1).arg(serials_size));
-			pdlg->SetValue(done + 1);
+			game_list_log.trace("Batch action for '%s' failed", serial);
 		}
 
 		(*index_ptr)++;
@@ -1154,11 +1152,21 @@ void game_list_actions::BatchActionBySerials(progress_dialog* pdlg, const std::s
 			indices.append(i);
 		}
 
-		QFutureWatcher<void>* future_watcher = new QFutureWatcher<void>(m_game_list_frame);
+		QFutureWatcher<bool>* future_watcher = new QFutureWatcher<bool>(m_game_list_frame);
 
-		future_watcher->setFuture(QtConcurrent::map(std::move(indices), *iterate_over_serial));
+		future_watcher->setFuture(QtConcurrent::mapped(std::move(indices), *iterate_over_serial));
 
-		connect(future_watcher, &QFutureWatcher<void>::finished, m_game_list_frame, [=, this]()
+		connect(future_watcher, &QFutureWatcher<bool>::resultReadyAt, m_game_list_frame, [=](int index)
+		{
+			if (future_watcher->resultAt(index))
+			{
+				const int done = pdlg->value() + 1;
+				pdlg->setLabelText(progressLabel.arg(done).arg(serials_size));
+				pdlg->SetValue(done);
+			}
+		});
+
+		connect(future_watcher, &QFutureWatcher<bool>::finished, m_game_list_frame, [=, this]()
 		{
 			pdlg->setLabelText(progressLabel.arg(index->load()).arg(serials_size));
 			pdlg->setCancelButtonText(tr("OK"));
@@ -1194,6 +1202,10 @@ void game_list_actions::BatchActionBySerials(progress_dialog* pdlg, const std::s
 
 		if ((*iterate_over_serial)(*index))
 		{
+			const int done = index->load();
+			pdlg->setLabelText(progressLabel.arg(done).arg(serials_size));
+			pdlg->SetValue(done);
+
 			QTimer::singleShot(1, m_game_list_frame, *periodic_func);
 			return;
 		}
