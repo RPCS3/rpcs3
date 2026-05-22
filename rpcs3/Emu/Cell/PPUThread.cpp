@@ -4641,9 +4641,6 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 	// Info to load to main JIT instance (true - compiled)
 	std::vector<std::pair<std::string, bool>> link_workload;
 
-	// Sync variable to acquire workloads
-	atomic_t<u32> work_cv = 0;
-
 	bool compiled_new = false;
 
 	bool has_mfvscr = false;
@@ -5250,12 +5247,16 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 	// Create worker threads for compilation
 	if (!workload.empty())
 	{
+		// Sync variable to acquire workloads
+		atomic_t<u64> work_cv = 0;
+		atomic_t<u64> work_done = 0;
+
 		// Update progress dialog
 		g_progr_ptotal += ::size32(workload);
 
 		*progress_dialog = get_localized_string(localized_string_id::PROGRESS_DIALOG_COMPILING_PPU_MODULES);
 
-		const u32 thread_count = std::min(::size32(workload), rpcs3::utils::get_max_threads());
+		const u32 thread_count = std::max<u32>(std::min<u32>(::size32(workload), rpcs3::utils::get_max_threads()), 1) - 1;
 
 		struct thread_index_allocator
 		{
@@ -5264,7 +5265,8 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 		struct thread_op
 		{
-			atomic_t<u32>& work_cv;
+			const std::add_pointer_t<atomic_t<u64>> work_cv;
+			const std::add_pointer_t<atomic_t<u64>> work_done;
 			std::vector<std::pair<std::string, ppu_module<lv2_obj>>>& workload;
 			const ppu_module<lv2_obj>& main_module;
 			const std::string& cache_path;
@@ -5272,10 +5274,11 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 			std::unique_lock<decltype(jit_core_allocator::sem)> core_lock;
 
-			thread_op(atomic_t<u32>& work_cv, std::vector<std::pair<std::string, ppu_module<lv2_obj>>>& workload
+			thread_op(atomic_t<u64>* _work_cv, atomic_t<u64>* _work_done, std::vector<std::pair<std::string, ppu_module<lv2_obj>>>& workload
 				, const cpu_thread* cpu, const ppu_module<lv2_obj>& main_module, const std::string& cache_path, decltype(jit_core_allocator::sem)& sem) noexcept
 
-				: work_cv(work_cv)
+				: work_cv(_work_cv)
+				, work_done(_work_done)
 				, workload(workload)
 				, main_module(main_module)
 				, cache_path(cache_path)
@@ -5287,6 +5290,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 			thread_op(const thread_op& other) noexcept
 				: work_cv(other.work_cv)
+				, work_done(other.work_done)
 				, workload(other.workload)
 				, main_module(other.main_module)
 				, cache_path(other.cache_path)
@@ -5309,7 +5313,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 	#ifdef __APPLE__
 				pthread_jit_write_protect_np(false);
 	#endif
-				for (u32 i = work_cv++; i < workload.size(); i = work_cv++, g_progr_pdone++)
+				for (u32 i = (*work_cv)++; i < workload.size(); i = (*work_cv)++, (*work_done)++, g_progr_pdone++)
 				{
 					if (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped())
 					{
@@ -5331,17 +5335,20 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				}
 
 				core_lock.unlock();
+
+	#ifdef __APPLE__
+				pthread_jit_write_protect_np(true);
+	#endif
 			}
 		};
 
 		// Prevent watchdog thread from terminating
 		g_watchdog_hold_ctr++;
 
-		named_thread_group threads(fmt::format("PPUW.%u.", ++g_fxo->get<thread_index_allocator>().index), thread_count
-			, thread_op(work_cv, workload, cpu, info, cache_path, g_fxo->get<jit_core_allocator>().sem)
-			, [&](u32 /*thread_index*/, thread_op& op)
+		const std::string worker_group_name = fmt::format("PPUW.%u.", ++g_fxo->get<thread_index_allocator>().index);
+		const auto try_lock_thread = [&](u32 thread_index, thread_op& op)
 		{
-			const bool to_lock = work_cv < workload.size() && (cpu ? !cpu->state.all_of(cpu_flag::exit) : !Emu.IsStopped());
+			const bool to_lock = (thread_index + *op.work_done) < workload.size() && (cpu ? !cpu->state.all_of(cpu_flag::exit) : !Emu.IsStopped());
 
 			if (!to_lock)
 			{
@@ -5352,7 +5359,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 			op.core_lock.lock();
 
 			// Second check before creating another thread
-			const bool to_unlock = !(work_cv < workload.size() && (cpu ? !cpu->state.all_of(cpu_flag::exit) : !Emu.IsStopped()));
+			const bool to_unlock = !((thread_index + *op.work_done) < workload.size() && (cpu ? !cpu->state.all_of(cpu_flag::exit) : !Emu.IsStopped()));
 
 			if (to_unlock)
 			{
@@ -5361,10 +5368,26 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 			}
 
 			return true;
-		});
+		};
+
+		named_thread_group threads(worker_group_name, thread_count
+			, thread_op(&work_cv, &work_done, workload, cpu, info, cache_path, g_fxo->get<jit_core_allocator>().sem)
+			, try_lock_thread);
+
+		const auto old_name = thread_ctrl::get_name();
+		thread_ctrl::set_name(worker_group_name + std::to_string(thread_count + 1));
+
+		thread_op cur_op(&work_cv, &work_done, workload, cpu, info, cache_path, g_fxo->get<jit_core_allocator>().sem);
+
+		if (try_lock_thread(thread_count, cur_op))
+		{
+			// Recycle current thread: reduce overall thrread count
+			cur_op();
+		}
 
 		threads.join();
-
+		
+		thread_ctrl::set_name(old_name);
 		g_watchdog_hold_ctr--;
 	}
 
