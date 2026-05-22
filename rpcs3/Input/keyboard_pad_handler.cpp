@@ -1022,10 +1022,12 @@ std::string keyboard_pad_handler::native_scan_code_to_string(int native_scan_cod
 	case 73: return "Num+9"; // Also "Num+PgUp" depending on numlock
 	case 83: return "Num+,"; // Also "Num+Del" depending on numlock
 	case 309: return "Num+/";
+	case 57397: return "Num+/";
 	case 55: return "Num+*";
 	case 74: return "Num+-";
 	case 78: return "Num++";
 	case 284: return "Num+Enter";
+	case 57372: return "Num+Enter";
 #else
 	// TODO
 #endif
