@@ -44,8 +44,6 @@
 #include "Emu/Io/LogitechG27.h"
 #endif
 
-#include <libusb.h>
-
 #ifdef _WIN32
 #if LIBUSB_WINDOWS_HOTPLUG && LIBUSB_API_VERSION >= 0x0100010C
 #define SYS_USBD_HOTPLUG_SUPPORTED 1
@@ -357,7 +355,7 @@ void usb_handler_thread::perform_scan()
 {
 	// look if any device which we could be interested in is actually connected
 	libusb_device** list = nullptr;
-	const ssize_t ndev   = libusb_get_device_list(ctx, &list);
+	const auto ndev = libusb_get_device_list(ctx, &list);
 	std::set<uint64_t> seen_usb_devices;
 
 	if (ndev < 0)
@@ -366,7 +364,7 @@ void usb_handler_thread::perform_scan()
 		return;
 	}
 
-	for (ssize_t index = 0; index < ndev; index++)
+	for (auto index = 0; index < ndev; index++)
 	{
 		libusb_device* dev = list[index];
 		libusb_device_descriptor desc;
