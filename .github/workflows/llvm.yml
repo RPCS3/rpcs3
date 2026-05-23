@@ -17,7 +17,7 @@ jobs:
   Windows_Build:
     if: github.event_name == 'workflow_dispatch'
     name: LLVM Windows (MSVC)
-    runs-on: windows-2025
+    runs-on: windows-2025-vs2026
     env:
       COMPILER: msvc
       CCACHE_SHA: '859141059ac950e1e8cd042c66f842f26b9e3a62a1669a69fe6ba180cb58bbdf'
@@ -47,9 +47,18 @@ jobs:
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@main
 
+      - name: Install VS2022 v143 MSVC toolchain
+        shell: pwsh
+        run: |
+          $vsInstaller = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe"
+          $vsPath = "C:\Program Files\Microsoft Visual Studio\18\Enterprise"
+          Write-Host "Installing v143 MSVC build tools..."
+          & $vsInstaller modify --installPath $vsPath --add Microsoft.VisualStudio.Component.VC.14.44.17.14.x86.x64 --quiet --norestart
+          Write-Host "v143 toolchain install completed (exit code: $LASTEXITCODE)"
+
       - name: Compile LLVM
         shell: pwsh
-        run: msbuild 3rdparty\llvm\llvm_build.vcxproj /p:SolutionDir="$(pwd)/" /p:Configuration=Release /v:minimal /p:Platform=x64 /p:PreferredToolArchitecture=x64 /p:CLToolPath=${{ env.CCACHE_BIN_DIR }} /p:UseMultiToolTask=true /p:CustomAfterMicrosoftCommonTargets="${{ github.workspace }}\buildfiles\msvc\ci_only.targets"
+        run: msbuild 3rdparty\llvm\llvm_build.vcxproj /p:SolutionDir="$(pwd)/" /p:Configuration=Release /v:minimal /p:Platform=x64 /p:PreferredToolArchitecture=x64 /p:PlatformToolset=v143 /p:CLToolPath=${{ env.CCACHE_BIN_DIR }} /p:UseMultiToolTask=true /p:CustomAfterMicrosoftCommonTargets="${{ github.workspace }}\buildfiles\msvc\ci_only.targets"
 
       - name: Pack up build artifacts
         run: |
