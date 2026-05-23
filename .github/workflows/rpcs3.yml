@@ -254,8 +254,8 @@ jobs:
         id: restore-build-ccache
         with:
           path: ${{ env.CCACHE_DIR }}
-          key: "${{ runner.os }}-ccache-${{ env.COMPILER }}-${{github.run_id}}"
-          restore-keys: ${{ runner.os }}-ccache-${{ env.COMPILER }}-
+          key: "${{ runner.os }}-ccache-${{ github.ref_name }}-${{ env.COMPILER }}-${{github.run_id}}"
+          restore-keys: ${{ runner.os }}-ccache-${{ github.ref_name }}-${{ env.COMPILER }}-
 
       - name: Restore Dependencies Cache
         uses: actions/cache/restore@main
