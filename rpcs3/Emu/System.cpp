@@ -188,13 +188,14 @@ void Emulator::CallFromMainThread(std::function<void()>&& func, atomic_t<u32>* w
 {
 	ensure(func);
 
-	std::string file_info = fmt::format("{}:{}", src_loc.file_name(), src_loc.line());
-	std::function<void()> final_func = [this, before = IsStopped(true), track_emu_state, thread_name = thread_ctrl::get_name(), src = src_loc
-		, count = (stop_ctr == umax ? +m_stop_ctr : stop_ctr), func = std::move(func)]
+	const char* src_file = src_loc.file_name();
+	const u32 src_line = src_loc.line();
+	std::function<void()> final_func = [this, before = IsStopped(true), track_emu_state, thread_name = thread_ctrl::get_name()
+	, src_file, src_line, count = (stop_ctr == umax ? +m_stop_ctr : stop_ctr), func = std::move(func)]
 	{
 		const bool call_it = (!track_emu_state || (count == m_stop_ctr && before == IsStopped(true)));
 
-		sys_log.trace("Callback from thread '%s' at [%s] is %s", thread_name, src, call_it ? "called" : "skipped");
+		sys_log.trace("Callback from thread '%s' at [%s] is %s", thread_name, src_file, src_line, call_it ? "called" : "skipped");
 
 		if (call_it)
 		{
