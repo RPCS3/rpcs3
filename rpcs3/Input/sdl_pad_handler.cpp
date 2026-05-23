@@ -481,14 +481,7 @@ PadHandlerBase::connection sdl_pad_handler::update_connection(const std::shared_
 		{
 			if (SDL_GamepadConnected(dev->sdl.gamepad))
 			{
-				if (SDL_HasEvents(SDL_EventType::SDL_EVENT_GAMEPAD_AXIS_MOTION, SDL_EventType::SDL_EVENT_GAMEPAD_BUTTON_UP) ||
-					SDL_HasEvents(SDL_EventType::SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN, SDL_EventType::SDL_EVENT_GAMEPAD_SENSOR_UPDATE) ||
-					SDL_HasEvent(SDL_EventType::SDL_EVENT_JOYSTICK_BATTERY_UPDATED))
-				{
-					return connection::connected;
-				}
-
-				return connection::no_data;
+				return connection::connected;
 			}
 
 			SDL_CloseGamepad(dev->sdl.gamepad);

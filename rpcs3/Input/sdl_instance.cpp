@@ -39,7 +39,7 @@ void sdl_instance::pump_events()
 
 	if (m_initialized)
 	{
-		const u64 sleep_us = std::clamp<u64>(g_cfg.io.pad_sleep.get(), 1000, 16000); // 1ms to 16ms
+		const u64 sleep_us = std::clamp<u64>(g_cfg.io.pad_sleep.get(), 100, 16000); // 0.1ms to 16ms
 
 		if ((get_system_time() - m_last_pump_us) < sleep_us)
 		{

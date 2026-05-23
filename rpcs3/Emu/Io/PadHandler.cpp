@@ -659,6 +659,8 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 		return;
 
 	auto button_values = get_button_values(device);
+	const u64 now = get_system_time();
+	constexpr u64 short_press_capture_us = 50'000;
 
 	// Find out if special buttons are pressed (introduced by RPCS3).
 	// These buttons will have a delay of one cycle, but whatever.
@@ -714,6 +716,12 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 				value = std::max(value, combo_val);
 				pressed = value > 0;
 			}
+		}
+
+		if (pressed && !button.m_pressed)
+		{
+			button.m_press_count++;
+			button.m_press_until_us = now + short_press_capture_us;
 		}
 
 		button.m_value = value;

@@ -385,6 +385,8 @@ struct Button
 	u32 m_outKeyCode = 0;
 	u16 m_value    = 0;
 	bool m_pressed = false;
+	u64 m_press_count = 0;
+	u64 m_press_until_us = 0;
 
 	std::vector<std::set<u32>> m_key_combos;
 
@@ -427,6 +429,8 @@ struct ButtonExternal
 	u32 m_outKeyCode = 0;
 	u16 m_value    = 0;
 	bool m_pressed = false;
+	u64 m_press_count = 0;
+	u64 m_press_until_us = 0;
 };
 
 struct AnalogStick

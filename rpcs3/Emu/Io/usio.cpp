@@ -5,6 +5,13 @@
 #include "Input/pad_thread.h"
 #include "Emu/Io/usio_config.h"
 #include "Emu/IdManager.h"
+#include "Emu/Cell/timers.hpp"
+
+#include <deque>
+#include <mutex>
+
+std::deque<int> g_taiko_queue[2][4];
+std::mutex g_taiko_mutex;
 
 LOG_CHANNEL(usio_log, "USIO");
 
@@ -214,18 +221,178 @@ void usb_device_usio::translate_input_taiko()
 	const auto handler = pad::get_pad_thread();
 
 	std::vector<u8> input_buf(0x60);
-	constexpr le_t<u16> c_hit = 0x1800;
 	le_t<u16> digital_input = 0;
+
+	static bool value_states[2][4] = {};
+	static bool previous_pressed[2][4] = {};
+	static u64 previous_press_count[2][4] = {};
+	static u16 active_values[2][4] = {};
+	static u8 active_reports[2][4] = {};
+	static usz next_output_lane[2][2] = {};
+	static u64 last_taiko_hit_us[2] = {};
+
+	constexpr usz max_queued_hits = 12;
+	constexpr usz max_center_release_drain_hits = 2;
+	constexpr usz max_side_release_drain_hits = 4;
+	constexpr u64 stale_queue_clear_us = 55'000;
+	constexpr u8 center_visible_reports = 1;
+	constexpr u8 side_visible_reports = 1;
+
+	const auto reset_taiko_lanes = [&](usz player)
+	{
+		if (player >= 2)
+			return;
+
+		std::lock_guard<std::mutex> queue_lock(g_taiko_mutex);
+		for (usz lane = 0; lane < 4; lane++)
+		{
+			value_states[player][lane] = false;
+			previous_pressed[player][lane] = false;
+			previous_press_count[player][lane] = 0;
+			active_values[player][lane] = 0;
+			active_reports[player][lane] = 0;
+		}
+		next_output_lane[player][0] = 0;
+		next_output_lane[player][1] = 0;
+		last_taiko_hit_us[player] = 0;
+
+		for (usz lane = 0; lane < 4; lane++)
+			g_taiko_queue[player][lane].clear();
+	};
+
+	const auto clear_queued_hits = [&](usz player)
+	{
+		std::lock_guard<std::mutex> queue_lock(g_taiko_mutex);
+		for (usz lane = 0; lane < 4; lane++)
+		{
+			g_taiko_queue[player][lane].clear();
+			active_values[player][lane] = 0;
+			active_reports[player][lane] = 0;
+		}
+	};
+
+	const auto clear_queued_group_hits = [&](usz player, usz group)
+	{
+		std::lock_guard<std::mutex> queue_lock(g_taiko_mutex);
+		const usz lane_a = group == 0 ? 1 : 0;
+		const usz lane_b = group == 0 ? 2 : 3;
+
+		g_taiko_queue[player][lane_a].clear();
+		g_taiko_queue[player][lane_b].clear();
+		active_values[player][lane_a] = 0;
+		active_values[player][lane_b] = 0;
+		active_reports[player][lane_a] = 0;
+		active_reports[player][lane_b] = 0;
+	};
+
+	const auto enqueue_hit = [&](usz player, usz lane, u64 count = 1)
+	{
+		std::lock_guard<std::mutex> queue_lock(g_taiko_mutex);
+		auto& queue = g_taiko_queue[player][lane];
+		while (count--)
+		{
+			if (queue.size() >= max_queued_hits)
+				continue;
+
+			queue.push_back(static_cast<int>(lane));
+		}
+	};
+
+	const auto trim_released_lane_hits = [&](usz player, usz lane)
+	{
+		std::lock_guard<std::mutex> queue_lock(g_taiko_mutex);
+		auto& queue = g_taiko_queue[player][lane];
+		const bool is_side_lane = lane == 0 || lane == 3;
+		const usz max_release_drain_hits = is_side_lane ? max_side_release_drain_hits : max_center_release_drain_hits;
+
+		while (queue.size() > max_release_drain_hits)
+			queue.pop_front();
+
+		active_values[player][lane] = 0;
+		active_reports[player][lane] = 0;
+	};
+
+	const auto update_hit_queue = [&](usz player, usz lane, bool pressed, u64 press_count) -> bool
+	{
+		bool counted_press = false;
+		bool queued_hit = false;
+
+		if (press_count > previous_press_count[player][lane])
+		{
+			enqueue_hit(player, lane, press_count - previous_press_count[player][lane]);
+			previous_press_count[player][lane] = press_count;
+			counted_press = true;
+			queued_hit = true;
+		}
+
+		if (!pressed)
+		{
+			if (previous_pressed[player][lane])
+				trim_released_lane_hits(player, lane);
+
+			previous_pressed[player][lane] = false;
+			return queued_hit;
+		}
+
+		if (!previous_pressed[player][lane] && !counted_press)
+		{
+			enqueue_hit(player, lane);
+			previous_pressed[player][lane] = true;
+			queued_hit = true;
+		}
+		else
+		{
+			previous_pressed[player][lane] = true;
+		}
+
+		return queued_hit;
+	};
+
+	const auto make_hit_value = [&](usz player, usz lane) -> u16
+	{
+		bool& state = value_states[player][lane];
+		const u16 hit_val = state ? 51 : 50;
+		state = !state;
+
+		return static_cast<u16>((hit_val << 15) / 100 + 1);
+	};
+
+	const auto write_hit_value = [&](u8* ptr, u16 value)
+	{
+		const le_t<u16> analog_val = value;
+		std::memcpy(ptr, &analog_val, sizeof(u16));
+	};
 
 	const auto translate_from_pad = [&](usz pad_number, usz player)
 	{
+		if (player >= 2 || pad_number >= g_cfg_usio.players.size())
+			return;
+
 		const usz offset = player * 8ULL;
 		auto& status = m_io_status[0];
+		bool taiko_pressed[4]{};
+		u64 taiko_press_counts[4]{};
 
 		if (const auto& pad = ::at32(handler->GetPads(), pad_number); pad->is_connected() && !pad->is_copilot() && is_input_allowed())
 		{
+			const auto get_press_count = [&](pad_button pad_btn) -> u64
+			{
+				const u32 button_offset = pad_button_offset(pad_btn);
+				const u32 keycode = pad_button_keycode(pad_btn);
+
+				for (const ButtonExternal& button : pad->m_buttons_external)
+				{
+					if (button.m_offset == button_offset && button.m_outKeyCode == keycode)
+					{
+						return button.m_press_count;
+					}
+				}
+
+				return 0;
+			};
+
 			const auto& cfg = ::at32(g_cfg_usio.players, pad_number);
-			cfg->handle_input(pad, false, [&](usio_btn btn, pad_button /*pad_btn*/, u16 /*value*/, bool pressed, bool& /*abort*/)
+			cfg->handle_input(pad, false, [&](usio_btn btn, pad_button pad_btn, u16 /*value*/, bool pressed, bool& /*abort*/)
 			{
 				switch (btn)
 				{
@@ -258,20 +425,20 @@ void usb_device_usio::translate_input_taiko()
 						digital_input |= 0x1000;
 					break;
 				case usio_btn::taiko_hit_side_left:
-					if (pressed)
-						std::memcpy(input_buf.data() + 32 + offset, &c_hit, sizeof(u16));
+					taiko_pressed[0] = taiko_pressed[0] || pressed;
+					taiko_press_counts[0] += get_press_count(pad_btn);
 					break;
 				case usio_btn::taiko_hit_center_right:
-					if (pressed)
-						std::memcpy(input_buf.data() + 36 + offset, &c_hit, sizeof(u16));
+					taiko_pressed[2] = taiko_pressed[2] || pressed;
+					taiko_press_counts[2] += get_press_count(pad_btn);
 					break;
 				case usio_btn::taiko_hit_side_right:
-					if (pressed)
-						std::memcpy(input_buf.data() + 38 + offset, &c_hit, sizeof(u16));
+					taiko_pressed[3] = taiko_pressed[3] || pressed;
+					taiko_press_counts[3] += get_press_count(pad_btn);
 					break;
 				case usio_btn::taiko_hit_center_left:
-					if (pressed)
-						std::memcpy(input_buf.data() + 34 + offset, &c_hit, sizeof(u16));
+					taiko_pressed[1] = taiko_pressed[1] || pressed;
+					taiko_press_counts[1] += get_press_count(pad_btn);
 					break;
 				case usio_btn::card_tapping:
 					if (pressed)
@@ -282,9 +449,87 @@ void usb_device_usio::translate_input_taiko()
 				}
 			});
 		}
+		else
+		{
+			reset_taiko_lanes(player);
+		}
 
 		if (player == 0 && status.test_on)
 			digital_input |= 0x80;
+
+		bool queued_hit = false;
+		bool queued_center_hit = false;
+		bool queued_side_hit = false;
+		for (usz lane = 0; lane < 4; lane++)
+		{
+			const bool lane_queued_hit = update_hit_queue(player, lane, taiko_pressed[lane], taiko_press_counts[lane]);
+			queued_hit = lane_queued_hit || queued_hit;
+			queued_center_hit = (lane == 1 || lane == 2) ? lane_queued_hit || queued_center_hit : queued_center_hit;
+			queued_side_hit = (lane == 0 || lane == 3) ? lane_queued_hit || queued_side_hit : queued_side_hit;
+		}
+
+		const bool center_pressed = taiko_pressed[1] || taiko_pressed[2];
+		const bool side_pressed = taiko_pressed[0] || taiko_pressed[3];
+
+		if (queued_center_hit && !side_pressed)
+			clear_queued_group_hits(player, 1);
+		if (queued_side_hit && !center_pressed)
+			clear_queued_group_hits(player, 0);
+
+		const u64 now_us = get_system_time();
+		if (queued_hit)
+		{
+			last_taiko_hit_us[player] = now_us;
+		}
+		else if (last_taiko_hit_us[player] != 0 && now_us - last_taiko_hit_us[player] > stale_queue_clear_us)
+		{
+			clear_queued_hits(player);
+			last_taiko_hit_us[player] = 0;
+		}
+
+		{
+			std::lock_guard<std::mutex> queue_lock(g_taiko_mutex);
+
+			for (usz lane = 0; lane < 4; lane++)
+				active_reports[player][lane] = 0;
+
+			const auto output_lane = [&](usz lane)
+			{
+				active_values[player][lane] = make_hit_value(player, lane);
+				active_reports[player][lane] = (lane == 0 || lane == 3) ? side_visible_reports : center_visible_reports;
+			};
+
+			const auto output_group = [&](usz group)
+			{
+				const usz lane_a = group == 0 ? 1 : 0;
+				const usz lane_b = group == 0 ? 2 : 3;
+				const usz preferred_lane = next_output_lane[player][group] == 0 ? lane_a : lane_b;
+				const usz fallback_lane = next_output_lane[player][group] == 0 ? lane_b : lane_a;
+				usz lane = preferred_lane;
+
+				if (g_taiko_queue[player][lane].empty())
+					lane = fallback_lane;
+
+				if (!g_taiko_queue[player][lane].empty())
+				{
+					g_taiko_queue[player][lane].pop_front();
+					output_lane(lane);
+					next_output_lane[player][group] = lane == lane_a ? 1 : 0;
+				}
+			};
+
+			output_group(0);
+			output_group(1);
+
+			for (usz lane = 0; lane < 4; lane++)
+			{
+				if (active_reports[player][lane] > 0)
+				{
+					write_hit_value(input_buf.data() + 32 + offset + lane * 2, active_values[player][lane]);
+					active_reports[player][lane]--;
+				}
+			}
+		}
 	};
 
 	for (usz i = 0; i < m_io_status.size(); i++)
@@ -826,8 +1071,8 @@ void usb_device_usio::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, Us
 
 	transfer->fake            = true;
 	transfer->expected_result = HC_CC_NOERR;
-	// The latency varies per operation but it doesn't seem to matter for this device so let's go fast!
-	transfer->expected_time = get_timestamp() + 1'000;
+	transfer->expected_time   = get_timestamp();
+	transfer->expected_count  = buf_size;
 
 	is_used = true;
 
@@ -836,14 +1081,26 @@ void usb_device_usio::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, Us
 	case 0x01:
 	{
 		// Write endpoint
-		transfer->expected_count = buf_size;
+		if (buf_size == 6 && (buf[0] & 0xF0) == USIO_COMMAND_READ)
+		{
+			const u8 channel = buf[0] & 0xF;
+			const u16 reg = *reinterpret_cast<le_t<u16>*>(&buf[2]);
+			const u16 length = *reinterpret_cast<le_t<u16>*>(&buf[4]);
+
+			if (reg == 0x1080)
+			{
+				response_seek = 0;
+				response.clear();
+				usio_read(channel, reg, length);
+				return;
+			}
+		}
 
 		if (expecting_data)
 		{
 			usio_data.insert(usio_data.end(), buf, buf + buf_size);
-			usio_length -= buf_size;
 
-			if (usio_length == 0)
+			if (usio_data.size() >= usio_length)
 			{
 				expecting_data = false;
 				usio_write(usio_channel, usio_register, usio_data);

@@ -309,6 +309,7 @@ void pad_thread::apply_copilots()
 		}
 
 		pad->m_buttons_external.resize(pad->m_buttons.size());
+		const u64 now = get_system_time();
 
 		for (usz i = 0; i < pad->m_buttons.size(); i++)
 		{
@@ -318,7 +319,9 @@ void pad_thread::apply_copilots()
 			dst.m_offset = src.m_offset;
 			dst.m_outKeyCode = src.m_outKeyCode;
 			dst.m_value = src.m_value;
-			dst.m_pressed = src.m_pressed;
+			dst.m_pressed = src.m_pressed || src.m_press_until_us > now;
+			dst.m_press_count = src.m_press_count;
+			dst.m_press_until_us = src.m_press_until_us;
 		}
 
 		for (usz i = 0; i < pad->m_sticks.size(); i++)
@@ -358,6 +361,13 @@ void pad_thread::apply_copilots()
 								button.m_value = other.m_value;
 							}
 						}
+						else if (other.m_press_until_us > now)
+						{
+							button.m_pressed = true;
+						}
+
+						button.m_press_count += other.m_press_count;
+						button.m_press_until_us = std::max(button.m_press_until_us, other.m_press_until_us);
 
 						break;
 					}
@@ -458,11 +468,6 @@ void pad_thread::operator()()
 
 	const auto start_threads = [this, &threads, &pad_mode]()
 	{
-		if (pad_mode == pad_handler_mode::single_threaded)
-		{
-			return;
-		}
-
 		input_log.notice("Starting pad threads...");
 
 #if defined(__APPLE__)
@@ -506,7 +511,7 @@ void pad_thread::operator()()
 						handler->process();
 					}
 
-					u64 pad_sleep = g_cfg.io.pad_sleep;
+					u64 pad_sleep = std::min<u64>(g_cfg.io.pad_sleep, 100);
 
 					if (Emu.IsPaused())
 					{
@@ -537,7 +542,7 @@ void pad_thread::operator()()
 
 					handler->process();
 
-					u64 pad_sleep = g_cfg.io.pad_sleep;
+					u64 pad_sleep = std::min<u64>(g_cfg.io.pad_sleep, 100);
 
 					if (Emu.IsPaused())
 					{
@@ -588,15 +593,8 @@ void pad_thread::operator()()
 
 		u32 connected_devices = 0;
 
-		if (pad_mode == pad_handler_mode::single_threaded)
-		{
-			for (auto& handler : m_handlers)
-			{
-				handler.second->process();
-				connected_devices += handler.second->connected_devices;
-			}
-		}
-		else
+		// Cemu-style fast input path: input handlers run on their own threads,
+		// even when the user's old config says "single-threaded".
 		{
 			for (auto& handler : m_handlers)
 			{
@@ -722,7 +720,7 @@ void pad_thread::operator()()
 			});
 		}
 
-		u64 pad_sleep = g_cfg.io.pad_sleep;
+		u64 pad_sleep = std::min<u64>(g_cfg.io.pad_sleep, 100);
 
 		if (Emu.GetStatus(false) == system_state::paused)
 		{

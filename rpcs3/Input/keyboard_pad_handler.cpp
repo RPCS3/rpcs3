@@ -3,11 +3,16 @@
 #include "Emu/Io/pad_config.h"
 #include "Emu/Io/KeyboardHandler.h"
 #include "Emu/Io/interception.h"
+#include "Emu/Cell/timers.hpp"
 #include "Input/product_info.h"
 #include "rpcs3qt/gs_frame.h"
 
 #include <algorithm>
 #include <QApplication>
+
+#ifdef _WIN32
+#include <Windows.h>
+#endif
 
 bool keyboard_pad_handler::Init()
 {
@@ -82,6 +87,8 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 	}
 
 	value = Clamp0To255(value);
+
+	std::lock_guard input_lock(m_input_mutex);
 
 	for (auto& pad : m_pads_internal)
 	{
@@ -194,7 +201,13 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 			}
 			else
 			{
+				const u16 old_actual_value = button.m_actual_value;
 				button.m_actual_value = register_new_button_value(button);
+				if (button.m_actual_value > 0 && old_actual_value == 0)
+				{
+					button.m_press_count++;
+					button.m_press_until_us = get_system_time() + 50'000;
+				}
 
 				// to get the fastest response time possible we don't wanna use any lerp with factor 1
 				if (button.m_analog)
@@ -371,6 +384,8 @@ void keyboard_pad_handler::Key(const u32 code, bool pressed, u16 value)
 
 void keyboard_pad_handler::release_all_keys()
 {
+	std::lock_guard input_lock(m_input_mutex);
+
 	for (auto& pad : m_pads_internal)
 	{
 		for (Button& button : pad.m_buttons)
@@ -1180,10 +1195,80 @@ bool keyboard_pad_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 
 void keyboard_pad_handler::process()
 {
+	std::lock_guard input_lock(m_input_mutex);
+
 	constexpr double stick_interval = 10.0;
 	constexpr double button_interval = 10.0;
 
 	const auto now = steady_clock::now();
+
+#ifdef _WIN32
+	const auto qt_key_to_vk = [](u32 code) -> int
+	{
+		if ((code >= Qt::Key_A && code <= Qt::Key_Z) || (code >= Qt::Key_0 && code <= Qt::Key_9))
+			return static_cast<int>(code);
+
+		switch (code)
+		{
+		case Qt::Key_Return:
+		case Qt::Key_Enter: return VK_RETURN;
+		case Qt::Key_Space: return VK_SPACE;
+		case Qt::Key_Backspace: return VK_BACK;
+		case Qt::Key_Tab: return VK_TAB;
+		case Qt::Key_Escape: return VK_ESCAPE;
+		case Qt::Key_Shift: return VK_SHIFT;
+		case Qt::Key_Control: return VK_CONTROL;
+		case Qt::Key_Alt: return VK_MENU;
+		case Qt::Key_Left: return VK_LEFT;
+		case Qt::Key_Right: return VK_RIGHT;
+		case Qt::Key_Up: return VK_UP;
+		case Qt::Key_Down: return VK_DOWN;
+		case Qt::Key_Delete: return VK_DELETE;
+		case Qt::Key_End: return VK_END;
+		case Qt::Key_PageDown: return VK_NEXT;
+		case Qt::Key_Home: return VK_HOME;
+		case Qt::Key_PageUp: return VK_PRIOR;
+		default: return 0;
+		}
+	};
+
+	std::set<u32> mapped_keys;
+	const auto add_combos = [&mapped_keys](const auto& combos)
+	{
+		for (const std::set<u32>& combo : combos)
+		{
+			mapped_keys.insert(combo.cbegin(), combo.cend());
+		}
+	};
+
+	for (const Pad& pad : m_pads_internal)
+	{
+		for (const Button& button : pad.m_buttons)
+			add_combos(button.m_key_combos);
+
+		for (const AnalogStick& stick : pad.m_sticks)
+		{
+			add_combos(stick.m_key_combos_min);
+			add_combos(stick.m_key_combos_max);
+		}
+	}
+
+	for (u32 key : mapped_keys)
+	{
+		const int vk = qt_key_to_vk(key);
+		if (!vk)
+			continue;
+
+		const bool pressed = (GetAsyncKeyState(vk) & 0x8000) != 0;
+		bool& old_pressed = m_native_key_states[key];
+
+		if (pressed != old_pressed)
+		{
+			Key(key, pressed);
+			old_pressed = pressed;
+		}
+	}
+#endif
 
 	const double elapsed_stick = std::chrono::duration_cast<std::chrono::microseconds>(now - m_stick_time).count() / 1000.0;
 	const double elapsed_button = std::chrono::duration_cast<std::chrono::microseconds>(now - m_button_time).count() / 1000.0;
@@ -1384,6 +1469,8 @@ void keyboard_pad_handler::process()
 
 			btn.m_value = btn_internal.m_value;
 			btn.m_pressed = btn_internal.m_pressed;
+			btn.m_press_count = btn_internal.m_press_count;
+			btn.m_press_until_us = btn_internal.m_press_until_us;
 		}
 
 		for (usz j = 0; j < pad->m_sticks.size(); j++)

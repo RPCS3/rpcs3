@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <set>
+#include <mutex>
 
 enum mouse : u32
 {
@@ -109,6 +111,8 @@ private:
 	bool m_keys_released = false;
 	bool m_mouse_move_used = false;
 	bool m_mouse_wheel_used = false;
+	std::unordered_map<u32, bool> m_native_key_states;
+	std::recursive_mutex m_input_mutex;
 	bool get_mouse_lock_state() const;
 	void release_all_keys();
 
