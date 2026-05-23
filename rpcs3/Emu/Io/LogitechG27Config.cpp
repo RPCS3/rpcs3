@@ -46,8 +46,8 @@ void fmt_class_string<g27_ffb_direction_type>::format(std::string& out, u64 arg)
 	{
 		switch (value)
 		{
-		case g27_ffb_direction_type::cartesian: return "cartesian";
 		case g27_ffb_direction_type::steering_axis: return "steering_axis";
+		case g27_ffb_direction_type::cartesian: return "cartesian";
 		case g27_ffb_direction_type::polar: return "polar";
 		}
 
