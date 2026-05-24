@@ -3723,6 +3723,30 @@ template <typename T1, typename T2, typename T3>
 		result.value = m_ir->CreateCall(get_intrinsic<u32[4], u8[16]>(llvm::Intrinsic::aarch64_neon_sdot), {data0, data1, data2});
 		return result;
 	}
+
+	template <typename T1, typename T2>
+	value_t<s32[4]> smull(T1 a, T2 b)
+	{
+		value_t<s32[4]> result;
+
+		const auto data0 = a.eval(m_ir);
+		const auto data1 = b.eval(m_ir);
+
+		result.value = m_ir->CreateCall(get_intrinsic<s32[4]>(llvm::Intrinsic::aarch64_neon_smull), {data0, data1});
+		return result;
+	}
+
+	template <typename T1, typename T2>
+	value_t<u32[4]> umull(T1 a, T2 b)
+	{
+		value_t<u32[4]> result;
+
+		const auto data0 = a.eval(m_ir);
+		const auto data1 = b.eval(m_ir);
+
+		result.value = m_ir->CreateCall(get_intrinsic<u32[4]>(llvm::Intrinsic::aarch64_neon_umull), {data0, data1});
+		return result;
+	}
 	
 template <typename T1, typename T2>
 	auto addp(T1 a, T2 b)

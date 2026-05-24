@@ -341,7 +341,7 @@ namespace rsx
 						continue;
 					}
 
-					for (const Button& button : pad->m_buttons_external)
+					for (const ButtonExternal& button : pad->m_buttons_external)
 					{
 						pad_button button_id = pad_button::pad_button_max_enum;
 						if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
@@ -418,7 +418,7 @@ namespace rsx
 							break;
 					}
 
-					for (const AnalogStick& stick : pad->m_sticks_external)
+					for (const AnalogStickExternal& stick : pad->m_sticks_external)
 					{
 						pad_button button_id = pad_button::pad_button_max_enum;
 						pad_button release_id = pad_button::pad_button_max_enum;

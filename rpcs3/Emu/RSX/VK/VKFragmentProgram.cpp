@@ -91,6 +91,11 @@ void VKFragmentDecompilerThread::prepareBindingTable()
 			}
 		}
 	}
+
+	if (m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE)
+	{
+		vk_prog->binding_table.frag_depth_input_location = location++;
+	}
 }
 
 void VKFragmentDecompilerThread::insertHeader(std::stringstream & OS)
@@ -240,6 +245,24 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 		}
 	}
 
+	if (m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE)
+	{
+		const auto frag_depth_type = (m_prog.ctrl & RSX_SHADER_CONTROL_MULTISAMPLED_ZBUFFER)
+			? "sampler2DMS"
+			: "sampler2D";
+
+		OS << "layout(set=" << vk::glsl::binding_set_index_fragment << ", binding=" << vk_prog->binding_table.frag_depth_input_location << ") uniform " << frag_depth_type << " frag_depth;\n";
+
+		auto in = vk::glsl::program_input::make(
+			glsl::glsl_fragment_program,
+			"frag_depth",
+			vk::glsl::input_type_texture,
+			vk::glsl::binding_set_index_fragment,
+			vk_prog->binding_table.frag_depth_input_location
+		);
+		inputs.push_back(in);
+	}
+
 	// Draw params are always provided by vertex program. Instead of pointer chasing, they're provided as varyings.
 	if (!(m_prog.ctrl & RSX_SHADER_CONTROL_INTERPRETER_MODEL))
 	{
@@ -341,6 +364,8 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.require_shadowProj_ops = properties.shadow_sampler_mask != 0 && properties.has_texShadowProj;
 	m_shader_props.require_alpha_kill = !!(m_prog.ctrl & RSX_SHADER_CONTROL_TEXTURE_ALPHA_KILL);
 	m_shader_props.require_color_format_convert = !!(m_prog.ctrl & RSX_SHADER_CONTROL_TEXTURE_FORMAT_CONVERT);
+	m_shader_props.emulate_depth_compare = !!(m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE);
+	m_shader_props.depth_buffer_multisampled = !!(m_prog.ctrl & RSX_SHADER_CONTROL_MULTISAMPLED_ZBUFFER);
 
 	// Declare global constants
 	if (m_shader_props.require_fog_read)
@@ -465,7 +490,8 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 	OS << "void main()\n";
 	OS << "{\n";
 
-	if (m_prog.ctrl & RSX_SHADER_CONTROL_ALPHA_TEST)
+	if ((m_prog.ctrl & RSX_SHADER_CONTROL_ALPHA_TEST) ||
+		(m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE))
 	{
 		OS <<
 			"	const uint rop_control = fs_contexts[_fs_context_offset].rop_control;\n"

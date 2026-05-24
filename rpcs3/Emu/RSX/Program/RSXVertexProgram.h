@@ -1,9 +1,9 @@
 #pragma once
 
 #include "program_util.h"
+#include "util/bit_set.hpp"
 
 #include <vector>
-#include <bitset>
 #include <set>
 
 enum vp_reg_type
@@ -227,7 +227,7 @@ struct RSXVertexProgram
 	u32 output_mask = 0;
 	u32 base_address = 0;
 	u32 entry = 0;
-	std::bitset<rsx::max_vertex_program_instructions> instruction_mask;
+	bit_set<rsx::max_vertex_program_instructions> instruction_mask;
 	std::set<u32> jump_table;
 
 	rsx::texture_dimension_extended get_texture_dimension(u8 id) const

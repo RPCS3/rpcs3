@@ -269,7 +269,8 @@ public:
 			{
 				if (!postpone_notify)
 				{
-					utils::bless<atomic_t<u32>>(&data)[1].notify_one();
+					const usz is_le = std::endian::native == std::endian::little ? 1 : 0;
+					utils::bless<atomic_t<u32>>(&data)[is_le].notify_one();
 				}
 			}
 
@@ -280,7 +281,8 @@ public:
 
 	void notify()
 	{
-		utils::bless<atomic_t<u32>>(&data)[1].notify_one();
+		const usz is_le = std::endian::native == std::endian::little ? 1 : 0;
+		utils::bless<atomic_t<u32>>(&data)[is_le].notify_one();
 	}
 
 	// Returns true on success
@@ -334,7 +336,8 @@ public:
 
 		if (old & bit_wait)
 		{
-			utils::bless<atomic_t<u32>>(&data)[1].notify_one();
+			const usz is_le = std::endian::native == std::endian::little ? 1 : 0;
+			utils::bless<atomic_t<u32>>(&data)[is_le].notify_one();
 		}
 
 		return static_cast<u32>(old);
