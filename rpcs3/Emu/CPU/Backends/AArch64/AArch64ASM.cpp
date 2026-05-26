@@ -292,7 +292,7 @@ namespace aarch64
         case ArgType::LLVMPtr:
         default:
             // Return placeholder identifier
-            return std::string("$") + std::to_string(*id++);
+            return std::string("$") + std::to_string((*id)++);
         }
     }
 }
