@@ -349,7 +349,7 @@ namespace fs
 			return false;
 		}
 
-		return _rhs.type_view == _lhs.type_view && std::equal(_rhs.data_view.begin(), _rhs.data_view.end(), _lhs.data_view.begin(), _lhs.data_view.end());
+		return _rhs.type_view == _lhs.type_view && _rhs.data_view.size() == _lhs.data_view.size() && std::equal(_rhs.data_view.begin(), _rhs.data_view.end(), _lhs.data_view.begin(), _lhs.data_view.end());
 	}
 
 	dir_base::~dir_base()

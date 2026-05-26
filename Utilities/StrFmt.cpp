@@ -587,7 +587,7 @@ void fmt_class_string<std::source_location>::format(std::string& out, u64 arg)
 		for (usz index = func.find_first_of('('); index != umax && func.size() >= 100u; index = func.find_first_of('(', index))
 		{
 			// Operator() function
-			if (func.compare(0, 3, "()("sv) == 0 || func.compare(0, 3, "() "sv))
+			if (func.compare(0, 3, "()("sv) == 0 || func.compare(0, 3, "() "sv) == 0)
 			{
 				if (usz not_space = func.find_first_not_of(' ', index + 2); not_space != umax && func[not_space] == '(')
 				{
