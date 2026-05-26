@@ -99,7 +99,7 @@ namespace vk
 		}
 
 		g_resource_manager.eid_completed(event_id);
-		g_last_completed_event = std::max(event_id, g_last_completed_event.load());
+		g_last_completed_event.atomic_op([event_id](u64& v) { v = std::max(event_id, v); });
 	}
 
 	void print_debug_markers()

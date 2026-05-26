@@ -162,7 +162,7 @@ namespace rsx
 				return *this;
 			}
 
-			T& operator ++ (int)
+			iterator operator ++ (int)
 			{
 				ensure(m_current);
 				auto old = *this;
