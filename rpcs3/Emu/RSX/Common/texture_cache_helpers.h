@@ -210,6 +210,13 @@ namespace rsx
 						continue;
 					}
 
+					// Skip zero-sized display buffers — buffer.height == 0 would underflow `(buffer.height - 1)`
+					// to ~UINT_MAX and produce a wild range.
+					if (!buffer.height || !buffer.width)
+					{
+						continue;
+					}
+
 					const auto buffer_range = address_range32::start_length(rsx::get_address(buffer.offset, CELL_GCM_LOCATION_LOCAL), pitch * (buffer.height - 1) + (buffer.width * bpp));
 					if (dst_range.inside(buffer_range))
 					{

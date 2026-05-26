@@ -195,7 +195,13 @@ namespace
 			const auto [prims, primitives_emulated] = vk::get_appropriate_topology(draw_clause.primitive);
 
 			const auto stream_length = rsx::method_registers.current_draw_clause.inline_vertex_array.size();
-			const u32 vertex_count = u32(stream_length * sizeof(u32)) / m_vertex_layout.interleaved_blocks[0]->attribute_stride;
+			const u32 attribute_stride = m_vertex_layout.interleaved_blocks[0]->attribute_stride;
+			if (attribute_stride == 0)
+			{
+				// Avoid division by zero from a guest-supplied zero stride.
+				return{ prims, false, 0, 0, 0, 0, {} };
+			}
+			const u32 vertex_count = u32(stream_length * sizeof(u32)) / attribute_stride;
 
 			if (!primitives_emulated)
 			{

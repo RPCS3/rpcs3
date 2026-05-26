@@ -650,6 +650,12 @@ void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst,
 		return;
 	case rsx::primitive_type::triangle_fan:
 	case rsx::primitive_type::polygon:
+		// Require at least 3 vertices — otherwise `(count - 2)` underflows to ~UINT_MAX and we write
+		// multi-GB worth of indices past the destination.
+		if (count < 3)
+		{
+			return;
+		}
 		for (unsigned i = 0; i < (count - 2); i++)
 		{
 			typedDst[3 * i] = 0;
