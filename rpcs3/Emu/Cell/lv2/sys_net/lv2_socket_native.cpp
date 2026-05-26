@@ -1071,11 +1071,27 @@ std::optional<s32> lv2_socket_native::sendmsg(s32 flags, const sys_net_msghdr& m
 		return {-SYS_NET_ECONNRESET};
 	}
 
+	// Cap iov count and aggregate payload size so a malformed msghdr cannot drive a multi-GB allocation
+	// or feed garbage to send().
+	constexpr int iovlen_cap = 1024;
+	constexpr usz total_cap = 0x1000000; // 16 MiB
+
+	if (msg.msg_iovlen < 0 || msg.msg_iovlen > iovlen_cap)
+	{
+		return {-SYS_NET_EMSGSIZE};
+	}
+
 	std::vector<u8> buf_copy;
 	for (int i = 0; i < msg.msg_iovlen; i++)
 	{
 		auto iov_base = msg.msg_iov[i].iov_base;
 		const u32 len = msg.msg_iov[i].iov_len;
+
+		if (len > total_cap || buf_copy.size() > total_cap - len)
+		{
+			return {-SYS_NET_EMSGSIZE};
+		}
+
 		const auto* src = vm::_ptr<const char>(iov_base.addr());
 		buf_copy.insert(buf_copy.end(), src, src + len);
 	}

@@ -770,8 +770,9 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 
 	sys_net.trace("sys_net_bnet_recvfrom(s=%d, buf=*0x%x, len=%u, flags=0x%x, addr=*0x%x, paddrlen=*0x%x)", s, buf, len, flags, addr, paddrlen);
 
-	// If addr is null, paddrlen must be null as well
-	if (!buf || !len || addr.operator bool() != paddrlen.operator bool())
+	// If addr is null, paddrlen must be null as well; otherwise verify the guest provided enough room
+	// because we always overwrite *paddrlen with sizeof(sys_net_sockaddr_in) on success below.
+	if (!buf || !len || addr.operator bool() != paddrlen.operator bool() || (paddrlen && *paddrlen < addr.size()))
 	{
 		return -SYS_NET_EINVAL;
 	}
@@ -779,6 +780,12 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 	if (flags & ~(SYS_NET_MSG_PEEK | SYS_NET_MSG_DONTWAIT | SYS_NET_MSG_WAITALL | SYS_NET_MSG_USECRYPTO | SYS_NET_MSG_USESIGNATURE))
 	{
 		fmt::throw_exception("sys_net_bnet_recvfrom(s=%d): unknown flags (0x%x)", flags);
+	}
+
+	// Cap the per-recv buffer size symmetrically with sendto.
+	if (len > 0x1000000)
+	{
+		return -SYS_NET_EINVAL;
 	}
 
 	s32 result = 0;
@@ -989,6 +996,13 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 		fmt::throw_exception("sys_net_bnet_sendto(s=%d): unknown flags (0x%x)", flags);
 	}
 
+	// Cap the guest-supplied length so we cannot drive multi-GB host allocations from a single syscall.
+	// 16 MiB is comfortably above any sane PS3 send size; sub-protocols (P2PS) impose stricter caps.
+	if (len > 0x1000000)
+	{
+		return -SYS_NET_EMSGSIZE;
+	}
+
 	if (addr && addrlen < sizeof(sys_net_sockaddr))
 	{
 		sys_net.error("sys_net_bnet_sendto(s=%d): bad addrlen (%u)", s, addrlen);
@@ -1117,6 +1131,13 @@ error_code sys_net_bnet_setsockopt(ppu_thread& ppu, s32 s, s32 level, s32 optnam
 	}
 
 	if (optlen < sizeof(s32))
+	{
+		return -SYS_NET_EINVAL;
+	}
+
+	// The largest legitimate socket option (e.g. sys_net_ip_mreq, sys_net_linger) is well under 256 bytes;
+	// reject larger inputs so a guest cannot drive multi-GB allocations via this syscall.
+	if (optlen > 256)
 	{
 		return -SYS_NET_EINVAL;
 	}
