@@ -107,6 +107,8 @@ void usb_device_passthrough::patch_descriptors()
 				device._device.idVendor = 0x12BA; // SCEA
 				device._device.idProduct = 0x2530; // Harmonix Real Guitar
 				break;
+			default:
+				break;
 		}
 	}
 }
