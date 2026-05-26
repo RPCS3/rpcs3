@@ -12,7 +12,7 @@ namespace date_time
 #ifdef _MSC_VER
 		localtime_s(&buf, &t);
 #else
-		buf = *localtime(&t);
+		localtime_r(&t, &buf);
 #endif
 		return buf;
 	}
@@ -24,7 +24,7 @@ namespace date_time
 #ifdef _MSC_VER
 		localtime_s(&buf, &t);
 #else
-		buf = *localtime(&t);
+		localtime_r(&t, &buf);
 #endif
 		char str[80];
 		strftime(str, sizeof(str), fmt, &buf);

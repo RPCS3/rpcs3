@@ -523,6 +523,7 @@ public:
 		for (auto slice = pop_all(); slice; slice.pop_front())
 		{
 			std::invoke(func, *slice);
+			count++;
 		}
 
 		return count;

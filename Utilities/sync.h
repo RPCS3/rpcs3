@@ -98,6 +98,10 @@ inline int futex(volatile void* uaddr, int futex_op, uint val, const timespec* t
 	case FUTEX_WAKE_PRIVATE:
 	case FUTEX_WAKE_BITSET_PRIVATE:
 	{
+		if (val == 0)
+		{
+			return 0;
+		}
 		for (;;)
 		{
 			int ret = 0;
