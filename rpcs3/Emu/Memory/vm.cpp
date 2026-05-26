@@ -2376,6 +2376,14 @@ namespace vm
 
 			const u32 flags = ar.pop<u32>();
 			const u64 size = ar.pop<u64>();
+
+			// Validate the requested shm size against the remaining state and a hard upper bound
+			// so a crafted savestate cannot trigger an OOM/abort via std::make_shared.
+			if (!size || (size & 0xFFF) || size > 0x1'0000'0000ull || size > ar.get_size(umax))
+			{
+				fmt::throw_exception("Invalid VM serialization state: shm size=0x%x, ar=%s", size, ar);
+			}
+
 			shm = std::make_shared<utils::shm>(size, flags);
 
 			// Load binary image
