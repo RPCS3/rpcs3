@@ -302,7 +302,7 @@ void signaling_handler::process_incoming_messages()
 		const auto update_rtt = [&](u64 rtt_timestamp)
 		{
 			u64 timestamp_now = get_micro_timestamp(now);
-			u64 rtt = timestamp_now - rtt_timestamp;
+			u64 rtt = (timestamp_now > rtt_timestamp) ? (timestamp_now - rtt_timestamp) : 0;
 			si->last_rtts[(si->rtt_counters % 6)] = rtt;
 			si->rtt_counters++;
 

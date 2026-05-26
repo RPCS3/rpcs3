@@ -636,7 +636,10 @@ namespace rpcn
 		std::vector<u8> data;
 		if (packet_size > RPCN_HEADER_SIZE)
 		{
+			constexpr u32 RPCN_MAX_PACKET_PAYLOAD = 16 * 1024 * 1024;
 			const u32 data_size = packet_size - RPCN_HEADER_SIZE;
+			if (data_size > RPCN_MAX_PACKET_PAYLOAD)
+				return error_and_disconnect("Packet payload exceeds maximum allowed size");
 			data.resize(data_size);
 			if (recvn(data.data(), data_size) != recvn_result::recvn_success)
 				return error_and_disconnect("Failed to receive a whole packet");

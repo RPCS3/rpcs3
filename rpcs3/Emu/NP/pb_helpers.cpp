@@ -319,8 +319,16 @@ namespace np
 			if (room_info)
 			{
 				// If we have SceNpMatching2RoomDataInternal available we point the pointers to the group there
-				sce_member_data->roomGroup = room_info->roomGroup + (pb_roomgroup.groupid().value() - 1);
-				edata.add_relocation<SceNpMatching2RoomGroup>(sce_member_data->roomGroup);
+				const u32 groupid = pb_roomgroup.groupid().value();
+				if (groupid >= 1 && groupid <= room_info->roomGroupNum)
+				{
+					sce_member_data->roomGroup = room_info->roomGroup + (groupid - 1);
+					edata.add_relocation<SceNpMatching2RoomGroup>(sce_member_data->roomGroup);
+				}
+				else
+				{
+					rpcn_log.error("RoomMemberDataInternal_to_SceNpMatching2RoomMemberDataInternal: invalid groupid %u (roomGroupNum=%u)", groupid, room_info->roomGroupNum);
+				}
 			}
 			else
 			{
