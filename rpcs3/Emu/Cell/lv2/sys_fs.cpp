@@ -1304,7 +1304,7 @@ error_code sys_fs_write(ppu_thread& ppu, u32 fd, vm::cptr<void> buf, u64 nbytes,
 
 	if (file->type != lv2_file_type::regular)
 	{
-		sys_fs.error("%s type: Writing %u bytes to FD=%d (path=%s)", file->type, nbytes, file->name.data());
+		sys_fs.error("%s type: Writing %u bytes to FD=%d (path=%s)", file->type, nbytes, fd, file->name.data());
 	}
 
 	if (file->mp.read_only)
