@@ -958,6 +958,13 @@ namespace vk
 			unspill(cmd);
 		}
 
+		// CRITICAL FIX: Ensure resolve surface exists for MSAA surfaces when transfer_read is requested
+		// This prevents crashes in get_surface(...) when resolve_surface is null after spilling
+		if (access.is_transfer() && samples() > 1 && !resolve_surface)
+		{
+			get_resolve_target_safe(cmd);
+		}
+
 		if (access == rsx::surface_access::shader_write && m_cyclic_ref_tracker.is_enabled())
 		{
 			if (current_layout == VK_IMAGE_LAYOUT_GENERAL || current_layout == VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT)

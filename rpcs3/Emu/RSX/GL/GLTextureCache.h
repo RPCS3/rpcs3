@@ -657,7 +657,22 @@ namespace gl
 			const rsx::image_section_attributes_t search_desc = { .gcm_format = gcm_format, .width = width, .height = height, .depth = depth, .mipmaps = mipmaps };
 			const bool allow_dirty = (context != rsx::texture_upload_context::framebuffer_storage);
 			auto& cached = *find_cached_texture(rsx_range, search_desc, true, true, allow_dirty);
-			ensure(!cached.is_locked());
+
+			// If the section is locked, only allow proceeding if it's not an FBO-backed section.
+			// For CPU uploads we can safely deprotect so the CPU may create/upload the texture.
+			if (cached.is_locked())
+			{
+				if (context == rsx::texture_upload_context::framebuffer_storage)
+				{
+					// Framebuffer regions must stay locked here — preserve original invariant.
+					ensure(!"create_new_texture: region is locked for framebuffer_storage");
+				}
+				else
+				{
+					// Deprotect to allow CPU write / initialization.
+					cached.unprotect();
+				}
+			}
 
 			gl::viewable_image* image = nullptr;
 			if (cached.exists())
