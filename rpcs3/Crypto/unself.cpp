@@ -626,6 +626,11 @@ bool SCEDecrypter::LoadMetadata(const u8 erk[32], const u8 riv[16])
 {
 	aes_context aes;
 	const auto metadata_info = std::make_unique<u8[]>(sizeof(meta_info));
+	if (sce_hdr.se_hsize < sizeof(sce_hdr) + sce_hdr.se_meta + sizeof(meta_info))
+	{
+		self_log.error("Invalid SCE header size (se_hsize=0x%llx, se_meta=0x%llx)", sce_hdr.se_hsize, sce_hdr.se_meta);
+		return false;
+	}
 	const auto metadata_headers_size = sce_hdr.se_hsize - (sizeof(sce_hdr) + sce_hdr.se_meta + sizeof(meta_info));
 	const auto metadata_headers = std::make_unique<u8[]>(metadata_headers_size);
 
@@ -1098,6 +1103,11 @@ bool SELFDecrypter::LoadMetadata(const u8* klic_key)
 {
 	aes_context aes;
 	const auto metadata_info = std::make_unique<u8[]>(sizeof(meta_info));
+	if (sce_hdr.se_hsize < sizeof(sce_hdr) + sce_hdr.se_meta + sizeof(meta_info))
+	{
+		self_log.error("Invalid SELF header size (se_hsize=0x%llx, se_meta=0x%llx)", sce_hdr.se_hsize, sce_hdr.se_meta);
+		return false;
+	}
 	const auto metadata_headers_size = sce_hdr.se_hsize - (sizeof(sce_hdr) + sce_hdr.se_meta + sizeof(meta_info));
 	const auto metadata_headers = std::make_unique<u8[]>(metadata_headers_size);
 
@@ -1154,6 +1164,14 @@ bool SELFDecrypter::LoadMetadata(const u8* klic_key)
 
 	// Load the metadata header.
 	meta_hdr.Load(metadata_headers.get());
+
+	// Validate that the metadata section headers and data keys fit in metadata_headers.
+	if (u64{meta_hdr.section_count} * sizeof(MetadataSectionHeader) + u64{meta_hdr.key_count} * 0x10 + sizeof(meta_hdr) > metadata_headers_size)
+	{
+		self_log.error("Invalid SELF metadata header (section_count=0x%x, key_count=0x%x, metadata_headers_size=0x%llx)",
+			meta_hdr.section_count, meta_hdr.key_count, metadata_headers_size);
+		return false;
+	}
 
 	// Load the metadata section headers.
 	meta_shdr.clear();

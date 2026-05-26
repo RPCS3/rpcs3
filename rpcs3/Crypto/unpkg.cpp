@@ -1462,10 +1462,13 @@ usz package_reader::decrypt(u64 offset, u64 size, const uchar* key, void* local_
 		pkg_log.error("Unknown release type (0x%x)", m_header.pkg_type);
 	}
 
-	if (blocks * 16 != size)
+	// On short reads, zero-pad the unread tail of the caller's buffer so consumers
+	// don't see garbage. The original "memset(out_data + size, 0, blocks*16 - size)"
+	// underflowed size_t when data_span.size() < size and could also write past the
+	// caller's buffer when size was not 16-aligned.
+	if (data_span.size() < size)
 	{
-		// Put NTS and other zeroes on unaligned reads
-		std::memset(out_data + size, 0, blocks * 16 - size);
+		std::memset(out_data + data_span.size(), 0, size - data_span.size());
 	}
 
 	// Return the amount of data written in buf
