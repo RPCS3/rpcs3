@@ -45,6 +45,11 @@ error_code cellAtracMultiSetDataAndGetMemSize(vm::ptr<CellAtracMultiHandle> pHan
 	cellAtracMulti.warning("cellAtracMultiSetDataAndGetMemSize(pHandle=*0x%x, pucBufferAddr=*0x%x, uiReadByte=0x%x, uiBufferByte=0x%x, uiOutputChNum=%d, piTrackArray=*0x%x, puiWorkMemByte=*0x%x)",
 		pHandle, pucBufferAddr, uiReadByte, uiBufferByte, uiOutputChNum, piTrackArray, puiWorkMemByte);
 
+	if (!puiWorkMemByte)
+	{
+		return CELL_ATRACMULTI_ERROR_API_FAIL;
+	}
+
 	*puiWorkMemByte = 0x1000;
 	return CELL_OK;
 }
@@ -53,6 +58,11 @@ error_code cellAtracMultiCreateDecoder(vm::ptr<CellAtracMultiHandle> pHandle, vm
 {
 	cellAtracMulti.warning("cellAtracMultiCreateDecoder(pHandle=*0x%x, pucWorkMem=*0x%x, uiPpuThreadPriority=%d, uiSpuThreadPriority=%d)", pHandle, pucWorkMem, uiPpuThreadPriority, uiSpuThreadPriority);
 
+	if (!pHandle || !pucWorkMem)
+	{
+		return CELL_ATRACMULTI_ERROR_API_FAIL;
+	}
+
 	std::memcpy(pHandle->ucWorkMem, pucWorkMem.get_ptr(), CELL_ATRACMULTI_HANDLE_SIZE);
 	return CELL_OK;
 }
@@ -60,6 +70,11 @@ error_code cellAtracMultiCreateDecoder(vm::ptr<CellAtracMultiHandle> pHandle, vm
 error_code cellAtracMultiCreateDecoderExt(vm::ptr<CellAtracMultiHandle> pHandle, vm::ptr<u8> pucWorkMem, u32 uiPpuThreadPriority, vm::ptr<CellAtracMultiExtRes> pExtRes)
 {
 	cellAtracMulti.warning("cellAtracMultiCreateDecoderExt(pHandle=*0x%x, pucWorkMem=*0x%x, uiPpuThreadPriority=%d, pExtRes=*0x%x)", pHandle, pucWorkMem, uiPpuThreadPriority, pExtRes);
+
+	if (!pHandle || !pucWorkMem)
+	{
+		return CELL_ATRACMULTI_ERROR_API_FAIL;
+	}
 
 	std::memcpy(pHandle->ucWorkMem, pucWorkMem.get_ptr(), CELL_ATRACMULTI_HANDLE_SIZE);
 	return CELL_OK;

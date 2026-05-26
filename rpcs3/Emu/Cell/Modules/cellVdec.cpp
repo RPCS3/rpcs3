@@ -478,7 +478,8 @@ struct vdec_context final
 
 						if (frame->repeat_pict)
 						{
-							fmt::throw_exception("Repeated frames not supported (handle=0x%x, seq_id=%d, cmd_id=%d, repear_pict=0x%x)", handle, cmd->seq_id, cmd->id, frame->repeat_pict);
+							// Driven by untrusted bitstream content; don't tear down the emulator on a crafted input.
+							cellVdec.error("Repeated frames not supported (handle=0x%x, seq_id=%d, cmd_id=%d, repeat_pict=0x%x)", handle, cmd->seq_id, cmd->id, frame->repeat_pict);
 						}
 
 						if (frame->pts != smin)
@@ -581,7 +582,7 @@ struct vdec_context final
 							{
 								std::lock_guard lock{mutex};
 
-								if (out_queue.size() <= out_max)
+								if (out_queue.size() < out_max)
 								{
 									break;
 								}

@@ -124,10 +124,20 @@ error_code cellSailDescriptorCreateDatabase(vm::ptr<CellSailDescriptor> pSelf, v
 {
 	cellSail.warning("cellSailDescriptorCreateDatabase(pSelf=*0x%x, pDatabase=*0x%x, size=0x%x, arg=0x%llx)", pSelf, pDatabase, size, arg);
 
+	if (!pSelf || !pDatabase)
+	{
+		return CELL_SAIL_ERROR_INVALID_ARG;
+	}
+
 	switch (pSelf->streamType)
 	{
 		case CELL_SAIL_STREAM_PAMF:
 		{
+			if (size < sizeof(CellPamfReader))
+			{
+				return CELL_SAIL_ERROR_INVALID_ARG;
+			}
+
 			u32 addr = pSelf->sp_;
 			auto ptr = vm::ptr<CellPamfReader>::make(addr);
 			memcpy(pDatabase.get_ptr(), ptr.get_ptr(), sizeof(CellPamfReader));

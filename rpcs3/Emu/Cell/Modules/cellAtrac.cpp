@@ -43,6 +43,11 @@ error_code cellAtracSetDataAndGetMemSize(vm::ptr<CellAtracHandle> pHandle, vm::p
 {
 	cellAtrac.warning("cellAtracSetDataAndGetMemSize(pHandle=*0x%x, pucBufferAddr=*0x%x, uiReadByte=0x%x, uiBufferByte=0x%x, puiWorkMemByte=*0x%x)", pHandle, pucBufferAddr, uiReadByte, uiBufferByte, puiWorkMemByte);
 
+	if (!puiWorkMemByte)
+	{
+		return CELL_ATRAC_ERROR_API_FAIL;
+	}
+
 	*puiWorkMemByte = 0x1000;
 	return CELL_OK;
 }
@@ -51,6 +56,11 @@ error_code cellAtracCreateDecoder(vm::ptr<CellAtracHandle> pHandle, vm::ptr<u8> 
 {
 	cellAtrac.warning("cellAtracCreateDecoder(pHandle=*0x%x, pucWorkMem=*0x%x, uiPpuThreadPriority=%d, uiSpuThreadPriority=%d)", pHandle, pucWorkMem, uiPpuThreadPriority, uiSpuThreadPriority);
 
+	if (!pHandle || !pucWorkMem)
+	{
+		return CELL_ATRAC_ERROR_API_FAIL;
+	}
+
 	std::memcpy(pHandle->ucWorkMem, pucWorkMem.get_ptr(), CELL_ATRAC_HANDLE_SIZE);
 	return CELL_OK;
 }
@@ -58,6 +68,11 @@ error_code cellAtracCreateDecoder(vm::ptr<CellAtracHandle> pHandle, vm::ptr<u8> 
 error_code cellAtracCreateDecoderExt(vm::ptr<CellAtracHandle> pHandle, vm::ptr<u8> pucWorkMem, u32 uiPpuThreadPriority, vm::ptr<CellAtracExtRes> pExtRes)
 {
 	cellAtrac.warning("cellAtracCreateDecoderExt(pHandle=*0x%x, pucWorkMem=*0x%x, uiPpuThreadPriority=%d, pExtRes=*0x%x)", pHandle, pucWorkMem, uiPpuThreadPriority, pExtRes);
+
+	if (!pHandle || !pucWorkMem)
+	{
+		return CELL_ATRAC_ERROR_API_FAIL;
+	}
 
 	std::memcpy(pHandle->ucWorkMem, pucWorkMem.get_ptr(), CELL_ATRAC_HANDLE_SIZE);
 	return CELL_OK;

@@ -232,6 +232,14 @@ error_code cellVpostExec(u32 handle, vm::cptr<u8> inPicBuff, vm::cptr<CellVpostC
 	u32 ow = ctrlParam->outWidth;
 	u32 oh = ctrlParam->outHeight;
 
+	// Reject dimensions that would overflow `new u8[w*h]` or cause sws_scale to use negative linesizes
+	// after the implicit int conversions below.
+	constexpr u32 max_dim = 4096;
+	if (!w || !h || !ow || !oh || w > max_dim || h > max_dim || ow > max_dim || oh > max_dim)
+	{
+		return CELL_VPOST_ERROR_E_ARG_HDL_INVALID;
+	}
+
 	//ctrlParam->inWindow; // ignored
 	if (ctrlParam->inWindow.x) cellVpost.notice("*** inWindow.x = %d", ctrlParam->inWindow.x);
 	if (ctrlParam->inWindow.y) cellVpost.notice("*** inWindow.y = %d", ctrlParam->inWindow.y);
