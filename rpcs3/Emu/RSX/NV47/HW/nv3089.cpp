@@ -626,7 +626,7 @@ namespace rsx
 				dst.width != out_w || dst.height != out_h;
 
 			const bool need_convert = out_format != in_format || !rsx::fcmp(fabsf(dst.scale_x), 1.f) || !rsx::fcmp(fabsf(dst.scale_y), 1.f);
-			const u32 slice_h = static_cast<u32>(std::ceil(static_cast<f32>(dst.clip_height + dst.clip_y) / dst.scale_y));
+			const u32 slice_h = static_cast<u32>(std::ceil(static_cast<f32>(dst.clip_height + dst.clip_y) / std::fabs(dst.scale_y)));
 			const bool interpolate = in_inter == blit_engine::transfer_interpolator::foh;
 
 			auto real_dst = dst.pixels;
