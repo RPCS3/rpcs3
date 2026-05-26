@@ -427,6 +427,14 @@ void spu_load_exec(const spu_exec_object& elf)
 	{
 		if (prog.p_type == 0x1u /* LOAD */ && prog.p_memsz)
 		{
+			// Reject malformed segments whose payload would write past the end of LS.
+			if (prog.p_vaddr >= SPU_LS_SIZE || prog.p_filesz > SPU_LS_SIZE - prog.p_vaddr)
+			{
+				spu_log.error("spu_load_exec: skipping segment with vaddr=0x%x filesz=0x%x (LS=0x%x)",
+					prog.p_vaddr, prog.p_filesz, SPU_LS_SIZE);
+				continue;
+			}
+
 			std::memcpy(spu->_ptr<void>(prog.p_vaddr), prog.bin.data(), prog.p_filesz);
 		}
 	}
@@ -496,6 +504,14 @@ void spu_load_rel_exec(const spu_rel_object& elf)
 	{
 		if (shdr.sh_type == sec_type::sht_progbits && shdr.sh_flags().all_of(sh_flag::shf_alloc))
 		{
+			// Reject sections that would write past the end of LS or overflow the cumulative offset.
+			if (offs >= SPU_LS_SIZE || shdr.sh_size > SPU_LS_SIZE - offs)
+			{
+				spu_log.error("spu_load_rel_exec: skipping section with offs=0x%x sh_size=0x%x (LS=0x%x)",
+					offs, shdr.sh_size, SPU_LS_SIZE);
+				continue;
+			}
+
 			std::memcpy(spu->_ptr<void>(offs), shdr.get_bin().data(), shdr.sh_size);
 			offs = utils::align<u32>(offs + shdr.sh_size, 4);
 		}

@@ -1204,6 +1204,15 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 
 			const auto ptr = get_ptr<u32>(_ptr);
 
+			// Reject lengths whose +4 would wrap u32 — otherwise the size and bounds checks below
+			// can be passed by an attacker-influenced .eh_frame entry, leading to an infinite loop
+			// or wild pointer advance.
+			if (ptr[0] > 0xFFFFFFFCu)
+			{
+				sec_end.set(0);
+				break;
+			}
+
 			const u32 size = ptr[0] + 4;
 
 			if (size == 4 && _ptr + 1 == sec_end)
