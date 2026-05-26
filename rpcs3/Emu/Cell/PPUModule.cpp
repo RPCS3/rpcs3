@@ -1733,7 +1733,7 @@ shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_load, c
 				vm::bptr<void, u64> ptr;
 			};
 
-			for (uint i = 0; i < prog.p_filesz; i += sizeof(ppu_prx_relocation_info))
+			for (uint i = 0; i + sizeof(ppu_prx_relocation_info) <= prog.p_filesz; i += sizeof(ppu_prx_relocation_info))
 			{
 				const auto& rel = reinterpret_cast<const ppu_prx_relocation_info&>(prog.bin[i]);
 
@@ -1858,7 +1858,10 @@ shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_load, c
 
 		// Access library information (TODO)
 		const auto lib_info = ensure(prx->get_ptr<const ppu_prx_library_info>(::narrow<u32>(prx->segs[0].addr + elf.progs[0].p_paddr - elf.progs[0].p_offset)));
-		const std::string lib_name = lib_info->name;
+
+		// `name` is a fixed 28-byte array in the PRX image — bound the C-string read so a non-terminated entry
+		// cannot walk past the field into adjacent segment memory.
+		const std::string lib_name(lib_info->name, ::strnlen(lib_info->name, sizeof(lib_info->name)));
 
 		strcpy_trunc(prx->module_info_name, lib_name);
 		prx->module_info_version[0] = lib_info->version[0];
@@ -1871,7 +1874,11 @@ shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_load, c
 		prx->exports_start = lib_info->exports_start;
 		prx->exports_end = lib_info->exports_end;
 
-		for (u32 start = prx->exports_start, size = 0;; size++)
+		// Defense in depth against a crafted PRX with attacker-influenced exports_start/end and module-info
+		// increments: bound iteration count and bail on any wrap-around.
+		constexpr u32 max_module_exports = 4096;
+
+		for (u32 start = prx->exports_start, size = 0; size <= max_module_exports; size++)
 		{
 			if (start >= prx->exports_end)
 			{
@@ -1881,7 +1888,20 @@ shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_load, c
 			}
 
 			const u8 increment = *ensure(prx->get_ptr<u8>(start));
-			start += increment ? increment : sizeof(ppu_prx_module_info);
+			const u32 step = increment ? increment : static_cast<u32>(sizeof(ppu_prx_module_info));
+
+			if (start + step < start)
+			{
+				// Address wraps u32 — abort.
+				fmt::throw_exception("PRX exports walker wrapped u32 (start=0x%x, step=0x%x)", start, step);
+			}
+
+			start += step;
+
+			if (size == max_module_exports)
+			{
+				fmt::throw_exception("PRX exports walker exceeded %u entries (start=0x%x, end=0x%x)", max_module_exports, prx->exports_start, prx->exports_end);
+			}
 		}
 
 		ppu_loader.warning("Library %s (rtoc=0x%x):", lib_name, lib_info->toc);

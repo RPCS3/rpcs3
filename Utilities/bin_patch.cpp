@@ -739,7 +739,12 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 
 	patch_data p_data{};
 	p_data.type            = type;
-	p_data.offset          = addr_node.as<u32>(0) + modifier;
+
+	// Compute (raw_addr + modifier) in u64 so the overflow check below sees the true value rather than
+	// the already-truncated u32 sum.
+	const u32 raw_offset = addr_node.as<u32>(0);
+	const u64 full_offset = static_cast<u64>(raw_offset) + modifier;
+	p_data.offset          = static_cast<u32>(full_offset);
 	p_data.original_offset = addr_node.Scalar();
 	p_data.original_value  = value_node.Scalar();
 
@@ -764,10 +769,10 @@ bool patch_engine::add_patch_data(YAML::Node node, patch_info& info, u32 modifie
 			append_log_message(log_messages, error_message, &patch_log.error);
 			return false;
 		}
-		if ((0xFFFFFFFF - modifier) < p_data.offset)
+		if (full_offset > 0xFFFFFFFFu)
 		{
 			error_message = fmt::format("Skipping patch data entry: [ %s, 0x%.8x, %s ] (key: %s, location: %s, file: %s) Invalid combination of patch offset 0x%.8x and modifier 0x%.8x (overflow)",
-				p_data.type, p_data.offset, p_data.original_value.empty() ? "?" : p_data.original_value, info.hash, get_yaml_node_location(node), path, p_data.offset, modifier);
+				p_data.type, p_data.offset, p_data.original_value.empty() ? "?" : p_data.original_value, info.hash, get_yaml_node_location(node), path, raw_offset, modifier);
 			append_log_message(log_messages, error_message, &patch_log.error);
 			return false;
 		}
@@ -1149,6 +1154,16 @@ static usz apply_modification(std::vector<u32>& applied, patch_engine::patch_inf
 			// Allow only if points to a PPU executable instruction
 			if (out_branch < 0x10000 || out_branch >= 0x4000'0000 || !vm::check_addr<4>(out_branch, vm::page_executable))
 			{
+				continue;
+			}
+
+			// Bound patch-supplied instruction count so a malicious patches.yml cannot drive multi-GB writes via std::fill_n below
+			// or wrap the u32 size computation.
+			constexpr u64 code_alloc_max_instructions = 0x10000; // 64 KiB of instructions
+
+			if (p.value.long_value == 0 || p.value.long_value > code_alloc_max_instructions)
+			{
+				patch_log.error("Invalid code_alloc patch instruction count: 0x%x", p.value.long_value);
 				continue;
 			}
 
