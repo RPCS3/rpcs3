@@ -339,7 +339,7 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 	manage_game_menu->addSeparator();
 
 	// Remove game
-	QAction* remove_game = manage_game_menu->addAction(tr("&Remove %1").arg(gameinfo->localized_category));
+	QAction* remove_game = manage_game_menu->addAction(tr("&Remove %0").arg(gameinfo->localized_category));
 	remove_game->setEnabled(!is_current_running_game);
 
 	// Custom Images menu
