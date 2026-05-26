@@ -136,7 +136,7 @@ error_code sys_overlay_load_module(vm::ptr<u32> ovlmid, vm::cptr<char> path, u64
 		return CELL_ENOSYS;
 	}
 
-	if (!path)
+	if (!path || !ovlmid || !entry)
 	{
 		return CELL_EFAULT;
 	}
@@ -152,6 +152,11 @@ error_code sys_overlay_load_module_by_fd(vm::ptr<u32> ovlmid, u32 fd, u64 offset
 	{
 		// Process not permitted
 		return CELL_ENOSYS;
+	}
+
+	if (!ovlmid || !entry)
+	{
+		return CELL_EFAULT;
 	}
 
 	if (static_cast<s64>(offset) < 0)

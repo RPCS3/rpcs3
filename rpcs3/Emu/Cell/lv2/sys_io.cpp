@@ -16,6 +16,13 @@ error_code sys_io_buffer_create(u32 block_count, u32 block_size, u32 blocks, u32
 		return CELL_EFAULT;
 	}
 
+	// Reject zero-sized or oversized configurations so sys_io_buffer_allocate cannot later compute
+	// block_count * block_size that wraps u32 and produce a tiny vm::alloc.
+	if (!block_count || !block_size || u64{block_count} * block_size > 0x10000000ull)
+	{
+		return CELL_EINVAL;
+	}
+
 	if (auto io = idm::make<lv2_io_buf>(block_count, block_size, blocks, unk1))
 	{
 		*handle = io;

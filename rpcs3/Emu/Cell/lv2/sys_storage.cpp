@@ -63,13 +63,20 @@ error_code sys_storage_read(u32 fd, u32 mode, u32 start_sector, u32 num_sectors,
 		return CELL_EFAULT;
 	}
 
-	std::memset(bounce_buf.get_ptr(), 0, num_sectors * 0x200ull);
+	// Cap num_sectors so a malicious caller can't drive a multi-TiB memset before we even validate fd.
+	if (num_sectors > 0x100000)
+	{
+		return CELL_EINVAL;
+	}
+
 	const auto handle = idm::get_unlocked<lv2_storage>(fd);
 
 	if (!handle)
 	{
 		return CELL_ESRCH;
 	}
+
+	std::memset(bounce_buf.get_ptr(), 0, num_sectors * 0x200ull);
 
 	if (handle->file)
 	{
