@@ -151,6 +151,7 @@ vm::ptr<CellGcmReportData> cellGcmGetReportDataAddressLocation(ppu_thread& ppu, 
 		if (index >= 1024 * 1024)
 		{
 			cellGcmSys.error("%s: Wrong main index (%d)", ppu.current_function, index);
+			return vm::null;
 		}
 
 		return vm::cast(gcmIoOffsetToAddress(0x0e000000 + index * 0x10));
@@ -161,6 +162,7 @@ vm::ptr<CellGcmReportData> cellGcmGetReportDataAddressLocation(ppu_thread& ppu, 
 	if (index >= 2048)
 	{
 		cellGcmSys.error("%s: Wrong local index (%d)", ppu.current_function, index);
+		return vm::null;
 	}
 
 	return vm::cast(rsx::get_current_renderer()->label_addr + ::offset32(&RsxReports::report) + index * 0x10);
@@ -173,6 +175,7 @@ u64 cellGcmGetTimeStamp(u32 index)
 	if (index >= 2048)
 	{
 		cellGcmSys.error("cellGcmGetTimeStamp: Wrong local index (%d)", index);
+		return 0;
 	}
 
 	const u32 address = rsx::get_current_renderer()->label_addr + ::offset32(&RsxReports::report) + index * 0x10;
@@ -188,6 +191,13 @@ u32 cellGcmGetCurrentField()
 u32 cellGcmGetNotifyDataAddress(u32 index)
 {
 	cellGcmSys.warning("cellGcmGetNotifyDataAddress(index=%d)", index);
+
+	// Notify area is a single 1 MiB IO page; reject out-of-range indices.
+	if (index >= 0x100000 / 0x40)
+	{
+		cellGcmSys.error("cellGcmGetNotifyDataAddress: index out of range (%d)", index);
+		return 0;
+	}
 
 	// If entry not in use, return NULL
 	u16 entry = g_fxo->get<gcm_config>().offsetTable.eaAddress[241];
@@ -213,6 +223,7 @@ u32 cellGcmGetReport(u32 type, u32 index)
 	if (index >= 2048)
 	{
 		cellGcmSys.error("cellGcmGetReport: Wrong local index (%d)", index);
+		return -1;
 	}
 
 	if (type < 1 || type > 5) {
@@ -230,6 +241,7 @@ u32 cellGcmGetReportDataAddress(u32 index)
 	if (index >= 2048)
 	{
 		cellGcmSys.error("cellGcmGetReportDataAddress: Wrong local index (%d)", index);
+		return 0;
 	}
 
 	return rsx::get_current_renderer()->label_addr + ::offset32(&RsxReports::report) + index * 0x10;
@@ -977,6 +989,12 @@ error_code cellGcmAddressToOffset(u32 address, vm::ptr<u32> offset)
 	// Address in main memory else check
 	else
 	{
+		// ioAddress[] has 0xC00 (3072) entries; address >> 20 may reach 0xFFF for arbitrary guest input.
+		if (address >> 20 >= 0xC00)
+		{
+			return CELL_GCM_ERROR_FAILURE;
+		}
+
 		const u32 upper12Bits = gcm_cfg.offsetTable.ioAddress[address >> 20];
 
 		// If the address is mapped in IO
@@ -1034,6 +1052,17 @@ error_code gcmMapEaIoAddress(ppu_thread& ppu, u32 ea, u32 io, u32 size, bool is_
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
+	// Defense-in-depth: validate the ea/io/size ranges fit our offset tables (ioAddress=3072 entries, eaAddress=512 entries).
+	// Performed in MiB units so the sum cannot wrap u32.
+	const u32 ea_mb = ea >> 20;
+	const u32 io_mb = io >> 20;
+	const u32 sz_mb = size >> 20;
+
+	if (ea_mb >= 0xC00 || sz_mb > 0xC00 - ea_mb || io_mb >= 0x200 || sz_mb > 0x200 - io_mb)
+	{
+		return CELL_GCM_ERROR_FAILURE;
+	}
+
 	if (auto error = sys_rsx_context_iomap(ppu, 0x55555555, io, ea, size, 0xe000000000000800ull | (u64{is_strict} << 60)))
 	{
 		return error;
@@ -1041,16 +1070,15 @@ error_code gcmMapEaIoAddress(ppu_thread& ppu, u32 ea, u32 io, u32 size, bool is_
 
 	// Assume lock is acquired
 	auto& gcm_cfg = g_fxo->get<gcm_config>();
-	ea >>= 20, io >>= 20, size >>= 20;
 
 	// Fill the offset table
-	for (u32 i = 0; i < size; i++)
+	for (u32 i = 0; i < sz_mb; i++)
 	{
-		gcm_cfg.offsetTable.ioAddress[ea + i] = io + i;
-		gcm_cfg.offsetTable.eaAddress[io + i] = ea + i;
+		gcm_cfg.offsetTable.ioAddress[ea_mb + i] = static_cast<u16>(io_mb + i);
+		gcm_cfg.offsetTable.eaAddress[io_mb + i] = static_cast<u16>(ea_mb + i);
 	}
 
-	gcm_cfg.IoMapTable[ea] = size;
+	gcm_cfg.IoMapTable[ea_mb] = static_cast<u16>(sz_mb);
 	return CELL_OK;
 }
 
@@ -1153,7 +1181,15 @@ error_code cellGcmReserveIoMapSize(u32 size)
 
 error_code GcmUnmapIoAddress(ppu_thread& ppu, gcm_config& gcm_cfg, u32 io)
 {
-	if (u32 ea = gcm_cfg.offsetTable.eaAddress[io >>= 20], size = gcm_cfg.IoMapTable[ea]; size)
+	io >>= 20;
+
+	// eaAddress[] is 0x200 (512) entries.
+	if (io >= 0x200)
+	{
+		return CELL_GCM_ERROR_FAILURE;
+	}
+
+	if (u32 ea = gcm_cfg.offsetTable.eaAddress[io], size = gcm_cfg.IoMapTable[ea]; size)
 	{
 		if (auto error = sys_rsx_context_iounmap(ppu, 0x55555555, io << 20, size << 20))
 		{
