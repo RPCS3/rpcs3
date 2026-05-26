@@ -21,7 +21,7 @@ namespace vk
 		* 56-57: Sharing (Max 1)    <- Boolean. Exclusive = 0, shared = 1
 		* 57-64: Flags   (Max 127)  <- We have some room here, we only care about a small subset of create flags.
 		*/
-		ensure(static_cast<u32>(format) < 0xFF);
+		ensure(static_cast<u32>(format) <= 0xFF);
 		return (static_cast<u64>(format) & 0xFF) |
 			(static_cast<u64>(w) << 8) |
 			(static_cast<u64>(h) << 24) |
