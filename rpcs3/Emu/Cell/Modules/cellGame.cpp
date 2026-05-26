@@ -225,9 +225,20 @@ static bool check_system_ver(vm::cptr<char> systemVersion)
 {
 	// Only allow something like "04.8300".
 	// The disassembly shows that "04.83" would also be considered valid, but the initial strlen check makes this void.
+	if (!systemVersion)
+	{
+		return false;
+	}
+
+	// Bounded length check so a guest can't make us walk off the end of a guest page.
+	const char* p = systemVersion.get_ptr();
+	const void* nul = std::memchr(p, '\0', 8);
+	if (!nul || static_cast<usz>(static_cast<const char*>(nul) - p) != 7)
+	{
+		return false;
+	}
+
 	return (
-		systemVersion &&
-		std::strlen(systemVersion.get_ptr()) == 7 &&
 		std::isdigit(systemVersion[0]) &&
 		std::isdigit(systemVersion[1]) &&
 		systemVersion[2] == '.' &&
@@ -874,6 +885,11 @@ error_code cellGameDataCheck(u32 type, vm::cptr<char> dirName, vm::ptr<CellGameC
 
 	if (type != CELL_GAME_GAMETYPE_DISC)
 	{
+		if (sysutil_check_name_string(dirName.get_ptr(), 1, CELL_GAME_DIRNAME_SIZE) != 0)
+		{
+			return {CELL_GAME_ERROR_PARAM, type};
+		}
+
 		name = dirName.get_ptr();
 	}
 
@@ -1313,12 +1329,19 @@ error_code cellGameDeleteGameData(vm::cptr<char> dirName)
 {
 	cellGame.warning("cellGameDeleteGameData(dirName=%s)", dirName);
 
-	if (!dirName)
+	if (!dirName || sysutil_check_name_string(dirName.get_ptr(), 1, CELL_GAME_DIRNAME_SIZE) != 0)
 	{
 		return CELL_GAME_ERROR_PARAM;
 	}
 
 	const std::string name = dirName.get_ptr();
+
+	// Reject path separators so the dirName cannot escape /dev_hdd0/game/.
+	if (name.find_first_of("/\\") != std::string::npos)
+	{
+		return CELL_GAME_ERROR_PARAM;
+	}
+
 	const std::string dir = vfs::get("/dev_hdd0/game/"s + name);
 
 	auto& perm = g_fxo->get<content_permission>();
@@ -1734,9 +1757,18 @@ error_code cellGameThemeInstall(vm::cptr<char> usrdirPath, vm::cptr<char> fileNa
 {
 	cellGame.todo("cellGameThemeInstall(usrdirPath=%s, fileName=%s, option=0x%x)", usrdirPath, fileName, option);
 
-	if (!usrdirPath || !fileName || !memchr(usrdirPath.get_ptr(), '\0', CELL_GAME_PATH_MAX) || option > CELL_GAME_THEME_OPTION_APPLY)
+	if (!usrdirPath || !fileName || !memchr(usrdirPath.get_ptr(), '\0', CELL_GAME_PATH_MAX) || !memchr(fileName.get_ptr(), '\0', CELL_GAME_PATH_MAX) || option > CELL_GAME_THEME_OPTION_APPLY)
 	{
 		return CELL_GAME_ERROR_PARAM;
+	}
+
+	// Reject path separators in fileName to keep installation within usrdirPath.
+	{
+		const std::string fn = fileName.get_ptr();
+		if (fn.find_first_of("/\\") != std::string::npos || fn == ".." || fn.find("..") != std::string::npos)
+		{
+			return CELL_GAME_ERROR_PARAM;
+		}
 	}
 
 	const std::string src_path = vfs::get(fmt::format("%s/%s", usrdirPath, fileName));

@@ -1090,6 +1090,12 @@ s32 _spurs::initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, 
 		return CELL_SPURS_CORE_ERROR_INVAL;
 	}
 
+	// Avoid a memcpy from a null guest pointer when a non-zero prefix size is supplied.
+	if (prefixSize && !prefix)
+	{
+		return CELL_SPURS_CORE_ERROR_NULL_POINTER;
+	}
+
 	if (process_is_spu_lock_line_reservation_address(spurs.addr(), SYS_MEMORY_ACCESS_RIGHT_SPU_THR))
 	{
 		return CELL_SPURS_CORE_ERROR_PERM;
@@ -1129,7 +1135,10 @@ s32 _spurs::initialize(ppu_thread& ppu, vm::ptr<CellSpurs> spurs, u32 revision, 
 	spurs->ppu1       = 0xffffffffull;
 	spurs->flags      = flags;
 	spurs->prefixSize = static_cast<u8>(prefixSize);
-	std::memcpy(spurs->prefix, prefix.get_ptr(), prefixSize);
+	if (prefixSize)
+	{
+		std::memcpy(spurs->prefix, prefix.get_ptr(), prefixSize);
+	}
 
 	if (!isSecond)
 	{
