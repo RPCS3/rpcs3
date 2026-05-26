@@ -941,34 +941,44 @@ namespace gem
 			// Correct outliers
 			if (vc.conversion_flags & CELL_GEM_FILTER_OUTLIER_PIXELS)
 			{
-				corrected_buffer.resize(width * height);
-
-				for (u32 y = 0; y < height; y++)
+				// The neighbour-sampling here hardcodes a 640-pixel pitch and 638/478 edge constants;
+				// it is only safe for the VGA 640x480 layout cellGem nominally requires. Skip the
+				// outlier-correction step on other dimensions rather than risk OOB indexing.
+				if (width == 640 && height == 480)
 				{
-					const u8* src = src_data + y * 640;
-					u8* dst = &corrected_buffer[y * 640];
+					corrected_buffer.resize(width * height);
 
-					for (u32 x = 0; x < width; x++, src++)
+					for (u32 y = 0; y < height; y++)
 					{
-						// Let's just say these 2 are outliers
-						if (const u8 val = *src; val > 0 && val < 255)
+						const u8* src = src_data + y * 640;
+						u8* dst = &corrected_buffer[y * 640];
+
+						for (u32 x = 0; x < width; x++, src++)
 						{
-							*dst++ = val;
-							continue;
+							// Let's just say these 2 are outliers
+							if (const u8 val = *src; val > 0 && val < 255)
+							{
+								*dst++ = val;
+								continue;
+							}
+
+							// Just take the 4 neighbours for now
+							s32 sum = 0;
+							if (y >= 2) sum += *(src - (2 * 640));
+							if (x >= 2) sum += *(src - 2);
+							if (x < 638) sum += *(src + 2);
+							if (y < 478) sum += *(src + (2 * 640));
+
+							*dst++ = sum / 4; // Ignore count. It will only be less than 4 on the edges
 						}
-
-						// Just take the 4 neighbours for now
-						s32 sum = 0;
-						if (y >= 2) sum += *(src - (2 * 640));
-						if (x >= 2) sum += *(src - 2);
-						if (x < 638) sum += *(src + 2);
-						if (y < 478) sum += *(src + (2 * 640));
-
-						*dst++ = sum / 4; // Ignore count. It will only be less than 4 on the edges
 					}
-				}
 
-				src_data = corrected_buffer.data();
+					src_data = corrected_buffer.data();
+				}
+				else
+				{
+					cellGem.warning("cellGem outlier-correction skipped for non-VGA dims (%ux%u)", width, height);
+				}
 			}
 
 			// Combine with previous frame

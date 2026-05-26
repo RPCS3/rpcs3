@@ -1642,6 +1642,17 @@ s32 UTF8stoUTF32s(vm::cptr<u8> src, vm::ptr<u32> src_len, vm::ptr<u32> dst, vm::
 
 	for (u32 src_pos = 0; src_pos < *src_len;)
 	{
+		// Reject truncated UTF-8 sequences before calling UTF8toUTF32, which would otherwise read
+		// up to three bytes past the guest-supplied buffer end.
+		const u8 lead = src[src_pos];
+		const u32 needed = ((lead & 0xf8) == 0xf0) ? 4 : ((lead & 0xf0) == 0xe0) ? 3 : ((lead & 0xe0) == 0xc0) ? 2 : 1u;
+		if (needed > *src_len - src_pos)
+		{
+			*src_len -= src_pos;
+			*dst_len = len;
+			return SRCIllegal;
+		}
+
 		const s32 utf8_len = UTF8toUTF32(src + src_pos, utf32_tmp);
 
 		if (utf8_len == 0)
@@ -2257,6 +2268,17 @@ s32 UTF8stoSBCSs(vm::cptr<u8> src, vm::ptr<u32> src_len, vm::ptr<u8> dst, vm::pt
 
 	for (u32 src_pos = 0; src_pos < *src_len;)
 	{
+		// Reject truncated UTF-8 sequences before calling UTF8toUCS2, which would otherwise read
+		// up to three bytes past the guest-supplied buffer end.
+		const u8 lead = src[src_pos];
+		const u32 needed = ((lead & 0xf8) == 0xf0) ? 4 : ((lead & 0xf0) == 0xe0) ? 3 : ((lead & 0xe0) == 0xc0) ? 2 : 1u;
+		if (needed > *src_len - src_pos)
+		{
+			*src_len -= src_pos;
+			*dst_len = len;
+			return SRCIllegal;
+		}
+
 		const s32 utf8_len = UTF8toUCS2(src + src_pos, ucs2_tmp);
 		if (utf8_len == 0)
 		{
@@ -2585,6 +2607,15 @@ s32 UTF8stoUTF16s(vm::cptr<u8> src, vm::ptr<u32> src_len, vm::ptr<u16> dst, vm::
 
 	for (u32 src_pos = 0; src_pos < *src_len;)
 	{
+		const u8 lead = src[src_pos];
+		const u32 needed = ((lead & 0xf8) == 0xf0) ? 4 : ((lead & 0xf0) == 0xe0) ? 3 : ((lead & 0xe0) == 0xc0) ? 2 : 1u;
+		if (needed > *src_len - src_pos)
+		{
+			*src_len -= src_pos;
+			*dst_len = len;
+			return SRCIllegal;
+		}
+
 		const s32 utf8_len = UTF8toUTF16(src + src_pos, utf16_tmp, utf16_len_tmp);
 
 		if (utf8_len == 0)
@@ -2652,6 +2683,15 @@ s32 UTF8stoUCS2s(vm::cptr<u8> src, vm::ptr<u32> src_len, vm::ptr<u16> dst, vm::p
 
 	for (u32 src_pos = 0; src_pos < *src_len;)
 	{
+		const u8 lead = src[src_pos];
+		const u32 needed = ((lead & 0xf8) == 0xf0) ? 4 : ((lead & 0xf0) == 0xe0) ? 3 : ((lead & 0xe0) == 0xc0) ? 2 : 1u;
+		if (needed > *src_len - src_pos)
+		{
+			*src_len -= src_pos;
+			*dst_len = len;
+			return SRCIllegal;
+		}
+
 		const s32 utf8_len = UTF8toUCS2(src + src_pos, ucs2_tmp);
 
 		if (utf8_len == 0 || *src_len < len)

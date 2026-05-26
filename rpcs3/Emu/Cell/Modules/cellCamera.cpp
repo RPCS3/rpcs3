@@ -359,7 +359,14 @@ u32 get_buffer_size_by_format(s32 format, s32 width, s32 height)
 		break;
 	}
 
-	return ::narrow<u32>(static_cast<u64>(std::ceil(width * height * bytes_per_pixel)));
+	// Reject pathological dimensions up front and compute the product in 64-bit so a guest that picks
+	// extreme width/height cannot make the s32 multiplication overflow before being widened.
+	if (width <= 0 || height <= 0 || width > 0x4000 || height > 0x4000)
+	{
+		return 0;
+	}
+
+	return ::narrow<u32>(static_cast<u64>(std::ceil(static_cast<f64>(width) * static_cast<f64>(height) * bytes_per_pixel)));
 }
 
 
