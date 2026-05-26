@@ -661,6 +661,11 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 		return CELL_EINVAL;
 	}
 
+	if (!thread)
+	{
+		return CELL_EFAULT;
+	}
+
 	if (!attr)
 	{
 		return CELL_EFAULT;
@@ -2459,6 +2464,11 @@ error_code sys_raw_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<void> at
 	ppu.state += cpu_flag::wait;
 
 	sys_spu.warning("sys_raw_spu_create(id=*0x%x, attr=*0x%x)", id, attr);
+
+	if (!id)
+	{
+		return CELL_EFAULT;
+	}
 
 	auto& limits = g_fxo->get<spu_limits_t>();
 

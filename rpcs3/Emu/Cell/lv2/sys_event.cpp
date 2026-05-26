@@ -231,6 +231,11 @@ error_code sys_event_queue_create(cpu_thread& cpu, vm::ptr<u32> equeue_id, vm::p
 		return CELL_EINVAL;
 	}
 
+	if (!equeue_id)
+	{
+		return CELL_EFAULT;
+	}
+
 	const u32 protocol = attr->protocol;
 
 	if (protocol != SYS_SYNC_FIFO && protocol != SYS_SYNC_PRIORITY)
@@ -433,6 +438,11 @@ error_code sys_event_queue_tryreceive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sy
 	if (queue->type != SYS_PPU_QUEUE)
 	{
 		return CELL_EINVAL;
+	}
+
+	if (!event_array || !number)
+	{
+		return CELL_EFAULT;
 	}
 
 	std::array<sys_event_t, 127> events;

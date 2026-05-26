@@ -449,6 +449,11 @@ error_code sys_memory_container_get_size(cpu_thread& cpu, vm::ptr<sys_memory_inf
 
 	sys_memory.warning("sys_memory_container_get_size(mem_info=*0x%x, cid=0x%x)", mem_info, cid);
 
+	if (!mem_info)
+	{
+		return CELL_EFAULT;
+	}
+
 	const auto ct = idm::get_unlocked<lv2_memory_container>(cid);
 
 	if (!ct)

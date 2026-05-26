@@ -2755,6 +2755,11 @@ error_code sys_fs_lseek(ppu_thread& ppu, u32 fd, s64 offset, s32 whence, vm::ptr
 
 	sys_fs.trace("sys_fs_lseek(fd=%d, offset=0x%llx, whence=0x%x, pos=*0x%x)", fd, offset, whence, pos);
 
+	if (!pos)
+	{
+		return CELL_EFAULT;
+	}
+
 	const auto file = idm::get_unlocked<lv2_fs_object, lv2_file>(fd);
 
 	if (!file)
