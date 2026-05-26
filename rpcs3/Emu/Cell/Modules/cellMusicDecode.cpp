@@ -180,6 +180,14 @@ error_code cell_music_decode_read(vm::ptr<void> buf, vm::ptr<u32> startTime, u64
 		return CELL_MUSIC_DECODE_ERROR_PARAM;
 	}
 
+	// Bound the guest-supplied request size so the memset below (which zero-fills the trailing
+	// reqSize - size_to_read bytes of the buffer) cannot run past the legitimate decoder output buffer.
+	constexpr u64 music_decode_max_req_size = 0x100000; // 1 MiB
+	if (reqSize > music_decode_max_req_size)
+	{
+		return CELL_MUSIC_DECODE_ERROR_PARAM;
+	}
+
 	*position = CELL_MUSIC_DECODE_POSITION_NONE;
 	*readSize = 0;
 	*startTime = 0;

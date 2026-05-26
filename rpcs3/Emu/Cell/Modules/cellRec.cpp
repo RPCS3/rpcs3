@@ -898,6 +898,18 @@ bool create_path(std::string& out, std::string dir_name, const std::string& file
 		return false;
 	}
 
+	// Reject .. segments so the recording can't escape the directory passed by the caller.
+	if (dir_name.find("..") != std::string::npos || file_name.find("..") != std::string::npos)
+	{
+		return false;
+	}
+
+	// The filename must not embed its own path separator.
+	if (file_name.find_first_of("/\\") != std::string::npos)
+	{
+		return false;
+	}
+
 	out = std::move(dir_name);
 
 	if (!out.empty() && out.back() != '/')

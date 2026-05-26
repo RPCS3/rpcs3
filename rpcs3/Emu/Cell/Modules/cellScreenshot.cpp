@@ -93,7 +93,11 @@ error_code cellScreenShotSetOverlayImage(vm::cptr<char> srcDir, vm::cptr<char> s
 	if (!srcDir || !srcFile)
 		return CELL_SCREENSHOT_ERROR_PARAM;
 
-	// TODO: check srcDir (size 1024) and srcFile (size 64) for '-' or '_' or '.' or '/' in some manner (range checks?)
+	// Bound both strings up front so the std::string constructor below cannot walk past a guest page boundary.
+	if (!memchr(srcDir.get_ptr(), '\0', 1024) || !memchr(srcFile.get_ptr(), '\0', 64))
+	{
+		return CELL_SCREENSHOT_ERROR_PARAM;
+	}
 
 	// Make sure that srcDir starts with /dev_hdd0, /dev_bdvd, /app_home or /host_root
 	if (strncmp(srcDir.get_ptr(), "/dev_hdd0", 9) && strncmp(srcDir.get_ptr(), "/dev_bdvd", 9) && strncmp(srcDir.get_ptr(), "/app_home", 9) && strncmp(srcDir.get_ptr(), "/host_root", 10))
@@ -101,11 +105,20 @@ error_code cellScreenShotSetOverlayImage(vm::cptr<char> srcDir, vm::cptr<char> s
 		return CELL_SCREENSHOT_ERROR_PARAM;
 	}
 
+	const std::string dir_str(srcDir.get_ptr());
+	const std::string file_str(srcFile.get_ptr());
+
+	// Reject .. segments and absolute traversal in either component so the eventual overlay path cannot escape the sandbox root.
+	if (dir_str.find("..") != std::string::npos || file_str.find("..") != std::string::npos || file_str.find_first_of("/\\") != std::string::npos)
+	{
+		return CELL_SCREENSHOT_ERROR_PARAM;
+	}
+
 	auto& manager = g_fxo->get<screenshot_manager>();
 	std::lock_guard lock(manager.mutex);
 
-	manager.overlay_dir_name = std::string(srcDir.get_ptr());
-	manager.overlay_file_name = std::string(srcFile.get_ptr());
+	manager.overlay_dir_name = dir_str;
+	manager.overlay_file_name = file_str;
 	manager.overlay_offset_x = offset_x;
 	manager.overlay_offset_y = offset_y;
 

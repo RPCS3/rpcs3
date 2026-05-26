@@ -165,6 +165,12 @@ error_code cellUserInfoSelectUser_ListType(vm::ptr<CellUserInfoTypeSet> listType
 			return CELL_USERINFO_ERROR_BUSY;
 		}
 
+		if (!memchr(listType->title.get_ptr(), '\0', CELL_USERINFO_TITLE_SIZE))
+		{
+			g_fxo->get<user_info_manager>().dialog_opened = false;
+			return CELL_USERINFO_ERROR_PARAM;
+		}
+
 		const std::string title = listType->title.get_ptr();
 		const u32 focused = listType->focus;
 
@@ -272,6 +278,12 @@ error_code cellUserInfoSelectUser_SetList(vm::ptr<CellUserInfoListSet> setList, 
 		{
 			g_fxo->get<user_info_manager>().dialog_opened = false;
 			return CELL_USERINFO_ERROR_BUSY;
+		}
+
+		if (!memchr(setList->title.get_ptr(), '\0', CELL_USERINFO_TITLE_SIZE))
+		{
+			g_fxo->get<user_info_manager>().dialog_opened = false;
+			return CELL_USERINFO_ERROR_PARAM;
 		}
 
 		const std::string title = setList->title.get_ptr();

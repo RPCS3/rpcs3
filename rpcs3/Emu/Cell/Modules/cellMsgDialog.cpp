@@ -376,7 +376,7 @@ error_code cellMsgDialogOpen2(u32 type, vm::cptr<char> msgString, vm::ptr<CellMs
 {
 	cellSysutil.warning("cellMsgDialogOpen2(type=0x%x, msgString=%s, callback=*0x%x, userData=*0x%x, extParam=*0x%x)", type, msgString, callback, userData, extParam);
 
-	if (!msgString || std::strlen(msgString.get_ptr()) >= CELL_MSGDIALOG_STRING_SIZE || type & -0x33f8)
+	if (!msgString || !memchr(msgString.get_ptr(), '\0', CELL_MSGDIALOG_STRING_SIZE) || type & -0x33f8)
 	{
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
@@ -599,7 +599,7 @@ error_code cellMsgDialogProgressBarSetMsg(u32 progressBarIndex, vm::cptr<char> m
 {
 	cellSysutil.warning("cellMsgDialogProgressBarSetMsg(progressBarIndex=%d, msgString=%s)", progressBarIndex, msgString);
 
-	if (!msgString || std::strlen(msgString.get_ptr()) >= CELL_MSGDIALOG_PROGRESSBAR_STRING_SIZE)
+	if (!msgString || !memchr(msgString.get_ptr(), '\0', CELL_MSGDIALOG_PROGRESSBAR_STRING_SIZE))
 	{
 		return CELL_MSGDIALOG_ERROR_PARAM;
 	}
