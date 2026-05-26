@@ -46,6 +46,16 @@ pup_object::pup_object(fs::file&& file) : m_file(std::move(file))
 		return;
 	}
 
+	// Bound file_count to what the header can actually contain (file table + hash table follow the header)
+	constexpr u64 entry_pair_size = sizeof(PUPFileEntry) + sizeof(PUPHashEntry);
+	const u64 max_entries_by_header = m_header.header_length > sizeof(PUPHeader) ? (m_header.header_length - sizeof(PUPHeader)) / entry_pair_size : 0;
+	if (m_header.file_count > max_entries_by_header || m_header.file_count > 65536)
+	{
+		m_formatted_error = fmt::format("Invalid PUP file_count: 0x%x (header_length=0x%x)", m_header.file_count, m_header.header_length);
+		m_error = pup_error::header_file_count;
+		return;
+	}
+
 	if (!m_file.read(m_file_tbl, m_header.file_count) || !m_file.read(m_hash_tbl, m_header.file_count))
 	{
 		m_error = pup_error::header_file_count;

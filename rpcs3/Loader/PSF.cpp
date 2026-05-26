@@ -222,8 +222,11 @@ namespace psf
 		{
 			PSF_CHECK(indices[i].key_off < header.off_data_table - header.off_key_table, error::corrupt);
 
-			// Get key name (null-terminated string)
-			std::string key(keys.data() + indices[i].key_off);
+			// Get key name (null-terminated string) - verify a NUL exists within the keys buffer
+			const usz key_remaining = keys.size() - indices[i].key_off;
+			const usz key_len = std::strnlen(keys.data() + indices[i].key_off, key_remaining);
+			PSF_CHECK(key_len < key_remaining, error::corrupt);
+			std::string key(keys.data() + indices[i].key_off, key_len);
 
 			// Check entry
 			PSF_CHECK(!result.sfo.contains(key), error::corrupt);
