@@ -868,6 +868,20 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 
 		std::string_view name = fmt::trim_back_sv(name_buf, "\0"sv);
 
+		// Reject path traversal in the PKG entry name. vfs::escape preserves '/' and '.', so the canonical
+		// form below could otherwise resolve to a directory anywhere on the host. Refuse any name containing
+		// ".." segments or backslashes (some PKG tools use them as separators).
+		bool name_traversal = name.find("..") != std::string_view::npos
+			|| name.find('\\') != std::string_view::npos
+			|| (!name.empty() && name.front() == '/');
+
+		if (name_traversal)
+		{
+			num_failures++;
+			pkg_log.error("PKG entry name contains traversal characters: '%s'", name);
+			break;
+		}
+
 		std::string path = m_install_path + vfs::escape(name);
 
 		if (entry.pad || (entry.type & ~PKG_FILE_ENTRY_KNOWN_BITS))
@@ -912,6 +926,19 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 				num_failures++;
 				pkg_log.error("Failed to get weakly_canonical path for '%s'", path);
 				break;
+			}
+
+			// Defense-in-depth: even after the name-level traversal reject above, verify the canonical
+			// path still lives under m_install_path so a future regression cannot smuggle traversal in.
+			{
+				std::error_code ec;
+				const std::string canon_root = std::filesystem::weakly_canonical(m_install_path, ec).string();
+				if (ec || canon_root.empty() || true_path.compare(0, canon_root.size(), canon_root) != 0)
+				{
+					num_failures++;
+					pkg_log.error("PKG entry escapes install path: '%s' (root='%s')", true_path, canon_root);
+					break;
+				}
 			}
 
 			auto map_ptr = &*all_install_entries.try_emplace(true_path).first;

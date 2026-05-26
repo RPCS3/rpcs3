@@ -5,6 +5,7 @@
 
 #include "Emu/Cell/PPUInterpreter.h"
 #include "Emu/Cell/Modules/sys_lv2dbg.h"
+#include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Memory/vm_locking.h"
 
 #include "util/asm.hpp"
@@ -17,6 +18,12 @@ error_code sys_dbg_read_process_memory(s32 pid, u32 address, u32 size, vm::ptr<v
 {
 	sys_dbg.warning("sys_dbg_read_process_memory(pid=0x%x, address=0x%llx, size=0x%x, data=*0x%x)", pid, address, size, data);
 
+	// This is a privileged debug syscall on real LV2 — restrict to root-perm processes only.
+	if (!g_ps3_process_info.has_root_perm())
+	{
+		return CELL_ENOSYS;
+	}
+
 	// Todo(TGEnigma): Process lookup (only 1 process exists right now)
 	if (pid != 1)
 	{
@@ -24,6 +31,12 @@ error_code sys_dbg_read_process_memory(s32 pid, u32 address, u32 size, vm::ptr<v
 	}
 
 	if (!size || !data)
+	{
+		return CELL_LV2DBG_ERROR_DEINVALIDARGUMENTS;
+	}
+
+	// Reject ranges that would wrap u32 so the subsequent `address + size` arithmetic is well-defined.
+	if (size > 0u - address)
 	{
 		return CELL_LV2DBG_ERROR_DEINVALIDARGUMENTS;
 	}
@@ -51,6 +64,13 @@ error_code sys_dbg_write_process_memory(s32 pid, u32 address, u32 size, vm::cptr
 {
 	sys_dbg.warning("sys_dbg_write_process_memory(pid=0x%x, address=0x%llx, size=0x%x, data=*0x%x)", pid, address, size, data);
 
+	// Privileged debug syscall — restrict to root-perm processes; otherwise any guest title could patch its
+	// own code pages via vm::get_super_ptr, bypassing read-only protections.
+	if (!g_ps3_process_info.has_root_perm())
+	{
+		return CELL_ENOSYS;
+	}
+
 	// Todo(TGEnigma): Process lookup (only 1 process exists right now)
 	if (pid != 1)
 	{
@@ -58,6 +78,11 @@ error_code sys_dbg_write_process_memory(s32 pid, u32 address, u32 size, vm::cptr
 	}
 
 	if (!size || !data)
+	{
+		return CELL_LV2DBG_ERROR_DEINVALIDARGUMENTS;
+	}
+
+	if (size > 0u - address)
 	{
 		return CELL_LV2DBG_ERROR_DEINVALIDARGUMENTS;
 	}
