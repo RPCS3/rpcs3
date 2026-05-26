@@ -191,7 +191,10 @@ namespace rsx
 			const u32 src_line_length = (std::min<u32>(in_w, in_x + static_cast<u32>(std::ceil(clip_w / scale_x))) * in_bpp);
 
 			u32 src_address = 0;
-			const u32 dst_address = get_address(dst_offset, dst_dma, 1); // TODO: Add size
+			// Conservatively size the destination using out_pitch * clip_h so a guest cannot drive a write past
+			// the end of the mapped region by setting dst_offset close to the boundary.
+			const u32 dst_write_length = u32{out_pitch} * clip_h;
+			const u32 dst_address = get_address(dst_offset, dst_dma, dst_write_length ? dst_write_length : 1);
 
 			if (!dst_address)
 			{

@@ -201,11 +201,27 @@ namespace rsx
 		const rsx::index_array_type type = REGS(m_ctx)->index_type();
 		const u32 type_size = get_index_type_size(type);
 
-		// Force aligned indices as realhw
-		const u32 address = (0 - type_size) & get_address(REGS(m_ctx)->index_array_address(), REGS(m_ctx)->index_array_location());
-
 		const u32 first = draw_indexed_clause.min_index();
 		const u32 count = draw_indexed_clause.get_elements_count();
+
+		// Validate the index array's total byte range against the iomap before returning a span; otherwise the
+		// backend uploader would read up to count*type_size bytes (up to ~64 MiB for a single u32-indexed draw)
+		// from a base that only the start of was checked.
+		const u64 total_bytes = (static_cast<u64>(first) + count) * type_size;
+
+		if (total_bytes > 0xFFFFFFFFull)
+		{
+			rsx_log.error("get_raw_index_array: index range overflows u32 (first=%u, count=%u, type_size=%u)", first, count, type_size);
+			return {};
+		}
+
+		// Force aligned indices as realhw
+		const u32 address = (0 - type_size) & get_address(REGS(m_ctx)->index_array_address(), REGS(m_ctx)->index_array_location(), static_cast<u32>(total_bytes));
+
+		if (!address)
+		{
+			return {};
+		}
 
 		const auto ptr = vm::_ptr<const std::byte>(address);
 		return { ptr + first * type_size, count * type_size };

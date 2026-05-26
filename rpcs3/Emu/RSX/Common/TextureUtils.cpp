@@ -1517,13 +1517,15 @@ namespace rsx
 
 	usz get_placed_texture_storage_size(const rsx::fragment_texture& texture, usz row_pitch_alignment, usz mipmap_alignment)
 	{
-		return get_placed_texture_storage_size(texture.width(), texture.height(), texture.depth(), texture.format(), texture.mipmap(), texture.cubemap(),
+		// Use the format-clamped mipmap count — texture.mipmap() returns a raw 16-bit register value that
+		// could otherwise drive a 65535-iteration loop inside the helper.
+		return get_placed_texture_storage_size(texture.width(), texture.height(), texture.depth(), texture.format(), texture.get_exact_mipmap_count(), texture.cubemap(),
 			row_pitch_alignment, mipmap_alignment);
 	}
 
 	usz get_placed_texture_storage_size(const rsx::vertex_texture& texture, usz row_pitch_alignment, usz mipmap_alignment)
 	{
-		return get_placed_texture_storage_size(texture.width(), texture.height(), texture.depth(), texture.format(), texture.mipmap(), texture.cubemap(),
+		return get_placed_texture_storage_size(texture.width(), texture.height(), texture.depth(), texture.format(), texture.get_exact_mipmap_count(), texture.cubemap(),
 			row_pitch_alignment, mipmap_alignment);
 	}
 
@@ -1545,7 +1547,9 @@ namespace rsx
 			pitch = get_format_packed_pitch(gcm_format, width, !!border, packed);
 		}
 
-		u32 size = 0;
+		// Compute the running total in 64-bit so a malformed texture (max width/height/mip combination) cannot
+		// overflow u32 and produce an under-sized buffer for the upload paths to walk past.
+		usz size = 0;
 		if (!packed)
 		{
 			// Constant pitch layout, simple scanning
@@ -1555,7 +1559,7 @@ namespace rsx
 				u32 mip_height = internal_height;
 				for (u32 mipmap = 0; mipmap < mipmaps && mip_height > 0; ++mipmap)
 				{
-					size += pitch * mip_height * depth;
+					size += static_cast<usz>(pitch) * mip_height * depth;
 					mip_height = std::max(mip_height / 2u, 1u);
 				}
 			}
@@ -1574,7 +1578,7 @@ namespace rsx
 				u32 mip_width = internal_width;
 				for (u32 mipmap = 0; mipmap < mipmaps && mip_height > 0; ++mipmap)
 				{
-					size += (mip_width * bytes_per_block * mip_height * depth);
+					size += static_cast<usz>(mip_width) * bytes_per_block * mip_height * depth;
 					mip_height = std::max(mip_height / 2u, 1u);
 					mip_width = std::max(mip_width / 2u, 1u);
 				}

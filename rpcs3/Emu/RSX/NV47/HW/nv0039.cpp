@@ -70,10 +70,33 @@ namespace rsx
 			u32 dst_dma = REGS(ctx)->nv0039_output_location();
 
 			const bool is_block_transfer = (in_pitch == out_pitch && out_pitch + 0u == line_length);
-			const auto read_address = get_address(src_offset, src_dma);
-			const auto write_address = get_address(dst_offset, dst_dma);
-			const auto read_length = in_pitch * (line_count - 1) + line_length;
-			const auto write_length = out_pitch * (line_count - 1) + line_length;
+
+			// Compute the read/write extents in 64-bit so attacker-supplied pitch * line_count combinations
+			// don't wrap u32 and pass the subsequent get_address size checks with bogus small lengths.
+			const u64 read_length_u64 = line_count
+				? static_cast<u64>(in_pitch) * (line_count - 1) + line_length
+				: 0;
+			const u64 write_length_u64 = line_count
+				? static_cast<u64>(out_pitch) * (line_count - 1) + line_length
+				: 0;
+
+			if (read_length_u64 > 0xFFFFFFFFull || write_length_u64 > 0xFFFFFFFFull)
+			{
+				rsx_log.error("NV0039_BUFFER_NOTIFY: oversized transfer rejected (read=0x%llx, write=0x%llx)", read_length_u64, write_length_u64);
+				return;
+			}
+
+			const auto read_length = static_cast<u32>(read_length_u64);
+			const auto write_length = static_cast<u32>(write_length_u64);
+
+			const auto read_address = get_address(src_offset, src_dma, read_length ? read_length : 1);
+			const auto write_address = get_address(dst_offset, dst_dma, write_length ? write_length : 1);
+
+			if (!read_address || !write_address)
+			{
+				rsx_log.error("NV0039_BUFFER_NOTIFY: unmapped read or write address (read=0x%x, write=0x%x)", read_address, write_address);
+				return;
+			}
 
 			RSX(ctx)->invalidate_fragment_program(dst_dma, dst_offset, write_length);
 
