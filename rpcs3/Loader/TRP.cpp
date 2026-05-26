@@ -141,9 +141,24 @@ bool TRPLoader::LoadHeader(bool show)
 
 	m_entries.clear();
 
+	// Sanity-check the count to avoid OOM from a corrupt/malicious header
+	const u64 trp_file_size = m_header.trp_file_size;
+	const u64 max_entries = trp_file_size > sizeof(m_header) ? (trp_file_size - sizeof(m_header)) / sizeof(TRPEntry) : 0;
+	if (m_header.trp_files_count > max_entries)
+	{
+		trp_log.error("TRP entry count (%u) exceeds the available space in the file", m_header.trp_files_count);
+		return false;
+	}
+
 	if (!trp_f.read(m_entries, m_header.trp_files_count))
 	{
 		return false;
+	}
+
+	// TRPEntry::name is fixed-size and treated as a C string; force NUL-termination defensively.
+	for (auto& entry : m_entries)
+	{
+		entry.name[sizeof(entry.name) - 1] = '\0';
 	}
 
 	if (show)
@@ -160,9 +175,10 @@ bool TRPLoader::LoadHeader(bool show)
 u64 TRPLoader::GetRequiredSpace() const
 {
 	const u64 file_size = m_header.trp_file_size;
-	const u64 file_element_size = u64{1} * m_header.trp_files_count * m_header.trp_element_size;
+	const u64 file_element_size = u64{m_header.trp_files_count} * m_header.trp_element_size;
+	const u64 header_size = sizeof(m_header) + file_element_size;
 
-	return file_size - sizeof(m_header) - file_element_size;
+	return file_size > header_size ? file_size - header_size : 0;
 }
 
 bool TRPLoader::ContainsEntry(std::string_view filename)
