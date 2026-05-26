@@ -60,9 +60,16 @@ error_code cellJpgDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellJp
 	current_subHandle.fd = 0;
 	current_subHandle.src = *src;
 
+	// Cap fileSize at 64 MiB so a crafted guest input cannot drive multi-GB host allocations later.
+	constexpr u64 jpgdec_max_input_size = 64 * 1024 * 1024;
+
 	switch (src->srcSelect)
 	{
 	case CELL_JPGDEC_BUFFER:
+		if (!src->streamSize || src->streamSize > jpgdec_max_input_size)
+		{
+			return CELL_JPGDEC_ERROR_OPEN_FILE;
+		}
 		current_subHandle.fileSize = src->streamSize;
 		break;
 
@@ -73,7 +80,13 @@ error_code cellJpgDecOpen(u32 mainHandle, vm::ptr<u32> subHandle, vm::ptr<CellJp
 		fs::file file_s(real_path);
 		if (!file_s) return CELL_JPGDEC_ERROR_OPEN_FILE;
 
-		current_subHandle.fileSize = file_s.size();
+		const u64 sz = file_s.size();
+		if (!sz || sz > jpgdec_max_input_size)
+		{
+			return CELL_JPGDEC_ERROR_OPEN_FILE;
+		}
+
+		current_subHandle.fileSize = sz;
 		current_subHandle.fd = idm::make<lv2_fs_object, lv2_file>(src->fileName.get_ptr(), std::move(file_s), 0, 0, real_path);
 		break;
 	}
@@ -124,6 +137,12 @@ error_code cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDe
 	const u64 fileSize = subHandle_data->fileSize;
 	CellJpgDecInfo& current_info = subHandle_data->info;
 
+	// Minimum size needed to parse the JFIF header below (SOI + APP0 + JFIF + at least one block past index 4 + SOF0 with 9 bytes).
+	if (fileSize < 0x14)
+	{
+		return CELL_JPGDEC_ERROR_HEADER;
+	}
+
 	// Write the header to buffer
 	std::unique_ptr<u8[]> buffer(new u8[fileSize]);
 
@@ -151,15 +170,24 @@ error_code cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDe
 
 	u32 i = 4;
 
-	if (i >= fileSize)
+	// Need at least bytes [i, i+1] readable.
+	if (i + 1 >= fileSize)
 		return CELL_JPGDEC_ERROR_HEADER;
 
-	u16 block_length = buffer[i] * 0xFF + buffer[i + 1];
+	u32 block_length = buffer[i] * 0x100u + buffer[i + 1];
 
 	while (true)
 	{
+		// Block length must advance the index forward; reject malformed lengths.
+		if (block_length < 2)
+		{
+			return CELL_JPGDEC_ERROR_HEADER;
+		}
+
 		i += block_length;                                  // Increase the file index to get to the next block
-		if (i >= fileSize ||                                // Check to protect against segmentation faults
+
+		// Need to read at least buffer[i] and buffer[i+1] below.
+		if (i + 1 >= fileSize ||
 			buffer[i] != 0xFF)                              // Check that we are truly at the start of another block
 		{
 			return CELL_JPGDEC_ERROR_HEADER;
@@ -169,7 +197,20 @@ error_code cellJpgDecReadHeader(u32 mainHandle, u32 subHandle, vm::ptr<CellJpgDe
 			break;                                          // 0xFFC0 is the "Start of frame" marker which contains the file size
 
 		i += 2;                                             // Skip the block marker
-		block_length = buffer[i] * 0xFF + buffer[i + 1];    // Go to the next block
+
+		// Need to read [i, i+1] to form the next block length.
+		if (i + 1 >= fileSize)
+		{
+			return CELL_JPGDEC_ERROR_HEADER;
+		}
+
+		block_length = buffer[i] * 0x100u + buffer[i + 1];  // Go to the next block
+	}
+
+	// SOF0 payload: we read up to buffer[i + 8].
+	if (i + 8 >= fileSize)
+	{
+		return CELL_JPGDEC_ERROR_HEADER;
 	}
 
 	current_info.imageWidth    = buffer[i + 7] * 0x100 + buffer[i + 8];
@@ -235,24 +276,33 @@ error_code cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data,
 	if (!image)
 		return CELL_JPGDEC_ERROR_STREAM_FORMAT;
 
+	// stbi returns non-negative width/height on success; reject pathological sizes that would overflow
+	// 32-bit byte arithmetic below.
+	if (width <= 0 || height <= 0 || width > 0x4000 || height > 0x4000)
+	{
+		return CELL_JPGDEC_ERROR_STREAM_FORMAT;
+	}
+
 	const bool flip = current_outParam.outputMode == CELL_JPGDEC_BOTTOM_TO_TOP;
-	const int bytesPerLine = static_cast<int>(dataCtrlParam->outputBytesPerLine);
-	usz image_size = width * height;
+	const u64 bytesPerLine = dataCtrlParam->outputBytesPerLine;
+	const u64 uWidth = static_cast<u64>(width);
+	const u64 uHeight = static_cast<u64>(height);
+	usz image_size = uWidth * uHeight;
 
 	switch(current_outParam.outputColorSpace)
 	{
 	case CELL_JPG_RGB:
 	case CELL_JPG_RGBA:
 	{
-		const char nComponents = current_outParam.outputColorSpace == CELL_JPG_RGBA ? 4 : 3;
+		const u64 nComponents = current_outParam.outputColorSpace == CELL_JPG_RGBA ? 4 : 3;
 		image_size *= nComponents;
-		if (bytesPerLine > width * nComponents || flip) //check if we need padding
+		if (bytesPerLine > uWidth * nComponents || flip) //check if we need padding
 		{
-			const int linesize = std::min(bytesPerLine, width * nComponents);
-			for (int i = 0; i < height; i++)
+			const u64 linesize = std::min<u64>(bytesPerLine, uWidth * nComponents);
+			for (u64 i = 0; i < uHeight; i++)
 			{
-				const int dstOffset = i * bytesPerLine;
-				const int srcOffset = width * nComponents * (flip ? height - i - 1 : i);
+				const u64 dstOffset = i * bytesPerLine;
+				const u64 srcOffset = uWidth * nComponents * (flip ? uHeight - i - 1 : i);
 				memcpy(&data[dstOffset], &image.get()[srcOffset], linesize);
 			}
 		}
@@ -264,18 +314,18 @@ error_code cellJpgDecDecodeData(u32 mainHandle, u32 subHandle, vm::ptr<u8> data,
 	}
 	case CELL_JPG_ARGB:
 	{
-		constexpr int nComponents = 4;
+		constexpr u64 nComponents = 4;
 		image_size *= nComponents;
-		if (bytesPerLine > width * nComponents || flip) //check if we need padding
+		if (bytesPerLine > uWidth * nComponents || flip) //check if we need padding
 		{
 			//TODO: Find out if we can't do padding without an extra copy
-			const int linesize = std::min(bytesPerLine, width * nComponents);
+			const u64 linesize = std::min<u64>(bytesPerLine, uWidth * nComponents);
 			std::vector<char> output(image_size);
-			for (int i = 0; i < height; i++)
+			for (u64 i = 0; i < uHeight; i++)
 			{
-				const int dstOffset = i * bytesPerLine;
-				const int srcOffset = width * nComponents * (flip ? height - i - 1 : i);
-				for (int j = 0; j < linesize; j += nComponents)
+				const u64 dstOffset = i * bytesPerLine;
+				const u64 srcOffset = uWidth * nComponents * (flip ? uHeight - i - 1 : i);
+				for (u64 j = 0; j < linesize; j += nComponents)
 				{
 					output[j + 0] = image.get()[srcOffset + j + 3];
 					output[j + 1] = image.get()[srcOffset + j + 0];

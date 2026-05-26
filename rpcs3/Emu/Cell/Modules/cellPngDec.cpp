@@ -95,6 +95,13 @@ void pngDecReadBuffer(png_structp png_ptr, png_bytep out, png_size_t length)
 	}
 	else
 	{
+		// Reject reads past the declared end of the guest-supplied buffer.
+		if (buffer.cursor > buffer.length || length > buffer.length - buffer.cursor)
+		{
+			png_error(png_ptr, "pngDecReadBuffer: read past end of input buffer");
+			return;
+		}
+
 		// Get the current data pointer, including the current cursor position
 		void* data = static_cast<u8*>(buffer.data.get_ptr()) + buffer.cursor;
 
@@ -858,8 +865,13 @@ error_code cellPngDecExtReadHeader(PHandle handle, PStream stream, PInfo info, P
 	}
 
 	// lets push what we have so far
+	if (stream->buffer->cursor > stream->buffer->length)
+	{
+		return CELL_PNGDEC_ERROR_HEADER;
+	}
+
 	u8* data = static_cast<u8*>(stream->buffer->data.get_ptr()) + stream->buffer->cursor;
-	png_process_data(stream->png_ptr, stream->info_ptr, data, stream->buffer->length);
+	png_process_data(stream->png_ptr, stream->info_ptr, data, stream->buffer->length - stream->buffer->cursor);
 
 	// lets hope we pushed enough for callback
 	pngSetHeader(stream.get_ptr());

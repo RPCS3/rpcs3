@@ -545,7 +545,8 @@ error_code pamfVerify(vm::cptr<PamfHeader> pAddr, u64 fileSize, vm::ptr<CellPamf
 				return { CELL_PAMF_ERROR_INVALID_PAMF, "pamfVerify() failed: invalid ep_offset" };
 			}
 
-			if (ep_offset + ep_num * sizeof(PamfEpHeader) > header_size)
+			// Promote to u64 so attacker-controlled ep_offset/ep_num cannot wrap u32 past the header bound.
+			if (static_cast<u64>(ep_offset) + static_cast<u64>(ep_num) * sizeof(PamfEpHeader) > header_size)
 			{
 				return { CELL_PAMF_ERROR_INVALID_PAMF, "pamfVerify() failed: invalid ep_num" };
 			}

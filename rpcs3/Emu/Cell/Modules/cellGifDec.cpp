@@ -116,6 +116,9 @@ error_code cellGifDecOpen(vm::ptr<GifDecoder> mainHandle, vm::pptr<GifStream> su
 		return CELL_GIFDEC_ERROR_ARG;
 	}
 
+	// Cap input size so a crafted guest input cannot drive multi-GB host allocations later.
+	constexpr u64 gifdec_max_input_size = 64 * 1024 * 1024;
+
 	GifStream current_subHandle{};
 	current_subHandle.fd = 0;
 	current_subHandle.src = *src;
@@ -124,7 +127,7 @@ error_code cellGifDecOpen(vm::ptr<GifDecoder> mainHandle, vm::pptr<GifStream> su
 	{
 	case CELL_GIFDEC_BUFFER:
 	{
-		if (!src->streamPtr || !src->streamSize)
+		if (!src->streamPtr || !src->streamSize || src->streamSize > gifdec_max_input_size)
 		{
 			return CELL_GIFDEC_ERROR_ARG;
 		}
@@ -152,7 +155,13 @@ error_code cellGifDecOpen(vm::ptr<GifDecoder> mainHandle, vm::pptr<GifStream> su
 			return CELL_GIFDEC_ERROR_ARG;
 		}
 
-		current_subHandle.fileSize = file_s.size();
+		const u64 sz = file_s.size();
+		if (!sz || sz > gifdec_max_input_size)
+		{
+			return CELL_GIFDEC_ERROR_OPEN_FILE;
+		}
+
+		current_subHandle.fileSize = sz;
 		current_subHandle.fd = idm::make<lv2_fs_object, lv2_file>(src->fileName.get_ptr(), std::move(file_s), 0, 0, real_path);
 		break;
 	}
@@ -188,6 +197,8 @@ error_code cellGifDecExtOpen(vm::ptr<GifDecoder> mainHandle, vm::pptr<GifStream>
 		return CELL_GIFDEC_ERROR_ARG;
 	}
 
+	constexpr u64 gifdec_ext_max_input_size = 64 * 1024 * 1024;
+
 	GifStream current_subHandle{};
 	current_subHandle.fd = 0;
 	current_subHandle.src = *src;
@@ -196,7 +207,7 @@ error_code cellGifDecExtOpen(vm::ptr<GifDecoder> mainHandle, vm::pptr<GifStream>
 	{
 	case CELL_GIFDEC_BUFFER:
 	{
-		if (!src->streamPtr || !src->streamSize)
+		if (!src->streamPtr || !src->streamSize || src->streamSize > gifdec_ext_max_input_size)
 		{
 			return CELL_GIFDEC_ERROR_ARG;
 		}
@@ -224,7 +235,13 @@ error_code cellGifDecExtOpen(vm::ptr<GifDecoder> mainHandle, vm::pptr<GifStream>
 			return CELL_GIFDEC_ERROR_ARG;
 		}
 
-		current_subHandle.fileSize = file_s.size();
+		const u64 sz = file_s.size();
+		if (!sz || sz > gifdec_ext_max_input_size)
+		{
+			return CELL_GIFDEC_ERROR_OPEN_FILE;
+		}
+
+		current_subHandle.fileSize = sz;
 		current_subHandle.fd = idm::make<lv2_fs_object, lv2_file>(src->fileName.get_ptr(), std::move(file_s), 0, 0, real_path);
 		break;
 	}
@@ -233,6 +250,12 @@ error_code cellGifDecExtOpen(vm::ptr<GifDecoder> mainHandle, vm::pptr<GifStream>
 		return CELL_GIFDEC_ERROR_ARG;
 	}
 	}
+
+	// Populate the out-pointer so the caller actually receives a usable handle (cellGifDecExtOpen previously
+	// left *subHandle untouched, leading to a guest dereference of an uninitialised value).
+	subHandle->set(vm::alloc(sizeof(GifStream), vm::main));
+
+	**subHandle = current_subHandle;
 
 	return CELL_OK;
 }
@@ -512,21 +535,28 @@ error_code cellGifDecDecodeData(vm::ptr<GifDecoder> mainHandle, vm::cptr<GifStre
 	if (!image)
 		return CELL_GIFDEC_ERROR_STREAM_FORMAT;
 
-	const int bytesPerLine = static_cast<int>(dataCtrlParam->outputBytesPerLine);
-	constexpr char nComponents = 4;
-	const u32 image_size = width * height * nComponents;
+	if (width <= 0 || height <= 0 || width > 0x4000 || height > 0x4000)
+	{
+		return CELL_GIFDEC_ERROR_STREAM_FORMAT;
+	}
+
+	const u64 bytesPerLine = dataCtrlParam->outputBytesPerLine;
+	constexpr u64 nComponents = 4;
+	const u64 uWidth = static_cast<u64>(width);
+	const u64 uHeight = static_cast<u64>(height);
+	const u64 image_size = uWidth * uHeight * nComponents;
 
 	switch(current_outParam.outputColorSpace)
 	{
 	case CELL_GIFDEC_RGBA:
 	{
-		if (bytesPerLine > width * nComponents) // Check if we need padding
+		if (bytesPerLine > uWidth * nComponents) // Check if we need padding
 		{
-			const int linesize = std::min(bytesPerLine, width * nComponents);
-			for (int i = 0; i < height; i++)
+			const u64 linesize = std::min<u64>(bytesPerLine, uWidth * nComponents);
+			for (u64 i = 0; i < uHeight; i++)
 			{
-				const int dstOffset = i * bytesPerLine;
-				const int srcOffset = width * nComponents * i;
+				const u64 dstOffset = i * bytesPerLine;
+				const u64 srcOffset = uWidth * nComponents * i;
 				memcpy(&data[dstOffset], &image.get()[srcOffset], linesize);
 			}
 		}
@@ -538,16 +568,16 @@ error_code cellGifDecDecodeData(vm::ptr<GifDecoder> mainHandle, vm::cptr<GifStre
 	}
 	case CELL_GIFDEC_ARGB:
 	{
-		if (bytesPerLine > width * nComponents) // Check if we need padding
+		if (bytesPerLine > uWidth * nComponents) // Check if we need padding
 		{
 			//TODO: find out if we can't do padding without an extra copy
-			const int linesize = std::min(bytesPerLine, width * nComponents);
+			const u64 linesize = std::min<u64>(bytesPerLine, uWidth * nComponents);
 			const auto output = std::make_unique<char[]>(linesize);
-			for (int i = 0; i < height; i++)
+			for (u64 i = 0; i < uHeight; i++)
 			{
-				const int dstOffset = i * bytesPerLine;
-				const int srcOffset = width * nComponents * i;
-				for (int j = 0; j < linesize; j += nComponents)
+				const u64 dstOffset = i * bytesPerLine;
+				const u64 srcOffset = uWidth * nComponents * i;
+				for (u64 j = 0; j < linesize; j += nComponents)
 				{
 					output[j + 0] = image.get()[srcOffset + j + 3];
 					output[j + 1] = image.get()[srcOffset + j + 0];
