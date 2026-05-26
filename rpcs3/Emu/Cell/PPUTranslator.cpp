@@ -2253,7 +2253,8 @@ void PPUTranslator::ADDI(ppu_opcode_t op)
 
 void PPUTranslator::ADDIS(ppu_opcode_t op)
 {
-	Value* imm = m_ir->getInt64(op.simm16 << 16);
+	// Promote to unsigned before shifting so a negative simm16 doesn't trigger signed-shift UB.
+	Value* imm = m_ir->getInt64(static_cast<s64>(static_cast<s32>(static_cast<u32>(op.simm16) << 16)));
 
 	if (m_rel && (m_rel->type >= 4u && m_rel->type <= 6u))
 	{
