@@ -188,7 +188,7 @@ namespace extra_nps
 		print_range(&resp->range);
 
 		const SceNpMatching2RoomDataExternal* room_ptr = resp->roomDataExternal.get_ptr();
-		for (u32 i = 0; i < resp->range.total; i++)
+		for (u32 i = 0; i < resp->range.size && room_ptr; i++)
 		{
 			sceNp2.warning("SceNpMatching2SearchRoomResponse[%d]:", i);
 			print_SceNpMatching2RoomDataExternal(room_ptr);
