@@ -894,7 +894,9 @@ void usb_device_usio::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, Us
 	case 0x82:
 	{
 		// Read endpoint
-		const u32 size = std::min(buf_size, static_cast<u32>(response.size() - response_seek));
+		const u32 size = response_seek < response.size()
+			? std::min(buf_size, static_cast<u32>(response.size() - response_seek))
+			: 0u;
 		memcpy(buf, response.data() + response_seek, size);
 		response_seek += size;
 		transfer->expected_count = size;

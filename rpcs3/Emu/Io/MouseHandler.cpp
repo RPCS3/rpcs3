@@ -139,8 +139,8 @@ void MouseHandlerBase::Move(u32 index, s32 x_pos_new, s32 y_pos_new, s32 x_max, 
 			y_delta = y_pos_new - mouse.y_pos;
 		}
 
-		new_data.x_axis = static_cast<s8>(std::clamp(x_delta, -127, 128));
-		new_data.y_axis = static_cast<s8>(std::clamp(y_delta, -127, 128));
+		new_data.x_axis = static_cast<s8>(std::clamp(x_delta, -128, 127));
+		new_data.y_axis = static_cast<s8>(std::clamp(y_delta, -128, 127));
 		new_data.pixel_x = x_pos_new;
 		new_data.pixel_y = y_pos_new;
 
