@@ -191,7 +191,7 @@ namespace gl
 		blit_dst.color[0] = GL_NONE;
 	}
 
-	void blitter::fast_clear_image(gl::command_context& cmd, const texture* dst, float /*depth*/, u8 /*stencil*/)
+	void blitter::fast_clear_image(gl::command_context& cmd, const texture* dst, float depth, u8 stencil)
 	{
 		fbo::attachment::type attachment;
 		GLbitfield clear_mask;
@@ -220,7 +220,13 @@ namespace gl
 		blit_dst.check();
 
 		cmd->depth_mask(GL_TRUE);
-		cmd->stencil_mask(0xFF);
+		cmd->clear_depth(depth);
+
+		if (clear_mask & GL_STENCIL_BUFFER_BIT)
+		{
+			cmd->stencil_mask(0xFF);
+			cmd->clear_stencil(stencil);
+		}
 
 		glClear(clear_mask);
 		attach_point = GL_NONE;
