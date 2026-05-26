@@ -78,6 +78,13 @@ error_code cellHttpUtilParseUri(vm::ptr<CellHttpUri> uri, vm::cptr<char> str, vm
 		}
 		else
 		{
+			// Refuse to write past the guest-provided pool — the previous code did unconditional memcpys.
+			if (size < totalSize)
+			{
+				if (required) *required = totalSize;
+				return CELL_HTTP_UTIL_ERROR_INSUFFICIENT;
+			}
+
 			std::memcpy(vm::base(pool.addr() + schemeOffset), scheme.c_str(), scheme.length() + 1);
 			std::memcpy(vm::base(pool.addr() + hostOffset), host.c_str(), host.length() + 1);
 			std::memcpy(vm::base(pool.addr() + pathOffset), path.c_str(), path.length() + 1);

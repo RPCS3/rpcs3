@@ -123,6 +123,11 @@ error_code cellSslCertificateLoader(u64 flag, vm::ptr<char> buffer, u32 size, vm
 	}
 	else
 	{
+		if (!buffer || !size)
+		{
+			return CELL_SSL_ERROR_NO_BUFFER;
+		}
+
 		std::string final;
 		for (uint i = 1; i <= flagBits.size(); i++)
 		{
@@ -133,8 +138,11 @@ error_code cellSslCertificateLoader(u64 flag, vm::ptr<char> buffer, u32 size, vm
 			final.append(getCert(certPath, i, flagBits.test(BaltimoreCert - 1)));
 		}
 
-		std::memset(buffer.get_ptr(), '\0', size - 1);
-		std::memcpy(buffer.get_ptr(), final.c_str(), final.size());
+		// Clamp the copy at the guest-provided buffer size to avoid overflowing it, and zero the whole region
+		// (the old `size - 1` underflowed to 4 GiB when size == 0).
+		const u32 to_copy = std::min<u32>(::size32(final), size);
+		std::memset(buffer.get_ptr(), '\0', size);
+		std::memcpy(buffer.get_ptr(), final.c_str(), to_copy);
 	}
 
 	return CELL_OK;
