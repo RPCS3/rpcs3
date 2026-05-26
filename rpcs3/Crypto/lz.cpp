@@ -147,7 +147,7 @@ int decompress(unsigned char *out, unsigned char *in, unsigned int size)
 		if (code <= size)
 		{
 			memcpy(out, in + 5, code);
-			result = static_cast<int>(start - out);
+			result = static_cast<int>(code);
 		}
 	}
 	else

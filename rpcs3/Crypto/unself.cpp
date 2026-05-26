@@ -716,7 +716,7 @@ bool SCEDecrypter::DecryptData()
 		if (meta_shdr[i].encrypted == 3)
 		{
 			// Make sure the key and iv are not out of boundaries.
-			if ((meta_shdr[i].key_idx <= meta_hdr.key_count - 1) && (meta_shdr[i].iv_idx <= meta_hdr.key_count))
+			if ((meta_shdr[i].key_idx < meta_hdr.key_count) && (meta_shdr[i].iv_idx < meta_hdr.key_count))
 			{
 				// Get the key and iv from the previously stored key buffer.
 				memcpy(data_key, data_keys.get() + meta_shdr[i].key_idx * 0x10, 0x10);
