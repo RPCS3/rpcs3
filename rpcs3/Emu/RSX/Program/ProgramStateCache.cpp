@@ -278,9 +278,17 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 				}
 				else
 				{
-					// Set possible end address and proceed as usual
-					conditional_targets.emplace(jump_address);
-					instruction_range.second = std::max(jump_address, instruction_range.second);
+					// Clamp the guest-derived jump target so it can't push instruction_range past the
+					// architectural maximum and drive a downstream copy beyond the 544-entry program array.
+					if (jump_address < rsx::max_vertex_program_instructions)
+					{
+						conditional_targets.emplace(jump_address);
+						instruction_range.second = std::max(jump_address, instruction_range.second);
+					}
+					else
+					{
+						rsx_log.error("vp_analyser: ignoring out-of-range conditional jump target 0x%x", jump_address);
+					}
 				}
 
 				break;
@@ -611,8 +619,9 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 	const auto instBuffer = ptr;
 	s32 index = 0;
 
-	// Find the start of the program
-	while (true)
+	// Find the start of the program. Bound the walk so a guest fragment program that never
+	// sets the end bit can't drive an unbounded read past mapped memory.
+	while (index < static_cast<s32>(rsx::max_fragment_program_instructions))
 	{
 		const auto inst = v128::loadu(instBuffer, index);
 
@@ -635,7 +644,16 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 		index++;
 	}
 
-	while (true)
+	if (result.program_start_offset == umax)
+	{
+		// Did not find a real instruction within the architectural limit — give up.
+		result.program_start_offset = 0;
+		result.program_ucode_length = 16;
+		result.is_nop_shader = true;
+		return result;
+	}
+
+	while (index < static_cast<s32>(rsx::max_fragment_program_instructions))
 	{
 		const auto inst = v128::loadu(instBuffer, index);
 		const auto d0 = OPDEST::from_be32(inst._u32[0]);

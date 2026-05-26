@@ -7,7 +7,8 @@ namespace rsx
 {
 	enum program_limits
 	{
-		max_vertex_program_instructions = 544
+		max_vertex_program_instructions = 544,
+		max_fragment_program_instructions = 16384, // Architectural ceiling — used to bound bytecode walks against malformed programs
 	};
 
 #pragma pack(push, 1)
