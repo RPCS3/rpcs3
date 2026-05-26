@@ -367,6 +367,12 @@ error_code sys_ppu_thread_get_priority(ppu_thread& ppu, u32 thread_id, vm::ptr<s
 	ppu.state += cpu_flag::wait;
 
 	sys_ppu_thread.trace("sys_ppu_thread_get_priority(thread_id=0x%x, priop=*0x%x)", thread_id, priop);
+
+	if (!priop)
+	{
+		return CELL_EFAULT;
+	}
+
 	u32 prio{};
 
 	if (thread_id == ppu.id)
@@ -427,6 +433,11 @@ error_code sys_ppu_thread_get_priority(ppu_thread& ppu, u32 thread_id, vm::ptr<s
 error_code sys_ppu_thread_get_stack_information(ppu_thread& ppu, vm::ptr<sys_ppu_thread_stack_t> sp)
 {
 	sys_ppu_thread.trace("sys_ppu_thread_get_stack_information(sp=*0x%x)", sp);
+
+	if (!sp)
+	{
+		return CELL_EFAULT;
+	}
 
 	sp->pst_addr = ppu.stack_addr;
 	sp->pst_size = ppu.stack_size;

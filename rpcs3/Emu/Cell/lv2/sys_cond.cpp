@@ -85,6 +85,11 @@ error_code sys_cond_create(ppu_thread& ppu, vm::ptr<u32> cond_id, u32 mutex_id, 
 
 	sys_cond.trace("sys_cond_create(cond_id=*0x%x, mutex_id=0x%x, attr=*0x%x)", cond_id, mutex_id, attr);
 
+	if (!cond_id || !attr)
+	{
+		return CELL_EFAULT;
+	}
+
 	auto mutex = idm::get_unlocked<lv2_obj, lv2_mutex>(mutex_id);
 
 	if (!mutex)

@@ -1577,11 +1577,18 @@ error_code sys_fs_readdir(ppu_thread& ppu, u32 fd, vm::ptr<CellFsDirent> dir, vm
 	{
 		nread_to_write = sizeof(CellFsDirent);
 	}
-	else
+	else if (!directory->entries.empty())
 	{
 		// It does actually write polling the last entry. Seems consistent across HDD0 and HDD1 (TODO: check more partitions)
 		info = &directory->entries.back();
 		nread_to_write = 0;
+	}
+	else
+	{
+		// Directory had no entries to begin with: signal end-of-directory without dereferencing a back() that does not exist.
+		*nread = 0;
+		*dir = {};
+		return CELL_OK;
 	}
 
 	CellFsDirent dir_write{};

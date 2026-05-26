@@ -239,6 +239,11 @@ error_code sys_timer_get_information(ppu_thread& ppu, u32 timer_id, vm::ptr<sys_
 
 	sys_timer.trace("sys_timer_get_information(timer_id=0x%x, info=*0x%x)", timer_id, info);
 
+	if (!info)
+	{
+		return CELL_EFAULT;
+	}
+
 	sys_timer_information_t _info{};
 	const u64 now = get_guest_system_time();
 

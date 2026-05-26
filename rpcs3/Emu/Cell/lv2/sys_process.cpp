@@ -87,6 +87,11 @@ error_code sys_process_get_number_of_object(u32 object, vm::ptr<u32> nump)
 {
 	sys_process.error("sys_process_get_number_of_object(object=0x%x, nump=*0x%x)", object, nump);
 
+	if (!nump)
+	{
+		return CELL_EFAULT;
+	}
+
 	switch(object)
 	{
 	case SYS_MEM_OBJECT: *nump = idm_get_count<lv2_obj, lv2_memory>(); break;
@@ -131,6 +136,11 @@ void idm_get_set(std::set<u32>& out)
 
 static error_code process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::ptr<u32> set_size)
 {
+	if (!buffer || !set_size)
+	{
+		return CELL_EFAULT;
+	}
+
 	std::set<u32> objects;
 
 	switch (object)

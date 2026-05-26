@@ -231,7 +231,7 @@ error_code sys_event_queue_create(cpu_thread& cpu, vm::ptr<u32> equeue_id, vm::p
 		return CELL_EINVAL;
 	}
 
-	if (!equeue_id)
+	if (!equeue_id || !attr)
 	{
 		return CELL_EFAULT;
 	}
@@ -443,6 +443,19 @@ error_code sys_event_queue_tryreceive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sy
 	if (!event_array || !number)
 	{
 		return CELL_EFAULT;
+	}
+
+	// Defense-in-depth: a lv2 event queue is capped at 127 entries at creation, so the local stack array
+	// below cannot legitimately overflow — but if any code path ever lets queue->events.size() exceed 127,
+	// pin `size` to the array bound so the writes stay in range.
+	if (size < 0)
+	{
+		return CELL_EINVAL;
+	}
+
+	if (size > 127)
+	{
+		size = 127;
 	}
 
 	std::array<sys_event_t, 127> events;
