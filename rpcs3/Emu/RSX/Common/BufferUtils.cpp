@@ -470,7 +470,7 @@ namespace
 		for (; (i + step) <= count; i += step, vec_ptr++)
 		{
 			_mm_stream_si128(vec_ptr, values);
-			_mm_add_epi16(values,  vec_step);
+			values = _mm_add_epi16(values, vec_step);
 		}
 #endif
 		for (; i < count; ++i)
@@ -701,8 +701,7 @@ namespace
 		case rsx::primitive_type::line_loop:
 		{
 			const auto &returnvalue = upload_untouched<T>(src, dst, draw_mode, restart_index_enabled, restart_index);
-			const auto index_count = dst.size_bytes() / sizeof(T);
-			dst[index_count] = src[0];
+			dst[src.size()] = src[0];
 			return returnvalue;
 		}
 		case rsx::primitive_type::polygon:
