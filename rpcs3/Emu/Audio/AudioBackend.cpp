@@ -51,7 +51,7 @@ void AudioBackend::convert_to_s16(u32 cnt, const f32* src, void* dst)
 {
 	for (u32 i = 0; i < cnt; i++)
 	{
-		static_cast<s16*>(dst)[i] = static_cast<s16>(std::clamp(src[i] * 32768.5f, -32768.0f, 32767.0f));
+		static_cast<s16*>(dst)[i] = static_cast<s16>(std::clamp(src[i] * 32767.5f, -32768.0f, 32767.0f));
 	}
 }
 
