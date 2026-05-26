@@ -149,11 +149,15 @@ namespace rsx
 
 			u32 rcount = count;
 
-			if (const u32 max = load_pos * 4 + rcount + (index % 4);
-				max > max_vertex_program_instructions * 4)
+			if (const u32 max = load_pos * 4 + rcount + (index % 4), limit = max_vertex_program_instructions * 4;
+				max > limit)
 			{
 				rsx_log.warning("Program buffer overflow! Attempted to write %u VP instructions.", max / 4);
-				rcount -= max - (max_vertex_program_instructions * 4);
+
+				if ((max - rcount) < limit)
+					rcount -= max - limit;
+				else
+					rcount = 0;
 			}
 
 			if (!rcount)
