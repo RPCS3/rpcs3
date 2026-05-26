@@ -840,6 +840,12 @@ void usb_device_usio::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, Us
 
 		if (expecting_data)
 		{
+			if (buf_size > usio_length)
+			{
+				usio_log.error("UsioWrite: buf_size (0x%X) exceeds expected usio_length (0x%X); clamping", buf_size, usio_length);
+				buf_size = usio_length;
+			}
+
 			usio_data.insert(usio_data.end(), buf, buf + buf_size);
 			usio_length -= buf_size;
 

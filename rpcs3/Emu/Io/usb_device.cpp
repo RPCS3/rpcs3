@@ -147,10 +147,13 @@ void usb_device_passthrough::read_descriptors()
 		// Minimalistic parse
 		auto& conf = device.add_node(UsbDescriptorNode(buf[0], buf[1], &buf[2]));
 
-		for (int index = buf[0]; index < ssize;)
+		for (int desc_idx = buf[0]; desc_idx < ssize && buf[desc_idx] > 0;)
 		{
-			conf.add_node(UsbDescriptorNode(buf[index], buf[index + 1], &buf[index + 2]));
-			index += buf[index];
+			// Ensure we have at least 2 bytes available for bLength/bDescriptorType
+			if (desc_idx + 1 >= ssize)
+				break;
+			conf.add_node(UsbDescriptorNode(buf[desc_idx], buf[desc_idx + 1], &buf[desc_idx + 2]));
+			desc_idx += buf[desc_idx];
 		}
 	}
 }
@@ -261,8 +264,9 @@ u32 usb_device_emulated::get_descriptor(u8 type, u8 index, u8* buf, u32 buf_size
 	case USB_DESCRIPTOR_DEVICE:
 	{
 		buf[0] = device.bLength;
-		expected_count = std::min(device.bLength, ::narrow<u8>(buf_size));
-		std::memcpy(buf + header.size(), device.data, expected_count - header.size());
+		expected_count = std::min(device.bLength, ::narrow<u8>(std::min<u32>(255, buf_size)));
+		if (expected_count >= header.size())
+			std::memcpy(buf + header.size(), device.data, expected_count - header.size());
 		break;
 	}
 	case USB_DESCRIPTOR_CONFIG:
@@ -270,8 +274,9 @@ u32 usb_device_emulated::get_descriptor(u8 type, u8 index, u8* buf, u32 buf_size
 		if (index < device.subnodes.size())
 		{
 			buf[0] = device.subnodes[index].bLength;
-			expected_count = std::min(device.subnodes[index].bLength, ::narrow<u8>(buf_size));
-			std::memcpy(buf + header.size(), device.subnodes[index].data, expected_count - header.size());
+			expected_count = std::min(device.subnodes[index].bLength, ::narrow<u8>(std::min<u32>(255, buf_size)));
+			if (expected_count >= header.size())
+				std::memcpy(buf + header.size(), device.subnodes[index].data, expected_count - header.size());
 		}
 		break;
 	}
@@ -283,9 +288,10 @@ u32 usb_device_emulated::get_descriptor(u8 type, u8 index, u8* buf, u32 buf_size
 			{
 				constexpr u8 len = static_cast<u8>(sizeof(u16) + header.size());
 				buf[0] = len;
-				expected_count = std::min(len, ::narrow<u8>(buf_size));
+				expected_count = std::min(len, ::narrow<u8>(std::min<u32>(255, buf_size)));
 				constexpr le_t<u16> langid = 0x0409; // English (United States)
-				std::memcpy(buf + header.size(), &langid, expected_count - header.size());
+				if (expected_count >= header.size())
+					std::memcpy(buf + header.size(), &langid, expected_count - header.size());
 			}
 			else
 			{
@@ -293,7 +299,8 @@ u32 usb_device_emulated::get_descriptor(u8 type, u8 index, u8* buf, u32 buf_size
 				const u8 len = static_cast<u8>(std::min(u16str.size() * sizeof(u16) + header.size(), static_cast<usz>(0xFF)));
 				buf[0] = len;
 				expected_count = std::min(len, ::narrow<u8>(std::min<u32>(255, buf_size)));
-				std::memcpy(buf + header.size(), u16str.data(), expected_count - header.size());
+				if (expected_count >= header.size())
+					std::memcpy(buf + header.size(), u16str.data(), expected_count - header.size());
 			}
 		}
 		break;

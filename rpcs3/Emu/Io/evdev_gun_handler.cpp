@@ -34,7 +34,7 @@ const std::map<gun_button, int> button_map
 
 struct event_udev_entry
 {
-	const char* devnode = nullptr;
+	std::string devnode;
 	struct udev_list_entry* item = nullptr;
 };
 
@@ -221,6 +221,11 @@ bool evdev_gun_handler::init()
 		{
 			const char* name = udev_list_entry_get_name(item);
 			udev_device* dev = udev_device_new_from_syspath(m_udev, name);
+			if (dev == nullptr)
+			{
+				continue;
+			}
+
 			const char* devnode = udev_device_get_devnode(dev);
 
 			if (devnode != nullptr)
@@ -230,16 +235,13 @@ bool evdev_gun_handler::init()
 				new_device.item = item;
 				sorted_devices.push_back(std::move(new_device));
 			}
-			else
-			{
-				udev_device_unref(dev);
-			}
+			udev_device_unref(dev);
 		}
 
 		// Sort the udev entries by devnode name so that they are created in the proper order
 		std::sort(sorted_devices.begin(), sorted_devices.end(), [](const event_udev_entry& a, const event_udev_entry& b)
 		{
-			return event_cmp_less_than(a.devnode, b.devnode);
+			return event_cmp_less_than(a.devnode.c_str(), b.devnode.c_str());
 		});
 
 		for (const event_udev_entry& entry : sorted_devices)
@@ -249,7 +251,20 @@ bool evdev_gun_handler::init()
 			evdev_log.notice("Lightgun: found device %s", name);
 
 			udev_device* dev = udev_device_new_from_syspath(m_udev, name);
+			if (dev == nullptr)
+			{
+				evdev_log.warning("Lightgun: udev_device_new_from_syspath returned null for %s", name);
+				continue;
+			}
+
 			const char* devnode = udev_device_get_devnode(dev);
+			if (devnode == nullptr)
+			{
+				evdev_log.warning("Lightgun: udev_device_get_devnode returned null for %s", name);
+				udev_device_unref(dev);
+				continue;
+			}
+
 			const int fd = open(devnode, O_RDONLY | O_NONBLOCK);
 			struct libevdev* device = nullptr;
 			const int rc = libevdev_new_from_fd(fd, &device);
@@ -260,6 +275,7 @@ bool evdev_gun_handler::init()
 					evdev_log.warning("Failed to connect to lightgun device at %s, the error was: %s", devnode, strerror(-rc));
 				libevdev_free(device);
 				close(fd);
+				udev_device_unref(dev);
 				continue;
 			}
 
@@ -293,8 +309,11 @@ bool evdev_gun_handler::init()
 				}
 				else
 				{
+					libevdev_free(device);
 					close(fd);
 				}
+
+				udev_device_unref(dev);
 
 				if (m_devices.size() >= max_devices)
 					break;
@@ -302,7 +321,9 @@ bool evdev_gun_handler::init()
 			else
 			{
 				evdev_log.notice("Lightgun: device %s not valid. No axis or key events found", name);
+				libevdev_free(device);
 				close(fd);
+				udev_device_unref(dev);
 			}
 		}
 		udev_enumerate_unref(enumerate);
