@@ -42,6 +42,12 @@ namespace aarch64
                 return reinterpret_cast<const aarch64_esr_ctx*>(head);
             }
 
+            // Defensive: malformed block with zero/under-sized advance would loop forever.
+            if (head->size < sizeof(aarch64_cpu_ctx_block))
+            {
+                return nullptr;
+            }
+
             offset += head->size;
         }
 
