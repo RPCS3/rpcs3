@@ -2350,7 +2350,9 @@ std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u
 				continue;
 			}
 
-			const u32 target = op_branch_targets(next, op)[0];
+			// Use the local opcode being examined here, not the outer caller's `op` — the immediate that
+			// drives the branch target lives in `test_op`.
+			const u32 target = op_branch_targets(next, test_op)[0];
 
 			if (target == umax || addr + 4 == target || target == addr || std::count(addrs.begin(), addrs.end(), target))
 			{
@@ -3085,7 +3087,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 					limit = std::min<u32>(limit, target);
 				}
 
-				if (!is_no_return && sl && g_cfg.core.spu_block_size != spu_block_size_type::safe)
+				if (!is_no_return && sl && g_cfg.core.spu_block_size != spu_block_size_type::safe && pos + 4 < SPU_LS_SIZE)
 				{
 					m_ret_info.set(pos / 4 + 1, true);
 					m_entry_info.set(pos / 4 + 1, true);
@@ -3297,7 +3299,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 			if (type == spu_itype::BI || sl || is_no_return)
 			{
-				if (type == spu_itype::BI || g_cfg.core.spu_block_size == spu_block_size_type::safe || is_no_return)
+				if (type == spu_itype::BI || g_cfg.core.spu_block_size == spu_block_size_type::safe || is_no_return || pos + 4 >= SPU_LS_SIZE)
 				{
 					m_targets[pos];
 				}
@@ -3369,7 +3371,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 			m_targets[pos].push_back(target);
 
-			if (!is_no_return && g_cfg.core.spu_block_size != spu_block_size_type::safe)
+			if (!is_no_return && g_cfg.core.spu_block_size != spu_block_size_type::safe && pos + 4 < SPU_LS_SIZE)
 			{
 				m_ret_info.set(pos / 4 + 1, true);
 				m_entry_info.set(pos / 4 + 1, true);
