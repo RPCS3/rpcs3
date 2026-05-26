@@ -144,16 +144,27 @@ void usb_device_passthrough::read_descriptors()
 			continue;
 		}
 
-		// Minimalistic parse
+		// Minimalistic parse — reject malformed root descriptors whose bLength would underflow.
+		if (ssize < 2 || buf[0] < 2 || buf[0] > ssize)
+		{
+			sys_usbd.error("Skipping malformed configuration descriptor (ssize=%d, bLength=%u)", ssize, buf[0]);
+			continue;
+		}
+
 		auto& conf = device.add_node(UsbDescriptorNode(buf[0], buf[1], &buf[2]));
 
-		for (int desc_idx = buf[0]; desc_idx < ssize && buf[desc_idx] > 0;)
+		for (int desc_idx = buf[0]; desc_idx + 1 < ssize;)
 		{
-			// Ensure we have at least 2 bytes available for bLength/bDescriptorType
-			if (desc_idx + 1 >= ssize)
+			const u8 entry_len = buf[desc_idx];
+
+			// Reject descriptors that don't include the 2-byte header or would walk past the libusb scratch buffer.
+			if (entry_len < 2 || desc_idx + entry_len > ssize)
+			{
 				break;
-			conf.add_node(UsbDescriptorNode(buf[desc_idx], buf[desc_idx + 1], &buf[desc_idx + 2]));
-			desc_idx += buf[desc_idx];
+			}
+
+			conf.add_node(UsbDescriptorNode(entry_len, buf[desc_idx + 1], &buf[desc_idx + 2]));
+			desc_idx += entry_len;
 		}
 	}
 }

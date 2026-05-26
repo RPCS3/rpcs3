@@ -185,7 +185,15 @@ struct UsbDescriptorNode
 	UsbDescriptorNode(u8 _bLength, u8 _bDescriptorType, const u8* _data)
 		: bLength(_bLength), bDescriptorType(_bDescriptorType)
 	{
-		memcpy(data, _data, _bLength - 2);
+		// bLength includes the two header bytes; reject malformed (sub-header) descriptors so the subtraction
+		// below cannot underflow and clamp the payload copy to the fixed-size `data` field.
+		if (_bLength < 2)
+		{
+			return;
+		}
+
+		const usz payload = std::min<usz>(static_cast<usz>(_bLength) - 2, sizeof(data));
+		memcpy(data, _data, payload);
 	}
 
 	UsbDescriptorNode& add_node(const UsbDescriptorNode& newnode)
