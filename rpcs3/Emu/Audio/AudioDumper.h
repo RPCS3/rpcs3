@@ -64,7 +64,7 @@ struct WAVHeader
 	WAVHeader() = default;
 
 	WAVHeader(AudioChannelCnt ch, AudioFreq sample_rate, AudioSampleSize sample_size)
-		: RIFF(sizeof(RIFFHeader) + sizeof(FMTHeader))
+		: RIFF(sizeof(WAVHeader) - 8)
 		, FMT(ch, sample_rate, sample_size)
 		, FACT(0)
 		, Size(0)

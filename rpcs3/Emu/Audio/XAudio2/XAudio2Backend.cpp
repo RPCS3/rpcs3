@@ -160,7 +160,10 @@ void XAudio2Backend::CloseUnlocked()
 		m_master_voice = nullptr;
 	}
 
-	m_device_enumerator->UnregisterEndpointNotificationCallback(this);
+	if (m_device_enumerator != nullptr)
+	{
+		m_device_enumerator->UnregisterEndpointNotificationCallback(this);
+	}
 
 	m_playing = false;
 	m_last_sample.fill(0);
