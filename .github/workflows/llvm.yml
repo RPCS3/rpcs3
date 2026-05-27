@@ -17,7 +17,7 @@ jobs:
   Windows_Build:
     if: github.event_name == 'workflow_dispatch'
     name: LLVM Windows (MSVC)
-    runs-on: windows-2025
+    runs-on: windows-2025-vs2026
     env:
       COMPILER: msvc
       CCACHE_SHA: '859141059ac950e1e8cd042c66f842f26b9e3a62a1669a69fe6ba180cb58bbdf'
