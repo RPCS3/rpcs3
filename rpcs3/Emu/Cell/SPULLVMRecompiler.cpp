@@ -3912,23 +3912,20 @@ public:
 							}
 							else if (!(itype & spu_itype::branch))
 							{
-								// Inline ret exits the instruction helper directly.
+								// Hack: inline ret instruction before final jmp; this is not reliable.
 #ifdef ARCH_X64
 								m_ir->CreateCall(InlineAsm::get(get_ftype<void>(), "ret", "", true, false, InlineAsm::AD_Intel));
 #else
 								m_ir->CreateCall(InlineAsm::get(get_ftype<void>(), "ret", "", true, false));
 #endif
-								m_ir->CreateUnreachable();
+								fret = ret_func;
 							}
 
-							if (!m_ir->GetInsertBlock()->getTerminator())
-							{
-								const auto arg3 = UndefValue::get(get_type<u32>());
-								const auto _ret = m_ir->CreateCall(if_type, fret, {m_lsptr, m_thread, m_interp_pc, arg3, m_interp_table, m_interp_7f0, m_interp_regs});
-								_ret->setCallingConv(CallingConv::GHC);
-								_ret->setTailCall();
-								m_ir->CreateRetVoid();
-							}
+							const auto arg3 = UndefValue::get(get_type<u32>());
+							const auto _ret = m_ir->CreateCall(if_type, fret, {m_lsptr, m_thread, m_interp_pc, arg3, m_interp_table, m_interp_7f0, m_interp_regs});
+							_ret->setCallingConv(CallingConv::GHC);
+							_ret->setTailCall();
+							m_ir->CreateRetVoid();
 						}
 
 						if (!m_ir->GetInsertBlock()->getTerminator())
