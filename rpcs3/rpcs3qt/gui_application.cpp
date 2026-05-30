@@ -1360,7 +1360,7 @@ bool gui_application::native_event_filter::nativeEventFilter([[maybe_unused]] co
 			{
 				if (Emu.IsRunning() || Emu.IsStarting())
 				{
-					handle_hotplug_event(msg->wParam == DBT_DEVICEARRIVAL);
+					handle_hotplug_event(msg->wParam == DBT_DEVICEARRIVAL, false);
 				}
 				return false;
 			}

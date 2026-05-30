@@ -315,6 +315,9 @@ public:
 	// Exit.
 	[[noreturn]] static void emergency_exit(std::string_view reason);
 
+	// Exit the current named thread as errored without reporting a fatal error.
+	[[noreturn]] static void silent_exit() noexcept;
+
 	// Get current thread (may be nullptr)
 	static thread_base* get_current()
 	{
@@ -797,31 +800,30 @@ public:
 		m_count = 0;
 
 		// Create all threads
-		for (u32 i = 0; i < count - 1; i++)
+		for (; m_count < count - 1; m_count++)
 		{
 			// Copy the context
 			std::remove_cvref_t<Context> context(static_cast<const Context&>(f));
 
 			// Perform the check and additional preparations for each context
-			if (!std::invoke(std::forward<CheckAndPrepare>(check), i, context))
+			if (!std::invoke(std::forward<CheckAndPrepare>(check), m_count, context))
 			{
 				return;
 			}
 
-			m_count++;
-			new (static_cast<void*>(m_threads + i)) Thread(std::string(name) + std::to_string(i + 1), std::move(context));
+			new (static_cast<void*>(m_threads + m_count)) Thread(std::string(name) + std::to_string(m_count + 1), std::move(context));
 		}
 
 		// Move the context (if movable)
 		std::remove_cvref_t<Context> context(std::forward<Context>(f));
 
-		if (!std::invoke(std::forward<CheckAndPrepare>(check), m_count - 1, context))
+		if (!std::invoke(std::forward<CheckAndPrepare>(check), m_count, context))
 		{
 			return;
 		}
 
+		new (static_cast<void*>(m_threads + m_count)) Thread(std::string(name) + std::to_string(m_count + 1), std::move(context));
 		m_count++;
-		new (static_cast<void*>(m_threads + m_count - 1)) Thread(std::string(name) + std::to_string(m_count - 1), std::move(context));
 	}
 
 	// Default constructor

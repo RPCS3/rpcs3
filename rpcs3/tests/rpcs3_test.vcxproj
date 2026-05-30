@@ -92,6 +92,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="test.cpp" />
+    <ClCompile Include="test_bit_set.cpp" />
     <ClCompile Include="test_dmux_pamf.cpp">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>

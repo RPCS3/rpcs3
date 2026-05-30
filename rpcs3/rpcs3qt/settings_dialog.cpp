@@ -2457,6 +2457,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->disableVertexCache, emu_settings_type::DisableVertexCache);
 	SubscribeTooltip(ui->disableVertexCache, tooltips.settings.disable_vertex_cache);
 
+	m_emu_settings->EnhanceCheckBox(ui->emulateDepthCompare, emu_settings_type::EmulateDepthCompare);
+	SubscribeTooltip(ui->emulateDepthCompare, tooltips.settings.emulate_depth_compare);
+
 	m_emu_settings->EnhanceCheckBox(ui->forceHwMSAAResolve, emu_settings_type::ForceHwMSAAResolve);
 	SubscribeTooltip(ui->forceHwMSAAResolve, tooltips.settings.force_hw_MSAA);
 

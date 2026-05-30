@@ -72,8 +72,6 @@ void color_wedge_widget::paintEvent(QPaintEvent* /*event*/)
 		m_img = QImage(w, h, QImage::Format_RGB32);
 	}
 
-	QVector3D out;
-
 	// Loop over pixels
 	for (int y = 0; y < h; ++y)
 	{

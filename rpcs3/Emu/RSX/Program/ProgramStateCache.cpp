@@ -140,7 +140,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 	//u32 last_instruction_address = 0;
 	//u32 first_instruction_address = entry;
 
-	std::bitset<rsx::max_vertex_program_instructions> instructions_to_patch;
+	bit_set<rsx::max_vertex_program_instructions> instructions_to_patch;
 	std::pair<u32, u32> instruction_range{ umax, 0 };
 	bool has_branch_instruction = false;
 	std::stack<u32> call_stack;
@@ -178,7 +178,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			d3.HEX = instruction._u32[3];
 
 			// Touch current instruction
-			result.instruction_mask[current_instruction] = true;
+			result.instruction_mask.set(current_instruction, true);
 			instruction_range.first = std::min(current_instruction, instruction_range.first);
 			instruction_range.second = std::max(current_instruction, instruction_range.second);
 
@@ -258,7 +258,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			case RSX_SCA_OPCODE_CLB:
 			{
 				// Need to patch the jump address to be consistent wherever the program is located
-				instructions_to_patch[current_instruction] = true;
+				instructions_to_patch.set(current_instruction, true);
 				has_branch_instruction = true;
 
 				d0.HEX = instruction._u32[0];

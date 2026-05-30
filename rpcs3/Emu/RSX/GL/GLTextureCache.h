@@ -2,6 +2,7 @@
 
 #include "Emu/RSX/GL/GLTexture.h"
 #include "GLRenderTargets.h"
+#include "glutils/barriers.h"
 #include "glutils/blitter.h"
 #include "glutils/sync.hpp"
 
@@ -804,12 +805,7 @@ namespace gl
 
 		void insert_texture_barrier(gl::command_context&, gl::texture*, bool) override
 		{
-			auto &caps = gl::get_driver_caps();
-
-			if (caps.ARB_texture_barrier_supported)
-				glTextureBarrier();
-			else if (caps.NV_texture_barrier_supported)
-				glTextureBarrierNV();
+			gl::insert_texture_barrier();
 		}
 
 		bool render_target_format_is_compatible(gl::texture* tex, u32 gcm_format) override

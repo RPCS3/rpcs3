@@ -3775,12 +3775,12 @@ struct registers_decoder<NV309E_SET_FORMAT>
 
 		u8 sw_height_log2() const
 		{
-			return bf_decoder<16, 8>(value);
+			return bf_decoder<24, 8>(value);
 		}
 
 		u8 sw_width_log2() const
 		{
-			return bf_decoder<24, 8>(value);
+			return bf_decoder<16, 8>(value);
 		}
 	};
 

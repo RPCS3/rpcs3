@@ -2122,6 +2122,7 @@ void main_window::OnEmuStop()
 	ui->batchRemoveSPUCachesAct->setEnabled(true);
 	ui->removeHDD1CachesAct->setEnabled(true);
 	ui->removeAllCachesAct->setEnabled(true);
+	ui->removeFirmwareCacheAct->setEnabled(true);
 	ui->removeSavestatesAct->setEnabled(true);
 	ui->cleanUpGameListAct->setEnabled(true);
 
@@ -2176,6 +2177,7 @@ void main_window::OnEmuReady()
 	ui->batchRemoveSPUCachesAct->setEnabled(false);
 	ui->removeHDD1CachesAct->setEnabled(false);
 	ui->removeAllCachesAct->setEnabled(false);
+	ui->removeFirmwareCacheAct->setEnabled(false);
 	ui->removeSavestatesAct->setEnabled(false);
 	ui->cleanUpGameListAct->setEnabled(false);
 

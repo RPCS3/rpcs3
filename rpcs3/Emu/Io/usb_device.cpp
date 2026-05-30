@@ -4,7 +4,6 @@
 #include "Emu/Cell/lv2/sys_usbd.h"
 #include "Emu/Io/usb_device.h"
 #include "Utilities/StrUtil.h"
-#include <libusb.h>
 
 LOG_CHANNEL(sys_usbd);
 
@@ -194,7 +193,7 @@ void usb_device_passthrough::interrupt_transfer(u32 buf_size, u8* buf, u32 endpo
 	const UsbDeviceEndpoint* ep_desc = find_endpoint(static_cast<u8>(endpoint));
 	const bool is_bulk = ep_desc && (ep_desc->bmAttributes & LIBUSB_TRANSFER_TYPE_MASK) == LIBUSB_TRANSFER_TYPE_BULK;
 
-	sys_usbd.notice("USIO debug: submitting passthrough transfer endpoint=0x%x dir=%s size=0x%x type=%s",
+	sys_usbd.trace("USIO debug: submitting passthrough transfer endpoint=0x%x dir=%s size=0x%x type=%s",
 		endpoint, (endpoint & LIBUSB_ENDPOINT_IN) ? "IN" : "OUT", buf_size, is_bulk ? "bulk" : "interrupt");
 
 	if (is_bulk)

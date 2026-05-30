@@ -79,6 +79,7 @@ enum class emu_settings_type
 	DisableOcclusionQueries,
 	DisableVideoOutput,
 	DisableFIFOReordering,
+	EmulateDepthCompare,
 	StrictTextureFlushing,
 	ShaderPrecisionQuality,
 	StereoRenderEnabled,
