@@ -855,6 +855,11 @@ int run_rpcs3(int argc, char** argv)
 
 	parser.process(app->arguments());
 
+	for (const auto& opt : parser.optionNames())
+	{
+		sys_log.notice("Option passed via command line: %s %s", opt, parser.value(opt));
+	}
+
 	// Don't start up the full rpcs3 gui if we just want the version or help.
 	if (parser.isSet(version_option) || parser.isSet(help_option))
 		return 0;
@@ -1182,12 +1187,9 @@ int run_rpcs3(int argc, char** argv)
 			{
 				main_window::InstallPackages(nullptr, {parser.value(installpkg_option)});
 			}
-		}
-	}
 
-	for (const auto& opt : parser.optionNames())
-	{
-		sys_log.notice("Option passed via command line: %s %s", opt, parser.value(opt));
+			return 0;
+		}
 	}
 
 	if (parser.isSet(arg_savestate))
