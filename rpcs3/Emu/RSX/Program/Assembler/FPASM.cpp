@@ -171,7 +171,7 @@ namespace rsx::assembler
 
 		for (const auto& inst : m_instructions)
 		{
-			const auto src = reinterpret_cast<const be_t<u16>*>(inst.bytecode);
+			const auto src = utils::bless<const be_t<u16>>(&inst.bytecode[0]);
 			for (u32 j = 0; j < inst.length; ++j)
 			{
 				const u16 low = src[j * 2];
