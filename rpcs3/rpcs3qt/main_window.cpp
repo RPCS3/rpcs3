@@ -864,7 +864,7 @@ bool main_window::InstallFileInExData(const std::string& extension, const QStrin
 	return to.commit();
 }
 
-bool main_window::InstallPackages(main_window* mw, QStringList file_paths, bool from_boot)
+bool main_window::InstallPackages(main_window* mw, QStringList file_paths, bool from_boot, bool no_precompile)
 {
 	if (file_paths.isEmpty())
 	{
@@ -969,26 +969,26 @@ bool main_window::InstallPackages(main_window* mw, QStringList file_paths, bool 
 
 	if (from_boot)
 	{
-		return HandlePackageInstallation(mw, file_paths, true);
+		return HandlePackageInstallation(mw, file_paths, true, no_precompile);
 	}
 
 	// Handle further installations with a timeout. Otherwise the source explorer instance is not usable during the following file processing.
 	if (mw)
 	{
-		QTimer::singleShot(0, [mw, paths = std::move(file_paths)]()
+		QTimer::singleShot(0, [mw, paths = std::move(file_paths), no_precompile]()
 		{
-			HandlePackageInstallation(mw, paths, false);
+			HandlePackageInstallation(mw, paths, false, no_precompile);
 		});
 	}
 	else
 	{
-		return HandlePackageInstallation(nullptr, file_paths, false);
+		return HandlePackageInstallation(nullptr, file_paths, false, no_precompile);
 	}
 
 	return true;
 }
 
-bool main_window::HandlePackageInstallation(main_window* mw, QStringList file_paths, bool from_boot)
+bool main_window::HandlePackageInstallation(main_window* mw, QStringList file_paths, bool from_boot, bool no_precompile)
 {
 	if (file_paths.empty())
 	{
@@ -1043,6 +1043,7 @@ bool main_window::HandlePackageInstallation(main_window* mw, QStringList file_pa
 			}
 			packages.push_back(std::move(info));
 		}
+		precompile_caches = !no_precompile;
 	}
 
 	if (canceled || packages.empty())
