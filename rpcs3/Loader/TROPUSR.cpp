@@ -286,7 +286,7 @@ u32 TROPUSRLoader::GetUnlockedPlatinumID(u32 trophy_id, const std::string& confi
 	if (!trophy_base)
 	{
 		trp_log.error("TROPUSRLoader::GetUnlockedPlatinumID: Failed to read file (root is null): %s", config_path);
-		return false;
+		return invalid_trophy_id;
 	}
 
 	const usz trophy_count = m_table4.size();
