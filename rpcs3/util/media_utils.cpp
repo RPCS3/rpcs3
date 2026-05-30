@@ -720,7 +720,8 @@ namespace utils
 			{
 				// Shuffle once if necessary
 				media_log.notice("audio_decoder: shuffling initial playlist...");
-				auto engine = std::default_random_engine{};
+				std::random_device rd;
+				auto engine = std::default_random_engine{rd()};
 				std::shuffle(std::begin(m_context.playlist), std::end(m_context.playlist), engine);
 			}
 
