@@ -79,33 +79,38 @@ struct music_state
 	music_state()
 	{
 		handler = Emu.GetCallbacks().get_music_handler();
-		handler->set_status_callback([this](music_handler_base::player_status status)
+		handler->set_event_status_callback([this](u32 status)
 		{
-			// TODO: disabled until I find a game that uses CELL_MUSIC_EVENT_STATUS_NOTIFICATION
-			return;
-
 			if (!func)
 			{
 				return;
 			}
 
-			s32 result = CELL_OK;
-
+			// Known to be used by NFS: Hot Pursuit
+			sysutil_register_cb([this, state = status](ppu_thread& ppu) -> s32
+			{
+				cellMusic.notice("Sending status notification %d", state);
+				func(ppu, CELL_MUSIC_EVENT_STATUS_NOTIFICATION, vm::addr_t(state), userData);
+				return CELL_OK;
+			});
+		});
+		handler->set_playback_status_callback([this](music_handler_base::player_status status)
+		{
 			switch (status)
 			{
 			case music_handler_base::player_status::end_of_media:
-				result = CELL_MUSIC_PLAYBACK_FINISHED;
+				// Let's just play the next song for now
+				if (current_selection_context.content_type == CELL_SEARCH_CONTENTTYPE_MUSICLIST && handler->get_state() == CELL_MUSIC_PB_STATUS_PLAY)
+				{
+					if (const error_code error = set_playback_command(CELL_MUSIC_PB_CMD_NEXT))
+					{
+						cellMusic.error("Failed to play next track. error=0x%x", +error);
+					}
+				}
 				break;
 			default:
 				return;
 			}
-
-			sysutil_register_cb([this, &result](ppu_thread& ppu) -> s32
-			{
-				cellMusic.notice("Sending status notification %d", result);
-				func(ppu, CELL_MUSIC_EVENT_STATUS_NOTIFICATION, vm::addr_t(result), userData);
-				return CELL_OK;
-			});
 		});
 	}
 

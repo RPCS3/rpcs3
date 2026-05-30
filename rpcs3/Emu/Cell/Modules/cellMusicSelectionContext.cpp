@@ -287,6 +287,8 @@ u32 music_selection_context::step_track(bool next)
 		return umax;
 	}
 
+	const std::string last_track = ::at32(playlist, current_track);
+
 	switch (repeat_mode)
 	{
 	case CELL_SEARCH_REPEATMODE_NONE:
@@ -365,6 +367,12 @@ u32 music_selection_context::step_track(bool next)
 			std::random_device rd;
 			auto engine = std::default_random_engine{rd()};
 			std::shuffle(std::begin(playlist), std::end(playlist), engine);
+
+			// Don't play the same track twice
+			if (last_track == ::at32(playlist, current_track))
+			{
+				current_track = (current_track + 1) % playlist.size();
+			}
 		}
 	}
 
