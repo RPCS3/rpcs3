@@ -1539,7 +1539,17 @@ namespace rsx
 			}
 		}
 
-		if (depth_buffer_unused)
+		// A draw with no colour target and depth-test disabled, but with an active ZPASS occlusion
+		// query, must still rasterize against the bound depth buffer so the query produces a pixel
+		// count (e.g. the light/torch occlusion coronas in Resistance 3). Otherwise the depth buffer
+		// is dropped here, no attachment remains, the draw is discarded below ("Framebuffer setup
+		// failed") and the query returns no data - making the light flicker, which precise_zpass_count
+		// cannot mask. Keeping the resolved depth surface bound turns this into a (read-only, since
+		// depth writes are off) depth-only framebuffer, an already-supported configuration.
+		const bool keep_depth_for_query = depth_buffer_unused && color_buffer_unused && layout.zeta_address &&
+			!!method_registers.registers[NV4097_SET_ZPASS_PIXEL_COUNT_ENABLE];
+
+		if (depth_buffer_unused && !keep_depth_for_query)
 		{
 			layout.zeta_address = 0;
 		}
