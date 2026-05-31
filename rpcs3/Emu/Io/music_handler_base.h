@@ -15,17 +15,17 @@ public:
 
 	virtual void stop() = 0;
 	virtual void pause() = 0;
-	virtual void play(const std::string& path) = 0;
+	virtual void play(const std::string& path, bool automatic = false) = 0;
 	virtual void fast_forward(const std::string& path) = 0;
 	virtual void fast_reverse(const std::string& path) = 0;
 	virtual void set_volume(f32 volume) = 0;
 	virtual f32 get_volume() const = 0;
 
-	void set_state(u32 state)
+	void set_state(u32 state, bool automatic = false)
 	{
-		m_state = state;
+		const bool changed = m_state.exchange(state) != state;
 
-		if (m_event_status_callback)
+		if (m_event_status_callback && (changed || !automatic))
 		{
 			m_event_status_callback(state);
 		}

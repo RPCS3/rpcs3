@@ -102,7 +102,7 @@ struct music_state
 				// Let's just play the next song for now
 				if (current_selection_context.content_type == CELL_SEARCH_CONTENTTYPE_MUSICLIST && handler->get_state() == CELL_MUSIC_PB_STATUS_PLAY)
 				{
-					if (const error_code error = set_playback_command(CELL_MUSIC_PB_CMD_NEXT))
+					if (const error_code error = set_playback_command(CELL_MUSIC_PB_CMD_NEXT, true))
 					{
 						cellMusic.error("Failed to play next track. error=0x%x", +error);
 					}
@@ -135,7 +135,7 @@ struct music_state
 	}
 
 	// NOTE: This function only uses CELL_MUSIC enums. CELL_MUSIC2 enums are identical.
-	error_code set_playback_command(s32 command)
+	error_code set_playback_command(s32 command, bool automatic = false)
 	{
 		switch (command)
 		{
@@ -196,7 +196,7 @@ struct music_state
 				handler->fast_reverse(path);
 				break;
 			default:
-				handler->play(path);
+				handler->play(path, automatic);
 				break;
 			}
 
