@@ -13,13 +13,13 @@ LOG_CHANNEL(sys_interrupt);
 
 lv2_int_tag::lv2_int_tag() noexcept
 	: lv2_obj(1)
-	, id(idm::last_id())
+	, id(idm::last_id<lv2_int_tag>())
 {
 }
 
 lv2_int_tag::lv2_int_tag(utils::serial& ar) noexcept
 	: lv2_obj(1)
-	, id(idm::last_id())
+	, id(idm::last_id<lv2_int_tag>())
 	, handler([&]()
 	{
 		const u32 id{ar};
@@ -46,7 +46,7 @@ void lv2_int_tag::save(utils::serial& ar)
 
 lv2_int_serv::lv2_int_serv(shared_ptr<named_thread<ppu_thread>> thread, u64 arg1, u64 arg2) noexcept
 	: lv2_obj(1)
-	, id(idm::last_id())
+	, id(idm::last_id<lv2_int_serv>())
 	, thread(thread)
 	, arg1(arg1)
 	, arg2(arg2)
@@ -55,7 +55,7 @@ lv2_int_serv::lv2_int_serv(shared_ptr<named_thread<ppu_thread>> thread, u64 arg1
 
 lv2_int_serv::lv2_int_serv(utils::serial& ar) noexcept
 	: lv2_obj(1)
-	, id(idm::last_id())
+	, id(idm::last_id<lv2_int_serv>())
 	, thread(idm::get_unlocked<named_thread<ppu_thread>>(ar.pop<u32>()))
 	, arg1(ar)
 	, arg2(ar)
