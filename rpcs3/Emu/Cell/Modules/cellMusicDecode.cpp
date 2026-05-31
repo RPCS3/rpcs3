@@ -74,6 +74,7 @@ struct music_decode
 			cellMusicDecode.notice("set_decode_command(START): context: %s", current_selection_context.to_string());
 
 			music_selection_context context = current_selection_context;
+			context.current_track = context.first_track;
 
 			for (usz i = 0; i < context.playlist.size(); i++)
 			{
