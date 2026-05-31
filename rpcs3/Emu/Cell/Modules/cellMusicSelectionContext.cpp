@@ -287,7 +287,7 @@ u32 music_selection_context::step_track(bool next)
 		return umax;
 	}
 
-	const std::string last_track = ::at32(playlist, current_track);
+	const std::string last_track = (current_track < playlist.size()) ? playlist[current_track] : "";
 
 	switch (repeat_mode)
 	{
