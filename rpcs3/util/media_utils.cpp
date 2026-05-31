@@ -465,7 +465,7 @@ namespace utils
 		stop();
 	}
 
-	void audio_decoder::set_context(music_selection_context context)
+	void audio_decoder::set_context(music_selection_context&& context)
 	{
 		m_context = std::move(context);
 	}
@@ -714,8 +714,6 @@ namespace utils
 				return;
 			}
 
-			m_context.current_track = m_context.first_track;
-
 			if (m_context.context_option == CELL_SEARCH_CONTEXTOPTION_SHUFFLE && m_context.playlist.size() > 1)
 			{
 				// Shuffle once if necessary
@@ -740,8 +738,12 @@ namespace utils
 
 				// Let's only decode one track at a time. Wait for the consumer to finish reading the track.
 				media_log.notice("audio_decoder: waiting until track is consumed...");
-				thread_ctrl::wait_on(track_fully_consumed, 0);
-				track_fully_consumed = false;
+
+				while (thread_ctrl::state() != thread_state::aborting && !track_fully_consumed)
+				{
+					thread_ctrl::wait_on(track_fully_consumed, 0);
+				}
+				track_fully_consumed = 0;
 			}
 
 			media_log.notice("audio_decoder: finished playlist");
