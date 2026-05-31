@@ -32,13 +32,13 @@ struct lv2_timer_thread
 
 lv2_timer::lv2_timer(utils::serial& ar)
 	: lv2_obj(1)
-	, state(ar)
+	, state(ar.pop<u32>())
 	, port(lv2_event_queue::load_ptr(ar, port, "timer"))
 	, source(ar)
 	, data1(ar)
 	, data2(ar)
-	, expire(ar)
-	, period(ar)
+	, expire(ar.pop<u32>())
+	, period(ar.pop<u32>())
 {
 }
 

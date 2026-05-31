@@ -233,10 +233,10 @@ lv2_spu_group::lv2_spu_group(utils::serial& ar) noexcept
 	, max_num(ar)
 	, mem_size(ar)
 	, type(ar) // SPU Thread Group Type
-	, ct(lv2_memory_container::search(ar))
+	, ct(lv2_memory_container::search(ar.pop<u32>()))
 	, has_scheduler_context(ar.pop<u8>())
 	, max_run(ar)
-	, init(ar)
+	, init(ar.pop<u32>())
 	, prio([&ar]()
 	{
 		std::common_type_t<decltype(lv2_spu_group::prio)> prio{};
@@ -246,7 +246,7 @@ lv2_spu_group::lv2_spu_group(utils::serial& ar) noexcept
 		return prio;
 	}())
 	, run_state(ar.pop<spu_group_status>())
-	, exit_status(ar)
+	, exit_status(ar.pop<s32>())
 {
 	for (auto& thread : threads)
 	{

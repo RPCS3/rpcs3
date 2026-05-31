@@ -310,8 +310,8 @@ std::function<void(void*)> lv2_prx::load(utils::serial& ar)
 	[[maybe_unused]] const s32 version = GET_SERIALIZATION_VERSION(lv2_prx_overlay);
 
 	const std::string path = vfs::get(ar.pop<std::string>());
-	const s64 offset = ar;
-	const u32 state = ar;
+	const s64 offset{ar};
+	const u32 state{ar};
 
 	usz seg_count = 0;
 	ar.deserialize_vle(seg_count);
@@ -358,7 +358,7 @@ std::function<void(void*)> lv2_prx::load(utils::serial& ar)
 			for (usz i = 0; i < seg_count; i++)
 			{
 				auto& seg = prx->segs.emplace_back();
-				seg.addr = ar;
+				ar(seg.addr);
 				seg.size = 1; // TODO
 			}
 		}

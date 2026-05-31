@@ -22,7 +22,7 @@ lv2_int_tag::lv2_int_tag(utils::serial& ar) noexcept
 	, id(idm::last_id())
 	, handler([&]()
 	{
-		const u32 id = ar;
+		const u32 id{ar};
 
 		auto ptr = idm::get_unlocked<lv2_obj, lv2_int_serv>(id);
 
@@ -56,7 +56,7 @@ lv2_int_serv::lv2_int_serv(shared_ptr<named_thread<ppu_thread>> thread, u64 arg1
 lv2_int_serv::lv2_int_serv(utils::serial& ar) noexcept
 	: lv2_obj(1)
 	, id(idm::last_id())
-	, thread(idm::get_unlocked<named_thread<ppu_thread>>(ar))
+	, thread(idm::get_unlocked<named_thread<ppu_thread>>(ar.pop<u32>()))
 	, arg1(ar)
 	, arg2(ar)
 {
