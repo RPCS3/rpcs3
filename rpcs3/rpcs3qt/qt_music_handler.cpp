@@ -113,7 +113,7 @@ void qt_music_handler::pause()
 	set_state(CELL_MUSIC_PB_STATUS_PAUSE);
 }
 
-void qt_music_handler::play(const std::string& path)
+void qt_music_handler::play(const std::string& path, bool automatic)
 {
 	std::lock_guard lock(m_mutex);
 
@@ -135,7 +135,7 @@ void qt_music_handler::play(const std::string& path)
 		m_media_player->play();
 	});
 
-	set_state(CELL_MUSIC_PB_STATUS_PLAY);
+	set_state(CELL_MUSIC_PB_STATUS_PLAY, automatic);
 }
 
 void qt_music_handler::fast_forward(const std::string& path)
