@@ -237,7 +237,7 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 
 		sys_prx.warning("Ignored module: \"%s\" (id=0x%x)", vpath, idm::last_id());
 
-		return not_an_error(idm::last_id());
+		return not_an_error(idm::last_id<lv2_prx>());
 	};
 
 	if (ignore)
@@ -300,7 +300,7 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 
 	sys_prx.success("Loaded module: \"%s\" (id=0x%x)", vpath, idm::last_id());
 
-	return not_an_error(idm::last_id());
+	return not_an_error(idm::last_id<lv2_prx>());
 }
 
 fs::file make_file_view(fs::file&& file, u64 offset, u64 size);

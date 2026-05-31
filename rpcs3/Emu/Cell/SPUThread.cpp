@@ -1757,7 +1757,7 @@ void spu_thread::init_spu_decoder()
 }
 
 spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id, bool is_isolated, u32 option)
-	: cpu_thread(idm::last_id())
+	: cpu_thread(idm::last_id<spu_thread>())
 	, group(group)
 	, index(index)
 	, thread_type(group ? spu_type::threaded : is_isolated ? spu_type::isolated : spu_type::raw)
@@ -1819,7 +1819,7 @@ void spu_thread::serialize_common(utils::serial& ar)
 }
 
 spu_thread::spu_thread(utils::serial& ar, lv2_spu_group* group)
-	: cpu_thread(idm::last_id())
+	: cpu_thread(idm::last_id<spu_thread>())
 	, group(group)
 	, index(ar)
 	, thread_type(group ? spu_type::threaded : ar.pop<u8>() ? spu_type::isolated : spu_type::raw)

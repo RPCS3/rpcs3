@@ -2425,7 +2425,7 @@ ppu_thread::~ppu_thread()
 }
 
 ppu_thread::ppu_thread(const ppu_thread_params& param, std::string_view name, u32 _prio, int detached)
-	: cpu_thread(idm::last_id())
+	: cpu_thread(idm::last_id<ppu_thread>())
 	, stack_size(param.stack_size)
 	, stack_addr(param.stack_addr)
 	, joiner(detached != 0 ? ppu_join_status::detached : ppu_join_status::joinable)
@@ -2525,7 +2525,7 @@ struct save_lv2_tag
 };
 
 ppu_thread::ppu_thread(utils::serial& ar)
-	: cpu_thread(idm::last_id()) // last_id() is showed to constructor on serialization
+	: cpu_thread(idm::last_id<ppu_thread>()) // last_id<>() is shown to constructor on serialization
 	, stack_size(ar)
 	, stack_addr(ar)
 	, joiner(ar.pop<ppu_join_status>())
