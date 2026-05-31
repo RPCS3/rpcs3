@@ -2142,33 +2142,32 @@ public:
 					accumulate_pair(pending_cmp, llvm::ConstantInt::get(pending_cmp->getType(), -1, true));
 				}
 
-				llvm::Value* expected = nullptr;
-
 				if (m_use_dotprod)
 				{
-					u32 expected_words[4];
-					expected_words[0] = expected_hits * 4 * 0xff * 0xff;
-					expected_words[1] = expected_words[0];
-					expected_words[2] = expected_words[0];
-					expected_words[3] = expected_words[0];
-					expected = ConstantDataVector::get(m_context, llvm::ArrayRef(expected_words, 4));
+					llvm::Value* acc = m_ir->CreateAdd(m_ir->CreateAdd(acc0, acc1), m_ir->CreateAdd(acc2, acc3));
+					acc = m_ir->CreateCall(get_intrinsic<u32, u32[4]>(llvm::Intrinsic::aarch64_neon_uaddv), {acc});
+
+					constexpr u64 dot_match_value = 0xff * 0xff;
+					const u32 expected = static_cast<u32>(expected_hits * 16 * dot_match_value);
+					const auto cond = m_ir->CreateICmpNE(acc, m_ir->getInt32(expected));
+					m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
 				}
 				else
 				{
 					u16 expected_words[8];
 					std::fill_n(expected_words, 8, static_cast<u16>(expected_hits));
-					expected = ConstantDataVector::get(m_context, llvm::ArrayRef(expected_words, 8));
+					const auto expected = ConstantDataVector::get(m_context, llvm::ArrayRef(expected_words, 8));
+
+					llvm::Value* acc = m_ir->CreateAdd(m_ir->CreateAdd(acc0, acc1), m_ir->CreateAdd(acc2, acc3));
+					acc = m_ir->CreateXor(acc, expected);
+					acc = m_ir->CreateBitCast(acc, get_type<u64[2]>());
+
+					llvm::Value* elem = m_ir->CreateExtractElement(acc, u64{0});
+					elem = m_ir->CreateOr(elem, m_ir->CreateExtractElement(acc, u64{1}));
+
+					const auto cond = m_ir->CreateICmpNE(elem, m_ir->getInt64(0));
+					m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
 				}
-
-				llvm::Value* acc = m_ir->CreateAdd(m_ir->CreateAdd(acc0, acc1), m_ir->CreateAdd(acc2, acc3));
-				acc = m_ir->CreateXor(acc, expected);
-				acc = m_ir->CreateBitCast(acc, get_type<u64[2]>());
-
-				llvm::Value* elem = m_ir->CreateExtractElement(acc, u64{0});
-				elem = m_ir->CreateOr(elem, m_ir->CreateExtractElement(acc, u64{1}));
-
-				const auto cond = m_ir->CreateICmpNE(elem, m_ir->getInt64(0));
-				m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
 			}
 #else
 			else
