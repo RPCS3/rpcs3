@@ -1812,7 +1812,7 @@ void spu_thread::serialize_common(utils::serial& ar)
 	}
 	else
 	{
-		const u8 count = ar;
+		const u8 count{ar};
 		ar(std::span(vals, count));
 		ch_in_mbox.set_values(count, vals[0], vals[1], vals[2], vals[3]);
 	}

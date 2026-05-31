@@ -56,7 +56,7 @@ lv2_memory::lv2_memory(utils::serial& ar)
 
 		return null_ptr;
 	}(ar.pop<u32>()))
-	, counter(ar)
+	, counter(ar.pop<u32>())
 {
 }
 

@@ -465,7 +465,7 @@ lv2_fs_object::lv2_fs_object(std::string_view filename)
 }
 
 lv2_fs_object::lv2_fs_object(utils::serial& ar, bool)
-	: name(ar)
+	: name(ar.pop<decltype(name)>())
 	, mp(g_fxo->get<lv2_fs_mount_info_map>().lookup(name.data()))
 {
 }
@@ -569,7 +569,7 @@ lv2_file::lv2_file(utils::serial& ar)
 
 	if (ar.pop<bool>()) // see lv2_file::save in_mem
 	{
-		const fs::stat_t stat = ar;
+		const fs::stat_t stat = ar.pop<fs::stat_t>();
 
 		std::vector<u8> buf(stat.size);
 		ar(std::span<u8>(buf.data(), buf.size()));
@@ -589,7 +589,7 @@ lv2_file::lv2_file(utils::serial& ar)
 		sys_fs.success("Loaded file descriptor \'%s\' file for savestates (vpath=\'%s\', type=%s, flags=0x%x, id=%d)", name.data(), retrieve_real, type, flags, idm::last_id());
 	}
 
-	file.seek(ar);
+	file.seek(ar.pop<s64>());
 }
 
 void lv2_file::save(utils::serial& ar)
@@ -682,7 +682,7 @@ lv2_dir::lv2_dir(utils::serial& ar)
 
 		return entries;
 	}())
-	, pos(ar)
+	, pos(ar.pop<u64>())
 {
 }
 

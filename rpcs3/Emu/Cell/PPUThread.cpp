@@ -161,7 +161,7 @@ bool serialize<ppu_thread::cr_bits>(utils::serial& ar, typename ppu_thread::cr_b
 	}
 	else
 	{
-		o.unpack(ar);
+		o.unpack(ar.pop<u32>());
 	}
 
 	return true;
@@ -2529,7 +2529,7 @@ ppu_thread::ppu_thread(utils::serial& ar)
 	, stack_size(ar)
 	, stack_addr(ar)
 	, joiner(ar.pop<ppu_join_status>())
-	, entry_func(std::bit_cast<ppu_func_opd_t, u64>(ar))
+	, entry_func(std::bit_cast<ppu_func_opd_t>(ar.pop<u64>()))
 	, is_interrupt_thread(ar)
 {
 	[[maybe_unused]] const s32 version = GET_SERIALIZATION_VERSION(ppu);
