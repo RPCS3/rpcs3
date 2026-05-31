@@ -1191,7 +1191,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 			continue;
 		}
 
-		vm::cptr<void> sec_end = vm::cast(sec.addr + sec.size);
+		vm::cptr<u32> sec_end = vm::cast(sec.addr + sec.size);
 
 		// Probe
 		for (vm::cptr<u32> _ptr = vm::cast(sec.addr); _ptr < sec_end;)
@@ -1212,7 +1212,7 @@ bool ppu_module<lv2_obj>::analyse(u32 lib_toc, u32 entry, const u32 sec_end, con
 				break;
 			}
 
-			if (size % 4 || size < 0x10 || _ptr + size / 4 > sec_end)
+			if (size % 4 || size < 0x10 || static_cast<u32>(sec_end - _ptr) < size / 4)
 			{
 				sec_end.set(0);
 				break;
