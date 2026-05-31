@@ -267,9 +267,10 @@ void music_selection_context::set_track(std::string_view track)
 
 	for (usz i = 0; i < playlist.size(); i++)
 	{
-		cellMusicSelectionContext.error("set_track: Comparing track '%s' vs '%s'", track, playlist[i]);
+		cellMusicSelectionContext.notice("set_track: Comparing track '%s' vs '%s'", track, playlist[i]);
 		if (track.ends_with(playlist[i]))
 		{
+			cellMusicSelectionContext.notice("set_track: Found track '%s': '%s'", track, playlist[i]);
 			first_track = current_track = static_cast<u32>(i);
 			return;
 		}
