@@ -121,7 +121,8 @@ namespace rsx
 }
 
 Emulator::Emulator() noexcept
-	: m_default_renderer(video_renderer::null)
+	: m_supported_renderers({video_renderer::null})
+	, m_default_renderer(video_renderer::null)
 {
 	s_emulator_available = true;
 }
@@ -301,6 +302,15 @@ static void fixup_settings(const psf::registry* _psf)
 		{
 			sys_log.warning("The music handler '%s' is currently not supported in headless mode and will therefore be set to '%s'.", g_cfg.audio.music.get(), music_handler::null);
 			g_cfg.audio.music.set(music_handler::null);
+		}
+	}
+	else
+	{
+		// Make sure we have a valid renderer
+		if (!Emu.GetSupportedRenderers().contains(g_cfg.video.renderer.get()))
+		{
+			sys_log.warning("The video renderer '%s' is not supported on this device and will therefore be set to '%s'.", g_cfg.video.renderer.get(), Emu.GetDefaultRenderer());
+			g_cfg.video.renderer.set(Emu.GetDefaultRenderer());
 		}
 	}
 

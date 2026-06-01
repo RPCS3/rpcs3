@@ -142,6 +142,7 @@ class Emulator final
 
 	games_config m_games_config;
 
+	std::set<video_renderer> m_supported_renderers;
 	video_renderer m_default_renderer;
 	std::string m_default_graphics_adapter;
 
@@ -476,6 +477,10 @@ public:
 	bool IsHeadless() const { return m_headless; }
 	void SetHeadless(bool headless) { m_headless = headless; }
 
+	const std::set<video_renderer>& GetSupportedRenderers() const { return m_supported_renderers; }
+	void SetSupportedRenderers(std::set<video_renderer> renderers) { m_supported_renderers = std::move(renderers); }
+
+	video_renderer GetDefaultRenderer() const { return m_default_renderer; }
 	void SetDefaultRenderer(video_renderer renderer) { m_default_renderer = renderer; }
 	void SetDefaultGraphicsAdapter(std::string adapter) { m_default_graphics_adapter = std::move(adapter); }
 
