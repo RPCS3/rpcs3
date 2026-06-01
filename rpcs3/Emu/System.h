@@ -172,6 +172,7 @@ class Emulator final
 
 	bool m_continuous_mode = false;
 	bool m_has_gui = true;
+	bool m_headless = false;
 	bool m_add_database_config = false;
 
 	bool m_state_inspection_savestate = false;
@@ -471,6 +472,9 @@ public:
 
 	bool HasGui() const { return m_has_gui; }
 	void SetHasGui(bool has_gui) { m_has_gui = has_gui; }
+
+	bool IsHeadless() const { return m_headless; }
+	void SetHeadless(bool headless) { m_headless = headless; }
 
 	void SetDefaultRenderer(video_renderer renderer) { m_default_renderer = renderer; }
 	void SetDefaultGraphicsAdapter(std::string adapter) { m_default_graphics_adapter = std::move(adapter); }
