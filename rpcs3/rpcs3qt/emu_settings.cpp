@@ -100,21 +100,28 @@ bool emu_settings::Init()
 {
 	m_render_creator = new render_creator(this);
 
-	if (m_render_creator->abort_requested)
+	std::set<video_renderer> supported_renderers;
+	supported_renderers.insert(video_renderer::null);
+
+	if (m_render_creator->OpenGL.supported)
 	{
-		return false;
+		supported_renderers.insert(video_renderer::opengl);
 	}
 
 	// Make Vulkan default setting if it is supported
-	if (m_render_creator->Vulkan.supported && !m_render_creator->Vulkan.adapters.empty())
+	if (!m_render_creator->abort_requested && m_render_creator->Vulkan.supported && !m_render_creator->Vulkan.adapters.empty())
 	{
 		const std::string adapter = ::at32(m_render_creator->Vulkan.adapters, 0).toStdString();
 		cfg_log.notice("Setting the default renderer to Vulkan. Default GPU: '%s'", adapter);
 		Emu.SetDefaultRenderer(video_renderer::vulkan);
 		Emu.SetDefaultGraphicsAdapter(adapter);
+
+		supported_renderers.insert(video_renderer::vulkan);
 	}
 
-	return true;
+	Emu.SetSupportedRenderers(supported_renderers);
+
+	return !m_render_creator->abort_requested;
 }
 
 void emu_settings::LoadSettings(const std::string& title_id, bool create_config_from_global, const std::string& db_config)
