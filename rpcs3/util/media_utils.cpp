@@ -477,6 +477,8 @@ namespace utils
 
 	void audio_decoder::clear()
 	{
+		media_log.notice("audio_decoder: Clear data...");
+
 		track_fully_decoded = 0;
 		track_fully_consumed = 0;
 		has_error = false;
@@ -487,6 +489,8 @@ namespace utils
 
 	void audio_decoder::stop()
 	{
+		media_log.notice("audio_decoder: Stop decoding...");
+
 		if (m_thread)
 		{
 			auto& thread = *m_thread;
@@ -695,7 +699,7 @@ namespace utils
 					if (buffer)
 						av_freep(&buffer);
 
-					media_log.notice("audio_decoder: decoded frame_count=%d buffer_size=%d timestamp_us=%d", frame_count, buffer_size, av.audio.frame->best_effort_timestamp);
+					media_log.trace("audio_decoder: decoded frame_count=%d buffer_size=%d timestamp_us=%d", frame_count, buffer_size, av.audio.frame->best_effort_timestamp);
 				}
 			}
 		};

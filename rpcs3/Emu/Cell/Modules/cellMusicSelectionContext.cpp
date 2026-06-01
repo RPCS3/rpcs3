@@ -301,7 +301,7 @@ u32 music_selection_context::step_track(bool next)
 			{
 				// We are at the end of the playlist.
 				cellMusicSelectionContext.notice("step_track: No more tracks to play in playlist...");
-				current_track = umax;
+				current_track = playlist.size() - 1; // NOTE: We could use size instead of size - 1 to allow to use PREV to play the last track again.
 				return umax;
 			}
 		}

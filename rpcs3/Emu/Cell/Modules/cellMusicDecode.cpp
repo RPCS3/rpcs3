@@ -387,6 +387,12 @@ error_code cellMusicDecodeSetDecodeCommand(s32 command)
 		return CELL_OK;
 	});
 
+	//sysutil_register_cb([&dec, command](ppu_thread& ppu) -> s32
+	//{
+	//	dec.func(ppu, CELL_MUSIC_DECODE_EVENT_STATUS_NOTIFICATION, vm::addr_t(command), dec.userData);
+	//	return CELL_OK;
+	//});
+
 	return CELL_OK;
 }
 
