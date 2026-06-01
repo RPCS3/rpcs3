@@ -301,7 +301,7 @@ u32 music_selection_context::step_track(bool next)
 			{
 				// We are at the end of the playlist.
 				cellMusicSelectionContext.notice("step_track: No more tracks to play in playlist...");
-				current_track = playlist.size() - 1; // NOTE: We could use size instead of size - 1 to allow to use PREV to play the last track again.
+				current_track = ::size32(playlist) - 1; // NOTE: We could use size instead of size - 1 to allow to use PREV to play the last track again.
 				return umax;
 			}
 		}
@@ -312,7 +312,6 @@ u32 music_selection_context::step_track(bool next)
 			{
 				// We are at the start of the playlist.
 				cellMusicSelectionContext.notice("step_track: No more tracks to play in playlist...");
-				current_track = umax;
 				return umax;
 			}
 
@@ -337,7 +336,7 @@ u32 music_selection_context::step_track(bool next)
 			// Play the previous track. Start with the last track if we reached the start of the playlist.
 			if (current_track == 0)
 			{
-				current_track = ::narrow<u32>(playlist.size() - 1);
+				current_track = ::size32(playlist) - 1;
 			}
 			else
 			{
