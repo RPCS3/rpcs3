@@ -118,6 +118,11 @@ bool emu_settings::Init()
 
 		supported_renderers.insert(video_renderer::vulkan);
 	}
+	else if (m_render_creator->OpenGL.supported)
+	{
+		cfg_log.notice("Setting the default renderer to OpenGl");
+		Emu.SetDefaultRenderer(video_renderer::opengl);
+	}
 
 	Emu.SetSupportedRenderers(supported_renderers);
 
