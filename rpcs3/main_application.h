@@ -11,7 +11,7 @@ class main_application
 public:
 	virtual bool Init() = 0;
 
-	static void InitializeEmulator(const std::string& user, bool show_gui);
+	static void InitializeEmulator(const std::string& user, bool show_gui, bool headless);
 
 	void SetActiveUser(const std::string& user)
 	{

@@ -61,9 +61,10 @@ namespace rsx::overlays
 extern void qt_events_aware_op(int repeat_duration_ms, std::function<bool()> wrapped_op);
 
 /** Emu.Init() wrapper for user management */
-void main_application::InitializeEmulator(const std::string& user, bool show_gui)
+void main_application::InitializeEmulator(const std::string& user, bool show_gui, bool headless)
 {
 	Emu.SetHasGui(show_gui);
+	Emu.SetHeadless(headless);
 	Emu.SetUsr(user);
 	Emu.Init();
 

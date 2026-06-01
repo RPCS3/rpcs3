@@ -152,7 +152,7 @@ bool gui_application::Init()
 	}
 
 	// Force init the emulator
-	InitializeEmulator(m_active_user, m_show_gui);
+	InitializeEmulator(m_active_user, m_show_gui, false);
 
 	// Create callbacks from the emulator, which reference the handlers.
 	InitializeCallbacks();
