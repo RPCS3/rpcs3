@@ -57,12 +57,12 @@ namespace rsx
 			m_clear_button->set_pos(360, sky_list_y + sky_list_h + 20);
 			m_clear_button->set_font("Arial", 16);
 
-			m_create_button = std::make_unique<image_button>();
-			m_create_button->set_text(localized_string_id::HOME_MENU_SETTINGS_SKYLANDER_CREATE);
-			m_create_button->set_image_resource(resource_config::standard_image_resource::triangle);
-			m_create_button->set_size(120, 30);
-			m_create_button->set_pos(540, sky_list_y + sky_list_h + 20);
-			m_create_button->set_font("Arial", 16);
+			// m_create_button = std::make_unique<image_button>();
+			// m_create_button->set_text(localized_string_id::HOME_MENU_SETTINGS_SKYLANDER_CREATE);
+			// m_create_button->set_image_resource(resource_config::standard_image_resource::triangle);
+			// m_create_button->set_size(120, 30);
+			// m_create_button->set_pos(540, sky_list_y + sky_list_h + 20);
+			// m_create_button->set_font("Arial", 16);
 
 			fade_animation.duration_sec = 0.15f;
 
@@ -152,7 +152,7 @@ namespace rsx
 			result.add(m_description->get_compiled());
 			result.add(m_load_button->get_compiled());
 			result.add(m_clear_button->get_compiled());
-			result.add(m_create_button->get_compiled());
+			// result.add(m_create_button->get_compiled());
 
 			fade_animation.apply(result);
 
