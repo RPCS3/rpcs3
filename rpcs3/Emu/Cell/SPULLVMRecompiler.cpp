@@ -1849,8 +1849,11 @@ public:
 			if ((end - starta) >= 192 && !g_cfg.core.precise_spu_verification)
 			{
 #ifdef ARCH_ARM64
+				// Loop if there is at least 288 bytes of data to checksum on ARM.
+				// Each ARM checksum block consumes 6 NEON vectors: 2 direct adds and 2 UABD accumulates.
 				constexpr u32 checksum_block_size = 96;
 #else
+				// Loop if there is atleast (16 * stride) bytes of data to checksum to save some instruction cache
 				constexpr u32 checksum_block_size = 64;
 #endif
 				constexpr u32 checksum_loop_vectors = 16;
@@ -2005,6 +2008,13 @@ public:
 				const auto cond = m_ir->CreateICmpNE(elem, m_ir->getInt64(0));
 				m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
 #else
+				// Very cursed "checksumming" code
+				// 96 bytes per ARM checksum step
+				//vls[0] -> add
+				//vls[1], vls[2] -> uaba
+				//vls[3] -> add
+				//vls[4], vls[5] -> uaba
+				//This allows us to save on some ALU ops relative to load instructions
 				const auto acc_init = ConstantAggregateZero::get(get_type<u32[4]>());
 				llvm::Value* checksum_parts[4] = {acc_init, acc_init, acc_init, acc_init};
 				u32 checksum[16] = {0};
@@ -2239,6 +2249,9 @@ public:
 						m_ir->CreateBitCast(expected, get_type<u16[8]>())), get_type<s16[8]>());
 				};
 
+				// Multiply accumulate based comparison
+				// See comment above cmp16_pair_accum_arm64 in SPUThread.cpp
+				// Dotproduct instructions have slightly higher throughput on many common ARM cores
 				const auto accumulate_pair = [&](llvm::Value* lhs, llvm::Value* rhs)
 				{
 					llvm::Value*& acc = *accs[acc_index];
