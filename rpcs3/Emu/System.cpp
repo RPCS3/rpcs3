@@ -475,7 +475,6 @@ void Emulator::Init()
 	g_cfg.name.clear();
 
 	// Not all renderers are known at compile time, so set a provided default if possible
-	// TODO: Also initialize render_creator in headless mode
 	ensure(m_supported_renderers.contains(m_default_renderer));
 	ensure(!(m_default_renderer == video_renderer::vulkan && m_default_graphics_adapter.empty()));
 	g_cfg.video.renderer.set(m_default_renderer);
