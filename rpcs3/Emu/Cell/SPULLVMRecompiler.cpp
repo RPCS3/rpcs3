@@ -1867,6 +1867,7 @@ public:
 					if (!func.data[(j - start) / 4])
 					{
 						use_checksum_loop = false;
+						break;
 					}
 				}
 
