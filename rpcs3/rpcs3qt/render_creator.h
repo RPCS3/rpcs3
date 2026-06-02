@@ -2,16 +2,13 @@
 
 #include "emu_settings_type.h"
 
-#include <QObject>
 #include <QString>
 #include <QStringList>
 
-class render_creator : public QObject
+class render_creator
 {
-	Q_OBJECT
-
 public:
-	render_creator(QObject* parent);
+	render_creator();
 
 	void update_names(const QStringList& names);
 
@@ -33,7 +30,7 @@ public:
 			, supported(supported) {}
 	};
 
-	bool abort_requested = false;
+	bool vulkan_timed_out = false;
 	bool supports_vulkan = false;
 	QStringList vulkan_adapters;
 	render_info Vulkan;

@@ -370,7 +370,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	//   | |__| | |    | |__| |    | | (_| | |_) |
 	//    \_____|_|     \____/     |_|\__,_|_.__/
 
-	render_creator* r_creator = m_emu_settings->m_render_creator;
+	std::shared_ptr<render_creator> r_creator = m_emu_settings->m_render_creator;
 
 	if (!r_creator)
 	{
