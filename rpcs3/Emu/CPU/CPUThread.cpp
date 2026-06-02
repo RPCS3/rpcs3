@@ -1509,7 +1509,7 @@ bool cpu_thread::suspend_work::push(cpu_thread* _this) noexcept
 		{
 			for (u32 i = 0; i < work->prf_size; i++)
 			{
-				utils::prefetch_write(work->prf_list[0]);
+				utils::prefetch_write(work->prf_list[i]);
 			}
 		}
 
