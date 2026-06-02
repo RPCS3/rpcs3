@@ -857,21 +857,30 @@ public:
 
 				if (sizeof...(Get) == 0 || ((key.type() == get_type<Get>()) || ...))
 				{
-					if constexpr ((std::is_invocable_v<F, u32, Get&> && ...))
+					constexpr bool process_local = sizeof...(Get) == 0 ? (std::is_invocable_v<F, u32, T&>) : (std::is_invocable_v<F, u32, Get&> && ...);
+
+					if constexpr (process_local)
 					{
 						if (id_manager::g_process != key.process())
 						{
 							continue;
 						}
 
+						std::remove_reference_t<std::conditional_t<process_local, F&&, result_type(*)(u32, object_type&)>>* pfunc{};
+
+						if constexpr (process_local)
+						{
+							pfunc = &func;
+						}
+
 						if constexpr (std::is_void_v<result_type>)
 						{
-							func(key, *ptr);
+							std::invoke(*pfunc, key, *ptr);
 							result++;
 						}
 						else
 						{
-							if ((result.ret = func(key, *ptr)))
+							if ((result.ret = std::invoke(*pfunc, key, *ptr)))
 							{
 								result.ptr = static_cast<stx::shared_ptr<object_type>>(id.load());
 								break;
@@ -880,14 +889,21 @@ public:
 					}
 					else
 					{
+						std::remove_reference_t<std::conditional_t<!process_local, F&&, result_type(*)(u32, u32, object_type&)>>* pfunc{};
+
+						if constexpr (!process_local)
+						{
+							pfunc = &func;
+						}
+
 						if constexpr (std::is_void_v<result_type>)
 						{
-							func(key, key.process(), *ptr);
+							std::invoke(*pfunc, key, key.process(), *ptr);
 							result++;
 						}
 						else
 						{
-							if ((result.ret = func(key, key.process(), *ptr)))
+							if ((result.ret = std::invoke(*pfunc, key, key.process(), *ptr)))
 							{
 								result.ptr = static_cast<stx::shared_ptr<object_type>>(id.load());
 								break;

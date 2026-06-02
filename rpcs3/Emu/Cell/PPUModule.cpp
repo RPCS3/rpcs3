@@ -2206,7 +2206,6 @@ shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2
 		}
 	}
 
-	//init_ppu_functions(ar, false);
 
 	// Set for delayed initialization in ppu_initialize()
 	const auto process_ptr = ar ? idm::make_ptr<lv2_obj, lv2_process>(*ar) : idm::make_ptr<lv2_obj, lv2_process>();
@@ -2218,6 +2217,8 @@ shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2
 	process_ptr->ELF_file_path = elf_path;
 
 	auto& _main = *process_ptr;
+
+	init_ppu_functions(process_ptr, ar, false);
 
 	// Access linkage information object
 	auto& link = g_fxo->get<ppu_linkage_info>();

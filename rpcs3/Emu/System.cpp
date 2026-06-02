@@ -76,7 +76,7 @@ std::string g_cfg_defaults;
 
 atomic_t<u64> g_watchdog_hold_ctr{0};
 
-extern bool ppu_load_self(const ppu_exec_object& elf, bool virtual_load, const std::vector<std::string>& argv0, const std::vector<std::string>& envp0, const std::vector<u8>& data, utils::serial* ar = nullptr);
+extern shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2_memory_container> mem_ct, bool virtual_load, const std::vector<std::string>& argv0, const std::vector<std::string>& envp0, const std::vector<u8>& data0, utils::serial* ar = nullptr);
 extern void spu_load_exec(const spu_exec_object&);
 extern void spu_load_rel_exec(const spu_rel_object&);
 extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_module<lv2_obj>*>* loaded_prx, bool is_fast_compilation);
@@ -228,7 +228,7 @@ void Emulator::BlockingCallFromMainThread(std::function<void()>&& func, bool tra
 }
 
 // This function ensures constant initialization order between different compilers and builds
-void init_fxo_for_exec(utils::serial* ar, bool full = false)
+void init_fxo_for_exec(shared_ptr<lv2_process> process, utils::serial* ar, bool full = false)
 {
 	void init_ppu_functions(utils::serial* ar, bool full);
 
@@ -3818,8 +3818,8 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 				ar(std::array<u8, 32>{}); // Reserved for future use
 
-				set_progress_message("Saving VMemory");
-				vm::save(ar);
+				// set_progress_message("Saving VMemory");
+				// vm::save(ar);
 
 				set_progress_message("Saving FXO");
 				g_fxo->save(ar);
@@ -4047,8 +4047,6 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			g_fxo->reset();
 
 			sys_log.notice("Objects cleared...");
-
-			vm::close();
 
 			*stop_watchdog = thread_state::finished;
 			static_cast<void>(init_mtx->reset());

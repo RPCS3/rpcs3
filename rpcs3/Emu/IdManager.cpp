@@ -6,6 +6,7 @@ shared_mutex id_manager::g_mutex;
 namespace id_manager
 {
 	thread_local u32 g_id = 0;
+	thread_local u32 g_process = 0;
 }
 
 template <>
