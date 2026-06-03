@@ -6,6 +6,7 @@
 
 #if defined(ARCH_ARM64)
 #include "Emu/CPU/Backends/AArch64/AArch64Common.h"
+#include <arm_sve.h>
 #endif
 #ifdef _WIN32
 #include "windows.h"
@@ -458,6 +459,19 @@ bool utils::has_sve2()
 		return IsProcessorFeaturePresent(PF_ARM_SVE2_INSTRUCTIONS_AVAILABLE) != 0;
 #endif
 	}();
+	return g_value;
+}
+
+#if defined(_MSC_VER)
+#define sve_func
+#else
+#define sve_func __attribute__((__target__("+sve")))
+#endif
+
+// svcntb returns sve length in bytes, our function retuns length in bits
+sve_func int utils::sve_length()
+{
+	static const int g_value = static_cast<int>(svcntb() * 8);
 	return g_value;
 }
 
