@@ -178,6 +178,7 @@ enum class emu_settings_type
 	GHLtar,
 	MidiDevices,
 	SDLMappings,
+	MouseBasedGyro,
 	IoDebugOverlay,
 	MouseDebugOverlay,
 

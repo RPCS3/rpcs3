@@ -83,6 +83,7 @@ void pad_thread::Init()
 
 	// Reset mouse-based gyro state
 	m_mouse_gyro.clear();
+	m_mouse_gyro.set_enabled(g_cfg.io.mouse_based_gyro_enabled.get());
 
 	// Cache old settings if possible
 	std::array<pad_setting, CELL_PAD_MAX_PORT_NUM> pad_settings;
