@@ -82,7 +82,6 @@ void pad_thread::Init()
 	std::lock_guard lock(pad::g_pad_mutex);
 
 	// Reset mouse-based gyro state
-	m_mouse_gyro.clear();
 	m_mouse_gyro.set_enabled(g_cfg.io.mouse_based_gyro_enabled.get());
 
 	// Cache old settings if possible
