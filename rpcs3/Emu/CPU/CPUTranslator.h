@@ -3121,6 +3121,9 @@ protected:
 	// ARMv8 SDOT/UDOT
 	bool m_use_dotprod = false;
 
+	// ARMv8.6 SMMLA/UMMLA
+	bool m_use_i8mm = false;
+
 	// Allow direct TBL2/TBX2 emission.
 	bool m_use_tbl2 = true;
 
@@ -3725,6 +3728,32 @@ template <typename T1, typename T2, typename T3>
 		const auto data2 = c.eval(m_ir);
 
 		result.value = m_ir->CreateCall(get_intrinsic<u32[4], u8[16]>(llvm::Intrinsic::aarch64_neon_sdot), {data0, data1, data2});
+		return result;
+	}
+
+	template <typename T1, typename T2, typename T3>
+	value_t<u32[4]> ummla(T1 a, T2 b, T3 c)
+	{
+		value_t<u32[4]> result;
+
+		const auto data0 = a.eval(m_ir);
+		const auto data1 = b.eval(m_ir);
+		const auto data2 = c.eval(m_ir);
+
+		result.value = m_ir->CreateCall(get_intrinsic<u32[4], u8[16]>(llvm::Intrinsic::aarch64_neon_ummla), {data0, data1, data2});
+		return result;
+	}
+
+	template <typename T1, typename T2, typename T3>
+	value_t<u32[4]> smmla(T1 a, T2 b, T3 c)
+	{
+		value_t<u32[4]> result;
+
+		const auto data0 = a.eval(m_ir);
+		const auto data1 = b.eval(m_ir);
+		const auto data2 = c.eval(m_ir);
+
+		result.value = m_ir->CreateCall(get_intrinsic<u32[4], u8[16]>(llvm::Intrinsic::aarch64_neon_smmla), {data0, data1, data2});
 		return result;
 	}
 
