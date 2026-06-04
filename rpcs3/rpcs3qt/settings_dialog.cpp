@@ -1243,6 +1243,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	ui->loadSdlMappings->setVisible(false);
 #endif
 
+	m_emu_settings->EnhanceCheckBox(ui->mouseBasedGyroBox, emu_settings_type::MouseBasedGyro);
+	SubscribeTooltip(ui->mouseBasedGyroBox, tooltips.settings.mouse_based_gyro);
+
 #ifndef _WIN32
 	// Remove raw mouse handler
 	remove_item(ui->mouseHandlerBox, static_cast<int>(mouse_handler::raw), static_cast<int>(g_cfg.io.mouse.def));
