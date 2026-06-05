@@ -531,13 +531,18 @@ std::string utils::get_system_info()
 	}
 #ifdef ARCH_ARM64
 
-	if (has_neon())
+	if (!has_neon())
 	{
-		result += " | Neon";
+		fmt::throw_exception("Neon support not present");
+	}
+
+	if (has_sve())
+	{
+		fmt::append(result, " | SVE%s-%d", has_sve2() ? "2" : "", sve_length());
 	}
 	else
 	{
-		fmt::throw_exception("Neon support not present");
+		result += " | Neon";
 	}
 #else
 

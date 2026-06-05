@@ -6265,6 +6265,15 @@ public:
 
 	void MPYHHU(spu_opcode_t op)
 	{
+#ifdef ARCH_ARM64
+		const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
+
+		if (m_use_sve2_128)
+		{
+			set_vr(op.rt, sve_umullt(bitcast<u16[8]>(a), bitcast<u16[8]>(b)));
+			return;
+		}
+#endif
 		set_vr(op.rt, (get_vr(op.ra) >> 16) * (get_vr(op.rb) >> 16));
 	}
 
@@ -6295,11 +6304,29 @@ public:
 
 	void MPYHHA(spu_opcode_t op)
 	{
+#ifdef ARCH_ARM64
+		const auto [a, b] = get_vrs<s32[4]>(op.ra, op.rb);
+
+		if (m_use_sve2_128)
+		{
+			set_vr(op.rt, sve_smlalt(get_vr<s32[4]>(op.rt), bitcast<s16[8]>(a), bitcast<s16[8]>(b)));
+			return;
+		}
+#endif
 		set_vr(op.rt, (get_vr<s32[4]>(op.ra) >> 16) * (get_vr<s32[4]>(op.rb) >> 16) + get_vr<s32[4]>(op.rt));
 	}
 
 	void MPYHHAU(spu_opcode_t op)
 	{
+#ifdef ARCH_ARM64
+		const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
+
+		if (m_use_sve2_128)
+		{
+			set_vr(op.rt, sve_umlalt(get_vr<u32[4]>(op.rt), bitcast<u16[8]>(a), bitcast<u16[8]>(b)));
+			return;
+		}
+#endif
 		set_vr(op.rt, (get_vr(op.ra) >> 16) * (get_vr(op.rb) >> 16) + get_vr(op.rt));
 	}
 
@@ -6307,7 +6334,15 @@ public:
 	{
 #ifdef ARCH_ARM64
 		const auto [a, b] = get_vrs<s32[4]>(op.ra, op.rb);
-		set_vr(op.rt, smull(zshuffle(bitcast<s16[8]>(a), 0, 2, 4, 6), zshuffle(bitcast<s16[8]>(b), 0, 2, 4, 6)));
+
+		if (m_use_sve2_128)
+		{
+			set_vr(op.rt, sve_smullb(bitcast<s16[8]>(a), bitcast<s16[8]>(b)));
+		}
+		else
+		{
+			set_vr(op.rt, smull(zshuffle(bitcast<s16[8]>(a), 0, 2, 4, 6), zshuffle(bitcast<s16[8]>(b), 0, 2, 4, 6)));
+		}
 #else
 		set_vr(op.rt, (get_vr<s32[4]>(op.ra) << 16 >> 16) * (get_vr<s32[4]>(op.rb) << 16 >> 16));
 #endif
@@ -6320,6 +6355,15 @@ public:
 
 	void MPYHH(spu_opcode_t op)
 	{
+#ifdef ARCH_ARM64
+		const auto [a, b] = get_vrs<s32[4]>(op.ra, op.rb);
+
+		if (m_use_sve2_128)
+		{
+			set_vr(op.rt, sve_smullt(bitcast<s16[8]>(a), bitcast<s16[8]>(b)));
+			return;
+		}
+#endif
 		set_vr(op.rt, (get_vr<s32[4]>(op.ra) >> 16) * (get_vr<s32[4]>(op.rb) >> 16));
 	}
 
@@ -6327,7 +6371,15 @@ public:
 	{
 #ifdef ARCH_ARM64
 		const auto [a, b] = get_vrs<s32[4]>(op.ra, op.rb);
-		set_vr(op.rt, smull(zshuffle(bitcast<s16[8]>(a), 0, 2, 4, 6), zshuffle(bitcast<s16[8]>(b), 0, 2, 4, 6)) >> 16);
+
+		if (m_use_sve2_128)
+		{
+			set_vr(op.rt, sve_smullb(bitcast<s16[8]>(a), bitcast<s16[8]>(b)) >> 16);
+		}
+		else
+		{
+			set_vr(op.rt, smull(zshuffle(bitcast<s16[8]>(a), 0, 2, 4, 6), zshuffle(bitcast<s16[8]>(b), 0, 2, 4, 6)) >> 16);
+		}
 #else
 		set_vr(op.rt, (get_vr<s32[4]>(op.ra) << 16 >> 16) * (get_vr<s32[4]>(op.rb) << 16 >> 16) >> 16);
 #endif
@@ -6342,7 +6394,15 @@ public:
 	{
 #ifdef ARCH_ARM64
 		const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
-		set_vr(op.rt, umull(zshuffle(bitcast<u16[8]>(a), 0, 2, 4, 6), zshuffle(bitcast<u16[8]>(b), 0, 2, 4, 6)));
+
+		if (m_use_sve2_128)
+		{
+			set_vr(op.rt, sve_umullb(bitcast<u16[8]>(a), bitcast<u16[8]>(b)));
+		}
+		else
+		{
+			set_vr(op.rt, umull(zshuffle(bitcast<u16[8]>(a), 0, 2, 4, 6), zshuffle(bitcast<u16[8]>(b), 0, 2, 4, 6)));
+		}
 #else
 		set_vr(op.rt, mpyu(get_vr(op.ra), get_vr(op.rb)));
 #endif
@@ -6495,7 +6555,14 @@ public:
 	void MPYI(spu_opcode_t op)
 	{
 #ifdef ARCH_ARM64
-		set_vr(op.rt, smull(zshuffle(bitcast<s16[8]>(get_vr<s32[4]>(op.ra)), 0, 2, 4, 6), get_imm<s16[4]>(op.si10)));
+		if (m_use_sve2_128)
+		{
+			set_vr(op.rt, sve_smullb(bitcast<s16[8]>(get_vr<s32[4]>(op.ra)), get_imm<s16[8]>(op.si10)));
+		}
+		else
+		{
+			set_vr(op.rt, smull(zshuffle(bitcast<s16[8]>(get_vr<s32[4]>(op.ra)), 0, 2, 4, 6), get_imm<s16[4]>(op.si10)));
+		}
 #else
 		set_vr(op.rt, (get_vr<s32[4]>(op.ra) << 16 >> 16) * get_imm<s32[4]>(op.si10));
 #endif
@@ -6504,7 +6571,14 @@ public:
 	void MPYUI(spu_opcode_t op)
 	{
 #ifdef ARCH_ARM64
-		set_vr(op.rt, umull(zshuffle(bitcast<u16[8]>(get_vr<u32[4]>(op.ra)), 0, 2, 4, 6), get_imm<u16[4]>(op.si10)));
+		if (m_use_sve2_128)
+		{
+			set_vr(op.rt, sve_umullb(bitcast<u16[8]>(get_vr<u32[4]>(op.ra)), get_imm<u16[8]>(op.si10)));
+		}
+		else
+		{
+			set_vr(op.rt, umull(zshuffle(bitcast<u16[8]>(get_vr<u32[4]>(op.ra)), 0, 2, 4, 6), get_imm<u16[4]>(op.si10)));
+		}
 #else
 		set_vr(op.rt, (get_vr(op.ra) << 16 >> 16) * (get_imm(op.si10) & 0xffff));
 #endif
@@ -7091,7 +7165,15 @@ public:
 	{
 #ifdef ARCH_ARM64
 		const auto [a, b] = get_vrs<s32[4]>(op.ra, op.rb);
-		set_vr(op.rt4, smull(zshuffle(bitcast<s16[8]>(a), 0, 2, 4, 6), zshuffle(bitcast<s16[8]>(b), 0, 2, 4, 6)) + get_vr<s32[4]>(op.rc));
+
+		if (m_use_sve2_128)
+		{
+			set_vr(op.rt4, sve_smlalb(get_vr<s32[4]>(op.rc), bitcast<s16[8]>(a), bitcast<s16[8]>(b)));
+		}
+		else
+		{
+			set_vr(op.rt4, smull(zshuffle(bitcast<s16[8]>(a), 0, 2, 4, 6), zshuffle(bitcast<s16[8]>(b), 0, 2, 4, 6)) + get_vr<s32[4]>(op.rc));
+		}
 #else
 		set_vr(op.rt4, (get_vr<s32[4]>(op.ra) << 16 >> 16) * (get_vr<s32[4]>(op.rb) << 16 >> 16) + get_vr<s32[4]>(op.rc));
 #endif
