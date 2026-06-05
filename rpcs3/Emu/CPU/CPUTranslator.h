@@ -3123,6 +3123,10 @@ protected:
 
 	// Allow direct TBL2/TBX2 emission.
 	bool m_use_tbl2 = true;
+
+	bool m_use_sve_128 = false;
+
+	bool m_use_sve2_128 = false;
 #else
 	// Allow FMA
 	bool m_use_fma = false;
@@ -3746,6 +3750,45 @@ template <typename T1, typename T2, typename T3>
 
 		result.value = m_ir->CreateCall(get_intrinsic<u32[4]>(llvm::Intrinsic::aarch64_neon_umull), {data0, data1});
 		return result;
+	}
+
+	llvm::Value* to_sve_vector(llvm::Value* value)
+	{
+		if (llvm::isa<llvm::ScalableVectorType>(value->getType()))
+		{
+			return value;
+		}
+
+		const auto fixed_type = llvm::cast<llvm::FixedVectorType>(value->getType());
+		const auto scalable_type = llvm::ScalableVectorType::get(fixed_type->getElementType(), fixed_type->getNumElements());
+		return m_ir->CreateInsertVector(scalable_type, llvm::UndefValue::get(scalable_type), value, m_ir->getInt64(0));
+	}
+
+	llvm::Value* from_sve_vector(llvm::Value* value, llvm::FixedVectorType* fixed_type)
+	{
+		if (value->getType() == fixed_type)
+		{
+			return value;
+		}
+
+		return m_ir->CreateExtractVector(fixed_type, value, m_ir->getInt64(0));
+	}
+
+	llvm::Value* sve_ptrue(llvm::FixedVectorType* fixed_type)
+	{
+		const auto pred_type = llvm::ScalableVectorType::get(m_ir->getInt1Ty(), fixed_type->getNumElements());
+		return m_ir->CreateIntrinsic(llvm::Intrinsic::aarch64_sve_ptrue, {pred_type}, {m_ir->getInt32(31)});
+	}
+
+	llvm::Value* sve_fnmls(llvm::Value* acc, llvm::Value* lhs, llvm::Value* rhs)
+	{
+		const auto fixed_type = llvm::cast<llvm::FixedVectorType>(acc->getType());
+		const auto vacc = to_sve_vector(acc);
+		const auto vlhs = to_sve_vector(lhs);
+		const auto vrhs = to_sve_vector(rhs);
+		const auto result = m_ir->CreateIntrinsic(llvm::Intrinsic::aarch64_sve_fnmls, {vacc->getType()}, {sve_ptrue(fixed_type), vacc, vlhs, vrhs});
+
+		return from_sve_vector(result, fixed_type);
 	}
 	
 template <typename T1, typename T2>
