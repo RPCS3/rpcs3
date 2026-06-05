@@ -67,6 +67,12 @@ namespace vk
 			u32 min_pool_size = 0;
 			u32 max_pool_size = 0;
 			u32 current_size = 0;
+
+			// Debounce setup.
+			static constexpr u32 increment_min_steps = 2u;
+			u32 increment_steps = 0;
+
+			u32 get_pool_size();
 		};
 
 		const vk::render_device* m_owner = nullptr;
