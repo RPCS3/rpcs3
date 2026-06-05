@@ -1842,6 +1842,13 @@
               </widget>
              </item>
              <item>
+              <widget class="QCheckBox" name="mouseBasedGyroBox">
+               <property name="text">
+                <string>Enable Mouse-based Gyro</string>
+               </property>
+              </widget>
+             </item>
+             <item>
               <spacer name="verticalSpacerIoAdditionalSettings">
                <property name="orientation">
                 <enum>Qt::Orientation::Vertical</enum>

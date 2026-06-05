@@ -855,6 +855,11 @@ int run_rpcs3(int argc, char** argv)
 
 	parser.process(app->arguments());
 
+	for (const auto& opt : parser.optionNames())
+	{
+		sys_log.notice("Option passed via command line: %s %s", opt, parser.value(opt));
+	}
+
 	// Don't start up the full rpcs3 gui if we just want the version or help.
 	if (parser.isSet(version_option) || parser.isSet(help_option))
 		return 0;
@@ -1159,11 +1164,11 @@ int run_rpcs3(int argc, char** argv)
 				}
 				else if (parser.isSet(arg_installfw))
 				{
-					gui_app->m_main_window->InstallPup(parser.value(installfw_option));
+					main_window::InstallPup(gui_app->m_main_window, parser.value(installfw_option));
 				}
 				else
 				{
-					gui_app->m_main_window->InstallPackages({parser.value(installpkg_option)});
+					main_window::InstallPackages(gui_app->m_main_window, {parser.value(installpkg_option)});
 				}
 			}
 			else
@@ -1173,13 +1178,18 @@ int run_rpcs3(int argc, char** argv)
 		}
 		else
 		{
-			report_fatal_error("Cannot perform installation in headless mode!");
-		}
-	}
+			if (parser.isSet(arg_installfw))
+			{
+				main_window::InstallPup(nullptr, parser.value(installfw_option));
+			}
 
-	for (const auto& opt : parser.optionNames())
-	{
-		sys_log.notice("Option passed via command line: %s %s", opt, parser.value(opt));
+			if (parser.isSet(arg_installpkg))
+			{
+				main_window::InstallPackages(nullptr, {parser.value(installpkg_option)});
+			}
+
+			return 0;
+		}
 	}
 
 	if (parser.isSet(arg_savestate))

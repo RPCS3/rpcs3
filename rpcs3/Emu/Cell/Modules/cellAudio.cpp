@@ -398,7 +398,7 @@ cell_audio_thread::cell_audio_thread(utils::serial& ar)
 
 	ar(key_count, event_period);
 
-	keys.resize(ar);
+	keys.resize(ar.pop<u64>());
 
 	for (key_info& k : keys)
 	{
@@ -421,7 +421,7 @@ void cell_audio_thread::save(utils::serial& ar)
 	USING_SERIALIZATION_VERSION(cellAudio);
 
 	ar(key_count, event_period);
-	ar(keys.size());
+	ar(static_cast<u64>(keys.size()));
 
 	for (const key_info& k : keys)
 	{

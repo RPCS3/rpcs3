@@ -365,7 +365,7 @@ void user_manager_dialog::OnUserLogin()
 	const u32 key = GetUserKey();
 	const std::string new_user = m_user_list[key].GetUserId();
 
-	main_application::InitializeEmulator(new_user, Emu.HasGui());
+	main_application::InitializeEmulator(new_user, Emu.HasGui(), Emu.IsHeadless());
 
 	m_active_user = new_user;
 	m_persistent_settings->SetValue(gui::persistent::active_user, QString::fromStdString(m_active_user));

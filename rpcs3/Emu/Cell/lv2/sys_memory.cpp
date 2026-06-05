@@ -36,7 +36,7 @@ lv2_memory_container::lv2_memory_container(u32 size, bool from_idm) noexcept
 lv2_memory_container::lv2_memory_container(utils::serial& ar, bool from_idm) noexcept
 	: size(ar)
 	, id{from_idm ? idm::last_id() : SYS_MEMORY_CONTAINER_ID_INVALID}
-	, used(ar)
+	, used(ar.pop<s32>())
 {
 }
 

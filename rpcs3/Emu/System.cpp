@@ -121,7 +121,8 @@ namespace rsx
 }
 
 Emulator::Emulator() noexcept
-	: m_default_renderer(video_renderer::null)
+	: m_supported_renderers({video_renderer::null})
+	, m_default_renderer(video_renderer::null)
 {
 	s_emulator_available = true;
 }
@@ -279,9 +280,41 @@ void init_fxo_for_exec(utils::serial* ar, bool full = false)
 	}
 }
 
-// Some settings are not allowed in certain PPU decoders
+// Some settings are not allowed with certain conditions
 static void fixup_settings(const psf::registry* _psf)
 {
+	// Disable some incompatible settings in headless mode
+	if (Emu.IsHeadless())
+	{
+		if (g_cfg.video.renderer != video_renderer::null)
+		{
+			sys_log.warning("The video renderer '%s' is currently not supported in headless mode and will therefore be set to '%s'.", g_cfg.video.renderer.get(), video_renderer::null);
+			g_cfg.video.renderer.set(video_renderer::null);
+		}
+
+		if (g_cfg.io.camera == camera_handler::qt)
+		{
+			sys_log.warning("The camera handler '%s' is currently not supported in headless mode and will therefore be set to '%s'.", g_cfg.io.camera.get(), camera_handler::null);
+			g_cfg.io.camera.set(camera_handler::null);
+		}
+
+		if (g_cfg.audio.music == music_handler::qt)
+		{
+			sys_log.warning("The music handler '%s' is currently not supported in headless mode and will therefore be set to '%s'.", g_cfg.audio.music.get(), music_handler::null);
+			g_cfg.audio.music.set(music_handler::null);
+		}
+	}
+	else
+	{
+		// Make sure we have a valid renderer
+		if (!Emu.GetSupportedRenderers().contains(g_cfg.video.renderer.get()))
+		{
+			sys_log.warning("The video renderer '%s' is not supported on this device and will therefore be set to '%s'.", g_cfg.video.renderer.get(), Emu.GetDefaultRenderer());
+			g_cfg.video.renderer.set(Emu.GetDefaultRenderer());
+		}
+	}
+
+	// Some settings are not allowed in certain PPU decoders
 	if (g_cfg.core.ppu_decoder != ppu_decoder_type::_static)
 	{
 		if (g_cfg.core.ppu_use_nj_bit)
@@ -442,11 +475,10 @@ void Emulator::Init()
 	g_cfg.name.clear();
 
 	// Not all renderers are known at compile time, so set a provided default if possible
-	if (m_default_renderer == video_renderer::vulkan && !m_default_graphics_adapter.empty())
-	{
-		g_cfg.video.renderer.set(m_default_renderer);
-		g_cfg.video.vk.adapter.from_string(m_default_graphics_adapter);
-	}
+	ensure(m_supported_renderers.contains(m_default_renderer));
+	ensure(!(m_default_renderer == video_renderer::vulkan && m_default_graphics_adapter.empty()));
+	g_cfg.video.renderer.set(m_default_renderer);
+	g_cfg.video.vk.adapter.set(m_default_graphics_adapter);
 
 	g_cfg_defaults = g_cfg.to_string();
 
@@ -2724,7 +2756,7 @@ void Emulator::FixGuestTime()
 			// Mark a known savestate location and the one we try to boot (in case we boot a moved/copied savestate)
 			if (g_cfg.savestate.suspend_emu)
 			{
-				for (std::string old_path : std::initializer_list<std::string>{m_ar ? m_path_old : "", m_title_id.empty() ? "" : get_savestate_file(m_title_id, m_path_old, -1)})
+				for (const std::string& old_path : {m_ar ? m_path_old : ""s, m_title_id.empty() ? ""s : get_savestate_file(m_title_id, m_path_old, -1)})
 				{
 					if (old_path.empty())
 					{

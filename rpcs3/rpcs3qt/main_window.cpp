@@ -356,7 +356,7 @@ void main_window::OnMissingFw()
 
 	connect(mb, &QDialog::accepted, this, [this]()
 	{
-		QTimer::singleShot(1, [this](){ InstallPup(); }); // singleShot to avoid a Qt bug that causes a deletion of the sender during long slots.
+		QTimer::singleShot(1, [this](){ InstallPup(this); }); // singleShot to avoid a Qt bug that causes a deletion of the sender during long slots.
 	});
 }
 
@@ -864,15 +864,21 @@ bool main_window::InstallFileInExData(const std::string& extension, const QStrin
 	return to.commit();
 }
 
-bool main_window::InstallPackages(QStringList file_paths, bool from_boot)
+bool main_window::InstallPackages(main_window* mw, QStringList file_paths, bool from_boot)
 {
 	if (file_paths.isEmpty())
 	{
+		if (!mw)
+		{
+			gui_log.error("PKG: no filepaths selected");
+			return false;
+		}
+
 		ensure(!from_boot);
 
 		// If this function was called without a path, ask the user for files to install.
-		const QString path_last_pkg = m_gui_settings->GetValue(gui::fd_install_pkg).toString();
-		const QStringList paths = QFileDialog::getOpenFileNames(this, tr("Select packages and/or rap files to install"),
+		const QString path_last_pkg = mw->m_gui_settings->GetValue(gui::fd_install_pkg).toString();
+		const QStringList paths = QFileDialog::getOpenFileNames(mw, tr("Select packages and/or rap files to install"),
 			path_last_pkg, tr("All relevant (*.pkg *.PKG *.rap *.RAP *.edat *.EDAT);;Package files (*.pkg *.PKG);;Rap files (*.rap *.RAP);;Edat files (*.edat *.EDAT);;All files (*.*)"));
 
 		if (paths.isEmpty())
@@ -882,7 +888,7 @@ bool main_window::InstallPackages(QStringList file_paths, bool from_boot)
 
 		file_paths.append(paths);
 		const QFileInfo file_info(file_paths[0]);
-		m_gui_settings->SetValue(gui::fd_install_pkg, file_info.path());
+		mw->m_gui_settings->SetValue(gui::fd_install_pkg, file_info.path());
 	}
 
 	if (file_paths.count() == 1)
@@ -903,7 +909,7 @@ bool main_window::InstallPackages(QStringList file_paths, bool from_boot)
 				return true;
 			}
 
-			return InstallPackages(dir_file_paths, from_boot);
+			return InstallPackages(mw, dir_file_paths, from_boot);
 		}
 	}
 
@@ -932,7 +938,7 @@ bool main_window::InstallPackages(QStringList file_paths, bool from_boot)
 
 	if (!from_boot)
 	{
-		if (!m_gui_settings->GetBootConfirmation(this))
+		if (mw && !mw->m_gui_settings->GetBootConfirmation(mw))
 		{
 			// Last chance to cancel the operation
 			return true;
@@ -947,10 +953,10 @@ bool main_window::InstallPackages(QStringList file_paths, bool from_boot)
 		install_filetype("edat");
 	}
 
-	if (installed_rap_and_edat_count > 0)
+	if (mw && installed_rap_and_edat_count > 0)
 	{
 		// Refresh game list since we probably unlocked some games now.
-		m_game_list_frame->Refresh(true);
+		mw->m_game_list_frame->Refresh(true);
 	}
 
 	// Find remaining package files
@@ -963,19 +969,26 @@ bool main_window::InstallPackages(QStringList file_paths, bool from_boot)
 
 	if (from_boot)
 	{
-		return HandlePackageInstallation(file_paths, true);
+		return HandlePackageInstallation(mw, file_paths, true);
 	}
 
 	// Handle further installations with a timeout. Otherwise the source explorer instance is not usable during the following file processing.
-	QTimer::singleShot(0, [this, paths = std::move(file_paths)]()
+	if (mw)
 	{
-		HandlePackageInstallation(paths, false);
-	});
+		QTimer::singleShot(0, [mw, paths = std::move(file_paths)]()
+		{
+			HandlePackageInstallation(mw, paths, false);
+		});
+	}
+	else
+	{
+		return HandlePackageInstallation(nullptr, file_paths, false);
+	}
 
 	return true;
 }
 
-bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_boot)
+bool main_window::HandlePackageInstallation(main_window* mw, QStringList file_paths, bool from_boot)
 {
 	if (file_paths.empty())
 	{
@@ -987,33 +1000,52 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 	bool precompile_caches = false;
 	bool canceled = false;
 
-	const game_compatibility* compat = m_game_list_frame ? m_game_list_frame->GetGameCompatibility() : nullptr;
-
-	// Let the user choose the packages to install and select the order in which they shall be installed.
-	pkg_install_dialog dlg(file_paths, from_boot, compat, this);
-	connect(&dlg, &QDialog::finished, this, [&](int result)
+	if (mw)
 	{
-		if (result != QDialog::Accepted)
+		// Let the user choose the packages to install and select the order in which they shall be installed.
+		const game_compatibility* compat = (mw && mw->m_game_list_frame) ? mw->m_game_list_frame->GetGameCompatibility() : nullptr;
+
+		pkg_install_dialog dlg(file_paths, from_boot, compat, mw);
+		connect(&dlg, &QDialog::finished, mw, [&](int result)
 		{
-			canceled = true;
-			return;
+			if (result != QDialog::Accepted)
+			{
+				canceled = true;
+				return;
+			}
+
+			packages = dlg.get_paths_to_install();
+			precompile_caches = dlg.precompile_caches();
+
+			if (dlg.create_desktop_shortcuts())
+				shortcut_locations.insert(gui::utils::shortcut_location::desktop);
+
+			if (dlg.create_app_shortcut())
+				shortcut_locations.insert(gui::utils::shortcut_location::applications);
+
+			if (dlg.create_steam_shortcut())
+				shortcut_locations.insert(gui::utils::shortcut_location::steam);
+		});
+		dlg.exec();
+	}
+	else
+	{
+		game_compatibility compat(nullptr);
+		compat.RequestCompatibility();
+
+		for (const QString& path : file_paths)
+		{
+			compat::package_info info = game_compatibility::GetPkgInfo(path, &compat);
+			if (!info.is_valid)
+			{
+				gui_log.error("Cannot install invalid package: '%s'", info.path);
+				continue;
+			}
+			packages.push_back(std::move(info));
 		}
+	}
 
-		packages = dlg.get_paths_to_install();
-		precompile_caches = dlg.precompile_caches();
-
-		if (dlg.create_desktop_shortcuts())
-			shortcut_locations.insert(gui::utils::shortcut_location::desktop);
-
-		if (dlg.create_app_shortcut())
-			shortcut_locations.insert(gui::utils::shortcut_location::applications);
-
-		if (dlg.create_steam_shortcut())
-			shortcut_locations.insert(gui::utils::shortcut_location::steam);
-	});
-	dlg.exec();
-
-	if (canceled)
+	if (canceled || packages.empty())
 	{
 		// return "true" if installation of optional packages (requested by some games at first boot) is skipped
 		return from_boot;
@@ -1021,7 +1053,7 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 
 	if (!from_boot)
 	{
-		if (!m_gui_settings->GetBootConfirmation(this))
+		if (mw && !mw->m_gui_settings->GetBootConfirmation(mw))
 		{
 			return true;
 		}
@@ -1036,9 +1068,14 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 	}
 	gui_log.notice("About to install packages:\n%s", fmt::merge(path_vec, "\n"));
 
-	progress_dialog pdlg(tr("RPCS3 Package Installer"), tr("Installing package, please wait..."), tr("Cancel"), 0, 1000, false, this);
-	pdlg.setAutoClose(false);
-	pdlg.show();
+	std::unique_ptr<progress_dialog> pdlg;
+
+	if (mw)
+	{
+		pdlg = std::make_unique<progress_dialog>(tr("RPCS3 Package Installer"), tr("Installing package, please wait..."), tr("Cancel"), 0, 1000, false, mw);
+		pdlg->setAutoClose(false);
+		pdlg->show();
+	}
 
 	package_install_result result = {};
 
@@ -1087,7 +1124,10 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 		return result.error == package_install_result::error_type::no_error;
 	});
 
-	pdlg.show();
+	if (pdlg)
+	{
+		pdlg->show();
+	}
 
 	// Wait for the completion
 	int reader_it = 0;
@@ -1101,7 +1141,7 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 			return true;
 		}
 
-		if (pdlg.wasCanceled())
+		if (pdlg && pdlg->wasCanceled())
 		{
 			cancelled = true;
 
@@ -1115,16 +1155,21 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 		}
 
 		// Update progress window
-		const int progress = readers[reader_it].get_progress(pdlg.maximum());
-		pdlg.SetValue(progress);
+		const int progress_max = pdlg ? pdlg->maximum() : 100;
+		const int progress = readers[reader_it].get_progress(progress_max);
 
-		if (set_text != reader_it)
+		if (pdlg)
 		{
-			pdlg.setLabelText(tr("Installing package (%0/%1), please wait...\n\n%2").arg(reader_it + 1).arg(readers_size).arg(get_app_info(packages[reader_it])));
-			set_text = reader_it;
+			pdlg->SetValue(progress);
+
+			if (set_text != reader_it)
+			{
+				pdlg->setLabelText(tr("Installing package (%0/%1), please wait...\n\n%2").arg(reader_it + 1).arg(readers_size).arg(get_app_info(packages[reader_it])));
+				set_text = reader_it;
+			}
 		}
 
-		if (progress == pdlg.maximum())
+		if (progress == progress_max)
 		{
 			reader_it++;
 		}
@@ -1137,7 +1182,10 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 
 	if (success)
 	{
-		pdlg.SetValue(pdlg.maximum());
+		if (pdlg)
+		{
+			pdlg->SetValue(pdlg->maximum());
+		}
 
 		const u64 start_time = get_system_time();
 
@@ -1189,9 +1237,9 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 		// Need to test here due to potential std::move later
 		const bool installed_a_whole_package_without_new_software = bootable_paths_installed.empty() && !cancelled;
 
-		if (!bootable_paths_installed.empty())
+		if (mw && !bootable_paths_installed.empty())
 		{
-			m_game_list_frame->AddRefreshedSlot([this, shortcut_locations, precompile_caches, paths = std::move(bootable_paths_installed)](std::set<std::string>& claimed_paths) mutable
+			mw->m_game_list_frame->AddRefreshedSlot([mw, shortcut_locations, precompile_caches, paths = std::move(bootable_paths_installed)](std::set<std::string>& claimed_paths) mutable
 			{
 				// Try to claim operations on ID
 				for (auto it = paths.begin(); it != paths.end();)
@@ -1209,29 +1257,39 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 					}
 				}
 
-				CreateShortCuts(paths, shortcut_locations);
+				mw->CreateShortCuts(paths, shortcut_locations);
 
 				if (precompile_caches)
 				{
-					PrecompileCachesFromInstalledPackages(paths);
+					mw->PrecompileCachesFromInstalledPackages(paths);
 				}
 			});
 		}
 
-		m_game_list_frame->Refresh(true);
+		if (mw)
+		{
+			mw->m_game_list_frame->Refresh(true);
+		}
 
 		std::this_thread::sleep_for(std::chrono::microseconds(100'000 - std::min<usz>(100'000, get_system_time() - start_time)));
-		pdlg.hide();
 
-		if (installed_a_whole_package_without_new_software)
+		if (pdlg)
 		{
-			m_gui_settings->ShowInfoBox(tr("Success!"), tr("Successfully installed software from package(s)!"), gui::ib_pkg_success, this);
+			pdlg->hide();
+		}
+
+		if (mw && installed_a_whole_package_without_new_software)
+		{
+			mw->m_gui_settings->ShowInfoBox(tr("Success!"), tr("Successfully installed software from package(s)!"), gui::ib_pkg_success, mw);
 		}
 	}
 	else
 	{
-		pdlg.hide();
-		pdlg.SignalFailure();
+		if (pdlg)
+		{
+			pdlg->hide();
+			pdlg->SignalFailure();
+		}
 
 		if (!cancelled)
 		{
@@ -1260,30 +1318,42 @@ bool main_window::HandlePackageInstallation(QStringList file_paths, bool from_bo
 			if (result.error == package_install_result::error_type::app_version)
 			{
 				gui_log.error("Cannot install %s.", package->path);
+
+				if (!mw)
+				{
+					return success;
+				}
+
 				const bool has_expected = !result.version.expected.empty();
 				const bool has_found = !result.version.found.empty();
 				if (has_expected && has_found)
 				{
-					QMessageBox::warning(this, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nUpdate is for version %1, but you have version %2.\n\nTried to install: %3")
+					QMessageBox::warning(mw, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nUpdate is for version %1, but you have version %2.\n\nTried to install: %3")
 							.arg(QString::fromStdString(result.version.expected)).arg(QString::fromStdString(result.version.found)).arg(package->path));
 				}
 				else if (has_expected)
 				{
-					QMessageBox::warning(this, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nUpdate is for version %1, but you don't have any data installed.\n\nTried to install: %2")
+					QMessageBox::warning(mw, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nUpdate is for version %1, but you don't have any data installed.\n\nTried to install: %2")
 							.arg(QString::fromStdString(result.version.expected)).arg(package->path));
 				}
 				else
 				{
 					// probably unreachable
 					const QString found = has_found ? tr("version %1").arg(QString::fromStdString(result.version.found)) : tr("no data installed");
-					QMessageBox::warning(this, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nUpdate is for unknown version, but you have version %1.\n\nTried to install: %2")
+					QMessageBox::warning(mw, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nUpdate is for unknown version, but you have version %1.\n\nTried to install: %2")
 							.arg(QString::fromStdString(result.version.expected)).arg(found).arg(package->path));
 				}
 			}
 			else
 			{
 				gui_log.error("Failed to install %s.", package->path);
-				QMessageBox::critical(this, tr("Failure!"), tr("Failed to install software from package:\n%1!"
+
+				if (!mw)
+				{
+					return success;
+				}
+
+				QMessageBox::critical(mw, tr("Failure!"), tr("Failed to install software from package:\n%1!"
 					"\nThis is very likely caused by external interference from a faulty anti-virus software."
 					"\nPlease add RPCS3 to your anti-virus\' whitelist or use better anti-virus software.").arg(package->path));
 			}
@@ -1312,16 +1382,22 @@ void main_window::ExtractMSELF()
 	}
 }
 
-void main_window::InstallPup(QString file_path)
+void main_window::InstallPup(main_window* mw, QString file_path)
 {
 	if (file_path.isEmpty())
 	{
-		const QString path_last_pup = m_gui_settings->GetValue(gui::fd_install_pup).toString();
-		file_path = QFileDialog::getOpenFileName(this, tr("Select PS3UPDAT.PUP To Install"), path_last_pup, tr("PS3 update file (PS3UPDAT.PUP);;All pup files (*.pup *.PUP);;All files (*.*)"));
+		if (!mw)
+		{
+			gui_log.error("Firmware: Cancelled installation. Filepath empty");
+			return;
+		}
+
+		const QString path_last_pup = mw->m_gui_settings->GetValue(gui::fd_install_pup).toString();
+		file_path = QFileDialog::getOpenFileName(mw, tr("Select PS3UPDAT.PUP To Install"), path_last_pup, tr("PS3 update file (PS3UPDAT.PUP);;All pup files (*.pup *.PUP);;All files (*.*)"));
 	}
-	else
+	else if (mw)
 	{
-		if (QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("Install firmware: %1?").arg(file_path),
+		if (QMessageBox::question(mw, tr("RPCS3 Firmware Installer"), tr("Install firmware: %1?").arg(file_path),
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
 		{
 			gui_log.notice("Firmware: Cancelled installation from drop. File: %s", file_path);
@@ -1331,11 +1407,18 @@ void main_window::InstallPup(QString file_path)
 
 	if (!file_path.isEmpty())
 	{
-		// Handle the actual installation with a timeout. Otherwise the source explorer instance is not usable during the following file processing.
-		QTimer::singleShot(0, [this, file_path]()
+		if (mw)
 		{
-			HandlePupInstallation(file_path);
-		});
+			// Handle the actual installation with a timeout. Otherwise the source explorer instance is not usable during the following file processing.
+			QTimer::singleShot(0, [mw, file_path]()
+			{
+				HandlePupInstallation(mw, file_path);
+			});
+		}
+		else
+		{
+			HandlePupInstallation(nullptr, file_path);
+		}
 	}
 }
 
@@ -1353,7 +1436,7 @@ void main_window::ExtractPup()
 
 	if (!dir.isEmpty())
 	{
-		HandlePupInstallation(file_path, dir);
+		HandlePupInstallation(this, file_path, dir);
 	}
 }
 
@@ -1427,13 +1510,15 @@ void main_window::ExtractTar()
 	}
 }
 
-void main_window::HandlePupInstallation(const QString& file_path, const QString& dir_path)
+void main_window::HandlePupInstallation(main_window* mw, const QString& file_path, const QString& dir_path)
 {
-	const auto critical = [this](QString str)
+	const auto critical = [mw](QString str)
 	{
-		Emu.CallFromMainThread([this, str = std::move(str)]()
+		if (!mw) return;
+
+		Emu.CallFromMainThread([mw, str = std::move(str)]()
 		{
-			QMessageBox::critical(this, tr("Firmware Installation Failed"), str);
+			QMessageBox::critical(mw, tr("Firmware Installation Failed"), str);
 		}, nullptr, false);
 	};
 
@@ -1444,14 +1529,17 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 		return;
 	}
 
-	if (!m_gui_settings->GetBootConfirmation(this))
+	if (mw && !mw->m_gui_settings->GetBootConfirmation(mw))
 	{
 		return;
 	}
 
-	Emu.GracefulShutdown(false);
+	if (mw)
+	{
+		Emu.GracefulShutdown(false);
 
-	m_gui_settings->SetValue(gui::fd_install_pup, QFileInfo(file_path).path());
+		mw->m_gui_settings->SetValue(gui::fd_install_pup, QFileInfo(file_path).path());
+	}
 
 	const std::string path = file_path.toStdString();
 
@@ -1506,7 +1594,8 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 		critical(tr("Firmware installation failed: The provided file's contents are corrupted."));
 		return;
 	}
-	case pup_error::ok: break;
+	case pup_error::ok:
+		break;
 	}
 
 	fs::file update_files_f = pup.get_file(0x300);
@@ -1595,8 +1684,8 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 		return;
 	}
 
-	if (version_string < cur_version &&
-		QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("Old firmware detected.\nThe newest firmware version is %1 and you are trying to install version %2\nContinue installation?").arg(QString::fromUtf8(cur_version.data(), ::size32(cur_version)), QString::fromStdString(version_string)),
+	if (version_string < cur_version && mw &&
+		QMessageBox::question(mw, tr("RPCS3 Firmware Installer"), tr("Old firmware detected.\nThe newest firmware version is %1 and you are trying to install version %2\nContinue installation?").arg(QString::fromUtf8(cur_version.data(), ::size32(cur_version)), QString::fromStdString(version_string)),
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) == QMessageBox::No)
 	{
 		return;
@@ -1606,7 +1695,7 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 	{
 		gui_log.warning("Reinstalling firmware: old=%s, new=%s", installed, version_string);
 
-		if (QMessageBox::question(this, tr("RPCS3 Firmware Installer"), tr("Firmware of version %1 has already been installed.\nOverwrite current installation with version %2?").arg(QString::fromStdString(installed), QString::fromStdString(version_string)),
+		if (mw && QMessageBox::question(mw, tr("RPCS3 Firmware Installer"), tr("Firmware of version %1 has already been installed.\nOverwrite current installation with version %2?").arg(QString::fromStdString(installed), QString::fromStdString(version_string)),
 			QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) == QMessageBox::No)
 		{
 			gui_log.warning("Reinstallation of firmware aborted.");
@@ -1614,11 +1703,16 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 		}
 	}
 
-	// Remove possibly PS3 fonts from database
-	QFontDatabase::removeAllApplicationFonts();
+	std::unique_ptr<progress_dialog> pdlg;
 
-	progress_dialog pdlg(tr("RPCS3 Firmware Installer"), tr("Installing firmware version %1\nPlease wait...").arg(QString::fromStdString(version_string)), tr("Cancel"), 0, static_cast<int>(update_filenames.size()), false, this);
-	pdlg.show();
+	if (mw)
+	{
+		// Remove possibly PS3 fonts from database
+		QFontDatabase::removeAllApplicationFonts();
+
+		pdlg = std::make_unique<progress_dialog>(tr("RPCS3 Firmware Installer"), tr("Installing firmware version %1\nPlease wait...").arg(QString::fromStdString(version_string)), tr("Cancel"), 0, static_cast<int>(update_filenames.size()), false, mw);
+		pdlg->show();
+	}
 
 	// Used by tar_object::extract() as destination directory
 	vfs::mount("/dev_flash", g_cfg_vfs.get_dev_flash());
@@ -1685,14 +1779,18 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 				return true;
 			}
 
-			if (pdlg.wasCanceled())
+			if (pdlg)
 			{
-				progress = -1;
-				return true;
+				if (pdlg->wasCanceled())
+				{
+					progress = -1;
+					return true;
+				}
+
+				// Update progress window
+				pdlg->SetValue(static_cast<int>(value));
 			}
 
-			// Update progress window
-			pdlg.SetValue(static_cast<int>(value));
 			return false;
 		});
 
@@ -1704,24 +1802,32 @@ void main_window::HandlePupInstallation(const QString& file_path, const QString&
 
 	if (progress == update_filenames.size())
 	{
-		pdlg.SetValue(pdlg.maximum());
+		if (pdlg)
+		{
+			pdlg->SetValue(pdlg->maximum());
+		}
 		std::this_thread::sleep_for(100ms);
 	}
 
 	// Update with newly installed PS3 fonts
-	Q_EMIT RequestGlobalStylesheetChange();
+	if (mw)
+	{
+		Q_EMIT mw->RequestGlobalStylesheetChange();
+	}
 
 	// Unmount
 	Emu.Init();
 
 	if (progress == update_filenames.size())
 	{
-		ui->bootVSHAct->setEnabled(fs::is_file(g_cfg_vfs.get_dev_flash() + "/vsh/module/vsh.self"));
-
 		gui_log.success("Successfully installed PS3 firmware version %s.", version_string);
-		m_gui_settings->ShowInfoBox(tr("Success!"), tr("Successfully installed PS3 firmware and LLE Modules!"), gui::ib_pup_success, this);
 
-		CreateFirmwareCache();
+		if (mw)
+		{
+			mw->ui->bootVSHAct->setEnabled(fs::is_file(g_cfg_vfs.get_dev_flash() + "/vsh/module/vsh.self"));
+			mw->m_gui_settings->ShowInfoBox(tr("Success!"), tr("Successfully installed PS3 firmware and LLE Modules!"), gui::ib_pup_success, mw);
+			mw->CreateFirmwareCache();
+		}
 	}
 }
 
@@ -2716,8 +2822,8 @@ void main_window::CreateConnects()
 		m_gui_settings->SetValue(gui::rs_freeze, checked);
 	});
 
-	connect(ui->bootInstallPkgAct, &QAction::triggered, this, [this] {InstallPackages(); });
-	connect(ui->bootInstallPupAct, &QAction::triggered, this, [this] {InstallPup(); });
+	connect(ui->bootInstallPkgAct, &QAction::triggered, this, [this] {InstallPackages(this); });
+	connect(ui->bootInstallPupAct, &QAction::triggered, this, [this] {InstallPup(this); });
 
 	connect(this, &main_window::NotifyWindowCloseEvent, this, [this](bool closed)
 	{
@@ -3570,7 +3676,6 @@ void main_window::CreateDockWindows()
 	m_mw->setContextMenuPolicy(Qt::PreventContextMenu);
 
 	m_game_list_frame = new game_list_frame(m_gui_settings, m_emu_settings, m_persistent_settings, m_mw);
-	m_game_list_frame->setFeatures(m_game_list_frame->features() & ~QDockWidget::DockWidgetClosable);
 	m_debugger_frame = new debugger_frame(m_gui_settings, m_mw);
 	m_log_frame = new log_frame(m_gui_settings, m_mw);
 
@@ -4202,12 +4307,12 @@ void main_window::dropEvent(QDropEvent* event)
 	}
 	case drop_type::drop_rap_edat_pkg: // install the packages
 	{
-		InstallPackages(drop_paths);
+		InstallPackages(this, drop_paths);
 		break;
 	}
 	case drop_type::drop_pup: // install the firmware
 	{
-		InstallPup(drop_paths.first());
+		InstallPup(this, drop_paths.first());
 		break;
 	}
 	case drop_type::drop_psf: // Display PARAM.SFO content

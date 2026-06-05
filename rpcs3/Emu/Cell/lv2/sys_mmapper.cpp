@@ -56,7 +56,7 @@ lv2_memory::lv2_memory(utils::serial& ar)
 
 		return null_ptr;
 	}(ar.pop<u32>()))
-	, counter(ar)
+	, counter(ar.pop<u32>())
 {
 }
 
@@ -235,7 +235,7 @@ error_code sys_mmapper_allocate_shared_memory(ppu_thread& ppu, u64 ipc_key, u64 
 	}
 
 	ppu.check_state();
-	*mem_id = idm::last_id();
+	*mem_id = idm::last_id<lv2_memory>();
 	return CELL_OK;
 }
 
@@ -291,7 +291,7 @@ error_code sys_mmapper_allocate_shared_memory_from_container(ppu_thread& ppu, u6
 	}
 
 	ppu.check_state();
-	*mem_id = idm::last_id();
+	*mem_id = idm::last_id<lv2_memory>();
 	return CELL_OK;
 }
 
@@ -390,7 +390,7 @@ error_code sys_mmapper_allocate_shared_memory_ext(ppu_thread& ppu, u64 ipc_key, 
 	}
 
 	ppu.check_state();
-	*mem_id = idm::last_id();
+	*mem_id = idm::last_id<lv2_memory>();
 	return CELL_OK;
 }
 
@@ -493,7 +493,7 @@ error_code sys_mmapper_allocate_shared_memory_from_container_ext(ppu_thread& ppu
 	}
 
 	ppu.check_state();
-	*mem_id = idm::last_id();
+	*mem_id = idm::last_id<lv2_memory>();
 	return CELL_OK;
 }
 

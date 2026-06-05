@@ -1465,6 +1465,9 @@
     <ClCompile Include="Loader\iso_cache.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Io\gem_config.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">

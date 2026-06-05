@@ -37,10 +37,10 @@ struct sys_vm_global_t
 };
 
 sys_vm_t::sys_vm_t(utils::serial& ar)
-	: ct(lv2_memory_container::search(ar))
+	: ct(lv2_memory_container::search(ar.pop<u32>()))
 	, addr(ar)
 	, size(ar)
-	, psize(ar)
+	, psize(ar.pop<u32>())
 {
 	g_ids[addr >> 28].release(idm::last_id());
 	g_fxo->need<sys_vm_global_t>();

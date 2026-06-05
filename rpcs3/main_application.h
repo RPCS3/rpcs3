@@ -1,5 +1,7 @@
 #pragma once
 
+#include "rpcs3qt/render_creator.h"
+
 #include <string>
 #include <QThread>
 
@@ -9,9 +11,11 @@ class gs_frame;
 class main_application
 {
 public:
+	main_application();
+
 	virtual bool Init() = 0;
 
-	static void InitializeEmulator(const std::string& user, bool show_gui);
+	static void InitializeEmulator(const std::string& user, bool show_gui, bool headless);
 
 	void SetActiveUser(const std::string& user)
 	{
@@ -25,6 +29,7 @@ protected:
 
 	EmuCallbacks CreateCallbacks();
 
+	std::shared_ptr<render_creator> m_render_creator;
 	std::string m_active_user;
 	gs_frame* m_game_window = nullptr;
 };
