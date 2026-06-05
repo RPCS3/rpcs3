@@ -110,6 +110,31 @@ namespace vk
 		}
 	}
 
+	u32 descriptor_pool::autoscaling_config_t::get_pool_size()
+	{
+		if (current_size < min_pool_size)
+		{
+			current_size = min_pool_size;
+			return min_pool_size;
+		}
+
+		if (current_size >= max_pool_size)
+		{
+			current_size = max_pool_size;
+			return max_pool_size;
+		}
+
+		// Try grow
+		if ((increment_steps++) < (increment_min_steps - 1u))
+		{
+			return current_size;
+		}
+
+		increment_steps = 0u;
+		current_size = std::min(current_size * 2u, max_pool_size);
+		return current_size;
+	}
+
 	void descriptor_pool::create(const vk::render_device& dev, const rsx::simple_array<VkDescriptorPoolSize>& pool_sizes, u32 min_sets, u32 max_sets)
 	{
 		m_autoscaling_config.min_pool_size = std::max(min_sets, 16u);
@@ -276,16 +301,8 @@ namespace vk
 	std::pair<VkResult, VkDescriptorPool> descriptor_pool::new_subpool()
 	{
 		// Try autoscaling
-		u32 set_count = m_autoscaling_config.current_size;
-		if (set_count < m_autoscaling_config.min_pool_size)
-		{
-			set_count = m_autoscaling_config.min_pool_size;
-		}
-		else if (set_count < m_autoscaling_config.max_pool_size)
-		{
-			// Scale up
-			set_count = std::min(m_autoscaling_config.max_pool_size, set_count * 2u);
-		}
+		const auto prev_scaling_config = m_autoscaling_config;
+		const u32 set_count = m_autoscaling_config.get_pool_size();
 
 		// Configure request using current pool size
 		auto descriptor_pool_sizes = m_create_info_pool_sizes.map([set_count](const VkDescriptorPoolSize& pool_size_info)
@@ -302,10 +319,10 @@ namespace vk
 		VkDescriptorPool subpool = VK_NULL_HANDLE;
 		VkResult result = vkCreateDescriptorPool(*m_owner, &m_create_info, nullptr, &subpool);
 
-		if (result == VK_SUCCESS)
+		if (result != VK_SUCCESS)
 		{
-			// Commit autoscaling
-			m_autoscaling_config.current_size = set_count;
+			// Roll back autoscaling
+			m_autoscaling_config = prev_scaling_config;
 		}
 
 		// Cleanup
