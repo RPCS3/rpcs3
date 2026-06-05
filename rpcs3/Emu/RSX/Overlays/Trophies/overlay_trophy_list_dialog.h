@@ -4,6 +4,7 @@
 #include "../overlay_list_view.hpp"
 
 #include "Loader/TROPUSR.h"
+#include "Emu/NP/rpcn_client.h"
 
 class TROPUSRLoader;
 
@@ -25,18 +26,24 @@ namespace rsx
 		private:
 			std::unique_ptr<trophy_data> load_trophies(const std::string& trop_name) const;
 			void reload();
+			void sync_trophies_async();
 
 			std::unique_ptr<overlay_element> m_dim_background;
 			std::unique_ptr<list_view> m_list;
 			std::unique_ptr<label> m_description;
 			std::unique_ptr<image_button> m_show_hidden_trophies_button;
+			std::unique_ptr<image_button> m_sync_trophies_button;
 
 			animation_color_interpolate fade_animation;
 
 			std::unique_ptr<trophy_data> m_trophy_data;
+			std::string m_trop_name;
 			atomic_t<bool> m_list_dirty { true };
 			bool m_show_hidden_trophies = false;
 			bool m_show_hidden_trophies_last = false;
+
+			// Sync state: 0 = idle, 1 = syncing, 2 = success, 3 = error
+			atomic_t<u8> m_sync_status { 0 };
 
 		public:
 			trophy_list_dialog();
@@ -47,6 +54,8 @@ namespace rsx
 			compiled_resource get_compiled() override;
 
 			void show(const std::string& trop_name);
+
+			static bool rpcn_configured();
 		};
 	}
 }
