@@ -255,6 +255,7 @@ public:
 		const QString show_move_cursor  = tr("Shows the raw position of the PS Move input.\nThis can be very helpful during calibration screens.");
 		const QString midi_devices      = tr("Select up to 3 emulated MIDI devices and their types.");
 		const QString sdl_mappings      = tr("Loads the SDL GameController database for improved gamepad compatibility. Only used in the SDL pad handler.");
+		const QString mouse_based_gyro  = tr("Enables mouse-based gyro emulation at game startup. It can also be toggled at any time with the associated hotkey.\nHold the right mouse button to activate gyro input: moving the mouse maps to the X and Z motion axes, and the scroll wheel maps to the Y axis. Release the button to reset the motion values.");
 
 		const QString lock_overlay_input_to_player_one  = tr("Locks the native overlay input to the first player.");
 
