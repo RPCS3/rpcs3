@@ -110,17 +110,14 @@ namespace vk
 		}
 	}
 
-	void descriptor_pool::create(const vk::render_device& dev, const rsx::simple_array<VkDescriptorPoolSize>& pool_sizes, u32 max_sets)
+	void descriptor_pool::create(const vk::render_device& dev, const rsx::simple_array<VkDescriptorPoolSize>& pool_sizes, u32 min_sets, u32 max_sets)
 	{
-		ensure(max_sets > 16);
+		m_autoscaling_config.min_pool_size = std::max(min_sets, 16u);
+		m_autoscaling_config.max_pool_size = std::max(min_sets, max_sets);
+
+		ensure(m_autoscaling_config.max_pool_size >= 16u);
 
 		m_create_info_pool_sizes = pool_sizes;
-
-		for (auto& size : m_create_info_pool_sizes)
-		{
-			ensure(size.descriptorCount < 128); // Sanity check. Remove before commit.
-			size.descriptorCount *= max_sets;
-		}
 
 		m_create_info.flags = dev.get_descriptor_update_after_bind_support() ? VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT : 0;
 		m_create_info.maxSets = max_sets;
@@ -186,7 +183,7 @@ namespace vk
 
 		if (use_cache)
 		{
-			const auto alloc_size = std::min<u32>(m_create_info.maxSets - m_current_subpool_offset, max_cache_size);
+			const auto alloc_size = std::min<u32>(max_sets() - m_current_subpool_offset, max_cache_size);
 			m_allocation_request_cache.resize(alloc_size);
 			for (auto& layout_ : m_allocation_request_cache)
 			{
@@ -243,8 +240,8 @@ namespace vk
 				}
 			}
 
-			VkDescriptorPool subpool = VK_NULL_HANDLE;
-			if (VkResult result = vkCreateDescriptorPool(*m_owner, &m_create_info, nullptr, &subpool))
+			const auto [result, subpool] = new_subpool();
+			if (result != VK_SUCCESS)
 			{
 				if (retries-- && (result == VK_ERROR_FRAGMENTATION_EXT))
 				{
@@ -263,6 +260,7 @@ namespace vk
 			m_device_subpools.push_back(
 			{
 				.handle = subpool,
+				.size = m_autoscaling_config.current_size,
 				.busy = VK_FALSE
 			});
 
@@ -273,6 +271,48 @@ namespace vk
 	done:
 		m_device_subpools[m_current_subpool_index].busy = VK_TRUE;
 		m_current_pool_handle = m_device_subpools[m_current_subpool_index].handle;
+	}
+
+	std::pair<VkResult, VkDescriptorPool> descriptor_pool::new_subpool()
+	{
+		// Try autoscaling
+		u32 set_count = m_autoscaling_config.current_size;
+		if (set_count < m_autoscaling_config.min_pool_size)
+		{
+			set_count = m_autoscaling_config.min_pool_size;
+		}
+		else if (set_count < m_autoscaling_config.max_pool_size)
+		{
+			// Scale up
+			set_count = std::min(m_autoscaling_config.max_pool_size, set_count * 2u);
+		}
+
+		// Configure request using current pool size
+		auto descriptor_pool_sizes = m_create_info_pool_sizes.map([set_count](const VkDescriptorPoolSize& pool_size_info)
+		{
+			auto ret = pool_size_info;
+			ret.descriptorCount *= set_count;
+			return ret;
+		});
+
+		m_create_info.maxSets = set_count;
+		m_create_info.poolSizeCount = descriptor_pool_sizes.size();
+		m_create_info.pPoolSizes = descriptor_pool_sizes.data();
+
+		VkDescriptorPool subpool = VK_NULL_HANDLE;
+		VkResult result = vkCreateDescriptorPool(*m_owner, &m_create_info, nullptr, &subpool);
+
+		if (result == VK_SUCCESS)
+		{
+			// Commit autoscaling
+			m_autoscaling_config.current_size = set_count;
+		}
+
+		// Cleanup
+		m_create_info.pPoolSizes = nullptr;
+		m_create_info.poolSizeCount = 0;
+
+		return { result, subpool };
 	}
 
 	descriptor_set::descriptor_set(VkDescriptorSet set)

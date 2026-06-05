@@ -39,28 +39,39 @@ namespace vk
 		descriptor_pool() = default;
 		~descriptor_pool() = default;
 
-		void create(const vk::render_device& dev, const rsx::simple_array<VkDescriptorPoolSize>& pool_sizes, u32 max_sets = 1024);
+		void create(const vk::render_device& dev, const rsx::simple_array<VkDescriptorPoolSize>& pool_sizes, u32 min_sets = 1024, u32 max_sets = 1024);
 		void destroy();
 
 		VkDescriptorSet allocate(VkDescriptorSetLayout layout, VkBool32 use_cache = VK_TRUE);
 
 		operator VkDescriptorPool() { return m_current_pool_handle; }
 		FORCE_INLINE bool valid() const { return !m_device_subpools.empty(); }
-		FORCE_INLINE u32 max_sets() const { return m_create_info.maxSets; }
+		FORCE_INLINE u32 max_sets() const { return m_current_subpool_index >= m_device_subpools.size() ? 0u : m_device_subpools[m_current_subpool_index].size; }
 
 	private:
-		FORCE_INLINE bool can_allocate(u32 required_count, u32 already_used_count = 0) const { return (required_count + already_used_count) <= m_create_info.maxSets; };
+		FORCE_INLINE bool can_allocate(u32 required_count, u32 already_used_count = 0) const { return (required_count + already_used_count) <= max_sets(); };
 		void reset(u32 subpool_id, VkDescriptorPoolResetFlags flags);
 		void next_subpool();
 
+		std::pair<VkResult, VkDescriptorPool> new_subpool();
+
 		struct logical_subpool_t
 		{
-			VkDescriptorPool handle;
-			VkBool32 busy;
+			VkDescriptorPool handle = VK_NULL_HANDLE;
+			u32 size = 0;
+			VkBool32 busy = VK_FALSE;
+		};
+
+		struct autoscaling_config_t
+		{
+			u32 min_pool_size = 0;
+			u32 max_pool_size = 0;
+			u32 current_size = 0;
 		};
 
 		const vk::render_device* m_owner = nullptr;
 		VkDescriptorPoolCreateInfo m_create_info = {};
+		autoscaling_config_t m_autoscaling_config = {};
 		rsx::simple_array<VkDescriptorPoolSize> m_create_info_pool_sizes;
 
 		rsx::simple_array<logical_subpool_t> m_device_subpools;
