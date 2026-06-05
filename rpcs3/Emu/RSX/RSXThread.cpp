@@ -680,7 +680,7 @@ namespace rsx
 				ar(u32{0});
 			}
 		}
-		else if (u32 count = ar)
+		else if (u32 count{ar})
 		{
 			restore_fifo_count = count;
 			ar(restore_fifo_cmd);

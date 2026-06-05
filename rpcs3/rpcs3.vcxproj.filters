@@ -858,12 +858,6 @@
     <ClCompile Include="rpcs3qt\render_creator.cpp">
       <Filter>Gui\settings</Filter>
     </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_render_creator.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_render_creator.cpp">
-      <Filter>Generated Files\Release</Filter>
-    </ClCompile>
     <ClCompile Include="rpcs3qt\config_adapter.cpp">
       <Filter>Gui\settings</Filter>
     </ClCompile>

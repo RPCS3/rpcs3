@@ -148,11 +148,6 @@ namespace vk
 			vk_prog->binding_table.cbuf_location = location++;
 		}
 
-		if (vk::emulate_conditional_rendering())
-		{
-			vk_prog->binding_table.cr_pred_buffer_location = location++;
-		}
-
 		// Return next index
 		return location;
 	}
