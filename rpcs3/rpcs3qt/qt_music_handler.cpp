@@ -97,7 +97,7 @@ void qt_music_handler::stop()
 		m_media_player->stop();
 	});
 
-	m_state = CELL_MUSIC_PB_STATUS_STOP;
+	set_state(CELL_MUSIC_PB_STATUS_STOP);
 }
 
 void qt_music_handler::pause()
@@ -110,10 +110,10 @@ void qt_music_handler::pause()
 		m_media_player->pause();
 	});
 
-	m_state = CELL_MUSIC_PB_STATUS_PAUSE;
+	set_state(CELL_MUSIC_PB_STATUS_PAUSE);
 }
 
-void qt_music_handler::play(const std::string& path)
+void qt_music_handler::play(const std::string& path, bool automatic)
 {
 	std::lock_guard lock(m_mutex);
 
@@ -135,7 +135,7 @@ void qt_music_handler::play(const std::string& path)
 		m_media_player->play();
 	});
 
-	m_state = CELL_MUSIC_PB_STATUS_PLAY;
+	set_state(CELL_MUSIC_PB_STATUS_PLAY, automatic);
 }
 
 void qt_music_handler::fast_forward(const std::string& path)
@@ -160,7 +160,7 @@ void qt_music_handler::fast_forward(const std::string& path)
 		m_media_player->play();
 	});
 
-	m_state = CELL_MUSIC_PB_STATUS_FASTFORWARD;
+	set_state(CELL_MUSIC_PB_STATUS_FASTFORWARD);
 }
 
 void qt_music_handler::fast_reverse(const std::string& path)
@@ -185,7 +185,7 @@ void qt_music_handler::fast_reverse(const std::string& path)
 		m_media_player->play();
 	});
 
-	m_state = CELL_MUSIC_PB_STATUS_FASTREVERSE;
+	set_state(CELL_MUSIC_PB_STATUS_FASTREVERSE);
 }
 
 void qt_music_handler::set_volume(f32 volume)
@@ -218,7 +218,7 @@ void qt_music_handler::handle_media_status(QMediaPlayer::MediaStatus status)
 {
 	music_log.notice("New media status: %s (status=%d)", status, static_cast<int>(status));
 
-	if (!m_status_callback)
+	if (!m_playback_status_callback)
 	{
 		return;
 	}
@@ -234,7 +234,7 @@ void qt_music_handler::handle_media_status(QMediaPlayer::MediaStatus status)
 	case QMediaPlayer::MediaStatus::InvalidMedia:
 		break;
 	case QMediaPlayer::MediaStatus::EndOfMedia:
-		m_status_callback(player_status::end_of_media);
+		m_playback_status_callback(player_status::end_of_media);
 		break;
 	default:
 		music_log.error("Ignoring unknown status %d", static_cast<int>(status));

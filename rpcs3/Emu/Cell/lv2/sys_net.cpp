@@ -257,7 +257,7 @@ lv2_socket::lv2_socket(utils::serial& ar, lv2_socket_type _type)
 
 	ar(so_rcvtimeo, so_sendtimeo);
 
-	lv2_id = idm::last_id();
+	lv2_id = idm::last_id<lv2_socket>();
 
 	ar(last_bound_addr);
 }

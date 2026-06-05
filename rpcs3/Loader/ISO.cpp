@@ -859,14 +859,14 @@ static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, 
 	else if (names_in_ucs2) // For strings in joliet descriptor
 	{
 		// Characters are stored in big endian format
-		const u16* raw = reinterpret_cast<const u16*>(file_name.data());
+		const be_t<u16>* raw = utils::bless<const be_t<u16>>(file_name.data());
 		std::u16string utf16;
 
 		utf16.resize(header.file_name_length / 2);
 
-		for (usz i = 0; i < utf16.size(); i++, raw++)
+		for (usz i = 0; i < utf16.size(); i++)
 		{
-			utf16[i] = *reinterpret_cast<const be_t<u16>*>(raw);
+			utf16[i] = raw[i];
 		}
 
 		file_name = utf16_to_utf8(utf16);

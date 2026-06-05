@@ -126,14 +126,34 @@ bool gui_application::Init()
 		}
 	}
 
-	m_emu_settings = std::make_shared<emu_settings>();
+	if (m_render_creator->vulkan_timed_out)
+	{
+		gui_log.error("Vulkan device enumeration timed out");
+		const auto button = QMessageBox::critical(nullptr, tr("Vulkan Check Timeout"),
+			tr("Querying for Vulkan-compatible devices is taking too long. This is usually caused by malfunctioning "
+				"graphics drivers, reinstalling them could fix the issue.\n\n"
+				"Selecting ignore starts the emulator without Vulkan support."),
+			QMessageBox::Ignore | QMessageBox::Abort, QMessageBox::Abort);
+
+		if (button != QMessageBox::Ignore)
+		{
+			return false;
+		}
+	}
+
+#ifdef __APPLE__
+	if (!m_render_creator->Vulkan.supported)
+	{
+		QMessageBox::warning(nullptr,
+							 tr("Warning"),
+							 tr("Vulkan is not supported on this Mac.\n"
+								"No graphics will be rendered."));
+	}
+#endif
+
+	m_emu_settings = std::make_shared<emu_settings>(m_render_creator);
 	m_gui_settings = std::make_shared<gui_settings>();
 	m_persistent_settings = std::make_shared<persistent_settings>();
-
-	if (!m_emu_settings->Init())
-	{
-		return false;
-	}
 
 	if (m_gui_settings->GetValue(gui::m_attachCommandLine).toBool())
 	{
@@ -152,7 +172,7 @@ bool gui_application::Init()
 	}
 
 	// Force init the emulator
-	InitializeEmulator(m_active_user, m_show_gui);
+	InitializeEmulator(m_active_user, m_show_gui, false);
 
 	// Create callbacks from the emulator, which reference the handlers.
 	InitializeCallbacks();
@@ -830,14 +850,13 @@ void gui_application::InitializeCallbacks()
 	{
 		callbacks.on_install_pkgs = [this](const std::vector<std::string>& pkgs)
 		{
-			ensure(m_main_window);
 			ensure(!pkgs.empty());
 			QStringList pkg_list;
 			for (const std::string& pkg : pkgs)
 			{
 				pkg_list << QString::fromStdString(pkg);
 			}
-			return m_main_window->InstallPackages(pkg_list, true);
+			return main_window::InstallPackages(m_main_window, pkg_list, true);
 		};
 	}
 
