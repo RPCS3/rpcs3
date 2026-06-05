@@ -696,7 +696,7 @@ namespace vk
 		void descriptor_table_t::create_descriptor_pool()
 		{
 			m_descriptor_pool = std::make_unique<descriptor_pool>();
-			m_descriptor_pool->create(*vk::g_render_device, m_descriptor_pool_sizes);
+			m_descriptor_pool->create(*vk::g_render_device, m_descriptor_pool_sizes, 16u, 4096u);
 		}
 
 		void descriptor_table_t::validate() const
