@@ -5524,6 +5524,44 @@ public:
 		const auto a = get_vr<s16[8]>(op.ra);
 
 #ifdef ARCH_ARM64
+		if (m_use_i8mm)
+		{
+			if (match_vr<s16[8], s32[4], s64[2]>(op.ra, [&](auto c, auto MP)
+			{
+				using VT = typename decltype(MP)::type;
+
+				if (auto [ok, x] = match_expr(c, sext<VT>(match<bool[std::extent_v<VT>]>())); ok)
+				{
+					const auto zeroes = splat<u32[4]>(0);
+					const auto es = zshuffle(bitcast<u8[16]>(a), 16, 16, 16, 16, 16, 16, 16, 16, 0, 2, 4, 6, 8, 10, 12, 14);
+
+					set_vr(op.rt, smmla(zeroes, es, build<u8[16]>(
+						0x00, 0x00, 0x00, 0x00,
+						0x00, 0x00, 0x00, 0x00,
+						-0x01, -0x02, -0x04, -0x08,
+						-0x10, -0x20, -0x40, -0x80
+					)));
+					return true;
+				}
+				return false;
+			}))
+			{
+			return;
+			}
+
+			const auto zeroes = splat<u32[4]>(0);
+			const auto masked = a & 0x01;
+			const auto es = zshuffle(bitcast<u8[16]>(masked), 16, 16, 16, 16, 16, 16, 16, 16, 0, 2, 4, 6, 8, 10, 12, 14);
+
+			set_vr(op.rt, ummla(zeroes, es, build<u8[16]>(
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x01, 0x02, 0x04, 0x08,
+				0x10, 0x20, 0x40, 0x80
+			)));
+			return;
+		}
+
 		// Use dot product instructions with special values to shift then sum results into the preferred slot
 		if (m_use_dotprod)
 		{
@@ -5579,6 +5617,48 @@ public:
 		const auto a = get_vr<u8[16]>(op.ra);
 
 #ifdef ARCH_ARM64
+		if (m_use_i8mm)
+		{
+			if (match_vr<s8[16], s16[8], s32[4], s64[2]>(op.ra, [&](auto c, auto MP)
+			{
+				using VT = typename decltype(MP)::type;
+
+				if (auto [ok, x] = match_expr(c, sext<VT>(match<bool[std::extent_v<VT>]>())); ok)
+				{
+					const auto zeroes = splat<u32[4]>(0);
+
+					const auto extracted = smmla(zeroes, a, build<u8[16]>(
+						0x00, 0x00, 0x00, 0x00,
+						0x00, 0x00, 0x00, 0x00,
+						-0x01, -0x02, -0x04, -0x08,
+						-0x10, -0x20, -0x40, -0x80
+					));
+
+					const auto es = zshuffle(bitcast<u8[16]>(extracted), 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 4, 12, 16, 16);
+					set_vr(op.rt, bitcast<u32[4]>(es));
+					return true;
+				}
+				return false;
+			}))
+			{
+			return;
+			}
+
+			const auto zeroes = splat<u32[4]>(0);
+			const auto masked = a & 0x01;
+
+			const auto extracted = ummla(zeroes, masked, build<u8[16]>(
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x01, 0x02, 0x04, 0x08,
+				0x10, 0x20, 0x40, 0x80
+			));
+
+			const auto es = zshuffle(bitcast<u8[16]>(extracted), 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 4, 12, 16, 16);
+			set_vr(op.rt, bitcast<u32[4]>(es));
+			return;
+		}
+
 		// Use dot product instructions with special values to shift then sum results into the preferred slot
 		if (m_use_dotprod)
 		{

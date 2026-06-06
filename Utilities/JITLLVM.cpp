@@ -750,6 +750,15 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 	else
 		attributes.push_back("-dotprod");
 
+	// The recompilers emit i8mm intrinsics (e.g. ummla) gated on utils::has_i8mm().
+	// The JIT target features must advertise i8mm too, otherwise the backend fails
+	// with "Cannot select: intrinsic %llvm.aarch64.neon.ummla" whenever the resolved
+	// -mcpu does not already imply it (e.g. the cortex-a78 fallback on Apple silicon).
+	if (utils::has_i8mm())
+		attributes.push_back("+i8mm");
+	else
+		attributes.push_back("-i8mm");
+
 	if (utils::has_sve())
 		attributes.push_back("+sve");
 	else
