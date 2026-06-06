@@ -8965,6 +8965,12 @@ struct spu_llvm_worker
 
 	void operator()()
 	{
+		// Run on-demand SPU compilation at low priority so it yields to the actively-executing
+		// PPU/SPU emulation threads. On a cold cache these workers would otherwise contend for all
+		// cores and slow down time-critical SPU init (e.g. VF5FS CRI audio) enough to miss in-game
+		// timeouts — most visible on core-limited machines (Apple silicon).
+		thread_ctrl::scoped_priority low_prio(-1);
+
 		// SPU LLVM Recompiler instance
 		std::unique_ptr<spu_recompiler_base> compiler;
 

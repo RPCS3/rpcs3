@@ -3353,6 +3353,23 @@ void thread_ctrl::set_native_priority(int priority)
 	{
 		sig_log.error("SetThreadPriority() failed: %s", fmt::win_error{GetLastError(), nullptr});
 	}
+#elif defined(__linux__)
+	// Under the default SCHED_OTHER policy sched_priority is always 0, so adjusting it via
+	// pthread_setschedparam is a no-op on Linux — which silently defeated every scoped_priority
+	// hint in the codebase (compiler/background threads meant to yield, audio/RSX meant to be
+	// favored). SCHED_OTHER honors per-thread nice values instead, so use setpriority(). On
+	// Linux 'who == 0' targets the calling thread (per-task nice). Lowering priority (nice up)
+	// always succeeds; raising (nice down) needs CAP_SYS_NICE and is best-effort — ignore
+	// failure so unprivileged runs don't spam the log.
+	const int nice_val = priority < 0 ? std::min(19, -priority * 5)
+		: priority > 0 ? std::max(-20, -priority * 5)
+		: 0;
+
+	errno = 0;
+	if (setpriority(PRIO_PROCESS, 0, nice_val) != 0 && nice_val < 0 && errno != EACCES && errno != EPERM)
+	{
+		sig_log.error("setpriority() failed: %d", errno);
+	}
 #else
 	int policy;
 	struct sched_param param;
