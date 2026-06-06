@@ -3,11 +3,13 @@
 #include "util/types.hpp"
 #include "util/tsc.hpp"
 #include "util/atomic.hpp"
+#include "util/sysinfo.hpp"
 #include <functional>
 
 #ifdef ARCH_X64
 #ifdef _MSC_VER
 #include <intrin.h>
+#include <immintrin.h>
 #else
 #include <immintrin.h>
 #include <x86intrin.h>
@@ -214,6 +216,84 @@ namespace utils
 #endif
 		do pause();
 		while (get_tsc() < stop);
+	}
+
+	template <typename T, usz Align, typename Pred>
+#if defined(ARCH_X64) && !defined(_MSC_VER)
+	__attribute__((target("waitpkg,mwaitx")))
+#endif
+	inline void spin_wait(const atomic_t<T, Align>& var, Pred predicate)
+	{
+#ifdef ARCH_X64
+		static const bool use_umwait = has_waitpkg();
+		static const bool use_waitx = has_waitx();
+#endif
+
+		const auto read_mem = [&]()
+		{
+			return var.load();
+		};
+
+		const void* addr = &var.raw();
+
+		while (true)
+		{
+			if (predicate(read_mem()))
+			{
+				return;
+			}
+
+#if defined(ARCH_ARM64)
+			using value_type = decltype(read_mem());
+			using wait_type = std::remove_cvref_t<decltype(var.raw())>;
+
+			wait_type value{};
+			const auto* wait_addr = static_cast<const volatile wait_type*>(addr);
+
+			if constexpr (sizeof(wait_type) == 1) __asm__ volatile("ldaxrb %w0, %1" : "=r"(value) : "Q"(*wait_addr) : "memory");
+			else if constexpr (sizeof(wait_type) == 2) __asm__ volatile("ldaxrh %w0, %1" : "=r"(value) : "Q"(*wait_addr) : "memory");
+			else if constexpr (sizeof(wait_type) == 4) __asm__ volatile("ldaxr %w0, %1" : "=r"(value) : "Q"(*wait_addr) : "memory");
+			else if constexpr (sizeof(wait_type) == 8) __asm__ volatile("ldaxr %x0, %1" : "=r"(value) : "Q"(*wait_addr) : "memory");
+			else static_assert(sizeof(wait_type) <= 8, "Unsupported atomic size for spin_wait");
+
+			if (predicate(static_cast<value_type>(value)))
+			{
+				__asm__ volatile("clrex" ::: "memory");
+				return;
+			}
+
+			__asm__ volatile("wfe" ::: "memory");
+			__asm__ volatile("clrex" ::: "memory");
+
+#elif defined(ARCH_X64)
+			if (use_umwait)
+			{
+				_umonitor(const_cast<void*>(addr));
+				if (predicate(read_mem()))
+				{
+					return;
+				}
+
+				_umwait(0, ~0ULL);
+			}
+			else if (use_waitx)
+			{
+				_mm_monitorx(const_cast<void*>(addr), 0, 0);
+				if (predicate(read_mem()))
+				{
+					return;
+				}
+
+				_mm_mwaitx(0, 0, 0);
+			}
+			else
+			{
+				pause();
+			}
+#else
+			pause();
+#endif
+		}
 	}
 
 	// Align to power of 2
