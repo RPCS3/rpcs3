@@ -1662,7 +1662,7 @@ error_code AudioSetNotifyEventQueue(ppu_thread& ppu, u64 key, u32 iFlags)
 	lv2_sleep(20, &ppu);
 
 	// Dirty hack for sound: confirm the creation of _mxr000 event queue by _cellsurMixerMain thread
-	constexpr u64 c_mxr000 = 0x8000cafe0246030;
+	constexpr u64 c_mxr000 = 0x8000cafe02460300;
 
 	if (key == c_mxr000 || key == 0)
 	{
