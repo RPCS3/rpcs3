@@ -1044,6 +1044,14 @@ const char * fallback_cpu_detection()
 
 	return s_result.c_str();
 #else
+	// Prefer a concrete host -mcpu (e.g. apple-m2) so LLVM uses the right scheduling model.
+	// MIDR_EL1 is exposed via sysfs on Linux; see aarch64::get_cpu_llvm_name().
+	static const std::string s_mcpu = aarch64::get_cpu_llvm_name();
+	if (!s_mcpu.empty())
+	{
+		return s_mcpu.c_str();
+	}
+
 	// TODO: Read the data from /proc/cpuinfo. ARM CPU registers are not accessible from usermode.
 	// This will be a pain when supporting snapdragon on windows but we'll cross that bridge when we get there.
 	// Require at least armv8-2a. Older chips are going to be useless anyway.

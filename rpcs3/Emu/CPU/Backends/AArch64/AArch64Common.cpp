@@ -83,6 +83,8 @@ namespace aarch64
         { 0x61, 0x25, "armv8.5-a", "M1 Pro", "Icestorm" },
         { 0x61, 0x32, "armv8.5-a", "M2", "Avalanche" },
         { 0x61, 0x33, "armv8.5-a", "M2", "Blizzard" },
+        { 0x61, 0x38, "armv8.5-a+fp16+bf16+i8mm+dotprod", "M2 Pro/Max", "Avalanche" },
+        { 0x61, 0x39, "armv8.5-a+fp16+bf16+i8mm+dotprod", "M2 Pro/Max", "Blizzard" },
 
         // QUALCOMM
         { 0x51, 0x01, "armv8.5-a", "Snapdragon", "X-Elite" },
@@ -239,6 +241,40 @@ namespace aarch64
         result += suffix;
         return result;
     }
+
+    std::string get_cpu_llvm_name()
+    {
+        std::map<u64, int> core_layout;
+        for (u32 i = 0; i < std::thread::hardware_concurrency(); ++i)
+        {
+            const auto midr = read_MIDR_EL1(i);
+            if (midr == umax)
+            {
+                break;
+            }
+            core_layout[midr]++;
+        }
+
+        for (const auto& [midr, count] : core_layout)
+        {
+            const auto implementer_id = (midr >> 24) & 0xff;
+            const auto part_id = (midr >> 4) & 0xfff;
+            const auto part_info = find_cpu_part(implementer_id, part_id);
+            if (!part_info || implementer_id != 0x61 || !part_info->family)
+            {
+                continue;
+            }
+
+            // Map Apple SoC family to an LLVM -mcpu so the JIT schedules for the real microarchitecture.
+            const std::string family = part_info->family;
+            if (family.starts_with("M1")) return "apple-m1";
+            if (family.starts_with("M2")) return "apple-m2";
+            if (family.starts_with("M3")) return "apple-m3";
+            if (family.starts_with("M4")) return "apple-m4";
+        }
+
+        return {};
+    }
 #else
     static std::string sysctl_s(const std::string_view& variable_name)
     {
@@ -296,6 +332,16 @@ namespace aarch64
         }
 
         return fmt::format("%s (%lluP+%lluE)", brand, pcores, ecores);
+    }
+
+    std::string get_cpu_llvm_name()
+    {
+        const auto brand = sysctl_s("machdep.cpu.brand_string");
+        if (brand.find("M1") != umax) return "apple-m1";
+        if (brand.find("M2") != umax) return "apple-m2";
+        if (brand.find("M3") != umax) return "apple-m3";
+        if (brand.find("M4") != umax) return "apple-m4";
+        return {};
     }
 #endif
 }
