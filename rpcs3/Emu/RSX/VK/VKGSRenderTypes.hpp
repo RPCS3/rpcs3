@@ -254,18 +254,18 @@ namespace vk
 
 		void consumer_wait() const
 		{
-			while (num_waiters.load() != 0)
+			utils::spin_wait(num_waiters, [](auto v)
 			{
-				utils::pause();
-			}
+				return v == 0;
+			});
 		}
 
 		void producer_wait() const
 		{
-			while (pending_state.load())
+			utils::spin_wait(pending_state, [](auto v)
 			{
-				std::this_thread::yield();
-			}
+				return !v;
+			});
 		}
 	};
 
