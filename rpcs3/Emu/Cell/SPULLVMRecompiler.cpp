@@ -1656,11 +1656,10 @@ public:
 			return add_loc->compiled;
 		}
 
-		bool add_to_file = false;
-
 		if (auto& cache = g_fxo->get<spu_cache>(); cache && g_cfg.core.spu_cache && !add_loc->cached.exchange(1))
 		{
-			add_to_file = true;
+			cache.add(func);
+			spu_log.success("New SPU block detected (size=%u)", func_size);
 		}
 
 		{
@@ -3470,14 +3469,6 @@ public:
 				fs::write_file(m_spurt->get_cache_path() + "spu-ir.log", fs::write + fs::append, llvm_log);
 			}
 
-			if (auto& cache = g_fxo->get<spu_cache>())
-			{
-				if (add_to_file)
-				{
-					cache.add(func);
-				}
-			}
-
 			fmt::throw_exception("Compilation failed");
 		}
 
@@ -3564,14 +3555,6 @@ public:
 		// Rebuild trampoline if necessary
 		if (!m_spurt->rebuild_ubertrampoline(func.data[0]))
 		{
-			if (auto& cache = g_fxo->get<spu_cache>())
-			{
-				if (add_to_file)
-				{
-					cache.add(func);
-				}
-			}
-
 			return nullptr;
 		}
 
@@ -3591,16 +3574,6 @@ public:
 		asm("ISB");
 		asm("DSB ISH");
 #endif
-
-		if (auto& cache = g_fxo->get<spu_cache>())
-		{
-			if (add_to_file)
-			{
-				cache.add(func);
-			}
-
-			spu_log.success("New SPU block compiled successfully (size=%u)", func_size);
-		}
 
 		return fn;
 	}
