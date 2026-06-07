@@ -2520,6 +2520,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="ppuReservationPrority">
+                 <property name="text">
+                  <string>PPU Reservation Priority</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="llvmPrecompilation">
                  <property name="text">
                   <string>PPU/SPU LLVM Precompilation</string>
