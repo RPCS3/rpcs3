@@ -255,22 +255,40 @@ namespace aarch64
             core_layout[midr]++;
         }
 
+        bool is_apple_silicon = false;
+
         for (const auto& [midr, count] : core_layout)
         {
             const auto implementer_id = (midr >> 24) & 0xff;
             const auto part_id = (midr >> 4) & 0xfff;
+
+            // This helper only hand-picks an -mcpu for Apple silicon (implementer 0x61) for now.
+            if (implementer_id != 0x61)
+            {
+                continue;
+            }
+
+            is_apple_silicon = true;
+
             const auto part_info = find_cpu_part(implementer_id, part_id);
-            if (!part_info || implementer_id != 0x61 || !part_info->family)
+            if (!part_info || !part_info->family)
             {
                 continue;
             }
 
             // Map Apple SoC family to an LLVM -mcpu so the JIT schedules for the real microarchitecture.
-            const std::string family = part_info->family;
+            const std::string_view family = part_info->family;
             if (family.starts_with("M1")) return "apple-m1";
             if (family.starts_with("M2")) return "apple-m2";
             if (family.starts_with("M3")) return "apple-m3";
             if (family.starts_with("M4")) return "apple-m4";
+        }
+
+        // Recognized as Apple silicon but not a known M-series generation (newer M-series, A-series, etc.):
+        // fall back to a conservative Apple baseline instead of a generic Cortex core.
+        if (is_apple_silicon)
+        {
+            return "apple-m1";
         }
 
         return {};
@@ -336,11 +354,29 @@ namespace aarch64
 
     std::string get_cpu_llvm_name()
     {
+        // machdep.cpu.brand_string on Apple silicon is "Apple <family>", e.g.
+        // "Apple M2 Max", "Apple M1 Pro", "Apple M4". Match the family token right after
+        // the "Apple " vendor prefix instead of a substring-anywhere find.
         const auto brand = sysctl_s("machdep.cpu.brand_string");
-        if (brand.find("M1") != umax) return "apple-m1";
-        if (brand.find("M2") != umax) return "apple-m2";
-        if (brand.find("M3") != umax) return "apple-m3";
-        if (brand.find("M4") != umax) return "apple-m4";
+
+        std::string_view family = brand;
+        if (family.starts_with("Apple "))
+        {
+            family.remove_prefix(6);
+        }
+
+        if (family.starts_with("M1")) return "apple-m1";
+        if (family.starts_with("M2")) return "apple-m2";
+        if (family.starts_with("M3")) return "apple-m3";
+        if (family.starts_with("M4")) return "apple-m4";
+
+        // Unrecognized but Apple-branded silicon (newer M-series, A-series, etc.): pick a
+        // conservative Apple baseline instead of falling through to a generic Cortex core.
+        if (brand.starts_with("Apple"))
+        {
+            return "apple-m1";
+        }
+
         return {};
     }
 #endif
