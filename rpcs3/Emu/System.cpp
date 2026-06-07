@@ -230,11 +230,11 @@ void Emulator::BlockingCallFromMainThread(std::function<void()>&& func, bool tra
 // This function ensures constant initialization order between different compilers and builds
 void init_fxo_for_exec(shared_ptr<lv2_process> process, utils::serial* ar, bool full = false)
 {
-	void init_ppu_functions(utils::serial* ar, bool full);
+	void init_ppu_functions(shared_ptr<lv2_process> process, utils::serial* ar, bool full);
 
 	if (full)
 	{
-		init_ppu_functions(ar, true);
+		init_ppu_functions(process, ar, true);
 	}
 
 	stx::g_launch_retainer = 1;
@@ -1805,7 +1805,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			std::vector<std::string> dir_queue;
 			dir_queue.emplace_back(m_path + '/');
 
-			init_fxo_for_exec(nullptr, true);
+			init_fxo_for_exec(process, nullptr, true);
 
 			{
 				if (m_title_id.empty())
@@ -1853,7 +1853,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 					const ppu_exec_object obj = src;
 
-					if (obj == elf_error::ok && ppu_load_self(obj, true, this->argv, this->envp, this->data, DeserialManager()))
+					if (obj == elf_error::ok && ppu_load_self(obj, null_ptr, true, this->argv, this->envp, this->data, DeserialManager()))
 					{
 						//
 					}
@@ -2375,7 +2375,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 					sys_log.notice("Hdd1: %s", hdd1);
 				}
 
-				init_fxo_for_exec(DeserialManager(), true);
+				init_fxo_for_exec(null_ptr, DeserialManager(), true);
 
 				return game_boot_result::no_errors;
 			}
@@ -2563,7 +2563,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				sys_log.error("Booting HG category outside of HDD0!");
 			}
 
-			if (ppu_load_self(ppu_exec, false, this->argv, this->envp, this->data, DeserialManager()))
+			if (ppu_load_self(ppu_exec, null_ptr, false, this->argv, this->envp, this->data, DeserialManager()))
 			{
 				if (g_cfg.core.ppu_debug && had_been_decrypted)
 				{
@@ -4226,6 +4226,8 @@ std::string Emulator::GuessPPUCache(const std::string elf_path) const
 	{
 		sys_log.notice("Cache: %s", cache);
 	}
+
+	return cache;
 }
 
 std::set<std::string> Emulator::GetGameDirs() const

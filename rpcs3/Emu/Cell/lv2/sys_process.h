@@ -155,7 +155,7 @@ struct lv2_process : public ppu_module<lv2_obj>
 // Auxiliary functions
 s32 process_getpid();
 s32 process_get_sdk_version(u32 pid, s32& ver);
-void lv2_exitspawn(ppu_thread& ppu, bool exit_current, std::vector<std::string>& argv, std::vector<std::string>& envp, std::vector<u8>& data);
+void lv2_exitspawn(ppu_thread& ppu, bool exit_current, shared_ptr<lv2_memory_container> pp_mem, std::vector<std::string>& argv, std::vector<std::string>& envp, std::vector<u8>& data);
 
 namespace vm
 {

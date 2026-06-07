@@ -2743,14 +2743,14 @@ shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2
 			{
 				process_ptr->parent_memory_container = idm::make_ptr<lv2_memory_container>(mem_size);
 
-				void init_fxo_for_exec(utils::serial* ar, bool full);
-				init_fxo_for_exec(ar, false);
+				void init_fxo_for_exec(shared_ptr<lv2_process> process, utils::serial* ar, bool full);
+				init_fxo_for_exec(process_ptr, ar, false);
 			}
 		}
 		else
 		{
-			void init_fxo_for_exec(utils::serial* ar, bool full);
-			init_fxo_for_exec(ar, false);
+			void init_fxo_for_exec(shared_ptr<lv2_process> process, utils::serial* ar, bool full);
+			init_fxo_for_exec(process_ptr, ar, false);
 		}
 
 		liblv2_begin = 0;

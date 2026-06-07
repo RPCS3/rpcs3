@@ -566,10 +566,10 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 
 	// TODO: set prio, flags
 
-	lv2_exitspawn(ppu, true, argv, envp, data);
+	lv2_exitspawn(ppu, true, null_ptr, argv, envp, data);
 }
 
-void lv2_exitspawn(ppu_thread& ppu, bool exit_current, std::vector<std::string>& argv, std::vector<std::string>& envp, std::vector<u8>& data)
+void lv2_exitspawn(ppu_thread& ppu, bool exit_current, shared_ptr<lv2_memory_container> pp_mem, std::vector<std::string>& argv, std::vector<std::string>& envp, std::vector<u8>& data)
 {
 	ppu.state += cpu_flag::wait;
 
@@ -608,7 +608,7 @@ void lv2_exitspawn(ppu_thread& ppu, bool exit_current, std::vector<std::string>&
 
 		obj.set_encrypted_layer_data(&self_info);
 
-		if (!ppu_load_self(obj, false, argv, envp, data, nullptr))
+		if (!ppu_load_self(obj, pp_mem, false, argv, envp, data, nullptr))
 		{
 			ppu.gpr[3] = CELL_ENOEXEC;
 			return;
@@ -800,7 +800,14 @@ error_code sys_process_spawns_a_self2(ppu_thread& ppu, vm::ptr<u32> pid, u32 pri
 	//	// std::memcpy(data.data(), vm::base(arg.addr() + arg_size - 0x1000), 0x1000);
 	//}
 
-	lv2_exitspawn(ppu, false, argv, envp, data);
+	const auto mem_ct = idm::get_unlocked<lv2_memory_container>(mem_id);
+
+	if (!mem_ct)
+	{
+		return CELL_ESRCH;
+	}
+
+	lv2_exitspawn(ppu, false, mem_ct, argv, envp, data);
 
 	if (ppu.gpr[3] != CELL_OK)
 	{
