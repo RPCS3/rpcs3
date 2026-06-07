@@ -8,6 +8,8 @@
 
 namespace gl
 {
+	extern GLenum tex_min_filter(rsx::texture_minify_filter min_filter);
+
 	inline GLenum comparison_op(rsx::comparison_function op)
 	{
 		return static_cast<GLenum>(op);
@@ -410,8 +412,26 @@ void GLGSRender::load_texture_env()
 
 		if (is_depth_reconstructed || is_snorm)
 		{
+			GLint adjusted_min_filter = GL_NEAREST;
+			if (!is_depth_reconstructed) [[ unlikely ]]
+			{
+				switch (gl::tex_min_filter(tex.min_filter()))
+				{
+				default:
+					break;
+				case GL_LINEAR_MIPMAP_LINEAR:
+				case GL_LINEAR_MIPMAP_NEAREST:
+				case GL_NEAREST_MIPMAP_LINEAR:
+				case GL_NEAREST_MIPMAP_NEAREST:
+					// This is a hack and an unfortunate one at that as there is no feasible workaround.
+					// Doing full trilinear filtering in a shader is just dumb, approximate it instead with NEAREST_NEAREST.
+					adjusted_min_filter = GL_NEAREST_MIPMAP_NEAREST;
+					break;
+				}
+			}
+
 			// Depth format redirected to BGRA8 resample stage. Do not filter to avoid bits leaking.
-			m_fs_sampler_states[i].set_parameteri(GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			m_fs_sampler_states[i].set_parameteri(GL_TEXTURE_MIN_FILTER, adjusted_min_filter);
 			m_fs_sampler_states[i].set_parameteri(GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		}
 	}

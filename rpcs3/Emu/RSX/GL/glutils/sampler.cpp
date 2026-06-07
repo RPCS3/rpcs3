@@ -45,7 +45,7 @@ namespace gl
 		return 1.0f;
 	}
 
-	int tex_min_filter(rsx::texture_minify_filter min_filter)
+	GLenum tex_min_filter(rsx::texture_minify_filter min_filter)
 	{
 		switch (min_filter)
 		{
@@ -60,7 +60,7 @@ namespace gl
 		fmt::throw_exception("Unknown min filter");
 	}
 
-	int tex_mag_filter(rsx::texture_magnify_filter mag_filter)
+	GLenum tex_mag_filter(rsx::texture_magnify_filter mag_filter)
 	{
 		switch (mag_filter)
 		{
