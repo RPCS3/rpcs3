@@ -8721,7 +8721,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			// This difference cannot be known at analyzer time but from observing callers.
 			static constexpr std::initializer_list<std::string_view> allowed_patterns =
 			{
-				"620oYSe8uQqq9eTkhWfMqoEXX0us"sv, // CellSpurs JobChain acquire pattern
+				"disabled_620oYSe8uQqq9eTkhWfMqoEXX0us"sv, // CellSpurs JobChain acquire pattern (disabled for now)
 			};
 
 			allow_pattern = std::any_of(allowed_patterns.begin(), allowed_patterns.end(), FN(pattern_hash == x));

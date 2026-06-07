@@ -41,6 +41,7 @@ struct cfg_root : cfg::node
 		cfg::_bool spu_accurate_reservations{ this, "Accurate SPU Reservations", true };
 		cfg::_bool accurate_cache_line_stores{ this, "Accurate Cache Line Stores", false };
 		cfg::_bool rsx_accurate_res_access{this, "Accurate RSX reservation access", false, true};
+		cfg::_bool ppu_reservation_priority_over_spu{this, "PPU Reservation Priority Over SPUs", false, true};
 
 		struct fifo_setting : public cfg::_enum<rsx_fifo_mode>
 		{

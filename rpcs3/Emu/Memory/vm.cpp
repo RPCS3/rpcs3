@@ -483,6 +483,14 @@ namespace vm
 		{
 			auto& bits = get_range_lock_bits(true);
 
+			if (!!bits)
+			{
+				if (i == 0 && g_cfg.core.ppu_reservation_priority_over_spu)
+				{
+					busy_wait(5000);
+				}
+			}
+
 			if (!range_lock)
 			{
 				if (!bits && bits.compare_and_swap_test(0, u64{umax}))

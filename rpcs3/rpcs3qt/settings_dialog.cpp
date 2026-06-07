@@ -260,6 +260,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->spuLoopDetection, emu_settings_type::SPULoopDetection);
 	SubscribeTooltip(ui->spuLoopDetection, tooltips.settings.spu_loop_detection);
 
+	m_emu_settings->EnhanceCheckBox(ui->ppuReservationPrority, emu_settings_type::PPUReservationPriorityOverSPUs);
+	SubscribeTooltip(ui->ppuReservationPrority, tooltips.settings.ppu_reservation_priority);
+
 	// Comboboxes
 	m_emu_settings->EnhanceComboBox(ui->xfloatAccuracy, emu_settings_type::XFloatAccuracy);
 	SubscribeTooltip(ui->gb_xfloat_accuracy, tooltips.settings.xfloat);
