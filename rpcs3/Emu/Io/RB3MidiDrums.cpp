@@ -412,7 +412,10 @@ usb_device_rb3_midi_drums::usb_device_rb3_midi_drums(const std::array<u8, 7>& lo
 
 usb_device_rb3_midi_drums::~usb_device_rb3_midi_drums()
 {
-	rtmidi_in_free(midi_in);
+	if (midi_in)
+	{
+		rtmidi_in_free(midi_in);
+	}
 }
 
 static const std::array<u8, 40> disabled_response = {

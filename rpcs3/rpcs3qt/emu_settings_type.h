@@ -52,6 +52,7 @@ enum class emu_settings_type
 	SPUProfiler,
 	DisableSpinOptimization,
 	EnabledSPUEventsBusyLoop,
+	PPUReservationPriorityOverSPUs,
 
 	// Graphics
 	Renderer,
@@ -178,6 +179,7 @@ enum class emu_settings_type
 	GHLtar,
 	MidiDevices,
 	SDLMappings,
+	MouseBasedGyro,
 	IoDebugOverlay,
 	MouseDebugOverlay,
 

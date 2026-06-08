@@ -86,7 +86,10 @@ usb_device_rb3_midi_keyboard::usb_device_rb3_midi_keyboard(const std::array<u8, 
 
 usb_device_rb3_midi_keyboard::~usb_device_rb3_midi_keyboard()
 {
-	rtmidi_in_free(midi_in);
+	if (midi_in)
+	{
+		rtmidi_in_free(midi_in);
+	}
 }
 
 static const std::array<u8, 40> disabled_response = {

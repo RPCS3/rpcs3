@@ -14,7 +14,7 @@ microphone_creator::microphone_creator()
 }
 
 // We need to recreate the localized string because the microphone creator is currently only created once.
-QString microphone_creator::get_none()
+QString microphone_creator::get_none() const
 {
 	return tr("None", "Microphone device");
 }
@@ -49,12 +49,12 @@ void microphone_creator::refresh_list()
 	}
 }
 
-QStringList microphone_creator::get_microphone_list() const
+const QStringList& microphone_creator::get_microphone_list() const
 {
 	return m_microphone_list;
 }
 
-std::array<std::string, 4> microphone_creator::get_selection_list() const
+const std::array<std::string, 4>& microphone_creator::get_selection_list() const
 {
 	return m_sel_list;
 }

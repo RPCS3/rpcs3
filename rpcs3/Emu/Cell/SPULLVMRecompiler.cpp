@@ -5524,6 +5524,44 @@ public:
 		const auto a = get_vr<s16[8]>(op.ra);
 
 #ifdef ARCH_ARM64
+		if (m_use_i8mm)
+		{
+			if (match_vr<s16[8], s32[4], s64[2]>(op.ra, [&](auto c, auto MP)
+			{
+				using VT = typename decltype(MP)::type;
+
+				if (auto [ok, x] = match_expr(c, sext<VT>(match<bool[std::extent_v<VT>]>())); ok)
+				{
+					const auto zeroes = splat<u32[4]>(0);
+					const auto es = zshuffle(bitcast<u8[16]>(a), 16, 16, 16, 16, 16, 16, 16, 16, 0, 2, 4, 6, 8, 10, 12, 14);
+
+					set_vr(op.rt, smmla(zeroes, es, build<u8[16]>(
+						0x00, 0x00, 0x00, 0x00,
+						0x00, 0x00, 0x00, 0x00,
+						-0x01, -0x02, -0x04, -0x08,
+						-0x10, -0x20, -0x40, -0x80
+					)));
+					return true;
+				}
+				return false;
+			}))
+			{
+			return;
+			}
+
+			const auto zeroes = splat<u32[4]>(0);
+			const auto masked = a & 0x01;
+			const auto es = zshuffle(bitcast<u8[16]>(masked), 16, 16, 16, 16, 16, 16, 16, 16, 0, 2, 4, 6, 8, 10, 12, 14);
+
+			set_vr(op.rt, ummla(zeroes, es, build<u8[16]>(
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x01, 0x02, 0x04, 0x08,
+				0x10, 0x20, 0x40, 0x80
+			)));
+			return;
+		}
+
 		// Use dot product instructions with special values to shift then sum results into the preferred slot
 		if (m_use_dotprod)
 		{
@@ -5579,6 +5617,48 @@ public:
 		const auto a = get_vr<u8[16]>(op.ra);
 
 #ifdef ARCH_ARM64
+		if (m_use_i8mm)
+		{
+			if (match_vr<s8[16], s16[8], s32[4], s64[2]>(op.ra, [&](auto c, auto MP)
+			{
+				using VT = typename decltype(MP)::type;
+
+				if (auto [ok, x] = match_expr(c, sext<VT>(match<bool[std::extent_v<VT>]>())); ok)
+				{
+					const auto zeroes = splat<u32[4]>(0);
+
+					const auto extracted = smmla(zeroes, a, build<u8[16]>(
+						0x00, 0x00, 0x00, 0x00,
+						0x00, 0x00, 0x00, 0x00,
+						-0x01, -0x02, -0x04, -0x08,
+						-0x10, -0x20, -0x40, -0x80
+					));
+
+					const auto es = zshuffle(bitcast<u8[16]>(extracted), 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 4, 12, 16, 16);
+					set_vr(op.rt, bitcast<u32[4]>(es));
+					return true;
+				}
+				return false;
+			}))
+			{
+			return;
+			}
+
+			const auto zeroes = splat<u32[4]>(0);
+			const auto masked = a & 0x01;
+
+			const auto extracted = ummla(zeroes, masked, build<u8[16]>(
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x01, 0x02, 0x04, 0x08,
+				0x10, 0x20, 0x40, 0x80
+			));
+
+			const auto es = zshuffle(bitcast<u8[16]>(extracted), 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 4, 12, 16, 16);
+			set_vr(op.rt, bitcast<u32[4]>(es));
+			return;
+		}
+
 		// Use dot product instructions with special values to shift then sum results into the preferred slot
 		if (m_use_dotprod)
 		{
@@ -5657,28 +5737,89 @@ public:
 		}
 
 		const auto v = extract(get_vr(op.ra), 3);
+#ifdef ARCH_ARM64
+// Workaround for bad codegen via LLVM
+// More idiomatic version that compiles to 2 neon instructions
+// Remove me when addressed by upstream llvm: https://github.com/llvm/llvm-project/issues/200325 - Whatcookie
+		const auto masks = build<u32[4]>(1, 2, 4, 8);
+		const auto bits = vsplat<u32[4]>(zext<u32>(trunc<i4>(v)));
+		set_vr(op.rt, sext<s32[4]>((bits & masks) == masks));
+#else
 		const auto m = bitcast<bool[4]>(trunc<i4>(v));
 		set_vr(op.rt, sext<s32[4]>(m));
+#endif
 	}
 
 	void FSMH(spu_opcode_t op)
 	{
 		const auto v = extract(get_vr(op.ra), 3);
+#ifdef ARCH_ARM64
+		const auto masks = build<u16[8]>(1, 2, 4, 8, 16, 32, 64, 128);
+		const auto bits = vsplat<u16[8]>(zext<u16>(trunc<u8>(v)));
+		set_vr(op.rt, sext<s16[8]>((bits & masks) == masks));
+#else
 		const auto m = bitcast<bool[8]>(trunc<u8>(v));
 		set_vr(op.rt, sext<s16[8]>(m));
+#endif
 	}
 
 	void FSMB(spu_opcode_t op)
 	{
 		const auto v = extract(get_vr(op.ra), 3);
+#ifdef ARCH_ARM64
+		const auto masks = build<u8[16]>(1, 2, 4, 8, 16, 32, 64, 128, 1, 2, 4, 8, 16, 32, 64, 128);
+		const auto bytes = bitcast<u8[16]>(vsplat<u16[8]>(trunc<u16>(v)));
+		const auto bits = zshuffle(bytes, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1);
+		set_vr(op.rt, sext<s8[16]>((bits & masks) == masks));
+#else
 		const auto m = bitcast<bool[16]>(trunc<u16>(v));
 		set_vr(op.rt, sext<s8[16]>(m));
+#endif
 	}
 
 	template <typename TA>
 	static auto byteswap(TA&& a)
 	{
 		return zshuffle(std::forward<TA>(a), 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+	}
+
+	static auto rotqby_reverse_base()
+	{
+		return build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+	}
+
+	static auto rotqby_forward_base()
+	{
+		return build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+	}
+
+	static auto rotqby_zero_base()
+	{
+#ifdef ARCH_ARM64
+		return rotqby_forward_base();
+#else
+		return build<u8[16]>(112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127);
+#endif
+	}
+
+	static auto rotqby_reverse_zero_base()
+	{
+#ifdef ARCH_ARM64
+		return rotqby_reverse_base();
+#else
+		return build<u8[16]>(127, 126, 125, 124, 123, 122, 121, 120, 119, 118, 117, 116, 115, 114, 113, 112);
+#endif
+	}
+
+	// For use in rotqby family of instructions only
+	template <typename T, typename U>
+	auto pshufb_for_x86_and_tbl_for_aarch64(T&& a, U&& b)
+	{
+#ifdef ARCH_ARM64
+		return tbl(std::forward<T>(a), std::forward<U>(b));
+#else
+		return pshufb(std::forward<T>(a), std::forward<U>(b));
+#endif
 	}
 
 	template <typename T, typename U>
@@ -5697,7 +5838,7 @@ public:
 			// Data with swapped endian from a load instruction
 			if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
 			{
-				const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+				const auto sc = rotqby_reverse_base();
 				const auto sh = sc + (splat_scalar(b) >> 3);
 
 				if (m_use_avx512_icl)
@@ -5705,9 +5846,9 @@ public:
 					return eval(vpermb(as, sh));
 				}
 
-				return eval(pshufb(as, (sh & 0xf)));
+				return eval(pshufb_for_x86_and_tbl_for_aarch64(as, (sh & 0xf)));
 			}
-			const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+			const auto sc = rotqby_forward_base();
 			const auto sh = sc - (splat_scalar(b) >> 3);
 
 			if (m_use_avx512_icl)
@@ -5715,7 +5856,7 @@ public:
 				return eval(vpermb(a, sh));
 			}
 
-			return eval(pshufb(a, (sh & 0xf)));
+			return eval(pshufb_for_x86_and_tbl_for_aarch64(a, (sh & 0xf)));
 		});
 
 		set_vr(op.rt, rotqbybi(get_vr<u8[16]>(op.ra), get_vr<u8[16]>(op.rb)));
@@ -5743,15 +5884,15 @@ public:
 		// Data with swapped endian from a load instruction
 		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
 		{
-			const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+			const auto sc = rotqby_reverse_base();
 			const auto sh = sc - splat_scalar(minusbx);
-			set_vr(op.rt, pshufb(as, sh));
+			set_vr(op.rt, pshufb_for_x86_and_tbl_for_aarch64(as, sh));
 			return;
 		}
 
-		const auto sc = build<u8[16]>(112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127);
+		const auto sc = rotqby_zero_base();
 		const auto sh = sc + splat_scalar(minusbx);
-		set_vr(op.rt, pshufb(a, sh));
+		set_vr(op.rt, pshufb_for_x86_and_tbl_for_aarch64(a, sh));
 	}
 
 	void SHLQBYBI(spu_opcode_t op)
@@ -5762,15 +5903,15 @@ public:
 		// Data with swapped endian from a load instruction
 		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
 		{
-			const auto sc = build<u8[16]>(127, 126, 125, 124, 123, 122, 121, 120, 119, 118, 117, 116, 115, 114, 113, 112);
+			const auto sc = rotqby_reverse_zero_base();
 			const auto sh = sc + (splat_scalar(b) >> 3);
-			set_vr(op.rt, pshufb(as, sh));
+			set_vr(op.rt, pshufb_for_x86_and_tbl_for_aarch64(as, sh));
 			return;
 		}
 
-		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+		const auto sc = rotqby_forward_base();
 		const auto sh = sc - (splat_scalar(b) >> 3);
-		set_vr(op.rt, pshufb(a, sh));
+		set_vr(op.rt, pshufb_for_x86_and_tbl_for_aarch64(a, sh));
 	}
 
 	template <typename RT, typename T>
@@ -5924,7 +6065,7 @@ public:
 		// Data with swapped endian from a load instruction
 		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
 		{
-			const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+			const auto sc = rotqby_reverse_base();
 			const auto sh = eval(sc + splat_scalar(b));
 
 			if (m_use_avx512_icl)
@@ -5933,11 +6074,11 @@ public:
 				return;
 			}
 
-			set_vr(op.rt, pshufb(as, (sh & 0xf)));
+			set_vr(op.rt, pshufb_for_x86_and_tbl_for_aarch64(as, (sh & 0xf)));
 			return;
 		}
 
-		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+		const auto sc = rotqby_forward_base();
 		const auto sh = eval(sc - splat_scalar(b));
 
 		if (m_use_avx512_icl)
@@ -5946,7 +6087,7 @@ public:
 			return;
 		}
 
-		set_vr(op.rt, pshufb(a, (sh & 0xf)));
+		set_vr(op.rt, pshufb_for_x86_and_tbl_for_aarch64(a, (sh & 0xf)));
 	}
 
 	void ROTQMBY(spu_opcode_t op)
@@ -5965,15 +6106,15 @@ public:
 		// Data with swapped endian from a load instruction
 		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
 		{
-			const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+			const auto sc = rotqby_reverse_base();
 			const auto sh = sc - (splat_scalar(minusbx) & 0x1f);
-			set_vr(op.rt, pshufb(as, sh));
+			set_vr(op.rt, pshufb_for_x86_and_tbl_for_aarch64(as, sh));
 			return;
 		}
 
-		const auto sc = build<u8[16]>(112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127);
+		const auto sc = rotqby_zero_base();
 		const auto sh = sc + (splat_scalar(minusbx) & 0x1f);
-		set_vr(op.rt, pshufb(a, sh));
+		set_vr(op.rt, pshufb_for_x86_and_tbl_for_aarch64(a, sh));
 	}
 
 	void SHLQBY(spu_opcode_t op)
@@ -5984,15 +6125,15 @@ public:
 		// Data with swapped endian from a load instruction
 		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
 		{
-			const auto sc = build<u8[16]>(127, 126, 125, 124, 123, 122, 121, 120, 119, 118, 117, 116, 115, 114, 113, 112);
+			const auto sc = rotqby_reverse_zero_base();
 			const auto sh = sc + (splat_scalar(b) & 0x1f);
-			set_vr(op.rt, pshufb(as, sh));
+			set_vr(op.rt, pshufb_for_x86_and_tbl_for_aarch64(as, sh));
 			return;
 		}
 
-		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+		const auto sc = rotqby_forward_base();
 		const auto sh = sc - (splat_scalar(b) & 0x1f);
-		set_vr(op.rt, pshufb(a, sh));
+		set_vr(op.rt, pshufb_for_x86_and_tbl_for_aarch64(a, sh));
 	}
 
 	template <typename T>
@@ -6090,26 +6231,26 @@ public:
 	void ROTQBYI(spu_opcode_t op)
 	{
 		const auto a = get_vr<u8[16]>(op.ra);
-		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+		const auto sc = rotqby_forward_base();
 		const auto sh = (sc - get_imm<u8[16]>(op.i7, false)) & 0xf;
-		set_vr(op.rt, pshufb(a, sh));
+		set_vr(op.rt, pshufb_for_x86_and_tbl_for_aarch64(a, sh));
 	}
 
 	void ROTQMBYI(spu_opcode_t op)
 	{
 		const auto a = get_vr<u8[16]>(op.ra);
-		const auto sc = build<u8[16]>(112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127);
+		const auto sc = rotqby_zero_base();
 		const auto sh = sc + (-get_imm<u8[16]>(op.i7, false) & 0x1f);
-		set_vr(op.rt, pshufb(a, sh));
+		set_vr(op.rt, pshufb_for_x86_and_tbl_for_aarch64(a, sh));
 	}
 
 	void SHLQBYI(spu_opcode_t op)
 	{
 		if (get_reg_raw(op.ra) && !op.i7) return set_reg_fixed(op.rt, get_reg_raw(op.ra), false); // For expressions matching
 		const auto a = get_vr<u8[16]>(op.ra);
-		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+		const auto sc = rotqby_forward_base();
 		const auto sh = sc - (get_imm<u8[16]>(op.i7, false) & 0x1f);
-		set_vr(op.rt, pshufb(a, sh));
+		set_vr(op.rt, pshufb_for_x86_and_tbl_for_aarch64(a, sh));
 	}
 
 	void CGT(spu_opcode_t op)
@@ -6243,6 +6384,15 @@ public:
 
 	void MPYHHU(spu_opcode_t op)
 	{
+#ifdef ARCH_ARM64
+		const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
+
+		if (m_use_sve2_128)
+		{
+			set_vr(op.rt, sve_umullt(bitcast<u16[8]>(a), bitcast<u16[8]>(b)));
+			return;
+		}
+#endif
 		set_vr(op.rt, (get_vr(op.ra) >> 16) * (get_vr(op.rb) >> 16));
 	}
 
@@ -6273,11 +6423,29 @@ public:
 
 	void MPYHHA(spu_opcode_t op)
 	{
+#ifdef ARCH_ARM64
+		const auto [a, b] = get_vrs<s32[4]>(op.ra, op.rb);
+
+		if (m_use_sve2_128)
+		{
+			set_vr(op.rt, sve_smlalt(get_vr<s32[4]>(op.rt), bitcast<s16[8]>(a), bitcast<s16[8]>(b)));
+			return;
+		}
+#endif
 		set_vr(op.rt, (get_vr<s32[4]>(op.ra) >> 16) * (get_vr<s32[4]>(op.rb) >> 16) + get_vr<s32[4]>(op.rt));
 	}
 
 	void MPYHHAU(spu_opcode_t op)
 	{
+#ifdef ARCH_ARM64
+		const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
+
+		if (m_use_sve2_128)
+		{
+			set_vr(op.rt, sve_umlalt(get_vr<u32[4]>(op.rt), bitcast<u16[8]>(a), bitcast<u16[8]>(b)));
+			return;
+		}
+#endif
 		set_vr(op.rt, (get_vr(op.ra) >> 16) * (get_vr(op.rb) >> 16) + get_vr(op.rt));
 	}
 
@@ -6285,7 +6453,15 @@ public:
 	{
 #ifdef ARCH_ARM64
 		const auto [a, b] = get_vrs<s32[4]>(op.ra, op.rb);
-		set_vr(op.rt, smull(zshuffle(bitcast<s16[8]>(a), 0, 2, 4, 6), zshuffle(bitcast<s16[8]>(b), 0, 2, 4, 6)));
+
+		if (m_use_sve2_128)
+		{
+			set_vr(op.rt, sve_smullb(bitcast<s16[8]>(a), bitcast<s16[8]>(b)));
+		}
+		else
+		{
+			set_vr(op.rt, smull(zshuffle(bitcast<s16[8]>(a), 0, 2, 4, 6), zshuffle(bitcast<s16[8]>(b), 0, 2, 4, 6)));
+		}
 #else
 		set_vr(op.rt, (get_vr<s32[4]>(op.ra) << 16 >> 16) * (get_vr<s32[4]>(op.rb) << 16 >> 16));
 #endif
@@ -6298,6 +6474,15 @@ public:
 
 	void MPYHH(spu_opcode_t op)
 	{
+#ifdef ARCH_ARM64
+		const auto [a, b] = get_vrs<s32[4]>(op.ra, op.rb);
+
+		if (m_use_sve2_128)
+		{
+			set_vr(op.rt, sve_smullt(bitcast<s16[8]>(a), bitcast<s16[8]>(b)));
+			return;
+		}
+#endif
 		set_vr(op.rt, (get_vr<s32[4]>(op.ra) >> 16) * (get_vr<s32[4]>(op.rb) >> 16));
 	}
 
@@ -6305,7 +6490,15 @@ public:
 	{
 #ifdef ARCH_ARM64
 		const auto [a, b] = get_vrs<s32[4]>(op.ra, op.rb);
-		set_vr(op.rt, smull(zshuffle(bitcast<s16[8]>(a), 0, 2, 4, 6), zshuffle(bitcast<s16[8]>(b), 0, 2, 4, 6)) >> 16);
+
+		if (m_use_sve2_128)
+		{
+			set_vr(op.rt, sve_smullb(bitcast<s16[8]>(a), bitcast<s16[8]>(b)) >> 16);
+		}
+		else
+		{
+			set_vr(op.rt, smull(zshuffle(bitcast<s16[8]>(a), 0, 2, 4, 6), zshuffle(bitcast<s16[8]>(b), 0, 2, 4, 6)) >> 16);
+		}
 #else
 		set_vr(op.rt, (get_vr<s32[4]>(op.ra) << 16 >> 16) * (get_vr<s32[4]>(op.rb) << 16 >> 16) >> 16);
 #endif
@@ -6320,7 +6513,15 @@ public:
 	{
 #ifdef ARCH_ARM64
 		const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
-		set_vr(op.rt, umull(zshuffle(bitcast<u16[8]>(a), 0, 2, 4, 6), zshuffle(bitcast<u16[8]>(b), 0, 2, 4, 6)));
+
+		if (m_use_sve2_128)
+		{
+			set_vr(op.rt, sve_umullb(bitcast<u16[8]>(a), bitcast<u16[8]>(b)));
+		}
+		else
+		{
+			set_vr(op.rt, umull(zshuffle(bitcast<u16[8]>(a), 0, 2, 4, 6), zshuffle(bitcast<u16[8]>(b), 0, 2, 4, 6)));
+		}
 #else
 		set_vr(op.rt, mpyu(get_vr(op.ra), get_vr(op.rb)));
 #endif
@@ -6333,8 +6534,15 @@ public:
 
 	void FSMBI(spu_opcode_t op)
 	{
+#ifdef ARCH_ARM64
+		const auto masks = build<u8[16]>(1, 2, 4, 8, 16, 32, 64, 128, 1, 2, 4, 8, 16, 32, 64, 128);
+		const auto bytes = bitcast<u8[16]>(vsplat<u16[8]>(get_imm<u16>(op.i16)));
+		const auto bits = zshuffle(bytes, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1);
+		set_vr(op.rt, sext<s8[16]>((bits & masks) == masks));
+#else
 		const auto m = bitcast<bool[16]>(get_imm<u16>(op.i16));
 		set_vr(op.rt, sext<s8[16]>(m));
+#endif
 	}
 
 	void IL(spu_opcode_t op)
@@ -6466,7 +6674,14 @@ public:
 	void MPYI(spu_opcode_t op)
 	{
 #ifdef ARCH_ARM64
-		set_vr(op.rt, smull(zshuffle(bitcast<s16[8]>(get_vr<s32[4]>(op.ra)), 0, 2, 4, 6), get_imm<s16[4]>(op.si10)));
+		if (m_use_sve2_128)
+		{
+			set_vr(op.rt, sve_smullb(bitcast<s16[8]>(get_vr<s32[4]>(op.ra)), get_imm<s16[8]>(op.si10)));
+		}
+		else
+		{
+			set_vr(op.rt, smull(zshuffle(bitcast<s16[8]>(get_vr<s32[4]>(op.ra)), 0, 2, 4, 6), get_imm<s16[4]>(op.si10)));
+		}
 #else
 		set_vr(op.rt, (get_vr<s32[4]>(op.ra) << 16 >> 16) * get_imm<s32[4]>(op.si10));
 #endif
@@ -6475,7 +6690,14 @@ public:
 	void MPYUI(spu_opcode_t op)
 	{
 #ifdef ARCH_ARM64
-		set_vr(op.rt, umull(zshuffle(bitcast<u16[8]>(get_vr<u32[4]>(op.ra)), 0, 2, 4, 6), get_imm<u16[4]>(op.si10)));
+		if (m_use_sve2_128)
+		{
+			set_vr(op.rt, sve_umullb(bitcast<u16[8]>(get_vr<u32[4]>(op.ra)), get_imm<u16[8]>(op.si10)));
+		}
+		else
+		{
+			set_vr(op.rt, umull(zshuffle(bitcast<u16[8]>(get_vr<u32[4]>(op.ra)), 0, 2, 4, 6), get_imm<u16[4]>(op.si10)));
+		}
 #else
 		set_vr(op.rt, (get_vr(op.ra) << 16 >> 16) * (get_imm(op.si10) & 0xffff));
 #endif
@@ -7062,7 +7284,15 @@ public:
 	{
 #ifdef ARCH_ARM64
 		const auto [a, b] = get_vrs<s32[4]>(op.ra, op.rb);
-		set_vr(op.rt4, smull(zshuffle(bitcast<s16[8]>(a), 0, 2, 4, 6), zshuffle(bitcast<s16[8]>(b), 0, 2, 4, 6)) + get_vr<s32[4]>(op.rc));
+
+		if (m_use_sve2_128)
+		{
+			set_vr(op.rt4, sve_smlalb(get_vr<s32[4]>(op.rc), bitcast<s16[8]>(a), bitcast<s16[8]>(b)));
+		}
+		else
+		{
+			set_vr(op.rt4, smull(zshuffle(bitcast<s16[8]>(a), 0, 2, 4, 6), zshuffle(bitcast<s16[8]>(b), 0, 2, 4, 6)) + get_vr<s32[4]>(op.rc));
+		}
 #else
 		set_vr(op.rt4, (get_vr<s32[4]>(op.ra) << 16 >> 16) * (get_vr<s32[4]>(op.rb) << 16 >> 16) + get_vr<s32[4]>(op.rc));
 #endif
@@ -8220,10 +8450,26 @@ public:
 
 			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
 			{
+#ifdef ARCH_ARM64
+				if (m_use_sve2_128)
+				{
+					const auto ca = eval(clamp_smax(a));
+					const auto cb = eval(clamp_smax(b));
+					return value<f32[4]>(sve_fnmls(c.value, ca.value, cb.value));
+				}
+#endif
+
 				return fma32x4(clamp_smax(a), clamp_smax(b), eval(-c));
 			}
 			else
 			{
+#ifdef ARCH_ARM64
+				if (m_use_sve2_128)
+				{
+					return value<f32[4]>(sve_fnmls(c.value, a.value, b.value));
+				}
+#endif
+
 				return fma32x4(a, b, eval(-c));
 			}
 		});
