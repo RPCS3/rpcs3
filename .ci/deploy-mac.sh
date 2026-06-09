@@ -7,7 +7,6 @@ cd bin
 git clone --revision=a075e5e417f87675ea3137b7365f3e5a99608d72 https://github.com/KhronosGroup/MoltenVK.git
 cd MoltenVK
 ./fetchDependencies --macos
-sudo xcode-select -switch /Applications/Xcode_16.2.app/Contents/Developer
 make macos MVK_USE_METAL_PRIVATE_API=1
 cd ../
 
@@ -84,7 +83,7 @@ echo "[InternetShortcut]" > Quickstart.url
 echo "URL=https://rpcs3.net/quickstart" >> Quickstart.url
 echo "IconIndex=0" >> Quickstart.url
 
-if [ "$AARCH64" -eq 1 ]; then
+if [ "$(arch)" = "arm64" ]; then
   ARCHIVE_FILEPATH="$BUILD_ARTIFACTSTAGINGDIRECTORY/rpcs3-v${LVER}_macos_aarch64.7z"
 else
   ARCHIVE_FILEPATH="$BUILD_ARTIFACTSTAGINGDIRECTORY/rpcs3-v${LVER}_macos.7z"
