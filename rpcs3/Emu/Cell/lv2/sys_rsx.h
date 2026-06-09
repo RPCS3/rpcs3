@@ -124,6 +124,21 @@ struct RsxDisplayInfo
 	}
 };
 
+struct lv2_rsx_context
+{
+	// TODO: LV1 does 0x55555555 XOR (internal index) for ID creation
+	// So the first context is 0x55555555, then 0x55555554, then 0x55555557 until 0x5555555A lastly
+	// Whereas IDM cannot do that yet
+	static constexpr u32 id_base = 0x55555550;
+	static constexpr u32 id_count = 16;
+	static constexpr u32 id_step = 1;
+
+	u32 label_addr = 0;
+	u32 driver_info = 0;
+	u32 main_mem_size = 0;
+	u32 rsx_event_port = 0;
+};
+
 // SysCalls
 error_code sys_rsx_device_open(cpu_thread& cpu);
 error_code sys_rsx_device_close(cpu_thread& cpu);
