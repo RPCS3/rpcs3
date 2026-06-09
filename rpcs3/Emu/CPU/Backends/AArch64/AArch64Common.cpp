@@ -138,7 +138,9 @@ namespace aarch64
 #endif
     }
 
-    std::string get_cpu_name()
+    // Resolve the representative CPU part entry for this machine (the "lowest" core in a
+    // big.LITTLE layout), or nullptr if the layout can't be fully identified.
+    static const cpu_entry_t* get_cpu_part_info()
     {
         std::map<u64, int> core_layout;
         for (u32 i = 0; i < std::thread::hardware_concurrency(); ++i)
@@ -154,10 +156,10 @@ namespace aarch64
 
         if (core_layout.empty())
         {
-            return {};
+            return nullptr;
         }
 
-        const cpu_entry_t* lowest_part_info = nullptr; 
+        const cpu_entry_t* lowest_part_info = nullptr;
         for (const auto& [midr, count] : core_layout)
         {
             const auto implementer_id = (midr >> 24) & 0xff;
@@ -166,7 +168,7 @@ namespace aarch64
             const auto part_info = find_cpu_part(implementer_id, part_id);
             if (!part_info)
             {
-                return {};
+                return nullptr;
             }
 
             if (lowest_part_info == nullptr || lowest_part_info > part_info)
@@ -175,7 +177,13 @@ namespace aarch64
             }
         }
 
-        return lowest_part_info ? lowest_part_info->name : "";
+        return lowest_part_info;
+    }
+
+    std::string get_cpu_name()
+    {
+        const auto part_info = get_cpu_part_info();
+        return part_info ? part_info->name : "";
     }
 
     std::string get_cpu_brand()
@@ -244,54 +252,17 @@ namespace aarch64
 
     std::string get_cpu_llvm_name()
     {
-        std::map<u64, int> core_layout;
-        for (u32 i = 0; i < std::thread::hardware_concurrency(); ++i)
+        const auto part_info = get_cpu_part_info();
+
+        // Only Apple silicon (implementer 0x61) gets a hand-picked -mcpu for now. The family
+        // field holds the SoC generation ("M2", "M2 Pro/Max", ...) whose first token maps
+        // directly onto the LLVM "apple-mN" targets (and auto-extends to future generations).
+        if (!part_info || part_info->vendor != 0x61 || !part_info->family || !part_info->family[0])
         {
-            const auto midr = read_MIDR_EL1(i);
-            if (midr == umax)
-            {
-                break;
-            }
-            core_layout[midr]++;
+            return {};
         }
 
-        bool is_apple_silicon = false;
-
-        for (const auto& [midr, count] : core_layout)
-        {
-            const auto implementer_id = (midr >> 24) & 0xff;
-            const auto part_id = (midr >> 4) & 0xfff;
-
-            // This helper only hand-picks an -mcpu for Apple silicon (implementer 0x61) for now.
-            if (implementer_id != 0x61)
-            {
-                continue;
-            }
-
-            is_apple_silicon = true;
-
-            const auto part_info = find_cpu_part(implementer_id, part_id);
-            if (!part_info || !part_info->family)
-            {
-                continue;
-            }
-
-            // Map Apple SoC family to an LLVM -mcpu so the JIT schedules for the real microarchitecture.
-            const std::string_view family = part_info->family;
-            if (family.starts_with("M1")) return "apple-m1";
-            if (family.starts_with("M2")) return "apple-m2";
-            if (family.starts_with("M3")) return "apple-m3";
-            if (family.starts_with("M4")) return "apple-m4";
-        }
-
-        // Recognized as Apple silicon but not a known M-series generation (newer M-series, A-series, etc.):
-        // fall back to a conservative Apple baseline instead of a generic Cortex core.
-        if (is_apple_silicon)
-        {
-            return "apple-m1";
-        }
-
-        return {};
+        return fmt::format("apple-%s", fmt::to_lower(fmt::split(part_info->family, {" "}).front()));
     }
 #else
     static std::string sysctl_s(const std::string_view& variable_name)
@@ -354,30 +325,25 @@ namespace aarch64
 
     std::string get_cpu_llvm_name()
     {
-        // machdep.cpu.brand_string on Apple silicon is "Apple <family>", e.g.
-        // "Apple M2 Max", "Apple M1 Pro", "Apple M4". Match the family token right after
-        // the "Apple " vendor prefix instead of a substring-anywhere find.
+        // machdep.cpu.brand_string on Apple silicon is "Apple <family>", e.g. "Apple M2 Max",
+        // "Apple M1 Pro", "Apple M4". The generation token after the "Apple " vendor prefix maps
+        // directly onto the LLVM "apple-mN"/"apple-aN" targets.
         const auto brand = sysctl_s("machdep.cpu.brand_string");
 
         std::string_view family = brand;
-        if (family.starts_with("Apple "))
+        if (!family.starts_with("Apple "))
         {
-            family.remove_prefix(6);
+            return {};
+        }
+        family.remove_prefix(6);
+
+        const auto tokens = fmt::split(family, {" "});
+        if (tokens.empty())
+        {
+            return {};
         }
 
-        if (family.starts_with("M1")) return "apple-m1";
-        if (family.starts_with("M2")) return "apple-m2";
-        if (family.starts_with("M3")) return "apple-m3";
-        if (family.starts_with("M4")) return "apple-m4";
-
-        // Unrecognized but Apple-branded silicon (newer M-series, A-series, etc.): pick a
-        // conservative Apple baseline instead of falling through to a generic Cortex core.
-        if (brand.starts_with("Apple"))
-        {
-            return "apple-m1";
-        }
-
-        return {};
+        return fmt::format("apple-%s", fmt::to_lower(tokens.front()));
     }
 #endif
 }
