@@ -262,7 +262,13 @@ namespace aarch64
             return {};
         }
 
-        return fmt::format("apple-%s", fmt::to_lower(fmt::split(part_info->family, {" "}).front()));
+        const auto tokens = fmt::split_sv(part_info->family, {" "});
+        if (tokens.empty())
+        {
+            return {};
+        }
+
+        return fmt::format("apple-%s", fmt::to_lower(tokens.front()));
     }
 #else
     static std::string sysctl_s(const std::string_view& variable_name)
@@ -337,7 +343,7 @@ namespace aarch64
         }
         family.remove_prefix(6);
 
-        const auto tokens = fmt::split(family, {" "});
+        const auto tokens = fmt::split_sv(family, {" "});
         if (tokens.empty())
         {
             return {};
