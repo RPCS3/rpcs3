@@ -321,6 +321,14 @@ void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKey
 		}
 		break;
 	}
+	case gui::shortcuts::shortcut::gw_stop:
+	{
+		if (!Emu.IsStopped())
+		{
+			Emu.GracefulShutdown(true, true);
+		}
+		break;
+	}
 	case gui::shortcuts::shortcut::gw_restart:
 	case gui::shortcuts::shortcut::gw_savestate_1:
 	case gui::shortcuts::shortcut::gw_savestate_2:
