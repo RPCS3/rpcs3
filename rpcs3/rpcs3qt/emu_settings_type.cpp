@@ -190,6 +190,7 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::MouseBasedGyro,          get_cfg_location(local_cfg.io.mouse_based_gyro_enabled) },
 	{ emu_settings_type::IoDebugOverlay,          get_cfg_location(local_cfg.io.pad_debug_overlay) },
 	{ emu_settings_type::MouseDebugOverlay,       get_cfg_location(local_cfg.io.mouse_debug_overlay) },
+	{ emu_settings_type::MoveDebugOverlay,        get_cfg_location(local_cfg.io.ps_move_debug_overlay) },
 
 	// Misc
 	{ emu_settings_type::ExitRPCS3OnFinish,               get_cfg_location(local_cfg.misc.autoexit) },
