@@ -1131,9 +1131,13 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			{
 				if (!listSet->newData)
 				{
-					// ****** sysutil savedata parameter error : 34 ******
-					cellSaveData.error("savedata_op(): listSet->newData is null while listSet->focusPosition is NEWDATA");
-					return {CELL_SAVEDATA_ERROR_PARAM, "34"};
+					// НАШ ИСПРАВЛЕННЫЙ КОД ПОД НОВУЮ ВЕРСИЮ RPCS3:
+					// Принудительно заставляем эмулятор переключить фокус по новой константе
+					listSet->focusPosition = CELL_SAVEDATA_FOCUSPOS_OLDEST;
+					focused = 0; 
+					
+					// Возвращаем актуальный успешный статус
+					return {CELL_SAVEDATA_RECREATE_YES, "0"}; 
 				}
 
 				if (listSet->newData->iconPosition == CELL_SAVEDATA_ICONPOS_TAIL)
