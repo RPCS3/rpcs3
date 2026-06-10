@@ -33,6 +33,7 @@ namespace gui
 			gw_screenshot,
 			gw_toggle_recording,
 			gw_pause_play,
+			gw_stop,
 			gw_savestate,
 			gw_savestate_1,
 			gw_savestate_2,
