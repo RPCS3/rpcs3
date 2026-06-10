@@ -95,7 +95,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 		"	vertex_context_t vertex_contexts[];\n"
 		"};\n\n";
 
-	const vk::glsl::program_input context_input
+	vk::glsl::program_input context_input
 	{
 		.domain = glsl::glsl_vertex_program,
 		.type = vk::glsl::input_type_uniform_buffer,
@@ -103,7 +103,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 		.location = vk_prog->binding_table.context_buffer_location,
 		.name = "VertexContextBuffer"
 	};
-	inputs.push_back(context_input);
+	inputs.push_back(std::move(context_input));
 
 	if (m_device_props.emulate_conditional_rendering)
 	{
@@ -113,7 +113,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 			"	uint cr_predicate_value;\n"
 			"};\n\n";
 
-		const vk::glsl::program_input predicate_input
+		vk::glsl::program_input predicate_input
 		{
 			.domain = glsl::glsl_vertex_program,
 			.type = vk::glsl::input_type_storage_buffer,
@@ -121,7 +121,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 			.location = vk_prog->binding_table.cr_pred_buffer_location,
 			.name = "EXT_Conditional_Rendering"
 		};
-		inputs.push_back(predicate_input);
+		inputs.push_back(std::move(predicate_input));
 	}
 
 	OS <<
@@ -130,7 +130,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 		"	draw_parameters_t draw_parameters[];\n"
 		"};\n\n";
 
-	const vk::glsl::program_input layouts_input
+	vk::glsl::program_input layouts_input
 	{
 		.domain = glsl::glsl_vertex_program,
 		.type = vk::glsl::input_type_storage_buffer,
@@ -138,7 +138,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 		.location = vk_prog->binding_table.vertex_buffers_location + 2,
 		.name = "DrawParametersBuffer"
 	};
-	inputs.push_back(layouts_input);
+	inputs.push_back(std::move(layouts_input));
 
 	OS <<
 		"layout(push_constant) uniform push_constants_block\n"
@@ -146,7 +146,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 		"	uint draw_parameters_offset;\n"
 		"};\n\n";
 
-	const vk::glsl::program_input push_constants
+	vk::glsl::program_input push_constants
 	{
 		.domain = glsl::glsl_vertex_program,
 		.type = vk::glsl::input_type_push_constant,
@@ -155,7 +155,7 @@ void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
 		.location = umax,
 		.name = "push_constants_block"
 	};
-	inputs.push_back(push_constants);
+	inputs.push_back(std::move(push_constants));
 }
 
 void VKVertexDecompilerThread::insertInputs(std::stringstream& OS, const std::vector<ParamType>& /*inputs*/)
@@ -171,15 +171,14 @@ void VKVertexDecompilerThread::insertInputs(std::stringstream& OS, const std::ve
 	{
 		OS << "layout(set=0, binding=" << location << ") uniform usamplerBuffer " << stream << ";\n";
 
-		const vk::glsl::program_input input
+		this->inputs.push_back(vk::glsl::program_input
 		{
 			.domain = glsl::glsl_vertex_program,
 			.type = vk::glsl::input_type_texel_buffer,
 			.set = vk::glsl::binding_set_index_vertex,
 			.location = location++,
 			.name = stream
-		};
-		this->inputs.push_back(input);
+		});
 	}
 }
 
