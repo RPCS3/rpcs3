@@ -3,15 +3,15 @@
 
 namespace gl::ex
 {
-	void glNamedBufferStorageEX(GLuint buffer, GLenum target, GLsizeiptr size, const void* data, GLbitfield flags)
+	void glNamedBufferStorageEX(GLuint name, GLenum target, GLsizeiptr size, const void* data, GLbitfield flags)
 	{
 		GLint restore = GL_NONE;
 		glGetIntegerv(target, &restore);
 
-		glBindBuffer(target, buffer);
+		glBindBuffer(target, name);
 		glBufferStorage(target, size, data, flags);
 
-		if (restore != buffer)
+		if (restore != static_cast<GLint>(name))
 		{
 			glBindBuffer(target, restore);
 		}
