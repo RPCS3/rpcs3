@@ -20,7 +20,6 @@ namespace gl
 		DSA_CALL2(NamedBufferStorage, m_id, size, data, buffer_storage_flags);
 		m_memory_mapping = DSA_CALL2_RET(MapNamedBufferRange, m_id, 0, size, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
 
-		ensure(m_memory_mapping != nullptr);
 		m_data_loc = 0;
 		m_size = ::narrow<u32>(size);
 		m_memory_type = memory_type::host_visible;
