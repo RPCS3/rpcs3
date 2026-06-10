@@ -433,6 +433,9 @@
     <addaction name="languageMenu"/>
     <addaction name="separator"/>
     <addaction name="updateAct"/>
+    <addaction name="downloadIntegrityDbAct"/>
+    <addaction name="downloadCompatDbAct"/>
+    <addaction name="downloadConfigDbAct"/>
     <addaction name="welcomeAct"/>
     <addaction name="supportAct"/>
     <addaction name="separator"/>
@@ -848,6 +851,21 @@
   <action name="updateAct">
    <property name="text">
     <string>Check for Updates</string>
+   </property>
+  </action>
+  <action name="downloadIntegrityDbAct">
+   <property name="text">
+    <string>Download Integrity Database</string>
+   </property>
+  </action>
+  <action name="downloadCompatDbAct">
+   <property name="text">
+    <string>Download Compatibility Database</string>
+   </property>
+  </action>
+  <action name="downloadConfigDbAct">
+   <property name="text">
+    <string>Download Config Database</string>
    </property>
   </action>
   <action name="welcomeAct">
