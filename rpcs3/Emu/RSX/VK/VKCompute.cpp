@@ -13,20 +13,19 @@ namespace vk
 		std::vector<glsl::program_input> result;
 		for (unsigned i = 0; i < ssbo_count; ++i)
 		{
-			const auto input = glsl::program_input::make
+			result.push_back(glsl::program_input::make
 			(
 				::glsl::glsl_compute_program,
 				"ssbo" + std::to_string(i),
 				glsl::program_input_type::input_type_storage_buffer,
 				0,
 				i
-			);
-			result.push_back(input);
+			));
 		}
 
 		if (use_push_constants && push_constants_size > 0)
 		{
-			const auto input = glsl::program_input::make
+			result.push_back(glsl::program_input::make
 			(
 				::glsl::glsl_compute_program,
 				"push_constants",
@@ -34,8 +33,7 @@ namespace vk
 				0,
 				0,
 				glsl::push_constant_ref{ .offset = 0, .size = push_constants_size }
-			);
-			result.push_back(input);
+			));
 		}
 
 		return result;

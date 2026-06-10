@@ -563,8 +563,8 @@ void usb_device_rb3_midi_drums::interrupt_transfer(u32 buf_size, u8* buf, u32 /*
 		}
 		else
 		{
-			bool is_cancel = kit_state.snare >= midi::min_velocity();
-			bool is_accept = kit_state.floor_tom >= midi::min_velocity();
+			const bool is_cancel = kit_state.snare >= midi::min_velocity();
+			const bool is_accept = kit_state.floor_tom >= midi::min_velocity();
 			if (hold_kick && (is_cancel || is_accept))
 			{
 				// Hold kick brings up the song category selector menu, which can be dismissed using accept/cancel buttons.

@@ -253,14 +253,13 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 		OS << "layout(set=" << vk::glsl::binding_set_index_fragment << ", binding=" << vk_prog->binding_table.frag_depth_input_location << ") uniform " << frag_depth_type << " frag_depth;\n";
 
-		auto in = vk::glsl::program_input::make(
+		inputs.push_back(vk::glsl::program_input::make(
 			glsl::glsl_fragment_program,
 			"frag_depth",
 			vk::glsl::input_type_texture,
 			vk::glsl::binding_set_index_fragment,
 			vk_prog->binding_table.frag_depth_input_location
-		);
-		inputs.push_back(in);
+		));
 	}
 
 	// Draw params are always provided by vertex program. Instead of pointer chasing, they're provided as varyings.

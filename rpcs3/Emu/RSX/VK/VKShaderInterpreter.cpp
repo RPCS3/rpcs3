@@ -257,13 +257,14 @@ namespace vk
 		// Declare local inputs
 		auto vs_inputs = comp.get_inputs();
 
-		vk::glsl::program_input in;
-		in.set = 0;
-		in.domain = ::glsl::glsl_vertex_program;
-		in.location = vertex_instruction_start;
-		in.type = glsl::input_type_storage_buffer;
-		in.name = "VertexInstructionBlock";
-		vs_inputs.push_back(in);
+		vs_inputs.push_back(vk::glsl::program_input::make
+		(
+			::glsl::glsl_vertex_program,
+			"VertexInstructionBlock",
+			glsl::input_type_storage_buffer,
+			0,
+			vertex_instruction_start
+		));
 
 		vk_prog->SetInputs(vs_inputs);
 
@@ -426,12 +427,14 @@ namespace vk
 		// Declare local inputs
 		auto inputs = comp.get_inputs();
 
-		vk::glsl::program_input in;
-		in.set = 1;
-		in.domain = ::glsl::glsl_fragment_program;
-		in.location = fragment_instruction_start;
-		in.type = glsl::input_type_storage_buffer;
-		in.name = "FragmentInstructionBlock";
+		vk::glsl::program_input in = vk::glsl::program_input::make
+		(
+			::glsl::glsl_fragment_program,
+			"FragmentInstructionBlock",
+			glsl::input_type_storage_buffer,
+			1,
+			fragment_instruction_start
+		);
 		inputs.push_back(in);
 
 		if (compiler_options & COMPILER_OPT_ENABLE_TEXTURES)

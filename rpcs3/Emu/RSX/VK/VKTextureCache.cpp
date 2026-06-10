@@ -1265,7 +1265,7 @@ namespace vk
 				upload_command_flags |= source_is_gpu_resident;
 				heap_align = width * bpp;
 
-				tmp.push_back(subres);
+				tmp.push_back(std::move(subres));
 				p_subresource_layout = &tmp;
 			}
 		}

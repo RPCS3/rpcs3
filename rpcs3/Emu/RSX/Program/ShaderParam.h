@@ -326,7 +326,7 @@ public:
 				new_swizzle += swizzle[p.second];
 		}
 
-		swizzles.push_back(new_swizzle);
+		swizzles.push_back(std::move(new_swizzle));
 
 		return *this;
 	}

@@ -13,8 +13,6 @@ namespace rpcs3::curl
 
 curl_handle::curl_handle()
 {
-	reset_error_buffer();
-
 	m_curl = curl_easy_init();
 
 	CURLcode err = curl_easy_setopt(m_curl, CURLOPT_ERRORBUFFER, m_error_buffer.data());
@@ -44,7 +42,6 @@ CURL* curl_handle::get_curl() const
 
 void curl_handle::reset_error_buffer()
 {
-	ensure(m_error_buffer.size() == CURL_ERROR_SIZE);
 	m_error_buffer[0] = 0;
 }
 
@@ -52,7 +49,6 @@ std::string curl_handle::get_verbose_error(CURLcode code) const
 {
 	if (m_uses_error_buffer)
 	{
-		ensure(m_error_buffer.size() == CURL_ERROR_SIZE);
 		if (m_error_buffer[0])
 		{
 			return fmt::format("Curl error (%d): %s\nDetails: %s", static_cast<int>(code), curl_easy_strerror(code), m_error_buffer.data());

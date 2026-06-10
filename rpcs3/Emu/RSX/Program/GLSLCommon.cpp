@@ -636,7 +636,7 @@ namespace glsl
 					}
 				}
 
-				varying_list.push_back({ reg_location, var_name, PT.type });
+				varying_list.push_back({ reg_location, std::move(var_name), PT.type });
 			}
 		}
 

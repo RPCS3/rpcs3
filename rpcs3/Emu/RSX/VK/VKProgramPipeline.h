@@ -89,6 +89,25 @@ namespace vk
 					.name = name
 				};
 			}
+
+			static program_input make(
+				::glsl::program_domain domain,
+				std::string&& name,
+				program_input_type type,
+				u32 set,
+				u32 location,
+				const bound_data_t& data = bound_buffer{})
+			{
+				return program_input
+				{
+					.domain = domain,
+					.type = type,
+					.bound_data = data,
+					.set = set,
+					.location = location,
+					.name = std::move(name)
+				};
+			}
 		};
 
 		class shader

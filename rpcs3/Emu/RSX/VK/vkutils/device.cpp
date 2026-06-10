@@ -1032,7 +1032,7 @@ namespace vk
 
 		for (u32 i = 0; i < memory_properties.memoryTypeCount; i++)
 		{
-			auto& type_info = memory_properties.memoryTypes[i];
+			const auto& type_info = memory_properties.memoryTypes[i];
 			memory_heap_map[type_info.heapIndex].types.push_back({ i, type_info.propertyFlags, 0 });
 		}
 
@@ -1040,9 +1040,9 @@ namespace vk
 		{
 			std::vector<memory_type> results;
 
-			for (auto& heap : memory_heap_map)
+			for (const auto& heap : memory_heap_map)
 			{
-				for (auto &type : heap.types)
+				for (const auto& type : heap.types)
 				{
 					if (((type.flags & desired_flags) == desired_flags) && !(type.flags & excluded_flags))
 					{

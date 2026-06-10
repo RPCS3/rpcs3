@@ -2212,11 +2212,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 				for (auto&& entry : fs::dir{ins_dir})
 				{
-					const std::string pkg_file = ins_dir + entry.name;
+					std::string pkg_file = ins_dir + entry.name;
 
 					if (!entry.is_directory && entry.name.ends_with(".PKG"))
 					{
-						pkgs.push_back(pkg_file);
+						pkgs.push_back(std::move(pkg_file));
 					}
 				}
 			}
@@ -2229,11 +2229,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				{
 					if (entry.is_directory && entry.name.starts_with("PKG"))
 					{
-						const std::string pkg_file = pkg_dir + entry.name + "/INSTALL.PKG";
+						std::string pkg_file = pkg_dir + entry.name + "/INSTALL.PKG";
 
 						if (fs::is_file(pkg_file))
 						{
-							pkgs.push_back(pkg_file);
+							pkgs.push_back(std::move(pkg_file));
 						}
 					}
 				}
@@ -2247,11 +2247,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				{
 					if (entry.is_directory && entry.name[0] == 'D')
 					{
-						const std::string pkg_file = extra_dir + entry.name + "/DATA000.PKG";
+						std::string pkg_file = extra_dir + entry.name + "/DATA000.PKG";
 
 						if (fs::is_file(pkg_file))
 						{
-							pkgs.push_back(pkg_file);
+							pkgs.push_back(std::move(pkg_file));
 						}
 					}
 				}

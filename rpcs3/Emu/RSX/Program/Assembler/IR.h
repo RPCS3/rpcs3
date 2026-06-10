@@ -105,14 +105,14 @@ namespace rsx::assembler
 		FlowEdge* insert_succ(BasicBlock* b, EdgeType type = EdgeType::NONE)
 		{
 			FlowEdge e{ .type = type, .from = this, .to = b };
-			succ.push_back(e);
+			succ.push_back(std::move(e));
 			return &succ.back();
 		}
 
 		FlowEdge* insert_pred(BasicBlock* b, EdgeType type = EdgeType::NONE)
 		{
 			FlowEdge e{ .type = type, .from = b, .to = this };
-			pred.push_back(e);
+			pred.push_back(std::move(e));
 			return &pred.back();
 		}
 

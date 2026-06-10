@@ -207,8 +207,8 @@ bool TROPUSRLoader::Generate(std::string_view filepath, std::string_view configp
 			TROPUSREntry4 entry4 = { 4, u32{sizeof(TROPUSREntry4)} - 0x10, ::size32(m_table4), 0, trophy_id, trophy_grade, trophy_pid };
 			TROPUSREntry6 entry6 = { 6, u32{sizeof(TROPUSREntry6)} - 0x10, ::size32(m_table6), 0, trophy_id };
 
-			m_table4.push_back(entry4);
-			m_table6.push_back(entry6);
+			m_table4.push_back(std::move(entry4));
+			m_table6.push_back(std::move(entry6));
 		}
 	}
 
@@ -219,8 +219,8 @@ bool TROPUSRLoader::Generate(std::string_view filepath, std::string_view configp
 	offset += m_table6.size() * sizeof(TROPUSREntry6);
 
 	m_tableHeaders.clear();
-	m_tableHeaders.push_back(table4header);
-	m_tableHeaders.push_back(table6header);
+	m_tableHeaders.push_back(std::move(table4header));
+	m_tableHeaders.push_back(std::move(table6header));
 
 	std::memset(&m_header, 0, sizeof(m_header));
 	m_header.magic = TROPUSR_MAGIC;
