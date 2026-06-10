@@ -1040,6 +1040,7 @@
     <ClInclude Include="Emu\Io\PadHandler.h" />
     <ClInclude Include="Emu\RSX\Program\CgBinaryProgram.h" />
     <ClInclude Include="Emu\RSX\Common\BufferUtils.h" />
+    <ClInclude Include="Emu\RSX\Common\BufferUtils_avx512.h" />
     <ClInclude Include="Emu\RSX\Program\FragmentProgramDecompiler.h" />
     <ClInclude Include="Emu\RSX\Common\ring_buffer_helper.h" />
     <ClInclude Include="Emu\RSX\Program\ShaderParam.h" />
