@@ -58,12 +58,14 @@ if(WITH_LLVM)
 	else()
 		message(STATUS "Using prebuilt or system LLVM")
 
+		set(FIND_LLVM_VERSION "19.1...99.9" CACHE STRING "LLVM version to search for.")
+
 		if (LLVM_DIR AND NOT IS_ABSOLUTE "${LLVM_DIR}")
 			# change relative LLVM_DIR to be relative to the source dir
 			set(LLVM_DIR ${CMAKE_SOURCE_DIR}/${LLVM_DIR})
 		endif()
 
-		find_package(LLVM CONFIG)
+		find_package(LLVM ${FIND_LLVM_VERSION} CONFIG)
 
 		if (NOT LLVM_FOUND)
 			message(FATAL_ERROR "Can't find LLVM libraries from the CMAKE_PREFIX_PATH path or LLVM_DIR. Enable BUILD_LLVM option to build LLVM from included as a git submodule.")
