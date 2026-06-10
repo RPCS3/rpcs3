@@ -25,18 +25,30 @@
 #define GL_COMPUTE_BUFFER_SLOT(index)          SSBO_SLOT(2 + index)
 #define GL_COMPUTE_IMAGE_SLOT(index)           SSBO_SLOT(index)
 
-//Function call wrapped in ARB_DSA vs EXT_DSA compat check
+// Function call wrapped in ARB_DSA vs EXT_DSA compat check
 #define DSA_CALL(func, object_name, target, ...)\
 	if (::gl::get_driver_caps().ARB_direct_state_access_supported)\
 		gl##func(object_name, __VA_ARGS__);\
 	else\
 		gl##func##EXT(object_name, target, __VA_ARGS__);
 
+#define DSA_CALL_EX(func, object_name, target, ...)\
+	if (::gl::get_driver_caps().ARB_direct_state_access_supported)\
+		gl##func(object_name, __VA_ARGS__);\
+	else\
+		gl##func##EX(object_name, target, __VA_ARGS__);
+
 #define DSA_CALL2(func, ...)\
 	if (::gl::get_driver_caps().ARB_direct_state_access_supported)\
 		gl##func(__VA_ARGS__);\
 	else\
 		gl##func##EXT(__VA_ARGS__);
+
+#define DSA_CALL2_EX(func, ...)\
+	if (::gl::get_driver_caps().ARB_direct_state_access_supported)\
+		gl##func(__VA_ARGS__);\
+	else\
+		gl##func##EX(__VA_ARGS__);
 
 #define DSA_CALL2_RET(func, ...)\
 	(::gl::get_driver_caps().ARB_direct_state_access_supported) ?\
