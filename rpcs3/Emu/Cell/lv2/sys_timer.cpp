@@ -37,8 +37,8 @@ lv2_timer::lv2_timer(utils::serial& ar)
 	, source(ar)
 	, data1(ar)
 	, data2(ar)
-	, expire(ar.pop<u32>())
-	, period(ar.pop<u32>())
+	, expire(ar.pop<u64>())
+	, period(ar.pop<u64>())
 {
 }
 
