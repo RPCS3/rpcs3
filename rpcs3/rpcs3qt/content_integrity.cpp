@@ -21,17 +21,17 @@ content_integrity::content_integrity(QWidget* parent, content_file_type file_typ
 	case content_file_type::PSN_CONTENT:
 		m_file_path = QString::fromStdString(rpcs3::utils::get_psn_content_db_path());
 		m_url = rpcs3::utils::get_psn_content_db_download_url();
-		m_data_prefix = "psn_content";
+		m_data_prefix = "nointro";
 		break;
 	case content_file_type::PSN_DLC:
 		m_file_path = QString::fromStdString(rpcs3::utils::get_psn_dlc_db_path());
 		m_url = rpcs3::utils::get_psn_dlc_db_download_url();
-		m_data_prefix = "psn_dlc";
+		m_data_prefix = "nointro";
 		break;
 	case content_file_type::PSN_UPDATE:
 		m_file_path = QString::fromStdString(rpcs3::utils::get_psn_update_db_path());
 		m_url = rpcs3::utils::get_psn_update_db_download_url();
-		m_data_prefix = "psn_update";
+		m_data_prefix = "nointro";
 		break;
 	}
 
