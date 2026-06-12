@@ -502,12 +502,12 @@ void game_list_actions::ShowGameIntegrityDialog(content_file_type file_type, con
 
 		if (m_game_validator->get_status() == content_hash_status::ABORTED)
 		{
-			text_dialog = "Hash calculation failed!\n\nIntegrity check aborted";
+			text_dialog = tr("Hash calculation failed!\n\nIntegrity check aborted");
 			info_dialog = false;
 		}
 		else
 		{
-			text_dialog = "Integrity check completed!\n\n" + text_result;
+			text_dialog = tr("Integrity check completed!\n\n%0").arg(text_result);
 		}
 
 		// Tell the progress bar thread to terminate
