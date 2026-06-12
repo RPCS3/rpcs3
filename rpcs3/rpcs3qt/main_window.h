@@ -128,6 +128,10 @@ protected:
 	void closeEvent(QCloseEvent *event) override;
 	void mouseDoubleClickEvent(QMouseEvent *event) override;
 	void dropEvent(QDropEvent* event) override;
+	// Re-assert the native OLE drop target of the main window. On Windows, Qt can
+	// silently lose the RegisterDragDrop registration when the game window's native
+	// surface is created, which breaks file drag&drop onto the main window.
+	void reinforce_drop_target();
 	void dragEnterEvent(QDragEnterEvent* event) override;
 	void dragMoveEvent(QDragMoveEvent* event) override;
 
