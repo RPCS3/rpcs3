@@ -315,6 +315,14 @@
      <addaction name="actionManage_Dimensions_ToyPad"/>
      <addaction name="actionManage_KamenRider_RideGate"/>
     </widget>
+    <widget class="QMenu" name="menuDatabases">
+     <property name="title">
+      <string>Databases</string>
+     </property>
+     <addaction name="downloadIntegrityDbAct"/>
+     <addaction name="downloadCompatDbAct"/>
+     <addaction name="downloadConfigDbAct"/>
+    </widget>
     <addaction name="confVFSDialogAct"/>
     <addaction name="separator"/>
     <addaction name="actionManage_Users"/>
@@ -328,6 +336,7 @@
     <addaction name="separator"/>
     <addaction name="actionManage_Cheats"/>
     <addaction name="actionManage_Game_Patches"/>
+    <addaction name="menuDatabases"/>
     <addaction name="separator"/>
     <addaction name="actionManage_Screenshots"/>
    </widget>
@@ -433,9 +442,6 @@
     <addaction name="languageMenu"/>
     <addaction name="separator"/>
     <addaction name="updateAct"/>
-    <addaction name="downloadIntegrityDbAct"/>
-    <addaction name="downloadCompatDbAct"/>
-    <addaction name="downloadConfigDbAct"/>
     <addaction name="welcomeAct"/>
     <addaction name="supportAct"/>
     <addaction name="separator"/>
