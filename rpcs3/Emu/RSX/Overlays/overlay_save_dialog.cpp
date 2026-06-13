@@ -7,7 +7,7 @@ namespace rsx
 {
 	namespace overlays
 	{
-		save_dialog::save_dialog_entry::save_dialog_entry(const std::string& text1, const std::string& text2, const std::string& text3, u8 resource_id, const std::vector<u8>& icon_buf, const std::string& video_path)
+		save_dialog::save_dialog_entry::save_dialog_entry(std::string_view text1, std::string_view text2, std::string_view text3, u8 resource_id, const std::vector<u8>& icon_buf, const std::string& video_path)
 		{
 			const std::string audio_path; // no audio here
 			std::unique_ptr<overlay_element> image = resource_id != image_resource_id::raw_image
