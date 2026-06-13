@@ -458,15 +458,14 @@ void patch_manager_dialog::filter_patches(const QString& term)
 		const node_level level = static_cast<node_level>(item->data(0, node_level_role).toInt());
 
 		// Hide nodes that aren't in the game list
-		if (m_show_owned_games_only)
+		if (m_show_owned_games_only && level == node_level::serial_level)
 		{
-			if (level == node_level::serial_level)
+			const std::string serial = item->data(0, serial_role).toString().toStdString();
+			if (serial != patch_key::all)
 			{
-				const std::string serial = item->data(0, serial_role).toString().toStdString();
 				const std::string app_version = item->data(0, app_version_role).toString().toStdString();
 
-				if (serial != patch_key::all &&
-					(!m_owned_games.contains(serial) || (app_version != patch_key::all && !::at32(m_owned_games, serial).contains(app_version))))
+				if (!m_owned_games.contains(serial) || (app_version != patch_key::all && !::at32(m_owned_games, serial).contains(app_version)))
 				{
 					item->setHidden(true);
 					return 0;
@@ -745,15 +744,15 @@ void patch_manager_dialog::handle_item_changed(QTreeWidgetItem* item, int /*colu
 	if (const auto node = item->parent(); node && enabled)
 	{
 		const node_level level = static_cast<node_level>(item->data(0, node_level_role).toInt());
-		const std::string patch_group = item->data(0, patch_group_role).toString().toStdString();
+		const QString patch_group = item->data(0, patch_group_role).toString();
 
-		if (!patch_group.empty() && level == node_level::patch_level)
+		if (!patch_group.isEmpty() && level == node_level::patch_level)
 		{
 			for (int i = 0; i < node->childCount(); i++)
 			{
 				if (const auto other = node->child(i); other && other != item)
 				{
-					const std::string other_patch_group = other->data(0, patch_group_role).toString().toStdString();
+					const QString other_patch_group = other->data(0, patch_group_role).toString();
 
 					if (other_patch_group == patch_group)
 					{
@@ -844,7 +843,8 @@ void patch_manager_dialog::handle_config_value_changed(double value)
 
 			for (const QString& q_key : q_config_values.keys())
 			{
-				if (const std::string s_key = q_key.toStdString(); key == q_key && patch.default_config_values.contains(s_key))
+				if (key != q_key) continue;
+				if (const std::string s_key = q_key.toStdString(); patch.default_config_values.contains(s_key))
 				{
 					config_values[s_key].value = value;
 				}
