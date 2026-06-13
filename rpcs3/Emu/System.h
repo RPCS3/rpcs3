@@ -19,8 +19,15 @@ enum class video_renderer;
 
 class spu_thread;
 
-template <typename T>
-class named_thread;
+struct default_tls_initializer;
+
+template <class T, class Tls>
+class named_thread_impl;
+
+template <class T>
+using named_thread = named_thread_impl<T, default_tls_initializer>;
+
+struct lv2_process;
 
 namespace cfg
 {
@@ -163,6 +170,7 @@ class Emulator final
 	std::string m_sfo_dir;
 	std::string m_game_dir{"PS3_GAME"};
 	std::string m_usr{"00000001"};
+	bool m_boot_from_xmb = false;
 	u32 m_usrid{1};
 	std::shared_ptr<utils::serial> m_ar;
 
@@ -353,6 +361,11 @@ public:
 		return m_games_config;
 	}
 
+	void BootFromXmb()
+	{
+		m_boot_from_xmb = true;
+	}
+
 	// Get deserialization manager
 	utils::serial* DeserialManager() const;
 
@@ -486,8 +499,7 @@ public:
 
 	std::string GetFormattedTitle(double fps) const;
 
-	void ConfigurePPUCache() const;
-
+	std::string GuessPPUCache(std::string elf_path) const;
 	std::set<std::string> GetGameDirs() const;
 	u32 AddGamesFromDir(const std::string& path);
 	game_boot_result AddGame(const std::string& path);
@@ -505,7 +517,7 @@ public:
 
 	static game_boot_result GetElfPathFromDir(std::string& elf_path, const std::string& path);
 	static void GetBdvdDir(std::string& bdvd_dir, std::string& sfb_dir, std::string& game_dir, const std::string& elf_dir);
-	friend void init_fxo_for_exec(utils::serial*, bool);
+	friend void init_fxo_for_exec(shared_ptr<lv2_process> process, utils::serial* ar, bool full);
 
 	static bool IsVsh();
 	static bool IsValidSfb(const std::string& path);

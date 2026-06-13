@@ -6,6 +6,7 @@ shared_mutex id_manager::g_mutex;
 namespace id_manager
 {
 	thread_local u32 g_id = 0;
+	thread_local u32 g_process = 0;
 }
 
 template <>
@@ -32,7 +33,7 @@ std::vector<std::pair<u128, id_manager::typeinfo>>& id_manager::get_typeinfo_map
 	return s_map;
 }
 
-id_manager::id_key* idm::allocate_id(std::span<id_manager::id_key> keys, u32& highest_index, u32 type_id, u32 dst_id, u32 base, u32 step, u32 count, bool uses_lowest_id, std::pair<u32, u32> invl_range)
+id_manager::id_key* idm::allocate_id(std::span<id_manager::id_key> keys, u32& highest_index, u32 type_id, id_index dst_id, u32 base, u32 step, u32 count, bool uses_lowest_id, std::pair<u32, u32> invl_range)
 {
 	if (dst_id != (base ? 0 : u32{umax}))
 	{
@@ -48,7 +49,7 @@ id_manager::id_key* idm::allocate_id(std::span<id_manager::id_key> keys, u32& hi
 		}
 
 		id_manager::g_id = dst_id;
-		keys[index] = id_manager::id_key(dst_id, type_id);
+		keys[index] = id_manager::id_key(dst_id, type_id, dst_id.owning_process);
 		return &keys[index];
 	}
 
@@ -62,7 +63,7 @@ id_manager::id_key* idm::allocate_id(std::span<id_manager::id_key> keys, u32& hi
 		// Try to emplace back
 		const u32 _next = base + step * highest_index;
 		id_manager::g_id = _next;
-		return &(keys[highest_index++] = (id_manager::id_key(_next, type_id)));
+		return &(keys[highest_index++] = (id_manager::id_key(_next, type_id, dst_id.owning_process)));
 	}
 
 	// Check all IDs starting from "next id" (TODO)
@@ -76,7 +77,7 @@ id_manager::id_key* idm::allocate_id(std::span<id_manager::id_key> keys, u32& hi
 			// Incremenet ID invalidation counter
 			const u32 id = next | ((ptr->value() + (1u << invl_range.first)) & (invl_range.second ? (((1u << invl_range.second) - 1) << invl_range.first) : 0));
 			id_manager::g_id = id;
-			*ptr = id_manager::id_key(id, type_id);
+			*ptr = id_manager::id_key(id, type_id, dst_id.owning_process);
 			return ptr;
 		}
 	}

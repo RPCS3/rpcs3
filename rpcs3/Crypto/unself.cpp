@@ -1426,7 +1426,7 @@ fs::file decrypt_self(const fs::file& elf_or_self, const u8* klic_key, SelfAddit
 		// Make a new ELF file from this SELF.
 		return self_dec.MakeElf(isElf32);
 	}
-	else if (Emu.GetBoot().ends_with(".elf") || Emu.GetBoot().ends_with(".ELF"))
+	else if (file_type == "\177ELF"_u32)
 	{
 		// Write the file back if the main executable is not signed
 		fs::file e = fs::make_stream<std::vector<u8>>();

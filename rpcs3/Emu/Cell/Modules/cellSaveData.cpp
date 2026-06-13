@@ -528,7 +528,7 @@ static s32 savedata_check_args(u32 operation, u32 version, vm::cptr<char> dirNam
 		}
 
 		if (!memchr(setList->dirNamePrefix.get_ptr(), '\0', CELL_SAVEDATA_PREFIX_SIZE)
-			|| (g_ps3_process_info.sdk_ver > 0x3FFFFF && !setList->dirNamePrefix[0]))
+			|| (cpu_thread::get_current<ppu_thread>()->sdk_version > 0x3FFFFF && !setList->dirNamePrefix[0]))
 		{
 			// ****** sysutil savedata parameter error : 17 ******
 			return 17;
@@ -1646,7 +1646,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			if (statSet->setParam->parental_level > 11)
 			{
 				// ****** sysutil savedata parameter error : 58 ******
-				return {CELL_SAVEDATA_ERROR_PARAM, "58 (sdk_ver=0x%x, parental_level=%d)", g_ps3_process_info.sdk_ver, statSet->setParam->parental_level};
+				return {CELL_SAVEDATA_ERROR_PARAM, "58 (sdk_ver=0x%x, parental_level=%d)", ppu.sdk_version, statSet->setParam->parental_level};
 			}
 
 			// Note: in firmware 3.70 or higher parental_level was changed to reserved2
@@ -1656,7 +1656,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 				// Convert to pointer to avoid UB when accessing out of range
 				const u8 c = (+statSet->setParam->listParam)[index];
 
-				if (c == 0 || index >= (g_ps3_process_info.sdk_ver > 0x36FFFF ? std::size(statSet->setParam->listParam) - 1 : std::size(statSet->setParam->listParam)))
+				if (c == 0 || index >= (ppu.sdk_version > 0x36FFFF ? std::size(statSet->setParam->listParam) - 1 : std::size(statSet->setParam->listParam)))
 				{
 					if (c)
 					{

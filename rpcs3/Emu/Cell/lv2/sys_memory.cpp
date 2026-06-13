@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "sys_memory.h"
+#include "sys_process.h"
 
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/CPU/CPUThread.h"
@@ -61,7 +62,7 @@ lv2_memory_container* lv2_memory_container::search(u32 id)
 		return idm::check_unlocked<lv2_memory_container>(id);
 	}
 
-	return &g_fxo->get<lv2_memory_container>();
+	return idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->parent_memory_container.get();
 }
 
 struct sys_memory_address_table
@@ -136,7 +137,7 @@ error_code sys_memory_allocate(cpu_thread& cpu, u64 size, u64 flags, vm::ptr<u32
 	}
 
 	// Get "default" memory container
-	auto& dct = g_fxo->get<lv2_memory_container>();
+	auto& dct = *idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->parent_memory_container;
 
 	// Try to get "physical memory"
 	if (!dct.take(size))
@@ -326,7 +327,7 @@ error_code sys_memory_get_user_memory_size(cpu_thread& cpu, vm::ptr<sys_memory_i
 	cpu.state += cpu_flag::wait;
 
 	// Get "default" memory container
-	auto& dct = g_fxo->get<lv2_memory_container>();
+	auto& dct = *idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->parent_memory_container;
 
 	sys_memory_info_t out{};
 	{
@@ -386,7 +387,7 @@ error_code sys_memory_container_create(cpu_thread& cpu, vm::ptr<u32> cid, u64 si
 		return CELL_ENOMEM;
 	}
 
-	auto& dct = g_fxo->get<lv2_memory_container>();
+	auto& dct = *idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->parent_memory_container;
 
 	std::lock_guard lock(s_memstats_mtx);
 
@@ -438,7 +439,7 @@ error_code sys_memory_container_destroy(cpu_thread& cpu, u32 cid)
 	}
 
 	// Return "physical memory" to the default container
-	g_fxo->get<lv2_memory_container>().free(ct->size);
+	idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->parent_memory_container->free(ct->size);
 
 	return CELL_OK;
 }

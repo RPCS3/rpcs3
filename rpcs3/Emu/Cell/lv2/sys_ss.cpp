@@ -115,7 +115,7 @@ error_code sys_ss_random_number_generator(u64 pkg_id, vm::ptr<void> buf, u64 siz
 	{
 		if (pkg_id == 1)
 		{
-			if (!g_ps3_process_info.has_root_perm())
+			if (!lv2_process::has_process_root_perm())
 			{
 				return CELL_ENOSYS;
 			}
@@ -158,14 +158,16 @@ error_code sys_ss_access_control_engine(u64 pkg_id, u64 a2, u64 a3)
 {
 	sys_ss.success("sys_ss_access_control_engine(pkg_id=0x%llx, a2=0x%llx, a3=0x%llx)", pkg_id, a2, a3);
 
-	const u64 authid = g_ps3_process_info.self_info.valid ?
-		g_ps3_process_info.self_info.prog_id_hdr.program_authority_id : 0;
+	const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
+
+	const u64 authid = process->self_info.valid ?
+		process->self_info.prog_id_hdr.program_authority_id : 0;
 
 	switch (pkg_id)
 	{
 	case 0x1:
 	{
-		if (!g_ps3_process_info.debug_or_root())
+		if (!process->debug_or_root())
 		{
 			return not_an_error(CELL_ENOSYS);
 		}
@@ -186,7 +188,7 @@ error_code sys_ss_access_control_engine(u64 pkg_id, u64 a2, u64 a3)
 	}
 	case 0x3:
 	{
-		if (!g_ps3_process_info.debug_or_root())
+		if (!process->debug_or_root())
 		{
 			return CELL_ENOSYS;
 		}
@@ -194,7 +196,9 @@ error_code sys_ss_access_control_engine(u64 pkg_id, u64 a2, u64 a3)
 		break;
 	}
 	default:
+	{
 		return 0x8001051du;
+	}
 	}
 
 	return CELL_OK;
@@ -223,7 +227,7 @@ error_code sys_ss_appliance_info_manager(u32 code, vm::ptr<u8> buffer)
 {
 	sys_ss.notice("sys_ss_appliance_info_manager(code=0x%x, buffer=*0x%x)", code, buffer);
 
-	if (!g_ps3_process_info.has_root_perm())
+	if (!lv2_process::has_process_root_perm())
 		return CELL_ENOSYS;
 
 	if (!buffer)
@@ -361,7 +365,7 @@ error_code sys_ss_update_manager(u64 pkg_id, u64 a1, u64 a2, u64 a3, u64 a4, u64
 {
 	sys_ss.notice("sys_ss_update_manager(pkg=0x%x, a1=0x%x, a2=0x%x, a3=0x%x, a4=0x%x, a5=0x%x, a6=0x%x)", pkg_id, a1, a2, a3, a4, a5, a6);
 
-	if (!g_ps3_process_info.has_root_perm())
+	if (!lv2_process::has_process_root_perm())
 		return CELL_ENOSYS;
 
 	auto& update_manager = g_fxo->get<lv2_update_manager>();

@@ -6,6 +6,7 @@
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/PPUAnalyser.h"
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/System.h"
 
 LOG_CHANNEL(sys_log, "SYS");
 
@@ -13,15 +14,7 @@ namespace rpcs3::cache
 {
 	std::string get_ppu_cache()
 	{
-		const auto _main = g_fxo->try_get<main_ppu_module<lv2_obj>>();
-
-		if (!_main || _main->cache.empty())
-		{
-			ppu_log.error("PPU Cache location not initialized.");
-			return {};
-		}
-
-		return _main->cache;
+		return Emu.GuessPPUCache(Emu.GetBoot());
 	}
 
 	void limit_cache_size()
