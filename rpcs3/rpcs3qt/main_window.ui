@@ -315,6 +315,14 @@
      <addaction name="actionManage_Dimensions_ToyPad"/>
      <addaction name="actionManage_KamenRider_RideGate"/>
     </widget>
+    <widget class="QMenu" name="menuDatabases">
+     <property name="title">
+      <string>Databases</string>
+     </property>
+     <addaction name="downloadIntegrityDbAct"/>
+     <addaction name="downloadCompatDbAct"/>
+     <addaction name="downloadConfigDbAct"/>
+    </widget>
     <addaction name="confVFSDialogAct"/>
     <addaction name="separator"/>
     <addaction name="actionManage_Users"/>
@@ -328,6 +336,7 @@
     <addaction name="separator"/>
     <addaction name="actionManage_Cheats"/>
     <addaction name="actionManage_Game_Patches"/>
+    <addaction name="menuDatabases"/>
     <addaction name="separator"/>
     <addaction name="actionManage_Screenshots"/>
    </widget>
@@ -848,6 +857,21 @@
   <action name="updateAct">
    <property name="text">
     <string>Check for Updates</string>
+   </property>
+  </action>
+  <action name="downloadIntegrityDbAct">
+   <property name="text">
+    <string>Download Integrity Database</string>
+   </property>
+  </action>
+  <action name="downloadCompatDbAct">
+   <property name="text">
+    <string>Download Compatibility Database</string>
+   </property>
+  </action>
+  <action name="downloadConfigDbAct">
+   <property name="text">
+    <string>Download Config Database</string>
    </property>
   </action>
   <action name="welcomeAct">
