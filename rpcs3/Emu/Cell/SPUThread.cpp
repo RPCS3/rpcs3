@@ -245,6 +245,26 @@ static FORCE_INLINE bool cmp_rdata_avx(const __m256i* lhs, const __m256i* rhs)
 }
 #endif
 
+// Insane idea to accelerate comparisons on Neon with a fixed length
+// Common ARM chips like the a78 and a715 can Perform 3 128b loads/clock
+// But only execute 2 128b instructions on the ALU per clock
+// To consume data any faster, we need to use ALU instructions that take 3 inputs
+// Idea: compare data, filling each lane with either -1 or 0
+// Then multiply each pair of comparisons together, resulting in 1 if both pairs were -1
+// Accummulate those results, and compare the accumulated value to the expected count
+// Benchmarks showed this to be faster even on arm machines that aren't capable of more loads than ALU operations
+// Tested on Tensor G1, Snapdragon 8 gen 2, and the Snapdragon 8 Elite gen 5
+#if defined(ARCH_ARM64)
+static FORCE_INLINE int16x8_t cmp16_pair_accum_arm64(
+	int16x8_t acc, const v128& lhs0, const v128& rhs0, const v128& lhs1, const v128& rhs1)
+{
+	const int16x8_t eq0 = vreinterpretq_s16_u16(vceqq_u16(static_cast<uint16x8_t>(lhs0), static_cast<uint16x8_t>(rhs0)));
+	const int16x8_t eq1 = vreinterpretq_s16_u16(vceqq_u16(static_cast<uint16x8_t>(lhs1), static_cast<uint16x8_t>(rhs1)));
+	return vmlaq_s16(acc, eq0, eq1);
+}
+
+#endif
+
 #ifdef _MSC_VER
 __forceinline
 #endif
@@ -261,12 +281,22 @@ extern bool cmp_rdata(const spu_rdata_t& _lhs, const spu_rdata_t& _rhs)
 
 	const auto lhs = reinterpret_cast<const v128*>(_lhs);
 	const auto rhs = reinterpret_cast<const v128*>(_rhs);
+#if defined(ARCH_ARM64)
+	int16x8_t hits = vdupq_n_s16(0);
+	hits = cmp16_pair_accum_arm64(hits, lhs[0], rhs[0], lhs[1], rhs[1]);
+	hits = cmp16_pair_accum_arm64(hits, lhs[2], rhs[2], lhs[3], rhs[3]);
+	hits = cmp16_pair_accum_arm64(hits, lhs[4], rhs[4], lhs[5], rhs[5]);
+	hits = cmp16_pair_accum_arm64(hits, lhs[6], rhs[6], lhs[7], rhs[7]);
+
+	return vaddvq_s16(hits) == 32;
+#else
 	const v128 a = (lhs[0] ^ rhs[0]) | (lhs[1] ^ rhs[1]);
 	const v128 c = (lhs[4] ^ rhs[4]) | (lhs[5] ^ rhs[5]);
 	const v128 b = (lhs[2] ^ rhs[2]) | (lhs[3] ^ rhs[3]);
 	const v128 d = (lhs[6] ^ rhs[6]) | (lhs[7] ^ rhs[7]);
 	const v128 r = (a | b) | (c | d);
 	return gv_testz(r);
+#endif
 }
 
 #if defined(ARCH_X64)
