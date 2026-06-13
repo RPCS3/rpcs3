@@ -3544,6 +3544,9 @@ void main_window::CreateConnects()
 	connect(ui->downloadIntegrityDbAct, &QAction::triggered, this, [this]()
 	{
 		ensure(m_game_list_frame->GetIsoIntegrity())->download();
+		ensure(m_game_list_frame->GetPsnContentIntegrity())->download();
+		ensure(m_game_list_frame->GetPsnDlcIntegrity())->download();
+		ensure(m_game_list_frame->GetPsnUpdateIntegrity())->download();
 	});
 
 	connect(ui->downloadCompatDbAct, &QAction::triggered, this, [this]()
@@ -3554,6 +3557,14 @@ void main_window::CreateConnects()
 	connect(ui->downloadConfigDbAct, &QAction::triggered, this, [this]()
 	{
 		m_game_list_frame->GetConfigDatabase()->request_config_database(true);
+	});
+
+	// Check integrity for the content categories based on .PKG, .RAP and .EDAT (e.g. HDD game, DLC, Update)
+	connect(ui->checkPackageIntegrityAct, &QAction::triggered, this, [this]()
+	{
+		// File type different than ISO as passed here (PSN_CONTENT) will be properly detected in
+		// ShowGameIntegrityDialog() based on the selected package file
+		m_game_list_frame->actions()->ShowGameIntegrityDialog(content_file_type::PSN_CONTENT, "");
 	});
 
 	connect(ui->welcomeAct, &QAction::triggered, this, [this]()
