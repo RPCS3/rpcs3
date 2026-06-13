@@ -1240,7 +1240,9 @@ bool rsxaudio_data_thread::enqueue_data(RsxaudioPort dst, bool silence, const vo
 {
 	auto& backend_thread = g_fxo->get<rsx_audio_backend>();
 
-	if (dst == RsxaudioPort::SERIAL)
+	switch (dst)
+	{
+	case RsxaudioPort::SERIAL:
 	{
 		if (!silence)
 		{
@@ -1258,7 +1260,7 @@ bool rsxaudio_data_thread::enqueue_data(RsxaudioPort dst, bool silence, const vo
 		backend_thread.add_data(cont);
 		return cont.data_was_used();
 	}
-	else if (dst == RsxaudioPort::SPDIF_0)
+	case RsxaudioPort::SPDIF_0:
 	{
 		if (!silence)
 		{
@@ -1273,7 +1275,7 @@ bool rsxaudio_data_thread::enqueue_data(RsxaudioPort dst, bool silence, const vo
 		backend_thread.add_data(cont);
 		return cont.data_was_used();
 	}
-	else if (dst == RsxaudioPort::SPDIF_1)
+	case RsxaudioPort::SPDIF_1:
 	{
 		if (!silence)
 		{
@@ -1287,6 +1289,11 @@ bool rsxaudio_data_thread::enqueue_data(RsxaudioPort dst, bool silence, const vo
 		rsxaudio_data_container cont{hwp, output_buf, false, false, true};
 		backend_thread.add_data(cont);
 		return cont.data_was_used();
+	}
+	case RsxaudioPort::INVALID:
+	{
+		break;
+	}
 	}
 
 	return false;
@@ -1361,7 +1368,7 @@ u8 rsxaudio_backend_thread::get_channel_count() const
 rsxaudio_backend_thread::emu_audio_cfg rsxaudio_backend_thread::get_emu_cfg()
 {
 	// Get max supported channel count
-	AudioChannelCnt out_ch_cnt = AudioBackend::get_max_channel_count(0); // CELL_AUDIO_OUT_PRIMARY
+	const AudioChannelCnt out_ch_cnt = AudioBackend::get_max_channel_count(0); // CELL_AUDIO_OUT_PRIMARY
 
 	emu_audio_cfg cfg =
 	{
@@ -2285,9 +2292,9 @@ void rsxaudio_periodic_tmr::cancel_wait()
 
 void rsxaudio_periodic_tmr::enable_vtimer(u32 vtimer_id, u32 rate, u64 crnt_time)
 {
-	ensure(vtimer_id < VTIMER_MAX && rate);
+	ensure(rate);
 
-	vtimer& vtimer = vtmr_pool[vtimer_id];
+	vtimer& vtimer = ::at32(vtmr_pool, vtimer_id);
 	const f64 new_blk_time = get_blk_time(rate);
 
 	// Avoid timer reset when possible
@@ -2302,26 +2309,20 @@ void rsxaudio_periodic_tmr::enable_vtimer(u32 vtimer_id, u32 rate, u64 crnt_time
 
 void rsxaudio_periodic_tmr::disable_vtimer(u32 vtimer_id)
 {
-	ensure(vtimer_id < VTIMER_MAX);
-
-	vtimer& vtimer = vtmr_pool[vtimer_id];
+	vtimer& vtimer = ::at32(vtmr_pool, vtimer_id);
 	vtimer.active = false;
 }
 
 bool rsxaudio_periodic_tmr::is_vtimer_behind(u32 vtimer_id, u64 crnt_time) const
 {
-	ensure(vtimer_id < VTIMER_MAX);
-
-	const vtimer& vtimer = vtmr_pool[vtimer_id];
+	const vtimer& vtimer = ::at32(vtmr_pool, vtimer_id);
 
 	return is_vtimer_behind(vtimer, crnt_time);
 }
 
 void rsxaudio_periodic_tmr::vtimer_skip_periods(u32 vtimer_id, u64 crnt_time)
 {
-	ensure(vtimer_id < VTIMER_MAX);
-
-	vtimer& vtimer = vtmr_pool[vtimer_id];
+	vtimer& vtimer = ::at32(vtmr_pool, vtimer_id);
 
 	if (is_vtimer_behind(vtimer, crnt_time))
 	{
@@ -2331,9 +2332,7 @@ void rsxaudio_periodic_tmr::vtimer_skip_periods(u32 vtimer_id, u64 crnt_time)
 
 void rsxaudio_periodic_tmr::vtimer_incr(u32 vtimer_id, u64 crnt_time)
 {
-	ensure(vtimer_id < VTIMER_MAX);
-
-	vtimer& vtimer = vtmr_pool[vtimer_id];
+	vtimer& vtimer = ::at32(vtmr_pool, vtimer_id);
 
 	if (is_vtimer_behind(vtimer, crnt_time))
 	{
@@ -2343,18 +2342,14 @@ void rsxaudio_periodic_tmr::vtimer_incr(u32 vtimer_id, u64 crnt_time)
 
 bool rsxaudio_periodic_tmr::is_vtimer_active(u32 vtimer_id) const
 {
-	ensure(vtimer_id < VTIMER_MAX);
-
-	const vtimer& vtimer = vtmr_pool[vtimer_id];
+	const vtimer& vtimer = ::at32(vtmr_pool, vtimer_id);
 
 	return vtimer.active;
 }
 
 u64 rsxaudio_periodic_tmr::vtimer_get_sched_time(u32 vtimer_id) const
 {
-	ensure(vtimer_id < VTIMER_MAX);
-
-	const vtimer& vtimer = vtmr_pool[vtimer_id];
+	const vtimer& vtimer = ::at32(vtmr_pool, vtimer_id);
 
 	return static_cast<u64>(vtimer.blk_cnt * vtimer.blk_time);
 }

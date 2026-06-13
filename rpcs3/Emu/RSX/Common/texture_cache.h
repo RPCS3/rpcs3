@@ -3180,7 +3180,7 @@ namespace rsx
 					subres.pitch_in_block = full_width;
 					subres.depth = 1;
 					subres.data = { vm::_ptr<const std::byte>(image_base), static_cast<std::span<const std::byte>::size_type>(src.pitch * image_height) };
-					subresource_layout.push_back(subres);
+					subresource_layout.push_back(std::move(subres));
 
 					const u32 gcm_format = helpers::get_sized_blit_format(src_is_argb8, dst_is_depth_surface, is_format_convert);
 					const auto rsx_range = address_range32::start_length(image_base, src.pitch * image_height);
@@ -3321,7 +3321,7 @@ namespace rsx
 						subres.pitch_in_block = pitch_in_block;
 						subres.depth = 1;
 						subres.data = { vm::get_super_ptr<const std::byte>(dst_base_address), static_cast<std::span<const std::byte>::size_type>(dst.pitch * dst_dimensions.height) };
-						subresource_layout.push_back(subres);
+						subresource_layout.push_back(std::move(subres));
 
 						cached_dest = upload_image_from_cpu(cmd, rsx_range, dst_dimensions.width, dst_dimensions.height, 1, 1, dst.pitch,
 							preferred_dst_format, rsx::texture_upload_context::blit_engine_dst, subresource_layout,
