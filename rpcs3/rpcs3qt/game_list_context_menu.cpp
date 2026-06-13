@@ -628,19 +628,10 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 			{
 				check_integrity->setEnabled(false);
 			}
-
-			QAction* download_integrity = addAction(tr("&Download Integrity Database"));
-			connect(download_integrity, &QAction::triggered, m_game_list_frame, [this]
-			{
-				ensure(m_game_list_frame->GetIsoIntegrity())->download();
-			});
 		}
 	}
 
 	QAction* check_compat = addAction(tr("&Check Game Compatibility"));
-	QAction* download_compat = addAction(tr("&Download Compatibility Database"));
-	QAction* download_config_db = addAction(tr("&Download Config Database"));
-
 	addSeparator();
 
 	// Disk usage
@@ -733,14 +724,6 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 	{
 		const QString link = "https://rpcs3.net/compatibility?g=" + serial;
 		QDesktopServices::openUrl(QUrl(link));
-	});
-	connect(download_compat, &QAction::triggered, m_game_list_frame, [this]
-	{
-		m_game_list_frame->GetGameCompatibility()->RequestCompatibility(true);
-	});
-	connect(download_config_db, &QAction::triggered, m_game_list_frame, [this]
-	{
-		m_game_list_frame->GetConfigDatabase()->request_config_database(true);
 	});
 	connect(rename_title, &QAction::triggered, m_game_list_frame, [this, name, serial = QString::fromStdString(serial), global_pos]
 	{
@@ -997,20 +980,6 @@ void game_list_context_menu::show_multi_selection_context_menu(const std::vector
 	connect(remove_game, &QAction::triggered, this, [this, games]()
 	{
 		m_game_list_actions->ShowRemoveGameDialog(games);
-	});
-
-	addSeparator();
-
-	QAction* download_compat = addAction(tr("&Download Compatibility Database"));
-	connect(download_compat, &QAction::triggered, m_game_list_frame, [this]
-	{
-		m_game_list_frame->GetGameCompatibility()->RequestCompatibility(true);
-	});
-
-	QAction* download_config_db = addAction(tr("&Download Config Database"));
-	connect(download_config_db, &QAction::triggered, m_game_list_frame, [this]
-	{
-		m_game_list_frame->GetConfigDatabase()->request_config_database(true);
 	});
 
 	addSeparator();

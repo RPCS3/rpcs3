@@ -3541,6 +3541,21 @@ void main_window::CreateConnects()
 #endif
 	});
 
+	connect(ui->downloadIntegrityDbAct, &QAction::triggered, this, [this]()
+	{
+		ensure(m_game_list_frame->GetIsoIntegrity())->download();
+	});
+
+	connect(ui->downloadCompatDbAct, &QAction::triggered, this, [this]()
+	{
+		m_game_list_frame->GetGameCompatibility()->RequestCompatibility(true);
+	});
+
+	connect(ui->downloadConfigDbAct, &QAction::triggered, this, [this]()
+	{
+		m_game_list_frame->GetConfigDatabase()->request_config_database(true);
+	});
+
 	connect(ui->welcomeAct, &QAction::triggered, this, [this]()
 	{
 		welcome_dialog* welcome = new welcome_dialog(m_gui_settings, true, this);
