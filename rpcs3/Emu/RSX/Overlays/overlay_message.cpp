@@ -95,7 +95,7 @@ namespace rsx
 			return m_text.text == text;
 		}
 
-		void message_item::set_label_text(const std::string& text)
+		void message_item::set_label_text(std::string_view text)
 		{
 			m_text.set_text(text);
 			m_is_compiled = false;
@@ -338,12 +338,12 @@ namespace rsx
 			return check_lists(location, check_list);
 		}
 
-		bool message::message_exists(message_pin_location location, const std::string& msg, bool allow_refresh, bool compare_id)
+		bool message::message_exists(message_pin_location location, std::string_view msg, bool allow_refresh, bool compare_id)
 		{
 			return message_exists(location, utf8_to_u32string(msg), allow_refresh, compare_id);
 		}
 
-		bool message::message_exists(message_pin_location location, const std::u32string& msg, bool allow_refresh, bool /*compare_id*/)
+		bool message::message_exists(message_pin_location location, std::u32string_view msg, bool allow_refresh, bool /*compare_id*/)
 		{
 			const auto check_list = [&](std::deque<message_item>& list)
 			{

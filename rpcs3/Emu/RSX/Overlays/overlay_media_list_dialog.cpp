@@ -221,7 +221,7 @@ namespace rsx
 			return result;
 		}
 
-		s32 media_list_dialog::show(std::shared_ptr<media_entry> root, media_entry& result, const std::string& title, u32 focused, bool enable_overlay)
+		s32 media_list_dialog::show(std::shared_ptr<media_entry> root, media_entry& result, std::string_view title, u32 focused, bool enable_overlay)
 		{
 			auto ref = g_fxo->get<display_manager>().get(uid);
 
@@ -291,7 +291,7 @@ namespace rsx
 			return return_code;
 		}
 
-		void media_list_dialog::reload(const std::string& title, u32 focused)
+		void media_list_dialog::reload(std::string_view title, u32 focused)
 		{
 			ensure(m_media);
 

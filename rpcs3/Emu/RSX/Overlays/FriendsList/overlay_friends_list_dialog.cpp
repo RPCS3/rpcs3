@@ -14,7 +14,7 @@ namespace rsx
 			dlg->callback_handler(ntype, username, status);
 		}
 
-		friends_list_dialog::friends_list_entry::friends_list_entry(friends_list_dialog_page page, const std::string& username, const rpcn::friend_online_data& data)
+		friends_list_dialog::friends_list_entry::friends_list_entry(friends_list_dialog_page page, std::string_view username, const rpcn::friend_online_data& data)
 		{
 			std::unique_ptr<overlay_element> image = std::make_unique<image_view>();
 			image->set_size(160, 110);

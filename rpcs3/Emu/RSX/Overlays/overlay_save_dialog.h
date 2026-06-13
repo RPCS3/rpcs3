@@ -14,7 +14,7 @@ namespace rsx
 			struct save_dialog_entry : horizontal_layout
 			{
 			public:
-				save_dialog_entry(const std::string& text1, const std::string& text2, const std::string& text3, u8 resource_id, const std::vector<u8>& icon_buf, const std::string& video_path);
+				save_dialog_entry(std::string_view text1, std::string_view text2, std::string_view text3, u8 resource_id, const std::vector<u8>& icon_buf, const std::string& video_path);
 				void set_selected(bool selected) override;
 
 			private:

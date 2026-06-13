@@ -26,7 +26,7 @@ namespace rsx
 				std::unique_ptr<image_info> icon_data;
 
 			public:
-				friends_list_entry(friends_list_dialog_page page, const std::string& username, const rpcn::friend_online_data& data);
+				friends_list_entry(friends_list_dialog_page page, std::string_view username, const rpcn::friend_online_data& data);
 			};
 
 			std::mutex m_list_mutex;

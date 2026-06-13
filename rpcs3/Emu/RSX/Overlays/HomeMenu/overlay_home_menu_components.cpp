@@ -5,7 +5,7 @@ namespace rsx
 {
 	namespace overlays
 	{
-		home_menu_entry::home_menu_entry(home_menu::fa_icon icon, const std::string& text, u16 width, text_align alignment)
+		home_menu_entry::home_menu_entry(home_menu::fa_icon icon, std::string_view text, u16 width, text_align alignment)
 		{
 			auto text_stack = std::make_unique<vertical_layout>();
 			auto padding    = std::make_unique<spacer>();

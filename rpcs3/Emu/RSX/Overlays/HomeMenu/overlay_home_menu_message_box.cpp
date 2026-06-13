@@ -53,7 +53,7 @@ namespace rsx
 			return compiled_resources;
 		}
 
-		void home_menu_message_box::show(const std::string& text, std::function<void()> on_accept, std::function<void()> on_cancel)
+		void home_menu_message_box::show(std::string_view text, std::function<void()> on_accept, std::function<void()> on_cancel)
 		{
 			m_on_accept = std::move(on_accept);
 			m_on_cancel = std::move(on_cancel);

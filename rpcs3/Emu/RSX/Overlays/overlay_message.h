@@ -33,7 +33,7 @@ namespace rsx
 			bool id_matches(localized_string_id id) const;
 			bool text_matches(std::u32string_view text) const;
 
-			void set_label_text(const std::string& text);
+			void set_label_text(std::string_view text);
 
 		private:
 			localized_string_id m_loc_id = localized_string_id::INVALID;
@@ -126,8 +126,8 @@ namespace rsx
 			// Stacking. Extends the lifetime of a message instead of inserting a duplicate
 			bool check_lists(message_pin_location location, std::function<bool(std::deque<message_item>& list)> check_list);
 			bool message_exists(message_pin_location location, localized_string_id id, bool allow_refresh, bool compare_id);
-			bool message_exists(message_pin_location location, const std::string& msg, bool allow_refresh, bool compare_id);
-			bool message_exists(message_pin_location location, const std::u32string& msg, bool allow_refresh, bool compare_id);
+			bool message_exists(message_pin_location location, std::string_view msg, bool allow_refresh, bool compare_id);
+			bool message_exists(message_pin_location location, std::u32string_view msg, bool allow_refresh, bool compare_id);
 			bool message_exists(message_pin_location location, const localized_string& container, bool allow_refresh, bool compare_id);
 		};
 

@@ -18,7 +18,7 @@ namespace rsx
 			dlg->callback_handler(ntype, username, status);
 		}
 
-		sendmessage_dialog::list_entry::list_entry(const std::string& msg)
+		sendmessage_dialog::list_entry::list_entry(std::string_view msg)
 		{
 			std::unique_ptr<overlay_element> text_stack  = std::make_unique<vertical_layout>();
 			std::unique_ptr<overlay_element> padding     = std::make_unique<spacer>();
@@ -336,7 +336,7 @@ namespace rsx
 			return {};
 		}
 
-		void sendmessage_dialog::reload(const std::string& previous_selection)
+		void sendmessage_dialog::reload(std::string_view previous_selection)
 		{
 			if (m_list)
 			{
