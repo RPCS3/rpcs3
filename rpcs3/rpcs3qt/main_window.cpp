@@ -2140,7 +2140,7 @@ void main_window::OnEmuStop()
 	}
 
 	// Make sure file drag&drop still works after a game session (see reinforce_drop_target)
-	reinforce_drop_target();
+	//reinforce_drop_target();
 
 	// Close kernel explorer if running
 	if (m_kernel_explorer)
