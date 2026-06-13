@@ -96,9 +96,6 @@
 
 #ifdef _WIN32
 #include "raw_mouse_settings_dialog.h"
-#include <windows.h>
-#include <ole2.h>
-#include <objbase.h>
 #endif
 
 #if defined(__linux__) || defined(__APPLE__) || (defined(_WIN32) && defined(ARCH_X64))
@@ -2138,9 +2135,6 @@ void main_window::OnEmuStop()
 	{
 		m_game_list_frame->Refresh();
 	}
-
-	// Make sure file drag&drop still works after a game session (see reinforce_drop_target)
-	//reinforce_drop_target();
 
 	// Close kernel explorer if running
 	if (m_kernel_explorer)
@@ -4388,48 +4382,6 @@ void main_window::dropEvent(QDropEvent* event)
 		break;
 	}
 	}
-}
-
-void main_window::reinforce_drop_target()
-{
-#ifdef _WIN32
-	// Re-assert OLE on the GUI thread so file drag&drop keeps working.
-	// Qt's file drag&drop relies on OLE (RegisterDragDrop), which only works while OLE is
-	// initialized on the GUI thread (Qt calls OleInitialize once at startup). Some code paths
-	// (e.g. Qt's Windows multimedia backend) can tear OLE down on the GUI thread more often
-	// than they initialized it; once the OLE refcount reaches zero, OLE shuts down on the
-	// thread, every RegisterDragDrop target is revoked, and drag&drop silently stops working.
-	//
-	// IMPORTANT: do NOT touch the drop target here (no RevokeDragDrop, no setAcceptDrops
-	// toggle). That removes the working OLE drop target and Qt does not reliably re-register
-	// it on a QMainWindow, which would break drag&drop by itself.
-
-	// Probe whether COM/OLE is still alive on the GUI thread without changing its state.
-	// CoInitializeEx returns:
-	//   S_OK               -> COM was NOT initialized (it got torn down),
-	//   S_FALSE            -> COM already initialized (healthy),
-	//   RPC_E_CHANGED_MODE -> initialized as MTA (unexpected here).
-	const HRESULT probe = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
-
-	if (probe == S_OK)
-	{
-		// COM/OLE had been fully torn down on the GUI thread. Undo our bare COM probe, then
-		// restore the full OLE subsystem (RegisterDragDrop needs OleInitialize, not just
-		// CoInitializeEx) and intentionally keep the reference to repair the imbalance.
-		CoUninitialize();
-		const HRESULT ole = OleInitialize(nullptr);
-		gui_log.warning("main_window: OLE was uninitialized on the GUI thread; restored it to keep file drag&drop working (OleInitialize=0x%x).", static_cast<u32>(ole));
-	}
-	else if (probe == RPC_E_CHANGED_MODE)
-	{
-		gui_log.error("main_window: GUI thread COM apartment is MTA - file drag&drop cannot work.");
-	}
-	else if (SUCCEEDED(probe))
-	{
-		// S_FALSE: healthy. Balance the reference our probe added.
-		CoUninitialize();
-	}
-#endif
 }
 
 void main_window::dragEnterEvent(QDragEnterEvent* event)
