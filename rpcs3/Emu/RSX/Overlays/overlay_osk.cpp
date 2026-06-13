@@ -467,7 +467,7 @@ namespace rsx
 			m_update = true;
 		}
 
-		void osk_dialog::initialize_layout(const std::u32string& title, const std::u32string& initial_text)
+		void osk_dialog::initialize_layout(std::u32string_view title, std::u32string_view initial_text)
 		{
 			const auto scale_font = [this](overlay_element& elem)
 			{
@@ -1096,14 +1096,14 @@ namespace rsx
 			on_text_changed();
 		}
 
-		void osk_dialog::on_shift(const std::u32string&)
+		void osk_dialog::on_shift(std::u32string_view /*str*/)
 		{
 			const u32 max = num_shift_layers_by_charset[m_selected_charset];
 			selected_z = (selected_z + 1) % max;
 			m_update = true;
 		}
 
-		void osk_dialog::on_layer(const std::u32string&)
+		void osk_dialog::on_layer(std::u32string_view /*str*/)
 		{
 			const u32 num_charsets = std::max<u32>(::size32(num_shift_layers_by_charset), 1);
 			m_selected_charset = (m_selected_charset + 1) % num_charsets;
@@ -1120,7 +1120,7 @@ namespace rsx
 			m_update = true;
 		}
 
-		void osk_dialog::on_space(const std::u32string&)
+		void osk_dialog::on_space(std::u32string_view /*str*/)
 		{
 			if (!(flags & CELL_OSKDIALOG_NO_SPACE))
 			{
@@ -1132,19 +1132,19 @@ namespace rsx
 			}
 		}
 
-		void osk_dialog::on_backspace(const std::u32string&)
+		void osk_dialog::on_backspace(std::u32string_view /*str*/)
 		{
 			m_preview.erase();
 			on_text_changed();
 		}
 
-		void osk_dialog::on_delete(const std::u32string&)
+		void osk_dialog::on_delete(std::u32string_view /*str*/)
 		{
 			m_preview.del();
 			on_text_changed();
 		}
 
-		void osk_dialog::on_enter(const std::u32string&)
+		void osk_dialog::on_enter(std::u32string_view /*str*/)
 		{
 			if (!(flags & CELL_OSKDIALOG_NO_RETURN))
 			{
@@ -1156,7 +1156,7 @@ namespace rsx
 			}
 		}
 
-		void osk_dialog::on_move_cursor(const std::u32string&, edit_text::direction dir)
+		void osk_dialog::on_move_cursor(std::u32string_view /*str*/, edit_text::direction dir)
 		{
 			m_preview.move_caret(dir);
 			m_update = true;
@@ -1371,11 +1371,11 @@ namespace rsx
 				m_title.back_color.a = 0.7f; // Uses the dimmed color of the frame background
 			}
 
-			const callback_t shift_cb  = [this](const std::u32string& text){ on_shift(text); };
-			const callback_t layer_cb  = [this](const std::u32string& text){ on_layer(text); };
-			const callback_t space_cb  = [this](const std::u32string& text){ on_space(text); };
-			const callback_t delete_cb = [this](const std::u32string& text){ on_backspace(text); };
-			const callback_t enter_cb  = [this](const std::u32string& text){ on_enter(text); };
+			const callback_t shift_cb  = [this](std::u32string_view text){ on_shift(text); };
+			const callback_t layer_cb  = [this](std::u32string_view text){ on_layer(text); };
+			const callback_t space_cb  = [this](std::u32string_view text){ on_space(text); };
+			const callback_t delete_cb = [this](std::u32string_view text){ on_backspace(text); };
+			const callback_t enter_cb  = [this](std::u32string_view text){ on_enter(text); };
 
 			const auto is_supported = [&](u32 mode) -> bool
 			{
