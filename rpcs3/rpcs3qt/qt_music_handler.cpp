@@ -66,15 +66,24 @@ void fmt_class_string<QMediaPlayer::PlaybackState>::format(std::string& out, u64
 
 qt_music_handler::qt_music_handler()
 {
-	music_log.notice("Constructing Qt music handler...");
+	// Construct the QMediaPlayer on the GUI thread, the same thread on which it is destroyed
+	// (see ~qt_music_handler). cellMusic creates this handler from an emulated thread, but Qt's
+	// Windows multimedia backend balances its COM init/teardown per calling thread: constructing
+	// off the GUI thread and destroying on it left an unmatched CoUninitialize on the GUI thread,
+	// draining the OLE reference that Qt's startup OleInitialize set up until file drag&drop on
+	// the main window silently broke. Keeping both on the GUI thread keeps them balanced.
+	Emu.BlockingCallFromMainThread([this]()
+	{
+		music_log.notice("Constructing Qt music handler...");
 
-	m_media_player = std::make_unique<QMediaPlayer>();
-	m_media_player->setAudioOutput(new QAudioOutput(m_media_player.get()));
+		m_media_player = std::make_unique<QMediaPlayer>();
+		m_media_player->setAudioOutput(new QAudioOutput(m_media_player.get()));
 
-	connect(m_media_player.get(), &QMediaPlayer::mediaStatusChanged, this, &qt_music_handler::handle_media_status);
-	connect(m_media_player.get(), &QMediaPlayer::playbackStateChanged, this, &qt_music_handler::handle_music_state);
-	connect(m_media_player.get(), &QMediaPlayer::errorOccurred, this, &qt_music_handler::handle_music_error);
-	connect(m_media_player->audioOutput(), &QAudioOutput::volumeChanged, this, &qt_music_handler::handle_volume_change);
+		connect(m_media_player.get(), &QMediaPlayer::mediaStatusChanged, this, &qt_music_handler::handle_media_status);
+		connect(m_media_player.get(), &QMediaPlayer::playbackStateChanged, this, &qt_music_handler::handle_music_state);
+		connect(m_media_player.get(), &QMediaPlayer::errorOccurred, this, &qt_music_handler::handle_music_error);
+		connect(m_media_player->audioOutput(), &QAudioOutput::volumeChanged, this, &qt_music_handler::handle_volume_change);
+	});
 }
 
 qt_music_handler::~qt_music_handler()
