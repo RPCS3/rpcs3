@@ -602,9 +602,6 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 
 	addSeparator();
 
-	// Check Integrity menu
-	QMenu* check_integrity_menu = addMenu(tr("&Check Integrity"));
-
 	// Check disc game integrity
 	if (QString::fromStdString(current_game.category) == cat::cat_disc_game)
 	{
@@ -616,37 +613,26 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 		// That is to highlight a Redump ISO from a non Redump ISO
 		if (raw_archive || iso_type != iso_type_status::NOT_ISO)
 		{
-			QAction* check_iso = check_integrity_menu->addAction(tr("&Check ISO Integrity"));
+			QAction* check_iso_integrity = addAction(tr("&Check ISO Integrity"));
 
 			// If it's a Redump ISO and the integrity DB exists
 			if ((raw_archive || iso_type == iso_type_status::REDUMP_ISO) &&
 				content_validation::check_integrity(content_file_type::ISO, "") != content_integrity_status::ERROR_OPENING_DB)
 			{
-				connect(check_iso, &QAction::triggered, this, [this, gameinfo]()
+				connect(check_iso_integrity, &QAction::triggered, this, [this, gameinfo]()
 				{
-					m_game_list_actions->ShowGameIntegrityDialog(content_file_type::ISO, gameinfo);
+					m_game_list_actions->ShowGameIntegrityDialog(content_file_type::ISO, gameinfo->info.path);
 				});
 			}
 			else
 			{
-				check_iso->setEnabled(false);
+				check_iso_integrity->setEnabled(false);
 			}
 		}
 	}
 
-	// Check integrity for the other categories based on .PKG, .RAP and .EDAT (e.g. HDD game, DLC, Update)
-	QAction* check_psn_content = check_integrity_menu->addAction(tr("&Check Packages/Raps/Edats Integrity"));
-
-	connect(check_psn_content, &QAction::triggered, this, [this, gameinfo]()
-	{
-		// File type different than ISO as passed here (PSN_CONTENT) will be properly detected in
-		// ShowGameIntegrityDialog() based on the selected package file
-		m_game_list_actions->ShowGameIntegrityDialog(content_file_type::PSN_CONTENT, gameinfo);
-	});
-
 	QAction* check_compat = addAction(tr("&Check Game Compatibility"));
-
-  addSeparator();
+	addSeparator();
 
 	// Disk usage
 	QAction* disk_usage = addAction(tr("&Disk Usage"));

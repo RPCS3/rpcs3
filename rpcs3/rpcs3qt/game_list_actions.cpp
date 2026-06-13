@@ -368,7 +368,7 @@ void game_list_actions::ShowGameInfoDialog(const std::vector<game_info>& games)
 	QMessageBox::information(m_game_list_frame, tr("Game Info"), GetContentInfo(games).info);
 }
 
-void game_list_actions::ShowGameIntegrityDialog(content_file_type file_type, const game_info& game)
+void game_list_actions::ShowGameIntegrityDialog(content_file_type file_type, const std::string& game_path)
 {
 	if (m_game_integrity_future.isRunning()) // Still running the last request
 		return;
@@ -378,7 +378,7 @@ void game_list_actions::ShowGameIntegrityDialog(content_file_type file_type, con
 	switch (file_type)
 	{
 	case content_file_type::ISO:
-		path_list.push_back(QString::fromStdString(game->info.path));
+		path_list.push_back(QString::fromStdString(game_path));
 		break;
 	default: // Auto-detect the file type
 		const QString path_last_pkg = m_gui_settings->GetValue(gui::fd_install_pkg).toString();

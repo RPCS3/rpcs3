@@ -55,7 +55,7 @@ public:
 
 	void ShowRemoveGameDialog(const std::vector<game_info>& games);
 	void ShowGameInfoDialog(const std::vector<game_info>& games);
-	void ShowGameIntegrityDialog(content_file_type file_type, const game_info& game);
+	void ShowGameIntegrityDialog(content_file_type file_type, const std::string& game_path);
 	void ShowDiskUsageDialog();
 
 	// NOTES:

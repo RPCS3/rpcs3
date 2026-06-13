@@ -3559,6 +3559,14 @@ void main_window::CreateConnects()
 		m_game_list_frame->GetConfigDatabase()->request_config_database(true);
 	});
 
+	// Check integrity for the content categories based on .PKG, .RAP and .EDAT (e.g. HDD game, DLC, Update)
+	connect(ui->checkPackageIntegrityAct, &QAction::triggered, this, [this]()
+	{
+		// File type different than ISO as passed here (PSN_CONTENT) will be properly detected in
+		// ShowGameIntegrityDialog() based on the selected package file
+		m_game_list_frame->actions()->ShowGameIntegrityDialog(content_file_type::PSN_CONTENT, "");
+	});
+
 	connect(ui->welcomeAct, &QAction::triggered, this, [this]()
 	{
 		welcome_dialog* welcome = new welcome_dialog(m_gui_settings, true, this);
