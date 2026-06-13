@@ -295,6 +295,13 @@ private:
 		case localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_FONT_SIZE: return tr("Font Size", "Performance Overlay");
 		case localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_OPACITY: return tr("Opacity", "Performance Overlay");
 		case localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_USE_WINDOW_SPACE: return tr("Use Window Space", "Performance Overlay");
+		case localized_string_id::HOME_MENU_SETTINGS_SKYLANDER_CLEAR: return tr("Clear Skylander");
+		case localized_string_id::HOME_MENU_SETTINGS_SKYLANDER_CREATE: return tr("Create Skylander");
+		case localized_string_id::HOME_MENU_SETTINGS_SKYLANDER_LOAD: return tr("Load Skylander");
+		case localized_string_id::HOME_MENU_SETTINGS_SKYLANDER_LOAD_FILE: return tr("Select Skylander File");
+		case localized_string_id::HOME_MENU_SETTINGS_SKYLANDER_MANAGER: return tr("Skylander Manager");
+		case localized_string_id::HOME_MENU_SETTINGS_SKYLANDER_NO_SKYLANDER: return tr("None");
+		case localized_string_id::HOME_MENU_SETTINGS_SKYLANDER_UNKNOWN: return tr("Unknown");
 		case localized_string_id::HOME_MENU_SETTINGS_DEBUG: return tr("Debug");
 		case localized_string_id::HOME_MENU_SETTINGS_DEBUG_OVERLAY: return tr("Debug Overlay", "Debug");
 		case localized_string_id::HOME_MENU_SETTINGS_DEBUG_INPUT_OVERLAY: return tr("Input Debug Overlay", "Debug");

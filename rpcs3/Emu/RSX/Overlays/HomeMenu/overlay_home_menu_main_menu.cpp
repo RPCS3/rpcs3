@@ -5,10 +5,12 @@
 #include "overlay_home_menu_savestate.h"
 #include "Emu/RSX/Overlays/FriendsList/overlay_friends_list_dialog.h"
 #include "Emu/RSX/Overlays/Trophies/overlay_trophy_list_dialog.h"
+#include "Emu/RSX/Overlays/USBDevices/overlay_skylander_dialog.h"
 #include "Emu/RSX/Overlays/overlay_manager.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/Cell/Modules/sceNpTrophy.h"
+#include "Emu/Io/Skylander.h"
 
 extern atomic_t<bool> g_user_asked_for_recording;
 
@@ -90,6 +92,24 @@ namespace rsx
 						if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 						{
 							manager->create<rsx::overlays::trophy_list_dialog>()->show(trop_name);
+						}
+					});
+					return page_navigation::stay;
+				});
+			}
+
+			if (g_skyportal.is_active())
+			{
+				add_item(home_menu::fa_icon::usb, get_localized_string(localized_string_id::HOME_MENU_SETTINGS_SKYLANDER_MANAGER), [](pad_button btn) -> page_navigation
+				{
+					if (btn != pad_button::cross) return page_navigation::stay;
+
+					rsx_log.notice("User selected devices in home menu");
+					Emu.CallFromMainThread([]()
+					{
+						if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
+						{
+							manager->create<rsx::overlays::skylander_dialog>()->show();
 						}
 					});
 					return page_navigation::stay;
