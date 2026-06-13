@@ -1420,6 +1420,20 @@ void rsxaudio_backend_thread::operator()()
 				{
 					lock.unlock();
 					backend_stop();
+
+					// Destroy the backend on this thread, the one that created it in backend_init().
+					// The backend's ctor calls CoInitializeEx here on Windows; if it is instead released
+					// by ~rsxaudio_backend_thread() (which runs on the GUI thread via g_fxo->clear()
+					// during Kill()), the matching CoUninitialize lands on the GUI thread, draining its
+					// OLE reference and silently breaking the main window's file drag&drop. Keep COM
+					// init/teardown balanced on this thread.
+					if (backend)
+					{
+						backend->Close();
+						backend->SetWriteCallback(nullptr);
+						backend->SetStateCallback(nullptr);
+						backend = nullptr;
+					}
 					return;
 				}
 

@@ -1019,6 +1019,13 @@ void cell_audio_thread::operator()()
 
 	// Destroy ringbuffer
 	ringbuffer.reset();
+
+	// Destroy the audio backend on this thread (the one that created it in cfg.reset()).
+	// The backend's ctor calls CoInitializeEx here on Windows; releasing it on a different
+	// thread (g_fxo->clear() runs on the GUI thread during Kill()) would land the matching
+	// CoUninitialize on the GUI thread, draining its OLE reference and silently breaking the
+	// main window's file drag&drop. Keep COM init/teardown balanced on this thread.
+	cfg.backend.reset();
 }
 
 audio_port* cell_audio_thread::open_port()
