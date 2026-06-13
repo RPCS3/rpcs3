@@ -62,6 +62,16 @@ const extern spu_decoder<spu_iflag> g_spu_iflag;
 
 #ifdef ARCH_ARM64
 #include "Emu/CPU/Backends/AArch64/AArch64JIT.h"
+
+namespace
+{
+	thread_local spu_llvm_compile_context* g_spu_llvm_compile_context = nullptr;
+}
+
+void spu_llvm_set_compile_context(spu_llvm_compile_context* context) noexcept
+{
+	g_spu_llvm_compile_context = context;
+}
 #endif
 
 class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
@@ -76,10 +86,10 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	u32 m_op_const_mask = -1;
 
 	// Current function chunk entry point
-	u32 m_entry;
+	u32 m_entry = 0;
 
 	// Main entry point offset
-	u32 m_base;
+	u32 m_base = 0;
 
 	// Module name
 	std::string m_hash;
@@ -91,26 +101,26 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	u32 m_next_op = 0;
 
 	// Current function (chunk)
-	llvm::Function* m_function;
+	llvm::Function* m_function{};
 
-	llvm::Value* m_thread;
-	llvm::Value* m_lsptr;
-	llvm::Value* m_interp_op;
-	llvm::Value* m_interp_pc;
-	llvm::Value* m_interp_table;
-	llvm::Value* m_interp_7f0;
-	llvm::Value* m_interp_regs;
+	llvm::Value* m_thread{};
+	llvm::Value* m_lsptr{};
+	llvm::Value* m_interp_op{};
+	llvm::Value* m_interp_pc{};
+	llvm::Value* m_interp_table{};
+	llvm::Value* m_interp_7f0{};
+	llvm::Value* m_interp_regs{};
 
 	// Helpers
-	llvm::Value* m_base_pc;
-	llvm::Value* m_interp_pc_next;
-	llvm::BasicBlock* m_interp_bblock;
+	llvm::Value* m_base_pc{};
+	llvm::Value* m_interp_pc_next{};
+	llvm::BasicBlock* m_interp_bblock{};
 
 	// i8*, contains constant vm::g_base_addr value
-	llvm::Value* m_memptr;
+	llvm::Value* m_memptr{};
 
 	// Pointers to registers in the thread context
-	std::array<llvm::Value*, s_reg_max> m_reg_addr;
+	std::array<llvm::Value*, s_reg_max> m_reg_addr{};
 
 	// Global variable (function table)
 	llvm::GlobalVariable* m_function_table{};
@@ -130,10 +140,10 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	// Chunk for external tail call (dispatch)
 	llvm::Function* m_dispatch{};
 
-	llvm::MDNode* m_md_unlikely;
-	llvm::MDNode* m_md_likely;
-	llvm::MDNode* m_md_spu_memory_domain;
-	llvm::MDNode* m_md_spu_context_domain;
+	llvm::MDNode* m_md_unlikely{};
+	llvm::MDNode* m_md_likely{};
+	llvm::MDNode* m_md_spu_memory_domain{};
+	llvm::MDNode* m_md_spu_context_domain{};
 
 	struct block_info
 	{
@@ -1669,6 +1679,15 @@ public:
 			m_hash_start = hash_start;
 		}
 
+#ifdef ARCH_ARM64
+		m_use_tbl2 = !g_spu_llvm_compile_context || g_spu_llvm_compile_context->use_tbl2;
+
+		if (g_spu_llvm_compile_context)
+		{
+			g_spu_llvm_compile_context->llvm_error.clear();
+		}
+#endif
+
 		spu_log.notice("Building function 0x%x... (size %u, %s)", func.entry_point, func.data.size(), m_hash);
 
 		m_pos = func.lower_bound;
@@ -2175,7 +2194,7 @@ public:
 						if (src > 0x40000)
 						{
 							// Use the xfloat hint to create 256-bit (4x double) PHI
-							llvm::Type* type = g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate && bb.reg_maybe_xf[i] ? get_type<f64[4]>() : get_reg_type(i);
+							llvm::Type* type = g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate && bb.reg_maybe_xf.test_unsafe(i) ? get_type<f64[4]>() : get_reg_type(i);
 
 							const auto _phi = m_ir->CreatePHI(type, ::size32(bb.preds), fmt::format("phi0x%05x_r%u", baddr, i));
 							m_block->phi[i] = _phi;
@@ -2581,7 +2600,7 @@ public:
 				{
 					for (u32 i = 0; i < s_reg_max; i++)
 					{
-						llvm::Type* type = g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate && bb.reg_maybe_xf[i] ? get_type<f64[4]>() : get_reg_type(i);
+						llvm::Type* type = g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::accurate && bb.reg_maybe_xf.test_unsafe(i) ? get_type<f64[4]>() : get_reg_type(i);
 
 						if (i < m_reduced_loop_info->loop_dicts.size() && (m_reduced_loop_info->loop_dicts.test(i) || m_reduced_loop_info->loop_writes.test(i)))
 						{
@@ -2637,7 +2656,7 @@ public:
 
 				for (u32 iteration_emit = 0; is_reduced_loop; m_pos += 4)
 				{
-					if (m_pos != baddr && m_block_info[m_pos / 4] && m_reduced_loop_info->loop_end < m_pos)
+					if (m_pos != baddr && m_pos != SPU_LS_SIZE && m_block_info[m_pos / 4] && m_reduced_loop_info->loop_end < m_pos)
 					{
 						fmt::throw_exception("LLVM: Reduced Loop Pattern: Exit(1) too early at 0x%x", m_pos);
 					}
@@ -3217,7 +3236,7 @@ public:
 
 							for (u32 target : m_bbs[cur].targets)
 							{
-								if (!m_block_info[target / 4])
+								if (target == SPU_LS_SIZE || !m_block_info[target / 4])
 								{
 									continue;
 								}
@@ -3478,17 +3497,63 @@ public:
 		} _jit_guard;
 #endif
 
-		if (g_cfg.core.spu_debug)
 		{
-			// Testing only
-			m_jit.add(std::move(_module), m_spurt->get_cache_path() + "llvm/");
-		}
-		else
-		{
-			m_jit.add(std::move(_module));
-		}
+#ifdef ARCH_ARM64
+			const bool recoverable = !!g_spu_llvm_compile_context;
 
-		m_jit.fin();
+			if (recoverable)
+			{
+				bool added = false;
+				std::string& llvm_error = g_spu_llvm_compile_context->llvm_error;
+
+				if (g_cfg.core.spu_debug)
+				{
+					// Testing only
+					added = m_jit.try_add(std::move(_module), m_spurt->get_cache_path() + "llvm/", llvm_error);
+				}
+				else
+				{
+					added = m_jit.try_add(std::move(_module), llvm_error);
+				}
+
+				if (!added || !m_jit.try_fin(llvm_error))
+				{
+					if (add_to_file)
+					{
+						add_loc->cached = 0;
+					}
+
+					return nullptr;
+				}
+			}
+			else
+			{
+				if (g_cfg.core.spu_debug)
+				{
+					// Testing only
+					m_jit.add(std::move(_module), m_spurt->get_cache_path() + "llvm/");
+				}
+				else
+				{
+					m_jit.add(std::move(_module));
+				}
+
+				m_jit.fin();
+			}
+#else
+			if (g_cfg.core.spu_debug)
+			{
+				// Testing only
+				m_jit.add(std::move(_module), m_spurt->get_cache_path() + "llvm/");
+			}
+			else
+			{
+				m_jit.add(std::move(_module));
+			}
+
+			m_jit.fin();
+#endif
+		}
 
 		// Register function pointer
 		const spu_function_t fn = reinterpret_cast<spu_function_t>(m_jit.get_engine().getPointerToFunction(main_func));
@@ -4209,13 +4274,13 @@ public:
 		}
 		case SPU_RdDec:
 		{
-#if defined(ARCH_X64)
+#if defined(ARCH_X64) || defined(ARCH_ARM64)
 			if (utils::get_tsc_freq() && !(g_cfg.core.spu_loop_detection) && (g_cfg.core.clocks_scale == 100))
 			{
 				const auto timebase_offs = m_ir->CreateLoad(get_type<u64>(), m_ir->CreateIntToPtr(m_ir->getInt64(reinterpret_cast<u64>(&g_timebase_offs)), get_type<u64*>()));
 				const auto timestamp = m_ir->CreateLoad(get_type<u64>(), spu_ptr(&spu_thread::ch_dec_start_timestamp));
 				const auto dec_value = m_ir->CreateLoad(get_type<u32>(), spu_ptr(&spu_thread::ch_dec_value));
-				const auto tsc = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_rdtsc));
+				const auto tsc = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::readcyclecounter));
 				const auto tscx = m_ir->CreateMul(m_ir->CreateUDiv(tsc, m_ir->getInt64(utils::get_tsc_freq())), m_ir->getInt64(80000000));
 				const auto tscm = m_ir->CreateUDiv(m_ir->CreateMul(m_ir->CreateURem(tsc, m_ir->getInt64(utils::get_tsc_freq())), m_ir->getInt64(80000000)), m_ir->getInt64(utils::get_tsc_freq()));
 				const auto tsctb = m_ir->CreateSub(m_ir->CreateAdd(tscx, tscm), timebase_offs);
@@ -5032,11 +5097,11 @@ public:
 		{
 			call("spu_get_events", &exec_get_events, m_thread, m_ir->getInt32(SPU_EVENT_TM));
 
-#if defined(ARCH_X64)
+#if defined(ARCH_X64) || defined(ARCH_ARM64)
 			if (utils::get_tsc_freq() && !(g_cfg.core.spu_loop_detection) && (g_cfg.core.clocks_scale == 100))
 			{
 				const auto timebase_offs = m_ir->CreateLoad(get_type<u64>(), m_ir->CreateIntToPtr(m_ir->getInt64(reinterpret_cast<u64>(&g_timebase_offs)), get_type<u64*>()));
-				const auto tsc = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_rdtsc));
+				const auto tsc = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::readcyclecounter));
 				const auto tscx = m_ir->CreateMul(m_ir->CreateUDiv(tsc, m_ir->getInt64(utils::get_tsc_freq())), m_ir->getInt64(80000000));
 				const auto tscm = m_ir->CreateUDiv(m_ir->CreateMul(m_ir->CreateURem(tsc, m_ir->getInt64(utils::get_tsc_freq())), m_ir->getInt64(80000000)), m_ir->getInt64(utils::get_tsc_freq()));
 				const auto tsctb = m_ir->CreateSub(m_ir->CreateAdd(tscx, tscm), timebase_offs);
@@ -5459,6 +5524,44 @@ public:
 		const auto a = get_vr<s16[8]>(op.ra);
 
 #ifdef ARCH_ARM64
+		if (m_use_i8mm)
+		{
+			if (match_vr<s16[8], s32[4], s64[2]>(op.ra, [&](auto c, auto MP)
+			{
+				using VT = typename decltype(MP)::type;
+
+				if (auto [ok, x] = match_expr(c, sext<VT>(match<bool[std::extent_v<VT>]>())); ok)
+				{
+					const auto zeroes = splat<u32[4]>(0);
+					const auto es = zshuffle(bitcast<u8[16]>(a), 16, 16, 16, 16, 16, 16, 16, 16, 0, 2, 4, 6, 8, 10, 12, 14);
+
+					set_vr(op.rt, smmla(zeroes, es, build<u8[16]>(
+						0x00, 0x00, 0x00, 0x00,
+						0x00, 0x00, 0x00, 0x00,
+						-0x01, -0x02, -0x04, -0x08,
+						-0x10, -0x20, -0x40, -0x80
+					)));
+					return true;
+				}
+				return false;
+			}))
+			{
+			return;
+			}
+
+			const auto zeroes = splat<u32[4]>(0);
+			const auto masked = a & 0x01;
+			const auto es = zshuffle(bitcast<u8[16]>(masked), 16, 16, 16, 16, 16, 16, 16, 16, 0, 2, 4, 6, 8, 10, 12, 14);
+
+			set_vr(op.rt, ummla(zeroes, es, build<u8[16]>(
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x01, 0x02, 0x04, 0x08,
+				0x10, 0x20, 0x40, 0x80
+			)));
+			return;
+		}
+
 		// Use dot product instructions with special values to shift then sum results into the preferred slot
 		if (m_use_dotprod)
 		{
@@ -5514,6 +5617,48 @@ public:
 		const auto a = get_vr<u8[16]>(op.ra);
 
 #ifdef ARCH_ARM64
+		if (m_use_i8mm)
+		{
+			if (match_vr<s8[16], s16[8], s32[4], s64[2]>(op.ra, [&](auto c, auto MP)
+			{
+				using VT = typename decltype(MP)::type;
+
+				if (auto [ok, x] = match_expr(c, sext<VT>(match<bool[std::extent_v<VT>]>())); ok)
+				{
+					const auto zeroes = splat<u32[4]>(0);
+
+					const auto extracted = smmla(zeroes, a, build<u8[16]>(
+						0x00, 0x00, 0x00, 0x00,
+						0x00, 0x00, 0x00, 0x00,
+						-0x01, -0x02, -0x04, -0x08,
+						-0x10, -0x20, -0x40, -0x80
+					));
+
+					const auto es = zshuffle(bitcast<u8[16]>(extracted), 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 4, 12, 16, 16);
+					set_vr(op.rt, bitcast<u32[4]>(es));
+					return true;
+				}
+				return false;
+			}))
+			{
+			return;
+			}
+
+			const auto zeroes = splat<u32[4]>(0);
+			const auto masked = a & 0x01;
+
+			const auto extracted = ummla(zeroes, masked, build<u8[16]>(
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x01, 0x02, 0x04, 0x08,
+				0x10, 0x20, 0x40, 0x80
+			));
+
+			const auto es = zshuffle(bitcast<u8[16]>(extracted), 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 4, 12, 16, 16);
+			set_vr(op.rt, bitcast<u32[4]>(es));
+			return;
+		}
+
 		// Use dot product instructions with special values to shift then sum results into the preferred slot
 		if (m_use_dotprod)
 		{
@@ -5592,28 +5737,89 @@ public:
 		}
 
 		const auto v = extract(get_vr(op.ra), 3);
+#ifdef ARCH_ARM64
+// Workaround for bad codegen via LLVM
+// More idiomatic version that compiles to 2 neon instructions
+// Remove me when addressed by upstream llvm: https://github.com/llvm/llvm-project/issues/200325 - Whatcookie
+		const auto masks = build<u32[4]>(1, 2, 4, 8);
+		const auto bits = vsplat<u32[4]>(zext<u32>(trunc<i4>(v)));
+		set_vr(op.rt, sext<s32[4]>((bits & masks) == masks));
+#else
 		const auto m = bitcast<bool[4]>(trunc<i4>(v));
 		set_vr(op.rt, sext<s32[4]>(m));
+#endif
 	}
 
 	void FSMH(spu_opcode_t op)
 	{
 		const auto v = extract(get_vr(op.ra), 3);
+#ifdef ARCH_ARM64
+		const auto masks = build<u16[8]>(1, 2, 4, 8, 16, 32, 64, 128);
+		const auto bits = vsplat<u16[8]>(zext<u16>(trunc<u8>(v)));
+		set_vr(op.rt, sext<s16[8]>((bits & masks) == masks));
+#else
 		const auto m = bitcast<bool[8]>(trunc<u8>(v));
 		set_vr(op.rt, sext<s16[8]>(m));
+#endif
 	}
 
 	void FSMB(spu_opcode_t op)
 	{
 		const auto v = extract(get_vr(op.ra), 3);
+#ifdef ARCH_ARM64
+		const auto masks = build<u8[16]>(1, 2, 4, 8, 16, 32, 64, 128, 1, 2, 4, 8, 16, 32, 64, 128);
+		const auto bytes = bitcast<u8[16]>(vsplat<u16[8]>(trunc<u16>(v)));
+		const auto bits = zshuffle(bytes, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1);
+		set_vr(op.rt, sext<s8[16]>((bits & masks) == masks));
+#else
 		const auto m = bitcast<bool[16]>(trunc<u16>(v));
 		set_vr(op.rt, sext<s8[16]>(m));
+#endif
 	}
 
 	template <typename TA>
 	static auto byteswap(TA&& a)
 	{
 		return zshuffle(std::forward<TA>(a), 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+	}
+
+	static auto rotqby_reverse_base()
+	{
+		return build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+	}
+
+	static auto rotqby_forward_base()
+	{
+		return build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+	}
+
+	static auto rotqby_zero_base()
+	{
+#ifdef ARCH_ARM64
+		return rotqby_forward_base();
+#else
+		return build<u8[16]>(112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127);
+#endif
+	}
+
+	static auto rotqby_reverse_zero_base()
+	{
+#ifdef ARCH_ARM64
+		return rotqby_reverse_base();
+#else
+		return build<u8[16]>(127, 126, 125, 124, 123, 122, 121, 120, 119, 118, 117, 116, 115, 114, 113, 112);
+#endif
+	}
+
+	// For use in rotqby family of instructions only
+	template <typename T, typename U>
+	auto pshufb_for_x86_and_tbl_for_aarch64(T&& a, U&& b)
+	{
+#ifdef ARCH_ARM64
+		return tbl(std::forward<T>(a), std::forward<U>(b));
+#else
+		return pshufb(std::forward<T>(a), std::forward<U>(b));
+#endif
 	}
 
 	template <typename T, typename U>
@@ -5632,7 +5838,7 @@ public:
 			// Data with swapped endian from a load instruction
 			if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
 			{
-				const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+				const auto sc = rotqby_reverse_base();
 				const auto sh = sc + (splat_scalar(b) >> 3);
 
 				if (m_use_avx512_icl)
@@ -5640,9 +5846,9 @@ public:
 					return eval(vpermb(as, sh));
 				}
 
-				return eval(pshufb(as, (sh & 0xf)));
+				return eval(pshufb_for_x86_and_tbl_for_aarch64(as, (sh & 0xf)));
 			}
-			const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+			const auto sc = rotqby_forward_base();
 			const auto sh = sc - (splat_scalar(b) >> 3);
 
 			if (m_use_avx512_icl)
@@ -5650,7 +5856,7 @@ public:
 				return eval(vpermb(a, sh));
 			}
 
-			return eval(pshufb(a, (sh & 0xf)));
+			return eval(pshufb_for_x86_and_tbl_for_aarch64(a, (sh & 0xf)));
 		});
 
 		set_vr(op.rt, rotqbybi(get_vr<u8[16]>(op.ra), get_vr<u8[16]>(op.rb)));
@@ -5678,15 +5884,15 @@ public:
 		// Data with swapped endian from a load instruction
 		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
 		{
-			const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+			const auto sc = rotqby_reverse_base();
 			const auto sh = sc - splat_scalar(minusbx);
-			set_vr(op.rt, pshufb(as, sh));
+			set_vr(op.rt, pshufb_for_x86_and_tbl_for_aarch64(as, sh));
 			return;
 		}
 
-		const auto sc = build<u8[16]>(112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127);
+		const auto sc = rotqby_zero_base();
 		const auto sh = sc + splat_scalar(minusbx);
-		set_vr(op.rt, pshufb(a, sh));
+		set_vr(op.rt, pshufb_for_x86_and_tbl_for_aarch64(a, sh));
 	}
 
 	void SHLQBYBI(spu_opcode_t op)
@@ -5697,15 +5903,15 @@ public:
 		// Data with swapped endian from a load instruction
 		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
 		{
-			const auto sc = build<u8[16]>(127, 126, 125, 124, 123, 122, 121, 120, 119, 118, 117, 116, 115, 114, 113, 112);
+			const auto sc = rotqby_reverse_zero_base();
 			const auto sh = sc + (splat_scalar(b) >> 3);
-			set_vr(op.rt, pshufb(as, sh));
+			set_vr(op.rt, pshufb_for_x86_and_tbl_for_aarch64(as, sh));
 			return;
 		}
 
-		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+		const auto sc = rotqby_forward_base();
 		const auto sh = sc - (splat_scalar(b) >> 3);
-		set_vr(op.rt, pshufb(a, sh));
+		set_vr(op.rt, pshufb_for_x86_and_tbl_for_aarch64(a, sh));
 	}
 
 	template <typename RT, typename T>
@@ -5859,7 +6065,7 @@ public:
 		// Data with swapped endian from a load instruction
 		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
 		{
-			const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+			const auto sc = rotqby_reverse_base();
 			const auto sh = eval(sc + splat_scalar(b));
 
 			if (m_use_avx512_icl)
@@ -5868,11 +6074,11 @@ public:
 				return;
 			}
 
-			set_vr(op.rt, pshufb(as, (sh & 0xf)));
+			set_vr(op.rt, pshufb_for_x86_and_tbl_for_aarch64(as, (sh & 0xf)));
 			return;
 		}
 
-		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+		const auto sc = rotqby_forward_base();
 		const auto sh = eval(sc - splat_scalar(b));
 
 		if (m_use_avx512_icl)
@@ -5881,7 +6087,7 @@ public:
 			return;
 		}
 
-		set_vr(op.rt, pshufb(a, (sh & 0xf)));
+		set_vr(op.rt, pshufb_for_x86_and_tbl_for_aarch64(a, (sh & 0xf)));
 	}
 
 	void ROTQMBY(spu_opcode_t op)
@@ -5900,15 +6106,15 @@ public:
 		// Data with swapped endian from a load instruction
 		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
 		{
-			const auto sc = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+			const auto sc = rotqby_reverse_base();
 			const auto sh = sc - (splat_scalar(minusbx) & 0x1f);
-			set_vr(op.rt, pshufb(as, sh));
+			set_vr(op.rt, pshufb_for_x86_and_tbl_for_aarch64(as, sh));
 			return;
 		}
 
-		const auto sc = build<u8[16]>(112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127);
+		const auto sc = rotqby_zero_base();
 		const auto sh = sc + (splat_scalar(minusbx) & 0x1f);
-		set_vr(op.rt, pshufb(a, sh));
+		set_vr(op.rt, pshufb_for_x86_and_tbl_for_aarch64(a, sh));
 	}
 
 	void SHLQBY(spu_opcode_t op)
@@ -5919,15 +6125,15 @@ public:
 		// Data with swapped endian from a load instruction
 		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
 		{
-			const auto sc = build<u8[16]>(127, 126, 125, 124, 123, 122, 121, 120, 119, 118, 117, 116, 115, 114, 113, 112);
+			const auto sc = rotqby_reverse_zero_base();
 			const auto sh = sc + (splat_scalar(b) & 0x1f);
-			set_vr(op.rt, pshufb(as, sh));
+			set_vr(op.rt, pshufb_for_x86_and_tbl_for_aarch64(as, sh));
 			return;
 		}
 
-		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+		const auto sc = rotqby_forward_base();
 		const auto sh = sc - (splat_scalar(b) & 0x1f);
-		set_vr(op.rt, pshufb(a, sh));
+		set_vr(op.rt, pshufb_for_x86_and_tbl_for_aarch64(a, sh));
 	}
 
 	template <typename T>
@@ -6025,26 +6231,26 @@ public:
 	void ROTQBYI(spu_opcode_t op)
 	{
 		const auto a = get_vr<u8[16]>(op.ra);
-		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+		const auto sc = rotqby_forward_base();
 		const auto sh = (sc - get_imm<u8[16]>(op.i7, false)) & 0xf;
-		set_vr(op.rt, pshufb(a, sh));
+		set_vr(op.rt, pshufb_for_x86_and_tbl_for_aarch64(a, sh));
 	}
 
 	void ROTQMBYI(spu_opcode_t op)
 	{
 		const auto a = get_vr<u8[16]>(op.ra);
-		const auto sc = build<u8[16]>(112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127);
+		const auto sc = rotqby_zero_base();
 		const auto sh = sc + (-get_imm<u8[16]>(op.i7, false) & 0x1f);
-		set_vr(op.rt, pshufb(a, sh));
+		set_vr(op.rt, pshufb_for_x86_and_tbl_for_aarch64(a, sh));
 	}
 
 	void SHLQBYI(spu_opcode_t op)
 	{
 		if (get_reg_raw(op.ra) && !op.i7) return set_reg_fixed(op.rt, get_reg_raw(op.ra), false); // For expressions matching
 		const auto a = get_vr<u8[16]>(op.ra);
-		const auto sc = build<u8[16]>(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15);
+		const auto sc = rotqby_forward_base();
 		const auto sh = sc - (get_imm<u8[16]>(op.i7, false) & 0x1f);
-		set_vr(op.rt, pshufb(a, sh));
+		set_vr(op.rt, pshufb_for_x86_and_tbl_for_aarch64(a, sh));
 	}
 
 	void CGT(spu_opcode_t op)
@@ -6178,6 +6384,15 @@ public:
 
 	void MPYHHU(spu_opcode_t op)
 	{
+#ifdef ARCH_ARM64
+		const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
+
+		if (m_use_sve2_128)
+		{
+			set_vr(op.rt, sve_umullt(bitcast<u16[8]>(a), bitcast<u16[8]>(b)));
+			return;
+		}
+#endif
 		set_vr(op.rt, (get_vr(op.ra) >> 16) * (get_vr(op.rb) >> 16));
 	}
 
@@ -6208,17 +6423,48 @@ public:
 
 	void MPYHHA(spu_opcode_t op)
 	{
+#ifdef ARCH_ARM64
+		const auto [a, b] = get_vrs<s32[4]>(op.ra, op.rb);
+
+		if (m_use_sve2_128)
+		{
+			set_vr(op.rt, sve_smlalt(get_vr<s32[4]>(op.rt), bitcast<s16[8]>(a), bitcast<s16[8]>(b)));
+			return;
+		}
+#endif
 		set_vr(op.rt, (get_vr<s32[4]>(op.ra) >> 16) * (get_vr<s32[4]>(op.rb) >> 16) + get_vr<s32[4]>(op.rt));
 	}
 
 	void MPYHHAU(spu_opcode_t op)
 	{
+#ifdef ARCH_ARM64
+		const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
+
+		if (m_use_sve2_128)
+		{
+			set_vr(op.rt, sve_umlalt(get_vr<u32[4]>(op.rt), bitcast<u16[8]>(a), bitcast<u16[8]>(b)));
+			return;
+		}
+#endif
 		set_vr(op.rt, (get_vr(op.ra) >> 16) * (get_vr(op.rb) >> 16) + get_vr(op.rt));
 	}
 
 	void MPY(spu_opcode_t op)
 	{
+#ifdef ARCH_ARM64
+		const auto [a, b] = get_vrs<s32[4]>(op.ra, op.rb);
+
+		if (m_use_sve2_128)
+		{
+			set_vr(op.rt, sve_smullb(bitcast<s16[8]>(a), bitcast<s16[8]>(b)));
+		}
+		else
+		{
+			set_vr(op.rt, smull(zshuffle(bitcast<s16[8]>(a), 0, 2, 4, 6), zshuffle(bitcast<s16[8]>(b), 0, 2, 4, 6)));
+		}
+#else
 		set_vr(op.rt, (get_vr<s32[4]>(op.ra) << 16 >> 16) * (get_vr<s32[4]>(op.rb) << 16 >> 16));
+#endif
 	}
 
 	void MPYH(spu_opcode_t op)
@@ -6228,12 +6474,34 @@ public:
 
 	void MPYHH(spu_opcode_t op)
 	{
+#ifdef ARCH_ARM64
+		const auto [a, b] = get_vrs<s32[4]>(op.ra, op.rb);
+
+		if (m_use_sve2_128)
+		{
+			set_vr(op.rt, sve_smullt(bitcast<s16[8]>(a), bitcast<s16[8]>(b)));
+			return;
+		}
+#endif
 		set_vr(op.rt, (get_vr<s32[4]>(op.ra) >> 16) * (get_vr<s32[4]>(op.rb) >> 16));
 	}
 
 	void MPYS(spu_opcode_t op)
 	{
+#ifdef ARCH_ARM64
+		const auto [a, b] = get_vrs<s32[4]>(op.ra, op.rb);
+
+		if (m_use_sve2_128)
+		{
+			set_vr(op.rt, sve_smullb(bitcast<s16[8]>(a), bitcast<s16[8]>(b)) >> 16);
+		}
+		else
+		{
+			set_vr(op.rt, smull(zshuffle(bitcast<s16[8]>(a), 0, 2, 4, 6), zshuffle(bitcast<s16[8]>(b), 0, 2, 4, 6)) >> 16);
+		}
+#else
 		set_vr(op.rt, (get_vr<s32[4]>(op.ra) << 16 >> 16) * (get_vr<s32[4]>(op.rb) << 16 >> 16) >> 16);
+#endif
 	}
 
 	void CEQH(spu_opcode_t op)
@@ -6243,7 +6511,20 @@ public:
 
 	void MPYU(spu_opcode_t op)
 	{
+#ifdef ARCH_ARM64
+		const auto [a, b] = get_vrs<u32[4]>(op.ra, op.rb);
+
+		if (m_use_sve2_128)
+		{
+			set_vr(op.rt, sve_umullb(bitcast<u16[8]>(a), bitcast<u16[8]>(b)));
+		}
+		else
+		{
+			set_vr(op.rt, umull(zshuffle(bitcast<u16[8]>(a), 0, 2, 4, 6), zshuffle(bitcast<u16[8]>(b), 0, 2, 4, 6)));
+		}
+#else
 		set_vr(op.rt, mpyu(get_vr(op.ra), get_vr(op.rb)));
+#endif
 	}
 
 	void CEQB(spu_opcode_t op)
@@ -6253,8 +6534,15 @@ public:
 
 	void FSMBI(spu_opcode_t op)
 	{
+#ifdef ARCH_ARM64
+		const auto masks = build<u8[16]>(1, 2, 4, 8, 16, 32, 64, 128, 1, 2, 4, 8, 16, 32, 64, 128);
+		const auto bytes = bitcast<u8[16]>(vsplat<u16[8]>(get_imm<u16>(op.i16)));
+		const auto bits = zshuffle(bytes, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1);
+		set_vr(op.rt, sext<s8[16]>((bits & masks) == masks));
+#else
 		const auto m = bitcast<bool[16]>(get_imm<u16>(op.i16));
 		set_vr(op.rt, sext<s8[16]>(m));
+#endif
 	}
 
 	void IL(spu_opcode_t op)
@@ -6385,12 +6673,34 @@ public:
 
 	void MPYI(spu_opcode_t op)
 	{
+#ifdef ARCH_ARM64
+		if (m_use_sve2_128)
+		{
+			set_vr(op.rt, sve_smullb(bitcast<s16[8]>(get_vr<s32[4]>(op.ra)), get_imm<s16[8]>(op.si10)));
+		}
+		else
+		{
+			set_vr(op.rt, smull(zshuffle(bitcast<s16[8]>(get_vr<s32[4]>(op.ra)), 0, 2, 4, 6), get_imm<s16[4]>(op.si10)));
+		}
+#else
 		set_vr(op.rt, (get_vr<s32[4]>(op.ra) << 16 >> 16) * get_imm<s32[4]>(op.si10));
+#endif
 	}
 
 	void MPYUI(spu_opcode_t op)
 	{
+#ifdef ARCH_ARM64
+		if (m_use_sve2_128)
+		{
+			set_vr(op.rt, sve_umullb(bitcast<u16[8]>(get_vr<u32[4]>(op.ra)), get_imm<u16[8]>(op.si10)));
+		}
+		else
+		{
+			set_vr(op.rt, umull(zshuffle(bitcast<u16[8]>(get_vr<u32[4]>(op.ra)), 0, 2, 4, 6), get_imm<u16[4]>(op.si10)));
+		}
+#else
 		set_vr(op.rt, (get_vr(op.ra) << 16 >> 16) * (get_imm(op.si10) & 0xffff));
+#endif
 	}
 
 	void CEQI(spu_opcode_t op)
@@ -6757,6 +7067,73 @@ public:
 		const auto a = get_vr<u8[16]>(op.ra);
 		const auto b = get_vr<u8[16]>(op.rb);
 
+#ifdef ARCH_ARM64
+		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
+		{
+			if (auto [ok, bs] = match_expr(b, byteswap(match<u8[16]>())); ok)
+			{
+				if (op.ra == op.rb)
+				{
+					if (perm_only)
+					{
+						const auto cm = eval(c & 0x0f);
+						set_vr(op.rt4, tbl(as, cm));
+						return;
+					}
+
+					const auto x = tbl(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
+					const auto cm = eval(c & 0x8f);
+					set_vr(op.rt4, tbx(x, as, cm));
+					return;
+				}
+
+				if (perm_only)
+				{
+					const auto cm = eval(c & 0x1f);
+					set_vr(op.rt4, tbl2(as, bs, cm));
+					return;
+				}
+
+				const auto x = tbl(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
+				const auto cm = eval(c & 0x9f);
+				set_vr(op.rt4, tbx2(x, as, bs, cm));
+				return;
+			}
+		}
+
+		if (op.ra == op.rb && !m_interp_magn)
+		{
+			if (perm_only)
+			{
+				const auto cm = eval(c & 0x0f);
+				const auto cr = eval(cm ^ 0x0f);
+				set_vr(op.rt4, tbl(a, cr));
+				return;
+			}
+
+			const auto x = tbl(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
+			const auto cm = eval(c & 0x8f);
+			const auto cr = eval(cm ^ 0x0f);
+			set_vr(op.rt4, tbx(x, a, cr));
+			return;
+		}
+
+		if (perm_only)
+		{
+			const auto cm = eval(c & 0x9f);
+			const auto cr = eval(cm ^ 0x0f);
+			set_vr(op.rt4, tbl2(a, b, cr));
+			return;
+		}
+
+		const auto x = tbl(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
+		// AND should be before XOR so that llvm can combine them into BCAX
+		// Though for some reason it doesn't seem to be doing that.
+		const auto cm = eval(c & ~0x60);
+		const auto cr = eval(cm ^ 0x0f);
+		set_vr(op.rt4, tbx2(x, a, b, cr));
+		return;
+#else
 		// Data with swapped endian from a load instruction
 		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
 		{
@@ -6900,11 +7277,25 @@ public:
 			set_vr(op.rt4, select_by_bit4(cr, ax, bx));
 		else
 			set_vr(op.rt4, select_by_bit4(cr, ax, bx) | x);
+#endif
 	}
 
 	void MPYA(spu_opcode_t op)
 	{
+#ifdef ARCH_ARM64
+		const auto [a, b] = get_vrs<s32[4]>(op.ra, op.rb);
+
+		if (m_use_sve2_128)
+		{
+			set_vr(op.rt4, sve_smlalb(get_vr<s32[4]>(op.rc), bitcast<s16[8]>(a), bitcast<s16[8]>(b)));
+		}
+		else
+		{
+			set_vr(op.rt4, smull(zshuffle(bitcast<s16[8]>(a), 0, 2, 4, 6), zshuffle(bitcast<s16[8]>(b), 0, 2, 4, 6)) + get_vr<s32[4]>(op.rc));
+		}
+#else
 		set_vr(op.rt4, (get_vr<s32[4]>(op.ra) << 16 >> 16) * (get_vr<s32[4]>(op.rb) << 16 >> 16) + get_vr<s32[4]>(op.rc));
+#endif
 	}
 
 	void FSCRRD(spu_opcode_t op) //
@@ -7148,15 +7539,15 @@ public:
 		{
 			const value_t<f32[4]> ab[2]{a, b};
 
-			std::bitset<2> safe_int_compare(0);
-			std::bitset<2> safe_finite_compare(0);
+			bit_set<2> safe_int_compare(0);
+			bit_set<2> safe_finite_compare(0);
 
 			for (u32 i = 0; i < 2; i++)
 			{
 				if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, __LINE__ + i); ok)
 				{
-					safe_int_compare.set(i);
-					safe_finite_compare.set(i);
+					safe_int_compare.set_unsafe(i);
+					safe_finite_compare.set_unsafe(i);
 
 					for (u32 j = 0; j < 4; j++)
 					{
@@ -7170,8 +7561,8 @@ public:
 							// Note: Technically this optimization is accurate for any positive value, but due to the fact that
 							// we don't produce "extended range" values the same way as real hardware, it's not safe to apply
 							// this optimization for values outside of the range of x86 floating point hardware.
-							safe_int_compare.reset(i);
-							if ((value & 0x7fffffffu) >= 0x7f7ffffeu) safe_finite_compare.reset(i);
+							safe_int_compare.reset_unsafe(i);
+							if ((value & 0x7fffffffu) >= 0x7f7ffffeu) safe_finite_compare.reset_unsafe(i);
 						}
 					}
 				}
@@ -7179,12 +7570,12 @@ public:
 
 			if (m_reduced_loop_info && m_reduced_loop_info->is_gpr_not_NaN_hint(op.ra))
 			{
-				safe_finite_compare.set(0);
+				safe_finite_compare.set_unsafe(0);
 			}
 
 			if (m_reduced_loop_info && m_reduced_loop_info->is_gpr_not_NaN_hint(op.rb))
 			{
-				safe_finite_compare.set(1);
+				safe_finite_compare.set_unsafe(1);
 			}
 
 			if (safe_int_compare.any())
@@ -7192,12 +7583,12 @@ public:
 				return eval(sext<s32[4]>(bitcast<s32[4]>(a) > bitcast<s32[4]>(b)));
 			}
 
-			if  (safe_finite_compare.test(1))
+			if (safe_finite_compare.test(1u))
 			{
 				return eval(sext<s32[4]>(fcmp_uno(clamp_negative_smax(a) > b)));
 			}
 
-			if  (safe_finite_compare.test(0))
+			if (safe_finite_compare.test(0u))
 			{
 				return eval(sext<s32[4]>(fcmp_ord(a > clamp_smax(b))));
 			}
@@ -7205,7 +7596,22 @@ public:
 			const auto ai = eval(bitcast<s32[4]>(a));
 			const auto bi = eval(bitcast<s32[4]>(b));
 
+// Awful workaround to some awful LLVM codegen via inline assembly
+// Once it is solved upstream we should remove it - Whatcookie
+// https://github.com/llvm/llvm-project/issues/197360
+#if defined(ARCH_ARM64)
+			const auto select_bsl = [&](auto mask, auto t, auto f)
+			{
+				const auto asm_type = llvm::FunctionType::get(get_type<s32[4]>(), {get_type<s32[4]>(), get_type<s32[4]>(), get_type<s32[4]>()}, false);
+				const auto bsl_asm = llvm::InlineAsm::get(asm_type, "bsl $0.16b, $1.16b, $2.16b", "=w,w,w,0", false);
+
+				return value<s32[4]>(m_ir->CreateCall(asm_type, bsl_asm, {eval(sext<s32[4]>(t)).value, eval(sext<s32[4]>(f)).value, eval(sext<s32[4]>(mask)).value}));
+			};
+
+			return eval(sext<s32[4]>(fcmp_uno(a != b)) & select_bsl((ai & bi) >= 0, ai > bi, ai < bi));
+#else
 			return eval(sext<s32[4]>(fcmp_uno(a != b) & select((ai & bi) >= 0, ai > bi, ai < bi)));
+#endif		
 		};
 
 		set_vr(op.rt, fcgt(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb)));
@@ -7232,13 +7638,13 @@ public:
 
 			const value_t<f32[4]> ab[2]{a, b};
 
-			std::bitset<2> safe_int_compare(0);
+			bit_set<2> safe_int_compare(0);
 
 			for (u32 i = 0; i < 2; i++)
 			{
 				if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, __LINE__ + i); ok)
 				{
-					safe_int_compare.set(i);
+					safe_int_compare.set_unsafe(i);
 
 					for (u32 j = 0; j < 4; j++)
 					{
@@ -7248,7 +7654,7 @@ public:
 						if ((value & 0x7fffffffu) >= 0x7f7fffffu || !exponent)
 						{
 							// See above
-							safe_int_compare.reset(i);
+							safe_int_compare.reset_unsafe(i);
 						}
 					}
 				}
@@ -7506,15 +7912,15 @@ public:
 
 			const value_t<f32[4]> ab[2]{a, b};
 
-			std::bitset<2> safe_float_compare(0);
-			std::bitset<2> safe_int_compare(0);
+			bit_set<2> safe_float_compare(0);
+			bit_set<2> safe_int_compare(0);
 
 			for (u32 i = 0; i < 2; i++)
 			{
 				if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, __LINE__ + i); ok)
 				{
-					safe_float_compare.set(i);
-					safe_int_compare.set(i);
+					safe_float_compare.set_unsafe(i);
+					safe_int_compare.set_unsafe(i);
 
 					for (u32 j = 0; j < 4; j++)
 					{
@@ -7524,13 +7930,13 @@ public:
 						// unsafe if nan
 						if (exponent == 255)
 						{
-							safe_float_compare.reset(i);
+							safe_float_compare.reset_unsafe(i);
 						}
 
 						// unsafe if denormal or 0
 						if (!exponent)
 						{
-							safe_int_compare.reset(i);
+							safe_int_compare.reset_unsafe(i);
 						}
 					}
 				}
@@ -7580,15 +7986,15 @@ public:
 
 			const value_t<f32[4]> ab[2]{a, b};
 
-			std::bitset<2> safe_float_compare(0);
-			std::bitset<2> safe_int_compare(0);
+			bit_set<2> safe_float_compare(0);
+			bit_set<2> safe_int_compare(0);
 
 			for (u32 i = 0; i < 2; i++)
 			{
 				if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, __LINE__ + i); ok)
 				{
-					safe_float_compare.set(i);
-					safe_int_compare.set(i);
+					safe_float_compare.set_unsafe(i);
+					safe_int_compare.set_unsafe(i);
 
 					for (u32 j = 0; j < 4; j++)
 					{
@@ -7598,13 +8004,13 @@ public:
 						// unsafe if nan
 						if (exponent == 255)
 						{
-							safe_float_compare.reset(i);
+							safe_float_compare.reset_unsafe(i);
 						}
 
 						// unsafe if denormal or 0
 						if (!exponent)
 						{
-							safe_int_compare.reset(i);
+							safe_int_compare.reset_unsafe(i);
 						}
 					}
 				}
@@ -8044,10 +8450,26 @@ public:
 
 			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
 			{
+#ifdef ARCH_ARM64
+				if (m_use_sve2_128)
+				{
+					const auto ca = eval(clamp_smax(a));
+					const auto cb = eval(clamp_smax(b));
+					return value<f32[4]>(sve_fnmls(c.value, ca.value, cb.value));
+				}
+#endif
+
 				return fma32x4(clamp_smax(a), clamp_smax(b), eval(-c));
 			}
 			else
 			{
+#ifdef ARCH_ARM64
+				if (m_use_sve2_128)
+				{
+					return value<f32[4]>(sve_fnmls(c.value, a.value, b.value));
+				}
+#endif
+
 				return fma32x4(a, b, eval(-c));
 			}
 		});
@@ -9051,7 +9473,7 @@ public:
 
 			for (u32 target : tfound->second)
 			{
-				if (m_block_info[target / 4])
+				if (target != SPU_LS_SIZE && m_block_info[target / 4])
 				{
 					targets.emplace(target, nullptr);
 				}

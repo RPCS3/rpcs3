@@ -44,6 +44,7 @@
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">AL_LIBTYPE_STATIC;MINIUPNP_STATICLIB;HAVE_VULKAN;HAVE_SDL3;ZLIB_CONST;WOLFSSL_USER_SETTINGS;CURL_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">AL_LIBTYPE_STATIC;MINIUPNP_STATICLIB;HAVE_VULKAN;HAVE_SDL3;ZLIB_CONST;WOLFSSL_USER_SETTINGS;CURL_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions Condition="'$(EnableLibUsbWindowsHotplug)' == 'true'">LIBUSB_WINDOWS_HOTPLUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(AdditionalModuleDependencies)</AdditionalModuleDependencies>
       <AdditionalModuleDependencies Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(AdditionalModuleDependencies)</AdditionalModuleDependencies>
     </ClCompile>
@@ -87,6 +88,7 @@
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="Emu\Io\GameTablet.cpp" />
+    <ClCompile Include="Emu\Io\gem_config.cpp" />
     <ClCompile Include="Emu\Io\GHLtar.cpp" />
     <ClCompile Include="Emu\Io\GunCon3.cpp" />
     <ClCompile Include="Emu\Io\midi_config_types.cpp" />
@@ -780,9 +782,11 @@
     <ClInclude Include="Emu\system_config_types.h" />
     <ClInclude Include="Emu\vfs_config.h" />
     <ClInclude Include="Loader\disc.h" />
+    <ClInclude Include="Loader\iso_cache.h" />
     <ClInclude Include="Loader\iso_validation.h" />
     <ClInclude Include="Loader\mself.hpp" />
     <ClInclude Include="util\atomic.hpp" />
+    <ClInclude Include="util\bit_set.hpp" />
     <ClInclude Include="util\bless.hpp" />
     <ClInclude Include="util\pair.hpp" />
     <ClInclude Include="util\tuple.hpp" />

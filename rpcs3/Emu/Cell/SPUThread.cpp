@@ -1757,7 +1757,7 @@ void spu_thread::init_spu_decoder()
 }
 
 spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id, bool is_isolated, u32 option)
-	: cpu_thread(idm::last_id())
+	: cpu_thread(idm::last_id<spu_thread>())
 	, group(group)
 	, index(index)
 	, thread_type(group ? spu_type::threaded : is_isolated ? spu_type::isolated : spu_type::raw)
@@ -1812,14 +1812,14 @@ void spu_thread::serialize_common(utils::serial& ar)
 	}
 	else
 	{
-		const u8 count = ar;
+		const u8 count{ar};
 		ar(std::span(vals, count));
 		ch_in_mbox.set_values(count, vals[0], vals[1], vals[2], vals[3]);
 	}
 }
 
 spu_thread::spu_thread(utils::serial& ar, lv2_spu_group* group)
-	: cpu_thread(idm::last_id())
+	: cpu_thread(idm::last_id<spu_thread>())
 	, group(group)
 	, index(ar)
 	, thread_type(group ? spu_type::threaded : ar.pop<u8>() ? spu_type::isolated : spu_type::raw)
@@ -6430,8 +6430,6 @@ extern void resume_spu_thread_group_from_waiting(spu_thread& spu, std::array<sha
 
 bool spu_thread::stop_and_signal(u32 code)
 {
-	spu_log.trace("stop_and_signal(code=0x%x)", code);
-
 	auto set_status_npc = [&]()
 	{
 		status_npc.atomic_op([&](status_npc_sync_var& state)
@@ -6445,6 +6443,8 @@ bool spu_thread::stop_and_signal(u32 code)
 
 	if (get_type() >= spu_type::raw)
 	{
+		spu_log.warning("stop_and_signal(code=0x%x)", code);
+
 		// Save next PC and current SPU Interrupt Status
 		state += cpu_flag::stop + cpu_flag::wait + cpu_flag::ret;
 		set_status_npc();
@@ -7200,11 +7200,13 @@ s64 spu_channel::pop_wait(cpu_thread& spu, bool pop)
 
 	lv2_obj::notify_all();
 
-	const u32 wait_on_val = static_cast<u32>(((pop ? bit_occupy : 0) | bit_wait) >> 32);
+	old = (pop ? bit_occupy : 0) | bit_wait;
 
 	while (true)
 	{
-		thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&data)[1], wait_on_val);
+		const usz is_le = std::endian::native == std::endian::little ? 1 : 0;
+		thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&data)[is_le], read_from_ptr<u32>(reinterpret_cast<char*>(&old), is_le * 4));
+
 		old = data;
 
 		if (!(old & bit_wait))
@@ -7248,7 +7250,7 @@ bool spu_channel::push_wait(cpu_thread& spu, u32 value, bool push)
 	{
 		if (data & bit_count) [[unlikely]]
 		{
-			jostling_value.release(push ? (bit_occupy | value) : static_cast<u32>(data));
+			jostling_value.release(push ? value : static_cast<u32>(data));
 			data |= (push ? bit_occupy : 0) | bit_wait;
 		}
 		else if (push)
@@ -7288,7 +7290,8 @@ bool spu_channel::push_wait(cpu_thread& spu, u32 value, bool push)
 			return !data.bit_test_reset(off_wait);
 		}
 
-		thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&data)[1], u32(state >> 32));
+		const usz is_le = std::endian::native == std::endian::little ? 1 : 0;
+		thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&data)[is_le], u32(state >> 32));
 		state = data;
 	}
 }

@@ -135,7 +135,7 @@ namespace utils
 			}
 			else
 			{
-				result.push_back(fmt::format("rpcs3@0xp", pointer));
+				result.push_back(fmt::format("rpcs3@0x%p", pointer));
 			}
 		}
 

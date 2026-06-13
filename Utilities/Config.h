@@ -717,6 +717,11 @@ namespace cfg
 			m_value = std::string(value);
 			return true;
 		}
+
+		void set(std::string_view value)
+		{
+			m_value = std::string(value);
+		}
 	};
 
 	// Simple set entry (TODO: template for various types)

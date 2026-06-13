@@ -41,6 +41,7 @@ struct cfg_root : cfg::node
 		cfg::_bool spu_accurate_reservations{ this, "Accurate SPU Reservations", true };
 		cfg::_bool accurate_cache_line_stores{ this, "Accurate Cache Line Stores", false };
 		cfg::_bool rsx_accurate_res_access{this, "Accurate RSX reservation access", false, true};
+		cfg::_bool ppu_reservation_priority_over_spu{this, "PPU Reservation Priority Over SPUs", false, true};
 
 		struct fifo_setting : public cfg::_enum<rsx_fifo_mode>
 		{
@@ -147,6 +148,7 @@ struct cfg_root : cfg::node
 		cfg::_bool disable_video_output{ this, "Disable Video Output", false, true };
 		cfg::_bool disable_vertex_cache{ this, "Disable Vertex Cache", false };
 		cfg::_bool disable_FIFO_reordering{ this, "Disable FIFO Reordering", false };
+		cfg::_bool emulate_depth_compare{ this, "Emulate Special Depth Comparison", false };
 		cfg::_bool frame_skip_enabled{ this, "Enable Frame Skip", false, true };
 		cfg::_bool force_cpu_blit_processing{ this, "Force CPU Blit", false, true }; // Debugging option
 		cfg::_bool disable_on_disk_shader_cache{ this, "Disable On-Disk Shader Cache", false };
@@ -294,6 +296,7 @@ struct cfg_root : cfg::node
 		cfg::_bool lock_overlay_input_to_player_one{this, "Lock overlay input to player one", false, true};
 		cfg::string midi_devices{this, "Emulated Midi devices", "Keyboardßßß@@@Keyboardßßß@@@Keyboardßßß@@@"};
 		cfg::_bool load_sdl_mappings{ this, "Load SDL GameController Mappings", true };
+		cfg::_bool mouse_based_gyro_enabled{ this, "Mouse-based gyro enabled", false, true };
 		cfg::_bool pad_debug_overlay{ this, "IO Debug overlay", false, true };
 		cfg::_bool mouse_debug_overlay{ this, "Mouse Debug overlay", false, true };
 		cfg::uint<1, 180> fake_move_rotation_cone_h{ this, "Fake Move Rotation Cone", 10, true };

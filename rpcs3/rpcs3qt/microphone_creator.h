@@ -15,12 +15,12 @@ class microphone_creator : public QObject
 
 public:
 	microphone_creator();
-	QString get_none();
+	QString get_none() const;
 	std::string set_device(u32 num, const QString& text);
 	void parse_devices(std::string_view list);
 	void refresh_list();
-	QStringList get_microphone_list() const;
-	std::array<std::string, 4> get_selection_list() const;
+	const QStringList& get_microphone_list() const;
+	const std::array<std::string, 4>& get_selection_list() const;
 
 private:
 	QStringList m_microphone_list;

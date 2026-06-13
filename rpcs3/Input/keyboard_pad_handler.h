@@ -93,7 +93,7 @@ public:
 	static std::string GetMouseName(u32 button);
 	static QStringList GetKeyNames(const QKeyEvent* keyEvent);
 	static std::string GetKeyName(const QKeyEvent* keyEvent, bool with_modifiers);
-	static std::string GetKeyName(const u32& keyCode);
+	static std::string GetKeyName(u32 keyCode);
 	static std::vector<std::set<u32>> GetKeyCombos(const std::string& cfg_string);
 	static u32 GetKeyCode(const QString& keyName);
 
@@ -128,11 +128,6 @@ private:
 	f32 m_r_stick_lerp_factor = 1.0f;
 	u32 m_l_stick_multiplier = 100;
 	u32 m_r_stick_multiplier = 100;
-
-	static constexpr usz max_sticks = 4;
-	std::array<u8, max_sticks> m_stick_min{ 0, 0, 0, 0 };
-	std::array<u8, max_sticks> m_stick_max{ 128, 128, 128, 128 };
-	std::array<u8, max_sticks> m_stick_val{ 128, 128, 128, 128 };
 
 	// Mouse Movements
 	steady_clock::time_point m_last_mouse_move_left;

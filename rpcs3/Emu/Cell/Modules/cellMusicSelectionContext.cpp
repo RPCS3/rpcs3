@@ -267,9 +267,10 @@ void music_selection_context::set_track(std::string_view track)
 
 	for (usz i = 0; i < playlist.size(); i++)
 	{
-		cellMusicSelectionContext.error("set_track: Comparing track '%s' vs '%s'", track, playlist[i]);
+		cellMusicSelectionContext.notice("set_track: Comparing track '%s' vs '%s'", track, playlist[i]);
 		if (track.ends_with(playlist[i]))
 		{
+			cellMusicSelectionContext.notice("set_track: Found track '%s': '%s'", track, playlist[i]);
 			first_track = current_track = static_cast<u32>(i);
 			return;
 		}
@@ -287,6 +288,8 @@ u32 music_selection_context::step_track(bool next)
 		return umax;
 	}
 
+	const std::string last_track = (current_track < playlist.size()) ? playlist[current_track] : "";
+
 	switch (repeat_mode)
 	{
 	case CELL_SEARCH_REPEATMODE_NONE:
@@ -298,7 +301,7 @@ u32 music_selection_context::step_track(bool next)
 			{
 				// We are at the end of the playlist.
 				cellMusicSelectionContext.notice("step_track: No more tracks to play in playlist...");
-				current_track = umax;
+				current_track = ::size32(playlist) - 1; // NOTE: We could use size instead of size - 1 to allow to use PREV to play the last track again.
 				return umax;
 			}
 		}
@@ -309,7 +312,6 @@ u32 music_selection_context::step_track(bool next)
 			{
 				// We are at the start of the playlist.
 				cellMusicSelectionContext.notice("step_track: No more tracks to play in playlist...");
-				current_track = umax;
 				return umax;
 			}
 
@@ -334,7 +336,7 @@ u32 music_selection_context::step_track(bool next)
 			// Play the previous track. Start with the last track if we reached the start of the playlist.
 			if (current_track == 0)
 			{
-				current_track = ::narrow<u32>(playlist.size() - 1);
+				current_track = ::size32(playlist) - 1;
 			}
 			else
 			{
@@ -365,6 +367,12 @@ u32 music_selection_context::step_track(bool next)
 			std::random_device rd;
 			auto engine = std::default_random_engine{rd()};
 			std::shuffle(std::begin(playlist), std::end(playlist), engine);
+
+			// Don't play the same track twice
+			if (last_track == ::at32(playlist, current_track))
+			{
+				current_track = (current_track + 1) % playlist.size();
+			}
 		}
 	}
 

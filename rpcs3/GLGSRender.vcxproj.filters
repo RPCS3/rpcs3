@@ -122,6 +122,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\GL\GLDMA.h" />
     <ClInclude Include="Emu\RSX\GL\GLResolveHelper.h" />
+    <ClInclude Include="Emu\RSX\GL\glutils\barriers.h">
+      <Filter>glutils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="glutils">

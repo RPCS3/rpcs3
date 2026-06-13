@@ -35,9 +35,7 @@ public:
 	/** Creates a settings object which reads in the config.yml file at rpcs3/bin/%path%/config.yml
 	* Settings are only written when SaveSettings is called.
 	*/
-	emu_settings();
-
-	bool Init();
+	emu_settings(std::shared_ptr<render_creator> r_creator);
 
 	/** Connects a combo box with the target settings type*/
 	void EnhanceComboBox(QComboBox* combobox, emu_settings_type type, bool is_ranged = false, bool use_max = false, int max = 0, bool sorted = false, bool strict = true);
@@ -94,7 +92,7 @@ public:
 	emu_settings_type FindSettingsType(const cfg::_base* node) const;
 
 	/** Gets all the renderer info for gpu settings.*/
-	render_creator* m_render_creator = nullptr;
+	std::shared_ptr<render_creator> m_render_creator;
 
 	/** Gets a list of all the microphones available.*/
 	microphone_creator m_microphone_creator;

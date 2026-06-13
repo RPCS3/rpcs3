@@ -54,6 +54,9 @@
     <ClCompile Condition="'$(Configuration)'=='Release'">
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
+    <ClCompile Condition="'$(EnableLibUsbWindowsHotplug)' == 'true'">
+      <PreprocessorDefinitions>LIBUSB_WINDOWS_HOTPLUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
     <Lib>
       <OutputFile>$(OutDir)libusb-1.0.lib</OutputFile>
     </Lib>
@@ -64,6 +67,7 @@
     <ClCompile Include="libusb\libusb\hotplug.c" />
     <ClCompile Include="libusb\libusb\io.c" />
     <ClCompile Include="libusb\libusb\os\events_windows.c" />
+    <ClCompile Condition="'$(EnableLibUsbWindowsHotplug)' == 'true'" Include="libusb\libusb\os\windows_hotplug.c" />
     <ClCompile Include="libusb\libusb\strerror.c" />
     <ClCompile Include="libusb\libusb\sync.c" />
     <ClCompile Include="libusb\libusb\os\threads_windows.c" />
@@ -72,6 +76,7 @@
     <ClCompile Include="libusb\libusb\os\windows_winusb.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Condition="'$(EnableLibUsbWindowsHotplug)' == 'true'" Include="libusb\libusb\os\windows_hotplug.h" />
     <ClInclude Include="libusb\msvc\config.h" />
     <ClInclude Include="libusb\libusb\hotplug.h" />
     <ClInclude Include="libusb\libusb\libusb.h" />

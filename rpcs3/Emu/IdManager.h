@@ -591,6 +591,20 @@ public:
 		return id_manager::g_id;
 	}
 
+	// Get last ID with type validation
+	template <typename T>
+	static inline u32 last_id(std::source_location src = std::source_location::current())
+	{
+		const u32 last = id_manager::g_id;
+
+		if (get_index<T>(last) >= T::id_count)
+		{
+			fmt::raw_range_error(src, last, T::id_base);
+		}
+
+		return last;
+	}
+
 	// Add a new ID of specified type with specified constructor arguments (returns object or null_ptr)
 	template <typename T, typename Make = T, typename... Args> requires (std::is_constructible_v<Make, Args&&...>)
 	static inline stx::shared_ptr<Make> make_ptr(Args&&... args)

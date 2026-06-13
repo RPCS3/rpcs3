@@ -579,6 +579,12 @@
     <ClCompile Include="rpcs3qt\call_stack_list.cpp">
       <Filter>Gui\debugger</Filter>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_anaglyph_settings_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_anaglyph_settings_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_breakpoint_list.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
@@ -851,12 +857,6 @@
     </ClCompile>
     <ClCompile Include="rpcs3qt\render_creator.cpp">
       <Filter>Gui\settings</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Debug\moc_render_creator.cpp">
-      <Filter>Generated Files\Debug</Filter>
-    </ClCompile>
-    <ClCompile Include="QTGeneratedFiles\Release\moc_render_creator.cpp">
-      <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\config_adapter.cpp">
       <Filter>Gui\settings</Filter>

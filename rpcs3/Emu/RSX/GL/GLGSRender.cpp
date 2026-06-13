@@ -1307,11 +1307,11 @@ void GLGSRender::do_local_task(rsx::FIFO::state state)
 	{
 		std::lock_guard lock(queue_guard);
 
-		work_queue.remove_if([](auto &q) { return q.received; });
+		work_queue.remove_if([](auto &q) { return q.received.load(); });
 
 		for (auto& q : work_queue)
 		{
-			if (q.processed) continue;
+			if (q.processed.load()) continue;
 
 			gl::command_context cmd{ gl_state };
 			q.result = m_gl_texture_cache.flush_all(cmd, q.section_data);

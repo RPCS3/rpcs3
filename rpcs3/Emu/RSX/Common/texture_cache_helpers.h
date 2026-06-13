@@ -968,9 +968,10 @@ namespace rsx
 			// Check for upscaling if requested
 			if (apply_upscaling)
 			{
+				const auto base_mip = as_surface_type(sections.front());
 				auto& mip = sections.back();
 				std::tie(mip.dst_w, mip.dst_h) = rsx::apply_resolution_scale<true>(
-					as_surface_type(mip)->resolution_scaling_config,
+					base_mip->resolution_scaling_config,
 					mip.dst_w, mip.dst_h, level0_attr.width, level0_attr.height);
 			}
 

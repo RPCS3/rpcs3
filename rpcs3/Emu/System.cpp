@@ -121,7 +121,8 @@ namespace rsx
 }
 
 Emulator::Emulator() noexcept
-	: m_default_renderer(video_renderer::null)
+	: m_supported_renderers({video_renderer::null})
+	, m_default_renderer(video_renderer::null)
 {
 	s_emulator_available = true;
 }
@@ -279,9 +280,41 @@ void init_fxo_for_exec(utils::serial* ar, bool full = false)
 	}
 }
 
-// Some settings are not allowed in certain PPU decoders
+// Some settings are not allowed with certain conditions
 static void fixup_settings(const psf::registry* _psf)
 {
+	// Disable some incompatible settings in headless mode
+	if (Emu.IsHeadless())
+	{
+		if (g_cfg.video.renderer != video_renderer::null)
+		{
+			sys_log.warning("The video renderer '%s' is currently not supported in headless mode and will therefore be set to '%s'.", g_cfg.video.renderer.get(), video_renderer::null);
+			g_cfg.video.renderer.set(video_renderer::null);
+		}
+
+		if (g_cfg.io.camera == camera_handler::qt)
+		{
+			sys_log.warning("The camera handler '%s' is currently not supported in headless mode and will therefore be set to '%s'.", g_cfg.io.camera.get(), camera_handler::null);
+			g_cfg.io.camera.set(camera_handler::null);
+		}
+
+		if (g_cfg.audio.music == music_handler::qt)
+		{
+			sys_log.warning("The music handler '%s' is currently not supported in headless mode and will therefore be set to '%s'.", g_cfg.audio.music.get(), music_handler::null);
+			g_cfg.audio.music.set(music_handler::null);
+		}
+	}
+	else
+	{
+		// Make sure we have a valid renderer
+		if (!Emu.GetSupportedRenderers().contains(g_cfg.video.renderer.get()))
+		{
+			sys_log.warning("The video renderer '%s' is not supported on this device and will therefore be set to '%s'.", g_cfg.video.renderer.get(), Emu.GetDefaultRenderer());
+			g_cfg.video.renderer.set(Emu.GetDefaultRenderer());
+		}
+	}
+
+	// Some settings are not allowed in certain PPU decoders
 	if (g_cfg.core.ppu_decoder != ppu_decoder_type::_static)
 	{
 		if (g_cfg.core.ppu_use_nj_bit)
@@ -442,11 +475,10 @@ void Emulator::Init()
 	g_cfg.name.clear();
 
 	// Not all renderers are known at compile time, so set a provided default if possible
-	if (m_default_renderer == video_renderer::vulkan && !m_default_graphics_adapter.empty())
-	{
-		g_cfg.video.renderer.set(m_default_renderer);
-		g_cfg.video.vk.adapter.from_string(m_default_graphics_adapter);
-	}
+	ensure(m_supported_renderers.contains(m_default_renderer));
+	ensure(!(m_default_renderer == video_renderer::vulkan && m_default_graphics_adapter.empty()));
+	g_cfg.video.renderer.set(m_default_renderer);
+	g_cfg.video.vk.adapter.set(m_default_graphics_adapter);
 
 	g_cfg_defaults = g_cfg.to_string();
 
@@ -2724,7 +2756,7 @@ void Emulator::FixGuestTime()
 			// Mark a known savestate location and the one we try to boot (in case we boot a moved/copied savestate)
 			if (g_cfg.savestate.suspend_emu)
 			{
-				for (std::string old_path : std::initializer_list<std::string>{m_ar ? m_path_old : "", m_title_id.empty() ? "" : get_savestate_file(m_title_id, m_path_old, -1)})
+				for (const std::string& old_path : {m_ar ? m_path_old : ""s, m_title_id.empty() ? ""s : get_savestate_file(m_title_id, m_path_old, -1)})
 				{
 					if (old_path.empty())
 					{
@@ -3890,6 +3922,11 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 					tty_buffer.resize(tty_read_fd.read_at(m_tty_file_init_pos, tty_buffer.data(), tty_buffer.size()));
 					tty_read_fd.close();
 
+					if (!tty_buffer.empty() && std::isspace(tty_buffer.back()))
+					{
+						tty_buffer.resize(tty_buffer.find_last_not_of(" \f\n\r\t\v"sv) + 1);
+					}
+
 					if (!tty_buffer.empty())
 					{
 						// Mark start and end very clearly with RPCS3 put in it
@@ -3923,6 +3960,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 						std::string_view to_log = not_logged;
 						to_log = to_log.substr(0, 0x8000);
 						to_log = to_log.substr(0, utils::add_saturate<usz>(to_log.rfind("\n========== SPU BLOCK"sv), 1));
+						to_log = to_log.substr(0, utils::add_saturate<usz>(to_log.find_last_of("\n"sv), 1));
 						to_remove = to_log.size();
 
 						std::string new_log(to_log);
@@ -3975,6 +4013,11 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 							out_added += text_append.size();
 							iter = index + 1;
+						}
+
+						if (!new_log.empty() && std::isspace(new_log.back()))
+						{
+							new_log.resize(new_log.find_last_not_of(" \f\n\r\t\v"sv) + 1);
 						}
 
 						// Cannot log it all at once due to technical reasons, split it to 8MB at maximum of whole functions
@@ -4068,8 +4111,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			if (after_kill_callback)
 			{
 				// Make after_kill_callback empty before call
-				const auto callback = std::move(after_kill_callback);
-				callback();
+				std::exchange(ensure(after_kill_callback), nullptr)();
 			}
 		});
 	}));
@@ -4125,7 +4167,7 @@ game_boot_result Emulator::Restart(bool graceful, bool reset_path)
 	else
 	{
 		// Execute and empty the callback
-		::as_rvalue(std::move(Emu.after_kill_callback))();
+		std::exchange(ensure(Emu.after_kill_callback), nullptr)();
 	}
 
 	return game_boot_result::no_errors;

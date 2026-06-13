@@ -42,6 +42,7 @@ public:
 		const QString disable_vertex_cache         = tr("Disables the vertex cache.\nMight resolve missing or flickering graphics output.\nMay degrade performance.");
 		const QString disable_async_host_mm        = tr("Force host memory management calls to be inlined instead of handled asynchronously.\nThis can cause severe performance degradation and stuttering in some games.\nThis option is only needed by developers to debug problems with texture cache memory protection.");
 		const QString disable_spin_optimization    = tr("Disable SPU GETLLAR spin optimization.\nThis can cause severe performance degradation and stuttering in many games.\nThis option is only needed for a select number of games.");
+		const QString emulate_depth_compare        = tr("Emulate depth comparison operations where desktop hardware behavior differs from PS3, usually EQUAL comparison modes.\nFixes excessive shadow flickering and Z-fighting in some games.\nThis is most obvious in some games where the Z prepass depth format is different from the rasterization depth format, a scenario that will never work out correctly on compliant desktop hardware.");
 		const QString enable_spu_events_busy_loop  = tr("Enable SPU RdEventStat spin.\nThis increases CPU usage, this setting is beneficial for high-threaded CPUs (12+) with select number of games.");
 		const QString zcull_operation_mode         = tr("Changes ZCULL report synchronization behaviour. Experiment to find the best option for your game. Approximate mode is recommended for most games.\n· Precise is the most accurate to PS3 behaviour. Required for accurate visuals in some titles such as Demon's Souls and The Darkness.\n· Approximate is a much faster way to generate occlusion data which may not always match what the PS3 would generate. Works well with most PS3 games.\n· Relaxed changes the synchronization method completely and can greatly improve performance in some games or completely break others.");
 		const QString max_spurs_threads            = tr("Limits the maximum number of SPURS threads in each thread group.\nMay improve performance in some cases, especially on systems with limited number of hardware threads.\nLimiting the number of threads is likely to cause crashes; it's recommended to keep this at the default value.");
@@ -95,6 +96,7 @@ public:
 		const QString spu_block_size            = tr("This option controls the SPU analyser, particularly the size of compiled units. The Mega and Giga modes may improve performance by tying smaller units together, decreasing the number of compiled units but increasing their size.\nUse the Safe mode for maximum compatibility.");
 		const QString preferred_spu_threads     = tr("Some SPU stages are sensitive to race conditions and allowing a limited number at a time helps alleviate performance stalls.\nSetting this to a smaller value might improve performance and reduce stuttering in some games.\nLeave this on auto if performance is negatively affected when setting a small value.");
 		const QString max_cpu_preempt           = tr("Reduces CPU usage and power consumption, improving battery life on mobile devices. (0 means disabled)\nHigher values cause a more pronounced effect, but may cause audio or performance issues. A value of 50 or less is recommended.\nThis option forces an FPS limit because it's active when framerate is stable.\nThe lighter the game is on the hardware, the more power is saved by it. (until the preemption count barrier is reached)");
+		const QString ppu_reservation_priority  = tr("Give PPUs an execution advantage when the SPUs are using reservations.\nThis setting is recommended only for a few game for improving performance.\nDO NOT use it without being advised to due to potential performance degradation.");
 
 		// debug
 
@@ -254,6 +256,7 @@ public:
 		const QString show_move_cursor  = tr("Shows the raw position of the PS Move input.\nThis can be very helpful during calibration screens.");
 		const QString midi_devices      = tr("Select up to 3 emulated MIDI devices and their types.");
 		const QString sdl_mappings      = tr("Loads the SDL GameController database for improved gamepad compatibility. Only used in the SDL pad handler.");
+		const QString mouse_based_gyro  = tr("Enables mouse-based gyro emulation at game startup. It can also be toggled at any time with the associated hotkey.\nHold the right mouse button to activate gyro input: moving the mouse maps to the X and Z motion axes, and the scroll wheel maps to the Y axis. Release the button to reset the motion values.");
 
 		const QString lock_overlay_input_to_player_one  = tr("Locks the native overlay input to the first player.");
 

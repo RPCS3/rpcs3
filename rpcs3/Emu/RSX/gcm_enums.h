@@ -443,32 +443,35 @@ namespace gcm
 
 	enum
 	{
-		CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT = 0xe, ///< shader program exports the depth of the shaded fragment
-		CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS = 0x40, ///< shader program exports 32 bits registers values (instead of 16 bits ones)
+		CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT       = 0x0000000e, ///< shader program exports the depth of the shaded fragment
+		CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS    = 0x00000040, ///< shader program exports 32 bits registers values (instead of 16 bits ones)
 
 		// Other known flags
-		RSX_SHADER_CONTROL_USED_REGS_MASK = 0xf,
-		RSX_SHADER_CONTROL_USED_TEMP_REGS_MASK = 0xff << 24,
-		RSX_SHADER_CONTROL_USES_KIL = 0x80,   // program uses KIL op
-		RSX_SHADER_CONTROL_UNKNOWN0 = 0x400,  // seemingly always set
-		RSX_SHADER_CONTROL_UNKNOWN1 = 0x8000, // seemingly set when srgb packer is used??
+		RSX_SHADER_CONTROL_USED_REGS_MASK           = 0x0000000f,
+		RSX_SHADER_CONTROL_USED_TEMP_REGS_MASK      = 0xff000000,
+
+		RSX_SHADER_CONTROL_USES_KIL                 = 0x00000080,   // program uses KIL op
+		RSX_SHADER_CONTROL_UNKNOWN0                 = 0x00000400,  // seemingly always set
+		RSX_SHADER_CONTROL_UNKNOWN1                 = 0x00008000, // seemingly set when srgb packer is used??
 
 		// Custom
-		RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION = 0x0010000, // Rasterizing triangles and not lines or points
-		RSX_SHADER_CONTROL_INSTANCED_CONSTANTS     = 0x0020000, // Support instance ID offsets when loading constants
-		RSX_SHADER_CONTROL_INTERPRETER_MODEL       = 0x0040000, // Compile internals expecting interpreter
+		RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION  = 0x00010000, // Rasterizing triangles and not lines or points
+		RSX_SHADER_CONTROL_INSTANCED_CONSTANTS      = 0x00020000, // Support instance ID offsets when loading constants
+		RSX_SHADER_CONTROL_INTERPRETER_MODEL        = 0x00040000, // Compile internals expecting interpreter
 
-		RSX_SHADER_CONTROL_8BIT_FRAMEBUFFER        = 0x0080000, // Quantize outputs to 8-bit FBO
-		RSX_SHADER_CONTROL_SRGB_FRAMEBUFFER        = 0x0100000, // Outputs are SRGB. We could reuse UNKNOWN1 but we just keep the namespaces separate.
+		RSX_SHADER_CONTROL_8BIT_FRAMEBUFFER         = 0x00080000, // Quantize outputs to 8-bit FBO
+		RSX_SHADER_CONTROL_SRGB_FRAMEBUFFER         = 0x00100000, // Outputs are SRGB. We could reuse UNKNOWN1 but we just keep the namespaces separate.
 
-		RSX_SHADER_CONTROL_TEXTURE_ALPHA_KILL      = 0x0200000, // Uses alpha kill on texture input
-		RSX_SHADER_CONTROL_ALPHA_TEST              = 0x0400000, // Uses alpha test on the outputs
-		RSX_SHADER_CONTROL_POLYGON_STIPPLE         = 0x0800000, // Uses polygon stipple for dithered rendering
-		RSX_SHADER_CONTROL_ALPHA_TO_COVERAGE       = 0x1000000, // Alpha to coverage
+		RSX_SHADER_CONTROL_TEXTURE_ALPHA_KILL       = 0x00200000, // Uses alpha kill on texture input
+		RSX_SHADER_CONTROL_ALPHA_TEST               = 0x00400000, // Uses alpha test on the outputs
+		RSX_SHADER_CONTROL_POLYGON_STIPPLE          = 0x00800000, // Uses polygon stipple for dithered rendering
+		RSX_SHADER_CONTROL_ALPHA_TO_COVERAGE        = 0x01000000, // Alpha to coverage
 
-		RSX_SHADER_CONTROL_DISABLE_EARLY_Z         = 0x2000000, // Do not allow early-Z optimizations on this shader
+		RSX_SHADER_CONTROL_DISABLE_EARLY_Z          = 0x02000000, // Do not allow early-Z optimizations on this shader
 
-		RSX_SHADER_CONTROL_TEXTURE_FORMAT_CONVERT  = 0x4000000, // Allow format conversions (BX2, SNORM, SRGB, RENORM)
+		RSX_SHADER_CONTROL_TEXTURE_FORMAT_CONVERT   = 0x04000000, // Allow format conversions (BX2, SNORM, SRGB, RENORM)
+		RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE    = 0x08000000, // Emulate depth comparisons
+		RSX_SHADER_CONTROL_MULTISAMPLED_ZBUFFER     = 0x10000000, // Z buffer is multisampled. Only affects depth comparison behavior at this time.
 
 		// Meta
 		RSX_SHADER_CONTROL_META_USES_DISCARD       = (RSX_SHADER_CONTROL_USES_KIL | RSX_SHADER_CONTROL_TEXTURE_ALPHA_KILL | RSX_SHADER_CONTROL_ALPHA_TEST | RSX_SHADER_CONTROL_POLYGON_STIPPLE | RSX_SHADER_CONTROL_ALPHA_TO_COVERAGE)

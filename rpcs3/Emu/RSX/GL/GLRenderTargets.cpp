@@ -116,7 +116,8 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 		rsx::rtt_config_dirty |
 		rsx::rtt_config_contested |
 		rsx::rtt_config_valid |
-		rsx::rtt_cache_state_dirty);
+		rsx::rtt_cache_state_dirty |
+		rsx::pipeline_config_dirty);
 
 	get_framebuffer_layout(context, m_framebuffer_layout);
 	if (!m_graphics_state.test(rsx::rtt_config_valid))
