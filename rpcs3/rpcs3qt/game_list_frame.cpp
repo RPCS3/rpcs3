@@ -43,6 +43,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	, m_persistent_settings(std::move(persistent_settings))
 {
 	setObjectName("gamelist");
+	setFeatures(features() & ~QDockWidget::DockWidgetClosable);
 
 	m_game_list_actions = std::make_shared<game_list_actions>(this, m_gui_settings);
 

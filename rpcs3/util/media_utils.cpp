@@ -465,7 +465,7 @@ namespace utils
 		stop();
 	}
 
-	void audio_decoder::set_context(music_selection_context context)
+	void audio_decoder::set_context(music_selection_context&& context)
 	{
 		m_context = std::move(context);
 	}
@@ -477,6 +477,8 @@ namespace utils
 
 	void audio_decoder::clear()
 	{
+		media_log.notice("audio_decoder: Clear data...");
+
 		track_fully_decoded = 0;
 		track_fully_consumed = 0;
 		has_error = false;
@@ -487,6 +489,8 @@ namespace utils
 
 	void audio_decoder::stop()
 	{
+		media_log.notice("audio_decoder: Stop decoding...");
+
 		if (m_thread)
 		{
 			auto& thread = *m_thread;
@@ -695,7 +699,7 @@ namespace utils
 					if (buffer)
 						av_freep(&buffer);
 
-					media_log.notice("audio_decoder: decoded frame_count=%d buffer_size=%d timestamp_us=%d", frame_count, buffer_size, av.audio.frame->best_effort_timestamp);
+					media_log.trace("audio_decoder: decoded frame_count=%d buffer_size=%d timestamp_us=%d", frame_count, buffer_size, av.audio.frame->best_effort_timestamp);
 				}
 			}
 		};
@@ -714,13 +718,12 @@ namespace utils
 				return;
 			}
 
-			m_context.current_track = m_context.first_track;
-
 			if (m_context.context_option == CELL_SEARCH_CONTEXTOPTION_SHUFFLE && m_context.playlist.size() > 1)
 			{
 				// Shuffle once if necessary
 				media_log.notice("audio_decoder: shuffling initial playlist...");
-				auto engine = std::default_random_engine{};
+				std::random_device rd;
+				auto engine = std::default_random_engine{rd()};
 				std::shuffle(std::begin(m_context.playlist), std::end(m_context.playlist), engine);
 			}
 
@@ -739,8 +742,12 @@ namespace utils
 
 				// Let's only decode one track at a time. Wait for the consumer to finish reading the track.
 				media_log.notice("audio_decoder: waiting until track is consumed...");
-				thread_ctrl::wait_on(track_fully_consumed, 0);
-				track_fully_consumed = false;
+
+				while (thread_ctrl::state() != thread_state::aborting && !track_fully_consumed)
+				{
+					thread_ctrl::wait_on(track_fully_consumed, 0);
+				}
+				track_fully_consumed = 0;
 			}
 
 			media_log.notice("audio_decoder: finished playlist");

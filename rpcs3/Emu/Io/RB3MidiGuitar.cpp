@@ -100,7 +100,10 @@ usb_device_rb3_midi_guitar::usb_device_rb3_midi_guitar(const std::array<u8, 7>& 
 
 usb_device_rb3_midi_guitar::~usb_device_rb3_midi_guitar()
 {
-	rtmidi_in_free(midi_in);
+	if (midi_in)
+	{
+		rtmidi_in_free(midi_in);
+	}
 }
 
 static const std::array<u8, 40> disabled_response = {

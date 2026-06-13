@@ -63,7 +63,7 @@ namespace utils
 		audio_decoder();
 		~audio_decoder();
 
-		void set_context(music_selection_context context);
+		void set_context(music_selection_context&& context);
 		void set_swap_endianness(bool swapped);
 		void clear();
 		void stop();

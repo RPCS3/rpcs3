@@ -483,6 +483,14 @@ namespace vm
 		{
 			auto& bits = get_range_lock_bits(true);
 
+			if (!!bits)
+			{
+				if (i == 0 && g_cfg.core.ppu_reservation_priority_over_spu)
+				{
+					busy_wait(5000);
+				}
+			}
+
 			if (!range_lock)
 			{
 				if (!bits && bits.compare_and_swap_test(0, u64{umax}))
@@ -1811,7 +1819,7 @@ namespace vm
 
 		while (true)
 		{
-			const u8 flags0 = ar;
+			const u8 flags0{ar};
 
 			if (!(flags0 & page_allocated))
 			{
@@ -1819,8 +1827,8 @@ namespace vm
 				break;
 			}
 
-			const u32 addr0 = ar;
-			const u32 size0 = ar;
+			const u32 addr0{ar};
+			const u32 size0{ar};
 
 			u64 pflags = 0;
 

@@ -646,7 +646,7 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 
 	QAction* check_compat = addAction(tr("&Check Game Compatibility"));
 
-	addSeparator();
+  addSeparator();
 
 	// Disk usage
 	QAction* disk_usage = addAction(tr("&Disk Usage"));

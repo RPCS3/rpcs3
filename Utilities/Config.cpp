@@ -269,6 +269,8 @@ bool try_to_string(std::string* out, f64 value, std::string_view name)
 
 bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) func, std::string_view value, std::string_view name)
 {
+	ensure(func);
+
 	u64 max = umax;
 
 	for (u64 i = 0;; i++)
@@ -297,7 +299,7 @@ bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) f
 	const char* end = start + value.size();
 	int base = 10;
 
-	if (start[0] == '0' && (start[1] == 'x' || start[1] == 'X'))
+	if (value.size() >= 2 && start[0] == '0' && (start[1] == 'x' || start[1] == 'X'))
 	{
 		// Limited hex support
 		base = 16;

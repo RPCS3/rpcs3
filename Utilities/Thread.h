@@ -315,6 +315,9 @@ public:
 	// Exit.
 	[[noreturn]] static void emergency_exit(std::string_view reason);
 
+	// Exit the current named thread as errored without reporting a fatal error.
+	[[noreturn]] static void silent_exit() noexcept;
+
 	// Get current thread (may be nullptr)
 	static thread_base* get_current()
 	{

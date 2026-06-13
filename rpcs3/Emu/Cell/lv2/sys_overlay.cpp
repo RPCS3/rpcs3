@@ -70,7 +70,7 @@ static error_code overlay_load_module(vm::ptr<u32> ovlmid, const std::string& vp
 
 	sys_overlay.success("Loaded overlay: \"%s\" (id=0x%x)", vpath, idm::last_id());
 
-	*ovlmid = idm::last_id();
+	*ovlmid = idm::last_id<lv2_overlay>();
 	*entry  = ovlm->entry;
 
 	return CELL_OK;
