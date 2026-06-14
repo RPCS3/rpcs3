@@ -302,9 +302,14 @@ namespace gl
 		GLFragmentDecompilerThread comp(shader_str, arr, frag, len);
 
 		std::stringstream builder;
-		builder <<
-		"#version 450\n"
-		"#extension GL_ARB_bindless_texture : require\n\n";
+		builder << "#version 450\n";
+
+		if (compiler_options & COMPILER_OPT_ENABLE_TEXTURES)
+		{
+			builder << "#extension GL_ARB_bindless_texture : require\n";
+		}
+
+		builder << "\n";
 
 		::glsl::insert_subheader_block(builder);
 		comp.insertConstants(builder);
