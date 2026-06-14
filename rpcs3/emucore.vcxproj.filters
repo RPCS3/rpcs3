@@ -1465,9 +1465,6 @@
     <ClCompile Include="Emu\Cell\Modules\libsvc1d.cpp">
       <Filter>Emu\Cell\Modules</Filter>
     </ClCompile>
-    <ClCompile Include="Loader\iso_cache.cpp">
-      <Filter>Loader</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\Io\gem_config.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
@@ -2949,9 +2946,6 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\libsvc1d.h">
       <Filter>Emu\Cell\Modules</Filter>
-    </ClInclude>
-    <ClInclude Include="Loader\iso_cache.h">
-      <Filter>Loader</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
