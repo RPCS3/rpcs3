@@ -71,7 +71,7 @@ namespace glsl
 
 	std::string getFloatTypeNameImpl(usz elementCount);
 	std::string getHalfTypeNameImpl(usz elementCount);
-	std::string compareFunctionImpl(COMPARE f, const std::string &Op0, const std::string &Op1, bool scalar = false);
+	std::string compareFunctionImpl(COMPARE f, std::string_view Op0, std::string_view Op1, bool scalar = false);
 	void insert_vertex_input_fetch(std::stringstream& OS, glsl_rules rules, bool glsl4_compliant=true);
 	void insert_rop_init(std::ostream& OS);
 	void insert_rop(std::ostream& OS, const shader_properties& props);

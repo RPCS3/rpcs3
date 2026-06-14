@@ -73,7 +73,7 @@ namespace glsl
 		}
 	}
 
-	std::string compareFunctionImpl(COMPARE f, const std::string &Op0, const std::string &Op1, bool scalar)
+	std::string compareFunctionImpl(COMPARE f, std::string_view Op0, std::string_view Op1, bool scalar)
 	{
 		if (scalar)
 		{
