@@ -11,7 +11,7 @@
 
 enum { CRYPTO_MAX_PATH = 4096 };
 
-char* extract_file_name(const char* file_path, char real_file_name[CRYPTO_MAX_PATH]);
+char* extract_file_name(std::string_view file_path, char real_file_name[CRYPTO_MAX_PATH]);
 
 std::string sha256_get_hash(const char* data, usz size, bool lower_case);
 
