@@ -565,11 +565,11 @@ void tar_object::save_directory(const std::string& target_path, utils::serial& a
 		}
 	};
 
-	auto save_header = [&](const fs::stat_t& stat, const std::string& name)
+	auto save_header = [&](const fs::stat_t& stat, std::string_view name)
 	{
 		static_assert(sizeof(TARHeader) == 512);
 
-		std::string_view saved_path{name.size() == src_dir_pos ? name.c_str() : &::at32(name, src_dir_pos), name.size() - src_dir_pos};
+		std::string_view saved_path = name.size() == src_dir_pos ? name : name.substr(src_dir_pos);
 
 		if (is_null)
 		{
