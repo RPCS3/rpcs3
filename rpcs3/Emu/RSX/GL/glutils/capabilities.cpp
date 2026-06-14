@@ -167,4 +167,14 @@ namespace gl
 
 		initialized = true;
 	}
+
+	const std::string get_device_name()
+	{
+		if (const char* renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER)))
+		{
+			return renderer;
+		}
+
+		return "OpenGL GPU";
+	}
 }

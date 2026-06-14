@@ -830,17 +830,7 @@ void gs_frame::flip(draw_context_t /*context*/, bool /*skip_frame*/)
 
 	if (fps_t.GetElapsedTimeInSec() >= 0.5)
 	{
-		std::string new_title = Emu.GetFormattedTitle(m_frames / fps_t.GetElapsedTimeInSec());
-
-		if (new_title != m_window_title)
-		{
-			m_window_title = new_title;
-
-			Emu.CallFromMainThread([this, title = std::move(new_title)]()
-			{
-				setTitle(QString::fromStdString(title));
-			});
-		}
+		update_title(m_frames / fps_t.GetElapsedTimeInSec());
 
 		m_frames = 0;
 		fps_t.Start();
@@ -1128,6 +1118,21 @@ void gs_frame::take_screenshot(std::vector<u8>&& data, u32 sshot_width, u32 ssho
 		},
 		std::move(data))
 		.detach();
+}
+
+void gs_frame::update_title(double fps)
+{
+	std::string new_title = Emu.GetFormattedTitle(fps);
+
+	if (new_title != m_window_title)
+	{
+		m_window_title = new_title;
+
+		Emu.CallFromMainThread([this, title = std::move(new_title)]()
+		{
+			setTitle(QString::fromStdString(title));
+		});
+	}
 }
 
 void gs_frame::mouseDoubleClickEvent(QMouseEvent* ev)
