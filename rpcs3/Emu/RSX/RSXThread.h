@@ -218,7 +218,7 @@ namespace rsx
 
 		surface_scaling_config_t resolution_scaling_config{};
 
-		void capture_frame(const std::string& name);
+		void capture_frame(const std::string& name) const;
 		const backend_configuration& get_backend_config() const { return backend_config; }
 
 		const draw_command_processor* draw_processor() const { return &m_draw_processor; }

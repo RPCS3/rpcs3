@@ -58,4 +58,5 @@ namespace gl
 	};
 
 	const capabilities& get_driver_caps();
+	const std::string get_device_name();
 }
