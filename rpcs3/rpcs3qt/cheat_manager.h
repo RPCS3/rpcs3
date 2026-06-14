@@ -30,7 +30,7 @@ public:
 	void save() const;
 
 	// Static functions to find/get/set values in ps3 memory
-	static bool resolve_script(u32& final_offset, const u32 offset, const std::string& red_script);
+	static bool resolve_script(u32& final_offset, const u32 offset, std::string_view red_script);
 
 	template <typename T>
 	static std::vector<u32> search(const T value, const std::vector<u32>& to_filter);

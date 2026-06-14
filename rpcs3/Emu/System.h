@@ -510,7 +510,7 @@ public:
 	static bool IsVsh();
 	static bool IsValidSfb(const std::string& path);
 
-	static void SaveSettings(const std::string& settings, const std::string& title_id);
+	static void SaveSettings(std::string_view settings, const std::string& title_id);
 };
 
 extern Emulator Emu;

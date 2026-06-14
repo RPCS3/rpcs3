@@ -109,7 +109,7 @@ namespace gui::utils
 		return true;
 	}
 
-	static std::string make_simple_name(const std::string& name)
+	static std::string make_simple_name(std::string_view name)
 	{
 		const std::string simple_name = QString::fromStdString(vfs::escape(name, true)).simplified().toStdString();
 		return simple_name;
@@ -227,7 +227,7 @@ namespace gui::utils
 		Microsoft::WRL::ComPtr<IShellLink> pShellLink;
 		Microsoft::WRL::ComPtr<IPersistFile> pPersistFile;
 
-		const auto cleanup = [&](bool return_value, const std::string& fail_reason) -> bool
+		const auto cleanup = [&](bool return_value, std::string_view fail_reason) -> bool
 		{
 			if (!return_value) sys_log.error("Failed to create shortcut: %s", fail_reason);
 			CoUninitialize();
@@ -611,7 +611,7 @@ namespace gui::utils
 		return result;
 	}
 
-	static void remove_shortcuts(const std::string& simple_name, [[maybe_unused]] const std::string& serial)
+	static void remove_shortcuts(std::string_view simple_name, [[maybe_unused]] const std::string& serial)
 	{
 		if (simple_name.empty() || simple_name == "." || simple_name == "..")
 		{

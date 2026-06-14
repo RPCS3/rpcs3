@@ -229,7 +229,7 @@ void user_manager_dialog::OnUserRemove()
 	}
 }
 
-void user_manager_dialog::GenerateUser(const std::string& user_id, const std::string& username)
+void user_manager_dialog::GenerateUser(const std::string& user_id, std::string_view username)
 {
 	ensure(rpcs3::utils::check_user(user_id) > 0);
 

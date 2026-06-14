@@ -4843,7 +4843,7 @@ bool Emulator::IsValidSfb(const std::string& path)
 	return false;
 }
 
-void Emulator::SaveSettings(const std::string& settings, const std::string& title_id)
+void Emulator::SaveSettings(std::string_view settings, const std::string& title_id)
 {
 	std::string config_name;
 
@@ -4864,7 +4864,7 @@ void Emulator::SaveSettings(const std::string& settings, const std::string& titl
 	}
 	else
 	{
-		temp.file.write(settings.c_str(), settings.size());
+		temp.file.write(settings.data(), settings.size());
 		if (!temp.commit())
 		{
 			sys_log.error("Could not save config to %s (failed to commit) (error=%s)", config_name, fs::g_tls_error);
@@ -4875,7 +4875,7 @@ void Emulator::SaveSettings(const std::string& settings, const std::string& titl
 	if (config_name == g_cfg.name || title_id == Emu.GetTitleID())
 	{
 		// Update current config
-		if (!g_cfg.from_string({settings.c_str(), settings.size()}, !Emu.IsStopped()))
+		if (!g_cfg.from_string(settings, !Emu.IsStopped()))
 		{
 			sys_log.fatal("Failed to update configuration");
 		}
