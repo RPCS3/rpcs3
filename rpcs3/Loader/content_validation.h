@@ -40,7 +40,7 @@ private:
 	content_hash_status m_status = content_hash_status::INITIALIZED;
 
 public:
-	static content_integrity_status check_integrity(content_file_type file_type, const std::string& hash, std::string* game_name = nullptr);
+	static content_integrity_status check_integrity(content_file_type file_type, std::string_view hash, std::string* game_name = nullptr);
 
 	const std::string& get_path() const { return m_path; }
 	const std::string& get_name() const	{ return m_name; }

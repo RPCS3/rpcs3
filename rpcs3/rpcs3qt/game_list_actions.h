@@ -49,7 +49,7 @@ public:
 		std::set<std::string> removed_disc_list; // Filled in by RemoveContentList()
 	};
 
-	static bool IsGameRunning(const std::string& serial);
+	static bool IsGameRunning(std::string_view serial);
 
 	void CreateShortcuts(const std::vector<game_info>& games, const std::set<gui::utils::shortcut_location>& locations);
 

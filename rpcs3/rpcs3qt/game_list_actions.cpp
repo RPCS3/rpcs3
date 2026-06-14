@@ -605,7 +605,7 @@ void game_list_actions::ShowDiskUsageDialog()
 	});
 }
 
-bool game_list_actions::IsGameRunning(const std::string& serial)
+bool game_list_actions::IsGameRunning(std::string_view serial)
 {
 	return !Emu.IsStopped(true) && (serial == Emu.GetTitleID() || (serial == "vsh.self" && Emu.IsVsh()));
 }
