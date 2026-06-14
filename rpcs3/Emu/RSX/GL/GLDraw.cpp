@@ -749,7 +749,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 
 	if (!upload_info.index_info)
 	{
-		if (draw_call.is_trivial_instanced_draw)
+		if (draw_call.is_trivial_instanced_draw && backend_config.supports_hw_instanced_rendering)
 		{
 			glDrawArraysInstanced(draw_mode, 0, upload_info.vertex_draw_count, draw_call.pass_count());
 		}
@@ -821,7 +821,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 
 		m_index_ring_buffer->bind();
 
-		if (draw_call.is_trivial_instanced_draw)
+		if (draw_call.is_trivial_instanced_draw && backend_config.supports_hw_instanced_rendering)
 		{
 			glDrawElementsInstanced(draw_mode, upload_info.vertex_draw_count, index_type, reinterpret_cast<GLvoid*>(u64{ index_offset }), draw_call.pass_count());
 		}
@@ -948,7 +948,7 @@ void GLGSRender::end()
 	{
 		emit_geometry(subdraw++);
 
-		if (draw_call.is_trivial_instanced_draw)
+		if (draw_call.is_trivial_instanced_draw && backend_config.supports_hw_instanced_rendering)
 		{
 			// We already completed. End the draw.
 			draw_call.end();
