@@ -213,25 +213,32 @@ iso_type_status iso_file_decryption::get_key(const std::string& key_path, aes_co
 		return iso_type_status::ERROR_OPENING_KEY;
 	}
 
-	char key_str[32];
+	std::array<char, 32> key_str {};
 	std::array<u8, 16> key {};
 
-	const u64 key_len = key_file.read(key_str, sizeof(key_str));
+	const u64 key_len = key_file.read(key_str.data(), key_str.size());
 
-	if (key_len == sizeof(key_str) || key_len == sizeof(key))
+	if (key_len == key_str.size() || key_len == key.size())
 	{
 		// If the key read from the key file is 16 bytes long instead of 32, consider the file as
 		// binary (".key") and so not needing any further conversion from hex string to bytes
-		if (key_len == sizeof(key))
+		if (key_len == key.size())
 		{
-			std::memcpy(key.data(), key_str, sizeof(key));
+			std::memcpy(key.data(), key_str.data(), key.size());
 		}
 		else
 		{
-			hex_to_bytes(key.data(), std::string_view(key_str, key_len), static_cast<unsigned int>(key_len));
+			std::string error;
+			hex_to_bytes(key.data(), std::string_view(key_str.data(), key_str.size()), key_str.size(), &error);
+
+			if (!error.empty())
+			{
+				iso_log.error("get_key(%s): %s", key_path, error);
+				return iso_type_status::ERROR_PROCESSING_KEY;
+			}
 		}
 
-		aes_context aes_dec;
+		aes_context aes_dec {};
 
 		// If "aes_ctx" not requested
 		if (!aes_ctx)

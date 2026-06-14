@@ -16,10 +16,10 @@ char* extract_file_name(const char* file_path, char real_file_name[CRYPTO_MAX_PA
 std::string sha256_get_hash(const char* data, usz size, bool lower_case);
 
 // Bytes conversion auxiliary function.
-void bytes_to_hex(std::string& hex_str, const unsigned char* data, unsigned int data_length);
+void bytes_to_hex(std::string& hex_str, const unsigned char* data, usz data_length);
 
 // Hex string conversion auxiliary function.
-void hex_to_bytes(unsigned char* data, std::string_view hex_str, unsigned int str_length);
+void hex_to_bytes(unsigned char* data, std::string_view hex_str, usz str_length, std::string* error = nullptr);
 
 // Crypto functions (AES128-CBC, AES128-ECB, SHA1-HMAC and AES-CMAC).
 void aescbc128_decrypt(unsigned char *key, unsigned char *iv, unsigned char *in, unsigned char *out, usz len);
