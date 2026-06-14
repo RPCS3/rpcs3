@@ -313,7 +313,7 @@ usb_device_rb3_midi_drums::Definition::Definition(std::string name, const std::s
 	, create_state{create_state}
 {}
 
-usb_device_rb3_midi_drums::usb_device_rb3_midi_drums(const std::array<u8, 7>& location, const std::string& device_name)
+usb_device_rb3_midi_drums::usb_device_rb3_midi_drums(const std::array<u8, 7>& location, std::string_view device_name)
 	: usb_device_emulated(location)
 {
 	m_id_to_note_mapping = midi::create_id_to_note_mapping();
