@@ -2,7 +2,7 @@
 
 #include "gui_game_info.h"
 #include "shortcut_utils.h"
-#include "Loader/iso_validation.h"
+#include "Loader/content_validation.h"
 
 #include <QFuture>
 #include <QObject>
@@ -55,7 +55,7 @@ public:
 
 	void ShowRemoveGameDialog(const std::vector<game_info>& games);
 	void ShowGameInfoDialog(const std::vector<game_info>& games);
-	void ShowGameIntegrityDialog(const game_info& game);
+	void ShowGameIntegrityDialog(content_file_type file_type, const std::string& game_path);
 	void ShowDiskUsageDialog();
 
 	// NOTES:
@@ -100,7 +100,7 @@ private:
 	std::shared_ptr<gui_settings> m_gui_settings;
 	QFuture<void> m_disk_usage_future;
 	QFuture<void> m_game_integrity_future;
-	std::shared_ptr<iso_file_validation> m_iso_validator = std::make_shared<iso_file_validation>();
+	std::shared_ptr<content_validation> m_game_validator = std::make_shared<content_validation>();
 
 	// NOTE:
 	//   m_content_info is used by:

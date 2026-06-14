@@ -75,7 +75,10 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	m_game_list->installEventFilter(this);
 	m_game_list->verticalScrollBar()->installEventFilter(this);
 
-	m_iso_integrity = new iso_integrity(this);
+	m_iso_integrity = new content_integrity(this, content_file_type::ISO);
+	m_psn_content_integrity = new content_integrity(this, content_file_type::PSN_CONTENT);
+	m_psn_dlc_integrity = new content_integrity(this, content_file_type::PSN_DLC);
+	m_psn_update_integrity = new content_integrity(this, content_file_type::PSN_UPDATE);
 	m_game_compat = new game_compatibility(this);
 	m_config_db = new config_database(this);
 

@@ -1414,6 +1414,9 @@
     <ClCompile Include="Loader\ISO.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
+    <ClCompile Include="Loader\iso_cache.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\RSX\Overlays\overlay_audio.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
@@ -1432,7 +1435,7 @@
     <ClCompile Include="Emu\RSX\Overlays\overlay_select.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
-    <ClCompile Include="Loader\iso_validation.cpp">
+    <ClCompile Include="Loader\content_validation.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
     <ClCompile Include="..\Utilities\stereo_config.cpp">
@@ -2887,6 +2890,9 @@
     <ClInclude Include="Loader\ISO.h">
       <Filter>Loader</Filter>
     </ClInclude>
+    <ClInclude Include="Loader\iso_cache.h">
+      <Filter>Loader</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\overlay_audio.h">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
@@ -2911,7 +2917,7 @@
     <ClInclude Include="Emu\RSX\Common\aligned_malloc.hpp">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
-    <ClInclude Include="Loader\iso_validation.h">
+    <ClInclude Include="Loader\content_validation.h">
       <Filter>Loader</Filter>
     </ClInclude>
     <ClInclude Include="..\Utilities\stereo_config.h">

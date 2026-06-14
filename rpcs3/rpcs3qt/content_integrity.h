@@ -2,13 +2,15 @@
 
 #include "downloader.h"
 
-class iso_integrity : public QObject
+#include "Loader/content_validation.h"
+
+class content_integrity : public QObject
 {
 	Q_OBJECT
 
 public:
-	// Handles download for the ISO integrity database
-	iso_integrity(QWidget* parent);
+	// Handles download for the content integrity database
+	content_integrity(QWidget* parent, content_file_type file_type);
 
 	// Downloads and writes the database to file
 	void download();
@@ -21,6 +23,9 @@ private Q_SLOTS:
 private:
 	QByteArray read_json(const QByteArray& data, bool after_download);
 
-	QString m_filepath;
+	content_file_type m_file_type;
+	QString m_file_path;
+	std::string m_url;
+	std::string m_data_prefix;
 	downloader* m_downloader = nullptr;
 };

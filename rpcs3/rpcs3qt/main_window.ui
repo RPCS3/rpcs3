@@ -323,6 +323,12 @@
      <addaction name="downloadCompatDbAct"/>
      <addaction name="downloadConfigDbAct"/>
     </widget>
+    <widget class="QMenu" name="menuPackages">
+     <property name="title">
+      <string>Packages/Raps/Edats</string>
+     </property>
+     <addaction name="checkPackageIntegrityAct"/>
+    </widget>
     <addaction name="confVFSDialogAct"/>
     <addaction name="separator"/>
     <addaction name="actionManage_Users"/>
@@ -337,6 +343,7 @@
     <addaction name="actionManage_Cheats"/>
     <addaction name="actionManage_Game_Patches"/>
     <addaction name="menuDatabases"/>
+    <addaction name="menuPackages"/>
     <addaction name="separator"/>
     <addaction name="actionManage_Screenshots"/>
    </widget>
@@ -872,6 +879,11 @@
   <action name="downloadConfigDbAct">
    <property name="text">
     <string>Download Config Database</string>
+   </property>
+  </action>
+  <action name="checkPackageIntegrityAct">
+   <property name="text">
+    <string>Check Integrity</string>
    </property>
   </action>
   <action name="welcomeAct">

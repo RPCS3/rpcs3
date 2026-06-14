@@ -49,6 +49,12 @@ namespace rpcs3::utils
 	std::string	get_redump_db_path();
 	std::string get_redump_db_download_url();
 	std::string get_redump_key_dir();
+	std::string get_psn_content_db_path();
+	std::string get_psn_content_db_download_url();
+	std::string get_psn_dlc_db_path();
+	std::string get_psn_dlc_db_download_url();
+	std::string get_psn_update_db_path();
+	std::string get_psn_update_db_download_url();
 
 	std::string get_data_dir();
 	std::string get_icons_dir();
