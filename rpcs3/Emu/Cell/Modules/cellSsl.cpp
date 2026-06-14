@@ -75,7 +75,7 @@ error_code cellSslGetMemoryInfo()
 	return CELL_OK;
 }
 
-std::string getCert(const std::string& certPath, const int certID, const bool isNormalCert)
+std::string getCert(std::string_view certPath, const int certID, const bool isNormalCert)
 {
 	int newID = certID;
 

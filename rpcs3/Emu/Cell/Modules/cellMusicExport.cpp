@@ -72,7 +72,7 @@ struct music_export
 };
 
 
-bool check_music_path(const std::string& file_path)
+bool check_music_path(std::string_view file_path)
 {
 	if (file_path.size() >= CELL_MUSIC_EXPORT_UTIL_HDD_PATH_MAX)
 	{
