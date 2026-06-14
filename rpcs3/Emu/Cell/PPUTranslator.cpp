@@ -961,7 +961,7 @@ void PPUTranslator::WriteMemory(Value* addr, Value* value, bool is_be, u32 align
 	m_ir->CreateAlignedStore(value, GetMemory(addr), llvm::MaybeAlign{align})->setVolatile(true);
 }
 
-void PPUTranslator::CompilationError(const std::string& error)
+void PPUTranslator::CompilationError(std::string_view error)
 {
 	ppu_log.error("LLVM: [0x%08x] Error: %s", m_addr + (m_reloc ? m_reloc->addr : 0), error);
 }

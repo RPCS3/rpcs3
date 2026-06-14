@@ -14,7 +14,7 @@ namespace utils
 		// Printing utilities
 
 		template <typename T>
-		concept Logger = requires (T& t, const std::string& msg)
+		concept Logger = requires (T& t, std::string_view msg)
 		{
 			{ t.print(msg) };
 		};
@@ -28,7 +28,7 @@ namespace utils
 				: log(chan)
 			{}
 
-			void print(const std::string& s)
+			void print(std::string_view s)
 			{
 				log.error("%s", s);
 			}

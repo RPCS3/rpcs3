@@ -67,7 +67,7 @@ namespace aarch64
 
         bool is_faux_function(const std::string& function_name);
 
-        gpr get_base_register_for_call(const std::string& callee_name, gpr default_reg = gpr::x19);
+        gpr get_base_register_for_call(std::string_view callee_name, gpr default_reg = gpr::x19);
 
         void process_leaf_function(llvm::IRBuilder<>* irb, llvm::Function& f);
 
