@@ -136,17 +136,15 @@ void cmac_hash_forge(unsigned char *key, int /*key_len*/, unsigned char *in, usz
 	aes_cmac(&ctx, in_len, in, hash);
 }
 
-char* extract_file_name(const char* file_path, char real_file_name[CRYPTO_MAX_PATH])
+char* extract_file_name(std::string_view file_path, char real_file_name[CRYPTO_MAX_PATH])
 {
-	std::string_view v(file_path);
-
-	if (const auto pos = v.find_last_of(fs::delim); pos != umax)
+	if (const auto pos = file_path.find_last_of(fs::delim); pos != umax)
 	{
-		v.remove_prefix(pos + 1);
+		file_path.remove_prefix(pos + 1);
 	}
 
 	std::span r(real_file_name, CRYPTO_MAX_PATH);
-	strcpy_trunc(r, v);
+	strcpy_trunc(r, file_path);
 	return real_file_name;
 }
 
