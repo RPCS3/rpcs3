@@ -267,7 +267,7 @@ namespace np
 		error_code abort_request(u32 req_id);
 
 		// For signaling
-		void req_sign_infos(const std::string& npid, u32 conn_id);
+		void req_sign_infos(std::string_view npid, u32 conn_id);
 
 		// For UPNP
 		void upnp_add_port_mapping(u16 internal_port, std::string_view protocol);
@@ -297,7 +297,7 @@ namespace np
 		// Various generic helpers
 		bool discover_ip_address();
 		bool discover_ether_address();
-		bool error_and_disconnect(const std::string& error_msg);
+		bool error_and_disconnect(std::string_view error_msg);
 
 		// Notification handlers
 		void notif_user_joined_room(vec_stream& noti);

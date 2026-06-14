@@ -166,7 +166,7 @@ public:
 			vec.push_back(*(reinterpret_cast<u8*>(&value) + index));
 		}
 	}
-	void insert_string(const std::string& str) const
+	void insert_string(std::string_view str) const
 	{
 		std::copy(str.begin(), str.end(), std::back_inserter(vec));
 		vec.push_back(0);
@@ -277,8 +277,8 @@ namespace rpcn
 		bool send_packet(const std::vector<u8>& packet);
 
 	private:
-		bool connect(const std::string& host);
-		bool login(const std::string& npid, const std::string& password, const std::string& token);
+		bool connect(std::string_view host);
+		bool login(std::string_view npid, std::string_view password, std::string_view token);
 		void disconnect();
 
 	public:
@@ -297,12 +297,12 @@ namespace rpcn
 		void remove_friend_cb(friend_cb_func, void* cb_param);
 
 		ErrorType create_user(std::string_view npid, std::string_view password, std::string_view online_name, std::string_view avatar_url, std::string_view email);
-		ErrorType resend_token(const std::string& npid, const std::string& password);
+		ErrorType resend_token(std::string_view npid, std::string_view password);
 		ErrorType send_reset_token(std::string_view npid, std::string_view email);
 		ErrorType reset_password(std::string_view npid, std::string_view token, std::string_view password);
 		ErrorType delete_account();
-		std::optional<ErrorType> add_friend(const std::string& friend_username);
-		bool remove_friend(const std::string& friend_username);
+		std::optional<ErrorType> add_friend(std::string_view friend_username);
+		bool remove_friend(std::string_view friend_username);
 
 		u32 get_num_friends() const;
 		u32 get_num_blocks() const;
@@ -346,8 +346,8 @@ namespace rpcn
 		bool set_userinfo(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetUserInfoRequest* req);
 		bool ping_room_owner(u32 req_id, const SceNpCommunicationId& communication_id, u64 room_id);
 		bool send_room_message(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SendRoomMessageRequest* req);
-		bool req_sign_infos(u32 req_id, const std::string& npid);
-		bool req_ticket(u32 req_id, const std::string& service_id, const std::vector<u8>& cookie);
+		bool req_sign_infos(u32 req_id, std::string_view npid);
+		bool req_ticket(u32 req_id, std::string_view service_id, const std::vector<u8>& cookie);
 		bool send_message(const message_data& msg_data, const std::set<std::string>& npids);
 		bool get_board_infos(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id);
 		bool record_score(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id, SceNpScorePcId char_id, SceNpScoreValue score, const std::optional<std::string> comment, const std::optional<std::vector<u8>> score_data);
@@ -396,12 +396,12 @@ namespace rpcn
 
 		std::vector<u8> forge_request(rpcn::CommandType command, u64 packet_id, const std::vector<u8>& data) const;
 		bool forge_send(rpcn::CommandType command, u64 packet_id, const std::vector<u8>& data);
-		bool forge_request_with_com_id(const std::string& serialized_data, const SceNpCommunicationId& com_id, CommandType command, u64 packet_id);
-		bool forge_request_with_data(const std::string& serialized_data, CommandType command, u64 packet_id);
+		bool forge_request_with_com_id(std::string_view serialized_data, const SceNpCommunicationId& com_id, CommandType command, u64 packet_id);
+		bool forge_request_with_data(std::string_view serialized_data, CommandType command, u64 packet_id);
 		bool forge_send_reply(rpcn::CommandType command, u64 packet_id, const std::vector<u8>& data, std::vector<u8>& reply_data);
 
-		bool error_and_disconnect(const std::string& error_mgs);
-		bool error_and_disconnect_notice(const std::string& error_msg);
+		bool error_and_disconnect(std::string_view error_mgs);
+		bool error_and_disconnect_notice(std::string_view error_msg);
 
 		std::string get_wolfssl_error(WOLFSSL* wssl, int error) const;
 

@@ -1303,7 +1303,7 @@ namespace np
 		}
 	}
 
-	bool np_handler::error_and_disconnect(const std::string& error_msg)
+	bool np_handler::error_and_disconnect(std::string_view error_msg)
 	{
 		rpcn_log.error("%s", error_msg);
 		rpcn.reset();
