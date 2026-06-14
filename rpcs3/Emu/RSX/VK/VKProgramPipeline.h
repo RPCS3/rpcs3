@@ -221,13 +221,12 @@ namespace vk
 			program& link(bool separate_stages);
 			program& bind(const vk::command_buffer& cmd, VkPipelineBindPoint bind_point);
 
-			bool has_uniform(program_input_type type, const std::string &uniform_name);
-			std::pair<u32, u32> get_uniform_location(::glsl::program_domain domain, program_input_type type, const std::string& uniform_name);
+			bool has_uniform(program_input_type type, std::string_view uniform_name);
+			std::pair<u32, u32> get_uniform_location(::glsl::program_domain domain, program_input_type type, std::string_view uniform_name);
 
 			void bind_uniform(const VkDescriptorImageInfoEx& image_descriptor, u32 set_id, u32 binding_point);
 			void bind_uniform(const VkDescriptorBufferInfoEx& buffer_descriptor, u32 set_id, u32 binding_point);
 			void bind_uniform(const VkDescriptorBufferViewEx& buffer_view, u32 set_id, u32 binding_point);
-			void bind_uniform(const VkDescriptorBufferViewEx& buffer_view, ::glsl::program_domain domain, program_input_type type, const std::string &binding_name);
 
 			void bind_uniform_array(const std::span<const VkDescriptorImageInfoEx>& image_descriptors,u32 set_id, u32 binding_point);
 
