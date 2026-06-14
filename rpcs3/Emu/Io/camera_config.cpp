@@ -85,9 +85,15 @@ void cfg_camera::camera_setting::from_string(std::string_view text)
 		return;
 	}
 
-	const auto to_integer = [](const std::string& str, int& out) -> bool
+	const auto to_integer = [](std::string_view str, int& out) -> bool
 	{
-		auto [ptr, ec] = std::from_chars(str.c_str(), str.c_str() + str.size(), out);
+		if (str.empty())
+		{
+			camera_log.error("Empty string cannot be interpreted as integer.");
+			return false;
+		}
+
+		auto [ptr, ec] = std::from_chars(str.data(), str.data() + str.size(), out);
 		if (ec != std::errc{})
 		{
 			camera_log.error("String '%s' cannot be interpreted as integer.", str);
@@ -96,11 +102,17 @@ void cfg_camera::camera_setting::from_string(std::string_view text)
 		return true;
 	};
 
-	const auto to_double = [](const std::string& str, double& out) -> bool
+	const auto to_double = [](std::string_view str, double& out) -> bool
 	{
+		if (str.empty())
+		{
+			camera_log.error("Empty string cannot be interpreted as double.");
+			return false;
+		}
+
 		char* end{};
-		out = std::strtod(str.c_str(), &end);
-		if (end != str.c_str() + str.size())
+		out = std::strtod(str.data(), &end);
+		if (end != str.data() + str.size())
 		{
 			camera_log.error("String '%s' cannot be interpreted as double.", str);
 			return false;

@@ -226,7 +226,7 @@ pad_preview_values mm_joystick_handler::get_preview_values(const std::unordered_
 	if (buttons.size() != 10)
 		return preview_values;
 
-	const auto get_key_value = [this, &data](const std::string& str) -> u16
+	const auto get_key_value = [this, &data](std::string_view str) -> u16
 	{
 		u16 value{};
 

@@ -371,7 +371,7 @@ PadHandlerBase::connection evdev_joystick_handler::get_next_button_press(const s
 
 	const auto data = GetButtonValues(device);
 
-	const auto find_value = [&, this](const std::string& str)
+	const auto find_value = [&, this](std::string_view str)
 	{
 		const std::vector<pad::combo> combos = cfg_pad::get_combos(str);
 
@@ -1419,7 +1419,7 @@ bool evdev_joystick_handler::bindPadToDevice(std::shared_ptr<Pad> pad)
 		e_sensor.mirrored = sensor.mirrored.get();
 		e_sensor.shift = sensor.shift.get();
 
-		const std::vector<std::set<u32>> combos = find_key_combos(motion_axis_list, sensor.axis);
+		const std::vector<std::set<u32>> combos = find_key_combos(motion_axis_list, sensor.axis.to_string());
 		if (!combos.empty() && !combos.front().empty()) e_sensor.code = *combos.front().begin(); // We should only have one key for each of our sensors
 		return e_sensor;
 	};

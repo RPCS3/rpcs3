@@ -228,7 +228,7 @@ private:
 
 	pad_device_info get_pad_info(QComboBox* combo, int index);
 	void switch_pad_info(int index, pad_device_info info, bool is_connected);
-	void SwitchPadInfo(const std::string& name, bool is_connected);
+	void SwitchPadInfo(std::string_view name, bool is_connected);
 
 	/** Enable/Disable Buttons while trying to remap an other */
 	void SwitchButtons(bool is_enabled);
