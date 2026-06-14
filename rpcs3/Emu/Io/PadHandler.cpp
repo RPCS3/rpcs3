@@ -11,7 +11,7 @@ PadHandlerBase::PadHandlerBase(pad_handler type) : m_type(type)
 {
 }
 
-std::vector<std::set<u32>> PadHandlerBase::find_key_combos(const std::unordered_map<u32, std::string>& map, const std::string& cfg_string)
+std::vector<std::set<u32>> PadHandlerBase::find_key_combos(const std::unordered_map<u32, std::string>& map, std::string_view cfg_string)
 {
 	std::vector<std::set<u32>> key_codes;
 
@@ -232,7 +232,7 @@ pad_capabilities PadHandlerBase::get_capabilities(const std::string& /*pad_id*/)
 	};
 }
 
-cfg_pad* PadHandlerBase::get_config(const std::string& pad_id)
+cfg_pad* PadHandlerBase::get_config(std::string_view pad_id)
 {
 	int index = 0;
 
@@ -595,52 +595,52 @@ std::array<std::vector<std::set<u32>>, PadHandlerBase::button::button_count> Pad
 	if (!device || !cfg)
 		return mapping;
 
-	mapping[button::up]       = find_key_combos(button_list, cfg->up);
-	mapping[button::down]     = find_key_combos(button_list, cfg->down);
-	mapping[button::left]     = find_key_combos(button_list, cfg->left);
-	mapping[button::right]    = find_key_combos(button_list, cfg->right);
-	mapping[button::cross]    = find_key_combos(button_list, cfg->cross);
-	mapping[button::square]   = find_key_combos(button_list, cfg->square);
-	mapping[button::circle]   = find_key_combos(button_list, cfg->circle);
-	mapping[button::triangle] = find_key_combos(button_list, cfg->triangle);
-	mapping[button::start]    = find_key_combos(button_list, cfg->start);
-	mapping[button::select]   = find_key_combos(button_list, cfg->select);
-	mapping[button::l1]       = find_key_combos(button_list, cfg->l1);
-	mapping[button::l2]       = find_key_combos(button_list, cfg->l2);
-	mapping[button::l3]       = find_key_combos(button_list, cfg->l3);
-	mapping[button::r1]       = find_key_combos(button_list, cfg->r1);
-	mapping[button::r2]       = find_key_combos(button_list, cfg->r2);
-	mapping[button::r3]       = find_key_combos(button_list, cfg->r3);
-	mapping[button::ls_left]  = find_key_combos(button_list, cfg->ls_left);
-	mapping[button::ls_right] = find_key_combos(button_list, cfg->ls_right);
-	mapping[button::ls_down]  = find_key_combos(button_list, cfg->ls_down);
-	mapping[button::ls_up]    = find_key_combos(button_list, cfg->ls_up);
-	mapping[button::rs_left]  = find_key_combos(button_list, cfg->rs_left);
-	mapping[button::rs_right] = find_key_combos(button_list, cfg->rs_right);
-	mapping[button::rs_down]  = find_key_combos(button_list, cfg->rs_down);
-	mapping[button::rs_up]    = find_key_combos(button_list, cfg->rs_up);
-	mapping[button::ps]       = find_key_combos(button_list, cfg->ps);
+	mapping[button::up]       = find_key_combos(button_list, cfg->up.to_string());
+	mapping[button::down]     = find_key_combos(button_list, cfg->down.to_string());
+	mapping[button::left]     = find_key_combos(button_list, cfg->left.to_string());
+	mapping[button::right]    = find_key_combos(button_list, cfg->right.to_string());
+	mapping[button::cross]    = find_key_combos(button_list, cfg->cross.to_string());
+	mapping[button::square]   = find_key_combos(button_list, cfg->square.to_string());
+	mapping[button::circle]   = find_key_combos(button_list, cfg->circle.to_string());
+	mapping[button::triangle] = find_key_combos(button_list, cfg->triangle.to_string());
+	mapping[button::start]    = find_key_combos(button_list, cfg->start.to_string());
+	mapping[button::select]   = find_key_combos(button_list, cfg->select.to_string());
+	mapping[button::l1]       = find_key_combos(button_list, cfg->l1.to_string());
+	mapping[button::l2]       = find_key_combos(button_list, cfg->l2.to_string());
+	mapping[button::l3]       = find_key_combos(button_list, cfg->l3.to_string());
+	mapping[button::r1]       = find_key_combos(button_list, cfg->r1.to_string());
+	mapping[button::r2]       = find_key_combos(button_list, cfg->r2.to_string());
+	mapping[button::r3]       = find_key_combos(button_list, cfg->r3.to_string());
+	mapping[button::ls_left]  = find_key_combos(button_list, cfg->ls_left.to_string());
+	mapping[button::ls_right] = find_key_combos(button_list, cfg->ls_right.to_string());
+	mapping[button::ls_down]  = find_key_combos(button_list, cfg->ls_down.to_string());
+	mapping[button::ls_up]    = find_key_combos(button_list, cfg->ls_up.to_string());
+	mapping[button::rs_left]  = find_key_combos(button_list, cfg->rs_left.to_string());
+	mapping[button::rs_right] = find_key_combos(button_list, cfg->rs_right.to_string());
+	mapping[button::rs_down]  = find_key_combos(button_list, cfg->rs_down.to_string());
+	mapping[button::rs_up]    = find_key_combos(button_list, cfg->rs_up.to_string());
+	mapping[button::ps]       = find_key_combos(button_list, cfg->ps.to_string());
 
-	mapping[button::skateboard_ir_nose]    = find_key_combos(button_list, cfg->ir_nose);
-	mapping[button::skateboard_ir_tail]    = find_key_combos(button_list, cfg->ir_tail);
-	mapping[button::skateboard_ir_left]    = find_key_combos(button_list, cfg->ir_left);
-	mapping[button::skateboard_ir_right]   = find_key_combos(button_list, cfg->ir_right);
-	mapping[button::skateboard_tilt_left]  = find_key_combos(button_list, cfg->tilt_left);
-	mapping[button::skateboard_tilt_right] = find_key_combos(button_list, cfg->tilt_right);
+	mapping[button::skateboard_ir_nose]    = find_key_combos(button_list, cfg->ir_nose.to_string());
+	mapping[button::skateboard_ir_tail]    = find_key_combos(button_list, cfg->ir_tail.to_string());
+	mapping[button::skateboard_ir_left]    = find_key_combos(button_list, cfg->ir_left.to_string());
+	mapping[button::skateboard_ir_right]   = find_key_combos(button_list, cfg->ir_right.to_string());
+	mapping[button::skateboard_tilt_left]  = find_key_combos(button_list, cfg->tilt_left.to_string());
+	mapping[button::skateboard_tilt_right] = find_key_combos(button_list, cfg->tilt_right.to_string());
 
 	if (b_has_pressure_intensity_button)
 	{
-		mapping[button::pressure_intensity_button] = find_key_combos(button_list, cfg->pressure_intensity_button);
+		mapping[button::pressure_intensity_button] = find_key_combos(button_list, cfg->pressure_intensity_button.to_string());
 	}
 
 	if (b_has_analog_limiter_button)
 	{
-		mapping[button::analog_limiter_button] = find_key_combos(button_list, cfg->analog_limiter_button);
+		mapping[button::analog_limiter_button] = find_key_combos(button_list, cfg->analog_limiter_button.to_string());
 	}
 
 	if (b_has_orientation)
 	{
-		mapping[button::orientation_reset_button] = find_key_combos(button_list, cfg->orientation_reset_button);
+		mapping[button::orientation_reset_button] = find_key_combos(button_list, cfg->orientation_reset_button.to_string());
 	}
 
 	return mapping;
