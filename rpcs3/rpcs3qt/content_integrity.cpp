@@ -83,7 +83,7 @@ void content_integrity::handle_download_canceled()
 
 void content_integrity::handle_download_error(const QString& error)
 {
-	sys_log.error("", error.toStdString().c_str());
+	sys_log.error("Database download failed: %s", error);
 }
 
 QByteArray content_integrity::read_json(const QByteArray& data, bool after_download)
