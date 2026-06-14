@@ -1976,10 +1976,16 @@ namespace rsx
 
 			if (!overlapping_locals.empty())
 			{
-				// Remove everything that is not a transfer target
-				overlapping_locals.erase_if([](const auto& e)
+				// Remove everything that is not a transfer target, and reject blit targets whose texel size
+				// differs from the requested format. Reinterpreting e.g. a 32bpp A8R8G8B8 blit result as a
+				// 64bpp FP16 texture byte-for-byte yields garbage (denormal/near-zero floats -> black squares);
+				// the stored GPU bytes are not the linear-memory bytes the game intends to reinterpret. Dropping
+				// such a section forces a normal texture upload from RSX memory, which matches hardware.
+				overlapping_locals.erase_if([&](const auto& e)
 				{
-					return e->is_dirty() || (e->get_context() != rsx::texture_upload_context::blit_engine_dst);
+					return e->is_dirty() ||
+						(e->get_context() != rsx::texture_upload_context::blit_engine_dst) ||
+						(get_format_block_size_in_bytes(e->get_gcm_format()) != attr.bpp);
 				});
 			}
 
