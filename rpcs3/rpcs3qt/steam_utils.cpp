@@ -520,7 +520,7 @@ namespace gui::utils
 		return !path.empty() && fs::is_dir(path);
 	}
 
-	u32 steam_shortcut::crc32(const std::string& data)
+	u32 steam_shortcut::crc32(std::string_view data)
 	{
 		u32 crc = 0xFFFFFFFF;
 
@@ -882,7 +882,7 @@ namespace gui::utils
 	}
 #endif
 
-	std::string steam_shortcut::steamid64_to_32(const std::string& steam_id)
+	std::string steam_shortcut::steamid64_to_32(std::string_view steam_id)
 	{
 		u64 id = 0;
 		if (!try_to_uint64(&id, steam_id, 0, umax))
@@ -1009,7 +1009,7 @@ namespace gui::utils
 
 		usz user_count = 0;
 
-		const auto find_user_id = [&content, &user_count](const std::string& key, const std::string& comp) -> std::string
+		const auto find_user_id = [&content, &user_count](const std::string& key, std::string_view comp) -> std::string
 		{
 			user_count = 0;
 			usz pos = 0;

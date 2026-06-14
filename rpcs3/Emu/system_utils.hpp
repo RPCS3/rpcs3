@@ -21,7 +21,7 @@ namespace rpcs3::utils
 
 	void configure_logs(bool force_enable = false);
 
-	u32 check_user(const std::string& user);
+	u32 check_user(std::string_view user);
 
 	bool install_pkg(const std::string& path);
 
