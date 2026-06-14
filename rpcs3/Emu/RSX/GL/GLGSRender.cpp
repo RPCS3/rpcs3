@@ -149,6 +149,9 @@ void GLGSRender::on_init_thread()
 	rsx_log.success("GL VERSION: %s", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
 	rsx_log.success("GLSL VERSION: %s", reinterpret_cast<const char*>(glGetString(GL_SHADING_LANGUAGE_VERSION)));
 
+	// Update frame title after GL was initialized in order to show the proper GPU
+	m_frame->update_title();
+
 	const auto& gl_caps = gl::get_driver_caps();
 
 	std::vector<std::string> exception_reasons;

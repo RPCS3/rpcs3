@@ -765,7 +765,7 @@ namespace rsx
 		ar(stereo_enabled, format, aspect, resolution_id, scanline_pitch, gamma, resolution_x, resolution_y, state, scan_mode);
 	}
 
-	void thread::capture_frame(const std::string& name)
+	void thread::capture_frame(const std::string& name) const
 	{
 		frame_trace_data::draw_state draw_state{};
 
@@ -843,7 +843,7 @@ namespace rsx
 
 		if (capture_current_frame)
 		{
-			u32 element_count = rsx::method_registers.current_draw_clause.get_elements_count();
+			const u32 element_count = rsx::method_registers.current_draw_clause.get_elements_count();
 			capture_frame(fmt::format("Draw %s %d", rsx::method_registers.current_draw_clause.primitive, element_count));
 		}
 	}
