@@ -11,7 +11,7 @@
 
 LOG_CHANNEL(sys_log, "VALIDATION");
 
-content_integrity_status content_validation::check_integrity(content_file_type file_type, const std::string& hash, std::string* game_name)
+content_integrity_status content_validation::check_integrity(content_file_type file_type, std::string_view hash, std::string* game_name)
 {
 	//
 	// Check for Redump db
