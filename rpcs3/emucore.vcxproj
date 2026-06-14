@@ -1067,7 +1067,6 @@
     <ClInclude Include="Loader\PUP.h" />
     <ClInclude Include="Loader\TAR.h" />
     <ClInclude Include="Loader\ISO.h" />
-    <ClInclude Include="Loader\iso_cache.h" />
     <ClInclude Include="Loader\TROPUSR.h" />
     <ClInclude Include="Loader\TRP.h" />
     <ClInclude Include="rpcs3_version.h" />
