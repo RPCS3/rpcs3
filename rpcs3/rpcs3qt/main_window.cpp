@@ -4100,6 +4100,19 @@ void main_window::closeEvent(QCloseEvent* closeEvent)
 	Emu.Quit(true);
 }
 
+void main_window::changeEvent(QEvent* event)
+{
+	if (event->type() == QEvent::ActivationChange)
+	{
+		if (m_game_list_frame && !isActiveWindow())
+		{
+			m_game_list_frame->stop_movie();
+		}
+	}
+
+	QMainWindow::changeEvent(event);
+}
+
 /**
 Add valid disc games to gamelist (games.yml)
 @param paths = dir paths to scan for game
