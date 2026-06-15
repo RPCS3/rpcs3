@@ -35,6 +35,15 @@ game_list::game_list() : QTableWidget(), game_list_base()
 	});
 }
 
+void game_list::stop_movie()
+{
+	if (m_last_hover_item)
+	{
+		m_last_hover_item->set_active(false);
+		m_last_hover_item = nullptr;
+	}
+}
+
 void game_list::sync_header_actions(std::map<int, QAction*>& actions, std::function<bool(int)> get_visibility)
 {
 	ensure(get_visibility);

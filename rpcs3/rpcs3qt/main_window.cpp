@@ -3543,10 +3543,10 @@ void main_window::CreateConnects()
 
 	connect(ui->downloadIntegrityDbAct, &QAction::triggered, this, [this]()
 	{
-		ensure(m_game_list_frame->GetIsoIntegrity())->download();
-		ensure(m_game_list_frame->GetPsnContentIntegrity())->download();
-		ensure(m_game_list_frame->GetPsnDlcIntegrity())->download();
-		ensure(m_game_list_frame->GetPsnUpdateIntegrity())->download();
+		m_game_list_frame->GetIsoIntegrity()->download();
+		m_game_list_frame->GetPsnContentIntegrity()->download();
+		m_game_list_frame->GetPsnDlcIntegrity()->download();
+		m_game_list_frame->GetPsnUpdateIntegrity()->download();
 	});
 
 	connect(ui->downloadCompatDbAct, &QAction::triggered, this, [this]()

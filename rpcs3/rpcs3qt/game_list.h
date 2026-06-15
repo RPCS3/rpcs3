@@ -23,6 +23,8 @@ class game_list : public QTableWidget, public game_list_base
 public:
 	game_list();
 
+	void stop_movie();
+
 	void sync_header_actions(std::map<int, QAction*>& actions, std::function<bool(int)> get_visibility);
 	void create_header_actions(std::map<int, QAction*>& actions, std::function<bool(int)> get_visibility, std::function<void(int, bool)> set_visibility);
 

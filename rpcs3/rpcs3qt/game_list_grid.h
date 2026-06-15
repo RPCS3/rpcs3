@@ -12,6 +12,8 @@ class game_list_grid : public flow_widget, public game_list_base
 public:
 	explicit game_list_grid();
 
+	void stop_movie();
+
 	void clear_list() override;
 
 	void populate(
