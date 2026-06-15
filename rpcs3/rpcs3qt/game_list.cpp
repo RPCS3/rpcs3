@@ -26,7 +26,7 @@ game_list::game_list() : QTableWidget(), game_list_base()
 
 		movie_item* new_item = static_cast<movie_item*>(item(row, 0));
 
-		if (new_item)
+		if (new_item && isActiveWindow())
 		{
 			new_item->set_active(true);
 		}
@@ -157,7 +157,7 @@ void game_list::mouseMoveEvent(QMouseEvent* event)
 		{
 			m_last_hover_item->set_active(false);
 		}
-		if (new_item)
+		if (new_item && isActiveWindow())
 		{
 			new_item->set_active(true);
 		}
