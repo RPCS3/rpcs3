@@ -1237,6 +1237,12 @@ void game_list_frame::ShowCustomConfigIcon(const game_info& game)
 	RepaintIcons();
 }
 
+void game_list_frame::stop_movie()
+{
+	if (m_game_list) m_game_list->stop_movie();
+	if (m_game_grid) m_game_grid->stop_movie();
+}
+
 void game_list_frame::ResizeIcons(int slider_pos)
 {
 	m_icon_size_index = slider_pos;
