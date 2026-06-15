@@ -208,22 +208,23 @@ namespace utils
 			content << proc_stat.rdbuf();
 			proc_stat.close();
 
-			const std::vector<std::string> lines = fmt::split(content.str(), {"\n"});
+			const std::string content_str = content.str();
+			const std::vector<std::string_view> lines = fmt::split_sv(content_str, {"\n"});
 			if (lines.empty())
 			{
 				perf_log.error("/proc/stat is empty");
 				return;
 			}
 
-			for (const std::string& line : lines)
+			for (const std::string_view& line : lines)
 			{
-				const std::vector<std::string> tokens = fmt::split(line, {" "});
+				const std::vector<std::string_view> tokens = fmt::split_sv(line, {" "});
 				if (tokens.size() < 5)
 				{
 					return;
 				}
 
-				const std::string& token = tokens[0];
+				const std::string_view token = tokens[0];
 				if (!token.starts_with("cpu"))
 				{
 					return;

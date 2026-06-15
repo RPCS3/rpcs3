@@ -77,7 +77,7 @@ void cfg_camera::camera_setting::from_string(std::string_view text)
 		return;
 	}
 
-	const std::vector<std::string> list = fmt::split(text, { "," });
+	const std::vector<std::string_view> list = fmt::split_sv(text, { "," });
 
 	if (list.size() != member_count)
 	{
