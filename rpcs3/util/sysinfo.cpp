@@ -765,7 +765,8 @@ utils::OS_version utils::get_OS_version()
 #else
 	if (struct utsname details = {}; !uname(&details))
 	{
-		const std::vector<std::string> version_list = fmt::split(details.release, { "." });
+		const std::string_view release = details.release;
+		const std::vector<std::string_view> version_list = fmt::split_sv(release, { "." });
 		const auto get_version_part = [&version_list](usz i) -> usz
 		{
 			if (version_list.size() <= i) return 0;
