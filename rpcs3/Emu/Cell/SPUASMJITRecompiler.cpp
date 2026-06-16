@@ -3343,44 +3343,33 @@ void spu_recompiler::HGT(spu_opcode_t op)
 
 void spu_recompiler::CLZ(spu_opcode_t op)
 {
+	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+
 	if (utils::has_avx512())
 	{
-		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
 		const XmmLink& vt = XmmAlloc();
 		c->vplzcntd(vt, va);
 		c->movdqa(SPU_OFF_128(gpr, op.rt), vt);
 		return;
 	}
-	
-	if (utils::has_sse41())
-	{
-		// Use signed conversion to float, as exponent is ilog2
-		// Fixup "negative" cases by overwriting with zero
-		const u32 exp_bias = 127;
 
-		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
-		const XmmLink& vf = XmmAlloc();
-		const XmmLink& v1 = XmmAlloc();
-		c->cvtdq2ps(vf, va); // only correct with round-towards-zero
-		c->psrld(vf, 23);
-		c->movdqa(v1, XmmConst(v128::from32p(exp_bias - 1)));
-		c->psignd(v1, va);	// conditional zeroing
-		c->paddd(v1, XmmConst(v128::from32p(32))); 
-		c->psubd(v1, vf);	// (x==0)? 32 : 31 - (exponent - exp_bias)
-		c->pxor(vf, vf);
-		c->blendvps(v1, vf, va);
-		c->movdqa(SPU_OFF_128(gpr, op.rt), v1);
-		return;
-	}
+	// Use signed conversion to float, as exponent is ilog2
+	// Fixup "negative" cases by overwriting with zero
+	const u32 exp_bias = 127;
 
-	c->mov(qw0->r32(), 32 + 31);
-	for (u32 i = 0; i < 4; i++) // unrolled loop
-	{
-		c->bsr(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, i));
-		c->cmovz(*addr, qw0->r32());
-		c->xor_(*addr, 31);
-		c->mov(SPU_OFF_32(gpr, op.rt, &v128::_u32, i), *addr);
-	}
+	const XmmLink& vf = XmmAlloc();
+	const XmmLink& v1 = XmmAlloc();
+	c->cvtdq2ps(vf, va); // only correct with round-towards-zero
+	c->psrld(vf, 23);
+	c->pxor(v1, v1);
+	c->pcmpeqd(v1, va);
+	c->pand(v1, XmmConst(v128::from32p(32 ^ (31 + exp_bias))));
+	c->pxor(v1, XmmConst(v128::from32p(31 + exp_bias)));
+	c->psubd(v1, vf);	// (x==0)? 32 : 31 - (exponent - exp_bias)
+	c->psrad(va, 31);
+	c->pandn(va, v1);
+	c->movdqa(SPU_OFF_128(gpr, op.rt), va);
+	return;
 }
 
 void spu_recompiler::XSWD(spu_opcode_t op)
