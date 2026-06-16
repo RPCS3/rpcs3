@@ -3343,12 +3343,33 @@ void spu_recompiler::HGT(spu_opcode_t op)
 
 void spu_recompiler::CLZ(spu_opcode_t op)
 {
+	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+		
 	if (utils::has_avx512())
 	{
-		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
 		const XmmLink& vt = XmmAlloc();
 		c->vplzcntd(vt, va);
 		c->movdqa(SPU_OFF_128(gpr, op.rt), vt);
+		return;
+	}
+	
+	if (utils::has_sse41())
+	{
+		// Use signed conversion to float, as exponent is ilog2
+		// Fixup "negative" cases by overwriting with zero
+		const u32 exp_bias = 127;
+
+		const XmmLink& vf = XmmAlloc();
+		const XmmLink& v1 = XmmAlloc();
+		c->cvtdq2ps(vf, va); // only correct with round-towards-zero
+		c->psrld(vf, 23);
+		c->movdqa(v1, XmmConst(v128::from32p(exp_bias - 1)));
+		c->psignd(v1, va);	// conditional zeroing
+		c->paddd(v1, XmmConst(v128::from32p(32))); 
+		c->psubd(v1, vf);	// (x==0)? 32 : 31 - (exponent - exp_bias)
+		c->pxor(vf, vf);
+		c->blendvps(v1, vf, va);
+		c->movdqa(SPU_OFF_128(gpr, op.rt), v1);
 		return;
 	}
 
