@@ -3343,10 +3343,9 @@ void spu_recompiler::HGT(spu_opcode_t op)
 
 void spu_recompiler::CLZ(spu_opcode_t op)
 {
-	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
-		
 	if (utils::has_avx512())
 	{
+		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
 		const XmmLink& vt = XmmAlloc();
 		c->vplzcntd(vt, va);
 		c->movdqa(SPU_OFF_128(gpr, op.rt), vt);
@@ -3359,6 +3358,7 @@ void spu_recompiler::CLZ(spu_opcode_t op)
 		// Fixup "negative" cases by overwriting with zero
 		const u32 exp_bias = 127;
 
+		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
 		const XmmLink& vf = XmmAlloc();
 		const XmmLink& v1 = XmmAlloc();
 		c->cvtdq2ps(vf, va); // only correct with round-towards-zero
