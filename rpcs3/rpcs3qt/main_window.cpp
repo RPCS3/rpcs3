@@ -3543,10 +3543,10 @@ void main_window::CreateConnects()
 
 	connect(ui->downloadIntegrityDbAct, &QAction::triggered, this, [this]()
 	{
-		ensure(m_game_list_frame->GetIsoIntegrity())->download();
-		ensure(m_game_list_frame->GetPsnContentIntegrity())->download();
-		ensure(m_game_list_frame->GetPsnDlcIntegrity())->download();
-		ensure(m_game_list_frame->GetPsnUpdateIntegrity())->download();
+		m_game_list_frame->GetIsoIntegrity()->download();
+		m_game_list_frame->GetPsnContentIntegrity()->download();
+		m_game_list_frame->GetPsnDlcIntegrity()->download();
+		m_game_list_frame->GetPsnUpdateIntegrity()->download();
 	});
 
 	connect(ui->downloadCompatDbAct, &QAction::triggered, this, [this]()
@@ -4098,6 +4098,19 @@ void main_window::closeEvent(QCloseEvent* closeEvent)
 
 	gui_log.notice("Quit with main_window::closeEvent");
 	Emu.Quit(true);
+}
+
+void main_window::changeEvent(QEvent* event)
+{
+	if (event->type() == QEvent::ActivationChange)
+	{
+		if (m_game_list_frame && !isActiveWindow())
+		{
+			m_game_list_frame->stop_movie();
+		}
+	}
+
+	QMainWindow::changeEvent(event);
 }
 
 /**

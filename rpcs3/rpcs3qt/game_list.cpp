@@ -26,13 +26,22 @@ game_list::game_list() : QTableWidget(), game_list_base()
 
 		movie_item* new_item = static_cast<movie_item*>(item(row, 0));
 
-		if (new_item)
+		if (new_item && isActiveWindow())
 		{
 			new_item->set_active(true);
 		}
 
 		m_last_hover_item = new_item;
 	});
+}
+
+void game_list::stop_movie()
+{
+	if (m_last_hover_item)
+	{
+		m_last_hover_item->set_active(false);
+		m_last_hover_item = nullptr;
+	}
 }
 
 void game_list::sync_header_actions(std::map<int, QAction*>& actions, std::function<bool(int)> get_visibility)
@@ -157,7 +166,7 @@ void game_list::mouseMoveEvent(QMouseEvent* event)
 		{
 			m_last_hover_item->set_active(false);
 		}
-		if (new_item)
+		if (new_item && isActiveWindow())
 		{
 			new_item->set_active(true);
 		}
