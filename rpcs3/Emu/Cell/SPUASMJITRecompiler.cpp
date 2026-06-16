@@ -3354,8 +3354,8 @@ void spu_recompiler::CLZ(spu_opcode_t op)
 	}
 
 	// Use signed conversion to float, as exponent is ilog2
-	// Fixup "negative" cases by overwriting with zero
-	const u32 exp_bias = 127;
+	// "Negative" values are zeroed due to saturation subtract
+	constexpr u32 exp_bias = 127;
 
 	const XmmLink& vf = XmmAlloc();
 	const XmmLink& v1 = XmmAlloc();
@@ -3365,10 +3365,8 @@ void spu_recompiler::CLZ(spu_opcode_t op)
 	c->pcmpeqd(v1, va);
 	c->pand(v1, XmmConst(v128::from32p(32 ^ (31 + exp_bias))));
 	c->pxor(v1, XmmConst(v128::from32p(31 + exp_bias)));
-	c->psubd(v1, vf);	// (x==0)? 32 : 31 - (exponent - exp_bias)
-	c->psrad(va, 31);
-	c->pandn(va, v1);
-	c->movdqa(SPU_OFF_128(gpr, op.rt), va);
+	c->psubusw(v1, vf);	// (x==0)? 32 : 31 - (exponent - exp_bias)
+	c->movdqa(SPU_OFF_128(gpr, op.rt), v1);
 	return;
 }
 
