@@ -1923,6 +1923,7 @@ void main_window::DecryptSPRXLibraries()
 void main_window::SaveWindowState() const
 {
 	// Save gui settings
+	m_gui_settings->SetValue(gui::mw_visibility, gui::window_states_to_string(windowState()), false);
 	m_gui_settings->SetValue(gui::mw_geometry, saveGeometry(), false);
 	m_gui_settings->SetValue(gui::mw_windowState, saveState(), false);
 
@@ -1999,14 +2000,7 @@ void main_window::RepaintToolBarIcons()
 		ui->sysPauseAct->setIcon(m_icon_play);
 	}
 
-	if (isFullScreen())
-	{
-		ui->toolbar_fullscreen->setIcon(m_icon_fullscreen_off);
-	}
-	else
-	{
-		ui->toolbar_fullscreen->setIcon(m_icon_fullscreen_on);
-	}
+	ui->toolbar_fullscreen->setIcon(isFullScreen() ? m_icon_fullscreen_off : m_icon_fullscreen_on);
 
 	const QColor& new_color = new_colors[QIcon::Normal];
 	ui->sizeSlider->setStyleSheet(ui->sizeSlider->styleSheet().append("QSlider::handle:horizontal{ background: rgba(%1, %2, %3, %4); }")
@@ -3941,6 +3935,10 @@ void main_window::ConfigureGuiFromSettings()
 
 	// Gamelist
 	m_game_list_frame->LoadSettings();
+
+	// Restore saved visibility from last time.
+	setWindowState(gui::string_to_window_states(m_gui_settings->GetValue(gui::mw_visibility).toString()));
+	ui->toolbar_fullscreen->setIcon(isFullScreen() ? m_icon_fullscreen_off : m_icon_fullscreen_on);
 }
 
 void main_window::SetIconSizeActions(int idx) const
@@ -4060,7 +4058,7 @@ void main_window::CreateFirmwareCache()
 	}
 }
 
-void main_window::mouseDoubleClickEvent(QMouseEvent *event)
+void main_window::mouseDoubleClickEvent(QMouseEvent* event)
 {
 	if (isFullScreen())
 	{

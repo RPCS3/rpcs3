@@ -125,9 +125,9 @@ private Q_SLOTS:
 	void update_gui_pad_thread();
 
 protected:
-	void closeEvent(QCloseEvent *event) override;
-	void changeEvent(QEvent *event) override;
-	void mouseDoubleClickEvent(QMouseEvent *event) override;
+	void closeEvent(QCloseEvent* event) override;
+	void changeEvent(QEvent* event) override;
+	void mouseDoubleClickEvent(QMouseEvent* event) override;
 	void dropEvent(QDropEvent* event) override;
 	void dragEnterEvent(QDragEnterEvent* event) override;
 	void dragMoveEvent(QDragMoveEvent* event) override;
@@ -184,7 +184,7 @@ private:
 	QActionGroup* m_category_visible_act_group = nullptr;
 
 	// Dockable widget frames
-	QMainWindow *m_mw = nullptr;
+	QMainWindow* m_mw = nullptr;
 	log_frame* m_log_frame = nullptr;
 	debugger_frame* m_debugger_frame = nullptr;
 	game_list_frame* m_game_list_frame = nullptr;
