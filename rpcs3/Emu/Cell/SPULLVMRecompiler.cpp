@@ -7539,9 +7539,7 @@ public:
 			for (u32 i = 0; i < 4; i++)
 			{
 				const auto eval_fraction = eval(extract(a_fraction, i));
-
 				value_t<u32> r_fraction = load_const<u32>(m_spu_frsqest_fraction_lut, eval_fraction);
-
 				final_fraction = eval(insert(final_fraction, i, r_fraction));
 			}
 
@@ -8589,9 +8587,7 @@ public:
 				for (u32 i = 0; i < 4; i++)
 				{
 					const auto eval_fraction = eval(extract(a_fraction, i));
-					
 					value_t<u32> r_fraction = load_const<u32>(m_spu_frsqest_fraction_lut, eval_fraction);
-					
 					final_fraction = eval(insert(final_fraction, i, r_fraction));
 				}
 
