@@ -109,6 +109,12 @@ namespace gui
 		return q_string_pair(path, title.simplified()); // simplified() forces single line text
 	}
 
+	QString window_states_to_string(Qt::WindowStates states);
+	Qt::WindowState string_to_window_states(const QString& state);
+
+	QString visibility_to_string(QWindow::Visibility visibility);
+	QWindow::Visibility string_to_visibility(const QString& visibility);
+
 	const QString Settings          = "CurrentSettings";
 	const QString DefaultStylesheet = "default";
 	const QString NoStylesheet      = "none";
@@ -180,6 +186,7 @@ namespace gui
 	const gui_save mw_geometry         = gui_save(main_window, "geometry",         QByteArray());
 	const gui_save mw_windowState      = gui_save(main_window, "windowState",      QByteArray());
 	const gui_save mw_mwState          = gui_save(main_window, "mwState",          QByteArray());
+	const gui_save mw_visibility       = gui_save(main_window, "visibility",       window_states_to_string(Qt::WindowNoState));
 
 	const gui_save cat_hdd_game    = gui_save(game_list, "categoryVisibleHDDGame",    true);
 	const gui_save cat_disc_game   = gui_save(game_list, "categoryVisibleDiscGame",   true);
@@ -272,7 +279,7 @@ namespace gui
 	const gui_save gs_hideMouseIdle     = gui_save(gs_frame, "hideMouseOnIdle",       false);
 	const gui_save gs_hideMouseIdleTime = gui_save(gs_frame, "hideMouseOnIdleTime",   2000);
 	const gui_save gs_geometry          = gui_save(gs_frame, "geometry",              QRect());
-	const gui_save gs_visibility        = gui_save(gs_frame, "visibility",            QWindow::Visibility::AutomaticVisibility);
+	const gui_save gs_visibility        = gui_save(gs_frame, "visibility",            visibility_to_string(QWindow::Visibility::AutomaticVisibility));
 
 	const gui_save ss_icon_color      = gui_save(trophy, "icon_color",    gl_icon_color);
 	const gui_save ss_game_icon_size  = gui_save(trophy, "game_icon_size",  25);
