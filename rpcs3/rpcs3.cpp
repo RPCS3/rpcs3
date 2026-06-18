@@ -692,6 +692,10 @@ int run_rpcs3(int argc, char** argv)
 		logs::stored_message ver{sys_log.always()};
 		ver.text = fmt::format("RPCS3 v%s", rpcs3::get_verbose_version());
 
+		// Write Architecture
+		logs::stored_message arch{sys_log.always()};
+		arch.text = fmt::format("Architecture: %s", utils::get_architecture());
+
 		// Write System information
 		logs::stored_message sys{sys_log.always()};
 		sys.text = utils::get_system_info();
@@ -708,7 +712,7 @@ int run_rpcs3(int argc, char** argv)
 		logs::stored_message time{sys_log.always()};
 		time.text = fmt::format("Current Time: %s", std::chrono::system_clock::now());
 
-		logs::set_init({std::move(ver), std::move(sys), std::move(os), std::move(qt), std::move(time)});
+		logs::set_init({std::move(ver), std::move(arch), std::move(sys), std::move(os), std::move(qt), std::move(time)});
 	}
 
 #ifdef ARCH_ARM64
