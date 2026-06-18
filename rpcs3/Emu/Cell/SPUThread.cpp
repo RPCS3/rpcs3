@@ -4355,10 +4355,20 @@ bool spu_thread::process_mfc_cmd()
 									}
 								}
 								else
-#endif
 								{
 									busy_wait(300);
 								}
+#elif defined(ARCH_ARM64)
+									// arm64 has no UMWAIT/MWAITX. Use the WFE exclusive-monitor wait (the arm64
+									// analogue of __mwaitx): sleep the core on the reservation timestamp word and
+									// wake on the PUTLLC store, instead of a blind unobserving busy_wait. Mirrors
+									// the X64 __mwaitx comparison args (reservation_acquire vs the snapshot rtime).
+									utils::spin_on_cacheline_once(vm::reservation_acquire(addr), +rtime, 100);
+#else
+								{
+									busy_wait(300);
+								}
+#endif
 
 								if (getllar_spin_count == 3)
 								{
@@ -5725,10 +5735,20 @@ s64 spu_thread::get_ch_value(u32 ch)
 					}
 				}
 				else
-#endif
 				{
 					busy_wait(300);
 				}
+#elif defined(ARCH_ARM64)
+					// arm64 has no UMWAIT/MWAITX. Use the WFE exclusive-monitor wait (the arm64
+					// analogue of __mwaitx): sleep the core on the reservation timestamp word and
+					// wake on the PUTLLC store, instead of a blind unobserving busy_wait. Mirrors
+					// the X64 __mwaitx comparison args (reservation_acquire vs the snapshot rtime).
+					utils::spin_on_cacheline_once(vm::reservation_acquire(raddr), +rtime, 100);
+#else
+				{
+					busy_wait(300);
+				}
+#endif
 
 				// Check other reservations in other threads
 				lv2_obj::notify_all();
