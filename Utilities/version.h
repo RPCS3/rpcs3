@@ -23,10 +23,10 @@ namespace utils
 		uint m_lo;
 		version_type m_type = version_type::release;
 		uint m_type_index = 1;
-		const char* m_postfix;
+		std::string_view m_postfix;
 
 	public:
-		constexpr version(uint hi, uint mid, uint lo, version_type type, uint type_index, const char* postfix)
+		constexpr version(uint hi, uint mid, uint lo, version_type type, uint type_index, std::string_view postfix)
 			: m_hi(hi)
 			, m_mid(mid)
 			, m_lo(lo)
@@ -56,7 +56,7 @@ namespace utils
 			return m_type;
 		}
 
-		std::string postfix() const
+		std::string_view postfix() const
 		{
 			return m_postfix;
 		}
@@ -67,7 +67,7 @@ namespace utils
 		}
 
 		uint to_hex() const;
-		std::string to_string() const;
+		std::string to_string(bool simple = false) const;
 	};
 
 	// Generic version comparison (e.g. 0.0.5 vs 1.3)
