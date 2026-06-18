@@ -531,6 +531,17 @@ std::string utils::get_cpu_brand()
 #endif
 }
 
+std::string_view utils::get_architecture()
+{
+#if defined(ARCH_X64)
+    return "x64"sv;
+#elif defined(ARCH_ARM64)
+    return "arm64"sv;
+#else
+    return "unknown"sv;
+#endif
+}
+
 std::string utils::get_system_info()
 {
 	std::string result;

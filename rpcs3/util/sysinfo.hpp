@@ -71,6 +71,8 @@ namespace utils
 #endif
 	std::string get_cpu_brand();
 
+	std::string_view get_architecture();
+
 	std::string get_system_info();
 
 	std::string get_firmware_version();
