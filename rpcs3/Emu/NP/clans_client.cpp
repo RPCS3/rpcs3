@@ -145,10 +145,15 @@ namespace clan
 		clan_request_ctx()
 		{
 			curl = curl_easy_init();
-			if (curl)
+
+			if (!curl)
 			{
-				curl_easy_setopt(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
+				clan_log.error("curl_easy_init failed");
+				return;
 			}
+
+			CURLcode err = curl_easy_setopt(curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
+			if (err != CURLE_OK) clan_log.error("curl_easy_setopt(CURLOPT_SSL_OPTIONS): %s", curl_easy_strerror(err));
 		}
 
 		~clan_request_ctx()
@@ -245,24 +250,39 @@ namespace clan
 
 		std::vector<char> response_buffer;
 
-		curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_callback);
-		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_buffer);
-		curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, err_buf);
+		CURLcode err = curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+		if (err != CURLE_OK) clan_log.error("curl_easy_setopt(CURLOPT_URL): %s", curl_easy_strerror(err));
+
+		err = curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write_callback);
+		if (err != CURLE_OK) clan_log.error("curl_easy_setopt(CURLOPT_WRITEFUNCTION): %s", curl_easy_strerror(err));
+
+		err = curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response_buffer);
+		if (err != CURLE_OK) clan_log.error("curl_easy_setopt(CURLOPT_WRITEDATA): %s", curl_easy_strerror(err));
+
+		err = curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, err_buf);
+		if (err != CURLE_OK) clan_log.error("curl_easy_setopt(CURLOPT_ERRORBUFFER): %s", curl_easy_strerror(err));
 
 		// WARN: This disables certificate verification!
-		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+		err = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+		if (err != CURLE_OK) clan_log.error("curl_easy_setopt(CURLOPT_SSL_VERIFYHOST): %s", curl_easy_strerror(err));
 
-		curl_easy_setopt(curl, CURLOPT_POST, 1);
-		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, xml.c_str());
-		curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, xml.size());
+		err = curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+		if (err != CURLE_OK) clan_log.error("curl_easy_setopt(CURLOPT_SSL_VERIFYPEER): %s", curl_easy_strerror(err));
 
-		const CURLcode res = curl_easy_perform(curl);
+		err = curl_easy_setopt(curl, CURLOPT_POST, 1);
+		if (err != CURLE_OK) clan_log.error("curl_easy_setopt(CURLOPT_POST): %s", curl_easy_strerror(err));
 
-		if (res != CURLE_OK)
+		err = curl_easy_setopt(curl, CURLOPT_POSTFIELDS, xml.c_str());
+		if (err != CURLE_OK) clan_log.error("curl_easy_setopt(CURLOPT_POSTFIELDS): %s", curl_easy_strerror(err));
+
+		err = curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, xml.size());
+		if (err != CURLE_OK) clan_log.error("curl_easy_setopt(CURLOPT_POSTFIELDSIZE): %s", curl_easy_strerror(err));
+
+		err = curl_easy_perform(curl);
+
+		if (err != CURLE_OK)
 		{
-			clan_log.error("curl_easy_perform() failed: %s", curl_easy_strerror(res));
+			clan_log.error("curl_easy_perform() failed: %s", curl_easy_strerror(err));
 			clan_log.error("Error buffer: %s", err_buf);
 			return SCE_NP_CLANS_ERROR_BAD_REQUEST;
 		}
