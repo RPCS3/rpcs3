@@ -940,6 +940,18 @@ std::string fs::get_path_if_dir(const std::string& path)
 	return path + '/';
 }
 
+std::string fs::strip_end_path_delimiter(const std::string& path)
+{
+	const auto not_del = path.find_last_not_of(delim);
+
+	if (path.empty() || not_del == umax)
+	{
+		return path;
+	}
+
+	return path.substr(0, not_del + 1);
+}
+
 bool fs::get_stat(const std::string& path, stat_t& info)
 {
 	// Ensure consistent information on failure

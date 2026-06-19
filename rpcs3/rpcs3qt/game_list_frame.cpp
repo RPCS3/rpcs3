@@ -397,7 +397,7 @@ void game_list_frame::Refresh(const bool from_drive, const std::vector<std::stri
 			action->setText(get_action_text(col));
 		}
 
-		const std::string games_dir = rpcs3::utils::get_games_dir();
+		const std::string games_dir = fs::strip_end_path_delimiter(rpcs3::utils::get_games_dir());
 
 		// Remove the specified and detected serials (title id) belonging to "games_dir" folder only from the game list in memory
 		// (not yet in "games.yml" file)

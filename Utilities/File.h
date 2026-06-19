@@ -198,6 +198,9 @@ namespace fs
 	// Return "path" plus an ending delimiter (if missing) if "path" is an existing directory. Otherwise, an empty string
 	std::string get_path_if_dir(const std::string& path);
 
+	// Return "path" removing any ending delimiter (if present)
+	std::string strip_end_path_delimiter(const std::string& path);
+
 	// Get file information
 	bool get_stat(const std::string& path, stat_t& info);
 
