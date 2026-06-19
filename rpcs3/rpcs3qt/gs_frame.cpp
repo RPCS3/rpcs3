@@ -647,7 +647,7 @@ void gs_frame::hide_on_close()
 {
 	// Make sure not to save the hidden state, which is useless to us.
 	const Visibility current_visibility = visibility();
-	m_gui_settings->SetValue(gui::gs_visibility, current_visibility == Visibility::Hidden ? m_visibility : current_visibility, false);
+	m_gui_settings->SetValue(gui::gs_visibility, gui::visibility_to_string(current_visibility == Visibility::Hidden ? m_visibility : current_visibility), false);
 	m_gui_settings->SetValue(gui::gs_geometry, geometry(), true);
 
 	if (!g_progr_text)
@@ -718,10 +718,10 @@ void gs_frame::show()
 		{
 			setVisibility(FullScreen);
 		}
-		else if (const QVariant var = m_gui_settings->GetValue(gui::gs_visibility); var.canConvert<Visibility>())
+		else if (const QVariant var = m_gui_settings->GetValue(gui::gs_visibility); var.canConvert<QString>())
 		{
 			// Restore saved visibility from last time. Make sure not to hide the window, or the user can't access it anymore.
-			if (const Visibility visibility = var.value<Visibility>(); visibility != Visibility::Hidden)
+			if (const Visibility visibility = gui::string_to_visibility(var.value<QString>()); visibility != Visibility::Hidden)
 			{
 				setVisibility(visibility);
 			}

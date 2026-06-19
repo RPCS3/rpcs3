@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "curl_handle.h"
 #include "util/logs.hpp"
+#include "util/sysinfo.hpp"
 
 #ifdef _WIN32
 #include "Utilities/StrUtil.h"
@@ -15,6 +16,12 @@ curl_handle::curl_handle()
 {
 	m_curl = curl_easy_init();
 
+	if (!m_curl)
+	{
+		network_log.error("curl_easy_init failed");
+		return;
+	}
+
 	CURLcode err = curl_easy_setopt(m_curl, CURLOPT_ERRORBUFFER, m_error_buffer.data());
 	if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_ERRORBUFFER): %s", curl_easy_strerror(err));
 
@@ -28,11 +35,18 @@ curl_handle::curl_handle()
 	err = curl_easy_setopt(m_curl, CURLOPT_SSL_OPTIONS, CURLSSLOPT_NATIVE_CA);
 	if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_SSL_OPTIONS): %s", curl_easy_strerror(err));
 #endif
+
+	const std::string user_agent = utils::get_user_agent();
+	err = curl_easy_setopt(m_curl, CURLOPT_USERAGENT, user_agent.c_str());
+	if (err != CURLE_OK) network_log.error("curl_easy_setopt(CURLOPT_USERAGENT): %s", curl_easy_strerror(err));
 }
 
 curl_handle::~curl_handle()
 {
-	curl_easy_cleanup(m_curl);
+	if (m_curl)
+	{
+		curl_easy_cleanup(m_curl);
+	}
 }
 
 CURL* curl_handle::get_curl() const

@@ -2147,7 +2147,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 				{ "%R", tr("Renderer", "Game window title") },
 				{ "%T", tr("Title", "Game window title") },
 				{ "%t", tr("Title ID", "Game window title") },
-				{ "%V", tr("RPCS3 Version", "Game window title") }
+				{ "%V", tr("RPCS3 Version", "Game window title") },
+				{ "%A", tr("Architecture", "Game window title") }
 			};
 
 			QString glossary;
