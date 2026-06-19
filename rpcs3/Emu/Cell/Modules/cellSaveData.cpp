@@ -795,7 +795,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		std::vector<std::string> prefix_list = fmt::split(setList->dirNamePrefix.get_ptr(), {"|"});
 
 		// if prefix_list is empty game wants to check all savedata
-		if (prefix_list.empty() && (operation == SAVEDATA_OP_LIST_LOAD || operation == SAVEDATA_OP_FIXED_LOAD))
+		if (prefix_list.empty() && (operation == SAVEDATA_OP_LIST_LOAD || operation == SAVEDATA_OP_FIXED_LOAD || operation == SAVEDATA_OP_FIXED_DELETE))
 		{
 			cellSaveData.notice("savedata_op(): dirNamePrefix is empty. Listing all entries. operation=%d", operation);
 			prefix_list = {""};
@@ -1356,6 +1356,12 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 					selected = i;
 					break;
 				}
+			}
+
+			if (operation == SAVEDATA_OP_FIXED_DELETE && (selected < 0 || static_cast<u32>(selected) >= save_entries.size()))
+			{
+				// No matching save entry found to delete
+				return {CELL_SAVEDATA_ERROR_NODATA, "FixedDelete: no save entry found for dirName"};
 			}
 
 			switch (fixedSet->option)
