@@ -39,10 +39,10 @@ namespace rsx
 
 			compiled_resource get_compiled() override;
 
-			s32 show(std::shared_ptr<media_entry> root, media_entry& result, const std::string& title, u32 focused, bool enable_overlay);
+			s32 show(std::shared_ptr<media_entry> root, media_entry& result, std::string_view title, u32 focused, bool enable_overlay);
 
 		private:
-			void reload(const std::string& title, u32 focused);
+			void reload(std::string_view title, u32 focused);
 
 			struct media_list_entry : horizontal_layout
 			{

@@ -277,6 +277,9 @@ protected:
 protected:
 	libusb_device* lusb_device        = nullptr;
 	libusb_device_handle* lusb_handle = nullptr;
+
+private:
+	void patch_descriptors();
 };
 
 class usb_device_emulated : public usb_device

@@ -260,6 +260,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->spuLoopDetection, emu_settings_type::SPULoopDetection);
 	SubscribeTooltip(ui->spuLoopDetection, tooltips.settings.spu_loop_detection);
 
+	m_emu_settings->EnhanceCheckBox(ui->ppuReservationPrority, emu_settings_type::PPUReservationPriorityOverSPUs);
+	SubscribeTooltip(ui->ppuReservationPrority, tooltips.settings.ppu_reservation_priority);
+
 	// Comboboxes
 	m_emu_settings->EnhanceComboBox(ui->xfloatAccuracy, emu_settings_type::XFloatAccuracy);
 	SubscribeTooltip(ui->gb_xfloat_accuracy, tooltips.settings.xfloat);
@@ -370,7 +373,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	//   | |__| | |    | |__| |    | | (_| | |_) |
 	//    \_____|_|     \____/     |_|\__,_|_.__/
 
-	render_creator* r_creator = m_emu_settings->m_render_creator;
+	std::shared_ptr<render_creator> r_creator = m_emu_settings->m_render_creator;
 
 	if (!r_creator)
 	{
@@ -933,8 +936,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			QStringList cur_list = m_emu_settings->m_microphone_creator.get_microphone_list();
 			for (u32 subindex = 0; subindex < m_mics_combo.size(); subindex++)
 			{
-				if (subindex != index && m_mics_combo[subindex]->currentText() != mic_none)
-					cur_list.removeOne(m_mics_combo[subindex]->currentText());
+				if (subindex == index) continue;
+				if (const QString text = m_mics_combo[subindex]->currentText(); text != mic_none)
+				{
+					cur_list.removeOne(text);
+				}
 			}
 			m_mics_combo[index]->blockSignals(true);
 			m_mics_combo[index]->clear();
@@ -949,7 +955,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		m_emu_settings->SetSetting(emu_settings_type::MicrophoneDevices, m_emu_settings->m_microphone_creator.set_device(index, text));
 		if (const u32 next_index = index + 1; next_index < m_mics_combo.size() && text == mic_none)
+		{
 			m_mics_combo[next_index]->setCurrentText(mic_none);
+		}
 		propagate_used_devices();
 	};
 
@@ -1102,7 +1110,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->m_microphone_creator.parse_devices(m_emu_settings->GetSetting(emu_settings_type::MicrophoneDevices));
 
-	const std::array<std::string, 4> mic_sel_list = m_emu_settings->m_microphone_creator.get_selection_list();
+	const std::array<std::string, 4>& mic_sel_list = m_emu_settings->m_microphone_creator.get_selection_list();
 
 	for (s32 index = static_cast<int>(mic_sel_list.size()) - 1; index >= 0; index--)
 	{
@@ -1243,6 +1251,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	ui->loadSdlMappings->setVisible(false);
 #endif
 
+	m_emu_settings->EnhanceCheckBox(ui->mouseBasedGyroBox, emu_settings_type::MouseBasedGyro);
+	SubscribeTooltip(ui->mouseBasedGyroBox, tooltips.settings.mouse_based_gyro);
+
 #ifndef _WIN32
 	// Remove raw mouse handler
 	remove_item(ui->mouseHandlerBox, static_cast<int>(mouse_handler::raw), static_cast<int>(g_cfg.io.mouse.def));
@@ -1273,8 +1284,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			QStringList cur_list = m_emu_settings->m_midi_creator.get_midi_list();
 			for (u32 subindex = 0; subindex < m_midi_device_combo.size(); subindex++)
 			{
-				if (subindex != index && m_midi_device_combo[subindex]->currentText() != midi_none)
-					cur_list.removeOne(m_midi_device_combo[subindex]->currentText());
+				if (subindex == index) continue;
+				if (const QString text = m_midi_device_combo[subindex]->currentText(); text != midi_none)
+				{
+					cur_list.removeOne(text);
+				}
 			}
 			m_midi_device_combo[index]->blockSignals(true);
 			m_midi_device_combo[index]->clear();
@@ -1323,7 +1337,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->m_midi_creator.parse_devices(m_emu_settings->GetSetting(emu_settings_type::MidiDevices));
 
-	const std::array<midi_device, max_midi_devices> midi_sel_list = m_emu_settings->m_midi_creator.get_selection_list();
+	const std::array<midi_device, max_midi_devices>& midi_sel_list = m_emu_settings->m_midi_creator.get_selection_list();
 
 	for (s32 index = static_cast<int>(midi_sel_list.size()) - 1; index >= 0; index--)
 	{
@@ -2133,7 +2147,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 				{ "%R", tr("Renderer", "Game window title") },
 				{ "%T", tr("Title", "Game window title") },
 				{ "%t", tr("Title ID", "Game window title") },
-				{ "%V", tr("RPCS3 Version", "Game window title") }
+				{ "%V", tr("RPCS3 Version", "Game window title") },
+				{ "%A", tr("Architecture", "Game window title") }
 			};
 
 			QString glossary;

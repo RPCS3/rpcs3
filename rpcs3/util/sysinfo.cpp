@@ -3,9 +3,11 @@
 #include "Utilities/File.h"
 #include "Emu/vfs_config.h"
 #include "Utilities/Thread.h"
+#include "rpcs3_version.h"
 
 #if defined(ARCH_ARM64)
 #include "Emu/CPU/Backends/AArch64/AArch64Common.h"
+#include <arm_sve.h>
 #endif
 #ifdef _WIN32
 #include "windows.h"
@@ -425,6 +427,26 @@ bool utils::has_dotprod()
 	return g_value;
 }
 
+bool utils::has_i8mm()
+{
+	static const bool g_value = []() -> bool
+	{
+#if defined(__linux__)
+		return (getauxval(AT_HWCAP2) & HWCAP2_I8MM) != 0;
+#elif defined(__APPLE__)
+		int val = 0;
+		size_t len = sizeof(val);
+		sysctlbyname("hw.optional.arm.FEAT_I8MM", &val, &len, nullptr, 0);
+		return val != 0;
+#elif defined(_WIN32)
+		return IsProcessorFeaturePresent(PF_ARM_V82_I8MM_INSTRUCTIONS_AVAILABLE) != 0;
+#else
+		return false;
+#endif
+	}();
+	return g_value;
+}
+
 bool utils::has_sve()
 {
 	static const bool g_value = []() -> bool
@@ -458,6 +480,19 @@ bool utils::has_sve2()
 		return IsProcessorFeaturePresent(PF_ARM_SVE2_INSTRUCTIONS_AVAILABLE) != 0;
 #endif
 	}();
+	return g_value;
+}
+
+#if defined(_MSC_VER)
+#define sve_func
+#else
+#define sve_func __attribute__((__target__("+sve")))
+#endif
+
+// svcntb returns sve length in bytes, our function retuns length in bits
+sve_func int utils::sve_length()
+{
+	static const int g_value = static_cast<int>(svcntb() * 8);
 	return g_value;
 }
 
@@ -497,6 +532,17 @@ std::string utils::get_cpu_brand()
 #endif
 }
 
+std::string_view utils::get_architecture()
+{
+#if defined(ARCH_X64)
+    return "x64"sv;
+#elif defined(ARCH_ARM64)
+    return "arm64"sv;
+#else
+    return "unknown"sv;
+#endif
+}
+
 std::string utils::get_system_info()
 {
 	std::string result;
@@ -517,13 +563,18 @@ std::string utils::get_system_info()
 	}
 #ifdef ARCH_ARM64
 
-	if (has_neon())
+	if (!has_neon())
 	{
-		result += " | Neon";
+		fmt::throw_exception("Neon support not present");
+	}
+
+	if (has_sve())
+	{
+		fmt::append(result, " | SVE%s-%d", has_sve2() ? "2" : "", sve_length());
 	}
 	else
 	{
-		fmt::throw_exception("Neon support not present");
+		result += " | Neon";
 	}
 #else
 
@@ -726,7 +777,8 @@ utils::OS_version utils::get_OS_version()
 #else
 	if (struct utsname details = {}; !uname(&details))
 	{
-		const std::vector<std::string> version_list = fmt::split(details.release, { "." });
+		const std::string_view release = details.release;
+		const std::vector<std::string_view> version_list = fmt::split_sv(release, { "." });
 		const auto get_version_part = [&version_list](usz i) -> usz
 		{
 			if (version_list.size() <= i) return 0;
@@ -745,13 +797,17 @@ utils::OS_version utils::get_OS_version()
 	return res;
 }
 
-std::string utils::get_OS_version_string()
+std::string utils::get_OS_version_string(bool simple)
 {
-	std::string output;
 #ifdef _WIN32
 	OSVERSIONINFOW osvi{};
 	osvi.dwOSVersionInfoSize = sizeof(osvi);
 	RtlGetVersion(&osvi);
+
+	if (simple)
+	{
+		return fmt::format("Windows %lu.%lu.%lu", osvi.dwMajorVersion, osvi.dwMinorVersion, osvi.dwBuildNumber);
+	}
 
 	const bool has_sp = osvi.szCSDVersion[0] != L'\0';
 	std::vector<char> holder;
@@ -764,8 +820,7 @@ std::string utils::get_OS_version_string()
 			holder.data(), len, nullptr, nullptr);
 	}
 
-	fmt::append(output,
-		"Operating system: Windows, Major: %lu, Minor: %lu, Build: %lu, Service Pack: %s",
+	return fmt::format("Operating system: Windows, Major: %lu, Minor: %lu, Build: %lu, Service Pack: %s",
 		osvi.dwMajorVersion, osvi.dwMinorVersion, osvi.dwBuildNumber,
 		has_sp ? holder.data() : "none");
 #elif defined (__APPLE__)
@@ -773,22 +828,41 @@ std::string utils::get_OS_version_string()
 	const int minor_version = Darwin_Version::getNSminorVersion();
 	const int patch_version = Darwin_Version::getNSpatchVersion();
 
-	fmt::append(output, "Operating system: macOS, Version: %d.%d.%d",
-		major_version, minor_version, patch_version);
+	if (simple)
+	{
+		return fmt::format("macOS %d.%d.%d", major_version, minor_version, patch_version);
+	}
+
+	return fmt::format("Operating system: macOS, Version: %d.%d.%d", major_version, minor_version, patch_version);
 #else
 	struct utsname details = {};
 
 	if (!uname(&details))
 	{
-		fmt::append(output, "Operating system: POSIX, Name: %s, Release: %s, Version: %s",
-			details.sysname, details.release, details.version);
+		if (simple)
+		{
+			return fmt::format("%s %s", details.sysname, details.release);
+		}
+
+		return fmt::format("Operating system: POSIX, Name: %s, Release: %s, Version: %s", details.sysname, details.release, details.version);
 	}
-	else
+
+	if (simple)
 	{
-		fmt::append(output, "Operating system: POSIX, Unknown version! (Error: %d)", errno);
+		return "POSIX";
 	}
+
+	return fmt::format("Operating system: POSIX, Unknown version! (Error: %d)", errno);
 #endif
-	return output;
+}
+
+std::string utils::get_user_agent()
+{
+	const std::string user_agent = fmt::format("RPCS3/%s (%s; %s)",
+		rpcs3::get_version().to_string(true),
+		utils::get_OS_version_string(true),
+		utils::get_architecture());
+	return user_agent;
 }
 
 int utils::get_maxfiles()

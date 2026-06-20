@@ -334,7 +334,7 @@ public:
 	}
 
 	// Handle compilation errors
-	void CompilationError(const std::string& error);
+	void CompilationError(std::string_view error);
 
 	PPUTranslator(llvm::LLVMContext& context, llvm::Module* _module, const ppu_module<lv2_obj>& info, llvm::ExecutionEngine& engine);
 	~PPUTranslator();

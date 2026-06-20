@@ -66,6 +66,7 @@ void fmt_class_string<CellMusic2Error>::format(std::string& out, u64 arg)
 
 struct music_state
 {
+public:
 	shared_mutex mutex;
 
 	vm::ptr<void(u32 event, vm::ptr<void> param, vm::ptr<void> userData)> func{};
@@ -99,17 +100,37 @@ struct music_state
 			switch (status)
 			{
 			case music_handler_base::player_status::end_of_media:
-				// Let's just play the next song for now
-				if (current_selection_context.content_type == CELL_SEARCH_CONTENTTYPE_MUSICLIST && handler->get_state() == CELL_MUSIC_PB_STATUS_PLAY)
-				{
-					if (const error_code error = set_playback_command(CELL_MUSIC_PB_CMD_NEXT, true))
-					{
-						cellMusic.error("Failed to play next track. error=0x%x", +error);
-					}
-				}
+				// Let's just play the next song for now if we are in list mode.
+				// Due to potential main thread recursion this may cause a deadlock with the internal mutex of the handler.
+				// Let's just call it from another thread instead.
+				m_wake_up_thread = 1;
+				m_wake_up_thread.notify_one();
 				break;
 			default:
 				return;
+			}
+		});
+
+		m_thread = std::make_unique<named_thread<std::function<void()>>>("cellMusic State", [this]()
+		{
+			while (thread_ctrl::state() != thread_state::aborting)
+			{
+				while (thread_ctrl::state() != thread_state::aborting && !m_wake_up_thread)
+				{
+					thread_ctrl::wait_on(m_wake_up_thread, 0);
+				}
+				m_wake_up_thread = 0;
+
+				if (thread_ctrl::state() == thread_state::aborting)
+				{
+					return;
+				}
+
+				// Play the next song
+				if (const error_code error = set_playback_command(CELL_MUSIC_PB_CMD_NEXT_TRACK))
+				{
+					cellMusic.error("Failed to play next track. error=0x%x", +error);
+				}
 			}
 		});
 	}
@@ -118,6 +139,19 @@ struct music_state
 		: music_state()
 	{
 		save(ar);
+	}
+
+	~music_state()
+	{
+		if (m_thread)
+		{
+			auto& thread = *m_thread;
+			thread = thread_state::aborting;
+			m_wake_up_thread = 1;
+			m_wake_up_thread.notify_one();
+			thread();
+			m_thread.reset();
+		}
 	}
 
 	void save(utils::serial& ar)
@@ -135,7 +169,7 @@ struct music_state
 	}
 
 	// NOTE: This function only uses CELL_MUSIC enums. CELL_MUSIC2 enums are identical.
-	error_code set_playback_command(s32 command, bool automatic = false)
+	error_code set_playback_command(u32 command)
 	{
 		switch (command)
 		{
@@ -150,11 +184,27 @@ struct music_state
 		case CELL_MUSIC_PB_CMD_FASTREVERSE:
 		case CELL_MUSIC_PB_CMD_NEXT:
 		case CELL_MUSIC_PB_CMD_PREV:
+		case CELL_MUSIC_PB_CMD_NEXT_TRACK:
 		{
 			std::string path;
+			bool automatic = false;
 			bool no_more_tracks = false;
 			{
 				std::lock_guard lock(mtx);
+
+				// Handle auto-play of the next track in the current playlist.
+				if (command == CELL_MUSIC_PB_CMD_NEXT_TRACK)
+				{
+					// We only auto-play the next song if we are in list mode and the music is playing.
+					if (current_selection_context.content_type != CELL_SEARCH_CONTENTTYPE_MUSICLIST || handler->get_state() != CELL_MUSIC_PB_STATUS_PLAY)
+					{
+						return CELL_OK;
+					}
+
+					command = CELL_MUSIC_PB_CMD_NEXT;
+					automatic = true;
+				}
+
 				const std::vector<std::string>& playlist = current_selection_context.playlist;
 				const u32 current_track = current_selection_context.current_track;
 				u32 next_track = current_track;
@@ -208,6 +258,10 @@ struct music_state
 
 		return CELL_OK;
 	}
+
+private:
+	std::unique_ptr<named_thread<std::function<void()>>> m_thread;
+	atomic_t<u32> m_wake_up_thread{0};
 };
 
 error_code cell_music_select_contents()

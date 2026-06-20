@@ -457,6 +457,7 @@ void VKGSRender::load_texture_env()
 		{
 			mag_filter = VK_FILTER_NEAREST;
 			min_filter.filter = VK_FILTER_NEAREST;
+			min_filter.mipmap_mode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
 		}
 
 		if (min_filter.sample_mipmaps && mipmap_count > 1)

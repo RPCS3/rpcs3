@@ -551,9 +551,9 @@ public:
 	}
 };
 
-std::string jit_compiler::cpu(const std::string& _cpu)
+std::string jit_compiler::cpu(std::string_view _cpu)
 {
-	std::string m_cpu = _cpu;
+	std::string m_cpu = std::string(_cpu);
 
 	if (m_cpu.empty())
 	{
@@ -681,7 +681,7 @@ bool jit_compiler::add_sub_disk_space(ssz space)
 	}).second;
 }
 
-jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu, u32 flags, std::function<u64(const std::string&)> symbols_cement) noexcept
+jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, std::string_view _cpu, u32 flags, std::function<u64(const std::string&)> symbols_cement) noexcept
 	: m_context(new llvm::LLVMContext)
 	, m_cpu(cpu(_cpu))
 {
@@ -749,6 +749,15 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 		attributes.push_back("+dotprod");
 	else
 		attributes.push_back("-dotprod");
+
+	// The recompilers emit i8mm intrinsics (e.g. ummla) gated on utils::has_i8mm().
+	// The JIT target features must advertise i8mm too, otherwise the backend fails
+	// with "Cannot select: intrinsic %llvm.aarch64.neon.ummla" whenever the resolved
+	// -mcpu does not already imply it (e.g. the cortex-a78 fallback on Apple silicon).
+	if (utils::has_i8mm())
+		attributes.push_back("+i8mm");
+	else
+		attributes.push_back("-i8mm");
 
 	if (utils::has_sve())
 		attributes.push_back("+sve");

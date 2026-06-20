@@ -256,6 +256,36 @@ namespace rpcs3::utils
 		return get_data_dir() + "redump/";
 	}
 
+	std::string get_psn_content_db_path()
+	{
+		return fs::get_config_dir(true) + "psn_content.dat";
+	}
+
+	std::string get_psn_content_db_download_url()
+	{
+		return "https://api.rpcs3.net/nointro/content/?api=v1";
+	}
+
+	std::string get_psn_dlc_db_path()
+	{
+		return fs::get_config_dir(true) + "psn_dlc.dat";
+	}
+
+	std::string get_psn_dlc_db_download_url()
+	{
+		return "https://api.rpcs3.net/nointro/dlc/?api=v1";
+	}
+
+	std::string get_psn_update_db_path()
+	{
+		return fs::get_config_dir(true) + "psn_update.dat";
+	}
+
+	std::string get_psn_update_db_download_url()
+	{
+		return "https://api.rpcs3.net/nointro/updates/?api=v1";
+	}
+
 	std::string get_data_dir()
 	{
 		return fs::get_config_dir() + "data/";
