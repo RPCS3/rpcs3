@@ -4276,9 +4276,11 @@ std::set<std::string> Emulator::GetGameDirs() const
 	return dirs;
 }
 
-u32 Emulator::AddGamesFromDir(const std::string& path)
+u32 Emulator::AddGamesFromDir(std::string path)
 {
 	u32 games_added = 0;
+
+	fmt::trim_back(path, fs::delim);
 
 	m_games_config.set_save_on_dirty(false);
 
@@ -4313,7 +4315,7 @@ u32 Emulator::AddGamesFromDir(const std::string& path)
 					continue;
 				}
 
-				const std::string dir_path = path + '/' + dir_entry.name;
+				const std::string dir_path = path + "/" + dir_entry.name;
 
 				if (!dir_entry.is_directory && !is_iso_file(dir_path))
 				{
@@ -4349,8 +4351,10 @@ u32 Emulator::AddGamesFromDir(const std::string& path)
 	return games_added;
 }
 
-game_boot_result Emulator::AddGame(const std::string& path)
+game_boot_result Emulator::AddGame(std::string path)
 {
+	fmt::trim_back(path, fs::delim);
+
 	// Handle files directly
 	if (!fs::is_dir(path) || fs::get_optical_raw_device(path))
 	{
@@ -4396,8 +4400,10 @@ game_boot_result Emulator::AddGame(const std::string& path)
 	return result;
 }
 
-game_boot_result Emulator::AddGameToYml(const std::string& path)
+game_boot_result Emulator::AddGameToYml(std::string path)
 {
+	fmt::trim_back(path, fs::delim);
+
 	// Detect boot location
 	const auto is_invalid_path = [this](std::string_view path, std::string_view dir) -> game_boot_result
 	{
