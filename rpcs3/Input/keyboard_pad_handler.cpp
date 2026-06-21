@@ -943,10 +943,10 @@ u32 keyboard_pad_handler::GetKeyCode(const QString& keyName)
 	if (keyName == "Meta") return Qt::Key_Meta;
 #ifdef __APPLE__
 	// QKeySequence doesn't work properly for the arrow keys on macOS
-	if (keyName == "Num←") return Qt::Key_Left;
-	if (keyName == "Num↑") return Qt::Key_Up;
-	if (keyName == "Num→") return Qt::Key_Right;
-	if (keyName == "Num↓") return Qt::Key_Down;
+	if (keyName == "Num←" || keyName == "←") return Qt::Key_Left;
+	if (keyName == "Num↑" || keyName == "↑") return Qt::Key_Up;
+	if (keyName == "Num→" || keyName == "→") return Qt::Key_Right;
+	if (keyName == "Num↓" || keyName == "↓") return Qt::Key_Down;
 #endif
 
 	const QKeySequence seq(keyName);
