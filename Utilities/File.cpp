@@ -946,7 +946,7 @@ std::string fs::strip_end_path_delimiter(const std::string& path)
 
 	if (path.empty() || not_del == umax)
 	{
-		return path;
+		return "";
 	}
 
 	return path.substr(0, not_del + 1);

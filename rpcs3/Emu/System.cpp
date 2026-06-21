@@ -4313,7 +4313,7 @@ u32 Emulator::AddGamesFromDir(const std::string& path)
 					continue;
 				}
 
-				const std::string dir_path = path + '/' + dir_entry.name;
+				const std::string dir_path = fs::strip_end_path_delimiter(path) + "/" + dir_entry.name;
 
 				if (!dir_entry.is_directory && !is_iso_file(dir_path))
 				{
@@ -4377,7 +4377,7 @@ game_boot_result Emulator::AddGame(const std::string& path)
 
 		if (entry.is_directory && std::regex_match(entry.name, std::regex("^PS3_GM[[:digit:]]{2}$")))
 		{
-			const std::string elf = path + "/" + entry.name + "/USRDIR/EBOOT.BIN";
+			const std::string elf = fs::strip_end_path_delimiter(path) + "/" + entry.name + "/USRDIR/EBOOT.BIN";
 
 			if (fs::is_file(elf))
 			{
