@@ -7498,7 +7498,7 @@ public:
 			const auto a_sign = (a & splat<u32[4]>(0x80000000));
 			value_t<u32[4]> final_result = eval(splat<u32[4]>(0));
 
-			if (m_use_avx512_icl)
+			if (m_use_avx512)
 			{
 				value_t<u32[16]> lo_lut;
 				value_t<u32[16]> hi_lut;
@@ -8561,7 +8561,7 @@ public:
 				const auto a_sign = (a & splat<u32[4]>(0x80000000));
 				value_t<u32[4]> b = eval(splat<u32[4]>(0));
 
-				if (m_use_avx512_icl)
+				if (m_use_avx512)
 				{
 					value_t<u32[16]> lo_lut;
 					value_t<u32[16]> hi_lut;
