@@ -7498,13 +7498,23 @@ public:
 			const auto a_sign = (a & splat<u32[4]>(0x80000000));
 			value_t<u32[4]> final_result = eval(splat<u32[4]>(0));
 
-			for (u32 i = 0; i < 4; i++)
+			if (m_use_avx512)
 			{
-				const auto eval_fraction = eval(extract(a_fraction, i));
+				value_t<u32[16]> lo_lut;
+				value_t<u32[16]> hi_lut;
+				lo_lut.value = llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(spu_frest_fraction_lut, 16));
+				hi_lut.value = llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(spu_frest_fraction_lut + 16, 16));
 
-				value_t<u32> r_fraction = load_const<u32>(m_spu_frest_fraction_lut, eval_fraction);
-
-				final_result = eval(insert(final_result, i, r_fraction));
+				final_result = vperm2d128From512(lo_lut, a_fraction, hi_lut);
+			}
+			else
+			{
+				for (u32 i = 0; i < 4; i++)
+				{
+					const auto eval_fraction = eval(extract(a_fraction, i));
+					value_t<u32> r_fraction = load_const<u32>(m_spu_frest_fraction_lut, eval_fraction);
+					final_result = eval(insert(final_result, i, r_fraction));
+				}
 			}
 
 			//final_result = eval(select(final_result != (0), final_result, bitcast<u32[4]>(pshufb(splat<u8[16]>(0), bitcast<u8[16]>(final_result)))));
@@ -8551,13 +8561,23 @@ public:
 				const auto a_sign = (a & splat<u32[4]>(0x80000000));
 				value_t<u32[4]> b = eval(splat<u32[4]>(0));
 
-				for (u32 i = 0; i < 4; i++)
+				if (m_use_avx512)
 				{
-					const auto eval_fraction = eval(extract(a_fraction, i));
+					value_t<u32[16]> lo_lut;
+					value_t<u32[16]> hi_lut;
+					lo_lut.value = llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(spu_frest_fraction_lut, 16));
+					hi_lut.value = llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(spu_frest_fraction_lut + 16, 16));
 
-					value_t<u32> r_fraction = load_const<u32>(m_spu_frest_fraction_lut, eval_fraction);
-
-					b = eval(insert(b, i, r_fraction));
+					b = vperm2d128From512(lo_lut, a_fraction, hi_lut);
+				}
+				else
+				{
+					for (u32 i = 0; i < 4; i++)
+					{
+						const auto eval_fraction = eval(extract(a_fraction, i));
+						value_t<u32> r_fraction = load_const<u32>(m_spu_frest_fraction_lut, eval_fraction);
+						b = eval(insert(b, i, r_fraction));
+					}
 				}
 
 				b = eval(b | fix_exponent | a_sign);
