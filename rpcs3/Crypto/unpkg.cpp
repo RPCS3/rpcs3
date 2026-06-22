@@ -1509,7 +1509,17 @@ usz package_reader::decrypt(u64 offset, u64 size, const uchar* key, void* local_
 		pkg_log.error("Unknown release type (0x%x)", m_header.pkg_type);
 	}
 
-	if (blocks * 16 != size)
+	if (data_span.size() < size)
+	{
+		// Short read (fewer bytes available than requested): zero the unread
+		// tail. The bytes actually decrypted are [0, data_span.size()); the rest
+		// of the caller's buffer is defined as zero. Deriving the fill length
+		// from blocks * 16 (as the aligned case below does) underflows here:
+		// blocks comes from the short data_span, so blocks * 16 can be smaller
+		// than size, producing a huge unsigned length.
+		std::memset(out_data + data_span.size(), 0, size - data_span.size());
+	}
+	else if (blocks * 16 != size)
 	{
 		// Put NTS and other zeroes on unaligned reads
 		std::memset(out_data + size, 0, blocks * 16 - size);
