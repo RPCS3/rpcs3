@@ -393,6 +393,11 @@ private:
 	std::string m_path{};
 	std::string m_install_dir{};
 	fs::file m_file{};
+	// Paths of every fragment of the package (one entry for a regular .pkg,
+	// several for a multi-part _NN.pkg set). Set once in read_header and never
+	// mutated afterwards, so extract workers can open their own file handles
+	// from it without sharing m_file across threads.
+	std::vector<std::string> m_part_paths{};
 	std::array<uchar, 16> m_dec_key{};
 
 	PKGHeader m_header{};

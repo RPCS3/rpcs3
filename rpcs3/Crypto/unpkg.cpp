@@ -148,6 +148,11 @@ bool package_reader::read_header()
 	}
 	}
 
+	// Remember every fragment's path so extract workers can each open a private
+	// handle later (see m_part_paths). The first fragment is always m_path.
+	m_part_paths.clear();
+	m_part_paths.push_back(m_path);
+
 	if (m_header.pkg_size > m_file.size())
 	{
 		// Check if multi-files pkg
@@ -183,6 +188,7 @@ bool package_reader::read_header()
 			}
 
 			cursize += add_size;
+			m_part_paths.push_back(archive_filename);
 			filelist.emplace_back(std::move(archive_file));
 		}
 
@@ -1384,6 +1390,47 @@ u64 package_reader::archive_read(void* data_ptr, const u64 num_bytes)
 
 std::span<const char> package_reader::archive_read_block(u64 offset, void* data_ptr, u64 num_bytes)
 {
+	// extract_data runs one extract_worker per hardware thread, and they all
+	// read the package through this function. A single fs::file handle is not
+	// safe to read from several threads at once, so give each thread its own
+	// handle instead of sharing m_file. The handle is rebuilt once per thread
+	// from m_part_paths (a plain file for a regular package, a gather stream for
+	// a multi-part set), which is fixed after read_header.
+	if (!m_part_paths.empty())
+	{
+		thread_local fs::file t_file;
+		thread_local const package_reader* t_owner = nullptr;
+
+		if (t_owner != this)
+		{
+			if (m_part_paths.size() == 1)
+			{
+				t_file = fs::file(m_part_paths[0]);
+			}
+			else
+			{
+				std::vector<fs::file> parts;
+				parts.reserve(m_part_paths.size());
+
+				for (const std::string& part_path : m_part_paths)
+				{
+					parts.emplace_back(part_path);
+				}
+
+				t_file = fs::make_gather(std::move(parts));
+			}
+
+			t_owner = this;
+		}
+
+		if (t_file)
+		{
+			const usz read_n = t_file.read_at(offset, data_ptr, num_bytes);
+			return {static_cast<const char*>(data_ptr), read_n};
+		}
+	}
+
+	// Fallback for reads that happen before m_part_paths is populated.
 	const usz read_n = m_file.read_at(offset, data_ptr, num_bytes);
 
 	return {static_cast<const char*>(data_ptr), read_n};
