@@ -7078,226 +7078,127 @@ public:
 		}
 
 		// Check whether shuffle mask doesn't contain fixed value selectors
-		bool perm_only = false;
-
-		if (auto k = get_known_bits(c); !!(k.Zero & 0x80))
-		{
-			perm_only = true;
-		}
+		// TODO: Add known single high/low source (bit4)
+		// TODO: Add "fixed value can only be zero" for X86's pshufb (bit6 == 0)
+		const auto known_idx = get_known_bits(c);
+		const bool perm_only = known_idx.Zero.isSignBitSet();
 
 		const auto a = get_vr<u8[16]>(op.ra);
 		const auto b = get_vr<u8[16]>(op.rb);
 
-#ifdef ARCH_ARM64
-		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
+		// Data with swapped endian from a load instruction
+		auto [a_was_swapped, a_swap] = match_expr(a, byteswap(match<u8[16]>()));
+		auto [b_was_swapped, b_swap] = match_expr(b, byteswap(match<u8[16]>()));
+
+		const auto [a_is_const, a_data] = get_const_vector(a.value, m_pos);
+		const auto [b_is_const, b_data] = get_const_vector(b.value, m_pos);
+
+		const bool a_is_splat = a_is_const && a_data == v128::from8p(a_data._u8[0]);
+		const bool b_is_splat = b_is_const && b_data == v128::from8p(b_data._u8[0]);
+
+		// Splats are their own byteswap
+		// TODO: We can also calculate the swap for any constant vector for free
+		if (a_is_splat)
+			a_swap.value = a.value;
+
+		if (b_is_splat)
+			b_swap.value = b.value;
+
+		// Shuffle index reversal is equivalent to a byteswap
+		value_t<u8[16]> av, bv, cv;
+		if ((a_was_swapped || a_is_splat) && (b_was_swapped || b_is_splat))
 		{
-			if (auto [ok, bs] = match_expr(b, byteswap(match<u8[16]>())); ok)
-			{
-				if (op.ra == op.rb)
-				{
-					if (perm_only)
-					{
-						const auto cm = eval(c & 0x0f);
-						set_vr(op.rt4, tbl(as, cm));
-						return;
-					}
-
-					const auto x = tbl(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
-					const auto cm = eval(c & 0x8f);
-					set_vr(op.rt4, tbx(x, as, cm));
-					return;
-				}
-
-				if (perm_only)
-				{
-					const auto cm = eval(c & 0x1f);
-					set_vr(op.rt4, tbl2(as, bs, cm));
-					return;
-				}
-
-				const auto x = tbl(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
-				const auto cm = eval(c & 0x9f);
-				set_vr(op.rt4, tbx2(x, as, bs, cm));
-				return;
-			}
+			av = eval(a_swap);
+			bv = eval(b_swap);
+			cv = c;
+		}
+		else
+		{
+			av = a;
+			bv = b;
+			cv = eval(c ^ 0xf);
 		}
 
+		// TODO: Index fixed constant calculation can be combined with splat selection
+		//		 by inserting splat value into the lower 8 LUT elements (X86 & ARM)
+
+#ifdef ARCH_ARM64
+
+		// NOTE: LLVM doesn't emit BCAX	(llvm-project/issues/200699)
+		//		 Verify if `(x ^ 0x0F) & 0x?F` is reassociated when upstreamed
+		
 		if (op.ra == op.rb && !m_interp_magn)
 		{
 			if (perm_only)
 			{
-				const auto cm = eval(c & 0x0f);
-				const auto cr = eval(cm ^ 0x0f);
-				set_vr(op.rt4, tbl(a, cr));
+				const auto cm = eval(cv & 0x0f);
+				set_vr(op.rt4, tbl(av, cm));
 				return;
 			}
 
 			const auto x = tbl(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
-			const auto cm = eval(c & 0x8f);
-			const auto cr = eval(cm ^ 0x0f);
-			set_vr(op.rt4, tbx(x, a, cr));
+			const auto cm = eval(cv & 0x8f);
+			set_vr(op.rt4, tbx(x, av, cm));
 			return;
 		}
 
 		if (perm_only)
 		{
-			const auto cm = eval(c & 0x9f);
-			const auto cr = eval(cm ^ 0x0f);
-			set_vr(op.rt4, tbl2(a, b, cr));
+			const auto cm = eval(cv & 0x1f);
+			set_vr(op.rt4, tbl2(av, bv, cm));
 			return;
 		}
 
 		const auto x = tbl(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
-		// AND should be before XOR so that llvm can combine them into BCAX
-		// Though for some reason it doesn't seem to be doing that.
-		const auto cm = eval(c & ~0x60);
-		const auto cr = eval(cm ^ 0x0f);
-		set_vr(op.rt4, tbx2(x, a, b, cr));
+		const auto cm = eval(cv & 0x9f);
+		set_vr(op.rt4, tbx2(x, av, bv, cm));
 		return;
 #else
-		// Data with swapped endian from a load instruction
-		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
-		{
-			if (auto [ok, bs] = match_expr(b, byteswap(match<u8[16]>())); ok)
-			{
-				// Undo endian swapping, and rely on pshufb/vperm2b to re-reverse endianness
-				if (m_use_avx512_icl && (op.ra != op.rb))
-				{
-					if (perm_only)
-					{
-						set_vr(op.rt4, vperm2b(as, bs, c));
-						return;
-					}
 
-					const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
-					const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
-					const auto ab = vperm2b(as, bs, c);
-					set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
-					return;
-				}
 
-				const auto x = pshufb(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
-				const auto ax = pshufb(as, c);
-				const auto bx = pshufb(bs, c);
+		bool shuf_zero_when_msb = false;
 
-				if (perm_only)
-					set_vr(op.rt4, select_by_bit4(c, ax, bx));
-				else
-					set_vr(op.rt4, select_by_bit4(c, ax, bx) | x);
-				return;
-			}
-
-			if (auto [ok, data] = get_const_vector(b.value, m_pos); ok)
-			{
-				if (data == v128::from8p(data._u8[0]))
-				{
-					if (m_use_avx512_icl)
-					{
-						if (perm_only)
-						{
-							set_vr(op.rt4, vperm2b(as, b, c));
-							return;
-						}
-
-						const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
-						const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
-						const auto ab = vperm2b(as, b, c);
-						set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
-						return;
-					}
-					// See above
-					const auto x = pshufb(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
-					const auto ax = pshufb(as, c);
-
-					if (perm_only)
-						set_vr(op.rt4, select_by_bit4(c, ax, b));
-					else
-						set_vr(op.rt4, select_by_bit4(c, ax, b) | x);
-					return;
-				}
-			}
-		}
-
-		if (auto [ok, bs] = match_expr(b, byteswap(match<u8[16]>())); ok)
-		{
-			if (auto [ok, data] = get_const_vector(a.value, m_pos); ok)
-			{
-				if (data == v128::from8p(data._u8[0]))
-				{
-					// See above
-					const auto x = pshufb(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
-					const auto bx = pshufb(bs, c);
-
-					if (perm_only)
-						set_vr(op.rt4, select_by_bit4(c, a, bx));
-					else
-						set_vr(op.rt4, select_by_bit4(c, a, bx) | x);
-					return;
-				}
-			}
-		}
-
+		value_t<u8[16]> ab_shuf;
 		if (m_use_avx512_icl && (op.ra != op.rb || m_interp_magn))
 		{
-			if (auto [ok, data] = get_const_vector(b.value, m_pos); ok)
-			{
-				if (data == v128::from8p(data._u8[0]))
-				{
-					if (perm_only)
-					{
-						set_vr(op.rt4, vperm2b(a, b, eval(c ^ 0xf)));
-						return;
-					}
+			// TODO: Optimize known splats
+			// TODO: Swap source order to allow for a memory operand using a XOR (when free)
+			ab_shuf = vperm2b(av, bv, cv);
+		}
+		else
+		{
+			const auto a_shuf = a_is_splat ? av : eval(pshufb(av, cv));
+			const auto b_shuf = b_is_splat ? bv : eval(pshufb(bv, cv));
+			ab_shuf = eval(select_by_bit4(c, a_shuf, b_shuf));
 
-					const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
-					const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
-					const auto ab = vperm2b(a, b, eval(c ^ 0xf));
-					set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
-					return;
-				}
-			}
+			// pshufb zeros when the MSB is set
+			shuf_zero_when_msb = !(a_is_splat || b_is_splat);
+		}
 
-			if (auto [ok, data] = get_const_vector(a.value, m_pos); ok)
-			{
-				if (data == v128::from8p(data._u8[0]))
-				{
-					if (perm_only)
-					{
-						set_vr(op.rt4, vperm2b(b, a, eval(c ^ 0x1f)));
-						return;
-					}
-
-					const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
-					const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
-					const auto ab = vperm2b(b, a, eval(c ^ 0x1f));
-					set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
-					return;
-				}
-			}
-
-			if (perm_only)
-			{
-				set_vr(op.rt4, vperm2b(a, b, eval(c ^ 0xf)));
-				return;
-			}
-
-			const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
-			const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
-			const auto cr = eval(c ^ 0xf);
-			const auto ab = vperm2b(a, b, cr);
-			set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
+		if (perm_only)
+		{
+			set_vr(op.rt4, ab_shuf);
 			return;
 		}
 
-		const auto x = pshufb(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
-		const auto cr = eval(c ^ 0xf);
-		const auto ax = pshufb(a, cr);
-		const auto bx = pshufb(b, cr);
+		// Calculate special index constants
 
-		if (perm_only)
-			set_vr(op.rt4, select_by_bit4(cr, ax, bx));
+		value_t<u8[16]> idx_consts;
+		if (m_use_avx512_icl)
+		{
+			const auto gfni = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
+			idx_consts = eval(select(noncast<s8[16]>(gfni) >= 0, splat<u8[16]>(0), gfni));
+		}
 		else
-			set_vr(op.rt4, select_by_bit4(cr, ax, bx) | x);
+		{
+			const auto pshufb_lut = build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80);
+			idx_consts = eval(pshufb(pshufb_lut, (c >> 4)));
+		}
+
+		if (shuf_zero_when_msb)
+			set_vr(op.rt4, ab_shuf | idx_consts);
+		else
+			set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab_shuf, idx_consts));
 #endif
 	}
 
