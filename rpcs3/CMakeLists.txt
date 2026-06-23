@@ -81,7 +81,7 @@ if (NOT ANDROID)
 
     # Unix display manager
     if(X11_FOUND)
-        target_link_libraries(rpcs3_lib PRIVATE X11::X11)
+        target_link_libraries(rpcs3_lib PRIVATE X11::X11 xkbcommon-x11)
     elseif(USE_VULKAN AND UNIX AND NOT WAYLAND_FOUND AND NOT APPLE AND NOT ANDROID)
         # Wayland has been checked in 3rdparty/CMakeLists.txt already.
         message(FATAL_ERROR "RPCS3 requires either X11 or Wayland (or both) for Vulkan.")
