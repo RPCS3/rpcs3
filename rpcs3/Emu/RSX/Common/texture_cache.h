@@ -500,6 +500,20 @@ namespace rsx
 		virtual void prepare_for_dma_transfers(commandbuffer_type&) = 0;
 		virtual void cleanup_after_dma_transfers(commandbuffer_type&) = 0;
 
+		// Dumps a freshly uploaded texture to a PNG on disk (texture_dump setting).
+		// Backends that support it (Vulkan) override this; default is a no-op so
+		// other backends keep building unchanged.
+		virtual void dump_texture_image(commandbuffer_type&, section_storage_type* /*section*/,
+			u16 /*width*/, u16 /*height*/, u32 /*gcm_format*/, u64 /*content_hash*/,
+			const texture_channel_remap_t& /*remap*/) {}
+
+		// Overwrites a freshly uploaded texture with a same-resolution PNG
+		// replacement if one exists on disk (texture_replace setting). Returns
+		// true if a replacement was applied. Default is a no-op.
+		virtual bool replace_texture_image(commandbuffer_type&, section_storage_type* /*section*/,
+			u16 /*width*/, u16 /*height*/, u32 /*gcm_format*/, u64 /*content_hash*/,
+			const texture_channel_remap_t& /*remap*/) { return false; }
+
 	public:
 		virtual void destroy() = 0;
 		virtual bool is_depth_texture(u32, u32) = 0;
@@ -2519,6 +2533,30 @@ namespace rsx
 			// Upload from CPU. Note that sRGB conversion is handled in the FS
 			auto uploaded = upload_image_from_cpu(cmd, tex_range, attributes.width, attributes.height, attributes.depth, tex.get_exact_mipmap_count(), attributes.pitch, attributes.gcm_format,
 				texture_upload_context::shader_read, subresources_layout, extended_dimension, attributes.swizzled);
+
+			if (uploaded && (g_cfg.video.texture_dump || g_cfg.video.texture_replace))
+			{
+				if (const u8* guest = vm::get_super_ptr<const u8>(attributes.address))
+				{
+					// FNV-1a hash of the guest texture bytes - stable across runs, used
+					// as both the dump filename and the replacement lookup key.
+					u64 content_hash = 0xcbf29ce484222325ull;
+					for (u32 i = 0; i < tex_size; ++i)
+					{
+						content_hash = (content_hash ^ guest[i]) * 0x100000001b3ull;
+					}
+
+					bool replaced = false;
+					if (g_cfg.video.texture_replace)
+					{
+						replaced = replace_texture_image(cmd, uploaded, attributes.width, attributes.height, attributes.gcm_format, content_hash, tex.decoded_remap());
+					}
+					if (!replaced && g_cfg.video.texture_dump)
+					{
+						dump_texture_image(cmd, uploaded, attributes.width, attributes.height, attributes.gcm_format, content_hash, tex.decoded_remap());
+					}
+				}
+			}
 
 			return{ uploaded->get_view(tex.decoded_remap()),
 					texture_upload_context::shader_read, format_class, scale, extended_dimension };

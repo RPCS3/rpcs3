@@ -497,6 +497,17 @@ namespace vk
 
 		void cleanup_after_dma_transfers(vk::command_buffer& cmd) override;
 
+		// PNG texture dump (texture_dump setting): reads the just-uploaded image
+		// back to the CPU, decodes it to RGBA8 and writes a PNG. Deduplicated per
+		// content hash so each texture is only dumped once per session.
+		void dump_texture_image(vk::command_buffer& cmd, cached_texture_section* section,
+			u16 width, u16 height, u32 gcm_format, u64 content_hash,
+			const rsx::texture_channel_remap_t& remap) override;
+		bool replace_texture_image(vk::command_buffer& cmd, cached_texture_section* section,
+			u16 width, u16 height, u32 gcm_format, u64 content_hash,
+			const rsx::texture_channel_remap_t& remap) override;
+		std::unordered_set<u64> m_dumped_texture_hashes;
+
 	public:
 		using baseclass::texture_cache;
 

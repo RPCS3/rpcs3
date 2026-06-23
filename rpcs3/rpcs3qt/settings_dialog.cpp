@@ -5,6 +5,7 @@
 #include <QFontMetrics>
 #include <QPushButton>
 #include <QMessageBox>
+#include <QFileDialog>
 #include <QInputDialog>
 #include <QDesktopServices>
 #include <QColorDialog>
@@ -639,6 +640,32 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->asyncTextureStreaming, emu_settings_type::VulkanAsyncTextureUploads);
 	SubscribeTooltip(ui->asyncTextureStreaming, tooltips.settings.async_texture_streaming);
+
+	m_emu_settings->EnhanceCheckBox(ui->textureDumpToPNG, emu_settings_type::TextureDumpToPNG);
+	SubscribeTooltip(ui->textureDumpToPNG, tr("Dumps sampled textures to PNG under textures/<title-id>/dump/. Hurts performance; for texture-pack authoring only."));
+
+	m_emu_settings->EnhanceCheckBox(ui->textureReplaceFromPNG, emu_settings_type::TextureReplaceFromPNG);
+	SubscribeTooltip(ui->textureReplaceFromPNG, tr("Loads same-resolution PNG replacements from textures/<title-id>/ over matching textures. Hurts performance; for texture packs only."));
+
+	m_emu_settings->EnhanceLineEdit(ui->textureDumpPathEdit, emu_settings_type::TextureDumpPath);
+	SubscribeTooltip(ui->textureDumpPathEdit, tr("Root folder for texture dumps; a <title-id>/dump subfolder is created inside. Leave empty for the default (config dir / textures)."));
+	connect(ui->textureDumpPathBrowse, &QAbstractButton::clicked, this, [this]()
+	{
+		const QString dir = QFileDialog::getExistingDirectory(this, tr("Select Texture Dump Folder"),
+			ui->textureDumpPathEdit->text(), QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+		if (!dir.isEmpty())
+			ui->textureDumpPathEdit->setText(dir);
+	});
+
+	m_emu_settings->EnhanceLineEdit(ui->textureReplacePathEdit, emu_settings_type::TextureReplacePath);
+	SubscribeTooltip(ui->textureReplacePathEdit, tr("Root folder for PNG replacements; loaded from the <title-id> subfolder inside. Leave empty for the default (config dir / textures)."));
+	connect(ui->textureReplacePathBrowse, &QAbstractButton::clicked, this, [this]()
+	{
+		const QString dir = QFileDialog::getExistingDirectory(this, tr("Select Texture Replacement Folder"),
+			ui->textureReplacePathEdit->text(), QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+		if (!dir.isEmpty())
+			ui->textureReplacePathEdit->setText(dir);
+	});
 
 	// Radio buttons
 

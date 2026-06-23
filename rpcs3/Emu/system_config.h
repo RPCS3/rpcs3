@@ -155,6 +155,10 @@ struct cfg_root : cfg::node
 		cfg::_bool disable_vulkan_mem_allocator{ this, "Disable Vulkan Memory Allocator", false };
 		cfg::_bool full_rgb_range_output{ this, "Use full RGB output range", true, true }; // Video out dynamic range
 		cfg::_bool strict_texture_flushing{ this, "Strict Texture Flushing", false };
+		cfg::_bool texture_dump{ this, "Dump Textures to PNG", false, true };
+		cfg::_bool texture_replace{ this, "Replace Textures from PNG", false, true };
+		cfg::string texture_dump_path{ this, "Texture Dump Path", "", true }; // root; <title>/dump/ is appended. empty = <config dir>/textures/
+		cfg::string texture_replace_path{ this, "Texture Replacement Path", "", true }; // root; <title>/ is appended. empty = <config dir>/textures/
 		cfg::_bool multithreaded_rsx{ this, "Multithreaded RSX", false };
 		cfg::_bool relaxed_zcull_sync{ this, "Relaxed ZCULL Sync", false };
 		cfg::_bool force_hw_MSAA_resolve{ this, "Force Hardware MSAA Resolve", false, true };

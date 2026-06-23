@@ -4,7 +4,15 @@
 #include "VKCompute.h"
 #include "VKAsyncScheduler.h"
 
+#include "Emu/System.h"
 #include "util/asm.hpp"
+#include "Utilities/File.h"
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image_write.h>
+#define STB_DXT_IMPLEMENTATION
+#include <stb_dxt.h>
+#include <stb_image.h>
 
 namespace vk
 {
@@ -1452,6 +1460,614 @@ namespace vk
 			ensure(cmd.is_recording());
 			cmd.flags |= vk::command_buffer::cb_load_occluson_task;
 		}
+	}
+
+	namespace
+	{
+		inline u8 expand5(u32 v) { return static_cast<u8>((v << 3) | (v >> 2)); }
+		inline u8 expand6(u32 v) { return static_cast<u8>((v << 2) | (v >> 4)); }
+		inline u32 pack_rgba(u8 r, u8 g, u8 b, u8 a)
+		{
+			// Little-endian byte order R,G,B,A - what stbi_write_png expects.
+			return u32(r) | (u32(g) << 8) | (u32(b) << 16) | (u32(a) << 24);
+		}
+
+		// Decodes the 8-byte RGB color portion of a BC1/BC2/BC3 block. opaque
+		// (BC2/BC3) disables BC1's 3-color+transparent mode.
+		void decode_bc1_colors(const u8* block, bool opaque, u32 out[16])
+		{
+			const u16 c0 = static_cast<u16>(block[0] | (block[1] << 8));
+			const u16 c1 = static_cast<u16>(block[2] | (block[3] << 8));
+			u8 r[4], g[4], b[4], a[4] = {255, 255, 255, 255};
+			r[0] = expand5((c0 >> 11) & 0x1f); g[0] = expand6((c0 >> 5) & 0x3f); b[0] = expand5(c0 & 0x1f);
+			r[1] = expand5((c1 >> 11) & 0x1f); g[1] = expand6((c1 >> 5) & 0x3f); b[1] = expand5(c1 & 0x1f);
+			if (c0 > c1 || opaque)
+			{
+				r[2] = u8((2 * r[0] + r[1]) / 3); g[2] = u8((2 * g[0] + g[1]) / 3); b[2] = u8((2 * b[0] + b[1]) / 3);
+				r[3] = u8((r[0] + 2 * r[1]) / 3); g[3] = u8((g[0] + 2 * g[1]) / 3); b[3] = u8((b[0] + 2 * b[1]) / 3);
+			}
+			else
+			{
+				r[2] = u8((r[0] + r[1]) / 2); g[2] = u8((g[0] + g[1]) / 2); b[2] = u8((b[0] + b[1]) / 2);
+				r[3] = g[3] = b[3] = 0; a[3] = 0;
+			}
+			const u32 idx = u32(block[4]) | (u32(block[5]) << 8) | (u32(block[6]) << 16) | (u32(block[7]) << 24);
+			for (u32 i = 0; i < 16; ++i)
+			{
+				const u32 s = (idx >> (i * 2)) & 3;
+				out[i] = pack_rgba(r[s], g[s], b[s], a[s]);
+			}
+		}
+
+		// Decodes an 8-byte BC3 interpolated-alpha block into 16 values.
+		void decode_bc3_alpha(const u8* block, u8 out[16])
+		{
+			u8 a[8];
+			a[0] = block[0]; a[1] = block[1];
+			if (a[0] > a[1])
+			{
+				for (u32 i = 1; i < 7; ++i) a[i + 1] = u8(((7 - i) * a[0] + i * a[1]) / 7);
+			}
+			else
+			{
+				for (u32 i = 1; i < 5; ++i) a[i + 1] = u8(((5 - i) * a[0] + i * a[1]) / 5);
+				a[6] = 0; a[7] = 255;
+			}
+			u64 bits = 0;
+			for (u32 i = 0; i < 6; ++i) bits |= u64(block[2 + i]) << (8 * i);
+			for (u32 i = 0; i < 16; ++i) out[i] = a[(bits >> (i * 3)) & 7];
+		}
+
+		void store_block(const u32 texels[16], u32 bx, u32 by, u32 width, u32 height, u8* out)
+		{
+			for (u32 y = 0; y < 4; ++y)
+			{
+				const u32 py = by * 4 + y;
+				if (py >= height) break;
+				for (u32 x = 0; x < 4; ++x)
+				{
+					const u32 px = bx * 4 + x;
+					if (px >= width) continue;
+					std::memcpy(out + (usz(py) * width + px) * 4, &texels[y * 4 + x], 4);
+				}
+			}
+		}
+
+		// Tightly-packed readback size for a VK format's base level.
+		u64 vk_readback_size(VkFormat format, u32 width, u32 height)
+		{
+			const u32 bx = (width + 3) / 4, by = (height + 3) / 4;
+			switch (format)
+			{
+			case VK_FORMAT_BC1_RGBA_UNORM_BLOCK:
+			case VK_FORMAT_BC1_RGBA_SRGB_BLOCK:
+				return u64(bx) * by * 8;
+			case VK_FORMAT_BC2_UNORM_BLOCK:
+			case VK_FORMAT_BC2_SRGB_BLOCK:
+			case VK_FORMAT_BC3_UNORM_BLOCK:
+			case VK_FORMAT_BC3_SRGB_BLOCK:
+				return u64(bx) * by * 16;
+			case VK_FORMAT_R4G4B4A4_UNORM_PACK16:
+			case VK_FORMAT_B4G4R4A4_UNORM_PACK16:
+			case VK_FORMAT_R5G6B5_UNORM_PACK16:
+			case VK_FORMAT_B5G6R5_UNORM_PACK16:
+			case VK_FORMAT_R16_UNORM:
+				return u64(width) * height * 2;
+			case VK_FORMAT_R16G16B16A16_UNORM:
+			case VK_FORMAT_R16G16B16A16_SFLOAT:
+				return u64(width) * height * 8;
+			default:
+				return u64(width) * height * 4;
+			}
+		}
+
+		// Converts a 16-bit half float to an 8-bit unorm (clamped to [0,1]).
+		inline u8 half_to_unorm8(u16 h)
+		{
+			const u32 sign = (h >> 15) & 1;
+			const u32 exp = (h >> 10) & 0x1f;
+			const u32 mant = h & 0x3ff;
+			u32 bits;
+			if (exp == 0)
+			{
+				if (mant == 0)
+				{
+					bits = sign << 31;
+				}
+				else
+				{
+					s32 e = -1; u32 m = mant;
+					do { e++; m <<= 1; } while ((m & 0x400) == 0);
+					bits = (sign << 31) | u32((127 - 15 - e) << 23) | ((m & 0x3ff) << 13);
+				}
+			}
+			else if (exp == 0x1f)
+			{
+				bits = (sign << 31) | (0xffu << 23) | (mant << 13);
+			}
+			else
+			{
+				bits = (sign << 31) | ((exp - 15 + 127) << 23) | (mant << 13);
+			}
+			float f;
+			std::memcpy(&f, &bits, 4);
+			if (f <= 0.0f) return 0;
+			if (f >= 1.0f) return 255;
+			return u8(f * 255.0f + 0.5f);
+		}
+
+		// Decodes a supported VK host format to tightly-packed RGBA8, or returns
+		// empty for unsupported formats.
+		std::vector<u8> decode_vk_to_rgba8(VkFormat format, const u8* src, u32 width, u32 height)
+		{
+			std::vector<u8> out(usz(width) * height * 4);
+			u8* dst = out.data();
+			const u32 bx_count = (width + 3) / 4, by_count = (height + 3) / 4;
+
+			switch (format)
+			{
+			case VK_FORMAT_R8G8B8A8_UNORM:
+			case VK_FORMAT_R8G8B8A8_SRGB:
+				std::memcpy(dst, src, out.size());
+				return out;
+			case VK_FORMAT_B8G8R8A8_UNORM:
+			case VK_FORMAT_B8G8R8A8_SRGB:
+				for (usz i = 0; i < usz(width) * height; ++i)
+				{
+					dst[i * 4 + 0] = src[i * 4 + 2];
+					dst[i * 4 + 1] = src[i * 4 + 1];
+					dst[i * 4 + 2] = src[i * 4 + 0];
+					dst[i * 4 + 3] = src[i * 4 + 3];
+				}
+				return out;
+			case VK_FORMAT_BC1_RGBA_UNORM_BLOCK:
+			case VK_FORMAT_BC1_RGBA_SRGB_BLOCK:
+				for (u32 by = 0; by < by_count; ++by)
+					for (u32 bx = 0; bx < bx_count; ++bx)
+					{
+						u32 texels[16];
+						decode_bc1_colors(src + (usz(by) * bx_count + bx) * 8, false, texels);
+						store_block(texels, bx, by, width, height, dst);
+					}
+				return out;
+			case VK_FORMAT_BC2_UNORM_BLOCK:
+			case VK_FORMAT_BC2_SRGB_BLOCK:
+				for (u32 by = 0; by < by_count; ++by)
+					for (u32 bx = 0; bx < bx_count; ++bx)
+					{
+						const u8* blk = src + (usz(by) * bx_count + bx) * 16;
+						u32 texels[16];
+						decode_bc1_colors(blk + 8, true, texels);
+						for (u32 i = 0; i < 16; ++i)
+						{
+							const u32 nib = (blk[i / 2] >> ((i & 1) * 4)) & 0xf;
+							texels[i] = (texels[i] & 0x00ffffffu) | (u32(nib * 17) << 24);
+						}
+						store_block(texels, bx, by, width, height, dst);
+					}
+				return out;
+			case VK_FORMAT_BC3_UNORM_BLOCK:
+			case VK_FORMAT_BC3_SRGB_BLOCK:
+				for (u32 by = 0; by < by_count; ++by)
+					for (u32 bx = 0; bx < bx_count; ++bx)
+					{
+						const u8* blk = src + (usz(by) * bx_count + bx) * 16;
+						u32 texels[16];
+						decode_bc1_colors(blk + 8, true, texels);
+						u8 alpha[16];
+						decode_bc3_alpha(blk, alpha);
+						for (u32 i = 0; i < 16; ++i)
+							texels[i] = (texels[i] & 0x00ffffffu) | (u32(alpha[i]) << 24);
+						store_block(texels, bx, by, width, height, dst);
+					}
+				return out;
+			case VK_FORMAT_R4G4B4A4_UNORM_PACK16:
+				for (usz i = 0; i < usz(width) * height; ++i)
+				{
+					const u16 v = u16(src[i * 2] | (src[i * 2 + 1] << 8));
+					// Vulkan PACK16: R in the high nibble, A in the low nibble.
+					dst[i * 4 + 0] = u8(((v >> 12) & 0xf) * 17);
+					dst[i * 4 + 1] = u8(((v >> 8) & 0xf) * 17);
+					dst[i * 4 + 2] = u8(((v >> 4) & 0xf) * 17);
+					dst[i * 4 + 3] = u8((v & 0xf) * 17);
+				}
+				return out;
+			case VK_FORMAT_R16_UNORM:
+				for (usz i = 0; i < usz(width) * height; ++i)
+				{
+					dst[i * 4 + 0] = src[i * 2 + 1]; // high byte of the 16-bit channel
+					dst[i * 4 + 1] = 0;
+					dst[i * 4 + 2] = 0;
+					dst[i * 4 + 3] = 255;
+				}
+				return out;
+			case VK_FORMAT_R16G16B16A16_SFLOAT:
+				for (usz i = 0; i < usz(width) * height; ++i)
+				{
+					const usz o = i * 8;
+					dst[i * 4 + 0] = half_to_unorm8(u16(src[o + 0] | (src[o + 1] << 8)));
+					dst[i * 4 + 1] = half_to_unorm8(u16(src[o + 2] | (src[o + 3] << 8)));
+					dst[i * 4 + 2] = half_to_unorm8(u16(src[o + 4] | (src[o + 5] << 8)));
+					dst[i * 4 + 3] = half_to_unorm8(u16(src[o + 6] | (src[o + 7] << 8)));
+				}
+				return out;
+			default:
+				return {};
+			}
+		}
+
+		// Applies the texture's view component mapping (the per-texture channel
+		// remap the game samples through) to decoded RGBA8, so the dump matches
+		// the in-game appearance instead of the raw host channel order.
+		void apply_component_mapping_rgba8(std::vector<u8>& rgba, const VkComponentMapping& m)
+		{
+			auto pick = [](VkComponentSwizzle s, u8 r, u8 g, u8 b, u8 a, u8 ident) -> u8
+			{
+				switch (s)
+				{
+				case VK_COMPONENT_SWIZZLE_ZERO: return 0;
+				case VK_COMPONENT_SWIZZLE_ONE: return 255;
+				case VK_COMPONENT_SWIZZLE_R: return r;
+				case VK_COMPONENT_SWIZZLE_G: return g;
+				case VK_COMPONENT_SWIZZLE_B: return b;
+				case VK_COMPONENT_SWIZZLE_A: return a;
+				default: return ident; // VK_COMPONENT_SWIZZLE_IDENTITY
+				}
+			};
+			for (usz i = 0; i + 4 <= rgba.size(); i += 4)
+			{
+				const u8 r = rgba[i], g = rgba[i + 1], b = rgba[i + 2], a = rgba[i + 3];
+				rgba[i + 0] = pick(m.r, r, g, b, a, r);
+				rgba[i + 1] = pick(m.g, r, g, b, a, g);
+				rgba[i + 2] = pick(m.b, r, g, b, a, b);
+				rgba[i + 3] = pick(m.a, r, g, b, a, a);
+			}
+		}
+
+		// Reverse of apply_component_mapping_rgba8: given the game's forward view
+		// mapping, transform canonical (PNG) RGBA into the host-logical channel
+		// order, so that sampling through the forward mapping reproduces the PNG.
+		void inverse_component_mapping_rgba8(std::vector<u8>& rgba, const VkComponentMapping& m)
+		{
+			auto resolve = [](VkComponentSwizzle s, int ident) -> int
+			{
+				switch (s)
+				{
+				case VK_COMPONENT_SWIZZLE_R: return 0;
+				case VK_COMPONENT_SWIZZLE_G: return 1;
+				case VK_COMPONENT_SWIZZLE_B: return 2;
+				case VK_COMPONENT_SWIZZLE_A: return 3;
+				case VK_COMPONENT_SWIZZLE_ZERO:
+				case VK_COMPONENT_SWIZZLE_ONE: return -1; // forced by the game; host value is don't-care
+				default: return ident; // VK_COMPONENT_SWIZZLE_IDENTITY
+				}
+			};
+			const int sel[4] = {resolve(m.r, 0), resolve(m.g, 1), resolve(m.b, 2), resolve(m.a, 3)};
+			for (usz i = 0; i + 4 <= rgba.size(); i += 4)
+			{
+				const u8 png[4] = {rgba[i], rgba[i + 1], rgba[i + 2], rgba[i + 3]};
+				u8 host[4] = {0, 0, 0, 0};
+				for (int o = 0; o < 4; ++o)
+				{
+					if (sel[o] >= 0) host[sel[o]] = png[o];
+				}
+				rgba[i + 0] = host[0]; rgba[i + 1] = host[1]; rgba[i + 2] = host[2]; rgba[i + 3] = host[3];
+			}
+		}
+
+		// Encodes host-logical RGBA8 into a host VK format, or returns empty for
+		// unsupported formats. BC uses the vendored stb_dxt compressor.
+		std::vector<u8> encode_rgba8_to_host(VkFormat format, const u8* rgba, u32 width, u32 height)
+		{
+			switch (format)
+			{
+			case VK_FORMAT_R8G8B8A8_UNORM:
+			case VK_FORMAT_R8G8B8A8_SRGB:
+			{
+				std::vector<u8> out(usz(width) * height * 4);
+				std::memcpy(out.data(), rgba, out.size());
+				return out;
+			}
+			case VK_FORMAT_B8G8R8A8_UNORM:
+			case VK_FORMAT_B8G8R8A8_SRGB:
+			{
+				std::vector<u8> out(usz(width) * height * 4);
+				for (usz i = 0; i < usz(width) * height; ++i)
+				{
+					out[i * 4 + 0] = rgba[i * 4 + 2];
+					out[i * 4 + 1] = rgba[i * 4 + 1];
+					out[i * 4 + 2] = rgba[i * 4 + 0];
+					out[i * 4 + 3] = rgba[i * 4 + 3];
+				}
+				return out;
+			}
+			case VK_FORMAT_R4G4B4A4_UNORM_PACK16:
+			{
+				std::vector<u8> out(usz(width) * height * 2);
+				for (usz i = 0; i < usz(width) * height; ++i)
+				{
+					const u16 v = u16(((rgba[i * 4 + 0] >> 4) << 12) | ((rgba[i * 4 + 1] >> 4) << 8) |
+						((rgba[i * 4 + 2] >> 4) << 4) | (rgba[i * 4 + 3] >> 4));
+					out[i * 2 + 0] = u8(v & 0xff);
+					out[i * 2 + 1] = u8(v >> 8);
+				}
+				return out;
+			}
+			case VK_FORMAT_BC1_RGBA_UNORM_BLOCK:
+			case VK_FORMAT_BC1_RGBA_SRGB_BLOCK:
+			case VK_FORMAT_BC3_UNORM_BLOCK:
+			case VK_FORMAT_BC3_SRGB_BLOCK:
+			{
+				const bool bc3 = (format == VK_FORMAT_BC3_UNORM_BLOCK || format == VK_FORMAT_BC3_SRGB_BLOCK);
+				const u32 block_bytes = bc3 ? 16 : 8;
+				const u32 bx = (width + 3) / 4, by = (height + 3) / 4;
+				std::vector<u8> out(usz(bx) * by * block_bytes);
+				for (u32 yb = 0; yb < by; ++yb)
+				{
+					for (u32 xb = 0; xb < bx; ++xb)
+					{
+						u8 block[64];
+						for (u32 y = 0; y < 4; ++y)
+						{
+							for (u32 x = 0; x < 4; ++x)
+							{
+								const u32 px = std::min<u32>(xb * 4 + x, width - 1);
+								const u32 py = std::min<u32>(yb * 4 + y, height - 1);
+								std::memcpy(&block[(y * 4 + x) * 4], rgba + (usz(py) * width + px) * 4, 4);
+							}
+						}
+						stb_compress_dxt_block(&out[(usz(yb) * bx + xb) * block_bytes], block, bc3 ? 1 : 0, STB_DXT_NORMAL);
+					}
+				}
+				return out;
+			}
+			default:
+				return {};
+			}
+		}
+
+		// Plain box halving of a tightly packed RGBA8 image, used to regenerate the
+		// mip chain for a replacement texture so every level reflects the edit (a
+		// base-only replacement ghosts under trilinear filtering / at small sizes).
+		// NOTE: deliberately a plain average (not alpha-weighted) - these textures
+		// commonly key transparency off a black RGB background rather than the alpha
+		// channel, so edge texels must average toward black, not toward logo colour.
+		std::vector<u8> downsample_rgba8(const std::vector<u8>& src, u32 sw, u32 sh, u32 dw, u32 dh)
+		{
+			std::vector<u8> dst(usz(dw) * dh * 4);
+			for (u32 y = 0; y < dh; ++y)
+			{
+				const u32 sy0 = std::min(y * 2, sh - 1);
+				const u32 sy1 = std::min(sy0 + 1, sh - 1);
+				for (u32 x = 0; x < dw; ++x)
+				{
+					const u32 sx0 = std::min(x * 2, sw - 1);
+					const u32 sx1 = std::min(sx0 + 1, sw - 1);
+					const u8* p00 = &src[(usz(sy0) * sw + sx0) * 4];
+					const u8* p01 = &src[(usz(sy0) * sw + sx1) * 4];
+					const u8* p10 = &src[(usz(sy1) * sw + sx0) * 4];
+					const u8* p11 = &src[(usz(sy1) * sw + sx1) * 4];
+					u8* d = &dst[(usz(y) * dw + x) * 4];
+					for (u32 c = 0; c < 4; ++c)
+					{
+						d[c] = u8((u32(p00[c]) + p01[c] + p10[c] + p11[c] + 2) / 4);
+					}
+				}
+			}
+			return dst;
+		}
+	}
+
+	void texture_cache::dump_texture_image(vk::command_buffer& cmd, cached_texture_section* section,
+		u16 width, u16 height, u32 gcm_format, u64 content_hash,
+		const rsx::texture_channel_remap_t& remap)
+	{
+		if (!section)
+			return;
+		if (!m_dumped_texture_hashes.insert(content_hash).second)
+			return; // Already dumped this texture this session.
+
+		vk::image* image = section->get_raw_texture();
+		if (!image)
+			return;
+
+		const VkFormat vk_format = image->format();
+		const u64 readback_size = vk_readback_size(vk_format, width, height);
+
+		// Configurable dump root (empty = config dir). The per-title and dump/
+		// subfolders are always appended: the dump/ split keeps dumps out of the
+		// replacement folder so a shared root can't form a dump->replace loop.
+		std::string root = g_cfg.video.texture_dump_path.to_string();
+		if (root.empty())
+			root = fs::get_config_dir() + "textures/";
+		else if (root.back() != '/' && root.back() != '\\')
+			root += '/';
+		const std::string dir = root + Emu.GetTitleID() + "/dump/";
+		if (!fs::create_path(dir))
+			return;
+		const std::string path = fmt::format("%s%016x_%02x.png", dir, content_hash, gcm_format);
+		if (fs::exists(path))
+			return;
+
+		// Read the uploaded image back into a host-visible buffer.
+		vk::buffer readback(*m_device, readback_size, m_memory_types.host_visible_coherent, 0,
+			VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0, VMM_ALLOCATION_POOL_UNDEFINED);
+
+		VkBufferImageCopy region{};
+		region.bufferRowLength = 0;   // tightly packed
+		region.bufferImageHeight = 0;
+		region.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1};
+		region.imageOffset = {0, 0, 0};
+		region.imageExtent = {width, height, 1};
+
+		image->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+		vk::copy_image_to_buffer(cmd, image, &readback, region);
+		image->pop_layout(cmd);
+
+		// Submit and wait so the copy completes, then restart the command buffer
+		// for the caller (matches the cache's flush idiom above).
+		cmd.end();
+		vk::fence submit_fence(*m_device);
+		vk::queue_submit_t submit_info{m_submit_queue, &submit_fence};
+		cmd.submit(submit_info, VK_TRUE);
+		vk::wait_for_fence(&submit_fence, GENERAL_WAIT_TIMEOUT);
+		cmd.reset();
+		cmd.begin();
+
+		if (void* mapped = readback.map(0, readback_size))
+		{
+			std::vector<u8> rgba = decode_vk_to_rgba8(vk_format, static_cast<const u8*>(mapped), width, height);
+			readback.unmap();
+			if (rgba.empty())
+			{
+				rsx_log.warning("texture_dump: unsupported host format %u, skipping", static_cast<u32>(vk_format));
+			}
+			else
+			{
+				// Reorder channels to match what the game samples (WYSIWYG).
+				const VkComponentMapping mapping = apply_component_mapping_flags(gcm_format, rsx::component_order::default_, remap);
+				apply_component_mapping_rgba8(rgba, mapping);
+				if (!stbi_write_png(path.c_str(), width, height, 4, rgba.data(), width * 4))
+				{
+					rsx_log.error("texture_dump: failed to write %s", path);
+				}
+			}
+		}
+	}
+
+	bool texture_cache::replace_texture_image(vk::command_buffer& cmd, cached_texture_section* section,
+		u16 width, u16 height, u32 gcm_format, u64 content_hash,
+		const rsx::texture_channel_remap_t& remap)
+	{
+		if (!section)
+			return false;
+
+		vk::image* image = section->get_raw_texture();
+		if (!image)
+			return false;
+
+		// Configurable replacement root (empty = config dir); the per-title subfolder
+		// is always appended. Reads only this folder (non-recursive), so dumps under
+		// <root>/<title>/dump/ are never picked up as replacements.
+		std::string root = g_cfg.video.texture_replace_path.to_string();
+		if (root.empty())
+			root = fs::get_config_dir() + "textures/";
+		else if (root.back() != '/' && root.back() != '\\')
+			root += '/';
+		const std::string path = root + Emu.GetTitleID() + "/" + fmt::format("%016x_%02x.png", content_hash, gcm_format);
+		if (!fs::exists(path))
+		{
+			return false;
+		}
+
+		fs::file f(path);
+		if (!f)
+			return false;
+		std::vector<u8> file_data(f.size());
+		f.read(file_data.data(), file_data.size());
+
+		int pw = 0, ph = 0, comp = 0;
+		stbi_uc* decoded = stbi_load_from_memory(file_data.data(), static_cast<int>(file_data.size()), &pw, &ph, &comp, 4);
+		if (!decoded)
+		{
+			rsx_log.error("texture_replace: failed to decode %s", path);
+			return false;
+		}
+		if (u32(pw) != width || u32(ph) != height)
+		{
+			rsx_log.warning("texture_replace: %s is %dx%d but the texture is %ux%u (same-resolution only), skipping", path, pw, ph, width, height);
+			stbi_image_free(decoded);
+			return false;
+		}
+
+		std::vector<u8> rgba(decoded, decoded + usz(pw) * ph * 4);
+		stbi_image_free(decoded);
+
+		// The inverse of the view remap is applied per mip level below so the game's
+		// forward remap reproduces the edited PNG (WYSIWYG round-trip).
+		const VkComponentMapping mapping = apply_component_mapping_flags(gcm_format, rsx::component_order::default_, remap);
+
+		const VkFormat vk_format = image->format();
+		const u32 mip_count = std::max<u32>(1, image->mipmaps());
+
+		// Overwrite every mip level, regenerating the chain from the edited base by
+		// box-downsampling. A base-only replacement leaves the original sub-mips, so
+		// the game's trilinear filtering blends old+new (ghosting when drawn large)
+		// and small draws sample only untouched mips (no replacement at all).
+		image->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+		std::vector<std::unique_ptr<vk::buffer>> upload_buffers;
+		upload_buffers.reserve(mip_count);
+
+		std::vector<u8> level = std::move(rgba); // logical RGBA base level
+		u32 lw = width, lh = height;
+		u32 uploaded_mips = 0;
+		for (u32 m = 0; m < mip_count; ++m)
+		{
+			if (m > 0)
+			{
+				const u32 nw = std::max<u32>(1, lw >> 1);
+				const u32 nh = std::max<u32>(1, lh >> 1);
+				level = downsample_rgba8(level, lw, lh, nw, nh);
+				lw = nw;
+				lh = nh;
+			}
+
+			// Apply the inverse view remap on a copy (downsampling stays in logical
+			// RGBA order for correct alpha weighting), then encode to host format.
+			std::vector<u8> enc = level;
+			inverse_component_mapping_rgba8(enc, mapping);
+			std::vector<u8> host_data = encode_rgba8_to_host(vk_format, enc.data(), lw, lh);
+			if (host_data.empty())
+			{
+				if (m == 0)
+				{
+					rsx_log.warning("texture_replace: unsupported host format %u for replacement, skipping", static_cast<u32>(vk_format));
+					image->pop_layout(cmd);
+					return false;
+				}
+				break; // can't encode this level; leave remaining mips as uploaded by the game
+			}
+
+			auto buf = std::make_unique<vk::buffer>(*m_device, host_data.size(), m_memory_types.host_visible_coherent, 0,
+				VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 0, VMM_ALLOCATION_POOL_UNDEFINED);
+			void* dst = buf->map(0, host_data.size());
+			if (!dst)
+			{
+				image->pop_layout(cmd);
+				return false;
+			}
+			std::memcpy(dst, host_data.data(), host_data.size());
+			buf->unmap();
+
+			VkBufferImageCopy region{};
+			region.bufferRowLength = 0;
+			region.bufferImageHeight = 0;
+			region.imageSubresource = {VK_IMAGE_ASPECT_COLOR_BIT, m, 0, 1};
+			region.imageOffset = {0, 0, 0};
+			region.imageExtent = {lw, lh, 1};
+			vk::copy_buffer_to_image(cmd, buf.get(), image, region);
+
+			upload_buffers.push_back(std::move(buf));
+			++uploaded_mips;
+		}
+
+		image->pop_layout(cmd);
+
+		rsx_log.success("texture_replace: applied %s (%u/%u mips)", path, uploaded_mips, mip_count);
+
+		// Submit and wait so the copies complete before the upload buffers are freed,
+		// then restart the command buffer for the caller. upload_buffers stays in
+		// scope through the fence wait below.
+		cmd.end();
+		vk::fence submit_fence(*m_device);
+		vk::queue_submit_t submit_info{m_submit_queue, &submit_fence};
+		cmd.submit(submit_info, VK_TRUE);
+		vk::wait_for_fence(&submit_fence, GENERAL_WAIT_TIMEOUT);
+		cmd.reset();
+		cmd.begin();
+
+		return true;
 	}
 
 	void texture_cache::initialize(vk::render_device& device, VkQueue submit_queue, vk::data_heap& upload_heap)
