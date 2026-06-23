@@ -21,7 +21,7 @@ std::string VKFragmentDecompilerThread::getFunction(FUNCTION f)
 	return glsl::getFunctionImpl(f);
 }
 
-std::string VKFragmentDecompilerThread::compareFunction(COMPARE f, const std::string &Op0, const std::string &Op1)
+std::string VKFragmentDecompilerThread::compareFunction(COMPARE f, std::string_view Op0, std::string_view Op1)
 {
 	return glsl::compareFunctionImpl(f, Op0, Op1);
 }

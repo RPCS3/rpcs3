@@ -21,7 +21,7 @@ std::string VKVertexDecompilerThread::getFunction(FUNCTION f)
 	return glsl::getFunctionImpl(f);
 }
 
-std::string VKVertexDecompilerThread::compareFunction(COMPARE f, const std::string &Op0, const std::string &Op1, bool scalar)
+std::string VKVertexDecompilerThread::compareFunction(COMPARE f, std::string_view Op0, std::string_view Op1, bool scalar)
 {
 	return glsl::compareFunctionImpl(f, Op0, Op1, scalar);
 }
@@ -69,7 +69,7 @@ void VKVertexDecompilerThread::prepareBindingTable()
 	}
 }
 
-void VKVertexDecompilerThread::insertHeader(std::stringstream &OS)
+void VKVertexDecompilerThread::insertHeader(std::stringstream& OS)
 {
 	prepareBindingTable();
 
@@ -182,7 +182,7 @@ void VKVertexDecompilerThread::insertInputs(std::stringstream& OS, const std::ve
 	}
 }
 
-void VKVertexDecompilerThread::insertConstants(std::stringstream & OS, const std::vector<ParamType> & constants)
+void VKVertexDecompilerThread::insertConstants(std::stringstream& OS, const std::vector<ParamType>& constants)
 {
 	vk::glsl::program_input in
 	{
@@ -330,7 +330,7 @@ void VKVertexDecompilerThread::insertFSExport(std::stringstream& OS)
 		"}\n\n";
 }
 
-void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
+void VKVertexDecompilerThread::insertMainStart(std::stringstream& OS)
 {
 	glsl::shader_properties properties2{};
 	properties2.domain = glsl::glsl_vertex_program;
@@ -388,9 +388,9 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	OS << "{\n";
 
 	//Declare temporary registers, ignoring those mapped to outputs
-	for (const ParamType &PT : m_parr.params[PF_PARAM_NONE])
+	for (const ParamType& PT : m_parr.params[PF_PARAM_NONE])
 	{
-		for (const ParamItem &PI : PT.items)
+		for (const ParamItem& PI : PT.items)
 		{
 			if (PI.name.starts_with("dst_reg"))
 				continue;
@@ -403,9 +403,9 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 		}
 	}
 
-	for (const ParamType &PT : m_parr.params[PF_PARAM_IN])
+	for (const ParamType& PT : m_parr.params[PF_PARAM_IN])
 	{
-		for (const ParamItem &PI : PT.items)
+		for (const ParamItem& PI : PT.items)
 		{
 			OS << "	vec4 " << PI.name << "= read_location(" << std::to_string(PI.location) << ");\n";
 		}
@@ -414,7 +414,7 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	OS << "\nuint xform_constants_offset = get_draw_params().xform_constants_offset;\n\n";
 }
 
-void VKVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
+void VKVertexDecompilerThread::insertMainEnd(std::stringstream& OS)
 {
 	OS << "}\n\n";
 
