@@ -75,14 +75,14 @@ static bool is_iso_file(iso_file& file, u64* size = nullptr)
 	return ret;
 }
 
-bool is_iso_file(const std::string& path, u64* size, bool* is_raw_device)
+bool is_iso_file(std::string_view path, u64* size, bool* is_raw_device)
 {
 	if (path.empty())
 	{
 		return false;
 	}
 
-	std::string new_path = path;
+	std::string new_path(path);
 
 	// "new_path" is updated with the raw device path in case "path" points to a BD drive
 	const bool raw_device = fs::get_optical_raw_device(path, &new_path);
@@ -203,7 +203,7 @@ static bool decrypt_data(aes_context& aes, u64 offset, const unsigned char* buff
 	return true;
 }
 
-iso_type_status iso_file_decryption::get_key(const std::string& key_path, aes_context* aes_ctx)
+iso_type_status iso_file_decryption::get_key(std::string_view key_path, aes_context* aes_ctx)
 {
 	fs::file key_file(key_path);
 
@@ -344,7 +344,7 @@ iso_type_status iso_file_decryption::retrieve_key(iso_archive& archive, std::str
 	return iso_type_status::ERROR_OPENING_KEY;
 }
 
-iso_type_status iso_file_decryption::check_type(const std::string& path, std::string* key_path, aes_context* aes_ctx)
+iso_type_status iso_file_decryption::check_type(std::string_view path, std::string* key_path, aes_context* aes_ctx)
 {
 	if (!is_iso_file(path))
 	{
@@ -353,7 +353,7 @@ iso_type_status iso_file_decryption::check_type(const std::string& path, std::st
 
 	// Remove file extension from file path
 	const usz ext_pos = path.rfind('.');
-	const std::string name_path = ext_pos == umax ? path : path.substr(0, ext_pos);
+	const std::string name_path(ext_pos == umax ? path : path.substr(0, ext_pos));
 
 	// Detect file name (with no parent folder and no file extension)
 	const usz name_pos = name_path.rfind('/');
@@ -382,7 +382,7 @@ iso_type_status iso_file_decryption::check_type(const std::string& path, std::st
 	return iso_type_status::ERROR_OPENING_KEY;
 }
 
-bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
+bool iso_file_decryption::init(std::string_view path, iso_archive* archive)
 {
 	// Reset attributes first
 	m_enc_type = iso_encryption_type::NONE;
@@ -547,7 +547,7 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 	return true;
 }
 
-bool iso_file_decryption::decrypt(u64 offset, void* buffer, u64 size, const std::string& name)
+bool iso_file_decryption::decrypt(u64 offset, void* buffer, u64 size, std::string_view name)
 {
 	// If it's a non-encrypted type, nothing more to do
 	if (m_enc_type == iso_encryption_type::NONE)
@@ -602,7 +602,7 @@ bool iso_file_decryption::decrypt(u64 offset, void* buffer, u64 size, const std:
 	return true;
 }
 
-iso_file_encrypted::iso_file_encrypted(const std::string& path, bs_t<fs::open_mode> mode, const iso_fs_node& node, std::shared_ptr<iso_file_decryption> dec)
+iso_file_encrypted::iso_file_encrypted(std::string_view path, bs_t<fs::open_mode> mode, const iso_fs_node& node, std::shared_ptr<iso_file_decryption> dec)
 	: iso_file(path, mode, node), m_dec(dec)
 {
 }
@@ -909,7 +909,7 @@ static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, 
 	};
 }
 
-static void iso_form_hierarchy(fs::file& file, iso_fs_node& node, bool use_ucs2_decoding = false, const std::string& parent_path = "")
+static void iso_form_hierarchy(fs::file& file, iso_fs_node& node, bool use_ucs2_decoding = false, std::string_view parent_path = ""sv)
 {
 	if (!node.metadata.is_directory)
 	{
@@ -973,7 +973,7 @@ static void iso_form_hierarchy(fs::file& file, iso_fs_node& node, bool use_ucs2_
 	{
 		if (child_node->metadata.name != "." && child_node->metadata.name != "..")
 		{
-			iso_form_hierarchy(file, *child_node, use_ucs2_decoding, parent_path + "/" + node.metadata.name);
+			iso_form_hierarchy(file, *child_node, use_ucs2_decoding, fmt::format("%s/%s", parent_path, node.metadata.name));
 		}
 	}
 }
@@ -990,7 +990,7 @@ u64 iso_fs_metadata::size() const
 	return total_size;
 }
 
-iso_archive::iso_archive(const std::string& path)
+iso_archive::iso_archive(std::string_view path)
 {
 	m_path = path;
 
@@ -1050,7 +1050,7 @@ iso_archive::iso_archive(const std::string& path)
 	}
 }
 
-iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
+iso_fs_node* iso_archive::retrieve(std::string_view passed_path)
 {
 	if (passed_path.empty())
 	{
@@ -1127,12 +1127,12 @@ iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
 	return search_stack.top();
 }
 
-bool iso_archive::exists(const std::string& path)
+bool iso_archive::exists(std::string_view path)
 {
 	return retrieve(path) != nullptr;
 }
 
-bool iso_archive::is_file(const std::string& path)
+bool iso_archive::is_file(std::string_view path)
 {
 	const auto file_node = retrieve(path);
 
@@ -1144,7 +1144,7 @@ bool iso_archive::is_file(const std::string& path)
 	return !file_node->metadata.is_directory;
 }
 
-std::unique_ptr<fs::file_base> iso_archive::get_iso_file(const std::string& path, bs_t<fs::open_mode> mode, const iso_fs_node& node)
+std::unique_ptr<fs::file_base> iso_archive::get_iso_file(std::string_view path, bs_t<fs::open_mode> mode, const iso_fs_node& node)
 {
 	if (m_dec->get_enc_type() == iso_encryption_type::NONE)
 	{
@@ -1154,12 +1154,12 @@ std::unique_ptr<fs::file_base> iso_archive::get_iso_file(const std::string& path
 	return std::make_unique<iso_file_encrypted>(path, mode, node, m_dec);
 }
 
-std::unique_ptr<fs::file_base> iso_archive::open(const std::string& path)
+std::unique_ptr<fs::file_base> iso_archive::open(std::string_view path)
 {
 	return get_iso_file(m_path, fs::read, *ensure(retrieve(path)));
 }
 
-psf::registry iso_archive::open_psf(const std::string& path)
+psf::registry iso_archive::open_psf(std::string_view path)
 {
 	const auto node = retrieve(path);
 
@@ -1173,7 +1173,7 @@ psf::registry iso_archive::open_psf(const std::string& path)
 	return psf::load_object(psf_file, path);
 }
 
-iso_file::iso_file(const std::string& path, bs_t<fs::open_mode> mode)
+iso_file::iso_file(std::string_view path, bs_t<fs::open_mode> mode)
 {
 	m_file = fs::file(path, mode);
 
@@ -1192,7 +1192,7 @@ iso_file::iso_file(const std::string& path, bs_t<fs::open_mode> mode)
 	m_raw_device = fs::is_optical_raw_device(path);
 }
 
-iso_file::iso_file(const std::string& path, bs_t<fs::open_mode> mode, const iso_fs_node& node)
+iso_file::iso_file(std::string_view path, bs_t<fs::open_mode> mode, const iso_fs_node& node)
 	: m_meta(node.metadata)
 {
 	m_file = fs::file(path, mode);
@@ -1490,7 +1490,7 @@ void iso_dir::rewind()
 	m_pos = 0;
 }
 
-bool iso_device::stat(const std::string& path, fs::stat_t& info)
+bool iso_device::stat(std::string_view path, fs::stat_t& info)
 {
 	const auto relative_path = std::filesystem::relative(std::filesystem::path(path), std::filesystem::path(fs_prefix)).string();
 
@@ -1518,7 +1518,7 @@ bool iso_device::stat(const std::string& path, fs::stat_t& info)
 	return true;
 }
 
-bool iso_device::statfs(const std::string& path, fs::device_stat& info)
+bool iso_device::statfs(std::string_view path, fs::device_stat& info)
 {
 	const auto relative_path = std::filesystem::relative(std::filesystem::path(path), std::filesystem::path(fs_prefix)).string();
 
@@ -1543,7 +1543,7 @@ bool iso_device::statfs(const std::string& path, fs::device_stat& info)
 	return true;
 }
 
-std::unique_ptr<fs::file_base> iso_device::open(const std::string& path, bs_t<fs::open_mode> mode)
+std::unique_ptr<fs::file_base> iso_device::open(std::string_view path, bs_t<fs::open_mode> mode)
 {
 	const auto relative_path = std::filesystem::relative(std::filesystem::path(path), std::filesystem::path(fs_prefix)).string();
 
@@ -1564,7 +1564,7 @@ std::unique_ptr<fs::file_base> iso_device::open(const std::string& path, bs_t<fs
 	return m_archive.get_iso_file(m_archive.path(), mode, *node);
 }
 
-std::unique_ptr<fs::dir_base> iso_device::open_dir(const std::string& path)
+std::unique_ptr<fs::dir_base> iso_device::open_dir(std::string_view path)
 {
 	const auto relative_path = std::filesystem::relative(std::filesystem::path(path), std::filesystem::path(fs_prefix)).string();
 
@@ -1586,7 +1586,7 @@ std::unique_ptr<fs::dir_base> iso_device::open_dir(const std::string& path)
 	return std::make_unique<iso_dir>(*node);
 }
 
-void load_iso(const std::string& path)
+void load_iso(std::string_view path)
 {
 	sys_log.notice("Loading ISO '%s'", path);
 

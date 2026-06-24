@@ -107,9 +107,9 @@ content_integrity_status content_validation::check_integrity(content_file_type f
 	return content_integrity_status::NO_MATCH;
 }
 
-bool content_validation::init_hash(const std::string& path)
+bool content_validation::init_hash(std::string_view path)
 {
-	std::string new_path = path;
+	std::string new_path(path);
 
 	fs::get_optical_raw_device(path, &new_path);
 

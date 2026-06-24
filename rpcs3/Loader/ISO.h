@@ -6,9 +6,9 @@
 #include "util/types.hpp"
 #include "Crypto/aes.h"
 
-bool is_iso_file(const std::string& path, u64* size = nullptr, bool* is_raw_device = nullptr);
+bool is_iso_file(std::string_view path, u64* size = nullptr, bool* is_raw_device = nullptr);
 
-void load_iso(const std::string& path);
+void load_iso(std::string_view path);
 void unload_iso();
 
 constexpr u64 ISO_SECTOR_SIZE = 2048;
@@ -67,16 +67,16 @@ private:
 	iso_encryption_type m_enc_type = iso_encryption_type::NONE;
 	std::vector<iso_region_info> m_region_info;
 
-	static iso_type_status get_key(const std::string& key_path, aes_context* aes_ctx = nullptr);
+	static iso_type_status get_key(std::string_view key_path, aes_context* aes_ctx = nullptr);
 	static iso_type_status retrieve_key(iso_archive& archive, std::string& key_path, aes_context& aes_ctx);
 
 public:
-	static iso_type_status check_type(const std::string& path, std::string* key_path = nullptr, aes_context* aes_ctx = nullptr);
+	static iso_type_status check_type(std::string_view path, std::string* key_path = nullptr, aes_context* aes_ctx = nullptr);
 
 	iso_encryption_type get_enc_type() const { return m_enc_type; }
 
-	bool init(const std::string& path, iso_archive* archive = nullptr);
-	bool decrypt(u64 offset, void* buffer, u64 size, const std::string& name);
+	bool init(std::string_view path, iso_archive* archive = nullptr);
+	bool decrypt(u64 offset, void* buffer, u64 size, std::string_view name);
 };
 
 struct iso_extent_info
@@ -116,8 +116,8 @@ protected:
 	u64 file_offset(u64 pos) const;
 
 public:
-	iso_file(const std::string& path, bs_t<fs::open_mode> mode = fs::read);
-	iso_file(const std::string& path, bs_t<fs::open_mode> mode, const iso_fs_node& node);
+	iso_file(std::string_view path, bs_t<fs::open_mode> mode = fs::read);
+	iso_file(std::string_view path, bs_t<fs::open_mode> mode, const iso_fs_node& node);
 
 	explicit operator bool() const { return m_file.operator bool(); }
 
@@ -140,7 +140,7 @@ private:
 	std::shared_ptr<iso_file_decryption> m_dec;
 
 public:
-	iso_file_encrypted(const std::string& path, bs_t<fs::open_mode> mode, const iso_fs_node& node, std::shared_ptr<iso_file_decryption> dec);
+	iso_file_encrypted(std::string_view path, bs_t<fs::open_mode> mode, const iso_fs_node& node, std::shared_ptr<iso_file_decryption> dec);
 
 	u64 read_at(u64 offset, void* buffer, u64 size) override;
 };
@@ -169,18 +169,18 @@ private:
 	std::shared_ptr<iso_file_decryption> m_dec;
 
 public:
-	iso_archive(const std::string& path);
+	iso_archive(std::string_view path);
 
 	const std::string& path() const { return m_path; }
 	const iso_fs_node& root() const { return m_root; }
 
-	iso_fs_node* retrieve(const std::string& path);
-	bool exists(const std::string& path);
-	bool is_file(const std::string& path);
+	iso_fs_node* retrieve(std::string_view path);
+	bool exists(std::string_view path);
+	bool is_file(std::string_view path);
 
-	std::unique_ptr<fs::file_base> get_iso_file(const std::string& path, bs_t<fs::open_mode> mode, const iso_fs_node& node);
-	std::unique_ptr<fs::file_base> open(const std::string& path);
-	psf::registry open_psf(const std::string& path);
+	std::unique_ptr<fs::file_base> get_iso_file(std::string_view path, bs_t<fs::open_mode> mode, const iso_fs_node& node);
+	std::unique_ptr<fs::file_base> open(std::string_view path);
+	psf::registry open_psf(std::string_view path);
 
 	friend class iso_file;
 };
@@ -194,7 +194,7 @@ private:
 public:
 	inline static std::string virtual_device_name = "/vfsv0_virtual_iso_overlay_fs_dev";
 
-	iso_device(const std::string& iso_path, const std::string& device_name = virtual_device_name)
+	iso_device(std::string_view iso_path, std::string_view device_name = virtual_device_name)
 		: m_path(iso_path), m_archive(iso_path)
 	{
 		fs_prefix = device_name;
@@ -204,9 +204,9 @@ public:
 
 	const std::string& get_loaded_iso() const { return m_path; }
 
-	bool stat(const std::string& path, fs::stat_t& info) override;
-	bool statfs(const std::string& path, fs::device_stat& info) override;
+	bool stat(std::string_view path, fs::stat_t& info) override;
+	bool statfs(std::string_view path, fs::device_stat& info) override;
 
-	std::unique_ptr<fs::file_base> open(const std::string& path, bs_t<fs::open_mode> mode) override;
-	std::unique_ptr<fs::dir_base> open_dir(const std::string& path) override;
+	std::unique_ptr<fs::file_base> open(std::string_view path, bs_t<fs::open_mode> mode) override;
+	std::unique_ptr<fs::dir_base> open_dir(std::string_view path) override;
 };

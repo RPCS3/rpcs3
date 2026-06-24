@@ -43,4 +43,4 @@ CHECK_SIZE(mself_header, 0x40);
 
 CHECK_SIZE(mself_record, 0x40);
 
-bool extract_mself(const std::string& file, const std::string& extract_to);
+bool extract_mself(std::string_view file, const std::string& extract_to);

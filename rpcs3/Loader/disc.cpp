@@ -10,7 +10,7 @@ LOG_CHANNEL(disc_log, "DISC");
 
 namespace disc
 {
-	disc_type get_disc_type(const std::string& path, std::string& disc_root, std::string& ps3_game_dir)
+	disc_type get_disc_type(std::string_view path, std::string& disc_root, std::string& ps3_game_dir)
 	{
 		disc_type type = disc_type::unknown;
 
@@ -73,7 +73,7 @@ namespace disc
 		std::vector<std::string> lines;
 
 		// Try to find SYSTEM.CNF
-		for (std::string search_dir = path;;)
+		for (std::string search_dir(path);;)
 		{
 			if (fs::file file(search_dir + "/SYSTEM.CNF"); file)
 			{
