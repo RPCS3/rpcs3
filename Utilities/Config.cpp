@@ -757,7 +757,7 @@ void cfg::log_entry::from_default()
 
 std::pair<u16, u16> cfg::device_info::get_usb_ids() const
 {
-	auto string_to_hex = [](const std::string& str) -> u16
+	auto string_to_hex = [](std::string_view str) -> u16
 	{
 		u16 value = 0x0000;
 		if (!str.empty() && std::from_chars(str.data(), str.data() + str.size(), value, 16).ec != std::errc{})

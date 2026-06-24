@@ -56,13 +56,13 @@ namespace rpcs3::utils
 		was_silenced = silenced;
 	}
 
-	u32 check_user(const std::string& user)
+	u32 check_user(std::string_view user)
 	{
 		u32 id = 0;
 
 		if (user.size() == 8)
 		{
-			std::from_chars(&user.front(), &user.back() + 1, id);
+			std::from_chars(user.data(), user.data() + user.size(), id);
 		}
 
 		return id;
@@ -254,6 +254,36 @@ namespace rpcs3::utils
 	std::string get_redump_key_dir()
 	{
 		return get_data_dir() + "redump/";
+	}
+
+	std::string get_psn_content_db_path()
+	{
+		return fs::get_config_dir(true) + "psn_content.dat";
+	}
+
+	std::string get_psn_content_db_download_url()
+	{
+		return "https://api.rpcs3.net/nointro/content/?api=v1";
+	}
+
+	std::string get_psn_dlc_db_path()
+	{
+		return fs::get_config_dir(true) + "psn_dlc.dat";
+	}
+
+	std::string get_psn_dlc_db_download_url()
+	{
+		return "https://api.rpcs3.net/nointro/dlc/?api=v1";
+	}
+
+	std::string get_psn_update_db_path()
+	{
+		return fs::get_config_dir(true) + "psn_update.dat";
+	}
+
+	std::string get_psn_update_db_download_url()
+	{
+		return "https://api.rpcs3.net/nointro/updates/?api=v1";
 	}
 
 	std::string get_data_dir()
@@ -553,7 +583,7 @@ namespace rpcs3::utils
 		const bool check_disc = !disc_dir.empty();
 		const bool check_hdd0 = !hdd0_dir.empty() && !check_disc;
 
-		const auto find_content = [&](const std::string& name, const std::string& extension) -> std::string
+		const auto find_content = [&](std::string_view name, std::string_view extension) -> std::string
 		{
 			// Check localized content first
 			for (bool localized : { true, false })

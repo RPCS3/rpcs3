@@ -67,23 +67,20 @@ namespace vk
 
 		for (u32 n = 0; n < m_num_uniform_buffers; ++n, ++binding)
 		{
-			const std::string name = std::string("static_data") + (n > 0 ? std::to_string(n) : "");
-			const auto input = program_input::make(::glsl::program_domain::glsl_fragment_program, name, program_input_type::input_type_uniform_buffer, 0, 0);
-			fs_inputs.push_back(input);
+			std::string name = std::string("static_data") + (n > 0 ? std::to_string(n) : "");
+			fs_inputs.push_back(program_input::make(::glsl::program_domain::glsl_fragment_program, std::move(name), program_input_type::input_type_uniform_buffer, 0, 0));
 		}
 
 		for (u32 n = 0; n < m_num_usable_samplers; ++n, ++binding)
 		{
-			const std::string name = "fs" + std::to_string(n);
-			const auto input = program_input::make(::glsl::program_domain::glsl_fragment_program, name, program_input_type::input_type_texture, 0, binding);
-			fs_inputs.push_back(input);
+			std::string name = "fs" + std::to_string(n);
+			fs_inputs.push_back(program_input::make(::glsl::program_domain::glsl_fragment_program, std::move(name), program_input_type::input_type_texture, 0, binding));
 		}
 
 		for (u32 n = 0; n < m_num_input_attachments; ++n, ++binding)
 		{
-			const std::string name = "sp" + std::to_string(n);
-			const auto input = program_input::make(::glsl::program_domain::glsl_fragment_program, name, program_input_type::input_type_texture, 0, binding);
-			fs_inputs.push_back(input);
+			std::string name = "sp" + std::to_string(n);
+			fs_inputs.push_back(program_input::make(::glsl::program_domain::glsl_fragment_program, std::move(name), program_input_type::input_type_texture, 0, binding));
 		}
 
 		return fs_inputs;

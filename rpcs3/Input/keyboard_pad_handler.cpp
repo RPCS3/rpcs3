@@ -906,7 +906,7 @@ std::string keyboard_pad_handler::GetKeyName(u32 keyCode)
 	return QKeySequence(keyCode).toString(QKeySequence::NativeText).toStdString();
 }
 
-std::vector<std::set<u32>> keyboard_pad_handler::GetKeyCombos(const std::string& cfg_string)
+std::vector<std::set<u32>> keyboard_pad_handler::GetKeyCombos(std::string_view cfg_string)
 {
 	std::vector<std::set<u32>> res;
 

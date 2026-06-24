@@ -77,7 +77,7 @@ void spu_llvm_set_compile_context(spu_llvm_compile_context* context) noexcept
 class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 {
 	// JIT Instance
-	jit_compiler m_jit{{}, jit_compiler::cpu(g_cfg.core.llvm_cpu)};
+	jit_compiler m_jit{{}, jit_compiler::cpu(g_cfg.core.llvm_cpu.to_string())};
 
 	// Interpreter table size power
 	const u8 m_interp_magn;
@@ -128,7 +128,6 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	// Global LUTs
 	llvm::GlobalVariable* m_spu_frest_fraction_lut{};
 	llvm::GlobalVariable* m_spu_frsqest_fraction_lut{};
-	llvm::GlobalVariable* m_spu_frsqest_exponent_lut{};
 
 	// Helpers (interpreter)
 	llvm::GlobalVariable* m_scale_float_to{};
@@ -1592,7 +1591,7 @@ public:
 			clear_transforms();
 #ifdef ARCH_ARM64
 			{
-				auto should_exclude_function = [](const std::string& fn_name)
+				auto should_exclude_function = [](std::string_view fn_name)
 				{
 					return fn_name.starts_with("spu_") || fn_name.starts_with("tr_");
 				};
@@ -1623,7 +1622,6 @@ public:
 		// LUTs for some instructions
 		m_spu_frest_fraction_lut = new llvm::GlobalVariable(*m_module, llvm::ArrayType::get(GetType<u32>(), 32), true, llvm::GlobalValue::PrivateLinkage, llvm::ConstantDataArray::get(m_context, spu_frest_fraction_lut));
 		m_spu_frsqest_fraction_lut = new llvm::GlobalVariable(*m_module, llvm::ArrayType::get(GetType<u32>(), 64), true, llvm::GlobalValue::PrivateLinkage, llvm::ConstantDataArray::get(m_context, spu_frsqest_fraction_lut));
-		m_spu_frsqest_exponent_lut = new llvm::GlobalVariable(*m_module, llvm::ArrayType::get(GetType<u32>(), 256), true, llvm::GlobalValue::PrivateLinkage, llvm::ConstantDataArray::get(m_context, spu_frsqest_exponent_lut));
 	}
 
 	virtual spu_function_t compile(spu_program&& _func) override
@@ -6329,7 +6327,30 @@ public:
 
 	void CLZ(spu_opcode_t op)
 	{
+#ifdef ARCH_ARM64
 		set_vr(op.rt, ctlz(get_vr(op.ra)));
+#else
+		if (m_use_avx512)
+		{
+			set_vr(op.rt, ctlz(get_vr(op.ra)));
+			return;
+		}
+
+		// Implement manually since LLVM can't take advantage of round-towards-zero.
+		// Helpful as when converting to a float the exponent is always floor(ilog2)
+
+		constexpr u32 exp_bias = 127;
+		value_t<f32[4]> flt;
+
+		const auto a = get_vr(op.ra);
+		flt.value = m_ir->CreateSIToFP(a.value, get_type<f32[4]>()); // only correct with round-towards-zero!
+		const auto exp = bitcast<u32[4]>(flt) >> 23;
+
+		// "Negative" values cause saturation due to float's sign bit
+		const auto offset = select(a == 0, splat<u32[4]>(32), splat<u32[4]>(exp_bias + 31));
+		const auto lzcnt = sub_sat(bitcast<u16[8]>(offset), bitcast<u16[8]>(exp));
+		set_vr(op.rt, bitcast<u32[4]>(lzcnt));
+#endif
 	}
 
 	void XSWD(spu_opcode_t op)
@@ -7477,13 +7498,23 @@ public:
 			const auto a_sign = (a & splat<u32[4]>(0x80000000));
 			value_t<u32[4]> final_result = eval(splat<u32[4]>(0));
 
-			for (u32 i = 0; i < 4; i++)
+			if (m_use_avx512)
 			{
-				const auto eval_fraction = eval(extract(a_fraction, i));
+				value_t<u32[16]> lo_lut;
+				value_t<u32[16]> hi_lut;
+				lo_lut.value = llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(spu_frest_fraction_lut, 16));
+				hi_lut.value = llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(spu_frest_fraction_lut + 16, 16));
 
-				value_t<u32> r_fraction = load_const<u32>(m_spu_frest_fraction_lut, eval_fraction);
-
-				final_result = eval(insert(final_result, i, r_fraction));
+				final_result = vperm2d128From512(lo_lut, a_fraction, hi_lut);
+			}
+			else
+			{
+				for (u32 i = 0; i < 4; i++)
+				{
+					const auto eval_fraction = eval(extract(a_fraction, i));
+					value_t<u32> r_fraction = load_const<u32>(m_spu_frest_fraction_lut, eval_fraction);
+					final_result = eval(insert(final_result, i, r_fraction));
+				}
 			}
 
 			//final_result = eval(select(final_result != (0), final_result, bitcast<u32[4]>(pshufb(splat<u8[16]>(0), bitcast<u8[16]>(final_result)))));
@@ -7506,22 +7537,23 @@ public:
 		{
 			const auto a = bitcast<u32[4]>(value<f32[4]>(ci->getOperand(0)));
 
+			// (exponent==0)? 0xFF : 190 - (exponent + 1) / 2
+			const auto a_exponent = a & splat<u32[4]>(0xFF << 23);
+			const auto h_exponent = (a_exponent + (a_exponent & splat<u32[4]>(1 << 23))) >> splat<u32[4]>(1);
+			const auto r_exponent = splat<u32[4]>(190 << 23) - h_exponent;
+			const auto final_exponent = select(a_exponent == 0, splat<u32[4]>(0xFF << 23), r_exponent);
+
 			const auto a_fraction = (a >> splat<u32[4]>(18)) & splat<u32[4]>(0x3F);
-			const auto a_exponent = (a >> splat<u32[4]>(23)) & splat<u32[4]>(0xFF);
-			value_t<u32[4]> final_result = eval(splat<u32[4]>(0));
+			value_t<u32[4]> final_fraction = eval(splat<u32[4]>(0));
 
 			for (u32 i = 0; i < 4; i++)
 			{
 				const auto eval_fraction = eval(extract(a_fraction, i));
-				const auto eval_exponent = eval(extract(a_exponent, i));
-
 				value_t<u32> r_fraction = load_const<u32>(m_spu_frsqest_fraction_lut, eval_fraction);
-				value_t<u32> r_exponent = load_const<u32>(m_spu_frsqest_exponent_lut, eval_exponent);
-
-				final_result = eval(insert(final_result, i, eval(r_fraction | r_exponent)));
+				final_fraction = eval(insert(final_fraction, i, r_fraction));
 			}
 
-			return bitcast<f32[4]>(final_result);
+			return bitcast<f32[4]>(final_fraction | final_exponent);
 		});
 
 		set_vr(op.rt, frsqest(get_vr<f32[4]>(op.ra)));
@@ -8529,13 +8561,23 @@ public:
 				const auto a_sign = (a & splat<u32[4]>(0x80000000));
 				value_t<u32[4]> b = eval(splat<u32[4]>(0));
 
-				for (u32 i = 0; i < 4; i++)
+				if (m_use_avx512)
 				{
-					const auto eval_fraction = eval(extract(a_fraction, i));
+					value_t<u32[16]> lo_lut;
+					value_t<u32[16]> hi_lut;
+					lo_lut.value = llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(spu_frest_fraction_lut, 16));
+					hi_lut.value = llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(spu_frest_fraction_lut + 16, 16));
 
-					value_t<u32> r_fraction = load_const<u32>(m_spu_frest_fraction_lut, eval_fraction);
-
-					b = eval(insert(b, i, r_fraction));
+					b = vperm2d128From512(lo_lut, a_fraction, hi_lut);
+				}
+				else
+				{
+					for (u32 i = 0; i < 4; i++)
+					{
+						const auto eval_fraction = eval(extract(a_fraction, i));
+						value_t<u32> r_fraction = load_const<u32>(m_spu_frest_fraction_lut, eval_fraction);
+						b = eval(insert(b, i, r_fraction));
+					}
 				}
 
 				b = eval(b | fix_exponent | a_sign);
@@ -8552,20 +8594,24 @@ public:
 			register_intrinsic("spu_rsqrte", [&](llvm::CallInst* ci)
 			{
 				const auto a = bitcast<u32[4]>(value<f32[4]>(ci->getOperand(0)));
+
+				// (exponent==0)? 0xFF : 190 - (exponent + 1) / 2
+				const auto a_exponent = a & splat<u32[4]>(0xFF << 23);
+				const auto h_exponent = (a_exponent + (a_exponent & splat<u32[4]>(1 << 23))) >> splat<u32[4]>(1);
+				const auto r_exponent = splat<u32[4]>(190 << 23) - h_exponent;
+				const auto final_exponent = select(a_exponent == 0, splat<u32[4]>(0xFF << 23), r_exponent);
+
 				const auto a_fraction = (a >> splat<u32[4]>(18)) & splat<u32[4]>(0x3F);
-				const auto a_exponent = (a >> splat<u32[4]>(23)) & splat<u32[4]>(0xFF);
-				value_t<u32[4]> b = eval(splat<u32[4]>(0));
+				value_t<u32[4]> final_fraction = eval(splat<u32[4]>(0));
 
 				for (u32 i = 0; i < 4; i++)
 				{
 					const auto eval_fraction = eval(extract(a_fraction, i));
-					const auto eval_exponent = eval(extract(a_exponent, i));
-
 					value_t<u32> r_fraction = load_const<u32>(m_spu_frsqest_fraction_lut, eval_fraction);
-					value_t<u32> r_exponent = load_const<u32>(m_spu_frsqest_exponent_lut, eval_exponent);
-
-					b = eval(insert(b, i, eval(r_fraction | r_exponent)));
+					final_fraction = eval(insert(final_fraction, i, r_fraction));
 				}
+
+				const auto b = eval(final_fraction | final_exponent);
 
 				const auto base = (b & 0x007ffc00u) << 9; // Base fraction
 				const auto ymul = (b & 0x3ff) * (a & 0x7ffff); // Step fraction * Y fraction (fixed point at 2^-32)

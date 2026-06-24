@@ -8,6 +8,8 @@
 
 namespace gl
 {
+	extern GLenum tex_min_filter(rsx::texture_minify_filter min_filter);
+
 	inline GLenum comparison_op(rsx::comparison_function op)
 	{
 		return static_cast<GLenum>(op);
@@ -410,8 +412,26 @@ void GLGSRender::load_texture_env()
 
 		if (is_depth_reconstructed || is_snorm)
 		{
+			GLint adjusted_min_filter = GL_NEAREST;
+			if (!is_depth_reconstructed) [[ unlikely ]]
+			{
+				switch (gl::tex_min_filter(tex.min_filter()))
+				{
+				default:
+					break;
+				case GL_LINEAR_MIPMAP_LINEAR:
+				case GL_LINEAR_MIPMAP_NEAREST:
+				case GL_NEAREST_MIPMAP_LINEAR:
+				case GL_NEAREST_MIPMAP_NEAREST:
+					// This is a hack and an unfortunate one at that as there is no feasible workaround.
+					// Doing full trilinear filtering in a shader is just dumb, approximate it instead with NEAREST_NEAREST.
+					adjusted_min_filter = GL_NEAREST_MIPMAP_NEAREST;
+					break;
+				}
+			}
+
 			// Depth format redirected to BGRA8 resample stage. Do not filter to avoid bits leaking.
-			m_fs_sampler_states[i].set_parameteri(GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			m_fs_sampler_states[i].set_parameteri(GL_TEXTURE_MIN_FILTER, adjusted_min_filter);
 			m_fs_sampler_states[i].set_parameteri(GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		}
 	}
@@ -472,92 +492,6 @@ void GLGSRender::bind_texture_env()
 {
 	// Bind textures and resolve external copy operations
 	gl::command_context cmd{ gl_state };
-
-	for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
-	{
-		if (!(textures_ref & 1))
-		{
-			continue;
-		}
-
-		gl::texture_view* view = nullptr;
-		auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
-
-		if (rsx::method_registers.fragment_textures[i].enabled() &&
-			sampler_state->validate())
-		{
-			if (view = sampler_state->image_handle; !view) [[unlikely]]
-			{
-				view = m_gl_texture_cache.create_temporary_subresource(cmd, sampler_state->external_subresource_desc);
-			}
-		}
-
-		if (view) [[likely]]
-		{
-			view->bind(cmd, GL_FRAGMENT_TEXTURES_START + i);
-
-			if (current_fragment_program.texture_state.redirected_textures & (1 << i))
-			{
-				auto root_texture = static_cast<gl::viewable_image*>(view->image());
-				auto stencil_view = root_texture->get_view(rsx::default_remap_vector.with_encoding(gl::GL_REMAP_IDENTITY), gl::image_aspect::stencil);
-				stencil_view->bind(cmd, GL_STENCIL_MIRRORS_START + i);
-			}
-		}
-		else
-		{
-			const auto target = gl::get_target(current_fragment_program.get_texture_dimension(i));
-			cmd->bind_texture(GL_FRAGMENT_TEXTURES_START + i, target, m_null_textures[target]->id());
-
-			if (current_fragment_program.texture_state.redirected_textures & (1 << i))
-			{
-				cmd->bind_texture(GL_STENCIL_MIRRORS_START + i, target, m_null_textures[target]->id());
-			}
-		}
-	}
-
-	for (u32 textures_ref = current_vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
-	{
-		if (!(textures_ref & 1))
-		{
-			continue;
-		}
-
-		auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
-		gl::texture_view* view = nullptr;
-
-		if (rsx::method_registers.vertex_textures[i].enabled() &&
-			sampler_state->validate())
-		{
-			if (view = sampler_state->image_handle; !view)
-			{
-				view = m_gl_texture_cache.create_temporary_subresource(cmd, sampler_state->external_subresource_desc);
-			}
-		}
-
-		if (view) [[likely]]
-		{
-			view->bind(cmd, GL_VERTEX_TEXTURES_START + i);
-		}
-		else
-		{
-			cmd->bind_texture(GL_VERTEX_TEXTURES_START + i, GL_TEXTURE_2D, GL_NONE);
-		}
-	}
-
-	if (current_fragment_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE)
-	{
-		ensure(m_rtts.m_bound_depth_stencil.first, "Invalid FBO setup");
-		gl::insert_texture_barrier();
-
-		auto view = m_rtts.m_bound_depth_stencil.second->get_view(rsx::default_remap_vector, gl::image_aspect::depth);
-		view->bind(cmd, GL_TEMP_IMAGE_SLOT(0));
-	}
-}
-
-void GLGSRender::bind_interpreter_texture_env()
-{
-	// Bind textures and resolve external copy operations
-	gl::command_context cmd{ gl_state };
 	const bool is_interpreter = m_shader_interpreter.is_interpreter(m_program);
 
 	for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
@@ -580,13 +514,18 @@ void GLGSRender::bind_interpreter_texture_env()
 			}
 		}
 
-		if (!primary_view)
+		if (const bool is_redirected = (current_fragment_program.texture_state.redirected_textures & (1 << i));
+			!primary_view)
 		{
 			const auto target = gl::get_target(current_fragment_program.get_texture_dimension(i));
 			primary_view = m_null_textures[target]->get_view(rsx::default_remap_vector);
-			stencil_mirror = primary_view;
+
+			if (is_redirected)
+			{
+				stencil_mirror = primary_view;
+			}
 		}
-		else if (current_fragment_program.texture_state.redirected_textures & (1 << i))
+		else if (is_redirected)
 		{
 			auto root_texture = static_cast<gl::viewable_image*>(primary_view->image());
 			stencil_mirror = root_texture->get_view(rsx::default_remap_vector.with_encoding(gl::GL_REMAP_IDENTITY), gl::image_aspect::stencil);
@@ -638,6 +577,15 @@ void GLGSRender::bind_interpreter_texture_env()
 	if (is_interpreter)
 	{
 		m_shader_interpreter.flush_texture_bindings();
+	}
+
+	if (current_fragment_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE)
+	{
+		ensure(m_rtts.m_bound_depth_stencil.first, "Invalid FBO setup");
+		gl::insert_texture_barrier();
+
+		auto view = m_rtts.m_bound_depth_stencil.second->get_view(rsx::default_remap_vector, gl::image_aspect::depth);
+		view->bind(cmd, GL_TEMP_IMAGE_SLOT(0));
 	}
 }
 
@@ -729,7 +677,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 
 	if (!upload_info.index_info)
 	{
-		if (draw_call.is_trivial_instanced_draw)
+		if (draw_call.is_trivial_instanced_draw && backend_config.supports_hw_instanced_rendering)
 		{
 			glDrawArraysInstanced(draw_mode, 0, upload_info.vertex_draw_count, draw_call.pass_count());
 		}
@@ -801,7 +749,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 
 		m_index_ring_buffer->bind();
 
-		if (draw_call.is_trivial_instanced_draw)
+		if (draw_call.is_trivial_instanced_draw && backend_config.supports_hw_instanced_rendering)
 		{
 			glDrawElementsInstanced(draw_mode, upload_info.vertex_draw_count, index_type, reinterpret_cast<GLvoid*>(u64{ index_offset }), draw_call.pass_count());
 		}
@@ -928,7 +876,7 @@ void GLGSRender::end()
 	{
 		emit_geometry(subdraw++);
 
-		if (draw_call.is_trivial_instanced_draw)
+		if (draw_call.is_trivial_instanced_draw && backend_config.supports_hw_instanced_rendering)
 		{
 			// We already completed. End the draw.
 			draw_call.end();

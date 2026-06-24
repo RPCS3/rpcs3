@@ -2212,11 +2212,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 				for (auto&& entry : fs::dir{ins_dir})
 				{
-					const std::string pkg_file = ins_dir + entry.name;
+					std::string pkg_file = ins_dir + entry.name;
 
 					if (!entry.is_directory && entry.name.ends_with(".PKG"))
 					{
-						pkgs.push_back(pkg_file);
+						pkgs.push_back(std::move(pkg_file));
 					}
 				}
 			}
@@ -2229,11 +2229,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				{
 					if (entry.is_directory && entry.name.starts_with("PKG"))
 					{
-						const std::string pkg_file = pkg_dir + entry.name + "/INSTALL.PKG";
+						std::string pkg_file = pkg_dir + entry.name + "/INSTALL.PKG";
 
 						if (fs::is_file(pkg_file))
 						{
-							pkgs.push_back(pkg_file);
+							pkgs.push_back(std::move(pkg_file));
 						}
 					}
 				}
@@ -2247,11 +2247,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				{
 					if (entry.is_directory && entry.name[0] == 'D')
 					{
-						const std::string pkg_file = extra_dir + entry.name + "/DATA000.PKG";
+						std::string pkg_file = extra_dir + entry.name + "/DATA000.PKG";
 
 						if (fs::is_file(pkg_file))
 						{
-							pkgs.push_back(pkg_file);
+							pkgs.push_back(std::move(pkg_file));
 						}
 					}
 				}
@@ -4276,9 +4276,11 @@ std::set<std::string> Emulator::GetGameDirs() const
 	return dirs;
 }
 
-u32 Emulator::AddGamesFromDir(const std::string& path)
+u32 Emulator::AddGamesFromDir(std::string path)
 {
 	u32 games_added = 0;
+
+	fmt::trim_back(path, fs::delim);
 
 	m_games_config.set_save_on_dirty(false);
 
@@ -4313,7 +4315,7 @@ u32 Emulator::AddGamesFromDir(const std::string& path)
 					continue;
 				}
 
-				const std::string dir_path = path + '/' + dir_entry.name;
+				const std::string dir_path = path + "/" + dir_entry.name;
 
 				if (!dir_entry.is_directory && !is_iso_file(dir_path))
 				{
@@ -4349,8 +4351,10 @@ u32 Emulator::AddGamesFromDir(const std::string& path)
 	return games_added;
 }
 
-game_boot_result Emulator::AddGame(const std::string& path)
+game_boot_result Emulator::AddGame(std::string path)
 {
+	fmt::trim_back(path, fs::delim);
+
 	// Handle files directly
 	if (!fs::is_dir(path) || fs::get_optical_raw_device(path))
 	{
@@ -4396,8 +4400,10 @@ game_boot_result Emulator::AddGame(const std::string& path)
 	return result;
 }
 
-game_boot_result Emulator::AddGameToYml(const std::string& path)
+game_boot_result Emulator::AddGameToYml(std::string path)
 {
+	fmt::trim_back(path, fs::delim);
+
 	// Detect boot location
 	const auto is_invalid_path = [this](std::string_view path, std::string_view dir) -> game_boot_result
 	{
@@ -4843,7 +4849,7 @@ bool Emulator::IsValidSfb(const std::string& path)
 	return false;
 }
 
-void Emulator::SaveSettings(const std::string& settings, const std::string& title_id)
+void Emulator::SaveSettings(std::string_view settings, const std::string& title_id)
 {
 	std::string config_name;
 
@@ -4864,7 +4870,7 @@ void Emulator::SaveSettings(const std::string& settings, const std::string& titl
 	}
 	else
 	{
-		temp.file.write(settings.c_str(), settings.size());
+		temp.file.write(settings.data(), settings.size());
 		if (!temp.commit())
 		{
 			sys_log.error("Could not save config to %s (failed to commit) (error=%s)", config_name, fs::g_tls_error);
@@ -4875,7 +4881,7 @@ void Emulator::SaveSettings(const std::string& settings, const std::string& titl
 	if (config_name == g_cfg.name || title_id == Emu.GetTitleID())
 	{
 		// Update current config
-		if (!g_cfg.from_string({settings.c_str(), settings.size()}, !Emu.IsStopped()))
+		if (!g_cfg.from_string(settings, !Emu.IsStopped()))
 		{
 			sys_log.fatal("Failed to update configuration");
 		}

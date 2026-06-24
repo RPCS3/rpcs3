@@ -82,6 +82,8 @@ public:
 	void present_frame(std::vector<u8>&& data, u32 pitch, u32 width, u32 height, bool is_bgra) const override;
 	void take_screenshot(std::vector<u8>&& data, u32 sshot_width, u32 sshot_height, bool is_bgra) override;
 
+	void update_title(double fps = 0.0) override;
+
 protected:
 	video_renderer m_renderer;
 

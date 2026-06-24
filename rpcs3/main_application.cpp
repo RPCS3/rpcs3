@@ -394,7 +394,7 @@ EmuCallbacks main_application::CreateCallbacks()
 			{
 				font_dir += '/';
 			}
-			font_dirs.push_back(font_dir);
+			font_dirs.push_back(std::move(font_dir));
 		}
 		return font_dirs;
 	};

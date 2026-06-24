@@ -3781,6 +3781,23 @@ public:
 #endif
 	}
 
+	template <typename T1, typename T2, typename T3>
+	value_t<u32[4]> vperm2d128From512(T1 a, T2 b, T3 c)
+	{
+		value_t<u32[4]> result;
+		value_t<u32[16]> perm512;
+
+		const auto data0 = a.eval(m_ir);
+		const auto index128 = b.eval(m_ir);
+		const auto data1 = c.eval(m_ir);
+
+		const auto index512 = m_ir->CreateInsertVector(get_type<u32[16]>(), llvm::UndefValue::get(get_type<u32[16]>()), index128, m_ir->getInt64(0));
+		perm512.value = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_avx512_vpermi2var_d_512), {data0, index512, data1});
+
+		result.value = m_ir->CreateExtractVector(get_type<u32[4]>(), perm512.value, m_ir->getInt64(0));
+		return result;
+	}
+
 	template <typename T1, typename T2>
 	value_t<u8[16]> gf2p8affineqb(T1 a, T2 b, u8 c)
 	{

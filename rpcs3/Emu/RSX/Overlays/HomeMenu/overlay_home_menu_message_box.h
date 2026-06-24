@@ -11,7 +11,7 @@ namespace rsx
 		public:
 			home_menu_message_box(s16 x, s16 y, u16 width, u16 height);
 			compiled_resource& get_compiled() override;
-			void show(const std::string& text, std::function<void()> on_accept = nullptr, std::function<void()> on_cancel = nullptr);
+			void show(std::string_view text, std::function<void()> on_accept = nullptr, std::function<void()> on_cancel = nullptr);
 			void hide();
 			page_navigation handle_button_press(pad_button button_press);
 

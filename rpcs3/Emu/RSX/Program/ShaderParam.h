@@ -130,7 +130,7 @@ struct ParamType
 	{
 	}
 
-	bool HasItem(const std::string& name) const
+	bool HasItem(std::string_view name) const
 	{
 		return std::any_of(items.cbegin(), items.cend(), [&name](const auto& item)
 		{
@@ -138,7 +138,7 @@ struct ParamType
 		});
 	}
 
-	bool ReplaceOrInsert(const std::string& name, const ParamItem& item)
+	bool ReplaceOrInsert(std::string_view name, const ParamItem& item)
 	{
 		if (HasItem(name))
 		{
@@ -168,7 +168,7 @@ struct ParamArray
 {
 	std::vector<ParamType> params[PF_PARAM_COUNT];
 
-	ParamType* SearchParam(const ParamFlag &flag, const std::string& type)
+	ParamType* SearchParam(const ParamFlag& flag, std::string_view type)
 	{
 		for (auto& param : params[flag])
 		{
@@ -179,7 +179,7 @@ struct ParamArray
 		return nullptr;
 	}
 
-	bool HasParamTypeless(const ParamFlag flag, const std::string& name) const
+	bool HasParamTypeless(const ParamFlag flag, std::string_view name) const
 	{
 		const auto& p = params[flag];
 		return std::any_of(p.cbegin(), p.cend(), [&name](const auto& param)
@@ -188,7 +188,7 @@ struct ParamArray
 		});
 	}
 
-	bool HasParam(const ParamFlag flag, const std::string& type, const std::string& name)
+	bool HasParam(const ParamFlag flag, std::string_view type, std::string_view name)
 	{
 		const ParamType* t = SearchParam(flag, type);
 		return t && t->HasItem(name);
@@ -326,7 +326,7 @@ public:
 				new_swizzle += swizzle[p.second];
 		}
 
-		swizzles.push_back(new_swizzle);
+		swizzles.push_back(std::move(new_swizzle));
 
 		return *this;
 	}

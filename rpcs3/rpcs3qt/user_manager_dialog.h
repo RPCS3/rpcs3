@@ -35,7 +35,7 @@ protected:
 private:
 	void Init();
 	void UpdateTable(bool mark_only = false);
-	static void GenerateUser(const std::string& user_id, const std::string& username);
+	static void GenerateUser(const std::string& user_id, std::string_view username);
 	static bool ValidateUsername(const QString& text_to_validate);
 
 	void ShowContextMenu(const QPoint &pos);
