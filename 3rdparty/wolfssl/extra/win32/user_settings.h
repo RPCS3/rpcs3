@@ -46,6 +46,9 @@
 #define HAVE_AESGCM
 #define HAVE_SUPPORTED_CURVES
 #define HAVE_TLS_EXTENSIONS
+#define HAVE_HKDF
+#define WC_RSA_PSS
+#define WOLFSSL_TLS13
 #define HAVE_ECC
 #define ECC_SHAMIR
 #define ECC_TIMING_RESISTANT
