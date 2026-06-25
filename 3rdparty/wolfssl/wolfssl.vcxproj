@@ -71,15 +71,40 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="wolfssl\src\bio.c" />
+    <ClCompile Include="wolfssl\src\conf.c" />
     <ClCompile Include="wolfssl\src\crl.c" />
+    <ClCompile Include="wolfssl\src\dtls.c" />
+    <ClCompile Include="wolfssl\src\dtls13.c" />
     <ClCompile Include="wolfssl\src\internal.c" />
+    <ClCompile Include="wolfssl\src\pk.c" />
+    <ClCompile Include="wolfssl\src\pk_ec.c" />
+    <ClCompile Include="wolfssl\src\pk_rsa.c" />
+    <ClCompile Include="wolfssl\src\quic.c" />
+    <ClCompile Include="wolfssl\src\sniffer.c" />
+    <ClCompile Include="wolfssl\src\ssl_api_cert.c" />
+    <ClCompile Include="wolfssl\src\ssl_api_crl_ocsp.c" />
+    <ClCompile Include="wolfssl\src\ssl_api_dtls.c" />
+    <ClCompile Include="wolfssl\src\ssl_api_ext.c" />
+    <ClCompile Include="wolfssl\src\ssl_api_pk.c" />
     <ClCompile Include="wolfssl\src\ssl_asn1.c" />
+    <ClCompile Include="wolfssl\src\ssl_bn.c" />
+    <ClCompile Include="wolfssl\src\ssl_certman.c" />
+    <ClCompile Include="wolfssl\src\ssl_crypto.c" />
+    <ClCompile Include="wolfssl\src\ssl_ech.c" />
+    <ClCompile Include="wolfssl\src\ssl_load.c" />
+    <ClCompile Include="wolfssl\src\ssl_misc.c" />
+    <ClCompile Include="wolfssl\src\ssl_p7p12.c" />
+    <ClCompile Include="wolfssl\src\ssl_sess.c" />
+    <ClCompile Include="wolfssl\src\ssl_sk.c" />
     <ClCompile Include="wolfssl\src\wolfio.c" />
     <ClCompile Include="wolfssl\src\keys.c" />
     <ClCompile Include="wolfssl\src\ocsp.c" />
     <ClCompile Include="wolfssl\src\ssl.c" />
     <ClCompile Include="wolfssl\src\tls.c" />
     <ClCompile Include="wolfssl\src\tls13.c" />
+    <ClCompile Include="wolfssl\src\x509.c" />
+    <ClCompile Include="wolfssl\src\x509_str.c" />
     <ClCompile Include="wolfssl\wolfcrypt\src\aes.c" />
     <ClCompile Include="wolfssl\wolfcrypt\src\arc4.c" />
     <ClCompile Include="wolfssl\wolfcrypt\src\asn.c" />
@@ -139,6 +164,77 @@
   <ItemGroup>
     <ClInclude Include="extra\win32\user_settings.h" />
     <ClInclude Include="wolfssl\resource.h" />
+    <ClInclude Include="wolfssl\wolfssl\callbacks.h" />
+    <ClInclude Include="wolfssl\wolfssl\certs_test.h" />
+    <ClInclude Include="wolfssl\wolfssl\certs_test_sm.h" />
+    <ClInclude Include="wolfssl\wolfssl\crl.h" />
+    <ClInclude Include="wolfssl\wolfssl\error-ssl.h" />
+    <ClInclude Include="wolfssl\wolfssl\internal.h" />
+    <ClInclude Include="wolfssl\wolfssl\ocsp.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\aes.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\asn1.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\asn1t.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\bio.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\bn.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\buffer.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\camellia.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\cmac.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\cms.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\compat_types.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\conf.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\crypto.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\des.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\dh.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\dsa.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\ec.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\ec25519.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\ec448.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\ecdh.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\ecdsa.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\ed25519.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\ed448.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\engine.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\err.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\evp.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\fips_rand.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\hmac.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\kdf.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\lhash.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\md4.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\md5.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\modes.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\objects.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\obj_mac.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\ocsp.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\opensslconf.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\opensslv.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\ossl_typ.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\pem.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\pkcs12.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\pkcs7.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\rand.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\rc4.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\ripemd.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\rsa.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\safestack.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\sha.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\sha3.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\srp.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\ssl.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\ssl23.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\stack.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\tls1.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\txt_db.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\ui.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\x509.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\x509v3.h" />
+    <ClInclude Include="wolfssl\wolfssl\openssl\x509_vfy.h" />
+    <ClInclude Include="wolfssl\wolfssl\quic.h" />
+    <ClInclude Include="wolfssl\wolfssl\sniffer.h" />
+    <ClInclude Include="wolfssl\wolfssl\sniffer_error.h" />
+    <ClInclude Include="wolfssl\wolfssl\ssl.h" />
+    <ClInclude Include="wolfssl\wolfssl\test.h" />
+    <ClInclude Include="wolfssl\wolfssl\version.h" />
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\aes.h" />
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\arc4.h" />
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\asn.h" />
@@ -166,8 +262,6 @@
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\ed448.h" />
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\error-crypt.h" />
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\ext_kyber.h" />
-    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\ext_lms.h" />
-    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\ext_xmss.h" />
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\falcon.h" />
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\fe_448.h" />
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\fe_operations.h" />
@@ -180,7 +274,6 @@
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\integer.h" />
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\kdf.h" />
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\kyber.h" />
-    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\lms.h" />
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\logging.h" />
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\md2.h" />
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\md4.h" />
@@ -194,6 +287,7 @@
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\pkcs12.h" />
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\pkcs7.h" />
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\poly1305.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\puf.h" />
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\pwdbased.h" />
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\random.h" />
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\rc2.h" />
@@ -212,7 +306,6 @@
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\sm3.h" />
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\sm4.h" />
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\sp.h" />
-    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\sphincs.h" />
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\sp_int.h" />
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\srp.h" />
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\tfm.h" />
@@ -221,12 +314,16 @@
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\wc_encrypt.h" />
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\wc_kyber.h" />
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\wc_lms.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\wc_mldsa.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\wc_mlkem.h" />
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\wc_pkcs11.h" />
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\wc_port.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\wc_she.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\wc_slhdsa.h" />
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\wc_xmss.h" />
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\wolfevent.h" />
     <ClInclude Include="wolfssl\wolfssl\wolfcrypt\wolfmath.h" />
-    <ClInclude Include="wolfssl\wolfssl\wolfcrypt\xmss.h" />
+    <ClInclude Include="wolfssl\wolfssl\wolfio.h" />
     <CustomBuild Include="wolfssl\wolfcrypt\src\aes_asm.asm">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='DLL Debug|x64'">false</ExcludedFromBuild>
@@ -247,6 +344,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ResourceCompile>
+    <ResourceCompile Include="wolfssl\wolfssl\sniffer_error.rc" />
   </ItemGroup>
   <ItemGroup>
     <None Include="wolfssl\wolfssl\wolfcrypt\include.am" />
