@@ -7081,7 +7081,7 @@ public:
 		const auto known_idx = get_known_bits(c);
 		const bool perm_only = known_idx.Zero[7];
 		const bool perm_or_zero_only = known_idx.Zero[6];
-		const bool is_single_source = known_idx.extractBits(1, 4).isConstant() || (op.ra == op.rb && !m_interp_magn);
+		const bool idx_selects_single = known_idx.extractBits(1, 4).isConstant();
 
 		const auto a = get_vr<u8[16]>(op.ra);
 		const auto b = get_vr<u8[16]>(op.rb);
@@ -7127,7 +7127,10 @@ public:
 		}
 
 		// When single source, either indicated by KnownBits or both are the same
-		const auto only_src = known_idx.One[4] ? bv : av;
+		const std::optional<value_t<u8[16]>> single_src = (idx_selects_single || (op.ra == op.rb && !m_interp_magn))
+			? std::make_optional(known_idx.One[4] ? bv : av)
+			: std::nullopt;
+
 		const bool only_src_is_splat = known_idx.One[4] ? b_is_splat : a_is_splat;
 
 		// Can combine the special index constants + splat selection into one LUT
@@ -7140,13 +7143,9 @@ public:
 		// NOTE: LLVM doesn't emit BCAX	(llvm-project/issues/200699)
 		//		 Verify if `(x ^ 0x0F) & 0x?F` is reassociated when upstreamed
 
-		if (is_single_source)
+		if (single_src)
 		{
-			if (only_src_is_splat && perm_only)
-			{
-				set_vr(op.rt4, only_src);
-				return;
-			}
+			const auto only_src = single_src.value();
 
 			if (only_src_is_splat && perm_or_zero_only)
 			{
@@ -7206,15 +7205,15 @@ public:
 		bool shuf_zero_when_msb = false;
 
 		value_t<u8[16]> ab_shuf;
-		if (is_single_source)
+		if (single_src)
 		{
 			if (only_src_is_splat)
 			{
-				ab_shuf = only_src;
+				ab_shuf = single_src.value();
 			}
 			else
 			{
-				ab_shuf = eval(pshufb(only_src, cv));
+				ab_shuf = eval(pshufb(single_src.value(), cv));
 				shuf_zero_when_msb = true;
 			}
 		}
