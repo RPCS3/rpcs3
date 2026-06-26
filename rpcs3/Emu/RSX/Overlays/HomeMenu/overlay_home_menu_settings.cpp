@@ -172,6 +172,10 @@ namespace rsx
 				add_dropdown(&g_cfg.video.stereo_render_mode, localized_string_id::HOME_MENU_SETTINGS_VIDEO_STEREO_MODE);
 			}
 
+#ifdef HAVE_OPENXR
+			add_dropdown(&g_cfg.video.openxr_rendering, localized_string_id::HOME_MENU_SETTINGS_VIDEO_OPENXR_RENDER_MODE);
+#endif
+
 			apply_layout();
 		}
 

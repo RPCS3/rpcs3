@@ -37,4 +37,8 @@ namespace gl
 	bool is_primitive_native(rsx::primitive_type in);
 	bool emulate_extended_depth_range();
 	GLenum draw_mode(rsx::primitive_type in);
+
+	// Copies src into a cached texture (dst) with the same size and format as src and calls draw_overlays to draw the overlays into it.
+	// Used for screenshots and recordings with overlays and for headset rendering, since RSX draws the overlays directly to the window.
+	gl::texture* copy_texture_with_overlays(gl::command_context& cmd, std::unique_ptr<gl::texture>& dst, gl::texture* src, const std::function<void(gl::texture* dst)>& draw_overlays);
 }

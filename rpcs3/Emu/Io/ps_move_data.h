@@ -74,6 +74,10 @@ struct ps_move_data
 	static const vect<4> default_quaternion;
 	vect<4> quaternion {}; // quaternion orientation (x,y,z,w) of controller relative to default (facing the camera with buttons up)
 
+	// Set by handlers that track the position themselves instead of using the camera (OpenXR)
+	bool has_absolute_position = false;
+	vect<3> position_world {}; // position of the sphere in world coordinates (mm)
+
 	// Raw values (local)
 	vect<3> accelerometer {}; // linear acceleration in G units (9.81 = 1 unit)
 	vect<3> gyro {}; // angular velocity in rad/s

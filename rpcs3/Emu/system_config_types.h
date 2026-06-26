@@ -145,6 +145,7 @@ enum class move_handler
 	fake,
 	mouse,
 	raw_mouse,
+	openxr, // VR controllers tracked by an OpenXR runtime (see openxr_handler)
 #ifdef HAVE_LIBEVDEV
 	gun
 #endif
@@ -370,6 +371,14 @@ enum class stereo_render_mode_options
 	anaglyph_trioscopic,
 	anaglyph_amber_blue,
 	anaglyph_custom,
+};
+
+enum class openxr_render_mode
+{
+	disabled,              // Input only. Nothing is shown in the headset.
+	virtual_screen,        // A flat screen in front of the user. Both eyes see the same image.
+	virtual_screen_stereo, // A flat screen in front of the user. Each eye sees its own image in 3D games.
+	full_view,             // Each eye's image covers that eye's whole view.
 };
 
 enum class xfloat_accuracy
