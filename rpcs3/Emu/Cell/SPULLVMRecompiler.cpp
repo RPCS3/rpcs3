@@ -7151,14 +7151,14 @@ public:
 			if (only_src_is_splat && perm_or_zero_only)
 			{
 				set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, only_src, splat<u8[16]>(0)));
-				return
+				return;
 			}
 
 			if (only_src_is_splat)
 			{
 				const auto lut = build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x80, 0x80, 0x80, 0x80);
 				set_vr(op.rt4, tbx(only_src, lut, (c >> 3) ^ 0x10));
-				return
+				return;
 			}
 
 			if (perm_only)
