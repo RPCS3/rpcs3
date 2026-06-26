@@ -108,3 +108,6 @@
 	path = 3rdparty/protobuf/protobuf
 	url = ../../protocolbuffers/protobuf.git
 	ignore = dirty
+[submodule "3rdparty/OpenXR/OpenXR-SDK"]
+	path = 3rdparty/OpenXR/OpenXR-SDK
+	url = https://github.com/KhronosGroup/OpenXR-SDK.git

@@ -4,6 +4,7 @@
 #include "vkutils/descriptors.h"
 #include "VKDataHeapManager.h"
 #include "VKResourceManager.h"
+#include "VKOpenXRShare.h"
 
 #include "Emu/RSX/Common/simple_array.hpp"
 #include "Emu/RSX/Utils/rsx_utils.h"
@@ -208,6 +209,9 @@ namespace vk
 
 		data_heap_manager::managed_heap_snapshot_t heap_snapshot;
 		u64 last_frame_sync_time = 0;
+
+		// The OpenXR slot that this frame was copied to (see openxr_frame_share)
+		openxr_frame_share::frame_token openxr_frame{};
 
 		void init(VkDevice dev)
 		{

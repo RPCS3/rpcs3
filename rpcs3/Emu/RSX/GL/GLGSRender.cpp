@@ -2,6 +2,7 @@
 #include "../Overlays/overlay_compile_notification.h"
 #include "../Overlays/Shaders/shader_loading_dialog_native.h"
 #include "GLGSRender.h"
+#include "Emu/Io/openxr/openxr_thread.h"
 #include "GLCompute.h"
 #include "GLDMA.h"
 #include "GLResolveHelper.h"
@@ -569,6 +570,12 @@ void GLGSRender::on_shutdown()
 	m_framebuffer_cache.clear();
 
 	m_upscaler.reset();
+
+	// No more frames for the headset
+	openxr::set_consumer(openxr::consumer::headset_rendering, false);
+
+	// Images imported from the OpenXR handler
+	m_openxr_share.destroy();
 
 	for (auto& flip_tex_image : m_flip_tex_color)
 	{

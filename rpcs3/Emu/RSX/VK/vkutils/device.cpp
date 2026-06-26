@@ -2,6 +2,7 @@
 #include "instance.h"
 #include "util/logs.hpp"
 #include "Emu/system_config.h"
+#include "Emu/Io/openxr/openxr_frame_share_vk.h"
 #include <vulkan/vulkan_core.h>
 #ifdef __APPLE__
 #include <vulkan/vulkan_beta.h>
@@ -23,7 +24,7 @@ namespace vk
 		supported_extensions instance_extensions(supported_extensions::instance);
 		supported_extensions device_extensions(supported_extensions::device, nullptr, dev);
 
-		VkPhysicalDeviceFeatures2KHR features2;
+		VkPhysicalDeviceFeatures2KHR features2 {};
 		features2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 		features2.pNext = nullptr;
 
@@ -136,6 +137,10 @@ namespace vk
 		optional_features_support.shader_stencil_export    = device_extensions.is_supported(VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME);
 		optional_features_support.conditional_rendering    = device_extensions.is_supported(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
 		optional_features_support.external_memory_host     = device_extensions.is_supported(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
+#ifdef HAVE_OPENXR
+		// OpenXR headset rendering can be enabled at any time, so we can't check the setting here
+		optional_features_support.external_memory_import   = device_extensions.is_supported(openxr::shared_memory_extension_name);
+#endif
 		optional_features_support.synchronization_2        = device_extensions.is_supported(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
 		optional_features_support.unrestricted_depth_range = device_extensions.is_supported(VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME);
 #ifdef __APPLE__
@@ -177,7 +182,7 @@ namespace vk
 			return;
 		}
 
-		VkPhysicalDeviceProperties2KHR properties2;
+		VkPhysicalDeviceProperties2KHR properties2 {};
 		properties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR;
 		properties2.pNext = nullptr;
 
@@ -197,7 +202,7 @@ namespace vk
 
 		supported_extensions device_extensions(supported_extensions::device, nullptr, dev);
 
-		VkPhysicalDeviceProperties2KHR properties2;
+		VkPhysicalDeviceProperties2KHR properties2 {};
 		properties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR;
 		properties2.pNext = nullptr;
 
@@ -578,6 +583,12 @@ namespace vk
 		if (pgpu->optional_features_support.external_memory_host)
 		{
 			requested_extensions.push_back(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
+		}
+
+		if (pgpu->optional_features_support.external_memory_import)
+		{
+			// Imports the frames shared by the OpenXR handler
+			requested_extensions.push_back(openxr::shared_memory_extension_name);
 		}
 
 		if (pgpu->optional_features_support.shader_stencil_export)
