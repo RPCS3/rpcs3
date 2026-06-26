@@ -446,6 +446,7 @@ void fmt_class_string<move_handler>::format(std::string& out, u64 arg)
 		case move_handler::fake: return "Fake";
 		case move_handler::mouse: return "Mouse";
 		case move_handler::raw_mouse: return "Raw Mouse";
+		case move_handler::openxr: return "OpenXR";
 #ifdef HAVE_LIBEVDEV
 		case move_handler::gun: return "Gun";
 #endif
@@ -703,6 +704,23 @@ void fmt_class_string<stereo_render_mode_options>::format(std::string& out, u64 
 
 			return unknown;
 		});
+}
+
+template <>
+void fmt_class_string<openxr_render_mode>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](openxr_render_mode value)
+	{
+		switch (value)
+		{
+		case openxr_render_mode::disabled: return "Disabled";
+		case openxr_render_mode::virtual_screen: return "Virtual Screen";
+		case openxr_render_mode::virtual_screen_stereo: return "Virtual Screen 3D";
+		case openxr_render_mode::full_view: return "Full View";
+		}
+
+		return unknown;
+	});
 }
 
 template <>
