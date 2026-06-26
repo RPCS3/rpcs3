@@ -7169,8 +7169,9 @@ public:
 			}
 
 			const auto x = tbl(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
+			const auto xv = perm_or_zero_only ? eval(splat<u8[16]>(0)) : x;
 			const auto cm = eval(cv & 0x8f);
-			set_vr(op.rt4, tbx(perm_or_zero_only ? splat<u8[16]>(0) : x, only_src, cm));
+			set_vr(op.rt4, tbx(xv, only_src, cm));
 			return;
 		}
 
@@ -7194,8 +7195,9 @@ public:
 		}
 
 		const auto x = tbl(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
+		const auto xv = perm_or_zero_only ? eval(splat<u8[16]>(0)) : x;
 		const auto cm = eval(cv & 0x9f);
-		set_vr(op.rt4, tbx2(perm_or_zero_only ? splat<u8[16]>(0) : x, av, bv, cm));
+		set_vr(op.rt4, tbx2(xv, av, bv, cm));
 		return;
 #else
 
