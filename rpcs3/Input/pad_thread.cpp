@@ -6,6 +6,10 @@
 #include "dualsense_pad_handler.h"
 #include "skateboard_pad_handler.h"
 #include "ps_move_handler.h"
+#ifdef HAVE_OPENXR
+#include "openxr_handler.h"
+#endif
+#include "Emu/Io/openxr/openxr_thread.h"
 #ifdef _WIN32
 #include "xinput_pad_handler.h"
 #include "mm_joystick_handler.h"
@@ -75,6 +79,8 @@ pad_thread::pad_thread(void* curthread, void* curwindow, std::string_view title_
 pad_thread::~pad_thread()
 {
 	pad::g_pad_thread = nullptr;
+
+	openxr::set_consumer(openxr::consumer::pad_thread, false);
 }
 
 void pad_thread::Init()
@@ -225,7 +231,7 @@ void pad_thread::Init()
 			}
 		}
 
-		pad->is_fake_pad = ((g_cfg.io.move == move_handler::real || g_cfg.io.move == move_handler::fake) && i >= (static_cast<u32>(CELL_PAD_MAX_PORT_NUM) - static_cast<u32>(CELL_GEM_MAX_NUM)))
+		pad->is_fake_pad = ((g_cfg.io.move == move_handler::real || g_cfg.io.move == move_handler::fake || g_cfg.io.move == move_handler::openxr) && i >= (static_cast<u32>(CELL_PAD_MAX_PORT_NUM) - static_cast<u32>(CELL_GEM_MAX_NUM)))
 			|| (pad->m_class_type >= CELL_PAD_FAKE_TYPE_FIRST && pad->m_class_type < CELL_PAD_FAKE_TYPE_LAST);
 		connect_usb_controller(i, input::get_product_by_vid_pid(pad->m_vendor_id, pad->m_product_id));
 	}
@@ -254,6 +260,9 @@ void pad_thread::Init()
 
 	// Initialize active mouse and keyboard. Activate pad handler if one exists.
 	input::set_mouse_and_keyboard(m_handlers.contains(pad_handler::keyboard) ? input::active_mouse_and_keyboard::pad : input::active_mouse_and_keyboard::emulated);
+
+	// Only updated once all handlers exist, so that the OpenXR session keeps running while the handlers are recreated
+	openxr::set_consumer(openxr::consumer::pad_thread, m_handlers.contains(pad_handler::openxr));
 }
 
 void pad_thread::SetRumble(u32 pad, u8 large_motor, u8 small_motor)
@@ -475,6 +484,7 @@ void pad_thread::operator()()
 			switch (type)
 			{
 			case pad_handler::null:
+			case pad_handler::openxr:
 				break;
 			case pad_handler::ds3:
 			case pad_handler::ds4:
@@ -872,6 +882,12 @@ std::shared_ptr<PadHandlerBase> pad_thread::GetHandler(pad_handler type)
 		return std::make_shared<skateboard_pad_handler>();
 	case pad_handler::move:
 		return std::make_shared<ps_move_handler>();
+	case pad_handler::openxr:
+#ifdef HAVE_OPENXR
+		return std::make_shared<openxr_handler>();
+#else
+		break;
+#endif
 #ifdef _WIN32
 	case pad_handler::xinput:
 		return std::make_shared<xinput_pad_handler>();

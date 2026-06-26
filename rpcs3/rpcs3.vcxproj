@@ -62,7 +62,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)3rdparty\SoundTouch\soundtouch\include;$(SolutionDir)3rdparty\cubeb\extra;$(SolutionDir)3rdparty\cubeb\cubeb\include\;$(SolutionDir)build\lib\$(Configuration)-$(Platform)\protobuf_build\include;$(SolutionDir)3rdparty\wolfssl\wolfssl;$(SolutionDir)3rdparty\wolfssl\extra\win32;$(SolutionDir)3rdparty\curl\curl\include;$(SolutionDir)3rdparty\rtmidi\rtmidi;$(SolutionDir)3rdparty\libusb\libusb\libusb;$(VULKAN_SDK)\Include;$(SolutionDir)3rdparty\libsdl-org\SDL\include;$(QTDIR)\include;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtConcurrent;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtSvg;$(QTDIR)\include\QtSvgWidgets;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtMultimedia;$(QTDIR)\mkspecs\win32-msvc;.\release;.\QTGeneratedFiles\$(ConfigurationName);.\QTGeneratedFiles;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)3rdparty\SoundTouch\soundtouch\include;$(SolutionDir)3rdparty\cubeb\extra;$(SolutionDir)3rdparty\cubeb\cubeb\include\;$(SolutionDir)build\lib\$(Configuration)-$(Platform)\protobuf_build\include;$(SolutionDir)3rdparty\wolfssl\wolfssl;$(SolutionDir)3rdparty\wolfssl\extra\win32;$(SolutionDir)3rdparty\curl\curl\include;$(SolutionDir)3rdparty\rtmidi\rtmidi;$(SolutionDir)3rdparty\libusb\libusb\libusb;$(VULKAN_SDK)\Include;$(SolutionDir)3rdparty\OpenXR\OpenXR-SDK\include;$(SolutionDir)3rdparty\libsdl-org\SDL\include;$(QTDIR)\include;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtConcurrent;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtSvg;$(QTDIR)\include\QtSvgWidgets;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtMultimedia;$(QTDIR)\mkspecs\win32-msvc;.\release;.\QTGeneratedFiles\$(ConfigurationName);.\QTGeneratedFiles;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/Zc:__cplusplus -Zc:strictStrings -Zc:throwingNew- -w34100 -w34189 -w44996 -w44456 -w44457 -w44458 %(AdditionalOptions)</AdditionalOptions>
       <AssemblerListingLocation>release\</AssemblerListingLocation>
       <BrowseInformation>false</BrowseInformation>
@@ -81,7 +81,7 @@
     </ClCompile>
     <Link>
       <ExcludedFromBuild Condition="'$(SKIP_RPCS3_EXE)' != ''">true</ExcludedFromBuild>
-      <AdditionalDependencies>DbgHelp.lib;Ole32.lib;gdi32.lib;hidapi.lib;libusb-1.0.lib;winmm.lib;miniupnpc_static.lib;rtmidi.lib;imm32.lib;ksuser.lib;version.lib;OpenAL32.lib;XAudio.lib;GLGSRender.lib;shlwapi.lib;VKGSRender.lib;vulkan-1.lib;wolfssl.lib;libcurl.lib;Wldap32.lib;glslang.lib;OSDependent.lib;SPIRV.lib;MachineIndependent.lib;GenericCodeGen.lib;Advapi32.lib;user32.lib;zlib.lib;zstd.lib;libpng16.lib;asmjit.lib;yaml-cpp.lib;discord-rpc.lib;emucore.lib;dxgi.lib;shell32.lib;Qt6Core.lib;Qt6Gui.lib;Qt6Widgets.lib;Qt6Concurrent.lib;Qt6Multimedia.lib;Qt6MultimediaWidgets.lib;Qt6Svg.lib;Qt6SvgWidgets.lib;7zip.lib;libcubeb.lib;cubeb.lib;soundtouch.lib;Avrt.lib;SDL.lib;fusion.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>DbgHelp.lib;Ole32.lib;gdi32.lib;hidapi.lib;libusb-1.0.lib;winmm.lib;miniupnpc_static.lib;rtmidi.lib;imm32.lib;ksuser.lib;version.lib;OpenAL32.lib;XAudio.lib;GLGSRender.lib;shlwapi.lib;VKGSRender.lib;vulkan-1.lib;wolfssl.lib;libcurl.lib;Wldap32.lib;openxr_loader.lib;glslang.lib;OSDependent.lib;SPIRV.lib;MachineIndependent.lib;GenericCodeGen.lib;Advapi32.lib;user32.lib;zlib.lib;zstd.lib;libpng16.lib;asmjit.lib;yaml-cpp.lib;discord-rpc.lib;emucore.lib;dxgi.lib;shell32.lib;Qt6Core.lib;Qt6Gui.lib;Qt6Widgets.lib;Qt6Concurrent.lib;Qt6Multimedia.lib;Qt6MultimediaWidgets.lib;Qt6Svg.lib;Qt6SvgWidgets.lib;7zip.lib;libcubeb.lib;cubeb.lib;soundtouch.lib;Avrt.lib;SDL.lib;fusion.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)build\lib\$(Configuration)-$(Platform)\glslang;$(SolutionDir)build\lib_ext\$(CONFIGURATION)-$(PLATFORM);$(SolutionDir)build\lib\$(Configuration)-$(Platform)\protobuf_build\lib;$(QTDIR)\lib;$(VULKAN_SDK)\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>"/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'" /d2:-cgthreads8 %(AdditionalOptions)</AdditionalOptions>
       <DataExecutionPrevention>true</DataExecutionPrevention>
@@ -140,7 +140,7 @@
     </ClCompile>
     <Link>
       <ExcludedFromBuild Condition="'$(SKIP_RPCS3_EXE)' != ''">true</ExcludedFromBuild>
-      <AdditionalDependencies>DbgHelp.lib;Ole32.lib;gdi32.lib;hidapi.lib;libusb-1.0.lib;winmm.lib;miniupnpc_static.lib;rtmidi.lib;imm32.lib;ksuser.lib;version.lib;OpenAL32.lib;XAudio.lib;GLGSRender.lib;shlwapi.lib;VKGSRender.lib;vulkan-1.lib;wolfssl.lib;libcurl-d.lib;Wldap32.lib;glslangd.lib;OSDependentd.lib;SPIRVd.lib;MachineIndependentd.lib;GenericCodeGend.lib;Advapi32.lib;user32.lib;zlib.lib;zstd.lib;libpng16.lib;asmjit.lib;yaml-cpp.lib;discord-rpc.lib;emucore.lib;dxgi.lib;shell32.lib;Qt6Cored.lib;Qt6Guid.lib;Qt6Widgetsd.lib;Qt6Concurrentd.lib;Qt6Multimediad.lib;Qt6MultimediaWidgetsd.lib;Qt6Svgd.lib;Qt6SvgWidgetsd.lib;7zip.lib;libcubeb.lib;cubeb.lib;soundtouch.lib;Avrt.lib;SDL.lib;fusion.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>DbgHelp.lib;Ole32.lib;gdi32.lib;hidapi.lib;libusb-1.0.lib;winmm.lib;miniupnpc_static.lib;rtmidi.lib;imm32.lib;ksuser.lib;version.lib;OpenAL32.lib;XAudio.lib;GLGSRender.lib;shlwapi.lib;VKGSRender.lib;vulkan-1.lib;wolfssl.lib;libcurl-d.lib;Wldap32.lib;openxr_loader.lib;glslangd.lib;OSDependentd.lib;SPIRVd.lib;MachineIndependentd.lib;GenericCodeGend.lib;Advapi32.lib;user32.lib;zlib.lib;zstd.lib;libpng16.lib;asmjit.lib;yaml-cpp.lib;discord-rpc.lib;emucore.lib;dxgi.lib;shell32.lib;Qt6Cored.lib;Qt6Guid.lib;Qt6Widgetsd.lib;Qt6Concurrentd.lib;Qt6Multimediad.lib;Qt6MultimediaWidgetsd.lib;Qt6Svgd.lib;Qt6SvgWidgetsd.lib;7zip.lib;libcubeb.lib;cubeb.lib;soundtouch.lib;Avrt.lib;SDL.lib;fusion.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)build\lib\$(Configuration)-$(Platform)\glslang;$(SolutionDir)build\lib\$(CONFIGURATION)-$(PLATFORM);$(SolutionDir)build\lib\$(Configuration)-$(Platform)\protobuf_build\lib;$(QTDIR)\lib;$(VULKAN_SDK)\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>"/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'" /VERBOSE /d2:-cgthreads8 %(AdditionalOptions)</AdditionalOptions>
       <DataExecutionPrevention>true</DataExecutionPrevention>
@@ -187,6 +187,7 @@
     <ClCompile Include="Input\hid_instance.cpp" />
     <ClCompile Include="Input\hid_pad_handler.cpp" />
     <ClCompile Include="Input\mouse_gyro_handler.cpp" />
+    <ClCompile Include="Input\openxr_handler.cpp" />
     <ClCompile Include="Input\ps_move_calibration.cpp" />
     <ClCompile Include="Input\ps_move_config.cpp" />
     <ClCompile Include="Input\blob_detector.cpp" />
@@ -1132,6 +1133,7 @@
       <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\bin\moc.exe;%(FullPath)</AdditionalInputs>
     </CustomBuild>
     <ClInclude Include="Input\mouse_gyro_handler.h" />
+    <ClInclude Include="Input\openxr_handler.h" />
     <ClInclude Include="Input\ps_move_calibration.h" />
     <ClInclude Include="Input\ps_move_config.h" />
     <ClInclude Include="Input\blob_detector.h" />

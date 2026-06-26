@@ -609,6 +609,7 @@ if(NOT ANDROID AND NOT APPLE)
         RSX/GL/GLFragmentProgram.cpp
         RSX/GL/GLGSRender.cpp
         RSX/GL/GLHelpers.cpp
+        RSX/GL/GLOpenXRShare.cpp
         RSX/GL/GLOverlays.cpp
         RSX/GL/GLPipelineCompiler.cpp
         RSX/GL/GLPresent.cpp
@@ -671,6 +672,7 @@ if(TARGET 3rdparty_vulkan)
         RSX/VK/VKHelpers.cpp
         RSX/VK/VKMemAlloc.cpp
         RSX/VK/VKOverlays.cpp
+        RSX/VK/VKOpenXRShare.cpp
         RSX/VK/VKPipelineCompiler.cpp
         RSX/VK/VKPresent.cpp
         RSX/VK/VKProgramPipeline.cpp
@@ -693,6 +695,15 @@ if(TARGET 3rdparty_vulkan)
     endif()
 endif()
 
+# OpenXR
+if(TARGET 3rdparty_openxr)
+    target_sources(rpcs3_emu PRIVATE
+        Io/openxr/openxr_input.cpp
+        Io/openxr/openxr_renderer.cpp
+        Io/openxr/openxr_session.cpp
+    )
+endif()
+
 if(NOT WIN32)
     set(THREADS_PREFER_PTHREAD_FLAG ON)
 endif()
@@ -707,6 +718,7 @@ target_link_libraries(rpcs3_emu
         3rdparty::opengl
         3rdparty::stblib
         3rdparty::vulkan
+        3rdparty::openxr
         3rdparty::glew
         3rdparty::libusb
         3rdparty::hidapi
