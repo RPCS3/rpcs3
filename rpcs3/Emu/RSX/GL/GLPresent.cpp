@@ -6,6 +6,7 @@
 #include "upscalers/nearest_pass.hpp"
 
 #include "Emu/Cell/Modules/cellVideoOut.h"
+#include "Emu/Io/openxr/openxr_thread.h"
 #include "Emu/RSX/Overlays/overlay_manager.h"
 #include "Emu/RSX/Overlays/overlay_debug_overlay.h"
 
@@ -346,6 +347,35 @@ bool GLGSRender::present_frame(const rsx::display_flip_info_t& info)
 		}
 	};
 
+#ifdef HAVE_OPENXR
+	// Keeps the OpenXR thread running while headset rendering is enabled. The setting can change at any time.
+	openxr::set_consumer(openxr::consumer::headset_rendering, openxr::is_rendering_enabled());
+
+	// Copy the frame for the headset. It is handed over on a later flip, once the GPU finished it.
+	if (openxr::is_rendering_enabled() && image_to_flip)
+	{
+		const auto eyes = openxr::get_eye_layout(buffer_width, buffer_height, image_to_flip->height(), avconfig.stereo_enabled, image_to_flip2 != nullptr);
+
+		// The overlays are drawn directly to the window, so the share helper draws them into copies of the images
+		gl::openxr_frame_share::overlay_callback draw_overlays;
+		if (overlay_manager && overlay_manager->has_visible())
+		{
+			draw_overlays = [&](gl::texture* dst, const areau& area)
+			{
+				// Textures store the top row first, so the overlays have to be flipped (like for screenshots)
+				m_sshot_fbo.create();
+				render_overlays(dst, area, true);
+				m_sshot_fbo.remove();
+			};
+		}
+
+		m_openxr_share.present(cmd, image_to_flip, image_to_flip2, eyes, draw_overlays);
+
+		// The copies changed the framebuffer bindings, so draw to the screen again
+		gl::screen.bind();
+	}
+#endif
+
 	if (image_to_flip)
 	{
 		const bool user_asked_for_screenshot = g_user_asked_for_screenshot.exchange(false);
@@ -360,33 +390,11 @@ bool GLGSRender::present_frame(const rsx::display_flip_info_t& info)
 			{
 				m_sshot_fbo.create();
 
-				if (!m_sshot_tex ||
-					m_sshot_tex->get_target() != image_to_flip->get_target() ||
-					m_sshot_tex->width() != image_to_flip->width() ||
-					m_sshot_tex->height() != image_to_flip->height() ||
-					m_sshot_tex->depth() != image_to_flip->depth() ||
-					m_sshot_tex->levels() != image_to_flip->levels() ||
-					m_sshot_tex->samples() != image_to_flip->samples() ||
-					m_sshot_tex->get_internal_format() != image_to_flip->get_internal_format() ||
-					m_sshot_tex->format_class() != image_to_flip->format_class())
+				tex = gl::copy_texture_with_overlays(cmd, m_sshot_tex, image_to_flip, [&](gl::texture* dst)
 				{
-					m_sshot_tex = std::make_unique<gl::texture>(
-						GLenum(image_to_flip->get_target()),
-						image_to_flip->width(),
-						image_to_flip->height(),
-						image_to_flip->depth(),
-						image_to_flip->levels(),
-						image_to_flip->samples(),
-						GLenum(image_to_flip->get_internal_format()),
-						image_to_flip->format_class());
-				}
+					render_overlays(dst, areau(0, 0, image_to_flip->width(), image_to_flip->height()), true);
+				});
 
-				tex = m_sshot_tex.get();
-
-				static const position3u offset{};
-				gl::g_hw_blitter->copy_image(cmd, image_to_flip, tex, offset, offset, { tex->width(), tex->height(), 1 });
-
-				render_overlays(tex, areau(0, 0, image_to_flip->width(), image_to_flip->height()), true);
 				m_sshot_fbo.remove();
 			}
 			

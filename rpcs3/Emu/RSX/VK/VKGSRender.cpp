@@ -19,6 +19,7 @@
 #include "Emu/RSX/Core/RSXRendererFactory.h"
 #include "Emu/RSX/Host/MM.h"
 #include "Emu/RSX/Host/RSXDMAWriter.h"
+#include "Emu/Io/openxr/openxr_thread.h"
 #include "Emu/RSX/NV47/HW/context_accessors.define.h"
 #include "Emu/Memory/vm_locking.h"
 
@@ -470,6 +471,8 @@ VKGSRender::VKGSRender(rsx::context* ctx, rsx::display_output* output) noexcept 
 	m_device = const_cast<vk::render_device*>(&m_swapchain->get_device());
 	m_device->set_error_handler(vk::on_device_lost);
 
+	m_openxr_share.create(m_device);
+
 	vk::set_current_renderer(m_swapchain->get_device());
 	vk::init();
 
@@ -848,6 +851,12 @@ VKGSRender::~VKGSRender()
 
 	// Upscaler (references some global resources)
 	m_upscaler.reset();
+
+	// No more frames for the headset
+	openxr::set_consumer(openxr::consumer::headset_rendering, false);
+
+	// Images imported from the OpenXR handler. The device is idle at this point.
+	m_openxr_share.destroy();
 
 	// Heaps
 	vk::data_heap_manager::reset();

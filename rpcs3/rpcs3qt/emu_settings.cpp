@@ -1212,6 +1212,7 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case move_handler::fake: return tr("Fake", "Move handler");
 		case move_handler::mouse: return tr("Mouse", "Move handler");
 		case move_handler::raw_mouse: return tr("Raw Mouse", "Move handler");
+		case move_handler::openxr: return tr("OpenXR (VR Controllers)", "Move handler");
 #ifdef HAVE_LIBEVDEV
 		case move_handler::gun: return tr("Gun", "Gun handler");
 #endif
@@ -1496,6 +1497,15 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case stereo_render_mode_options::anaglyph_trioscopic: return tr("Anaglyph Green-Magenta (Trioscopic)", "3D Display Mode");
 		case stereo_render_mode_options::anaglyph_amber_blue: return tr("Anaglyph Amber-Blue (ColorCode 3D)", "3D Display Mode");
 		case stereo_render_mode_options::anaglyph_custom: return tr("Anaglyph Custom", "3D Display Mode");
+		}
+		break;
+	case emu_settings_type::OpenXRRenderMode:
+		switch (static_cast<openxr_render_mode>(index))
+		{
+		case openxr_render_mode::disabled: return tr("Disabled", "OpenXR Render Mode");
+		case openxr_render_mode::virtual_screen: return tr("Virtual Screen", "OpenXR Render Mode");
+		case openxr_render_mode::virtual_screen_stereo: return tr("Virtual Screen (3D)", "OpenXR Render Mode");
+		case openxr_render_mode::full_view: return tr("Full View", "OpenXR Render Mode");
 		}
 		break;
 	case emu_settings_type::MidiDevices:
