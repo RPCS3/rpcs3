@@ -7078,10 +7078,10 @@ public:
 		}
 
 		// Check whether shuffle mask doesn't contain fixed value selectors
-		// TODO: Add known single high/low source (bit4)
-		// TODO: Add "fixed value can only be zero" for X86's pshufb (bit6 == 0)
 		const auto known_idx = get_known_bits(c);
-		const bool perm_only = known_idx.Zero.isSignBitSet();
+		const bool perm_only = known_idx.Zero[7];
+		const bool perm_or_zero_only = known_idx.Zero[6];
+		const bool is_single_source = known_idx.extractBits(1, 4).isConstant() || (op.ra == op.rb && !m_interp_magn);
 
 		const auto a = get_vr<u8[16]>(op.ra);
 		const auto b = get_vr<u8[16]>(op.rb);
@@ -7096,17 +7096,24 @@ public:
 		const bool a_is_splat = a_is_const && a_data == v128::from8p(a_data._u8[0]);
 		const bool b_is_splat = b_is_const && b_data == v128::from8p(b_data._u8[0]);
 
-		// Splats are their own byteswap
-		// TODO: We can also calculate the swap for any constant vector for free
-		if (a_is_splat)
-			a_swap.value = a.value;
 
-		if (b_is_splat)
-			b_swap.value = b.value;
+		auto get_swap_from_const = [this](v128 data, bool is_splat) {
+			// Splats are their own byteswap
+			if (!is_splat)
+				std::reverse(std::begin(data._bytes), std::end(data._bytes));
+
+			return make_const_vector(data, get_type<u8[16]>());
+		};
+
+		if (a_is_const)
+			a_swap.value = get_swap_from_const(a_data, a_is_splat);
+
+		if (b_is_const)
+			b_swap.value = get_swap_from_const(b_data, b_is_splat);
 
 		// Shuffle index reversal is equivalent to a byteswap
 		value_t<u8[16]> av, bv, cv;
-		if ((a_was_swapped || a_is_splat) && (b_was_swapped || b_is_splat))
+		if ((a_was_swapped || a_is_const) && (b_was_swapped || b_is_const))
 		{
 			av = eval(a_swap);
 			bv = eval(b_swap);
@@ -7119,26 +7126,63 @@ public:
 			cv = eval(c ^ 0xf);
 		}
 
-		// TODO: Index fixed constant calculation can be combined with splat selection
-		//		 by inserting splat value into the lower 8 LUT elements (X86 & ARM)
+		// When single source, either indicated by KnownBits or both are the same
+		const auto only_src = known_idx.One[4] ? bv : av;
+		const bool only_src_is_splat = known_idx.One[4] ? b_is_splat : a_is_splat;
+
+		// Can combine the special index constants + splat selection into one LUT
+		const u8 sp_a = a_is_splat ? a_data._u8[0] : 0;
+		const u8 sp_b = b_is_splat ? b_data._u8[0] : 0;
+		const auto splat_lut = build<u8[16]>(sp_a, sp_b, sp_a, sp_b, sp_a, sp_b, sp_a, sp_b, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80);
 
 #ifdef ARCH_ARM64
 
 		// NOTE: LLVM doesn't emit BCAX	(llvm-project/issues/200699)
 		//		 Verify if `(x ^ 0x0F) & 0x?F` is reassociated when upstreamed
-		
-		if (op.ra == op.rb && !m_interp_magn)
+
+		if (is_single_source)
 		{
+			if (only_src_is_splat && perm_only)
+			{
+				set_vr(op.rt4, only_src);
+				return;
+			}
+
+			if (only_src_is_splat && perm_or_zero_only)
+			{
+				set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, only_src, splat<u8[16]>(0)));
+				return
+			}
+
+			if (only_src_is_splat)
+			{
+				const auto lut = build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x80, 0x80, 0x80, 0x80);
+				set_vr(op.rt4, tbx(only_src, lut, (c >> 3) ^ 0x10));
+				return
+			}
+
 			if (perm_only)
 			{
 				const auto cm = eval(cv & 0x0f);
-				set_vr(op.rt4, tbl(av, cm));
+				set_vr(op.rt4, tbl(only_src, cm));
 				return;
 			}
 
 			const auto x = tbl(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
 			const auto cm = eval(cv & 0x8f);
-			set_vr(op.rt4, tbx(x, av, cm));
+			set_vr(op.rt4, tbx(perm_or_zero_only ? splat<u8[16]>(0) : x, only_src, cm));
+			return;
+		}
+
+		if (a_is_splat && b_is_splat)
+		{
+			if (perm_only)
+			{
+				set_vr(op.rt4, select_by_bit4(c, av, bv));
+				return;
+			}
+
+			set_vr(op.rt4, tbl(splat_lut, (c >> 4)));
 			return;
 		}
 
@@ -7151,17 +7195,44 @@ public:
 
 		const auto x = tbl(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
 		const auto cm = eval(cv & 0x9f);
-		set_vr(op.rt4, tbx2(x, av, bv, cm));
+		set_vr(op.rt4, tbx2(perm_or_zero_only ? splat<u8[16]>(0) : x, av, bv, cm));
 		return;
 #else
 
+		// Calculate shuffle
 
 		bool shuf_zero_when_msb = false;
 
 		value_t<u8[16]> ab_shuf;
-		if (m_use_avx512_icl && (op.ra != op.rb || m_interp_magn))
+		if (is_single_source)
 		{
-			// TODO: Optimize known splats
+			if (only_src_is_splat)
+			{
+				ab_shuf = only_src;
+			}
+			else
+			{
+				ab_shuf = eval(pshufb(only_src, cv));
+				shuf_zero_when_msb = true;
+			}
+		}
+		else if (a_is_splat && b_is_splat)
+		{
+			if (perm_only)
+			{
+				set_vr(op.rt4, eval(select_by_bit4(c, av, bv)));
+				return;
+			}
+
+			// Low index selects the element within a vector, which are all the same
+			if (m_use_avx512_icl)
+				set_vr(op.rt4, vpermb(splat_lut, bitcast<u8[16]>(bitcast<u16[8]>(c) >> 4)));
+			else
+				set_vr(op.rt4, eval(pshufb(splat_lut, (c >> 4))));
+			return;
+		}
+		else if (m_use_avx512_icl)
+		{
 			// TODO: Swap source order to allow for a memory operand using a XOR (when free)
 			ab_shuf = vperm2b(av, bv, cv);
 		}
@@ -7184,7 +7255,11 @@ public:
 		// Calculate special index constants
 
 		value_t<u8[16]> idx_consts;
-		if (m_use_avx512_icl)
+		if (perm_or_zero_only)
+		{
+			idx_consts = eval(splat<u8[16]>(0));
+		}
+		else if (m_use_avx512_icl)
 		{
 			const auto gfni = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
 			idx_consts = eval(select(noncast<s8[16]>(gfni) >= 0, splat<u8[16]>(0), gfni));
@@ -7194,6 +7269,8 @@ public:
 			const auto pshufb_lut = build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80);
 			idx_consts = eval(pshufb(pshufb_lut, (c >> 4)));
 		}
+
+		// Combine shuffle and special index constants
 
 		if (shuf_zero_when_msb)
 			set_vr(op.rt4, ab_shuf | idx_consts);
