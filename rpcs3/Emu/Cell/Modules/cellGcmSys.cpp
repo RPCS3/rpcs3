@@ -412,7 +412,6 @@ error_code _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> contex
 	{
 		gcm_cfg.local_size = 0xf900000; // TODO: Get sdk_version in _cellGcmFunc15 and pass it to gcmGetLocalMemorySize
 		gcm_cfg.local_addr = rsx::constants::local_mem_base;
-		vm::falloc(gcm_cfg.local_addr, gcm_cfg.local_size, vm::video);
 	}
 
 	cellGcmSys.warning("*** local memory(addr=0x%x, size=0x%x)", gcm_cfg.local_addr, gcm_cfg.local_size);
@@ -432,11 +431,11 @@ error_code _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> contex
 	}
 
 	render->isHLE = true;
-	render->local_mem_size = gcm_cfg.local_size;
 
 	vm::var<u32> context_id;
 
 	ensure(sys_rsx_device_map(ppu, vm::var<u64>{}, vm::null, 0x8) == CELL_OK);
+	ensure(sys_rsx_memory_allocate(ppu, vm::var<u32>{}, vm::var<u64>{}, 8, gcm_cfg.local_size, 0x300000, 16, 8) == CELL_OK);
 	ensure(sys_rsx_context_allocate(ppu, +context_id, vm::var<u64>{}, vm::var<u64>{}, vm::var<u64>{}, 0, gcm_cfg.system_mode) == CELL_OK);
 
 	if (gcmMapEaIoAddress(ppu, ioAddress, 0, ioSize, false) != CELL_OK)
@@ -450,8 +449,9 @@ error_code _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> contex
 	gcm_cfg.current_config.localAddress =  gcm_cfg.local_addr;
 	gcm_cfg.current_config.memoryFrequency = 650000000;
 	gcm_cfg.current_config.coreFrequency = 500000000;
+	gcm_cfg.context_id = *context_id;
 
-	const u32 rsx_ctxaddr = render->lv2_context->device_addr;
+	const u32 rsx_ctxaddr = render->lv2_rsx_process->device_addr[8];
 	ensure(rsx_ctxaddr);
 
 	g_defaultCommandBufferBegin = ioAddress;
@@ -1050,13 +1050,14 @@ error_code gcmMapEaIoAddress(ppu_thread& ppu, u32 ea, u32 io, u32 size, bool is_
 		return CELL_GCM_ERROR_FAILURE;
 	}
 
-	if (auto error = sys_rsx_context_iomap(ppu, 0x55555555, io, ea, size, 0xe000000000000800ull | (u64{is_strict} << 60)))
+	auto& gcm_cfg = g_fxo->get<gcm_config>();
+
+	if (auto error = sys_rsx_context_iomap(ppu, gcm_cfg.context_id, io, ea, size, 0xe000000000000800ull | (u64{is_strict} << 60)))
 	{
 		return error;
 	}
 
 	// Assume lock is acquired
-	auto& gcm_cfg = g_fxo->get<gcm_config>();
 	ea >>= 20, io >>= 20, size >>= 20;
 
 	// Fill the offset table
@@ -1171,7 +1172,7 @@ error_code GcmUnmapIoAddress(ppu_thread& ppu, gcm_config& gcm_cfg, u32 io)
 {
 	if (u32 ea = gcm_cfg.offsetTable.eaAddress[io >>= 20], size = gcm_cfg.IoMapTable[ea]; size)
 	{
-		if (auto error = sys_rsx_context_iounmap(ppu, 0x55555555, io << 20, size << 20))
+		if (auto error = sys_rsx_context_iounmap(ppu, gcm_cfg.context_id, io << 20, size << 20))
 		{
 			return error;
 		}

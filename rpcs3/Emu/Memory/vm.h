@@ -121,28 +121,42 @@ namespace vm
 	bool page_protect(u32 addr, u32 size, u8 flags_test = 0, u8 flags_set = 0, u8 flags_clear = 0);
 
 	// Check flags for specified memory range (unsafe)
+	bool check_addr(vm::ps3_virtual_memory_object* memory_4GB_model, u64 addr, u8 flags, u32 size);
 	bool check_addr(u64 addr, u8 flags, u32 size);
 
 	template <u32 Size = 1>
 	inline bool check_addr(u64 addr, u8 flags = page_readable)
 	{
-		//If (Size - 1 >= 4095u || Size & (Size - 1) || addr % Size)
+		return check_addr(addr, flags, Size);
+	}
+
+	template <usz Size = 1, typename Owner>
+		requires(requires(Owner&& o) { o->pages; }) && (Size != 0 && Size < 4096) 
+	inline bool check_addr(Owner&& owner, u64 addr, u8 flags = page_readable) noexcept
+	{
+		if (addr < u32{umax} - 4095 && !(~owner->pages[addr / 4096] & (flags | page_allocated)))
 		{
-			// TODO
-			return check_addr(addr, flags, Size);
+			if constexpr (Size > 1)
+			{
+				if (addr % Size && (~owner->pages[(addr + Size - 1) / 4096] & (flags | page_allocated)))
+				{
+					return false;
+				}
+			}
+
+			return true;
 		}
 
-		//return !(~g_pages[addr / 4096] & (flags | page_allocated));
+		return false;
 	}
 
 	// Like check_addr but should only be used in lock-free context with care
-	inline std::pair<bool, u8> get_addr_flags(u32 /*addr*/) noexcept
+	template <typename Owner>
+	inline std::pair<bool, u8> get_addr_flags(Owner&& owner, u32 addr) noexcept
 	{
-		// TODO
-		return {true, vm::page_allocated};
-		// const u8 flags = g_pages[addr / 4096].load();
+		const u8 flags = owner->pages[addr / 4096].load();
 
-		// return std::make_pair(!!(flags & page_allocated), flags);
+		return std::make_pair(!!(flags & page_allocated), flags);
 	}
 
 	// Read string in a safe manner (page aware) (bool true = if null-termination)

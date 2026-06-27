@@ -667,7 +667,7 @@ void rsx_debugger::GetMemory() const
 void rsx_debugger::GetBuffers() const
 {
 	const auto render = rsx::get_current_renderer();
-	if (!render || !render->is_initialized || !render->local_mem_size || !render->is_paused())
+	if (!render || !render->is_initialized || !render->lv2_rsx_process->local_mem_size || !render->is_paused())
 	{
 		return;
 	}
@@ -1230,7 +1230,7 @@ void rsx_debugger::GetBuffers() const
 void rsx_debugger::GetVertexProgram() const
 {
 	const auto render = rsx::get_current_renderer();
-	if (!render || !render->is_initialized || !render->local_mem_size || !render->is_paused())
+	if (!render || !render->is_initialized || !render->lv2_rsx_process->local_mem_size || !render->is_paused())
 	{
 		return;
 	}
@@ -1279,7 +1279,7 @@ void rsx_debugger::GetVertexProgram() const
 void rsx_debugger::GetFragmentProgram() const
 {
 	const auto render = rsx::get_current_renderer();
-	if (!render || !render->is_initialized || !render->local_mem_size || !render->is_paused())
+	if (!render || !render->is_initialized || !render->lv2_rsx_process->local_mem_size || !render->is_paused())
 	{
 		return;
 	}

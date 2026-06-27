@@ -36,9 +36,9 @@ std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu, shared_ptr<cpu_thr
 
 	switch (cpu->get_class())
 	{
-	case thread_class::ppu: result = std::make_shared<PPUDisAsm>(cpu_disasm_mode::interpreter, vm::g_sudo_addr); break;
+	case thread_class::ppu: result = std::make_shared<PPUDisAsm>(cpu_disasm_mode::interpreter, static_cast<const ppu_thread*>(cpu)->vm_sudo, cpu); break;
 	case thread_class::spu: result = std::make_shared<SPUDisAsm>(cpu_disasm_mode::interpreter, static_cast<const spu_thread*>(cpu)->ls); break;
-	case thread_class::rsx: result = std::make_shared<RSXDisAsm>(cpu_disasm_mode::interpreter, vm::g_sudo_addr, 0, cpu); break;
+	//case thread_class::rsx: result = std::make_shared<RSXDisAsm>(cpu_disasm_mode::interpreter, static_cast<const rsx::thread*>(cpu)->vm_sudo, 0, cpu); break;
 	default: return result;
 	}
 

@@ -563,7 +563,7 @@ private:
 
 	// Get object by internal index if exists (additionally check type if types are not equal)
 	template <typename T, typename Type>
-	static std::pair<atomic_ptr<T>*, id_manager::id_key*> find_index(id_index index, u32 id)
+	static std::pair<atomic_ptr<T>*, id_manager::id_key*> find_index(u32 index, id_index id)
 	{
 		static_assert(IdmTypesCompatible<T, Type>, "Invalid ID type combination");
 
@@ -586,7 +586,7 @@ private:
 				is_valid = key.type() == get_type<Type>();
 			}
 
-			if (index.owning_process && id_manager::g_process && id_manager::g_process != index.owning_process)
+			if (id.owning_process && id_manager::g_process && id_manager::g_process != id.owning_process)
 			{
 				is_valid = false;
 			}
@@ -605,7 +605,7 @@ private:
 
 	// Find ID
 	template <typename T, typename Type>
-	static std::pair<atomic_ptr<T>*, id_manager::id_key*> find_id(u32 id)
+	static std::pair<atomic_ptr<T>*, id_manager::id_key*> find_id(id_index id)
 	{
 		static_assert(IdmTypesCompatible<T, Type>, "Invalid ID type combination");
 

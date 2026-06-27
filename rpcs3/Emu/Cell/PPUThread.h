@@ -260,6 +260,32 @@ public:
 	// Optimization: precomputed java-mode mask for handling denormals
 	u32 jm_mask = 0x7f80'0000;
 
+	// JIT vm::g_base_addr / vm::g_exec_addr accessibles
+	u8* vm_base = nullptr;
+	u8* vm_sudo = nullptr;
+	const void* vm_exec = nullptr;
+
+	std::shared_ptr<vm::ps3_virtual_memory_object> vm_owner;
+
+	// Convert specified VM address to process-local memory pointer
+	template<typename T>
+	to_be_t<T>* _ptr(u32 addr) const
+	{
+		return reinterpret_cast<to_be_t<T>*>(vm_base + addr);
+	}
+
+	template<typename T>
+	to_be_t<T>* _sudo(u32 addr) const
+	{
+		return reinterpret_cast<to_be_t<T>*>(vm_sudo + addr);
+	}
+
+	template<typename T>
+	to_be_t<T>& _ref(u32 addr) const
+	{
+		return *_ptr<T>(addr);
+	}
+
 	u32 raddr{0}; // Reservation addr
 	u64 rtime{0};
 	alignas(64) std::byte rdata[128]{}; // Reservation data

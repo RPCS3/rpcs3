@@ -652,7 +652,7 @@ namespace cpu_counter
 
 void cpu_thread::operator()()
 {
-	const auto ptr6 = lv2_process::acquire_globals(id_manager::g_process);
+	const auto vm_globals_access = lv2_process::acquire_globals(id_manager::g_process);
 
 	const auto old_prefix = g_tls_log_prefix;
 

@@ -2,6 +2,7 @@
 #include "PPUDisAsm.h"
 #include "PPUFunction.h"
 #include "PPUAnalyser.h"
+#include "PPUThread.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/lv2/sys_process.h"
 
@@ -18,7 +19,8 @@ enum class ppu_syscall_code : u64;
 
 extern std::shared_ptr<CPUDisAsm> make_basic_ppu_disasm()
 {
-	return std::make_shared<PPUDisAsm>(cpu_disasm_mode::normal, vm::g_sudo_addr);
+	return nullptr;
+	//return std::make_shared<PPUDisAsm>(cpu_disasm_mode::normal, vm::g_sudo_addr);
 }
 
 u32 PPUDisAsm::disasm(u32 pc)
@@ -30,7 +32,9 @@ u32 PPUDisAsm::disasm(u32 pc)
 		return 0;
 	}
 
-	if (m_offset == vm::g_sudo_addr && !vm::check_addr(pc, vm::page_executable))
+	const auto ppu = m_cpu ? m_cpu->try_get<ppu_thread>() : nullptr;
+
+	if (ppu && m_offset == ppu->vm_sudo && !vm::check_addr(ppu->vm_owner, pc, vm::page_executable))
 	{
 		return 0;
 	}

@@ -4,6 +4,7 @@
 #include "breakpoint_handler.h"
 
 #include "Emu/Cell/SPUThread.h"
+#include "Emu/Cell/PPUThread.h"
 #include "Emu/CPU/CPUDisAsm.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/RSX/RSXDisAsm.h"
@@ -214,6 +215,7 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool direct)
 	else
 	{
 		const bool is_spu = IsSpu();
+		const auto ppu = cpu ? cpu->try_get<ppu_thread>() : nullptr;
 		const u32 address_limits = (is_spu ? 0x3fffc : ~3);
 		const u32 current_pc = (cpu ? cpu->get_pc() : 0);
 		m_start_addr &= address_limits;
@@ -249,16 +251,16 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool direct)
 				list_item->setBackground(default_background);
 			}
 
-			if (cpu && cpu->get_class() == thread_class::ppu && !vm::check_addr(pc, 0))
+			if (cpu && cpu->get_class() == thread_class::ppu && !vm::check_addr(ppu->vm_owner, pc, 0))
 			{
 				list_item->setText((IsBreakpoint(pc) ? ">> " : "   ") + QString::fromStdString(fmt::format("[%08x]  ?? ?? ?? ??:", pc)));
 				count = 4;
 				continue;
 			}
 
-			if (cpu && cpu->get_class() == thread_class::ppu && !vm::check_addr(pc, vm::page_executable))
+			if (cpu && cpu->get_class() == thread_class::ppu && !vm::check_addr(ppu->vm_owner, pc, vm::page_executable))
 			{
-				const u32 data = *vm::get_super_ptr<atomic_be_t<u32>>(pc);
+				const u32 data = *reinterpret_cast<const atomic_be_t<u32>*>(ppu->vm_sudo + pc);
 				list_item->setText((IsBreakpoint(pc) ? ">> " : "   ") + QString::fromStdString(fmt::format("[%08x]  %02x %02x %02x %02x:", pc,
 				static_cast<u8>(data >> 24),
 				static_cast<u8>(data >> 16),
