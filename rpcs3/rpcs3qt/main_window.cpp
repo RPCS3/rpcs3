@@ -35,6 +35,7 @@
 #include "camera_settings_dialog.h"
 #include "ps_move_tracker_dialog.h"
 #include "ipc_settings_dialog.h"
+#include "sky_ipc_settings_dialog.h"
 #include "config_checker.h"
 #include "shortcut_dialog.h"
 #include "steam_utils.h"
@@ -3189,6 +3190,12 @@ void main_window::CreateConnects()
 	connect(ui->confIPCAct, &QAction::triggered, this, [this]()
 	{
 		ipc_settings_dialog dlg(this);
+		dlg.exec();
+	});
+
+	connect(ui->confSkyIPCAct, &QAction::triggered, this, [this]()
+	{
+		sky_ipc_settings_dialog dlg(this);
 		dlg.exec();
 	});
 

@@ -178,7 +178,8 @@ u8 sky_portal::load_skylander(u8* buf, fs::file in_file)
 		}
 	}
 
-	ensure(found_slot != 0xFF);
+	if (found_slot == 0xFF)
+		return 0xFF;
 
 	skylander& thesky = skylanders[found_slot];
 	memcpy(thesky.data.data(), buf, thesky.data.size());
@@ -189,6 +190,23 @@ u8 sky_portal::load_skylander(u8* buf, fs::file in_file)
 	thesky.last_id = sky_serial;
 
 	return found_slot;
+}
+
+void sky_portal::get_figure_info(u8 sky_num, u8& out_status, u16& out_id, u16& out_variant)
+{
+	std::lock_guard lock(sky_mutex);
+	const auto& s = skylanders[sky_num];
+	out_status = s.status;
+	if (s.status & 1)
+	{
+		out_id      = read_from_ptr<le_t<u16>>(s.data.data() + 0x10);
+		out_variant = read_from_ptr<le_t<u16>>(s.data.data() + 0x1C);
+	}
+	else
+	{
+		out_id      = 0;
+		out_variant = 0;
+	}
 }
 
 usb_device_skylander::usb_device_skylander(const std::array<u8, 7>& location)
