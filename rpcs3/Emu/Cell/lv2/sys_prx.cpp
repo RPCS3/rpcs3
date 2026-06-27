@@ -8,6 +8,7 @@
 #include "Crypto/unself.h"
 #include "Loader/ELF.h"
 
+#include "Emu/Cell/PPUFunction.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Crypto/unedat.h"
@@ -177,6 +178,9 @@ extern const std::map<std::string_view, int> g_prx_list
 
 bool ppu_register_library_lock(std::string_view libname, bool lock_lib);
 
+extern error_code sysmoduleModuleStart(ppu_thread& ppu, u32 args, vm::ptr<void> argp);
+extern error_code sysmoduleModuleStop(ppu_thread& ppu);
+
 static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<sys_prx_load_module_option_t> /*pOpt*/, fs::file src = {}, s64 file_offset = 0)
 {
 	if (flags != 0)
@@ -231,6 +235,12 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 	auto hle_load = [&]()
 	{
 		const auto prx = idm::make_ptr<lv2_obj, lv2_prx>();
+
+		if (name == "libsysmodule.sprx")
+		{
+			prx->start = vm::cast(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(sysmoduleModuleStart)));
+			prx->stop = vm::cast(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(sysmoduleModuleStop)));
+		}
 
 		prx->name = std::move(name);
 		prx->path = std::move(path);
