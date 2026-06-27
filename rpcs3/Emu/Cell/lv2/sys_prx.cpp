@@ -116,7 +116,7 @@ extern const std::map<std::string_view, int> g_prx_list
 	{ "libssl.sprx", 0 },
 	{ "libsvc1d.sprx", 0 },
 	{ "libsync2.sprx", 0 },
-	{ "libsysmodule.sprx", 0 },
+	{ "libsysmodule.sprx", 1 },
 	{ "libsysutil.sprx", 1 },
 	{ "libsysutil_ap.sprx", 1 },
 	{ "libsysutil_authdialog.sprx", 1 },
