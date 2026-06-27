@@ -127,7 +127,7 @@ namespace rsx
 				return;
 			}
 
-			if (addr == RSX(ctx)->lv2_context->device_addr + 0x30 && !arg)
+			if (addr == RSX(ctx)->lv2_rsx_process->device_addr[8] + 0x30 && !arg)
 			{
 				// HW flip synchronization related, 1 is not written without display queue command (TODO: make it behave as real hw)
 				arg = 1;

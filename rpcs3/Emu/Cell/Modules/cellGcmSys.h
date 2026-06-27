@@ -37,6 +37,7 @@ struct gcm_config
 	u64 system_mode = 0;
 	u32 local_size = 0;
 	u32 local_addr = 0;
+	u32 context_id = 0;
 
 	atomic_t<u32> reserved_size = 0;
 };

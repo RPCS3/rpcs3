@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Emu/Memory/vm_ptr.h"
+#include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/RSX/Core/RSXIOMap.hpp"
 
@@ -163,10 +164,8 @@ struct lv2_rsx_context
 	u32 current_display_buffer{ 0 };
 	
 	u32 dma_address{ 0 };
-	u32 device_addr{ 0 };
 	u32 label_addr{ 0 };
 	u32 main_mem_size{ 0 };
-	u32 local_mem_size{ 0 };
 	u32 rsx_event_port{ 0 };
 	u32 driver_info{ 0 };
 
@@ -180,6 +179,17 @@ struct lv2_rsx_context
 
 	rsx::GCM_tile_reference get_tiled_memory_region(const utils::address_range32& range) const;
 };
+
+// Process-specific RSX information (each process has one and it is not realy regulated by ID by CellOS)
+struct lv2_rsx_process_info
+{
+	u32 device_addr[16]{ 0 };
+	u32 local_mem_size{ 0 };
+
+	shared_mutex mutex;
+};
+
+
 
 // SysCalls
 error_code sys_rsx_device_open(cpu_thread& cpu);

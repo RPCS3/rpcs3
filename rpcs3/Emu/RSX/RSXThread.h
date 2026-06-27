@@ -124,6 +124,8 @@ namespace rsx
 		std::vector<std::pair<u32, u32>> dump_callstack_list() const override;
 		void dump_misc(std::string& ret, std::any& custom_data) const override;
 		struct ::lv2_rsx_context* lv2_context = nullptr;
+		struct ::lv2_rsx_process_info* lv2_rsx_process = nullptr;
+		u32 lv2_context_id = 0;
 		RsxDmaControl* ctrl = nullptr;
 
 	protected:
@@ -132,6 +134,9 @@ namespace rsx
 		u32 saved_fifo_ret = RSX_CALL_STACK_EMPTY;
 		u32 restore_fifo_cmd = 0;
 		u32 restore_fifo_count = 0;
+
+		void decide_rsx_context_queue(u64 game_priority, u64 operating_system_priority);
+		std::map<u32, u32> rsx_context_queue;
 
 		// Occlusion query
 		bool zcull_surface_active = false;
@@ -174,7 +179,6 @@ namespace rsx
 		u32 restore_point = 0;
 		u32 dbg_step_pc = 0;
 		u32 last_known_code_start = 0;
-		u32 local_mem_size = 0x100'00000;
 		shared_mutex sys_rsx_mtx;
 		atomic_t<u32> external_interrupt_lock{ 0 };
 		atomic_t<bool> external_interrupt_ack{ false };
@@ -452,7 +456,7 @@ namespace rsx
 
 	public:
 		void reset();
-		void init(shared_ptr<lv2_rsx_context> _lv2_context);
+		void init(shared_ptr<lv2_rsx_context> _lv2_context, std::shared_ptr<lv2_rsx_process_info> _lv2_rsx_process, u32 id);
 
 		// Emu App/Game flip, only immediately flips when called from rsxthread
 		bool request_emu_flip(u32 buffer);

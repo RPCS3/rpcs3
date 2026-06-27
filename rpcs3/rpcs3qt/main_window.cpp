@@ -3383,8 +3383,8 @@ void main_window::CreateConnects()
 
 	connect(ui->toolsmemory_viewerAct, &QAction::triggered, this, [this]
 	{
-		if (!Emu.IsStopped())
-			idm::make<memory_viewer_handle>(this, make_basic_ppu_disasm());
+		// if (!Emu.IsStopped())
+		// 	idm::make<memory_viewer_handle>(this, make_basic_ppu_disasm());
 	});
 
 	connect(ui->toolsRsxDebuggerAct, &QAction::triggered, this, [this]

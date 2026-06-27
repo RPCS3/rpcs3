@@ -857,13 +857,13 @@ namespace vm
 		}
 		else if (!shm)
 		{
-			utils::memory_protect(g_base_addr + addr, size, prot);
+			utils::memory_protect(memory_4GB_model->base_addr + addr, size, prot);
 
 			perf_meter<"PAGE_LCK"_u64> perf;
-			utils::memory_lock(g_base_addr + addr, size);
-			utils::memory_lock(g_sudo_addr + addr, size);
+			utils::memory_lock(memory_4GB_model->base_addr + addr, size);
+			utils::memory_lock(memory_4GB_model->sudo_addr + addr, size);
 		}
-		else if (!map_critical(g_base_addr + addr, prot) || !map_critical(g_sudo_addr + addr, utils::protection::rw) || (map_error = "map_self()", !shm->map_self()))
+		else if (!map_critical(memory_4GB_model->base_addr + addr, prot) || !map_critical(memory_4GB_model->sudo_addr + addr, utils::protection::rw) || (map_error = "map_self()", !shm->map_self()))
 		{
 			fmt::throw_exception("Memory mapping failed (addr=0x%x, size=0x%x, flags=0x%x): %s", addr, size, flags, map_error);
 		}
@@ -871,11 +871,11 @@ namespace vm
 		if (flags & page_executable && !is_noop)
 		{
 			// TODO (dead code)
-			utils::memory_commit(g_exec_addr + addr * 2, size * 2);
+			utils::memory_commit(memory_4GB_model->exec_addr + addr * 2, size * 2);
 
 			if (g_cfg.core.ppu_debug)
 			{
-				utils::memory_commit(g_stat_addr + addr, size);
+				utils::memory_commit(memory_4GB_model->stat_addr + addr, size);
 			}
 		}
 
@@ -1057,19 +1057,19 @@ namespace vm
 		}
 		else
 		{
-			shm->unmap_critical(g_base_addr + addr);
+			shm->unmap_critical(memory_4GB_model->base_addr + addr);
 #ifdef _WIN32
-			shm->unmap_critical(g_sudo_addr + addr);
+			shm->unmap_critical(memory_4GB_model->sudo_addr + addr);
 #endif
 		}
 
 		if (is_exec && !is_noop)
 		{
-			utils::memory_decommit(g_exec_addr + addr * 2, size * 2);
+			utils::memory_decommit(memory_4GB_model->exec_addr + addr * 2, size * 2);
 
 			if (g_cfg.core.ppu_debug)
 			{
-				utils::memory_decommit(g_stat_addr + addr, size);
+				utils::memory_decommit(memory_4GB_model->stat_addr + addr, size);
 			}
 		}
 
@@ -1077,7 +1077,7 @@ namespace vm
 		return size;
 	}
 
-	bool check_addr(u64 addr, u8 flags, u32 size)
+	bool check_addr(vm::ps3_virtual_memory_object* memory_4GB_model, u64 addr, u8 flags, u32 size)
 	{
 		if (size == 0)
 		{
@@ -1090,14 +1090,14 @@ namespace vm
 			return false;
 		}
 
-		const auto memory_4GB_model = get_current_memory_object();
+		const auto pages = memory_4GB_model->pages;
 
 		// Always check this flag
 		flags |= page_allocated;
 
 		for (u64 i = addr / 4096, max = (addr + size - 1) / 4096; i <= max;)
 		{
-			auto state = +memory_4GB_model->pages[i];
+			auto state = +pages[i];
 
 			if (~state & flags) [[unlikely]]
 			{
@@ -1120,6 +1120,11 @@ namespace vm
 		}
 
 		return true;
+	}
+
+	bool check_addr(u64 addr, u8 flags, u32 size)
+	{
+		return check_addr(get_current_memory_object().get(), addr, flags, size);
 	}
 
 	u32 alloc(u32 size, memory_location_t location, u32 align)
@@ -1335,7 +1340,8 @@ namespace vm
 			// Special path for whole-allocated areas allowing 4k granularity
 			m_common = std::make_shared<utils::shm>(size, fmt::format("_block_x%08x", addr));
 
-			if (!map_critical(vm::_ptr<u8>(addr), this->flags & page_size_4k && utils::get_page_size() > 4096 ? utils::protection::rw : utils::protection::no) || !map_critical(vm::get_super_ptr(addr), utils::protection::rw))
+			if (!map_critical(memory_4GB_model->base_addr + addr, this->flags & page_size_4k && utils::get_page_size() > 4096 ? utils::protection::rw : utils::protection::no)
+				|| !map_critical(memory_4GB_model->sudo_addr + addr, utils::protection::rw))
 			{
 				fmt::throw_exception("Memory mapping failed (addr=0x%x, size=0x%x, flags=0x%x): %s", addr, size, flags, map_error);
 			}
@@ -1781,7 +1787,7 @@ namespace vm
 
 				// Save raw binary image
 				const u32 guard_size = flags & stack_guarded ? 0x1000 : 0;
-				serialize_memory_bytes(ar, vm::get_super_ptr<u8>(addr + guard_size), shm.first - guard_size * 2);
+				serialize_memory_bytes(ar, memory_4GB_model->sudo_addr + (addr + guard_size), shm.first - guard_size * 2);
 			}
 			else
 			{
@@ -1804,8 +1810,8 @@ namespace vm
 		if (flags & preallocated)
 		{
 			m_common = std::make_shared<utils::shm>(size, fmt::format("_block_x%08x", addr));
-			m_common->map_critical(vm::base(addr), this->flags & page_size_4k && utils::get_page_size() > 4096 ? utils::protection::rw : utils::protection::no);
-			m_common->map_critical(vm::get_super_ptr(addr));
+			m_common->map_critical(memory_4GB_model->base_addr + addr, this->flags & page_size_4k && utils::get_page_size() > 4096 ? utils::protection::rw : utils::protection::no);
+			m_common->map_critical(memory_4GB_model->sudo_addr + addr);
 		}
 
 		std::shared_ptr<utils::shm> null_shm;
@@ -1857,7 +1863,7 @@ namespace vm
 			{
 				// Load binary image
 				const u32 guard_size = flags & stack_guarded ? 0x1000 : 0;
-				serialize_memory_bytes(ar, vm::get_super_ptr<u8>(addr0 + guard_size), size0 - guard_size * 2);
+				serialize_memory_bytes(ar, memory_4GB_model->sudo_addr + (addr0 + guard_size), size0 - guard_size * 2);
 			}
 		}
 	}
@@ -2121,7 +2127,7 @@ namespace vm
 
 	static bool try_access_internal(u32 addr, void* ptr, u32 size, bool is_write)
 	{
-		if (vm::check_addr(addr, is_write ? page_writable : page_readable, size))
+		if (vm::g_sudo_addr && vm::check_addr(addr, is_write ? page_writable : page_readable, size))
 		{
 			void* src = vm::g_sudo_addr + addr;
 			void* dst = ptr;
@@ -2316,13 +2322,15 @@ namespace vm
 
 	void initialize_ps3_mmemory_object(ps3_virtual_memory_object* ptr)
 	{
-		ptr->base_addr = memory_reserve_4GiB(reinterpret_cast<void*>(0x2'0000'0000), 0x2'0000'0000, true);
-		ptr->sudo_addr = ptr->base_addr + 0x1'0000'0000;
-		ptr->exec_addr = memory_reserve_4GiB(ptr->sudo_addr, 0x300000000);
-		ptr->hook_addr = memory_reserve_4GiB(ptr->exec_addr, 0x800000000);
-		ptr->stat_addr = memory_reserve_4GiB(ptr->hook_addr);
-		ptr->pages = static_cast<memory_page*>(utils::memory_reserve(0x10000000 / 4096));
-		utils::memory_commit(ptr->pages, 0x10000000 / 4096);
+		constexpr u64 pow32 = u64{1} << 32;
+
+		ptr->base_addr = memory_reserve_4GiB(reinterpret_cast<void*>(pow32 * 2), pow32 * 2, true);
+		ptr->sudo_addr = ptr->base_addr + pow32;
+		ptr->exec_addr = memory_reserve_4GiB(ptr->sudo_addr, pow32 * 4);
+		ptr->hook_addr = memory_reserve_4GiB(ptr->exec_addr, pow32 * 8);
+		ptr->stat_addr = memory_reserve_4GiB(ptr->exec_addr);
+		ptr->pages = static_cast<memory_page*>(utils::memory_reserve(pow32 / 4096));
+		utils::memory_commit(ptr->pages, pow32 / 4096);
 
 		vm_log.notice("Guest memory bases address ranges:\n"
 			"vm::g_base_addr = %p - %p\n"
@@ -2338,7 +2346,7 @@ namespace vm
 			ptr->stat_addr, ptr->stat_addr + 0xffff'ffff,
 			g_reservations, g_reservations + sizeof(g_reservations) - 1);
 
-		std::memset(ptr->pages, 0, sizeof(0x10000000 / 4096));
+		std::memset(ptr->pages, 0, sizeof(pow32 / 4096));
 
 		ptr->locations =
 		{
@@ -2366,6 +2374,8 @@ namespace vm
 
 	void deinitialize_ps3_mmemory_object(ps3_virtual_memory_object* ptr)
 	{
+		constexpr u64 pow32 = u64{1} << 32;
+
 		{
 			vm::writer_lock lock;
 
@@ -2381,21 +2391,21 @@ namespace vm
 			ptr->locations.clear();
 		}
 
-		utils::memory_decommit(ptr->exec_addr, 0x200000000);
-		utils::memory_decommit(ptr->stat_addr, 0x100000000);
+		utils::memory_decommit(ptr->exec_addr, pow32 * 2);
+		utils::memory_decommit(ptr->stat_addr, pow32);
 
 	#ifdef _WIN32
 		s_hook.unmap(ptr->hook_addr);
-		//ensure(utils::memory_reserve(0x800000000, ptr->hook_addr));
+		//ensure(utils::memory_reserve(pow32 * 8, ptr->hook_addr));
 	#else
-		utils::memory_decommit(ptr->hook_addr, 0x800000000);
+		utils::memory_decommit(ptr->hook_addr, pow32 * 8);
 	#endif
 
-		utils::memory_release(ptr->base_addr, 0x2'0000'0000);
-		utils::memory_release(ptr->exec_addr, 0x300000000);
-		utils::memory_release(ptr->hook_addr, 0x800000000);
-		utils::memory_release(ptr->stat_addr, 0x100000000);
-		utils::memory_release(ptr->pages, 0x10000000 / 4096);
+		utils::memory_release(ptr->base_addr, pow32 * 2);
+		utils::memory_release(ptr->exec_addr, pow32 * 3);
+		utils::memory_release(ptr->hook_addr, pow32 * 8);
+		utils::memory_release(ptr->stat_addr, pow32);
+		utils::memory_release(ptr->pages, pow32 / 4096);
 	}
 
 	void save(ps3_virtual_memory_object* obj, utils::serial& ar)

@@ -96,6 +96,7 @@ namespace vm
 
 class ppu_function_manager;
 struct lv2_memory_container;
+struct lv2_rsx_process_info;
 
 struct lv2_process : public ppu_module<lv2_obj>
 {
@@ -121,6 +122,9 @@ struct lv2_process : public ppu_module<lv2_obj>
 
 	// HLE table manager
 	std::shared_ptr<ppu_function_manager> func_manager;
+
+	// RSX proces-local information
+	std::shared_ptr<lv2_rsx_process_info> rsx_info;
 
 	bool has_root_perm() const;
 	static bool has_process_root_perm();

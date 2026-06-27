@@ -12,6 +12,7 @@
 #include "util/asm.hpp"
 #include "sys_event.h"
 #include "sys_vm.h"
+#include "sys_process.h"
 
 LOG_CHANNEL(sys_rsx);
 
@@ -97,7 +98,7 @@ void lv2_rsx_context::save(utils::serial& ar) noexcept
 	ar(display_buffers, display_buffers_count, current_display_buffer);
 	ar(dma_address, iomap_table, tiles, zculls, display_buffers, display_buffers_count, current_display_buffer);
 	ar(enable_second_vhandler);
-	ar(device_addr, label_addr, main_mem_size, local_mem_size, rsx_event_port, driver_info);
+	ar(label_addr, main_mem_size, rsx_event_port, driver_info);
 	ar(unsent_gcm_events);
 }
 
@@ -205,14 +206,16 @@ error_code sys_rsx_memory_allocate(cpu_thread& cpu, vm::ptr<u32> mem_handle, vm:
 
 	cpu.state += cpu_flag::wait;
 
+	const auto rsx_info = ensure(idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process))->rsx_info;
+
+	std::lock_guard lock(rsx_info->mutex);
+
+	// TODO(?): Implement
+	ensure(!rsx_info->local_mem_size);
+
 	if (vm::falloc(rsx::constants::local_mem_base, size, vm::video))
 	{
-		rsx::get_current_renderer()->local_mem_size = size;
-
-		if (u32 addr = rsx::get_current_renderer()->lv2_context->driver_info)
-		{
-			vm::_ptr<RsxDriverInfo>(addr)->memory_size = size;
-		}
+		rsx_info->local_mem_size = static_cast<u32>(size);
 
 		*mem_addr = rsx::constants::local_mem_base;
 		*mem_handle = 0x5a5a5a5b;
@@ -297,6 +300,7 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 	}
 
 	const auto rsx_context = idm::make_ptr<lv2_rsx_context>();
+	const u32 rsx_context_id = idm::last_id<lv2_rsx_context>();
 
 	ensure(rsx_context);
 
@@ -343,11 +347,13 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 
 	auto &driverInfo = *vm::_ptr<RsxDriverInfo>(vm::cast(*lpar_driver_info));
 
+	const auto rsx_info = ensure(idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process))->rsx_info;
+
 	std::memset(&driverInfo, 0, sizeof(RsxDriverInfo));
 
 	driverInfo.version_driver = 0x211;
 	driverInfo.version_gpu = 0x5c;
-	driverInfo.memory_size = render->local_mem_size;
+	driverInfo.memory_size = rsx_info->local_mem_size;
 	driverInfo.nvcore_frequency = 500000000; // 0x1DCD6500
 	driverInfo.memory_frequency = 650000000; // 0x26BE3680
 	driverInfo.reportsNotifyOffset = 0x1000;
@@ -383,9 +389,9 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 	rsx_context->current_display_buffer = 0;
 	rsx_context->label_addr = vm::cast(*lpar_reports);
 	rsx_context->dma_address = dma_address;
-	render->init(rsx_context);
+	render->init(rsx_context, rsx_info, rsx_context_id);
 
-	*context_id = idm::last_id<lv2_rsx_context>();
+	*context_id = rsx_context_id;
 
 	return CELL_OK;
 }
@@ -594,6 +600,9 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 	}
 
 	auto &driverInfo = *vm::_ptr<RsxDriverInfo>(rsx_context->driver_info);
+
+	const auto rsx_info = ensure(idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process))->rsx_info;
+
 	switch (package_id)
 	{
 	case 0x001: // FIFO
@@ -796,7 +805,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			switch (location)
 			{
 			case CELL_GCM_LOCATION_MAIN: limit = rsx_context->main_mem_size; break;
-			case CELL_GCM_LOCATION_LOCAL: limit = rsx_context->local_mem_size; break;
+			case CELL_GCM_LOCATION_LOCAL: limit = rsx_info->local_mem_size; break;
 			default: fmt::throw_exception("sys_rsx_context_attribute(): Unexpected location value (location=0x%x)", location);
 			}
 
@@ -870,9 +879,9 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 			// cullStart is an offset inside ZCULL RAM which is 3MB long, check bounds
 			// width and height are not allowed to be zero (checked by range.valid())
-			if (!cull_range.valid() || cull_range.end >= 3u << 20 || offset >= render->local_mem_size)
+			if (!cull_range.valid() || cull_range.end >= 3u << 20 || offset >= rsx_info->local_mem_size)
 			{
-				return { CELL_EINVAL, "cull_range invalid (valid=%d, end=%d, offset=%d, local_mem_size=%d)", cull_range.valid(), cull_range.end, offset, render->local_mem_size };
+				return { CELL_EINVAL, "cull_range invalid (valid=%d, end=%d, offset=%d, local_mem_size=%d)", cull_range.valid(), cull_range.end, offset, rsx_info->local_mem_size };
 			}
 
 			if (a5 & 0xF0000000)
@@ -987,6 +996,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 	return CELL_OK;
 }
 
+
 /*
  * lv2 SysCall 675 (0x2A3): sys_rsx_device_map
  * @param a1 (OUT): rsx device map address : 0x40000000, 0x50000000.. 0xB0000000
@@ -999,17 +1009,24 @@ error_code sys_rsx_device_map(cpu_thread& cpu, vm::ptr<u64> dev_addr, vm::ptr<u6
 
 	sys_rsx.warning("sys_rsx_device_map(dev_addr=*0x%x, a2=*0x%x, dev_id=0x%x)", dev_addr, a2, dev_id);
 
+	if (dev_id > 16)
+	{
+		return CELL_EINVAL;
+	}
+
 	if (dev_id != 8)
 	{
 		// TODO: lv1 related
 		fmt::throw_exception("sys_rsx_device_map: Invalid dev_id %d", dev_id);
 	}
 
-	const auto render = rsx::get_current_renderer();
+	const auto rsx_info = ensure(idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process))->rsx_info;
 
-	std::scoped_lock lock(render->sys_rsx_mtx);
+	std::lock_guard lock(rsx_info->mutex);
 
-	if (!render->lv2_context->device_addr)
+	u32& addr_ret = rsx_info->device_addr[dev_id];
+
+	if (!addr_ret)
 	{
 		const auto area = vm::reserve_map(vm::rsx_context, 0, 0x10000000, 0x403);
 		const u32 addr = area ? area->alloc(0x100000) : 0;
@@ -1020,13 +1037,10 @@ error_code sys_rsx_device_map(cpu_thread& cpu, vm::ptr<u64> dev_addr, vm::ptr<u6
 		}
 
 		sys_rsx.warning("sys_rsx_device_map(): Mapped address 0x%x", addr);
-
-		*dev_addr = addr;
-		render->lv2_context->device_addr = addr;
-		return CELL_OK;
+		addr_ret = addr;
 	}
 
-	*dev_addr = render->lv2_context->device_addr;
+	*dev_addr = addr_ret;
 	return CELL_OK;
 }
 
@@ -1039,6 +1053,11 @@ error_code sys_rsx_device_unmap(cpu_thread& cpu, u32 dev_id)
 	cpu.state += cpu_flag::wait;
 
 	sys_rsx.todo("sys_rsx_device_unmap(dev_id=0x%x)", dev_id);
+
+	if (dev_id > 16)
+	{
+		return CELL_EINVAL;
+	}
 
 	return CELL_OK;
 }

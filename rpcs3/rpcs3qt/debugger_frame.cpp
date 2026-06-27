@@ -570,7 +570,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 
 				std::string ret;
 
-				PPUDisAsm dis_asm(cpu_disasm_mode::normal, vm::g_sudo_addr);
+				PPUDisAsm dis_asm(cpu_disasm_mode::normal, cpu->try_get<ppu_thread>()->vm_sudo, cpu);
 				u32 i = 0;
 
 				for (auto it = copy.rbegin(); it != copy.rend(); it++, i++)
@@ -1138,7 +1138,7 @@ void debugger_frame::UpdateUnitList()
 			idm::select<named_thread<spu_thread>>(on_select, idm::unlocked);
 		}
 
-		if (const auto render = g_fxo->try_get<rsx::thread>(); render && render->lv2_context->main_mem_size)
+		if (const auto render = g_fxo->try_get<rsx::thread>(); render && render->lv2_context && render->lv2_context->main_mem_size)
 		{
 			on_select(render->id, *render);
 		}

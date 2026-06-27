@@ -289,7 +289,7 @@ error_code sys_memory_get_page_attribute(ppu_thread& ppu, u32 addr, vm::ptr<sys_
 		return CELL_OK;
 	}
 
-	const auto [ok, vm_flags] = vm::get_addr_flags(addr);
+	const auto [ok, vm_flags] = vm::get_addr_flags(ppu.vm_owner, addr);
 
 	if (!ok || addr >= SPU_FAKE_BASE_ADDR)
 	{

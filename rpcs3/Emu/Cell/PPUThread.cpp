@@ -128,7 +128,7 @@ void fmt_class_string<typename ppu_thread::call_history_t>::format(std::string& 
 {
 	const auto& history = get_object(arg);
 
-	PPUDisAsm dis_asm(cpu_disasm_mode::normal, vm::g_sudo_addr);
+	PPUDisAsm dis_asm(cpu_disasm_mode::normal, vm::g_sudo_addr, nullptr);
 
 	for (u64 count = 0, idx = history.index - 1; idx != umax && count < history.data.size(); count++, idx--)
 	{
@@ -221,9 +221,8 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 	c.mov(x86::qword_ptr(args[0], ::offset32(&ppu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs)), x86::rsp);
 
 	// Initialize args
-	c.movabs(x86::r13, reinterpret_cast<u64>(&vm::g_exec_addr));
-	c.mov(x86::r13, x86::qword_ptr(x86::r13));
 	c.mov(x86::rbp, args[0]);
+	c.mov(x86::r13, x86::qword_ptr(x86::rbp, ::offset32(&ppu_thread::vm_exec)));
 	c.mov(x86::edx, x86::dword_ptr(x86::rbp, ::offset32(&ppu_thread::cia))); // Load PC
 
 	c.mov(x86::rax, x86::qword_ptr(x86::r13, x86::rdx, 1, 0)); // Load call target
@@ -234,8 +233,7 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 	c.shl(x86::edx, 13);
 	c.mov(x86::r12d, x86::edx); // Set relocation base
 
-	c.movabs(x86::rbx, reinterpret_cast<u64>(&vm::g_base_addr));
-	c.mov(x86::rbx, x86::qword_ptr(x86::rbx));
+	c.mov(x86::rbx, x86::qword_ptr(x86::rbp, ::offset32(&ppu_thread::vm_base)));
 	c.mov(x86::r14, x86::qword_ptr(x86::rbp, ::offset32(&ppu_thread::gpr, 0))); // Load some registers
 	c.mov(x86::rsi, x86::qword_ptr(x86::rbp, ::offset32(&ppu_thread::gpr, 1)));
 	c.mov(x86::rdi, x86::qword_ptr(x86::rbp, ::offset32(&ppu_thread::gpr, 2)));
@@ -327,9 +325,14 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 	c.stp(a64::x28, a64::x29, arm::Mem(a64::x14, 96));
 	c.str(a64::x30, arm::Mem(a64::x14, 112));
 
+	const arm::GpX vm_base_off = a64::x11;
+	const arm::GpX vm_exec_off = a64::x11; // Recycle registers for now
+
 	// Load REG_Base - use absolute jump target to bypass rel jmp range limits
-	c.mov(a64::x19, Imm(reinterpret_cast<u64>(&vm::g_exec_addr)));
-	c.ldr(a64::x19, arm::Mem(a64::x19));
+	// Load offset value
+	c.mov(vm_exec_off, Imm(static_cast<u64>(::offset32(&ppu_thread::vm_exec))));
+	// Load vm::g_base_addr
+	c.ldr(a64::x19, arm::Mem(ppu_t_base, vm_exec_off));
 	// Load PPUThread struct base -> REG_Sp
 	const arm::GpX ppu_t_base = a64::x20;
 	c.mov(ppu_t_base, args[0]);
@@ -355,8 +358,10 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 	c.lsl(reg_hp.w(), reg_hp.w(), 13);
 
 	// Load registers
-	c.mov(a64::x22, Imm(reinterpret_cast<u64>(&vm::g_base_addr)));
-	c.ldr(a64::x22, arm::Mem(a64::x22));
+	// Load offset value
+	c.mov(vm_base_off, Imm(static_cast<u64>(::offset32(&ppu_thread::vm_base))));
+	// Load vm::g_base_addr
+	c.ldr(a64::x22, arm::Mem(ppu_t_base, vm_base_off));
 
 	const arm::GpX gpr_addr_reg = a64::x9;
 	c.mov(gpr_addr_reg, Imm(static_cast<u64>(::offset32(&ppu_thread::gpr))));
@@ -1378,7 +1383,7 @@ void ppu_thread::dump_regs(std::string& ret, std::any& custom_data) const
 		func_data = ensure(std::any_cast<dump_registers_data_t>(&custom_data));
 	}
 
-	PPUDisAsm dis_asm(cpu_disasm_mode::normal, vm::g_sudo_addr);
+	PPUDisAsm dis_asm(cpu_disasm_mode::normal, vm_sudo, this);
 
 	for (uint i = 0; i < 32; ++i)
 	{
@@ -1432,25 +1437,25 @@ void ppu_thread::dump_regs(std::string& ret, std::any& custom_data) const
 		constexpr u32 max_str_len = 32;
 		constexpr u32 hex_count = 8;
 
-		if (reg <= u32{umax} && vm::check_addr<max_str_len>(static_cast<u32>(reg)))
+		if (reg <= u32{umax} && vm::check_addr<max_str_len>(vm_owner, static_cast<u32>(reg)))
 		{
 			bool is_function = false;
 			u32 toc = 0;
 
 			auto is_exec_code = [&](u32 addr)
 			{
-				return addr % 4 == 0 && vm::check_addr(addr, vm::page_executable) && g_ppu_itype.decode(*vm::get_super_ptr<u32>(addr)) != ppu_itype::UNK;
+				return addr % 4 == 0 && vm::check_addr(vm_owner, addr, vm::page_executable) && g_ppu_itype.decode(*_sudo<u32>(addr)) != ppu_itype::UNK;
 			};
 
-			if (const u32 reg_ptr = *vm::get_super_ptr<be_t<u32, 1>>(static_cast<u32>(reg));
-				vm::check_addr<8>(reg_ptr) && !vm::check_addr(toc, vm::page_executable))
+			if (const u32 reg_ptr = *_sudo<be_t<u32, 1>>(static_cast<u32>(reg));
+				vm::check_addr<8>(vm_owner, reg_ptr) && !vm::check_addr(vm_owner, toc, vm::page_executable))
 			{
 				// Check executability and alignment
 				if (reg % 4 == 0 && is_exec_code(reg_ptr))
 				{
-					toc = *vm::get_super_ptr<u32>(static_cast<u32>(reg + 4));
+					toc = *_sudo<u32>(static_cast<u32>(reg + 4));
 
-					if (toc % 4 == 0 && (toc >> 29) == (reg_ptr >> 29) && vm::check_addr(toc) && !vm::check_addr(toc, vm::page_executable))
+					if (toc % 4 == 0 && (toc >> 29) == (reg_ptr >> 29) && vm::check_addr(vm_owner, toc) && !vm::check_addr(vm_owner, toc, vm::page_executable))
 					{
 						is_function = true;
 						reg = reg_ptr;
@@ -1462,7 +1467,7 @@ void ppu_thread::dump_regs(std::string& ret, std::any& custom_data) const
 				is_function = true;
 			}
 
-			const auto gpr_buf = vm::get_super_ptr<u8>(static_cast<u32>(reg));
+			const auto gpr_buf = _sudo<u8>(static_cast<u32>(reg));
 
 			std::string buf_tmp(gpr_buf, gpr_buf + max_str_len);
 
@@ -1999,7 +2004,7 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 
 			if (res.about_to_pop_frame || (res.maybe_leaf && !res.non_leaf))
 			{
-				const u64 temp_sp = *vm::get_super_ptr<u64>(static_cast<u32>(sp));
+				const u64 temp_sp = *_sudo<u64>(static_cast<u32>(sp));
 
 				if (temp_sp <= sp)
 				{
@@ -2013,7 +2018,7 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 			}
 		}
 
-		u64 addr = *vm::get_super_ptr<u64>(static_cast<u32>(sp + 16));
+		u64 addr = *_sudo<u64>(static_cast<u32>(sp + 16));
 
 		if (skip_single_frame)
 		{
@@ -2029,7 +2034,7 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 			break;
 		}
 
-		const u64 temp_sp = *vm::get_super_ptr<u64>(static_cast<u32>(sp));
+		const u64 temp_sp = *_sudo<u64>(static_cast<u32>(sp));
 
 		if (temp_sp <= sp)
 		{
@@ -2377,13 +2382,21 @@ void ppu_thread::exec_task()
 	// Ensure correct state before executing JIT code
 	pthread_jit_write_protect_np(true);
 #endif
-	// Set some localized process attributes
-	const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
+	if (sdk_version == umax)
+	{
+		// Set some localized process attributes
+		const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
 
-	has_root_perm = process->has_root_perm();
-	has_debug_or_root_perm = process->debug_or_root();
-	has_ppc_seg = process->ppc_seg;
-	sdk_version = process->sdk_ver;
+		has_root_perm = process->has_root_perm();
+		has_debug_or_root_perm = process->debug_or_root();
+		has_ppc_seg = process->ppc_seg;
+		sdk_version = process->sdk_ver;
+		vm_owner = process->memory_4GB_model;
+	}
+
+	vm_base = ensure(vm::g_base_addr);
+	vm_sudo = ensure(vm::g_sudo_addr);
+	vm_exec = ensure(vm::g_exec_addr);
 
 	if (g_cfg.core.ppu_decoder != ppu_decoder_type::_static)
 	{
@@ -4855,8 +4868,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 			code_size_until_jump = buf_end - buf_start;
 
 			c.add(x86::edx, seg0);
-			c.movabs(x86::rax, reinterpret_cast<u64>(&vm::g_exec_addr));
-			c.mov(x86::rax, x86::qword_ptr(x86::rax));
+			c.mov(x86::rax, x86::qword_ptr(x86::rbp, ::offset32(&ppu_thread::vm_exec)));
 			c.mov(x86::dword_ptr(x86::rbp, ::offset32(&ppu_thread::cia)), x86::edx);
 
 			c.mov(x86::rcx, x86::qword_ptr(x86::rax, x86::rdx, 1, 0)); // Load call target

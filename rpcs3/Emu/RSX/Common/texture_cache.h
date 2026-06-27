@@ -2679,7 +2679,7 @@ namespace rsx
 				// Confirm if the pages actually exist in vm
 				if (get_location(base_address) == CELL_GCM_LOCATION_LOCAL)
 				{
-					const auto vram_end = rsx::get_current_renderer()->local_mem_size + rsx::constants::local_mem_base;
+					const auto vram_end = rsx::get_current_renderer()->lv2_rsx_process->local_mem_size + rsx::constants::local_mem_base;
 					if (heuristic_end > vram_end)
 					{
 						// Outside available VRAM area

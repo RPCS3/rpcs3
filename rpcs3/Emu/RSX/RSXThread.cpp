@@ -18,6 +18,7 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/timers.hpp"
 #include "Emu/Cell/lv2/sys_event.h"
+#include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/lv2/sys_time.h"
 #include "Emu/Cell/Modules/cellGcmSys.h"
 #include "util/serialization_ext.hpp"
@@ -139,7 +140,9 @@ namespace rsx
 		case CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER:
 		case CELL_GCM_LOCATION_LOCAL:
 		{
-			if (offset < render->local_mem_size && render->local_mem_size - offset >= size_to_check)
+			const u32 local_size = render->lv2_rsx_process->local_mem_size;
+
+			if (offset < local_size && local_size - offset >= size_to_check)
 			{
 				return rsx::constants::local_mem_base + offset;
 			}
@@ -243,7 +246,7 @@ namespace rsx
 		{
 			if (offset < 0x100000 /*&& (offset % 0x10) == 0*/)
 			{
-				return render->lv2_context->device_addr + offset;
+				return render->lv2_rsx_process->device_addr[8] + offset;
 			}
 
 			// TODO: What happens here? It could wrap around or access other segments of rsx internal memory etc
@@ -382,7 +385,7 @@ namespace rsx
 			// The alternative would be re-iterating again over all of them
 			if (get_location(real_offset_address) == CELL_GCM_LOCATION_LOCAL)
 			{
-				if (utils::add_saturate<u32>(real_offset_address - rsx::constants::local_mem_base, (_max_index + 1) * attribute_stride) <= render->local_mem_size)
+				if (utils::add_saturate<u32>(real_offset_address - rsx::constants::local_mem_base, (_max_index + 1) * attribute_stride) <= render->lv2_rsx_process->local_mem_size)
 				{
 					break;
 				}
@@ -917,6 +920,18 @@ namespace rsx
 		}
 	}
 
+	void thread::decide_rsx_context_queue(u64 game_priority, u64 operating_system_priority)
+	{
+		idm::select<lv2_rsx_context>([&](u32 id, u32 process, lv2_rsx_context& context)
+		{
+			if (lv2_context != &context)
+			{
+				lv2_context = &context;
+				lv2_rsx_process = ensure(idm::get_unlocked<lv2_obj, lv2_process>(process))->rsx_info.get();
+			}
+		});
+	}
+
 	void thread::post_vblank_event(u64 post_event_time)
 	{
 		vblank_count++;
@@ -938,7 +953,30 @@ namespace rsx
 		}
 		else
 		{
-			sys_rsx_context_attribute(0x55555555, 0xFED, 1, get_guest_system_time(post_event_time), 0, 0);
+			const u64 post_time = get_guest_system_time(post_event_time);
+
+			std::vector<std::pair<u32, u32>> process_context;
+
+			idm::select<lv2_rsx_context>([&](u32 id, u32 process, lv2_rsx_context&)
+			{
+				process_context.emplace_back(process, id);
+			});
+
+			// Save previous procxess ID
+			const u32 old_proc = id_manager::g_process;
+			const auto saved = std::make_tuple(vm::g_base_addr, vm::g_sudo_addr, vm::g_exec_addr, vm::g_stat_addr, vm::g_vm_image);
+
+			for (auto [process, id] : process_context)
+			{
+				id_manager::g_process = process;
+				id_manager::g_id = id;
+				const auto acquired = lv2_process::acquire_globals(process);
+				sys_rsx_context_attribute(idm::last_id<lv2_rsx_context>(), 0xFED, 1, get_guest_system_time(post_event_time), 0, 0);
+			}
+
+			// Restore
+			id_manager::g_process = old_proc;
+			std::tie(vm::g_base_addr, vm::g_sudo_addr, vm::g_exec_addr, vm::g_stat_addr, vm::g_vm_image) = saved;
 		}
 	}
 
@@ -988,7 +1026,7 @@ namespace rsx
 
 		performance_counters.state = FIFO::state::empty;
 
-		const u64 event_flags = lv2_context->unsent_gcm_events.exchange(0);
+		const u64 event_flags = lv2_context ? lv2_context->unsent_gcm_events.exchange(0) : 0;
 
 		if (Emu.IsStarting())
 		{
@@ -1012,8 +1050,10 @@ namespace rsx
 				return;
 			}
 
-			thread_ctrl::wait_for(1000);
+			cpu_wait({});
 		}
+
+		decide_rsx_context_queue(0, 0);
 
 		performance_counters.state = FIFO::state::running;
 
@@ -1290,7 +1330,7 @@ namespace rsx
 		{
 			std::lock_guard lock(m_mtx_task);
 
-			m_invalidated_memory_range = utils::address_range32::start_end(0x2 << 28, constants::local_mem_base + local_mem_size - 1);
+			m_invalidated_memory_range = utils::address_range32::start_end(0x2 << 28, constants::local_mem_base + lv2_rsx_process->local_mem_size - 1);
 			handle_invalidated_memory_range();
 		}
 	}
@@ -2498,16 +2538,18 @@ namespace rsx
 		m_graphics_state |= pipeline_state::all_dirty;
 	}
 
-	void thread::init(shared_ptr<lv2_rsx_context> _lv2_context)
+	void thread::init(shared_ptr<lv2_rsx_context> _lv2_context, std::shared_ptr<lv2_rsx_process_info> _lv2_rsx_process, u32 id)
 	{
 		ctrl = vm::_ptr<RsxDmaControl>(_lv2_context->dma_address);
 		flip_status = CELL_GCM_DISPLAY_FLIP_STATUS_DONE;
 		fifo_ret_addr = RSX_CALL_STACK_EMPTY;
 
-		vm::write32(_lv2_context->device_addr + 0x30, 1);
+		vm::write32(_lv2_rsx_process->device_addr[8] + 0x30, 1);
 		std::memset(_lv2_context->display_buffers, 0, sizeof(_lv2_context->display_buffers));
 
 		lv2_context = _lv2_context.get();
+		lv2_rsx_process = _lv2_rsx_process.get();
+		lv2_context_id = id;
 	}
 
 	std::pair<u32, u32> thread::calculate_memory_requirements(const vertex_input_layout& layout, u32 first_vertex, u32 vertex_count)
@@ -3028,6 +3070,12 @@ namespace rsx
 		if (address < rsx::constants::local_mem_base)
 		{
 			const auto rsx_context = get_rsx_process_context();
+
+			if (!rsx_context)
+			{
+				return;
+			}
+
 			auto& iomap_tbl = rsx_context->iomap_table;
 
 			// Each bit represents io entry to be unmapped
@@ -3503,7 +3551,7 @@ namespace rsx
 		{
 			if (!isHLE)
 			{
-				sys_rsx_context_attribute(0x55555555, 0xFEC, buffer, 0, 0, 0);
+				sys_rsx_context_attribute(lv2_context_id, 0xFEC, buffer, 0, 0, 0);
 
 				if (lv2_context->unsent_gcm_events)
 				{
@@ -3760,12 +3808,10 @@ namespace rsx
 		ensure(id_manager::g_process);
 
 		idm::select<lv2_rsx_context>([&](u32 id, lv2_rsx_context&)
-			{
-				ensure(!to_put);
+		{
+			ensure(!to_put);
 
-				to_put = idm::get_unlocked<lv2_rsx_context>(id);
-			});
-
-		ensure(to_put);
+			to_put = idm::get_unlocked<lv2_rsx_context>(id);
+		});
 	}
 } // namespace rsx

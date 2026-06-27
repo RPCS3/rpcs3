@@ -775,7 +775,7 @@ extern u32 ppu_get_exported_func_addr(u32 fnid, const std::string& module_name)
 	return g_fxo->get<ppu_linkage_info>().find_or_construct(module_name, ensure(id_manager::g_process)).functions[fnid].export_addr;
 }
 
-extern bool ppu_register_library_lock(std::string_view libname, bool lock_lib)
+extern bool ppu_register_library_lock(std::string_view libname, bool lock_lib, bool is_mutex_locked)
 {
 	auto link = g_fxo->try_get<ppu_linkage_info>();
 
@@ -786,7 +786,9 @@ extern bool ppu_register_library_lock(std::string_view libname, bool lock_lib)
 
 	const u32 pid = ensure(id_manager::g_process);
 
-	reader_lock lock(link->mutex);
+	shared_mutex dummy{};
+
+	reader_lock lock(is_mutex_locked ? dummy : link->mutex);
 
 	if (auto it = link->find(libname, pid); it != link->modules.cend())
 	{
@@ -873,7 +875,7 @@ static auto ppu_load_exports(const ppu_module<lv2_obj>& _module, ppu_linkage_inf
 		{
 			if (::at32(*loaded_flags, unload_index))
 			{
-				ppu_register_library_lock(module_name, false);
+				ppu_register_library_lock(module_name, false, true);
 			}
 
 			continue;
@@ -886,7 +888,7 @@ static auto ppu_load_exports(const ppu_module<lv2_obj>& _module, ppu_linkage_inf
 			ppu_loader.error("Unexpected num_tlsvar (%u)!", lib.num_tlsvar);
 		}
 
-		const bool should_load = for_observing_callbacks || ppu_register_library_lock(module_name, true);
+		const bool should_load = for_observing_callbacks || ppu_register_library_lock(module_name, true, true);
 
 		if (loaded_flags)
 		{
@@ -1146,7 +1148,7 @@ static import_result_t ppu_load_imports(const ppu_module<lv2_obj>& _module, std:
 // For _sys_prx_register_module
 void ppu_manual_load_imports_exports(u32 imports_start, u32 imports_size, u32 exports_start, u32 exports_size, std::basic_string<char>& loaded_flags)
 {
-	ensure(cpu_thread::get_current<ppu_thread>());
+	ensure(id_manager::g_process);
 
 	const auto process = ensure(idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process));
 	auto& _main = *process;
@@ -2206,6 +2208,12 @@ shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2
 		}
 	}
 
+	if (!ar)
+	{
+		g_fxo->init<id_manager::id_map<lv2_memory_container>>();
+		g_fxo->init<id_manager::id_map<named_thread<ppu_thread>>>();
+		g_fxo->init<id_manager::id_map<lv2_obj>>();
+	}
 
 	// Set for delayed initialization in ppu_initialize()
 	const auto process_ptr = ar ? ensure(idm::get_unlocked<lv2_obj, lv2_process>(idm::last_id<lv2_process>())) : idm::make_ptr<lv2_obj, lv2_process>();
@@ -2835,6 +2843,8 @@ shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2
 		break;
 	}
 	}
+
+	const auto allows_VM_write_scope = lv2_process::acquire_globals(id_manager::g_process);
 
 	// Initialize main thread
 	ppu_thread_params p{};

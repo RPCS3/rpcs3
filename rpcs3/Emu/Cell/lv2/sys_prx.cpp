@@ -176,8 +176,6 @@ extern const std::map<std::string_view, int> g_prx_list
 	{ "libwmadec.sprx", 0 },
 };
 
-bool ppu_register_library_lock(std::string_view libname, bool lock_lib);
-
 extern error_code sysmoduleModuleStart(ppu_thread& ppu, u32 args, vm::ptr<void> argp);
 extern error_code sysmoduleModuleStop(ppu_thread& ppu);
 

@@ -1781,7 +1781,7 @@ void VKGSRender::do_local_task(rsx::FIFO::state state)
 		{
 			flush_command_queue(true);
 			rsx::display_flip_info_t info{};
-			info.buffer = lv2_context->current_display_buffer;
+			info.buffer = lv2_context ? lv2_context->current_display_buffer : 0;
 			flip(info);
 		}
 	}
