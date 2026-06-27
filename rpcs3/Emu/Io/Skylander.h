@@ -28,6 +28,7 @@ public:
 
 	bool remove_skylander(u8 sky_num);
 	u8 load_skylander(const std::array<u8, 0x40 * 0x10>& data, fs::file in_file);
+	void get_figure_info(u8 sky_num, u8& out_status, u16& out_id, u16& out_variant);
 
 protected:
 	shared_mutex sky_mutex;

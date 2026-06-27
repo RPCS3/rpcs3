@@ -305,6 +305,7 @@
      <addaction name="confRPCNAct"/>
      <addaction name="confClansAct"/>
      <addaction name="confIPCAct"/>
+     <addaction name="confSkyIPCAct"/>
     </widget>
     <widget class="QMenu" name="menuPortals">
      <property name="title">
@@ -1350,6 +1351,14 @@
    </property>
    <property name="toolTip">
     <string>Configure IPC</string>
+   </property>
+  </action>
+  <action name="confSkyIPCAct">
+   <property name="text">
+    <string>Skylanders Portal IPC</string>
+   </property>
+   <property name="toolTip">
+    <string>Configure Skylanders Portal IPC</string>
    </property>
   </action>
   <action name="actionLog_Viewer">
