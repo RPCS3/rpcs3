@@ -460,7 +460,7 @@ error_code sys_rsx_context_iomap(cpu_thread& cpu, u32 context_id, u64 io, u64 ea
 
 	const auto render = rsx::get_current_renderer();
 
-	if (!size || io & 0xFFFFF || size > 0x200'00000 || size > std::min<u64>(~io, ~size) || ea & 0xFFFFF || size & 0xFFFFF)
+	if (!size || io & 0xFFFFF || size > 0x200'00000 || size > std::min<u64>(~io, ~ea) || ea & 0xFFFFF || size & 0xFFFFF)
 	{
 		return CELL_EINVAL;
 	}

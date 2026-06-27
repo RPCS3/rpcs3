@@ -1146,7 +1146,7 @@ static import_result_t ppu_load_imports(const ppu_module<lv2_obj>& _module, std:
 // For _sys_prx_register_module
 void ppu_manual_load_imports_exports(u32 imports_start, u32 imports_size, u32 exports_start, u32 exports_size, std::basic_string<char>& loaded_flags)
 {
-	ensure(cpu_thread::get_current<ppu_thread>());
+	ensure(id_manager::g_process);
 
 	const auto process = ensure(idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process));
 	auto& _main = *process;
@@ -2206,6 +2206,12 @@ shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2
 		}
 	}
 
+	if (!ar)
+	{
+		g_fxo->init<id_manager::id_map<lv2_memory_container>>();
+		g_fxo->init<id_manager::id_map<named_thread<ppu_thread>>>();
+		g_fxo->init<id_manager::id_map<lv2_obj>>();
+	}
 
 	// Set for delayed initialization in ppu_initialize()
 	const auto process_ptr = ar ? ensure(idm::get_unlocked<lv2_obj, lv2_process>(idm::last_id<lv2_process>())) : idm::make_ptr<lv2_obj, lv2_process>();
@@ -2835,6 +2841,8 @@ shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2
 		break;
 	}
 	}
+
+	const auto allows_VM_write_scope = lv2_process::acquire_globals(id_manager::g_process);
 
 	// Initialize main thread
 	ppu_thread_params p{};

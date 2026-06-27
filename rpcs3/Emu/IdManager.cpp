@@ -73,6 +73,12 @@ id_manager::id_key* idm::allocate_id(std::span<id_manager::id_key> keys, u32& hi
 		return &(keys[highest_index++] = (id_manager::id_key(_next, type_id, dst_id.owning_process)));
 	}
 
+	// id_map is not initialized
+	if (highest_index == 0xCCCCCCCC)
+	{
+		fmt::throw_exception("id_map() is not initialized!");
+	}
+
 	// Check all IDs starting from "next id" (TODO)
 	for (u32 i = 0, next = base; i < count; i++, next += step)
 	{

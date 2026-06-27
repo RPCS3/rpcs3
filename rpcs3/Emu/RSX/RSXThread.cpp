@@ -988,7 +988,7 @@ namespace rsx
 
 		performance_counters.state = FIFO::state::empty;
 
-		const u64 event_flags = lv2_context->unsent_gcm_events.exchange(0);
+		const u64 event_flags = lv2_context ? lv2_context->unsent_gcm_events.exchange(0) : 0;
 
 		if (Emu.IsStarting())
 		{

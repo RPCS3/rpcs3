@@ -220,7 +220,9 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 	c.mov(x86::qword_ptr(args[0], ::offset32(&ppu_thread::hv_ctx, &rpcs3::hypervisor_context_t::regs)), x86::rsp);
 
 	// Initialize args
-	c.movabs(x86::r13, reinterpret_cast<u64>(&vm::g_exec_addr));
+	asmjit::emit_get_thread_pointer(c, x86::r15);
+	c.mov(x86::r13, x86::r15);
+	c.add(x86::r13, utils::get_thread_storage_offset(&vm::g_exec_addr));
 	c.mov(x86::r13, x86::qword_ptr(x86::r13));
 	c.mov(x86::rbp, args[0]);
 	c.mov(x86::edx, x86::dword_ptr(x86::rbp, ::offset32(&ppu_thread::cia))); // Load PC
@@ -233,7 +235,8 @@ const auto ppu_gateway = build_function_asm<void(*)(ppu_thread*)>("ppu_gateway",
 	c.shl(x86::edx, 13);
 	c.mov(x86::r12d, x86::edx); // Set relocation base
 
-	c.movabs(x86::rbx, reinterpret_cast<u64>(&vm::g_base_addr));
+	c.mov(x86::rbx, x86::r15);
+	c.add(x86::rbx, utils::get_thread_storage_offset(&vm::g_base_addr));
 	c.mov(x86::rbx, x86::qword_ptr(x86::rbx));
 	c.mov(x86::r14, x86::qword_ptr(x86::rbp, ::offset32(&ppu_thread::gpr, 0))); // Load some registers
 	c.mov(x86::rsi, x86::qword_ptr(x86::rbp, ::offset32(&ppu_thread::gpr, 1)));

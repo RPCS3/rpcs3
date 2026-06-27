@@ -503,9 +503,9 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		return;
 	}
 
-	u32 buffer_width = lv2_context->display_buffers[info.buffer].width;
-	u32 buffer_height = lv2_context->display_buffers[info.buffer].height;
-	u32 buffer_pitch = lv2_context->display_buffers[info.buffer].pitch;
+	u32 buffer_width = lv2_context ? +lv2_context->display_buffers[info.buffer].width : 0;
+	u32 buffer_height = lv2_context ? +lv2_context->display_buffers[info.buffer].height : 0;
+	u32 buffer_pitch = lv2_context ? +lv2_context->display_buffers[info.buffer].pitch : 0;
 
 	u32 av_format;
 	const auto& avconfig = g_fxo->get<rsx::avconf>();
@@ -537,7 +537,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	vk::viewable_image* image_to_flip = nullptr;
 	vk::viewable_image* image_to_flip2 = nullptr;
 
-	if (info.buffer < lv2_context->display_buffers_count && buffer_width && buffer_height)
+	if (lv2_context && info.buffer < lv2_context->display_buffers_count && buffer_width && buffer_height)
 	{
 		vk::present_surface_info present_info
 		{
