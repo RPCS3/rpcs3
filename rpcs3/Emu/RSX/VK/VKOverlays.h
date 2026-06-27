@@ -141,6 +141,9 @@ namespace vk
 		std::unordered_map<u64, std::unique_ptr<vk::image_view>> temp_view_cache;
 		rsx::overlays::primitive_type m_current_primitive_type = rsx::overlays::primitive_type::quad_list;
 
+		static constexpr u32 vertex_push_constants_size = 68;
+		static constexpr u32 fragment_push_constants_size = 60;
+
 		ui_overlay_renderer();
 
 		void upload_simple_texture(vk::image* tex, vk::command_buffer& cmd,
@@ -176,6 +179,9 @@ namespace vk
 		color4f clear_color = { 0.f, 0.f, 0.f, 0.f };
 		color4f colormask = { 1.f, 1.f, 1.f, 1.f };
 		VkRect2D region = {};
+
+		static constexpr u32 vertex_push_constants_size = 32;
+		static_assert(vertex_push_constants_size == (sizeof(clear_color) + sizeof(colormask)));
 
 		attachment_clear_pass();
 
@@ -224,6 +230,8 @@ namespace vk
 		}
 		config = {};
 
+		static constexpr u32 fragment_push_constants_size = 112;
+
 		video_out_calibration_pass();
 
 		std::vector<vk::glsl::program_input> get_fragment_inputs() override;
@@ -241,7 +249,7 @@ namespace vk
 	template<class T>
 	T* get_overlay_pass()
 	{
-		u32 index = stx::typeindex<id_manager::typeinfo, T>();
+		const u32 index = stx::typeindex<id_manager::typeinfo, T>();
 		auto& e = g_overlay_passes[index];
 
 		if (!e)
