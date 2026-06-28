@@ -2368,7 +2368,7 @@ std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u
 	{
 		// Search for BRSL LR and BRASL LR or BR
 		// TODO: BISL
-		const v128 inst = read_from_ptr<be_t<v128>>(ls.data(), i - base_addr);
+		const v128 inst = read_from_ptr<be_t<v128>>(ls, i - base_addr);
 		const v128 cleared_i16 = gv_and32(inst, v128::from32p(std::rotl<u32>(~0xffff, 7)));
 		const v128 eq_brsl = gv_eq32(cleared_i16, v128::from32p(0x66u << 23));
 		const v128 eq_brasl = gv_eq32(cleared_i16, brasl_mask);

@@ -503,8 +503,8 @@ namespace rpcn
 					{
 						if (msg.size() == 6)
 						{
-							const u32 new_addr_sig = read_from_ptr<le_t<u32>>(&msg[0]);
-							const u16 new_port_sig = read_from_ptr<be_t<u16>>(&msg[4]);
+							const u32 new_addr_sig = read_from_ptr<le_t<u32>>(msg, 0);
+							const u16 new_port_sig = read_from_ptr<be_t<u16>>(msg, 4);
 							const u32 old_addr_sig = addr_sig;
 							const u32 old_port_sig = port_sig;
 
@@ -533,7 +533,7 @@ namespace rpcn
 							// We don't really need ipv6 info stored so we just update the pong data
 							// std::array<u8, 16> new_ipv6_addr;
 							// std::memcpy(new_ipv6_addr.data(), &msg[3], 16);
-							// const u32 new_ipv6_port = read_from_ptr<be_t<u16>>(&msg[16]);
+							// const u32 new_ipv6_port = read_from_ptr<be_t<u16>>(msg, 16);
 
 							last_pong_time_ipv6 = now;
 						}
@@ -626,9 +626,9 @@ namespace rpcn
 		}
 
 		const u8 packet_type = header[0];
-		const auto command = static_cast<rpcn::CommandType>(static_cast<u16>(read_from_ptr<le_t<u16>>(&header[1])));
-		const u32 packet_size = read_from_ptr<le_t<u32>>(&header[3]);
-		const u64 packet_id = read_from_ptr<le_t<u64>>(&header[7]);
+		const auto command = static_cast<rpcn::CommandType>(static_cast<u16>(read_from_ptr<le_t<u16>>(header, 1)));
+		const u32 packet_size = read_from_ptr<le_t<u32>>(header, 3);
+		const u64 packet_id = read_from_ptr<le_t<u64>>(header, 7);
 
 		if (packet_size < RPCN_HEADER_SIZE)
 			return error_and_disconnect("Invalid packet size");

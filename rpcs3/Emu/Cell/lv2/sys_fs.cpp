@@ -658,7 +658,7 @@ void lv2_file::save(utils::serial& ar)
 			sys_fs.error("Read less than expected! (new-size=0x%x)", read_size);
 			stats.size = read_size;
 			ar.data.resize(old_end + stats.size);
-			write_to_ptr<fs::stat_t>(&ar.data[patch_stats_pos], stats);
+			write_to_ptr<fs::stat_t>(ar.data, patch_stats_pos, stats);
 		}
 	}
 
