@@ -280,7 +280,8 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 				}
 			}
 
-			if (std::is_same_v<T, turntable_btn> && (static_cast<turntable_btn>(i) == turntable_btn::crossfader || static_cast<turntable_btn>(i) == turntable_btn::effects_dial))
+			if ((std::is_same_v<T, turntable_btn> && (static_cast<turntable_btn>(i) == turntable_btn::crossfader || static_cast<turntable_btn>(i) == turntable_btn::effects_dial || static_cast<turntable_btn>(i) == turntable_btn::right_turntable)) ||
+				(std::is_same_v<T, ghltar_btn> && (static_cast<ghltar_btn>(i) == ghltar_btn::whammy || static_cast<ghltar_btn>(i) == ghltar_btn::tilt)))
 			{
 				for (int p = static_cast<int>(pad_button::motion_x); p < static_cast<int>(pad_button::pad_motion_max_enum); p++)
 				{
