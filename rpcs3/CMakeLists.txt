@@ -193,6 +193,7 @@ if(BUILD_RPCS3_TESTS)
             tests/test_rsx_fp_asm.cpp
             tests/test_dmux_pamf.cpp
             tests/test_spu_analyser.cpp
+            tests/test_types_util.cpp
     )
 
     target_link_libraries(rpcs3_test

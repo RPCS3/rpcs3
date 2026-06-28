@@ -1189,11 +1189,27 @@ constexpr T read_from_ptr(U&& array, usz pos = 0)
 {
 	// TODO: ensure array element types are trivial
 	static_assert(sizeof(T) % sizeof(array[0]) == 0);
-	std::decay_t<decltype(array[0])> buf[sizeof(T) / sizeof(array[0])];
+	constexpr usz elements_per_value = sizeof(T) / sizeof(array[0]);
+
+	std::decay_t<decltype(array[0])> buf[elements_per_value];
+
 	if (!std::is_constant_evaluated())
+	{
+		if constexpr (requires { std::size(array); })
+		{
+			ensure((pos + elements_per_value) <= std::size(array));
+		}
+
 		std::memcpy(+buf, &array[pos], sizeof(buf));
+	}
 	else
-		for (usz i = 0; i < pos; buf[i] = array[pos + i], i++);
+	{
+		// We could add an ensure or static_assert for OOB, but lucky for us, the [] operator will not compile with OOB.
+		for (usz i = 0; i < elements_per_value; i++)
+		{
+			buf[i] = array[pos + i];
+		}
+	}
 	return std::bit_cast<T>(buf);
 }
 
@@ -1201,20 +1217,42 @@ template <typename T, typename U>
 constexpr void write_to_ptr(U&& array, usz pos, const T& value)
 {
 	static_assert(sizeof(T) % sizeof(array[0]) == 0);
+	constexpr usz elements_per_value = sizeof(T) / sizeof(array[0]);
+
+	if constexpr (requires { std::size(array); })
+	{
+		ensure((pos + elements_per_value) <= std::size(array));
+	}
+
 	if (!std::is_constant_evaluated())
+	{
 		std::memcpy(static_cast<void*>(&array[pos]), &value, sizeof(value));
+	}
 	else
+	{
 		ensure(!"Unimplemented");
+	}
 }
 
 template <typename T, typename U>
 constexpr void write_to_ptr(U&& array, const T& value)
 {
 	static_assert(sizeof(T) % sizeof(array[0]) == 0);
+	constexpr usz elements_per_value = sizeof(T) / sizeof(array[0]);
+
+	if constexpr (requires { std::size(array); })
+	{
+		ensure(elements_per_value <= std::size(array));
+	}
+
 	if (!std::is_constant_evaluated())
+	{
 		std::memcpy(static_cast<void*>(&array[0]), &value, sizeof(value));
+	}
 	else
+	{
 		ensure(!"Unimplemented");
+	}
 }
 
 constexpr struct aref_tag_t{} aref_tag{};
