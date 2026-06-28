@@ -14,7 +14,6 @@
 #include <QCompleter>
 
 skylander_dialog* skylander_dialog::inst = nullptr;
-std::optional<std::tuple<u8, u16, u16>> skylander_dialog::sky_slots[UI_SKY_NUM];
 QString last_skylander_path;
 
 static const std::map<const std::pair<const u16, const u16>, const std::string> list_skylanders = {
@@ -730,6 +729,11 @@ skylander_dialog::skylander_dialog(QWidget* parent)
 	setLayout(vbox_panel);
 
 	update_edits();
+
+	m_update_timer = new QTimer(this);
+	m_update_timer->setInterval(500);
+	connect(m_update_timer, &QTimer::timeout, this, &skylander_dialog::update_edits);
+	m_update_timer->start();
 }
 
 skylander_dialog::~skylander_dialog()
@@ -747,13 +751,8 @@ skylander_dialog* skylander_dialog::get_dlg(QWidget* parent)
 
 void skylander_dialog::clear_skylander(u8 slot)
 {
-	if (const auto& slot_infos = sky_slots[slot])
-	{
-		const auto& [cur_slot, id, var] = slot_infos.value();
-		g_skyportal.remove_skylander(cur_slot);
-		sky_slots[slot] = {};
-		update_edits();
-	}
+	g_skyportal.remove_skylander(slot);
+	update_edits();
 }
 
 void skylander_dialog::create_skylander(u8 slot)
@@ -795,13 +794,7 @@ void skylander_dialog::load_skylander_path(u8 slot, const QString& path)
 	}
 
 	clear_skylander(slot);
-
-	u16 sky_id  = reinterpret_cast<le_t<u16>&>(data[0x10]);
-	u16 sky_var = reinterpret_cast<le_t<u16>&>(data[0x1C]);
-
-	u8 portal_slot  = g_skyportal.load_skylander(data.data(), std::move(sky_file));
-	sky_slots[slot] = std::tuple(portal_slot, sky_id, sky_var);
-
+	g_skyportal.load_skylander(data.data(), std::move(sky_file));
 	update_edits();
 }
 
@@ -810,9 +803,11 @@ void skylander_dialog::update_edits()
 	for (auto i = 0; i < UI_SKY_NUM; i++)
 	{
 		QString display_string;
-		if (const auto& sd = sky_slots[i])
+		u8 status;
+		u16 sky_id, sky_var;
+		g_skyportal.get_figure_info(static_cast<u8>(i), status, sky_id, sky_var);
+		if (status & 1)
 		{
-			const auto& [portal_slot, sky_id, sky_var] = sd.value();
 			const auto found_sky = list_skylanders.find(std::make_pair(sky_id, sky_var));
 			if (found_sky != list_skylanders.cend())
 			{

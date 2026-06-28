@@ -1,10 +1,10 @@
 #pragma once
 
-#include <optional>
 #include "util/types.hpp"
 
 #include <QDialog>
 #include <QLineEdit>
+#include <QTimer>
 
 constexpr auto UI_SKY_NUM = 8;
 
@@ -42,8 +42,8 @@ protected:
 
 protected:
 	QLineEdit* edit_skylanders[UI_SKY_NUM]{};
-	static std::optional<std::tuple<u8, u16, u16>> sky_slots[UI_SKY_NUM];
 
 private:
+	QTimer* m_update_timer;
 	static skylander_dialog* inst;
 };
