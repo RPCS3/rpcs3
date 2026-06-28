@@ -207,8 +207,8 @@ void sky_portal::get_figure_info(u8 sky_num, u8& out_status, u16& out_id, u16& o
 	out_status = s.status;
 	if (s.status & 1)
 	{
-		out_id      = read_from_ptr<le_t<u16>>(s.data.data() + 0x10);
-		out_variant = read_from_ptr<le_t<u16>>(s.data.data() + 0x1C);
+		out_id      = read_from_ptr<le_t<u16>>(s.data, 0x10);
+		out_variant = read_from_ptr<le_t<u16>>(s.data, 0x1C);
 	}
 	else
 	{
