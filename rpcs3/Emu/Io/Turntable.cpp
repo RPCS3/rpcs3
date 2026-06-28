@@ -296,4 +296,27 @@ void usb_device_turntable::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpo
 				break;
 			}
 		});
+
+	cfg->handle_motion_input(pad, [&buf](turntable_btn btn, pad_button /*pad_btn*/, u16 value, bool /*pressed*/, bool& /*abort*/)
+	{
+		switch (btn)
+		{
+		case turntable_btn::crossfader:
+		{
+			const u16 v = value & 0x03FF; // ensure 10-bit range
+			buf[21] = (v & 0xFF);         // Crossfader, lower 8 bits
+			buf[22] = (v >> 8) & 0x03;    // Crossfader, upper 2 bits
+			break;
+		}
+		case turntable_btn::effects_dial:
+		{
+			const u16 v = value & 0x03FF; // ensure 10-bit range
+			buf[19] = (v & 0xFF);         // Effects Dial, lower 8 bits
+			buf[20] = (v >> 8) & 0x03;    // Effects Dial, upper 2 bits
+			break;
+		}
+		default:
+			break;
+		}
+	});
 }

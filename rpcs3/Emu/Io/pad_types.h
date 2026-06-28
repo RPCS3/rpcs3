@@ -44,6 +44,13 @@ enum class pad_button : u8
 
 	pad_button_max_enum,
 
+	motion_x,
+	motion_y,
+	motion_z,
+	motion_g,
+
+	pad_motion_max_enum,
+
 	// Special buttons for mouse input
 	mouse_button_1,
 	mouse_button_2,

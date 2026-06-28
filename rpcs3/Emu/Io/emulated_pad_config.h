@@ -90,14 +90,14 @@ public:
 
 	void handle_input(std::shared_ptr<Pad> pad, bool press_only, const std::function<void(T, pad_button, u16, bool, bool&)>& func) const
 	{
-		if (!pad || pad->is_copilot())
+		if (!func || !pad || pad->is_copilot())
 			return;
 
 		for (const ButtonExternal& button : pad->m_buttons_external)
 		{
 			if (button.m_pressed || !press_only)
 			{
-				if (handle_input(func, button.m_offset, button.m_outKeyCode, button.m_value, button.m_pressed, true))
+				if (handle_input_internal(func, button.m_offset, button.m_outKeyCode, button.m_value, button.m_pressed, true))
 				{
 					return;
 				}
@@ -106,7 +106,21 @@ public:
 
 		for (const AnalogStickExternal& stick : pad->m_sticks_external)
 		{
-			if (handle_input(func, stick.m_offset, get_axis_keycode(stick.m_offset, stick.m_value), stick.m_value, true, true))
+			if (handle_input_internal(func, stick.m_offset, get_axis_keycode(stick.m_offset, stick.m_value), stick.m_value, true, true))
+			{
+				return;
+			}
+		}
+	}
+
+	void handle_motion_input(std::shared_ptr<Pad> pad, const std::function<void(T, pad_button, u16, bool, bool&)>& func) const
+	{
+		if (!func || !pad || pad->is_copilot())
+			return;
+
+		for (const AnalogSensor& sensor : pad->m_sensors)
+		{
+			if (handle_input_internal(func, sensor.m_offset, sensor.m_keyCode, sensor.m_value, true, false))
 			{
 				return;
 			}
@@ -124,7 +138,7 @@ public:
 				const u32 offset = pad_button_offset(button);
 				const u32 keycode = pad_button_keycode(button);
 
-				if (handle_input(func, offset, keycode, 255, true, true))
+				if (handle_input_internal(func, offset, keycode, 255, true, true))
 				{
 					return;
 				}
@@ -173,11 +187,11 @@ protected:
 		return empty_set;
 	}
 
-	bool handle_input(const std::function<void(T, pad_button, u16, bool, bool&)>& func, u32 offset, u32 keycode, u16 value, bool pressed, bool check_axis) const
+	bool handle_input_internal(const std::function<void(T, pad_button, u16, bool, bool&)>& func, u32 offset, u32 keycode, u16 value, bool pressed, bool check_axis) const
 	{
-		m_mutex.lock();
+		if (!func) return false;
 
-		bool abort = false;
+		m_mutex.lock();
 
 		const auto& btns = find_button(offset, keycode);
 		if (btns.empty())
@@ -192,18 +206,19 @@ protected:
 				case CELL_PAD_BTN_OFFSET_ANALOG_LEFT_Y:
 				case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X:
 				case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y:
-					abort = handle_input(func, offset, static_cast<u32>(axis_direction::both), value, pressed, false);
-					break;
+					return handle_input_internal(func, offset, static_cast<u32>(axis_direction::both), value, pressed, false);
 				default:
 					break;
 				}
 			}
-			return abort;
+			return false;
 		}
+
+		bool abort = false;
 
 		for (const auto& btn : btns)
 		{
-			if (btn && func)
+			if (btn)
 			{
 				func(btn->btn_id(), btn->get(), value, pressed, abort);
 				if (abort) break;
