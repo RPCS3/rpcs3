@@ -280,6 +280,18 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 				}
 			}
 
+			if (std::is_same_v<T, turntable_btn> && (static_cast<turntable_btn>(i) == turntable_btn::crossfader || static_cast<turntable_btn>(i) == turntable_btn::effects_dial))
+			{
+				for (int p = static_cast<int>(pad_button::motion_x); p < static_cast<int>(pad_button::pad_motion_max_enum); p++)
+				{
+					const QString translated = localized_emu::translated_pad_button(static_cast<pad_button>(p));
+					combo->addItem(translated);
+					const int index = combo->findText(translated);
+					combo->setItemData(index, p, button_role::button);
+					combo->setItemData(index, i, button_role::emulated_button);
+				}
+			}
+
 			pad_button saved_btn_id = pad_button::pad_button_max_enum;
 			switch (m_type)
 			{
