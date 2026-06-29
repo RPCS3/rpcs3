@@ -589,7 +589,7 @@ u32 ppu_read_mmio_aware_u32(u8* vm_base, u32 eal)
 	}
 
 	// Value is assumed to be swapped
-	return read_from_ptr<u32>(vm_base + eal);
+	return read_from_ptr<u32>(vm_base, eal);
 }
 
 void ppu_write_mmio_aware_u32(u8* vm_base, u32 eal, u32 value)
