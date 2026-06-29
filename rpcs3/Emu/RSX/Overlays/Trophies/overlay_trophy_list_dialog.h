@@ -20,6 +20,14 @@ namespace rsx
 			std::string path;
 		};
 
+		enum class trophy_sort_mode
+		{
+			game_default,
+			not_earned,
+			earned_date,
+			grade,
+		};
+
 		struct trophy_list_dialog : public user_interface
 		{
 		private:
@@ -29,6 +37,7 @@ namespace rsx
 			std::unique_ptr<overlay_element> m_dim_background;
 			std::unique_ptr<list_view> m_list;
 			std::unique_ptr<label> m_description;
+			std::unique_ptr<image_button> m_sort_button;
 			std::unique_ptr<image_button> m_show_hidden_trophies_button;
 
 			animation_color_interpolate fade_animation;
@@ -37,6 +46,8 @@ namespace rsx
 			atomic_t<bool> m_list_dirty { true };
 			bool m_show_hidden_trophies = false;
 			bool m_show_hidden_trophies_last = false;
+			trophy_sort_mode m_sort_mode = trophy_sort_mode::game_default;
+			trophy_sort_mode m_sort_mode_last = trophy_sort_mode::game_default;
 
 		public:
 			trophy_list_dialog();
