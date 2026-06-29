@@ -630,6 +630,13 @@ namespace fmt
 		thread_ctrl::emergency_exit(out);
 	}
 
+	[[noreturn]] void raw_verify_error(std::source_location loc, std::source_location propagated_loc, const char8_t* msg, usz object)
+	{
+		std::string out;
+		fmt::append(out, "%s (object: 0x%x)%s%s", msg ? msg : u8"Verification failed", object, loc, propagated_loc);
+		thread_ctrl::emergency_exit(out);
+	}
+
 	[[noreturn]] void raw_range_error(std::source_location loc, std::string_view index, usz container_size)
 	{
 		std::string out;
