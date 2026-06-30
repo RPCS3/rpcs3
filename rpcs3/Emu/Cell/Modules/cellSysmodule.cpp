@@ -336,11 +336,12 @@ namespace
 
 		be_t<u32> unk_addr;
 
-		std::optional<u32> mem_container_id;
+		u32 mem_container_id;
+		b8 use_mem_container;
 
-		std::array<module_state, MODULE_INFOS.size()> module_states;
+		module_state module_states[MODULE_INFOS.size()];
 
-		std::array<char, BASE_PATH_MAX_SIZE> module_base_path;
+		char module_base_path[BASE_PATH_MAX_SIZE];
 		u8 module_base_path_size;
 	};
 
@@ -365,7 +366,7 @@ template <CellSysmoduleModuleID module_id>
 		const vm::var<std::byte[]> boot_flag(8);
 		std::memset(boot_flag.get_ptr(), 0, boot_flag.get_count());
 
-		if (ret != CELL_OK || !read_from_ptr<bf_t<u64, 0, 1>>(paramsfo, 0x18))
+		if (ret != CELL_OK || !read_from_ptr<bf_t<u64, 0, 1>>(paramsfo.get_ptr(), 0x18))
 		{
 			const vm::var<u32> file_descriptor;
 
@@ -378,15 +379,15 @@ template <CellSysmoduleModuleID module_id>
 			ensure(sys_fs_read(ppu, *file_descriptor, boot_flag, 8, nread) == CELL_OK && *nread == 8ull); // Not checked on LLE
 			ensure(sys_fs_close(ppu, *file_descriptor) == CELL_OK); // Not checked on LLE
 
-			return !!read_from_ptr<bf_t<u64, 4, 1>>(boot_flag, 1);
+			return !!read_from_ptr<bf_t<u64, 4, 1>>(boot_flag.get_ptr(), 1);
 		}
 
-		return !read_from_ptr<bf_t<u64, 0, 1>>(paramsfo, 0x10);
+		return !read_from_ptr<bf_t<u64, 0, 1>>(paramsfo.get_ptr(), 0x10);
 	}
 	case CELL_SYSMODULE_GCM_SYS:
 	{
 		// If the extra load flag "EnableGCMDebug" is set, loads libgcm_sys_deh.sprx instead of libgcm_sys.sprx
-		return ret != CELL_OK || !read_from_ptr<bf_t<u64, 2, 1>>(paramsfo, 0x10);
+		return ret != CELL_OK || !read_from_ptr<bf_t<u64, 2, 1>>(paramsfo.get_ptr(), 0x10);
 	}
 	case CELL_SYSMODULE_FS:
 	{
@@ -427,11 +428,11 @@ static error_code load_module(ppu_thread& ppu, u8 module_idx, u32 args, vm::ptr<
 	if (loaded_count == 0)
 	{
 		const vm::var<char[]> module_path(72);
-		std::memcpy(module_path.get_ptr(), s_sysmodule_context->module_base_path.data(), s_sysmodule_context->module_base_path_size);
+		std::memcpy(module_path.get_ptr(), s_sysmodule_context->module_base_path, s_sysmodule_context->module_base_path_size);
 		std::memcpy(module_path.get_ptr() + s_sysmodule_context->module_base_path_size, path.data(), path.size() + 1);
 
-		const error_code ret = s_sysmodule_context->mem_container_id
-			? ppu_execute<&sys_prx_load_module_on_memcontainer>(ppu, +module_path, *s_sysmodule_context->mem_container_id, 0, vm::null)
+		const error_code ret = s_sysmodule_context->use_mem_container
+			? ppu_execute<&sys_prx_load_module_on_memcontainer>(ppu, +module_path, s_sysmodule_context->mem_container_id, 0, vm::null)
 			: ppu_execute<&sys_prx_load_module>(ppu, +module_path, 0, vm::null);
 
 		prx_id = ret;
@@ -536,7 +537,7 @@ extern error_code sysmoduleModuleStart(ppu_thread& ppu, u32 args, vm::ptr<void> 
 
 	cellSysmodule.notice("module_start(args=%d, argp=*0x%x)", args, argp);
 
-	s_sysmodule_context->mem_container_id.reset();
+	s_sysmodule_context->use_mem_container = false;
 
 	if (const vm::var<s64> auth_id; sys_ss_access_control_engine(1, sys_process_getpid(), auth_id.addr()) == CELL_OK)
 	{
@@ -578,7 +579,7 @@ extern error_code sysmoduleModuleStart(ppu_thread& ppu, u32 args, vm::ptr<void> 
 		{
 			if (module_id == CELL_SYSMODULE_GCM_SYS)
 			{
-				if (get_paramsfo_ret == CELL_OK && read_from_ptr<bf_t<u64, 6, 1>>(paramsfo, 0x10) && !retail_gcm_sys)
+				if (get_paramsfo_ret == CELL_OK && read_from_ptr<bf_t<u64, 6, 1>>(paramsfo.get_ptr(), 0x10) && !retail_gcm_sys)
 				{
 					if (load_module(ppu, GCM_SYS_DEH_IDX, 8, paramsfo + 0x28) != CELL_OK)
 					{
@@ -640,7 +641,7 @@ extern error_code sysmoduleModuleStart(ppu_thread& ppu, u32 args, vm::ptr<void> 
 		// Start the modules
 		for (const auto [module_id, prx_ix] : std::views::zip(DEFAULT_MODULES, std::span{ id_list.begin().get_ptr(), id_list.get_count() }))
 		{
-			if (module_id == CELL_SYSMODULE_GCM_SYS && read_from_ptr<bf_t<u64, 6, 1>>(paramsfo, 0x10) && !retail_gcm_sys)
+			if (module_id == CELL_SYSMODULE_GCM_SYS && read_from_ptr<bf_t<u64, 6, 1>>(paramsfo.get_ptr(), 0x10) && !retail_gcm_sys)
 			{
 				s_sysmodule_context->module_states[CELL_SYSMODULE_GCM_SYS].prx_id = static_cast<s32>(prx_ix);
 
@@ -690,7 +691,7 @@ extern error_code sysmoduleModuleStart(ppu_thread& ppu, u32 args, vm::ptr<void> 
 
 	// Load additional modules if certain ExtraLoadFlags are set
 
-	if (read_from_ptr<bf_t<u64, 6, 1>>(paramsfo, 0x10) && !retail_gcm_sys && read_from_ptr<bf_t<u64, 0, 1>>(paramsfo, 0x18))
+	if (read_from_ptr<bf_t<u64, 6, 1>>(paramsfo.get_ptr(), 0x10) && !retail_gcm_sys && read_from_ptr<bf_t<u64, 0, 1>>(paramsfo.get_ptr(), 0x18))
 	{
 		cellSysmoduleSetDebugmode(true);
 
@@ -702,7 +703,7 @@ extern error_code sysmoduleModuleStart(ppu_thread& ppu, u32 args, vm::ptr<void> 
 		cellSysmoduleSetDebugmode(false);
 	}
 
-	if (read_from_ptr<bf_t<u64, 3, 1>>(paramsfo, 0x10) && read_from_ptr<bf_t<u64, 0, 1>>(paramsfo, 0x18))
+	if (read_from_ptr<bf_t<u64, 3, 1>>(paramsfo.get_ptr(), 0x10) && read_from_ptr<bf_t<u64, 0, 1>>(paramsfo.get_ptr(), 0x18))
 	{
 		if (load_module(ppu, PROF_IDX, 0, vm::null) != CELL_OK)
 		{
@@ -710,7 +711,7 @@ extern error_code sysmoduleModuleStart(ppu_thread& ppu, u32 args, vm::ptr<void> 
 		}
 	}
 
-	if (read_from_ptr<bf_t<u64, 4, 1>>(paramsfo, 0x10))
+	if (read_from_ptr<bf_t<u64, 4, 1>>(paramsfo.get_ptr(), 0x10))
 	{
 		if (load_module(ppu, LV2COREDUMP_IDX, 0, vm::null) != CELL_OK)
 		{
@@ -718,7 +719,7 @@ extern error_code sysmoduleModuleStart(ppu_thread& ppu, u32 args, vm::ptr<void> 
 		}
 	}
 
-	if (read_from_ptr<bf_t<u64, 1, 1>>(paramsfo, 0x10))
+	if (read_from_ptr<bf_t<u64, 1, 1>>(paramsfo.get_ptr(), 0x10))
 	{
 		if (cellSysmoduleLoadModuleInternal(ppu, 0xf022) != CELL_OK)
 		{
@@ -764,18 +765,19 @@ error_code cellSysmoduleSetMemcontainer(ppu_thread& ppu, u32 ct_id)
 
 	if (ct_id == SYS_MEMORY_CONTAINER_ID_INVALID)
 	{
-		s_sysmodule_context->mem_container_id.reset();
+		s_sysmodule_context->use_mem_container = false;
 	}
 	else
 	{
 		if (const vm::var<sys_memory_info_t> memory_info;
 			sys_memory_container_get_size(ppu, +memory_info, ct_id) != CELL_OK || memory_info->available_user_memory < 0x60000)
 		{
-			s_sysmodule_context->mem_container_id.reset();
+			s_sysmodule_context->use_mem_container = false;
 			ensure(ppu_execute<&sys_lwmutex_unlock>(ppu, s_sysmodule_context.ptr(&sysmodule_context::mutex)) == CELL_OK); // Not checked on LLE
 			return CELL_SYSMODULE_ERROR_INVALID_MEMCONTAINER;
 		}
 
+		s_sysmodule_context->use_mem_container = true;
 		s_sysmodule_context->mem_container_id = ct_id;
 	}
 
@@ -1060,7 +1062,7 @@ error_code cellSysmoduleFetchImage(ppu_thread& ppu, u16 id, vm::ptr<void> image_
 	ensure(!!buf_size); // Not checked on LLE
 
 	if (const vm::var<char[]> path = (id & UNK_MODULE_ID_MASK) == 0 ? vm::make_str("/dev_flash/sys/external/flashATRAC.pic") : vm::make_str(""); // The second string is empty on LLE
-		(id & UNK_MODULE_ID_MASK) >= 1 || sys_fs_open(ppu, path, 0, file_descriptor, 0, vm::null, 0) != CELL_OK)
+		(id & UNK_MODULE_ID_MASK) >= 2 || sys_fs_open(ppu, path, 0, file_descriptor, 0, vm::null, 0) != CELL_OK)
 	{
 		*buf_size = 0;
 		return CELL_SYSMODULE_ERROR_FATAL;
@@ -1075,7 +1077,7 @@ error_code cellSysmoduleFetchImage(ppu_thread& ppu, u16 id, vm::ptr<void> image_
 		return CELL_SYSMODULE_ERROR_FATAL;
 	}
 
-	const s32 read_size = *buf_size <= sb->size ? static_cast<s32>(*buf_size) : static_cast<s32>(sb->size);
+	const u64 read_size = std::min<u64>(*buf_size, sb->size);
 
 	if (const vm::var<u64> nread; sys_fs_read(ppu, *file_descriptor, image_buf, read_size, nread) != CELL_OK)
 	{
@@ -1150,7 +1152,7 @@ error_code cellSysmoduleLoadModuleInternal(ppu_thread& ppu, u16 id)
 		std::memset(paramsfo.get_ptr(), 0, paramsfo.get_count());
 
 		if (ppu_execute<&sys_process_get_paramsfo>(ppu, +paramsfo) != CELL_OK
-			|| (!read_from_ptr<bf_t<u64, 0, 1>>(paramsfo, 0x18) && !read_from_ptr<bf_t<u64, 0, 1>>(paramsfo, 0x30)))
+			|| (!read_from_ptr<bf_t<u64, 0, 1>>(paramsfo.get_ptr(), 0x18) && !read_from_ptr<bf_t<u64, 0, 1>>(paramsfo.get_ptr(), 0x30)))
 		{
 			return CELL_SYSMODULE_ERROR_UNKNOWN;
 		}
@@ -1322,12 +1324,12 @@ error_code cellSysmoduleSetDebugmode(u32 debug_mode)
 
 	if (debug_mode == 1)
 	{
-		std::memcpy(s_sysmodule_context->module_base_path.data(), MODULE_BASE_PATH_DEBUG.data(), MODULE_BASE_PATH_DEBUG.size() + 1);
+		std::memcpy(s_sysmodule_context->module_base_path, MODULE_BASE_PATH_DEBUG.data(), MODULE_BASE_PATH_DEBUG.size() + 1);
 		s_sysmodule_context->module_base_path_size = static_cast<u8>(MODULE_BASE_PATH_DEBUG.size());
 	}
 	else
 	{
-		std::memcpy(s_sysmodule_context->module_base_path.data(), MODULE_BASE_PATH.data(), MODULE_BASE_PATH.size() + 1);
+		std::memcpy(s_sysmodule_context->module_base_path, MODULE_BASE_PATH.data(), MODULE_BASE_PATH.size() + 1);
 		s_sysmodule_context->module_base_path_size = static_cast<u8>(MODULE_BASE_PATH.size());
 	}
 
@@ -1369,7 +1371,7 @@ DECLARE(ppu_module_manager::cellSysmodule)("cellSysmodule", []()
 	REG_VAR(cellSysmodule, s_sysmodule_context).flag(MFF_HIDDEN).init = []
 	{
 		s_sysmodule_context->unk_addr = 0;
-		s_sysmodule_context->mem_container_id = std::nullopt;
+		s_sysmodule_context->use_mem_container = false;
 		std::ranges::fill(s_sysmodule_context->module_states, module_state{ .loaded_count = 0, .prx_id = -1 });
 		cellSysmoduleSetDebugmode(false);
 	};
