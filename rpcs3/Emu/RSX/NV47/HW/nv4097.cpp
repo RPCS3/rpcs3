@@ -187,7 +187,7 @@ namespace rsx
 				const u64 src_op2_2 = read_from_ptr<be_t<u64>>(fifo_span, second_index_off);
 
 				// Fast comparison
-				if (src_op1_2 != read_from_ptr<u64>(out_ptr, first_index_off) || src_op2_2 != read_from_ptr<u64>(out_ptr, second_index_off))
+				if (src_op1_2 != read_from_ptr_unsafe<u64>(out_ptr, first_index_off) || src_op2_2 != read_from_ptr_unsafe<u64>(out_ptr, second_index_off))
 				{
 					to_set_dirty = rsx::pipeline_state::vertex_program_ucode_dirty;
 				}
