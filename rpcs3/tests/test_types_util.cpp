@@ -77,7 +77,6 @@ namespace utils
 		// write_to_ptr and read_from_ptr with pos
 		std::array<u32, sizeof(u128) / sizeof(u32)> arr32_2{};
 
-		std::memset(arr32_2.data(), 0, arr32_2.size() * sizeof(u32));
 		for (u32 i = 0; i < arr32_2.size() * sizeof(u32); i += sizeof(u32))
 		{
 			const usz index = i / sizeof(u32);
@@ -86,7 +85,7 @@ namespace utils
 			EXPECT_EQ(read_from_ptr<u32>(arr32_2, index), i);
 		}
 
-		std::memset(arr32_2.data(), 0, arr32_2.size() * sizeof(u32));
+		arr32_2 = {};
 		for (u64 i = 0; i < arr32_2.size() * sizeof(u32); i += sizeof(u64))
 		{
 			const usz index = i / sizeof(u64);
@@ -95,7 +94,7 @@ namespace utils
 			EXPECT_EQ(read_from_ptr<u64>(arr32_2, index), i);
 		}
 
-		std::memset(arr32_2.data(), 0, arr32_2.size() * sizeof(u32));
+		arr32_2 = {};
 		for (usz i = 0; i < arr32_2.size() * sizeof(u32); i += sizeof(u128))
 		{
 			const usz index = i / sizeof(u128);
@@ -252,7 +251,7 @@ namespace utils
 #endif
 	}
 
-	TEST(Utils, read_write_to_ptr_raw_array)
+	TEST(Utils, read_write_to_ptr_unsafe)
 	{
 		g_headless = true; // Disable exception popups
 
@@ -261,13 +260,13 @@ namespace utils
 		u8* arr = new u8[arr_size];
 		std::memset(arr, 0, arr_size);
 
-		write_to_ptr(arr, u8(umax));
+		write_to_ptr_unsafe(arr, u8(umax));
 		EXPECT_EQ(*arr, u8(umax));
-		write_to_ptr(arr, u16(umax));
+		write_to_ptr_unsafe(arr, u16(umax));
 		EXPECT_EQ(*utils::bless<u16>(arr), u16(umax));
-		write_to_ptr(arr, u32(umax));
+		write_to_ptr_unsafe(arr, u32(umax));
 		EXPECT_EQ(*utils::bless<u32>(arr), u32(umax));
-		write_to_ptr(arr, u64(umax));
+		write_to_ptr_unsafe(arr, u64(umax));
 		EXPECT_EQ(*utils::bless<u64>(arr), u64(umax));
 
 		// write_to_ptr and read_from_ptr with pos
@@ -277,42 +276,42 @@ namespace utils
 		std::memset(arr2, 0, arr2_size);
 		for (u8 i = 0; i < arr2_size; i++)
 		{
-			write_to_ptr(arr2, i, i);
+			write_to_ptr_unsafe(arr2, i, i);
 			EXPECT_EQ(arr2[i], i);
-			EXPECT_EQ(read_from_ptr<u8>(arr2, i), i);
+			EXPECT_EQ(read_from_ptr_unsafe<u8>(arr2, i), i);
 		}
 
 		std::memset(arr2, 0, arr2_size);
 		for (u16 i = 0; i < arr2_size; i += sizeof(u16))
 		{
-			write_to_ptr(arr2, i, i);
+			write_to_ptr_unsafe(arr2, i, i);
 			EXPECT_EQ(*utils::bless<u16>(arr2 + i), i);
-			EXPECT_EQ(read_from_ptr<u16>(arr2, i), i);
+			EXPECT_EQ(read_from_ptr_unsafe<u16>(arr2, i), i);
 		}
 
 		std::memset(arr2, 0, arr2_size);
 		for (u32 i = 0; i < arr2_size; i += sizeof(u32))
 		{
-			write_to_ptr(arr2, i, i);
+			write_to_ptr_unsafe(arr2, i, i);
 			EXPECT_EQ(*utils::bless<u32>(arr2 + i), i);
-			EXPECT_EQ(read_from_ptr<u32>(arr2, i), i);
+			EXPECT_EQ(read_from_ptr_unsafe<u32>(arr2, i), i);
 		}
 
 		std::memset(arr2, 0, arr2_size);
 		for (usz i = 0; i < arr2_size; i += sizeof(u64))
 		{
-			write_to_ptr(arr2, i, u64(i));
+			write_to_ptr_unsafe(arr2, i, u64(i));
 			EXPECT_EQ(*utils::bless<u64>(arr2 + i), i);
-			EXPECT_EQ(read_from_ptr<u64>(arr2, i), i);
+			EXPECT_EQ(read_from_ptr_unsafe<u64>(arr2, i), i);
 		}
 
 		std::memset(arr2, 0, arr2_size);
 		for (usz i = 0; i < arr2_size; i += sizeof(u128))
 		{
-			write_to_ptr(arr2, i, u128(i));
+			write_to_ptr_unsafe(arr2, i, u128(i));
 			const u128 exp_u128 = i;
 			EXPECT_EQ(std::memcmp(arr2, &exp_u128, sizeof(u128)), 0);
-			const u128 val_u128 = read_from_ptr<u128>(arr2, i);
+			const u128 val_u128 = read_from_ptr_unsafe<u128>(arr2, i);
 			EXPECT_EQ(std::memcmp(&val_u128, &exp_u128, sizeof(u128)), 0);
 		}
 
@@ -322,9 +321,9 @@ namespace utils
 		u32* arr32 = new u32[arr32_count];
 		std::memset(arr32, 0, arr32_size);
 
-		write_to_ptr(arr32, u32(umax));
+		write_to_ptr_unsafe(arr32, u32(umax));
 		EXPECT_EQ(*utils::bless<u32>(arr32), u32(umax));
-		write_to_ptr(arr32, u64(umax));
+		write_to_ptr_unsafe(arr32, u64(umax));
 		EXPECT_EQ(*utils::bless<u64>(arr32), u64(umax));
 
 		// write_to_ptr and read_from_ptr with pos
@@ -336,56 +335,30 @@ namespace utils
 		for (u32 i = 0; i < arr32_2_size; i += sizeof(u32))
 		{
 			const usz index = i / sizeof(u32);
-			write_to_ptr(arr32_2, index, i);
+			write_to_ptr_unsafe(arr32_2, index, i);
 			EXPECT_EQ(*utils::bless<u32>(arr32_2 + index), i);
-			EXPECT_EQ(read_from_ptr<u32>(arr32_2, index), i);
+			EXPECT_EQ(read_from_ptr_unsafe<u32>(arr32_2, index), i);
 		}
 
 		std::memset(arr32_2, 0, arr32_2_size);
 		for (u64 i = 0; i < arr32_2_size; i += sizeof(u64))
 		{
 			const usz index = i / sizeof(u64);
-			write_to_ptr(arr32_2, index, i);
+			write_to_ptr_unsafe(arr32_2, index, i);
 			EXPECT_EQ(*utils::bless<u64>(arr32_2 + index), i);
-			EXPECT_EQ(read_from_ptr<u64>(arr32_2, index), i);
+			EXPECT_EQ(read_from_ptr_unsafe<u64>(arr32_2, index), i);
 		}
 
 		std::memset(arr32_2, 0, arr32_2_size);
 		for (usz i = 0; i < arr32_2_size; i += sizeof(u128))
 		{
 			const usz index = i / sizeof(u128);
-			write_to_ptr(arr32_2, index, u128(i));
+			write_to_ptr_unsafe(arr32_2, index, u128(i));
 			const u128 exp_u128 = i;
 			EXPECT_EQ(std::memcmp(arr32_2, &exp_u128, sizeof(u128)), 0);
-			const u128 val_u128 = read_from_ptr<u128>(arr32_2, index);
+			const u128 val_u128 = read_from_ptr_unsafe<u128>(arr32_2, index);
 			EXPECT_EQ(std::memcmp(&val_u128, &exp_u128, sizeof(u128)), 0);
 		}
-
-		// There are no sanity checks for raw pointers in these functions, so these will not fail.
-#if 0
-		// These tests can take a long time and produce warnings, so let's only run them in local builds
-#if CHECK_DEATH
-		EXPECT_DEATH(write_to_ptr(arr, u128()), ".*");
-		EXPECT_DEATH(write_to_ptr(arr2, arr2_size, u8()), ".*");
-		EXPECT_DEATH(write_to_ptr(arr2, arr2_size, u16()), ".*");
-		EXPECT_DEATH(write_to_ptr(arr2, arr2_size, u32()), ".*");
-		EXPECT_DEATH(write_to_ptr(arr2, arr2_size, u64()), ".*");
-		EXPECT_DEATH(write_to_ptr(arr2, arr2_size, u128()), ".*");
-		EXPECT_DEATH(read_from_ptr<u8>(arr2, arr2_size), ".*");
-		EXPECT_DEATH(read_from_ptr<u16>(arr2, arr2_size), ".*");
-		EXPECT_DEATH(read_from_ptr<u32>(arr2, arr2_size), ".*");
-		EXPECT_DEATH(read_from_ptr<u64>(arr2, arr2_size), ".*");
-		EXPECT_DEATH(read_from_ptr<u128>(arr2, arr2_size), ".*");
-
-		EXPECT_DEATH(write_to_ptr(arr32, u128()), ".*");
-		EXPECT_DEATH(write_to_ptr(arr32_2, arr32_count, u32()), ".*");
-		EXPECT_DEATH(write_to_ptr(arr32_2, arr32_count, u64()), ".*");
-		EXPECT_DEATH(write_to_ptr(arr32_2, arr32_count, u128()), ".*");
-		EXPECT_DEATH(read_from_ptr<u32>(arr32_2, arr32_count), ".*");
-		EXPECT_DEATH(read_from_ptr<u64>(arr32_2, arr32_count), ".*");
-		EXPECT_DEATH(read_from_ptr<u128>(arr32_2, arr32_count), ".*");
-#endif
-#endif
 
 		delete[] arr;
 		delete[] arr2;

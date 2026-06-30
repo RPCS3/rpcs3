@@ -96,8 +96,8 @@ u32 dimensions_toypad::get_next()
 std::array<u8, 8> dimensions_toypad::decrypt(const u8* buf, std::optional<std::array<u8, 16>> key)
 {
 	// Value to decrypt is separated in to two little endian 32 bit unsigned integers
-	u32 data_one = read_from_ptr<le_t<u32>>(buf);
-	u32 data_two = read_from_ptr<le_t<u32>>(buf, 4);
+	u32 data_one = read_from_ptr_unsafe<le_t<u32>>(buf);
+	u32 data_two = read_from_ptr_unsafe<le_t<u32>>(buf, 4);
 
 	// Use the key as 4 32 bit little endian unsigned integers
 	u32 key_one;
@@ -143,8 +143,8 @@ std::array<u8, 8> dimensions_toypad::encrypt(const u8* buf, std::optional<std::a
 {
 	// Value to encrypt is separated in to two little endian 32 bit unsigned integers
 
-	u32 data_one = read_from_ptr<le_t<u32>>(buf);
-	u32 data_two = read_from_ptr<le_t<u32>>(buf, 4);
+	u32 data_one = read_from_ptr_unsafe<le_t<u32>>(buf);
+	u32 data_two = read_from_ptr_unsafe<le_t<u32>>(buf, 4);
 
 	// Use the key as 4 32 bit little endian unsigned integers
 	u32 key_one;
@@ -328,7 +328,7 @@ void dimensions_toypad::write_block(u8 index, u8 page, const u8* to_write_buf, s
 			// Id is written to page 36
 			if (page == 36)
 			{
-				figure.id = read_from_ptr<le_t<u32>>(to_write_buf);
+				figure.id = read_from_ptr_unsafe<le_t<u32>>(to_write_buf);
 			}
 			std::memcpy(figure.data.data() + (page * 4), to_write_buf, 4);
 			figure.save();

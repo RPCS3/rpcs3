@@ -116,7 +116,7 @@ namespace np
 		parse();
 	}
 
-	std::size_t ticket::size() const
+	usz ticket::size() const
 	{
 		return raw_data.size();
 	}
@@ -258,7 +258,7 @@ namespace np
 		return std::string(vec.begin(), it);
 	}
 
-	std::optional<ticket_data> ticket::parse_node(std::size_t index) const
+	std::optional<ticket_data> ticket::parse_node(usz index) const
 	{
 		if ((index + MIN_TICKET_DATA_SIZE) > size())
 		{
@@ -268,11 +268,11 @@ namespace np
 
 		ticket_data tdata{};
 		const auto* ptr = data() + index;
-		tdata.id = read_from_ptr<be_t<u16>>(ptr);
-		tdata.len = read_from_ptr<be_t<u16>>(ptr + 2);
-		const auto* data_ptr = data() + index + 4;
+		tdata.id = read_from_ptr_unsafe<be_t<u16>>(ptr);
+		tdata.len = read_from_ptr_unsafe<be_t<u16>>(ptr, 2);
+		const usz data_offset = index + 4;
 
-		auto check_size = [&](std::size_t expected) -> bool
+		auto check_size = [&](usz expected) -> bool
 		{
 			if ((index + MIN_TICKET_DATA_SIZE + expected) > size())
 			{
@@ -294,7 +294,7 @@ namespace np
 			{
 				return std::nullopt;
 			}
-			tdata.data.data_u32 = read_from_ptr<be_t<u32>>(data_ptr);
+			tdata.data.data_u32 = read_from_ptr_unsafe<be_t<u32>>(data(), data_offset);
 			break;
 		case 2:
 		case 7:
@@ -302,7 +302,7 @@ namespace np
 			{
 				return std::nullopt;
 			}
-			tdata.data.data_u64 = read_from_ptr<be_t<u64>>(data_ptr);
+			tdata.data.data_u64 = read_from_ptr_unsafe<be_t<u64>>(data(), data_offset);
 			break;
 		case 4:
 		case 8:
@@ -311,7 +311,7 @@ namespace np
 				return std::nullopt;
 			}
 			tdata.data.data_vec = std::vector<u8>(tdata.len);
-			memcpy(tdata.data.data_vec.data(), data_ptr, tdata.len);
+			memcpy(tdata.data.data_vec.data(), data() + data_offset, tdata.len);
 			break;
 		default:
 			if ((tdata.id & 0x3000) == 0x3000)
@@ -321,7 +321,7 @@ namespace np
 					return std::nullopt;
 				}
 
-				std::size_t sub_index = 0;
+				usz sub_index = 0;
 				tdata.data.data_nodes = {};
 				while (sub_index < tdata.len)
 				{
@@ -352,14 +352,14 @@ namespace np
 			return;
 		}
 
-		version = read_from_ptr<be_t<u32>>(data());
+		version = read_from_ptr_unsafe<be_t<u32>>(data());
 		if (version != 0x21010000)
 		{
 			ticket_log.error("Invalid version: 0x%08x", version);
 			return;
 		}
 
-		u32 given_size = read_from_ptr<be_t<u32>>(data(), 4);
+		u32 given_size = read_from_ptr_unsafe<be_t<u32>>(data(), 4);
 		if ((given_size + 8) != size())
 		{
 			ticket_log.error("Size mismatch (gs: %d vs s: %d)", given_size, size());

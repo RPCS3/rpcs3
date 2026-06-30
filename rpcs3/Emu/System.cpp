@@ -4013,7 +4013,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 								continue;
 							}
 
-							const u64 hash_val = read_from_ptr<be_t<u64>>(result.data) & -65536;
+							const u64 hash_val = read_from_ptr_unsafe<be_t<u64>>(result.data) & -65536;
 							const f64 usage = get_cpu_program_usage_percent(hash_val);
 
 							if (usage == 0)

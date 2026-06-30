@@ -1197,6 +1197,7 @@ namespace stx
 
 // Read object of type T from raw pointer, array, string, vector, or any contiguous container
 template <typename T, typename U>
+	requires requires(U&& array) { std::size(array); std::data(array); }
 constexpr T read_from_ptr(U&& array, usz pos = 0, std::source_location src_loc = std::source_location::current())
 {
 	// TODO: ensure array element types are trivial
@@ -1207,10 +1208,7 @@ constexpr T read_from_ptr(U&& array, usz pos = 0, std::source_location src_loc =
 
 	if (!std::is_constant_evaluated())
 	{
-		if constexpr (requires { std::size(array); })
-		{
-			ensure((pos + elements_per_value) <= std::size(array), src_loc);
-		}
+		ensure((pos + elements_per_value) <= std::size(array), src_loc);
 
 		std::memcpy(+buf, &array[pos], sizeof(buf));
 	}
@@ -1225,16 +1223,28 @@ constexpr T read_from_ptr(U&& array, usz pos = 0, std::source_location src_loc =
 	return std::bit_cast<T>(buf);
 }
 
+// Read object of type T from raw pointer, array, string, vector, or any contiguous container
 template <typename T, typename U>
+	requires (!requires(U&& array) { std::size(array); std::data(array); })
+constexpr T read_from_ptr_unsafe(U&& array, usz pos = 0)
+{
+	// TODO: ensure array element types are trivial
+	static_assert(sizeof(T) % sizeof(array[0]) == 0);
+	constexpr usz elements_per_value = sizeof(T) / sizeof(array[0]);
+
+	std::decay_t<decltype(array[0])> buf[elements_per_value];
+	std::memcpy(+buf, &array[pos], sizeof(buf));
+	return std::bit_cast<T>(buf);
+}
+
+template <typename T, typename U>
+	requires requires(U&& array) { std::size(array); std::data(array); }
 constexpr void write_to_ptr(U&& array, usz pos, const T& value, std::source_location src_loc = std::source_location::current())
 {
 	static_assert(sizeof(T) % sizeof(array[0]) == 0);
 	constexpr usz elements_per_value = sizeof(T) / sizeof(array[0]);
 
-	if constexpr (requires { std::size(array); })
-	{
-		ensure((pos + elements_per_value) <= std::size(array), src_loc);
-	}
+	ensure((pos + elements_per_value) <= std::size(array), src_loc);
 
 	if (!std::is_constant_evaluated())
 	{
@@ -1247,15 +1257,13 @@ constexpr void write_to_ptr(U&& array, usz pos, const T& value, std::source_loca
 }
 
 template <typename T, typename U>
+	requires requires(U&& array) { std::size(array); std::data(array); }
 constexpr void write_to_ptr(U&& array, const T& value, std::source_location src_loc = std::source_location::current())
 {
 	static_assert(sizeof(T) % sizeof(array[0]) == 0);
 	constexpr usz elements_per_value = sizeof(T) / sizeof(array[0]);
 
-	if constexpr (requires { std::size(array); })
-	{
-		ensure(elements_per_value <= std::size(array), src_loc);
-	}
+	ensure(elements_per_value <= std::size(array), src_loc);
 
 	if (!std::is_constant_evaluated())
 	{
@@ -1265,6 +1273,24 @@ constexpr void write_to_ptr(U&& array, const T& value, std::source_location src_
 	{
 		ensure(!"Unimplemented");
 	}
+}
+
+template <typename T, typename U>
+	requires (!requires(U&& array) { std::size(array); std::data(array); })
+constexpr void write_to_ptr_unsafe(U&& array, usz pos, const T& value)
+{
+	static_assert(sizeof(T) % sizeof(array[0]) == 0);
+
+	std::memcpy(static_cast<void*>(&array[pos]), &value, sizeof(value));
+}
+
+template <typename T, typename U>
+	requires (!requires(U&& array) { std::size(array); std::data(array); })
+constexpr void write_to_ptr_unsafe(U&& array, const T& value)
+{
+	static_assert(sizeof(T) % sizeof(array[0]) == 0);
+
+	std::memcpy(static_cast<void*>(&array[0]), &value, sizeof(value));
 }
 
 constexpr struct aref_tag_t{} aref_tag{};
@@ -1288,12 +1314,12 @@ public:
 
 	constexpr T value() const
 	{
-		return read_from_ptr<T>(m_ptr);
+		return read_from_ptr_unsafe<T>(m_ptr);
 	}
 
 	constexpr operator T() const
 	{
-		return read_from_ptr<T>(m_ptr);
+		return read_from_ptr_unsafe<T>(m_ptr);
 	}
 
 	aref& operator=(const aref&) = delete;

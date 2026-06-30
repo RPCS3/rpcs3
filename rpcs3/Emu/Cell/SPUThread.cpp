@@ -7235,7 +7235,7 @@ s64 spu_channel::pop_wait(cpu_thread& spu, bool pop)
 	while (true)
 	{
 		const usz is_le = std::endian::native == std::endian::little ? 1 : 0;
-		thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&data)[is_le], read_from_ptr<u32>(reinterpret_cast<char*>(&old), is_le * 4));
+		thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&data)[is_le], read_from_ptr_unsafe<u32>(reinterpret_cast<char*>(&old), is_le * 4));
 
 		old = data;
 

@@ -366,7 +366,7 @@ template <CellSysmoduleModuleID module_id>
 		const vm::var<std::byte[]> boot_flag(8);
 		std::memset(boot_flag.get_ptr(), 0, boot_flag.get_count());
 
-		if (ret != CELL_OK || !read_from_ptr<bf_t<u64, 0, 1>>(paramsfo.get_ptr(), 0x18))
+		if (ret != CELL_OK || !read_from_ptr_unsafe<bf_t<u64, 0, 1>>(paramsfo.get_ptr(), 0x18))
 		{
 			const vm::var<u32> file_descriptor;
 
@@ -379,15 +379,15 @@ template <CellSysmoduleModuleID module_id>
 			ensure(sys_fs_read(ppu, *file_descriptor, boot_flag, 8, nread) == CELL_OK && *nread == 8ull); // Not checked on LLE
 			ensure(sys_fs_close(ppu, *file_descriptor) == CELL_OK); // Not checked on LLE
 
-			return !!read_from_ptr<bf_t<u64, 4, 1>>(boot_flag.get_ptr(), 1);
+			return !!read_from_ptr_unsafe<bf_t<u64, 4, 1>>(boot_flag.get_ptr(), 1);
 		}
 
-		return !read_from_ptr<bf_t<u64, 0, 1>>(paramsfo.get_ptr(), 0x10);
+		return !read_from_ptr_unsafe<bf_t<u64, 0, 1>>(paramsfo.get_ptr(), 0x10);
 	}
 	case CELL_SYSMODULE_GCM_SYS:
 	{
 		// If the extra load flag "EnableGCMDebug" is set, loads libgcm_sys_deh.sprx instead of libgcm_sys.sprx
-		return ret != CELL_OK || !read_from_ptr<bf_t<u64, 2, 1>>(paramsfo.get_ptr(), 0x10);
+		return ret != CELL_OK || !read_from_ptr_unsafe<bf_t<u64, 2, 1>>(paramsfo.get_ptr(), 0x10);
 	}
 	case CELL_SYSMODULE_FS:
 	{
@@ -579,7 +579,7 @@ extern error_code sysmoduleModuleStart(ppu_thread& ppu, u32 args, vm::ptr<void> 
 		{
 			if (module_id == CELL_SYSMODULE_GCM_SYS)
 			{
-				if (get_paramsfo_ret == CELL_OK && read_from_ptr<bf_t<u64, 6, 1>>(paramsfo.get_ptr(), 0x10) && !retail_gcm_sys)
+				if (get_paramsfo_ret == CELL_OK && read_from_ptr_unsafe<bf_t<u64, 6, 1>>(paramsfo.get_ptr(), 0x10) && !retail_gcm_sys)
 				{
 					if (load_module(ppu, GCM_SYS_DEH_IDX, 8, paramsfo + 0x28) != CELL_OK)
 					{
@@ -641,7 +641,7 @@ extern error_code sysmoduleModuleStart(ppu_thread& ppu, u32 args, vm::ptr<void> 
 		// Start the modules
 		for (const auto [module_id, prx_ix] : std::views::zip(DEFAULT_MODULES, std::span{ id_list.begin().get_ptr(), id_list.get_count() }))
 		{
-			if (module_id == CELL_SYSMODULE_GCM_SYS && read_from_ptr<bf_t<u64, 6, 1>>(paramsfo.get_ptr(), 0x10) && !retail_gcm_sys)
+			if (module_id == CELL_SYSMODULE_GCM_SYS && read_from_ptr_unsafe<bf_t<u64, 6, 1>>(paramsfo.get_ptr(), 0x10) && !retail_gcm_sys)
 			{
 				s_sysmodule_context->module_states[CELL_SYSMODULE_GCM_SYS].prx_id = static_cast<s32>(prx_ix);
 
@@ -691,7 +691,7 @@ extern error_code sysmoduleModuleStart(ppu_thread& ppu, u32 args, vm::ptr<void> 
 
 	// Load additional modules if certain ExtraLoadFlags are set
 
-	if (read_from_ptr<bf_t<u64, 6, 1>>(paramsfo.get_ptr(), 0x10) && !retail_gcm_sys && read_from_ptr<bf_t<u64, 0, 1>>(paramsfo.get_ptr(), 0x18))
+	if (read_from_ptr_unsafe<bf_t<u64, 6, 1>>(paramsfo.get_ptr(), 0x10) && !retail_gcm_sys && read_from_ptr_unsafe<bf_t<u64, 0, 1>>(paramsfo.get_ptr(), 0x18))
 	{
 		cellSysmoduleSetDebugmode(true);
 
@@ -703,7 +703,7 @@ extern error_code sysmoduleModuleStart(ppu_thread& ppu, u32 args, vm::ptr<void> 
 		cellSysmoduleSetDebugmode(false);
 	}
 
-	if (read_from_ptr<bf_t<u64, 3, 1>>(paramsfo.get_ptr(), 0x10) && read_from_ptr<bf_t<u64, 0, 1>>(paramsfo.get_ptr(), 0x18))
+	if (read_from_ptr_unsafe<bf_t<u64, 3, 1>>(paramsfo.get_ptr(), 0x10) && read_from_ptr_unsafe<bf_t<u64, 0, 1>>(paramsfo.get_ptr(), 0x18))
 	{
 		if (load_module(ppu, PROF_IDX, 0, vm::null) != CELL_OK)
 		{
@@ -711,7 +711,7 @@ extern error_code sysmoduleModuleStart(ppu_thread& ppu, u32 args, vm::ptr<void> 
 		}
 	}
 
-	if (read_from_ptr<bf_t<u64, 4, 1>>(paramsfo.get_ptr(), 0x10))
+	if (read_from_ptr_unsafe<bf_t<u64, 4, 1>>(paramsfo.get_ptr(), 0x10))
 	{
 		if (load_module(ppu, LV2COREDUMP_IDX, 0, vm::null) != CELL_OK)
 		{
@@ -719,7 +719,7 @@ extern error_code sysmoduleModuleStart(ppu_thread& ppu, u32 args, vm::ptr<void> 
 		}
 	}
 
-	if (read_from_ptr<bf_t<u64, 1, 1>>(paramsfo.get_ptr(), 0x10))
+	if (read_from_ptr_unsafe<bf_t<u64, 1, 1>>(paramsfo.get_ptr(), 0x10))
 	{
 		if (cellSysmoduleLoadModuleInternal(ppu, 0xf022) != CELL_OK)
 		{
@@ -1153,7 +1153,7 @@ error_code cellSysmoduleLoadModuleInternal(ppu_thread& ppu, u16 id)
 		std::memset(paramsfo.get_ptr(), 0, paramsfo.get_count());
 
 		if (ppu_execute<&sys_process_get_paramsfo>(ppu, +paramsfo) != CELL_OK
-			|| (!read_from_ptr<bf_t<u64, 0, 1>>(paramsfo.get_ptr(), 0x18) && !read_from_ptr<bf_t<u64, 0, 1>>(paramsfo.get_ptr(), 0x30)))
+			|| (!read_from_ptr_unsafe<bf_t<u64, 0, 1>>(paramsfo.get_ptr(), 0x18) && !read_from_ptr_unsafe<bf_t<u64, 0, 1>>(paramsfo.get_ptr(), 0x30)))
 		{
 			return CELL_SYSMODULE_ERROR_UNKNOWN;
 		}

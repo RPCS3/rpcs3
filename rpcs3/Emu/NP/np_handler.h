@@ -65,7 +65,7 @@ namespace np
 		ticket() = default;
 		ticket(std::vector<u8>&& raw_data);
 
-		std::size_t size() const;
+		usz size() const;
 		const u8* data() const;
 		bool empty() const;
 
@@ -73,11 +73,11 @@ namespace np
 		std::string get_service_id() const;
 
 	private:
-		std::optional<ticket_data> parse_node(std::size_t index) const;
+		std::optional<ticket_data> parse_node(usz index) const;
 		void parse();
 
 	private:
-		static constexpr std::size_t MIN_TICKET_DATA_SIZE = 4;
+		static constexpr usz MIN_TICKET_DATA_SIZE = 4;
 
 		std::vector<u8> raw_data;
 

@@ -640,19 +640,18 @@ skylander_creator_dialog::skylander_creator_dialog(QWidget* parent)
 		}
 
 		std::array<u8, 0x40 * 0x10> buf{};
-		const auto data = buf.data();
 		// Set the block permissions
-		write_to_ptr<le_t<u32>>(data, 0x36, 0x690F0F0F);
+		write_to_ptr<le_t<u32>>(buf, 0x36, 0x690F0F0F);
 		for (u32 index = 1; index < 0x10; index++)
 		{
-			write_to_ptr<le_t<u32>>(data, (index * 0x40) + 0x36, 0x69080F7F);
+			write_to_ptr<le_t<u32>>(buf, (index * 0x40) + 0x36, 0x69080F7F);
 		}
 		// Set the skylander infos
-		write_to_ptr<le_t<u16>>(data, (sky_id | sky_var) + 1);
-		write_to_ptr<le_t<u16>>(data, 0x10, sky_id);
-		write_to_ptr<le_t<u16>>(data, 0x1C, sky_var);
+		write_to_ptr<le_t<u16>>(buf, (sky_id | sky_var) + 1);
+		write_to_ptr<le_t<u16>>(buf, 0x10, sky_id);
+		write_to_ptr<le_t<u16>>(buf, 0x1C, sky_var);
 		// Set checksum
-		write_to_ptr<le_t<u16>>(data, 0x1E, skylander_crc16(0xFFFF, data, 0x1E));
+		write_to_ptr<le_t<u16>>(buf, 0x1E, skylander_crc16(0xFFFF, buf.data(), 0x1E));
 
 		sky_file.write(buf.data(), buf.size());
 		sky_file.close();
@@ -796,10 +795,10 @@ void skylander_dialog::load_skylander_path(u8 slot, const QString& path)
 
 	clear_skylander(slot);
 
-	u16 sky_id  = reinterpret_cast<le_t<u16>&>(data[0x10]);
-	u16 sky_var = reinterpret_cast<le_t<u16>&>(data[0x1C]);
+	const u16 sky_id  = reinterpret_cast<le_t<u16>&>(data[0x10]);
+	const u16 sky_var = reinterpret_cast<le_t<u16>&>(data[0x1C]);
 
-	u8 portal_slot  = g_skyportal.load_skylander(data.data(), std::move(sky_file));
+	const u8 portal_slot  = g_skyportal.load_skylander(data, std::move(sky_file));
 	sky_slots[slot] = std::tuple(portal_slot, sky_id, sky_var);
 
 	update_edits();

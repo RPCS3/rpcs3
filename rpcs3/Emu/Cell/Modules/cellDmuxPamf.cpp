@@ -309,7 +309,7 @@ u32 dmux_pamf_base::video_stream<avc>::parse_stream(std::span<const u8> stream)
 		// Search for delimiter in cache
 		for (; cache_idx < static_cast<s32>(cache.size()); cache_idx++)
 		{
-			if (const be_t<u32> code = read_from_ptr<be_t<u32>>(buf.data(), cache_idx);
+			if (const be_t<u32> code = read_from_ptr<be_t<u32>>(buf, cache_idx);
 				(avc && code == AVC_AU_DELIMITER) || (!avc && (code == M2V_PIC_START || code == M2V_SEQUENCE_HEADER || code == M2V_SEQUENCE_END)))
 			{
 				if (current_au.state != access_unit::state::none && (avc || current_au.state != access_unit::state::m2v_sequence))
@@ -335,7 +335,7 @@ u32 dmux_pamf_base::video_stream<avc>::parse_stream(std::span<const u8> stream)
 		// Search for delimiter in stream
 		for (; stream_it <= stream.end() - sizeof(u32); stream_it++)
 		{
-			if (const be_t<u32> code = read_from_ptr<be_t<u32>>(stream_it);
+			if (const be_t<u32> code = read_from_ptr_unsafe<be_t<u32>>(stream_it);
 				(avc && code == AVC_AU_DELIMITER) || (!avc && (code == M2V_PIC_START || code == M2V_SEQUENCE_HEADER || code == M2V_SEQUENCE_END)))
 			{
 				if (current_au.state != access_unit::state::none && (avc || current_au.state != access_unit::state::m2v_sequence))
@@ -440,7 +440,7 @@ u32 dmux_pamf_base::audio_stream<ac3>::parse_stream(std::span<const u8> stream)
 		// Search for delimiter in cache
 		for (; cache_idx <= static_cast<s32>(cache.size() + std::min(sizeof(u16) - 1, stream.size()) - sizeof(u16)); cache_idx++)
 		{
-			if (const be_t<u16> tmp = read_from_ptr<be_t<u16>>(buf.data(), cache_idx); current_au.size_info_offset != 0)
+			if (const be_t<u16> tmp = read_from_ptr<be_t<u16>>(buf, cache_idx); current_au.size_info_offset != 0)
 			{
 				if (--current_au.size_info_offset == 0)
 				{
@@ -473,7 +473,7 @@ u32 dmux_pamf_base::audio_stream<ac3>::parse_stream(std::span<const u8> stream)
 		// Search for delimiter in stream
 		for (; stream_it <= stream.end() - sizeof(u32); stream_it++) // LLE uses sizeof(u32), even though the delimiter is only two bytes large
 		{
-			if (const be_t<u16> tmp = read_from_ptr<be_t<u16>>(stream_it); current_au.size_info_offset != 0)
+			if (const be_t<u16> tmp = read_from_ptr_unsafe<be_t<u16>>(stream_it); current_au.size_info_offset != 0)
 			{
 				if (--current_au.size_info_offset == 0)
 				{
@@ -524,7 +524,7 @@ u32 dmux_pamf_base::user_data_stream::parse_stream_header(std::span<const u8> pe
 			return umax;
 		}
 
-		au_size_unk = read_from_ptr<be_t<u32>>(pes_packet_data.begin(), 2) - sizeof(u32);
+		au_size_unk = read_from_ptr<be_t<u32>>(pes_packet_data, 2) - sizeof(u32);
 		return 10;
 	}
 
@@ -741,7 +741,7 @@ bool dmux_pamf_base::process_next_pack()
 		// Skip over system header if present
 		if (read_from_ptr<be_t<u32>>(current_pes_packet) == SYSTEM_HEADER)
 		{
-			const u32 system_header_length = read_from_ptr<be_t<u16>>(current_pes_packet.begin(), PES_PACKET_LENGTH_OFFSET) + PES_PACKET_LENGTH_OFFSET + sizeof(u16);
+			const u32 system_header_length = read_from_ptr<be_t<u16>>(current_pes_packet, PES_PACKET_LENGTH_OFFSET) + PES_PACKET_LENGTH_OFFSET + sizeof(u16);
 
 			// Not checked on LLE, the SPU task would just increment the reading position and read random data in the SPU local store
 			if (system_header_length + PES_HEADER_DATA_LENGTH_OFFSET + sizeof(u8) > current_pes_packet.size())
@@ -766,7 +766,7 @@ bool dmux_pamf_base::process_next_pack()
 				// A system header is optionally followed by a private stream 2
 				// The first two bytes of the stream are the stream id of a video stream. The next access unit of that stream is a random access point/keyframe
 
-				const u16 pes_packet_length = read_from_ptr<be_t<u16>>(current_pes_packet.begin(), PES_PACKET_LENGTH_OFFSET) + PES_PACKET_LENGTH_OFFSET + sizeof(u16);
+				const u16 pes_packet_length = read_from_ptr<be_t<u16>>(current_pes_packet, PES_PACKET_LENGTH_OFFSET) + PES_PACKET_LENGTH_OFFSET + sizeof(u16);
 
 				// Not checked on LLE, the SPU task would just increment the reading position and read random data in the SPU local store
 				if (pes_packet_length + PES_HEADER_DATA_LENGTH_OFFSET + sizeof(u8) > current_pes_packet.size())
@@ -775,7 +775,7 @@ bool dmux_pamf_base::process_next_pack()
 					return false;
 				}
 
-				if (const u8 channel = read_from_ptr<be_t<u16>>(current_pes_packet.begin(), PES_PACKET_LENGTH_OFFSET + sizeof(u16)) & 0xf;
+				if (const u8 channel = read_from_ptr<be_t<u16>>(current_pes_packet, PES_PACKET_LENGTH_OFFSET + sizeof(u16)) & 0xf;
 					elementary_stream::is_enabled(elementary_streams[0][channel]))
 				{
 					elementary_streams[0][channel]->set_rap();
@@ -796,8 +796,8 @@ bool dmux_pamf_base::process_next_pack()
 			return false;
 		}
 
-		const u16 pes_packet_length = read_from_ptr<be_t<u16>>(current_pes_packet.begin(), PES_PACKET_LENGTH_OFFSET) + PES_PACKET_LENGTH_OFFSET + sizeof(u16);
-		const u8 pes_header_data_length = read_from_ptr<u8>(current_pes_packet.begin(), PES_HEADER_DATA_LENGTH_OFFSET) + PES_HEADER_DATA_LENGTH_OFFSET + sizeof(u8);
+		const u16 pes_packet_length = read_from_ptr<be_t<u16>>(current_pes_packet, PES_PACKET_LENGTH_OFFSET) + PES_PACKET_LENGTH_OFFSET + sizeof(u16);
+		const u8 pes_header_data_length = read_from_ptr<u8>(current_pes_packet, PES_HEADER_DATA_LENGTH_OFFSET) + PES_HEADER_DATA_LENGTH_OFFSET + sizeof(u8);
 
 		// Not checked on LLE, the SPU task would just increment the reading position and read random data in the SPU local store
 		if (pes_packet_length > current_pes_packet.size() || pes_packet_length <= pes_header_data_length)
@@ -821,23 +821,23 @@ bool dmux_pamf_base::process_next_pack()
 
 		if (elementary_stream::is_enabled(elementary_streams[type_idx][channel]))
 		{
-			const s8 pts_dts_flag = read_from_ptr<s8>(current_pes_packet.begin(), PTS_DTS_FLAG_OFFSET);
+			const s8 pts_dts_flag = read_from_ptr<s8>(current_pes_packet, PTS_DTS_FLAG_OFFSET);
 
 			if (pts_dts_flag < 0)
 			{
 				// The timestamps should be unsigned, but are sign-extended from s32 to u64 on LLE. They probably forgot about integer promotion
-				const s32 PTS_32_30 = read_from_ptr<bf_t<u8, 1, 7>>(current_pes_packet.begin(), 9);
-				const s32 PTS_29_15 = read_from_ptr<bf_t<be_t<u16>, 1, 15>>(current_pes_packet.begin(), 10);
-				const s32 PTS_14_0 = read_from_ptr<bf_t<be_t<u16>, 1, 15>>(current_pes_packet.begin(), 12);
+				const s32 PTS_32_30 = read_from_ptr<bf_t<u8, 1, 7>>(current_pes_packet, 9);
+				const s32 PTS_29_15 = read_from_ptr<bf_t<be_t<u16>, 1, 15>>(current_pes_packet, 10);
+				const s32 PTS_14_0 = read_from_ptr<bf_t<be_t<u16>, 1, 15>>(current_pes_packet, 12);
 
 				elementary_streams[type_idx][channel]->set_pts(PTS_32_30 << 30 | PTS_29_15 << 15 | PTS_14_0); // Bit 32 is discarded
 			}
 
 			if (pts_dts_flag & 0x40)
 			{
-				const s32 DTS_32_30 = read_from_ptr<bf_t<u8, 1, 7>>(current_pes_packet.begin(), 14);
-				const s32 DTS_29_15 = read_from_ptr<bf_t<be_t<u16>, 1, 15>>(current_pes_packet.begin(), 15);
-				const s32 DTS_14_0 = read_from_ptr<bf_t<be_t<u16>, 1, 15>>(current_pes_packet.begin(), 17);
+				const s32 DTS_32_30 = read_from_ptr<bf_t<u8, 1, 7>>(current_pes_packet, 14);
+				const s32 DTS_29_15 = read_from_ptr<bf_t<be_t<u16>, 1, 15>>(current_pes_packet, 15);
+				const s32 DTS_14_0 = read_from_ptr<bf_t<be_t<u16>, 1, 15>>(current_pes_packet, 17);
 
 				elementary_streams[type_idx][channel]->set_dts(DTS_32_30 << 30 | DTS_29_15 << 15 | DTS_14_0); // Bit 32 is discarded
 			}
