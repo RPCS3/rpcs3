@@ -3047,7 +3047,9 @@ void thread_ctrl::set_name(std::string name)
 			return false;
 		}).second)
 		{
+#ifndef __APPLE__
 			utils::trap();
+#endif
 		}
 	}
 
