@@ -713,50 +713,49 @@ namespace rsx
 
 			u32 removed_count = 0;
 
-			auto compare_and_tag_row = [&](const u32 offset, u32 length) -> bool
+			auto compare_and_tag_row = [&](u32 offset, u32 length) -> bool
 			{
 				u64 mask = 0;
-				u8* dst_ptr = marker.data() + offset;
 
 				while (length >= 8)
 				{
-					const u64 value = read_from_ptr<u64>(dst_ptr);
+					const u64 value = read_from_ptr<u64>(marker, offset);
 					const u64 block_mask = ~value;              // If the value is not all 1s, set valid to true
 					mask |= block_mask;
-					write_to_ptr<u64>(dst_ptr, umax);
+					write_to_ptr<u64>(marker, offset, umax);
 
-					dst_ptr += 8;
+					offset += 8;
 					length -= 8;
 				}
 
 				if (length >= 4)
 				{
-					const u32 value = read_from_ptr<u32>(dst_ptr);
+					const u32 value = read_from_ptr<u32>(marker, offset);
 					const u32 block_mask = ~value;
 					mask |= block_mask;
-					write_to_ptr<u32>(dst_ptr, umax);
+					write_to_ptr<u32>(marker, offset, umax);
 
-					dst_ptr += 4;
+					offset += 4;
 					length -= 4;
 				}
 
 				if (length >= 2)
 				{
-					const u16 value = read_from_ptr<u16>(dst_ptr);
+					const u16 value = read_from_ptr<u16>(marker, offset);
 					const u16 block_mask = ~value;
 					mask |= block_mask;
-					write_to_ptr<u16>(dst_ptr, umax);
+					write_to_ptr<u16>(marker, offset, umax);
 
-					dst_ptr += 2;
+					offset += 2;
 					length -= 2;
 				}
 
 				if (length)
 				{
-					const u8 value = *dst_ptr;
+					const u8 value = read_from_ptr<u8>(marker, offset);
 					const u8 block_mask = ~value;
 					mask |= block_mask;
-					*dst_ptr = umax;
+					write_to_ptr<u8>(marker, offset, umax);
 				}
 
 				return !!mask;

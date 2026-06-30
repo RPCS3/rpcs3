@@ -202,7 +202,7 @@ namespace rsx
 				}
 			}
 
-			const auto ret = read_from_ptr<be_t<u32>>(+m_cache[0], addr - m_cache_addr);
+			const auto ret = read_from_ptr_unsafe<be_t<u32>>(+m_cache[0], addr - m_cache_addr);
 			return {true, ret};
 		}
 

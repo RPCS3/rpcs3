@@ -865,7 +865,7 @@ void memory_viewer_panel::ShowMemory()
 
 			if (const auto ptr = this->to_ptr(addr))
 			{
-				const be_t<u32> rmem = read_from_ptr<be_t<u32>>(static_cast<const u8*>(ptr));
+				const be_t<u32> rmem = read_from_ptr_unsafe<be_t<u32>>(static_cast<const u8*>(ptr));
 				t_mem_hex_str += QString::fromStdString(fmt::format("%02x %02x %02x %02x",
 					static_cast<u8>(rmem >> 24),
 					static_cast<u8>(rmem >> 16),

@@ -480,7 +480,7 @@ static inline u8* ppu_seg_ptr(u32 addr)
 
 static inline ppu_intrp_func_t ppu_read(u32 addr)
 {
-	return read_from_ptr<ppu_intrp_func_t>(ppu_ptr(addr));
+	return read_from_ptr_unsafe<ppu_intrp_func_t>(ppu_ptr(addr));
 }
 
 // Get interpreter cache value
@@ -505,7 +505,7 @@ static void ppu_fallback(ppu_thread& ppu, ppu_opcode_t op, be_t<u32>* this_op, p
 {
 	const auto _pc = vm::get_addr(this_op);
 	const auto _fn = ppu_cache(_pc);
-	write_to_ptr<ppu_intrp_func_t>(ppu_ptr(_pc), _fn);
+	write_to_ptr_unsafe<ppu_intrp_func_t>(ppu_ptr(_pc), _fn);
 	return _fn(ppu, op, this_op, next_fn);
 }
 
@@ -590,7 +590,7 @@ u32 ppu_read_mmio_aware_u32(u8* vm_base, u32 eal)
 	}
 
 	// Value is assumed to be swapped
-	return read_from_ptr<u32>(vm_base, eal);
+	return read_from_ptr_unsafe<u32>(vm_base, eal);
 }
 
 void ppu_write_mmio_aware_u32(u8* vm_base, u32 eal, u32 value)
@@ -618,7 +618,7 @@ void ppu_write_mmio_aware_u32(u8* vm_base, u32 eal, u32 value)
 	}
 
 	// Value is assumed swapped
-	write_to_ptr<u32>(vm_base + eal, value);
+	write_to_ptr_unsafe<u32>(vm_base + eal, value);
 }
 
 extern bool ppu_test_address_may_be_mmio(std::span<const be_t<u32>> insts)
@@ -793,13 +793,13 @@ extern void ppu_register_range(u32 addr, u32 size)
 		if (g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
 		{
 			// Assume addr is the start of first segment of PRX
-			write_to_ptr<uptr>(ppu_ptr(addr), std::bit_cast<uptr>(ppu_recompiler_fallback_ghc));
-			write_to_ptr<u16>(ppu_seg_ptr(addr), static_cast<u16>(seg_base >> 13));
+			write_to_ptr_unsafe<uptr>(ppu_ptr(addr), std::bit_cast<uptr>(ppu_recompiler_fallback_ghc));
+			write_to_ptr_unsafe<u16>(ppu_seg_ptr(addr), static_cast<u16>(seg_base >> 13));
 		}
 		else
 		{
-			write_to_ptr<ppu_intrp_func_t>(ppu_ptr(addr), ppu_fallback);
-			write_to_ptr<u16>(ppu_seg_ptr(addr), 0);
+			write_to_ptr_unsafe<ppu_intrp_func_t>(ppu_ptr(addr), ppu_fallback);
+			write_to_ptr_unsafe<u16>(ppu_seg_ptr(addr), 0);
 		}
 
 		addr += 4;
@@ -814,7 +814,7 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_intrp_func_t ptr = 
 	// Initialize specific function
 	if (ptr)
 	{
-		write_to_ptr<uptr>(ppu_ptr(addr), std::bit_cast<uptr>(ptr));
+		write_to_ptr_unsafe<uptr>(ppu_ptr(addr), std::bit_cast<uptr>(ptr));
 		return;
 	}
 
@@ -841,7 +841,7 @@ extern void ppu_register_function_at(u32 addr, u32 size, ppu_intrp_func_t ptr = 
 	{
 		if (auto old = ppu_read(addr); old != ppu_break && old != ppu_far_jump)
 		{
-			write_to_ptr<ppu_intrp_func_t>(ppu_ptr(addr), ppu_cache(addr));
+			write_to_ptr_unsafe<ppu_intrp_func_t>(ppu_ptr(addr), ppu_cache(addr));
 		}
 
 		addr += 4;
@@ -1270,7 +1270,7 @@ extern bool ppu_breakpoint(u32 addr, bool is_adding)
 			return false;
 		}
 
-		write_to_ptr<ppu_intrp_func_t>(ppu_ptr(addr), breakpoint);
+		write_to_ptr_unsafe<ppu_intrp_func_t>(ppu_ptr(addr), breakpoint);
 		return true;
 	}
 
@@ -1279,7 +1279,7 @@ extern bool ppu_breakpoint(u32 addr, bool is_adding)
 		return false;
 	}
 
-	write_to_ptr<ppu_intrp_func_t>(ppu_ptr(addr), func_original);
+	write_to_ptr_unsafe<ppu_intrp_func_t>(ppu_ptr(addr), func_original);
 	return true;
 }
 
@@ -1314,7 +1314,7 @@ extern bool ppu_patch(u32 addr, u32 value)
 	{
 		if (auto old = ppu_read(addr); old != ppu_break && old != ppu_fallback)
 		{
-			write_to_ptr<ppu_intrp_func_t>(ppu_ptr(addr), ppu_cache(addr));
+			write_to_ptr_unsafe<ppu_intrp_func_t>(ppu_ptr(addr), ppu_cache(addr));
 		}
 	}
 
@@ -3979,7 +3979,7 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 						if (auto klic_ptr = mod->get_ptr<const u8>(static_cast<u32>(constant_value), 16))
 						{
 							// Try to read from that address
-							if (const u128 klic_value = read_from_ptr<u128>(klic_ptr))
+							if (const u128 klic_value = read_from_ptr_unsafe<u128>(klic_ptr))
 							{
 								if (!std::count_if(decrypt_klics.begin(), decrypt_klics.end(), FN(std::memcmp(&x, &klic_value, 16) == 0)))
 								{
@@ -4537,7 +4537,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 			if (g_cfg.core.ppu_debug && func.size && func.toc != umax && !ppu_get_far_jump(func.addr))
 			{
 				ppu_toc[func.addr] = func.toc;
-				write_to_ptr<ppu_intrp_func_t>(ppu_ptr(func.addr), &ppu_check_toc);
+				write_to_ptr_unsafe<ppu_intrp_func_t>(ppu_ptr(func.addr), &ppu_check_toc);
 			}
 		}
 
@@ -4736,7 +4736,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 		[[maybe_unused]] auto write_le = [](u8*& code, auto value)
 		{
-			write_to_ptr<le_t<std::remove_cvref_t<decltype(value)>>>(code, value);
+			write_to_ptr_unsafe<le_t<std::remove_cvref_t<decltype(value)>>>(code, value);
 			code += sizeof(value);
 		};
 
@@ -5559,7 +5559,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 		{
 			if (*inst_ptr == ppu_instructions::BLR() && reinterpret_cast<uptr>(ppu_read(addr)) == reinterpret_cast<uptr>(ppu_recompiler_fallback_ghc))
 			{
-				write_to_ptr<ppu_intrp_func_t>(ppu_ptr(addr), BLR_func);
+				write_to_ptr_unsafe<ppu_intrp_func_t>(ppu_ptr(addr), BLR_func);
 			}
 		}
 	}
