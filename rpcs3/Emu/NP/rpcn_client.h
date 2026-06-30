@@ -67,7 +67,7 @@ public:
 			error = true;
 			return static_cast<T>(0);
 		}
-		T res = read_from_ptr<le_t<T>>(&vec[i]);
+		T res = read_from_ptr<le_t<T>>(vec, i);
 		i += sizeof(T);
 		return res;
 	}
