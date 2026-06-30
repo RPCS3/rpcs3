@@ -341,7 +341,13 @@ SDLDevice::sdl_info sdl_pad_handler::get_sdl_info(SDL_JoystickID id)
 			const int num_axes = SDL_GetNumJoystickAxes(joystick);
 			const int num_buttons = SDL_GetNumJoystickButtons(joystick);
 
-			info.is_ds3_with_pressure_buttons = num_axes == 16 && num_buttons == 11;
+			// The DJ Hero Turntable (VID 0x12BA, PID 0x0140) coincidentally matches the
+			// DS3 axis/button counts (16 axes, 11 buttons) but is NOT a pressure-sensitive
+			// DS3. Routing its face buttons through the pressure axes drops the green (Cross)
+			// and blue (Square) deck buttons, so exclude it and read its buttons digitally.
+			const bool is_dj_hero_turntable = info.vid == 0x12BA && info.pid == 0x0140;
+
+			info.is_ds3_with_pressure_buttons = num_axes == 16 && num_buttons == 11 && !is_dj_hero_turntable;
 
 			sdl_log.notice("DS3 device %d has %d axis and %d buttons (has_pressure_buttons=%d)", id, num_axes, num_buttons, info.is_ds3_with_pressure_buttons);
 

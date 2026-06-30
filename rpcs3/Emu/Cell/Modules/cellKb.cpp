@@ -381,7 +381,7 @@ error_code cellKbRead(u32 port_no, vm::ptr<CellKbData> data)
 			data->keycode[i] = current_data.buttons[i].m_keyCode;
 		}
 
-		KbConfig& current_config = consumer.GetConfig(port_no);
+		const KbConfig& current_config = consumer.GetConfig(port_no);
 
 		// For single character mode to work properly we need to "flush" the buffer after reading or else we'll constantly get the same key presses with each call.
 		// Actual key repeats are handled by adding a new key code to the buffer periodically. Key releases are handled in a similar fashion.
