@@ -1733,21 +1733,48 @@ void spu_thread::cleanup()
 	static_cast<named_thread<spu_thread>&>(*this) = thread_state::finished;
 }
 
+enum : s64
+{
+	SIGNED_LS_SIZE = SPU_LS_SIZE
+};
+
 spu_thread::~spu_thread()
 {
 	// Unmap LS and its mirrors
-	shm->unmap(ls + SPU_LS_SIZE);
-	shm->unmap(ls);
-	shm->unmap(ls - SPU_LS_SIZE);
-	utils::memory_release(ls - SPU_LS_SIZE * 2, SPU_LS_SIZE * 5);
+	for (s64 ls_offs = 0 - SIGNED_LS_SIZE * 2; ls_offs <= SIGNED_LS_SIZE * 2; ls_offs += SIGNED_LS_SIZE)
+	{
+		shm->unmap(ls + ls_offs);
+	}
+
+	utils::memory_release(ls - SIGNED_LS_SIZE * 3, SIGNED_LS_SIZE * 7);
 }
 
 u8* spu_thread::map_ls(utils::shm& shm, void* ptr)
 {
+	const auto ls = ptr ? static_cast<u8*>(ptr) : static_cast<u8*>(ensure(utils::memory_reserve(SIGNED_LS_SIZE * 7, nullptr, true))) + SIGNED_LS_SIZE * 3;
+
 	vm::writer_lock mlock;
 
-	const auto ls = ptr ? static_cast<u8*>(ptr) : static_cast<u8*>(ensure(utils::memory_reserve(SPU_LS_SIZE * 5, nullptr, true))) + SPU_LS_SIZE * 2;
-	ensure(shm.map_critical(ls - SPU_LS_SIZE).first && shm.map_critical(ls).first && shm.map_critical(ls + SPU_LS_SIZE).first);
+	for (s64 ls_offs = 0 - SIGNED_LS_SIZE * 2; ls_offs <= SIGNED_LS_SIZE * 2; ls_offs += SIGNED_LS_SIZE)
+	{
+		const auto [ptr_ret, str] = shm.map_critical(ls + ls_offs);
+
+		if (!ptr_ret)
+		{
+			fmt::throw_exception("spu_thread::map_ls() failed: map_critical returned error (error=%s) [ls_offs=0x%x]", str, ls_offs);
+		}
+
+		if (ptr_ret != ls + ls_offs)
+		{
+			fmt::throw_exception("spu_thread::map_ls() failed: map_critical returned a different address: 0x%llx vs 0x%llx (error=%s) [ls_offs=0x%x]", ptr_ret, ls + ls_offs, str, ls_offs);
+		}
+
+		if (!str.empty())
+		{
+			fmt::throw_exception("spu_thread::map_ls() failed: map_critical returned unexpected error (error=%s) [ls_offs=0x%x]", str, ls_offs);
+		}
+	}
+
 	return ls;
 }
 
@@ -1792,7 +1819,7 @@ spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u
 	, index(index)
 	, thread_type(group ? spu_type::threaded : is_isolated ? spu_type::isolated : spu_type::raw)
 	, shm(std::make_shared<utils::shm>(SPU_LS_SIZE))
-	, ls(static_cast<u8*>(utils::memory_reserve(SPU_LS_SIZE * 5, nullptr, true)) + SPU_LS_SIZE * 2)
+	, ls(static_cast<u8*>(utils::memory_reserve(SPU_LS_SIZE * 7, nullptr, true)) + SPU_LS_SIZE * 3)
 	, option(option)
 	, lv2_id(lv2_id)
 	, spu_tname(make_single<std::string>(name))
