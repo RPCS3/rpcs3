@@ -77,7 +77,7 @@ void hex_to_bytes(unsigned char* data, std::string_view hex_str, usz str_length,
 }
 
 // Crypto functions (AES128-CBC, AES128-ECB, SHA1-HMAC and AES-CMAC).
-void aescbc128_decrypt(unsigned char *key, unsigned char *iv, unsigned char *in, unsigned char *out, usz len)
+void aescbc128_decrypt(const unsigned char *key, unsigned char *iv, const unsigned char *in, unsigned char *out, usz len)
 {
 	aes_context ctx;
 	aes_setkey_dec(&ctx, key, 128);
@@ -87,7 +87,7 @@ void aescbc128_decrypt(unsigned char *key, unsigned char *iv, unsigned char *in,
 	memset(iv, 0, 0x10);
 }
 
-void aescbc128_encrypt(unsigned char *key, unsigned char *iv, unsigned char *in, unsigned char *out, usz len)
+void aescbc128_encrypt(const unsigned char *key, unsigned char *iv, const unsigned char *in, unsigned char *out, usz len)
 {
 	aes_context ctx;
 	aes_setkey_enc(&ctx, key, 128);
@@ -97,14 +97,14 @@ void aescbc128_encrypt(unsigned char *key, unsigned char *iv, unsigned char *in,
 	memset(iv, 0, 0x10);
 }
 
-void aesecb128_encrypt(unsigned char *key, unsigned char *in, unsigned char *out)
+void aesecb128_encrypt(const unsigned char *key, const unsigned char *in, unsigned char *out)
 {
 	aes_context ctx;
 	aes_setkey_enc(&ctx, key, 128);
 	aes_crypt_ecb(&ctx, AES_ENCRYPT, in, out);
 }
 
-bool hmac_hash_compare(unsigned char *key, int key_len, unsigned char *in, usz in_len, unsigned char *hash, usz hash_len)
+bool hmac_hash_compare(const unsigned char *key, int key_len, const unsigned char *in, usz in_len, const unsigned char *hash, usz hash_len)
 {
 	const std::unique_ptr<u8[]> out(new u8[key_len]);
 
@@ -113,12 +113,12 @@ bool hmac_hash_compare(unsigned char *key, int key_len, unsigned char *in, usz i
 	return std::memcmp(out.get(), hash, hash_len) == 0;
 }
 
-void hmac_hash_forge(unsigned char *key, int key_len, unsigned char *in, usz in_len, unsigned char *hash)
+void hmac_hash_forge(const unsigned char *key, int key_len, const unsigned char *in, usz in_len, unsigned char *hash)
 {
 	sha1_hmac(key, key_len, in, in_len, hash);
 }
 
-bool cmac_hash_compare(unsigned char *key, int key_len, unsigned char *in, usz in_len, unsigned char *hash, usz hash_len)
+bool cmac_hash_compare(const unsigned char *key, int key_len, const unsigned char *in, usz in_len, const unsigned char *hash, usz hash_len)
 {
 	const std::unique_ptr<u8[]> out(new u8[key_len]);
 
@@ -129,7 +129,7 @@ bool cmac_hash_compare(unsigned char *key, int key_len, unsigned char *in, usz i
 	return std::memcmp(out.get(), hash, hash_len) == 0;
 }
 
-void cmac_hash_forge(unsigned char *key, int /*key_len*/, unsigned char *in, usz in_len, unsigned char *hash)
+void cmac_hash_forge(const unsigned char *key, int /*key_len*/, const unsigned char *in, usz in_len, unsigned char *hash)
 {
 	aes_context ctx;
 	aes_setkey_enc(&ctx, key, 128);
@@ -214,7 +214,7 @@ std::array<u8, PASSPHRASE_KEY_LEN> vtrm_portability_laid_paid()
 	return sc_combine_laid_paid(0x0000000000000000L, 0x0000000000000000L);
 }
 
-int sc_decrypt(const u8* sc_key, const std::array<u8, PASSPHRASE_KEY_LEN>& laid_paid, u8* iv, u8* input, u8* output)
+int sc_decrypt(const u8* sc_key, const std::array<u8, PASSPHRASE_KEY_LEN>& laid_paid, u8* iv, const u8* input, u8* output)
 {
 	aes_context ctx;
 	u8 key[PASSPHRASE_KEY_LEN];
@@ -223,12 +223,12 @@ int sc_decrypt(const u8* sc_key, const std::array<u8, PASSPHRASE_KEY_LEN>& laid_
 	return aes_crypt_cbc(&ctx, AES_DECRYPT, PASSPHRASE_OUT_LEN, iv, input, output);
 }
 
-int vtrm_decrypt(int type, u8* iv, u8* input, u8* output)
+int vtrm_decrypt(int type, u8* iv, const u8* input, u8* output)
 {
 	return sc_decrypt(SC_ISO_SERIES_KEY_2, vtrm_get_laid_paid_from_type(type), iv, input, output);
 }
 
-int vtrm_decrypt_master(s64 laid, s64 paid, u8* iv, u8* input, u8* output)
+int vtrm_decrypt_master(s64 laid, s64 paid, u8* iv, const u8* input, u8* output)
 {
 	return sc_decrypt(SC_ISO_SERIES_INTERNAL_KEY_3, sc_combine_laid_paid(laid, paid), iv, input, output);
 }
@@ -247,7 +247,7 @@ const u8* vtrm_portability_type_mapper(int type)
 	}
 }
 
-int vtrm_decrypt_with_portability(int type, u8* iv, u8* input, u8* output)
+int vtrm_decrypt_with_portability(int type, u8* iv, const u8* input, u8* output)
 {
 	return sc_decrypt(vtrm_portability_type_mapper(type), vtrm_portability_laid_paid(), iv, input, output);
 }

@@ -10,6 +10,7 @@ struct bit_set
 public:
 	constexpr bit_set() noexcept : m_bitset() {}
 	constexpr bit_set(usz val) noexcept : m_bitset(val) {}
+	explicit constexpr bit_set(auto&&... args) noexcept requires std::is_constructible_v<std::bitset<Bits>, decltype(args)...> : m_bitset(std::forward<decltype(args)>(args)...) {}
 
 	[[nodiscard]] bool test(usz pos, std::source_location src_loc = std::source_location::current()) const
 	{

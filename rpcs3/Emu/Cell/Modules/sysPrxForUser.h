@@ -63,5 +63,18 @@ error_code sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, u32 en
 error_code sys_interrupt_thread_disestablish(ppu_thread& ppu, u32 ih);
 
 void sys_ppu_thread_exit(ppu_thread& CPU, u64 val);
+error_code sys_process_get_paramsfo(ppu_thread& ppu, vm::ptr<char> buffer);
 void sys_game_process_exitspawn(ppu_thread& ppu, vm::cptr<char> path, vm::cpptr<char> argv, vm::cpptr<char> envp, u32 data, u32 data_size, s32 prio, u64 flags);
 void sys_game_process_exitspawn2(ppu_thread& ppu, vm::cptr<char> path, vm::cpptr<char> argv, vm::cpptr<char> envp, u32 data, u32 data_size, s32 prio, u64 flags);
+
+struct sys_prx_load_module_option_t;
+struct sys_prx_unload_module_option_t;
+struct sys_prx_module_info_t;
+
+error_code sys_prx_load_module(ppu_thread& ppu, vm::cptr<char> path, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt);
+error_code sys_prx_load_module_on_memcontainer(ppu_thread& ppu, vm::cptr<char> path, u32 mem_ct, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt);
+error_code sys_prx_load_module_list(ppu_thread& ppu, s32 count, vm::cpptr<char> path_list, u64 flags, vm::ptr<sys_prx_load_module_option_t> pOpt, vm::ptr<u32> id_list);
+error_code sys_prx_start_module(ppu_thread& ppu, u32 id, u32 args, vm::ptr<void> argp, vm::ptr<s32> result, u64 flags, vm::ptr<void> pOpt);
+error_code sys_prx_stop_module(ppu_thread& ppu, u32 id, u32 args, vm::ptr<void> argp, vm::ptr<s32> result, u64 flags, vm::ptr<void> pOpt);
+error_code sys_prx_unload_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_prx_unload_module_option_t> pOpt);
+error_code sys_prx_get_module_info(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sys_prx_module_info_t> info);
