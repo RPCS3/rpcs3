@@ -1161,7 +1161,7 @@ error_code cellSysmoduleLoadModuleInternal(ppu_thread& ppu, u16 id)
 	// Load dependencies
 	for (const u16 module_id : MODULE_INFOS[INTERNAL_MODULES_OFFSET + (id & INTERNAL_MODULE_ID_MASK)].dependencies)
 	{
-		if (const error_code ret = module_id < INTERNAL_MODULE_ID_BASE ? cellSysmoduleLoadModule(ppu, id) : cellSysmoduleLoadModuleInternal(ppu, id);
+		if (const error_code ret = module_id < INTERNAL_MODULE_ID_BASE ? cellSysmoduleLoadModule(ppu, module_id) : cellSysmoduleLoadModuleInternal(ppu, module_id);
 			ret != CELL_OK && ret != static_cast<s32>(CELL_SYSMODULE_ERROR_DUPLICATED))
 		{
 			return ret;
