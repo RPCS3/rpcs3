@@ -1028,7 +1028,7 @@ error_code cellSysmoduleGetImagesize(ppu_thread& ppu, u16 id, vm::ptr<u32> image
 
 	const vm::var<u32> file_descriptor;
 
-	if (const vm::var<char[]> path = (id & UNK_MODULE_ID_MASK) == 0 ? vm::make_str("/dev_flash/sys/external/flashATRAC.pic") : vm::make_str(""); // The second string is empty on LLE
+	if (const vm::var<char[]> path = vm::make_str((id & UNK_MODULE_ID_MASK) == 0 ? "/dev_flash/sys/external/flashATRAC.pic" : ""); // The second string is empty on LLE
 		sys_fs_open(ppu, path, 0, file_descriptor, 0, vm::null, 0) != CELL_OK)
 	{
 		return CELL_SYSMODULE_ERROR_FATAL;
@@ -1061,7 +1061,7 @@ error_code cellSysmoduleFetchImage(ppu_thread& ppu, u16 id, vm::ptr<void> image_
 
 	ensure(!!buf_size); // Not checked on LLE
 
-	if (const vm::var<char[]> path = (id & UNK_MODULE_ID_MASK) == 0 ? vm::make_str("/dev_flash/sys/external/flashATRAC.pic") : vm::make_str(""); // The second string is empty on LLE
+	if (const vm::var<char[]> path = vm::make_str((id & UNK_MODULE_ID_MASK) == 0 ? "/dev_flash/sys/external/flashATRAC.pic" : ""); // The second string is empty on LLE
 		(id & UNK_MODULE_ID_MASK) >= 2 || sys_fs_open(ppu, path, 0, file_descriptor, 0, vm::null, 0) != CELL_OK)
 	{
 		*buf_size = 0;
