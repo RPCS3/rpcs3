@@ -64,6 +64,7 @@
 #include "util/v128.hpp"
 #include "util/simd.hpp"
 #include "util/sysinfo.hpp"
+#include "util/fnv_hash.hpp"
 
 #include "Utilities/sema.h"
 
@@ -589,7 +590,7 @@ u32 ppu_read_mmio_aware_u32(u8* vm_base, u32 eal)
 	}
 
 	// Value is assumed to be swapped
-	return read_from_ptr<u32>(vm_base + eal);
+	return read_from_ptr<u32>(vm_base, eal);
 }
 
 void ppu_write_mmio_aware_u32(u8* vm_base, u32 eal, u32 value)
@@ -3472,9 +3473,6 @@ struct jit_core_allocator
 	// Initialize global semaphore with the max number of threads
 	::semaphore<0x7fff> sem{std::max<s16>(thread_count, 1)};
 
-	// Mutex for special extra-large modules to compile alone
-	shared_mutex shared_mtx;
-
 	static s16 limit()
 	{
 		return static_cast<s16>(std::min<s32>(0x7fff, utils::get_thread_count()));
@@ -3500,11 +3498,28 @@ namespace
 			std::unordered_map<std::string, jit_module> map;
 		};
 
-		std::array<bucket_t, 30> buckets;
+		std::array<bucket_t, 256> buckets;
 
 		bucket_t& get_bucket(std::string_view sv)
 		{
-			return buckets[std::hash<std::string_view>()(sv) % std::size(buckets)];
+			const std::string& cache_path = fs::get_cache_dir();
+	
+			if (sv.starts_with(cache_path))
+			{
+				sv = sv.substr(cache_path.size());
+			}
+
+			const usz hash = rpcs3::hash_array(sv.data(), sv.size());
+
+			usz final_index = 0;
+
+			for  (usz i = 0; i < sizeof(hash); i++)
+			{
+				final_index ^= (hash >> (i * 8)) % 256;
+			}
+
+			final_index ^= sv.size();
+			return buckets[final_index % std::size(buckets)];
 		}
 
 		jit_module& get(const std::string& name)
@@ -4127,9 +4142,12 @@ extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_
 					continue;
 				}
 
+				//std::unique_lock lock(g_fxo->get<jit_core_allocator>().sem);
+
 				if (auto prx = ppu_load_prx(obj, true, path, offset))
 				{
 					obj.clear(), src.close(); // Clear decrypted file and elf object memory
+					//.unlock();
 					ppu_initialize(*prx, false, file_size);
 					ppu_finalize(*prx, true);
 					continue;
@@ -4622,9 +4640,6 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 	// Info to load to main JIT instance (true - compiled)
 	std::vector<std::pair<std::string, bool>> link_workload;
-
-	// Sync variable to acquire workloads
-	atomic_t<u32> work_cv = 0;
 
 	bool compiled_new = false;
 
@@ -5232,12 +5247,16 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 	// Create worker threads for compilation
 	if (!workload.empty())
 	{
+		// Sync variable to acquire workloads
+		atomic_t<u64> work_cv = 0;
+		atomic_t<u64> work_done = 0;
+
 		// Update progress dialog
 		g_progr_ptotal += ::size32(workload);
 
 		*progress_dialog = get_localized_string(localized_string_id::PROGRESS_DIALOG_COMPILING_PPU_MODULES);
 
-		const u32 thread_count = std::min(::size32(workload), rpcs3::utils::get_max_threads());
+		const u32 thread_count = std::max<u32>(std::min<u32>(::size32(workload), rpcs3::utils::get_max_threads()), 1) - 1;
 
 		struct thread_index_allocator
 		{
@@ -5246,7 +5265,8 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 		struct thread_op
 		{
-			atomic_t<u32>& work_cv;
+			const std::add_pointer_t<atomic_t<u64>> work_cv;
+			const std::add_pointer_t<atomic_t<u64>> work_done;
 			std::vector<std::pair<std::string, ppu_module<lv2_obj>>>& workload;
 			const ppu_module<lv2_obj>& main_module;
 			const std::string& cache_path;
@@ -5254,10 +5274,11 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 			std::unique_lock<decltype(jit_core_allocator::sem)> core_lock;
 
-			thread_op(atomic_t<u32>& work_cv, std::vector<std::pair<std::string, ppu_module<lv2_obj>>>& workload
+			thread_op(atomic_t<u64>* _work_cv, atomic_t<u64>* _work_done, std::vector<std::pair<std::string, ppu_module<lv2_obj>>>& workload
 				, const cpu_thread* cpu, const ppu_module<lv2_obj>& main_module, const std::string& cache_path, decltype(jit_core_allocator::sem)& sem) noexcept
 
-				: work_cv(work_cv)
+				: work_cv(_work_cv)
+				, work_done(_work_done)
 				, workload(workload)
 				, main_module(main_module)
 				, cache_path(cache_path)
@@ -5269,6 +5290,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 			thread_op(const thread_op& other) noexcept
 				: work_cv(other.work_cv)
+				, work_done(other.work_done)
 				, workload(other.workload)
 				, main_module(other.main_module)
 				, cache_path(other.cache_path)
@@ -5291,7 +5313,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 	#ifdef __APPLE__
 				pthread_jit_write_protect_np(false);
 	#endif
-				for (u32 i = work_cv++; i < workload.size(); i = work_cv++, g_progr_pdone++)
+				for (u32 i = (*work_cv)++; i < workload.size(); i = (*work_cv)++, (*work_done)++, g_progr_pdone++)
 				{
 					if (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped())
 					{
@@ -5300,19 +5322,6 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 					// Keep allocating workload
 					const auto& [obj_name, part] = std::as_const(workload)[i];
-
-					std::shared_lock rlock(g_fxo->get<jit_core_allocator>().shared_mtx, std::defer_lock);
-					std::unique_lock lock(g_fxo->get<jit_core_allocator>().shared_mtx, std::defer_lock);
-
-					if (false && part.jit_bounds && part.parent->funcs.size() >= 0x8000)
-					{
-						// Make a large symbol-resolving function compile alone because it has massive memory requirements
-						lock.lock();
-					}
-					else
-					{
-						rlock.lock();
-					}
 
 					ppu_log.warning("LLVM: Compiling module %s%s", cache_path, obj_name);
 
@@ -5326,25 +5335,59 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				}
 
 				core_lock.unlock();
+
+	#ifdef __APPLE__
+				pthread_jit_write_protect_np(true);
+	#endif
 			}
 		};
 
 		// Prevent watchdog thread from terminating
 		g_watchdog_hold_ctr++;
 
-		named_thread_group threads(fmt::format("PPUW.%u.", ++g_fxo->get<thread_index_allocator>().index), thread_count
-			, thread_op(work_cv, workload, cpu, info, cache_path, g_fxo->get<jit_core_allocator>().sem)
-			, [&](u32 /*thread_index*/, thread_op& op)
+		const std::string worker_group_name = fmt::format("PPUW.%u.", ++g_fxo->get<thread_index_allocator>().index);
+		const auto try_lock_thread = [&](u32 thread_index, thread_op& op)
 		{
+			const bool to_lock = (thread_index + *op.work_done) < workload.size() && (cpu ? !cpu->state.all_of(cpu_flag::exit) : !Emu.IsStopped());
+
+			if (!to_lock)
+			{
+				return false;
+			}
+
 			// Allocate "core"
 			op.core_lock.lock();
 
 			// Second check before creating another thread
-			return work_cv < workload.size() && (cpu ? !cpu->state.all_of(cpu_flag::exit) : !Emu.IsStopped());
-		});
+			const bool to_unlock = !((thread_index + *op.work_done) < workload.size() && (cpu ? !cpu->state.all_of(cpu_flag::exit) : !Emu.IsStopped()));
+
+			if (to_unlock)
+			{
+				op.core_lock.unlock();
+				return false;
+			}
+
+			return true;
+		};
+
+		named_thread_group threads(worker_group_name, thread_count
+			, thread_op(&work_cv, &work_done, workload, cpu, info, cache_path, g_fxo->get<jit_core_allocator>().sem)
+			, try_lock_thread);
+
+		const auto old_name = thread_ctrl::get_name();
+		thread_ctrl::set_name(worker_group_name + std::to_string(thread_count + 1));
+
+		thread_op cur_op(&work_cv, &work_done, workload, cpu, info, cache_path, g_fxo->get<jit_core_allocator>().sem);
+
+		if (try_lock_thread(thread_count, cur_op))
+		{
+			// Recycle current thread: reduce overall thrread count
+			cur_op();
+		}
 
 		threads.join();
-
+		
+		thread_ctrl::set_name(old_name);
 		g_watchdog_hold_ctr--;
 	}
 

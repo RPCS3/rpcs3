@@ -225,56 +225,56 @@ void usb_device_usio::translate_input_taiko()
 		if (const auto& pad = ::at32(handler->GetPads(), pad_number); pad->is_connected() && !pad->is_copilot() && is_input_allowed())
 		{
 			const auto& cfg = ::at32(g_cfg_usio.players, pad_number);
-			cfg->handle_input(pad, false, [&](usio_btn btn, pad_button /*pad_btn*/, u16 /*value*/, bool pressed, bool& /*abort*/)
+			cfg->handle_input(pad, false, [&](const auto& value, bool& /*abort*/)
 			{
-				switch (btn)
+				switch (value.btn)
 				{
 				case usio_btn::test:
 					if (player != 0) break;
-					if (pressed && !status.test_key_pressed) // Solve the need to hold the Test key
+					if (value.pressed && !status.test_key_pressed) // Solve the need to hold the Test key
 						status.test_on = !status.test_on;
-					status.test_key_pressed = pressed;
+					status.test_key_pressed = value.pressed;
 					break;
 				case usio_btn::coin:
 					if (player != 0) break;
-					if (pressed && !status.coin_key_pressed) // Ensure only one coin is inserted each time the Coin key is pressed
+					if (value.pressed && !status.coin_key_pressed) // Ensure only one coin is inserted each time the Coin key is pressed
 						status.coin_counter++;
-					status.coin_key_pressed = pressed;
+					status.coin_key_pressed = value.pressed;
 					break;
 				case usio_btn::service:
-					if (player == 0 && pressed)
+					if (player == 0 && value.pressed)
 						digital_input |= 0x4000;
 					break;
 				case usio_btn::enter:
-					if (player == 0 && pressed)
+					if (player == 0 && value.pressed)
 						digital_input |= 0x200;
 					break;
 				case usio_btn::up:
-					if (player == 0 && pressed)
+					if (player == 0 && value.pressed)
 						digital_input |= 0x2000;
 					break;
 				case usio_btn::down:
-					if (player == 0 && pressed)
+					if (player == 0 && value.pressed)
 						digital_input |= 0x1000;
 					break;
 				case usio_btn::taiko_hit_side_left:
-					if (pressed)
+					if (value.pressed)
 						std::memcpy(input_buf.data() + 32 + offset, &c_hit, sizeof(u16));
 					break;
 				case usio_btn::taiko_hit_center_right:
-					if (pressed)
+					if (value.pressed)
 						std::memcpy(input_buf.data() + 36 + offset, &c_hit, sizeof(u16));
 					break;
 				case usio_btn::taiko_hit_side_right:
-					if (pressed)
+					if (value.pressed)
 						std::memcpy(input_buf.data() + 38 + offset, &c_hit, sizeof(u16));
 					break;
 				case usio_btn::taiko_hit_center_left:
-					if (pressed)
+					if (value.pressed)
 						std::memcpy(input_buf.data() + 34 + offset, &c_hit, sizeof(u16));
 					break;
 				case usio_btn::card_tapping:
-					if (pressed)
+					if (value.pressed)
 						tap_card(player);
 					break;
 				default:
@@ -316,30 +316,30 @@ void usb_device_usio::translate_input_tekken()
 		if (const auto& pad = ::at32(handler->GetPads(), pad_number); pad->is_connected() && !pad->is_copilot() && is_input_allowed())
 		{
 			const auto& cfg = ::at32(g_cfg_usio.players, pad_number);
-			cfg->handle_input(pad, false, [&](usio_btn btn, pad_button /*pad_btn*/, u16 /*value*/, bool pressed, bool& /*abort*/)
+			cfg->handle_input(pad, false, [&](const auto& value, bool& /*abort*/)
 			{
-				switch (btn)
+				switch (value.btn)
 				{
 				case usio_btn::test:
 					if (player % 2 != 0)
 						break;
-					if (pressed && !status.test_key_pressed) // Solve the need to hold the Test button
+					if (value.pressed && !status.test_key_pressed) // Solve the need to hold the Test button
 						status.test_on = !status.test_on;
-					status.test_key_pressed = pressed;
+					status.test_key_pressed = value.pressed;
 					break;
 				case usio_btn::coin:
 					if (player % 2 != 0)
 						break;
-					if (pressed && !status.coin_key_pressed) // Ensure only one coin is inserted each time the Coin button is pressed
+					if (value.pressed && !status.coin_key_pressed) // Ensure only one coin is inserted each time the Coin button is pressed
 						status.coin_counter++;
-					status.coin_key_pressed = pressed;
+					status.coin_key_pressed = value.pressed;
 					break;
 				case usio_btn::service:
-					if (player % 2 == 0 && pressed)
+					if (player % 2 == 0 && value.pressed)
 						input |= 0x4000;
 					break;
 				case usio_btn::enter:
-					if (pressed)
+					if (value.pressed)
 					{
 						input |= 0x800000ULL << shift;
 						if (player == 0)
@@ -347,7 +347,7 @@ void usb_device_usio::translate_input_tekken()
 					}
 					break;
 				case usio_btn::up:
-					if (pressed)
+					if (value.pressed)
 					{
 						input |= 0x200000ULL << shift;
 						if (player == 0)
@@ -355,7 +355,7 @@ void usb_device_usio::translate_input_tekken()
 					}
 					break;
 				case usio_btn::down:
-					if (pressed)
+					if (value.pressed)
 					{
 						input |= 0x100000ULL << shift;
 						if (player == 0)
@@ -363,7 +363,7 @@ void usb_device_usio::translate_input_tekken()
 					}
 					break;
 				case usio_btn::left:
-					if (pressed)
+					if (value.pressed)
 					{
 						input |= 0x80000ULL << shift;
 						if (player == 0)
@@ -371,7 +371,7 @@ void usb_device_usio::translate_input_tekken()
 					}
 					break;
 				case usio_btn::right:
-					if (pressed)
+					if (value.pressed)
 					{
 						input |= 0x40000ULL << shift;
 						if (player == 0)
@@ -379,7 +379,7 @@ void usb_device_usio::translate_input_tekken()
 					}
 					break;
 				case usio_btn::tekken_button1:
-					if (pressed)
+					if (value.pressed)
 					{
 						input |= 0x20000ULL << shift;
 						if (player == 0)
@@ -387,23 +387,23 @@ void usb_device_usio::translate_input_tekken()
 					}
 					break;
 				case usio_btn::tekken_button2:
-					if (pressed)
+					if (value.pressed)
 						input |= 0x10000ULL << shift;
 					break;
 				case usio_btn::tekken_button3:
-					if (pressed)
+					if (value.pressed)
 						input |= 0x40000000ULL << shift;
 					break;
 				case usio_btn::tekken_button4:
-					if (pressed)
+					if (value.pressed)
 						input |= 0x20000000ULL << shift;
 					break;
 				case usio_btn::tekken_button5:
-					if (pressed)
+					if (value.pressed)
 						input |= 0x80000000ULL << shift;
 					break;
 				case usio_btn::card_tapping:
-					if (pressed)
+					if (value.pressed)
 						tap_card(player);
 					break;
 				default:

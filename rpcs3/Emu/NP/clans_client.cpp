@@ -230,8 +230,8 @@ namespace clan
 		CURL* curl = ctx->curl;
 
 		ClanRequestType req_type = ClanRequestType::FUNC;
-		const pugi::xml_node clan = xml_body.child("clan");
-		if (clan && clan.child("ticket"))
+		const pugi::xml_node clan = xml_body.child("clan"sv);
+		if (clan && clan.child("ticket"sv))
 		{
 			req_type = ClanRequestType::SEC;
 		}
@@ -296,11 +296,11 @@ namespace clan
 			return SCE_NP_CLANS_ERROR_BAD_RESPONSE;
 		}
 
-		const pugi::xml_node clan_result = out_response.child("clan");
+		const pugi::xml_node clan_result = out_response.child("clan"sv);
 		if (!clan_result)
 			return SCE_NP_CLANS_ERROR_BAD_RESPONSE;
 
-		const pugi::xml_attribute result = clan_result.attribute("result");
+		const pugi::xml_attribute result = clan_result.attribute("result"sv);
 		if (!result)
 			return SCE_NP_CLANS_ERROR_BAD_RESPONSE;
 
@@ -358,11 +358,11 @@ namespace clan
 			return SCE_NP_CLANS_ERROR_SERVICE_UNAVAILABLE;
 
 		pugi::xml_document doc = pugi::xml_document();
-		pugi::xml_node clan = doc.append_child("clan");
+		pugi::xml_node clan = doc.append_child("clan"sv);
 
-		clan.append_child("ticket").text().set(ticket.c_str());
-		clan.append_child("start").text().set(paging.startPos);
-		clan.append_child("max").text().set(paging.max);
+		clan.append_child("ticket"sv).text().set(ticket);
+		clan.append_child("start"sv).text().set(paging.startPos);
+		clan.append_child("max"sv).text().set(paging.max);
 
 		pugi::xml_document response = pugi::xml_document();
 		const SceNpClansError clan_res = send_request(req_id, ClanRequestAction::GetClanList, ClanManagerOperationType::VIEW, doc, response);
@@ -370,37 +370,37 @@ namespace clan
 		if (clan_res != SCE_NP_CLANS_SUCCESS)
 			return clan_res;
 
-		const pugi::xml_node clan_result = response.child("clan");
-		const pugi::xml_node list = clan_result.child("list");
+		const pugi::xml_node clan_result = response.child("clan"sv);
+		const pugi::xml_node list = clan_result.child("list"sv);
 
-		const pugi::xml_attribute results = list.attribute("results");
+		const pugi::xml_attribute results = list.attribute("results"sv);
 		const uint32_t results_count = results.as_uint();
 
-		const pugi::xml_attribute total = list.attribute("total");
+		const pugi::xml_attribute total = list.attribute("total"sv);
 		const uint32_t total_count = total.as_uint();
 
 		int i = 0;
-		for (pugi::xml_node info = list.child("info"); info; info = info.next_sibling("info"), i++)
+		for (pugi::xml_node info = list.child("info"sv); info; info = info.next_sibling("info"sv), i++)
 		{
-			const pugi::xml_attribute id = info.attribute("id");
+			const pugi::xml_attribute id = info.attribute("id"sv);
 			const uint32_t clan_id = id.as_uint();
 
-			const pugi::xml_node name = info.child("name");
+			const pugi::xml_node name = info.child("name"sv);
 			const std::string name_str = name.text().as_string();
 
-			const pugi::xml_node tag = info.child("tag");
+			const pugi::xml_node tag = info.child("tag"sv);
 			const std::string tag_str = tag.text().as_string();
 
-			const pugi::xml_node role = info.child("role");
+			const pugi::xml_node role = info.child("role"sv);
 			const int32_t role_int = role.text().as_uint();
 
-			const pugi::xml_node status = info.child("status");
+			const pugi::xml_node status = info.child("status"sv);
 			const uint32_t status_int = status.text().as_uint();
 
-			const pugi::xml_node onlinename = info.child("onlinename");
+			const pugi::xml_node onlinename = info.child("onlinename"sv);
 			const std::string onlinename_str = onlinename.text().as_string();
 
-			const pugi::xml_node members = info.child("members");
+			const pugi::xml_node members = info.child("members"sv);
 			const uint32_t members_int = members.text().as_uint();
 
 			SceNpClansEntry entry = SceNpClansEntry{
@@ -431,8 +431,8 @@ namespace clan
 	SceNpClansError clans_client::get_clan_info(u32 req_id, SceNpClanId clan_id, SceNpClansClanInfo& clan_info)
 	{
 		pugi::xml_document doc = pugi::xml_document();
-		pugi::xml_node clan = doc.append_child("clan");
-		clan.append_child("id").text().set(clan_id);
+		pugi::xml_node clan = doc.append_child("clan"sv);
+		clan.append_child("id"sv).text().set(clan_id);
 
 		pugi::xml_document response = pugi::xml_document();
 		const SceNpClansError clan_res = send_request(req_id, ClanRequestAction::GetClanInfo, ClanManagerOperationType::VIEW, doc, response);
@@ -440,14 +440,14 @@ namespace clan
 		if (clan_res != SCE_NP_CLANS_SUCCESS)
 			return clan_res;
 
-		const pugi::xml_node clan_result = response.child("clan");
-		const pugi::xml_node info = clan_result.child("info");
+		const pugi::xml_node clan_result = response.child("clan"sv);
+		const pugi::xml_node info = clan_result.child("info"sv);
 
-		const std::string name_str = info.child("name").text().as_string();
-		const std::string tag_str = info.child("tag").text().as_string();
-		const uint32_t members_int = info.child("members").text().as_uint();
-		const std::string date_created_str = info.child("date-created").text().as_string();
-		const std::string description_str = info.child("description").text().as_string();
+		const std::string name_str = info.child("name"sv).text().as_string();
+		const std::string tag_str = info.child("tag"sv).text().as_string();
+		const uint32_t members_int = info.child("members"sv).text().as_uint();
+		const std::string date_created_str = info.child("date-created"sv).text().as_string();
+		const std::string description_str = info.child("description"sv).text().as_string();
 
 		clan_info = SceNpClansClanInfo{
 			.info = SceNpClansClanBasicInfo{
@@ -474,12 +474,12 @@ namespace clan
 			return SCE_NP_CLANS_ERROR_SERVICE_UNAVAILABLE;
 
 		pugi::xml_document doc = pugi::xml_document();
-		pugi::xml_node clan = doc.append_child("clan");
-		clan.append_child("ticket").text().set(ticket.c_str());
-		clan.append_child("id").text().set(clan_id);
+		pugi::xml_node clan = doc.append_child("clan"sv);
+		clan.append_child("ticket"sv).text().set(ticket);
+		clan.append_child("id"sv).text().set(clan_id);
 
 		const std::string jid_str = fmt::format(JID_FORMAT, np::npid_to_string(np_id));
-		clan.append_child("jid").text().set(jid_str.c_str());
+		clan.append_child("jid"sv).text().set(jid_str);
 
 		pugi::xml_document response = pugi::xml_document();
 		const SceNpClansError clan_res = send_request(req_id, ClanRequestAction::GetMemberInfo, ClanManagerOperationType::VIEW, doc, response);
@@ -487,10 +487,10 @@ namespace clan
 		if (clan_res != SCE_NP_CLANS_SUCCESS)
 			return clan_res;
 
-		const pugi::xml_node clan_result = response.child("clan");
-		const pugi::xml_node member_info = clan_result.child("info");
+		const pugi::xml_node clan_result = response.child("clan"sv);
+		const pugi::xml_node member_info = clan_result.child("info"sv);
 
-		const pugi::xml_attribute member_jid = member_info.attribute("jid");
+		const pugi::xml_attribute member_jid = member_info.attribute("jid"sv);
 		const std::string member_jid_str = member_jid.as_string();
 		const std::string member_username = fmt::split(member_jid_str, {"@"})[0];
 
@@ -504,13 +504,13 @@ namespace clan
 			np::string_to_npid(member_username, member_npid);
 		}
 
-		const pugi::xml_node role = member_info.child("role");
+		const pugi::xml_node role = member_info.child("role"sv);
 		const uint32_t role_int = role.text().as_uint();
 
-		const pugi::xml_node status = member_info.child("status");
+		const pugi::xml_node status = member_info.child("status"sv);
 		const uint32_t status_int = status.text().as_uint();
 
-		const pugi::xml_node description = member_info.child("description");
+		const pugi::xml_node description = member_info.child("description"sv);
 		const std::string description_str = description.text().as_string();
 
 		mem_info = SceNpClansMemberEntry
@@ -535,11 +535,11 @@ namespace clan
 			return SCE_NP_CLANS_ERROR_SERVICE_UNAVAILABLE;
 
 		pugi::xml_document doc = pugi::xml_document();
-		pugi::xml_node clan = doc.append_child("clan");
-		clan.append_child("ticket").text().set(ticket.c_str());
-		clan.append_child("id").text().set(clan_id);
-		clan.append_child("start").text().set(paging.startPos);
-		clan.append_child("max").text().set(paging.max);
+		pugi::xml_node clan = doc.append_child("clan"sv);
+		clan.append_child("ticket"sv).text().set(ticket);
+		clan.append_child("id"sv).text().set(clan_id);
+		clan.append_child("start"sv).text().set(paging.startPos);
+		clan.append_child("max"sv).text().set(paging.max);
 
 		pugi::xml_document response = pugi::xml_document();
 		const SceNpClansError clan_res = send_request(req_id, ClanRequestAction::GetMemberList, ClanManagerOperationType::VIEW, doc, response);
@@ -547,19 +547,19 @@ namespace clan
 		if (clan_res != SCE_NP_CLANS_SUCCESS)
 			return clan_res;
 
-		const pugi::xml_node clan_result = response.child("clan");
-		const pugi::xml_node list = clan_result.child("list");
+		const pugi::xml_node clan_result = response.child("clan"sv);
+		const pugi::xml_node list = clan_result.child("list"sv);
 
-		const pugi::xml_attribute results = list.attribute("results");
+		const pugi::xml_attribute results = list.attribute("results"sv);
 		const uint32_t results_count = results.as_uint();
 
-		const pugi::xml_attribute total = list.attribute("total");
+		const pugi::xml_attribute total = list.attribute("total"sv);
 		const uint32_t total_count = total.as_uint();
 
 		int i = 0;
-		for (pugi::xml_node member_info = list.child("info"); member_info; member_info = member_info.next_sibling("info"))
+		for (pugi::xml_node member_info = list.child("info"sv); member_info; member_info = member_info.next_sibling("info"sv))
 		{
-			const std::string member_jid = member_info.attribute("jid").as_string();
+			const std::string member_jid = member_info.attribute("jid"sv).as_string();
 			const std::string member_username = fmt::split(member_jid, {"@"})[0];
 
 			SceNpId member_npid;
@@ -572,9 +572,9 @@ namespace clan
 				np::string_to_npid(member_username, member_npid);
 			}
 
-			const uint32_t role_int = member_info.child("role").text().as_uint();
-			const uint32_t status_int = member_info.child("status").text().as_uint();
-			const std::string description_str = member_info.child("description").text().as_string();
+			const uint32_t role_int = member_info.child("role"sv).text().as_uint();
+			const uint32_t status_int = member_info.child("status"sv).text().as_uint();
+			const std::string description_str = member_info.child("description"sv).text().as_string();
 
 			SceNpClansMemberEntry entry = SceNpClansMemberEntry
 			{
@@ -603,11 +603,11 @@ namespace clan
 		const std::string ticket = get_clan_ticket(nph);
 
 		pugi::xml_document doc = pugi::xml_document();
-		pugi::xml_node clan = doc.append_child("clan");
-		clan.append_child("ticket").text().set(ticket.c_str());
-		clan.append_child("id").text().set(clan_id);
-		clan.append_child("start").text().set(paging.startPos);
-		clan.append_child("max").text().set(paging.max);
+		pugi::xml_node clan = doc.append_child("clan"sv);
+		clan.append_child("ticket"sv).text().set(ticket);
+		clan.append_child("id"sv).text().set(clan_id);
+		clan.append_child("start"sv).text().set(paging.startPos);
+		clan.append_child("max"sv).text().set(paging.max);
 
 		pugi::xml_document response = pugi::xml_document();
 		const SceNpClansError clan_res = send_request(req_id, ClanRequestAction::GetBlacklist, ClanManagerOperationType::VIEW, doc, response);
@@ -615,19 +615,19 @@ namespace clan
 		if (clan_res != SCE_NP_CLANS_SUCCESS)
 			return clan_res;
 
-		const pugi::xml_node clan_result = response.child("clan");
-		const pugi::xml_node list = clan_result.child("list");
+		const pugi::xml_node clan_result = response.child("clan"sv);
+		const pugi::xml_node list = clan_result.child("list"sv);
 
-		const pugi::xml_attribute results = list.attribute("results");
+		const pugi::xml_attribute results = list.attribute("results"sv);
 		const uint32_t results_count = results.as_uint();
 
-		const pugi::xml_attribute total = list.attribute("total");
+		const pugi::xml_attribute total = list.attribute("total"sv);
 		const uint32_t total_count = total.as_uint();
 
 		int i = 0;
-		for (pugi::xml_node member = list.child("entry"); member; member = member.next_sibling("entry"))
+		for (pugi::xml_node member = list.child("entry"sv); member; member = member.next_sibling("entry"sv))
 		{
-			const pugi::xml_node member_jid = member.child("jid");
+			const pugi::xml_node member_jid = member.child("jid"sv);
 			const std::string member_jid_str = member_jid.text().as_string();
 			const std::string member_username = fmt::split(member_jid_str, {"@"})[0];
 
@@ -638,7 +638,7 @@ namespace clan
 			}
 			else
 			{
-				np::string_to_npid(member_username.c_str(), member_npid);
+				np::string_to_npid(member_username, member_npid);
 			}
 
 			SceNpClansBlacklistEntry entry = SceNpClansBlacklistEntry
@@ -666,12 +666,12 @@ namespace clan
 			return SCE_NP_CLANS_ERROR_SERVICE_UNAVAILABLE;
 
 		pugi::xml_document doc = pugi::xml_document();
-		pugi::xml_node clan = doc.append_child("clan");
-		clan.append_child("ticket").text().set(ticket.c_str());
-		clan.append_child("id").text().set(clan_id);
+		pugi::xml_node clan = doc.append_child("clan"sv);
+		clan.append_child("ticket"sv).text().set(ticket);
+		clan.append_child("id"sv).text().set(clan_id);
 
 		const std::string jid_str = fmt::format(JID_FORMAT, np::npid_to_string(np_id));
-		clan.append_child("jid").text().set(jid_str.c_str());
+		clan.append_child("jid"sv).text().set(jid_str);
 
 		pugi::xml_document response = pugi::xml_document();
 		return send_request(req_id, ClanRequestAction::RecordBlacklistEntry, ClanManagerOperationType::UPDATE, doc, response);
@@ -684,12 +684,12 @@ namespace clan
 			return SCE_NP_CLANS_ERROR_SERVICE_UNAVAILABLE;
 
 		pugi::xml_document doc = pugi::xml_document();
-		pugi::xml_node clan = doc.append_child("clan");
-		clan.append_child("ticket").text().set(ticket.c_str());
-		clan.append_child("id").text().set(clan_id);
+		pugi::xml_node clan = doc.append_child("clan"sv);
+		clan.append_child("ticket"sv).text().set(ticket);
+		clan.append_child("id"sv).text().set(clan_id);
 
 		const std::string jid_str = fmt::format(JID_FORMAT, np::npid_to_string(np_id));
-		clan.append_child("jid").text().set(jid_str.c_str());
+		clan.append_child("jid"sv).text().set(jid_str);
 
 		pugi::xml_document response = pugi::xml_document();
 		return send_request(req_id, ClanRequestAction::DeleteBlacklistEntry, ClanManagerOperationType::UPDATE, doc, response);
@@ -698,16 +698,16 @@ namespace clan
 	SceNpClansError clans_client::clan_search(u32 req_id, const SceNpClansPagingRequest& paging, const SceNpClansSearchableName& search, std::vector<SceNpClansClanBasicInfo>& clan_list, SceNpClansPagingResult& page_result)
 	{
 		pugi::xml_document doc = pugi::xml_document();
-		pugi::xml_node clan = doc.append_child("clan");
-		clan.append_child("start").text().set(paging.startPos);
-		clan.append_child("max").text().set(paging.max);
+		pugi::xml_node clan = doc.append_child("clan"sv);
+		clan.append_child("start"sv).text().set(paging.startPos);
+		clan.append_child("max"sv).text().set(paging.max);
 
-		pugi::xml_node filter = clan.append_child("filter");
-		pugi::xml_node name = filter.append_child("name");
+		pugi::xml_node filter = clan.append_child("filter"sv);
+		pugi::xml_node name = filter.append_child("name"sv);
 
 		const std::string op_name = fmt::format("%s", static_cast<ClanSearchFilterOperator>(static_cast<s32>(search.nameSearchOp)));
-		name.append_attribute("op").set_value(op_name.c_str());
-		name.append_attribute("value").set_value(search.name);
+		name.append_attribute("op"sv).set_value(op_name);
+		name.append_attribute("value"sv).set_value(search.name);
 
 		pugi::xml_document response = pugi::xml_document();
 		const SceNpClansError clan_res = send_request(req_id, ClanRequestAction::ClanSearch, ClanManagerOperationType::VIEW, doc, response);
@@ -715,22 +715,22 @@ namespace clan
 		if (clan_res != SCE_NP_CLANS_SUCCESS)
 			return clan_res;
 
-		const pugi::xml_node clan_result = response.child("clan");
-		const pugi::xml_node list = clan_result.child("list");
+		const pugi::xml_node clan_result = response.child("clan"sv);
+		const pugi::xml_node list = clan_result.child("list"sv);
 
-		const pugi::xml_attribute results = list.attribute("results");
+		const pugi::xml_attribute results = list.attribute("results"sv);
 		const uint32_t results_count = results.as_uint();
 
-		const pugi::xml_attribute total = list.attribute("total");
+		const pugi::xml_attribute total = list.attribute("total"sv);
 		const uint32_t total_count = total.as_uint();
 
 		int i = 0;
-		for (pugi::xml_node node = list.child("info"); node; node = node.next_sibling("info"))
+		for (pugi::xml_node node = list.child("info"sv); node; node = node.next_sibling("info"sv))
 		{
-			const uint32_t clan_id = node.attribute("id").as_uint();
-			const std::string name_str = node.child("name").text().as_string();
-			const std::string tag_str = node.child("tag").text().as_string();
-			const uint32_t members_int = node.child("members").text().as_uint();
+			const uint32_t clan_id = node.attribute("id"sv).as_uint();
+			const std::string name_str = node.child("name"sv).text().as_string();
+			const std::string tag_str = node.child("tag"sv).text().as_string();
+			const uint32_t members_int = node.child("members"sv).text().as_uint();
 
 			SceNpClansClanBasicInfo entry = SceNpClansClanBasicInfo
 			{
@@ -764,11 +764,11 @@ namespace clan
 			return SCE_NP_CLANS_ERROR_SERVICE_UNAVAILABLE;
 
 		pugi::xml_document doc = pugi::xml_document();
-		pugi::xml_node clan = doc.append_child("clan");
-		clan.append_child("ticket").text().set(ticket.c_str());
+		pugi::xml_node clan = doc.append_child("clan"sv);
+		clan.append_child("ticket"sv).text().set(ticket);
 
-		clan.append_child("name").text().set(name.data());
-		clan.append_child("tag").text().set(tag.data());
+		clan.append_child("name"sv).text().set(name.data());
+		clan.append_child("tag"sv).text().set(tag.data());
 
 		pugi::xml_document response = pugi::xml_document();
 		const SceNpClansError clan_res = send_request(req_id, ClanRequestAction::CreateClan, ClanManagerOperationType::UPDATE, doc, response);
@@ -776,8 +776,8 @@ namespace clan
 		if (clan_res != SCE_NP_CLANS_SUCCESS)
 			return clan_res;
 
-		const pugi::xml_node clan_result = response.child("clan");
-		const pugi::xml_attribute id = clan_result.attribute("id");
+		const pugi::xml_node clan_result = response.child("clan"sv);
+		const pugi::xml_attribute id = clan_result.attribute("id"sv);
 		const uint32_t clan_id_int = id.as_uint();
 
 		*clan_id = clan_id_int;
@@ -792,9 +792,9 @@ namespace clan
 			return SCE_NP_CLANS_ERROR_SERVICE_UNAVAILABLE;
 
 		pugi::xml_document doc = pugi::xml_document();
-		pugi::xml_node clan = doc.append_child("clan");
-		clan.append_child("ticket").text().set(ticket.c_str());
-		clan.append_child("id").text().set(clan_id);
+		pugi::xml_node clan = doc.append_child("clan"sv);
+		clan.append_child("ticket"sv).text().set(ticket);
+		clan.append_child("id"sv).text().set(clan_id);
 
 		pugi::xml_document response = pugi::xml_document();
 		const SceNpClansError clan_res = send_request(req_id, ClanRequestAction::DisbandClan, ClanManagerOperationType::UPDATE, doc, response);
@@ -812,9 +812,9 @@ namespace clan
 			return SCE_NP_CLANS_ERROR_SERVICE_UNAVAILABLE;
 
 		pugi::xml_document doc = pugi::xml_document();
-		pugi::xml_node clan = doc.append_child("clan");
-		clan.append_child("ticket").text().set(ticket.c_str());
-		clan.append_child("id").text().set(clan_id);
+		pugi::xml_node clan = doc.append_child("clan"sv);
+		clan.append_child("ticket"sv).text().set(ticket);
+		clan.append_child("id"sv).text().set(clan_id);
 
 		pugi::xml_document response = pugi::xml_document();
 		return send_request(req_id, ClanRequestAction::RequestMembership, ClanManagerOperationType::UPDATE, doc, response);
@@ -827,9 +827,9 @@ namespace clan
 			return SCE_NP_CLANS_ERROR_SERVICE_UNAVAILABLE;
 
 		pugi::xml_document doc = pugi::xml_document();
-		pugi::xml_node clan = doc.append_child("clan");
-		clan.append_child("ticket").text().set(ticket.c_str());
-		clan.append_child("id").text().set(clan_id);
+		pugi::xml_node clan = doc.append_child("clan"sv);
+		clan.append_child("ticket"sv).text().set(ticket);
+		clan.append_child("id"sv).text().set(clan_id);
 
 		pugi::xml_document response = pugi::xml_document();
 		return send_request(req_id, ClanRequestAction::CancelRequestMembership, ClanManagerOperationType::UPDATE, doc, response);
@@ -842,12 +842,12 @@ namespace clan
 			return SCE_NP_CLANS_ERROR_SERVICE_UNAVAILABLE;
 
 		pugi::xml_document doc = pugi::xml_document();
-		pugi::xml_node clan = doc.append_child("clan");
-		clan.append_child("ticket").text().set(ticket.c_str());
-		clan.append_child("id").text().set(clan_id);
+		pugi::xml_node clan = doc.append_child("clan"sv);
+		clan.append_child("ticket"sv).text().set(ticket);
+		clan.append_child("id"sv).text().set(clan_id);
 
 		const std::string jid_str = fmt::format(JID_FORMAT, np::npid_to_string(np_id));
-		clan.append_child("jid").text().set(jid_str.c_str());
+		clan.append_child("jid"sv).text().set(jid_str);
 
 		pugi::xml_document response = pugi::xml_document();
 		return send_request(req_id, allow ? ClanRequestAction::AcceptMembershipRequest : ClanRequestAction::DeclineMembershipRequest, ClanManagerOperationType::UPDATE, doc, response);
@@ -860,12 +860,12 @@ namespace clan
 			return SCE_NP_CLANS_ERROR_SERVICE_UNAVAILABLE;
 
 		pugi::xml_document doc = pugi::xml_document();
-		pugi::xml_node clan = doc.append_child("clan");
-		clan.append_child("ticket").text().set(ticket.c_str());
-		clan.append_child("id").text().set(clan_id);
+		pugi::xml_node clan = doc.append_child("clan"sv);
+		clan.append_child("ticket"sv).text().set(ticket);
+		clan.append_child("id"sv).text().set(clan_id);
 
 		const std::string jid_str = fmt::format(JID_FORMAT, np::npid_to_string(np_id));
-		clan.append_child("jid").text().set(jid_str.c_str());
+		clan.append_child("jid"sv).text().set(jid_str);
 
 		pugi::xml_document response = pugi::xml_document();
 		return send_request(req_id, ClanRequestAction::SendInvitation, ClanManagerOperationType::UPDATE, doc, response);
@@ -878,12 +878,12 @@ namespace clan
 			return SCE_NP_CLANS_ERROR_SERVICE_UNAVAILABLE;
 
 		pugi::xml_document doc = pugi::xml_document();
-		pugi::xml_node clan = doc.append_child("clan");
-		clan.append_child("ticket").text().set(ticket.c_str());
-		clan.append_child("id").text().set(clan_id);
+		pugi::xml_node clan = doc.append_child("clan"sv);
+		clan.append_child("ticket"sv).text().set(ticket);
+		clan.append_child("id"sv).text().set(clan_id);
 
 		const std::string jid_str = fmt::format(JID_FORMAT, np::npid_to_string(np_id));
-		clan.append_child("jid").text().set(jid_str.c_str());
+		clan.append_child("jid"sv).text().set(jid_str);
 
 		pugi::xml_document response = pugi::xml_document();
 		return send_request(req_id, ClanRequestAction::CancelInvitation, ClanManagerOperationType::UPDATE, doc, response);
@@ -896,9 +896,9 @@ namespace clan
 			return SCE_NP_CLANS_ERROR_SERVICE_UNAVAILABLE;
 
 		pugi::xml_document doc = pugi::xml_document();
-		pugi::xml_node clan = doc.append_child("clan");
-		clan.append_child("ticket").text().set(ticket.c_str());
-		clan.append_child("id").text().set(clan_id);
+		pugi::xml_node clan = doc.append_child("clan"sv);
+		clan.append_child("ticket"sv).text().set(ticket);
+		clan.append_child("id"sv).text().set(clan_id);
 
 		pugi::xml_document response = pugi::xml_document();
 		return send_request(req_id, accept ? ClanRequestAction::AcceptInvitation : ClanRequestAction::DeclineInvitation, ClanManagerOperationType::UPDATE, doc, response);
@@ -911,17 +911,17 @@ namespace clan
 			return SCE_NP_CLANS_ERROR_SERVICE_UNAVAILABLE;
 
 		pugi::xml_document doc = pugi::xml_document();
-		pugi::xml_node clan = doc.append_child("clan");
-		clan.append_child("ticket").text().set(ticket.c_str());
-		clan.append_child("id").text().set(clan_id);
+		pugi::xml_node clan = doc.append_child("clan"sv);
+		clan.append_child("ticket"sv).text().set(ticket);
+		clan.append_child("id"sv).text().set(clan_id);
 
-		pugi::xml_node role = clan.append_child("onlinename");
-		role.text().set(np::npid_to_string(nph.get_npid()).c_str());
+		pugi::xml_node role = clan.append_child("onlinename"sv);
+		role.text().set(np::npid_to_string(nph.get_npid()));
 
-		pugi::xml_node description = clan.append_child("description");
+		pugi::xml_node description = clan.append_child("description"sv);
 		description.text().set(info.description);
 
-		pugi::xml_node status = clan.append_child("bin-attr1");
+		pugi::xml_node status = clan.append_child("bin-attr1"sv);
 
 		byte bin_attr_1[SCE_NP_CLANS_MEMBER_BINARY_ATTRIBUTE1_MAX_SIZE * 2 + 1] = {0};
 		uint32_t bin_attr_1_size = UINT32_MAX;
@@ -933,10 +933,10 @@ namespace clan
 		// `reinterpret_cast` used to let the compiler select the correct overload of `set`
 		status.text().set(reinterpret_cast<const char*>(bin_attr_1));
 
-		pugi::xml_node allow_msg = clan.append_child("allow-msg");
+		pugi::xml_node allow_msg = clan.append_child("allow-msg"sv);
 		allow_msg.text().set(static_cast<uint32_t>(info.allowMsg));
 
-		pugi::xml_node size = clan.append_child("size");
+		pugi::xml_node size = clan.append_child("size"sv);
 		size.text().set(info.binData1Size);
 
 		pugi::xml_document response = pugi::xml_document();
@@ -950,13 +950,13 @@ namespace clan
 			return SCE_NP_CLANS_ERROR_SERVICE_UNAVAILABLE;
 
 		pugi::xml_document doc = pugi::xml_document();
-		pugi::xml_node clan = doc.append_child("clan");
-		clan.append_child("ticket").text().set(ticket.c_str());
-		clan.append_child("id").text().set(clan_id);
+		pugi::xml_node clan = doc.append_child("clan"sv);
+		clan.append_child("ticket"sv).text().set(ticket);
+		clan.append_child("id"sv).text().set(clan_id);
 
 		// TODO: implement binary and integer attributes (not implemented in server yet)
 
-		pugi::xml_node description = clan.append_child("description");
+		pugi::xml_node description = clan.append_child("description"sv);
 		description.text().set(info.description);
 
 		pugi::xml_document response = pugi::xml_document();
@@ -970,9 +970,9 @@ namespace clan
 			return SCE_NP_CLANS_ERROR_SERVICE_UNAVAILABLE;
 
 		pugi::xml_document doc = pugi::xml_document();
-		pugi::xml_node clan = doc.append_child("clan");
-		clan.append_child("ticket").text().set(ticket.c_str());
-		clan.append_child("id").text().set(clan_id);
+		pugi::xml_node clan = doc.append_child("clan"sv);
+		clan.append_child("ticket"sv).text().set(ticket);
+		clan.append_child("id"sv).text().set(clan_id);
 
 		pugi::xml_document response = pugi::xml_document();
 		return send_request(req_id, ClanRequestAction::JoinClan, ClanManagerOperationType::UPDATE, doc, response);
@@ -985,9 +985,9 @@ namespace clan
 			return SCE_NP_CLANS_ERROR_SERVICE_UNAVAILABLE;
 
 		pugi::xml_document doc = pugi::xml_document();
-		pugi::xml_node clan = doc.append_child("clan");
-		clan.append_child("ticket").text().set(ticket.c_str());
-		clan.append_child("id").text().set(clan_id);
+		pugi::xml_node clan = doc.append_child("clan"sv);
+		clan.append_child("ticket"sv).text().set(ticket);
+		clan.append_child("id"sv).text().set(clan_id);
 
 		pugi::xml_document response = pugi::xml_document();
 		return send_request(req_id, ClanRequestAction::LeaveClan, ClanManagerOperationType::UPDATE, doc, response);
@@ -1000,12 +1000,12 @@ namespace clan
 			return SCE_NP_CLANS_ERROR_SERVICE_UNAVAILABLE;
 
 		pugi::xml_document doc = pugi::xml_document();
-		pugi::xml_node clan = doc.append_child("clan");
-		clan.append_child("ticket").text().set(ticket.c_str());
-		clan.append_child("id").text().set(clan_id);
+		pugi::xml_node clan = doc.append_child("clan"sv);
+		clan.append_child("ticket"sv).text().set(ticket);
+		clan.append_child("id"sv).text().set(clan_id);
 
 		const std::string jid_str = fmt::format(JID_FORMAT, np::npid_to_string(np_id));
-		clan.append_child("jid").text().set(jid_str.c_str());
+		clan.append_child("jid"sv).text().set(jid_str);
 
 		pugi::xml_document response = pugi::xml_document();
 		return send_request(req_id, ClanRequestAction::KickMember, ClanManagerOperationType::UPDATE, doc, response);
@@ -1018,14 +1018,14 @@ namespace clan
 			return SCE_NP_CLANS_ERROR_SERVICE_UNAVAILABLE;
 
 		pugi::xml_document doc = pugi::xml_document();
-		pugi::xml_node clan = doc.append_child("clan");
-		clan.append_child("ticket").text().set(ticket.c_str());
-		clan.append_child("id").text().set(clan_id);
+		pugi::xml_node clan = doc.append_child("clan"sv);
+		clan.append_child("ticket"sv).text().set(ticket);
+		clan.append_child("id"sv).text().set(clan_id);
 
 		const std::string jid_str = fmt::format(JID_FORMAT, np::npid_to_string(np_id));
-		clan.append_child("jid").text().set(jid_str.c_str());
+		clan.append_child("jid"sv).text().set(jid_str);
 
-		pugi::xml_node role_node = clan.append_child("role");
+		pugi::xml_node role_node = clan.append_child("role"sv);
 		role_node.text().set(static_cast<uint32_t>(role));
 
 		pugi::xml_document response = pugi::xml_document();
@@ -1039,11 +1039,11 @@ namespace clan
 			return SCE_NP_CLANS_ERROR_SERVICE_UNAVAILABLE;
 
 		pugi::xml_document doc = pugi::xml_document();
-		pugi::xml_node clan = doc.append_child("clan");
-		clan.append_child("ticket").text().set(ticket.c_str());
-		clan.append_child("id").text().set(clan_id);
-		clan.append_child("start").text().set(paging.startPos);
-		clan.append_child("max").text().set(paging.max);
+		pugi::xml_node clan = doc.append_child("clan"sv);
+		clan.append_child("ticket"sv).text().set(ticket);
+		clan.append_child("id"sv).text().set(clan_id);
+		clan.append_child("start"sv).text().set(paging.startPos);
+		clan.append_child("max"sv).text().set(paging.max);
 
 		pugi::xml_document response = pugi::xml_document();
 		const SceNpClansError clan_res = send_request(req_id, ClanRequestAction::RetrieveAnnouncements, ClanManagerOperationType::VIEW, doc, response);
@@ -1051,25 +1051,25 @@ namespace clan
 		if (clan_res != SCE_NP_CLANS_SUCCESS)
 			return clan_res;
 
-		const pugi::xml_node clan_result = response.child("clan");
-		const pugi::xml_node list = clan_result.child("list");
+		const pugi::xml_node clan_result = response.child("clan"sv);
+		const pugi::xml_node list = clan_result.child("list"sv);
 
-		const pugi::xml_attribute results = list.attribute("results");
+		const pugi::xml_attribute results = list.attribute("results"sv);
 		const uint32_t results_count = results.as_uint();
 
-		const pugi::xml_attribute total = list.attribute("total");
+		const pugi::xml_attribute total = list.attribute("total"sv);
 		const uint32_t total_count = total.as_uint();
 
 		int i = 0;
-		for (pugi::xml_node node = list.child("msg-info"); node; node = node.next_sibling("msg-info"))
+		for (pugi::xml_node node = list.child("msg-info"sv); node; node = node.next_sibling("msg-info"sv))
 		{
-			const pugi::xml_attribute id = node.attribute("id");
+			const pugi::xml_attribute id = node.attribute("id"sv);
 			const uint32_t msg_id = id.as_uint();
 
-			const std::string subject_str = node.child("subject").text().as_string();
-			const std::string msg_str = node.child("msg").text().as_string();
-			const std::string author_jid = node.child("jid").text().as_string();
-			const std::string msg_date = node.child("msg-date").text().as_string();
+			const std::string subject_str = node.child("subject"sv).text().as_string();
+			const std::string msg_str = node.child("msg"sv).text().as_string();
+			const std::string author_jid = node.child("jid"sv).text().as_string();
+			const std::string msg_date = node.child("msg-date"sv).text().as_string();
 
 			SceNpId author_npid;
 			const std::string author_username = fmt::split(author_jid, {"@"})[0];
@@ -1119,17 +1119,17 @@ namespace clan
 			return SCE_NP_CLANS_ERROR_SERVICE_UNAVAILABLE;
 
 		pugi::xml_document doc = pugi::xml_document();
-		pugi::xml_node clan = doc.append_child("clan");
-		clan.append_child("ticket").text().set(ticket.c_str());
-		clan.append_child("id").text().set(clan_id);
+		pugi::xml_node clan = doc.append_child("clan"sv);
+		clan.append_child("ticket"sv).text().set(ticket);
+		clan.append_child("id"sv).text().set(clan_id);
 
-		pugi::xml_node subject = clan.append_child("subject");
+		pugi::xml_node subject = clan.append_child("subject"sv);
 		subject.text().set(announcement.subject);
 
-		pugi::xml_node msg = clan.append_child("msg");
+		pugi::xml_node msg = clan.append_child("msg"sv);
 		msg.text().set(announcement.body);
 
-		pugi::xml_node expire_date = clan.append_child("expire-date");
+		pugi::xml_node expire_date = clan.append_child("expire-date"sv);
 		expire_date.text().set(duration);
 
 		pugi::xml_document response = pugi::xml_document();
@@ -1138,8 +1138,8 @@ namespace clan
 		if (clan_res != SCE_NP_CLANS_SUCCESS)
 			return clan_res;
 
-		const pugi::xml_node clan_result = response.child("clan");
-		const pugi::xml_node msg_id_node = clan_result.child("id");
+		const pugi::xml_node clan_result = response.child("clan"sv);
+		const pugi::xml_node msg_id_node = clan_result.child("id"sv);
 		msg_id = msg_id_node.text().as_uint();
 
 		return SCE_NP_CLANS_SUCCESS;
@@ -1152,10 +1152,10 @@ namespace clan
 			return SCE_NP_CLANS_ERROR_SERVICE_UNAVAILABLE;
 
 		pugi::xml_document doc = pugi::xml_document();
-		pugi::xml_node clan = doc.append_child("clan");
-		clan.append_child("ticket").text().set(ticket.c_str());
-		clan.append_child("id").text().set(clan_id);
-		clan.append_child("msg-id").text().set(announcement_id);
+		pugi::xml_node clan = doc.append_child("clan"sv);
+		clan.append_child("ticket"sv).text().set(ticket);
+		clan.append_child("id"sv).text().set(clan_id);
+		clan.append_child("msg-id"sv).text().set(announcement_id);
 
 		pugi::xml_document response = pugi::xml_document();
 		return send_request(req_id, ClanRequestAction::DeleteAnnouncement, ClanManagerOperationType::UPDATE, doc, response);

@@ -1319,10 +1319,95 @@ struct llvm_rol
 
 	llvm_expr_t<A1> a1;
 	llvm_expr_t<A2> a2;
+	bool use_sve_xar = false;
 
 	static_assert(llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint, "llvm_rol<>: invalid type");
 
 	static constexpr bool is_ok = llvm_value_t<T>::is_sint || llvm_value_t<T>::is_uint;
+
+#ifdef ARCH_ARM64
+	static bool get_constant_splat(llvm::Value* value, u64& result)
+	{
+		if (const auto constant = llvm::dyn_cast<llvm::ConstantInt>(value))
+		{
+			result = constant->getZExtValue();
+			return true;
+		}
+
+		if (llvm::isa<llvm::ConstantAggregateZero>(value))
+		{
+			result = 0;
+			return true;
+		}
+
+		const auto vector_type = llvm::dyn_cast<llvm::FixedVectorType>(value->getType());
+
+		if (!vector_type)
+		{
+			return false;
+		}
+
+		const auto element_count = vector_type->getNumElements();
+		const auto get_element = [&](u32 index) -> llvm::Constant*
+		{
+			if (const auto data = llvm::dyn_cast<llvm::ConstantDataVector>(value))
+			{
+				return data->getElementAsConstant(index);
+			}
+
+			if (const auto vector = llvm::dyn_cast<llvm::ConstantVector>(value))
+			{
+				return vector->getAggregateElement(index);
+			}
+
+			return nullptr;
+		};
+
+		const auto first_element = llvm::dyn_cast_or_null<llvm::ConstantInt>(get_element(0));
+
+		if (!first_element)
+		{
+			return false;
+		}
+
+		result = first_element->getZExtValue();
+
+		for (u32 i = 1; i < element_count; i++)
+		{
+			const auto element = llvm::dyn_cast_or_null<llvm::ConstantInt>(get_element(i));
+
+			if (!element || element->getZExtValue() != result)
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	static llvm::Value* to_sve_vector(llvm::IRBuilder<>* ir, llvm::Value* value)
+	{
+		if (llvm::isa<llvm::ScalableVectorType>(value->getType()))
+		{
+			return value;
+		}
+
+		const auto fixed_type = llvm::cast<llvm::FixedVectorType>(value->getType());
+		const auto scalable_type = llvm::ScalableVectorType::get(fixed_type->getElementType(), fixed_type->getNumElements());
+
+		return ir->CreateInsertVector(scalable_type, llvm::UndefValue::get(scalable_type), value, ir->getInt64(0));
+	}
+
+	static llvm::Value* from_sve_vector(llvm::IRBuilder<>* ir, llvm::Value* value, llvm::FixedVectorType* fixed_type)
+	{
+		if (value->getType() == fixed_type)
+		{
+			return value;
+		}
+
+		return ir->CreateExtractVector(fixed_type, value, ir->getInt64(0));
+	}
+#endif
 
 	llvm::Value* eval(llvm::IRBuilder<>* ir) const
 	{
@@ -1333,6 +1418,28 @@ struct llvm_rol
 		{
 			return llvm_fshl<A1, A1, A2>::fold(ir, v1, v1, v2);
 		}
+
+#ifdef ARCH_ARM64
+		u64 rotate = 0;
+
+		if (use_sve_xar && llvm::isa<llvm::FixedVectorType>(v1->getType()) && get_constant_splat(v2, rotate))
+		{
+			constexpr u64 element_size = llvm_value_t<T>::esize;
+			const u32 rotate_right = static_cast<u32>((element_size - (rotate % element_size)) % element_size);
+
+			if (rotate_right == 0)
+			{
+				return v1;
+			}
+
+			const auto fixed_type = llvm::cast<llvm::FixedVectorType>(v1->getType());
+			const auto data = to_sve_vector(ir, v1);
+			const auto zero = llvm::Constant::getNullValue(data->getType());
+			const auto result = ir->CreateIntrinsic(llvm::Intrinsic::aarch64_sve_xar, {data->getType()}, {data, zero, ir->getInt32(rotate_right)});
+
+			return from_sve_vector(ir, result, fixed_type);
+		}
+#endif
 
 		return ir->CreateCall(llvm_fshl<A1, A1, A2>::get_fshl(ir), {v1, v1, v2});
 	}
@@ -3407,9 +3514,13 @@ public:
 
 	template <typename T, typename U>
 		requires llvm_rol<T, U>::is_ok
-	static auto rol(T&& a, U&& b)
+	auto rol(T&& a, U&& b)
 	{
+#ifdef ARCH_ARM64
+		return llvm_rol<T, U>{std::forward<T>(a), std::forward<U>(b), m_use_sve2_128};
+#else
 		return llvm_rol<T, U>{std::forward<T>(a), std::forward<U>(b)};
+#endif
 	}
 
 	template <typename T, typename U>
@@ -3583,11 +3694,22 @@ public:
 
 	// Infinite-precision shift left
 	template <typename T, typename U, typename CT = llvm_common_t<T, U>>
-	auto inf_shl(T&& a, U&& b)
+	value_t<CT> inf_shl(T&& a, U&& b)
 	{
 		static constexpr u32 esz = llvm_value_t<CT>::esize;
 
-		return expr(select(b < esz, a << b, splat<CT>(0)), [](llvm::Value*& value, llvm::Module* _m) -> llvm_match_tuple<T, U>
+#ifdef ARCH_ARM64
+		auto sh = eval(std::forward<U>(b));
+		auto k = get_known_bits(sh);
+		const auto max_shift = llvm::APInt(k.Zero.getBitWidth(), esz * 2 - 1);
+
+		if ((k.Zero | max_shift).isAllOnes())
+		{
+			return ushl(std::forward<T>(a), sh);
+		}
+#endif
+
+		auto result = expr(select(b < esz, a << b, splat<CT>(0)), [](llvm::Value*& value, llvm::Module* _m) -> llvm_match_tuple<T, U>
 		{
 			static const auto M = match<CT>();
 
@@ -3605,15 +3727,28 @@ public:
 			value = nullptr;
 			return {};
 		});
+
+		return eval(result);
 	}
 
 	// Infinite-precision logical shift right (unsigned)
 	template <typename T, typename U, typename CT = llvm_common_t<T, U>>
-	auto inf_lshr(T&& a, U&& b)
+	value_t<CT> inf_lshr(T&& a, U&& b)
 	{
 		static constexpr u32 esz = llvm_value_t<CT>::esize;
 
-		return expr(select(b < esz, a >> b, splat<CT>(0)), [](llvm::Value*& value, llvm::Module* _m) -> llvm_match_tuple<T, U>
+#ifdef ARCH_ARM64
+		auto sh = eval(std::forward<U>(b));
+		auto k = get_known_bits(sh);
+		const auto max_shift = llvm::APInt(k.Zero.getBitWidth(), esz * 2 - 1);
+
+		if ((k.Zero | max_shift).isAllOnes())
+		{
+			return ushl(std::forward<T>(a), -sh);
+		}
+#endif
+
+		auto result = expr(select(b < esz, a >> b, splat<CT>(0)), [](llvm::Value*& value, llvm::Module* _m) -> llvm_match_tuple<T, U>
 		{
 			static const auto M = match<CT>();
 
@@ -3631,6 +3766,8 @@ public:
 			value = nullptr;
 			return {};
 		});
+
+		return eval(result);
 	}
 
 	// Infinite-precision arithmetic shift right (signed)
@@ -3668,6 +3805,23 @@ public:
 #else
 		return llvm::Intrinsic::getDeclaration(_module, id, {get_type<Types>()...});
 #endif
+	}
+
+	template <typename T1, typename T2, typename T3>
+	value_t<u32[4]> vperm2d128From512(T1 a, T2 b, T3 c)
+	{
+		value_t<u32[4]> result;
+		value_t<u32[16]> perm512;
+
+		const auto data0 = a.eval(m_ir);
+		const auto index128 = b.eval(m_ir);
+		const auto data1 = c.eval(m_ir);
+
+		const auto index512 = m_ir->CreateInsertVector(get_type<u32[16]>(), llvm::UndefValue::get(get_type<u32[16]>()), index128, m_ir->getInt64(0));
+		perm512.value = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_avx512_vpermi2var_d_512), {data0, index512, data1});
+
+		result.value = m_ir->CreateExtractVector(get_type<u32[4]>(), perm512.value, m_ir->getInt64(0));
+		return result;
 	}
 
 	template <typename T1, typename T2>
@@ -3891,6 +4045,18 @@ template <typename T1, typename T2, typename T3>
 	value_t<u32[4]> sve_umlalt(T0 acc, T1 a, T2 b)
 	{
 		return sve_mlal<u32[4]>(llvm::Intrinsic::aarch64_sve_umlalt, acc, a, b);
+	}
+
+	template <typename T1, typename T2, typename T = llvm_common_t<T1, T2>>
+	value_t<T> ushl(T1 a, T2 b)
+	{
+		value_t<T> result;
+
+		const auto data0 = a.eval(m_ir);
+		const auto data1 = b.eval(m_ir);
+
+		result.value = m_ir->CreateCall(get_intrinsic<T>(llvm::Intrinsic::aarch64_neon_ushl), {data0, data1});
+		return result;
 	}
 
 	template <typename T1, typename T2>

@@ -102,7 +102,7 @@ std::string u32_to_padded_hex(u32 value)
 template <typename T>
 T hex_to(std::string_view val)
 {
-	T result;
+	T result {};
 	auto [ptr, err] = std::from_chars(val.data(), val.data() + val.size(), result, 16);
 	if (err != std::errc())
 	{
@@ -361,7 +361,7 @@ void gdb_thread::ack(bool accepted)
 	send_char(accepted ? '+' : '-');
 }
 
-void gdb_thread::send_cmd(const std::string& cmd)
+void gdb_thread::send_cmd(std::string_view cmd)
 {
 	u8 checksum = 0;
 	std::string buf;
@@ -376,7 +376,7 @@ void gdb_thread::send_cmd(const std::string& cmd)
 	send(buf.c_str(), static_cast<int>(buf.length()));
 }
 
-bool gdb_thread::send_cmd_ack(const std::string& cmd)
+bool gdb_thread::send_cmd_ack(std::string_view cmd)
 {
 	while (true)
 	{
@@ -465,7 +465,7 @@ std::string gdb_thread::get_reg(ppu_thread* thread, u32 rid)
 	}
 }
 
-bool gdb_thread::set_reg(ppu_thread* thread, u32 rid, const std::string& value)
+bool gdb_thread::set_reg(ppu_thread* thread, u32 rid, std::string_view value)
 {
 	switch (rid)
 	{
