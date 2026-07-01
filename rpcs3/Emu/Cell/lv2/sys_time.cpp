@@ -4,6 +4,7 @@
 #include "sys_process.h"
 #include "Emu/system_config.h"
 #include "Emu/Cell/ErrorCodes.h"
+#include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/timers.hpp"
 #include "util/tsc.hpp"
 
@@ -257,11 +258,11 @@ u64 get_guest_system_time(u64 time)
 }
 
 // Functions
-error_code sys_time_set_timezone(s32 timezone, s32 summertime)
+error_code sys_time_set_timezone(ppu_thread& ppu, s32 timezone, s32 summertime)
 {
 	sys_time.trace("sys_time_set_timezone(timezone=0x%x, summertime=0x%x)", timezone, summertime);
 
-	if (!g_ps3_process_info.has_root_perm())
+	if (!ppu.has_root_perm)
 	{
 		return CELL_ENOSYS;
 	}
@@ -425,11 +426,11 @@ error_code sys_time_get_current_time(vm::ptr<s64> sec, vm::ptr<s64> nsec)
 	return CELL_OK;
 }
 
-error_code sys_time_set_current_time(s64 sec, s64 nsec)
+error_code sys_time_set_current_time(ppu_thread& ppu, s64 sec, s64 nsec)
 {
 	sys_time.trace("sys_time_set_current_time(sec=0x%x, nsec=0x%x)", sec, nsec);
 
-	if (!g_ps3_process_info.has_root_perm())
+	if (!ppu.has_root_perm)
 	{
 		return CELL_ENOSYS;
 	}

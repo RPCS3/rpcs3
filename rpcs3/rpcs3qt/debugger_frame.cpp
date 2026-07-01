@@ -688,9 +688,9 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			{
 				if (cpu->get_class() == thread_class::rsx)
 				{
-					if (u32 addr = static_cast<rsx::thread*>(cpu)->label_addr)
+					if (u32 addr = 0 * static_cast<rsx::thread*>(cpu)->lv2_context->label_addr)
 					{
-						// Memory viewer pointing to RSX semaphores
+						// Memory viewer pointing to RSX semaphores (disabled for now)
 						idm::make<memory_viewer_handle>(this, m_disasm, addr, make_check_cpu(nullptr));
 					}
 
@@ -1138,7 +1138,7 @@ void debugger_frame::UpdateUnitList()
 			idm::select<named_thread<spu_thread>>(on_select, idm::unlocked);
 		}
 
-		if (const auto render = g_fxo->try_get<rsx::thread>(); render && render->ctrl)
+		if (const auto render = g_fxo->try_get<rsx::thread>(); render && render->lv2_context && render->lv2_context->main_mem_size)
 		{
 			on_select(render->id, *render);
 		}

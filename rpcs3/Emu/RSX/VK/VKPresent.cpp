@@ -503,9 +503,9 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		return;
 	}
 
-	u32 buffer_width = display_buffers[info.buffer].width;
-	u32 buffer_height = display_buffers[info.buffer].height;
-	u32 buffer_pitch = display_buffers[info.buffer].pitch;
+	u32 buffer_width = lv2_context ? +lv2_context->display_buffers[info.buffer].width : 0;
+	u32 buffer_height = lv2_context ? +lv2_context->display_buffers[info.buffer].height : 0;
+	u32 buffer_pitch = lv2_context ? +lv2_context->display_buffers[info.buffer].pitch : 0;
 
 	u32 av_format;
 	const auto& avconfig = g_fxo->get<rsx::avconf>();
@@ -537,11 +537,11 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	vk::viewable_image* image_to_flip = nullptr;
 	vk::viewable_image* image_to_flip2 = nullptr;
 
-	if (info.buffer < display_buffers_count && buffer_width && buffer_height)
+	if (lv2_context && info.buffer < lv2_context->display_buffers_count && buffer_width && buffer_height)
 	{
 		vk::present_surface_info present_info
 		{
-			.address = rsx::get_address(display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL),
+			.address = rsx::get_address(lv2_context->display_buffers[info.buffer].offset, CELL_GCM_LOCATION_LOCAL),
 			.format = av_format,
 			.width = buffer_width,
 			.height = buffer_height,
@@ -556,7 +556,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			if (image_to_flip->height() < min_expected_height)
 			{
 				// Get image for second eye
-				const u32 image_offset = (buffer_height + 30) * buffer_pitch + display_buffers[info.buffer].offset;
+				const u32 image_offset = (buffer_height + 30) * buffer_pitch + lv2_context->display_buffers[info.buffer].offset;
 				present_info.width = buffer_width;
 				present_info.height = buffer_height;
 				present_info.address = rsx::get_address(image_offset, CELL_GCM_LOCATION_LOCAL);

@@ -497,6 +497,66 @@ namespace utils
 #error "Missing utils::trap() implementation"
 #endif
 	}
+
+	inline void* get_thread_storage_pointer() noexcept
+	{
+	#if defined(_WIN64)
+
+	    // TEB
+	    return (void*)__readgsqword(0x30);
+
+	#elif defined(_WIN32)
+
+	    // TEB
+	    return (void*)__readfsdword(0x18);
+
+	#elif defined(__aarch64__) && defined(__APPLE__)
+
+	    // Apple Silicon
+	    void* tp;
+	    asm volatile("mrs %0, TPIDRRO_EL0" : "=r"(tp));
+	    return tp;
+
+	#elif defined(__aarch64__)
+
+	    // Linux/BSD AArch64
+	    void* tp;
+	    asm volatile("mrs %0, TPIDR_EL0" : "=r"(tp));
+	    return tp;
+
+	#elif defined(__x86_64__)
+
+	    // SysV x86-64 (Linux, BSD, etc.)
+	    void* tp;
+	    asm volatile("mov %%fs:0, %0" : "=r"(tp));
+	    return tp;
+
+	#elif defined(__i386__)
+
+	    // Linux/BSD i386
+	    void* tp;
+	    asm volatile("mov %%gs:0, %0" : "=r"(tp));
+	    return tp;
+	#else
+	#error Unsupported platform
+	#endif
+	}
+
+	inline usz get_thread_storage_offset(const void* ptr) noexcept
+	{
+		const usz ptr_addr = reinterpret_cast<usz>(ptr);
+		const usz base = reinterpret_cast<usz>(get_thread_storage_pointer());
+
+		const usz ret_val = ptr_addr - base;
+
+		while (!ptr || ret_val > 0x100000000)
+		{
+			utils::trap();
+		}
+
+		return ret_val;
+	}
+
 } // namespace utils
 
 using utils::busy_wait;

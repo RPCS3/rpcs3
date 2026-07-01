@@ -1142,8 +1142,8 @@ void VKGSRender::notify_tile_unbound(u32 tile)
 	//TODO: Handle texture writeback
 	if (false)
 	{
-		u32 addr = rsx::get_address(tiles[tile].offset, tiles[tile].location);
-		on_notify_pre_memory_unmapped(addr, tiles[tile].size, *std::make_unique<std::vector<std::pair<u64, u64>>>());
+		u32 addr = rsx::get_address(lv2_context->tiles[tile].offset, lv2_context->tiles[tile].location);
+		on_notify_pre_memory_unmapped(addr, lv2_context->tiles[tile].size, *std::make_unique<std::vector<std::pair<u64, u64>>>());
 		m_rtts.invalidate_surface_address(addr, false);
 	}
 
@@ -1781,7 +1781,7 @@ void VKGSRender::do_local_task(rsx::FIFO::state state)
 		{
 			flush_command_queue(true);
 			rsx::display_flip_info_t info{};
-			info.buffer = current_display_buffer;
+			info.buffer = lv2_context ? lv2_context->current_display_buffer : 0;
 			flip(info);
 		}
 	}

@@ -32,7 +32,7 @@ const u32 ime_jp_address = 0xf0000000;
 
 ime_jp_manager::ime_jp_manager()
 {
-	if (static_cast<s32>(g_ps3_process_info.sdk_ver) < 0x360000) // firmware < 3.6.0
+	if (static_cast<s32>(idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->sdk_ver < 0x360000)) // firmware < 3.6.0
 		allowed_extensions = CELL_IMEJP_EXTENSIONCH_UD85TO94 | CELL_IMEJP_EXTENSIONCH_OUTJIS;
 	else
 		allowed_extensions = CELL_IMEJP_EXTENSIONCH_UD09TO15 | CELL_IMEJP_EXTENSIONCH_UD85TO94 | CELL_IMEJP_EXTENSIONCH_OUTJIS;

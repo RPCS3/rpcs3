@@ -432,6 +432,40 @@ namespace asmjit
 		c.bind(next);
 	}
 #endif
+
+	inline void emit_get_thread_pointer(native_asm& c, auto dst)
+	{
+	#if defined(_WIN64)
+
+		// mov dst, gs:[0x30]
+		const asmjit::x86::Mem mmm = FN(x.setSegment(x86::gs), x)(x86::qword_ptr_abs(0x30));
+		c.mov(x86::r15, mmm );
+
+	#elif defined(_WIN32)
+
+		// mov dst, fs:[0x18]
+		c.mov(dst.r32(), FN(x.setSegment(x86::fs), x)(x86::dword_ptr_abs(0x18)));
+
+	#elif defined(__x86_64__)
+
+		// mov dst, fs:[0]
+		c.mov(dst, FN(x.setSegment(x86::fs), x)(x86::qword_ptr_abs(0x0)));
+
+	#elif defined(__i386__)
+
+		// mov dst, gs:[0]
+		c.mov(dst.r32(), FN(x.setSegment(x86::gs), x)(x86::dword_ptr_abs(0x0)));
+
+	#elif defined(__APPLE__)
+
+		// mrs dst, TPIDRRO_EL0
+		c.emit(0xd53bd060 | dst.id());
+
+	#else 
+		// mrs dst, TPIDR_EL0
+		c.emit(0xd53bd040 | dst.id());
+	#endif
+	}
 }
 
 // Build runtime function with asmjit::X86Assembler

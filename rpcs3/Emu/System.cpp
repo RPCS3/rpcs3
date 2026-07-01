@@ -76,7 +76,7 @@ std::string g_cfg_defaults;
 
 atomic_t<u64> g_watchdog_hold_ctr{0};
 
-extern bool ppu_load_exec(const ppu_exec_object&, bool virtual_load, const std::string&, utils::serial* = nullptr);
+extern shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2_memory_container> mem_ct, bool virtual_load, const std::vector<std::string>& argv0, const std::vector<std::string>& envp0, const std::vector<u8>& data0, utils::serial* ar = nullptr);
 extern void spu_load_exec(const spu_exec_object&);
 extern void spu_load_rel_exec(const spu_rel_object&);
 extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_module<lv2_obj>*>* loaded_prx, bool is_fast_compilation);
@@ -228,18 +228,14 @@ void Emulator::BlockingCallFromMainThread(std::function<void()>&& func, bool tra
 }
 
 // This function ensures constant initialization order between different compilers and builds
-void init_fxo_for_exec(utils::serial* ar, bool full = false)
+void init_fxo_for_exec(shared_ptr<lv2_process> process, utils::serial* ar, bool full = false)
 {
-	g_fxo->init<main_ppu_module<lv2_obj>>();
-
-	void init_ppu_functions(utils::serial* ar, bool full);
+	void init_ppu_functions(shared_ptr<lv2_process> process, utils::serial* ar, bool full);
 
 	if (full)
 	{
-		init_ppu_functions(ar, true);
+		init_ppu_functions(process, ar, true);
 	}
-
-	Emu.ConfigurePPUCache();
 
 	stx::g_launch_retainer = 1;
 
@@ -912,7 +908,6 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	Init();
 	g_cfg.video.disable_on_disk_shader_cache.set(true);
 
-	vm::init();
 	g_fxo->init(false);
 
 	// Initialize progress dialog
@@ -1768,8 +1763,12 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		{
 			m_state = system_state::ready;
 			GetCallbacks().on_ready();
-			ensure(g_fxo->init<main_ppu_module<lv2_obj>>());
-			vm::init();
+
+			ensure(g_fxo->init<id_manager::id_map<named_thread<ppu_thread>>>());
+			ensure(g_fxo->init<id_manager::id_map<lv2_obj>>());
+
+			const auto process = idm::make_ptr<lv2_obj, lv2_process>();
+
 			m_force_boot = false;
 
 			// Force LLVM recompiler
@@ -1806,7 +1805,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			std::vector<std::string> dir_queue;
 			dir_queue.emplace_back(m_path + '/');
 
-			init_fxo_for_exec(nullptr, true);
+			init_fxo_for_exec(process, nullptr, true);
 
 			{
 				if (m_title_id.empty())
@@ -1854,9 +1853,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 					const ppu_exec_object obj = src;
 
-					if (obj == elf_error::ok && ppu_load_exec(obj, true, path))
+					if (obj == elf_error::ok && ppu_load_self(obj, null_ptr, true, this->argv, this->envp, this->data, DeserialManager()))
 					{
-						ensure(g_fxo->try_get<main_ppu_module<lv2_obj>>())->path = path;
+						//
 					}
 					else
 					{
@@ -1887,14 +1886,25 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 #endif
 				std::vector<ppu_module<lv2_obj>*> mod_list;
 
-				if (auto& _main = *ensure(g_fxo->try_get<main_ppu_module<lv2_obj>>()); !_main.path.empty())
+				shared_ptr<lv2_process> first;
+
+				idm::select<lv2_obj, lv2_process>([&](u32 id, lv2_obj&)
+				{
+					if (!first)
+					{
+						first = idm::get_unlocked<lv2_obj, lv2_process>(id);
+					}
+				});
+
+				ensure(first);
+
+				if (auto& _main = *first; !_main.path.empty())
 				{
 					if (!_main.analyse(0, _main.elf_entry, _main.seg0_code_end, _main.applied_patches, std::vector<u32>{}, [](){ return Emu.IsStopped(); }))
 					{
 						return;
 					}
 
-					Emu.ConfigurePPUCache();
 					ppu_initialize(_main);
 					mod_list.emplace_back(&_main);
 				}
@@ -2166,6 +2176,12 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			sys_log.notice("Disk: %s, Dir: %s", vfs::get("/dev_bdvd"), m_game_dir);
 		}
 
+		if (m_boot_from_xmb)
+		{
+			argv.resize(1);
+			argv[0] = "/dev_flash/vsh/module.vsh";
+		}
+
 		// Initialize progress dialog
 		g_fxo->init<named_thread<progress_dialog_server>>();
 
@@ -2353,16 +2369,13 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			{
 				sys_log.warning("State Inspection Savestate Mode!");
 
-				vm::init();
-				vm::load(*m_ar);
-
 				if (!hdd1.empty())
 				{
 					vfs::mount("/dev_hdd1", hdd1);
 					sys_log.notice("Hdd1: %s", hdd1);
 				}
 
-				init_fxo_for_exec(DeserialManager(), true);
+				init_fxo_for_exec(null_ptr, DeserialManager(), true);
 
 				return game_boot_result::no_errors;
 			}
@@ -2372,16 +2385,14 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 		bool had_been_decrypted = false;
 
+		SelfAdditionalInfo self_info{};
+
 		// Check SELF header
 		if (elf_file.size() >= 4 && elf_file.read<u32>() == "SCE\0"_u32)
 		{
 			// Decrypt SELF
 			had_been_decrypted = true;
-			elf_file = decrypt_self(elf_file, klic.empty() ? nullptr : reinterpret_cast<u8*>(&klic[0]), &g_ps3_process_info.self_info);
-		}
-		else
-		{
-			g_ps3_process_info.self_info.valid = false;
+			elf_file = decrypt_self(elf_file, klic.empty() ? nullptr : reinterpret_cast<u8*>(&klic[0]), &self_info);
 		}
 
 		if (!elf_file)
@@ -2430,14 +2441,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		spu_exec_object spu_exec;
 		spu_rel_object spu_rel;
 
-		vm::init();
-
 		if (ppu_exec == elf_error::ok)
 		{
-			if (m_ar)
-			{
-				vm::load(*m_ar);
-			}
+			ppu_exec.set_encrypted_layer_data(&self_info);
 
 			// Mount /host_root/ if necessary (special value)
 			if (g_cfg.vfs.host_root)
@@ -2557,9 +2563,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				sys_log.error("Booting HG category outside of HDD0!");
 			}
 
-			const auto _main = ensure(g_fxo->init<main_ppu_module<lv2_obj>>());
-
-			if (ppu_load_exec(ppu_exec, false, m_path, DeserialManager()))
+			if (ppu_load_self(ppu_exec, null_ptr, false, this->argv, this->envp, this->data, DeserialManager()))
 			{
 				if (g_cfg.core.ppu_debug && had_been_decrypted)
 				{
@@ -2567,7 +2571,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 					const auto exec_bin = elf_file.to_vector<u8>();
 
-					dump_executable({exec_bin.data(), exec_bin.size()}, _main, GetTitleID());
+					//dump_executable({exec_bin.data(), exec_bin.size()}, _main, GetTitleID());
 				}
 			}
 			// Overlay (OVL) executable (only load it)
@@ -3454,6 +3458,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 		m_savestate_extension_flags1 = {};
 		m_emu_state_close_pending = false;
 		m_precompilation_option = {};
+		m_boot_from_xmb = false;
 	};
 
 	if (system_state old_state = m_state.fetch_op([](system_state& state)
@@ -3813,8 +3818,8 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 				ar(std::array<u8, 32>{}); // Reserved for future use
 
-				set_progress_message("Saving VMemory");
-				vm::save(ar);
+				// set_progress_message("Saving VMemory");
+				// vm::save(ar);
 
 				set_progress_message("Saving FXO");
 				g_fxo->save(ar);
@@ -4043,8 +4048,6 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			sys_log.notice("Objects cleared...");
 
-			vm::close();
-
 			*stop_watchdog = thread_state::finished;
 			static_cast<void>(init_mtx->reset());
 
@@ -4211,22 +4214,20 @@ std::string Emulator::GetFormattedTitle(double fps) const
 	return rpcs3::get_formatted_title(title_data);
 }
 
-void Emulator::ConfigurePPUCache() const
+std::string Emulator::GuessPPUCache(const std::string elf_path) const
 {
-	auto& _main = g_fxo->get<main_ppu_module<lv2_obj>>();
+	const std::string cache = rpcs3::utils::get_cache_dir(elf_path);
 
-	_main.cache = rpcs3::utils::get_cache_dir(_main.path);
-
-	fmt::append(_main.cache, "ppu-%s-%s/", fmt::base57(_main.sha1), _main.path.substr(_main.path.find_last_of('/') + 1));
-
-	if (!fs::create_path(_main.cache))
+	if (!fs::create_path(cache))
 	{
-		sys_log.error("Failed to create cache directory: %s (%s)", _main.cache, fs::g_tls_error);
+		sys_log.error("Failed to create cache directory: %s (%s)", cache, fs::g_tls_error);
 	}
 	else
 	{
-		sys_log.notice("Cache: %s", _main.cache);
+		sys_log.notice("Cache: %s", cache);
 	}
+
+	return cache;
 }
 
 std::set<std::string> Emulator::GetGameDirs() const
@@ -4828,7 +4829,9 @@ utils::serial* Emulator::DeserialManager() const
 
 bool Emulator::IsVsh()
 {
-	return g_ps3_process_info.self_info.valid && (g_ps3_process_info.self_info.prog_id_hdr.program_authority_id >> 36 == 0x1070000); // Not only VSH but also most CoreOS LV2 SELFs need the special treatment
+	const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
+
+	return process->self_info.valid && (process->self_info.prog_id_hdr.program_authority_id >> 36 == 0x1070000); // Not only VSH but also most CoreOS LV2 SELFs need the special treatment
 }
 
 bool Emulator::IsValidSfb(const std::string& path)

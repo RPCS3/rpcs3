@@ -630,7 +630,7 @@ namespace rsx
 			const bool interpolate = in_inter == blit_engine::transfer_interpolator::foh;
 
 			auto real_dst = dst.pixels;
-			const auto tiled_region = RSX(ctx)->get_tiled_memory_region(utils::address_range32::start_length(dst.rsx_address, write_length));
+			const auto tiled_region = RSX(ctx)->lv2_context->get_tiled_memory_region(utils::address_range32::start_length(dst.rsx_address, write_length));
 			std::vector<u8> tmp;
 
 			if (tiled_region)

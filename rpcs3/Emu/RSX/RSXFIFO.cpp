@@ -26,7 +26,7 @@ namespace rsx
 		{
 			m_thread = pctrl;
 			m_ctrl = pctrl->ctrl;
-			m_iotable = &pctrl->iomap_table;
+			m_iotable = &pctrl->lv2_context->iomap_table;
 		}
 
 		u32 FIFO_control::translate_address(u32 address) const
@@ -742,7 +742,7 @@ namespace rsx
 				// Optimize returning to another CALL
 				if ((ctrl->put & ~3) != fifo_ret_addr)
 				{
-					if (u32 addr = iomap_table.get_addr(fifo_ret_addr); addr != umax)
+					if (u32 addr = lv2_context->iomap_table.get_addr(fifo_ret_addr); addr != umax)
 					{
 						const u32 cmd0 = vm::read32(addr);
 
@@ -831,7 +831,7 @@ namespace rsx
 
 								for (u32 i = 1; i < remaining && fifo_ctrl->get_pos() + i * 4 != (ctrl->put & ~3); i++)
 								{
-									replay_cmd.rsx_command = std::make_pair(0, vm::read32(iomap_table.get_addr(fifo_ctrl->get_pos()) + (i * 4)));
+									replay_cmd.rsx_command = std::make_pair(0, vm::read32(lv2_context->iomap_table.get_addr(fifo_ctrl->get_pos()) + (i * 4)));
 
 									commands.push_back(replay_cmd);
 								}

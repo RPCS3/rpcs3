@@ -190,7 +190,7 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 			return CELL_EINVAL;
 		}
 
-		if (flags & SYS_PRX_LOAD_MODULE_FLAGS_FIXEDADDR && !g_ps3_process_info.ppc_seg)
+		if (flags & SYS_PRX_LOAD_MODULE_FLAGS_FIXEDADDR && !cpu_thread::get_current<ppu_thread>()->has_ppc_seg)
 		{
 			return CELL_ENOSYS;
 		}
@@ -456,7 +456,7 @@ static error_code prx_load_module_list(ppu_thread& ppu, s32 count, vm::cpptr<cha
 			return CELL_EINVAL;
 		}
 
-		if (flags & SYS_PRX_LOAD_MODULE_FLAGS_FIXEDADDR && !g_ps3_process_info.ppc_seg)
+		if (flags & SYS_PRX_LOAD_MODULE_FLAGS_FIXEDADDR && !ppu.has_ppc_seg)
 		{
 			return CELL_ENOSYS;
 		}

@@ -497,7 +497,7 @@ s32 cellSpursRunJobChain(ppu_thread& ppu, vm::ptr<CellSpursJobChain> jobChain);
 
 s32 _spurs::get_sdk_version()
 {
-	const s32 version = static_cast<s32>(g_ps3_process_info.sdk_ver);
+	const s32 version = static_cast<s32>(cpu_thread::get_current<ppu_thread>()->sdk_version);
 	return version == -1 ? 0x485000 : version;
 }
 

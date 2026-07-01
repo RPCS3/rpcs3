@@ -67,6 +67,9 @@ namespace id_manager
 	// Last allocated ID for constructors
 	extern thread_local u32 g_id;
 
+	// Current process ID (0 if all-access)
+	extern thread_local u32 g_process;
+
 	// ID traits
 	template <typename T>
 	struct id_traits
@@ -246,14 +249,16 @@ namespace id_manager
 	class id_key
 	{
 		u32 m_value = 0; // ID value
-		u32 m_base = umax;  // ID base (must be unique for each type in the same container)
+		u32 m_base = umax; // ID base (must be unique for each type in the same container)
+		u32 m_proc = 0; // Owning process (0 if shared)
 
 	public:
 		id_key() noexcept = default;
 
-		id_key(u32 value, u32 type) noexcept
+		id_key(u32 value, u32 type, u32 proc) noexcept
 			: m_value(value)
 			, m_base(type)
+			, m_proc(proc)
 		{
 		}
 
@@ -267,9 +272,15 @@ namespace id_manager
 			return m_base;
 		}
 
+		u32 process() const
+		{
+			return m_proc;
+		}
+
 		void clear()
 		{
 			m_base = umax;
+			m_proc = 0;
 		}
 
 		operator u32() const noexcept
@@ -323,12 +334,15 @@ namespace id_manager
 					}
 				}
 
+				const u32 pid = ar.pop<u32>();
+
 				ensure(info);
 
 				// Construct each object from information collected
 
 				// Simulate construction semantics (idm::last_id() value)
 				g_id = id;
+				g_process = pid;
 
 				const u32 object_index = get_index(id, info->base, info->step, info->count, info->invl_range);
 				auto& obj = ::at32(vec_data, object_index);
@@ -336,7 +350,7 @@ namespace id_manager
 
 				highest_index = std::max(highest_index, object_index + 1);
 
-				vec_keys[object_index] = id_key(id, static_cast<u32>(static_cast<u64>(type_init_pos >> 64)));
+				vec_keys[object_index] = id_key(id, static_cast<u32>(static_cast<u64>(type_init_pos >> 64)), pid);
 				info->load(ar)(&obj);
 			}
 		}
@@ -367,7 +381,7 @@ namespace id_manager
 					// Create a tag for each object
 					serial_breathe_and_tag(ar, g_fxo->get_name<id_map<T>>(), false);
 
-					ar(key.value(), key.type());
+					ar(key.value(), key.type(), key.process());
 					info->save(ar, p.observe());
 				}
 			}
@@ -432,6 +446,22 @@ class idm
 		using result_type = R;
 	};
 
+	template <typename F, typename R, typename A1, typename A2, typename A3>
+	struct function_traits<R (F::*)(A1, A2, A3&) const>
+	{
+		using object_type = A3;
+		using result_type = R;
+	};
+
+	template <typename F, typename R, typename A1, typename A2, typename A3>
+	struct function_traits<R (F::*)(A1, A2, A3&)>
+	{
+		using object_type = A3;
+		using result_type = R;
+	};
+
+public:
+
 	// Helper type: pointer + return value propagated
 	template <typename T, typename RT>
 	struct return_pair;
@@ -481,6 +511,46 @@ class idm
 		}
 	};
 
+	struct id_index
+	{
+		u32 value;
+		u32 owning_process;
+
+		// Prrocess-local access
+		template <typename T> requires (std::is_integral_v<std::common_type_t<T>>)
+		id_index(const T& key) noexcept
+			: value(+key)
+			, owning_process(id_manager::g_process)
+
+		{
+		}
+
+		id_index(const id_index&) = default;
+
+		// Explicit constructor
+		id_index(u32 key, u32 process_id) noexcept
+			: value(key)
+			, owning_process(process_id)
+
+		{
+		}
+
+		// Almighty access
+		id_index(u32 key, std::nullptr_t) noexcept
+			: value(key)
+			, owning_process(0)
+
+		{
+		}
+
+		operator u32() const
+		{
+			return value;
+		}
+	};
+
+private:
+
 	// Get type ID that is meant to be unique within the same container
 	template <typename T>
 	static consteval u32 get_type()
@@ -489,11 +559,11 @@ class idm
 	}
 
 	// Prepare new ID (returns nullptr if out of resources)
-	static id_manager::id_key* allocate_id(std::span<id_manager::id_key> keys, u32& highest_index, u32 type_id, u32 dst_id, u32 base, u32 step, u32 count, bool uses_lowest_id, std::pair<u32, u32> invl_range);
+	static id_manager::id_key* allocate_id(std::span<id_manager::id_key> keys, u32& highest_index, u32 type_id, id_index dst_id, u32 base, u32 step, u32 count, bool uses_lowest_id, std::pair<u32, u32> invl_range);
 
 	// Get object by internal index if exists (additionally check type if types are not equal)
 	template <typename T, typename Type>
-	static std::pair<atomic_ptr<T>*, id_manager::id_key*> find_index(u32 index, u32 id)
+	static std::pair<atomic_ptr<T>*, id_manager::id_key*> find_index(id_index index, u32 id)
 	{
 		static_assert(IdmTypesCompatible<T, Type>, "Invalid ID type combination");
 
@@ -509,7 +579,19 @@ class idm
 
 		if (data)
 		{
-			if (std::is_same_v<T, Type> || key.type() == get_type<Type>())
+			bool is_valid = std::is_same_v<T, Type>;
+
+			if constexpr (!std::is_same_v<T, Type>)
+			{
+				is_valid = key.type() == get_type<Type>();
+			}
+
+			if (index.owning_process && id_manager::g_process && id_manager::g_process != index.owning_process)
+			{
+				is_valid = false;
+			}
+
+			if (is_valid)
 			{
 				if (!id_manager::id_traits<Type>::invl_range.second || key.value() == id)
 				{
@@ -632,7 +714,7 @@ public:
 	// Add a new ID for an object returned by provider()
 	template <typename T, typename Made = T, typename F>
 		requires IdmTypesCompatible<T, Made> && std::is_convertible_v<std::invoke_result_t<F&&>, stx::shared_ptr<Made>>
-	static inline u32 import(F&& provider, u32 id = id_manager::id_traits<Made>::invalid)
+	static inline u32 import(F&& provider, id_index id = id_manager::id_traits<Made>::invalid)
 	{
 		if (create_id<T, Made>(std::forward<F>(provider), id))
 		{
@@ -645,7 +727,7 @@ public:
 	// Add a new ID for an existing object provided (returns new id)
 	template <typename T, typename Made = T>
 		requires IdmTypesCompatible<T, Made>
-	static inline u32 import_existing(stx::shared_ptr<Made> ptr, u32 id = id_manager::id_traits<Made>::invalid)
+	static inline u32 import_existing(stx::shared_ptr<Made> ptr, id_index id = id_manager::id_traits<Made>::invalid)
 	{
 		return import<T, Made>([&]() -> stx::shared_ptr<Made> { return std::move(ptr); }, id);
 	}
@@ -653,7 +735,7 @@ public:
 	// Check the ID without locking (can be called from other method)
 	template <typename T, typename Get = T>
 		requires IdmTypesCompatible<T, Get>
-	static inline Get* check_unlocked(u32 id)
+	static inline Get* check_unlocked(id_index id)
 	{
 		if (const auto found = find_id<T, Get>(id); found.first)
 		{
@@ -666,7 +748,7 @@ public:
 	// Check the ID, access object under shared lock
 	template <typename T, typename Get = T, typename F, typename FRT = std::invoke_result_t<F, Get&>>
 		requires IdmTypesCompatible<T, Get>
-	static inline std::conditional_t<std::is_void_v<FRT>, Get*, return_pair<Get*, FRT>> check(u32 id, F&& func)
+	static inline std::conditional_t<std::is_void_v<FRT>, Get*, return_pair<Get*, FRT>> check(id_index id, F&& func)
 	{
 		const u32 index = get_index<Get>(id);
 
@@ -698,7 +780,7 @@ public:
 	// Get the object without locking (can be called from other method)
 	template <typename T, typename Get = T>
 		requires IdmTypesCompatible<T, Get>
-	static inline stx::shared_ptr<Get> get_unlocked(u32 id)
+	static inline stx::shared_ptr<Get> get_unlocked(id_index id)
 	{
 		const auto found = find_id<T, Get>(id);
 
@@ -713,7 +795,7 @@ public:
 	// Get the object, access object under reader lock
 	template <typename T, typename Get = T, typename F, typename FRT = std::invoke_result_t<F, Get&>>
 		requires IdmTypesCompatible<T, Get>
-	static inline std::conditional_t<std::is_void_v<FRT>, stx::shared_ptr<Get>, return_pair<stx::shared_ptr<Get>, FRT>> get(u32 id, F&& func)
+	static inline std::conditional_t<std::is_void_v<FRT>, stx::shared_ptr<Get>, return_pair<stx::shared_ptr<Get>, FRT>> get(id_index id, F&& func)
 	{
 		const u32 index = get_index<Get>(id);
 
@@ -750,7 +832,7 @@ public:
 	// Access all objects of specified type. Returns the number of objects processed.
 	// If function result evaluates to true, stop and return the object and the value.
 	template <typename T, typename... Get, typename F, typename Lock = std::true_type>
-		requires IdmBaseCompatible<T> && (IdmCompatible<Get> && ...) && (std::is_invocable_v<F, u32, Get&> && ...)
+		requires IdmBaseCompatible<T> && (IdmCompatible<Get> && ...) && ((std::is_invocable_v<F, u32, Get&> && ...) || (std::is_invocable_v<F, u32, u32, Get&> && ...))
 	static inline auto select(F&& func, Lock = std::true_type{})
 	{
 		static_assert((IdmTypesCompatible<T, Get> && ...), "Invalid ID type combination");
@@ -775,17 +857,57 @@ public:
 
 				if (sizeof...(Get) == 0 || ((key.type() == get_type<Get>()) || ...))
 				{
-					if constexpr (std::is_void_v<result_type>)
+					constexpr bool process_local = sizeof...(Get) == 0 ? (std::is_invocable_v<F, u32, T&>) : (std::is_invocable_v<F, u32, Get&> && ...);
+
+					if constexpr (process_local)
 					{
-						func(key, *ptr);
-						result++;
+						if (id_manager::g_process != key.process())
+						{
+							continue;
+						}
+
+						std::remove_reference_t<std::conditional_t<process_local, F&&, result_type(*)(u32, object_type&)>>* pfunc{};
+
+						if constexpr (process_local)
+						{
+							pfunc = &func;
+						}
+
+						if constexpr (std::is_void_v<result_type>)
+						{
+							std::invoke(*pfunc, key, *ptr);
+							result++;
+						}
+						else
+						{
+							if ((result.ret = std::invoke(*pfunc, key, *ptr)))
+							{
+								result.ptr = static_cast<stx::shared_ptr<object_type>>(id.load());
+								break;
+							}
+						}
 					}
 					else
 					{
-						if ((result.ret = func(key, *ptr)))
+						std::remove_reference_t<std::conditional_t<!process_local, F&&, result_type(*)(u32, u32, object_type&)>>* pfunc{};
+
+						if constexpr (!process_local)
 						{
-							result.ptr = static_cast<stx::shared_ptr<object_type>>(id.load());
-							break;
+							pfunc = &func;
+						}
+
+						if constexpr (std::is_void_v<result_type>)
+						{
+							std::invoke(*pfunc, key, key.process(), *ptr);
+							result++;
+						}
+						else
+						{
+							if ((result.ret = std::invoke(*pfunc, key, key.process(), *ptr)))
+							{
+								result.ptr = static_cast<stx::shared_ptr<object_type>>(id.load());
+								break;
+							}
 						}
 					}
 				}
@@ -798,7 +920,7 @@ public:
 	// Remove the ID
 	template <typename T, typename Get = T>
 		requires IdmTypesCompatible<T, Get>
-	static inline bool remove(u32 id)
+	static inline bool remove(id_index id)
 	{
 		stx::shared_ptr<T> ptr;
 		{
@@ -830,7 +952,7 @@ public:
 	// Remove the ID if matches the weak/shared ptr
 	template <typename T, typename Get = T, typename Ptr, typename Lock = std::true_type>
 		requires IdmTypesCompatible<T, Get> && std::is_convertible_v<Lock, bool>
-	static inline bool remove_verify(u32 id, Ptr&& sptr, Lock = std::true_type{})
+	static inline bool remove_verify(id_index id, Ptr&& sptr, Lock = std::true_type{})
 	{
 		stx::shared_ptr<T> ptr;
 		{
@@ -862,7 +984,7 @@ public:
 	// Remove the ID and return the object
 	template <typename T, typename Get = T, typename Lock = std::true_type>
 		requires IdmTypesCompatible<T, Get>
-	static inline stx::shared_ptr<Get> withdraw(u32 id, int = 0, Lock = std::true_type{})
+	static inline stx::shared_ptr<Get> withdraw(id_index id, int = 0, Lock = std::true_type{})
 	{
 		stx::shared_ptr<Get> ptr;
 		{
@@ -881,7 +1003,7 @@ public:
 	// Remove the ID after accessing the object under writer lock, return the object and propagate return value
 	template <typename T, typename Get = T, typename F, typename FRT = std::invoke_result_t<F, Get&>>
 		requires IdmTypesCompatible<T, Get> && std::is_invocable_v<F, Get&>
-	static inline std::conditional_t<std::is_void_v<FRT>, stx::shared_ptr<Get>, return_pair<stx::shared_ptr<Get>, FRT>> withdraw(u32 id, F&& func)
+	static inline std::conditional_t<std::is_void_v<FRT>, stx::shared_ptr<Get>, return_pair<stx::shared_ptr<Get>, FRT>> withdraw(id_index id, F&& func)
 	{
 		const u32 index = get_index<Get>(id);
 

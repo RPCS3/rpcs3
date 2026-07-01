@@ -7,8 +7,11 @@
 #include "Utilities/address_range.h"
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/RSX/RSXThread.h"
+#include "Emu/Cell/lv2/sys_process.h"
+#include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/SPURecompiler.h"
 #include "Emu/perf_meter.hpp"
+#include "Emu/IdManager.h"
 #include <deque>
 #include <span>
 
@@ -26,6 +29,10 @@ extern bool is_memory_compatible_for_copy_from_executable_optimization(u32 addr,
 
 namespace vm
 {
+	using ps3_vm = ps3_virtual_memory_object;
+
+	static utils::shm s_hook{0x800000000, ""};
+
 	static u8* memory_reserve_4GiB(void* _addr, u64 size = 0x100000000, bool is_memory_mapping = false)
 	{
 		for (u64 addr = reinterpret_cast<u64>(_addr) + 0x100000000; addr < 0x8000'0000'0000; addr += 0x100000000)
@@ -40,31 +47,28 @@ namespace vm
 	}
 
 	// Emulated virtual memory
-	u8* const g_base_addr = memory_reserve_4GiB(reinterpret_cast<void*>(0x2'0000'0000), 0x2'0000'0000, true);
+	thread_local u8* g_base_addr = nullptr;
 
 	// Unprotected virtual memory mirror
-	u8* const g_sudo_addr = g_base_addr + 0x1'0000'0000;
+	thread_local u8* g_sudo_addr = nullptr;
 
 	// Auxiliary virtual memory for executable areas
-	u8* const g_exec_addr = memory_reserve_4GiB(g_sudo_addr, 0x300000000);
+	thread_local u8* g_exec_addr = nullptr;
 
 	// Hooks for memory R/W interception (default: zero offset to some function with only ret instructions)
-	u8* const g_hook_addr = memory_reserve_4GiB(g_exec_addr, 0x800000000);
+	thread_local u8* g_hook_addr = nullptr;
 
 	// Stats for debugging
-	u8* const g_stat_addr = memory_reserve_4GiB(g_hook_addr);
+	thread_local u8* g_stat_addr = nullptr;
 
-	// For SPU
-	u8* const g_free_addr = g_stat_addr + 0x1'0000'0000;
+	// Thread-local VM instance
+	thread_local std::shared_ptr<ps3_virtual_memory_object> g_vm_image;
 
 	// Reservation stats
 	alignas(4096) u8 g_reservations[65536 / 128 * 64]{0};
 
 	// Pointers to shared memory mirror or zeros for "normal" memory
 	alignas(4096) atomic_t<u64> g_shmem[65536]{0};
-
-	// Memory locations
-	alignas(64) std::vector<std::shared_ptr<block_t>> g_locations;
 
 	// Memory mutex acknowledgement
 	thread_local atomic_t<cpu_thread*>* g_tls_locked = nullptr;
@@ -82,9 +86,6 @@ namespace vm
 
 	// Memory range lock slots (sparse atomics)
 	atomic_t<u64, 128> g_range_lock_set[64]{};
-
-	// Memory pages
-	std::array<memory_page, 0x100000000 / 4096> g_pages;
 
 	std::pair<bool, u64> try_reservation_update(u32 addr)
 	{
@@ -172,6 +173,8 @@ namespace vm
 
 		cpu_thread* _cpu = nullptr;
 
+		const auto memory_4GB_model = get_current_memory_object();
+
 		if (u64 to_store = begin | (u64{size} << 32); *range_lock != to_store)
 		{
 			range_lock->store(to_store);
@@ -222,7 +225,7 @@ namespace vm
 
 				for (u32 i = begin / 4096, max = (begin + size - 1) / 4096; i <= max; i++)
 				{
-					if (!(g_pages[i] & (vm::page_readable)))
+					if (!(memory_4GB_model->pages[i] & (vm::page_readable)))
 					{
 						test = i * 4096;
 						break;
@@ -644,6 +647,8 @@ namespace vm
 
 	u64 reservation_lock_internal(u32 addr, atomic_t<u64>& res)
 	{
+		const auto memory_4GB_model = get_current_memory_object();
+
 		for (u64 i = 0;; i++)
 		{
 			if (u64 rtime = res; !(rtime & 127) && reservation_try_lock(res, rtime)) [[likely]]
@@ -662,7 +667,7 @@ namespace vm
 			else
 			{
 				// TODO: Accurate locking in this case
-				if (!(g_pages[addr / 4096] & page_writable))
+				if (!(memory_4GB_model->pages[addr / 4096] & page_writable))
 				{
 					return -1;
 				}
@@ -744,7 +749,7 @@ namespace vm
 		thread_ctrl::emergency_exit("vm::reservation_escape");
 	}
 
-	static void _page_map(u32 addr, u8 flags, u32 size, utils::shm* shm, u64 bflags, std::pair<const u32, std::pair<u32, std::shared_ptr<utils::shm>>>* (*search_shm)(vm::block_t* block, utils::shm* shm))
+	static void _page_map(ps3_vm* memory_4GB_model, u32 addr, u8 flags, u32 size, utils::shm* shm, u64 bflags, std::pair<const u32, std::pair<u32, std::shared_ptr<utils::shm>>>* (*search_shm)(vm::block_t* block, utils::shm* shm))
 	{
 		perf_meter<"PAGE_MAP"_u64> perf0;
 
@@ -755,7 +760,7 @@ namespace vm
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
-			if (g_pages[i])
+			if (memory_4GB_model->pages[i])
 			{
 				fmt::throw_exception("Memory already mapped (addr=0x%x, size=0x%x, flags=0x%x, current_addr=0x%x)", addr, size, flags, i * 4096);
 			}
@@ -782,7 +787,7 @@ namespace vm
 				ensure((shm_self & 0xffff'0000'0000'ffff) == range_locked);
 
 				// Find another mirror and map it as shareable too
-				for (auto& ploc : g_locations)
+				for (auto& ploc : memory_4GB_model->locations)
 				{
 					if (auto loc = ploc.get())
 					{
@@ -852,13 +857,13 @@ namespace vm
 		}
 		else if (!shm)
 		{
-			utils::memory_protect(g_base_addr + addr, size, prot);
+			utils::memory_protect(memory_4GB_model->base_addr + addr, size, prot);
 
 			perf_meter<"PAGE_LCK"_u64> perf;
-			utils::memory_lock(g_base_addr + addr, size);
-			utils::memory_lock(g_sudo_addr + addr, size);
+			utils::memory_lock(memory_4GB_model->base_addr + addr, size);
+			utils::memory_lock(memory_4GB_model->sudo_addr + addr, size);
 		}
-		else if (!map_critical(g_base_addr + addr, prot) || !map_critical(g_sudo_addr + addr, utils::protection::rw) || (map_error = "map_self()", !shm->map_self()))
+		else if (!map_critical(memory_4GB_model->base_addr + addr, prot) || !map_critical(memory_4GB_model->sudo_addr + addr, utils::protection::rw) || (map_error = "map_self()", !shm->map_self()))
 		{
 			fmt::throw_exception("Memory mapping failed (addr=0x%x, size=0x%x, flags=0x%x): %s", addr, size, flags, map_error);
 		}
@@ -866,17 +871,17 @@ namespace vm
 		if (flags & page_executable && !is_noop)
 		{
 			// TODO (dead code)
-			utils::memory_commit(g_exec_addr + addr * 2, size * 2);
+			utils::memory_commit(memory_4GB_model->exec_addr + addr * 2, size * 2);
 
 			if (g_cfg.core.ppu_debug)
 			{
-				utils::memory_commit(g_stat_addr + addr, size);
+				utils::memory_commit(memory_4GB_model->stat_addr + addr, size);
 			}
 		}
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
-			if (g_pages[i].exchange(flags | page_allocated))
+			if (memory_4GB_model->pages[i].exchange(flags | page_allocated))
 			{
 				fmt::throw_exception("Concurrent access (addr=0x%x, size=0x%x, flags=0x%x, current_addr=0x%x)", addr, size, flags, i * 4096);
 			}
@@ -888,6 +893,8 @@ namespace vm
 	bool page_protect(u32 addr, u32 size, u8 flags_test, u8 flags_set, u8 flags_clear)
 	{
 		perf_meter<"PAGE_PRO"_u64> perf0;
+
+		const auto memory_4GB_model = get_current_memory_object();
 
 		vm::writer_lock lock;
 
@@ -921,14 +928,14 @@ namespace vm
 
 			if (i < end)
 			{
-				new_val = g_pages[i];
+				new_val = memory_4GB_model->pages[i];
 				new_val |= flags_set;
 				new_val &= ~flags_clear;
 			}
 
 			if (new_val != start_value)
 			{
-				const u8 old_val = g_pages[start];
+				const u8 old_val = memory_4GB_model->pages[start];
 
 				if (u32 page_size = (i - start) * 4096; page_size && old_val != start_value)
 				{
@@ -944,7 +951,7 @@ namespace vm
 
 					for (u32 j = start; j < i; j++)
 					{
-						g_pages[j].release(start_value);
+						memory_4GB_model->pages[j].release(start_value);
 					}
 
 					if ((old_val ^ start_value) & (page_readable | page_writable))
@@ -964,7 +971,7 @@ namespace vm
 		return true;
 	}
 
-	static u32 _page_unmap(u32 addr, u32 max_size, u64 bflags, utils::shm* shm, std::vector<std::pair<u64, u64>>& unmap_events, bool is_block_termination = false)
+	static u32 _page_unmap(ps3_vm* memory_4GB_model, u32 addr, u32 max_size, u64 bflags, utils::shm* shm, std::vector<std::pair<u64, u64>>& unmap_events, bool is_block_termination = false)
 	{
 		perf_meter<"PAGE_UNm"_u64> perf0;
 
@@ -982,19 +989,19 @@ namespace vm
 
 		for (u32 i = addr / 4096; i < addr / 4096 + max_size / 4096; i++)
 		{
-			if ((g_pages[i] & page_allocated) == 0)
+			if ((memory_4GB_model->pages[i] & page_allocated) == 0)
 			{
 				break;
 			}
 
 			if (size == 0)
 			{
-				is_exec = !!(g_pages[i] & page_executable);
+				is_exec = !!(memory_4GB_model->pages[i] & page_executable);
 			}
 			else
 			{
 				// Must be consistent
-				ensure(is_exec == !!(g_pages[i] & page_executable));
+				ensure(is_exec == !!(memory_4GB_model->pages[i] & page_executable));
 			}
 
 			size += 4096;
@@ -1015,12 +1022,12 @@ namespace vm
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
-			if (!(g_pages[i] & page_allocated))
+			if (!(memory_4GB_model->pages[i] & page_allocated))
 			{
 				fmt::throw_exception("Concurrent access (addr=0x%x, size=0x%x, current_addr=0x%x)", addr, size, i * 4096);
 			}
 
-			g_pages[i].release(0);
+			memory_4GB_model->pages[i].release(0);
 		}
 
 		// Notify rsx to invalidate range
@@ -1050,19 +1057,19 @@ namespace vm
 		}
 		else
 		{
-			shm->unmap_critical(g_base_addr + addr);
+			shm->unmap_critical(memory_4GB_model->base_addr + addr);
 #ifdef _WIN32
-			shm->unmap_critical(g_sudo_addr + addr);
+			shm->unmap_critical(memory_4GB_model->sudo_addr + addr);
 #endif
 		}
 
 		if (is_exec && !is_noop)
 		{
-			utils::memory_decommit(g_exec_addr + addr * 2, size * 2);
+			utils::memory_decommit(memory_4GB_model->exec_addr + addr * 2, size * 2);
 
 			if (g_cfg.core.ppu_debug)
 			{
-				utils::memory_decommit(g_stat_addr + addr, size);
+				utils::memory_decommit(memory_4GB_model->stat_addr + addr, size);
 			}
 		}
 
@@ -1083,12 +1090,15 @@ namespace vm
 			return false;
 		}
 
+		const auto memory_4GB_model = get_current_memory_object();
+		const auto pages = memory_4GB_model->pages;
+
 		// Always check this flag
 		flags |= page_allocated;
 
 		for (u64 i = addr / 4096, max = (addr + size - 1) / 4096; i <= max;)
 		{
-			auto state = +g_pages[i];
+			auto state = +pages[i];
 
 			if (~state & flags) [[unlikely]]
 			{
@@ -1176,7 +1186,7 @@ namespace vm
 		// Check if memory area is already mapped
 		for (u32 i = addr / 4096; i <= (addr + size - 1) / 4096; i++)
 		{
-			if (g_pages[i])
+			if (memory_4GB_model->pages[i])
 			{
 				return false;
 			}
@@ -1216,12 +1226,12 @@ namespace vm
 		if (this->flags & stack_guarded)
 		{
 			// Mark overflow/underflow guard pages as allocated
-			ensure(!g_pages[addr / 4096].exchange(page_allocated));
-			ensure(!g_pages[addr / 4096 + size / 4096 - 1].exchange(page_allocated));
+			ensure(!memory_4GB_model->pages[addr / 4096].exchange(page_allocated));
+			ensure(!memory_4GB_model->pages[addr / 4096 + size / 4096 - 1].exchange(page_allocated));
 		}
 
 		// Map "real" memory pages; provide a function to search for mirrors with private member access
-		_page_map(page_addr, flags, page_size, shm.get(), this->flags, [](vm::block_t* _this, utils::shm* shm)
+		_page_map(memory_4GB_model, page_addr, flags, page_size, shm.get(), this->flags, [](vm::block_t* _this, utils::shm* shm)
 		{
 			auto& map = (_this->m.*block_map)();
 
@@ -1299,8 +1309,9 @@ namespace vm
 		return s_id++;
 	}
 
-	block_t::block_t(u32 addr, u32 size, u64 flags)
+	block_t::block_t(ps3_virtual_memory_object* memory_4GB_model, u32 addr, u32 size, u64 flags) noexcept
 		: m_id(init_block_id())
+		, memory_4GB_model(memory_4GB_model)
 		, addr(addr)
 		, size(size)
 		, flags(process_block_flags(flags))
@@ -1325,7 +1336,8 @@ namespace vm
 			// Special path for whole-allocated areas allowing 4k granularity
 			m_common = std::make_shared<utils::shm>(size, fmt::format("_block_x%08x", addr));
 
-			if (!map_critical(vm::_ptr<u8>(addr), this->flags & page_size_4k && utils::get_page_size() > 4096 ? utils::protection::rw : utils::protection::no) || !map_critical(vm::get_super_ptr(addr), utils::protection::rw))
+			if (!map_critical(memory_4GB_model->base_addr + addr, this->flags & page_size_4k && utils::get_page_size() > 4096 ? utils::protection::rw : utils::protection::no)
+				|| !map_critical(memory_4GB_model->sudo_addr + addr, utils::protection::rw))
 			{
 				fmt::throw_exception("Memory mapping failed (addr=0x%x, size=0x%x, flags=0x%x): %s", addr, size, flags, map_error);
 			}
@@ -1345,7 +1357,7 @@ namespace vm
 				const auto size = it->second.first;
 
 				std::vector<std::pair<u64, u64>> event_data;
-				ensure(size == _page_unmap(it->first, size, this->flags, it->second.second.get(), unmapped ? *unmapped : event_data, true));
+				ensure(size == _page_unmap(memory_4GB_model, it->first, size, this->flags, it->second.second.get(), unmapped ? *unmapped : event_data, true));
 
 				if (it->second.second && addr < 0xE0000000)
 				{
@@ -1376,7 +1388,7 @@ namespace vm
 		return false;
 	}
 
-	block_t::~block_t()
+	block_t::~block_t() noexcept
 	{
 		ensure(!is_valid());
 		ensure(!m_common || m_common.use_count() == 1);
@@ -1555,12 +1567,12 @@ namespace vm
 			if (flags & stack_guarded)
 			{
 				// Clear guard pages
-				ensure(g_pages[addr / 4096 - 1].exchange(0) == page_allocated);
-				ensure(g_pages[addr / 4096 + size / 4096].exchange(0) == page_allocated);
+				ensure(memory_4GB_model->pages[addr / 4096 - 1].exchange(0) == page_allocated);
+				ensure(memory_4GB_model->pages[addr / 4096 + size / 4096].exchange(0) == page_allocated);
 			}
 
 			// Unmap "real" memory pages
-			ensure(size == _page_unmap(addr, size, this->flags, found->second.second.get(), unmap_notification.event_data));
+			ensure(size == _page_unmap(memory_4GB_model, addr, size, this->flags, found->second.second.get(), unmap_notification.event_data));
 
 			// Clear stack guards
 			if (flags & stack_guarded)
@@ -1636,7 +1648,7 @@ namespace vm
 		return imp_used(lock);
 	}
 
-	void block_t::get_shared_memory(std::vector<std::pair<utils::shm*, u32>>& shared)
+	void block_t::get_shared_memory(std::vector<std::shared_ptr<utils::shm>>& shared)
 	{
 		auto& m_map = (m.*block_map)();
 
@@ -1646,27 +1658,9 @@ namespace vm
 
 			for (const auto& [addr, shm] : m_map)
 			{
-				shared.emplace_back(shm.second.get(), addr);
+				shared.emplace_back(shm.second);
 			}
 		}
-	}
-
-	u32 block_t::get_shm_addr(const std::shared_ptr<utils::shm>& shared)
-	{
-		auto& m_map = (m.*block_map)();
-
-		if (!(flags & preallocated))
-		{
-			for (auto& [addr, pair] : m_map)
-			{
-				if (pair.second == shared)
-				{
-					return addr;
-				}
-			}
-		}
-
-		return 0;
 	}
 
 	static bool check_cache_line_zero(const void* ptr)
@@ -1771,7 +1765,7 @@ namespace vm
 		for (const auto& [addr, shm] : m_map)
 		{
 			// Assume first page flags represent all the map
-			ar(g_pages[addr / 4096 + !!(flags & stack_guarded)]);
+			ar(memory_4GB_model->pages[addr / 4096 + !!(flags & stack_guarded)]);
 
 			ar(addr);
 			ar(shm.first);
@@ -1789,7 +1783,7 @@ namespace vm
 
 				// Save raw binary image
 				const u32 guard_size = flags & stack_guarded ? 0x1000 : 0;
-				serialize_memory_bytes(ar, vm::get_super_ptr<u8>(addr + guard_size), shm.first - guard_size * 2);
+				serialize_memory_bytes(ar, memory_4GB_model->sudo_addr + (addr + guard_size), shm.first - guard_size * 2);
 			}
 			else
 			{
@@ -1802,8 +1796,9 @@ namespace vm
 		ar(u8{0});
 	}
 
-	block_t::block_t(utils::serial& ar, std::vector<std::shared_ptr<utils::shm>>& shared)
+	block_t::block_t(utils::serial& ar, ps3_vm* memory_4GB_model, std::vector<std::shared_ptr<utils::shm>>& shared)
 		: m_id(init_block_id())
+		, memory_4GB_model(memory_4GB_model)
 		, addr(ar)
 		, size(ar)
 		, flags(ar)
@@ -1811,8 +1806,8 @@ namespace vm
 		if (flags & preallocated)
 		{
 			m_common = std::make_shared<utils::shm>(size, fmt::format("_block_x%08x", addr));
-			m_common->map_critical(vm::base(addr), this->flags & page_size_4k && utils::get_page_size() > 4096 ? utils::protection::rw : utils::protection::no);
-			m_common->map_critical(vm::get_super_ptr(addr));
+			m_common->map_critical(memory_4GB_model->base_addr + addr, this->flags & page_size_4k && utils::get_page_size() > 4096 ? utils::protection::rw : utils::protection::no);
+			m_common->map_critical(memory_4GB_model->sudo_addr + addr);
 		}
 
 		std::shared_ptr<utils::shm> null_shm;
@@ -1858,13 +1853,13 @@ namespace vm
 
 			// Map the memory through the same method as alloc() and falloc()
 			// Copy the shared handle unconditionally
-			ensure(try_alloc(addr0, pflags, size0, ::as_rvalue(flags & preallocated ? null_shm : shared[ar.pop<usz>()])));
+			ensure(try_alloc(addr0, pflags, size0, ::as_rvalue(flags & preallocated ? null_shm : shared[ar.pop<u32>()])));
 
 			if (flags & preallocated)
 			{
 				// Load binary image
 				const u32 guard_size = flags & stack_guarded ? 0x1000 : 0;
-				serialize_memory_bytes(ar, vm::get_super_ptr<u8>(addr0 + guard_size), size0 - guard_size * 2);
+				serialize_memory_bytes(ar, memory_4GB_model->sudo_addr + (addr0 + guard_size), size0 - guard_size * 2);
 			}
 		}
 	}
@@ -1874,7 +1869,7 @@ namespace vm
 		return block->unmap(unmapped);
 	}
 
-	static bool _test_map(u32 addr, u32 size)
+	static bool _test_map(ps3_vm* memory_4GB_model, u32 addr, u32 size)
 	{
 		const auto range = utils::address_range32::start_length(addr, size);
 
@@ -1883,7 +1878,7 @@ namespace vm
 			return false;
 		}
 
-		for (auto& block : g_locations)
+		for (auto& block : memory_4GB_model->locations)
 		{
 			if (!block)
 			{
@@ -1899,7 +1894,7 @@ namespace vm
 		return true;
 	}
 
-	static std::shared_ptr<block_t> _find_map(u32 size, u32 align, u64 flags)
+	static std::shared_ptr<block_t> _find_map(ps3_vm* memory_4GB_model, u32 size, u32 align, u64 flags)
 	{
 		const u32 max = (0xC0000000 - size) & (0 - align);
 
@@ -1910,9 +1905,9 @@ namespace vm
 
 		for (u32 addr = utils::align<u32>(0x10000000, align);; addr += align)
 		{
-			if (_test_map(addr, size))
+			if (_test_map(memory_4GB_model, addr, size))
 			{
-				return std::make_shared<block_t>(addr, size, flags);
+				return std::make_shared<block_t>(memory_4GB_model, addr, size, flags);
 			}
 
 			if (addr == max)
@@ -1924,48 +1919,48 @@ namespace vm
 		return nullptr;
 	}
 
-	static std::shared_ptr<block_t> _map(u32 addr, u32 size, u64 flags)
+	static std::shared_ptr<block_t> _map(ps3_vm* memory_4GB_model, u32 addr, u32 size, u64 flags)
 	{
 		if (!size || (size | addr) % 4096)
 		{
 			fmt::throw_exception("Invalid arguments (addr=0x%x, size=0x%x)", addr, size);
 		}
 
-		if (!_test_map(addr, size))
+		if (!_test_map(memory_4GB_model, addr, size))
 		{
 			return nullptr;
 		}
 
 		for (u32 i = addr / 4096; i < addr / 4096 + size / 4096; i++)
 		{
-			if (g_pages[i])
+			if (memory_4GB_model->pages[i])
 			{
 				fmt::throw_exception("Unexpected pages allocated (current_addr=0x%x)", i * 4096);
 			}
 		}
 
-		auto block = std::make_shared<block_t>(addr, size, flags);
+		auto block = std::make_shared<block_t>(memory_4GB_model, addr, size, flags);
 
-		g_locations.emplace_back(block);
+		memory_4GB_model->locations.emplace_back(block);
 
 		return block;
 	}
 
-	static std::shared_ptr<block_t> _get_map(memory_location_t location, u32 addr)
+	static std::shared_ptr<block_t> _get_map(ps3_vm* memory_4GB_model, memory_location_t location, u32 addr)
 	{
 		if (location != any)
 		{
 			// return selected location
-			if (location < g_locations.size())
+			if (location < memory_4GB_model->locations.size())
 			{
-				return g_locations[location];
+				return memory_4GB_model->locations[location];
 			}
 
 			return nullptr;
 		}
 
 		// search location by address
-		for (auto& block : g_locations)
+		for (auto& block : memory_4GB_model->locations)
 		{
 			if (block && addr >= block->addr && addr <= block->addr + block->size - 1)
 			{
@@ -1978,13 +1973,17 @@ namespace vm
 
 	std::shared_ptr<block_t> map(u32 addr, u32 size, u64 flags)
 	{
+		const auto memory_4GB_model = get_current_memory_object();
+
 		vm::writer_lock lock;
 
-		return _map(addr, size, flags);
+		return _map(memory_4GB_model.get(), addr, size, flags);
 	}
 
 	std::shared_ptr<block_t> find_map(u32 orig_size, u32 align, u64 flags)
 	{
+		const auto memory_4GB_model = get_current_memory_object();
+
 		vm::writer_lock lock;
 
 		// Align to minimal page size
@@ -2002,9 +2001,9 @@ namespace vm
 			return nullptr;
 		}
 
-		auto block = _find_map(size, align, flags);
+		auto block = _find_map(memory_4GB_model.get(), size, align, flags);
 
-		if (block) g_locations.emplace_back(block);
+		if (block) memory_4GB_model->locations.emplace_back(block);
 
 		return block;
 	}
@@ -2034,9 +2033,11 @@ namespace vm
 			}
 		} unmap_notifications;
 
+		const auto memory_4GB_model = get_current_memory_object();
+
 		vm::writer_lock lock;
 
-		for (auto it = g_locations.begin() + memory_location_max; it != g_locations.end(); it++)
+		for (auto it = memory_4GB_model->locations.begin() + memory_location_max; it != memory_4GB_model->locations.end(); it++)
 		{
 			if (*it && (*it)->addr == addr)
 			{
@@ -2062,7 +2063,7 @@ namespace vm
 				}
 
 				result.first = std::move(*it);
-				g_locations.erase(it);
+				memory_4GB_model->locations.erase(it);
 				ensure(_unmap_block(result.first, &unmap_notifications.unmap_data));
 				result.second = true;
 				return result;
@@ -2074,16 +2075,20 @@ namespace vm
 
 	std::shared_ptr<block_t> get(memory_location_t location, u32 addr)
 	{
+		const auto memory_4GB_model = get_current_memory_object();
+
 		vm::writer_lock lock;
 
-		return _get_map(location, addr);
+		return _get_map(memory_4GB_model.get(), location, addr);
 	}
 
 	std::shared_ptr<block_t> reserve_map(memory_location_t location, u32 addr, u32 area_size, u64 flags)
 	{
+		const auto memory_4GB_model = get_current_memory_object();
+
 		vm::writer_lock lock;
 
-		auto area = _get_map(location, addr);
+		auto area = _get_map(memory_4GB_model.get(), location, addr);
 
 		if (area)
 		{
@@ -2091,29 +2096,29 @@ namespace vm
 		}
 
 		// Allocation on arbitrary address
-		if (location != any && location < g_locations.size())
+		if (location != any && location < memory_4GB_model->locations.size())
 		{
 			// return selected location
-			auto& loc = g_locations[location];
+			auto& loc = memory_4GB_model->locations[location];
 
 			if (!loc)
 			{
 				// Deferred allocation
-				loc = _find_map(area_size, 0x10000000, flags);
+				loc = _find_map(memory_4GB_model.get(), area_size, 0x10000000, flags);
 			}
 
 			return loc;
 		}
 
 		// Fixed address allocation
-		area = _get_map(location, addr);
+		area = _get_map(memory_4GB_model.get(), location, addr);
 
 		if (area)
 		{
 			return area;
 		}
 
-		return _map(addr, area_size, flags);
+		return _map(memory_4GB_model.get(), addr, area_size, flags);
 	}
 
 	static bool try_access_internal(u32 addr, void* ptr, u32 size, bool is_write)
@@ -2223,152 +2228,35 @@ namespace vm
 		return result;
 	}
 
-	inline namespace ps3_
+	void ps3_physical_memory_entries::save(utils::serial& ar)
 	{
-		static utils::shm s_hook{0x800000000, ""};
+		shm_list.clear();
 
-		void init()
+		idm::select<lv2_obj, lv2_process>([&](u32, u32, lv2_process& p)
 		{
-			vm_log.notice("Guest memory bases address ranges:\n"
-			"vm::g_base_addr = %p - %p\n"
-			"vm::g_sudo_addr = %p - %p\n"
-			"vm::g_exec_addr = %p - %p\n"
-			"vm::g_hook_addr = %p - %p\n"
-			"vm::g_stat_addr = %p - %p\n"
-			"vm::g_reservations = %p - %p\n",
-			g_base_addr, g_base_addr + 0xffff'ffff,
-			g_sudo_addr, g_sudo_addr + 0xffff'ffff,
-			g_exec_addr, g_exec_addr + 0x200000000 - 1,
-			g_hook_addr, g_hook_addr + 0x800000000 - 1,
-			g_stat_addr, g_stat_addr + 0xffff'ffff,
-			g_reservations, g_reservations + sizeof(g_reservations) - 1);
-
-			std::memset(&g_pages, 0, sizeof(g_pages));
-
-			g_locations =
+			for (auto& loc : p.memory_4GB_model->locations)
 			{
-				std::make_shared<block_t>(0x00010000, 0x0FFF0000, page_size_64k | preallocated), // main
-				nullptr,		                                                                 // user 64k pages
-				nullptr,                                                                         // user 1m pages
-				nullptr,                                                                         // rsx context
-				std::make_shared<block_t>(0xC0000000, 0x10000000, page_size_64k | preallocated), // video
-				std::make_shared<block_t>(0xD0000000, 0x10000000, page_size_4k  | preallocated | stack_guarded | bf0_0x1), // stack
-				std::make_shared<block_t>(0xE0000000, 0x20000000, page_size_64k),                // SPU reserved
-			};
-
-			std::memset(g_reservations, 0, sizeof(g_reservations));
-			std::memset(g_shmem, 0, sizeof(g_shmem));
-			std::memset(g_range_lock_set, 0, sizeof(g_range_lock_set));
-			std::memset(g_range_lock_bits, 0, sizeof(g_range_lock_bits));
-
-#ifdef _WIN32
-			utils::memory_release(g_hook_addr, 0x800000000);
-#endif
-			ensure(s_hook.map(g_hook_addr, utils::protection::rw, true));
-		}
-	}
-
-	void close()
-	{
-		{
-			vm::writer_lock lock;
-
-			for (auto& block : g_locations)
-			{
-				if (block)
-				{
-					_unmap_block(block);
-					ensure(block.use_count() == 1);
-				}
+				if (loc) loc->get_shared_memory(shm_list);
 			}
+		}, idm::unlocked);
 
-			g_locations.clear();
-		}
-
-		utils::memory_decommit(g_exec_addr, 0x200000000);
-		utils::memory_decommit(g_stat_addr, 0x100000000);
-
-#ifdef _WIN32
-		s_hook.unmap(g_hook_addr);
-		ensure(utils::memory_reserve(0x800000000, g_hook_addr));
-#else
-		utils::memory_decommit(g_hook_addr, 0x800000000);
-#endif
-
-		std::memset(g_range_lock_set, 0, sizeof(g_range_lock_set));
-		std::memset(g_range_lock_bits, 0, sizeof(g_range_lock_bits));
-	}
-
-	void save(utils::serial& ar)
-	{
-		// Shared memory lookup, sample address is saved for easy memory copy
-		// Just need one address for this optimization
-		std::vector<std::pair<utils::shm*, u32>> shared;
-
-		for (auto& loc : g_locations)
-		{
-			if (loc) loc->get_shared_memory(shared);
-		}
-
-		std::map<utils::shm*, usz> shared_map;
-
-#ifndef _MSC_VER
-		shared.erase(std::unique(shared.begin(), shared.end(), [](auto& a, auto& b) { return a.first == b.first; }), shared.end());
-#else
-		// Workaround for bugged std::unique
-		for (auto it = shared.begin(); it != shared.end();)
-		{
-			if (shared_map.count(it->first))
-			{
-				it = shared.erase(it);
-				continue;
-			}
-
-			shared_map.emplace(it->first, 0);
-			it++;
-		}
-
-		shared_map.clear();
-#endif
-
-		for (auto& p : shared)
-		{
-			shared_map.emplace(p.first, &p - shared.data());
-		}
+		populate_map();
 
 		// TODO: proper serialization of std::map
-		ar(static_cast<usz>(shared_map.size()));
+		ar(static_cast<usz>(map_lookup.size()));
 
-		for (const auto& [shm, addr] : shared)
+		for (const auto& [shm, shm_index] : map_lookup)
 		{
-			//  Save shared memory
+			// Save shared memory
 			ar(shm->flags());
 
 			ar(shm->size());
-			serialize_memory_bytes(ar, vm::get_super_ptr<u8>(addr), shm->size());
+			serialize_memory_bytes(ar, shm->map_self(), shm->size());
 		}
-
-		// TODO: Serialize std::vector direcly
-		ar(g_locations.size());
-
-		for (auto& loc : g_locations)
-		{
-			const u8 has = loc.operator bool();
-			ar(has);
-
-			if (loc)
-			{
-				loc->save(ar, shared_map);
-			}
-		}
-
-		is_memory_compatible_for_copy_from_executable_optimization(0, 0); // Cleanup internal data
 	}
 
-	void load(utils::serial& ar)
+	ps3_physical_memory_entries::ps3_physical_memory_entries(utils::serial& ar)
 	{
-		std::vector<std::shared_ptr<utils::shm>> shared;
-
 		const usz shared_size = ar.pop<usz>();
 
 		if (!shared_size || ar.get_size(umax) / 4096 < shared_size)
@@ -2376,9 +2264,9 @@ namespace vm
 			fmt::throw_exception("Invalid VM serialization state: shared_size=0x%x, ar=%s", shared_size, ar);
 		}
 
-		shared.resize(shared_size);
+		shm_list.resize(shared_size);
 
-		for (auto& shm : shared)
+		for (auto& shm : shm_list)
 		{
 			// Load shared memory
 
@@ -2391,36 +2279,177 @@ namespace vm
 			serialize_memory_bytes(ar, shm->map_self(), shm->size());
 		}
 
-		for (auto& block : g_locations)
+		populate_map();
+	}
+
+	void ps3_physical_memory_entries::populate_map()
+	{
+		map_lookup.clear();
+
+#ifndef _MSC_VER
+		shm_list.erase(std::unique(shm_list.begin(), shm_list.end(), [](auto& a, auto& b) { return a.first == b.first; }), shm_list.end());
+#else
+		// Workaround for bugged std::unique
+		for (auto it = shm_list.begin(); it != shm_list.end();)
+		{
+			if (map_lookup.count(it->get()))
+			{
+				it = shm_list.erase(it);
+				continue;
+			}
+
+			map_lookup.emplace(it->get(), 0);
+			it++;
+		}
+
+		map_lookup.clear();
+#endif
+
+		for (auto& p : shm_list)
+		{
+			map_lookup.emplace(p.get(), &p - shm_list.data());
+		}
+	}
+
+	inline namespace ps3_
+	{
+		//static utils::shm s_hook{0x800000000, ""};
+	}
+
+	void initialize_ps3_mmemory_object(ps3_virtual_memory_object* ptr)
+	{
+		constexpr u64 pow32 = u64{1} << 32;
+
+		ptr->base_addr = memory_reserve_4GiB(reinterpret_cast<void*>(pow32 * 2), pow32 * 2, true);
+		ptr->sudo_addr = ptr->base_addr + pow32;
+		ptr->exec_addr = memory_reserve_4GiB(ptr->sudo_addr, pow32 * 4);
+		ptr->hook_addr = memory_reserve_4GiB(ptr->exec_addr, pow32 * 8);
+		ptr->stat_addr = memory_reserve_4GiB(ptr->exec_addr);
+		ptr->pages = static_cast<memory_page*>(utils::memory_reserve(pow32 / 4096));
+		utils::memory_commit(ptr->pages, pow32 / 4096);
+
+		vm_log.notice("Guest memory bases address ranges:\n"
+			"vm::g_base_addr = %p - %p\n"
+			"vm::g_sudo_addr = %p - %p\n"
+			"vm::g_exec_addr = %p - %p\n"
+			"vm::g_hook_addr = %p - %p\n"
+			"vm::g_stat_addr = %p - %p\n"
+			"vm::g_reservations = %p - %p\n",
+			ptr->base_addr, ptr->base_addr + 0xffff'ffff,
+			ptr->sudo_addr, ptr->sudo_addr + 0xffff'ffff,
+			ptr->exec_addr, ptr->exec_addr + 0x200000000 - 1,
+			ptr->hook_addr, ptr->hook_addr + 0x800000000 - 1,
+			ptr->stat_addr, ptr->stat_addr + 0xffff'ffff,
+			g_reservations, g_reservations + sizeof(g_reservations) - 1);
+
+		std::memset(ptr->pages, 0, sizeof(pow32 / 4096));
+
+		ptr->locations =
+		{
+			std::make_shared<block_t>(ptr, 0x00010000, 0x0FFF0000, page_size_64k | preallocated), // main
+			nullptr,		                                                                 // user 64k pages
+			nullptr,                                                                         // user 1m pages
+			nullptr,                                                                         // rsx context
+			std::make_shared<block_t>(ptr, 0xC0000000, 0x10000000, page_size_64k | preallocated), // video
+			std::make_shared<block_t>(ptr, 0xD0000000, 0x10000000, page_size_4k  | preallocated | stack_guarded | bf0_0x1), // stack
+			std::make_shared<block_t>(ptr, 0xE0000000, 0x20000000, page_size_64k),                // SPU reserved
+		};
+
+
+// #ifdef _WIN32
+ 		utils::memory_release(ptr->hook_addr, 0x800000000);
+// #endif
+		ensure(s_hook.map(ptr->hook_addr, utils::protection::rw, true));
+
+		// Global
+		std::memset(g_reservations, 0, sizeof(g_reservations));
+		std::memset(g_shmem, 0, sizeof(g_shmem));
+		std::memset(g_range_lock_set, 0, sizeof(g_range_lock_set));
+		std::memset(g_range_lock_bits, 0, sizeof(g_range_lock_bits));
+	}
+
+	void deinitialize_ps3_mmemory_object(ps3_virtual_memory_object* ptr)
+	{
+		constexpr u64 pow32 = u64{1} << 32;
+
+		{
+			vm::writer_lock lock;
+
+			for (auto& block : ptr->locations)
+			{
+				if (block)
+				{
+					_unmap_block(block);
+					ensure(block.use_count() == 1);
+				}
+			}
+
+			ptr->locations.clear();
+		}
+
+		utils::memory_decommit(ptr->exec_addr, pow32 * 2);
+		utils::memory_decommit(ptr->stat_addr, pow32);
+
+	#ifdef _WIN32
+		s_hook.unmap(ptr->hook_addr);
+		//ensure(utils::memory_reserve(pow32 * 8, ptr->hook_addr));
+	#else
+		utils::memory_decommit(ptr->hook_addr, pow32 * 8);
+	#endif
+
+		utils::memory_release(ptr->base_addr, pow32 * 2);
+		utils::memory_release(ptr->exec_addr, pow32 * 3);
+		utils::memory_release(ptr->hook_addr, pow32 * 8);
+		utils::memory_release(ptr->stat_addr, pow32);
+		utils::memory_release(ptr->pages, pow32 / 4096);
+	}
+
+	void save(ps3_virtual_memory_object* obj, utils::serial& ar)
+	{
+		// TODO: Serialize std::vector direcly
+		ar(obj->locations.size());
+
+		for (auto& loc : obj->locations)
+		{
+			const u8 has = loc.operator bool();
+			ar(has);
+
+			if (loc)
+			{
+				loc->save(ar, g_fxo->get<ps3_physical_memory_entries>().map_lookup);
+			}
+		}
+
+		is_memory_compatible_for_copy_from_executable_optimization(0, 0); // Cleanup internal data
+	}
+
+	void load(ps3_virtual_memory_object* obj, utils::serial& ar)
+	{
+		for (auto& block : obj->locations)
 		{
 			if (block) _unmap_block(block);
 		}
 
-		g_locations.clear();
-		g_locations.resize(ar.pop<usz>());
+		obj->locations.clear();
 
-		for (auto& loc : g_locations)
+		const usz loc_count = ar.pop<usz>();
+
+		if (loc_count > 16)
+		{
+			fmt::throw_exception("Invalid VM locations count: 0x%x", loc_count);
+		}
+
+		obj->locations.resize(loc_count);
+
+		for (auto& loc : obj->locations)
 		{
 			const u8 has = ar.pop<u8>();
 
 			if (has)
 			{
-				loc = std::make_shared<block_t>(ar, shared);
+				loc = std::make_shared<block_t>(ar, obj, g_fxo->get<vm::ps3_physical_memory_entries>().shm_list);
 			}
 		}
-	}
-
-	u32 get_shm_addr(const std::shared_ptr<utils::shm>& shared)
-	{
-		for (auto& loc : g_locations)
-		{
-			if (u32 addr = loc ? loc->get_shm_addr(shared) : 0)
-			{
-				return addr;
-			}
-		}
-
-		return 0;
 	}
 
 	bool read_string(u32 addr, u32 max_size, std::string& out_string, bool check_pages) noexcept
