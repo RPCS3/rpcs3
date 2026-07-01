@@ -234,7 +234,7 @@ kamen_rider_creator_dialog::kamen_rider_creator_dialog(QWidget* parent)
 			std::array<u8, 16> figure_data = {static_cast<u8>(dist(mt)), 0x03, 0x00, 0x00, 0x01, 0x0e, 0x0a, 0x0a,
 				static_cast<u8>(fig_id & 0xff), static_cast<u8>((fig_id >> 8) & 0xff),
 				static_cast<u8>((fig_id >> 16) & 0xff), static_cast<u8>((fig_id >> 24) & 0xff)};
-			write_to_ptr<le_t<u32>>(figure_data.data(), 0xC, kamen_rider_crc32(figure_data));
+			write_to_ptr<le_t<u32>>(figure_data, 0xC, kamen_rider_crc32(figure_data));
 			memcpy(&buf[16], figure_data.data(), figure_data.size());
 			fig_file.write(buf.data(), buf.size());
 			fig_file.close();

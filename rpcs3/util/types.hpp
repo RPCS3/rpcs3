@@ -941,6 +941,7 @@ using const_str = const_str_t<>;
 namespace fmt
 {
 	[[noreturn]] void raw_verify_error(std::source_location loc, const char8_t* msg, usz object);
+	[[noreturn]] void raw_verify_error(std::source_location loc, std::source_location propagated_loc, const char8_t* msg, usz object);
 	[[noreturn]] void raw_range_error(std::source_location loc, std::string_view index, usz container_size);
 	[[noreturn]] void raw_range_error(std::source_location loc, usz index, usz container_size);
 }
@@ -974,6 +975,17 @@ constexpr decltype(auto) ensure(T&& arg, const_str msg = const_str(), std::sourc
 	}
 
 	fmt::raw_verify_error(src_loc, msg, 0);
+}
+
+template <typename T>
+constexpr decltype(auto) ensure(T&& arg, std::source_location propagated_loc, const_str msg = const_str(), std::source_location src_loc = std::source_location::current()) noexcept
+{
+	if (std::forward<T>(arg)) [[likely]]
+	{
+		return std::forward<T>(arg);
+	}
+
+	fmt::raw_verify_error(src_loc, propagated_loc, msg, 0);
 }
 
 template <typename T, typename F> requires (std::is_invocable_v<F, T&&>)
@@ -1185,36 +1197,74 @@ namespace stx
 
 // Read object of type T from raw pointer, array, string, vector, or any contiguous container
 template <typename T, typename U>
-constexpr T read_from_ptr(U&& array, usz pos = 0)
+constexpr T read_from_ptr(U&& array, usz pos = 0, std::source_location src_loc = std::source_location::current())
 {
 	// TODO: ensure array element types are trivial
 	static_assert(sizeof(T) % sizeof(array[0]) == 0);
-	std::decay_t<decltype(array[0])> buf[sizeof(T) / sizeof(array[0])];
+	constexpr usz elements_per_value = sizeof(T) / sizeof(array[0]);
+
+	std::decay_t<decltype(array[0])> buf[elements_per_value];
+
 	if (!std::is_constant_evaluated())
+	{
+		if constexpr (requires { std::size(array); })
+		{
+			ensure((pos + elements_per_value) <= std::size(array), src_loc);
+		}
+
 		std::memcpy(+buf, &array[pos], sizeof(buf));
+	}
 	else
-		for (usz i = 0; i < pos; buf[i] = array[pos + i], i++);
+	{
+		// We could add an ensure or static_assert for OOB, but lucky for us, the [] operator will not compile with OOB.
+		for (usz i = 0; i < elements_per_value; i++)
+		{
+			buf[i] = array[pos + i];
+		}
+	}
 	return std::bit_cast<T>(buf);
 }
 
 template <typename T, typename U>
-constexpr void write_to_ptr(U&& array, usz pos, const T& value)
+constexpr void write_to_ptr(U&& array, usz pos, const T& value, std::source_location src_loc = std::source_location::current())
 {
 	static_assert(sizeof(T) % sizeof(array[0]) == 0);
+	constexpr usz elements_per_value = sizeof(T) / sizeof(array[0]);
+
+	if constexpr (requires { std::size(array); })
+	{
+		ensure((pos + elements_per_value) <= std::size(array), src_loc);
+	}
+
 	if (!std::is_constant_evaluated())
+	{
 		std::memcpy(static_cast<void*>(&array[pos]), &value, sizeof(value));
+	}
 	else
+	{
 		ensure(!"Unimplemented");
+	}
 }
 
 template <typename T, typename U>
-constexpr void write_to_ptr(U&& array, const T& value)
+constexpr void write_to_ptr(U&& array, const T& value, std::source_location src_loc = std::source_location::current())
 {
 	static_assert(sizeof(T) % sizeof(array[0]) == 0);
+	constexpr usz elements_per_value = sizeof(T) / sizeof(array[0]);
+
+	if constexpr (requires { std::size(array); })
+	{
+		ensure(elements_per_value <= std::size(array), src_loc);
+	}
+
 	if (!std::is_constant_evaluated())
+	{
 		std::memcpy(static_cast<void*>(&array[0]), &value, sizeof(value));
+	}
 	else
+	{
 		ensure(!"Unimplemented");
+	}
 }
 
 constexpr struct aref_tag_t{} aref_tag{};

@@ -195,7 +195,7 @@ bool cheat_engine::erase(const std::string& game, const u32 offset)
 	return true;
 }
 
-bool cheat_engine::resolve_script(u32& final_offset, const u32 offset, const std::string& red_script)
+bool cheat_engine::resolve_script(u32& final_offset, const u32 offset, std::string_view red_script)
 {
 	enum operand
 	{
@@ -290,8 +290,11 @@ bool cheat_engine::resolve_script(u32& final_offset, const u32 offset, const std
 				cur_op = operand_sub;
 				index++;
 				break;
-			case ' ': index++; break;
-			default: log_cheat.fatal("invalid character in redirection script"); return false;
+			case ' ': index++;
+				break;
+			default:
+				log_cheat.fatal("invalid character in redirection script");
+				return false;
 			}
 		}
 	}

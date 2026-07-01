@@ -3,6 +3,7 @@
 #include "Utilities/File.h"
 #include "Emu/vfs_config.h"
 #include "Utilities/Thread.h"
+#include "rpcs3_version.h"
 
 #if defined(ARCH_ARM64)
 #include "Emu/CPU/Backends/AArch64/AArch64Common.h"
@@ -531,6 +532,17 @@ std::string utils::get_cpu_brand()
 #endif
 }
 
+std::string_view utils::get_architecture()
+{
+#if defined(ARCH_X64)
+    return "x64"sv;
+#elif defined(ARCH_ARM64)
+    return "arm64"sv;
+#else
+    return "unknown"sv;
+#endif
+}
+
 std::string utils::get_system_info()
 {
 	std::string result;
@@ -785,13 +797,17 @@ utils::OS_version utils::get_OS_version()
 	return res;
 }
 
-std::string utils::get_OS_version_string()
+std::string utils::get_OS_version_string(bool simple)
 {
-	std::string output;
 #ifdef _WIN32
 	OSVERSIONINFOW osvi{};
 	osvi.dwOSVersionInfoSize = sizeof(osvi);
 	RtlGetVersion(&osvi);
+
+	if (simple)
+	{
+		return fmt::format("Windows %lu.%lu.%lu", osvi.dwMajorVersion, osvi.dwMinorVersion, osvi.dwBuildNumber);
+	}
 
 	const bool has_sp = osvi.szCSDVersion[0] != L'\0';
 	std::vector<char> holder;
@@ -804,8 +820,7 @@ std::string utils::get_OS_version_string()
 			holder.data(), len, nullptr, nullptr);
 	}
 
-	fmt::append(output,
-		"Operating system: Windows, Major: %lu, Minor: %lu, Build: %lu, Service Pack: %s",
+	return fmt::format("Operating system: Windows, Major: %lu, Minor: %lu, Build: %lu, Service Pack: %s",
 		osvi.dwMajorVersion, osvi.dwMinorVersion, osvi.dwBuildNumber,
 		has_sp ? holder.data() : "none");
 #elif defined (__APPLE__)
@@ -813,22 +828,41 @@ std::string utils::get_OS_version_string()
 	const int minor_version = Darwin_Version::getNSminorVersion();
 	const int patch_version = Darwin_Version::getNSpatchVersion();
 
-	fmt::append(output, "Operating system: macOS, Version: %d.%d.%d",
-		major_version, minor_version, patch_version);
+	if (simple)
+	{
+		return fmt::format("macOS %d.%d.%d", major_version, minor_version, patch_version);
+	}
+
+	return fmt::format("Operating system: macOS, Version: %d.%d.%d", major_version, minor_version, patch_version);
 #else
 	struct utsname details = {};
 
 	if (!uname(&details))
 	{
-		fmt::append(output, "Operating system: POSIX, Name: %s, Release: %s, Version: %s",
-			details.sysname, details.release, details.version);
+		if (simple)
+		{
+			return fmt::format("%s %s", details.sysname, details.release);
+		}
+
+		return fmt::format("Operating system: POSIX, Name: %s, Release: %s, Version: %s", details.sysname, details.release, details.version);
 	}
-	else
+
+	if (simple)
 	{
-		fmt::append(output, "Operating system: POSIX, Unknown version! (Error: %d)", errno);
+		return "POSIX";
 	}
+
+	return fmt::format("Operating system: POSIX, Unknown version! (Error: %d)", errno);
 #endif
-	return output;
+}
+
+std::string utils::get_user_agent()
+{
+	const std::string user_agent = fmt::format("RPCS3/%s (%s; %s)",
+		rpcs3::get_version().to_string(true),
+		utils::get_OS_version_string(true),
+		utils::get_architecture());
+	return user_agent;
 }
 
 int utils::get_maxfiles()

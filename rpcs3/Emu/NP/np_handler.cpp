@@ -359,7 +359,7 @@ namespace np
 			return;
 		}
 
-		u32 given_size = read_from_ptr<be_t<u32>>(data() + 4);
+		u32 given_size = read_from_ptr<be_t<u32>>(data(), 4);
 		if ((given_size + 8) != size())
 		{
 			ticket_log.error("Size mismatch (gs: %d vs s: %d)", given_size, size());
@@ -1303,7 +1303,7 @@ namespace np
 		}
 	}
 
-	bool np_handler::error_and_disconnect(const std::string& error_msg)
+	bool np_handler::error_and_disconnect(std::string_view error_msg)
 	{
 		rpcn_log.error("%s", error_msg);
 		rpcn.reset();

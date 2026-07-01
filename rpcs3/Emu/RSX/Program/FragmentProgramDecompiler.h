@@ -111,33 +111,33 @@ protected:
 	/** returns string calling function where arguments are passed via
 	 * $0 $1 $2 substring.
 	 */
-	virtual std::string getFunction(FUNCTION) = 0;
+	virtual std::string getFunction(FUNCTION f) = 0;
 
 	/** returns string calling comparison function on 2 args passed as strings.
 	 */
-	virtual std::string compareFunction(COMPARE, const std::string &, const std::string &) = 0;
+	virtual std::string compareFunction(COMPARE f, std::string_view Op0, std::string_view Op1) = 0;
 
 	/** Insert header of shader file (eg #version, "system constants"...)
 	 */
-	virtual void insertHeader(std::stringstream &OS) = 0;
+	virtual void insertHeader(std::stringstream& OS) = 0;
 	/** Insert global declaration of fragments inputs.
 	 */
-	virtual void insertInputs(std::stringstream &OS) = 0;
+	virtual void insertInputs(std::stringstream& OS) = 0;
 	/** insert global declaration of fragments outputs.
 	*/
-	virtual void insertOutputs(std::stringstream &OS) = 0;
+	virtual void insertOutputs(std::stringstream& OS) = 0;
 	/** insert declaration of shader constants.
 	*/
-	virtual void insertConstants(std::stringstream &OS) = 0;
+	virtual void insertConstants(std::stringstream& OS) = 0;
 	/** insert helper function definitions.
 	*/
-	virtual void insertGlobalFunctions(std::stringstream &OS) = 0;
+	virtual void insertGlobalFunctions(std::stringstream& OS) = 0;
 	/** insert beginning of main (signature, temporary declaration...)
 	*/
-	virtual void insertMainStart(std::stringstream &OS) = 0;
+	virtual void insertMainStart(std::stringstream& OS) = 0;
 	/** insert end of main function (return value, output copy...)
 	 */
-	virtual void insertMainEnd(std::stringstream &OS) = 0;
+	virtual void insertMainEnd(std::stringstream& OS) = 0;
 
 public:
 	enum : u16
@@ -201,7 +201,7 @@ public:
 	device_props;
 
 	ParamArray m_parr;
-	FragmentProgramDecompiler(const RSXFragmentProgram &prog, u32& size);
+	FragmentProgramDecompiler(const RSXFragmentProgram& prog, u32& size);
 	FragmentProgramDecompiler(const FragmentProgramDecompiler&) = delete;
 	FragmentProgramDecompiler(FragmentProgramDecompiler&&) = delete;
 	std::string Decompile();
