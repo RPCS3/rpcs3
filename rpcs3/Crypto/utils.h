@@ -11,7 +11,7 @@
 
 enum { CRYPTO_MAX_PATH = 4096 };
 
-char* extract_file_name(const char* file_path, char real_file_name[CRYPTO_MAX_PATH]);
+char* extract_file_name(std::string_view file_path, char real_file_name[CRYPTO_MAX_PATH]);
 
 std::string sha256_get_hash(const char* data, usz size, bool lower_case);
 
@@ -22,17 +22,17 @@ void bytes_to_hex(std::string& hex_str, const unsigned char* data, usz data_leng
 void hex_to_bytes(unsigned char* data, std::string_view hex_str, usz str_length, std::string* error = nullptr);
 
 // Crypto functions (AES128-CBC, AES128-ECB, SHA1-HMAC and AES-CMAC).
-void aescbc128_decrypt(unsigned char *key, unsigned char *iv, unsigned char *in, unsigned char *out, usz len);
-void aescbc128_encrypt(unsigned char *key, unsigned char *iv, unsigned char *in, unsigned char *out, usz len);
-void aesecb128_encrypt(unsigned char *key, unsigned char *in, unsigned char *out);
-bool hmac_hash_compare(unsigned char *key, int key_len, unsigned char *in, usz in_len, unsigned char *hash, usz hash_len);
-void hmac_hash_forge(unsigned char *key, int key_len, unsigned char *in, usz in_len, unsigned char *hash);
-bool cmac_hash_compare(unsigned char *key, int key_len, unsigned char *in, usz in_len, unsigned char *hash, usz hash_len);
-void cmac_hash_forge(unsigned char *key, int key_len, unsigned char *in, usz in_len, unsigned char *hash);
+void aescbc128_decrypt(const unsigned char *key, unsigned char *iv, const unsigned char *in, unsigned char *out, usz len);
+void aescbc128_encrypt(const unsigned char *key, unsigned char *iv, const unsigned char *in, unsigned char *out, usz len);
+void aesecb128_encrypt(const unsigned char *key, const unsigned char *in, unsigned char *out);
+bool hmac_hash_compare(const unsigned char *key, int key_len, const unsigned char *in, usz in_len, const unsigned char *hash, usz hash_len);
+void hmac_hash_forge(const unsigned char *key, int key_len, const unsigned char *in, usz in_len, unsigned char *hash);
+bool cmac_hash_compare(const unsigned char *key, int key_len, const unsigned char *in, usz in_len, const unsigned char *hash, usz hash_len);
+void cmac_hash_forge(const unsigned char *key, int key_len, const unsigned char *in, usz in_len, const unsigned char *hash);
 void mbedtls_zeroize(void *v, size_t n);
 
 // SC passphrase crypto
 
-int vtrm_decrypt(int type, u8* iv, u8* input, u8* output);
-int vtrm_decrypt_master(s64 laid, s64 paid, u8* iv, u8* input, u8* output);
-int vtrm_decrypt_with_portability(int type, u8* iv, u8* input, u8* output);
+int vtrm_decrypt(int type, u8* iv, const u8* input, u8* output);
+int vtrm_decrypt_master(s64 laid, s64 paid, u8* iv, const u8* input, u8* output);
+int vtrm_decrypt_with_portability(int type, u8* iv, const u8* input, u8* output);

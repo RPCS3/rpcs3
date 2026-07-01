@@ -1923,6 +1923,7 @@ void main_window::DecryptSPRXLibraries()
 void main_window::SaveWindowState() const
 {
 	// Save gui settings
+	m_gui_settings->SetValue(gui::mw_visibility, gui::window_states_to_string(windowState()), false);
 	m_gui_settings->SetValue(gui::mw_geometry, saveGeometry(), false);
 	m_gui_settings->SetValue(gui::mw_windowState, saveState(), false);
 
@@ -1999,14 +2000,7 @@ void main_window::RepaintToolBarIcons()
 		ui->sysPauseAct->setIcon(m_icon_play);
 	}
 
-	if (isFullScreen())
-	{
-		ui->toolbar_fullscreen->setIcon(m_icon_fullscreen_off);
-	}
-	else
-	{
-		ui->toolbar_fullscreen->setIcon(m_icon_fullscreen_on);
-	}
+	ui->toolbar_fullscreen->setIcon(isFullScreen() ? m_icon_fullscreen_off : m_icon_fullscreen_on);
 
 	const QColor& new_color = new_colors[QIcon::Normal];
 	ui->sizeSlider->setStyleSheet(ui->sizeSlider->styleSheet().append("QSlider::handle:horizontal{ background: rgba(%1, %2, %3, %4); }")
@@ -3543,10 +3537,10 @@ void main_window::CreateConnects()
 
 	connect(ui->downloadIntegrityDbAct, &QAction::triggered, this, [this]()
 	{
-		ensure(m_game_list_frame->GetIsoIntegrity())->download();
-		ensure(m_game_list_frame->GetPsnContentIntegrity())->download();
-		ensure(m_game_list_frame->GetPsnDlcIntegrity())->download();
-		ensure(m_game_list_frame->GetPsnUpdateIntegrity())->download();
+		m_game_list_frame->GetIsoIntegrity()->download();
+		m_game_list_frame->GetPsnContentIntegrity()->download();
+		m_game_list_frame->GetPsnDlcIntegrity()->download();
+		m_game_list_frame->GetPsnUpdateIntegrity()->download();
 	});
 
 	connect(ui->downloadCompatDbAct, &QAction::triggered, this, [this]()
@@ -3941,6 +3935,10 @@ void main_window::ConfigureGuiFromSettings()
 
 	// Gamelist
 	m_game_list_frame->LoadSettings();
+
+	// Restore saved visibility from last time.
+	setWindowState(gui::string_to_window_states(m_gui_settings->GetValue(gui::mw_visibility).toString()));
+	ui->toolbar_fullscreen->setIcon(isFullScreen() ? m_icon_fullscreen_off : m_icon_fullscreen_on);
 }
 
 void main_window::SetIconSizeActions(int idx) const
@@ -4060,7 +4058,7 @@ void main_window::CreateFirmwareCache()
 	}
 }
 
-void main_window::mouseDoubleClickEvent(QMouseEvent *event)
+void main_window::mouseDoubleClickEvent(QMouseEvent* event)
 {
 	if (isFullScreen())
 	{
@@ -4098,6 +4096,19 @@ void main_window::closeEvent(QCloseEvent* closeEvent)
 
 	gui_log.notice("Quit with main_window::closeEvent");
 	Emu.Quit(true);
+}
+
+void main_window::changeEvent(QEvent* event)
+{
+	if (event->type() == QEvent::ActivationChange)
+	{
+		if (m_game_list_frame && !isActiveWindow())
+		{
+			m_game_list_frame->stop_movie();
+		}
+	}
+
+	QMainWindow::changeEvent(event);
 }
 
 /**

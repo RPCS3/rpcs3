@@ -589,7 +589,7 @@ u32 ppu_read_mmio_aware_u32(u8* vm_base, u32 eal)
 	}
 
 	// Value is assumed to be swapped
-	return read_from_ptr<u32>(vm_base + eal);
+	return read_from_ptr<u32>(vm_base, eal);
 }
 
 void ppu_write_mmio_aware_u32(u8* vm_base, u32 eal, u32 value)
@@ -5177,7 +5177,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				settings += ppu_settings::contains_symbol_resolver; // Avoid invalidating all modules for this purpose
 
 			// Write version, hash, CPU, settings
-			fmt::append(obj_name, "v7-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu));
+			fmt::append(obj_name, "v7-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu.to_string()));
 		}
 
 		if (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped())
@@ -5318,7 +5318,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 					{
 						// Use another JIT instance
-						jit_compiler jit2({}, g_cfg.core.llvm_cpu, 0x1);
+						jit_compiler jit2({}, g_cfg.core.llvm_cpu.to_string(), 0x1);
 						ppu_initialize2(jit2, part, cache_path, obj_name);
 					}
 
@@ -5351,7 +5351,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 	// Initialize compiler instance
 	while (jits.size() < utils::aligned_div<u64>(module_counter, c_moudles_per_jit) && is_being_used_in_emulation)
 	{
-		jits.emplace_back(std::make_shared<jit_compiler>(s_link_table, g_cfg.core.llvm_cpu, 0, symbols_cement));
+		jits.emplace_back(std::make_shared<jit_compiler>(s_link_table, g_cfg.core.llvm_cpu.to_string(), 0, symbols_cement));
 
 		for (const auto& [addr, func] : *shared_map)
 		{

@@ -647,7 +647,7 @@ void gs_frame::hide_on_close()
 {
 	// Make sure not to save the hidden state, which is useless to us.
 	const Visibility current_visibility = visibility();
-	m_gui_settings->SetValue(gui::gs_visibility, current_visibility == Visibility::Hidden ? m_visibility : current_visibility, false);
+	m_gui_settings->SetValue(gui::gs_visibility, gui::visibility_to_string(current_visibility == Visibility::Hidden ? m_visibility : current_visibility), false);
 	m_gui_settings->SetValue(gui::gs_geometry, geometry(), true);
 
 	if (!g_progr_text)
@@ -718,10 +718,10 @@ void gs_frame::show()
 		{
 			setVisibility(FullScreen);
 		}
-		else if (const QVariant var = m_gui_settings->GetValue(gui::gs_visibility); var.canConvert<Visibility>())
+		else if (const QVariant var = m_gui_settings->GetValue(gui::gs_visibility); var.canConvert<QString>())
 		{
 			// Restore saved visibility from last time. Make sure not to hide the window, or the user can't access it anymore.
-			if (const Visibility visibility = var.value<Visibility>(); visibility != Visibility::Hidden)
+			if (const Visibility visibility = gui::string_to_visibility(var.value<QString>()); visibility != Visibility::Hidden)
 			{
 				setVisibility(visibility);
 			}
@@ -830,17 +830,7 @@ void gs_frame::flip(draw_context_t /*context*/, bool /*skip_frame*/)
 
 	if (fps_t.GetElapsedTimeInSec() >= 0.5)
 	{
-		std::string new_title = Emu.GetFormattedTitle(m_frames / fps_t.GetElapsedTimeInSec());
-
-		if (new_title != m_window_title)
-		{
-			m_window_title = new_title;
-
-			Emu.CallFromMainThread([this, title = std::move(new_title)]()
-			{
-				setTitle(QString::fromStdString(title));
-			});
-		}
+		update_title(m_frames / fps_t.GetElapsedTimeInSec());
 
 		m_frames = 0;
 		fps_t.Start();
@@ -1128,6 +1118,21 @@ void gs_frame::take_screenshot(std::vector<u8>&& data, u32 sshot_width, u32 ssho
 		},
 		std::move(data))
 		.detach();
+}
+
+void gs_frame::update_title(double fps)
+{
+	std::string new_title = Emu.GetFormattedTitle(fps);
+
+	if (new_title != m_window_title)
+	{
+		m_window_title = new_title;
+
+		Emu.CallFromMainThread([this, title = std::move(new_title)]()
+		{
+			setTitle(QString::fromStdString(title));
+		});
+	}
 }
 
 void gs_frame::mouseDoubleClickEvent(QMouseEvent* ev)

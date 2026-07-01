@@ -49,6 +49,7 @@ GLGSRender::GLGSRender(utils::serial* ar) noexcept : GSRender(ar)
 
 	backend_config.supports_multidraw = true;
 	backend_config.supports_normalized_barycentrics = true;
+	backend_config.supports_hw_instanced_rendering = true;
 
 	if (g_cfg.video.antialiasing_level != msaa_level::none)
 	{
@@ -148,6 +149,9 @@ void GLGSRender::on_init_thread()
 	rsx_log.success("GL VERSION: %s", reinterpret_cast<const char*>(glGetString(GL_VERSION)));
 	rsx_log.success("GLSL VERSION: %s", reinterpret_cast<const char*>(glGetString(GL_SHADING_LANGUAGE_VERSION)));
 
+	// Update frame title after GL was initialized in order to show the proper GPU
+	m_frame->update_title();
+
 	const auto& gl_caps = gl::get_driver_caps();
 
 	std::vector<std::string> exception_reasons;
@@ -174,6 +178,12 @@ void GLGSRender::on_init_thread()
 	if (!gl_caps.ARB_texture_barrier_supported && !gl_caps.NV_texture_barrier_supported && !g_cfg.video.strict_rendering_mode)
 	{
 		rsx_log.warning("Texture barriers are not supported by your GPU. Feedback loops will have undefined results.");
+	}
+
+	if (!gl_caps.ARB_shader_storage_buffer_object_supported)
+	{
+		rsx_log.warning("[PERFORMANCE WARNING] SSBOs are not supported by your GPU. Some functionality such as hardware instancing will be unavailable.");
+		backend_config.supports_hw_instanced_rendering = false;
 	}
 
 	if (!gl_caps.ARB_bindless_texture_supported)
@@ -326,10 +336,16 @@ void GLGSRender::on_init_thread()
 	m_vertex_layout_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 	m_raster_env_ring_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
 	m_scratch_ring_buffer->create(gl::buffer::target::uniform, 16 * 0x100000);
-	m_instancing_ring_buffer->create(gl::buffer::target::ssbo, 128 * 0x100000);
+
+	if (backend_config.supports_hw_instanced_rendering)
+	{
+		ensure(gl_caps.ARB_shader_storage_buffer_object_supported);
+		m_instancing_ring_buffer->create(gl::buffer::target::ssbo, 128 * 0x100000);
+	}
 
 	if (shadermode == shader_mode::async_with_interpreter || shadermode == shader_mode::interpreter_only)
 	{
+		ensure(gl_caps.ARB_shader_storage_buffer_object_supported);
 		m_vertex_instructions_buffer->create(gl::buffer::target::ssbo, 16 * 0x100000);
 		m_fragment_instructions_buffer->create(gl::buffer::target::ssbo, 16 * 0x100000);
 	}
@@ -919,7 +935,7 @@ void GLGSRender::load_program_env()
 	const bool update_fragment_texture_env = m_graphics_state & rsx::pipeline_state::fragment_texture_state_dirty;
 	const bool update_instruction_buffers = !!m_interpreter_state && m_shader_interpreter.is_interpreter(m_program);
 	const bool update_raster_env = REGS(m_ctx)->polygon_stipple_enabled() && (m_graphics_state & rsx::pipeline_state::polygon_stipple_pattern_dirty);
-	const bool update_instancing_data = REGS(m_ctx)->current_draw_clause.is_trivial_instanced_draw;
+	const bool update_instancing_data = backend_config.supports_hw_instanced_rendering && REGS(m_ctx)->current_draw_clause.is_trivial_instanced_draw;
 
 	if (manually_flush_ring_buffers)
 	{

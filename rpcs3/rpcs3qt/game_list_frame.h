@@ -56,10 +56,10 @@ public:
 
 	void SetShowHidden(bool show);
 
-	content_integrity* GetIsoIntegrity() const { return m_iso_integrity; }
-	content_integrity* GetPsnContentIntegrity() const { return m_psn_content_integrity; }
-	content_integrity* GetPsnDlcIntegrity() const { return m_psn_dlc_integrity; }
-	content_integrity* GetPsnUpdateIntegrity() const { return m_psn_update_integrity; }
+	content_integrity* GetIsoIntegrity() const { return ensure(m_iso_integrity); }
+	content_integrity* GetPsnContentIntegrity() const { return ensure(m_psn_content_integrity); }
+	content_integrity* GetPsnDlcIntegrity() const { return ensure(m_psn_dlc_integrity); }
+	content_integrity* GetPsnUpdateIntegrity() const { return ensure(m_psn_update_integrity); }
 	game_compatibility* GetGameCompatibility() const { return ensure(m_game_compat); }
 	config_database* GetConfigDatabase() const { return ensure(m_config_db); }
 	const std::vector<game_info>& GetGameInfo() const { return m_game_data; }
@@ -74,6 +74,8 @@ public:
 	bool IsEntryVisible(const game_info& game, bool search_fallback = false) const;
 
 	void ShowCustomConfigIcon(const game_info& game);
+
+	void stop_movie();
 
 	// Enqueue slot for refreshed signal
 	// Allowing for an individual container for each distinct use case (currently disabled and contains only one such entry)

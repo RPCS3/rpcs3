@@ -280,12 +280,12 @@ void usb_device_topshotelite::interrupt_transfer(u32 buf_size, u8* buf, u32 /*en
 	}
 
 	bool up = false, right = false, down = false, left = false;
-	const auto input_callback = [&ts, &up, &down, &left, &right](topshotelite_btn btn, pad_button /*pad_button*/, u16 value, bool pressed, bool& /*abort*/)
+	const auto input_callback = [&ts, &up, &down, &left, &right](const emulated_pad_config<topshotelite_btn>::input_value& value, bool& /*abort*/)
 	{
-		if (!pressed)
+		if (!value.pressed)
 			return;
 
-		switch (btn)
+		switch (value.btn)
 		{
 		case topshotelite_btn::trigger: ts.btn_trigger |= 1; break;
 		case topshotelite_btn::reload: ts.btn_reload |= 1; break;
@@ -302,11 +302,11 @@ void usb_device_topshotelite::interrupt_transfer(u32 buf_size, u8* buf, u32 /*en
 		case topshotelite_btn::dpad_down: down = true; break;
 		case topshotelite_btn::dpad_left: left = true; break;
 		case topshotelite_btn::dpad_right: right = true; break;
-		case topshotelite_btn::ls_x: ts.stick_lx = static_cast<uint8_t>(value); break;
+		case topshotelite_btn::ls_x: ts.stick_lx = static_cast<uint8_t>(value.value); break;
 		// you know you have a «Top» controller when the games are programmed to ignore a perfect controller, so we have to simulate a drift
-		case topshotelite_btn::ls_y: ts.stick_ly = std::min(0xff, 1 + static_cast<uint8_t>(value)); break;
-		case topshotelite_btn::rs_x: ts.stick_rx = static_cast<uint8_t>(value); break;
-		case topshotelite_btn::rs_y: ts.stick_ry = static_cast<uint8_t>(value); break;
+		case topshotelite_btn::ls_y: ts.stick_ly = std::min(0xff, 1 + static_cast<uint8_t>(value.value)); break;
+		case topshotelite_btn::rs_x: ts.stick_rx = static_cast<uint8_t>(value.value); break;
+		case topshotelite_btn::rs_y: ts.stick_ry = static_cast<uint8_t>(value.value); break;
 		case topshotelite_btn::count: break;
 		}
 	};

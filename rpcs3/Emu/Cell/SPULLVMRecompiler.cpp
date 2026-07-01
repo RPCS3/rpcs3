@@ -77,7 +77,7 @@ void spu_llvm_set_compile_context(spu_llvm_compile_context* context) noexcept
 class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 {
 	// JIT Instance
-	jit_compiler m_jit{{}, jit_compiler::cpu(g_cfg.core.llvm_cpu)};
+	jit_compiler m_jit{{}, jit_compiler::cpu(g_cfg.core.llvm_cpu.to_string())};
 
 	// Interpreter table size power
 	const u8 m_interp_magn;
@@ -128,7 +128,6 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	// Global LUTs
 	llvm::GlobalVariable* m_spu_frest_fraction_lut{};
 	llvm::GlobalVariable* m_spu_frsqest_fraction_lut{};
-	llvm::GlobalVariable* m_spu_frsqest_exponent_lut{};
 
 	// Helpers (interpreter)
 	llvm::GlobalVariable* m_scale_float_to{};
@@ -1592,7 +1591,7 @@ public:
 			clear_transforms();
 #ifdef ARCH_ARM64
 			{
-				auto should_exclude_function = [](const std::string& fn_name)
+				auto should_exclude_function = [](std::string_view fn_name)
 				{
 					return fn_name.starts_with("spu_") || fn_name.starts_with("tr_");
 				};
@@ -1623,7 +1622,6 @@ public:
 		// LUTs for some instructions
 		m_spu_frest_fraction_lut = new llvm::GlobalVariable(*m_module, llvm::ArrayType::get(GetType<u32>(), 32), true, llvm::GlobalValue::PrivateLinkage, llvm::ConstantDataArray::get(m_context, spu_frest_fraction_lut));
 		m_spu_frsqest_fraction_lut = new llvm::GlobalVariable(*m_module, llvm::ArrayType::get(GetType<u32>(), 64), true, llvm::GlobalValue::PrivateLinkage, llvm::ConstantDataArray::get(m_context, spu_frsqest_fraction_lut));
-		m_spu_frsqest_exponent_lut = new llvm::GlobalVariable(*m_module, llvm::ArrayType::get(GetType<u32>(), 256), true, llvm::GlobalValue::PrivateLinkage, llvm::ConstantDataArray::get(m_context, spu_frsqest_exponent_lut));
 	}
 
 	virtual spu_function_t compile(spu_program&& _func) override
@@ -6329,7 +6327,30 @@ public:
 
 	void CLZ(spu_opcode_t op)
 	{
+#ifdef ARCH_ARM64
 		set_vr(op.rt, ctlz(get_vr(op.ra)));
+#else
+		if (m_use_avx512)
+		{
+			set_vr(op.rt, ctlz(get_vr(op.ra)));
+			return;
+		}
+
+		// Implement manually since LLVM can't take advantage of round-towards-zero.
+		// Helpful as when converting to a float the exponent is always floor(ilog2)
+
+		constexpr u32 exp_bias = 127;
+		value_t<f32[4]> flt;
+
+		const auto a = get_vr(op.ra);
+		flt.value = m_ir->CreateSIToFP(a.value, get_type<f32[4]>()); // only correct with round-towards-zero!
+		const auto exp = bitcast<u32[4]>(flt) >> 23;
+
+		// "Negative" values cause saturation due to float's sign bit
+		const auto offset = select(a == 0, splat<u32[4]>(32), splat<u32[4]>(exp_bias + 31));
+		const auto lzcnt = sub_sat(bitcast<u16[8]>(offset), bitcast<u16[8]>(exp));
+		set_vr(op.rt, bitcast<u32[4]>(lzcnt));
+#endif
 	}
 
 	void XSWD(spu_opcode_t op)
@@ -7057,226 +7078,205 @@ public:
 		}
 
 		// Check whether shuffle mask doesn't contain fixed value selectors
-		bool perm_only = false;
-
-		if (auto k = get_known_bits(c); !!(k.Zero & 0x80))
-		{
-			perm_only = true;
-		}
+		const auto known_idx = get_known_bits(c);
+		const bool perm_only = known_idx.Zero[7];
+		const bool perm_or_zero_only = known_idx.Zero[6];
+		const bool idx_selects_single = known_idx.extractBits(1, 4).isConstant();
 
 		const auto a = get_vr<u8[16]>(op.ra);
 		const auto b = get_vr<u8[16]>(op.rb);
 
-#ifdef ARCH_ARM64
-		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
+		// Data with swapped endian from a load instruction
+		auto [a_was_swapped, a_swap] = match_expr(a, byteswap(match<u8[16]>()));
+		auto [b_was_swapped, b_swap] = match_expr(b, byteswap(match<u8[16]>()));
+
+		const auto [a_is_const, a_data] = get_const_vector(a.value, m_pos);
+		const auto [b_is_const, b_data] = get_const_vector(b.value, m_pos);
+
+		const bool a_is_splat = a_is_const && a_data == v128::from8p(a_data._u8[0]);
+		const bool b_is_splat = b_is_const && b_data == v128::from8p(b_data._u8[0]);
+
+
+		auto get_swap_from_const = [this](v128 data, bool is_splat) {
+			// Splats are their own byteswap
+			if (!is_splat)
+				std::reverse(std::begin(data._bytes), std::end(data._bytes));
+
+			return make_const_vector(data, get_type<u8[16]>());
+		};
+
+		if (a_is_const)
+			a_swap.value = get_swap_from_const(a_data, a_is_splat);
+
+		if (b_is_const)
+			b_swap.value = get_swap_from_const(b_data, b_is_splat);
+
+		// Shuffle index reversal is equivalent to a byteswap
+		value_t<u8[16]> av, bv, cv;
+		if ((a_was_swapped || a_is_const) && (b_was_swapped || b_is_const))
 		{
-			if (auto [ok, bs] = match_expr(b, byteswap(match<u8[16]>())); ok)
-			{
-				if (op.ra == op.rb)
-				{
-					if (perm_only)
-					{
-						const auto cm = eval(c & 0x0f);
-						set_vr(op.rt4, tbl(as, cm));
-						return;
-					}
-
-					const auto x = tbl(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
-					const auto cm = eval(c & 0x8f);
-					set_vr(op.rt4, tbx(x, as, cm));
-					return;
-				}
-
-				if (perm_only)
-				{
-					const auto cm = eval(c & 0x1f);
-					set_vr(op.rt4, tbl2(as, bs, cm));
-					return;
-				}
-
-				const auto x = tbl(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
-				const auto cm = eval(c & 0x9f);
-				set_vr(op.rt4, tbx2(x, as, bs, cm));
-				return;
-			}
+			av = eval(a_swap);
+			bv = eval(b_swap);
+			cv = c;
+		}
+		else
+		{
+			av = a;
+			bv = b;
+			cv = eval(c ^ 0xf);
 		}
 
-		if (op.ra == op.rb && !m_interp_magn)
+		// When single source, either indicated by KnownBits or both are the same
+		const std::optional<value_t<u8[16]>> single_src = (idx_selects_single || (op.ra == op.rb && !m_interp_magn))
+			? std::make_optional(known_idx.One[4] ? bv : av)
+			: std::nullopt;
+
+		const bool only_src_is_splat = known_idx.One[4] ? b_is_splat : a_is_splat;
+
+		// Can combine the special index constants + splat selection into one LUT
+		const u8 sp_a = a_is_splat ? a_data._u8[0] : 0;
+		const u8 sp_b = b_is_splat ? b_data._u8[0] : 0;
+		const auto splat_lut = build<u8[16]>(sp_a, sp_b, sp_a, sp_b, sp_a, sp_b, sp_a, sp_b, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80);
+
+#ifdef ARCH_ARM64
+
+		// NOTE: LLVM doesn't emit BCAX	(llvm-project/issues/200699)
+		//		 Verify if `(x ^ 0x0F) & 0x?F` is reassociated when upstreamed
+
+		if (single_src)
 		{
+			const auto only_src = single_src.value();
+
+			if (only_src_is_splat && perm_or_zero_only)
+			{
+				set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, only_src, splat<u8[16]>(0)));
+				return;
+			}
+
+			if (only_src_is_splat)
+			{
+				const auto lut = build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x80, 0x80, 0x80, 0x80);
+				set_vr(op.rt4, tbx(only_src, lut, (c >> 3) ^ 0x10));
+				return;
+			}
+
 			if (perm_only)
 			{
-				const auto cm = eval(c & 0x0f);
-				const auto cr = eval(cm ^ 0x0f);
-				set_vr(op.rt4, tbl(a, cr));
+				const auto cm = eval(cv & 0x0f);
+				set_vr(op.rt4, tbl(only_src, cm));
 				return;
 			}
 
 			const auto x = tbl(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
-			const auto cm = eval(c & 0x8f);
-			const auto cr = eval(cm ^ 0x0f);
-			set_vr(op.rt4, tbx(x, a, cr));
+			const auto xv = perm_or_zero_only ? eval(splat<u8[16]>(0)) : x;
+			const auto cm = eval(cv & 0x8f);
+			set_vr(op.rt4, tbx(xv, only_src, cm));
+			return;
+		}
+
+		if (a_is_splat && b_is_splat)
+		{
+			if (perm_only)
+			{
+				set_vr(op.rt4, select_by_bit4(c, av, bv));
+				return;
+			}
+
+			set_vr(op.rt4, tbl(splat_lut, (c >> 4)));
 			return;
 		}
 
 		if (perm_only)
 		{
-			const auto cm = eval(c & 0x9f);
-			const auto cr = eval(cm ^ 0x0f);
-			set_vr(op.rt4, tbl2(a, b, cr));
+			const auto cm = eval(cv & 0x1f);
+			set_vr(op.rt4, tbl2(av, bv, cm));
 			return;
 		}
 
 		const auto x = tbl(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
-		// AND should be before XOR so that llvm can combine them into BCAX
-		// Though for some reason it doesn't seem to be doing that.
-		const auto cm = eval(c & ~0x60);
-		const auto cr = eval(cm ^ 0x0f);
-		set_vr(op.rt4, tbx2(x, a, b, cr));
+		const auto xv = perm_or_zero_only ? eval(splat<u8[16]>(0)) : x;
+		const auto cm = eval(cv & 0x9f);
+		set_vr(op.rt4, tbx2(xv, av, bv, cm));
 		return;
 #else
-		// Data with swapped endian from a load instruction
-		if (auto [ok, as] = match_expr(a, byteswap(match<u8[16]>())); ok)
+
+		// Calculate shuffle
+
+		bool shuf_zero_when_msb = false;
+
+		value_t<u8[16]> ab_shuf;
+		if (single_src)
 		{
-			if (auto [ok, bs] = match_expr(b, byteswap(match<u8[16]>())); ok)
+			if (only_src_is_splat)
 			{
-				// Undo endian swapping, and rely on pshufb/vperm2b to re-reverse endianness
-				if (m_use_avx512_icl && (op.ra != op.rb))
-				{
-					if (perm_only)
-					{
-						set_vr(op.rt4, vperm2b(as, bs, c));
-						return;
-					}
-
-					const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
-					const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
-					const auto ab = vperm2b(as, bs, c);
-					set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
-					return;
-				}
-
-				const auto x = pshufb(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
-				const auto ax = pshufb(as, c);
-				const auto bx = pshufb(bs, c);
-
-				if (perm_only)
-					set_vr(op.rt4, select_by_bit4(c, ax, bx));
-				else
-					set_vr(op.rt4, select_by_bit4(c, ax, bx) | x);
-				return;
+				ab_shuf = single_src.value();
 			}
-
-			if (auto [ok, data] = get_const_vector(b.value, m_pos); ok)
+			else
 			{
-				if (data == v128::from8p(data._u8[0]))
-				{
-					if (m_use_avx512_icl)
-					{
-						if (perm_only)
-						{
-							set_vr(op.rt4, vperm2b(as, b, c));
-							return;
-						}
-
-						const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
-						const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
-						const auto ab = vperm2b(as, b, c);
-						set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
-						return;
-					}
-					// See above
-					const auto x = pshufb(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
-					const auto ax = pshufb(as, c);
-
-					if (perm_only)
-						set_vr(op.rt4, select_by_bit4(c, ax, b));
-					else
-						set_vr(op.rt4, select_by_bit4(c, ax, b) | x);
-					return;
-				}
+				ab_shuf = eval(pshufb(single_src.value(), cv));
+				shuf_zero_when_msb = true;
 			}
 		}
-
-		if (auto [ok, bs] = match_expr(b, byteswap(match<u8[16]>())); ok)
+		else if (a_is_splat && b_is_splat)
 		{
-			if (auto [ok, data] = get_const_vector(a.value, m_pos); ok)
-			{
-				if (data == v128::from8p(data._u8[0]))
-				{
-					// See above
-					const auto x = pshufb(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
-					const auto bx = pshufb(bs, c);
-
-					if (perm_only)
-						set_vr(op.rt4, select_by_bit4(c, a, bx));
-					else
-						set_vr(op.rt4, select_by_bit4(c, a, bx) | x);
-					return;
-				}
-			}
-		}
-
-		if (m_use_avx512_icl && (op.ra != op.rb || m_interp_magn))
-		{
-			if (auto [ok, data] = get_const_vector(b.value, m_pos); ok)
-			{
-				if (data == v128::from8p(data._u8[0]))
-				{
-					if (perm_only)
-					{
-						set_vr(op.rt4, vperm2b(a, b, eval(c ^ 0xf)));
-						return;
-					}
-
-					const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
-					const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
-					const auto ab = vperm2b(a, b, eval(c ^ 0xf));
-					set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
-					return;
-				}
-			}
-
-			if (auto [ok, data] = get_const_vector(a.value, m_pos); ok)
-			{
-				if (data == v128::from8p(data._u8[0]))
-				{
-					if (perm_only)
-					{
-						set_vr(op.rt4, vperm2b(b, a, eval(c ^ 0x1f)));
-						return;
-					}
-
-					const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
-					const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
-					const auto ab = vperm2b(b, a, eval(c ^ 0x1f));
-					set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
-					return;
-				}
-			}
-
 			if (perm_only)
 			{
-				set_vr(op.rt4, vperm2b(a, b, eval(c ^ 0xf)));
+				set_vr(op.rt4, eval(select_by_bit4(c, av, bv)));
 				return;
 			}
 
-			const auto m = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
-			const auto mm = select(noncast<s8[16]>(m) >= 0, splat<u8[16]>(0), m);
-			const auto cr = eval(c ^ 0xf);
-			const auto ab = vperm2b(a, b, cr);
-			set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab, mm));
+			// Low index selects the element within a vector, which are all the same
+			if (m_use_avx512_icl)
+				set_vr(op.rt4, vpermb(splat_lut, bitcast<u8[16]>(bitcast<u16[8]>(c) >> 4)));
+			else
+				set_vr(op.rt4, eval(pshufb(splat_lut, (c >> 4))));
+			return;
+		}
+		else if (m_use_avx512_icl)
+		{
+			// TODO: Swap source order to allow for a memory operand using a XOR (when free)
+			ab_shuf = vperm2b(av, bv, cv);
+		}
+		else
+		{
+			const auto a_shuf = a_is_splat ? av : eval(pshufb(av, cv));
+			const auto b_shuf = b_is_splat ? bv : eval(pshufb(bv, cv));
+			ab_shuf = eval(select_by_bit4(c, a_shuf, b_shuf));
+
+			// pshufb zeros when the MSB is set
+			shuf_zero_when_msb = !(a_is_splat || b_is_splat);
+		}
+
+		if (perm_only)
+		{
+			set_vr(op.rt4, ab_shuf);
 			return;
 		}
 
-		const auto x = pshufb(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
-		const auto cr = eval(c ^ 0xf);
-		const auto ax = pshufb(a, cr);
-		const auto bx = pshufb(b, cr);
+		// Calculate special index constants
 
-		if (perm_only)
-			set_vr(op.rt4, select_by_bit4(cr, ax, bx));
+		value_t<u8[16]> idx_consts;
+		if (perm_or_zero_only)
+		{
+			idx_consts = eval(splat<u8[16]>(0));
+		}
+		else if (m_use_avx512_icl)
+		{
+			const auto gfni = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
+			idx_consts = eval(select(noncast<s8[16]>(gfni) >= 0, splat<u8[16]>(0), gfni));
+		}
 		else
-			set_vr(op.rt4, select_by_bit4(cr, ax, bx) | x);
+		{
+			const auto pshufb_lut = build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80);
+			idx_consts = eval(pshufb(pshufb_lut, (c >> 4)));
+		}
+
+		// Combine shuffle and special index constants
+
+		if (shuf_zero_when_msb)
+			set_vr(op.rt4, ab_shuf | idx_consts);
+		else
+			set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab_shuf, idx_consts));
 #endif
 	}
 
@@ -7477,13 +7477,23 @@ public:
 			const auto a_sign = (a & splat<u32[4]>(0x80000000));
 			value_t<u32[4]> final_result = eval(splat<u32[4]>(0));
 
-			for (u32 i = 0; i < 4; i++)
+			if (m_use_avx512)
 			{
-				const auto eval_fraction = eval(extract(a_fraction, i));
+				value_t<u32[16]> lo_lut;
+				value_t<u32[16]> hi_lut;
+				lo_lut.value = llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(spu_frest_fraction_lut, 16));
+				hi_lut.value = llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(spu_frest_fraction_lut + 16, 16));
 
-				value_t<u32> r_fraction = load_const<u32>(m_spu_frest_fraction_lut, eval_fraction);
-
-				final_result = eval(insert(final_result, i, r_fraction));
+				final_result = vperm2d128From512(lo_lut, a_fraction, hi_lut);
+			}
+			else
+			{
+				for (u32 i = 0; i < 4; i++)
+				{
+					const auto eval_fraction = eval(extract(a_fraction, i));
+					value_t<u32> r_fraction = load_const<u32>(m_spu_frest_fraction_lut, eval_fraction);
+					final_result = eval(insert(final_result, i, r_fraction));
+				}
 			}
 
 			//final_result = eval(select(final_result != (0), final_result, bitcast<u32[4]>(pshufb(splat<u8[16]>(0), bitcast<u8[16]>(final_result)))));
@@ -7506,22 +7516,23 @@ public:
 		{
 			const auto a = bitcast<u32[4]>(value<f32[4]>(ci->getOperand(0)));
 
+			// (exponent==0)? 0xFF : 190 - (exponent + 1) / 2
+			const auto a_exponent = a & splat<u32[4]>(0xFF << 23);
+			const auto h_exponent = (a_exponent + (a_exponent & splat<u32[4]>(1 << 23))) >> splat<u32[4]>(1);
+			const auto r_exponent = splat<u32[4]>(190 << 23) - h_exponent;
+			const auto final_exponent = select(a_exponent == 0, splat<u32[4]>(0xFF << 23), r_exponent);
+
 			const auto a_fraction = (a >> splat<u32[4]>(18)) & splat<u32[4]>(0x3F);
-			const auto a_exponent = (a >> splat<u32[4]>(23)) & splat<u32[4]>(0xFF);
-			value_t<u32[4]> final_result = eval(splat<u32[4]>(0));
+			value_t<u32[4]> final_fraction = eval(splat<u32[4]>(0));
 
 			for (u32 i = 0; i < 4; i++)
 			{
 				const auto eval_fraction = eval(extract(a_fraction, i));
-				const auto eval_exponent = eval(extract(a_exponent, i));
-
 				value_t<u32> r_fraction = load_const<u32>(m_spu_frsqest_fraction_lut, eval_fraction);
-				value_t<u32> r_exponent = load_const<u32>(m_spu_frsqest_exponent_lut, eval_exponent);
-
-				final_result = eval(insert(final_result, i, eval(r_fraction | r_exponent)));
+				final_fraction = eval(insert(final_fraction, i, r_fraction));
 			}
 
-			return bitcast<f32[4]>(final_result);
+			return bitcast<f32[4]>(final_fraction | final_exponent);
 		});
 
 		set_vr(op.rt, frsqest(get_vr<f32[4]>(op.ra)));
@@ -8529,13 +8540,23 @@ public:
 				const auto a_sign = (a & splat<u32[4]>(0x80000000));
 				value_t<u32[4]> b = eval(splat<u32[4]>(0));
 
-				for (u32 i = 0; i < 4; i++)
+				if (m_use_avx512)
 				{
-					const auto eval_fraction = eval(extract(a_fraction, i));
+					value_t<u32[16]> lo_lut;
+					value_t<u32[16]> hi_lut;
+					lo_lut.value = llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(spu_frest_fraction_lut, 16));
+					hi_lut.value = llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(spu_frest_fraction_lut + 16, 16));
 
-					value_t<u32> r_fraction = load_const<u32>(m_spu_frest_fraction_lut, eval_fraction);
-
-					b = eval(insert(b, i, r_fraction));
+					b = vperm2d128From512(lo_lut, a_fraction, hi_lut);
+				}
+				else
+				{
+					for (u32 i = 0; i < 4; i++)
+					{
+						const auto eval_fraction = eval(extract(a_fraction, i));
+						value_t<u32> r_fraction = load_const<u32>(m_spu_frest_fraction_lut, eval_fraction);
+						b = eval(insert(b, i, r_fraction));
+					}
 				}
 
 				b = eval(b | fix_exponent | a_sign);
@@ -8552,20 +8573,24 @@ public:
 			register_intrinsic("spu_rsqrte", [&](llvm::CallInst* ci)
 			{
 				const auto a = bitcast<u32[4]>(value<f32[4]>(ci->getOperand(0)));
+
+				// (exponent==0)? 0xFF : 190 - (exponent + 1) / 2
+				const auto a_exponent = a & splat<u32[4]>(0xFF << 23);
+				const auto h_exponent = (a_exponent + (a_exponent & splat<u32[4]>(1 << 23))) >> splat<u32[4]>(1);
+				const auto r_exponent = splat<u32[4]>(190 << 23) - h_exponent;
+				const auto final_exponent = select(a_exponent == 0, splat<u32[4]>(0xFF << 23), r_exponent);
+
 				const auto a_fraction = (a >> splat<u32[4]>(18)) & splat<u32[4]>(0x3F);
-				const auto a_exponent = (a >> splat<u32[4]>(23)) & splat<u32[4]>(0xFF);
-				value_t<u32[4]> b = eval(splat<u32[4]>(0));
+				value_t<u32[4]> final_fraction = eval(splat<u32[4]>(0));
 
 				for (u32 i = 0; i < 4; i++)
 				{
 					const auto eval_fraction = eval(extract(a_fraction, i));
-					const auto eval_exponent = eval(extract(a_exponent, i));
-
 					value_t<u32> r_fraction = load_const<u32>(m_spu_frsqest_fraction_lut, eval_fraction);
-					value_t<u32> r_exponent = load_const<u32>(m_spu_frsqest_exponent_lut, eval_exponent);
-
-					b = eval(insert(b, i, eval(r_fraction | r_exponent)));
+					final_fraction = eval(insert(final_fraction, i, r_fraction));
 				}
+
+				const auto b = eval(final_fraction | final_exponent);
 
 				const auto base = (b & 0x007ffc00u) << 9; // Base fraction
 				const auto ymul = (b & 0x3ff) * (a & 0x7ffff); // Step fraction * Y fraction (fixed point at 2^-32)
