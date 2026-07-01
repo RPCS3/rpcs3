@@ -306,9 +306,9 @@ static void fixup_settings(const psf::registry* _psf)
 	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
 	{
 #ifdef LLVM_AVAILABLE
-		constexpr auto arm64_spu_fallback = spu_decoder_type::llvm;
-#else
 		constexpr auto arm64_spu_fallback = spu_decoder_type::dynamic;
+#else
+		constexpr auto arm64_spu_fallback = spu_decoder_type::_static;
 #endif
 		sys_log.warning("The setting '%s' is currently not supported on ARM64 builds and will therefore be changed from '%s' to '%s' during emulation.",
 			g_cfg.core.spu_decoder.get_name(), spu_decoder_type::asmjit, arm64_spu_fallback);
