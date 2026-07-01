@@ -56,6 +56,7 @@ namespace vk
 		NVK,
 		V3DV,
 		HONEYKRISP,
+		KOSMICKRISP,
 		PANVK,
 		ARM_MALI
 	};
