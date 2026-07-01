@@ -245,6 +245,26 @@ static FORCE_INLINE bool cmp_rdata_avx(const __m256i* lhs, const __m256i* rhs)
 }
 #endif
 
+// Insane idea to accelerate comparisons on Neon with a fixed length
+// Common ARM chips like the a78 and a715 can Perform 3 128b loads/clock
+// But only execute 2 128b instructions on the ALU per clock
+// To consume data any faster, we need to use ALU instructions that take 3 inputs
+// Idea: compare data, filling each lane with either -1 or 0
+// Then multiply each pair of comparisons together, resulting in 1 if both pairs were -1
+// Accummulate those results, and compare the accumulated value to the expected count
+// Benchmarks showed this to be faster even on arm machines that aren't capable of more loads than ALU operations
+// Tested on Tensor G1, Snapdragon 8 gen 2, and the Snapdragon 8 Elite gen 5
+#if defined(ARCH_ARM64)
+static FORCE_INLINE int16x8_t cmp16_pair_accum_arm64(
+	int16x8_t acc, const v128& lhs0, const v128& rhs0, const v128& lhs1, const v128& rhs1)
+{
+	const int16x8_t eq0 = vreinterpretq_s16_u16(vceqq_u16(static_cast<uint16x8_t>(lhs0), static_cast<uint16x8_t>(rhs0)));
+	const int16x8_t eq1 = vreinterpretq_s16_u16(vceqq_u16(static_cast<uint16x8_t>(lhs1), static_cast<uint16x8_t>(rhs1)));
+	return vmlaq_s16(acc, eq0, eq1);
+}
+
+#endif
+
 #ifdef _MSC_VER
 __forceinline
 #endif
@@ -261,12 +281,22 @@ extern bool cmp_rdata(const spu_rdata_t& _lhs, const spu_rdata_t& _rhs)
 
 	const auto lhs = reinterpret_cast<const v128*>(_lhs);
 	const auto rhs = reinterpret_cast<const v128*>(_rhs);
+#if defined(ARCH_ARM64)
+	int16x8_t hits = vdupq_n_s16(0);
+	hits = cmp16_pair_accum_arm64(hits, lhs[0], rhs[0], lhs[1], rhs[1]);
+	hits = cmp16_pair_accum_arm64(hits, lhs[2], rhs[2], lhs[3], rhs[3]);
+	hits = cmp16_pair_accum_arm64(hits, lhs[4], rhs[4], lhs[5], rhs[5]);
+	hits = cmp16_pair_accum_arm64(hits, lhs[6], rhs[6], lhs[7], rhs[7]);
+
+	return vaddvq_s16(hits) == 32;
+#else
 	const v128 a = (lhs[0] ^ rhs[0]) | (lhs[1] ^ rhs[1]);
 	const v128 c = (lhs[4] ^ rhs[4]) | (lhs[5] ^ rhs[5]);
 	const v128 b = (lhs[2] ^ rhs[2]) | (lhs[3] ^ rhs[3]);
 	const v128 d = (lhs[6] ^ rhs[6]) | (lhs[7] ^ rhs[7]);
 	const v128 r = (a | b) | (c | d);
 	return gv_testz(r);
+#endif
 }
 
 #if defined(ARCH_X64)
@@ -1757,7 +1787,7 @@ void spu_thread::init_spu_decoder()
 }
 
 spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u32 lv2_id, bool is_isolated, u32 option)
-	: cpu_thread(idm::last_id())
+	: cpu_thread(idm::last_id<spu_thread>())
 	, group(group)
 	, index(index)
 	, thread_type(group ? spu_type::threaded : is_isolated ? spu_type::isolated : spu_type::raw)
@@ -1812,14 +1842,14 @@ void spu_thread::serialize_common(utils::serial& ar)
 	}
 	else
 	{
-		const u8 count = ar;
+		const u8 count{ar};
 		ar(std::span(vals, count));
 		ch_in_mbox.set_values(count, vals[0], vals[1], vals[2], vals[3]);
 	}
 }
 
 spu_thread::spu_thread(utils::serial& ar, lv2_spu_group* group)
-	: cpu_thread(idm::last_id())
+	: cpu_thread(idm::last_id<spu_thread>())
 	, group(group)
 	, index(ar)
 	, thread_type(group ? spu_type::threaded : ar.pop<u8>() ? spu_type::isolated : spu_type::raw)
@@ -6430,8 +6460,6 @@ extern void resume_spu_thread_group_from_waiting(spu_thread& spu, std::array<sha
 
 bool spu_thread::stop_and_signal(u32 code)
 {
-	spu_log.trace("stop_and_signal(code=0x%x)", code);
-
 	auto set_status_npc = [&]()
 	{
 		status_npc.atomic_op([&](status_npc_sync_var& state)
@@ -6445,6 +6473,8 @@ bool spu_thread::stop_and_signal(u32 code)
 
 	if (get_type() >= spu_type::raw)
 	{
+		spu_log.warning("stop_and_signal(code=0x%x)", code);
+
 		// Save next PC and current SPU Interrupt Status
 		state += cpu_flag::stop + cpu_flag::wait + cpu_flag::ret;
 		set_status_npc();
@@ -7200,11 +7230,13 @@ s64 spu_channel::pop_wait(cpu_thread& spu, bool pop)
 
 	lv2_obj::notify_all();
 
-	const u32 wait_on_val = static_cast<u32>(((pop ? bit_occupy : 0) | bit_wait) >> 32);
+	old = (pop ? bit_occupy : 0) | bit_wait;
 
 	while (true)
 	{
-		thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&data)[1], wait_on_val);
+		const usz is_le = std::endian::native == std::endian::little ? 1 : 0;
+		thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&data)[is_le], read_from_ptr<u32>(reinterpret_cast<char*>(&old), is_le * 4));
+
 		old = data;
 
 		if (!(old & bit_wait))
@@ -7248,7 +7280,7 @@ bool spu_channel::push_wait(cpu_thread& spu, u32 value, bool push)
 	{
 		if (data & bit_count) [[unlikely]]
 		{
-			jostling_value.release(push ? (bit_occupy | value) : static_cast<u32>(data));
+			jostling_value.release(push ? value : static_cast<u32>(data));
 			data |= (push ? bit_occupy : 0) | bit_wait;
 		}
 		else if (push)
@@ -7288,7 +7320,8 @@ bool spu_channel::push_wait(cpu_thread& spu, u32 value, bool push)
 			return !data.bit_test_reset(off_wait);
 		}
 
-		thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&data)[1], u32(state >> 32));
+		const usz is_le = std::endian::native == std::endian::little ? 1 : 0;
+		thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&data)[is_le], u32(state >> 32));
 		state = data;
 	}
 }

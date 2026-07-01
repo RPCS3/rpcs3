@@ -101,6 +101,13 @@ struct GLTraits
 			// Bind locations 0 and 1 to the stream buffers
 			program->uniforms[0] = GL_STREAM_BUFFER_START + 0;
 			program->uniforms[1] = GL_STREAM_BUFFER_START + 1;
+
+			// Optional inputs
+			int location = 0;
+			if (program->uniforms.has_location("frag_depth", &location))
+			{
+				program->uniforms[location] = GL_TEMP_IMAGE_SLOT(0);
+			}
 		};
 
 		auto pipeline = compiler->compile(flags, post_create_func, post_link_func, callback);

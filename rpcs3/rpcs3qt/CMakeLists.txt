@@ -1,5 +1,6 @@
 add_library(rpcs3_ui STATIC
     about_dialog.cpp
+    anaglyph_settings_dialog.cpp
     auto_pause_settings_dialog.cpp
     basic_mouse_settings_dialog.cpp
     breakpoint_handler.cpp
@@ -12,6 +13,7 @@ add_library(rpcs3_ui STATIC
     config_adapter.cpp
     config_checker.cpp
     config_database.cpp
+    content_integrity.cpp
     curl_handle.cpp
     custom_dialog.cpp
     custom_table_widget_item.cpp
@@ -50,7 +52,6 @@ add_library(rpcs3_ui STATIC
     input_dialog.cpp
     instruction_editor_dialog.cpp
     ipc_settings_dialog.cpp
-    iso_integrity.cpp
     kamen_rider_dialog.cpp
     kernel_explorer.cpp
     localized.cpp

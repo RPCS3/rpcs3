@@ -72,7 +72,7 @@ namespace gui::utils
 			return false;
 		}
 
-		const bool is_archive = is_file_iso(path);
+		const bool is_archive = is_iso_file(path);
 
 		QPixmap icon;
 		if (!load_icon(icon, src_icon_path, is_archive ? path : ""))
@@ -109,7 +109,7 @@ namespace gui::utils
 		return true;
 	}
 
-	static std::string make_simple_name(const std::string& name)
+	static std::string make_simple_name(std::string_view name)
 	{
 		const std::string simple_name = QString::fromStdString(vfs::escape(name, true)).simplified().toStdString();
 		return simple_name;
@@ -227,7 +227,7 @@ namespace gui::utils
 		Microsoft::WRL::ComPtr<IShellLink> pShellLink;
 		Microsoft::WRL::ComPtr<IPersistFile> pPersistFile;
 
-		const auto cleanup = [&](bool return_value, const std::string& fail_reason) -> bool
+		const auto cleanup = [&](bool return_value, std::string_view fail_reason) -> bool
 		{
 			if (!return_value) sys_log.error("Failed to create shortcut: %s", fail_reason);
 			CoUninitialize();
@@ -478,7 +478,7 @@ namespace gui::utils
 		std::string gameid_token_value;
 
 		const std::string dev_flash = g_cfg_vfs.get_dev_flash();
-		const bool is_iso = is_file_iso(game->info.path);
+		const bool is_archive = is_iso_file(game->info.path);
 		std::shared_ptr<iso_archive> archive;
 
 		const auto file_exists = [&archive](const std::string& path)
@@ -486,7 +486,7 @@ namespace gui::utils
 			return archive ? archive->is_file(path) : fs::is_file(path);
 		};
 
-		if (is_iso)
+		if (is_archive)
 		{
 			gameid_token_value = game->info.serial;
 			archive = std::make_shared<iso_archive>(game->info.path);
@@ -542,7 +542,7 @@ namespace gui::utils
 			if (location == shortcut_location::steam)
 			{
 				// Try to find a nice banner for steam
-				const std::string sfo_dir = is_iso ? "PS3_GAME" : rpcs3::utils::get_sfo_dir_from_game_path(game->info.path);
+				const std::string sfo_dir = is_archive ? "PS3_GAME" : rpcs3::utils::get_sfo_dir_from_game_path(game->info.path);
 
 				for (const std::string& filename : {"PIC1.PNG"s, "PIC3.PNG"s, "PIC0.PNG"s, "PIC2.PNG"s, "ICON0.PNG"s})
 				{
@@ -611,7 +611,7 @@ namespace gui::utils
 		return result;
 	}
 
-	static void remove_shortcuts(const std::string& simple_name, [[maybe_unused]] const std::string& serial)
+	static void remove_shortcuts(std::string_view simple_name, [[maybe_unused]] const std::string& serial)
 	{
 		if (simple_name.empty() || simple_name == "." || simple_name == "..")
 		{

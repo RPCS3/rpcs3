@@ -52,6 +52,7 @@ enum class emu_settings_type
 	SPUProfiler,
 	DisableSpinOptimization,
 	EnabledSPUEventsBusyLoop,
+	PPUReservationPriorityOverSPUs,
 
 	// Graphics
 	Renderer,
@@ -79,6 +80,7 @@ enum class emu_settings_type
 	DisableOcclusionQueries,
 	DisableVideoOutput,
 	DisableFIFOReordering,
+	EmulateDepthCompare,
 	StrictTextureFlushing,
 	ShaderPrecisionQuality,
 	StereoRenderEnabled,
@@ -111,6 +113,10 @@ enum class emu_settings_type
 	UseReBAR,
 	RecordWithOverlays,
 	DisableHWTexelRemapping,
+
+	// Anaglyph Matrix
+	CustomAnaglyphMatrixLeft,
+	CustomAnaglyphMatrixRight,
 
 	// Performance Overlay
 	PerfOverlayEnabled,
@@ -173,6 +179,7 @@ enum class emu_settings_type
 	GHLtar,
 	MidiDevices,
 	SDLMappings,
+	MouseBasedGyro,
 	IoDebugOverlay,
 	MouseDebugOverlay,
 
@@ -206,6 +213,7 @@ enum class emu_settings_type
 	PSNStatus,
 	BindAddress,
 	EnableUpnp,
+	DeriveMacFromPsid,
 	PSNCountry,
 	EnableClans,
 

@@ -814,7 +814,7 @@ namespace np
 		cb_info_opt->queue_callback(req_id, 0, error_code, 0);
 	}
 
-	void np_handler::req_sign_infos(const std::string& npid, u32 conn_id)
+	void np_handler::req_sign_infos(std::string_view npid, u32 conn_id)
 	{
 		const u32 req_id = get_req_id(REQUEST_ID_HIGH::MISC);
 		{

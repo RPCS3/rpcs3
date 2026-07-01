@@ -3,11 +3,14 @@
 #include "util/types.hpp"
 #include "util/tsc.hpp"
 #include "util/atomic.hpp"
+#include "util/sysinfo.hpp"
 #include <functional>
+#include <thread>
 
 #ifdef ARCH_X64
 #ifdef _MSC_VER
 #include <intrin.h>
+#include <immintrin.h>
 #else
 #include <immintrin.h>
 #include <x86intrin.h>
@@ -214,6 +217,200 @@ namespace utils
 #endif
 		do pause();
 		while (get_tsc() < stop);
+	}
+
+#ifdef ARCH_X64
+	inline u64 get_wait_cycles(u64 timeout_us, u64 tsc_freq)
+	{
+		constexpr u64 max_timeout = u64{umax};
+
+		if (!tsc_freq)
+		{
+			return 0;
+		}
+
+		if (timeout_us == max_timeout)
+		{
+			return max_timeout;
+		}
+
+		const u64 seconds = timeout_us / 1'000'000;
+		const u64 micros = timeout_us % 1'000'000;
+
+		if (seconds > max_timeout / tsc_freq)
+		{
+			return max_timeout;
+		}
+
+		const u64 sec_cycles = seconds * tsc_freq;
+		const u64 cycles_per_us = tsc_freq / 1'000'000;
+
+		if (micros && cycles_per_us > max_timeout / micros)
+		{
+			return max_timeout;
+		}
+
+		const u64 us_cycles = micros * cycles_per_us + (micros * (tsc_freq % 1'000'000)) / 1'000'000;
+		return sec_cycles > max_timeout - us_cycles ? max_timeout : sec_cycles + us_cycles;
+	}
+#endif
+
+	template <typename T, usz Align>
+#if defined(ARCH_X64) && !defined(_MSC_VER)
+	__attribute__((target("waitpkg,mwaitx")))
+#endif
+	inline void spin_on_cacheline_once(const atomic_t<T, Align>& var, T old_value, u64 timeout_us)
+	{
+		const void* addr = &var.raw();
+
+#if defined(ARCH_ARM64)
+		// WFE will wake from the periodic event stream, so the explicit timeout is ignored on ARM.
+		(void)timeout_us;
+
+		using wait_type = std::remove_cvref_t<decltype(var.raw())>;
+		using raw_type = std::conditional_t<sizeof(wait_type) == 8, u64,
+			std::conditional_t<sizeof(wait_type) == 4, u32,
+			std::conditional_t<sizeof(wait_type) == 2, u16, u8>>>;
+
+		static_assert(sizeof(wait_type) <= 8, "Unsupported atomic size for spin_on_cacheline_once");
+
+		raw_type value{};
+		const auto* wait_addr = static_cast<const volatile raw_type*>(addr);
+
+		if constexpr (sizeof(raw_type) == 1) __asm__ volatile("ldaxrb %w0, %1" : "=r"(value) : "Q"(*wait_addr) : "memory");
+		else if constexpr (sizeof(raw_type) == 2) __asm__ volatile("ldaxrh %w0, %1" : "=r"(value) : "Q"(*wait_addr) : "memory");
+		else if constexpr (sizeof(raw_type) == 4) __asm__ volatile("ldaxr %w0, %1" : "=r"(value) : "Q"(*wait_addr) : "memory");
+		else if constexpr (sizeof(raw_type) == 8) __asm__ volatile("ldaxr %x0, %1" : "=r"(value) : "Q"(*wait_addr) : "memory");
+
+		if (std::bit_cast<wait_type>(value) != old_value)
+		{
+			__asm__ volatile("clrex" ::: "memory");
+			return;
+		}
+
+		__asm__ volatile("wfe" ::: "memory");
+		__asm__ volatile("clrex" ::: "memory");
+#elif defined(ARCH_X64)
+		static const bool use_umwait = has_waitpkg();
+		static const bool use_waitx = has_waitx();
+
+		const u64 cycles = get_wait_cycles(timeout_us, get_tsc_freq());
+
+		if (use_umwait && cycles)
+		{
+			_umonitor(const_cast<void*>(addr));
+
+			if (var.load() != old_value)
+			{
+				return;
+			}
+
+			constexpr u64 max_timeout = u64{umax};
+			const u64 now = get_tsc();
+			const u64 deadline = cycles > max_timeout - now ? max_timeout : now + cycles;
+			_umwait(0, deadline);
+		}
+		else if (use_waitx && cycles)
+		{
+			_mm_monitorx(const_cast<void*>(addr), 0, 0);
+
+			if (var.load() != old_value)
+			{
+				return;
+			}
+
+			constexpr u32 timer_enable = 2;
+			_mm_mwaitx(timer_enable, 0, cycles > u32{umax} ? u32{umax} : static_cast<u32>(cycles));
+		}
+		else
+		{
+			std::this_thread::yield();
+		}
+#else
+		(void)addr;
+		(void)old_value;
+		(void)timeout_us;
+
+		std::this_thread::yield();
+#endif
+	}
+
+	template <typename T, usz Align, typename Pred>
+#if defined(ARCH_X64) && !defined(_MSC_VER)
+	__attribute__((target("waitpkg,mwaitx")))
+#endif
+	inline void spin_wait(const atomic_t<T, Align>& var, Pred predicate)
+	{
+#ifdef ARCH_X64
+		static const bool use_umwait = has_waitpkg();
+		static const bool use_waitx = has_waitx();
+#endif
+
+		const auto read_mem = [&]()
+		{
+			return var.load();
+		};
+
+		const void* addr = &var.raw();
+
+		while (true)
+		{
+			if (predicate(read_mem()))
+			{
+				return;
+			}
+
+#if defined(ARCH_ARM64)
+			using value_type = decltype(read_mem());
+			using wait_type = std::remove_cvref_t<decltype(var.raw())>;
+
+			wait_type value{};
+			const auto* wait_addr = static_cast<const volatile wait_type*>(addr);
+
+			if constexpr (sizeof(wait_type) == 1) __asm__ volatile("ldaxrb %w0, %1" : "=r"(value) : "Q"(*wait_addr) : "memory");
+			else if constexpr (sizeof(wait_type) == 2) __asm__ volatile("ldaxrh %w0, %1" : "=r"(value) : "Q"(*wait_addr) : "memory");
+			else if constexpr (sizeof(wait_type) == 4) __asm__ volatile("ldaxr %w0, %1" : "=r"(value) : "Q"(*wait_addr) : "memory");
+			else if constexpr (sizeof(wait_type) == 8) __asm__ volatile("ldaxr %x0, %1" : "=r"(value) : "Q"(*wait_addr) : "memory");
+			else static_assert(sizeof(wait_type) <= 8, "Unsupported atomic size for spin_wait");
+
+			if (predicate(static_cast<value_type>(value)))
+			{
+				__asm__ volatile("clrex" ::: "memory");
+				return;
+			}
+
+			__asm__ volatile("wfe" ::: "memory");
+			__asm__ volatile("clrex" ::: "memory");
+
+#elif defined(ARCH_X64)
+			if (use_umwait)
+			{
+				_umonitor(const_cast<void*>(addr));
+				if (predicate(read_mem()))
+				{
+					return;
+				}
+
+				_umwait(0, ~0ULL);
+			}
+			else if (use_waitx)
+			{
+				_mm_monitorx(const_cast<void*>(addr), 0, 0);
+				if (predicate(read_mem()))
+				{
+					return;
+				}
+
+				_mm_mwaitx(0, 0, 0);
+			}
+			else
+			{
+				pause();
+			}
+#else
+			pause();
+#endif
+		}
 	}
 
 	// Align to power of 2

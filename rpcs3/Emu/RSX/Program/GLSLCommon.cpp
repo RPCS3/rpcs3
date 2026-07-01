@@ -73,7 +73,7 @@ namespace glsl
 		}
 	}
 
-	std::string compareFunctionImpl(COMPARE f, const std::string &Op0, const std::string &Op1, bool scalar)
+	std::string compareFunctionImpl(COMPARE f, std::string_view Op0, std::string_view Op1, bool scalar)
 	{
 		if (scalar)
 		{
@@ -200,6 +200,8 @@ namespace glsl
 				{ "ALPHA_TEST_FUNC_LENGTH      ", rsx::ROP_control_bits::ALPHA_FUNC_NUM_BITS },
 				{ "MSAA_SAMPLE_CTRL_OFFSET     ", rsx::ROP_control_bits::MSAA_SAMPLE_CTRL_OFFSET },
 				{ "MSAA_SAMPLE_CTRL_LENGTH     ", rsx::ROP_control_bits::MSAA_SAMPLE_CTRL_NUM_BITS },
+				{ "FRAG_DEPTH_24_BIT           ", rsx::ROP_control_bits::FRAG_DEPTH_24_BIT },
+				{ "FRAG_DEPTH_FLOAT_BIT        ", rsx::ROP_control_bits::FRAG_DEPTH_FLOAT_BIT },
 				{ "ROP_CMD_MASK                ", rsx::ROP_control_bits::ROP_CMD_MASK }
 			});
 
@@ -239,6 +241,16 @@ namespace glsl
 			if (props.ROP_polygon_stipple_test)
 			{
 				enabled_options.push_back("_ENABLE_POLYGON_STIPPLE");
+			}
+
+			if (props.emulate_depth_compare)
+			{
+				enabled_options.push_back("_ENABLE_DEPTH_COMPARE");
+			}
+
+			if (props.depth_buffer_multisampled)
+			{
+				enabled_options.push_back("_ENABLE_DEPTH_BUFFER_MULTISAMPLED");
 			}
 		}
 
@@ -624,7 +636,7 @@ namespace glsl
 					}
 				}
 
-				varying_list.push_back({ reg_location, var_name, PT.type });
+				varying_list.push_back({ reg_location, std::move(var_name), PT.type });
 			}
 		}
 

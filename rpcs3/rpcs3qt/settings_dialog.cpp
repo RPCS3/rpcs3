@@ -24,6 +24,7 @@
 #include "render_creator.h"
 #include "microphone_creator.h"
 #include "log_level_dialog.h"
+#include "anaglyph_settings_dialog.h"
 
 #include "Emu/NP/rpcn_countries.h"
 #include "Emu/GameInfo.h"
@@ -45,7 +46,7 @@
 
 LOG_CHANNEL(cfg_log, "CFG");
 
-std::pair<QString, int> get_data(const QComboBox* box, int index)
+static std::pair<QString, int> get_data(const QComboBox* box, int index)
 {
 	if (!box) return {};
 
@@ -57,7 +58,7 @@ std::pair<QString, int> get_data(const QComboBox* box, int index)
 	return { var_list[0].toString(), var_list[1].toInt() };
 }
 
-int find_item(const QComboBox* box, int value)
+static int find_item(const QComboBox* box, int value)
 {
 	for (int i = 0; box && i < box->count(); i++)
 	{
@@ -70,7 +71,7 @@ int find_item(const QComboBox* box, int value)
 	return -1;
 }
 
-void remove_item(QComboBox* box, int data_value, int def_value)
+static void remove_item(QComboBox* box, int data_value, int def_value)
 {
 	if (!box) return;
 
@@ -259,6 +260,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->spuLoopDetection, emu_settings_type::SPULoopDetection);
 	SubscribeTooltip(ui->spuLoopDetection, tooltips.settings.spu_loop_detection);
 
+	m_emu_settings->EnhanceCheckBox(ui->ppuReservationPrority, emu_settings_type::PPUReservationPriorityOverSPUs);
+	SubscribeTooltip(ui->ppuReservationPrority, tooltips.settings.ppu_reservation_priority);
+
 	// Comboboxes
 	m_emu_settings->EnhanceComboBox(ui->xfloatAccuracy, emu_settings_type::XFloatAccuracy);
 	SubscribeTooltip(ui->gb_xfloat_accuracy, tooltips.settings.xfloat);
@@ -292,7 +296,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->ppu__static, tooltips.settings.ppu__static);
 	SubscribeTooltip(ui->ppu_llvm,    tooltips.settings.ppu_llvm);
 
-	QButtonGroup *ppu_bg = new QButtonGroup(this);
+	QButtonGroup* ppu_bg = new QButtonGroup(this);
 	ppu_bg->addButton(ui->ppu__static, static_cast<int>(ppu_decoder_type::_static));
 	ppu_bg->addButton(ui->ppu_llvm,    static_cast<int>(ppu_decoder_type::llvm));
 
@@ -369,7 +373,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	//   | |__| | |    | |__| |    | | (_| | |_) |
 	//    \_____|_|     \____/     |_|\__,_|_.__/
 
-	render_creator* r_creator = m_emu_settings->m_render_creator;
+	std::shared_ptr<render_creator> r_creator = m_emu_settings->m_render_creator;
 
 	if (!r_creator)
 	{
@@ -593,9 +597,15 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			ui->stereoRenderMode->setEnabled(stereo_allowed && stereo_enabled);
 			ui->stereoRenderEnabled->setEnabled(stereo_allowed);
 			ui->gb_screen_size->setEnabled(stereo_allowed && stereo_enabled);
+			ui->gb_anaglyph_settings->setEnabled(stereo_allowed && stereo_enabled);
 		};
 		connect(ui->resBox, &QComboBox::currentIndexChanged, this, [enable_3D_modes](int){ enable_3D_modes(); });
 		connect(ui->stereoRenderEnabled, &QCheckBox::checkStateChanged, this, [enable_3D_modes](Qt::CheckState){ enable_3D_modes(); });
+		connect(ui->pb_anaglyph_settings, &QAbstractButton::clicked, [this]()
+		{
+			anaglyph_settings_dialog* dlg = new anaglyph_settings_dialog(this, m_emu_settings);
+			dlg->open();
+		});
 		enable_3D_modes();
 	}
 	else
@@ -603,6 +613,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		ui->stereoRenderMode->setCurrentIndex(find_item(ui->stereoRenderMode, static_cast<int>(g_cfg.video.stereo_render_mode.def)));
 		ui->stereoRenderEnabled->setChecked(false);
 		ui->gb_stereo->setEnabled(false);
+		ui->gb_anaglyph_settings->setEnabled(false);
 	}
 
 	// Checkboxes: main options
@@ -636,7 +647,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	SubscribeTooltip(ui->rb_async_with_shader_interpreter, tooltips.settings.async_with_shader_interpreter);
 	SubscribeTooltip(ui->rb_shader_interpreter_only, tooltips.settings.shader_interpreter_only);
 
-	QButtonGroup *shader_mode_bg = new QButtonGroup(this);
+	QButtonGroup* shader_mode_bg = new QButtonGroup(this);
 	shader_mode_bg->addButton(ui->rb_legacy_recompiler, static_cast<int>(shader_mode::recompiler));
 	shader_mode_bg->addButton(ui->rb_async_recompiler, static_cast<int>(shader_mode::async_recompiler));
 	shader_mode_bg->addButton(ui->rb_async_with_shader_interpreter, static_cast<int>(shader_mode::async_with_interpreter));
@@ -925,8 +936,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			QStringList cur_list = m_emu_settings->m_microphone_creator.get_microphone_list();
 			for (u32 subindex = 0; subindex < m_mics_combo.size(); subindex++)
 			{
-				if (subindex != index && m_mics_combo[subindex]->currentText() != mic_none)
-					cur_list.removeOne(m_mics_combo[subindex]->currentText());
+				if (subindex == index) continue;
+				if (const QString text = m_mics_combo[subindex]->currentText(); text != mic_none)
+				{
+					cur_list.removeOne(text);
+				}
 			}
 			m_mics_combo[index]->blockSignals(true);
 			m_mics_combo[index]->clear();
@@ -941,7 +955,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		m_emu_settings->SetSetting(emu_settings_type::MicrophoneDevices, m_emu_settings->m_microphone_creator.set_device(index, text));
 		if (const u32 next_index = index + 1; next_index < m_mics_combo.size() && text == mic_none)
+		{
 			m_mics_combo[next_index]->setCurrentText(mic_none);
+		}
 		propagate_used_devices();
 	};
 
@@ -1094,7 +1110,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->m_microphone_creator.parse_devices(m_emu_settings->GetSetting(emu_settings_type::MicrophoneDevices));
 
-	const std::array<std::string, 4> mic_sel_list = m_emu_settings->m_microphone_creator.get_selection_list();
+	const std::array<std::string, 4>& mic_sel_list = m_emu_settings->m_microphone_creator.get_selection_list();
 
 	for (s32 index = static_cast<int>(mic_sel_list.size()) - 1; index >= 0; index--)
 	{
@@ -1235,6 +1251,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	ui->loadSdlMappings->setVisible(false);
 #endif
 
+	m_emu_settings->EnhanceCheckBox(ui->mouseBasedGyroBox, emu_settings_type::MouseBasedGyro);
+	SubscribeTooltip(ui->mouseBasedGyroBox, tooltips.settings.mouse_based_gyro);
+
 #ifndef _WIN32
 	// Remove raw mouse handler
 	remove_item(ui->mouseHandlerBox, static_cast<int>(mouse_handler::raw), static_cast<int>(g_cfg.io.mouse.def));
@@ -1265,8 +1284,11 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			QStringList cur_list = m_emu_settings->m_midi_creator.get_midi_list();
 			for (u32 subindex = 0; subindex < m_midi_device_combo.size(); subindex++)
 			{
-				if (subindex != index && m_midi_device_combo[subindex]->currentText() != midi_none)
-					cur_list.removeOne(m_midi_device_combo[subindex]->currentText());
+				if (subindex == index) continue;
+				if (const QString text = m_midi_device_combo[subindex]->currentText(); text != midi_none)
+				{
+					cur_list.removeOne(text);
+				}
 			}
 			m_midi_device_combo[index]->blockSignals(true);
 			m_midi_device_combo[index]->clear();
@@ -1315,7 +1337,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->m_midi_creator.parse_devices(m_emu_settings->GetSetting(emu_settings_type::MidiDevices));
 
-	const std::array<midi_device, max_midi_devices> midi_sel_list = m_emu_settings->m_midi_creator.get_selection_list();
+	const std::array<midi_device, max_midi_devices>& midi_sel_list = m_emu_settings->m_midi_creator.get_selection_list();
 
 	for (s32 index = static_cast<int>(midi_sel_list.size()) - 1; index >= 0; index--)
 	{
@@ -1394,7 +1416,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	// Radio Buttons
 
 	// creating this in ui file keeps scrambling the order...
-	QButtonGroup *enter_button_assignment_bg = new QButtonGroup(this);
+	QButtonGroup* enter_button_assignment_bg = new QButtonGroup(this);
 	enter_button_assignment_bg->addButton(ui->enterButtonAssignCircle, 0);
 	enter_button_assignment_bg->addButton(ui->enterButtonAssignCross, 1);
 
@@ -1424,14 +1446,19 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->enable_upnp, emu_settings_type::EnableUpnp);
 	SubscribeTooltip(ui->enable_upnp, tooltips.settings.enable_upnp);
 
+	m_emu_settings->EnhanceCheckBox(ui->derive_mac_from_psid, emu_settings_type::DeriveMacFromPsid);
+	SubscribeTooltip(ui->derive_mac_from_psid, tooltips.settings.derive_mac_from_psid);
+
 	// Comboboxes
 
 	connect(ui->netStatusBox, &QComboBox::currentIndexChanged, [this](int index)
 	{
 		if (index < 0) return;
 		const auto [text, value] = get_data(ui->netStatusBox, index);
-		ui->gb_edit_dns->setEnabled(static_cast<np_internet_status>(value) != np_internet_status::disabled);
-		ui->enable_upnp->setEnabled(static_cast<np_internet_status>(value) != np_internet_status::disabled);
+		const bool internet_enabled = static_cast<np_internet_status>(value) != np_internet_status::disabled;
+		ui->gb_edit_dns->setEnabled(internet_enabled);
+		ui->enable_upnp->setEnabled(internet_enabled);
+		ui->derive_mac_from_psid->setEnabled(internet_enabled);
 
 		if (static_cast<np_internet_status>(value) == np_internet_status::disabled)
 		{
@@ -2120,7 +2147,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 				{ "%R", tr("Renderer", "Game window title") },
 				{ "%T", tr("Title", "Game window title") },
 				{ "%t", tr("Title ID", "Game window title") },
-				{ "%V", tr("RPCS3 Version", "Game window title") }
+				{ "%V", tr("RPCS3 Version", "Game window title") },
+				{ "%A", tr("Architecture", "Game window title") }
 			};
 
 			QString glossary;
@@ -2443,6 +2471,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->disableVertexCache, emu_settings_type::DisableVertexCache);
 	SubscribeTooltip(ui->disableVertexCache, tooltips.settings.disable_vertex_cache);
+
+	m_emu_settings->EnhanceCheckBox(ui->emulateDepthCompare, emu_settings_type::EmulateDepthCompare);
+	SubscribeTooltip(ui->emulateDepthCompare, tooltips.settings.emulate_depth_compare);
 
 	m_emu_settings->EnhanceCheckBox(ui->forceHwMSAAResolve, emu_settings_type::ForceHwMSAAResolve);
 	SubscribeTooltip(ui->forceHwMSAAResolve, tooltips.settings.force_hw_MSAA);

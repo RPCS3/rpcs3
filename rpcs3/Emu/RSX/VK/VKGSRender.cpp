@@ -508,12 +508,12 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	// VRAM allocation
 	// This first set is bound persistently, so grow notifications are enabled.
 	m_attrib_ring_info.create(VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_default, "attrib buffer", 0x400000, VK_TRUE);
-	m_fragment_env_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "fragment env buffer", 0x10000, VK_TRUE);
-	m_vertex_env_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "vertex env buffer", 0x10000, VK_TRUE);
-	m_fragment_texture_params_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "fragment texture params buffer", 0x10000, VK_TRUE);
+	m_fragment_env_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "fragment env buffer", 0x10000, VK_TRUE);
+	m_vertex_env_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_default, "vertex env buffer", 0x10000, VK_TRUE);
+	m_fragment_texture_params_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "fragment texture params buffer", 0x10000, VK_TRUE);
 	m_vertex_layout_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "vertex layout buffer", 0x10000, VK_TRUE);
-	m_fragment_constants_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "fragment constants buffer", 0x10000, VK_TRUE);
-	m_transform_constants_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, vk::heap_pool_default, "transform constants buffer", 0x10000, VK_TRUE);
+	m_fragment_constants_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "fragment constants buffer", 0x10000, VK_TRUE);
+	m_transform_constants_ring_info.create(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, vk::heap_pool_default, "transform constants buffer", 0x10000, VK_TRUE);
 	m_raster_env_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_UBO_RING_BUFFER_SIZE_M * 0x100000, vk::heap_pool_low_latency, "raster env buffer", 0x10000, VK_TRUE);
 	// Below here, we do not bind these persistently. Each draw call specifies the range manually so we do not need heap_grow notifications.
 	m_instancing_buffer_ring_info.create(VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VK_TRANSFORM_CONSTANTS_BUFFER_SIZE_M * 0x100000, vk::heap_pool_default, "instancing data buffer");
@@ -534,6 +534,8 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 		std::ref(m_raster_env_ring_info),
 		std::ref(m_instancing_buffer_ring_info)
 	});
+
+	m_flushable_data_heaps = vk::data_heap_manager::to_list().filter(FN(x->has_shadow()));
 
 	const auto shadermode = g_cfg.video.shadermode.get();
 
@@ -560,6 +562,21 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 
 	const auto& limits = m_device->gpu().get_limits();
 	m_texbuffer_view_size = std::min(limits.maxTexelBufferElements, VK_ATTRIB_RING_BUFFER_SIZE_M * 0x100000u);
+
+	// Initialize bulk allocators
+	m_vertex_env_allocator = std::make_unique<rsx::data_heap::bulk_allocator<256, 96>>(
+		m_vertex_env_ring_info,
+		std::min<u32>(limits.maxUniformBufferRange / 96u, 1024u));
+
+	m_transform_constants_allocator = std::make_unique<rsx::data_heap::bulk_allocator<256, 16>>(
+		m_transform_constants_ring_info,
+		std::min<u32>(limits.maxUniformBufferRange / 16u, 8192u)
+	);
+
+	m_fragment_constants_allocator = std::make_unique<rsx::data_heap::bulk_allocator<256, 16>>(
+		m_fragment_constants_ring_info,
+		std::min<u32>(limits.maxUniformBufferRange / 16u, 8192u)
+	);
 
 	if (m_texbuffer_view_size < 0x800000)
 	{
@@ -623,6 +640,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	}
 
 	backend_config.supports_multidraw = true;
+	backend_config.supports_hw_instanced_rendering = true;
 
 	// NVIDIA has broken attribute interpolation
 	backend_config.supports_normalized_barycentrics = (
@@ -1220,18 +1238,31 @@ void VKGSRender::on_init_thread()
 	GSRender::on_init_thread();
 	zcull_ctrl.reset(static_cast<::rsx::reports::ZCULL_control*>(this));
 
-	if (!m_overlay_manager)
+	if (g_cfg.video.shadermode == shader_mode::async_with_interpreter ||
+		g_cfg.video.shadermode == shader_mode::interpreter_only)
 	{
-		m_frame->hide();
-		m_shaders_cache->load(nullptr);
-		m_frame->show();
+		std::unique_ptr<rsx::shader_loading_dialog> dlg = m_overlay_manager
+			? std::make_unique<rsx::shader_loading_dialog_native>(this)
+			: std::make_unique<rsx::shader_loading_dialog>();
+		m_shader_interpreter.preload(dlg.get());
+		dlg->close();
 	}
-	else
-	{
-		rsx::shader_loading_dialog_native dlg(this);
 
-		// TODO: Handle window resize messages during loading on GPUs without OUT_OF_DATE_KHR support
-		m_shaders_cache->load(&dlg);
+	if (g_cfg.video.shadermode != shader_mode::interpreter_only)
+	{
+		if (!m_overlay_manager)
+		{
+			m_frame->hide();
+			m_shaders_cache->load(nullptr);
+			m_frame->show();
+		}
+		else
+		{
+			rsx::shader_loading_dialog_native dlg(this);
+
+			// TODO: Handle window resize messages during loading on GPUs without OUT_OF_DATE_KHR support
+			m_shaders_cache->load(&dlg);
+		}
 	}
 }
 
@@ -1932,6 +1963,7 @@ void VKGSRender::load_program_env()
 	}
 
 	const auto& ctx = REGS(m_ctx);
+	const auto& gpu_limits = m_device->gpu().get_limits();
 
 	const u32 fragment_constants_size = current_fp_metadata.program_constants_buffer_length;
 	const bool is_interpreter = m_shader_interpreter.is_interpreter(m_program);
@@ -1948,7 +1980,9 @@ void VKGSRender::load_program_env()
 	if (update_vertex_env)
 	{
 		// Vertex state. Note, we're now on std430 alignment here, not hardware alignment.
-		const auto [mem, buf] = m_vertex_env_ring_info.alloc_and_map<16, char>(96);
+		// Use the bulk allocator here
+		const auto mem = m_vertex_env_allocator->alloc();
+		auto buf = m_vertex_env_ring_info.map<char>(mem, 96);
 
 		m_draw_processor.fill_scale_offset_data(buf, false);
 		m_draw_processor.fill_user_clip_data(buf + 64);
@@ -1959,6 +1993,9 @@ void VKGSRender::load_program_env()
 
 		m_vertex_env_ring_info.unmap();
 		m_vertex_env_dynamic_offset = mem;
+
+		m_vertex_env_buffer_info = m_vertex_env_ring_info.window<256>(m_vertex_env_dynamic_offset, 96, gpu_limits.maxUniformBufferRange);
+		m_vertex_env_dynamic_offset -= m_vertex_env_buffer_info.offset;
 	}
 
 	if (update_instancing_data)
@@ -1993,8 +2030,7 @@ void VKGSRender::load_program_env()
 		usz mem_offset = 0;
 		auto alloc_storage = [&](usz size) -> std::pair<void*, usz>
 		{
-			const auto alignment = m_device->gpu().get_limits().minStorageBufferOffsetAlignment;
-			mem_offset = m_transform_constants_ring_info.alloc<1>(utils::align(size, alignment));
+			mem_offset = m_transform_constants_allocator->alloc_bytes(size);
 			return std::make_pair(m_transform_constants_ring_info.map(mem_offset, size), size);
 		};
 
@@ -2005,6 +2041,9 @@ void VKGSRender::load_program_env()
 		{
 			m_transform_constants_ring_info.unmap();
 			m_xform_constants_dynamic_offset = mem_offset;
+
+			m_vertex_constants_buffer_info = m_transform_constants_ring_info.window<16>(m_xform_constants_dynamic_offset, io_buf.size(), gpu_limits.maxUniformBufferRange);
+			m_xform_constants_dynamic_offset -= m_vertex_constants_buffer_info.offset;
 		}
 	}
 
@@ -2013,13 +2052,16 @@ void VKGSRender::load_program_env()
 		// Fragment constants
 		if (fragment_constants_size)
 		{
-			m_fragment_constants_dynamic_offset = m_fragment_constants_ring_info.alloc<16>(fragment_constants_size);
+			m_fragment_constants_dynamic_offset = m_fragment_constants_allocator->alloc_bytes(fragment_constants_size);
 			auto buf = m_fragment_constants_ring_info.map(m_fragment_constants_dynamic_offset, fragment_constants_size);
 
 			m_prog_buffer->fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), fragment_constants_size },
 				*ensure(m_fragment_prog), current_fragment_program, true);
 
 			m_fragment_constants_ring_info.unmap();
+
+			m_fragment_constants_buffer_info = m_fragment_constants_ring_info.window<16>(m_fragment_constants_dynamic_offset, fragment_constants_size, gpu_limits.maxUniformBufferRange);
+			m_fragment_constants_dynamic_offset -= m_fragment_constants_buffer_info.offset;
 		}
 	}
 
@@ -2030,15 +2072,21 @@ void VKGSRender::load_program_env()
 
 		m_draw_processor.fill_fragment_state_buffer(buf, current_fragment_program);
 		m_fragment_env_ring_info.unmap();
+
+		m_fragment_env_buffer_info = m_fragment_env_ring_info.window<32>(m_fragment_env_dynamic_offset, 32, gpu_limits.maxUniformBufferRange);
+		m_fragment_env_dynamic_offset -= m_fragment_env_buffer_info.offset;
 	}
 
 	if (update_fragment_texture_env)
 	{
-		m_texture_parameters_dynamic_offset = m_fragment_texture_params_ring_info.static_alloc<16, 768>();
+		m_texture_parameters_dynamic_offset = m_fragment_texture_params_ring_info.static_alloc<256, 768>();
 		auto buf = m_fragment_texture_params_ring_info.map(m_texture_parameters_dynamic_offset, 768);
 
 		current_fragment_program.texture_params.write_to(buf, current_fp_metadata.referenced_textures_mask);
 		m_fragment_texture_params_ring_info.unmap();
+
+		m_fragment_texture_params_buffer_info = m_fragment_texture_params_ring_info.window<768>(m_texture_parameters_dynamic_offset, 768, gpu_limits.maxUniformBufferRange);
+		m_texture_parameters_dynamic_offset -= m_fragment_texture_params_buffer_info.offset;
 	}
 
 	if (update_raster_env)
@@ -2160,6 +2208,7 @@ std::pair<const vs_binding_table_t*, const fs_binding_table_t*> VKGSRender::get_
 	}
 
 	const auto& [vs, fs] = m_shader_interpreter.get_shaders();
+	ensure(vs && fs, "Invalid interpreter configuration");
 	return { &vs->binding_table, &fs->binding_table };
 }
 
@@ -2276,6 +2325,11 @@ void VKGSRender::patch_transform_constants(rsx::context* /*ctx*/, u32 index, u32
 
 	rsx::io_buffer iobuf(allocate_mem);
 	upload_transform_constants(iobuf);
+
+	if (!iobuf.empty())
+	{
+		m_transform_constants_ring_info.unmap();
+	}
 }
 
 void VKGSRender::init_buffers(rsx::framebuffer_creation_context context, bool)
@@ -2297,32 +2351,16 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 
 	if (vk::test_status_interrupt(vk::heap_dirty))
 	{
-		if (m_attrib_ring_info.is_dirty() ||
-			m_fragment_env_ring_info.is_dirty() ||
-			m_vertex_env_ring_info.is_dirty() ||
-			m_fragment_texture_params_ring_info.is_dirty() ||
-			m_vertex_layout_ring_info.is_dirty() ||
-			m_fragment_constants_ring_info.is_dirty() ||
-			m_index_buffer_ring_info.is_dirty() ||
-			m_transform_constants_ring_info.is_dirty() ||
-			m_texture_upload_buffer_ring_info.is_dirty() ||
-			m_raster_env_ring_info.is_dirty() ||
-			m_instancing_buffer_ring_info.is_dirty())
+		if (const auto dirty_list = m_flushable_data_heaps.filter(FN(x->is_dirty()));
+			!dirty_list.empty())
 		{
 			auto secondary_command_buffer = m_secondary_cb_list.next();
 			secondary_command_buffer->begin();
 
-			m_attrib_ring_info.sync(*secondary_command_buffer);
-			m_fragment_env_ring_info.sync(*secondary_command_buffer);
-			m_vertex_env_ring_info.sync(*secondary_command_buffer);
-			m_fragment_texture_params_ring_info.sync(*secondary_command_buffer);
-			m_vertex_layout_ring_info.sync(*secondary_command_buffer);
-			m_fragment_constants_ring_info.sync(*secondary_command_buffer);
-			m_index_buffer_ring_info.sync(*secondary_command_buffer);
-			m_transform_constants_ring_info.sync(*secondary_command_buffer);
-			m_texture_upload_buffer_ring_info.sync(*secondary_command_buffer);
-			m_raster_env_ring_info.sync(*secondary_command_buffer);
-			m_instancing_buffer_ring_info.sync(*secondary_command_buffer);
+			for (auto& heap : dirty_list)
+			{
+				heap->sync(*secondary_command_buffer);
+			}
 
 			secondary_command_buffer->end();
 

@@ -997,7 +997,7 @@ error_code cellDmuxResetEs(ppu_thread& ppu, vm::ptr<DmuxEsContext> esHandle)
 		return ret;
 	}
 
-	if (dmux_status & DMUX_STOPPED)
+	if (!(dmux_status & DMUX_STOPPED))
 	{
 		return CELL_DMUX_ERROR_SEQ;
 	}

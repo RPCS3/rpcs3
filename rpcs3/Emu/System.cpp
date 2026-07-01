@@ -121,6 +121,8 @@ namespace rsx
 }
 
 Emulator::Emulator() noexcept
+	: m_supported_renderers({video_renderer::null})
+	, m_default_renderer(video_renderer::null)
 {
 	s_emulator_available = true;
 }
@@ -278,9 +280,41 @@ void init_fxo_for_exec(utils::serial* ar, bool full = false)
 	}
 }
 
-// Some settings are not allowed in certain PPU decoders
+// Some settings are not allowed with certain conditions
 static void fixup_settings(const psf::registry* _psf)
 {
+	// Disable some incompatible settings in headless mode
+	if (Emu.IsHeadless())
+	{
+		if (g_cfg.video.renderer != video_renderer::null)
+		{
+			sys_log.warning("The video renderer '%s' is currently not supported in headless mode and will therefore be set to '%s'.", g_cfg.video.renderer.get(), video_renderer::null);
+			g_cfg.video.renderer.set(video_renderer::null);
+		}
+
+		if (g_cfg.io.camera == camera_handler::qt)
+		{
+			sys_log.warning("The camera handler '%s' is currently not supported in headless mode and will therefore be set to '%s'.", g_cfg.io.camera.get(), camera_handler::null);
+			g_cfg.io.camera.set(camera_handler::null);
+		}
+
+		if (g_cfg.audio.music == music_handler::qt)
+		{
+			sys_log.warning("The music handler '%s' is currently not supported in headless mode and will therefore be set to '%s'.", g_cfg.audio.music.get(), music_handler::null);
+			g_cfg.audio.music.set(music_handler::null);
+		}
+	}
+	else
+	{
+		// Make sure we have a valid renderer
+		if (!Emu.GetSupportedRenderers().contains(g_cfg.video.renderer.get()))
+		{
+			sys_log.warning("The video renderer '%s' is not supported on this device and will therefore be set to '%s'.", g_cfg.video.renderer.get(), Emu.GetDefaultRenderer());
+			g_cfg.video.renderer.set(Emu.GetDefaultRenderer());
+		}
+	}
+
+	// Some settings are not allowed in certain PPU decoders
 	if (g_cfg.core.ppu_decoder != ppu_decoder_type::_static)
 	{
 		if (g_cfg.core.ppu_use_nj_bit)
@@ -455,11 +489,10 @@ void Emulator::Init()
 	g_cfg.name.clear();
 
 	// Not all renderers are known at compile time, so set a provided default if possible
-	if (m_default_renderer == video_renderer::vulkan && !m_default_graphics_adapter.empty())
-	{
-		g_cfg.video.renderer.set(m_default_renderer);
-		g_cfg.video.vk.adapter.from_string(m_default_graphics_adapter);
-	}
+	ensure(m_supported_renderers.contains(m_default_renderer));
+	ensure(!(m_default_renderer == video_renderer::vulkan && m_default_graphics_adapter.empty()));
+	g_cfg.video.renderer.set(m_default_renderer);
+	g_cfg.video.vk.adapter.set(m_default_graphics_adapter);
 
 	g_cfg_defaults = g_cfg.to_string();
 
@@ -652,7 +685,7 @@ void Emulator::Init()
 
 		const std::string games_common_dir = g_cfg_vfs.get(g_cfg_vfs.games_dir, emu_dir);
 
-		if (make_path_verbose(games_common_dir, true))
+		if (!is_iso_file(games_common_dir) && make_path_verbose(games_common_dir, true))
 		{
 			fs::write_file(games_common_dir + "/Disc Games Can Be Put Here For Automatic Detection.txt", fs::create + fs::excl + fs::write, ""s);
 
@@ -949,6 +982,8 @@ game_boot_result Emulator::GetElfPathFromDir(std::string& elf_path, const std::s
 
 game_boot_result Emulator::BootGame(const std::string& path, const std::string& title_id, bool direct, cfg_mode config_mode, const std::string& config_path, const std::optional<std::string>& db_config)
 {
+	sys_log.notice("Emulator::BootGame: path='%s', title_id='%s', direct=%d, config_mode='%s', config_path='%s', db_config=(set=%d, valid=%d)", path, title_id, direct, config_mode, config_path, db_config.has_value(), db_config && !db_config->empty());
+
 	if (m_restrict_emu_state_change)
 	{
 		return game_boot_result::currently_restricted;
@@ -999,7 +1034,7 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 	m_db_config = db_config;
 
 	// Handle files and special paths inside Load unmodified
-	if (direct || !fs::is_dir(path))
+	if (direct || !fs::is_dir(path) || fs::get_optical_raw_device(path))
 	{
 		m_path = path;
 
@@ -1215,7 +1250,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			std::string disc_info;
 			m_ar->serialize(argv.emplace_back(), disc_info, klic.emplace_back(), m_game_dir, hdd1);
 
-			launching_from_disc_archive = is_file_iso(disc_info);
+			launching_from_disc_archive = is_iso_file(disc_info);
 
 			sys_log.notice("Savestate: is iso archive = %d ('%s')", launching_from_disc_archive, disc_info);
 
@@ -1232,7 +1267,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				// Load /dev_bdvd/ from game list if available
 				if (std::string game_path = m_games_config.get_path(m_title_id); !game_path.empty())
 				{
-					if (is_file_iso(game_path))
+					if (is_iso_file(game_path))
 					{
 						game_path = iso_device::virtual_device_name + "/PS3_GAME/./";
 					}
@@ -1403,7 +1438,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				title_path = std::move(game_path);
 			}
 
-			if (is_file_iso(title_path))
+			if (is_iso_file(title_path))
 			{
 				m_path = std::move(title_path);
 				ok = true;
@@ -1494,7 +1529,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		}
 
 		const std::string resolved_path = GetCallbacks().resolve_path(m_path);
-		if (!launching_from_disc_archive && is_file_iso(m_path))
+		if (!launching_from_disc_archive && is_iso_file(m_path))
 		{
 			sys_log.notice("Loading iso archive '%s'", m_path);
 
@@ -1506,9 +1541,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 			// ISOs that are install discs will error if set to EBOOT.BIN
 			// so this should cover both of them
-			if (fs::exists(path + "PS3_GAME/USRDIR/EBOOT.BIN"))
+			if (fs::exists(path + m_game_dir + "/USRDIR/EBOOT.BIN"))
 			{
-				path = path + "PS3_GAME/USRDIR/EBOOT.BIN";
+				path = path + m_game_dir + "/USRDIR/EBOOT.BIN";
 			}
 
 			m_path_real = m_path;
@@ -1639,7 +1674,13 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 						{
 							g_cfg.name = config_path;
 							m_config_path = config_path;
-							m_add_database_config = false; // A custom config exists. Do not add the database config.
+
+							if (m_add_database_config)
+							{
+								// A custom config exists. Do not add the database config.
+								sys_log.notice("Found custom config. Ignoring database config");
+								m_add_database_config = false;
+							}
 							break;
 						}
 
@@ -1840,6 +1881,24 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 			g_fxo->init<named_thread>("SPRX Loader"sv, [this, dir_queue, is_fast = m_precompilation_option.is_fast]() mutable
 			{
+#ifdef __APPLE__
+				// Apple Silicon W^X: this thread invokes ppu_initialize()
+				// and ppu_precompile(), which write into MAP_JIT pages.
+				// Without enabling write mode here, these writes segfault
+				// before the game can boot (reproducible: RDR BLUS30418
+				// crashes ~12s into boot at 0x300010000). Pair the enable
+				// with an RAII guard so execute mode is restored on every
+				// exit path (return, exception, etc.).
+				pthread_jit_write_protect_np(false);
+
+				struct jit_write_guard
+				{
+					~jit_write_guard()
+					{
+						pthread_jit_write_protect_np(true);
+					}
+				} _jit_guard;
+#endif
 				std::vector<ppu_module<lv2_obj>*> mod_list;
 
 				if (auto& _main = *ensure(g_fxo->try_get<main_ppu_module<lv2_obj>>()); !_main.path.empty())
@@ -1947,7 +2006,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			// Load /dev_bdvd/ from game list if available
 			if (std::string game_path = m_games_config.get_path(m_title_id); !game_path.empty())
 			{
-				if (is_file_iso(game_path))
+				if (is_iso_file(game_path))
 				{
 					sys_log.notice("Loading iso archive for patch ('%s')", game_path);
 
@@ -2167,11 +2226,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 				for (auto&& entry : fs::dir{ins_dir})
 				{
-					const std::string pkg_file = ins_dir + entry.name;
+					std::string pkg_file = ins_dir + entry.name;
 
 					if (!entry.is_directory && entry.name.ends_with(".PKG"))
 					{
-						pkgs.push_back(pkg_file);
+						pkgs.push_back(std::move(pkg_file));
 					}
 				}
 			}
@@ -2184,11 +2243,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				{
 					if (entry.is_directory && entry.name.starts_with("PKG"))
 					{
-						const std::string pkg_file = pkg_dir + entry.name + "/INSTALL.PKG";
+						std::string pkg_file = pkg_dir + entry.name + "/INSTALL.PKG";
 
 						if (fs::is_file(pkg_file))
 						{
-							pkgs.push_back(pkg_file);
+							pkgs.push_back(std::move(pkg_file));
 						}
 					}
 				}
@@ -2202,11 +2261,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				{
 					if (entry.is_directory && entry.name[0] == 'D')
 					{
-						const std::string pkg_file = extra_dir + entry.name + "/DATA000.PKG";
+						std::string pkg_file = extra_dir + entry.name + "/DATA000.PKG";
 
 						if (fs::is_file(pkg_file))
 						{
-							pkgs.push_back(pkg_file);
+							pkgs.push_back(std::move(pkg_file));
 						}
 					}
 				}
@@ -2711,7 +2770,7 @@ void Emulator::FixGuestTime()
 			// Mark a known savestate location and the one we try to boot (in case we boot a moved/copied savestate)
 			if (g_cfg.savestate.suspend_emu)
 			{
-				for (std::string old_path : std::initializer_list<std::string>{m_ar ? m_path_old : "", m_title_id.empty() ? "" : get_savestate_file(m_title_id, m_path_old, -1)})
+				for (const std::string& old_path : {m_ar ? m_path_old : ""s, m_title_id.empty() ? ""s : get_savestate_file(m_title_id, m_path_old, -1)})
 				{
 					if (old_path.empty())
 					{
@@ -3877,6 +3936,11 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 					tty_buffer.resize(tty_read_fd.read_at(m_tty_file_init_pos, tty_buffer.data(), tty_buffer.size()));
 					tty_read_fd.close();
 
+					if (!tty_buffer.empty() && std::isspace(tty_buffer.back()))
+					{
+						tty_buffer.resize(tty_buffer.find_last_not_of(" \f\n\r\t\v"sv) + 1);
+					}
+
 					if (!tty_buffer.empty())
 					{
 						// Mark start and end very clearly with RPCS3 put in it
@@ -3910,6 +3974,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 						std::string_view to_log = not_logged;
 						to_log = to_log.substr(0, 0x8000);
 						to_log = to_log.substr(0, utils::add_saturate<usz>(to_log.rfind("\n========== SPU BLOCK"sv), 1));
+						to_log = to_log.substr(0, utils::add_saturate<usz>(to_log.find_last_of("\n"sv), 1));
 						to_remove = to_log.size();
 
 						std::string new_log(to_log);
@@ -3962,6 +4027,11 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 							out_added += text_append.size();
 							iter = index + 1;
+						}
+
+						if (!new_log.empty() && std::isspace(new_log.back()))
+						{
+							new_log.resize(new_log.find_last_not_of(" \f\n\r\t\v"sv) + 1);
 						}
 
 						// Cannot log it all at once due to technical reasons, split it to 8MB at maximum of whole functions
@@ -4055,8 +4125,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			if (after_kill_callback)
 			{
 				// Make after_kill_callback empty before call
-				const auto callback = std::move(after_kill_callback);
-				callback();
+				std::exchange(ensure(after_kill_callback), nullptr)();
 			}
 		});
 	}));
@@ -4112,7 +4181,7 @@ game_boot_result Emulator::Restart(bool graceful, bool reset_path)
 	else
 	{
 		// Execute and empty the callback
-		::as_rvalue(std::move(Emu.after_kill_callback))();
+		std::exchange(ensure(Emu.after_kill_callback), nullptr)();
 	}
 
 	return game_boot_result::no_errors;
@@ -4221,9 +4290,11 @@ std::set<std::string> Emulator::GetGameDirs() const
 	return dirs;
 }
 
-u32 Emulator::AddGamesFromDir(const std::string& path)
+u32 Emulator::AddGamesFromDir(std::string path)
 {
 	u32 games_added = 0;
+
+	fmt::trim_back(path, fs::delim);
 
 	m_games_config.set_save_on_dirty(false);
 
@@ -4251,16 +4322,16 @@ u32 Emulator::AddGamesFromDir(const std::string& path)
 			// search direct subdirectories, that way we can drop one folder containing all games
 			for (; path_it != entries.end(); ++path_it)
 			{
-				auto dir_entry = std::move(*path_it);
+				const auto dir_entry = std::move(*path_it);
 
 				if (dir_entry.name == "." || dir_entry.name == "..")
 				{
 					continue;
 				}
 
-				const std::string dir_path = path + '/' + dir_entry.name;
+				const std::string dir_path = path + "/" + dir_entry.name;
 
-				if (!dir_entry.is_directory && !is_file_iso(dir_path))
+				if (!dir_entry.is_directory && !is_iso_file(dir_path))
 				{
 					continue;
 				}
@@ -4294,10 +4365,12 @@ u32 Emulator::AddGamesFromDir(const std::string& path)
 	return games_added;
 }
 
-game_boot_result Emulator::AddGame(const std::string& path)
+game_boot_result Emulator::AddGame(std::string path)
 {
+	fmt::trim_back(path, fs::delim);
+
 	// Handle files directly
-	if (!fs::is_dir(path))
+	if (!fs::is_dir(path) || fs::get_optical_raw_device(path))
 	{
 		return AddGameToYml(path);
 	}
@@ -4341,8 +4414,10 @@ game_boot_result Emulator::AddGame(const std::string& path)
 	return result;
 }
 
-game_boot_result Emulator::AddGameToYml(const std::string& path)
+game_boot_result Emulator::AddGameToYml(std::string path)
 {
+	fmt::trim_back(path, fs::delim);
+
 	// Detect boot location
 	const auto is_invalid_path = [this](std::string_view path, std::string_view dir) -> game_boot_result
 	{
@@ -4368,7 +4443,7 @@ game_boot_result Emulator::AddGameToYml(const std::string& path)
 	}
 
 	std::unique_ptr<iso_archive> archive;
-	if (is_file_iso(path))
+	if (is_iso_file(path))
 	{
 		archive = std::make_unique<iso_archive>(path);
 	}
@@ -4788,7 +4863,7 @@ bool Emulator::IsValidSfb(const std::string& path)
 	return false;
 }
 
-void Emulator::SaveSettings(const std::string& settings, const std::string& title_id)
+void Emulator::SaveSettings(std::string_view settings, const std::string& title_id)
 {
 	std::string config_name;
 
@@ -4809,7 +4884,7 @@ void Emulator::SaveSettings(const std::string& settings, const std::string& titl
 	}
 	else
 	{
-		temp.file.write(settings.c_str(), settings.size());
+		temp.file.write(settings.data(), settings.size());
 		if (!temp.commit())
 		{
 			sys_log.error("Could not save config to %s (failed to commit) (error=%s)", config_name, fs::g_tls_error);
@@ -4820,7 +4895,7 @@ void Emulator::SaveSettings(const std::string& settings, const std::string& titl
 	if (config_name == g_cfg.name || title_id == Emu.GetTitleID())
 	{
 		// Update current config
-		if (!g_cfg.from_string({settings.c_str(), settings.size()}, !Emu.IsStopped()))
+		if (!g_cfg.from_string(settings, !Emu.IsStopped()))
 		{
 			sys_log.fatal("Failed to update configuration");
 		}

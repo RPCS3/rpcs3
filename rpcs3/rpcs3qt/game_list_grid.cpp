@@ -35,6 +35,17 @@ game_list_grid::game_list_grid()
 	});
 }
 
+void game_list_grid::stop_movie()
+{
+	for (flow_widget_item* flow_item : items())
+	{
+		if (game_list_grid_item* item = static_cast<game_list_grid_item*>(flow_item))
+		{
+			item->set_active(false);
+		}
+	}
+}
+
 void game_list_grid::clear_list()
 {
 	clear();
@@ -124,7 +135,7 @@ void game_list_grid::populate(
 			check_iso |= !fs::exists(game->info.audio_path);
 		}
 
-		if (check_iso && is_file_iso(game->info.path))
+		if (check_iso && is_iso_file(game->info.path))
 		{
 			item->set_iso_path(game->info.path);
 		}
@@ -145,6 +156,9 @@ void game_list_grid::populate(
 	QApplication::processEvents();
 
 	select_items(selected_items);
+
+	// Prevent playing unwanted movie
+	stop_movie();
 }
 
 void game_list_grid::repaint_icons(std::vector<game_info>& game_data, const QColor& icon_color, const QSize& icon_size, qreal device_pixel_ratio)

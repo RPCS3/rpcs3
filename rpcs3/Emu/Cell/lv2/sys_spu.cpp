@@ -233,10 +233,10 @@ lv2_spu_group::lv2_spu_group(utils::serial& ar) noexcept
 	, max_num(ar)
 	, mem_size(ar)
 	, type(ar) // SPU Thread Group Type
-	, ct(lv2_memory_container::search(ar))
+	, ct(lv2_memory_container::search(ar.pop<u32>()))
 	, has_scheduler_context(ar.pop<u8>())
 	, max_run(ar)
-	, init(ar)
+	, init(ar.pop<u32>())
 	, prio([&ar]()
 	{
 		std::common_type_t<decltype(lv2_spu_group::prio)> prio{};
@@ -246,7 +246,7 @@ lv2_spu_group::lv2_spu_group(utils::serial& ar) noexcept
 		return prio;
 	}())
 	, run_state(ar.pop<spu_group_status>())
-	, exit_status(ar)
+	, exit_status(ar.pop<s32>())
 {
 	for (auto& thread : threads)
 	{
@@ -833,7 +833,7 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 	if (auto state = +group->run_state; state != SPU_THREAD_GROUP_STATUS_NOT_INITIALIZED)
 	{
 		lock.unlock();
-		idm::remove<named_thread<spu_thread>>(idm::last_id());
+		ensure(idm::remove<named_thread<spu_thread>>(idm::last_id<spu_thread>()));
 
 		if (state == SPU_THREAD_GROUP_STATUS_DESTROYED)
 		{
@@ -846,7 +846,7 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 	if (group->threads_map[spu_num] != -1)
 	{
 		lock.unlock();
-		idm::remove<named_thread<spu_thread>>(idm::last_id());
+		ensure(idm::remove<named_thread<spu_thread>>(idm::last_id<spu_thread>()));
 		return CELL_EBUSY;
 	}
 
@@ -1137,7 +1137,7 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 	sys_spu.warning("sys_spu_thread_group_create(): Thread group \"%s\" created (id=0x%x)", group->name, idm::last_id());
 
 	ppu.check_state();
-	*id = idm::last_id();
+	*id = idm::last_id<lv2_spu_group>();
 	return CELL_OK;
 }
 

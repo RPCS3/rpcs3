@@ -17,7 +17,7 @@
 #include "Utilities/File.h"
 #include "Emu/system_utils.hpp"
 #include "Loader/ISO.h"
-#include "Loader/iso_validation.h"
+#include "Loader/content_validation.h"
 
 #include "QApplication"
 #include "QClipboard"
@@ -339,7 +339,7 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 	manage_game_menu->addSeparator();
 
 	// Remove game
-	QAction* remove_game = manage_game_menu->addAction(tr("&Remove %1").arg(gameinfo->localized_category));
+	QAction* remove_game = manage_game_menu->addAction(tr("&Remove %0").arg(gameinfo->localized_category));
 	remove_game->setEnabled(!is_current_running_game);
 
 	// Custom Images menu
@@ -602,46 +602,36 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 
 	addSeparator();
 
-	// Check integrity
+	// Check disc game integrity
 	if (QString::fromStdString(current_game.category) == cat::cat_disc_game)
 	{
-		std::string key_path;
-		const iso_type_status iso_type = iso_file_decryption::check_type(current_game.path, key_path);
+		const bool raw_archive = is_iso_file(current_game.path);
+		const iso_type_status iso_type = iso_file_decryption::check_type(current_game.path);
 
 		// If it's an ISO file (e.g. even a decrypted ISO), always provide the entry on the context menu but disable
 		// it if the ISO does not support integrity check (e.g. non Redump ISO) or no integrity DB is found.
 		// That is to highlight a Redump ISO from a non Redump ISO
-		if (iso_type != iso_type_status::NOT_ISO)
+		if (raw_archive || iso_type != iso_type_status::NOT_ISO)
 		{
-			const iso_integrity_status iso_integrity = iso_file_validation::check_integrity(current_game.path, "");
-
-			QAction* check_integrity = addAction(tr("&Check ISO Integrity"));
+			QAction* check_iso_integrity = addAction(tr("&Check ISO Integrity"));
 
 			// If it's a Redump ISO and the integrity DB exists
-			if (iso_type == iso_type_status::REDUMP_ISO && iso_integrity != iso_integrity_status::ERROR_OPENING_DB)
+			if ((raw_archive || iso_type == iso_type_status::REDUMP_ISO) &&
+				content_validation::check_integrity(content_file_type::ISO, "") != content_integrity_status::ERROR_OPENING_DB)
 			{
-				connect(check_integrity, &QAction::triggered, this, [this, gameinfo]()
+				connect(check_iso_integrity, &QAction::triggered, this, [this, gameinfo]()
 				{
-					m_game_list_actions->ShowGameIntegrityDialog(gameinfo);
+					m_game_list_actions->ShowGameIntegrityDialog(content_file_type::ISO, gameinfo->info.path);
 				});
 			}
 			else
 			{
-				check_integrity->setEnabled(false);
+				check_iso_integrity->setEnabled(false);
 			}
-
-			QAction* download_integrity = addAction(tr("&Download Integrity Database"));
-			connect(download_integrity, &QAction::triggered, m_game_list_frame, [this]
-			{
-				ensure(m_game_list_frame->GetIsoIntegrity())->download();
-			});
 		}
 	}
 
 	QAction* check_compat = addAction(tr("&Check Game Compatibility"));
-	QAction* download_compat = addAction(tr("&Download Compatibility Database"));
-	QAction* download_config_db = addAction(tr("&Download Config Database"));
-
 	addSeparator();
 
 	// Disk usage
@@ -734,14 +724,6 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 	{
 		const QString link = "https://rpcs3.net/compatibility?g=" + serial;
 		QDesktopServices::openUrl(QUrl(link));
-	});
-	connect(download_compat, &QAction::triggered, m_game_list_frame, [this]
-	{
-		m_game_list_frame->GetGameCompatibility()->RequestCompatibility(true);
-	});
-	connect(download_config_db, &QAction::triggered, m_game_list_frame, [this]
-	{
-		m_game_list_frame->GetConfigDatabase()->request_config_database(true);
 	});
 	connect(rename_title, &QAction::triggered, m_game_list_frame, [this, name, serial = QString::fromStdString(serial), global_pos]
 	{
@@ -998,20 +980,6 @@ void game_list_context_menu::show_multi_selection_context_menu(const std::vector
 	connect(remove_game, &QAction::triggered, this, [this, games]()
 	{
 		m_game_list_actions->ShowRemoveGameDialog(games);
-	});
-
-	addSeparator();
-
-	QAction* download_compat = addAction(tr("&Download Compatibility Database"));
-	connect(download_compat, &QAction::triggered, m_game_list_frame, [this]
-	{
-		m_game_list_frame->GetGameCompatibility()->RequestCompatibility(true);
-	});
-
-	QAction* download_config_db = addAction(tr("&Download Config Database"));
-	connect(download_config_db, &QAction::triggered, m_game_list_frame, [this]
-	{
-		m_game_list_frame->GetConfigDatabase()->request_config_database(true);
 	});
 
 	addSeparator();

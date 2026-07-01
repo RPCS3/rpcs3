@@ -19,22 +19,28 @@ namespace
 		return dir;
 	}
 
-	// FNV-64 hash of the ISO path used as the cache filename stem.
-	std::string get_cache_stem(const std::string& iso_path)
+	// FNV-64 hash of the given key used as the cache filename stem.
+	std::string get_cache_stem(std::string_view key)
 	{
 		usz hash = rpcs3::fnv_seed;
-		for (const char c : iso_path)
+		for (const char c : key)
 		{
 			hash ^= static_cast<u8>(c);
 			hash *= rpcs3::fnv_prime;
 		}
 		return fmt::format("%016llx", hash);
 	}
+
+	// Separate stem for the per-ISO subdir index entry.
+	std::string get_index_stem(const std::string& iso_path)
+	{
+		return get_cache_stem(iso_path + "//index");
+	}
 }
 
 namespace iso_cache
 {
-	bool load(const std::string& iso_path, iso_metadata_cache_entry& out_entry)
+	bool load(const std::string& iso_path, std::string_view cache_key, iso_metadata_cache_entry& out_entry)
 	{
 		fs::stat_t iso_stat{};
 		if (!fs::get_stat(iso_path, iso_stat) || iso_stat.is_directory)
@@ -42,7 +48,7 @@ namespace iso_cache
 			return false;
 		}
 
-		const std::string stem     = get_cache_stem(iso_path);
+		const std::string stem     = get_cache_stem(cache_key);
 		const std::string dir      = get_cache_dir();
 		const std::string yml_path = dir + stem + ".yml";
 		const std::string sfo_path = dir + stem + ".sfo";
@@ -89,11 +95,9 @@ namespace iso_cache
 		return true;
 	}
 
-	void save(const std::string& iso_path, const iso_metadata_cache_entry& entry)
+	void save(std::string_view iso_path, std::string_view cache_key, const iso_metadata_cache_entry& entry)
 	{
-		iso_cache_log.notice("Saving cache for '%s'", iso_path);
-
-		const std::string stem     = get_cache_stem(iso_path);
+		const std::string stem     = get_cache_stem(cache_key);
 		const std::string dir      = get_cache_dir();
 		const std::string yml_path = dir + stem + ".yml";
 		const std::string sfo_path = dir + stem + ".sfo";
@@ -136,15 +140,96 @@ namespace iso_cache
 		}
 	}
 
+	bool load_index(const std::string& iso_path, std::vector<std::string>& out_subdirs)
+	{
+		fs::stat_t iso_stat{};
+		if (!fs::get_stat(iso_path, iso_stat) || iso_stat.is_directory)
+		{
+			return false;
+		}
+
+		const std::string dir      = get_cache_dir();
+		const std::string yml_path = dir + get_index_stem(iso_path) + ".yml";
+
+		const fs::file yml_file(yml_path);
+		if (!yml_file)
+		{
+			return false;
+		}
+
+		const auto [node, error] = yaml_load(yml_file.to_string());
+		if (!error.empty())
+		{
+			iso_cache_log.warning("Failed to parse index YAML for '%s': %s", iso_path, error);
+			return false;
+		}
+
+		const s64 cached_mtime = node["mtime"].as<s64>(0);
+		if (cached_mtime != iso_stat.mtime)
+		{
+			return false;
+		}
+
+		const YAML::Node subdirs_node = node["subdirs"];
+		if (!subdirs_node || !subdirs_node.IsSequence())
+		{
+			return false;
+		}
+
+		for (const auto& entry : subdirs_node)
+		{
+			std::string name = entry.as<std::string>("");
+			if (!name.empty())
+			{
+				out_subdirs.push_back(std::move(name));
+			}
+		}
+
+		return !out_subdirs.empty();
+	}
+
+	void save_index(const std::string& iso_path, const std::vector<std::string>& subdirs)
+	{
+		fs::stat_t iso_stat{};
+		if (!fs::get_stat(iso_path, iso_stat))
+		{
+			return;
+		}
+		const std::string dir      = get_cache_dir();
+		const std::string yml_path = dir + get_index_stem(iso_path) + ".yml";
+
+		YAML::Emitter out;
+		out << YAML::BeginMap;
+		out << YAML::Key << "mtime"   << YAML::Value << static_cast<long long>(iso_stat.mtime);
+		out << YAML::Key << "subdirs" << YAML::Value << YAML::BeginSeq;
+		for (const std::string& s : subdirs)
+		{
+			out << s;
+		}
+		out << YAML::EndSeq;
+		out << YAML::EndMap;
+
+		if (fs::pending_file yml_file(yml_path); yml_file.file)
+		{
+			yml_file.file.write(out.c_str(), out.size());
+			yml_file.commit();
+		}
+		else
+		{
+			iso_cache_log.warning("Failed to write index YAML for '%s'", iso_path);
+		}
+	}
+
 	void cleanup(const std::unordered_set<std::string>& valid_iso_paths)
 	{
 		const std::string dir = get_cache_dir();
 
-		// Build a set of stems that should exist.
+		// Build a set of stems that should exist, including index entries.
 		std::unordered_set<std::string> valid_stems;
 		for (const std::string& path : valid_iso_paths)
 		{
 			valid_stems.insert(get_cache_stem(path));
+			valid_stems.insert(get_index_stem(path));
 		}
 
 		// Delete any cache files whose stem is not in the valid set.

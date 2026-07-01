@@ -77,6 +77,7 @@ target_sources(rpcs3_emu PRIVATE
     ../../Utilities/sema.cpp
     ../../Utilities/simple_ringbuf.cpp
     ../../Utilities/stack_trace.cpp
+    ../../Utilities/stereo_config.cpp
     ../../Utilities/StrFmt.cpp
     ../../Utilities/Thread.cpp
     ../../Utilities/version.cpp
@@ -127,7 +128,7 @@ target_sources(rpcs3_emu PRIVATE
     ../Loader/TAR.cpp
     ../Loader/ISO.cpp
     ../Loader/iso_cache.cpp
-    ../Loader/iso_validation.cpp
+    ../Loader/content_validation.cpp
     ../Loader/TROPUSR.cpp
     ../Loader/TRP.cpp
 )
@@ -409,6 +410,7 @@ target_sources(rpcs3_emu PRIVATE
     Io/Dimensions.cpp
     Io/evdev_gun_handler.cpp
     Io/GameTablet.cpp
+    Io/gem_config.cpp
     Io/GHLtar.cpp
     Io/GunCon3.cpp
     Io/Infinity.cpp
@@ -550,6 +552,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Program/GLSLCommon.cpp
     RSX/Program/ProgramStateCache.cpp
     RSX/Program/program_util.cpp
+    RSX/Program/ShaderInterpreter.cpp
     RSX/Program/SPIRVCommon.cpp
     RSX/Program/VertexProgramDecompiler.cpp
     RSX/GSFrameBase.cpp
@@ -585,6 +588,7 @@ if(NOT ANDROID AND NOT APPLE)
         RSX/GL/glutils/buffer_object.cpp
         RSX/GL/glutils/capabilities.cpp
         RSX/GL/glutils/common.cpp
+        RSX/GL/glutils/ex.cpp
         RSX/GL/glutils/fbo.cpp
         RSX/GL/glutils/image.cpp
         RSX/GL/glutils/program.cpp

@@ -703,26 +703,15 @@ namespace vk
 		device.ppEnabledExtensionNames = requested_extensions.data();
 		device.pEnabledFeatures = &enabled_features;
 
-		VkPhysicalDeviceFloat16Int8FeaturesKHR shader_support_info{};
-		if (pgpu->shader_types_support.allow_float16)
-		{
-			// Allow use of f16 type in shaders if possible
-			shader_support_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FLOAT16_INT8_FEATURES_KHR;
-			shader_support_info.shaderFloat16 = VK_TRUE;
-			shader_support_info.pNext = const_cast<void*>(device.pNext);
-			device.pNext = &shader_support_info;
+		VkPhysicalDeviceVulkan12Features vulkan12_features{ .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
+		vulkan12_features.runtimeDescriptorArray = VK_TRUE;
+		vulkan12_features.uniformBufferStandardLayout = VK_TRUE;
+		vulkan12_features.pNext = const_cast<void*>(device.pNext);
+		device.pNext = &vulkan12_features;
 
-			rsx_log.notice("GPU/driver supports float16 data types natively. Using native float16_t variables if possible.");
-		}
-		else
-		{
-			rsx_log.notice("GPU/driver lacks support for float16 data types. All float16_t arithmetic will be emulated with float32_t.");
-		}
-
-		VkPhysicalDeviceDescriptorIndexingFeatures indexing_features{};
 		if (pgpu->descriptor_indexing_support)
 		{
-#define SET_DESCRIPTOR_BITFLAG(field, bit) if (pgpu->descriptor_indexing_support.update_after_bind_mask & (1ull << bit)) indexing_features.field = VK_TRUE
+#define SET_DESCRIPTOR_BITFLAG(field, bit) if (pgpu->descriptor_indexing_support.update_after_bind_mask & (1ull << bit)) vulkan12_features.field = VK_TRUE
 			SET_DESCRIPTOR_BITFLAG(descriptorBindingUniformBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
 			SET_DESCRIPTOR_BITFLAG(descriptorBindingSampledImageUpdateAfterBind, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
 			SET_DESCRIPTOR_BITFLAG(descriptorBindingSampledImageUpdateAfterBind, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE);
@@ -731,11 +720,25 @@ namespace vk
 			SET_DESCRIPTOR_BITFLAG(descriptorBindingUniformTexelBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER);
 			SET_DESCRIPTOR_BITFLAG(descriptorBindingStorageTexelBufferUpdateAfterBind, VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER);
 #undef SET_DESCRIPTOR_BITFLAG
-
-			indexing_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
-			indexing_features.pNext = const_cast<void*>(device.pNext);
-			device.pNext = &indexing_features;
 		}
+
+		if (pgpu->shader_types_support.allow_float16)
+		{
+			// Allow use of f16 type in shaders if possible
+			vulkan12_features.shaderFloat16 = VK_TRUE;
+			rsx_log.notice("GPU/driver supports float16 data types natively. Using native float16_t variables if possible.");
+		}
+		else
+		{
+			rsx_log.notice("GPU/driver lacks support for float16 data types. All float16_t arithmetic will be emulated with float32_t.");
+		}
+
+		// FIXME: Fall back to something. Idk how that would even work though, this really is a hard requirement
+		VkPhysicalDeviceShaderUniformBufferUnsizedArrayFeaturesEXT ubo_unsized_array_feature{};
+		ubo_unsized_array_feature.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_UNIFORM_BUFFER_UNSIZED_ARRAY_FEATURES_EXT;
+		ubo_unsized_array_feature.shaderUniformBufferUnsizedArray = VK_TRUE;
+		ubo_unsized_array_feature.pNext = const_cast<void*>(device.pNext);
+		device.pNext = &ubo_unsized_array_feature;
 
 		VkPhysicalDeviceCustomBorderColorFeaturesEXT custom_border_color_features{};
 		if (pgpu->custom_border_color_support)
@@ -1029,7 +1032,7 @@ namespace vk
 
 		for (u32 i = 0; i < memory_properties.memoryTypeCount; i++)
 		{
-			auto& type_info = memory_properties.memoryTypes[i];
+			const auto& type_info = memory_properties.memoryTypes[i];
 			memory_heap_map[type_info.heapIndex].types.push_back({ i, type_info.propertyFlags, 0 });
 		}
 
@@ -1037,9 +1040,9 @@ namespace vk
 		{
 			std::vector<memory_type> results;
 
-			for (auto& heap : memory_heap_map)
+			for (const auto& heap : memory_heap_map)
 			{
-				for (auto &type : heap.types)
+				for (const auto& type : heap.types)
 				{
 					if (((type.flags & desired_flags) == desired_flags) && !(type.flags & excluded_flags))
 					{

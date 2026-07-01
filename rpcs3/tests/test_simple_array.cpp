@@ -181,10 +181,30 @@ namespace rsx
 		EXPECT_FALSE(arr.any([](const int& val) { return val > 5; }));
 	}
 
+	TEST(SimpleArray, Filter)
+	{
+		const rsx::simple_array<int> arr{ 1, 2, 3, 4, 5, 6, 7, 8, 9, -1, -2 };
+		const auto result = arr.filter(FN(x > 5));
+		const auto result2 = arr.filter(FN(x < 0));
+		const auto result3 = arr.filter(FN(x == 10));
+
+		EXPECT_EQ(result.size(), 4);
+		EXPECT_EQ(result[0], 6);
+		EXPECT_EQ(result[1], 7);
+		EXPECT_EQ(result[2], 8);
+		EXPECT_EQ(result[3], 9);
+
+		EXPECT_EQ(result2.size(), 2);
+		EXPECT_EQ(result2[0], -1);
+		EXPECT_EQ(result2[1], -2);
+
+		EXPECT_EQ(result3.size(), 0);
+	}
+
 	TEST(SimpleArray, Sort)
 	{
 		rsx::simple_array<int> arr{ 5, 3, 1, 4, 2 };
-		arr.sort([](const int& a, const int& b) { return a < b; });
+		arr.sort(FN(x < y));
 
 		for (u32 i = 0; i < arr.size(); ++i)
 		{
@@ -358,6 +378,21 @@ namespace rsx
 		}
 	}
 
+	TEST(SimpleArray, ForEach)
+	{
+		rsx::simple_array<int> arr{
+			0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+		};
+		arr.for_each(FN(x += 10));
+
+		EXPECT_EQ(arr.size(), 10);
+
+		for (int i = 0; i < 10; ++i)
+		{
+			EXPECT_EQ(arr[i], i + 10);
+		}
+	}
+
 	TEST(AlignedAllocator, Alloc)
 	{
 		auto ptr = rsx::aligned_allocator::malloc<256>(16);
@@ -383,8 +418,12 @@ namespace rsx
 	{
 		auto ptr = rsx::aligned_allocator::malloc<256>(16);
 		auto ptr2 = rsx::aligned_allocator::realloc<256>(ptr, 16, 8);
+
+		const auto ptr_value = reinterpret_cast<uintptr_t>(ptr);
+		const auto ptr2_value = reinterpret_cast<uintptr_t>(ptr2);
+
 		rsx::aligned_allocator::free(ptr2);
 
-		EXPECT_EQ(ptr, ptr2);
+		EXPECT_EQ(ptr_value, ptr2_value);
 	}
 }

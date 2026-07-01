@@ -495,7 +495,7 @@ void pad_settings_dialog::InitButtons()
 			return;
 		}
 
-		const auto update_preview = [this](const std::string& pad_name, bool is_connected, int battery_level, int trigger_left, int trigger_right, int lx, int ly, int rx, int ry, const pad_capabilities& capabilities)
+		const auto update_preview = [this](std::string_view pad_name, bool is_connected, int battery_level, int trigger_left, int trigger_right, int lx, int ly, int rx, int ry, const pad_capabilities& capabilities)
 		{
 			SwitchPadInfo(pad_name, is_connected);
 
@@ -801,7 +801,7 @@ void pad_settings_dialog::switch_pad_info(int index, pad_device_info info, bool 
 	}
 }
 
-void pad_settings_dialog::SwitchPadInfo(const std::string& pad_name, bool is_connected)
+void pad_settings_dialog::SwitchPadInfo(std::string_view pad_name, bool is_connected)
 {
 	for (int i = 0; i < ui->chooseDevice->count(); i++)
 	{

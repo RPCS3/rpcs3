@@ -58,6 +58,7 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::SPUProfiler,                get_cfg_location(local_cfg.core.spu_prof) },
 	{ emu_settings_type::DisableSpinOptimization,    get_cfg_location(local_cfg.core.spu_getllar_spin_optimization_disabled) },
 	{ emu_settings_type::EnabledSPUEventsBusyLoop,   get_cfg_location(local_cfg.core.spu_reservation_busy_waiting_enabled) },
+	{ emu_settings_type::PPUReservationPriorityOverSPUs, get_cfg_location(local_cfg.core.ppu_reservation_priority_over_spu) },
 
 	// Graphics Tab
 	{ emu_settings_type::Renderer,                   get_cfg_location(local_cfg.video.renderer) },
@@ -84,6 +85,7 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::DisableOcclusionQueries,    get_cfg_location(local_cfg.video.disable_zcull_queries) },
 	{ emu_settings_type::DisableVideoOutput,         get_cfg_location(local_cfg.video.disable_video_output) },
 	{ emu_settings_type::DisableFIFOReordering,      get_cfg_location(local_cfg.video.disable_FIFO_reordering) },
+	{ emu_settings_type::EmulateDepthCompare,        get_cfg_location(local_cfg.video.emulate_depth_compare) },
 	{ emu_settings_type::StereoRenderEnabled,        get_cfg_location(local_cfg.video.stereo_enabled) },
 	{ emu_settings_type::StereoRenderMode,           get_cfg_location(local_cfg.video.stereo_render_mode) },
 	{ emu_settings_type::ScreenSize,                 get_cfg_location(local_cfg.video.screen_size) },
@@ -144,6 +146,10 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::ShaderLoadBgDarkening,   get_cfg_location(local_cfg.video.shader_preloading_dialog.darkening_strength) },
 	{ emu_settings_type::ShaderLoadBgBlur,        get_cfg_location(local_cfg.video.shader_preloading_dialog.blur_strength) },
 
+	// Anaglyph matrix
+	{ emu_settings_type::CustomAnaglyphMatrixLeft,   get_cfg_location(local_cfg.video.custom_anaglyph_matrices.left) },
+	{ emu_settings_type::CustomAnaglyphMatrixRight,  get_cfg_location(local_cfg.video.custom_anaglyph_matrices.right) },
+
 	// Audio
 	{ emu_settings_type::AudioRenderer,           get_cfg_location(local_cfg.audio.renderer) },
 	{ emu_settings_type::DumpToFile,              get_cfg_location(local_cfg.audio.dump_to_file) },
@@ -181,6 +187,7 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::GHLtar,                  get_cfg_location(local_cfg.io.ghltar) },
 	{ emu_settings_type::MidiDevices,             get_cfg_location(local_cfg.io.midi_devices) },
 	{ emu_settings_type::SDLMappings,             get_cfg_location(local_cfg.io.load_sdl_mappings) },
+	{ emu_settings_type::MouseBasedGyro,          get_cfg_location(local_cfg.io.mouse_based_gyro_enabled) },
 	{ emu_settings_type::IoDebugOverlay,          get_cfg_location(local_cfg.io.pad_debug_overlay) },
 	{ emu_settings_type::MouseDebugOverlay,       get_cfg_location(local_cfg.io.mouse_debug_overlay) },
 
@@ -215,6 +222,7 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::PSNStatus,      get_cfg_location(local_cfg.net.psn_status) },
 	{ emu_settings_type::BindAddress,    get_cfg_location(local_cfg.net.bind_address) },
 	{ emu_settings_type::EnableUpnp,     get_cfg_location(local_cfg.net.upnp_enabled) },
+	{ emu_settings_type::DeriveMacFromPsid, get_cfg_location(local_cfg.net.derive_mac_from_psid) },
 	{ emu_settings_type::PSNCountry,     get_cfg_location(local_cfg.net.country) },
 	{ emu_settings_type::EnableClans,    get_cfg_location(local_cfg.net.clans_enabled) },
 

@@ -1,6 +1,7 @@
 #include "GLOverlays.h"
 
 #include "Utilities/StrUtil.h"
+#include "Utilities/stereo_config.h"
 #include "../Program/RSXOverlay.h"
 #include "Emu/Cell/timers.hpp"
 
@@ -510,7 +511,7 @@ namespace gl
 	}
 
 	void video_out_calibration_pass::run(gl::command_context& cmd, const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb,
-		bool stereo_enabled, stereo_render_mode_options stereo_mode, gl::filter input_filter)
+		bool stereo_enabled, gl::filter input_filter)
 	{
 		if (m_input_filter != input_filter)
 		{
@@ -519,10 +520,16 @@ namespace gl
 			m_sampler.set_parameteri(GL_TEXTURE_MAG_FILTER, static_cast<GLenum>(m_input_filter));
 		}
 
+		static stereo_config stereo_cfg = stereo_config(true);
+		stereo_cfg.update_from_config(stereo_enabled);
+		const auto& matrices = stereo_cfg.matrices();
+
 		program_handle.uniforms["gamma"] = gamma;
 		program_handle.uniforms["limit_range"] = limited_rgb + 0;
-		program_handle.uniforms["stereo_display_mode"] = stereo_enabled ? static_cast<u8>(stereo_mode) : 0;
-		program_handle.uniforms["stereo_image_count"] = (source[1] == GL_NONE? 1 : 2);
+		program_handle.uniforms["stereo_display_mode"] = static_cast<u8>(stereo_cfg.stereo_mode());
+		program_handle.uniforms["stereo_image_count"] = (source[1] == GL_NONE ? 1 : 2);
+		program_handle.uniforms["left_anaglyph_matrix"] = matrices.left;
+		program_handle.uniforms["right_anaglyph_matrix"] = matrices.right;
 
 		saved_sampler_state saved(GL_TEMP_IMAGE_SLOT(0), m_sampler);
 		cmd->bind_texture(GL_TEMP_IMAGE_SLOT(0), GL_TEXTURE_2D, source[0]);

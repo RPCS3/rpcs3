@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "vm_locking.h"
 #include "vm_ptr.h"
-#include "vm_ref.h"
 #include "vm_reservation.h"
 
 #include "Utilities/Thread.h"
@@ -483,6 +482,14 @@ namespace vm
 		for (u64 i = 0;; i++)
 		{
 			auto& bits = get_range_lock_bits(true);
+
+			if (!!bits)
+			{
+				if (i == 0 && g_cfg.core.ppu_reservation_priority_over_spu)
+				{
+					busy_wait(5000);
+				}
+			}
 
 			if (!range_lock)
 			{
@@ -1063,15 +1070,15 @@ namespace vm
 		return size;
 	}
 
-	bool check_addr(u32 addr, u8 flags, u32 size)
+	bool check_addr(u64 addr, u8 flags, u32 size)
 	{
 		if (size == 0)
 		{
 			return true;
 		}
 
-		// Overflow checking
-		if (0x10000'0000ull - addr < size)
+		// u64 addressing is not supported at the moment
+		if (addr > u32{umax} || 0x10000'0000ull - addr < size)
 		{
 			return false;
 		}
@@ -1079,7 +1086,7 @@ namespace vm
 		// Always check this flag
 		flags |= page_allocated;
 
-		for (u32 i = addr / 4096, max = (addr + size - 1) / 4096; i <= max;)
+		for (u64 i = addr / 4096, max = (addr + size - 1) / 4096; i <= max;)
 		{
 			auto state = +g_pages[i];
 
@@ -1812,7 +1819,7 @@ namespace vm
 
 		while (true)
 		{
-			const u8 flags0 = ar;
+			const u8 flags0{ar};
 
 			if (!(flags0 & page_allocated))
 			{
@@ -1820,8 +1827,8 @@ namespace vm
 				break;
 			}
 
-			const u32 addr0 = ar;
-			const u32 size0 = ar;
+			const u32 addr0{ar};
+			const u32 size0{ar};
 
 			u64 pflags = 0;
 

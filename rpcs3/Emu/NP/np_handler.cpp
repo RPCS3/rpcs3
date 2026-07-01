@@ -359,7 +359,7 @@ namespace np
 			return;
 		}
 
-		u32 given_size = read_from_ptr<be_t<u32>>(data() + 4);
+		u32 given_size = read_from_ptr<be_t<u32>>(data(), 4);
 		if ((given_size + 8) != size())
 		{
 			ticket_log.error("Size mismatch (gs: %d vs s: %d)", given_size, size());
@@ -612,6 +612,15 @@ namespace np
 
 	bool np_handler::discover_ether_address()
 	{
+		if (g_cfg.net.derive_mac_from_psid)
+		{
+			const u128 psid = g_cfg.sys.console_psid;
+			memcpy(ether_address.data(), &psid, 6);
+			ether_address[0] &= 0xFE;
+			ether_address[0] |= 0x02;
+			return true;
+		}
+
 #if defined(__FreeBSD__) || defined(__APPLE__)
 		ifaddrs* ifap;
 
@@ -1294,7 +1303,7 @@ namespace np
 		}
 	}
 
-	bool np_handler::error_and_disconnect(const std::string& error_msg)
+	bool np_handler::error_and_disconnect(std::string_view error_msg)
 	{
 		rpcn_log.error("%s", error_msg);
 		rpcn.reset();

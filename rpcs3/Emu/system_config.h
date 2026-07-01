@@ -41,6 +41,7 @@ struct cfg_root : cfg::node
 		cfg::_bool spu_accurate_reservations{ this, "Accurate SPU Reservations", true };
 		cfg::_bool accurate_cache_line_stores{ this, "Accurate Cache Line Stores", false };
 		cfg::_bool rsx_accurate_res_access{this, "Accurate RSX reservation access", false, true};
+		cfg::_bool ppu_reservation_priority_over_spu{this, "PPU Reservation Priority Over SPUs", false, true};
 
 		struct fifo_setting : public cfg::_enum<rsx_fifo_mode>
 		{
@@ -125,7 +126,7 @@ struct cfg_root : cfg::node
 		cfg::_enum<frame_limit_type> frame_limit{ this, "Frame limit", frame_limit_type::_auto, true };
 		cfg::_float<0, 1000> second_frame_limit{ this, "Second Frame Limit", 0, true }; // 0 disables its effect
 		cfg::_enum<msaa_level> antialiasing_level{ this, "MSAA", msaa_level::_auto };
-		cfg::_enum<shader_mode> shadermode{ this, "Shader Mode", shader_mode::async_recompiler };
+		cfg::_enum<shader_mode> shadermode{ this, "Shader Mode", shader_mode::async_with_interpreter };
 		cfg::_enum<gpu_preset_level> shader_precision{ this, "Shader Precision", gpu_preset_level::high };
 		cfg::_enum<vsync_mode> vsync{ this, "VSync Mode", vsync_mode::off, true };
 
@@ -147,6 +148,7 @@ struct cfg_root : cfg::node
 		cfg::_bool disable_video_output{ this, "Disable Video Output", false, true };
 		cfg::_bool disable_vertex_cache{ this, "Disable Vertex Cache", false };
 		cfg::_bool disable_FIFO_reordering{ this, "Disable FIFO Reordering", false };
+		cfg::_bool emulate_depth_compare{ this, "Emulate Special Depth Comparison", false };
 		cfg::_bool frame_skip_enabled{ this, "Enable Frame Skip", false, true };
 		cfg::_bool force_cpu_blit_processing{ this, "Force CPU Blit", false, true }; // Debugging option
 		cfg::_bool disable_on_disk_shader_cache{ this, "Disable On-Disk Shader Cache", false };
@@ -234,6 +236,15 @@ struct cfg_root : cfg::node
 
 		} shader_preloading_dialog{ this };
 
+		struct anaglyph_matrices : cfg::node
+		{
+			anaglyph_matrices(cfg::node* _this) : cfg::node(_this, "Custom Anaglyph Matrices") {}
+
+			cfg::node_map_entry left{ this, "Matrix Left" };
+			cfg::node_map_entry right{ this, "Matrix Right" };
+
+		} custom_anaglyph_matrices{ this };
+
 	} video{ this };
 
 	struct node_audio : cfg::node
@@ -285,6 +296,7 @@ struct cfg_root : cfg::node
 		cfg::_bool lock_overlay_input_to_player_one{this, "Lock overlay input to player one", false, true};
 		cfg::string midi_devices{this, "Emulated Midi devices", "Keyboardßßß@@@Keyboardßßß@@@Keyboardßßß@@@"};
 		cfg::_bool load_sdl_mappings{ this, "Load SDL GameController Mappings", true };
+		cfg::_bool mouse_based_gyro_enabled{ this, "Mouse-based gyro enabled", false, true };
 		cfg::_bool pad_debug_overlay{ this, "IO Debug overlay", false, true };
 		cfg::_bool mouse_debug_overlay{ this, "Mouse Debug overlay", false, true };
 		cfg::uint<1, 180> fake_move_rotation_cone_h{ this, "Fake Move Rotation Cone", 10, true };
@@ -323,6 +335,7 @@ struct cfg_root : cfg::node
 		cfg::string dns{this, "DNS address", "8.8.8.8"};
 		cfg::string swap_list{this, "IP swap list", ""};
 		cfg::_bool upnp_enabled{this, "UPNP Enabled", false};
+		cfg::_bool derive_mac_from_psid{this, "Derive MAC from PSID", false};
 
 		cfg::_enum<np_psn_status> psn_status{this, "PSN status", np_psn_status::disabled};
 		cfg::string country{this, "PSN Country", "us"};
@@ -353,7 +366,7 @@ struct cfg_root : cfg::node
 		cfg::_bool prevent_display_sleep{ this, "Prevent display sleep while running games", true, true };
 		cfg::_bool show_trophy_popups{ this, "Show trophy popups", true, true };
 		cfg::_bool show_rpcn_popups{ this, "Show RPCN popups", true, true };
-		cfg::_bool show_shader_compilation_hint{ this, "Show shader compilation hint", true, true };
+		cfg::_bool show_shader_compilation_hint{ this, "Show shader compilation hint", false, true };
 		cfg::_bool show_ppu_compilation_hint{ this, "Show PPU compilation hint", true, true };
 		cfg::_bool show_autosave_autoload_hint{ this, "Show autosave/autoload hint", false, true };
 		cfg::_bool show_pressure_intensity_toggle_hint{ this, "Show pressure intensity toggle hint", true, true };

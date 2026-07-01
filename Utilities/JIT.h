@@ -525,7 +525,7 @@ class jit_compiler final
 	atomic_t<usz> m_disk_space = umax;
 
 public:
-	jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu, u32 flags = 0, std::function<u64(const std::string&)> symbols_cement = {}) noexcept;
+	jit_compiler(const std::unordered_map<std::string, u64>& _link, std::string_view _cpu, u32 flags = 0, std::function<u64(const std::string&)> symbols_cement = {}) noexcept;
 	jit_compiler& operator=(thread_state) noexcept;
 	~jit_compiler() noexcept;
 
@@ -543,8 +543,14 @@ public:
 	// Add module (path to obj cache dir)
 	void add(std::unique_ptr<llvm::Module> _module, const std::string& path);
 
+	// Returns false after LLVM fatal recovery. The compiler must be discarded.
+	bool try_add(std::unique_ptr<llvm::Module> _module, const std::string& path, std::string& error);
+
 	// Add module (not cached)
 	void add(std::unique_ptr<llvm::Module> _module);
+
+	// Returns false after LLVM fatal recovery. The compiler must be discarded.
+	bool try_add(std::unique_ptr<llvm::Module> _module, std::string& error);
 
 	// Add object (path to obj file)
 	bool add(const std::string& path);
@@ -558,11 +564,14 @@ public:
 	// Finalize
 	void fin();
 
+	// Returns false after LLVM fatal recovery. The compiler must be discarded.
+	bool try_fin(std::string& error);
+
 	// Get compiled function address
 	u64 get(const std::string& name);
 
 	// Get CPU info
-	static std::string cpu(const std::string& _cpu);
+	static std::string cpu(std::string_view _cpu);
 
 	// Get system triple (PPU)
 	static std::string triple1();

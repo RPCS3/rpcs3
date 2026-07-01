@@ -45,6 +45,7 @@
 #include <thread>
 
 LOG_CHANNEL(sys_log, "SYS");
+LOG_CHANNEL(cfg_log, "CFG");
 
 namespace audio
 {
@@ -60,10 +61,41 @@ namespace rsx::overlays
 
 extern void qt_events_aware_op(int repeat_duration_ms, std::function<bool()> wrapped_op);
 
+main_application::main_application()
+	: m_render_creator(std::make_shared<render_creator>())
+{
+	std::set<video_renderer> supported_renderers;
+	supported_renderers.insert(video_renderer::null);
+
+	if (m_render_creator->OpenGL.supported)
+	{
+		supported_renderers.insert(video_renderer::opengl);
+	}
+
+	// Make Vulkan default setting if it is supported
+	if (m_render_creator->Vulkan.supported && !m_render_creator->Vulkan.adapters.empty())
+	{
+		const std::string adapter = ::at32(m_render_creator->Vulkan.adapters, 0).toStdString();
+		cfg_log.notice("Setting the default renderer to Vulkan. Default GPU: '%s'", adapter);
+		Emu.SetDefaultRenderer(video_renderer::vulkan);
+		Emu.SetDefaultGraphicsAdapter(adapter);
+
+		supported_renderers.insert(video_renderer::vulkan);
+	}
+	else if (m_render_creator->OpenGL.supported)
+	{
+		cfg_log.notice("Setting the default renderer to OpenGl");
+		Emu.SetDefaultRenderer(video_renderer::opengl);
+	}
+
+	Emu.SetSupportedRenderers(supported_renderers);
+}
+
 /** Emu.Init() wrapper for user management */
-void main_application::InitializeEmulator(const std::string& user, bool show_gui)
+void main_application::InitializeEmulator(const std::string& user, bool show_gui, bool headless)
 {
 	Emu.SetHasGui(show_gui);
+	Emu.SetHeadless(headless);
 	Emu.SetUsr(user);
 	Emu.Init();
 
@@ -362,7 +394,7 @@ EmuCallbacks main_application::CreateCallbacks()
 			{
 				font_dir += '/';
 			}
-			font_dirs.push_back(font_dir);
+			font_dirs.push_back(std::move(font_dir));
 		}
 		return font_dirs;
 	};
@@ -412,16 +444,22 @@ EmuCallbacks main_application::CreateCallbacks()
 
 	callbacks.get_database_config = [](const std::string& title_id)
 	{
-		if (title_id.empty())
-			return std::string();
-
 		sys_log.notice("Trying to retrieve database config for: '%s'", title_id);
+
+		if (title_id.empty())
+		{
+			sys_log.warning("Cannot retrieve database config for empty title_id");
+			return std::string();
+		}
 
 		config_database config_db(nullptr);
 		config_db.request_config_database(false);
 
 		if (!config_db.has_config(title_id))
+		{
+			sys_log.notice("Cannot find database config for: '%s'", title_id);
 			return std::string();
+		}
 
 		if (const auto config = config_db.get_config(title_id))
 		{
@@ -429,6 +467,7 @@ EmuCallbacks main_application::CreateCallbacks()
 			return config.value();
 		}
 
+		sys_log.error("Failed to retrieve database config for: '%s'", title_id);
 		return std::string();
 	};
 

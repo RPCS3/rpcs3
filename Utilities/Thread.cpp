@@ -1384,11 +1384,7 @@ bool handle_access_violation(u32 addr, bool is_writing, bool is_exec, ucontext_t
 			return false;
 		}
 
-		if (a_size != 4)
-		{
-			// Might be unimplemented, such as writing MFC proxy EAL+EAH using 64-bit store
-			break;
-		}
+		bool handled = true;
 
 		switch (op)
 		{
@@ -1398,14 +1394,37 @@ bool handle_access_violation(u32 addr, bool is_writing, bool is_exec, ucontext_t
 		case X64OP_LOAD_TEST:
 		{
 			u32 value;
-			if (is_writing || !thread->read_reg(addr, value))
+			const u32 addr_aligned = addr & -4;
+
+			if (addr % 4 + a_size > 4)
+			{
+				handled = false;
+				break;
+			}
+
+			if (is_writing || !thread->read_reg(addr_aligned, value))
 			{
 				return false;
 			}
 
+			// Adjust value for 8-bit and 16-bit reads
+			value >>= ((4 - a_size) * 8) - ((addr % 4) * 8);
+			value &= a_size == 4 ? u32{umax} : ((1u << (a_size * 8)) - 1);
+
 			if (op != X64OP_LOAD_BE)
 			{
-				value = stx::se_storage<u32>::swap(value);
+				if (a_size == 4)
+				{
+					value = stx::se_storage<u32>::swap(value);
+				}
+				else if (a_size == 2)
+				{
+					value = stx::se_storage<u16>::swap(value);
+				}
+				else
+				{
+					ensure(a_size == 1);
+				}
 			}
 
 			if (op == X64OP_LOAD_CMP)
@@ -1440,12 +1459,35 @@ bool handle_access_violation(u32 addr, bool is_writing, bool is_exec, ucontext_t
 		case X64OP_BEXTR:
 		{
 			u32 value;
-			if (is_writing || !thread->read_reg(addr, value))
+			const u32 addr_aligned = addr & -4;
+
+			if (addr % 4 + a_size > 4)
+			{
+				handled = false;
+				break;
+			}
+
+			if (is_writing || !thread->read_reg(addr_aligned, value))
 			{
 				return false;
 			}
 
-			value = stx::se_storage<u32>::swap(value);
+			// Adjust value for 8-bit and 16-bit reads
+			value >>= ((4 - a_size) * 8) - ((addr % 4) * 8);
+			value &= a_size == 4 ? u32{umax} : ((1u << (a_size * 8)) - 1);
+
+			if (a_size == 4)
+			{
+				value = stx::se_storage<u32>::swap(value);
+			}
+			else if (a_size == 2)
+			{
+				value = stx::se_storage<u16>::swap(value);
+			}
+			else
+			{
+				ensure(a_size == 1);
+			}
 
 			u64 ctrl;
 			if (!get_x64_reg_value(context, s_tls_reg3, d_size, i_size, ctrl))
@@ -1471,6 +1513,13 @@ bool handle_access_violation(u32 addr, bool is_writing, bool is_exec, ucontext_t
 		case X64OP_STORE:
 		case X64OP_STORE_BE:
 		{
+			if (a_size != 4)
+			{
+				// Might be unimplemented, such as writing MFC proxy EAL+EAH using 64-bit store
+				handled = false;
+				break;
+			}
+
 			u64 reg_value;
 			if (!is_writing || !get_x64_reg_value(context, reg, d_size, i_size, reg_value))
 			{
@@ -1489,10 +1538,17 @@ bool handle_access_violation(u32 addr, bool is_writing, bool is_exec, ucontext_t
 		case X64OP_STOS:
 		default:
 		{
-			sig_log.error("Invalid or unsupported operation (op=%d, reg=%d, d_size=%lld, i_size=%lld)", +op, +reg, d_size, i_size);
+			sig_log.error("Invalid or unsupported operation (op=%d, addr=0x%x, reg=%d, d_size=%lld, i_size=%lld, a_size=%d)", +op, addr, +reg, d_size, i_size, a_size);
 			report_opcode();
 			return false;
 		}
+		}
+
+		if (!handled)
+		{
+			sig_log.error("Invalid or unsupported operation (op=%d, addr=0x%x, reg=%d, d_size=%lld, i_size=%lld, a_size=%d)", +op, addr, +reg, d_size, i_size, a_size);
+			report_opcode();
+			break;
 		}
 
 		// skip processed instruction
@@ -2986,6 +3042,32 @@ void thread_ctrl::set_name(std::string name)
 	}
 
 	report_fatal_error(reason);
+}
+
+void thread_ctrl::silent_exit() noexcept
+{
+	if (const auto _this = g_tls_this_thread)
+	{
+		g_tls_error_callback();
+
+		u64 _self = _this->finalize(thread_state::errored);
+
+		if (_self == umax)
+		{
+			// Unused, detached thread support remnant
+			delete _this;
+		}
+
+		thread_base::finalize(umax);
+	}
+
+#ifdef _WIN32
+	_endthreadex(0);
+#else
+	pthread_exit(nullptr);
+#endif
+
+	std::abort();
 }
 
 void thread_ctrl::detect_cpu_layout()

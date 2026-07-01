@@ -26,7 +26,7 @@ namespace rsx
 {
 	namespace overlays
 	{
-		static std::vector<vertex> generate_unit_quadrant(int num_patch_points, const float offset[2], const float scale[2])
+		[[maybe_unused]] static std::vector<vertex> generate_unit_quadrant(int num_patch_points, const float offset[2], const float scale[2])
 		{
 			ensure(num_patch_points >= 3);
 			std::vector<vertex> result(num_patch_points + 1);

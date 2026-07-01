@@ -21,10 +21,12 @@ namespace rsx
 		// Auxilliary config
 		INT_FRAMEBUFFER_BIT          = 16,
 		MSAA_WRITE_ENABLE_BIT        = 17,
+		FRAG_DEPTH_24_BIT            = 18,
+		FRAG_DEPTH_FLOAT_BIT         = 19,
 
 		// Data
-		ALPHA_FUNC_OFFSET            = 18,
-		MSAA_SAMPLE_CTRL_OFFSET      = 21,
+		ALPHA_FUNC_OFFSET            = 20,
+		MSAA_SAMPLE_CTRL_OFFSET      = 23,
 
 		// Data lengths
 		ALPHA_FUNC_NUM_BITS          = 3,
@@ -69,7 +71,7 @@ namespace glsl
 
 	std::string getFloatTypeNameImpl(usz elementCount);
 	std::string getHalfTypeNameImpl(usz elementCount);
-	std::string compareFunctionImpl(COMPARE f, const std::string &Op0, const std::string &Op1, bool scalar = false);
+	std::string compareFunctionImpl(COMPARE f, std::string_view Op0, std::string_view Op1, bool scalar = false);
 	void insert_vertex_input_fetch(std::stringstream& OS, glsl_rules rules, bool glsl4_compliant=true);
 	void insert_rop_init(std::ostream& OS);
 	void insert_rop(std::ostream& OS, const shader_properties& props);

@@ -43,6 +43,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	, m_persistent_settings(std::move(persistent_settings))
 {
 	setObjectName("gamelist");
+	setFeatures(features() & ~QDockWidget::DockWidgetClosable);
 
 	m_game_list_actions = std::make_shared<game_list_actions>(this, m_gui_settings);
 
@@ -74,7 +75,10 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	m_game_list->installEventFilter(this);
 	m_game_list->verticalScrollBar()->installEventFilter(this);
 
-	m_iso_integrity = new iso_integrity(this);
+	m_iso_integrity = new content_integrity(this, content_file_type::ISO);
+	m_psn_content_integrity = new content_integrity(this, content_file_type::PSN_CONTENT);
+	m_psn_dlc_integrity = new content_integrity(this, content_file_type::PSN_DLC);
+	m_psn_update_integrity = new content_integrity(this, content_file_type::PSN_UPDATE);
 	m_game_compat = new game_compatibility(this);
 	m_config_db = new config_database(this);
 
@@ -547,20 +551,24 @@ void game_list_frame::OnParsingFinished()
 	const auto add_game = [this, localized_title, localized_icon, localized_movie, dev_flash, game_icon_path, _hdd,
 	                       cat_unknown_localized = localized.category.unknown.toStdString(), cat_unknown = cat::cat_unknown.toStdString(),
 	                       play_hover_movies = m_play_hover_movies, play_hover_music = m_play_hover_music, show_custom_icons = m_show_custom_icons]
-	                       (const std::string& dir_or_elf)
+	                       (const std::string& dir_or_elf, const std::string& game_dir = "PS3_GAME")
 	{
 		std::unique_ptr<iso_archive> archive;
 		iso_metadata_cache_entry cache_entry{};
-		const bool is_iso = is_file_iso(dir_or_elf);
+		bool is_raw_device = false;
+		const bool is_archive = is_iso_file(dir_or_elf, nullptr, &is_raw_device);
+		std::string iso_cache_key;
 		
-		if (is_iso)
+		if (is_archive)
 		{
-			// Only construct iso_archive (which walks the full directory tree)
-			// when no valid cache entry exists for this ISO path + mtime.
-			if (!iso_cache::load(dir_or_elf, cache_entry))
+			iso_cache_key = (game_dir == "PS3_GAME") ? dir_or_elf : dir_or_elf + "//" + game_dir;
+			// Only construct iso_archive (which walks the full directory tree) in case of raw device or
+			// when no valid cache entry exists for this ISO path + mtime
+			if (is_raw_device || !iso_cache::load(dir_or_elf, iso_cache_key, cache_entry))
 			{
 				archive = std::make_unique<iso_archive>(dir_or_elf);
 			}
+
 			// Track this ISO path for cache cleanup after scan completes.
 			std::lock_guard lock(m_path_mutex);
 			m_scanned_iso_paths.insert(dir_or_elf);
@@ -577,10 +585,11 @@ void game_list_frame::OnParsingFinished()
 
 		gui_game_info game{};
 		game.info.path = dir_or_elf;
+		game.info.game_dir = (game_dir == "PS3_GAME") ? "" : game_dir;
 
 		const Localized thread_localized;
 
-		const std::string sfo_dir = (archive || !cache_entry.psf_data.empty()) ? "PS3_GAME" : rpcs3::utils::get_sfo_dir_from_game_path(dir_or_elf);
+		const std::string sfo_dir = (archive || !cache_entry.psf_data.empty()) ? game_dir : rpcs3::utils::get_sfo_dir_from_game_path(dir_or_elf);
 		const std::string sfo_path = sfo_dir + "/PARAM.SFO";
 
 		// Load PSF: from archive on cache miss, rehydrate from cached SFO bytes on hit.
@@ -738,9 +747,9 @@ void game_list_frame::OnParsingFinished()
 			}
 		}
 
-		// On cache miss for an ISO, persist the resolved metadata so subsequent
-		// launches skip iso_archive construction entirely.
-		if (archive && is_iso)
+		// With the exception of raw device, on cache miss for an ISO, persist the resolved metadata so subsequent
+		// launches skip iso_archive construction entirely
+		if (archive && is_archive && !is_raw_device)
 		{
 			fs::stat_t iso_stat{};
 			if (fs::get_stat(dir_or_elf, iso_stat))
@@ -755,15 +764,15 @@ void game_list_frame::OnParsingFinished()
 				if (game.icon_in_archive)
 				{
 					auto icon_file = archive->open(game.info.icon_path);
-					const auto icon_size = icon_file.size();
+					const auto icon_size = icon_file->size();
 					if (icon_size > 0)
 					{
 						cache_entry.icon_data.resize(icon_size);
-						icon_file.read(cache_entry.icon_data.data(), icon_size);
+						icon_file->read(cache_entry.icon_data.data(), icon_size);
 					}
 				}
 
-				iso_cache::save(dir_or_elf, cache_entry);
+				iso_cache::save(dir_or_elf, (game_dir == "PS3_GAME") ? dir_or_elf : dir_or_elf + "//" + game_dir, cache_entry);
 			}
 		}
 
@@ -854,7 +863,56 @@ void game_list_frame::OnParsingFinished()
 
 		if (entry.is_from_yml)
 		{
-			if (fs::is_file(entry.path + "/PARAM.SFO"))
+			if (is_iso_file(entry.path))
+			{
+				std::vector<std::string> subdirs;
+
+				if (iso_cache::load_index(entry.path, subdirs))
+				{
+					for (const std::string& name : subdirs)
+					{
+						if (m_refresh_watcher.isCanceled()) break;
+						add_game(entry.path, name);
+					}
+
+					return;
+				}
+
+				iso_archive archive(entry.path);
+				const iso_fs_node& root = archive.root();
+				const std::regex ps3_gm_regex("^PS3_GM[[:digit:]]{2}$");
+
+				for (const auto& child : root.children)
+				{
+					if (m_refresh_watcher.isCanceled())
+					{
+						break;
+					}
+					if (!child->metadata.is_directory)
+					{
+						continue;
+					}
+
+					const std::string& name = child->metadata.name;
+					if (name == "PS3_GAME" || std::regex_match(name, ps3_gm_regex))
+					{
+						subdirs.push_back(name);
+						add_game(entry.path, name);
+					}
+				}
+				if (subdirs.empty())
+				{
+					add_game(entry.path);
+					subdirs.push_back("PS3_GAME");
+				}
+				if (!m_refresh_watcher.isCanceled())
+				{
+					iso_cache::save_index(entry.path, subdirs);
+				}
+
+				return;
+			}
+			else if (fs::is_file(entry.path + "/PARAM.SFO"))
 			{
 				push_path(entry.path, legit_paths);
 			}
@@ -886,10 +944,6 @@ void game_list_frame::OnParsingFinished()
 				}
 
 				add_disc_dir(entry.path, legit_paths);
-			}
-			else if (is_file_iso(entry.path))
-			{
-				push_path(entry.path, legit_paths);
 			}
 			else
 			{
@@ -1181,6 +1235,12 @@ void game_list_frame::ShowCustomConfigIcon(const game_info& game)
 	m_game_list->set_custom_config_icon(game);
 
 	RepaintIcons();
+}
+
+void game_list_frame::stop_movie()
+{
+	if (m_game_list) m_game_list->stop_movie();
+	if (m_game_grid) m_game_grid->stop_movie();
 }
 
 void game_list_frame::ResizeIcons(int slider_pos)

@@ -170,7 +170,6 @@ void CgBinaryDisasm::BuildShaderBody(bool include_glsl)
 			return;
 		}
 
-		u32 unused;
 		std::vector<u32> be_data;
 
 		// Swap bytes. FP decompiler expects input in BE
@@ -190,6 +189,7 @@ void CgBinaryDisasm::BuildShaderBody(bool include_glsl)
 		rsx_prog.data = reinterpret_cast<u8*>(be_data.data()) + metadata.program_start_offset;
 		for (u32 i = 0; i < 16; ++i) rsx_prog.texture_state.set_dimension(rsx::texture_dimension_extended::texture_dimension_2d, i);
 #ifndef WITHOUT_OPENGL
+		u32 unused = 0;
 		GLFragmentDecompilerThread(m_glsl_shader, param_array, rsx_prog, unused).Task();
 #endif
 	}

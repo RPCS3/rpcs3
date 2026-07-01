@@ -226,9 +226,8 @@ pad_preview_values mm_joystick_handler::get_preview_values(const std::unordered_
 	if (buttons.size() != 10)
 		return preview_values;
 
-	const auto get_key_value = [this, &data](const std::string& str) -> u16
+	const auto get_key_value = [this, &data](std::string_view str) -> u16
 	{
-		bool pressed{};
 		u16 value{};
 
 		// The DS3 Button is considered pressed if any configured button combination is pressed
@@ -256,7 +255,6 @@ pad_preview_values mm_joystick_handler::get_preview_values(const std::unordered_
 			if (combo_pressed)
 			{
 				value = std::max(value, combo_val);
-				pressed = value > 0;
 			}
 		}
 

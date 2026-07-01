@@ -87,4 +87,16 @@ namespace rpcs3
 		}
 		return hash;
 	}
+
+	template <typename T>
+		requires std::is_integral_v<T>
+	static inline usz hash_array(const T* arr, size_t count)
+	{
+		usz hash = fnv_seed;
+		for (size_t i = 0; i < count; ++i)
+		{
+			hash = hash64(hash, arr[i]);
+		}
+		return hash;
+	}
 }

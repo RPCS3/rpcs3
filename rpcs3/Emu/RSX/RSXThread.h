@@ -86,6 +86,7 @@ namespace rsx
 		bool supports_hw_msaa;                 // MSAA support
 		bool supports_hw_a2one;                // Alpha to one
 		bool supports_hw_conditional_render;   // Conditional render
+		bool supports_hw_instanced_rendering;  // Instanced draws
 		bool supports_passthrough_dma;         // DMA passthrough
 		bool supports_asynchronous_compute;    // Async compute
 		bool supports_host_gpu_labels;         // Advanced host synchronization
@@ -217,7 +218,7 @@ namespace rsx
 
 		surface_scaling_config_t resolution_scaling_config{};
 
-		void capture_frame(const std::string& name);
+		void capture_frame(const std::string& name) const;
 		const backend_configuration& get_backend_config() const { return backend_config; }
 
 		const draw_command_processor* draw_processor() const { return &m_draw_processor; }
@@ -280,11 +281,13 @@ namespace rsx
 		// Prefetch and analyze the currently active vertex program ucode
 		void prefetch_vertex_program();
 
+		// Update fragment program export configuration. Can invalidate the current program.
+		rsx::flags32_t get_fragment_program_export_config();
+
+		// Gets the current vertex program and associated state. Can invalidate the bound progam.
 		void get_current_vertex_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count>& sampler_descriptors);
 
-		/**
-		 * Gets current fragment program and associated fragment state
-		 */
+		// Gets current fragment program and associated fragment state. Can invalidate the bound program.
 		void get_current_fragment_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count>& sampler_descriptors);
 
 	public:

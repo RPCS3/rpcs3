@@ -37,8 +37,8 @@ public:
 protected:
 	std::string getFloatTypeName(usz elementCount) override;
 	std::string getHalfTypeName(usz elementCount) override;
-	std::string getFunction(FUNCTION) override;
-	std::string compareFunction(COMPARE, const std::string&, const std::string&) override;
+	std::string getFunction(FUNCTION f) override;
+	std::string compareFunction(COMPARE f, std::string_view Op0, std::string_view Op1) override;
 
 	void insertHeader(std::stringstream &OS) override;
 	void insertInputs(std::stringstream &OS) override;
@@ -75,6 +75,7 @@ public:
 		u32 polygon_stipple_params_location = umax;   // Polygon stipple settings
 		u32 ftex_location[16];                        // Texture locations array
 		u32 ftex_stencil_location[16];                // Texture stencil mirror array
+		u32 frag_depth_input_location = umax;         // Fragment depth compare
 
 	} binding_table;
 

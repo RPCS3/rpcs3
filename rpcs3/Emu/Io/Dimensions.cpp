@@ -214,7 +214,7 @@ u32 dimensions_toypad::scramble(const std::array<u8, 7>& uid, u8 count)
 	}
 	::at32(to_scramble, count * 4 - 1) = 0xaa;
 
-	return read_from_ptr<be_t<u32>>(dimensions_randomize(to_scramble, count).data());
+	return read_from_ptr<be_t<u32>>(dimensions_randomize(to_scramble, count));
 }
 
 std::array<u8, 4> dimensions_toypad::dimensions_randomize(const std::vector<u8>& key, u8 count)
@@ -522,7 +522,7 @@ bool dimensions_toypad::create_blank_character(std::array<u8, 0x2D * 0x04>& buf,
 	else
 	{
 		// Page 38 is used as verification for blank tags
-		write_to_ptr<be_t<u16>>(buf.data(), 38 * 4, 1);
+		write_to_ptr<be_t<u16>>(buf, 38 * 4, 1);
 	}
 
 	return true;
@@ -530,11 +530,10 @@ bool dimensions_toypad::create_blank_character(std::array<u8, 0x2D * 0x04>& buf,
 
 std::array<u8, 4> dimensions_toypad::pwd_generate(const std::array<u8, 7>& uid)
 {
-	std::vector<u8> pwd_calc = {PWD_CONSTANT.begin(), PWD_CONSTANT.end() - 1};
-	for (u8 i = 0; i < uid.size(); i++)
-	{
-		pwd_calc.insert(pwd_calc.begin() + i, uid[i]);
-	}
+	std::vector<u8> pwd_calc;
+	pwd_calc.reserve(uid.size() + PWD_CONSTANT.size());
+	pwd_calc.insert(pwd_calc.end(), uid.begin(), uid.end());
+	pwd_calc.insert(pwd_calc.end(), PWD_CONSTANT.begin(), PWD_CONSTANT.end());
 
 	return dimensions_randomize(pwd_calc, 8);
 }

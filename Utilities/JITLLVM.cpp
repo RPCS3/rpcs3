@@ -12,6 +12,10 @@
 
 #include <charconv>
 
+#if defined(__APPLE__)
+#include <pthread.h>
+#endif
+
 LOG_CHANNEL(jit_log, "JIT");
 
 #ifdef LLVM_AVAILABLE
@@ -49,6 +53,44 @@ LOG_CHANNEL(jit_log, "JIT");
 #ifdef ARCH_ARM64
 #include "Emu/CPU/Backends/AArch64/AArch64Common.h"
 #endif
+
+namespace
+{
+	thread_local std::string* g_llvm_fatal_message = nullptr;
+
+	template <typename F>
+	bool run_recoverable_llvm(F&& func, std::string& error)
+	{
+		error.clear();
+
+		// Run LLVM codegen in a disposable thread. If LLVM invokes the fatal
+		// handler, only this helper thread exits.
+		named_thread worker("LLVM JIT", [&]()
+		{
+#if defined(__APPLE__)
+			pthread_jit_write_protect_np(false);
+#endif
+			g_llvm_fatal_message = &error;
+
+			std::forward<F>(func)();
+
+			g_llvm_fatal_message = nullptr;
+#if defined(__APPLE__)
+			pthread_jit_write_protect_np(true);
+#endif
+		});
+
+		worker();
+		const bool result = static_cast<thread_state>(worker) == thread_state::finished;
+
+		if (!result && error.empty())
+		{
+			error = "LLVM crash recovery invoked";
+		}
+
+		return result;
+	}
+}
 
 const bool jit_initialize = []() -> bool
 {
@@ -509,9 +551,9 @@ public:
 	}
 };
 
-std::string jit_compiler::cpu(const std::string& _cpu)
+std::string jit_compiler::cpu(std::string_view _cpu)
 {
-	std::string m_cpu = _cpu;
+	std::string m_cpu = std::string(_cpu);
 
 	if (m_cpu.empty())
 	{
@@ -639,7 +681,7 @@ bool jit_compiler::add_sub_disk_space(ssz space)
 	}).second;
 }
 
-jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, const std::string& _cpu, u32 flags, std::function<u64(const std::string&)> symbols_cement) noexcept
+jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, std::string_view _cpu, u32 flags, std::function<u64(const std::string&)> symbols_cement) noexcept
 	: m_context(new llvm::LLVMContext)
 	, m_cpu(cpu(_cpu))
 {
@@ -649,6 +691,13 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 		llvm::install_fatal_error_handler([](void*, const char* msg, bool)
 		{
 			const std::string_view out = msg ? msg : "";
+
+			if (g_llvm_fatal_message)
+			{
+				*g_llvm_fatal_message = out;
+				thread_ctrl::silent_exit();
+			}
+
 			fmt::throw_exception("LLVM Emergency Exit Invoked: '%s'", out);
 		}, nullptr);
 
@@ -700,6 +749,15 @@ jit_compiler::jit_compiler(const std::unordered_map<std::string, u64>& _link, co
 		attributes.push_back("+dotprod");
 	else
 		attributes.push_back("-dotprod");
+
+	// The recompilers emit i8mm intrinsics (e.g. ummla) gated on utils::has_i8mm().
+	// The JIT target features must advertise i8mm too, otherwise the backend fails
+	// with "Cannot select: intrinsic %llvm.aarch64.neon.ummla" whenever the resolved
+	// -mcpu does not already imply it (e.g. the cortex-a78 fallback on Apple silicon).
+	if (utils::has_i8mm())
+		attributes.push_back("+i8mm");
+	else
+		attributes.push_back("-i8mm");
 
 	if (utils::has_sve())
 		attributes.push_back("+sve");
@@ -788,6 +846,33 @@ void jit_compiler::add(std::unique_ptr<llvm::Module> _module, const std::string&
 	}
 }
 
+bool jit_compiler::try_add(std::unique_ptr<llvm::Module> _module, const std::string& path, std::string& error)
+{
+	ObjectCache cache{path, this};
+	m_engine->setObjectCache(&cache);
+
+	const auto ptr = _module.get();
+	m_engine->addModule(std::move(_module));
+
+	if (!run_recoverable_llvm([&]()
+	{
+		m_engine->generateCodeForModule(ptr);
+	}, error))
+	{
+		return false;
+	}
+
+	m_engine->setObjectCache(nullptr);
+
+	for (auto& func : ptr->functions())
+	{
+		// Delete IR to lower memory consumption
+		func.deleteBody();
+	}
+
+	return true;
+}
+
 void jit_compiler::add(std::unique_ptr<llvm::Module> _module)
 {
 	const auto ptr = _module.get();
@@ -799,6 +884,28 @@ void jit_compiler::add(std::unique_ptr<llvm::Module> _module)
 		// Delete IR to lower memory consumption
 		func.deleteBody();
 	}
+}
+
+bool jit_compiler::try_add(std::unique_ptr<llvm::Module> _module, std::string& error)
+{
+	const auto ptr = _module.get();
+	m_engine->addModule(std::move(_module));
+
+	if (!run_recoverable_llvm([&]()
+	{
+		m_engine->generateCodeForModule(ptr);
+	}, error))
+	{
+		return false;
+	}
+
+	for (auto& func : ptr->functions())
+	{
+		// Delete IR to lower memory consumption
+		func.deleteBody();
+	}
+
+	return true;
 }
 
 bool jit_compiler::add(const std::string& path)
@@ -850,6 +957,14 @@ void jit_compiler::update_global_mapping(const std::string& name, u64 addr)
 void jit_compiler::fin()
 {
 	m_engine->finalizeObject();
+}
+
+bool jit_compiler::try_fin(std::string& error)
+{
+	return run_recoverable_llvm([&]()
+	{
+		m_engine->finalizeObject();
+	}, error);
 }
 
 u64 jit_compiler::get(const std::string& name)
