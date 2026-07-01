@@ -51,6 +51,12 @@ namespace rsx::overlays::home_menu
 			return "sliders-solid.png";
 		case fa_icon::settings_gauge:
 			return "gauge-solid.png";
+		case fa_icon::usb:
+			return "usb-solid.png";
+		case fa_icon::file:
+			return "file-solid.png";
+		case fa_icon::folder:
+			return "folder-solid.png";
 		case fa_icon::bug:
 			return "bug-solid.png";
 		}

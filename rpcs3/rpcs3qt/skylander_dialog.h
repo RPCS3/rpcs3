@@ -1,12 +1,10 @@
 #pragma once
 
-#include <optional>
 #include "util/types.hpp"
+#include "Emu/Io/Skylander.h"
 
 #include <QDialog>
 #include <QLineEdit>
-
-constexpr auto UI_SKY_NUM = 8;
 
 class skylander_creator_dialog : public QDialog
 {
@@ -41,8 +39,7 @@ protected:
 	void update_edits();
 
 protected:
-	QLineEdit* edit_skylanders[UI_SKY_NUM]{};
-	static std::optional<std::tuple<u8, u16, u16>> sky_slots[UI_SKY_NUM];
+	std::array<QLineEdit*, MAX_SKYLANDERS> edit_skylanders{};
 
 private:
 	static skylander_dialog* inst;
