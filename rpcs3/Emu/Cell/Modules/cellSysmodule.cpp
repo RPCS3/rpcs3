@@ -1118,7 +1118,8 @@ error_code cellSysmoduleUnloadModuleInternal(ppu_thread& ppu, u16 id)
 	// Unload dependencies in reverse order
 	for (const u16 module_id : MODULE_INFOS[INTERNAL_MODULES_OFFSET + (id & INTERNAL_MODULE_ID_MASK)].dependencies | std::views::reverse)
 	{
-		if (const error_code ret = module_id < INTERNAL_MODULE_ID_BASE ? cellSysmoduleUnloadModule(ppu, id) : cellSysmoduleUnloadModuleInternal(ppu, id); ret != CELL_OK)
+		if (const error_code ret = module_id < INTERNAL_MODULE_ID_BASE ? cellSysmoduleUnloadModule(ppu, module_id) : cellSysmoduleUnloadModuleInternal(ppu, module_id);
+			ret != CELL_OK)
 		{
 			return ret;
 		}
