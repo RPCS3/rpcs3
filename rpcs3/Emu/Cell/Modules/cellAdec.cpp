@@ -482,7 +482,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 				case CELL_ADEC_CH_3_2_LFE:
 					for (s32 i = 0; i < sample_num; i += channel_num)
 					{
-						const u64 tmp = std::rotl(read_from_ptr<u64>(&_output[i + 1]), 0x20); // Swap Front Right and Center
+						const u64 tmp = std::rotl(read_from_ptr_unsafe<u64>(_output, i + 1), 0x20); // Swap Front Right and Center
 						std::memcpy(&_output[i + 1], &tmp, sizeof(u64));
 					}
 					break;
@@ -511,7 +511,7 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 					{
 						const v128 tmp1 = gv_shuffle32<3, 2, 0, 1>(v128::loadu(&_output[i + 4])); // Reorder Rear Left, Rear Right, Side Right, LFE -> LFE, Side Right, Rear Left, Rear Right
 						v128::storeu(tmp1, &_output[i + 4]);
-						const u64 tmp2 = std::rotl(read_from_ptr<u64>(&_output[i + 3]), 0x20); // Swap Side Left and LFE
+						const u64 tmp2 = std::rotl(read_from_ptr_unsafe<u64>(_output, i + 3), 0x20); // Swap Side Left and LFE
 						std::memcpy(&_output[i + 3], &tmp2, sizeof(u64));
 					}
 					break;
@@ -620,8 +620,8 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 						const v128 tmp1 = gv_loadu32(&input_u8[i_in]);
 						const v128 tmp2 = gv_loadu32(&input_u8[i_in + high_bytes_3_4_offset]);
 						v128 s20be = gv_unpacklo32(tmp1, tmp2);
-						s20be = gv_insert16<4>(s20be, read_from_ptr<u16>(&input_u8[i_in + low_bits_1_2_offset]));
-						s20be = gv_insert16<5>(s20be, read_from_ptr<u16>(&input_u8[i_in + low_bits_3_4_offset]));
+						s20be = gv_insert16<4>(s20be, read_from_ptr_unsafe<u16>(input_u8, i_in + low_bits_1_2_offset));
+						s20be = gv_insert16<5>(s20be, read_from_ptr_unsafe<u16>(input_u8, i_in + low_bits_3_4_offset));
 
 						// Reorder bytes to form four 32-bit integer samples
 						v128 _s32 = gv_shuffle8(s20be, shuffle_ctrl);
@@ -651,8 +651,8 @@ void LpcmDecContext::exec(ppu_thread& ppu)
 						const v128 tmp1 = gv_loadu32(&input_u8[i_in]);
 						const v128 tmp2 = gv_loadu32(&input_u8[i_in + high_bytes_3_4_offset]);
 						v128 s24be = gv_unpacklo32(tmp1, tmp2);
-						s24be = gv_insert16<4>(s24be, read_from_ptr<u16>(&input_u8[i_in + low_bytes_1_2_offset]));
-						s24be = gv_insert16<5>(s24be, read_from_ptr<u16>(&input_u8[i_in + low_bytes_3_4_offset]));
+						s24be = gv_insert16<4>(s24be, read_from_ptr_unsafe<u16>(input_u8, i_in + low_bytes_1_2_offset));
+						s24be = gv_insert16<5>(s24be, read_from_ptr_unsafe<u16>(input_u8, i_in + low_bytes_3_4_offset));
 
 						// Reorder bytes to form four 32-bit integer samples
 						const v128 _s32 = std::endian::native == std::endian::little

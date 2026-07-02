@@ -958,7 +958,7 @@ void padding(const unsigned char *lastb, unsigned char *pad, size_t length)
 	}
 }
 
-void aes_cmac(aes_context *ctx, size_t length, unsigned char *input, unsigned char *output)
+void aes_cmac(aes_context *ctx, size_t length, const unsigned char *input, unsigned char *output)
 {
     unsigned char X[16], Y[16], M_last[16], padded[16];
     unsigned char K1[16], K2[16];
