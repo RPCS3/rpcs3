@@ -69,6 +69,8 @@ namespace aarch64
 
         gpr get_base_register_for_call(std::string_view callee_name, gpr default_reg = gpr::x19);
 
+        void emit_hv_return_addr(llvm::IRBuilder<>* irb, llvm::Function& f);
+
         void process_leaf_function(llvm::IRBuilder<>* irb, llvm::Function& f);
 
         llvm::BasicBlock::iterator patch_tail_call(

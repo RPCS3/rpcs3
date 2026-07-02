@@ -275,18 +275,22 @@ namespace aarch64
             return;
         }
 
-        // Force tail calls on all terminators
-        force_tail_call_terminators(f);
-
         // Check for leaves
         if (function_info.is_leaf && !m_config.use_stack_frames)
         {
             // Sanity check. If this function had no returning calls, it should have been omitted from processing.
             ensure(function_info.clobbers_x30, "Function has no terminator and no non-tail calls but was allowed for frame processing!");
             DPRINT("Function %s is a leaf.", this_name.c_str());
+            // NOTE: Do NOT call force_tail_call_terminators here. Leaf functions contain only non-tail C calls
+            // (e.g. syscalls). Forcing those to tail calls causes LLVM to generate a sibling-call branch
+            // (b sys_func) instead of bl+ret, which absorbs the ret and makes any code injected between
+            // the call and the return unreachable.
             process_leaf_function(irb, f);
             return;
         }
+
+        // Force tail calls on all terminators (non-leaf functions with GHC tail calls only)
+        force_tail_call_terminators(f);
 
         // Asm snippets for patching stack frame
         ASMBlock frame_prologue, frame_epilogue;
@@ -426,14 +430,7 @@ namespace aarch64
         }
 
         // Patch the return path. No GHC call shall ever return to another. If we reach the function endpoint, immediately abort to GW
-        auto thread_base_reg = get_base_register_for_call(f.getName().str());
-        auto arg_index = static_cast<int>(thread_base_reg) - static_cast<int>(x19);
-        ASMBlock c;
-
-        auto thread_arg = ensure(f.getArg(arg_index)); // Guaranteed to hold our original 'thread'
-        c.mov(x30, UASM::Var(thread_arg));
-        c.ldr(x30, x30, UASM::Imm(m_config.hypervisor_context_offset));
-        c.insert(irb, f.getContext());
+        emit_hv_return_addr(irb, f);
 
         // Next
         return where;
@@ -504,6 +501,27 @@ namespace aarch64
         return std::find(x.begin(), x.end(), function_name) != x.end();
     }
 
+    void GHC_frame_preservation_pass::emit_hv_return_addr(llvm::IRBuilder<>* irb, llvm::Function& f)
+    {
+        // Emit inline asm that loads the gateway return address from hv_ctx into x30.
+        // Uses the LLVM SSA value for the thread argument via an "r" input constraint so that
+        // LLVM guarantees the correct thread pointer is in a register, regardless of whether the
+        // base register (e.g. x20) was repurposed for other computations by the time this runs.
+        ASMBlock c;
+        auto thread_base_reg = get_base_register_for_call(f.getName().str());
+        const auto arg_index = static_cast<int>(thread_base_reg) - static_cast<int>(x19);
+        if (arg_index >= 0 && static_cast<u32>(arg_index) < f.arg_size())
+        {
+            c.mov(x30, UASM::Var(f.getArg(arg_index)));
+        }
+        else
+        {
+            c.mov(x30, thread_base_reg);
+        }
+        c.ldr(x30, x30, UASM::Imm(m_config.hypervisor_context_offset));
+        c.insert(irb, f.getContext());
+    }
+
     void GHC_frame_preservation_pass::process_leaf_function(llvm::IRBuilder<>* irb, llvm::Function& f)
     {
         for (auto &bb : f)
@@ -530,15 +548,8 @@ namespace aarch64
                     c.insert(irb, f.getContext());
                 }
 
-                // Now we need to reload LR. We abuse the function's caller arg set for this to avoid messing with regs too much
-                auto thread_base_reg = get_base_register_for_call(f.getName().str());
-                auto arg_index = static_cast<int>(thread_base_reg) - static_cast<int>(x19);
-                ASMBlock c;
-
-                auto thread_arg = ensure(f.getArg(arg_index)); // Guaranteed to hold our original 'thread'
-                c.mov(x30, UASM::Var(thread_arg));
-                c.ldr(x30, x30, UASM::Imm(m_config.hypervisor_context_offset));
-                c.insert(irb, f.getContext());
+                // Reload LR from the gateway return address stored in hv_ctx.
+                emit_hv_return_addr(irb, f);
 
                 if (bit != bb.end())
                 {
