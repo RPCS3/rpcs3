@@ -323,6 +323,10 @@ private:
 		case localized_string_id::HOME_MENU_TROPHY_GRADE_SILVER: return tr("Silver", "Trophy type");
 		case localized_string_id::HOME_MENU_TROPHY_GRADE_GOLD: return tr("Gold", "Trophy type");
 		case localized_string_id::HOME_MENU_TROPHY_GRADE_PLATINUM: return tr("Platinum", "Trophy type");
+		case localized_string_id::HOME_MENU_TROPHY_SORT_GAME_DEFAULT: return tr("Sort: Game Default");
+		case localized_string_id::HOME_MENU_TROPHY_SORT_NOT_EARNED: return tr("Sort: Not Earned");
+		case localized_string_id::HOME_MENU_TROPHY_SORT_EARNED_DATE: return tr("Sort: Earned Date");
+		case localized_string_id::HOME_MENU_TROPHY_SORT_GRADE: return tr("Sort: Grade");
 		case localized_string_id::AUDIO_MUTED: return tr("Audio muted", "Audio");
 		case localized_string_id::AUDIO_UNMUTED: return tr("Audio unmuted", "Audio");
 		case localized_string_id::AUDIO_CHANGED: return tr("Volume changed to %0", "Audio").arg(std::forward<Args>(args)...);
