@@ -8,7 +8,7 @@
 
 LOG_CHANNEL(mself_log, "MSELF");
 
-bool extract_mself(const std::string& file, const std::string& extract_to)
+bool extract_mself(std::string_view file, const std::string& extract_to)
 {
 	fs::file mself(file);
 
@@ -63,19 +63,21 @@ bool extract_mself(const std::string& file, const std::string& extract_to)
 		mself.seek(pos);
 		mself.read(buffer.data(), rec.size);
 
-		if (!fs::create_path(fs::get_parent_dir(extract_to + name)))
+		const std::string path = extract_to + name;
+
+		if (!fs::create_path(fs::get_parent_dir(path)))
 		{
-			mself_log.error("Error creating directory %s (%s)", fs::get_parent_dir(extract_to + name), fs::g_tls_error);
+			mself_log.error("Error creating directory %s (%s)", fs::get_parent_dir(path), fs::g_tls_error);
 			return false;
 		}
 
-		if (!fs::write_file(extract_to + name, fs::rewrite, buffer))
+		if (!fs::write_file(path, fs::rewrite, buffer))
 		{
-			mself_log.error("Error creating %s (%s)", extract_to + name, fs::g_tls_error);
+			mself_log.error("Error creating %s (%s)", path, fs::g_tls_error);
 			return false;
 		}
 
-		mself_log.success("Extracted '%s' to '%s'", name, extract_to + name);
+		mself_log.success("Extracted '%s' to '%s'", name, path);
 	}
 
 	mself_log.success("Extraction complete!");

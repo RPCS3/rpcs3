@@ -218,8 +218,8 @@ namespace fs
 		std::unordered_map<std::string, shared_ptr<device_base>> m_map{};
 
 	public:
-		shared_ptr<device_base> get_device(const std::string& path);
-		shared_ptr<device_base> set_device(const std::string& name, shared_ptr<device_base>);
+		shared_ptr<device_base> get_device(std::string_view path);
+		shared_ptr<device_base> set_device(std::string_view name, shared_ptr<device_base>);
 	};
 
 	static device_manager& get_device_manager()
@@ -365,43 +365,43 @@ namespace fs
 	{
 	}
 
-	bool device_base::remove_dir(const std::string&)
+	bool device_base::remove_dir(std::string_view)
 	{
 		g_tls_error = error::readonly;
 		return false;
 	}
 
-	bool device_base::create_dir(const std::string&)
+	bool device_base::create_dir(std::string_view)
 	{
 		g_tls_error = error::readonly;
 		return false;
 	}
 
-	bool device_base::create_symlink(const std::string&)
+	bool device_base::create_symlink(std::string_view)
 	{
 		g_tls_error = error::readonly;
 		return false;
 	}
 
-	bool device_base::rename(const std::string&, const std::string&)
+	bool device_base::rename(std::string_view, std::string_view)
 	{
 		g_tls_error = error::readonly;
 		return false;
 	}
 
-	bool device_base::remove(const std::string&)
+	bool device_base::remove(std::string_view)
 	{
 		g_tls_error = error::readonly;
 		return false;
 	}
 
-	bool device_base::trunc(const std::string&, u64)
+	bool device_base::trunc(std::string_view, u64)
 	{
 		g_tls_error = error::readonly;
 		return false;
 	}
 
-	bool device_base::utime(const std::string&, s64, s64)
+	bool device_base::utime(std::string_view, s64, s64)
 	{
 		g_tls_error = error::readonly;
 		return false;
@@ -811,13 +811,14 @@ namespace fs
 #endif
 }
 
-shared_ptr<fs::device_base> fs::device_manager::get_device(const std::string& path)
+shared_ptr<fs::device_base> fs::device_manager::get_device(std::string_view path)
 {
 	reader_lock lock(m_mutex);
 
 	const usz prefix = path.find_first_of('_', 7) + 1;
+	const std::string suffix(path.substr(prefix, path.find_first_of('/', 1) - prefix));
 
-	const auto found = m_map.find(path.substr(prefix, path.find_first_of('/', 1) - prefix));
+	const auto found = m_map.find(suffix);
 
 	if (found == m_map.end() || !path.starts_with(found->second->fs_prefix))
 	{
@@ -827,14 +828,15 @@ shared_ptr<fs::device_base> fs::device_manager::get_device(const std::string& pa
 	return found->second;
 }
 
-shared_ptr<fs::device_base> fs::device_manager::set_device(const std::string& name, shared_ptr<device_base> device)
+shared_ptr<fs::device_base> fs::device_manager::set_device(std::string_view name, shared_ptr<device_base> device)
 {
+	const std::string sname(name);
 	std::lock_guard lock(m_mutex);
 
 	if (device)
 	{
 		// Adding
-		if (auto [it, ok] = m_map.try_emplace(name, std::move(device)); ok)
+		if (auto [it, ok] = m_map.try_emplace(sname, std::move(device)); ok)
 		{
 			return it->second;
 		}
@@ -844,7 +846,7 @@ shared_ptr<fs::device_base> fs::device_manager::set_device(const std::string& na
 	else
 	{
 		// Removing
-		if (auto found = m_map.find(name); found != m_map.end())
+		if (auto found = m_map.find(sname); found != m_map.end())
 		{
 			device = std::move(found->second);
 			m_map.erase(found);
@@ -857,10 +859,10 @@ shared_ptr<fs::device_base> fs::device_manager::set_device(const std::string& na
 	return null_ptr;
 }
 
-shared_ptr<fs::device_base> fs::get_virtual_device(const std::string& path)
+shared_ptr<fs::device_base> fs::get_virtual_device(std::string_view path)
 {
 	// Every virtual device path must have specific name at the beginning
-	if (path.starts_with("/vfsv0_") && path.size() >= 8 + 22 && path[29] == '_' && path.find_first_of('/', 1) > 29)
+	if (path.size() >= 30 && path.starts_with("/vfsv0_") && path[29] == '_' && path.find_first_of('/', 1) > 29)
 	{
 		return get_device_manager().get_device(path);
 	}
@@ -868,7 +870,7 @@ shared_ptr<fs::device_base> fs::get_virtual_device(const std::string& path)
 	return null_ptr;
 }
 
-shared_ptr<fs::device_base> fs::set_virtual_device(const std::string& name, shared_ptr<device_base> device)
+shared_ptr<fs::device_base> fs::set_virtual_device(std::string_view name, shared_ptr<device_base> device)
 {
 	return get_device_manager().set_device(name, std::move(device));
 }
@@ -924,7 +926,7 @@ std::string_view fs::get_parent_dir_view(std::string_view path, u32 parent_level
 	return result;
 }
 
-std::string fs::get_path_if_dir(const std::string& path)
+std::string fs::get_path_if_dir(std::string_view path)
 {
 	if (path.empty() || !fs::is_dir(path))
 	{
@@ -934,16 +936,22 @@ std::string fs::get_path_if_dir(const std::string& path)
 	// If delimiters are already present at the end of the string then nothing else to do
 	if (usz sz = path.find_last_of(delim); sz != umax && (sz + 1) == path.size())
 	{
-		return path;
+		return std::string(path);
 	}
 
-	return path + '/';
+	return fmt::format("%s/", path);
 }
 
-bool fs::get_stat(const std::string& path, stat_t& info)
+bool fs::get_stat(std::string_view path, stat_t& info)
 {
 	// Ensure consistent information on failure
 	info = {};
+
+	if (path.empty())
+	{
+		g_tls_error = fs::error::noent;
+		return false;
+	}
 
 	if (auto device = get_virtual_device(path))
 	{
@@ -951,21 +959,19 @@ bool fs::get_stat(const std::string& path, stat_t& info)
 	}
 
 #ifdef _WIN32
-	std::string_view epath = path;
-
 	// '/' and '\\' Not allowed by FindFirstFileExW at the end of path but we should allow it
-	if (auto not_del = epath.find_last_not_of(delim); not_del != umax && not_del != epath.size() - 1)
+	if (auto not_del = path.find_last_not_of(delim); not_del != umax && not_del != path.size() - 1)
 	{
-		epath.remove_suffix(epath.size() - 1 - not_del);
+		path.remove_suffix(path.size() - 1 - not_del);
 	}
 
 	// Handle drives specially
-	if (epath.find_first_of(delim) == umax && epath.ends_with(':'))
+	if (path.find_first_of(delim) == umax && path.ends_with(':'))
 	{
 		WIN32_FILE_ATTRIBUTE_DATA attrs{};
 
 		// Must end with a delimiter
-		if (!GetFileAttributesExW(to_wchar(std::string(epath) + '/').get(), GetFileExInfoStandard, &attrs))
+		if (!GetFileAttributesExW(to_wchar(std::string(path) + '/').get(), GetFileExInfoStandard, &attrs))
 		{
 			g_tls_error = to_error(GetLastError());
 			return false;
@@ -985,7 +991,7 @@ bool fs::get_stat(const std::string& path, stat_t& info)
 	}
 
 	// Allowed by FindFirstFileExW but we should not allow it
-	if (epath.ends_with("*"))
+	if (path.ends_with("*"))
 	{
 		g_tls_error = fs::error::noent;
 		return false;
@@ -993,7 +999,7 @@ bool fs::get_stat(const std::string& path, stat_t& info)
 
 	WIN32_FIND_DATA attrs{};
 
-	const auto wchar_ptr = to_wchar(std::string(epath));
+	const auto wchar_ptr = to_wchar(path);
 	const std::wstring_view wpath_view = wchar_ptr.get();
 
 	const HANDLE handle = FindFirstFileExW(wpath_view.data(), FindExInfoStandard, &attrs, FindExSearchNameMatch, nullptr, FIND_FIRST_EX_CASE_SENSITIVE);
@@ -1034,7 +1040,7 @@ bool fs::get_stat(const std::string& path, stat_t& info)
 	info.ctime = info.mtime;
 #else
 	struct ::stat file_info;
-	if (::stat(path.c_str(), &file_info) != 0)
+	if (::stat(path.data(), &file_info) != 0)
 	{
 		g_tls_error = to_error(errno);
 		return false;
@@ -1055,13 +1061,13 @@ bool fs::get_stat(const std::string& path, stat_t& info)
 	return true;
 }
 
-bool fs::exists(const std::string& path)
+bool fs::exists(std::string_view path)
 {
 	fs::stat_t info{};
 	return fs::get_stat(path, info);
 }
 
-bool fs::is_file(const std::string& path)
+bool fs::is_file(std::string_view path)
 {
 	fs::stat_t info{};
 	if (!fs::get_stat(path, info))
@@ -1078,7 +1084,7 @@ bool fs::is_file(const std::string& path)
 	return true;
 }
 
-bool fs::is_dir(const std::string& path)
+bool fs::is_dir(std::string_view path)
 {
 	fs::stat_t info{};
 	if (!fs::get_stat(path, info))
@@ -1095,7 +1101,7 @@ bool fs::is_dir(const std::string& path)
 	return true;
 }
 
-bool fs::is_symlink(const std::string& path)
+bool fs::is_symlink(std::string_view path)
 {
 	fs::stat_t info{};
 	if (!fs::get_stat(path, info))
@@ -1112,7 +1118,7 @@ bool fs::is_symlink(const std::string& path)
 	return true;
 }
 
-bool fs::is_optical_raw_device([[maybe_unused]] const std::string& path)
+bool fs::is_optical_raw_device([[maybe_unused]] std::string_view path)
 {
 #ifdef _WIN32
 	if (path.starts_with("\\\\.\\"))
@@ -1123,7 +1129,7 @@ bool fs::is_optical_raw_device([[maybe_unused]] const std::string& path)
 	return false;
 }
 
-bool fs::get_optical_raw_device(const std::string& path, std::string* raw_device)
+bool fs::get_optical_raw_device(std::string_view path, std::string* raw_device)
 {
 	if (fs::is_optical_raw_device(path))
 	{
@@ -1145,7 +1151,7 @@ bool fs::get_optical_raw_device(const std::string& path, std::string* raw_device
 		return false;
 	}
 
-	const std::string drive_letter = path.substr(0, drive_delim_pos + 1); // e.g. "E:"
+	const std::string drive_letter(path.substr(0, drive_delim_pos + 1)); // e.g. "E:"
 	const std::string drive_path = drive_letter + "\\"; // e.g. "E:\"
 
 	if (GetDriveTypeA(drive_path.c_str()) == DRIVE_CDROM)
@@ -1161,8 +1167,14 @@ bool fs::get_optical_raw_device(const std::string& path, std::string* raw_device
 	return false;
 }
 
-bool fs::statfs(const std::string& path, fs::device_stat& info)
+bool fs::statfs(std::string_view path, fs::device_stat& info)
 {
+	if (path.empty())
+	{
+		g_tls_error = fs::error::noent;
+		return false;
+	}
+
 	if (auto device = get_virtual_device(path))
 	{
 		return device->statfs(path, info);
@@ -1205,7 +1217,7 @@ bool fs::statfs(const std::string& path, fs::device_stat& info)
 	info.avail_free = avail_free.QuadPart;
 #else
 	struct ::statvfs buf;
-	if (::statvfs(path.c_str(), &buf) != 0)
+	if (::statvfs(path.data(), &buf) != 0)
 	{
 		g_tls_error = to_error(errno);
 		return false;
@@ -1220,8 +1232,14 @@ bool fs::statfs(const std::string& path, fs::device_stat& info)
 	return true;
 }
 
-bool fs::create_dir(const std::string& path)
+bool fs::create_dir(std::string_view path)
 {
+	if (path.empty())
+	{
+		g_tls_error = fs::error::noent;
+		return false;
+	}
+
 	if (auto device = get_virtual_device(path))
 	{
 		return device->create_dir(path);
@@ -1244,7 +1262,7 @@ bool fs::create_dir(const std::string& path)
 
 	return true;
 #else
-	if (::mkdir(path.c_str(), S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) != 0)
+	if (::mkdir(path.data(), S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) != 0)
 	{
 		g_tls_error = to_error(errno);
 		return false;
@@ -1254,7 +1272,7 @@ bool fs::create_dir(const std::string& path)
 #endif
 }
 
-bool fs::create_path(const std::string& path)
+bool fs::create_path(std::string_view path)
 {
 	const std::string parent = get_parent_dir(path);
 
@@ -1276,7 +1294,7 @@ bool fs::create_path(const std::string& path)
 	return true;
 }
 
-bool fs::remove_dir(const std::string& path)
+bool fs::remove_dir(std::string_view path)
 {
 	if (path.empty())
 	{
@@ -1297,7 +1315,7 @@ bool fs::remove_dir(const std::string& path)
 		return false;
 	}
 #else
-	if (::rmdir(path.c_str()) != 0)
+	if (::rmdir(path.data()) != 0)
 	{
 		g_tls_error = to_error(errno);
 		return false;
@@ -1307,8 +1325,14 @@ bool fs::remove_dir(const std::string& path)
 	return true;
 }
 
-bool fs::create_symlink(const std::string& path, const std::string& target)
+bool fs::create_symlink(std::string_view path, std::string_view target)
 {
+	if (path.empty() || target.empty())
+	{
+		g_tls_error = fs::error::noent;
+		return false;
+	}
+
 	if (auto device = get_virtual_device(path))
 	{
 		return device->create_symlink(path);
@@ -1324,7 +1348,7 @@ bool fs::create_symlink(const std::string& path, const std::string& target)
 
 	return true;
 #else
-	if (::symlink(target.c_str(), path.c_str()) != 0)
+	if (::symlink(target.data(), path.data()) != 0)
 	{
 		g_tls_error = to_error(errno);
 		return false;
@@ -1334,7 +1358,7 @@ bool fs::create_symlink(const std::string& path, const std::string& target)
 #endif
 }
 
-bool fs::rename(const std::string& from, const std::string& to, bool overwrite)
+bool fs::rename(std::string_view from, std::string_view to, bool overwrite)
 {
 	if (from.empty() || to.empty())
 	{
@@ -1389,7 +1413,7 @@ bool fs::rename(const std::string& from, const std::string& to, bool overwrite)
 #else
 
 #ifdef __linux__
-	if (syscall(SYS_renameat2, AT_FDCWD, from.c_str(), AT_FDCWD, to.c_str(), overwrite ? 0 : 1 /* RENAME_NOREPLACE */) == 0)
+	if (syscall(SYS_renameat2, AT_FDCWD, from.data(), AT_FDCWD, to.data(), overwrite ? 0 : 1 /* RENAME_NOREPLACE */) == 0)
 	{
 		return true;
 	}
@@ -1408,7 +1432,7 @@ bool fs::rename(const std::string& from, const std::string& to, bool overwrite)
 		return false;
 	}
 
-	if (::rename(from.c_str(), to.c_str()) != 0)
+	if (::rename(from.data(), to.data()) != 0)
 	{
 		g_tls_error = to_error(errno);
 		return false;
@@ -1418,8 +1442,14 @@ bool fs::rename(const std::string& from, const std::string& to, bool overwrite)
 #endif
 }
 
-bool fs::copy_file(const std::string& from, const std::string& to, bool overwrite)
+bool fs::copy_file(std::string_view from, std::string_view to, bool overwrite)
 {
+	if (from.empty() || to.empty())
+	{
+		g_tls_error = fs::error::noent;
+		return false;
+	}
+
 	const auto device = get_virtual_device(from);
 
 	if (device != get_virtual_device(to) || device) // TODO
@@ -1438,14 +1468,14 @@ bool fs::copy_file(const std::string& from, const std::string& to, bool overwrit
 #elif defined(__APPLE__) || defined(__linux__) || defined(__sun)
 	/* Source: http://stackoverflow.com/questions/2180079/how-can-i-copy-a-file-on-unix-using-c */
 
-	const int input = ::open(from.c_str(), O_RDONLY);
+	const int input = ::open(from.data(), O_RDONLY);
 	if (input == -1)
 	{
 		g_tls_error = to_error(errno);
 		return false;
 	}
 
-	const int output = ::open(to.c_str(), O_WRONLY | O_CREAT | (overwrite ? O_TRUNC : O_EXCL), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+	const int output = ::open(to.data(), O_WRONLY | O_CREAT | (overwrite ? O_TRUNC : O_EXCL), S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	if (output == -1)
 	{
 		const int err = errno;
@@ -1518,8 +1548,14 @@ bool fs::copy_file(const std::string& from, const std::string& to, bool overwrit
 #endif
 }
 
-bool fs::remove_file(const std::string& path)
+bool fs::remove_file(std::string_view path)
 {
+	if (path.empty())
+	{
+		g_tls_error = fs::error::noent;
+		return false;
+	}
+
 	if (auto device = get_virtual_device(path))
 	{
 		return device->remove(path);
@@ -1534,7 +1570,7 @@ bool fs::remove_file(const std::string& path)
 
 	return true;
 #else
-	if (::unlink(path.c_str()) != 0)
+	if (::unlink(path.data()) != 0)
 	{
 		g_tls_error = to_error(errno);
 		return false;
@@ -1544,8 +1580,14 @@ bool fs::remove_file(const std::string& path)
 #endif
 }
 
-bool fs::truncate_file(const std::string& path, u64 length)
+bool fs::truncate_file(std::string_view path, u64 length)
 {
+	if (path.empty())
+	{
+		g_tls_error = fs::error::noent;
+		return false;
+	}
+
 	if (auto device = get_virtual_device(path))
 	{
 		return device->trunc(path, length);
@@ -1573,7 +1615,7 @@ bool fs::truncate_file(const std::string& path, u64 length)
 	CloseHandle(handle);
 	return true;
 #else
-	if (::truncate(path.c_str(), length) != 0)
+	if (::truncate(path.data(), length) != 0)
 	{
 		g_tls_error = to_error(errno);
 		return false;
@@ -1583,8 +1625,14 @@ bool fs::truncate_file(const std::string& path, u64 length)
 #endif
 }
 
-bool fs::utime(const std::string& path, s64 atime, s64 mtime)
+bool fs::utime(std::string_view path, s64 atime, s64 mtime)
 {
+	if (path.empty())
+	{
+		g_tls_error = fs::error::noent;
+		return false;
+	}
+
 	if (auto device = get_virtual_device(path))
 	{
 		return device->utime(path, atime, mtime);
@@ -1631,7 +1679,7 @@ bool fs::utime(const std::string& path, s64 atime, s64 mtime)
 	buf.actime = atime;
 	buf.modtime = mtime;
 
-	if (::utime(path.c_str(), &buf) != 0)
+	if (::utime(path.data(), &buf) != 0)
 	{
 		g_tls_error = to_error(errno);
 		return false;
@@ -1666,7 +1714,7 @@ void fs::sync()
 	fmt::throw_exception("Stream overflow.");
 }
 
-fs::file::file(const std::string& path, bs_t<open_mode> mode)
+fs::file::file(std::string_view path, bs_t<open_mode> mode)
 {
 	if (path.empty())
 	{
@@ -1809,14 +1857,14 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			// Alternative to truncation for "unread" flag (TODO)
 			if (mode & fs::create)
 			{
-				::unlink(path.c_str());
+				::unlink(path.data());
 			}
 		}
 
 		perm = 0;
 	}
 
-	const int fd = ::open(path.c_str(), flags, perm);
+	const int fd = ::open(path.data(), flags, perm);
 
 	if (fd == -1)
 	{
@@ -1846,8 +1894,6 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 	}
 #endif
 }
-
-
 
 fs::file fs::file::from_native_handle(native_handle handle)
 {
@@ -1973,7 +2019,7 @@ fs::file_id fs::file::get_id() const
 	return {};
 }
 
-bool fs::dir::open(const std::string& path)
+bool fs::dir::open(std::string_view path)
 {
 	m_dir.reset();
 
@@ -1997,7 +2043,7 @@ bool fs::dir::open(const std::string& path)
 
 #ifdef _WIN32
 	WIN32_FIND_DATAW found;
-	const auto handle = FindFirstFileExW(to_wchar(path + "/*").get(), FindExInfoBasic, &found, FindExSearchNameMatch, nullptr, FIND_FIRST_EX_CASE_SENSITIVE | FIND_FIRST_EX_LARGE_FETCH);
+	const auto handle = FindFirstFileExW(to_wchar(fmt::format("%s/*", path)).get(), FindExInfoBasic, &found, FindExSearchNameMatch, nullptr, FIND_FIRST_EX_CASE_SENSITIVE | FIND_FIRST_EX_LARGE_FETCH);
 
 	if (handle == INVALID_HANDLE_VALUE)
 	{
@@ -2061,7 +2107,7 @@ bool fs::dir::open(const std::string& path)
 
 	m_dir = std::make_unique<windows_dir>(handle, found);
 #else
-	::DIR* const ptr = ::opendir(path.c_str());
+	::DIR* const ptr = ::opendir(path.data());
 
 	if (!ptr)
 	{
@@ -2403,7 +2449,7 @@ const std::string& fs::get_temp_dir()
 	return s_dir;
 }
 
-bool fs::remove_all(const std::string& path, bool remove_root, bool is_no_dir_ok)
+bool fs::remove_all(std::string_view path, bool remove_root, bool is_no_dir_ok)
 {
 	if (const auto root_dir = dir(path))
 	{
@@ -2443,7 +2489,7 @@ bool fs::remove_all(const std::string& path, bool remove_root, bool is_no_dir_ok
 	return true;
 }
 
-u64 fs::get_dir_size(const std::string& path, u64 rounding_alignment, atomic_t<bool>* cancel_flag)
+u64 fs::get_dir_size(std::string_view path, u64 rounding_alignment, atomic_t<bool>* cancel_flag)
 {
 	u64 result = 0;
 
@@ -2758,10 +2804,11 @@ bool fs::pending_file::commit(bool overwrite)
 
 			while (true)
 			{
-				if (link_name_buffer.c_str() != ws1_sv)
+				// Note: link_name_buffer is a buffer which may contain zeroes so truncate it
+				if (std::wstring link_name_buffer_trunc = link_name_buffer.c_str();
+					link_name_buffer_trunc != ws1_sv)
 				{
-					// Note: link_name_buffer is a buffer which may contain zeroes so truncate it
-					hardlink_paths.push_back(link_name_buffer.c_str());
+					hardlink_paths.push_back(std::move(link_name_buffer_trunc));
 				}
 
 				buffer_size = static_cast<DWORD>(link_name_buffer.size() - 1);
@@ -2857,7 +2904,7 @@ bool fs::pending_file::commit(bool overwrite)
 	return false;
 }
 
-stx::generator<fs::dir_entry&> fs::list_dir_recursively(const std::string& path)
+stx::generator<fs::dir_entry&> fs::list_dir_recursively(std::string_view path)
 {
 	for (auto& entry : fs::dir(path))
 	{

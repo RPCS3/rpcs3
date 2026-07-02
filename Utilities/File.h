@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 #include <algorithm>
 
@@ -160,18 +161,18 @@ namespace fs
 		device_base();
 		virtual ~device_base();
 
-		virtual bool stat(const std::string& path, stat_t& info) = 0;
-		virtual bool statfs(const std::string& path, device_stat& info) = 0;
-		virtual bool remove_dir(const std::string& path);
-		virtual bool create_dir(const std::string& path);
-		virtual bool create_symlink(const std::string& path);
-		virtual bool rename(const std::string& from, const std::string& to);
-		virtual bool remove(const std::string& path);
-		virtual bool trunc(const std::string& path, u64 length);
-		virtual bool utime(const std::string& path, s64 atime, s64 mtime);
+		virtual bool stat(std::string_view path, stat_t& info) = 0;
+		virtual bool statfs(std::string_view path, device_stat& info) = 0;
+		virtual bool remove_dir(std::string_view path);
+		virtual bool create_dir(std::string_view path);
+		virtual bool create_symlink(std::string_view path);
+		virtual bool rename(std::string_view from, std::string_view to);
+		virtual bool remove(std::string_view path);
+		virtual bool trunc(std::string_view path, u64 length);
+		virtual bool utime(std::string_view path, s64 atime, s64 mtime);
 
-		virtual std::unique_ptr<file_base> open(const std::string& path, bs_t<open_mode> mode) = 0;
-		virtual std::unique_ptr<dir_base> open_dir(const std::string& path) = 0;
+		virtual std::unique_ptr<file_base> open(std::string_view path, bs_t<open_mode> mode) = 0;
+		virtual std::unique_ptr<dir_base> open_dir(std::string_view path) = 0;
 	};
 
 	[[noreturn]] void xnull(std::source_location);
@@ -181,10 +182,10 @@ namespace fs
 	constexpr struct pod_tag_t{} pod_tag;
 
 	// Get virtual device for specified path (nullptr for real path)
-	shared_ptr<device_base> get_virtual_device(const std::string& path);
+	shared_ptr<device_base> get_virtual_device(std::string_view path);
 
 	// Set virtual device with specified name (nullptr for deletion)
-	shared_ptr<device_base> set_virtual_device(const std::string& name, shared_ptr<device_base> device);
+	shared_ptr<device_base> set_virtual_device(std::string_view name, shared_ptr<device_base> device);
 
 	// Try to get parent directory
 	std::string_view get_parent_dir_view(std::string_view path, u32 parent_level = 1);
@@ -196,58 +197,58 @@ namespace fs
 	}
 
 	// Return "path" plus an ending delimiter (if missing) if "path" is an existing directory. Otherwise, an empty string
-	std::string get_path_if_dir(const std::string& path);
+	std::string get_path_if_dir(std::string_view path);
 
 	// Get file information
-	bool get_stat(const std::string& path, stat_t& info);
+	bool get_stat(std::string_view path, stat_t& info);
 
 	// Check whether a file or a directory exists (not recommended, use is_file() or is_dir() instead)
-	bool exists(const std::string& path);
+	bool exists(std::string_view path);
 
 	// Check whether the file exists and is NOT a directory
-	bool is_file(const std::string& path);
+	bool is_file(std::string_view path);
 
 	// Check whether the directory exists and is NOT a file
-	bool is_dir(const std::string& path);
+	bool is_dir(std::string_view path);
 
 	// Check whether the path points to an existing symlink
-	bool is_symlink(const std::string& path);
+	bool is_symlink(std::string_view path);
 
 	// Check whether the path points to a raw device
-	bool is_optical_raw_device(const std::string& path);
+	bool is_optical_raw_device(std::string_view path);
 
 	// Check whether the path points to an optical drive. If so, provide the raw device in "raw_device" if requested
-	bool get_optical_raw_device(const std::string& path, std::string* raw_device = nullptr);
+	bool get_optical_raw_device(std::string_view path, std::string* raw_device = nullptr);
 
 	// Get filesystem information
-	bool statfs(const std::string& path, device_stat& info);
+	bool statfs(std::string_view path, device_stat& info);
 
 	// Delete empty directory
-	bool remove_dir(const std::string& path);
+	bool remove_dir(std::string_view path);
 
 	// Create directory
-	bool create_dir(const std::string& path);
+	bool create_dir(std::string_view path);
 
 	// Create directories
-	bool create_path(const std::string& path);
+	bool create_path(std::string_view path);
 
 	// Create symbolic link
-	bool create_symlink(const std::string& path, const std::string& target);
+	bool create_symlink(std::string_view path, std::string_view target);
 
 	// Rename (move) file or directory
-	bool rename(const std::string& from, const std::string& to, bool overwrite);
+	bool rename(std::string_view from, std::string_view to, bool overwrite);
 
 	// Copy file contents
-	bool copy_file(const std::string& from, const std::string& to, bool overwrite);
+	bool copy_file(std::string_view from, std::string_view to, bool overwrite);
 
 	// Delete file
-	bool remove_file(const std::string& path);
+	bool remove_file(std::string_view path);
 
 	// Change file size (possibly appending zeros)
-	bool truncate_file(const std::string& path, u64 length);
+	bool truncate_file(std::string_view path, u64 length);
 
 	// Set file access/modification time
-	bool utime(const std::string& path, s64 atime, s64 mtime);
+	bool utime(std::string_view path, s64 atime, s64 mtime);
 
 	// Synchronize filesystems (TODO)
 	void sync();
@@ -261,7 +262,7 @@ namespace fs
 		file() = default;
 
 		// Open file with specified mode
-		explicit file(const std::string& path, bs_t<open_mode> mode = ::fs::read);
+		explicit file(std::string_view path, bs_t<open_mode> mode = ::fs::read);
 
 		file(std::unique_ptr<file_base>&& ptr) : m_file(std::move(ptr)) {}
 
@@ -504,13 +505,13 @@ namespace fs
 		dir() = default;
 
 		// Open dir handle
-		explicit dir(const std::string& path) noexcept
+		explicit dir(std::string_view path) noexcept
 		{
 			open(path);
 		}
 
 		// Open specified directory
-		bool open(const std::string& path);
+		bool open(std::string_view path);
 
 		// Check whether the handle is valid (opened directory)
 		explicit operator bool() const noexcept
@@ -673,10 +674,10 @@ namespace fs
 	};
 
 	// Delete directory and all its contents recursively
-	bool remove_all(const std::string& path, bool remove_root = true, bool is_no_dir_ok = false);
+	bool remove_all(std::string_view path, bool remove_root = true, bool is_no_dir_ok = false);
 
 	// Get size of all files recursively
-	u64 get_dir_size(const std::string& path, u64 rounding_alignment = 1, atomic_t<bool>* cancel_flag = nullptr);
+	u64 get_dir_size(std::string_view path, u64 rounding_alignment = 1, atomic_t<bool>* cancel_flag = nullptr);
 
 	enum class error : uint
 	{
@@ -848,7 +849,7 @@ namespace fs
 	}
 
 	template <bool Flush = false, typename... Args>
-	bool write_file(const std::string& path, bs_t<fs::open_mode> mode, const Args&... args)
+	bool write_file(std::string_view path, bs_t<fs::open_mode> mode, const Args&... args)
 	{
 		// Always use write flag, remove read flag
 		if (fs::file f{path, mode + fs::write - fs::read})
@@ -877,5 +878,5 @@ namespace fs
 
 	file make_gather(std::vector<file>);
 
-	stx::generator<dir_entry&> list_dir_recursively(const std::string& path);
+	stx::generator<dir_entry&> list_dir_recursively(std::string_view path);
 }
