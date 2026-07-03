@@ -99,6 +99,8 @@ namespace vk
 		s32 static_parameters[4];
 		s32 static_parameters_width = 2;
 
+		static constexpr usz fragment_push_constants_size = sizeof(static_parameters);
+
 		depth_resolve_base()
 		{
 			renderpass_config.set_depth_mask(true);
@@ -122,14 +124,16 @@ namespace vk
 				glsl::input_type_push_constant,
 				0,
 				umax,
-				glsl::push_constant_ref{ .size = 16 }
+				glsl::push_constant_ref{ .size = fragment_push_constants_size }
 			));
 			return result;
 		}
 
 		void update_uniforms(vk::command_buffer& cmd, vk::glsl::program* program) override
 		{
-			vkCmdPushConstants(cmd, program->layout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, static_parameters_width * 4, static_parameters);
+			const u32 size_to_push = static_parameters_width * sizeof(decltype(static_parameters[0]));
+			ensure(size_to_push <= fragment_push_constants_size);
+			vkCmdPushConstants(cmd, program->layout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, size_to_push, static_parameters);
 		}
 
 		void update_sample_configuration(vk::image* msaa_image)
