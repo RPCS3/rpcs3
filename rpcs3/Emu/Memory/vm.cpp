@@ -30,7 +30,7 @@ namespace vm
 	{
 		for (u64 addr = reinterpret_cast<u64>(_addr) + 0x100000000; addr < 0x8000'0000'0000; addr += 0x100000000)
 		{
-			if (auto ptr = utils::memory_reserve(size, reinterpret_cast<void*>(addr), is_memory_mapping))
+			if (auto ptr = utils::memory_reserve(size, reinterpret_cast<void*>(addr), is_memory_mapping, false))
 			{
 				return static_cast<u8*>(ptr);
 			}
@@ -1700,8 +1700,8 @@ namespace vm
 
 				for (usz i = 0; i < byte_of_pages; i += 128 * 2)
 				{
-					const u64 sample64_1 = read_from_ptr<u64>(data_ptr, i);
-					const u64 sample64_2 = read_from_ptr<u64>(data_ptr, i + 128);
+					const u64 sample64_1 = read_from_ptr_unsafe<u64>(data_ptr, i);
+					const u64 sample64_2 = read_from_ptr_unsafe<u64>(data_ptr, i + 128);
 
 					// Speed up testing in scenarios where it is likely non-zero data
 					if (sample64_1 && sample64_2)

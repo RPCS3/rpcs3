@@ -91,7 +91,7 @@ void sky_portal::get_status(u8* reply_buf)
 
 	std::memset(reply_buf, 0, 0x20);
 	reply_buf[0] = 0x53;
-	write_to_ptr<le_t<u16>>(reply_buf, 1, status);
+	write_to_ptr_unsafe<le_t<u16>>(reply_buf, 1, status);
 	reply_buf[5] = interrupt_counter++;
 	reply_buf[6] = 0x01;
 }
@@ -153,11 +153,11 @@ bool sky_portal::remove_skylander(u8 sky_num)
 	return false;
 }
 
-u8 sky_portal::load_skylander(u8* buf, fs::file in_file, int requested_slot)
+u8 sky_portal::load_skylander(const std::array<u8, 0x40 * 0x10>& data, fs::file in_file, int requested_slot)
 {
 	std::lock_guard lock(sky_mutex);
 
-	const u32 sky_serial = read_from_ptr<le_t<u32>>(buf);
+	const u32 sky_serial = read_from_ptr<le_t<u32>>(data);
 	u8 found_slot  = 0xFF;
 
 	if (requested_slot >= 0 && requested_slot <= 7)
@@ -190,7 +190,7 @@ u8 sky_portal::load_skylander(u8* buf, fs::file in_file, int requested_slot)
 		return 0xFF;
 
 	skylander& thesky = skylanders[found_slot];
-	memcpy(thesky.data.data(), buf, thesky.data.size());
+	memcpy(thesky.data.data(), data.data(), thesky.data.size());
 	thesky.sky_file = std::move(in_file);
 	thesky.status   = 3;
 	thesky.queued_status.push(3);

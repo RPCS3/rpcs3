@@ -9,6 +9,8 @@
 
 #include "unedat.h"
 
+#include <span>
+
 LOG_CHANNEL(self_log, "SELF");
 
 // SCE-specific definitions for e_type:
@@ -163,7 +165,7 @@ struct MetadataInfo
 	u8 iv[0x10];
 	u8 iv_pad[0x10];
 
-	void Load(u8* in);
+	void Load(std::span<u8> in);
 	void Show() const;
 };
 
@@ -177,7 +179,7 @@ struct MetadataHeader
 	u32 unknown2;
 	u32 unknown3;
 
-	void Load(u8* in);
+	void Load(std::span<u8> in);
 	void Show() const;
 };
 
@@ -194,7 +196,7 @@ struct MetadataSectionHeader
 	u32 iv_idx;
 	u32 compressed;
 
-	void Load(u8* in);
+	void Load(std::span<u8> in);
 	void Show() const;
 };
 
@@ -416,13 +418,11 @@ protected:
 	// Metadata structs.
 	MetadataInfo meta_info{};
 	MetadataHeader meta_hdr{};
-	std::vector<MetadataSectionHeader> meta_shdr{};
+	std::vector<MetadataSectionHeader> meta_shdr;
 
 	// Internal data buffers.
-	std::unique_ptr<u8[]> data_keys{};
-	u32 data_keys_length{};
-	std::unique_ptr<u8[]> data_buf{};
-	u32 data_buf_length{};
+	std::vector<u8> data_keys;
+	std::vector<u8> data_buf;
 
 public:
 	SCEDecrypter(const fs::file& s);
@@ -463,10 +463,8 @@ class SELFDecrypter
 	std::vector<MetadataSectionHeader> meta_shdr{};
 
 	// Internal data buffers.
-	std::unique_ptr<u8[]> data_keys{};
-	u32 data_keys_length{};
-	std::unique_ptr<u8[]> data_buf{};
-	u32 data_buf_length{};
+	std::vector<u8> data_keys;
+	std::vector<u8> data_buf;
 
 	// Main key vault instance.
 	KeyVault key_v{};
@@ -512,14 +510,13 @@ private:
 					std::unique_ptr<u8[]> decomp_buf(new u8[filesz]);
 
 					// Create a buffer separate from data_buf to uncompress.
-					std::unique_ptr<u8[]> zlib_buf(new u8[data_buf_length]);
-					memcpy(zlib_buf.get(), data_buf.get(), data_buf_length);
+					std::vector<u8> zlib_buf = data_buf;
 
 					uLongf decomp_buf_length = ::narrow<uLongf>(filesz);
 
 					// Use zlib uncompress on the new buffer.
 					// decomp_buf_length changes inside the call to uncompress
-					const int rv = uncompress(decomp_buf.get(), &decomp_buf_length, zlib_buf.get() + data_buf_offset, data_buf_length);
+					const int rv = uncompress(decomp_buf.get(), &decomp_buf_length, zlib_buf.data() + data_buf_offset, ::size32(zlib_buf));
 
 					// Check for errors (TODO: Probably safe to remove this once these changes have passed testing.)
 					switch (rv)
@@ -538,7 +535,7 @@ private:
 				{
 					// Seek to the program header data offset and write the data.
 					e.seek(phdr[meta_shdr[i].program_idx].p_offset);
-					e.write(data_buf.get() + data_buf_offset, meta_shdr[i].data_size);
+					e.write(data_buf.data() + data_buf_offset, meta_shdr[i].data_size);
 				}
 
 				// Advance the data buffer offset by data size.

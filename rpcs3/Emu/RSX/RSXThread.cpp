@@ -393,13 +393,13 @@ namespace rsx
 
 			_max_index = 0;
 
-			auto re_evaluate = [&] <typename T> (const std::byte* ptr, T)
+			const auto re_evaluate = [&] <typename T> (const std::byte* ptr, T)
 			{
 				const u64 restart = rsx::method_registers.restart_index_enabled() ? rsx::method_registers.restart_index() : u64{umax};
 
 				for (u32 _index = first; _index < first + count; _index++)
 				{
-					const auto value = read_from_ptr<be_t<T>>(ptr, _index * sizeof(T));
+					const auto value = read_from_ptr_unsafe<be_t<T>>(ptr, _index * sizeof(T));
 
 					if (value == restart)
 					{

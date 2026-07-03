@@ -2,6 +2,7 @@
 
 #include "Emu/Io/usb_device.h"
 #include "Utilities/mutex.h"
+#include <array>
 #include <queue>
 
 struct skylander
@@ -26,7 +27,7 @@ public:
 	void write_block(u8 sky_num, u8 block, const u8* to_write_buf, u8* reply_buf);
 
 	bool remove_skylander(u8 sky_num);
-	u8 load_skylander(u8* buf, fs::file in_file, int requested_slot = -1);
+	u8 load_skylander(const std::array<u8, 0x40 * 0x10>& data, fs::file in_file, int requested_slot = -1);
 	void get_figure_info(u8 sky_num, u8& out_status, u16& out_id, u16& out_variant);
 
 protected:
