@@ -126,6 +126,7 @@ private:
 	void transfer_dfgt(u32 buf_size, u8* buf, UsbTransfer* transfer) const;
 	void transfer_g25(u32 buf_size, u8* buf, UsbTransfer* transfer) const;
 	void transfer_g27(u32 buf_size, u8* buf, UsbTransfer* transfer) const;
+	SDL_HapticDirection make_steering_direction() const;
 
 	u32 m_controller_index = 0;
 

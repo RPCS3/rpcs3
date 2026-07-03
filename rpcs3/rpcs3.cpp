@@ -692,6 +692,10 @@ int run_rpcs3(int argc, char** argv)
 		logs::stored_message ver{sys_log.always()};
 		ver.text = fmt::format("RPCS3 v%s", rpcs3::get_verbose_version());
 
+		// Write Architecture
+		logs::stored_message arch{sys_log.always()};
+		arch.text = fmt::format("Architecture: %s", utils::get_architecture());
+
 		// Write System information
 		logs::stored_message sys{sys_log.always()};
 		sys.text = utils::get_system_info();
@@ -708,7 +712,7 @@ int run_rpcs3(int argc, char** argv)
 		logs::stored_message time{sys_log.always()};
 		time.text = fmt::format("Current Time: %s", std::chrono::system_clock::now());
 
-		logs::set_init({std::move(ver), std::move(sys), std::move(os), std::move(qt), std::move(time)});
+		logs::set_init({std::move(ver), std::move(arch), std::move(sys), std::move(os), std::move(qt), std::move(time)});
 	}
 
 #ifdef ARCH_ARM64
@@ -854,6 +858,11 @@ int run_rpcs3(int argc, char** argv)
 	parser.addOption(QCommandLineOption("N/A", "Arguments after \"--\" are considered emulation arguments."));
 
 	parser.process(app->arguments());
+
+	for (const auto& opt : parser.optionNames())
+	{
+		sys_log.notice("Option passed via command line: %s %s", opt, parser.value(opt));
+	}
 
 	// Don't start up the full rpcs3 gui if we just want the version or help.
 	if (parser.isSet(version_option) || parser.isSet(help_option))
@@ -1159,11 +1168,11 @@ int run_rpcs3(int argc, char** argv)
 				}
 				else if (parser.isSet(arg_installfw))
 				{
-					gui_app->m_main_window->InstallPup(parser.value(installfw_option));
+					main_window::InstallPup(gui_app->m_main_window, parser.value(installfw_option));
 				}
 				else
 				{
-					gui_app->m_main_window->InstallPackages({parser.value(installpkg_option)});
+					main_window::InstallPackages(gui_app->m_main_window, {parser.value(installpkg_option)});
 				}
 			}
 			else
@@ -1173,13 +1182,18 @@ int run_rpcs3(int argc, char** argv)
 		}
 		else
 		{
-			report_fatal_error("Cannot perform installation in headless mode!");
-		}
-	}
+			if (parser.isSet(arg_installfw))
+			{
+				main_window::InstallPup(nullptr, parser.value(installfw_option));
+			}
 
-	for (const auto& opt : parser.optionNames())
-	{
-		sys_log.notice("Option passed via command line: %s %s", opt, parser.value(opt));
+			if (parser.isSet(arg_installpkg))
+			{
+				main_window::InstallPackages(nullptr, {parser.value(installpkg_option)});
+			}
+
+			return 0;
+		}
 	}
 
 	if (parser.isSet(arg_savestate))

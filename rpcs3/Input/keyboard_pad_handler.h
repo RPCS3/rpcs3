@@ -93,8 +93,8 @@ public:
 	static std::string GetMouseName(u32 button);
 	static QStringList GetKeyNames(const QKeyEvent* keyEvent);
 	static std::string GetKeyName(const QKeyEvent* keyEvent, bool with_modifiers);
-	static std::string GetKeyName(const u32& keyCode);
-	static std::vector<std::set<u32>> GetKeyCombos(const std::string& cfg_string);
+	static std::string GetKeyName(u32 keyCode);
+	static std::vector<std::set<u32>> GetKeyCombos(std::string_view cfg_string);
 	static u32 GetKeyCode(const QString& keyName);
 
 	static int native_scan_code_from_string(const std::string& key);

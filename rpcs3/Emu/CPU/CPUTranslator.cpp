@@ -207,6 +207,21 @@ void cpu_translator::initialize(llvm::LLVMContext& context, llvm::ExecutionEngin
 	{
 		m_use_dotprod = true;
 	}
+
+	if (utils::has_i8mm())
+	{
+		m_use_i8mm = true;
+	}
+
+	if (utils::has_sve() && utils::sve_length() == 128)
+	{
+		m_use_sve_128 = true;
+	}
+
+	if (utils::has_sve2() && utils::sve_length() == 128)
+	{
+		m_use_sve2_128 = true;
+	}
 #endif
 }
 

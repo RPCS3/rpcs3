@@ -44,10 +44,10 @@ class gdb_thread
 	//acknowledge packet, either as accepted or declined
 	void ack(bool accepted);
 	//sends command body cmd to client
-	void send_cmd(const std::string& cmd);
+	void send_cmd(std::string_view cmd);
 	//sends command to client until receives positive acknowledgement
 	//returns false in case some error happened, and command wasn't sent
-	bool send_cmd_ack(const std::string& cmd);
+	bool send_cmd_ack(std::string_view cmd);
 	//appends encoded char c to string str, and returns checksum. encoded byte can occupy 2 bytes
 	static u8 append_encoded_char(char c, std::string& str);
 	//convert u8 to 2 byte hexademical representation
@@ -57,7 +57,7 @@ class gdb_thread
 	//returns register value as hex string by register id (in gdb), in case of wrong id returns empty string
 	static std::string get_reg(ppu_thread* thread, u32 rid);
 	//sets register value to hex string by register id (in gdb), in case of wrong id returns false
-	static bool set_reg(ppu_thread* thread, u32 rid, const std::string& value);
+	static bool set_reg(ppu_thread* thread, u32 rid, std::string_view value);
 	//returns size of register with id rid in bytes, zero if invalid rid is provided
 	static u32 get_reg_size(ppu_thread* thread, u32 rid);
 	//send reason of stop, returns false if sending response failed

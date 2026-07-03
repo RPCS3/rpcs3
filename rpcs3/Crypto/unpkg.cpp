@@ -807,7 +807,8 @@ bool package_reader::set_install_path()
 	}
 
 	// TODO: Verify whether other content types require appending title ID
-	if (m_metadata.content_type != PKG_CONTENT_TYPE_LICENSE)
+	// Append title ID depending on content type
+	if (m_metadata.content_type != PKG_CONTENT_TYPE_THEME && m_metadata.content_type != PKG_CONTENT_TYPE_LICENSE)
 		dir += m_install_dir + '/';
 
 	// If false, an existing directory is being overwritten: cannot cancel the operation
@@ -1431,8 +1432,8 @@ usz package_reader::decrypt(u64 offset, u64 size, const uchar* key, void* local_
 
 			sha1(reinterpret_cast<const u8*>(input), sizeof(input), hash.data);
 
-			const u128 v = read_from_ptr<u128>(out_data, i * 16);
-			write_to_ptr<u128>(out_data, i * 16, v ^ read_from_ptr<u128>(hash.data));
+			const u128 v = read_from_ptr_unsafe<u128>(out_data, i * 16);
+			write_to_ptr_unsafe<u128>(out_data, i * 16, v ^ read_from_ptr<u128>(hash.data));
 		}
 	}
 	else if (m_header.pkg_type == PKG_RELEASE_TYPE_RELEASE)
@@ -1452,8 +1453,8 @@ usz package_reader::decrypt(u64 offset, u64 size, const uchar* key, void* local_
 
 			aes_crypt_ecb(&ctx, AES_ENCRYPT, reinterpret_cast<const u8*>(&input), reinterpret_cast<u8*>(&key));
 
-			const u128 v = read_from_ptr<u128>(out_data, i * 16);
-			write_to_ptr<u128>(out_data, i * 16, v ^ key);
+			const u128 v = read_from_ptr_unsafe<u128>(out_data, i * 16);
+			write_to_ptr_unsafe<u128>(out_data, i * 16, v ^ key);
 		}
 	}
 	else

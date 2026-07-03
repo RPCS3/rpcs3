@@ -257,10 +257,8 @@ namespace logs
 		{
 			return found.first->second->enabled.observe();
 		}
-		else
-		{
-			return level::always;
-		}
+
+		return level::always;
 	}
 
 	void set_channel_levels(const std::map<std::string, logs::level, std::less<>>& map)

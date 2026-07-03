@@ -901,12 +901,12 @@ std::string keyboard_pad_handler::GetKeyName(const QKeyEvent* keyEvent, bool wit
 	return QKeySequence(keyEvent->key()).toString(QKeySequence::NativeText).toStdString();
 }
 
-std::string keyboard_pad_handler::GetKeyName(const u32& keyCode)
+std::string keyboard_pad_handler::GetKeyName(u32 keyCode)
 {
 	return QKeySequence(keyCode).toString(QKeySequence::NativeText).toStdString();
 }
 
-std::vector<std::set<u32>> keyboard_pad_handler::GetKeyCombos(const std::string& cfg_string)
+std::vector<std::set<u32>> keyboard_pad_handler::GetKeyCombos(std::string_view cfg_string)
 {
 	std::vector<std::set<u32>> res;
 
@@ -943,10 +943,10 @@ u32 keyboard_pad_handler::GetKeyCode(const QString& keyName)
 	if (keyName == "Meta") return Qt::Key_Meta;
 #ifdef __APPLE__
 	// QKeySequence doesn't work properly for the arrow keys on macOS
-	if (keyName == "Num←") return Qt::Key_Left;
-	if (keyName == "Num↑") return Qt::Key_Up;
-	if (keyName == "Num→") return Qt::Key_Right;
-	if (keyName == "Num↓") return Qt::Key_Down;
+	if (keyName == "Num←" || keyName == "←") return Qt::Key_Left;
+	if (keyName == "Num↑" || keyName == "↑") return Qt::Key_Up;
+	if (keyName == "Num→" || keyName == "→") return Qt::Key_Right;
+	if (keyName == "Num↓" || keyName == "↓") return Qt::Key_Down;
 #endif
 
 	const QKeySequence seq(keyName);
@@ -1022,10 +1022,12 @@ std::string keyboard_pad_handler::native_scan_code_to_string(int native_scan_cod
 	case 73: return "Num+9"; // Also "Num+PgUp" depending on numlock
 	case 83: return "Num+,"; // Also "Num+Del" depending on numlock
 	case 309: return "Num+/";
+	case 57397: return "Num+/";
 	case 55: return "Num+*";
 	case 74: return "Num+-";
 	case 78: return "Num++";
 	case 284: return "Num+Enter";
+	case 57372: return "Num+Enter";
 #else
 	// TODO
 #endif

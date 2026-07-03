@@ -65,7 +65,7 @@ namespace np
 		ticket() = default;
 		ticket(std::vector<u8>&& raw_data);
 
-		std::size_t size() const;
+		usz size() const;
 		const u8* data() const;
 		bool empty() const;
 
@@ -73,11 +73,11 @@ namespace np
 		std::string get_service_id() const;
 
 	private:
-		std::optional<ticket_data> parse_node(std::size_t index) const;
+		std::optional<ticket_data> parse_node(usz index) const;
 		void parse();
 
 	private:
-		static constexpr std::size_t MIN_TICKET_DATA_SIZE = 4;
+		static constexpr usz MIN_TICKET_DATA_SIZE = 4;
 
 		std::vector<u8> raw_data;
 
@@ -267,7 +267,7 @@ namespace np
 		error_code abort_request(u32 req_id);
 
 		// For signaling
-		void req_sign_infos(const std::string& npid, u32 conn_id);
+		void req_sign_infos(std::string_view npid, u32 conn_id);
 
 		// For UPNP
 		void upnp_add_port_mapping(u16 internal_port, std::string_view protocol);
@@ -297,7 +297,7 @@ namespace np
 		// Various generic helpers
 		bool discover_ip_address();
 		bool discover_ether_address();
-		bool error_and_disconnect(const std::string& error_msg);
+		bool error_and_disconnect(std::string_view error_msg);
 
 		// Notification handlers
 		void notif_user_joined_room(vec_stream& noti);

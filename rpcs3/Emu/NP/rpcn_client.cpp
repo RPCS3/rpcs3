@@ -503,8 +503,8 @@ namespace rpcn
 					{
 						if (msg.size() == 6)
 						{
-							const u32 new_addr_sig = read_from_ptr<le_t<u32>>(&msg[0]);
-							const u16 new_port_sig = read_from_ptr<be_t<u16>>(&msg[4]);
+							const u32 new_addr_sig = read_from_ptr<le_t<u32>>(msg, 0);
+							const u16 new_port_sig = read_from_ptr<be_t<u16>>(msg, 4);
 							const u32 old_addr_sig = addr_sig;
 							const u32 old_port_sig = port_sig;
 
@@ -533,7 +533,7 @@ namespace rpcn
 							// We don't really need ipv6 info stored so we just update the pong data
 							// std::array<u8, 16> new_ipv6_addr;
 							// std::memcpy(new_ipv6_addr.data(), &msg[3], 16);
-							// const u32 new_ipv6_port = read_from_ptr<be_t<u16>>(&msg[16]);
+							// const u32 new_ipv6_port = read_from_ptr<be_t<u16>>(msg, 16);
 
 							last_pong_time_ipv6 = now;
 						}
@@ -626,9 +626,9 @@ namespace rpcn
 		}
 
 		const u8 packet_type = header[0];
-		const auto command = static_cast<rpcn::CommandType>(static_cast<u16>(read_from_ptr<le_t<u16>>(&header[1])));
-		const u32 packet_size = read_from_ptr<le_t<u32>>(&header[3]);
-		const u64 packet_id = read_from_ptr<le_t<u64>>(&header[7]);
+		const auto command = static_cast<rpcn::CommandType>(static_cast<u16>(read_from_ptr<le_t<u16>>(header, 1)));
+		const u32 packet_size = read_from_ptr<le_t<u32>>(header, 3);
+		const u64 packet_id = read_from_ptr<le_t<u64>>(header, 7);
 
 		if (packet_size < RPCN_HEADER_SIZE)
 			return error_and_disconnect("Invalid packet size");
@@ -967,7 +967,7 @@ namespace rpcn
 		server_info_received = false;
 	}
 
-	bool rpcn_client::connect(const std::string& host)
+	bool rpcn_client::connect(std::string_view host)
 	{
 		rpcn_log.warning("connect: Attempting to connect");
 
@@ -1172,7 +1172,7 @@ namespace rpcn
 		return true;
 	}
 
-	bool rpcn_client::login(const std::string& npid, const std::string& password, const std::string& token)
+	bool rpcn_client::login(std::string_view npid, std::string_view password, std::string_view token)
 	{
 		if (npid.empty())
 		{
@@ -1338,7 +1338,7 @@ namespace rpcn
 		return error;
 	}
 
-	ErrorType rpcn_client::resend_token(const std::string& npid, const std::string& password)
+	ErrorType rpcn_client::resend_token(std::string_view npid, std::string_view password)
 	{
 		if (authentified)
 		{
@@ -1469,7 +1469,7 @@ namespace rpcn
 		return error;
 	}
 
-	std::optional<ErrorType> rpcn_client::add_friend(const std::string& friend_username)
+	std::optional<ErrorType> rpcn_client::add_friend(std::string_view friend_username)
 	{
 		std::vector<u8> data;
 		std::copy(friend_username.begin(), friend_username.end(), std::back_inserter(data));
@@ -1494,7 +1494,7 @@ namespace rpcn
 		return error;
 	}
 
-	bool rpcn_client::remove_friend(const std::string& friend_username)
+	bool rpcn_client::remove_friend(std::string_view friend_username)
 	{
 		std::vector<u8> data;
 		std::copy(friend_username.begin(), friend_username.end(), std::back_inserter(data));
@@ -2159,7 +2159,7 @@ namespace rpcn
 		return forge_request_with_com_id(serialized, communication_id, CommandType::SendRoomMessage, req_id);
 	}
 
-	bool rpcn_client::req_sign_infos(u32 req_id, const std::string& npid)
+	bool rpcn_client::req_sign_infos(u32 req_id, std::string_view npid)
 	{
 		std::vector<u8> data;
 		std::copy(npid.begin(), npid.end(), std::back_inserter(data));
@@ -2168,7 +2168,7 @@ namespace rpcn
 		return forge_send(CommandType::RequestSignalingInfos, req_id, data);
 	}
 
-	bool rpcn_client::req_ticket(u32 req_id, const std::string& service_id, const std::vector<u8>& cookie)
+	bool rpcn_client::req_ticket(u32 req_id, std::string_view service_id, const std::vector<u8>& cookie)
 	{
 		std::vector<u8> data;
 		std::copy(service_id.begin(), service_id.end(), std::back_inserter(data));
@@ -2859,7 +2859,7 @@ namespace rpcn
 		memcpy(data.data(), com_id_str.data(), COMMUNICATION_ID_SIZE);
 	}
 
-	bool rpcn_client::forge_request_with_com_id(const std::string& serialized_data, const SceNpCommunicationId& com_id, CommandType command, u64 packet_id)
+	bool rpcn_client::forge_request_with_com_id(std::string_view serialized_data, const SceNpCommunicationId& com_id, CommandType command, u64 packet_id)
 	{
 		const usz bufsize = serialized_data.size();
 		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + bufsize);
@@ -2872,7 +2872,7 @@ namespace rpcn
 		return forge_send(command, packet_id, data);
 	}
 
-	bool rpcn_client::forge_request_with_data(const std::string& serialized_data, CommandType command, u64 packet_id)
+	bool rpcn_client::forge_request_with_data(std::string_view serialized_data, CommandType command, u64 packet_id)
 	{
 		const usz bufsize = serialized_data.size();
 		std::vector<u8> data(sizeof(u32) + bufsize);
@@ -2897,14 +2897,14 @@ namespace rpcn
 		return packet;
 	}
 
-	bool rpcn_client::error_and_disconnect(const std::string& error_msg)
+	bool rpcn_client::error_and_disconnect(std::string_view error_msg)
 	{
 		connected = false;
 		rpcn_log.error("%s", error_msg);
 		return false;
 	}
 
-	bool rpcn_client::error_and_disconnect_notice(const std::string& error_msg)
+	bool rpcn_client::error_and_disconnect_notice(std::string_view error_msg)
 	{
 		connected = false;
 		rpcn_log.notice("%s", error_msg);

@@ -139,7 +139,7 @@ std::unique_ptr<utils::serial> tar_object::get_file(const std::string& path, std
 		}
 		else
 		{
-			tar_log.notice("tar_object::get_file() failed to parse header: offset=0x%x, filesize=0x%x, header_first16=0x%016x", offset, max_size, read_from_ptr<be_t<u128>>(reinterpret_cast<const u8*>(&header)));
+			tar_log.notice("tar_object::get_file() failed to parse header: offset=0x%x, filesize=0x%x, header_first16=0x%016x", offset, max_size, read_from_ptr_unsafe<be_t<u128>>(reinterpret_cast<const u8*>(&header)));
 		}
 
 		return { size, {} };
@@ -565,11 +565,12 @@ void tar_object::save_directory(const std::string& target_path, utils::serial& a
 		}
 	};
 
-	auto save_header = [&](const fs::stat_t& stat, const std::string& name)
+	auto save_header = [&](const fs::stat_t& stat, std::string_view name)
 	{
 		static_assert(sizeof(TARHeader) == 512);
+		ensure(src_dir_pos <= name.size());
 
-		std::string_view saved_path{name.size() == src_dir_pos ? name.c_str() : &::at32(name, src_dir_pos), name.size() - src_dir_pos};
+		std::string_view saved_path = name.size() == src_dir_pos ? std::string_view() : name.substr(src_dir_pos);
 
 		if (is_null)
 		{
@@ -606,7 +607,7 @@ void tar_object::save_directory(const std::string& target_path, utils::serial& a
 		ar.breathe();
 	};
 
-	fs::stat_t stat{};
+	fs::dir_entry stat{};
 
 	if (src_dir_pos == umax)
 	{
@@ -642,14 +643,14 @@ void tar_object::save_directory(const std::string& target_path, utils::serial& a
 			// Optimization: avoid saving to list if this is not an evaluation call
 			if (is_null)
 			{
-				static_cast<fs::stat_t&>(entries.emplace_back()) = stat;
+				entries.push_back(stat);
 				entries.back().name = target_path;
 			}
 		}
 		else
 		{
 			stat = entries.back();
-			save_header(stat, entries.back().name);
+			save_header(stat, stat.name);
 		}
 
 		if (stat.is_directory)
@@ -694,11 +695,7 @@ void tar_object::save_directory(const std::string& target_path, utils::serial& a
 		}
 		else
 		{
-			fs::dir_entry entry{};
-			entry.name = target_path;
-			static_cast<fs::stat_t&>(entry) = stat;
-
-			save_file(entry, entry.name);
+			save_file(stat, target_path);
 		}
 
 		ar.breathe();

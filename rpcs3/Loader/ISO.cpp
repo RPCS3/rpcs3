@@ -213,25 +213,32 @@ iso_type_status iso_file_decryption::get_key(const std::string& key_path, aes_co
 		return iso_type_status::ERROR_OPENING_KEY;
 	}
 
-	char key_str[32];
+	std::array<char, 32> key_str {};
 	std::array<u8, 16> key {};
 
-	const u64 key_len = key_file.read(key_str, sizeof(key_str));
+	const u64 key_len = key_file.read(key_str.data(), key_str.size());
 
-	if (key_len == sizeof(key_str) || key_len == sizeof(key))
+	if (key_len == key_str.size() || key_len == key.size())
 	{
 		// If the key read from the key file is 16 bytes long instead of 32, consider the file as
 		// binary (".key") and so not needing any further conversion from hex string to bytes
-		if (key_len == sizeof(key))
+		if (key_len == key.size())
 		{
-			std::memcpy(key.data(), key_str, sizeof(key));
+			std::memcpy(key.data(), key_str.data(), key.size());
 		}
 		else
 		{
-			hex_to_bytes(key.data(), std::string_view(key_str, key_len), static_cast<unsigned int>(key_len));
+			std::string error;
+			hex_to_bytes(key.data(), std::string_view(key_str.data(), key_str.size()), key_str.size(), &error);
+
+			if (!error.empty())
+			{
+				iso_log.error("get_key(%s): %s", key_path, error);
+				return iso_type_status::ERROR_PROCESSING_KEY;
+			}
 		}
 
-		aes_context aes_dec;
+		aes_context aes_dec {};
 
 		// If "aes_ctx" not requested
 		if (!aes_ctx)
@@ -859,14 +866,14 @@ static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, 
 	else if (names_in_ucs2) // For strings in joliet descriptor
 	{
 		// Characters are stored in big endian format
-		const u16* raw = reinterpret_cast<const u16*>(file_name.data());
+		const be_t<u16>* raw = utils::bless<const be_t<u16>>(file_name.data());
 		std::u16string utf16;
 
 		utf16.resize(header.file_name_length / 2);
 
-		for (usz i = 0; i < utf16.size(); i++, raw++)
+		for (usz i = 0; i < utf16.size(); i++)
 		{
-			utf16[i] = *reinterpret_cast<const be_t<u16>*>(raw);
+			utf16[i] = raw[i];
 		}
 
 		file_name = utf16_to_utf8(utf16);

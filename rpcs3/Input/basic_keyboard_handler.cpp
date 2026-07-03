@@ -7,6 +7,11 @@
 
 #ifdef _WIN32
 #include "windows.h"
+#elif __linux__
+#include <xkbcommon/xkbcommon.h>
+#include <xkbcommon/xkbcommon-x11.h>
+#include <private/qxkbcommon_p.h>
+#include <QGuiApplication>
 #endif
 
 LOG_CHANNEL(input_log, "Input");
@@ -44,7 +49,7 @@ void basic_keyboard_handler::Init(keyboard_consumer& consumer, const u32 max_con
 /* Sets the target window for the event handler, and also installs an event filter on the target. */
 void basic_keyboard_handler::SetTargetWindow(QWindow* target)
 {
-	if (target != nullptr)
+	if (target)
 	{
 		m_target = target;
 		target->installEventFilter(this);
@@ -119,7 +124,7 @@ void basic_keyboard_handler::keyPressEvent(QKeyEvent* keyEvent)
 		return;
 	}
 
-	const int key = getUnmodifiedKey(keyEvent);
+	const int key = get_unmodified_key(keyEvent);
 
 	if (key < 0 || !HandleKey(static_cast<u32>(key), keyEvent->nativeScanCode(), true, keyEvent->isAutoRepeat(), keyEvent->text().toStdU32String()))
 	{
@@ -140,7 +145,7 @@ void basic_keyboard_handler::keyReleaseEvent(QKeyEvent* keyEvent)
 		return;
 	}
 
-	const int key = getUnmodifiedKey(keyEvent);
+	const int key = get_unmodified_key(keyEvent);
 
 	if (key < 0 || !HandleKey(static_cast<u32>(key), keyEvent->nativeScanCode(), false, keyEvent->isAutoRepeat(), keyEvent->text().toStdU32String()))
 	{
@@ -149,8 +154,10 @@ void basic_keyboard_handler::keyReleaseEvent(QKeyEvent* keyEvent)
 }
 
 // This should get the actual unmodified key without getting too crazy.
-// key() only shows the modifiers and the modified key (e.g. no easy way of knowing that - was pressed in 'SHIFT+-' in order to get _)
-s32 basic_keyboard_handler::getUnmodifiedKey(QKeyEvent* keyEvent)
+// key() only shows the modifiers and the modified key.
+// e.g. 'Shift+1' may result in Qt::Key_Exclam, so we lose the information that Qt::Key_1 was pressed.
+// We want to find the actual physical key that was pressed (and return Qt::Key_1 in this example).
+s32 basic_keyboard_handler::get_unmodified_key(QKeyEvent* keyEvent)
 {
 	if (!keyEvent) [[unlikely]]
 	{
@@ -166,9 +173,9 @@ s32 basic_keyboard_handler::getUnmodifiedKey(QKeyEvent* keyEvent)
 
 	u32 raw_key = static_cast<u32>(key);
 
-#ifdef _WIN32
 	if (keyEvent->modifiers() != Qt::NoModifier && !keyEvent->text().isEmpty())
 	{
+#ifdef _WIN32
 		u32 mapped_key = static_cast<u32>(MapVirtualKeyA(static_cast<UINT>(keyEvent->nativeVirtualKey()), MAPVK_VK_TO_CHAR));
 
 		if (raw_key != mapped_key)
@@ -179,8 +186,72 @@ s32 basic_keyboard_handler::getUnmodifiedKey(QKeyEvent* keyEvent)
 			}
 			raw_key = mapped_key;
 		}
-	}
+#elif __linux__
+		class kb_mapper
+		{
+		public:
+			kb_mapper()
+			{
+				m_ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
+			}
+
+			~kb_mapper()
+			{
+				if (m_ctx) xkb_context_unref(m_ctx);
+			}
+
+			s32 get_unmodified_key(u32 qt_native_scan_code)
+			{
+				if (!m_ctx) return -1;
+
+				auto* connection = get_connection();
+				if (!connection) return -1;
+
+				const int device_id = xkb_x11_get_core_keyboard_device_id(connection);
+
+				xkb_keymap* keymap = xkb_x11_keymap_new_from_device(m_ctx, connection, device_id, XKB_KEYMAP_COMPILE_NO_FLAGS);
+				if (!keymap) return -1;
+
+				xkb_state* state = xkb_x11_state_new_from_device(keymap, connection, device_id);
+				if (!state)
+				{
+					xkb_keymap_unref(keymap);
+					return -1;
+				}
+
+				const xkb_keycode_t code = static_cast<xkb_keycode_t>(qt_native_scan_code);
+				const xkb_layout_index_t layout = xkb_state_serialize_layout(state, XKB_STATE_LAYOUT_EFFECTIVE);
+				const xkb_keysym_t* syms = nullptr;
+				const int count = xkb_keymap_key_get_syms_by_level(keymap, code, layout, 0, &syms);
+
+				const auto new_key = (syms && count > 0) ? QXkbCommon::keysymToQtKey(syms[0], Qt::NoModifier, nullptr, code) : -1;
+
+				xkb_state_unref(state);
+				xkb_keymap_unref(keymap);
+
+				return new_key;
+			}
+
+		private:
+			xcb_connection_t* get_connection()
+			{
+				if (!qGuiApp) return nullptr;
+				auto* native_interface = qGuiApp->nativeInterface<QNativeInterface::QX11Application>();
+				return native_interface ? native_interface->connection() : nullptr;
+			}
+
+			xkb_context* m_ctx = nullptr;
+		};
+
+		static kb_mapper mapper = kb_mapper();
+		if (const int res = mapper.get_unmodified_key(keyEvent->nativeScanCode()); res > 0)
+		{
+			raw_key = res;
+		}
+#elif __APPLE__
+		// TODO
 #endif
+	}
 
 	return static_cast<s32>(raw_key);
 }

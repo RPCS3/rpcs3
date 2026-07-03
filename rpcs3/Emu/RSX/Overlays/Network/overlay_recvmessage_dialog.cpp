@@ -14,7 +14,7 @@ namespace rsx
 			dlg->callback_handler(std::move(new_msg), msg_id);
 		}
 
-		recvmessage_dialog::list_entry::list_entry(const std::string& name, const std::string& subj, const std::string& body)
+		recvmessage_dialog::list_entry::list_entry(std::string_view name, std::string_view subj, std::string_view body)
 		{
 			std::unique_ptr<overlay_element> prefix_stack = std::make_unique<vertical_layout>();
 			std::unique_ptr<overlay_element> text_stack = std::make_unique<vertical_layout>();

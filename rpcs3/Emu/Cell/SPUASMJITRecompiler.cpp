@@ -1863,10 +1863,18 @@ void spu_recompiler::SHL(spu_opcode_t op)
 
 void spu_recompiler::ROTH(spu_opcode_t op) //nf
 {
+	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+	const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
+	
+	if (utils::has_avx512_icl())
+	{
+		c->vpshldvw(va, va, vb);
+		c->vmovdqa(SPU_OFF_128(gpr, op.rt), va);
+		return;
+	}
+	
 	if (utils::has_avx512())
 	{
-		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
-		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
 		const XmmLink& vt = XmmAlloc();
 		const XmmLink& v4 = XmmAlloc();
 		c->vmovdqa(v4, XmmConst(v128::from32r(0x0d0c0d0c, 0x09080908, 0x05040504, 0x01000100)));
@@ -1883,29 +1891,42 @@ void spu_recompiler::ROTH(spu_opcode_t op) //nf
 
 	if (utils::has_xop())
 	{
-		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
-		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
 		const XmmLink& vt = XmmAlloc();
 		c->vprotw(vt, va, vb);
 		c->movdqa(SPU_OFF_128(gpr, op.rt), vt);
 		return;
 	}
 
-	for (u32 i = 0; i < 8; i++) // unrolled loop
-	{
-		c->movzx(qw0->r32(), SPU_OFF_16(gpr, op.ra, &v128::_u16, i));
-		c->movzx(asmjit::x86::ecx, SPU_OFF_16(gpr, op.rb, &v128::_u16, i));
-		c->rol(qw0->r16(), asmjit::x86::cl);
-		c->mov(SPU_OFF_16(gpr, op.rt, &v128::_u16, i), qw0->r16());
-	}
+	// Turn shift amount into power of 2 using a float's exponent
+	// Calculating a negative power makes truncation cheaper
+	const XmmLink& v1 = XmmAlloc();
+	const XmmLink& v2 = XmmAlloc();
+	c->psllw(vb, 12);
+	c->psrlw(vb, 5);
+	c->paddw(vb, XmmConst(v128::from16p(std::bit_cast<uint32_t>(-1.0f) >> 16)));
+	c->pxor(v1, v1);
+	c->pxor(v2, v2);
+	c->punpcklwd(v1, vb);	// "shifts" the amount into the exponent
+	c->punpckhwd(v2, vb);
+	c->cvttps2dq(v1, v1);
+	c->cvttps2dq(v2, v2);
+	c->packssdw(v1, v2);	// positive power (1<<15) would have saturated
+	c->pxor(vb, vb);
+	c->psubw(vb, v1);
+	c->movdqa(v2, va);
+	c->pmullw(v2, vb);
+	c->pmulhuw(va, vb);
+	c->por(va, v2);
+	c->vmovdqa(SPU_OFF_128(gpr, op.rt), va);
 }
 
 void spu_recompiler::ROTHM(spu_opcode_t op)
 {
+	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+	const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
+
 	if (utils::has_avx512())
 	{
-		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
-		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
 		const XmmLink& vt = XmmAlloc();
 		c->psubw(vb, XmmConst(v128::from16p(1)));
 		c->pandn(vb, XmmConst(v128::from16p(0x1f)));
@@ -1916,8 +1937,6 @@ void spu_recompiler::ROTHM(spu_opcode_t op)
 
 	if (utils::has_avx2())
 	{
-		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
-		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
 		const XmmLink& vt = XmmAlloc();
 		const XmmLink& v4 = XmmAlloc();
 		const XmmLink& v5 = XmmAlloc();
@@ -1936,8 +1955,6 @@ void spu_recompiler::ROTHM(spu_opcode_t op)
 
 	if (utils::has_xop())
 	{
-		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
-		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
 		const XmmLink& vt = XmmAlloc();
 		c->psubw(vb, XmmConst(v128::from16p(1)));
 		c->pandn(vb, XmmConst(v128::from16p(0x1f)));
@@ -1950,22 +1967,40 @@ void spu_recompiler::ROTHM(spu_opcode_t op)
 		return;
 	}
 
-	for (u32 i = 0; i < 8; i++) // unrolled loop
-	{
-		c->movzx(qw0->r32(), SPU_OFF_16(gpr, op.ra, &v128::_u16, i));
-		c->movzx(asmjit::x86::ecx, SPU_OFF_16(gpr, op.rb, &v128::_u16, i));
-		c->neg(asmjit::x86::ecx);
-		c->shr(qw0->r32(), asmjit::x86::cl);
-		c->mov(SPU_OFF_16(gpr, op.rt, &v128::_u16, i), qw0->r16());
-	}
+	// Turn shift amount into power of 2 using a float's exponent
+	// Amount is `-amt % 32`, so make power zero when < 16
+	const float exp_offset = -std::exp2(-16.0f);
+
+	const XmmLink& vt = XmmAlloc();
+	const XmmLink& v1 = XmmAlloc();
+	const XmmLink& v2 = XmmAlloc();
+	c->psllw(vb, 11);
+	c->psrlw(vb, 4);
+	c->movdqa(vt, vb);
+	c->paddw(vb, XmmConst(v128::from16p(std::bit_cast<uint32_t>(exp_offset) >> 16)));
+	c->pxor(v1, v1);
+	c->pxor(v2, v2);
+	c->punpcklwd(v1, vb);	// "shifts" the amount into the exponent
+	c->punpckhwd(v2, vb);
+	c->cvttps2dq(v1, v1);
+	c->cvttps2dq(v2, v2);
+	c->packssdw(v1, v2);	// positive power (1<<15) would have saturated
+	c->pxor(vb, vb);
+	c->pcmpeqw(vt, vb);
+	c->pand(vt, va);
+	c->psubw(vb, v1);
+	c->pmulhuw(va, vb);		// high multiply "shifts" right by 16
+	c->por(va, vt);			// (amt == 0)? x : (x >> (32 - amt))
+	c->vmovdqa(SPU_OFF_128(gpr, op.rt), va);
 }
 
 void spu_recompiler::ROTMAH(spu_opcode_t op)
 {
+	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+	const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
+
 	if (utils::has_avx512())
 	{
-		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
-		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
 		const XmmLink& vt = XmmAlloc();
 		c->psubw(vb, XmmConst(v128::from16p(1)));
 		c->pandn(vb, XmmConst(v128::from16p(0x1f)));
@@ -1976,8 +2011,6 @@ void spu_recompiler::ROTMAH(spu_opcode_t op)
 
 	if (utils::has_avx2())
 	{
-		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
-		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
 		const XmmLink& vt = XmmAlloc();
 		const XmmLink& v4 = XmmAlloc();
 		const XmmLink& v5 = XmmAlloc();
@@ -1998,8 +2031,6 @@ void spu_recompiler::ROTMAH(spu_opcode_t op)
 
 	if (utils::has_xop())
 	{
-		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
-		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
 		const XmmLink& vt = XmmAlloc();
 		c->psubw(vb, XmmConst(v128::from16p(1)));
 		c->pandn(vb, XmmConst(v128::from16p(0x1f)));
@@ -2011,22 +2042,44 @@ void spu_recompiler::ROTMAH(spu_opcode_t op)
 		return;
 	}
 
-	for (u32 i = 0; i < 8; i++) // unrolled loop
-	{
-		c->movsx(qw0->r32(), SPU_OFF_16(gpr, op.ra, &v128::_u16, i));
-		c->movzx(asmjit::x86::ecx, SPU_OFF_16(gpr, op.rb, &v128::_u16, i));
-		c->neg(asmjit::x86::ecx);
-		c->sar(qw0->r32(), asmjit::x86::cl);
-		c->mov(SPU_OFF_16(gpr, op.rt, &v128::_u16, i), qw0->r16());
-	}
+	// Turn shift amount into power of 2 using a float's exponent
+	// Amount is `-amt % 32`, so clamp to sign fill when < 16
+	const float exp_offset = -std::exp2(-17.0f); // source is pre-shifted later
+
+	const XmmLink& vt = XmmAlloc();
+	const XmmLink& v1 = XmmAlloc();
+	const XmmLink& v2 = XmmAlloc();
+	c->psllw(vb, 11);
+	c->psrlw(vb, 4);
+	c->movdqa(vt, vb);
+	c->pmaxsw(vb, XmmConst(v128::from16p(17 << (23-16))));	// large shifts fill with sign
+	c->paddw(vb, XmmConst(v128::from16p(std::bit_cast<uint32_t>(exp_offset) >> 16)));
+	c->pxor(v1, v1);
+	c->pxor(v2, v2);
+	c->pcmpeqw(vt, v1);
+	c->punpcklwd(v1, vb);	// "shifts" the amount into the exponent
+	c->punpckhwd(v2, vb);
+	c->cvttps2dq(v1, v1);
+	c->cvttps2dq(v2, v2);
+	c->packssdw(v1, v2);	// positive power (1<<15) would have saturated
+	c->psrlw(vt, 1);
+	c->psubw(vt, v1);		// (amt == 0)? (1<<15) : -negPow2
+	c->movdqa(vb, va);
+	c->psraw(vb, 15);
+	c->paddw(va, va);		// pre-shift so `mulhi(x, 1<<15) = x >> 0` (already have sign bit)
+	c->pmullw(vb, vt);
+	c->pmulhuw(va, vt);
+	c->por(va, vb);			// fshr((x>>15), x, amt)
+	c->vmovdqa(SPU_OFF_128(gpr, op.rt), va);
 }
 
 void spu_recompiler::SHLH(spu_opcode_t op)
 {
+	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+	const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
+
 	if (utils::has_avx512())
 	{
-		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
-		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
 		const XmmLink& vt = XmmAlloc();
 		c->pand(vb, XmmConst(v128::from16p(0x1f)));
 		c->vpsllvw(vt, va, vb);
@@ -2036,8 +2089,6 @@ void spu_recompiler::SHLH(spu_opcode_t op)
 
 	if (utils::has_avx2())
 	{
-		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
-		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
 		const XmmLink& vt = XmmAlloc();
 		const XmmLink& v4 = XmmAlloc();
 		const XmmLink& v5 = XmmAlloc();
@@ -2055,8 +2106,6 @@ void spu_recompiler::SHLH(spu_opcode_t op)
 
 	if (utils::has_xop())
 	{
-		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
-		const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
 		const XmmLink& vt = XmmAlloc();
 		c->pand(vb, XmmConst(v128::from16p(0x1f)));
 		c->vpcmpgtw(vt, vb, XmmConst(v128::from16p(15)));
@@ -2066,13 +2115,24 @@ void spu_recompiler::SHLH(spu_opcode_t op)
 		return;
 	}
 
-	for (u32 i = 0; i < 8; i++) // unrolled loop
-	{
-		c->movzx(qw0->r32(), SPU_OFF_16(gpr, op.ra, &v128::_u16, i));
-		c->movzx(asmjit::x86::ecx, SPU_OFF_16(gpr, op.rb, &v128::_u16, i));
-		c->shl(qw0->r32(), asmjit::x86::cl);
-		c->mov(SPU_OFF_16(gpr, op.rt, &v128::_u16, i), qw0->r16());
-	}
+	// Turn shift amount into power of 2 using a float's exponent
+	// Arithmetic shift can make power smaller than one
+	const XmmLink& v1 = XmmAlloc();
+	const XmmLink& v2 = XmmAlloc();
+	c->psllw(vb, 11);
+	c->psraw(vb, 4);		// when amt > 15, exp -= 16
+	c->paddw(vb, XmmConst(v128::from16p(std::bit_cast<uint32_t>(-1.0f) >> 16)));
+	c->pxor(v1, v1);
+	c->pxor(v2, v2);
+	c->punpcklwd(v1, vb);
+	c->punpckhwd(v2, vb);
+	c->cvttps2dq(v1, v1);
+	c->cvttps2dq(v2, v2);
+	c->packssdw(v1, v2);	// positive power (1<<15) would have saturated
+	c->pxor(vb, vb);
+	c->psubw(vb, va);		// can negate either
+	c->pmullw(vb, v1);
+	c->movdqa(SPU_OFF_128(gpr, op.rt), vb);
 }
 
 void spu_recompiler::ROTI(spu_opcode_t op)
@@ -2799,32 +2859,35 @@ void spu_recompiler::FREST(spu_opcode_t op)
 void spu_recompiler::FRSQEST(spu_opcode_t op)
 {
 	const XmmLink& va = XmmGet(op.ra, XmmType::Float);
+	const XmmLink& vz = XmmAlloc();
+	const XmmLink& v1 = XmmAlloc();
 	const XmmLink& v_fraction = XmmAlloc();
 	const XmmLink& v_exponent = XmmAlloc();
 	c->movdqa(v_fraction, va);
 	c->movdqa(v_exponent, va);
 
+	// (exponent==0)? 0xFF : 190 - (exponent + 1) / 2
+	c->paddd(v_exponent, v_exponent);
+	c->pxor(vz, vz);
+	c->pavgb(v_exponent, vz);
+	c->movdqa(v1, XmmConst(v128::from32p(190 << 24)));
+	c->psubb(v1, v_exponent);
+	c->pcmpeqb(v_exponent, vz);
+	c->por(v_exponent, v1);
+	c->psrld(v_exponent, 1);
+	c->pand(v_exponent, XmmConst(v128::from32p(0xFF << 23)));
+
 	c->psrld(v_fraction, 18);
-	c->psrld(v_exponent, 23);
-
-	c->andps(v_fraction, XmmConst(v128::from32p(0x3F)));
-	c->andps(v_exponent, XmmConst(v128::from32p(0xFF)));
-
+	c->pand(v_fraction, XmmConst(v128::from32p(0x3F)));
 	const u64 fraction_lut_addr = reinterpret_cast<u64>(spu_frsqest_fraction_lut);
-	const u64 exponent_lut_addr = reinterpret_cast<u64>(spu_frsqest_exponent_lut);
 
 	c->movabs(*arg0, fraction_lut_addr);
-	c->movabs(*arg1, exponent_lut_addr);
 
 	for (u32 index = 0; index < 4; index++)
 	{
 		c->pextrd(*qw0, v_fraction, index);
 		c->mov(*qw1, asmjit::x86::dword_ptr(*arg0, *qw0, 2));
 		c->pinsrd(v_fraction, *qw1, index);
-
-		c->pextrd(*qw0, v_exponent, index);
-		c->mov(*qw1, asmjit::x86::dword_ptr(*arg1, *qw0, 2));
-		c->pinsrd(v_exponent, *qw1, index);
 	}
 
 	c->orps(v_fraction, v_exponent);
@@ -3343,23 +3406,31 @@ void spu_recompiler::HGT(spu_opcode_t op)
 
 void spu_recompiler::CLZ(spu_opcode_t op)
 {
+	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
+
 	if (utils::has_avx512())
 	{
-		const XmmLink& va = XmmGet(op.ra, XmmType::Int);
 		const XmmLink& vt = XmmAlloc();
 		c->vplzcntd(vt, va);
 		c->movdqa(SPU_OFF_128(gpr, op.rt), vt);
 		return;
 	}
 
-	c->mov(qw0->r32(), 32 + 31);
-	for (u32 i = 0; i < 4; i++) // unrolled loop
-	{
-		c->bsr(*addr, SPU_OFF_32(gpr, op.ra, &v128::_u32, i));
-		c->cmovz(*addr, qw0->r32());
-		c->xor_(*addr, 31);
-		c->mov(SPU_OFF_32(gpr, op.rt, &v128::_u32, i), *addr);
-	}
+	// Use signed conversion to float, as exponent is ilog2
+	// "Negative" values are zeroed due to saturation subtract
+	constexpr u32 exp_bias = 127;
+
+	const XmmLink& vf = XmmAlloc();
+	const XmmLink& v1 = XmmAlloc();
+	c->cvtdq2ps(vf, va); // only correct with round-towards-zero
+	c->psrld(vf, 23);
+	c->pxor(v1, v1);
+	c->pcmpeqd(v1, va);
+	c->pand(v1, XmmConst(v128::from32p(32 ^ (31 + exp_bias))));
+	c->pxor(v1, XmmConst(v128::from32p(31 + exp_bias)));
+	c->psubusw(v1, vf);	// (x==0)? 32 : 31 - (exponent - exp_bias)
+	c->movdqa(SPU_OFF_128(gpr, op.rt), v1);
+	return;
 }
 
 void spu_recompiler::XSWD(spu_opcode_t op)

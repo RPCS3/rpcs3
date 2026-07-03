@@ -501,7 +501,7 @@ auto ppu_feed_data(ppu_thread& ppu, u64 addr)
 		if (raddr / 128 == addr / 128)
 			src = &ppu.rdata[addr & 127], size = std::min<u32>(128 - (addr % 128), sizeof(T));
 		else
-			src = &ppu.rdata[0], size = (addr + u32{sizeof(T)}) % 127, offs = sizeof(T) - size;
+			src = &ppu.rdata[0], size = (addr + u32{sizeof(T)}) % 128, offs = sizeof(T) - size;
 
 		if (std::memcmp(buffer + offs, src, size))
 		{
