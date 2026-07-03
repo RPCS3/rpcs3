@@ -39,7 +39,7 @@ static std::string handle_load(int slot, const std::string& path)
 	if (sky_file.read(buf.data(), buf.size()) != buf.size())
 		return "error file too small\n";
 
-	const u8 result = g_skyportal.load_skylander(buf.data(), std::move(sky_file), slot);
+	const u8 result = g_skyportal.load_skylander(buf, std::move(sky_file), slot);
 	if (result == 0xFF)
 		return "error no free slot\n";
 
