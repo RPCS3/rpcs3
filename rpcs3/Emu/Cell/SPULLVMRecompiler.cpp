@@ -2981,6 +2981,11 @@ public:
 							condition = m_ir->CreateAnd(cond_verify, condition);
 						}
 					}
+					else
+					{
+						// Check spu_thread::state
+						condition = m_ir->CreateAnd(m_ir->CreateICmpEQ(spu_context_attr(m_ir->CreateLoad(get_type<u32>(), spu_ptr(&spu_thread::state), true)), m_ir->getInt32(0)), condition);
+					}
 
 					m_ir->CreateCondBr(condition, optimization_block, block_optimization_next);
 				};
