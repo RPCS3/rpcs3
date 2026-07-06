@@ -210,7 +210,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	function_info* m_finfo = nullptr;
 
 	// Reduced Loop Pattern information (if available)
-	reduced_loop_t* m_reduced_loop_info = nullptr;
+	std::shared_ptr<reduced_loop_t> m_reduced_loop_info;
 
 	// All blocks in the current function chunk
 	std::unordered_map<u32, block_info, value_hash<u32, 2>> m_blocks;
@@ -2689,7 +2689,7 @@ public:
 				}
 
 				const bool is_reduced_loop = m_inst_attrs[(baddr - start) / 4] == inst_attr::reduced_loop;
-				m_reduced_loop_info = is_reduced_loop ? std::static_pointer_cast<reduced_loop_t>(ensure(m_patterns.at(baddr - start).info_ptr)).get() : nullptr;
+				m_reduced_loop_info = is_reduced_loop ? std::static_pointer_cast<reduced_loop_t>(ensure(m_patterns.at(baddr - start).info_ptr)) : nullptr;
 
 				BasicBlock* block_optimization_phi_parent =  nullptr;
 				const auto block_optimization_inner = is_reduced_loop ? BasicBlock::Create(m_context, fmt::format("b-loop-it-0x%x", m_pos), m_function) : nullptr;
@@ -7813,7 +7813,7 @@ public:
 
 	value_t<f32[4]> clamp_smax(value_t<f32[4]> v, u32 gpr)
 	{
-		if (m_reduced_loop_info && gpr < s_reg_max && m_reduced_loop_info->is_gpr_not_NaN_hint(gpr))
+		if (gpr < s_reg_max && m_reduced_loop_info && m_reduced_loop_info->is_gpr_not_NaN_hint(gpr))
 		{
 			return v;
 		}
