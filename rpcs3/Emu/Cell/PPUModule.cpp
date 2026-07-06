@@ -1185,9 +1185,11 @@ static void ppu_check_patch_spu_images(const ppu_module<lv2_obj>& mod, const ppu
 
 		ensure(data.size() <= pos && index <= data.size());
 
+		const auto data_to_search = data.substr(index, pos - index);
+
 		for (std::string_view value : values)
 		{
-			if (usz pos0 = data.substr(index, pos - index).find(value); pos0 != umax && pos0 + index < pos)
+			if (usz pos0 = data_to_search.find(value); pos0 != umax && pos0 + index < pos)
 			{
 				pos = static_cast<u32>(pos0 + index);
 			}
@@ -1211,12 +1213,22 @@ static void ppu_check_patch_spu_images(const ppu_module<lv2_obj>& mod, const ppu
 		{
 			const u32 old_prefix_addr = prefix_addr;
 
-			auto search_guid_pattern = [&](u32 index, std::string_view data_span, s32 advance_index, u32 lower_bound, u32 uppper_bound) -> u32
+			auto search_guid_pattern = [&](u32 index, std::string_view data_span, s32 advance_index, u32 lower_bound, u32 upper_bound) -> u32
 			{
-				for (u32 search = index & -16, tries = 16 * 64; tries && search >= lower_bound && search < uppper_bound; tries = tries - 1, search = advance_index < 0 ? utils::sub_saturate<u32>(search, 0 - advance_index) : search + advance_index)
+				ensure(upper_bound <= data_span.size());
+				ensure(lower_bound <= data_span.size());
+				ensure(lower_bound <= upper_bound);
+
+				for (u32 search = index & -16, tries = 16 * 64; tries && search >= lower_bound && search < (upper_bound & -16); tries = tries - 1, search = advance_index < 0 ? utils::sub_saturate<u32>(search, 0 - advance_index) : search + advance_index)
 				{
 					if (seg_view[search] != 0x42 && seg_view[search] != 0x43)
 					{
+						if (search == 0 && advance_index <= 0)
+						{
+							// Fast early-out
+							break;
+						}
+
 						continue;
 					}
 
@@ -1260,7 +1272,7 @@ static void ppu_check_patch_spu_images(const ppu_module<lv2_obj>& mod, const ppu
 			{
 				const u32 instruction = std::min<u32>(search_guid_pattern(addr_last, ls_segment, +16, 0, ::size32(ls_segment)), find_first_of_multiple(ls_segment, prefixes, addr_last));
 
-				if (instruction != umax && std::memcmp(ls_segment.data() + instruction, "\x24\0\x40\x80", 4) == 0)
+				if (instruction < ls_segment.size() && std::memcmp(ls_segment.data() + instruction, "\x24\0\x40\x80", 4) == 0)
 				{
 					if (instruction % 4 != prefix_addr % 4)
 					{
