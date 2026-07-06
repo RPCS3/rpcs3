@@ -685,7 +685,11 @@ public:
 
 		bool is_gpr_not_NaN_hint(u32 i) const noexcept
 		{
+#ifdef ARCH_X64
 			return gpr_not_nans.test(i);
+#else
+			return false;
+#endif
 		}
 
 		origin_t get_reg(u32 reg_val) noexcept
