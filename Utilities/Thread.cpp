@@ -3560,15 +3560,26 @@ std::pair<void*, usz> thread_ctrl::get_thread_stack()
 
 u64 thread_ctrl::get_tid()
 {
-#ifdef _WIN32
-	return GetCurrentThreadId();
-#elif defined(ANDROID)
-	return static_cast<u64>(pthread_self());
-#elif defined(__linux__)
-	return syscall(SYS_gettid);
-#else
-	return reinterpret_cast<u64>(pthread_self());
-#endif
+	static thread_local u64 s_tls_tid = []() -> u64
+	{
+	#ifdef _WIN32
+		return GetCurrentThreadId();
+	#elif defined(ANDROID)
+		return pthread_gettid_np(pthread_self());
+	#elif defined(__linux__)
+		return syscall(SYS_gettid);
+	#elif defined(__APPLE__)
+		u64 tid{};
+		pthread_threadid_np(nullptr, &tid);
+		return tid;
+	#elif defined(__FreeBSD__)
+		return pthread_getthreadid_np();
+	#else
+		return static_cast<u64>(pthread_self());
+	#endif
+	}();
+
+	return s_tls_tid;
 }
 
 bool thread_ctrl::is_main()
