@@ -7190,77 +7190,74 @@ public:
 			using VT = typename decltype(MP)::type;
 
 			// If the control mask comes from a comparison instruction, replace SELB with select
-			if (auto [ok, x] = match_expr(c, sext<VT>(match<bool[std::extent_v<VT>]>())); ok)
+			auto [select_match, sel_bool] = match_expr(c, sext<VT>(match<bool[std::extent_v<VT>]>()));
+
+			if (!select_match)
+				return false;
+
+			if constexpr (std::extent_v<VT> == 2) // u64[2]
 			{
-				if constexpr (std::extent_v<VT> == 2) // u64[2]
+				// Try to select floats as floats if either is typed as f64[2]
+				if (auto [a, b] = match_vrs<f64[2]>(op.ra, op.rb); a || b)
 				{
-					// Try to select floats as floats if a OR b is typed as f64[2]
-					if (auto [a, b] = match_vrs<f64[2]>(op.ra, op.rb); a || b)
-					{
-						set_vr(op.rt4, select(x, get_vr<f64[2]>(op.rb), get_vr<f64[2]>(op.ra)));
-						return true;
-					}
+					set_vr(op.rt4, select(sel_bool, get_vr<f64[2]>(op.rb), get_vr<f64[2]>(op.ra)));
+					return true;
 				}
-
-				if constexpr (std::extent_v<VT> == 4) // u32[4]
-				{
-					// Match division (adjusted) (TODO)
-					if (auto a = match_vr<f32[4]>(op.ra))
-					{
-						static const auto MT = match<f32[4]>();
-
-						if (auto [div_ok, diva, divb] = match_expr(a, MT / MT); div_ok)
-						{
-							if (auto b = match_vr<s32[4]>(op.rb))
-							{
-								if (auto [add1_ok] = match_expr(b, bitcast<s32[4]>(a) + splat<s32[4]>(1)); add1_ok)
-								{
-									if (auto [fm_ok, a1, b1] = match_expr(x, bitcast<s32[4]>(fm(MT, MT)) > splat<s32[4]>(-1)); fm_ok)
-									{
-										if (auto [fnma_ok] = match_expr(a1, fnms(divb, bitcast<f32[4]>(b), diva)); fnma_ok)
-										{
-											if (fabs(b1).eval(m_ir) == fsplat<f32[4]>(1.0).eval(m_ir))
-											{
-												set_vr(op.rt4, diva / divb);
-												return true;
-											}
-
-											if (auto [sel_ok] = match_expr(b1, bitcast<f32[4]>((bitcast<u32[4]>(diva) & 0x80000000) | 0x3f800000)); sel_ok)
-											{
-												set_vr(op.rt4, diva / divb);
-												return true;
-											}
-										}
-									}
-								}
-							}
-						}
-					}
-
-					if (auto [a, b] = match_vrs<f64[4]>(op.ra, op.rb); a || b)
-					{
-						set_vr(op.rt4, select(x, get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.ra)));
-						return true;
-					}
-
-					if (auto [a, b] = match_vrs<f32[4]>(op.ra, op.rb); a || b)
-					{
-						set_vr(op.rt4, select(x, get_vr<f32[4]>(op.rb), get_vr<f32[4]>(op.ra)));
-						return true;
-					}
-				}
-
-				if (auto [ok, y] = match_expr(x, bitcast<bool[std::extent_v<VT>]>(match<get_int_vt<std::extent_v<VT>>>())); ok)
-				{
-					// Don't ruin FSMB/FSM/FSMH instructions
-					return false;
-				}
-
-				set_vr(op.rt4, select(x, get_vr<VT>(op.rb), get_vr<VT>(op.ra)));
-				return true;
 			}
 
-			return false;
+			if constexpr (std::extent_v<VT> == 4) // u32[4]
+			{
+				// Replace "division accuracy correction" pattern with direct division
+
+				auto quot = match_vr<f32[4]>(op.ra);
+				auto quot_offset = match_vr<s32[4]>(op.rb);
+
+				if (quot && quot_offset)
+				{
+					// Capture arbitrary operand
+					static const auto MT = match<f32[4]>();
+
+					// select(div_error > -1, nextafter(n/d), n/d)
+					const auto [errcmp_match, div_err, fone] = match_expr(sel_bool, bitcast<s32[4]>(fm(MT, MT)) > splat<s32[4]>(-1));
+					const auto [divoffset_match] = match_expr(quot_offset, bitcast<s32[4]>(quot) + splat<s32[4]>(1));
+					const auto [div_match, nume, denom] = match_expr(quot, MT / MT);
+
+					if (errcmp_match && divoffset_match && div_match)
+					{
+						// "Undo" division to check rounding error
+						const auto [diverr_match] = match_expr(div_err, fnms(denom, bitcast<f32[4]>(quot_offset), nume));
+
+						const auto is_one_const = fabs(fone).eval(m_ir) == fsplat<f32[4]>(1.0).eval(m_ir);
+						const auto [copy_sign_match] = match_expr(fone, bitcast<f32[4]>((bitcast<u32[4]>(nume) & 0x80000000) | std::bit_cast<uint32_t>(1.0f)));
+
+						if (diverr_match && (is_one_const || copy_sign_match))
+						{
+							// Correction isn't needed as IEEE division is accurate
+							set_vr(op.rt4, nume / denom);
+							return true;
+						}
+					}
+				}
+
+				if (auto [a, b] = match_vrs<f64[4]>(op.ra, op.rb); a || b)
+				{
+					set_vr(op.rt4, select(sel_bool, get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.ra)));
+					return true;
+				}
+
+				if (auto [a, b] = match_vrs<f32[4]>(op.ra, op.rb); a || b)
+				{
+					set_vr(op.rt4, select(sel_bool, get_vr<f32[4]>(op.rb), get_vr<f32[4]>(op.ra)));
+					return true;
+				}
+			}
+
+			// Don't ruin FSMB/FSM/FSMH instructions
+			if (auto [ok, y] = match_expr(sel_bool, bitcast<bool[std::extent_v<VT>]>(match<get_int_vt<std::extent_v<VT>>>())); ok)
+				return false;
+
+			set_vr(op.rt4, select(sel_bool, get_vr<VT>(op.rb), get_vr<VT>(op.ra)));
+			return true;
 		}))
 		{
 			return;
@@ -7271,63 +7268,54 @@ public:
 		// Check if the constant mask doesn't require bit granularity
 		if (auto [ok, mask] = get_const_vector(c.value, m_pos); ok)
 		{
-			bool sel_32 = true;
-			for (u32 i = 0; i < 4; i++)
+			unsigned byte_granularity = 16;
+
+			unsigned equals_run = 0;
+			u8 prev_elt = mask._u8[0];
+			for (u8 cur_elt : mask._u8.m_data)
 			{
-				if (mask._u32[i] && mask._u32[i] != 0xFFFFFFFF)
+				if (cur_elt != 0x00 && cur_elt != 0xFF)
 				{
-					sel_32 = false;
+					byte_granularity = 0;
 					break;
 				}
+
+				if (cur_elt != prev_elt)
+				{
+					// Fraction of 16 check
+					byte_granularity = (16 % equals_run) ? 1 : std::min(byte_granularity, equals_run);
+					equals_run = 0;	// 1 after increment
+				}
+
+				equals_run++;
+				prev_elt = cur_elt;
 			}
 
-			if (sel_32)
+			switch (byte_granularity)
 			{
-				if (auto [a, b] = match_vrs<f64[4]>(op.ra, op.rb); a || b)
+			case 16:
+			case 8:
+			case 4:
+			{
+				if (const auto [a_f64, b_f64] = match_vrs<f64[4]>(op.ra, op.rb); a_f64 || b_f64)
 				{
-					set_vr(op.rt4, select(noncast<s32[4]>(c) != 0,  get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.ra)));
+					set_vr(op.rt4, select(noncast<s32[4]>(c) != 0, get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.ra)));
 					return;
 				}
-				else if (auto [a, b] = match_vrs<f32[4]>(op.ra, op.rb); a || b)
+
+				if (const auto [a_f32, b_f32] = match_vrs<f32[4]>(op.ra, op.rb); a_f32 || b_f32)
 				{
-					set_vr(op.rt4, select(noncast<s32[4]>(c) != 0,  get_vr<f32[4]>(op.rb), get_vr<f32[4]>(op.ra)));
+					set_vr(op.rt4, select(noncast<s32[4]>(c) != 0, get_vr<f32[4]>(op.rb), get_vr<f32[4]>(op.ra)));
 					return;
 				}
-
-				set_vr(op.rt4, select(noncast<s32[4]>(c) != 0, get_vr<u32[4]>(op.rb), get_vr<u32[4]>(op.ra)));
+				[[fallthrough]];
+			}
+			case 2:
+			case 1:
+			{
+				set_vr(op.rt4, select(bitcast<s8[16]>(c) != 0, get_vr<u8[16]>(op.rb), get_vr<u8[16]>(op.ra)));
 				return;
 			}
-
-			bool sel_16 = true;
-			for (u32 i = 0; i < 8; i++)
-			{
-				if (mask._u16[i] && mask._u16[i] != 0xFFFF)
-				{
-					sel_16 = false;
-					break;
-				}
-			}
-
-			if (sel_16)
-			{
-				set_vr(op.rt4, select(bitcast<s16[8]>(c) != 0, get_vr<u16[8]>(op.rb), get_vr<u16[8]>(op.ra)));
-				return;
-			}
-
-			bool sel_8 = true;
-			for (u32 i = 0; i < 16; i++)
-			{
-				if (mask._u8[i] && mask._u8[i] != 0xFF)
-				{
-					sel_8 = false;
-					break;
-				}
-			}
-
-			if (sel_8)
-			{
-				set_vr(op.rt4, select(bitcast<s8[16]>(c) != 0,get_vr<u8[16]>(op.rb), get_vr<u8[16]>(op.ra)));
-				return;
 			}
 		}
 
