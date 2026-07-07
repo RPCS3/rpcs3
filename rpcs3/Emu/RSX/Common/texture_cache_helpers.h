@@ -46,21 +46,6 @@ namespace rsx
 		blit_image_static,        // Variant of the copy command that does scaling instead of copying
 	};
 
-	struct image_section_attributes_t
-	{
-		u32 address;
-		u32 gcm_format;
-		u32 pitch;
-		u16 width;
-		u16 height;
-		u16 depth;
-		u16 mipmaps;
-		u16 slice_h;
-		u8  bpp;
-		bool swizzled;
-		bool edge_clamped;
-	};
-
 	struct blit_op_result
 	{
 		bool succeeded = false;

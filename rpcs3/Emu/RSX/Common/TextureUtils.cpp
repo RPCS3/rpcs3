@@ -1703,6 +1703,48 @@ namespace rsx
 		}
 	}
 
+	rsx::surface_color_format get_compatible_surface_color_format(u32 gcm_format)
+	{
+		switch (gcm_format)
+		{
+		case CELL_GCM_TEXTURE_R5G6B5:
+			return rsx::surface_color_format::r5g6b5;
+		case CELL_GCM_TEXTURE_A8R8G8B8:
+			return rsx::surface_color_format::a8b8g8r8;
+		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
+			return rsx::surface_color_format::w16z16y16x16;
+		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
+			return rsx::surface_color_format::w32z32y32x32;
+		case CELL_GCM_TEXTURE_A1R5G5B5:
+			return rsx::surface_color_format::x1r5g5b5_o1r5g5b5;
+		case CELL_GCM_TEXTURE_B8:
+			return rsx::surface_color_format::b8;
+		case CELL_GCM_TEXTURE_G8B8:
+			return rsx::surface_color_format::g8b8;
+		case CELL_GCM_TEXTURE_X32_FLOAT:
+			return rsx::surface_color_format::x32;
+		default:
+			fmt::throw_exception("Unhandled surface format 0x%x", gcm_format);
+		}
+	}
+
+	rsx::surface_depth_format2 get_compatible_surface_depth_format(u32 gcm_format)
+	{
+		switch (gcm_format)
+		{
+		case RSX_FORMAT_CLASS_DEPTH16_UNORM:
+			return rsx::surface_depth_format2::z16_uint;
+		case RSX_FORMAT_CLASS_DEPTH24_UNORM_X8_PACK32:
+			return rsx::surface_depth_format2::z24s8_uint;
+		case RSX_FORMAT_CLASS_DEPTH16_FLOAT:
+			return rsx::surface_depth_format2::z16_float;
+		case RSX_FORMAT_CLASS_DEPTH24_FLOAT_X8_PACK32:
+			return rsx::surface_depth_format2::z24s8_float;
+		default:
+			fmt::throw_exception("Invalid depth format 0x%x", gcm_format);
+		}
+	}
+
 	u32 get_max_depth_value(rsx::surface_depth_format2 format)
 	{
 		return get_format_block_size_in_bytes(format) == 2 ? 0xFFFF : 0xFFFFFF;
