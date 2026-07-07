@@ -2927,10 +2927,14 @@ void spu_recompiler::ROTQBYBI(spu_opcode_t op)
 	}
 
 	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
-	c->mov(*qw0, +g_spu_imm.rldq_pshufb);
-	c->mov(*addr, SPU_OFF_32(gpr, op.rb, &v128::_u32, 3));
-	c->and_(*addr, 0xf << 3);
-	c->pshufb(va, asmjit::x86::oword_ptr(*qw0, addr->r64(), 1));
+	const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
+	const XmmLink& vt = XmmAlloc();
+	c->psrld(vb, 3);
+	c->pshufb(vb, XmmConst(v128::from8p(12)));
+	c->pand(vb, XmmConst(v128::from8p(0x0f)));
+	c->movdqa(vt, XmmConst(v128::from32r(0x1f1e1d1c, 0x1b1a1918, 0x17161514, 0x13121110)));
+	c->psubb(vt, vb);
+	c->pshufb(va, vt);
 	c->movdqa(SPU_OFF_128(gpr, op.rt), va);
 }
 
@@ -2942,10 +2946,15 @@ void spu_recompiler::ROTQMBYBI(spu_opcode_t op)
 	}
 
 	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
-	c->mov(*qw0, +g_spu_imm.srdq_pshufb);
-	c->mov(*addr, SPU_OFF_32(gpr, op.rb, &v128::_u32, 3));
-	c->and_(*addr, 0x1f << 3);
-	c->pshufb(va, asmjit::x86::oword_ptr(*qw0, addr->r64(), 1));
+	const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
+	const XmmLink& vz = XmmAlloc();
+	c->pxor(vz, vz);
+	c->psrld(vb, 3);
+	c->pshufb(vb, XmmConst(v128::from8p(12)));
+	c->psubb(vz, vb);
+	c->pand(vz, XmmConst(v128::from8p(0x1f)));
+	c->paddb(vz, XmmConst(v128::from32r(0x7f7e7d7c, 0x7b7a7978, 0x77767574, 0x73727170)));
+	c->pshufb(va, vz);
 	c->movdqa(SPU_OFF_128(gpr, op.rt), va);
 }
 
@@ -2957,10 +2966,14 @@ void spu_recompiler::SHLQBYBI(spu_opcode_t op)
 	}
 
 	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
-	c->mov(*qw0, +g_spu_imm.sldq_pshufb);
-	c->mov(*addr, SPU_OFF_32(gpr, op.rb, &v128::_u32, 3));
-	c->and_(*addr, 0x1f << 3);
-	c->pshufb(va, asmjit::x86::oword_ptr(*qw0, addr->r64(), 1));
+	const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
+	const XmmLink& vt = XmmAlloc();
+	c->psrld(vb, 3);
+	c->pshufb(vb, XmmConst(v128::from8p(12)));
+	c->pand(vb, XmmConst(v128::from8p(0x1f)));
+	c->movdqa(vt, XmmConst(v128::from32r(0x0f0e0d0c, 0x0b0a0908, 0x07060504, 0x03020100)));
+	c->psubb(vt, vb);
+	c->pshufb(va, vt);
 	c->movdqa(SPU_OFF_128(gpr, op.rt), va);
 }
 
@@ -3080,11 +3093,13 @@ void spu_recompiler::ROTQBY(spu_opcode_t op)
 	}
 
 	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
-	c->mov(*qw0, +g_spu_imm.rldq_pshufb);
-	c->mov(*addr, SPU_OFF_32(gpr, op.rb, &v128::_u32, 3));
-	c->and_(*addr, 0xf);
-	c->shl(*addr, 4);
-	c->pshufb(va, asmjit::x86::oword_ptr(*qw0, addr->r64()));
+	const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
+	const XmmLink& vt = XmmAlloc();
+	c->pshufb(vb, XmmConst(v128::from8p(12)));
+	c->pand(vb, XmmConst(v128::from8p(0x0f)));
+	c->movdqa(vt, XmmConst(v128::from32r(0x1f1e1d1c, 0x1b1a1918, 0x17161514, 0x13121110)));
+	c->psubb(vt, vb);
+	c->pshufb(va, vt);
 	c->movdqa(SPU_OFF_128(gpr, op.rt), va);
 }
 
@@ -3096,11 +3111,14 @@ void spu_recompiler::ROTQMBY(spu_opcode_t op)
 	}
 
 	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
-	c->mov(*qw0, +g_spu_imm.srdq_pshufb);
-	c->mov(*addr, SPU_OFF_32(gpr, op.rb, &v128::_u32, 3));
-	c->and_(*addr, 0x1f);
-	c->shl(*addr, 4);
-	c->pshufb(va, asmjit::x86::oword_ptr(*qw0, addr->r64()));
+	const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
+	const XmmLink& vz = XmmAlloc();
+	c->pxor(vz, vz);
+	c->pshufb(vb, XmmConst(v128::from8p(12)));
+	c->psubb(vz, vb);
+	c->pand(vz, XmmConst(v128::from8p(0x1f)));
+	c->paddb(vz, XmmConst(v128::from32r(0x7f7e7d7c, 0x7b7a7978, 0x77767574, 0x73727170)));
+	c->pshufb(va, vz);
 	c->movdqa(SPU_OFF_128(gpr, op.rt), va);
 }
 
@@ -3112,11 +3130,13 @@ void spu_recompiler::SHLQBY(spu_opcode_t op)
 	}
 
 	const XmmLink& va = XmmGet(op.ra, XmmType::Int);
-	c->mov(*qw0, +g_spu_imm.sldq_pshufb);
-	c->mov(*addr, SPU_OFF_32(gpr, op.rb, &v128::_u32, 3));
-	c->and_(*addr, 0x1f);
-	c->shl(*addr, 4);
-	c->pshufb(va, asmjit::x86::oword_ptr(*qw0, addr->r64()));
+	const XmmLink& vb = XmmGet(op.rb, XmmType::Int);
+	const XmmLink& vt = XmmAlloc();
+	c->pshufb(vb, XmmConst(v128::from8p(12)));
+	c->pand(vb, XmmConst(v128::from8p(0x1f)));
+	c->movdqa(vt, XmmConst(v128::from32r(0x0f0e0d0c, 0x0b0a0908, 0x07060504, 0x03020100)));
+	c->psubb(vt, vb);
+	c->pshufb(va, vt);
 	c->movdqa(SPU_OFF_128(gpr, op.rt), va);
 }
 
