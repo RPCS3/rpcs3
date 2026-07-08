@@ -1158,6 +1158,71 @@ namespace rsx
 			return result;
 		}
 
+		template <typename ...FlushArgs, typename ...Args>
+		void lock_memory_region_impl(commandbuffer_type& cmd, image_storage_type* image, const address_range32& rsx_range, bool is_active_surface, u16 width, u16 height, u32 pitch, Args&&... extras)
+		{
+			// Find a cached section to use
+			image_section_attributes_t search_desc = { .gcm_format = RSX_GCM_FORMAT_IGNORED, .width = width, .height = height };
+			section_storage_type& region = *find_cached_texture(rsx_range, search_desc, true, true, false);
+
+			// Prepare and initialize fbo region
+			if (region.exists() && region.get_context() != texture_upload_context::framebuffer_storage)
+			{
+				//This space was being used for other purposes other than framebuffer storage
+				//Delete used resources before attaching it to framebuffer memory
+				read_only_tex_invalidate = true;
+			}
+
+			if (!region.is_locked() || region.get_context() != texture_upload_context::framebuffer_storage)
+			{
+				// Invalidate sections from surface cache occupying same address range
+				invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::superseded_by_fbo);
+			}
+
+			if (!region.is_locked() || region.can_be_reused())
+			{
+				// New region, we must prepare it
+				region.reset(rsx_range);
+				no_access_range = region.get_min_max(no_access_range, rsx::section_bounds::locked_range);
+				region.set_context(texture_upload_context::framebuffer_storage);
+				region.set_image_type(rsx::texture_dimension_extended::texture_dimension_2d);
+			}
+			else
+			{
+				// Re-using clean fbo region
+				ensure(region.matches(rsx_range));
+				ensure(region.get_context() == texture_upload_context::framebuffer_storage);
+				ensure(region.get_image_type() == rsx::texture_dimension_extended::texture_dimension_2d);
+			}
+
+			region.create(width, height, 1, 1, image, pitch, false, std::forward<Args>(extras)...);
+			region.reprotect(utils::protection::no, { 0, rsx_range.length() });
+
+			region.set_dirty(false);
+			region.touch(m_cache_update_tag);
+
+			if (is_active_surface)
+			{
+				// Add to flush always cache
+				if (region.get_memory_read_flags() != memory_read_flags::flush_always)
+				{
+					region.set_memory_read_flags(memory_read_flags::flush_always, false);
+					update_flush_always_cache(region, true);
+				}
+				else
+				{
+					AUDIT(m_flush_always_cache.find(region.get_section_range()) != m_flush_always_cache.end());
+				}
+			}
+
+			update_cache_tag();
+
+#ifdef TEXTURE_CACHE_DEBUG
+			// Check that the cache makes sense
+			tex_cache_checker.verify();
+#endif // TEXTURE_CACHE_DEBUG
+		}
+
 	public:
 
 		texture_cache() : m_storage(this), m_predictor(this) {}
@@ -1345,72 +1410,13 @@ namespace rsx
 		}
 
 		template <typename ...FlushArgs, typename ...Args>
-		void lock_memory_region(commandbuffer_type& cmd, image_storage_type* image, const address_range32 &rsx_range, bool is_active_surface, u16 width, u16 height, u32 pitch, Args&&... extras)
+		void lock_memory_region(commandbuffer_type& cmd, image_storage_type* image, const address_range32& rsx_range, bool is_active_surface, u16 width, u16 height, u32 pitch, Args&&... extras)
 		{
 			AUDIT(g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer); // this method is only called when either WCB or WDB are enabled
 
 			std::lock_guard lock(m_cache_mutex);
 
-			// Find a cached section to use
-			image_section_attributes_t search_desc = { .gcm_format = RSX_GCM_FORMAT_IGNORED, .width = width, .height = height };
-			section_storage_type& region = *find_cached_texture(rsx_range, search_desc, true, true, false);
-
-			// Prepare and initialize fbo region
-			if (region.exists() && region.get_context() != texture_upload_context::framebuffer_storage)
-			{
-				//This space was being used for other purposes other than framebuffer storage
-				//Delete used resources before attaching it to framebuffer memory
-				read_only_tex_invalidate = true;
-			}
-
-			if (!region.is_locked() || region.get_context() != texture_upload_context::framebuffer_storage)
-			{
-				// Invalidate sections from surface cache occupying same address range
-				invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::superseded_by_fbo);
-			}
-
-			if (!region.is_locked() || region.can_be_reused())
-			{
-				// New region, we must prepare it
-				region.reset(rsx_range);
-				no_access_range = region.get_min_max(no_access_range, rsx::section_bounds::locked_range);
-				region.set_context(texture_upload_context::framebuffer_storage);
-				region.set_image_type(rsx::texture_dimension_extended::texture_dimension_2d);
-			}
-			else
-			{
-				// Re-using clean fbo region
-				ensure(region.matches(rsx_range));
-				ensure(region.get_context() == texture_upload_context::framebuffer_storage);
-				ensure(region.get_image_type() == rsx::texture_dimension_extended::texture_dimension_2d);
-			}
-
-			region.create(width, height, 1, 1, image, pitch, false, std::forward<Args>(extras)...);
-			region.reprotect(utils::protection::no, { 0, rsx_range.length() });
-
-			region.set_dirty(false);
-			region.touch(m_cache_update_tag);
-
-			if (is_active_surface)
-			{
-				// Add to flush always cache
-				if (region.get_memory_read_flags() != memory_read_flags::flush_always)
-				{
-					region.set_memory_read_flags(memory_read_flags::flush_always, false);
-					update_flush_always_cache(region, true);
-				}
-				else
-				{
-					AUDIT(m_flush_always_cache.find(region.get_section_range()) != m_flush_always_cache.end());
-				}
-			}
-
-			update_cache_tag();
-
-#ifdef TEXTURE_CACHE_DEBUG
-			// Check that the cache makes sense
-			tex_cache_checker.verify();
-#endif // TEXTURE_CACHE_DEBUG
+			lock_memory_region_impl(cmd, image, rsx_range, is_active_surface, width, height, pitch, std::forward<Args>(extras)...);
 		}
 
 		template <typename ...Args>
@@ -3290,7 +3296,7 @@ namespace rsx
 				else
 				{
 					// render target data is already in correct swizzle layout
-					auto channel_order = src_is_render_target ? rsx::component_order::native :
+					[[maybe_unused]] auto channel_order = src_is_render_target ? rsx::component_order::native :
 						dst_is_argb8 ? rsx::component_order::default_ :
 						rsx::component_order::swapped_native;
 
@@ -3300,11 +3306,33 @@ namespace rsx
 					dst_area.y1 += dst_offset.y;
 					dst_area.y2 += dst_offset.y;
 
+					// We have to create the surface in the surface cache
+					rsx::image_section_attributes_t section_attr
+					{
+						.address = rsx_range.start,
+						.gcm_format = preferred_dst_format,
+						.pitch = dst.pitch,
+						.width = static_cast<u16>(dst_dimensions.width),
+						.height = static_cast<u16>(dst_dimensions.height),
+						.depth = 1,
+						.mipmaps = 1,
+						.slice_h = static_cast<u16>(dst_dimensions.height),
+						.bpp = dst_bpp,
+						.swizzled = false,
+						.edge_clamped = false
+					};
+
+					auto dst_surface = m_rtts.create_surface_from_rsx_section(
+						cmd,
+						section_attr,
+						std::forward<Args>(extras)...);
+
+					ensure(dst_surface, "Failed to create target surface");
+
 					if (!dst_area.x1 && !dst_area.y1 && dst_area.x2 == dst_dimensions.width && dst_area.y2 == dst_dimensions.height)
 					{
-						cached_dest = create_new_texture(cmd, rsx_range, dst_dimensions.width, dst_dimensions.height, 1, 1, dst.pitch,
-							preferred_dst_format, rsx::texture_upload_context::blit_engine_dst, rsx::texture_dimension_extended::texture_dimension_2d,
-							dst.swizzled, channel_order, 0);
+						// Nothing to do, not even a background erase is needed here
+						dst_surface->state_flags &= ~rsx::surface_state_flags::erase_bkgnd;
 					}
 					else
 					{
@@ -3313,25 +3341,24 @@ namespace rsx
 						const auto prot_range = dst_range.to_page_range();
 						utils::memory_protect(vm::base(prot_range.start), prot_range.length(), utils::protection::no);
 
-						const auto pitch_in_block = dst.pitch / dst_bpp;
-						std::vector<rsx::subresource_layout> subresource_layout;
-						rsx::subresource_layout subres = {};
-						subres.width_in_block = subres.width_in_texel = dst_dimensions.width;
-						subres.height_in_block = subres.height_in_texel = dst_dimensions.height;
-						subres.pitch_in_block = pitch_in_block;
-						subres.depth = 1;
-						subres.data = { vm::get_super_ptr<const std::byte>(dst_base_address), static_cast<std::span<const std::byte>::size_type>(dst.pitch * dst_dimensions.height) };
-						subresource_layout.push_back(std::move(subres));
-
-						cached_dest = upload_image_from_cpu(cmd, rsx_range, dst_dimensions.width, dst_dimensions.height, 1, 1, dst.pitch,
-							preferred_dst_format, rsx::texture_upload_context::blit_engine_dst, subresource_layout,
-							rsx::texture_dimension_extended::texture_dimension_2d, dst.swizzled);
-
-						set_component_order(*cached_dest, preferred_dst_format, channel_order);
+						dst_surface->state_flags |= rsx::surface_state_flags::force_data_load | rsx::surface_state_flags::erase_bkgnd;
+						// set_component_order(*cached_dest, preferred_dst_format, channel_order);
 					}
 
-					dest_texture = cached_dest->get_raw_texture();
-					typeless_info.dst_context = texture_upload_context::blit_engine_dst;
+					// Lock this for readback. That also creates a matching section
+					lock_memory_region_impl(
+						cmd, dst_surface, dst_surface->get_memory_range(), false,
+						dst_surface->get_surface_width<rsx::surface_metrics::pixels>(),
+						dst_surface->get_surface_height<rsx::surface_metrics::pixels>(),
+						dst_surface->get_rsx_pitch(),
+						dst_surface);
+
+					// Fake RTT cache hit
+					dst_subres.surface = dst_surface;
+					dst_is_render_target = true;
+
+					dest_texture = dst_surface->get_surface(rsx::surface_access::transfer_write);
+					typeless_info.dst_context = texture_upload_context::framebuffer_storage;
 					typeless_info.dst_gcm_format = preferred_dst_format;
 				}
 			}
