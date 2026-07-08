@@ -12,10 +12,11 @@ namespace rsx
 {
 	enum surface_state_flags : u32
 	{
-		ready = 0,
-		erase_bkgnd = 1,
-		require_resolve = 2,
-		require_unresolve = 4
+		ready               = 0x00,
+		erase_bkgnd         = 0x01,
+		require_resolve     = 0x02,
+		require_unresolve   = 0x04,
+		force_data_load     = 0x08
 	};
 
 	enum class surface_sample_layout : u32

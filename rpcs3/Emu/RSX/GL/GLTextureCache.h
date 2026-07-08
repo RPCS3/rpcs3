@@ -120,6 +120,30 @@ namespace gl
 			baseclass::on_section_resources_created();
 		}
 
+		void create(u16 w, u16 h, u16 depth, u16 mipmaps, gl::texture* image, u32 rsx_pitch, bool managed, const gl::render_target* surface)
+		{
+			gl::texture::format format;
+			gl::texture::type type;
+			bool swap_bytes;
+
+			if (surface->is_depth_surface())
+			{
+				const auto depth_format_gl = rsx::internals::surface_depth_format_to_gl(surface->get_surface_depth_format());
+				format = depth_format_gl.format;
+				type = depth_format_gl.type;
+				swap_bytes = (type != gl::texture::type::uint_24_8);
+			}
+			else
+			{
+				const auto color_format_gl = rsx::internals::surface_color_format_to_gl(surface->get_surface_color_format());
+				format = color_format_gl.format;
+				type = color_format_gl.type;
+				swap_bytes = color_format_gl.swap_bytes;
+			}
+
+			create(w, h, depth, mipmaps, image, rsx_pitch, managed, format, type, swap_bytes);
+		}
+
 		void set_dimensions(u32 width, u32 height, u32 /*depth*/, u32 pitch)
 		{
 			this->width = width;
