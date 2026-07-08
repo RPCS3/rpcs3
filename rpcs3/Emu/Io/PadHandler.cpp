@@ -979,7 +979,7 @@ void PadDevice::reset_orientation()
 	ahrs->settings.convention = FusionConvention::FusionConventionEnu;
 	ahrs->settings.gain = 0.0f; // If gain is set, the algorithm tries to adjust the orientation over time.
 	FusionAhrsSetSettings(ahrs.get(), &ahrs->settings);
-	FusionAhrsReset(ahrs.get());
+	FusionAhrsRestart(ahrs.get());
 }
 
 void PadDevice::update_orientation(ps_move_data& move_data)
@@ -1028,7 +1028,8 @@ void PadDevice::update_orientation(ps_move_data& move_data)
 	}
 
 	// Update Fusion
-	FusionAhrsUpdate(ahrs.get(), gyroscope, accelerometer, magnetometer, elapsed_sec);
+	FusionAhrsSetSamplePeriod(ahrs.get(), elapsed_sec);
+	FusionAhrsUpdate(ahrs.get(), gyroscope, accelerometer, magnetometer);
 
 	// Get quaternion
 	const FusionQuaternion quaternion = FusionAhrsGetQuaternion(ahrs.get());
