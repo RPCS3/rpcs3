@@ -196,12 +196,12 @@ namespace vk
 		}
 
 		static std::unique_ptr<vk::render_target> create_new_surface(
+			const vk::command_buffer& cmd,
 			u32 address,
 			rsx::surface_color_format format,
 			usz width, usz height, usz pitch,
 			rsx::surface_antialiasing antialias,
-			const rsx::surface_scaling_config_t& resolution_scaling_config,
-			vk::render_device& device, vk::command_buffer& cmd)
+			const rsx::surface_scaling_config_t& resolution_scaling_config)
 		{
 			const auto fmt = vk::get_compatible_surface_format(format);
 			VkFormat requested_format = fmt.first;
@@ -234,7 +234,8 @@ namespace vk
 			std::unique_ptr<vk::render_target> rtt;
 			const auto [width_, height_] = rsx::apply_resolution_scale<true>(resolution_scaling_config, static_cast<u16>(width), static_cast<u16>(height));
 
-			rtt = std::make_unique<vk::render_target>(device, device.get_memory_mapping().device_local,
+			auto pdev = vk::get_current_renderer();
+			rtt = std::make_unique<vk::render_target>(*pdev, pdev->get_memory_mapping().device_local,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D,
 				requested_format,
@@ -268,14 +269,15 @@ namespace vk
 		}
 
 		static std::unique_ptr<vk::render_target> create_new_surface(
+			const vk::command_buffer& cmd,
 			u32 address,
 			rsx::surface_depth_format2 format,
 			usz width, usz height, usz pitch,
 			rsx::surface_antialiasing antialias,
-			const rsx::surface_scaling_config_t& resolution_scaling_config,
-			vk::render_device& device, vk::command_buffer& cmd)
+			const rsx::surface_scaling_config_t& resolution_scaling_config)
 		{
-			const VkFormat requested_format = vk::get_compatible_depth_surface_format(device.get_formats_support(), format);
+			auto pdev = vk::get_current_renderer();
+			const VkFormat requested_format = vk::get_compatible_depth_surface_format(pdev->get_formats_support(), format);
 
 			u8 samples;
 			rsx::surface_sample_layout sample_layout;
@@ -301,7 +303,7 @@ namespace vk
 			std::unique_ptr<vk::render_target> ds;
 			const auto [width_, height_] = rsx::apply_resolution_scale<true>(resolution_scaling_config, static_cast<u16>(width), static_cast<u16>(height));
 
-			ds = std::make_unique<vk::render_target>(device, device.get_memory_mapping().device_local,
+			ds = std::make_unique<vk::render_target>(*pdev, pdev->get_memory_mapping().device_local,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D,
 				requested_format,

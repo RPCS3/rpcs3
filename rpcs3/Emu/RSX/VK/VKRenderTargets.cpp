@@ -794,13 +794,16 @@ namespace vk
 			}
 		}
 
-		state_flags &= ~rsx::surface_state_flags::erase_bkgnd;
+		state_flags &= ~(rsx::surface_state_flags::erase_bkgnd | rsx::surface_state_flags::force_data_load);
 	}
 
 	void render_target::initialize_memory(vk::command_buffer& cmd, rsx::surface_access access)
 	{
-		const bool is_depth = is_depth_surface();
-		const bool should_read_buffers = is_depth ? !!g_cfg.video.read_depth_buffer : !!g_cfg.video.read_color_buffers;
+		const bool read_buffers_config = is_depth_surface() ?
+			!!g_cfg.video.read_depth_buffer :
+			!!g_cfg.video.read_color_buffers;
+
+		const bool should_read_buffers = (state_flags & rsx::surface_state_flags::force_data_load) || read_buffers_config;
 
 		if (!should_read_buffers)
 		{

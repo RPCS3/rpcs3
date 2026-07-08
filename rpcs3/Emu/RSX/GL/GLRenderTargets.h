@@ -135,12 +135,12 @@ struct gl_render_target_traits
 
 	static
 	std::unique_ptr<gl::render_target> create_new_surface(
+		gl::command_context&,
 		u32 address,
 		rsx::surface_color_format surface_color_format,
 		usz width, usz height, usz pitch,
 		rsx::surface_antialiasing antialias,
-		const rsx::surface_scaling_config_t& resolution_scaling_config
-	)
+		const rsx::surface_scaling_config_t& resolution_scaling_config)
 	{
 		auto format = rsx::internals::surface_color_format_to_gl(surface_color_format);
 		const auto [width_, height_] = rsx::apply_resolution_scale<true>(resolution_scaling_config, static_cast<u16>(width), static_cast<u16>(height));
@@ -181,12 +181,12 @@ struct gl_render_target_traits
 
 	static
 	std::unique_ptr<gl::render_target> create_new_surface(
-			u32 address,
-			rsx::surface_depth_format2 surface_depth_format,
-			usz width, usz height, usz pitch,
-			rsx::surface_antialiasing antialias,
-			const rsx::surface_scaling_config_t& resolution_scaling_config
-		)
+		gl::command_context&,
+		u32 address,
+		rsx::surface_depth_format2 surface_depth_format,
+		usz width, usz height, usz pitch,
+		rsx::surface_antialiasing antialias,
+		const rsx::surface_scaling_config_t& resolution_scaling_config)
 	{
 		auto format = rsx::internals::surface_depth_format_to_gl(surface_depth_format);
 		const auto [width_, height_] = rsx::apply_resolution_scale<true>(resolution_scaling_config, static_cast<u16>(width), static_cast<u16>(height));
