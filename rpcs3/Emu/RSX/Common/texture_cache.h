@@ -2533,6 +2533,173 @@ namespace rsx
 		// Pseudo-manespace wrapper. Functions extracted from upload_scaled_image
 		struct blit_engine_utils
 		{
+			// Applies reverse-scan subpixel correction and computes the mirror/flip adjustments for the source.
+			static void apply_pixel_transforms(
+				rsx::blit_src_info& src,
+				const rsx::blit_dst_info& dst,
+				typeless_xfer& typeless_info,
+				u32& src_address,
+				u16& src_w,
+				u16& src_h,
+				u8 src_bpp)
+			{
+				if (true) // This block is a debug/sanity check and should be optionally disabled with a config option
+				{
+					// Do subpixel correction in the special case of reverse scanning
+					// When reverse scanning, pixel0 is at offset = (dimension - 1)
+					if (dst.scale_y < 0.f && src.offset_y)
+					{
+						if (src.offset_y = (src.height - src.offset_y);
+							src.offset_y == 1)
+						{
+							src.offset_y = 0;
+						}
+					}
+
+					if (dst.scale_x < 0.f && src.offset_x)
+					{
+						if (src.offset_x = (src.width - src.offset_x);
+							src.offset_x == 1)
+						{
+							src.offset_x = 0;
+						}
+					}
+
+					if ((src_h + src.offset_y) > src.height) [[unlikely]]
+					{
+						// TODO: Special case that needs wrapping around (custom blit)
+						rsx_log.error("Transfer cropped in Y, src_h=%d, offset_y=%d, block_h=%d", src_h, src.offset_y, src.height);
+						src_h = src.height - src.offset_y;
+					}
+
+					if ((src_w + src.offset_x) > src.width) [[unlikely]]
+					{
+						// TODO: Special case that needs wrapping around (custom blit)
+						rsx_log.error("Transfer cropped in X, src_w=%d, offset_x=%d, block_w=%d", src_w, src.offset_x, src.width);
+						src_w = src.width - src.offset_x;
+					}
+				}
+
+				if (dst.scale_y < 0.f)
+				{
+					typeless_info.flip_vertical = true;
+					src_address -= (src.pitch * (src_h - 1));
+				}
+
+				if (dst.scale_x < 0.f)
+				{
+					typeless_info.flip_horizontal = true;
+					src_address += (src.width - src_w) * src_bpp;
+				}
+			}
+
+			// Given a surface's actual bpp, decide whether the blit side must be typeless and pick its format.
+			static void configure_typeless_format(
+				/*out*/ bool& is_typeless,
+				/*out*/ f32& scaling_hint,
+				/*out*/ u32& gcm_format,
+				u8 surface_bpp,
+				u8 blit_bpp,
+				bool is_argb8,
+				bool surface_is_depth,
+				bool is_format_convert)
+			{
+				const bool typeless = (surface_bpp != blit_bpp || is_format_convert);
+
+				if (!typeless) [[likely]]
+				{
+					// Use format as-is
+					gcm_format = helpers::get_sized_blit_format(is_argb8, surface_is_depth, false);
+				}
+				else
+				{
+					// Enable type scaling
+					is_typeless = true;
+					scaling_hint = static_cast<f32>(surface_bpp) / blit_bpp;
+					gcm_format = helpers::get_sized_blit_format(is_argb8, false, is_format_convert);
+				}
+			}
+
+			// Result of the CPU-vs-GPU transfer heuristic for a main-memory destination.
+			struct transfer_configuration
+			{
+				bool fall_back_to_cpu = false;          // Abort the GPU path and let the caller memcpy instead
+				bool discard_dst_render_target = false; // dst was a render target but should be treated as plain memory
+				bool skip_if_collision_exists = false;  // Prefer CPU memcpy if a differing cached section overlaps
+			};
+
+			// Decides whether a transfer into main memory should run on the GPU or fall back to a CPU memcpy.
+			// Pure heuristic: the caller applies the returned effects (early-out, rtt discard, collision handling).
+			static transfer_configuration configure_transfer_mode(
+				const rsx::blit_src_info& src,
+				const rsx::blit_dst_info& dst,
+				bool dst_is_render_target,
+				bool is_copy_op,
+				bool is_format_convert,
+				bool dst_is_tiled,
+				bool src_is_tiled,
+				u16 src_w,
+				u16 src_h,
+				u16 dst_w,
+				u16 dst_h,
+				u32 dst_address)
+			{
+				transfer_configuration config{};
+
+				// Determine whether to perform this transfer on CPU or GPU (src data may not be graphical)
+				const bool is_trivial_copy = is_copy_op && !is_format_convert && !dst.swizzled && !dst_is_tiled && !src_is_tiled;
+				const bool is_block_transfer = (dst_w == src_w && dst_h == src_h && (src.pitch == dst.pitch || src_h == 1));
+				const bool is_mirror_op = (dst.scale_x < 0.f || dst.scale_y < 0.f);
+
+				// Always use GPU blit if src or dst is in the surface store
+				if (dst_is_render_target)
+				{
+					if (is_trivial_copy && src_h == 1)
+					{
+						dst_is_render_target = false;
+						config.discard_dst_render_target = true;
+					}
+					else
+					{
+						return config;
+					}
+				}
+
+				if (is_trivial_copy)
+				{
+					// Check if trivial memcpy can perform the same task
+					// Used to copy programs and arbitrary data to the GPU in some cases
+					// NOTE: This case overrides the GPU texture scaling option
+					if (is_block_transfer && !is_mirror_op)
+					{
+						config.fall_back_to_cpu = true;
+						return config;
+					}
+
+					// If a matching section exists with a different use-case, fall back to CPU memcpy
+					config.skip_if_collision_exists = true;
+				}
+
+				if (!g_cfg.video.use_gpu_texture_scaling && !dst_is_tiled && !src_is_tiled)
+				{
+					if (dst.swizzled)
+					{
+						// Swizzle operation requested. Use fallback
+						config.fall_back_to_cpu = true;
+						return config;
+					}
+
+					if (is_trivial_copy && get_location(dst_address) != CELL_GCM_LOCATION_LOCAL)
+					{
+						// Trivial copy and the destination is in XDR memory
+						config.fall_back_to_cpu = true;
+						return config;
+					}
+				}
+
+				return config;
+			}
+
 			// Verifies that the memory range defined by [base_address, write_end] actually exists in VM
 			// The heurestic-defined block_end input is speculative. e.g We may be rendering to one corner of a larger image.
 			// Returns true if we can use the entire range, false if we can only use the [base_address, write_end] area
@@ -2660,54 +2827,7 @@ namespace rsx
 			u16 dst_w = dst.clip_width;
 			u16 dst_h = dst.clip_height;
 
-			if (true) // This block is a debug/sanity check and should be optionally disabled with a config option
-			{
-				// Do subpixel correction in the special case of reverse scanning
-				// When reverse scanning, pixel0 is at offset = (dimension - 1)
-				if (dst.scale_y < 0.f && src.offset_y)
-				{
-					if (src.offset_y = (src.height - src.offset_y);
-						src.offset_y == 1)
-					{
-						src.offset_y = 0;
-					}
-				}
-
-				if (dst.scale_x < 0.f && src.offset_x)
-				{
-					if (src.offset_x = (src.width - src.offset_x);
-						src.offset_x == 1)
-					{
-						src.offset_x = 0;
-					}
-				}
-
-				if ((src_h + src.offset_y) > src.height) [[unlikely]]
-				{
-					// TODO: Special case that needs wrapping around (custom blit)
-					rsx_log.error("Transfer cropped in Y, src_h=%d, offset_y=%d, block_h=%d", src_h, src.offset_y, src.height);
-					src_h = src.height - src.offset_y;
-				}
-
-				if ((src_w + src.offset_x) > src.width) [[unlikely]]
-				{
-					// TODO: Special case that needs wrapping around (custom blit)
-					rsx_log.error("Transfer cropped in X, src_w=%d, offset_x=%d, block_w=%d", src_w, src.offset_x, src.width);
-					src_w = src.width - src.offset_x;
-				}
-			}
-
-			if (dst.scale_y < 0.f)
-			{
-				typeless_info.flip_vertical = true;
-				src_address -= (src.pitch * (src_h - 1));
-			}
-
-			if (dst.scale_x < 0.f)
-			{
-				typeless_info.flip_horizontal = true;
-				src_address += (src.width - src_w) * src_bpp;
-			}
+			blit_engine_utils::apply_pixel_transforms(src, dst, typeless_info, src_address, src_w, src_h, src_bpp);
 
 			const auto get_tiled_region = [&](const utils::address_range32& range)
 			{
@@ -2843,20 +2963,7 @@ namespace rsx
 			{
 				const auto surf = src_subres.surface;
 				const auto bpp = surf->get_bpp();
-				const bool typeless = (bpp != src_bpp || is_format_convert);
-
-				if (!typeless) [[likely]]
-				{
-					// Use format as-is
-					typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, src_subres.is_depth, false);
-				}
-				else
-				{
-					// Enable type scaling in src
-					typeless_info.src_is_typeless = true;
-					typeless_info.src_scaling_hint = static_cast<f32>(bpp) / src_bpp;
-					typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, false, is_format_convert);
-				}
+				blit_engine_utils::configure_typeless_format(typeless_info.src_is_typeless, typeless_info.src_scaling_hint, typeless_info.src_gcm_format, bpp, src_bpp, src_is_argb8, src_subres.is_depth, is_format_convert);
 
 				if (surf->template get_surface_width<rsx::surface_metrics::pixels>() != surf->width() ||
 					surf->template get_surface_height<rsx::surface_metrics::pixels>() != surf->height())
@@ -2868,70 +2975,28 @@ namespace rsx
 			}
 			else
 			{
-				// Determine whether to perform this transfer on CPU or GPU (src data may not be graphical)
-				const bool is_trivial_copy = is_copy_op && !is_format_convert && !dst.swizzled && !dst_is_tiled && !src_is_tiled;
-				const bool is_block_transfer = (dst_w == src_w && dst_h == src_h && (src.pitch == dst.pitch || src_h == 1));
-				const bool is_mirror_op = (dst.scale_x < 0.f || dst.scale_y < 0.f);
+				const auto decision = blit_engine_utils::configure_transfer_mode(
+					src, dst, dst_is_render_target, is_copy_op, is_format_convert,
+					dst_is_tiled, src_is_tiled, src_w, src_h, dst_w, dst_h, dst_address);
 
-				if (dst_is_render_target)
+				if (decision.fall_back_to_cpu)
 				{
-					if (is_trivial_copy && src_h == 1)
-					{
-						dst_is_render_target = false;
-						dst_subres = {};
-					}
+					return false;
 				}
 
-				// Always use GPU blit if src or dst is in the surface store
-				if (!dst_is_render_target)
+				if (decision.discard_dst_render_target)
 				{
-					if (is_trivial_copy)
-					{
-						// Check if trivial memcpy can perform the same task
-						// Used to copy programs and arbitrary data to the GPU in some cases
-						// NOTE: This case overrides the GPU texture scaling option
-						if (is_block_transfer && !is_mirror_op)
-						{
-							return false;
-						}
-
-						// If a matching section exists with a different use-case, fall back to CPU memcpy
-						skip_if_collision_exists = true;
-					}
-
-					if (!g_cfg.video.use_gpu_texture_scaling && !dst_is_tiled && !src_is_tiled)
-					{
-						if (dst.swizzled)
-						{
-							// Swizzle operation requested. Use fallback
-							return false;
-						}
-
-						if (is_trivial_copy && get_location(dst_address) != CELL_GCM_LOCATION_LOCAL)
-						{
-							// Trivial copy and the destination is in XDR memory
-							return false;
-						}
-					}
+					dst_is_render_target = false;
+					dst_subres = {};
 				}
+
+				skip_if_collision_exists = decision.skip_if_collision_exists;
 			}
 
 			if (dst_is_render_target)
 			{
 				const auto bpp = dst_subres.surface->get_bpp();
-				const bool typeless = (bpp != dst_bpp || is_format_convert);
-
-				if (!typeless) [[likely]]
-				{
-					typeless_info.dst_gcm_format = helpers::get_sized_blit_format(dst_is_argb8, dst_subres.is_depth, false);
-				}
-				else
-				{
-					// Enable type scaling in dst
-					typeless_info.dst_is_typeless = true;
-					typeless_info.dst_scaling_hint = static_cast<f32>(bpp) / dst_bpp;
-					typeless_info.dst_gcm_format = helpers::get_sized_blit_format(dst_is_argb8, false, is_format_convert);
-				}
+				blit_engine_utils::configure_typeless_format(typeless_info.dst_is_typeless, typeless_info.dst_scaling_hint, typeless_info.dst_gcm_format, bpp, dst_bpp, dst_is_argb8, dst_subres.is_depth, is_format_convert);
 			}
 
 			section_storage_type* cached_dest = nullptr;
