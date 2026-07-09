@@ -3398,33 +3398,31 @@ namespace rsx
 				// Reset this object's synchronization status if it is locked
 				lock.upgrade();
 
-				if (const auto found = find_cached_texture(dst_subres.surface->get_memory_range(), { .gcm_format = RSX_GCM_FORMAT_IGNORED }, false, false, false))
+				if (const auto found = find_cached_texture(dst_subres.surface->get_memory_range(), { .gcm_format = RSX_GCM_FORMAT_IGNORED }, false, false, false);
+					found && found->is_locked())
 				{
-					if (found->is_locked())
+					if (found->get_rsx_pitch() == dst.pitch) [[ likely ]]
 					{
-						if (found->get_rsx_pitch() == dst.pitch)
+						// It is possible for other resource types to overlap this fbo if it only covers a small section of its max width.
+						// Blit engine read and write resources do not allow clipping and would have been recreated at the same address.
+						// TODO: In cases of clipped data, generate the blit resources in the surface cache instead.
+						if (found->get_context() == rsx::texture_upload_context::framebuffer_storage)
 						{
-							// It is possible for other resource types to overlap this fbo if it only covers a small section of its max width.
-							// Blit engine read and write resources do not allow clipping and would have been recreated at the same address.
-							// TODO: In cases of clipped data, generate the blit resources in the surface cache instead.
-							if (found->get_context() == rsx::texture_upload_context::framebuffer_storage)
-							{
-								found->touch(m_cache_update_tag);
-								update_cache_tag();
-							}
+							found->touch(m_cache_update_tag);
+							update_cache_tag();
 						}
-						else
+					}
+					else
+					{
+						// Unlikely situation, but the only one which would allow re-upload from CPU to overlap this section.
+						if (found->is_flushable())
 						{
-							// Unlikely situation, but the only one which would allow re-upload from CPU to overlap this section.
-							if (found->is_flushable())
-							{
-								// Technically this is possible in games that may change surface pitch at random (insomniac engine)
-								// FIXME: A proper fix includes pitch conversion and surface inheritance chains between surface targets and blit targets (unified cache) which is a very long-term thing.
-								const auto range = found->get_section_range();
-								rsx_log.error("[Pitch Mismatch] GPU-resident data at 0x%x->0x%x is discarded due to surface cache data clobbering it.", range.start, range.end);
-							}
-							found->discard(true);
+							// Technically this is possible in games that may change surface pitch at random (insomniac engine)
+							// FIXME: A proper fix includes pitch conversion and surface inheritance chains between surface targets and blit targets (unified cache) which is a very long-term thing.
+							const auto range = found->get_section_range();
+							rsx_log.error("[Pitch Mismatch] GPU-resident data at 0x%x->0x%x is discarded due to surface cache data clobbering it.", range.start, range.end);
 						}
+						found->discard(true);
 					}
 				}
 			}
@@ -3510,36 +3508,46 @@ namespace rsx
 
 		void do_update()
 		{
-			if (!m_flush_always_cache.empty())
+			if (m_flush_always_cache.empty())
 			{
-				if (m_cache_update_tag.load() != m_flush_always_update_timestamp)
+				return;
+			}
+
+			if (m_cache_update_tag.load() == m_flush_always_update_timestamp)
+			{
+				return;
+			}
+
+			std::lock_guard lock(m_cache_mutex);
+			bool update_tag = false;
+
+			for (const auto &It : m_flush_always_cache)
+			{
+				auto& section = *(It.second);
+				if (section.get_protection() == utils::protection::no)
 				{
-					std::lock_guard lock(m_cache_mutex);
-					bool update_tag = false;
+					continue;
+				}
 
-					for (const auto &It : m_flush_always_cache)
-					{
-						auto& section = *(It.second);
-						if (section.get_protection() != utils::protection::no)
-						{
-							ensure(section.exists());
-							AUDIT(section.get_context() == texture_upload_context::framebuffer_storage);
-							AUDIT(section.get_memory_read_flags() == memory_read_flags::flush_always);
+				ensure(section.exists());
+				AUDIT(section.get_context() == texture_upload_context::framebuffer_storage);
+				AUDIT(section.get_memory_read_flags() == memory_read_flags::flush_always);
 
-							section.reprotect(utils::protection::no);
-							update_tag = true;
-						}
-					}
+				section.reprotect(utils::protection::no);
+				update_tag = true;
+			}
 
-					if (update_tag) update_cache_tag();
-					m_flush_always_update_timestamp = m_cache_update_tag.load();
+			if (update_tag)
+			{
+				update_cache_tag();
+			}
+
+			m_flush_always_update_timestamp = m_cache_update_tag.load();
 
 #ifdef TEXTURE_CACHE_DEBUG
-					// Check that the cache has the correct protections
-					m_storage.verify_protection();
+			// Check that the cache has the correct protections
+			m_storage.verify_protection();
 #endif // TEXTURE_CACHE_DEBUG
-				}
-			}
 		}
 
 		predictor_type& get_predictor()
