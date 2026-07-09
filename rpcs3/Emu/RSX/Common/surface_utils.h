@@ -147,6 +147,9 @@ namespace rsx
 		u8  samples_x = 1;
 		u8  samples_y = 1;
 
+		// AA mode
+		rsx::surface_antialiasing aa_mode = rsx::surface_antialiasing::center_1_sample;
+
 		// Scaling configuration
 		surface_scaling_config_t resolution_scaling_config;
 
@@ -258,6 +261,8 @@ namespace rsx
 
 		void set_aa_mode(rsx::surface_antialiasing aa)
 		{
+			aa_mode = aa;
+
 			switch (aa)
 			{
 				case rsx::surface_antialiasing::center_1_sample:
@@ -275,6 +280,11 @@ namespace rsx
 				default:
 					fmt::throw_exception("Unknown AA mode 0x%x", static_cast<u8>(aa));
 			}
+		}
+
+		rsx::surface_antialiasing get_aa_mode() const
+		{
+			return aa_mode;
 		}
 
 		void set_spp(u8 count)
