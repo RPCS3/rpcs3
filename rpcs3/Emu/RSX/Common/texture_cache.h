@@ -3,9 +3,11 @@
 #include "Emu/RSX/Common/simple_array.hpp"
 #include "Emu/RSX/Core/RSXContext.h"
 #include "Emu/RSX/RSXThread.h"
+
 #include "texture_cache_utils.h"
 #include "texture_cache_predictor.h"
 #include "texture_cache_helpers.h"
+#include "texture_cache_blit_helpers.h"
 
 #include <unordered_map>
 
@@ -2533,298 +2535,6 @@ namespace rsx
 		// Pseudo-manespace wrapper. Functions extracted from upload_scaled_image
 		struct blit_engine_utils
 		{
-			// Applies reverse-scan subpixel correction and computes the mirror/flip adjustments for the source.
-			static void apply_pixel_transforms(
-				rsx::blit_src_info& src,
-				const rsx::blit_dst_info& dst,
-				typeless_xfer& typeless_info,
-				u32& src_address,
-				u16& src_w,
-				u16& src_h,
-				u8 src_bpp)
-			{
-				if (true) // This block is a debug/sanity check and should be optionally disabled with a config option
-				{
-					// Do subpixel correction in the special case of reverse scanning
-					// When reverse scanning, pixel0 is at offset = (dimension - 1)
-					if (dst.scale_y < 0.f && src.offset_y)
-					{
-						if (src.offset_y = (src.height - src.offset_y);
-							src.offset_y == 1)
-						{
-							src.offset_y = 0;
-						}
-					}
-
-					if (dst.scale_x < 0.f && src.offset_x)
-					{
-						if (src.offset_x = (src.width - src.offset_x);
-							src.offset_x == 1)
-						{
-							src.offset_x = 0;
-						}
-					}
-
-					if ((src_h + src.offset_y) > src.height) [[unlikely]]
-					{
-						// TODO: Special case that needs wrapping around (custom blit)
-						rsx_log.error("Transfer cropped in Y, src_h=%d, offset_y=%d, block_h=%d", src_h, src.offset_y, src.height);
-						src_h = src.height - src.offset_y;
-					}
-
-					if ((src_w + src.offset_x) > src.width) [[unlikely]]
-					{
-						// TODO: Special case that needs wrapping around (custom blit)
-						rsx_log.error("Transfer cropped in X, src_w=%d, offset_x=%d, block_w=%d", src_w, src.offset_x, src.width);
-						src_w = src.width - src.offset_x;
-					}
-				}
-
-				if (dst.scale_y < 0.f)
-				{
-					typeless_info.flip_vertical = true;
-					src_address -= (src.pitch * (src_h - 1));
-				}
-
-				if (dst.scale_x < 0.f)
-				{
-					typeless_info.flip_horizontal = true;
-					src_address += (src.width - src_w) * src_bpp;
-				}
-			}
-
-			// Given a surface's actual bpp, decide whether the blit side must be typeless and pick its format.
-			static void configure_typeless_format(
-				/*out*/ bool& is_typeless,
-				/*out*/ f32& scaling_hint,
-				/*out*/ u32& gcm_format,
-				u8 surface_bpp,
-				u8 blit_bpp,
-				bool is_argb8,
-				bool surface_is_depth,
-				bool is_format_convert)
-			{
-				const bool typeless = (surface_bpp != blit_bpp || is_format_convert);
-
-				if (!typeless) [[likely]]
-				{
-					// Use format as-is
-					gcm_format = helpers::get_sized_blit_format(is_argb8, surface_is_depth, false);
-				}
-				else
-				{
-					// Enable type scaling
-					is_typeless = true;
-					scaling_hint = static_cast<f32>(surface_bpp) / blit_bpp;
-					gcm_format = helpers::get_sized_blit_format(is_argb8, false, is_format_convert);
-				}
-			}
-
-			// Whether a cached surface's format is an acceptable source for a blit.
-			// Only accept 16-bit data for 16-bit transfers and 32-bit for 32-bit transfers.
-			// NOTE: some formats are copy-compatible but not scaling-compatible (hence the is_copy_op / dst_is_render_target checks).
-			static bool is_blit_source_format_compatible(u32 gcm_format, bool src_is_argb8, bool is_copy_op, bool dst_is_render_target)
-			{
-				switch (gcm_format)
-				{
-				case CELL_GCM_TEXTURE_X32_FLOAT:
-				case CELL_GCM_TEXTURE_Y16_X16:
-				case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
-					// Should be copy compatible but not scaling compatible
-					return src_is_argb8 && (is_copy_op || dst_is_render_target);
-				case CELL_GCM_TEXTURE_DEPTH24_D8:
-				case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
-					// Should be copy compatible but not scaling compatible
-					return src_is_argb8 && (is_copy_op || !dst_is_render_target);
-				case CELL_GCM_TEXTURE_A8R8G8B8:
-				case CELL_GCM_TEXTURE_D8R8G8B8:
-					// Perfect match
-					return src_is_argb8;
-				case CELL_GCM_TEXTURE_X16:
-				case CELL_GCM_TEXTURE_G8B8:
-				case CELL_GCM_TEXTURE_A1R5G5B5:
-				case CELL_GCM_TEXTURE_A4R4G4B4:
-				case CELL_GCM_TEXTURE_D1R5G5B5:
-				case CELL_GCM_TEXTURE_R5G5B5A1:
-					// Copy compatible
-					return !src_is_argb8 && (is_copy_op || dst_is_render_target);
-				case CELL_GCM_TEXTURE_DEPTH16:
-				case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
-					// Copy compatible
-					return !src_is_argb8 && (is_copy_op || !dst_is_render_target);
-				case CELL_GCM_TEXTURE_R5G6B5:
-					// Perfect match
-					return !src_is_argb8;
-				default:
-					return false;
-				}
-			}
-
-			// Result of the CPU-vs-GPU transfer heuristic for a main-memory destination.
-			struct transfer_configuration
-			{
-				bool fall_back_to_cpu = false;          // Abort the GPU path and let the caller memcpy instead
-				bool discard_dst_render_target = false; // dst was a render target but should be treated as plain memory
-			};
-
-			// Decides whether a transfer into main memory should run on the GPU or fall back to a CPU memcpy.
-			// Pure heuristic: the caller applies the returned effects (early-out, rtt discard, collision handling).
-			static transfer_configuration configure_transfer_mode(
-				const rsx::blit_src_info& src,
-				const rsx::blit_dst_info& dst,
-				bool dst_is_render_target,
-				bool is_copy_op,
-				bool is_format_convert,
-				bool dst_is_tiled,
-				bool src_is_tiled,
-				u16 src_w,
-				u16 src_h,
-				u16 dst_w,
-				u16 dst_h,
-				u32 dst_address)
-			{
-				transfer_configuration config{};
-
-				// Determine whether to perform this transfer on CPU or GPU (src data may not be graphical)
-				const bool is_trivial_copy = is_copy_op && !is_format_convert && !dst.swizzled && !dst_is_tiled && !src_is_tiled;
-				const bool is_block_transfer = (dst_w == src_w && dst_h == src_h && (src.pitch == dst.pitch || src_h == 1));
-				const bool is_mirror_op = (dst.scale_x < 0.f || dst.scale_y < 0.f);
-
-				// Always use GPU blit if src or dst is in the surface store
-				if (dst_is_render_target)
-				{
-					if (is_trivial_copy && src_h == 1)
-					{
-						dst_is_render_target = false;
-						config.discard_dst_render_target = true;
-					}
-					else
-					{
-						return config;
-					}
-				}
-
-				if (is_trivial_copy)
-				{
-					// Check if trivial memcpy can perform the same task
-					// Used to copy programs and arbitrary data to the GPU in some cases
-					// NOTE: This case overrides the GPU texture scaling option
-					if (is_block_transfer && !is_mirror_op)
-					{
-						config.fall_back_to_cpu = true;
-						return config;
-					}
-				}
-
-				if (!g_cfg.video.use_gpu_texture_scaling && !dst_is_tiled && !src_is_tiled)
-				{
-					if (dst.swizzled)
-					{
-						// Swizzle operation requested. Use fallback
-						config.fall_back_to_cpu = true;
-						return config;
-					}
-
-					if (is_trivial_copy && get_location(dst_address) != CELL_GCM_LOCATION_LOCAL)
-					{
-						// Trivial copy and the destination is in XDR memory
-						config.fall_back_to_cpu = true;
-						return config;
-					}
-				}
-
-				return config;
-			}
-
-			// Verifies that the memory range defined by [base_address, write_end] actually exists in VM
-			// The heurestic-defined block_end input is speculative. e.g We may be rendering to one corner of a larger image.
-			// Returns true if we can use the entire range, false if we can only use the [base_address, write_end] area
-			static bool validate_memory_range(u32 base_address, u32 write_end, u32 block_end)
-			{
-				if (block_end <= write_end)
-				{
-					return true;
-				}
-
-				// Confirm if the pages actually exist in vm
-				if (get_location(base_address) == CELL_GCM_LOCATION_LOCAL)
-				{
-					const auto vram_end = rsx::get_current_renderer()->local_mem_size + rsx::constants::local_mem_base;
-					return block_end <= vram_end;
-				}
-
-				// Main memory block validation
-				return vm::check_addr(write_end, vm::page_readable, (block_end - write_end));
-			}
-
-			// Reverse projects output clip rect back onto the source input.
-			// This cuts out a post-transfer clip operation at the cost of possible edge bleed.
-			static void reproject_clip_offsets(
-				rsx::blit_dst_info& dst_info,
-				areai& src_area,
-				u16 max_dst_width,
-				u16 max_dst_height,
-				f32 scale_x,
-				f32 scale_y,
-				const typeless_xfer& typeless_info)
-			{
-				// Validate clipping region
-				if ((dst_info.offset_x + dst_info.clip_x + dst_info.clip_width) > max_dst_width) dst_info.clip_x = 0;
-				if ((dst_info.offset_y + dst_info.clip_y + dst_info.clip_height) > max_dst_height) dst_info.clip_y = 0;
-
-				// Reproject clip offsets onto source to simplify blit
-				if (dst_info.clip_x || dst_info.clip_y)
-				{
-					const u16 scaled_clip_offset_x = static_cast<u16>(dst_info.clip_x / (scale_x * typeless_info.src_scaling_hint));
-					const u16 scaled_clip_offset_y = static_cast<u16>(dst_info.clip_y / scale_y);
-
-					src_area.x1 += scaled_clip_offset_x;
-					src_area.x2 += scaled_clip_offset_x;
-					src_area.y1 += scaled_clip_offset_y;
-					src_area.y2 += scaled_clip_offset_y;
-				}
-			}
-
-			// Reconcile cross-aspect transfers. Transfers cannot go across aspects due to API limitations.
-			static void reconcile_depth_color_typeless(
-				typeless_xfer& typeless_info,
-				bool src_is_argb8,
-				bool dst_is_argb8)
-			{
-				if (typeless_info.src_gcm_format == typeless_info.dst_gcm_format) [[ likely ]]
-				{
-					return;
-				}
-
-				const auto src_is_depth = helpers::is_gcm_depth_format(typeless_info.src_gcm_format);
-				const auto dst_is_depth = helpers::is_gcm_depth_format(typeless_info.dst_gcm_format);
-
-				if (src_is_depth == dst_is_depth)
-				{
-					return;
-				}
-
-				// Make the depth side typeless because the other side is guaranteed to be color
-				if (src_is_depth)
-				{
-					// SRC is depth, transfer must be done typelessly
-					if (!typeless_info.src_is_typeless)
-					{
-						typeless_info.src_is_typeless = true;
-						typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, false, false);
-					}
-
-					return;
-				}
-
-				// DST is depth, transfer must be done typelessly
-				if (!typeless_info.dst_is_typeless)
-				{
-					typeless_info.dst_is_typeless = true;
-					typeless_info.dst_gcm_format = helpers::get_sized_blit_format(dst_is_argb8, false, false);
-				}
-			}
-
 			// Confirms that an FBO-backed section is still locked/consistent before we treat it as a valid GPU source or target.
 			static bool validate_fbo_integrity(texture_cache* cache, const utils::address_range32& range, bool is_depth_texture)
 			{
@@ -2953,7 +2663,7 @@ namespace rsx
 					}
 
 					// Force format matching; only accept 16-bit data for 16-bit transfers, 32-bit for 32-bit transfers
-					if (!is_blit_source_format_compatible(surface->get_gcm_format(), src_is_argb8, is_copy_op, dst_is_render_target))
+					if (!blit_engine_helpers::is_blit_source_format_compatible(surface->get_gcm_format(), src_is_argb8, is_copy_op, dst_is_render_target))
 					{
 						continue;
 					}
@@ -2994,7 +2704,7 @@ namespace rsx
 					u16 image_height = src.height;
 
 					// Check if memory is valid
-					const bool use_full_range = validate_memory_range(
+					const bool use_full_range = blit_engine_helpers::validate_memory_range(
 						image_base,
 						(src_address + src_payload_length),
 						image_base + (image_height * src.pitch));
@@ -3083,7 +2793,7 @@ namespace rsx
 				u32 block_end = dst_base_address + (dst.pitch * dst_dimensions.height);
 
 				// Confirm if the pages actually exist in vm
-				if (!validate_memory_range(dst_base_address, write_end, block_end))
+				if (!blit_engine_helpers::validate_memory_range(dst_base_address, write_end, block_end))
 				{
 					block_end = write_end;
 				}
@@ -3229,7 +2939,7 @@ namespace rsx
 			u16 dst_w = dst.clip_width;
 			u16 dst_h = dst.clip_height;
 
-			blit_engine_utils::apply_pixel_transforms(src, dst, typeless_info, src_address, src_w, src_h, src_bpp);
+			blit_engine_helpers::apply_pixel_transforms(src, dst, typeless_info, src_address, src_w, src_h, src_bpp);
 
 			const auto get_tiled_region = [&](const utils::address_range32& range)
 			{
@@ -3291,7 +3001,7 @@ namespace rsx
 			{
 				const auto surf = src_subres.surface;
 				const auto bpp = surf->get_bpp();
-				blit_engine_utils::configure_typeless_format(typeless_info.src_is_typeless, typeless_info.src_scaling_hint, typeless_info.src_gcm_format, bpp, src_bpp, src_is_argb8, src_subres.is_depth, is_format_convert);
+				blit_engine_helpers::configure_typeless_format(typeless_info.src_is_typeless, typeless_info.src_scaling_hint, typeless_info.src_gcm_format, bpp, src_bpp, src_is_argb8, src_subres.is_depth, is_format_convert);
 
 				if (surf->template get_surface_width<rsx::surface_metrics::pixels>() != surf->width() ||
 					surf->template get_surface_height<rsx::surface_metrics::pixels>() != surf->height())
@@ -3303,7 +3013,7 @@ namespace rsx
 			}
 			else
 			{
-				const auto decision = blit_engine_utils::configure_transfer_mode(
+				const auto decision = blit_engine_helpers::configure_transfer_mode(
 					src, dst, dst_is_render_target, is_copy_op, is_format_convert,
 					dst_is_tiled, src_is_tiled, src_w, src_h, dst_w, dst_h, dst_address);
 
@@ -3322,7 +3032,7 @@ namespace rsx
 			if (dst_is_render_target)
 			{
 				const auto bpp = dst_subres.surface->get_bpp();
-				blit_engine_utils::configure_typeless_format(typeless_info.dst_is_typeless, typeless_info.dst_scaling_hint, typeless_info.dst_gcm_format, bpp, dst_bpp, dst_is_argb8, dst_subres.is_depth, is_format_convert);
+				blit_engine_helpers::configure_typeless_format(typeless_info.dst_is_typeless, typeless_info.dst_scaling_hint, typeless_info.dst_gcm_format, bpp, dst_bpp, dst_is_argb8, dst_subres.is_depth, is_format_convert);
 			}
 
 			section_storage_type* cached_dest = nullptr;
@@ -3464,7 +3174,7 @@ namespace rsx
 			const auto preferred_dst_format = helpers::get_sized_blit_format(dst_is_argb8, false, is_format_convert);
 
 			// Reverse-project the clip rect to the source to avoid post-transfer clipping.
-			blit_engine_utils::reproject_clip_offsets(dst, src_area, max_dst_width, max_dst_height, scale_x, scale_y, typeless_info);
+			blit_engine_helpers::reproject_clip_offsets(dst, src_area, max_dst_width, max_dst_height, scale_x, scale_y, typeless_info);
 
 			if (!cached_dest && !dst_is_render_target)
 			{
@@ -3582,7 +3292,7 @@ namespace rsx
 			}
 
 			// Normalize the transfer information w.r.t cross-aspect operations
-			blit_engine_utils::reconcile_depth_color_typeless(typeless_info, src_is_argb8, dst_is_argb8);
+			blit_engine_helpers::reconcile_depth_color_typeless(typeless_info, src_is_argb8, dst_is_argb8);
 
 			if (!use_null_region) [[likely]]
 			{
