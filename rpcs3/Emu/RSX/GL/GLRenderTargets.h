@@ -252,7 +252,7 @@ struct gl_render_target_traits
 			sink->resolution_scaling_config = scaling_config;
 
 			sink->set_name(fmt::format("SINK_%u@0x%x", sink->id(), address));
-			sink->set_spp(ref->get_spp());
+			sink->set_aa_mode(ref->get_aa_mode());
 			sink->set_native_pitch(static_cast<u32>(prev.width) * ref->get_bpp() * ref->samples_x);
 			sink->set_rsx_pitch(ref->get_rsx_pitch());
 			sink->set_surface_dimensions(prev.width, prev.height, ref->get_rsx_pitch());

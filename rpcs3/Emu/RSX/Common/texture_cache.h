@@ -3328,6 +3328,7 @@ namespace rsx
 						std::forward<Args>(extras)...);
 
 					ensure(dst_surface, "Failed to create target surface");
+					//dst_surface->set_name(fmt::format("Blit target @0x%x", section_attr.address));
 
 					if (!dst_area.x1 && !dst_area.y1 && dst_area.x2 == dst_dimensions.width && dst_area.y2 == dst_dimensions.height)
 					{
@@ -3388,7 +3389,9 @@ namespace rsx
 			}
 			else
 			{
-				// NOTE: This doesn't work very well in case of Cell access
+				m_rtts.prepare_transfer_target(cmd, dst_subres.surface, rsx::surface_access::transfer_write, std::forward<Args>(extras)...);
+
+				// NOTE: This doesn't work very well in case of Cell access (when WCB/WDB is disabled)
 				// Need to lock the affected memory range and actually attach this subres to a locked_region
 				dst_subres.surface->on_write_copy(rsx::get_shared_tag(), false, raster_type);
 

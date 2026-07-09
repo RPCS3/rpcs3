@@ -368,7 +368,7 @@ namespace vk
 				sink->sample_layout = ref->sample_layout;
 				sink->resolution_scaling_config = scaling_config;
 
-				sink->set_spp(ref->get_spp());
+				sink->set_aa_mode(ref->get_aa_mode());
 				sink->format_info = ref->format_info;
 				sink->memory_usage_flags = rsx::surface_usage_flags::storage;
 				sink->state_flags = rsx::surface_state_flags::erase_bkgnd;
