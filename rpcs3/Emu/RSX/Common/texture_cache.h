@@ -1587,8 +1587,8 @@ namespace rsx
 					// Lock this for readback. That also creates a matching section
 					cache->lock_memory_region_impl(
 						cmd, dst_surface, dst_surface->get_memory_range(), false,
-						dst_surface->get_surface_width<rsx::surface_metrics::pixels>(),
-						dst_surface->get_surface_height<rsx::surface_metrics::pixels>(),
+						dst_surface->template get_surface_width<rsx::surface_metrics::pixels>(),
+						dst_surface->template get_surface_height<rsx::surface_metrics::pixels>(),
 						dst_surface->get_rsx_pitch(),
 						dst_surface);
 
