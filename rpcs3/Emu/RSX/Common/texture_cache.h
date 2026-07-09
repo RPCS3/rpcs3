@@ -3044,6 +3044,152 @@ namespace rsx
 			typeless_info.src_context = cached_src->get_context();
 		}
 
+		// Creates the blit destination when it is neither an existing render target nor an existing DMA section.
+		// Out params: cached_dest, or promotes dst to a render target (dst_subres/dst_is_render_target/dest_texture and the dst side of typeless_info) and adjusts dst_dimensions/dst_area.
+		template <typename surface_store_type, typename ...Args>
+		void create_blit_dst(
+			commandbuffer_type& cmd,
+			surface_store_type& m_rtts,
+			const rsx::blit_dst_info& dst,
+			u32 dst_address,
+			u32 dst_payload_length,
+			u32 dst_base_address,
+			u16 dst_w,
+			u8 dst_bpp,
+			const address_range32& dst_range,
+			const GCM_tile_reference& dst_tile,
+			const position2i& dst_offset,
+			u32 preferred_dst_format,
+			bool src_is_render_target,
+			bool dst_is_argb8,
+			bool use_null_region,
+			/*out*/ size2i& dst_dimensions,
+			/*out*/ areai& dst_area,
+			/*out*/ section_storage_type*& cached_dest,
+			/*out*/ typename surface_store_type::surface_overlap_info& dst_subres,
+			/*out*/ bool& dst_is_render_target,
+			/*out*/ image_resource_type& dest_texture,
+			/*out*/ typeless_xfer& typeless_info,
+			reader_lock& lock,
+			Args&&... extras)
+		{
+			ensure(!dest_texture);
+
+			// Need to calculate the minimum required size that will fit the data, anchored on the rsx_address
+			// If the application starts off with an 'inseted' section, the guessed dimensions may not fit!
+			const u32 write_end = dst_address + dst_payload_length;
+			u32 block_end = dst_base_address + (dst.pitch * dst_dimensions.height);
+
+			// Confirm if the pages actually exist in vm
+			if (!blit_engine_utils::validate_memory_range(dst_base_address, write_end, block_end))
+			{
+				block_end = write_end;
+			}
+
+			const u32 usable_section_length = std::max(write_end, block_end) - dst_base_address;
+			dst_dimensions.height = align2(usable_section_length, dst.pitch) / dst.pitch;
+
+			const u32 full_section_length = ((dst_dimensions.height - 1) * dst.pitch) + (dst_dimensions.width * dst_bpp);
+			const auto rsx_range = address_range32::start_length(dst_base_address, full_section_length);
+
+			lock.upgrade();
+
+			// NOTE: Write flag set to remove all other overlapping regions (e.g shader_read or blit_src)
+			// NOTE: This step can potentially invalidate the newly created src image as well.
+			invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::cause_is_write | invalidation_cause::cause_uses_strict_data_bounds, {}, std::forward<Args>(extras)...);
+
+			if (use_null_region) [[likely]]
+			{
+				bool force_dma_load = false;
+				if ((dst_w * dst_bpp) != dst.pitch)
+				{
+					// Keep Cell from touching the range we need
+					const auto prot_range = dst_range.to_page_range();
+					utils::memory_protect(vm::base(prot_range.start), prot_range.length(), utils::protection::no);
+
+					force_dma_load = true;
+				}
+
+				const image_section_attributes_t attrs =
+				{
+					.pitch = dst.pitch,
+					.width = static_cast<u16>(dst_dimensions.width),
+					.height = static_cast<u16>(dst_dimensions.height),
+					.bpp = dst_bpp
+				};
+				cached_dest = create_nul_section(cmd, rsx_range, attrs, dst_tile, force_dma_load);
+			}
+			else
+			{
+				// render target data is already in correct swizzle layout
+				[[maybe_unused]] auto channel_order = src_is_render_target ? rsx::component_order::native :
+					dst_is_argb8 ? rsx::component_order::default_ :
+					rsx::component_order::swapped_native;
+
+				// Translate dst_area into the 'full' dst block based on dst.rsx_address as (0, 0)
+				dst_area.x1 += dst_offset.x;
+				dst_area.x2 += dst_offset.x;
+				dst_area.y1 += dst_offset.y;
+				dst_area.y2 += dst_offset.y;
+
+				// We have to create the surface in the surface cache
+				rsx::image_section_attributes_t section_attr
+				{
+					.address = rsx_range.start,
+					.gcm_format = preferred_dst_format,
+					.pitch = dst.pitch,
+					.width = static_cast<u16>(dst_dimensions.width),
+					.height = static_cast<u16>(dst_dimensions.height),
+					.depth = 1,
+					.mipmaps = 1,
+					.slice_h = static_cast<u16>(dst_dimensions.height),
+					.bpp = dst_bpp,
+					.swizzled = false,
+					.edge_clamped = false
+				};
+
+				auto dst_surface = m_rtts.create_surface_from_rsx_section(
+					cmd,
+					section_attr,
+					std::forward<Args>(extras)...);
+
+				ensure(dst_surface, "Failed to create target surface");
+				//dst_surface->set_name(fmt::format("Blit target @0x%x", section_attr.address));
+
+				if (!dst_area.x1 && !dst_area.y1 && dst_area.x2 == dst_dimensions.width && dst_area.y2 == dst_dimensions.height)
+				{
+					// Nothing to do, not even a background erase is needed here
+					dst_surface->state_flags &= ~rsx::surface_state_flags::erase_bkgnd;
+				}
+				else
+				{
+					// HACK: workaround for data race with Cell
+					// Pre-lock the memory range we'll be touching, then load with super_ptr
+					const auto prot_range = dst_range.to_page_range();
+					utils::memory_protect(vm::base(prot_range.start), prot_range.length(), utils::protection::no);
+
+					dst_surface->state_flags |= rsx::surface_state_flags::force_data_load | rsx::surface_state_flags::erase_bkgnd;
+					// set_component_order(*cached_dest, preferred_dst_format, channel_order);
+				}
+
+				// Lock this for readback. That also creates a matching section
+				lock_memory_region_impl(
+					cmd, dst_surface, dst_surface->get_memory_range(), false,
+					dst_surface->get_surface_width<rsx::surface_metrics::pixels>(),
+					dst_surface->get_surface_height<rsx::surface_metrics::pixels>(),
+					dst_surface->get_rsx_pitch(),
+					dst_surface);
+
+				// Fake RTT cache hit
+				dst_subres.surface = dst_surface;
+				dst_is_render_target = true;
+
+				dest_texture = dst_surface->get_surface(rsx::surface_access::transfer_write);
+				typeless_info.dst_context = texture_upload_context::framebuffer_storage;
+				typeless_info.dst_gcm_format = preferred_dst_format;
+			}
+		}
+
 		// FIXME: This function is way too large and needs an urgent refactor.
 		template <typename surface_store_type, typename blitter_type, typename ...Args>
 		blit_op_result upload_scaled_image(const rsx::blit_src_info& src_info, const rsx::blit_dst_info& dst_info, bool interpolate, commandbuffer_type& cmd, surface_store_type& m_rtts, blitter_type& blitter, Args&&... extras)
@@ -3300,121 +3446,7 @@ namespace rsx
 
 			if (!cached_dest && !dst_is_render_target)
 			{
-				ensure(!dest_texture);
-
-				// Need to calculate the minimum required size that will fit the data, anchored on the rsx_address
-				// If the application starts off with an 'inseted' section, the guessed dimensions may not fit!
-				const u32 write_end = dst_address + dst_payload_length;
-				u32 block_end = dst_base_address + (dst.pitch * dst_dimensions.height);
-
-				// Confirm if the pages actually exist in vm
-				if (!blit_engine_utils::validate_memory_range(dst_base_address, write_end, block_end))
-				{
-					block_end = write_end;
-				}
-
-				const u32 usable_section_length = std::max(write_end, block_end) - dst_base_address;
-				dst_dimensions.height = align2(usable_section_length, dst.pitch) / dst.pitch;
-
-				const u32 full_section_length = ((dst_dimensions.height - 1) * dst.pitch) + (dst_dimensions.width * dst_bpp);
-				const auto rsx_range = address_range32::start_length(dst_base_address, full_section_length);
-
-				lock.upgrade();
-
-				// NOTE: Write flag set to remove all other overlapping regions (e.g shader_read or blit_src)
-				// NOTE: This step can potentially invalidate the newly created src image as well.
-				invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::cause_is_write | invalidation_cause::cause_uses_strict_data_bounds, {}, std::forward<Args>(extras)...);
-
-				if (use_null_region) [[likely]]
-				{
-					bool force_dma_load = false;
-					if ((dst_w * dst_bpp) != dst.pitch)
-					{
-						// Keep Cell from touching the range we need
-						const auto prot_range = dst_range.to_page_range();
-						utils::memory_protect(vm::base(prot_range.start), prot_range.length(), utils::protection::no);
-
-						force_dma_load = true;
-					}
-
-					const image_section_attributes_t attrs =
-					{
-						.pitch = dst.pitch,
-						.width = static_cast<u16>(dst_dimensions.width),
-						.height = static_cast<u16>(dst_dimensions.height),
-						.bpp = dst_bpp
-					};
-					cached_dest = create_nul_section(cmd, rsx_range, attrs, dst_tile, force_dma_load);
-				}
-				else
-				{
-					// render target data is already in correct swizzle layout
-					[[maybe_unused]] auto channel_order = src_is_render_target ? rsx::component_order::native :
-						dst_is_argb8 ? rsx::component_order::default_ :
-						rsx::component_order::swapped_native;
-
-					// Translate dst_area into the 'full' dst block based on dst.rsx_address as (0, 0)
-					dst_area.x1 += dst_offset.x;
-					dst_area.x2 += dst_offset.x;
-					dst_area.y1 += dst_offset.y;
-					dst_area.y2 += dst_offset.y;
-
-					// We have to create the surface in the surface cache
-					rsx::image_section_attributes_t section_attr
-					{
-						.address = rsx_range.start,
-						.gcm_format = preferred_dst_format,
-						.pitch = dst.pitch,
-						.width = static_cast<u16>(dst_dimensions.width),
-						.height = static_cast<u16>(dst_dimensions.height),
-						.depth = 1,
-						.mipmaps = 1,
-						.slice_h = static_cast<u16>(dst_dimensions.height),
-						.bpp = dst_bpp,
-						.swizzled = false,
-						.edge_clamped = false
-					};
-
-					auto dst_surface = m_rtts.create_surface_from_rsx_section(
-						cmd,
-						section_attr,
-						std::forward<Args>(extras)...);
-
-					ensure(dst_surface, "Failed to create target surface");
-					//dst_surface->set_name(fmt::format("Blit target @0x%x", section_attr.address));
-
-					if (!dst_area.x1 && !dst_area.y1 && dst_area.x2 == dst_dimensions.width && dst_area.y2 == dst_dimensions.height)
-					{
-						// Nothing to do, not even a background erase is needed here
-						dst_surface->state_flags &= ~rsx::surface_state_flags::erase_bkgnd;
-					}
-					else
-					{
-						// HACK: workaround for data race with Cell
-						// Pre-lock the memory range we'll be touching, then load with super_ptr
-						const auto prot_range = dst_range.to_page_range();
-						utils::memory_protect(vm::base(prot_range.start), prot_range.length(), utils::protection::no);
-
-						dst_surface->state_flags |= rsx::surface_state_flags::force_data_load | rsx::surface_state_flags::erase_bkgnd;
-						// set_component_order(*cached_dest, preferred_dst_format, channel_order);
-					}
-
-					// Lock this for readback. That also creates a matching section
-					lock_memory_region_impl(
-						cmd, dst_surface, dst_surface->get_memory_range(), false,
-						dst_surface->get_surface_width<rsx::surface_metrics::pixels>(),
-						dst_surface->get_surface_height<rsx::surface_metrics::pixels>(),
-						dst_surface->get_rsx_pitch(),
-						dst_surface);
-
-					// Fake RTT cache hit
-					dst_subres.surface = dst_surface;
-					dst_is_render_target = true;
-
-					dest_texture = dst_surface->get_surface(rsx::surface_access::transfer_write);
-					typeless_info.dst_context = texture_upload_context::framebuffer_storage;
-					typeless_info.dst_gcm_format = preferred_dst_format;
-				}
+				create_blit_dst(cmd, m_rtts, dst, dst_address, dst_payload_length, dst_base_address, dst_w, dst_bpp, dst_range, dst_tile, dst_offset, preferred_dst_format, src_is_render_target, dst_is_argb8, use_null_region, dst_dimensions, dst_area, cached_dest, dst_subres, dst_is_render_target, dest_texture, typeless_info, lock, std::forward<Args>(extras)...);
 			}
 
 			ensure(cached_dest || dst_is_render_target);
