@@ -2530,6 +2530,99 @@ namespace rsx
 					texture_upload_context::shader_read, format_class, scale, extended_dimension };
 		}
 
+		// Pseudo-manespace wrapper. Functions extracted from upload_scaled_image
+		struct blit_engine_utils
+		{
+			// Verifies that the memory range defined by [base_address, write_end] actually exists in VM
+			// The heurestic-defined block_end input is speculative. e.g We may be rendering to one corner of a larger image.
+			// Returns true if we can use the entire range, false if we can only use the [base_address, write_end] area
+			static bool validate_memory_range(u32 base_address, u32 write_end, u32 block_end)
+			{
+				if (block_end <= write_end)
+				{
+					return true;
+				}
+
+				// Confirm if the pages actually exist in vm
+				if (get_location(base_address) == CELL_GCM_LOCATION_LOCAL)
+				{
+					const auto vram_end = rsx::get_current_renderer()->local_mem_size + rsx::constants::local_mem_base;
+					return block_end <= vram_end;
+				}
+
+				// Main memory block validation
+				return vm::check_addr(write_end, vm::page_readable, (block_end - write_end));
+			}
+
+			// Reverse projects output clip rect back onto the source input.
+			// This cuts out a post-transfer clip operation at the cost of possible edge bleed.
+			static void reproject_clip_offsets(
+				rsx::blit_dst_info& dst_info,
+				areai& src_area,
+				u16 max_dst_width,
+				u16 max_dst_height,
+				f32 scale_x,
+				f32 scale_y,
+				const typeless_xfer& typeless_info)
+			{
+				// Validate clipping region
+				if ((dst_info.offset_x + dst_info.clip_x + dst_info.clip_width) > max_dst_width) dst_info.clip_x = 0;
+				if ((dst_info.offset_y + dst_info.clip_y + dst_info.clip_height) > max_dst_height) dst_info.clip_y = 0;
+
+				// Reproject clip offsets onto source to simplify blit
+				if (dst_info.clip_x || dst_info.clip_y)
+				{
+					const u16 scaled_clip_offset_x = static_cast<u16>(dst_info.clip_x / (scale_x * typeless_info.src_scaling_hint));
+					const u16 scaled_clip_offset_y = static_cast<u16>(dst_info.clip_y / scale_y);
+
+					src_area.x1 += scaled_clip_offset_x;
+					src_area.x2 += scaled_clip_offset_x;
+					src_area.y1 += scaled_clip_offset_y;
+					src_area.y2 += scaled_clip_offset_y;
+				}
+			}
+
+			// Reconcile cross-aspect transfers. Transfers cannot go across aspects due to API limitations.
+			static void reconcile_depth_color_typeless(
+				typeless_xfer& typeless_info,
+				bool src_is_argb8,
+				bool dst_is_argb8)
+			{
+				if (typeless_info.src_gcm_format == typeless_info.dst_gcm_format) [[ likely ]]
+				{
+					return;
+				}
+
+				const auto src_is_depth = helpers::is_gcm_depth_format(typeless_info.src_gcm_format);
+				const auto dst_is_depth = helpers::is_gcm_depth_format(typeless_info.dst_gcm_format);
+
+				if (src_is_depth == dst_is_depth)
+				{
+					return;
+				}
+
+				// Make the depth side typeless because the other side is guaranteed to be color
+				if (src_is_depth)
+				{
+					// SRC is depth, transfer must be done typelessly
+					if (!typeless_info.src_is_typeless)
+					{
+						typeless_info.src_is_typeless = true;
+						typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, false, false);
+					}
+
+					return;
+				}
+
+				// DST is depth, transfer must be done typelessly
+				if (!typeless_info.dst_is_typeless)
+				{
+					typeless_info.dst_is_typeless = true;
+					typeless_info.dst_gcm_format = helpers::get_sized_blit_format(dst_is_argb8, false, false);
+				}
+			}
+		};
+
 		// FIXME: This function is way too large and needs an urgent refactor.
 		template <typename surface_store_type, typename blitter_type, typename ...Args>
 		blit_op_result upload_scaled_image(const rsx::blit_src_info& src_info, const rsx::blit_dst_info& dst_info, bool interpolate, commandbuffer_type& cmd, surface_store_type& m_rtts, blitter_type& blitter, Args&&... extras)
@@ -2673,35 +2766,6 @@ namespace rsx
 				}
 
 				return {};
-			};
-
-			auto validate_memory_range = [](u32 base_address, u32 write_end, u32 heuristic_end)
-			{
-				if (heuristic_end <= write_end)
-				{
-					return true;
-				}
-
-				// Confirm if the pages actually exist in vm
-				if (get_location(base_address) == CELL_GCM_LOCATION_LOCAL)
-				{
-					const auto vram_end = rsx::get_current_renderer()->local_mem_size + rsx::constants::local_mem_base;
-					if (heuristic_end > vram_end)
-					{
-						// Outside available VRAM area
-						return false;
-					}
-				}
-				else
-				{
-					if (!vm::check_addr(write_end, vm::page_readable, (heuristic_end - write_end)))
-					{
-						// Enforce strict allocation size!
-						return false;
-					}
-				}
-
-				return true;
 			};
 
 			auto validate_fbo_integrity = [&](const utils::address_range32& range, bool is_depth_texture)
@@ -3159,7 +3223,7 @@ namespace rsx
 					u16 image_height = src.height;
 
 					// Check if memory is valid
-					const bool use_full_range = validate_memory_range(
+					const bool use_full_range = blit_engine_utils::validate_memory_range(
 						image_base,
 						(src_address + src_payload_length),
 						image_base + (image_height * src.pitch));
@@ -3229,21 +3293,8 @@ namespace rsx
 				set_component_order(*cached_dest, preferred_dst_format, channel_order);
 			}
 
-			// Validate clipping region
-			if ((dst.offset_x + dst.clip_x + dst.clip_width) > max_dst_width) dst.clip_x = 0;
-			if ((dst.offset_y + dst.clip_y + dst.clip_height) > max_dst_height) dst.clip_y = 0;
-
-			// Reproject clip offsets onto source to simplify blit
-			if (dst.clip_x || dst.clip_y)
-			{
-				const u16 scaled_clip_offset_x = static_cast<u16>(dst.clip_x / (scale_x * typeless_info.src_scaling_hint));
-				const u16 scaled_clip_offset_y = static_cast<u16>(dst.clip_y / scale_y);
-
-				src_area.x1 += scaled_clip_offset_x;
-				src_area.x2 += scaled_clip_offset_x;
-				src_area.y1 += scaled_clip_offset_y;
-				src_area.y2 += scaled_clip_offset_y;
-			}
+			// Reverse-project the clip rect to the source to avoid post-transfer clipping.
+			blit_engine_utils::reproject_clip_offsets(dst, src_area, max_dst_width, max_dst_height, scale_x, scale_y, typeless_info);
 
 			if (!cached_dest && !dst_is_render_target)
 			{
@@ -3255,7 +3306,7 @@ namespace rsx
 				u32 block_end = dst_base_address + (dst.pitch * dst_dimensions.height);
 
 				// Confirm if the pages actually exist in vm
-				if (!validate_memory_range(dst_base_address, write_end, block_end))
+				if (!blit_engine_utils::validate_memory_range(dst_base_address, write_end, block_end))
 				{
 					block_end = write_end;
 				}
@@ -3449,29 +3500,8 @@ namespace rsx
 				dst_subres.surface->transform_blit_coordinates(rsx::surface_access::transfer_write, dst_area);
 			}
 
-			if (helpers::is_gcm_depth_format(typeless_info.src_gcm_format) !=
-				helpers::is_gcm_depth_format(typeless_info.dst_gcm_format))
-			{
-				// Make the depth side typeless because the other side is guaranteed to be color
-				if (helpers::is_gcm_depth_format(typeless_info.src_gcm_format))
-				{
-					// SRC is depth, transfer must be done typelessly
-					if (!typeless_info.src_is_typeless)
-					{
-						typeless_info.src_is_typeless = true;
-						typeless_info.src_gcm_format = helpers::get_sized_blit_format(src_is_argb8, false, false);
-					}
-				}
-				else
-				{
-					// DST is depth, transfer must be done typelessly
-					if (!typeless_info.dst_is_typeless)
-					{
-						typeless_info.dst_is_typeless = true;
-						typeless_info.dst_gcm_format = helpers::get_sized_blit_format(dst_is_argb8, false, false);
-					}
-				}
-			}
+			// Normalize the transfer information w.r.t cross-aspect operations
+			blit_engine_utils::reconcile_depth_color_typeless(typeless_info, src_is_argb8, dst_is_argb8);
 
 			if (!use_null_region) [[likely]]
 			{
