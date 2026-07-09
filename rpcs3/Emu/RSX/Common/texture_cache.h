@@ -2914,6 +2914,136 @@ namespace rsx
 			return section && section->is_locked();
 		}
 
+		// Resolves the blit source when it is not already a render target: reuses an overlapping cached texture if one matches, otherwise uploads the source image from CPU.
+		// Out parameters: cached_src, vram_texture, the src side of typeless_info and adjusts src_area.
+		template <typename ...Args>
+		void get_or_create_blit_src(
+			commandbuffer_type& cmd,
+			const rsx::blit_src_info& src,
+			const rsx::blit_dst_info& dst,
+			u32 src_address,
+			u32 src_payload_length,
+			u8 src_bpp,
+			u16 src_h,
+			bool src_is_argb8,
+			bool dst_is_render_target,
+			bool dst_is_depth_surface,
+			bool is_copy_op,
+			bool is_format_convert,
+			areai& src_area,
+			/*out*/ section_storage_type*& cached_src,
+			/*out*/ image_resource_type& vram_texture,
+			/*out*/ typeless_xfer& typeless_info,
+			reader_lock& lock,
+			Args&&... extras)
+		{
+			// NOTE: Src address already takes into account the flipped nature of the overlap!
+			const u32 lookup_mask = rsx::texture_upload_context::blit_engine_src | rsx::texture_upload_context::shader_read;
+			auto overlapping_surfaces = find_texture_from_range<false>(address_range32::start_length(src_address, src_payload_length), src.pitch, lookup_mask);
+			auto old_src_area = src_area;
+
+			for (const auto &surface : overlapping_surfaces)
+			{
+				if (!surface->is_locked())
+				{
+					// TODO: Rejecting unlocked blit_engine dst causes stutter in SCV
+					// Surfaces marked as dirty have already been removed, leaving only flushed blit_dst data
+					continue;
+				}
+
+				// Force format matching; only accept 16-bit data for 16-bit transfers, 32-bit for 32-bit transfers
+				if (!blit_engine_utils::is_blit_source_format_compatible(surface->get_gcm_format(), src_is_argb8, is_copy_op, dst_is_render_target))
+				{
+					continue;
+				}
+
+				const auto this_address = surface->get_section_base();
+				if (this_address > src_address)
+				{
+					continue;
+				}
+
+				if (const u32 address_offset = src_address - this_address)
+				{
+					const u32 offset_y = address_offset / src.pitch;
+					const u32 offset_x = address_offset % src.pitch;
+					const u32 offset_x_in_block = offset_x / src_bpp;
+
+					src_area.x1 += offset_x_in_block;
+					src_area.x2 += offset_x_in_block;
+					src_area.y1 += offset_y;
+					src_area.y2 += offset_y;
+				}
+
+				if (src_area.x2 <= surface->get_width() &&
+					src_area.y2 <= surface->get_height())
+				{
+					cached_src = surface;
+					break;
+				}
+
+				src_area = old_src_area;
+			}
+
+			if (!cached_src)
+			{
+				const u16 full_width = src.pitch / src_bpp;
+				u32 image_base = src.rsx_address;
+				u16 image_width = full_width;
+				u16 image_height = src.height;
+
+				// Check if memory is valid
+				const bool use_full_range = blit_engine_utils::validate_memory_range(
+					image_base,
+					(src_address + src_payload_length),
+					image_base + (image_height * src.pitch));
+
+				if (use_full_range && dst.scale_x > 0.f && dst.scale_y > 0.f) [[likely]]
+				{
+					// Loading full image from the corner address
+					// Translate src_area into the declared block
+					src_area.x1 += src.offset_x;
+					src_area.x2 += src.offset_x;
+					src_area.y1 += src.offset_y;
+					src_area.y2 += src.offset_y;
+				}
+				else
+				{
+					image_base = src_address;
+					image_height = src_h;
+				}
+
+				std::vector<rsx::subresource_layout> subresource_layout;
+				rsx::subresource_layout subres = {};
+				subres.width_in_block = subres.width_in_texel = image_width;
+				subres.height_in_block = subres.height_in_texel = image_height;
+				subres.pitch_in_block = full_width;
+				subres.depth = 1;
+				subres.data = { vm::_ptr<const std::byte>(image_base), static_cast<std::span<const std::byte>::size_type>(src.pitch * image_height) };
+				subresource_layout.push_back(std::move(subres));
+
+				const u32 gcm_format = helpers::get_sized_blit_format(src_is_argb8, dst_is_depth_surface, is_format_convert);
+				const auto rsx_range = address_range32::start_length(image_base, src.pitch * image_height);
+
+				lock.upgrade();
+
+				invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::read, {}, std::forward<Args>(extras)...);
+
+				cached_src = upload_image_from_cpu(cmd, rsx_range, image_width, image_height, 1, 1, src.pitch, gcm_format, texture_upload_context::blit_engine_src,
+					subresource_layout, rsx::texture_dimension_extended::texture_dimension_2d, dst.swizzled);
+
+				typeless_info.src_gcm_format = gcm_format;
+			}
+			else
+			{
+				typeless_info.src_gcm_format = cached_src->get_gcm_format();
+			}
+
+			cached_src->add_ref();
+			vram_texture = cached_src->get_raw_texture();
+			typeless_info.src_context = cached_src->get_context();
+		}
+
 		// FIXME: This function is way too large and needs an urgent refactor.
 		template <typename surface_store_type, typename blitter_type, typename ...Args>
 		blit_op_result upload_scaled_image(const rsx::blit_src_info& src_info, const rsx::blit_dst_info& dst_info, bool interpolate, commandbuffer_type& cmd, surface_store_type& m_rtts, blitter_type& blitter, Args&&... extras)
@@ -3153,111 +3283,7 @@ namespace rsx
 			// TODO: This can be greatly improved with DMA optimizations. Most transfer operations here are actually non-graphical (no transforms applied)
 			if (!src_is_render_target)
 			{
-				// NOTE: Src address already takes into account the flipped nature of the overlap!
-				const u32 lookup_mask = rsx::texture_upload_context::blit_engine_src | rsx::texture_upload_context::shader_read;
-				auto overlapping_surfaces = find_texture_from_range<false>(address_range32::start_length(src_address, src_payload_length), src.pitch, lookup_mask);
-				auto old_src_area = src_area;
-
-				for (const auto &surface : overlapping_surfaces)
-				{
-					if (!surface->is_locked())
-					{
-						// TODO: Rejecting unlocked blit_engine dst causes stutter in SCV
-						// Surfaces marked as dirty have already been removed, leaving only flushed blit_dst data
-						continue;
-					}
-
-					// Force format matching; only accept 16-bit data for 16-bit transfers, 32-bit for 32-bit transfers
-					if (!blit_engine_utils::is_blit_source_format_compatible(surface->get_gcm_format(), src_is_argb8, is_copy_op, dst_is_render_target))
-					{
-						continue;
-					}
-
-					const auto this_address = surface->get_section_base();
-					if (this_address > src_address)
-					{
-						continue;
-					}
-
-					if (const u32 address_offset = src_address - this_address)
-					{
-						const u32 offset_y = address_offset / src.pitch;
-						const u32 offset_x = address_offset % src.pitch;
-						const u32 offset_x_in_block = offset_x / src_bpp;
-
-						src_area.x1 += offset_x_in_block;
-						src_area.x2 += offset_x_in_block;
-						src_area.y1 += offset_y;
-						src_area.y2 += offset_y;
-					}
-
-					if (src_area.x2 <= surface->get_width() &&
-						src_area.y2 <= surface->get_height())
-					{
-						cached_src = surface;
-						break;
-					}
-
-					src_area = old_src_area;
-				}
-
-				if (!cached_src)
-				{
-					const u16 full_width = src.pitch / src_bpp;
-					u32 image_base = src.rsx_address;
-					u16 image_width = full_width;
-					u16 image_height = src.height;
-
-					// Check if memory is valid
-					const bool use_full_range = blit_engine_utils::validate_memory_range(
-						image_base,
-						(src_address + src_payload_length),
-						image_base + (image_height * src.pitch));
-
-					if (use_full_range && dst.scale_x > 0.f && dst.scale_y > 0.f) [[likely]]
-					{
-						// Loading full image from the corner address
-						// Translate src_area into the declared block
-						src_area.x1 += src.offset_x;
-						src_area.x2 += src.offset_x;
-						src_area.y1 += src.offset_y;
-						src_area.y2 += src.offset_y;
-					}
-					else
-					{
-						image_base = src_address;
-						image_height = src_h;
-					}
-
-					std::vector<rsx::subresource_layout> subresource_layout;
-					rsx::subresource_layout subres = {};
-					subres.width_in_block = subres.width_in_texel = image_width;
-					subres.height_in_block = subres.height_in_texel = image_height;
-					subres.pitch_in_block = full_width;
-					subres.depth = 1;
-					subres.data = { vm::_ptr<const std::byte>(image_base), static_cast<std::span<const std::byte>::size_type>(src.pitch * image_height) };
-					subresource_layout.push_back(std::move(subres));
-
-					const u32 gcm_format = helpers::get_sized_blit_format(src_is_argb8, dst_is_depth_surface, is_format_convert);
-					const auto rsx_range = address_range32::start_length(image_base, src.pitch * image_height);
-
-					lock.upgrade();
-
-					invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::read, {}, std::forward<Args>(extras)...);
-
-					cached_src = upload_image_from_cpu(cmd, rsx_range, image_width, image_height, 1, 1, src.pitch, gcm_format, texture_upload_context::blit_engine_src,
-						subresource_layout, rsx::texture_dimension_extended::texture_dimension_2d, dst.swizzled);
-
-					typeless_info.src_gcm_format = gcm_format;
-				}
-				else
-				{
-					typeless_info.src_gcm_format = cached_src->get_gcm_format();
-				}
-
-				cached_src->add_ref();
-				vram_texture = cached_src->get_raw_texture();
-				typeless_info.src_context = cached_src->get_context();
+				get_or_create_blit_src(cmd, src, dst, src_address, src_payload_length, src_bpp, src_h, src_is_argb8, dst_is_render_target, dst_is_depth_surface, is_copy_op, is_format_convert, src_area, cached_src, vram_texture, typeless_info, lock, std::forward<Args>(extras)...);
 			}
 			else
 			{
