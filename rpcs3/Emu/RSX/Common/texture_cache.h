@@ -1538,7 +1538,7 @@ namespace rsx
 					dst_area.y2 += dst_offset.y;
 
 					// We have to create the surface in the surface cache
-					rsx::image_section_attributes_t section_attr
+					const rsx::image_section_attributes_t section_attr
 					{
 						.address = rsx_range.start,
 						.gcm_format = preferred_dst_format,
@@ -1553,9 +1553,16 @@ namespace rsx
 						.edge_clamped = false
 					};
 
+					const surface_scaling_config_t scaling_config =
+					{
+						.scale_percent = static_cast<u16>(g_cfg.video.resolution_scale_percent),
+						.min_scalable_dimension = static_cast<u16>(g_cfg.video.min_scalable_dimension),
+					};
+
 					auto dst_surface = m_rtts.create_surface_from_rsx_section(
 						cmd,
 						section_attr,
+						scaling_config,
 						std::forward<Args>(extras)...);
 
 					ensure(dst_surface, "Failed to create target surface");
