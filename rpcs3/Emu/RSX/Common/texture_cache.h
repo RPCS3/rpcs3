@@ -2620,21 +2620,6 @@ namespace rsx
 				}
 			}
 
-			// Whether a cached surface's format is an acceptable destination for a blit of the given aspect.
-			// Only color formats are supported as blit destinations (most blit-engine access is color).
-			static bool is_blit_dest_format_compatible(u32 gcm_format, bool dst_is_argb8)
-			{
-				switch (gcm_format)
-				{
-				case CELL_GCM_TEXTURE_A8R8G8B8:
-					return dst_is_argb8;
-				case CELL_GCM_TEXTURE_R5G6B5:
-					return !dst_is_argb8;
-				default:
-					return false;
-				}
-			}
-
 			// Whether a cached surface's format is an acceptable source for a blit.
 			// Only accept 16-bit data for 16-bit transfers and 32-bit for 32-bit transfers.
 			// NOTE: some formats are copy-compatible but not scaling-compatible (hence the is_copy_op / dst_is_render_target checks).
@@ -2680,7 +2665,6 @@ namespace rsx
 			{
 				bool fall_back_to_cpu = false;          // Abort the GPU path and let the caller memcpy instead
 				bool discard_dst_render_target = false; // dst was a render target but should be treated as plain memory
-				bool skip_if_collision_exists = false;  // Prefer CPU memcpy if a differing cached section overlaps
 			};
 
 			// Decides whether a transfer into main memory should run on the GPU or fall back to a CPU memcpy.
@@ -2730,9 +2714,6 @@ namespace rsx
 						config.fall_back_to_cpu = true;
 						return config;
 					}
-
-					// If a matching section exists with a different use-case, fall back to CPU memcpy
-					config.skip_if_collision_exists = true;
 				}
 
 				if (!g_cfg.video.use_gpu_texture_scaling && !dst_is_tiled && !src_is_tiled)
@@ -2960,7 +2941,6 @@ namespace rsx
 
 			const bool is_copy_op = (fcmp(scale_x, 1.f) && fcmp(scale_y, 1.f));
 			const bool is_format_convert = (dst_is_argb8 != src_is_argb8);
-			bool skip_if_collision_exists = false;
 
 			// Offset in x and y for src is 0 (it is already accounted for when getting pixels_src)
 			// Reproject final clip onto source...
@@ -3058,8 +3038,6 @@ namespace rsx
 					dst_is_render_target = false;
 					dst_subres = {};
 				}
-
-				skip_if_collision_exists = decision.skip_if_collision_exists;
 			}
 
 			if (dst_is_render_target)
@@ -3126,22 +3104,23 @@ namespace rsx
 
 			reader_lock lock(m_cache_mutex);
 
-			const auto old_dst_area = dst_area;
-			if (!dst_is_render_target)
+			if (dst_is_render_target)
 			{
-				// Check for any available region that will fit this one
-				u32 required_type_mask;
-				if (use_null_region)
-				{
-					required_type_mask = texture_upload_context::dma;
-				}
-				else
-				{
-					required_type_mask = texture_upload_context::blit_engine_dst;
-					if (skip_if_collision_exists) required_type_mask |= texture_upload_context::shader_read;
-				}
+				// Destination dimensions are relaxed (true)
+				dst_area = dst_subres.src_area;
 
-				auto overlapping_surfaces = find_texture_from_range(dst_range, dst.pitch, required_type_mask);
+				dest_texture = dst_subres.surface->get_surface(rsx::surface_access::transfer_write);
+				typeless_info.dst_context = texture_upload_context::framebuffer_storage;
+				dst_is_depth_surface = typeless_info.dst_is_typeless ? false : dst_subres.is_depth;
+
+				max_dst_width = static_cast<u16>(dst_subres.surface->template get_surface_width<rsx::surface_metrics::samples>() * typeless_info.dst_scaling_hint);
+				max_dst_height = dst_subres.surface->template get_surface_height<rsx::surface_metrics::samples>();
+			}
+			else if (use_null_region)
+			{
+				// Check for any available DMA region that will fit this one and attach to it.
+				// NOTE: Everything else (2D blit destinations) is created as a render target further below.
+				auto overlapping_surfaces = find_texture_from_range(dst_range, dst.pitch, texture_upload_context::dma);
 				for (const auto &surface : overlapping_surfaces)
 				{
 					if (!surface->is_locked())
@@ -3163,82 +3142,11 @@ namespace rsx
 						continue;
 					}
 
-					if (use_null_region)
-					{
-						// Attach to existing region
-						cached_dest = surface;
-
-						// Technically it is totally possible to just extend a pre-existing section
-						// Will leave this as a TODO
-						continue;
-					}
-
-					if (skip_if_collision_exists) [[unlikely]]
-					{
-						if (surface->get_context() != texture_upload_context::blit_engine_dst)
-						{
-							// This section is likely to be 'flushed' to CPU for reupload soon anyway
-							return false;
-						}
-					}
-
-					// Prefer formats which will not trigger a typeless conversion later
-					// Only color formats are supported as destination as most access from blit engine will be color
-					if (!blit_engine_utils::is_blit_dest_format_compatible(surface->get_gcm_format(), dst_is_argb8))
-					{
-						continue;
-					}
-
-					if (const auto this_address = surface->get_section_base();
-						const u32 address_offset = dst_address - this_address)
-					{
-						const u32 offset_y = address_offset / dst.pitch;
-						const u32 offset_x = address_offset % dst.pitch;
-						const u32 offset_x_in_block = offset_x / dst_bpp;
-
-						dst_area.x1 += offset_x_in_block;
-						dst_area.x2 += offset_x_in_block;
-						dst_area.y1 += offset_y;
-						dst_area.y2 += offset_y;
-					}
-
-					// Validate clipping region
-					if (static_cast<uint>(dst_area.x2) <= surface->get_width() &&
-						static_cast<uint>(dst_area.y2) <= surface->get_height())
-					{
-						cached_dest = surface;
-						dest_texture = cached_dest->get_raw_texture();
-						typeless_info.dst_context = cached_dest->get_context();
-
-						max_dst_width = cached_dest->get_width();
-						max_dst_height = cached_dest->get_height();
-						continue;
-					}
-
-					dst_area = old_dst_area;
+					// Attach to existing region
+					// Technically it is totally possible to just extend a pre-existing section
+					// Will leave this as a TODO
+					cached_dest = surface;
 				}
-
-				if (cached_dest && cached_dest->get_context() != texture_upload_context::dma)
-				{
-					// NOTE: DMA sections are plain memory blocks with no format!
-					if (cached_dest) [[likely]]
-					{
-						typeless_info.dst_gcm_format = cached_dest->get_gcm_format();
-						dst_is_depth_surface = cached_dest->is_depth_texture();
-					}
-				}
-			}
-			else
-			{
-				// Destination dimensions are relaxed (true)
-				dst_area = dst_subres.src_area;
-
-				dest_texture = dst_subres.surface->get_surface(rsx::surface_access::transfer_write);
-				typeless_info.dst_context = texture_upload_context::framebuffer_storage;
-				dst_is_depth_surface = typeless_info.dst_is_typeless ? false : dst_subres.is_depth;
-
-				max_dst_width = static_cast<u16>(dst_subres.surface->template get_surface_width<rsx::surface_metrics::samples>() * typeless_info.dst_scaling_hint);
-				max_dst_height = dst_subres.surface->template get_surface_height<rsx::surface_metrics::samples>();
 			}
 
 			// Create source texture if does not exist
@@ -3246,7 +3154,7 @@ namespace rsx
 			if (!src_is_render_target)
 			{
 				// NOTE: Src address already takes into account the flipped nature of the overlap!
-				const u32 lookup_mask = rsx::texture_upload_context::blit_engine_src | rsx::texture_upload_context::blit_engine_dst | rsx::texture_upload_context::shader_read;
+				const u32 lookup_mask = rsx::texture_upload_context::blit_engine_src | rsx::texture_upload_context::shader_read;
 				auto overlapping_surfaces = find_texture_from_range<false>(address_range32::start_length(src_address, src_payload_length), src.pitch, lookup_mask);
 				auto old_src_area = src_area;
 
@@ -3360,16 +3268,6 @@ namespace rsx
 
 			//const auto src_is_depth_format = helpers::is_gcm_depth_format(typeless_info.src_gcm_format);
 			const auto preferred_dst_format = helpers::get_sized_blit_format(dst_is_argb8, false, is_format_convert);
-
-			if (cached_dest && !use_null_region)
-			{
-				// Prep surface
-				auto channel_order = src_is_render_target ? rsx::component_order::native :
-					dst_is_argb8 ? rsx::component_order::default_ :
-					rsx::component_order::swapped_native;
-
-				set_component_order(*cached_dest, preferred_dst_format, channel_order);
-			}
 
 			// Reverse-project the clip rect to the source to avoid post-transfer clipping.
 			blit_engine_utils::reproject_clip_offsets(dst, src_area, max_dst_width, max_dst_height, scale_x, scale_y, typeless_info);
