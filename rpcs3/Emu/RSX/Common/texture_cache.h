@@ -2620,6 +2620,61 @@ namespace rsx
 				}
 			}
 
+			// Whether a cached surface's format is an acceptable destination for a blit of the given aspect.
+			// Only color formats are supported as blit destinations (most blit-engine access is color).
+			static bool is_blit_dest_format_compatible(u32 gcm_format, bool dst_is_argb8)
+			{
+				switch (gcm_format)
+				{
+				case CELL_GCM_TEXTURE_A8R8G8B8:
+					return dst_is_argb8;
+				case CELL_GCM_TEXTURE_R5G6B5:
+					return !dst_is_argb8;
+				default:
+					return false;
+				}
+			}
+
+			// Whether a cached surface's format is an acceptable source for a blit.
+			// Only accept 16-bit data for 16-bit transfers and 32-bit for 32-bit transfers.
+			// NOTE: some formats are copy-compatible but not scaling-compatible (hence the is_copy_op / dst_is_render_target checks).
+			static bool is_blit_source_format_compatible(u32 gcm_format, bool src_is_argb8, bool is_copy_op, bool dst_is_render_target)
+			{
+				switch (gcm_format)
+				{
+				case CELL_GCM_TEXTURE_X32_FLOAT:
+				case CELL_GCM_TEXTURE_Y16_X16:
+				case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
+					// Should be copy compatible but not scaling compatible
+					return src_is_argb8 && (is_copy_op || dst_is_render_target);
+				case CELL_GCM_TEXTURE_DEPTH24_D8:
+				case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
+					// Should be copy compatible but not scaling compatible
+					return src_is_argb8 && (is_copy_op || !dst_is_render_target);
+				case CELL_GCM_TEXTURE_A8R8G8B8:
+				case CELL_GCM_TEXTURE_D8R8G8B8:
+					// Perfect match
+					return src_is_argb8;
+				case CELL_GCM_TEXTURE_X16:
+				case CELL_GCM_TEXTURE_G8B8:
+				case CELL_GCM_TEXTURE_A1R5G5B5:
+				case CELL_GCM_TEXTURE_A4R4G4B4:
+				case CELL_GCM_TEXTURE_D1R5G5B5:
+				case CELL_GCM_TEXTURE_R5G5B5A1:
+					// Copy compatible
+					return !src_is_argb8 && (is_copy_op || dst_is_render_target);
+				case CELL_GCM_TEXTURE_DEPTH16:
+				case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+					// Copy compatible
+					return !src_is_argb8 && (is_copy_op || !dst_is_render_target);
+				case CELL_GCM_TEXTURE_R5G6B5:
+					// Perfect match
+					return !src_is_argb8;
+				default:
+					return false;
+				}
+			}
+
 			// Result of the CPU-vs-GPU transfer heuristic for a main-memory destination.
 			struct transfer_configuration
 			{
@@ -2790,6 +2845,94 @@ namespace rsx
 			}
 		};
 
+		// Finds a render target in the surface store that overlaps the requested region (extracted from upload_scaled_image).
+		template <typename surface_store_type>
+		typename surface_store_type::surface_overlap_info rtt_lookup(
+			surface_store_type& m_rtts,
+			commandbuffer_type& cmd,
+			u32 address,
+			u32 width,
+			u32 height,
+			u32 pitch,
+			u8 bpp,
+			rsx::flags32_t access,
+			bool allow_clipped,
+			f32 scale_x,
+			f32 scale_y)
+		{
+			const auto list = m_rtts.get_merged_texture_memory_region(cmd, address, width, height, pitch, bpp, access);
+			if (list.empty())
+			{
+				return {};
+			}
+
+			for (auto It = list.rbegin(); It != list.rend(); ++It)
+			{
+				if (!(It->surface->memory_usage_flags & rsx::surface_usage_flags::attachment))
+				{
+					// HACK
+					// TODO: Properly analyse the input here to determine if it can properly fit what we need
+					// This is a problem due to chunked transfer
+					// First 2 512x720 blocks go into a cpu-side buffer but suddenly when its time to render the final 256x720
+					// it falls onto some storage buffer in surface cache that has bad dimensions
+					// Proper solution is to always merge when a cpu resource is created (it should absorb the render targets in range)
+					// We then should not have any 'dst-is-rendertarget' surfaces in use
+					// Option 2: Make surfaces here part of surface cache and do not pad them for optimization
+					// Surface cache is good at merging for resolve operations. This keeps integrity even when drawing to the rendertgargets
+					// This option needs a lot more work
+					continue;
+				}
+
+				if (!It->is_clipped || allow_clipped)
+				{
+					return *It;
+				}
+
+				const auto _w = It->dst_area.width;
+				const auto _h = It->dst_area.height;
+
+				if (_w < width)
+				{
+					if ((_w * scale_x) <= 1.f)
+						continue;
+				}
+
+				if (_h < height)
+				{
+					if ((_h * scale_y) <= 1.f)
+						continue;
+				}
+
+				// Some surface exists, but its size is questionable
+				// Opt to re-upload (needs WCB/WDB to work properly)
+				break;
+			}
+
+			return {};
+		}
+
+		// Confirms that an FBO-backed section is still locked/consistent before we treat it as a valid GPU source or target.
+		bool validate_fbo_integrity(const utils::address_range32& range, bool is_depth_texture)
+		{
+			const bool will_upload = is_depth_texture ? !!g_cfg.video.read_depth_buffer : !!g_cfg.video.read_color_buffers;
+			if (!will_upload)
+			{
+				// Give a pass. The data is lost anyway.
+				return true;
+			}
+
+			const bool should_be_locked = is_depth_texture ? !!g_cfg.video.write_depth_buffer : !!g_cfg.video.write_color_buffers;
+			if (!should_be_locked)
+			{
+				// Data is lost anyway.
+				return true;
+			}
+
+			// Optimal setup. We have ideal conditions presented so we can correctly decide what to do here.
+			const auto section = find_cached_texture(range, { .gcm_format = RSX_GCM_FORMAT_IGNORED }, false, false, false);
+			return section && section->is_locked();
+		}
+
 		// FIXME: This function is way too large and needs an urgent refactor.
 		template <typename surface_store_type, typename blitter_type, typename ...Args>
 		blit_op_result upload_scaled_image(const rsx::blit_src_info& src_info, const rsx::blit_dst_info& dst_info, bool interpolate, commandbuffer_type& cmd, surface_store_type& m_rtts, blitter_type& blitter, Args&&... extras)
@@ -2835,80 +2978,6 @@ namespace rsx
 				return rsxthr->get_tiled_memory_region(range);
 			};
 
-			auto rtt_lookup = [&m_rtts, &cmd, &scale_x, &scale_y](u32 address, u32 width, u32 height, u32 pitch, u8 bpp, rsx::flags32_t access, bool allow_clipped) -> typename surface_store_type::surface_overlap_info
-			{
-				const auto list = m_rtts.get_merged_texture_memory_region(cmd, address, width, height, pitch, bpp, access);
-				if (list.empty())
-				{
-					return {};
-				}
-
-				for (auto It = list.rbegin(); It != list.rend(); ++It)
-				{
-					if (!(It->surface->memory_usage_flags & rsx::surface_usage_flags::attachment))
-					{
-						// HACK
-						// TODO: Properly analyse the input here to determine if it can properly fit what we need
-						// This is a problem due to chunked transfer
-						// First 2 512x720 blocks go into a cpu-side buffer but suddenly when its time to render the final 256x720
-						// it falls onto some storage buffer in surface cache that has bad dimensions
-						// Proper solution is to always merge when a cpu resource is created (it should absorb the render targets in range)
-						// We then should not have any 'dst-is-rendertarget' surfaces in use
-						// Option 2: Make surfaces here part of surface cache and do not pad them for optimization
-						// Surface cache is good at merging for resolve operations. This keeps integrity even when drawing to the rendertgargets
-						// This option needs a lot more work
-						continue;
-					}
-
-					if (!It->is_clipped || allow_clipped)
-					{
-						return *It;
-					}
-
-					const auto _w = It->dst_area.width;
-					const auto _h = It->dst_area.height;
-
-					if (_w < width)
-					{
-						if ((_w * scale_x) <= 1.f)
-							continue;
-					}
-
-					if (_h < height)
-					{
-						if ((_h * scale_y) <= 1.f)
-							continue;
-					}
-
-					// Some surface exists, but its size is questionable
-					// Opt to re-upload (needs WCB/WDB to work properly)
-					break;
-				}
-
-				return {};
-			};
-
-			auto validate_fbo_integrity = [&](const utils::address_range32& range, bool is_depth_texture)
-			{
-				const bool will_upload = is_depth_texture ? !!g_cfg.video.read_depth_buffer : !!g_cfg.video.read_color_buffers;
-				if (!will_upload)
-				{
-					// Give a pass. The data is lost anyway.
-					return true;
-				}
-
-				const bool should_be_locked = is_depth_texture ? !!g_cfg.video.write_depth_buffer : !!g_cfg.video.write_color_buffers;
-				if (!should_be_locked)
-				{
-					// Data is lost anyway.
-					return true;
-				}
-
-				// Optimal setup. We have ideal conditions presented so we can correctly decide what to do here.
-				const auto section = find_cached_texture(range, { .gcm_format = RSX_GCM_FORMAT_IGNORED }, false, false, false);
-				return section && section->is_locked();
-			};
-
 			// Check tiled mem
 			const auto dst_tile = get_tiled_region(utils::address_range32::start_length(dst_address, dst.pitch * dst.clip_height));
 			const auto src_tile = get_tiled_region(utils::address_range32::start_length(src_address, src.pitch * src.height));
@@ -2921,14 +2990,14 @@ namespace rsx
 
 			// TODO: Handle cases where src or dst can be a depth texture while the other is a color texture - requires a render pass to emulate
 			// NOTE: Grab the src first as requirements for reading are more strict than requirements for writing
-			auto src_subres = rtt_lookup(src_address, src_w, src_h, src.pitch, src_bpp, surface_access::transfer_read, false);
+			auto src_subres = rtt_lookup(m_rtts, cmd, src_address, src_w, src_h, src.pitch, src_bpp, surface_access::transfer_read, false, scale_x, scale_y);
 			src_is_render_target = src_subres.surface != nullptr;
 
 			if (get_location(dst_address) == CELL_GCM_LOCATION_LOCAL)
 			{
 				// TODO: HACK
 				// After writing, it is required to lock the memory range from access!
-				dst_subres = rtt_lookup(dst_address, dst_w, dst_h, dst.pitch, dst_bpp, surface_access::transfer_write, false);
+				dst_subres = rtt_lookup(m_rtts, cmd, dst_address, dst_w, dst_h, dst.pitch, dst_bpp, surface_access::transfer_write, false, scale_x, scale_y);
 				dst_is_render_target = dst_subres.surface != nullptr;
 			}
 			else
@@ -3115,15 +3184,8 @@ namespace rsx
 
 					// Prefer formats which will not trigger a typeless conversion later
 					// Only color formats are supported as destination as most access from blit engine will be color
-					switch (surface->get_gcm_format())
+					if (!blit_engine_utils::is_blit_dest_format_compatible(surface->get_gcm_format(), dst_is_argb8))
 					{
-					case CELL_GCM_TEXTURE_A8R8G8B8:
-						if (!dst_is_argb8) continue;
-						break;
-					case CELL_GCM_TEXTURE_R5G6B5:
-						if (dst_is_argb8) continue;
-						break;
-					default:
 						continue;
 					}
 
@@ -3198,58 +3260,9 @@ namespace rsx
 					}
 
 					// Force format matching; only accept 16-bit data for 16-bit transfers, 32-bit for 32-bit transfers
-					switch (surface->get_gcm_format())
-					{
-					case CELL_GCM_TEXTURE_X32_FLOAT:
-					case CELL_GCM_TEXTURE_Y16_X16:
-					case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
-					{
-						// Should be copy compatible but not scaling compatible
-						if (src_is_argb8 && (is_copy_op || dst_is_render_target)) break;
-						continue;
-					}
-					case CELL_GCM_TEXTURE_DEPTH24_D8:
-					case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
-					{
-						// Should be copy compatible but not scaling compatible
-						if (src_is_argb8 && (is_copy_op || !dst_is_render_target)) break;
-						continue;
-					}
-					case CELL_GCM_TEXTURE_A8R8G8B8:
-					case CELL_GCM_TEXTURE_D8R8G8B8:
-					{
-						// Perfect match
-						if (src_is_argb8) break;
-						continue;
-					}
-					case CELL_GCM_TEXTURE_X16:
-					case CELL_GCM_TEXTURE_G8B8:
-					case CELL_GCM_TEXTURE_A1R5G5B5:
-					case CELL_GCM_TEXTURE_A4R4G4B4:
-					case CELL_GCM_TEXTURE_D1R5G5B5:
-					case CELL_GCM_TEXTURE_R5G5B5A1:
-					{
-						// Copy compatible
-						if (!src_is_argb8 && (is_copy_op || dst_is_render_target)) break;
-						continue;
-					}
-					case CELL_GCM_TEXTURE_DEPTH16:
-					case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
-					{
-						// Copy compatible
-						if (!src_is_argb8 && (is_copy_op || !dst_is_render_target)) break;
-						continue;
-					}
-					case CELL_GCM_TEXTURE_R5G6B5:
-					{
-						// Perfect match
-						if (!src_is_argb8) break;
-						continue;
-					}
-					default:
+					if (!blit_engine_utils::is_blit_source_format_compatible(surface->get_gcm_format(), src_is_argb8, is_copy_op, dst_is_render_target))
 					{
 						continue;
-					}
 					}
 
 					const auto this_address = surface->get_section_base();
