@@ -6,6 +6,7 @@
 
 #include "texture_cache_utils.h"
 #include "texture_cache_helpers.h"
+#include "texture_cache_blit_helpers.h"
 
 namespace rsx
 {
@@ -224,13 +225,6 @@ namespace rsx
 
 	namespace blit_engine_helpers
 	{
-		// Result of the CPU-vs-GPU transfer heuristic for a main-memory destination.
-		struct transfer_configuration
-		{
-			bool fall_back_to_cpu = false;          // Abort the GPU path and let the caller memcpy instead
-			bool discard_dst_render_target = false; // dst was a render target but should be treated as plain memory
-		};
-
 		// Applies reverse-scan subpixel correction and computes the mirror/flip adjustments for the source.
 		void apply_pixel_transforms(
 			rsx::blit_src_info& src,
