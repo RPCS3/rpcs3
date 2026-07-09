@@ -1073,6 +1073,7 @@ namespace rsx
 		surface_type create_surface_from_rsx_section(
 			command_list_type command_list,
 			const rsx::image_section_attributes_t& attributes,
+			const rsx::surface_scaling_config_t& scaling_config,
 			Args&&... extra_params)
 		{
 			cache_tag = rsx::get_shared_tag();
@@ -1087,7 +1088,7 @@ namespace rsx
 					attributes.width,
 					attributes.height,
 					attributes.pitch,
-					{},
+					scaling_config,
 					std::forward<Args>(extra_params)...);
 			}
 
