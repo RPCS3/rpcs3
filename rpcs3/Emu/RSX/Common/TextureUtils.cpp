@@ -1710,7 +1710,7 @@ namespace rsx
 		case CELL_GCM_TEXTURE_R5G6B5:
 			return rsx::surface_color_format::r5g6b5;
 		case CELL_GCM_TEXTURE_A8R8G8B8:
-			return rsx::surface_color_format::a8b8g8r8;
+			return rsx::surface_color_format::a8r8g8b8;
 		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
 			return rsx::surface_color_format::w16z16y16x16;
 		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
