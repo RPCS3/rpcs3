@@ -7,6 +7,7 @@
 #include "Emu/VFS.h"
 #include "Emu/vfs_config.h"
 #include "Emu/system_utils.hpp"
+#include "Emu/System.h"
 #include "Utilities/File.h"
 #include "Utilities/StrUtil.h"
 #include "Loader/ISO.h"
@@ -475,8 +476,6 @@ namespace gui::utils
 	{
 		if (!game || locations.empty()) return false;
 
-		std::string gameid_token_value;
-
 		const std::string dev_flash = g_cfg_vfs.get_dev_flash();
 		const bool is_archive = is_iso_file(game->info.path);
 		std::shared_ptr<iso_archive> archive;
@@ -486,12 +485,23 @@ namespace gui::utils
 			return archive ? archive->is_file(path) : fs::is_file(path);
 		};
 
+		// The game id token is primarily the Title ID found in param.sfo.
+		// During boot, we search for an entry in games.yml and for game folders with that ID.
+		// We append the actual folder name if the Title ID of the param.sfo does not match the folder name.
+		// e.g. Title ID is SLUS12345 but the actual folder is NPUB12345
+		std::string gameid_token_value;
+
+		const bool is_disc_without_patch = !is_archive && game->info.category == "DG" && !fs::is_file(rpcs3::utils::get_hdd0_dir() + "/game/" + game->info.serial + "/USRDIR/EBOOT.BIN");
+		const bool is_in_hdd0_game = !is_archive && !is_disc_without_patch && Emu.IsPathInsideDir(game->info.path, vfs::get("/dev_hdd0/game/"));
+		const bool is_hdd_game_with_different_foldername = is_in_hdd0_game && game->info.category == "HG" && !fs::is_file(rpcs3::utils::get_hdd0_dir() + "/game/" + game->info.serial + "/USRDIR/EBOOT.BIN");
+		const bool is_ps1_game_with_different_foldername = is_in_hdd0_game && game->info.category == "1P" && !fs::is_file(rpcs3::utils::get_hdd0_dir() + "/game/" + game->info.serial + "/USRDIR/ISO.BIN.EDAT");
+
 		if (is_archive)
 		{
 			gameid_token_value = game->info.serial;
 			archive = std::make_shared<iso_archive>(game->info.path);
 		}
-		else if (game->info.category == "DG" && !fs::is_file(rpcs3::utils::get_hdd0_dir() + "/game/" + game->info.serial + "/USRDIR/EBOOT.BIN"))
+		else if (is_disc_without_patch || is_hdd_game_with_different_foldername || is_ps1_game_with_different_foldername)
 		{
 			const usz ps3_game_dir_pos = fs::get_parent_dir(game->info.path).size();
 			std::string relative_boot_dir = game->info.path.substr(ps3_game_dir_pos);
