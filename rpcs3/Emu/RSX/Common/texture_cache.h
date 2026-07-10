@@ -1161,7 +1161,7 @@ namespace rsx
 		}
 
 		template <typename ...FlushArgs, typename ...Args>
-		void lock_memory_region_impl(commandbuffer_type& cmd, image_storage_type* image, const address_range32& rsx_range, bool is_active_surface, u16 width, u16 height, u32 pitch, Args&&... extras)
+		section_storage_type* lock_memory_region_impl(commandbuffer_type& cmd, image_storage_type* image, const address_range32& rsx_range, bool is_active_surface, u16 width, u16 height, u32 pitch, Args&&... extras)
 		{
 			// Find a cached section to use
 			image_section_attributes_t search_desc = { .gcm_format = RSX_GCM_FORMAT_IGNORED, .width = width, .height = height };
@@ -1223,6 +1223,8 @@ namespace rsx
 			// Check that the cache makes sense
 			tex_cache_checker.verify();
 #endif // TEXTURE_CACHE_DEBUG
+
+			return &region;
 		}
 
 		// Pseudo-manespace wrapper. Functions extracted from upload_scaled_image
@@ -3238,14 +3240,11 @@ namespace rsx
 			}
 			else
 			{
-				m_rtts.prepare_transfer_target(cmd, dst_subres.surface, rsx::surface_access::transfer_write, std::forward<Args>(extras)...);
-
-				// NOTE: This doesn't work very well in case of Cell access (when WCB/WDB is disabled)
-				// Need to lock the affected memory range and actually attach this subres to a locked_region
-				dst_subres.surface->on_write_copy(rsx::get_shared_tag(), false, raster_type);
-
 				// Reset this object's synchronization status if it is locked
 				lock.upgrade();
+
+				// We also want to grab the section alias while we're at it to make sure the memory is sane
+				section_storage_type* dest_section = nullptr;
 
 				if (const auto found = find_cached_texture(dst_subres.surface->get_memory_range(), { .gcm_format = RSX_GCM_FORMAT_IGNORED }, false, false, false);
 					found && found->is_locked())
@@ -3259,6 +3258,13 @@ namespace rsx
 						{
 							found->touch(m_cache_update_tag);
 							update_cache_tag();
+
+							if (found->get_section_base() == dst_subres.surface->base_addr)
+							{
+								ensure(!dest_section, "More than one section matches our surface!");
+								ensure(found->get_section_range() == dst_subres.surface->get_memory_range(), "Memory range does not match!");
+								dest_section = found;
+							}
 						}
 					}
 					else
@@ -3274,6 +3280,33 @@ namespace rsx
 						found->discard(true);
 					}
 				}
+
+				if (!dest_section || !dest_section->is_locked())
+				{
+					// All blit targets must be protected, regardless of WCB/RCB settings
+					dst_subres.surface->state_flags |= rsx::surface_state_flags::force_data_load | rsx::surface_state_flags::erase_bkgnd;
+
+					if (!dest_section)
+					{
+						dest_section = lock_memory_region_impl(
+							cmd,
+							dst_subres.surface,
+							dst_subres.surface->get_memory_range(),
+							false,
+							dst_subres.surface->template get_surface_width<rsx::surface_metrics::pixels>(),
+							dst_subres.surface->template get_surface_height<rsx::surface_metrics::pixels>(),
+							dst_subres.surface->get_rsx_pitch(),
+							dst_subres.surface
+						);
+					}
+					else
+					{
+						dest_section->reprotect(utils::protection::no);
+					}
+				}
+
+				// Commit any pending writes before we do the transfer. Writes will be done on super_ptr so locking beforehand is ok.
+				m_rtts.prepare_transfer_target(cmd, dst_subres.surface, rsx::surface_access::transfer_write, std::forward<Args>(extras)...);
 			}
 
 			if (src_is_render_target)
@@ -3327,6 +3360,9 @@ namespace rsx
 			}
 			else
 			{
+				ensure(dst_is_render_target);
+				dst_subres.surface->on_write_copy(rsx::get_shared_tag(), false, raster_type);
+
 				result.real_dst_address = dst_base_address;
 				result.real_dst_size = dst.pitch * dst_dimensions.height;
 			}
