@@ -794,7 +794,16 @@ namespace rsx
 
 		bool has_flushable_data() const
 		{
-			ensure(is_locked());
+			if (!is_locked())
+			{
+				// The owning texture-cache section can remain locked while this
+				// render target's mirrored lock flag is cleared (e.g. after a
+				// surface swap/clone during render-to-texture readback, as seen
+				// in Far Cry 3's weapon-purchase screen). An unlocked surface has
+				// no GPU data pending flush to guest memory, so report none rather
+				// than asserting.
+				return false;
+			}
 			ensure(texture_cache_metadata.timestamp);
 			return (texture_cache_metadata.timestamp < last_use_tag);
 		}
