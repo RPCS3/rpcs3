@@ -33,7 +33,7 @@ namespace utils
 namespace
 {
 
-#ifndef __APPLE__
+#if !defined(__APPLE__) || !defined(ARCH_X64)
 u16 convert_rgb655_to_rgb565(const u16 bits)
 {
 	// g6 = g5
@@ -946,7 +946,7 @@ namespace rsx
 			break;
 		}
 
-#ifndef __APPLE__
+#if !defined(__APPLE__) || !defined(ARCH_X64)
 		case CELL_GCM_TEXTURE_R6G5B5:
 		{
 			if (is_swizzled)

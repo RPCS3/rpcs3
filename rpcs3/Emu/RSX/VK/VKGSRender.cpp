@@ -37,7 +37,7 @@ namespace vk
 
 		switch (color_format)
 		{
-#ifndef __APPLE__
+#if !defined(__APPLE__) || !defined(ARCH_X64)
 		case rsx::surface_color_format::r5g6b5:
 			return std::make_pair(VK_FORMAT_R5G6B5_UNORM_PACK16, vk::default_component_map);
 
@@ -47,7 +47,7 @@ namespace vk
 		case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
 			return std::make_pair(VK_FORMAT_A1R5G5B5_UNORM_PACK16, z_rgb);
 #else
-		// assign B8G8R8A8_UNORM to formats that are not supported by Metal
+		// assign B8G8R8A8_UNORM to formats that are not supported by Metal on non-Apple GPUs
 		case rsx::surface_color_format::r5g6b5:
 			return std::make_pair(VK_FORMAT_B8G8R8A8_UNORM, vk::default_component_map);
 
@@ -728,11 +728,6 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 		}
 		break;
 #endif
-	case vk::driver_vendor::MVK:
-		// Async compute crashes immediately on Apple GPUs
-		rsx_log.error("Apple GPUs are incompatible with the current implementation of asynchronous texture decoding.");
-		backend_config.supports_asynchronous_compute = false;
-		break;
 	case vk::driver_vendor::INTEL:
 		// As expected host allocations won't work on INTEL despite the extension being present
 		if (backend_config.supports_passthrough_dma)
