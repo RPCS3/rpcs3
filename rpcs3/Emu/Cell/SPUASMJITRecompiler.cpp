@@ -3505,51 +3505,45 @@ void spu_recompiler::ANDC(spu_opcode_t op)
 
 void spu_recompiler::FCGT(spu_opcode_t op)
 {
-	const auto last_exp_bit = XmmConst(v128::from32p(0x00800000));
-	const auto all_exp_bits = XmmConst(v128::from32p(0x7f800000));
+	// denormals are implicitly treated as zero (DAZ flag)
 
-	const XmmLink& tmp0 = XmmAlloc();
-	const XmmLink& tmp1 = XmmAlloc();
-	const XmmLink& tmp2 = XmmAlloc();
-	const XmmLink& tmp3 = XmmAlloc();
-	const XmmLink& tmpv = XmmAlloc();
+	const XmmLink& va = XmmAlloc();
+	const XmmLink& vb = XmmAlloc();
+	c->movaps(va, SPU_OFF_128(gpr, op.ra));
+	c->movaps(vb, SPU_OFF_128(gpr, op.rb));
 
-	c->pxor(tmp0, tmp0);
-	c->pxor(tmp1, tmp1);
-	c->cmpps(tmp0, SPU_OFF_128(gpr, op.ra), 3);  //tmp0 is true if a is extended (nan/inf)
-	c->cmpps(tmp1, SPU_OFF_128(gpr, op.rb), 3);  //tmp1 is true if b is extended (nan/inf)
+	if (utils::has_avx512())
+	{
+		const XmmLink& v0 = XmmAlloc();
+		const XmmLink& v1 = XmmAlloc();
+		c->vxorps(v0, v0, v0);
+		c->vmovaps(v1, XmmConst(v128::from32p(0x111111ff)));
+		c->vfixupimmps(v0, va, v1, 0);	// NaN -> -FLT_MAX, else src2
+		c->vfixupimmps(v1, vb, v1, 0);
+		c->vandps(va, va, v0);			// -FLT_MAX = ~(1<<23)
+		c->vandps(vb, vb, v1);
+		c->vcmpps(va, vb, va, 1 /* < */);
+		c->vmovaps(SPU_OFF_128(gpr, op.rt), va);
+		return;
+	}
 
-	//compute lower a and b
-	c->movaps(tmp2, last_exp_bit);
-	c->movaps(tmp3, last_exp_bit);
-	c->pandn(tmp2, SPU_OFF_128(gpr, op.ra));  //tmp2 = lowered_a
-	c->pandn(tmp3, SPU_OFF_128(gpr, op.rb));  //tmp3 = lowered_b
+	const XmmLink& v0 = XmmAlloc();
+	const XmmLink& v1 = XmmAlloc();
+	const XmmLink& vt = XmmAlloc();
+	c->xorps(v0, v0);
+	c->xorps(v1, v1);
+	c->cmpps(v0, va, 3 /* isNaN */);
+	c->cmpps(v1, vb, 3);
 
-	//lower a if extended
-	c->movaps(tmpv, tmp0);
-	c->pand(tmpv, tmp2);
-	c->pandn(tmp0, SPU_OFF_128(gpr, op.ra));
-	c->orps(tmp0, tmpv);
+	// decrease exponent if in extended range
+	c->movaps(vt, XmmConst(v128::from32p(1<<23)));
+	c->andps(v0, vt);
+	c->andps(v1, vt);
+	c->andnps(v0, va);
+	c->andnps(v1, vb);
 
-	//lower b if extended
-	c->movaps(tmpv, tmp1);
-	c->pand(tmpv, tmp3);
-	c->pandn(tmp1, SPU_OFF_128(gpr, op.rb));
-	c->orps(tmp1, tmpv);
-
-	//flush to 0 if denormalized
-	c->pxor(tmpv, tmpv);
-	c->movaps(tmp2, SPU_OFF_128(gpr, op.ra));
-	c->movaps(tmp3, SPU_OFF_128(gpr, op.rb));
-	c->andps(tmp2, all_exp_bits);
-	c->andps(tmp3, all_exp_bits);
-	c->cmpps(tmp2, tmpv, 0);
-	c->cmpps(tmp3, tmpv, 0);
-	c->pandn(tmp2, tmp0);
-	c->pandn(tmp3, tmp1);
-
-	c->cmpps(tmp3, tmp2, 1);
-	c->movaps(SPU_OFF_128(gpr, op.rt), tmp3);
+	c->cmpps(v1, v0, 1 /* < */);
+	c->movaps(SPU_OFF_128(gpr, op.rt), v1);
 }
 
 void spu_recompiler::DFCGT(spu_opcode_t op)
@@ -3573,55 +3567,47 @@ void spu_recompiler::FS(spu_opcode_t op)
 
 void spu_recompiler::FM(spu_opcode_t op)
 {
-	const auto sign_bits = XmmConst(v128::from32p(0x80000000));
-	const auto all_exp_bits = XmmConst(v128::from32p(0x7f800000));
+	const XmmLink& va = XmmGet(op.ra, XmmType::Float);
+	const XmmLink& vb = XmmGet(op.rb, XmmType::Float);
 
-	const XmmLink& tmp0 = XmmAlloc();
-	const XmmLink& tmp1 = XmmAlloc();
-	const XmmLink& tmp2 = XmmAlloc();
-	const XmmLink& tmp3 = XmmAlloc();
-	const XmmLink& tmp4 = XmmGet(op.ra, XmmType::Float);
-	const XmmLink& tmp5 = XmmGet(op.rb, XmmType::Float);
+	if (utils::has_avx512())
+	{
+		const XmmLink& v0 = XmmAlloc();
+		const XmmLink& v1 = XmmAlloc();
+		const XmmLink& v2 = XmmAlloc();
+		c->vxorps(v1, v1, v1);
+		c->vcmpps(v2, va, v1, 0 /* == */);
+		c->vcmpps(v1, vb, v1, 0);
+		c->vmulps(v0, va, vb);
+		c->vpternlogd(va, vb, XmmConst(v128::from32p(0x7fffffff)), 0xbe /* orCxorAB */);
+		c->vfixupimmps(va, v0, XmmConst(v128::from32p(0x11001800)), 0);	// inf & NaN -> src1, denormals/0 -> +0.0, finite -> src2
+		c->vpternlogd(v1, v2, va, 0x2 /*andC!orAB*/);
+		c->vmovaps(SPU_OFF_128(gpr, op.rt), v1);
+		return;
+	}
 
-	//check denormals
-	c->pxor(tmp0, tmp0);
-	c->movaps(tmp1, all_exp_bits);
-	c->movaps(tmp2, all_exp_bits);
-	c->andps(tmp1, tmp4);
-	c->andps(tmp2, tmp5);
-	c->cmpps(tmp1, tmp0, 0);
-	c->cmpps(tmp2, tmp0, 0);
-	c->orps(tmp1, tmp2);  //denormal operand mask
+	const XmmLink& v0 = XmmAlloc();
+	const XmmLink& v1 = XmmAlloc();
+	c->xorps(v0, v0);
+	c->xorps(v1, v1);
+	c->cmpps(v0, va, 0 /* == */);
+	c->cmpps(v1, vb, 0 /* == */);
+	c->orps(v1, v0);
 
-	//compute result with flushed denormal inputs
-	c->movaps(tmp2, tmp4);
-	c->mulps(tmp2, tmp5); //primary result
-	c->movaps(tmp3, tmp2);
-	c->andps(tmp3, all_exp_bits);
-	c->cmpps(tmp3, tmp0, 0); //denom mask from result
-	c->orps(tmp3, tmp1);
-	c->andnps(tmp3, tmp2); //flushed result
+	c->movaps(v0, va);
+	c->mulps(v0, vb);
+	c->xorps(va, vb);
+	c->orps(va, XmmConst(v128::from32p(0x7fffffff)));
 
-	//compute results for the extended path
-	c->andps(tmp2, all_exp_bits);
-	c->cmpps(tmp2, all_exp_bits, 0); //extended mask
-	c->movaps(tmp4, sign_bits);
-	c->movaps(tmp5, sign_bits);
-	c->movaps(tmp0, sign_bits);
-	c->andps(tmp4, SPU_OFF_128(gpr, op.ra));
-	c->andps(tmp5, SPU_OFF_128(gpr, op.rb));
-	c->xorps(tmp4, tmp5); //sign mask
-	c->pandn(tmp0, tmp2);
-	c->orps(tmp4, tmp0); //add result sign back to original extended value
-	c->movaps(tmp5, tmp1); //denormal mask (operands)
-	c->andnps(tmp5, tmp4); //max_float with sign bit (nan/-nan) where not denormal or zero
-
-	//select result
-	c->movaps(tmp0, tmp2);
-	c->andnps(tmp0, tmp3);
-	c->andps(tmp2, tmp5);
-	c->orps(tmp0, tmp2);
-	c->movaps(SPU_OFF_128(gpr, op.rt), tmp0);
+	// saturate extended to copysign(XFLT_MAX, a ^ b)
+	c->movaps(vb, XmmConst(v128::from32p(0xff << 23)));
+	c->orps(vb, v0);
+	c->pcmpeqd(vb, v0);
+	c->andps(va, vb);
+	c->andnps(vb, v0);
+	c->addps(va, vb);	// +0.0 + -0.0 -> +0.0 (IEEE rules). SSE propagates QNaN/extended exactly
+	c->andnps(v1, va);	// zero if either input is denormal/0
+	c->movaps(SPU_OFF_128(gpr, op.rt), v1);
 }
 
 void spu_recompiler::CLGTH(spu_opcode_t op)
@@ -3656,42 +3642,40 @@ void spu_recompiler::FCMGT(spu_opcode_t op)
 {
 	// reverted less-than
 	// since comparison is absoulte, a > b if a is extended and b is not extended
-	// flush denormals to zero to make zero == zero work
-	const auto all_exp_bits = XmmConst(v128::from32p(0x7f800000));
-	const auto remove_sign_bits = XmmConst(v128::from32p(0x7fffffff));
+	// denormals are implicitly treated as zero (DAZ flag)
 
-	const XmmLink& tmp0 = XmmAlloc();
-	const XmmLink& tmp1 = XmmAlloc();
-	const XmmLink& tmp2 = XmmAlloc();
-	const XmmLink& tmp3 = XmmAlloc();
-	const XmmLink& tmpv = XmmAlloc();
+	const XmmLink& va = XmmAlloc();
+	const XmmLink& vb = XmmAlloc();
+	c->movaps(va, SPU_OFF_128(gpr, op.ra));
+	c->movaps(vb, SPU_OFF_128(gpr, op.rb));
 
-	c->pxor(tmp0, tmp0);
-	c->pxor(tmp1, tmp1);
-	c->cmpps(tmp0, SPU_OFF_128(gpr, op.ra), 3);  //tmp0 is true if a is extended (nan/inf)
-	c->cmpps(tmp1, SPU_OFF_128(gpr, op.rb), 3);  //tmp1 is true if b is extended (nan/inf)
+	if (utils::has_avx512())
+	{
+		const XmmLink& vt = XmmAlloc();
+		c->vrangeps(vt, va, vb, 0x7 /* maxMagnitude */);
+		c->vcmpps(vt, vb, vt, 4 /* != */);
+		c->vcmpps(va, va, va, 3 /* isNaN */);
+		c->vcmpps(vb, vb, vb, 3);
+		c->vpternlogd(va, vb, vt, 0x32 /* orAB?nandBA:C */);
+		c->vmovaps(SPU_OFF_128(gpr, op.rt), va);
+		return;
+	}
 
-	//flush to 0 if denormalized
-	c->pxor(tmpv, tmpv);
-	c->movaps(tmp2, SPU_OFF_128(gpr, op.ra));
-	c->movaps(tmp3, SPU_OFF_128(gpr, op.rb));
-	c->andps(tmp2, all_exp_bits);
-	c->andps(tmp3, all_exp_bits);
-	c->cmpps(tmp2, tmpv, 0);
-	c->cmpps(tmp3, tmpv, 0);
-	c->pandn(tmp2, SPU_OFF_128(gpr, op.ra));
-	c->pandn(tmp3, SPU_OFF_128(gpr, op.rb));
-
-	//Set tmp1 to true where a is extended but b is not extended
-	//This is a simplification since absolute values remove necessity of lowering
-	c->xorps(tmp0, tmp1);   //tmp0 is true when either a or b is extended
-	c->pandn(tmp1, tmp0);   //tmp1 is true if b is not extended and a is extended
-
-	c->andps(tmp2, remove_sign_bits);
-	c->andps(tmp3, remove_sign_bits);
-	c->cmpps(tmp3, tmp2, 1);
-	c->orps(tmp3, tmp1);    //Force result to all true if a is extended but b is not
-	c->movaps(SPU_OFF_128(gpr, op.rt), tmp3);
+	const XmmLink& v0 = XmmAlloc();
+	const XmmLink& v1 = XmmAlloc();
+	const XmmLink& vt = XmmAlloc();
+	c->pxor(v0, v0);
+	c->pxor(v1, v1);
+	c->cmpps(v0, va, 3 /* isNaN */);
+	c->cmpps(v1, vb, 3);
+	
+	c->movaps(vt, XmmConst(v128::from32p(0x7fffffff)));
+	c->andps(va, vt);
+	c->andps(vb, vt);
+	c->cmpps(vb, va, 1 /* < */);
+	c->pandn(v1, v0);	// a is extended well b isn't
+	c->orps(vb, v1);
+	c->movaps(SPU_OFF_128(gpr, op.rt), vb);
 }
 
 void spu_recompiler::DFCMGT(spu_opcode_t op)
