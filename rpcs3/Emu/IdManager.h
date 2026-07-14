@@ -802,9 +802,16 @@ public:
 	{
 		stx::shared_ptr<T> ptr;
 		{
+			const u32 index = get_index<Get>(id);
+
+			if (index >= id_manager::id_traits<Get>::count)
+			{
+				return false;
+			}
+
 			std::lock_guard lock(id_manager::g_mutex);
 
-			if (const auto found = find_id<T, Get>(id); found.first)
+			if (const auto found = find_index<T, Get>(index, id); found.first)
 			{
 				ptr = found.first->exchange(null_ptr);
 				found.second->clear();
@@ -834,9 +841,16 @@ public:
 	{
 		stx::shared_ptr<T> ptr;
 		{
+			const u32 index = get_index<Get>(id);
+
+			if (index >= id_manager::id_traits<Get>::count)
+			{
+				return false;
+			}
+
 			[[maybe_unused]] std::conditional_t<!!Lock(), std::lock_guard<shared_mutex>, const shared_mutex&> lock(id_manager::g_mutex);
 
-			if (const auto found = find_id<T, Get>(id); found.first && found.first->is_equal(sptr))
+			if (const auto found = find_index<T, Get>(index, id); found.first && found.first->is_equal(sptr))
 			{
 				ptr = found.first->exchange(null_ptr);
 				found.second->clear();
@@ -866,9 +880,16 @@ public:
 	{
 		stx::shared_ptr<Get> ptr;
 		{
+			const u32 index = get_index<Get>(id);
+
+			if (index >= id_manager::id_traits<Get>::count)
+			{
+				return ptr;
+			}
+
 			[[maybe_unused]] std::conditional_t<!!Lock(), std::lock_guard<shared_mutex>, const shared_mutex&> lock(id_manager::g_mutex);
 
-			if (const auto found = find_id<T, Get>(id); found.first)
+			if (const auto found = find_index<T, Get>(index, id); found.first)
 			{
 				ptr = static_cast<stx::shared_ptr<Get>>(found.first->exchange(null_ptr));
 				found.second->clear();

@@ -7,6 +7,12 @@
 
 #ifdef HAVE_OPENCV
 #include <opencv2/photo.hpp>
+
+// OpenCV 5.x moved some functions to this header
+#if __has_include(<opencv2/geometry.hpp>)
+#include <opencv2/geometry.hpp>
+#endif
+
 #endif
 
 LOG_CHANNEL(ps_move);

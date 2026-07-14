@@ -366,9 +366,6 @@
     <ClCompile Include="curl\lib\headers.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="curl\lib\noproxy.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="curl\lib\ws.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -382,12 +379,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="curl\lib\cf-socket.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="curl\lib\vquic\curl_ngtcp2.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="curl\lib\vquic\curl_quiche.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="curl\lib\http1.c">
@@ -562,6 +553,45 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="curl\lib\thrdqueue.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\vtls\vtls_config.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\vquic\capsule.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\vquic\cf-capsule.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\vquic\cf-ngtcp2.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\vquic\cf-ngtcp2-cmn.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\vquic\cf-ngtcp2-proxy.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\vquic\cf-quiche.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\vquic\vquic-tls.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\cf-recvbuf.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\cf-setup.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\creds.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\peer.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="curl\lib\proxy.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -944,9 +974,6 @@
     <ClInclude Include="curl\lib\functypes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="curl\lib\noproxy.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="curl\lib\ws.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -960,12 +987,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\cf-socket.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="curl\lib\vquic\curl_ngtcp2.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="curl\lib\vquic\curl_quiche.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\vquic\vquic_int.h">
@@ -1143,6 +1164,45 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="curl\lib\thrdqueue.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\vtls\vtls_config.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\vquic\capsule.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\vquic\cf-capsule.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\vquic\cf-ngtcp2.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\vquic\cf-ngtcp2-cmn.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\vquic\cf-ngtcp2-proxy.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\vquic\cf-quiche.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\vquic\vquic-tls.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\cf-recvbuf.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\cf-setup.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\creds.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\peer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="curl\lib\proxy.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

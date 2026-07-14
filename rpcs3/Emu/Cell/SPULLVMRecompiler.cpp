@@ -1835,16 +1835,94 @@ public:
 			llvm::Value* starta_pc = m_ir->CreateAnd(get_pc(starta), 0x3fffc);
 			llvm::Value* data_addr = _ptr(m_lsptr, starta_pc);
 
+#ifndef ARCH_ARM64
 			llvm::Value* acc0 = nullptr;
 			llvm::Value* acc1 = nullptr;
 			bool toggle = true;
+#endif
 
 			// Use a 512bit simple checksum to verify integrity if size is atleast 512b * 3
 			// This code uses a 512bit vector for all hardware to ensure behavior matches.
 			// The checksum path is still faster even on narrow hardware.
 			if ((end - starta) >= 192 && !g_cfg.core.precise_spu_verification)
 			{
-				for (u32 j = starta; j < end; j += 64)
+#ifdef ARCH_ARM64
+				// Loop if there is at least 288 bytes of data to checksum on ARM.
+				// Each ARM checksum block consumes 6 NEON vectors: 2 direct adds and 2 UABD accumulates.
+				constexpr u32 checksum_block_size = 96;
+#else
+				// Loop if there is atleast (16 * stride) bytes of data to checksum to save some instruction cache
+				constexpr u32 checksum_block_size = 64;
+#endif
+				constexpr u32 checksum_loop_vectors = 16;
+				const u32 checksum_vectors_per_block = checksum_block_size / stride;
+				const u32 checksum_loop_blocks = (checksum_loop_vectors + checksum_vectors_per_block - 1) / checksum_vectors_per_block;
+				const u32 checksum_loop_size = checksum_block_size * checksum_loop_blocks;
+				const u32 checksum_loop_end = starta + ((end - starta) / checksum_loop_size) * checksum_loop_size;
+
+				bool use_checksum_loop = (checksum_loop_end - starta) >= checksum_loop_size * 2;
+
+				for (u32 j = starta; use_checksum_loop && j < checksum_loop_end; j += 4)
+				{
+					if (!func.data[(j - start) / 4])
+					{
+						use_checksum_loop = false;
+						break;
+					}
+				}
+
+#ifndef ARCH_ARM64
+				if (use_checksum_loop)
+				{
+					const auto acc_init = ConstantAggregateZero::get(get_type<u32[16]>());
+					const auto loop_block = BasicBlock::Create(m_context, "spu_checksum_loop", m_function);
+					const auto loop_next = BasicBlock::Create(m_context, "spu_checksum_next", m_function);
+					const auto loop_preheader = m_ir->GetInsertBlock();
+					m_ir->CreateBr(loop_block);
+
+					m_ir->SetInsertPoint(loop_block);
+					const auto offset = m_ir->CreatePHI(get_type<u32>(), 2);
+					const auto acc0_phi = m_ir->CreatePHI(get_type<u32[16]>(), 2);
+					const auto acc1_phi = m_ir->CreatePHI(get_type<u32[16]>(), 2);
+
+					offset->addIncoming(m_ir->getInt32(0), loop_preheader);
+					acc0_phi->addIncoming(acc_init, loop_preheader);
+					acc1_phi->addIncoming(acc_init, loop_preheader);
+
+					const auto offset64 = m_ir->CreateZExt(offset, get_type<u64>());
+					llvm::Value* next_acc0 = acc0_phi;
+					llvm::Value* next_acc1 = acc1_phi;
+
+					for (u32 block = 0; block < checksum_loop_blocks; block++)
+					{
+						const auto vls = m_ir->CreateAlignedLoad(get_type<u32[16]>(), _ptr(data_addr, m_ir->CreateAdd(offset64, m_ir->getInt64(block * checksum_block_size))), llvm::MaybeAlign{4});
+
+						if (block & 1)
+						{
+							next_acc1 = m_ir->CreateAdd(next_acc1, vls);
+						}
+						else
+						{
+							next_acc0 = m_ir->CreateAdd(next_acc0, vls);
+						}
+					}
+
+					const auto next_offset = m_ir->CreateAdd(offset, m_ir->getInt32(checksum_loop_size));
+					const auto loop_again = m_ir->CreateICmpULT(next_offset, m_ir->getInt32(checksum_loop_end - starta));
+					m_ir->CreateCondBr(loop_again, loop_block, loop_next);
+
+					offset->addIncoming(next_offset, loop_block);
+					acc0_phi->addIncoming(next_acc0, loop_block);
+					acc1_phi->addIncoming(next_acc1, loop_block);
+					acc0 = next_acc0;
+					acc1 = next_acc1;
+
+					check_iterations += (checksum_loop_end - starta) / checksum_block_size;
+
+					m_ir->SetInsertPoint(loop_next);
+				}
+
+				for (u32 j = use_checksum_loop ? checksum_loop_end : starta; j < end; j += checksum_block_size)
 				{
 					int indices[16];
 					bool holes = false;
@@ -1928,7 +2006,319 @@ public:
 				// Compare result with zero
 				const auto cond = m_ir->CreateICmpNE(elem, m_ir->getInt64(0));
 				m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
+#else
+				// Very cursed "checksumming" code
+				// 96 bytes per ARM checksum step
+				//vls[0] -> add
+				//vls[1], vls[2] -> uaba
+				//vls[3] -> add
+				//vls[4], vls[5] -> uaba
+				//This allows us to save on some ALU ops relative to load instructions
+				const auto acc_init = ConstantAggregateZero::get(get_type<u32[4]>());
+				llvm::Value* checksum_parts[4] = {acc_init, acc_init, acc_init, acc_init};
+				u32 checksum[16] = {0};
+
+				const auto update_checksum = [&](const u32* words)
+				{
+					for (u32 i = 0; i < 4; i++)
+					{
+						checksum[i] += words[i];
+						checksum[4 + i] += words[4 + i] > words[8 + i] ? words[4 + i] - words[8 + i] : words[8 + i] - words[4 + i];
+						checksum[8 + i] += words[12 + i];
+						checksum[12 + i] += words[16 + i] > words[20 + i] ? words[16 + i] - words[20 + i] : words[20 + i] - words[16 + i];
+					}
+				};
+
+				if (use_checksum_loop)
+				{
+					for (u32 j = starta; j < checksum_loop_end; j += checksum_block_size)
+					{
+						u32 words[24];
+
+						for (u32 i = 0; i < 24; i++)
+						{
+							words[i] = func.data[(j + i * 4 - start) / 4];
+						}
+
+						update_checksum(words);
+					}
+
+					const auto loop_block = BasicBlock::Create(m_context, "spu_checksum_loop", m_function);
+					const auto loop_next = BasicBlock::Create(m_context, "spu_checksum_next", m_function);
+					const auto loop_preheader = m_ir->GetInsertBlock();
+					m_ir->CreateBr(loop_block);
+
+					m_ir->SetInsertPoint(loop_block);
+					const auto offset = m_ir->CreatePHI(get_type<u32>(), 2);
+					llvm::PHINode* acc_phi[4];
+					llvm::Value* next_acc[4];
+
+					for (u32 part = 0; part < 4; part++)
+					{
+						acc_phi[part] = m_ir->CreatePHI(get_type<u32[4]>(), 2);
+						acc_phi[part]->addIncoming(checksum_parts[part], loop_preheader);
+						next_acc[part] = acc_phi[part];
+					}
+
+					offset->addIncoming(m_ir->getInt32(0), loop_preheader);
+
+					const auto offset64 = m_ir->CreateZExt(offset, get_type<u64>());
+
+					for (u32 block = 0; block < checksum_loop_blocks; block++)
+					{
+						llvm::Value* vls[6];
+
+						for (u32 part = 0; part < 6; part++)
+						{
+							vls[part] = m_ir->CreateAlignedLoad(get_type<u32[4]>(), _ptr(data_addr, m_ir->CreateAdd(offset64, m_ir->getInt64(block * checksum_block_size + part * 16))), llvm::MaybeAlign{4});
+						}
+
+						next_acc[0] = m_ir->CreateAdd(next_acc[0], vls[0]);
+						next_acc[1] = m_ir->CreateAdd(next_acc[1], m_ir->CreateCall(get_intrinsic<u32[4]>(llvm::Intrinsic::aarch64_neon_uabd), {vls[1], vls[2]}));
+						next_acc[2] = m_ir->CreateAdd(next_acc[2], vls[3]);
+						next_acc[3] = m_ir->CreateAdd(next_acc[3], m_ir->CreateCall(get_intrinsic<u32[4]>(llvm::Intrinsic::aarch64_neon_uabd), {vls[4], vls[5]}));
+					}
+
+					const auto next_offset = m_ir->CreateAdd(offset, m_ir->getInt32(checksum_loop_size));
+					const auto loop_again = m_ir->CreateICmpULT(next_offset, m_ir->getInt32(checksum_loop_end - starta));
+					m_ir->CreateCondBr(loop_again, loop_block, loop_next);
+
+					offset->addIncoming(next_offset, loop_block);
+
+					for (u32 part = 0; part < 4; part++)
+					{
+						acc_phi[part]->addIncoming(next_acc[part], loop_block);
+						checksum_parts[part] = next_acc[part];
+					}
+
+					check_iterations += (checksum_loop_end - starta) / checksum_block_size;
+
+					m_ir->SetInsertPoint(loop_next);
+				}
+
+				for (u32 j = use_checksum_loop ? checksum_loop_end : starta; j < end; j += checksum_block_size)
+				{
+					llvm::Value* vls[6] = {};
+					u32 words[24] = {};
+					bool any_data = false;
+
+					for (u32 part = 0; part < 6; part++)
+					{
+						int indices[4];
+						bool holes = false;
+						bool data = false;
+
+						for (u32 i = 0; i < 4; i++)
+						{
+							const u32 k = j + (part * 4 + i) * 4;
+
+							if (k < start || k >= end || !func.data[(k - start) / 4])
+							{
+								indices[i] = 4;
+								holes      = true;
+							}
+							else
+							{
+								indices[i] = i;
+								data       = true;
+								words[part * 4 + i] = func.data[(k - start) / 4];
+							}
+						}
+
+						if (!data)
+						{
+							vls[part] = acc_init;
+							continue;
+						}
+
+						any_data = true;
+
+						// Load unaligned code block from LS
+						vls[part] = m_ir->CreateAlignedLoad(get_type<u32[4]>(), _ptr(data_addr, j + part * 16 - starta), llvm::MaybeAlign{4});
+
+						// Mask if necessary
+						if (holes)
+						{
+							vls[part] = m_ir->CreateShuffleVector(vls[part], acc_init, llvm::ArrayRef(indices, 4));
+						}
+					}
+
+					if (!any_data)
+					{
+						// Skip full-sized holes
+						continue;
+					}
+
+					checksum_parts[0] = m_ir->CreateAdd(checksum_parts[0], vls[0]);
+					checksum_parts[1] = m_ir->CreateAdd(checksum_parts[1], m_ir->CreateCall(get_intrinsic<u32[4]>(llvm::Intrinsic::aarch64_neon_uabd), {vls[1], vls[2]}));
+					checksum_parts[2] = m_ir->CreateAdd(checksum_parts[2], vls[3]);
+					checksum_parts[3] = m_ir->CreateAdd(checksum_parts[3], m_ir->CreateCall(get_intrinsic<u32[4]>(llvm::Intrinsic::aarch64_neon_uabd), {vls[4], vls[5]}));
+
+					update_checksum(words);
+
+					check_iterations++;
+				}
+
+				llvm::Value* elem = nullptr;
+
+				for (u32 part = 0; part < 4; part++)
+				{
+					auto* const_vector = ConstantDataVector::get(m_context, llvm::ArrayRef(checksum + part * 4, 4));
+					llvm::Value* acc = m_ir->CreateXor(checksum_parts[part], const_vector);
+					acc = m_ir->CreateBitCast(acc, get_type<u64[2]>());
+
+					for (u32 i = 0; i < 2; i++)
+					{
+						const auto lane = m_ir->CreateExtractElement(acc, i);
+						elem = elem ? m_ir->CreateOr(elem, lane) : lane;
+					}
+				}
+
+				// Compare result with zero
+				const auto cond = m_ir->CreateICmpNE(elem, m_ir->getInt64(0));
+				m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
+#endif
 			}
+#ifdef ARCH_ARM64
+			else
+			{
+				const auto acc_init = m_use_dotprod ? ConstantAggregateZero::get(get_type<u32[4]>()) : ConstantAggregateZero::get(get_type<s16[8]>());
+				llvm::Value* acc0 = acc_init;
+				llvm::Value* acc1 = acc_init;
+				llvm::Value* acc2 = acc_init;
+				llvm::Value* acc3 = acc_init;
+				llvm::Value** accs[4] = {&acc0, &acc1, &acc2, &acc3};
+				u32 acc_index = 0;
+				llvm::Value* pending_cmp = nullptr;
+				u32 expected_hits = 0;
+
+				const auto make_cmp = [&](u32 j) -> llvm::Value*
+				{
+					int indices[4];
+					bool holes = false;
+					bool data = false;
+
+					for (u32 i = 0; i < 4; i++)
+					{
+						const u32 k = j + i * 4;
+
+						if (k < start || k >= end || !func.data[(k - start) / 4])
+						{
+							indices[i] = 4;
+							holes      = true;
+						}
+						else
+						{
+							indices[i] = i;
+							data       = true;
+						}
+					}
+
+					if (!data)
+					{
+						return nullptr;
+					}
+
+					llvm::Value* vls = m_ir->CreateAlignedLoad(get_type<u32[4]>(), _ptr(data_addr, j - starta), llvm::MaybeAlign{4});
+
+					if (holes)
+					{
+						vls = m_ir->CreateShuffleVector(vls, ConstantAggregateZero::get(vls->getType()), llvm::ArrayRef(indices, 4));
+					}
+
+					u32 words[4];
+
+					for (u32 i = 0; i < 4; i++)
+					{
+						const u32 k = j + i * 4;
+						words[i] = k >= start && k < end ? func.data[(k - start) / 4] : 0;
+					}
+
+					const auto expected = ConstantDataVector::get(m_context, llvm::ArrayRef(words, 4));
+
+					if (m_use_dotprod)
+					{
+						return m_ir->CreateSExt(m_ir->CreateICmpEQ(
+							m_ir->CreateBitCast(vls, get_type<u8[16]>()),
+							m_ir->CreateBitCast(expected, get_type<u8[16]>())), get_type<s8[16]>());
+					}
+
+					return m_ir->CreateSExt(m_ir->CreateICmpEQ(
+						m_ir->CreateBitCast(vls, get_type<u16[8]>()),
+						m_ir->CreateBitCast(expected, get_type<u16[8]>())), get_type<s16[8]>());
+				};
+
+				// Multiply accumulate based comparison
+				// See comment above cmp16_pair_accum_arm64 in SPUThread.cpp
+				// Dotproduct instructions have slightly higher throughput on many common ARM cores
+				const auto accumulate_pair = [&](llvm::Value* lhs, llvm::Value* rhs)
+				{
+					llvm::Value*& acc = *accs[acc_index];
+
+					if (m_use_dotprod)
+					{
+						acc = m_ir->CreateCall(get_intrinsic<u32[4], u8[16]>(llvm::Intrinsic::aarch64_neon_udot), {acc, lhs, rhs});
+					}
+					else
+					{
+						acc = m_ir->CreateAdd(acc, m_ir->CreateMul(lhs, rhs));
+					}
+
+					acc_index = (acc_index + 1) & 3;
+					expected_hits++;
+				};
+
+				for (u32 j = starta; j < end; j += 16)
+				{
+					if (const auto cmp = make_cmp(j))
+					{
+						if (pending_cmp)
+						{
+							accumulate_pair(pending_cmp, cmp);
+							pending_cmp = nullptr;
+						}
+						else
+						{
+							pending_cmp = cmp;
+						}
+
+						check_iterations++;
+					}
+				}
+
+				if (pending_cmp)
+				{
+					accumulate_pair(pending_cmp, llvm::ConstantInt::get(pending_cmp->getType(), -1, true));
+				}
+
+				if (m_use_dotprod)
+				{
+					llvm::Value* acc = m_ir->CreateAdd(m_ir->CreateAdd(acc0, acc1), m_ir->CreateAdd(acc2, acc3));
+					acc = m_ir->CreateCall(get_intrinsic<u32, u32[4]>(llvm::Intrinsic::aarch64_neon_uaddv), {acc});
+
+					constexpr u64 dot_match_value = 0xff * 0xff;
+					const u32 expected = static_cast<u32>(expected_hits * 16 * dot_match_value);
+					const auto cond = m_ir->CreateICmpNE(acc, m_ir->getInt32(expected));
+					m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
+				}
+				else
+				{
+					u16 expected_words[8];
+					std::fill_n(expected_words, 8, static_cast<u16>(expected_hits));
+					const auto expected = ConstantDataVector::get(m_context, llvm::ArrayRef(expected_words, 8));
+
+					llvm::Value* acc = m_ir->CreateAdd(m_ir->CreateAdd(acc0, acc1), m_ir->CreateAdd(acc2, acc3));
+					acc = m_ir->CreateXor(acc, expected);
+					acc = m_ir->CreateBitCast(acc, get_type<u64[2]>());
+
+					llvm::Value* elem = m_ir->CreateExtractElement(acc, u64{0});
+					elem = m_ir->CreateOr(elem, m_ir->CreateExtractElement(acc, u64{1}));
+
+					const auto cond = m_ir->CreateICmpNE(elem, m_ir->getInt64(0));
+					m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
+				}
+			}
+#else
 			else
 			{
 				for (u32 j = starta; j < end; j += stride)
@@ -2031,6 +2421,7 @@ public:
 				const auto cond = m_ir->CreateICmpNE(elem, m_ir->getInt64(0));
 				m_ir->CreateCondBr(cond, label_diff, label_body, m_md_unlikely);
 			}
+#endif
 		}
 
 		// Increase block counter with statistics
@@ -6799,77 +7190,74 @@ public:
 			using VT = typename decltype(MP)::type;
 
 			// If the control mask comes from a comparison instruction, replace SELB with select
-			if (auto [ok, x] = match_expr(c, sext<VT>(match<bool[std::extent_v<VT>]>())); ok)
+			auto [select_match, sel_bool] = match_expr(c, sext<VT>(match<bool[std::extent_v<VT>]>()));
+
+			if (!select_match)
+				return false;
+
+			if constexpr (std::extent_v<VT> == 2) // u64[2]
 			{
-				if constexpr (std::extent_v<VT> == 2) // u64[2]
+				// Try to select floats as floats if either is typed as f64[2]
+				if (auto [a, b] = match_vrs<f64[2]>(op.ra, op.rb); a || b)
 				{
-					// Try to select floats as floats if a OR b is typed as f64[2]
-					if (auto [a, b] = match_vrs<f64[2]>(op.ra, op.rb); a || b)
-					{
-						set_vr(op.rt4, select(x, get_vr<f64[2]>(op.rb), get_vr<f64[2]>(op.ra)));
-						return true;
-					}
+					set_vr(op.rt4, select(sel_bool, get_vr<f64[2]>(op.rb), get_vr<f64[2]>(op.ra)));
+					return true;
 				}
-
-				if constexpr (std::extent_v<VT> == 4) // u32[4]
-				{
-					// Match division (adjusted) (TODO)
-					if (auto a = match_vr<f32[4]>(op.ra))
-					{
-						static const auto MT = match<f32[4]>();
-
-						if (auto [div_ok, diva, divb] = match_expr(a, MT / MT); div_ok)
-						{
-							if (auto b = match_vr<s32[4]>(op.rb))
-							{
-								if (auto [add1_ok] = match_expr(b, bitcast<s32[4]>(a) + splat<s32[4]>(1)); add1_ok)
-								{
-									if (auto [fm_ok, a1, b1] = match_expr(x, bitcast<s32[4]>(fm(MT, MT)) > splat<s32[4]>(-1)); fm_ok)
-									{
-										if (auto [fnma_ok] = match_expr(a1, fnms(divb, bitcast<f32[4]>(b), diva)); fnma_ok)
-										{
-											if (fabs(b1).eval(m_ir) == fsplat<f32[4]>(1.0).eval(m_ir))
-											{
-												set_vr(op.rt4, diva / divb);
-												return true;
-											}
-
-											if (auto [sel_ok] = match_expr(b1, bitcast<f32[4]>((bitcast<u32[4]>(diva) & 0x80000000) | 0x3f800000)); sel_ok)
-											{
-												set_vr(op.rt4, diva / divb);
-												return true;
-											}
-										}
-									}
-								}
-							}
-						}
-					}
-
-					if (auto [a, b] = match_vrs<f64[4]>(op.ra, op.rb); a || b)
-					{
-						set_vr(op.rt4, select(x, get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.ra)));
-						return true;
-					}
-
-					if (auto [a, b] = match_vrs<f32[4]>(op.ra, op.rb); a || b)
-					{
-						set_vr(op.rt4, select(x, get_vr<f32[4]>(op.rb), get_vr<f32[4]>(op.ra)));
-						return true;
-					}
-				}
-
-				if (auto [ok, y] = match_expr(x, bitcast<bool[std::extent_v<VT>]>(match<get_int_vt<std::extent_v<VT>>>())); ok)
-				{
-					// Don't ruin FSMB/FSM/FSMH instructions
-					return false;
-				}
-
-				set_vr(op.rt4, select(x, get_vr<VT>(op.rb), get_vr<VT>(op.ra)));
-				return true;
 			}
 
-			return false;
+			if constexpr (std::extent_v<VT> == 4) // u32[4]
+			{
+				// Replace "division accuracy correction" pattern with direct division
+
+				auto quot = match_vr<f32[4]>(op.ra);
+				auto quot_offset = match_vr<s32[4]>(op.rb);
+
+				if (quot && quot_offset)
+				{
+					// Capture arbitrary operand
+					static const auto MT = match<f32[4]>();
+
+					// select(div_error > -1, nextafter(n/d), n/d)
+					const auto [errcmp_match, div_err, fone] = match_expr(sel_bool, bitcast<s32[4]>(fm(MT, MT)) > splat<s32[4]>(-1));
+					const auto [divoffset_match] = match_expr(quot_offset, bitcast<s32[4]>(quot) + splat<s32[4]>(1));
+					const auto [div_match, nume, denom] = match_expr(quot, MT / MT);
+
+					if (errcmp_match && divoffset_match && div_match)
+					{
+						// "Undo" division to check rounding error
+						const auto [diverr_match] = match_expr(div_err, fnms(denom, bitcast<f32[4]>(quot_offset), nume));
+
+						const auto is_one_const = fabs(fone).eval(m_ir) == fsplat<f32[4]>(1.0).eval(m_ir);
+						const auto [copy_sign_match] = match_expr(fone, bitcast<f32[4]>((bitcast<u32[4]>(nume) & 0x80000000) | std::bit_cast<uint32_t>(1.0f)));
+
+						if (diverr_match && (is_one_const || copy_sign_match))
+						{
+							// Correction isn't needed as IEEE division is accurate
+							set_vr(op.rt4, nume / denom);
+							return true;
+						}
+					}
+				}
+
+				if (auto [a, b] = match_vrs<f64[4]>(op.ra, op.rb); a || b)
+				{
+					set_vr(op.rt4, select(sel_bool, get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.ra)));
+					return true;
+				}
+
+				if (auto [a, b] = match_vrs<f32[4]>(op.ra, op.rb); a || b)
+				{
+					set_vr(op.rt4, select(sel_bool, get_vr<f32[4]>(op.rb), get_vr<f32[4]>(op.ra)));
+					return true;
+				}
+			}
+
+			// Don't ruin FSMB/FSM/FSMH instructions
+			if (auto [ok, y] = match_expr(sel_bool, bitcast<bool[std::extent_v<VT>]>(match<get_int_vt<std::extent_v<VT>>>())); ok)
+				return false;
+
+			set_vr(op.rt4, select(sel_bool, get_vr<VT>(op.rb), get_vr<VT>(op.ra)));
+			return true;
 		}))
 		{
 			return;
@@ -6880,63 +7268,54 @@ public:
 		// Check if the constant mask doesn't require bit granularity
 		if (auto [ok, mask] = get_const_vector(c.value, m_pos); ok)
 		{
-			bool sel_32 = true;
-			for (u32 i = 0; i < 4; i++)
+			unsigned byte_granularity = 16;
+
+			unsigned equals_run = 0;
+			u8 prev_elt = mask._u8[0];
+			for (u8 cur_elt : mask._u8.m_data)
 			{
-				if (mask._u32[i] && mask._u32[i] != 0xFFFFFFFF)
+				if (cur_elt != 0x00 && cur_elt != 0xFF)
 				{
-					sel_32 = false;
+					byte_granularity = 0;
 					break;
 				}
+
+				if (cur_elt != prev_elt)
+				{
+					// Fraction of 16 check
+					byte_granularity = (16 % equals_run) ? 1 : std::min(byte_granularity, equals_run);
+					equals_run = 0;	// 1 after increment
+				}
+
+				equals_run++;
+				prev_elt = cur_elt;
 			}
 
-			if (sel_32)
+			switch (byte_granularity)
 			{
-				if (auto [a, b] = match_vrs<f64[4]>(op.ra, op.rb); a || b)
+			case 16:
+			case 8:
+			case 4:
+			{
+				if (const auto [a_f64, b_f64] = match_vrs<f64[4]>(op.ra, op.rb); a_f64 || b_f64)
 				{
-					set_vr(op.rt4, select(noncast<s32[4]>(c) != 0,  get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.ra)));
+					set_vr(op.rt4, select(noncast<s32[4]>(c) != 0, get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.ra)));
 					return;
 				}
-				else if (auto [a, b] = match_vrs<f32[4]>(op.ra, op.rb); a || b)
+
+				if (const auto [a_f32, b_f32] = match_vrs<f32[4]>(op.ra, op.rb); a_f32 || b_f32)
 				{
-					set_vr(op.rt4, select(noncast<s32[4]>(c) != 0,  get_vr<f32[4]>(op.rb), get_vr<f32[4]>(op.ra)));
+					set_vr(op.rt4, select(noncast<s32[4]>(c) != 0, get_vr<f32[4]>(op.rb), get_vr<f32[4]>(op.ra)));
 					return;
 				}
-
-				set_vr(op.rt4, select(noncast<s32[4]>(c) != 0, get_vr<u32[4]>(op.rb), get_vr<u32[4]>(op.ra)));
+				[[fallthrough]];
+			}
+			case 2:
+			case 1:
+			{
+				set_vr(op.rt4, select(bitcast<s8[16]>(c) != 0, get_vr<u8[16]>(op.rb), get_vr<u8[16]>(op.ra)));
 				return;
 			}
-
-			bool sel_16 = true;
-			for (u32 i = 0; i < 8; i++)
-			{
-				if (mask._u16[i] && mask._u16[i] != 0xFFFF)
-				{
-					sel_16 = false;
-					break;
-				}
-			}
-
-			if (sel_16)
-			{
-				set_vr(op.rt4, select(bitcast<s16[8]>(c) != 0, get_vr<u16[8]>(op.rb), get_vr<u16[8]>(op.ra)));
-				return;
-			}
-
-			bool sel_8 = true;
-			for (u32 i = 0; i < 16; i++)
-			{
-				if (mask._u8[i] && mask._u8[i] != 0xFF)
-				{
-					sel_8 = false;
-					break;
-				}
-			}
-
-			if (sel_8)
-			{
-				set_vr(op.rt4, select(bitcast<s8[16]>(c) != 0,get_vr<u8[16]>(op.rb), get_vr<u8[16]>(op.ra)));
-				return;
 			}
 		}
 
