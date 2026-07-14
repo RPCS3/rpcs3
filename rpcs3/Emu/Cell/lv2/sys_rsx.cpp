@@ -419,7 +419,7 @@ error_code sys_rsx_context_iomap(cpu_thread& cpu, u32 context_id, u64 io, u64 ea
 
 	const auto render = rsx::get_current_renderer();
 
-	if (!size || io & 0xFFFFF || size > 0x200'00000 || size > std::min<u64>(~io, ~size) || ea & 0xFFFFF || size & 0xFFFFF)
+	if (!size || io & 0xFFFFF || size > 0x200'00000 || size > std::min<u64>(~io, ~ea) || ea & 0xFFFFF || size & 0xFFFFF)
 	{
 		return CELL_EINVAL;
 	}
@@ -464,9 +464,9 @@ error_code sys_rsx_context_iomap(cpu_thread& cpu, u32 context_id, u64 io, u64 ea
 
 		// TODO: Investigate relaxed memory ordering
 		const u32 prev_ea = table.ea[io + i];
-		table.ea[io + i].release((ea + i) << 20);
+		table.ea[io + i].release(static_cast<u32>(ea + i) << 20);
 		if (prev_ea + 1) table.io[prev_ea >> 20].release(-1); // Clear previous mapping if exists
-		table.io[ea + i].release((io + i) << 20);
+		table.io[ea + i].release(static_cast<u32>(io + i) << 20);
 	}
 
 	return CELL_OK;
