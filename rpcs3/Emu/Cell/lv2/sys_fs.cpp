@@ -149,24 +149,39 @@ bool verify_mself(const fs::file& mself_file)
 // TODO: May not be thread-safe (or even, process-safe)
 bool has_non_directory_components(std::string_view path)
 {
-	std::string path0{path};
+	std::string sub_path{path};
+
+	fs::stat_t stat{};
 
 	while (true)
 	{
-		const std::string sub_path = fs::get_parent_dir(path0);
+		std::string_view path_sv = fs::get_parent_dir_view(sub_path);
+		const usz sv_size = path_sv.size();
 
-		if (sub_path.size() >= path0.size())
+		if (sv_size >= sub_path.size())
 		{
+			sys_fs.error("has_non_directory_components() did not find a directory! (path=%s, sub_path=%s)", path, sub_path);
 			break;
 		}
 
-		fs::stat_t stat{};
+		// Trim child path tail
+		path_sv = {};
+		sub_path.resize(sv_size);
+
 		if (fs::get_stat(sub_path, stat))
 		{
+			if (!stat.is_directory)
+			{
+				sys_fs.error("has_non_directory_components() returned an affirmative (sub_path=%s)", sub_path);
+			}
+
 			return !stat.is_directory;
 		}
 
-		path0 = std::move(sub_path);
+		if (fs::g_tls_error != fs::error::noent)
+		{
+			fmt::throw_exception("sys_fs: fs::get_stat() failed with error '%s' (sub_path=%s)", fs::g_tls_error, sub_path);
+		}
 	}
 
 	return false;
