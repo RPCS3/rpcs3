@@ -1071,7 +1071,7 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 				return {CELL_ENOTDIR};
 			}
 
-			fmt::throw_exception("unknown error %s", error);
+			fmt::throw_exception("unknown error %s (local=%s)", error, local_path);
 		}
 		}
 	}
@@ -1784,9 +1784,15 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 				return { CELL_ENOTDIR, path };
 			}
 
-			fmt::throw_exception("unknown error %s", error);
+			fmt::throw_exception("unknown error %s (local=%s)", error, local_path);
 		}
 		}
+	}
+
+	if (ends_with_delim_dot_or_dotdot(vpath) && !info.is_directory)
+	{
+		// If ending with "/.", it must be a directory
+		return { CELL_ENOTDIR, path };
 	}
 
 	lock.unlock();
