@@ -459,7 +459,16 @@ Value* PPUTranslator::VecHandleDenormal(Value* val)
 	const auto type = val->getType();
 	const auto value = bitcast(val, GetType<u32[4]>());
 
-	const auto mask = SExt(m_ir->CreateICmpEQ(m_ir->CreateAnd(value, Broadcast(RegLoad(m_jm_mask), 4)), ConstantAggregateZero::get(value->getType())), GetType<s32[4]>());
+	const auto is_zero_or_denormal = m_ir->CreateICmpEQ(m_ir->CreateAnd(value, Broadcast(RegLoad(m_jm_mask), 4)), ConstantAggregateZero::get(value->getType()));
+
+	if (m_use_avx512)
+	{
+		// AVX-512 lowers this to vptestnmd and a masked AND.
+		const auto signed_zero = m_ir->CreateAnd(value, Broadcast(m_ir->getInt32(0x8000'0000), 4));
+		return bitcast(m_ir->CreateSelect(is_zero_or_denormal, signed_zero, value), type);
+	}
+
+	const auto mask = SExt(is_zero_or_denormal, GetType<s32[4]>());
 	const auto nz = m_ir->CreateLShr(mask, 1);
 	const auto result = m_ir->CreateAnd(m_ir->CreateNot(nz), value);
 
