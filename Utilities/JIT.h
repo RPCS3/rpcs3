@@ -244,7 +244,6 @@ namespace asmjit
 
 		void vec_load_unaligned(u32 esize, const Operand& v, const x86::Mem& src);
 		void vec_store_unaligned(u32 esize, const Operand& v, const x86::Mem& dst);
-		void vec_partial_move(u32 esize, const Operand& dst, const Operand& src);
 
 		void _vec_binary_op(x86::Inst::Id sse_op, x86::Inst::Id vex_op, x86::Inst::Id evex_op, const Operand& dst, const Operand& lhs, const Operand& rhs);
 
