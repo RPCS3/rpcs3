@@ -1809,8 +1809,8 @@ public:
 			}
 
 			u32 stride;
-			u32 elements;
-			u32 dwords;
+			[[maybe_unused]] u32 elements;
+			[[maybe_unused]] u32 dwords;
 
 			if (m_use_avx512)
 			{
