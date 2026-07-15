@@ -5153,6 +5153,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				accurate_vnan,
 				accurate_nj_mode,
 				contains_symbol_resolver,
+				daz_and_ftz,
 
 				__bitset_enum_max
 			};
@@ -5184,6 +5185,8 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				settings += ppu_settings::accurate_nj_mode, settings -= ppu_settings::fixup_nj_denormals, fmt::throw_exception("NJ Not implemented");
 			if (fpos >= info.get_funcs().size() || module_counter % c_moudles_per_jit == c_moudles_per_jit - 1)
 				settings += ppu_settings::contains_symbol_resolver; // Avoid invalidating all modules for this purpose
+			if (g_cfg.core.set_daz_and_ftz)
+				settings += ppu_settings::daz_and_ftz;
 
 			// Write version, hash, CPU, settings
 			fmt::append(obj_name, "v7-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu.to_string()));
