@@ -8,6 +8,7 @@
 #include "util/video_provider.h"
 
 #include "sys_rsxaudio.h"
+#include "sys_process.h"
 
 #include <cmath>
 #include <optional>
@@ -828,6 +829,23 @@ void rsxaudio_data_thread::extract_audio_data()
 		advance_all_timers();
 		return;
 	}
+
+	u32 used_process_vm = id_manager::id_traits<lv2_process>::invalid;
+
+	idm::select<lv2_obj, lv2_rsxaudio>([&](u32, u32 process, lv2_rsxaudio& ptr)
+	{
+		if (&ptr == rsxaudio_obj.get())
+		{
+			used_process_vm = process;
+		}
+	});
+
+	if (used_process_vm == id_manager::id_traits<lv2_process>::invalid)
+	{
+		return;
+	}
+
+	const auto vm_globals = lv2_process::acquire_globals(used_process_vm);
 
 	std::lock_guard<shared_mutex> rsxaudio_lock(rsxaudio_obj->mutex);
 

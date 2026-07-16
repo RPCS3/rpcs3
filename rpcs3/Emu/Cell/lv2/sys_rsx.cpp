@@ -88,7 +88,14 @@ static void set_rsx_dmactl(rsx::thread* render, u64 get_put)
 	}
 }
 
+lv2_rsx_context::lv2_rsx_context() noexcept
+{
+	tiles.resize(15);
+	zculls.resize(8);
+}
+
 lv2_rsx_context::lv2_rsx_context(utils::serial& ar) noexcept
+	: lv2_rsx_context()
 {
 	save(ar);
 }
@@ -96,7 +103,7 @@ lv2_rsx_context::lv2_rsx_context(utils::serial& ar) noexcept
 void lv2_rsx_context::save(utils::serial& ar) noexcept
 {
 	ar(display_buffers, display_buffers_count, current_display_buffer);
-	ar(dma_address, iomap_table, tiles, zculls, display_buffers, display_buffers_count, current_display_buffer);
+	ar(dma_address, iomap_table, std::span(tiles.data(), 15), std::span(zculls.data(), 8), display_buffers, display_buffers_count, current_display_buffer);
 	ar(enable_second_vhandler);
 	ar(label_addr, main_mem_size, rsx_event_port, driver_info);
 	ar(unsent_gcm_events);
@@ -577,6 +584,7 @@ error_code sys_rsx_context_iounmap(cpu_thread& cpu, u32 context_id, u64 io, u64 
  * @param a5 (IN):
  * @param a6 (IN):
  */
+#pragma optimize("", off)
 error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64 a4, u64 a5, u64 a6)
 {
 	if (auto cpu = get_current_cpu_thread())
