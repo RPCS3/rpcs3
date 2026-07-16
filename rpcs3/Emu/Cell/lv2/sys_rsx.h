@@ -173,7 +173,7 @@ struct lv2_rsx_context
 	atomic_t<bool> enable_second_vhandler = false;
 	atomic_t<u64> unsent_gcm_events = 0; // Unsent event bits when aborting RSX/VBLANK thread (will be sent on savestate load)
 
-	lv2_rsx_context() noexcept = default;
+	lv2_rsx_context() noexcept;
 	lv2_rsx_context(utils::serial& ar) noexcept;
 	void save(utils::serial& ar) noexcept;
 
