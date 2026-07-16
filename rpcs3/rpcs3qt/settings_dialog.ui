@@ -2492,6 +2492,13 @@
                 </widget>
                </item>
                <item>
+                <widget class="QCheckBox" name="setDAZandFTZ">
+                 <property name="text">
+                  <string>PPU Set DAZ and FTZ</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="mfcDelayCommand">
                  <property name="text">
                   <string>Delay each odd MFC Command</string>
@@ -4527,13 +4534,6 @@
               </widget>
              </item>
              <item>
-              <widget class="QCheckBox" name="setDAZandFTZ">
-               <property name="text">
-                <string>PPU Set DAZ and FTZ</string>
-               </property>
-              </widget>
-             </item>
-             <item>
               <widget class="QCheckBox" name="spuDebug">
                <property name="text">
                 <string>SPU Debug</string>
@@ -4608,13 +4608,6 @@
                  <widget class="QCheckBox" name="accuratePPUVNAN">
                   <property name="text">
                    <string>Accurate PPU Vector NaN Handling</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
-                 <widget class="QCheckBox" name="ppuNJFixup">
-                  <property name="text">
-                   <string>Approximate PPU Non-Java Mode</string>
                   </property>
                  </widget>
                 </item>

@@ -41,7 +41,6 @@ enum class emu_settings_type
 	SleepTimersAccuracy,
 	ClocksScale,
 	PerformanceReport,
-	PPUNJFixup,
 	PPUVNANFixup,
 	AccurateDFMA,
 	AccuratePPUSAT,

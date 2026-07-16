@@ -5144,7 +5144,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				platform_bit,
 				accurate_dfma,
 				fixup_vnan,
-				fixup_nj_denormals,
+				_reserved_for_backwards_compatibility,
 				accurate_cache_line_stores,
 				reservations_128_byte,
 				greedy_mode,
@@ -5160,6 +5160,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 			be_t<bs_t<ppu_settings>> settings{};
 
+			settings += ppu_settings::_reserved_for_backwards_compatibility;
 #if !defined(_WIN32) && !defined(__APPLE__)
 			settings += ppu_settings::platform_bit;
 #endif
@@ -5167,8 +5168,6 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				settings += ppu_settings::accurate_dfma;
 			if (g_cfg.core.ppu_fix_vnan)
 				settings += ppu_settings::fixup_vnan;
-			if (g_cfg.core.ppu_llvm_nj_fixup)
-				settings += ppu_settings::fixup_nj_denormals;
 			if (has_dcbz == 2)
 				settings += ppu_settings::accurate_cache_line_stores;
 			if (g_cfg.core.ppu_128_reservations_loop_max_length)
@@ -5182,7 +5181,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 			if (g_cfg.core.ppu_set_vnan)
 				settings += ppu_settings::accurate_vnan, settings -= ppu_settings::fixup_vnan, fmt::throw_exception("VNAN Not implemented");
 			if (g_cfg.core.ppu_use_nj_bit)
-				settings += ppu_settings::accurate_nj_mode, settings -= ppu_settings::fixup_nj_denormals, fmt::throw_exception("NJ Not implemented");
+				settings += ppu_settings::accurate_nj_mode, fmt::throw_exception("NJ Not implemented");
 			if (fpos >= info.get_funcs().size() || module_counter % c_moudles_per_jit == c_moudles_per_jit - 1)
 				settings += ppu_settings::contains_symbol_resolver; // Avoid invalidating all modules for this purpose
 			if (g_cfg.core.set_daz_and_ftz)
