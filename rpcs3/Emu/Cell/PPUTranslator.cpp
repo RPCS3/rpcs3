@@ -482,10 +482,10 @@ Value* PPUTranslator::VecHandleDenormal(Value* val)
 	return bitcast(result, type);
 }
 
-Value* PPUTranslator::VecHandleResult(Value* val)
+Value* PPUTranslator::VecHandleResult(Value* val, bool flush_denormals_manually)
 {
 	val = g_cfg.core.ppu_fix_vnan ? VecHandleNan(val) : val;
-	val = g_cfg.core.ppu_llvm_nj_fixup ? VecHandleDenormal(val) : val;
+	val = flush_denormals_manually || !g_cfg.core.set_daz_and_ftz ? VecHandleDenormal(val) : val;
 	return val;
 }
 
@@ -995,8 +995,7 @@ void PPUTranslator::MTVSCR(ppu_opcode_t op)
 	const auto vscr = m_ir->CreateExtractElement(GetVr(op.vb, VrType::vi32), m_ir->getInt32(m_is_be ? 3 : 0));
 	const auto nj = Trunc(m_ir->CreateLShr(vscr, 16), GetType<bool>());
 	RegStore(nj, m_nj);
-	if (g_cfg.core.ppu_llvm_nj_fixup)
-		RegStore(m_ir->CreateSelect(nj, m_ir->getInt32(0x7f80'0000), m_ir->getInt32(0x7fff'ffff)), m_jm_mask);
+	RegStore(m_ir->CreateSelect(nj, m_ir->getInt32(0x7f80'0000), m_ir->getInt32(0x7fff'ffff)), m_jm_mask);
 	if (g_cfg.core.ppu_set_sat_bit)
 		RegStore(m_ir->CreateInsertElement(ConstantAggregateZero::get(GetType<u32[4]>()), m_ir->CreateAnd(vscr, 1), m_ir->getInt32(0)), m_sat);
 }
@@ -1295,13 +1294,13 @@ void PPUTranslator::VCTUXS(ppu_opcode_t op)
 void PPUTranslator::VEXPTEFP(ppu_opcode_t op)
 {
 	const auto b = get_vr<f32[4]>(op.vb);
-	set_vr(op.vd, vec_handle_result(llvm_calli<f32[4], decltype(b)>{"llvm.exp2.v4f32", {b}}));
+	set_vr(op.vd, vec_handle_result(llvm_calli<f32[4], decltype(b)>{"llvm.exp2.v4f32", {b}}, true));
 }
 
 void PPUTranslator::VLOGEFP(ppu_opcode_t op)
 {
 	const auto b = get_vr<f32[4]>(op.vb);
-	set_vr(op.vd, vec_handle_result(llvm_calli<f32[4], decltype(b)>{"llvm.log2.v4f32", {b}}));
+	set_vr(op.vd, vec_handle_result(llvm_calli<f32[4], decltype(b)>{"llvm.log2.v4f32", {b}}, true));
 }
 
 void PPUTranslator::VMADDFP(ppu_opcode_t op)
@@ -1345,9 +1344,9 @@ void PPUTranslator::VMAXFP(ppu_opcode_t op)
 {
 	const auto [a, b] = get_vrs<f32[4]>(op.va, op.vb);
 #ifdef ARCH_ARM64
-	set_vr(op.vd, vec_handle_result(fmax(a, b)));
+	set_vr(op.vd, vec_handle_result(fmax(a, b), true));
 #else
-	set_vr(op.vd, vec_handle_result(select(fcmp_ord(a < b) | fcmp_uno(b != b), b, a)));
+	set_vr(op.vd, vec_handle_result(select(fcmp_ord(a < b) | fcmp_uno(b != b), b, a), true));
 #endif
 }
 
@@ -1411,9 +1410,9 @@ void PPUTranslator::VMINFP(ppu_opcode_t op)
 {
 	const auto [a, b] = get_vrs<f32[4]>(op.va, op.vb);
 #ifdef ARCH_ARM64
-	set_vr(op.vd, vec_handle_result(fmin(a, b)));
+	set_vr(op.vd, vec_handle_result(fmin(a, b), true));
 #else
-	set_vr(op.vd, vec_handle_result(select(fcmp_ord(a > b) | fcmp_uno(b != b), b, a)));
+	set_vr(op.vd, vec_handle_result(select(fcmp_ord(a > b) | fcmp_uno(b != b), b, a), true));
 #endif
 }
 
