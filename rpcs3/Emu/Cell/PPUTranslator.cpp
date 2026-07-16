@@ -447,6 +447,13 @@ Function* PPUTranslator::GetSymbolResolver(const ppu_module<lv2_obj>& info)
 
 Value* PPUTranslator::VecHandleNan(Value* val)
 {
+	if (m_use_avx512 && !g_cfg.core.set_daz_and_ftz)
+	{
+		// VFIXUPIMMPS is only equivalent when DAZ is disabled.
+		// Select the canonical NaN for QNaN/SNaN and pass through every other class.
+		return vfixupimmps(value<f32[4]>(nan_vec4), value<f32[4]>(val), splat<u32[4]>(0x1111'1100), 0x10, 0xff).eval(m_ir);
+	}
+
 	const auto is_nan = m_ir->CreateFCmpUNO(val, val);
 
 	val = m_ir->CreateSelect(is_nan, nan_vec4, val);
