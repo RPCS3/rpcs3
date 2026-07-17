@@ -7767,6 +7767,8 @@ public:
 		else
 			set_vr(op.rt, -(a * b + c));
 	}
+	
+	static constexpr auto spu_zero_fp_classes = llvm::FPClassTest::fcSubnormal | llvm::FPClassTest::fcZero;
 
 	// clamping helpers
 	value_t<f32[4]> clamp_positive_smax(value_t<f32[4]> v, std::optional<llvm::KnownFPClass> known_opt = std::nullopt)
@@ -8135,8 +8137,12 @@ public:
 		{
 			const auto a = value<f32[4]>(ci->getOperand(0));
 			const auto b = value<f32[4]>(ci->getOperand(1));
-			const bool a_notnan = llvm::cast<llvm::ConstantInt>(ci->getOperand(2))->getZExtValue() != 0;
-			const bool b_notnan = llvm::cast<llvm::ConstantInt>(ci->getOperand(3))->getZExtValue() != 0;
+
+			const auto a_known = get_known_fp_class<2>(a, llvm::FPClassTest::fcNan);
+			const auto b_known = get_known_fp_class<2>(b, llvm::FPClassTest::fcNan);
+
+			const bool a_notnan = a_known.isKnownNeverNaN() || llvm::cast<llvm::ConstantInt>(ci->getOperand(2))->getZExtValue() != 0;
+			const bool b_notnan = b_known.isKnownNeverNaN() || llvm::cast<llvm::ConstantInt>(ci->getOperand(3))->getZExtValue() != 0;
 
 			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
 			{
@@ -8294,44 +8300,19 @@ public:
 			const auto a = value<f32[4]>(ci->getOperand(0));
 			const auto b = value<f32[4]>(ci->getOperand(1));
 
-			const value_t<f32[4]> ab[2]{a, b};
+			constexpr auto interested_classes = llvm::FPClassTest::fcNan | spu_zero_fp_classes;
+			const auto a_known = get_known_fp_class<2>(a, interested_classes);
+			const auto b_known = get_known_fp_class<2>(b, interested_classes);
 
-			bit_set<2> safe_float_compare(0);
-			bit_set<2> safe_int_compare(0);
+			const bool safe_float_compare = a_known.isKnownNeverNaN() && b_known.isKnownNeverNaN();
+			const bool safe_int_compare = a_known.isKnownNever(spu_zero_fp_classes) && b_known.isKnownNever(spu_zero_fp_classes);
 
-			for (u32 i = 0; i < 2; i++)
-			{
-				if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, __LINE__ + i); ok)
-				{
-					safe_float_compare.set_unsafe(i);
-					safe_int_compare.set_unsafe(i);
-
-					for (u32 j = 0; j < 4; j++)
-					{
-						const u32 value = data._u32[j];
-						const u8 exponent = static_cast<u8>(value >> 23);
-
-						// unsafe if nan
-						if (exponent == 255)
-						{
-							safe_float_compare.reset_unsafe(i);
-						}
-
-						// unsafe if denormal or 0
-						if (!exponent)
-						{
-							safe_int_compare.reset_unsafe(i);
-						}
-					}
-				}
-			}
-
-			if (safe_float_compare.any())
+			if (safe_float_compare)
 			{
 				return eval(sext<s32[4]>(fcmp_ord(a == b)));
 			}
 
-			if (safe_int_compare.any())
+			if (safe_int_compare)
 			{
 				return eval(sext<s32[4]>(bitcast<s32[4]>(a) == bitcast<s32[4]>(b)));
 			}
@@ -8368,47 +8349,22 @@ public:
 			const auto a = value<f32[4]>(ci->getOperand(0));
 			const auto b = value<f32[4]>(ci->getOperand(1));
 
-			const value_t<f32[4]> ab[2]{a, b};
+			constexpr auto interested_classes = llvm::FPClassTest::fcNan | spu_zero_fp_classes;
+			const auto a_known = get_known_fp_class<2>(a, interested_classes);
+			const auto b_known = get_known_fp_class<2>(b, interested_classes);
 
-			bit_set<2> safe_float_compare(0);
-			bit_set<2> safe_int_compare(0);
-
-			for (u32 i = 0; i < 2; i++)
-			{
-				if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, __LINE__ + i); ok)
-				{
-					safe_float_compare.set_unsafe(i);
-					safe_int_compare.set_unsafe(i);
-
-					for (u32 j = 0; j < 4; j++)
-					{
-						const u32 value = data._u32[j];
-						const u8 exponent = static_cast<u8>(value >> 23);
-
-						// unsafe if nan
-						if (exponent == 255)
-						{
-							safe_float_compare.reset_unsafe(i);
-						}
-
-						// unsafe if denormal or 0
-						if (!exponent)
-						{
-							safe_int_compare.reset_unsafe(i);
-						}
-					}
-				}
-			}
+			const bool safe_float_compare = a_known.isKnownNeverNaN() && b_known.isKnownNeverNaN();
+			const bool safe_int_compare = a_known.isKnownNever(spu_zero_fp_classes) && b_known.isKnownNever(spu_zero_fp_classes);
 
 			const auto fa = eval(fabs(a));
 			const auto fb = eval(fabs(b));
 
-			if (safe_float_compare.any())
+			if (safe_float_compare)
 			{
 				return eval(sext<s32[4]>(fcmp_ord(fa == fb)));
 			}
 
-			if (safe_int_compare.any())
+			if (safe_int_compare)
 			{
 				return eval(sext<s32[4]>(bitcast<s32[4]>(fa) == bitcast<s32[4]>(fb)));
 			}
