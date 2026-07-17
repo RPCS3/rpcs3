@@ -8827,6 +8827,11 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		{
 			stats.single++;
 
+			if (true)
+			{
+				continue;
+			}
+
 			add_pattern(inst_attr::reduced_loop, loop_pc - result.entry_point, 0, std::make_shared<reduced_loop_t>(pattern));
 
 			std::string regs = "{";
