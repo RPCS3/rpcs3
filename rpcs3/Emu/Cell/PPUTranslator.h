@@ -116,13 +116,13 @@ public:
 
 	llvm::Value* VecHandleNan(llvm::Value* val);
 	llvm::Value* VecHandleDenormal(llvm::Value* val);
-	llvm::Value* VecHandleResult(llvm::Value* val);
+	llvm::Value* VecHandleResult(llvm::Value* val, bool flush_denormals_manually = false);
 
 	template <typename T>
-	auto vec_handle_result(T&& expr)
+	auto vec_handle_result(T&& expr, bool flush_denormals_manually = false)
 	{
 		value_t<typename T::type> result;
-		result.value = VecHandleResult(expr.eval(m_ir));
+		result.value = VecHandleResult(expr.eval(m_ir), flush_denormals_manually);
 		return result;
 	}
 
