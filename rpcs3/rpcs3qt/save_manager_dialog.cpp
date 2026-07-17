@@ -573,26 +573,36 @@ void save_manager_dialog::OnEntryRemove(int row, bool user_interaction)
 
 void save_manager_dialog::OnEntriesRemove()
 {
-	QModelIndexList selection(m_list->selectionModel()->selectedRows());
-	if (selection.empty())
+	const QModelIndexList selected_rows(m_list->selectionModel()->selectedRows());
+	if (selected_rows.empty())
 	{
 		return;
+	}
+
+	// Collect row indices as plain ints BEFORE any model modification.
+	// QModelIndex references can become stale after removeRow() below.
+	std::vector<int> rows;
+	rows.reserve(selected_rows.size());
+	for (const QModelIndex& index : selected_rows)
+	{
+		rows.push_back(index.row());
 	}
 
 	WaitForRepaintThreads(false);
 
-	if (selection.size() == 1)
+	if (rows.size() == 1)
 	{
-		OnEntryRemove(selection.first().row(), true);
+		OnEntryRemove(rows.front(), true);
 		return;
 	}
 
-	if (QMessageBox::question(this, tr("Delete Confirmation"), tr("Are you sure you want to delete these %n items?", "", selection.size()), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
+	if (QMessageBox::question(this, tr("Delete Confirmation"), tr("Are you sure you want to delete these %n items?", "", rows.size()), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
 	{
-		std::sort(selection.rbegin(), selection.rend());
-		for (const QModelIndex& index : selection)
+		// Sort descending so removeRow() doesn't shift remaining indices.
+		std::sort(rows.begin(), rows.end(), std::greater<int>());
+		for (int row : rows)
 		{
-			OnEntryRemove(index.row(), false);
+			OnEntryRemove(row, false);
 		}
 	}
 }
