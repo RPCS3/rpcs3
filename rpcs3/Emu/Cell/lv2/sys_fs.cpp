@@ -628,7 +628,14 @@ u64 lv2_file::op_write(const fs::file& file, vm::cptr<void> buf, u64 size)
 
 	while (result < size)
 	{
-		const u64 block = std::min<u64>(size - result, local_buf.size());
+		const u64 block = std::min<u64>({ size - result, local_buf.size(), 65536 - buf.addr() % 65536 });
+
+		if (!vm::check_addr(buf.addr() + result, vm::page_readable, block))
+		{
+			// Returns EFAULT later
+			return result;
+		}
+
 		std::memcpy(local_buf.data(), static_cast<const uchar*>(buf.get_ptr()) + result, block);
 		const u64 nwrite = file.write(+local_buf.data(), block);
 		result += nwrite;
@@ -1475,6 +1482,12 @@ error_code sys_fs_write(ppu_thread& ppu, u32 fd, vm::cptr<void> buf, u64 nbytes,
 	ppu.check_state();
 
 	*nwrite = written;
+
+	if (written != nbytes)
+	{
+		//return { CELL_EFAULT, written };
+	}
+
 	return CELL_OK;
 }
 

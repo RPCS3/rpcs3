@@ -753,6 +753,7 @@ void sys_process_exit3(ppu_thread& ppu, s32 status)
 	return _sys_process_exit(ppu, status, 0, 0);
 }
 
+#pragma optimize("", off)
 error_code sys_process_spawns_a_self2(ppu_thread& ppu, vm::ptr<u32> pid, u32 primary_prio, u64 flags, vm::ptr<void> stack, u32 stack_size, u32 mem_id, vm::ptr<void> param_sfo, vm::ptr<void> dbg_data)
 {
 	sys_process.todo("sys_process_spawns_a_self2(pid=*0x%x, primary_prio=0x%x, flags=0x%llx, stack=*0x%x, stack_size=0x%x, mem_id=0x%x, param_sfo=*0x%x, dbg_data=*0x%x"
@@ -768,7 +769,7 @@ error_code sys_process_spawns_a_self2(ppu_thread& ppu, vm::ptr<u32> pid, u32 pri
 	// And instead of using offsets within the buffer, it provides direct addresses that must reisde in [stack, stack + stack_size] range
 	// But the actual buffer read is done once internally.
 	// So all arguments are extracted from the buffer of std::vector<u8> data manaually
-	std::vector<u8> data;
+	std::vector<u8> data(stack_size);
 	std::memcpy(data.data(), vm::base(stack.addr()), stack_size);
 
 	vm::bpptr<char, u64, u64> vpstr = vm::cast(stack.addr());
@@ -792,7 +793,7 @@ error_code sys_process_spawns_a_self2(ppu_thread& ppu, vm::ptr<u32> pid, u32 pri
 			return nullptr;
 		}
 
-		if (data_ptr.addr() < stack.addr() && data_ptr.addr() >= stack.addr() + stack_size)
+		if (data_ptr.addr() < stack.addr() || data_ptr.addr() >= stack.addr() + stack_size)
 		{
 			// This is EFAULT
 			faulting_address = data_ptr.addr();
@@ -814,7 +815,7 @@ error_code sys_process_spawns_a_self2(ppu_thread& ppu, vm::ptr<u32> pid, u32 pri
 		sys_process.notice(" *** env: %s", envp.back());
 	}
 
-	if (faulting_address)
+	if (faulting_address != stack.addr())
 	{
 		return { CELL_EFAULT, faulting_address };
 	}
@@ -824,6 +825,9 @@ error_code sys_process_spawns_a_self2(ppu_thread& ppu, vm::ptr<u32> pid, u32 pri
 	//	// data.resize(0x1000);
 	//	// std::memcpy(data.data(), vm::base(arg.addr() + arg_size - 0x1000), 0x1000);
 	//}
+
+	const u32 old_proc = id_manager::g_process;
+	const auto saved = std::make_tuple(vm::g_base_addr, vm::g_sudo_addr, vm::g_exec_addr, vm::g_stat_addr, vm::g_vm_image);
 
 	const auto mem_ct = idm::get_unlocked<lv2_memory_container>(mem_id);
 
@@ -839,7 +843,12 @@ error_code sys_process_spawns_a_self2(ppu_thread& ppu, vm::ptr<u32> pid, u32 pri
 		return CellError{static_cast<u32>(ppu.gpr[3])};
 	}
 
-	*pid = idm::last_id<lv2_process>();
+	const u32 new_proc = id_manager::g_process;
+
+	id_manager::g_process = old_proc;
+	std::tie(vm::g_base_addr, vm::g_sudo_addr, vm::g_exec_addr, vm::g_stat_addr, vm::g_vm_image) = saved;
+
+	*pid = new_proc;
 
 	return CELL_OK;
 }

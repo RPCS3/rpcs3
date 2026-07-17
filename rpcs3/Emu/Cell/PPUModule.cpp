@@ -2379,7 +2379,7 @@ shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2
 	const auto process_ptr = ar ? ensure(idm::get_unlocked<lv2_obj, lv2_process>(idm::last_id<lv2_process>())) : idm::make_ptr<lv2_obj, lv2_process>();
 
 	id_manager::g_process = idm::last_id<lv2_process>();
-	const auto ptr6 = process_ptr->acquire_globals(idm::last_id<lv2_process>());
+	const auto vm_globals = process_ptr->acquire_globals(idm::last_id<lv2_process>());
 
 	const std::string elf_path = argv0[0];
 	process_ptr->ELF_file_path = elf_path;

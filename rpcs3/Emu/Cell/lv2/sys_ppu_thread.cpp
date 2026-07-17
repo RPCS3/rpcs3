@@ -491,6 +491,8 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 
 	if (!param || !param->entry)
 	{
+		ppu.state += cpu_flag::dbg_pause;
+		vm::read_string(threadname.addr(), 44, *std::make_unique<std::string>(), true);
 		return CELL_EFAULT;
 	}
 
@@ -545,6 +547,7 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 
 		if (!vm::read_string(threadname.addr(), max_size, ppu_name, true))
 		{
+			vm::read_string(threadname.addr(), max_size, ppu_name, true);
 			dct.free(stack_size);
 			return CELL_EFAULT;
 		}
