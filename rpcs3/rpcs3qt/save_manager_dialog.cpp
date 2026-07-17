@@ -581,18 +581,18 @@ void save_manager_dialog::OnEntriesRemove()
 
 	// Collect row indices as plain ints BEFORE any model modification.
 	// QModelIndex references can become stale after removeRow() below.
-	QList<int> rows;
+	std::vector<int> rows;
 	rows.reserve(selected_rows.size());
 	for (const QModelIndex& index : selected_rows)
 	{
-		rows.append(index.row());
+		rows.push_back(index.row());
 	}
 
 	WaitForRepaintThreads(false);
 
 	if (rows.size() == 1)
 	{
-		OnEntryRemove(rows.first(), true);
+		OnEntryRemove(rows.front(), true);
 		return;
 	}
 
