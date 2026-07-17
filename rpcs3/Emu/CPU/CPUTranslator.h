@@ -4288,7 +4288,7 @@ template <typename T1, typename T2, typename T3>
 	{
 		static_assert(depth <= llvm::MaxAnalysisRecursionDepth, "Depth parameter can only decrease search. Default is max.");
 
-#if LLVM_MAJOR_VERSION >= 21
+#if LLVM_VERSION_MAJOR >= 21
 		const llvm::SimplifyQuery SQ(m_module->getDataLayout());
 		return llvm::computeKnownFPClass(a.eval(m_ir), interested_classes, SQ, llvm::MaxAnalysisRecursionDepth - depth);
 #else
