@@ -27,6 +27,9 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Support/KnownBits.h"
+#if LLVM_VERSION_MAJOR >= 21
+#include "llvm/Support/KnownFPClass.h"
+#endif
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/IntrinsicsX86.h"
