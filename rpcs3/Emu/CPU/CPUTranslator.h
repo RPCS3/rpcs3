@@ -27,6 +27,10 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Support/KnownBits.h"
+#if LLVM_VERSION_MAJOR >= 21
+#include "llvm/Support/KnownFPClass.h"
+#endif
+#include "llvm/Analysis/SimplifyQuery.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/IntrinsicsX86.h"
@@ -4277,6 +4281,19 @@ template <typename T1, typename T2, typename T3>
 	llvm::KnownBits kbc(T value)
 	{
 		return llvm::KnownBits::makeConstant(llvm::APInt(sizeof(T) * 8, u64(value)));
+	}
+	
+	template <unsigned depth = llvm::MaxAnalysisRecursionDepth, typename T>
+	llvm::KnownFPClass get_known_fp_class(T a, llvm::FPClassTest interested_classes)
+	{
+		static_assert(depth <= llvm::MaxAnalysisRecursionDepth, "Depth parameter can only decrease search. Default is max.");
+
+#if LLVM_VERSION_MAJOR >= 21
+		const llvm::SimplifyQuery SQ(m_module->getDataLayout());
+		return llvm::computeKnownFPClass(a.eval(m_ir), interested_classes, SQ, llvm::MaxAnalysisRecursionDepth - depth);
+#else
+		return llvm::computeKnownFPClass(a.eval(m_ir), m_module->getDataLayout(), interested_classes, llvm::MaxAnalysisRecursionDepth - depth);
+#endif
 	}
 
 private:

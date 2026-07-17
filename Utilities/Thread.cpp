@@ -2337,6 +2337,7 @@ void thread_base::start()
 	ensure(::ResumeThread(reinterpret_cast<HANDLE>(+m_thread)) != static_cast<DWORD>(-1));
 #elif defined(__APPLE__)
 	pthread_attr_t attrs;
+	pthread_t thread_id{};
 	struct sched_param sp;
     memset(&sp, 0, sizeof(struct sched_param));
     sp.sched_priority=99;
@@ -2346,20 +2347,43 @@ void thread_base::start()
 	pthread_attr_set_qos_class_np(&attrs, QOS_CLASS_USER_INTERACTIVE, 0);
 	pthread_attr_setschedpolicy(&attrs, SCHED_RR);
 	pthread_attr_setschedparam(&attrs, &sp);
-	ensure(pthread_create(reinterpret_cast<pthread_t*>(&m_thread.raw()), &attrs, entry_point, this) == 0);
+	ensure(pthread_create(&thread_id, &attrs, entry_point, this) == 0);
 #else
-	ensure(pthread_create(reinterpret_cast<pthread_t*>(&m_thread.raw()), nullptr, entry_point, this) == 0);
+	pthread_t thread_id{};
+	ensure(pthread_create(&thread_id, nullptr, entry_point, this) == 0);
+#endif
+
+#ifndef _WIN32
+	// Update m_thread atomically
+	u64 dest_id = 0;
+	std::memcpy(&dest_id, &thread_id, sizeof(thread_id));
+
+	if (!m_thread && !m_thread.compare_and_swap_test(0, dest_id))
+	{
+		ensure(m_thread == dest_id);
+	}
 #endif
 }
 
 void thread_base::initialize(void (*error_cb)())
 {
 #ifndef _WIN32
-#ifdef ANDROID
-	m_thread.release(pthread_self());
+#ifdef __APPLE__
+	while (!m_thread)
+	{
+		busy_wait();
+	}
+	[[maybe_unused]] u64 new_tid = 0;
+#elif defined(ANDROID)
+	const u64 new_tid = pthread_self();
 #else
-	m_thread.release(reinterpret_cast<u64>(pthread_self()));
+	const u64 new_tid = reinterpret_cast<u64>(pthread_self());
 #endif
+
+	if (!m_thread && !m_thread.compare_and_swap_test(0, new_tid))
+	{
+		ensure(m_thread == new_tid);
+	}
 #endif
 
 	// Initialize TLS variables
@@ -3047,7 +3071,9 @@ void thread_ctrl::set_name(std::string name)
 			return false;
 		}).second)
 		{
+#ifndef __APPLE__
 			utils::trap();
+#endif
 		}
 	}
 
@@ -3558,15 +3584,26 @@ std::pair<void*, usz> thread_ctrl::get_thread_stack()
 
 u64 thread_ctrl::get_tid()
 {
-#ifdef _WIN32
-	return GetCurrentThreadId();
-#elif defined(ANDROID)
-	return static_cast<u64>(pthread_self());
-#elif defined(__linux__)
-	return syscall(SYS_gettid);
-#else
-	return reinterpret_cast<u64>(pthread_self());
-#endif
+	static thread_local u64 s_tls_tid = []() -> u64
+	{
+	#ifdef _WIN32
+		return GetCurrentThreadId();
+	#elif defined(ANDROID)
+		return pthread_gettid_np(pthread_self());
+	#elif defined(__linux__)
+		return syscall(SYS_gettid);
+	#elif defined(__APPLE__)
+		u64 tid{};
+		pthread_threadid_np(nullptr, &tid);
+		return tid;
+	#elif defined(__FreeBSD__)
+		return pthread_getthreadid_np();
+	#else
+		return static_cast<u64>(pthread_self());
+	#endif
+	}();
+
+	return s_tls_tid;
 }
 
 bool thread_ctrl::is_main()

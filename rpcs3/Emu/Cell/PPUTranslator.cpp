@@ -447,6 +447,13 @@ Function* PPUTranslator::GetSymbolResolver(const ppu_module<lv2_obj>& info)
 
 Value* PPUTranslator::VecHandleNan(Value* val)
 {
+	if (m_use_avx512 && !g_cfg.core.set_daz_and_ftz)
+	{
+		// VFIXUPIMMPS is only equivalent when DAZ is disabled.
+		// Select the canonical NaN for QNaN/SNaN and pass through every other class.
+		return vfixupimmps(value<f32[4]>(nan_vec4), value<f32[4]>(val), splat<u32[4]>(0x1111'1100), 0x10, 0xff).eval(m_ir);
+	}
+
 	const auto is_nan = m_ir->CreateFCmpUNO(val, val);
 
 	val = m_ir->CreateSelect(is_nan, nan_vec4, val);
@@ -459,17 +466,26 @@ Value* PPUTranslator::VecHandleDenormal(Value* val)
 	const auto type = val->getType();
 	const auto value = bitcast(val, GetType<u32[4]>());
 
-	const auto mask = SExt(m_ir->CreateICmpEQ(m_ir->CreateAnd(value, Broadcast(RegLoad(m_jm_mask), 4)), ConstantAggregateZero::get(value->getType())), GetType<s32[4]>());
+	const auto is_zero_or_denormal = m_ir->CreateICmpEQ(m_ir->CreateAnd(value, Broadcast(RegLoad(m_jm_mask), 4)), ConstantAggregateZero::get(value->getType()));
+
+	if (m_use_avx512)
+	{
+		// AVX-512 lowers this to vptestnmd and a masked AND.
+		const auto signed_zero = m_ir->CreateAnd(value, Broadcast(m_ir->getInt32(0x8000'0000), 4));
+		return bitcast(m_ir->CreateSelect(is_zero_or_denormal, signed_zero, value), type);
+	}
+
+	const auto mask = SExt(is_zero_or_denormal, GetType<s32[4]>());
 	const auto nz = m_ir->CreateLShr(mask, 1);
 	const auto result = m_ir->CreateAnd(m_ir->CreateNot(nz), value);
 
 	return bitcast(result, type);
 }
 
-Value* PPUTranslator::VecHandleResult(Value* val)
+Value* PPUTranslator::VecHandleResult(Value* val, bool flush_denormals_manually)
 {
 	val = g_cfg.core.ppu_fix_vnan ? VecHandleNan(val) : val;
-	val = g_cfg.core.ppu_llvm_nj_fixup ? VecHandleDenormal(val) : val;
+	val = flush_denormals_manually || !g_cfg.core.set_daz_and_ftz ? VecHandleDenormal(val) : val;
 	return val;
 }
 
@@ -979,8 +995,7 @@ void PPUTranslator::MTVSCR(ppu_opcode_t op)
 	const auto vscr = m_ir->CreateExtractElement(GetVr(op.vb, VrType::vi32), m_ir->getInt32(m_is_be ? 3 : 0));
 	const auto nj = Trunc(m_ir->CreateLShr(vscr, 16), GetType<bool>());
 	RegStore(nj, m_nj);
-	if (g_cfg.core.ppu_llvm_nj_fixup)
-		RegStore(m_ir->CreateSelect(nj, m_ir->getInt32(0x7f80'0000), m_ir->getInt32(0x7fff'ffff)), m_jm_mask);
+	RegStore(m_ir->CreateSelect(nj, m_ir->getInt32(0x7f80'0000), m_ir->getInt32(0x7fff'ffff)), m_jm_mask);
 	if (g_cfg.core.ppu_set_sat_bit)
 		RegStore(m_ir->CreateInsertElement(ConstantAggregateZero::get(GetType<u32[4]>()), m_ir->CreateAnd(vscr, 1), m_ir->getInt32(0)), m_sat);
 }
@@ -1279,13 +1294,13 @@ void PPUTranslator::VCTUXS(ppu_opcode_t op)
 void PPUTranslator::VEXPTEFP(ppu_opcode_t op)
 {
 	const auto b = get_vr<f32[4]>(op.vb);
-	set_vr(op.vd, vec_handle_result(llvm_calli<f32[4], decltype(b)>{"llvm.exp2.v4f32", {b}}));
+	set_vr(op.vd, vec_handle_result(llvm_calli<f32[4], decltype(b)>{"llvm.exp2.v4f32", {b}}, true));
 }
 
 void PPUTranslator::VLOGEFP(ppu_opcode_t op)
 {
 	const auto b = get_vr<f32[4]>(op.vb);
-	set_vr(op.vd, vec_handle_result(llvm_calli<f32[4], decltype(b)>{"llvm.log2.v4f32", {b}}));
+	set_vr(op.vd, vec_handle_result(llvm_calli<f32[4], decltype(b)>{"llvm.log2.v4f32", {b}}, true));
 }
 
 void PPUTranslator::VMADDFP(ppu_opcode_t op)
@@ -1329,9 +1344,9 @@ void PPUTranslator::VMAXFP(ppu_opcode_t op)
 {
 	const auto [a, b] = get_vrs<f32[4]>(op.va, op.vb);
 #ifdef ARCH_ARM64
-	set_vr(op.vd, vec_handle_result(fmax(a, b)));
+	set_vr(op.vd, vec_handle_result(fmax(a, b), true));
 #else
-	set_vr(op.vd, vec_handle_result(select(fcmp_ord(a < b) | fcmp_uno(b != b), b, a)));
+	set_vr(op.vd, vec_handle_result(select(fcmp_ord(a < b) | fcmp_uno(b != b), b, a), true));
 #endif
 }
 
@@ -1395,9 +1410,9 @@ void PPUTranslator::VMINFP(ppu_opcode_t op)
 {
 	const auto [a, b] = get_vrs<f32[4]>(op.va, op.vb);
 #ifdef ARCH_ARM64
-	set_vr(op.vd, vec_handle_result(fmin(a, b)));
+	set_vr(op.vd, vec_handle_result(fmin(a, b), true));
 #else
-	set_vr(op.vd, vec_handle_result(select(fcmp_ord(a > b) | fcmp_uno(b != b), b, a)));
+	set_vr(op.vd, vec_handle_result(select(fcmp_ord(a > b) | fcmp_uno(b != b), b, a), true));
 #endif
 }
 
