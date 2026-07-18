@@ -8481,36 +8481,41 @@ public:
 
 			const bool a_notnan = a_known.isKnownNeverNaN() || llvm::cast<llvm::ConstantInt>(ci->getOperand(3))->getZExtValue() != 0;
 			const bool b_notnan = b_known.isKnownNeverNaN() || llvm::cast<llvm::ConstantInt>(ci->getOperand(4))->getZExtValue() != 0;
-			
+
+			const auto normal_fma = fma32x4(a, b, c, a_known, b_known);
+
 			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
 			{
 				if (a.value == b.value || (a_notnan && b_notnan))
 				{
-					return fma32x4(a, b, c, a_known, b_known);
+					return normal_fma;
 				}
 
 				if (a_notnan)
 				{
-					const auto ma = sext<s32[4]>(fcmp_uno(a != fsplat<f32[4]>(0.)));
-					const auto cb = bitcast<f32[4]>(bitcast<s32[4]>(b) & ma);
-					return fma32x4(a, eval(cb), c, a_known, b_known);
+					return eval(select(fcmp_uno(a != fsplat<f32[4]>(0.)), normal_fma, c));
 				}
 				else if (b_notnan)
 				{
-					const auto mb = sext<s32[4]>(fcmp_uno(b != fsplat<f32[4]>(0.)));
-					const auto ca = bitcast<f32[4]>(bitcast<s32[4]>(a) & mb);
-					return fma32x4(eval(ca), b, c, a_known, b_known);
+					return eval(select(fcmp_uno(b != fsplat<f32[4]>(0.)), normal_fma, c));
 				}
 
-				const auto ma = sext<s32[4]>(fcmp_uno(a != fsplat<f32[4]>(0.)));
-				const auto mb = sext<s32[4]>(fcmp_uno(b != fsplat<f32[4]>(0.)));
-				const auto ca = bitcast<f32[4]>(bitcast<s32[4]>(a) & mb);
-				const auto cb = bitcast<f32[4]>(bitcast<s32[4]>(b) & ma);
-				return fma32x4(eval(ca), eval(cb), c, a_known, b_known);
+				// Same number of operations well preventing a serial predicate chain pessimization
+				if (m_use_avx512)
+				{
+					// 0/denormals -> +0, else 1st operand
+					const auto ca = vfixupimmps(a, b, splat<u32[4]>(0x00000800u), 0, 0xff);
+					const auto cb = vfixupimmps(b, a, splat<u32[4]>(0x00000800u), 0, 0xff);
+					return fma32x4(ca, cb, c, a_known, b_known);
+				}
+
+				const auto a_cmp = fcmp_uno(a != fsplat<f32[4]>(0.));
+				const auto b_cmp = fcmp_uno(b != fsplat<f32[4]>(0.));
+				return eval(select(a_cmp & b_cmp, normal_fma, c));
 			}
 			else
 			{
-				return fma32x4(a, b, c, a_known, b_known);
+				return normal_fma;
 			}
 		});
 
