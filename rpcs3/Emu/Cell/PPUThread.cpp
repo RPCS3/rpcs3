@@ -5486,7 +5486,6 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 	{
 		usz index = umax;
 
-
 #ifdef __APPLE__
 		named_thread sym_worker("PPU Symbol Resolver", [&]()
 		{
