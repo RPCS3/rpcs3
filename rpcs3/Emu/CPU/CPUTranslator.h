@@ -4271,10 +4271,53 @@ template <typename T1, typename T2, typename T3>
 	template <typename T = v128>
 	llvm::Constant* make_const_vector(T, llvm::Type*, u32 = __builtin_LINE());
 
+	// IR is emitted in a single pass: phi nodes may still be missing their back-edge incoming
+	// values, so any known bits computeKnownBits derives through a phi are unsound for the
+	// final IR. Whether a phi is complete cannot be queried (the CFG edges from not-yet-emitted
+	// predecessors don't exist either), so reject every value whose bits may derive from a phi.
+	static bool is_known_bits_safe(llvm::Value* value)
+	{
+		llvm::SmallPtrSet<const llvm::Value*, 32> visited;
+		llvm::SmallVector<const llvm::Value*, 32> worklist{value};
+
+		while (!worklist.empty())
+		{
+			const llvm::Value* v = worklist.pop_back_val();
+
+			if (!visited.insert(v).second)
+			{
+				continue;
+			}
+
+			if (llvm::isa<llvm::PHINode>(v) || visited.size() > 256)
+			{
+				return false;
+			}
+
+			// Loads don't propagate operand bits; constants and arguments are leaves
+			if (auto i = llvm::dyn_cast<llvm::Instruction>(v); i && !llvm::isa<llvm::LoadInst>(i))
+			{
+				for (const llvm::Use& op : i->operands())
+				{
+					worklist.push_back(op.get());
+				}
+			}
+		}
+
+		return true;
+	}
+
 	template <typename T>
 	llvm::KnownBits get_known_bits(T a)
 	{
-		return llvm::computeKnownBits(a.eval(m_ir), m_module->getDataLayout());
+		llvm::Value* value = a.eval(m_ir);
+
+		if (!is_known_bits_safe(value))
+		{
+			return llvm::KnownBits(value->getType()->getScalarSizeInBits());
+		}
+
+		return llvm::computeKnownBits(value, m_module->getDataLayout());
 	}
 
 	template <typename T>
