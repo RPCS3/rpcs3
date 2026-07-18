@@ -8482,21 +8482,21 @@ public:
 			const bool a_notnan = a_known.isKnownNeverNaN() || llvm::cast<llvm::ConstantInt>(ci->getOperand(3))->getZExtValue() != 0;
 			const bool b_notnan = b_known.isKnownNeverNaN() || llvm::cast<llvm::ConstantInt>(ci->getOperand(4))->getZExtValue() != 0;
 
-			const auto normal_fma = fma32x4(a, b, c, a_known, b_known);
-
 			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
 			{
 				if (a.value == b.value || (a_notnan && b_notnan))
 				{
-					return normal_fma;
+					return fma32x4(a, b, c, a_known, b_known);
 				}
 
 				if (a_notnan)
 				{
+					const auto normal_fma = fma32x4(a, b, c, a_known, b_known);
 					return eval(select(fcmp_uno(a != fsplat<f32[4]>(0.)), normal_fma, c));
 				}
 				else if (b_notnan)
 				{
+					const auto normal_fma = fma32x4(a, b, c, a_known, b_known);
 					return eval(select(fcmp_uno(b != fsplat<f32[4]>(0.)), normal_fma, c));
 				}
 
@@ -8509,13 +8509,14 @@ public:
 					return fma32x4(ca, cb, c, a_known, b_known);
 				}
 
+				const auto normal_fma = fma32x4(a, b, c, a_known, b_known);
 				const auto a_cmp = fcmp_uno(a != fsplat<f32[4]>(0.));
 				const auto b_cmp = fcmp_uno(b != fsplat<f32[4]>(0.));
 				return eval(select(a_cmp & b_cmp, normal_fma, c));
 			}
 			else
 			{
-				return normal_fma;
+				return fma32x4(a, b, c, a_known, b_known);
 			}
 		});
 
