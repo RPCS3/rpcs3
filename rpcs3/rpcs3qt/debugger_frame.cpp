@@ -818,7 +818,7 @@ cpu_thread* debugger_frame::get_cpu()
 		}
 		else if (ppu)
 		{
-			m_cpu = idm::get_unlocked<named_thread<ppu_thread>>(ppu->id);
+			m_cpu = idm::get_unlocked<named_thread<ppu_thread>>(idm::id_index(ppu->id, nullptr));
 		}
 		else
 		{
@@ -888,22 +888,22 @@ std::function<cpu_thread*()> debugger_frame::make_check_cpu(cpu_thread* cpu, boo
 		{
 			if (type == thread_class::ppu)
 			{
-				shared = idm::get_unlocked<named_thread<ppu_thread>>(cpu->id);
+				shared = idm::get_unlocked<named_thread<ppu_thread>>(idm::id_index(cpu->id, nullptr));
 			}
 			else if (type == thread_class::spu)
 			{
-				shared = idm::get_unlocked<named_thread<spu_thread>>(cpu->id);
+				shared = idm::get_unlocked<named_thread<spu_thread>>(idm::id_index(cpu->id, nullptr));
 			}
 		}
 		else
 		{
 			if (type == thread_class::ppu)
 			{
-				shared = idm::get_unlocked<named_thread<ppu_thread>>(cpu->id);
+				shared = idm::get_unlocked<named_thread<ppu_thread>>(idm::id_index(cpu->id, nullptr));
 			}
 			else if (type == thread_class::spu)
 			{
-				shared = idm::get_unlocked<named_thread<spu_thread>>(cpu->id);
+				shared = idm::get_unlocked<named_thread<spu_thread>>(idm::id_index(cpu->id, nullptr));
 			}
 		}
 	}
@@ -1074,7 +1074,7 @@ void debugger_frame::UpdateUnitList()
 
 	m_hw_ppu_idx = umax;
 
-	const auto on_select = [&](u32 id, cpu_thread& cpu)
+	const auto on_select = [&](u32 id, u32, cpu_thread& cpu)
 	{
 		std::function<cpu_thread*()> func_cpu = make_check_cpu(std::addressof(cpu), true);
 
@@ -1115,7 +1115,7 @@ void debugger_frame::UpdateUnitList()
 				}
 				else if (ppu)
 				{
-					cpu_storage = idm::get_unlocked<named_thread<ppu_thread>>(ppu->id);
+					cpu_storage = idm::get_unlocked<named_thread<ppu_thread>>(idm::id_index(ppu->id, nullptr));
 				}
 				else
 				{
@@ -1140,7 +1140,7 @@ void debugger_frame::UpdateUnitList()
 
 		if (const auto render = g_fxo->try_get<rsx::thread>(); render && render->lv2_context && render->lv2_context->main_mem_size)
 		{
-			on_select(render->id, *render);
+			on_select(render->id, 0, *render);
 		}
 	}
 
@@ -1256,7 +1256,7 @@ void debugger_frame::OnSelectUnit()
 		{
 		case 1:
 		{
-			m_cpu = idm::get_unlocked<named_thread<ppu_thread>>(cpu_id);
+			m_cpu = idm::get_unlocked<named_thread<ppu_thread>>(idm::id_index(cpu_id, nullptr));
 
 			if (selected == m_cpu.get())
 			{
@@ -1267,7 +1267,7 @@ void debugger_frame::OnSelectUnit()
 		}
 		case 2:
 		{
-			m_cpu = idm::get_unlocked<named_thread<spu_thread>>(cpu_id);
+			m_cpu = idm::get_unlocked<named_thread<spu_thread>>(idm::id_index(cpu_id, nullptr));
 
 			if (selected == m_cpu.get())
 			{

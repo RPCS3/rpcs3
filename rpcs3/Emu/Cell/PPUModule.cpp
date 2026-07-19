@@ -2949,7 +2949,7 @@ shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2
 	p.stack_size = primary_stacksize;
 	p.entry = vm::_ref<ppu_func_opd_t>(entry);
 
-	auto ppu = idm::make_ptr<named_thread<ppu_thread>>(p, "main_thread", primary_prio, 1);
+	auto ppu = idm::make_ptr<named_thread<ppu_thread>>(stx::launch_retainer{}, p, "main_thread", primary_prio, 1);
 
 	// Write initial data (exitspawn)
 	if (!data0.empty())
@@ -3013,7 +3013,10 @@ shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2
 
 	ensure(process_ptr->parent_memory_container->take(primary_stacksize + segs_size));
 
-	ppu->cmd_push({ppu_cmd::initialize, 0});
+	if (Emu.IsReady())
+	{
+		ppu->cmd_push({ppu_cmd::initialize, 0});
+	}
 
 	if (entry == static_cast<u32>(elf.header.e_entry) && !Emu.IsVsh())
 	{
@@ -3061,6 +3064,18 @@ shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2
 			// Set memory protection to read-only when necessary (only if PPU-W, SPU-W, RSX-W are all disabled)
 			ensure(vm::page_protect(addr, utils::align(size, 0x1000), 0, 0, vm::page_writable));
 		}
+	}
+
+	if (!Emu.IsReady())
+	{
+		ppu->state -= cpu_flag::stop;
+	}
+
+	*ppu = thread_state::created;
+
+	if (!Emu.IsReady())
+	{
+		ppu->state.notify_one();
 	}
 
 	error_handler.errored = false;

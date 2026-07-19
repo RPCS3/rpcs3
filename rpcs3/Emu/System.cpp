@@ -5001,7 +5001,7 @@ bool Emulator::IsVsh()
 {
 	const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
 
-	return process->self_info.valid && (process->self_info.prog_id_hdr.program_authority_id >> 36 == 0x1070000); // Not only VSH but also most CoreOS LV2 SELFs need the special treatment
+	return process->self_info.valid && (process->self_info.prog_id_hdr.program_authority_id == 0x10700005FF000001L); // VSH.self ID
 }
 
 bool Emulator::IsValidSfb(const std::string& path)

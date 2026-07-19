@@ -2759,6 +2759,12 @@ void thread_base::start()
 #ifdef _WIN32
 	m_thread = ::_beginthreadex(nullptr, 0, entry_point, this, CREATE_SUSPENDED, nullptr);
 	ensure(m_thread);
+
+	if (SetThreadDescriptionImport)
+	{
+		SetThreadDescriptionImport(reinterpret_cast<HANDLE>(+m_thread), utf8_to_wchar(*m_tname.load()).c_str());
+	}
+
 	ensure(::ResumeThread(reinterpret_cast<HANDLE>(+m_thread)) != static_cast<DWORD>(-1));
 #elif defined(__APPLE__)
 	pthread_attr_t attrs;
