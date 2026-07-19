@@ -4,15 +4,11 @@
 cd build || exit 1
 
 cd bin
-git clone --revision=a075e5e417f87675ea3137b7365f3e5a99608d72 https://github.com/KhronosGroup/MoltenVK.git
-cd MoltenVK
-./fetchDependencies --macos
-make macos MVK_USE_METAL_PRIVATE_API=1
-cd ../
-
 mkdir -p "rpcs3.app/Contents/Resources/vulkan/icd.d" || true
-cp "MoltenVK/Package/Release/MoltenVK/dynamic/dylib/macOS/libMoltenVK.dylib" "rpcs3.app/Contents/Frameworks/libMoltenVK.dylib"
-cp "MoltenVK/Package/Release/MoltenVK/dynamic/dylib/macOS/MoltenVK_icd.json" "rpcs3.app/Contents/Resources/vulkan/icd.d/MoltenVK_icd.json"
+wget https://github.com/KhronosGroup/MoltenVK/releases/download/v1.4.2-rc1/MoltenVK-macos-privateapi.tar
+tar -xvf MoltenVK-macos-privateapi.tar
+cp "MoltenVK/MoltenVK/dynamic/dylib/macOS/libMoltenVK.dylib" "rpcs3.app/Contents/Frameworks/libMoltenVK.dylib"
+cp "MoltenVK/MoltenVK/dynamic/dylib/macOS/MoltenVK_icd.json" "rpcs3.app/Contents/Resources/vulkan/icd.d/MoltenVK_icd.json"
 sed -i '' "s/.\//..\/..\/..\/Frameworks\//g" "rpcs3.app/Contents/Resources/vulkan/icd.d/MoltenVK_icd.json"
 
 cp "$(realpath $BREW_PATH/opt/llvm@$LLVM_COMPILER_VER/lib/c++/libc++abi.1.0.dylib)" "rpcs3.app/Contents/Frameworks/libc++abi.1.dylib"
