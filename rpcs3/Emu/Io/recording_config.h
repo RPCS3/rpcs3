@@ -16,7 +16,8 @@ struct cfg_recording final : cfg::node
 		cfg::uint<640, 7680> width{this, "Width", 1280};
 		cfg::uint<360, 4320> height{this, "Height", 720};
 		cfg::uint<0, 192> pixel_format{this, "AVPixelFormat", 0}; // AVPixelFormat::AV_PIX_FMT_YUV420P
-		cfg::uint<0, 0xFFFF> video_codec{this, "AVCodecID", 12}; // AVCodecID::AV_CODEC_ID_MPEG4
+		cfg::string codec_name{this, "Video Codec", ""};
+		cfg::uint<0, 0xFFFF> codec_id{this, "AVCodecID", 12}; // AVCodecID::AV_CODEC_ID_MPEG4
 		cfg::uint<1'000'000, 60'000'000> video_bps{this, "Video Bitrate", 4'000'000};
 		cfg::uint<0, 3> max_b_frames{this, "Max B-Frames", 2};
 		cfg::uint<1, 120> gop_size{this, "Group of Pictures Size", 30};
@@ -27,7 +28,8 @@ struct cfg_recording final : cfg::node
 	{
 		node_audio(cfg::node* _this) : cfg::node(_this, "Audio") {}
 		
-		cfg::uint<0x10000, 0x17000> audio_codec{this, "AVCodecID", 86018}; // AVCodecID::AV_CODEC_ID_AAC
+		cfg::string codec_name{this, "Audio Codec", ""};
+		cfg::uint<0x10000, 0x17000> codec_id{this, "AVCodecID", 86018}; // AVCodecID::AV_CODEC_ID_AAC
 		cfg::uint<64'000, 320'000> audio_bps{this, "Audio Bitrate", 192'000};
 
 	} audio{ this };

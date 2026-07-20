@@ -111,13 +111,13 @@ namespace utils
 		void set_framerate(u32 framerate);
 		void set_video_bitrate(u32 bitrate);
 		void set_output_format(frame_format format);
-		void set_video_codec(s32 codec_id);
+		void set_video_codec(s32 codec_id, std::string_view codec_name);
 		void set_max_b_frames(s32 max_b_frames);
 		void set_gop_size(s32 gop_size);
 		void set_sample_rate(u32 sample_rate);
 		void set_audio_channels(u32 channels);
 		void set_audio_bitrate(u32 bitrate);
-		void set_audio_codec(s32 codec_id);
+		void set_audio_codec(s32 codec_id, std::string_view codec_name);
 		void pause(bool flush = true) override;
 		void stop(bool flush = true) override;
 		void resume() override;
@@ -135,6 +135,7 @@ namespace utils
 		// Video parameters
 		u32 m_video_bitrate_bps = 0;
 		s32 m_video_codec_id = 12; // AV_CODEC_ID_MPEG4
+		std::string m_video_codec_name;
 		s32 m_max_b_frames = 2;
 		s32 m_gop_size = 12;
 		frame_format m_out_format{};
@@ -143,5 +144,6 @@ namespace utils
 		u32 m_channels = 2;
 		u32 m_audio_bitrate_bps = 320000;
 		s32 m_audio_codec_id = 86018; // AV_CODEC_ID_AAC
+		std::string m_audio_codec_name;
 	};
 }

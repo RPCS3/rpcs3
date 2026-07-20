@@ -24,6 +24,8 @@ extern "C" {
 
 LOG_CHANNEL(cfg_log, "CFG");
 
+constexpr int codec_name_role = Qt::UserRole + 1;
+
 static std::vector<const AVCodec*> get_video_codecs(const AVOutputFormat* fmt)
 {
 	std::vector<const AVCodec*> codecs;
@@ -142,36 +144,42 @@ recording_settings_dialog::recording_settings_dialog(QWidget* parent)
 	{
 		if (!codec) continue;
 
-		const std::string name = codec->long_name ? codec->long_name : avcodec_get_name(codec->id);
+		const char* codec_name = avcodec_get_name(codec->id);
+		const std::string name = codec->long_name ? codec->long_name : codec_name;
 		ui->combo_video_codec->addItem(QString::fromStdString(name), static_cast<int>(codec->id));
+		ui->combo_video_codec->setItemData(ui->combo_video_codec->findData(static_cast<int>(codec->id)), QString(codec_name), codec_name_role);
 	}
 
 	for (const AVCodec* codec : m_audio_codecs)
 	{
 		if (!codec) continue;
 
-		const std::string name = codec->long_name ? codec->long_name : avcodec_get_name(codec->id);
+		const char* codec_name = avcodec_get_name(codec->id);
+		const std::string name = codec->long_name ? codec->long_name : codec_name;
 		ui->combo_audio_codec->addItem(QString::fromStdString(name), static_cast<int>(codec->id));
+		ui->combo_audio_codec->setItemData(ui->combo_audio_codec->findData(static_cast<int>(codec->id)), QString(codec_name), codec_name_role);
 	}
 
 	connect(ui->combo_video_codec, &QComboBox::currentIndexChanged, this, [this](int index)
 	{
-		const QVariant var = ui->combo_video_codec->itemData(index);
-		if (var.canConvert<int>())
+		const QVariant codec_id = ui->combo_video_codec->itemData(index);
+		const QVariant codec_name = ui->combo_video_codec->itemData(index, codec_name_role);
+		if (codec_id.canConvert<int>() && codec_name.canConvert<QString>())
 		{
-			const int codec_id = var.toInt();
-			g_cfg_recording.video.video_codec.set(codec_id);
+			g_cfg_recording.video.codec_name.set(codec_name.toString().toStdString());
+			g_cfg_recording.video.codec_id.set(codec_id.toInt());
 			update_preset();
 		}
 	});
 
 	connect(ui->combo_audio_codec, &QComboBox::currentIndexChanged, this, [this](int index)
 	{
-		const QVariant var = ui->combo_audio_codec->itemData(index);
-		if (var.canConvert<int>())
+		const QVariant codec_id = ui->combo_audio_codec->itemData(index);
+		const QVariant codec_name = ui->combo_audio_codec->itemData(index, codec_name_role);
+		if (codec_id.canConvert<int>() && codec_name.canConvert<QString>())
 		{
-			const int codec_id = var.toInt();
-			g_cfg_recording.audio.audio_codec.set(codec_id);
+			g_cfg_recording.audio.codec_name.set(codec_name.toString().toStdString());
+			g_cfg_recording.audio.codec_id.set(codec_id.toInt());
 			update_preset();
 		}
 	});
@@ -279,8 +287,25 @@ void recording_settings_dialog::update_ui()
 
 	ui->combo_resolution->setCurrentIndex(ui->combo_resolution->findData(QVariant::fromValue(QPair<int, int>(g_cfg_recording.video.width.get(), g_cfg_recording.video.height.get()))));
 	ui->combo_framerate->setCurrentIndex(ui->combo_framerate->findData(static_cast<int>(g_cfg_recording.video.framerate.get())));
-	ui->combo_video_codec->setCurrentIndex(ui->combo_video_codec->findData(static_cast<int>(g_cfg_recording.video.video_codec.get())));
-	ui->combo_audio_codec->setCurrentIndex(ui->combo_audio_codec->findData(static_cast<int>(g_cfg_recording.audio.audio_codec.get())));
+
+	if (const int index = ui->combo_video_codec->findData(QString::fromStdString(g_cfg_recording.video.codec_name.get()), codec_name_role); index >= 0)
+	{
+		ui->combo_video_codec->setCurrentIndex(index);
+	}
+	else
+	{
+		ui->combo_video_codec->setCurrentIndex(ui->combo_video_codec->findData(static_cast<int>(g_cfg_recording.video.codec_id.get())));
+	}
+
+	if (const int index = ui->combo_audio_codec->findData(QString::fromStdString(g_cfg_recording.audio.codec_name.get()), codec_name_role); index >= 0)
+	{
+		ui->combo_audio_codec->setCurrentIndex(index);
+	}
+	else
+	{
+		ui->combo_audio_codec->setCurrentIndex(ui->combo_audio_codec->findData(static_cast<int>(g_cfg_recording.audio.codec_id.get())));
+	}
+
 	ui->spinbox_video_bitrate->setValue(g_cfg_recording.video.video_bps);
 	ui->spinbox_audio_bitrate->setValue(g_cfg_recording.audio.audio_bps);
 	ui->spinbox_gop_size->setValue(g_cfg_recording.video.gop_size);
@@ -295,8 +320,14 @@ void recording_settings_dialog::update_ui()
 	ui->spinbox_gop_size->blockSignals(false);
 	ui->spinbox_max_b_frames->blockSignals(false);
 
-	const auto get_codec_name = [](const std::vector<const AVCodec*>& codecs, u32 id)
+	const auto get_codec_name = [](const std::vector<const AVCodec*>& codecs, u32 id, const std::string& codec_name)
 	{
+		if (const AVCodec* codec = avcodec_find_encoder_by_name(codec_name.c_str()))
+		{
+			const std::string name = codec->long_name ? codec->long_name : avcodec_get_name(codec->id);
+			return name;
+		}
+
 		for (const AVCodec* codec : codecs)
 		{
 			if (codec && codec->id == static_cast<AVCodecID>(id))
@@ -323,9 +354,9 @@ void recording_settings_dialog::update_ui()
 		fmt::format("%d x %d\n%d fps\n%s\n%d\n%s\n%d\n%d\n%d",
 			g_cfg_recording.video.width.get(), g_cfg_recording.video.height.get(),
 			g_cfg_recording.video.framerate.get(),
-			get_codec_name(m_video_codecs, g_cfg_recording.video.video_codec.get()),
+			get_codec_name(m_video_codecs, g_cfg_recording.video.codec_id.get(), g_cfg_recording.video.codec_name.get()),
 			g_cfg_recording.video.video_bps.get(),
-			get_codec_name(m_audio_codecs, g_cfg_recording.audio.audio_codec.get()),
+			get_codec_name(m_audio_codecs, g_cfg_recording.audio.codec_id.get(), g_cfg_recording.audio.codec_name.get()),
 			g_cfg_recording.audio.audio_bps.get(),
 			g_cfg_recording.video.gop_size.get(),
 			g_cfg_recording.video.max_b_frames.get()
@@ -340,10 +371,12 @@ void recording_settings_dialog::select_preset(quality_preset preset, cfg_recordi
 		return;
 	}
 
-	cfg.audio.audio_codec.set(static_cast<u32>(AVCodecID::AV_CODEC_ID_AAC));
+	cfg.audio.codec_name.set("");
+	cfg.audio.codec_id.set(static_cast<u32>(AVCodecID::AV_CODEC_ID_AAC));
 	cfg.audio.audio_bps.set(192'000); // 192 kbps
 
-	cfg.video.video_codec.set(static_cast<u32>(AVCodecID::AV_CODEC_ID_MPEG4));
+	cfg.video.codec_name.set("");
+	cfg.video.codec_id.set(static_cast<u32>(AVCodecID::AV_CODEC_ID_MPEG4));
 	cfg.video.pixel_format.set(static_cast<u32>(::AV_PIX_FMT_YUV420P));
 
 	switch (preset)
@@ -437,11 +470,13 @@ recording_settings_dialog::quality_preset recording_settings_dialog::current_pre
 			g_cfg_recording.video.width.get() == cfg.video.width.get() &&
 			g_cfg_recording.video.height.get() == cfg.video.height.get() &&
 			g_cfg_recording.video.pixel_format.get() == cfg.video.pixel_format.get() &&
-			g_cfg_recording.video.video_codec.get() == cfg.video.video_codec.get() &&
+			g_cfg_recording.video.codec_name.get() == cfg.video.codec_name.get() &&
+			g_cfg_recording.video.codec_id.get() == cfg.video.codec_id.get() &&
 			g_cfg_recording.video.video_bps.get() == cfg.video.video_bps.get() &&
 			g_cfg_recording.video.max_b_frames.get() == cfg.video.max_b_frames.get() &&
 			g_cfg_recording.video.gop_size.get() == cfg.video.gop_size.get() &&
-			g_cfg_recording.audio.audio_codec.get() == cfg.audio.audio_codec.get() &&
+			g_cfg_recording.audio.codec_name.get() == cfg.audio.codec_name.get() &&
+			g_cfg_recording.audio.codec_id.get() == cfg.audio.codec_id.get() &&
 			g_cfg_recording.audio.audio_bps.get() == cfg.audio.audio_bps.get())
 		{
 			return preset;
