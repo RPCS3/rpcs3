@@ -213,6 +213,8 @@ error_code sys_memory_allocate(cpu_thread& cpu, u64 size, u64 flags, vm::ptr<u32
 		{
 			sys_memory.notice("sys_memory_allocate(): Allocated 0x%x address (size=0x%x)", addr, size);
 
+			ensure(!lv2_process::get_typemap()->get<sys_memory_address_table>().addrs[addr >> 16].exchange(&dct));
+
 			vm::lock_sudo(addr, static_cast<u32>(size));
 			cpu.check_state();
 			*alloc_addr = addr;
@@ -283,6 +285,8 @@ error_code sys_memory_allocate_from_container(cpu_thread& cpu, u64 size, u32 cid
 		{
 			sys_memory.notice("sys_memory_allocate_from_container(): Allocated 0x%x address (size=0x%x)", addr, size);
 
+			ensure(!lv2_process::get_typemap()->get<sys_memory_address_table>().addrs[addr >> 16].exchange(ct.ptr.get()));
+
 			vm::lock_sudo(addr, static_cast<u32>(size));
 			cpu.check_state();
 			*alloc_addr = addr;
@@ -303,7 +307,7 @@ error_code sys_memory_free(cpu_thread& cpu, u32 addr)
 
 	sys_memory.warning("sys_memory_free(addr=0x%x)", addr);
 
-	const auto ct = addr % 0x10000 ? nullptr : g_fxo->get<sys_memory_address_table>().addrs[addr >> 16].exchange(nullptr);
+	const auto ct = addr % 0x10000 ? nullptr : lv2_process::get_typemap()->get<sys_memory_address_table>().addrs[addr >> 16].exchange(nullptr);
 
 	if (!ct)
 	{

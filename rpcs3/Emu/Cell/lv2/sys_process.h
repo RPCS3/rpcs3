@@ -7,6 +7,8 @@
 
 #include "sys_sync.h"
 
+#include "util/fixed_typemap.hpp"
+
 // Process Local Object Type
 enum : u32
 {
@@ -126,6 +128,9 @@ struct lv2_process : public ppu_module<lv2_obj>
 	// RSX proces-local information
 	std::shared_ptr<lv2_rsx_process_info> rsx_info;
 
+	// Preallocate 1 MiB
+	std::unique_ptr<stx::manual_typemap<lv2_process, 0x2'00000, 128>> local_typemap;
+
 	bool has_root_perm() const;
 	static bool has_process_root_perm();
 	bool has_debug_perm() const;
@@ -154,6 +159,7 @@ struct lv2_process : public ppu_module<lv2_obj>
 	};
 
 	static shared_ptr<lv2_memory_container> get_default_memory_container();
+	static stx::manual_typemap<lv2_process, 0x2'00000, 128>* get_typemap(u32 proc_id = umax);
 };
 
 class ppu_thread;

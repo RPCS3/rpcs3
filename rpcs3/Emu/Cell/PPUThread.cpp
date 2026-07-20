@@ -2864,7 +2864,7 @@ bool ppu_thread::savable() const
 		return false;
 	}
 
-	if (cia == g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(vdecEntry)))
+	if (cia == idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->func_manager->func_addr(FIND_FUNC(vdecEntry)))
 	{
 		// Do not attempt to save the state of HLE VDEC threads
 		return false;
@@ -3239,7 +3239,7 @@ void ppu_thread::fast_call(u32 addr, u64 rtoc, bool is_thread_entry)
 	interrupt_thread_executing = true;
 	cia = addr;
 	gpr[2] = rtoc;
-	lr = g_fxo->get<ppu_function_manager>().func_addr(1, true); // HLE stop address
+	lr = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->func_manager->func_addr(1, true); // HLE stop address
 	current_function = nullptr;
 
 	if (std::exchange(loaded_from_savestate, false))
@@ -3266,7 +3266,7 @@ void ppu_thread::fast_call(u32 addr, u64 rtoc, bool is_thread_entry)
 
 		const auto cia = _this->cia;
 
-		if (_this->current_function && g_fxo->get<ppu_function_manager>().is_func(cia))
+		if (_this->current_function && idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->func_manager->is_func(cia))
 		{
 			return fmt::format("PPU[0x%x] Thread (%s) [HLE:0x%08x, LR:0x%08x]", _this->id, *name_cache.get(), cia, _this->lr);
 		}
@@ -3294,7 +3294,7 @@ void ppu_thread::fast_call(u32 addr, u64 rtoc, bool is_thread_entry)
 			gpr[2] = old_rtoc;
 			lr = old_lr;
 		}
-		else if (state & cpu_flag::ret && cia == g_fxo->get<ppu_function_manager>().func_addr(1, true) + 4 && is_thread_entry)
+		else if (state & cpu_flag::ret && cia == idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->func_manager->func_addr(1, true) + 4 && is_thread_entry)
 		{
 			std::string ret;
 			dump_all(ret);

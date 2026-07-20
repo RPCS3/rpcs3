@@ -45,6 +45,7 @@ lv2_process::lv2_process(shared_ptr<lv2_memory_container> pp_memory) noexcept
 
 	func_manager = std::make_shared<ppu_function_manager>();
 	rsx_info = std::make_shared<lv2_rsx_process_info>();
+	local_typemap = std::make_unique<std::remove_cvref_t<decltype(*local_typemap)>>();
 }
 
 lv2_process::lv2_process(utils::serial& ar) noexcept
@@ -90,6 +91,9 @@ lv2_process::lv2_process(utils::serial& ar) noexcept
 
 	rsx_info = std::make_shared<lv2_rsx_process_info>();
 	ar(rsx_info->device_addr, rsx_info->local_mem_size);
+
+	local_typemap = std::make_unique<std::remove_cvref_t<decltype(*local_typemap)>>();
+	local_typemap->init(true, std::addressof(ar));
 }
 
 void lv2_process::save(utils::serial& ar) noexcept
@@ -120,6 +124,8 @@ void lv2_process::save(utils::serial& ar) noexcept
 
 	ar(func_manager->save_addr());
 	ar(rsx_info->device_addr, rsx_info->local_mem_size);
+
+	local_typemap->save(ar);
 }
 
 namespace vm
@@ -128,6 +134,11 @@ namespace vm
 	{
 		return idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->memory_4GB_model;
 	}
+}
+
+stx::manual_typemap<lv2_process, 0x2'00000, 128>* lv2_process::get_typemap(u32 proc_id)
+{
+	return ensure(idm::get_unlocked<lv2_obj, lv2_process>(proc_id == umax ? id_manager::g_process : proc_id))->local_typemap.get();
 }
 
 extern shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2_memory_container> mem_ct, bool virtual_load, const std::vector<std::string>& argv0, const std::vector<std::string>& envp0, const std::vector<u8>& data0, utils::serial* ar = nullptr);
