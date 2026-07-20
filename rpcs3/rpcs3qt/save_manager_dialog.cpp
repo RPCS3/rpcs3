@@ -596,7 +596,7 @@ void save_manager_dialog::OnEntriesRemove()
 		return;
 	}
 
-	if (QMessageBox::question(this, tr("Delete Confirmation"), tr("Are you sure you want to delete these %n items?", "", rows.size()), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
+	if (QMessageBox::question(this, tr("Delete Confirmation"), tr("Are you sure you want to delete these %n items?", "", static_cast<int>(rows.size())), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
 	{
 		// Sort descending so removeRow() doesn't shift remaining indices.
 		std::sort(rows.begin(), rows.end(), std::greater<int>());

@@ -1069,7 +1069,7 @@ static const bool s_tsc_freq_evaluated = []() -> bool
 			{
 				// Sleep between first and last sample
 #ifdef _WIN32
-				Sleep(sleep_time_ms);
+				Sleep(static_cast<DWORD>(sleep_time_ms));
 #else
 				usleep(sleep_time_ms * 1000);
 #endif
