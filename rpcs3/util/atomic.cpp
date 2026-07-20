@@ -55,6 +55,10 @@ static bool has_waitv()
 #include <pthread.h>
 #endif
 
+#if defined(__DragonFly__) || defined(__FreeBSD__) || defined(__OpenBSD__)
+#include <pthread_np.h>
+#endif
+
 #include "asm.hpp"
 #include "endian.hpp"
 #include "tsc.hpp"
