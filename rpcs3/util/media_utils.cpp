@@ -93,6 +93,13 @@ namespace utils
 			media_log.notice("av_log: %s", msg);
 	};
 
+	template <typename T>
+	T media_info::get_metadata([[maybe_unused]] const std::string& key, const T& def) const
+	{
+		static_assert("unimplemented");
+		return def;
+	}
+
 	template <>
 	std::string media_info::get_metadata(const std::string& key, const std::string& def) const
 	{
