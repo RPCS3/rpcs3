@@ -210,7 +210,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	function_info* m_finfo = nullptr;
 
 	// Reduced Loop Pattern information (if available)
-	reduced_loop_t* m_reduced_loop_info = nullptr;
+	std::shared_ptr<reduced_loop_t> m_reduced_loop_info;
 
 	// All blocks in the current function chunk
 	std::unordered_map<u32, block_info, value_hash<u32, 2>> m_blocks;
@@ -2689,7 +2689,7 @@ public:
 				}
 
 				const bool is_reduced_loop = m_inst_attrs[(baddr - start) / 4] == inst_attr::reduced_loop;
-				m_reduced_loop_info = is_reduced_loop ? std::static_pointer_cast<reduced_loop_t>(ensure(m_patterns.at(baddr - start).info_ptr)).get() : nullptr;
+				m_reduced_loop_info = is_reduced_loop ? std::static_pointer_cast<reduced_loop_t>(ensure(m_patterns.at(baddr - start).info_ptr)) : nullptr;
 
 				BasicBlock* block_optimization_phi_parent =  nullptr;
 				const auto block_optimization_inner = is_reduced_loop ? BasicBlock::Create(m_context, fmt::format("b-loop-it-0x%x", m_pos), m_function) : nullptr;
@@ -2980,6 +2980,11 @@ public:
 							// Amend condition
 							condition = m_ir->CreateAnd(cond_verify, condition);
 						}
+					}
+					else
+					{
+						// Check spu_thread::state
+						condition = m_ir->CreateAnd(m_ir->CreateICmpEQ(spu_context_attr(m_ir->CreateLoad(get_type<u32>(), spu_ptr(&spu_thread::state), true)), m_ir->getInt32(0)), condition);
 					}
 
 					m_ir->CreateCondBr(condition, optimization_block, block_optimization_next);
@@ -7767,74 +7772,53 @@ public:
 		else
 			set_vr(op.rt, -(a * b + c));
 	}
-
-	bool is_input_positive(value_t<f32[4]> a)
-	{
-		if (auto [ok, v0, v1] = match_expr(a, match<f32[4]>() * match<f32[4]>()); ok && v0.eq(v1))
-		{
-			return true;
-		}
-
-		return false;
-	}
+	
+	static constexpr auto spu_zero_fp_classes = llvm::FPClassTest::fcSubnormal | llvm::FPClassTest::fcZero;
 
 	// clamping helpers
-	value_t<f32[4]> clamp_positive_smax(value_t<f32[4]> v)
+	value_t<f32[4]> clamp_positive_smax(value_t<f32[4]> v, std::optional<llvm::KnownFPClass> known_opt = std::nullopt)
 	{
-		return eval(bitcast<f32[4]>(min(bitcast<s32[4]>(v),splat<s32[4]>(0x7f7fffff))));
+		constexpr auto overflow_classes = llvm::FPClassTest::fcNan | llvm::FPClassTest::fcPosInf;
+		const auto known = known_opt.value_or(get_known_fp_class<3>(v, overflow_classes));
+		
+		if (known.isKnownNever(overflow_classes))
+			return v;
+
+		return eval(bitcast<f32[4]>(min(bitcast<s32[4]>(v), splat<s32[4]>(0x7f7fffff))));
 	}
 
-	value_t<f32[4]> clamp_negative_smax(value_t<f32[4]> v)
+	value_t<f32[4]> clamp_negative_smax(value_t<f32[4]> v, std::optional<llvm::KnownFPClass> known_opt = std::nullopt)
 	{
-		if (is_input_positive(v))
-		{
-			return v;
-		}
+		constexpr auto overflow_classes = llvm::FPClassTest::fcNan | llvm::FPClassTest::fcNegInf;
+		const auto known = known_opt.value_or(get_known_fp_class<3>(v, overflow_classes));
 
-		return eval(bitcast<f32[4]>(min(bitcast<u32[4]>(v),splat<u32[4]>(0xff7fffff))));
+		if (known.isKnownNever(overflow_classes))
+			return v;
+
+		return eval(bitcast<f32[4]>(min(bitcast<u32[4]>(v), splat<u32[4]>(0xff7fffff))));
 	}
 
-	value_t<f32[4]> clamp_smax(value_t<f32[4]> v, u32 gpr = s_reg_max)
+	value_t<f32[4]> clamp_smax(value_t<f32[4]> v, std::optional<llvm::KnownFPClass> known_opt = std::nullopt)
 	{
-		if (m_reduced_loop_info && gpr < s_reg_max && m_reduced_loop_info->is_gpr_not_NaN_hint(gpr))
+		const auto known = known_opt.value_or(get_known_fp_class<3>(v, llvm::FPClassTest::fcNan | llvm::FPClassTest::fcInf));
+
+		// Avoid pessimation when full clamping isn't needed
+		if (m_use_avx512 && !(known.isKnownNeverNaN() && (known.isKnownNeverPosInfinity() || known.isKnownNeverNegInfinity())))
 		{
-			return v;
-		}
-
-		if (m_use_avx512)
-		{
-			if (is_input_positive(v))
-			{
-				return eval(clamp_positive_smax(v));
-			}
-
-			if (auto [ok, data] = get_const_vector(v.value, m_pos); ok)
-			{
-				// Avoid pessimation when input is constant
-				return eval(clamp_positive_smax(clamp_negative_smax(v)));
-			}
-
 			return eval(vrangeps(v, fsplat<f32[4]>(std::bit_cast<f32, u32>(0x7f7fffff)), 0x2, 0xff));
 		}
 
-		return eval(clamp_positive_smax(clamp_negative_smax(v)));
+		return eval(clamp_positive_smax(clamp_negative_smax(v, known), known));
 	}
 
-	// Checks for postive and negative zero, or Denormal (treated as zero)
-	// If sign is +-1 check equality againts all sign bits
-	bool is_spu_float_zero(v128 a, int sign = 0)
+	value_t<f32[4]> clamp_smax(value_t<f32[4]> v, u32 gpr)
 	{
-		for (u32 i = 0; i < 4; i++)
+		if (gpr < s_reg_max && m_reduced_loop_info && m_reduced_loop_info->is_gpr_not_NaN_hint(gpr))
 		{
-			const u32 exponent = a._u32[i] & 0x7f800000u;
-
-			if (exponent || (sign && (sign >= 0) != (a._s32[i] >= 0)))
-			{
-				// Normalized number
-				return false;
-			}
+			return v;
 		}
-		return true;
+
+		return clamp_smax(v);
 	}
 
 	template <typename T>
@@ -8141,8 +8125,12 @@ public:
 		{
 			const auto a = value<f32[4]>(ci->getOperand(0));
 			const auto b = value<f32[4]>(ci->getOperand(1));
-			const bool a_notnan = llvm::cast<llvm::ConstantInt>(ci->getOperand(2))->getZExtValue() != 0;
-			const bool b_notnan = llvm::cast<llvm::ConstantInt>(ci->getOperand(3))->getZExtValue() != 0;
+
+			const auto a_known = get_known_fp_class<2>(a, llvm::FPClassTest::fcNan);
+			const auto b_known = get_known_fp_class<2>(b, llvm::FPClassTest::fcNan);
+
+			const bool a_notnan = a_known.isKnownNeverNaN() || llvm::cast<llvm::ConstantInt>(ci->getOperand(2))->getZExtValue() != 0;
+			const bool b_notnan = b_known.isKnownNeverNaN() || llvm::cast<llvm::ConstantInt>(ci->getOperand(3))->getZExtValue() != 0;
 
 			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
 			{
@@ -8300,44 +8288,19 @@ public:
 			const auto a = value<f32[4]>(ci->getOperand(0));
 			const auto b = value<f32[4]>(ci->getOperand(1));
 
-			const value_t<f32[4]> ab[2]{a, b};
+			constexpr auto interested_classes = llvm::FPClassTest::fcNan | spu_zero_fp_classes;
+			const auto a_known = get_known_fp_class<2>(a, interested_classes);
+			const auto b_known = get_known_fp_class<2>(b, interested_classes);
 
-			bit_set<2> safe_float_compare(0);
-			bit_set<2> safe_int_compare(0);
+			const bool safe_float_compare = a_known.isKnownNeverNaN() && b_known.isKnownNeverNaN();
+			const bool safe_int_compare = a_known.isKnownNever(spu_zero_fp_classes) && b_known.isKnownNever(spu_zero_fp_classes);
 
-			for (u32 i = 0; i < 2; i++)
-			{
-				if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, __LINE__ + i); ok)
-				{
-					safe_float_compare.set_unsafe(i);
-					safe_int_compare.set_unsafe(i);
-
-					for (u32 j = 0; j < 4; j++)
-					{
-						const u32 value = data._u32[j];
-						const u8 exponent = static_cast<u8>(value >> 23);
-
-						// unsafe if nan
-						if (exponent == 255)
-						{
-							safe_float_compare.reset_unsafe(i);
-						}
-
-						// unsafe if denormal or 0
-						if (!exponent)
-						{
-							safe_int_compare.reset_unsafe(i);
-						}
-					}
-				}
-			}
-
-			if (safe_float_compare.any())
+			if (safe_float_compare)
 			{
 				return eval(sext<s32[4]>(fcmp_ord(a == b)));
 			}
 
-			if (safe_int_compare.any())
+			if (safe_int_compare)
 			{
 				return eval(sext<s32[4]>(bitcast<s32[4]>(a) == bitcast<s32[4]>(b)));
 			}
@@ -8374,47 +8337,22 @@ public:
 			const auto a = value<f32[4]>(ci->getOperand(0));
 			const auto b = value<f32[4]>(ci->getOperand(1));
 
-			const value_t<f32[4]> ab[2]{a, b};
+			constexpr auto interested_classes = llvm::FPClassTest::fcNan | spu_zero_fp_classes;
+			const auto a_known = get_known_fp_class<2>(a, interested_classes);
+			const auto b_known = get_known_fp_class<2>(b, interested_classes);
 
-			bit_set<2> safe_float_compare(0);
-			bit_set<2> safe_int_compare(0);
-
-			for (u32 i = 0; i < 2; i++)
-			{
-				if (auto [ok, data] = get_const_vector(ab[i].value, m_pos, __LINE__ + i); ok)
-				{
-					safe_float_compare.set_unsafe(i);
-					safe_int_compare.set_unsafe(i);
-
-					for (u32 j = 0; j < 4; j++)
-					{
-						const u32 value = data._u32[j];
-						const u8 exponent = static_cast<u8>(value >> 23);
-
-						// unsafe if nan
-						if (exponent == 255)
-						{
-							safe_float_compare.reset_unsafe(i);
-						}
-
-						// unsafe if denormal or 0
-						if (!exponent)
-						{
-							safe_int_compare.reset_unsafe(i);
-						}
-					}
-				}
-			}
+			const bool safe_float_compare = a_known.isKnownNeverNaN() && b_known.isKnownNeverNaN();
+			const bool safe_int_compare = a_known.isKnownNever(spu_zero_fp_classes) && b_known.isKnownNever(spu_zero_fp_classes);
 
 			const auto fa = eval(fabs(a));
 			const auto fb = eval(fabs(b));
 
-			if (safe_float_compare.any())
+			if (safe_float_compare)
 			{
 				return eval(sext<s32[4]>(fcmp_ord(fa == fb)));
 			}
 
-			if (safe_int_compare.any())
+			if (safe_int_compare)
 			{
 				return eval(sext<s32[4]>(bitcast<s32[4]>(fa) == bitcast<s32[4]>(fb)));
 			}
@@ -8434,36 +8372,24 @@ public:
 
 	value_t<f32[4]> fma32x4(value_t<f32[4]> a, value_t<f32[4]> b, value_t<f32[4]> c)
 	{
+		const auto a_known = get_known_fp_class<2>(a, spu_zero_fp_classes);
+		const auto b_known = get_known_fp_class<2>(b, spu_zero_fp_classes);
+
+		return fma32x4(a, b, c, a_known, b_known);
+	}
+
+	value_t<f32[4]> fma32x4(value_t<f32[4]> a, value_t<f32[4]> b, value_t<f32[4]> c, llvm::KnownFPClass a_known, llvm::KnownFPClass b_known)
+	{
+		const auto c_known = get_known_fp_class<2>(c, spu_zero_fp_classes);
+
 		// Optimization: Emit only a floating multiply if the addend is zero
 		// This is odd since SPU code could just use the FM instruction, but it seems common enough
-		if (auto [ok, data] = get_const_vector(c.value, m_pos); ok)
+		if (c_known.isKnownAlways(spu_zero_fp_classes))
 		{
-			if (is_spu_float_zero(data, 0))
-			{
-				return eval(a * b);
-			}
+			return eval(a * b);
 		}
 
-		if ([&]()
-		{
-			if (auto [ok, data] = get_const_vector(a.value, m_pos); ok)
-			{
-				if (is_spu_float_zero(data, 0))
-				{
-					return true;
-				}
-			}
-
-			if (auto [ok, data] = get_const_vector(b.value, m_pos); ok)
-			{
-				if (is_spu_float_zero(data, 0))
-				{
-					return true;
-				}
-			}
-
-			return false;
-		}())
+		if (a_known.isKnownAlways(spu_zero_fp_classes) || b_known.isKnownAlways(spu_zero_fp_classes))
 		{
 			// Just return the added value if either a or b are +-0
 			return c;
@@ -8504,7 +8430,15 @@ public:
 			const auto b = value<f32[4]>(ci->getOperand(1));
 			const auto c = value<f32[4]>(ci->getOperand(2));
 
-			return fma32x4(eval(-clamp_smax(a)), clamp_smax(b), c);
+			constexpr auto interested_classes = llvm::FPClassTest::fcNan | llvm::FPClassTest::fcInf | spu_zero_fp_classes;
+			auto a_known = get_known_fp_class<4>(a, interested_classes);
+			auto b_known = get_known_fp_class<4>(b, interested_classes);
+
+			const auto a_clamp = clamp_smax(a, a_known);
+			const auto b_clamp = clamp_smax(b, b_known);
+			
+			a_known.fneg();
+			return fma32x4(eval(-a_clamp), b_clamp, c, a_known, b_known);
 		});
 
 		set_vr(op.rt4, fnms(get_vr<f32[4]>(op.ra), get_vr<f32[4]>(op.rb), get_vr<f32[4]>(op.rc)));
@@ -8538,38 +8472,51 @@ public:
 			const auto a = value<f32[4]>(ci->getOperand(0));
 			const auto b = value<f32[4]>(ci->getOperand(1));
 			const auto c = value<f32[4]>(ci->getOperand(2));
-			const bool a_notnan = llvm::cast<llvm::ConstantInt>(ci->getOperand(3))->getZExtValue() != 0;
-			const bool b_notnan = llvm::cast<llvm::ConstantInt>(ci->getOperand(4))->getZExtValue() != 0;
-			
+
+			constexpr auto interested_classes = llvm::FPClassTest::fcNan | spu_zero_fp_classes;
+
+			// The "mask away with zero multiplier" case is already optimized for in fma32x4
+			const auto a_known = get_known_fp_class<2>(a, interested_classes);
+			const auto b_known = get_known_fp_class<2>(b, interested_classes);
+
+			const bool a_notnan = a_known.isKnownNeverNaN() || llvm::cast<llvm::ConstantInt>(ci->getOperand(3))->getZExtValue() != 0;
+			const bool b_notnan = b_known.isKnownNeverNaN() || llvm::cast<llvm::ConstantInt>(ci->getOperand(4))->getZExtValue() != 0;
+
 			if (g_cfg.core.spu_xfloat_accuracy == xfloat_accuracy::approximate)
 			{
 				if (a.value == b.value || (a_notnan && b_notnan))
 				{
-					return fma32x4(a, b, c);
+					return fma32x4(a, b, c, a_known, b_known);
 				}
 
 				if (a_notnan)
 				{
-					const auto ma = sext<s32[4]>(fcmp_uno(a != fsplat<f32[4]>(0.)));
-					const auto cb = bitcast<f32[4]>(bitcast<s32[4]>(b) & ma);
-					return fma32x4(a, eval(cb), c);
+					const auto normal_fma = fma32x4(a, b, c, a_known, b_known);
+					return eval(select(fcmp_uno(a != fsplat<f32[4]>(0.)), normal_fma, c));
 				}
 				else if (b_notnan)
 				{
-					const auto mb = sext<s32[4]>(fcmp_uno(b != fsplat<f32[4]>(0.)));
-					const auto ca = bitcast<f32[4]>(bitcast<s32[4]>(a) & mb);
-					return fma32x4(eval(ca), b, c);
+					const auto normal_fma = fma32x4(a, b, c, a_known, b_known);
+					return eval(select(fcmp_uno(b != fsplat<f32[4]>(0.)), normal_fma, c));
 				}
 
-				const auto ma = sext<s32[4]>(fcmp_uno(a != fsplat<f32[4]>(0.)));
-				const auto mb = sext<s32[4]>(fcmp_uno(b != fsplat<f32[4]>(0.)));
-				const auto ca = bitcast<f32[4]>(bitcast<s32[4]>(a) & mb);
-				const auto cb = bitcast<f32[4]>(bitcast<s32[4]>(b) & ma);
-				return fma32x4(eval(ca), eval(cb), c);
+				// Same number of operations well preventing a serial predicate chain pessimization
+				if (m_use_avx512)
+				{
+					// 0/denormals -> +0, else 1st operand
+					const auto ca = vfixupimmps(a, b, splat<u32[4]>(0x00000800u), 0, 0xff);
+					const auto cb = vfixupimmps(b, a, splat<u32[4]>(0x00000800u), 0, 0xff);
+					return fma32x4(ca, cb, c, a_known, b_known);
+				}
+
+				const auto normal_fma = fma32x4(a, b, c, a_known, b_known);
+				const auto a_cmp = fcmp_uno(a != fsplat<f32[4]>(0.));
+				const auto b_cmp = fcmp_uno(b != fsplat<f32[4]>(0.));
+				return eval(select(a_cmp & b_cmp, normal_fma, c));
 			}
 			else
 			{
-				return fma32x4(a, b, c);
+				return fma32x4(a, b, c, a_known, b_known);
 			}
 		});
 
@@ -8849,7 +8796,14 @@ public:
 				}
 #endif
 
-				return fma32x4(clamp_smax(a), clamp_smax(b), eval(-c));
+				constexpr auto interested_classes = llvm::FPClassTest::fcNan | llvm::FPClassTest::fcInf | spu_zero_fp_classes;
+				const auto a_known = get_known_fp_class<4>(a, interested_classes);
+				const auto b_known = get_known_fp_class<4>(b, interested_classes);
+
+				const auto a_clamp = clamp_smax(a, a_known);
+				const auto b_clamp = clamp_smax(b, b_known);
+
+				return fma32x4(a_clamp, b_clamp, eval(-c), a_known, b_known);
 			}
 			else
 			{
@@ -9276,6 +9230,11 @@ public:
 		return byteswap(data);
 	}
 
+	static constexpr u64 make_negative_LS_offset(u32 original)
+	{
+		return original | ~u64{SPU_LS_SIZE - 1};
+	}
+
 	void STQX(spu_opcode_t op)
 	{
 		const auto a = get_vr(op.ra);
@@ -9285,17 +9244,14 @@ public:
 		{
 			if (auto [ok, data] = get_const_vector(pair.first.value, m_pos); ok)
 			{
-				data._u32[3] %= SPU_LS_SIZE;
+				// "sign extend" offset addend
+				// Discourage the use of multiple addresses to refer to the same block of memory (due to memory mirrors use)
+				// Which may confuse LLVM's optimization
+				const u64 addend = (data._u32[3] >= SPU_LS_SIZE) ? make_negative_LS_offset(data._u32[3]) : data._u32[3];
 
 				if (const u32 remainder = data._u32[3] % 0x10; remainder == 0)
 				{
-					value_t<u64> addr = eval(splat<u64>(data._u32[3]) + zext<u64>(extract(pair.second, 3) & 0x3fff0));
-					make_store_ls(addr, get_vr<u8[16]>(op.rt));
-					return;
-				}
-				else
-				{
-					value_t<u64> addr = eval(splat<u64>(data._u32[3] - remainder) + zext<u64>((extract(pair.second, 3) + remainder) & 0x3fff0));
+					value_t<u64> addr = eval(splat<u64>(addend) + zext<u64>(extract(pair.second, 3) & 0x3fff0));
 					make_store_ls(addr, get_vr<u8[16]>(op.rt));
 					return;
 				}
@@ -9315,17 +9271,14 @@ public:
 		{
 			if (auto [ok, data] = get_const_vector(pair.first.value, m_pos); ok)
 			{
-				data._u32[3] %= SPU_LS_SIZE;
+				// "sign extend" offset addend
+				// Discourage the use of multiple addresses to refer to the same block of memory
+				// Which may confuse LLVM's optimization
+				const u64 addend = (data._u32[3] >= SPU_LS_SIZE) ? make_negative_LS_offset(data._u32[3]) : data._u32[3];
 
 				if (const u32 remainder = data._u32[3] % 0x10; remainder == 0)
 				{
-					value_t<u64> addr = eval(splat<u64>(data._u32[3]) + zext<u64>(extract(pair.second, 3) & 0x3fff0));
-					set_vr(op.rt, make_load_ls(addr));
-					return;
-				}
-				else
-				{
-					value_t<u64> addr = eval(splat<u64>(data._u32[3] - remainder) + zext<u64>((extract(pair.second, 3) + remainder) & 0x3fff0));
+					value_t<u64> addr = eval(splat<u64>(addend) + zext<u64>(extract(pair.second, 3) & 0x3fff0));
 					set_vr(op.rt, make_load_ls(addr));
 					return;
 				}
@@ -9384,20 +9337,24 @@ public:
 
 		const auto a = get_vr(op.ra);
 
-		if (auto [ok, x, y] = match_expr(a, match<u32[4]>() + match<u32[4]>()); ok)
+		if (auto [ok, x, y] = match_expr(a, match<u32[4]>() + match<u32[4]>()); ok && false)
 		{
-			if (auto [ok1, data] = get_const_vector(x.value, m_pos + 1); ok1 && data._u32[3] % 16 == 0)
+			for (auto pair : std::initializer_list<std::pair<llvm_match_t<u32[4]>, llvm_match_t<u32[4]>>>{{x, y}, {y, x}})
 			{
-				value_t<u64> addr = eval(zext<u64>(extract(y, 3) & 0x3fff0) + ((get_imm<u64>(op.si10) << 4) + splat<u64>(data._u32[3] & 0x3fff0)));
-				make_store_ls(addr, get_vr<u8[16]>(op.rt));
-				return;
-			}
+				if (auto [ok, data] = get_const_vector(pair.first.value, m_pos); ok)
+				{
+					// "sign extend" offset addend
+					// Discourage the use of multiple addresses to refer to the same block of memory
+					// Which may confuse LLVM's optimization
+					const u64 addend = (data._u32[3] >= SPU_LS_SIZE) ? make_negative_LS_offset(data._u32[3]) : data._u32[3];
 
-			if (auto [ok2, data] = get_const_vector(y.value, m_pos + 2); ok2 && data._u32[3] % 16 == 0)
-			{
-				value_t<u64> addr = eval(zext<u64>(extract(x, 3) & 0x3fff0) + ((get_imm<u64>(op.si10) << 4) + splat<u64>(data._u32[3] & 0x3fff0)));
-				make_store_ls(addr, get_vr<u8[16]>(op.rt));
-				return;
+					if (const u32 remainder = data._u32[3] % 0x10; remainder == 0)
+					{
+						value_t<u64> addr = eval(zext<u64>(extract(pair.second, 3) & 0x3fff0) + ((get_imm<u64>(op.si10) << 4) + splat<u64>(addend)));
+						make_store_ls(addr, get_vr<u8[16]>(op.rt));
+						return;
+					}
+				}
 			}
 		}
 
@@ -9409,20 +9366,22 @@ public:
 	{
 		const auto a = get_vr(op.ra);
 
-		if (auto [ok, x1, y1] = match_expr(a, match<u32[4]>() + match<u32[4]>()); ok)
+		if (auto [ok, x, y] = match_expr(a, match<u32[4]>() + match<u32[4]>()); ok)
 		{
-			if (auto [ok1, data] = get_const_vector(x1.value, m_pos + 1); ok1 && data._u32[3] % 16 == 0)
+			for (auto pair : std::initializer_list<std::pair<llvm_match_t<u32[4]>, llvm_match_t<u32[4]>>>{{x, y}, {y, x}})
 			{
-				value_t<u64> addr = eval(zext<u64>(extract(y1, 3) & 0x3fff0) + ((get_imm<u64>(op.si10) << 4) + splat<u64>(data._u32[3] & 0x3fff0)));
-				set_vr(op.rt, make_load_ls(addr));
-				return;
-			}
+				if (auto [ok, data] = get_const_vector(pair.first.value, m_pos); ok && false)
+				{
+					// "sign extend" offset addend
+					const u64 addend = (data._u32[3] >= SPU_LS_SIZE) ? data._u32[3] | ~u64{SPU_LS_SIZE - 1} : data._u32[3];
 
-			if (auto [ok2, data] = get_const_vector(y1.value, m_pos + 2); ok2 && data._u32[3] % 16 == 0)
-			{
-				value_t<u64> addr = eval(zext<u64>(extract(x1, 3) & 0x3fff0) + ((get_imm<u64>(op.si10) << 4) + splat<u64>(data._u32[3] & 0x3fff0)));
-				set_vr(op.rt, make_load_ls(addr));
-				return;
+					if (const u32 remainder = data._u32[3] % 0x10; remainder == 0)
+					{
+						value_t<u64> addr = eval(zext<u64>(extract(pair.second, 3) & 0x3fff0) + ((get_imm<u64>(op.si10) << 4) + splat<u64>(addend)));
+						set_vr(op.rt, make_load_ls(addr));
+						return;
+					}
+				}
 			}
 		}
 

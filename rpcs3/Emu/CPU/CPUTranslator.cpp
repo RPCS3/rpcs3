@@ -317,6 +317,9 @@ llvm::Value* cpu_translator::bitcast(llvm::Value* val, llvm::Type* type, std::so
 template <>
 std::pair<bool, v128> cpu_translator::get_const_vector<v128>(llvm::Value* c, u32 _pos, u32 _line)
 {
+	// Bitcasts do not matter
+	c = peek_through_bitcasts(c);
+
 	v128 result{};
 
 	if (!llvm::isa<llvm::Constant>(c))
@@ -610,4 +613,134 @@ void cpu_translator::erase_stores(llvm::ArrayRef<llvm::Value*> args)
 	}
 }
 
+llvm::KnownBits cpu_translator::get_known_bits_fallback(llvm::Value* value)
+{
+	// TODO: Improve it - add support for integer addition/subtraction and more stuff
+
+	const auto type = value->getType();
+
+	if (!type->isVectorTy())
+	{
+		if (llvm::isa<llvm::IntegerType>(type))
+		{
+			if (auto bin_inst = llvm::dyn_cast<llvm::BinaryOperator>(value))
+			{
+				llvm::Value* lhs = ensure(bin_inst->getOperand(0));
+				llvm::Value* rhs = ensure(bin_inst->getOperand(1));
+
+				llvm::ConstantInt* constant_value = llvm::dyn_cast<llvm::ConstantInt>(rhs) ? llvm::dyn_cast<llvm::ConstantInt>(rhs) : llvm::dyn_cast<llvm::ConstantInt>(lhs);
+
+				if (!constant_value)
+				{
+					return llvm::KnownBits(type->getScalarSizeInBits());
+				}
+
+				if (bin_inst->getOpcode() == llvm::Instruction::Or)
+				{
+					llvm::KnownBits ret(type->getScalarSizeInBits());
+					ret.One = constant_value->getValue();
+					return ret;
+				}
+
+				if (bin_inst->getOpcode() == llvm::Instruction::And)
+				{
+					llvm::KnownBits ret(type->getScalarSizeInBits());
+					ret.Zero = constant_value->getValue();
+					ret.Zero.flipAllBits();
+					return ret;
+				}
+
+				return llvm::KnownBits(type->getScalarSizeInBits());
+			}
+		}
+
+		fmt::throw_exception("Bad KnownBits type: i%ux", type->getScalarSizeInBits());
+	}
+
+	if (auto v = llvm::cast<llvm::FixedVectorType>(type); v->getScalarSizeInBits() * v->getNumElements() != 128)
+	{
+		// Unsupported
+		return llvm::KnownBits(type->getScalarSizeInBits());
+	}
+
+	const auto original_value = peek_through_bitcasts(value);
+
+	auto bin_inst = llvm::dyn_cast<llvm::BinaryOperator>(original_value);
+
+	if (!bin_inst)
+	{
+		return llvm::KnownBits(type->getScalarSizeInBits());
+	}
+
+	llvm::Value* lhs = ensure(bin_inst->getOperand(0));
+	llvm::Value* rhs = ensure(bin_inst->getOperand(1));
+
+	llvm::Value* constant_value = llvm::dyn_cast<llvm::ConstantDataVector>(rhs) ? llvm::dyn_cast<llvm::ConstantDataVector>(rhs) : llvm::dyn_cast<llvm::ConstantDataVector>(lhs);
+
+	if (!constant_value)
+	{
+		return llvm::KnownBits(value->getType()->getScalarSizeInBits());
+	}
+
+	const auto [ok, v128_const] = get_const_vector(constant_value, -1);
+
+	ensure(ok);
+
+	llvm::APInt all_lanes{};
+	llvm::APInt any_lanes{};
+
+	auto combine_bits = [&](const auto& array, u32 size)
+	{
+		auto all = +array[0];
+		auto any = +array[0];
+
+		for (u32 i = 1; i < size; i++)
+		{
+			all &= +array[i];
+			any |= +array[i];
+		}
+
+		return std::make_pair(all, any);
+	};
+
+	if (type->getScalarType()->isIntegerTy(8))
+	{
+		const auto [all, any] = combine_bits(v128_const._u8, 16);
+		all_lanes = llvm::APInt(8, all);
+		any_lanes = llvm::APInt(8, any);
+	}
+	else if (type->getScalarType()->isIntegerTy(16))
+	{
+		const auto [all, any] = combine_bits(v128_const._u16, 8);
+		all_lanes = llvm::APInt(16, all);
+		any_lanes = llvm::APInt(16, any);
+	}
+	else if (type->getScalarType()->isIntegerTy(32))
+	{
+		const auto [all, any] = combine_bits(v128_const._u32, 4);
+		all_lanes = llvm::APInt(32, all);
+		any_lanes = llvm::APInt(32, any);
+	}
+	else // if (type->getScalarType()->isIntegerTy(64))
+	{
+		return llvm::KnownBits(type->getScalarSizeInBits());
+	}
+
+	if (bin_inst->getOpcode() == llvm::Instruction::Or)
+	{
+		llvm::KnownBits ret(type->getScalarSizeInBits());
+		ret.One = all_lanes;
+		return ret;
+	}
+
+	if (bin_inst->getOpcode() == llvm::Instruction::And)
+	{
+		llvm::KnownBits ret(type->getScalarSizeInBits());
+		ret.Zero = any_lanes;
+		ret.Zero.flipAllBits();
+		return ret;
+	}
+
+	return llvm::KnownBits(type->getScalarSizeInBits());
+}
 #endif

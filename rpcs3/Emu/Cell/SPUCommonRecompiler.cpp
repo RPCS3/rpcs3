@@ -8827,6 +8827,11 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		{
 			stats.single++;
 
+			if (true)
+			{
+				continue;
+			}
+
 			add_pattern(inst_attr::reduced_loop, loop_pc - result.entry_point, 0, std::make_shared<reduced_loop_t>(pattern));
 
 			std::string regs = "{";
@@ -9987,6 +9992,11 @@ std::array<reg_state_t, s_reg_max>& block_reg_info::evaluate_start_state(const s
 
 void spu_recompiler_base::add_pattern(inst_attr attr, u32 start, u64 info, std::shared_ptr<void> info_ptr)
 {
+	if (m_inst_attrs[start / 4] != inst_attr::none)
+	{
+		fmt::throw_exception("SPU Pattern is occupied! (start=0x%x)", start);
+	}
+
 	m_patterns[start] = pattern_info{info, info_ptr};
 	m_inst_attrs[start / 4] = attr;
 }
