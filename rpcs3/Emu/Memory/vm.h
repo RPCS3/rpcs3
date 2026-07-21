@@ -47,6 +47,8 @@ namespace vm
 
 		// Dynamic size to ease on the compiler
 		std::add_pointer_t<memory_page> pages{};
+
+		void terminate();
 	};
 
 	struct ps3_physical_memory_entries

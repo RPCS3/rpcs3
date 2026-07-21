@@ -2474,9 +2474,14 @@ namespace vm
 
 		utils::memory_release(ptr->base_addr, pow32 * 2);
 		utils::memory_release(ptr->exec_addr, pow32 * 3);
-		utils::memory_release(ptr->hook_addr, pow32 * 8);
+		//utils::memory_release(ptr->hook_addr, pow32 * 8);
 		utils::memory_release(ptr->stat_addr, pow32);
 		utils::memory_release(ptr->pages, pow32 / 4096);
+	}
+
+	void ps3_virtual_memory_object::terminate()
+	{
+		deinitialize_ps3_mmemory_object(this);
 	}
 
 	void save(ps3_virtual_memory_object* obj, utils::serial& ar)

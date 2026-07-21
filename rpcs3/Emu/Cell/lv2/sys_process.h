@@ -100,6 +100,8 @@ class ppu_function_manager;
 struct lv2_memory_container;
 struct lv2_rsx_process_info;
 
+enum class thread_state : u32;
+
 struct lv2_process : public ppu_module<lv2_obj>
 {
 	static constexpr u32 id_base = 0x50000000;
@@ -115,12 +117,17 @@ struct lv2_process : public ppu_module<lv2_obj>
 	std::string ELF_file_path;
 	std::array<u8, 256> ELF_file_hash{};
 
+	atomic_t<bool> is_terminating = false;
+
 	// shared_ptr so it will be initialized externally (incomplete typename)
 	std::shared_ptr<vm::ps3_virtual_memory_object> memory_4GB_model;
 
 	// Parent memory container (default for sys_memory_allocate etc)
 	// Current process is oblivious to its ID
 	shared_ptr<lv2_memory_container> parent_memory_container;
+
+	// Mmemory to return when process is killed to the parent memory container
+	u32 used_mewmory = 0;
 
 	// HLE table manager
 	std::shared_ptr<ppu_function_manager> func_manager;
@@ -140,8 +147,10 @@ struct lv2_process : public ppu_module<lv2_obj>
 	lv2_process() noexcept;
 	lv2_process(shared_ptr<lv2_memory_container> pp_memory) noexcept;
 	lv2_process(utils::serial&) noexcept;
+	~lv2_process() noexcept;
 	void save(utils::serial&) noexcept;
-	
+	u64 ki11_self();
+	int operator=(thread_state s) noexcept;
 	static std::shared_ptr<void> acquire_globals(u32 proc_id);
 	static void release_globals();
 

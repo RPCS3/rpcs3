@@ -128,6 +128,104 @@ void lv2_process::save(utils::serial& ar) noexcept
 	local_typemap->save(ar);
 }
 
+u64 lv2_process::ki11_self()
+{
+	if (is_terminating.exchange(true))
+	{
+		return 0;
+	}
+
+	extern u64 get_system_time();
+
+	const u64 start_time = get_system_time();
+
+	std::map<u32, shared_ptr<cpu_thread>> terminate_threads;
+
+	while (true)
+	{
+		const u64 old_created = cpu_thread::g_threads_created;
+
+		idm::select<named_thread<ppu_thread>>([&](u32 id, named_thread<ppu_thread>&)
+		{
+			terminate_threads.emplace(id, ensure(idm::get_unlocked<named_thread<ppu_thread>>(id)));
+		});
+
+		idm::select<named_thread<spu_thread>>([&](u32 id, named_thread<spu_thread>&)
+		{
+			terminate_threads.emplace(id, ensure(idm::get_unlocked<named_thread<spu_thread>>(id)));
+		});
+
+		if (old_created != cpu_thread::g_threads_created)
+		{
+			continue;
+		}
+
+		for (auto& cpu : terminate_threads)
+		{
+			cpu.second->state += cpu_flag::req_exit;
+			cpu.second->notify();
+		}
+
+		if (old_created != cpu_thread::g_threads_created)
+		{
+			continue;
+		}
+
+		// Join threads
+		for (auto& cpu : terminate_threads)
+		{
+			if (cpu.second->try_get<ppu_thread>() && cpu.second.get() != cpu_thread::get_current())
+			{
+				static_cast<named_thread<ppu_thread>&>(*cpu.second).operator()();
+			}
+
+			if (cpu.second->try_get<spu_thread>())
+			{
+				static_cast<named_thread<spu_thread>&>(*cpu.second).operator()();
+			}
+		}
+
+		if (old_created != cpu_thread::g_threads_created)
+		{
+			continue;
+		}
+
+		break;
+	}
+
+	if (memory_4GB_model)
+	{
+		memory_4GB_model->terminate();
+		memory_4GB_model.reset();
+	}
+
+	if (parent_memory_container)
+	{
+		parent_memory_container->free(used_mewmory);
+	}
+
+	// Returns the time this process took
+	return get_system_time() - start_time;
+}
+
+lv2_process::~lv2_process() noexcept
+{
+	if (memory_4GB_model)
+	{
+		memory_4GB_model->terminate();
+	}
+}
+
+int lv2_process::operator=(thread_state s) noexcept
+{
+	if (s == thread_state::finished)
+	{
+		// TODO
+	}
+
+	return 0;
+}
+
 namespace vm
 {
 	std::shared_ptr<vm::ps3_virtual_memory_object> get_current_memory_object()
@@ -543,7 +641,18 @@ void _sys_process_exit(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3)
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_process.warning("_sys_process_exit(status=%d, arg2=0x%x, arg3=0x%x)", status, arg2, arg3);
+	if (id_manager::g_process != lv2_process::id_base)
+	{
+		sys_process.success("Sub-process 0x%x terminated!", id_manager::g_process);
+	}
+
+	sys_process.success("_sys_process_exit(status=%d, arg2=0x%x, arg3=0x%x)", status, arg2, arg3);
+
+	if (id_manager::g_process != lv2_process::id_base)
+	{
+		ensure(idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process))->ki11_self();
+		return;
+	}
 
 	Emu.CallFromMainThread([]()
 	{
