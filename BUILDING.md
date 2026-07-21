@@ -72,14 +72,7 @@ You can either use `update-alternatives` to setup `gcc-13`/`g++-13` as your defa
 
 ##### Vulkan SDK
 
-For Ubuntu systems, it is strongly recommended to use the PPA from [LunarG](https://packages.lunarg.com/) which will provide a compatible Vulkan SDK to compile RPCS3. If your Vulkan SDK is older, it can lead to compilation errors.
-```
-. /etc/os-release
-wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
-sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.3.268-$UBUNTU_CODENAME.list https://packages.lunarg.com/vulkan/1.3.268/lunarg-vulkan-1.3.268-$UBUNTU_CODENAME.list
-sudo apt update
-sudo apt install vulkan-sdk
-```
+For Ubuntu systems, it is strongly recommended to use the official [Linux Tarball Vulkan SDK](https://vulkan.lunarg.com/doc/view/1.4.341.0/linux/getting_started.html) which will provide a compatible Vulkan SDK to compile RPCS3. If your Vulkan SDK is older, it can lead to compilation errors.
 
 ##### CMake
 
