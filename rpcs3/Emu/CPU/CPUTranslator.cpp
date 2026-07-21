@@ -621,7 +621,7 @@ llvm::KnownBits cpu_translator::get_known_bits_fallback(llvm::Value* value)
 
 	if (!type->isVectorTy())
 	{
-		if (const auto it = llvm::dyn_cast<llvm::IntegerType>(type))
+		if (llvm::isa<llvm::IntegerType>(type))
 		{
 			if (auto bin_inst = llvm::dyn_cast<llvm::BinaryOperator>(value))
 			{
@@ -663,20 +663,7 @@ llvm::KnownBits cpu_translator::get_known_bits_fallback(llvm::Value* value)
 		return llvm::KnownBits(type->getScalarSizeInBits());
 	}
 
-	const auto cv = llvm::dyn_cast<llvm::ConstantDataVector>(value);
-
-	if (!cv)
-	{
-		if (llvm::isa<llvm::ConstantAggregateZero>(value))
-		{
-			llvm::KnownBits ret(type->getScalarSizeInBits());
-			ret.Zero.setAllBits();
-			return ret;
-		}
-	}
-
 	const auto original_value = peek_through_bitcasts(value);
-	const auto original_type = original_value->getType();
 
 	auto bin_inst = llvm::dyn_cast<llvm::BinaryOperator>(original_value);
 
@@ -699,31 +686,40 @@ llvm::KnownBits cpu_translator::get_known_bits_fallback(llvm::Value* value)
 
 	ensure(ok);
 
-	llvm::APInt dest{};
+	llvm::APInt all_lanes{};
+	llvm::APInt any_lanes{};
 
 	auto combine_bits = [&](const auto& array, u32 size)
 	{
-		auto first = +array[0];
+		auto all = +array[0];
+		auto any = +array[0];
 
-		for (u32 i = 0; i < size; i++)
+		for (u32 i = 1; i < size; i++)
 		{
-			first &= +array[i];
+			all &= +array[i];
+			any |= +array[i];
 		}
 
-		return first;
+		return std::make_pair(all, any);
 	};
 
 	if (type->getScalarType()->isIntegerTy(8))
 	{
-		dest = llvm::APInt(8, combine_bits(v128_const._u8, 16));
+		const auto [all, any] = combine_bits(v128_const._u8, 16);
+		all_lanes = llvm::APInt(8, all);
+		any_lanes = llvm::APInt(8, any);
 	}
 	else if (type->getScalarType()->isIntegerTy(16))
 	{
-		dest = llvm::APInt(16, combine_bits(v128_const._u16, 8));
+		const auto [all, any] = combine_bits(v128_const._u16, 8);
+		all_lanes = llvm::APInt(16, all);
+		any_lanes = llvm::APInt(16, any);
 	}
 	else if (type->getScalarType()->isIntegerTy(32))
 	{
-		dest = llvm::APInt(32, combine_bits(v128_const._u32, 4));
+		const auto [all, any] = combine_bits(v128_const._u32, 4);
+		all_lanes = llvm::APInt(32, all);
+		any_lanes = llvm::APInt(32, any);
 	}
 	else // if (type->getScalarType()->isIntegerTy(64))
 	{
@@ -733,14 +729,14 @@ llvm::KnownBits cpu_translator::get_known_bits_fallback(llvm::Value* value)
 	if (bin_inst->getOpcode() == llvm::Instruction::Or)
 	{
 		llvm::KnownBits ret(type->getScalarSizeInBits());
-		ret.One = dest;
+		ret.One = all_lanes;
 		return ret;
 	}
 
 	if (bin_inst->getOpcode() == llvm::Instruction::And)
 	{
 		llvm::KnownBits ret(type->getScalarSizeInBits());
-		ret.Zero = dest;
+		ret.Zero = any_lanes;
 		ret.Zero.flipAllBits();
 		return ret;
 	}
