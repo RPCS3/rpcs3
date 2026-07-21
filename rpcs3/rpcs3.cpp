@@ -70,9 +70,12 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/system_utils.hpp"
+#include "Emu/savestate_utils.hpp"
 #include "Emu/RSX/Overlays/overlay_message.h"
+
 #include <thread>
 #include <charconv>
+#include <regex>
 
 #include "util/sysinfo.hpp"
 
@@ -384,36 +387,37 @@ private:
 };
 
 // Arguments that force a headless application (need to be checked in create_application)
-constexpr auto arg_headless     = "headless";
-constexpr auto arg_decrypt      = "decrypt";
+constexpr auto arg_headless       = "headless";
+constexpr auto arg_decrypt        = "decrypt";
 
 // Arguments that can be used with a gui application
-constexpr auto arg_no_gui       = "no-gui";
-constexpr auto arg_fullscreen   = "fullscreen"; // only useful with no-gui
-constexpr auto arg_gs_screen    = "game-screen";
-constexpr auto arg_high_dpi     = "hidpi";
-constexpr auto arg_rounding     = "dpi-rounding";
-constexpr auto arg_styles       = "styles";
-constexpr auto arg_style        = "style";
-constexpr auto arg_stylesheet   = "stylesheet";
-constexpr auto arg_config       = "config";
-constexpr auto arg_input_config = "input-config"; // only useful with no-gui
-constexpr auto arg_q_debug      = "qDebug";
-constexpr auto arg_error        = "error";
-constexpr auto arg_updating     = "updating";
-constexpr auto arg_user_id      = "user-id";
-constexpr auto arg_installfw    = "installfw";
-constexpr auto arg_installpkg   = "installpkg";
-constexpr auto arg_savestate    = "savestate";
-constexpr auto arg_rsx_capture  = "rsx-capture";
-constexpr auto arg_timer        = "high-res-timer";
-constexpr auto arg_verbose_curl = "verbose-curl";
-constexpr auto arg_any_location = "allow-any-location";
-constexpr auto arg_codecs       = "codecs";
+constexpr auto arg_no_gui         = "no-gui";
+constexpr auto arg_fullscreen     = "fullscreen"; // only useful with no-gui
+constexpr auto arg_gs_screen      = "game-screen";
+constexpr auto arg_high_dpi       = "hidpi";
+constexpr auto arg_rounding       = "dpi-rounding";
+constexpr auto arg_styles         = "styles";
+constexpr auto arg_style          = "style";
+constexpr auto arg_stylesheet     = "stylesheet";
+constexpr auto arg_config         = "config";
+constexpr auto arg_input_config   = "input-config"; // only useful with no-gui
+constexpr auto arg_q_debug        = "qDebug";
+constexpr auto arg_error          = "error";
+constexpr auto arg_updating       = "updating";
+constexpr auto arg_user_id        = "user-id";
+constexpr auto arg_installfw      = "installfw";
+constexpr auto arg_installpkg     = "installpkg";
+constexpr auto arg_savestate      = "savestate";
+constexpr auto arg_last_savestate = "last-savestate";
+constexpr auto arg_rsx_capture    = "rsx-capture";
+constexpr auto arg_timer          = "high-res-timer";
+constexpr auto arg_verbose_curl   = "verbose-curl";
+constexpr auto arg_any_location   = "allow-any-location";
+constexpr auto arg_codecs         = "codecs";
 
 #ifdef _WIN32
-constexpr auto arg_stdout       = "stdout";
-constexpr auto arg_stderr       = "stderr";
+constexpr auto arg_stdout         = "stdout";
+constexpr auto arg_stderr         = "stderr";
 #endif
 
 constexpr auto arg_emulation_barrier = "";
@@ -839,6 +843,8 @@ int run_rpcs3(int argc, char** argv)
 	parser.addOption(user_id_option);
 	const QCommandLineOption savestate_option(arg_savestate, "Path for directly loading a savestate.", "path", "");
 	parser.addOption(savestate_option);
+	const QCommandLineOption last_savestate_option(arg_last_savestate, "Loading the last savestate of a game.", "path", "Title-ID or path");
+	parser.addOption(last_savestate_option);
 	const QCommandLineOption rsx_capture_option(arg_rsx_capture, "Path for directly loading an rsx capture.", "path", "");
 	parser.addOption(rsx_capture_option);
 	parser.addOption(QCommandLineOption(arg_q_debug, "Log qDebug to RPCS3.log."));
@@ -1196,14 +1202,26 @@ int run_rpcs3(int argc, char** argv)
 		}
 	}
 
-	if (parser.isSet(arg_savestate))
+	if (parser.isSet(arg_savestate) || parser.isSet(arg_last_savestate))
 	{
-		const std::string savestate_path = parser.value(savestate_option).toStdString();
-		sys_log.notice("Booting savestate from command line: %s", savestate_path);
+		std::string savestate_path;
 
-		if (!fs::is_file(savestate_path))
+		if (parser.isSet(arg_savestate))
 		{
-			report_fatal_error(fmt::format("No savestate file found: %s", savestate_path));
+			savestate_path = parser.value(savestate_option).toStdString();
+			sys_log.notice("Booting savestate from command line: path='%s'", savestate_path);
+		}
+		else
+		{
+			const std::string serial_or_path = parser.value(last_savestate_option).toStdString();
+			const bool is_serial = std::regex_match(serial_or_path, std::regex(R"(^[A-Z]{4}\d{5}$)"));
+			savestate_path = get_savestate_file(is_serial ? serial_or_path : "", is_serial ? "" : serial_or_path, 1);
+			sys_log.notice("Booting last savestate from command line: game='%s', path='%s'", serial_or_path, savestate_path);
+		}
+
+		if (!is_savestate_compatible(savestate_path))
+		{
+			report_fatal_error(fmt::format("No savestate file found or savestate not compatible: path='%s'", savestate_path));
 		}
 
 		Emu.CallFromMainThread([path = savestate_path]()
