@@ -317,6 +317,9 @@ llvm::Value* cpu_translator::bitcast(llvm::Value* val, llvm::Type* type, std::so
 template <>
 std::pair<bool, v128> cpu_translator::get_const_vector<v128>(llvm::Value* c, u32 _pos, u32 _line)
 {
+	// Bitcasts do not matter
+	c = peek_through_bitcasts(c);
+
 	v128 result{};
 
 	if (!llvm::isa<llvm::Constant>(c))
