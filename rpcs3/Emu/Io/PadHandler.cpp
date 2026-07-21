@@ -976,10 +976,11 @@ void PadDevice::reset_orientation()
 	// Initialize Fusion
 	ahrs = std::make_shared<FusionAhrs>();
 	FusionAhrsInitialise(ahrs.get());
-	ahrs->settings.convention = FusionConvention::FusionConventionEnu;
-	ahrs->settings.gain = 0.0f; // If gain is set, the algorithm tries to adjust the orientation over time.
-	FusionAhrsSetSettings(ahrs.get(), &ahrs->settings);
-	FusionAhrsRestart(ahrs.get());
+
+	FusionAhrsSettings settings = fusionAhrsDefaultSettings;
+	settings.convention = FusionConvention::FusionConventionEnu;
+	settings.gain = 0.0f; // If gain is set, the algorithm tries to adjust the orientation over time.
+	FusionAhrsSetSettings(ahrs.get(), &settings);
 }
 
 void PadDevice::update_orientation(ps_move_data& move_data)
@@ -996,7 +997,7 @@ void PadDevice::update_orientation(ps_move_data& move_data)
 
 	// The ps move handler's axis may differ from the Fusion axis, so we have to map them correctly.
 	// Don't ask how the axis work. It's basically been trial and error.
-	ensure(ahrs->settings.convention == FusionConvention::FusionConventionEnu); // East-North-Up
+	ensure(ahrs->convention == FusionConvention::FusionConventionEnu); // East-North-Up
 
 	const FusionVector accelerometer{
 		.axis {
