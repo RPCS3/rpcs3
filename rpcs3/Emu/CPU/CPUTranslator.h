@@ -4307,6 +4307,8 @@ template <typename T1, typename T2, typename T3>
 		return true;
 	}
 
+	llvm::KnownBits get_known_bits_fallback(llvm::Value* value);
+
 	template <typename T>
 	llvm::KnownBits get_known_bits(T a)
 	{
@@ -4314,7 +4316,7 @@ template <typename T1, typename T2, typename T3>
 
 		if (!is_known_bits_safe(value))
 		{
-			return llvm::KnownBits(value->getType()->getScalarSizeInBits());
+			return get_known_bits_fallback(value);
 		}
 
 		return llvm::computeKnownBits(value, m_module->getDataLayout());
