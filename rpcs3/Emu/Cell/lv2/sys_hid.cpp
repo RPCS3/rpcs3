@@ -7,17 +7,43 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/Modules/cellPad.h"
+#include "Input/pad_thread.h"
 
 #include "sys_process.h"
 
 LOG_CHANNEL(sys_hid);
 
-error_code sys_hid_manager_open(ppu_thread& ppu, u64 device_type, u64 port_no, vm::ptr<u32> handle)
+lv2_hidio_handle::lv2_hidio_handle(u32 port_no, u32 device_type) noexcept
+	: port_no(port_no)
+	, device_type(device_type)
+	, real_id(idm::last_id<lv2_hidio_handle>() % 256 + device_type * 256 + port_no * 256 * 256)
 {
-	sys_hid.todo("sys_hid_manager_open(device_type=0x%llx, port_no=0x%llx, handle=*0x%llx)", device_type, port_no, handle);
+}
 
-	//device type == 1 = pad, 2 = kb, 3 = mouse
-	if (device_type > 3)
+lv2_hidio_handle::lv2_hidio_handle(utils::serial& ar) noexcept
+	: port_no(ar.pop<u8>())
+	, device_type(ar.pop<u8>())
+	, real_id(idm::last_id<lv2_hidio_handle>() % 256 + device_type * 256 + port_no * 256 * 256)
+{
+}
+
+void lv2_hidio_handle::save(utils::serial& ar)
+{
+	ar(static_cast<u8>(port_no));
+	ar(static_cast<u8>(device_type));
+}
+
+error_code sys_hid_manager_open(ppu_thread& ppu, u8 device_type, u8 port_no, vm::ptr<u32> handle)
+{
+	sys_hid.success("sys_hid_manager_open(device_type=0x%llx, port_no=0x%llx, handle=*0x%llx)", device_type, port_no, handle);
+
+	// device type == 1 = pad, 2 = kb, 3 = mouse
+	if (device_type > 3 || !device_type)
+	{
+		return CELL_EINVAL;
+	}
+
+	if (port_no > 6)
 	{
 		return CELL_EINVAL;
 	}
@@ -27,15 +53,14 @@ error_code sys_hid_manager_open(ppu_thread& ppu, u64 device_type, u64 port_no, v
 		return CELL_EFAULT;
 	}
 
-	// 'handle' starts at 0x100 in realhw, and increments every time sys_hid_manager_open is called
-	// however, sometimes the handle is reused when opening sys_hid_manager again (even when the previous one hasn't been closed yet) - maybe when processes/threads get killed/finish they also release their handles?
-	static u32 ctr = 0x100;
-	*handle = ctr++;
+	// portno 16-23
+	// ID = 0..7
+	// device_type 8..15
 
-	if (device_type == 1)
+	if (!idm::make_ptr<lv2_hidio_handle>(port_no, device_type))
 	{
-		cellPadInit(ppu, 7);
-		cellPadSetPortSetting(::narrow<u32>(port_no) /* 0 */, CELL_PAD_SETTING_LDD | CELL_PAD_SETTING_PRESS_ON | CELL_PAD_SETTING_SENSOR_ON);
+		// No real error code it seems, just -1
+		return -1;
 	}
 
 	return CELL_OK;
@@ -45,6 +70,15 @@ error_code sys_hid_manager_ioctl(u32 hid_handle, u32 pkg_id, vm::ptr<void> buf, 
 {
 	sys_hid.todo("sys_hid_manager_ioctl(hid_handle=0x%x, pkg_id=0x%llx, buf=*0x%x, buf_size=0x%llx)", hid_handle, pkg_id, buf, buf_size);
 
+	const auto handle = idm::get_unlocked<lv2_hidio_handle>(hid_handle % 256);
+
+	if (!handle)
+	{
+		// Technically can also return ENOSYS if using ID fdrom another process (TODO)
+		return CELL_EINVAL;
+	}
+
+	
 	// From realhw syscall dump when vsh boots
 	// SC count | handle | pkg_id | *buf (in)                                                                 | *buf (out)                                                                | size -> ret
 	// ---------|--------|--------|---------------------------------------------------------------------------|---------------------------------------------------------------------------|------------
@@ -155,38 +189,73 @@ error_code sys_hid_manager_add_hot_key_observer(u32 event_queue, vm::ptr<u32> un
 	return CELL_OK;
 }
 
+extern void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data);
+
 error_code sys_hid_manager_read(u32 handle, u32 pkg_id, vm::ptr<void> buf, u64 buf_size)
 {
+	(pkg_id == 2 || pkg_id == 0x81 ? sys_hid.trace : sys_hid.todo)
+		("sys_hid_manager_read(handle=0x%x, pkg_id=0x%x, buf=*0x%x, buf_size=0x%llx)", handle, pkg_id, buf, buf_size);
+
+	const auto handle_ptr = idm::get_unlocked<lv2_hidio_handle>(handle % 256);
+
+	if (!handle_ptr)
+	{
+		// Technically can also return ENOSYS if using ID fdrom another process (TODO)
+		return CELL_EINVAL;
+	}
+
+	// TODO: Use IDM data or the handle bits to extract port_no??
+	// There is no error check for when it mismatches!
+	const u32 port_no = (handle >> 16) % 256;
+
 	if (!buf)
 	{
 		return CELL_EFAULT;
 	}
 
-	(pkg_id == 2 || pkg_id == 0x81 ? sys_hid.trace : sys_hid.todo)
-		("sys_hid_manager_read(handle=0x%x, pkg_id=0x%x, buf=*0x%x, buf_size=0x%llx)", handle, pkg_id, buf, buf_size);
+	std::lock_guard lock(pad::g_pad_mutex);
+
+	const auto handler = pad::get_pad_thread();
+	const auto& pads = handler->GetPads();
+
+	if (port_no <= pads.size())
+	{
+		// ???
+		sys_hid.error("Some error!");
+		return CELL_OK;
+	}
+
+	const auto& pad = pads[port_no];
+
+	if (!pad->is_connected())
+	{
+		// ???
+		sys_hid.error("Some error!");
+		return CELL_OK;
+	}
+
+	alignas(128) CellPadData tmpData{};
+	std::memset(&tmpData, 0, sizeof(tmpData));
 
 	if (pkg_id == 2)
 	{
 		// cellPadGetData
 		// it returns just button array from 'CellPadData'
 		//auto data = vm::static_ptr_cast<u16[64]>(buf);
-		// todo: use handle and dont call cellpad here
-		vm::var<CellPadData> tmpData;
-		if ((cellPadGetData(0, +tmpData) == CELL_OK) && tmpData->len > 0)
+		if ((pad_get_data(port_no, &tmpData, false), true) && tmpData.len > 0)
 		{
-			u64 cpySize = std::min(static_cast<u64>(tmpData->len) * sizeof(u16), buf_size * sizeof(u16));
-			memcpy(buf.get_ptr(), &tmpData->button, cpySize);
+			u64 cpySize = std::min(static_cast<u64>(tmpData.len) * sizeof(u16), buf_size * sizeof(u16));
+			memcpy(buf.get_ptr(), &tmpData.button, cpySize);
 			return not_an_error(cpySize);
 		}
 	}
 	else if (pkg_id == 0x81)
 	{
 		// cellPadGetDataExtra?
-		vm::var<CellPadData> tmpData;
-		if ((cellPadGetData(0, +tmpData) == CELL_OK) && tmpData->len > 0)
+		if ((pad_get_data(port_no, &tmpData, false), true) && tmpData.len > 0)
 		{
-			u64 cpySize = std::min(static_cast<u64>(tmpData->len) * sizeof(u16), buf_size * sizeof(u16));
-			memcpy(buf.get_ptr(), &tmpData->button, cpySize);
+			u64 cpySize = std::min(static_cast<u64>(tmpData.len) * sizeof(u16), buf_size * sizeof(u16));
+			memcpy(buf.get_ptr(), &tmpData.button, cpySize);
 			return not_an_error(cpySize / 2);
 		}
 	}

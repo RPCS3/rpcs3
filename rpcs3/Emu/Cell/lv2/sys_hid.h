@@ -32,9 +32,33 @@ struct sys_hid_manager_514_pkg_d
 	u8 unk2;
 };
 
+enum hid_device_type : u32
+{
+	pad_type = 1,
+	kb_tupe = 2,
+	mouse_type = 3,
+};
+
+struct lv2_hidio_handle
+{
+	static constexpr u32 id_base = 0;
+	static constexpr u32 id_step = 1;
+	static constexpr u32 id_count = 64;
+
+	SAVESTATE_INIT_POS(57);
+
+	const u32 port_no;
+	const u32 device_type;
+	const u32 real_id;
+
+	lv2_hidio_handle(u32 port_no, u32 device_type) noexcept;
+	lv2_hidio_handle(utils::serial& ar) noexcept;
+	void save(utils::serial& ar);
+};
+
 // SysCalls
 
-error_code sys_hid_manager_open(ppu_thread& ppu, u64 device_type, u64 port_no, vm::ptr<u32> handle);
+error_code sys_hid_manager_open(ppu_thread& ppu, u8 device_type, u8 port_no, vm::ptr<u32> handle);
 error_code sys_hid_manager_ioctl(u32 hid_handle, u32 pkg_id, vm::ptr<void> buf, u64 buf_size);
 error_code sys_hid_manager_add_hot_key_observer(u32 event_queue, vm::ptr<u32> unk);
 error_code sys_hid_manager_check_focus();

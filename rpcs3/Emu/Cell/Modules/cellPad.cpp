@@ -352,7 +352,7 @@ error_code cellPadClearBuf(u32 port_no)
 	return CELL_OK;
 }
 
-void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
+extern void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 {
 	auto& config = g_fxo->get<pad_info>();
 	const auto handler = pad::get_pad_thread();
