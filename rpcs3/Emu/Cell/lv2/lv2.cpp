@@ -417,7 +417,7 @@ const std::array<std::pair<ppu_intrp_func_t, std::string_view>, 1024> g_ppu_sysc
 	BIND_SYSC(sys_mmapper_search_and_map),                  //337 (0x151)
 	NULL_FUNC(sys_mmapper_get_shared_memory_attribute),     //338 (0x152)
 	BIND_SYSC(sys_mmapper_allocate_shared_memory_ext),      //339 (0x153)
-	null_func,//BIND_SYSC(sys_...),                         //340 (0x154)
+	BIND_SYSC(sys_mmapper_shared_memory_get_auth_id),       //340 (0x154)
 	BIND_SYSC(sys_memory_container_create),                 //341 (0x155)
 	BIND_SYSC(sys_memory_container_destroy),                //342 (0x156)
 	BIND_SYSC(sys_memory_container_get_size),               //343 (0x157)

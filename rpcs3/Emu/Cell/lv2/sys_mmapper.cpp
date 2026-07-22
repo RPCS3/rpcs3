@@ -43,12 +43,13 @@ void fmt_class_string<lv2_mem_container_id>::format(std::string& out, u64 arg)
 	});
 }
 
-lv2_memory::lv2_memory(u32 size, u32 align, u64 flags, u64 key, bool pshared, lv2_memory_container* ct)
+lv2_memory::lv2_memory(u32 size, u32 align, u64 flags, u64 key, bool pshared, u64 authid, lv2_memory_container* ct)
 	: size(size)
 	, align(align)
 	, flags(flags)
 	, key(key)
 	, pshared(pshared)
+	, authid(authid)
 	, ct(ct)
 	, shm(null_ptr)
 {
@@ -60,6 +61,7 @@ lv2_memory::lv2_memory(utils::serial& ar)
 	, flags(ar)
 	, key(ar)
 	, pshared(ar)
+	, authid(ar)
 	, ct(lv2_memory_container::search(ar.pop<u32>()))
 	, shm([&](u32 mem_index) -> shared_ptr<std::shared_ptr<utils::shm>>
 	{
@@ -145,7 +147,7 @@ void lv2_memory::save_data(utils::serial& ar)
 {
 	USING_SERIALIZATION_VERSION(lv2_memory);
 
-	ar(size, align, flags, key, pshared, ct ? static_cast<u32>(ct->id) : 0, system_handle);
+	ar(size, align, flags, key, pshared, authid, ct ? static_cast<u32>(ct->id) : 0, system_handle);
 	const auto data = shm.load();
 	const u32 addr = data ? vm::get_shm_addr(*data) : 0;
 	ar(addr);
@@ -202,17 +204,35 @@ error_code create_lv2_shm(bool pshared, u64 ipc_key, u64 size, u32 align, u64 fl
 	const s32 create_mode = exclusive || (flags & 0xc000) == 0xc000 ? SYS_SYNC_NEWLY_CREATED
 		: (flags & 0x8000) ? SYS_SYNC_NOT_CARE : SYS_SYNC_NOT_CREATE;
 
+	u64 authid = 0;
+
 	if (!pshared)
 	{
 		ipc_key = 0;
+	}
+	else
+	{
+		authid = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->self_info.prog_id_hdr.program_authority_id; 
 	}
 
 	shared_ptr<lv2_memory> created;
 	return lv2_obj::create<lv2_memory>(_pshared, ipc_key, create_mode, [&]()
 	{
-		created = make_shared<lv2_memory>(static_cast<u32>(size), align, flags, ipc_key, pshared, ct);
+		created = make_shared<lv2_memory>(
+			static_cast<u32>(size),
+			align,
+			flags,
+			ipc_key,
+			pshared,
+			authid,
+			ct);
 		return created;
-	}, false, size, align, created);
+	}, false)
+	{
+		return error;
+	}
+
+	return CELL_OK;
 }
 
 error_code sys_mmapper_allocate_address(ppu_thread& ppu, u64 size, u64 flags, u64 alignment, vm::ptr<u32> alloc_addr)
@@ -332,6 +352,12 @@ error_code sys_mmapper_allocate_shared_memory(ppu_thread& ppu, u64 ipc_key, u64 
 
 	ppu.check_state();
 	*mem_id = idm::last_id<lv2_memory>();
+
+	if (ipc_key != SYS_MMAPPER_NO_SHM_KEY)
+	{
+		sys_mmapper.warning("sys_mmapper_allocate_shared_memory(): Allocated memory ID 0x%x for IPC 0x%x", idm::last_id(), ipc_key);
+	}
+
 	return CELL_OK;
 }
 
@@ -401,6 +427,12 @@ error_code sys_mmapper_allocate_shared_memory_from_container(ppu_thread& ppu, u6
 
 	ppu.check_state();
 	*mem_id = idm::last_id<lv2_memory>();
+
+	if (ipc_key != SYS_MMAPPER_NO_SHM_KEY)
+	{
+		sys_mmapper.warning("sys_mmapper_allocate_shared_memory_from_container(): Allocated memory ID 0x%x for IPC 0x%x", idm::last_id(), ipc_key);
+	}
+
 	return CELL_OK;
 }
 
@@ -508,6 +540,8 @@ error_code sys_mmapper_allocate_shared_memory_ext(ppu_thread& ppu, u64 ipc_key, 
 
 	ppu.check_state();
 	*mem_id = idm::last_id<lv2_memory>();
+
+	sys_mmapper.warning("sys_mmapper_allocate_shared_memory_ext(): Allocated memory ID 0x%x for IPC 0x%x", idm::last_id(), ipc_key);
 	return CELL_OK;
 }
 
@@ -619,6 +653,25 @@ error_code sys_mmapper_allocate_shared_memory_from_container_ext(ppu_thread& ppu
 
 	ppu.check_state();
 	*mem_id = idm::last_id<lv2_memory>();
+
+	sys_mmapper.warning("sys_mmapper_allocate_shared_memory_from_container_ext(): Allocated memory ID 0x%x for IPC 0x%x", idm::last_id(), ipc_key);
+	return CELL_OK;
+}
+
+error_code sys_mmapper_shared_memory_get_auth_id(ppu_thread& ppu, u32 mem_id, vm::ptr<u64> out_authid)
+{
+	ppu.state += cpu_flag::wait;
+
+	sys_mmapper.warning("sys_mmapper_shared_memory_get_auth_id(mem_id=0x%x, out_authid=0x%x)", mem_id, out_authid);
+
+	const auto mem = idm::get_unlocked<lv2_obj, lv2_memory>(mem_id);
+
+	if (!mem)
+	{
+		return CELL_EINVAL;
+	}
+
+	*out_authid = mem->authid;
 	return CELL_OK;
 }
 
