@@ -80,7 +80,7 @@ std::string g_cfg_defaults;
 
 atomic_t<u64> g_watchdog_hold_ctr{0};
 
-extern shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2_memory_container> mem_ct, bool virtual_load, const std::vector<std::string>& argv0, const std::vector<std::string>& envp0, const std::vector<u8>& data0, utils::serial* ar = nullptr);
+extern shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2_memory_container> mem_ct, bool virtual_load, const std::vector<std::string>& argv0, const std::vector<std::string>& envp0, const std::vector<u8>& data0, const std::vector<u8>& lv2_paramsfo, utils::serial* ar = nullptr);
 extern void spu_load_exec(const spu_exec_object&);
 extern void spu_load_rel_exec(const spu_rel_object&);
 extern void ppu_precompile(std::vector<std::string>& dir_queue, std::vector<ppu_module<lv2_obj>*>* loaded_prx, bool is_fast_compilation);
@@ -1975,7 +1975,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 					const ppu_exec_object obj = src;
 
-					if (obj == elf_error::ok && ppu_load_self(obj, null_ptr, true, this->argv, this->envp, this->data, DeserialManager()))
+					std::vector<u8> paramsfo_dummy;
+					if (obj == elf_error::ok && ppu_load_self(obj, null_ptr, true, this->argv, this->envp, this->data, paramsfo_dummy, DeserialManager()))
 					{
 						//
 					}
@@ -2685,7 +2686,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				sys_log.error("Booting HG category outside of HDD0!");
 			}
 
-			if (ppu_load_self(ppu_exec, null_ptr, false, this->argv, this->envp, this->data, DeserialManager()))
+			if (std::vector<u8> paramsfo_dummy; ppu_load_self(ppu_exec, null_ptr, false, this->argv, this->envp, this->data, paramsfo_dummy, DeserialManager()))
 			{
 				if (g_cfg.core.ppu_debug && had_been_decrypted)
 				{

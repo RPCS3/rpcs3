@@ -2208,7 +2208,7 @@ void ppu_unload_prx(const lv2_prx& prx)
 }
 
 // Like ppu_load_exec, but simplified and reduced to fit process launching
-shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2_memory_container> mem_ct, bool virtual_load, const std::vector<std::string>& argv0, const std::vector<std::string>& envp0, const std::vector<u8>& data0, utils::serial* ar)
+shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2_memory_container> mem_ct, bool virtual_load, const std::vector<std::string>& argv0, const std::vector<std::string>& envp0, const std::vector<u8>& data0, const std::vector<u8>& lv2_paramsfo, utils::serial* ar)
 {
 	if (elf != elf_error::ok)
 	{
@@ -2961,28 +2961,28 @@ shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2
 	// Initialize process arguments
 
 	// Calculate storage requirements on the stack
-	const u32 pointers_storage_size = u32{sizeof(u64)} * utils::align<u32>(::size32(Emu.envp) + ::size32(Emu.argv) + 2, 2);
+	const u32 pointers_storage_size = u32{sizeof(u64)} * utils::align<u32>(::size32(envp0) + ::size32(argv0) + 2, 2);
 
 	u32 stack_alloc_size = pointers_storage_size;
 
-	for (const auto& arg : Emu.argv)
+	for (const auto& arg : argv0)
 	{
 		stack_alloc_size += utils::align<u32>(::size32(arg) + 1, 0x10);
 	}
 
-	for (const auto& arg : Emu.envp)
+	for (const auto& arg : envp0)
 	{
 		stack_alloc_size += utils::align<u32>(::size32(arg) + 1, 0x10);
 	}
 
 	ensure(ppu->stack_size > stack_alloc_size);
 
-	vm::ptr<u64> args = vm::cast(static_cast<u32>(ppu->stack_addr + ppu->stack_size - stack_alloc_size - utils::align<u32>(::size32(Emu.data), 0x10)));
+	vm::ptr<u64> args = vm::cast(static_cast<u32>(ppu->stack_addr + ppu->stack_size - stack_alloc_size - utils::align<u32>(::size32(data0), 0x10)));
 	vm::ptr<u8> args_data = vm::cast(args.addr() + pointers_storage_size);
 
 	const vm::ptr<u64> argv = args;
 
-	for (const auto& arg : Emu.argv)
+	for (const auto& arg : argv0)
 	{
 		const u32 arg_size = ::size32(arg) + 1;
 
@@ -2997,7 +2997,7 @@ shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2
 	const vm::ptr<u64> envp = args;
 	args = envp;
 
-	for (const auto& arg : Emu.envp)
+	for (const auto& arg : envp0)
 	{
 		const u32 arg_size = ::size32(arg) + 1;
 
@@ -3010,6 +3010,13 @@ shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2
 	*args++ = 0;
 
 	ppu->gpr[1] -= stack_alloc_size;
+
+	if (!lv2_paramsfo.empty())
+	{
+		std::array<u8, 0x40> paramsfo;
+		std::copy(lv2_paramsfo.begin(), lv2_paramsfo.end(), paramsfo.begin());
+		process_ptr->provided_paramsfo = std::make_unique<std::array<u8, 0x40>>(paramsfo);
+	}
 
 	ensure(process_ptr->parent_memory_container->take(primary_stacksize + segs_size));
 
@@ -3047,7 +3054,7 @@ shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2
 	// Set command line arguments, run entry function
 	ppu->cmd_list
 	({
-		{ ppu_cmd::set_args, 8 }, u64{Emu.argv.size()}, u64{argv.addr()}, u64{envp.addr()}, u64{Emu.envp.size()}, u64{ppu->id}, u64{tls_vaddr}, u64{tls_fsize}, u64{tls_vsize},
+		{ ppu_cmd::set_args, 8 }, u64{argv0.size()}, u64{argv.addr()}, u64{envp.addr()}, u64{envp0.size()}, u64{ppu->id}, u64{tls_vaddr}, u64{tls_fsize}, u64{tls_vsize},
 		{ ppu_cmd::set_gpr, 11 }, u64{elf.header.e_entry},
 		{ ppu_cmd::set_gpr, 12 }, u64{malloc_pagesize},
 		{ ppu_cmd::entry_call, 0 },

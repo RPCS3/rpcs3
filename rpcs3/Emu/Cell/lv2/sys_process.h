@@ -116,6 +116,7 @@ struct lv2_process : public ppu_module<lv2_obj>
 
 	std::string ELF_file_path;
 	std::array<u8, 256> ELF_file_hash{};
+	std::unique_ptr<std::array<u8, 0x40>> provided_paramsfo;
 
 	atomic_t<bool> is_terminating = false;
 
@@ -176,7 +177,7 @@ class ppu_thread;
 // Auxiliary functions
 s32 process_getpid();
 s32 process_get_sdk_version(u32 pid, s32& ver);
-void lv2_exitspawn(ppu_thread& ppu, bool exit_current, shared_ptr<lv2_memory_container> pp_mem, std::vector<std::string>& argv, std::vector<std::string>& envp, std::vector<u8>& data);
+void lv2_exitspawn(ppu_thread& ppu, bool exit_current, shared_ptr<lv2_memory_container> pp_mem, std::vector<std::string>& argv, std::vector<std::string>& envp, std::vector<u8>& data, std::vector<u8>& lv2_paramsfo);
 
 namespace vm
 {

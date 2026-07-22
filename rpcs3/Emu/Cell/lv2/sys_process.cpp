@@ -239,7 +239,7 @@ stx::manual_typemap<lv2_process, 0x2'00000, 128>* lv2_process::get_typemap(u32 p
 	return ensure(idm::get_unlocked<lv2_obj, lv2_process>(proc_id == umax ? id_manager::g_process : proc_id))->local_typemap.get();
 }
 
-extern shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2_memory_container> mem_ct, bool virtual_load, const std::vector<std::string>& argv0, const std::vector<std::string>& envp0, const std::vector<u8>& data0, utils::serial* ar = nullptr);
+extern shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2_memory_container> mem_ct, bool virtual_load, const std::vector<std::string>& argv0, const std::vector<std::string>& envp0, const std::vector<u8>& data0, const std::vector<u8>& lv2_paramsfo, utils::serial* ar = nullptr);
 
 // Check all flags known to be related to extended permissions (TODO)
 // It's possible anything which has root flags implicitly has debug perm as well
@@ -549,13 +549,24 @@ error_code _sys_process_get_paramsfo(vm::ptr<char> buffer)
 {
 	sys_process.warning("_sys_process_get_paramsfo(buffer=0x%x)", buffer);
 
-	if (Emu.GetTitleID().empty())
+	const auto current = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
+
+	if (!current->provided_paramsfo && Emu.GetTitleID().empty())
 	{
 		return CELL_ENOENT;
 	}
 
-	memset(buffer.get_ptr(), 0, 0x40);
-	memcpy(buffer.get_ptr() + 1, Emu.GetTitleID().c_str(), std::min<usz>(Emu.GetTitleID().length(), 9));
+	char buffer_out[0x40]{};
+	if (!current->provided_paramsfo)
+	{
+		std::memcpy(buffer_out + 1, Emu.GetTitleID().c_str(), std::min<usz>(Emu.GetTitleID().length(), 9));
+	}
+	else
+	{
+		std::memcpy(buffer_out, current->provided_paramsfo->data(), current->provided_paramsfo->size());
+	}
+
+	std::memcpy(buffer.get_ptr(), buffer_out, 0x40);
 
 	return CELL_OK;
 }
@@ -711,10 +722,10 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 
 	// TODO: set prio, flags
 
-	lv2_exitspawn(ppu, true, null_ptr, argv, envp, data);
+	lv2_exitspawn(ppu, true, null_ptr, argv, envp, data, *std::make_unique<std::vector<u8>>());
 }
 
-void lv2_exitspawn(ppu_thread& ppu, bool exit_current, shared_ptr<lv2_memory_container> pp_mem, std::vector<std::string>& argv, std::vector<std::string>& envp, std::vector<u8>& data)
+void lv2_exitspawn(ppu_thread& ppu, bool exit_current, shared_ptr<lv2_memory_container> pp_mem, std::vector<std::string>& argv, std::vector<std::string>& envp, std::vector<u8>& data, std::vector<u8>& lv2_paramsfo)
 {
 	ppu.state += cpu_flag::wait;
 
@@ -753,7 +764,7 @@ void lv2_exitspawn(ppu_thread& ppu, bool exit_current, shared_ptr<lv2_memory_con
 
 		obj.set_encrypted_layer_data(&self_info);
 
-		if (!ppu_load_self(obj, pp_mem, false, argv, envp, data, nullptr))
+		if (!ppu_load_self(obj, pp_mem, false, argv, envp, data, lv2_paramsfo, nullptr))
 		{
 			ppu.gpr[3] = CELL_ENOEXEC;
 			return;
@@ -879,10 +890,19 @@ error_code sys_process_spawns_a_self2(ppu_thread& ppu, vm::ptr<u32> pid, u32 pri
 	sys_process.todo("sys_process_spawns_a_self2(pid=*0x%x, primary_prio=0x%x, flags=0x%llx, stack=*0x%x, stack_size=0x%x, mem_id=0x%x, param_sfo=*0x%x, dbg_data=*0x%x"
 		, pid, primary_prio, flags, stack, stack_size, mem_id, param_sfo, dbg_data);
 
-	if (!vm::check_addr(stack.addr(), stack_size))
+	if (!vm::check_addr(ppu.vm_owner.get(), stack.addr(), 0, stack_size))
 	{
 		return { CELL_EFAULT, stack };
 	}
+
+	std::vector<u8> paramsfo(0x40);
+
+	if (!vm::check_addr(ppu.vm_owner.get(), param_sfo.addr(), 0, 0x40))
+	{
+		return {CELL_EFAULT, param_sfo.addr()};
+	}
+
+	std::memcpy(paramsfo.data(), vm::base(param_sfo.addr()), 0x40);
 
 	// This syscall does something special: it provides a single buffer for all arguments
 	// All arguments must be contained within [stack, stack + stack_size]
@@ -956,7 +976,7 @@ error_code sys_process_spawns_a_self2(ppu_thread& ppu, vm::ptr<u32> pid, u32 pri
 		return CELL_ESRCH;
 	}
 
-	lv2_exitspawn(ppu, false, mem_ct, argv, envp, data);
+	lv2_exitspawn(ppu, false, mem_ct, argv, envp, data, paramsfo);
 
 	if (ppu.gpr[3] != CELL_OK)
 	{
