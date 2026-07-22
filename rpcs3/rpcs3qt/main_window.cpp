@@ -50,6 +50,7 @@
 #include "config_database.h"
 
 #include <thread>
+#include <cstring>
 #include <unordered_set>
 
 #include <QScreen>
@@ -109,8 +110,6 @@
 
 #ifdef _WIN32
 #include "raw_mouse_settings_dialog.h"
-#include <Windows.h>
-#include <winioctl.h>
 #endif
 
 #if defined(__linux__) || defined(__APPLE__) || (defined(_WIN32) && defined(ARCH_X64))
@@ -147,7 +146,6 @@ namespace
 		u32 vm_offset = 0;
 		u32 type = 0;
 		std::string name;
-		std::vector<u8> data;
 	};
 
 	// Emu.Pause() only requests the pause: every emulated thread drains into its
@@ -187,18 +185,6 @@ namespace
 	{
 		return QStringLiteral("0x%1").arg(value, width, 16, QLatin1Char('0'));
 	}
-
-#ifdef _WIN32
-	// On NTFS a sparse file only allocates the ranges actually written, so the
-	// 4 GB address image costs roughly the allocated guest bytes on disk. POSIX
-	// file systems create holes for unwritten ranges without any setup.
-	bool set_sparse(const fs::file& file)
-	{
-		FILE_SET_SPARSE_BUFFER sparse{TRUE};
-		DWORD returned = 0;
-		return DeviceIoControl(file.get_handle(), FSCTL_SET_SPARSE, &sparse, sizeof(sparse), nullptr, 0, &returned, nullptr) != FALSE;
-	}
-#endif
 }
 
 extern void qt_events_aware_op(int repeat_duration_ms, std::function<bool()> wrapped_op)
@@ -925,20 +911,6 @@ void main_window::DumpGuestMemory()
 
 	const QString default_parent = QString::fromStdString(fs::get_config_dir() + "guest_memory_dumps");
 	QDir().mkpath(default_parent);
-	const QString selected_parent = QFileDialog::getExistingDirectory(this, tr("Select Guest Memory Dump Folder"), default_parent, QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
-
-	if (selected_parent.isEmpty())
-	{
-		return;
-	}
-
-	// The native folder dialog runs its own event loop, so the game may have
-	// stopped while the user was choosing a destination.
-	if (Emu.IsStopped() || Emu.IsStarting())
-	{
-		QMessageBox::warning(this, tr("Dump Guest Memory"), tr("The game stopped before the guest-memory dump could begin."));
-		return;
-	}
 
 	QString title_id = QString::fromStdString(Emu.GetTitleID());
 	if (title_id.isEmpty())
@@ -946,40 +918,101 @@ void main_window::DumpGuestMemory()
 		title_id = QStringLiteral("RPCS3");
 	}
 
-	const QString timestamp = QDateTime::currentDateTimeUtc().toString(QStringLiteral("yyyyMMdd_HHmmss_zzz"));
-	const QString folder_stem = QStringLiteral("%1_guest_memory_%2").arg(title_id, timestamp);
-	QDir parent(selected_parent);
-	QString folder_name = folder_stem;
-
-	for (u32 suffix = 2; parent.exists(folder_name); suffix++)
-	{
-		folder_name = QStringLiteral("%1_%2").arg(folder_stem).arg(suffix);
-	}
-
-	if (!parent.mkpath(folder_name))
-	{
-		QMessageBox::critical(this, tr("Dump Guest Memory"), tr("Could not create the output folder:\n%0").arg(parent.filePath(folder_name)));
-		return;
-	}
-
-	QDir output(parent.filePath(folder_name));
-
 	// Remove the output folder again unless the dump ran to completion, so a
 	// failed or cancelled dump does not leave an empty folder or a partial
-	// image behind. Declared before the output files so it destructs after
-	// they are closed.
+	// image behind. This is declared before the output file so it destructs
+	// after the file is closed.
 	struct cleanup_guard
 	{
 		QDir dir;
+		bool enabled = false;
 		bool keep = false;
 		~cleanup_guard()
 		{
-			if (!keep && !dir.removeRecursively())
+			if (enabled && !keep && !dir.removeRecursively())
 			{
 				gui_log.error("Could not remove incomplete guest memory dump folder: %s", dir.absolutePath());
 			}
 		}
-	} cleanup{output};
+	} cleanup;
+
+	QString picker_parent = default_parent;
+	QDir output;
+	fs::file guest_file;
+	bool sparse_image = false;
+
+	while (!sparse_image)
+	{
+		const QString selected_parent = QFileDialog::getExistingDirectory(this, tr("Select Guest Memory Dump Folder"), picker_parent, QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+
+		if (selected_parent.isEmpty())
+		{
+			return;
+		}
+
+		// The native folder dialog runs its own event loop, so the game may have
+		// stopped while the user was choosing a destination.
+		if (Emu.IsStopped() || Emu.IsStarting())
+		{
+			QMessageBox::warning(this, tr("Dump Guest Memory"), tr("The game stopped before the guest-memory dump could begin."));
+			return;
+		}
+
+		const QString timestamp = QDateTime::currentDateTimeUtc().toString(QStringLiteral("yyyyMMdd_HHmmss_zzz"));
+		const QString folder_stem = QStringLiteral("%1_guest_memory_%2").arg(title_id, timestamp);
+		QDir parent(selected_parent);
+		QString folder_name = folder_stem;
+
+		for (u32 suffix = 2; parent.exists(folder_name); suffix++)
+		{
+			folder_name = QStringLiteral("%1_%2").arg(folder_stem).arg(suffix);
+		}
+
+		if (!parent.mkpath(folder_name))
+		{
+			QMessageBox::critical(this, tr("Dump Guest Memory"), tr("Could not create the output folder:\n%0").arg(parent.filePath(folder_name)));
+			return;
+		}
+
+		output.setPath(parent.filePath(folder_name));
+		cleanup.dir = output;
+		cleanup.enabled = true;
+
+		const QString guest_path = output.filePath(QStringLiteral("guest_memory.bin"));
+		if (!guest_file.open(guest_path.toStdString(), fs::rewrite))
+		{
+			QMessageBox::critical(this, tr("Dump Guest Memory"), tr("Could not create:\n%0").arg(guest_path));
+			return;
+		}
+
+		// POSIX file systems create holes for unwritten ranges by default; Windows
+		// needs the sparse attribute set explicitly.
+		sparse_image = fs::set_sparse(guest_file);
+
+		if (!sparse_image)
+		{
+			guest_file.close();
+			if (!output.removeRecursively())
+			{
+				QMessageBox::critical(this, tr("Dump Guest Memory"), tr("The selected destination does not support sparse files, and the incomplete output folder could not be removed:\n%0").arg(output.absolutePath()));
+				return;
+			}
+
+			cleanup.enabled = false;
+			QMessageBox message(QMessageBox::Critical, tr("Dump Guest Memory"), tr("The selected destination does not support sparse files. Choose a location on an NTFS volume."), QMessageBox::NoButton, this);
+			auto* choose_button = message.addButton(tr("Choose Another Location"), QMessageBox::AcceptRole);
+			message.addButton(QMessageBox::Cancel);
+			message.setDefaultButton(choose_button);
+			message.exec();
+
+			if (message.clickedButton() != choose_button)
+			{
+				return;
+			}
+
+			picker_parent = selected_parent;
+		}
+	}
 
 	const bool resume_after_dump = Emu.IsRunning();
 
@@ -1074,7 +1107,6 @@ void main_window::DumpGuestMemory()
 			dump.vm_offset = spu.vm_offset();
 			dump.type = static_cast<u32>(spu.get_type());
 			dump.name = spu.get_name();
-			dump.data.assign(spu.ls, spu.ls + SPU_LS_SIZE);
 			spu_dumps.emplace_back(std::move(dump));
 		});
 	}
@@ -1100,7 +1132,7 @@ void main_window::DumpGuestMemory()
 		}
 	}
 
-	u64 completed_bytes = 0;
+	atomic_t<u64> completed_bytes{0};
 	QProgressDialog progress(tr("Dumping PS3 guest memory..."), QString(), 0, 1000, this);
 	progress.setWindowTitle(tr("Dump Guest Memory"));
 	progress.setWindowModality(Qt::WindowModal);
@@ -1108,98 +1140,112 @@ void main_window::DumpGuestMemory()
 	progress.setMinimumDuration(0);
 	progress.setValue(0);
 
-	const auto update_progress = [&]()
-	{
-		progress.setValue(total_bytes ? static_cast<int>(completed_bytes * 1000 / total_bytes) : 1000);
-		QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
-	};
-
-	const QString guest_path = output.filePath(QStringLiteral("guest_memory.bin"));
-	fs::file guest_file(guest_path.toStdString(), fs::rewrite);
-
-	if (!guest_file)
-	{
-		QMessageBox::critical(this, tr("Dump Guest Memory"), tr("Could not create:\n%0").arg(guest_path));
-		return;
-	}
-
-	// POSIX file systems create holes for unwritten ranges by default; Windows
-	// needs the sparse attribute set explicitly.
-	bool sparse_image = true;
-
-#ifdef _WIN32
-	// Without the sparse attribute (e.g. on FAT32 or exFAT) the image really
-	// occupies its full 4 GB, so refuse when that cannot fit and ask before
-	// writing it that way when it can.
-	sparse_image = set_sparse(guest_file);
-
-	if (!sparse_image)
-	{
-		if (available < guest_address_space_size + (64ull << 20))
-		{
-			QMessageBox::critical(this, tr("Dump Guest Memory"), tr("This file system does not support sparse files and does not have 4 GB free for a full size image. No dump was created."));
-			return;
-		}
-
-		if (QMessageBox::question(this, tr("Dump Guest Memory"), tr("This file system does not support sparse files, so guest_memory.bin will occupy the full 4 GB on disk.\n\nContinue anyway?")) != QMessageBox::Yes)
-		{
-			return;
-		}
-	}
-#endif
-
 	if (!guest_file.trunc(guest_address_space_size))
 	{
-		// FAT32 caps files below 4 GB, so no full size fallback is possible there.
-		QMessageBox::critical(this, tr("Dump Guest Memory"), tr("Could not size the 4 GB address image. Note that FAT32 cannot hold a file of this size."));
+		QMessageBox::critical(this, tr("Dump Guest Memory"), tr("Could not size the 4 GB address image."));
 		return;
 	}
 
 	// Read through the sudo mirror: it maps every allocated page as read/write,
 	// so pages the guest keeps protected (reservation notification, no access
-	// areas) are captured as well instead of faulting or being skipped.
-	for (const auto& region : regions)
+	// areas) are captured as well instead of faulting or being skipped. Copy
+	// into ordinary host memory before passing data to fs::file, and perform all
+	// guest-memory reads and file writes off the UI thread.
+	enum class dump_write_error
 	{
-		if (guest_file.seek(region.start) != region.start)
-		{
-			QMessageBox::critical(this, tr("Dump Guest Memory"), tr("Could not seek to guest address %0 in the output file.").arg(hex_u64(region.start)));
-			return;
-		}
+		none,
+		guest_seek,
+		guest_write,
+		spu_write,
+	};
 
-		for (u64 offset = 0; offset < region.size;)
-		{
-			const u64 chunk_size = std::min(dump_io_chunk_size, region.size - offset);
-			const u64 address = static_cast<u64>(region.start) + offset;
+	dump_write_error write_error = dump_write_error::none;
+	u64 error_address = 0;
+	QString error_path;
+	const QString output_path = output.absolutePath();
 
-			if (guest_file.write(vm::g_sudo_addr + address, chunk_size) != chunk_size)
+	named_thread dump_thread("Guest Memory Dumper", [&]()
+	{
+		std::vector<u8> middle_buffer(dump_io_chunk_size);
+
+		for (const auto& region : regions)
+		{
+			if (guest_file.seek(region.start) != region.start)
 			{
-				QMessageBox::critical(this, tr("Dump Guest Memory"), tr("Writing failed at guest address %0. The dump is incomplete.").arg(hex_u64(address)));
+				write_error = dump_write_error::guest_seek;
+				error_address = region.start;
 				return;
 			}
 
-			offset += chunk_size;
-			completed_bytes += chunk_size;
-			update_progress();
+			for (u64 offset = 0; offset < region.size;)
+			{
+				const u64 chunk_size = std::min(dump_io_chunk_size, region.size - offset);
+				const u64 address = static_cast<u64>(region.start) + offset;
+
+				std::memcpy(middle_buffer.data(), vm::g_sudo_addr + address, chunk_size);
+				if (guest_file.write(middle_buffer.data(), chunk_size) != chunk_size)
+				{
+					write_error = dump_write_error::guest_write;
+					error_address = address;
+					return;
+				}
+
+				offset += chunk_size;
+				completed_bytes.fetch_add(chunk_size);
+			}
 		}
+
+		guest_file.close();
+
+		QDir worker_output(output_path);
+		for (const auto& dump : spu_dumps)
+		{
+			const QString filename = QStringLiteral("spu_%1_ls.bin").arg(dump.id, 8, 16, QLatin1Char('0'));
+			const QString file_path = worker_output.filePath(filename);
+			std::memcpy(middle_buffer.data(), vm::g_sudo_addr + dump.vm_offset, SPU_LS_SIZE);
+			fs::file file(file_path.toStdString(), fs::rewrite);
+
+			if (!file || file.write(middle_buffer.data(), SPU_LS_SIZE) != SPU_LS_SIZE)
+			{
+				write_error = dump_write_error::spu_write;
+				error_path = file_path;
+				return;
+			}
+
+			completed_bytes.fetch_add(SPU_LS_SIZE);
+		}
+	});
+
+	qt_events_aware_op(10, [&]()
+	{
+		const u64 completed = completed_bytes.load();
+		progress.setValue(total_bytes ? static_cast<int>(completed * 1000 / total_bytes) : 1000);
+		return static_cast<thread_state>(dump_thread) == thread_state::finished;
+	});
+	dump_thread();
+
+	if (write_error == dump_write_error::guest_seek)
+	{
+		QMessageBox::critical(this, tr("Dump Guest Memory"), tr("Could not seek to guest address %0 in the output file.").arg(hex_u64(error_address)));
+		return;
 	}
 
-	guest_file.close();
+	if (write_error == dump_write_error::guest_write)
+	{
+		QMessageBox::critical(this, tr("Dump Guest Memory"), tr("Writing failed at guest address %0. The dump is incomplete.").arg(hex_u64(error_address)));
+		return;
+	}
+
+	if (write_error == dump_write_error::spu_write)
+	{
+		QMessageBox::critical(this, tr("Dump Guest Memory"), tr("Could not write SPU local store:\n%0").arg(error_path));
+		return;
+	}
 
 	QJsonArray spu_json;
 	for (const auto& dump : spu_dumps)
 	{
 		const QString filename = QStringLiteral("spu_%1_ls.bin").arg(dump.id, 8, 16, QLatin1Char('0'));
-		fs::file file(output.filePath(filename).toStdString(), fs::rewrite);
-
-		if (!file || file.write(dump.data.data(), dump.data.size()) != dump.data.size())
-		{
-			QMessageBox::critical(this, tr("Dump Guest Memory"), tr("Could not write SPU local store:\n%0").arg(output.filePath(filename)));
-			return;
-		}
-
-		completed_bytes += dump.data.size();
-		update_progress();
-
 		QJsonObject item;
 		item.insert(QStringLiteral("file"), filename);
 		item.insert(QStringLiteral("id"), hex_u64(dump.id));
@@ -1209,7 +1255,7 @@ void main_window::DumpGuestMemory()
 		item.insert(QStringLiteral("vm_offset"), hex_u64(dump.vm_offset));
 		item.insert(QStringLiteral("type"), static_cast<int>(dump.type));
 		item.insert(QStringLiteral("name"), QString::fromStdString(dump.name));
-		item.insert(QStringLiteral("size"), static_cast<int>(dump.data.size()));
+		item.insert(QStringLiteral("size"), static_cast<int>(SPU_LS_SIZE));
 		spu_json.append(item);
 	}
 
@@ -1261,11 +1307,7 @@ void main_window::DumpGuestMemory()
 		resume.enabled = false;
 	}
 
-	const QString image_note = sparse_image ?
-		tr("The 4 GB guest_memory.bin file is sparse: its file offset equals the PS3 guest address, while only allocated pages consume disk space.") :
-		tr("guest_memory.bin occupies the full 4 GB on disk. Its file offset equals the PS3 guest address.");
-
-	QMessageBox::information(this, tr("Dump Guest Memory"), tr("Guest memory dump completed.\n\n%0\n\n%1").arg(output.absolutePath()).arg(image_note));
+	QMessageBox::information(this, tr("Dump Guest Memory"), tr("Guest memory dump completed.\n\n%0\n\nThe 4 GB guest_memory.bin file is sparse: its file offset equals the PS3 guest address, while only allocated pages consume disk space.").arg(output.absolutePath()));
 }
 
 bool main_window::InstallFileInExData(const std::string& extension, const QString& path, const std::string& filename)
