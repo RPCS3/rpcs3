@@ -610,7 +610,7 @@ static void ppu_initialize_modules(shared_ptr<lv2_process> process, ppu_linkage_
 }
 
 // For the debugger (g_ppu_function_names shouldn't change, string_view should suffice)
-extern const std::unordered_map<u32, std::string_view>& get_exported_function_names_as_addr_indexed_map()
+extern const std::unordered_map<u32, std::string_view>& get_exported_function_names_as_addr_indexed_map(const ppu_thread* ppu)
 {
 	struct info_t
 	{
@@ -630,7 +630,7 @@ extern const std::unordered_map<u32, std::string_view>& get_exported_function_na
 
 	const auto link = g_fxo->try_get<ppu_linkage_info>();
 
-	const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
+	const auto process = idm::get_unlocked<lv2_obj, lv2_process>(ppu->proc_id);
 
 	const auto hle_funcs = process ? process->func_manager : nullptr;
 
@@ -655,18 +655,18 @@ extern const std::unordered_map<u32, std::string_view>& get_exported_function_na
 	for (auto& pair : ppu_module_manager::get())
 	{
 		const auto _module = pair.second;
-		auto& linkage = link->find_or_construct(pair.first, ensure(id_manager::g_process));
+		auto& linkage = link->find_or_construct(pair.first, ppu->proc_id);
 
 		for (auto& function : _module->functions)
 		{
 			auto& flink = linkage.functions[function.first];
 			u32 addr = flink.export_addr;
 
-			if (vm::check_addr<4>(addr, vm::page_readable) && addr != hle_funcs->func_addr(function.second.index))
+			if (vm::check_addr<4>(ppu->vm_owner, addr, vm::page_readable) && addr != hle_funcs->func_addr(function.second.index))
 			{
-				addr = vm::read32(addr);
+				addr = ppu->_ref<u32>(addr);
 
-				if (!(addr % 4) && vm::check_addr<4>(addr, vm::page_executable))
+				if (!(addr % 4) && vm::check_addr<4>(ppu->vm_owner, addr, vm::page_executable))
 				{
 					res.try_emplace(addr, g_ppu_function_names[function.second.index]);
 				}

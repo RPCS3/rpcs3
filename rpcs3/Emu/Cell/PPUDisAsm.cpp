@@ -13,7 +13,7 @@
 const ppu_decoder<PPUDisAsm> s_ppu_disasm;
 const ppu_decoder<ppu_itype> s_ppu_itype;
 
-extern const std::unordered_map<u32, std::string_view>& get_exported_function_names_as_addr_indexed_map();
+extern const std::unordered_map<u32, std::string_view>& get_exported_function_names_as_addr_indexed_map(const ppu_thread* ppu);
 
 enum class ppu_syscall_code : u64;
 
@@ -46,14 +46,14 @@ u32 PPUDisAsm::disasm(u32 pc)
 
 	(this->*(s_ppu_disasm.decode(m_op)))({ m_op });
 
-	if (m_offset != vm::g_sudo_addr)
+	if (!ppu || m_offset != ppu->vm_sudo)
 	{
 		// Exported functions lookup is not allowed in this case
 		format_by_mode();
 		return 4;
 	}
 
-	const auto& map = get_exported_function_names_as_addr_indexed_map();
+	const auto& map = get_exported_function_names_as_addr_indexed_map(ppu);
 
 	if (auto it = map.find(pc); it != map.end())
 	{
@@ -77,7 +77,7 @@ std::unique_ptr<CPUDisAsm> PPUDisAsm::copy_type_erased() const
 
 std::pair<PPUDisAsm::const_op, u64> PPUDisAsm::try_get_const_op_gpr_value(u32 reg, u32 pc, u32 TTL) const
 {
-	if (!TTL)
+	if (!TTL || !m_cpu)
 	{
 		// Recursion limit (Time To Live)
 		return {};
@@ -104,7 +104,9 @@ std::pair<PPUDisAsm::const_op, u64> PPUDisAsm::try_get_const_op_gpr_value(u32 re
 
 	// Scan PPU executable memory backwards until unmapped or non-executable memory block is encountered
 
-	for (u32 i = pc; i >= m_start_pc && (m_offset != vm::g_sudo_addr || vm::check_addr(i, vm::page_executable));)
+	const auto ppu = static_cast<const ppu_thread*>(m_cpu);
+
+	for (u32 i = pc; i >= m_start_pc && (m_offset != ppu->vm_sudo || vm::check_addr(ppu->vm_owner, i, vm::page_executable));)
 	{
 		const u32 opcode = *reinterpret_cast<const be_t<u32>*>(m_offset + i);
 		const ppu_opcode_t op{ opcode };
