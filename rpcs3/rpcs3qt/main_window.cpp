@@ -59,8 +59,17 @@
 #include <QFileDialog>
 #include <QFontDatabase>
 #include <QBuffer>
+#include <QDateTime>
 #include <QTemporaryFile>
 #include <QDesktopServices>
+#include <QDir>
+#include <QElapsedTimer>
+#include <QFile>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QProgressDialog>
+#include <QStorageInfo>
 
 #include "rpcs3_version.h"
 #include "Emu/IdManager.h"
@@ -71,6 +80,10 @@
 #include "Emu/system_config.h"
 #include "Emu/savestate_utils.hpp"
 #include "Emu/Cell/timers.hpp"
+#include "Emu/Cell/PPUThread.h"
+#include "Emu/Cell/SPUThread.h"
+#include "Emu/Memory/vm.h"
+#include "Emu/RSX/RSXThread.h"
 
 #include "Crypto/unpkg.h"
 #include "Crypto/unself.h"
@@ -96,6 +109,8 @@
 
 #ifdef _WIN32
 #include "raw_mouse_settings_dialog.h"
+#include <Windows.h>
+#include <winioctl.h>
 #endif
 
 #if defined(__linux__) || defined(__APPLE__) || (defined(_WIN32) && defined(ARCH_X64))
@@ -109,6 +124,82 @@ extern atomic_t<bool> g_headless;
 
 class CPUDisAsm;
 std::shared_ptr<CPUDisAsm> make_basic_ppu_disasm();
+
+namespace
+{
+	constexpr u64 guest_address_space_size = 0x1'0000'0000ull;
+	constexpr u32 guest_page_size = 0x1000;
+	constexpr u64 dump_io_chunk_size = 4 * 1024 * 1024;
+
+	struct guest_memory_region
+	{
+		u32 start = 0;
+		u64 size = 0;
+		u8 flags = 0;
+	};
+
+	struct spu_local_store_dump
+	{
+		u32 id = 0;
+		u32 lv2_id = 0;
+		u32 index = 0;
+		u32 pc = 0;
+		u32 vm_offset = 0;
+		u32 type = 0;
+		std::string name;
+		std::vector<u8> data;
+	};
+
+	// Emu.Pause() only requests the pause: every emulated thread drains into its
+	// wait or stop state asynchronously. The dump must not begin until each PPU,
+	// SPU and RSX thread has actually settled, or it could capture torn state.
+	bool emulated_processors_quiesced()
+	{
+		bool quiesced = true;
+		const auto check_cpu = [&](u32, cpu_thread& cpu)
+		{
+			const auto state = +cpu.state;
+			if (!::is_stopped(state) && !(state & cpu_flag::wait))
+			{
+				quiesced = false;
+			}
+		};
+
+		if (g_fxo->is_init<id_manager::id_map<named_thread<ppu_thread>>>())
+		{
+			idm::select<named_thread<ppu_thread>>(check_cpu);
+		}
+
+		if (g_fxo->is_init<id_manager::id_map<named_thread<spu_thread>>>())
+		{
+			idm::select<named_thread<spu_thread>>(check_cpu);
+		}
+
+		if (const auto rsx = g_fxo->try_get<rsx::thread>())
+		{
+			check_cpu(0, *rsx);
+		}
+
+		return quiesced;
+	}
+
+	QString hex_u64(u64 value, int width = 8)
+	{
+		return QStringLiteral("0x%1").arg(value, width, 16, QLatin1Char('0'));
+	}
+
+#ifdef _WIN32
+	// On NTFS a sparse file only allocates the ranges actually written, so the
+	// 4 GB address image costs roughly the allocated guest bytes on disk. POSIX
+	// file systems create holes for unwritten ranges without any setup.
+	bool set_sparse(const fs::file& file)
+	{
+		FILE_SET_SPARSE_BUFFER sparse{TRUE};
+		DWORD returned = 0;
+		return DeviceIoControl(file.get_handle(), FSCTL_SET_SPARSE, &sparse, sizeof(sparse), nullptr, 0, &returned, nullptr) != FALSE;
+	}
+#endif
+}
 
 extern void qt_events_aware_op(int repeat_duration_ms, std::function<bool()> wrapped_op)
 {
@@ -822,6 +913,359 @@ void main_window::BootRsxCapture(std::string path)
 	{
 		gui_log.success("Capture Boot Success. path: %s", path);
 	}
+}
+
+void main_window::DumpGuestMemory()
+{
+	if (Emu.IsStopped() || Emu.IsStarting())
+	{
+		QMessageBox::warning(this, tr("Dump Guest Memory"), tr("Start a game before creating a guest-memory dump."));
+		return;
+	}
+
+	const QString default_parent = QString::fromStdString(fs::get_config_dir() + "guest_memory_dumps");
+	QDir().mkpath(default_parent);
+	const QString selected_parent = QFileDialog::getExistingDirectory(this, tr("Select Guest Memory Dump Folder"), default_parent, QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+
+	if (selected_parent.isEmpty())
+	{
+		return;
+	}
+
+	// The native folder dialog runs its own event loop, so the game may have
+	// stopped while the user was choosing a destination.
+	if (Emu.IsStopped() || Emu.IsStarting())
+	{
+		QMessageBox::warning(this, tr("Dump Guest Memory"), tr("The game stopped before the guest-memory dump could begin."));
+		return;
+	}
+
+	QString title_id = QString::fromStdString(Emu.GetTitleID());
+	if (title_id.isEmpty())
+	{
+		title_id = QStringLiteral("RPCS3");
+	}
+
+	const QString timestamp = QDateTime::currentDateTimeUtc().toString(QStringLiteral("yyyyMMdd_HHmmss_zzz"));
+	const QString folder_stem = QStringLiteral("%1_guest_memory_%2").arg(title_id, timestamp);
+	QDir parent(selected_parent);
+	QString folder_name = folder_stem;
+
+	for (u32 suffix = 2; parent.exists(folder_name); suffix++)
+	{
+		folder_name = QStringLiteral("%1_%2").arg(folder_stem).arg(suffix);
+	}
+
+	if (!parent.mkpath(folder_name))
+	{
+		QMessageBox::critical(this, tr("Dump Guest Memory"), tr("Could not create the output folder:\n%0").arg(parent.filePath(folder_name)));
+		return;
+	}
+
+	QDir output(parent.filePath(folder_name));
+
+	// Remove the output folder again unless the dump ran to completion, so a
+	// failed or cancelled dump does not leave an empty folder or a partial
+	// image behind. Declared before the output files so it destructs after
+	// they are closed.
+	struct cleanup_guard
+	{
+		QDir dir;
+		bool keep = false;
+		~cleanup_guard()
+		{
+			if (!keep && !dir.removeRecursively())
+			{
+				gui_log.error("Could not remove incomplete guest memory dump folder: %s", dir.absolutePath());
+			}
+		}
+	} cleanup{output};
+
+	const bool resume_after_dump = Emu.IsRunning();
+
+	if (resume_after_dump && !Emu.Pause(false, false))
+	{
+		QMessageBox::critical(this, tr("Dump Guest Memory"), tr("Could not pause emulation for a consistent memory snapshot."));
+		return;
+	}
+
+	struct resume_guard
+	{
+		bool enabled = false;
+		~resume_guard()
+		{
+			if (enabled)
+			{
+				Emu.Resume();
+			}
+		}
+	} resume{resume_after_dump};
+
+	bool quiesced = false;
+	QElapsedTimer pause_timer;
+	pause_timer.start();
+	qt_events_aware_op(5, [&]()
+	{
+		quiesced = emulated_processors_quiesced();
+		return quiesced || pause_timer.elapsed() >= 5000;
+	});
+
+	if (!quiesced)
+	{
+		QMessageBox::critical(this, tr("Dump Guest Memory"), tr("One or more emulated processors did not stop within five seconds. No dump was created."));
+		return;
+	}
+
+	std::vector<guest_memory_region> regions;
+	guest_memory_region current{};
+
+	const auto finish_region = [&]()
+	{
+		if (current.size)
+		{
+			regions.emplace_back(current);
+			current = {};
+		}
+	};
+
+	// Walk the guest page table and coalesce contiguous pages with identical
+	// flags into regions, so the manifest mirrors the guest memory map instead
+	// of listing a million single pages.
+	for (u32 page = 0; page < guest_address_space_size / guest_page_size; page++)
+	{
+		const u32 address = static_cast<u32>(static_cast<u64>(page) * guest_page_size);
+		const auto [allocated, flags] = vm::get_addr_flags(address);
+
+		if (!allocated)
+		{
+			finish_region();
+			continue;
+		}
+
+		if (current.size && (current.flags != flags || static_cast<u64>(current.start) + current.size != address))
+		{
+			finish_region();
+		}
+
+		if (!current.size)
+		{
+			current.start = address;
+			current.flags = flags;
+		}
+
+		current.size += guest_page_size;
+	}
+
+	finish_region();
+
+	// SPU local store is also part of the guest map (at each thread's
+	// vm_offset), but a per thread copy with id, pc and type recorded in the
+	// manifest is much easier to analyze than digging it out of the main image.
+	std::vector<spu_local_store_dump> spu_dumps;
+	if (g_fxo->is_init<id_manager::id_map<named_thread<spu_thread>>>())
+	{
+		idm::select<named_thread<spu_thread>>([&](u32 id, spu_thread& spu)
+		{
+			spu_local_store_dump dump;
+			dump.id = id;
+			dump.lv2_id = spu.lv2_id;
+			dump.index = spu.index;
+			dump.pc = spu.pc;
+			dump.vm_offset = spu.vm_offset();
+			dump.type = static_cast<u32>(spu.get_type());
+			dump.name = spu.get_name();
+			dump.data.assign(spu.ls, spu.ls + SPU_LS_SIZE);
+			spu_dumps.emplace_back(std::move(dump));
+		});
+	}
+
+	u64 guest_bytes = 0;
+	for (const auto& region : regions)
+	{
+		guest_bytes += region.size;
+	}
+
+	const u64 total_bytes = guest_bytes + static_cast<u64>(spu_dumps.size()) * SPU_LS_SIZE;
+
+	// Preflight the destination. A sparse image costs roughly the allocated
+	// bytes, so warn when even that plus some margin does not fit.
+	const QStorageInfo storage(output.absolutePath());
+	const u64 available = storage.bytesAvailable() > 0 ? static_cast<u64>(storage.bytesAvailable()) : 0;
+
+	if (const u64 needed = total_bytes + (64ull << 20); available < needed)
+	{
+		if (QMessageBox::question(this, tr("Dump Guest Memory"), tr("The destination may not have enough free space (roughly %0 MiB needed, %1 MiB available).\n\nContinue anyway?").arg(needed >> 20).arg(available >> 20)) != QMessageBox::Yes)
+		{
+			return;
+		}
+	}
+
+	u64 completed_bytes = 0;
+	QProgressDialog progress(tr("Dumping PS3 guest memory..."), QString(), 0, 1000, this);
+	progress.setWindowTitle(tr("Dump Guest Memory"));
+	progress.setWindowModality(Qt::WindowModal);
+	progress.setCancelButton(nullptr);
+	progress.setMinimumDuration(0);
+	progress.setValue(0);
+
+	const auto update_progress = [&]()
+	{
+		progress.setValue(total_bytes ? static_cast<int>(completed_bytes * 1000 / total_bytes) : 1000);
+		QCoreApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+	};
+
+	const QString guest_path = output.filePath(QStringLiteral("guest_memory.bin"));
+	fs::file guest_file(guest_path.toStdString(), fs::rewrite);
+
+	if (!guest_file)
+	{
+		QMessageBox::critical(this, tr("Dump Guest Memory"), tr("Could not create:\n%0").arg(guest_path));
+		return;
+	}
+
+	// POSIX file systems create holes for unwritten ranges by default; Windows
+	// needs the sparse attribute set explicitly.
+	bool sparse_image = true;
+
+#ifdef _WIN32
+	// Without the sparse attribute (e.g. on FAT32 or exFAT) the image really
+	// occupies its full 4 GB, so refuse when that cannot fit and ask before
+	// writing it that way when it can.
+	sparse_image = set_sparse(guest_file);
+
+	if (!sparse_image)
+	{
+		if (available < guest_address_space_size + (64ull << 20))
+		{
+			QMessageBox::critical(this, tr("Dump Guest Memory"), tr("This file system does not support sparse files and does not have 4 GB free for a full size image. No dump was created."));
+			return;
+		}
+
+		if (QMessageBox::question(this, tr("Dump Guest Memory"), tr("This file system does not support sparse files, so guest_memory.bin will occupy the full 4 GB on disk.\n\nContinue anyway?")) != QMessageBox::Yes)
+		{
+			return;
+		}
+	}
+#endif
+
+	if (!guest_file.trunc(guest_address_space_size))
+	{
+		// FAT32 caps files below 4 GB, so no full size fallback is possible there.
+		QMessageBox::critical(this, tr("Dump Guest Memory"), tr("Could not size the 4 GB address image. Note that FAT32 cannot hold a file of this size."));
+		return;
+	}
+
+	// Read through the sudo mirror: it maps every allocated page as read/write,
+	// so pages the guest keeps protected (reservation notification, no access
+	// areas) are captured as well instead of faulting or being skipped.
+	for (const auto& region : regions)
+	{
+		if (guest_file.seek(region.start) != region.start)
+		{
+			QMessageBox::critical(this, tr("Dump Guest Memory"), tr("Could not seek to guest address %0 in the output file.").arg(hex_u64(region.start)));
+			return;
+		}
+
+		for (u64 offset = 0; offset < region.size;)
+		{
+			const u64 chunk_size = std::min(dump_io_chunk_size, region.size - offset);
+			const u64 address = static_cast<u64>(region.start) + offset;
+
+			if (guest_file.write(vm::g_sudo_addr + address, chunk_size) != chunk_size)
+			{
+				QMessageBox::critical(this, tr("Dump Guest Memory"), tr("Writing failed at guest address %0. The dump is incomplete.").arg(hex_u64(address)));
+				return;
+			}
+
+			offset += chunk_size;
+			completed_bytes += chunk_size;
+			update_progress();
+		}
+	}
+
+	guest_file.close();
+
+	QJsonArray spu_json;
+	for (const auto& dump : spu_dumps)
+	{
+		const QString filename = QStringLiteral("spu_%1_ls.bin").arg(dump.id, 8, 16, QLatin1Char('0'));
+		fs::file file(output.filePath(filename).toStdString(), fs::rewrite);
+
+		if (!file || file.write(dump.data.data(), dump.data.size()) != dump.data.size())
+		{
+			QMessageBox::critical(this, tr("Dump Guest Memory"), tr("Could not write SPU local store:\n%0").arg(output.filePath(filename)));
+			return;
+		}
+
+		completed_bytes += dump.data.size();
+		update_progress();
+
+		QJsonObject item;
+		item.insert(QStringLiteral("file"), filename);
+		item.insert(QStringLiteral("id"), hex_u64(dump.id));
+		item.insert(QStringLiteral("lv2_id"), hex_u64(dump.lv2_id));
+		item.insert(QStringLiteral("index"), static_cast<int>(dump.index));
+		item.insert(QStringLiteral("pc"), hex_u64(dump.pc, 5));
+		item.insert(QStringLiteral("vm_offset"), hex_u64(dump.vm_offset));
+		item.insert(QStringLiteral("type"), static_cast<int>(dump.type));
+		item.insert(QStringLiteral("name"), QString::fromStdString(dump.name));
+		item.insert(QStringLiteral("size"), static_cast<int>(dump.data.size()));
+		spu_json.append(item);
+	}
+
+	QJsonArray region_json;
+	for (const auto& region : regions)
+	{
+		QJsonObject item;
+		item.insert(QStringLiteral("start"), hex_u64(region.start));
+		item.insert(QStringLiteral("end_exclusive"), hex_u64(static_cast<u64>(region.start) + region.size));
+		item.insert(QStringLiteral("size"), static_cast<double>(region.size));
+		item.insert(QStringLiteral("file_offset"), hex_u64(region.start));
+		item.insert(QStringLiteral("raw_page_flags"), static_cast<int>(region.flags));
+		item.insert(QStringLiteral("readable"), !!(region.flags & vm::page_readable));
+		item.insert(QStringLiteral("writable"), !!(region.flags & vm::page_writable));
+		item.insert(QStringLiteral("executable"), !!(region.flags & vm::page_executable));
+		region_json.append(item);
+	}
+
+	QJsonObject manifest;
+	manifest.insert(QStringLiteral("format"), QStringLiteral("rpcs3-guest-memory-dump"));
+	manifest.insert(QStringLiteral("version"), 1);
+	manifest.insert(QStringLiteral("created_utc"), QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs));
+	manifest.insert(QStringLiteral("title"), QString::fromStdString(Emu.GetTitle()));
+	manifest.insert(QStringLiteral("title_id"), QString::fromStdString(Emu.GetTitleID()));
+	manifest.insert(QStringLiteral("address_space_file"), QStringLiteral("guest_memory.bin"));
+	manifest.insert(QStringLiteral("address_space_size"), hex_u64(guest_address_space_size, 9));
+	manifest.insert(QStringLiteral("page_size"), static_cast<int>(guest_page_size));
+	manifest.insert(QStringLiteral("allocated_bytes"), static_cast<double>(guest_bytes));
+	manifest.insert(QStringLiteral("file_offset_equals_guest_address"), true);
+	manifest.insert(QStringLiteral("sparse_image"), sparse_image);
+	manifest.insert(QStringLiteral("regions"), region_json);
+	manifest.insert(QStringLiteral("spu_local_stores"), spu_json);
+
+	QFile manifest_file(output.filePath(QStringLiteral("manifest.json")));
+	if (!manifest_file.open(QIODevice::WriteOnly | QIODevice::Truncate) || manifest_file.write(QJsonDocument(manifest).toJson(QJsonDocument::Indented)) < 0)
+	{
+		QMessageBox::critical(this, tr("Dump Guest Memory"), tr("Could not write the dump manifest."));
+		return;
+	}
+
+	manifest_file.close();
+	cleanup.keep = true;
+	progress.setValue(1000);
+	gui_log.success("Guest memory dump complete: %s (%u regions, %u SPU local stores, %u bytes allocated)", output.absolutePath(), regions.size(), spu_dumps.size(), guest_bytes);
+
+	if (resume.enabled)
+	{
+		Emu.Resume();
+		resume.enabled = false;
+	}
+
+	const QString image_note = sparse_image ?
+		tr("The 4 GB guest_memory.bin file is sparse: its file offset equals the PS3 guest address, while only allocated pages consume disk space.") :
+		tr("guest_memory.bin occupies the full 4 GB on disk. Its file offset equals the PS3 guest address.");
+
+	QMessageBox::information(this, tr("Dump Guest Memory"), tr("Guest memory dump completed.\n\n%0\n\n%1").arg(output.absolutePath()).arg(image_note));
 }
 
 bool main_window::InstallFileInExData(const std::string& extension, const QString& path, const std::string& filename)
@@ -2192,6 +2636,7 @@ void main_window::EnableMenus(bool enabled) const
 	// Tools
 	ui->toolskernel_explorerAct->setEnabled(enabled);
 	ui->toolsmemory_viewerAct->setEnabled(enabled);
+	ui->toolsDumpGuestMemoryAct->setEnabled(enabled);
 	ui->toolsRsxDebuggerAct->setEnabled(enabled);
 	ui->toolsSystemCommandsAct->setEnabled(enabled);
 	ui->actionCreate_RSX_Capture->setEnabled(enabled);
@@ -3386,6 +3831,8 @@ void main_window::CreateConnects()
 		if (!Emu.IsStopped())
 			idm::make<memory_viewer_handle>(this, make_basic_ppu_disasm());
 	});
+
+	connect(ui->toolsDumpGuestMemoryAct, &QAction::triggered, this, &main_window::DumpGuestMemory);
 
 	connect(ui->toolsRsxDebuggerAct, &QAction::triggered, this, [this]
 	{
