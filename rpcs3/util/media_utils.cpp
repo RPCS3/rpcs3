@@ -93,6 +93,13 @@ namespace utils
 			media_log.notice("av_log: %s", msg);
 	};
 
+	template <typename T>
+	T media_info::get_metadata([[maybe_unused]] const std::string& key, const T& def) const
+	{
+		static_assert("unimplemented");
+		return def;
+	}
+
 	template <>
 	std::string media_info::get_metadata(const std::string& key, const std::string& def) const
 	{
@@ -799,9 +806,10 @@ namespace utils
 		m_out_format = std::move(format);
 	}
 
-	void video_encoder::set_video_codec(s32 codec_id)
+	void video_encoder::set_video_codec(s32 codec_id, std::string_view codec_name)
 	{
 		m_video_codec_id = codec_id;
+		m_video_codec_name = codec_name;
 	}
 
 	void video_encoder::set_max_b_frames(s32 max_b_frames)
@@ -829,9 +837,10 @@ namespace utils
 		m_audio_bitrate_bps = bitrate;
 	}
 
-	void video_encoder::set_audio_codec(s32 codec_id)
+	void video_encoder::set_audio_codec(s32 codec_id, std::string_view codec_name)
 	{
 		m_audio_codec_id = codec_id;
+		m_audio_codec_name = codec_name;
 	}
 
 	void video_encoder::pause(bool flush)
@@ -992,9 +1001,12 @@ namespace utils
 				return nullptr;
 			};
 
-			const AVCodecID video_codec = static_cast<AVCodecID>(m_video_codec_id);
-			const AVCodecID audio_codec = static_cast<AVCodecID>(m_audio_codec_id);
-			const AVOutputFormat* out_format = find_format(video_codec, audio_codec);
+			const AVCodec* selected_video_codec = avcodec_find_encoder_by_name(m_video_codec_name.c_str());
+			const AVCodec* selected_audio_codec = avcodec_find_encoder_by_name(m_audio_codec_name.c_str());
+
+			const AVCodecID video_codec_id = selected_video_codec ? selected_video_codec->id : static_cast<AVCodecID>(m_video_codec_id);
+			const AVCodecID audio_codec_id = selected_audio_codec ? selected_audio_codec->id : static_cast<AVCodecID>(m_audio_codec_id);
+			const AVOutputFormat* out_format = find_format(video_codec_id, audio_codec_id);
 
 			if (out_format)
 			{
@@ -1002,7 +1014,7 @@ namespace utils
 			}
 			else
 			{
-				media_log.error("video_encoder: Could not find a format for the requested video_codec %d and audio_codec %d", m_video_codec_id, m_audio_codec_id);
+				media_log.error("video_encoder: Could not find a format for the requested video_codec '%s' (ID=%d) and audio_codec '%s' (ID=%d)", m_video_codec_name, m_video_codec_id, m_audio_codec_name, m_audio_codec_id);
 
 				// Fallback to some other codec
 				for (const AVCodec* video_codec : video_codecs)
@@ -1014,6 +1026,8 @@ namespace utils
 						if (out_format)
 						{
 							media_log.success("video_encoder: Found fallback output format '%s'", out_format->name);
+							selected_video_codec = video_codec;
+							selected_audio_codec = audio_codec;
 							break;
 						}
 					}
@@ -1046,27 +1060,11 @@ namespace utils
 				return;
 			}
 
-			const auto create_context = [this, &av](bool is_video) -> bool
+			const auto create_context = [this, &av, &selected_video_codec, &selected_audio_codec](bool is_video) -> bool
 			{
 				const std::string type = is_video ? "video" : "audio";
 				scoped_av::ctx& ctx = is_video ? av.video : av.audio;
-
-				if (is_video)
-				{
-					if (!(ctx.codec = avcodec_find_encoder(av.format_context->oformat->video_codec)))
-					{
-						media_log.error("video_encoder: avcodec_find_encoder for video failed. video_codec=%d", static_cast<int>(av.format_context->oformat->video_codec));
-						return false;
-					}
-				}
-				else
-				{
-					if (!(ctx.codec = avcodec_find_encoder(av.format_context->oformat->audio_codec)))
-					{
-						media_log.error("video_encoder: avcodec_find_encoder for audio failed. audio_codec=%d", static_cast<int>(av.format_context->oformat->audio_codec));
-						return false;
-					}
-				}
+				ctx.codec = is_video ? selected_video_codec : selected_audio_codec;
 
 				if (!(ctx.stream = avformat_new_stream(av.format_context, nullptr)))
 				{
