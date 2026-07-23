@@ -1609,6 +1609,32 @@ namespace np
 		}
 	}
 
+	void np_handler::rpcn_trophy_unlock(const SceNpCommunicationId& communication_id, s32 trophy_id, u64 timestamp)
+	{
+		if (!is_psn_active || g_cfg.net.psn_status != np_psn_status::psn_rpcn)
+			return;
+
+		std::lock_guard lock(mutex_rpcn);
+		if (!rpcn || !rpcn->is_authentified())
+			return;
+
+		rpcn->unlock_trophy(communication_id, trophy_id, timestamp);
+	}
+
+	std::vector<std::pair<s32, u64>> np_handler::rpcn_trophy_sync(
+		const SceNpCommunicationId& communication_id,
+		const std::vector<std::pair<s32, u64>>& local_unlocked)
+	{
+		if (!is_psn_active || g_cfg.net.psn_status != np_psn_status::psn_rpcn)
+			return {};
+
+		std::lock_guard lock(mutex_rpcn);
+		if (!rpcn || !rpcn->is_authentified())
+			return {};
+
+		return rpcn->sync_trophies(communication_id, local_unlocked);
+	}
+
 	template <typename T>
 	error_code np_handler::get_friend_presence_by_index(u32 index, SceNpUserInfo* user, T* pres)
 	{
