@@ -37,7 +37,7 @@ namespace vk
 
 		std::unique_ptr<vk::viewable_image> managed_texture = nullptr;
 
-		//DMA relevant data
+		// DMA relevant data
 		std::unique_ptr<vk::event> dma_fence;
 		vk::render_device* m_device = nullptr;
 		vk::viewable_image* vram_texture = nullptr;
@@ -97,6 +97,26 @@ namespace vk
 
 			// Notify baseclass
 			baseclass::on_section_resources_created();
+		}
+
+		void create(u16 w, u16 h, u16 depth, u16 mipmaps, vk::image* image, u32 rsx_pitch, bool managed, const vk::render_target* surface)
+		{
+			u32 gcm_format;
+			bool swap_bytes;
+
+			if (surface->is_depth_surface())
+			{
+				gcm_format = (surface->get_surface_depth_format() != rsx::surface_depth_format::z16) ? CELL_GCM_TEXTURE_DEPTH16 : CELL_GCM_TEXTURE_DEPTH24_D8;
+				swap_bytes = true;
+			}
+			else
+			{
+				auto info = get_compatible_gcm_format(surface->get_surface_color_format());
+				gcm_format = info.first;
+				swap_bytes = info.second;
+			}
+
+			create(w, h, depth, mipmaps, image, rsx_pitch, managed, gcm_format, swap_bytes);
 		}
 
 		void release_dma_resources()

@@ -532,7 +532,7 @@ namespace rsx
 			if (!new_surface)
 			{
 				ensure(store);
-				new_surface_storage = Traits::create_new_surface(address, format, width, height, pitch, antialias, scaling_config, std::forward<Args>(extra_params)...);
+				new_surface_storage = Traits::create_new_surface(command_list, address, format, width, height, pitch, antialias, scaling_config, std::forward<Args>(extra_params)...);
 				new_surface = Traits::get(new_surface_storage);
 				Traits::prepare_surface_for_drawing(command_list, new_surface);
 				allocate_rsx_memory(new_surface);
@@ -1025,6 +1025,83 @@ namespace rsx
 			{
 				m_bound_depth_stencil = std::make_pair(0, nullptr);
 			}
+		}
+
+		// Prepare a render target surface for drawing without binding it to the current RTV/DSV set.
+		// Useful for transfer operations to ensure watertight writes.
+		template <typename ...Args>
+		void prepare_transfer_target(
+			command_list_type command_list,
+			surface_type surface,
+			rsx::surface_access access,
+			Args&&... extra_params)
+		{
+			// We need to reintersect the surface against the surface hierarchy tree to avoid data loss
+			if (!surface->is_depth_surface()) [[ likely ]]
+			{
+				bind_address_as_render_targets(
+					command_list,
+					surface->base_addr,
+					surface->format_info.gcm_color_format,
+					surface->get_aa_mode(),
+					surface->get_surface_width(),
+					surface->get_surface_height(),
+					surface->get_rsx_pitch(),
+					surface->get_resolution_scaling_config(),
+					std::forward<Args>(extra_params)...);
+			}
+			else
+			{
+				bind_address_as_depth_stencil(
+					command_list,
+					surface->base_addr,
+					surface->format_info.gcm_depth_format,
+					surface->get_aa_mode(),
+					surface->get_surface_width(),
+					surface->get_surface_height(),
+					surface->get_rsx_pitch(),
+					surface->get_resolution_scaling_config(),
+					std::forward<Args>(extra_params)...);
+			}
+
+			ensure(access.is_transfer());
+			surface->memory_barrier(command_list, access);
+		}
+
+		// Create surface on-demand from an RSX image description
+		template <typename ...Args>
+		surface_type create_surface_from_rsx_section(
+			command_list_type command_list,
+			const rsx::image_section_attributes_t& attributes,
+			const rsx::surface_scaling_config_t& scaling_config,
+			Args&&... extra_params)
+		{
+			cache_tag = rsx::get_shared_tag();
+
+			if (rsx::classify_format(attributes.gcm_format) == RSX_FORMAT_CLASS_COLOR)
+			{
+				return bind_address_as_render_targets(
+					command_list,
+					attributes.address,
+					rsx::get_compatible_surface_color_format(attributes.gcm_format),
+					rsx::surface_antialiasing::center_1_sample,
+					attributes.width,
+					attributes.height,
+					attributes.pitch,
+					scaling_config,
+					std::forward<Args>(extra_params)...);
+			}
+
+			return bind_address_as_depth_stencil(
+				command_list,
+				attributes.address,
+				rsx::get_compatible_surface_depth_format(attributes.gcm_format),
+				rsx::surface_antialiasing::center_1_sample,
+				attributes.width,
+				attributes.height,
+				attributes.pitch,
+				{},
+				std::forward<Args>(extra_params)...);
 		}
 
 		u8 get_color_surface_count() const
