@@ -54,6 +54,8 @@
 #include "Utilities/JIT.h"
 
 #include "Emu/IPC_socket.h"
+#include "Emu/Io/SkylanderPortalIPC.h"
+#include "Emu/Io/SkylanderPortalIPC_config.h"
 
 #if defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VulkanAPI.h"
@@ -813,6 +815,15 @@ void Emulator::Init()
 	if (g_cfg_ipc.get_server_enabled())
 	{
 		g_fxo->init<IPC_socket::IPC_server_manager>(true);
+	}
+
+	// Load Skylanders IPC config and start server if enabled
+	g_cfg_sky_ipc.load();
+	sys_log.notice("Using Skylanders IPC config:\n%s", g_cfg_sky_ipc.to_string());
+
+	if (g_cfg_sky_ipc.get_server_enabled())
+	{
+		g_fxo->init<SkylanderPortalIPCServerManager>(true);
 	}
 }
 
