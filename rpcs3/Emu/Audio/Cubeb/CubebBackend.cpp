@@ -114,9 +114,14 @@ bool CubebBackend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize
 
 	if (!device.handle)
 	{
-		if (use_default_device) Cubeb.error("Opening default device failed");
-		else Cubeb.error("Device with id=%s not found", dev_id);
-		return false;
+		if (!use_default_device)
+		{
+			Cubeb.error("Device with id=%s not found", dev_id);
+			return false;
+		}
+
+		Cubeb.notice("Device enumeration unavailable, using default output (nullptr)");
+		device.ch_cnt = static_cast<u32>(ch_cnt);
 	}
 
 	if (device.ch_cnt == 0)
