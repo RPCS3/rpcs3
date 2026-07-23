@@ -142,7 +142,7 @@ error_code sys_hid_manager_513(u64 a1, u64 a2, vm::ptr<void> buf, u64 buf_size)
 	return CELL_OK;
 }
 
-error_code sys_hid_manager_514(u32 pkg_id, vm::ptr<void> buf, u64 buf_size)
+error_code sys_hid_manager_514(ppu_thread& ppu, u32 pkg_id, vm::ptr<void> buf, u64 buf_size)
 {
 	if (pkg_id == 0xE)
 	{
@@ -151,6 +151,11 @@ error_code sys_hid_manager_514(u32 pkg_id, vm::ptr<void> buf, u64 buf_size)
 	else
 	{
 		sys_hid.todo("sys_hid_manager_514(pkg_id=0x%x, buf=*0x%x, buf_size=0x%llx)", pkg_id, buf, buf_size);
+	}
+
+	if (buf_size && !vm::check_addr(ppu.vm_owner.get(), buf.addr(), 0, buf_size))
+	{
+		return CELL_EABORT;
 	}
 
 	if (pkg_id == 0xE)
