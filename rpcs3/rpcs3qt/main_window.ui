@@ -365,6 +365,7 @@
     <addaction name="separator"/>
     <addaction name="toolsSystemCommandsAct"/>
     <addaction name="toolsmemory_viewerAct"/>
+    <addaction name="toolsDumpGuestMemoryAct"/>
     <addaction name="toolskernel_explorerAct"/>
     <addaction name="toolsRsxDebuggerAct"/>
     <addaction name="separator"/>
@@ -757,6 +758,17 @@
    </property>
    <property name="text">
     <string>Memory Viewer</string>
+   </property>
+  </action>
+  <action name="toolsDumpGuestMemoryAct">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Dump Guest Memory</string>
+   </property>
+   <property name="toolTip">
+    <string>Dump all allocated PS3 guest memory and live SPU local stores</string>
    </property>
   </action>
   <action name="toolsRsxDebuggerAct">

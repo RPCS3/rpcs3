@@ -109,6 +109,7 @@ private Q_SLOTS:
 	void BootVSH();
 	void BootSavestate();
 	void BootRsxCapture(std::string path = "");
+	void DumpGuestMemory();
 	void DecryptSPRXLibraries();
 	void show_boot_error(game_boot_result status);
 
