@@ -1079,21 +1079,21 @@ void trophy_manager_dialog::StartTrophyLoadThreads()
 	for (int i = 0; i < count; ++i)
 		indices.append(i);
 
-	QFutureWatcher<void> futureWatcher;
+	QFutureWatcher<void> future_watcher;
 
-	progress_dialog progressDialog(tr("Loading trophies"), tr("Loading trophy data, please wait..."), tr("Cancel"), 0, 1, false, this, Qt::Dialog | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
+	progress_dialog progress_dlg(tr("Loading trophies"), tr("Loading trophy data, please wait..."), tr("Cancel"), 0, 1, false, this, Qt::Dialog | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
 
-	connect(&futureWatcher, &QFutureWatcher<void>::progressRangeChanged, &progressDialog, &QProgressDialog::setRange);
-	connect(&futureWatcher, &QFutureWatcher<void>::progressValueChanged, &progressDialog, &QProgressDialog::setValue);
-	connect(&futureWatcher, &QFutureWatcher<void>::finished, this, [this]() { RepaintUI(true); });
-	connect(&progressDialog, &QProgressDialog::canceled, this, [this, &futureWatcher]()
+	connect(&future_watcher, &QFutureWatcher<void>::progressRangeChanged, &progress_dlg, &QProgressDialog::setRange);
+	connect(&future_watcher, &QFutureWatcher<void>::progressValueChanged, &progress_dlg, &QProgressDialog::setValue);
+	connect(&future_watcher, &QFutureWatcher<void>::finished, this, [this]() { RepaintUI(true); });
+	connect(&progress_dlg, &QProgressDialog::canceled, this, [this, &future_watcher]()
 	{
-		futureWatcher.cancel();
+		future_watcher.cancel();
 		close(); // It's pointless to show an empty window
 	});
 
 	atomic_t<usz> error_count{};
-	futureWatcher.setFuture(QtConcurrent::map(indices, [this, &error_count, &folder_list](const int& i)
+	future_watcher.setFuture(QtConcurrent::map(indices, [this, &error_count, &folder_list](const int& i)
 	{
 		const std::string dir_name = folder_list.value(i).toStdString();
 		gui_log.trace("Loading trophy dir: %s", dir_name);
@@ -1106,9 +1106,9 @@ void trophy_manager_dialog::StartTrophyLoadThreads()
 		}
 	}));
 
-	progressDialog.exec();
+	progress_dlg.exec();
 
-	futureWatcher.waitForFinished();
+	future_watcher.waitForFinished();
 
 	if (error_count != 0)
 	{

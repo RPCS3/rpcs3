@@ -1964,7 +1964,7 @@ fs::native_handle fs::file::get_handle() const
 #endif
 }
 
-bool fs::set_sparse(const fs::file& file)
+bool fs::set_sparse([[maybe_unused]] const fs::file& file)
 {
 #ifdef _WIN32
 	FILE_SET_SPARSE_BUFFER sparse{TRUE};

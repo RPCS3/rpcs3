@@ -43,6 +43,7 @@ add_library(rpcs3_ui STATIC
     game_list_grid.cpp
     game_list_grid_item.cpp
     game_list_table.cpp
+    guest_memory_dumper.cpp
     gui_application.cpp
     gl_gs_frame.cpp
     gs_frame.cpp
