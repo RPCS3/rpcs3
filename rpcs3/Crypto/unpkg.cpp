@@ -121,9 +121,9 @@ bool package_reader::read_header()
 		return false;
 	}
 
-	if (u64{umax} / sizeof(PKGEntry) < u64(m_header.file_count))
+	if (m_header.file_count > PKG_MAX_FILE_COUNT || u64(m_header.file_count) > u64(m_header.data_size) / sizeof(PKGEntry))
 	{
-		pkg_log.error("PKG file count is too large! (0x%x)", m_header.file_count);
+		pkg_log.error("PKG file count is invalid! (count=0x%x, data_size=0x%llx)", m_header.file_count, m_header.data_size);
 		return false;
 	}
 
