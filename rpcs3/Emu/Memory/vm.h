@@ -48,6 +48,7 @@ namespace vm
 		// Dynamic size to ease on the compiler
 		std::add_pointer_t<memory_page> pages{};
 
+		~ps3_virtual_memory_object() noexcept;
 		void terminate();
 	};
 

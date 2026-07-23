@@ -2323,7 +2323,7 @@ void lv2_obj::notify_all() noexcept
 
 	const auto cpu = cpu_thread::get_current();
 
-	if (!cpu)
+	if (!cpu || cpu->is_stopped())
 	{
 		return;
 	}

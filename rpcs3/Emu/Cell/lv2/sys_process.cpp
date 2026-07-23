@@ -193,12 +193,6 @@ u64 lv2_process::ki11_self()
 		break;
 	}
 
-	if (memory_4GB_model)
-	{
-		memory_4GB_model->terminate();
-		memory_4GB_model.reset();
-	}
-
 	if (parent_memory_container)
 	{
 		parent_memory_container->free(used_mewmory);
@@ -661,7 +655,12 @@ void _sys_process_exit(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3)
 
 	if (id_manager::g_process != lv2_process::id_base)
 	{
-		ensure(idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process))->ki11_self();
+		lv2_obj::sleep(ppu);
+
+		const auto current = ensure(idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process));
+		current->ki11_self();
+
+		ensure(idm::remove_verify<lv2_obj, lv2_process>(id_manager::g_process, current));
 		return;
 	}
 

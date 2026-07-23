@@ -3267,9 +3267,14 @@ void ppu_thread::fast_call(u32 addr, u64 rtoc, bool is_thread_entry)
 
 		const auto cia = _this->cia;
 
-		if (_this->current_function && idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->func_manager->is_func(cia))
+		if (_this->current_function)
 		{
-			return fmt::format("PPU[0x%x] Thread (%s) [HLE:0x%08x, LR:0x%08x]", _this->id, *name_cache.get(), cia, _this->lr);
+			const auto current = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
+
+			if (current && current->func_manager->is_func(cia))
+			{
+				return fmt::format("PPU[0x%x] Thread (%s) [HLE:0x%08x, LR:0x%08x]", _this->id, *name_cache.get(), cia, _this->lr);
+			}
 		}
 
 		extern const char* get_prx_name_by_cia(u32 addr);
@@ -3320,6 +3325,17 @@ void ppu_thread::fast_call(u32 addr, u64 rtoc, bool is_thread_entry)
 		current_function = old_func;
 		g_tls_log_prefix = old_fmt;
 		state -= cpu_flag::ret;
+
+		if (state & cpu_flag::exit)
+		{
+			// lv2_obj::sleep(*this);
+			// state -= cpu_flag::suspend;
+
+			if (vm_owner && !idm::check_unlocked<lv2_obj, lv2_process>(id_manager::g_process))
+			{
+				vm_owner->terminate();
+			}
+		}
 	};
 
 	exec_task();

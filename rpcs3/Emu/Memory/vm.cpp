@@ -2431,9 +2431,9 @@ namespace vm
 		};
 
 
-// #ifdef _WIN32
+	#ifdef _WIN32
  		utils::memory_release(ptr->hook_addr, 0x800000000);
-// #endif
+	#endif
 		ensure(s_hook.map(ptr->hook_addr, utils::protection::rw, true));
 
 		// Global
@@ -2446,7 +2446,6 @@ namespace vm
 	void deinitialize_ps3_mmemory_object(ps3_virtual_memory_object* ptr)
 	{
 		constexpr u64 pow32 = u64{1} << 32;
-
 		{
 			vm::writer_lock lock;
 
@@ -2458,25 +2457,9 @@ namespace vm
 					ensure(block.use_count() == 1);
 				}
 			}
-
-			ptr->locations.clear();
 		}
 
-		utils::memory_decommit(ptr->exec_addr, pow32 * 2);
-		utils::memory_decommit(ptr->stat_addr, pow32);
-
-	#ifdef _WIN32
-		s_hook.unmap(ptr->hook_addr);
-		//ensure(utils::memory_reserve(pow32 * 8, ptr->hook_addr));
-	#else
-		utils::memory_decommit(ptr->hook_addr, pow32 * 8);
-	#endif
-
-		utils::memory_release(ptr->base_addr, pow32 * 2);
-		utils::memory_release(ptr->exec_addr, pow32 * 3);
-		//utils::memory_release(ptr->hook_addr, pow32 * 8);
-		utils::memory_release(ptr->stat_addr, pow32);
-		utils::memory_release(ptr->pages, pow32 / 4096);
+		std::memset(ptr->pages, 0, sizeof(pow32 / 4096));
 	}
 
 	void ps3_virtual_memory_object::terminate()
@@ -2484,6 +2467,26 @@ namespace vm
 		deinitialize_ps3_mmemory_object(this);
 	}
 
+	ps3_virtual_memory_object::~ps3_virtual_memory_object() noexcept
+	{
+		constexpr u64 pow32 = u64{1} << 32;
+
+		utils::memory_decommit(exec_addr, pow32 * 2);
+		utils::memory_decommit(stat_addr, pow32);
+
+	#ifdef _WIN32
+		s_hook.unmap(hook_addr);
+		ensure(utils::memory_reserve(pow32 * 8, hook_addr));
+	#else
+		utils::memory_decommit(hook_addr, pow32 * 8);
+	#endif
+
+		utils::memory_release(base_addr, pow32 * 2);
+		utils::memory_release(exec_addr, pow32 * 3);
+		utils::memory_release(hook_addr, pow32 * 8);
+		utils::memory_release(stat_addr, pow32);
+		utils::memory_release(pages, pow32 / 4096);
+	}
 	void save(ps3_virtual_memory_object* obj, utils::serial& ar)
 	{
 		// TODO: Serialize std::vector direcly

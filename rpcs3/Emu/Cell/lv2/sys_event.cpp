@@ -261,6 +261,12 @@ error_code sys_event_queue_create(cpu_thread& cpu, vm::ptr<u32> equeue_id, vm::p
 
 	cpu.check_state();
 	*equeue_id = idm::last_id<lv2_event_queue>();
+
+	if (ipc_key != SYS_EVENT_QUEUE_LOCAL)
+	{
+		sys_event.warning("sys_event_queue_create(): created IPC event queue: 0x%x", idm::last_id());
+	}
+
 	return CELL_OK;
 }
 
