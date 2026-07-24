@@ -7,6 +7,7 @@
 #include "util/auto_typemap.hpp"
 
 #include "util/to_endian.hpp"
+#include "Emu/Cell/RawSPUMMIO.h"
 
 class ppu_thread;
 
@@ -324,6 +325,17 @@ namespace vm
 		{
 			using dest_t = std::conditional_t<std::is_void_v<T>, U, T>;
 
+			if (addr >= RAW_SPU_BASE_ADDR) [[unlikely]]
+			{
+				if constexpr (sizeof(dest_t) == 4)
+				{
+					// dest_t already holds the value in guest (big-endian) byte order;
+					// reinterpret its raw bits directly instead of round-tripping through host order.
+					ppu_write_mmio_aware_u32(g_base_addr, addr, std::bit_cast<u32>(static_cast<dest_t>(value)));
+					return;
+				}
+			}
+
 			if constexpr (!std::is_void_v<T>)
 			{
 				*_ptr<dest_t>(addr) = value;
@@ -344,13 +356,26 @@ namespace vm
 			write<be_t<u16>>(addr, value, ppu);
 		}
 
-		inline const be_t<u32>& read32(u32 addr)
+		inline u32 read32(u32 addr)
 		{
+			if (addr >= RAW_SPU_BASE_ADDR) [[unlikely]]
+			{
+				// Result is in guest (big-endian) byte order; bit_cast into be_t<u32>
+				// so the implicit conversion to u32 below performs the host-order swap.
+				return std::bit_cast<be_t<u32>>(ppu_read_mmio_aware_u32(g_base_addr, addr));
+			}
 			return _ref<u32>(addr);
 		}
 
 		inline void write32(u32 addr, be_t<u32> value, ppu_thread* ppu = nullptr)
 		{
+			if (addr >= RAW_SPU_BASE_ADDR) [[unlikely]]
+			{
+				// value already holds the guest (big-endian) byte order; pass the raw
+				// bits through as-is instead of letting the be_t->u32 conversion swap them.
+				ppu_write_mmio_aware_u32(g_base_addr, addr, std::bit_cast<u32>(value));
+				return;
+			}
 			write<be_t<u32>>(addr, value, ppu);
 		}
 

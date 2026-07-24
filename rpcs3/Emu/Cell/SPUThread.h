@@ -3,6 +3,7 @@
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/CPU/Hypervisor.h"
 #include "Emu/Cell/SPUInterpreter.h"
+#include "Emu/Cell/RawSPUMMIO.h"
 #include "Emu/Memory/vm.h"
 #include "MFC.h"
 
@@ -167,16 +168,6 @@ enum
 	SPU_NPC_offs = 0x4034,
 	SPU_RdSigNotify1_offs = 0x1400C,
 	SPU_RdSigNotify2_offs = 0x1C00C,
-};
-
-enum : u32
-{
-	RAW_SPU_BASE_ADDR   = 0xE0000000,
-	RAW_SPU_OFFSET      = 0x00100000,
-	RAW_SPU_LS_OFFSET   = 0x00000000,
-	RAW_SPU_PROB_OFFSET = 0x00040000,
-
-	SPU_FAKE_BASE_ADDR  = 0xE8000000,
 };
 
 struct spu_channel_op_state
