@@ -581,6 +581,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceComboBox(ui->outputScalingMode, emu_settings_type::OutputScalingMode);
 	SubscribeTooltip(ui->outputScalingMode, tooltips.settings.output_scaling_mode);
+#ifndef __APPLE__
+	// MetalFX output scaling is only implemented on top of MoltenVK
+	remove_item(ui->outputScalingMode, static_cast<int>(output_scaling_mode::metalfx), static_cast<int>(output_scaling_mode::bilinear));
+#endif
 
 	// 3D
 	m_emu_settings->EnhanceComboBox(ui->stereoRenderMode, emu_settings_type::StereoRenderMode);
