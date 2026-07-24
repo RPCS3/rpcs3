@@ -814,7 +814,6 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 #endif
 		else
 		{
-			// Covers bilinear as well as metalfx when MetalFX is unavailable on this system.
 			m_upscaler = std::make_unique<vk::bilinear_upscale_pass>();
 		}
 	}
