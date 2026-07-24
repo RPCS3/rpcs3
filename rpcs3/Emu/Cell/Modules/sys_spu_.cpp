@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/VFS.h"
+#include "Emu/IdManager.h"
 #include "Emu/Cell/PPUModule.h"
 
 #include "Emu/Cell/lv2/sys_spu.h"
@@ -379,6 +380,14 @@ error_code sys_raw_spu_load(s32 id, vm::cptr<char> path, vm::ptr<u32> entry)
 {
 	sysPrxForUser.warning("sys_raw_spu_load(id=%d, path=%s, entry=*0x%x)", id, path, entry);
 
+	const auto thread = idm::get_unlocked<named_thread<spu_thread>>(
+		spu_thread::find_raw_spu(static_cast<u32>(id)));
+
+	if (!thread) [[unlikely]]
+	{
+		return CELL_ESRCH;
+	}
+
 	const fs::file elf_file = fs::file(vfs::get(path.get_ptr()));
 
 	if (!elf_file)
@@ -388,6 +397,7 @@ error_code sys_raw_spu_load(s32 id, vm::cptr<char> path, vm::ptr<u32> entry)
 
 	sys_spu_image img;
 	img.load(elf_file);
+	// LS is mapped at RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index in vm space
 	img.deploy(vm::_ptr<u8>(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id), std::span(img.segs.get_ptr(), img.nsegs));
 	img.free();
 
@@ -400,10 +410,18 @@ error_code sys_raw_spu_image_load(s32 id, vm::ptr<sys_spu_image> img)
 {
 	sysPrxForUser.warning("sys_raw_spu_image_load(id=%d, img=*0x%x)", id, img);
 
-	// Load SPU segments
+	const auto thread = idm::get_unlocked<named_thread<spu_thread>>(
+		spu_thread::find_raw_spu(static_cast<u32>(id)));
+
+	if (!thread) [[unlikely]]
+	{
+		return CELL_ESRCH;
+	}
+
+	// Load SPU segments — LS is mapped at RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index
 	img->deploy(vm::_ptr<u8>(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id), std::span(img->segs.get_ptr(), img->nsegs));
 
-	// Use MMIO
+	// Set NPC via vm::write32 — now dispatches through ppu_write_mmio_aware_u32 for MMIO region
 	vm::write32(RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * id + RAW_SPU_PROB_OFFSET + SPU_NPC_offs, img->entry_point);
 
 	return CELL_OK;

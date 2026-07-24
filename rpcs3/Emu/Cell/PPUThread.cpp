@@ -27,6 +27,7 @@
 #include "lv2/sys_overlay.h"
 #include "lv2/sys_process.h"
 #include "lv2/sys_spu.h"
+#include "RawSPUMMIO.h"
 
 #ifdef LLVM_AVAILABLE
 #ifdef _MSC_VER
