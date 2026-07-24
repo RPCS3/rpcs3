@@ -440,7 +440,7 @@ void Emulator::Init()
 	jit_runtime::initialize();
 
 	const std::string emu_dir = rpcs3::utils::get_emu_dir();
-	auto make_path_verbose = [&](const std::string& path, bool must_exist_outside_emu_dir)
+	auto make_path_verbose = [&](std::string_view path, bool must_exist_outside_emu_dir)
 	{
 		if (fs::is_dir(path))
 		{
@@ -951,7 +951,7 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	return true;
 }
 
-game_boot_result Emulator::GetElfPathFromDir(std::string& elf_path, const std::string& path)
+game_boot_result Emulator::GetElfPathFromDir(std::string& elf_path, std::string_view path)
 {
 	if (!fs::is_dir(path))
 	{
@@ -968,7 +968,7 @@ game_boot_result Emulator::GetElfPathFromDir(std::string& elf_path, const std::s
 
 	for (std::string elf : boot_list)
 	{
-		elf = path + elf;
+		elf = fmt::format("%s%s", path, elf);
 
 		if (fs::is_file(elf))
 		{
@@ -4706,7 +4706,7 @@ const std::string Emulator::GetSfoDir(bool prefer_disc_sfo) const
 	return m_sfo_dir;
 }
 
-void Emulator::GetBdvdDir(std::string& bdvd_dir, std::string& sfb_dir, std::string& game_dir, const std::string& elf_dir)
+void Emulator::GetBdvdDir(std::string& bdvd_dir, std::string& sfb_dir, std::string& game_dir, std::string_view elf_dir)
 {
 	// Find disc directory by searching a valid PS3_DISC.SFB closest to root directory
 	std::string main_dir;
@@ -4714,7 +4714,7 @@ void Emulator::GetBdvdDir(std::string& bdvd_dir, std::string& sfb_dir, std::stri
 
 	std::string parent_dir;
 
-	for (std::string search_dir = elf_dir.substr(0, elf_dir.find_last_not_of(fs::delim) + 1);; search_dir = std::move(parent_dir))
+	for (std::string search_dir = std::string(elf_dir.substr(0, elf_dir.find_last_not_of(fs::delim) + 1));; search_dir = std::move(parent_dir))
 	{
 		parent_dir = fs::get_parent_dir(search_dir);
 
@@ -4872,7 +4872,7 @@ bool Emulator::IsVsh()
 	return g_ps3_process_info.self_info.valid && (g_ps3_process_info.self_info.prog_id_hdr.program_authority_id >> 36 == 0x1070000); // Not only VSH but also most CoreOS LV2 SELFs need the special treatment
 }
 
-bool Emulator::IsValidSfb(const std::string& path)
+bool Emulator::IsValidSfb(std::string_view path)
 {
 	fs::file sfb_file{path, fs::read + fs::isfile};
 
