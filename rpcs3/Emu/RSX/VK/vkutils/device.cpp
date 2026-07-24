@@ -125,6 +125,7 @@ namespace vk
 		optional_features_support.unrestricted_depth_range = device_extensions.is_supported(VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME);
 #ifdef __APPLE__
 		optional_features_support.portability              = device_extensions.is_supported(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
+		optional_features_support.metal_objects            = device_extensions.is_supported(VK_EXT_METAL_OBJECTS_EXTENSION_NAME);
 #endif
 
 		optional_features_support.debug_utils              = instance_extensions.is_supported(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
@@ -566,6 +567,12 @@ namespace vk
 		if (pgpu->optional_features_support.portability)
 		{
 			requested_extensions.push_back(VK_KHR_PORTABILITY_SUBSET_EXTENSION_NAME);
+		}
+
+		// Required to hand VkImage-backed MTLTextures to the MetalFX upscaler
+		if (pgpu->optional_features_support.metal_objects)
+		{
+			requested_extensions.push_back(VK_EXT_METAL_OBJECTS_EXTENSION_NAME);
 		}
 #endif
 

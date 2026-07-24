@@ -9,6 +9,9 @@
 #include "upscalers/bilinear_pass.hpp"
 #include "upscalers/fsr_pass.h"
 #include "upscalers/nearest_pass.hpp"
+#ifdef __APPLE__
+#include "upscalers/metalfx_pass.h"
+#endif
 #include "util/asm.hpp"
 #include "util/video_provider.h"
 
@@ -756,6 +759,21 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		}
 	}
 
+#ifdef __APPLE__
+	// The MetalFX pass submits its own command buffer that samples image_to_flip. The commands
+	// recorded above (guest image upload/composition and this frame's draws) must be flushed to
+	// the queue first or that submission reads stale/undefined data. This must also happen
+	// before the acquired swapchain image is touched below, so that all swapchain writes stay
+	// in the command buffer that waits on the acquire semaphore.
+	if (image_to_flip && !need_media_capture &&
+		g_cfg.video.output_scaling.get() == output_scaling_mode::metalfx &&
+		g_cfg.video.full_rgb_range_output.get() && rsx::fcmp(avconfig.gamma, 1.f) && !avconfig.stereo_enabled &&
+		vk::metalfx_upscale_pass::is_available())
+	{
+		flush_command_queue();
+	}
+#endif
+
 	if (!image_to_flip || aspect_ratio.x1 || aspect_ratio.y1)
 	{
 		// Clear the window background to black
@@ -793,8 +811,15 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		{
 			m_upscaler = std::make_unique<vk::fsr_upscale_pass>();
 		}
+#ifdef __APPLE__
+		else if (m_output_scaling == output_scaling_mode::metalfx && vk::metalfx_upscale_pass::is_available())
+		{
+			m_upscaler = std::make_unique<vk::metalfx_upscale_pass>();
+		}
+#endif
 		else
 		{
+			// Covers bilinear as well as metalfx when MetalFX is unavailable on this system.
 			m_upscaler = std::make_unique<vk::bilinear_upscale_pass>();
 		}
 	}

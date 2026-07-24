@@ -655,7 +655,12 @@ if(TARGET 3rdparty_vulkan)
     if(APPLE)
         target_sources(rpcs3_emu PRIVATE
             RSX/VK/vkutils/metal_layer.mm
+            RSX/VK/upscalers/metalfx/metalfx_pass.mm
         )
+        # MetalFX spatial upscaler interop (VK_EXT_metal_objects -> MTLFXSpatialScaler)
+        find_library(METAL_LIBRARY Metal REQUIRED)
+        find_library(METALFX_LIBRARY MetalFX REQUIRED)
+        target_link_libraries(rpcs3_emu PRIVATE ${METAL_LIBRARY} ${METALFX_LIBRARY})
     endif()
 endif()
 
