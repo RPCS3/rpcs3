@@ -760,11 +760,6 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	}
 
 #ifdef __APPLE__
-	// The MetalFX pass submits its own command buffer that samples image_to_flip. The commands
-	// recorded above (guest image upload/composition and this frame's draws) must be flushed to
-	// the queue first or that submission reads stale/undefined data. This must also happen
-	// before the acquired swapchain image is touched below, so that all swapchain writes stay
-	// in the command buffer that waits on the acquire semaphore.
 	if (image_to_flip && !need_media_capture &&
 		g_cfg.video.output_scaling.get() == output_scaling_mode::metalfx &&
 		g_cfg.video.full_rgb_range_output.get() && rsx::fcmp(avconfig.gamma, 1.f) && !avconfig.stereo_enabled &&

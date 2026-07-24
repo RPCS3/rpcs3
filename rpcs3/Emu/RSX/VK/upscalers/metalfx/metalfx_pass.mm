@@ -1,29 +1,3 @@
-// MetalFX spatial upscaler implementation (macOS / MoltenVK only).
-//
-// The RSX present path hands us a VkImage rendered by the guest at its (usually lower)
-// internal resolution and asks us to scale it up to the swapchain resolution. MetalFX is a
-// Metal-only API, so to feed it we go through VK_EXT_metal_objects: every VkImage we create
-// with a VkExportMetalObjectCreateInfoEXT is backed by an MTLTexture that we can hand to an
-// MTLFXSpatialScaler.
-//
-// Pipeline per frame (commit path):
-//   1. Blit the requested source region into an export-backed input MTLTexture (Vulkan),
-//      submit that on an owned command buffer and wait so the texture is populated.
-//   2. Run MTLFXSpatialScaler input -> output on Metal, waiting for completion.
-//   3. Blit the export-backed output MTLTexture into the presentation surface (Vulkan, in the
-//      caller's command buffer, which is submitted later in the present sequence).
-//
-// The double blit + two sync points make this heavier than the compute-based FSR pass, but it
-// keeps the cross-API ownership contained and correct.
-//
-// CONTRACT: the caller must have flushed all pending work that writes the source image to the
-// queue before invoking this pass (VKGSRender::flip does this), because step 1 submits ahead
-// of the caller's open command buffer.
-//
-// This file is compiled WITHOUT ARC: exported Metal handles (device/queue/textures) are
-// borrowed references owned by MoltenVK and must not be retained or released here. Only the
-// scaler (from a new* method) is owned and released explicitly.
-
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -41,7 +15,6 @@
 #import <Metal/Metal.h>
 #import <MetalFX/MetalFX.h>
 
-// Matches VKGSRenderTypes.hpp's GENERAL_WAIT_TIMEOUT (2s) without dragging in that heavy header.
 static constexpr u64 metalfx_wait_timeout = 2000000ull;
 
 namespace vk
@@ -63,7 +36,6 @@ namespace vk
 
 	struct metalfx_upscale_pass::impl
 	{
-		// An export-backed VkImage and the MTLTexture that shares its storage.
 		struct exportable_image
 		{
 			VkImage image        = VK_NULL_HANDLE;
@@ -113,12 +85,11 @@ namespace vk
 				scaler = nil;
 			}
 
-			// Borrowed from MoltenVK, never retained - just drop the references.
+			// Borrowed from MoltenVK, not released
 			mtl_queue = nil;
 			mtl_device = nil;
 		}
 
-		// Fetch the MTLDevice/MTLCommandQueue that MoltenVK is driving so MetalFX shares them.
 		bool bind_metal_handles()
 		{
 			if (mtl_device && mtl_queue)
@@ -205,7 +176,6 @@ namespace vk
 				return false;
 			}
 
-			// Pull out the MTLTexture that shares this image's storage.
 			VkExportMetalTextureInfoEXT tex_info = { VK_STRUCTURE_TYPE_EXPORT_METAL_TEXTURE_INFO_EXT };
 			tex_info.image = img.image;
 			tex_info.plane = VK_IMAGE_ASPECT_PLANE_0_BIT;
@@ -288,7 +258,6 @@ namespace vk
 	metalfx_upscale_pass::metalfx_upscale_pass()
 		: m_impl(std::make_unique<impl>())
 	{
-		// The active renderer is a mutable singleton; the accessor just hands back a const view.
 		m_impl->dev = const_cast<vk::render_device*>(vk::get_current_renderer());
 	}
 
@@ -305,7 +274,7 @@ namespace vk
 		auto* dev = const_cast<vk::render_device*>(vk::get_current_renderer());
 		if (!dev)
 		{
-			// No active device to probe against yet. Do not cache this outcome.
+			// No device to probe yet, don't cache
 			return false;
 		}
 
@@ -345,9 +314,7 @@ namespace vk
 
 		const bool is_upscale = input_size.width < output_size.width && input_size.height < output_size.height;
 
-		// MetalFX only participates in the commit path (direct-to-present). For the calibration
-		// path (gamma/limited-range/stereo) or a non-upscaling request we defer to the caller,
-		// which samples the source directly (bilinear-equivalent).
+		// Only handle the direct-to-present path; anything else falls back to a plain blit
 		if (!(mode & UPSCALE_AND_COMMIT) || !is_upscale || !present_surface)
 		{
 			if (mode & UPSCALE_AND_COMMIT)
@@ -361,13 +328,6 @@ namespace vk
 			return src;
 		}
 
-		// Always run the scaler in a fixed working format so it is only recreated on resolution
-		// changes, never when the guest buffer format differs between games/framebuffers. BGRA8
-		// is chosen because the common case has BGRA on both ends (guest A8R8G8B8 buffers map to
-		// VK_FORMAT_B8G8R8A8_UNORM and the MoltenVK swapchain is BGRA8Unorm), and both blits in
-		// this pass are 1:1 - with matching formats MoltenVK services them on the blit-encoder
-		// fast path instead of a format-converting draw. When a source is RGBA instead, the
-		// blit reorders channels by name, so colours stay correct either way.
 		const VkFormat work_format = VK_FORMAT_B8G8R8A8_UNORM;
 		const MTLPixelFormat mtl_format = MTLPixelFormatBGRA8Unorm;
 
@@ -381,15 +341,11 @@ namespace vk
 					VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT)) &&
 			(out_img.width == output_size.width && out_img.height == output_size.height && out_img.format == work_format
 				? true
-				// MetalFX writes its output as both compute and render work: STORAGE maps to
-				// MTLTextureUsageShaderWrite and COLOR_ATTACHMENT to MTLTextureUsageRenderTarget.
-				// Without RenderTarget usage the scaler's encode fails and the output is undefined.
 				: m_impl->create_image(out_img, output_size.width, output_size.height, work_format,
 					VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)) &&
 			m_impl->ensure_scaler(input_size.width, input_size.height, output_size.width, output_size.height, mtl_format) &&
 			m_impl->ensure_owned_cb();
 
-		// Any failure -> transparent bilinear fallback so the frame still presents correctly.
 		const auto bilinear_fallback = [&]()
 		{
 			rsx_log.warning("MetalFX upscaling unavailable for this frame, falling back to bilinear.");
@@ -404,7 +360,6 @@ namespace vk
 			return nullptr;
 		}
 
-		// --- Step 1: copy the source region into the export-backed input image (owned CB) ---
 		{
 			auto& ocmd = m_impl->cmd;
 			ocmd.begin();
@@ -420,17 +375,12 @@ namespace vk
 			in_blit.srcOffsets[1] = request.srcOffsets[1];
 			in_blit.dstOffsets[0] = { 0, 0, 0 };
 			in_blit.dstOffsets[1] = { s32(input_size.width), s32(input_size.height), 1 };
-			// 1:1 copy (only the format/channel order changes) - NEAREST avoids any resampling.
 			vkCmdBlitImage(ocmd, src->value, src->current_layout, m_impl->input.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &in_blit, VK_FILTER_NEAREST);
 
-			// MoltenVK reads the shared MTLTexture irrespective of Vulkan layout; keep it GENERAL for reuse.
 			vk::change_image_layout(ocmd, m_impl->input.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL,
 				{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
 			m_impl->input.layout = VK_IMAGE_LAYOUT_GENERAL;
 
-			// The output image lives its whole life in GENERAL: it is written by Metal outside
-			// Vulkan's knowledge, so GENERAL is the only layout that never lies about contents.
-			// Transition it exactly once after (re)creation.
 			if (out_img.layout == VK_IMAGE_LAYOUT_UNDEFINED)
 			{
 				vk::change_image_layout(ocmd, out_img.image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
@@ -443,16 +393,10 @@ namespace vk
 
 			m_impl->submit_fence->reset();
 			vk::queue_submit_t submit_info{ m_impl->dev->get_graphics_queue(), m_impl->submit_fence.get() };
-			// No forced flush: with MTRSX the async submit queue must retain ordering against the
-			// frame contents the renderer flushed before invoking us. wait_for_fence spins on the
-			// fence's flush flag first, so the deferred submit is handled correctly.
 			ocmd.submit(submit_info);
 			vk::wait_for_fence(m_impl->submit_fence.get(), metalfx_wait_timeout);
 		}
 
-		// --- Step 2: run MetalFX input -> output on the shared Metal queue ---
-		// The autoreleasepool is required: this runs on the RSX thread which has no pool of its
-		// own, and the per-frame MTLCommandBuffer is autoreleased.
 		bool metal_ok = false;
 		if (@available(macOS 13.0, *))
 		{
@@ -466,8 +410,6 @@ namespace vk
 				[mtl_cb commit];
 				[mtl_cb waitUntilCompleted];
 
-				// If the scaler failed (e.g. texture usage validation), the output texture holds
-				// undefined data. Presenting it anyway is what shows up as a solid white frame.
 				metal_ok = ([mtl_cb status] == MTLCommandBufferStatusCompleted);
 				if (!metal_ok)
 				{
@@ -483,9 +425,6 @@ namespace vk
 			return nullptr;
 		}
 
-		// --- Step 3: blit the upscaled output into the presentation surface (caller's CB) ---
-		// The output stays in GENERAL (see step 1); blitting from GENERAL is valid and avoids
-		// declaring a false oldLayout for pixels Vulkan never saw being written.
 		VkImageBlit out_blit = {};
 		out_blit.srcSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
 		out_blit.dstSubresource = request.dstSubresource;
