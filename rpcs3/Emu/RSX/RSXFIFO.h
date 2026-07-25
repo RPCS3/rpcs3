@@ -2,6 +2,7 @@
 
 #include "util/types.hpp"
 #include "Emu/RSX/gcm_enums.h"
+#include "Emu/system_config_types.h"
 
 #include <span>
 
@@ -142,6 +143,9 @@ namespace rsx
 			u32 m_remaining_commands = 0;
 			u32 m_args_ptr = 0;
 			u32 m_cmd = ~0u;
+
+			const rsx_fifo_mode m_fifo_mode;
+			const bool m_atomic_fetch;
 
 			u32 m_cache_addr = 0;
 			u32 m_cache_size = 0;

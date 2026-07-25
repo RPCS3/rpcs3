@@ -23,6 +23,8 @@ namespace rsx
 	namespace FIFO
 	{
 		FIFO_control::FIFO_control(::rsx::thread* pctrl)
+			: m_fifo_mode(g_cfg.core.rsx_fifo_accuracy.get())
+			, m_atomic_fetch(m_fifo_mode != rsx_fifo_mode::fast)
 		{
 			m_thread = pctrl;
 			m_ctrl = pctrl->ctrl;
@@ -128,8 +130,8 @@ namespace rsx
 				}
 
 				// Atomic FIFO debug options
-				const bool force_cache_fill = g_cfg.core.rsx_fifo_accuracy == rsx_fifo_mode::atomic_ordered;
-				const bool strict_fetch_ordering = g_cfg.core.rsx_fifo_accuracy >= rsx_fifo_mode::atomic_ordered;
+				const bool force_cache_fill = m_fifo_mode == rsx_fifo_mode::atomic_ordered;
+				const bool strict_fetch_ordering = m_fifo_mode >= rsx_fifo_mode::atomic_ordered;
 
 				rsx::reservation_lock<true, 1> rsx_lock(addr1, m_cache_size, true);
 				const auto src = vm::_ptr<spu_rdata_t>(addr1);
@@ -231,7 +233,7 @@ namespace rsx
 				return {};
 			}
 
-			if (g_cfg.core.rsx_fifo_accuracy)
+			if (m_atomic_fetch)
 			{
 				// Return a pointer to the cache storage with confined access
 				const u32 cache_offset_in_words = (m_internal_get - m_cache_addr) / 4;
@@ -275,7 +277,7 @@ namespace rsx
 				bool ok{};
 				u32 arg = 0;
 
-				if (g_cfg.core.rsx_fifo_accuracy) [[ unlikely ]]
+				if (m_atomic_fetch) [[ likely ]]
 				{
 					std::tie(ok, arg) = fetch_u32(m_internal_get + 4);
 
@@ -365,7 +367,7 @@ namespace rsx
 				m_memwatch_cmp = 0;
 			}
 
-			if (!g_cfg.core.rsx_fifo_accuracy) [[ likely ]]
+			if (!m_atomic_fetch) [[ unlikely ]]
 			{
 				const u32 put = read_put();
 
@@ -434,7 +436,7 @@ namespace rsx
 				m_remaining_commands = count - 1;
 			}
 
-			if (g_cfg.core.rsx_fifo_accuracy)
+			if (m_atomic_fetch)
 			{
 				m_internal_get += 4;
 
