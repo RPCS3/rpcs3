@@ -408,6 +408,13 @@ namespace gl
 			"	uvec4 fp_instructions[];\n"
 			"};\n\n";
 
+		const ::glsl::shader_properties properties
+		{
+			.domain = ::glsl::program_domain::glsl_fragment_program,
+			.require_lit_emulation = true,
+		};
+
+		::glsl::insert_glsl_legacy_function(builder, properties);
 		builder << program_common::interpreter::get_fragment_interpreter();
 		const std::string s = builder.str();
 

@@ -660,7 +660,7 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_SCA_OPCODE_EXP: SetDSTSca("exp($s)"); break;
 		case RSX_SCA_OPCODE_LOG: SetDSTSca("log($s)"); break;
 		case RSX_SCA_OPCODE_LIT:
-			SetDSTSca("lit_legacy($s)");
+			SetDSTSca("_builtin_lit($s)");
 			properties.has_lit_op = true;
 			break;
 		case RSX_SCA_OPCODE_BRA:

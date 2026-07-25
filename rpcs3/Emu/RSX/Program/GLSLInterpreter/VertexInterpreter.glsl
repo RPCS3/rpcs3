@@ -230,7 +230,7 @@ vec4 get_cond()
 	return shuffle(cc[d0.cond_reg_sel_1], d0.swizzle);
 }
 
-void write_sca(in float value)
+void write_sca(in vec4 value)
 {
 	if (d0.saturate)
 	{
@@ -241,16 +241,16 @@ void write_sca(in float value)
 	{
 		if (!d0.vec_result)
 		{
-			reg_mov(dest[d3.dst & 0xFu], vec4(value), d3.sca_mask);
+			reg_mov(dest[d3.dst & 0xFu], value, d3.sca_mask);
 		}
 		else
 		{
-			reg_mov(cc[d0.cond_reg_sel_1], vec4(value), d3.sca_mask);
+			reg_mov(cc[d0.cond_reg_sel_1], value, d3.sca_mask);
 		}
 	}
 	else
 	{
-		reg_mov(temp[d3.sca_dst_tmp], vec4(value), d3.sca_mask);
+		reg_mov(temp[d3.sca_dst_tmp], value, d3.sca_mask);
 	}
 }
 
@@ -476,7 +476,13 @@ void main()
 			write_vec(value);
 		}
 
-		if (sca_opcode != RSX_SCA_OPCODE_NOP)
+		if (sca_opcode == RSX_SCA_OPCODE_LIT)
+		{
+			// Ridiculously hacky instruction. It is a vector opcode, not scalar
+			// TODO: More HWTEST
+			write_sca(_builtin_lit(read_src(2)));
+		}
+		else if (sca_opcode != RSX_SCA_OPCODE_NOP)
 		{
 			float value = read_src(2).x;
 			switch (sca_opcode)
@@ -487,7 +493,6 @@ void main()
 			case RSX_SCA_OPCODE_RSQ: value = 1.0 / sqrt(value); break;
 			case RSX_SCA_OPCODE_EXP: value = exp(value); break;
 			case RSX_SCA_OPCODE_LOG: value = log(value); break;
-			//case RSX_SCA_OPCODE_LIT: value = lit_legacy(value); break;
 			case RSX_SCA_OPCODE_LG2: value = log2(value); break;
 			case RSX_SCA_OPCODE_EX2: value = exp2(value); break;
 			case RSX_SCA_OPCODE_SIN: value = sin(value); break;
@@ -541,7 +546,7 @@ void main()
 			//case RSX_SCA_OPCODE_POP:
 			}
 
-			write_sca(value);
+			write_sca(vec4(value));
 		}
 	}
 

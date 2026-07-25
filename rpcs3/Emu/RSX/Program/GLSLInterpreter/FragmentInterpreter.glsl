@@ -719,7 +719,11 @@ void main()
 		case RSX_FP_OPCODE_SIN:
 			vrr = sin(s0.xxxx); break;
 		case RSX_FP_OPCODE_NRM:
-			vrr.xyz = normalize(s0.xyz); break;
+			vrr = normalize(s0.xyz).xyzz; break;
+		case RSX_FP_OPCODE_LIT:
+			vrr = _builtin_lit(s0); break;
+		case RSX_FP_OPCODE_LIF:
+			vrr = _builtin_lif(s0); break;
 
 #ifdef WITH_TEXTURES
 		case RSX_FP_OPCODE_TEX:
@@ -837,8 +841,6 @@ void main()
 		//Other (missing in HW)
 		//case RSX_FP_OPCODE_BEM:
 		//case RSX_FP_OPCODE_BEMLUM:
-		//case RSX_FP_OPCODE_LIT:
-		//case RSX_FP_OPCODE_LIF:
 		//case RSX_FP_OPCODE_TIMESWTEX:
 #endif
 		write_dst(vrr);

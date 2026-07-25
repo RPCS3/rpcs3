@@ -12,15 +12,30 @@ R"(
 #define CMP_FIXUP(a) (a)
 #endif
 
+#define _builtin_approx_pow(a, b) exp2((b) * log2(a))
+
 #ifdef _ENABLE_LIT_EMULATION
-vec4 lit_legacy(const in vec4 val)
+// LIT is well documented in NV extension documents. See https://registry.khronos.org/OpenGL/extensions/NV/NV_vertex_program.txt
+// In RSXFP the LIT instruction is unimplemented in hw. In it's place we have LIF and full LIT is emulated using at least 3 instructions.
+vec4 _builtin_lit(const in vec4 values)
 {
-	vec4 clamped_val = vec4(max(val.xy, vec2(0.)), val.zw);
-	return vec4(
-		1.,
-		clamped_val.x,
-		exp2(clamped_val.w * log2(max(clamped_val.y, 0.0000000001))) * sign(clamped_val.x),
-		1.);
+    vec4 t = vec4(max(values.xy, 0.f), values.zw);
+    return vec4(1.f,
+        t.x,
+        t.x > 0.f ? _builtin_approx_pow(max(t.y, 1e-10), t.w) : 0.f,
+        1.f);
+}
+
+// LIT d, t on RSXFP becomes:
+// t.xy = max(t.xy, 0)
+// t.w = t.w * log2(t.y)
+// LIF d, t
+vec4 _builtin_lif(const in vec4 t)
+{
+    return vec4(1.f,
+        t.y,
+        t.y > 0.f ? exp2(t.w) : 0.f,
+        1.f);
 }
 #endif
 

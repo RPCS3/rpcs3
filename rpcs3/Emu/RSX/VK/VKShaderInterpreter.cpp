@@ -285,10 +285,11 @@ namespace vk
 			}
 		}
 
-		[[maybe_unused]] ::glsl::shader_properties properties{};
-		properties.domain = ::glsl::program_domain::glsl_fragment_program;
-		properties.require_depth_conversion = true;
-		properties.require_wpos = true;
+		::glsl::shader_properties properties
+		{
+			.domain = ::glsl::program_domain::glsl_fragment_program,
+			.require_lit_emulation = true,
+		};
 
 		u32 len;
 		ParamArray arr;
@@ -417,6 +418,7 @@ namespace vk
 			"	uint rop_control = fs_contexts[_fs_context_offset].rop_control;\n"
 			"	float alpha_ref = fs_contexts[_fs_context_offset].alpha_ref;\n\n";
 
+		::glsl::insert_glsl_legacy_function(builder, properties);
 		builder << program_common::interpreter::get_fragment_interpreter();
 		const std::string s = builder.str();
 
