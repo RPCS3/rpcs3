@@ -12,6 +12,10 @@ echo "AVVER=$AVVER" >> .ci/ci-vars.env
 # Clang depends on LLVM_COMPILER_VER so it needs to be installed here.
 sudo port install "clang-$LLVM_COMPILER_VER"
 
+if [ "$BUILD_MAC_KK" -eq 1 ]; then
+    sudo port -v install "spirv-llvm-translator-$LLVM_COMPILER_VER" mesa +kosmickrisp
+fi
+
 export CXX=clang++
 export CC=clang
 

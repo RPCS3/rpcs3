@@ -143,6 +143,9 @@ namespace vk
 		case driver_vendor::HONEYKRISP:
 			// Needs more testing
 			break;
+		case driver_vendor::KOSMICKRISP:
+			 // Needs more testing
+			 break;
 		case driver_vendor::PANVK:
 			// Needs more testing
 			break;
