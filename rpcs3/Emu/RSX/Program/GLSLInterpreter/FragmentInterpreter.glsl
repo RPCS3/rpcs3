@@ -625,7 +625,7 @@ void main()
 				else
 				{
 					// Go to ELSE path
-					ip = int(inst.words.z >> 2);
+					ip = int(GET_INST_BITS(2, 0, 31) >> 2);
 					inst_length = 0;
 				}
 				continue;
