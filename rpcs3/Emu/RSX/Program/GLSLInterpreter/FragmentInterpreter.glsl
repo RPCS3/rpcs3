@@ -461,7 +461,7 @@ void write_dst(const in vec4 value)
 	if (TEST_INST_BIT(0, 8)) // SET COND
 	{
 		ur0 = GET_INST_BITS(1, 30, 1);
-		reg_mov(cc[ur0], value, bvr0);
+		reg_mov(cc[ur0], vr0, bvr0);
 	}
 
 	if (TEST_INST_BIT(0, 30)) // NO DEST
