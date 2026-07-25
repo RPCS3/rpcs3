@@ -609,7 +609,7 @@ void main()
 			//case RSX_FP_OPCODE_CAL:
 				// Function call not yet found in the wild for this hw class
 			case RSX_FP_OPCODE_RET:
-				inst.end = true;
+				if (check_cond()) inst.end = true;
 				continue;
 			case RSX_FP_OPCODE_IFE:
 				if (check_cond())
@@ -645,6 +645,10 @@ void main()
 				}
 				continue;
 			case RSX_FP_OPCODE_BRK:
+				if (!check_cond())
+				{
+					continue;
+				}
 				if (loop_end_addr > 0)
 				{
 					ip = loop_end_addr;
