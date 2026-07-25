@@ -818,7 +818,7 @@ void main()
 			case RSX_FP_OPCODE_MAD:
 				vrr = fma(s0, s1, s2); break;
 			case RSX_FP_OPCODE_LRP:
-				vrr = mix(s1, s2, s0); break;
+				vrr = mix(s2, s1, s0); break;
 			case RSX_FP_OPCODE_DP2A:
 				vrr = dot(s0.xy, s1.xy).xxxx + s2.xxxx; break;
 			}
