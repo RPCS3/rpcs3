@@ -495,7 +495,7 @@ void main()
 
 			case RSX_SCA_OPCODE_BRA:
 				// Jump by address register
-				if (dynamic_branch()) current_instruction = int(read_addr_reg().x);
+				if (dynamic_branch()) current_instruction = int(read_addr_reg().x - base_address);
 				continue;
 			case RSX_SCA_OPCODE_BRI:
 				// Jump immediate
