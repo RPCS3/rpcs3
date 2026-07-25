@@ -308,9 +308,10 @@ ivec4 read_addr_reg()
 
 int branch_addr()
 {
-	uint addr_h = GET_BITS(instr.z, 0, 6);
-	uint addr_l = GET_BITS(instr.w, 29, 3);
-	return int((addr_h << 3) + addr_l);
+	const uint addr_2 = GET_BITS(instr.x, 23, 1);        // Allows indexing beyond 512 instructions. Some games push upto 544 instructions on CEX firmware.
+	const uint addr_1 = GET_BITS(instr.z, 0, 6);
+	const uint addr_0 = GET_BITS(instr.w, 29, 3);
+	return int((addr_2 << 9) + (addr_1 << 3) + addr_0);  // NOTE: Encoded jump addresses are already rebased by the VP analyser pass.
 }
 
 bool static_branch()
@@ -412,11 +413,11 @@ void main()
 
 	int callstack[8];
 	int stack_ptr = 0;
-	int current_instruction = 0;
+	int current_instruction = int(entry - base_address);
 
 	d3.end = false;
 
-	while (current_instruction < 512)
+	while (current_instruction >= 0 && current_instruction < 544) // NOTE: CEX can hold upto 544 instructions
 	{
 		if (d3.end)
 		{
