@@ -19,10 +19,11 @@ R"(
 // In RSXFP the LIT instruction is unimplemented in hw. In it's place we have LIF and full LIT is emulated using at least 3 instructions.
 vec4 _builtin_lit(const in vec4 values)
 {
-    vec4 t = vec4(max(values.xy, 0.f), values.zw);
+    // We clamp t.y to 1e-10 to avoid NaN in approx_pow when y=0 and w=0. This matches the spec's pow(x, 0) == 1 requirement.
+    vec4 t = vec4(max(values.xy, vec2(0.f, 1e-10)), values.zw);
     return vec4(1.f,
         t.x,
-        t.x > 0.f ? _builtin_approx_pow(max(t.y, 1e-10), t.w) : 0.f,
+        t.x > 0.f ? _builtin_approx_pow(t.y, t.w) : 0.f,
         1.f);
 }
 
