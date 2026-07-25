@@ -9,6 +9,20 @@ AVVER="${COMM_TAG}-${COMM_COUNT}"
 export LVER="${COMM_TAG}-${COMM_COUNT}-${COMM_HASH}"
 echo "AVVER=$AVVER" >> .ci/ci-vars.env
 
+if [ "$BUILD_MAC_KK" -eq 1 ]; then
+# Due to issues with getting this running under MacPorts, I'm reluctantly going to let this depend on brew for now.
+  git clone https://gitlab.freedesktop.org/mesa/mesa.git kosmickrisp; cd kosmickrisp
+  brew install meson spirv-llvm-translator spirv-tools
+  pip3 install mako packaging pyyaml --break-system-packages
+  sudo port -f deactivate pkgconfig
+  export PATH_OLD="$PATH"
+  export PATH="/opt/homebrew/opt/llvm/bin:$PATH"
+  meson setup build --prefix=/opt/homebrew --buildtype=release -Dplatforms=macos -Dvulkan-drivers=kosmickrisp -Dgallium-drivers= -Dopengl=false -Dzstd=disabled
+  ninja -C build; cd ../
+  export PATH="$PATH_OLD"
+  sudo port -f activate pkgconfig
+fi
+
 # Clang depends on LLVM_COMPILER_VER so it needs to be installed here.
 sudo port install "clang-$LLVM_COMPILER_VER"
 
