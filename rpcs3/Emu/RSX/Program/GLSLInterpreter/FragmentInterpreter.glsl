@@ -639,11 +639,14 @@ void main()
 			case RSX_FP_OPCODE_REP:
 				if (check_cond())
 				{
-					counter = int(GET_INST_BITS(2, 2, 8) - GET_INST_BITS(2, 10, 8)) - 1; // RANGE
-					ir0 = int(GET_INST_BITS(2, 19, 8));                                  // STEP
-					counter = max(counter, 0) / max(ir0, 1);                             // ITERATIONS
-					if (counter > 0)
+					ur0 = GET_INST_BITS(2, 10, 8);                // Start
+					ur1 = GET_INST_BITS(2, 2, 8);                 // End
+					if (ur1 > ur0)
 					{
+						counter = int(ur1 - ur0 - 1);             // RANGE
+						ir0 = int(GET_INST_BITS(2, 19, 8));       // STEP
+						counter = max(counter, 0) / max(ir0, 1);  // ITERATIONS
+
 						loop_start_addr = ip + 1;
 						loop_end_addr = int(inst.words.w >> 2);
 						continue;
