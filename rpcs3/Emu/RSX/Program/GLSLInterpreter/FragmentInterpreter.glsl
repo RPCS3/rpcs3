@@ -484,14 +484,18 @@ void initialize()
 	// NOTE: Register count is the number of 'full' registers that will be consumed. Hardware seems to do some renaming.
 	// NOTE: Attempting to zero-initialize all the registers will slow things to a crawl!
 
-	uint register_count = GET_BITS(shader_control, 24, 6);
-	ur0 = 0, ur1 = 0;
-	while (register_count > 0)
-	{
-		regs32[ur0++] = vr_zero;
-		regs16[ur1++] = vr_zero;
-		regs16[ur1++] = vr_zero;
-		register_count--;
+	const uint register_count = GET_BITS(shader_control, 24, 6);
+	const uint regs32_count = min(register_count, 48u);
+	const uint regs16_count = min(register_count << 1u, 48u);
+
+	ur0 = regs32_count;
+	while (ur0 > 0) {
+		regs32[--ur0] = vr_zero;
+	}
+
+	ur0 = regs16_count;
+	while (ur0 > 0) {
+		regs16[--ur0] = vr_zero;
 	}
 
 	// Fog coord
