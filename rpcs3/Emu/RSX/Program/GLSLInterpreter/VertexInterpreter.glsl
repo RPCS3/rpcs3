@@ -505,7 +505,7 @@ void main()
 				// Call immediate
 				if (dynamic_branch())
 				{
-					callstack[stack_ptr] = current_instruction;
+					callstack[stack_ptr] = current_instruction; // Already incremented, points to next
 					stack_ptr++;
 					current_instruction = branch_addr();
 				}
@@ -518,8 +518,7 @@ void main()
 				if (dynamic_branch())
 				{
 					if (stack_ptr == 0) return;
-					current_instruction = callstack[stack_ptr];
-					stack_ptr--;
+					current_instruction = callstack[--stack_ptr];
 				}
 				continue;
 			case RSX_SCA_OPCODE_BRB:
