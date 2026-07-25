@@ -828,15 +828,18 @@ void main()
 				vrr = mix(s2, s1, s0); break;
 			case RSX_FP_OPCODE_DP2A:
 				vrr = dot(s0.xy, s1.xy).xxxx + s2.xxxx; break;
+			default:
+				// Fallback - just write zero
+				vrr = vr_zero;
 			}
 		}
 #if 0
-		// Other
-		case RSX_FP_OPCODE_BEM:
-		case RSX_FP_OPCODE_BEMLUM:
-		case RSX_FP_OPCODE_LIT:
-		case RSX_FP_OPCODE_LIF:
-		case RSX_FP_OPCODE_TIMESWTEX:
+		//Other (missing in HW)
+		//case RSX_FP_OPCODE_BEM:
+		//case RSX_FP_OPCODE_BEMLUM:
+		//case RSX_FP_OPCODE_LIT:
+		//case RSX_FP_OPCODE_LIF:
+		//case RSX_FP_OPCODE_TIMESWTEX:
 #endif
 		write_dst(vrr);
 	}
