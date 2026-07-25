@@ -618,20 +618,21 @@ void main()
 				if (check_cond()) inst.end = true;
 				continue;
 			case RSX_FP_OPCODE_IFE:
+				ur0 = GET_INST_BITS(2, 0, 31); // ELSE addr
 				if (check_cond())
 				{
-					// Go down IF path
-					if (inst.words.z < inst.words.w)
+					// We've entered the IF block. Set up an exit trap to skip the ELSE block.
+					if (ur0 < inst.words.w)                  // If ELSE address is before ENDIF address..
 					{
-						test_addr = int(inst.words.z >> 2);
-						jump_addr = int(inst.words.w >> 2);
+						test_addr = int(ur0 >> 2u);           // When we reach ELSE block...
+						jump_addr = int(inst.words.w >> 2u);  // Jump to ENDIF
 					}
 					// If simple IF..ENDIF, do nothing
 				}
 				else
 				{
-					// Go to ELSE path
-					ip = int(GET_INST_BITS(2, 0, 31) >> 2);
+					// Go to ELSE path. If ELSE is not provided, it matches ENDIF address.
+					ip = int(ur0 >> 2u);
 					inst_length = 0;
 				}
 				continue;
