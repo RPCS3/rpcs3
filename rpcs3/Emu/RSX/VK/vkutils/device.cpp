@@ -285,12 +285,6 @@ namespace vk
 
 	driver_vendor physical_device::get_driver_vendor() const
 	{
-#ifdef __APPLE__
-		// moltenVK currently returns DRIVER_ID_MOLTENVK (0).
-		// For now, assume the vendor is moltenVK on Apple devices.
-		return driver_vendor::MVK;
-#endif
-
 		if (!driver_properties.driverID)
 		{
 			const auto gpu_name = get_name();
@@ -341,7 +335,11 @@ namespace vk
 
 			if (gpu_name.find("Apple") != umax)
 			{
+#ifdef __APPLE__
+				return driver_vendor::KOSMICKRISP;
+#else
 				return driver_vendor::HONEYKRISP;
+#endif
 			}
 
 			if (gpu_name.find("Panfrost") != umax)
@@ -380,10 +378,14 @@ namespace vk
 				return driver_vendor::V3DV;
 			case VK_DRIVER_ID_MESA_HONEYKRISP:
 				return driver_vendor::HONEYKRISP;
+			case VK_DRIVER_ID_MESA_KOSMICKRISP:
+				return driver_vendor::KOSMICKRISP;
 			case VK_DRIVER_ID_MESA_PANVK:
 				return driver_vendor::PANVK;
 			case VK_DRIVER_ID_ARM_PROPRIETARY:
 				return driver_vendor::ARM_MALI;
+			case VK_DRIVER_ID_MOLTENVK:
+				return driver_vendor::MVK;
 			default:
 				// Mobile?
 				return driver_vendor::unknown;
