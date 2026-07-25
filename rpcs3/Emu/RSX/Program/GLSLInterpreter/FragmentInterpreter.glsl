@@ -734,7 +734,7 @@ void main()
 		case RSX_FP_OPCODE_PK4:
 			vrr = vec4(uintBitsToFloat(packSnorm4x8(s0))); break;
 		case RSX_FP_OPCODE_PK16:
-			vrr = vec4(uintBitsToFloat(packSnorm2x16(s0.xy))); break;
+			vrr = vec4(uintBitsToFloat(packUnorm2x16(s0.xy))); break;
 		case RSX_FP_OPCODE_PKG:
 			// Should be similar to PKB but with gamma correction, see description of PK4UBG in khronos page
 		case RSX_FP_OPCODE_PKB:
@@ -744,7 +744,7 @@ void main()
 		case RSX_FP_OPCODE_UP4:
 			vrr = unpackSnorm4x8(floatBitsToUint(s0.x)); break;
 		case RSX_FP_OPCODE_UP16:
-			vrr = unpackSnorm2x16(floatBitsToUint(s0.x)).xyxy; break;
+			vrr = unpackUnorm2x16(floatBitsToUint(s0.x)).xyxy; break;
 		case RSX_FP_OPCODE_UPG:
 			// Same as UPB with gamma correction
 		case RSX_FP_OPCODE_UPB:
