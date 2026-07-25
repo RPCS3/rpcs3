@@ -443,7 +443,7 @@ void main()
 
 		if (vec_opcode == RSX_VEC_OPCODE_ARL)
 		{
-			a[d0.dst_tmp] = ivec4(read_src(0));
+			a[d0.dst_tmp & 0x1u] = ivec4(read_src(0));
 		}
 		else if (vec_opcode != RSX_VEC_OPCODE_NOP)
 		{
