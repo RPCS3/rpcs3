@@ -237,21 +237,29 @@ void write_sca(in vec4 value)
 		value = clamp(value, 0, 1);
 	}
 
-	if (d3.sca_dst_tmp == 0x3f)
+	const bool write_out_reg = !d0.vec_result;
+	const bool write_gpr_reg = d3.sca_dst_tmp != 0x3f;
+
+	// NOTE: SCA does not support double register writes.
+	if (write_gpr_reg)
 	{
-		if (!d0.vec_result)
-		{
-			reg_mov(dest[d3.dst & 0xFu], value, d3.sca_mask);
-		}
-		else
-		{
-			reg_mov(cc[d0.cond_reg_sel_1], value, d3.sca_mask);
-		}
-	}
-	else
-	{
+		// Write to GPR. Most likely scenario.
 		reg_mov(temp[d3.sca_dst_tmp], value, d3.sca_mask);
+		return;
 	}
+
+	if (write_out_reg)
+	{
+		if (d3.dst < 16)
+		{
+			reg_mov(dest[d3.dst], value, d3.sca_mask);
+		}
+
+		return;
+	}
+
+	// Not writing to temp or out register. Update CC
+	reg_mov(cc[d0.cond_reg_sel_1], value, d3.sca_mask);
 }
 
 void write_vec(in vec4 value)
@@ -268,22 +276,32 @@ void write_vec(in vec4 value)
 		write_mask = bvec4(uvec4(write_mask) & uvec4(mask));
 	}
 
-	if (d0.dst_tmp == 0x3f && !d0.vec_result)
+	if (d0.dst_tmp != 0x3f)
 	{
-		reg_mov(cc[d0.cond_reg_sel_1], value, write_mask);
-	}
-	else
-	{
-		if (d0.vec_result)
+		// GPR write
+		reg_mov(temp[d0.dst_tmp], value, write_mask);
+
+		if (!d0.vec_result)
 		{
-			reg_mov(dest[d3.dst & 0xFu], value, write_mask);
+			return;
 		}
 
-		if (d0.dst_tmp != 0x3f)
-		{
-			reg_mov(temp[d0.dst_tmp], value, write_mask);
-		}
+		// Fallthrough - VEC engine allows double write to one output register and one GPR
 	}
+
+	if (d0.vec_result)
+	{
+		if (d3.dst < 16)
+		{
+			reg_mov(dest[d3.dst], value, write_mask);
+		}
+
+		return;
+	}
+
+	// Writes to neither GPR nor OUT reg. Update CC
+	reg_mov(cc[d0.cond_reg_sel_1], value, write_mask);
+
 }
 
 void write_output(const in int oid, const in int mask_bit)
