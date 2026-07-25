@@ -439,17 +439,6 @@ void write_dst(const in vec4 value)
 	uvr0 = uvec4(uint(1 << 9), uint(1 << 10), uint(1 << 11), uint(1 << 12));
 	bvr0 = bvec4(uvr0 & inst.words.xxxx);
 
-	if (TEST_INST_BIT(0, 8)) // SET COND
-	{
-		ur0 = GET_INST_BITS(1, 30, 1);
-		reg_mov(cc[ur0], value, bvr0);
-	}
-
-	if (TEST_INST_BIT(0, 30)) // NO DEST
-	{
-		return;
-	}
-
 	ur1 = GET_INST_BITS(2, 28, 3);
 	sr0 = modifier_scale[ur1];
 	vr0 = value * sr0;
@@ -465,6 +454,18 @@ void write_dst(const in vec4 value)
 		vr1 = read_cond();
 		bvr1 = decode_cond(ur0, vr1);
 		bvr0 = bvec4(uvec4(bvr0) & uvec4(bvr1));
+	}
+
+	// FIXME - HWTEST: Are CC registers affected by scale and SAT modifiers?
+	if (TEST_INST_BIT(0, 8)) // SET COND
+	{
+		ur0 = GET_INST_BITS(1, 30, 1);
+		reg_mov(cc[ur0], value, bvr0);
+	}
+
+	if (TEST_INST_BIT(0, 30)) // NO DEST
+	{
+		return;
 	}
 
 	ur1 = GET_INST_BITS(0, 1, 6);
