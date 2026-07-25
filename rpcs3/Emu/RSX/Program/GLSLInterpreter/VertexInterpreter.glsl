@@ -62,6 +62,8 @@ layout(location=0) out vec4 dest[16];
 
 #define reg_mov(d, s, m) d = mix(d, s, m)
 
+#define MAX_STACK_DEPTH 8
+
 struct D0
 {
     uint addr_swz;
@@ -429,7 +431,7 @@ void main()
 		dest[i] = vec4(0., 0., 0., 1.);
 	}
 
-	int callstack[8];
+	int callstack[MAX_STACK_DEPTH];
 	int stack_ptr = 0;
 	int current_instruction = int(entry - base_address);
 
@@ -528,6 +530,7 @@ void main()
 				// Call immediate
 				if (dynamic_branch())
 				{
+					if (stack_ptr == MAX_STACK_DEPTH) return;
 					callstack[stack_ptr] = current_instruction; // Already incremented, points to next
 					stack_ptr++;
 					current_instruction = branch_addr();
