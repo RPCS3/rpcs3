@@ -558,6 +558,7 @@ void main()
 				// Call by boolean mask
 				if (static_branch())
 				{
+					if (stack_ptr == MAX_STACK_DEPTH) return;
 					callstack[stack_ptr] = current_instruction;
 					stack_ptr++;
 					current_instruction = branch_addr();
