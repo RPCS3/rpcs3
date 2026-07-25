@@ -241,7 +241,7 @@ void write_sca(in float value)
 	{
 		if (!d0.vec_result)
 		{
-			reg_mov(dest[d3.dst], vec4(value), d3.sca_mask);
+			reg_mov(dest[d3.dst & 0xFu], vec4(value), d3.sca_mask);
 		}
 		else
 		{
@@ -274,9 +274,9 @@ void write_vec(in vec4 value)
 	}
 	else
 	{
-		if (d0.vec_result && d3.dst < 16)
+		if (d0.vec_result)
 		{
-			reg_mov(dest[d3.dst], value, write_mask);
+			reg_mov(dest[d3.dst & 0xFu], value, write_mask);
 		}
 
 		if (d0.dst_tmp != 0x3f)
