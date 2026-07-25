@@ -705,7 +705,7 @@ void main()
 		case RSX_FP_OPCODE_RCP:
 			vrr = (1.f / s0.xxxx); break;
 		case RSX_FP_OPCODE_RSQ:
-			vrr = inversesqrt(s0.xxxx); break;
+			vrr = inversesqrt(abs(s0.x)).xxxx; break;
 		case RSX_FP_OPCODE_EX2:
 			vrr = exp2(s0.xxxx); break;
 		case RSX_FP_OPCODE_LG2:
@@ -795,7 +795,7 @@ void main()
 				vrr = s0 / s1.xxxx; break;
 			case RSX_FP_OPCODE_DIVSQ:
 				bvr0 = bvec4(s0);
-				sr0 = inversesqrt(s1.x);
+				sr0 = inversesqrt(abs(s1.x));
 				vr0 = s0 * sr0;
 				vrr = select(s0, vr0, bvr0);
 				break;
