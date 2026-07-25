@@ -642,14 +642,17 @@ void main()
 					counter = int(GET_INST_BITS(2, 2, 8) - GET_INST_BITS(2, 10, 8)) - 1; // RANGE
 					ir0 = int(GET_INST_BITS(2, 19, 8));                                  // STEP
 					counter = max(counter, 0) / max(ir0, 1);                             // ITERATIONS
-					loop_start_addr = ip + 1;
-					loop_end_addr = int(inst.words.w >> 2);
+					if (counter > 0)
+					{
+						loop_start_addr = ip + 1;
+						loop_end_addr = int(inst.words.w >> 2);
+						continue;
+					}
 				}
-				else
-				{
-					ip = int(inst.words.w >> 2);
-					inst_length = 0;
-				}
+
+				// Failed cond check or 0 iterations encoded
+				ip = int(inst.words.w >> 2);
+				inst_length = 0;
 				continue;
 			case RSX_FP_OPCODE_BRK:
 				if (!check_cond())
