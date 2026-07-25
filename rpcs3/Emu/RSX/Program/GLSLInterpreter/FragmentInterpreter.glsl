@@ -101,6 +101,7 @@ uint ur0, ur1;     // GP unsigned register (scalar)
 uvec4 uvr0;        // GP unsigned register (vector)
 bvec4 bvr0, bvr1;  // GP boolean register (vector)
 float sr0;         // GP scalar register
+int ir0;           // GP scalar register (scalar)
 
 vec4 vrr;          // value return (dst register)
 vec4 s0, s1, s2;   // instruction src (src0, src1, src2)
@@ -638,8 +639,9 @@ void main()
 			case RSX_FP_OPCODE_REP:
 				if (check_cond())
 				{
-					counter = int(GET_INST_BITS(2, 2, 8) - GET_INST_BITS(2, 10, 8));
-					counter /= int(GET_INST_BITS(2, 19, 8));
+					counter = int(GET_INST_BITS(2, 2, 8) - GET_INST_BITS(2, 10, 8)) - 1; // RANGE
+					ir0 = int(GET_INST_BITS(2, 19, 8));                                  // STEP
+					counter = max(counter, 0) / max(ir0, 1);                             // ITERATIONS
 					loop_start_addr = ip + 1;
 					loop_end_addr = int(inst.words.w >> 2);
 				}
