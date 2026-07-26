@@ -493,10 +493,15 @@ namespace gl
 		data->prog->uniforms[0] = GL_STREAM_BUFFER_START + 0;
 		data->prog->uniforms[1] = GL_STREAM_BUFFER_START + 1;
 
+		// Initialize texture bindings
 		if (compiler_options & COMPILER_OPT_ENABLE_TEXTURES)
 		{
-			// Initialize texture bindings
-			flush_texture_bindings(data->prog.get());
+			flush_fragment_texture_bindings(data->prog.get());
+		}
+
+		if (compiler_options & COMPILER_OPT_ENABLE_VTX_TEXTURES)
+		{
+			flush_vertex_texture_bindings(data->prog.get());
 		}
 
 		data->flags &= ~CACHED_PIPE_UNINITIALIZED;
@@ -525,7 +530,7 @@ namespace gl
 		}
 	}
 
-	void shader_interpreter::flush_texture_bindings(glsl::program* program)
+	void shader_interpreter::flush_fragment_texture_bindings(glsl::program* program)
 	{
 		using enum rsx::texture_dimension_extended;
 
@@ -536,9 +541,15 @@ namespace gl
 		}
 
 		const bool is_bound_interpreter = m_current_interpreter && m_current_interpreter->prog.get() == program;
-		const u32 dirty_mask = is_bound_interpreter
-			? 0xff
-			: m_texture_bindings.dirty;
+		u32 dirty_mask = m_texture_bindings.dirty;
+
+		if (is_bound_interpreter) [[ likely ]]
+		{
+			// Check if we even support textures
+			dirty_mask = (m_current_interpreter->build_compiler_options & COMPILER_OPT_ENABLE_TEXTURES)
+				? 0xff
+				: 0x0;
+		}
 
 		if (!dirty_mask)
 		{
@@ -563,5 +574,10 @@ namespace gl
 		{
 			m_texture_bindings.dirty = 0;
 		}
+	}
+
+	void shader_interpreter::flush_vertex_texture_bindings(glsl::program* program)
+	{
+		// TODO
 	}
 }

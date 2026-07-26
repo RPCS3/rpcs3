@@ -576,7 +576,15 @@ void GLGSRender::bind_texture_env()
 
 	if (is_interpreter)
 	{
-		m_shader_interpreter.flush_texture_bindings();
+		if (current_fp_metadata.referenced_textures_mask)
+		{
+			m_shader_interpreter.flush_fragment_texture_bindings();
+		}
+
+		if (current_vp_metadata.referenced_textures_mask)
+		{
+			m_shader_interpreter.flush_vertex_texture_bindings();
+		}
 	}
 
 	if (current_fragment_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE)
