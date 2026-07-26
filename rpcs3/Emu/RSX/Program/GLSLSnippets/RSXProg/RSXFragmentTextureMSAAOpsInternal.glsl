@@ -5,7 +5,14 @@ vec4 texelFetch2DMS(in _MSAA_SAMPLER_TYPE_ tex, const in vec2 sample_count, cons
 	const vec2 aa_coords = floor(resolve_coords / sample_count);               // AA coords = real_coords / sample_count
 	const vec2 sample_loc = fma(aa_coords, -sample_count, resolve_coords);     // Sample ID = real_coords % sample_count
 	const float sample_index = fma(sample_loc.y, sample_count.y, sample_loc.x);
-	return texelFetch(tex, ivec2(aa_coords), int(sample_index));
+
+	// texelFetch has no hardware clamping: an out-of-range texel or sample index returns 0 (black).
+	// This happens at the right/bottom edges (the +1/+2 downsample offsets overshoot) and when the
+	// bound image has fewer samples than the reconstruction assumes. Clamp to valid ranges so we
+	// return a real (edge) texel instead of a black one.
+	const ivec2 clamped_coords = clamp(ivec2(aa_coords), ivec2(0), textureSize(tex) - ivec2(1));
+	const int clamped_sample = clamp(int(sample_index), 0, textureSamples(tex) - 1);
+	return texelFetch(tex, clamped_coords, clamped_sample);
 }
 
 vec4 sampleTexture2DMS(in _MSAA_SAMPLER_TYPE_ tex, const in vec2 coords, const in sampler_info tex_params)
