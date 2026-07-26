@@ -455,6 +455,21 @@ namespace rsx
 		return registers[NV4097_SET_TEXTURE_CONTROL3 + m_index] & 0xfffff;
 	}
 
+	image_section_attributes_t fragment_texture::attributes() const
+	{
+		const auto _format = format();
+		return {
+			.address = offset(),
+			.gcm_format = _format,
+			.pitch = pitch(),
+			.width = width(),
+			.height = height(),
+			.depth = depth(),
+			.mipmaps = mipmap(),
+			.bpp = rsx::get_format_block_size_in_bytes(_format)
+		};
+	}
+
 	u32 vertex_texture::offset() const
 	{
 		return registers[NV4097_SET_VERTEX_TEXTURE_OFFSET + (m_index * 8)] & 0x7FFFFFFF;
