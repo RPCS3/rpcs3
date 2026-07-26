@@ -746,12 +746,13 @@ namespace rsx
 			}
 
 			texptr->memory_barrier(cmd, rsx::surface_access::transfer_read);
+			auto format_class = rsx::classify_format(attr2.gcm_format);
 
 			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_3d)
 			{
 				return{ texptr->get_surface(rsx::surface_access::transfer_read), deferred_request_command::_3d_unwrap,
 						attr2, {},
-						texture_upload_context::framebuffer_storage, texptr->format_class(), scale,
+						texture_upload_context::framebuffer_storage, format_class, scale,
 						rsx::texture_dimension_extended::texture_dimension_3d, decoded_remap };
 			}
 
@@ -759,7 +760,7 @@ namespace rsx
 
 			return{ texptr->get_surface(rsx::surface_access::transfer_read), deferred_request_command::cubemap_unwrap,
 					attr2, {},
-					texture_upload_context::framebuffer_storage, texptr->format_class(), scale,
+					texture_upload_context::framebuffer_storage, format_class, scale,
 					rsx::texture_dimension_extended::texture_dimension_cubemap, decoded_remap };
 		}
 
