@@ -494,6 +494,41 @@ void GLGSRender::bind_texture_env()
 	gl::command_context cmd{ gl_state };
 	const bool is_interpreter = m_shader_interpreter.is_interpreter(m_program);
 
+	auto decay_view_for_interpreter = [&](
+		gl::texture_cache::sampled_image_descriptor* desc,
+		gl::texture_view* base,
+		const rsx::texture_channel_remap_t& decoded_remap,
+		bool is_msaa,
+		bool is_redirected) -> gl::texture_view*
+	{
+		if (!is_msaa && !is_redirected)
+		{
+			return base;
+		}
+
+		using deferred_subresource_t = gl::texture_cache::deferred_subresource;
+
+		if (is_redirected)
+		{
+			// Force bitcast
+			deferred_subresource_t flatten_op{};
+			flatten_op.external_handle = base->image();
+			flatten_op.op = m_rtts.address_is_bound(desc->ref_address)
+				? rsx::deferred_request_command::copy_image_dynamic
+				: rsx::deferred_request_command::copy_image_static;
+			flatten_op.width = flatten_op.external_handle->width();
+			flatten_op.height = flatten_op.external_handle->height();
+			flatten_op.depth = 1;
+			flatten_op.gcm_format = desc->format_ex.format();
+			flatten_op.remap = decoded_remap;
+			return m_gl_texture_cache.create_temporary_subresource(cmd, flatten_op);
+		}
+
+		// MSAA
+		auto surface = gl::as_rtt(base->image())->get_surface(rsx::surface_access::transfer_read);
+		return surface->get_view(decoded_remap, base->aspect());
+	};
+
 	for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
 		if (!(textures_ref & 1))
@@ -533,7 +568,21 @@ void GLGSRender::bind_texture_env()
 
 		if (is_interpreter) [[ unlikely ]]
 		{
-			m_shader_interpreter.bind_fragment_texture(i, primary_view->handle(), *sampler_state);
+			// Interpreter does not support MSAA or DEPTH->RGBA conversion a.k.a aspect redirection
+			const auto mask = (1u << i);
+			const bool is_redirected = !!(current_fragment_program.texture_state.redirected_textures & mask);
+			const bool is_msaa = !!(current_fragment_program.texture_state.multisampled_textures & mask);
+			auto view = primary_view;
+			if (is_redirected || is_msaa)
+			{
+				view = decay_view_for_interpreter(
+					sampler_state,
+					primary_view,
+					rsx::method_registers.fragment_textures[i].decoded_remap(),
+					is_msaa,
+					is_redirected);
+			}
+			m_shader_interpreter.bind_fragment_texture(i, view->handle(), *sampler_state);
 			continue;
 		}
 
