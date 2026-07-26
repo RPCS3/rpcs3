@@ -2,6 +2,7 @@
 #include "Emu/IdManager.h"
 #include "Loader/ELF.h"
 #include "util/asm.hpp"
+#include "timers.hpp"
 
 #include "SPUThread.h"
 
@@ -39,8 +40,67 @@ bool spu_thread::read_reg(const u32 addr, u32& value)
 {
 	const u32 offset = addr - (RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index) - RAW_SPU_PROB_OFFSET;
 
-	spu_log.trace("RawSPU[%u]: Read32(0x%x, offset=0x%x)", index, addr, offset);
+	raw_spu_log_stats_t stats{};
+	stats.mmio_offset = offset;
 
+	const auto [old_stats, is_changed] = mmio_stats.fetch_op([&](raw_spu_log_stats_t& old)
+	{
+		if (old.mmio_offset == offset)
+		{
+			const u64 current = get_system_time();
+
+			if (current - old.mmio_time >= 1500)
+			{
+				old.mmio_time = current;
+				return true;
+			}
+
+			return false;
+		}
+
+		old.mmio_offset = offset;
+		return true;
+	});
+
+	std::string log_message = fmt::format("RawSPU[%u]: read_reg(0x%x, offset=0x%x)", index, addr, offset);
+
+	if (is_changed)
+	{
+		spu_log.trace("%s", log_message);
+	}
+
+	struct logger_end_t
+	{
+		u32 offset;
+		const u32* value;
+		atomic_t<raw_spu_log_stats_t>* stats;
+		std::string log_message;
+
+		~logger_end_t() noexcept
+		{
+			const auto [old, value_changed] = stats->fetch_op([&](raw_spu_log_stats_t& old)
+			{
+				if (old.mmio_offset == offset)
+				{
+					if (old.mmio_value != *value)
+					{
+						const u64 current = get_system_time();
+						old.mmio_time = current;
+						old.mmio_value = *value;
+						return true;
+					}
+				}
+
+				return false;
+			});
+
+			if (value_changed)
+			{
+				spu_log.trace("%s: value=0x%x", log_message, *value);
+			}
+		}
+	} logger_end{offset, &value, &mmio_stats, std::move(log_message)};
+	
 	switch (offset)
 	{
 	case MFC_CMDStatus_offs:
@@ -202,7 +262,7 @@ bool spu_thread::read_reg(const u32 addr, u32& value)
 	}
 	}
 
-	spu_log.error("RawSPU[%u]: Read32(0x%x): unknown/illegal offset (0x%x)", index, addr, offset);
+	spu_log.error("RawSPU[%u]: read_reg(0x%x): unknown/illegal offset (0x%x)", index, addr, offset);
 	return false;
 }
 
@@ -210,7 +270,30 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 {
 	const u32 offset = addr - (RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index) - RAW_SPU_PROB_OFFSET;
 
-	spu_log.trace("RawSPU[%u]: Write32(0x%x, offset=0x%x, value=0x%x)", index, addr, offset, value);
+	const auto [old_stats, is_changed] = mmio_stats.fetch_op([&](raw_spu_log_stats_t& old)
+	{
+		if (old.mmio_offset == offset && old.mmio_value == value)
+		{
+			const u64 current = get_system_time();
+
+			if (current - old.mmio_time >= 500)
+			{
+				old.mmio_time = current;
+				return true;
+			}
+
+			return false;
+		}
+
+		old.mmio_offset = offset;
+		old.mmio_value = value;
+		return true;
+	});
+
+	if (is_changed)
+	{
+		spu_log.trace("RawSPU[%u]: write_reg(0x%x, offset=0x%x, value=0x%x)", index, addr, offset, value);
+	}
 
 	switch (offset)
 	{
@@ -365,7 +448,7 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 	}
 	}
 
-	spu_log.error("RawSPU[%u]: Write32(0x%x, value=0x%x): unknown/illegal offset (0x%x)", index, addr, value, offset);
+	spu_log.error("RawSPU[%u]: write_reg(0x%x, value=0x%x): unknown/illegal offset (0x%x)", index, addr, value, offset);
 	return false;
 }
 
