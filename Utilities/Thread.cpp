@@ -1250,20 +1250,296 @@ usz get_x64_access_size(x64_context* context, x64_op_t op, x64_reg_t reg, usz d_
 
 #elif defined(ARCH_ARM64)
 
-#if defined(__APPLE__)
+#ifdef _WIN32
+#define RIP(context) (reinterpret_cast<CONTEXT*>((context))->Pc)
+#define GPR(context, index) (reinterpret_cast<CONTEXT*>((context))->X[index])
+#elif defined(__APPLE__)
 // https://github.com/bombela/backward-cpp/issues/200
 #define RIP(context) ((context)->uc_mcontext->__ss.__pc)
+#define GPR(context, index) ((context)->uc_mcontext->__ss.__x[(index)])
 #elif defined(__FreeBSD__)
 #define RIP(context) ((context)->uc_mcontext.mc_gpregs.gp_elr)
+#define GPR(context, index) ((context)->uc_mcontext.mc_gpregs.gp_x[(index)])
 #elif defined(__NetBSD__)
 #define RIP(context) ((context)->uc_mcontext.__gregs[_REG_PC])
+#define GPR(context, index) ((context)->uc_mcontext.__gregs[(index)])
 #elif defined(__OpenBSD__)
 #define RIP(context) ((context)->sc_elr)
+#define GPR(context, index) ((context)->sc_x[(index)])
 #else
 #define RIP(context) ((context)->uc_mcontext.pc)
+#define GPR(context, index) ((context)->uc_mcontext.regs[(index)])
 #endif
 
-#endif /* ARCH_ */
+enum mem_a64_op_t
+{
+	A64_INVALID = 0,
+	A64_LOAD,
+	A64_STORE,
+};
+
+struct a64_mem_info_t
+{
+	mem_a64_op_t op;
+	u32 mem_size;   // Bytes accessed in memory
+	u32 reg_size;   // Register width (4 or 8 bytes)
+	u32 reg_num;
+	bool reg_signed;
+};
+
+a64_mem_info_t decode_a64_mem_inst(u32 inst)
+{
+	a64_mem_info_t r{ A64_INVALID, 0, 0, inst % 32, false };
+
+	// Exclude SIMD/FP loads/stores
+	if ((inst >> 26) & 1)
+	{
+		return r;
+	}
+
+	// Scalar load/store immediate, unsigned offset variants only:
+	// size[31:30]
+	// V[26]
+	// opc[23:22]
+	// class bits[29:24] = 111001
+	if ((inst & 0x3B000000) == 0x39000000)
+	{
+		const u32 size = (inst >> 30) & 3;
+		const u32 opc  = (inst >> 22) & 3;
+
+		r.mem_size = 1u << size;
+
+		switch (opc)
+		{
+		case 0:
+		{
+			// STR
+			r.op = A64_STORE;
+			r.reg_size = r.mem_size;
+			return r;
+		}
+		case 1:
+		{
+			// LDR unsigned zero-extend
+			// size=3 (64-bit) -> Xt; everything else -> Wt
+			r.op = A64_LOAD;
+			r.reg_size = (size == 3) ? 8u : 4u;
+			r.reg_signed = false;
+			return r;
+		}
+		case 2:
+		case 3:
+		{
+			if (size == 3)
+			{
+				return r;
+			}
+
+			if (size == 2 && opc == 3)
+			{
+				// Invalid LDRSW
+				return r;
+			}
+
+			// LDRSB/LDRSH/LDRSW
+			// size determines extension type:
+			// 00 LDRSB
+			// 01 LDRSH
+			// 10 LDRSW
+			r.op = A64_LOAD;
+
+			if (size == 2)
+			{
+				// LDUSW
+				r.reg_size = 8;
+			}
+			else
+			{
+				// LDRSB/LDRSH
+				// opc=2 -> Wt, opc=3 -> Xt
+				r.reg_size = (opc == 3) ? 4 : 8;
+			}
+
+			r.reg_signed = true;
+			return r;
+		}
+		default:
+			return r;
+		}
+	}
+
+	// Scalar load/store unscaled immediate (LDUR/STUR)
+	// size[31:30]
+	// V[26]
+	// opc[23:22]
+	if ((inst & 0x3B200C00u) == 0x38000000u)
+	{
+		const u32 size = (inst >> 30) & 3;
+		const u32 opc  = (inst >> 22) & 3;
+
+		r.mem_size = 1u << size;
+
+		switch (opc)
+		{
+		case 0:
+		{
+			// STURB/STURH/STUR Wt/STUR Xt
+			r.op = A64_STORE;
+
+			// Source register width
+			r.reg_size = r.mem_size;
+			return r;
+		}
+
+		case 1:
+		{
+			// LDURB/LDURH/LDUR Wt/LDUR Xt
+			r.op = A64_LOAD;
+
+			// Destination register width
+			r.reg_size = (size == 3) ? 8 : 4;
+			r.reg_signed = false;
+			return r;
+		}
+
+		case 2:
+		case 3:
+		{
+			// LDURSB/LDURSH/LDURSW
+			if (size == 3)
+			{
+				return r;
+			}
+
+			r.op = A64_LOAD;
+			r.reg_signed = true;
+
+			if (size == 2)
+			{
+				// LDURSW
+				r.reg_size = 8;
+			}
+			else
+			{
+				// LDURSB/LDURSH
+				// opc=2 -> Wt, opc=3 -> Xt
+				r.reg_size = (opc == 3) ? 4 : 8;
+			}
+
+			return r;
+		}
+		default:
+			return r;
+		}
+	}
+
+	// 
+	// Literal loads:
+	// 
+	// LDR Wt, label
+	// LDR Xt, label
+	// LDRSW Xt, label
+	//
+
+	// This is not needed for MMIO (which is the only use for this function)
+
+	// if ((inst & 0x3B000000) == 0x18000000)
+	// {
+	// 	u32 opc = (inst >> 30) & 3;
+
+	// 	r.op = A64_LOAD;
+
+	// 	switch (opc)
+	// 	{
+	// 	case 0: // LDR Wt literal
+	// 	{
+	// 		r.mem_size = 4;
+	// 		r.reg_size = 4;
+	// 		return r;
+	// 	}
+	// 	case 1: // LDR Xt literal
+	// 	{
+	// 		r.mem_size = 8;
+	// 		r.reg_size = 8;
+	// 		return r;
+	// 	}
+	// 	case 2: // LDRSW literal
+	// 	{
+	// 		r.mem_size = 4;
+	// 		r.reg_size = 8;
+	// 		r.reg_signed = true;
+	// 		return r;
+	// 	}
+	// 	default:
+	// 	{
+	// 		break;
+	// 	}
+	// 	}
+	// }
+
+	return r;
+}
+
+void put_a64_reg_value(ucontext_t* context, u32 reg_index, u32 reg_size, bool reg_signed, u32 mem_size, u64 value)
+{
+	ensure(mem_size == 1 || mem_size == 2 || mem_size == 4 || mem_size == 8);
+	ensure(reg_size == 1 || reg_size == 2 || reg_size == 4 || reg_size == 8);
+	ensure(reg_size >= mem_size);
+	ensure(reg_index < 32);
+
+	if (reg_index == 31)
+	{
+		// XZR "register" 
+		ensure(false);
+	}
+
+	auto make_mask = [](u32 bytes) -> u64
+	{
+		if (bytes == 8)
+		{
+			return umax;
+		}
+
+		const u64 bits = bytes * 8;
+		return (u64{1} << bits) - 1;
+	};
+
+	// Mask for sign-extending the value
+	const u64 sign_bit = value & (make_mask(mem_size) / 2 + 1);
+	const u64 sign_mask = (reg_signed && sign_bit != 0 && reg_size > mem_size) ? (make_mask(reg_size) & ~make_mask(mem_size)) : 0;
+
+	u64 temp_reg_value = 0;
+	temp_reg_value |= (value & make_mask(mem_size)); // Set value (adjusted by size)
+	temp_reg_value |= sign_mask; // Apply sign-extension
+	GPR(context, reg_index) = temp_reg_value;
+}
+
+u64 get_a64_reg_value(ucontext_t* context, u32 reg_index, u32 reg_size)
+{
+	ensure(reg_size == 1 || reg_size == 2 || reg_size == 4 || reg_size == 8);
+	ensure(reg_index < 32);
+
+	if (reg_index == 31)
+	{
+		// XZR "register"
+		return 0;
+	}
+
+	auto make_mask = [](u32 bytes) -> u64
+	{
+		if (bytes == 8)
+		{
+			return umax;
+		}
+
+		const u64 bits = bytes * 8;
+		return (u64{1} << bits) - 1;
+	};
+
+	return (GPR(context, reg_index) & make_mask(reg_size));
+}
+
+#endif /* ARCH_ARM64 */
 
 namespace rsx
 {
@@ -1478,11 +1754,11 @@ bool handle_access_violation(u32 addr, bool is_writing, bool is_exec, ucontext_t
 
 			if (a_size == 4)
 			{
-				value = stx::se_storage<u32>::swap(value);
+				value = std::bit_cast<be_t<u32>>(value);
 			}
 			else if (a_size == 2)
 			{
-				value = stx::se_storage<u16>::swap(value);
+				value = std::bit_cast<be_t<u16>>(static_cast<u16>(value));
 			}
 			else
 			{
@@ -1556,8 +1832,126 @@ bool handle_access_violation(u32 addr, bool is_writing, bool is_exec, ucontext_t
 		g_tls_fault_spu++;
 		return true;
 	} while (0);
-#else
-	static_cast<void>(context);
+#elif defined(ARCH_ARM64)
+	const u8* const code = reinterpret_cast<u8*>(RIP(context));
+
+	const u32 instruction = read_from_ptr_unsafe<u32>(code);
+
+	const auto [op, mem_size, reg_size, reg_index, reg_signed] = decode_a64_mem_inst(instruction);
+
+	auto report_opcode = [&]()
+	{
+		sig_log.error("decode_a64_mem_inst(%p): unsupported opcode: %s", code, +std::bit_cast<be_t<u32>>(instruction));
+	};
+
+	if (0x1'0000'0000ull - addr < mem_size)
+	{
+		sig_log.error("Invalid mem_size (0x%llx)", mem_size);
+		report_opcode();
+		return false;
+	}
+
+	// check if address is RawSPU MMIO register
+	do if (addr - RAW_SPU_BASE_ADDR < (6 * RAW_SPU_OFFSET) && (addr % RAW_SPU_OFFSET) >= RAW_SPU_PROB_OFFSET)
+	{
+		auto thread = idm::get_unlocked<named_thread<spu_thread>>(spu_thread::find_raw_spu((addr - RAW_SPU_BASE_ADDR) / RAW_SPU_OFFSET));
+
+		if (!thread || is_exec)
+		{
+			break;
+		}
+
+		if (!mem_size)
+		{
+			sig_log.error("Invalid or unsupported instruction (reg=%d, mem_size=%lld, reg_size=0x%llx)", reg_index, mem_size, reg_size);
+			report_opcode();
+			return false;
+		}
+
+		bool handled = true;
+
+		switch (op)
+		{
+		case A64_LOAD:
+		{
+			u32 value;
+			const u32 addr_aligned = addr & -4;
+
+			if (addr % 4 + mem_size > 4)
+			{
+				handled = false;
+				break;
+			}
+
+			if (is_writing || !thread->read_reg(addr_aligned, value))
+			{
+				return false;
+			}
+
+			// Adjust value for 8-bit and 16-bit reads
+			value >>= ((4 - mem_size) * 8) - ((addr % 4) * 8);
+			value &= mem_size == 4 ? u32{umax} : ((1u << (mem_size * 8)) - 1);
+
+			if (mem_size == 4)
+			{
+				value = std::bit_cast<be_t<u32>>(value);
+			}
+			else if (mem_size == 2)
+			{
+				value = std::bit_cast<be_t<u16>>(static_cast<u16>(value));
+			}
+			else
+			{
+				ensure(mem_size == 1);
+			}
+
+			// Update register value
+			put_a64_reg_value(context, reg_index, reg_size, reg_signed, mem_size, value);
+			break;
+		}
+		case A64_STORE:
+		{
+			if (mem_size != 4)
+			{
+				// Might be unimplemented, such as writing MFC proxy EAL+EAH using 64-bit store
+				handled = false;
+				break;
+			}
+
+			if (!is_writing)
+			{
+				return false;
+			}
+
+			const u64 reg_value = get_a64_reg_value(context, reg_index, reg_size);
+			const u32 val32 = static_cast<u32>(reg_value);
+			if (!thread->write_reg(addr, std::bit_cast<be_t<u32>>(val32)))
+			{
+				return false;
+			}
+
+			break;
+		}
+		default:
+		{
+			sig_log.error("Invalid or unsupported operation (reg=%d, mem_size=%lld, reg_size=0x%llx)", reg_index, mem_size, reg_size);
+			report_opcode();
+			return false;
+		}
+		}
+
+		if (!handled)
+		{
+			sig_log.error("Invalid or unsupported operation (reg=%d, mem_size=%lld, reg_size=0x%llx)", reg_index, mem_size, reg_size);
+			report_opcode();
+			break;
+		}
+
+		// skip processed instruction
+		RIP(context) = reinterpret_cast<std::remove_cvref_t<decltype(RIP(context))>>(reinterpret_cast<const char*>(RIP(context)) + 4);
+		g_tls_fault_spu++;
+		return true;
+	} while (0);
 #endif /* ARCH_ */
 
 	const auto required_page_perms = (is_writing ? vm::page_writable : vm::page_readable) + (is_exec ? vm::page_executable : 0);
@@ -2133,7 +2527,7 @@ static void signal_handler(int /*sig*/, siginfo_t* info, void* uct) noexcept
 	}
 
 #else
-	const u32 insn = is_executing ? 0 : *reinterpret_cast<u32*>(RIP(context));
+	const u32 insn = is_executing ? 0 : read_from_ptr_unsafe<u32>(RIP(context));
 	const bool is_writing =
 		(insn & 0xbfff0000) == 0x0c000000 ||  // STR <Wt>, [<Xn>, #<imm>] (store word with immediate offset)
 		(insn & 0xbfe00000) == 0x0c800000 ||  // STP <Wt1>, <Wt2>, [<Xn>, #<imm>] (store pair of registers with immediate offset)
@@ -2339,8 +2733,8 @@ void thread_base::start()
 	pthread_attr_t attrs;
 	pthread_t thread_id{};
 	struct sched_param sp;
-    memset(&sp, 0, sizeof(struct sched_param));
-    sp.sched_priority=99;
+	memset(&sp, 0, sizeof(struct sched_param));
+	sp.sched_priority=99;
 	pthread_attr_init(&attrs);
 	pthread_attr_setstacksize(&attrs, 0x800000);
 	
