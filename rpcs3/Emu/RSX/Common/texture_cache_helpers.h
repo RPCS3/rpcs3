@@ -270,15 +270,12 @@ namespace rsx
 			bool unordered_list = false;
 
 			rsx::simple_array<sort_helper> sort_list;
-			rsx::simple_array<utils::address_range32> sort_ranges;
 			sort_list.reserve(available_slices);
-			sort_ranges.reserve(available_slices);
 
 			// Generate sorting tree if both resources are available and overlapping
 			for (u32 index = 0; index < fbos.size(); ++index)
 			{
 				const auto range = fbos[index].surface->get_memory_range();
-				sort_ranges.push_back(range);
 				sort_list.push_back({
 					.tag = fbos[index].surface->last_use_tag,
 					.list = 0,
@@ -293,7 +290,6 @@ namespace rsx
 					continue;
 
 				const auto range = local[index]->get_section_range();
-				sort_ranges.push_back(range);
 				sort_list.push_back({
 					.tag = local[index]->last_write_tag,
 					.list = 1,
@@ -307,15 +303,11 @@ namespace rsx
 				sort_list.sort(FN(x.tag < y.tag));
 			}
 
-			// Check if ordered
-			for (u32 i = 0; i < sort_list.size(); ++i)
+			// Check if ordered. NOTE: This has to run on the final iteration order, not the insertion order,
+			// otherwise the early-out below can terminate the gather before every contributing section is consumed.
+			for (u32 i = 1; i < sort_list.size(); ++i)
 			{
-				if (i == 0)
-				{
-					continue;
-				}
-
-				if (sort_ranges[i].start < sort_ranges[i - 1].end)
+				if (sort_list[i].bounds.start < sort_list[i - 1].bounds.end)
 				{
 					unordered_list = true;
 					break;
@@ -382,7 +374,12 @@ namespace rsx
 					.dst_h = dst_height
 				});
 
-				return { section_end <= slice_end, section_end >= slice_end };
+				// NOTE: Reaching the bottom of the slice does not imply the slice is covered - sections also tile horizontally.
+				// A section that lies further along in memory can still land on the same rows at a higher X offset.
+				const bool covers_slice = (section_end >= slice_end) &&
+					(section.dst_area.x == 0 && u32(section.dst_area.x + section.dst_area.width) >= u32{attr.width});
+
+				return { section_end <= slice_end, covers_slice };
 			};
 
 			auto add_local_resource = [&](auto& section, u32 address, u16 slice, bool scaling) -> std::pair<bool, bool> // [ input fully consumed, output fully covered ]
@@ -427,6 +424,10 @@ namespace rsx
 				const u16 src_w = static_cast<u16>(src_size.width);
 				const u16 height = std::min(dst_slice_end, write_section_end) - dst_y;
 
+				// NOTE: Reaching the bottom of the slice does not imply the slice is covered - sections also tile horizontally.
+				const bool covers_slice = (write_section_end >= dst_slice_end) &&
+					(dst_offset.x == 0 && (dst_offset.x + dst_size.width) >= u32{attr.width});
+
 				if (scaling)
 				{
 					// Since output is upscaled, also upscale on dst
@@ -451,7 +452,7 @@ namespace rsx
 						.dst_h = _dst_h
 					});
 
-					return { write_section_end <= dst_slice_end, write_section_end >= dst_slice_end };
+					return { write_section_end <= dst_slice_end, covers_slice };
 				}
 
 				out.push_back
@@ -470,7 +471,7 @@ namespace rsx
 					.dst_h = height
 				});
 
-				return { write_section_end <= dst_slice_end, write_section_end >= dst_slice_end };
+				return { write_section_end <= dst_slice_end, covers_slice };
 			};
 
 			u32 current_address = attr.address;
