@@ -27,9 +27,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Support/KnownBits.h"
-#if LLVM_VERSION_MAJOR >= 21
 #include "llvm/Support/KnownFPClass.h"
-#endif
 #include "llvm/Analysis/SimplifyQuery.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -1180,11 +1178,7 @@ struct llvm_fshl
 	static llvm::Function* get_fshl(llvm::IRBuilder<>* ir)
 	{
 		const auto _module = ir->GetInsertBlock()->getParent()->getParent();
-#if LLVM_VERSION_MAJOR >= 21 || (LLVM_VERSION_MAJOR == 20 && LLVM_VERSION_MINOR >= 1)
 		return llvm::Intrinsic::getOrInsertDeclaration(_module, llvm::Intrinsic::fshl, {llvm_value_t<T>::get_type(ir->getContext())});
-#else
-		return llvm::Intrinsic::getDeclaration(_module, llvm::Intrinsic::fshl, {llvm_value_t<T>::get_type(ir->getContext())});
-#endif
 	}
 
 	static llvm::Value* fold(llvm::IRBuilder<>* ir, llvm::Value* v1, llvm::Value* v2, llvm::Value* v3)
@@ -1256,11 +1250,7 @@ struct llvm_fshr
 	static llvm::Function* get_fshr(llvm::IRBuilder<>* ir)
 	{
 		const auto _module = ir->GetInsertBlock()->getParent()->getParent();
-#if LLVM_VERSION_MAJOR >= 21 || (LLVM_VERSION_MAJOR == 20 && LLVM_VERSION_MINOR >= 1)
 		return llvm::Intrinsic::getOrInsertDeclaration(_module, llvm::Intrinsic::fshr, {llvm_value_t<T>::get_type(ir->getContext())});
-#else
-		return llvm::Intrinsic::getDeclaration(_module, llvm::Intrinsic::fshr, {llvm_value_t<T>::get_type(ir->getContext())});
-#endif
 	}
 
 	static llvm::Value* fold(llvm::IRBuilder<>* ir, llvm::Value* v1, llvm::Value* v2, llvm::Value* v3)
@@ -2366,11 +2356,7 @@ struct llvm_add_sat
 	static llvm::Function* get_add_sat(llvm::IRBuilder<>* ir)
 	{
 		const auto _module = ir->GetInsertBlock()->getParent()->getParent();
-#if LLVM_VERSION_MAJOR >= 21 || (LLVM_VERSION_MAJOR == 20 && LLVM_VERSION_MINOR >= 1)
 		return llvm::Intrinsic::getOrInsertDeclaration(_module, intr, {llvm_value_t<T>::get_type(ir->getContext())});
-#else
-		return llvm::Intrinsic::getDeclaration(_module, intr, {llvm_value_t<T>::get_type(ir->getContext())});
-#endif
 	}
 
 	llvm::Value* eval(llvm::IRBuilder<>* ir) const
@@ -2453,11 +2439,7 @@ struct llvm_sub_sat
 	static llvm::Function* get_sub_sat(llvm::IRBuilder<>* ir)
 	{
 		const auto _module = ir->GetInsertBlock()->getParent()->getParent();
-#if LLVM_VERSION_MAJOR >= 21 || (LLVM_VERSION_MAJOR == 20 && LLVM_VERSION_MINOR >= 1)
 		return llvm::Intrinsic::getOrInsertDeclaration(_module, intr, {llvm_value_t<T>::get_type(ir->getContext())});
-#else
-		return llvm::Intrinsic::getDeclaration(_module, intr, {llvm_value_t<T>::get_type(ir->getContext())});
-#endif
 	}
 
 	llvm::Value* eval(llvm::IRBuilder<>* ir) const
@@ -3804,11 +3786,7 @@ public:
 	llvm::Function* get_intrinsic(llvm::Intrinsic::ID id)
 	{
 		const auto _module = m_ir->GetInsertBlock()->getParent()->getParent();
-#if LLVM_VERSION_MAJOR >= 21 || (LLVM_VERSION_MAJOR == 20 && LLVM_VERSION_MINOR >= 1)
 		return llvm::Intrinsic::getOrInsertDeclaration(_module, id, {get_type<Types>()...});
-#else
-		return llvm::Intrinsic::getDeclaration(_module, id, {get_type<Types>()...});
-#endif
 	}
 
 	template <typename T1, typename T2, typename T3>
@@ -3852,13 +3830,8 @@ public:
 		const auto data1 = b.eval(m_ir);
 		const auto data2 = c.eval(m_ir);
 
-#if LLVM_VERSION_MAJOR >= 22
-		// LLVM 22+ changed the intrinsic signature from v4i32 to v16i8 for operands 2 and 3
 		result.value = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_avx512_vpdpbusd_128),
 			{data0, m_ir->CreateBitCast(data1, get_type<u8[16]>()), m_ir->CreateBitCast(data2, get_type<u8[16]>())});
-#else
-		result.value = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_avx512_vpdpbusd_128), {data0, data1, data2});
-#endif
 		return result;
 	}
 
@@ -4333,12 +4306,8 @@ template <typename T1, typename T2, typename T3>
 	{
 		static_assert(depth <= llvm::MaxAnalysisRecursionDepth, "Depth parameter can only decrease search. Default is max.");
 
-#if LLVM_VERSION_MAJOR >= 21
 		const llvm::SimplifyQuery SQ(m_module->getDataLayout());
 		return llvm::computeKnownFPClass(a.eval(m_ir), interested_classes, SQ, llvm::MaxAnalysisRecursionDepth - depth);
-#else
-		return llvm::computeKnownFPClass(a.eval(m_ir), m_module->getDataLayout(), interested_classes, llvm::MaxAnalysisRecursionDepth - depth);
-#endif
 	}
 
 private:

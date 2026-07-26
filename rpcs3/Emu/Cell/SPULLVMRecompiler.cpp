@@ -1740,11 +1740,7 @@ public:
 
 		// Create LLVM module
 		std::unique_ptr<Module> _module = std::make_unique<Module>(m_hash + ".obj", m_context);
-#if LLVM_VERSION_MAJOR >= 21 && (LLVM_VERSION_MINOR >= 1 || LLVM_VERSION_MAJOR >= 22)
 		_module->setTargetTriple(Triple(jit_compiler::triple2()));
-#else
-		_module->setTargetTriple(jit_compiler::triple2());
-#endif
 		_module->setDataLayout(m_jit.get_engine().getTargetMachine()->createDataLayout());
 		m_module = _module.get();
 
@@ -3670,11 +3666,7 @@ public:
 						{
 							if (b2 != bqbi)
 							{
-#if LLVM_VERSION_MAJOR >= 21 || (LLVM_VERSION_MAJOR == 20 && LLVM_VERSION_MINOR >= 1)
 								auto ins = &*b2->block->getFirstNonPHIIt();
-#else
-								auto ins = b2->block->getFirstNonPHI();
-#endif
 
 								if (b2->bb->preds.size() == 1)
 								{
@@ -4046,11 +4038,7 @@ public:
 
 		// Create LLVM module
 		std::unique_ptr<Module> _module = std::make_unique<Module>("spu_interpreter.obj", m_context);
-#if LLVM_VERSION_MAJOR >= 21 && (LLVM_VERSION_MINOR >= 1 || LLVM_VERSION_MAJOR >= 22)
 		_module->setTargetTriple(Triple(jit_compiler::triple2()));
-#else
-		_module->setTargetTriple(jit_compiler::triple2());
-#endif
 		_module->setDataLayout(m_jit.get_engine().getTargetMachine()->createDataLayout());
 		m_module = _module.get();
 
