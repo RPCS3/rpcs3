@@ -740,6 +740,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		if (!render->request_emu_flip(flip_idx))
 		{
 			if (auto cpu = get_current_cpu_thread())
+				if (1)
 			{
 				cpu->state += cpu_flag::exit;
 				cpu->state += cpu_flag::again;

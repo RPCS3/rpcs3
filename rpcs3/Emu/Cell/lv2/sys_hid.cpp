@@ -57,12 +57,15 @@ error_code sys_hid_manager_open(ppu_thread& ppu, u8 device_type, u8 port_no, vm:
 	// ID = 0..7
 	// device_type 8..15
 
-	if (!idm::make_ptr<lv2_hidio_handle>(port_no, device_type))
+	const auto obj = idm::make_ptr<lv2_hidio_handle>(port_no, device_type);
+
+	if (!obj)
 	{
 		// No real error code it seems, just -1
 		return -1;
 	}
 
+	*handle = obj->real_id;
 	return CELL_OK;
 }
 
@@ -223,7 +226,7 @@ error_code sys_hid_manager_read(u32 handle, u32 pkg_id, vm::ptr<void> buf, u64 b
 	const auto handler = pad::get_pad_thread();
 	const auto& pads = handler->GetPads();
 
-	if (port_no <= pads.size())
+	if (port_no >= pads.size())
 	{
 		// ???
 		sys_hid.error("Some error!");
