@@ -1709,7 +1709,8 @@ namespace rsx
 					if (found_desc.external_handle != desc.external_handle ||
 						found_desc.op != desc.op ||
 						found_desc.x != desc.x || found_desc.y != desc.y ||
-						found_desc.width != desc.width || found_desc.height != desc.height)
+						found_desc.width != desc.width || found_desc.height != desc.height ||
+						found_desc.gcm_format != desc.gcm_format)
 						continue;
 
 					if (desc.op == deferred_request_command::copy_image_dynamic)
