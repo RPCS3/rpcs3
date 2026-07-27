@@ -25,12 +25,12 @@ std::string VertexProgramDecompiler::GetMask(bool is_sca) const
 	return ret.empty() || ret == "xyzw" ? "" : ("." + ret);
 }
 
-std::string VertexProgramDecompiler::GetVecMask()
+std::string VertexProgramDecompiler::GetVecMask() const
 {
 	return GetMask(false);
 }
 
-std::string VertexProgramDecompiler::GetScaMask()
+std::string VertexProgramDecompiler::GetScaMask() const
 {
 	return GetMask(true);
 }
@@ -486,7 +486,7 @@ std::string VertexProgramDecompiler::Decompile()
 	{
 		// Call function
 		// NOTE: Addresses are assumed to have been patched
-		m_call_stack.push(i+1);
+		m_call_stack.push(i + 1);
 		AddCode(condition);
 		AddCode("{");
 		m_cur_instr->open_scopes++;
@@ -680,8 +680,8 @@ std::string VertexProgramDecompiler::Decompile()
 				//TODO
 				rsx_log.error("BRA opcode found in subroutine!");
 			}
+			break;
 		}
-		break;
 		case RSX_SCA_OPCODE_BRI: // works differently (BRI o[1].x(TR) L0;)
 		{
 			if (m_call_stack.empty())
@@ -701,8 +701,8 @@ std::string VertexProgramDecompiler::Decompile()
 				//TODO
 				rsx_log.error("BRI opcode found in subroutine!");
 			}
+			break;
 		}
-		break;
 		case RSX_SCA_OPCODE_CAL:
 			// works same as BRI
 			AddCode("//CAL");
