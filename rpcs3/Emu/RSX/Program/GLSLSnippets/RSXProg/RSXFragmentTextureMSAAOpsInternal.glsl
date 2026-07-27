@@ -58,12 +58,12 @@ vec4 sampleTexture2DMS(in _MSAA_SAMPLER_TYPE_ tex, const in vec2 coords, const i
 		    const vec3 weights = compute2x2DownsampleWeights(normalized_coords.x, uv_step.x, actual_step.x);
 
 		    const vec4 sample4 = texelFetch2DMS(tex, clamp_bounds, sample_count, icoords, ivec2(2, 0));    // Further bottom right
-		    a = fma(sample0, weights.xxxx, sample1 * weights.y) + (sample4 * weights.z);     // Weighted sum
+		    a = fma(sample0, weights.xxxx, sample1 * weights.y) + (sample4 * weights.z);                   // Weighted sum
 
 		    if (!no_filter.y)
 		    {
 		        const vec4 sample5 = texelFetch2DMS(tex, clamp_bounds, sample_count, icoords, ivec2(2, 1));    // Further top right
-		        b = fma(sample2, weights.xxxx, sample3 * weights.y) + (sample5 * weights.z);     // Weighted sum
+		        b = fma(sample2, weights.xxxx, sample3 * weights.y) + (sample5 * weights.z);                   // Weighted sum
 		    }
 		}
 		else if (actual_step.x < uv_step.x)
