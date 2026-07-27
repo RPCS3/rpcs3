@@ -152,6 +152,7 @@ namespace rsx
 
 			utils::address_range32 cache_range;
 			bool do_not_cache = false;
+			bool force_bg_load = false;
 
 			deferred_subresource() = default;
 
@@ -2112,8 +2113,8 @@ namespace rsx
 					return {};
 				}
 
-				bool result_is_valid;
-				if (_pool == 0 && !g_cfg.video.write_color_buffers && !g_cfg.video.write_depth_buffer)
+				bool result_is_valid = result.atlas_covers_target_area(section_count == 1 ? 99 : 90);
+				if (_pool == 0 && !result_is_valid && !g_cfg.video.write_color_buffers && !g_cfg.video.write_depth_buffer)
 				{
 					// HACK: Avoid WCB requirement for some games with wrongly declared sampler dimensions.
 					// TODO: Some games may render a small region (e.g 1024x256x2) and sample a huge texture (e.g 1024x1024).
@@ -2121,10 +2122,7 @@ namespace rsx
 					// Properly fix this by introducing partial data upload into the surface cache in such cases and making RCB/RDB
 					// enabled by default. Blit engine already handles this correctly.
 					result_is_valid = true;
-				}
-				else
-				{
-					result_is_valid = result.atlas_covers_target_area(section_count == 1 ? 99 : 90);
+					result.external_subresource_desc.force_bg_load = true;
 				}
 
 				if (!result_is_valid)
