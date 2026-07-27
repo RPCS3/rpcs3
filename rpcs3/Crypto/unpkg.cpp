@@ -653,7 +653,6 @@ bool package_reader::read_param_sfo()
 	return false;
 }
 
-// TODO: maybe also check if VERSION matches
 package_install_result package_reader::check_target_app_version() const
 {
 	if (!m_is_valid)
@@ -698,7 +697,13 @@ package_install_result package_reader::check_target_app_version() const
 		{
 			// We are unable to compare anything with the target app version
 			pkg_log.error("A target app version is required (%s), but no PARAM.SFO was found for %s. (path='%s', error=%s)", target_app_ver, title_id, sfo_path, fs::g_tls_error);
-			return {package_install_result::error_type::app_version, {std::string(target_app_ver)}};
+			return {
+				.error = package_install_result::error_type::app_version,
+				.version = {
+					.app_ver = std::string(app_ver),
+					.expected = std::string(target_app_ver)
+				}
+			};
 		}
 
 		// There is nothing we need to compare, so we may install the package
@@ -744,7 +749,13 @@ package_install_result package_reader::check_target_app_version() const
 		}
 
 		pkg_log.error("The new app version (%s) is smaller than the installed app version (%s)", app_ver, installed_app_ver);
-		return {package_install_result::error_type::app_version, {std::string(app_ver), std::string(installed_app_ver)}};
+		return {
+			.error = package_install_result::error_type::app_version,
+			.version = {
+				.app_ver = std::string(app_ver),
+				.installed = std::string(installed_app_ver)
+			}
+		};
 	}
 
 	// Check if the installed app version matches the target app version
@@ -764,7 +775,14 @@ package_install_result package_reader::check_target_app_version() const
 	}
 
 	pkg_log.error("The installed app version (%s) does not match the target app version (%s)", installed_app_ver, target_app_ver);
-	return {package_install_result::error_type::app_version, {std::string(target_app_ver), std::string(installed_app_ver)}};
+	return {
+		.error = package_install_result::error_type::app_version,
+		.version = {
+			.app_ver = std::string(app_ver),
+			.expected = std::string(target_app_ver),
+			.installed = std::string(installed_app_ver)
+		}
+	};
 }
 
 bool package_reader::set_install_path()
