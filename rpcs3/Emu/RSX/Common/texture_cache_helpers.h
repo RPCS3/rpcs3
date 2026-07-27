@@ -233,7 +233,7 @@ namespace rsx
 		}
 
 		template<typename commandbuffer_type, typename section_storage_type, typename copy_region_type, typename surface_store_list_type>
-		void gather_texture_slices(
+		bool gather_texture_slices(
 			commandbuffer_type& cmd,
 			rsx::simple_array<copy_region_type>& out,
 			const surface_store_list_type& fbos,
@@ -520,6 +520,8 @@ namespace rsx
 					rsx_log.warning("Could not gather textures into an atlas; using CPU fallback...");
 				}
 			}
+
+			return found_slices == count;
 		}
 
 		template<typename render_target_type>
@@ -844,7 +846,7 @@ namespace rsx
 						upload_context, format_class, scale,
 						rsx::texture_dimension_extended::texture_dimension_cubemap, decoded_remap };
 
-				gather_texture_slices(cmd, desc.external_subresource_desc.sections_to_copy, fbos, local, attr, 6, is_depth);
+				desc.external_subresource_desc.force_bg_load = !gather_texture_slices(cmd, desc.external_subresource_desc.sections_to_copy, fbos, local, attr, 6, is_depth);
 				return desc;
 			}
 			else if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_3d && attr.depth > 1)
@@ -857,7 +859,7 @@ namespace rsx
 					upload_context, format_class, scale,
 					rsx::texture_dimension_extended::texture_dimension_3d, decoded_remap };
 
-				gather_texture_slices(cmd, desc.external_subresource_desc.sections_to_copy, fbos, local, attr, attr.depth, is_depth);
+				desc.external_subresource_desc.force_bg_load = !gather_texture_slices(cmd, desc.external_subresource_desc.sections_to_copy, fbos, local, attr, attr.depth, is_depth);
 				return desc;
 			}
 
@@ -876,7 +878,7 @@ namespace rsx
 					attr2, {}, upload_context, format_class,
 					scale, rsx::texture_dimension_extended::texture_dimension_2d, decoded_remap };
 
-			gather_texture_slices(cmd, result.external_subresource_desc.sections_to_copy, fbos, local, attr, 1, is_depth);
+			result.external_subresource_desc.force_bg_load = !gather_texture_slices(cmd, result.external_subresource_desc.sections_to_copy, fbos, local, attr, 1, is_depth);
 			result.simplify();
 			return result;
 		}
