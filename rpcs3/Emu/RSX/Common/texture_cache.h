@@ -1816,14 +1816,11 @@ namespace rsx
 		template <typename ...Args>
 		void discard_framebuffer_memory_region(commandbuffer_type& /*cmd*/, const address_range32& rsx_range, Args&&... /*extras*/)
 		{
-			if (g_cfg.video.write_color_buffers || g_cfg.video.write_depth_buffer)
+			auto* region_ptr = find_cached_texture(rsx_range, { .gcm_format = RSX_GCM_FORMAT_IGNORED }, false, false, false);
+			if (region_ptr && region_ptr->is_locked() && region_ptr->get_context() == texture_upload_context::framebuffer_storage)
 			{
-				auto* region_ptr = find_cached_texture(rsx_range, { .gcm_format = RSX_GCM_FORMAT_IGNORED }, false, false, false);
-				if (region_ptr && region_ptr->is_locked() && region_ptr->get_context() == texture_upload_context::framebuffer_storage)
-				{
-					ensure(region_ptr->get_protection() == utils::protection::no);
-					region_ptr->discard(false);
-				}
+				ensure(region_ptr->get_protection() == utils::protection::no);
+				region_ptr->discard(false);
 			}
 		}
 
