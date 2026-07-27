@@ -1247,13 +1247,13 @@ bool main_window::HandlePackageInstallation(main_window* mw, QStringList file_pa
 				{
 					std::string resolved_path = Emu.GetCallbacks().resolve_path(it->first);
 
-					if (resolved_path.empty() || claimed_paths.count(resolved_path))
+					if (resolved_path.empty() || claimed_paths.contains(resolved_path))
 					{
 						it = paths.erase(it);
 					}
 					else
 					{
-						claimed_paths.emplace(std::move(resolved_path));
+						claimed_paths.insert(std::move(resolved_path));
 						it++;
 					}
 				}
@@ -1326,23 +1326,27 @@ bool main_window::HandlePackageInstallation(main_window* mw, QStringList file_pa
 				}
 
 				const bool has_expected = !result.version.expected.empty();
-				const bool has_found = !result.version.found.empty();
-				if (has_expected && has_found)
+				const bool has_installed = !result.version.installed.empty();
+
+				if (has_expected && has_installed)
 				{
-					QMessageBox::warning(mw, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nUpdate is for version %1, but you have version %2.\n\nTried to install: %3")
-							.arg(QString::fromStdString(result.version.expected)).arg(QString::fromStdString(result.version.found)).arg(package->path));
+					QMessageBox::warning(mw, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nUpdate with version %0 is for version %1, but you have version %2.\n\nTried to install: %3")
+							.arg(QString::fromStdString(result.version.app_ver)).arg(QString::fromStdString(result.version.expected)).arg(QString::fromStdString(result.version.installed)).arg(package->path));
 				}
 				else if (has_expected)
 				{
-					QMessageBox::warning(mw, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nUpdate is for version %1, but you don't have any data installed.\n\nTried to install: %2")
-							.arg(QString::fromStdString(result.version.expected)).arg(package->path));
+					QMessageBox::warning(mw, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nUpdate with version %0 is for version %1, but you don't have any data installed.\n\nTried to install: %2")
+							.arg(QString::fromStdString(result.version.app_ver)).arg(QString::fromStdString(result.version.expected)).arg(package->path));
+				}
+				else if (has_installed)
+				{
+					QMessageBox::warning(mw, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nUpdate has version %0, but you already have version %1.\n\nTried to install: %2")
+							.arg(QString::fromStdString(result.version.app_ver)).arg(QString::fromStdString(result.version.installed)).arg(package->path));
 				}
 				else
 				{
 					// probably unreachable
-					const QString found = has_found ? tr("version %1").arg(QString::fromStdString(result.version.found)) : tr("no data installed");
-					QMessageBox::warning(mw, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nUpdate is for unknown version, but you have version %1.\n\nTried to install: %2")
-							.arg(QString::fromStdString(result.version.expected)).arg(found).arg(package->path));
+					QMessageBox::warning(mw, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nAn unexpected error occured.\n\nTried to install: %0").arg(package->path));
 				}
 			}
 			else

@@ -305,10 +305,11 @@ struct package_install_result
 		app_version,
 		other
 	} error = error_type::no_error;
-	struct version
+	struct versions
 	{
+		std::string app_ver;
 		std::string expected;
-		std::string found;
+		std::string installed;
 	} version;
 };
 
