@@ -1,4 +1,5 @@
 #include "game_compatibility.h"
+#include "gui_application.h"
 #include "gui_settings.h"
 #include "downloader.h"
 #include "localized.h"
@@ -268,12 +269,13 @@ compat::package_info game_compatibility::GetPkgInfo(const QString& pkg_path, con
 
 	const psf::registry& psf = reader.get_psf();
 
-	// TODO: localization of title and changelog
-	const std::string title_key     = "TITLE";
-	const std::string changelog_key = "paramhip";
+	const std::string localized_title_key = fmt::format("TITLE_%02d", gui_application::get_language_id());
+	const std::string localized_changelog_key = fmt::format("paramhip_%02d", gui_application::get_language_id());
+
+	std::string_view localized_title = psf::get_string(psf, localized_title_key);
 
 	info.path     = pkg_path;
-	info.title    = QString::fromStdString(std::string(psf::get_string(psf, title_key))); // Let's read this from the psf first
+	info.title    = QString::fromStdString(std::string(localized_title.empty() ? psf::get_string(psf, "TITLE") : localized_title));
 	info.title_id = QString::fromStdString(std::string(psf::get_string(psf, "TITLE_ID")));
 	info.category = QString::fromStdString(std::string(psf::get_string(psf, "CATEGORY")));
 	info.version  = QString::fromStdString(std::string(psf::get_string(psf, "APP_VER")));
@@ -327,12 +329,12 @@ compat::package_info game_compatibility::GetPkgInfo(const QString& pkg_path, con
 			{
 				if (info.version.toStdString() == package.version)
 				{
-					if (const std::string localized_title = package.get_title(title_key); !localized_title.empty())
+					if (const std::string localized_title = package.get_title(localized_title_key); !localized_title.empty())
 					{
 						info.title = QString::fromStdString(localized_title);
 					}
 
-					if (const std::string localized_changelog = package.get_changelog(changelog_key); !localized_changelog.empty())
+					if (const std::string localized_changelog = package.get_changelog(localized_changelog_key); !localized_changelog.empty())
 					{
 						info.changelog = QString::fromStdString(localized_changelog);
 					}
