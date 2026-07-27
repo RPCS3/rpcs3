@@ -1501,12 +1501,12 @@ namespace rsx
 
 				lock.upgrade();
 
-				// NOTE: Write flag set to remove all other overlapping regions (e.g shader_read or blit_src)
-				// NOTE: This step can potentially invalidate the newly created src image as well.
-				cache->invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::cause_is_write | invalidation_cause::cause_uses_strict_data_bounds, {}, std::forward<Args>(extras)...);
-
 				if (use_null_region) [[likely]]
 				{
+					// NOTE: Write flag set to remove all other overlapping regions (e.g shader_read or blit_src)
+					// NOTE: This step can potentially invalidate the newly created src image as well.
+					cache->invalidate_range_impl_base(cmd, rsx_range, invalidation_cause::cause_is_write | invalidation_cause::cause_uses_strict_data_bounds, {}, std::forward<Args>(extras)...);
+
 					bool force_dma_load = false;
 					if ((dst_w * dst_bpp) != dst.pitch)
 					{
