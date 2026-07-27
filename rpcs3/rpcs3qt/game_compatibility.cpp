@@ -300,15 +300,13 @@ compat::package_info game_compatibility::GetPkgInfo(const QString& pkg_path, con
 		if (info.category == "GD")
 		{
 			// For now let's assume that PS3 Game Data packages are always updates or DLC.
-			// Update packages always seem to have an APP_VER, so let's say it's a DLC otherwise.
-			// Ideally this would simply be the package content type, but I am too lazy to implement this right now.
-			if (info.version.isEmpty())
+			if (reader.get_metadata().package_type & pkg_flag::PKG_FLAG_PATCH)
 			{
-				info.type = compat::package_type::dlc;
+				info.type = compat::package_type::update;
 			}
 			else
 			{
-				info.type = compat::package_type::update;
+				info.type = compat::package_type::dlc;
 			}
 		}
 	}
