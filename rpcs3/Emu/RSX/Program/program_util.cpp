@@ -33,7 +33,7 @@ namespace rsx
 			std::memcpy(dst, src, sizeof(TIU_slot) * 4); return;
 		default:
 			break;
-		};
+		}
 
 		const auto start = std::countr_zero(mask);
 		const auto end = 16 - std::countl_zero(mask);
@@ -174,7 +174,7 @@ namespace rsx
 		}
 
 		// Check for any hits
-		for (auto& idx : constant_ids)
+		for (u16 idx : constant_ids)
 		{
 			if (idx >= first_index && idx <= last_index)
 			{

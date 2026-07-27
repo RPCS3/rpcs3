@@ -67,8 +67,8 @@ struct VertexProgramDecompiler
 
 	static std::string NotZeroPositive(const std::string& code);
 	std::string GetMask(bool is_sca) const;
-	std::string GetVecMask();
-	std::string GetScaMask();
+	std::string GetVecMask() const;
+	std::string GetScaMask() const;
 	std::string GetDST(bool is_sca = false);
 	std::string GetSRC(u32 n);
 	std::string GetTex();

@@ -199,7 +199,7 @@ public:
 	template<typename T>
 	T& GetCgRef(const u32 offset)
 	{
-		return reinterpret_cast<T&>(m_buffer[offset]);
+		return reinterpret_cast<T&>(::at32(m_buffer, offset));
 	}
 
 	static std::string GetCgParamType(u32 type);

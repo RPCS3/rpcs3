@@ -4,14 +4,12 @@
 
 void CgBinaryDisasm::AddScaCodeDisasm(const std::string& code)
 {
-	ensure((m_sca_opcode < 21));
-	m_arb_shader += rsx_vp_sca_op_names[m_sca_opcode] + code + " ";
+	m_arb_shader += ::at32(rsx_vp_sca_op_names, m_sca_opcode) + code + " ";
 }
 
 void CgBinaryDisasm::AddVecCodeDisasm(const std::string& code)
 {
-	ensure((m_vec_opcode < 26));
-	m_arb_shader += rsx_vp_vec_op_names[m_vec_opcode] + code + " ";
+	m_arb_shader += ::at32(rsx_vp_vec_op_names, m_vec_opcode) + code + " ";
 }
 
 std::string CgBinaryDisasm::GetMaskDisasm(bool is_sca) const
@@ -107,8 +105,6 @@ std::string CgBinaryDisasm::GetDSTDisasm(bool is_sca) const
 
 std::string CgBinaryDisasm::GetSRCDisasm(const u32 n) const
 {
-	ensure(n < 3);
-
 	std::string ret;
 
 	static constexpr std::array<std::string_view, 16> reg_table =
@@ -121,11 +117,13 @@ std::string CgBinaryDisasm::GetSRCDisasm(const u32 n) const
 		"in_tc4", "in_tc5", "in_tc6", "in_tc7"
 	};
 
-	switch (src[n].reg_type)
+	const SRC& s = ::at32(src, n);
+
+	switch (s.reg_type)
 	{
 	case 1: //temp
 		ret += 'R';
-		ret += std::to_string(src[n].tmp_src);
+		ret += std::to_string(s.tmp_src);
 		break;
 	case 2: //input
 		if (d1.input_src < reg_table.size())
@@ -143,7 +141,7 @@ std::string CgBinaryDisasm::GetSRCDisasm(const u32 n) const
 		break;
 
 	default:
-		rsx_log.fatal("Bad src%u reg type: %d", n, u32{ src[n].reg_type });
+		rsx_log.fatal("Bad src%u reg type: %d", n, u32{ s.reg_type });
 		break;
 	}
 
@@ -152,10 +150,10 @@ std::string CgBinaryDisasm::GetSRCDisasm(const u32 n) const
 	std::string swizzle;
 	swizzle.reserve(5);
 	swizzle += '.';
-	swizzle += f[src[n].swz_x];
-	swizzle += f[src[n].swz_y];
-	swizzle += f[src[n].swz_z];
-	swizzle += f[src[n].swz_w];
+	swizzle += f[s.swz_x];
+	swizzle += f[s.swz_y];
+	swizzle += f[s.swz_z];
+	swizzle += f[s.swz_w];
 
 	if (swizzle == ".xxxx") swizzle = ".x";
 	else if (swizzle == ".yyyy") swizzle = ".y";
@@ -178,7 +176,7 @@ std::string CgBinaryDisasm::GetSRCDisasm(const u32 n) const
 	}
 
 	if (abs) ret = "|" + ret + "|";
-	if (src[n].neg) ret = "-" + ret;
+	if (s.neg) ret = "-" + ret;
 
 	return ret;
 }
