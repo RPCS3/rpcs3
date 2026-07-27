@@ -1,7 +1,7 @@
 R"(
 vec4 texelFetch2DMS(in _MSAA_SAMPLER_TYPE_ tex, const in vec2 sample_count, const in ivec2 icoords, const in ivec2 offset)
 {
-	const vec2 resolve_coords = vec2(icoords + offset);
+	const vec2 resolve_coords = vec2(clamp(icoords + offset, ivec2(0), textureSize(tex) - ivec2(1)));
 	const vec2 aa_coords = floor(resolve_coords / sample_count);               // AA coords = real_coords / sample_count
 	const vec2 sample_loc = fma(aa_coords, -sample_count, resolve_coords);     // Sample ID = real_coords % sample_count
 	const float sample_index = fma(sample_loc.y, sample_count.y, sample_loc.x);
