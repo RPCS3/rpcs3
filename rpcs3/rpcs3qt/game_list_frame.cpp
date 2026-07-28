@@ -55,6 +55,8 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	m_col_sort_order  = m_gui_settings->GetValue(gui::gl_sortAsc).toBool() ? Qt::AscendingOrder : Qt::DescendingOrder;
 	m_sort_column     = m_gui_settings->GetValue(gui::gl_sortCol).toInt();
 	m_hidden_list     = gui::utils::list_to_set(m_gui_settings->GetValue(gui::gl_hidden_list).toStringList());
+	m_broken_list     = gui::utils::list_to_set(m_gui_settings->GetValue(gui::gl_broken_list).toStringList());
+	m_completed_list     = gui::utils::list_to_set(m_gui_settings->GetValue(gui::gl_completed_list).toStringList());
 
 	m_old_layout_is_list = m_is_list_layout;
 
@@ -336,7 +338,9 @@ bool game_list_frame::IsEntryVisible(const game_info& game, bool search_fallback
 	};
 
 	const QString serial = QString::fromStdString(game->info.serial);
-	const bool is_visible = m_show_hidden || !m_hidden_list.contains(serial);
+	const bool is_visible = (m_show_hidden || !m_hidden_list.contains(serial)) &&
+							(m_show_broken || !m_broken_list.contains(serial)) &&
+							(m_show_completed || !m_completed_list.contains(serial));
 	return is_visible && matches_category() && SearchMatchesApp(QString::fromStdString(game->info.name), serial, search_fallback);
 }
 
@@ -1067,9 +1071,13 @@ void game_list_frame::OnRefreshFinished()
 		return title1.toLower() < title2.toLower();
 	});
 
-	// clean up hidden games list
+	// clean up hidden lists (Hide, Broekn, Completed)
 	m_hidden_list.intersect(m_serials);
 	m_gui_settings->SetValue(gui::gl_hidden_list, QStringList(m_hidden_list.values()));
+	m_broken_list.intersect(m_serials);
+	m_gui_settings->SetValue(gui::gl_broken_list, QStringList(m_broken_list.values()));
+	m_completed_list.intersect(m_serials);
+	m_gui_settings->SetValue(gui::gl_completed_list, QStringList(m_completed_list.values()));
 	m_serials.clear();
 	m_path_list.clear();
 	m_path_entries.clear();
@@ -1283,6 +1291,16 @@ void game_list_frame::RepaintIcons(bool from_settings)
 void game_list_frame::SetShowHidden(bool show)
 {
 	m_show_hidden = show;
+}
+
+void game_list_frame::SetShowBroken(bool show)
+{
+	m_show_broken = show;
+}
+
+void game_list_frame::SetShowCompleted(bool show)
+{
+	m_show_completed = show;
 }
 
 void game_list_frame::SetListMode(bool is_list)

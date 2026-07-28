@@ -327,9 +327,15 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 	manage_game_menu->addSeparator();
 
 	// Hide/rename game in game list
-	QAction* hide_serial = manage_game_menu->addAction(tr("&Hide In Game List"));
-	hide_serial->setCheckable(true);
-	hide_serial->setChecked(m_game_list_frame->hidden_list().contains(QString::fromStdString(serial)));
+	QAction* hide_hidden_serial = manage_game_menu->addAction(tr("&Hide Hidden Game In Game List"));
+	hide_hidden_serial->setCheckable(true);
+	hide_hidden_serial->setChecked(m_game_list_frame->hidden_list().contains(QString::fromStdString(serial)));
+	QAction* hide_broken_serial = manage_game_menu->addAction(tr("&Hide Broken Game In Game List"));
+	hide_broken_serial->setCheckable(true);
+	hide_broken_serial->setChecked(m_game_list_frame->broken_list().contains(QString::fromStdString(serial)));
+	QAction* hide_completed_serial = manage_game_menu->addAction(tr("&Hide Completed Game In Game List"));
+	hide_completed_serial->setCheckable(true);
+	hide_completed_serial->setChecked(m_game_list_frame->completed_list().contains(QString::fromStdString(serial)));
 	QAction* rename_title = manage_game_menu->addAction(tr("&Rename In Game List"));
 
 	// Edit tooltip notes/reset time played
@@ -694,7 +700,7 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 			m_game_list_frame->ShowCustomConfigIcon(gameinfo);
 		}
 	});
-	connect(hide_serial, &QAction::triggered, m_game_list_frame, [this, serial = QString::fromStdString(serial)](bool checked)
+	connect(hide_hidden_serial, &QAction::triggered, m_game_list_frame, [this, serial = QString::fromStdString(serial)](bool checked)
 	{
 		if (checked)
 			m_game_list_frame->hidden_list().insert(serial);
@@ -702,6 +708,26 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 			m_game_list_frame->hidden_list().remove(serial);
 
 		m_gui_settings->SetValue(gui::gl_hidden_list, QStringList(m_game_list_frame->hidden_list().values()));
+		m_game_list_frame->Refresh();
+	});
+	connect(hide_broken_serial, &QAction::triggered, m_game_list_frame, [this, serial = QString::fromStdString(serial)](bool checked)
+	{
+		if (checked)
+			m_game_list_frame->broken_list().insert(serial);
+		else
+			m_game_list_frame->broken_list().remove(serial);
+
+		m_gui_settings->SetValue(gui::gl_broken_list, QStringList(m_game_list_frame->broken_list().values()));
+		m_game_list_frame->Refresh();
+	});
+	connect(hide_completed_serial, &QAction::triggered, m_game_list_frame, [this, serial = QString::fromStdString(serial)](bool checked)
+	{
+		if (checked)
+			m_game_list_frame->completed_list().insert(serial);
+		else
+			m_game_list_frame->completed_list().remove(serial);
+
+		m_gui_settings->SetValue(gui::gl_completed_list, QStringList(m_game_list_frame->completed_list().values()));
 		m_game_list_frame->Refresh();
 	});
 	connect(create_cpu_cache, &QAction::triggered, m_game_list_frame, [this, gameinfo]
@@ -925,10 +951,10 @@ void game_list_context_menu::show_multi_selection_context_menu(const std::vector
 	manage_game_menu->addSeparator();
 
 	// Hide game in game list
-	QAction* hide_serial = manage_game_menu->addAction(tr("&Hide In Game List"));
-	connect(hide_serial, &QAction::triggered, m_game_list_frame, [this, games]()
+	QAction* hide_hidden_serial = manage_game_menu->addAction(tr("&Hide Hidden Game In Game List"));
+	connect(hide_hidden_serial, &QAction::triggered, m_game_list_frame, [this, games]()
 	{
-		if (QMessageBox::question(m_game_list_frame, tr("Confirm Hiding"), tr("Hide in game list?")) != QMessageBox::Yes)
+		if (QMessageBox::question(m_game_list_frame, tr("Confirm Hiding"), tr("Hide hidden game in game list?")) != QMessageBox::Yes)
 			return;
 
 		for (const auto& game : games)
@@ -939,10 +965,38 @@ void game_list_context_menu::show_multi_selection_context_menu(const std::vector
 		m_gui_settings->SetValue(gui::gl_hidden_list, QStringList(m_game_list_frame->hidden_list().values()));
 		m_game_list_frame->Refresh();
 	});
+	QAction* hide_broken_serial = manage_game_menu->addAction(tr("&Hide Broken Game In Game List"));
+	connect(hide_broken_serial, &QAction::triggered, m_game_list_frame, [this, games]()
+	{
+		if (QMessageBox::question(m_game_list_frame, tr("Confirm Hiding"), tr("Hide broken game in game list?")) != QMessageBox::Yes)
+			return;
+
+		for (const auto& game : games)
+		{
+			m_game_list_frame->broken_list().insert(QString::fromStdString(game->info.serial));
+		}
+
+		m_gui_settings->SetValue(gui::gl_broken_list, QStringList(m_game_list_frame->broken_list().values()));
+		m_game_list_frame->Refresh();
+	});
+	QAction* hide_completed_serial = manage_game_menu->addAction(tr("&Hide Completed Game In Game List"));
+	connect(hide_completed_serial, &QAction::triggered, m_game_list_frame, [this, games]()
+	{
+		if (QMessageBox::question(m_game_list_frame, tr("Confirm Hiding"), tr("Hide completed game in game list?")) != QMessageBox::Yes)
+			return;
+
+		for (const auto& game : games)
+		{
+			m_game_list_frame->completed_list().insert(QString::fromStdString(game->info.serial));
+		}
+
+		m_gui_settings->SetValue(gui::gl_completed_list, QStringList(m_game_list_frame->completed_list().values()));
+		m_game_list_frame->Refresh();
+	});
 
 	// Show game in game list
-	QAction* show_serial = manage_game_menu->addAction(tr("&Show In Game List"));
-	connect(show_serial, &QAction::triggered, m_game_list_frame, [this, games]()
+	QAction* show_hidden_serial = manage_game_menu->addAction(tr("&Show Hidden Game In Game List"));
+	connect(show_hidden_serial, &QAction::triggered, m_game_list_frame, [this, games]()
 	{
 		for (const auto& game : games)
 		{
@@ -950,6 +1004,28 @@ void game_list_context_menu::show_multi_selection_context_menu(const std::vector
 		}
 
 		m_gui_settings->SetValue(gui::gl_hidden_list, QStringList(m_game_list_frame->hidden_list().values()));
+		m_game_list_frame->Refresh();
+	});
+	QAction* show_broken_serial = manage_game_menu->addAction(tr("&Show Broken Game In Game List"));
+	connect(show_broken_serial, &QAction::triggered, m_game_list_frame, [this, games]()
+	{
+		for (const auto& game : games)
+		{
+			m_game_list_frame->broken_list().remove(QString::fromStdString(game->info.serial));
+		}
+
+		m_gui_settings->SetValue(gui::gl_broken_list, QStringList(m_game_list_frame->broken_list().values()));
+		m_game_list_frame->Refresh();
+	});
+	QAction* show_completed_serial = manage_game_menu->addAction(tr("&Show Completed Game In Game List"));
+	connect(show_completed_serial, &QAction::triggered, m_game_list_frame, [this, games]()
+	{
+		for (const auto& game : games)
+		{
+			m_game_list_frame->completed_list().remove(QString::fromStdString(game->info.serial));
+		}
+
+		m_gui_settings->SetValue(gui::gl_completed_list, QStringList(m_game_list_frame->completed_list().values()));
 		m_game_list_frame->Refresh();
 	});
 
