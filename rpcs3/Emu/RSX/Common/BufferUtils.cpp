@@ -470,7 +470,7 @@ namespace
 		for (; (i + step) <= count; i += step, vec_ptr++)
 		{
 			_mm_stream_si128(vec_ptr, values);
-			_mm_add_epi16(values,  vec_step);
+			values = _mm_add_epi16(values,  vec_step);
 		}
 #endif
 		for (; i < count; ++i)
