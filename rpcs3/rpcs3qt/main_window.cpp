@@ -3480,7 +3480,7 @@ void main_window::CreateConnects()
 		m_game_list_frame->Refresh();
 	});
 
-		connect(ui->showCompletedEntriesAct, &QAction::triggered, this, [this](bool checked)
+	connect(ui->showCompletedEntriesAct, &QAction::triggered, this, [this](bool checked)
 	{
 		m_gui_settings->SetValue(gui::gl_show_completed, checked);
 		m_game_list_frame->SetShowCompleted(checked);

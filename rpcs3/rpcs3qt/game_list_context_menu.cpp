@@ -327,7 +327,7 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 	manage_game_menu->addSeparator();
 
 	// Hide/rename game in game list
-	QAction* hide_hidden_serial = manage_game_menu->addAction(tr("&Hide Hidden Game In Game List"));
+	QAction* hide_hidden_serial = manage_game_menu->addAction(tr("&Hide Game In Game List"));
 	hide_hidden_serial->setCheckable(true);
 	hide_hidden_serial->setChecked(m_game_list_frame->hidden_list().contains(QString::fromStdString(serial)));
 	QAction* hide_broken_serial = manage_game_menu->addAction(tr("&Hide Broken Game In Game List"));
@@ -951,10 +951,10 @@ void game_list_context_menu::show_multi_selection_context_menu(const std::vector
 	manage_game_menu->addSeparator();
 
 	// Hide game in game list
-	QAction* hide_hidden_serial = manage_game_menu->addAction(tr("&Hide Hidden Game In Game List"));
+	QAction* hide_hidden_serial = manage_game_menu->addAction(tr("&Hide Game In Game List"));
 	connect(hide_hidden_serial, &QAction::triggered, m_game_list_frame, [this, games]()
 	{
-		if (QMessageBox::question(m_game_list_frame, tr("Confirm Hiding"), tr("Hide hidden game in game list?")) != QMessageBox::Yes)
+		if (QMessageBox::question(m_game_list_frame, tr("Confirm Hiding"), tr("Hide game in game list?")) != QMessageBox::Yes)
 			return;
 
 		for (const auto& game : games)

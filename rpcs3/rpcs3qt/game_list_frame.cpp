@@ -56,7 +56,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	m_sort_column     = m_gui_settings->GetValue(gui::gl_sortCol).toInt();
 	m_hidden_list     = gui::utils::list_to_set(m_gui_settings->GetValue(gui::gl_hidden_list).toStringList());
 	m_broken_list     = gui::utils::list_to_set(m_gui_settings->GetValue(gui::gl_broken_list).toStringList());
-	m_completed_list     = gui::utils::list_to_set(m_gui_settings->GetValue(gui::gl_completed_list).toStringList());
+	m_completed_list  = gui::utils::list_to_set(m_gui_settings->GetValue(gui::gl_completed_list).toStringList());
 
 	m_old_layout_is_list = m_is_list_layout;
 
@@ -1071,7 +1071,7 @@ void game_list_frame::OnRefreshFinished()
 		return title1.toLower() < title2.toLower();
 	});
 
-	// clean up hidden lists (Hide, Broekn, Completed)
+	// clean up hidden lists (Hide, Broken, Completed)
 	m_hidden_list.intersect(m_serials);
 	m_gui_settings->SetValue(gui::gl_hidden_list, QStringList(m_hidden_list.values()));
 	m_broken_list.intersect(m_serials);
