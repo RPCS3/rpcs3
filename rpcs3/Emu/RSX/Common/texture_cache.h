@@ -2121,11 +2121,10 @@ namespace rsx
 				bool result_is_valid = result.atlas_covers_target_area(section_count == 1 ? 99 : 90);
 				if (_pool == 0 && !result_is_valid && !g_cfg.video.write_color_buffers && !g_cfg.video.write_depth_buffer)
 				{
-					// HACK: Avoid WCB requirement for some games with wrongly declared sampler dimensions.
-					// TODO: Some games may render a small region (e.g 1024x256x2) and sample a huge texture (e.g 1024x1024).
+					// Avoid WCB requirement for some games with wrongly declared sampler dimensions.
+					// Some games may render a small region (e.g 1024x256x2) and sample a huge texture (e.g 1024x1024).
 					// Seen in APF2k8 - this causes missing bits to be reuploaded from CPU which can cause WCB requirement.
-					// Properly fix this by introducing partial data upload into the surface cache in such cases and making RCB/RDB
-					// enabled by default. Blit engine already handles this correctly.
+					// We work around the issue by forcing a background data load on the subresource to fill the missing data hole.
 					result_is_valid = true;
 					result.external_subresource_desc.force_bg_load = true;
 				}
