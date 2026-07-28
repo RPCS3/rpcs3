@@ -255,7 +255,27 @@ bool package_reader::read_metadata()
 			if (packet.size == sizeof(m_metadata.package_type))
 			{
 				archive_read(&m_metadata.package_type, sizeof(m_metadata.package_type));
+
+				std::vector<std::string> package_flags;
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_0x01)             package_flags.push_back("0x01");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_EBOOT)            package_flags.push_back("EBOOT");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_REQUIRE_LICENSE)  package_flags.push_back("REQUIRE_LICENSE");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_HDD_MC)           package_flags.push_back("HDD_MC");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_PATCH)            package_flags.push_back("PATCH");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_0x20)             package_flags.push_back("0x20");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_RENAME_DIRECTORY) package_flags.push_back("RENAME_DIRECTORY");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_EDAT)             package_flags.push_back("EDAT");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_0x100)            package_flags.push_back("0x100");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_EMULATOR)         package_flags.push_back("EMULATOR");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_VSH_MODULE)       package_flags.push_back("VSH_MODULE");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_DISC_BOUND)       package_flags.push_back("DISC_BOUND");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_UNKNOWN)          package_flags.push_back("UNKNOWN");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_PS_VITA_CARD)     package_flags.push_back("PS_VITA_CARD");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_PS_VITA_NON_GAME) package_flags.push_back("PS_VITA_NON_GAME");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_0x8000)           package_flags.push_back("0x8000");
+
 				pkg_log.notice("Metadata: Package Type = 0x%x = %d", m_metadata.package_type, m_metadata.package_type);
+				pkg_log.notice("Metadata: Package Flags = %s", package_flags.empty() ? "{}" : fmt::merge(package_flags, ", "));
 				continue;
 			}
 			else
@@ -732,6 +752,12 @@ package_install_result package_reader::check_target_app_version() const
 
 	if (target_app_ver.empty())
 	{
+		if (!(m_metadata.package_type & pkg_flag::PKG_FLAG_PATCH))
+		{
+			// This should be a DLC. Let's allow DLCs even with smaller APP_VER.
+			return {package_install_result::error_type::no_error};
+		}
+
 		// This is most likely the first patch. Let's make sure its version is high enough for the installed game.
 
 		const double new_version = std::strtod(app_ver.data(), &ev1);
