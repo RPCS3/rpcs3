@@ -2176,24 +2176,9 @@ namespace rsx
 				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION;
 			}
 
-			if (m_ctx->register_state->alpha_test_enabled())
-			{
-				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ALPHA_TEST;
-			}
-
 			if (m_ctx->register_state->polygon_stipple_enabled())
 			{
 				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_POLYGON_STIPPLE;
-			}
-
-			if (m_ctx->register_state->msaa_alpha_to_coverage_enabled())
-			{
-				const bool is_multiple_samples = m_ctx->register_state->surface_antialias() != rsx::surface_antialiasing::center_1_sample;
-				if (!backend_config.supports_hw_a2c || (!is_multiple_samples && !backend_config.supports_hw_a2c_1spp))
-				{
-					// Emulation required
-					current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ALPHA_TO_COVERAGE;
-				}
 			}
 
 			current_fragment_program.ctrl |= get_fragment_program_export_config();
@@ -2203,6 +2188,25 @@ namespace rsx
 		{
 			// Set high word of the control mask to store point sprite control
 			current_fragment_program.texcoord_control_mask |= u32(m_ctx->register_state->point_sprite_control_mask()) << 16;
+		}
+
+		// NOTE: Alpha test and alpha-to-coverage are ROP stages and apply to every primitive class, not just polygons.
+		// Gating these on the polygon class silently compiles them out of the shader for point sprites and lines, which
+		// makes alpha-tested cutout sprites render as opaque quads. It also diverges from the hardware a2c path, which is
+		// programmed without any primitive class check.
+		if (m_ctx->register_state->alpha_test_enabled())
+		{
+			current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ALPHA_TEST;
+		}
+
+		if (m_ctx->register_state->msaa_alpha_to_coverage_enabled())
+		{
+			const bool is_multiple_samples = m_ctx->register_state->surface_antialias() != rsx::surface_antialiasing::center_1_sample;
+			if (!backend_config.supports_hw_a2c || (!is_multiple_samples && !backend_config.supports_hw_a2c_1spp))
+			{
+				// Emulation required
+				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ALPHA_TO_COVERAGE;
+			}
 		}
 
 		// Check if framebuffer is actually an XRGB format and not a WZYX format
