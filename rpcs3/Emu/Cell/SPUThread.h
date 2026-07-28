@@ -826,6 +826,15 @@ public:
 	u64 mfc_dump_idx = 0;
 	static constexpr u32 max_mfc_dump_idx = 4096;
 
+	struct alignas(16) raw_spu_log_stats_t
+	{
+		u32 mmio_offset = umax;
+		u32 mmio_value = umax;
+		u64 mmio_time = umax;
+	};
+
+	atomic_t<raw_spu_log_stats_t> mmio_stats{};
+
 	bool in_cpu_work = false;
 	bool allow_interrupts_in_cpu_work = false;
 	u8 cpu_work_iteration_count = 0;
