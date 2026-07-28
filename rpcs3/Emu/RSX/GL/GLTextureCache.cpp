@@ -121,7 +121,7 @@ namespace gl
 	}
 
 	gl::texture_view* texture_cache::create_temporary_subresource_impl(gl::command_context& cmd, gl::texture* src, GLenum sized_internal_fmt, GLenum dst_target,
-		u32 gcm_format, u16 x, u16 y, u16 width, u16 height, u16 depth, u8 mipmaps, const rsx::texture_channel_remap_t& remap, bool copy)
+		u32 gcm_format, u16 x, u16 y, u16 width, u16 height, u16 depth, u8 mipmaps, const rsx::texture_channel_remap_t& remap, bool copy, bool load)
 	{
 		if (sized_internal_fmt == GL_NONE)
 		{
