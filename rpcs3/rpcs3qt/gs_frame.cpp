@@ -527,7 +527,7 @@ void gs_frame::toggle_recording()
 		m_video_encoder->set_path(video_path);
 		m_video_encoder->set_framerate(g_cfg_recording.video.framerate);
 		m_video_encoder->set_video_bitrate(g_cfg_recording.video.video_bps);
-		m_video_encoder->set_video_codec(g_cfg_recording.video.video_codec);
+		m_video_encoder->set_video_codec(g_cfg_recording.video.codec_id, g_cfg_recording.video.codec_name.get());
 		m_video_encoder->set_max_b_frames(g_cfg_recording.video.max_b_frames);
 		m_video_encoder->set_gop_size(g_cfg_recording.video.gop_size);
 		m_video_encoder->set_output_format(output_format);
@@ -557,7 +557,7 @@ void gs_frame::toggle_recording()
 		}
 
 		m_video_encoder->set_audio_bitrate(g_cfg_recording.audio.audio_bps);
-		m_video_encoder->set_audio_codec(g_cfg_recording.audio.audio_codec);
+		m_video_encoder->set_audio_codec(g_cfg_recording.audio.codec_id, g_cfg_recording.audio.codec_name.get());
 		m_video_encoder->encode();
 
 		if (m_video_encoder->has_error)
