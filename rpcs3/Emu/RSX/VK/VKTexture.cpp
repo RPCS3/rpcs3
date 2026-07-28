@@ -1003,6 +1003,12 @@ namespace vk
 
 		for (const rsx::subresource_layout &layout : subresource_layout)
 		{
+			if (layout.level >= dst_image->mipmaps())
+			{
+				rsx_log.error("Invalid subresource definition for the output texture. Mip level does not exist.");
+				continue;
+			}
+
 			const auto [row_pitch, upload_pitch_in_texel] = calculate_upload_pitch(format, heap_align, dst_image, layout, caps);
 			caps.alignment = row_pitch;
 
