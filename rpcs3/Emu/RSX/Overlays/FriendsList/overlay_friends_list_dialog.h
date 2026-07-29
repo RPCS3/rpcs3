@@ -47,12 +47,14 @@ namespace rsx
 
 			std::shared_ptr<rpcn::rpcn_client> m_rpcn;
 			rpcn::friend_data m_friend_data;
+			std::vector<game_invite> m_game_invite_messages;
 			std::vector<game_invite> m_game_invites;
 			atomic_t<bool> m_list_dirty { true };
 			atomic_t<friends_list_dialog_page> m_current_page { friends_list_dialog_page::friends };
 			atomic_t<friends_list_dialog_page> m_last_page { friends_list_dialog_page::friends };
 
 			void reload();
+			void remove_game_invite(u64 message_id);
 
 		public:
 			friends_list_dialog();
@@ -65,7 +67,7 @@ namespace rsx
 			error_code show(bool enable_overlay, std::function<void(s32 status)> on_close);
 
 			void callback_handler(rpcn::NotificationType ntype, const std::string& username, bool status);
-			void message_callback_handler();
+			void message_callback_handler(const shared_ptr<std::pair<std::string, message_data>>& message, u64 message_id);
 
 			static bool rpcn_configured();
 		};
