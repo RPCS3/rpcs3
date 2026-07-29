@@ -530,9 +530,8 @@ namespace rsx
 			}))
 			{
 				m_game_invite_messages.emplace_back(message_id, message);
+				m_list_dirty = true;
 			}
-
-			m_list_dirty = true;
 		}
 
 		void friends_list_dialog::remove_game_invite(u64 message_id)
