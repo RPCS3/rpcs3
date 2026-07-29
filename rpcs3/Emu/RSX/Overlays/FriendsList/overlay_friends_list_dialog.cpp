@@ -320,9 +320,9 @@ namespace rsx
 					const auto& [message_id, message] = ::at32(m_game_invites, index);
 					ensure(message);
 
-					const localized_string_id prompt = button_press == pad_button::cross
-						? localized_string_id::HOME_MENU_FRIENDS_ACCEPT_GAME_INVITE_MSG
-						: localized_string_id::HOME_MENU_FRIENDS_REJECT_GAME_INVITE_MSG;
+					const localized_string_id prompt = button_press == pad_button::cross ?
+						localized_string_id::HOME_MENU_FRIENDS_ACCEPT_GAME_INVITE_MSG :
+						localized_string_id::HOME_MENU_FRIENDS_REJECT_GAME_INVITE_MSG;
 
 					if (button_press == pad_button::cross)
 					{
