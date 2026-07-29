@@ -7800,6 +7800,8 @@ public:
 		// Avoid pessimation when full clamping isn't needed
 		if (m_use_avx512 && !(known.isKnownNeverNaN() && (known.isKnownNeverPosInfinity() || known.isKnownNeverNegInfinity())))
 		{
+			// Fails to clamp SNaN
+			// Normally doesn't cause issues as SNaN frequently gets quieted beforehand
 			return eval(vrangeps(v, fsplat<f32[4]>(std::bit_cast<f32, u32>(0x7f7fffff)), 0x2, 0xff));
 		}
 
@@ -8842,13 +8844,17 @@ public:
 			const auto a = bitcast<u32[4]>(value<f32[4]>(ci->getOperand(0)));
 			const auto b = bitcast<u32[4]>(value<f32[4]>(ci->getOperand(1)));
 
+			// The AVX512 path in `clamp_smax` doesn't properly clamp SNaN
+			// Normally this is fine, but it can cause issues if we generate them from normalized inputs
+
 			const auto base = (b & 0x007ffc00u) << 9; // Base fraction
 			const auto ymul = (b & 0x3ff) * (a & 0x7ffff); // Step fraction * Y fraction (fixed point at 2^-32)
-			const auto comparison = (ymul > base); // Should exponent be adjusted?
-			const auto bnew = (base - ymul) >> (zext<u32[4]>(comparison) ^ 9); // Shift one less bit if exponent is adjusted
-			const auto base_result = (b & 0xff800000u) | (bnew & ~0xff800000u); // Inject old sign and exponent
-			const auto adjustment = bitcast<u32[4]>(sext<s32[4]>(comparison)) & (1 << 23); // exponent adjustement for negative bnew
-			return clamp_smax(eval(bitcast<f32[4]>(base_result - adjustment)));
+			const auto comparison = bitcast<u32[4]>(sext<s32[4]>(ymul > base)); // Should exponent be adjusted?
+			const auto bnew = (base - ymul) >> (comparison + 9); // Shift one less bit if exponent is adjusted
+			const auto adjustment = comparison & (1 << 23); // exponent adjustement for negative bnew
+			const auto adjust_expo = (b & 0xff800000u) - adjustment;
+			const auto result_expo = clamp_smax(eval(bitcast<f32[4]>(adjust_expo)));
+			return bitcast<f32[4]>(bitcast<u32[4]>(result_expo) | (bnew & 0x007fffffu)); // clamped overwrites mantissa
 		});
 
 		const auto [a, b] = get_vrs<f32[4]>(op.ra, op.rb);
@@ -8887,15 +8893,13 @@ public:
 					}
 				}
 
-				b = eval(b | fix_exponent | a_sign);
-
 				const auto base = (b & 0x007ffc00u) << 9; // Base fraction
 				const auto ymul = (b & 0x3ff) * (a & 0x7ffff); // Step fraction * Y fraction (fixed point at 2^-32)
-				const auto comparison = (ymul > base); // Should exponent be adjusted?
-				const auto bnew = (base - ymul) >> (zext<u32[4]>(comparison) ^ 9); // Shift one less bit if exponent is adjusted
-				const auto base_result = (b & 0xff800000u) | (bnew & ~0xff800000u); // Inject old sign and exponent
-				const auto adjustment = bitcast<u32[4]>(sext<s32[4]>(comparison)) & (1 << 23); // exponent adjustement for negative bnew
-				return clamp_smax(eval(bitcast<f32[4]>(base_result - adjustment)));
+				const auto comparison = bitcast<u32[4]>(sext<s32[4]>(ymul > base)); // Should exponent be adjusted?
+				const auto bnew = (base - ymul) >> (comparison + 9); // Shift one less bit if exponent is adjusted
+				const auto adjust_expo = (fix_exponent | a_sign) - (comparison & (1 << 23)); // exponent adjustement for negative bnew
+				const auto result_expo = clamp_smax(eval(bitcast<f32[4]>(adjust_expo)));
+				return bitcast<f32[4]>(bitcast<u32[4]>(result_expo) | (bnew & 0x007fffffu)); // clamped overwrites mantissa
 			});
 
 			register_intrinsic("spu_rsqrte", [&](llvm::CallInst* ci)
@@ -8918,15 +8922,15 @@ public:
 					final_fraction = eval(insert(final_fraction, i, r_fraction));
 				}
 
-				const auto b = eval(final_fraction | final_exponent);
+				const auto b = final_fraction;
 
 				const auto base = (b & 0x007ffc00u) << 9; // Base fraction
 				const auto ymul = (b & 0x3ff) * (a & 0x7ffff); // Step fraction * Y fraction (fixed point at 2^-32)
-				const auto comparison = (ymul > base); // Should exponent be adjusted?
-				const auto bnew = (base - ymul) >> (zext<u32[4]>(comparison) ^ 9); // Shift one less bit if exponent is adjusted
-				const auto base_result = (b & 0xff800000u) | (bnew & ~0xff800000u); // Inject old sign and exponent
-				const auto adjustment = bitcast<u32[4]>(sext<s32[4]>(comparison)) & (1 << 23); // exponent adjustement for negative bnew
-				return clamp_smax(eval(bitcast<f32[4]>(base_result - adjustment)));
+				const auto comparison = bitcast<u32[4]>(sext<s32[4]>(ymul > base)); // Should exponent be adjusted?
+				const auto bnew = (base - ymul) >> (comparison + 9); // Shift one less bit if exponent is adjusted
+				const auto adjust_expo = final_exponent - (comparison & (1 << 23)); // exponent adjustement for negative bnew
+				const auto result_expo = clamp_positive_smax(eval(bitcast<f32[4]>(adjust_expo)));
+				return bitcast<f32[4]>(bitcast<u32[4]>(result_expo) | (bnew & 0x007fffffu)); // clamped overwrites mantissa
 			});
 			break;
 		}
