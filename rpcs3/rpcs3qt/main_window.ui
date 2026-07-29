@@ -429,6 +429,8 @@
     <addaction name="separator"/>
     <addaction name="showGameListAct"/>
     <addaction name="showHiddenEntriesAct"/>
+    <addaction name="showBrokenEntriesAct"/>
+    <addaction name="showCompletedEntriesAct"/>
     <addaction name="separator"/>
     <addaction name="menuGame_List_View"/>
     <addaction name="menuGame_List_Grid_Mode"/>
@@ -1193,6 +1195,21 @@
    </property>
    <property name="text">
     <string>Show Hidden Entries</string>
+   </property>
+  </action>
+  <action name="showBrokenEntriesAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Broken Entries</string>
+   </property>
+  </action> <action name="showCompletedEntriesAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Completed Entries</string>
    </property>
   </action>
   <action name="actionopen_rsx_capture">
