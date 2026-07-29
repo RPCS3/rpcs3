@@ -15,7 +15,7 @@
 // Giga SPU analyser regression: a brsl whose return address is a stop-trap leaves
 // a dangling target edge after block cleanup, which the reg-state walk must not
 // dereference. The SPU program below is made-up data (not from any game).
-namespace
+namespace test_spu
 {
 	constexpr u32 SPU_STOP = 0x00000000u; // stop 0x0 — the no-return trap word
 
@@ -37,7 +37,6 @@ namespace
 	{
 		return 0x1a8u << 21;
 	}
-}
 
 TEST(SpuAnalyserGiga, ReturnToStopTrapDoesNotRangeCheckFail)
 {
@@ -241,4 +240,6 @@ TEST(SpuAnalyserGiga, ReDecodeConstPropCompletes)
 	EXPECT_EQ(prog.data[0x10 / 4], std::bit_cast<u32>(be_t<u32>{enc2_il(7, 0x33)}));
 
 	g_cfg.core.spu_block_size.set(saved);
+}
+
 }
