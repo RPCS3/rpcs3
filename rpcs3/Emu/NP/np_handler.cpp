@@ -1106,7 +1106,7 @@ namespace np
 		get_rpcn()->send_message(msg_data, npids);
 	}
 
-	b8 np_handler::select_invitation(u64 msg_id)
+	bool np_handler::select_invitation(u64 msg_id)
 	{
 		const auto message = get_message(msg_id);
 
@@ -1120,6 +1120,7 @@ namespace np
 
 		if (sysutil_send_system_cmd(CELL_SYSUTIL_NP_INVITATION_SELECTED, 0) <= 0)
 		{
+			clear_message_selected(SCE_NP_BASIC_SELECTED_INVITATION_DATA);
 			rpcn_log.error("Failed to notify the game about selected invitation: msg_id=%d", msg_id);
 			return false;
 		}

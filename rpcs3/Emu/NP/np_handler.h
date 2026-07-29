@@ -155,7 +155,7 @@ namespace np
 		std::optional<shared_ptr<std::pair<std::string, message_data>>> get_message_selected(SceNpBasicAttachmentDataId id);
 		void clear_message_selected(SceNpBasicAttachmentDataId id);
 		void send_message(const message_data& msg_data, const std::set<std::string>& npids);
-		b8 select_invitation(u64 msg_id);
+		bool select_invitation(u64 msg_id);
 
 		// Those should probably be under match2 ctx
 		vm::ptr<SceNpMatching2RoomEventCallback> room_event_cb{}; // Room events

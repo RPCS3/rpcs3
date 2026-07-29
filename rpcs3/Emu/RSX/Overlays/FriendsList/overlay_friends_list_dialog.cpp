@@ -15,10 +15,10 @@ namespace rsx
 			dlg->callback_handler(ntype, username, status);
 		}
 
-		void game_invite_callback(void* param, const shared_ptr<std::pair<std::string, message_data>> /*new_msg*/, u64 /*msg_id*/)
+		void game_invite_callback(void* param, const shared_ptr<std::pair<std::string, message_data>> new_msg, u64 msg_id)
 		{
 			auto* dlg = static_cast<friends_list_dialog*>(param);
-			dlg->message_callback_handler();
+			dlg->message_callback_handler(new_msg, msg_id);
 		}
 
 		friends_list_dialog::friends_list_entry::friends_list_entry(friends_list_dialog_page page, std::string_view username, const rpcn::friend_online_data& data)
@@ -330,7 +330,7 @@ namespace rsx
 						{
 							if (g_fxo->get<named_thread<np::np_handler>>().select_invitation(message_id))
 							{
-								m_list_dirty = true;
+								remove_game_invite(message_id);
 							}
 						});
 					}
@@ -339,7 +339,7 @@ namespace rsx
 						m_message_box->show(get_localized_string(prompt, message->first.c_str()), [this, message_id]()
 						{
 							m_rpcn->mark_message_used(message_id);
-							m_list_dirty = true;
+							remove_game_invite(message_id);
 						});
 					}
 
@@ -520,8 +520,31 @@ namespace rsx
 			}
 		}
 
-		void friends_list_dialog::message_callback_handler()
+		void friends_list_dialog::message_callback_handler(const shared_ptr<std::pair<std::string, message_data>>& message, u64 message_id)
 		{
+			std::lock_guard lock(m_list_mutex);
+
+			if (std::none_of(m_game_invite_messages.cbegin(), m_game_invite_messages.cend(), [message_id](const game_invite& invite)
+			{
+				return invite.first == message_id;
+			}))
+			{
+				m_game_invite_messages.emplace_back(message_id, message);
+			}
+
+			m_list_dirty = true;
+		}
+
+		void friends_list_dialog::remove_game_invite(u64 message_id)
+		{
+			std::lock_guard lock(m_list_mutex);
+			const auto has_message_id = [message_id](const game_invite& invite)
+			{
+				return invite.first == message_id;
+			};
+
+			std::erase_if(m_game_invite_messages, has_message_id);
+			std::erase_if(m_game_invites, has_message_id);
 			m_list_dirty = true;
 		}
 
@@ -696,7 +719,6 @@ namespace rsx
 				if (!rpcn_connected)
 					break;
 
-				const auto messages = m_rpcn->get_messages_and_register_cb(SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE, true, game_invite_callback, this);
 				auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 
 				if (!nph.basic_handler_registered)
@@ -704,7 +726,7 @@ namespace rsx
 
 				const SceNpCommunicationId context = nph.get_basic_handler_context();
 
-				for (const auto& [message_id, message] : messages)
+				for (const auto& [message_id, message] : m_game_invite_messages)
 				{
 					ensure(message);
 
@@ -776,7 +798,20 @@ namespace rsx
 
 			m_rpcn = rpcn::rpcn_client::get_instance(0);
 
+			{
+				std::lock_guard lock(m_list_mutex);
+				m_game_invite_messages.clear();
+				m_game_invites.clear();
+				m_list_dirty = true;
+			}
+
 			m_rpcn->register_friend_cb(friend_callback, this);
+			const auto game_invites = m_rpcn->get_messages_and_register_cb(SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE, true, game_invite_callback, this);
+
+			for (const auto& [message_id, message] : game_invites)
+			{
+				message_callback_handler(message, message_id);
+			}
 
 			m_description->set_text(get_localized_string(localized_string_id::HOME_MENU_FRIENDS));
 			m_description->auto_resize();
