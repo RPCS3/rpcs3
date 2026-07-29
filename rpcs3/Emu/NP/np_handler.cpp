@@ -1045,7 +1045,7 @@ namespace np
 
 	void np_handler::set_message_selected(SceNpBasicAttachmentDataId id, u64 msg_id)
 	{
-		std::lock_guard lock(mutex_selected_messages);
+		std::lock_guard lock(m_mutex_selected_messages);
 
 		switch (id)
 		{
@@ -1062,7 +1062,7 @@ namespace np
 
 	std::optional<shared_ptr<std::pair<std::string, message_data>>> np_handler::get_message_selected(SceNpBasicAttachmentDataId id)
 	{
-		std::lock_guard lock(mutex_selected_messages);
+		std::lock_guard lock(m_mutex_selected_messages);
 
 		switch (id)
 		{
@@ -1083,7 +1083,7 @@ namespace np
 
 	void np_handler::clear_message_selected(SceNpBasicAttachmentDataId id)
 	{
-		std::lock_guard lock(mutex_selected_messages);
+		std::lock_guard lock(m_mutex_selected_messages);
 
 		switch (id)
 		{
@@ -1106,7 +1106,7 @@ namespace np
 		get_rpcn()->send_message(msg_data, npids);
 	}
 
-	bool np_handler::select_invitation(u64 msg_id)
+	b8 np_handler::select_invitation(u64 msg_id)
 	{
 		const auto message = get_message(msg_id);
 
