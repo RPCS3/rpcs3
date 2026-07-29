@@ -56,6 +56,10 @@ public:
 
 	void SetShowHidden(bool show);
 
+	void SetShowBroken(bool show);
+
+	void SetShowCompleted(bool show);
+
 	content_integrity* GetIsoIntegrity() const { return ensure(m_iso_integrity); }
 	content_integrity* GetPsnContentIntegrity() const { return ensure(m_psn_content_integrity); }
 	content_integrity* GetPsnDlcIntegrity() const { return ensure(m_psn_dlc_integrity); }
@@ -70,6 +74,8 @@ public:
 	std::map<QString, QString>& notes() { return m_notes; }
 	std::map<QString, QString>& titles() { return m_titles; }
 	QSet<QString>& hidden_list() { return m_hidden_list; }
+	QSet<QString>& broken_list() { return m_broken_list; }
+	QSet<QString>& completed_list() { return m_completed_list; }
 
 	bool IsEntryVisible(const game_info& game, bool search_fallback = false) const;
 
@@ -206,6 +212,10 @@ private:
 	QFutureWatcher<void> m_refresh_watcher;
 	QSet<QString> m_hidden_list;
 	bool m_show_hidden{false};
+	QSet<QString> m_broken_list;
+	bool m_show_broken{false};
+	QSet<QString> m_completed_list;
+	bool m_show_completed{false};
 
 	// Search
 	QString m_search_text;
