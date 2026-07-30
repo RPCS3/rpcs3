@@ -9,7 +9,12 @@ export ASSUME_ALWAYS_YES=true
 pkg info # debug
 
 # WITH_LLVM
-pkg install "llvm$LLVM_COMPILER_VER"
+if pkg search -q "^llvm${LLVM_COMPILER_VER}$" >/dev/null; then
+    pkg install "llvm${LLVM_COMPILER_VER}"
+else
+    echo "llvm${LLVM_COMPILER_VER} not found, falling back to llvm-devel"
+    pkg install llvm-devel
+fi
 
 # Mandatory dependencies (qtX-base is pulled via qtX-multimedia)
 pkg install git ccache cmake ninja "qt$QT_VER_MAIN-multimedia" "qt$QT_VER_MAIN-svg" glew openal-soft ffmpeg pcre2
