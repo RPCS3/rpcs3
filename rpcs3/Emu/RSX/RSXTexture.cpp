@@ -457,7 +457,7 @@ namespace rsx
 
 	image_section_attributes_t fragment_texture::attributes() const
 	{
-		const auto _format = format();
+		const auto _format = format() & ~(CELL_GCM_TEXTURE_UN | CELL_GCM_TEXTURE_LN);
 		return {
 			.address = offset(),
 			.gcm_format = _format,
