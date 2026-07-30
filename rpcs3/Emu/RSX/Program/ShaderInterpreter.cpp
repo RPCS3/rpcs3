@@ -120,9 +120,9 @@ namespace program_common::interpreter
 
 		// Prepare outputs
 		interpreter_variants_t result;
-		for (const auto& vs_opt : vs_masks)
+		for (const u32 vs_opt : vs_masks)
 		{
-			for (const auto& fs_opt : fs_masks)
+			for (const u32 fs_opt : fs_masks)
 			{
 				interpreter_pipeline_variant_t variant{};
 				variant.vs_opts.shader_opt = vs_opt;
