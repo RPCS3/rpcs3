@@ -443,10 +443,10 @@ jobs:
     env:
       CCACHE_DIR: ${{ github.workspace }}/ccache
       QT_VER_MAIN: '6'
-      LLVM_COMPILER_VER: '-devel'
+      LLVM_COMPILER_VER: '22'
+      LLVM_CONFIG: 'llvm-config22'
       CC: 'clang-devel'
       CXX: 'clang++-devel'
-      LLVM_CONFIG: 'llvm-config-devel'
 
     steps:
       - name: Checkout repository
