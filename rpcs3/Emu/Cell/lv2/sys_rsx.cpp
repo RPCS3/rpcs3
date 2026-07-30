@@ -191,13 +191,15 @@ error_code sys_rsx_memory_allocate(cpu_thread& cpu, vm::ptr<u32> mem_handle, vm:
 
 	cpu.state += cpu_flag::wait;
 
-	if (vm::falloc(rsx::constants::local_mem_base, size, vm::video))
+	const u32 mem_size = static_cast<u32>(size);
+
+	if (vm::falloc(rsx::constants::local_mem_base, mem_size, vm::video))
 	{
-		rsx::get_current_renderer()->local_mem_size = size;
+		rsx::get_current_renderer()->local_mem_size = mem_size;
 
 		if (u32 addr = rsx::get_current_renderer()->driver_info)
 		{
-			vm::_ptr<RsxDriverInfo>(addr)->memory_size = size;
+			vm::_ptr<RsxDriverInfo>(addr)->memory_size = mem_size;
 		}
 
 		*mem_addr = rsx::constants::local_mem_base;
@@ -435,7 +437,7 @@ error_code sys_rsx_context_iomap(cpu_thread& cpu, u32 context_id, u64 io, u64 ea
 	}
 
 	// Wait until we have no active RSX locks and reserve iomap for use. Must do so before acquiring vm lock to avoid deadlocks
-	rsx::reservation_lock<true> rsx_lock(ea, size);
+	rsx::reservation_lock<true> rsx_lock(::narrow<u32>(ea), static_cast<u32>(size));
 
 	vm::writer_lock rlock;
 
@@ -446,7 +448,7 @@ error_code sys_rsx_context_iomap(cpu_thread& cpu, u32 context_id, u64 io, u64 ea
 			return CELL_EINVAL;
 		}
 
-		if ((addr == ea || !(addr % 0x1000'0000)) && idm::check_unlocked<sys_vm_t>(sys_vm_t::find_id(addr)))
+		if ((addr == ea || !(addr % 0x1000'0000)) && idm::check_unlocked<sys_vm_t>(sys_vm_t::find_id(::narrow<u32>(addr))))
 		{
 			// Virtual memory is disallowed
 			return CELL_EINVAL;

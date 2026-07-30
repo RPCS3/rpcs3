@@ -295,7 +295,7 @@ namespace gl
 			}
 		}
 
-		u32 len;
+		u32 len {};
 		ParamArray arr;
 		std::string shader_str;
 		RSXFragmentProgram frag;
