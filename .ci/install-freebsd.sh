@@ -11,6 +11,9 @@ pkg info # debug
 # WITH_LLVM
 pkg install "llvm$LLVM_COMPILER_VER"
 
+# Compiler dependency (latest clang)
+pkg install "llvm-devel"
+
 # Mandatory dependencies (qtX-base is pulled via qtX-multimedia)
 pkg install git ccache cmake ninja "qt$QT_VER_MAIN-multimedia" "qt$QT_VER_MAIN-svg" glew openal-soft ffmpeg pcre2
 
