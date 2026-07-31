@@ -445,8 +445,8 @@ jobs:
       QT_VER_MAIN: '6'
       LLVM_COMPILER_VER: '22'
       LLVM_CONFIG: 'llvm-config22'
-      CC: 'clang-devel'
-      CXX: 'clang++-devel'
+      CC: 'clang22'
+      CXX: 'clang++22'
 
     steps:
       - name: Checkout repository
