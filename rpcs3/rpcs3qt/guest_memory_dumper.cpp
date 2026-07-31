@@ -233,7 +233,7 @@ void guest_memory_dumper::dump_guest_memory()
 	for (u32 page = 0; page < guest_address_space_size / guest_page_size; page++)
 	{
 		const u32 address = static_cast<u32>(static_cast<u64>(page) * guest_page_size);
-		const auto [allocated, flags] = vm::get_addr_flags(address);
+		const auto [allocated, flags] = vm::get_addr_flags(static_cast<vm::ps3_virtual_memory_object*>(nullptr), address);
 
 		if (!allocated)
 		{
