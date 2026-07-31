@@ -189,6 +189,12 @@ namespace gl
 		return dst->get_view(remap);
 	}
 
+	void texture_cache::initialize_subresource_from_memory(gl::command_context& cmd, gl::texture* dst, const deferred_subresource& desc, rsx::texture_dimension_extended type) const
+	{
+		const auto subresources_layout = rsx::get_subresources_layout(desc, type);
+		gl::upload_texture(cmd, dst, desc.gcm_format, desc.swizzled, subresources_layout);
+	}
+
 	void texture_cache::copy_transfer_regions_impl(gl::command_context& cmd, gl::texture* dst_image, const rsx::simple_array<copy_region_descriptor>& sources) const
 	{
 		const auto dst_bpp = dst_image->pitch() / dst_image->width();
