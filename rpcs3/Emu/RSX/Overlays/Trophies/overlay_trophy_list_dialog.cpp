@@ -2,6 +2,7 @@
 #include "../overlay_manager.h"
 #include "overlay_trophy_list_dialog.h"
 #include "Emu/Cell/Modules/sceNpTrophy.h"
+#include "Emu/NP/rpcn_config.h"
 #include "Emu/System.h"
 #include "Emu/VFS.h"
 
@@ -110,6 +111,13 @@ namespace rsx
 			m_show_hidden_trophies_button->set_pos(180, trophy_list_y + trophy_list_h + 20);
 			m_show_hidden_trophies_button->set_font("Arial", 16);
 
+			m_sync_trophies_button = std::make_unique<image_button>();
+			m_sync_trophies_button->set_text(localized_string_id::HOME_MENU_TROPHY_SYNC_TROPHIES);
+			m_sync_trophies_button->set_image_resource(resource_config::standard_image_resource::triangle);
+			m_sync_trophies_button->set_size(120, 30);
+			m_sync_trophies_button->set_pos(460, trophy_list_y + trophy_list_h + 20);
+			m_sync_trophies_button->set_font("Arial", 16);
+
 			fade_animation.duration_sec = 0.15f;
 
 			return_code = selection_code::canceled;
@@ -138,6 +146,14 @@ namespace rsx
 			case pad_button::square:
 				m_show_hidden_trophies = !m_show_hidden_trophies;
 				m_list_dirty = true;
+				break;
+			case pad_button::triangle:
+				// Only start a new sync if not already in progress
+				if (m_sync_status.load() != 1)
+				{
+					play_sound(sound_effect::cursor);
+					sync_trophies_async();
+				}
 				break;
 			case pad_button::dpad_up:
 			case pad_button::ls_up:
@@ -189,6 +205,15 @@ namespace rsx
 				m_show_hidden_trophies_last = m_show_hidden_trophies;
 			}
 
+			// Update sync button label based on current sync state
+			switch (m_sync_status.load())
+			{
+			case 1: m_sync_trophies_button->set_text(localized_string_id::HOME_MENU_TROPHY_SYNCING_TROPHIES); break;
+			case 2: m_sync_trophies_button->set_text(localized_string_id::HOME_MENU_TROPHY_SYNC_SUCCESS); break;
+			case 3: m_sync_trophies_button->set_text(localized_string_id::HOME_MENU_TROPHY_SYNC_FAILED); break;
+			default: m_sync_trophies_button->set_text(localized_string_id::HOME_MENU_TROPHY_SYNC_TROPHIES); break;
+			}
+
 			compiled_resource result;
 			result.add(m_dim_background->get_compiled());
 			if (m_list_dirty.exchange(false))
@@ -201,6 +226,7 @@ namespace rsx
 			}
 			result.add(m_description->get_compiled());
 			result.add(m_show_hidden_trophies_button->get_compiled());
+			result.add(m_sync_trophies_button->get_compiled());
 
 			fade_animation.apply(result);
 
@@ -210,7 +236,8 @@ namespace rsx
 		void trophy_list_dialog::show(const std::string& trop_name)
 		{
 			visible = false;
-			
+
+			m_trop_name = trop_name;
 			m_trophy_data = load_trophies(trop_name);
 			ensure(m_trophy_data && m_trophy_data->trop_usr);
 
@@ -232,6 +259,122 @@ namespace rsx
 			{
 				notify->wait(0, atomic_wait_timeout{1'000'000});
 			}
+		}
+
+		bool trophy_list_dialog::rpcn_configured()
+		{
+			cfg_rpcn cfg;
+			cfg.load();
+			return !cfg.get_npid().empty() && !cfg.get_password().empty();
+		}
+
+		void trophy_list_dialog::sync_trophies_async()
+		{
+			if (!rpcn_configured())
+			{
+				rsx_log.warning("Trophy sync requested but RPCN is not configured.");
+				m_sync_status = 3; // error
+				return;
+			}
+
+			if (!m_trophy_data || !m_trophy_data->trop_usr)
+			{
+				rsx_log.error("Trophy sync requested but trophy data is not loaded.");
+				m_sync_status = 3;
+				return;
+			}
+
+			m_sync_status = 1; // syncing
+
+			const std::string trop_name = m_trop_name;
+			atomic_t<u8>* sync_status = &m_sync_status;
+			atomic_t<bool>* list_dirty = &m_list_dirty;
+
+			SceNpCommunicationId comm_id{};
+			{
+				if (trop_name.size() >= COMMUNICATION_ID_SIZE)
+				{
+					const auto& n = trop_name;
+					std::memcpy(comm_id.data, n.c_str(), COMMUNICATION_ID_COMID_COMPONENT_SIZE);
+					comm_id.data[COMMUNICATION_ID_COMID_COMPONENT_SIZE] = '\0';
+					comm_id.num = static_cast<u8>(std::atoi(n.c_str() + COMMUNICATION_ID_COMID_COMPONENT_SIZE + 1));
+				}
+				else
+				{
+					rsx_log.error("Trophy sync: unexpected trop_name format: %s", trop_name);
+					m_sync_status = 3;
+					return;
+				}
+			}
+
+			const u32 trophy_count = m_trophy_data->trop_usr->GetTrophiesCount();
+			std::vector<std::pair<s32, u64>> local_unlocked;
+			local_unlocked.reserve(trophy_count);
+			for (u32 i = 0; i < trophy_count; i++)
+			{
+				if (m_trophy_data->trop_usr->GetTrophyUnlockState(static_cast<s32>(i)))
+					local_unlocked.emplace_back(static_cast<s32>(i), u64{0});
+			}
+
+			const std::string tropusr_vfs_path = "/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + trop_name + "/TROPUSR.DAT";
+			const std::string tropconf_vfs_path = "/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + trop_name + "/TROPCONF.SFM";
+
+			std::thread([=, local_unlocked = std::move(local_unlocked)]() mutable
+			{
+				g_cfg_rpcn.load();
+
+				auto rpcn = rpcn::rpcn_client::get_instance(0);
+
+				if (auto res = rpcn->wait_for_connection(); res != rpcn::rpcn_state::failure_no_failure)
+				{
+					rsx_log.error("Trophy sync: failed to connect to RPCN: %s", rpcn::rpcn_state_to_string(res));
+					*sync_status = 3;
+					return;
+				}
+
+				if (auto res = rpcn->wait_for_authentified(); res != rpcn::rpcn_state::failure_no_failure)
+				{
+					rsx_log.error("Trophy sync: failed to authenticate with RPCN: %s", rpcn::rpcn_state_to_string(res));
+					*sync_status = 3;
+					return;
+				}
+
+				std::vector<std::pair<s32, u64>> srv_trophies = rpcn->sync_trophies(comm_id, local_unlocked);
+
+				if (!srv_trophies.empty())
+				{
+					auto tropusr = std::make_unique<TROPUSRLoader>();
+					if (tropusr->Load(tropusr_vfs_path, tropconf_vfs_path).success)
+					{
+						const u32 count = tropusr->GetTrophiesCount();
+						bool changed = false;
+						for (const auto& [tid, ts] : srv_trophies)
+						{
+							if (tid >= 0 && tid < static_cast<s32>(count) && !tropusr->GetTrophyUnlockState(tid))
+							{
+								(void)tropusr->UnlockTrophy(tid, ts, ts);
+								changed = true;
+							}
+						}
+
+						if (changed)
+						{
+							if (!tropusr->Save(tropusr_vfs_path))
+								rsx_log.error("Trophy sync: failed to save TROPUSR after sync for %s", trop_name);
+
+							*list_dirty = true;
+						}
+					}
+					else
+					{
+						rsx_log.error("Trophy sync: failed to reload TROPUSR for %s", trop_name);
+						*sync_status = 3;
+						return;
+					}
+				}
+
+				*sync_status = 2; // success
+			}).detach();
 		}
 
 		std::unique_ptr<trophy_data> trophy_list_dialog::load_trophies(const std::string& trop_name) const
@@ -308,6 +451,15 @@ namespace rsx
 		void trophy_list_dialog::reload()
 		{
 			ensure(m_trophy_data);
+
+			if (!m_trop_name.empty())
+			{
+				const std::string tropusr_path = "/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + m_trop_name + "/TROPUSR.DAT";
+				const std::string tropconf_path = "/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + m_trop_name + "/TROPCONF.SFM";
+				auto fresh_usr = std::make_unique<TROPUSRLoader>();
+				if (fresh_usr->Load(tropusr_path, tropconf_path).success)
+					m_trophy_data->trop_usr = std::move(fresh_usr);
+			}
 
 			rsx_log.trace("Reloading Trophy List Overlay with %s %s", m_trophy_data->game_name, m_trophy_data->path);
 
