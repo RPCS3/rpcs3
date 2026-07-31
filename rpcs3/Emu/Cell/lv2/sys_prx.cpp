@@ -176,6 +176,7 @@ extern const std::map<std::string_view, int> g_prx_list
 	{ "libwmadec.sprx", 0 },
 };
 
+#pragma optimize("", off)
 extern error_code sysmoduleModuleStart(ppu_thread& ppu, u32 args, vm::ptr<void> argp);
 extern error_code sysmoduleModuleStop(ppu_thread& ppu);
 extern bool sysutilModuleInit(lv2_prx& prx);
@@ -234,11 +235,12 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 	auto hle_load = [&]() -> error_code
 	{
 		const auto prx = idm::make_ptr<lv2_obj, lv2_prx>();
+		const auto& funcs = ensure(idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process))->local_typemap->get<ppu_function_manager>();
 
 		if (name == "libsysmodule.sprx")
 		{
-			prx->start = vm::cast(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(sysmoduleModuleStart)));
-			prx->stop = vm::cast(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(sysmoduleModuleStop)));
+			prx->start = vm::cast(funcs.func_addr(FIND_FUNC(sysmoduleModuleStart)));
+			prx->stop = vm::cast(funcs.func_addr(FIND_FUNC(sysmoduleModuleStop)));
 		}
 		else if (name == "libsysutil.sprx")
 		{

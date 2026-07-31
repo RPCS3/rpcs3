@@ -400,6 +400,8 @@ error_code _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> contex
 {
 	cellGcmSys.warning("_cellGcmInitBody(context=**0x%x, cmdSize=0x%x, ioSize=0x%x, ioAddress=0x%x)", context, cmdSize, ioSize, ioAddress);
 
+	ppu.state += cpu_flag::dbg_pause;
+	ppu.check_state();
 	auto& gcm_cfg = g_fxo->get<gcm_config>();
 	std::lock_guard lock(gcm_cfg.gcmio_mutex);
 
@@ -419,6 +421,15 @@ error_code _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> contex
 	InitOffsetTable();
 
 	const auto render = rsx::get_current_renderer();
+
+	render->isHLE = true;
+
+	vm::var<u32> context_id;
+
+	ensure(sys_rsx_device_map(ppu, vm::var<u64>{}, vm::null, 0x8) == CELL_OK);
+	ensure(sys_rsx_memory_allocate(ppu, vm::var<u32>{}, vm::var<u64>{}, 8, gcm_cfg.local_size, 0x300000, 16, 8) == CELL_OK);
+	ensure(sys_rsx_context_allocate(ppu, +context_id, vm::var<u64>{}, vm::var<u64>{}, vm::var<u64>{}, 0, gcm_cfg.system_mode) == CELL_OK);
+
 	if (gcm_cfg.system_mode == CELL_GCM_SYSTEM_MODE_IOMAP_512MB)
 	{
 		cellGcmSys.warning("cellGcmInit(): 512MB io address space used");
@@ -429,14 +440,6 @@ error_code _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> contex
 		cellGcmSys.warning("cellGcmInit(): 256MB io address space used");
 		render->lv2_context->main_mem_size = 0x10000000;
 	}
-
-	render->isHLE = true;
-
-	vm::var<u32> context_id;
-
-	ensure(sys_rsx_device_map(ppu, vm::var<u64>{}, vm::null, 0x8) == CELL_OK);
-	ensure(sys_rsx_memory_allocate(ppu, vm::var<u32>{}, vm::var<u64>{}, 8, gcm_cfg.local_size, 0x300000, 16, 8) == CELL_OK);
-	ensure(sys_rsx_context_allocate(ppu, +context_id, vm::var<u64>{}, vm::var<u64>{}, vm::var<u64>{}, 0, gcm_cfg.system_mode) == CELL_OK);
 
 	if (gcmMapEaIoAddress(ppu, ioAddress, 0, ioSize, false) != CELL_OK)
 	{
@@ -462,7 +465,7 @@ error_code _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> contex
 	gcm_cfg.current_context.begin.set(g_defaultCommandBufferBegin + 4096); // 4 kb reserved at the beginning
 	gcm_cfg.current_context.end.set(g_defaultCommandBufferBegin + 32 * 1024 - 4); // 4b at the end for jump
 	gcm_cfg.current_context.current = gcm_cfg.current_context.begin;
-	gcm_cfg.current_context.callback.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(cellGcmCallback)));
+	gcm_cfg.current_context.callback.set(ppu.exports_table->func_addr(FIND_FUNC(cellGcmCallback)));
 
 	gcm_cfg.ctxt_addr = context.addr();
 	gcm_cfg.gcm_buffers.set(vm::alloc(sizeof(CellGcmDisplayInfo) * 8, vm::main));

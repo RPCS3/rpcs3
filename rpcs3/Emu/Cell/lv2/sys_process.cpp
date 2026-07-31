@@ -43,9 +43,9 @@ lv2_process::lv2_process(shared_ptr<lv2_memory_container> pp_memory) noexcept
 	// Current process is oblivious to its ID
 	parent_memory_container = pp_memory;
 
-	func_manager = std::make_shared<ppu_function_manager>();
 	rsx_info = std::make_shared<lv2_rsx_process_info>();
 	local_typemap = std::make_unique<std::remove_cvref_t<decltype(*local_typemap)>>();
+	local_typemap->init(true);
 }
 
 lv2_process::lv2_process(utils::serial& ar) noexcept
@@ -86,9 +86,6 @@ lv2_process::lv2_process(utils::serial& ar) noexcept
 		}
 	}
 
-	func_manager = std::make_shared<ppu_function_manager>();
-	func_manager->init_addr(ar.pop<u32>());
-
 	rsx_info = std::make_shared<lv2_rsx_process_info>();
 	ar(rsx_info->device_addr, rsx_info->local_mem_size);
 
@@ -122,7 +119,6 @@ void lv2_process::save(utils::serial& ar) noexcept
 		parent_memory_container->save(ar);
 	}
 
-	ar(func_manager->save_addr());
 	ar(rsx_info->device_addr, rsx_info->local_mem_size);
 
 	local_typemap->save(ar);
@@ -208,6 +204,8 @@ lv2_process::~lv2_process() noexcept
 	{
 		memory_4GB_model->terminate();
 	}
+
+	local_typemap->clear();
 }
 
 int lv2_process::operator=(thread_state s) noexcept

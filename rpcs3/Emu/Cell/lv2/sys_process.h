@@ -130,9 +130,6 @@ struct lv2_process : public ppu_module<lv2_obj>
 	// Mmemory to return when process is killed to the parent memory container
 	u32 used_mewmory = 0;
 
-	// HLE table manager
-	std::shared_ptr<ppu_function_manager> func_manager;
-
 	// RSX proces-local information
 	std::shared_ptr<lv2_rsx_process_info> rsx_info;
 

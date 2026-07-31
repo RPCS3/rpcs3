@@ -2802,12 +2802,14 @@ void PPUDisAsm::UNK(ppu_opcode_t)
 {
 	const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
 
-	if (u32 addr{}; process && process->func_manager && (addr = process->func_manager->save_addr()))
+	if (process)
 	{
+		const u32 addr = process->local_typemap->try_get<ppu_function_manager>()->save_addr();
+
 		// HLE function index
 		const u32 index = (dump_pc - addr) / 8;
 
-		if (dump_pc % 8 == 4 && index < ppu_function_manager::get().size())
+		if (dump_pc % 8 == 4 && addr && index < ppu_function_manager::get().size())
 		{
 			fmt::append(last_opcode, "Function : %s (index %u)", index < g_ppu_function_names.size() ? g_ppu_function_names[index].c_str() : "?", index);
 			return;

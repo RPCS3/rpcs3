@@ -928,7 +928,7 @@ struct ppu_far_jumps_t
 					// NOTE: In order to clean up this information all calls must return in order
 					auto& saved_info = calls_info.emplace_back();
 					saved_info.cia = pc;
-					saved_info.saved_lr = std::exchange(ppu->lr, process->func_manager->func_addr(FIND_FUNC(ppu_return_from_far_jump), true));
+					saved_info.saved_lr = std::exchange(ppu->lr, ppu->exports_table->func_addr(FIND_FUNC(ppu_return_from_far_jump), true));
 					saved_info.saved_r2 = std::exchange(ppu->gpr[2], opd.rtoc);
 				}
 			}
@@ -1246,9 +1246,9 @@ extern bool ppu_breakpoint(u32 addr, bool is_adding)
 	ppu_intrp_func_t func_original = 0;
 	ppu_intrp_func_t breakpoint = &ppu_break;
 
-	const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
+	const auto func_manager = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->local_typemap->try_get<ppu_function_manager>();
 
-	if (u32 hle_addr{}; process->func_manager && (hle_addr = process->func_manager->save_addr()))
+	if (u32 hle_addr{}; func_manager && (hle_addr = func_manager->save_addr()))
 	{
 		// HLE function index
 		const u32 index = (addr - hle_addr) / 8;
@@ -1710,7 +1710,7 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 
 			// Ignore HLE stop address
 
-			return addr == process->func_manager->func_addr(1, true);
+			return addr == exports_table->func_addr(1, true);
 		};
 
 		if (is_first && !is_invalid(_lr))
@@ -2746,18 +2746,6 @@ void ppu_thread::exec_task()
 	// Ensure correct state before executing JIT code
 	pthread_jit_write_protect_np(true);
 #endif
-	if (sdk_version == umax)
-	{
-		// Set some localized process attributes
-		const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
-
-		has_root_perm = process->has_root_perm();
-		has_debug_or_root_perm = process->debug_or_root();
-		has_ppc_seg = process->ppc_seg;
-		sdk_version = process->sdk_ver;
-		vm_owner = process->memory_4GB_model;
-		proc_id = id_manager::g_process;
-	}
 
 	vm_base = ensure(vm::g_base_addr);
 	vm_sudo = ensure(vm::g_sudo_addr);
@@ -2865,7 +2853,7 @@ bool ppu_thread::savable() const
 		return false;
 	}
 
-	if (cia == idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->func_manager->func_addr(FIND_FUNC(vdecEntry)))
+	if (cia == exports_table->func_addr(FIND_FUNC(vdecEntry)))
 	{
 		// Do not attempt to save the state of HLE VDEC threads
 		return false;
@@ -3240,12 +3228,26 @@ void ppu_thread::fast_call(u32 addr, u64 rtoc, bool is_thread_entry)
 	interrupt_thread_executing = true;
 	cia = addr;
 	gpr[2] = rtoc;
-	lr = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->func_manager->func_addr(1, true); // HLE stop address
+	lr = exports_table->func_addr(1, true); // HLE stop address
 	current_function = nullptr;
 
 	if (std::exchange(loaded_from_savestate, false))
 	{
 		lr = old_lr;
+	}
+
+	if (sdk_version == umax)
+	{
+		// Set some localized process attributes
+		const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
+
+		has_root_perm = process->has_root_perm();
+		has_debug_or_root_perm = process->debug_or_root();
+		has_ppc_seg = process->ppc_seg;
+		sdk_version = process->sdk_ver;
+		vm_owner = process->memory_4GB_model;
+		exports_table = ensure(process->local_typemap->try_get<ppu_function_manager>());
+		proc_id = id_manager::g_process;
 	}
 
 	g_tls_log_prefix = []
@@ -3269,9 +3271,7 @@ void ppu_thread::fast_call(u32 addr, u64 rtoc, bool is_thread_entry)
 
 		if (_this->current_function)
 		{
-			const auto current = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
-
-			if (current && current->func_manager->is_func(cia))
+			if (_this->exports_table->is_func(cia))
 			{
 				return fmt::format("PPU[0x%x] Thread (%s) [HLE:0x%08x, LR:0x%08x]", _this->id, *name_cache.get(), cia, _this->lr);
 			}
@@ -3300,7 +3300,7 @@ void ppu_thread::fast_call(u32 addr, u64 rtoc, bool is_thread_entry)
 			gpr[2] = old_rtoc;
 			lr = old_lr;
 		}
-		else if (state & cpu_flag::ret && cia == idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->func_manager->func_addr(1, true) + 4 && is_thread_entry)
+		else if (state & cpu_flag::ret && cia == exports_table->func_addr(1, true) + 4 && is_thread_entry)
 		{
 			std::string ret;
 			dump_all(ret);

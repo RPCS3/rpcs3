@@ -93,6 +93,11 @@ static void select_from_nids_scenpdrm_addrs(std::map<u32, std::vector<std::pair<
 	}
 }
 
+auto get_my_process()
+{
+	return ensure(idm::get_unlocked<lv2_obj, lv2_process>(ensure(id_manager::g_process)));
+}
+
 ppu_static_module::ppu_static_module(const char* name)
 	: name(name)
 {
@@ -156,6 +161,8 @@ void ppu_module_manager::initialize_modules()
 	}
 }
 
+#pragma optimize("", off)
+
 // Global linkage information
 struct ppu_linkage_info
 {
@@ -185,15 +192,15 @@ struct ppu_linkage_info
 	// Module map
 	struct module_key_view
 	{
-		u32 process_id;
+		//u32 process_id;
 		std::string_view name;
 
 		bool operator<(const module_key_view& rhs) const
 		{
-			if (process_id != rhs.process_id)
-			{
-				return process_id < rhs.process_id;
-			}
+			// if (process_id != rhs.process_id)
+			// {
+			// 	return process_id < rhs.process_id;
+			// }
 
 			return name < rhs.name;
 		}
@@ -201,35 +208,35 @@ struct ppu_linkage_info
 
 	struct module_key
 	{
-		u32 process_id;
+		//u32 process_id;
 		std::string name;
 
 		bool operator<(const module_key& rhs) const
 		{
-			if (process_id != rhs.process_id)
-			{
-				return process_id < rhs.process_id;
-			}
+			// if (process_id != rhs.process_id)
+			// {
+			// 	return process_id < rhs.process_id;
+			// }
 
 			return name < rhs.name;
 		}
 
 		bool operator<(const module_key_view& rhs) const
 		{
-			if (process_id != rhs.process_id)
-			{
-				return process_id < rhs.process_id;
-			}
+			// if (process_id != rhs.process_id)
+			// {
+			// 	return process_id < rhs.process_id;
+			// }
 
 			return name < rhs.name;
 		}
 
 		friend bool operator<(const module_key_view& lhs, const module_key& rhs)
 		{
-			if (lhs.process_id != rhs.process_id)
-			{
-				return lhs.process_id < rhs.process_id;
-			}
+			// if (lhs.process_id != rhs.process_id)
+			// {
+			// 	return lhs.process_id < rhs.process_id;
+			// }
 
 			return lhs.name < rhs.name;
 		}
@@ -238,19 +245,19 @@ struct ppu_linkage_info
 	std::map<module_key, module_data, std::less<>> modules{};
 	shared_mutex mutex;
 
-	auto find(std::string_view name, u32 process) const
+	auto find(std::string_view name) const
 	{
-		return modules.find(module_key_view{process, name});
+		return modules.find(module_key_view{name});
 	}
 
-	auto find(std::string_view name, u32 process)
+	auto find(std::string_view name)
 	{
-		return modules.find(module_key_view{process, name});
+		return modules.find(module_key_view{name});
 	}
 
-	module_data& find_or_construct(std::string_view name, u32 process)
+	module_data& find_or_construct(std::string_view name)
 	{
-		return modules.try_emplace(module_key{process, std::string{name}}).first->second;
+		return modules.try_emplace(module_key{std::string{name}}).first->second;
 	}
 };
 
@@ -414,13 +421,13 @@ static void ppu_initialize_modules(shared_ptr<lv2_process> process, ppu_linkage_
 	// Initialize double-purpose fake OPD array for HLE functions
 	const auto& hle_funcs = ppu_function_manager::get(g_cfg.core.ppu_decoder != ppu_decoder_type::_static);
 
-	u32 hle_funcs_addr = process->func_manager->save_addr();
+	u32 hle_funcs_addr = process->local_typemap->try_get<ppu_function_manager>()->save_addr();
 
 	// Allocate memory for the array (must be called after fixed allocations)
 	if (!hle_funcs_addr)
 	{
 		hle_funcs_addr = vm::alloc(::size32(hle_funcs) * 8, vm::main);
-		process->func_manager->init_addr(hle_funcs_addr);
+		process->local_typemap->try_get<ppu_function_manager>()->init_addr(hle_funcs_addr);
 	}
 	else
 	{
@@ -468,7 +475,7 @@ static void ppu_initialize_modules(shared_ptr<lv2_process> process, ppu_linkage_
 
 	struct hle_vars_save
 	{
-		hle_vars_save() = default;
+		hle_vars_save(int) noexcept {}
 
 		hle_vars_save(const hle_vars_save&) = delete;
 
@@ -529,17 +536,17 @@ static void ppu_initialize_modules(shared_ptr<lv2_process> process, ppu_linkage_
 
 	if (ar)
 	{
-		ensure(g_fxo->init<hle_vars_save>(*ar));
+		ensure(process->local_typemap->init<hle_vars_save>(*ar));
 	}
 	else
 	{
-		ensure(g_fxo->init<hle_vars_save>());
+		ensure(process->local_typemap->init<hle_vars_save>(0));
 	}
 
 	for (auto& pair : ppu_module_manager::get())
 	{
 		const auto _module = pair.second;
-		auto& linkage = link->find_or_construct(pair.first, ensure(id_manager::g_process));
+		auto& linkage = link->find_or_construct(pair.first);
 
 		for (auto& function : _module->functions)
 		{
@@ -553,13 +560,18 @@ static void ppu_initialize_modules(shared_ptr<lv2_process> process, ppu_linkage_
 			auto& flink = linkage.functions[function.first];
 
 			flink.static_func = &function.second;
-			flink.export_addr = process->func_manager->func_addr(function.second.index);
+			flink.export_addr = process->local_typemap->try_get<ppu_function_manager>()->func_addr(function.second.index);
 			function.second.export_addr = &flink.export_addr;
 		}
 
 		for (auto& variable : _module->variables)
 		{
 			ppu_loader.trace("** &0x%08X: %s (size=0x%x, align=0x%x)", variable.first, variable.second.name, variable.second.size, variable.second.align);
+
+			if (process->ELF_file_path.find("/dev_flash/") != umax)
+			{
+				continue;
+			}
 
 			// Allocate HLE variable
 			if (ar)
@@ -628,11 +640,10 @@ extern const std::unordered_map<u32, std::string_view>& get_exported_function_na
 
 	auto& [res, update_time] = *info;
 
-	const auto link = g_fxo->try_get<ppu_linkage_info>();
-
 	const auto process = idm::get_unlocked<lv2_obj, lv2_process>(ppu->proc_id);
-
-	const auto hle_funcs = process ? process->func_manager : nullptr;
+	const auto link = process->local_typemap->try_get<ppu_linkage_info>();
+	
+	const auto hle_funcs = process ? process->local_typemap->try_get<ppu_function_manager>() : nullptr;
 
 	if (!link || !hle_funcs)
 	{
@@ -655,7 +666,7 @@ extern const std::unordered_map<u32, std::string_view>& get_exported_function_na
 	for (auto& pair : ppu_module_manager::get())
 	{
 		const auto _module = pair.second;
-		auto& linkage = link->find_or_construct(pair.first, ppu->proc_id);
+		auto& linkage = link->find_or_construct(pair.first);
 
 		for (auto& function : _module->functions)
 		{
@@ -773,7 +784,8 @@ bool ppu_form_branch_to_code(u32 entry, u32 target);
 
 extern u32 ppu_get_exported_func_addr(u32 fnid, const std::string& module_name)
 {
-	auto& link = g_fxo->get<ppu_linkage_info>();
+	const auto process = get_my_process();
+	auto& link = process->local_typemap->get<ppu_linkage_info>();
 	std::shared_lock lock(link.mutex);
 
 	const auto module = link.modules.find(module_name);
@@ -788,20 +800,19 @@ extern u32 ppu_get_exported_func_addr(u32 fnid, const std::string& module_name)
 
 extern bool ppu_register_library_lock(std::string_view libname, bool lock_lib, bool is_mutex_locked)
 {
-	auto link = g_fxo->try_get<ppu_linkage_info>();
+	const auto process = get_my_process();
+	auto link = process->local_typemap->try_get<ppu_linkage_info>();
 
 	if (!link || libname.empty())
 	{
 		return false;
 	}
 
-	const u32 pid = ensure(id_manager::g_process);
-
 	shared_mutex dummy{};
 
 	reader_lock lock(is_mutex_locked ? dummy : link->mutex);
 
-	if (auto it = link->find(libname, pid); it != link->modules.cend())
+	if (auto it = link->find(libname); it != link->modules.cend())
 	{
 		return lock_lib ? !it->second.lib_lock.test_and_set() : it->second.lib_lock.test_and_reset();
 	}
@@ -814,7 +825,7 @@ extern bool ppu_register_library_lock(std::string_view libname, bool lock_lib, b
 
 	lock.upgrade();
 
-	auto& lib_lock = link->find_or_construct(libname, pid).lib_lock;
+	auto& lib_lock = link->find_or_construct(libname).lib_lock;
 
 	return !lib_lock.test_and_set();
 }
@@ -823,6 +834,7 @@ extern bool ppu_register_library_lock(std::string_view libname, bool lock_lib, b
 static auto ppu_load_exports(const ppu_module<lv2_obj>& _module, ppu_linkage_info* link, u32 exports_start, u32 exports_end, bool for_observing_callbacks = false, std::vector<u32>* funcs = nullptr, std::basic_string<char>* loaded_flags = nullptr)
 {
 	const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
+	const auto func_manager = process->local_typemap->try_get<ppu_function_manager>();
 
 	std::unordered_map<u32, u32> result;
 
@@ -916,7 +928,7 @@ static auto ppu_load_exports(const ppu_module<lv2_obj>& _module, ppu_linkage_inf
 		const auto _sm = ppu_module_manager::get_module(module_name);
 
 		// Module linkage
-		auto& mlink = link->find_or_construct(module_name, ensure(id_manager::g_process));
+		auto& mlink = link->find_or_construct(module_name);
 
 		const auto fnids = +lib.nids;
 		const auto faddrs = +lib.addrs;
@@ -965,7 +977,7 @@ static auto ppu_load_exports(const ppu_module<lv2_obj>& _module, ppu_linkage_inf
 			// Function linkage info
 			auto& flink = mlink.functions[fnid];
 
-			if (flink.static_func && flink.export_addr == process->func_manager->func_addr(flink.static_func->index))
+			if (flink.static_func && flink.export_addr == func_manager->func_addr(flink.static_func->index))
 			{
 				flink.export_addr = 0;
 			}
@@ -982,7 +994,7 @@ static auto ppu_load_exports(const ppu_module<lv2_obj>& _module, ppu_linkage_inf
 				if (_sf && (_sf->flags & MFF_FORCED_HLE))
 				{
 					// Inject a branch to the HLE implementation
-					const u32 target = process->func_manager->func_addr(_sf->index, true);
+					const u32 target = func_manager->func_addr(_sf->index, true);
 
 					// Set exported function
 					flink.export_addr = target - 4;
@@ -1062,6 +1074,7 @@ using import_result_t = std::pair<std::unordered_map<u32, void*>, std::unordered
 static import_result_t ppu_load_imports(const ppu_module<lv2_obj>& _module, std::vector<ppu_reloc>& relocs, ppu_linkage_info* link, u32 imports_start, u32 imports_end)
 {
 	const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
+	const auto func_manager = process->local_typemap->try_get<ppu_function_manager>();
 
 	import_result_t result;
 	auto& [import_table, nid_to_use_addr] = result;
@@ -1085,7 +1098,7 @@ static import_result_t ppu_load_imports(const ppu_module<lv2_obj>& _module, std:
 		//const auto _sm = ppu_module_manager::get_module(module_name);
 
 		// Module linkage
-		auto& mlink = link->find_or_construct(module_name, ensure(id_manager::g_process));
+		auto& mlink = link->find_or_construct(module_name);
 
 		const auto fnids = +lib.nids;
 		const auto faddrs = +lib.addrs;
@@ -1112,7 +1125,7 @@ static import_result_t ppu_load_imports(const ppu_module<lv2_obj>& _module, std:
 			}
 
 			// Link address (special HLE function by default)
-			const u32 link_addr = flink.export_addr ? flink.export_addr : process->func_manager->save_addr();
+			const u32 link_addr = flink.export_addr ? flink.export_addr : func_manager->save_addr();
 
 			// Write import table
 			_module.get_ref<u32>(faddr) = link_addr;
@@ -1163,7 +1176,7 @@ void ppu_manual_load_imports_exports(u32 imports_start, u32 imports_size, u32 ex
 
 	const auto process = ensure(idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process));
 	auto& _main = *process;
-	auto& link = g_fxo->get<ppu_linkage_info>();
+	auto& link = _main.local_typemap->get<ppu_linkage_info>();
 
 	ppu_module<lv2_obj> vm_all_fake_module{};
 	vm_all_fake_module.segs.emplace_back(ppu_segment{0x10000, 0 - 0x10000u, 1 /*LOAD*/, 0, 0 - 0x1000u, vm::base(0x10000)});
@@ -1242,8 +1255,6 @@ extern bool is_memory_compatible_for_copy_from_executable_optimization(u32 addr,
 
 void init_ppu_functions(shared_ptr<lv2_process> process, utils::serial* ar, bool full = false)
 {
-	g_fxo->need<ppu_linkage_info>();
-
 	if (ar)
 	{
 		const u32 addr = ar->pop<u32>();
@@ -1253,13 +1264,13 @@ void init_ppu_functions(shared_ptr<lv2_process> process, utils::serial* ar, bool
 			fmt::throw_exception("init_ppu_functions(): Failure to initialize function manager. (addr=0x%x, %s)", addr, *ar);
 		}
 
-		process->func_manager->init_addr(addr);
+		process->local_typemap->get<ppu_function_manager>().init_addr(addr);
 	}
 
 	if (full)
 	{
 		// Initialize HLE modules
-		ppu_initialize_modules(process, &g_fxo->get<ppu_linkage_info>(), ar);
+		ppu_initialize_modules(process, &process->local_typemap->get<ppu_linkage_info>(), ar);
 	}
 }
 
@@ -1693,9 +1704,8 @@ shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_load, c
 	const auto prx = !ar && !virtual_load ? idm::make_ptr<lv2_obj, lv2_prx>() : make_shared<lv2_prx>();
 
 	// Access linkage information object
-	auto& link = g_fxo->get<ppu_linkage_info>();
-
 	const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
+	auto& link = process->local_typemap->get<ppu_linkage_info>();
 
 	// Initialize HLE modules
 	ppu_initialize_modules(process, &link);
@@ -2138,7 +2148,8 @@ void ppu_unload_prx(const lv2_prx& prx)
 		return;
 	}
 
-	std::unique_lock lock(g_fxo->get<ppu_linkage_info>().mutex, std::defer_lock);
+	const auto process = get_my_process();
+	std::unique_lock lock(process->local_typemap->get<ppu_linkage_info>().mutex, std::defer_lock);
 
 	// Clean linkage info
 	for (auto& imp : prx.imports)
@@ -2389,7 +2400,7 @@ shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2
 	init_ppu_functions(process_ptr, ar, false);
 
 	// Access linkage information object
-	auto& link = g_fxo->get<ppu_linkage_info>();
+	auto& link = process_ptr->local_typemap->get<ppu_linkage_info>();
 
 	// TLS information
 	u32 tls_vaddr = 0;
@@ -3097,7 +3108,8 @@ std::pair<shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_ob
 	}
 
 	// Access linkage information object
-	auto& link = g_fxo->get<ppu_linkage_info>();
+	const auto process = get_my_process();
+	auto& link = process->local_typemap->get<ppu_linkage_info>();
 
 	// Executable hash
 	sha1_context sha;

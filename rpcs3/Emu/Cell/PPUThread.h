@@ -352,6 +352,7 @@ public:
 	bool has_debug_or_root_perm = false; // Local copy of lv2_process::debug_or_root
 	bool has_ppc_seg = false; // Local copy of lv2_process::ppc_seg
 	u32 proc_id = 0;
+	class ppu_function_manager* exports_table = nullptr;
 
 	u64 last_ftsc = 0;
 	u64 last_ftime = 0;

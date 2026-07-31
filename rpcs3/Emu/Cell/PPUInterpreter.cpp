@@ -6808,7 +6808,7 @@ auto UNK()
 
 			// HLE function index
 			const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
-			const u32 index = (ppu.cia - process->func_manager->save_addr()) / 8;
+			const u32 index = (ppu.cia - process->local_typemap->try_get<ppu_function_manager>()->save_addr()) / 8;
 
 			const auto& hle_funcs = ppu_function_manager::get();
 
