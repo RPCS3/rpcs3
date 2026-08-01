@@ -107,6 +107,22 @@ void usb_device_passthrough::patch_descriptors()
 				device._device.idVendor = 0x12BA; // SCEA
 				device._device.idProduct = 0x2530; // Harmonix Real Guitar
 				break;
+			case 0x3138: // Harmonix MPA in Drums Mode - Wii
+				device._device.idVendor = 0x12BA; // SCEA
+				device._device.idProduct = 0x0218; // Harmonix MPA in Drums Mode
+				break;
+			case 0x3338: // Harmonix MPA in Keyboard Mode - Wii
+				device._device.idVendor = 0x12BA; // SCEA
+				device._device.idProduct = 0x2338; // Harmonix MPA in Keyboard Mode
+				break;
+			case 0x3438: // Harmonix MPA in Button Guitar Mode - Wii
+				device._device.idVendor = 0x12BA; // SCEA
+				device._device.idProduct = 0x2438; // Harmonix MPA in Button Guitar Mode
+				break;
+			case 0x3538: // Harmonix MPA in Real Guitar Mode - Wii
+				device._device.idVendor = 0x12BA; // SCEA
+				device._device.idProduct = 0x2538; // Harmonix MPA in Real Guitar Mode
+				break;
 			default:
 				break;
 		}
