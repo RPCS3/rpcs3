@@ -329,10 +329,10 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 	if (m_prog.two_sided_lighting)
 	{
 		if (properties.in_register_mask & in_diff_color)
-			OS << "	vec4 diff_color = gl_FrontFacing ? diff_color1 : diff_color0;\n";
+			OS << "	vec4 diff_color = gl_FrontFacing ? diff_color0 : diff_color1;\n";
 
 		if (properties.in_register_mask & in_spec_color)
-			OS << "	vec4 spec_color = gl_FrontFacing ? spec_color1 : spec_color0;\n";
+			OS << "	vec4 spec_color = gl_FrontFacing ? spec_color0 : spec_color1;\n";
 	}
 }
 
