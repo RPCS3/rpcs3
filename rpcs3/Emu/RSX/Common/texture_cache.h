@@ -1765,11 +1765,15 @@ namespace rsx
 						.edge_clamped = false
 					};
 
-					const surface_scaling_config_t scaling_config =
+					surface_scaling_config_t scaling_config{};
+					if (g_cfg.video.allow_blit_engine_upscaling)
 					{
-						.scale_percent = static_cast<u16>(g_cfg.video.resolution_scale_percent),
-						.min_scalable_dimension = static_cast<u16>(g_cfg.video.min_scalable_dimension),
-					};
+						scaling_config =
+						{
+							.scale_percent = static_cast<u16>(g_cfg.video.resolution_scale_percent),
+							.min_scalable_dimension = static_cast<u16>(g_cfg.video.min_scalable_dimension),
+						};
+					}
 
 					auto dst_surface = m_rtts.create_surface_from_rsx_section(
 						cmd,
