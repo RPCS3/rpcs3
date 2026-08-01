@@ -1964,8 +1964,15 @@ bool handle_access_violation(u32 addr, bool is_writing, bool is_exec, ucontext_t
 	// Hack: allocate memory in case the emulator is stopping
 	const auto hack_alloc = [&]()
 	{
+		const bool added_flag = cpu && !cpu->state.test_and_set(cpu_flag::wait);
+
 		if (vm::check_addr(addr, required_page_perms))
 		{
+			if (added_flag)
+			{
+				cpu->check_state();
+			}
+
 			return true;
 		}
 
@@ -1973,6 +1980,11 @@ bool handle_access_violation(u32 addr, bool is_writing, bool is_exec, ucontext_t
 
 		if (!area)
 		{
+			if (added_flag)
+			{
+				cpu->check_state();
+			}
+
 			return false;
 		}
 
@@ -1993,6 +2005,11 @@ bool handle_access_violation(u32 addr, bool is_writing, bool is_exec, ucontext_t
 			{
 				ppu_register_range(addr & -0x10000, 0x10000);
 			}
+			
+			if (added_flag)
+			{
+				cpu->check_state();
+			}
 
 			g_tls_access_violation_recovered = addr;
 			return true;
@@ -2007,10 +2024,20 @@ bool handle_access_violation(u32 addr, bool is_writing, bool is_exec, ucontext_t
 				ppu_register_range(addr & -0x10000, 0x10000);
 			}
 
+			if (added_flag)
+			{
+				cpu->check_state();
+			}
+
 			g_tls_access_violation_recovered = addr;
 			return true;
 		}
 
+		if (added_flag)
+		{
+			cpu->check_state();
+		}
+	
 		return false;
 	};
 
