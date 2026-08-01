@@ -3260,30 +3260,28 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 			//auto& cline_data = vm::_ref<spu_rdata_t>(addr);
 
 			data += 0;
-			auto range_lock = vm::alloc_range_lock();
-			bool success = false;
+			rsx::reservation_lock rsx_lock(addr, 128);
+
+			auto& super_data = *vm::get_super_ptr<spu_rdata_t>(addr);
+			const bool success = [&]()
 			{
-				rsx::reservation_lock rsx_lock(addr, 128);
+				// Full lock (heavyweight): must be the global exclusive lock.
+				// A per-slot range lock does not exclude other exclusive lock holders (the drain loop
+				// skips g_range_lock_bits[1]), and dropping cpu_flag::wait/memory at the end of the
+				// ctor would then break the PPU suspension another writer_lock is relying on.
+				// TODO: vm::check_addr
+				vm::writer_lock lock(addr);
 
-				auto& super_data = *vm::get_super_ptr<spu_rdata_t>(addr);
-				success = [&]()
+				if (cmp_rdata(ppu.rdata, super_data))
 				{
-					// Full lock (heavyweight)
-					// TODO: vm::check_addr
-					vm::writer_lock lock(addr, range_lock);
+					data.release(new_data);
+					res += 64;
+					return true;
+				}
 
-					if (cmp_rdata(ppu.rdata, super_data))
-					{
-						data.release(new_data);
-						res += 64;
-						return true;
-					}
-
-					res -= 64;
-					return false;
-				}();
-			}
-			vm::free_range_lock(range_lock);
+				res -= 64;
+				return false;
+			}();
 
 			return success;
 		}

@@ -522,7 +522,10 @@ namespace vm
 			}
 		}
 
-		if (range_lock)
+		// Note: the exclusive (full) lock is also required to suspend PPU threads, otherwise
+		// callers such as vm::reservation_op and do_cell_atomic_128_store (called outside of SPU threads)
+		// would perform their non-atomic 128-byte stores without stopping the PPUs first
+		if (range_lock || addr >= 0x10000)
 		{
 			perf_meter<"SUSPEND"_u64> perf0;
 
