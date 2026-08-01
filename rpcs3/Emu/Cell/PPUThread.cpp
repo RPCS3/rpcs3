@@ -5684,10 +5684,8 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module
 				// Translate
 				if ([[maybe_unused]] const auto func = translator.Translate(mod_func))
 				{
-#ifdef ARCH_X64 // TODO
 					// Run optimization passes
 					fpm.run(*func, fam);
-#endif // ARCH_X64
 				}
 				else
 				{
@@ -5702,10 +5700,8 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module
 		{
 			if ([[maybe_unused]] const auto func = translator.GetSymbolResolver(module_part))
 			{
-#ifdef ARCH_X64 // TODO
 				// Run optimization passes
 				fpm.run(*func, fam);
-#endif // ARCH_X64
 			}
 			else
 			{
