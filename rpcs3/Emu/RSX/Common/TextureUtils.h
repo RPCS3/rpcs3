@@ -313,6 +313,7 @@ namespace rsx
 	 */
 	std::vector<subresource_layout> get_subresources_layout(const rsx::fragment_texture &texture);
 	std::vector<subresource_layout> get_subresources_layout(const rsx::vertex_texture &texture);
+	std::vector<subresource_layout> get_subresources_layout(const image_section_attributes_t& attrs, texture_dimension_extended type);
 
 	texture_memory_info upload_texture_subresource(rsx::io_buffer& dst_buffer, const subresource_layout &src_layout, int format, bool is_swizzled, texture_uploader_capabilities& caps);
 
