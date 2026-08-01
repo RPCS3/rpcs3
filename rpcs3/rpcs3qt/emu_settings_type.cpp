@@ -113,6 +113,7 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::RecordWithOverlays,         get_cfg_location(local_cfg.video.record_with_overlays) },
 	{ emu_settings_type::DisableHWTexelRemapping,    get_cfg_location(local_cfg.video.disable_hardware_texel_remapping) },
 	{ emu_settings_type::FsrSharpeningStrength,      get_cfg_location(local_cfg.video.rcas_sharpening_intensity) },
+	{ emu_settings_type::EnableBlitEngineScaling,    get_cfg_location(local_cfg.video.allow_blit_engine_upscaling) },
 
 	// Vulkan
 	{ emu_settings_type::VulkanAdapter,                    get_cfg_location(local_cfg.video.vk.adapter) },
