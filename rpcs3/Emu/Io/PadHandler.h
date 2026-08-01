@@ -193,7 +193,7 @@ protected:
 	std::shared_ptr<Pad> m_pad_for_pad_settings;
 
 	// Search an unordered map for a string value and return the found combos
-	static std::vector<std::set<u32>> find_key_combos(const std::unordered_map<u32, std::string>& map, const std::string& cfg_string);
+	static std::vector<std::set<u32>> find_key_combos(const std::unordered_map<u32, std::string>& map, std::string_view cfg_string);
 
 	// Search an unordered map for a combo and return the found key codes
 	static std::set<u32> find_key_codes(const std::unordered_map<u32, std::string>& map, const pad::combo& combo);
@@ -324,7 +324,7 @@ protected:
 	virtual void get_mapping(const pad_ensemble& binding);
 	void TranslateButtonPress(const std::shared_ptr<PadDevice>& device, u32 keyCode, bool& pressed, u16& val, bool use_stick_multipliers, bool ignore_stick_threshold = false, bool ignore_trigger_threshold = false);
 	void init_configs();
-	cfg_pad* get_config(const std::string& pad_id);
+	cfg_pad* get_config(std::string_view pad_id);
 
 	static void set_raw_orientation(ps_move_data& move_data, f32 accel_x, f32 accel_y, f32 accel_z, f32 gyro_x, f32 gyro_y, f32 gyro_z);
 	static void set_raw_orientation(Pad& pad);

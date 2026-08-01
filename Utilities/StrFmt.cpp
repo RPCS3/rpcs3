@@ -630,6 +630,13 @@ namespace fmt
 		thread_ctrl::emergency_exit(out);
 	}
 
+	[[noreturn]] void raw_verify_error(std::source_location loc, std::source_location propagated_loc, const char8_t* msg, usz object)
+	{
+		std::string out;
+		fmt::append(out, "%s (object: 0x%x)%s%s", msg ? msg : u8"Verification failed", object, loc, propagated_loc);
+		thread_ctrl::emergency_exit(out);
+	}
+
 	[[noreturn]] void raw_range_error(std::source_location loc, std::string_view index, usz container_size)
 	{
 		std::string out;
@@ -921,6 +928,13 @@ std::string_view fmt::trim_front_sv(std::string_view source, std::string_view va
 void fmt::trim_back(std::string& source, std::string_view values)
 {
 	const usz index = source.find_last_not_of(values);
+
+	if (index == source.npos)
+	{
+		source.clear();
+		return;
+	}
+
 	source.resize(index + 1);
 }
 

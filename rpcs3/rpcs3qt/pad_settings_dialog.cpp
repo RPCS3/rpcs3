@@ -495,7 +495,7 @@ void pad_settings_dialog::InitButtons()
 			return;
 		}
 
-		const auto update_preview = [this](const std::string& pad_name, bool is_connected, int battery_level, int trigger_left, int trigger_right, int lx, int ly, int rx, int ry, const pad_capabilities& capabilities)
+		const auto update_preview = [this](std::string_view pad_name, bool is_connected, int battery_level, int trigger_left, int trigger_right, int lx, int ly, int rx, int ry, const pad_capabilities& capabilities)
 		{
 			SwitchPadInfo(pad_name, is_connected);
 
@@ -801,7 +801,7 @@ void pad_settings_dialog::switch_pad_info(int index, pad_device_info info, bool 
 	}
 }
 
-void pad_settings_dialog::SwitchPadInfo(const std::string& pad_name, bool is_connected)
+void pad_settings_dialog::SwitchPadInfo(std::string_view pad_name, bool is_connected)
 {
 	for (int i = 0; i < ui->chooseDevice->count(); i++)
 	{
@@ -1173,13 +1173,19 @@ bool pad_settings_dialog::eventFilter(QObject* object, QEvent* event)
 {
 	switch (event->type())
 	{
+	case QEvent::MouseButtonPress:
+	{
+		// Save object on rightclick if we are not remapping a button in order to allow clearing a binding
+		m_clear_binding_object = (m_button_id == button_ids::id_pad_begin && static_cast<QMouseEvent*>(event)->button() == Qt::RightButton) ? object : nullptr;
+		break;
+	}
 	case QEvent::MouseButtonRelease:
 	{
 		// On right click clear binding if we are not remapping pad button
-		if (m_button_id == button_ids::id_pad_begin)
+		// Only allow clearing a binding if the same object was also pressed while we were not remapping
+		if (m_button_id == button_ids::id_pad_begin && static_cast<QMouseEvent*>(event)->button() == Qt::RightButton && m_clear_binding_object == object)
 		{
-			QMouseEvent* mouse_event = static_cast<QMouseEvent*>(event);
-			if (const auto button = qobject_cast<QPushButton*>(object); button && button->isEnabled() && mouse_event->button() == Qt::RightButton)
+			if (const auto button = qobject_cast<QPushButton*>(object); button && button->isEnabled())
 			{
 				if (const int button_id = m_pad_buttons->id(button); m_cfg_entries.contains(button_id))
 				{
@@ -1482,6 +1488,10 @@ void pad_settings_dialog::OnPadButtonClicked(int id)
 	m_last_pos = QCursor::pos();
 
 	m_button_id = id;
+
+	// Disable clearing of a binding while we are remapping a button
+	m_clear_binding_object = nullptr;
+
 	if (auto button = m_pad_buttons->button(m_button_id))
 	{
 		button->setText(tr("[ Waiting %1 ]").arg(MAX_SECONDS));

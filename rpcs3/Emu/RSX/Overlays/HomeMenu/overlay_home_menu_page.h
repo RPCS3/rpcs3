@@ -26,7 +26,7 @@ namespace rsx
 		struct home_menu_page : public list_view
 		{
 		public:
-			home_menu_page(s16 x, s16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent, const std::string& text);
+			home_menu_page(s16 x, s16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent, const std::string& title);
 
 			void set_current_page(home_menu_page* page);
 			home_menu_page* get_current_page(bool include_this);
@@ -56,7 +56,7 @@ namespace rsx
 			virtual void add_item(home_menu::fa_icon icon, std::string_view, std::function<page_navigation(pad_button)> callback);
 			virtual void add_item(std::unique_ptr<overlay_element>& element, std::function<page_navigation(pad_button)> callback);
 			virtual void apply_layout(bool center_vertically = false);
-			void show_dialog(const std::string& text, std::function<void()> on_accept = nullptr, std::function<void()> on_cancel = nullptr);
+			void show_dialog(std::string_view text, std::function<void()> on_accept = nullptr, std::function<void()> on_cancel = nullptr);
 
 			std::vector<std::shared_ptr<home_menu_page>> m_pages;
 

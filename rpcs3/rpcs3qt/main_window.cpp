@@ -48,6 +48,7 @@
 #include "sound_effect_manager_dialog.h"
 #include "recording_settings_dialog.h"
 #include "config_database.h"
+#include "guest_memory_dumper.h"
 
 #include <thread>
 #include <unordered_set>
@@ -1246,13 +1247,13 @@ bool main_window::HandlePackageInstallation(main_window* mw, QStringList file_pa
 				{
 					std::string resolved_path = Emu.GetCallbacks().resolve_path(it->first);
 
-					if (resolved_path.empty() || claimed_paths.count(resolved_path))
+					if (resolved_path.empty() || claimed_paths.contains(resolved_path))
 					{
 						it = paths.erase(it);
 					}
 					else
 					{
-						claimed_paths.emplace(std::move(resolved_path));
+						claimed_paths.insert(std::move(resolved_path));
 						it++;
 					}
 				}
@@ -1325,23 +1326,27 @@ bool main_window::HandlePackageInstallation(main_window* mw, QStringList file_pa
 				}
 
 				const bool has_expected = !result.version.expected.empty();
-				const bool has_found = !result.version.found.empty();
-				if (has_expected && has_found)
+				const bool has_installed = !result.version.installed.empty();
+
+				if (has_expected && has_installed)
 				{
-					QMessageBox::warning(mw, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nUpdate is for version %1, but you have version %2.\n\nTried to install: %3")
-							.arg(QString::fromStdString(result.version.expected)).arg(QString::fromStdString(result.version.found)).arg(package->path));
+					QMessageBox::warning(mw, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nUpdate with version %0 is for version %1, but you have version %2.\n\nTried to install: %3")
+							.arg(QString::fromStdString(result.version.app_ver)).arg(QString::fromStdString(result.version.expected)).arg(QString::fromStdString(result.version.installed)).arg(package->path));
 				}
 				else if (has_expected)
 				{
-					QMessageBox::warning(mw, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nUpdate is for version %1, but you don't have any data installed.\n\nTried to install: %2")
-							.arg(QString::fromStdString(result.version.expected)).arg(package->path));
+					QMessageBox::warning(mw, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nUpdate with version %0 is for version %1, but you don't have any data installed.\n\nTried to install: %2")
+							.arg(QString::fromStdString(result.version.app_ver)).arg(QString::fromStdString(result.version.expected)).arg(package->path));
+				}
+				else if (has_installed)
+				{
+					QMessageBox::warning(mw, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nUpdate has version %0, but you already have version %1.\n\nTried to install: %2")
+							.arg(QString::fromStdString(result.version.app_ver)).arg(QString::fromStdString(result.version.installed)).arg(package->path));
 				}
 				else
 				{
 					// probably unreachable
-					const QString found = has_found ? tr("version %1").arg(QString::fromStdString(result.version.found)) : tr("no data installed");
-					QMessageBox::warning(mw, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nUpdate is for unknown version, but you have version %1.\n\nTried to install: %2")
-							.arg(QString::fromStdString(result.version.expected)).arg(found).arg(package->path));
+					QMessageBox::warning(mw, tr("Warning!"), tr("Package cannot be installed on top of the current data.\nAn unexpected error occured.\n\nTried to install: %0").arg(package->path));
 				}
 			}
 			else
@@ -1923,6 +1928,7 @@ void main_window::DecryptSPRXLibraries()
 void main_window::SaveWindowState() const
 {
 	// Save gui settings
+	m_gui_settings->SetValue(gui::mw_visibility, gui::window_states_to_string(windowState()), false);
 	m_gui_settings->SetValue(gui::mw_geometry, saveGeometry(), false);
 	m_gui_settings->SetValue(gui::mw_windowState, saveState(), false);
 
@@ -1999,14 +2005,7 @@ void main_window::RepaintToolBarIcons()
 		ui->sysPauseAct->setIcon(m_icon_play);
 	}
 
-	if (isFullScreen())
-	{
-		ui->toolbar_fullscreen->setIcon(m_icon_fullscreen_off);
-	}
-	else
-	{
-		ui->toolbar_fullscreen->setIcon(m_icon_fullscreen_on);
-	}
+	ui->toolbar_fullscreen->setIcon(isFullScreen() ? m_icon_fullscreen_off : m_icon_fullscreen_on);
 
 	const QColor& new_color = new_colors[QIcon::Normal];
 	ui->sizeSlider->setStyleSheet(ui->sizeSlider->styleSheet().append("QSlider::handle:horizontal{ background: rgba(%1, %2, %3, %4); }")
@@ -2198,6 +2197,7 @@ void main_window::EnableMenus(bool enabled) const
 	// Tools
 	ui->toolskernel_explorerAct->setEnabled(enabled);
 	ui->toolsmemory_viewerAct->setEnabled(enabled);
+	ui->toolsDumpGuestMemoryAct->setEnabled(enabled);
 	ui->toolsRsxDebuggerAct->setEnabled(enabled);
 	ui->toolsSystemCommandsAct->setEnabled(enabled);
 	ui->actionCreate_RSX_Capture->setEnabled(enabled);
@@ -3393,6 +3393,12 @@ void main_window::CreateConnects()
 			idm::make<memory_viewer_handle>(this, make_basic_ppu_disasm());
 	});
 
+	connect(ui->toolsDumpGuestMemoryAct, &QAction::triggered, this, [this]()
+	{
+		guest_memory_dumper* dumper = new guest_memory_dumper(this, true);
+		dumper->dump_guest_memory();
+	});
+
 	connect(ui->toolsRsxDebuggerAct, &QAction::triggered, this, [this]
 	{
 		rsx_debugger* rsx = new rsx_debugger(m_gui_settings);
@@ -3464,6 +3470,20 @@ void main_window::CreateConnects()
 	{
 		m_gui_settings->SetValue(gui::gl_show_hidden, checked);
 		m_game_list_frame->SetShowHidden(checked);
+		m_game_list_frame->Refresh();
+	});
+
+	connect(ui->showBrokenEntriesAct, &QAction::triggered, this, [this](bool checked)
+	{
+		m_gui_settings->SetValue(gui::gl_show_broken, checked);
+		m_game_list_frame->SetShowBroken(checked);
+		m_game_list_frame->Refresh();
+	});
+
+	connect(ui->showCompletedEntriesAct, &QAction::triggered, this, [this](bool checked)
+	{
+		m_gui_settings->SetValue(gui::gl_show_completed, checked);
+		m_game_list_frame->SetShowCompleted(checked);
 		m_game_list_frame->Refresh();
 	});
 
@@ -3539,6 +3559,32 @@ void main_window::CreateConnects()
 #else
 		QMessageBox::warning(this, tr("Auto-updater"), tr("The auto-updater isn't available for your OS currently."));
 #endif
+	});
+
+	connect(ui->downloadIntegrityDbAct, &QAction::triggered, this, [this]()
+	{
+		m_game_list_frame->GetIsoIntegrity()->download();
+		m_game_list_frame->GetPsnContentIntegrity()->download();
+		m_game_list_frame->GetPsnDlcIntegrity()->download();
+		m_game_list_frame->GetPsnUpdateIntegrity()->download();
+	});
+
+	connect(ui->downloadCompatDbAct, &QAction::triggered, this, [this]()
+	{
+		m_game_list_frame->GetGameCompatibility()->RequestCompatibility(true);
+	});
+
+	connect(ui->downloadConfigDbAct, &QAction::triggered, this, [this]()
+	{
+		m_game_list_frame->GetConfigDatabase()->request_config_database(true);
+	});
+
+	// Check integrity for the content categories based on .PKG, .RAP and .EDAT (e.g. HDD game, DLC, Update)
+	connect(ui->checkPackageIntegrityAct, &QAction::triggered, this, [this]()
+	{
+		// File type different than ISO as passed here (PSN_CONTENT) will be properly detected in
+		// ShowGameIntegrityDialog() based on the selected package file
+		m_game_list_frame->actions()->ShowGameIntegrityDialog(content_file_type::PSN_CONTENT, "");
 	});
 
 	connect(ui->welcomeAct, &QAction::triggered, this, [this]()
@@ -3889,6 +3935,12 @@ void main_window::ConfigureGuiFromSettings()
 	ui->showHiddenEntriesAct->setChecked(m_gui_settings->GetValue(gui::gl_show_hidden).toBool());
 	m_game_list_frame->SetShowHidden(ui->showHiddenEntriesAct->isChecked()); // prevent GetValue in m_game_list_frame->LoadSettings
 
+	ui->showBrokenEntriesAct->setChecked(m_gui_settings->GetValue(gui::gl_show_broken).toBool());
+	m_game_list_frame->SetShowBroken(ui->showBrokenEntriesAct->isChecked()); // prevent GetValue in m_game_list_frame->LoadSettings
+
+	ui->showCompletedEntriesAct->setChecked(m_gui_settings->GetValue(gui::gl_show_completed).toBool());
+	m_game_list_frame->SetShowCompleted(ui->showCompletedEntriesAct->isChecked()); // prevent GetValue in m_game_list_frame->LoadSettings
+
 	ui->showCompatibilityInGridAct->setChecked(m_gui_settings->GetValue(gui::gl_draw_compat).toBool());
 	ui->actionPreferGameDataIcons->setChecked(m_gui_settings->GetValue(gui::gl_pref_gd_icon).toBool());
 	ui->showCustomIconsAct->setChecked(m_gui_settings->GetValue(gui::gl_custom_icon).toBool());
@@ -3915,6 +3967,10 @@ void main_window::ConfigureGuiFromSettings()
 
 	// Gamelist
 	m_game_list_frame->LoadSettings();
+
+	// Restore saved visibility from last time.
+	setWindowState(gui::string_to_window_states(m_gui_settings->GetValue(gui::mw_visibility).toString()));
+	ui->toolbar_fullscreen->setIcon(isFullScreen() ? m_icon_fullscreen_off : m_icon_fullscreen_on);
 }
 
 void main_window::SetIconSizeActions(int idx) const
@@ -4034,7 +4090,7 @@ void main_window::CreateFirmwareCache()
 	}
 }
 
-void main_window::mouseDoubleClickEvent(QMouseEvent *event)
+void main_window::mouseDoubleClickEvent(QMouseEvent* event)
 {
 	if (isFullScreen())
 	{
@@ -4072,6 +4128,19 @@ void main_window::closeEvent(QCloseEvent* closeEvent)
 
 	gui_log.notice("Quit with main_window::closeEvent");
 	Emu.Quit(true);
+}
+
+void main_window::changeEvent(QEvent* event)
+{
+	if (event->type() == QEvent::ActivationChange)
+	{
+		if (m_game_list_frame && !isActiveWindow())
+		{
+			m_game_list_frame->stop_movie();
+		}
+	}
+
+	QMainWindow::changeEvent(event);
 }
 
 /**

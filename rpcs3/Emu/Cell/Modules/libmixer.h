@@ -41,8 +41,8 @@ enum
 	CELL_SURMIXER_PARAM_REVERBLEVEL = 41, // in dB
 };
 
-static const float CELL_SURMIXER_CONT_MUTEON = 1.0;
-static const float CELL_SURMIXER_CONT_MUTEOFF = 0.0;
+static constexpr f32 CELL_SURMIXER_CONT_MUTEON = 1.0f;
+static constexpr f32 CELL_SURMIXER_CONT_MUTEOFF = 0.0f;
 
 enum
 {
@@ -137,15 +137,15 @@ struct CellSSPlayerCommonParam
 
 struct CellSurMixerPosition
 {
-	be_t<float> x;
-	be_t<float> y;
-	be_t<float> z;
+	be_t<f32> x;
+	be_t<f32> y;
+	be_t<f32> z;
 };
 
 struct CellSSPlayerRuntimeInfo
 {
-	be_t<float> level;
-	be_t<float> speed;
+	be_t<f32> level;
+	be_t<f32> speed;
 	CellSurMixerPosition position;
 };
 
@@ -163,6 +163,6 @@ struct CellSurMixerChStripParam
 	be_t<u32> param;
 	be_t<u32> attribute_addr;
 	be_t<s32> dBSwitch;
-	be_t<float> floatVal;
+	be_t<f32> floatVal;
 	be_t<s32> intVal;
 };

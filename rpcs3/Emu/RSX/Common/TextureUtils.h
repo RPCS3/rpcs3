@@ -284,6 +284,21 @@ namespace rsx
 		usz alignment;
 	};
 
+	struct image_section_attributes_t
+	{
+		u32 address;
+		u32 gcm_format;
+		u32 pitch;
+		u16 width;
+		u16 height;
+		u16 depth;
+		u16 mipmaps;
+		u16 slice_h;
+		u8  bpp;
+		bool swizzled;
+		bool edge_clamped;
+	};
+
 	/**
 	* Get size to store texture in a linear fashion.
 	* Storage is assumed to use a rowPitchAlignment boundary for every row of texture.
@@ -298,6 +313,7 @@ namespace rsx
 	 */
 	std::vector<subresource_layout> get_subresources_layout(const rsx::fragment_texture &texture);
 	std::vector<subresource_layout> get_subresources_layout(const rsx::vertex_texture &texture);
+	std::vector<subresource_layout> get_subresources_layout(const image_section_attributes_t& attrs, texture_dimension_extended type);
 
 	texture_memory_info upload_texture_subresource(rsx::io_buffer& dst_buffer, const subresource_layout &src_layout, int format, bool is_swizzled, texture_uploader_capabilities& caps);
 
@@ -349,6 +365,9 @@ namespace rsx
 	 */
 	std::pair<u32, bool> get_compatible_gcm_format(rsx::surface_color_format format);
 	std::pair<u32, bool> get_compatible_gcm_format(rsx::surface_depth_format2 format);
+
+	rsx::surface_color_format get_compatible_surface_color_format(u32 gcm_format);
+	rsx::surface_depth_format2 get_compatible_surface_depth_format(u32 gcm_format);
 
 	format_class classify_format(rsx::surface_depth_format2 format);
 	format_class classify_format(u32 gcm_format);

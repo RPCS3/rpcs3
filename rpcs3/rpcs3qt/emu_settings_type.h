@@ -41,7 +41,6 @@ enum class emu_settings_type
 	SleepTimersAccuracy,
 	ClocksScale,
 	PerformanceReport,
-	PPUNJFixup,
 	PPUVNANFixup,
 	AccurateDFMA,
 	AccuratePPUSAT,
@@ -52,6 +51,7 @@ enum class emu_settings_type
 	SPUProfiler,
 	DisableSpinOptimization,
 	EnabledSPUEventsBusyLoop,
+	PPUReservationPriorityOverSPUs,
 
 	// Graphics
 	Renderer,

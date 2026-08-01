@@ -336,6 +336,20 @@ static void fixup_settings(const psf::registry* _psf)
 		}
 	}
 
+#if defined(ARCH_ARM64)
+	if (g_cfg.core.spu_decoder == spu_decoder_type::asmjit)
+	{
+#ifdef LLVM_AVAILABLE
+		constexpr auto arm64_spu_fallback = spu_decoder_type::dynamic;
+#else
+		constexpr auto arm64_spu_fallback = spu_decoder_type::_static;
+#endif
+		sys_log.warning("The setting '%s' is currently not supported on ARM64 builds and will therefore be changed from '%s' to '%s' during emulation.",
+			g_cfg.core.spu_decoder.get_name(), spu_decoder_type::asmjit, arm64_spu_fallback);
+		g_cfg.core.spu_decoder.set(arm64_spu_fallback);
+	}
+#endif
+
 	if (const u32 psf_resolution = _psf ? psf::get_integer(*_psf, "RESOLUTION", 0) : 0)
 	{
 		const std::map<video_resolution, u32> resolutions
@@ -1407,6 +1421,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				return game_boot_result::invalid_file_or_folder;
 			}
 
+			// The game id token is primarily the Title ID found in param.sfo which may.
+			// If a tail exists then it is usually an alternate directory.
+			// e.g. Title ID is SLUS12345 but the actual folder is NPUB12345
 			std::string tail = m_path.substr(game_id_boot_prefix.size() + m_title_id.size());
 
 			if (tail.find_first_not_of(fs::delim) == umax)
@@ -1418,12 +1435,13 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			bool ok = false;
 			std::string title_path;
 
-			// const overload does not create new node on failure
+			// Check if there's a known games.yml path for the Title ID
 			if (std::string game_path = m_games_config.get_path(m_title_id); !game_path.empty())
 			{
 				title_path = std::move(game_path);
 			}
 
+			// Check if it's an ISO
 			if (is_iso_file(title_path))
 			{
 				m_path = std::move(title_path);
@@ -1431,16 +1449,39 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			}
 			else
 			{
-				for (std::string test_path :
+				std::vector<std::string> test_dirs;
+
+				// Check in hdd game directory first
+				const std::string hdd0_game = rpcs3::utils::get_hdd0_dir() + "game";
+				test_dirs.push_back(hdd0_game + "/" + m_title_id + "/USRDIR/");
+
+				if (!tail.empty())
 				{
-					rpcs3::utils::get_hdd0_dir() + "game/" + m_title_id + "/USRDIR/EBOOT.BIN"
-					, tail.empty() ? "" : title_path + tail + "/USRDIR/EBOOT.BIN"
-					, title_path + "/PS3_GAME/USRDIR/EBOOT.BIN"
-					, title_path + "/USRDIR/EBOOT.BIN"
-				})
-				{
-					if (!test_path.empty() && fs::is_file(test_path))
+					// Check in tail directory
+					test_dirs.push_back(title_path + tail + "/USRDIR/");
+
+					// Check in alternate hdd game directory if the tail looks like a Title ID
+					if (tail.size() == 10 && tail.find_first_of(fs::delim) == 0)
 					{
+						test_dirs.push_back(hdd0_game + tail + "/USRDIR/");
+					}
+				}
+
+				// Check games.yml paths
+				if (!title_path.empty())
+				{
+					test_dirs.push_back(title_path + "/PS3_GAME/USRDIR/");
+					test_dirs.push_back(title_path + "/USRDIR/");
+				}
+
+				for (const std::string& dir : test_dirs)
+				{
+					// Check for regular binaries as well as PS1 binaries
+					for (const std::string& bin_suffix : {"EBOOT.BIN"s, "ISO.BIN.EDAT"s})
+					{
+						std::string test_path = dir + bin_suffix;
+						if (!fs::is_file(test_path)) continue;
+
 						m_path = std::move(test_path);
 						ok = true;
 						break;
@@ -1879,7 +1920,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 				struct jit_write_guard
 				{
-					~jit_write_guard()
+					~jit_write_guard() noexcept
 					{
 						pthread_jit_write_protect_np(true);
 					}
@@ -2212,11 +2253,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 				for (auto&& entry : fs::dir{ins_dir})
 				{
-					const std::string pkg_file = ins_dir + entry.name;
+					std::string pkg_file = ins_dir + entry.name;
 
 					if (!entry.is_directory && entry.name.ends_with(".PKG"))
 					{
-						pkgs.push_back(pkg_file);
+						pkgs.push_back(std::move(pkg_file));
 					}
 				}
 			}
@@ -2229,11 +2270,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				{
 					if (entry.is_directory && entry.name.starts_with("PKG"))
 					{
-						const std::string pkg_file = pkg_dir + entry.name + "/INSTALL.PKG";
+						std::string pkg_file = pkg_dir + entry.name + "/INSTALL.PKG";
 
 						if (fs::is_file(pkg_file))
 						{
-							pkgs.push_back(pkg_file);
+							pkgs.push_back(std::move(pkg_file));
 						}
 					}
 				}
@@ -2247,11 +2288,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				{
 					if (entry.is_directory && entry.name[0] == 'D')
 					{
-						const std::string pkg_file = extra_dir + entry.name + "/DATA000.PKG";
+						std::string pkg_file = extra_dir + entry.name + "/DATA000.PKG";
 
 						if (fs::is_file(pkg_file))
 						{
-							pkgs.push_back(pkg_file);
+							pkgs.push_back(std::move(pkg_file));
 						}
 					}
 				}
@@ -3999,7 +4040,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 								continue;
 							}
 
-							const u64 hash_val = read_from_ptr<be_t<u64>>(result.data) & -65536;
+							const u64 hash_val = read_from_ptr_unsafe<be_t<u64>>(result.data) & -65536;
 							const f64 usage = get_cpu_program_usage_percent(hash_val);
 
 							if (usage == 0)
@@ -4276,9 +4317,11 @@ std::set<std::string> Emulator::GetGameDirs() const
 	return dirs;
 }
 
-u32 Emulator::AddGamesFromDir(const std::string& path)
+u32 Emulator::AddGamesFromDir(std::string path)
 {
 	u32 games_added = 0;
+
+	fmt::trim_back(path, fs::delim);
 
 	m_games_config.set_save_on_dirty(false);
 
@@ -4313,7 +4356,7 @@ u32 Emulator::AddGamesFromDir(const std::string& path)
 					continue;
 				}
 
-				const std::string dir_path = path + '/' + dir_entry.name;
+				const std::string dir_path = path + "/" + dir_entry.name;
 
 				if (!dir_entry.is_directory && !is_iso_file(dir_path))
 				{
@@ -4349,8 +4392,10 @@ u32 Emulator::AddGamesFromDir(const std::string& path)
 	return games_added;
 }
 
-game_boot_result Emulator::AddGame(const std::string& path)
+game_boot_result Emulator::AddGame(std::string path)
 {
+	fmt::trim_back(path, fs::delim);
+
 	// Handle files directly
 	if (!fs::is_dir(path) || fs::get_optical_raw_device(path))
 	{
@@ -4396,8 +4441,10 @@ game_boot_result Emulator::AddGame(const std::string& path)
 	return result;
 }
 
-game_boot_result Emulator::AddGameToYml(const std::string& path)
+game_boot_result Emulator::AddGameToYml(std::string path)
 {
+	fmt::trim_back(path, fs::delim);
+
 	// Detect boot location
 	const auto is_invalid_path = [this](std::string_view path, std::string_view dir) -> game_boot_result
 	{
@@ -4822,7 +4869,9 @@ utils::serial* Emulator::DeserialManager() const
 
 bool Emulator::IsVsh()
 {
-	return g_ps3_process_info.self_info.valid && (g_ps3_process_info.self_info.prog_id_hdr.program_authority_id >> 36 == 0x1070000); // Not only VSH but also most CoreOS LV2 SELFs need the special treatment
+	const auto process = &g_ps3_process_info;
+
+	return process->self_info.valid && (process->self_info.prog_id_hdr.program_authority_id == 0x10700005FF000001L); // VSH.self ID
 }
 
 bool Emulator::IsValidSfb(const std::string& path)
@@ -4843,7 +4892,7 @@ bool Emulator::IsValidSfb(const std::string& path)
 	return false;
 }
 
-void Emulator::SaveSettings(const std::string& settings, const std::string& title_id)
+void Emulator::SaveSettings(std::string_view settings, const std::string& title_id)
 {
 	std::string config_name;
 
@@ -4864,7 +4913,7 @@ void Emulator::SaveSettings(const std::string& settings, const std::string& titl
 	}
 	else
 	{
-		temp.file.write(settings.c_str(), settings.size());
+		temp.file.write(settings.data(), settings.size());
 		if (!temp.commit())
 		{
 			sys_log.error("Could not save config to %s (failed to commit) (error=%s)", config_name, fs::g_tls_error);
@@ -4875,7 +4924,7 @@ void Emulator::SaveSettings(const std::string& settings, const std::string& titl
 	if (config_name == g_cfg.name || title_id == Emu.GetTitleID())
 	{
 		// Update current config
-		if (!g_cfg.from_string({settings.c_str(), settings.size()}, !Emu.IsStopped()))
+		if (!g_cfg.from_string(settings, !Emu.IsStopped()))
 		{
 			sys_log.fatal("Failed to update configuration");
 		}

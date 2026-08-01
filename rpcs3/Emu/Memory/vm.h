@@ -78,10 +78,10 @@ namespace vm
 	bool page_protect(u32 addr, u32 size, u8 flags_test = 0, u8 flags_set = 0, u8 flags_clear = 0);
 
 	// Check flags for specified memory range (unsafe)
-	bool check_addr(u32 addr, u8 flags, u32 size);
+	bool check_addr(u64 addr, u8 flags, u32 size);
 
 	template <u32 Size = 1>
-	inline bool check_addr(u32 addr, u8 flags = page_readable)
+	inline bool check_addr(u64 addr, u8 flags = page_readable)
 	{
 		extern std::array<memory_page, 0x100000000 / 4096> g_pages;
 

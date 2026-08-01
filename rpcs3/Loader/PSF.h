@@ -103,7 +103,7 @@ namespace psf
 	// Get integer value or default value
 	u32 get_integer(const registry& psf, std::string_view key, u32 def = 0);
 
-	bool check_registry(const registry& psf, std::function<bool(bool ok, const std::string& key, const entry& value)> validate = {}, std::source_location src_loc = std::source_location::current());
+	bool check_registry(const registry& psf, std::source_location src_loc = std::source_location::current());
 
 	// Assign new entry
 	inline void assign(registry& psf, std::string_view key, entry&& _entry)

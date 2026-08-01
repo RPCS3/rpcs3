@@ -679,7 +679,7 @@ u128 GetEdatRifKeyFromRapFile(const fs::file& rap_file)
 	return rifkey;
 }
 
-bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& input_file_name, const u8* custom_klic, NPD_HEADER* npd_out)
+bool VerifyEDATHeaderWithKLicense(const fs::file& input, std::string_view input_file_name, const u8* custom_klic, NPD_HEADER* npd_out)
 {
 	// Setup NPD and EDAT/SDAT structs.
 	NPD_HEADER NPD;
@@ -702,7 +702,7 @@ bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& inpu
 
 	// Perform header validation (EDAT only).
 	char real_file_name[CRYPTO_MAX_PATH]{};
-	extract_file_name(input_file_name.c_str(), real_file_name);
+	extract_file_name(input_file_name, real_file_name);
 	if (!validate_npd_hashes(real_file_name, custom_klic, &NPD, &EDAT, false))
 	{
 		edat_log.error("NPD hash validation failed!");
@@ -810,7 +810,7 @@ bool EDATADecrypter::ReadHeader()
 	{
 		// extract key from RIF
 		char real_file_name[CRYPTO_MAX_PATH]{};
-		extract_file_name(m_file_name.c_str(), real_file_name);
+		extract_file_name(m_file_name, real_file_name);
 
 		if (!validate_npd_hashes(real_file_name, reinterpret_cast<const u8*>(&dec_key), &npdHeader, &edatHeader, false))
 		{

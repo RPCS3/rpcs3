@@ -7354,7 +7354,7 @@ ppu_interpreter_rt_base::ppu_interpreter_rt_base() noexcept
 		selected += set_sat;
 	if (g_cfg.core.ppu_use_nj_bit)
 		selected += use_nj + fix_nj;
-	if (g_cfg.core.ppu_llvm_nj_fixup)
+	if (!g_cfg.core.set_daz_and_ftz)
 		selected += fix_nj;
 	if (g_cfg.core.ppu_set_vnan)
 		selected += set_vnan + fix_vnan;

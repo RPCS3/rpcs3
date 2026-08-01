@@ -9,7 +9,7 @@ The world's first free and open-source PlayStation 3 emulator/debugger, written 
 You can find some basic information on our [**website**](https://rpcs3.net/). Game info is being populated on the [**Wiki**](https://wiki.rpcs3.net/).
 For discussion about this emulator, PS3 emulation, and game compatibility reports, please visit our [**forums**](https://forums.rpcs3.net) and our [**Discord server**](https://discord.gg/RPCS3).
 
-[**Support Lead Developers Nekotekina and kd-11 on Patreon**](https://www.patreon.com/Nekotekina)
+[**Support the Lead Developers on Patreon**](https://rpcs3.net/patreon)
 
 ## Contributing
 

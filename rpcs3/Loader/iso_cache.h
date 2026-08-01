@@ -23,10 +23,10 @@ struct iso_metadata_cache_entry
 namespace iso_cache
 {
 	// Returns false if no valid cache entry exists or mtime has changed.
-	bool load(const std::string& iso_path, const std::string& cache_key, iso_metadata_cache_entry& out_entry);
+	bool load(const std::string& iso_path, std::string_view cache_key, iso_metadata_cache_entry& out_entry);
 
 	// Persists a populated cache entry to disk.
-	void save(const std::string& iso_path, const std::string& cache_key, const iso_metadata_cache_entry& entry);
+	void save(std::string_view iso_path, std::string_view cache_key, const iso_metadata_cache_entry& entry);
 
 	bool load_index(const std::string& iso_path, std::vector<std::string>& out_subdirs);
 	void save_index(const std::string& iso_path, const std::vector<std::string>& subdirs);

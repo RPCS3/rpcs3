@@ -71,6 +71,8 @@ namespace utils
 #endif
 	std::string get_cpu_brand();
 
+	std::string_view get_architecture();
+
 	std::string get_system_info();
 
 	std::string get_firmware_version();
@@ -87,7 +89,9 @@ namespace utils
 	};
 	OS_version get_OS_version();
 
-	std::string get_OS_version_string();
+	std::string get_OS_version_string(bool simple = false);
+
+	std::string get_user_agent();
 
 	int get_maxfiles();
 

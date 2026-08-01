@@ -207,9 +207,7 @@ static void ghc_cpp_trampoline(u64 fn_target, native_asm& c, auto& args)
 
 DECLARE(spu_runtime::tr_dispatch) = []
 {
-#ifdef __APPLE__
-	pthread_jit_write_protect_np(false);
-#endif
+	jit_write_guard jit_guard;
 #if defined(ARCH_X64)
 	// Generate a special trampoline to spu_recompiler_base::dispatch with pause instruction
 	u8* const trptr = jit_runtime::alloc(32, 16);
@@ -237,6 +235,7 @@ DECLARE(spu_runtime::tr_dispatch) = []
 
 DECLARE(spu_runtime::tr_branch) = []
 {
+	jit_write_guard jit_guard;
 #if defined(ARCH_X64)
 	// Generate a trampoline to spu_recompiler_base::branch
 	u8* const trptr = jit_runtime::alloc(32, 16);
@@ -262,6 +261,7 @@ DECLARE(spu_runtime::tr_branch) = []
 
 DECLARE(spu_runtime::tr_interpreter) = []
 {
+	jit_write_guard jit_guard;
 #if defined(ARCH_X64)
 	u8* const trptr = jit_runtime::alloc(32, 16);
 	u8* raw = move_args_ghc_to_native(trptr);
@@ -283,6 +283,8 @@ DECLARE(spu_runtime::tr_interpreter) = []
 
 DECLARE(spu_runtime::g_dispatcher) = []
 {
+	jit_write_guard jit_guard;
+
 	// Allocate 2^20 positions in data area
 	const auto ptr = reinterpret_cast<std::remove_const_t<decltype(spu_runtime::g_dispatcher)>>(jit_runtime::alloc(sizeof(*g_dispatcher), 64, false));
 
@@ -296,6 +298,8 @@ DECLARE(spu_runtime::g_dispatcher) = []
 
 DECLARE(spu_runtime::tr_all) = []
 {
+	jit_write_guard jit_guard;
+
 #if defined(ARCH_X64)
 	u8* const trptr = jit_runtime::alloc(32, 16);
 	u8* raw = trptr;
@@ -646,17 +650,31 @@ spu_cache::~spu_cache()
 
 extern void utilize_spu_data_segment(u32 vaddr, const void* ls_data_vaddr, u32 size)
 {
-	if (vaddr % 4)
+	if (u32 rem = vaddr % 4)
 	{
-		return;
+		// The remainder that it needs to be aligned up to the next DWORD
+		rem = 4 - rem;
+
+		if (size < rem)
+		{
+			return;
+		}
+
+		vaddr += rem;
+		ls_data_vaddr = reinterpret_cast<const char*>(ls_data_vaddr) + rem;
+		size -= rem;
 	}
 
 	size &= -4;
 
-	if (!size || vaddr + size > SPU_LS_SIZE)
+	if (!size || vaddr >= SPU_LS_SIZE)
 	{
 		return;
 	}
+
+	// Let SPU block search mistakes pass through
+	// SPU code mining is too important
+	size = std::min<u32>(SPU_LS_SIZE - vaddr, size);
 
 	if (!g_cfg.core.llvm_precompilation)
 	{
@@ -820,6 +838,8 @@ void spu_cache::add(const spu_program& func)
 
 void spu_cache::initialize(bool build_existing_cache)
 {
+	jit_write_guard jit_guard;
+
 	spu_runtime::g_interpreter = spu_runtime::g_gateway;
 
 	if (g_cfg.core.spu_decoder == spu_decoder_type::_static || g_cfg.core.spu_decoder == spu_decoder_type::dynamic)
@@ -950,15 +970,7 @@ void spu_cache::initialize(bool build_existing_cache)
 		// every exit path (return, exception, etc.). Leaving a worker
 		// in write mode at teardown can leave per-thread state
 		// inconsistent on AArch64.
-		pthread_jit_write_protect_np(false);
-
-		struct jit_write_guard
-		{
-			~jit_write_guard()
-			{
-				pthread_jit_write_protect_np(true);
-			}
-		} _jit_guard;
+		jit_write_guard jit_guard;
 #endif
 		// Set low priority
 		thread_ctrl::scoped_priority low_prio(-1);
@@ -2193,6 +2205,9 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 		return;
 	}
 
+#if defined(__APPLE__)
+	pthread_jit_write_protect_np(false);
+#endif
 	auto program = spu.jit->analyse(spu._ptr<u32>(0), spu.pc);
 #ifdef ARCH_ARM64
 	const auto func = compile_spu_llvm_with_retry(spu.jit, program);
@@ -2364,11 +2379,22 @@ std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u
 	// TODO: Does not detect jumptables or fixed-addr indirect calls
 	const v128 brasl_mask = is_known_addr ? v128::from32p(0x62u << 23) : v128::from32p(umax);
 
-	for (u32 i = utils::align<u32>(base_addr, 0x10); i < std::min<u32>(base_addr + ::size32(ls), 0x3FFF0); i += 0x10)
+	for (u32 i = base_addr, end_ls = std::min<u32>(base_addr + ::size32(ls), SPU_LS_SIZE); i < end_ls; i = utils::align<u32>(i + 1, 0x10))
 	{
 		// Search for BRSL LR and BRASL LR or BR
 		// TODO: BISL
-		const v128 inst = read_from_ptr<be_t<v128>>(ls.data(), i - base_addr);
+		be_t<v128> inst_be{};
+
+		if (end_ls - i < 16)
+		{
+			std::memcpy(&inst_be, ls.data() + (i - base_addr), end_ls - i);
+		}
+		else
+		{
+			inst_be = read_from_ptr<be_t<v128>>(ls, i - base_addr);
+		}
+
+		const v128 inst = inst_be;
 		const v128 cleared_i16 = gv_and32(inst, v128::from32p(std::rotl<u32>(~0xffff, 7)));
 		const v128 eq_brsl = gv_eq32(cleared_i16, v128::from32p(0x66u << 23));
 		const v128 eq_brasl = gv_eq32(cleared_i16, brasl_mask);
@@ -3973,11 +3999,6 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		it++;
 	}
 
-	if (out_target_list)
-	{
-		out_target_list->insert(m_targets.begin(), m_targets.end());
-	}
-
 	// Remove unnecessary target lists
 	for (auto it = m_targets.begin(); it != m_targets.end();)
 	{
@@ -3991,7 +4012,13 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 		for (auto it2 = it->second.begin(); it2 != it->second.end();)
 		{
-			if (*it2 < lsa || *it2 >= limit)
+			// Drop targets out of range, OR pointing at a block that cleanup
+			// removed above (m_block_info cleared) - the dead in-range edges
+			// that otherwise leave dangling targets in m_bbs. Pruning them here
+			// keeps m_targets self-consistent. The pre-existing get_block_targets
+			// / get_block_preds guards are retained, plus a belt-and-suspenders
+			// initiate_patterns guard added below - all defense in depth.
+			if (*it2 < lsa || *it2 >= limit || !m_block_info[*it2 / 4])
 			{
 				it2 = it->second.erase(it2);
 				removed = true;
@@ -4008,6 +4035,14 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 		std::sort(it->second.begin(), it->second.end());
 		it++;
+	}
+
+	// Export the now-pruned, self-consistent target map AFTER the prune above,
+	// so callers don't see the dead in-range edges (or stale out-of-range keys)
+	// we just removed from m_targets.
+	if (out_target_list)
+	{
+		out_target_list->insert(m_targets.begin(), m_targets.end());
 	}
 
 	// Fill holes which contain only NOP and LNOP instructions (TODO: compile)
@@ -4564,7 +4599,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		for (u32 ia = addr; ia < addr + bb.size * 4; ia += 4)
 		{
 			// Decode instruction again
-			op.opcode = std::bit_cast<be_t<u32>>(result.data[(ia - lsa) / 41]);
+			op.opcode = std::bit_cast<be_t<u32>>(result.data[(ia - lsa) / 4]);
 			last_inst = g_spu_itype.decode(op.opcode);
 
 			// Propagate some constants
@@ -5257,6 +5292,14 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 
 	const auto initiate_patterns = [&](block_reg_state_iterator& block_state_it, u32 bpc, bool is_multi_block)
 	{
+		// Defense in depth: cleanup now prunes dead in-range edges from m_targets,
+		// but still skip a bpc whose block was removed (matches get_block_targets)
+		// so no consumer can ever deref a stale target (e.g. a stop-trap return).
+		if (!m_block_info[bpc / 4] || !m_bbs.count(bpc))
+		{
+			return;
+		}
+
 		// Initiate patterns (that are initiated on block start)
 		const auto& bb_body = ::at32(m_bbs, bpc);
 
@@ -5319,7 +5362,19 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		{
 			targets_count = 0;
 
-			const u32 cond_next = block_pc + ::at32(m_bbs, block_pc).size * 4;
+			// Belt-and-suspenders (PR #18935): block_pc is the previous block's
+			// fall-through (cond_next), a live m_bbs key only because the m_targets
+			// prune keeps dead edges out of block.targets. If that ever regressed,
+			// the ::at32 below would abort with the same "Range check failed" as
+			// the bug we fixed - bail cleanly instead of dereferencing a non-block.
+			const auto block_it = m_bbs.find(block_pc);
+			if (block_it == m_bbs.end() || !m_block_info[block_pc / 4])
+			{
+				invalid = true;
+				break;
+			}
+
+			const u32 cond_next = block_pc + block_it->second.size * 4;
 			valid = false;
 
 			bool is_end = false;
@@ -8721,7 +8776,7 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 			// This difference cannot be known at analyzer time but from observing callers.
 			static constexpr std::initializer_list<std::string_view> allowed_patterns =
 			{
-				"620oYSe8uQqq9eTkhWfMqoEXX0us"sv, // CellSpurs JobChain acquire pattern
+				"disabled_620oYSe8uQqq9eTkhWfMqoEXX0us"sv, // CellSpurs JobChain acquire pattern (disabled for now)
 			};
 
 			allow_pattern = std::any_of(allowed_patterns.begin(), allowed_patterns.end(), FN(pattern_hash == x));
@@ -8771,6 +8826,11 @@ spu_program spu_recompiler_base::analyse(const be_t<u32>* ls, u32 entry_point, s
 		if (inst_attr attr = m_inst_attrs[(loop_pc - entry_point) / 4]; attr == inst_attr::none)
 		{
 			stats.single++;
+
+			if (true)
+			{
+				continue;
+			}
 
 			add_pattern(inst_attr::reduced_loop, loop_pc - result.entry_point, 0, std::make_shared<reduced_loop_t>(pattern));
 
@@ -9932,6 +9992,11 @@ std::array<reg_state_t, s_reg_max>& block_reg_info::evaluate_start_state(const s
 
 void spu_recompiler_base::add_pattern(inst_attr attr, u32 start, u64 info, std::shared_ptr<void> info_ptr)
 {
+	if (m_inst_attrs[start / 4] != inst_attr::none)
+	{
+		fmt::throw_exception("SPU Pattern is occupied! (start=0x%x)", start);
+	}
+
 	m_patterns[start] = pattern_info{info, info_ptr};
 	m_inst_attrs[start / 4] = attr;
 }

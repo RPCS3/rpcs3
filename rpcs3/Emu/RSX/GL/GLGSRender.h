@@ -6,6 +6,7 @@
 #include "GLOverlays.h"
 #include "GLShaderInterpreter.h"
 #include "Emu/RSX/rsx_cache.h"
+#include "util/asm.hpp"
 
 #include <optional>
 #include <unordered_map>
@@ -45,16 +46,16 @@ namespace gl
 		u32  address_to_flush = 0;
 		gl::texture_cache::thrashed_set section_data;
 
-		volatile bool processed = false;
+		atomic_t<bool> processed = false;
 		volatile bool result = false;
-		volatile bool received = false;
+		atomic_t<bool> received = false;
 
 		void producer_wait()
 		{
-			while (!processed)
+			utils::spin_wait(processed, [](auto v)
 			{
-				std::this_thread::yield();
-			}
+				return v;
+			});
 
 			received = true;
 		}
@@ -183,7 +184,6 @@ private:
 
 	void load_texture_env();
 	void bind_texture_env();
-	void bind_interpreter_texture_env();
 
 	gl::texture* get_present_source(gl::present_surface_info* info, const rsx::avconf& avconfig);
 

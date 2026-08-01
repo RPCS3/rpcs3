@@ -245,6 +245,26 @@ static FORCE_INLINE bool cmp_rdata_avx(const __m256i* lhs, const __m256i* rhs)
 }
 #endif
 
+// Insane idea to accelerate comparisons on Neon with a fixed length
+// Common ARM chips like the a78 and a715 can Perform 3 128b loads/clock
+// But only execute 2 128b instructions on the ALU per clock
+// To consume data any faster, we need to use ALU instructions that take 3 inputs
+// Idea: compare data, filling each lane with either -1 or 0
+// Then multiply each pair of comparisons together, resulting in 1 if both pairs were -1
+// Accummulate those results, and compare the accumulated value to the expected count
+// Benchmarks showed this to be faster even on arm machines that aren't capable of more loads than ALU operations
+// Tested on Tensor G1, Snapdragon 8 gen 2, and the Snapdragon 8 Elite gen 5
+#if defined(ARCH_ARM64)
+static FORCE_INLINE int16x8_t cmp16_pair_accum_arm64(
+	int16x8_t acc, const v128& lhs0, const v128& rhs0, const v128& lhs1, const v128& rhs1)
+{
+	const int16x8_t eq0 = vreinterpretq_s16_u16(vceqq_u16(static_cast<uint16x8_t>(lhs0), static_cast<uint16x8_t>(rhs0)));
+	const int16x8_t eq1 = vreinterpretq_s16_u16(vceqq_u16(static_cast<uint16x8_t>(lhs1), static_cast<uint16x8_t>(rhs1)));
+	return vmlaq_s16(acc, eq0, eq1);
+}
+
+#endif
+
 #ifdef _MSC_VER
 __forceinline
 #endif
@@ -261,12 +281,22 @@ extern bool cmp_rdata(const spu_rdata_t& _lhs, const spu_rdata_t& _rhs)
 
 	const auto lhs = reinterpret_cast<const v128*>(_lhs);
 	const auto rhs = reinterpret_cast<const v128*>(_rhs);
+#if defined(ARCH_ARM64)
+	int16x8_t hits = vdupq_n_s16(0);
+	hits = cmp16_pair_accum_arm64(hits, lhs[0], rhs[0], lhs[1], rhs[1]);
+	hits = cmp16_pair_accum_arm64(hits, lhs[2], rhs[2], lhs[3], rhs[3]);
+	hits = cmp16_pair_accum_arm64(hits, lhs[4], rhs[4], lhs[5], rhs[5]);
+	hits = cmp16_pair_accum_arm64(hits, lhs[6], rhs[6], lhs[7], rhs[7]);
+
+	return vaddvq_s16(hits) == 32;
+#else
 	const v128 a = (lhs[0] ^ rhs[0]) | (lhs[1] ^ rhs[1]);
 	const v128 c = (lhs[4] ^ rhs[4]) | (lhs[5] ^ rhs[5]);
 	const v128 b = (lhs[2] ^ rhs[2]) | (lhs[3] ^ rhs[3]);
 	const v128 d = (lhs[6] ^ rhs[6]) | (lhs[7] ^ rhs[7]);
 	const v128 r = (a | b) | (c | d);
 	return gv_testz(r);
+#endif
 }
 
 #if defined(ARCH_X64)
@@ -1703,21 +1733,48 @@ void spu_thread::cleanup()
 	static_cast<named_thread<spu_thread>&>(*this) = thread_state::finished;
 }
 
+enum : s64
+{
+	SIGNED_LS_SIZE = SPU_LS_SIZE
+};
+
 spu_thread::~spu_thread()
 {
 	// Unmap LS and its mirrors
-	shm->unmap(ls + SPU_LS_SIZE);
-	shm->unmap(ls);
-	shm->unmap(ls - SPU_LS_SIZE);
-	utils::memory_release(ls - SPU_LS_SIZE * 2, SPU_LS_SIZE * 5);
+	for (s64 ls_offs = 0 - SIGNED_LS_SIZE * 2; ls_offs <= SIGNED_LS_SIZE * 2; ls_offs += SIGNED_LS_SIZE)
+	{
+		shm->unmap(ls + ls_offs);
+	}
+
+	utils::memory_release(ls - SIGNED_LS_SIZE * 3, SIGNED_LS_SIZE * 7);
 }
 
 u8* spu_thread::map_ls(utils::shm& shm, void* ptr)
 {
+	const auto ls = ptr ? static_cast<u8*>(ptr) : static_cast<u8*>(ensure(utils::memory_reserve(SIGNED_LS_SIZE * 7, nullptr, true))) + SIGNED_LS_SIZE * 3;
+
 	vm::writer_lock mlock;
 
-	const auto ls = ptr ? static_cast<u8*>(ptr) : static_cast<u8*>(ensure(utils::memory_reserve(SPU_LS_SIZE * 5, nullptr, true))) + SPU_LS_SIZE * 2;
-	ensure(shm.map_critical(ls - SPU_LS_SIZE).first && shm.map_critical(ls).first && shm.map_critical(ls + SPU_LS_SIZE).first);
+	for (s64 ls_offs = 0 - SIGNED_LS_SIZE * 2; ls_offs <= SIGNED_LS_SIZE * 2; ls_offs += SIGNED_LS_SIZE)
+	{
+		const auto [ptr_ret, str] = shm.map_critical(ls + ls_offs);
+
+		if (!ptr_ret)
+		{
+			fmt::throw_exception("spu_thread::map_ls() failed: map_critical returned error (error=%s) [ls_offs=0x%x]", str, ls_offs);
+		}
+
+		if (ptr_ret != ls + ls_offs)
+		{
+			fmt::throw_exception("spu_thread::map_ls() failed: map_critical returned a different address: 0x%llx vs 0x%llx (error=%s) [ls_offs=0x%x]", ptr_ret, ls + ls_offs, str, ls_offs);
+		}
+
+		if (!str.empty())
+		{
+			fmt::throw_exception("spu_thread::map_ls() failed: map_critical returned unexpected error (error=%s) [ls_offs=0x%x]", str, ls_offs);
+		}
+	}
+
 	return ls;
 }
 
@@ -1762,7 +1819,7 @@ spu_thread::spu_thread(lv2_spu_group* group, u32 index, std::string_view name, u
 	, index(index)
 	, thread_type(group ? spu_type::threaded : is_isolated ? spu_type::isolated : spu_type::raw)
 	, shm(std::make_shared<utils::shm>(SPU_LS_SIZE))
-	, ls(static_cast<u8*>(utils::memory_reserve(SPU_LS_SIZE * 5, nullptr, true)) + SPU_LS_SIZE * 2)
+	, ls(static_cast<u8*>(utils::memory_reserve(SPU_LS_SIZE * 7, nullptr, true)) + SPU_LS_SIZE * 3)
 	, option(option)
 	, lv2_id(lv2_id)
 	, spu_tname(make_single<std::string>(name))
@@ -7205,7 +7262,7 @@ s64 spu_channel::pop_wait(cpu_thread& spu, bool pop)
 	while (true)
 	{
 		const usz is_le = std::endian::native == std::endian::little ? 1 : 0;
-		thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&data)[is_le], read_from_ptr<u32>(reinterpret_cast<char*>(&old), is_le * 4));
+		thread_ctrl::wait_on(utils::bless<atomic_t<u32>>(&data)[is_le], read_from_ptr_unsafe<u32>(reinterpret_cast<char*>(&old), is_le * 4));
 
 		old = data;
 

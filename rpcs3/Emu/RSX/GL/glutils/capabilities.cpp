@@ -93,6 +93,8 @@ namespace gl
 
 		CHECK_EXTENSION_SUPPORT(EXT_texture_compression_s3tc);
 
+		CHECK_EXTENSION_SUPPORT(ARB_shader_storage_buffer_object);
+
 #undef CHECK_EXTENSION_SUPPORT
 
 		// Set GLSL version
@@ -164,5 +166,15 @@ namespace gl
 #endif
 
 		initialized = true;
+	}
+
+	const std::string get_device_name()
+	{
+		if (const char* renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER)))
+		{
+			return renderer;
+		}
+
+		return "OpenGL GPU";
 	}
 }

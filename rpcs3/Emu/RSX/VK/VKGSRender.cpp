@@ -640,6 +640,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	}
 
 	backend_config.supports_multidraw = true;
+	backend_config.supports_hw_instanced_rendering = true;
 
 	// NVIDIA has broken attribute interpolation
 	backend_config.supports_normalized_barycentrics = (

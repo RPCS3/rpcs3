@@ -424,6 +424,9 @@ void game_list_table::populate(
 		}
 	}
 	Q_EMIT itemSelectionChanged();
+
+	// Prevent playing unwanted movie
+	stop_movie();
 }
 
 void game_list_table::repaint_icons(std::vector<game_info>& game_data, const QColor& icon_color, const QSize& icon_size, qreal device_pixel_ratio)

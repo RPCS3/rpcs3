@@ -132,7 +132,8 @@ namespace gl
 
 		// Update texture bindings based on the incoming descriptor structures
 		void bind_fragment_texture(int i, handle64_t handle, const rsx::sampled_image_descriptor_base& descriptor);
-		void flush_texture_bindings(glsl::program* program = nullptr);
+		void flush_fragment_texture_bindings(glsl::program* program = nullptr);
+		void flush_vertex_texture_bindings(glsl::program* program = nullptr);
 
 		glsl::program* get(const interpreter::program_metadata& fp_metadata, u32 vp_ctrl, u32 fp_ctrl);
 		bool is_interpreter(const glsl::program* program) const;

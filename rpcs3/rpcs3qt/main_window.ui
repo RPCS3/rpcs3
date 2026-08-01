@@ -315,6 +315,20 @@
      <addaction name="actionManage_Dimensions_ToyPad"/>
      <addaction name="actionManage_KamenRider_RideGate"/>
     </widget>
+    <widget class="QMenu" name="menuDatabases">
+     <property name="title">
+      <string>Databases</string>
+     </property>
+     <addaction name="downloadIntegrityDbAct"/>
+     <addaction name="downloadCompatDbAct"/>
+     <addaction name="downloadConfigDbAct"/>
+    </widget>
+    <widget class="QMenu" name="menuPackages">
+     <property name="title">
+      <string>Packages/Raps/Edats</string>
+     </property>
+     <addaction name="checkPackageIntegrityAct"/>
+    </widget>
     <addaction name="confVFSDialogAct"/>
     <addaction name="separator"/>
     <addaction name="actionManage_Users"/>
@@ -328,6 +342,8 @@
     <addaction name="separator"/>
     <addaction name="actionManage_Cheats"/>
     <addaction name="actionManage_Game_Patches"/>
+    <addaction name="menuDatabases"/>
+    <addaction name="menuPackages"/>
     <addaction name="separator"/>
     <addaction name="actionManage_Screenshots"/>
    </widget>
@@ -349,6 +365,7 @@
     <addaction name="separator"/>
     <addaction name="toolsSystemCommandsAct"/>
     <addaction name="toolsmemory_viewerAct"/>
+    <addaction name="toolsDumpGuestMemoryAct"/>
     <addaction name="toolskernel_explorerAct"/>
     <addaction name="toolsRsxDebuggerAct"/>
     <addaction name="separator"/>
@@ -412,6 +429,8 @@
     <addaction name="separator"/>
     <addaction name="showGameListAct"/>
     <addaction name="showHiddenEntriesAct"/>
+    <addaction name="showBrokenEntriesAct"/>
+    <addaction name="showCompletedEntriesAct"/>
     <addaction name="separator"/>
     <addaction name="menuGame_List_View"/>
     <addaction name="menuGame_List_Grid_Mode"/>
@@ -743,6 +762,17 @@
     <string>Memory Viewer</string>
    </property>
   </action>
+  <action name="toolsDumpGuestMemoryAct">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Dump Guest Memory</string>
+   </property>
+   <property name="toolTip">
+    <string>Dump all allocated PS3 guest memory and live SPU local stores</string>
+   </property>
+  </action>
   <action name="toolsRsxDebuggerAct">
    <property name="enabled">
     <bool>false</bool>
@@ -848,6 +878,26 @@
   <action name="updateAct">
    <property name="text">
     <string>Check for Updates</string>
+   </property>
+  </action>
+  <action name="downloadIntegrityDbAct">
+   <property name="text">
+    <string>Download Integrity Database</string>
+   </property>
+  </action>
+  <action name="downloadCompatDbAct">
+   <property name="text">
+    <string>Download Compatibility Database</string>
+   </property>
+  </action>
+  <action name="downloadConfigDbAct">
+   <property name="text">
+    <string>Download Config Database</string>
+   </property>
+  </action>
+  <action name="checkPackageIntegrityAct">
+   <property name="text">
+    <string>Check Integrity</string>
    </property>
   </action>
   <action name="welcomeAct">
@@ -1145,6 +1195,21 @@
    </property>
    <property name="text">
     <string>Show Hidden Entries</string>
+   </property>
+  </action>
+  <action name="showBrokenEntriesAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Broken Entries</string>
+   </property>
+  </action> <action name="showCompletedEntriesAct">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show Completed Entries</string>
    </property>
   </action>
   <action name="actionopen_rsx_capture">

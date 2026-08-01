@@ -24,6 +24,7 @@ void fmt_class_string<shortcut>::format(std::string& out, u64 arg)
 		case shortcut::gw_screenshot: return "gw_screenshot";
 		case shortcut::gw_toggle_recording: return "gw_toggle_recording";
 		case shortcut::gw_pause_play: return "gw_pause_play";
+		case shortcut::gw_stop: return "gw_stop";
 		case shortcut::gw_savestate: return "gw_savestate";
 		case shortcut::gw_savestate_1: return "gw_savestate1";
 		case shortcut::gw_savestate_2: return "gw_savestate2";
@@ -63,7 +64,7 @@ void fmt_class_string<shortcut_handler_id>::format(std::string& out, u64 arg)
 shortcut_settings::shortcut_settings()
 	: shortcut_map({
 		{ shortcut::mw_start, shortcut_info{ "main_window_start", tr("Start"), "Ctrl+E", shortcut_handler_id::main_window, false } },
-		{ shortcut::mw_stop, shortcut_info{ "main_window_stop", tr("Stop"), "Ctrl+S", shortcut_handler_id::main_window, false } },
+		{ shortcut::mw_stop, shortcut_info{ "main_window_stop", tr("Stop/Exit Game"), "Ctrl+S", shortcut_handler_id::main_window, false } },
 		{ shortcut::mw_pause, shortcut_info{ "main_window_pause", tr("Pause"), "Ctrl+P", shortcut_handler_id::main_window, false } },
 		{ shortcut::mw_restart, shortcut_info{ "main_window_restart", tr("Restart"), "Ctrl+R", shortcut_handler_id::main_window, false } },
 		{ shortcut::mw_toggle_fullscreen, shortcut_info{ "main_window_toggle_fullscreen", tr("Toggle Fullscreen"), "Alt+Return", shortcut_handler_id::main_window, false } },
@@ -76,11 +77,12 @@ shortcut_settings::shortcut_settings()
 		{ shortcut::gw_toggle_recording, shortcut_info{ "game_window_toggle_recording", tr("Start/Stop Recording"), "F11", shortcut_handler_id::game_window, false } },
 		{ shortcut::gw_screenshot, shortcut_info{ "game_window_screenshot", tr("Screenshot"), "F12", shortcut_handler_id::game_window, false } },
 		{ shortcut::gw_pause_play, shortcut_info{ "game_window_pause_play", tr("Pause/Play"), "Ctrl+P", shortcut_handler_id::game_window, false } },
+		{ shortcut::gw_stop, shortcut_info{ "game_window_stop", tr("Stop/Exit Game"), "", shortcut_handler_id::game_window, false } },
 		{ shortcut::gw_savestate, shortcut_info{ "game_window_savestate", tr("Savestate"), "Ctrl+S", shortcut_handler_id::game_window, false } },
-		{ shortcut::gw_savestate_1, shortcut_info{ "game_window_savestate_1", tr("Savestate"), "Alt+Ctrl+1", shortcut_handler_id::game_window, false } },
-		{ shortcut::gw_savestate_2, shortcut_info{ "game_window_savestate_2", tr("Savestate"), "Alt+Ctrl+2", shortcut_handler_id::game_window, false } },
-		{ shortcut::gw_savestate_3, shortcut_info{ "game_window_savestate_3", tr("Savestate"), "Alt+Ctrl+3", shortcut_handler_id::game_window, false } },
-		{ shortcut::gw_savestate_4, shortcut_info{ "game_window_savestate_4", tr("Savestate"), "Alt+Ctrl+4", shortcut_handler_id::game_window, false } },
+		{ shortcut::gw_savestate_1, shortcut_info{ "game_window_savestate_1", tr("Savestate 1"), "Alt+Ctrl+1", shortcut_handler_id::game_window, false } },
+		{ shortcut::gw_savestate_2, shortcut_info{ "game_window_savestate_2", tr("Savestate 2"), "Alt+Ctrl+2", shortcut_handler_id::game_window, false } },
+		{ shortcut::gw_savestate_3, shortcut_info{ "game_window_savestate_3", tr("Savestate 3"), "Alt+Ctrl+3", shortcut_handler_id::game_window, false } },
+		{ shortcut::gw_savestate_4, shortcut_info{ "game_window_savestate_4", tr("Savestate 4"), "Alt+Ctrl+4", shortcut_handler_id::game_window, false } },
 		{ shortcut::gw_restart, shortcut_info{ "game_window_restart", tr("Restart"), "Ctrl+R", shortcut_handler_id::game_window, false } },
 		{ shortcut::gw_rsx_capture, shortcut_info{ "game_window_rsx_capture", tr("RSX Capture"), "Alt+C", shortcut_handler_id::game_window, false } },
 		{ shortcut::gw_frame_limit, shortcut_info{ "game_window_frame_limit", tr("Toggle Framelimit"), "Ctrl+F10", shortcut_handler_id::game_window, false } },

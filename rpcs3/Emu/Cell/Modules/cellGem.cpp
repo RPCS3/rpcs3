@@ -1973,12 +1973,12 @@ static void ds3_input_to_pad(const u32 gem_num, be_t<u16>& digital_buttons, be_t
 		return;
 	}
 
-	const auto handle_input = [&](gem_btn btn, pad_button /*pad_btn*/, u16 value, bool pressed, bool& /*abort*/)
+	const auto handle_input = [&](const emulated_pad_config<gem_btn>::input_value& value, bool& /*abort*/)
 	{
-		if (!pressed)
+		if (!value.pressed)
 			return;
 
-		switch (btn)
+		switch (value.btn)
 		{
 		case gem_btn::start:
 			digital_buttons |= CELL_GEM_CTRL_START;
@@ -2003,7 +2003,7 @@ static void ds3_input_to_pad(const u32 gem_num, be_t<u16>& digital_buttons, be_t
 			break;
 		case gem_btn::t:
 			digital_buttons |= CELL_GEM_CTRL_T;
-			analog_t = std::max<u16>(analog_t, value);
+			analog_t = std::max<u16>(analog_t, value.value);
 			break;
 		default:
 			break;
@@ -2029,15 +2029,15 @@ static inline void ds3_get_stick_values(u32 gem_num, const std::shared_ptr<Pad>&
 	y_pos = 0;
 
 	const auto& cfg = ::at32(g_cfg_gem_fake.players, gem_num);
-	cfg->handle_input(pad, true, [&](gem_btn btn, pad_button /*pad_btn*/, u16 value, bool pressed, bool& /*abort*/)
+	cfg->handle_input(pad, true, [&](const auto& value, bool& /*abort*/)
 	{
-		if (!pressed)
+		if (!value.pressed)
 			return;
 
-		switch (btn)
+		switch (value.btn)
 		{
-		case gem_btn::x_axis: x_pos = value; break;
-		case gem_btn::y_axis: y_pos = value; break;
+		case gem_btn::x_axis: x_pos = value.value; break;
+		case gem_btn::y_axis: y_pos = value.value; break;
 		default: break;
 		}
 	});
@@ -2180,9 +2180,9 @@ static u32 ext_device_id(gem_ext_id id)
 }
 
 template <bool has_combo, bool is_combo>
-static void input_to_ext(u32 external_device_id, CellGemExtPortData& ext, std::set<pad_button>& combos, gem_btn btn, pad_button pad_btn, u16 value, bool pressed)
+static void input_to_ext(u32 external_device_id, CellGemExtPortData& ext, std::set<pad_button>& combos, const emulated_pad_config<gem_btn>::input_value& value)
 {
-	if (!pressed)
+	if (!value.pressed)
 		return;
 
 	const auto set_firing_mode = [&ext](gem_btn btn)
@@ -2196,18 +2196,18 @@ static void input_to_ext(u32 external_device_id, CellGemExtPortData& ext, std::s
 	{
 		if (external_device_id == SHARP_SHOOTER_DEVICE_ID)
 		{
-			switch (btn)
+			switch (value.btn)
 			{
 			case gem_btn::combo_sharpshooter_firing_mode_1:
 			case gem_btn::combo_sharpshooter_firing_mode_2:
 			case gem_btn::combo_sharpshooter_firing_mode_3:
-				set_firing_mode(btn);
-				combos.insert(pad_btn);
+				set_firing_mode(value.btn);
+				combos.insert(value.pad_btn);
 				break;
 			case gem_btn::combo_sharpshooter_trigger:
 			case gem_btn::combo_sharpshooter_reload:
-				ext.custom[0] |= ::at32(ext_btn_map, btn);
-				combos.insert(pad_btn);
+				ext.custom[0] |= ::at32(ext_btn_map, value.btn);
+				combos.insert(value.pad_btn);
 				break;
 			default:
 				break;
@@ -2215,30 +2215,30 @@ static void input_to_ext(u32 external_device_id, CellGemExtPortData& ext, std::s
 		}
 		else if (external_device_id == RACING_WHEEL_DEVICE_ID)
 		{
-			switch (btn)
+			switch (value.btn)
 			{
 			case gem_btn::combo_racing_wheel_throttle:
 			case gem_btn::combo_racing_wheel_l2:
 			case gem_btn::combo_racing_wheel_r2:
-				ext.custom[::at32(ext_btn_indices, btn)] = static_cast<u8>(value);
-				combos.insert(pad_btn);
+				ext.custom[::at32(ext_btn_indices, value.btn)] = static_cast<u8>(value.value);
+				combos.insert(value.pad_btn);
 				break;
 			case gem_btn::combo_racing_wheel_paddle_l:
 			case gem_btn::combo_racing_wheel_paddle_r:
-				ext.custom[::at32(ext_btn_indices, btn)] |= ::at32(ext_btn_map, btn);
-				combos.insert(pad_btn);
+				ext.custom[::at32(ext_btn_indices, value.btn)] |= ::at32(ext_btn_map, value.btn);
+				combos.insert(value.pad_btn);
 				break;
 			case gem_btn::combo_racing_wheel_d_pad_up:
 			case gem_btn::combo_racing_wheel_d_pad_right:
 			case gem_btn::combo_racing_wheel_d_pad_down:
 			case gem_btn::combo_racing_wheel_d_pad_left:
-				ext.digital1 |= ::at32(ext_btn_map, btn);
-				combos.insert(pad_btn);
+				ext.digital1 |= ::at32(ext_btn_map, value.btn);
+				combos.insert(value.pad_btn);
 				break;
 			case gem_btn::combo_racing_wheel_l1:
 			case gem_btn::combo_racing_wheel_r1:
-				ext.digital2 |= ::at32(ext_btn_map, btn);
-				combos.insert(pad_btn);
+				ext.digital2 |= ::at32(ext_btn_map, value.btn);
+				combos.insert(value.pad_btn);
 				break;
 			default:
 				break;
@@ -2249,7 +2249,7 @@ static void input_to_ext(u32 external_device_id, CellGemExtPortData& ext, std::s
 	{
 		if constexpr (has_combo)
 		{
-			if (combos.contains(pad_btn))
+			if (combos.contains(value.pad_btn))
 			{
 				return;
 			}
@@ -2257,16 +2257,16 @@ static void input_to_ext(u32 external_device_id, CellGemExtPortData& ext, std::s
 
 		if (external_device_id == SHARP_SHOOTER_DEVICE_ID)
 		{
-			switch (btn)
+			switch (value.btn)
 			{
 			case gem_btn::sharpshooter_firing_mode_1:
 			case gem_btn::sharpshooter_firing_mode_2:
 			case gem_btn::sharpshooter_firing_mode_3:
-				set_firing_mode(btn);
+				set_firing_mode(value.btn);
 				break;
 			case gem_btn::sharpshooter_trigger:
 			case gem_btn::sharpshooter_reload:
-				ext.custom[0] |= ::at32(ext_btn_map, btn);
+				ext.custom[0] |= ::at32(ext_btn_map, value.btn);
 				break;
 			default:
 				break;
@@ -2274,26 +2274,26 @@ static void input_to_ext(u32 external_device_id, CellGemExtPortData& ext, std::s
 		}
 		else if (external_device_id == RACING_WHEEL_DEVICE_ID)
 		{
-			switch (btn)
+			switch (value.btn)
 			{
 			case gem_btn::combo_racing_wheel_throttle:
 			case gem_btn::combo_racing_wheel_l2:
 			case gem_btn::combo_racing_wheel_r2:
-				ext.custom[::at32(ext_btn_indices, btn)] = static_cast<u8>(value);
+				ext.custom[::at32(ext_btn_indices, value.btn)] = static_cast<u8>(value.value);
 				break;
 			case gem_btn::combo_racing_wheel_paddle_l:
 			case gem_btn::combo_racing_wheel_paddle_r:
-				ext.custom[::at32(ext_btn_indices, btn)] |= ::at32(ext_btn_map, btn);
+				ext.custom[::at32(ext_btn_indices, value.btn)] |= ::at32(ext_btn_map, value.btn);
 				break;
 			case gem_btn::combo_racing_wheel_d_pad_up:
 			case gem_btn::combo_racing_wheel_d_pad_right:
 			case gem_btn::combo_racing_wheel_d_pad_down:
 			case gem_btn::combo_racing_wheel_d_pad_left:
-				ext.digital1 |= ::at32(ext_btn_map, btn);
+				ext.digital1 |= ::at32(ext_btn_map, value.btn);
 				break;
 			case gem_btn::combo_racing_wheel_l1:
 			case gem_btn::combo_racing_wheel_r1:
-				ext.digital2 |= ::at32(ext_btn_map, btn);
+				ext.digital2 |= ::at32(ext_btn_map, value.btn);
 				break;
 			default:
 				break;
@@ -2370,10 +2370,10 @@ static void fake_input_to_ext(u32 gem_num, gem_config::gem_controller& controlle
 	// Restore firing mode
 	ext.custom[0] = controller.firing_mode;
 
-	cfg->handle_input(pad, true, [&move_data, &ext](gem_btn btn, pad_button pad_btn, u16 value, bool pressed, bool& /*abort*/)
+	cfg->handle_input(pad, true, [&move_data, &ext](const auto& value, bool& /*abort*/)
 	{
 		static std::set<pad_button> s_combos = {};
-		input_to_ext<false, false>(move_data.external_device_id, ext, s_combos, btn, pad_btn, value, pressed);
+		input_to_ext<false, false>(move_data.external_device_id, ext, s_combos, value);
 	});
 
 	ext.status = controller.ext_status;
@@ -2419,9 +2419,9 @@ static void mouse_input_to_ext(u32 mouse_no, gem_config::gem_controller& control
 	std::set<pad_button> combos;
 
 	// Check combo button first
-	cfg->handle_input(mouse_data, [&combo_active](gem_btn btn, pad_button /*pad_btn*/, u16 /*value*/, bool pressed, bool& abort)
+	cfg->handle_input(mouse_data, [&combo_active](const auto& value, bool& abort)
 	{
-		if (pressed && btn == gem_btn::combo)
+		if (value.pressed && value.btn == gem_btn::combo)
 		{
 			combo_active = true;
 			abort = true;
@@ -2431,16 +2431,16 @@ static void mouse_input_to_ext(u32 mouse_no, gem_config::gem_controller& control
 	// Check combos
 	if (combo_active)
 	{
-		cfg->handle_input(mouse_data, [external_device_id, &ext, &combos](gem_btn btn, pad_button pad_btn, u16 value, bool pressed, bool& /*abort*/)
+		cfg->handle_input(mouse_data, [external_device_id, &ext, &combos](const auto& value, bool& /*abort*/)
 		{
-			input_to_ext<true, true>(external_device_id, ext, combos, btn, pad_btn, value, pressed);
+			input_to_ext<true, true>(external_device_id, ext, combos, value);
 		});
 	}
 
 	// Check normal buttons
-	cfg->handle_input(mouse_data, [external_device_id, &ext, &combos](gem_btn btn, pad_button pad_btn, u16 value, bool pressed, bool& /*abort*/)
+	cfg->handle_input(mouse_data, [external_device_id, &ext, &combos](const auto& value, bool& /*abort*/)
 	{
-		input_to_ext<true, false>(external_device_id, ext, combos, btn, pad_btn, value, pressed);
+		input_to_ext<true, false>(external_device_id, ext, combos, value);
 	});
 
 	ext.status = controller.ext_status;
@@ -2553,9 +2553,9 @@ static bool mouse_input_to_pad(u32 mouse_no, be_t<u16>& digital_buttons, be_t<u1
 	};
 
 	// Check combo button first
-	cfg->handle_input(mouse_data, [&combo_active](gem_btn btn, pad_button /*pad_btn*/, u16 /*value*/, bool pressed, bool& abort)
+	cfg->handle_input(mouse_data, [&combo_active](const auto& value, bool& abort)
 	{
-		if (pressed && btn == gem_btn::combo)
+		if (value.pressed && value.btn == gem_btn::combo)
 		{
 			combo_active = true;
 			abort = true;
@@ -2565,12 +2565,12 @@ static bool mouse_input_to_pad(u32 mouse_no, be_t<u16>& digital_buttons, be_t<u1
 	// Check combos
 	if (combo_active)
 	{
-		cfg->handle_input(mouse_data, [&digital_buttons, &combos](gem_btn btn, pad_button pad_btn, u16 /*value*/, bool pressed, bool& /*abort*/)
+		cfg->handle_input(mouse_data, [&digital_buttons, &combos](const auto& value, bool& /*abort*/)
 		{
-			if (!pressed)
+			if (!value.pressed)
 				return;
 
-			switch (btn)
+			switch (value.btn)
 			{
 			case gem_btn::combo_start:
 			case gem_btn::combo_select:
@@ -2580,8 +2580,8 @@ static bool mouse_input_to_pad(u32 mouse_no, be_t<u16>& digital_buttons, be_t<u1
 			case gem_btn::combo_square:
 			case gem_btn::combo_move:
 			case gem_btn::combo_t:
-				digital_buttons |= ::at32(btn_map, btn);
-				combos.insert(pad_btn);
+				digital_buttons |= ::at32(btn_map, value.btn);
+				combos.insert(value.pad_btn);
 				break;
 			default:
 				break;
@@ -2590,12 +2590,12 @@ static bool mouse_input_to_pad(u32 mouse_no, be_t<u16>& digital_buttons, be_t<u1
 	}
 
 	// Check normal buttons
-	cfg->handle_input(mouse_data, [&digital_buttons, &combos](gem_btn btn, pad_button pad_btn, u16 /*value*/, bool pressed, bool& /*abort*/)
+	cfg->handle_input(mouse_data, [&digital_buttons, &combos](const auto& value, bool& /*abort*/)
 	{
-		if (!pressed)
+		if (!value.pressed)
 			return;
 
-		switch (btn)
+		switch (value.btn)
 		{
 		case gem_btn::start:
 		case gem_btn::select:
@@ -2606,9 +2606,9 @@ static bool mouse_input_to_pad(u32 mouse_no, be_t<u16>& digital_buttons, be_t<u1
 		case gem_btn::move:
 		case gem_btn::t:
 			// Ignore this gem_btn if the same pad_button was already used in a combo
-			if (!combos.contains(pad_btn))
+			if (!combos.contains(value.pad_btn))
 			{
-				digital_buttons |= ::at32(btn_map, btn);
+				digital_buttons |= ::at32(btn_map, value.btn);
 			}
 			break;
 		default:

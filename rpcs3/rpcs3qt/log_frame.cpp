@@ -638,7 +638,7 @@ void log_frame::UpdateUI()
 				// If ANSI TTY is enabled, remove all control characters except for ESC (0x1B) for ANSI sequences
 				if (m_ansi_tty)
 				{
-					buf_line.erase(std::remove_if(buf_line.begin(), buf_line.end(), [](s8 c)
+					buf_line.erase(std::remove_if(buf_line.begin(), buf_line.end(), [](u8 c) // Use u8. Otherwise we drop valid UTF-8 characters.
 					{
 						return c <= 0x8 || c == 0x7F || (c >= 0xE && c <= 0x1F && c != 0x1B);
 					}), buf_line.end());
@@ -646,7 +646,7 @@ void log_frame::UpdateUI()
 				// Otherwise, remove all control characters to keep the output clean
 				else
 				{
-					buf_line.erase(std::remove_if(buf_line.begin(), buf_line.end(), [](s8 c)
+					buf_line.erase(std::remove_if(buf_line.begin(), buf_line.end(), [](u8 c) // Use u8. Otherwise we drop valid UTF-8 characters.
 					{
 						return c <= 0x8 || c == 0x7F || (c >= 0xE && c <= 0x1F);
 					}), buf_line.end());

@@ -391,6 +391,17 @@ void usb_handler_thread::perform_scan()
 				&& desc.idProduct >= entry.id_product_min
 				&& desc.idProduct <= entry.id_product_max)
 			{
+#ifdef __APPLE__
+				// On macOS, libusb cannot claim HID interfaces, so passing through a real
+				// controller that also has an emulated implementation yields a non-functional
+				// device and silently overrides the user's emulated-device setting (the emulated
+				// setup below only fills slots not already passed through). Prefer the emulated
+				// implementation whenever the user has enabled it. (e.g. DJ Hero Turntable)
+				if (entry.make_instance && entry.max_device_count && entry.max_device_count() > 0)
+				{
+					continue;
+				}
+#endif
 				sys_usbd.success("Found device: %s", std::basic_string(entry.device_name));
 				libusb_ref_device(dev);
 				std::shared_ptr<usb_device_passthrough> usb_dev = std::make_shared<usb_device_passthrough>(dev, desc, get_new_location());

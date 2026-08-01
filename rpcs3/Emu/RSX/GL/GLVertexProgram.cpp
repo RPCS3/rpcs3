@@ -21,12 +21,12 @@ std::string GLVertexDecompilerThread::getFunction(FUNCTION f)
 	return glsl::getFunctionImpl(f);
 }
 
-std::string GLVertexDecompilerThread::compareFunction(COMPARE f, const std::string &Op0, const std::string &Op1, bool scalar)
+std::string GLVertexDecompilerThread::compareFunction(COMPARE f, std::string_view Op0, std::string_view Op1, bool scalar)
 {
 	return glsl::compareFunctionImpl(f, Op0, Op1, scalar);
 }
 
-void GLVertexDecompilerThread::insertHeader(std::stringstream &OS)
+void GLVertexDecompilerThread::insertHeader(std::stringstream& OS)
 {
 	OS <<
 		"#version 430\n"
@@ -162,7 +162,7 @@ void GLVertexDecompilerThread::insertOutputs(std::stringstream& OS, const std::v
 	}
 }
 
-void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
+void GLVertexDecompilerThread::insertMainStart(std::stringstream& OS)
 {
 	const auto& dev_caps = gl::get_driver_caps();
 
@@ -236,7 +236,7 @@ void GLVertexDecompilerThread::insertMainStart(std::stringstream & OS)
 	}
 }
 
-void GLVertexDecompilerThread::insertMainEnd(std::stringstream & OS)
+void GLVertexDecompilerThread::insertMainEnd(std::stringstream& OS)
 {
 	OS << "}\n\n";
 

@@ -13,6 +13,7 @@ add_library(rpcs3_ui STATIC
     config_adapter.cpp
     config_checker.cpp
     config_database.cpp
+    content_integrity.cpp
     curl_handle.cpp
     custom_dialog.cpp
     custom_table_widget_item.cpp
@@ -42,6 +43,7 @@ add_library(rpcs3_ui STATIC
     game_list_grid.cpp
     game_list_grid_item.cpp
     game_list_table.cpp
+    guest_memory_dumper.cpp
     gui_application.cpp
     gl_gs_frame.cpp
     gs_frame.cpp
@@ -51,7 +53,6 @@ add_library(rpcs3_ui STATIC
     input_dialog.cpp
     instruction_editor_dialog.cpp
     ipc_settings_dialog.cpp
-    iso_integrity.cpp
     kamen_rider_dialog.cpp
     kernel_explorer.cpp
     localized.cpp

@@ -74,7 +74,7 @@ struct photo_export
 };
 
 
-bool check_photo_path(const std::string& file_path)
+bool check_photo_path(std::string_view file_path)
 {
 	if (file_path.size() >= CELL_PHOTO_EXPORT_UTIL_HDD_PATH_MAX)
 	{

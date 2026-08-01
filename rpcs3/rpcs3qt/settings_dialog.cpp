@@ -260,6 +260,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->spuLoopDetection, emu_settings_type::SPULoopDetection);
 	SubscribeTooltip(ui->spuLoopDetection, tooltips.settings.spu_loop_detection);
 
+	m_emu_settings->EnhanceCheckBox(ui->ppuReservationPrority, emu_settings_type::PPUReservationPriorityOverSPUs);
+	SubscribeTooltip(ui->ppuReservationPrority, tooltips.settings.ppu_reservation_priority);
+
 	// Comboboxes
 	m_emu_settings->EnhanceComboBox(ui->xfloatAccuracy, emu_settings_type::XFloatAccuracy);
 	SubscribeTooltip(ui->gb_xfloat_accuracy, tooltips.settings.xfloat);
@@ -1522,9 +1525,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceCheckBox(ui->accurateSpuDMA, emu_settings_type::AccurateSpuDMA);
 	SubscribeTooltip(ui->accurateSpuDMA, tooltips.settings.accurate_spu_dma);
 
-	m_emu_settings->EnhanceCheckBox(ui->ppuNJFixup, emu_settings_type::PPUNJFixup);
-	SubscribeTooltip(ui->ppuNJFixup, tooltips.settings.fixup_ppunj);
-
 	m_emu_settings->EnhanceCheckBox(ui->PPUVNANfixup, emu_settings_type::PPUVNANFixup);
 	SubscribeTooltip(ui->PPUVNANfixup, tooltips.settings.fixup_ppuvnan);
 
@@ -1554,6 +1554,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->handleTiledMemory, emu_settings_type::HandleRSXTiledMemory);
 	SubscribeTooltip(ui->handleTiledMemory, tooltips.settings.handle_tiled_memory);
+
+	m_emu_settings->EnhanceCheckBox(ui->setDAZandFTZ, emu_settings_type::SetDAZandFTZ);
+	SubscribeTooltip(ui->setDAZandFTZ, tooltips.settings.set_daz_and_ftz);
 
 	m_emu_settings->EnhanceCheckBox(ui->vblankNTSCFixup, emu_settings_type::VBlankNTSCFixup);
 
@@ -2144,7 +2147,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 				{ "%R", tr("Renderer", "Game window title") },
 				{ "%T", tr("Title", "Game window title") },
 				{ "%t", tr("Title ID", "Game window title") },
-				{ "%V", tr("RPCS3 Version", "Game window title") }
+				{ "%V", tr("RPCS3 Version", "Game window title") },
+				{ "%A", tr("Architecture", "Game window title") }
 			};
 
 			QString glossary;
@@ -2492,9 +2496,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	m_emu_settings->EnhanceCheckBox(ui->mfcDebug, emu_settings_type::MFCDebug);
 	SubscribeTooltip(ui->mfcDebug, tooltips.settings.mfc_debug);
-
-	m_emu_settings->EnhanceCheckBox(ui->setDAZandFTZ, emu_settings_type::SetDAZandFTZ);
-	SubscribeTooltip(ui->setDAZandFTZ, tooltips.settings.set_daz_and_ftz);
 
 	m_emu_settings->EnhanceCheckBox(ui->accuratePPUSAT, emu_settings_type::AccuratePPUSAT);
 	SubscribeTooltip(ui->accuratePPUSAT, tooltips.settings.accurate_ppusat);

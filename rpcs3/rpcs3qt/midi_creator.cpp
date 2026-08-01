@@ -8,7 +8,7 @@
 
 LOG_CHANNEL(cfg_log, "CFG");
 
-const auto midi_deleter = [](RtMidiWrapper* ptr) { if (ptr) rtmidi_in_free(ptr); };
+inline constexpr auto midi_deleter = [](RtMidiWrapper* ptr) { if (ptr) rtmidi_in_free(ptr); };
 using midi_ptr = std::unique_ptr<RtMidiWrapper, decltype(midi_deleter)>;
 
 std::mutex midi_creator::m_midi_init_mutex = {};

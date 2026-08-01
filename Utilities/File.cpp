@@ -26,6 +26,7 @@ std::string g_android_cache_dir;
 
 #include <cwchar>
 #include <Windows.h>
+#include <winioctl.h>
 
 static std::unique_ptr<wchar_t[]> to_wchar(std::string_view source)
 {
@@ -1960,6 +1961,17 @@ fs::native_handle fs::file::get_handle() const
 	return INVALID_HANDLE_VALUE;
 #else
 	return -1;
+#endif
+}
+
+bool fs::set_sparse([[maybe_unused]] const fs::file& file)
+{
+#ifdef _WIN32
+	FILE_SET_SPARSE_BUFFER sparse{TRUE};
+	DWORD returned = 0;
+	return DeviceIoControl(file.get_handle(), FSCTL_SET_SPARSE, &sparse, sizeof(sparse), nullptr, 0, &returned, nullptr) != FALSE;
+#else
+	return true;
 #endif
 }
 

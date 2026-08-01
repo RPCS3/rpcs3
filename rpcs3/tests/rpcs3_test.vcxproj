@@ -96,6 +96,7 @@
     <ClCompile Include="test_dmux_pamf.cpp">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="test_spu_analyser.cpp" />
     <ClCompile Include="test_fmt.cpp" />
     <ClCompile Include="test_rsx_cfg.cpp" />
     <ClCompile Include="test_rsx_fp_asm.cpp" />
@@ -104,6 +105,7 @@
     <ClCompile Include="test_sys_fs.cpp" />
     <ClCompile Include="test_tuple.cpp" />
     <ClCompile Include="test_pair.cpp" />
+    <ClCompile Include="test_types_util.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" Condition="'$(GTestInstalled)' == 'true'">

@@ -42,7 +42,7 @@ struct cfg_vfs : cfg::node
 	cfg::device_info get_device(const cfg::device_entry& _cfg, std::string_view key, std::string_view emu_dir = {}) const;
 
 private:
-	std::string get(const std::string& _cfg, const std::string& def, std::string_view emu_dir) const;
+	std::string get(std::string_view _cfg, std::string_view def, std::string_view emu_dir) const;
 	cfg::device_info get_device_info(const cfg::device_entry& _cfg, std::string_view key, std::string_view emu_dir = {}) const;
 };
 

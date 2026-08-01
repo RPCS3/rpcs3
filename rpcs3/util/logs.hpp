@@ -175,10 +175,10 @@ namespace logs
 	void silence();
 
 	// Log level control: register channel if necessary, set channel level
-	void set_level(const std::string&, level);
+	void set_level(const std::string& ch_name, level value);
 
 	// Log level control: get channel level
-	level get_level(const std::string&);
+	level get_level(const std::string& ch_name);
 
 	// Log level control: set specific channels to level::fatal
 	void set_channel_levels(const std::map<std::string, logs::level, std::less<>>& map);

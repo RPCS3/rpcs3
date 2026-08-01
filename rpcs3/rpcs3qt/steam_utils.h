@@ -105,7 +105,7 @@ namespace gui::utils
 
 		void update_steam_input_config(const std::string& user_dir);
 
-		static u32 crc32(const std::string& data);
+		static u32 crc32(std::string_view data);
 		static u32 steam_appid(const std::string& exe, const std::string& name);
 
 		static void append(std::string& s, const std::string& val);
@@ -114,7 +114,7 @@ namespace gui::utils
 		static std::string fix_slashes(const std::string& s);
 		static std::string kv_string(const std::string& key, const std::string& value);
 		static std::string kv_int(const std::string& key, u32 value);
-		static std::string steamid64_to_32(const std::string& steam_id);
+		static std::string steamid64_to_32(std::string_view steam_id);
 		static std::string get_steam_path();
 		static std::string get_last_active_steam_user(const std::string& steam_path);
 

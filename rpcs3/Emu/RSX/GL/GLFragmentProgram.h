@@ -34,8 +34,8 @@ public:
 protected:
 	std::string getFloatTypeName(usz elementCount) override;
 	std::string getHalfTypeName(usz elementCount) override;
-	std::string getFunction(FUNCTION) override;
-	std::string compareFunction(COMPARE, const std::string&, const std::string&) override;
+	std::string getFunction(FUNCTION f) override;
+	std::string compareFunction(COMPARE f, std::string_view Op0, std::string_view Op1) override;
 
 	void insertHeader(std::stringstream &OS) override;
 	void insertInputs(std::stringstream &OS) override;

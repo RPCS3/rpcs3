@@ -27,7 +27,7 @@ public:
 private:
 	CURL* m_curl = nullptr;
 	bool m_uses_error_buffer = false;
-	std::array<char, CURL_ERROR_SIZE> m_error_buffer;
+	std::array<char, CURL_ERROR_SIZE> m_error_buffer {};
 };
 
 }

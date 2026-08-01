@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "buffer_object.h"
 #include "common.h"
+#include "ex.h"
 
 namespace gl
 {
@@ -44,7 +45,7 @@ namespace gl
 				flags |= GL_CLIENT_STORAGE_BIT;
 			}
 
-			DSA_CALL2(NamedBufferStorage, m_id, size, data_, flags);
+			DSA_CALL_EX(NamedBufferStorage, m_id, static_cast<GLenum>(m_target), size, data_, flags);
 			m_size = size;
 		}
 		else

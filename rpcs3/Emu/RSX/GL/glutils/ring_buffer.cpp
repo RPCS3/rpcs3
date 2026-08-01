@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "ring_buffer.h"
+#include "ex.h"
 
 namespace gl
 {
@@ -17,7 +18,7 @@ namespace gl
 		GLbitfield buffer_storage_flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
 		if (gl::get_driver_caps().vendor_MESA) buffer_storage_flags |= GL_CLIENT_STORAGE_BIT;
 
-		DSA_CALL2(NamedBufferStorage, m_id, size, data, buffer_storage_flags);
+		DSA_CALL_EX(NamedBufferStorage, m_id, static_cast<GLenum>(m_target), size, data, buffer_storage_flags);
 		m_memory_mapping = DSA_CALL2_RET(MapNamedBufferRange, m_id, 0, size, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
 
 		ensure(m_memory_mapping != nullptr);
@@ -206,7 +207,7 @@ namespace gl
 
 		buffer::create();
 		save_binding_state save(current_target(), *this);
-		DSA_CALL2(NamedBufferStorage, m_id, size, data, GL_MAP_WRITE_BIT);
+		DSA_CALL_EX(NamedBufferStorage, m_id, static_cast<GLenum>(m_target), size, data, GL_MAP_WRITE_BIT);
 
 		m_data_loc = 0;
 		m_size = ::narrow<u32>(size);

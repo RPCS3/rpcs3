@@ -626,7 +626,7 @@ bool figure_creator_dialog::create_blank_figure(u32 character, u8 series)
 	std::array<u8, 16> uid_data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x89, 0x44, 0x00, 0xC2};
 	for (u8 i = 0; i < 7; i++)
 	{
-		u8 random = rand() % 255;
+		const u8 random = rand() % 255;
 		sha1_calc.push_back(random);
 		uid_data[i] = random;
 	}
@@ -659,7 +659,7 @@ bool figure_creator_dialog::create_blank_figure(u32 character, u8 series)
 		figure_data[6] = 0x1C;
 	}
 
-	u32 checksum = infinity_crc32(0, figure_data.data(), 12);
+	const u32 checksum = infinity_crc32(0, figure_data.data(), 12);
 	for (s8 i = 0; i < 4; i++)
 	{
 		figure_data[12 + i] = u8((checksum >> (3 - i) * 8) & 0xFF);

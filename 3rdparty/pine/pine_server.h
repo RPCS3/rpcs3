@@ -164,14 +164,17 @@ namespace pine
 				return IPCBuffer{ 5, MakeFailIPC(ret_buffer) };
 			};
 
-			const auto write_string = [&](const std::string& str)
+			const auto write_string = [&](std::string_view str)
 			{
 				if (!SafetyChecks(buf_cnt, 0, ret_cnt, str.size() + 1 + sizeof(u32), buf_size))
 					return false;
 				ToArray(ret_buffer, ::narrow<u32>(str.size() + 1), ret_cnt);
 				ret_cnt += sizeof(u32);
-				memcpy(&ret_buffer[ret_cnt], str.data(), str.size());
-				ret_cnt += str.size();
+				if (str.size())
+				{
+					std::memcpy(&ret_buffer[ret_cnt], str.data(), str.size());
+					ret_cnt += str.size();
+				}
 				ret_buffer[ret_cnt++] = '\0';
 				return true;
 			};
@@ -512,7 +515,7 @@ namespace pine
 		 */
 		static inline bool SafetyChecks(usz command_len, usz command_size, usz reply_len, usz reply_size = 0, usz buf_size = MAX_IPC_SIZE - 1)
 		{
-			bool res = ((command_len + command_size) > buf_size ||
+			const bool res = ((command_len + command_size) > buf_size ||
 				(reply_len + reply_size) >= MAX_IPC_RETURN_SIZE);
 			if (res) [[unlikely]]
 				return false;
@@ -524,8 +527,8 @@ namespace pine
 		pine_server() noexcept
 		{
 #ifdef _WIN32
-			WSADATA wsa;
-			struct sockaddr_in server;
+			WSADATA wsa {};
+			struct sockaddr_in server {};
 			m_sock = INVALID_SOCKET;
 			m_msgsock = INVALID_SOCKET;
 
@@ -579,7 +582,7 @@ namespace pine
 				fmt::append(m_socket_name, ".%d", slot);
 			}
 
-			struct sockaddr_un server;
+			struct sockaddr_un server {};
 
 			m_sock = socket(AF_UNIX, SOCK_STREAM, 0);
 			if (m_sock < 0)
