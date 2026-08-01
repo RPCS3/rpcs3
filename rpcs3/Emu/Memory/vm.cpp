@@ -414,20 +414,6 @@ namespace vm
 		}
 	}
 
-	void passive_unlock(cpu_thread& cpu)
-	{
-		if (auto& ptr = g_tls_locked)
-		{
-			ptr->release(nullptr);
-			ptr = nullptr;
-
-			if (cpu.state & cpu_flag::memory)
-			{
-				cpu.state -= cpu_flag::memory;
-			}
-		}
-	}
-
 	bool temporary_unlock(cpu_thread& cpu) noexcept
 	{
 		bs_t<cpu_flag> add_state = cpu_flag::wait;
@@ -436,6 +422,8 @@ namespace vm
 		{
 			add_state += cpu_flag::memory;
 		}
+
+		g_tls_locked = nullptr;
 
 		if (add_state - cpu.state)
 		{
@@ -462,20 +450,19 @@ namespace vm
 	writer_lock::writer_lock(u32 const addr, atomic_t<u64, 128>* range_lock, u32 const size, u64 const flags) noexcept
 		: range_lock(range_lock)
 	{
-		cpu_thread* cpu{};
-
-		if (g_tls_locked)
+		if (cpu_thread* cpu = cpu_thread::get_current(); cpu && cpu->get_class() == thread_class::ppu)
 		{
-			cpu = get_current_cpu_thread();
-			AUDIT(cpu);
-
-			if (*g_tls_locked != cpu || cpu->state & cpu_flag::wait)
+			// cpu_flag::wait must be added by the caller
+			// We cannot manage it internally within vm::writer_lock
+			// Because in doing that, cpu_thread::check_state() needs to be called
+			// Which may not be suitable for the code that writer_lock is used at
+			if (!(cpu->state & cpu_flag::wait))
 			{
-				cpu = nullptr;
-			}
-			else
-			{
-				cpu->state += cpu_flag::wait;
+				// If lock is not set than it is technically fine, though a bit odd for usage
+				if (g_tls_locked)
+				{
+					fmt::throw_exception("vm::writer_lock is being used without cpu_flag::wait set by the caller!\nPlease report to the developers.");
+				}
 			}
 		}
 
@@ -602,11 +589,6 @@ namespace vm
 					}
 				}
 			}
-		}
-
-		if (cpu)
-		{
-			cpu->state -= cpu_flag::memory + cpu_flag::wait;
 		}
 	}
 

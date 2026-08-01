@@ -255,8 +255,10 @@ CellError process_is_spu_lock_line_reservation_address(u32 addr, u64 flags)
 	return {};
 }
 
-error_code sys_process_is_spu_lock_line_reservation_address(u32 addr, u64 flags)
+error_code sys_process_is_spu_lock_line_reservation_address(ppu_thread& ppu, u32 addr, u64 flags)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_process.warning("sys_process_is_spu_lock_line_reservation_address(addr=0x%x, flags=0x%llx)", addr, flags);
 
 	if (auto err = process_is_spu_lock_line_reservation_address(addr, flags))
