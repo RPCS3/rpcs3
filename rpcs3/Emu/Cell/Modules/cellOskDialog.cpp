@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/Modules/sysPrxForUser.h"
 #include "Emu/Io/interception.h"
 #include "Emu/Io/Keyboard.h"
 #include "Emu/IdManager.h"
@@ -310,14 +311,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 
 				sysutil_register_cb([&, length = i, string_to_send = std::move(string_to_send)](ppu_thread& cb_ppu) -> s32
 				{
-					cb_ppu.state += cpu_flag::wait;
-
-					vm::var<u16[], vm::page_allocator<>> string_var(CELL_OSKDIALOG_STRING_SIZE, string_to_send.data());
-
-					if (cb_ppu.check_state())
-					{
-						return 0;
-					}
+					vm::var<u16[], vm::hle_malloc_allocator> string_var(CELL_OSKDIALOG_STRING_SIZE, string_to_send.data());
 
 					const u32 return_value = ccb(cb_ppu, string_var.begin(), static_cast<s32>(length));
 					cellOskDialog.warning("osk_confirm_callback return_value=%d", return_value);
@@ -512,7 +506,7 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 			// Prepare callback variables
 			vm::var<CellOskDialogKeyMessage> keyMessage(key_message);
 			vm::var<u32> action(CELL_OSKDIALOG_CHANGE_NO_EVENT);
-			vm::var<u16[], vm::page_allocator<>> pActionInfo(::narrow<u32>(string_to_send.size()), string_to_send.data());
+			vm::var<u16[], vm::hle_malloc_allocator> pActionInfo(::narrow<u32>(string_to_send.size()), string_to_send.data());
 
 			// Create helpers for logging
 			std::u16string utf16_string(reinterpret_cast<const char16_t*>(string_to_send.data()), string_to_send.size());
