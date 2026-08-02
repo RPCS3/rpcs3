@@ -1035,12 +1035,32 @@ namespace utils
 				return nullptr;
 			};
 
-			const AVCodec* selected_video_codec = avcodec_find_encoder_by_name(m_video_codec_name.c_str());
-			const AVCodec* selected_audio_codec = avcodec_find_encoder_by_name(m_audio_codec_name.c_str());
+			const auto get_codec = [](const std::string& name, AVCodecID fallback, bool is_video)
+			{
+				const AVCodec* codec = name.empty() ? nullptr : avcodec_find_encoder_by_name(name.c_str());
+				if (codec) return codec;
+				media_log.warning("video_encoder: avcodec_find_encoder_by_name('%s') for %s failed or name is empty. Using fallback coded %d", name, is_video ? "video" : "audio", static_cast<int>(fallback));
+				return avcodec_find_encoder(fallback);
+			};
 
-			const AVCodecID video_codec_id = selected_video_codec ? selected_video_codec->id : static_cast<AVCodecID>(m_video_codec_id);
-			const AVCodecID audio_codec_id = selected_audio_codec ? selected_audio_codec->id : static_cast<AVCodecID>(m_audio_codec_id);
-			const AVOutputFormat* out_format = find_format(video_codec_id, audio_codec_id);
+			const AVCodec* selected_video_codec = get_codec(m_video_codec_name, static_cast<AVCodecID>(m_video_codec_id), true);
+			const AVCodec* selected_audio_codec = get_codec(m_audio_codec_name, static_cast<AVCodecID>(m_audio_codec_id), false);
+
+			if (!selected_video_codec)
+			{
+				media_log.error("video_encoder: avcodec_find_encoder for video failed");
+				has_error = true;
+				return;
+			}
+
+			if (!selected_audio_codec)
+			{
+				media_log.error("video_encoder: avcodec_find_encoder for audio failed");
+				has_error = true;
+				return;
+			}
+
+			const AVOutputFormat* out_format = find_format(selected_video_codec->id, selected_audio_codec->id);
 
 			if (out_format)
 			{
@@ -1048,7 +1068,7 @@ namespace utils
 			}
 			else
 			{
-				media_log.error("video_encoder: Could not find a format for the requested video_codec '%s' (ID=%d) and audio_codec '%s' (ID=%d)", m_video_codec_name, m_video_codec_id, m_audio_codec_name, m_audio_codec_id);
+				media_log.error("video_encoder: Could not find a format for the requested video_codec '%s' (ID=%d) and audio_codec '%s' (ID=%d)", m_video_codec_name, static_cast<int>(selected_video_codec->id), m_audio_codec_name, static_cast<int>(selected_audio_codec->id));
 
 				// Fallback to some other codec
 				for (const AVCodec* video_codec : video_codecs)
