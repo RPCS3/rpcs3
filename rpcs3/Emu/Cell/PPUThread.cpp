@@ -5151,7 +5151,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				_reserved_for_backwards_compatibility,
 				accurate_cache_line_stores,
 				reservations_128_byte,
-				greedy_mode,
+				_reserved_for_backwards_compatibility_2,
 				accurate_sat,
 				accurate_fpcc,
 				accurate_vnan,
@@ -5176,8 +5176,6 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				settings += ppu_settings::accurate_cache_line_stores;
 			if (g_cfg.core.ppu_128_reservations_loop_max_length)
 				settings += ppu_settings::reservations_128_byte;
-			if (g_cfg.core.ppu_llvm_greedy_mode)
-				settings += ppu_settings::greedy_mode;
 			if (has_mfvscr && g_cfg.core.ppu_set_sat_bit)
 				settings += ppu_settings::accurate_sat;
 			if (g_cfg.core.ppu_set_fpcc)
