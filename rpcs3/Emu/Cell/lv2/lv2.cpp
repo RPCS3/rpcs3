@@ -833,8 +833,8 @@ const std::array<std::pair<ppu_intrp_func_t, std::string_view>, 1024> g_ppu_sysc
 	NULL_FUNC(sys_ss_get_cache_of_analog_sunset_flag),      //860 (0x35C)  AUTHID
 	NULL_FUNC(sys_ss_protected_file_db),                    //861  ROOT
 	BIND_SYSC(sys_ss_virtual_trm_manager),                  //862  ROOT
-	BIND_SYSC(sys_ss_update_manager),                       //863  ROOT
-	NULL_FUNC(sys_ss_sec_hw_framework),                     //864  DBG
+	BIND_SYSC(sys_ss_update_manager),                       //863 (0x35F) ROOT
+	NULL_FUNC(sys_ss_sec_hw_framework),                     //864 (0x360) DBG
 	BIND_SYSC(sys_ss_random_number_generator),              //865 (0x361)
 	BIND_SYSC(sys_ss_secure_rtc),                           //866  ROOT
 	BIND_SYSC(sys_ss_appliance_info_manager),               //867  ROOT

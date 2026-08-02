@@ -310,7 +310,14 @@ error_code cellOskDialogLoadAsync(u32 container, vm::ptr<CellOskDialogParam> dia
 
 				sysutil_register_cb([&, length = i, string_to_send = std::move(string_to_send)](ppu_thread& cb_ppu) -> s32
 				{
+					cb_ppu.state += cpu_flag::wait;
+
 					vm::var<u16[], vm::page_allocator<>> string_var(CELL_OSKDIALOG_STRING_SIZE, string_to_send.data());
+
+					if (cb_ppu.check_state())
+					{
+						return 0;
+					}
 
 					const u32 return_value = ccb(cb_ppu, string_var.begin(), static_cast<s32>(length));
 					cellOskDialog.warning("osk_confirm_callback return_value=%d", return_value);
