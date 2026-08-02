@@ -74,7 +74,11 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 {
 	m_window_title = Emu.GetFormattedTitle(0);
 
-	if (!g_cfg_recording.load())
+	if (g_cfg_recording.load())
+	{
+		gui_log.notice("Using recording config:\n%s", g_cfg_recording.to_string());
+	}
+	else
 	{
 		gui_log.notice("Could not load recording config. Using defaults.");
 	}
