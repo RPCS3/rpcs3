@@ -1117,6 +1117,12 @@ void fmt_class_string<CellError>::format(std::string& out, u64 arg)
 	});
 }
 
+template <>
+void fmt_class_string<error_code>::format(std::string& out, u64 arg)
+{
+	fmt_class_string<CellError>::format(out, arg);
+}
+
 stx::init_lock acquire_lock(stx::init_mutex& mtx, ppu_thread* ppu)
 {
 	if (!ppu)
