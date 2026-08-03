@@ -246,16 +246,21 @@ extern void send_close_home_menu_cmds(std::function<void()> on_system_menu_close
 	// TODO: handle CELL_SYSUTIL_BGMPLAYBACK_STATUS_DISABLE
 	sysutil_send_system_cmd(CELL_SYSUTIL_BGMPLAYBACK_STOP, 0);
 	sysutil_send_system_cmd(CELL_SYSUTIL_SYSTEM_MENU_CLOSE, 0);
+	status->active = false;
 
-	// Report actions selected in the system menu before drawing ends.
 	if (on_system_menu_close)
 	{
-		on_system_menu_close();
+		// Let the game process SYSTEM_MENU_CLOSE before reporting the selected action.
+		sysutil_register_cb([on_system_menu_close = std::move(on_system_menu_close)](ppu_thread&) -> s32
+		{
+			on_system_menu_close();
+			sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
+			return CELL_OK;
+		});
+		return;
 	}
 
 	sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
-
-	status->active = false;
 }
 
 template <>

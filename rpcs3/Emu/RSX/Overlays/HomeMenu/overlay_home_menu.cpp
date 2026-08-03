@@ -103,15 +103,16 @@ namespace rsx
 				break;
 			}
 			case page_navigation::exit:
+			{
+				request_close();
+				break;
+			}
 			case page_navigation::exit_for_screenshot:
 			{
-				request_close([navigation]
+				request_close([]
 				{
-					if (navigation == page_navigation::exit_for_screenshot)
-					{
-						rsx_log.notice("Taking screenshot after exiting home menu");
-						g_user_asked_for_screenshot = true;
-					}
+					rsx_log.notice("Taking screenshot after exiting home menu");
+					g_user_asked_for_screenshot = true;
 				});
 				break;
 			}
