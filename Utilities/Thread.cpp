@@ -125,13 +125,23 @@ enum cpu_threads_emulation_info_dump_t : u32 {};
 
 std::string dump_useful_thread_info()
 {
-	std::string result;
+	// Protection against crash inside the function itself
+	thread_local volatile bool in_session = false;
 
+	if (in_session)
+	{
+		return {};
+	}
+
+	in_session = true;
+
+	std::string result;
 	if (auto cpu = get_current_cpu_thread())
 	{
 		fmt::append(result, "%s", cpu_threads_emulation_info_dump_t{cpu->id});
 	}
 
+	in_session = false;
 	return result;
 }
 

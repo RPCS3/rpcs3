@@ -1054,14 +1054,30 @@ namespace rsx
 
 	void thread::decide_rsx_context_queue(u64 game_priority, u64 operating_system_priority)
 	{
-		idm::select<lv2_rsx_context>([&](u32 id, u32 process, lv2_rsx_context& context)
+		bool changed = false;
+
+		idm::select<lv2_rsx_context>([&](u32 id, u32 proc, lv2_rsx_context& context)
 		{
 			if (lv2_context != &context)
 			{
+				changed = true;
+
+				const auto process = ensure(idm::get_unlocked<lv2_obj, lv2_process>(proc));
+
 				lv2_context = &context;
-				lv2_rsx_process = ensure(idm::get_unlocked<lv2_obj, lv2_process>(process))->rsx_info.get();
+				lv2_rsx_process = process->rsx_info.get();
+				vm::g_base_addr = process->memory_4GB_model->base_addr;
+				vm::g_sudo_addr = process->memory_4GB_model->sudo_addr;
+				vm::g_vm_image = process->memory_4GB_model;
+				ctrl = vm::_ptr<RsxDmaControl>(lv2_context->dma_address);
 			}
 		});
+
+		if (changed)
+		{
+			fifo_ctrl = std::make_unique<::rsx::FIFO::FIFO_control>(this);
+			fifo_ctrl->set_get(ctrl->get);
+		}
 	}
 
 	void thread::post_vblank_event(u64 post_event_time)
@@ -1119,8 +1135,9 @@ namespace rsx
 
 	void thread::on_task()
 	{
-		g_tls_log_prefix = []
+		g_tls_log_prefix = [] -> std::string
 		{
+			return  "RSX[]";
 			const auto rsx = get_current_renderer();
 			return fmt::format("RSX [0x%07x]", rsx->ctrl ? +rsx->ctrl->get : 0);
 		};
@@ -3418,6 +3435,11 @@ namespace rsx
 			external_interrupt_ack.store(false);
 		}
 		while (external_interrupt_lock && (cpu_flag::ret - state));
+
+		if (!lv2_context)
+		{
+			decide_rsx_context_queue(0, 0);
+		}
 	}
 
 	u32 thread::get_load()

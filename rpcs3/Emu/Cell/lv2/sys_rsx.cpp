@@ -483,11 +483,6 @@ error_code sys_rsx_context_free(ppu_thread& ppu, u32 context_id)
 	rsx::eng_lock fifo_lock(render);
 	std::scoped_lock lock(render->sys_rsx_mtx);
 
-	if (render->state & cpu_flag::ret)
-	{
-		return CELL_EINVAL;
-	}
-
 	auto rsx_context = idm::get_unlocked<lv2_rsx_context>(context_id);
 
 	if (!rsx_context)
@@ -495,16 +490,7 @@ error_code sys_rsx_context_free(ppu_thread& ppu, u32 context_id)
 		return { CELL_EINVAL, "context_id is 0x%x", context_id };
 	}
 
-	g_fxo->get<rsx::vblank_thread>() = thread_state::finished;
-
 	const u32 queue_id = vm::_ptr<RsxDriverInfo>(rsx_context->driver_info)->handler_queue;
-
-	render->state += cpu_flag::ret;
-
-	while (render->state & cpu_flag::ret)
-	{
-		thread_ctrl::wait_for(1000);
-	}
 
 	sys_event_port_disconnect(ppu, rsx_context->rsx_event_port);
 	sys_event_port_destroy(ppu, rsx_context->rsx_event_port);
@@ -514,6 +500,7 @@ error_code sys_rsx_context_free(ppu_thread& ppu, u32 context_id)
 	if (render->lv2_context == rsx_context.get())
 	{
 		render->lv2_context = nullptr;
+		render->ctrl = nullptr;
 	}
 
 	ensure(idm::remove_verify<lv2_rsx_context>(context_id, rsx_context));
