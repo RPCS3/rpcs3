@@ -3,7 +3,8 @@
 #include "Emu/IdManager.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
-#include "Emu//Audio/audio_utils.h"
+#include "Emu/Audio/audio_utils.h"
+#include "Emu/Cell/PPUThread.h"
 #include "util/bit_set.hpp"
 #include "util/video_provider.h"
 
@@ -138,9 +139,11 @@ void lv2_rsxaudio::save(utils::serial& ar)
 	}
 }
 
-error_code sys_rsxaudio_initialize(vm::ptr<u32> handle)
+error_code sys_rsxaudio_initialize(ppu_thread& ppu, vm::ptr<u32> handle)
 {
-	sys_rsxaudio.trace("sys_rsxaudio_initialize(handle=*0x%x)", handle);
+	ppu.state += cpu_flag::wait;
+
+	sys_rsxaudio.notice("sys_rsxaudio_initialize(handle=*0x%x)", handle);
 
 	auto& rsxaudio_thread = g_fxo->get<rsx_audio_data>();
 
@@ -196,9 +199,11 @@ error_code sys_rsxaudio_initialize(vm::ptr<u32> handle)
 	return CELL_OK;
 }
 
-error_code sys_rsxaudio_finalize(u32 handle)
+error_code sys_rsxaudio_finalize(ppu_thread& ppu, u32 handle)
 {
-	sys_rsxaudio.trace("sys_rsxaudio_finalize(handle=0x%x)", handle);
+	ppu.state += cpu_flag::wait;
+
+	sys_rsxaudio.notice("sys_rsxaudio_finalize(handle=0x%x)", handle);
 
 	const auto rsxaudio_obj = idm::get_unlocked<lv2_obj, lv2_rsxaudio>(handle);
 
@@ -230,9 +235,11 @@ error_code sys_rsxaudio_finalize(u32 handle)
 	return CELL_OK;
 }
 
-error_code sys_rsxaudio_import_shared_memory(u32 handle, vm::ptr<u64> addr)
+error_code sys_rsxaudio_import_shared_memory(ppu_thread& ppu, u32 handle, vm::ptr<u64> addr)
 {
-	sys_rsxaudio.trace("sys_rsxaudio_import_shared_memory(handle=0x%x, addr=*0x%x)", handle, addr);
+	ppu.state += cpu_flag::wait;
+
+	sys_rsxaudio.notice("sys_rsxaudio_import_shared_memory(handle=0x%x, addr=*0x%x)", handle, addr);
 
 	const auto rsxaudio_obj = idm::get_unlocked<lv2_obj, lv2_rsxaudio>(handle);
 
@@ -259,9 +266,11 @@ error_code sys_rsxaudio_import_shared_memory(u32 handle, vm::ptr<u64> addr)
 	return CELL_OK;
 }
 
-error_code sys_rsxaudio_unimport_shared_memory(u32 handle, vm::ptr<u64> addr /* unused */)
+error_code sys_rsxaudio_unimport_shared_memory(ppu_thread& ppu, u32 handle, vm::ptr<u64> addr /* unused */)
 {
-	sys_rsxaudio.trace("sys_rsxaudio_unimport_shared_memory(handle=0x%x, addr=*0x%x)", handle, addr);
+	ppu.state += cpu_flag::wait;
+
+	sys_rsxaudio.notice("sys_rsxaudio_unimport_shared_memory(handle=0x%x, addr=*0x%x)", handle, addr);
 
 	const auto rsxaudio_obj = idm::get_unlocked<lv2_obj, lv2_rsxaudio>(handle);
 
