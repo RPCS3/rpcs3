@@ -431,7 +431,7 @@ const std::array<std::pair<ppu_intrp_func_t, std::string_view>, 1024> g_ppu_sysc
 	BIND_SYSC(sys_memory_get_page_attribute),               //351 (0x15F)
 	BIND_SYSC(sys_memory_get_user_memory_size),             //352 (0x160)
 	BIND_SYSC(sys_memory_get_user_memory_stat),             //353 (0x161)
-	null_func,//BIND_SYSC(sys_memory_...),                  //354 (0x162)
+	BIND_SYSC(sys_memory_container_create_child_container),                  //354 (0x162)
 	null_func,//BIND_SYSC(sys_memory_...),                  //355 (0x163)
 	NULL_FUNC(sys_memory_allocate_colored),                 //356 (0x164)
 	null_func,//BIND_SYSC(sys_memory_...),                  //357 (0x165)

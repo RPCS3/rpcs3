@@ -465,6 +465,47 @@ error_code sys_memory_container_create(cpu_thread& cpu, vm::ptr<u32> cid, u64 si
 	return CELL_EAGAIN;
 }
 
+error_code sys_memory_container_create_child_container(cpu_thread& cpu, vm::ptr<u32> cid, u32 parent_mc_id, u32 size)
+{
+	cpu.state += cpu_flag::wait;
+
+	sys_memory.warning("sys_memory_container_create_child_container(cid=*0x%x, parent_mc_id=0x%x, size=0x%x)", cid, parent_mc_id, size);
+
+	const auto ct = idm::get_unlocked<lv2_memory_container>(parent_mc_id);
+
+	if (!ct)
+	{
+		return CELL_ESRCH;
+	}
+
+	// Round down to 1 MB granularity
+	size &= ~0xfffff;
+
+	if (!size)
+	{
+		return CELL_ENOMEM;
+	}
+
+	std::lock_guard lock(s_memstats_mtx);
+
+	// Try to obtain "physical memory" from the default container
+	if (!ct->take(size))
+	{
+		return CELL_ENOMEM;
+	}
+
+	// Create the memory container
+	if (const u32 id = idm::make<lv2_memory_container>(static_cast<u32>(size), true))
+	{
+		cpu.check_state();
+		*cid = id;
+		return CELL_OK;
+	}
+
+	ct->free(size);
+	return CELL_EAGAIN;
+}
+
 error_code sys_memory_container_destroy(cpu_thread& cpu, u32 cid)
 {
 	cpu.state += cpu_flag::wait;
@@ -491,7 +532,7 @@ error_code sys_memory_container_destroy(cpu_thread& cpu, u32 cid)
 
 	if (ct.ret)
 	{
-		return ct.ret;
+		return { ct.ret, +ct->used };
 	}
 
 	// Return "physical memory" to the default container
