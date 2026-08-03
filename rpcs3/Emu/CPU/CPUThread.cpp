@@ -735,12 +735,12 @@ void cpu_thread::operator()()
 			{
 				cleanup();
 
-				auto log_thread = named_thread("CPU Thread Cleanup Logger", [name = name]()
+				/*auto log_thread = named_thread("CPU Thread Cleanup Logger", [name = name]()
 				{
 					sys_log.warning("CPU Thread '%s' terminated abnormally!", name);
 				});
 
-				log_thread();
+				log_thread();*/
 			}
 		}
 	} cleanup;
