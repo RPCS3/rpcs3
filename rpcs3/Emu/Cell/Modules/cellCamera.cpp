@@ -700,14 +700,19 @@ error_code cellCameraClose(ppu_thread& ppu, s32 dev_num)
 	if (g_camera.info.buffer)
 	{
 		vm::dealloc(g_camera.info.buffer.addr(), vm::main);
+		g_camera.info.buffer = vm::null;
 	}
+
 	if (g_camera.info.pbuf[0])
 	{
 		vm::dealloc(g_camera.info.pbuf[0].addr(), vm::main);
+		g_camera.info.pbuf[0] = vm::null;
 	}
+
 	if (g_camera.info.pbuf[1])
 	{
 		vm::dealloc(g_camera.info.pbuf[1].addr(), vm::main);
+		g_camera.info.pbuf[1] = vm::null;
 	}
 
 	g_camera.close_camera();
@@ -1847,14 +1852,19 @@ void camera_context::reset_state()
 	if (info.buffer)
 	{
 		vm::dealloc(info.buffer.addr(), vm::main);
+		info.buffer = vm::null;
 	}
+
 	if (info.pbuf[0])
 	{
 		vm::dealloc(info.pbuf[0].addr(), vm::main);
+		info.pbuf[0] = vm::null;
 	}
+
 	if (info.pbuf[1])
 	{
 		vm::dealloc(info.pbuf[1].addr(), vm::main);
+		info.pbuf[1] = vm::null;
 	}
 
 	std::scoped_lock lock(mutex_notify_data_map);
