@@ -908,8 +908,7 @@ void pad_thread::InitPadConfig(cfg_pad& cfg, pad_handler type, std::shared_ptr<P
 }
 
 extern bool send_open_home_menu_cmds();
-extern void send_close_home_menu_cmds();
-extern void send_close_home_menu_cmds(std::function<void()> on_system_menu_close);
+extern void send_close_home_menu_cmds(std::function<void()> on_system_menu_close = nullptr);
 extern bool close_osk_from_ps_button();
 
 void pad_thread::open_home_menu()
