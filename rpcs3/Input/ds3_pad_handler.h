@@ -69,8 +69,10 @@ public:
 #endif
 	reports::ds3_input_report report{};
 
+#ifdef __linux__
 	// Last time the motors were running. Used to keep resending the output report for a while afterwards.
 	steady_clock::time_point last_motor_activity{};
+#endif
 };
 
 class ds3_pad_handler final : public hid_pad_handler<ds3_device>

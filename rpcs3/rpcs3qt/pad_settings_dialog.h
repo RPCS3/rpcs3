@@ -7,6 +7,7 @@
 #include <QComboBox>
 
 #include <mutex>
+#include <optional>
 
 #include "Emu/Io/PadHandler.h"
 #include "Emu/Io/pad_config.h"
@@ -207,6 +208,29 @@ private:
 		};
 		std::vector<input_values> values;
 	} m_input_callback_data;
+
+	// Pending output report (rumble/LED test). Filled by the GUI thread, sent by the input thread.
+	struct pad_data_request
+	{
+		std::string device_name;
+		u8 player_id = 0;
+		u8 large_motor = 0;
+		u8 small_motor = 0;
+		s32 color_r = 0;
+		s32 color_g = 0;
+		s32 color_b = 0;
+		bool player_led = false;
+		bool battery_led = false;
+		u32 battery_led_brightness = 0;
+	};
+	std::mutex m_pad_data_mutex;      // Guards the slot below. Only ever held briefly.
+	std::mutex m_pad_data_send_mutex; // Held by the input thread for the whole duration of a send.
+	std::optional<pad_data_request> m_pad_data_request;
+
+	// Drops a pending output report and waits for one that is already being sent. Must be called before
+	// changing a player's handler or device: the handler resolves the device name to a config through
+	// PadHandlerBase::get_config, and a request built for the old assignment would no longer resolve.
+	void drop_pending_pad_data();
 
 	// Input thread. Its Callback handles the input
 	std::unique_ptr<named_thread<std::function<void()>>> m_input_thread;

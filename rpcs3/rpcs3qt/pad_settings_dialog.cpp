@@ -672,6 +672,29 @@ void pad_settings_dialog::InitButtons()
 
 			std::lock_guard lock(m_handler_mutex);
 
+			// Send any output report requested by the GUI thread (rumble or LED test). This can block for
+			// seconds on a bluetooth DS3, which is exactly why it doesn't run on the GUI thread.
+			// m_pad_data_send_mutex is held across the whole send, not just around taking the request, so
+			// that drop_pending_pad_data can wait for us: the handler resolves the device name to a config
+			// and that resolution must not race with a device or handler change on the GUI thread.
+			// Lock order is m_handler_mutex -> m_pad_data_send_mutex -> m_pad_data_mutex, everywhere.
+			{
+				std::lock_guard send_lock(m_pad_data_send_mutex);
+
+				std::optional<pad_data_request> request;
+				{
+					std::lock_guard data_lock(m_pad_data_mutex);
+					request = std::move(m_pad_data_request);
+					m_pad_data_request.reset();
+				}
+
+				if (request && m_handler)
+				{
+					m_handler->SetPadData(request->device_name, request->player_id, request->large_motor, request->small_motor,
+						request->color_r, request->color_g, request->color_b, request->player_led, request->battery_led, request->battery_led_brightness);
+				}
+			}
+
 			const std::vector<std::string> buttons =
 			{
 				m_cfg_entries[button_ids::id_pad_l2].button_string(),
@@ -742,6 +765,16 @@ void pad_settings_dialog::InitButtons()
 
 void pad_settings_dialog::RefreshPads()
 {
+	// Never wait for the input thread here. It may be busy sending an output report, which can take seconds on
+	// a bluetooth DS3, and this runs on the GUI thread every second. Skipping a connection status refresh is
+	// harmless, the next tick will pick it up. (ChangeHandler pauses the input thread, so its call gets the lock.)
+	std::unique_lock lock(m_handler_mutex, std::try_to_lock);
+
+	if (!lock)
+	{
+		return;
+	}
+
 	for (int i = 0; i < ui->chooseDevice->count(); i++)
 	{
 		pad_device_info info = get_pad_info(ui->chooseDevice, i);
@@ -751,7 +784,6 @@ void pad_settings_dialog::RefreshPads()
 			continue;
 		}
 
-		std::lock_guard lock(m_handler_mutex);
 		const PadHandlerBase::connection status = m_handler->get_next_button_press(info.name, nullptr, nullptr, PadHandlerBase::gui_call_type::get_connection, {});
 		switch_pad_info(i, info, status != PadHandlerBase::connection::disconnected);
 	}
@@ -761,9 +793,40 @@ void pad_settings_dialog::SetPadData(u8 large_motor, u8 small_motor, bool led_ba
 {
 	const cfg_pad& cfg = GetPlayerConfig();
 
-	std::lock_guard lock(m_handler_mutex);
-	ensure(m_handler);
-	m_handler->SetPadData(m_device_name, GetPlayerIndex(), large_motor, small_motor, cfg.colorR, cfg.colorG, cfg.colorB, cfg.player_led_enabled.get(), led_battery_indicator, cfg.led_battery_indicator_brightness);
+	// Don't send the output report from here. This runs on the GUI thread, and sending an output report can
+	// block for a very long time on some transports: on linux hid-sony marks the sixaxis with
+	// HID_QUIRK_NO_OUTPUT_REPORTS_ON_INTR_EP, so hidraw turns every hid_write into a SET_REPORT on the control
+	// endpoint, which over bluetooth waits for the device's handshake (up to 10 seconds in
+	// hidp_set_raw_report). Hand the request to the input thread instead, which is what it exists for.
+	// Everything that needs the UI or the config is read here, so the input thread only has to send it.
+	// Note that we must not take m_handler_mutex here: the input thread holds it while sending.
+	std::lock_guard lock(m_pad_data_mutex);
+	m_pad_data_request = pad_data_request
+	{
+		.device_name = m_device_name,
+		.player_id = static_cast<u8>(GetPlayerIndex()),
+		.large_motor = large_motor,
+		.small_motor = small_motor,
+		.color_r = static_cast<s32>(cfg.colorR.get()),
+		.color_g = static_cast<s32>(cfg.colorG.get()),
+		.color_b = static_cast<s32>(cfg.colorB.get()),
+		.player_led = cfg.player_led_enabled.get(),
+		.battery_led = led_battery_indicator,
+		.battery_led_brightness = cfg.led_battery_indicator_brightness
+	};
+}
+
+void pad_settings_dialog::drop_pending_pad_data()
+{
+	// Taking m_pad_data_send_mutex waits for a report that is already on its way to the device. Without that
+	// wait there is a window between the input thread taking the request and PadHandlerBase::get_config
+	// running inside the handler, and a caller changing a player's device or handler in that window would
+	// make that lookup fail. Both mutexes are released before we return, so a caller that then waits for the
+	// input thread to pause (pause_input_thread) cannot deadlock against it.
+	std::lock_guard send_lock(m_pad_data_send_mutex);
+	std::lock_guard data_lock(m_pad_data_mutex);
+
+	m_pad_data_request.reset();
 }
 
 pad_device_info pad_settings_dialog::get_pad_info(QComboBox* combo, int index)
@@ -1758,6 +1821,9 @@ void pad_settings_dialog::ChangeConfig(const QString& config_file)
 	if (config_file.isEmpty())
 		return;
 
+	// Loading a config rewrites the handler and device of every player.
+	drop_pending_pad_data();
+
 	m_config_file = config_file.toStdString();
 
 	ui->b_remConfig->setEnabled(m_title_id.empty() && m_config_file != g_cfg_input_configs.default_config);
@@ -2361,6 +2427,9 @@ std::string pad_settings_dialog::GetDeviceName() const
 
 void pad_settings_dialog::SetDeviceName(const std::string& name)
 {
+	// Not covered by pause_input_thread: the device can be switched while the input thread is running.
+	drop_pending_pad_data();
+
 	m_device_name = name;
 
 	if (!g_cfg_input.player[GetPlayerIndex()]->device.from_string(m_device_name))
@@ -2428,6 +2497,10 @@ void pad_settings_dialog::start_input_thread()
 
 void pad_settings_dialog::pause_input_thread()
 {
+	// We only pause to reconfigure, so a request built for the previous handler or device must not survive.
+	// Whatever comes after will queue a fresh one.
+	drop_pending_pad_data();
+
 	if (m_input_thread)
 	{
 		m_input_thread_state = input_thread_state::pausing;
