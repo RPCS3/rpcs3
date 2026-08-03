@@ -28,6 +28,7 @@
 #include "Utilities/date_time.h"
 
 #include "util/asm.hpp"
+#include "Emu/RetroAchievements.h"
 
 #include <span>
 #include <thread>
@@ -3313,6 +3314,9 @@ namespace rsx
 		}
 
 		// Reset current stats
+#ifdef RPCS3_RA_ENABLED
+		rpcs3::ra::on_frame_end();
+#endif
 		m_frame_stats = {};
 		m_profiler.enabled = !!g_cfg.video.debug_overlay;
 	}

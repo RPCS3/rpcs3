@@ -25,6 +25,7 @@ class persistent_settings;
 class kernel_explorer;
 class system_cmd_dialog;
 class gui_pad_thread;
+class ra_settings_dialog;
 
 struct gui_game_info;
 
@@ -101,6 +102,7 @@ public Q_SLOTS:
 
 private Q_SLOTS:
 	void OnPlayOrPause();
+	void open_ra_settings();
 	void Boot(const std::string& path, const std::string& title_id = "", bool direct = false, bool refresh_list = false, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "");
 	void BootElf();
 	void BootTest();
