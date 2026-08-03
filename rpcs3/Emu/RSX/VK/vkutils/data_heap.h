@@ -81,7 +81,7 @@ namespace vk
 				return { *heap, 0, VK_WHOLE_SIZE };
 			}
 
-			if (utils::address_range64::start_length(offset, range).inside(m_cached_buffer_range)) [[ likely ]]
+			if (m_cached_buffer_range.valid() && utils::address_range64::start_length(offset, range).inside(m_cached_buffer_range)) [[ likely ]]
 			{
 				return { *heap, m_cached_buffer_range.start, m_cached_buffer_range.length() };
 			}
@@ -95,6 +95,7 @@ namespace vk
 				const u64 block_addr = start_partition * aligned_window_size;
 				const u64 block_end = std::min<u64>(block_addr + aligned_window_size, size());
 				m_cached_buffer_range = utils::address_range64::start_end(block_addr, block_end - 1);
+				AUDIT(m_cached_buffer_range.valid());
 				return { *heap, m_cached_buffer_range.start, m_cached_buffer_range.length() };
 			}
 
