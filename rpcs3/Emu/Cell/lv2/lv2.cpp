@@ -985,9 +985,18 @@ enum CellSpursJobError : u32;
 enum CellSyncError : u32;
 
 enum CellGameError : u32;
+enum CellSysutilError : u32;
+enum CellSaveDataError : u32;
 enum CellGameDataError : u32;
-enum CellDiscGameError : u32;
 enum CellHddGameError : u32;
+enum CellDiscGameError : u32;
+
+enum CellCameraError : u32;
+enum CellGemError : u32;
+
+enum CellKbError : u32;
+enum CellPadError : u32;
+enum CellMouseError : u32;
 
 enum SceNpTrophyError : u32;
 enum SceNpError : u32;
@@ -1013,15 +1022,24 @@ const std::map<u64, void(*)(std::string&, u64)> s_error_codes_formatting_by_type
 	formatter_of<0x80410A00, CellSpursJobError>,
 
 	formatter_of<0x8002cb00, CellGameError>,
+	formatter_of<0x8002b100, CellSysutilError>,
+	formatter_of<0x8002b400, CellSaveDataError>,
 	formatter_of<0x8002b600, CellGameDataError>,
-	formatter_of<0x8002bd00, CellDiscGameError>,
 	formatter_of<0x8002ba00, CellHddGameError>,
+	formatter_of<0x8002bd00, CellDiscGameError>,
+
+	formatter_of<0x80140800, CellCameraError>,
+	formatter_of<0x80121800, CellGemError>,
+
+	formatter_of<0x80121000, CellKbError>,
+	formatter_of<0x80121100, CellPadError>,
+	formatter_of<0x80121200, CellMouseError>,
 
 	formatter_of<0x80022900, SceNpTrophyError>,
 	formatter_of<0x80029500, SceNpError>,
 };
 
-template<>
+template <>
 void fmt_class_string<CellError>::format(std::string& out, u64 arg)
 {
 	// Test if can be formatted by this formatter
@@ -1034,8 +1052,12 @@ void fmt_class_string<CellError>::format(std::string& out, u64 arg)
 
 		if (upper == s_error_codes_formatting_by_type.begin())
 		{
-			// Format as unknown by another enum formatter
-			upper->second(out, arg);
+			// Format as unknown
+			format_enum(out, arg, [](auto error)
+			{
+				return unknown;
+			});
+
 			return;
 		}
 
