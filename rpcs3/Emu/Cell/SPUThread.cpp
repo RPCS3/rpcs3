@@ -3670,6 +3670,13 @@ void do_cell_atomic_128_store(u32 addr, const void* to_write)
 
 			// Hard lock
 			auto spu = cpu ? cpu->try_get<spu_thread>() : nullptr;
+
+			if (!spu && cpu)
+			{
+				// For vm::writer_lock
+				cpu->state += cpu_flag::wait;
+			}
+
 			vm::writer_lock lock(addr, spu ? spu->range_lock : nullptr);
 			mov_rdata(sdata, *static_cast<const spu_rdata_t*>(to_write));
 			vm::reservation_acquire(addr) += 32;

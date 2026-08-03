@@ -222,7 +222,11 @@ namespace gui
 	const gui_save gl_textFactor   = gui_save(game_list, "textFactor",   qreal{2.0});
 	const gui_save gl_marginFactor = gui_save(game_list, "marginFactor", qreal{0.09});
 	const gui_save gl_show_hidden  = gui_save(game_list, "show_hidden",  false);
+	const gui_save gl_show_broken  = gui_save(game_list, "show_broken",  false);
+	const gui_save gl_show_completed = gui_save(game_list, "show_completed", false);
 	const gui_save gl_hidden_list  = gui_save(game_list, "hidden_list",  QStringList());
+	const gui_save gl_broken_list  = gui_save(game_list, "broken_list",  QStringList());
+	const gui_save gl_completed_list = gui_save(game_list, "completed_list", QStringList());
 	const gui_save gl_draw_compat  = gui_save(game_list, "draw_compat",  false);
 	const gui_save gl_pref_gd_icon = gui_save(game_list, "pref_gd_icon", false);
 	const gui_save gl_custom_icon  = gui_save(game_list, "custom_icon",  true);
@@ -294,6 +298,8 @@ namespace gui
 	const gui_save tr_show_locked   = gui_save(trophy, "show_locked",   true);
 	const gui_save tr_show_unlocked = gui_save(trophy, "show_unlocked", true);
 	const gui_save tr_show_hidden   = gui_save(trophy, "show_hidden",   false);
+	const gui_save tr_show_broken   = gui_save(trophy, "show_broken",   false);
+	const gui_save tr_show_completed = gui_save(trophy, "show_completed", false);
 	const gui_save tr_show_bronze   = gui_save(trophy, "show_bronze",   true);
 	const gui_save tr_show_silver   = gui_save(trophy, "show_silver",   true);
 	const gui_save tr_show_gold     = gui_save(trophy, "show_gold",     true);

@@ -664,6 +664,12 @@ namespace gl
 
 			for (const rsx::subresource_layout& layout : input_layouts)
 			{
+				if (layout.level >= dst->levels())
+				{
+					rsx_log.error("Invalid subresource definition for the output texture. Mip level does not exist.");
+					continue;
+				}
+
 				rsx::io_buffer io_buf = staging_buffer;
 				upload_texture_subresource(io_buf, layout, format, is_swizzled, caps);
 
@@ -741,6 +747,12 @@ namespace gl
 
 		for (const rsx::subresource_layout& layout : input_layouts)
 		{
+			if (layout.level >= dst->levels())
+			{
+				rsx_log.error("Invalid subresource definition for the output texture. Mip level does not exist.");
+				continue;
+			}
+
 			if (driver_caps.ARB_compute_shader_supported)
 			{
 				u64 row_pitch = rsx::align2<u64, u64>(layout.width_in_block * block_size_in_bytes, caps.alignment);
