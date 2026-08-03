@@ -622,11 +622,12 @@ using rsx_audio_backend = named_thread<rsxaudio_backend_thread>;
 using rsx_audio_data = named_thread<rsxaudio_data_thread>;
 
 // SysCalls
+class ppu_thread;
 
-error_code sys_rsxaudio_initialize(vm::ptr<u32> handle);
-error_code sys_rsxaudio_finalize(u32 handle);
-error_code sys_rsxaudio_import_shared_memory(u32 handle, vm::ptr<u64> addr);
-error_code sys_rsxaudio_unimport_shared_memory(u32 handle, vm::ptr<u64> addr);
+error_code sys_rsxaudio_initialize(ppu_thread& ppu, vm::ptr<u32> handle);
+error_code sys_rsxaudio_finalize(ppu_thread& ppu, u32 handle);
+error_code sys_rsxaudio_import_shared_memory(ppu_thread& ppu, u32 handle, vm::ptr<u64> addr);
+error_code sys_rsxaudio_unimport_shared_memory(ppu_thread& ppu, u32 handle, vm::ptr<u64> addr);
 error_code sys_rsxaudio_create_connection(u32 handle);
 error_code sys_rsxaudio_close_connection(u32 handle);
 error_code sys_rsxaudio_prepare_process(u32 handle);
