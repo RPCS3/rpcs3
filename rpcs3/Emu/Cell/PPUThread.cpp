@@ -3225,17 +3225,6 @@ void ppu_thread::fast_call(u32 addr, u64 rtoc, bool is_thread_entry)
 	const auto old_func = current_function;
 	const auto old_fmt = g_tls_log_prefix;
 
-	interrupt_thread_executing = true;
-	cia = addr;
-	gpr[2] = rtoc;
-	lr = exports_table->func_addr(1, true); // HLE stop address
-	current_function = nullptr;
-
-	if (std::exchange(loaded_from_savestate, false))
-	{
-		lr = old_lr;
-	}
-
 	if (sdk_version == umax)
 	{
 		// Set some localized process attributes
@@ -3250,7 +3239,18 @@ void ppu_thread::fast_call(u32 addr, u64 rtoc, bool is_thread_entry)
 		proc_id = id_manager::g_process;
 	}
 
-	g_tls_log_prefix = []
+	interrupt_thread_executing = true;
+	cia = addr;
+	gpr[2] = rtoc;
+	lr = exports_table->func_addr(1, true); // HLE stop address
+	current_function = nullptr;
+
+	if (std::exchange(loaded_from_savestate, false))
+	{
+		lr = old_lr;
+	}
+
+	g_tls_log_prefix = []()
 	{
 		const auto _this = static_cast<ppu_thread*>(get_current_cpu_thread());
 
@@ -3271,7 +3271,7 @@ void ppu_thread::fast_call(u32 addr, u64 rtoc, bool is_thread_entry)
 
 		if (_this->current_function)
 		{
-			if (_this->exports_table->is_func(cia))
+			if (_this->exports_table && _this->exports_table->is_func(cia))
 			{
 				return fmt::format("PPU[0x%x] Thread (%s) [HLE:0x%08x, LR:0x%08x]", _this->id, *name_cache.get(), cia, _this->lr);
 			}

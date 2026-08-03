@@ -654,6 +654,7 @@ void _sys_process_exit(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3)
 	if (id_manager::g_process != lv2_process::id_base)
 	{
 		lv2_obj::sleep(ppu);
+		ppu.exports_table = nullptr;
 
 		const auto current = ensure(idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process));
 		current->ki11_self();
