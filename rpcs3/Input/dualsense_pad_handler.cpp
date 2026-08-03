@@ -1014,12 +1014,15 @@ void dualsense_pad_handler::apply_pad_data(const pad_ensemble& binding)
 	const auto now = steady_clock::now();
 	const auto elapsed = now - dev->last_output;
 
-	if (dev->new_output_data || elapsed > min_output_interval)
+	if ((dev->new_output_data && elapsed > 20ms) || elapsed > min_output_interval)
 	{
+		// Remember the time of the attempt instead of the time of the last success. Otherwise a device whose
+		// writes keep failing would be retried on every single iteration of the pad thread.
+		dev->last_output = now;
+
 		if (const int res = send_output_report(dev); res >= 0)
 		{
 			dev->new_output_data = false;
-			dev->last_output = now;
 		}
 		else if (res == -1)
 		{

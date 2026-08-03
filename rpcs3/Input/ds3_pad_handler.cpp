@@ -592,12 +592,30 @@ void ds3_pad_handler::apply_pad_data(const pad_ensemble& binding)
 	const auto now = steady_clock::now();
 	const auto elapsed = now - dev->last_output;
 
-	if (dev->new_output_data || elapsed > min_output_interval)
+	if (dev->large_motor > 0 || dev->small_motor > 0)
 	{
+		dev->last_motor_activity = now;
+	}
+
+	// The DS3 keeps whatever we send it until we tell it otherwise (all durations are set to 0xFF = forever),
+	// so resending an identical report is a no-op. We can't go completely quiet either though: if the report
+	// that stops the motors is silently lost, the pad would rumble forever. So we keep resending for a while
+	// after the last rumble, which is the only state that is dangerous to get stuck in. A stuck LED isn't.
+	// Staying quiet while idle matters on linux: hid-sony marks the sixaxis with
+	// HID_QUIRK_NO_OUTPUT_REPORTS_ON_INTR_EP, so hidraw turns every hid_write into a SET_REPORT on the control
+	// endpoint. Over bluetooth that is a blocking round trip which waits for the device's handshake (up to 10
+	// seconds in hidp_set_raw_report), stalling the pad thread and eventually killing the connection.
+	const bool keep_motors_in_sync = (now - dev->last_motor_activity) < 2s;
+
+	if ((dev->new_output_data && elapsed > 20ms) || (keep_motors_in_sync && elapsed > min_output_interval))
+	{
+		// Remember the time of the attempt instead of the time of the last success. Otherwise a device whose
+		// writes keep failing would be retried on every single iteration of the pad thread.
+		dev->last_output = now;
+
 		if (const int res = send_output_report(dev); res >= 0)
 		{
 			dev->new_output_data = false;
-			dev->last_output = now;
 		}
 		else if (res == -1)
 		{
