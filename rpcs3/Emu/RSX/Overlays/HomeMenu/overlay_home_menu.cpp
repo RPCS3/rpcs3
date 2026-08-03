@@ -122,13 +122,15 @@ namespace rsx
 			}
 		}
 
-		void home_menu_dialog::request_close(std::function<void()> after_close)
+		void home_menu_dialog::request_close(std::function<void()> on_close)
 		{
+			m_close_callback = std::move(on_close);
+
 			fade_animation.current = color4f(1.f);
 			fade_animation.end = color4f(0.f);
 			fade_animation.active = true;
 
-			fade_animation.on_finish = [this, after_close = std::move(after_close)]
+			fade_animation.on_finish = [this]
 			{
 				close(true, true);
 
@@ -139,12 +141,12 @@ namespace rsx
 						Emu.Resume();
 					});
 				}
-
-				if (after_close)
-				{
-					after_close();
-				}
 			};
+		}
+
+		std::function<void()> home_menu_dialog::take_close_callback()
+		{
+			return std::move(m_close_callback);
 		}
 
 		compiled_resource home_menu_dialog::get_compiled()

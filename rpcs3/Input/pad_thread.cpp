@@ -909,6 +909,7 @@ void pad_thread::InitPadConfig(cfg_pad& cfg, pad_handler type, std::shared_ptr<P
 
 extern bool send_open_home_menu_cmds();
 extern void send_close_home_menu_cmds();
+extern void send_close_home_menu_cmds(std::function<void()> on_system_menu_close);
 extern bool close_osk_from_ps_button();
 
 void pad_thread::open_home_menu()
@@ -935,13 +936,22 @@ void pad_thread::open_home_menu()
 
 		input_log.notice("opening home menu...");
 
-		const error_code result = manager->create<rsx::overlays::home_menu_dialog>()->show([this](s32 status)
+		const auto home_menu = manager->create<rsx::overlays::home_menu_dialog>();
+		const std::weak_ptr<rsx::overlays::home_menu_dialog> weak_home_menu = home_menu;
+		const error_code result = home_menu->show([this, weak_home_menu](s32 status)
 		{
 			input_log.notice("closing home menu with status %d", status);
 
 			m_home_menu_open = false;
 
-			send_close_home_menu_cmds();
+			if (const auto home_menu = weak_home_menu.lock())
+			{
+				send_close_home_menu_cmds(home_menu->take_close_callback());
+			}
+			else
+			{
+				send_close_home_menu_cmds();
+			}
 		});
 
 		(result ? input_log.error : input_log.notice)("opened home menu with result %d", s32{result});

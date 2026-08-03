@@ -234,7 +234,7 @@ extern bool send_open_home_menu_cmds()
 	return true;
 }
 
-extern void send_close_home_menu_cmds()
+extern void send_close_home_menu_cmds(std::function<void()> on_system_menu_close)
 {
 	auto status = g_fxo->try_get<SysutilMenuOpenStatus>();
 
@@ -246,9 +246,21 @@ extern void send_close_home_menu_cmds()
 	// TODO: handle CELL_SYSUTIL_BGMPLAYBACK_STATUS_DISABLE
 	sysutil_send_system_cmd(CELL_SYSUTIL_BGMPLAYBACK_STOP, 0);
 	sysutil_send_system_cmd(CELL_SYSUTIL_SYSTEM_MENU_CLOSE, 0);
+
+	// Report actions selected in the system menu before drawing ends.
+	if (on_system_menu_close)
+	{
+		on_system_menu_close();
+	}
+
 	sysutil_send_system_cmd(CELL_SYSUTIL_DRAWING_END, 0);
 
 	status->active = false;
+}
+
+extern void send_close_home_menu_cmds()
+{
+	send_close_home_menu_cmds(nullptr);
 }
 
 template <>
