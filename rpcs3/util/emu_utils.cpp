@@ -42,6 +42,10 @@ std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu, shared_ptr<cpu_thr
 	default: return result;
 	}
 
-	result->set_cpu_handle(std::move(handle));
+	if (handle || cpu->get_class() != thread_class::rsx)
+	{
+		result->set_cpu_handle(std::move(handle));
+	}
+
 	return result;
 }
