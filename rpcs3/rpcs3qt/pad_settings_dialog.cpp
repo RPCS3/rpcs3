@@ -675,15 +675,21 @@ void pad_settings_dialog::InitButtons()
 			// m_handler_mutex is held across the whole send, not just around taking the request, so
 			// that drop_pending_pad_data can wait for us: the handler resolves the device name to a config
 			// and that resolution must not race with a device or handler change on the GUI thread.
+			// The slot itself has its own mutex, held only for the pickup, so that queueing a request from
+			// the GUI thread never ends up waiting on the send.
 
 			std::optional<pad_data_request> request;
 
-			if (m_pad_data_request && m_pad_data_request->device_name == m_device_name)
 			{
-				request = std::move(m_pad_data_request);
-			}
+				std::lock_guard data_lock(m_pad_data_mutex);
 
-			m_pad_data_request.reset();
+				if (m_pad_data_request && m_pad_data_request->device_name == m_device_name)
+				{
+					request = std::move(m_pad_data_request);
+				}
+
+				m_pad_data_request.reset();
+			}
 
 			if (request)
 			{
@@ -790,9 +796,11 @@ void pad_settings_dialog::SetPadData(u8 large_motor, u8 small_motor, bool led_ba
 {
 	const cfg_pad& cfg = GetPlayerConfig();
 
-	// Enqueue new pad data to be set async on the input thread
+	// Enqueue new pad data to be set async on the input thread.
+	// Only the slot mutex is taken here, never m_handler_mutex: the input thread holds that one across the
+	// blocking send, and this runs on the GUI thread from Qt signal handlers, which must not stall.
 
-	std::lock_guard lock(m_handler_mutex);
+	std::lock_guard lock(m_pad_data_mutex);
 
 	m_pad_data_request = pad_data_request
 	{
@@ -818,6 +826,7 @@ void pad_settings_dialog::drop_pending_pad_data()
 	// input thread to pause (pause_input_thread) cannot deadlock against it.
 
 	std::lock_guard send_lock(m_handler_mutex);
+	std::lock_guard data_lock(m_pad_data_mutex);
 
 	m_pad_data_request.reset();
 }
@@ -2423,7 +2432,16 @@ void pad_settings_dialog::SetDeviceName(const std::string& name)
 	// Not covered by pause_input_thread: the device can be switched while the input thread is running.
 	drop_pending_pad_data();
 
-	m_device_name = name;
+	{
+		// Publish the new name under m_handler_mutex. The input thread reads m_device_name while holding it,
+		// both to pass it to get_next_button_press and to check a queued request against it, so assigning it
+		// unlocked would be a data race on the string. The other writer, in ChangeHandler, runs with the
+		// input thread paused.
+
+		std::lock_guard lock(m_handler_mutex);
+
+		m_device_name = name;
+	}
 
 	if (!g_cfg_input.player[GetPlayerIndex()]->device.from_string(m_device_name))
 	{

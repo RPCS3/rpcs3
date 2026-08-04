@@ -226,6 +226,11 @@ private:
 
 	std::optional<pad_data_request> m_pad_data_request;
 
+	// Guards m_pad_data_request only, and is always held briefly. It exists so that queueing a request from
+	// the GUI thread never waits on m_handler_mutex, which the input thread holds across the blocking send.
+	// Lock order, where both are taken: m_handler_mutex -> m_pad_data_mutex.
+	std::mutex m_pad_data_mutex;
+
 	// Drops a pending output report and waits for one that is already being sent. Must be called before
 	// changing a player's handler or device: the handler resolves the device name to a config through
 	// PadHandlerBase::get_config, and a request built for the old assignment would no longer resolve.
