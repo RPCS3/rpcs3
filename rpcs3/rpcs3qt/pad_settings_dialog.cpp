@@ -672,8 +672,6 @@ void pad_settings_dialog::InitButtons()
 
 			std::lock_guard lock(m_handler_mutex);
 
-			// Send any output report requested by the GUI thread (rumble or LED test). This can block for
-			// seconds on a bluetooth DS3, which is exactly why it doesn't run on the GUI thread.
 			// m_pad_data_send_mutex is held across the whole send, not just around taking the request, so
 			// that drop_pending_pad_data can wait for us: the handler resolves the device name to a config
 			// and that resolution must not race with a device or handler change on the GUI thread.
@@ -684,6 +682,7 @@ void pad_settings_dialog::InitButtons()
 				std::optional<pad_data_request> request;
 				{
 					std::lock_guard data_lock(m_pad_data_mutex);
+
 					request = std::move(m_pad_data_request);
 					m_pad_data_request.reset();
 				}
@@ -768,6 +767,7 @@ void pad_settings_dialog::RefreshPads()
 	// Never wait for the input thread here. It may be busy sending an output report, which can take seconds on
 	// a bluetooth DS3, and this runs on the GUI thread every second. Skipping a connection status refresh is
 	// harmless, the next tick will pick it up. (ChangeHandler pauses the input thread, so its call gets the lock.)
+
 	std::unique_lock lock(m_handler_mutex, std::try_to_lock);
 
 	if (!lock)
@@ -793,14 +793,10 @@ void pad_settings_dialog::SetPadData(u8 large_motor, u8 small_motor, bool led_ba
 {
 	const cfg_pad& cfg = GetPlayerConfig();
 
-	// Don't send the output report from here. This runs on the GUI thread, and sending an output report can
-	// block for a very long time on some transports: on linux hid-sony marks the sixaxis with
-	// HID_QUIRK_NO_OUTPUT_REPORTS_ON_INTR_EP, so hidraw turns every hid_write into a SET_REPORT on the control
-	// endpoint, which over bluetooth waits for the device's handshake (up to 10 seconds in
-	// hidp_set_raw_report). Hand the request to the input thread instead, which is what it exists for.
-	// Everything that needs the UI or the config is read here, so the input thread only has to send it.
-	// Note that we must not take m_handler_mutex here: the input thread holds it while sending.
+	// Enqueue new pad data to be set async on the input thread
+
 	std::lock_guard lock(m_pad_data_mutex);
+
 	m_pad_data_request = pad_data_request
 	{
 		.device_name = m_device_name,
@@ -823,6 +819,7 @@ void pad_settings_dialog::drop_pending_pad_data()
 	// running inside the handler, and a caller changing a player's device or handler in that window would
 	// make that lookup fail. Both mutexes are released before we return, so a caller that then waits for the
 	// input thread to pause (pause_input_thread) cannot deadlock against it.
+
 	std::lock_guard send_lock(m_pad_data_send_mutex);
 	std::lock_guard data_lock(m_pad_data_mutex);
 
