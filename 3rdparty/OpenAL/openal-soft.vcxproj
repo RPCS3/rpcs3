@@ -77,7 +77,6 @@
         -DCMAKE_INSTALL_PREFIX="./Debug" ^
         -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDebug ^
         -DCMAKE_SYSTEM_VERSION=10.0 ^
-        -DLIBTYPE=STATIC ^
         -DALSOFT_UTILS=false ^
         -DALSOFT_EXAMPLES=false ^
         -DALSOFT_INSTALL=false ^
@@ -92,6 +91,11 @@
       echo Copying..
       copy "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\OpenAL32.lib" "$(SolutionDir)build\lib\$(Configuration)-$(Platform)"
     </CmakeCopyCLI>
+    <CmakeCopyDebugCLI>
+      echo Copying..
+      copy "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\OpenAL32.lib" "$(SolutionDir)build\lib\$(Configuration)-$(Platform)"
+      copy "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\OpenAL32.dll" "$(SolutionDir)bin"
+    </CmakeCopyDebugCLI>
     <CmakeCleanCLI>
       echo Cleaning..
       del "$(SolutionDir)build\lib\$(Configuration)-$(Platform)\OpenAL32.lib"
@@ -104,13 +108,13 @@
     <NMakeBuildCommandLine>
       $(CmakeDebugCLI)
       ninja
-      $(CmakeCopyCLI)
+      $(CmakeCopyDebugCLI)
     </NMakeBuildCommandLine>
     <NMakeReBuildCommandLine>
       $(CmakeCleanCLI)
       $(CmakeDebugCLI)
       ninja
-      $(CmakeCopyCLI)
+      $(CmakeCopyDebugCLI)
     </NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>
       $(CmakeCleanCLI)
