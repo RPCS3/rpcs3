@@ -592,7 +592,7 @@ void ds3_pad_handler::apply_pad_data(const pad_ensemble& binding)
 	const auto now = steady_clock::now();
 	const auto elapsed = now - dev->last_output;
 
-	// send a new report or periodically defer the resending of last report
+	// send a new report or periodically resend the last one
 	if (dev->new_output_data || elapsed > min_output_interval)
 	{
 		dev->new_output_data = false;

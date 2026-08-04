@@ -223,8 +223,7 @@ private:
 		bool battery_led = false;
 		u32 battery_led_brightness = 0;
 	};
-	std::mutex m_pad_data_mutex;      // Guards the slot below. Only ever held briefly.
-	std::mutex m_pad_data_send_mutex; // Held by the input thread for the whole duration of a send.
+
 	std::optional<pad_data_request> m_pad_data_request;
 
 	// Drops a pending output report and waits for one that is already being sent. Must be called before

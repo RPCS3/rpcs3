@@ -672,26 +672,23 @@ void pad_settings_dialog::InitButtons()
 
 			std::lock_guard lock(m_handler_mutex);
 
-			// m_pad_data_send_mutex is held across the whole send, not just around taking the request, so
+			// m_handler_mutex is held across the whole send, not just around taking the request, so
 			// that drop_pending_pad_data can wait for us: the handler resolves the device name to a config
 			// and that resolution must not race with a device or handler change on the GUI thread.
-			// Lock order is m_handler_mutex -> m_pad_data_send_mutex -> m_pad_data_mutex, everywhere.
+
+			std::optional<pad_data_request> request;
+
+			if (m_pad_data_request && m_pad_data_request->device_name == m_device_name)
 			{
-				std::lock_guard send_lock(m_pad_data_send_mutex);
+				request = std::move(m_pad_data_request);
+			}
 
-				std::optional<pad_data_request> request;
-				{
-					std::lock_guard data_lock(m_pad_data_mutex);
+			m_pad_data_request.reset();
 
-					request = std::move(m_pad_data_request);
-					m_pad_data_request.reset();
-				}
-
-				if (request && m_handler)
-				{
-					m_handler->SetPadData(request->device_name, request->player_id, request->large_motor, request->small_motor,
-						request->color_r, request->color_g, request->color_b, request->player_led, request->battery_led, request->battery_led_brightness);
-				}
+			if (request)
+			{
+				m_handler->SetPadData(request->device_name, request->player_id, request->large_motor, request->small_motor,
+					request->color_r, request->color_g, request->color_b, request->player_led, request->battery_led, request->battery_led_brightness);
 			}
 
 			const std::vector<std::string> buttons =
@@ -795,7 +792,7 @@ void pad_settings_dialog::SetPadData(u8 large_motor, u8 small_motor, bool led_ba
 
 	// Enqueue new pad data to be set async on the input thread
 
-	std::lock_guard lock(m_pad_data_mutex);
+	std::lock_guard lock(m_handler_mutex);
 
 	m_pad_data_request = pad_data_request
 	{
@@ -814,14 +811,13 @@ void pad_settings_dialog::SetPadData(u8 large_motor, u8 small_motor, bool led_ba
 
 void pad_settings_dialog::drop_pending_pad_data()
 {
-	// Taking m_pad_data_send_mutex waits for a report that is already on its way to the device. Without that
+	// Taking m_handler_mutex waits for a report that is already on its way to the device. Without that
 	// wait there is a window between the input thread taking the request and PadHandlerBase::get_config
 	// running inside the handler, and a caller changing a player's device or handler in that window would
 	// make that lookup fail. Both mutexes are released before we return, so a caller that then waits for the
 	// input thread to pause (pause_input_thread) cannot deadlock against it.
 
-	std::lock_guard send_lock(m_pad_data_send_mutex);
-	std::lock_guard data_lock(m_pad_data_mutex);
+	std::lock_guard send_lock(m_handler_mutex);
 
 	m_pad_data_request.reset();
 }
