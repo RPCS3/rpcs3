@@ -2738,7 +2738,7 @@ void Emulator::Run(bool start_playtime)
 	GetCallbacks().on_run(start_playtime);
 
 #ifdef RPCS3_RA_ENABLED
-	rpcs3::ra::on_game_start(m_path);
+	rpcs3::ra::on_game_start();
 #endif
 
 	m_pause_start_time = 0;

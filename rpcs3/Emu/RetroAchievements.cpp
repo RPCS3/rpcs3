@@ -6,10 +6,9 @@
 #include "rc_client.h"
 #include "rc_consoles.h"
 #include "Emu/Memory/vm.h"
+#include "Emu/System.h"
 #include "util/logs.hpp"
 #include "rpcs3_version.h"
-#include "Emu/VFS.h"
-#include "Utilities/File.h"
 #include "ra_config.h"
 
 #include <curl/curl.h>
@@ -187,7 +186,7 @@ namespace rpcs3::ra
 		s_game_loaded = false;
 	}
 
-	void on_game_start(const std::string& game_path)
+	void on_game_start()
 	{
 		std::lock_guard lock(s_mutex);
 		if (!s_client || s_game_loaded)
@@ -207,24 +206,10 @@ namespace rpcs3::ra
 			}
 		};
 
-		const std::string eboot_path = vfs::get("/dev_bdvd/PS3_GAME/USRDIR/EBOOT.BIN");
-		fs::file eboot(eboot_path);
-
-		if (eboot)
-		{
-			ra_log.notice("Identifying game via EBOOT.BIN: %s", eboot_path);
-			auto data = eboot.to_string<u8>();
-			rc_client_begin_identify_and_load_game(s_client, RC_CONSOLE_UNKNOWN,
-				nullptr, data.data(), static_cast<u32>(data.size()),
-				load_callback, nullptr);
-		}
-		else
-		{
-			ra_log.notice("EBOOT.BIN not found, falling back to path: %s", game_path);
-			rc_client_begin_identify_and_load_game(s_client, RC_CONSOLE_UNKNOWN,
-				game_path.c_str(), nullptr, 0,
-				load_callback, nullptr);
-		}
+		const std::string& disc_path = Emu.GetLastBoot();
+		rc_client_begin_identify_and_load_game(s_client, RC_CONSOLE_PLAYSTATION_3,
+			disc_path.c_str(), nullptr, 0,
+			load_callback, nullptr);
 	}
 
 	void on_game_stop()

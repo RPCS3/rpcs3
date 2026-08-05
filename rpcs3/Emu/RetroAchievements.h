@@ -11,7 +11,7 @@ namespace rpcs3::ra
 	void initialize();
 	void shutdown();
 
-	void on_game_start(const std::string& game_path);
+	void on_game_start();
 	void on_game_stop();
 	void on_frame_end();
 	void on_pause();
