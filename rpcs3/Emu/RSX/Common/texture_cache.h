@@ -3578,6 +3578,12 @@ namespace rsx
 					typeless_info,
 					lock,
 					std::forward<Args>(extras)...);
+
+				// Disable interpolation if we're doing a simple copy
+				if (is_copy_op)
+				{
+					interpolate = false;
+				}
 			}
 			else
 			{
