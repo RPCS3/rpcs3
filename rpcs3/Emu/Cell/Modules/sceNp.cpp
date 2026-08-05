@@ -6800,6 +6800,11 @@ error_code sceNpSignalingActivateConnection(u32 ctx_id, vm::ptr<SceNpId> npId, v
 		return SCE_NP_SIGNALING_ERROR_NOT_INITIALIZED;
 	}
 
+	if (!get_signaling_context(ctx_id))
+	{
+		return SCE_NP_SIGNALING_ERROR_CTX_NOT_FOUND;
+	}
+
 	if (!npId || !conn_id)
 	{
 		return SCE_NP_SIGNALING_ERROR_INVALID_ARGUMENT;
