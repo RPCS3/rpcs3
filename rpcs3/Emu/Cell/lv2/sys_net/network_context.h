@@ -14,13 +14,13 @@ struct base_network_thread
 
 	shared_mutex mutex_ppu_to_awake;
 	std::vector<ppu_thread*> ppu_to_awake;
+	shared_mutex mutex_thread_loop;
 
 	void wake_threads();
 };
 
 struct network_thread : base_network_thread
 {
-	shared_mutex mutex_thread_loop;
 	atomic_t<u32> num_polls = 0;
 
 	static constexpr auto thread_name = "Network Thread";

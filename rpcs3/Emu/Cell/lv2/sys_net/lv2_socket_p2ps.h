@@ -34,10 +34,11 @@ struct p2ps_encapsulated_tcp
 
 enum p2ps_stream_status
 {
-	stream_closed,      // Default when port is not listening nor connected
-	stream_listening,   // Stream is listening, accepting SYN packets
-	stream_handshaking, // Currently handshaking
-	stream_connected,   // This is an established connection(after tcp handshake)
+	stream_closed,       // Default when the stream was never listening nor connected
+	stream_listening,    // Stream is listening, accepting SYN packets
+	stream_handshaking,  // Currently handshaking
+	stream_connected,    // This is an established connection(after tcp handshake)
+	stream_disconnected, // Was connected but is now closed
 };
 
 enum p2ps_tcp_flags : u8
@@ -91,8 +92,11 @@ public:
 
 	void poll(sys_net_pollfd& sn_pfd, pollfd& native_pfd) override;
 	std::tuple<bool, bool, bool> select(bs_t<poll_t> selected, pollfd& native_pfd) override;
+	void get_sockinfo(sys_net_sockinfo_t& info) override;
 
 private:
+	bs_t<poll_t> get_pending_events() const override;
+	void signal_pending_events();
 	void close_stream_nl(nt_p2p_port* p2p_port);
 
 private:
