@@ -76,7 +76,11 @@ static void put_exitspawn(vm::ptr<void> out, vm::cptr<char> path, u32 argc, vm::
 
 static void exitspawn(ppu_thread& ppu, vm::cptr<char> path, vm::cpptr<char> argv, vm::cpptr<char> envp, u32 data, u32 data_size, s32 prio, u64 _flags)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_mutex_lock(ppu, *g_ppu_exit_mutex, 0);
+
+	ppu.state += cpu_flag::wait;
 
 	u32 arg_count = 0;
 	u32 env_count = 0;
@@ -105,6 +109,8 @@ static void exitspawn(ppu_thread& ppu, vm::cptr<char> path, vm::cpptr<char> argv
 		// TODO (process atexit)
 		return _sys_process_exit(ppu, CELL_ENOMEM, 0, 0);
 	}
+
+	static_cast<void>(ppu.check_state());
 
 	put_exitspawn(vm::cast(alloc_addr + 0x30), path, arg_count, argv, env_count, envp);
 

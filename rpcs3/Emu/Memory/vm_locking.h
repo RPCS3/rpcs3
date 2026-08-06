@@ -82,9 +82,6 @@ namespace vm
 	// Release it
 	void free_range_lock(atomic_t<u64, 128>*) noexcept;
 
-	// Unregister reader
-	void passive_unlock(cpu_thread& cpu);
-
 	// Optimization (set cpu_flag::memory)
 	bool temporary_unlock(cpu_thread& cpu) noexcept;
 	void temporary_unlock() noexcept;
