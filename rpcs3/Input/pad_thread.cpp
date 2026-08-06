@@ -941,14 +941,11 @@ void pad_thread::open_home_menu()
 			input_log.notice("closing home menu with status %d", status);
 
 			m_home_menu_open = false;
+			send_close_home_menu_cmds();
 
 			if (const auto home_menu = weak_home_menu.lock())
 			{
-				send_close_home_menu_cmds(home_menu->take_close_callback());
-			}
-			else
-			{
-				send_close_home_menu_cmds();
+				home_menu->register_close_callback();
 			}
 		});
 

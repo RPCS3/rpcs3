@@ -348,5 +348,5 @@ using SysutilMenuOpenStatus = SysutilEventStatus<CELL_SYSUTIL_SYSTEM_MENU_OPEN>;
 extern void sysutil_register_cb(std::function<s32(ppu_thread&)>&&);
 extern s32 sysutil_send_system_cmd(u64 status, u64 param);
 extern bool send_open_home_menu_cmds();
-extern void send_close_home_menu_cmds(std::function<void()> on_system_menu_close = nullptr);
+extern void send_close_home_menu_cmds();
 s32 sysutil_check_name_string(const char* src, s32 minlen, s32 maxlen);
