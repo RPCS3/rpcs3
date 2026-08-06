@@ -234,7 +234,7 @@ extern bool send_open_home_menu_cmds()
 	return true;
 }
 
-extern void send_close_home_menu_cmds(std::function<void()> on_system_menu_close = nullptr)
+extern void send_close_home_menu_cmds(std::function<void()> on_system_menu_close)
 {
 	auto status = g_fxo->try_get<SysutilMenuOpenStatus>();
 

@@ -1116,6 +1116,8 @@ namespace np
 			return false;
 		}
 
+		const auto& [sender, invitation] = *message.value();
+
 		set_message_selected(SCE_NP_BASIC_SELECTED_INVITATION_DATA, msg_id);
 		rpcn_log.notice("Selected invitation: msg_id=%d", msg_id);
 
@@ -1125,15 +1127,15 @@ namespace np
 		{
 			basic_event event{};
 			event.event = SCE_NP_BASIC_EVENT_RECV_INVITATION_RESULT;
-			strcpy_trunc(event.from.userId.handle.data, message.value()->first);
-			strcpy_trunc(event.from.name.data, message.value()->first);
+			strcpy_trunc(event.from.userId.handle.data, sender);
+			strcpy_trunc(event.from.name.data, sender);
 			event.data.resize(sizeof(SceNpBasicExtendedAttachmentData));
 
-			SceNpBasicExtendedAttachmentData* attachment_data = reinterpret_cast<SceNpBasicExtendedAttachmentData*>(event.data.data());
+			auto* attachment_data = reinterpret_cast<SceNpBasicExtendedAttachmentData*>(event.data.data());
 			attachment_data->flags = 0;
 			attachment_data->msgId = msg_id;
 			attachment_data->data.id = SCE_NP_BASIC_SELECTED_INVITATION_DATA;
-			attachment_data->data.size = static_cast<u32>(message.value()->second.data.size());
+			attachment_data->data.size = static_cast<u32>(invitation.data.size());
 			attachment_data->userAction = SCE_NP_BASIC_MESSAGE_ACTION_ACCEPT;
 			attachment_data->markedAsUsed = 1;
 
