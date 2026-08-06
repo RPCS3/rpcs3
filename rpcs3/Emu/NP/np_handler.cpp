@@ -1117,6 +1117,7 @@ namespace np
 		}
 
 		set_message_selected(SCE_NP_BASIC_SELECTED_INVITATION_DATA, msg_id);
+		rpcn_log.notice("Selected invitation: msg_id=%d", msg_id);
 
 		if (sysutil_send_system_cmd(CELL_SYSUTIL_NP_INVITATION_SELECTED, 0) <= 0)
 		{
