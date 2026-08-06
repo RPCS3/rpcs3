@@ -16,7 +16,7 @@ namespace rsx
 			void update(u64 timestamp_us) override;
 			void on_button_pressed(pad_button button_press, bool is_auto_repeat) override;
 			void request_close(std::function<void()> on_close = nullptr);
-			void register_close_callback();
+			std::function<void()> take_close_callback();
 
 			compiled_resource get_compiled() override;
 

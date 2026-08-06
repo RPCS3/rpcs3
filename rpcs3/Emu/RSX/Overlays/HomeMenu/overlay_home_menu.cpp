@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "overlay_home_menu.h"
 #include "../overlay_manager.h"
-#include "Emu/Cell/Modules/cellSysutil.h"
 #include "Emu/system_config.h"
 #include "Utilities/date_time.h"
 
@@ -146,17 +145,9 @@ namespace rsx
 			};
 		}
 
-		void home_menu_dialog::register_close_callback()
+		std::function<void()> home_menu_dialog::take_close_callback()
 		{
-			if (m_close_callback)
-			{
-				// Let the game process all system menu close callbacks before reporting the selected action.
-				sysutil_register_cb([on_close = std::move(m_close_callback)](ppu_thread&) -> s32
-				{
-					on_close();
-					return CELL_OK;
-				});
-			}
+			return std::move(m_close_callback);
 		}
 
 		compiled_resource home_menu_dialog::get_compiled()

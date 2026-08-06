@@ -945,7 +945,10 @@ void pad_thread::open_home_menu()
 
 			if (const auto home_menu = weak_home_menu.lock())
 			{
-				home_menu->register_close_callback();
+				if (auto on_close = home_menu->take_close_callback())
+				{
+					on_close();
+				}
 			}
 		});
 
