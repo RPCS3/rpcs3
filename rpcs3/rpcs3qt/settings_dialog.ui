@@ -26,15 +26,8 @@
    <iconset resource="../resources.qrc">
     <normaloff>:/rpcs3.ico</normaloff>:/rpcs3.ico</iconset>
   </property>
-  <layout class="QVBoxLayout" name="settings_dialog_layout">
+  <layout class="QVBoxLayout" name="settings_dialog_layout" stretch="1,0">
    <item>
-    <widget class="QScrollArea" name="scrollArea">
-     <property name="frameShape">
-      <enum>QFrame::Shape::NoFrame</enum>
-     </property>
-     <property name="widgetResizable">
-      <bool>true</bool>
-     </property>
      <widget class="QTabWidget" name="tab_widget_settings">
       <property name="enabled">
        <bool>true</bool>
@@ -48,7 +41,7 @@
        </rect>
       </property>
       <property name="sizePolicy">
-       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+       <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
         <horstretch>0</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
@@ -60,7 +53,17 @@
        <attribute name="title">
         <string>CPU</string>
        </attribute>
-       <layout class="QVBoxLayout" name="coreTabLayout" stretch="0,1,0">
+       <layout class="QVBoxLayout" name="coreTabLayout" stretch="1,0">
+        <item>
+         <widget class="QScrollArea" name="coreTabScrollArea">
+          <property name="frameShape">
+           <enum>QFrame::Shape::NoFrame</enum>
+          </property>
+          <property name="widgetResizable">
+           <bool>true</bool>
+          </property>
+          <widget class="QWidget" name="coreTabScrollContents">
+           <layout class="QVBoxLayout" name="coreTabScrollContentsLayout">
         <item>
          <layout class="QHBoxLayout" name="coreTabItemLayout">
           <item>
@@ -322,28 +325,32 @@
           </property>
          </spacer>
         </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
         <item>
          <widget class="QGroupBox" name="gb_description_cpu">
+          <property name="flat">
+           <bool>true</bool>
+          </property>
           <property name="title">
            <string>Description</string>
           </property>
           <layout class="QVBoxLayout" name="gb_description_cpu_layout">
            <item>
-            <widget class="QLabel" name="description_cpu">
-             <property name="text">
-              <string>Point your mouse at an option to display a description in here.
-
-
-</string>
+            <widget class="QPlainTextEdit" name="description_cpu">
+             <property name="focusPolicy">
+              <enum>Qt::FocusPolicy::ClickFocus</enum>
              </property>
-             <property name="textFormat">
-              <enum>Qt::TextFormat::PlainText</enum>
+             <property name="frameShape">
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
-             </property>
-             <property name="wordWrap">
+             <property name="readOnly">
               <bool>true</bool>
+             </property>
+             <property name="plainText">
+              <string>Point your mouse at an option to display a description in here.</string>
              </property>
             </widget>
            </item>
@@ -356,7 +363,17 @@
        <attribute name="title">
         <string>GPU</string>
        </attribute>
-       <layout class="QVBoxLayout" name="gpuTab_layout" stretch="0,1,0">
+       <layout class="QVBoxLayout" name="gpuTab_layout" stretch="1,0">
+        <item>
+         <widget class="QScrollArea" name="gpuTabScrollArea">
+          <property name="frameShape">
+           <enum>QFrame::Shape::NoFrame</enum>
+          </property>
+          <property name="widgetResizable">
+           <bool>true</bool>
+          </property>
+          <widget class="QWidget" name="gpuTabScrollContents">
+           <layout class="QVBoxLayout" name="gpuTabScrollContentsLayout">
         <item>
          <layout class="QHBoxLayout" name="gpuTabLayout" stretch="1,1,1">
           <item>
@@ -1026,28 +1043,32 @@
           </property>
          </spacer>
         </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
         <item>
          <widget class="QGroupBox" name="gb_description_gpu">
+          <property name="flat">
+           <bool>true</bool>
+          </property>
           <property name="title">
            <string>Description</string>
           </property>
           <layout class="QHBoxLayout" name="gb_description_gpu_layout">
            <item>
-            <widget class="QLabel" name="description_gpu">
-             <property name="text">
-              <string>Point your mouse at an option to display a description in here.
-
-
-</string>
+            <widget class="QPlainTextEdit" name="description_gpu">
+             <property name="focusPolicy">
+              <enum>Qt::FocusPolicy::ClickFocus</enum>
              </property>
-             <property name="textFormat">
-              <enum>Qt::TextFormat::PlainText</enum>
+             <property name="frameShape">
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
-             </property>
-             <property name="wordWrap">
+             <property name="readOnly">
               <bool>true</bool>
+             </property>
+             <property name="plainText">
+              <string>Point your mouse at an option to display a description in here.</string>
              </property>
             </widget>
            </item>
@@ -1060,7 +1081,17 @@
        <attribute name="title">
         <string>Audio</string>
        </attribute>
-       <layout class="QVBoxLayout" name="audioTab_layout" stretch="0,0,1,0">
+       <layout class="QVBoxLayout" name="audioTab_layout" stretch="1,0">
+        <item>
+         <widget class="QScrollArea" name="audioTabScrollArea">
+          <property name="frameShape">
+           <enum>QFrame::Shape::NoFrame</enum>
+          </property>
+          <property name="widgetResizable">
+           <bool>true</bool>
+          </property>
+          <widget class="QWidget" name="audioTabScrollContents">
+           <layout class="QVBoxLayout" name="audioTabScrollContentsLayout">
         <item>
          <layout class="QHBoxLayout" name="audioTabLayoutTop" stretch="1,1,1">
           <item>
@@ -1574,28 +1605,32 @@
           </property>
          </spacer>
         </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
         <item>
          <widget class="QGroupBox" name="gb_description_audio">
+          <property name="flat">
+           <bool>true</bool>
+          </property>
           <property name="title">
            <string>Description</string>
           </property>
           <layout class="QVBoxLayout" name="gb_description_audio_layout">
            <item>
-            <widget class="QLabel" name="description_audio">
-             <property name="text">
-              <string>Point your mouse at an option to display a description in here.
-
-
-</string>
+            <widget class="QPlainTextEdit" name="description_audio">
+             <property name="focusPolicy">
+              <enum>Qt::FocusPolicy::ClickFocus</enum>
              </property>
-             <property name="textFormat">
-              <enum>Qt::TextFormat::PlainText</enum>
+             <property name="frameShape">
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
-             </property>
-             <property name="wordWrap">
+             <property name="readOnly">
               <bool>true</bool>
+             </property>
+             <property name="plainText">
+              <string>Point your mouse at an option to display a description in here.</string>
              </property>
             </widget>
            </item>
@@ -1608,7 +1643,17 @@
        <attribute name="title">
         <string>I/O</string>
        </attribute>
-       <layout class="QVBoxLayout" name="inputTab_layout">
+       <layout class="QVBoxLayout" name="inputTab_layout" stretch="1,0">
+        <item>
+         <widget class="QScrollArea" name="inputTabScrollArea">
+          <property name="frameShape">
+           <enum>QFrame::Shape::NoFrame</enum>
+          </property>
+          <property name="widgetResizable">
+           <bool>true</bool>
+          </property>
+          <widget class="QWidget" name="inputTabScrollContents">
+           <layout class="QVBoxLayout" name="inputTabScrollContentsLayout">
         <item>
          <layout class="QGridLayout" name="ioGridLayout" columnstretch="1,1,1">
           <item row="2" column="2">
@@ -1885,28 +1930,32 @@
           </property>
          </spacer>
         </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
         <item>
          <widget class="QGroupBox" name="gb_description_io">
+          <property name="flat">
+           <bool>true</bool>
+          </property>
           <property name="title">
            <string>Description</string>
           </property>
           <layout class="QVBoxLayout" name="gb_description_io_layout">
            <item>
-            <widget class="QLabel" name="description_io">
-             <property name="text">
-              <string>Point your mouse at an option to display a description in here.
-
-
-</string>
+            <widget class="QPlainTextEdit" name="description_io">
+             <property name="focusPolicy">
+              <enum>Qt::FocusPolicy::ClickFocus</enum>
              </property>
-             <property name="textFormat">
-              <enum>Qt::TextFormat::PlainText</enum>
+             <property name="frameShape">
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
-             </property>
-             <property name="wordWrap">
+             <property name="readOnly">
               <bool>true</bool>
+             </property>
+             <property name="plainText">
+              <string>Point your mouse at an option to display a description in here.</string>
              </property>
             </widget>
            </item>
@@ -1919,7 +1968,17 @@
        <attribute name="title">
         <string>System</string>
        </attribute>
-       <layout class="QVBoxLayout" name="systemTab_layout" stretch="0,1,0">
+       <layout class="QVBoxLayout" name="systemTab_layout" stretch="1,0">
+        <item>
+         <widget class="QScrollArea" name="systemTabScrollArea">
+          <property name="frameShape">
+           <enum>QFrame::Shape::NoFrame</enum>
+          </property>
+          <property name="widgetResizable">
+           <bool>true</bool>
+          </property>
+          <widget class="QWidget" name="systemTabScrollContents">
+           <layout class="QVBoxLayout" name="systemTabScrollContentsLayout">
         <item>
          <layout class="QHBoxLayout" name="systemTabHorizontalLayout" stretch="1,1,1">
           <item>
@@ -2193,28 +2252,32 @@
           </property>
          </spacer>
         </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
         <item>
          <widget class="QGroupBox" name="gb_description_system">
+          <property name="flat">
+           <bool>true</bool>
+          </property>
           <property name="title">
            <string>Description</string>
           </property>
           <layout class="QHBoxLayout" name="gb_description_system_layout">
            <item>
-            <widget class="QLabel" name="description_system">
-             <property name="text">
-              <string>Point your mouse at an option to display a description in here.
-
-
-</string>
+            <widget class="QPlainTextEdit" name="description_system">
+             <property name="focusPolicy">
+              <enum>Qt::FocusPolicy::ClickFocus</enum>
              </property>
-             <property name="textFormat">
-              <enum>Qt::TextFormat::PlainText</enum>
+             <property name="frameShape">
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
-             </property>
-             <property name="wordWrap">
+             <property name="readOnly">
               <bool>true</bool>
+             </property>
+             <property name="plainText">
+              <string>Point your mouse at an option to display a description in here.</string>
              </property>
             </widget>
            </item>
@@ -2227,7 +2290,17 @@
        <attribute name="title">
         <string>Network</string>
        </attribute>
-       <layout class="QVBoxLayout" name="networkTab_layout" stretch="0,1,0">
+       <layout class="QVBoxLayout" name="networkTab_layout" stretch="1,0">
+        <item>
+         <widget class="QScrollArea" name="networkTabScrollArea">
+          <property name="frameShape">
+           <enum>QFrame::Shape::NoFrame</enum>
+          </property>
+          <property name="widgetResizable">
+           <bool>true</bool>
+          </property>
+          <widget class="QWidget" name="networkTabScrollContents">
+           <layout class="QVBoxLayout" name="networkTabScrollContentsLayout">
         <item>
          <layout class="QHBoxLayout" name="networkTabLayout" stretch="0,0">
           <item>
@@ -2412,28 +2485,32 @@
           </property>
          </spacer>
         </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
         <item>
          <widget class="QGroupBox" name="gb_description_network">
+          <property name="flat">
+           <bool>true</bool>
+          </property>
           <property name="title">
            <string>Description</string>
           </property>
           <layout class="QVBoxLayout" name="gb_description_network_layout">
            <item>
-            <widget class="QLabel" name="description_network">
-             <property name="text">
-              <string>Point your mouse at an option to display a description in here.
-
-
-</string>
+            <widget class="QPlainTextEdit" name="description_network">
+             <property name="focusPolicy">
+              <enum>Qt::FocusPolicy::ClickFocus</enum>
              </property>
-             <property name="textFormat">
-              <enum>Qt::TextFormat::PlainText</enum>
+             <property name="frameShape">
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
-             </property>
-             <property name="wordWrap">
+             <property name="readOnly">
               <bool>true</bool>
+             </property>
+             <property name="plainText">
+              <string>Point your mouse at an option to display a description in here.</string>
              </property>
             </widget>
            </item>
@@ -2446,7 +2523,17 @@
        <attribute name="title">
         <string>Advanced</string>
        </attribute>
-       <layout class="QVBoxLayout" name="advancedTab_layout" stretch="1,0,0">
+       <layout class="QVBoxLayout" name="advancedTab_layout" stretch="1,0">
+        <item>
+         <widget class="QScrollArea" name="advancedTabScrollArea">
+          <property name="frameShape">
+           <enum>QFrame::Shape::NoFrame</enum>
+          </property>
+          <property name="widgetResizable">
+           <bool>true</bool>
+          </property>
+          <widget class="QWidget" name="advancedTabScrollContents">
+           <layout class="QVBoxLayout" name="advancedTabScrollContentsLayout">
         <item>
          <layout class="QHBoxLayout" name="advancedTabLayout" stretch="1,1,1">
           <item>
@@ -2962,28 +3049,32 @@
           </property>
          </spacer>
         </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
         <item>
          <widget class="QGroupBox" name="gb_description_advanced">
+          <property name="flat">
+           <bool>true</bool>
+          </property>
           <property name="title">
            <string>Description</string>
           </property>
           <layout class="QVBoxLayout" name="gb_description_advanced_layout">
            <item>
-            <widget class="QLabel" name="description_advanced">
-             <property name="text">
-              <string>Point your mouse at an option to display a description in here.
-
-
-</string>
+            <widget class="QPlainTextEdit" name="description_advanced">
+             <property name="focusPolicy">
+              <enum>Qt::FocusPolicy::ClickFocus</enum>
              </property>
-             <property name="textFormat">
-              <enum>Qt::TextFormat::PlainText</enum>
+             <property name="frameShape">
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
-             </property>
-             <property name="wordWrap">
+             <property name="readOnly">
               <bool>true</bool>
+             </property>
+             <property name="plainText">
+              <string>Point your mouse at an option to display a description in here.</string>
              </property>
             </widget>
            </item>
@@ -2996,7 +3087,17 @@
        <attribute name="title">
         <string>Emulator</string>
        </attribute>
-       <layout class="QVBoxLayout" name="emulatorTab_layout" stretch="0,1,0">
+       <layout class="QVBoxLayout" name="emulatorTab_layout" stretch="1,0">
+        <item>
+         <widget class="QScrollArea" name="emulatorTabScrollArea">
+          <property name="frameShape">
+           <enum>QFrame::Shape::NoFrame</enum>
+          </property>
+          <property name="widgetResizable">
+           <bool>true</bool>
+          </property>
+          <widget class="QWidget" name="emulatorTabScrollContents">
+           <layout class="QVBoxLayout" name="emulatorTabScrollContentsLayout">
         <item>
          <layout class="QHBoxLayout" name="emulatorTabLayout" stretch="1,1,1">
           <item>
@@ -3853,28 +3954,32 @@
           </property>
          </spacer>
         </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
         <item>
          <widget class="QGroupBox" name="gb_description_emulator">
+          <property name="flat">
+           <bool>true</bool>
+          </property>
           <property name="title">
            <string>Description</string>
           </property>
           <layout class="QVBoxLayout" name="gb_description_emulator_layout">
            <item>
-            <widget class="QLabel" name="description_emulator">
-             <property name="text">
-              <string>Point your mouse at an option to display a description in here.
-
-
-</string>
+            <widget class="QPlainTextEdit" name="description_emulator">
+             <property name="focusPolicy">
+              <enum>Qt::FocusPolicy::ClickFocus</enum>
              </property>
-             <property name="textFormat">
-              <enum>Qt::TextFormat::PlainText</enum>
+             <property name="frameShape">
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
-             </property>
-             <property name="wordWrap">
+             <property name="readOnly">
               <bool>true</bool>
+             </property>
+             <property name="plainText">
+              <string>Point your mouse at an option to display a description in here.</string>
              </property>
             </widget>
            </item>
@@ -3887,7 +3992,17 @@
        <attribute name="title">
         <string>GUI</string>
        </attribute>
-       <layout class="QVBoxLayout" name="guiTab_layout" stretch="0,1,0">
+       <layout class="QVBoxLayout" name="guiTab_layout" stretch="1,0">
+        <item>
+         <widget class="QScrollArea" name="guiTabScrollArea">
+          <property name="frameShape">
+           <enum>QFrame::Shape::NoFrame</enum>
+          </property>
+          <property name="widgetResizable">
+           <bool>true</bool>
+          </property>
+          <widget class="QWidget" name="guiTabScrollContents">
+           <layout class="QVBoxLayout" name="guiTabScrollContentsLayout">
         <item>
          <layout class="QHBoxLayout" name="guiTabLayout" stretch="1,1,1">
           <item>
@@ -4316,28 +4431,32 @@
           </property>
          </spacer>
         </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
         <item>
          <widget class="QGroupBox" name="gb_description_gui">
+          <property name="flat">
+           <bool>true</bool>
+          </property>
           <property name="title">
            <string>Description</string>
           </property>
           <layout class="QVBoxLayout" name="gb_description_gui_layout">
            <item>
-            <widget class="QLabel" name="description_gui">
-             <property name="text">
-              <string>Point your mouse at an option to display a description in here.
-
-
-</string>
+            <widget class="QPlainTextEdit" name="description_gui">
+             <property name="focusPolicy">
+              <enum>Qt::FocusPolicy::ClickFocus</enum>
              </property>
-             <property name="textFormat">
-              <enum>Qt::TextFormat::PlainText</enum>
+             <property name="frameShape">
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
-             </property>
-             <property name="wordWrap">
+             <property name="readOnly">
               <bool>true</bool>
+             </property>
+             <property name="plainText">
+              <string>Point your mouse at an option to display a description in here.</string>
              </property>
             </widget>
            </item>
@@ -4350,7 +4469,17 @@
        <attribute name="title">
         <string>Debug</string>
        </attribute>
-       <layout class="QVBoxLayout" name="debugTab_layout" stretch="0,1,0">
+       <layout class="QVBoxLayout" name="debugTab_layout" stretch="1,0">
+        <item>
+         <widget class="QScrollArea" name="debugTabScrollArea">
+          <property name="frameShape">
+           <enum>QFrame::Shape::NoFrame</enum>
+          </property>
+          <property name="widgetResizable">
+           <bool>true</bool>
+          </property>
+          <widget class="QWidget" name="debugTabScrollContents">
+           <layout class="QVBoxLayout" name="debugTabScrollContentsLayout">
         <item>
          <layout class="QHBoxLayout" name="debugTabLayout" stretch="1,1,1">
           <item>
@@ -4824,28 +4953,32 @@
           </property>
          </spacer>
         </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
         <item>
          <widget class="QGroupBox" name="gb_description_debug">
+          <property name="flat">
+           <bool>true</bool>
+          </property>
           <property name="title">
            <string>Description</string>
           </property>
           <layout class="QVBoxLayout" name="gb_description_debug_layout">
            <item>
-            <widget class="QLabel" name="description_debug">
-             <property name="text">
-              <string>Point your mouse at an option to display a description in here.
-
-
-</string>
+            <widget class="QPlainTextEdit" name="description_debug">
+             <property name="focusPolicy">
+              <enum>Qt::FocusPolicy::ClickFocus</enum>
              </property>
-             <property name="textFormat">
-              <enum>Qt::TextFormat::PlainText</enum>
+             <property name="frameShape">
+              <enum>QFrame::Shape::NoFrame</enum>
              </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
-             </property>
-             <property name="wordWrap">
+             <property name="readOnly">
               <bool>true</bool>
+             </property>
+             <property name="plainText">
+              <string>Point your mouse at an option to display a description in here.</string>
              </property>
             </widget>
            </item>
@@ -4854,7 +4987,6 @@
         </item>
        </layout>
       </widget>
-     </widget>
     </widget>
    </item>
    <item>

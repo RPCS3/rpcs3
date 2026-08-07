@@ -8,7 +8,9 @@
 #include <QInputDialog>
 #include <QDesktopServices>
 #include <QColorDialog>
+#include <QPlainTextEdit>
 #include <QSpinBox>
+#include <QTextDocument>
 #include <QTimer>
 #include <QScreen>
 #include <QStyleFactory>
@@ -2461,10 +2463,14 @@ void settings_dialog::open()
 	});
 }
 
-void settings_dialog::SubscribeDescription(QLabel* description)
+void settings_dialog::SubscribeDescription(QPlainTextEdit* description)
 {
-	description->setFixedHeight(description->sizeHint().height());
-	m_description_labels.push_back(std::pair<QLabel*, QString>(description, description->text()));
+	// Give the description box a static height
+	constexpr int visible_lines = 4;
+	const int margins = static_cast<int>(description->document()->documentMargin()) * 2 + description->frameWidth() * 2;
+	description->setFixedHeight(description->fontMetrics().lineSpacing() * visible_lines + margins);
+
+	m_description_views.emplace_back(description, description->toPlainText());
 }
 
 void settings_dialog::SubscribeTooltip(QObject* object, const QString& tooltip)
@@ -2497,17 +2503,17 @@ bool settings_dialog::eventFilter(QObject* object, QEvent* event)
 	{
 		const int i = ui->tab_widget_settings->currentIndex();
 
-		if (i >= 0 && static_cast<usz>(i) < m_description_labels.size())
+		if (i >= 0 && static_cast<usz>(i) < m_description_views.size())
 		{
-			if (QLabel* label = m_description_labels[i].first)
+			if (QPlainTextEdit* description = m_description_views[i].first)
 			{
 				if (event->type() == QEvent::Enter)
 				{
-					label->setText(m_descriptions[object]);
+					description->setPlainText(m_descriptions[object]);
 				}
 				else if (event->type() == QEvent::Leave)
 				{
-					label->setText(m_description_labels[i].second);
+					description->setPlainText(m_description_views[i].second);
 				}
 			}
 		}
