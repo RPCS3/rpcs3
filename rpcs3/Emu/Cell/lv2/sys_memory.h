@@ -2,6 +2,9 @@
 
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/ErrorCodes.h"
+#include "Utilities/mutex.h"
+
+#include <map>
 
 u32 allocate_user_memory(u32 size, u32 align);
 
@@ -81,6 +84,9 @@ struct lv2_memory_container
 	void save(utils::serial& ar);
 	static lv2_memory_container* search(u32 id);
 
+	shared_mutex m_allocations_mtx;
+	std::multimap<std::string, u32> m_allocations;
+
 	// Try to get specified amount of "physical" memory
 	// Values greater than UINT32_MAX will fail
 	u32 take(u64 amount)
@@ -101,7 +107,7 @@ struct lv2_memory_container
 
 	u32 free(u64 amount)
 	{
-		auto [_, result] = used.fetch_op([&](u32& value) -> u32
+		auto [old_used, result] = used.fetch_op([&](u32& value) -> u32
 		{
 			if (value >= amount)
 			{
@@ -115,7 +121,32 @@ struct lv2_memory_container
 		// Sanity check
 		ensure(result == amount);
 
-		return result;
+		return old_used - amount;
+	}
+
+	void take_named(const std::string& name, u32 amount)
+	{
+		std::lock_guard lock(m_allocations_mtx);
+
+		m_allocations.emplace(name, amount);
+	}
+
+	void free_named(const std::string& name, u32 amount)
+	{
+		std::lock_guard lock(m_allocations_mtx);
+
+		if (auto it = m_allocations.find(name); it == m_allocations.end())
+		{
+			ensure(false);
+		}
+		else if (it->second != amount)
+		{
+			ensure(false);
+		}
+		else
+		{
+			m_allocations.erase(it);
+		}
 	}
 };
 

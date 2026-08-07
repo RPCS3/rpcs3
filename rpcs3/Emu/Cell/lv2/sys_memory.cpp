@@ -167,6 +167,11 @@ u32 allocate_user_memory(u32 size, u32 align)
 	return g_fxo->get<sys_memory_address_table>().allocate(size, align);
 }
 
+static std::string make_named_allocation(u32 addr, [[maybe_unused]] u32 amount)
+{
+	return fmt::format("sys_memory: addr 0x%x", addr);
+}
+
 // Todo: fix order of error checks
 
 error_code sys_memory_allocate(cpu_thread& cpu, u64 size, u64 flags, vm::ptr<u32> alloc_addr)
@@ -215,10 +220,20 @@ error_code sys_memory_allocate(cpu_thread& cpu, u64 size, u64 flags, vm::ptr<u32
 
 			ensure(!lv2_process::get_typemap()->get<sys_memory_address_table>().addrs[addr >> 16].exchange(&dct));
 
-			vm::lock_sudo(addr, static_cast<u32>(size));
-			cpu.check_state();
-			*alloc_addr = addr;
-			return CELL_OK;
+			if (alloc_addr)
+			{
+				dct.take_named(make_named_allocation(addr, size), size);
+				sys_memory.notice("sys_memory_allocate(): Allocated 0x%x address (size=0x%x)", addr, size);
+
+				vm::lock_sudo(addr, static_cast<u32>(size));
+				cpu.check_state();
+				*alloc_addr = addr;
+				return CELL_OK;
+			}
+
+			// Dealloc using the syscall
+			sys_memory_free(cpu, addr);
+			return CELL_EFAULT;
 		}
 
 		sys_memory_free(cpu, addr);
@@ -287,10 +302,20 @@ error_code sys_memory_allocate_from_container(cpu_thread& cpu, u64 size, u32 cid
 
 			ensure(!lv2_process::get_typemap()->get<sys_memory_address_table>().addrs[addr >> 16].exchange(ct.ptr.get()));
 
-			vm::lock_sudo(addr, static_cast<u32>(size));
-			cpu.check_state();
-			*alloc_addr = addr;
-			return CELL_OK;
+			if (alloc_addr)
+			{
+				ct->take_named(make_named_allocation(addr, size), size);
+				sys_memory.notice("sys_memory_allocate_from_container(): Allocated 0x%x address (size=0x%x)", addr, size);
+
+				vm::lock_sudo(addr, static_cast<u32>(size));
+				cpu.check_state();
+				*alloc_addr = addr;
+				return CELL_OK;
+			}
+
+			// Dealloc using the syscall
+			sys_memory_free(cpu, addr);
+			return CELL_EFAULT;
 		}
 
 		sys_memory_free(cpu, addr);
@@ -307,15 +332,29 @@ error_code sys_memory_free(cpu_thread& cpu, u32 addr)
 
 	sys_memory.warning("sys_memory_free(addr=0x%x)", addr);
 
-	const auto ct = addr % 0x10000 ? nullptr : lv2_process::get_typemap()->get<sys_memory_address_table>().addrs[addr >> 16].exchange(nullptr);
+	auto ct = addr % 0x10000 ? nullptr : lv2_process::get_typemap()->get<sys_memory_address_table>().addrs[addr >> 16].exchange(nullptr);
 
 	if (!ct)
 	{
 		return {CELL_EINVAL, addr};
 	}
 
+	// Get "default" memory container
+	auto& dct = *idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->parent_memory_container;
+
 	const auto size = (ensure(vm::dealloc(addr)));
-	reader_lock{id_manager::g_mutex}, ct->free(size);
+	reader_lock lock(id_manager::g_mutex);
+
+	const u32 used_amount = ct->free(size);
+
+	if (ct != &dct)
+	{
+		sys_memory.warning("sys_memory_free(): CT 0x%x has 0x%x of memory being used.", ct->id, used_amount);
+	}
+
+	ct->free_named(make_named_allocation(addr, size), size);
+
+	ct = nullptr;
 	return CELL_OK;
 }
 
@@ -532,6 +571,18 @@ error_code sys_memory_container_destroy(cpu_thread& cpu, u32 cid)
 
 	if (ct.ret)
 	{
+		std::lock_guard lock(ct->m_allocations_mtx);
+
+		for (auto [named, amount] : ct->m_allocations)
+		{
+			sys_memory.error("Allocations \"%s\" remained (size=0x%x)", named, amount);
+		}
+
+		if (ct->m_allocations.empty())
+		{
+			sys_memory.error("No recognized allocations!");
+		}
+
 		return { ct.ret, +ct->used };
 	}
 

@@ -91,12 +91,23 @@ lv2_memory::lv2_memory(utils::serial& ar)
 	}
 }
 
+static std::string make_named_allocation(u32 id, [[maybe_unused]] u32 amount)
+{
+	return fmt::format("sys_mmapper: id 0x%x", id);
+}
+
 CellError lv2_memory::on_id_create()
 {
 	if (!exists && !external_refs && ct && !ct->take(size))
 	{
 		sys_mmapper.error("lv2_memory::on_id_create(): Cannot allocate 0x%x bytes (0x%x available)", size, ct->size - ct->used);
+
 		return CELL_ENOMEM;
+	}
+
+	if (!exists)
+	{
+		ct->take_named(make_named_allocation(idm::last_id(), size), size);
 	}
 
 	exists++;
@@ -769,8 +780,15 @@ error_code sys_mmapper_free_shared_memory(ppu_thread& ppu, u32 mem_id)
 			return CELL_EBUSY;
 		}
 
-		lv2_obj::on_id_destroy(mem, mem.key, false);
+		lv2_obj::on_id_destroy(mem, mem.key, +mem.pshared);
 		mem.release_memory();
+
+		if (!mem.exists)
+		{
+			// Return "physical memory" to the memory container
+			mem.ct->free(mem.size);
+			mem.ct->free_named(make_named_allocation(mem_id, mem.size), mem.size);
+		}
 
 		return {};
 	});
