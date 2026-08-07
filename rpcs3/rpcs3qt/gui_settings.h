@@ -165,6 +165,8 @@ namespace gui
 	const gui_save ib_restart_hint = gui_save(main_window, "confirmationRestart",      true);
 
 	const gui_save fd_install_pkg  = gui_save(main_window, "lastExplorePathPKG",  "");
+	const gui_save fd_add_games    = gui_save(main_window, "lastExplorePathADDGAMES", "");
+	const gui_save fd_add_iso      = gui_save(main_window, "lastExplorePathADDISO",   "");
 	const gui_save fd_install_pup  = gui_save(main_window, "lastExplorePathPUP",  "");
 	const gui_save fd_boot_elf     = gui_save(main_window, "lastExplorePathELF",  "");
 	const gui_save fd_boot_game    = gui_save(main_window, "lastExplorePathGAME", "");

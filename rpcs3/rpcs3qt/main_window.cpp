@@ -2729,11 +2729,14 @@ void main_window::CreateConnects()
 		}
 
 		// Only select one folder for now
-		QString dir = QFileDialog::getExistingDirectory(this, tr("Select a folder containing one or more games"), QString::fromStdString(fs::get_config_dir()), QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+		const QString path_last_add_games = m_gui_settings->GetValue(gui::fd_add_games).toString();
+		const QString dir = QFileDialog::getExistingDirectory(this, tr("Select a folder containing one or more games"), path_last_add_games, QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
 		if (dir.isEmpty())
 		{
 			return;
 		}
+
+		m_gui_settings->SetValue(gui::fd_add_games, QFileInfo(dir).path());
 
 		QStringList paths;
 		paths << dir;
@@ -2747,11 +2750,14 @@ void main_window::CreateConnects()
 			return;
 		}
 
-		QStringList paths = QFileDialog::getOpenFileNames(this, tr("Select ISO files to add"), QString::fromStdString(fs::get_config_dir()), tr("ISO files (*.iso);;All files (*.*)"));
+		const QString path_last_add_iso = m_gui_settings->GetValue(gui::fd_add_iso).toString();
+		QStringList paths = QFileDialog::getOpenFileNames(this, tr("Select ISO files to add"), path_last_add_iso, tr("ISO files (*.iso);;All files (*.*)"));
 		if (paths.isEmpty())
 		{
 			return;
 		}
+
+		m_gui_settings->SetValue(gui::fd_add_iso, QFileInfo(paths.front()).path());
 
 		AddGamesFromDirs(std::move(paths));
 	});
