@@ -224,18 +224,21 @@ void set_flip_handler(vm::ptr<CellRescHandler> handler)
 	return;
 }
 
-void fill_vertex_array()
+void fill_vertex_array(f32 src_width = 1.0f, f32 src_height = 1.0f, f32 dst_width = 1.0f, f32 dst_height = 1.0f)
 {
 	auto& resc_manager = g_fxo->get<cell_resc_manager>();
 
-	const f32 half_texel_x = 0.5f / resc_manager.horizontal;
-	const f32 half_texel_y = 0.5f / resc_manager.vertical;
+	const f32 center_x = src_width * 0.5f;
+	const f32 center_y = src_height * 0.5f;
 
-	const f32 tex_coord_min_x = 0.5f - half_texel_x;
-	const f32 tex_coord_max_x = 0.5f + half_texel_x;
+	const f32 half_texel_x = center_x / resc_manager.horizontal;
+	const f32 half_texel_y = center_y / resc_manager.vertical;
 
-	const f32 tex_coord_min_y = 0.5f - half_texel_y;
-	const f32 tex_coord_max_y = 0.5f + half_texel_y;
+	f32 tex_coord_min_x = center_x - half_texel_x;
+	f32 tex_coord_max_x = center_x + half_texel_x;
+
+	f32 tex_coord_min_y = center_y - half_texel_y;
+	f32 tex_coord_max_y = center_y + half_texel_y;
 
 	f32* vertexArray = reinterpret_cast<f32*>(resc_manager.vertexArray.get_ptr());
 
@@ -243,85 +246,22 @@ void fill_vertex_array()
 	{
 		if (resc_manager.config.ratioMode == CELL_RESC_LETTERBOX)
 		{
-			f32 letterbox_offset_y = (2.0f / 3.0f) / resc_manager.vertical;
+			f32 letterbox_offset_y = half_texel_y * 4.0f / 3.0f;
 
 			if (resc_manager.config.size != 28)
 			{
 				letterbox_offset_y /= 1.062091588973999f;
 			}
 
-			const f32 letterbox_tex_coord_min_y = 0.5f - letterbox_offset_y;
-			const f32 letterbox_tex_coord_max_y = 0.5f + letterbox_offset_y;
-
-			vertexArray[0] = -1.0f;
-			vertexArray[1] = 1.0f;
-			vertexArray[2] = tex_coord_min_x;
-			vertexArray[3] = letterbox_tex_coord_min_y;
-			vertexArray[4] = 0;
-			vertexArray[5] = 0;
-
-			vertexArray[6] = 1.0f;
-			vertexArray[7] = 1.0f;
-			vertexArray[8] = tex_coord_max_x;
-			vertexArray[9] = letterbox_tex_coord_min_y;
-			vertexArray[10] = 1.0f;
-			vertexArray[11] = 0;
-
-			vertexArray[12] = 1.0f;
-			vertexArray[13] = -1.0f;
-			vertexArray[14] = tex_coord_max_x;
-			vertexArray[15] = letterbox_tex_coord_max_y;
-			vertexArray[16] = 1.0f;
-			vertexArray[17] = 1.0f;
-
-			vertexArray[18] = -1.0f;
-			vertexArray[19] = -1.0f;
-			vertexArray[20] = tex_coord_min_x;
-			vertexArray[21] = letterbox_tex_coord_max_y;
-			vertexArray[22] = 0;
-			vertexArray[23] = 1.0f;
-
-			resc_manager.field_0x140 = 4;
-			return;
+			tex_coord_min_y = center_y - letterbox_offset_y;
+			tex_coord_max_y = center_y + letterbox_offset_y;
 		}
-
-		if (resc_manager.config.ratioMode == CELL_RESC_PANSCAN)
+		else if (resc_manager.config.ratioMode == CELL_RESC_PANSCAN)
 		{
-			const f32 panscan_offset_x = 0.375f / resc_manager.horizontal;
+			const f32 panscan_offset_x = half_texel_x * 3.0f / 4.0f;
 
-			const f32 panscan_tex_coord_min_x = 0.5f - panscan_offset_x;
-			const f32 panscan_tex_coord_max_x = 0.5f + panscan_offset_x;
-
-			vertexArray[0] = -1.0f;
-			vertexArray[1] = 1.0f;
-			vertexArray[2] = panscan_tex_coord_min_x;
-			vertexArray[3] = tex_coord_min_y;
-			vertexArray[4] = 0;
-			vertexArray[5] = 0;
-
-			vertexArray[6] = 1.0f;
-			vertexArray[7] = 1.0f;
-			vertexArray[8] = panscan_tex_coord_max_x;
-			vertexArray[9] = tex_coord_min_y;
-			vertexArray[10] = 1.0f;
-			vertexArray[11] = 0;
-
-			vertexArray[12] = 1.0f;
-			vertexArray[13] = -1.0f;
-			vertexArray[14] = panscan_tex_coord_max_x;
-			vertexArray[15] = tex_coord_max_y;
-			vertexArray[16] = 1.0f;
-			vertexArray[17] = 1.0f;
-
-			vertexArray[18] = -1.0f;
-			vertexArray[19] = -1.0f;
-			vertexArray[20] = panscan_tex_coord_min_x;
-			vertexArray[21] = tex_coord_max_y;
-			vertexArray[22] = 0;
-			vertexArray[23] = 1.0f;
-
-			resc_manager.field_0x140 = 4;
-			return;
+			tex_coord_min_x = center_x - panscan_offset_x;
+			tex_coord_max_x = center_x + panscan_offset_x;
 		}
 	}
 
@@ -336,24 +276,49 @@ void fill_vertex_array()
 	vertexArray[7] = 1.0f;
 	vertexArray[8] = tex_coord_max_x;
 	vertexArray[9] = tex_coord_min_y;
-	vertexArray[10] = 1.0f;
+	vertexArray[10] = dst_width;
 	vertexArray[11] = 0;
 
 	vertexArray[12] = 1.0f;
 	vertexArray[13] = -1.0f;
 	vertexArray[14] = tex_coord_max_x;
 	vertexArray[15] = tex_coord_max_y;
-	vertexArray[16] = 1.0f;
-	vertexArray[17] = 1.0f;
+	vertexArray[16] = dst_width;
+	vertexArray[17] = dst_height;
 
 	vertexArray[18] = -1.0f;
 	vertexArray[19] = -1.0f;
 	vertexArray[20] = tex_coord_min_x;
 	vertexArray[21] = tex_coord_max_y;
 	vertexArray[22] = 0;
-	vertexArray[23] = 1.0f;
+	vertexArray[23] = dst_height;
 
 	resc_manager.field_0x140 = 4;
+}
+
+
+void fill_vertex_array_from_src(s32 index)
+{
+	auto& resc_manager = g_fxo->get<cell_resc_manager>();
+
+	if (resc_manager.recreateVertexArray.exchange(false))
+	{
+		resc_manager.src_width = resc_manager.srcs[index].width;
+		resc_manager.src_height = resc_manager.srcs[index].height;
+	}
+	else
+	{
+		if (resc_manager.src_width == resc_manager.srcs[index].width &&
+			resc_manager.src_height == resc_manager.srcs[index].height)
+		{
+			return;
+		}
+
+		resc_manager.src_width = resc_manager.srcs[index].width;
+		resc_manager.src_height = resc_manager.srcs[index].height;
+	}
+
+	fill_vertex_array(resc_manager.src_width, resc_manager.src_height, resc_manager.width, resc_manager.height);
 }
 
 void init_config()
@@ -401,8 +366,8 @@ void init_config()
 	resc_manager.height = 0;
 	resc_manager.pitch = 0;
 
-	resc_manager.field_0x120 = 0;
-	resc_manager.field_0x122 = 0;
+	resc_manager.src_width = 0;
+	resc_manager.src_height = 0;
 
 	resc_manager.bufferSize = 0;
 
@@ -417,9 +382,9 @@ void init_config()
 	resc_manager.horizontal = 1.0f;
 	resc_manager.vertical = 1.0f;
 
-	resc_manager.is_initialized = 0;
+	resc_manager.is_initialized = false;
+	resc_manager.recreateVertexArray = false;
 
-	resc_manager.field_0x151 = 0;
 	for (s32 i = 0; i < 15; i++)
 	{
 		resc_manager.field_0x152[i] = 0xff;
@@ -765,7 +730,7 @@ error_code cellRescAdjustAspectRatio(f32 horizontal, f32 vertical)
 
 	if (resc_manager.config.interlaceMode == CELL_RESC_INTERLACE_FILTER)
 	{
-		resc_manager.field_0x151 = 1;
+		resc_manager.recreateVertexArray = true;
 		return CELL_OK;
 	}
 
@@ -959,7 +924,7 @@ error_code cellRescSetSrc(s32 idx, vm::cptr<CellRescSrc> src)
 	return CELL_OK;
 }
 
-error_code cellRescSetConvertAndFlip(ppu_thread& ppu, vm::ptr<CellGcmContextData> con, s32 idx)
+error_code cellRescSetConvertAndFlip(vm::ptr<CellGcmContextData> con, s32 idx)
 {
 	cellResc.todo("cellRescSetConvertAndFlip(con=*0x%x, idx=0x%x)", con, idx);
 

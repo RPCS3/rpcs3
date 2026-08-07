@@ -12,7 +12,7 @@ enum CellRescError : u32
 	CELL_RESC_ERROR_x308              = 0x80210308, // TODO: find proper name
 };
 
-enum
+enum : u32
 {
 	COLOR_BUFFER_ALIGNMENT = 128,
 	VERTEX_BUFFER_ALIGNMENT = 4,
@@ -31,7 +31,7 @@ enum CellRescBufferMode : u32 // CellRescDisplayBufferMode
 	CELL_RESC_1920x1080 = 0x8,
 };
 
-enum CellRescPalTemporalMode
+enum CellRescPalTemporalMode : u32
 {
 	CELL_RESC_PAL_50                            = 0,
 	CELL_RESC_PAL_60_DROP                       = 1,
@@ -41,32 +41,32 @@ enum CellRescPalTemporalMode
 	CELL_RESC_PAL_60_FOR_HSYNC                  = 5,
 };
 
-enum CellRescRatioConvertMode
+enum CellRescRatioConvertMode : u32
 {
 	CELL_RESC_FULLSCREEN             = 0,
 	CELL_RESC_LETTERBOX              = 1,
 	CELL_RESC_PANSCAN                = 2,
 };
 
-enum CellRescFlipMode
+enum CellRescFlipMode : u32
 {
 	CELL_RESC_DISPLAY_VSYNC          = 0,
 	CELL_RESC_DISPLAY_HSYNC          = 1,
 };
 
-enum CellRescDstFormat
+enum CellRescDstFormat : u32
 {
 	CELL_RESC_SURFACE_A8R8G8B8       = 8,  // == CELL_GCM_SURFACE_A8R8G8B8
 	CELL_RESC_SURFACE_F_W16Z16Y16X16 = 11, // == CELL_GCM_SURFACE_F_W16Z16Y16X16
 };
 
-enum CellRescTableElement
+enum CellRescTableElement : u32
 {
 	CELL_RESC_ELEMENT_HALF = 0,
 	CELL_RESC_ELEMENT_FLOAT = 1,
 };
 
-enum CellRescResourcePolicy
+enum CellRescResourcePolicy : u32
 {
 	CELL_RESC_CONSTANT_VRAM          = 0x0,
 	CELL_RESC_MINIMUM_VRAM           = 0x1,
@@ -74,7 +74,7 @@ enum CellRescResourcePolicy
 	CELL_RESC_MINIMUM_GPU_LOAD       = 0x2,
 };
 
-enum CellRescConvolutionFilterMode // CellRescInterlaceFilterMode
+enum CellRescConvolutionFilterMode : u32 // CellRescInterlaceFilterMode
 {
 	CELL_RESC_NORMAL_BILINEAR        = 0,
 	CELL_RESC_INTERLACE_FILTER       = 1,
@@ -142,8 +142,8 @@ struct cell_resc_manager
 	u32 width = 0;
 	u32 height = 0;
 	u32 pitch = 0;
-	u16 field_0x120 = 0; // TODO
-	u16 field_0x122 = 0; // TODO
+	u16 src_width = 0;
+	u16 src_height = 0;
 	u32 bufferSize = 0;
 	u32 buffersOffsets[MAX_DST_BUFFER_NUM] {};
 	u32 field_0x140 = 0; // TODO
@@ -151,7 +151,7 @@ struct cell_resc_manager
 	f32 horizontal = 0.0f;
 	f32 vertical = 0.0f;
 	atomic_t<bool> is_initialized = false;
-	u8 field_0x151 = 0; // TODO
+	atomic_t<bool> recreateVertexArray = 0;
 	u8 field_0x152[15] {}; // TODO
 	u8 pad2[7] {};
 	u64 field_0x168 = 0; // TODO
