@@ -12,7 +12,7 @@ enum CellRescError : u32
 	CELL_RESC_ERROR_x308              = 0x80210308, // TODO: find proper name
 };
 
-enum : u32
+enum
 {
 	COLOR_BUFFER_ALIGNMENT = 128,
 	VERTEX_BUFFER_ALIGNMENT = 4,
@@ -145,7 +145,7 @@ struct cell_resc_manager
 	u16 src_width = 0;
 	u16 src_height = 0;
 	u32 bufferSize = 0;
-	u32 buffersOffsets[MAX_DST_BUFFER_NUM] {};
+	u32 bufferOffsets[MAX_DST_BUFFER_NUM] {};
 	u32 field_0x140 = 0; // TODO
 	u32 depth = 0;
 	f32 horizontal = 0.0f;

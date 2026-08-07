@@ -240,8 +240,6 @@ void fill_vertex_array(f32 src_width = 1.0f, f32 src_height = 1.0f, f32 dst_widt
 	f32 tex_coord_min_y = center_y - half_texel_y;
 	f32 tex_coord_max_y = center_y + half_texel_y;
 
-	f32* vertexArray = reinterpret_cast<f32*>(resc_manager.vertexArray.get_ptr());
-
 	if (resc_manager.bufferMode == CELL_RESC_720x480 || resc_manager.bufferMode == CELL_RESC_720x576)
 	{
 		if (resc_manager.config.ratioMode == CELL_RESC_LETTERBOX)
@@ -264,6 +262,8 @@ void fill_vertex_array(f32 src_width = 1.0f, f32 src_height = 1.0f, f32 dst_widt
 			tex_coord_max_x = center_x + panscan_offset_x;
 		}
 	}
+
+	f32* vertexArray = reinterpret_cast<f32*>(resc_manager.vertexArray.get_ptr());
 
 	vertexArray[0] = -1.0f;
 	vertexArray[1] = 1.0f;
@@ -373,7 +373,7 @@ void init_config()
 
 	for (u32 i = 0; i < MAX_DST_BUFFER_NUM; i++)
 	{
-		resc_manager.buffersOffsets[i] = 0;
+		resc_manager.bufferOffsets[i] = 0;
 	}
 
 	resc_manager.field_0x140 = 0;
@@ -420,8 +420,29 @@ error_code cellRescInit(vm::cptr<CellRescInitConfig> initConfig)
 		return CELL_RESC_ERROR_REINITIALIZED;
 	}
 
-	if (!initConfig || initConfig->size > 28 || (initConfig->size != 20 && initConfig->size != 24 && initConfig->size != 28))
+	if (!initConfig)
 	{
+		return CELL_RESC_ERROR_BAD_ARGUMENT;
+	}
+
+	switch (initConfig->size)
+	{
+	case 20:
+		break;
+	case 24:
+		if (initConfig->interlaceMode > CELL_RESC_INTERLACE_FILTER)
+		{
+			return CELL_RESC_ERROR_BAD_ARGUMENT;
+		}
+		break;
+	case 28:
+		if (initConfig->interlaceMode > CELL_RESC_2X3_QUINCUNX_ALT ||
+			initConfig->flipMode > CELL_RESC_DISPLAY_HSYNC)
+		{
+			return CELL_RESC_ERROR_BAD_ARGUMENT;
+		}
+		break;
+	default:
 		return CELL_RESC_ERROR_BAD_ARGUMENT;
 	}
 
@@ -431,22 +452,6 @@ error_code cellRescInit(vm::cptr<CellRescInitConfig> initConfig)
 		(initConfig->palTemporalMode > CELL_RESC_PAL_60_FOR_HSYNC))
 	{
 		return CELL_RESC_ERROR_BAD_ARGUMENT;
-	}
-
-	if (resc_manager.config.size == 24)
-	{
-		if (initConfig->flipMode > CELL_RESC_INTERLACE_FILTER)
-		{
-			return CELL_RESC_ERROR_BAD_ARGUMENT;
-		}
-	}
-	else if (resc_manager.config.size == 28)
-	{
-		if (initConfig->interlaceMode > CELL_RESC_2X3_QUINCUNX_ALT ||
-			initConfig->flipMode > CELL_RESC_INTERLACE_FILTER)
-		{
-			return CELL_RESC_ERROR_BAD_ARGUMENT;
-		}
 	}
 
 	init_config();
@@ -1015,7 +1020,7 @@ error_code cellRescSetBufferAddress(vm::ptr<void> colorBuffers, vm::ptr<void> ve
 
 	for (u32 i = 0; i < color_buffers; i++)
 	{
-		resc_manager.buffersOffsets[i] = *offset + i * resc_manager.bufferSize;
+		resc_manager.bufferOffsets[i] = *offset + i * resc_manager.bufferSize;
 	}
 
 	for (u32 i = 0; true; i++)
@@ -1044,7 +1049,7 @@ error_code cellRescSetBufferAddress(vm::ptr<void> colorBuffers, vm::ptr<void> ve
 			// TODO
 		}
 
-		const error_code error = cellGcmSetDisplayBuffer(i, resc_manager.buffersOffsets[i], resc_manager.pitch, resc_manager.width, resc_manager.height);
+		const error_code error = cellGcmSetDisplayBuffer(i, resc_manager.bufferOffsets[i], resc_manager.pitch, resc_manager.width, resc_manager.height);
 		if (error != CELL_OK)
 		{
 			// Something is called here before the return. Not sure if there's a NOP here or something wasn't decompiled correctly.
