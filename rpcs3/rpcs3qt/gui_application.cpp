@@ -25,6 +25,7 @@
 #endif
 
 #include "Emu/Audio/audio_utils.h"
+#include "Emu/RetroAchievements.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
 #include "Emu/Io/Null/null_camera_handler.h"
 #include "Emu/Io/Null/null_music_handler.h"
@@ -249,6 +250,12 @@ bool gui_application::Init()
 	if (m_main_window)
 	{
 		register_device_notification(m_main_window->winId());
+
+#ifdef RPCS3_RA_ENABLED
+#ifdef RC_CLIENT_SUPPORTS_RAINTEGRATION
+		rpcs3::ra::load_integration(reinterpret_cast<HWND>(m_main_window->winId()));
+#endif
+#endif
 	}
 #endif
 

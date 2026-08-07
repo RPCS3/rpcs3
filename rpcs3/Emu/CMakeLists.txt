@@ -52,6 +52,10 @@ endif()
 
 if(RPCS3_RA_ENABLED)
     target_compile_definitions(rpcs3_emu PRIVATE RPCS3_RA_ENABLED=1)
+    if(WIN32)
+        target_compile_definitions(rpcs3_emu PRIVATE RC_CLIENT_SUPPORTS_RAINTEGRATION)
+        target_link_libraries(rpcs3_emu PRIVATE shlwapi)
+    endif()
 endif()
 
 # For stdafx.h

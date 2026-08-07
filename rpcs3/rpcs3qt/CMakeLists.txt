@@ -195,6 +195,9 @@ if(RPCS3_RA_ENABLED)
     target_include_directories(rpcs3_ui PRIVATE
         "${CMAKE_SOURCE_DIR}/3rdparty/rcheevos/rcheevos/include"
     )
+    if(WIN32)
+        target_compile_definitions(rpcs3_ui PRIVATE RC_CLIENT_SUPPORTS_RAINTEGRATION)
+    endif()
 endif()
 
 if(WIN32)

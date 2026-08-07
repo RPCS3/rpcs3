@@ -40,6 +40,11 @@ add_library(rcheevos STATIC
     rcheevos/src/rhash/md5.c
 )
 
+if(WIN32)
+    target_sources(rcheevos PRIVATE rcheevos/src/rc_client_raintegration.c)
+    target_compile_definitions(rcheevos PRIVATE RC_CLIENT_SUPPORTS_RAINTEGRATION)
+endif()
+
 target_include_directories(rcheevos PUBLIC rcheevos/include)
 
 target_compile_definitions(rcheevos PUBLIC

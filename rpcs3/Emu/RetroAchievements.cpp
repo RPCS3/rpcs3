@@ -16,6 +16,11 @@
 #include <string>
 #include <thread>
 
+#ifdef RC_CLIENT_SUPPORTS_RAINTEGRATION
+#include "rc_client_raintegration.h"
+#include <shlwapi.h>
+#endif
+
 LOG_CHANNEL(ra_log, "RA");
 
 namespace rpcs3::ra
@@ -27,10 +32,7 @@ namespace rpcs3::ra
 
 	static u32 read_memory(u32 address, u8* buffer, u32 num_bytes, rc_client_t* /*client*/)
 	{
-		if (!vm::g_base_addr || address + num_bytes > 0x10000000u)
-			return 0;
-		std::memcpy(buffer, vm::g_base_addr + address, num_bytes);
-		return num_bytes;
+		return vm::try_access(address, buffer, num_bytes, false) ? num_bytes : 0;
 	}
 
 	static size_t curl_write_callback(char* ptr, size_t size, size_t nmemb, void* userdata)
@@ -171,8 +173,6 @@ namespace rpcs3::ra
 			ra_log.notice("RetroAchievements initialized");
 		}
 
-		if (g_cfg_ra.enabled && !g_cfg_ra.username.get().empty() && !g_cfg_ra.token.get().empty())
-			login_with_token(g_cfg_ra.username.get(), g_cfg_ra.token.get());
 	}
 
 	void shutdown()
@@ -319,6 +319,82 @@ namespace rpcs3::ra
 			ra_log.notice("Logged out from RetroAchievements");
 		}
 	}
+
+#ifdef RC_CLIENT_SUPPORTS_RAINTEGRATION
+	static void raintegration_event_handler(const rc_client_raintegration_event_t* event, rc_client_t* /*client*/)
+	{
+		switch (event->type)
+		{
+		case RC_CLIENT_RAINTEGRATION_EVENT_PAUSE:
+			Emu.Pause();
+			break;
+		case RC_CLIENT_RAINTEGRATION_EVENT_HARDCORE_CHANGED:
+			ra_log.notice("Hardcore mode changed: %s",
+				rc_client_get_hardcore_enabled(s_client) ? "enabled" : "disabled");
+			break;
+		case RC_CLIENT_RAINTEGRATION_EVENT_MENU_CHANGED:
+			// Menu update handled by Qt side
+			break;
+		default:
+			ra_log.warning("Unhandled RAIntegration event: %u", event->type);
+			break;
+		}
+	}
+
+	static void raintegration_write_memory(u32 address, u8* buffer, u32 num_bytes, rc_client_t* /*client*/)
+	{
+		vm::try_access(address, buffer, num_bytes, true);
+	}
+
+	static void raintegration_get_game_name(char* buffer, u32 buffer_size, rc_client_t* /*client*/)
+	{
+		const std::string& path = Emu.GetLastBoot();
+		std::string filename = path.substr(path.find_last_of("/\\") + 1);
+		const auto dot = filename.find_last_of('.');
+		if (dot != std::string::npos)
+			filename = filename.substr(0, dot);
+		std::snprintf(buffer, buffer_size, "%s", filename.c_str());
+	}
+
+	static void raintegration_load_callback(int result, const char* error_message, rc_client_t* client, void* /*userdata*/)
+	{
+		switch (result)
+		{
+		case RC_OK:
+			ra_log.notice("RAIntegration DLL loaded successfully");
+			rc_client_raintegration_set_event_handler(client, raintegration_event_handler);
+			rc_client_raintegration_set_write_memory_function(client, raintegration_write_memory);
+			rc_client_raintegration_set_get_game_name_function(client, raintegration_get_game_name);
+			if (g_cfg_ra.enabled && !g_cfg_ra.username.get().empty() && !g_cfg_ra.token.get().empty())
+				login_with_token(g_cfg_ra.username.get(), g_cfg_ra.token.get());
+			break;
+		case RC_MISSING_VALUE:
+			ra_log.notice("RAIntegration DLL not found - toolkit unavailable");
+			if (g_cfg_ra.enabled && !g_cfg_ra.username.get().empty() && !g_cfg_ra.token.get().empty())
+				login_with_token(g_cfg_ra.username.get(), g_cfg_ra.token.get());
+			break;
+		default:
+			ra_log.error("RAIntegration DLL load failed: %s", error_message);
+			break;
+		}
+	}
+
+	void load_integration(void* hwnd)
+	{
+		std::lock_guard lock(s_mutex);
+		if (!s_client)
+			return;
+
+		wchar_t exe_path[MAX_PATH];
+		GetModuleFileNameW(nullptr, exe_path, MAX_PATH);
+		PathRemoveFileSpecW(exe_path);
+
+		rc_client_begin_load_raintegration(s_client, exe_path,
+			static_cast<HWND>(hwnd),
+			"RPCS3", rpcs3::get_version().to_string().c_str(),
+			raintegration_load_callback, nullptr);
+	}
+#endif // RC_CLIENT_SUPPORTS_RAINTEGRATION
 
 } // namespace rpcs3::ra
 

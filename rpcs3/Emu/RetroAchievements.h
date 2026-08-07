@@ -25,6 +25,10 @@ namespace rpcs3::ra
 	void login_with_token(const std::string& username, const std::string& token);
 	void logout();
 
+#ifdef RC_CLIENT_SUPPORTS_RAINTEGRATION
+	void load_integration(void* hwnd);
+#endif
+
 } // namespace rpcs3::ra
 
 #endif // RPCS3_RA_ENABLED
