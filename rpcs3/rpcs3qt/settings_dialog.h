@@ -4,7 +4,6 @@
 
 #include <QDialog>
 #include <QLabel>
-#include <QPlainTextEdit>
 #include <QSlider>
 
 #include <memory>
@@ -65,9 +64,8 @@ private:
 	QString m_discord_state;
 
 	// Descriptions
-	std::vector<std::pair<QPlainTextEdit*, QString>> m_description_views;
+	QString m_default_description;
 	QHash<QObject*, QString> m_descriptions;
-	void SubscribeDescription(QPlainTextEdit* description);
 	void SubscribeTooltip(QObject* object, const QString& tooltip);
 	bool eventFilter(QObject* object, QEvent* event) override;
 	void closeEvent(QCloseEvent* event) override;
