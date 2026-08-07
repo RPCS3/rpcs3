@@ -2669,7 +2669,7 @@ error_code raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 /*hwthread*/, 
 		return CELL_EINVAL;
 	}
 
-	CellError error = {};
+	CellError error = CELL_EAGAIN;
 
 	const auto tag = idm::import<lv2_obj, lv2_int_tag>([&]()
 	{
@@ -2696,8 +2696,10 @@ error_code raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 /*hwthread*/, 
 		return result;
 	});
 
-	if (tag)
+	if (tag != id_manager::id_traits<lv2_int_tag>::invalid)
 	{
+		(class_id == 2 ? sys_spu.warning : sys_spu.trace)("raw_spu_create_interrupt_tag(): SPU=%d: tag=0x%x", id, tag);
+
 		cpu_thread::get_current()->check_state();
 		*intrtag = tag;
 		return CELL_OK;
