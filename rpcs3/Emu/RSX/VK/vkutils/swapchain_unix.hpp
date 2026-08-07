@@ -146,7 +146,7 @@ namespace vk
 				createInfo.sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
 				createInfo.dpy = p.first;
 				createInfo.window = p.second;
-				CHECK_RESULT(vkCreateXlibSurfaceKHR(vk_instance, &createInfo, nullptr, &result));
+				CHECK_RESULT(VK_GET_SYMBOL(vkCreateXlibSurfaceKHR)(vk_instance, &createInfo, nullptr, &result));
 			}
 			else
 #endif
@@ -157,7 +157,7 @@ namespace vk
 				createInfo.sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR;
 				createInfo.display = p.first;
 				createInfo.surface = p.second;
-				CHECK_RESULT(vkCreateWaylandSurfaceKHR(vk_instance, &createInfo, nullptr, &result));
+				CHECK_RESULT(VK_GET_SYMBOL(vkCreateWaylandSurfaceKHR)(vk_instance, &createInfo, nullptr, &result));
 				config->supports_automatic_wm_reports = false;
 			}
 			else

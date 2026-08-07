@@ -36,7 +36,7 @@ else()
 		# Note that compared to the rest of the 8.x family, 8.1 is very restrictive and we'll have to bump the requirement in future to get anything meaningful.
 		if (APPLE)
 			add_compile_options(-march=armv8.4-a)
-		else()
+		elseif(NOT ANDROID)
 			add_compile_options(-march=armv8.1-a)
 		endif()
 	elseif(COMPILER_X86)

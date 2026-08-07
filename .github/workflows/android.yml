@@ -1,0 +1,159 @@
+name: Android APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: Build variant
+        type: choice
+        options: [debug, release]
+        default: debug
+      flavor:
+        description: Branding flavor (package name)
+        type: choice
+        options: [all, standard, antutu, ludashi, pubg]
+        default: all
+      rebuild_deps:
+        description: Force rebuild of LLVM and FFmpeg (ignores cache)
+        type: boolean
+        default: false
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NDK_VERSION: 29.0.14206865
+  CMAKE_VERSION: 3.31.6
+  ANDROID_API: 31
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android/sdk/ndk /opt/ghc /usr/local/.ghcup
+          df -h /
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install build tools
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ninja-build
+
+      - name: Install NDK and CMake
+        run: |
+          sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          manager="$sdk/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$manager" ]; then
+            manager=$(find "$sdk" -type f -name sdkmanager 2>/dev/null | head -1)
+          fi
+          if [ -z "$manager" ]; then
+            echo "::error::sdkmanager not found under $sdk"
+            exit 1
+          fi
+          echo "using $manager"
+          yes | "$manager" --install "ndk;${NDK_VERSION}" "cmake;${CMAKE_VERSION}" > /dev/null
+          echo "ANDROID_SDK_ROOT=$sdk" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=$sdk" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_HOME=$sdk/ndk/${NDK_VERSION}" >> "$GITHUB_ENV"
+
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: android-deps-${{ env.NDK_VERSION }}
+          max-size: 3G
+
+      - name: Cache prebuilt dependencies
+        id: deps
+        uses: actions/cache@v4
+        with:
+          path: android/prebuilt
+          key: android-prebuilt-${{ env.NDK_VERSION }}-${{ hashFiles('android/build-llvm-android.sh', 'android/build-ffmpeg-android.sh') }}-${{ hashFiles('.gitmodules') }}
+
+      - name: Build FFmpeg
+        if: steps.deps.outputs.cache-hit != 'true' || inputs.rebuild_deps
+        working-directory: android
+        env:
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
+        run: ./build-ffmpeg-android.sh
+
+      - name: Build LLVM
+        if: steps.deps.outputs.cache-hit != 'true' || inputs.rebuild_deps
+        working-directory: android
+        env:
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
+        run: ./build-llvm-android.sh
+
+      - name: Setup Gradle cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ hashFiles('android/**/*.gradle.kts', 'android/gradle/libs.versions.toml', 'android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-
+
+      - name: Cache native build tree
+        uses: actions/cache@v4
+        with:
+          path: android/app/.cxx
+          key: cxx-${{ inputs.variant }}-${{ env.NDK_VERSION }}-${{ hashFiles('android/app/src/main/cpp/CMakeLists.txt') }}
+          restore-keys: |
+            cxx-${{ inputs.variant }}-${{ env.NDK_VERSION }}-
+
+      - name: Build APK
+        working-directory: android
+        env:
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
+        run: |
+          if [ "${{ inputs.variant }}" = "release" ]; then suffix=Release; else suffix=Debug; fi
+          if [ "${{ inputs.flavor }}" = "all" ]; then
+            flavors="standard antutu ludashi pubg"
+          else
+            flavors="${{ inputs.flavor }}"
+          fi
+          tasks=""
+          for f in $flavors; do
+            tasks="$tasks assemble${f^}${suffix}"
+          done
+          echo "gradle tasks:$tasks"
+          ./gradlew --no-daemon --build-cache $tasks
+
+      - name: Verify the native library is optimized
+        working-directory: android
+        run: |
+          readelf=$(find "$ANDROID_NDK_HOME" -name llvm-readelf | head -1)
+          rm -rf /tmp/apkcheck && mkdir -p /tmp/apkcheck
+          for apk in $(find app/build/outputs/apk -name '*.apk'); do
+            unzip -o -q "$apk" 'lib/arm64-v8a/librpcs3-android.so' -d /tmp/apkcheck
+            so=/tmp/apkcheck/lib/arm64-v8a/librpcs3-android.so
+            text=$("$readelf" -S "$so" | awk '$2==".text"{print strtonum("0x"$6)}')
+            echo "$(basename "$apk"): librpcs3-android.so .text = $text bytes"
+            if [ "$text" -gt 70000000 ]; then
+              echo "::error::$apk ships an unoptimized native library (-O0)"
+              exit 1
+            fi
+          done
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps3native-${{ inputs.flavor }}-${{ inputs.variant }}
+          path: android/app/build/outputs/apk/*/${{ inputs.variant }}/*.apk
+          if-no-files-found: error

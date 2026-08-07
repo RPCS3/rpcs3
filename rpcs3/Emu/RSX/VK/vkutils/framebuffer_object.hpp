@@ -39,12 +39,12 @@ namespace vk
 			m_width = width;
 			m_height = height;
 
-			CHECK_RESULT(vkCreateFramebuffer(dev, &info, nullptr, &value));
+			CHECK_RESULT(VK_GET_SYMBOL(vkCreateFramebuffer)(dev, &info, nullptr, &value));
 		}
 
 		~framebuffer()
 		{
-			vkDestroyFramebuffer(m_device, value, nullptr);
+			VK_GET_SYMBOL(vkDestroyFramebuffer)(m_device, value, nullptr);
 		}
 
 		u32 width() const

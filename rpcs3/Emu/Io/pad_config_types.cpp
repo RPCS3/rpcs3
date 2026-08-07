@@ -25,6 +25,7 @@ void fmt_class_string<pad_handler>::format(std::string& out, u64 arg)
 #ifdef HAVE_LIBEVDEV
 		case pad_handler::evdev: return "Evdev";
 #endif
+		case pad_handler::virtual_pad: return "Virtual";
 		}
 
 		return unknown;

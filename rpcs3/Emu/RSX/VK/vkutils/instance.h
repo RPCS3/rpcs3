@@ -41,9 +41,21 @@ namespace vk
 		PFN_vkCreateDebugReportCallbackEXT _vkCreateDebugReportCallback = nullptr;
 		VkDebugReportCallbackEXT m_debugger = nullptr;
 
+#ifdef ANDROID
+		static void* g_vk_loader;
+		bool owns_loader = false;
+#endif
+
 		bool extensions_loaded = false;
 
 	public:
+
+#ifdef ANDROID
+		static void* get_vk_loader()
+		{
+			return g_vk_loader;
+		}
+#endif
 
 		instance() = default;
 

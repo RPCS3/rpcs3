@@ -5,7 +5,9 @@
 #include "Emu/Io/pad_types.h"
 #include "Emu/Io/pad_config.h"
 #include "Emu/Io/pad_config_types.h"
+#ifndef ANDROID
 #include "Input/mouse_gyro_handler.h"
+#endif
 #include "Utilities/mutex.h"
 
 #include <map>
@@ -42,7 +44,9 @@ public:
 
 	static auto constexpr thread_name = "Pad Thread"sv;
 
+#ifndef ANDROID
 	mouse_gyro_handler& get_mouse_gyro() { return m_mouse_gyro; }
+#endif
 
 protected:
 	void Init();
@@ -71,7 +75,9 @@ private:
 	bool m_ps_button_pressed = false;
 	atomic_t<bool> m_home_menu_open = false;
 
+#ifndef ANDROID
 	mouse_gyro_handler m_mouse_gyro;
+#endif
 };
 
 namespace pad

@@ -99,7 +99,7 @@ if(APPLE)
     )
 endif()
 
-target_include_directories(rpcs3_emu PUBLIC "${CMAKE_SOURCE_DIR}")
+target_include_directories(rpcs3_emu PUBLIC "${rpcs3_SOURCE_DIR}")
 
 set_source_files_properties("../../Utilities/JITLLVM.cpp" "../../Utilities/JITASM.cpp" PROPERTIES
     COMPILE_FLAGS "$<IF:$<CXX_COMPILER_ID:MSVC>,/GR-,-fno-rtti>"
@@ -693,6 +693,8 @@ target_link_libraries(rpcs3_emu
         3rdparty::miniupnpc
         3rdparty::libevdev
         3rdparty::protobuf
+        3rdparty::json
+        3rdparty::adrenotools
         3rdparty::pugixml
         3rdparty::vulkanmemoryallocator
         Threads::Threads

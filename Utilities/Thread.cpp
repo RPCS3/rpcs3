@@ -1,11 +1,11 @@
 #include "stdafx.h"
+#include "Emu/Cell/timers.hpp"
 #include "Emu/System.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/lv2/sys_mmapper.h"
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/Cell/lv2/sys_process.h"
-#include "Emu/RSX/RSXThread.h"
 #include "Thread.h"
 #include "Utilities/JIT.h"
 #include <cfenv>
@@ -120,6 +120,22 @@ namespace stx
 [[noreturn]] void report_fatal_error(std::string_view text, bool is_html = false, bool include_help_text = true);
 
 enum cpu_threads_emulation_info_dump_t : u32 {};
+
+template<>
+void fmt_class_string<thread_class>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](thread_class value)
+	{
+		switch (value)
+		{
+		case thread_class::general: return "General";
+		case thread_class::ppu: return "PPU";
+		case thread_class::spu: return "SPU";
+		case thread_class::rsx: return "RSX";
+		}
+		return unknown;
+	});
+}
 
 std::string dump_useful_thread_info()
 {
@@ -3419,7 +3435,11 @@ void thread_base::exec()
 
 void thread_ctrl::set_name(std::string name)
 {
-	ensure(g_tls_this_thread);
+	if (!g_tls_this_thread)
+	{
+		return;
+	}
+
 	g_tls_this_thread->m_tname.store(make_single<std::string>(name));
 	g_tls_this_thread->set_name(std::move(name));
 }
@@ -3611,6 +3631,36 @@ void thread_ctrl::detect_cpu_layout()
 
 u64 thread_ctrl::get_affinity_mask(thread_class group)
 {
+#ifdef ANDROID
+	u64 mask = 0;
+	thread_class affinities[] =
+	{
+		g_cfg.core.affinity.cpu0.get(),
+		g_cfg.core.affinity.cpu1.get(),
+		g_cfg.core.affinity.cpu2.get(),
+		g_cfg.core.affinity.cpu3.get(),
+		g_cfg.core.affinity.cpu4.get(),
+		g_cfg.core.affinity.cpu5.get(),
+		g_cfg.core.affinity.cpu6.get(),
+		g_cfg.core.affinity.cpu7.get()
+	};
+
+	for (std::size_t i = 0; i < std::min<std::size_t>(std::thread::hardware_concurrency(), std::size(affinities)); ++i)
+	{
+		if (affinities[i] == group || affinities[i] == thread_class::general)
+		{
+			mask |= 1ull << i;
+		}
+	}
+
+	for (std::size_t i = std::size(affinities); i < std::thread::hardware_concurrency(); ++i)
+	{
+		mask |= 1ull << i;
+	}
+
+	return mask;
+#endif
+
 	detect_cpu_layout();
 
 	if (const auto thread_count = utils::get_thread_count())
@@ -3890,7 +3940,7 @@ void thread_ctrl::set_thread_affinity_mask(u64 mask)
 	thread_affinity_policy_data_t policy = { static_cast<integer_t>(std::countr_zero(mask)) };
 	thread_port_t mach_thread = pthread_mach_thread_np(pthread_self());
 	thread_policy_set(mach_thread, THREAD_AFFINITY_POLICY, reinterpret_cast<thread_policy_t>(&policy), !mask ? 0 : 1);
-#elif !defined(ANDROID) && (defined(__linux__) || defined(__DragonFly__) || defined(__FreeBSD__))
+#elif (defined(__linux__) || defined(__DragonFly__) || defined(__FreeBSD__))
 	if (!mask)
 	{
 		// Reset affinity mask
@@ -3917,8 +3967,11 @@ void thread_ctrl::set_thread_affinity_mask(u64 mask)
 			break;
 		}
 	}
-
+#ifdef ANDROID
+	if (int err = sched_setaffinity(::gettid(), sizeof(cpu_set_t), &cs))
+#else
 	if (int err = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cs))
+#endif
 	{
 		sig_log.error("Failed to set thread affinity 0x%x: error %d.", mask, err);
 	}
@@ -3942,11 +3995,15 @@ u64 thread_ctrl::get_thread_affinity_mask()
 
 	sig_log.error("Failed to get thread affinity mask.");
 	return 0;
-#elif !defined(ANDROID) && (defined(__linux__) || defined(__DragonFly__) || defined(__FreeBSD__))
+#elif (defined(__linux__) || defined(__DragonFly__) || defined(__FreeBSD__))
 	cpu_set_t cs;
 	CPU_ZERO(&cs);
 
+#ifdef ANDROID
+	if (int err = sched_getaffinity(::gettid(), sizeof(cpu_set_t), &cs))
+#else
 	if (int err = pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &cs))
+#endif
 	{
 		sig_log.error("Failed to get thread affinity mask: error %d.", err);
 		return 0;

@@ -91,7 +91,7 @@ bool CubebBackend::DefaultDeviceChanged()
 
 	device_handle device = GetDevice();
 
-	return !device.handle || device.id != m_default_device;
+	return !device.valid || device.id != m_default_device;
 }
 
 bool CubebBackend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize sample_size, AudioChannelCnt ch_cnt, audio_channel_layout layout)
@@ -112,7 +112,7 @@ bool CubebBackend::Open(std::string_view dev_id, AudioFreq freq, AudioSampleSize
 
 	device_handle device = GetDevice(use_default_device ? "" : dev_id);
 
-	if (!device.handle)
+	if (!device.valid)
 	{
 		if (use_default_device) Cubeb.error("Opening default device failed");
 		else Cubeb.error("Device with id=%s not found", dev_id);
@@ -273,6 +273,13 @@ CubebBackend::device_handle CubebBackend::GetDevice(std::string_view dev_id)
 	cubeb_device_collection dev_collection{};
 	if (int err = cubeb_enumerate_devices(m_ctx, CUBEB_DEVICE_TYPE_OUTPUT, &dev_collection))
 	{
+		if (err == CUBEB_ERROR_NOT_SUPPORTED && default_dev)
+		{
+			// Backends such as AAudio cannot enumerate. A null devid selects the backend default.
+			Cubeb.notice("Backend does not support device enumeration, using implicit default device");
+			return { .handle = nullptr, .id = std::string(audio_device_enumerator::DEFAULT_DEV_ID), .ch_cnt = 2, .valid = true };
+		}
+
 		Cubeb.error("cubeb_enumerate_devices() failed: %i", err);
 		return {};
 	}
@@ -314,18 +321,20 @@ CubebBackend::device_handle CubebBackend::GetDevice(std::string_view dev_id)
 		{
 			if (dev_info.preferred & CUBEB_DEVICE_PREF_MULTIMEDIA)
 			{
+				device.valid = true;
 				result = std::move(device);
 				break;
 			}
 		}
 		else if (device.id == dev_id)
 		{
+			device.valid = true;
 			result = std::move(device);
 			break;
 		}
 	}
 
-	if (result.handle)
+	if (result.valid)
 	{
 		Cubeb.notice("Found device '%s' with %d channels", result.id, result.ch_cnt);
 	}

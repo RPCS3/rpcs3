@@ -41,7 +41,7 @@ namespace vk
 			.pSignalSemaphores = submit_info.signal_semaphores.data()
 		};
 
-		vkQueueSubmit(submit_info.queue, 1, &info, submit_info.pfence->handle);
+		VK_GET_SYMBOL(vkQueueSubmit)(submit_info.queue, 1, &info, submit_info.pfence->handle);
 		release_global_submit_lock();
 
 		// Signal fence

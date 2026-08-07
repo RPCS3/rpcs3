@@ -217,7 +217,7 @@ namespace vk
 					mem_load.srcOffset = dma_mapping.first;
 					mem_load.dstOffset = dst_offset;
 					mem_load.size = dma_sync_region.length();
-					vkCmdCopyBuffer(cmd, dma_mapping.second->value, working_buffer->value, 1, &mem_load);
+					VK_GET_SYMBOL(vkCmdCopyBuffer)(cmd, dma_mapping.second->value, working_buffer->value, 1, &mem_load);
 
 					// Transfer -> Compute barrier
 					vk::insert_buffer_memory_barrier(cmd, working_buffer->value, dst_offset, dma_sync_region.length(),
@@ -300,7 +300,7 @@ namespace vk
 				copy.srcOffset = result_offset;
 				copy.dstOffset = dma_mapping.first;
 				copy.size = dma_sync_region.length();
-				vkCmdCopyBuffer(cmd, working_buffer->value, dma_mapping.second->value, 1, &copy);
+				VK_GET_SYMBOL(vkCmdCopyBuffer)(cmd, working_buffer->value, dma_mapping.second->value, 1, &copy);
 			}
 			else
 			{
@@ -319,7 +319,7 @@ namespace vk
 					dst_offset += rsx_pitch;
 				}
 
-				vkCmdCopyBuffer(cmd, working_buffer->value, dma_mapping.second->value, transfer_height, copy.data());
+				VK_GET_SYMBOL(vkCmdCopyBuffer)(cmd, working_buffer->value, dma_mapping.second->value, transfer_height, copy.data());
 			}
 		}
 		else
@@ -333,7 +333,7 @@ namespace vk
 			region.imageExtent = { transfer_width, transfer_height, 1 };
 
 			region.bufferOffset = dma_mapping.first;
-			vkCmdCopyImageToBuffer(cmd, src->value, src->current_layout, dma_mapping.second->value, 1, &region);
+			VK_GET_SYMBOL(vkCmdCopyImageToBuffer)(cmd, src->value, src->current_layout, dma_mapping.second->value, 1, &region);
 		}
 
 		// Post-transfer barrier on dma layer
@@ -519,7 +519,7 @@ namespace vk
 			if (src_w == section.dst_w && src_h == section.dst_h) [[likely]]
 			{
 				const auto copy_rgn = get_output_region(src_x, src_y, src_w, src_h, src_image);
-				vkCmdCopyImage(cmd, src_image->value, src_image->current_layout, dst->value, dst->current_layout, 1, &copy_rgn);
+				VK_GET_SYMBOL(vkCmdCopyImage)(cmd, src_image->value, src_image->current_layout, dst->value, dst->current_layout, 1, &copy_rgn);
 			}
 			else
 			{
@@ -554,7 +554,7 @@ namespace vk
 					// Casting comes after the scaling!
 					const auto copy_rgn = get_output_region(dst_x, dst_y, section.dst_w, section.dst_h, _dst);
 					_dst->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-					vkCmdCopyImage(cmd, _dst->value, _dst->current_layout, dst->value, dst->current_layout, 1, &copy_rgn);
+					VK_GET_SYMBOL(vkCmdCopyImage)(cmd, _dst->value, _dst->current_layout, dst->value, dst->current_layout, 1, &copy_rgn);
 				}
 			}
 		}
@@ -789,12 +789,12 @@ namespace vk
 		else if (!(dst_aspect & VK_IMAGE_ASPECT_DEPTH_BIT))
 		{
 			VkClearColorValue clear = {};
-			vkCmdClearColorImage(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
+			VK_GET_SYMBOL(vkCmdClearColorImage)(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
 		}
 		else
 		{
 			VkClearDepthStencilValue clear = { 1.f, 0 };
-			vkCmdClearDepthStencilImage(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
+			VK_GET_SYMBOL(vkCmdClearDepthStencilImage)(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
 		}
 
 		vk::insert_image_memory_barrier(
@@ -837,12 +837,12 @@ namespace vk
 		else if (!(dst_aspect & VK_IMAGE_ASPECT_DEPTH_BIT))
 		{
 			VkClearColorValue clear = {};
-			vkCmdClearColorImage(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
+			VK_GET_SYMBOL(vkCmdClearColorImage)(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
 		}
 		else
 		{
 			VkClearDepthStencilValue clear = { 1.f, 0 };
-			vkCmdClearDepthStencilImage(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
+			VK_GET_SYMBOL(vkCmdClearDepthStencilImage)(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
 		}
 
 		vk::insert_image_memory_barrier(
@@ -887,12 +887,12 @@ namespace vk
 			if (!(dst_aspect & VK_IMAGE_ASPECT_DEPTH_BIT))
 			{
 				VkClearColorValue clear = {};
-				vkCmdClearColorImage(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
+				VK_GET_SYMBOL(vkCmdClearColorImage)(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
 			}
 			else
 			{
 				VkClearDepthStencilValue clear = { 1.f, 0 };
-				vkCmdClearDepthStencilImage(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
+				VK_GET_SYMBOL(vkCmdClearDepthStencilImage)(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
 			}
 		}
 
@@ -937,12 +937,12 @@ namespace vk
 		else if (!(dst_aspect & VK_IMAGE_ASPECT_DEPTH_BIT))
 		{
 			VkClearColorValue clear = {};
-			vkCmdClearColorImage(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
+			VK_GET_SYMBOL(vkCmdClearColorImage)(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
 		}
 		else
 		{
 			VkClearDepthStencilValue clear = { 1.f, 0 };
-			vkCmdClearDepthStencilImage(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
+			VK_GET_SYMBOL(vkCmdClearDepthStencilImage)(cmd, image->value, image->current_layout, &clear, 1, &dst_range);
 		}
 
 		vk::insert_image_memory_barrier(
@@ -1074,12 +1074,12 @@ namespace vk
 					if (image->aspect() & VK_IMAGE_ASPECT_COLOR_BIT)
 					{
 						VkClearColorValue color = { {0.f, 0.f, 0.f, 1.f} };
-						vkCmdClearColorImage(cmd, image->value, image->current_layout, &color, 1, &range);
+						VK_GET_SYMBOL(vkCmdClearColorImage)(cmd, image->value, image->current_layout, &color, 1, &range);
 					}
 					else
 					{
 						VkClearDepthStencilValue clear{ 1.f, 255 };
-						vkCmdClearDepthStencilImage(cmd, image->value, image->current_layout, &clear, 1, &range);
+						VK_GET_SYMBOL(vkCmdClearDepthStencilImage)(cmd, image->value, image->current_layout, &clear, 1, &range);
 					}
 
 					vk::insert_image_memory_barrier(
@@ -1634,7 +1634,7 @@ namespace vk
 		subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 
 		VkSubresourceLayout layout{};
-		vkGetImageSubresourceLayout(*m_device, image->value, &subresource, &layout);
+		VK_GET_SYMBOL(vkGetImageSubresourceLayout)(*m_device, image->value, &subresource, &layout);
 
 		void* mem = image->memory->map(0, layout.rowPitch * height);
 

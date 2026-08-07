@@ -13,11 +13,11 @@ namespace vk
 	{
 		VkSurfaceKHR result = VK_NULL_HANDLE;
 
-		VkWin32SurfaceCreateInfoKHR createInfo = {};
+		VkAndroidSurfaceCreateInfoKHR createInfo = {};
 		createInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
-		createInfo.window = std::get<ANativeWindow *>(window_handle);
+		createInfo.window = std::get<ANativeWindow*>(window_handle);
 
-		CHECK_RESULT(vkCreateAndroidSurfaceKHR(this->m_instance, &createInfo, nullptr, &result));
+		CHECK_RESULT(VK_GET_SYMBOL(vkCreateAndroidSurfaceKHR)(vk_instance, &createInfo, nullptr, &result));
 		return result;
 	}
 #endif

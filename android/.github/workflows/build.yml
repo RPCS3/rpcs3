@@ -1,0 +1,94 @@
+# Todo List:
+# - Move librpcs3 compilation away (or add ccache here) because the compilation is ridiculously slow
+# - Do not use legacy CMake scripts (figure out how)
+
+name: Java CI with Gradle
+
+on:
+  workflow_dispatch:
+    inputs:
+      shouldrelease:
+          description: Create release
+          type: boolean
+      uploadbuild:
+          description: Upload build
+          type: boolean
+      releasetag:
+        description: Enter the tag name
+        type: string
+      releasetype:
+        description: Make it prerelease
+        type: boolean
+      islatest:
+        description: Mark as latest
+        type: boolean
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup CCache
+      uses: hendrikmuhs/ccache-action@v1.2
+
+    - name: Setup Gradle Cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-android-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-android-
+            
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: 17
+
+    - name: Decode Keystore
+      env:
+        KEYSTORE_ENCODED: ${{ secrets.KEYSTORE }}
+      run: | 
+        echo "$KEYSTORE_ENCODED" | base64 --decode > ${{ github.workspace }}/app/ks.jks
+
+    - name: Build with Gradle
+      env: 
+        KEYSTORE_PATH: "ks.jks"
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEYSTORE_ALIAS: ${{ secrets.KEYSTORE_ALIAS }}
+        CMAKE_C_COMPILER_LAUNCHER: "ccache"
+        CMAKE_CXX_COMPILER_LAUNCHER: "ccache"
+      run: ./gradlew assembleRelease
+
+    - name: Build release artifacts
+      uses: actions/upload-artifact@v4
+      if: ${{ github.event_name != 'workflow_dispatch' }} || ${{ inputs.uploadbuild }}
+      with:
+        name: rpcs3-build
+        path: |
+          app/build/outputs/apk/release/rpcs3-release.apk
+
+    - name: Create release
+      uses: softprops/action-gh-release@v2
+      if: ${{ inputs.shouldrelease }}
+      with:
+        prerelease: ${{ inputs.releasetype }}
+        tag_name: ${{ inputs.releasetag }}
+        make_latest: ${{ inputs.islatest }}
+        # body: 'Some release text body if needed'
+        # body_path: or/as/file.md
+        files: |
+          app/build/outputs/apk/release/rpcs3-release.apk

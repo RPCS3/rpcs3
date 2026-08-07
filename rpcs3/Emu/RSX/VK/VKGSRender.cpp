@@ -624,7 +624,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
 
 		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
-		vkCmdClearColorImage(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
+		VK_GET_SYMBOL(vkCmdClearColorImage)(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
 		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, target_layout, range);
 
 	}
@@ -803,7 +803,7 @@ VKGSRender::~VKGSRender()
 	}
 
 	//Wait for device to finish up with resources
-	vkDeviceWaitIdle(*m_device);
+	VK_GET_SYMBOL(vkDeviceWaitIdle)(*m_device);
 
 	// Globals. TODO: Refactor lifetime management
 	if (auto async_scheduler = g_fxo->try_get<vk::AsyncTaskScheduler>())
@@ -1224,8 +1224,8 @@ void VKGSRender::bind_viewport()
 		m_graphics_state.clear(rsx::pipeline_state::zclip_config_state_dirty);
 	}
 
-	vkCmdSetViewport(*m_current_command_buffer, 0, 1, &m_viewport);
-	vkCmdSetScissor(*m_current_command_buffer, 0, 1, &m_scissor);
+	VK_GET_SYMBOL(vkCmdSetViewport)(*m_current_command_buffer, 0, 1, &m_viewport);
+	VK_GET_SYMBOL(vkCmdSetScissor)(*m_current_command_buffer, 0, 1, &m_scissor);
 }
 
 void VKGSRender::on_init_thread()
@@ -1519,7 +1519,7 @@ void VKGSRender::clear_surface(u32 mask)
 	if (!clear_descriptors.empty())
 	{
 		begin_render_pass();
-		vkCmdClearAttachments(*m_current_command_buffer, ::size32(clear_descriptors), clear_descriptors.data(), 1, &region);
+		VK_GET_SYMBOL(vkCmdClearAttachments)(*m_current_command_buffer, ::size32(clear_descriptors), clear_descriptors.data(), 1, &region);
 	}
 }
 
@@ -1608,15 +1608,15 @@ bool VKGSRender::release_GCM_label(u32 type, u32 address, u32 args)
 
 	if (host_ctx->has_unflushed_texture_loads())
 	{
-		vkCmdUpdateBuffer(*m_current_command_buffer, mapping.second->value, mapping.first, 4, &write_data);
+		VK_GET_SYMBOL(vkCmdUpdateBuffer)(*m_current_command_buffer, mapping.second->value, mapping.first, 4, &write_data);
 		flush_command_queue();
 	}
 	else
 	{
 		auto cmd = m_secondary_cb_list.next();
 		cmd->begin();
-		vkCmdUpdateBuffer(*cmd, mapping.second->value, mapping.first, 4, &write_data);
-		vkCmdUpdateBuffer(*cmd, m_host_object_data->value, ::offset32(&vk::host_data_t::commands_complete_event), 8, &release_event_id);
+		VK_GET_SYMBOL(vkCmdUpdateBuffer)(*cmd, mapping.second->value, mapping.first, 4, &write_data);
+		VK_GET_SYMBOL(vkCmdUpdateBuffer)(*cmd, m_host_object_data->value, ::offset32(&vk::host_data_t::commands_complete_event), 8, &release_event_id);
 		cmd->end();
 
 		vk::queue_submit_t submit_info = { m_device->get_graphics_queue(), nullptr };
@@ -1638,7 +1638,7 @@ void VKGSRender::on_guest_texture_read(const vk::command_buffer& cmd)
 	// Queue a sync update on the CB doing the load
 	auto host_ctx = ensure(m_host_dma_ctrl->host_ctx());
 	const auto event_id = host_ctx->on_texture_load_acquire();
-	vkCmdUpdateBuffer(cmd, m_host_object_data->value, ::offset32(&vk::host_data_t::texture_load_complete_event), sizeof(u64), &event_id);
+	VK_GET_SYMBOL(vkCmdUpdateBuffer)(cmd, m_host_object_data->value, ::offset32(&vk::host_data_t::texture_load_complete_event), sizeof(u64), &event_id);
 }
 
 void VKGSRender::write_barrier(u32 address, u32 range)
@@ -2279,7 +2279,7 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 	dst->fs_stipple_pattern_offset = fs_stipple_pattern_offset;
 
 	const u32 push_val = vertex_layout_offset + id;
-	vkCmdPushConstants(
+	VK_GET_SYMBOL(vkCmdPushConstants)(
 		*m_current_command_buffer,
 		m_program->layout(),
 		VK_SHADER_STAGE_VERTEX_BIT,
@@ -2395,7 +2395,7 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 
 	if (m_host_dma_ctrl && m_host_dma_ctrl->host_ctx()->needs_label_release())
 	{
-		vkCmdUpdateBuffer(*m_current_command_buffer,
+		VK_GET_SYMBOL(vkCmdUpdateBuffer)(*m_current_command_buffer,
 			m_host_object_data->value,
 			::offset32(&vk::host_data_t::commands_complete_event),
 			sizeof(u64),
@@ -2888,7 +2888,7 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 			usage_flags, 0, VMM_ALLOCATION_POOL_UNDEFINED);
 
 		// Fill CR+4 with all-ones. Instead of dynamic flags, just bind the all-ones word to disable CR
-		vkCmdFillBuffer(*m_current_command_buffer, m_cond_render_buffer->value, 4, 4, 0xFFFFFFFFu);
+		VK_GET_SYMBOL(vkCmdFillBuffer)(*m_current_command_buffer, m_cond_render_buffer->value, 4, 4, 0xFFFFFFFFu);
 
 		// Ensure the all-ones mask is written before next VS invocation
 		vk::insert_buffer_memory_barrier(*m_current_command_buffer, m_cond_render_buffer->value, 4, 4,
@@ -3015,7 +3015,7 @@ void VKGSRender::begin_conditional_rendering(const std::vector<rsx::reports::occ
 			ensure(dst_offset > 4);
 
 			// Clear result to zero
-			vkCmdFillBuffer(*m_current_command_buffer, m_cond_render_buffer->value, 0, 4, 0);
+			VK_GET_SYMBOL(vkCmdFillBuffer)(*m_current_command_buffer, m_cond_render_buffer->value, 0, 4, 0);
 
 			vk::insert_buffer_memory_barrier(*m_current_command_buffer, m_cond_render_buffer->value, 0, 4,
 				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,

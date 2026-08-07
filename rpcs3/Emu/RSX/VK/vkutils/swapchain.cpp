@@ -28,7 +28,7 @@ namespace vk
 		copyRegion.imageExtent = { m_width, m_height, 1 };
 
 		change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-		vkCmdCopyImageToBuffer(cmd, value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_dma_buffer->value, 1, &copyRegion);
+		VK_GET_SYMBOL(vkCmdCopyImageToBuffer)(cmd, value, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_dma_buffer->value, 1, &copyRegion);
 		change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 	}
 
@@ -105,11 +105,11 @@ namespace vk
 	swapchain_WSI::swapchain_WSI(vk::physical_device& gpu, u32 present_queue, u32 graphics_queue, u32 transfer_queue, VkFormat format, VkSurfaceKHR surface, VkColorSpaceKHR color_space, bool force_wm_reporting_off)
 		: WSI_swapchain_base(gpu, present_queue, graphics_queue, transfer_queue, format)
 	{
-		_vkCreateSwapchainKHR = reinterpret_cast<PFN_vkCreateSwapchainKHR>(vkGetDeviceProcAddr(dev, "vkCreateSwapchainKHR"));
-		_vkDestroySwapchainKHR = reinterpret_cast<PFN_vkDestroySwapchainKHR>(vkGetDeviceProcAddr(dev, "vkDestroySwapchainKHR"));
-		_vkGetSwapchainImagesKHR = reinterpret_cast<PFN_vkGetSwapchainImagesKHR>(vkGetDeviceProcAddr(dev, "vkGetSwapchainImagesKHR"));
-		_vkAcquireNextImageKHR = reinterpret_cast<PFN_vkAcquireNextImageKHR>(vkGetDeviceProcAddr(dev, "vkAcquireNextImageKHR"));
-		_vkQueuePresentKHR = reinterpret_cast<PFN_vkQueuePresentKHR>(vkGetDeviceProcAddr(dev, "vkQueuePresentKHR"));
+		_vkCreateSwapchainKHR = reinterpret_cast<PFN_vkCreateSwapchainKHR>(VK_GET_SYMBOL(vkGetDeviceProcAddr)(dev, "vkCreateSwapchainKHR"));
+		_vkDestroySwapchainKHR = reinterpret_cast<PFN_vkDestroySwapchainKHR>(VK_GET_SYMBOL(vkGetDeviceProcAddr)(dev, "vkDestroySwapchainKHR"));
+		_vkGetSwapchainImagesKHR = reinterpret_cast<PFN_vkGetSwapchainImagesKHR>(VK_GET_SYMBOL(vkGetDeviceProcAddr)(dev, "vkGetSwapchainImagesKHR"));
+		_vkAcquireNextImageKHR = reinterpret_cast<PFN_vkAcquireNextImageKHR>(VK_GET_SYMBOL(vkGetDeviceProcAddr)(dev, "vkAcquireNextImageKHR"));
+		_vkQueuePresentKHR = reinterpret_cast<PFN_vkQueuePresentKHR>(VK_GET_SYMBOL(vkGetDeviceProcAddr)(dev, "vkQueuePresentKHR"));
 
 		m_surface = surface;
 		m_color_space = color_space;
@@ -131,6 +131,27 @@ namespace vk
 				break;
 			}
 		}
+	}
+
+	void swapchain_WSI::create([[maybe_unused]] display_handle_t& handle)
+	{
+#ifdef ANDROID
+		if (!dev)
+		{
+			return;
+		}
+
+		if (m_vk_swapchain)
+		{
+			_vkDestroySwapchainKHR(dev, m_vk_swapchain, nullptr);
+			m_vk_swapchain = nullptr;
+		}
+
+		swapchain_images.clear();
+
+		WSI_config config{};
+		m_surface = make_WSI_surface(dev.gpu(), handle, &config);
+#endif
 	}
 
 	void swapchain_WSI::destroy(bool)
@@ -173,7 +194,7 @@ namespace vk
 				pSurfaceInfo.pNext = &full_screen_exclusive_win32_info;
 
 				auto getPhysicalDeviceSurfaceCapabilities2KHR = reinterpret_cast<PFN_vkGetPhysicalDeviceSurfaceCapabilities2KHR>(
-					vkGetInstanceProcAddr(dev.gpu(), "vkGetPhysicalDeviceSurfaceCapabilities2KHR")
+					VK_GET_SYMBOL(vkGetInstanceProcAddr)(dev.gpu(), "vkGetPhysicalDeviceSurfaceCapabilities2KHR")
 					);
 				ensure(getPhysicalDeviceSurfaceCapabilities2KHR);
 				CHECK_RESULT(getPhysicalDeviceSurfaceCapabilities2KHR(dev.gpu(), &pSurfaceInfo, &pSurfaceCapabilities));
@@ -187,7 +208,15 @@ namespace vk
 		}
 #endif
 		VkSurfaceCapabilitiesKHR surface_descriptors = {};
-		CHECK_RESULT(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(dev.gpu(), m_surface, &surface_descriptors));
+		const VkResult result = VK_GET_SYMBOL(vkGetPhysicalDeviceSurfaceCapabilitiesKHR)(dev.gpu(), m_surface, &surface_descriptors);
+#ifdef ANDROID
+		if (result != VK_ERROR_SURFACE_LOST_KHR)
+		{
+			CHECK_RESULT(result);
+		}
+#else
+		CHECK_RESULT(result);
+#endif
 		return { surface_descriptors, false };
 	}
 
@@ -226,10 +255,10 @@ namespace vk
 		}
 
 		u32 nb_available_modes = 0;
-		CHECK_RESULT(vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, m_surface, &nb_available_modes, nullptr));
+		CHECK_RESULT(VK_GET_SYMBOL(vkGetPhysicalDeviceSurfacePresentModesKHR)(gpu, m_surface, &nb_available_modes, nullptr));
 
 		std::vector<VkPresentModeKHR> present_modes(nb_available_modes);
-		CHECK_RESULT(vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, m_surface, &nb_available_modes, present_modes.data()));
+		CHECK_RESULT(VK_GET_SYMBOL(vkGetPhysicalDeviceSurfacePresentModesKHR)(gpu, m_surface, &nb_available_modes, present_modes.data()));
 
 		VkPresentModeKHR swapchain_present_mode = VK_PRESENT_MODE_FIFO_KHR;
 		std::vector<VkPresentModeKHR> preferred_modes;

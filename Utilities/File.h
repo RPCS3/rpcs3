@@ -109,6 +109,10 @@ namespace fs
 		virtual u64 read(void* buffer, u64 size) = 0;
 		virtual u64 read_at(u64 offset, void* buffer, u64 size) = 0;
 		virtual u64 write(const void* buffer, u64 size) = 0;
+		virtual u64 write_at([[maybe_unused]] u64 offset, [[maybe_unused]] const void* buffer, [[maybe_unused]] u64 size)
+		{
+			return 0;
+		}
 		virtual u64 seek(s64 offset, seek_mode whence) = 0;
 		virtual u64 size() = 0;
 		virtual native_handle get_handle();
@@ -352,6 +356,12 @@ namespace fs
 		{
 			if (!m_file) xnull(src_loc);
 			return m_file->write(buffer, count);
+		}
+
+		u64 write_at(u64 offset, const void* buffer, u64 count, std::source_location src_loc = std::source_location::current()) const
+		{
+			if (!m_file) xnull(src_loc);
+			return m_file->write_at(offset, buffer, count);
 		}
 
 		// Change current position, returns resulting position
@@ -623,6 +633,29 @@ namespace fs
 		{
 			return {nullptr};
 		}
+	};
+
+	class virtual_dir final : public fs::dir_base
+	{
+		std::vector<fs::dir_entry> m_entries;
+		std::size_t m_offset = 0;
+	
+	public:
+		virtual_dir(std::vector<fs::dir_entry> entries)
+			: m_entries(std::move(entries)) {}
+		
+		bool read(fs::dir_entry &entry) override
+		{
+			if (m_offset < m_entries.size())
+			{
+				entry = m_entries[m_offset++];
+				return true;
+			}
+		
+			return false;
+		}
+		
+		void rewind() override { m_offset = 0; }
 	};
 
 	// Get executable path

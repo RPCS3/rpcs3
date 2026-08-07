@@ -268,6 +268,11 @@ public:
 		m_precompilation_option = option;
 	}
 
+	void SetState(system_state state)
+	{
+		m_state = state;
+	}
+
 	void Init();
 
 	std::vector<std::string> argv;
@@ -299,6 +304,11 @@ public:
 	const std::string& GetTitleID() const
 	{
 		return m_title_id;
+	}
+
+	void SetTitleID(std::string title_id)
+	{
+		m_title_id = std::move(title_id);
 	}
 
 	const std::string& GetTitle() const

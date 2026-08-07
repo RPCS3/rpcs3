@@ -105,7 +105,7 @@ namespace vk
 			infos.flags |= VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
 
 			VkDescriptorSetLayout result;
-			CHECK_RESULT(vkCreateDescriptorSetLayout(*g_render_device, &infos, nullptr, &result));
+			CHECK_RESULT(VK_GET_SYMBOL(vkCreateDescriptorSetLayout)(*g_render_device, &infos, nullptr, &result));
 			return result;
 		}
 	}
@@ -160,7 +160,7 @@ namespace vk
 
 		for (auto& pool : m_device_subpools)
 		{
-			vkDestroyDescriptorPool((*m_owner), pool.handle, nullptr);
+			VK_GET_SYMBOL(vkDestroyDescriptorPool)((*m_owner), pool.handle, nullptr);
 			pool.handle = VK_NULL_HANDLE;
 		}
 
@@ -171,7 +171,7 @@ namespace vk
 	{
 		std::lock_guard lock(m_subpool_lock);
 
-		CHECK_RESULT(vkResetDescriptorPool(*m_owner, m_device_subpools[subpool_id].handle, flags));
+		CHECK_RESULT(VK_GET_SYMBOL(vkResetDescriptorPool)(*m_owner, m_device_subpools[subpool_id].handle, flags));
 		m_device_subpools[subpool_id].busy = VK_FALSE;
 	}
 
@@ -220,7 +220,7 @@ namespace vk
 			alloc_info.pSetLayouts = m_allocation_request_cache.data();
 
 			m_descriptor_set_cache.resize(alloc_size);
-			CHECK_RESULT(vkAllocateDescriptorSets(*m_owner, &alloc_info, m_descriptor_set_cache.data()));
+			CHECK_RESULT(VK_GET_SYMBOL(vkAllocateDescriptorSets)(*m_owner, &alloc_info, m_descriptor_set_cache.data()));
 
 			m_current_subpool_offset += alloc_size;
 			new_descriptor_set = m_descriptor_set_cache.pop_back();
@@ -228,7 +228,7 @@ namespace vk
 		else
 		{
 			m_current_subpool_offset++;
-			CHECK_RESULT(vkAllocateDescriptorSets(*m_owner, &alloc_info, &new_descriptor_set));
+			CHECK_RESULT(VK_GET_SYMBOL(vkAllocateDescriptorSets)(*m_owner, &alloc_info, &new_descriptor_set));
 		}
 
 		return new_descriptor_set;
@@ -317,7 +317,7 @@ namespace vk
 		m_create_info.pPoolSizes = descriptor_pool_sizes.data();
 
 		VkDescriptorPool subpool = VK_NULL_HANDLE;
-		VkResult result = vkCreateDescriptorPool(*m_owner, &m_create_info, nullptr, &subpool);
+		VkResult result = VK_GET_SYMBOL(vkCreateDescriptorPool)(*m_owner, &m_create_info, nullptr, &subpool);
 
 		if (result != VK_SUCCESS)
 		{
@@ -458,7 +458,7 @@ namespace vk
 			nullptr,                                   // pBufferInfo
 			nullptr                                    // pTexelBufferView
 		};
-		vkUpdateDescriptorSets(*g_render_device, 1, &writer, 0, nullptr);
+		VK_GET_SYMBOL(vkUpdateDescriptorSets)(*g_render_device, 1, &writer, 0, nullptr);
 	}
 
 	void descriptor_set::push(const rsx::simple_array<VkCopyDescriptorSet>& copy_cmd, u32 type_mask)
@@ -526,7 +526,7 @@ namespace vk
 
 		const auto num_writes = ::size32(m_pending_writes);
 		const auto num_copies = ::size32(m_pending_copies);
-		vkUpdateDescriptorSets(*g_render_device, num_writes, m_pending_writes.data(), num_copies, m_pending_copies.data());
+		VK_GET_SYMBOL(vkUpdateDescriptorSets)(*g_render_device, num_writes, m_pending_writes.data(), num_copies, m_pending_copies.data());
 
 		m_storage_cache_id++;
 

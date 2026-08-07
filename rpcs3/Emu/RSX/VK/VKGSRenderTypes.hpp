@@ -90,7 +90,7 @@ namespace vk
 				return false;
 			}
 
-			if (vkGetFenceStatus(pool->get_owner(), m_submit_fence->handle) == VK_SUCCESS)
+			if (VK_GET_SYMBOL(vkGetFenceStatus)(pool->get_owner(), m_submit_fence->handle) == VK_SUCCESS)
 			{
 				lock.upgrade();
 
@@ -189,14 +189,14 @@ namespace vk
 		{
 			VkSemaphoreCreateInfo semaphore_info = {};
 			semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-			vkCreateSemaphore(dev, &semaphore_info, nullptr, &present_wait_semaphore);
-			vkCreateSemaphore(dev, &semaphore_info, nullptr, &acquire_signal_semaphore);
+			VK_GET_SYMBOL(vkCreateSemaphore)(dev, &semaphore_info, nullptr, &present_wait_semaphore);
+			VK_GET_SYMBOL(vkCreateSemaphore)(dev, &semaphore_info, nullptr, &acquire_signal_semaphore);
 		}
 
 		void destroy(VkDevice dev)
 		{
-			vkDestroySemaphore(dev, present_wait_semaphore, nullptr);
-			vkDestroySemaphore(dev, acquire_signal_semaphore, nullptr);
+			VK_GET_SYMBOL(vkDestroySemaphore)(dev, present_wait_semaphore, nullptr);
+			VK_GET_SYMBOL(vkDestroySemaphore)(dev, acquire_signal_semaphore, nullptr);
 		}
 
 		// Copy shareable information

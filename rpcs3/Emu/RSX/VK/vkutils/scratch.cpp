@@ -50,7 +50,7 @@ namespace vk
 		sampler_info.compareOp = VK_COMPARE_OP_NEVER;
 		sampler_info.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 
-		vkCreateSampler(*g_render_device, &sampler_info, nullptr, &g_null_sampler);
+		VK_GET_SYMBOL(vkCreateSampler)(*g_render_device, &sampler_info, nullptr, &g_null_sampler);
 		return g_null_sampler;
 	}
 
@@ -110,7 +110,7 @@ namespace vk
 
 		VkClearColorValue clear_color = {};
 		VkImageSubresourceRange range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, tex->mipmaps(), 0, tex->layers() };
-		vkCmdClearColorImage(cmd, tex->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
+		VK_GET_SYMBOL(vkCmdClearColorImage)(cmd, tex->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
 
 		// Prep for shader access
 		tex->change_layout(cmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -185,7 +185,7 @@ namespace vk
 		{
 			// Zero-initialize the allocated VRAM
 			const u64 zero_length = init_mem ? buf->size() : utils::align(min_required_size, 4);
-			vkCmdFillBuffer(cmd, buf->value, 0, zero_length, 0);
+			VK_GET_SYMBOL(vkCmdFillBuffer)(cmd, buf->value, 0, zero_length, 0);
 
 			insert_buffer_memory_barrier(cmd, buf->value, 0, zero_length,
 				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -210,7 +210,7 @@ namespace vk
 
 		if (g_null_sampler)
 		{
-			vkDestroySampler(*g_render_device, g_null_sampler, nullptr);
+			VK_GET_SYMBOL(vkDestroySampler)(*g_render_device, g_null_sampler, nullptr);
 			g_null_sampler = nullptr;
 		}
 	}

@@ -60,7 +60,7 @@ if(WITH_LLVM)
 
 		if (LLVM_DIR AND NOT IS_ABSOLUTE "${LLVM_DIR}")
 			# change relative LLVM_DIR to be relative to the source dir
-			set(LLVM_DIR ${CMAKE_SOURCE_DIR}/${LLVM_DIR})
+			set(LLVM_DIR ${rpcs3_SOURCE_DIR}/${LLVM_DIR})
 		endif()
 
 		find_package(LLVM CONFIG)

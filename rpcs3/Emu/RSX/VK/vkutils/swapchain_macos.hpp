@@ -17,7 +17,7 @@ namespace vk
 		createInfo.sType = VK_STRUCTURE_TYPE_METAL_SURFACE_CREATE_INFO_EXT;
 		createInfo.pLayer = GetCAMetalLayerFromMetalView(window_handle);
 
-		CHECK_RESULT(vkCreateMetalSurfaceEXT(vk_instance, &createInfo, NULL, &result));
+		CHECK_RESULT(VK_GET_SYMBOL(vkCreateMetalSurfaceEXT)(vk_instance, &createInfo, NULL, &result));
 		return result;
 	}
 #endif

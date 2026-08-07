@@ -58,6 +58,7 @@ private:
 		cubeb_devid handle{};
 		std::string id;
 		u32 ch_cnt{};
+		bool valid{};
 	};
 
 	device_handle GetDevice(std::string_view dev_id = "");

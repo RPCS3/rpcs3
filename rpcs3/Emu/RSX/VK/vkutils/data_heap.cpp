@@ -243,7 +243,7 @@ namespace vk
 
 		ensure(shadow);
 		ensure(heap);
-		vkCmdCopyBuffer(cmd, shadow->value, heap->value, ::size32(dirty_ranges), dirty_ranges.data());
+		VK_GET_SYMBOL(vkCmdCopyBuffer)(cmd, shadow->value, heap->value, ::size32(dirty_ranges), dirty_ranges.data());
 		dirty_ranges.clear();
 
 		insert_buffer_memory_barrier(cmd, heap->value, 0, heap->size(),

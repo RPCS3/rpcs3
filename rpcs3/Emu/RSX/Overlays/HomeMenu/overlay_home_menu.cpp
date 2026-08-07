@@ -111,6 +111,14 @@ namespace rsx
 
 				fade_animation.on_finish = [this, navigation]
 				{
+#ifdef ANDROID
+					if (m_main_menu.m_config_changed && *m_main_menu.m_config_changed)
+					{
+						rsx_log.notice("home_menu_dialog: saving settings on exit");
+						Emu.GetCallbacks().save_emu_settings();
+						*m_main_menu.m_config_changed = false;
+					}
+#endif
 					close(true, true);
 
 					if (g_cfg.misc.pause_during_home_menu)

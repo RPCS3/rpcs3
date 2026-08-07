@@ -74,6 +74,7 @@ void fmt_class_string<CellMicInErrorDsp>::format(std::string& out, u64 arg)
 	});
 }
 
+#ifndef WITHOUT_OPENAL
 namespace fmt
 {
 	struct alc_error
@@ -89,6 +90,7 @@ void fmt_class_string<fmt::alc_error>::format(std::string& out, u64 arg)
 	const fmt::alc_error& obj = get_object(arg);
 	fmt::append(out, "0x%x='%s'", obj.error, alcGetString(obj.device, obj.error));
 }
+#endif
 
 void mic_context::operator()()
 {

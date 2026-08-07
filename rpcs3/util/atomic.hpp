@@ -2,6 +2,9 @@
 
 #include "util/types.hpp"
 #include <functional>
+#ifdef ANDROID
+#include <thread>
+#endif
 
 #ifndef _MSC_VER
 #pragma GCC diagnostic push
@@ -1690,15 +1693,54 @@ public:
 		});
 	}
 
+#ifdef ANDROID
+	static constexpr usz spin_relax_threshold = 8;
+	static constexpr usz spin_count = 16;
+#endif
+
 	void wait(type old_value, atomic_wait_timeout timeout = atomic_wait_timeout::inf) const
 		requires(sizeof(type) == 4)
 	{
+#ifdef ANDROID
+		const auto& data = *reinterpret_cast<const std::atomic<u32>*>(&m_data);
+
+		for (usz i = 0; i < spin_count; ++i)
+		{
+			if (std::bit_cast<type>(data.load()) != old_value)
+			{
+				return;
+			}
+
+			if (i > spin_relax_threshold)
+			{
+				std::this_thread::yield();
+			}
+		}
+#endif
+
 		atomic_wait_engine::wait(&m_data, std::bit_cast<u32>(old_value), static_cast<u64>(timeout));
 	}
 
 	[[deprecated]] void wait(type old_value, atomic_wait_timeout timeout = atomic_wait_timeout::inf) const
 		requires(sizeof(type) == 8)
 	{
+#ifdef ANDROID
+		const auto& data = *reinterpret_cast<const std::atomic<u64>*>(&m_data);
+
+		for (usz i = 0; i < spin_count; ++i)
+		{
+			if (std::bit_cast<type>(data.load()) != old_value)
+			{
+				return;
+			}
+
+			if (i > spin_relax_threshold)
+			{
+				std::this_thread::yield();
+			}
+		}
+#endif
+
 		atomic_wait::info ext[2]{};
 		ext[0].data = reinterpret_cast<const char*>(&m_data) + 4;
 		ext[0].old = std::bit_cast<u64>(old_value) >> 32;

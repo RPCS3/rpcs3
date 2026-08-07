@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Utilities/StrFmt.h"
 #include "util/types.hpp"
 #include "util/v128.hpp"
 #include "util/sysinfo.hpp"
@@ -1881,7 +1882,11 @@ inline v128 gv_muladdfs(const v128& a, const v128& b, const v128& c)
 inline v128 gv_rmuladds_hds16(const v128& a, const v128& b, const v128& c)
 {
 #if defined(ARCH_ARM64)
+#if defined(__ARM_FEATURE_QRDMX)
 	return vqrdmlahq_s16(c, a, b);
+#else
+	return vqaddq_s16(c, vqrdmulhq_s16(a, b));
+#endif
 #elif defined(ARCH_X64)
 	const auto x80 = _mm_set1_epi16(0x80); // 0x80 * 0x80 = 0x4000, add this to the product
 	const auto al = _mm_unpacklo_epi16(a, x80);

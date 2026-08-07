@@ -10,6 +10,7 @@
 #include "Emu/Cell/SPURecompiler.h"
 #include "Emu/perf_meter.hpp"
 #include <deque>
+#include <mutex>
 #include <span>
 
 #include "util/vm.hpp"
@@ -1146,7 +1147,15 @@ namespace vm
 
 		if (!utils::memory_lock(g_sudo_addr + addr, size))
 		{
+#ifdef ANDROID
+			static std::once_flag reported;
+			std::call_once(reported, [addr, size]()
+			{
+				vm_log.notice("Failed to lock sudo memory (addr=0x%x, size=0x%x). RLIMIT_MEMLOCK is capped by the platform; pages stay mapped and usable.", addr, size);
+			});
+#else
 			vm_log.error("Failed to lock sudo memory (addr=0x%x, size=0x%x). Consider increasing your system limits.", addr, size);
+#endif
 		}
 	}
 

@@ -37,6 +37,7 @@ namespace aarch64
         "xzr", ".", "sp"
     };
 
+    const char *get_cpu_name(int cpu);
     std::string get_cpu_name();
     std::string get_cpu_brand();
 }

@@ -18,7 +18,7 @@ namespace vk
 		infos.sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 		infos.queueFamilyIndex = queue_family;
 
-		CHECK_RESULT(vkCreateCommandPool(dev, &infos, nullptr, &pool));
+		CHECK_RESULT(VK_GET_SYMBOL(vkCreateCommandPool)(dev, &infos, nullptr, &pool));
 	}
 
 	void command_pool::destroy()
@@ -26,7 +26,7 @@ namespace vk
 		if (!pool)
 			return;
 
-		vkDestroyCommandPool((*owner), pool, nullptr);
+		VK_GET_SYMBOL(vkDestroyCommandPool)((*owner), pool, nullptr);
 		pool = nullptr;
 	}
 
@@ -52,7 +52,7 @@ namespace vk
 		infos.commandBufferCount = 1;
 		infos.commandPool = +cmd_pool;
 		infos.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		CHECK_RESULT(vkAllocateCommandBuffers(cmd_pool.get_owner(), &infos, &commands));
+		CHECK_RESULT(VK_GET_SYMBOL(vkAllocateCommandBuffers)(cmd_pool.get_owner(), &infos, &commands));
 
 		m_submit_fence = new fence(cmd_pool.get_owner());
 		pool = &cmd_pool;
@@ -60,11 +60,11 @@ namespace vk
 
 	void command_buffer::destroy()
 	{
-		vkFreeCommandBuffers(pool->get_owner(), (*pool), 1, &commands);
+		VK_GET_SYMBOL(vkFreeCommandBuffers)(pool->get_owner(), (*pool), 1, &commands);
 
 		if (m_submit_fence)
 		{
-			//vkDestroyFence(pool->get_owner(), m_submit_fence, nullptr);
+			//VK_GET_SYMBOL(vkDestroyFence)(pool->get_owner(), m_submit_fence, nullptr);
 			delete m_submit_fence;
 			m_submit_fence = nullptr;
 		}
@@ -73,7 +73,7 @@ namespace vk
 	void command_buffer::reset()
 	{
 		// Do the driver reset
-		CHECK_RESULT(vkResetCommandBuffer(commands, 0));
+		CHECK_RESULT(VK_GET_SYMBOL(vkResetCommandBuffer)(commands, 0));
 	}
 
 	void command_buffer::clear_state_cache()
@@ -90,7 +90,7 @@ namespace vk
 			wait_for_fence(m_submit_fence);
 			is_pending = false;
 
-			//CHECK_RESULT(vkResetFences(pool->get_owner(), 1, &m_submit_fence));
+			//CHECK_RESULT(VK_GET_SYMBOL(vkResetFences)(pool->get_owner(), 1, &m_submit_fence));
 			m_submit_fence->reset();
 			reset();
 		}
@@ -105,7 +105,7 @@ namespace vk
 		begin_infos.pInheritanceInfo = &inheritance_info;
 		begin_infos.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		begin_infos.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-		CHECK_RESULT(vkBeginCommandBuffer(commands, &begin_infos));
+		CHECK_RESULT(VK_GET_SYMBOL(vkBeginCommandBuffer)(commands, &begin_infos));
 		is_open = true;
 
 		clear_state_cache();
@@ -119,7 +119,7 @@ namespace vk
 			return;
 		}
 
-		CHECK_RESULT(vkEndCommandBuffer(commands));
+		CHECK_RESULT(VK_GET_SYMBOL(vkEndCommandBuffer)(commands));
 		is_open = false;
 	}
 
@@ -155,7 +155,7 @@ namespace vk
 		}
 
 		cached = pipeline;
-		vkCmdBindPipeline(commands, bind_point, pipeline);
+		VK_GET_SYMBOL(vkCmdBindPipeline)(commands, bind_point, pipeline);
 	}
 
 	void command_buffer::bind_descriptor_sets(
@@ -174,7 +174,7 @@ namespace vk
 		}
 
 		std::memcpy(m_bound_descriptor_sets.data(), sets.data(), sets.size_bytes());
-		vkCmdBindDescriptorSets(commands, bind_point, pipe_layout, 0, num_sets, sets.data(), ::size32(dynamic_offsets), dynamic_offsets.data());
+		VK_GET_SYMBOL(vkCmdBindDescriptorSets)(commands, bind_point, pipe_layout, 0, num_sets, sets.data(), ::size32(dynamic_offsets), dynamic_offsets.data());
 	}
 
 	void command_buffer::bind_descriptor_sets(
@@ -191,6 +191,6 @@ namespace vk
 		}
 
 		std::memcpy(m_bound_descriptor_sets.data(), sets.data(), sets.size_bytes());
-		vkCmdBindDescriptorSets(commands, bind_point, pipe_layout, 0, num_sets, sets.data(), 0, nullptr);
+		VK_GET_SYMBOL(vkCmdBindDescriptorSets)(commands, bind_point, pipe_layout, 0, num_sets, sets.data(), 0, nullptr);
 	}
 }

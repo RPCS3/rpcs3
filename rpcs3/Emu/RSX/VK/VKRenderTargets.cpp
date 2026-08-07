@@ -498,12 +498,12 @@ namespace vk
 		if (surface->aspect() & VK_IMAGE_ASPECT_COLOR_BIT)
 		{
 			VkClearColorValue color = { {0.f, 0.f, 0.f, 1.f} };
-			vkCmdClearColorImage(cmd, surface->value, surface->current_layout, &color, 1, &range);
+			VK_GET_SYMBOL(vkCmdClearColorImage)(cmd, surface->value, surface->current_layout, &color, 1, &range);
 		}
 		else
 		{
 			VkClearDepthStencilValue clear{ 1.f, 255 };
-			vkCmdClearDepthStencilImage(cmd, surface->value, surface->current_layout, &clear, 1, &range);
+			VK_GET_SYMBOL(vkCmdClearDepthStencilImage)(cmd, surface->value, surface->current_layout, &clear, 1, &range);
 		}
 
 		surface->pop_layout(cmd);
@@ -632,7 +632,7 @@ namespace vk
 
 		const auto regions = build_spill_transfer_descriptors(src);
 		src->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-		vkCmdCopyImageToBuffer(cmd, src->value, src->current_layout, m_spilled_mem->value, ::size32(regions), regions.data());
+		VK_GET_SYMBOL(vkCmdCopyImageToBuffer)(cmd, src->value, src->current_layout, m_spilled_mem->value, ::size32(regions), regions.data());
 
 		// Destroy this object through a cloned object
 		auto obj = std::unique_ptr<viewable_image>(clone());
@@ -669,7 +669,7 @@ namespace vk
 			const auto regions = build_spill_transfer_descriptors(dst);
 
 			dst->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-			vkCmdCopyBufferToImage(cmd, m_spilled_mem->value, dst->value, dst->current_layout, ::size32(regions), regions.data());
+			VK_GET_SYMBOL(vkCmdCopyBufferToImage)(cmd, m_spilled_mem->value, dst->value, dst->current_layout, ::size32(regions), regions.data());
 
 			if (samples() > 1)
 			{

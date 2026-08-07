@@ -16,7 +16,7 @@ namespace vk
 	{
 		if (!allow_extensions)
 		{
-			vkGetPhysicalDeviceFeatures(dev, &features);
+			VK_GET_SYMBOL(vkGetPhysicalDeviceFeatures)(dev, &features);
 			return;
 		}
 
@@ -88,7 +88,7 @@ namespace vk
 			features2.pNext      = &multidraw_info;
 		}
 
-		vkGetPhysicalDeviceFeatures2(dev, &features2);
+		VK_GET_SYMBOL(vkGetPhysicalDeviceFeatures2)(dev, &features2);
 
 		shader_types_support.allow_float64 = !!features2.features.shaderFloat64;
 		shader_types_support.allow_float16 = !!shader_support_info.shaderFloat16;
@@ -154,8 +154,8 @@ namespace vk
 	void physical_device::get_physical_device_properties_0(bool allow_extensions)
 	{
 		// Core properties only
-		vkGetPhysicalDeviceMemoryProperties(dev, &memory_properties);
-		vkGetPhysicalDeviceProperties(dev, &props);
+		VK_GET_SYMBOL(vkGetPhysicalDeviceMemoryProperties)(dev, &memory_properties);
+		VK_GET_SYMBOL(vkGetPhysicalDeviceProperties)(dev, &props);
 
 		if (!allow_extensions)
 		{
@@ -169,7 +169,7 @@ namespace vk
 		driver_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES_KHR;
 		driver_properties.pNext = properties2.pNext;
 		properties2.pNext = &driver_properties;
-		vkGetPhysicalDeviceProperties2(dev, &properties2);
+		VK_GET_SYMBOL(vkGetPhysicalDeviceProperties2)(dev, &properties2);
 	}
 
 	void physical_device::get_physical_device_properties_1(bool allow_extensions)
@@ -200,7 +200,7 @@ namespace vk
 			properties2.pNext = &multidraw_props;
 		}
 
-		vkGetPhysicalDeviceProperties2(dev, &properties2);
+		VK_GET_SYMBOL(vkGetPhysicalDeviceProperties2)(dev, &properties2);
 		props = properties2.properties;
 
 		if (descriptor_indexing_support)
@@ -272,6 +272,17 @@ namespace vk
 	std::string physical_device::get_name() const
 	{
 		return props.deviceName;
+	}
+
+	std::string physical_device::get_driver_name() const
+	{
+		return driver_properties.driverName;
+	}
+
+	std::string physical_device::get_driver_vk_version() const
+	{
+		const auto version = driver_properties.conformanceVersion;
+		return fmt::format("%u.%u.%u.%u", version.major, version.minor, version.subminor, version.patch);
 	}
 
 	driver_vendor physical_device::get_driver_vendor() const
@@ -415,7 +426,7 @@ namespace vk
 			return ::size32(queue_props);
 
 		u32 count = 0;
-		vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, nullptr);
+		VK_GET_SYMBOL(vkGetPhysicalDeviceQueueFamilyProperties)(dev, &count, nullptr);
 
 		return count;
 	}
@@ -425,10 +436,10 @@ namespace vk
 		if (queue_props.empty())
 		{
 			u32 count = 0;
-			vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, nullptr);
+			VK_GET_SYMBOL(vkGetPhysicalDeviceQueueFamilyProperties)(dev, &count, nullptr);
 
 			queue_props.resize(count);
-			vkGetPhysicalDeviceQueueFamilyProperties(dev, &count, queue_props.data());
+			VK_GET_SYMBOL(vkGetPhysicalDeviceQueueFamilyProperties)(dev, &count, queue_props.data());
 		}
 
 		if (queue >= queue_props.size())
@@ -805,7 +816,7 @@ namespace vk
 			device.pNext = &shader_barycentric_info;
 		}
 
-		if (auto error = vkCreateDevice(*pgpu, &device, nullptr, &dev))
+		if (auto error = VK_GET_SYMBOL(vkCreateDevice)(*pgpu, &device, nullptr, &dev))
 		{
 			dump_debug_info(requested_extensions, enabled_features);
 			vk::die_with_error(error);
@@ -819,12 +830,12 @@ namespace vk
 		}
 
 		// Initialize queues
-		vkGetDeviceQueue(dev, graphics_queue_idx, 0, &m_graphics_queue);
-		vkGetDeviceQueue(dev, transfer_queue_idx, transfer_queue_sub_index, &m_transfer_queue);
+		VK_GET_SYMBOL(vkGetDeviceQueue)(dev, graphics_queue_idx, 0, &m_graphics_queue);
+		VK_GET_SYMBOL(vkGetDeviceQueue)(dev, transfer_queue_idx, transfer_queue_sub_index, &m_transfer_queue);
 
 		if (present_queue_idx != umax)
 		{
-			vkGetDeviceQueue(dev, present_queue_idx, 0, &m_present_queue);
+			VK_GET_SYMBOL(vkGetDeviceQueue)(dev, present_queue_idx, 0, &m_present_queue);
 		}
 
 		memory_map = vk::get_memory_mapping(pdev);
@@ -859,7 +870,7 @@ namespace vk
 				m_allocator.reset();
 			}
 
-			vkDestroyDevice(dev, nullptr);
+			VK_GET_SYMBOL(vkDestroyDevice)(dev, nullptr);
 			dev = nullptr;
 			memory_map = {};
 			m_formats_support = {};
@@ -875,7 +886,7 @@ namespace vk
 		}
 
 		auto& props = pgpu->format_properties[format];
-		vkGetPhysicalDeviceFormatProperties(*pgpu, format, &props);
+		VK_GET_SYMBOL(vkGetPhysicalDeviceFormatProperties)(*pgpu, format, &props);
 		return props;
 	}
 
@@ -996,7 +1007,7 @@ namespace vk
 	{
 		VkPhysicalDevice pdev = dev;
 		VkPhysicalDeviceMemoryProperties memory_properties;
-		vkGetPhysicalDeviceMemoryProperties(pdev, &memory_properties);
+		VK_GET_SYMBOL(vkGetPhysicalDeviceMemoryProperties)(pdev, &memory_properties);
 
 		memory_type_mapping result;
 		result.device_local_total_bytes = 0;
@@ -1130,7 +1141,7 @@ namespace vk
 		const auto test_format_features = [&dev](VkFormat format, VkFlags required_features, VkBool32 linear_features) -> bool
 		{
 			VkFormatProperties props;
-			vkGetPhysicalDeviceFormatProperties(dev, format, &props);
+			VK_GET_SYMBOL(vkGetPhysicalDeviceFormatProperties)(dev, format, &props);
 
 			const auto supported_features_mask = (linear_features) ? props.linearTilingFeatures : props.optimalTilingFeatures;
 			return (supported_features_mask & required_features) == required_features;

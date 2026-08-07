@@ -342,7 +342,7 @@ namespace vk
 		rp_info.pSubpasses = &subpass;
 
 		VkRenderPass result;
-		CHECK_RESULT(vkCreateRenderPass(dev, &rp_info, NULL, &result));
+		CHECK_RESULT(VK_GET_SYMBOL(vkCreateRenderPass)(dev, &rp_info, NULL, &result));
 
 		g_renderpass_cache[renderpass_key] = result;
 		return result;
@@ -358,7 +358,7 @@ namespace vk
 		// Destroy cache
 		for (const auto &renderpass : g_renderpass_cache)
 		{
-			vkDestroyRenderPass(dev, renderpass.second, nullptr);
+			VK_GET_SYMBOL(vkDestroyRenderPass)(dev, renderpass.second, nullptr);
 		}
 
 		g_renderpass_cache.clear();
@@ -385,7 +385,7 @@ namespace vk
 		rp_begin.renderArea.extent.width = framebuffer_region.width;
 		rp_begin.renderArea.extent.height = framebuffer_region.height;
 
-		vkCmdBeginRenderPass(cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
+		VK_GET_SYMBOL(vkCmdBeginRenderPass)(cmd, &rp_begin, VK_SUBPASS_CONTENTS_INLINE);
 		renderpass_info = { pass, target };
 	}
 
@@ -402,7 +402,7 @@ namespace vk
 
 	void end_renderpass(const vk::command_buffer& cmd)
 	{
-		vkCmdEndRenderPass(cmd);
+		VK_GET_SYMBOL(vkCmdEndRenderPass)(cmd);
 		g_current_renderpass[cmd] = {};
 	}
 

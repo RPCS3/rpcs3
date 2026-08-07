@@ -5734,6 +5734,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module
 			result.clear();
 		}
 
+#ifndef ANDROID
 		if (verifyModule(*_module, &out))
 		{
 			out.flush();
@@ -5741,6 +5742,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module
 			Emu.CallFromMainThread([]{ Emu.GracefulShutdown(false, true); });
 			return;
 		}
+#endif
 
 		ppu_log.notice("LLVM: %zu functions generated (code_size=0x%x, num_func=%d, max_addr(-)min_addr=0x%x)", _module->getFunctionList().size(), guest_code_size, num_func, max_addr - min_addr);
 	}

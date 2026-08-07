@@ -2,14 +2,14 @@
 	path = 3rdparty/ffmpeg
 	url = ../../RPCS3/ffmpeg-core.git
 	ignore = dirty
+[submodule "3rdparty/llvm/llvm"]
+	path = 3rdparty/llvm/llvm
+	url = ../../llvm/llvm-project.git
+	ignore = dirty
 [submodule "asmjit"]
 	path = 3rdparty/asmjit/asmjit
 	url = ../../asmjit/asmjit.git
 	branch = master
-	ignore = dirty
-[submodule "3rdparty/llvm/llvm"]
-	path = 3rdparty/llvm/llvm
-	url = ../../llvm/llvm-project.git
 	ignore = dirty
 [submodule "3rdparty/glslang"]
 	path = 3rdparty/glslang/glslang
@@ -111,4 +111,12 @@
 [submodule "3rdparty/protobuf/protobuf"]
 	path = 3rdparty/protobuf/protobuf
 	url = ../../protocolbuffers/protobuf.git
+	ignore = dirty
+[submodule "3rdparty/json"]
+	path = 3rdparty/json
+	url = ../../nlohmann/json.git
+	ignore = dirty
+[submodule "3rdparty/libadrenotools"]
+	path = 3rdparty/libadrenotools
+	url = ../../bylaws/libadrenotools.git
 	ignore = dirty

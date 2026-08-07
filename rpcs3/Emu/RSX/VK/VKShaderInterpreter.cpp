@@ -462,7 +462,7 @@ namespace vk
 		m_device = dev;
 
 		VkPipelineCacheCreateInfo drv_cache_info{ VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
-		vkCreatePipelineCache(m_device, &drv_cache_info, nullptr, &m_driver_pipeline_cache);
+		VK_GET_SYMBOL(vkCreatePipelineCache)(m_device, &drv_cache_info, nullptr, &m_driver_pipeline_cache);
 	}
 
 	void shader_interpreter::destroy()
@@ -474,7 +474,7 @@ namespace vk
 
 		if (m_driver_pipeline_cache)
 		{
-			vkDestroyPipelineCache(m_device, m_driver_pipeline_cache, nullptr);
+			VK_GET_SYMBOL(vkDestroyPipelineCache)(m_device, m_driver_pipeline_cache, nullptr);
 			m_driver_pipeline_cache = VK_NULL_HANDLE;
 		}
 	}

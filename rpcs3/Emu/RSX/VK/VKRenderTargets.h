@@ -628,7 +628,7 @@ namespace vk
 			if (dest != bo)
 			{
 				VkBufferCopy copy = { src_offset_in_buffer, dst_offset_in_buffer, max_copy_length };
-				vkCmdCopyBuffer(cmd, dest->value, bo->value, 1, &copy);
+				VK_GET_SYMBOL(vkCmdCopyBuffer)(cmd, dest->value, bo->value, 1, &copy);
 
 				vk::insert_buffer_memory_barrier(cmd,
 					bo->value, dst_offset_in_buffer, max_copy_length,
@@ -668,7 +668,7 @@ namespace vk
 
 				VkBufferCopy copy = { 0, offset, ::size32(*bo) };
 				offset += ::size32(*bo);
-				vkCmdCopyBuffer(cmd, bo->value, dst->value, 1, &copy);
+				VK_GET_SYMBOL(vkCmdCopyBuffer)(cmd, bo->value, dst->value, 1, &copy);
 
 				// Cleanup
 				vk::surface_cache_utils::dispose(bo);

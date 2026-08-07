@@ -272,6 +272,7 @@ bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) f
 	ensure(func);
 
 	u64 max = umax;
+	std::size_t gap = 0;
 
 	for (u64 i = 0;; i++)
 	{
@@ -288,9 +289,15 @@ bool cfg::try_to_enum_value(u64* out, decltype(&fmt_class_string<int>::format) f
 		fmt_class_string<u64>::format(hex, i);
 		if (var == hex)
 		{
-			break;
+			if (++gap > 100)
+			{
+				break;
+			}
+
+			continue;
 		}
 
+		gap = 0;
 		max = i;
 	}
 
@@ -340,6 +347,7 @@ std::string cfg::uint128::to_string(u128 value) noexcept
 std::vector<std::string> cfg::try_to_enum_list(decltype(&fmt_class_string<int>::format) func)
 {
 	std::vector<std::string> result;
+	std::size_t gap = 0;
 
 	for (u64 i = 0;; i++)
 	{
@@ -350,8 +358,15 @@ std::vector<std::string> cfg::try_to_enum_list(decltype(&fmt_class_string<int>::
 		fmt_class_string<u64>::format(hex, i);
 		if (var == hex)
 		{
-			break;
+			if (++gap > 100)
+			{
+				break;
+			}
+
+			continue;
 		}
+
+		gap = 0;
 
 		result.emplace_back(std::move(var));
 	}
@@ -668,6 +683,54 @@ std::string cfg::node::to_string() const
 	cfg::encode(out, *this);
 
 	return {out.c_str(), out.size()};
+}
+
+nlohmann::ordered_json cfg::node::to_json() const 
+{
+	auto result = nlohmann::ordered_json::object();
+
+	for (const auto& node : get_nodes())
+	{
+		result[node->get_name()] = node->to_json();
+	}
+
+	return result;
+}
+
+bool cfg::node::from_json(const nlohmann::json &json, bool dynamic)
+{
+	if (!json.is_object())
+	{
+		return false;
+	}
+
+	auto find_node = [this](std::string_view name) -> _base *
+	{
+		for (const auto& node : get_nodes())
+		{
+			if (node->get_name() == name)
+			{
+				return node;
+			}
+		}
+
+		return nullptr;
+	};
+
+
+	for (auto &[key, value] : json.get<nlohmann::json::object_t>())
+	{
+		auto keyNode = find_node(key);
+
+		if (keyNode == nullptr || (dynamic && !keyNode->get_is_dynamic()))
+		{
+			continue;
+		}
+
+		keyNode->from_json(value, dynamic);
+	}
+
+	return false;
 }
 
 bool cfg::node::from_string(std::string_view value, bool dynamic)

@@ -14,7 +14,7 @@ namespace vk
 	{
 		auto pdev = get_current_renderer();
 
-		#define VK_FUNC(func) _##func = reinterpret_cast<PFN_##func>(vkGetDeviceProcAddr(*pdev, #func))
+		#define VK_FUNC(func) _##func = reinterpret_cast<PFN_##func>(VK_GET_SYMBOL(vkGetDeviceProcAddr)(*pdev, #func))
 		#include "VKProcTable.h"
 	}
 }

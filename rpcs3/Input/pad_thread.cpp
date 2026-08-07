@@ -18,6 +18,7 @@
 #ifndef ANDROID
 #include "keyboard_pad_handler.h"
 #endif
+#include "virtual_pad_handler.h"
 #include "Emu/Io/Null/NullPadHandler.h"
 #include "Emu/Io/interception.h"
 #include "Emu/Io/PadHandler.h"
@@ -81,8 +82,10 @@ void pad_thread::Init()
 {
 	std::lock_guard lock(pad::g_pad_mutex);
 
+#ifndef ANDROID
 	// Reset mouse-based gyro state
 	m_mouse_gyro.set_enabled(g_cfg.io.mouse_based_gyro_enabled.get());
+#endif
 
 	// Cache old settings if possible
 	std::array<pad_setting, CELL_PAD_MAX_PORT_NUM> pad_settings;
@@ -610,9 +613,11 @@ void pad_thread::operator()()
 		{
 			update_pad_states();
 
+#ifndef ANDROID
 			// Apply mouse-based gyro emulation.
 			// Intentionally bound to Player 1 only.
 			m_mouse_gyro.apply_gyro(m_pads[0]);
+#endif
 		}
 
 		m_info.now_connect = connected_devices + num_ldd_pad;
@@ -886,6 +891,8 @@ std::shared_ptr<PadHandlerBase> pad_thread::GetHandler(pad_handler type)
 	case pad_handler::evdev:
 		return std::make_shared<evdev_joystick_handler>();
 #endif
+	case pad_handler::virtual_pad:
+		return std::make_shared<virtual_pad_handler>();
 	}
 
 	return nullptr;

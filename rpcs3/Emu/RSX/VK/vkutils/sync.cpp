@@ -152,21 +152,21 @@ namespace vk
 		owner                  = dev;
 		VkFenceCreateInfo info = {};
 		info.sType             = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-		CHECK_RESULT(vkCreateFence(dev, &info, nullptr, &handle));
+		CHECK_RESULT(VK_GET_SYMBOL(vkCreateFence)(dev, &info, nullptr, &handle));
 	}
 
 	fence::~fence()
 	{
 		if (handle)
 		{
-			vkDestroyFence(owner, handle, nullptr);
+			VK_GET_SYMBOL(vkDestroyFence)(owner, handle, nullptr);
 			handle = VK_NULL_HANDLE;
 		}
 	}
 
 	void fence::reset()
 	{
-		vkResetFences(owner, 1, &handle);
+		VK_GET_SYMBOL(vkResetFences)(owner, 1, &handle);
 		flushed.release(false);
 	}
 
@@ -193,12 +193,12 @@ namespace vk
 	{
 		VkSemaphoreCreateInfo info{};
 		info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-		CHECK_RESULT(vkCreateSemaphore(m_device, &info, nullptr, &m_handle));
+		CHECK_RESULT(VK_GET_SYMBOL(vkCreateSemaphore)(m_device, &info, nullptr, &m_handle));
 	}
 
 	semaphore::~semaphore()
 	{
-		vkDestroySemaphore(m_device, m_handle, nullptr);
+		VK_GET_SYMBOL(vkDestroySemaphore)(m_device, m_handle, nullptr);
 	}
 
 	semaphore::operator VkSemaphore() const
@@ -236,14 +236,14 @@ namespace vk
 			info.flags = VK_EVENT_CREATE_DEVICE_ONLY_BIT_KHR;
 		}
 
-		CHECK_RESULT(vkCreateEvent(dev, &info, nullptr, &m_vk_event));
+		CHECK_RESULT(VK_GET_SYMBOL(vkCreateEvent)(dev, &info, nullptr, &m_vk_event));
 	}
 
 	event::~event()
 	{
 		if (m_vk_event) [[likely]]
 		{
-			vkDestroyEvent(*m_device, m_vk_event, nullptr);
+			VK_GET_SYMBOL(vkDestroyEvent)(*m_device, m_vk_event, nullptr);
 		}
 	}
 
@@ -263,7 +263,7 @@ namespace vk
 		const auto image_memory_barriers = v1_utils::get_image_memory_barriers(dependency);
 		const auto buffer_memory_barriers = v1_utils::get_buffer_memory_barriers(dependency);
 
-		vkCmdPipelineBarrier(cmd, src_stages, dst_stages, dependency.dependencyFlags,
+		VK_GET_SYMBOL(vkCmdPipelineBarrier)(cmd, src_stages, dst_stages, dependency.dependencyFlags,
 			::size32(memory_barriers), memory_barriers.data(),
 			::size32(buffer_memory_barriers), buffer_memory_barriers.data(),
 			::size32(image_memory_barriers), image_memory_barriers.data());
@@ -289,7 +289,7 @@ namespace vk
 			else
 			{
 				const auto dst_stages = v1_utils::gather_dst_stages(dependency);
-				vkCmdSetEvent(cmd, m_vk_event, dst_stages);
+				VK_GET_SYMBOL(vkCmdSetEvent)(cmd, m_vk_event, dst_stages);
 			}
 
 			return;
@@ -302,7 +302,7 @@ namespace vk
 		// 2. Signalling won't wait. The caller is responsible for setting up the dependencies correctly.
 		if (m_backend != sync_backend::events_v2)
 		{
-			vkCmdSetEvent(cmd, m_vk_event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+			VK_GET_SYMBOL(vkCmdSetEvent)(cmd, m_vk_event, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 			return;
 		}
 
@@ -329,7 +329,7 @@ namespace vk
 	{
 		if (m_backend != sync_backend::gpu_label) [[ likely ]]
 		{
-			vkSetEvent(*m_device, m_vk_event);
+			VK_GET_SYMBOL(vkSetEvent)(*m_device, m_vk_event);
 			return;
 		}
 
@@ -352,7 +352,7 @@ namespace vk
 		const auto image_memory_barriers = v1_utils::get_image_memory_barriers(dependency);
 		const auto buffer_memory_barriers = v1_utils::get_buffer_memory_barriers(dependency);
 
-		vkCmdWaitEvents(cmd,
+		VK_GET_SYMBOL(vkCmdWaitEvents)(cmd,
 			1, &m_vk_event,
 			src_stages, dst_stages,
 			::size32(memory_barriers), memory_barriers.data(),
@@ -364,7 +364,7 @@ namespace vk
 	{
 		if (m_backend != sync_backend::gpu_label) [[ likely ]]
 		{
-			vkResetEvent(*m_device, m_vk_event);
+			VK_GET_SYMBOL(vkResetEvent)(*m_device, m_vk_event);
 			return;
 		}
 
@@ -375,7 +375,7 @@ namespace vk
 	{
 		if (m_backend != sync_backend::gpu_label) [[ likely ]]
 		{
-			return vkGetEventStatus(*m_device, m_vk_event);
+			return VK_GET_SYMBOL(vkGetEventStatus)(*m_device, m_vk_event);
 		}
 
 		return m_label->signaled() ? VK_EVENT_SET : VK_EVENT_RESET;
@@ -468,12 +468,12 @@ namespace vk
 			barrier.dstAccessMask |= VK_ACCESS_TRANSFER_WRITE_BIT;
 		}
 
-		vkCmdPipelineBarrier(cmd, src_stages, dst_stages, dependency.dependencyFlags,
+		VK_GET_SYMBOL(vkCmdPipelineBarrier)(cmd, src_stages, dst_stages, dependency.dependencyFlags,
 			::size32(memory_barriers), memory_barriers.data(),
 			::size32(buffer_memory_barriers), buffer_memory_barriers.data(),
 			::size32(image_memory_barriers), image_memory_barriers.data());
 
-		vkCmdFillBuffer(cmd, m_buffer_handle, m_buffer_offset, 4, label_constants::set_);
+		VK_GET_SYMBOL(vkCmdFillBuffer)(cmd, m_buffer_handle, m_buffer_offset, 4, label_constants::set_);
 	}
 
 	gpu_debug_marker::gpu_debug_marker(gpu_debug_marker_pool& pool, std::string message)
@@ -565,11 +565,11 @@ namespace vk
 
 		if (timeout)
 		{
-			return vkWaitForFences(*g_render_device, 1, &pFence->handle, VK_FALSE, timeout * 1000ull);
+			return VK_GET_SYMBOL(vkWaitForFences)(*g_render_device, 1, &pFence->handle, VK_FALSE, timeout * 1000ull);
 		}
 		else
 		{
-			while (auto status = vkGetFenceStatus(*g_render_device, pFence->handle))
+			while (auto status = VK_GET_SYMBOL(vkGetFenceStatus)(*g_render_device, pFence->handle))
 			{
 				switch (status)
 				{

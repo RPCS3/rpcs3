@@ -1597,7 +1597,10 @@ shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object& elf, bool virtual_load, c
 	auto& link = g_fxo->get<ppu_linkage_info>();
 
 	// Initialize HLE modules
-	ppu_initialize_modules(&link);
+	if (!virtual_load)
+	{
+		ppu_initialize_modules(&link);
+	}
 
 	// Library hash
 	sha1_context sha;
@@ -2372,8 +2375,11 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 		ppu_loader.success("PPU executable hash: %s (<- %u)", hash, applied.size());
 	}
 
-	// Initialize HLE modules
-	ppu_initialize_modules(&link, ar);
+	if (!virtual_load)
+	{
+		// Initialize HLE modules
+		ppu_initialize_modules(&link, ar);
+	}
 
 	// Embedded SPU elf patching
 	for (const auto& seg : _main.segs)

@@ -194,7 +194,7 @@ namespace vk
 
 		VkBuffer buffers = m_vao.heap->value;
 		VkDeviceSize offsets = m_vao_offset;
-		vkCmdBindVertexBuffers(cmd, 0, 1, &buffers, &offsets);
+		VK_GET_SYMBOL(vkCmdBindVertexBuffers)(cmd, 0, 1, &buffers, &offsets);
 
 		return program;
 	}
@@ -236,7 +236,7 @@ namespace vk
 
 	void overlay_pass::emit_geometry(vk::command_buffer& cmd, glsl::program* /*program*/)
 	{
-		vkCmdDraw(cmd, num_drawable_elements, 1, first_vertex, 0);
+		VK_GET_SYMBOL(vkCmdDraw)(cmd, num_drawable_elements, 1, first_vertex, 0);
 	}
 
 	void overlay_pass::set_up_viewport(vk::command_buffer& cmd, u32 x, u32 y, u32 w, u32 h)
@@ -248,10 +248,10 @@ namespace vk
 		vp.height = static_cast<f32>(h);
 		vp.minDepth = 0.f;
 		vp.maxDepth = 1.f;
-		vkCmdSetViewport(cmd, 0, 1, &vp);
+		VK_GET_SYMBOL(vkCmdSetViewport)(cmd, 0, 1, &vp);
 
 		VkRect2D vs = { { static_cast<s32>(x), static_cast<s32>(y) }, { w, h } };
-		vkCmdSetScissor(cmd, 0, 1, &vs);
+		VK_GET_SYMBOL(vkCmdSetScissor)(cmd, 0, 1, &vs);
 	}
 
 	void overlay_pass::run(vk::command_buffer& cmd, const areau& viewport, vk::framebuffer* fbo, const std::vector<vk::image_view*>& src, VkRenderPass render_pass)
@@ -344,7 +344,7 @@ namespace vk
 			.imageExtent = { static_cast<u32>(w), static_cast<u32>(h), 1u }
 		};
 		change_image_layout(cmd, tex, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
-		vkCmdCopyBufferToImage(cmd, upload_heap.heap->value, tex->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+		VK_GET_SYMBOL(vkCmdCopyBufferToImage)(cmd, upload_heap.heap->value, tex->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 		change_image_layout(cmd, tex, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, range);
 	}
 
@@ -557,7 +557,7 @@ namespace vk
 
 		ensure(pos <= push_buf.size());
 		ensure(pos == (vertex_push_constants_size / sizeof(f32)));
-		vkCmdPushConstants(cmd, program->layout(), VK_SHADER_STAGE_VERTEX_BIT, 0, vertex_push_constants_size, push_buf.data());
+		VK_GET_SYMBOL(vkCmdPushConstants)(cmd, program->layout(), VK_SHADER_STAGE_VERTEX_BIT, 0, vertex_push_constants_size, push_buf.data());
 
 		// 2. Fragment stuff
 		rsx::overlays::fragment_options frag_opts {};
@@ -586,7 +586,7 @@ namespace vk
 
 		ensure(pos <= push_buf.size());
 		ensure(pos == (fragment_push_constants_size / sizeof(f32)));
-		vkCmdPushConstants(cmd, program->layout(), VK_SHADER_STAGE_FRAGMENT_BIT, vertex_push_constants_size, fragment_push_constants_size, push_buf.data());
+		VK_GET_SYMBOL(vkCmdPushConstants)(cmd, program->layout(), VK_SHADER_STAGE_FRAGMENT_BIT, vertex_push_constants_size, fragment_push_constants_size, push_buf.data());
 	}
 
 	void ui_overlay_renderer::set_primitive_type(rsx::overlays::primitive_type type)
@@ -623,7 +623,7 @@ namespace vk
 
 			for (u32 n = 0; n < num_quads; ++n)
 			{
-				vkCmdDraw(cmd, 4, 1, first, 0);
+				VK_GET_SYMBOL(vkCmdDraw)(cmd, 4, 1, first, 0);
 				first += 4;
 			}
 		}
@@ -774,7 +774,7 @@ namespace vk
 		data[7] = colormask.a;
 
 		static_assert(sizeof(data) == vertex_push_constants_size);
-		vkCmdPushConstants(cmd, program->layout(), VK_SHADER_STAGE_VERTEX_BIT, 0, vertex_push_constants_size, data);
+		VK_GET_SYMBOL(vkCmdPushConstants)(cmd, program->layout(), VK_SHADER_STAGE_VERTEX_BIT, 0, vertex_push_constants_size, data);
 	}
 
 	void attachment_clear_pass::set_up_viewport(vk::command_buffer& cmd, u32 x, u32 y, u32 w, u32 h)
@@ -786,9 +786,9 @@ namespace vk
 		vp.height = static_cast<f32>(h);
 		vp.minDepth = 0.f;
 		vp.maxDepth = 1.f;
-		vkCmdSetViewport(cmd, 0, 1, &vp);
+		VK_GET_SYMBOL(vkCmdSetViewport)(cmd, 0, 1, &vp);
 
-		vkCmdSetScissor(cmd, 0, 1, &region);
+		VK_GET_SYMBOL(vkCmdSetScissor)(cmd, 0, 1, &region);
 	}
 
 	void attachment_clear_pass::run(vk::command_buffer& cmd, vk::framebuffer* target, VkRect2D rect, u32 clearmask, color4f color, VkRenderPass render_pass)
@@ -852,9 +852,9 @@ namespace vk
 		vp.height = static_cast<f32>(h);
 		vp.minDepth = 0.f;
 		vp.maxDepth = 1.f;
-		vkCmdSetViewport(cmd, 0, 1, &vp);
+		VK_GET_SYMBOL(vkCmdSetViewport)(cmd, 0, 1, &vp);
 
-		vkCmdSetScissor(cmd, 0, 1, &region);
+		VK_GET_SYMBOL(vkCmdSetScissor)(cmd, 0, 1, &region);
 	}
 
 	void stencil_clear_pass::run(vk::command_buffer& cmd, vk::render_target* target, VkRect2D rect, u32 stencil_clear, u32 stencil_write_mask, VkRenderPass render_pass)
@@ -921,7 +921,7 @@ namespace vk
 	void video_out_calibration_pass::update_uniforms(vk::command_buffer& cmd, vk::glsl::program* program)
 	{
 		static_assert(sizeof(config.data) == fragment_push_constants_size);
-		vkCmdPushConstants(cmd, program->layout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, fragment_push_constants_size, config.data);
+		VK_GET_SYMBOL(vkCmdPushConstants)(cmd, program->layout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, fragment_push_constants_size, config.data);
 	}
 
 	void video_out_calibration_pass::run(vk::command_buffer& cmd, const areau& viewport, vk::framebuffer* target,

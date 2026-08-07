@@ -153,6 +153,13 @@ namespace vk
 			rsx_log.warning("Unsupported device: %s", gpu_name);
 		}
 
+		if (g_cfg.video.vk.workarounds.no_primitive_restart) g_drv_no_primitive_restart = true;
+		if (g_cfg.video.vk.workarounds.sanitize_fp_values) g_drv_sanitize_fp_values = true;
+		if (g_cfg.video.vk.workarounds.disable_fence_reset) g_drv_disable_fence_reset = true;
+		if (g_cfg.video.vk.workarounds.emulate_cond_render) g_drv_emulate_cond_render = true;
+		if (g_cfg.video.vk.workarounds.strict_query_scopes) g_drv_strict_query_scopes = true;
+		if (g_cfg.video.vk.workarounds.force_reuse_query_pools) g_drv_force_reuse_query_pools = true;
+
 		rsx_log.notice("Vulkan: Renderer initialized on device '%s'", gpu_name);
 
 		{
@@ -181,15 +188,15 @@ namespace vk
 			for (const auto &usage : types)
 			{
 				info.usage = usage;
-				CHECK_RESULT(vkCreateBuffer(*g_render_device, &info, nullptr, &tmp));
+				CHECK_RESULT(VK_GET_SYMBOL(vkCreateBuffer)(*g_render_device, &info, nullptr, &tmp));
 
-				vkGetBufferMemoryRequirements(*g_render_device, tmp, &memory_reqs);
+				VK_GET_SYMBOL(vkGetBufferMemoryRequirements)(*g_render_device, tmp, &memory_reqs);
 				if (g_render_device->get_compatible_memory_type(memory_reqs.memoryTypeBits, memory_flags, nullptr))
 				{
 					g_heap_compatible_buffer_types |= usage;
 				}
 
-				vkDestroyBuffer(*g_render_device, tmp, nullptr);
+				VK_GET_SYMBOL(vkDestroyBuffer)(*g_render_device, tmp, nullptr);
 			}
 		}
 

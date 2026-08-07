@@ -455,7 +455,7 @@ namespace vk
 
 		void set_parameters(const vk::command_buffer& cmd)
 		{
-			vkCmdPushConstants(cmd, m_program->layout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, push_constants_size, params.data);
+			VK_GET_SYMBOL(vkCmdPushConstants)(cmd, m_program->layout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, push_constants_size, params.data);
 		}
 
 		void run(const vk::command_buffer& cmd, const vk::buffer* dst, u32 out_offset, const vk::buffer* src, u32 in_offset, u32 data_length, u32 width, u32 height, u32 depth, u32 mipmaps) override
@@ -586,7 +586,7 @@ namespace vk
 
 		void set_parameters(const vk::command_buffer& cmd)
 		{
-			vkCmdPushConstants(cmd, m_program->layout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, push_constants_size, &params);
+			VK_GET_SYMBOL(vkCmdPushConstants)(cmd, m_program->layout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, push_constants_size, &params);
 		}
 
 		void run(const vk::command_buffer& cmd, const RSX_detiler_config& config)

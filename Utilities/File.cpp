@@ -553,6 +553,34 @@ namespace fs
 			return nwritten_sum;
 		}
 
+		u64 write_at(u64 offset, const void* buffer, u64 count) override
+		{
+			u64 nwritten_sum = 0;
+
+			for (const char* data = static_cast<const char*>(buffer); count;)
+			{
+				const DWORD size = static_cast<DWORD>(std::min<u64>(count, DWORD{umax} & -4096));
+
+				DWORD nwritten = 0;
+				OVERLAPPED ovl{};
+				ovl.Offset = DWORD(offset);
+				ovl.OffsetHigh = DWORD(offset >> 32);
+				ensure(WriteFile(m_handle, data, size, &nwritten, &ovl)); // "file::write"
+				ensure(nwritten == size);
+				nwritten_sum += nwritten;
+
+				if (nwritten < size)
+				{
+					break;
+				}
+
+				count -= size;
+				data += size;
+			}
+
+			return nwritten_sum;
+		}
+
 		u64 seek(s64 offset, seek_mode whence) override
 		{
 			if (whence > seek_end)
@@ -725,6 +753,25 @@ namespace fs
 			{
 				ensure(r > 0); // "file::write"
 				count -= r;
+				result += r;
+				buffer = static_cast<const u8*>(buffer) + r;
+				if (!count)
+					break;
+			}
+
+			return result;
+		}
+
+		u64 write_at(u64 offset, const void* buffer, u64 count) override
+		{
+			u64 result = 0;
+
+			// For safety; see read()
+			while (auto r = ::pwrite(m_fd, buffer, count, offset))
+			{
+				ensure(r > 0); // "file::write"
+				count -= r;
+				offset += r;
 				result += r;
 				buffer = static_cast<const u8*>(buffer) + r;
 				if (!count)

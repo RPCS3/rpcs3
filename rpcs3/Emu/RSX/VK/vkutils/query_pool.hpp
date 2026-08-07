@@ -22,7 +22,7 @@ namespace vk
 			info.sType      = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO;
 			info.queryType  = type;
 			info.queryCount = size;
-			CHECK_RESULT(vkCreateQueryPool(dev, &info, nullptr, &m_query_pool));
+			CHECK_RESULT(VK_GET_SYMBOL(vkCreateQueryPool)(dev, &info, nullptr, &m_query_pool));
 
 			// Take 'size' references on this object
 			ref_count.release(static_cast<s32>(size));
@@ -30,7 +30,7 @@ namespace vk
 
 		~query_pool()
 		{
-			vkDestroyQueryPool(m_device, m_query_pool, nullptr);
+			VK_GET_SYMBOL(vkDestroyQueryPool)(m_device, m_query_pool, nullptr);
 		}
 
 		operator VkQueryPool()

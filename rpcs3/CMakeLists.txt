@@ -28,7 +28,7 @@ if (NOT ANDROID)
     # finds Qt libraries and setups custom commands for MOC and UIC
     # Must be done here because generated MOC and UIC targets cant
     # be found otherwise
-    include(${CMAKE_SOURCE_DIR}/3rdparty/qt6.cmake)
+    include(${rpcs3_SOURCE_DIR}/3rdparty/qt6.cmake)
 endif()
 
 # subdirectories
@@ -129,18 +129,18 @@ if (NOT ANDROID)
         qt_finalize_target(rpcs3)
         add_custom_command(TARGET rpcs3 POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/rpcs3.icns $<TARGET_FILE_DIR:rpcs3>/../Resources/rpcs3.icns
-            COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/../Resources/Icons
-            COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/GuiConfigs $<TARGET_FILE_DIR:rpcs3>/../Resources/GuiConfigs
+            COMMAND ${CMAKE_COMMAND} -E copy_directory ${rpcs3_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/../Resources/Icons
+            COMMAND ${CMAKE_COMMAND} -E copy_directory ${rpcs3_SOURCE_DIR}/bin/GuiConfigs $<TARGET_FILE_DIR:rpcs3>/../Resources/GuiConfigs
             COMMAND "${MACDEPLOYQT_EXECUTABLE}" "${PROJECT_BINARY_DIR}/bin/rpcs3.app" "$<$<CONFIG:Debug,RelWithDebInfo>:-no-strip>")
     elseif(UNIX)
         add_custom_command(TARGET rpcs3 POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/Icons
-            COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/GuiConfigs $<TARGET_FILE_DIR:rpcs3>/GuiConfigs)
+            COMMAND ${CMAKE_COMMAND} -E copy_directory ${rpcs3_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/Icons
+            COMMAND ${CMAKE_COMMAND} -E copy_directory ${rpcs3_SOURCE_DIR}/bin/GuiConfigs $<TARGET_FILE_DIR:rpcs3>/GuiConfigs)
     elseif(WIN32)
         add_custom_command(TARGET rpcs3 POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/Icons
-            COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/GuiConfigs $<TARGET_FILE_DIR:rpcs3>/GuiConfigs
-            COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/bin/test $<TARGET_FILE_DIR:rpcs3>/test
+            COMMAND ${CMAKE_COMMAND} -E copy_directory ${rpcs3_SOURCE_DIR}/bin/Icons $<TARGET_FILE_DIR:rpcs3>/Icons
+            COMMAND ${CMAKE_COMMAND} -E copy_directory ${rpcs3_SOURCE_DIR}/bin/GuiConfigs $<TARGET_FILE_DIR:rpcs3>/GuiConfigs
+            COMMAND ${CMAKE_COMMAND} -E copy_directory ${rpcs3_SOURCE_DIR}/bin/test $<TARGET_FILE_DIR:rpcs3>/test
             COMMAND "${WINDEPLOYQT_EXECUTABLE}" --no-compiler-runtime --no-opengl-sw --no-patchqt
                 --no-system-d3d-compiler --no-system-dxc-compiler --no-quick-import
                 --plugindir "$<IF:$<CXX_COMPILER_ID:MSVC>,$<TARGET_FILE_DIR:rpcs3>/plugins,$<TARGET_FILE_DIR:rpcs3>/share/qt6/plugins>"

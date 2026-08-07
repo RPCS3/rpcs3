@@ -118,7 +118,7 @@ namespace vk
 			vs_info.pCode    = m_compiled.data();
 			vs_info.flags    = 0;
 
-			vkCreateShaderModule(*g_render_device, &vs_info, nullptr, &m_handle);
+			VK_GET_SYMBOL(vkCreateShaderModule)(*g_render_device, &vs_info, nullptr, &m_handle);
 
 			return m_handle;
 		}
@@ -130,7 +130,7 @@ namespace vk
 
 			if (m_handle)
 			{
-				vkDestroyShaderModule(*g_render_device, m_handle, nullptr);
+				VK_GET_SYMBOL(vkDestroyShaderModule)(*g_render_device, m_handle, nullptr);
 				m_handle = nullptr;
 			}
 		}
@@ -174,11 +174,11 @@ namespace vk
 
 		program::~program()
 		{
-			vkDestroyPipeline(m_device, m_pipeline, nullptr);
+			VK_GET_SYMBOL(vkDestroyPipeline)(m_device, m_pipeline, nullptr);
 
 			if (m_pipeline_layout)
 			{
-				vkDestroyPipelineLayout(m_device, m_pipeline_layout, nullptr);
+				VK_GET_SYMBOL(vkDestroyPipelineLayout)(m_device, m_pipeline_layout, nullptr);
 
 				for (auto& set : m_sets)
 				{
@@ -269,13 +269,13 @@ namespace vk
 			{
 				VkGraphicsPipelineCreateInfo create_info = *p_graphics_info;
 				create_info.layout = m_pipeline_layout;
-				CHECK_RESULT(vkCreateGraphicsPipelines(m_device, nullptr, 1, &create_info, nullptr, &m_pipeline));
+				CHECK_RESULT(VK_GET_SYMBOL(vkCreateGraphicsPipelines)(m_device, nullptr, 1, &create_info, nullptr, &m_pipeline));
 			}
 			else
 			{
 				VkComputePipelineCreateInfo create_info = *p_compute_info;
 				create_info.layout = m_pipeline_layout;
-				CHECK_RESULT(vkCreateComputePipelines(m_device, nullptr, 1, &create_info, nullptr, &m_pipeline));
+				CHECK_RESULT(VK_GET_SYMBOL(vkCreateComputePipelines)(m_device, nullptr, 1, &create_info, nullptr, &m_pipeline));
 			}
 
 			m_linked = true;
@@ -393,7 +393,7 @@ namespace vk
 				.pushConstantRangeCount = push_constants.size(),
 				.pPushConstantRanges = push_constants.data()
 			};
-			CHECK_RESULT(vkCreatePipelineLayout(m_device, &create_info, nullptr, &m_pipeline_layout));
+			CHECK_RESULT(VK_GET_SYMBOL(vkCreatePipelineLayout)(m_device, &create_info, nullptr, &m_pipeline_layout));
 		}
 
 		program& program::bind(const vk::command_buffer& cmd, VkPipelineBindPoint bind_point)
@@ -425,7 +425,7 @@ namespace vk
 
 			if (m_descriptor_set_layout)
 			{
-				vkDestroyDescriptorSetLayout(m_device, m_descriptor_set_layout, nullptr);
+				VK_GET_SYMBOL(vkDestroyDescriptorSetLayout)(m_device, m_descriptor_set_layout, nullptr);
 			}
 
 			if (m_descriptor_pool)

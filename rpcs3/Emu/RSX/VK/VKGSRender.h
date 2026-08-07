@@ -118,6 +118,7 @@ private:
 	sizeu m_swapchain_dims{};
 	bool swapchain_unavailable = false;
 	bool should_reinitialize_swapchain = false;
+	bool surface_lost = false;
 
 	u64 m_last_heap_sync_time = 0;
 	u32 m_texbuffer_view_size = 0;

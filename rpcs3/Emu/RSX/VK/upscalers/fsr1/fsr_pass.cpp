@@ -161,7 +161,7 @@ namespace vk
 				static_cast<f32>(m_output_size.width), static_cast<f32>(m_output_size.height));  // Size of output viewport (target size)
 
 			ensure(push_constants_size <= (m_constants_buf.size() * sizeof(decltype(m_constants_buf)::value_type)));
-			vkCmdPushConstants(cmd, m_program->layout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, push_constants_size, m_constants_buf.data());
+			VK_GET_SYMBOL(vkCmdPushConstants)(cmd, m_program->layout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, push_constants_size, m_constants_buf.data());
 		}
 
 		rcas_pass::rcas_pass()
@@ -181,7 +181,7 @@ namespace vk
 			FsrRcasCon(&m_constants_buf[0], cas_attenuation);
 
 			ensure(push_constants_size <= (m_constants_buf.size() * sizeof(decltype(m_constants_buf)::value_type)));
-			vkCmdPushConstants(cmd, m_program->layout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, push_constants_size, m_constants_buf.data());
+			VK_GET_SYMBOL(vkCmdPushConstants)(cmd, m_program->layout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, push_constants_size, m_constants_buf.data());
 		}
 
 	} // Namespace FidelityFX
@@ -399,7 +399,7 @@ namespace vk
 		if (mode & UPSCALE_AND_COMMIT)
 		{
 			src_image->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-			vkCmdBlitImage(cmd, src_image->value, src_image->current_layout, target_image, target_image_layout, 1, &output_request, VK_FILTER_LINEAR);
+			VK_GET_SYMBOL(vkCmdBlitImage)(cmd, src_image->value, src_image->current_layout, target_image, target_image_layout, 1, &output_request, VK_FILTER_LINEAR);
 			src_image->pop_layout(cmd);
 			return nullptr;
 		}

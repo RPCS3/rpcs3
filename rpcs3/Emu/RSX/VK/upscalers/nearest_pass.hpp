@@ -20,7 +20,7 @@ namespace vk
 				ensure(present_surface);
 
 				src->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-				vkCmdBlitImage(cmd, src->value, src->current_layout, present_surface, present_surface_layout, 1, &request, VK_FILTER_NEAREST);
+				VK_GET_SYMBOL(vkCmdBlitImage)(cmd, src->value, src->current_layout, present_surface, present_surface_layout, 1, &request, VK_FILTER_NEAREST);
 				src->pop_layout(cmd);
 				return nullptr;
 			}

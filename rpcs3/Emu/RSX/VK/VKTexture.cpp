@@ -68,7 +68,7 @@ namespace vk
 		default:
 		{
 			ensure(!options.swap_bytes); // "Implicit byteswap option not supported for speficied format"
-			vkCmdCopyImageToBuffer(cmd, src->value, src->current_layout, dst->value, 1, &region);
+			VK_GET_SYMBOL(vkCmdCopyImageToBuffer)(cmd, src->value, src->current_layout, dst->value, 1, &region);
 
 			if (options.sync_region)
 			{
@@ -100,7 +100,7 @@ namespace vk
 			VkBufferImageCopy region2;
 			region2 = region;
 			region2.bufferOffset = z32_offset;
-			vkCmdCopyImageToBuffer(cmd, src->value, src->current_layout, dst->value, 1, &region2);
+			VK_GET_SYMBOL(vkCmdCopyImageToBuffer)(cmd, src->value, src->current_layout, dst->value, 1, &region2);
 
 			// 2. Pre-compute barrier
 			vk::insert_buffer_memory_barrier(cmd, dst->value, z32_offset, packed32_length,
@@ -158,7 +158,7 @@ namespace vk
 			sub_regions[0].imageSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 			sub_regions[1].bufferOffset = s_offset;
 			sub_regions[1].imageSubresource.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
-			vkCmdCopyImageToBuffer(cmd, src->value, src->current_layout, dst->value, 2, sub_regions);
+			VK_GET_SYMBOL(vkCmdCopyImageToBuffer)(cmd, src->value, src->current_layout, dst->value, 2, sub_regions);
 
 			// 2. Interleave the separated data blocks with a compute job
 			vk::cs_interleave_task *job;
@@ -229,7 +229,7 @@ namespace vk
 		{
 		default:
 		{
-			vkCmdCopyBufferToImage(cmd, src->value, dst->value, dst->current_layout, 1, &region);
+			VK_GET_SYMBOL(vkCmdCopyBufferToImage)(cmd, src->value, dst->value, dst->current_layout, 1, &region);
 			break;
 		}
 		case VK_FORMAT_D32_SFLOAT:
@@ -265,7 +265,7 @@ namespace vk
 			// 5. Copy the depth data to image
 			VkBufferImageCopy region2 = region;
 			region2.bufferOffset = z32_offset;
-			vkCmdCopyBufferToImage(cmd, src->value, dst->value, dst->current_layout, 1, &region2);
+			VK_GET_SYMBOL(vkCmdCopyBufferToImage)(cmd, src->value, dst->value, dst->current_layout, 1, &region2);
 			break;
 		}
 		case VK_FORMAT_D24_UNORM_S8_UINT:
@@ -285,7 +285,7 @@ namespace vk
 			const auto s_offset = utils::align<u32>(z_offset + in_depth_size, 256);
 
 			// Zero out the stencil block
-			vkCmdFillBuffer(cmd, src->value, s_offset, utils::align(in_stencil_size, 4), 0);
+			VK_GET_SYMBOL(vkCmdFillBuffer)(cmd, src->value, s_offset, utils::align(in_stencil_size, 4), 0);
 
 			vk::insert_buffer_memory_barrier(cmd, src->value, s_offset, in_stencil_size,
 				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
@@ -319,7 +319,7 @@ namespace vk
 			sub_regions[0].imageSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 			sub_regions[1].bufferOffset = s_offset;
 			sub_regions[1].imageSubresource.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;
-			vkCmdCopyBufferToImage(cmd, src->value, dst->value, dst->current_layout, 2, sub_regions);
+			VK_GET_SYMBOL(vkCmdCopyBufferToImage)(cmd, src->value, dst->value, dst->current_layout, 2, sub_regions);
 			break;
 		}
 		}
@@ -506,7 +506,7 @@ namespace vk
 
 		for (u32 mip_level = 0; mip_level < mipmaps; ++mip_level)
 		{
-			vkCmdCopyImage(cmd, src->value, src->current_layout, dst->value, dst->current_layout, 1, &rgn);
+			VK_GET_SYMBOL(vkCmdCopyImage)(cmd, src->value, src->current_layout, dst->value, dst->current_layout, 1, &rgn);
 
 			rgn.srcSubresource.mipLevel++;
 			rgn.dstSubresource.mipLevel++;
@@ -555,7 +555,7 @@ namespace vk
 			copy_rgn.srcSubresource = { src->aspect(), 0, 0, 1 };
 			copy_rgn.extent = { static_cast<u32>(src_rect.width()), static_cast<u32>(src_rect.height()), 1 };
 
-			vkCmdCopyImage(cmd, src->value, src->current_layout, dst->value, dst->current_layout, 1, &copy_rgn);
+			VK_GET_SYMBOL(vkCmdCopyImage)(cmd, src->value, src->current_layout, dst->value, dst->current_layout, 1, &copy_rgn);
 		}
 		else if ((src->aspect() & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) != 0)
 		{
@@ -609,12 +609,12 @@ namespace vk
 					info.imageExtent = { static_cast<u32>(src_w), static_cast<u32>(src_h), 1 };
 					info.imageSubresource = { aspect & transfer_flags, 0, 0, 1 };
 
-					vkCmdCopyImageToBuffer(cmd, src->value, src->current_layout, scratch_buf->value, 1, &info);
+					VK_GET_SYMBOL(vkCmdCopyImageToBuffer)(cmd, src->value, src->current_layout, scratch_buf->value, 1, &info);
 					insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, VK_WHOLE_SIZE, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 
 					info.imageOffset = {};
 					info.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
-					vkCmdCopyBufferToImage(cmd, scratch_buf->value, typeless->value, VK_IMAGE_LAYOUT_GENERAL, 1, &info);
+					VK_GET_SYMBOL(vkCmdCopyBufferToImage)(cmd, scratch_buf->value, typeless->value, VK_IMAGE_LAYOUT_GENERAL, 1, &info);
 
 					//2. Blit typeless surface to self and apply transform if necessary
 					areai src_rect2 = { 0, 0, src_w, src_h };
@@ -637,12 +637,12 @@ namespace vk
 					info.imageExtent = { static_cast<u32>(dst_w), static_cast<u32>(dst_h), 1 };
 					info.imageOffset = { 0, src_h, 0 };
 
-					vkCmdCopyImageToBuffer(cmd, typeless->value, VK_IMAGE_LAYOUT_GENERAL, scratch_buf->value, 1, &info);
+					VK_GET_SYMBOL(vkCmdCopyImageToBuffer)(cmd, typeless->value, VK_IMAGE_LAYOUT_GENERAL, scratch_buf->value, 1, &info);
 					insert_buffer_memory_barrier(cmd, scratch_buf->value, 0, VK_WHOLE_SIZE, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 
 					info.imageOffset = { dst_rect.x1, dst_rect.y1, 0 };
 					info.imageSubresource = { aspect & transfer_flags, 0, 0, 1 };
-					vkCmdCopyBufferToImage(cmd, scratch_buf->value, dst->value, dst->current_layout, 1, &info);
+					VK_GET_SYMBOL(vkCmdCopyBufferToImage)(cmd, scratch_buf->value, dst->value, dst->current_layout, 1, &info);
 				};
 
 				const u32 typeless_w = std::max(dst_rect.width(), src_rect.width());
@@ -743,7 +743,7 @@ namespace vk
 
 			for (u32 mip_level = 0; mip_level < mipmaps; ++mip_level)
 			{
-				vkCmdBlitImage(cmd, src->value, src->current_layout, dst->value, dst->current_layout, 1, &rgn, filter);
+				VK_GET_SYMBOL(vkCmdBlitImage)(cmd, src->value, src->current_layout, dst->value, dst->current_layout, 1, &rgn, filter);
 
 				rgn.srcSubresource.mipLevel++;
 				rgn.dstSubresource.mipLevel++;
@@ -1189,14 +1189,14 @@ namespace vk
 				auto range_ptr = buffer_copies.data();
 				for (const auto& op : upload_commands)
 				{
-					vkCmdCopyBuffer(cmd2, op.first, scratch_buf->value, op.second, range_ptr);
+					VK_GET_SYMBOL(vkCmdCopyBuffer)(cmd2, op.first, scratch_buf->value, op.second, range_ptr);
 					range_ptr += op.second;
 				}
 			}
 			else
 			{
 				ensure(!buffer_copies.empty());
-				vkCmdCopyBuffer(cmd2, upload_buffer->value, scratch_buf->value, static_cast<u32>(buffer_copies.size()), buffer_copies.data());
+				VK_GET_SYMBOL(vkCmdCopyBuffer)(cmd2, upload_buffer->value, scratch_buf->value, static_cast<u32>(buffer_copies.size()), buffer_copies.data());
 			}
 
 			insert_buffer_memory_barrier(
@@ -1233,20 +1233,20 @@ namespace vk
 			insert_buffer_memory_barrier(cmd2, scratch_buf->value, block_start, scratch_offset, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 				VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 
-			vkCmdCopyBufferToImage(cmd2, scratch_buf->value, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<u32>(copy_regions.size()), copy_regions.data());
+			VK_GET_SYMBOL(vkCmdCopyBufferToImage)(cmd2, scratch_buf->value, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<u32>(copy_regions.size()), copy_regions.data());
 		}
 		else if (upload_commands.size() > 1)
 		{
 			auto region_ptr = copy_regions.data();
 			for (const auto& op : upload_commands)
 			{
-				vkCmdCopyBufferToImage(cmd2, op.first, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, op.second, region_ptr);
+				VK_GET_SYMBOL(vkCmdCopyBufferToImage)(cmd2, op.first, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, op.second, region_ptr);
 				region_ptr += op.second;
 			}
 		}
 		else
 		{
-			vkCmdCopyBufferToImage(cmd2, upload_buffer->value, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<u32>(copy_regions.size()), copy_regions.data());
+			VK_GET_SYMBOL(vkCmdCopyBufferToImage)(cmd2, upload_buffer->value, dst_image->value, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<u32>(copy_regions.size()), copy_regions.data());
 		}
 
 		if (cmd2.get_queue_family() != cmd.get_queue_family())
@@ -1309,7 +1309,7 @@ namespace vk
 			.dstOffset = tiled_data_scratch_offset,
 			.size = section_length
 		};
-		vkCmdCopyBuffer(cmd, dma_mapping.second->value, scratch_buf->value, 1, &copy_rgn);
+		VK_GET_SYMBOL(vkCmdCopyBuffer)(cmd, dma_mapping.second->value, scratch_buf->value, 1, &copy_rgn);
 
 		// Post-Transfer barrier
 		vk::insert_buffer_memory_barrier(

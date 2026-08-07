@@ -36,6 +36,23 @@ namespace
 
 bool VKGSRender::reinitialize_swapchain()
 {
+	if (surface_lost)
+	{
+		surface_lost = false;
+
+#ifdef ANDROID
+		VK_GET_SYMBOL(vkDeviceWaitIdle)(*m_device);
+
+		if (Emu.IsStopped())
+		{
+			return false;
+		}
+
+		display_handle_t handle = m_frame->handle();
+		m_swapchain->create(handle);
+#endif
+	}
+
 	m_swapchain_dims.width = m_frame->client_width();
 	m_swapchain_dims.height = m_frame->client_height();
 
@@ -81,7 +98,7 @@ bool VKGSRender::reinitialize_swapchain()
 	m_upscaler.reset();
 
 	// Drain all the queues
-	vkDeviceWaitIdle(*m_device);
+	VK_GET_SYMBOL(vkDeviceWaitIdle)(*m_device);
 
 	// Reset frame context storage
 	for (auto& ctx : m_frame_context_storage)
@@ -98,6 +115,7 @@ bool VKGSRender::reinitialize_swapchain()
 	{
 		rsx_log.warning("Swapchain initialization failed. Request ignored [%dx%d]", m_swapchain_dims.width, m_swapchain_dims.height);
 		swapchain_unavailable = true;
+		surface_lost = true;
 		return false;
 	}
 
@@ -120,7 +138,7 @@ bool VKGSRender::reinitialize_swapchain()
 		VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 
 		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, range);
-		vkCmdClearColorImage(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
+		VK_GET_SYMBOL(vkCmdClearColorImage)(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_color, 1, &range);
 		vk::change_image_layout(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, target_layout, range);
 	}
 
@@ -159,6 +177,10 @@ void VKGSRender::present(vk::frame_context_t *ctx)
 #endif
 			break;
 		case VK_ERROR_OUT_OF_DATE_KHR:
+			swapchain_unavailable = true;
+			break;
+		case VK_ERROR_SURFACE_LOST_KHR:
+			surface_lost = true;
 			swapchain_unavailable = true;
 			break;
 		default:
@@ -585,7 +607,12 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	ensure(m_current_frame->present_image == umax);
 	ensure(m_current_frame->swap_command_buffer == nullptr);
 
-	u64 timeout = m_swapchain->get_swap_image_count() <= 2? 0ull: 100000000ull;
+#ifdef ANDROID
+	constexpr u64 acquire_timeout = 1000ull;
+#else
+	constexpr u64 acquire_timeout = 100000000ull;
+#endif
+	u64 timeout = m_swapchain->get_swap_image_count() <= 2? 0ull: acquire_timeout;
 	while (VkResult status = m_swapchain->acquire_next_swapchain_image(m_current_frame->acquire_signal_semaphore, timeout, &m_current_frame->present_image))
 	{
 		switch (status)
@@ -614,6 +641,12 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			reinitialize_swapchain();
 			ensure(m_current_frame, "Could not reinitialize swapchain after VK_ERROR_OUT_OF_DATE_KHR signal!");
 			continue;
+		case VK_ERROR_SURFACE_LOST_KHR:
+			rsx_log.warning("vkAcquireNextImageKHR failed with VK_ERROR_SURFACE_LOST_KHR. Flip request ignored until surface is recreated.");
+			surface_lost = true;
+			swapchain_unavailable = true;
+			reinitialize_swapchain();
+			return;
 		default:
 			vk::die_with_error(status);
 		}
@@ -761,7 +794,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		// Clear the window background to black
 		VkClearColorValue clear_black {};
 		vk::change_image_layout(*m_current_command_buffer, target_image, present_layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
-		vkCmdClearColorImage(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_black, 1, &subresource_range);
+		VK_GET_SYMBOL(vkCmdClearColorImage)(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_black, 1, &subresource_range);
 
 		// Prevent WAW on transfer writes
 		vk::insert_image_memory_barrier(
@@ -879,7 +912,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			barrier.subresourceRange = subresource_range;
-			vkCmdPipelineBarrier(*m_current_command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1, &barrier);
+			VK_GET_SYMBOL(vkCmdPipelineBarrier)(*m_current_command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_DEPENDENCY_BY_REGION_BIT, 0, nullptr, 0, nullptr, 1, &barrier);
 
 			target_layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		}

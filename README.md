@@ -1,48 +1,74 @@
-RPCS3
-=====
+PS3Native
+=========
 
-[![GitHub Actions](https://img.shields.io/github/actions/workflow/status/RPCS3/rpcs3/rpcs3.yml?branch=master&logo=github&label=Actions)](https://github.com/RPCS3/rpcs3/actions/workflows/rpcs3.yml)
-[![RPCS3 Discord Server](https://img.shields.io/discord/272035812277878785?color=5865F2&label=RPCS3%20Discord&logo=discord&logoColor=white)](https://discord.gg/rpcs3)
+A PlayStation 3 emulator for Android, built directly on top of current upstream [RPCS3](https://github.com/RPCS3/rpcs3).
 
-The world's first free and open-source PlayStation 3 emulator/debugger, written in C++ for Windows, Linux, macOS and FreeBSD.
+This fork tracks the real RPCS3 tree rather than a snapshot. The archived [RPCS3-Android](https://github.com/RPCS3/rpcs3-android) port is folded in at [`android/`](android), rebased onto current upstream, and carried forward with additional fixes and interface work contributed by the [WinNative](https://github.com/WinNative-Emu) developers.
 
-You can find some basic information on our [**website**](https://rpcs3.net/). Game info is being populated on the [**Wiki**](https://wiki.rpcs3.net/).
-For discussion about this emulator, PS3 emulation, and game compatibility reports, please visit our [**forums**](https://forums.rpcs3.net) and our [**Discord server**](https://discord.gg/RPCS3).
+## What this is
 
-[**Support the Lead Developers on Patreon**](https://rpcs3.net/patreon)
+Upstream RPCS3 targets desktop platforms. The Android port was published separately and then went stale against a moving upstream. The goal here is a single tree where:
 
-## Contributing
+* the emulator core is unmodified upstream RPCS3, so improvements land by merging upstream rather than by re-porting;
+* the Android front end lives beside it in `android/` and builds an APK from that same source;
+* Android-specific defects — threading, shutdown, configuration persistence, on-screen controls — are fixed in place;
+* the interface is a Compose Material 3 front end sharing the design language of WinNative.
 
-If you want to help the project but do not code, the best way to help out is to test games and make bug reports. See:
-* [Quickstart](https://rpcs3.net/quickstart)
+Everything below `android/` is additive. The upstream history is preserved intact.
 
-If you want to contribute as a developer, please take a look at the following pages:
+## State
 
-* [Coding Style](https://github.com/RPCS3/rpcs3/wiki/Coding-Style)
-* [Developer Information](https://github.com/RPCS3/rpcs3/wiki/Developer-Information)
+Working:
 
-You should also contact any of the developers in the forums or in the Discord server to learn more about the current state of the emulator.
+* boots and runs commercial titles at full speed on current Snapdragon hardware
+* Vulkan renderer, PPU/SPU recompilers via a cross-compiled LLVM
+* per-game configuration, backed by RPCS3's own custom-config mechanism
+* generated PS2-style on-screen controls with sticky presses and reserved touch zones
+* in-game menu with pause/resume, settings and shutdown
+* game library with a built-in compatibility browser
 
-### AI Use
+Not finished:
 
-Use of AI tools for research and reverse engineering purposes is permitted. However, contributors are expected to fully own and understand all code they submit. Any communication with the team — including code, code comments, and GitHub comments — must come from the human contributor, not an AI agent acting autonomously.
-
-We have unfortunately seen a rise in untested and unverified AI-generated slop being submitted to this project. This wastes maintainer time and, in worse cases, such changes get merged and break functionality for all users. Repeated violations will result in a ban from the repository. Please be respectful of everyone's time.
-
-**Pull requests opened by AI agents or automated tools must include a disclosure in the PR description** stating the scope of AI involvement — which parts were AI-generated and what human testing or review was performed prior to submission. PRs that omit this disclosure may be closed without review.
-
-If you are unsure about your work, open a discussion issue to talk it through with the team, or reach out to a maintainer on [Discord](https://discord.gg/RPCS3).
+* netplay has never been verified end to end; RPCN has no sign-in interface on Android
+* an intermittent crash in the render queue is still being tracked
+* audio backend selection is limited
 
 ## Building
 
-See [BUILDING.md](BUILDING.md) for more information about how to setup an environment to build RPCS3.
+The Android build needs LLVM and FFmpeg cross-compiled for `arm64-v8a` first. Both scripts fetch their own sources and write into `android/prebuilt/`:
 
-## Running
+```bash
+cd android
+./build-ffmpeg-android.sh
+./build-llvm-android.sh
+./gradlew assembleStandardDebug
+```
 
-Check our friendly [quickstart](https://rpcs3.net/quickstart) guide to make sure your computer meets the minimum system requirements to run RPCS3.
+Requirements: JDK 17, Android NDK 29, CMake 3.31, and a checkout with submodules (`git submodule update --init --recursive`).
 
-Don't forget to have your graphics driver up to date and to install the [Visual C++ Redistributable Packages for Visual Studio 2022](https://aka.ms/vs/17/release/VC_redist.x64.exe) if you are a Windows user.
+The dependency scripts are the slow part and only need running when they change. `android/prebuilt/` is not tracked.
+
+To build in CI, run the **Android APK** workflow manually from the Actions tab. It is dispatch-only, caches the cross-compiled dependencies against the build-script hashes, and shares a ccache across both the dependency and application builds, so a run that only touches app code reuses everything else.
+
+## Flavors
+
+The same APK is published under several package names. Some Android vendors gate their high-performance CPU and GPU governors on an allowlist of package names, so a build installed under one of those identifiers is scheduled more aggressively. Pick whichever performs best on your device.
+
+| Flavor | Package name | Gradle task |
+| --- | --- | --- |
+| `standard` | `com.ps3native.standard` | `assembleStandardDebug` |
+| `antutu` | `com.antutu.ABenchMark` | `assembleAntutuDebug` |
+| `ludashi` | `com.ludashi.benchmark` | `assembleLudashiDebug` |
+| `pubg` | `com.tencent.ig` | `assemblePubgDebug` |
+
+All four are the same emulator and carry the same name and icon. Because a package name is unique on a device, a flavor cannot be installed alongside the real application that owns that identifier, and only `standard` is suitable for distribution through an app store.
+
+## Credits
+
+* the [RPCS3](https://github.com/RPCS3/rpcs3) team, for the emulator
+* the [RPCS3-Android](https://github.com/RPCS3/rpcs3-android) port this build started from
+* the [WinNative](https://github.com/WinNative-Emu) developers, for the interface work and Android fixes
 
 ## License
 
-Most files are licensed under the terms of GNU GPL-2.0-only License; see LICENSE file for details. Some files may be licensed differently; check appropriate file headers for details.
+Most files are licensed under GNU GPL-2.0-only; see [LICENSE](LICENSE). Some files are licensed differently — check the individual file headers. This project is not affiliated with or endorsed by Sony Interactive Entertainment.

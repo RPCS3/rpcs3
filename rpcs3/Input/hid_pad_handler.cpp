@@ -248,6 +248,25 @@ std::vector<pad_list_entry> hid_pad_handler<Device>::list_devices()
 }
 
 template <class Device>
+std::vector<pad_list_entry> hid_pad_handler<Device>::list_connected_devices()
+{
+	std::vector<pad_list_entry> pads_list;
+
+	if (!Init())
+		return pads_list;
+
+	for (const auto& controller : m_controllers) // Controllers 1-n in GUI
+	{
+		if (controller.second != nullptr && controller.second->hidDevice != nullptr)
+		{
+			pads_list.emplace_back(controller.first, false);
+		}
+	}
+
+	return pads_list;
+}
+
+template <class Device>
 void hid_pad_handler<Device>::enumerate_devices()
 {
 	Timer timer;

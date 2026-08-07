@@ -116,7 +116,7 @@ namespace vk
 
 	image::~image()
 	{
-		vkDestroyImage(m_device, value, nullptr);
+		VK_GET_SYMBOL(vkDestroyImage)(m_device, value, nullptr);
 	}
 
 	void image::create_impl(const vk::render_device& dev, u32 access_flags, const memory_type_info& memory_type, vmm_allocation_pool allocation_pool)
@@ -127,10 +127,10 @@ namespace vk
 		const bool nullable = !!(info.flags & VK_IMAGE_CREATE_ALLOW_NULL_RPCS3);
 		info.flags &= ~VK_IMAGE_CREATE_SPECIAL_FLAGS_RPCS3;
 
-		CHECK_RESULT(vkCreateImage(m_device, &info, nullptr, &value));
+		CHECK_RESULT(VK_GET_SYMBOL(vkCreateImage)(m_device, &info, nullptr, &value));
 
 		VkMemoryRequirements memory_req;
-		vkGetImageMemoryRequirements(m_device, value, &memory_req);
+		VK_GET_SYMBOL(vkGetImageMemoryRequirements)(m_device, value, &memory_req);
 
 		const auto allocation_type_info = memory_type.get(dev, access_flags, memory_req.memoryTypeBits);
 		if (!allocation_type_info)
@@ -151,13 +151,13 @@ namespace vk
 		if (auto device_mem = memory->get_vk_device_memory();
 			device_mem != VK_NULL_HANDLE) [[likely]]
 		{
-			CHECK_RESULT(vkBindImageMemory(m_device, value, device_mem, memory->get_vk_device_memory_offset()));
+			CHECK_RESULT(VK_GET_SYMBOL(vkBindImageMemory)(m_device, value, device_mem, memory->get_vk_device_memory_offset()));
 			current_layout = info.initialLayout;
 		}
 		else
 		{
 			ensure(nullable);
-			vkDestroyImage(m_device, value, nullptr);
+			VK_GET_SYMBOL(vkDestroyImage)(m_device, value, nullptr);
 			value = VK_NULL_HANDLE;
 		}
 	}
@@ -386,7 +386,7 @@ namespace vk
 
 	image_view::~image_view()
 	{
-		vkDestroyImageView(m_device, value, nullptr);
+		VK_GET_SYMBOL(vkDestroyImageView)(m_device, value, nullptr);
 	}
 
 	image_view* image_view::as(VkFormat format)
@@ -443,7 +443,7 @@ namespace vk
 		info.components = { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY };
 #endif
 
-		CHECK_RESULT(vkCreateImageView(m_device, &info, nullptr, &value));
+		CHECK_RESULT(VK_GET_SYMBOL(vkCreateImageView)(m_device, &info, nullptr, &value));
 
 #if (VK_DISABLE_COMPONENT_SWIZZLE)
 		// Restore requested mapping

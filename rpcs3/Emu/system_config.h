@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Utilities/Thread.h"
 #include "system_config_types.h"
 #include "Utilities/Config.h"
 
@@ -20,7 +21,7 @@ struct cfg_root : cfg::node
 		cfg::_bool ppu_call_history{ this, "PPU Calling History" }; // Enable PPU calling history recording
 		cfg::_bool llvm_logs{ this, "Save LLVM logs" };
 		cfg::string llvm_cpu{ this, "Use LLVM CPU" };
-		cfg::_int<0, 1024> llvm_threads{ this, "Max LLVM Compile Threads", 0 };
+		cfg::_int<0, 1024> llvm_threads{ this, "Max LLVM Compile Threads", 0, false, nullptr, []{ return std::thread::hardware_concurrency() * 2; } };
 		cfg::_bool llvm_precompilation{ this, "LLVM Precompilation", true };
 		cfg::_enum<thread_scheduler_mode> thread_scheduler{this, "Thread Scheduler Mode", thread_scheduler_mode::os};
 		cfg::_bool set_daz_and_ftz{ this, "Set DAZ and FTZ", false };
@@ -35,12 +36,34 @@ struct cfg_root : cfg::node
 		cfg::_int<0, 16> spu_delay_penalty{ this, "SPU delay penalty", 3 }; // Number of milliseconds to block a thread if a virtual 'core' isn't free
 		cfg::_bool spu_loop_detection{ this, "SPU loop detection", false }; // Try to detect wait loops and trigger thread yield
 		cfg::_int<1, 6> max_spurs_threads{ this, "Max SPURS Threads", 6, true }; // HACK. If less then 6, max number of running SPURS threads in each thread group.
-		cfg::_enum<spu_block_size_type> spu_block_size{ this, "SPU Block Size", spu_block_size_type::safe };
+		cfg::_enum<spu_block_size_type> spu_block_size{ this, "SPU Block Size", 
+#ifdef ANDROID
+			spu_block_size_type::mega
+#else
+			spu_block_size_type::safe
+#endif
+		};
 		cfg::_bool spu_accurate_dma{ this, "Accurate SPU DMA", false };
 		cfg::_bool spu_accurate_reservations{ this, "Accurate SPU Reservations", true };
 		cfg::_bool accurate_cache_line_stores{ this, "Accurate Cache Line Stores", false };
 		cfg::_bool rsx_accurate_res_access{this, "Accurate RSX reservation access", false, true};
 		cfg::_bool ppu_reservation_priority_over_spu{this, "PPU Reservation Priority Over SPUs", false, true};
+
+#ifdef ANDROID
+		struct node_affinity : cfg::node
+		{
+		public:
+			node_affinity(cfg::node* _this) : cfg::node(_this, "Affinity") {}
+			cfg::_enum<thread_class> cpu0{this, "CPU0", thread_class::general, true};
+			cfg::_enum<thread_class> cpu1{this, "CPU1", thread_class::general, true};
+			cfg::_enum<thread_class> cpu2{this, "CPU2", thread_class::general, true};
+			cfg::_enum<thread_class> cpu3{this, "CPU3", thread_class::general, true};
+			cfg::_enum<thread_class> cpu4{this, "CPU4", thread_class::general, true};
+			cfg::_enum<thread_class> cpu5{this, "CPU5", thread_class::general, true};
+			cfg::_enum<thread_class> cpu6{this, "CPU6", thread_class::general, true};
+			cfg::_enum<thread_class> cpu7{this, "CPU7", thread_class::general, true};
+		} affinity { this };
+#endif
 
 		struct fifo_setting : public cfg::_enum<rsx_fifo_mode>
 		{
@@ -123,8 +146,13 @@ struct cfg_root : cfg::node
 		cfg::_enum<video_aspect> aspect_ratio{ this, "Aspect ratio", video_aspect::_16_9 };
 		cfg::_enum<frame_limit_type> frame_limit{ this, "Frame limit", frame_limit_type::_auto, true };
 		cfg::_float<0, 1000> second_frame_limit{ this, "Second Frame Limit", 0, true }; // 0 disables its effect
+#ifdef ANDROID
+		cfg::_enum<msaa_level> antialiasing_level{ this, "MSAA", msaa_level::none };
+		cfg::_enum<shader_mode> shadermode{ this, "Shader Mode", shader_mode::async_recompiler };
+#else
 		cfg::_enum<msaa_level> antialiasing_level{ this, "MSAA", msaa_level::_auto };
 		cfg::_enum<shader_mode> shadermode{ this, "Shader Mode", shader_mode::async_with_interpreter };
+#endif
 		cfg::_enum<gpu_preset_level> shader_precision{ this, "Shader Precision", gpu_preset_level::high };
 		cfg::_enum<vsync_mode> vsync{ this, "VSync Mode", vsync_mode::off, true };
 
@@ -163,13 +191,21 @@ struct cfg_root : cfg::node
 		cfg::_bool precise_zpass_count{ this, "Accurate ZCULL stats", true };
 		cfg::_int<1, 8> consecutive_frames_to_draw{ this, "Consecutive Frames To Draw", 1, true};
 		cfg::_int<1, 8> consecutive_frames_to_skip{ this, "Consecutive Frames To Skip", 1, true};
+#ifdef ANDROID
+		cfg::uint<25, 800> resolution_scale_percent{ this, "Resolution Scale", 70, true };
+#else
 		cfg::uint<25, 800> resolution_scale_percent{ this, "Resolution Scale", 100, true };
+#endif
 		cfg::uint<0, 16> anisotropic_level_override{ this, "Anisotropic Filter Override", 0, true };
 		cfg::_float<-32, 32> texture_lod_bias{ this, "Texture LOD Bias Addend", 0, true };
 		cfg::uint<1, 1024> min_scalable_dimension{ this, "Minimum Scalable Dimension", 16, true };
 		cfg::_int<0, 16> shader_compiler_threads_count{ this, "Shader Compiler Threads", 0 };
 		cfg::_int<0, 30000000> driver_recovery_timeout{ this, "Driver Recovery Timeout", 1000000, true };
+#ifdef ANDROID
+		cfg::uint<0, 16667> driver_wakeup_delay{ this, "Driver Wake-Up Delay", 1, true };
+#else
 		cfg::uint<0, 16667> driver_wakeup_delay{ this, "Driver Wake-Up Delay", 0, true };
+#endif
 		cfg::_int<1, 6000> vblank_rate{ this, "Vblank Rate", 60, true }; // Changing this from 60 may affect game speed in unexpected ways
 		cfg::_bool vblank_ntsc{ this, "Vblank NTSC Fixup", false, true };
 		cfg::_bool decr_memory_layout{ this, "DECR memory layout", false}; // Force enable increased allowed main memory range as DECR console
@@ -192,6 +228,27 @@ struct cfg_root : cfg::node
 			cfg::uint<256, 65536> vram_allocation_limit{ this, "VRAM allocation limit (MB)", 65536, false };
 			cfg::_bool use_rebar_upload_heap{ this, "Use Re-BAR for GPU uploads", true, false };
 
+#ifdef ANDROID
+			struct driver : cfg::node
+			{
+				driver(cfg::node* _this) : cfg::node(_this, "Custom Driver") {}
+				cfg::string path{ this, "Path", "", false };
+				cfg::string internal_data_dir{ this, "Internal Data Directory", "", false };
+				cfg::string hook_dir{ this, "Hook Directory", "", false };
+				cfg::_bool turbo_mode{ this, "Turbo Mode", false, false };
+			} driver{ this };
+
+			struct node_workarounds : cfg::node
+			{
+				node_workarounds(cfg::node* _this) : cfg::node(_this, "Workarounds") {}
+				cfg::_bool no_primitive_restart{ this, "No Primitive Restart" };
+				cfg::_bool sanitize_fp_values{ this, "Sanitize FP Values" };
+				cfg::_bool disable_fence_reset{ this, "Disable Fence Reset" };
+				cfg::_bool emulate_cond_render{ this, "Emulate Cond Render" };
+				cfg::_bool strict_query_scopes{ this, "Strict Query Scopes" };
+				cfg::_bool force_reuse_query_pools{ this, "Force Reuse Query Pools" };
+			} workarounds{ this };
+#endif
 		} vk{ this };
 
 		struct node_perf_overlay : cfg::node
@@ -326,13 +383,21 @@ struct cfg_root : cfg::node
 	{
 		node_net(cfg::node* _this) : cfg::node(_this, "Net") {}
 
+#ifdef ANDROID
+		cfg::_enum<np_internet_status> net_active{this, "Internet enabled", np_internet_status::enabled};
+#else
 		cfg::_enum<np_internet_status> net_active{this, "Internet enabled", np_internet_status::disabled};
+#endif
 		cfg::string ip_address{this, "IP address", "0.0.0.0"};
 		cfg::string bind_address{this, "Bind address", "0.0.0.0"};
 		cfg::string dns{this, "DNS address", "8.8.8.8"};
 		cfg::string swap_list{this, "IP swap list", ""};
 		cfg::_bool upnp_enabled{this, "UPNP Enabled", false};
+#ifdef ANDROID
+		cfg::_bool derive_mac_from_psid{this, "Derive MAC from PSID", true};
+#else
 		cfg::_bool derive_mac_from_psid{this, "Derive MAC from PSID", false};
+#endif
 
 		cfg::_enum<np_psn_status> psn_status{this, "PSN status", np_psn_status::disabled};
 		cfg::string country{this, "PSN Country", "us"};

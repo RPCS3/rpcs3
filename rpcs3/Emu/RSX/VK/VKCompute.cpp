@@ -137,7 +137,7 @@ namespace vk
 		}
 
 		load_program(cmd);
-		vkCmdDispatch(cmd, invocations_x, invocations_y, invocations_z);
+		VK_GET_SYMBOL(vkCmdDispatch)(cmd, invocations_x, invocations_y, invocations_z);
 	}
 
 	void compute_task::run(const vk::command_buffer& cmd, u32 num_invocations)
@@ -246,7 +246,7 @@ namespace vk
 		if (!m_params.empty())
 		{
 			ensure(use_push_constants);
-			vkCmdPushConstants(cmd, m_program->layout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, m_params.size_bytes32(), m_params.data());
+			VK_GET_SYMBOL(vkCmdPushConstants)(cmd, m_program->layout(), VK_SHADER_STAGE_COMPUTE_BIT, 0, m_params.size_bytes32(), m_params.data());
 		}
 	}
 

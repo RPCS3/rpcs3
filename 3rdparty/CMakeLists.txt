@@ -353,12 +353,23 @@ add_subdirectory(fusion EXCLUDE_FROM_ALL)
 # FERAL INTERACTIVE
 add_subdirectory(feralinteractive EXCLUDE_FROM_ALL)
 
+# nlohmann json
+add_library(3rdparty_json INTERFACE)
+target_include_directories(3rdparty_json INTERFACE json/include)
+
 # add nice ALIAS targets for ease of use
 if(USE_SYSTEM_LIBUSB)
 	add_library(3rdparty::libusb ALIAS usb-1.0-shared)
 else()
 	add_library(3rdparty::libusb ALIAS usb-1.0-static)
 endif()
+
+if (ANDROID)
+	add_subdirectory(libadrenotools)
+else()
+	add_library(adrenotools INTERFACE)
+endif()
+
 add_library(3rdparty::zlib ALIAS 3rdparty_zlib)
 add_library(3rdparty::zstd ALIAS 3rdparty_zstd)
 add_library(3rdparty::7zip ALIAS 3rdparty_7zip)
@@ -386,3 +397,5 @@ add_library(3rdparty::rtmidi ALIAS rtmidi)
 add_library(3rdparty::opencv ALIAS ${OPENCV_TARGET})
 add_library(3rdparty::fusion ALIAS Fusion)
 add_library(3rdparty::feralinteractive ALIAS 3rdparty_feralinteractive)
+add_library(3rdparty::json ALIAS 3rdparty_json)
+add_library(3rdparty::adrenotools ALIAS adrenotools)

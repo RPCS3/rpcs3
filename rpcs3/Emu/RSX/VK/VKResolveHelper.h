@@ -133,7 +133,7 @@ namespace vk
 		{
 			const u32 size_to_push = static_parameters_width * sizeof(decltype(static_parameters[0]));
 			ensure(size_to_push <= fragment_push_constants_size);
-			vkCmdPushConstants(cmd, program->layout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, size_to_push, static_parameters);
+			VK_GET_SYMBOL(vkCmdPushConstants)(cmd, program->layout(), VK_SHADER_STAGE_FRAGMENT_BIT, 0, size_to_push, static_parameters);
 		}
 
 		void update_sample_configuration(vk::image* msaa_image)
@@ -233,12 +233,12 @@ namespace vk
 
 		void emit_geometry(vk::command_buffer& cmd, glsl::program* program) override
 		{
-			vkCmdClearAttachments(cmd, 1, &clear_info, 1, &region);
+			VK_GET_SYMBOL(vkCmdClearAttachments)(cmd, 1, &clear_info, 1, &region);
 
 			for (s32 write_mask = 0x1; write_mask <= 0x80; write_mask <<= 1)
 			{
-				vkCmdSetStencilWriteMask(cmd, VK_STENCIL_FRONT_AND_BACK, write_mask);
-				vkCmdPushConstants(cmd, program->layout(), VK_SHADER_STAGE_FRAGMENT_BIT, 8, 4, &write_mask);
+				VK_GET_SYMBOL(vkCmdSetStencilWriteMask)(cmd, VK_STENCIL_FRONT_AND_BACK, write_mask);
+				VK_GET_SYMBOL(vkCmdPushConstants)(cmd, program->layout(), VK_SHADER_STAGE_FRAGMENT_BIT, 8, 4, &write_mask);
 
 				overlay_pass::emit_geometry(cmd, program);
 			}
@@ -292,12 +292,12 @@ namespace vk
 
 		void emit_geometry(vk::command_buffer& cmd, glsl::program* program) override
 		{
-			vkCmdClearAttachments(cmd, 1, &clear_info, 1, &clear_region);
+			VK_GET_SYMBOL(vkCmdClearAttachments)(cmd, 1, &clear_info, 1, &clear_region);
 
 			for (s32 write_mask = 0x1; write_mask <= 0x80; write_mask <<= 1)
 			{
-				vkCmdSetStencilWriteMask(cmd, VK_STENCIL_FRONT_AND_BACK, write_mask);
-				vkCmdPushConstants(cmd, program->layout(), VK_SHADER_STAGE_FRAGMENT_BIT, 8, 4, &write_mask);
+				VK_GET_SYMBOL(vkCmdSetStencilWriteMask)(cmd, VK_STENCIL_FRONT_AND_BACK, write_mask);
+				VK_GET_SYMBOL(vkCmdPushConstants)(cmd, program->layout(), VK_SHADER_STAGE_FRAGMENT_BIT, 8, 4, &write_mask);
 
 				overlay_pass::emit_geometry(cmd, program);
 			}

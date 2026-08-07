@@ -126,6 +126,10 @@ namespace rsx
 				result.font_names.emplace_back("Roboto-Regular.ttf");
 				result.font_names.emplace_back("OpenSans-Regular.ttf");
 				result.font_names.emplace_back("FreeSans.ttf");
+#elif defined(ANDROID)
+				result.font_names.emplace_back("Roboto-Regular.ttf");
+				result.font_names.emplace_back("DroidSans.ttf");
+				result.font_names.emplace_back("NotoSans-Regular.ttf");
 #elif !defined(_WIN32)
 				result.font_names.emplace_back("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"); // ubuntu
 				result.font_names.emplace_back("/usr/share/fonts/TTF/DejaVuSans.ttf");             // arch
@@ -146,6 +150,10 @@ namespace rsx
 				// Known system font as last fallback
 				result.font_names.emplace_back("Yu Gothic.ttf");
 				result.font_names.emplace_back("YuGothR.ttc");
+#ifdef ANDROID
+				result.font_names.emplace_back("NotoSansCJK-Regular.ttc");
+				result.font_names.emplace_back("NotoSerifCJK-Regular.ttc");
+#endif
 #ifdef _WIN32
 				result.font_names.emplace_back("msyh.ttc");
 				result.font_names.emplace_back("simsunb.ttc");
@@ -165,6 +173,9 @@ namespace rsx
 				// Known system font as last fallback
 				result.font_names.emplace_back("Malgun Gothic.ttf");
 				result.font_names.emplace_back("malgun.ttf");
+#ifdef ANDROID
+				result.font_names.emplace_back("NotoSansCJK-Regular.ttc");
+#endif
 				break;
 			}
 			}

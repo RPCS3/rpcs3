@@ -165,14 +165,14 @@ void VKGSRender::update_draw_state()
 	{
 		const float actual_line_width =
 			m_device->get_wide_lines_support() ? rsx::method_registers.line_width() * resolution_scaling_config.scale_factor() : 1.f;
-		vkCmdSetLineWidth(*m_current_command_buffer, actual_line_width);
+		VK_GET_SYMBOL(vkCmdSetLineWidth)(*m_current_command_buffer, actual_line_width);
 	}
 
 	if (rsx::method_registers.blend_enabled())
 	{
 		// Update blend constants
 		auto blend_colors = rsx::get_constant_blend_colors();
-		vkCmdSetBlendConstants(*m_current_command_buffer, blend_colors.data());
+		VK_GET_SYMBOL(vkCmdSetBlendConstants)(*m_current_command_buffer, blend_colors.data());
 	}
 
 	if (rsx::method_registers.stencil_test_enabled())
@@ -180,15 +180,15 @@ void VKGSRender::update_draw_state()
 		const bool two_sided_stencil = rsx::method_registers.two_sided_stencil_test_enabled();
 		VkStencilFaceFlags face_flag = (two_sided_stencil) ? VK_STENCIL_FACE_FRONT_BIT : VK_STENCIL_FRONT_AND_BACK;
 
-		vkCmdSetStencilWriteMask(*m_current_command_buffer, face_flag, rsx::method_registers.stencil_mask());
-		vkCmdSetStencilCompareMask(*m_current_command_buffer, face_flag, rsx::method_registers.stencil_func_mask());
-		vkCmdSetStencilReference(*m_current_command_buffer, face_flag, rsx::method_registers.stencil_func_ref());
+		VK_GET_SYMBOL(vkCmdSetStencilWriteMask)(*m_current_command_buffer, face_flag, rsx::method_registers.stencil_mask());
+		VK_GET_SYMBOL(vkCmdSetStencilCompareMask)(*m_current_command_buffer, face_flag, rsx::method_registers.stencil_func_mask());
+		VK_GET_SYMBOL(vkCmdSetStencilReference)(*m_current_command_buffer, face_flag, rsx::method_registers.stencil_func_ref());
 
 		if (two_sided_stencil)
 		{
-			vkCmdSetStencilWriteMask(*m_current_command_buffer, VK_STENCIL_FACE_BACK_BIT, rsx::method_registers.back_stencil_mask());
-			vkCmdSetStencilCompareMask(*m_current_command_buffer, VK_STENCIL_FACE_BACK_BIT, rsx::method_registers.back_stencil_func_mask());
-			vkCmdSetStencilReference(*m_current_command_buffer, VK_STENCIL_FACE_BACK_BIT, rsx::method_registers.back_stencil_func_ref());
+			VK_GET_SYMBOL(vkCmdSetStencilWriteMask)(*m_current_command_buffer, VK_STENCIL_FACE_BACK_BIT, rsx::method_registers.back_stencil_mask());
+			VK_GET_SYMBOL(vkCmdSetStencilCompareMask)(*m_current_command_buffer, VK_STENCIL_FACE_BACK_BIT, rsx::method_registers.back_stencil_func_mask());
+			VK_GET_SYMBOL(vkCmdSetStencilReference)(*m_current_command_buffer, VK_STENCIL_FACE_BACK_BIT, rsx::method_registers.back_stencil_func_ref());
 		}
 	}
 
@@ -219,12 +219,12 @@ void VKGSRender::update_draw_state()
 			polygon_offset_bias *= 0.5f;
 		}
 
-		vkCmdSetDepthBias(*m_current_command_buffer, polygon_offset_bias, 0.f, polygon_offset_scale);
+		VK_GET_SYMBOL(vkCmdSetDepthBias)(*m_current_command_buffer, polygon_offset_bias, 0.f, polygon_offset_scale);
 	}
 	else
 	{
 		// Zero bias value - disables depth bias
-		vkCmdSetDepthBias(*m_current_command_buffer, 0.f, 0.f, 0.f);
+		VK_GET_SYMBOL(vkCmdSetDepthBias)(*m_current_command_buffer, 0.f, 0.f, 0.f);
 	}
 
 	if (m_device->get_depth_bounds_support())
@@ -249,7 +249,7 @@ void VKGSRender::update_draw_state()
 			bounds_max = std::clamp(bounds_max, 0.f, 1.f);
 		}
 
-		vkCmdSetDepthBounds(*m_current_command_buffer, bounds_min, bounds_max);
+		VK_GET_SYMBOL(vkCmdSetDepthBounds)(*m_current_command_buffer, bounds_min, bounds_max);
 	}
 
 	bind_viewport();
@@ -1117,11 +1117,11 @@ void VKGSRender::emit_geometry(u32 sub_index)
 	{
 		if (draw_call.is_trivial_instanced_draw)
 		{
-			vkCmdDraw(*m_current_command_buffer, upload_info.vertex_draw_count, draw_call.pass_count(), 0, 0);
+			VK_GET_SYMBOL(vkCmdDraw)(*m_current_command_buffer, upload_info.vertex_draw_count, draw_call.pass_count(), 0, 0);
 		}
 		else if (draw_call.is_single_draw())
 		{
-			vkCmdDraw(*m_current_command_buffer, upload_info.vertex_draw_count, 1, 0, 0);
+			VK_GET_SYMBOL(vkCmdDraw)(*m_current_command_buffer, upload_info.vertex_draw_count, 1, 0, 0);
 		}
 		else if (m_device->get_multidraw_support())
 		{
@@ -1135,7 +1135,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 			const auto subranges = draw_call.get_subranges();
 			for (const auto &range : subranges)
 			{
-				vkCmdDraw(*m_current_command_buffer, range.count, 1, vertex_offset, 0);
+				VK_GET_SYMBOL(vkCmdDraw)(*m_current_command_buffer, range.count, 1, vertex_offset, 0);
 				vertex_offset += range.count;
 			}
 		}
@@ -1145,15 +1145,15 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		const VkIndexType index_type = std::get<1>(*upload_info.index_info);
 		const VkDeviceSize offset = std::get<0>(*upload_info.index_info);
 
-		vkCmdBindIndexBuffer(*m_current_command_buffer, m_index_buffer_ring_info.heap->value, offset, index_type);
+		VK_GET_SYMBOL(vkCmdBindIndexBuffer)(*m_current_command_buffer, m_index_buffer_ring_info.heap->value, offset, index_type);
 
 		if (draw_call.is_trivial_instanced_draw)
 		{
-			vkCmdDrawIndexed(*m_current_command_buffer, upload_info.vertex_draw_count, draw_call.pass_count(), 0, 0, 0);
+			VK_GET_SYMBOL(vkCmdDrawIndexed)(*m_current_command_buffer, upload_info.vertex_draw_count, draw_call.pass_count(), 0, 0, 0);
 		}
 		else if (rsx::method_registers.current_draw_clause.is_single_draw())
 		{
-			vkCmdDrawIndexed(*m_current_command_buffer, upload_info.vertex_draw_count, 1, 0, 0, 0);
+			VK_GET_SYMBOL(vkCmdDrawIndexed)(*m_current_command_buffer, upload_info.vertex_draw_count, 1, 0, 0, 0);
 		}
 		else if (m_device->get_multidraw_support())
 		{
@@ -1186,7 +1186,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 			for (const auto &range : subranges)
 			{
 				const auto count = get_index_count(draw_call.primitive, range.count);
-				vkCmdDrawIndexed(*m_current_command_buffer, count, 1, vertex_offset, 0, 0);
+				VK_GET_SYMBOL(vkCmdDrawIndexed)(*m_current_command_buffer, count, 1, vertex_offset, 0, 0);
 				vertex_offset += count;
 			}
 		}

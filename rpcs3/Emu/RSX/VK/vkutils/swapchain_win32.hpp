@@ -103,7 +103,7 @@ namespace vk
 		createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
 		createInfo.hinstance = hInstance;
 		createInfo.hwnd = window_handle;
-		CHECK_RESULT(vkCreateWin32SurfaceKHR(vk_instance, &createInfo, NULL, &result));
+		CHECK_RESULT(VK_GET_SYMBOL(vkCreateWin32SurfaceKHR)(vk_instance, &createInfo, NULL, &result));
 		return result;
 	}
 #endif

@@ -184,7 +184,7 @@ namespace vk
 		if (vram_allocation_limit < dev.get_memory_mapping().device_local_total_bytes)
 		{
 			VkPhysicalDeviceMemoryProperties memory_properties;
-			vkGetPhysicalDeviceMemoryProperties(pdev, &memory_properties);
+			VK_GET_SYMBOL(vkGetPhysicalDeviceMemoryProperties)(pdev, &memory_properties);
 			for (u32 i = 0; i < memory_properties.memoryHeapCount; ++i)
 			{
 				const u64 max_sz = (memory_properties.memoryHeaps[i].flags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
@@ -378,7 +378,7 @@ namespace vk
 			for (const auto& memory_type_index : *request.memory_type)
 			{
 				info.memoryTypeIndex = memory_type_index;
-				error_code = vkAllocateMemory(m_device, &info, nullptr, &memory);
+				error_code = VK_GET_SYMBOL(vkAllocateMemory)(m_device, &info, nullptr, &memory);
 				if (error_code == VK_SUCCESS)
 				{
 					return { error_code, memory_type_index };
@@ -426,19 +426,19 @@ namespace vk
 	void mem_allocator_vk::free(mem_handle_t mem_handle)
 	{
 		vmm_notify_memory_freed(mem_handle);
-		vkFreeMemory(m_device, static_cast<VkDeviceMemory>(mem_handle), nullptr);
+		VK_GET_SYMBOL(vkFreeMemory)(m_device, static_cast<VkDeviceMemory>(mem_handle), nullptr);
 	}
 
 	void* mem_allocator_vk::map(mem_handle_t mem_handle, u64 offset, u64 size)
 	{
 		void* data = nullptr;
-		CHECK_RESULT(vkMapMemory(m_device, static_cast<VkDeviceMemory>(mem_handle), offset, std::max<u64>(size, 1u), 0, &data));
+		CHECK_RESULT(VK_GET_SYMBOL(vkMapMemory)(m_device, static_cast<VkDeviceMemory>(mem_handle), offset, std::max<u64>(size, 1u), 0, &data));
 		return data;
 	}
 
 	void mem_allocator_vk::unmap(mem_handle_t mem_handle)
 	{
-		vkUnmapMemory(m_device, static_cast<VkDeviceMemory>(mem_handle));
+		VK_GET_SYMBOL(vkUnmapMemory)(m_device, static_cast<VkDeviceMemory>(mem_handle));
 	}
 
 	VkDeviceMemory mem_allocator_vk::get_vk_device_memory(mem_handle_t mem_handle)
@@ -491,12 +491,12 @@ namespace vk
 		import_info.handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_HOST_ALLOCATION_BIT_EXT;
 		import_info.pHostPointer = host_pointer;
 
-		CHECK_RESULT(vkAllocateMemory(m_device, &alloc_info, nullptr, &m_mem_handle));
+		CHECK_RESULT(VK_GET_SYMBOL(vkAllocateMemory)(m_device, &alloc_info, nullptr, &m_mem_handle));
 	}
 
 	memory_block_host::~memory_block_host()
 	{
-		vkFreeMemory(m_device, m_mem_handle, nullptr);
+		VK_GET_SYMBOL(vkFreeMemory)(m_device, m_mem_handle, nullptr);
 	}
 
 	VkDeviceMemory memory_block_host::get_vk_device_memory()
