@@ -72,8 +72,11 @@ namespace rsx
 			const bool is_block_transfer = (in_pitch == out_pitch && out_pitch + 0u == line_length);
 			const auto read_address = get_address(src_offset, src_dma);
 			const auto write_address = get_address(dst_offset, dst_dma);
-			const auto read_length = in_pitch * (line_count - 1) + line_length;
-			const auto write_length = out_pitch * (line_count - 1) + line_length;
+			// LINE_LENGTH_IN is an element count; FORMAT_IN/OUT select the byte stride between elements.
+			const auto read_length =
+				in_pitch * (line_count - 1) + line_length * in_format;
+			const auto write_length =
+				out_pitch * (line_count - 1) + line_length * out_format;
 
 			RSX(ctx)->invalidate_fragment_program(dst_dma, dst_offset, write_length);
 
@@ -110,7 +113,7 @@ namespace rsx
 			const bool is_overlapping = dst_dma == src_dma && [&]() -> bool
 			{
 				const u32 src_max = src_offset + read_length;
-				const u32 dst_max = dst_offset + (out_pitch * (line_count - 1) + line_length);
+				const u32 dst_max = dst_offset + write_length;
 				return (src_offset >= dst_offset && src_offset < dst_max) ||
 				 (dst_offset >= src_offset && dst_offset < src_max);
 			}();
