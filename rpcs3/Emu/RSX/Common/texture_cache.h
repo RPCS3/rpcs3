@@ -2996,13 +2996,17 @@ namespace rsx
 
 			// FBO re-validation. It is common for GPU and CPU data to desync as we do not have a way to share memory pages directly between the two (in most setups)
 			// To avoid losing data, we need to do some gymnastics
-			if (src_is_render_target && !blit_engine_internals::validate_fbo_integrity(this, src_subres.surface->get_memory_range(), src_subres.is_depth))
+			if (src_is_render_target &&
+				!src_subres.is_reloaded &&
+				!blit_engine_internals::validate_fbo_integrity(this, src_subres.surface->get_memory_range(), src_subres.is_depth))
 			{
 				src_is_render_target = false;
 				src_subres.surface = nullptr;
 			}
 
-			if (dst_is_render_target && !blit_engine_internals::validate_fbo_integrity(this, dst_subres.surface->get_memory_range(), dst_subres.is_depth))
+			if (dst_is_render_target &&
+				!dst_subres.is_reloaded &&
+				!blit_engine_internals::validate_fbo_integrity(this, dst_subres.surface->get_memory_range(), dst_subres.is_depth))
 			{
 				// This is a lot more serious that the src case. We have to signal surface cache to reload the memory and discard what we have GPU-side.
 				// Do the transfer CPU side and we should eventually "read" the data on RCB/RDB barrier.

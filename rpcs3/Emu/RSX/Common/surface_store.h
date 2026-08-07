@@ -1251,6 +1251,9 @@ namespace rsx
 						height = std::min<u32>(required_height, normalized_surface_height - info.src_area.y);
 					}
 
+					// We need to track if this surface is reloaded from CPU during this next step.
+					const bool needs_reload = surface->needs_cpu_upload();
+
 					// Delay this as much as possible to avoid side-effects of spamming barrier
 					if (surface->memory_barrier(cmd, access); !surface->test())
 					{
@@ -1258,6 +1261,7 @@ namespace rsx
 						continue;
 					}
 
+					info.is_reloaded = needs_reload;
 					info.is_clipped = (width < required_width || height < required_height);
 					info.src_area.height = info.dst_area.height = height;
 					info.dst_area.width = width;
