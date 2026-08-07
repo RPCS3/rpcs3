@@ -1116,38 +1116,10 @@ namespace np
 			return false;
 		}
 
-		const auto& [sender, invitation] = *message.value();
-
 		set_message_selected(SCE_NP_BASIC_SELECTED_INVITATION_DATA, msg_id);
 		rpcn_log.notice("Selected invitation: msg_id=%d", msg_id);
 
-		bool notification_sent = false;
-
-		if (basic_handler_registered)
-		{
-			basic_event event{};
-			event.event = SCE_NP_BASIC_EVENT_RECV_INVITATION_RESULT;
-			strcpy_trunc(event.from.userId.handle.data, sender);
-			strcpy_trunc(event.from.name.data, sender);
-			event.data.resize(sizeof(SceNpBasicExtendedAttachmentData));
-
-			auto* attachment_data = reinterpret_cast<SceNpBasicExtendedAttachmentData*>(event.data.data());
-			attachment_data->flags = 0;
-			attachment_data->msgId = msg_id;
-			attachment_data->data.id = SCE_NP_BASIC_SELECTED_INVITATION_DATA;
-			attachment_data->data.size = static_cast<u32>(invitation.data.size());
-			attachment_data->userAction = SCE_NP_BASIC_MESSAGE_ACTION_ACCEPT;
-			attachment_data->markedAsUsed = 1;
-
-			queue_basic_event(std::move(event));
-			notification_sent = send_basic_event(SCE_NP_BASIC_EVENT_RECV_INVITATION_RESULT, 0, 0);
-		}
-		else
-		{
-			notification_sent = sysutil_send_system_cmd(CELL_SYSUTIL_NP_INVITATION_SELECTED, 0) > 0;
-		}
-
-		if (!notification_sent)
+		if (sysutil_send_system_cmd(CELL_SYSUTIL_NP_INVITATION_SELECTED, 0) <= 0)
 		{
 			clear_message_selected(SCE_NP_BASIC_SELECTED_INVITATION_DATA);
 			rpcn_log.error("Failed to notify the game about selected invitation: msg_id=%d", msg_id);
