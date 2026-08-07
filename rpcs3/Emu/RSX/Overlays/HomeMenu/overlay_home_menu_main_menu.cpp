@@ -9,6 +9,7 @@
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/Cell/Modules/sceNpTrophy.h"
+#include "Emu/NP/np_handler.h"
 
 extern atomic_t<bool> g_user_asked_for_recording;
 
@@ -70,6 +71,8 @@ namespace rsx
 			{
 				rsx_log.notice("Friends list hidden in home menu. RPCN is not configured.");
 			}
+
+			refresh_custom_menu_actions();
 
 			// get current trophy name for trophy list overlay
 			std::string trop_name;
@@ -153,6 +156,47 @@ namespace rsx
 			});
 
 			apply_layout();
+		}
+
+		std::function<void()> home_menu_main_menu::take_close_callback()
+		{
+			return std::move(m_close_callback);
+		}
+
+		bool home_menu_main_menu::refresh_custom_menu_actions()
+		{
+			bool changed = false;
+
+			for (const auto& action : g_fxo->get<named_thread<np::np_handler>>().get_custom_menu_actions(SCE_NP_CUSTOM_MENU_ACTION_MASK_ME))
+			{
+				const u32 index = static_cast<u32>(action.id);
+
+				if (std::find(m_custom_menu_action_ids.cbegin(), m_custom_menu_action_ids.cend(), index) != m_custom_menu_action_ids.cend())
+				{
+					continue;
+				}
+
+				m_custom_menu_action_ids.push_back(index);
+				add_item(home_menu::fa_icon::friends, action.name, [this, index, name = action.name](pad_button btn) -> page_navigation
+				{
+					if (btn != pad_button::cross) return page_navigation::stay;
+
+					rsx_log.notice("User selected custom NP menu action '%s' (index=%u)", name, index);
+					m_close_callback = [index]
+					{
+						auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+						if (!nph.invoke_custom_menu_action(index, nph.get_npid(), SCE_NP_CUSTOM_MENU_SELECTED_TYPE_ME))
+						{
+							rsx_log.error("Failed to invoke custom NP menu action %u", index);
+						}
+					};
+					return page_navigation::exit;
+				});
+				changed = true;
+			}
+
+			return changed;
 		}
 
 		void home_menu_main_menu::apply_layout(bool center_vertically)
@@ -264,6 +308,11 @@ namespace rsx
 
 		void home_menu_main_menu::update(u64 timestamp_us)
 		{
+			if (refresh_custom_menu_actions())
+			{
+				apply_layout();
+			}
+
 			if (m_animation_timer == 0)
 			{
 				m_animation_timer = timestamp_us;

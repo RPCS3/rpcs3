@@ -289,6 +289,9 @@ namespace np
 		SceNpCustomMenuIndexArray custom_menu_activation{};
 		std::vector<SceNpCustomMenuActionExceptions> custom_menu_exception_list{};
 
+		std::vector<custom_menu_action> get_custom_menu_actions(SceNpCustomMenuActionMask mask);
+		bool invoke_custom_menu_action(u32 index, const SceNpId& npid, SceNpCustomMenuSelectedType type);
+
 		// Mutex for NP status change
 		shared_mutex mutex_status;
 

@@ -10,6 +10,7 @@ namespace rsx
 		struct home_menu_main_menu : public home_menu_page
 		{
 			home_menu_main_menu(s16 x, s16 y, u16 width, u16 height, bool use_separators, home_menu_page* parent);
+			std::function<void()> take_close_callback();
 
 			void select_entry(s32 entry) override;
 			void select_next(u16 count = 1) override;
@@ -20,6 +21,7 @@ namespace rsx
 
 		private:
 			void apply_layout(bool center_vertically = false) override;
+			bool refresh_custom_menu_actions();
 
 			using home_menu_page::add_item;
 			void add_item(home_menu::fa_icon icon, std::string_view title, std::function<page_navigation(pad_button)> callback) override;
@@ -30,6 +32,8 @@ namespace rsx
 			u64 m_animation_timer = 0;
 			animation_translate m_sliding_animation;
 			std::unique_ptr<list_view> m_sidebar; // Render proxy
+			std::function<void()> m_close_callback;
+			std::vector<u32> m_custom_menu_action_ids;
 		};
 	}
 }

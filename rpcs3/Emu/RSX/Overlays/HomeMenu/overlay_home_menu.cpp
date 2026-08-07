@@ -104,7 +104,7 @@ namespace rsx
 			}
 			case page_navigation::exit:
 			{
-				request_close();
+				request_close(m_main_menu.take_close_callback());
 				break;
 			}
 			case page_navigation::exit_for_screenshot:

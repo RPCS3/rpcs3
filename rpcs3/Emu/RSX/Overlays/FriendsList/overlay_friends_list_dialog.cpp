@@ -2,6 +2,7 @@
 #include "../overlay_manager.h"
 #include "overlay_friends_list_dialog.h"
 #include "Emu/RSX/Overlays/HomeMenu/overlay_home_menu.h"
+#include "Emu/Cell/Modules/cellSysutil.h"
 #include "Emu/NP/np_handler.h"
 #include "Emu/NP/rpcn_config.h"
 #include "Emu/vfs_config.h"
@@ -334,7 +335,12 @@ namespace rsx
 							close(true, false);
 							home_menu->request_close([message_id]()
 							{
-								g_fxo->get<named_thread<np::np_handler>>().select_invitation(message_id);
+								// Let the game process all system menu close callbacks before reporting the selected action.
+								sysutil_register_cb([message_id](ppu_thread&) -> s32
+								{
+									g_fxo->get<named_thread<np::np_handler>>().select_invitation(message_id);
+									return CELL_OK;
+								});
 							});
 						});
 					}

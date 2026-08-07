@@ -8,6 +8,7 @@
 #include "Emu/Cell/timers.hpp"
 #include "Utilities/StrUtil.h"
 #include "Emu/IdManager.h"
+#include "Emu/Memory/vm_var.h"
 #include "Emu/System.h"
 #include "Emu/NP/rpcn_config.h"
 #include "Emu/NP/np_contexts.h"
@@ -1096,6 +1097,74 @@ namespace np
 		default:
 			fmt::throw_exception("clear_message_selected with id %d", id);
 		}
+	}
+
+	std::vector<np_handler::custom_menu_action> np_handler::get_custom_menu_actions(SceNpCustomMenuActionMask mask)
+	{
+		std::lock_guard lock(mutex_custom_menu);
+		std::vector<custom_menu_action> actions;
+
+		if (!custom_menu_registered)
+		{
+			return actions;
+		}
+
+		for (const auto& action : custom_menu_actions)
+		{
+			const u32 index = action.id;
+
+			if ((action.mask & mask) && index < SCE_NP_CUSTOM_MENU_INDEX_SETSIZE && SCE_NP_CUSTOM_MENU_INDEX_ISSET(index, &custom_menu_activation))
+			{
+				actions.push_back(action);
+			}
+		}
+
+		return actions;
+	}
+
+	bool np_handler::invoke_custom_menu_action(u32 index, const SceNpId& npid, SceNpCustomMenuSelectedType type)
+	{
+		vm::ptr<SceNpCustomMenuEventHandler> handler;
+		vm::ptr<void> user_arg;
+		SceNpCustomMenuActionMask mask;
+
+		switch (type)
+		{
+		case SCE_NP_CUSTOM_MENU_SELECTED_TYPE_ME: mask = SCE_NP_CUSTOM_MENU_ACTION_MASK_ME; break;
+		case SCE_NP_CUSTOM_MENU_SELECTED_TYPE_FRIEND: mask = SCE_NP_CUSTOM_MENU_ACTION_MASK_FRIEND; break;
+		case SCE_NP_CUSTOM_MENU_SELECTED_TYPE_PLAYER: mask = SCE_NP_CUSTOM_MENU_ACTION_MASK_PLAYER; break;
+		default: return false;
+		}
+
+		{
+			std::lock_guard lock(mutex_custom_menu);
+
+			if (!custom_menu_registered || index >= SCE_NP_CUSTOM_MENU_INDEX_SETSIZE || !SCE_NP_CUSTOM_MENU_INDEX_ISSET(index, &custom_menu_activation))
+			{
+				return false;
+			}
+
+			const auto action = std::find_if(custom_menu_actions.cbegin(), custom_menu_actions.cend(), [index](const custom_menu_action& item)
+			{
+				return item.id == static_cast<s32>(index);
+			});
+
+			if (action == custom_menu_actions.cend() || !(action->mask & mask))
+			{
+				return false;
+			}
+
+			handler = custom_menu_handler;
+			user_arg = custom_menu_user_arg;
+		}
+
+		sysutil_register_cb([handler, user_arg, index, npid, type](ppu_thread& ppu) -> s32
+		{
+			const vm::var<SceNpId> selected_npid(npid);
+			return handler(ppu, CELL_OK, index, selected_npid, type, user_arg);
+		});
+
+		return true;
 	}
 
 	void np_handler::send_message(const message_data& msg_data, const std::set<std::string>& npids)
