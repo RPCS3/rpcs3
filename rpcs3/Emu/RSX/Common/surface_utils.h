@@ -39,6 +39,7 @@ namespace rsx
 		u32 base_address = 0;
 		bool is_depth = false;
 		bool is_clipped = false;
+		bool is_reloaded = false;
 
 		coordu src_area;  //<- Always computed in source image coordinates
 		coordu dst_area;  //<- Always computed in destination (requester) image coordinates
@@ -355,6 +356,23 @@ namespace rsx
 		inline bool write_through() const
 		{
 			return (state_flags & rsx::surface_state_flags::erase_bkgnd) && old_contents.empty();
+		}
+
+		inline bool needs_cpu_upload() const
+		{
+			if ((state_flags & rsx::surface_state_flags::erase_bkgnd) == 0) [[ likely ]]
+			{
+				return false;
+			}
+
+			if (state_flags & rsx::surface_state_flags::force_data_load)
+			{
+				return true;
+			}
+
+			return is_depth_surface()
+				? !!g_cfg.video.read_depth_buffer
+				: !!g_cfg.video.read_color_buffers;
 		}
 
 #if (ENABLE_SURFACE_CACHE_DEBUG)

@@ -1260,6 +1260,9 @@ namespace rsx
 					// Drop any excess subpixels on the requester side if any. Ensures division generates a perfect fitting rect without rounding bugs.
 					width_in_bytes -= (width_in_bytes % required_bpp);
 
+					// We need to track if this surface is reloaded from CPU during this next step.
+					const bool needs_reload = surface->needs_cpu_upload();
+
 					// Delay this as much as possible to avoid side-effects of spamming barrier
 					if (surface->memory_barrier(cmd, access); !surface->test())
 					{
@@ -1272,6 +1275,7 @@ namespace rsx
 					info.base_address = range.start;
 					info.is_depth = is_depth;
 					info.is_clipped = (width_in_bytes < required_width_in_bytes || height < required_height);
+					info.is_reloaded = needs_reload;
 
 					// Decode source
 					info.src_area.x = src_x / surface_bpp;
