@@ -710,6 +710,9 @@ bool SCEDecrypter::DecryptData()
 	// Set initial offset.
 	u32 data_buf_offset = 0;
 
+	// Tmp buffer
+	std::vector<u8> buf;
+
 	// Parse the metadata section headers to find the offsets of encrypted data.
 	for (const MetadataSectionHeader& hdr : meta_shdr)
 	{
@@ -728,30 +731,28 @@ bool SCEDecrypter::DecryptData()
 				std::memcpy(data_key, data_keys.data() + hdr.key_idx * 0x10, 0x10);
 				std::memcpy(data_iv, data_keys.data() + hdr.iv_idx * 0x10, 0x10);
 
-				// Allocate a buffer to hold the data.
-				auto buf = std::make_unique<u8[]>(hdr.data_size);
-
 				// Seek to the section data offset and read the encrypted data.
+				buf.resize(hdr.data_size);
 				sce_f.seek(hdr.data_offset);
-				sce_f.read(buf.get(), hdr.data_size);
+				sce_f.read(buf.data(), buf.size());
 
 				// Zero out our ctr nonce.
 				std::memset(ctr_stream_block, 0, sizeof(ctr_stream_block));
 
 				// Perform AES-CTR encryption on the data blocks.
 				aes_setkey_enc(&aes, data_key, 128);
-				aes_crypt_ctr(&aes, hdr.data_size, &ctr_nc_off, data_iv, ctr_stream_block, buf.get(), buf.get());
+				aes_crypt_ctr(&aes, buf.size(), &ctr_nc_off, data_iv, ctr_stream_block, buf.data(), buf.data());
 
 				// Copy the decrypted data.
-				std::memcpy(data_buf.data() + data_buf_offset, buf.get(), hdr.data_size);
+				std::memcpy(data_buf.data() + data_buf_offset, buf.data(), buf.size());
 			}
 		}
 		else
 		{
-			auto buf = std::make_unique<u8[]>(hdr.data_size);
+			buf.resize(hdr.data_size);
 			sce_f.seek(hdr.data_offset);
-			sce_f.read(buf.get(), hdr.data_size);
-			std::memcpy(data_buf.data() + data_buf_offset, buf.get(), hdr.data_size);
+			sce_f.read(buf.data(), buf.size());
+			std::memcpy(data_buf.data() + data_buf_offset, buf.data(), buf.size());
 		}
 
 		// Advance the buffer's offset.
@@ -1217,6 +1218,9 @@ bool SELFDecrypter::DecryptData()
 	// Set initial offset.
 	u32 data_buf_offset = 0;
 
+	// Tmp buffer
+	std::vector<u8> buf;
+
 	// Parse the metadata section headers to find the offsets of encrypted data.
 	for (const MetadataSectionHeader& hdr : meta_shdr)
 	{
@@ -1235,22 +1239,20 @@ bool SELFDecrypter::DecryptData()
 				std::memcpy(data_key, data_keys.data() + hdr.key_idx * 0x10, 0x10);
 				std::memcpy(data_iv, data_keys.data() + hdr.iv_idx * 0x10, 0x10);
 
-				// Allocate a buffer to hold the data.
-				auto buf = std::make_unique<u8[]>(hdr.data_size);
-
 				// Seek to the section data offset and read the encrypted data.
+				buf.resize(hdr.data_size);
 				self_f.seek(hdr.data_offset);
-				self_f.read(buf.get(), hdr.data_size);
+				self_f.read(buf.data(), buf.size());
 
 				// Zero out our ctr nonce.
 				std::memset(ctr_stream_block, 0, sizeof(ctr_stream_block));
 
 				// Perform AES-CTR encryption on the data blocks.
 				aes_setkey_enc(&aes, data_key, 128);
-				aes_crypt_ctr(&aes, hdr.data_size, &ctr_nc_off, data_iv, ctr_stream_block, buf.get(), buf.get());
+				aes_crypt_ctr(&aes, buf.size(), &ctr_nc_off, data_iv, ctr_stream_block, buf.data(), buf.data());
 
 				// Copy the decrypted data.
-				std::memcpy(data_buf.data() + data_buf_offset, buf.get(), hdr.data_size);
+				std::memcpy(data_buf.data() + data_buf_offset, buf.data(), buf.size());
 
 				// Advance the buffer's offset.
 				data_buf_offset += ::narrow<u32>(hdr.data_size);
