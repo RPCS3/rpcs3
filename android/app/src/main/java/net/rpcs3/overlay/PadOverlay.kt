@@ -120,8 +120,6 @@ class PadOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(context,
         val btnR1X = btnR2X
         val btnR1Y = btnL1Y
 
-        val btnHomeX = totalWidth / 2 - buttonSize / 2
-        val btnHomeY = btnStartY - buttonSize - (snap * 1.2f).toInt()
 
         touchSlop = (snap * 0.55f).toInt()
         reservedZones = listOf(
@@ -249,15 +247,6 @@ class PadOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(context,
                 pressedArt = PadButtonArt.pillButton(pillW, pillH, "SELECT", pressed = true)
             ),
 
-            createButton(
-                R.drawable.ic_ps_button,
-                btnHomeX,
-                btnHomeY,
-                buttonSize,
-                buttonSize,
-                Digital1Flags.CELL_PAD_CTRL_PS,
-                Digital2Flags.None
-            ),
             createButton(
                 R.drawable.l1,
                 btnL1X,

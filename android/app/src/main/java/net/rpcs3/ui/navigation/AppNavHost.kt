@@ -94,6 +94,7 @@ import net.rpcs3.dialogs.AlertDialogQueue
 import net.rpcs3.ui.drivers.GpuDriversScreen
 import net.rpcs3.ui.games.IsoChoiceDialog
 import net.rpcs3.ui.games.GamesScreen
+import net.rpcs3.ui.games.PackageInstallFlow
 import net.rpcs3.ui.settings.AdvancedSettingsScreen
 import net.rpcs3.ui.patches.GamePatchesScreen
 import net.rpcs3.ui.settings.GameSettingsScreen
@@ -192,11 +193,9 @@ fun AppNavHost() {
         composable(
             route = "settings"
         ) {
-            LaunchedEffect(Unit) { RPCS3.settingsTitleId.value = "" }
-            GameSettingsScreen(
-                titleId = "",
-                title = "Global Defaults",
-                onClose = navController::navigateUp
+            SettingsScreen(
+                navigateBack = navController::navigateUp,
+                navigateTo = { path -> navController.navigate(path) }
             )
         }
 
@@ -233,7 +232,9 @@ fun AppNavHost() {
             )
         }
 
-        composable(route = "diagnostics") { DiagnosticsScreen() }
+        composable(route = "diagnostics") {
+            DiagnosticsScreen(onClose = { navController.popBackStack() })
+        }
 
         composable(
             route = "drivers"
@@ -263,16 +264,23 @@ fun GamesDestination(
     var emulatorState by remember { RPCS3.state }
     val emulatorActiveGame by remember { RPCS3.activeGame }
 
+    var pendingPackages by remember { mutableStateOf<List<Uri>>(emptyList()) }
+
     val installPkgLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent(),
-        onResult = { uri: Uri? ->
-            if (uri != null) PrecompilerService.start(
-                context,
-                PrecompilerServiceAction.Install,
-                uri
-            )
+        contract = ActivityResultContracts.GetMultipleContents(),
+        onResult = { uris: List<Uri> ->
+            if (uris.isNotEmpty()) {
+                pendingPackages = uris
+            }
         }
     )
+
+    if (pendingPackages.isNotEmpty()) {
+        PackageInstallFlow(
+            uris = pendingPackages,
+            onFinished = { pendingPackages = emptyList() }
+        )
+    }
 
     var pendingIso by remember { mutableStateOf<Uri?>(null) }
     var needsStorage by remember { mutableStateOf(false) }

@@ -1,5 +1,7 @@
 package net.rpcs3.ui.games
 
+import net.rpcs3.ui.theme.Rpcs
+
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
@@ -67,11 +69,11 @@ import androidx.core.view.WindowInsetsControllerCompat
 import coil3.compose.AsyncImage
 
 private val LaunchBlack = Color.Black
-private val LaunchCard = Color(0xFF12121B)
-private val LaunchAccent = Color(0xFF1A9FFF)
-private val LaunchTextPrimary = Color(0xFFF0F4FF)
-private val LaunchTextSecondary = Color(0xFF93A6BC)
-private val LaunchDanger = Color(0xFFFF6B6B)
+private val LaunchCard = Rpcs.SurfaceInset
+private val LaunchAccent = Rpcs.Accent
+private val LaunchTextPrimary = Rpcs.TextPrimary
+private val LaunchTextSecondary = Rpcs.TextSecondary
+private val LaunchDanger = Rpcs.Danger
 
 private data class ActionSpec(
     val icon: ImageVector,
@@ -336,9 +338,9 @@ private fun PlayButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
             .background(
                 Brush.horizontalGradient(
                     colors = listOf(
-                        Color(0xFF00B4D8).copy(alpha = 0.38f),
+                        Rpcs.GradientCyan.copy(alpha = 0.38f),
                         LaunchAccent.copy(alpha = 0.38f),
-                        Color(0xFF7B2FF7).copy(alpha = 0.38f)
+                        Rpcs.GradientViolet.copy(alpha = 0.38f)
                     )
                 )
             )

@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,18 +22,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ExitToApp
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.CircularProgressIndicator
@@ -51,9 +50,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
@@ -66,7 +67,9 @@ import net.rpcs3.ui.settings.SettingsNodeContent
 import net.rpcs3.ui.settings.categoriesOf
 import net.rpcs3.ui.settings.iconForCategory
 import net.rpcs3.ui.theme.Dimens
+import net.rpcs3.ui.theme.Dims
 import net.rpcs3.ui.theme.DrawerStyle
+import net.rpcs3.ui.theme.Rpcs
 import net.rpcs3.ui.theme.SettingsStyle
 import org.json.JSONObject
 
@@ -308,26 +311,34 @@ private fun DrawerSidebarItem(
     nested: Boolean,
     onClick: () -> Unit
 ) {
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = if (nested) 16.dp else 6.dp, end = 6.dp)
             .clip(RoundedCornerShape(9.dp))
             .background(if (isSelected) DrawerStyle.FocusFill else Color.Transparent)
-            .clickable(onClick = onClick)
+            .border(
+                if (focused) Dims.FocusBorderWidth else Dims.BorderWidth,
+                if (focused) Rpcs.FocusBorder else Color.Transparent,
+                RoundedCornerShape(9.dp)
+            )
+            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 9.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = if (isSelected) SettingsStyle.AccentBlue else SettingsStyle.TextSecondary,
+                tint = if (isSelected || focused) SettingsStyle.AccentBlue else SettingsStyle.TextSecondary,
                 modifier = Modifier.size(Dimens.IconSize)
             )
             Spacer(Modifier.width(8.dp))
             Text(
                 text = label,
-                color = if (isSelected) SettingsStyle.TextPrimary else SettingsStyle.TextSecondary,
+                color = if (isSelected || focused) SettingsStyle.TextPrimary else SettingsStyle.TextSecondary,
                 fontSize = Dimens.ValueSize,
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                 maxLines = 2,
@@ -348,7 +359,7 @@ private fun DrawerActionButton(
 ) {
     val background = if (isExit) DrawerStyle.TileExitResting else DrawerStyle.PaneInnerResting
     val border = if (isExit) DrawerStyle.TileExitPressed else DrawerStyle.RestingCardBorder
-    val tint = if (isExit) Color(0xFFE07B6B) else DrawerStyle.TextPrimary
+    val tint = if (isExit) DrawerStyle.ExitTint else DrawerStyle.TextPrimary
 
     Row(
         modifier = modifier

@@ -9,35 +9,38 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,6 +60,10 @@ import net.rpcs3.RPCS3
 import net.rpcs3.dialogs.AlertDialogQueue
 import net.rpcs3.provider.AppDataDocumentProvider
 import net.rpcs3.ui.common.ComposePreview
+import net.rpcs3.ui.components.PaneNavRow
+import net.rpcs3.ui.components.PaneScaffold
+import net.rpcs3.ui.components.PaneSectionTitle
+import net.rpcs3.ui.components.PaneTab
 import net.rpcs3.ui.settings.components.core.PreferenceIcon
 import net.rpcs3.ui.settings.components.core.PreferenceValue
 import net.rpcs3.ui.settings.components.preference.HomePreference
@@ -65,8 +72,8 @@ import net.rpcs3.ui.settings.components.preference.SingleSelectionDialog
 import net.rpcs3.ui.settings.components.preference.SliderPreference
 import net.rpcs3.ui.settings.components.preference.SwitchPreference
 import net.rpcs3.ui.settings.components.preference.TextPreference
+import net.rpcs3.ui.theme.Dims
 import org.json.JSONObject
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -413,113 +420,102 @@ fun SettingsScreen(
     navigateBack: () -> Unit,
     navigateTo: (path: String) -> Unit,
 ) {
-    val topBarScrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
-    Scaffold(
-        modifier = Modifier
-            .nestedScroll(topBarScrollBehavior.nestedScrollConnection)
-            .then(modifier),
-        topBar = {
-            LargeTopAppBar(
-                title = { Text(text = "Settings", fontWeight = FontWeight.Medium) },
-                scrollBehavior = topBarScrollBehavior,
-                navigationIcon = {
-                    IconButton(
-                        onClick = navigateBack
-                    ) {
-                        Icon(imageVector = Icons.AutoMirrored.Default.KeyboardArrowLeft, null)
-                    }
-                }
-            )
-        }
-    ) { contentPadding ->
-        val context = LocalContext.current
+    val context = LocalContext.current
+    var selected by remember { mutableIntStateOf(0) }
 
-        var selectedFileUri by remember { mutableStateOf<Uri?>(null) }
+    val tabs = listOf(
+        PaneTab("General", Icons.Default.Settings),
+        PaneTab("Graphics", Icons.Outlined.Build),
+        PaneTab("Support", Icons.Default.Share)
+    )
 
-        val firmwareFilePicker = rememberLauncherForActivityResult(
-            contract = ActivityResultContracts.GetContent()
-        ) { resultUri ->
-            resultUri?.let { selectedFileUri = it }
-            Toast.makeText(context, resultUri.toString(), Toast.LENGTH_SHORT).show()
-        }
-
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(contentPadding),
-        ) {    
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-            
-            item(
-                key = "internal_directory"
-            ) {
-                HomePreference(
+    PaneScaffold(
+        title = "Settings",
+        tabs = tabs,
+        selected = selected,
+        onSelect = { selected = it },
+        onBack = navigateBack,
+        modifier = modifier
+    ) {
+        when (selected) {
+            0 -> {
+                PaneSectionTitle("Emulator")
+                PaneNavRow(
+                    title = "Advanced Settings",
+                    description = "Configure emulator advanced settings",
+                    icon = Icons.Default.Settings,
+                    onClick = { navigateTo("gameSettings?titleId=") }
+                )
+                Spacer(Modifier.height(Dims.RowSpacing))
+                PaneNavRow(
                     title = "View Internal Directory",
-                    icon = { PreferenceIcon(icon = painterResource(R.drawable.ic_folder)) },
-                    description = "Open internal directory of RPCS3 in file manager"
-                ) {
-                    if (context.launchBrowseIntent(Intent.ACTION_VIEW) or context.launchBrowseIntent()) {
-                        // No Activity found to handle action
+                    description = "Open the RPCS3 directory in a file manager",
+                    icon = Icons.Default.Folder,
+                    onClick = {
+                        context.launchBrowseIntent(Intent.ACTION_VIEW) or context.launchBrowseIntent()
                     }
-                }
+                )
             }
 
-            item(key = "advanced_settings") {
-                HomePreference(title = "Advanced Settings", icon = { Icon(imageVector = Icons.Default.Settings, null) }, description = "Configure emulator advanced settings") {
-                    navigateTo("gameSettings?titleId=")
-                }
-            }
-            
-            item(
-                key = "custom_gpu_driver"
-            ) {
-                HomePreference(
+            1 -> {
+                PaneSectionTitle("Renderer")
+                PaneNavRow(
                     title = "Custom GPU Driver",
-                    icon = { Icon(Icons.Outlined.Build, contentDescription = null) },
-                    description = "Install alternative drivers for potentially better performance or accuracy"
-                ) {
-                    if (RPCS3.instance.supportsCustomDriverLoading()) {
-                        navigateTo("drivers")
-                    } else {
-                        AlertDialogQueue.showDialog(
-                            title = "Custom drivers not supported",
-                            message = "Custom driver loading isn't currently supported for this device",
-                            confirmText = "Close",
-                            dismissText = ""
-                        )
+                    description = "Install alternative drivers for better performance or accuracy",
+                    icon = Icons.Outlined.Build,
+                    onClick = {
+                        if (RPCS3.instance.supportsCustomDriverLoading()) {
+                            navigateTo("drivers")
+                        } else {
+                            AlertDialogQueue.showDialog(
+                                title = "Custom drivers not supported",
+                                message = "Custom driver loading isn't currently supported for this device",
+                                confirmText = "Close",
+                                dismissText = ""
+                            )
+                        }
                     }
-                }
+                )
             }
 
-            item(key = "share_logs") {
-                HomePreference(
+            else -> {
+                PaneSectionTitle("Troubleshooting")
+                PaneNavRow(
                     title = "Share Log",
-                    icon = { Icon(imageVector = Icons.Default.Share, contentDescription = null) },
-                    description = "Share RPCS3's log file to debug issues"
-                ) {
-                    val file = DocumentFile.fromSingleUri(
-                        context,
-                        DocumentsContract.buildDocumentUri(
-                            AppDataDocumentProvider.AUTHORITY,
-                            "${AppDataDocumentProvider.ROOT_ID}/cache/RPCS3.log"
+                    description = "Share the RPCS3 log file to debug issues",
+                    icon = Icons.Default.Share,
+                    onClick = {
+                        val file = DocumentFile.fromSingleUri(
+                            context,
+                            DocumentsContract.buildDocumentUri(
+                                AppDataDocumentProvider.AUTHORITY,
+                                "${AppDataDocumentProvider.ROOT_ID}/cache/RPCS3.log"
+                            )
                         )
-                    )
 
-                    if (file != null && file.exists() && file.length() != 0L) {
-                        val intent = Intent(Intent.ACTION_SEND).apply {
-                            setDataAndType(file.uri, "text/plain")
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            putExtra(Intent.EXTRA_STREAM, file.uri)
+                        if (file != null && file.exists() && file.length() != 0L) {
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                setDataAndType(file.uri, "text/plain")
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                putExtra(Intent.EXTRA_STREAM, file.uri)
+                            }
+                            context.startActivity(Intent.createChooser(intent, "Share Log File"))
+                        } else {
+                            Toast.makeText(context, "Log file not found!", Toast.LENGTH_SHORT).show()
                         }
-                        context.startActivity(Intent.createChooser(intent, "Share Log File"))
-                    } else {
-                        Toast.makeText(context, "Log file not found!", Toast.LENGTH_SHORT).show()
                     }
-                }
+                )
+                Spacer(Modifier.height(Dims.RowSpacing))
+                PaneNavRow(
+                    title = "Diagnostics",
+                    description = "Check setup, storage and graphics status",
+                    icon = Icons.Default.Info,
+                    onClick = { navigateTo("diagnostics") }
+                )
             }
         }
+
+        Spacer(Modifier.height(16.dp))
     }
 }
 

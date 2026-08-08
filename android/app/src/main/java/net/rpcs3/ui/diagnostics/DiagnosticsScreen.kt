@@ -1,20 +1,15 @@
 package net.rpcs3.ui.diagnostics
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBars
-import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Memory
+import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -26,22 +21,28 @@ import kotlinx.coroutines.withContext
 import net.rpcs3.FirmwareRepository
 import net.rpcs3.Permission
 import net.rpcs3.RPCS3
-import net.rpcs3.ui.components.InfoRow
-import net.rpcs3.ui.components.SectionLabel
-import net.rpcs3.ui.components.SettingGroup
+import net.rpcs3.ui.components.PaneCard
+import net.rpcs3.ui.components.PaneKeyValue
+import net.rpcs3.ui.components.PaneScaffold
+import net.rpcs3.ui.components.PaneSectionTitle
+import net.rpcs3.ui.components.PaneTab
 import net.rpcs3.ui.setup.hasStorageAccess
-import net.rpcs3.ui.theme.Dimens
-import net.rpcs3.ui.theme.SettingsStyle
+import net.rpcs3.ui.theme.Rpcs
 import java.io.File
 
 @Composable
-fun DiagnosticsScreen(modifier: Modifier = Modifier) {
+fun DiagnosticsScreen(
+    modifier: Modifier = Modifier,
+    onClose: (() -> Unit)? = null
+) {
     val context = LocalContext.current
     val firmware by FirmwareRepository.version
 
+    var selected by remember { mutableIntStateOf(0) }
     var configWritable by remember { mutableStateOf<Boolean?>(null) }
-    var customConfigs by remember { mutableStateOf(0) }
+    var customConfigs by remember { mutableIntStateOf(0) }
     var driver by remember { mutableStateOf("") }
+    var systemInfo by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
@@ -60,57 +61,99 @@ fun DiagnosticsScreen(modifier: Modifier = Modifier) {
             driver = runCatching {
                 RPCS3.instance.settingsGet("Video@@Vulkan@@Custom Driver@@Path", "")
             }.getOrDefault("")
+
+            systemInfo = runCatching { RPCS3.instance.systemInfo() }.getOrDefault("")
         }
     }
 
-    Column(
+    val tabs = listOf(
+        PaneTab("Setup", Icons.Outlined.Info),
+        PaneTab("Storage", Icons.Outlined.Storage),
+        PaneTab("Graphics", Icons.Outlined.Memory)
+    )
+
+    PaneScaffold(
+        title = "Diagnostics",
+        tabs = tabs,
+        selected = selected,
+        onSelect = { selected = it },
+        onBack = onClose,
         modifier = modifier
-            .fillMaxSize()
-            .background(SettingsStyle.BgDeep)
-            .windowInsetsPadding(WindowInsets.systemBars)
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(Dimens.SectionGap)
     ) {
-        SectionLabel(text = "Setup")
-        SettingGroup {
-            InfoRow(
-                label = "Storage access",
-                value = if (hasStorageAccess()) "Granted" else "Not granted"
-            )
-            InfoRow(label = "Firmware", value = firmware ?: "Not installed")
-            InfoRow(
-                label = "Notifications",
-                value = if (Permission.PostNotifications.checkPermission(context)) {
-                    "Granted"
-                } else {
-                    "Not granted"
+        when (selected) {
+            0 -> {
+                PaneSectionTitle("Requirements")
+                PaneCard {
+                    val storage = hasStorageAccess()
+                    PaneKeyValue(
+                        "Storage access",
+                        if (storage) "Granted" else "Not granted",
+                        if (storage) Rpcs.Success else Rpcs.Danger
+                    )
+                    PaneKeyValue(
+                        "Firmware",
+                        firmware ?: "Not installed",
+                        if (firmware != null) Rpcs.Success else Rpcs.Danger
+                    )
+                    val notifications = Permission.PostNotifications.checkPermission(context)
+                    PaneKeyValue(
+                        "Notifications",
+                        if (notifications) "Granted" else "Not granted",
+                        if (notifications) Rpcs.Success else Rpcs.Warning
+                    )
                 }
-            )
-        }
+            }
 
-        SectionLabel(text = "Storage")
-        SettingGroup {
-            InfoRow(
-                label = "Config writable",
-                value = when (configWritable) {
-                    true -> "Yes"
-                    false -> "No"
-                    null -> "Checking"
+            1 -> {
+                PaneSectionTitle("Configuration")
+                PaneCard {
+                    PaneKeyValue(
+                        "Config writable",
+                        when (configWritable) {
+                            true -> "Yes"
+                            false -> "No"
+                            null -> "Checking"
+                        },
+                        when (configWritable) {
+                            true -> Rpcs.Success
+                            false -> Rpcs.Danger
+                            null -> Rpcs.TextDim
+                        }
+                    )
+                    PaneKeyValue("Per-game configs", customConfigs.toString())
                 }
-            )
-            InfoRow(label = "Per-game configs", value = customConfigs.toString())
-            InfoRow(label = "Config directory", value = RPCS3.rootDirectory + "config")
+                Spacer(Modifier.height(12.dp))
+                PaneSectionTitle("Paths")
+                PaneCard {
+                    PaneKeyValue("Config directory", RPCS3.rootDirectory + "config")
+                }
+            }
+
+            else -> {
+                PaneSectionTitle("Renderer")
+                PaneCard {
+                    PaneKeyValue(
+                        "Custom driver",
+                        if (driver.contains("\"\"") || driver.isEmpty()) "System" else "Custom"
+                    )
+                }
+                if (systemInfo.isNotEmpty()) {
+                    Spacer(Modifier.height(12.dp))
+                    PaneSectionTitle("System")
+                    PaneCard {
+                        systemInfo.lines().filter { it.isNotBlank() }.forEach { line ->
+                            val parts = line.split(":", limit = 2)
+                            if (parts.size == 2) {
+                                PaneKeyValue(parts[0].trim(), parts[1].trim())
+                            } else {
+                                PaneKeyValue(line.trim(), "")
+                            }
+                        }
+                    }
+                }
+            }
         }
 
-        SectionLabel(text = "Graphics")
-        SettingGroup {
-            InfoRow(
-                label = "Custom driver",
-                value = if (driver.contains("\"\"") || driver.isEmpty()) "System" else "Custom"
-            )
-        }
-
-        Spacer(Modifier.height(Dimens.SectionGap))
+        Spacer(Modifier.height(16.dp))
     }
 }

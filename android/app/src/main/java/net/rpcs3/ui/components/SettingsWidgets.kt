@@ -1,5 +1,7 @@
 package net.rpcs3.ui.components
 
+import net.rpcs3.ui.theme.Rpcs
+
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -58,8 +60,8 @@ fun rpcsSwitchColors(): SwitchColors =
         checkedTrackColor = SettingsStyle.AccentBlue,
         checkedBorderColor = Color.Transparent,
         uncheckedThumbColor = SettingsStyle.TextSecondary,
-        uncheckedTrackColor = Color(0xFF212838),
-        uncheckedBorderColor = Color(0xFF35455C),
+        uncheckedTrackColor = Rpcs.SurfaceRaised,
+        uncheckedBorderColor = Rpcs.Outline,
     )
 
 @Composable

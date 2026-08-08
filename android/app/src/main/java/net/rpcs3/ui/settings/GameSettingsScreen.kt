@@ -1,5 +1,7 @@
 package net.rpcs3.ui.settings
 
+import net.rpcs3.ui.theme.Dims
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -242,6 +244,7 @@ fun GameSettingsScreen(
                     .weight(1f)
                     .fillMaxHeight()
                     .background(SettingsStyle.ContentBg)
+                    .widthIn(max = Dims.ContentMaxWidth)
             ) {
                 AnimatedContent(
                     targetState = selected,

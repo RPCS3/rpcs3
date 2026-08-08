@@ -79,7 +79,12 @@ import androidx.core.content.edit
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.compose.material.icons.outlined.Memory
 import net.rpcs3.RPCS3
+import net.rpcs3.ui.components.PaneActionButton
+import net.rpcs3.ui.components.PaneScaffold
+import net.rpcs3.ui.components.PaneSectionTitle
+import net.rpcs3.ui.components.PaneTab
 import net.rpcs3.utils.GpuDriverHelper
 import net.rpcs3.utils.GpuDriverInstallResult
 import net.rpcs3.utils.GpuDriverMetadata
@@ -191,86 +196,61 @@ fun GpuDriversScreen(navigateBack: () -> Unit) {
         )
     }
 
-    Scaffold(snackbarHost = { SnackbarHost(hostState = snackbarHostState) }, topBar = {
-        TopAppBar(
-            title = { Text(text = "GPU Drivers", fontWeight = FontWeight.Medium) },
-            scrollBehavior = topBarScrollBehavior,
-            navigationIcon = {
-                IconButton(
-                    onClick = navigateBack
-                ) {
-                    Icon(imageVector = Icons.AutoMirrored.Default.KeyboardArrowLeft, null)
-                }
-            })
-    }) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
+    Box(modifier = Modifier.fillMaxSize()) {
+        PaneScaffold(
+            title = "GPU Drivers",
+            tabs = listOf(PaneTab("Installed", Icons.Outlined.Memory)),
+            selected = 0,
+            onSelect = {},
+            onBack = navigateBack
         ) {
-            Text(
-                text = "Select a GPU Driver",
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(bottom = 16.dp),
-                color = MaterialTheme.colorScheme.onSurface
+            PaneSectionTitle("Select a GPU driver")
+
+            drivers.entries.toList().forEach { (file, metadata) ->
+                DriverItem(
+                    file = file,
+                    metadata = metadata,
+                    isSelected = metadata.label == selectedDriver,
+                    onSelect = {
+                        selectedDriver = metadata.label
+                        prefs.edit {
+                            putString(
+                                "selected_gpu_driver", selectedDriver ?: ""
+                            )
+                        }
+
+                        val path = if (metadata.name == "Default") "" else file.path
+
+                        coroutineScope.launch(Dispatchers.IO) {
+                            RPCS3.instance.settingsSet("Video@@Vulkan@@Custom Driver@@Path", "\"" + path + "\"", "")
+                            RPCS3.instance.settingsSet("Video@@Vulkan@@Custom Driver@@Internal Data Directory", "\"" + context.filesDir + "\"", "")
+                        }
+                    },
+                    onDelete = if (metadata.name == "Default") null else { driverFile ->
+                        coroutineScope.launch {
+                            if (driverFile.deleteRecursively()) {
+                                drivers = GpuDriverHelper.getInstalledDrivers(context)
+                            }
+                        }
+                    })
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            PaneActionButton(
+                label = if (isInstalling) "Installing…" else "Add driver",
+                icon = Icons.Default.Add,
+                enabled = !isInstalling,
+                onClick = { showDriverDialog = true }
             )
 
-            LazyColumn {
-                items(drivers.entries.toList()) { (file, metadata) ->
-                    DriverItem(
-                        file = file,
-                        metadata = metadata,
-                        isSelected = metadata.label == selectedDriver,
-                        onSelect = {
-                            selectedDriver = metadata.label
-                            prefs.edit {
-                                putString(
-                                    "selected_gpu_driver", selectedDriver ?: ""
-                                )
-                            }
-
-                            val path = if (metadata.name == "Default") "" else file.path
-
-                            coroutineScope.launch(Dispatchers.IO) {
-                                RPCS3.instance.settingsSet("Video@@Vulkan@@Custom Driver@@Path", "\"" + path + "\"", "")
-                                RPCS3.instance.settingsSet("Video@@Vulkan@@Custom Driver@@Internal Data Directory", "\"" + context.filesDir + "\"", "")
-                            }
-                        },
-                        onDelete = if (metadata.name == "Default") null else { driverFile ->
-                            coroutineScope.launch {
-                                if (driverFile.deleteRecursively()) {
-                                    drivers = GpuDriverHelper.getInstalledDrivers(context)
-                                }
-                            }
-                        })
-                }
-            }
-
             Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = { showDriverDialog = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isInstalling) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                ),
-                enabled = !isInstalling
-            ) {
-                if (isInstalling) {
-                    Text("Installing...")
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.Add, contentDescription = "Install Driver"
-                    )
-                }
-            }
-
         }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 }
 

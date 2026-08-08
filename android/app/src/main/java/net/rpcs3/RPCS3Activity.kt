@@ -183,10 +183,24 @@ class RPCS3Activity : ComponentActivity() {
     private val drawerVisible = mutableStateOf(false)
     private val drawerPaused = mutableStateOf(false)
 
+    private fun releaseAllPadInput() {
+        gamePadState.digital[0] = 0
+        gamePadState.digital[1] = 0
+        gamePadState.leftStickX = 127
+        gamePadState.leftStickY = 127
+        gamePadState.rightStickX = 127
+        gamePadState.rightStickY = 127
+        usesAxisL2 = false
+        usesAxisR2 = false
+        sendGamepadData()
+    }
+
     private fun setDrawerVisible(visible: Boolean) {
         if (visible) {
+            releaseAllPadInput()
             drawerPaused.value = RPCS3.getState() == EmulatorState.Paused
             binding.drawerHost.visibility = View.VISIBLE
+            binding.drawerHost.requestFocus()
             drawerVisible.value = true
             return
         }
@@ -270,6 +284,16 @@ class RPCS3Activity : ComponentActivity() {
         if (event == null || (event.source and (InputDevice.SOURCE_GAMEPAD or InputDevice.SOURCE_JOYSTICK or InputDevice.SOURCE_DPAD)) == 0 || event.repeatCount != 0) {
             return super.onKeyDown(keyCode, event)
         }
+
+        if (keyCode == KeyEvent.KEYCODE_BUTTON_MODE) {
+            setDrawerVisible(!drawerVisible.value)
+            return true
+        }
+
+        if (drawerVisible.value) {
+            return super.onKeyDown(keyCode, event)
+        }
+
         val padBit = keyCodeToPadBit(keyCode)
         if (padBit.first == 0) {
             return super.onKeyDown(keyCode, event)
@@ -282,6 +306,14 @@ class RPCS3Activity : ComponentActivity() {
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
         if (event == null || event.source and (InputDevice.SOURCE_GAMEPAD or InputDevice.SOURCE_JOYSTICK or InputDevice.SOURCE_DPAD) == 0) {
+            return super.onKeyUp(keyCode, event)
+        }
+
+        if (keyCode == KeyEvent.KEYCODE_BUTTON_MODE) {
+            return true
+        }
+
+        if (drawerVisible.value) {
             return super.onKeyUp(keyCode, event)
         }
 
@@ -298,6 +330,10 @@ class RPCS3Activity : ComponentActivity() {
 
     override fun onGenericMotionEvent(event: MotionEvent?): Boolean {
         if (event == null || event.source and InputDevice.SOURCE_JOYSTICK != InputDevice.SOURCE_JOYSTICK || event.action != MotionEvent.ACTION_MOVE) {
+            return super.onGenericMotionEvent(event)
+        }
+
+        if (drawerVisible.value) {
             return super.onGenericMotionEvent(event)
         }
 

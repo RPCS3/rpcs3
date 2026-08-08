@@ -7,49 +7,44 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowInsetsControllerCompat
-import net.rpcs3.ui.theme.RpcsAccent
-import net.rpcs3.ui.theme.RpcsBackground
-import net.rpcs3.ui.theme.RpcsDanger
-import net.rpcs3.ui.theme.RpcsOutline
-import net.rpcs3.ui.theme.RpcsPanel
-import net.rpcs3.ui.theme.RpcsSurface
-import net.rpcs3.ui.theme.RpcsSurfaceAlt
-import net.rpcs3.ui.theme.RpcsTextPrimary
-import net.rpcs3.ui.theme.RpcsTextSecondary
+import net.rpcs3.ui.theme.Rpcs
 import net.rpcs3.ui.theme.RpcsTypography
 
 private val RpcsColorScheme =
     darkColorScheme(
-        primary = RpcsAccent,
-        onPrimary = RpcsTextPrimary,
-        primaryContainer = RpcsSurface,
-        onPrimaryContainer = RpcsTextPrimary,
-        secondary = RpcsAccent,
-        onSecondary = RpcsTextPrimary,
-        secondaryContainer = RpcsSurfaceAlt,
-        onSecondaryContainer = RpcsTextPrimary,
-        tertiary = RpcsAccent,
-        onTertiary = RpcsTextPrimary,
-        tertiaryContainer = RpcsSurfaceAlt,
-        onTertiaryContainer = RpcsTextPrimary,
-        errorContainer = RpcsPanel,
-        onErrorContainer = RpcsDanger,
-        inverseSurface = RpcsTextPrimary,
-        inverseOnSurface = RpcsBackground,
-        scrim = RpcsBackground,
-        background = RpcsBackground,
-        onBackground = RpcsTextPrimary,
-        surface = RpcsSurface,
-        onSurface = RpcsTextPrimary,
-        surfaceVariant = RpcsSurfaceAlt,
-        onSurfaceVariant = RpcsTextSecondary,
-        surfaceContainer = RpcsPanel,
-        surfaceContainerHigh = RpcsSurfaceAlt,
-        surfaceContainerLow = RpcsPanel,
-        outline = RpcsOutline,
-        outlineVariant = RpcsOutline,
-        error = RpcsDanger,
-        onError = RpcsTextPrimary,
+        primary = Rpcs.Accent,
+        onPrimary = Rpcs.TextPrimary,
+        primaryContainer = Rpcs.SelectionFill,
+        onPrimaryContainer = Rpcs.Accent,
+        inversePrimary = Rpcs.AccentBright,
+        secondary = Rpcs.AccentBright,
+        onSecondary = Rpcs.TextPrimary,
+        secondaryContainer = Rpcs.SelectionFill,
+        onSecondaryContainer = Rpcs.AccentBright,
+        tertiary = Rpcs.Accent,
+        onTertiary = Rpcs.TextPrimary,
+        tertiaryContainer = Rpcs.SelectionFill,
+        onTertiaryContainer = Rpcs.Accent,
+        errorContainer = Rpcs.Danger.copy(alpha = 0.16f),
+        onErrorContainer = Rpcs.Danger,
+        inverseSurface = Rpcs.TextPrimary,
+        inverseOnSurface = Rpcs.Background,
+        scrim = Rpcs.Background,
+        background = Rpcs.Background,
+        onBackground = Rpcs.TextPrimary,
+        surface = Rpcs.Surface,
+        onSurface = Rpcs.TextPrimary,
+        surfaceVariant = Rpcs.SurfaceRaised,
+        onSurfaceVariant = Rpcs.TextSecondary,
+        surfaceContainerLowest = Rpcs.Background,
+        surfaceContainerLow = Rpcs.Surface,
+        surfaceContainer = Rpcs.Surface,
+        surfaceContainerHigh = Rpcs.SurfaceRaised,
+        surfaceContainerHighest = Rpcs.SurfaceRaised,
+        outline = Rpcs.Outline,
+        outlineVariant = Rpcs.OutlineSoft,
+        error = Rpcs.Danger,
+        onError = Rpcs.TextPrimary,
     )
 
 @Composable

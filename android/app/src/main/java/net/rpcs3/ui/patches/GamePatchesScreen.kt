@@ -21,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Healing
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -28,8 +29,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,15 +41,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.rpcs3.RPCS3
+import net.rpcs3.ui.components.PaneCard
+import net.rpcs3.ui.components.PaneScaffold
+import net.rpcs3.ui.components.PaneSectionTitle
+import net.rpcs3.ui.components.PaneTab
 import net.rpcs3.ui.components.SectionLabel
 import net.rpcs3.ui.components.SettingGroup
 import net.rpcs3.ui.components.SettingSwitch
 import net.rpcs3.ui.theme.Dimens
+import net.rpcs3.ui.theme.Rpcs
 import net.rpcs3.ui.theme.SettingsStyle
 import org.json.JSONArray
 import org.json.JSONObject
@@ -100,81 +107,53 @@ fun GamePatchesScreen(
         loading = false
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(SettingsStyle.BgDeep)
-            .windowInsetsPadding(WindowInsets.systemBars)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(SettingsStyle.SidebarBg)
-                .padding(horizontal = 8.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (onClose != null) {
-                IconButton(onClick = onClose) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                        contentDescription = "Back",
-                        tint = SettingsStyle.TextPrimary
-                    )
-                }
-            }
-            Column(modifier = Modifier.weight(1f).padding(start = 4.dp)) {
-                Text(
-                    text = "Patches",
-                    color = SettingsStyle.TextPrimary,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = titleId,
-                    color = SettingsStyle.TextSecondary,
-                    fontSize = 11.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
+    val grouped = remember(patches) {
+        patches.groupBy { it.group.ifEmpty { "Ungrouped" } }.toList().sortedBy { it.first }
+    }
+    var selected by remember(grouped) { mutableIntStateOf(0) }
 
+    if (loading) {
         Box(
-            Modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(SettingsStyle.Divider)
-        )
-
-        if (loading) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = SettingsStyle.AccentBlue)
-            }
-            return@Column
-        }
-
-        if (patches.isEmpty()) {
-            EmptyPatches()
-            return@Column
-        }
-
-        Column(
-            modifier = Modifier
+            modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(Dimens.SectionGap)
+                .background(Rpcs.Background),
+            contentAlignment = Alignment.Center
         ) {
-            patches.groupBy { it.group.ifEmpty { "Ungrouped" } }.forEach { (group, entries) ->
-                SectionLabel(text = group)
-                SettingGroup {
-                    entries.forEach { patch ->
-                        PatchRow(titleId = titleId, patch = patch)
-                    }
-                }
-            }
-            Spacer(Modifier.height(Dimens.SectionGap))
+            CircularProgressIndicator(color = Rpcs.Accent)
         }
+        return
+    }
+
+    if (grouped.isEmpty()) {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .background(Rpcs.Background)
+                .windowInsetsPadding(WindowInsets.systemBars)
+        ) {
+            EmptyPatches()
+        }
+        return
+    }
+
+    PaneScaffold(
+        title = "Patches · $titleId",
+        tabs = grouped.map { PaneTab(it.first, Icons.Outlined.Tune) },
+        selected = selected.coerceIn(0, grouped.lastIndex),
+        onSelect = { selected = it },
+        onBack = onClose,
+        modifier = modifier
+    ) {
+        val entries = grouped[selected.coerceIn(0, grouped.lastIndex)].second
+
+        PaneSectionTitle("${entries.size} patch${if (entries.size == 1) "" else "es"}")
+        PaneCard {
+            entries.forEach { patch ->
+                PatchRow(titleId = titleId, patch = patch)
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
     }
 }
 
