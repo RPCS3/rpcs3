@@ -51,6 +51,11 @@ struct ppu_thread_cleaner
 	}
 };
 
+extern shared_ptr<named_thread<ppu_thread>> use_ppu_thread_cleaner(u32 id)
+{
+	return g_fxo->get<ppu_thread_cleaner>().clean(idm::withdraw<named_thread<ppu_thread>>(id, 0, std::false_type{}));
+}
+
 void ppu_thread_exit(ppu_thread& ppu, ppu_opcode_t, be_t<u32>*, struct ppu_intrp_func*)
 {
 	ppu.state += cpu_flag::exit + cpu_flag::wait;

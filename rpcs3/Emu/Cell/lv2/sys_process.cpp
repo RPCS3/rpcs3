@@ -135,6 +135,8 @@ u64 lv2_process::ki11_self()
 
 	const u64 start_time = get_system_time();
 
+	ppu_thread& this_ppu = *cpu_thread::get_current<ppu_thread>();
+
 	std::map<u32, shared_ptr<cpu_thread>> terminate_threads;
 
 	while (true)
@@ -170,7 +172,7 @@ u64 lv2_process::ki11_self()
 		// Join threads
 		for (auto& cpu : terminate_threads)
 		{
-			if (cpu.second->try_get<ppu_thread>() && cpu.second.get() != cpu_thread::get_current())
+			if (cpu.second->try_get<ppu_thread>() && cpu.second.get() != &this_ppu)
 			{
 				static_cast<named_thread<ppu_thread>&>(*cpu.second).operator()();
 			}
@@ -186,18 +188,59 @@ u64 lv2_process::ki11_self()
 			continue;
 		}
 
-		// Clean mmapper handles
-		idm::select<lv2_memory>([&](u32, lv2_memory& mem)
-		{
-			mem.counters.erase(id_manager::g_process);
-		});
-
 		break;
+	}
+
+	std::vector<u32> IDs;
+
+	auto remove_handles = [&](std::function<void(u32)> syscall_func)
+	{
+		for (u32 id : IDs)
+		{
+			syscall_func(id);
+		}
+
+		// Clean list for tthe next round
+		IDs.clear();
+	};
+
+	// Clean mmapper handles
+	idm::select<lv2_memory>([&](u32 id, lv2_memory& mem)
+	{
+		mem.counters.at(id_manager::g_process) = 0;
+		IDs.emplace_back(id);
+	});
+
+	remove_handles(FN(sys_mmapper_free_shared_memory(this_ppu, x)));
+
+	// Clean sys_memory
+	extern void clean_sys_memory(lv2_process* process);
+	clean_sys_memory(this);
+
+	// Clean PPU threads
+	void ppu_thread_exit(ppu_thread& ppu, ppu_opcode_t, be_t<u32>*, struct ppu_intrp_func*);
+
+	idm::select<named_thread<ppu_thread>>([&](u32 id, ppu_thread& ppu)
+	{
+		ppu_thread_exit(ppu, {}, nullptr, nullptr);
+		IDs.emplace_back(id);
+	});
+
+	remove_handles(FN(this_ppu.id == x ? true : ensure(idm::remove<named_thread<ppu_thread>>(x))));
+
+	extern shared_ptr<named_thread<ppu_thread>> use_ppu_thread_cleaner(u32 id);
+
+	shared_ptr<named_thread<ppu_thread>> old_ppu;
+
+	if (this_ppu.vm_base == memory_4GB_model->base_addr)
+	{
+		std::lock_guard idm_full_lock(id_manager::g_mutex);
+		old_ppu = use_ppu_thread_cleaner(this_ppu.id);
 	}
 
 	if (parent_memory_container)
 	{
-		parent_memory_container->free(used_mewmory);
+		parent_memory_container->free(used_memory);
 	}
 
 	// Returns the time this process took

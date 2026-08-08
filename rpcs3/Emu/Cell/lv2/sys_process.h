@@ -127,8 +127,8 @@ struct lv2_process : public ppu_module<lv2_obj>
 	// Current process is oblivious to its ID
 	shared_ptr<lv2_memory_container> parent_memory_container;
 
-	// Mmemory to return when process is killed to the parent memory container
-	u32 used_mewmory = 0;
+	// Mmmory to return when process is killed to the parent memory container
+	u32 used_memory = 0;
 
 	// RSX proces-local information
 	std::shared_ptr<lv2_rsx_process_info> rsx_info;

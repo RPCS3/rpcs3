@@ -65,6 +65,8 @@ lv2_memory_container* lv2_memory_container::search(u32 id)
 	return idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->parent_memory_container.get();
 }
 
+static std::string make_named_allocation(u32 addr, [[maybe_unused]] u32 amount);
+
 struct sys_memory_address_table
 {
 	atomic_t<lv2_memory_container*> addrs[65536]{};
@@ -160,9 +162,36 @@ struct sys_memory_address_table
 		fmt::throw_exception("Uncharted area of allocations (size=0x%x, align=0x%x)", size, align);
 		return 0;
 	}
+
+	int operator=(thread_state s) noexcept
+	{
+		if (s == thread_state::finished)
+		{
+			for (u32 i = 0; i <= u32{umax} / 65536; i++)
+			{
+				if (auto ptr = addrs[i].exchange(nullptr))
+				{
+					const u32 addr = i * 65536;
+					const u32 size = ensure(vm::dealloc(addr));
+
+					ptr->free(size);
+					ptr->free_named(make_named_allocation(addr, size), size);
+				}
+			}
+		}
+
+		return 0;
+	}
 };
 
-u32 allocate_user_memory(u32 size, u32 align)
+u32 allocate_user_memory(u32 size, u32 align);
+
+extern void clean_sys_memory(lv2_process* process)
+{
+	process->local_typemap->get<sys_memory_address_table>() = thread_state::finished;
+}
+
+std::shared_ptr<vm::block_t> reserve_map(u32 alloc_size, u32 align)
 {
 	return g_fxo->get<sys_memory_address_table>().allocate(size, align);
 }

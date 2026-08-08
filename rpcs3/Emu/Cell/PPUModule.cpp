@@ -3029,6 +3029,9 @@ shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2
 		process_ptr->provided_paramsfo = std::make_unique<std::array<u8, 0x40>>(paramsfo);
 	}
 
+	process_ptr->used_memory = segs_size;
+	ppu_log.notice("ELF memory consumption for process: 0x%x", segs_size);
+ 
 	ensure(process_ptr->parent_memory_container->take(primary_stacksize + segs_size));
 
 	if (Emu.IsReady())
