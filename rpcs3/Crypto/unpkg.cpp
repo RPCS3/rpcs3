@@ -190,7 +190,8 @@ bool package_reader::read_header()
 		m_file = fs::make_gather(std::move(filelist));
 	}
 
-	if (m_header.data_size + m_header.data_offset > m_header.pkg_size)
+	if ((m_header.data_size + m_header.data_offset) > m_header.pkg_size ||
+		m_header.data_size > (u64{umax} - m_header.data_offset)) // Check for overflow
 	{
 		pkg_log.error("PKG data size mismatch (data_size=0x%llx, data_offset=0x%llx, file_size=0x%llx)", m_header.data_size, m_header.data_offset, m_header.pkg_size);
 		return false;
