@@ -31,6 +31,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/RSX/Capture/rsx_replay.h"
 #include "Emu/RSX/Overlays/overlay_message.h"
+#include "Emu/RSX/Overlays/BigPicture/overlay_big_picture.h"
 
 #include "Loader/PSF.h"
 #include "Loader/TAR.h"
@@ -947,6 +948,65 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	m_state.notify_all();
 
 	ensure(g_fxo->init<named_thread<rsx::rsx_replay_thread>>("RSX Replay", std::move(frame)));
+
+	return true;
+}
+
+bool Emulator::BootBigPictureMode()
+{
+	if (m_state != system_state::stopped || m_restrict_emu_state_change)
+	{
+		sys_log.error("Big Picture Mode: cannot boot, state=%d, restricted=%d", static_cast<u32>(m_state.load()), +m_restrict_emu_state_change);
+		return false;
+	}
+
+	sys_log.notice("Big Picture Mode: booting shell");
+
+	m_state = system_state::loading;
+
+	m_path.clear();
+	m_path_old.clear();
+	m_path_original.clear();
+	m_path_real.clear();
+	m_title_id.clear();
+	m_title.clear();
+	m_localized_title.clear();
+	m_app_version.clear();
+	m_hash.clear();
+	m_cat.clear();
+	m_dir.clear();
+	m_sfo_dir.clear();
+	m_ar.reset();
+
+	Init();
+	g_cfg.video.disable_on_disk_shader_cache.set(true);
+
+	vm::init();
+	g_fxo->init(false);
+
+	// Initialize progress dialog
+	g_fxo->init<named_thread<progress_dialog_server>>();
+
+	// Initialize performance monitor
+	g_fxo->init<named_thread<perf_monitor>>();
+
+	// No PS3 executable is loaded. GSRender/pad_thread only exist to host the Big Picture Mode overlay.
+	m_state = system_state::ready;
+	GetCallbacks().on_ready();
+
+	GetCallbacks().init_gs_render(nullptr);
+	GetCallbacks().init_pad_handler("");
+
+	GetCallbacks().on_run(false);
+	m_state = system_state::starting;
+	m_state.notify_all();
+
+	ensure(g_fxo->init<named_thread>("Big Picture Mode"sv, []()
+	{
+		rsx::overlays::open_big_picture_mode();
+	}));
+
+	sys_log.notice("Big Picture Mode: shell booted successfully");
 
 	return true;
 }

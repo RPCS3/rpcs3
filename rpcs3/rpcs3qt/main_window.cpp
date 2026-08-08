@@ -107,6 +107,7 @@ LOG_CHANNEL(gui_log, "GUI");
 
 extern atomic_t<bool> g_user_asked_for_frame_capture;
 extern atomic_t<bool> g_headless;
+extern atomic_t<bool> g_big_picture_mode_active;
 
 class CPUDisAsm;
 std::shared_ptr<CPUDisAsm> make_basic_ppu_disasm();
@@ -301,6 +302,12 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 	update_gui_pad_thread();
 
 	show();
+
+	// Don't override an explicit CLI boot request.
+	if (!with_cli_boot && g_cfg.misc.start_big_picture_mode && !Emu.IsBootingRestricted() && Emu.IsStopped())
+	{
+		Emu.BootBigPictureMode();
+	}
 
 	return true;
 }
@@ -550,6 +557,9 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 	{
 		return;
 	}
+
+	// A manual boot from the game list bypasses Big Picture Mode, so exiting it shouldn't relaunch Big Picture Mode.
+	g_big_picture_mode_active = false;
 
 	Emu.GracefulShutdown(false);
 
@@ -3440,6 +3450,26 @@ void main_window::CreateConnects()
 	{
 		checked ? m_debugger_frame->show() : m_debugger_frame->hide();
 		m_gui_settings->SetValue(gui::mw_debugger, checked);
+	});
+
+	connect(ui->bigPictureModeAct, &QAction::triggered, this, [this]()
+	{
+		if (Emu.IsBootingRestricted())
+		{
+			return;
+		}
+
+		if (!m_gui_settings->GetBootConfirmation(this, gui::ib_confirm_boot))
+		{
+			return;
+		}
+
+		Emu.GracefulShutdown(false);
+
+		if (!Emu.BootBigPictureMode())
+		{
+			gui_log.error("Failed to start Big Picture Mode.");
+		}
 	});
 
 	connect(ui->showLogAct, &QAction::triggered, this, [this](bool checked)
