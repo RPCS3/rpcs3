@@ -250,7 +250,7 @@ class PadOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(context,
             ),
 
             createButton(
-                R.mipmap.ic_launcher_round,
+                R.drawable.ic_ps_button,
                 btnHomeX,
                 btnHomeY,
                 buttonSize,
@@ -476,19 +476,15 @@ class PadOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(context,
     }
 
     private fun getBitmap(resourceId: Int, width: Int, height: Int): Bitmap {
-        return when (val drawable = ContextCompat.getDrawable(context, resourceId)) {
-            is BitmapDrawable -> {
-                BitmapFactory.decodeResource(context.resources, resourceId).scale(width, height)
-            }
+        val drawable = ContextCompat.getDrawable(context, resourceId)
+            ?: throw IllegalArgumentException("missing drawable $resourceId")
 
-            is VectorDrawable -> {
-                drawable.toBitmap(width, height)
-            }
-
-            else -> {
-                throw IllegalArgumentException("unexpected drawable type")
-            }
+        val bitmap = (drawable as? BitmapDrawable)?.bitmap
+        if (bitmap != null) {
+            return bitmap.scale(width, height)
         }
+
+        return drawable.toBitmap(width, height)
     }
 
     private fun createButton(

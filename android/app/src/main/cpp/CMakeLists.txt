@@ -103,4 +103,5 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     3rdparty::libcurl
     3rdparty::zlib
     3rdparty::fusion
+    3rdparty::yaml-cpp
 )

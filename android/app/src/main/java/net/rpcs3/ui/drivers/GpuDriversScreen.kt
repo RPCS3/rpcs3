@@ -231,9 +231,10 @@ fun GpuDriversScreen(navigateBack: () -> Unit) {
 
                             val path = if (metadata.name == "Default") "" else file.path
 
-                            Log.e("Driver", "path $path, internal data dir ${context.filesDir}")
-                            RPCS3.instance.settingsSet("Video@@Vulkan@@Custom Driver@@Path", "\"" + path + "\"", "")
-                            RPCS3.instance.settingsSet("Video@@Vulkan@@Custom Driver@@Internal Data Directory", "\"" + context.filesDir + "\"", "")
+                            coroutineScope.launch(Dispatchers.IO) {
+                                RPCS3.instance.settingsSet("Video@@Vulkan@@Custom Driver@@Path", "\"" + path + "\"", "")
+                                RPCS3.instance.settingsSet("Video@@Vulkan@@Custom Driver@@Internal Data Directory", "\"" + context.filesDir + "\"", "")
+                            }
                         },
                         onDelete = if (metadata.name == "Default") null else { driverFile ->
                             coroutineScope.launch {

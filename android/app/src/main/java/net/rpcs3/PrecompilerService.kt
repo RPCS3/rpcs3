@@ -13,7 +13,8 @@ import kotlin.concurrent.thread
 
 enum class PrecompilerServiceAction {
     InstallFirmware,
-    Install
+    Install,
+    AddIso
 }
 
 class PrecompilerService : Service() {
@@ -60,12 +61,27 @@ class PrecompilerService : Service() {
         super.onCreate()
     }
 
-    fun install(isFw: Boolean, uri: Uri, installProgress: Long): Boolean {
-        val descriptor = contentResolver.openAssetFileDescriptor(uri, "r")
-        val fd = descriptor?.parcelFileDescriptor?.fd
+    fun install(isFw: Boolean, uri: Uri, installProgress: Long): Boolean =
+        install(if (isFw) Mode.Firmware else Mode.Package, uri, installProgress)
+
+    enum class Mode { Firmware, Package, AddIso }
+
+    fun install(mode: Mode, uri: Uri, installProgress: Long): Boolean {
+        val parcel = if (mode == Mode.AddIso) {
+            contentResolver.openFileDescriptor(uri, "r")
+        } else {
+            null
+        }
+        val descriptor = if (parcel == null) {
+            contentResolver.openAssetFileDescriptor(uri, "r")
+        } else {
+            null
+        }
+        val fd = parcel?.fd ?: descriptor?.parcelFileDescriptor?.fd
 
         if (fd == null) {
             try {
+                parcel?.close()
                 descriptor?.close()
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -74,11 +90,11 @@ class PrecompilerService : Service() {
             return false
         }
 
-        val installResult =
-            if (isFw)
-                RPCS3.instance.installFw(fd, installProgress)
-            else
-                RPCS3.instance.install(fd, installProgress)
+        val installResult = when (mode) {
+            Mode.Firmware -> RPCS3.instance.installFw(fd, installProgress)
+            Mode.AddIso -> RPCS3.instance.addIsoEntry(fd, installProgress)
+            Mode.Package -> RPCS3.instance.install(fd, installProgress)
+        }
 
         if (!installResult) {
             try {
@@ -89,7 +105,8 @@ class PrecompilerService : Service() {
         }
 
         try {
-            descriptor.close()
+            parcel?.close()
+            descriptor?.close()
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -102,6 +119,11 @@ class PrecompilerService : Service() {
         val uri = intent?.getParcelableExtra<Uri>("uri")
         val action = intent?.getIntExtra("action", 0)
         val isFwInstall = action == PrecompilerServiceAction.InstallFirmware.ordinal
+        val mode = when (action) {
+            PrecompilerServiceAction.InstallFirmware.ordinal -> Mode.Firmware
+            PrecompilerServiceAction.AddIso.ordinal -> Mode.AddIso
+            else -> Mode.Package
+        }
 
         if (uri == null && batch == null) {
             stopSelf(startId)
@@ -111,7 +133,11 @@ class PrecompilerService : Service() {
         val installProgress =
             ProgressRepository.create(
                 this,
-                if (isFwInstall) "Firmware Installation" else "Package Installation"
+                when (mode) {
+                    Mode.Firmware -> "Firmware Installation"
+                    Mode.AddIso -> "Adding disc image"
+                    Mode.Package -> "Package Installation"
+                }
             ) { entry ->
                 if (entry.isFinished()) {
                     if (isFwInstall) {
@@ -144,10 +170,10 @@ class PrecompilerService : Service() {
         thread {
             var installResult = false
             if (uri != null) {
-                installResult = install(isFwInstall, uri, installProgress)
+                installResult = install(mode, uri, installProgress)
             } else batch?.forEach { uri ->
                 // FIXME: create child progress
-                if (install(isFwInstall, uri, installProgress)) {
+                if (install(mode, uri, installProgress)) {
                     installResult = true
                 }
             }

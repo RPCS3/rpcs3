@@ -53,11 +53,12 @@ class ProgressRepository {
         fun onProgressEvent(id: Long, value: Long, max: Long, message: String? = null): Boolean {
             val item = instance.progressHandlers[id] ?: return false
 
-            item.progressEntry.value.apply {
-                this.value.longValue = value
-                this.max.longValue = max
-                this.message.value = message ?: this.message.value
-            }
+            val previous = item.progressEntry.value
+            item.progressEntry.value = ProgressEntry(
+                mutableLongStateOf(value),
+                mutableLongStateOf(max),
+                mutableStateOf(message ?: previous.message.value)
+            )
 
             item.handler(ProgressUpdateEntry(value, max, item.progressEntry.value.message.value))
 

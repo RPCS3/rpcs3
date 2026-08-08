@@ -25,6 +25,7 @@ class FirmwareRepository {
         val progressChannel: MutableState<Long?> = mutableStateOf(null)
         val version: MutableState<String?> = mutableStateOf(null)
         val status: MutableState<FirmwareStatus> = mutableStateOf(FirmwareStatus.None)
+        val loaded: MutableState<Boolean> = mutableStateOf(false)
 
         fun save() {
                 try {
@@ -49,10 +50,14 @@ class FirmwareRepository {
                     e.printStackTrace()
                     null
                 }
-            } ?: return
+            }
 
-            status.value = info.status
-            version.value = info.version
+            if (info != null) {
+                status.value = info.status
+                version.value = info.version
+            }
+
+            loaded.value = true
         }
 
         @Keep

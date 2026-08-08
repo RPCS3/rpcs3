@@ -3,6 +3,7 @@ package net.rpcs3
 import androidx.activity.ComponentActivity
 import android.os.Handler
 import android.os.Looper
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.InputDevice
@@ -28,6 +29,7 @@ import kotlin.math.abs
 class RPCS3Activity : ComponentActivity() {
     private lateinit var binding: ActivityRpcs3Binding
     private lateinit var unregisterUsbEventListener: () -> Unit
+    private var isoDescriptor: android.os.ParcelFileDescriptor? = null
     private var gamePadState: State = State()
     private var usesAxisL2 = false
     private var usesAxisR2 = false
@@ -53,7 +55,7 @@ class RPCS3Activity : ComponentActivity() {
             RPCS3Theme {
                 InGameDrawer(
                     visible = drawerVisible.value,
-                    titleId = intent.getStringExtra("path")?.substringAfterLast('/').orEmpty(),
+                    titleId = gameTitleId(intent.getStringExtra("path").orEmpty()),
                     paused = drawerPaused.value,
                     onDismiss = { setDrawerVisible(false) },
                     onTogglePause = {
@@ -68,7 +70,19 @@ class RPCS3Activity : ComponentActivity() {
                     },
                     onExit = {
                         setDrawerVisible(false)
-                        thread { RPCS3.instance.kill() }
+                        thread {
+                            RPCS3.instance.kill()
+
+                            var waited = 0
+                            while (RPCS3.getState() != EmulatorState.Stopped && waited < 15000) {
+                                Thread.sleep(100)
+                                waited += 100
+                            }
+
+                            RPCS3.activeGame.value = null
+                            RPCS3.state.value = EmulatorState.Stopped
+                            runOnUiThread { finish() }
+                        }
                     }
                 )
             }
@@ -87,7 +101,20 @@ class RPCS3Activity : ComponentActivity() {
 
         binding.oscToggle.post { placeToggleBesideR3() }
 
-        val gamePath = intent.getStringExtra("path")!!
+        val isoUriString = intent.getStringExtra("isoUri")
+        val gamePath = intent.getStringExtra("path") ?: isoUriString!!
+
+        if (isoUriString != null) {
+            isoDescriptor = runCatching {
+                contentResolver.openFileDescriptor(Uri.parse(isoUriString), "r")
+            }.getOrNull()
+
+            if (isoDescriptor == null) {
+                AlertDialogQueue.showDialog("Boot Failed", "Could not open the selected disc image")
+                finish()
+                return
+            }
+        }
 
 
         bootThread = thread {
@@ -115,7 +142,12 @@ class RPCS3Activity : ComponentActivity() {
             Log.w("RPCS3 State", RPCS3.getState().name)
             RPCS3.activeGame.value = gamePath
 
-            val bootResult = RPCS3.boot(gamePath)
+            val descriptor = isoDescriptor
+            val bootResult = if (descriptor != null) {
+                BootResult.fromInt(RPCS3.instance.bootIso(descriptor.fd))
+            } else {
+                RPCS3.boot(gamePath)
+            }
             if (bootResult != BootResult.NoErrors) {
                 AlertDialogQueue.showDialog("Boot Failed", "Error: ${bootResult.name}")
                 finish()
@@ -190,10 +222,16 @@ class RPCS3Activity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         RPCS3.onEmulationStopped = null
-        RPCS3.state.value = EmulatorState.Paused
+        if (RPCS3.getState() != EmulatorState.Stopped) {
+            RPCS3.state.value = EmulatorState.Paused
+        } else {
+            RPCS3.activeGame.value = null
+        }
         unregisterUsbEventListener()
         bootThread?.interrupt()
         bootThread?.join()
+        runCatching { isoDescriptor?.close() }
+        isoDescriptor = null
     }
 
 

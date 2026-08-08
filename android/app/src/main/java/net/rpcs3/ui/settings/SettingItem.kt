@@ -10,6 +10,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import net.rpcs3.dialogs.AlertDialogQueue
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.rpcs3.RPCS3
 import net.rpcs3.ui.components.SettingDropdown
 import net.rpcs3.ui.components.SettingSlider
@@ -24,12 +29,30 @@ private fun variantsOf(item: JSONObject): List<String> {
     return List(array.length()) { array.optString(it, "") }
 }
 
+private val settingsWriter = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
 private fun commit(path: String, value: String, titleId: String, label: String): Boolean {
-    val ok = RPCS3.instance.settingsSet(path, value, titleId)
-    if (!ok) {
-        AlertDialogQueue.showDialog("Setting error", "Failed to assign $label")
+    settingsWriter.launch {
+        if (!RPCS3.instance.settingsSet(path, value, titleId)) {
+            withContext(Dispatchers.Main) {
+                AlertDialogQueue.showDialog("Setting error", "Failed to assign $label")
+            }
+            return@launch
+        }
+
+        RPCS3.instance.settingsFlush()
+
+        RPCS3.instance.takeSettingsSaveFailure()?.let { target ->
+            withContext(Dispatchers.Main) {
+                AlertDialogQueue.showDialog(
+                    "Settings not saved",
+                    "PS3Native could not write $target. The change will be lost when you " +
+                        "close the app."
+                )
+            }
+        }
     }
-    return ok
+    return true
 }
 
 @Composable

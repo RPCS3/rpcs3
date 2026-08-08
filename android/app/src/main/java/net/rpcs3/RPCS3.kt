@@ -83,6 +83,21 @@ class RPCS3 {
     external fun overlayPadData(digital1: Int, digital2: Int, leftStickX: Int, leftStickY: Int, rightStickX: Int, rightStickY: Int): Boolean
     external fun collectGameInfo(rootDir: String, progressId: Long): Boolean
     external fun systemInfo(): String
+    external fun takeSettingsSaveFailure(): String?
+    external fun bootIso(fd: Int): Int
+    external fun addIsoEntry(fd: Int, progressId: Long): Boolean
+
+    external fun patchesGet(titleId: String): String
+    external fun patchSet(
+        titleId: String,
+        hash: String,
+        description: String,
+        title: String,
+        serial: String,
+        appVersion: String,
+        enabled: Boolean
+    ): Boolean
+
     external fun settingsGet(path: String, titleId: String): String
     external fun settingsSet(path: String, value: String, titleId: String): Boolean
     external fun settingsFlush()

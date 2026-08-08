@@ -179,7 +179,6 @@ fun AdvancedSettingsScreen(
                                     title = key,
                                     leadingIcon = null,
                                     onClick = {
-                                        Log.e("Main", "Navigate to settings$itemPath, object $itemObject")
                                         navigateTo("settings$itemPath")
                                     }
                                 )  

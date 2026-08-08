@@ -26,6 +26,9 @@
 #include "Emu/system_config.h"
 #include "Emu/system_config_types.h"
 #include "Emu/system_progress.hpp"
+#include "Utilities/bin_patch.h"
+#include "Loader/ISO.h"
+#include <climits>
 #include "Emu/system_utils.hpp"
 #include "Emu/VFS.h"
 #include "Emu/vfs_config.h"
@@ -2487,6 +2490,8 @@ static bool g_save_busy = false;
 static bool g_save_now = false;
 static std::once_flag g_save_once;
 
+static std::string g_save_failure;
+
 static void settings_save_loop() {
   pthread_setname_np(pthread_self(), "rpcs3-cfgsave");
   std::unique_lock lock(g_save_mutex);
@@ -2502,7 +2507,20 @@ static void settings_save_loop() {
 
     lock.unlock();
     for (const auto &[title, data] : batch) {
+      if (!title.empty()) {
+        fs::create_path(rpcs3::utils::get_custom_config_dir());
+      }
+
       Emulator::SaveSettings(data, title);
+
+      const std::string written =
+          title.empty() ? fs::get_config_dir(true) + "config.yml"
+                        : rpcs3::utils::get_custom_config_path(title);
+
+      if (!fs::is_file(written)) {
+        rpcs3_android.error("settings save failed: %s", written);
+        g_save_failure = written;
+      }
     }
     lock.lock();
 
@@ -2589,4 +2607,258 @@ extern "C" JNIEXPORT jboolean JNICALL
 Java_net_rpcs3_RPCS3_supportsCustomDriverLoading(JNIEnv *env,
                                                  jobject instance) {
   return access("/dev/kgsl-3d0", F_OK) == 0;
+}
+
+static patch_engine::patch_map loadAllPatches() {
+  patch_engine::patch_map result;
+
+  const std::string dir = patch_engine::get_patches_path();
+
+  if (fs::is_dir(dir)) {
+    for (auto &&entry : fs::dir(dir)) {
+      if (entry.is_directory || !entry.name.ends_with(".yml")) {
+        continue;
+      }
+      patch_engine::load(result, dir + entry.name);
+    }
+  }
+
+  const std::string imported = patch_engine::get_imported_patch_path();
+
+  if (fs::is_file(imported)) {
+    patch_engine::load(result, imported);
+  }
+
+  return result;
+}
+
+static bool patchAppliesTo(const std::string &serial, const std::string &titleId) {
+  return serial == patch_key::all || serial == titleId;
+}
+
+extern "C" JNIEXPORT jstring JNICALL Java_net_rpcs3_RPCS3_patchesGet(
+    JNIEnv *env, jobject, jstring jtitleId) {
+  const std::string titleId = unwrap(env, jtitleId);
+  auto array = nlohmann::json::array();
+
+  try {
+    auto patches = loadAllPatches();
+
+    for (const auto &[hash, container] : patches) {
+      for (const auto &[description, info] : container.patch_info_map) {
+        for (const auto &[title, serials] : info.titles) {
+          for (const auto &[serial, app_versions] : serials) {
+            if (!patchAppliesTo(serial, titleId)) {
+              continue;
+            }
+
+            for (const auto &[app_version, values] : app_versions) {
+              array.push_back({
+                  {"hash", hash},
+                  {"description", description},
+                  {"title", title},
+                  {"serial", serial},
+                  {"appVersion", app_version},
+                  {"author", info.author},
+                  {"notes", info.notes},
+                  {"group", info.patch_group},
+                  {"patchVersion", info.patch_version},
+                  {"enabled", values.enabled},
+              });
+            }
+          }
+        }
+      }
+    }
+  } catch (const std::exception &e) {
+    rpcs3_android.error("patchesGet failed: %s", e.what());
+    return wrap(env, nlohmann::json::array().dump());
+  } catch (...) {
+    rpcs3_android.error("patchesGet failed");
+    return wrap(env, nlohmann::json::array().dump());
+  }
+
+  return wrap(env, array.dump());
+}
+
+extern "C" JNIEXPORT jboolean JNICALL Java_net_rpcs3_RPCS3_patchSet(
+    JNIEnv *env, jobject, jstring jtitleId, jstring jhash,
+    jstring jdescription, jstring jtitle, jstring jserial,
+    jstring jappVersion, jboolean enabled) {
+  const std::string hash = unwrap(env, jhash);
+  const std::string description = unwrap(env, jdescription);
+  const std::string title = unwrap(env, jtitle);
+  const std::string serial = unwrap(env, jserial);
+  const std::string appVersion = unwrap(env, jappVersion);
+
+  try {
+    auto patches = loadAllPatches();
+
+    auto container = patches.find(hash);
+    if (container == patches.end()) {
+      return false;
+    }
+
+    auto info = container->second.patch_info_map.find(description);
+    if (info == container->second.patch_info_map.end()) {
+      return false;
+    }
+
+    info->second.titles[title][serial][appVersion].enabled = enabled;
+    patch_engine::save_config(patches);
+  } catch (const std::exception &e) {
+    rpcs3_android.error("patchSet failed: %s", e.what());
+    return false;
+  } catch (...) {
+    rpcs3_android.error("patchSet failed");
+    return false;
+  }
+
+  return true;
+}
+
+
+static std::string resolveDescriptorPath(int fd) {
+  const std::string procPath = "/proc/self/fd/" + std::to_string(fd);
+  char resolved[PATH_MAX]{};
+  const ssize_t length = ::readlink(procPath.c_str(), resolved, sizeof(resolved) - 1);
+
+  if (length <= 0) {
+    return {};
+  }
+
+  const std::string link(resolved, static_cast<std::size_t>(length));
+  std::vector<std::string> candidates{link};
+
+  auto reroot = [&](std::string_view prefix, bool dropFirstSegment) {
+    if (!link.starts_with(prefix)) {
+      return;
+    }
+
+    std::string rest = link.substr(prefix.size());
+
+    if (dropFirstSegment) {
+      const auto slash = rest.find('/');
+      if (slash == std::string::npos) {
+        return;
+      }
+      rest = rest.substr(slash + 1);
+    }
+
+    candidates.push_back("/storage/" + rest);
+  };
+
+  reroot("/mnt/user/", true);
+  reroot("/mnt/runtime/", true);
+  reroot("/mnt/androidwritable/", true);
+  reroot("/mnt/media_rw/", false);
+
+  for (const auto &candidate : candidates) {
+    if (is_iso_file(candidate)) {
+      rpcs3_android.notice("resolveDescriptorPath: '%s' -> '%s'", link, candidate);
+      return candidate;
+    }
+  }
+
+  rpcs3_android.error("resolveDescriptorPath: no readable path for '%s'", link);
+  return {};
+}
+
+extern "C" JNIEXPORT jint JNICALL Java_net_rpcs3_RPCS3_bootIso(JNIEnv *env,
+                                                               jobject,
+                                                               jint fd) {
+  const std::string real = resolveDescriptorPath(fd);
+
+  if (real.empty()) {
+    rpcs3_android.error("bootIso: no readable path for descriptor %d", fd);
+    return static_cast<int>(game_boot_result::invalid_file_or_folder);
+  }
+
+  Emu.SetForceBoot(true);
+  return static_cast<int>(Emu.BootGame(real, "", false, cfg_mode::custom));
+}
+
+extern "C" JNIEXPORT jboolean JNICALL Java_net_rpcs3_RPCS3_addIsoEntry(
+    JNIEnv *env, jobject, jint fd, jlong progressId) {
+  Progress progress(env, progressId);
+
+  const std::string isoPath = resolveDescriptorPath(fd);
+
+  if (isoPath.empty()) {
+    progress.failure("Could not read the disc image. Grant all-files access.");
+    return false;
+  }
+
+  fs::file image{isoPath};
+
+  if (!image) {
+    progress.failure("Could not open the disc image. Grant all-files access.");
+    return false;
+  }
+
+  auto optIso = iso_fs::open(std::make_unique<file_view_block_dev>(image));
+
+  if (!optIso) {
+    progress.failure("Failed to read the disc image");
+    return false;
+  }
+
+  auto iso = std::move(*optIso);
+  auto sfoFile = iso.open("PS3_GAME/PARAM.SFO");
+
+  if (!sfoFile) {
+    progress.failure("Failed to locate PARAM.SFO in the disc image");
+    return false;
+  }
+
+  auto sfo = psf::load_object(sfoFile, "iso://PS3_GAME/PARAM.SFO");
+  auto titleId = std::string(psf::get_string(sfo, "TITLE_ID"));
+
+  if (titleId.empty()) {
+    progress.failure("Failed to read TITLE_ID from the disc image");
+    return false;
+  }
+
+  std::string iconPath;
+
+  if (auto icon = iso.open("PS3_GAME/ICON0.PNG")) {
+    const std::string iconDir = fs::get_config_dir() + "Icons/iso/";
+    fs::create_path(iconDir);
+
+    const std::string target = iconDir + titleId + ".PNG";
+
+    if (fs::file out{target, fs::rewrite}) {
+      std::vector<u8> buffer(icon.size());
+      icon.read_at(0, buffer.data(), buffer.size());
+      out.write(buffer.data(), buffer.size());
+      iconPath = target;
+    }
+  }
+
+  GameInfo info{};
+  info.path = isoPath;
+  info.name = std::string(psf::get_string(sfo, "TITLE"));
+  info.iconPath = iconPath;
+  info.flags = 0;
+
+  if (info.name.empty()) {
+    info.name = titleId;
+  }
+
+  sendGameInfo(env, progressId, {{info}});
+  progress.report(1, 1);
+  return true;
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_net_rpcs3_RPCS3_takeSettingsSaveFailure(JNIEnv *env, jobject) {
+  std::lock_guard lock(g_save_mutex);
+
+  if (g_save_failure.empty()) {
+    return nullptr;
+  }
+
+  auto result = wrap(env, g_save_failure);
+  g_save_failure.clear();
+  return result;
 }

@@ -2,6 +2,8 @@ package net.rpcs3.ui.games
 
 import android.content.Intent
 import android.net.Uri
+import net.rpcs3.PrecompilerService
+import net.rpcs3.PrecompilerServiceAction
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -80,6 +82,7 @@ import net.rpcs3.GameFlag
 import net.rpcs3.GameInfo
 import net.rpcs3.GameProgress
 import net.rpcs3.GameProgressType
+import net.rpcs3.gameTitleId
 import net.rpcs3.GameRepository
 import net.rpcs3.ProgressRepository
 import net.rpcs3.R
@@ -102,10 +105,19 @@ private fun withAlpha(color: Color, alpha: Float): Color {
 fun GameItem(
     game: Game,
     navigateToGameSettings: (titleId: String) -> Unit = {},
+    navigateToGamePatches: (titleId: String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val deleteScope = rememberCoroutineScope()
     val context = LocalContext.current
+    val updatePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri: Uri? ->
+            if (uri != null) {
+                PrecompilerService.start(context, PrecompilerServiceAction.Install, uri)
+            }
+        }
+    )
     val menuExpanded = remember { mutableStateOf(false) }
     val iconExists = remember { mutableStateOf(false) }
     var emulatorState by remember { RPCS3.state }
@@ -229,7 +241,7 @@ fun GameItem(
                     leadingIcon = { Icon(Icons.Outlined.Settings, contentDescription = null) },
                     onClick = {
                         menuExpanded.value = false
-                        navigateToGameSettings(game.info.path.substringAfterLast('/'))
+                        navigateToGameSettings(gameTitleId(game.info.path))
                     }
                 )
                 DropdownMenuItem(
@@ -404,7 +416,7 @@ fun GameItem(
             }
 
             Text(
-                text = game.info.name.value ?: game.info.path.substringAfterLast('/'),
+                text = game.info.name.value ?: gameTitleId(game.info.path),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 4.dp, vertical = 4.dp)
@@ -425,8 +437,8 @@ fun GameItem(
     }
     if (detailVisible.value) {
         GameDetailDialog(
-            title = game.info.name.value ?: game.info.path.substringAfterLast('/'),
-            subtitle = game.info.path.substringAfterLast('/'),
+            title = game.info.name.value ?: gameTitleId(game.info.path),
+            subtitle = gameTitleId(game.info.path),
             iconPath = if (iconExists.value) game.info.iconPath.value else null,
             onPlay = {
                 detailVisible.value = false
@@ -434,7 +446,15 @@ fun GameItem(
             },
             onSettings = {
                 detailVisible.value = false
-                navigateToGameSettings(game.info.path.substringAfterLast('/'))
+                navigateToGameSettings(gameTitleId(game.info.path))
+            },
+            onInstallUpdate = {
+                detailVisible.value = false
+                updatePickerLauncher.launch("*/*")
+            },
+            onPatches = {
+                detailVisible.value = false
+                navigateToGamePatches(gameTitleId(game.info.path))
             },
             onUninstall = if (game.info.name.value == "VSH") {
                 null
@@ -454,6 +474,7 @@ fun GameItem(
 @Composable
 fun GamesScreen(
     navigateToGameSettings: (titleId: String) -> Unit = {},
+    navigateToGamePatches: (titleId: String) -> Unit = {},
     searchQuery: String = "",
     sort: GameSort = GameSort.NameAscending
 ) {
@@ -501,7 +522,7 @@ fun GamesScreen(
                 }
                 .sortedWith(
                     compareBy(String.CASE_INSENSITIVE_ORDER) { game ->
-                        game.info.name.value ?: game.info.path.substringAfterLast('/')
+                        game.info.name.value ?: gameTitleId(game.info.path)
                     }
                 )
                 .let { if (sort == GameSort.NameDescending) it.reversed() else it }
@@ -527,8 +548,9 @@ fun GamesScreen(
             ) {
                 items(count = shown.size, key = { index -> shown[index].info.path }) { index ->
                     GameItem(
-                        shown[index],
-                        navigateToGameSettings,
+                        game = shown[index],
+                        navigateToGameSettings = navigateToGameSettings,
+                        navigateToGamePatches = navigateToGamePatches,
                         modifier = Modifier.height(rowHeight)
                     )
                 }

@@ -23,6 +23,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Album
+import androidx.compose.material.icons.outlined.MonitorHeart
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Memory
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
@@ -61,6 +65,9 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlin.concurrent.thread
 import kotlinx.coroutines.launch
 import net.rpcs3.EmulatorState
 import net.rpcs3.FirmwareRepository
@@ -75,12 +82,20 @@ import net.rpcs3.ui.library.CompatibilityScreen
 import net.rpcs3.ui.library.GameSort
 import net.rpcs3.ui.library.LibraryTab
 import net.rpcs3.ui.library.LibraryTopBar
+import net.rpcs3.ui.setup.SetupWizard
+import net.rpcs3.ui.setup.hasStorageAccess
+import net.rpcs3.ui.setup.requestStorageAccess
+import net.rpcs3.ui.setup.StorageAccessDialog
+import net.rpcs3.ui.diagnostics.DiagnosticsScreen
 import net.rpcs3.RPCS3
+import net.rpcs3.RPCS3Activity
 import net.rpcs3.overlay.OverlayEditActivity
 import net.rpcs3.dialogs.AlertDialogQueue
 import net.rpcs3.ui.drivers.GpuDriversScreen
+import net.rpcs3.ui.games.IsoChoiceDialog
 import net.rpcs3.ui.games.GamesScreen
 import net.rpcs3.ui.settings.AdvancedSettingsScreen
+import net.rpcs3.ui.patches.GamePatchesScreen
 import net.rpcs3.ui.settings.GameSettingsScreen
 import net.rpcs3.ui.settings.SettingsScreen
 import net.rpcs3.utils.FileUtil
@@ -93,8 +108,14 @@ fun AppNavHost() {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val settingsTitleId = RPCS3.settingsTitleId.value
-    val settings = remember(settingsTitleId) {
-        mutableStateOf(JSONObject(RPCS3.instance.settingsGet("", settingsTitleId)))
+    val settings = remember(settingsTitleId) { mutableStateOf(JSONObject()) }
+
+    LaunchedEffect(settingsTitleId) {
+        val loaded = withContext(Dispatchers.IO) {
+            runCatching { JSONObject(RPCS3.instance.settingsGet("", settingsTitleId)) }
+                .getOrDefault(JSONObject())
+        }
+        settings.value = loaded
     }
 
     BackHandler(enabled = drawerState.isOpen) {
@@ -120,6 +141,11 @@ fun AppNavHost() {
                 navigateToGameSettings = { titleId ->
                     navController.navigate("gameSettings?titleId=" + Uri.encode(titleId))
                 },
+                navigateToDrivers = { navController.navigate("drivers") },
+                navigateToGamePatches = { titleId ->
+                    navController.navigate("gamePatches?titleId=" + Uri.encode(titleId))
+                },
+                navigateToDiagnostics = { navController.navigate("diagnostics") },
                 drawerState
             )
         }
@@ -130,7 +156,6 @@ fun AppNavHost() {
                 val elemPath = "$path@@$key"
                 val elemObject = item as? JSONObject
                 if (elemObject == null) {
-                    Log.e("Main", "element is not object: settings$elemPath, $item")
                     return@self
                 }
 
@@ -138,7 +163,6 @@ fun AppNavHost() {
                     return@self
                 }
 
-                Log.e("Main", "registration settings$elemPath")
 
                 composable(
                     route = "settings$elemPath"
@@ -168,9 +192,11 @@ fun AppNavHost() {
         composable(
             route = "settings"
         ) {
-            SettingsScreen(
-                navigateBack = navController::navigateUp,
-                navigateTo = { navController.navigate(it) },
+            LaunchedEffect(Unit) { RPCS3.settingsTitleId.value = "" }
+            GameSettingsScreen(
+                titleId = "",
+                title = "Global Defaults",
+                onClose = navController::navigateUp
             )
         }
 
@@ -193,6 +219,23 @@ fun AppNavHost() {
         }
 
         composable(
+            route = "gamePatches?titleId={titleId}",
+            arguments = listOf(
+                navArgument("titleId") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                }
+            )
+        ) { entry ->
+            GamePatchesScreen(
+                titleId = entry.arguments?.getString("titleId").orEmpty(),
+                onClose = navController::navigateUp
+            )
+        }
+
+        composable(route = "diagnostics") { DiagnosticsScreen() }
+
+        composable(
             route = "drivers"
         ) {
             GpuDriversScreen(
@@ -209,6 +252,9 @@ fun AppNavHost() {
 fun GamesDestination(
     navigateToSettings: () -> Unit,
     navigateToGameSettings: (titleId: String) -> Unit,
+    navigateToDrivers: () -> Unit,
+    navigateToGamePatches: (titleId: String) -> Unit,
+    navigateToDiagnostics: () -> Unit,
     drawerState: androidx.compose.material3.DrawerState
 ) {
     val context = LocalContext.current
@@ -227,6 +273,48 @@ fun GamesDestination(
             )
         }
     )
+
+    var pendingIso by remember { mutableStateOf<Uri?>(null) }
+    var needsStorage by remember { mutableStateOf(false) }
+    val firmwareLoaded by FirmwareRepository.loaded
+    var setupActive by remember { mutableStateOf<Boolean?>(null) }
+
+    LaunchedEffect(firmwareLoaded) {
+        if (firmwareLoaded && setupActive == null) {
+            setupActive = !hasStorageAccess() || FirmwareRepository.version.value == null
+        }
+    }
+
+    val showSetup = setupActive == true
+
+    val bootIsoLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri: Uri? -> pendingIso = uri }
+    )
+
+    if (needsStorage) {
+        StorageAccessDialog(
+            onGrant = {
+                needsStorage = false
+                requestStorageAccess(context)
+            },
+            onDismiss = { needsStorage = false }
+        )
+    }
+
+    pendingIso?.let { uri ->
+        IsoChoiceDialog(
+            onDirectBoot = {
+                pendingIso = null
+                PrecompilerService.start(context, PrecompilerServiceAction.AddIso, uri)
+            },
+            onInstall = {
+                pendingIso = null
+                PrecompilerService.start(context, PrecompilerServiceAction.Install, uri)
+            },
+            onDismiss = { pendingIso = null }
+        )
+    }
 
     val installFwLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
@@ -278,7 +366,6 @@ fun GamesDestination(
                             val progress = ProgressRepository.getItem(progressChannel.value)
                             val progressValue = progress?.value?.value
                             val maxValue = progress?.value?.max
-                            Log.e("Main", "Update $progressChannel, $progress")
                             if (progressValue != null && maxValue != null) {
                                 if (maxValue.longValue != 0L) {
                                     CircularProgressIndicator(
@@ -317,6 +404,36 @@ fun GamesDestination(
                     )
 
                     NavigationDrawerItem(
+                        label = { Text("Setup") },
+                        selected = false,
+                        icon = { Icon(Icons.Outlined.CheckCircle, null) },
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            setupActive = true
+                        }
+                    )
+
+                    NavigationDrawerItem(
+                        label = { Text("Diagnostics") },
+                        selected = false,
+                        icon = { Icon(Icons.Outlined.MonitorHeart, null) },
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            navigateToDiagnostics()
+                        }
+                    )
+
+                    NavigationDrawerItem(
+                        label = { Text("GPU Drivers") },
+                        selected = false,
+                        icon = { Icon(Icons.Outlined.Memory, null) },
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            navigateToDrivers()
+                        }
+                    )
+
+                    NavigationDrawerItem(
                         label = { Text("Edit Overlay") },
                         selected = false,
                         icon = { Icon(painter = painterResource(id = R.drawable.ic_show_osc), null) },
@@ -335,7 +452,12 @@ fun GamesDestination(
                         selected = false,
                         icon = { Icon(Icons.Outlined.Info, contentDescription = null) },
                         onClick = {
-                            AlertDialogQueue.showDialog("System Info", RPCS3.instance.systemInfo())
+                            scope.launch {
+                                val info = withContext(Dispatchers.IO) {
+                                    runCatching { RPCS3.instance.systemInfo() }.getOrDefault("")
+                                }
+                                AlertDialogQueue.showDialog("System Info", info)
+                            }
                         }
                     )
                 }
@@ -345,6 +467,15 @@ fun GamesDestination(
         var selectedTab by remember { mutableStateOf(LibraryTab.Library) }
         var searchQuery by remember { mutableStateOf("") }
         var gameSort by remember { mutableStateOf(GameSort.NameAscending) }
+
+        if (showSetup) {
+            SetupWizard(
+                onInstallFirmware = { installFwLauncher.launch("*/*") },
+                onFinish = { setupActive = false },
+                onSkip = { setupActive = false }
+            )
+            return@ModalNavigationDrawer
+        }
 
         val libraryHeader: @Composable () -> Unit = {
             LibraryTopBar(
@@ -366,7 +497,7 @@ fun GamesDestination(
                     ) {
                         IconButton(onClick = {
                             emulatorState = EmulatorState.Stopped
-                            RPCS3.instance.kill()
+                            thread { RPCS3.instance.kill() }
                         }) {
                             Icon(
                                 imageVector = ImageVector.vectorResource(R.drawable.ic_stop),
@@ -387,7 +518,12 @@ fun GamesDestination(
             },
             floatingActionButton = {
                 if (selectedTab == LibraryTab.Library) {
-                    DropUpFloatingActionButton(installPkgLauncher, gameFolderPickerLauncher)
+                    DropUpFloatingActionButton(
+                        installPkgLauncher,
+                        gameFolderPickerLauncher,
+                        bootIsoLauncher,
+                        onNeedsStorage = { needsStorage = true }
+                    )
                 }
             },
         ) { innerPadding ->
@@ -399,6 +535,7 @@ fun GamesDestination(
                 ) {
                     GamesScreen(
                         navigateToGameSettings = navigateToGameSettings,
+                        navigateToGamePatches = navigateToGamePatches,
                         searchQuery = searchQuery,
                         sort = gameSort
                     )
@@ -418,7 +555,9 @@ fun GamesDestination(
 @Composable
 fun DropUpFloatingActionButton(
     installPkgLauncher: ActivityResultLauncher<String>,
-    gameFolderPickerLauncher: ActivityResultLauncher<Uri?>
+    gameFolderPickerLauncher: ActivityResultLauncher<Uri?>,
+    bootIsoLauncher: ActivityResultLauncher<String>,
+    onNeedsStorage: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -441,12 +580,28 @@ fun DropUpFloatingActionButton(
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     FloatingActionButton(
+                        onClick = {
+                            expanded = false
+                            if (hasStorageAccess()) {
+                                bootIsoLauncher.launch("*/*")
+                            } else {
+                                onNeedsStorage()
+                            }
+                        },
+                        containerColor = MaterialTheme.colorScheme.secondary
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Album,
+                            contentDescription = "Boot disc image"
+                        )
+                    }
+                    FloatingActionButton(
                         onClick = { installPkgLauncher.launch("*/*"); expanded = false },
                         containerColor = MaterialTheme.colorScheme.secondary
                     ) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_description),
-                            contentDescription = "Select Game"
+                            contentDescription = "Install"
                         )
                     }
                     FloatingActionButton(
@@ -455,7 +610,7 @@ fun DropUpFloatingActionButton(
                     ) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_folder),
-                            contentDescription = "Select Folder"
+                            contentDescription = "Folder"
                         )
                     }
                 }

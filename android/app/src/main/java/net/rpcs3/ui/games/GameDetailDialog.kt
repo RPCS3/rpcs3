@@ -29,6 +29,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Healing
+import androidx.compose.material.icons.outlined.SystemUpdateAlt
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SportsEsports
 import androidx.compose.material3.Icon
@@ -48,6 +50,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -70,6 +73,13 @@ private val LaunchTextPrimary = Color(0xFFF0F4FF)
 private val LaunchTextSecondary = Color(0xFF93A6BC)
 private val LaunchDanger = Color(0xFFFF6B6B)
 
+private data class ActionSpec(
+    val icon: ImageVector,
+    val label: String,
+    val danger: Boolean,
+    val onClick: () -> Unit
+)
+
 @Composable
 fun GameDetailDialog(
     title: String,
@@ -77,6 +87,8 @@ fun GameDetailDialog(
     iconPath: String?,
     onPlay: () -> Unit,
     onSettings: () -> Unit,
+    onInstallUpdate: (() -> Unit)?,
+    onPatches: (() -> Unit)?,
     onUninstall: (() -> Unit)?,
     onDismissRequest: () -> Unit
 ) {
@@ -194,7 +206,9 @@ fun GameDetailDialog(
 
                 val actionIconSize = 46.dp
                 val actionIconSpacing = 8.dp
-                val actionWidth = actionIconSize * 2 + actionIconSpacing
+                val actionSlots = 4
+                val actionWidth =
+                    actionIconSize * actionSlots + actionIconSpacing * (actionSlots - 1)
 
                 Row(
                     modifier = Modifier
@@ -235,24 +249,50 @@ fun GameDetailDialog(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = onPlay
                         )
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(actionIconSpacing),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IconActionButton(
-                                icon = Icons.Outlined.Settings,
-                                contentDescription = "Settings",
-                                size = actionIconSize,
-                                onClick = onSettings
-                            )
+                        val actions = buildList {
+                            add(ActionSpec(Icons.Outlined.Settings, "Settings", false, onSettings))
+                            onInstallUpdate?.let {
+                                add(ActionSpec(Icons.Outlined.SystemUpdateAlt, "Update", false, it))
+                            }
+                            onPatches?.let {
+                                add(ActionSpec(Icons.Outlined.Healing, "Patches", false, it))
+                            }
                             if (onUninstall != null) {
-                                IconActionButton(
-                                    icon = Icons.Outlined.Delete,
-                                    contentDescription = "Uninstall",
-                                    size = actionIconSize,
-                                    danger = true,
-                                    onClick = { confirmUninstall = true }
+                                add(
+                                    ActionSpec(Icons.Outlined.Delete, "Uninstall", true) {
+                                        confirmUninstall = true
+                                    }
                                 )
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(actionIconSpacing),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            actions.forEach { spec ->
+                                Column(
+                                    modifier = Modifier.width(actionIconSize),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    IconActionButton(
+                                        icon = spec.icon,
+                                        contentDescription = spec.label,
+                                        size = actionIconSize,
+                                        danger = spec.danger,
+                                        onClick = spec.onClick
+                                    )
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        text = spec.label,
+                                        color = if (spec.danger) LaunchDanger else LaunchTextSecondary,
+                                        fontSize = 9.sp,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
                             }
                         }
                     }

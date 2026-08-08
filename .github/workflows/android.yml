@@ -151,9 +151,34 @@ jobs:
             fi
           done
 
-      - name: Upload APK
+      - name: Upload standard APK
+        if: inputs.flavor == 'all' || inputs.flavor == 'standard'
         uses: actions/upload-artifact@v4
         with:
-          name: ps3native-${{ inputs.flavor }}-${{ inputs.variant }}
-          path: android/app/build/outputs/apk/*/${{ inputs.variant }}/*.apk
+          name: ps3native-standard-${{ inputs.variant }}
+          path: android/app/build/outputs/apk/standard/${{ inputs.variant }}/*.apk
+          if-no-files-found: error
+
+      - name: Upload antutu APK
+        if: inputs.flavor == 'all' || inputs.flavor == 'antutu'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps3native-antutu-${{ inputs.variant }}
+          path: android/app/build/outputs/apk/antutu/${{ inputs.variant }}/*.apk
+          if-no-files-found: error
+
+      - name: Upload ludashi APK
+        if: inputs.flavor == 'all' || inputs.flavor == 'ludashi'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps3native-ludashi-${{ inputs.variant }}
+          path: android/app/build/outputs/apk/ludashi/${{ inputs.variant }}/*.apk
+          if-no-files-found: error
+
+      - name: Upload pubg APK
+        if: inputs.flavor == 'all' || inputs.flavor == 'pubg'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps3native-pubg-${{ inputs.variant }}
+          path: android/app/build/outputs/apk/pubg/${{ inputs.variant }}/*.apk
           if-no-files-found: error

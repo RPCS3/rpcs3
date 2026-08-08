@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.WindowInsetsCompat
+import java.io.File
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
@@ -100,11 +101,25 @@ class MainActivity : ComponentActivity() {
             thread(name = "rpcs3-startup") {
                 installBundledAssets(assets, RPCS3.rootDirectory)
                 RPCS3.instance.initialize(RPCS3.rootDirectory)
+                val hookDirectory = "\"" + nativeLibraryDir + "\""
                 RPCS3.instance.settingsSet(
                     "Video@@Vulkan@@Custom Driver@@Hook Directory",
-                    "\"" + nativeLibraryDir + "\"",
+                    hookDirectory,
                     ""
                 )
+
+                File(RPCS3.rootDirectory + "/config/custom_configs")
+                    .listFiles { file ->
+                        file.name.startsWith("config_") && file.name.endsWith(".yml")
+                    }
+                    ?.forEach { file ->
+                        val id = file.name.removePrefix("config_").removeSuffix(".yml")
+                        RPCS3.instance.settingsSet(
+                            "Video@@Vulkan@@Custom Driver@@Hook Directory",
+                            hookDirectory,
+                            id
+                        )
+                    }
 
                 thread(name = "rpcs3-main-processor") {
                     RPCS3.instance.startMainThreadProcessor()

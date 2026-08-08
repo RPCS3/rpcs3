@@ -203,3 +203,5 @@ class GameRepository {
         }
     }
 }
+
+fun gameTitleId(path: String) = path.trimEnd('/').substringAfterLast('/')

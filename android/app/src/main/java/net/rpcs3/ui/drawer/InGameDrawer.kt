@@ -28,6 +28,9 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ExitToApp
 import androidx.compose.material.icons.outlined.Pause
@@ -58,6 +61,7 @@ import kotlinx.coroutines.withContext
 import net.rpcs3.RPCS3
 import net.rpcs3.ui.settings.ControlsCategory
 import net.rpcs3.ui.settings.ControlsSettings
+import net.rpcs3.ui.settings.SettingsCategory
 import net.rpcs3.ui.settings.SettingsNodeContent
 import net.rpcs3.ui.settings.categoriesOf
 import net.rpcs3.ui.settings.iconForCategory
@@ -121,6 +125,7 @@ fun InGameDrawer(
                         )
                 ) {
                     InGameSettingsPanel(
+                        onClose = onDismiss,
                         titleId = titleId,
                         modifier = Modifier.weight(1f)
                     )
@@ -159,7 +164,11 @@ fun InGameDrawer(
 }
 
 @Composable
-private fun InGameSettingsPanel(titleId: String, modifier: Modifier = Modifier) {
+private fun InGameSettingsPanel(
+    titleId: String,
+    modifier: Modifier = Modifier,
+    onClose: (() -> Unit)? = null
+) {
     var root by remember(titleId) { mutableStateOf<JSONObject?>(null) }
     var selected by remember(titleId) { mutableIntStateOf(0) }
 
@@ -180,66 +189,39 @@ private fun InGameSettingsPanel(titleId: String, modifier: Modifier = Modifier) 
             return@Box
         }
 
-        val categories = remember(tree) { categoriesOf(tree).map { it.label } + ControlsCategory }
+        val categories = remember(tree) {
+            categoriesOf(tree) + SettingsCategory(ControlsCategory, listOf(ControlsCategory), null)
+        }
 
         Column(modifier = Modifier.fillMaxSize()) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp),
+                    .padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
+                    modifier = Modifier.weight(1f),
                     text = if (titleId.isEmpty()) "Settings" else titleId,
                     color = SettingsStyle.TextPrimary,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold
                 )
-            }
 
-            ScrollableTabRow(
-                selectedTabIndex = selected.coerceIn(0, (categories.size - 1).coerceAtLeast(0)),
-                containerColor = Color.Transparent,
-                contentColor = SettingsStyle.AccentBlue,
-                edgePadding = 12.dp,
-                divider = {},
-                indicator = { positions ->
-                    if (selected < positions.size) {
-                        TabRowDefaults.SecondaryIndicator(
-                            modifier = Modifier.tabIndicatorOffset(positions[selected]),
-                            height = 2.dp,
-                            color = SettingsStyle.AccentBlue
-                        )
-                    }
-                }
-            ) {
-                categories.forEachIndexed { index, name ->
-                    Tab(
-                        selected = index == selected,
-                        onClick = { selected = index },
-                        selectedContentColor = SettingsStyle.AccentBlue,
-                        unselectedContentColor = SettingsStyle.TextSecondary
+                if (onClose != null) {
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .clickable(onClick = onClose),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = iconForCategory(name),
-                                contentDescription = null,
-                                modifier = Modifier.size(Dimens.IconSize)
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                text = name,
-                                fontSize = Dimens.ValueSize,
-                                fontWeight = if (index == selected) {
-                                    FontWeight.SemiBold
-                                } else {
-                                    FontWeight.Normal
-                                }
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Outlined.Close,
+                            contentDescription = "Close",
+                            tint = SettingsStyle.TextPrimary,
+                            modifier = Modifier.size(19.dp)
+                        )
                     }
                 }
             }
@@ -251,8 +233,41 @@ private fun InGameSettingsPanel(titleId: String, modifier: Modifier = Modifier) 
                     .background(SettingsStyle.Divider)
             )
 
-            val name = categories.getOrNull(selected)
-            val node = name?.let { tree.optJSONObject(it) }
+            Row(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier
+                        .width(SettingsStyle.SidebarWidth)
+                        .fillMaxHeight()
+                        .background(SettingsStyle.SidebarBg)
+                        .verticalScroll(rememberScrollState())
+                        .padding(vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(1.dp)
+                ) {
+                    categories.forEachIndexed { index, entry ->
+                        DrawerSidebarItem(
+                            icon = iconForCategory(entry.label),
+                            label = entry.label,
+                            isSelected = index == selected,
+                            nested = entry.parent != null,
+                            onClick = { selected = index }
+                        )
+                    }
+                }
+
+                Box(
+                    Modifier
+                        .fillMaxHeight()
+                        .width(1.dp)
+                        .background(SettingsStyle.Divider)
+                )
+
+            val entry = categories.getOrNull(selected)
+            val name = entry?.label
+            val node = entry?.let { target ->
+                var cursor: JSONObject? = tree
+                for (step in target.path) cursor = cursor?.optJSONObject(step)
+                cursor
+            }
 
             if (name == ControlsCategory) {
                 Column(
@@ -271,10 +286,54 @@ private fun InGameSettingsPanel(titleId: String, modifier: Modifier = Modifier) 
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(Dimens.SectionGap)
                 ) {
-                    SettingsNodeContent(node = node, path = name, titleId = titleId)
+                    SettingsNodeContent(
+                        node = node,
+                        path = entry.path.joinToString("@@"),
+                        titleId = titleId,
+                        includeSubGroups = entry.parent != null
+                    )
                     Spacer(Modifier.height(Dimens.SectionGap))
                 }
             }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DrawerSidebarItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    isSelected: Boolean,
+    nested: Boolean,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = if (nested) 16.dp else 6.dp, end = 6.dp)
+            .clip(RoundedCornerShape(9.dp))
+            .background(if (isSelected) DrawerStyle.FocusFill else Color.Transparent)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 9.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (isSelected) SettingsStyle.AccentBlue else SettingsStyle.TextSecondary,
+                modifier = Modifier.size(Dimens.IconSize)
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = label,
+                color = if (isSelected) SettingsStyle.TextPrimary else SettingsStyle.TextSecondary,
+                fontSize = Dimens.ValueSize,
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                lineHeight = 14.sp
+            )
         }
     }
 }
