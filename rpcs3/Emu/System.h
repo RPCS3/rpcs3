@@ -503,12 +503,12 @@ public:
 	void EjectDisc();
 	game_boot_result InsertDisc(const std::string& path);
 
-	static game_boot_result GetElfPathFromDir(std::string& elf_path, const std::string& path);
-	static void GetBdvdDir(std::string& bdvd_dir, std::string& sfb_dir, std::string& game_dir, const std::string& elf_dir);
+	static game_boot_result GetElfPathFromDir(std::string& elf_path, std::string_view path);
+	static void GetBdvdDir(std::string& bdvd_dir, std::string& sfb_dir, std::string& game_dir, std::string_view elf_dir);
 	friend void init_fxo_for_exec(utils::serial*, bool);
 
 	static bool IsVsh();
-	static bool IsValidSfb(const std::string& path);
+	static bool IsValidSfb(std::string_view path);
 
 	static void SaveSettings(std::string_view settings, const std::string& title_id);
 };

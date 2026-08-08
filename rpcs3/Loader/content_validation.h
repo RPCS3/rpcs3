@@ -52,6 +52,6 @@ public:
 	void set_count(u16 count) { m_count = count; }
 	void abort_hash() { m_status = content_hash_status::ABORTED; }
 
-	bool init_hash(const std::string& path);
+	bool init_hash(std::string_view path);
 	content_hash_status calculate_hash(std::string& hash);
 };
