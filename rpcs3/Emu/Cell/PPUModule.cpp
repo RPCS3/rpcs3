@@ -2381,7 +2381,11 @@ shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2
 
 	if (!ar)
 	{
-		g_fxo->init<id_manager::id_map<lv2_memory_container>>();
+		if (!Emu.init_mem_containers)
+		{
+			g_fxo->init<id_manager::id_map<lv2_memory_container>>();
+		}
+
 		g_fxo->init<id_manager::id_map<named_thread<ppu_thread>>>();
 		g_fxo->init<id_manager::id_map<lv2_obj>>();
 	}
@@ -2848,6 +2852,8 @@ shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2
 		// Set ppc fixed allocations segment permission
 		process_ptr->ppc_seg = ppc_seg;
 
+		bool init_fxo = true;
+
 		if (Emu.init_mem_containers)
 		{
 			// Refer to sys_process_exit2 for explanation
@@ -2856,23 +2862,21 @@ shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2
 			callback(mem_size);
 
 			ensure(g_fxo->is_init<id_manager::id_map<lv2_memory_container>>());
-			ensure(g_fxo->is_init<lv2_memory_container>());
 		}
 		else if (!ar)
 		{
 			if (mem_ct)
 			{
 				process_ptr->parent_memory_container = mem_ct;
+				init_fxo = false;
 			}
 			else
 			{
 				process_ptr->parent_memory_container = idm::make_ptr<lv2_memory_container>(mem_size);
-
-				void init_fxo_for_exec(shared_ptr<lv2_process> process, utils::serial* ar, bool full);
-				init_fxo_for_exec(process_ptr, ar, false);
 			}
 		}
-		else
+
+		if (init_fxo)
 		{
 			void init_fxo_for_exec(shared_ptr<lv2_process> process, utils::serial* ar, bool full);
 			init_fxo_for_exec(process_ptr, ar, false);

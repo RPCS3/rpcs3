@@ -850,18 +850,9 @@ void lv2_exitspawn(ppu_thread& ppu, bool exit_current, shared_ptr<lv2_memory_con
 
 		idm_capture->set_reading_state();
 
-		auto func = [is_real_reboot, old_size = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->parent_memory_container->size, idm_capture](u32 sdk_suggested_mem) mutable
+		auto func = [old_size = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->parent_memory_container->size, idm_capture](u32 sdk_suggested_mem) mutable
 		{
-			if (is_real_reboot)
-			{
-				// Do not save containers on actual reboot
-				ensure(g_fxo->init<id_map<lv2_memory_container>>());
-			}
-			else
-			{
-				// Save LV2 memory containers
-				ensure(g_fxo->init<id_map<lv2_memory_container>>(*idm_capture));
-			}
+			ensure(g_fxo->init<id_map<lv2_memory_container>>(*idm_capture));
 
 			// Empty the containers, accumulate their total size
 			u32 total_size = 0;
@@ -878,7 +869,7 @@ void lv2_exitspawn(ppu_thread& ppu, bool exit_current, shared_ptr<lv2_memory_con
 			//ensure(g_fxo->init<lv2_memory_container>(std::min(old_size - total_size, sdk_suggested_mem) + total_size));
 		};
 
-		Emu.after_kill_callback = [func = std::move(func), argv = std::move(argv), envp = std::move(envp), data = std::move(data),
+		Emu.after_kill_callback = [is_real_reboot, func = std::move(func), argv = std::move(argv), envp = std::move(envp), data = std::move(data),
 			disc = std::move(disc), path = std::move(path), hdd1 = std::move(hdd1), old_config = Emu.GetUsedConfig(), old_db_config = Emu.GetUsedDatabaseConfig(), klic]() mutable
 		{
 			Emu.argv = std::move(argv);
@@ -886,7 +877,11 @@ void lv2_exitspawn(ppu_thread& ppu, bool exit_current, shared_ptr<lv2_memory_con
 			Emu.data = std::move(data);
 			Emu.disc = std::move(disc);
 			Emu.hdd1 = std::move(hdd1);
-			Emu.init_mem_containers = std::move(func);
+
+			if (!is_real_reboot)
+			{
+				Emu.init_mem_containers = std::move(func);
+			}
 
 			if (klic)
 			{

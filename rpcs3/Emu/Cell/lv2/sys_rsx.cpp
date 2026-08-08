@@ -93,6 +93,7 @@ lv2_rsx_context::lv2_rsx_context() noexcept
 {
 	tiles.resize(15);
 	zculls.resize(8);
+	belonging_process = id_manager::g_process;
 }
 
 lv2_rsx_context::lv2_rsx_context(utils::serial& ar) noexcept
