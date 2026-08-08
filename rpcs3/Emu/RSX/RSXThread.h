@@ -245,7 +245,7 @@ namespace rsx
 		atomic_t<bool> requested_vsync{true};
 		atomic_t<bool> enable_second_vhandler{false};
 
-		bool send_event(u64, u64, u64);
+		bool send_event(lv2_rsx_context*, u64, u64, u64);
 
 		std::array<bool, 16> m_textures_dirty;
 		std::array<bool, 4> m_vertex_textures_dirty;

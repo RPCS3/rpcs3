@@ -110,11 +110,11 @@ void lv2_rsx_context::save(utils::serial& ar) noexcept
 	ar(unsent_gcm_events);
 }
 
-bool rsx::thread::send_event(u64 data1, u64 event_flags, u64 data3)
+bool rsx::thread::send_event(lv2_rsx_context* context, u64 data1, u64 event_flags, u64 data3)
 {
 	// Filter event bits, send them only if they are masked by gcm
 	// Except the upper 32-bits, they are reserved for unmapped io events and execute unconditionally
-	event_flags &= vm::_ref<RsxDriverInfo>(lv2_context->driver_info).handlers | 0xffff'ffffull << 32;
+	event_flags &= vm::_ref<RsxDriverInfo>(context->driver_info).handlers | 0xffff'ffffull << 32;
 
 	if (!event_flags)
 	{
@@ -122,7 +122,7 @@ bool rsx::thread::send_event(u64 data1, u64 event_flags, u64 data3)
 		return true;
 	}
 
-	auto error = sys_event_port_send(lv2_context->rsx_event_port, data1, event_flags, data3);
+	auto error = sys_event_port_send(context->rsx_event_port, data1, event_flags, data3);
 
 	while (error + 0u == CELL_EBUSY)
 	{
@@ -146,13 +146,13 @@ bool rsx::thread::send_event(u64 data1, u64 event_flags, u64 data3)
 			break;
 		}
 
-		error = sys_event_port_send(lv2_context->rsx_event_port, data1, event_flags, data3);
+		error = sys_event_port_send(context->rsx_event_port, data1, event_flags, data3);
 	}
 
 	if (error + 0u == CELL_EAGAIN)
 	{
 		// Thread has aborted when sending event (VBLANK duplicates are allowed)
-		ensure((lv2_context->unsent_gcm_events.fetch_or(event_flags) & event_flags & ~(SYS_RSX_EVENT_VBLANK | SYS_RSX_EVENT_SECOND_VBLANK_BASE | SYS_RSX_EVENT_SECOND_VBLANK_BASE * 2)) == 0);
+		ensure((context->unsent_gcm_events.fetch_or(event_flags) & event_flags & ~(SYS_RSX_EVENT_VBLANK | SYS_RSX_EVENT_SECOND_VBLANK_BASE | SYS_RSX_EVENT_SECOND_VBLANK_BASE * 2)) == 0);
 		return false;
 	}
 
@@ -753,7 +753,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		driverInfo.head[a3].flipFlags |= 0x40000000 | (1 << a4);
 
 		render->on_frame_end(static_cast<u32>(a4));
-		if (!render->send_event(0, SYS_RSX_EVENT_QUEUE_BASE << a3, 0))
+		if (!render->send_event(rsx_context.get(), 0, SYS_RSX_EVENT_QUEUE_BASE << a3, 0))
 		{
 			break;
 		}
@@ -1007,7 +1007,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		// NOTE: Realhw resets 16 bytes of this semaphore for some reason
 		vm::_ptr<atomic_t<u128>>(rsx_context->label_addr + 0x10)->store(u128{});
 
-		render->send_event(0, SYS_RSX_EVENT_FLIP_BASE << 1, 0);
+		render->send_event(rsx_context.get(), 0, SYS_RSX_EVENT_FLIP_BASE << 1, 0);
 		break;
 	}
 	case 0xFED: // hack: vblank command
@@ -1043,7 +1043,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		if (render->enable_second_vhandler)
 			event_flags |= SYS_RSX_EVENT_SECOND_VBLANK_BASE << a3; // second vhandler
 
-		render->send_event(0, event_flags, 0);
+		render->send_event(rsx_context.get(), 0, event_flags, 0);
 		break;
 	}
 
@@ -1060,7 +1060,11 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 			driverInfo.userCmdParam = intr_cause;
 		}
 
-		render->send_event(0, SYS_RSX_EVENT_USER_CMD, 0);
+		// 'custom' invalid package id for now
+		// as i think we need custom lv1 interrupts to handle this accurately
+		// this also should probly be set by rsxthread
+		driverInfo.userCmdParam = static_cast<u32>(a4);
+		render->send_event(rsx_context.get(), 0, SYS_RSX_EVENT_USER_CMD, 0);
 		break;
 	}
 
