@@ -260,6 +260,25 @@ namespace vk
 				gpus[i].create(m_instance, pdevs[i], extensions_loaded);
 		}
 
+		auto priority = [](const physical_device& dev)
+		{
+			switch (dev.get_type())
+			{
+			case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
+				return 0;
+			case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
+				return 1;
+			default:
+				return 2;
+			}
+		};
+
+		std::stable_sort(gpus.begin(), gpus.end(),
+			[&](const physical_device& a, const physical_device& b)
+			{
+				return priority(a) < priority(b);
+			});
+
 		return gpus;
 	}
 
