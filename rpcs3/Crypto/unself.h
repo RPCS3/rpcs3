@@ -482,7 +482,7 @@ public:
 
 private:
 	template<typename EHdr, typename SHdr, typename PHdr>
-	void WriteElf(fs::file& e, EHdr ehdr, SHdr shdr, PHdr phdr)
+	void WriteElf(fs::file& e, EHdr ehdr, const std::vector<SHdr>& shdrs, const std::vector<PHdr>& phdrs)
 	{
 		// Set initial offset.
 		u32 data_buf_offset = 0;
@@ -491,20 +491,22 @@ private:
 		WriteEhdr(e, ehdr);
 
 		// Write program headers.
-		for (u32 i = 0; i < ehdr.e_phnum; ++i)
+		for (const PHdr& phdr : phdrs)
 		{
-			WritePhdr(e, phdr[i]);
+			WritePhdr(e, phdr);
 		}
 
-		for (unsigned int i = 0; i < meta_hdr.section_count; i++)
+		for (const MetadataSectionHeader& hdr : meta_shdr)
 		{
 			// PHDR type.
-			if (meta_shdr[i].type == 2)
+			if (hdr.type == 2)
 			{
+				const PHdr& phdr = ::at32(phdrs, hdr.program_idx);
+
 				// Decompress if necessary.
-				if (meta_shdr[i].compressed == 2)
+				if (hdr.compressed == 2)
 				{
-					const auto filesz = phdr[meta_shdr[i].program_idx].p_filesz;
+					const auto filesz = phdr.p_filesz;
 
 					// Create a pointer to a buffer for decompression.
 					std::unique_ptr<u8[]> decomp_buf(new u8[filesz]);
@@ -528,18 +530,18 @@ private:
 					}
 
 					// Seek to the program header data offset and write the data.
-					e.seek(phdr[meta_shdr[i].program_idx].p_offset);
+					e.seek(phdr.p_offset);
 					e.write(decomp_buf.get(), filesz);
 				}
 				else
 				{
 					// Seek to the program header data offset and write the data.
-					e.seek(phdr[meta_shdr[i].program_idx].p_offset);
-					e.write(data_buf.data() + data_buf_offset, meta_shdr[i].data_size);
+					e.seek(phdr.p_offset);
+					e.write(data_buf.data() + data_buf_offset, hdr.data_size);
 				}
 
 				// Advance the data buffer offset by data size.
-				data_buf_offset += ::narrow<u32>(meta_shdr[i].data_size);
+				data_buf_offset += ::narrow<u32>(hdr.data_size);
 			}
 		}
 
@@ -548,9 +550,9 @@ private:
 		{
 			e.seek(ehdr.e_shoff);
 
-			for (u32 i = 0; i < ehdr.e_shnum; ++i)
+			for (const SHdr& shdr : shdrs)
 			{
-				WriteShdr(e, shdr[i]);
+				WriteShdr(e, shdr);
 			}
 		}
 	}
