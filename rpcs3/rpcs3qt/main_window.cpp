@@ -12,6 +12,7 @@
 #include "log_frame.h"
 #include "settings_dialog.h"
 #include "rpcn_settings_dialog.h"
+#include "ra_settings_dialog.h"
 #include "clans_settings_dialog.h"
 #include "auto_pause_settings_dialog.h"
 #include "cg_disasm_window.h"
@@ -537,6 +538,12 @@ void main_window::show_boot_error(game_boot_result status)
 	msg->setText(tr("Booting failed: %1 %2").arg(message).arg(link));
 	msg->setAttribute(Qt::WA_DeleteOnClose);
 	msg->open();
+}
+
+void main_window::open_ra_settings()
+{
+	ra_settings_dialog dlg(this);
+	dlg.exec();
 }
 
 void main_window::Boot(const std::string& path, const std::string& title_id, bool direct, bool refresh_list, cfg_mode config_mode, const std::string& config_path)
@@ -3231,6 +3238,8 @@ void main_window::CreateConnects()
 		connect(this, &main_window::RequestDialogRepaint, trop_manager, &trophy_manager_dialog::HandleRepaintUiRequest);
 		trop_manager->show();
 	});
+
+	connect(ui->confRetroAchievementsAct, &QAction::triggered, this, &main_window::open_ra_settings);
 
 	connect(ui->actionManage_Savestates, &QAction::triggered, this, [this]
 	{

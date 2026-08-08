@@ -92,6 +92,7 @@ add_library(rpcs3_ui STATIC
     recvmessage_dialog_frame.cpp
     render_creator.cpp
     rpcn_settings_dialog.cpp
+    ra_settings_dialog.cpp
     rsx_debugger.cpp
     save_data_dialog.cpp
     save_data_info_dialog.cpp
@@ -187,6 +188,13 @@ add_library(rpcs3_ui STATIC
 
 if(HAS_MEMORY_BREAKPOINTS)
     target_compile_definitions(rpcs3_ui PRIVATE RPCS3_HAS_MEMORY_BREAKPOINTS)
+endif()
+
+if(RPCS3_RA_ENABLED)
+    target_compile_definitions(rpcs3_ui PRIVATE RPCS3_RA_ENABLED=1)
+    target_include_directories(rpcs3_ui PRIVATE
+        "${CMAKE_SOURCE_DIR}/3rdparty/rcheevos/rcheevos/include"
+    )
 endif()
 
 if(WIN32)

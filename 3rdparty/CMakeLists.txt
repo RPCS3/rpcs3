@@ -335,6 +335,9 @@ add_subdirectory(llvm EXCLUDE_FROM_ALL)
 # WOLFSSL
 add_subdirectory(wolfssl EXCLUDE_FROM_ALL)
 
+# RCHEEVOS
+add_subdirectory(rcheevos EXCLUDE_FROM_ALL)
+
 # CURL
 add_subdirectory(curl EXCLUDE_FROM_ALL)
 
@@ -386,3 +389,4 @@ add_library(3rdparty::rtmidi ALIAS rtmidi)
 add_library(3rdparty::opencv ALIAS ${OPENCV_TARGET})
 add_library(3rdparty::fusion ALIAS Fusion)
 add_library(3rdparty::feralinteractive ALIAS 3rdparty_feralinteractive)
+add_library(3rdparty::rcheevos ALIAS 3rdparty_rcheevos)
