@@ -640,13 +640,14 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 	const u64 total_size = this->size();
 	const u64 archive_first_offset = file_offset(offset);
 	const u64 archive_last_offset = archive_first_offset + max_size - 1;
-	iso_sector first_sec, last_sec;
 	void* aligned_buf = get_aligned_buf(); // thread-safe buffer
 
+	iso_sector first_sec {};
 	first_sec.lba_address = (archive_first_offset / ISO_SECTOR_SIZE) * ISO_SECTOR_SIZE;
 	first_sec.offset = archive_first_offset % ISO_SECTOR_SIZE;
 	first_sec.size = first_sec.offset + max_size <= ISO_SECTOR_SIZE ? max_size : ISO_SECTOR_SIZE - first_sec.offset;
 
+	iso_sector last_sec {};
 	last_sec.lba_address = last_sec.address_aligned = (archive_last_offset / ISO_SECTOR_SIZE) * ISO_SECTOR_SIZE;
 	// last_sec.offset = last_sec.offset_aligned = 0; // Always 0 so no need to set and use those attributes
 	last_sec.size = (archive_last_offset % ISO_SECTOR_SIZE) + 1;

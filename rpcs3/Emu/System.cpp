@@ -4650,10 +4650,10 @@ game_boot_result Emulator::RemoveGameFromYml(const std::string& title_id)
 	return game_boot_result::generic_error;
 }
 
-bool Emulator::IsPathInsideDir(std::string_view path, std::string_view dir) const
+bool Emulator::IsPathInsideDir(std::string_view path, std::string_view dir, bool check_if_exists) const
 {
-	const std::string dir_path = GetCallbacks().resolve_path(dir);
-	const std::string resolved_path = GetCallbacks().resolve_path(path);
+	const std::string dir_path = check_if_exists ? GetCallbacks().resolve_path(dir) : GetCallbacks().resolve_path_may_not_exist(dir);
+	const std::string resolved_path = check_if_exists ? GetCallbacks().resolve_path(path) : GetCallbacks().resolve_path_may_not_exist(path);
 
 	return !dir_path.empty() && !resolved_path.empty() && (resolved_path + '/').starts_with((dir_path.back() == '/') ? dir_path : (dir_path + '/'));
 }
