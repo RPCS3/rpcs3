@@ -14,8 +14,7 @@ namespace rsx
 
 			add_page(home_menu::fa_icon::home, std::make_shared<big_picture_game_grid>(x, y, width, height, this, std::move(on_game_selected)));
 
-			// Reuse the pause menu's RSX-overlay settings pages. Big Picture Mode steps the resolution scale by 1% instead of 25%.
-			add_page(home_menu::fa_icon::settings, std::make_shared<home_menu_settings>(x, y, width, height, false, this, 1));
+			add_page(home_menu::fa_icon::settings, std::make_shared<home_menu_settings>(x, y, width, height, false, this));
 
 			add_item(home_menu::fa_icon::poweroff, get_localized_string(localized_string_id::BIG_PICTURE_MENU_EXIT), [](pad_button btn) -> page_navigation
 			{
