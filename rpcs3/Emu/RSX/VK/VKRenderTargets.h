@@ -187,6 +187,7 @@ namespace vk
 			case driver_vendor::LAVAPIPE:
 			case driver_vendor::V3DV:
 			case driver_vendor::HONEYKRISP:
+			case driver_vendor::KOSMICKRISP:
 			case driver_vendor::PANVK:
 			case driver_vendor::ARM_MALI:
 				break;
