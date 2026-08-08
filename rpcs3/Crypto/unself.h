@@ -496,6 +496,9 @@ private:
 			WritePhdr(e, phdr);
 		}
 
+		// Tmp buffer
+		std::vector<u8> decomp_buf;
+
 		for (const MetadataSectionHeader& hdr : meta_shdr)
 		{
 			// PHDR type.
@@ -507,18 +510,16 @@ private:
 				if (hdr.compressed == 2)
 				{
 					const auto filesz = phdr.p_filesz;
-
-					// Create a pointer to a buffer for decompression.
-					std::unique_ptr<u8[]> decomp_buf(new u8[filesz]);
+					decomp_buf.resize(filesz);
 
 					// Create a buffer separate from data_buf to uncompress.
-					std::vector<u8> zlib_buf = data_buf;
-
-					uLongf decomp_buf_length = ::narrow<uLongf>(filesz);
-
+					ensure(data_buf.size() > data_buf_offset);
+					const std::vector<u8> zlib_buf(data_buf.cbegin() + data_buf_offset, data_buf.cend());
+		
 					// Use zlib uncompress on the new buffer.
 					// decomp_buf_length changes inside the call to uncompress
-					const int rv = uncompress(decomp_buf.get(), &decomp_buf_length, zlib_buf.data() + data_buf_offset, ::size32(zlib_buf));
+					uLongf decomp_buf_length = ::narrow<uLongf>(filesz);
+					const int rv = uncompress(decomp_buf.data(), &decomp_buf_length, zlib_buf.data(), ::size32(zlib_buf));
 
 					// Check for errors (TODO: Probably safe to remove this once these changes have passed testing.)
 					switch (rv)
@@ -529,13 +530,24 @@ private:
 					default: break;
 					}
 
+					ensure(decomp_buf_length <= decomp_buf.size());
+
+					// Warn if the final data is smaller than expected
+					if (decomp_buf_length < decomp_buf.size())
+					{
+						self_log.warning("zlib uncompress returned a buffer of less size than expected (size=%d, expected=%d)", decomp_buf_length, decomp_buf.size());
+					}
+
 					// Seek to the program header data offset and write the data.
 					e.seek(phdr.p_offset);
-					e.write(decomp_buf.get(), filesz);
+					e.write(decomp_buf.data(), decomp_buf_length);
 				}
 				else
 				{
 					// Seek to the program header data offset and write the data.
+					ensure(data_buf.size() >= (hdr.data_size + data_buf_offset));
+					ensure(hdr.data_size > (u64{umax} - static_cast<u64>(data_buf_offset))); // Check for overflow
+
 					e.seek(phdr.p_offset);
 					e.write(data_buf.data() + data_buf_offset, hdr.data_size);
 				}
