@@ -688,7 +688,7 @@ bool SCEDecrypter::LoadMetadata(const u8 erk[32], const u8 riv[16])
 
 	const usz data_keys_offset = sizeof(meta_hdr) + meta_hdr.section_count * sizeof(MetadataSectionHeader);
 	ensure(metadata_headers.size() >= (data_keys_offset + data_keys.size()));
-	ensure(data_keys.size() > (u64{umax} - data_keys_offset)); // Check for overflow
+	ensure(data_keys.size() <= (usz{umax} - data_keys_offset)); // Check for overflow
 	std::memcpy(data_keys.data(), metadata_headers.data() + data_keys_offset, data_keys.size());
 
 	return true;
@@ -743,7 +743,7 @@ bool SCEDecrypter::DecryptData()
 
 				// Copy the decrypted data.
 				ensure(data_buf.size() >= (buf.size() + data_buf_offset));
-				ensure(buf.size() > (u64{umax} - static_cast<u64>(data_buf_offset))); // Check for overflow
+				ensure(buf.size() <= (usz{umax} - static_cast<usz>(data_buf_offset))); // Check for overflow
 				std::memcpy(data_buf.data() + data_buf_offset, buf.data(), buf.size());
 			}
 		}
@@ -754,7 +754,7 @@ bool SCEDecrypter::DecryptData()
 			sce_f.read(buf.data(), buf.size());
 
 			ensure(data_buf.size() >= (buf.size() + data_buf_offset));
-			ensure(buf.size() > (u64{umax} - static_cast<u64>(data_buf_offset))); // Check for overflow
+			ensure(buf.size() <= (usz{umax} - static_cast<usz>(data_buf_offset))); // Check for overflow
 			std::memcpy(data_buf.data() + data_buf_offset, buf.data(), buf.size());
 		}
 
@@ -1195,7 +1195,7 @@ bool SELFDecrypter::LoadMetadata(const u8* klic_key)
 	
 	const usz data_keys_offset = sizeof(meta_hdr) + meta_hdr.section_count * sizeof(MetadataSectionHeader);
 	ensure(metadata_headers.size() >= (data_keys_offset + data_keys.size()));
-	ensure(data_keys.size() > (u64{umax} - data_keys_offset)); // Check for overflow
+	ensure(data_keys.size() <= (usz{umax} - data_keys_offset)); // Check for overflow
 	std::memcpy(data_keys.data(), metadata_headers.data() + data_keys_offset, data_keys.size());
 
 	return true;
@@ -1254,7 +1254,7 @@ bool SELFDecrypter::DecryptData()
 
 				// Copy the decrypted data.
 				ensure(data_buf.size() >= (buf.size() + data_buf_offset));
-				ensure(buf.size() > (u64{umax} - static_cast<u64>(data_buf_offset))); // Check for overflow
+				ensure(buf.size() <= (usz{umax} - static_cast<usz>(data_buf_offset))); // Check for overflow
 				std::memcpy(data_buf.data() + data_buf_offset, buf.data(), buf.size());
 
 				// Advance the buffer's offset.

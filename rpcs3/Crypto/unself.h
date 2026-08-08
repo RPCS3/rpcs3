@@ -546,7 +546,7 @@ private:
 				{
 					// Seek to the program header data offset and write the data.
 					ensure(data_buf.size() >= (hdr.data_size + data_buf_offset));
-					ensure(hdr.data_size > (u64{umax} - static_cast<u64>(data_buf_offset))); // Check for overflow
+					ensure(hdr.data_size <= (u64{umax} - static_cast<u64>(data_buf_offset))); // Check for overflow
 
 					e.seek(phdr.p_offset);
 					e.write(data_buf.data() + data_buf_offset, hdr.data_size);
