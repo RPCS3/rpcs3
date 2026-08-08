@@ -522,6 +522,20 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		if (!buffer_pitch)
 			buffer_pitch = buffer_width * avconfig.get_bpp();
 
+		// Some games under-declare the display buffer width, leaving unclaimed bytes at the end of every row
+		// while rendering the full row. Brutal Legend declares 1152 wide on a pitch of 5120 (= 1280px).
+		// Cropping to the declared width loses the right edge of the frame and skews the source aspect ratio,
+		// which aspect_convert_region then pillarboxes. Recover the full row, but never past what the video
+		// mode can display, so buffers with genuine pitch padding are left alone.
+		// NOTE: This is decided from the display buffer and the AV config alone, never from whatever render
+		// target happens to be in the surface store. Keying it off the surface makes the output geometry
+		// change between frames and the picture visibly pulses.
+		if (const u32 row_width = buffer_pitch / avconfig.get_bpp();
+			row_width > buffer_width && row_width <= avconfig.resolution_x)
+		{
+			buffer_width = row_width;
+		}
+
 		const size2u video_frame_size = avconfig.video_frame_size();
 		buffer_width = std::min(buffer_width, video_frame_size.width);
 		buffer_height = std::min(buffer_height, video_frame_size.height);
