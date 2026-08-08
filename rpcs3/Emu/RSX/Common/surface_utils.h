@@ -12,10 +12,11 @@ namespace rsx
 {
 	enum surface_state_flags : u32
 	{
-		ready = 0,
-		erase_bkgnd = 1,
-		require_resolve = 2,
-		require_unresolve = 4
+		ready               = 0x00,
+		erase_bkgnd         = 0x01,
+		require_resolve     = 0x02,
+		require_unresolve   = 0x04,
+		force_data_load     = 0x08
 	};
 
 	enum class surface_sample_layout : u32
@@ -38,6 +39,7 @@ namespace rsx
 		u32 base_address = 0;
 		bool is_depth = false;
 		bool is_clipped = false;
+		bool is_reloaded = false;
 
 		coordu src_area;
 		coordu dst_area;
@@ -145,6 +147,9 @@ namespace rsx
 		u8  spp = 1;
 		u8  samples_x = 1;
 		u8  samples_y = 1;
+
+		// AA mode
+		rsx::surface_antialiasing aa_mode = rsx::surface_antialiasing::center_1_sample;
 
 		// Scaling configuration
 		surface_scaling_config_t resolution_scaling_config;
@@ -257,6 +262,8 @@ namespace rsx
 
 		void set_aa_mode(rsx::surface_antialiasing aa)
 		{
+			aa_mode = aa;
+
 			switch (aa)
 			{
 				case rsx::surface_antialiasing::center_1_sample:
@@ -274,6 +281,11 @@ namespace rsx
 				default:
 					fmt::throw_exception("Unknown AA mode 0x%x", static_cast<u8>(aa));
 			}
+		}
+
+		rsx::surface_antialiasing get_aa_mode() const
+		{
+			return aa_mode;
 		}
 
 		void set_spp(u8 count)
@@ -344,6 +356,23 @@ namespace rsx
 		inline bool write_through() const
 		{
 			return (state_flags & rsx::surface_state_flags::erase_bkgnd) && old_contents.empty();
+		}
+
+		inline bool needs_cpu_upload() const
+		{
+			if ((state_flags & rsx::surface_state_flags::erase_bkgnd) == 0) [[ likely ]]
+			{
+				return false;
+			}
+
+			if (state_flags & rsx::surface_state_flags::force_data_load)
+			{
+				return true;
+			}
+
+			return is_depth_surface()
+				? !!g_cfg.video.read_depth_buffer
+				: !!g_cfg.video.read_color_buffers;
 		}
 
 #if (ENABLE_SURFACE_CACHE_DEBUG)
