@@ -793,7 +793,7 @@ void lv2_exitspawn(ppu_thread& ppu, bool exit_current, shared_ptr<lv2_memory_con
 
 		SelfAdditionalInfo self_info{};
 
-		const auto elf_file = decrypt_self(self_file, klic ? nullptr : reinterpret_cast<const u8*>(&klic), &self_info);
+		const auto elf_file = decrypt_self(self_file, klic ? reinterpret_cast<const u8*>(&klic) : nullptr, &self_info);
 
 		if (!elf_file)
 		{
