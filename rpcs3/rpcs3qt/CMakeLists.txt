@@ -2,6 +2,7 @@ add_library(rpcs3_ui STATIC
     about_dialog.cpp
     anaglyph_settings_dialog.cpp
     auto_pause_settings_dialog.cpp
+    auto_scroll_label.cpp
     basic_mouse_settings_dialog.cpp
     breakpoint_handler.cpp
     breakpoint_list.cpp
