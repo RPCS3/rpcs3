@@ -32,7 +32,16 @@ namespace rpcs3::ra
 
 	static u32 read_memory(u32 address, u8* buffer, u32 num_bytes, rc_client_t* /*client*/)
 	{
-		return vm::try_access(address, buffer, num_bytes, false) ? num_bytes : 0;
+		if (vm::try_access(address, buffer, num_bytes, false))
+			return num_bytes;
+
+		if (address >= 0x10000000U && address < 0x30000000U)
+		{
+			memset(buffer, 0, num_bytes);
+			return num_bytes;
+		}
+
+		return 0;
 	}
 
 	static size_t curl_write_callback(char* ptr, size_t size, size_t nmemb, void* userdata)
