@@ -158,7 +158,7 @@ u128 get_block_key(int block, const NPD_HEADER& npd)
 // for out data, allocate a buffer the size of 'edat.block_size'
 // Also, set 'in file' to the beginning of the encrypted data, which may be offset if inside another file, but normally just reset to beginning of file
 // returns number of bytes written, -1 for error
-s64 decrypt_block(const fs::file& in, u8* out, const EDAT_HEADER& edat, const NPD_HEADER& npd, const u8* crypt_key, u32 block_num, u32 total_blocks, u64 size_left, bool is_out_buffer_aligned = false)
+s64 decrypt_block(const fs::file& in, std::vector<u8>& out, const EDAT_HEADER& edat, const NPD_HEADER& npd, const u8* crypt_key, u32 block_num, u32 total_blocks, u64 size_left, bool is_out_buffer_aligned = false)
 {
 	// Get metadata info and setup buffers.
 	const int metadata_section_size = ((edat.flags & EDAT_COMPRESSED_FLAG) != 0 || (edat.flags & EDAT_FLAG_0x20) != 0) ? 0x20 : 0x10;
@@ -240,15 +240,16 @@ s64 decrypt_block(const fs::file& in, u8* out, const EDAT_HEADER& edat, const NP
 	std::vector<u8> dec_data_buf(length);
 
 	// Try to use out buffer for file reads if no padding is needed instead of a new buffer
-	u8* enc_data = enc_data_buf.empty() ? out : enc_data_buf.data();
+	std::vector<u8>* enc_data = enc_data_buf.empty() ? &out : &enc_data_buf;
 
 	// Variable to avoid copies when possible
-	u8* dec_data = dec_data_buf.data();
+	std::vector<u8>* dec_data = &dec_data_buf;
 
 	std::memset(hash, 0, 0x10);
 	std::memset(key_result, 0, 0x10);
 
-	in.read_at(offset, enc_data, length);
+	ensure(enc_data->size() >= length);
+	in.read_at(offset, enc_data->data(), length);
 
 	// Generate a key for the current block.
 	auto b_key = get_block_key(block_num, npd);
@@ -293,7 +294,7 @@ s64 decrypt_block(const fs::file& in, u8* out, const EDAT_HEADER& edat, const NP
 		// Simply copy the data without the header or the footer.
 		if (should_decompress)
 		{
-			std::memcpy(dec_data, enc_data, length);
+			std::memcpy(dec_data->data(), enc_data->data(), length);
 		}
 		else
 		{
@@ -307,7 +308,7 @@ s64 decrypt_block(const fs::file& in, u8* out, const EDAT_HEADER& edat, const NP
 		const u8* iv = (npd.version <= 1) ? empty_iv : npd.digest;
 
 		// Call main crypto routine on this data block.
-		if (!decrypt(hash_mode, crypto_mode, (npd.version == 4), enc_data, dec_data, length, key_result, iv, hash, hash_result))
+		if (!decrypt(hash_mode, crypto_mode, (npd.version == 4), enc_data->data(), dec_data->data(), length, key_result, iv, hash, hash_result))
 		{
 			edat_log.error("Block at offset 0x%llx has invalid hash!", offset);
 			return -1;
@@ -317,7 +318,7 @@ s64 decrypt_block(const fs::file& in, u8* out, const EDAT_HEADER& edat, const NP
 	// Apply additional de-compression if needed and write the decrypted data.
 	if (should_decompress)
 	{
-		const int res = decompress(out, dec_data, edat.block_size);
+		const int res = decompress(out.data(), dec_data->data(), edat.block_size);
 
 		size_left -= res;
 
@@ -333,9 +334,11 @@ s64 decrypt_block(const fs::file& in, u8* out, const EDAT_HEADER& edat, const NP
 		return res;
 	}
 
-	if (dec_data != out)
+	if (dec_data != &out)
 	{
-		std::memcpy(out, dec_data, pad_length);
+		ensure(out.size() >= pad_length);
+		ensure(dec_data->size() >= pad_length);
+		std::memcpy(out.data(), dec_data->data(), pad_length);
 	}
 
 	return pad_length;
@@ -898,7 +901,7 @@ u64 EDATADecrypter::ReadData(u64 pos, u8* data, u64 size)
 
 	for (u32 i = starting_block; i < ending_block; i++)
 	{
-		u64 res = decrypt_block(edata_file, data_buf.data(), edatHeader, npdHeader, reinterpret_cast<uchar*>(&dec_key), i, total_blocks, edatHeader.file_size, true);
+		u64 res = decrypt_block(edata_file, data_buf, edatHeader, npdHeader, reinterpret_cast<uchar*>(&dec_key), i, total_blocks, edatHeader.file_size, true);
 
 		if (res == umax)
 		{
