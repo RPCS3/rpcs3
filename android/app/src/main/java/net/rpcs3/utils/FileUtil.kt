@@ -54,11 +54,8 @@ object FileUtil {
 
                     if (installDir != null) {
                         batchDirs += InstallableFolder(currentFolderUri, installDir)
-                    } else {
-                        workList.add(currentFolderUri)
+                        continue
                     }
-
-                    continue
                 }
 
                 listFiles(currentFolderUri, context).forEach { item ->
@@ -71,9 +68,21 @@ object FileUtil {
             }
 
             if (batchFiles.isNotEmpty()) {
-                PrecompilerService.start(
-                    context, PrecompilerServiceAction.Install, ArrayList(batchFiles)
-                )
+                val packages = batchFiles.mapNotNull { PackageInspector.read(context, it) }
+                val installable = packages.filter { it.kind == PackageKind.Pkg && it.valid }
+                val others = packages.filter { it.kind != PackageKind.Pkg }
+
+                others.forEach {
+                    PrecompilerService.start(context, PrecompilerServiceAction.Install, it.uri)
+                }
+
+                if (installable.isNotEmpty()) {
+                    PrecompilerService.start(
+                        context,
+                        PrecompilerServiceAction.InstallPackages,
+                        ArrayList(PackageInspector.installOrder(installable).map { it.uri })
+                    )
+                }
             }
 
             batchDirs.forEach {
@@ -139,12 +148,17 @@ object FileUtil {
             )
 
             bos = BufferedOutputStream(FileOutputStream(target, false))
-            val buf = ByteArray(1024)
-            bis.read(buf)
+            val buf = ByteArray(64 * 1024)
 
-            do {
-                bos.write(buf)
-            } while (bis.read(buf) != -1)
+            while (true) {
+                val read = bis.read(buf)
+                if (read <= 0) {
+                    break
+                }
+                bos.write(buf, 0, read)
+            }
+
+            bos.flush()
         } catch (e: IOException) {
             e.printStackTrace()
         } finally {

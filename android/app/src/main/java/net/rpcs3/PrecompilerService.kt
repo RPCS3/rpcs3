@@ -4,17 +4,20 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.content.res.AssetFileDescriptor
 import android.net.Uri
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
+import net.rpcs3.utils.PackageInspector
 import kotlin.concurrent.thread
 
 enum class PrecompilerServiceAction {
     InstallFirmware,
     Install,
-    AddIso
+    AddIso,
+    InstallPackages
 }
 
 class PrecompilerService : Service() {
@@ -33,11 +36,6 @@ class PrecompilerService : Service() {
 
         fun start(context: Context, action: PrecompilerServiceAction, batch: ArrayList<Uri>) {
             if (batch.isEmpty()) {
-                return
-            }
-
-            if (batch.size == 1) {
-                start(context, action, batch[0])
                 return
             }
 
@@ -64,7 +62,64 @@ class PrecompilerService : Service() {
     fun install(isFw: Boolean, uri: Uri, installProgress: Long): Boolean =
         install(if (isFw) Mode.Firmware else Mode.Package, uri, installProgress)
 
-    enum class Mode { Firmware, Package, AddIso }
+    enum class Mode { Firmware, Package, AddIso, PackageBatch }
+
+    private fun installBatch(uris: List<Uri>, installProgress: Long): Boolean {
+        val descriptors = ArrayList<AssetFileDescriptor>(uris.size)
+        val fds = ArrayList<Int>(uris.size)
+        val names = ArrayList<String>(uris.size)
+
+        try {
+            uris.forEach { uri ->
+                val descriptor = try {
+                    contentResolver.openAssetFileDescriptor(uri, "r")
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    null
+                }
+
+                val fd = descriptor?.parcelFileDescriptor?.fd
+
+                if (descriptor != null && fd != null) {
+                    descriptors += descriptor
+                    fds += fd
+                    names += PackageInspector.displayNameOf(this, uri)
+                } else {
+                    try {
+                        descriptor?.close()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
+            }
+
+            if (fds.isEmpty()) {
+                ProgressRepository.onProgressEvent(installProgress, -1, 0)
+                return false
+            }
+
+            if (!RPCS3.instance.installPackages(
+                    fds.toIntArray(), names.toTypedArray(), installProgress
+                )
+            ) {
+                try {
+                    ProgressRepository.onProgressEvent(installProgress, -1, 0)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        } finally {
+            descriptors.forEach {
+                try {
+                    it.close()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+
+        return true
+    }
 
     fun install(mode: Mode, uri: Uri, installProgress: Long): Boolean {
         val parcel = if (mode == Mode.AddIso) {
@@ -93,7 +148,7 @@ class PrecompilerService : Service() {
         val installResult = when (mode) {
             Mode.Firmware -> RPCS3.instance.installFw(fd, installProgress)
             Mode.AddIso -> RPCS3.instance.addIsoEntry(fd, installProgress)
-            Mode.Package -> RPCS3.instance.install(fd, installProgress)
+            Mode.Package, Mode.PackageBatch -> RPCS3.instance.install(fd, installProgress)
         }
 
         if (!installResult) {
@@ -122,6 +177,7 @@ class PrecompilerService : Service() {
         val mode = when (action) {
             PrecompilerServiceAction.InstallFirmware.ordinal -> Mode.Firmware
             PrecompilerServiceAction.AddIso.ordinal -> Mode.AddIso
+            PrecompilerServiceAction.InstallPackages.ordinal -> Mode.PackageBatch
             else -> Mode.Package
         }
 
@@ -136,6 +192,11 @@ class PrecompilerService : Service() {
                 when (mode) {
                     Mode.Firmware -> "Firmware Installation"
                     Mode.AddIso -> "Adding disc image"
+                    Mode.PackageBatch -> {
+                        val count = batch?.size ?: 0
+                        if (count > 1) "Installing $count packages" else "Package Installation"
+                    }
+
                     Mode.Package -> "Package Installation"
                 }
             ) { entry ->
@@ -168,13 +229,14 @@ class PrecompilerService : Service() {
         }
 
         thread {
-            var installResult = false
-            if (uri != null) {
-                installResult = install(mode, uri, installProgress)
-            } else batch?.forEach { uri ->
-                // FIXME: create child progress
-                if (install(mode, uri, installProgress)) {
-                    installResult = true
+            val installResult = when {
+                uri != null -> install(mode, uri, installProgress)
+                mode == Mode.PackageBatch || mode == Mode.Package ->
+                    installBatch(batch ?: arrayListOf(), installProgress)
+
+                else -> {
+                    batch?.forEach { install(mode, it, installProgress) }
+                    true
                 }
             }
 

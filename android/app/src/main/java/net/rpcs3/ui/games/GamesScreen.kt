@@ -2,8 +2,6 @@ package net.rpcs3.ui.games
 
 import android.content.Intent
 import android.net.Uri
-import net.rpcs3.PrecompilerService
-import net.rpcs3.PrecompilerServiceAction
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -110,14 +108,23 @@ fun GameItem(
 ) {
     val deleteScope = rememberCoroutineScope()
     val context = LocalContext.current
+    var pendingPackages by remember { mutableStateOf<List<Uri>>(emptyList()) }
+
     val updatePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent(),
-        onResult = { uri: Uri? ->
-            if (uri != null) {
-                PrecompilerService.start(context, PrecompilerServiceAction.Install, uri)
+        contract = ActivityResultContracts.GetMultipleContents(),
+        onResult = { uris: List<Uri> ->
+            if (uris.isNotEmpty()) {
+                pendingPackages = uris
             }
         }
     )
+
+    if (pendingPackages.isNotEmpty()) {
+        PackageInstallFlow(
+            uris = pendingPackages,
+            onFinished = { pendingPackages = emptyList() }
+        )
+    }
     val menuExpanded = remember { mutableStateOf(false) }
     val iconExists = remember { mutableStateOf(false) }
     var emulatorState by remember { RPCS3.state }

@@ -2016,18 +2016,37 @@ static bool installPup(JNIEnv *env, fs::file &&pup_f, jlong progressId) {
   return true;
 }
 
-static bool installPkg(JNIEnv *env, fs::file &&file, jlong progressId) {
+static bool installPkgs(JNIEnv *env,
+                        std::vector<std::pair<std::string, fs::file>> &&files,
+                        jlong progressId) {
   Progress progress(env, progressId);
 
   std::deque<package_reader> readers;
   std::deque<std::string> bootable_paths;
-  readers.emplace_back("dummy.pkg", std::move(file));
+  std::vector<std::string> names;
+
+  for (auto &[name, file] : files) {
+    names.push_back(name);
+    readers.emplace_back(name, std::move(file));
+  }
 
   AtExit atExit{[&] {
     for (auto &reader : readers) {
       reader.file().release_handle();
     }
   }};
+
+  if (readers.empty()) {
+    progress.failure("No packages to install");
+    return false;
+  }
+
+  for (std::size_t index = 0; index < readers.size(); index++) {
+    if (!readers[index].is_valid()) {
+      progress.failure("Corrupted package: " + names[index]);
+      return false;
+    }
+  }
 
   package_install_result result = {};
   named_thread worker("PKG Installer", [&readers, &result, &bootable_paths] {
@@ -2045,9 +2064,20 @@ static bool installPkg(JNIEnv *env, fs::file &&file, jlong progressId) {
 
   while (true) {
     std::uint64_t totalProgress = 0;
-    for (std::size_t index = 0; auto &reader : readers) {
+    for (auto &reader : readers) {
       if (result.error != package_install_result::error_type::no_error) {
-        progress.failure("Installation failed");
+        if (result.error == package_install_result::error_type::app_version) {
+          progress.failure(
+              "Update cannot be installed on the current version. It expects "
+              "version " +
+              result.version.expected + ", but version " +
+              (result.version.installed.empty() ? std::string("none")
+                                                : result.version.installed) +
+              " is installed. Install the missing updates in order first.");
+        } else {
+          progress.failure("Installation failed");
+        }
+
         for (package_reader &reader : readers) {
           reader.abort_extract();
         }
@@ -2074,16 +2104,30 @@ static bool installPkg(JNIEnv *env, fs::file &&file, jlong progressId) {
     std::this_thread::sleep_for(std::chrono::seconds(2));
   }
 
-  if (worker()) {
-    auto paths = std::vector(bootable_paths.begin(), bootable_paths.end());
-    collectGameInfo(env, -1, paths);
+  if (!worker()) {
+    progress.failure("Installation failed");
+    return false;
+  }
 
-    for (auto &path : paths) {
-      g_compilationQueue.push(progress, std::move(path));
-    }
+  auto paths = std::vector(bootable_paths.begin(), bootable_paths.end());
+  collectGameInfo(env, -1, paths);
+
+  if (paths.empty()) {
+    progress.success(maxProgress);
+    return true;
+  }
+
+  for (auto &path : paths) {
+    g_compilationQueue.push(progress, std::move(path));
   }
 
   return true;
+}
+
+static bool installPkg(JNIEnv *env, fs::file &&file, jlong progressId) {
+  std::vector<std::pair<std::string, fs::file>> files;
+  files.emplace_back("package.pkg", std::move(file));
+  return installPkgs(env, std::move(files), progressId);
 }
 
 static bool installEdat(JNIEnv *env, fs::file &&file, jlong progressId,
@@ -2366,6 +2410,92 @@ Java_net_rpcs3_RPCS3_install(JNIEnv *env, jobject, jint fd, jlong progressId) {
   }
 
   return true;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL Java_net_rpcs3_RPCS3_installPackages(
+    JNIEnv *env, jobject, jintArray jfds, jobjectArray jnames,
+    jlong progressId) {
+  const jsize count = env->GetArrayLength(jfds);
+
+  if (count <= 0) {
+    Progress(env, progressId).failure("No packages to install");
+    return false;
+  }
+
+  std::vector<jint> fds(count);
+  env->GetIntArrayRegion(jfds, 0, count, fds.data());
+
+  std::vector<std::pair<std::string, fs::file>> files;
+  files.reserve(count);
+
+  for (jsize index = 0; index < count; index++) {
+    std::string name = "package.pkg";
+
+    if (jnames != nullptr) {
+      if (auto jname = reinterpret_cast<jstring>(
+              env->GetObjectArrayElement(jnames, index))) {
+        name = unwrap(env, jname);
+      }
+    }
+
+    files.emplace_back(std::move(name),
+                       fs::file::from_native_handle(fds[index]));
+  }
+
+  return installPkgs(env, std::move(files), progressId);
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_net_rpcs3_RPCS3_pkgInfo(JNIEnv *env, jobject, jint fd) {
+  auto file = fs::file::from_native_handle(fd);
+
+  auto type = getFileType(file);
+  file.seek(0);
+
+  if (type != FileType::Pkg) {
+    file.release_handle();
+
+    return wrap(env, nlohmann::json{
+                         {"valid", false},
+                         {"kind", type == FileType::Rap   ? "rap"
+                                  : type == FileType::Edat ? "edat"
+                                  : type == FileType::Iso  ? "iso"
+                                  : type == FileType::Pup  ? "pup"
+                                                           : "unknown"},
+                     }
+                         .dump());
+  }
+
+  package_reader reader("package.pkg", std::move(file));
+  AtExit atExit{[&] { reader.file().release_handle(); }};
+
+  if (!reader.is_valid()) {
+    return wrap(env, nlohmann::json{{"valid", false}, {"kind", "pkg"}}.dump());
+  }
+
+  const psf::registry &psf = reader.get_psf();
+  const auto category = std::string(psf::get_string(psf, "CATEGORY", ""));
+  const bool isPatch =
+      (reader.get_metadata().package_type & pkg_flag::PKG_FLAG_PATCH) != 0;
+
+  return wrap(env, nlohmann::json{
+                       {"valid", true},
+                       {"kind", "pkg"},
+                       {"title", std::string(psf::get_string(psf, "TITLE", ""))},
+                       {"titleId",
+                        std::string(psf::get_string(psf, "TITLE_ID", ""))},
+                       {"category", category},
+                       {"appVer",
+                        std::string(psf::get_string(psf, "APP_VER", ""))},
+                       {"targetAppVer",
+                        std::string(psf::get_string(psf, "TARGET_APP_VER", ""))},
+                       {"dataSize",
+                        static_cast<std::uint64_t>(
+                            reader.get_header().data_size.value())},
+                       {"isUpdate", category == "GD" && isPatch},
+                       {"isDlc", category == "GD" && !isPatch},
+                   }
+                       .dump());
 }
 
 extern "C" JNIEXPORT jboolean JNICALL Java_net_rpcs3_RPCS3_installKey(

@@ -74,6 +74,8 @@ class RPCS3 {
     external fun initialize(rootDir: String): Boolean
     external fun installFw(fd: Int, progressId: Long): Boolean
     external fun install(fd: Int, progressId: Long): Boolean
+    external fun installPackages(fds: IntArray, names: Array<String>, progressId: Long): Boolean
+    external fun pkgInfo(fd: Int): String
     external fun installKey(fd: Int, requestId: Long, gamePath: String): Boolean
     external fun boot(path: String): Int
     external fun surfaceEvent(surface: Surface, event: Int): Boolean
