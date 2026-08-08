@@ -307,6 +307,10 @@ error_code sys_rsx_memory_free(cpu_thread& cpu, u32 mem_handle)
 
 	sys_rsx.warning("sys_rsx_memory_free(mem_handle=0x%x)", mem_handle);
 
+	const auto rsx_info = ensure(idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process))->rsx_info;
+
+	std::lock_guard lock(rsx_info->mutex);
+
 	if (!vm::check_addr(rsx::constants::local_mem_base))
 	{
 		return CELL_ENOMEM;
@@ -316,6 +320,9 @@ error_code sys_rsx_memory_free(cpu_thread& cpu, u32 mem_handle)
 	{
 		fmt::throw_exception("Attempting to dealloc rsx memory when the context is still being used");
 	}
+
+	ensure(rsx_info->local_mem_size);
+	rsx_info->local_mem_size = 0;
 
 	if (!vm::dealloc(rsx::constants::local_mem_base))
 	{
