@@ -868,7 +868,7 @@ bool EDATADecrypter::ReadHeader()
 	//}
 
 	file_size = edatHeader.file_size;
-	total_blocks = ::narrow<u32>(utils::aligned_div(edatHeader.file_size, edatHeader.block_size));
+	total_blocks = (edatHeader.block_size == 0) ? 0 : ::narrow<u32>(utils::aligned_div(edatHeader.file_size, edatHeader.block_size));
 
 	// Try decrypting the first block instead
 	u8 data_sample[1];
