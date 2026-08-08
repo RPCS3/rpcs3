@@ -31,9 +31,10 @@ struct lv2_memory : lv2_obj
 	lv2_memory_container* const ct; // Associated memory container
 	atomic_ptr<std::shared_ptr<utils::shm>> shm;
 
-	atomic_t<u32> counter{0};
 	// the game can drop its handle while audio still needs the buffer
 	atomic_t<u32> external_refs{0};
+	// Per-process allocations counter
+	std::map<u32, u32> counters;
 
 	lv2_memory(u32 size, u32 align, u64 flags, u64 key, bool pshared, u64 authid, lv2_memory_container* ct);
 

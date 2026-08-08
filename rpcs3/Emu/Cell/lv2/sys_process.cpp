@@ -186,6 +186,12 @@ u64 lv2_process::ki11_self()
 			continue;
 		}
 
+		// Clean mmapper handles
+		idm::select<lv2_memory>([&](u32, lv2_memory& mem)
+		{
+			mem.counters.erase(id_manager::g_process);
+		});
+
 		break;
 	}
 
