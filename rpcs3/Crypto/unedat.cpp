@@ -16,17 +16,19 @@ LOG_CHANNEL(edat_log, "EDAT");
 
 void generate_key(int crypto_mode, int version, u8* key_final, u8* iv_final, const u8* key, const u8* iv)
 {
-	int mode = crypto_mode & 0xF0000000;
-	uchar temp_iv[16]{};
+	const int mode = crypto_mode & 0xF0000000;
 	switch (mode)
 	{
 	case 0x10000000:
+	{
 		// Encrypted ERK.
 		// Decrypt the key with EDAT_KEY + EDAT_IV and copy the original IV.
+		u8 temp_iv[16]{};
 		memcpy(temp_iv, EDAT_IV, 0x10);
 		aescbc128_decrypt(const_cast<u8*>(version ? EDAT_KEY_1 : EDAT_KEY_0), temp_iv, key, key_final, 0x10);
 		memcpy(iv_final, iv, 0x10);
 		break;
+	}
 	case 0x20000000:
 		// Default ERK.
 		// Use EDAT_KEY and EDAT_IV.
@@ -44,16 +46,18 @@ void generate_key(int crypto_mode, int version, u8* key_final, u8* iv_final, con
 
 void generate_hash(int hash_mode, int version, u8* hash_final, const u8* hash)
 {
-	int mode = hash_mode & 0xF0000000;
-	uchar temp_iv[16]{};
+	const int mode = hash_mode & 0xF0000000;
 	switch (mode)
 	{
 	case 0x10000000:
+	{
 		// Encrypted HASH.
 		// Decrypt the hash with EDAT_KEY + EDAT_IV.
+		u8 temp_iv[16]{};
 		memcpy(temp_iv, EDAT_IV, 0x10);
 		aescbc128_decrypt(const_cast<u8*>(version ? EDAT_KEY_1 : EDAT_KEY_0), temp_iv, hash, hash_final, 0x10);
 		break;
+	}
 	case 0x20000000:
 		// Default HASH.
 		// Use EDAT_HASH.
@@ -70,10 +74,10 @@ void generate_hash(int hash_mode, int version, u8* hash_final, const u8* hash)
 bool decrypt(int hash_mode, int crypto_mode, int version, const u8* in, u8* out, usz length, const u8* key, const u8* iv, const u8* hash, const u8* test_hash)
 {
 	// Setup buffers for key, iv and hash.
-	unsigned char key_final[0x10] = {};
-	unsigned char iv_final[0x10] = {};
-	unsigned char hash_final_10[0x10] = {};
-	unsigned char hash_final_14[0x14] = {};
+	u8 key_final[0x10] = {};
+	u8 iv_final[0x10] = {};
+	u8 hash_final_10[0x10] = {};
+	u8 hash_final_14[0x14] = {};
 
 	// Generate crypto key and hash.
 	generate_key(crypto_mode, version, key_final, iv_final, key, iv);
@@ -119,22 +123,22 @@ bool decrypt(int hash_mode, int crypto_mode, int version, const u8* in, u8* out,
 std::tuple<u64, s32, s32> dec_section(const u8* metadata)
 {
 	std::array<u8, 0x10> dec;
-	dec[0x00] = (metadata[0xC] ^ metadata[0x8] ^ metadata[0x10]);
-	dec[0x01] = (metadata[0xD] ^ metadata[0x9] ^ metadata[0x11]);
-	dec[0x02] = (metadata[0xE] ^ metadata[0xA] ^ metadata[0x12]);
-	dec[0x03] = (metadata[0xF] ^ metadata[0xB] ^ metadata[0x13]);
-	dec[0x04] = (metadata[0x4] ^ metadata[0x8] ^ metadata[0x14]);
-	dec[0x05] = (metadata[0x5] ^ metadata[0x9] ^ metadata[0x15]);
-	dec[0x06] = (metadata[0x6] ^ metadata[0xA] ^ metadata[0x16]);
-	dec[0x07] = (metadata[0x7] ^ metadata[0xB] ^ metadata[0x17]);
-	dec[0x08] = (metadata[0xC] ^ metadata[0x0] ^ metadata[0x18]);
-	dec[0x09] = (metadata[0xD] ^ metadata[0x1] ^ metadata[0x19]);
-	dec[0x0A] = (metadata[0xE] ^ metadata[0x2] ^ metadata[0x1A]);
-	dec[0x0B] = (metadata[0xF] ^ metadata[0x3] ^ metadata[0x1B]);
-	dec[0x0C] = (metadata[0x4] ^ metadata[0x0] ^ metadata[0x1C]);
-	dec[0x0D] = (metadata[0x5] ^ metadata[0x1] ^ metadata[0x1D]);
-	dec[0x0E] = (metadata[0x6] ^ metadata[0x2] ^ metadata[0x1E]);
-	dec[0x0F] = (metadata[0x7] ^ metadata[0x3] ^ metadata[0x1F]);
+	dec[0x0] = (metadata[0xC] ^ metadata[0x8] ^ metadata[0x10]);
+	dec[0x1] = (metadata[0xD] ^ metadata[0x9] ^ metadata[0x11]);
+	dec[0x2] = (metadata[0xE] ^ metadata[0xA] ^ metadata[0x12]);
+	dec[0x3] = (metadata[0xF] ^ metadata[0xB] ^ metadata[0x13]);
+	dec[0x4] = (metadata[0x4] ^ metadata[0x8] ^ metadata[0x14]);
+	dec[0x5] = (metadata[0x5] ^ metadata[0x9] ^ metadata[0x15]);
+	dec[0x6] = (metadata[0x6] ^ metadata[0xA] ^ metadata[0x16]);
+	dec[0x7] = (metadata[0x7] ^ metadata[0xB] ^ metadata[0x17]);
+	dec[0x8] = (metadata[0xC] ^ metadata[0x0] ^ metadata[0x18]);
+	dec[0x9] = (metadata[0xD] ^ metadata[0x1] ^ metadata[0x19]);
+	dec[0xA] = (metadata[0xE] ^ metadata[0x2] ^ metadata[0x1A]);
+	dec[0xB] = (metadata[0xF] ^ metadata[0x3] ^ metadata[0x1B]);
+	dec[0xC] = (metadata[0x4] ^ metadata[0x0] ^ metadata[0x1C]);
+	dec[0xD] = (metadata[0x5] ^ metadata[0x1] ^ metadata[0x1D]);
+	dec[0xE] = (metadata[0x6] ^ metadata[0x2] ^ metadata[0x1E]);
+	dec[0xF] = (metadata[0x7] ^ metadata[0x3] ^ metadata[0x1F]);
 
 	u64 offset = read_from_ptr<be_t<u64>>(dec, 0);
 	s32 length = read_from_ptr<be_t<s32>>(dec, 8);
@@ -145,13 +149,13 @@ std::tuple<u64, s32, s32> dec_section(const u8* metadata)
 
 u128 get_block_key(int block, const NPD_HEADER& npd)
 {
-	unsigned char empty_key[0x10] = {};
-	const unsigned char* src_key = (npd.version <= 1) ? empty_key : npd.dev_hash;
+	const u8 empty_key[0x10] = {};
+	const u8* src_key = (npd.version <= 1) ? empty_key : npd.dev_hash;
 	u128 dest_key{};
 	std::memcpy(&dest_key, src_key, 0xC);
 
-	s32 swappedBlock = std::bit_cast<be_t<s32>>(block);
-	std::memcpy(reinterpret_cast<uchar*>(&dest_key) + 0xC, &swappedBlock, sizeof(swappedBlock));
+	const s32 swappedBlock = std::bit_cast<be_t<s32>>(block);
+	std::memcpy(reinterpret_cast<u8*>(&dest_key) + 0xC, &swappedBlock, sizeof(swappedBlock));
 	return dest_key;
 }
 
@@ -161,8 +165,8 @@ u128 get_block_key(int block, const NPD_HEADER& npd)
 s64 decrypt_block(const fs::file& in, std::vector<u8>& out, const EDAT_HEADER& edat, const NPD_HEADER& npd, const u8* crypt_key, u32 block_num, u32 total_blocks, u64 size_left, bool is_out_buffer_aligned = false)
 {
 	// Get metadata info and setup buffers.
-	const int metadata_section_size = ((edat.flags & EDAT_COMPRESSED_FLAG) != 0 || (edat.flags & EDAT_FLAG_0x20) != 0) ? 0x20 : 0x10;
-	const int metadata_offset = 0x100;
+	const u64 metadata_section_size = ((edat.flags & EDAT_COMPRESSED_FLAG) != 0 || (edat.flags & EDAT_FLAG_0x20) != 0) ? 0x20 : 0x10;
+	constexpr u64 metadata_offset = 0x100;
 
 	u8 hash[0x10] = { 0 };
 	u8 key_result[0x10] = { 0 };
@@ -172,7 +176,7 @@ s64 decrypt_block(const fs::file& in, std::vector<u8>& out, const EDAT_HEADER& e
 	u64 metadata_sec_offset = 0;
 	u64 length = 0;
 	s32 compression_end = 0;
-	unsigned char empty_iv[0x10] = {};
+	u8 empty_iv[0x10] = {};
 
 	// Decrypt the metadata.
 	if ((edat.flags & EDAT_COMPRESSED_FLAG) != 0)
@@ -255,7 +259,7 @@ s64 decrypt_block(const fs::file& in, std::vector<u8>& out, const EDAT_HEADER& e
 	auto b_key = get_block_key(block_num, npd);
 
 	// Encrypt the block key with the crypto key.
-	aesecb128_encrypt(crypt_key, reinterpret_cast<uchar*>(&b_key), key_result);
+	aesecb128_encrypt(crypt_key, reinterpret_cast<u8*>(&b_key), key_result);
 
 	if ((edat.flags & EDAT_FLAG_0x10) != 0)
 	{
@@ -394,7 +398,7 @@ bool check_data(const u8* key, const EDAT_HEADER& edat, const NPD_HEADER& npd, c
 	f.read(header_hash, 0x10);
 
 	// Setup the hashing mode and the crypto mode used in the file.
-	const int crypto_mode = 0x1;
+	constexpr int crypto_mode = 0x1;
 	int hash_mode = ((edat.flags & EDAT_ENCRYPTED_KEY_FLAG) == 0) ? 0x00000002 : 0x10000002;
 	if ((edat.flags & EDAT_DEBUG_DATA_FLAG) != 0)
 	{
@@ -405,8 +409,8 @@ bool check_data(const u8* key, const EDAT_HEADER& edat, const NPD_HEADER& npd, c
 	}
 
 	// Setup header key and iv buffers.
-	unsigned char header_key[0x10] = { 0 };
-	unsigned char header_iv[0x10] = { 0 };
+	u8 header_key[0x10] = { 0 };
+	u8 header_iv[0x10] = { 0 };
 
 	// Test the header hash (located at offset 0xA0).
 	if (!decrypt(hash_mode, crypto_mode, (npd.version == 4), header, empty_header, 0xA0, header_key, header_iv, key, header_hash))
@@ -423,7 +427,6 @@ bool check_data(const u8* key, const EDAT_HEADER& edat, const NPD_HEADER& npd, c
 	}
 
 	// Parse the metadata info.
-	const int metadata_section_size = ((edat.flags & EDAT_COMPRESSED_FLAG) != 0 || (edat.flags & EDAT_FLAG_0x20) != 0) ? 0x20 : 0x10;
 	if ((edat.flags & EDAT_COMPRESSED_FLAG) != 0)
 	{
 		if (verbose)
@@ -434,6 +437,8 @@ bool check_data(const u8* key, const EDAT_HEADER& edat, const NPD_HEADER& npd, c
 	{
 		return false;
 	}
+
+	const u64 metadata_section_size = ((edat.flags & EDAT_COMPRESSED_FLAG) != 0 || (edat.flags & EDAT_FLAG_0x20) != 0) ? 0x20 : 0x10;
 
 	const usz block_num = utils::aligned_div<u64>(edat.file_size, edat.block_size);
 	constexpr usz metadata_offset = 0x100;
@@ -477,12 +482,12 @@ bool check_data(const u8* key, const EDAT_HEADER& edat, const NPD_HEADER& npd, c
 	if ((edat.flags & EDAT_DEBUG_DATA_FLAG) == 0)
 	{
 		// Setup buffers.
-		unsigned char metadata_signature[0x28] = { 0 };
-		unsigned char header_signature[0x28] = { 0 };
-		unsigned char signature_hash[20] = { 0 };
-		unsigned char signature_r[0x15] = { 0 };
-		unsigned char signature_s[0x15] = { 0 };
-		unsigned char zero_buf[0x15] = { 0 };
+		u8 metadata_signature[0x28] = { 0 };
+		u8 header_signature[0x28] = { 0 };
+		u8 signature_hash[20] = { 0 };
+		u8 signature_r[0x15] = { 0 };
+		u8 signature_s[0x15] = { 0 };
+		u8 zero_buf[0x15] = { 0 };
 
 		// Setup ECDSA curve and public key.
 		ecdsa_set_curve(VSH_CURVE_P, VSH_CURVE_A, VSH_CURVE_B, VSH_CURVE_N, VSH_CURVE_GX, VSH_CURVE_GY);
@@ -563,7 +568,7 @@ bool validate_dev_klic(const u8* klicensee, const NPD_HEADER& npd)
 		return true;
 	}
 
-	unsigned char dev[0x60]{};
+	u8 dev[0x60]{};
 
 	// Build the dev buffer (first 0x60 bytes of NPD header in big-endian).
 	std::memcpy(dev, &npd, 0x60);
@@ -576,7 +581,7 @@ bool validate_dev_klic(const u8* klicensee, const NPD_HEADER& npd)
 	std::memcpy(dev + 0x8, &license, 4);
 	std::memcpy(dev + 0xC, &type, 4);
 
-	// Check for an empty dev_hash (can't validate if devklic is NULL);
+	// Check for an empty dev_hash (can't validate if devklic is nullptr);
 	u128 klic;
 	std::memcpy(&klic, klicensee, sizeof(klic));
 
@@ -584,7 +589,7 @@ bool validate_dev_klic(const u8* klicensee, const NPD_HEADER& npd)
 	u128 key = klic ^ std::bit_cast<u128>(NP_OMAC_KEY_2);
 
 	// Hash with generated key and compare with dev_hash.
-	return cmac_hash_compare(reinterpret_cast<uchar*>(&key), 0x10, dev, 0x60, npd.dev_hash, 0x10);
+	return cmac_hash_compare(reinterpret_cast<u8*>(&key), 0x10, dev, 0x60, npd.dev_hash, 0x10);
 }
 
 bool validate_npd_hashes(std::string_view file_name, const u8* klicensee, const NPD_HEADER& npd, const EDAT_HEADER& edat, bool verbose)
@@ -647,8 +652,8 @@ bool validate_npd_hashes(std::string_view file_name, const u8* klicensee, const 
 
 void read_npd_edat_header(const fs::file* input, NPD_HEADER& NPD, EDAT_HEADER& EDAT)
 {
-	char npd_header[0x80]{};
-	char edat_header[0x10]{};
+	u8 npd_header[0x80]{};
+	u8 edat_header[0x10]{};
 
 	usz pos = input->pos();
 	pos += input->read_at(pos, npd_header, sizeof(npd_header));
@@ -666,7 +671,7 @@ void read_npd_edat_header(const fs::file* input, NPD_HEADER& NPD, EDAT_HEADER& E
 	NPD.expire_time = read_from_ptr<be_t<s64>>(npd_header, 120);
 
 	EDAT.flags = read_from_ptr<be_t<s32>>(edat_header, 0);
-	EDAT.block_size = read_from_ptr<be_t<s32>>(edat_header, 4);
+	EDAT.block_size = read_from_ptr<be_t<u32>>(edat_header, 4);
 	EDAT.file_size = read_from_ptr<be_t<u64>>(edat_header, 8);
 }
 
@@ -677,7 +682,7 @@ u128 GetEdatRifKeyFromRapFile(const fs::file& rap_file)
 
 	rap_file.read<u128>(rapkey);
 
-	rap_to_rif(reinterpret_cast<const uchar*>(&rapkey), reinterpret_cast<uchar*>(&rifkey));
+	rap_to_rif(reinterpret_cast<const u8*>(&rapkey), reinterpret_cast<u8*>(&rifkey));
 
 	return rifkey;
 }
@@ -761,16 +766,16 @@ fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, 
 		memcpy(&devklic, NP_PSP_KEY_2, 0x10);
 		break;
 	case 8:
+	{
+		if (custom_klic)
+			memcpy(&devklic, custom_klic, 0x10);
+		else
 		{
-			if (custom_klic != NULL)
-				memcpy(&devklic, custom_klic, 0x10);
-			else
-			{
-				edat_log.error("Invalid custom klic!");
-				return fs::file{};
-			}
-			break;
+			edat_log.error("Invalid custom klic!");
+			return fs::file{};
 		}
+		break;
+	}
 	default:
 		edat_log.error("Invalid mode!");
 		return fs::file{};
@@ -901,7 +906,7 @@ u64 EDATADecrypter::ReadData(u64 pos, u8* data, u64 size)
 
 	for (u32 i = starting_block; i < ending_block; i++)
 	{
-		u64 res = decrypt_block(edata_file, data_buf, edatHeader, npdHeader, reinterpret_cast<uchar*>(&dec_key), i, total_blocks, edatHeader.file_size, true);
+		u64 res = decrypt_block(edata_file, data_buf, edatHeader, npdHeader, reinterpret_cast<u8*>(&dec_key), i, total_blocks, edatHeader.file_size, true);
 
 		if (res == umax)
 		{
