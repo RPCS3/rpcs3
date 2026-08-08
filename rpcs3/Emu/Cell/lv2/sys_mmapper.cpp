@@ -91,8 +91,13 @@ lv2_memory::lv2_memory(utils::serial& ar)
 	}
 }
 
-static std::string make_named_allocation(u32 id, [[maybe_unused]] u32 amount)
+static std::string make_named_allocation(u64 id, u64 key)
 {
+	if (key)
+	{
+		return fmt::format("sys_mmapper: IPC 0x%x", key);
+	}
+
 	return fmt::format("sys_mmapper: id 0x%x", id);
 }
 
@@ -107,7 +112,7 @@ CellError lv2_memory::on_id_create()
 
 	if (!exists)
 	{
-		ct->take_named(make_named_allocation(idm::last_id(), size), size);
+		ct->take_named(make_named_allocation(idm::last_id(), key), size);
 	}
 
 	exists++;
@@ -787,7 +792,7 @@ error_code sys_mmapper_free_shared_memory(ppu_thread& ppu, u32 mem_id)
 		{
 			// Return "physical memory" to the memory container
 			mem.ct->free(mem.size);
-			mem.ct->free_named(make_named_allocation(mem_id, mem.size), mem.size);
+			mem.ct->free_named(make_named_allocation(mem_id, mem.key), mem.size);
 		}
 
 		return {};
