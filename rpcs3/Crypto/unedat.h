@@ -54,7 +54,7 @@ struct NPD_HEADER
 struct EDAT_HEADER
 {
 	s32 flags;
-	s32 block_size;
+	u32 block_size;
 	u64 file_size;
 };
 
