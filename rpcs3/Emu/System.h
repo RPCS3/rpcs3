@@ -282,7 +282,7 @@ public:
 
 	u32 m_boot_source_type = 0; // CELL_GAME_GAMETYPE_SYS
 
-	const u32& GetBootSourceType() const
+	u32 GetBootSourceType() const
 	{
 		return m_boot_source_type;
 	}
