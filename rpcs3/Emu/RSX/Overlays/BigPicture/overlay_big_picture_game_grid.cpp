@@ -181,16 +181,6 @@ namespace rsx
 
 			m_selected_index = index;
 
-			const big_picture_game_tile* tile = m_tiles[m_selected_index];
-			const overlay_element* icon = tile->get_icon_view();
-
-			// Pad the bezel out a few pixels past the cover art so the border doesn't clip its corners.
-			constexpr s16 bezel_margin = 3;
-			m_highlight->set_pos(icon->x - bezel_margin, icon->y - bezel_margin);
-			m_highlight->set_size(icon->w + bezel_margin * 2, icon->h + bezel_margin * 2);
-			m_highlight->set_sinus_offset(1.6f);
-			m_highlight->refresh();
-
 			// Scroll the selected row into view if the grid has more rows than fit on screen.
 			if (m_row_stride > 0 && m_grid)
 			{
@@ -211,7 +201,18 @@ namespace rsx
 				}
 
 				m_grid->scroll_offset_value = static_cast<u16>(std::clamp(offset, 0, max_offset));
+				m_grid->refresh(); 
 			}
+
+			const big_picture_game_tile* tile = m_tiles[m_selected_index];
+			const overlay_element* icon = tile->get_icon_view();
+
+			// Pad the bezel out a few pixels past the cover art so the border doesn't clip its corners.
+			constexpr s16 bezel_margin = 3;
+			m_highlight->set_pos(icon->x - bezel_margin, icon->y - m_grid->scroll_offset_value - bezel_margin);
+			m_highlight->set_size(icon->w + bezel_margin * 2, icon->h + bezel_margin * 2);
+			m_highlight->set_sinus_offset(1.6f);
+			m_highlight->refresh();
 		}
 
 		page_navigation big_picture_game_grid::handle_button_press(pad_button button_press, bool is_auto_repeat, u64 auto_repeat_interval_ms)
