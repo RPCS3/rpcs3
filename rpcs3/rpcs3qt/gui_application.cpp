@@ -171,11 +171,11 @@ bool gui_application::Init()
 		m_active_user = m_persistent_settings->GetCurrentUser("00000001").toStdString();
 	}
 
-	// Force init the emulator
-	InitializeEmulator(m_active_user, m_show_gui, false);
-
 	// Create callbacks from the emulator, which reference the handlers.
 	InitializeCallbacks();
+
+	// Force init the emulator
+	InitializeEmulator(m_active_user, m_show_gui, false);
 
 	// Create connects to propagate events throughout Gui.
 	InitializeConnects();
