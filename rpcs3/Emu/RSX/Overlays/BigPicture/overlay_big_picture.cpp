@@ -9,8 +9,9 @@ namespace rsx
 {
 	namespace overlays
 	{
-		big_picture_dialog::big_picture_dialog()
-			: m_main_menu(20, 85, virtual_width - 2 * 20, 540, nullptr, [](std::string path, std::string title_id)
+		namespace
+		{
+			void boot_game_from_big_picture_mode(std::string path, std::string title_id)
 			{
 				rsx_log.notice("Big Picture Mode: starting boot handoff for '%s' (path='%s')", title_id, path);
 
@@ -34,7 +35,11 @@ namespace rsx
 						g_big_picture_mode_active = false;
 					}
 				});
-			})
+			}
+		}
+
+		big_picture_dialog::big_picture_dialog()
+			: m_main_menu(20, 85, virtual_width - 2 * 20, 540, nullptr, &boot_game_from_big_picture_mode)
 		{
 			m_allow_input_on_pause = true;
 

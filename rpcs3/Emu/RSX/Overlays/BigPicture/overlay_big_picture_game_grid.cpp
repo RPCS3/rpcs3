@@ -171,7 +171,6 @@ namespace rsx
 
 		void big_picture_game_grid::select_tile(s32 index)
 		{
-			// notice (not trace) so this shows up without enabling trace logging.
 			rsx_log.notice("Big Picture Mode: select_tile(%d), tile_count=%u", index, m_tiles.size());
 
 			if (index < 0 || static_cast<usz>(index) >= m_tiles.size())
@@ -324,16 +323,6 @@ namespace rsx
 
 		compiled_resource& big_picture_game_grid::get_compiled()
 		{
-			static bool logged_first_render = false;
-			const bool log_this_call = !logged_first_render;
-			logged_first_render = true;
-
-			if (log_this_call)
-			{
-				rsx_log.notice("Big Picture Mode: grid get_compiled() first call, tiles=%u, grid=%d, highlight=%d, details=%d",
-					m_tiles.size(), !!m_grid, !!m_highlight, !!m_details);
-			}
-
 			m_compiled_grid.clear();
 
 			if (m_tiles.empty())
@@ -343,9 +332,7 @@ namespace rsx
 			else if (m_grid)
 			{
 				m_compiled_grid.add(m_grid->get_compiled());
-				if (log_this_call) rsx_log.notice("Big Picture Mode: grid tiles compiled");
 				m_compiled_grid.add(m_highlight->get_compiled());
-				if (log_this_call) rsx_log.notice("Big Picture Mode: highlight compiled");
 			}
 
 			const bool details_visible = m_details && m_details->is_visible();
@@ -363,11 +350,6 @@ namespace rsx
 			if (m_details)
 			{
 				m_compiled_grid.add(m_details->get_compiled());
-			}
-
-			if (log_this_call)
-			{
-				rsx_log.notice("Big Picture Mode: grid get_compiled() finished");
 			}
 
 			return m_compiled_grid;
