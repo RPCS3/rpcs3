@@ -105,9 +105,12 @@ class PadOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(context,
         val shoulderH = trigH
 
         val startSelectSize = pillH
+        val psW = (pillH * 1.6f).toInt()
         val btnStartY = (totalHeight - bottomGap * 0.55f - pillH).toInt()
-        val btnStartX = (totalWidth / 2f + pillGap / 2f).toInt()
-        val btnSelectX = (totalWidth / 2f - pillGap / 2f - pillW).toInt()
+        val btnPsX = (totalWidth / 2f - psW / 2f).toInt()
+        val btnPsY = btnStartY
+        val btnStartX = (totalWidth / 2f + psW / 2f + pillGap).toInt()
+        val btnSelectX = (totalWidth / 2f - psW / 2f - pillGap - pillW).toInt()
         val btnSelectY = btnStartY
 
         val btnL2X = margin.toInt()
@@ -245,6 +248,16 @@ class PadOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(context,
                 Digital2Flags.None,
                 art = PadButtonArt.pillButton(pillW, pillH, "SELECT"),
                 pressedArt = PadButtonArt.pillButton(pillW, pillH, "SELECT", pressed = true)
+            ),
+            createButton(
+                x = btnPsX,
+                y = btnPsY,
+                width = psW,
+                height = pillH,
+                digital1 = Digital1Flags.CELL_PAD_CTRL_PS,
+                digital2 = Digital2Flags.None,
+                art = PadButtonArt.pillButton(psW, pillH, "PS"),
+                pressedArt = PadButtonArt.pillButton(psW, pillH, "PS", pressed = true)
             ),
 
             createButton(
@@ -477,7 +490,7 @@ class PadOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(context,
     }
 
     private fun createButton(
-        resourceId: Int,
+        resourceId: Int = 0,
         x: Int,
         y: Int,
         width: Int,

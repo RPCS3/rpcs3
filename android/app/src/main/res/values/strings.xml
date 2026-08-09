@@ -38,6 +38,8 @@
     <string name="progress_deleting_game">Deleting Game</string>
     <string name="progress_installing_directory">Installing Directory</string>
     <string name="progress_failed">%1$s failed</string>
+    <string name="folder_add_empty_title">Nothing to add</string>
+    <string name="folder_add_empty_message">No game or package was found in that folder. If you picked it through the Downloads shortcut, open the folder from the device storage root instead.</string>
 
     <string name="drawer_firmware">Firmware: %1$s</string>
     <string name="drawer_firmware_none">None</string>

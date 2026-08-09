@@ -25,7 +25,12 @@ android {
 
         externalNativeBuild {
             cmake {
-                arguments += listOf("-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON")
+                arguments += listOf(
+                    "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON",
+                    "-DCMAKE_JOB_POOLS=compile=8;link=1",
+                    "-DCMAKE_JOB_POOL_COMPILE=compile",
+                    "-DCMAKE_JOB_POOL_LINK=link"
+                )
             }
         }
     }

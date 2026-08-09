@@ -215,7 +215,7 @@ fun DebugScreen(
                         val file = DocumentFile.fromSingleUri(
                             context,
                             DocumentsContract.buildDocumentUri(
-                                AppDataDocumentProvider.AUTHORITY,
+                                AppDataDocumentProvider.authorityOf(context),
                                 "${AppDataDocumentProvider.ROOT_ID}/cache/RPCS3.log"
                             )
                         )

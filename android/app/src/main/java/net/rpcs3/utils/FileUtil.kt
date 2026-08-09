@@ -64,6 +64,16 @@ object FileUtil {
                 }
             }
 
+            if (batchFiles.isEmpty() && batchDirs.isEmpty()) {
+                val progress = ProgressRepository.create(
+                    context, context.getString(R.string.folder_add_empty_title)
+                )
+                ProgressRepository.onProgressEvent(
+                    progress, -1, 0, context.getString(R.string.folder_add_empty_message)
+                )
+                return@thread
+            }
+
             if (batchFiles.isNotEmpty()) {
                 val packages = batchFiles.mapNotNull { PackageInspector.read(context, it) }
                 val installable = packages.filter { it.kind == PackageKind.Pkg && it.valid }

@@ -73,7 +73,7 @@
         </activity>
         
         <provider
-            android:authorities="net.rpcs3.documents"
+            android:authorities="${applicationId}.documents"
             android:name="net.rpcs3.provider.AppDataDocumentProvider"
             android:exported="true"
             android:grantUriPermissions="true"
