@@ -77,7 +77,7 @@ enum class BootResult
 class RPCS3 {
     external fun initialize(rootDir: String): Boolean
     external fun installFw(fd: Int, progressId: Long): Boolean
-    external fun install(fd: Int, progressId: Long): Boolean
+    external fun install(fd: Int, progressId: Long, name: String): Boolean
     external fun installPackages(fds: IntArray, names: Array<String>, progressId: Long): Boolean
     external fun pkgInfo(fd: Int): String
     external fun installKey(fd: Int, requestId: Long, gamePath: String): Boolean

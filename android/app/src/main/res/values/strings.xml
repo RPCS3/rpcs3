@@ -22,6 +22,7 @@
     <string name="action_home">Home</string>
     <string name="action_add">Add</string>
     <string name="action_settings">Settings</string>
+    <string name="action_select">Select</string>
 
     <string name="percent_value">%1$d%%</string>
     <string name="version_prefix">v%1$s</string>
@@ -68,8 +69,7 @@
     <string name="games_uninstall_message">Deletes the installed game from app storage, along with its caches and any updates or extra data installed for it.</string>
     <string name="games_remove_message">Removes it from your library and clears its caches, updates and extra data. The original files at %1$s are not touched.</string>
     <string name="games_missing_key_title">Missing key</string>
-    <string name="games_missing_key_message">This game requires key to play</string>
-    <string name="games_install_rap">Install RAP file</string>
+    <string name="games_missing_rap_message">This game requires a .RAP file please select it from the button below</string>
     <string name="games_firmware_missing_title">Firmware Missing</string>
     <string name="games_firmware_missing_message">Please install the required firmware to continue.</string>
     <string name="games_firmware_installing_message">Please wait until firmware installs successfully to continue.</string>

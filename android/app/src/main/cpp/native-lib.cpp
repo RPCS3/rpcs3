@@ -2301,6 +2301,59 @@ static bool installRap(JNIEnv *env, fs::file &&file, jlong progressId,
   return true;
 }
 
+static bool installRapInExData(JNIEnv *env, fs::file &&file, jlong progressId,
+                               const std::string &name) {
+  Progress progress(env, progressId);
+
+  const auto baseName = name.substr(name.find_last_of("/\\") + 1);
+  const auto contentId = baseName.substr(0, baseName.find_last_of('.'));
+
+  if (contentId.empty()) {
+    progress.failure("RAP file name does not contain a content ID");
+    return false;
+  }
+
+  file.seek(0);
+
+  std::vector<std::uint8_t> bytes(file.size());
+  if (!file.read(bytes)) {
+    progress.failure("Failed to read key");
+    return false;
+  }
+
+  if (bytes.size() < 0x10) {
+    progress.failure("Not a RAP file");
+    return false;
+  }
+
+  const auto exdataDir = fmt::format("%shome/%s/exdata/",
+                                     rpcs3::utils::get_hdd0_dir(), Emu.GetUsr());
+
+  if (!fs::create_path(exdataDir) && !fs::is_dir(exdataDir)) {
+    progress.failure(fmt::format("Failed to create %s", exdataDir));
+    return false;
+  }
+
+  const auto licenseFile = exdataDir + contentId + ".rap";
+
+  fs::pending_file pending(licenseFile);
+
+  if (!pending.file) {
+    progress.failure(fmt::format("Failed to write key to %s", licenseFile));
+    return false;
+  }
+
+  pending.file.write(bytes);
+
+  if (!pending.commit()) {
+    progress.failure(fmt::format("Failed to write key to %s", licenseFile));
+    return false;
+  }
+
+  collectGameInfo(env, progressId, {rpcs3::utils::get_hdd0_dir() + "game"});
+  return true;
+}
+
 static bool installIso(JNIEnv *env, fs::file &&file, jlong progressId) {
   auto optIso = iso_fs::open(std::make_unique<file_view_block_dev>(file));
   Progress progress(env, progressId);
@@ -2425,7 +2478,7 @@ Java_net_rpcs3_RPCS3_isInstallableFile(JNIEnv *env, jobject, jint fd) {
 
   auto type = getFileType(file);
   file.seek(0);
-  return type != FileType::Unknown && type != FileType::Rap; // FIXME: implement rap preinstallation
+  return type != FileType::Unknown;
 }
 
 extern "C" JNIEXPORT jstring JNICALL
@@ -2442,7 +2495,8 @@ Java_net_rpcs3_RPCS3_getDirInstallPath(JNIEnv *env, jobject, jint fd) {
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_net_rpcs3_RPCS3_install(JNIEnv *env, jobject, jint fd, jlong progressId) {
+Java_net_rpcs3_RPCS3_install(JNIEnv *env, jobject, jint fd, jlong progressId,
+                             jstring jname) {
   auto file = fs::file::from_native_handle(fd);
   AtExit atExit{[&] { file.release_handle(); }};
 
@@ -2467,10 +2521,9 @@ Java_net_rpcs3_RPCS3_install(JNIEnv *env, jobject, jint fd, jlong progressId) {
     return installIso(env, std::move(file), progressId);
 
   case FileType::Rap:
-    Progress(env, progressId)
-        .failure("RAP file cannot be preinstalled. Use lock button on "
-                 "installed game instead");
-    return false;
+    return installRapInExData(env, std::move(file), progressId,
+                              jname != nullptr ? unwrap(env, jname)
+                                               : std::string());
   }
 
   return true;

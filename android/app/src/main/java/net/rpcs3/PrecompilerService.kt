@@ -184,7 +184,9 @@ class PrecompilerService : Service() {
         val installResult = when (mode) {
             Mode.Firmware -> RPCS3.instance.installFw(fd, installProgress)
             Mode.AddIso -> RPCS3.instance.addIsoEntry(fd, installProgress)
-            Mode.Package, Mode.PackageBatch -> RPCS3.instance.install(fd, installProgress)
+            Mode.Package, Mode.PackageBatch -> RPCS3.instance.install(
+                fd, installProgress, PackageInspector.displayNameOf(this, uri)
+            )
         }
 
         if (!installResult) {

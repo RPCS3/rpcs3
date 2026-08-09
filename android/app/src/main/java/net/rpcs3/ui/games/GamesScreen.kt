@@ -124,8 +124,52 @@ fun GameItem(
     var emulatorState by remember { RPCS3.state }
     val emulatorActiveGame by remember { RPCS3.activeGame }
 
+    var licenseDialogVisible by remember { mutableStateOf(false) }
+    var bootAfterLicenseInstall by remember { mutableStateOf(false) }
+
+    fun bootGame() {
+        if (FirmwareRepository.version.value == null) {
+            AlertDialogQueue.showDialog(
+                title = context.getString(R.string.games_firmware_missing_title),
+                message = context.getString(R.string.games_firmware_missing_message)
+            )
+            return
+        }
+
+        if (FirmwareRepository.progressChannel.value != null) {
+            AlertDialogQueue.showDialog(
+                title = context.getString(R.string.games_firmware_missing_title),
+                message = context.getString(R.string.games_firmware_installing_message)
+            )
+            return
+        }
+
+        if (game.info.path == "$" || game.findProgress(
+                arrayOf(GameProgressType.Install, GameProgressType.Remove)
+            ) != null
+        ) {
+            return
+        }
+
+        if (game.findProgress(GameProgressType.Compile) != null) {
+            AlertDialogQueue.showDialog(
+                title = context.getString(R.string.games_compiling_title),
+                message = context.getString(R.string.games_compiling_message)
+            )
+            return
+        }
+
+        GameRepository.onBoot(game)
+        val emulatorWindow = Intent(context, RPCS3Activity::class.java)
+        emulatorWindow.putExtra("path", game.info.path)
+        context.startActivity(emulatorWindow)
+    }
+
     val installKeyLauncher =
         rememberLauncherForActivityResult(contract = ActivityResultContracts.GetContent()) { uri: Uri? ->
+            val bootWhenInstalled = bootAfterLicenseInstall
+            bootAfterLicenseInstall = false
+
             if (uri != null) {
                 val descriptor = context.contentResolver.openAssetFileDescriptor(uri, "r")
                 val fd = descriptor?.parcelFileDescriptor?.fd
@@ -137,6 +181,14 @@ fun GameItem(
                     )
 
                     game.addProgress(GameProgress(installProgress, GameProgressType.Compile))
+
+                    if (bootWhenInstalled) {
+                        ProgressRepository.addListener(installProgress) { entry ->
+                            if (entry.isComplete()) {
+                                bootGame()
+                            }
+                        }
+                    }
 
                     thread(isDaemon = true) {
                         if (!RPCS3.instance.installKey(fd, installProgress, game.info.path)) {
@@ -260,48 +312,12 @@ fun GameItem(
     }
 
     fun launchGame() {
-                    if (game.hasFlag(GameFlag.Locked)) {
-                        AlertDialogQueue.showDialog(
-                            title = context.getString(R.string.games_missing_key_title),
-                            message = context.getString(R.string.games_missing_key_message),
-                            onConfirm = { installKeyLauncher.launch("*/*") },
-                            onDismiss = {},
-                            confirmText = context.getString(R.string.games_install_rap)
-                        )
+        if (game.hasFlag(GameFlag.Locked)) {
+            licenseDialogVisible = true
+            return
+        }
 
-                        return
-                    }
-
-                    if (FirmwareRepository.version.value == null) {
-                        AlertDialogQueue.showDialog(
-                            title = context.getString(R.string.games_firmware_missing_title),
-                            message = context.getString(R.string.games_firmware_missing_message)
-                        )
-                    } else if (FirmwareRepository.progressChannel.value != null) {
-                        AlertDialogQueue.showDialog(
-                            title = context.getString(R.string.games_firmware_missing_title),
-                            message = context.getString(R.string.games_firmware_installing_message)
-                        )
-                    } else if (game.info.path != "$" && game.findProgress(
-                            arrayOf(
-                                GameProgressType.Install, GameProgressType.Remove
-                            )
-                        ) == null
-                    ) {
-                        if (game.findProgress(GameProgressType.Compile) != null) {
-                            AlertDialogQueue.showDialog(
-                                title = context.getString(R.string.games_compiling_title),
-                                message = context.getString(R.string.games_compiling_message)
-                            )
-                        } else {
-                            GameRepository.onBoot(game)
-                            val emulatorWindow = Intent(
-                                context, RPCS3Activity::class.java
-                            )
-                            emulatorWindow.putExtra("path", game.info.path)
-                            context.startActivity(emulatorWindow)
-                        }
-                    }
+        bootGame()
     }
 
     Column(modifier = modifier) {
@@ -539,6 +555,19 @@ fun GameItem(
         )
     }
 
+    if (licenseDialogVisible) {
+        MissingLicenseDialog(
+            onSelect = {
+                licenseDialogVisible = false
+                bootAfterLicenseInstall = true
+                installKeyLauncher.launch("*/*")
+            },
+            onCancel = {
+                licenseDialogVisible = false
+                bootAfterLicenseInstall = false
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
