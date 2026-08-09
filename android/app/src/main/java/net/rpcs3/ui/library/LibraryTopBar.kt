@@ -47,19 +47,22 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.annotation.StringRes
+import net.rpcs3.R
 import net.rpcs3.ui.theme.SettingsStyle
 
-enum class LibraryTab(val label: String) {
-    Library("Library"),
-    Compatibility("Compatibility")
+enum class LibraryTab(@StringRes val labelRes: Int) {
+    Library(R.string.library_tab_library),
+    Compatibility(R.string.library_tab_compatibility)
 }
 
-enum class GameSort(val label: String) {
-    NameAscending("Name A-Z"),
-    NameDescending("Name Z-A")
+enum class GameSort(@StringRes val labelRes: Int) {
+    NameAscending(R.string.library_sort_name_ascending),
+    NameDescending(R.string.library_sort_name_descending)
 }
 
 @Composable
@@ -114,7 +117,7 @@ fun LibraryTopBar(
             ) {
                 if (searchQuery.isEmpty()) {
                     Text(
-                        text = "Search games",
+                        text = stringResource(R.string.library_search_placeholder),
                         color = SettingsStyle.TextDim,
                         fontSize = 13.sp
                     )
@@ -143,13 +146,13 @@ fun LibraryTopBar(
         ) {
             BarIcon(
                 icon = Icons.Filled.Menu,
-                contentDescription = "Menu",
+                contentDescription = stringResource(R.string.library_menu),
                 onClick = onMenuClick
             )
             Spacer(Modifier.width(4.dp))
             BarIcon(
                 icon = if (searchOpen) Icons.Outlined.Close else Icons.Outlined.Search,
-                contentDescription = "Search",
+                contentDescription = stringResource(R.string.library_search),
                 onClick = { searchOpen = !searchOpen }
             )
         }
@@ -164,7 +167,7 @@ fun LibraryTopBar(
             Box {
                 BarIcon(
                     icon = Icons.Outlined.FilterList,
-                    contentDescription = "Filter",
+                    contentDescription = stringResource(R.string.library_filter),
                     onClick = { filterOpen = true }
                 )
                 DropdownMenu(
@@ -177,7 +180,7 @@ fun LibraryTopBar(
                         DropdownMenuItem(
                             text = {
                                 Text(
-                                    text = option.label,
+                                    text = stringResource(option.labelRes),
                                     color = if (option == sort) {
                                         SettingsStyle.AccentBlue
                                     } else {
@@ -213,7 +216,7 @@ private fun TabPill(selectedTab: LibraryTab, onTabSelected: (LibraryTab) -> Unit
     ) {
         LibraryTab.entries.forEach { tab ->
             TabCell(
-                label = tab.label,
+                label = stringResource(tab.labelRes),
                 selected = tab == selectedTab,
                 onClick = { onTabSelected(tab) }
             )

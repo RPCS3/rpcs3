@@ -15,11 +15,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import net.rpcs3.FirmwareRepository
 import net.rpcs3.Permission
+import net.rpcs3.R
 import net.rpcs3.RPCS3
 import net.rpcs3.ui.components.PaneCard
 import net.rpcs3.ui.components.PaneKeyValue
@@ -67,13 +69,13 @@ fun DiagnosticsScreen(
     }
 
     val tabs = listOf(
-        PaneTab("Setup", Icons.Outlined.Info),
-        PaneTab("Storage", Icons.Outlined.Storage),
-        PaneTab("Graphics", Icons.Outlined.Memory)
+        PaneTab(stringResource(R.string.diagnostics_tab_setup), Icons.Outlined.Info),
+        PaneTab(stringResource(R.string.diagnostics_tab_storage), Icons.Outlined.Storage),
+        PaneTab(stringResource(R.string.diagnostics_tab_graphics), Icons.Outlined.Memory)
     )
 
     PaneScaffold(
-        title = "Diagnostics",
+        title = stringResource(R.string.diagnostics_title),
         tabs = tabs,
         selected = selected,
         onSelect = { selected = it },
@@ -82,64 +84,90 @@ fun DiagnosticsScreen(
     ) {
         when (selected) {
             0 -> {
-                PaneSectionTitle("Requirements")
+                PaneSectionTitle(stringResource(R.string.diagnostics_requirements))
                 PaneCard {
                     val storage = hasStorageAccess()
                     PaneKeyValue(
-                        "Storage access",
-                        if (storage) "Granted" else "Not granted",
+                        stringResource(R.string.diagnostics_storage_access),
+                        stringResource(
+                            if (storage) {
+                                R.string.diagnostics_granted
+                            } else {
+                                R.string.diagnostics_not_granted
+                            }
+                        ),
                         if (storage) Rpcs.Success else Rpcs.Danger
                     )
                     PaneKeyValue(
-                        "Firmware",
-                        firmware ?: "Not installed",
+                        stringResource(R.string.diagnostics_firmware),
+                        firmware ?: stringResource(R.string.diagnostics_firmware_missing),
                         if (firmware != null) Rpcs.Success else Rpcs.Danger
                     )
                     val notifications = Permission.PostNotifications.checkPermission(context)
                     PaneKeyValue(
-                        "Notifications",
-                        if (notifications) "Granted" else "Not granted",
+                        stringResource(R.string.diagnostics_notifications),
+                        stringResource(
+                            if (notifications) {
+                                R.string.diagnostics_granted
+                            } else {
+                                R.string.diagnostics_not_granted
+                            }
+                        ),
                         if (notifications) Rpcs.Success else Rpcs.Warning
                     )
                 }
             }
 
             1 -> {
-                PaneSectionTitle("Configuration")
+                PaneSectionTitle(stringResource(R.string.diagnostics_configuration))
                 PaneCard {
                     PaneKeyValue(
-                        "Config writable",
-                        when (configWritable) {
-                            true -> "Yes"
-                            false -> "No"
-                            null -> "Checking"
-                        },
+                        stringResource(R.string.diagnostics_config_writable),
+                        stringResource(
+                            when (configWritable) {
+                                true -> R.string.diagnostics_yes
+                                false -> R.string.diagnostics_no
+                                null -> R.string.diagnostics_checking
+                            }
+                        ),
                         when (configWritable) {
                             true -> Rpcs.Success
                             false -> Rpcs.Danger
                             null -> Rpcs.TextDim
                         }
                     )
-                    PaneKeyValue("Per-game configs", customConfigs.toString())
+                    PaneKeyValue(
+                        stringResource(R.string.diagnostics_per_game_configs),
+                        customConfigs.toString()
+                    )
                 }
                 Spacer(Modifier.height(12.dp))
-                PaneSectionTitle("Paths")
+                PaneSectionTitle(stringResource(R.string.diagnostics_paths))
                 PaneCard {
-                    PaneKeyValue("Config directory", RPCS3.rootDirectory + "config")
+                    PaneKeyValue(
+                        stringResource(R.string.diagnostics_config_directory),
+                        RPCS3.rootDirectory + "config"
+                    )
                 }
             }
 
             else -> {
-                PaneSectionTitle("Renderer")
+                PaneSectionTitle(stringResource(R.string.diagnostics_renderer))
                 PaneCard {
                     PaneKeyValue(
-                        "Custom driver",
-                        if (driver.contains("\"\"") || driver.isEmpty()) "System" else "Custom"
+                        stringResource(R.string.diagnostics_custom_driver),
+                        stringResource(
+                            if (driver.contains("\"\"") || driver.isEmpty()) {
+                                R.string.diagnostics_driver_system
+                            } else {
+                                R.string.diagnostics_driver_custom
+                            }
+                        )
                     )
                 }
                 if (systemInfo.isNotEmpty()) {
                     Spacer(Modifier.height(12.dp))
-                    PaneSectionTitle("System")
+                    PaneSectionTitle(stringResource(R.string.diagnostics_system))
                     PaneCard {
                         systemInfo.lines().filter { it.isNotBlank() }.forEach { line ->
                             val parts = line.split(":", limit = 2)

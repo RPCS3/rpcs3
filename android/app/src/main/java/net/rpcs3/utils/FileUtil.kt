@@ -13,6 +13,7 @@ import net.rpcs3.GameRepository
 import net.rpcs3.PrecompilerService
 import net.rpcs3.PrecompilerServiceAction
 import net.rpcs3.ProgressRepository
+import net.rpcs3.R
 import net.rpcs3.RPCS3
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
@@ -21,10 +22,6 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
 import kotlin.concurrent.thread
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 private data class InstallableFolder(
     val uri: Uri, val targetPath: String
@@ -90,7 +87,10 @@ object FileUtil {
                     return@forEach
                 }
 
-                val progress = ProgressRepository.create(context, "Installing Directory")
+                val progress = ProgressRepository.create(
+                    context,
+                    context.getString(R.string.progress_installing_directory)
+                )
                 GameRepository.add(arrayOf(GameInfo("$")), progress)
                 copyDirUriToInternalStorage(context, it.uri, it.targetPath, progress)
                 RPCS3.instance.collectGameInfo(it.targetPath, -1L)
@@ -234,12 +234,9 @@ object FileUtil {
     }
 
     fun deleteCache(ctx: Context, gameId: String, onComplete: (Boolean) -> Unit) {
-         CoroutineScope(Dispatchers.IO).launch {
-            val result = File(ctx.getExternalFilesDir(null)!!, "cache/cache/$gameId").deleteRecursively()
-            withContext(Dispatchers.Main) {
-                onComplete(result)
-            }
-         }
+        CacheUtil.clear(gameId, CacheKind.All) { result ->
+            onComplete(result.failed == 0)
+        }
     }
 }
 

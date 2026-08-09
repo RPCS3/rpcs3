@@ -10,9 +10,6 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 
-/**
-  @url: https://github.com/strato-emu/strato/blob/ae1566a48285816a87e81d4aeb40bd2f4e56e60b/app/src/main/java/org/stratoemu/strato/data/DriverPackageMetadata.kt#L13
-*/
 data class GpuDriverMetadata(
     val name : String,
     val author : String,

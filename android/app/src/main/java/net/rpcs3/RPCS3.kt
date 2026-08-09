@@ -37,7 +37,7 @@ enum class EmulatorState {
     Stopping,
     Running,
     Paused,
-    Frozen, // paused but cannot resume
+    Frozen,
     Ready,
     Starting,
     Compiling;
@@ -123,7 +123,6 @@ class RPCS3 {
     external fun supportsCustomDriverLoading() : Boolean
     external fun isInstallableFile(fd: Int) : Boolean
     external fun getDirInstallPath(sfoFd: Int) : String?
-//    external fun forceMaxGpuClocks(enable : Boolean)
 
 
     companion object {

@@ -31,11 +31,16 @@ class PrecompilerService : Service() {
             else -> Mode.Package
         }
 
-        private fun progressTitle(mode: Mode, count: Int) = when (mode) {
-            Mode.Firmware -> "Firmware Installation"
-            Mode.AddIso -> "Adding disc image"
-            Mode.PackageBatch -> if (count > 1) "Installing $count packages" else "Package Installation"
-            Mode.Package -> "Package Installation"
+        private fun progressTitle(context: Context, mode: Mode, count: Int) = when (mode) {
+            Mode.Firmware -> context.getString(R.string.progress_firmware_installation)
+            Mode.AddIso -> context.getString(R.string.progress_adding_disc_image)
+            Mode.PackageBatch -> if (count > 1) {
+                context.getString(R.string.progress_installing_packages, count)
+            } else {
+                context.getString(R.string.progress_package_installation)
+            }
+
+            Mode.Package -> context.getString(R.string.progress_package_installation)
         }
 
         private fun launch(
@@ -46,7 +51,7 @@ class PrecompilerService : Service() {
         ): Long {
             val progressId = ProgressRepository.create(
                 context.applicationContext,
-                progressTitle(modeOf(action.ordinal), count)
+                progressTitle(context, modeOf(action.ordinal), count)
             )
 
             val intent = Intent(context, PrecompilerService::class.java)
@@ -220,7 +225,7 @@ class PrecompilerService : Service() {
         val installProgress = if (ProgressRepository.exists(requestedProgress)) {
             requestedProgress
         } else {
-            ProgressRepository.create(this, progressTitle(mode, batch?.size ?: 1))
+            ProgressRepository.create(this, progressTitle(this, mode, batch?.size ?: 1))
         }
 
         ProgressRepository.addListener(installProgress) { entry ->

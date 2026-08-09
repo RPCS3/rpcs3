@@ -552,7 +552,8 @@ fun GhostButton(
     icon: ImageVector? = null,
     enabled: Boolean = true,
     accent: Boolean = false,
-    tint: Color = Rpcs.Accent
+    tint: Color = Rpcs.Accent,
+    horizontalPadding: Dp = 12.dp
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -573,7 +574,7 @@ fun GhostButton(
                 RoundedCornerShape(Dimens.GhostCorner)
             )
             .clickable(interactionSource = interaction, indication = null, enabled = enabled) { onClick() }
-            .padding(horizontal = 12.dp, vertical = 9.dp),
+            .padding(horizontal = horizontalPadding, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
@@ -590,7 +591,9 @@ fun GhostButton(
             text = label,
             color = tint,
             fontSize = Dimens.ValueSize,
-            fontWeight = FontWeight.SemiBold
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            softWrap = false
         )
     }
 }

@@ -29,6 +29,59 @@ private fun collect(node: JSONObject, prefix: String, out: MutableMap<String, Pa
     }
 }
 
+private fun collectLeaves(node: JSONObject, prefix: String, out: MutableMap<String, JSONObject>) {
+    val keys = node.keys()
+    while (keys.hasNext()) {
+        val key = keys.next()
+        val child = node.optJSONObject(key) ?: continue
+        val path = if (prefix.isEmpty()) key else "$prefix@@$key"
+
+        if (child.optString("type", "").isEmpty()) {
+            collectLeaves(child, path, out)
+        } else {
+            out[path] = child
+        }
+    }
+}
+
+private val deviceManagedPaths = listOf(
+    "Video@@Vulkan@@Custom Driver",
+    "Video@@Vulkan@@Adapter"
+)
+
+private fun isDeviceManaged(path: String) =
+    deviceManagedPaths.any { path == it || path.startsWith("$it@@") }
+
+internal fun resetToDefaults(current: JSONObject, titleId: String): Int {
+    val leaves = mutableMapOf<String, JSONObject>()
+    collectLeaves(current, "", leaves)
+
+    var restored = 0
+
+    leaves.forEach { (path, item) ->
+        if (!item.has("default") || isDeviceManaged(path)) {
+            return@forEach
+        }
+
+        val defaultValue = item.opt("default")
+        val encoded = encode(item.optString("type", ""), defaultValue) ?: return@forEach
+
+        if (encoded == encode(item.optString("type", ""), item.opt("value"))) {
+            return@forEach
+        }
+
+        if (RPCS3.instance.settingsSet(path, encoded, titleId)) {
+            restored++
+        }
+    }
+
+    if (restored > 0) {
+        RPCS3.instance.settingsFlush()
+    }
+
+    return restored
+}
+
 internal fun revertTo(baseline: JSONObject, current: JSONObject, titleId: String): Int {
     val before = mutableMapOf<String, Pair<String, Any?>>()
     val after = mutableMapOf<String, Pair<String, Any?>>()

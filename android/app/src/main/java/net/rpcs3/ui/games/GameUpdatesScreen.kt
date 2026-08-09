@@ -23,11 +23,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.rpcs3.ProgressRepository
+import net.rpcs3.R
 import net.rpcs3.RPCS3
 import net.rpcs3.dialogs.AlertDialogQueue
 import net.rpcs3.gameTitleId
@@ -80,6 +84,7 @@ fun GameUpdatesScreen(
     var reloadToken by remember(gamePath) { mutableIntStateOf(0) }
     var pendingPackages by remember { mutableStateOf<List<Uri>>(emptyList()) }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     LaunchedEffect(gamePath, reloadToken) {
         withContext(Dispatchers.IO) {
@@ -134,25 +139,41 @@ fun GameUpdatesScreen(
 
     Box(modifier.fillMaxSize()) {
         PaneScaffold(
-            title = "Updates · " + (details?.titleId?.ifEmpty { null } ?: gameTitleId(gamePath)),
+            title = stringResource(
+                R.string.updates_title,
+                details?.titleId?.ifEmpty { null } ?: gameTitleId(gamePath)
+            ),
             tabs = listOf(
-                PaneTab("Updates", Icons.Outlined.SystemUpdateAlt),
-                PaneTab("Other data", Icons.Outlined.Extension)
+                PaneTab(
+                    stringResource(R.string.updates_tab_updates),
+                    Icons.Outlined.SystemUpdateAlt
+                ),
+                PaneTab(
+                    stringResource(R.string.updates_tab_other_data),
+                    Icons.Outlined.Extension
+                )
             ),
             selected = selected,
             onSelect = { selected = it },
             onBack = onClose
         ) {
-            details?.versionLabel?.takeIf { it.isNotEmpty() }?.let { label ->
-                PaneSectionTitle("Installed version $label")
+            val updateTypeLabel = stringResource(R.string.updates_type_update)
+            val dataTypeLabel = stringResource(R.string.updates_type_data)
+
+            details?.versionLabel(context)?.takeIf { it.isNotEmpty() }?.let { label ->
+                PaneSectionTitle(stringResource(R.string.updates_installed_version, label))
                 Spacer(Modifier.height(4.dp))
             }
 
             PaneSectionTitle(
                 if (shown.isEmpty()) {
-                    "Nothing installed for this title"
+                    stringResource(R.string.updates_none_installed)
                 } else {
-                    "${shown.size} item${if (shown.size == 1) "" else "s"} in dev_hdd0/game"
+                    pluralStringResource(
+                        R.plurals.updates_item_count,
+                        shown.size,
+                        shown.size
+                    )
                 }
             )
 
@@ -163,19 +184,39 @@ fun GameUpdatesScreen(
                             title = entry.title.ifEmpty { entry.name },
                             subtitle = buildString {
                                 append(entry.name)
-                                if (entry.version.isNotEmpty()) append("  ·  v").append(entry.version)
-                                append("  ·  ").append(if (entry.isUpdate) "Update / game data" else entry.category.ifEmpty { "Data" })
-                                append("  ·  ").append(PackageInspector.formatSize(entry.size))
+                                if (entry.version.isNotEmpty()) {
+                                    append("  ·  ")
+                                        .append(
+                                            context.getString(
+                                                R.string.version_prefix,
+                                                entry.version
+                                            )
+                                        )
+                                }
+                                append("  ·  ").append(
+                                    if (entry.isUpdate) {
+                                        updateTypeLabel
+                                    } else {
+                                        entry.category.ifEmpty { dataTypeLabel }
+                                    }
+                                )
+                                append("  ·  ")
+                                    .append(PackageInspector.formatSize(context, entry.size))
                             },
                             actionIcon = Icons.Outlined.Delete,
-                            actionDescription = "Uninstall",
+                            actionDescription = stringResource(R.string.action_uninstall),
                             onAction = {
                                 AlertDialogQueue.showDialog(
-                                    title = "Uninstall ${entry.name}?",
-                                    message = "This deletes ${entry.path} and everything in it. " +
-                                        "For a disc game this reverts it to the version on the disc.",
-                                    confirmText = "Uninstall",
-                                    dismissText = "Cancel",
+                                    title = context.getString(
+                                        R.string.updates_uninstall_title,
+                                        entry.name
+                                    ),
+                                    message = context.getString(
+                                        R.string.updates_uninstall_message,
+                                        entry.path
+                                    ),
+                                    confirmText = context.getString(R.string.action_uninstall),
+                                    dismissText = context.getString(R.string.action_cancel),
                                     onConfirm = {
                                         scope.launch(Dispatchers.IO) {
                                             val ok = runCatching {
@@ -187,8 +228,13 @@ fun GameUpdatesScreen(
                                                     reloadToken++
                                                 } else {
                                                     AlertDialogQueue.showDialog(
-                                                        "Uninstall failed",
-                                                        "Could not remove ${entry.path}"
+                                                        context.getString(
+                                                            R.string.updates_uninstall_failed_title
+                                                        ),
+                                                        context.getString(
+                                                            R.string.updates_uninstall_failed_message,
+                                                            entry.path
+                                                        )
                                                     )
                                                 }
                                             }
@@ -204,7 +250,7 @@ fun GameUpdatesScreen(
             Spacer(Modifier.height(14.dp))
 
             PaneActionButton(
-                label = "Install updates",
+                label = stringResource(R.string.updates_install),
                 icon = Icons.Default.Add,
                 enabled = true,
                 onClick = { picker.launch("*/*") }
@@ -215,7 +261,7 @@ fun GameUpdatesScreen(
 
         if (progressId != null && !installDone && !overlayHidden) {
             PaneProgressOverlay(
-                title = "Installing packages",
+                title = stringResource(R.string.updates_installing),
                 message = progressEntry?.message?.value,
                 value = progressEntry?.value?.longValue ?: 0L,
                 max = progressEntry?.max?.longValue ?: 0L,

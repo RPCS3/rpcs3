@@ -84,7 +84,6 @@ class PadOverlayButton(private val context: Context, resources: Resources, image
                 .putInt("button_${digital1}_${digital2}_y", y - offsetY)
                 .apply()
         } else if (force) {
-            // don't use offsets as we aren't dragging
             setBounds(x, y, x + bounds.width(), y + bounds.height())
             prefs.edit()
                 .putInt("button_${digital1}_${digital2}_x", x)

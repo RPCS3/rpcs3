@@ -24,10 +24,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import net.rpcs3.R
 import net.rpcs3.ui.theme.SettingsStyle
 
 @Composable
@@ -46,14 +48,14 @@ fun IsoChoiceDialog(
                 .padding(18.dp)
         ) {
             Text(
-                text = "Add disc image",
+                text = stringResource(R.string.iso_title),
                 color = SettingsStyle.TextPrimary,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "Both options add the game to your library with full settings.",
+                text = stringResource(R.string.iso_subtitle),
                 color = SettingsStyle.TextSecondary,
                 fontSize = 12.sp
             )
@@ -61,15 +63,15 @@ fun IsoChoiceDialog(
 
             IsoChoice(
                 icon = Icons.Outlined.Album,
-                title = "Direct boot",
-                detail = "Runs from the disc image. Nothing is copied.",
+                title = stringResource(R.string.iso_direct_boot),
+                detail = stringResource(R.string.iso_direct_boot_detail),
                 onClick = onDirectBoot
             )
             Spacer(Modifier.height(10.dp))
             IsoChoice(
                 icon = Icons.Outlined.Download,
-                title = "Install",
-                detail = "Extracts the game to storage first.",
+                title = stringResource(R.string.iso_install),
+                detail = stringResource(R.string.iso_install_detail),
                 onClick = onInstall
             )
 
@@ -81,7 +83,11 @@ fun IsoChoiceDialog(
                     .clickable(onClick = onDismiss)
                     .padding(horizontal = 14.dp, vertical = 8.dp)
             ) {
-                Text(text = "Cancel", color = SettingsStyle.TextSecondary, fontSize = 13.sp)
+                Text(
+                    text = stringResource(R.string.action_cancel),
+                    color = SettingsStyle.TextSecondary,
+                    fontSize = 13.sp
+                )
             }
         }
     }

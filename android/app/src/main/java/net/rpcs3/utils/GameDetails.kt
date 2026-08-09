@@ -1,5 +1,7 @@
 package net.rpcs3.utils
 
+import android.content.Context
+import net.rpcs3.R
 import net.rpcs3.RPCS3
 import net.rpcs3.gameTitleId
 import org.json.JSONObject
@@ -12,12 +14,14 @@ data class GameDetails(
     val category: String,
     val updated: Boolean
 ) {
-    val versionLabel: String
-        get() = when {
-            version.isEmpty() -> ""
-            updated && baseVersion.isNotEmpty() -> "v$version (disc v$baseVersion)"
-            else -> "v$version"
+    fun versionLabel(context: Context): String = when {
+        version.isEmpty() -> ""
+        updated && baseVersion.isNotEmpty() -> {
+            context.getString(R.string.game_version_updated, version, baseVersion)
         }
+
+        else -> context.getString(R.string.game_version, version)
+    }
 }
 
 object GameDetailsReader {

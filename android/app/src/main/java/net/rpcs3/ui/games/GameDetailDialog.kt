@@ -1,7 +1,9 @@
 package net.rpcs3.ui.games
 
+import net.rpcs3.ui.theme.Dims
 import net.rpcs3.ui.theme.Rpcs
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
@@ -9,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,17 +32,23 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Healing
 import androidx.compose.material.icons.outlined.SystemUpdateAlt
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SportsEsports
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -51,6 +60,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -67,6 +78,14 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import net.rpcs3.R
+import net.rpcs3.dialogs.AlertDialogQueue
+import net.rpcs3.utils.CacheKind
+import net.rpcs3.utils.CacheSurvey
+import net.rpcs3.utils.CacheUtil
+import net.rpcs3.utils.GameDetailsReader
 
 private val LaunchBlack = Color.Black
 private val LaunchCard = Rpcs.SurfaceInset
@@ -82,20 +101,74 @@ private data class ActionSpec(
     val onClick: () -> Unit
 )
 
+private data class CacheAction(
+    val kind: CacheKind,
+    @StringRes val labelRes: Int,
+    @StringRes val descriptionRes: Int
+)
+
+private val cacheActions = listOf(
+    CacheAction(
+        CacheKind.Ppu,
+        R.string.cache_clear_ppu,
+        R.string.cache_clear_ppu_description
+    ),
+    CacheAction(
+        CacheKind.Shaders,
+        R.string.cache_clear_shaders,
+        R.string.cache_clear_shaders_description
+    ),
+    CacheAction(
+        CacheKind.Spu,
+        R.string.cache_clear_spu,
+        R.string.cache_clear_spu_description
+    ),
+    CacheAction(
+        CacheKind.Hdd1,
+        R.string.cache_clear_hdd1,
+        R.string.cache_clear_hdd1_description
+    ),
+    CacheAction(
+        CacheKind.All,
+        R.string.cache_clear_all,
+        R.string.cache_clear_all_description
+    )
+)
+
 @Composable
 fun GameDetailDialog(
     title: String,
     subtitle: String,
     version: String,
     iconPath: String?,
+    gamePath: String,
     onPlay: () -> Unit,
     onSettings: () -> Unit,
     onInstallUpdate: (() -> Unit)?,
     onPatches: (() -> Unit)?,
+    uninstallLabel: String = stringResource(R.string.action_uninstall),
     onUninstall: (() -> Unit)?,
     onDismissRequest: () -> Unit
 ) {
     var confirmUninstall by remember { mutableStateOf(false) }
+    var cacheSerial by remember(gamePath) { mutableStateOf("") }
+    var cacheSurvey by remember(gamePath) { mutableStateOf<Map<CacheKind, CacheSurvey>?>(null) }
+    var surveyToken by remember(gamePath) { mutableIntStateOf(0) }
+
+    LaunchedEffect(gamePath) {
+        cacheSerial = withContext(Dispatchers.IO) {
+            GameDetailsReader.read(gamePath).titleId
+        }
+    }
+
+    LaunchedEffect(cacheSerial, surveyToken) {
+        if (cacheSerial.isEmpty()) {
+            return@LaunchedEffect
+        }
+        cacheSurvey = withContext(Dispatchers.IO) {
+            CacheUtil.survey(cacheSerial)
+        }
+    }
 
     Dialog(
         onDismissRequest = onDismissRequest,
@@ -201,11 +274,20 @@ fun GameDetailDialog(
                 ) {
                     Icon(
                         Icons.AutoMirrored.Outlined.ArrowBack,
-                        contentDescription = "Back",
+                        contentDescription = stringResource(R.string.action_back),
                         tint = LaunchTextPrimary,
                         modifier = Modifier.size(22.dp)
                     )
                 }
+
+                CacheMenu(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(end = 18.dp, top = 14.dp),
+                    serial = cacheSerial,
+                    survey = cacheSurvey,
+                    onCleared = { surveyToken++ }
+                )
 
                 val actionIconSize = 46.dp
                 val actionIconSpacing = 8.dp
@@ -263,17 +345,34 @@ fun GameDetailDialog(
                             modifier = Modifier.fillMaxWidth(),
                             onClick = onPlay
                         )
+                        val settingsLabel = stringResource(R.string.detail_settings)
+                        val updateLabel = stringResource(R.string.detail_update)
+                        val patchesLabel = stringResource(R.string.detail_patches)
                         val actions = buildList {
-                            add(ActionSpec(Icons.Outlined.Settings, "Settings", false, onSettings))
+                            add(
+                                ActionSpec(
+                                    Icons.Outlined.Settings,
+                                    settingsLabel,
+                                    false,
+                                    onSettings
+                                )
+                            )
                             onInstallUpdate?.let {
-                                add(ActionSpec(Icons.Outlined.SystemUpdateAlt, "Update", false, it))
+                                add(
+                                    ActionSpec(
+                                        Icons.Outlined.SystemUpdateAlt,
+                                        updateLabel,
+                                        false,
+                                        it
+                                    )
+                                )
                             }
                             onPatches?.let {
-                                add(ActionSpec(Icons.Outlined.Healing, "Patches", false, it))
+                                add(ActionSpec(Icons.Outlined.Healing, patchesLabel, false, it))
                             }
                             if (onUninstall != null) {
                                 add(
-                                    ActionSpec(Icons.Outlined.Delete, "Uninstall", true) {
+                                    ActionSpec(Icons.Outlined.Delete, uninstallLabel, true) {
                                         confirmUninstall = true
                                     }
                                 )
@@ -320,6 +419,167 @@ fun GameDetailDialog(
                     onConfirm = {
                         confirmUninstall = false
                         onUninstall()
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CacheMenu(
+    serial: String,
+    survey: Map<CacheKind, CacheSurvey>?,
+    onCleared: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    val shape = RoundedCornerShape(Dims.InputCorner)
+    val context = LocalContext.current
+
+    fun confirmClear(action: CacheAction, amount: CacheSurvey) {
+        expanded = false
+        AlertDialogQueue.showDialog(
+            title = context.getString(
+                R.string.cache_confirm_title,
+                context.getString(action.labelRes)
+            ),
+            message = context.getString(
+                R.string.cache_confirm_message,
+                context.getString(action.descriptionRes),
+                amount.entries,
+                CacheUtil.formatBytes(amount.bytes),
+                serial
+            ),
+            onConfirm = {
+                CacheUtil.clear(serial, action.kind) { result ->
+                    onCleared()
+                    AlertDialogQueue.showDialog(
+                        title = context.getString(
+                            if (result.failed == 0) {
+                                R.string.cache_cleared_title
+                            } else {
+                                R.string.cache_cleared_partial_title
+                            }
+                        ),
+                        message = if (result.failed == 0) {
+                            context.getString(
+                                R.string.cache_cleared_message,
+                                result.removed,
+                                CacheUtil.formatBytes(result.bytes),
+                                serial
+                            )
+                        } else {
+                            context.getString(
+                                R.string.cache_cleared_partial_message,
+                                result.removed,
+                                CacheUtil.formatBytes(result.bytes),
+                                serial,
+                                result.failed
+                            )
+                        },
+                        confirmText = context.getString(R.string.action_close),
+                        dismissText = ""
+                    )
+                }
+            },
+            confirmText = context.getString(R.string.action_clear),
+            dismissText = context.getString(R.string.action_cancel)
+        )
+    }
+
+    Box(modifier = modifier) {
+        Row(
+            modifier = Modifier
+                .height(40.dp)
+                .clip(shape)
+                .background(LaunchBlack.copy(alpha = 0.45f))
+                .border(
+                    if (focused) Dims.FocusBorderWidth else Dims.BorderWidth,
+                    if (focused) Rpcs.FocusBorder else LaunchTextSecondary.copy(alpha = 0.65f),
+                    shape
+                )
+                .clickable(
+                    interactionSource = interaction,
+                    indication = null
+                ) { expanded = !expanded }
+                .padding(start = 14.dp, end = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.cache_menu_label),
+                color = LaunchTextPrimary,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.width(4.dp))
+            Icon(
+                imageVector = if (expanded) {
+                    Icons.Default.KeyboardArrowDown
+                } else {
+                    Icons.Default.KeyboardArrowUp
+                },
+                contentDescription = stringResource(
+                    if (expanded) R.string.cache_menu_collapse else R.string.cache_menu_expand
+                ),
+                tint = LaunchTextPrimary,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            shape = RoundedCornerShape(Dims.InputCorner),
+            containerColor = LaunchCard
+        ) {
+            cacheActions.forEach { action ->
+                if (action.kind == CacheKind.All) {
+                    HorizontalDivider(color = Rpcs.OutlineSoft)
+                }
+
+                val amount = survey?.get(action.kind)
+                val ready = serial.isNotEmpty() && amount != null
+                val hasData = ready && amount.entries > 0
+
+                DropdownMenuItem(
+                    enabled = hasData,
+                    text = {
+                        Column {
+                            Text(
+                                text = stringResource(action.labelRes),
+                                color = if (hasData) LaunchTextPrimary else Rpcs.TextDim,
+                                fontSize = 14.sp,
+                                fontWeight = if (action.kind == CacheKind.All) {
+                                    FontWeight.Bold
+                                } else {
+                                    FontWeight.Medium
+                                }
+                            )
+                            Text(
+                                text = when {
+                                    !ready -> stringResource(R.string.cache_scanning)
+                                    amount.entries == 0 -> {
+                                        stringResource(R.string.cache_nothing_to_clear)
+                                    }
+
+                                    else -> stringResource(
+                                        R.string.cache_entry_summary,
+                                        amount.entries,
+                                        CacheUtil.formatBytes(amount.bytes)
+                                    )
+                                },
+                                color = if (hasData) LaunchTextSecondary else Rpcs.TextDim,
+                                fontSize = 11.sp
+                            )
+                        }
+                    },
+                    onClick = {
+                        if (amount != null) {
+                            confirmClear(action, amount)
+                        }
                     }
                 )
             }
@@ -377,7 +637,7 @@ private fun PlayButton(modifier: Modifier = Modifier, onClick: () -> Unit) {
             )
             Spacer(Modifier.width(8.dp))
             Text(
-                text = "Play",
+                text = stringResource(R.string.detail_play),
                 color = LaunchTextPrimary,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
@@ -440,14 +700,14 @@ private fun UninstallConfirm(name: String, onCancel: () -> Unit, onConfirm: () -
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text(
-                    text = "Uninstall $name?",
+                    text = stringResource(R.string.detail_uninstall_title, name),
                     color = LaunchTextPrimary,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "This deletes the installed game data from this device.",
+                    text = stringResource(R.string.detail_uninstall_message),
                     color = LaunchTextSecondary,
                     fontSize = 13.sp
                 )
@@ -457,7 +717,7 @@ private fun UninstallConfirm(name: String, onCancel: () -> Unit, onConfirm: () -
                     horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End)
                 ) {
                     Text(
-                        text = "Cancel",
+                        text = stringResource(R.string.action_cancel),
                         color = LaunchTextSecondary,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -467,7 +727,7 @@ private fun UninstallConfirm(name: String, onCancel: () -> Unit, onConfirm: () -
                             .padding(horizontal = 14.dp, vertical = 8.dp)
                     )
                     Text(
-                        text = "Uninstall",
+                        text = stringResource(R.string.action_uninstall),
                         color = LaunchDanger,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,

@@ -19,12 +19,6 @@ import net.rpcs3.ui.settings.components.core.PreferenceIcon
 import net.rpcs3.ui.settings.components.core.PreferenceSubtitle
 import net.rpcs3.ui.settings.components.core.PreferenceTitle
 
-/**
- * Created using Android Studio
- * User: Muhammad Ashhal
- * Date: Sat, Mar 08, 2025
- * Time: 6:59 pm
- */
 
 @Composable
 fun SwitchPreference(

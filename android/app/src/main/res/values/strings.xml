@@ -1,3 +1,331 @@
 <resources>
     <string name="app_name">PS3Native</string>
+
+    <string name="action_ok">OK</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_close">Close</string>
+    <string name="action_save">Save</string>
+    <string name="action_reset">Reset</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_uninstall">Uninstall</string>
+    <string name="action_remove">Remove</string>
+    <string name="action_install">Install</string>
+    <string name="action_clear">Clear</string>
+    <string name="action_import">Import</string>
+    <string name="action_fetch">Fetch</string>
+    <string name="action_confirm">Confirm</string>
+    <string name="action_hide">Hide</string>
+    <string name="action_dismiss">Dismiss</string>
+    <string name="action_back">Back</string>
+    <string name="action_stop">Stop</string>
+    <string name="action_refresh">Refresh</string>
+    <string name="action_home">Home</string>
+    <string name="action_add">Add</string>
+    <string name="action_settings">Settings</string>
+
+    <string name="percent_value">%1$d%%</string>
+    <string name="version_prefix">v%1$s</string>
+
+    <string name="startup_message">Starting RPCS3</string>
+    <string name="notification_channel_progress">Installation progress</string>
+
+    <string name="progress_firmware_installation">Firmware Installation</string>
+    <string name="progress_adding_disc_image">Adding disc image</string>
+    <string name="progress_installing_packages">Installing %1$d packages</string>
+    <string name="progress_package_installation">Package Installation</string>
+    <string name="progress_license_installation">License Installation</string>
+    <string name="progress_deleting_game">Deleting Game</string>
+    <string name="progress_installing_directory">Installing Directory</string>
+    <string name="progress_failed">%1$s failed</string>
+
+    <string name="drawer_firmware">Firmware: %1$s</string>
+    <string name="drawer_firmware_none">None</string>
+    <string name="drawer_settings">Settings</string>
+    <string name="drawer_setup">Setup</string>
+    <string name="drawer_diagnostics">Diagnostics</string>
+    <string name="drawer_debug">Debug</string>
+    <string name="drawer_gpu_drivers">GPU Drivers</string>
+    <string name="drawer_edit_overlay">Edit Overlay</string>
+    <string name="drawer_system_info">System Info</string>
+
+    <string name="library_browse_internal">View internal directory</string>
+    <string name="library_boot_disc_image">Boot disc image</string>
+    <string name="library_install">Install</string>
+    <string name="library_folder">Folder</string>
+    <string name="library_tab_library">Library</string>
+    <string name="library_tab_compatibility">Compatibility</string>
+    <string name="library_sort_name_ascending">Name A-Z</string>
+    <string name="library_sort_name_descending">Name Z-A</string>
+    <string name="library_search_placeholder">Search games</string>
+    <string name="library_menu">Menu</string>
+    <string name="library_search">Search</string>
+    <string name="library_filter">Filter</string>
+
+    <string name="games_error_unexpected_title">Unexpected Error</string>
+    <string name="games_error_delete_cache">Failed to delete game cache</string>
+    <string name="games_uninstall_title">Uninstall %1$s?</string>
+    <string name="games_remove_title">Remove %1$s?</string>
+    <string name="games_uninstall_message">Deletes the installed game from app storage, along with its caches and any updates or extra data installed for it.</string>
+    <string name="games_remove_message">Removes it from your library and clears its caches, updates and extra data. The original files at %1$s are not touched.</string>
+    <string name="games_missing_key_title">Missing key</string>
+    <string name="games_missing_key_message">This game requires key to play</string>
+    <string name="games_install_rap">Install RAP file</string>
+    <string name="games_firmware_missing_title">Firmware Missing</string>
+    <string name="games_firmware_missing_message">Please install the required firmware to continue.</string>
+    <string name="games_firmware_installing_message">Please wait until firmware installs successfully to continue.</string>
+    <string name="games_compiling_title">Game compiling isn\'t finished yet</string>
+    <string name="games_compiling_message">Please wait until game compiles to continue.</string>
+    <string name="games_locked">Game is locked</string>
+
+    <string name="detail_play">Play</string>
+    <string name="detail_settings">Settings</string>
+    <string name="detail_update">Update</string>
+    <string name="detail_patches">Patches</string>
+    <string name="detail_uninstall_title">Uninstall %1$s?</string>
+    <string name="detail_uninstall_message">This deletes the installed game data from this device.</string>
+
+    <string name="cache_menu_label">PS3</string>
+    <string name="cache_menu_collapse">Collapse cache menu</string>
+    <string name="cache_menu_expand">Expand cache menu</string>
+    <string name="cache_scanning">Scanning…</string>
+    <string name="cache_nothing_to_clear">Nothing to clear</string>
+    <string name="cache_entry_summary">%1$d item(s) · %2$s</string>
+    <string name="cache_clear_ppu">Clear PPU</string>
+    <string name="cache_clear_ppu_description">Deletes the compiled PPU cache for this title. It is rebuilt the next time you play.</string>
+    <string name="cache_clear_shaders">Clear Shaders</string>
+    <string name="cache_clear_shaders_description">Deletes the shader cache for this title. Expect stutter while it is rebuilt.</string>
+    <string name="cache_clear_spu">Clear SPU</string>
+    <string name="cache_clear_spu_description">Deletes the compiled SPU cache for this title. It is rebuilt the next time you play.</string>
+    <string name="cache_clear_hdd1">Clear HDD1</string>
+    <string name="cache_clear_hdd1_description">Deletes the dev_hdd1 disk cache this title wrote during play.</string>
+    <string name="cache_clear_all">Clear All</string>
+    <string name="cache_clear_all_description">Deletes the PPU, shader, SPU and HDD1 caches for this title.</string>
+    <string name="cache_confirm_title">%1$s?</string>
+    <string name="cache_confirm_message">%1$s\n\nAbout to delete %2$d item(s), %3$s, from the cache of %4$s. The game, its updates and its settings are kept.</string>
+    <string name="cache_cleared_title">Cache cleared</string>
+    <string name="cache_cleared_partial_title">Cache partly cleared</string>
+    <string name="cache_cleared_message">Removed %1$d item(s), %2$s, for %3$s.</string>
+    <string name="cache_cleared_partial_message">Removed %1$d item(s), %2$s, for %3$s. %4$d item(s) could not be deleted.</string>
+
+    <string name="updates_title">Updates · %1$s</string>
+    <string name="updates_tab_updates">Updates</string>
+    <string name="updates_tab_other_data">Other data</string>
+    <string name="updates_installed_version">Installed version %1$s</string>
+    <string name="updates_none_installed">Nothing installed for this title</string>
+    <plurals name="updates_item_count">
+        <item quantity="one">%1$d item in dev_hdd0/game</item>
+        <item quantity="other">%1$d items in dev_hdd0/game</item>
+    </plurals>
+    <string name="updates_type_update">Update / game data</string>
+    <string name="updates_type_data">Data</string>
+    <string name="updates_uninstall_title">Uninstall %1$s?</string>
+    <string name="updates_uninstall_message">This deletes %1$s and everything in it. For a disc game this reverts it to the version on the disc.</string>
+    <string name="updates_uninstall_failed_title">Uninstall failed</string>
+    <string name="updates_uninstall_failed_message">Could not remove %1$s</string>
+    <string name="updates_install">Install updates</string>
+    <string name="updates_installing">Installing packages</string>
+
+    <string name="packages_reading">Reading packages</string>
+    <plurals name="packages_install_count">
+        <item quantity="one">Install %1$d package</item>
+        <item quantity="other">Install %1$d packages</item>
+    </plurals>
+    <string name="packages_reading_detail">Reading title and version information.</string>
+    <string name="packages_install_detail">Updates install oldest version first so each one matches the version it expects.</string>
+    <string name="packages_required_size">Required %1$s</string>
+    <string name="packages_free_size">"  ·  Free %1$s"</string>
+    <string name="packages_not_enough_space">Not enough space</string>
+    <plurals name="packages_skipped_count">
+        <item quantity="one">%1$d file skipped as unreadable</item>
+        <item quantity="other">%1$d files skipped as unreadable</item>
+    </plurals>
+    <string name="packages_index">#%1$d</string>
+    <string name="packages_type_corrupted">Corrupted</string>
+    <string name="packages_type_update">Update</string>
+    <string name="packages_type_dlc">DLC</string>
+    <string name="packages_type_package">Package</string>
+    <string name="packages_target_version">" from v%1$s"</string>
+    <string name="packages_size_unknown">unknown size</string>
+
+    <string name="iso_title">Add disc image</string>
+    <string name="iso_subtitle">Both options add the game to your library with full settings.</string>
+    <string name="iso_direct_boot">Direct boot</string>
+    <string name="iso_direct_boot_detail">Runs from the disc image. Nothing is copied.</string>
+    <string name="iso_install">Install</string>
+    <string name="iso_install_detail">Extracts the game to storage first.</string>
+
+    <string name="settings_title_global">Global Settings</string>
+    <string name="settings_category_controls">Controls</string>
+    <string name="settings_save">Save</string>
+    <string name="settings_reset">Reset</string>
+    <string name="settings_cancel">Cancel</string>
+    <string name="settings_reset_global_title">Reset global settings</string>
+    <string name="settings_reset_game_title">Reset %1$s settings</string>
+    <string name="settings_reset_global_message">Every global setting will be restored to its factory default. This is applied immediately and cannot be undone.</string>
+    <string name="settings_reset_game_message">Every setting for %1$s will be changed to match your current Global Settings. This is applied immediately and cannot be undone.</string>
+    <string name="settings_error_title">Setting error</string>
+    <string name="settings_error_assign">Failed to assign %1$s</string>
+    <string name="settings_error_assign_value">Failed to assign %1$s value %2$s</string>
+    <string name="settings_error_reset">Failed to reset %1$s</string>
+    <string name="settings_reset_item_title">Reset Setting</string>
+    <string name="settings_reset_item_message">Do you want to reset \'%1$s\' to its default value?</string>
+    <string name="settings_not_saved_title">Settings not saved</string>
+    <string name="settings_not_saved_message">PS3Native could not write %1$s. The change will be lost when you close the app.</string>
+
+    <string name="controls_section">On-screen controls</string>
+    <string name="controls_button_transparency">Button transparency</string>
+    <string name="controls_applies_to">Applies to</string>
+    <string name="controls_applies_to_value">All on-screen buttons and sticks</string>
+    <string name="controls_edit_layout">Edit layout</string>
+
+    <string name="advanced_title">Advanced Settings</string>
+    <string name="advanced_search_placeholder">Search settings...</string>
+    <string name="advanced_search">Search</string>
+    <string name="advanced_search_close">Close Search</string>
+
+    <string name="preference_not_set">Not set</string>
+    <string name="preference_value">Value</string>
+    <string name="preference_value_error">Value must be a multiple of step size %1$d within %2$s to %3$s</string>
+
+    <string name="debug_title">Debug</string>
+    <string name="debug_tab_troubleshooting">Troubleshooting</string>
+    <string name="debug_logging_loading">"Logging  ·  reading channels…"</string>
+    <string name="debug_logging_summary">"Logging  ·  %1$d of %2$d channels enabled"</string>
+    <string name="debug_all_off">All Off</string>
+    <string name="debug_loading">Loading…</string>
+    <string name="debug_no_channel_match">No channel matches \"%1$s\"</string>
+    <string name="debug_filter_placeholder">Filter channels</string>
+    <string name="debug_share_log">Share Log</string>
+    <string name="debug_share_log_description">Share the RPCS3 log file</string>
+    <string name="debug_share_log_chooser">Share Log File</string>
+    <string name="debug_log_not_found">Log file not found!</string>
+    <string name="debug_diagnostics">Diagnostics</string>
+    <string name="debug_diagnostics_description">Setup, storage and graphics</string>
+
+    <string name="diagnostics_title">Diagnostics</string>
+    <string name="diagnostics_tab_setup">Setup</string>
+    <string name="diagnostics_tab_storage">Storage</string>
+    <string name="diagnostics_tab_graphics">Graphics</string>
+    <string name="diagnostics_requirements">Requirements</string>
+    <string name="diagnostics_storage_access">Storage access</string>
+    <string name="diagnostics_granted">Granted</string>
+    <string name="diagnostics_not_granted">Not granted</string>
+    <string name="diagnostics_firmware">Firmware</string>
+    <string name="diagnostics_firmware_missing">Not installed</string>
+    <string name="diagnostics_notifications">Notifications</string>
+    <string name="diagnostics_configuration">Configuration</string>
+    <string name="diagnostics_config_writable">Config writable</string>
+    <string name="diagnostics_yes">Yes</string>
+    <string name="diagnostics_no">No</string>
+    <string name="diagnostics_checking">Checking</string>
+    <string name="diagnostics_per_game_configs">Per-game configs</string>
+    <string name="diagnostics_paths">Paths</string>
+    <string name="diagnostics_config_directory">Config directory</string>
+    <string name="diagnostics_renderer">Renderer</string>
+    <string name="diagnostics_custom_driver">Custom driver</string>
+    <string name="diagnostics_driver_system">System</string>
+    <string name="diagnostics_driver_custom">Custom</string>
+    <string name="diagnostics_system">System</string>
+
+    <string name="drivers_title">GPU Drivers</string>
+    <string name="drivers_tab_installed">Installed</string>
+    <string name="drivers_select">Select a GPU driver</string>
+    <string name="drivers_installing">Installing…</string>
+    <string name="drivers_add">Add driver</string>
+    <string name="drivers_choose">Choose</string>
+    <string name="drivers_import">Import</string>
+    <string name="drivers_install">Install</string>
+    <string name="drivers_enter_repo_url">Enter repo url</string>
+    <string name="drivers_error_title">Error</string>
+    <string name="drivers_fetch_unexpected">Something unexpected occurred while fetching %1$s drivers</string>
+    <string name="drivers_fetching">Fetching</string>
+    <string name="drivers_please_wait">Please wait</string>
+    <string name="drivers_list_title">Drivers</string>
+    <string name="drivers_downloading">Downloading</string>
+    <string name="drivers_import_failed">Failed to import %1$s: %2$s</string>
+    <string name="drivers_fetch_failed">Failed to fetch drivers</string>
+    <string name="drivers_repo_invalid">Provided driver repo url is not valid.</string>
+    <string name="drivers_fetch_error">Error fetching releases: %1$s</string>
+    <string name="drivers_download_open_failed">Failed to open %1$s</string>
+    <string name="drivers_default_description">The driver provided by your device system</string>
+    <string name="drivers_install_success">Successfully installed GPU driver</string>
+    <string name="drivers_install_invalid_archive">Invalid GPU driver archive</string>
+    <string name="drivers_install_missing_metadata">Selected driver\'s metadata is missing</string>
+    <string name="drivers_install_invalid_metadata">Selected driver\'s metadata is invalid</string>
+    <string name="drivers_install_unsupported_android">Your android version doesn\'t support selected driver</string>
+    <string name="drivers_install_already_installed">Selected driver is already installed</string>
+
+    <string name="patches_title">Patches · %1$s</string>
+    <string name="patches_group_ungrouped">Ungrouped</string>
+    <string name="patches_tab_files">Patch files</string>
+    <string name="patches_files_none">No patch files installed</string>
+    <plurals name="patches_file_count">
+        <item quantity="one">%1$d file in config/patches</item>
+        <item quantity="other">%1$d files in config/patches</item>
+    </plurals>
+    <plurals name="patches_count">
+        <item quantity="one">%1$d patch</item>
+        <item quantity="other">%1$d patches</item>
+    </plurals>
+    <string name="patches_delete_title">Delete %1$s?</string>
+    <string name="patches_delete_message">This removes the file from config/patches and every patch it provides.</string>
+    <string name="patches_none_available">No patches available for this title</string>
+    <string name="patches_add">Add patch files</string>
+    <string name="patches_importing">Importing patch files</string>
+    <string name="patches_import_failed_title">Some patches were not added</string>
+    <string name="patches_import_failed_message">Added %1$d. These were not valid patch files:\n%2$s</string>
+    <string name="patches_detail_author">by %1$s</string>
+    <string name="patches_detail_app_version">app %1$s</string>
+    <string name="patches_empty_title">No patches for this title</string>
+    <string name="patches_empty_message">Place patch .yml files in the patches folder and they will appear here.</string>
+
+    <string name="setup_welcome">Welcome to PS3Native</string>
+    <string name="setup_intro">Two things are needed before you can play. This takes a minute.</string>
+    <string name="setup_step_title">%1$d. %2$s</string>
+    <string name="setup_required">Required</string>
+    <string name="setup_optional">Optional</string>
+    <string name="setup_allow">Allow</string>
+    <string name="setup_install">Install</string>
+    <string name="setup_done">Done</string>
+    <string name="setup_next">Next</string>
+    <string name="setup_skip">Skip for now</string>
+    <string name="setup_storage_title">Storage access</string>
+    <string name="setup_storage_detail">Lets PS3Native read games and disc images from your storage.</string>
+    <string name="setup_firmware_title">PS3 firmware</string>
+    <string name="setup_firmware_installed">Installed: %1$s</string>
+    <string name="setup_firmware_detail">Select the official PS3UPDAT.PUP file. Most games need it.</string>
+    <string name="setup_notifications_title">Notifications</string>
+    <string name="setup_notifications_detail">Shows install and compilation progress.</string>
+    <string name="setup_storage_dialog_title">Storage access needed</string>
+    <string name="setup_storage_dialog_message">Booting a disc image reads it straight from your storage, so PS3Native needs all-files access.</string>
+    <string name="setup_storage_dialog_not_now">Not now</string>
+    <string name="setup_storage_dialog_open_settings">Open settings</string>
+
+    <string name="pane_working">Working</string>
+
+    <string name="ingame_resume">Resume</string>
+    <string name="ingame_pause">Pause</string>
+    <string name="ingame_exit">Exit Game</string>
+    <string name="ingame_settings">Settings</string>
+
+    <string name="boot_failed_title">Boot Failed</string>
+    <string name="boot_failed_open_image">Could not open the selected disc image</string>
+    <string name="boot_failed_error">Error: %1$s</string>
+
+    <string name="overlay_unknown_button">Unknown</string>
+    <string name="overlay_editing">Editing: %1$s</string>
+    <string name="overlay_move_up">Move Up</string>
+    <string name="overlay_move_down">Move Down</string>
+    <string name="overlay_move_left">Move Left</string>
+    <string name="overlay_move_right">Move Right</string>
+    <string name="overlay_scale">Scale</string>
+    <string name="overlay_opacity">Opacity</string>
+    <string name="overlay_slider_value">%1$s: %2$d%%</string>
+    <string name="overlay_reset_title">Reset %1$s</string>
+    <string name="overlay_reset_message">Are you sure you want to reset this button?</string>
+
+    <string name="game_version">v%1$s</string>
+    <string name="game_version_updated">v%1$s (disc v%2$s)</string>
+
+    <string name="system_info_title">System Info</string>
 </resources>

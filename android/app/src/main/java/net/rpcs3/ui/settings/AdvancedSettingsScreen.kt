@@ -30,10 +30,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import net.rpcs3.R
 import net.rpcs3.RPCS3
 import net.rpcs3.dialogs.AlertDialogQueue
 import net.rpcs3.ui.settings.components.core.PreferenceValue
@@ -53,6 +56,7 @@ fun AdvancedSettingsScreen(
     settings: JSONObject,
     path: String = ""
 ) {
+    val context = LocalContext.current
     val settingValue = remember { mutableStateOf(settings) }
     var searchQuery by remember { mutableStateOf("") }
     var isSearching by remember { mutableStateOf(false) }
@@ -90,7 +94,7 @@ fun AdvancedSettingsScreen(
                                 ) {
                                     if (searchQuery.isEmpty()) {
                                         Text(
-                                            text = "Search settings...",
+                                            text = stringResource(R.string.advanced_search_placeholder),
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
@@ -100,7 +104,9 @@ fun AdvancedSettingsScreen(
                         )
                     } else {
                         Text(
-                            text = if (titlePath.isEmpty()) "Advanced Settings" else titlePath,
+                            text = titlePath.ifEmpty {
+                                stringResource(R.string.advanced_title)
+                            },
                             fontWeight = FontWeight.Medium
                         )
                     }
@@ -127,7 +133,13 @@ fun AdvancedSettingsScreen(
                     ) {
                         Icon(
                             imageVector = if (isSearching) Icons.Default.Close else Icons.Default.Search,
-                            contentDescription = if (isSearching) "Close Search" else "Search"
+                            contentDescription = stringResource(
+                                if (isSearching) {
+                                    R.string.advanced_search_close
+                                } else {
+                                    R.string.advanced_search
+                                }
+                            )
                         )
                     }
                 }
@@ -169,7 +181,14 @@ fun AdvancedSettingsScreen(
                                     leadingIcon = null,
                                     onClick = { value ->
                                         if (!RPCS3.instance.settingsSet(itemPath, if (value) "true" else "false", RPCS3.settingsTitleId.value)) {
-                                           AlertDialogQueue.showDialog("Setting error", "Failed to assign $itemPath value $value")
+                                           AlertDialogQueue.showDialog(
+                                               context.getString(R.string.settings_error_title),
+                                               context.getString(
+                                                   R.string.settings_error_assign_value,
+                                                   itemPath,
+                                                   value
+                                               )
+                                           )
                                         } else {
                                             itemObject.put("value", value)
                                             itemValue = value
@@ -177,14 +196,27 @@ fun AdvancedSettingsScreen(
                                    },
                                    onLongClick = {
                                         AlertDialogQueue.showDialog(
-                                            title = "Reset Setting",
-                                            message = "Do you want to reset '$key' to its default value?",
+                                            title = context.getString(
+                                                R.string.settings_reset_item_title
+                                            ),
+                                            message = context.getString(
+                                                R.string.settings_reset_item_message,
+                                                key
+                                            ),
                                             onConfirm = {
                                                 if (RPCS3.instance.settingsSet(itemPath, def.toString(), RPCS3.settingsTitleId.value)) {
                                                     itemObject.put("value", def)
                                                     itemValue = def
                                                 } else {
-                                                    AlertDialogQueue.showDialog("Setting error", "Failed to reset $key")
+                                                    AlertDialogQueue.showDialog(
+                                                        context.getString(
+                                                            R.string.settings_error_title
+                                                        ),
+                                                        context.getString(
+                                                            R.string.settings_error_reset,
+                                                            key
+                                                        )
+                                                    )
                                                 }
                                             }
                                         )
@@ -209,7 +241,14 @@ fun AdvancedSettingsScreen(
                                     onValueChange = {
                                             value ->
                                         if (!RPCS3.instance.settingsSet(itemPath, "\"" + value + "\"", RPCS3.settingsTitleId.value)) {
-                                            AlertDialogQueue.showDialog("Setting error", "Failed to assign $itemPath value $value")
+                                            AlertDialogQueue.showDialog(
+                                               context.getString(R.string.settings_error_title),
+                                               context.getString(
+                                                   R.string.settings_error_assign_value,
+                                                   itemPath,
+                                                   value
+                                               )
+                                           )
                                         } else {
                                             itemObject.put("value", value)
                                             itemValue = value
@@ -217,14 +256,27 @@ fun AdvancedSettingsScreen(
                                     },
                                     onLongClick = {
                                         AlertDialogQueue.showDialog(
-                                            title = "Reset Setting",
-                                            message = "Do you want to reset '$key' to its default value?",
+                                            title = context.getString(
+                                                R.string.settings_reset_item_title
+                                            ),
+                                            message = context.getString(
+                                                R.string.settings_reset_item_message,
+                                                key
+                                            ),
                                             onConfirm = {
                                                 if (RPCS3.instance.settingsSet(itemPath, "\"" + def + "\"", RPCS3.settingsTitleId.value)) {
                                                     itemObject.put("value", def)
                                                     itemValue = def
                                                 } else {
-                                                    AlertDialogQueue.showDialog("Setting error", "Failed to reset $key")
+                                                    AlertDialogQueue.showDialog(
+                                                        context.getString(
+                                                            R.string.settings_error_title
+                                                        ),
+                                                        context.getString(
+                                                            R.string.settings_error_reset,
+                                                            key
+                                                        )
+                                                    )
                                                 }
                                             }
                                         )
@@ -260,8 +312,14 @@ fun AdvancedSettingsScreen(
                                                 )
                                             ) {
                                                 AlertDialogQueue.showDialog(
-                                                    "Setting error",
-                                                    "Failed to assign $itemPath value $value"
+                                                    context.getString(
+                                                        R.string.settings_error_title
+                                                    ),
+                                                    context.getString(
+                                                        R.string.settings_error_assign_value,
+                                                        itemPath,
+                                                        value
+                                                    )
                                                 )
                                             } else {
                                                 itemObject.put(
@@ -274,14 +332,27 @@ fun AdvancedSettingsScreen(
                                         valueContent = { PreferenceValue(text = itemValue.toString()) },
                                         onLongClick = {
                                             AlertDialogQueue.showDialog(
-                                                title = "Reset Setting",
-                                                message = "Do you want to reset '$key' to its default value?",
+                                                title = context.getString(
+                                                    R.string.settings_reset_item_title
+                                                ),
+                                                message = context.getString(
+                                                    R.string.settings_reset_item_message,
+                                                    key
+                                                ),
                                                 onConfirm = {
                                                     if (RPCS3.instance.settingsSet(itemPath, def.toString(), RPCS3.settingsTitleId.value)) {
                                                         itemObject.put("value", def)
                                                         itemValue = def
                                                     } else {
-                                                        AlertDialogQueue.showDialog("Setting error", "Failed to reset $key")
+                                                        AlertDialogQueue.showDialog(
+                                                        context.getString(
+                                                            R.string.settings_error_title
+                                                        ),
+                                                        context.getString(
+                                                            R.string.settings_error_reset,
+                                                            key
+                                                        )
+                                                    )
                                                     }
                                                 }
                                             )
@@ -310,8 +381,14 @@ fun AdvancedSettingsScreen(
                                                 )
                                             ) {
                                                 AlertDialogQueue.showDialog(
-                                                    "Setting error",
-                                                    "Failed to assign $itemPath value $value"
+                                                    context.getString(
+                                                        R.string.settings_error_title
+                                                    ),
+                                                    context.getString(
+                                                        R.string.settings_error_assign_value,
+                                                        itemPath,
+                                                        value
+                                                    )
                                                 )
                                             } else {
                                                 itemObject.put("value", value.toDouble().toString())
@@ -321,14 +398,27 @@ fun AdvancedSettingsScreen(
                                         valueContent = { PreferenceValue(text = itemValue.toString()) },
                                         onLongClick = {
                                             AlertDialogQueue.showDialog(
-                                                title = "Reset Setting",
-                                                message = "Do you want to reset '$key' to its default value?",
+                                                title = context.getString(
+                                                    R.string.settings_reset_item_title
+                                                ),
+                                                message = context.getString(
+                                                    R.string.settings_reset_item_message,
+                                                    key
+                                                ),
                                                 onConfirm = {
                                                     if (RPCS3.instance.settingsSet(itemPath, def.toString(), RPCS3.settingsTitleId.value)) {
                                                         itemObject.put("value", def)
                                                         itemValue = def
                                                     } else {
-                                                        AlertDialogQueue.showDialog("Setting error", "Failed to reset $key")
+                                                        AlertDialogQueue.showDialog(
+                                                        context.getString(
+                                                            R.string.settings_error_title
+                                                        ),
+                                                        context.getString(
+                                                            R.string.settings_error_reset,
+                                                            key
+                                                        )
+                                                    )
                                                     }
                                                 }
                                             )
@@ -347,7 +437,14 @@ fun AdvancedSettingsScreen(
                                     leadingIcon = null,
                                     onValueChange = { value ->
                                         if (!RPCS3.instance.settingsSet(itemPath, JSONObject.quote(value), RPCS3.settingsTitleId.value)) {
-                                            AlertDialogQueue.showDialog("Setting error", "Failed to assign $itemPath value $value")
+                                            AlertDialogQueue.showDialog(
+                                               context.getString(R.string.settings_error_title),
+                                               context.getString(
+                                                   R.string.settings_error_assign_value,
+                                                   itemPath,
+                                                   value
+                                               )
+                                           )
                                         } else {
                                             itemObject.put("value", value)
                                             itemValue = value
@@ -355,14 +452,27 @@ fun AdvancedSettingsScreen(
                                     },
                                     onLongClick = {
                                         AlertDialogQueue.showDialog(
-                                            title = "Reset Setting",
-                                            message = "Do you want to reset '$key' to its default value?",
+                                            title = context.getString(
+                                                R.string.settings_reset_item_title
+                                            ),
+                                            message = context.getString(
+                                                R.string.settings_reset_item_message,
+                                                key
+                                            ),
                                             onConfirm = {
                                                 if (RPCS3.instance.settingsSet(itemPath, JSONObject.quote(def), RPCS3.settingsTitleId.value)) {
                                                     itemObject.put("value", def)
                                                     itemValue = def
                                                 } else {
-                                                    AlertDialogQueue.showDialog("Setting error", "Failed to reset $key")
+                                                    AlertDialogQueue.showDialog(
+                                                        context.getString(
+                                                            R.string.settings_error_title
+                                                        ),
+                                                        context.getString(
+                                                            R.string.settings_error_reset,
+                                                            key
+                                                        )
+                                                    )
                                                 }
                                             }
                                         )

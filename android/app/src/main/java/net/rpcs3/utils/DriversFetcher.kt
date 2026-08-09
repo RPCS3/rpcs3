@@ -16,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import net.rpcs3.R
 import java.io.OutputStream
 import java.io.FileOutputStream
 import java.io.File
@@ -39,7 +40,11 @@ object DriversFetcher {
     @Serializable
     data class Asset(val browser_download_url: String)
 
-    suspend fun fetchReleases(repoUrl: String, bypassValidation: Boolean = false): FetchResultOutput {
+    suspend fun fetchReleases(
+        context: Context,
+        repoUrl: String,
+        bypassValidation: Boolean = false
+    ): FetchResultOutput {
         val repoPath = repoUrl.removePrefix("https://github.com/")
         val validationUrl = "https://api.github.com/repos/$repoPath/contents/.adrenoDrivers"
         val apiUrl = "https://api.github.com/repos/$repoPath/releases"
@@ -50,7 +55,10 @@ object DriversFetcher {
             }
 
             if (response.status.value != 200) 
-                return FetchResultOutput(emptyList(), FetchResult.Error("Failed to fetch drivers"))
+                return FetchResultOutput(
+                    emptyList(),
+                    FetchResult.Error(context.getString(R.string.drivers_fetch_failed))
+                )
                 
             val isValid = withContext(Dispatchers.IO) {
                 try {
@@ -61,7 +69,10 @@ object DriversFetcher {
             }
 
             if (!isValid && !bypassValidation) {
-                return FetchResultOutput(emptyList(), FetchResult.Warning("Provided driver repo url is not valid."))
+                return FetchResultOutput(
+                    emptyList(),
+                    FetchResult.Warning(context.getString(R.string.drivers_repo_invalid))
+                )
             }
 
             val releases: List<GitHubRelease> = response.body()
@@ -72,11 +83,15 @@ object DriversFetcher {
             FetchResultOutput(drivers, FetchResult.Success)
         } catch (e: Exception) {
             Log.e("DriversFetcher", "Error fetching releases: ${e.message}", e)
-            FetchResultOutput(emptyList(), FetchResult.Error("Error fetching releases: ${e.message}"))
+            FetchResultOutput(
+                emptyList(),
+                FetchResult.Error(context.getString(R.string.drivers_fetch_error, e.message))
+            )
         }
     }
 
     suspend fun downloadAsset(
+        context: Context,
         assetUrl: String,
         destinationFile: File,
         progressCallback: (Long, Long) -> Unit
@@ -88,7 +103,12 @@ object DriversFetcher {
 
                 FileOutputStream(destinationFile)?.use { outputStream ->
                     writeResponseToStream(response, outputStream, contentLength, progressCallback)
-                } ?: return@withContext DownloadResult.Error("Failed to open ${destinationFile.absolutePath}")
+                } ?: return@withContext DownloadResult.Error(
+                    context.getString(
+                        R.string.drivers_download_open_failed,
+                        destinationFile.absolutePath
+                    )
+                )
             }
             DownloadResult.Success
         } catch (e: Exception) {
@@ -104,7 +124,7 @@ object DriversFetcher {
         progressCallback: (Long, Long) -> Unit
     ) {
         val channel = response.bodyAsChannel()
-        val buffer = ByteArray(1024) // 1KB buffer size
+        val buffer = ByteArray(1024)
         var totalBytesRead = 0L
 
         while (!channel.isClosedForRead) {

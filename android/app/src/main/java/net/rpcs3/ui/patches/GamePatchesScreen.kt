@@ -44,6 +44,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -51,6 +53,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import net.rpcs3.R
 import net.rpcs3.RPCS3
 import net.rpcs3.dialogs.AlertDialogQueue
 import net.rpcs3.ui.components.PaneActionButton
@@ -182,17 +185,21 @@ fun GamePatchesScreen(
                 reloadToken++
                 if (failed.isNotEmpty()) {
                     AlertDialogQueue.showDialog(
-                        title = "Some patches were not added",
-                        message = "Added $added. These were not valid patch files:\n" +
+                        title = context.getString(R.string.patches_import_failed_title),
+                        message = context.getString(
+                            R.string.patches_import_failed_message,
+                            added,
                             failed.joinToString("\n")
+                        )
                     )
                 }
             }
         }
     }
 
-    val grouped = remember(patches) {
-        patches.groupBy { it.group.ifEmpty { "Ungrouped" } }.toList().sortedBy { it.first }
+    val ungroupedLabel = stringResource(R.string.patches_group_ungrouped)
+    val grouped = remember(patches, ungroupedLabel) {
+        patches.groupBy { it.group.ifEmpty { ungroupedLabel } }.toList().sortedBy { it.first }
     }
     var selected by remember(grouped) { mutableIntStateOf(0) }
 
@@ -209,13 +216,13 @@ fun GamePatchesScreen(
     }
 
     val tabs = grouped.map { PaneTab(it.first, Icons.Outlined.Tune) } +
-        PaneTab("Patch files", Icons.Outlined.Description)
+        PaneTab(stringResource(R.string.patches_tab_files), Icons.Outlined.Description)
     val filesTab = tabs.lastIndex
     val current = selected.coerceIn(0, filesTab)
 
     Box(modifier.fillMaxSize()) {
         PaneScaffold(
-            title = "Patches · $titleId",
+            title = stringResource(R.string.patches_title, titleId),
             tabs = tabs,
             selected = current,
             onSelect = { selected = it },
@@ -224,9 +231,13 @@ fun GamePatchesScreen(
             if (current == filesTab) {
                 PaneSectionTitle(
                     if (files.isEmpty()) {
-                        "No patch files installed"
+                        stringResource(R.string.patches_files_none)
                     } else {
-                        "${files.size} file${if (files.size == 1) "" else "s"} in config/patches"
+                        pluralStringResource(
+                            R.plurals.patches_file_count,
+                            files.size,
+                            files.size
+                        )
                     }
                 )
 
@@ -235,17 +246,24 @@ fun GamePatchesScreen(
                         files.forEach { file ->
                             PaneEntryRow(
                                 title = file.name,
-                                subtitle = "${file.patchCount} patch" +
-                                    (if (file.patchCount == 1) "" else "es") +
-                                    "  ·  " + PackageInspector.formatSize(file.size),
+                                subtitle = pluralStringResource(
+                                    R.plurals.patches_count,
+                                    file.patchCount,
+                                    file.patchCount
+                                ) + "  ·  " + PackageInspector.formatSize(context, file.size),
                                 actionIcon = Icons.Outlined.Delete,
-                                actionDescription = "Delete",
+                                actionDescription = stringResource(R.string.action_delete),
                                 onAction = {
                                     AlertDialogQueue.showDialog(
-                                        title = "Delete ${file.name}?",
-                                        message = "This removes the file from config/patches and every patch it provides.",
-                                        confirmText = "Delete",
-                                        dismissText = "Cancel",
+                                        title = context.getString(
+                                            R.string.patches_delete_title,
+                                            file.name
+                                        ),
+                                        message = context.getString(
+                                            R.string.patches_delete_message
+                                        ),
+                                        confirmText = context.getString(R.string.action_delete),
+                                        dismissText = context.getString(R.string.action_cancel),
                                         onConfirm = {
                                             scope.launch(Dispatchers.IO) {
                                                 runCatching { RPCS3.instance.patchFileDelete(file.name) }
@@ -261,20 +279,22 @@ fun GamePatchesScreen(
             } else if (grouped.isNotEmpty()) {
                 val entries = grouped[current].second
 
-                PaneSectionTitle("${entries.size} patch${if (entries.size == 1) "" else "es"}")
+                PaneSectionTitle(
+                    pluralStringResource(R.plurals.patches_count, entries.size, entries.size)
+                )
                 PaneCard {
                     entries.forEach { patch ->
                         PatchRow(titleId = titleId, patch = patch)
                     }
                 }
             } else {
-                PaneSectionTitle("No patches available for this title")
+                PaneSectionTitle(stringResource(R.string.patches_none_available))
             }
 
             Spacer(Modifier.height(14.dp))
 
             PaneActionButton(
-                label = "Add patch files",
+                label = stringResource(R.string.patches_add),
                 icon = Icons.Default.Add,
                 enabled = true,
                 onClick = { importer.launch("*/*") }
@@ -285,7 +305,7 @@ fun GamePatchesScreen(
 
         if (importTotal > 0 && !importHidden) {
             PaneProgressOverlay(
-                title = "Importing patch files",
+                title = stringResource(R.string.patches_importing),
                 message = importLabel,
                 value = importDone.toLong(),
                 max = importTotal.toLong(),
@@ -314,10 +334,17 @@ private fun PatchRow(titleId: String, patch: Patch) {
     var enabled by remember(patch.hash + patch.description) { mutableStateOf(patch.enabled) }
     val scope = rememberCoroutineScope()
 
+    val context = LocalContext.current
     val detail = buildList {
-        if (patch.author.isNotEmpty()) add("by ${patch.author}")
-        if (patch.patchVersion.isNotEmpty()) add("v${patch.patchVersion}")
-        if (patch.appVersion.isNotEmpty()) add("app ${patch.appVersion}")
+        if (patch.author.isNotEmpty()) {
+            add(context.getString(R.string.patches_detail_author, patch.author))
+        }
+        if (patch.patchVersion.isNotEmpty()) {
+            add(context.getString(R.string.version_prefix, patch.patchVersion))
+        }
+        if (patch.appVersion.isNotEmpty()) {
+            add(context.getString(R.string.patches_detail_app_version, patch.appVersion))
+        }
     }.joinToString(" · ")
 
     SettingSwitch(
@@ -371,14 +398,14 @@ private fun EmptyPatches() {
             }
             Spacer(Modifier.height(14.dp))
             Text(
-                text = "No patches for this title",
+                text = stringResource(R.string.patches_empty_title),
                 color = SettingsStyle.TextPrimary,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(Modifier.height(6.dp))
             Text(
-                text = "Place patch .yml files in the patches folder and they will appear here.",
+                text = stringResource(R.string.patches_empty_message),
                 color = SettingsStyle.TextSecondary,
                 fontSize = 12.sp
             )

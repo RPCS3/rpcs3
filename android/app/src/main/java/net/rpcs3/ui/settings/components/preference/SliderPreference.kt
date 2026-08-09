@@ -20,6 +20,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import net.rpcs3.R
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
@@ -29,12 +31,6 @@ import net.rpcs3.ui.settings.components.core.PreferenceSubtitle
 import net.rpcs3.ui.settings.components.core.PreferenceTitle
 
 
-/**
- * Created using Android Studio
- * User: Muhammad Ashhal
- * Date: Sat, Mar 08, 2025
- * Time: 10:35 pm
- */
 
 @Composable
 fun SliderPreference(
@@ -95,10 +91,17 @@ fun SliderPreference(
                             keyboardType = KeyboardType.Number
                         ),
                         isError = isError,
-                        label = { Text("Value") },
+                        label = { Text(stringResource(R.string.preference_value)) },
                         supportingText = {
                             if (isError) {
-                                Text("Value must be a multiple of step size $stepSize within ${valueRange.start} to ${valueRange.endInclusive}")
+                                Text(
+                                    stringResource(
+                                        R.string.preference_value_error,
+                                        stepSize,
+                                        valueRange.start.toString(),
+                                        valueRange.endInclusive.toString()
+                                    )
+                                )
                             }
                         }
                     )
@@ -127,7 +130,7 @@ fun SliderPreference(
                     },
                     enabled = !isError
                 ) {
-                    Text("OK")
+                    Text(stringResource(R.string.action_ok))
                 }
             },
             dismissButton = {
@@ -136,7 +139,7 @@ fun SliderPreference(
                     tempValue = value
                     textValue = value.toInt().toString()
                 }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         )

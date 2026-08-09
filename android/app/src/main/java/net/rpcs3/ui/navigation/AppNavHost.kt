@@ -64,6 +64,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -208,7 +209,7 @@ fun AppNavHost() {
             LaunchedEffect(Unit) { RPCS3.settingsTitleId.value = "" }
             GameSettingsScreen(
                 titleId = "",
-                title = "Global Settings",
+                title = stringResource(R.string.settings_title_global),
                 onClose = navController::navigateUp
             )
         }
@@ -233,7 +234,7 @@ fun AppNavHost() {
             LaunchedEffect(target) { RPCS3.settingsTitleId.value = target }
             GameSettingsScreen(
                 titleId = target,
-                title = if (target.isEmpty()) "Global Settings" else target,
+                title = target.ifEmpty { stringResource(R.string.settings_title_global) },
                 onClose = navController::navigateUp
             )
         }
@@ -400,7 +401,11 @@ fun GamesDestination(
                     NavigationDrawerItem(
                         label = {
                             Text(
-                                "Firmware: " + (FirmwareRepository.version.value ?: "None")
+                                stringResource(
+                                    R.string.drawer_firmware,
+                                    FirmwareRepository.version.value
+                                        ?: stringResource(R.string.drawer_firmware_none)
+                                )
                             )
                         },
                         selected = false,
@@ -441,7 +446,7 @@ fun GamesDestination(
                     )
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                     NavigationDrawerItem(
-                        label = { Text("Settings") },
+                        label = { Text(stringResource(R.string.drawer_settings)) },
                         selected = false,
                         icon = { Icon(Icons.Default.Settings, null) },
                         onClick = {
@@ -451,7 +456,7 @@ fun GamesDestination(
                     )
 
                     NavigationDrawerItem(
-                        label = { Text("Setup") },
+                        label = { Text(stringResource(R.string.drawer_setup)) },
                         selected = false,
                         icon = { Icon(Icons.Outlined.CheckCircle, null) },
                         onClick = {
@@ -461,7 +466,7 @@ fun GamesDestination(
                     )
 
                     NavigationDrawerItem(
-                        label = { Text("Diagnostics") },
+                        label = { Text(stringResource(R.string.drawer_diagnostics)) },
                         selected = false,
                         icon = { Icon(Icons.Outlined.MonitorHeart, null) },
                         onClick = {
@@ -471,7 +476,7 @@ fun GamesDestination(
                     )
 
                     NavigationDrawerItem(
-                        label = { Text("Debug") },
+                        label = { Text(stringResource(R.string.drawer_debug)) },
                         selected = false,
                         icon = { Icon(Icons.Outlined.BugReport, null) },
                         onClick = {
@@ -481,7 +486,7 @@ fun GamesDestination(
                     )
 
                     NavigationDrawerItem(
-                        label = { Text("GPU Drivers") },
+                        label = { Text(stringResource(R.string.drawer_gpu_drivers)) },
                         selected = false,
                         icon = { Icon(Icons.Outlined.Memory, null) },
                         onClick = {
@@ -491,7 +496,7 @@ fun GamesDestination(
                     )
 
                     NavigationDrawerItem(
-                        label = { Text("Edit Overlay") },
+                        label = { Text(stringResource(R.string.drawer_edit_overlay)) },
                         selected = false,
                         icon = { Icon(painter = painterResource(id = R.drawable.ic_show_osc), null) },
                         onClick = {
@@ -505,7 +510,7 @@ fun GamesDestination(
                     )
 
                     NavigationDrawerItem(
-                        label = { Text("System Info") },
+                        label = { Text(stringResource(R.string.drawer_system_info)) },
                         selected = false,
                         icon = { Icon(Icons.Outlined.Info, contentDescription = null) },
                         onClick = {
@@ -513,7 +518,10 @@ fun GamesDestination(
                                 val info = withContext(Dispatchers.IO) {
                                     runCatching { RPCS3.instance.systemInfo() }.getOrDefault("")
                                 }
-                                AlertDialogQueue.showDialog("System Info", info)
+                                AlertDialogQueue.showDialog(
+                                    context.getString(R.string.system_info_title),
+                                    info
+                                )
                             }
                         }
                     )
@@ -558,7 +566,7 @@ fun GamesDestination(
                         }) {
                             Icon(
                                 imageVector = ImageVector.vectorResource(R.drawable.ic_stop),
-                                contentDescription = "Stop"
+                                contentDescription = stringResource(R.string.action_stop)
                             )
                         }
                     }
@@ -610,7 +618,7 @@ fun GamesDestination(
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Folder,
-                            contentDescription = "View internal directory"
+                            contentDescription = stringResource(R.string.library_browse_internal)
                         )
                     }
                 }
@@ -666,7 +674,7 @@ fun DropUpFloatingActionButton(
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Album,
-                            contentDescription = "Boot disc image"
+                            contentDescription = stringResource(R.string.library_boot_disc_image)
                         )
                     }
                     FloatingActionButton(
@@ -675,7 +683,7 @@ fun DropUpFloatingActionButton(
                     ) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_description),
-                            contentDescription = "Install"
+                            contentDescription = stringResource(R.string.library_install)
                         )
                     }
                     FloatingActionButton(
@@ -684,7 +692,7 @@ fun DropUpFloatingActionButton(
                     ) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_folder),
-                            contentDescription = "Folder"
+                            contentDescription = stringResource(R.string.library_folder)
                         )
                     }
                 }
@@ -693,7 +701,7 @@ fun DropUpFloatingActionButton(
             FloatingActionButton(
                 onClick = { expanded = !expanded }
             ) {
-                Icon(Icons.Filled.Add, contentDescription = "Add")
+                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.action_add))
             }
         }
     }

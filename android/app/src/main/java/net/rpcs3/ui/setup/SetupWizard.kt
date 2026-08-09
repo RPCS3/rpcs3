@@ -46,6 +46,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -55,6 +56,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.runtime.DisposableEffect
 import net.rpcs3.FirmwareRepository
 import net.rpcs3.Permission
+import net.rpcs3.R
 import net.rpcs3.ui.theme.SettingsStyle
 
 fun hasStorageAccess(): Boolean =
@@ -121,14 +123,14 @@ fun SetupWizard(
             .padding(horizontal = 24.dp, vertical = 28.dp)
     ) {
         Text(
-            text = "Welcome to PS3Native",
+            text = stringResource(R.string.setup_welcome),
             color = SettingsStyle.TextPrimary,
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold
         )
         Spacer(Modifier.height(6.dp))
         Text(
-            text = "Two things are needed before you can play. This takes a minute.",
+            text = stringResource(R.string.setup_intro),
             color = SettingsStyle.TextSecondary,
             fontSize = 13.sp
         )
@@ -138,11 +140,10 @@ fun SetupWizard(
         SetupStep(
             index = 1,
             icon = Icons.Outlined.Folder,
-            title = "Storage access",
-            detail = "Lets PS3Native read games and disc images from your storage.",
-            requirement = "Required",
+            title = stringResource(R.string.setup_storage_title),
+            detail = stringResource(R.string.setup_storage_detail),
             done = storageGranted,
-            actionLabel = "Allow",
+            actionLabel = stringResource(R.string.setup_allow),
             onAction = { requestStorageAccess(context) }
         )
 
@@ -151,13 +152,12 @@ fun SetupWizard(
         SetupStep(
             index = 2,
             icon = Icons.Outlined.SystemUpdate,
-            title = "PS3 firmware",
-            detail = firmwareVersion?.let { "Installed: $it" }
-                ?: "Select the official PS3UPDAT.PUP file. Most games need it.",
-            requirement = "Required",
+            title = stringResource(R.string.setup_firmware_title),
+            detail = firmwareVersion?.let { stringResource(R.string.setup_firmware_installed, it) }
+                ?: stringResource(R.string.setup_firmware_detail),
             done = firmwareReady,
             busy = firmwareProgress != null,
-            actionLabel = "Install",
+            actionLabel = stringResource(R.string.setup_install),
             onAction = onInstallFirmware
         )
 
@@ -166,11 +166,11 @@ fun SetupWizard(
         SetupStep(
             index = 3,
             icon = Icons.Outlined.Notifications,
-            title = "Notifications",
-            detail = "Shows install and compilation progress.",
-            requirement = "Optional",
+            title = stringResource(R.string.setup_notifications_title),
+            detail = stringResource(R.string.setup_notifications_detail),
+            optional = true,
             done = notificationsGranted,
-            actionLabel = "Allow",
+            actionLabel = stringResource(R.string.setup_allow),
             onAction = {
                 (context as? Activity)?.let { Permission.PostNotifications.requestPermission(it) }
             }
@@ -195,7 +195,7 @@ fun SetupWizard(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "Next",
+                text = stringResource(R.string.setup_next),
                 color = if (ready) Color.White else SettingsStyle.TextDim,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold
@@ -213,7 +213,7 @@ fun SetupWizard(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Skip for now",
+                    text = stringResource(R.string.setup_skip),
                     color = SettingsStyle.TextSecondary,
                     fontSize = 13.sp
                 )
@@ -228,10 +228,10 @@ private fun SetupStep(
     icon: ImageVector,
     title: String,
     detail: String,
-    requirement: String,
     done: Boolean,
     actionLabel: String,
     onAction: () -> Unit,
+    optional: Boolean = false,
     busy: Boolean = false
 ) {
     Row(
@@ -267,18 +267,20 @@ private fun SetupStep(
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "$index. $title",
+                    text = stringResource(R.string.setup_step_title, index, title),
                     color = SettingsStyle.TextPrimary,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text = requirement,
-                    color = if (requirement == "Required") {
-                        SettingsStyle.TextSecondary
-                    } else {
+                    text = stringResource(
+                        if (optional) R.string.setup_optional else R.string.setup_required
+                    ),
+                    color = if (optional) {
                         SettingsStyle.TextDim
+                    } else {
+                        SettingsStyle.TextSecondary
                     },
                     fontSize = 10.sp
                 )
@@ -310,7 +312,7 @@ private fun SetupStep(
                 )
 
                 done -> Text(
-                    text = "Done",
+                    text = stringResource(R.string.setup_done),
                     color = SettingsStyle.AccentBlue,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold
@@ -339,15 +341,14 @@ fun StorageAccessDialog(onGrant: () -> Unit, onDismiss: () -> Unit) {
                 .padding(18.dp)
         ) {
             Text(
-                text = "Storage access needed",
+                text = stringResource(R.string.setup_storage_dialog_title),
                 color = SettingsStyle.TextPrimary,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(Modifier.height(6.dp))
             Text(
-                text = "Booting a disc image reads it straight from your storage, " +
-                    "so PS3Native needs all-files access.",
+                text = stringResource(R.string.setup_storage_dialog_message),
                 color = SettingsStyle.TextSecondary,
                 fontSize = 12.sp
             )
@@ -362,7 +363,11 @@ fun StorageAccessDialog(onGrant: () -> Unit, onDismiss: () -> Unit) {
                         .clickable(onClick = onDismiss)
                         .padding(horizontal = 14.dp, vertical = 8.dp)
                 ) {
-                    Text("Not now", color = SettingsStyle.TextSecondary, fontSize = 13.sp)
+                    Text(
+                        stringResource(R.string.setup_storage_dialog_not_now),
+                        color = SettingsStyle.TextSecondary,
+                        fontSize = 13.sp
+                    )
                 }
                 Spacer(Modifier.width(6.dp))
                 Box(
@@ -372,7 +377,11 @@ fun StorageAccessDialog(onGrant: () -> Unit, onDismiss: () -> Unit) {
                         .clickable(onClick = onGrant)
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
-                    Text("Open settings", color = Color.White, fontSize = 13.sp)
+                    Text(
+                        stringResource(R.string.setup_storage_dialog_open_settings),
+                        color = Color.White,
+                        fontSize = 13.sp
+                    )
                 }
             }
         }

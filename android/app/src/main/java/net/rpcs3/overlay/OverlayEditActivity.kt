@@ -38,6 +38,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.viewinterop.AndroidView
 import net.rpcs3.RPCS3Theme
 import net.rpcs3.R
@@ -91,7 +92,8 @@ fun OverlayEditScreen() {
     var scaleValue by remember { mutableStateOf(50f) }
     var opacityValue by remember { mutableStateOf(100f) }
     var isEnabled by remember { mutableStateOf(true) }
-    var currentButtonName by remember { mutableStateOf("Unknown") }
+    val unknownButtonName = stringResource(R.string.overlay_unknown_button)
+    var currentButtonName by remember { mutableStateOf(unknownButtonName) }
     var showResetDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
     var padOverlay: PadOverlay? by remember { mutableStateOf(null) }
@@ -218,14 +220,18 @@ fun ControlPanel(
                         .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), RoundedCornerShape(50))
                 )
                 IconButton(onClick = onCloseClick) {
-                    Icon(Icons.Default.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.error)
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = stringResource(R.string.action_close),
+                        tint = MaterialTheme.colorScheme.error
+                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(5.dp))
             
             Text(
-                text = "Editing: $currentButtonName",
+                text = stringResource(R.string.overlay_editing, currentButtonName),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -238,7 +244,7 @@ fun ControlPanel(
                 IconButton(onClick = onMoveUp) {
                     Icon(
                         imageVector = Icons.Default.KeyboardArrowUp,
-                        contentDescription = "Move Up",
+                        contentDescription = stringResource(R.string.overlay_move_up),
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
@@ -249,7 +255,7 @@ fun ControlPanel(
                     IconButton(onClick = onMoveLeft) {
                         Icon(
                             imageVector = Icons.Default.KeyboardArrowLeft,
-                            contentDescription = "Move Left",
+                            contentDescription = stringResource(R.string.overlay_move_left),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -267,7 +273,7 @@ fun ControlPanel(
                     IconButton(onClick = onMoveRight) {
                         Icon(
                             imageVector = Icons.Default.KeyboardArrowRight,
-                            contentDescription = "Move Right",
+                            contentDescription = stringResource(R.string.overlay_move_right),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -276,7 +282,7 @@ fun ControlPanel(
                 IconButton(onClick = onMoveDown) {
                     Icon(
                         imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = "Move Down",
+                        contentDescription = stringResource(R.string.overlay_move_down),
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
@@ -287,9 +293,17 @@ fun ControlPanel(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    SliderComponent("Scale", scaleValue, onScaleChange)
+                    SliderComponent(
+                        stringResource(R.string.overlay_scale),
+                        scaleValue,
+                        onScaleChange
+                    )
                     Spacer(modifier = Modifier.height(6.dp))
-                    SliderComponent("Opacity", opacityValue, onOpacityChange)
+                    SliderComponent(
+                        stringResource(R.string.overlay_opacity),
+                        opacityValue,
+                        onOpacityChange
+                    )
                 }
 
                 Spacer(modifier = Modifier.width(8.dp))
@@ -299,7 +313,11 @@ fun ControlPanel(
                     modifier = Modifier.size(40.dp),
                     colors = IconButtonDefaults.filledTonalIconButtonColors()
                 ) {
-                    Icon(painter = painterResource(id = R.drawable.ic_restore), contentDescription = "Reset", tint = MaterialTheme.colorScheme.primary)
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_restore),
+                        contentDescription = stringResource(R.string.action_reset),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
         }
@@ -310,7 +328,11 @@ fun ControlPanel(
 @Composable
 fun SliderComponent(label: String, value: Float, onValueChange: (Float) -> Unit) {
     Column {
-        Text(text = "$label: ${value.roundToInt()}%", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface)
+        Text(
+            text = stringResource(R.string.overlay_slider_value, label, value.roundToInt()),
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurface
+        )
         Slider(
             value = value,
             onValueChange = onValueChange,
@@ -331,16 +353,16 @@ fun SliderComponent(label: String, value: Float, onValueChange: (Float) -> Unit)
 fun ResetDialog(buttonName: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(text = "Reset $buttonName") },
-        text = { Text(text = "Are you sure you want to reset this button?") },
+        title = { Text(text = stringResource(R.string.overlay_reset_title, buttonName)) },
+        text = { Text(text = stringResource(R.string.overlay_reset_message)) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text(text = "Confirm")
+                Text(text = stringResource(R.string.action_confirm))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(text = "Cancel")
+                Text(text = stringResource(R.string.action_cancel))
             }
         }
     )

@@ -25,7 +25,9 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import net.rpcs3.R
 
 object AlertDialogQueue {
     val dialogs = mutableStateListOf<DialogData>()
@@ -35,8 +37,8 @@ object AlertDialogQueue {
         message: String,
         onConfirm: () -> Unit = {},
         onDismiss: (() -> Unit)? = null,
-        confirmText: String = "OK",
-        dismissText: String = "Cancel"
+        confirmText: String? = null,
+        dismissText: String? = null
     ) {
         dialogs.add(DialogData(title, message, onConfirm, onDismiss, confirmText, dismissText))
     }
@@ -111,7 +113,10 @@ object AlertDialogQueue {
                                     dismissDialog()
                                 }
                             ) {
-                                Text(text = dialog.dismissText)
+                                Text(
+                                    text = dialog.dismissText
+                                        ?: stringResource(R.string.action_cancel)
+                                )
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                             TextButton(
@@ -122,7 +127,10 @@ object AlertDialogQueue {
                                 }, 
                                 modifier = Modifier.padding(end = 16.dp)
                             ) {
-                                Text(text = dialog.confirmText)
+                                Text(
+                                    text = dialog.confirmText
+                                        ?: stringResource(R.string.action_ok)
+                                )
                             }
                         }
                     }
@@ -137,6 +145,6 @@ data class DialogData(
     val message: String,
     val onConfirm: () -> Unit,
     val onDismiss: (() -> Unit)?,
-    val confirmText: String,
-    val dismissText: String
+    val confirmText: String?,
+    val dismissText: String?
 )

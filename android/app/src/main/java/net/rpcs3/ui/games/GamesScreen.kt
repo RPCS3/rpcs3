@@ -61,6 +61,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -95,6 +96,11 @@ import net.rpcs3.utils.FileUtil
 import net.rpcs3.utils.GameDetails
 import net.rpcs3.utils.GameDetailsReader
 
+internal fun isInternalGame(path: String): Boolean {
+    val root = RPCS3.rootDirectory
+    return root.isNotEmpty() && File(path).absolutePath.startsWith(File(root).absolutePath)
+}
+
 private fun withAlpha(color: Color, alpha: Float): Color {
     return Color(
         red = color.red, green = color.green, blue = color.blue, alpha = alpha
@@ -125,7 +131,10 @@ fun GameItem(
                 val fd = descriptor?.parcelFileDescriptor?.fd
 
                 if (fd != null) {
-                    val installProgress = ProgressRepository.create(context, "License Installation")
+                    val installProgress = ProgressRepository.create(
+                        context,
+                        context.getString(R.string.progress_license_installation)
+                    )
 
                     game.addProgress(GameProgress(installProgress, GameProgressType.Compile))
 
@@ -168,17 +177,24 @@ fun GameItem(
     val tileFocused by tileInteraction.collectIsFocusedAsState()
 
     fun uninstallGame() {
-        val deleteProgress = ProgressRepository.create(context, "Deleting Game")
+        val deleteProgress = ProgressRepository.create(
+            context,
+            context.getString(R.string.progress_deleting_game)
+        )
         game.addProgress(GameProgress(deleteProgress, GameProgressType.Compile))
-        ProgressRepository.onProgressEvent(deleteProgress, -1, 0L)
+        ProgressRepository.onProgressEvent(deleteProgress, 0, 0L)
 
         val path = File(game.info.path)
-        val isDiscImage = path.isFile
+        val internal = isInternalGame(game.info.path)
         val titleId = gameTitleId(game.info.path)
 
         deleteScope.launch {
+            val serial = withContext(Dispatchers.IO) {
+                GameDetailsReader.read(game.info.path).titleId
+            }.ifEmpty { titleId }
+
             withContext(Dispatchers.IO) {
-                if (!isDiscImage && path.exists()) {
+                if (internal && path.exists()) {
                     path.deleteRecursively()
                 }
 
@@ -188,19 +204,19 @@ fun GameItem(
                     }
                 }
 
-                if (isDiscImage) {
+                if (!internal) {
                     runCatching {
                         File(RPCS3.rootDirectory + "config/Icons/iso/$titleId.PNG").delete()
                     }
                 }
             }
 
-            FileUtil.deleteCache(context, game.info.path.substringAfterLast("/")) { success ->
+            FileUtil.deleteCache(context, serial) { success ->
                 if (!success) {
                     AlertDialogQueue.showDialog(
-                        title = "Unexpected Error",
-                        message = "Failed to delete game cache",
-                        confirmText = "Close",
+                        title = context.getString(R.string.games_error_unexpected_title),
+                        message = context.getString(R.string.games_error_delete_cache),
+                        confirmText = context.getString(R.string.action_close),
                         dismissText = ""
                     )
                 }
@@ -210,21 +226,35 @@ fun GameItem(
         }
     }
 
+    fun openGameSettings() {
+        deleteScope.launch {
+            val resolved = withContext(Dispatchers.IO) {
+                GameDetailsReader.read(game.info.path).titleId
+            }
+            navigateToGameSettings(resolved.ifEmpty { gameTitleId(game.info.path) })
+        }
+    }
+
     fun confirmUninstall() {
-        val isDiscImage = File(game.info.path).isFile
         val name = game.info.name.value ?: gameTitleId(game.info.path)
+        val internal = isInternalGame(game.info.path)
+        val action = context.getString(
+            if (internal) R.string.action_uninstall else R.string.action_remove
+        )
 
         AlertDialogQueue.showDialog(
-            title = "Remove $name?",
-            message = if (isDiscImage) {
-                "Removes the library entry, its shader cache, and any updates or extra " +
-                    "data installed for it. The disc image at ${game.info.path} is kept."
+            title = if (internal) {
+                context.getString(R.string.games_uninstall_title, name)
             } else {
-                "Removes the installed game, its shader cache, and any updates or extra " +
-                    "data installed for it."
+                context.getString(R.string.games_remove_title, name)
             },
-            confirmText = "Remove",
-            dismissText = "Cancel",
+            message = if (internal) {
+                context.getString(R.string.games_uninstall_message)
+            } else {
+                context.getString(R.string.games_remove_message, game.info.path)
+            },
+            confirmText = action,
+            dismissText = context.getString(R.string.action_cancel),
             onConfirm = { uninstallGame() }
         )
     }
@@ -232,11 +262,11 @@ fun GameItem(
     fun launchGame() {
                     if (game.hasFlag(GameFlag.Locked)) {
                         AlertDialogQueue.showDialog(
-                            title = "Missing key",
-                            message = "This game requires key to play",
+                            title = context.getString(R.string.games_missing_key_title),
+                            message = context.getString(R.string.games_missing_key_message),
                             onConfirm = { installKeyLauncher.launch("*/*") },
                             onDismiss = {},
-                            confirmText = "Install RAP file"
+                            confirmText = context.getString(R.string.games_install_rap)
                         )
 
                         return
@@ -244,13 +274,13 @@ fun GameItem(
 
                     if (FirmwareRepository.version.value == null) {
                         AlertDialogQueue.showDialog(
-                            title = "Firmware Missing",
-                            message = "Please install the required firmware to continue."
+                            title = context.getString(R.string.games_firmware_missing_title),
+                            message = context.getString(R.string.games_firmware_missing_message)
                         )
                     } else if (FirmwareRepository.progressChannel.value != null) {
                         AlertDialogQueue.showDialog(
-                            title = "Firmware Missing",
-                            message = "Please wait until firmware installs successfully to continue."
+                            title = context.getString(R.string.games_firmware_missing_title),
+                            message = context.getString(R.string.games_firmware_installing_message)
                         )
                     } else if (game.info.path != "$" && game.findProgress(
                             arrayOf(
@@ -260,8 +290,8 @@ fun GameItem(
                     ) {
                         if (game.findProgress(GameProgressType.Compile) != null) {
                             AlertDialogQueue.showDialog(
-                                title = "Game compiling isn't finished yet",
-                                message = "Please wait until game compiles to continue."
+                                title = context.getString(R.string.games_compiling_title),
+                                message = context.getString(R.string.games_compiling_message)
                             )
                         } else {
                             GameRepository.onBoot(game)
@@ -279,15 +309,25 @@ fun GameItem(
             expanded = menuExpanded.value, onDismissRequest = { menuExpanded.value = false }) {
             if (game.progressList.isEmpty()) {
                 DropdownMenuItem(
-                    text = { Text("Settings") },
+                    text = { Text(stringResource(R.string.action_settings)) },
                     leadingIcon = { Icon(Icons.Outlined.Settings, contentDescription = null) },
                     onClick = {
                         menuExpanded.value = false
-                        navigateToGameSettings(gameTitleId(game.info.path))
+                        openGameSettings()
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text("Delete") },
+                    text = {
+                        Text(
+                            stringResource(
+                                if (isInternalGame(game.info.path)) {
+                                    R.string.action_uninstall
+                                } else {
+                                    R.string.action_remove
+                                }
+                            )
+                        )
+                    },
                     leadingIcon = { Icon(Icons.Outlined.Delete, contentDescription = null) },
                     onClick = {
                         menuExpanded.value = false
@@ -426,7 +466,7 @@ fun GameItem(
 
                             Icon(
                                 Icons.Outlined.Lock,
-                                contentDescription = "Game is locked",
+                                contentDescription = stringResource(R.string.games_locked),
                                 modifier = Modifier
                                     .size(30.dp)
                                     .padding(7.dp)
@@ -461,15 +501,16 @@ fun GameItem(
         GameDetailDialog(
             title = game.info.name.value ?: gameTitleId(game.info.path),
             subtitle = detailsState?.titleId?.ifEmpty { null } ?: gameTitleId(game.info.path),
-            version = detailsState?.versionLabel.orEmpty(),
+            version = detailsState?.versionLabel(context).orEmpty(),
             iconPath = if (iconExists.value) game.info.iconPath.value else null,
+            gamePath = game.info.path,
             onPlay = {
                 detailVisible.value = false
                 launchGame()
             },
             onSettings = {
                 detailVisible.value = false
-                navigateToGameSettings(gameTitleId(game.info.path))
+                openGameSettings()
             },
             onInstallUpdate = {
                 detailVisible.value = false
@@ -479,6 +520,13 @@ fun GameItem(
                 detailVisible.value = false
                 navigateToGamePatches(gameTitleId(game.info.path))
             },
+            uninstallLabel = stringResource(
+                if (isInternalGame(game.info.path)) {
+                    R.string.action_uninstall
+                } else {
+                    R.string.action_remove
+                }
+            ),
             onUninstall = if (game.info.name.value == "VSH") {
                 null
             } else {

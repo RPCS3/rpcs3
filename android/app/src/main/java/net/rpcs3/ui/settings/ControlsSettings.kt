@@ -13,6 +13,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import net.rpcs3.R
 import net.rpcs3.overlay.OverlayEditActivity
 import net.rpcs3.overlay.OverlayPrefs
 import net.rpcs3.ui.components.GhostButton
@@ -35,14 +37,14 @@ fun ControlsSettings(modifier: Modifier = Modifier) {
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(Dimens.SectionGap)
     ) {
-        SectionLabel(text = "On-screen controls")
+        SectionLabel(text = stringResource(R.string.controls_section))
 
         SettingGroup {
             SettingSlider(
-                label = "Button transparency",
+                label = stringResource(R.string.controls_button_transparency),
                 value = opacity,
                 valueRange = 0f..100f,
-                valueText = "${opacity.toInt()}%",
+                valueText = stringResource(R.string.percent_value, opacity.toInt()),
                 onValueChange = { opacity = it },
                 onValueChangeFinished = {
                     OverlayPrefs.setOpacity(context, opacity.toInt())
@@ -50,12 +52,12 @@ fun ControlsSettings(modifier: Modifier = Modifier) {
             )
 
             InfoRow(
-                label = "Applies to",
-                value = "All on-screen buttons and sticks"
+                label = stringResource(R.string.controls_applies_to),
+                value = stringResource(R.string.controls_applies_to_value)
             )
 
             GhostButton(
-                label = "Edit layout",
+                label = stringResource(R.string.controls_edit_layout),
                 icon = Icons.Outlined.Edit,
                 onClick = {
                     context.startActivity(Intent(context, OverlayEditActivity::class.java))

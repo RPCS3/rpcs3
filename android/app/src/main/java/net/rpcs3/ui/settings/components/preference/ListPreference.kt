@@ -177,7 +177,7 @@ private fun <T> DialogPreferenceItem(
     ) {
         RadioButton(
             selected = isSelected,
-            onClick = null // Since onClick is handled by the row
+            onClick = null
         )
 
         Spacer(modifier = Modifier.width(16.dp))
@@ -189,10 +189,6 @@ private fun <T> DialogPreferenceItem(
     }
 }
 
-/**
- * Use Interactive Mode inside preview to preview
- * dialog selection and interaction.
- */
 @PreviewLightDark
 @Composable
 private fun SingleSelectionDialogPreview() {

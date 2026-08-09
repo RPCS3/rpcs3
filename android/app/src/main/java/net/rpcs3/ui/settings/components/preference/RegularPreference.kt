@@ -14,20 +14,7 @@ import net.rpcs3.ui.settings.components.core.PreferenceSubtitle
 import net.rpcs3.ui.settings.components.core.PreferenceTitle
 
 
-/**
- * Created using Android Studio
- * User: Muhammad Ashhal
- * Date: Wed, Mar 05, 2025
- * Time: 1:01 am
- */
 
-/**
- * A regular preference item.
- * This is a simple preference item with a title, subtitle, leading icon, and trailing content.
- * This can also be called a simple TextPreference.
- * which is just a preference item, meant to show something to the user.
- * or be used to navigate the user to another screen.
- */
 
 @Composable
 fun RegularPreference(

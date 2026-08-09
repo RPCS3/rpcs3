@@ -29,34 +29,8 @@ import net.rpcs3.ui.settings.components.core.PreferenceSubtitle
 import net.rpcs3.ui.settings.components.core.PreferenceTitle
 
 
-/**
- * Created using Android Studio
- * User: Muhammad Ashhal
- * Date: Wed, Mar 05, 2025
- * Time: 1:03 am
- */
 
 
-/**
- * A composable function that creates a base layout for a preference item.
- *
- * @param title title of the preference.
- * @param modifier The modifier applied to the preference container.
- * @param subContent Optional composable content to display below the title.
- * @param leadingContent Optional composable content to display at the start of the preference item.
- * This is typically used for icons or other visual cues.
- *
- * @param trailingContent Optional composable content to display at the end of the preference item.
- * This is typically used for switches, checkboxes, or other interactive elements.
- *
- * @param shape The shape of the preference surface.
- * @param tonalElevation The tonal elevation of the preference surface.
- * @param shadowElevation The shadow elevation of the preference surface.
- * @param enabled Whether the preference is enabled or disabled.
- * @param onClick callback invoked when the preference item is clicked.
- *
- * @see Surface
- */
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

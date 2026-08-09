@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Build
 import android.util.Log
 import kotlinx.serialization.SerializationException
+import net.rpcs3.R
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
@@ -18,19 +19,16 @@ object GpuDriverHelper {
     fun getInstalledDrivers(context: Context): Map<File, GpuDriverMetadata> {
         val gpuDriverDir = getDriversDirectory(context)
 
-        // A map between the driver location and its metadata
         val driverMap = mutableMapOf<File, GpuDriverMetadata>()
-        driverMap[File("/system/vendor")] = getSystemDriverMetadata()
+        driverMap[File("/system/vendor")] = getSystemDriverMetadata(context)
 
         gpuDriverDir.listFiles()?.forEach { entry ->
-            // Delete any files that aren't a directory
             if (!entry.isDirectory) {
                 entry.delete()
                 return@forEach
             }
 
             val metadataFile = File(entry.canonicalPath, GPU_DRIVER_META_FILE)
-            // Delete entries without metadata
             if (!metadataFile.exists()) {
                 entry.delete()
                 return@forEach
@@ -49,7 +47,7 @@ object GpuDriverHelper {
         return driverMap
     }
 
-    private fun getSystemDriverMetadata(): GpuDriverMetadata {
+    private fun getSystemDriverMetadata(context: Context): GpuDriverMetadata {
         return GpuDriverMetadata(
             name = "Default",
             author = "",
@@ -57,7 +55,7 @@ object GpuDriverHelper {
             vendor = "",
             driverVersion = "",
             minApi = 0,
-            description = "The driver provided by your device system",
+            description = context.getString(R.string.drivers_default_description),
             libraryName = ""
         )
     }
@@ -101,14 +99,12 @@ object GpuDriverHelper {
             unpackDir.deleteRecursively()
         }
 
-        // Check that the metadata file exists
         val metadataFile = File(unpackDir, GPU_DRIVER_META_FILE)
         if (!metadataFile.isFile) {
             cleanup()
             return GpuDriverInstallResult.MissingMetadata
         }
 
-        // Check that the driver metadata is valid
         val driverMetadata = try {
             GpuDriverMetadata.deserialize(metadataFile)
         } catch (e: SerializationException) {
@@ -116,13 +112,11 @@ object GpuDriverHelper {
             return GpuDriverInstallResult.InvalidMetadata
         }
 
-        // Check that the device satisfies the driver's minimum Android version requirements
         if (Build.VERSION.SDK_INT < driverMetadata.minApi) {
             cleanup()
             return GpuDriverInstallResult.UnsupportedAndroidVersion
         }
 
-        // Check that the driver is not already installed
         val installedDrivers = getInstalledDrivers(context)
         val finalInstallDir = File(getDriversDirectory(context), driverMetadata.label)
         if (installedDrivers[finalInstallDir] != null) {
@@ -130,7 +124,6 @@ object GpuDriverHelper {
             return GpuDriverInstallResult.AlreadyInstalled
         }
 
-        // Move the driver files to the final location
         if (!unpackDir.renameTo(finalInstallDir)) {
             cleanup()
             throw IOException("Failed to create directory ${finalInstallDir.name}")
@@ -164,21 +157,28 @@ object GpuDriverHelper {
 
     private fun getDriversDirectory(context: Context) =
         File(context.filesDir.canonicalPath, GPU_DRIVER_DIRECTORY).apply {
-            // Create the directory if it doesn't exist
             if (!isDirectory) {
                 delete()
                 mkdirs()
             }
         }
 
-    fun resolveInstallResultToString(result: GpuDriverInstallResult) = when (result) {
-        GpuDriverInstallResult.Success -> "Successfully installed GPU driver"
-        GpuDriverInstallResult.InvalidArchive -> "Invalid GPU driver archive"
-        GpuDriverInstallResult.MissingMetadata -> "Selected driver's metadata is missing"
-        GpuDriverInstallResult.InvalidMetadata -> "Selected driver's metadata is invalid"
-        GpuDriverInstallResult.UnsupportedAndroidVersion -> "Your android version doesn't support selected driver"
-        GpuDriverInstallResult.AlreadyInstalled -> "Selected driver is already installed"
-    }
+    fun resolveInstallResultToString(context: Context, result: GpuDriverInstallResult): String =
+        context.getString(
+            when (result) {
+                GpuDriverInstallResult.Success -> R.string.drivers_install_success
+                GpuDriverInstallResult.InvalidArchive -> R.string.drivers_install_invalid_archive
+                GpuDriverInstallResult.MissingMetadata -> R.string.drivers_install_missing_metadata
+                GpuDriverInstallResult.InvalidMetadata -> R.string.drivers_install_invalid_metadata
+                GpuDriverInstallResult.UnsupportedAndroidVersion -> {
+                    R.string.drivers_install_unsupported_android
+                }
+
+                GpuDriverInstallResult.AlreadyInstalled -> {
+                    R.string.drivers_install_already_installed
+                }
+            }
+        )
 }
 
 enum class GpuDriverInstallResult {

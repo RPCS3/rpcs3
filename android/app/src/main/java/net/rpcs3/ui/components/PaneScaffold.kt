@@ -37,11 +37,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import net.rpcs3.R
 import net.rpcs3.ui.theme.Dims
 import net.rpcs3.ui.theme.Rpcs
 
@@ -84,7 +86,7 @@ fun PaneScaffold(
                 if (onBack != null) {
                     PaneIconButton(
                         icon = Icons.AutoMirrored.Outlined.ArrowBack,
-                        contentDescription = "Back",
+                        contentDescription = stringResource(R.string.action_back),
                         onClick = onBack
                     )
                     Spacer(Modifier.width(2.dp))
@@ -432,7 +434,11 @@ fun PaneProgressOverlay(
                 )
                 Spacer(Modifier.width(10.dp))
                 Text(
-                    text = if (max > 0L) "${(fraction * 100f).toInt()}%" else "Working",
+                    text = if (max > 0L) {
+                        stringResource(R.string.percent_value, (fraction * 100f).toInt())
+                    } else {
+                        stringResource(R.string.pane_working)
+                    },
                     color = Rpcs.Accent,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold
@@ -482,7 +488,10 @@ fun PaneProgressOverlay(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
-                PaneCompactButton(label = "Hide", onClick = onHide)
+                PaneCompactButton(
+                    label = stringResource(R.string.action_hide),
+                    onClick = onHide
+                )
             }
         }
     }

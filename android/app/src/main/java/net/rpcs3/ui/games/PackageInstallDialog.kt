@@ -33,12 +33,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import net.rpcs3.R
 import net.rpcs3.ui.theme.SettingsStyle
 import net.rpcs3.utils.PackageInfo
 import net.rpcs3.utils.PackageInspector
@@ -59,6 +63,7 @@ fun PackageInstallDialog(
     val corrupted = ordered.filter { !it.valid }
     val enoughSpace = freeSpace <= 0L || requiredSize <= freeSpace
 
+    val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val screenHeight = configuration.screenHeightDp.dp
     val listMaxHeight = (configuration.screenHeightDp - 250).coerceAtLeast(120).dp
@@ -78,7 +83,15 @@ fun PackageInstallDialog(
                 .padding(horizontal = 18.dp, vertical = 14.dp)
         ) {
             Text(
-                text = if (scanning) "Reading packages" else "Install ${selected.size} package${if (selected.size == 1) "" else "s"}",
+                text = if (scanning) {
+                    stringResource(R.string.packages_reading)
+                } else {
+                    pluralStringResource(
+                        R.plurals.packages_install_count,
+                        selected.size,
+                        selected.size
+                    )
+                },
                 color = SettingsStyle.TextPrimary,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold
@@ -86,9 +99,9 @@ fun PackageInstallDialog(
             Spacer(Modifier.height(4.dp))
             Text(
                 text = if (scanning) {
-                    "Reading title and version information."
+                    stringResource(R.string.packages_reading_detail)
                 } else {
-                    "Updates install oldest version first so each one matches the version it expects."
+                    stringResource(R.string.packages_install_detail)
                 },
                 color = SettingsStyle.TextSecondary,
                 fontSize = 12.sp
@@ -129,8 +142,17 @@ fun PackageInstallDialog(
                 Spacer(Modifier.height(12.dp))
 
                 Text(
-                    text = "Required ${PackageInspector.formatSize(requiredSize)}" +
-                        if (freeSpace > 0) "  ·  Free ${PackageInspector.formatSize(freeSpace)}" else "",
+                    text = stringResource(
+                        R.string.packages_required_size,
+                        PackageInspector.formatSize(context, requiredSize)
+                    ) + if (freeSpace > 0) {
+                        stringResource(
+                            R.string.packages_free_size,
+                            PackageInspector.formatSize(context, freeSpace)
+                        )
+                    } else {
+                        ""
+                    },
                     color = if (enoughSpace) SettingsStyle.TextSecondary else SettingsStyle.DangerRed,
                     fontSize = 12.sp
                 )
@@ -138,7 +160,7 @@ fun PackageInstallDialog(
                 if (!enoughSpace) {
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = "Not enough space",
+                        text = stringResource(R.string.packages_not_enough_space),
                         color = SettingsStyle.DangerRed,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold
@@ -148,7 +170,11 @@ fun PackageInstallDialog(
                 if (corrupted.isNotEmpty()) {
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        text = "${corrupted.size} file${if (corrupted.size == 1) "" else "s"} skipped as unreadable",
+                        text = pluralStringResource(
+                            R.plurals.packages_skipped_count,
+                            corrupted.size,
+                            corrupted.size
+                        ),
                         color = SettingsStyle.WarningAmber,
                         fontSize = 12.sp
                     )
@@ -161,10 +187,15 @@ fun PackageInstallDialog(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
-                DialogButton(text = "Cancel", accent = false, enabled = true, onClick = onDismiss)
+                DialogButton(
+                    text = stringResource(R.string.action_cancel),
+                    accent = false,
+                    enabled = true,
+                    onClick = onDismiss
+                )
                 Spacer(Modifier.width(10.dp))
                 DialogButton(
-                    text = "Install",
+                    text = stringResource(R.string.action_install),
                     accent = true,
                     enabled = !scanning && selected.isNotEmpty() && enoughSpace,
                     onClick = { onConfirm(selected) }
@@ -181,6 +212,8 @@ private fun PackageRow(
     selected: Boolean,
     onToggle: () -> Unit
 ) {
+    val context = LocalContext.current
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -234,10 +267,23 @@ private fun PackageRow(
             Text(
                 text = buildString {
                     if (info.titleId.isNotEmpty()) append(info.titleId).append("  ·  ")
-                    append(info.typeLabel)
-                    if (info.appVer.isNotEmpty()) append("  ·  v").append(info.appVer)
-                    if (info.targetAppVer.isNotEmpty()) append(" from v").append(info.targetAppVer)
-                    if (info.valid) append("  ·  ").append(PackageInspector.formatSize(info.dataSize))
+                    append(info.typeLabel(context))
+                    if (info.appVer.isNotEmpty()) {
+                        append("  ·  ")
+                            .append(context.getString(R.string.version_prefix, info.appVer))
+                    }
+                    if (info.targetAppVer.isNotEmpty()) {
+                        append(
+                            context.getString(
+                                R.string.packages_target_version,
+                                info.targetAppVer
+                            )
+                        )
+                    }
+                    if (info.valid) {
+                        append("  ·  ")
+                            .append(PackageInspector.formatSize(context, info.dataSize))
+                    }
                 },
                 color = SettingsStyle.TextSecondary,
                 fontSize = 11.sp,
@@ -249,7 +295,7 @@ private fun PackageRow(
         if (index != null) {
             Spacer(Modifier.width(8.dp))
             Text(
-                text = "#$index",
+                text = stringResource(R.string.packages_index, index),
                 color = SettingsStyle.AccentBlue,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold

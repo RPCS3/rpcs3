@@ -67,7 +67,6 @@ class PadOverlayDpad(
     private val prefs: SharedPreferences by lazy { context.getSharedPreferences("PadOverlayPrefs", Context.MODE_PRIVATE) }
     private var offsetX = 0
     private var offsetY = 0
-    // stores the default datas
     private val defaultArea = Rect(area)
     private val defaultButtonWidth = buttonWidth
     private val defaultButtonHeight = buttonHeight
@@ -115,7 +114,6 @@ class PadOverlayDpad(
         val centerY = area.centerY()
         
         area.set(centerX - newWidth / 2, centerY - newHeight / 2, centerX + newWidth / 2, centerY + newHeight / 2)
-        // FIXME: Implement proper calculation which will work for all buttons
         buttonWidth = newWidth / 2
         buttonHeight = newHeight / 2 - newHeight / 20
         updateBounds()

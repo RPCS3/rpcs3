@@ -46,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -54,6 +55,7 @@ import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import net.rpcs3.R
 import net.rpcs3.provider.AppDataDocumentProvider
 import net.rpcs3.ui.components.GhostButton
 import net.rpcs3.ui.components.PaneNavRow
@@ -100,10 +102,12 @@ fun DebugScreen(
     }
     val activeCount = values.count { it.value != LogLevelOff }
 
-    val tabs = listOf(PaneTab("Troubleshooting", Icons.Outlined.BugReport))
+    val tabs = listOf(
+        PaneTab(stringResource(R.string.debug_tab_troubleshooting), Icons.Outlined.BugReport)
+    )
 
     PaneScaffold(
-        title = "Debug",
+        title = stringResource(R.string.debug_title),
         tabs = tabs,
         selected = selected,
         onSelect = { selected = it },
@@ -115,9 +119,13 @@ fun DebugScreen(
         Column(modifier = Modifier.fillMaxSize()) {
             PaneSectionTitle(
                 if (loading) {
-                    "Logging  ·  reading channels…"
+                    stringResource(R.string.debug_logging_loading)
                 } else {
-                    "Logging  ·  $activeCount of ${channels.size} channels enabled"
+                    stringResource(
+                        R.string.debug_logging_summary,
+                        activeCount,
+                        channels.size
+                    )
                 }
             )
 
@@ -129,7 +137,7 @@ fun DebugScreen(
                 )
                 Spacer(Modifier.width(10.dp))
                 GhostButton(
-                    label = "All Off",
+                    label = stringResource(R.string.debug_all_off),
                     icon = Icons.Outlined.LayersClear,
                     enabled = !loading && activeCount > 0,
                     tint = Rpcs.Warning,
@@ -156,7 +164,11 @@ fun DebugScreen(
             ) {
                 if (visible.isEmpty()) {
                     Text(
-                        text = if (loading) "Loading…" else "No channel matches \"$filter\"",
+                        text = if (loading) {
+                            stringResource(R.string.debug_loading)
+                        } else {
+                            stringResource(R.string.debug_no_channel_match, filter)
+                        },
                         color = Rpcs.TextDim,
                         fontSize = 12.sp,
                         modifier = Modifier
@@ -195,8 +207,8 @@ fun DebugScreen(
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 PaneNavRow(
-                    title = "Share Log",
-                    description = "Share the RPCS3 log file",
+                    title = stringResource(R.string.debug_share_log),
+                    description = stringResource(R.string.debug_share_log_description),
                     icon = Icons.Outlined.Share,
                     modifier = Modifier.weight(1f),
                     onClick = {
@@ -214,17 +226,25 @@ fun DebugScreen(
                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                 putExtra(Intent.EXTRA_STREAM, file.uri)
                             }
-                            context.startActivity(Intent.createChooser(intent, "Share Log File"))
+                            context.startActivity(
+                                Intent.createChooser(
+                                    intent,
+                                    context.getString(R.string.debug_share_log_chooser)
+                                )
+                            )
                         } else {
-                            Toast.makeText(context, "Log file not found!", Toast.LENGTH_SHORT)
-                                .show()
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.debug_log_not_found),
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     }
                 )
                 Spacer(Modifier.width(Dims.RowSpacing))
                 PaneNavRow(
-                    title = "Diagnostics",
-                    description = "Setup, storage and graphics",
+                    title = stringResource(R.string.debug_diagnostics),
+                    description = stringResource(R.string.debug_diagnostics_description),
                     icon = Icons.Outlined.Info,
                     modifier = Modifier.weight(1f),
                     onClick = navigateToDiagnostics
@@ -267,7 +287,7 @@ private fun LogFilterField(
         Box(modifier = Modifier.weight(1f)) {
             if (value.isEmpty()) {
                 Text(
-                    text = "Filter channels",
+                    text = stringResource(R.string.debug_filter_placeholder),
                     color = SettingsStyle.TextDim,
                     fontSize = Dimens.ValueSize,
                     maxLines = 1,

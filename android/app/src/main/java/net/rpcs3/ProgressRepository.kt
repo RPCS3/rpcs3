@@ -134,7 +134,7 @@ class ProgressRepository {
                             notificationManager.notify(requestId.toInt(), builder.build())
                         }
                     } else if (value < 0) {
-                        val contentText = text ?: "Installation failed"
+                        val contentText = text ?: context.getString(R.string.progress_failed, title)
                         builder.setContentText(contentText)
                         AlertDialogQueue.showDialog(title, contentText)
                         notificationManager.notify(requestId.toInt(), builder.build())

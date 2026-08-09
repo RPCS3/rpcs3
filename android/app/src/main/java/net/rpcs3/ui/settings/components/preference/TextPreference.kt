@@ -11,6 +11,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import net.rpcs3.R
 import net.rpcs3.ui.settings.components.core.PreferenceSubtitle
 
 @Composable
@@ -30,7 +32,13 @@ fun TextPreference(
         title = title,
         leadingIcon = leadingIcon,
         modifier = modifier,
-        subtitle = { PreferenceSubtitle(text = value.ifEmpty { placeholder.ifEmpty { "Not set" } }) },
+        subtitle = {
+            PreferenceSubtitle(
+                text = value.ifEmpty {
+                    placeholder.ifEmpty { stringResource(R.string.preference_not_set) }
+                }
+            )
+        },
         enabled = enabled,
         onClick = { dialogVisible = true },
         onLongClick = onLongClick
@@ -62,10 +70,12 @@ fun TextPreference(
                             onValueChange(draft)
                         }
                     }
-                ) { Text(text = "Save") }
+                ) { Text(text = stringResource(R.string.action_save)) }
             },
             dismissButton = {
-                TextButton(onClick = { dialogVisible = false }) { Text(text = "Cancel") }
+                TextButton(onClick = { dialogVisible = false }) {
+                    Text(text = stringResource(R.string.action_cancel))
+                }
             }
         )
     }

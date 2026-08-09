@@ -17,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.WindowInsetsCompat
@@ -41,7 +42,7 @@ private fun StartupScreen() {
         ) {
             CircularProgressIndicator()
             Text(
-                text = "Starting RPCS3",
+                text = stringResource(R.string.startup_message),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(top = 16.dp)
             )
@@ -81,7 +82,7 @@ class MainActivity : ComponentActivity() {
         with(getSystemService(NOTIFICATION_SERVICE) as NotificationManager) {
             val channel = NotificationChannel(
                 "rpcs3-progress",
-                "Installation progress",
+                getString(R.string.notification_channel_progress),
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
                 setShowBadge(false)
@@ -104,9 +105,15 @@ class MainActivity : ComponentActivity() {
                 RPCS3.instance.initialize(RPCS3.rootDirectory)
                 applyDefaultLogLevels()
                 val hookDirectory = "\"" + nativeLibraryDir + "\""
+                val internalDataDirectory = "\"" + filesDir + "\""
                 RPCS3.instance.settingsSet(
                     "Video@@Vulkan@@Custom Driver@@Hook Directory",
                     hookDirectory,
+                    ""
+                )
+                RPCS3.instance.settingsSet(
+                    "Video@@Vulkan@@Custom Driver@@Internal Data Directory",
+                    internalDataDirectory,
                     ""
                 )
 
@@ -119,6 +126,11 @@ class MainActivity : ComponentActivity() {
                         RPCS3.instance.settingsSet(
                             "Video@@Vulkan@@Custom Driver@@Hook Directory",
                             hookDirectory,
+                            id
+                        )
+                        RPCS3.instance.settingsSet(
+                            "Video@@Vulkan@@Custom Driver@@Internal Data Directory",
+                            internalDataDirectory,
                             id
                         )
                     }

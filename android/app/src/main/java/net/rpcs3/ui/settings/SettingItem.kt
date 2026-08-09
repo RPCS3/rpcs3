@@ -7,7 +7,9 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import android.content.Context
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import net.rpcs3.dialogs.AlertDialogQueue
 import kotlinx.coroutines.CoroutineScope
@@ -15,6 +17,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import net.rpcs3.R
 import net.rpcs3.RPCS3
 import net.rpcs3.ui.components.SettingDropdown
 import net.rpcs3.ui.components.SettingSlider
@@ -31,11 +34,20 @@ private fun variantsOf(item: JSONObject): List<String> {
 
 private val settingsWriter = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-private fun commit(path: String, value: String, titleId: String, label: String): Boolean {
+private fun commit(
+    context: Context,
+    path: String,
+    value: String,
+    titleId: String,
+    label: String
+): Boolean {
     settingsWriter.launch {
         if (!RPCS3.instance.settingsSet(path, value, titleId)) {
             withContext(Dispatchers.Main) {
-                AlertDialogQueue.showDialog("Setting error", "Failed to assign $label")
+                AlertDialogQueue.showDialog(
+                    context.getString(R.string.settings_error_title),
+                    context.getString(R.string.settings_error_assign, label)
+                )
             }
             return@launch
         }
@@ -45,9 +57,8 @@ private fun commit(path: String, value: String, titleId: String, label: String):
         RPCS3.instance.takeSettingsSaveFailure()?.let { target ->
             withContext(Dispatchers.Main) {
                 AlertDialogQueue.showDialog(
-                    "Settings not saved",
-                    "PS3Native could not write $target. The change will be lost when you " +
-                        "close the app."
+                    context.getString(R.string.settings_not_saved_title),
+                    context.getString(R.string.settings_not_saved_message, target)
                 )
             }
         }
@@ -63,6 +74,8 @@ fun SettingItem(
     titleId: String,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+
     when (item.optString("type", "")) {
         "bool" -> {
             var value by remember(path) { mutableStateOf(item.optBoolean("value")) }
@@ -72,7 +85,7 @@ fun SettingItem(
                 checked = value,
                 modifier = modifier,
                 onCheckedChange = { next ->
-                    if (commit(path, if (next) "true" else "false", titleId, label)) {
+                    if (commit(context, path, if (next) "true" else "false", titleId, label)) {
                         item.put("value", next)
                         value = next
                     }
@@ -92,7 +105,7 @@ fun SettingItem(
                 modifier = modifier,
                 onSelected = { next ->
                     val chosen = variants.getOrNull(next) ?: return@SettingDropdown
-                    if (commit(path, JSONObject.quote(chosen), titleId, label)) {
+                    if (commit(context, path, JSONObject.quote(chosen), titleId, label)) {
                         item.put("value", chosen)
                         value = chosen
                     }
@@ -116,7 +129,7 @@ fun SettingItem(
                     onValueChange = { value = it },
                     onValueChangeFinished = {
                         val next = value.toLong()
-                        if (commit(path, next.toString(), titleId, label)) {
+                        if (commit(context, path, next.toString(), titleId, label)) {
                             item.put("value", next)
                         }
                     }
@@ -131,7 +144,7 @@ fun SettingItem(
                     onValueChange = { next ->
                         text = next
                         next.toLongOrNull()?.let {
-                            if (commit(path, it.toString(), titleId, label)) {
+                            if (commit(context, path, it.toString(), titleId, label)) {
                                 item.put("value", it)
                             }
                         }
@@ -154,7 +167,7 @@ fun SettingItem(
                 modifier = modifier,
                 onValueChange = { value = it },
                 onValueChangeFinished = {
-                    if (commit(path, value.toString(), titleId, label)) {
+                    if (commit(context, path, value.toString(), titleId, label)) {
                         item.put("value", value.toDouble())
                     }
                 }
@@ -171,7 +184,7 @@ fun SettingItem(
                 modifier = modifier,
                 onValueChange = { next ->
                     value = next
-                    if (commit(path, JSONObject.quote(next), titleId, label)) {
+                    if (commit(context, path, JSONObject.quote(next), titleId, label)) {
                         item.put("value", next)
                     }
                 }

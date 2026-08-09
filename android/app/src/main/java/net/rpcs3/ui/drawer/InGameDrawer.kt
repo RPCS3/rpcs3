@@ -53,12 +53,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import net.rpcs3.R
 import net.rpcs3.RPCS3
 import net.rpcs3.ui.settings.ControlsCategory
 import net.rpcs3.ui.settings.ControlsSettings
@@ -147,13 +149,15 @@ fun InGameDrawer(
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         DrawerActionButton(
-                            label = if (paused) "Resume" else "Pause",
+                            label = stringResource(
+                                if (paused) R.string.ingame_resume else R.string.ingame_pause
+                            ),
                             icon = if (paused) Icons.Outlined.PlayArrow else Icons.Outlined.Pause,
                             modifier = Modifier.weight(1f),
                             onClick = onTogglePause
                         )
                         DrawerActionButton(
-                            label = "Exit Game",
+                            label = stringResource(R.string.ingame_exit),
                             icon = Icons.AutoMirrored.Outlined.ExitToApp,
                             modifier = Modifier.weight(1f),
                             isExit = true,
@@ -205,7 +209,7 @@ private fun InGameSettingsPanel(
             ) {
                 Text(
                     modifier = Modifier.weight(1f),
-                    text = if (titleId.isEmpty()) "Settings" else titleId,
+                    text = titleId.ifEmpty { stringResource(R.string.ingame_settings) },
                     color = SettingsStyle.TextPrimary,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold
@@ -221,7 +225,7 @@ private fun InGameSettingsPanel(
                     ) {
                         Icon(
                             imageVector = Icons.Outlined.Close,
-                            contentDescription = "Close",
+                            contentDescription = stringResource(R.string.action_close),
                             tint = SettingsStyle.TextPrimary,
                             modifier = Modifier.size(19.dp)
                         )
@@ -249,7 +253,11 @@ private fun InGameSettingsPanel(
                     categories.forEachIndexed { index, entry ->
                         DrawerSidebarItem(
                             icon = iconForCategory(entry.label),
-                            label = entry.label,
+                            label = if (entry.label == ControlsCategory) {
+                                stringResource(R.string.settings_category_controls)
+                            } else {
+                                entry.label
+                            },
                             isSelected = index == selected,
                             nested = entry.parent != null,
                             onClick = { selected = index }

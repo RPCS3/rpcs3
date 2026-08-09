@@ -50,6 +50,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,6 +60,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -66,7 +69,9 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import net.rpcs3.R
 import net.rpcs3.RPCS3
+import net.rpcs3.dialogs.AlertDialogQueue
 import net.rpcs3.ui.components.GhostButton
 import net.rpcs3.ui.components.SectionLabel
 import net.rpcs3.ui.components.SettingGroup
@@ -146,7 +151,9 @@ fun GameSettingsScreen(
     var root by remember(titleId) { mutableStateOf<JSONObject?>(null) }
     var baseline by remember(titleId) { mutableStateOf<JSONObject?>(null) }
     var selected by remember(titleId) { mutableIntStateOf(0) }
+    var resetToken by remember(titleId) { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     LaunchedEffect(titleId) {
         root = withContext(Dispatchers.IO) {
@@ -213,7 +220,11 @@ fun GameSettingsScreen(
                     categories.forEachIndexed { index, entry ->
                         SidebarItem(
                             icon = iconForCategory(entry.label),
-                            label = entry.label,
+                            label = if (entry.label == ControlsCategory) {
+                                stringResource(R.string.settings_category_controls)
+                            } else {
+                                entry.label
+                            },
                             isSelected = index == selected,
                             nested = entry.parent != null,
                             onClick = { selected = index }
@@ -233,31 +244,90 @@ fun GameSettingsScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            .padding(horizontal = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         GhostButton(
-                            label = "Cancel",
+                            label = stringResource(R.string.settings_save),
                             accent = true,
-                            tint = Rpcs.Danger,
+                            tint = Rpcs.Success,
+                            horizontalPadding = 6.dp,
                             onClick = {
-                                val snapshot = baseline
                                 scope.launch(Dispatchers.IO) {
-                                    if (snapshot != null) {
-                                        revertTo(snapshot, tree, titleId)
-                                    }
+                                    RPCS3.instance.settingsFlush()
                                     withContext(Dispatchers.Main) { onClose() }
                                 }
                             },
                             modifier = Modifier.weight(1f)
                         )
                         GhostButton(
-                            label = "Save",
+                            label = stringResource(R.string.settings_reset),
                             accent = true,
-                            tint = Rpcs.Success,
+                            tint = Rpcs.Warning,
+                            horizontalPadding = 6.dp,
                             onClick = {
+                                AlertDialogQueue.showDialog(
+                                    title = if (titleId.isEmpty()) {
+                                        context.getString(R.string.settings_reset_global_title)
+                                    } else {
+                                        context.getString(
+                                            R.string.settings_reset_game_title,
+                                            titleId
+                                        )
+                                    },
+                                    message = if (titleId.isEmpty()) {
+                                        context.getString(R.string.settings_reset_global_message)
+                                    } else {
+                                        context.getString(
+                                            R.string.settings_reset_game_message,
+                                            titleId
+                                        )
+                                    },
+                                    confirmText = context.getString(R.string.action_reset),
+                                    dismissText = context.getString(R.string.action_cancel),
+                                    onConfirm = {
+                                        scope.launch(Dispatchers.IO) {
+                                            if (titleId.isEmpty()) {
+                                                resetToDefaults(tree, titleId)
+                                            } else {
+                                                val global = runCatching {
+                                                    JSONObject(RPCS3.instance.settingsGet("", ""))
+                                                }.getOrNull()
+                                                if (global != null) {
+                                                    revertTo(global, tree, titleId)
+                                                }
+                                            }
+
+                                            val refreshed = runCatching {
+                                                JSONObject(
+                                                    RPCS3.instance.settingsGet("", titleId)
+                                                )
+                                            }.getOrNull()
+
+                                            withContext(Dispatchers.Main) {
+                                                if (refreshed != null) {
+                                                    root = refreshed
+                                                    baseline = snapshotOf(refreshed)
+                                                }
+                                                resetToken++
+                                            }
+                                        }
+                                    }
+                                )
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                        GhostButton(
+                            label = stringResource(R.string.settings_cancel),
+                            accent = true,
+                            tint = Rpcs.Danger,
+                            horizontalPadding = 6.dp,
+                            onClick = {
+                                val snapshot = baseline
                                 scope.launch(Dispatchers.IO) {
-                                    RPCS3.instance.settingsFlush()
+                                    if (snapshot != null) {
+                                        revertTo(snapshot, tree, titleId)
+                                    }
                                     withContext(Dispatchers.Main) { onClose() }
                                 }
                             },
@@ -320,12 +390,14 @@ fun GameSettingsScreen(
                                 .padding(horizontal = 20.dp, vertical = 14.dp),
                             verticalArrangement = Arrangement.spacedBy(Dimens.SectionGap)
                         ) {
-                            SettingsNodeContent(
-                                node = node,
-                                path = entry.path.joinToString("@@"),
-                                titleId = titleId,
-                                includeSubGroups = entry.parent != null
-                            )
+                            key(resetToken) {
+                                SettingsNodeContent(
+                                    node = node,
+                                    path = entry.path.joinToString("@@"),
+                                    titleId = titleId,
+                                    includeSubGroups = entry.parent != null
+                                )
+                            }
                             Spacer(Modifier.height(Dimens.SectionGap))
                         }
                     }

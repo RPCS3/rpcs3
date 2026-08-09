@@ -55,7 +55,10 @@ class RPCS3Activity : ComponentActivity() {
             RPCS3Theme {
                 InGameDrawer(
                     visible = drawerVisible.value,
-                    titleId = gameTitleId(intent.getStringExtra("path").orEmpty()),
+                    titleId = runCatching { RPCS3.instance.getTitleId() }
+                        .getOrNull()
+                        ?.takeIf { it.isNotEmpty() }
+                        ?: gameTitleId(intent.getStringExtra("path").orEmpty()),
                     paused = drawerPaused.value,
                     onDismiss = { setDrawerVisible(false) },
                     onTogglePause = {
@@ -110,7 +113,10 @@ class RPCS3Activity : ComponentActivity() {
             }.getOrNull()
 
             if (isoDescriptor == null) {
-                AlertDialogQueue.showDialog("Boot Failed", "Could not open the selected disc image")
+                AlertDialogQueue.showDialog(
+                    getString(R.string.boot_failed_title),
+                    getString(R.string.boot_failed_open_image)
+                )
                 finish()
                 return
             }
@@ -150,7 +156,10 @@ class RPCS3Activity : ComponentActivity() {
                 RPCS3.boot(gamePath)
             }
             if (bootResult != BootResult.NoErrors) {
-                AlertDialogQueue.showDialog("Boot Failed", "Error: ${bootResult.name}")
+                AlertDialogQueue.showDialog(
+                    getString(R.string.boot_failed_title),
+                    getString(R.string.boot_failed_error, bootResult.name)
+                )
                 finish()
             }
         }
@@ -419,8 +428,6 @@ class RPCS3Activity : ComponentActivity() {
 
     private fun applyInsetsToPadOverlay() {
         ViewCompat.setOnApplyWindowInsetsListener(binding.padOverlay) { view, windowInsets ->
-            // I don't think we need `displayCutout` insets here as well
-            // Since there is hardly any overlay overlapping with it
             val insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars())
             view.updateLayoutParams<MarginLayoutParams> {
                 leftMargin = insets.left

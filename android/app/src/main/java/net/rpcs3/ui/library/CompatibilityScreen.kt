@@ -43,11 +43,13 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import net.rpcs3.R
 import net.rpcs3.ui.theme.SettingsStyle
 
 const val CompatibilityHomeUrl = "https://rpcs3.net/compatibility"
@@ -133,20 +135,22 @@ fun CompatibilityScreen(
             ) {
                 NavIcon(
                     icon = Icons.AutoMirrored.Outlined.ArrowBack,
-                    contentDescription = "Back",
+                    contentDescription = stringResource(R.string.action_back),
                     enabled = canGoBack,
                     onClick = { webView?.goBack() }
                 )
                 NavIcon(
                     icon = if (loading) Icons.Outlined.Close else Icons.Outlined.Refresh,
-                    contentDescription = if (loading) "Stop" else "Refresh",
+                    contentDescription = stringResource(
+                        if (loading) R.string.action_stop else R.string.action_refresh
+                    ),
                     onClick = {
                         if (loading) webView?.stopLoading() else webView?.reload()
                     }
                 )
                 NavIcon(
                     icon = Icons.Outlined.Home,
-                    contentDescription = "Home",
+                    contentDescription = stringResource(R.string.action_home),
                     onClick = { webView?.loadUrl(CompatibilityHomeUrl) }
                 )
 

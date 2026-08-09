@@ -3,6 +3,7 @@ package net.rpcs3.utils
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
+import net.rpcs3.R
 import net.rpcs3.RPCS3
 import org.json.JSONObject
 
@@ -43,14 +44,13 @@ data class PackageInfo(
     val label: String
         get() = title.ifEmpty { displayName }
 
-    val typeLabel: String
-        get() = when {
-            !valid -> "Corrupted"
-            isUpdate -> "Update"
-            isDlc -> "DLC"
-            category.isNotEmpty() -> category
-            else -> "Package"
-        }
+    fun typeLabel(context: Context): String = when {
+        !valid -> context.getString(R.string.packages_type_corrupted)
+        isUpdate -> context.getString(R.string.packages_type_update)
+        isDlc -> context.getString(R.string.packages_type_dlc)
+        category.isNotEmpty() -> category
+        else -> context.getString(R.string.packages_type_package)
+    }
 
     val versionOrder: Double
         get() = appVer.toDoubleOrNull() ?: 0.0
@@ -109,8 +109,8 @@ object PackageInspector {
                 .thenBy { it.displayName }
         )
 
-    fun formatSize(bytes: Long): String {
-        if (bytes <= 0) return "unknown size"
+    fun formatSize(context: Context, bytes: Long): String {
+        if (bytes <= 0) return context.getString(R.string.packages_size_unknown)
         val units = arrayOf("B", "KB", "MB", "GB", "TB")
         var value = bytes.toDouble()
         var unit = 0
