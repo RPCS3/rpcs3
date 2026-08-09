@@ -317,7 +317,28 @@ error_code sys_rsx_memory_free(cpu_thread& cpu, u32 mem_handle)
 		return CELL_ENOMEM;
 	}
 
-	if (rsx::get_current_renderer()->lv2_context)
+	bool is_bad = false;
+
+	if (auto current = rsx::get_current_renderer()->lv2_context)
+	{
+		std::vector<shared_ptr<lv2_rsx_context>> ctx_ptr;
+
+		idm::select<lv2_rsx_context>([&](u32 id, lv2_rsx_context&)
+		{
+			ctx_ptr.emplace_back(idm::get_unlocked<lv2_rsx_context>(id));
+		});
+
+		for (auto p : ctx_ptr)
+		{
+			if (p.get() == current)
+			{
+				is_bad = true;
+				break;
+			}
+		}
+	}
+
+	if (is_bad)
 	{
 		fmt::throw_exception("Attempting to dealloc rsx memory when the context is still being used");
 	}
