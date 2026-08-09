@@ -8,6 +8,10 @@
 #include "Utilities/JIT.h"
 #include "util/v128.hpp"
 
+#ifdef ARCH_X64
+#include <immintrin.h>
+#endif
+
 #ifdef _MSC_VER
 #pragma warning(push, 0)
 #else
