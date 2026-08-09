@@ -42,14 +42,14 @@ static u64 rsx_timeStamp()
 	return get_timebased_time();
 }
 
-static void set_rsx_dmactl(rsx::thread* render, u64 get_put)
+static void set_rsx_dmactl(rsx::thread* render, u64 get_put, lv2_rsx_context* context)
 {
 	{
 		rsx::eng_lock rlock(render);
 		render->fifo_ctrl->abort();
 
 		// Unconditional set
-		while (!render->new_get_put.compare_and_swap_test(u64{umax}, get_put))
+		while (!context->new_get_put.compare_and_swap_test(u64{umax}, get_put))
 		{
 			// Wait for the first store to complete (or be aborted)
 			if (auto cpu = cpu_thread::get_current())
@@ -72,11 +72,11 @@ static void set_rsx_dmactl(rsx::thread* render, u64 get_put)
 	if (auto cpu = cpu_thread::get_current())
 	{
 		// Wait for the first store to complete (or be aborted)
-		while (render->new_get_put != usz{umax})
+		while (render->lv2_context == context && context->new_get_put != usz{umax})
 		{
 			if (cpu->state & cpu_flag::exit)
 			{
-				if (render->new_get_put.compare_and_swap_test(get_put, umax))
+				if (context->new_get_put.compare_and_swap_test(get_put, umax))
 				{
 					// Retry
 					cpu->state += cpu_flag::again;
@@ -680,7 +680,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		const u64 get_put = put << 32 | get;
 
 		std::lock_guard lock(render->sys_rsx_mtx);
-		set_rsx_dmactl(render, get_put);
+		set_rsx_dmactl(render, get_put, rsx_context.get());
 		break;
 	}
 	case 0x100: // Display mode set

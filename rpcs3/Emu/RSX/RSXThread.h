@@ -177,7 +177,6 @@ namespace rsx
 		draw_command_processor m_draw_processor;
 
 	public:
-		atomic_t<u64> new_get_put = u64{umax};
 		u32 restore_point = 0;
 		u32 dbg_step_pc = 0;
 		u32 last_known_code_start = 0;

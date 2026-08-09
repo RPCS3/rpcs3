@@ -175,6 +175,8 @@ struct lv2_rsx_context
 
 	u32 belonging_process = umax; // Debug information
 
+	atomic_t<u64> new_get_put = umax;
+
 	lv2_rsx_context() noexcept;
 	lv2_rsx_context(utils::serial& ar) noexcept;
 	void save(utils::serial& ar) noexcept;
