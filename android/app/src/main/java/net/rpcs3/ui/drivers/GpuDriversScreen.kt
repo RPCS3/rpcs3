@@ -83,6 +83,7 @@ import androidx.compose.material.icons.outlined.Memory
 import net.rpcs3.R
 import net.rpcs3.RPCS3
 import net.rpcs3.ui.components.PaneActionButton
+import net.rpcs3.ui.settings.DriverFlagsSection
 import net.rpcs3.ui.components.PaneScaffold
 import net.rpcs3.ui.components.PaneSectionTitle
 import net.rpcs3.ui.components.PaneTab
@@ -251,6 +252,10 @@ fun GpuDriversScreen(navigateBack: () -> Unit) {
                 enabled = !isInstalling,
                 onClick = { showDriverDialog = true }
             )
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            DriverFlagsSection(null)
 
             Spacer(modifier = Modifier.height(16.dp))
         }

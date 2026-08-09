@@ -23,6 +23,8 @@ import androidx.core.view.updateLayoutParams
 import net.rpcs3.databinding.ActivityRpcs3Binding
 import net.rpcs3.dialogs.AlertDialogQueue
 import net.rpcs3.overlay.State
+import net.rpcs3.utils.DriverFlags
+import net.rpcs3.utils.GameDetailsReader
 import kotlin.concurrent.thread
 import kotlin.math.abs
 
@@ -148,6 +150,8 @@ class RPCS3Activity : ComponentActivity() {
 
             Log.w("RPCS3 State", RPCS3.getState().name)
             RPCS3.activeGame.value = gamePath
+
+            DriverFlags.apply(this@RPCS3Activity, GameDetailsReader.read(gamePath).titleId)
 
             val descriptor = isoDescriptor
             val bootResult = if (descriptor != null) {

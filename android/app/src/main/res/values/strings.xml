@@ -160,6 +160,12 @@
     <string name="settings_category_controls">Controls</string>
     <string name="settings_category_gpu_driver">GPU Driver</string>
     <string name="settings_driver_per_game">Driver used for this game</string>
+    <string name="drivers_flags_title">Turnip debug flags</string>
+    <string name="drivers_flags_description">Passed to Mesa Turnip as TU_DEBUG when a game starts. Applies only to custom drivers.</string>
+    <string name="drivers_flags_add_hint">Flag name</string>
+    <string name="drivers_flags_add">Add flag</string>
+    <string name="drivers_flags_delete">Remove flag</string>
+    <string name="drivers_flags_restore">Restore defaults</string>
     <string name="settings_save">Save</string>
     <string name="settings_reset">Reset</string>
     <string name="settings_cancel">Cancel</string>

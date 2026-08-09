@@ -64,5 +64,9 @@ fun GameDriverSettings(titleId: String) {
         )
     }
 
+    Spacer(Modifier.height(18.dp))
+
+    DriverFlagsSection(titleId)
+
     Spacer(Modifier.height(14.dp))
 }
