@@ -2728,7 +2728,7 @@ namespace rsx
 
 	void thread::init(shared_ptr<lv2_rsx_context> _lv2_context, std::shared_ptr<lv2_rsx_process_info> _lv2_rsx_process, u32 id)
 	{
-		vm::write32(_lv2_rsx_process->device_addr[8] + 0x30, 1);
+		//vm::write32(_lv2_rsx_process->device_addr[8] + 0x30, 1);
 		std::memset(_lv2_context->display_buffers, 0, sizeof(_lv2_context->display_buffers));
 
 		// Schedule FIFO interrupt to deal with this immediately
