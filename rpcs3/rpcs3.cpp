@@ -1387,6 +1387,10 @@ int run_rpcs3(int argc, char** argv)
 		Emu.Quit(true);
 		return 0;
 	}
+	else if (qobject_cast<gui_application*>(app.data()) && g_cfg.misc.start_big_picture_mode && !Emu.IsBootingRestricted() && Emu.IsStopped())
+	{
+		Emu.BootBigPictureMode();
+	}
 
 	// run event loop (maybe only needed for the gui application)
 	return app->exec();

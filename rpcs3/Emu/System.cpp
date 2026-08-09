@@ -4200,15 +4200,18 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			m_state = system_state::stopped;
 
 			// Only return to Big Picture Mode on a genuinely final stop, not an internal
-			// chainload/restart continuation (those leave after_kill_callback set).
+			// chainload/restart continuation (those leave after_kill_callback set already).
 			if (!after_kill_callback && g_big_picture_mode_active.exchange(false))
 			{
-				sys_log.notice("Big Picture Mode: game stopped, returning to Big Picture Mode.");
-				SetContinuousMode(true);
-				const bool result = BootBigPictureMode();
-				sys_log.notice("Big Picture Mode: BootBigPictureMode() returned %d", result);
+				after_kill_callback = [this]()
+				{
+					sys_log.notice("Big Picture Mode: game stopped, returning to Big Picture Mode.");
+					SetContinuousMode(true);
+					const bool result = BootBigPictureMode();
+					sys_log.notice("Big Picture Mode: BootBigPictureMode() returned %d", result);
+				};
 			}
-			
+
 			GetCallbacks().on_stop();
 
 			// Always Enable display sleep, not only if it was prevented.

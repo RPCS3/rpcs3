@@ -436,10 +436,10 @@ public:
 	bool BootBigPictureMode();
 	// Cancel any pending return to Big Picture Mode, e.g. when a game is booted manually and bypasses the shell.
 	void DeactivateBigPictureMode() const;
-	
+
 	void SetForceBoot(bool force_boot);
 	void SetContinuousMode(bool continuous_mode);
-	
+
 	game_boot_result Load(const std::string& title_id = "", bool is_disc_patch = false, usz recursion_count = 0);
 	void Run(bool start_playtime);
 	void RunPPU();

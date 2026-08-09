@@ -234,12 +234,6 @@ bool gui_application::Init()
 		return false;
 	}
 
-	// Don't override an explicit CLI boot request.
-	if (!m_with_cli_boot && g_cfg.misc.start_big_picture_mode && !Emu.IsBootingRestricted() && Emu.IsStopped())
-	{
-		Emu.BootBigPictureMode();
-	}
-
 #ifdef WITH_DISCORD_RPC
 	// Discord Rich Presence Integration
 	if (m_gui_settings->GetValue(gui::m_richPresence).toBool())
