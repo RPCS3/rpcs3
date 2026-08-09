@@ -1,6 +1,9 @@
 name: Android APK
 
 on:
+  push:
+    branches:
+      - android-refresh
   workflow_dispatch:
     inputs:
       variant:
@@ -8,11 +11,6 @@ on:
         type: choice
         options: [debug, release]
         default: debug
-      flavor:
-        description: Branding flavor (package name)
-        type: choice
-        options: [all, standard, antutu, ludashi, pubg]
-        default: all
       rebuild_deps:
         description: Force rebuild of LLVM and FFmpeg (ignores cache)
         type: boolean
@@ -26,6 +24,7 @@ env:
   NDK_VERSION: 29.0.14206865
   CMAKE_VERSION: 3.31.6
   ANDROID_API: 31
+  VARIANT: ${{ inputs.variant || 'debug' }}
 
 jobs:
   build:
@@ -112,9 +111,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: android/app/.cxx
-          key: cxx-${{ inputs.variant }}-${{ env.NDK_VERSION }}-${{ hashFiles('android/app/src/main/cpp/CMakeLists.txt') }}
+          key: cxx-${{ env.VARIANT }}-${{ env.NDK_VERSION }}-${{ hashFiles('android/app/src/main/cpp/CMakeLists.txt') }}
           restore-keys: |
-            cxx-${{ inputs.variant }}-${{ env.NDK_VERSION }}-
+            cxx-${{ env.VARIANT }}-${{ env.NDK_VERSION }}-
 
       - name: Build APK
         working-directory: android
@@ -122,12 +121,8 @@ jobs:
           CMAKE_C_COMPILER_LAUNCHER: ccache
           CMAKE_CXX_COMPILER_LAUNCHER: ccache
         run: |
-          if [ "${{ inputs.variant }}" = "release" ]; then suffix=Release; else suffix=Debug; fi
-          if [ "${{ inputs.flavor }}" = "all" ]; then
-            flavors="standard antutu ludashi pubg"
-          else
-            flavors="${{ inputs.flavor }}"
-          fi
+          if [ "$VARIANT" = "release" ]; then suffix=Release; else suffix=Debug; fi
+          flavors="standard antutu ludashi pubg"
           tasks=""
           for f in $flavors; do
             tasks="$tasks assemble${f^}${suffix}"
@@ -152,33 +147,29 @@ jobs:
           done
 
       - name: Upload standard APK
-        if: inputs.flavor == 'all' || inputs.flavor == 'standard'
         uses: actions/upload-artifact@v4
         with:
-          name: ps3native-standard-${{ inputs.variant }}
-          path: android/app/build/outputs/apk/standard/${{ inputs.variant }}/*.apk
+          name: ps3native-standard-${{ env.VARIANT }}
+          path: android/app/build/outputs/apk/standard/${{ env.VARIANT }}/*.apk
           if-no-files-found: error
 
       - name: Upload antutu APK
-        if: inputs.flavor == 'all' || inputs.flavor == 'antutu'
         uses: actions/upload-artifact@v4
         with:
-          name: ps3native-antutu-${{ inputs.variant }}
-          path: android/app/build/outputs/apk/antutu/${{ inputs.variant }}/*.apk
+          name: ps3native-antutu-${{ env.VARIANT }}
+          path: android/app/build/outputs/apk/antutu/${{ env.VARIANT }}/*.apk
           if-no-files-found: error
 
       - name: Upload ludashi APK
-        if: inputs.flavor == 'all' || inputs.flavor == 'ludashi'
         uses: actions/upload-artifact@v4
         with:
-          name: ps3native-ludashi-${{ inputs.variant }}
-          path: android/app/build/outputs/apk/ludashi/${{ inputs.variant }}/*.apk
+          name: ps3native-ludashi-${{ env.VARIANT }}
+          path: android/app/build/outputs/apk/ludashi/${{ env.VARIANT }}/*.apk
           if-no-files-found: error
 
       - name: Upload pubg APK
-        if: inputs.flavor == 'all' || inputs.flavor == 'pubg'
         uses: actions/upload-artifact@v4
         with:
-          name: ps3native-pubg-${{ inputs.variant }}
-          path: android/app/build/outputs/apk/pubg/${{ inputs.variant }}/*.apk
+          name: ps3native-pubg-${{ env.VARIANT }}
+          path: android/app/build/outputs/apk/pubg/${{ env.VARIANT }}/*.apk
           if-no-files-found: error
