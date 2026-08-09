@@ -251,14 +251,14 @@ fun GameItem(
                 }
 
                 runCatching {
-                    parseUpdates(RPCS3.instance.installedUpdates(titleId)).forEach { entry ->
+                    parseUpdates(RPCS3.instance.installedUpdates(serial)).forEach { entry ->
                         RPCS3.instance.uninstallUpdate(entry.path)
                     }
                 }
 
                 if (!internal) {
                     runCatching {
-                        File(RPCS3.rootDirectory + "config/Icons/iso/$titleId.PNG").delete()
+                        File(RPCS3.rootDirectory + "config/Icons/iso/$serial.PNG").delete()
                     }
                 }
             }
