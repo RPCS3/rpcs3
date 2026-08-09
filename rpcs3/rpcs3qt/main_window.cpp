@@ -2138,7 +2138,8 @@ void main_window::OnEmuStop()
 	ui->actionManage_Users->setEnabled(true);
 	ui->confCamerasAct->setEnabled(true);
 	ui->actionPS_Move_Tracker->setEnabled(true);
-
+	ui->bigPictureModeAct->setEnabled(true);
+	
 	// Refresh game list in order to update time played
 	if (m_game_list_frame && m_is_list_mode)
 	{
@@ -2180,6 +2181,7 @@ void main_window::OnEmuReady()
 	ui->actionManage_Users->setEnabled(false);
 	ui->confCamerasAct->setEnabled(false);
 	ui->actionPS_Move_Tracker->setEnabled(false);
+	ui->bigPictureModeAct->setEnabled(false);
 
 	ui->batchRemoveShaderCachesAct->setEnabled(false);
 	ui->batchRemovePPUCachesAct->setEnabled(false);
