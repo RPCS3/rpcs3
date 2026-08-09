@@ -86,6 +86,7 @@ private data class ActionSpec(
 fun GameDetailDialog(
     title: String,
     subtitle: String,
+    version: String,
     iconPath: String?,
     onPlay: () -> Unit,
     onSettings: () -> Unit,
@@ -234,6 +235,17 @@ fun GameDetailDialog(
                                 text = subtitle,
                                 color = LaunchTextSecondary,
                                 fontSize = 13.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        if (version.isNotEmpty()) {
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                text = version,
+                                color = LaunchAccent,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )

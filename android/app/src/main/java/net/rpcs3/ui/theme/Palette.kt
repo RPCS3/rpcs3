@@ -34,6 +34,8 @@ object Rpcs {
 object Dims {
     val ScreenPadding = 16.dp
     val ContentMaxWidth = 520.dp
+    val WideContentMaxWidth = 820.dp
+    val ChannelColumnMinWidth = 300.dp
     val SidebarWidth = 232.dp
     val CardCorner = 14.dp
     val InputCorner = 10.dp
@@ -42,6 +44,8 @@ object Dims {
     val SectionSpacing = 18.dp
     val BorderWidth = 1.dp
     val FocusBorderWidth = 2.dp
+    val OverlayWidth = 460.dp
+    val ProgressBarHeight = 6.dp
 }
 
 object SettingsStyle {

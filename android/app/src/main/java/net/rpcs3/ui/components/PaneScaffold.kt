@@ -1,5 +1,6 @@
 package net.rpcs3.ui.components
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -27,6 +28,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -37,6 +39,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import net.rpcs3.ui.theme.Dims
@@ -55,6 +58,8 @@ fun PaneScaffold(
     onSelect: (Int) -> Unit,
     onBack: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    scrollableContent: Boolean = true,
+    contentMaxWidth: Dp = Dims.ContentMaxWidth,
     content: @Composable () -> Unit
 ) {
     Row(
@@ -129,9 +134,15 @@ fun PaneScaffold(
             Column(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .widthIn(max = Dims.ContentMaxWidth)
+                    .widthIn(max = contentMaxWidth)
                     .padding(Dims.ScreenPadding)
-                    .verticalScroll(rememberScrollState())
+                    .then(
+                        if (scrollableContent) {
+                            Modifier.verticalScroll(rememberScrollState())
+                        } else {
+                            Modifier
+                        }
+                    )
             ) {
                 content()
             }
@@ -203,7 +214,8 @@ private fun PaneTabItem(
 fun PaneIconButton(
     icon: ImageVector,
     contentDescription: String?,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    tint: Color = Rpcs.TextSecondary
 ) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -223,7 +235,7 @@ fun PaneIconButton(
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
-            tint = if (focused) Rpcs.Accent else Rpcs.TextSecondary,
+            tint = if (focused) Rpcs.Accent else tint,
             modifier = Modifier.size(20.dp)
         )
     }
@@ -331,6 +343,177 @@ fun PaneNavRow(
                 fontSize = 11.sp
             )
         }
+    }
+}
+
+@Composable
+fun PaneEntryRow(
+    title: String,
+    subtitle: String,
+    actionIcon: ImageVector,
+    actionDescription: String,
+    onAction: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                color = Rpcs.TextPrimary,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = subtitle,
+                color = Rpcs.TextSecondary,
+                fontSize = 11.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Spacer(Modifier.width(10.dp))
+        PaneIconButton(
+            icon = actionIcon,
+            contentDescription = actionDescription,
+            tint = Rpcs.Danger,
+            onClick = onAction
+        )
+    }
+}
+
+@Composable
+fun PaneProgressOverlay(
+    title: String,
+    message: String?,
+    value: Long,
+    max: Long,
+    onHide: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val fraction = if (max > 0L) {
+        (value.toFloat() / max.toFloat()).coerceIn(0f, 1f)
+    } else {
+        0f
+    }
+    val animated by animateFloatAsState(targetValue = fraction, label = "paneProgress")
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.systemBars)
+            .padding(Dims.ScreenPadding),
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        Column(
+            modifier = Modifier
+                .widthIn(max = Dims.OverlayWidth)
+                .fillMaxWidth()
+                .background(Rpcs.SurfaceRaised, RoundedCornerShape(Dims.CardCorner))
+                .border(Dims.BorderWidth, Rpcs.Outline, RoundedCornerShape(Dims.CardCorner))
+                .padding(14.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = title,
+                    color = Rpcs.TextPrimary,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = if (max > 0L) "${(fraction * 100f).toInt()}%" else "Working",
+                    color = Rpcs.Accent,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            if (!message.isNullOrEmpty()) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = message,
+                    color = Rpcs.TextSecondary,
+                    fontSize = 11.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            if (max > 0L) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(Dims.ProgressBarHeight)
+                        .background(Rpcs.SurfaceInset, RoundedCornerShape(Dims.ProgressBarHeight))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(animated)
+                            .fillMaxHeight()
+                            .background(Rpcs.Accent, RoundedCornerShape(Dims.ProgressBarHeight))
+                    )
+                }
+            } else {
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(Dims.ProgressBarHeight),
+                    color = Rpcs.Accent,
+                    trackColor = Rpcs.SurfaceInset
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                PaneCompactButton(label = "Hide", onClick = onHide)
+            }
+        }
+    }
+}
+
+@Composable
+fun PaneCompactButton(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+
+    Box(
+        modifier = modifier
+            .background(Rpcs.SelectionFill, RoundedCornerShape(Dims.RowCorner))
+            .border(
+                if (focused) Dims.FocusBorderWidth else Dims.BorderWidth,
+                if (focused) Rpcs.FocusBorder else Rpcs.SelectionBorder,
+                RoundedCornerShape(Dims.RowCorner)
+            )
+            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+            .padding(horizontal = 18.dp, vertical = 9.dp)
+    ) {
+        Text(
+            text = label,
+            color = if (focused) Rpcs.AccentBright else Rpcs.Accent,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }
 

@@ -39,10 +39,14 @@ enum class EmulatorState {
     Paused,
     Frozen, // paused but cannot resume
     Ready,
-    Starting;
+    Starting,
+    Compiling;
+
+    val isEmulationActive: Boolean
+        get() = this != Stopped && this != Compiling
 
     companion object {
-        fun fromInt(value: Int) = EmulatorState.entries.first { it.ordinal == value }
+        fun fromInt(value: Int) = EmulatorState.entries.firstOrNull { it.ordinal == value } ?: Stopped
     }
 }
 
@@ -90,6 +94,12 @@ class RPCS3 {
     external fun addIsoEntry(fd: Int, progressId: Long): Boolean
 
     external fun patchesGet(titleId: String): String
+    external fun patchFiles(): String
+    external fun patchImport(fd: Int, name: String): Boolean
+    external fun patchFileDelete(name: String): Boolean
+    external fun gameDetails(path: String): String
+    external fun installedUpdates(titleId: String): String
+    external fun uninstallUpdate(path: String): Boolean
     external fun patchSet(
         titleId: String,
         hash: String,
@@ -103,6 +113,7 @@ class RPCS3 {
     external fun settingsGet(path: String, titleId: String): String
     external fun settingsSet(path: String, value: String, titleId: String): Boolean
     external fun settingsFlush()
+    external fun logChannels(): String
     external fun getState() : Int
     external fun kill()
     external fun resume()

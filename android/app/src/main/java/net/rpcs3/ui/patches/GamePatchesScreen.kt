@@ -1,5 +1,8 @@
 package net.rpcs3.ui.patches
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,6 +23,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Healing
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.CircularProgressIndicator
@@ -37,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -45,7 +52,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.rpcs3.RPCS3
+import net.rpcs3.dialogs.AlertDialogQueue
+import net.rpcs3.ui.components.PaneActionButton
 import net.rpcs3.ui.components.PaneCard
+import net.rpcs3.ui.components.PaneEntryRow
+import net.rpcs3.ui.components.PaneProgressOverlay
 import net.rpcs3.ui.components.PaneScaffold
 import net.rpcs3.ui.components.PaneSectionTitle
 import net.rpcs3.ui.components.PaneTab
@@ -55,6 +66,7 @@ import net.rpcs3.ui.components.SettingSwitch
 import net.rpcs3.ui.theme.Dimens
 import net.rpcs3.ui.theme.Rpcs
 import net.rpcs3.ui.theme.SettingsStyle
+import net.rpcs3.utils.PackageInspector
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -107,6 +119,78 @@ fun GamePatchesScreen(
         loading = false
     }
 
+    var files by remember(titleId) { mutableStateOf<List<PatchFile>>(emptyList()) }
+    var reloadToken by remember(titleId) { mutableIntStateOf(0) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(reloadToken) {
+        files = withContext(Dispatchers.IO) {
+            parsePatchFiles(runCatching { RPCS3.instance.patchFiles() }.getOrDefault("[]"))
+        }
+        if (reloadToken > 0) {
+            patches = withContext(Dispatchers.IO) {
+                parsePatches(runCatching { RPCS3.instance.patchesGet(titleId) }.getOrDefault("[]"))
+            }
+        }
+    }
+
+    var importTotal by remember { mutableIntStateOf(0) }
+    var importDone by remember { mutableIntStateOf(0) }
+    var importLabel by remember { mutableStateOf<String?>(null) }
+    var importHidden by remember { mutableStateOf(false) }
+
+    val importer = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetMultipleContents()
+    ) { uris: List<Uri> ->
+        if (uris.isEmpty()) return@rememberLauncherForActivityResult
+
+        importTotal = uris.size
+        importDone = 0
+        importLabel = null
+        importHidden = false
+
+        scope.launch(Dispatchers.IO) {
+            var added = 0
+            val failed = ArrayList<String>()
+
+            uris.forEach { uri ->
+                val name = PackageInspector.displayNameOf(context, uri)
+                withContext(Dispatchers.Main) { importLabel = name }
+
+                val descriptor = runCatching {
+                    context.contentResolver.openAssetFileDescriptor(uri, "r")
+                }.getOrNull()
+
+                val fd = descriptor?.parcelFileDescriptor?.fd
+                val ok = if (fd != null) {
+                    runCatching { RPCS3.instance.patchImport(fd, name) }.getOrDefault(false)
+                } else {
+                    false
+                }
+
+                runCatching { descriptor?.close() }
+
+                if (ok) added++ else failed += name
+
+                withContext(Dispatchers.Main) { importDone++ }
+            }
+
+            withContext(Dispatchers.Main) {
+                importTotal = 0
+                importLabel = null
+                reloadToken++
+                if (failed.isNotEmpty()) {
+                    AlertDialogQueue.showDialog(
+                        title = "Some patches were not added",
+                        message = "Added $added. These were not valid patch files:\n" +
+                            failed.joinToString("\n")
+                    )
+                }
+            }
+        }
+    }
+
     val grouped = remember(patches) {
         patches.groupBy { it.group.ifEmpty { "Ungrouped" } }.toList().sortedBy { it.first }
     }
@@ -124,38 +208,106 @@ fun GamePatchesScreen(
         return
     }
 
-    if (grouped.isEmpty()) {
-        Column(
-            modifier = modifier
-                .fillMaxSize()
-                .background(Rpcs.Background)
-                .windowInsetsPadding(WindowInsets.systemBars)
+    val tabs = grouped.map { PaneTab(it.first, Icons.Outlined.Tune) } +
+        PaneTab("Patch files", Icons.Outlined.Description)
+    val filesTab = tabs.lastIndex
+    val current = selected.coerceIn(0, filesTab)
+
+    Box(modifier.fillMaxSize()) {
+        PaneScaffold(
+            title = "Patches · $titleId",
+            tabs = tabs,
+            selected = current,
+            onSelect = { selected = it },
+            onBack = onClose
         ) {
-            EmptyPatches()
-        }
-        return
-    }
+            if (current == filesTab) {
+                PaneSectionTitle(
+                    if (files.isEmpty()) {
+                        "No patch files installed"
+                    } else {
+                        "${files.size} file${if (files.size == 1) "" else "s"} in config/patches"
+                    }
+                )
 
-    PaneScaffold(
-        title = "Patches · $titleId",
-        tabs = grouped.map { PaneTab(it.first, Icons.Outlined.Tune) },
-        selected = selected.coerceIn(0, grouped.lastIndex),
-        onSelect = { selected = it },
-        onBack = onClose,
-        modifier = modifier
-    ) {
-        val entries = grouped[selected.coerceIn(0, grouped.lastIndex)].second
+                if (files.isNotEmpty()) {
+                    PaneCard {
+                        files.forEach { file ->
+                            PaneEntryRow(
+                                title = file.name,
+                                subtitle = "${file.patchCount} patch" +
+                                    (if (file.patchCount == 1) "" else "es") +
+                                    "  ·  " + PackageInspector.formatSize(file.size),
+                                actionIcon = Icons.Outlined.Delete,
+                                actionDescription = "Delete",
+                                onAction = {
+                                    AlertDialogQueue.showDialog(
+                                        title = "Delete ${file.name}?",
+                                        message = "This removes the file from config/patches and every patch it provides.",
+                                        confirmText = "Delete",
+                                        dismissText = "Cancel",
+                                        onConfirm = {
+                                            scope.launch(Dispatchers.IO) {
+                                                runCatching { RPCS3.instance.patchFileDelete(file.name) }
+                                                withContext(Dispatchers.Main) { reloadToken++ }
+                                            }
+                                        }
+                                    )
+                                }
+                            )
+                        }
+                    }
+                }
+            } else if (grouped.isNotEmpty()) {
+                val entries = grouped[current].second
 
-        PaneSectionTitle("${entries.size} patch${if (entries.size == 1) "" else "es"}")
-        PaneCard {
-            entries.forEach { patch ->
-                PatchRow(titleId = titleId, patch = patch)
+                PaneSectionTitle("${entries.size} patch${if (entries.size == 1) "" else "es"}")
+                PaneCard {
+                    entries.forEach { patch ->
+                        PatchRow(titleId = titleId, patch = patch)
+                    }
+                }
+            } else {
+                PaneSectionTitle("No patches available for this title")
             }
+
+            Spacer(Modifier.height(14.dp))
+
+            PaneActionButton(
+                label = "Add patch files",
+                icon = Icons.Default.Add,
+                enabled = true,
+                onClick = { importer.launch("*/*") }
+            )
+
+            Spacer(Modifier.height(16.dp))
         }
 
-        Spacer(Modifier.height(16.dp))
+        if (importTotal > 0 && !importHidden) {
+            PaneProgressOverlay(
+                title = "Importing patch files",
+                message = importLabel,
+                value = importDone.toLong(),
+                max = importTotal.toLong(),
+                onHide = { importHidden = true }
+            )
+        }
     }
 }
+
+data class PatchFile(val name: String, val size: Long, val patchCount: Int)
+
+private fun parsePatchFiles(raw: String): List<PatchFile> = runCatching {
+    val array = JSONArray(raw)
+    (0 until array.length()).mapNotNull { index ->
+        val item = array.optJSONObject(index) ?: return@mapNotNull null
+        PatchFile(
+            name = item.optString("name"),
+            size = item.optLong("size", 0L),
+            patchCount = item.optInt("patchCount", 0)
+        )
+    }.sortedBy { it.name }
+}.getOrDefault(emptyList())
 
 @Composable
 private fun PatchRow(titleId: String, patch: Patch) {

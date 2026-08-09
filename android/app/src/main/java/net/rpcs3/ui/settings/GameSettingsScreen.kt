@@ -1,7 +1,5 @@
 package net.rpcs3.ui.settings
 
-import net.rpcs3.ui.theme.Dims
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -17,32 +15,33 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Article
 import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.HourglassEmpty
 import androidx.compose.material.icons.outlined.Layers
-import androidx.compose.material.icons.outlined.Tune
-import androidx.compose.material.icons.outlined.Article
 import androidx.compose.material.icons.outlined.Memory
 import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.SettingsApplications
+import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.SportsEsports
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material.icons.outlined.VolumeUp
 import androidx.compose.material3.CircularProgressIndicator
@@ -54,6 +53,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,12 +64,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.rpcs3.RPCS3
 import net.rpcs3.ui.components.GhostButton
 import net.rpcs3.ui.components.SectionLabel
 import net.rpcs3.ui.components.SettingGroup
 import net.rpcs3.ui.theme.Dimens
+import net.rpcs3.ui.theme.Dims
+import net.rpcs3.ui.theme.Rpcs
 import net.rpcs3.ui.theme.SettingsStyle
 import org.json.JSONObject
 
@@ -141,12 +144,15 @@ fun GameSettingsScreen(
     onClose: (() -> Unit)? = null
 ) {
     var root by remember(titleId) { mutableStateOf<JSONObject?>(null) }
+    var baseline by remember(titleId) { mutableStateOf<JSONObject?>(null) }
     var selected by remember(titleId) { mutableIntStateOf(0) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(titleId) {
         root = withContext(Dispatchers.IO) {
             runCatching { JSONObject(RPCS3.instance.settingsGet("", titleId)) }.getOrNull()
         }
+        baseline = root?.let { snapshotOf(it) }
     }
 
     val tree = root
@@ -224,11 +230,40 @@ fun GameSettingsScreen(
                             .background(SettingsStyle.Divider)
                     )
                     Spacer(Modifier.height(8.dp))
-                    GhostButton(
-                        label = "Close",
-                        onClick = onClose,
-                        modifier = Modifier.padding(horizontal = 12.dp)
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        GhostButton(
+                            label = "Cancel",
+                            accent = true,
+                            tint = Rpcs.Danger,
+                            onClick = {
+                                val snapshot = baseline
+                                scope.launch(Dispatchers.IO) {
+                                    if (snapshot != null) {
+                                        revertTo(snapshot, tree, titleId)
+                                    }
+                                    withContext(Dispatchers.Main) { onClose() }
+                                }
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                        GhostButton(
+                            label = "Save",
+                            accent = true,
+                            tint = Rpcs.Success,
+                            onClick = {
+                                scope.launch(Dispatchers.IO) {
+                                    RPCS3.instance.settingsFlush()
+                                    withContext(Dispatchers.Main) { onClose() }
+                                }
+                            },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 }
             }
 

@@ -74,7 +74,7 @@ class RPCS3Activity : ComponentActivity() {
                             RPCS3.instance.kill()
 
                             var waited = 0
-                            while (RPCS3.getState() != EmulatorState.Stopped && waited < 15000) {
+                            while (RPCS3.getState().isEmulationActive && waited < 15000) {
                                 Thread.sleep(100)
                                 waited += 100
                             }
@@ -118,8 +118,8 @@ class RPCS3Activity : ComponentActivity() {
 
 
         bootThread = thread {
-            if (RPCS3.getState() != EmulatorState.Stopped) {
-                val state = RPCS3.getState()
+            val state = RPCS3.getState()
+            if (state.isEmulationActive) {
                 Log.w("RPCS3 State", state.name)
 
                 if (state == EmulatorState.Paused && RPCS3.activeGame.value == gamePath) {
@@ -127,10 +127,11 @@ class RPCS3Activity : ComponentActivity() {
                     return@thread
                 }
 
-                if (RPCS3.getState() != EmulatorState.Stopping && RPCS3.getState() != EmulatorState.Stopped) {
+                val current = RPCS3.getState()
+                if (current.isEmulationActive && current != EmulatorState.Stopping) {
                     RPCS3.instance.kill()
 
-                    while (RPCS3.getState() != EmulatorState.Stopped) {
+                    while (RPCS3.getState().isEmulationActive) {
                         Thread.sleep(300)
                         if (Thread.interrupted()) {
                             return@thread
@@ -220,7 +221,7 @@ class RPCS3Activity : ComponentActivity() {
             return
         }
 
-        if (RPCS3.getState() != EmulatorState.Stopped) {
+        if (RPCS3.getState().isEmulationActive) {
             setDrawerVisible(true)
             return
         }
@@ -236,7 +237,7 @@ class RPCS3Activity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         RPCS3.onEmulationStopped = null
-        if (RPCS3.getState() != EmulatorState.Stopped) {
+        if (RPCS3.getState().isEmulationActive) {
             RPCS3.state.value = EmulatorState.Paused
         } else {
             RPCS3.activeGame.value = null

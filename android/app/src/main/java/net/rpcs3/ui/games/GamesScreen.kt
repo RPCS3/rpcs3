@@ -4,12 +4,20 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,11 +28,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -35,10 +46,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,33 +55,25 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CardDefaults
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import net.rpcs3.ui.theme.SettingsStyle
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.ui.draw.clip
-import net.rpcs3.ui.library.GameSort
-import androidx.compose.foundation.basicMarquee
-import androidx.compose.foundation.focusable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
-import net.rpcs3.ui.components.chasingBorder
-import androidx.compose.foundation.border
 import coil3.compose.AsyncImage
+import java.io.File
+import kotlin.concurrent.thread
+import kotlin.text.substringAfterLast
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.rpcs3.EmulatorState
 import net.rpcs3.FirmwareRepository
 import net.rpcs3.Game
@@ -80,17 +81,19 @@ import net.rpcs3.GameFlag
 import net.rpcs3.GameInfo
 import net.rpcs3.GameProgress
 import net.rpcs3.GameProgressType
-import net.rpcs3.gameTitleId
 import net.rpcs3.GameRepository
 import net.rpcs3.ProgressRepository
 import net.rpcs3.R
 import net.rpcs3.RPCS3
 import net.rpcs3.RPCS3Activity
-import net.rpcs3.utils.FileUtil
 import net.rpcs3.dialogs.AlertDialogQueue
-import java.io.File
-import kotlin.concurrent.thread
-import kotlin.text.substringAfterLast
+import net.rpcs3.gameTitleId
+import net.rpcs3.ui.components.chasingBorder
+import net.rpcs3.ui.library.GameSort
+import net.rpcs3.ui.theme.SettingsStyle
+import net.rpcs3.utils.FileUtil
+import net.rpcs3.utils.GameDetails
+import net.rpcs3.utils.GameDetailsReader
 
 private fun withAlpha(color: Color, alpha: Float): Color {
     return Color(
@@ -104,27 +107,12 @@ fun GameItem(
     game: Game,
     navigateToGameSettings: (titleId: String) -> Unit = {},
     navigateToGamePatches: (titleId: String) -> Unit = {},
+    navigateToGameUpdates: (titleId: String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val deleteScope = rememberCoroutineScope()
     val context = LocalContext.current
-    var pendingPackages by remember { mutableStateOf<List<Uri>>(emptyList()) }
 
-    val updatePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetMultipleContents(),
-        onResult = { uris: List<Uri> ->
-            if (uris.isNotEmpty()) {
-                pendingPackages = uris
-            }
-        }
-    )
-
-    if (pendingPackages.isNotEmpty()) {
-        PackageInstallFlow(
-            uris = pendingPackages,
-            onFinished = { pendingPackages = emptyList() }
-        )
-    }
     val menuExpanded = remember { mutableStateOf(false) }
     val iconExists = remember { mutableStateOf(false) }
     var emulatorState by remember { RPCS3.state }
@@ -167,6 +155,15 @@ fun GameItem(
         }
 
     val detailVisible = remember { mutableStateOf(false) }
+    var detailsState by remember(game.info.path) { mutableStateOf<GameDetails?>(null) }
+
+    LaunchedEffect(detailVisible.value, game.info.path) {
+        if (detailVisible.value && detailsState == null) {
+            detailsState = withContext(Dispatchers.IO) {
+                GameDetailsReader.read(game.info.path)
+            }
+        }
+    }
     val tileInteraction = remember { MutableInteractionSource() }
     val tileFocused by tileInteraction.collectIsFocusedAsState()
 
@@ -174,24 +171,62 @@ fun GameItem(
         val deleteProgress = ProgressRepository.create(context, "Deleting Game")
         game.addProgress(GameProgress(deleteProgress, GameProgressType.Compile))
         ProgressRepository.onProgressEvent(deleteProgress, -1, 0L)
+
         val path = File(game.info.path)
-        if (path.exists()) {
-            deleteScope.launch {
-                withContext(Dispatchers.IO) { path.deleteRecursively() }
-                FileUtil.deleteCache(context, game.info.path.substringAfterLast("/")) { success ->
-                    if (!success) {
-                        AlertDialogQueue.showDialog(
-                            title = "Unexpected Error",
-                            message = "Failed to delete game cache",
-                            confirmText = "Close",
-                            dismissText = ""
-                        )
+        val isDiscImage = path.isFile
+        val titleId = gameTitleId(game.info.path)
+
+        deleteScope.launch {
+            withContext(Dispatchers.IO) {
+                if (!isDiscImage && path.exists()) {
+                    path.deleteRecursively()
+                }
+
+                runCatching {
+                    parseUpdates(RPCS3.instance.installedUpdates(titleId)).forEach { entry ->
+                        RPCS3.instance.uninstallUpdate(entry.path)
                     }
-                    ProgressRepository.onProgressEvent(deleteProgress, 100, 100)
-                    GameRepository.remove(game)
+                }
+
+                if (isDiscImage) {
+                    runCatching {
+                        File(RPCS3.rootDirectory + "config/Icons/iso/$titleId.PNG").delete()
+                    }
                 }
             }
+
+            FileUtil.deleteCache(context, game.info.path.substringAfterLast("/")) { success ->
+                if (!success) {
+                    AlertDialogQueue.showDialog(
+                        title = "Unexpected Error",
+                        message = "Failed to delete game cache",
+                        confirmText = "Close",
+                        dismissText = ""
+                    )
+                }
+                ProgressRepository.onProgressEvent(deleteProgress, 100, 100)
+                GameRepository.remove(game)
+            }
         }
+    }
+
+    fun confirmUninstall() {
+        val isDiscImage = File(game.info.path).isFile
+        val name = game.info.name.value ?: gameTitleId(game.info.path)
+
+        AlertDialogQueue.showDialog(
+            title = "Remove $name?",
+            message = if (isDiscImage) {
+                "Removes the library entry, its shader cache, and any updates or extra " +
+                    "data installed for it. The disc image at ${game.info.path} is kept."
+            } else {
+                "Removes the installed game, its shader cache, and any updates or extra " +
+                    "data installed for it."
+            },
+            confirmText = "Remove",
+            dismissText = "Cancel",
+            onConfirm = { uninstallGame() }
+        )
     }
 
     fun launchGame() {
@@ -256,27 +291,7 @@ fun GameItem(
                     leadingIcon = { Icon(Icons.Outlined.Delete, contentDescription = null) },
                     onClick = {
                         menuExpanded.value = false
-                        val deleteProgress = ProgressRepository.create(context, "Deleting Game")
-                        game.addProgress(GameProgress(deleteProgress, GameProgressType.Compile))
-                        ProgressRepository.onProgressEvent(deleteProgress, -1, 0L)
-                        val path = File(game.info.path)
-                        if (path.exists()) {
-                            deleteScope.launch {
-                                withContext(Dispatchers.IO) { path.deleteRecursively() }
-                                FileUtil.deleteCache(context, game.info.path.substringAfterLast("/")) { success ->
-                                    if (!success) {
-                                        AlertDialogQueue.showDialog(
-                                            title = "Unexpected Error",
-                                            message = "Failed to delete game cache",
-                                            confirmText = "Close",
-                                            dismissText = ""
-                                        )
-                                    }
-                                    ProgressRepository.onProgressEvent(deleteProgress, 100, 100)
-                                    GameRepository.remove(game)
-                                }
-                            }
-                        }
+                        confirmUninstall()
                     }
                 )
             }
@@ -445,7 +460,8 @@ fun GameItem(
     if (detailVisible.value) {
         GameDetailDialog(
             title = game.info.name.value ?: gameTitleId(game.info.path),
-            subtitle = gameTitleId(game.info.path),
+            subtitle = detailsState?.titleId?.ifEmpty { null } ?: gameTitleId(game.info.path),
+            version = detailsState?.versionLabel.orEmpty(),
             iconPath = if (iconExists.value) game.info.iconPath.value else null,
             onPlay = {
                 detailVisible.value = false
@@ -457,7 +473,7 @@ fun GameItem(
             },
             onInstallUpdate = {
                 detailVisible.value = false
-                updatePickerLauncher.launch("*/*")
+                navigateToGameUpdates(game.info.path)
             },
             onPatches = {
                 detailVisible.value = false
@@ -468,7 +484,7 @@ fun GameItem(
             } else {
                 {
                     detailVisible.value = false
-                    uninstallGame()
+                    confirmUninstall()
                 }
             },
             onDismissRequest = { detailVisible.value = false }
@@ -482,6 +498,7 @@ fun GameItem(
 fun GamesScreen(
     navigateToGameSettings: (titleId: String) -> Unit = {},
     navigateToGamePatches: (titleId: String) -> Unit = {},
+    navigateToGameUpdates: (titleId: String) -> Unit = {},
     searchQuery: String = "",
     sort: GameSort = GameSort.NameAscending
 ) {
@@ -558,6 +575,7 @@ fun GamesScreen(
                         game = shown[index],
                         navigateToGameSettings = navigateToGameSettings,
                         navigateToGamePatches = navigateToGamePatches,
+                        navigateToGameUpdates = navigateToGameUpdates,
                         modifier = Modifier.height(rowHeight)
                     )
                 }

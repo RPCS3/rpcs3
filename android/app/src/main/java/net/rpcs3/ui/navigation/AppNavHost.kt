@@ -1,7 +1,10 @@
 package net.rpcs3.ui.navigation
 
+import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.provider.DocumentsContract
 import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -24,6 +27,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Album
+import androidx.compose.material.icons.outlined.BugReport
+import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Memory
@@ -54,6 +59,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -86,7 +92,9 @@ import net.rpcs3.ui.setup.SetupWizard
 import net.rpcs3.ui.setup.hasStorageAccess
 import net.rpcs3.ui.setup.requestStorageAccess
 import net.rpcs3.ui.setup.StorageAccessDialog
+import net.rpcs3.ui.debug.DebugScreen
 import net.rpcs3.ui.diagnostics.DiagnosticsScreen
+import net.rpcs3.provider.AppDataDocumentProvider
 import net.rpcs3.RPCS3
 import net.rpcs3.RPCS3Activity
 import net.rpcs3.overlay.OverlayEditActivity
@@ -94,11 +102,11 @@ import net.rpcs3.dialogs.AlertDialogQueue
 import net.rpcs3.ui.drivers.GpuDriversScreen
 import net.rpcs3.ui.games.IsoChoiceDialog
 import net.rpcs3.ui.games.GamesScreen
+import net.rpcs3.ui.games.GameUpdatesScreen
 import net.rpcs3.ui.games.PackageInstallFlow
 import net.rpcs3.ui.settings.AdvancedSettingsScreen
 import net.rpcs3.ui.patches.GamePatchesScreen
 import net.rpcs3.ui.settings.GameSettingsScreen
-import net.rpcs3.ui.settings.SettingsScreen
 import net.rpcs3.utils.FileUtil
 import org.json.JSONObject
 
@@ -146,7 +154,11 @@ fun AppNavHost() {
                 navigateToGamePatches = { titleId ->
                     navController.navigate("gamePatches?titleId=" + Uri.encode(titleId))
                 },
+                navigateToGameUpdates = { gamePath ->
+                    navController.navigate("gameUpdates?path=" + Uri.encode(gamePath))
+                },
                 navigateToDiagnostics = { navController.navigate("diagnostics") },
+                navigateToDebug = { navController.navigate("debug") },
                 drawerState
             )
         }
@@ -193,9 +205,18 @@ fun AppNavHost() {
         composable(
             route = "settings"
         ) {
-            SettingsScreen(
-                navigateBack = navController::navigateUp,
-                navigateTo = { path -> navController.navigate(path) }
+            LaunchedEffect(Unit) { RPCS3.settingsTitleId.value = "" }
+            GameSettingsScreen(
+                titleId = "",
+                title = "Global Settings",
+                onClose = navController::navigateUp
+            )
+        }
+
+        composable(route = "debug") {
+            DebugScreen(
+                navigateToDiagnostics = { navController.navigate("diagnostics") },
+                onClose = navController::navigateUp
             )
         }
 
@@ -232,6 +253,21 @@ fun AppNavHost() {
             )
         }
 
+        composable(
+            route = "gameUpdates?path={path}",
+            arguments = listOf(
+                navArgument("path") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                }
+            )
+        ) { entry ->
+            GameUpdatesScreen(
+                gamePath = entry.arguments?.getString("path").orEmpty(),
+                onClose = navController::navigateUp
+            )
+        }
+
         composable(route = "diagnostics") {
             DiagnosticsScreen(onClose = { navController.popBackStack() })
         }
@@ -255,12 +291,13 @@ fun GamesDestination(
     navigateToGameSettings: (titleId: String) -> Unit,
     navigateToDrivers: () -> Unit,
     navigateToGamePatches: (titleId: String) -> Unit,
+    navigateToGameUpdates: (titleId: String) -> Unit,
     navigateToDiagnostics: () -> Unit,
+    navigateToDebug: () -> Unit,
     drawerState: androidx.compose.material3.DrawerState
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    // val prefs = remember { context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
     var emulatorState by remember { RPCS3.state }
     val emulatorActiveGame by remember { RPCS3.activeGame }
 
@@ -339,7 +376,6 @@ fun GamesDestination(
         contract = ActivityResultContracts.OpenDocumentTree(),
         onResult = { uri: Uri? ->
             uri?.let {
-                // TODO: FileUtil.saveGameFolderUri(prefs, it)
                 val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION
                 context.contentResolver.takePersistableUriPermission(it, takeFlags)
                 FileUtil.installPackages(context, it)
@@ -396,7 +432,7 @@ fun GamesDestination(
                                     )
                                 }
                             }
-                        }, // Placeholder
+                        },
                         onClick = {
                             if (FirmwareRepository.progressChannel.value == null) {
                                 installFwLauncher.launch("*/*")
@@ -408,7 +444,10 @@ fun GamesDestination(
                         label = { Text("Settings") },
                         selected = false,
                         icon = { Icon(Icons.Default.Settings, null) },
-                        onClick = navigateToSettings
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            navigateToSettings()
+                        }
                     )
 
                     NavigationDrawerItem(
@@ -428,6 +467,16 @@ fun GamesDestination(
                         onClick = {
                             scope.launch { drawerState.close() }
                             navigateToDiagnostics()
+                        }
+                    )
+
+                    NavigationDrawerItem(
+                        label = { Text("Debug") },
+                        selected = false,
+                        icon = { Icon(Icons.Outlined.BugReport, null) },
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            navigateToDebug()
                         }
                     )
 
@@ -500,7 +549,7 @@ fun GamesDestination(
                 },
                 trailing = {
                     if (emulatorActiveGame != null &&
-                        emulatorState != EmulatorState.Stopped &&
+                        emulatorState.isEmulationActive &&
                         emulatorState != EmulatorState.Stopping
                     ) {
                         IconButton(onClick = {
@@ -536,17 +585,34 @@ fun GamesDestination(
             },
         ) { innerPadding ->
             when (selectedTab) {
-                LibraryTab.Library -> Column(
+                LibraryTab.Library -> Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(innerPadding)
                 ) {
-                    GamesScreen(
-                        navigateToGameSettings = navigateToGameSettings,
-                        navigateToGamePatches = navigateToGamePatches,
-                        searchQuery = searchQuery,
-                        sort = gameSort
-                    )
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        GamesScreen(
+                            navigateToGameSettings = navigateToGameSettings,
+                            navigateToGamePatches = navigateToGamePatches,
+                            navigateToGameUpdates = navigateToGameUpdates,
+                            searchQuery = searchQuery,
+                            sort = gameSort
+                        )
+                    }
+
+                    FloatingActionButton(
+                        onClick = {
+                            context.launchBrowseIntent(Intent.ACTION_VIEW) or context.launchBrowseIntent()
+                        },
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Folder,
+                            contentDescription = "View internal directory"
+                        )
+                    }
                 }
 
                 LibraryTab.Compatibility -> CompatibilityScreen(
@@ -630,5 +696,25 @@ fun DropUpFloatingActionButton(
                 Icon(Icons.Filled.Add, contentDescription = "Add")
             }
         }
+    }
+}
+
+private fun Context.launchBrowseIntent(
+    action: String = "android.provider.action.BROWSE"
+): Boolean {
+    return try {
+        val intent = Intent(action).apply {
+            addCategory(Intent.CATEGORY_DEFAULT)
+            data = DocumentsContract.buildRootUri(
+                AppDataDocumentProvider.AUTHORITY,
+                AppDataDocumentProvider.ROOT_ID
+            )
+            addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_PREFIX_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+        }
+        startActivity(intent)
+        true
+    } catch (_: ActivityNotFoundException) {
+        Log.w("AppNavHost", "No activity found to handle $action intent")
+        false
     }
 }

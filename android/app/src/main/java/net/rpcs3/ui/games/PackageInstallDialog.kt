@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,11 +32,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import net.rpcs3.ui.theme.SettingsStyle
 import net.rpcs3.utils.PackageInfo
 import net.rpcs3.utils.PackageInspector
@@ -56,14 +59,23 @@ fun PackageInstallDialog(
     val corrupted = ordered.filter { !it.valid }
     val enoughSpace = freeSpace <= 0L || requiredSize <= freeSpace
 
-    Dialog(onDismissRequest = onDismiss) {
+    val configuration = LocalConfiguration.current
+    val screenHeight = configuration.screenHeightDp.dp
+    val listMaxHeight = (configuration.screenHeightDp - 250).coerceAtLeast(120).dp
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
         Column(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxWidth(0.94f)
+                .widthIn(max = 620.dp)
+                .heightIn(max = screenHeight - 24.dp)
                 .clip(RoundedCornerShape(18.dp))
                 .background(SettingsStyle.BgDeep)
                 .border(1.dp, SettingsStyle.CardBorder, RoundedCornerShape(18.dp))
-                .padding(18.dp)
+                .padding(horizontal = 18.dp, vertical = 14.dp)
         ) {
             Text(
                 text = if (scanning) "Reading packages" else "Install ${selected.size} package${if (selected.size == 1) "" else "s"}",
@@ -96,7 +108,7 @@ fun PackageInstallDialog(
                     )
                 }
             } else {
-                LazyColumn(modifier = Modifier.heightIn(max = 320.dp)) {
+                LazyColumn(modifier = Modifier.heightIn(max = listMaxHeight)) {
                     items(ordered) { info ->
                         val key = info.uri.toString()
                         val isSelected = info.valid && key !in excluded
@@ -229,7 +241,7 @@ private fun PackageRow(
                 },
                 color = SettingsStyle.TextSecondary,
                 fontSize = 11.sp,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
         }

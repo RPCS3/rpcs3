@@ -20,6 +20,7 @@ object Dimens {
     val ChipCorner = 8.dp
     val BadgeCorner = 6.dp
     val GhostCorner = 10.dp
+    val InlineFieldWidth = 116.dp
 
     val LabelSize = 11.sp
     val ValueSize = 12.sp

@@ -26,7 +26,8 @@ private fun freeSpaceBytes(): Long = runCatching {
 @Composable
 fun PackageInstallFlow(
     uris: List<Uri>,
-    onFinished: () -> Unit
+    onFinished: () -> Unit,
+    onInstallStarted: (Long) -> Unit = {}
 ) {
     val context = LocalContext.current
     var scanned by remember(uris) { mutableStateOf<List<PackageInfo>?>(null) }
@@ -40,8 +41,18 @@ fun PackageInstallFlow(
         val nonPackages = result.filter { it.kind != PackageKind.Pkg }
 
         if (nonPackages.isNotEmpty()) {
+            var lastProgress = PrecompilerService.NoProgress
+
             nonPackages.forEach {
-                PrecompilerService.start(context, PrecompilerServiceAction.Install, it.uri)
+                val progress =
+                    PrecompilerService.start(context, PrecompilerServiceAction.Install, it.uri)
+                if (progress != PrecompilerService.NoProgress) {
+                    lastProgress = progress
+                }
+            }
+
+            if (lastProgress != PrecompilerService.NoProgress) {
+                onInstallStarted(lastProgress)
             }
         }
 
@@ -62,20 +73,23 @@ fun PackageInstallFlow(
         freeSpace = freeSpace,
         onConfirm = { selection ->
             onFinished()
-            startInstall(context, selection)
+            val progress = startInstall(context, selection)
+            if (progress != PrecompilerService.NoProgress) {
+                onInstallStarted(progress)
+            }
         },
         onDismiss = onFinished
     )
 }
 
-private fun startInstall(context: Context, selection: List<PackageInfo>) {
+private fun startInstall(context: Context, selection: List<PackageInfo>): Long {
     if (selection.isEmpty()) {
-        return
+        return PrecompilerService.NoProgress
     }
 
     val ordered = PackageInspector.installOrder(selection)
 
-    PrecompilerService.start(
+    return PrecompilerService.start(
         context,
         PrecompilerServiceAction.InstallPackages,
         ArrayList(ordered.map { it.uri })

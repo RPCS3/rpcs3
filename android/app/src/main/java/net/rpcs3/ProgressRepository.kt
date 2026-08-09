@@ -14,6 +14,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import net.rpcs3.dialogs.AlertDialogQueue
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 
 data class ProgressEntry(
     val value: MutableLongState = mutableLongStateOf(0),
@@ -35,7 +36,8 @@ data class ProgressUpdateEntry(val value: Long, val max: Long, val message: Stri
 
 private data class ProgressWithHandler(
     var handler: (ProgressUpdateEntry) -> Unit,
-    val progressEntry: MutableState<ProgressEntry>
+    val progressEntry: MutableState<ProgressEntry>,
+    val listeners: CopyOnWriteArrayList<(ProgressUpdateEntry) -> Unit> = CopyOnWriteArrayList()
 )
 
 class ProgressRepository {
@@ -47,6 +49,12 @@ class ProgressRepository {
 
         fun getItem(id: Long?) =
             if (id != null) instance.progressHandlers[id]?.progressEntry else null
+
+        fun exists(id: Long?) = id != null && instance.progressHandlers.containsKey(id)
+
+        fun addListener(id: Long, listener: (ProgressUpdateEntry) -> Unit) {
+            instance.progressHandlers[id]?.listeners?.add(listener)
+        }
 
         @Keep
         @JvmStatic
@@ -136,7 +144,9 @@ class ProgressRepository {
                     }
                 }
 
-                handler(ProgressUpdateEntry(value, max, text))
+                val update = ProgressUpdateEntry(value, max, text)
+                handler(update)
+                entry.listeners.forEach { it(update) }
                 true
             }
 

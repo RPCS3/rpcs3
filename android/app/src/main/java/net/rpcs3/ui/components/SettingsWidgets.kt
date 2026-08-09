@@ -1,12 +1,11 @@
 package net.rpcs3.ui.components
 
-import net.rpcs3.ui.theme.Rpcs
-
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,6 +50,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import net.rpcs3.ui.theme.Dimens
+import net.rpcs3.ui.theme.Dims
+import net.rpcs3.ui.theme.Rpcs
 import net.rpcs3.ui.theme.SettingsStyle
 
 @Composable
@@ -292,6 +293,120 @@ fun SettingDropdown(
 }
 
 @Composable
+fun SettingInlineDropdown(
+    label: String,
+    entries: List<String>,
+    selectedIndex: Int,
+    onSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    highlighted: Boolean = false,
+    fieldWidth: Dp = Dimens.InlineFieldWidth
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    val alpha = if (enabled) 1f else 0.4f
+
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier
+                .weight(1f)
+                .padding(end = 10.dp),
+            color = if (highlighted) SettingsStyle.AccentBlue else SettingsStyle.TextPrimary,
+            fontSize = Dimens.ValueSize,
+            fontWeight = if (highlighted) FontWeight.Medium else FontWeight.Normal,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+
+        Box {
+            Row(
+                modifier = Modifier
+                    .width(fieldWidth)
+                    .background(SettingsStyle.InputSurface, RoundedCornerShape(Dimens.FieldCorner))
+                    .border(
+                        if (focused) Dims.FocusBorderWidth else Dims.BorderWidth,
+                        when {
+                            focused -> Rpcs.FocusBorder
+                            highlighted -> SettingsStyle.AccentBlue.copy(alpha = 0.5f)
+                            else -> SettingsStyle.InputBorder
+                        },
+                        RoundedCornerShape(Dimens.FieldCorner)
+                    )
+                    .clickable(
+                        interactionSource = interaction,
+                        indication = null,
+                        enabled = enabled
+                    ) { expanded = true }
+                    .padding(
+                        horizontal = Dimens.FieldHorizontalPadding,
+                        vertical = Dimens.TightGap
+                    ),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = entries.getOrNull(selectedIndex) ?: "",
+                    modifier = Modifier.weight(1f),
+                    color = if (highlighted) {
+                        SettingsStyle.AccentBlue.copy(alpha = alpha)
+                    } else {
+                        SettingsStyle.TextSecondary.copy(alpha = alpha)
+                    },
+                    fontSize = Dimens.ValueSize,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Icon(
+                    imageVector = Icons.Default.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = SettingsStyle.TextDim.copy(alpha = alpha),
+                    modifier = Modifier.size(Dimens.ControlIconSize)
+                )
+            }
+
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                shape = RoundedCornerShape(Dimens.FieldCorner),
+                containerColor = SettingsStyle.CardSurface
+            ) {
+                entries.forEachIndexed { index, entry ->
+                    DropdownMenuItem(
+                        modifier = Modifier.background(
+                            if (index == selectedIndex) {
+                                SettingsStyle.AccentBlue.copy(alpha = 0.06f)
+                            } else {
+                                Color.Transparent
+                            }
+                        ),
+                        text = {
+                            Text(
+                                text = entry,
+                                color = if (index == selectedIndex) {
+                                    SettingsStyle.AccentBlue
+                                } else {
+                                    SettingsStyle.TextPrimary
+                                },
+                                fontSize = Dimens.ValueSize
+                            )
+                        },
+                        onClick = {
+                            expanded = false
+                            if (index != selectedIndex) onSelected(index)
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun SettingTextField(
     label: String,
     value: String,
@@ -435,37 +550,47 @@ fun GhostButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     icon: ImageVector? = null,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    accent: Boolean = false,
+    tint: Color = Rpcs.Accent
 ) {
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+
     Row(
         modifier = modifier
             .background(
-                SettingsStyle.AccentBlue.copy(alpha = 0.08f),
+                tint.copy(alpha = if (accent) 0.18f else 0.10f),
                 RoundedCornerShape(Dimens.GhostCorner)
             )
             .border(
-                1.dp,
-                SettingsStyle.AccentBlue.copy(alpha = 0.2f),
+                if (focused) Dims.FocusBorderWidth else Dims.BorderWidth,
+                when {
+                    focused -> Rpcs.FocusBorder
+                    accent -> tint.copy(alpha = 0.55f)
+                    else -> tint.copy(alpha = 0.35f)
+                },
                 RoundedCornerShape(Dimens.GhostCorner)
             )
-            .clickable(enabled = enabled) { onClick() }
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .clickable(interactionSource = interaction, indication = null, enabled = enabled) { onClick() }
+            .padding(horizontal = 12.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
     ) {
         if (icon != null) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = SettingsStyle.AccentBlue,
+                tint = tint,
                 modifier = Modifier.size(Dimens.IconSize)
             )
             Spacer(Modifier.width(8.dp))
         }
         Text(
             text = label,
-            color = SettingsStyle.AccentBlue,
+            color = tint,
             fontSize = Dimens.ValueSize,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.SemiBold
         )
     }
 }

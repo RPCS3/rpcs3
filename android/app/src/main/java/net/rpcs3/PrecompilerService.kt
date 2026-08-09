@@ -22,32 +22,63 @@ enum class PrecompilerServiceAction {
 
 class PrecompilerService : Service() {
     companion object {
-        fun start(context: Context, action: PrecompilerServiceAction, uri: Uri?) {
-            val intent = Intent(context, PrecompilerService::class.java)
-            intent.putExtra("action", action.ordinal)
-            intent.putExtra("uri", uri)
+        const val NoProgress = -1L
 
-            try {
-                context.startForegroundService(intent)
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+        private fun modeOf(action: Int) = when (action) {
+            PrecompilerServiceAction.InstallFirmware.ordinal -> Mode.Firmware
+            PrecompilerServiceAction.AddIso.ordinal -> Mode.AddIso
+            PrecompilerServiceAction.InstallPackages.ordinal -> Mode.PackageBatch
+            else -> Mode.Package
         }
 
-        fun start(context: Context, action: PrecompilerServiceAction, batch: ArrayList<Uri>) {
-            if (batch.isEmpty()) {
-                return
-            }
+        private fun progressTitle(mode: Mode, count: Int) = when (mode) {
+            Mode.Firmware -> "Firmware Installation"
+            Mode.AddIso -> "Adding disc image"
+            Mode.PackageBatch -> if (count > 1) "Installing $count packages" else "Package Installation"
+            Mode.Package -> "Package Installation"
+        }
+
+        private fun launch(
+            context: Context,
+            action: PrecompilerServiceAction,
+            count: Int,
+            fill: (Intent) -> Unit
+        ): Long {
+            val progressId = ProgressRepository.create(
+                context.applicationContext,
+                progressTitle(modeOf(action.ordinal), count)
+            )
 
             val intent = Intent(context, PrecompilerService::class.java)
             intent.putExtra("action", action.ordinal)
-            intent.putExtra("batch", batch)
+            intent.putExtra("progressId", progressId)
+            fill(intent)
 
             try {
                 context.startForegroundService(intent)
             } catch (e: Exception) {
                 e.printStackTrace()
+                ProgressRepository.onProgressEvent(progressId, -1, 0)
+                return NoProgress
             }
+
+            return progressId
+        }
+
+        fun start(context: Context, action: PrecompilerServiceAction, uri: Uri?): Long {
+            if (uri == null) {
+                return NoProgress
+            }
+
+            return launch(context, action, 1) { it.putExtra("uri", uri) }
+        }
+
+        fun start(context: Context, action: PrecompilerServiceAction, batch: ArrayList<Uri>): Long {
+            if (batch.isEmpty()) {
+                return NoProgress
+            }
+
+            return launch(context, action, batch.size) { it.putExtra("batch", batch) }
         }
     }
 
@@ -172,42 +203,35 @@ class PrecompilerService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val batch = intent?.getParcelableArrayListExtra<Uri>("batch")
         val uri = intent?.getParcelableExtra<Uri>("uri")
-        val action = intent?.getIntExtra("action", 0)
+        val action = intent?.getIntExtra("action", 0) ?: 0
         val isFwInstall = action == PrecompilerServiceAction.InstallFirmware.ordinal
-        val mode = when (action) {
-            PrecompilerServiceAction.InstallFirmware.ordinal -> Mode.Firmware
-            PrecompilerServiceAction.AddIso.ordinal -> Mode.AddIso
-            PrecompilerServiceAction.InstallPackages.ordinal -> Mode.PackageBatch
-            else -> Mode.Package
-        }
+        val mode = modeOf(action)
+        val requestedProgress = intent?.getLongExtra("progressId", NoProgress) ?: NoProgress
 
         if (uri == null && batch == null) {
+            if (ProgressRepository.exists(requestedProgress)) {
+                ProgressRepository.onProgressEvent(requestedProgress, -1, 0)
+            }
+
             stopSelf(startId)
             return START_NOT_STICKY
         }
 
-        val installProgress =
-            ProgressRepository.create(
-                this,
-                when (mode) {
-                    Mode.Firmware -> "Firmware Installation"
-                    Mode.AddIso -> "Adding disc image"
-                    Mode.PackageBatch -> {
-                        val count = batch?.size ?: 0
-                        if (count > 1) "Installing $count packages" else "Package Installation"
-                    }
+        val installProgress = if (ProgressRepository.exists(requestedProgress)) {
+            requestedProgress
+        } else {
+            ProgressRepository.create(this, progressTitle(mode, batch?.size ?: 1))
+        }
 
-                    Mode.Package -> "Package Installation"
+        ProgressRepository.addListener(installProgress) { entry ->
+            if (entry.isFinished()) {
+                if (isFwInstall) {
+                    FirmwareRepository.progressChannel.value = null
                 }
-            ) { entry ->
-                if (entry.isFinished()) {
-                    if (isFwInstall) {
-                        FirmwareRepository.progressChannel.value = null
-                    }
 
-                    stopSelf(startId)
-                }
+                stopSelf(startId)
             }
+        }
 
         if (isFwInstall) {
             FirmwareRepository.progressChannel.value = installProgress

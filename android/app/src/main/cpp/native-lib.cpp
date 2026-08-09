@@ -1028,8 +1028,34 @@ class CompilationQueue {
   std::uint64_t lastProcessedTag = 0;
   std::mutex queueMutex;
   std::deque<CompilationWorkload> queue;
+  std::timed_mutex emuMutex;
+  std::atomic<bool> emuOwned{false};
+  std::atomic<int> pendingBootRequests{0};
 
 public:
+  bool isOwningEmu() const { return emuOwned.load(); }
+
+  std::unique_lock<std::timed_mutex> acquireEmu() {
+    pendingBootRequests.fetch_add(1);
+
+    if (emuOwned.load()) {
+      rpcs3_android.warning("Boot requested, asking precompilation to abort");
+      Emu.SetState(system_state::stopped);
+    }
+
+    std::unique_lock<std::timed_mutex> lock(emuMutex, std::defer_lock);
+    const bool locked = lock.try_lock_for(std::chrono::seconds(60));
+
+    pendingBootRequests.fetch_sub(1);
+
+    if (!locked) {
+      rpcs3_android.error("Boot timed out waiting for precompilation to abort");
+      return {};
+    }
+
+    return lock;
+  }
+
   void push(CompilationWorkload workload) {
     {
       std::lock_guard lock(queueMutex);
@@ -1088,11 +1114,21 @@ private:
     rpcs3_android.error("Creating cache initiated, state %d",
                         (int)Emu.GetStatus(false));
 
+    std::unique_lock<std::timed_mutex> emuLock;
+
     while (true) {
       auto state = Emu.GetStatus(false);
 
-      if (state == system_state::stopped || state == system_state::ready) {
-        break;
+      if (state == system_state::stopped && pendingBootRequests.load() == 0) {
+        emuLock = std::unique_lock<std::timed_mutex>(emuMutex);
+
+        state = Emu.GetStatus(false);
+
+        if (state == system_state::stopped && pendingBootRequests.load() == 0) {
+          break;
+        }
+
+        emuLock.unlock();
       }
 
       rpcs3_android.error("Creating cache wait, state %d", (int)state);
@@ -1100,6 +1136,9 @@ private:
     }
 
     bool is_vsh = workload.path.ends_with("/vsh.self");
+
+    emuOwned.store(true);
+    AtExit releaseEmuOwnership{[this] { emuOwned.store(false); }};
 
     Emu.SetState(system_state::running);
 
@@ -1164,10 +1203,16 @@ private:
     }
 
     std::vector<ppu_module<lv2_obj> *> mod_list;
-    rpcs3_android.error("Going to analyze executable");
+    const bool aborting = pendingBootRequests.load() != 0;
+
+    if (aborting) {
+      rpcs3_android.error("Skipping precompilation, boot is pending");
+    } else {
+      rpcs3_android.error("Going to analyze executable");
+    }
 
     // FIXME: split states
-    if (!is_vsh) {
+    if (!aborting && !is_vsh) {
       if (_main.analyse(0, _main.elf_entry, _main.seg0_code_end,
                         _main.applied_patches, std::vector<u32>{})) {
         Emu.ConfigurePPUCache();
@@ -1178,11 +1223,14 @@ private:
       }
     }
 
-    ppu_precompile(dir_queue, mod_list.empty() ? nullptr : &mod_list, false);
+    if (!aborting) {
+      ppu_precompile(dir_queue, mod_list.empty() ? nullptr : &mod_list, false);
+    }
 
     rpcs3_android.error("Finalization");
     g_fxo->reset();
     Emu.SetState(system_state::stopped);
+    emuLock.unlock();
 
     MessageDialog::popPendingProgressId(workload.progressId);
 
@@ -1717,6 +1765,12 @@ extern "C" JNIEXPORT void JNICALL Java_net_rpcs3_RPCS3_shutdown(JNIEnv *env,
 extern "C" JNIEXPORT jint JNICALL Java_net_rpcs3_RPCS3_boot(JNIEnv *env,
                                                             jobject,
                                                             jstring jpath) {
+  auto emuLock = g_compilationQueue.acquireEmu();
+
+  if (!emuLock.owns_lock()) {
+    return static_cast<int>(game_boot_result::still_running);
+  }
+
   Emu.SetForceBoot(true);
   auto path = unwrap(env, jpath);
   while (path.ends_with('/')) {
@@ -1726,8 +1780,18 @@ extern "C" JNIEXPORT jint JNICALL Java_net_rpcs3_RPCS3_boot(JNIEnv *env,
   return static_cast<int>(Emu.BootGame(path, "", false, cfg_mode::custom));
 }
 
+static constexpr int kEmulatorStateCompiling = 8;
+static_assert(static_cast<int>(system_state::starting) < kEmulatorStateCompiling,
+              "kEmulatorStateCompiling collides with a real system_state value, "
+              "pick a value above the last system_state enumerator and append a "
+              "matching entry to net.rpcs3.EmulatorState");
+
 extern "C" JNIEXPORT jint JNICALL Java_net_rpcs3_RPCS3_getState(JNIEnv *env,
                                                                 jobject) {
+  if (g_compilationQueue.isOwningEmu()) {
+    return kEmulatorStateCompiling;
+  }
+
   return static_cast<int>(Emu.GetStatus(false));
 }
 
@@ -2412,6 +2476,229 @@ Java_net_rpcs3_RPCS3_install(JNIEnv *env, jobject, jint fd, jlong progressId) {
   return true;
 }
 
+extern "C" JNIEXPORT jstring JNICALL
+Java_net_rpcs3_RPCS3_gameDetails(JNIEnv *env, jobject, jstring jpath) {
+  const std::string path = unwrap(env, jpath);
+
+  std::string titleId;
+  std::string title;
+  std::string version;
+  std::string category;
+
+  const auto readFrom = [&](const psf::registry &psf) {
+    titleId = std::string(psf::get_string(psf, "TITLE_ID", ""));
+    title = std::string(psf::get_string(psf, "TITLE", ""));
+    version = std::string(psf::get_string(psf, "APP_VER", ""));
+    category = std::string(psf::get_string(psf, "CATEGORY", ""));
+  };
+
+  if (fs::is_dir(path)) {
+    const std::string sfoPath = locateParamSfoPath(path);
+
+    if (!sfoPath.empty()) {
+      if (const fs::file sfo{sfoPath}) {
+        readFrom(psf::load_object(sfo, sfoPath));
+      }
+    }
+  } else if (fs::is_file(path)) {
+    fs::file image{path};
+
+    if (image) {
+      if (auto optIso = iso_fs::open(std::make_unique<file_view_block_dev>(image))) {
+        auto iso = std::move(*optIso);
+
+        if (auto sfoFile = iso.open("PS3_GAME/PARAM.SFO")) {
+          readFrom(psf::load_object(sfoFile, "iso://PS3_GAME/PARAM.SFO"));
+        }
+      }
+    }
+  }
+
+  std::string baseVersion = version;
+
+  if (!titleId.empty()) {
+    const std::string updateSfo =
+        rpcs3::utils::get_hdd0_game_dir() + titleId + "/PARAM.SFO";
+
+    if (fs::is_file(updateSfo)) {
+      if (const fs::file sfo{updateSfo}) {
+        const auto psf = psf::load_object(sfo, updateSfo);
+        const auto updateVersion =
+            std::string(psf::get_string(psf, "APP_VER", ""));
+
+        if (!updateVersion.empty()) {
+          version = updateVersion;
+        }
+      }
+    }
+  }
+
+  return wrap(env, nlohmann::json{
+                       {"titleId", titleId},
+                       {"title", title},
+                       {"version", version},
+                       {"baseVersion", baseVersion},
+                       {"category", category},
+                       {"updated", version != baseVersion},
+                   }
+                       .dump());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_net_rpcs3_RPCS3_patchFiles(JNIEnv *env, jobject) {
+  auto array = nlohmann::json::array();
+  const std::string dir = patch_engine::get_patches_path();
+
+  if (fs::is_dir(dir)) {
+    for (auto &&entry : fs::dir(dir)) {
+      if (entry.is_directory || !entry.name.ends_with(".yml")) {
+        continue;
+      }
+
+      patch_engine::patch_map parsed;
+      patch_engine::load(parsed, dir + entry.name);
+
+      std::size_t count = 0;
+      for (const auto &[hash, container] : parsed) {
+        count += container.patch_info_map.size();
+      }
+
+      array.push_back({
+          {"name", entry.name},
+          {"size", static_cast<std::uint64_t>(entry.size)},
+          {"patchCount", static_cast<std::uint64_t>(count)},
+      });
+    }
+  }
+
+  return wrap(env, array.dump());
+}
+
+extern "C" JNIEXPORT jboolean JNICALL Java_net_rpcs3_RPCS3_patchImport(
+    JNIEnv *env, jobject, jint fd, jstring jname) {
+  auto file = fs::file::from_native_handle(fd);
+  AtExit atExit{[&] { file.release_handle(); }};
+
+  std::string name = unwrap(env, jname);
+
+  if (name.empty() || name.find('/') != std::string::npos) {
+    return false;
+  }
+
+  if (!name.ends_with(".yml")) {
+    name += ".yml";
+  }
+
+  const std::string dir = patch_engine::get_patches_path();
+
+  if (!fs::is_dir(dir) && !fs::create_path(dir)) {
+    return false;
+  }
+
+  const std::string target = dir + name;
+  const std::string staging = target + ".part";
+
+  file.seek(0);
+  std::vector<u8> data(file.size());
+
+  if (!data.empty() && file.read(data.data(), data.size()) != data.size()) {
+    return false;
+  }
+
+  {
+    fs::file out(staging, fs::rewrite);
+
+    if (!out || out.write(data.data(), data.size()) != data.size()) {
+      fs::remove_file(staging);
+      return false;
+    }
+  }
+
+  patch_engine::patch_map parsed;
+
+  if (!patch_engine::load(parsed, staging) || parsed.empty()) {
+    fs::remove_file(staging);
+    return false;
+  }
+
+  if (fs::is_file(target)) {
+    fs::remove_file(target);
+  }
+
+  return fs::rename(staging, target, true);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_net_rpcs3_RPCS3_patchFileDelete(JNIEnv *env, jobject, jstring jname) {
+  const std::string name = unwrap(env, jname);
+
+  if (name.empty() || name.find('/') != std::string::npos) {
+    return false;
+  }
+
+  return fs::remove_file(patch_engine::get_patches_path() + name);
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_net_rpcs3_RPCS3_installedUpdates(JNIEnv *env, jobject, jstring jtitleId) {
+  const std::string titleId = unwrap(env, jtitleId);
+  auto array = nlohmann::json::array();
+  const std::string gameDir = rpcs3::utils::get_hdd0_game_dir();
+
+  if (!fs::is_dir(gameDir)) {
+    return wrap(env, array.dump());
+  }
+
+  for (auto &&entry : fs::dir(gameDir)) {
+    if (!entry.is_directory || entry.name == "." || entry.name == "..") {
+      continue;
+    }
+
+    if (!titleId.empty() && entry.name.find(titleId) == std::string::npos) {
+      continue;
+    }
+
+    const std::string path = gameDir + entry.name;
+    const std::string sfoPath = path + "/PARAM.SFO";
+
+    std::string title;
+    std::string category;
+    std::string version;
+
+    if (fs::is_file(sfoPath)) {
+      if (const fs::file sfo{sfoPath}) {
+        const auto psf = psf::load_object(sfo, sfoPath);
+        title = std::string(psf::get_string(psf, "TITLE", ""));
+        category = std::string(psf::get_string(psf, "CATEGORY", ""));
+        version = std::string(psf::get_string(psf, "APP_VER", ""));
+      }
+    }
+
+    array.push_back({
+        {"path", path},
+        {"name", entry.name},
+        {"title", title},
+        {"category", category},
+        {"version", version},
+        {"size", static_cast<std::uint64_t>(fs::get_dir_size(path, 1))},
+    });
+  }
+
+  return wrap(env, array.dump());
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_net_rpcs3_RPCS3_uninstallUpdate(JNIEnv *env, jobject, jstring jpath) {
+  const std::string path = unwrap(env, jpath);
+  const std::string gameDir = rpcs3::utils::get_hdd0_game_dir();
+
+  if (path.empty() || !path.starts_with(gameDir) || !fs::is_dir(path)) {
+    return false;
+  }
+
+  return fs::remove_all(path, true);
+}
+
 extern "C" JNIEXPORT jboolean JNICALL Java_net_rpcs3_RPCS3_installPackages(
     JNIEnv *env, jobject, jintArray jfds, jobjectArray jnames,
     jlong progressId) {
@@ -2729,8 +3016,23 @@ extern "C" JNIEXPORT jboolean JNICALL Java_net_rpcs3_RPCS3_settingsSet(
     return false;
   }
 
+  if (titleId.empty() && root->get_type() == cfg::type::log) {
+    rpcs3::utils::configure_logs(Emu.IsStopped());
+  }
+
   settings_save_async(cfg->to_string(), titleId);
   return true;
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_net_rpcs3_RPCS3_logChannels(JNIEnv *env, jobject) {
+  auto result = nlohmann::json::array();
+
+  for (const auto &name : logs::get_channels()) {
+    result.push_back(name);
+  }
+
+  return wrap(env, result.dump());
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
@@ -2902,6 +3204,12 @@ extern "C" JNIEXPORT jint JNICALL Java_net_rpcs3_RPCS3_bootIso(JNIEnv *env,
   if (real.empty()) {
     rpcs3_android.error("bootIso: no readable path for descriptor %d", fd);
     return static_cast<int>(game_boot_result::invalid_file_or_folder);
+  }
+
+  auto emuLock = g_compilationQueue.acquireEmu();
+
+  if (!emuLock.owns_lock()) {
+    return static_cast<int>(game_boot_result::still_running);
   }
 
   Emu.SetForceBoot(true);

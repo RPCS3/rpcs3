@@ -24,6 +24,7 @@ import java.io.File
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
+import net.rpcs3.ui.debug.applyDefaultLogLevels
 import net.rpcs3.ui.navigation.AppNavHost
 import net.rpcs3.utils.installBundledAssets
 import kotlin.concurrent.thread
@@ -101,6 +102,7 @@ class MainActivity : ComponentActivity() {
             thread(name = "rpcs3-startup") {
                 installBundledAssets(assets, RPCS3.rootDirectory)
                 RPCS3.instance.initialize(RPCS3.rootDirectory)
+                applyDefaultLogLevels()
                 val hookDirectory = "\"" + nativeLibraryDir + "\""
                 RPCS3.instance.settingsSet(
                     "Video@@Vulkan@@Custom Driver@@Hook Directory",
