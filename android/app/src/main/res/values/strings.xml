@@ -158,6 +158,8 @@
 
     <string name="settings_title_global">Global Settings</string>
     <string name="settings_category_controls">Controls</string>
+    <string name="settings_category_gpu_driver">GPU Driver</string>
+    <string name="settings_driver_per_game">Driver used for this game</string>
     <string name="settings_save">Save</string>
     <string name="settings_reset">Reset</string>
     <string name="settings_cancel">Cancel</string>

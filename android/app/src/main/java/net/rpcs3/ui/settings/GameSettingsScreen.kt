@@ -96,6 +96,7 @@ internal fun iconForCategory(name: String): ImageVector = when (name) {
     "Miscellaneous" -> Icons.Outlined.Tune
     "Log" -> Icons.Outlined.Article
     ControlsCategory -> Icons.Outlined.SportsEsports
+    DriverCategory -> Icons.Outlined.Memory
     else -> Icons.Outlined.MoreHoriz
 }
 
@@ -179,7 +180,9 @@ fun GameSettingsScreen(
         }
 
         val categories = remember(tree) {
-            categoriesOf(tree) + SettingsCategory(ControlsCategory, listOf(ControlsCategory), null)
+            listOf(SettingsCategory(DriverCategory, listOf(DriverCategory), null)) +
+                categoriesOf(tree) +
+                SettingsCategory(ControlsCategory, listOf(ControlsCategory), null)
         }
         val currentName = categories.getOrNull(selected)?.label
 
@@ -220,10 +223,10 @@ fun GameSettingsScreen(
                     categories.forEachIndexed { index, entry ->
                         SidebarItem(
                             icon = iconForCategory(entry.label),
-                            label = if (entry.label == ControlsCategory) {
-                                stringResource(R.string.settings_category_controls)
-                            } else {
-                                entry.label
+                            label = when (entry.label) {
+                                ControlsCategory -> stringResource(R.string.settings_category_controls)
+                                DriverCategory -> stringResource(R.string.settings_category_gpu_driver)
+                                else -> entry.label
                             },
                             isSelected = index == selected,
                             nested = entry.parent != null,
@@ -371,7 +374,16 @@ fun GameSettingsScreen(
                         cursor
                     }
 
-                    if (name == ControlsCategory) {
+                    if (name == DriverCategory) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(rememberScrollState())
+                                .padding(horizontal = 20.dp, vertical = 14.dp)
+                        ) {
+                            GameDriverSettings(titleId)
+                        }
+                    } else if (name == ControlsCategory) {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
