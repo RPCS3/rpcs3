@@ -1097,6 +1097,87 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 	return CELL_OK;
 }
 
+struct global_rsx_device_mapping
+{
+	global_rsx_device_mapping() noexcept = default;
+	global_rsx_device_mapping(const global_rsx_device_mapping&) = delete;
+	int operator=(const global_rsx_device_mapping&) = delete;
+
+	SAVESTATE_INIT_POS(58);
+
+	std::array<std::shared_ptr<utils::shm>, 16> device_shms;
+	shared_mutex mutex;
+
+	global_rsx_device_mapping(utils::serial& ar) noexcept
+	{
+		const bool mapped_bitset = ar.pop<u16>();
+
+		for (u32 i = 0; i < device_shms.size(); i++)
+		{
+			if (~mapped_bitset & (1u << i))
+			{
+				continue;
+			}
+
+			const u32 mapped_index = ar.pop<u32>();
+
+			if (mapped_index != umax)
+			{
+				device_shms[i] = ensure(::at32(g_fxo->get<vm::ps3_physical_memory_entries>().shm_list, mapped_index));
+			}
+			else
+			{
+				device_shms[i] = std::make_shared<utils::shm>(0x100000);
+				ar(std::span(device_shms[i]->map_self(), 0x100000));
+			}
+		}
+	}
+
+	void save(utils::serial& ar) noexcept
+	{
+		u16 mapped_bitset = 0;
+
+		for (u32 i = 0; i < device_shms.size(); i++)
+		{
+			mapped_bitset |= (device_shms[i] ? 1u : 0u) << i;
+		}
+
+		ar(mapped_bitset);
+
+		for (u32 i = 0; i < device_shms.size(); i++)
+		{
+			if (~mapped_bitset & (1u << i))
+			{
+				continue;
+			}
+
+			if (!g_fxo->get<vm::ps3_physical_memory_entries>().map_lookup.contains(device_shms[i].get()))
+			{
+				ar(::at32(g_fxo->get<vm::ps3_physical_memory_entries>().map_lookup, device_shms[i].get()));
+			}
+			else
+			{
+				ar(u32{umax});
+				;
+				ar(std::span(device_shms[i]->map_self(), 0x100000));
+			}
+		}
+	}
+
+	std::shared_ptr<utils::shm> access_device(u32 i)
+	{
+		std::lock_guard lock(mutex);
+
+		if (device_shms[i])
+		{
+			return device_shms[i];
+		}
+
+		device_shms[i] = std::make_shared<utils::shm>(0x100000);
+		return device_shms[i];
+	}
+};
+
 
 /*
  * lv2 SysCall 675 (0x2A3): sys_rsx_device_map
@@ -1110,7 +1191,7 @@ error_code sys_rsx_device_map(cpu_thread& cpu, vm::ptr<u64> dev_addr, vm::ptr<u6
 
 	sys_rsx.warning("sys_rsx_device_map(dev_addr=*0x%x, a2=*0x%x, dev_id=0x%x)", dev_addr, a2, dev_id);
 
-	if (dev_id > 16)
+	if (dev_id >= 16)
 	{
 		return CELL_EINVAL;
 	}
@@ -1123,17 +1204,21 @@ error_code sys_rsx_device_map(cpu_thread& cpu, vm::ptr<u64> dev_addr, vm::ptr<u6
 
 	const auto rsx_info = ensure(idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process))->rsx_info;
 
+	const auto rsx_map = g_fxo->try_get<global_rsx_device_mapping>();
+
 	std::lock_guard lock(rsx_info->mutex);
 
 	u32& addr_ret = rsx_info->device_addr[dev_id];
 
 	if (!addr_ret)
 	{
+		const auto map = rsx_map->access_device(dev_id);
 		const auto area = vm::reserve_map(vm::rsx_context, 0, 0x10000000, 0x403);
-		const u32 addr = area ? area->alloc(0x100000) : 0;
+		const u32 addr = area ? area->alloc(0x100000, &map) : 0;
 
 		if (!addr)
 		{
+			// map remains (inefficiency)
 			return CELL_ENOMEM;
 		}
 
