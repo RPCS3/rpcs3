@@ -1911,6 +1911,11 @@ error_code sys_net_infoctl(ppu_thread& ppu, s32 cmd, vm::ptr<void> arg)
 	{
 	case 6:
 	{
+		if (!arg)
+		{
+			return -SYS_NET_EINVAL;
+		}
+
 		vm::ptr<net_infoctl_cmd_6_t> cmd_arg = vm::static_ptr_cast<net_infoctl_cmd_6_t>(arg);
 
 		const vm::bptr<sys_net_sockinfo_t> sock_info = cmd_arg->sock_info;
@@ -1926,6 +1931,11 @@ error_code sys_net_infoctl(ppu_thread& ppu, s32 cmd, vm::ptr<void> arg)
 			if (!sock_info)
 			{
 				return not_an_error(static_cast<s32>(idm::select<lv2_socket>([](u32, lv2_socket&) {})));
+			}
+
+			if (max_infos < 0)
+			{
+				return -SYS_NET_EINVAL;
 			}
 
 			s32 num_infos = 0;
@@ -1963,6 +1973,11 @@ error_code sys_net_infoctl(ppu_thread& ppu, s32 cmd, vm::ptr<void> arg)
 	}
 	case 9:
 	{
+		if (!arg)
+		{
+			return -SYS_NET_EINVAL;
+		}
+
 		auto& nph = g_fxo->get<named_thread<np::np_handler>>();
 		std::string nameserver = "nameserver " + np::ip_to_string(nph.get_dns_ip());
 

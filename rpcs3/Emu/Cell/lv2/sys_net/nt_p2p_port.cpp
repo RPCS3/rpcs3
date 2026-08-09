@@ -337,13 +337,20 @@ bool nt_p2p_port::recv_data()
 			if (bound_p2ps_vports.contains(tcp_header->dst_port))
 			{
 				const auto& bound_sockets = ::at32(bound_p2ps_vports, tcp_header->dst_port);
+				bool handled = false;
 
 				for (const auto sock_id : bound_sockets)
 				{
 					sys_net.trace("Received packet for listening STREAM-P2P socket(s=%d)", sock_id);
-					handle_listening(sock_id, tcp_header, p2p_data.data() + sizeof(p2ps_encapsulated_tcp), &native_addr);
+					handled |= handle_listening(sock_id, tcp_header, p2p_data.data() + sizeof(p2ps_encapsulated_tcp), &native_addr);
 				}
-				return true;
+
+				if (handled)
+				{
+					return true;
+				}
+
+				// The vport is only reserved(e.g. by a connect()ed socket), no socket is listening on it, reply with RST as if it was unbound
 			}
 
 			if (tcp_header->flags == p2ps_tcp_flags::RST)

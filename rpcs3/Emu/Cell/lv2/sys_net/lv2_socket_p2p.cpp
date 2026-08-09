@@ -92,8 +92,7 @@ s32 lv2_socket_p2p::connect_followup()
 
 std::pair<s32, sys_net_sockaddr> lv2_socket_p2p::getpeername()
 {
-	sys_net.fatal("[P2P] getpeername() called on a P2P socket");
-	return {};
+	return {-SYS_NET_ENOTCONN, {}};
 }
 
 s32 lv2_socket_p2p::listen([[maybe_unused]] s32 backlog)
@@ -388,7 +387,6 @@ bs_t<lv2_socket::poll_t> lv2_socket_p2p::get_pending_events() const
 void lv2_socket_p2p::poll(sys_net_pollfd& sn_pfd, [[maybe_unused]] pollfd& native_pfd)
 {
 	std::lock_guard lock(mutex);
-	ensure(vport);
 
 	const bs_t<lv2_socket::poll_t> pending = get_pending_events();
 
