@@ -2139,7 +2139,6 @@ void main_window::OnEmuStop()
 	ui->confCamerasAct->setEnabled(true);
 	ui->actionPS_Move_Tracker->setEnabled(true);
 	ui->bigPictureModeAct->setEnabled(true);
-	
 	// Refresh game list in order to update time played
 	if (m_game_list_frame && m_is_list_mode)
 	{
