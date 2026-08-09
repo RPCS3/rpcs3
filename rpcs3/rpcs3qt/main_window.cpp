@@ -107,7 +107,6 @@ LOG_CHANNEL(gui_log, "GUI");
 
 extern atomic_t<bool> g_user_asked_for_frame_capture;
 extern atomic_t<bool> g_headless;
-extern atomic_t<bool> g_big_picture_mode_active;
 
 class CPUDisAsm;
 std::shared_ptr<CPUDisAsm> make_basic_ppu_disasm();
@@ -302,12 +301,6 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 	update_gui_pad_thread();
 
 	show();
-
-	// Don't override an explicit CLI boot request.
-	if (!with_cli_boot && g_cfg.misc.start_big_picture_mode && !Emu.IsBootingRestricted() && Emu.IsStopped())
-	{
-		Emu.BootBigPictureMode();
-	}
 
 	return true;
 }
@@ -559,7 +552,7 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 	}
 
 	// A manual boot from the game list bypasses Big Picture Mode, so exiting it shouldn't relaunch Big Picture Mode.
-	g_big_picture_mode_active = false;
+	Emu.CancelBigPictureModeReturn();
 
 	Emu.GracefulShutdown(false);
 
@@ -2139,6 +2132,7 @@ void main_window::OnEmuStop()
 	ui->confCamerasAct->setEnabled(true);
 	ui->actionPS_Move_Tracker->setEnabled(true);
 	ui->bigPictureModeAct->setEnabled(true);
+
 	// Refresh game list in order to update time played
 	if (m_game_list_frame && m_is_list_mode)
 	{
@@ -3457,14 +3451,17 @@ void main_window::CreateConnects()
 	{
 		if (Emu.IsBootingRestricted())
 		{
+			gui_log.notice("Big Picture Mode: boot request ignored, booting is currently restricted.");
 			return;
 		}
 
 		if (!m_gui_settings->GetBootConfirmation(this, gui::ib_confirm_boot))
 		{
+			gui_log.notice("Big Picture Mode: boot cancelled by user at confirmation dialog.");
 			return;
 		}
-
+		
+		gui_log.notice("Booting Big Picture Mode from main window");
 		Emu.GracefulShutdown(false);
 
 		if (!Emu.BootBigPictureMode())

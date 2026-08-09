@@ -70,8 +70,6 @@
 
 LOG_CHANNEL(gui_log, "GUI");
 
-extern atomic_t<bool> g_big_picture_mode_active;
-
 std::unique_ptr<raw_mouse_handler> g_raw_mouse_handler;
 
 s32 gui_application::m_language_id = static_cast<s32>(CELL_SYSUTIL_LANG_ENGLISH_US);
@@ -234,6 +232,12 @@ bool gui_application::Init()
 	if (m_main_window && !m_main_window->Init(m_with_cli_boot))
 	{
 		return false;
+	}
+
+	// Don't override an explicit CLI boot request.
+	if (!m_with_cli_boot && g_cfg.misc.start_big_picture_mode && !Emu.IsBootingRestricted() && Emu.IsStopped())
+	{
+		Emu.BootBigPictureMode();
 	}
 
 #ifdef WITH_DISCORD_RPC
@@ -474,43 +478,6 @@ void gui_application::InitializeConnects()
 	connect(this, &gui_application::OnEmulatorPause, this, &gui_application::StopPlaytime);
 	connect(this, &gui_application::OnEmulatorResume, this, &gui_application::StartPlaytime);
 	connect(this, &QGuiApplication::applicationStateChanged, this, &gui_application::OnAppStateChanged);
-
-	connect(this, &gui_application::OnEmulatorStop, [this]()
-	{
-		if (!g_big_picture_mode_active)
-		{
-			return;
-		}
-
-		// This stop can be an intermediate step of a multi-executable disc (e.g. a collection disc that
-		// chainloads into a specific sub-game) rather than the player actually being done - booting Big
-		// Picture Mode's shell right now could race with that internal reboot and corrupt shared boot
-		// state. Wait a moment and confirm nothing else started booting before reclaiming it.
-		QTimer::singleShot(500, this, []()
-		{
-			if (!g_big_picture_mode_active.exchange(false))
-			{
-				return;
-			}
-
-			if (!Emu.IsStopped())
-			{
-				// Something else booted in the meantime. Leave the flag set; the real, final stop
-				// (once that title also finishes) will re-trigger this check.
-				g_big_picture_mode_active = true;
-				return;
-			}
-
-			gui_log.notice("Big Picture Mode: game stopped, returning to Big Picture Mode.");
-
-			Emu.CallFromMainThread([]()
-			{
-				Emu.SetContinuousMode(true);
-				const bool result = Emu.BootBigPictureMode();
-				gui_log.notice("Big Picture Mode: BootBigPictureMode() returned %d", result);
-			});
-		});
-	});
 
 #ifdef WITH_DISCORD_RPC
 	connect(this, &gui_application::OnEmulatorRun, [this](bool /*start_playtime*/)

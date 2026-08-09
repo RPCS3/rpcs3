@@ -96,6 +96,8 @@ fs::file make_file_view(const fs::file& file, u64 offset, u64 size);
 
 extern std::string get_syscache_state_corruption_indicator_file_path(std::string_view dir_path);
 
+extern atomic_t<bool> g_big_picture_mode_active;
+
 fs::file g_tty;
 atomic_t<s64> g_tty_size{0};
 std::array<std::deque<std::string>, 16> g_tty_input;
@@ -1009,6 +1011,11 @@ bool Emulator::BootBigPictureMode()
 	sys_log.notice("Big Picture Mode: shell booted successfully");
 
 	return true;
+}
+
+void Emulator::CancelBigPictureModeReturn() const
+{
+	g_big_picture_mode_active = false;
 }
 
 game_boot_result Emulator::GetElfPathFromDir(std::string& elf_path, const std::string& path)
@@ -4191,6 +4198,17 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			// Complete the operation
 			m_state = system_state::stopped;
+
+			// Only return to Big Picture Mode on a genuinely final stop, not an internal
+			// chainload/restart continuation (those leave after_kill_callback set).
+			if (!after_kill_callback && g_big_picture_mode_active.exchange(false))
+			{
+				sys_log.notice("Big Picture Mode: game stopped, returning to Big Picture Mode.");
+				SetContinuousMode(true);
+				const bool result = BootBigPictureMode();
+				sys_log.notice("Big Picture Mode: BootBigPictureMode() returned %d", result);
+			}
+			
 			GetCallbacks().on_stop();
 
 			// Always Enable display sleep, not only if it was prevented.
