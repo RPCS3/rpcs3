@@ -2815,6 +2815,7 @@ void thread_base::initialize(void (*error_cb)())
 	[[maybe_unused]] u64 new_tid = 0;
 #elif defined(ANDROID)
 	const u64 new_tid = pthread_self();
+	m_native_tid = static_cast<u32>(gettid());
 #else
 	const u64 new_tid = reinterpret_cast<u64>(pthread_self());
 #endif
@@ -2968,6 +2969,10 @@ u64 thread_base::finalize(thread_state result_state) noexcept
 
 	// Avoid race with the destructor
 	const u64 _self = m_thread;
+
+#ifdef ANDROID
+	m_native_tid = 0;
+#endif
 
 	// Set result state (errored or finalized)
 	m_sync.fetch_op([&](u32& v)
@@ -3344,11 +3349,21 @@ u64 thread_base::get_cycles()
 	clockid_t _clock;
 	struct timespec thread_time;
 #ifdef ANDROID
-	pthread_t thread_id = handle;
+	const u32 native_tid = m_native_tid;
+
+	if (!handle || !native_tid)
+	{
+		return m_cycles;
+	}
+
+	_clock = (~static_cast<clockid_t>(native_tid) << 3) | 6;
+
+	if (!clock_gettime(_clock, &thread_time))
 #else
 	pthread_t thread_id = reinterpret_cast<pthread_t>(handle);
-#endif
+
 	if (!pthread_getcpuclockid(thread_id, &_clock) && !clock_gettime(_clock, &thread_time))
+#endif
 	{
 		cycles = static_cast<u64>(thread_time.tv_sec) * 1'000'000'000 + thread_time.tv_nsec;
 #endif
