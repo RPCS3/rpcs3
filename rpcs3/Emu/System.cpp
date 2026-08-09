@@ -1013,7 +1013,7 @@ bool Emulator::BootBigPictureMode()
 	return true;
 }
 
-void Emulator::CancelBigPictureModeReturn() const
+void Emulator::DeactivateBigPictureMode() const
 {
 	g_big_picture_mode_active = false;
 }

@@ -552,7 +552,7 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 	}
 
 	// A manual boot from the game list bypasses Big Picture Mode, so exiting it shouldn't relaunch Big Picture Mode.
-	Emu.CancelBigPictureModeReturn();
+	Emu.DeactivateBigPictureMode();
 
 	Emu.GracefulShutdown(false);
 
@@ -3460,7 +3460,7 @@ void main_window::CreateConnects()
 			gui_log.notice("Big Picture Mode: boot cancelled by user at confirmation dialog.");
 			return;
 		}
-		
+
 		gui_log.notice("Booting Big Picture Mode from main window");
 		Emu.GracefulShutdown(false);
 
