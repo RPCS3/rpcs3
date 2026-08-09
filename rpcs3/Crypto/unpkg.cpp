@@ -2,6 +2,7 @@
 #include "aes.h"
 #include "sha1.h"
 #include "key_vault.h"
+#include "util/asm.hpp"
 #include "util/logs.hpp"
 #include "Utilities/StrUtil.h"
 #include "Utilities/Thread.h"
@@ -1152,6 +1153,9 @@ void package_reader::extract_worker()
 
 				read_cache.clear();
 
+				// 16MB buffer
+				std::vector<u8> buffer(std::min<usz>(entry.file_size, 1u << 24) + BUF_PADDING);
+
 				auto reader = std::make_unique<pkg_file_reader>([&, cache_off = u64{umax}](usz pos, void* ptr, usz size) mutable -> u64
 				{
 					if (pos >= entry.file_size || !size)
@@ -1159,6 +1163,7 @@ void package_reader::extract_worker()
 						return 0;
 					}
 
+					const usz original_size = size;
 					size = std::min<u64>(entry.file_size - pos, size);
 
 					u64 size_cache_end = 0;
@@ -1211,8 +1216,13 @@ void package_reader::extract_worker()
 					while (read_size < size)
 					{
 						const u64 block_size = std::min<u64>(BUF_SIZE, size - read_size);
+						const u64 available_buffer_size = buffer.size() - read_size;
 
-						const usz advance_size = decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), std::span<u8>{static_cast<u8*>(ptr) + read_size, block_size});
+						ensure(buffer.data() == ptr);
+						ensure(buffer.size() == original_size + BUF_PADDING);
+						ensure(available_buffer_size >= block_size);
+
+						const usz advance_size = decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), std::span<u8>{static_cast<u8*>(ptr) + read_size, available_buffer_size});
 
 						if (!advance_size)
 						{
@@ -1246,9 +1256,6 @@ void package_reader::extract_worker()
 					pkg_log.error("Failed to decrypt EDAT file %s (error=%s)", path, fs::g_tls_error);
 					break;
 				}
-
-				// 16MB buffer
-				std::vector<u8> buffer(std::min<usz>(entry.file_size, 1u << 24) + BUF_PADDING);
 
 				while (usz read_size = final_data.read(buffer.data(), buffer.size() - BUF_PADDING))
 				{
@@ -1453,11 +1460,21 @@ usz package_reader::decrypt(u64 offset, u64 size, const uchar* key, std::span<u8
 	// Read the data and set available size
 	const auto data_span = archive_read_block(m_header.data_offset + offset, local_buf, size);
 	ensure(data_span.data() == static_cast<void*>(local_buf.data()));
+	ensure(data_span.size() <= size);
 
-	// Get block count
-	const u64 blocks = (data_span.size() + 15) / 16;
+	// Clear padding
+	if (data_span.size() < local_buf.size())
+	{
+		std::memset(&local_buf[data_span.size()], 0, local_buf.size() - data_span.size());
+	}
 
-	if (m_header.pkg_type == PKG_RELEASE_TYPE_DEBUG)
+	// Get block count. Round up.
+	const u64 blocks = utils::aligned_div<u64>(data_span.size(), sizeof(u128));
+	const u64 read_size = blocks * sizeof(u128);
+
+	switch (m_header.pkg_type)
+	{
+	case PKG_RELEASE_TYPE_DEBUG:
 	{
 		// Debug key
 		be_t<u64> input[8] =
@@ -1471,7 +1488,7 @@ usz package_reader::decrypt(u64 offset, u64 size, const uchar* key, std::span<u8
 		for (u64 i = 0; i < blocks; i++)
 		{
 			// Initialize stream cipher for current position
-			input[7] = offset / 16 + i;
+			input[7] = offset / sizeof(u128) + i;
 
 			struct sha1_hash
 			{
@@ -1480,11 +1497,13 @@ usz package_reader::decrypt(u64 offset, u64 size, const uchar* key, std::span<u8
 
 			sha1(reinterpret_cast<const u8*>(input), sizeof(input), hash.data);
 
-			const u128 v = read_from_ptr<u128>(local_buf, i * 16);
-			write_to_ptr<u128>(local_buf, i * 16, v ^ read_from_ptr<u128>(hash.data));
+			const u128 v = read_from_ptr<u128>(local_buf, i * sizeof(u128));
+			write_to_ptr<u128>(local_buf, i * sizeof(u128), v ^ read_from_ptr<u128>(hash.data));
 		}
+
+		break;
 	}
-	else if (m_header.pkg_type == PKG_RELEASE_TYPE_RELEASE)
+	case PKG_RELEASE_TYPE_RELEASE:
 	{
 		aes_context ctx;
 
@@ -1492,7 +1511,7 @@ usz package_reader::decrypt(u64 offset, u64 size, const uchar* key, std::span<u8
 		aes_setkey_enc(&ctx, key, 128);
 
 		// Initialize stream cipher for start position
-		be_t<u128> input = m_header.klicensee.value() + offset / 16;
+		be_t<u128> input = m_header.klicensee.value() + offset / sizeof(u128);
 
 		// Increment stream position for every block
 		for (u64 i = 0; i < blocks; i++, input++)
@@ -1501,19 +1520,23 @@ usz package_reader::decrypt(u64 offset, u64 size, const uchar* key, std::span<u8
 
 			aes_crypt_ecb(&ctx, AES_ENCRYPT, reinterpret_cast<const u8*>(&input), reinterpret_cast<u8*>(&key));
 
-			const u128 v = read_from_ptr<u128>(local_buf, i * 16);
-			write_to_ptr<u128>(local_buf, i * 16, v ^ key);
+			const u128 v = read_from_ptr<u128>(local_buf, i * sizeof(u128));
+			write_to_ptr<u128>(local_buf, i * sizeof(u128), v ^ key);
 		}
+
+		break;
 	}
-	else
+	default:
 	{
 		pkg_log.error("Unknown release type (0x%x)", m_header.pkg_type);
+		break;
+	}
 	}
 
-	if (blocks * 16 != size)
+	if (read_size > size)
 	{
 		// Put NTS and other zeroes on unaligned reads
-		const u64 pad_size = blocks * 16 - size;
+		const u64 pad_size = read_size - size;
 		ensure(local_buf.size() >= (size + pad_size));
 		std::memset(&local_buf[size], 0, pad_size);
 	}
