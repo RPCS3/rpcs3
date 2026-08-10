@@ -6,6 +6,8 @@
 #include "util/types.hpp"
 #include "Crypto/aes.h"
 
+#include <span>
+
 bool is_iso_file(const std::string& path, u64* size = nullptr, bool* is_raw_device = nullptr);
 
 void load_iso(const std::string& path);
@@ -76,7 +78,7 @@ public:
 	iso_encryption_type get_enc_type() const { return m_enc_type; }
 
 	bool init(const std::string& path, iso_archive* archive = nullptr);
-	bool decrypt(u64 offset, void* buffer, u64 size, const std::string& name);
+	bool decrypt(u64 offset, const std::span<u8> buffer, const std::string& name);
 };
 
 struct iso_extent_info
