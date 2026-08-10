@@ -500,6 +500,12 @@ namespace gui::utils
 		{
 			gameid_token_value = game->info.serial;
 			archive = std::make_shared<iso_archive>(game->info.path);
+
+			if (!archive->is_valid())
+			{
+				sys_log.error("Failed to create shortcut path '%s' (Failed to load ISO)", game->info.path);
+				return false;
+			}
 		}
 		else if (is_disc_without_patch || is_hdd_game_with_different_foldername || is_ps1_game_with_different_foldername)
 		{

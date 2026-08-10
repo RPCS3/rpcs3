@@ -4473,6 +4473,12 @@ game_boot_result Emulator::AddGameToYml(std::string path)
 	if (is_iso_file(path))
 	{
 		archive = std::make_unique<iso_archive>(path);
+
+		if (!archive->is_valid())
+		{
+			sys_log.error("Failed to load ISO.");
+			return game_boot_result::invalid_file_or_folder;
+		}
 	}
 
 	// Load PARAM.SFO

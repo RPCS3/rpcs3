@@ -729,6 +729,8 @@ namespace gui
 			if (!archive.exists(icon_path)) return false;
 
 			auto icon_file = archive.open(icon_path);
+			if (!icon_file) return false;
+
 			const auto icon_size = icon_file->size();
 			if (icon_size == 0) return false;
 

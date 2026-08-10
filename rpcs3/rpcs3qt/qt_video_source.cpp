@@ -113,6 +113,8 @@ void qt_video_source::init_movie()
 		{
 			iso_archive archive(m_iso_path);
 			auto movie_file = archive.open(m_video_path.toStdString());
+			if (!movie_file) return;
+
 			const auto movie_size = movie_file->size();
 			if (movie_size == 0) return;
 
@@ -156,11 +158,10 @@ void qt_video_source::init_movie()
 		{
 			iso_archive archive(m_iso_path);
 			auto movie_file = archive.open(m_video_path.toStdString());
+			if (!movie_file) return;
+
 			const auto movie_size = movie_file->size();
-			if (movie_size == 0)
-			{
-				return;
-			}
+			if (movie_size == 0) return;
 
 			m_video_data = QByteArray(movie_size, 0);
 			movie_file->read(m_video_data.data(), movie_size);
@@ -280,6 +281,8 @@ void qt_video_source::start_audio()
 	{
 		iso_archive archive(m_iso_path);
 		auto audio_file = archive.open(m_audio_path.toStdString());
+		if (!audio_file) return;
+
 		const auto audio_size = audio_file->size();
 		if (audio_size == 0) return;
 
