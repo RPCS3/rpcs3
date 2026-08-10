@@ -49,6 +49,8 @@
 # Test Programs
 !/bin/test/
 
+!/bin/patches/
+
 # Themes
 !/bin/GuiConfigs/
 /bin/GuiConfigs/*.ini

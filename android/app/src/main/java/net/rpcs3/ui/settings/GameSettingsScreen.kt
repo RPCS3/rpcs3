@@ -32,6 +32,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Article
 import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Healing
 import androidx.compose.material.icons.outlined.HourglassEmpty
 import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material.icons.outlined.Memory
@@ -75,6 +76,7 @@ import net.rpcs3.dialogs.AlertDialogQueue
 import net.rpcs3.ui.components.GhostButton
 import net.rpcs3.ui.components.SectionLabel
 import net.rpcs3.ui.components.SettingGroup
+import net.rpcs3.ui.patches.PatchesCategory
 import net.rpcs3.ui.theme.Dimens
 import net.rpcs3.ui.theme.Dims
 import net.rpcs3.ui.theme.Rpcs
@@ -97,6 +99,7 @@ internal fun iconForCategory(name: String): ImageVector = when (name) {
     "Log" -> Icons.Outlined.Article
     ControlsCategory -> Icons.Outlined.SportsEsports
     DriverCategory -> Icons.Outlined.Memory
+    PatchesCategory -> Icons.Outlined.Healing
     else -> Icons.Outlined.MoreHoriz
 }
 

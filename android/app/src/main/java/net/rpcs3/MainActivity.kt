@@ -24,10 +24,13 @@ import androidx.core.view.WindowInsetsCompat
 import java.io.File
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import net.rpcs3.ui.debug.applyDefaultLogLevels
 import net.rpcs3.ui.navigation.AppNavHost
+import net.rpcs3.utils.PatchUpdater
 import net.rpcs3.utils.installBundledAssets
+import net.rpcs3.utils.installBundledPatches
 import kotlin.concurrent.thread
 
 private const val ACTION_USB_PERMISSION = "net.rpcs3.USB_PERMISSION"
@@ -104,6 +107,7 @@ class MainActivity : ComponentActivity() {
 
             thread(name = "rpcs3-startup") {
                 installBundledAssets(assets, RPCS3.rootDirectory)
+                installBundledPatches(assets, RPCS3.rootDirectory)
                 RPCS3.instance.initialize(RPCS3.rootDirectory)
                 applyDefaultLogLevels()
                 val hookDirectory = "\"" + nativeLibraryDir + "\""
@@ -148,6 +152,10 @@ class MainActivity : ComponentActivity() {
                 lifecycleScope.launch {
                     RPCS3.initialized.value = true
                     unregisterUsbEventListener = listenUsbEvents(this@MainActivity)
+                }
+
+                lifecycleScope.launch(Dispatchers.IO) {
+                    PatchUpdater.checkIfDue(applicationContext)
                 }
             }
         } else {

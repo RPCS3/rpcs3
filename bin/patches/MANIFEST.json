@@ -1,0 +1,15 @@
+{
+  "source": "https://rpcs3.net/compatibility?patch&api=v1&v=1.2",
+  "upstream": "https://wiki.rpcs3.net/index.php?title=Help:Game_Patches",
+  "patch_engine_version": "1.2",
+  "sha256": "b2440df7e37efe0b248b3e6f0f06af3c888e4b3f8f6fc6cfd4c3029c84337199",
+  "bytes": 895080,
+  "executable_hashes": 865,
+  "executable_hashes_by_kind": {
+    "PPU": 842,
+    "OVL": 1,
+    "SPU": 22
+  },
+  "patches_enabled_by_default": 0,
+  "license": "CC BY-SA 4.0 (RPCS3 Wiki content)"
+}

@@ -186,6 +186,14 @@ val copyRpcs3Icons by tasks.registering(Copy::class) {
     into(layout.buildDirectory.dir("generated/rpcs3-assets/Icons"))
 }
 
+val copyRpcs3Patches by tasks.registering(Copy::class) {
+    from(file("../../bin/patches")) {
+        include("patch.yml")
+    }
+    into(layout.buildDirectory.dir("generated/rpcs3-assets/patches"))
+}
+
 tasks.matching { it.name.startsWith("merge") && it.name.endsWith("Assets") }.configureEach {
     dependsOn(copyRpcs3Icons)
+    dependsOn(copyRpcs3Patches)
 }

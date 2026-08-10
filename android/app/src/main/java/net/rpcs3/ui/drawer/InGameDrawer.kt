@@ -62,6 +62,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import net.rpcs3.R
 import net.rpcs3.RPCS3
+import net.rpcs3.ui.patches.InGamePatchesPanel
+import net.rpcs3.ui.patches.PatchesCategory
 import net.rpcs3.ui.settings.ControlsCategory
 import net.rpcs3.ui.settings.ControlsSettings
 import net.rpcs3.ui.settings.SettingsCategory
@@ -197,7 +199,9 @@ private fun InGameSettingsPanel(
         }
 
         val categories = remember(tree) {
-            categoriesOf(tree) + SettingsCategory(ControlsCategory, listOf(ControlsCategory), null)
+            categoriesOf(tree) +
+                SettingsCategory(ControlsCategory, listOf(ControlsCategory), null) +
+                SettingsCategory(PatchesCategory, listOf(PatchesCategory), null)
         }
 
         Column(modifier = Modifier.fillMaxSize()) {
@@ -280,7 +284,17 @@ private fun InGameSettingsPanel(
                 cursor
             }
 
-            if (name == ControlsCategory) {
+            if (name == PatchesCategory) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    InGamePatchesPanel(titleId = titleId)
+                    Spacer(Modifier.height(Dimens.SectionGap))
+                }
+            } else if (name == ControlsCategory) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()

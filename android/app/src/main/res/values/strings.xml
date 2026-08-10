@@ -297,6 +297,23 @@
     <string name="patches_detail_app_version">app %1$s</string>
     <string name="patches_empty_title">No patches for this title</string>
     <string name="patches_empty_message">Place patch .yml files in the patches folder and they will appear here.</string>
+    <string name="patches_state_on">Enabled</string>
+    <string name="patches_ingame_hint">Tap a patch to enable it. Changes apply the next time the game boots.</string>
+    <string name="patches_update_title">Patch database</string>
+    <string name="patches_update_available">Update Available</string>
+    <string name="patches_update_available_detail">A newer patch set is ready to install (%1$d KB).</string>
+    <string name="patches_update_idle">Bundled patch set installed. Nothing is enabled by default.</string>
+    <string name="patches_update_current">Your patch set is up to date.</string>
+    <string name="patches_update_checking">Checking rpcs3.net for updates…</string>
+    <string name="patches_update_downloading">Installing the new patch set…</string>
+    <string name="patches_update_check">Check for Update</string>
+    <string name="patches_update_download">Download</string>
+    <string name="patches_update_none_title">No Update Available</string>
+    <string name="patches_update_none_message">You already have the latest patch set.</string>
+    <string name="patches_update_done_title">Patches updated</string>
+    <string name="patches_update_done_message">The new patch set is installed. Patches you had enabled stay enabled.</string>
+    <string name="patches_update_failed_title">Update failed</string>
+    <string name="patches_update_failed_message">The patch set could not be installed.</string>
 
     <string name="setup_welcome">Welcome to PS3Native</string>
     <string name="setup_intro">Two things are needed before you can play. This takes a minute.</string>
