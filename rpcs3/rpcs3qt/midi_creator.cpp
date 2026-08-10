@@ -12,7 +12,11 @@ inline constexpr auto midi_deleter = [](RtMidiWrapper* ptr) { if (ptr) rtmidi_in
 using midi_ptr = std::unique_ptr<RtMidiWrapper, decltype(midi_deleter)>;
 
 std::mutex midi_creator::m_midi_init_mutex = {};
-std::unique_ptr<std::thread> midi_creator::m_midi_init_thread = {};
+
+// Use std::jthread so the asynchronous RtMidi initialization is joined even if
+// process teardown bypasses ~midi_creator(). Destroying a joinable std::thread
+// would call std::terminate().
+std::unique_ptr<std::jthread> midi_creator::m_midi_init_thread = {};
 
 midi_creator::midi_creator()
 {
@@ -22,7 +26,7 @@ midi_creator::midi_creator()
 	std::lock_guard lock(m_midi_init_mutex);
 	if (!m_midi_init_thread)
 	{
-		m_midi_init_thread = std::make_unique<std::thread>([]
+		m_midi_init_thread = std::make_unique<std::jthread>([]
 		{
 			[[maybe_unused]] midi_ptr midi_in(rtmidi_in_create_default());
 		});
