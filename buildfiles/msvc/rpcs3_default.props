@@ -233,11 +233,22 @@
         absl_time_zone.lib;
         libutf8_validity.lib;
         libutf8_range.lib;
-        libprotobuf-lite.lib;
       </AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)3rdparty\ffmpeg\lib\windows\x86_64</AdditionalLibraryDirectories>
       <StackReserveSize>8388608</StackReserveSize>
       <StackCommitSize>1048576</StackCommitSize>
+    </Link>
+    <Link Condition="'$(Configuration)'=='Release'">
+      <AdditionalDependencies>
+        libprotobuf-lite.lib;
+        %(AdditionalDependencies)
+      </AdditionalDependencies>
+    </Link>
+    <Link Condition="'$(Configuration)'=='Debug'">
+      <AdditionalDependencies>
+        libprotobuf-lited.lib;
+        %(AdditionalDependencies)
+      </AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup />

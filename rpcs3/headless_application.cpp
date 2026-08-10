@@ -23,11 +23,11 @@ headless_application::headless_application(int& argc, char** argv) : QCoreApplic
 
 bool headless_application::Init()
 {
-	// Force init the emulator
-	InitializeEmulator(m_active_user.empty() ? "00000001" : m_active_user, false, true);
-
 	// Create callbacks from the emulator, which reference the handlers.
 	InitializeCallbacks();
+
+	// Force init the emulator
+	InitializeEmulator(m_active_user.empty() ? "00000001" : m_active_user, false, true);
 
 	// Create connects to propagate events throughout Gui.
 	InitializeConnects();

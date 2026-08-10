@@ -1291,6 +1291,8 @@ extern bool ppu_patch(u32 addr, u32 value)
 		return false;
 	}
 
+	ensure(!cpu_thread::get_current());
+
 	vm::writer_lock rlock;
 
 	if (!vm::check_addr(addr))
@@ -3263,6 +3265,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 			auto range_lock = vm::alloc_range_lock();
 			bool success = false;
 			{
+				ppu.state += cpu_flag::wait; // for vm::writer_lock
 				rsx::reservation_lock rsx_lock(addr, 128);
 
 				auto& super_data = *vm::get_super_ptr<spu_rdata_t>(addr);
@@ -3285,6 +3288,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 			}
 			vm::free_range_lock(range_lock);
 
+			static_cast<void>(ppu.test_stopped());
 			return success;
 		}
 
@@ -5147,7 +5151,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				_reserved_for_backwards_compatibility,
 				accurate_cache_line_stores,
 				reservations_128_byte,
-				greedy_mode,
+				_reserved_for_backwards_compatibility_2,
 				accurate_sat,
 				accurate_fpcc,
 				accurate_vnan,
@@ -5172,8 +5176,6 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				settings += ppu_settings::accurate_cache_line_stores;
 			if (g_cfg.core.ppu_128_reservations_loop_max_length)
 				settings += ppu_settings::reservations_128_byte;
-			if (g_cfg.core.ppu_llvm_greedy_mode)
-				settings += ppu_settings::greedy_mode;
 			if (has_mfvscr && g_cfg.core.ppu_set_sat_bit)
 				settings += ppu_settings::accurate_sat;
 			if (g_cfg.core.ppu_set_fpcc)

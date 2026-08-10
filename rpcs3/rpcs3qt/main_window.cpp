@@ -2729,11 +2729,14 @@ void main_window::CreateConnects()
 		}
 
 		// Only select one folder for now
-		QString dir = QFileDialog::getExistingDirectory(this, tr("Select a folder containing one or more games"), QString::fromStdString(fs::get_config_dir()), QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+		const QString path_last_add_games = m_gui_settings->GetValue(gui::fd_add_games).toString();
+		const QString dir = QFileDialog::getExistingDirectory(this, tr("Select a folder containing one or more games"), path_last_add_games, QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
 		if (dir.isEmpty())
 		{
 			return;
 		}
+
+		m_gui_settings->SetValue(gui::fd_add_games, QFileInfo(dir).path());
 
 		QStringList paths;
 		paths << dir;
@@ -2747,11 +2750,14 @@ void main_window::CreateConnects()
 			return;
 		}
 
-		QStringList paths = QFileDialog::getOpenFileNames(this, tr("Select ISO files to add"), QString::fromStdString(fs::get_config_dir()), tr("ISO files (*.iso);;All files (*.*)"));
+		const QString path_last_add_iso = m_gui_settings->GetValue(gui::fd_add_iso).toString();
+		QStringList paths = QFileDialog::getOpenFileNames(this, tr("Select ISO files to add"), path_last_add_iso, tr("ISO files (*.iso);;All files (*.*)"));
 		if (paths.isEmpty())
 		{
 			return;
 		}
+
+		m_gui_settings->SetValue(gui::fd_add_iso, QFileInfo(paths.front()).path());
 
 		AddGamesFromDirs(std::move(paths));
 	});
@@ -3473,6 +3479,20 @@ void main_window::CreateConnects()
 		m_game_list_frame->Refresh();
 	});
 
+	connect(ui->showBrokenEntriesAct, &QAction::triggered, this, [this](bool checked)
+	{
+		m_gui_settings->SetValue(gui::gl_show_broken, checked);
+		m_game_list_frame->SetShowBroken(checked);
+		m_game_list_frame->Refresh();
+	});
+
+	connect(ui->showCompletedEntriesAct, &QAction::triggered, this, [this](bool checked)
+	{
+		m_gui_settings->SetValue(gui::gl_show_completed, checked);
+		m_game_list_frame->SetShowCompleted(checked);
+		m_game_list_frame->Refresh();
+	});
+
 	connect(ui->showCompatibilityInGridAct, &QAction::triggered, m_game_list_frame, &game_list_frame::SetShowCompatibilityInGrid);
 
 	connect(ui->refreshGameListAct, &QAction::triggered, this, [this]
@@ -3920,6 +3940,12 @@ void main_window::ConfigureGuiFromSettings()
 
 	ui->showHiddenEntriesAct->setChecked(m_gui_settings->GetValue(gui::gl_show_hidden).toBool());
 	m_game_list_frame->SetShowHidden(ui->showHiddenEntriesAct->isChecked()); // prevent GetValue in m_game_list_frame->LoadSettings
+
+	ui->showBrokenEntriesAct->setChecked(m_gui_settings->GetValue(gui::gl_show_broken).toBool());
+	m_game_list_frame->SetShowBroken(ui->showBrokenEntriesAct->isChecked()); // prevent GetValue in m_game_list_frame->LoadSettings
+
+	ui->showCompletedEntriesAct->setChecked(m_gui_settings->GetValue(gui::gl_show_completed).toBool());
+	m_game_list_frame->SetShowCompleted(ui->showCompletedEntriesAct->isChecked()); // prevent GetValue in m_game_list_frame->LoadSettings
 
 	ui->showCompatibilityInGridAct->setChecked(m_gui_settings->GetValue(gui::gl_draw_compat).toBool());
 	ui->actionPreferGameDataIcons->setChecked(m_gui_settings->GetValue(gui::gl_pref_gd_icon).toBool());

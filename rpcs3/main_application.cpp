@@ -39,6 +39,7 @@
 #endif
 
 #include <QDateTime>
+#include <QDir>
 #include <QFileInfo> // This shouldn't be outside rpcs3qt...
 #include <QImageReader> // This shouldn't be outside rpcs3qt...
 #include <QStandardPaths> // This shouldn't be outside rpcs3qt...
@@ -381,6 +382,24 @@ EmuCallbacks main_application::CreateCallbacks()
 	{
 		// May result in an empty string if path does not exist
 		return QFileInfo(QString::fromUtf8(sv.data(), static_cast<int>(sv.size()))).canonicalFilePath().toStdString();
+	};
+
+	callbacks.resolve_path_may_not_exist = [](std::string_view sv)
+	{
+		const QString path = QString::fromUtf8(sv.data(), static_cast<int>(sv.size()));
+		QFileInfo fi(path);
+
+		QString tail;
+
+		while (!fi.exists())
+		{
+			tail = fi.fileName() + "/" + tail;
+			fi.setFile(fi.path());
+		}
+
+		const QString result = QDir(fi.canonicalFilePath()).filePath(tail);
+
+		return QDir::cleanPath(result).toStdString();
 	};
 
 	callbacks.get_font_dirs = []()

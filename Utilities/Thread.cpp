@@ -1964,8 +1964,15 @@ bool handle_access_violation(u32 addr, bool is_writing, bool is_exec, ucontext_t
 	// Hack: allocate memory in case the emulator is stopping
 	const auto hack_alloc = [&]()
 	{
+		const bool added_flag = cpu && !cpu->state.test_and_set(cpu_flag::wait);
+
 		if (vm::check_addr(addr, required_page_perms))
 		{
+			if (added_flag)
+			{
+				cpu->check_state();
+			}
+
 			return true;
 		}
 
@@ -1973,6 +1980,11 @@ bool handle_access_violation(u32 addr, bool is_writing, bool is_exec, ucontext_t
 
 		if (!area)
 		{
+			if (added_flag)
+			{
+				cpu->check_state();
+			}
+
 			return false;
 		}
 
@@ -1993,6 +2005,11 @@ bool handle_access_violation(u32 addr, bool is_writing, bool is_exec, ucontext_t
 			{
 				ppu_register_range(addr & -0x10000, 0x10000);
 			}
+			
+			if (added_flag)
+			{
+				cpu->check_state();
+			}
 
 			g_tls_access_violation_recovered = addr;
 			return true;
@@ -2007,10 +2024,20 @@ bool handle_access_violation(u32 addr, bool is_writing, bool is_exec, ucontext_t
 				ppu_register_range(addr & -0x10000, 0x10000);
 			}
 
+			if (added_flag)
+			{
+				cpu->check_state();
+			}
+
 			g_tls_access_violation_recovered = addr;
 			return true;
 		}
 
+		if (added_flag)
+		{
+			cpu->check_state();
+		}
+	
 		return false;
 	};
 
@@ -2247,12 +2274,12 @@ bool handle_access_violation(u32 addr, bool is_writing, bool is_exec, ucontext_t
 
 	if (Emu.IsStopped())
 	{
+		// Keep retrying until the page is mapped: the thread must be able to resume so it can observe cpu_flag::exit and terminate cleanly.
+		// Reporting the violation as unhandled here would escalate a guest crash into an unhandled host exception.
 		while (!hack_alloc())
 		{
 			thread_ctrl::wait_for(1000);
 		}
-
-		return false;
 	}
 
 	return true;
@@ -2301,10 +2328,11 @@ static LONG exception_handler(PEXCEPTION_POINTERS pExp) noexcept
 			is_exec = true;
 			addr = static_cast<u32>(exec64);
 		}
-		else if (const usz exec64 = (ptr - vm::g_exec_addr - vm::g_exec_addr_seg_offset); exec64 <= u32{umax})
+		else if (const usz seg_off = (ptr - vm::g_exec_addr - vm::g_exec_addr_seg_offset); seg_off <= u32{umax} / 2)
 		{
+			// Segment map holds one u16 per 4 bytes of guest code: ptr = g_exec_addr + g_exec_addr_seg_offset + (addr >> 1)
 			is_exec = true;
-			addr = static_cast<u32>(exec64);
+			addr = static_cast<u32>(seg_off * 2);
 		}
 		else 
 		{
@@ -2549,7 +2577,8 @@ static void signal_handler(int /*sig*/, siginfo_t* info, void* uct) noexcept
 #endif
 
 	const u64 exec64 = (reinterpret_cast<u64>(info->si_addr) - reinterpret_cast<u64>(vm::g_exec_addr)) / 2;
-	const u64 exec64_2 = (reinterpret_cast<u64>(info->si_addr) - reinterpret_cast<u64>(vm::g_exec_addr)) - vm::g_exec_addr_seg_offset;
+	// Segment map holds one u16 per 4 bytes of guest code: si_addr = g_exec_addr + g_exec_addr_seg_offset + (addr >> 1)
+	const u64 seg_off = (reinterpret_cast<u64>(info->si_addr) - reinterpret_cast<u64>(vm::g_exec_addr)) - vm::g_exec_addr_seg_offset;
 	const auto cause = is_executing ? "executing" : is_writing ? "writing" : "reading";
 
 	if (auto [addr, ok] = vm::try_get_addr(info->si_addr); ok && !is_executing)
@@ -2568,9 +2597,9 @@ static void signal_handler(int /*sig*/, siginfo_t* info, void* uct) noexcept
 			return;
 		}
 	}
-	else if (exec64_2 < 0x100000000ull && !is_executing)
+	else if (seg_off < 0x80000000ull && !is_executing)
 	{
-		if (thread_ctrl::get_current() && handle_access_violation(static_cast<u32>(exec64_2), is_writing, true, context))
+		if (thread_ctrl::get_current() && handle_access_violation(static_cast<u32>(seg_off * 2), is_writing, true, context))
 		{
 			return;
 		}

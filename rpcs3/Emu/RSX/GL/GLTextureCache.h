@@ -494,6 +494,8 @@ namespace gl
 			m_temporary_surfaces.clear();
 		}
 
+		void initialize_subresource_from_memory(gl::command_context& cmd, gl::texture* dst, const deferred_subresource& desc, rsx::texture_dimension_extended type) const;
+
 		gl::texture_view* create_temporary_subresource_impl(gl::command_context& cmd, gl::texture* src, GLenum sized_internal_fmt, GLenum dst_type, u32 gcm_format,
 				u16 x, u16 y, u16 width, u16 height, u16 depth, u8 mipmaps, const rsx::texture_channel_remap_t& remap, bool copy);
 
@@ -571,56 +573,67 @@ namespace gl
 
 	protected:
 
-		gl::texture_view* create_temporary_subresource_view(gl::command_context& cmd, gl::texture** src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h,
-				const rsx::texture_channel_remap_t& remap_vector) override
+		gl::texture_view* create_temporary_subresource_view(gl::command_context& cmd, const deferred_subresource& desc) override
 		{
-			return create_temporary_subresource_impl(cmd, *src, GL_NONE, GL_TEXTURE_2D, gcm_format, x, y, w, h, 1, 1, remap_vector, true);
+			return create_temporary_subresource_impl(cmd, desc.external_handle, static_cast<GLenum>(desc.external_handle->get_internal_format()),
+					GL_TEXTURE_2D, desc.gcm_format, desc.x, desc.y, desc.width, desc.height, 1, 1, desc.remap, true);
 		}
 
-		gl::texture_view* create_temporary_subresource_view(gl::command_context& cmd, gl::texture* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h,
-				const rsx::texture_channel_remap_t& remap_vector) override
+		gl::texture_view* generate_cubemap_from_images(gl::command_context& cmd, const deferred_subresource& desc) override
 		{
-			return create_temporary_subresource_impl(cmd, src, static_cast<GLenum>(src->get_internal_format()),
-					GL_TEXTURE_2D, gcm_format, x, y, w, h, 1, 1, remap_vector, true);
-		}
+			auto _template = get_template_from_collection_impl(desc.sections_to_copy);
+			const u8 mip_count = 1 + desc.sections_to_copy.reduce(0, FN(std::max<u8>(x, y.level)));
+			auto result = create_temporary_subresource_impl(cmd, _template, GL_NONE, GL_TEXTURE_CUBE_MAP, desc.gcm_format, 0, 0, desc.width, desc.height, 1, mip_count, desc.remap, false);
 
-		gl::texture_view* generate_cubemap_from_images(gl::command_context& cmd, u32 gcm_format, u16 size, const rsx::simple_array<copy_region_descriptor>& sources, const rsx::texture_channel_remap_t& remap_vector) override
-		{
-			auto _template = get_template_from_collection_impl(sources);
-			const u8 mip_count = 1 + sources.reduce(0, FN(std::max<u8>(x, y.level)));
-			auto result = create_temporary_subresource_impl(cmd, _template, GL_NONE, GL_TEXTURE_CUBE_MAP, gcm_format, 0, 0, size, size, 1, mip_count, remap_vector, false);
+			if (desc.force_bg_load)
+			{
+				initialize_subresource_from_memory(cmd, result->image(), desc, rsx::texture_dimension_extended::texture_dimension_cubemap);
+			}
 
-			copy_transfer_regions_impl(cmd, result->image(), sources);
+			copy_transfer_regions_impl(cmd, result->image(), desc.sections_to_copy);
 			return result;
 		}
 
-		gl::texture_view* generate_3d_from_2d_images(gl::command_context& cmd, u32 gcm_format, u16 width, u16 height, u16 depth, const rsx::simple_array<copy_region_descriptor>& sources, const rsx::texture_channel_remap_t& remap_vector) override
+		gl::texture_view* generate_3d_from_2d_images(gl::command_context& cmd, const deferred_subresource& desc) override
 		{
-			auto _template = get_template_from_collection_impl(sources);
-			auto result = create_temporary_subresource_impl(cmd, _template, GL_NONE, GL_TEXTURE_3D, gcm_format, 0, 0, width, height, depth, 1, remap_vector, false);
+			auto _template = get_template_from_collection_impl(desc.sections_to_copy);
+			auto result = create_temporary_subresource_impl(cmd, _template, GL_NONE, GL_TEXTURE_3D, desc.gcm_format, 0, 0, desc.width, desc.height, desc.depth, 1, desc.remap, false);
 
-			copy_transfer_regions_impl(cmd, result->image(), sources);
+			if (desc.force_bg_load)
+			{
+				initialize_subresource_from_memory(cmd, result->image(), desc, rsx::texture_dimension_extended::texture_dimension_3d);
+			}
+
+			copy_transfer_regions_impl(cmd, result->image(), desc.sections_to_copy);
 			return result;
 		}
 
-		gl::texture_view* generate_atlas_from_images(gl::command_context& cmd, u32 gcm_format, u16 width, u16 height, const rsx::simple_array<copy_region_descriptor>& sections_to_copy,
-				const rsx::texture_channel_remap_t& remap_vector) override
+		gl::texture_view* generate_atlas_from_images(gl::command_context& cmd, const deferred_subresource& desc) override
 		{
-			auto _template = get_template_from_collection_impl(sections_to_copy);
-			auto result = create_temporary_subresource_impl(cmd, _template, GL_NONE, GL_TEXTURE_2D, gcm_format, 0, 0, width, height, 1, 1, remap_vector, false);
+			auto _template = get_template_from_collection_impl(desc.sections_to_copy);
+			auto result = create_temporary_subresource_impl(cmd, _template, GL_NONE, GL_TEXTURE_2D, desc.gcm_format, 0, 0, desc.width, desc.height, 1, 1, desc.remap, false);
 
-			copy_transfer_regions_impl(cmd, result->image(), sections_to_copy);
+			if (desc.force_bg_load)
+			{
+				initialize_subresource_from_memory(cmd, result->image(), desc, rsx::texture_dimension_extended::texture_dimension_2d);
+			}
+
+			copy_transfer_regions_impl(cmd, result->image(), desc.sections_to_copy);
 			return result;
 		}
 
-		gl::texture_view* generate_2d_mipmaps_from_images(gl::command_context& cmd, u32 gcm_format, u16 width, u16 height, const rsx::simple_array<copy_region_descriptor>& sections_to_copy,
-			const rsx::texture_channel_remap_t& remap_vector) override
+		gl::texture_view* generate_2d_mipmaps_from_images(gl::command_context& cmd, const deferred_subresource& desc) override
 		{
-			const auto mipmaps = ::narrow<u8>(sections_to_copy.size());
-			auto _template = get_template_from_collection_impl(sections_to_copy);
-			auto result = create_temporary_subresource_impl(cmd, _template, GL_NONE, GL_TEXTURE_2D, gcm_format, 0, 0, width, height, 1, mipmaps, remap_vector, false);
+			const auto mipmaps = ::narrow<u8>(desc.sections_to_copy.size());
+			auto _template = get_template_from_collection_impl(desc.sections_to_copy);
+			auto result = create_temporary_subresource_impl(cmd, _template, GL_NONE, GL_TEXTURE_2D, desc.gcm_format, 0, 0, desc.width, desc.height, 1, mipmaps, desc.remap, false);
 
-			copy_transfer_regions_impl(cmd, result->image(), sections_to_copy);
+			if (desc.force_bg_load)
+			{
+				initialize_subresource_from_memory(cmd, result->image(), desc, rsx::texture_dimension_extended::texture_dimension_2d);
+			}
+
+			copy_transfer_regions_impl(cmd, result->image(), desc.sections_to_copy);
 			return result;
 		}
 
