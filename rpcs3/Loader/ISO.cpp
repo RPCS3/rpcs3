@@ -3,6 +3,7 @@
 #include "ISO.h"
 #include "Emu/VFS.h"
 #include "Emu/system_utils.hpp"
+#include "Emu/System.h"
 #include "Crypto/utils.h"
 
 #include <codecvt>
@@ -921,6 +922,9 @@ static void iso_form_hierarchy(fs::file& file, iso_fs_node& node, bool use_ucs2_
 		return;
 	}
 
+	const std::string node_path = parent_path + "/" + node.metadata.name;
+	ensure(parent_path.empty() || Emu.IsPathInsideDir(node_path, parent_path, false));
+
 	std::vector<usz> multi_extent_node_indices;
 
 	// Assuming the directory spans a single extent
@@ -978,7 +982,7 @@ static void iso_form_hierarchy(fs::file& file, iso_fs_node& node, bool use_ucs2_
 	{
 		if (child_node->metadata.name != "." && child_node->metadata.name != "..")
 		{
-			iso_form_hierarchy(file, *child_node, use_ucs2_decoding, parent_path + "/" + node.metadata.name);
+			iso_form_hierarchy(file, *child_node, use_ucs2_decoding, node_path);
 		}
 	}
 }
