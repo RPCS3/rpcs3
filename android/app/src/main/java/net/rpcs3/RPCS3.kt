@@ -129,6 +129,7 @@ class RPCS3 {
         val initialized = mutableStateOf(false)
         val instance = RPCS3()
         var rootDirectory: String = ""
+        var internalDirectory: String = ""
         var activeGame = mutableStateOf<String?>(null)
         var state = mutableStateOf(EmulatorState.Stopped)
 

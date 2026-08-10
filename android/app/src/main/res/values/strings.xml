@@ -37,9 +37,15 @@
     <string name="progress_license_installation">License Installation</string>
     <string name="progress_deleting_game">Deleting Game</string>
     <string name="progress_installing_directory">Installing Directory</string>
+    <string name="progress_adding_game_folder">Adding game folder</string>
     <string name="progress_failed">%1$s failed</string>
     <string name="folder_add_empty_title">Nothing to add</string>
     <string name="folder_add_empty_message">No game or package was found in that folder. If you picked it through the Downloads shortcut, open the folder from the device storage root instead.</string>
+    <string name="folder_direct_boot_no_game">No PS3 game was found in that folder. Pick the folder that holds PS3_GAME.</string>
+    <string name="folder_direct_boot_unreadable">Could not read that folder directly. Grant all-files access and pick it from the device storage root.</string>
+    <string name="folder_direct_boot_no_disc">This disc game is missing PS3_DISC.SFB. Pick the disc root folder that holds both PS3_DISC.SFB and PS3_GAME.</string>
+    <string name="folder_direct_boot_exists">That folder is already in your library.</string>
+    <string name="folder_direct_boot_link_failed">Could not prepare the folder for direct boot.</string>
 
     <string name="drawer_firmware">Firmware: %1$s</string>
     <string name="drawer_firmware_none">None</string>
@@ -70,6 +76,7 @@
     <string name="games_remove_title">Remove %1$s?</string>
     <string name="games_uninstall_message">Deletes the installed game from app storage, along with its caches and any updates or extra data installed for it.</string>
     <string name="games_remove_message">Removes it from your library and clears its caches, updates and extra data. The original files at %1$s are not touched.</string>
+    <string name="games_remove_direct_boot_message">Removes it from your library, deletes its direct boot links and clears its caches. The game folder at %1$s is not touched.</string>
     <string name="games_missing_key_title">Missing key</string>
     <string name="games_missing_rap_message">This game requires a .RAP file please select it from the button below</string>
     <string name="games_firmware_missing_title">Firmware Missing</string>
@@ -83,8 +90,6 @@
     <string name="detail_settings">Settings</string>
     <string name="detail_update">Update</string>
     <string name="detail_patches">Patches</string>
-    <string name="detail_uninstall_title">Uninstall %1$s?</string>
-    <string name="detail_uninstall_message">This deletes the installed game data from this device.</string>
 
     <string name="cache_menu_label">PS3</string>
     <string name="cache_menu_collapse">Collapse cache menu</string>
@@ -149,12 +154,16 @@
     <string name="packages_target_version">" from v%1$s"</string>
     <string name="packages_size_unknown">unknown size</string>
 
+    <string name="source_direct_boot">Direct boot</string>
+    <string name="source_install">Install</string>
     <string name="iso_title">Add disc image</string>
     <string name="iso_subtitle">Both options add the game to your library with full settings.</string>
-    <string name="iso_direct_boot">Direct boot</string>
     <string name="iso_direct_boot_detail">Runs from the disc image. Nothing is copied.</string>
-    <string name="iso_install">Install</string>
-    <string name="iso_install_detail">Extracts the game to storage first.</string>
+    <string name="iso_install_detail">Copies the game into app storage first.</string>
+    <string name="folder_title">Add game folder</string>
+    <string name="folder_subtitle">Both options add the game to your library with full settings.</string>
+    <string name="folder_direct_boot_detail">Runs from the folder where it is. Nothing is copied.</string>
+    <string name="folder_install_detail">Copies the folder into app storage first.</string>
 
     <string name="settings_title_global">Global Settings</string>
     <string name="settings_category_controls">Controls</string>

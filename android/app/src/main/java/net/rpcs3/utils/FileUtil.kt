@@ -108,6 +108,118 @@ object FileUtil {
         }
     }
 
+    private fun findGameParamSfos(context: Context, rootFolderUri: Uri): List<SimpleDocument> {
+        val workList = mutableListOf(rootFolderUri)
+        val found = mutableListOf<SimpleDocument>()
+
+        while (workList.isNotEmpty()) {
+            val currentFolderUri = workList.removeAt(0)
+
+            val sfo = uriChild(context, currentFolderUri, "PS3_GAME/PARAM.SFO")
+                ?: uriChild(context, currentFolderUri, "PARAM.SFO")
+
+            if (sfo != null && !sfo.isDirectory) {
+                found += sfo
+                continue
+            }
+
+            listFiles(currentFolderUri, context).forEach { item ->
+                if (item.isDirectory) {
+                    workList.add(item.uri)
+                }
+            }
+        }
+
+        return found
+    }
+
+    private fun addDirectBootGame(context: Context, paramSfo: SimpleDocument): Int {
+        val descriptor = runCatching {
+            context.contentResolver.openFileDescriptor(paramSfo.uri, "r")
+        }.getOrNull()
+
+        val paramSfoPath = descriptor?.fd?.let { FolderGames.resolveDescriptorPath(it) }
+        runCatching { descriptor?.close() }
+
+        if (paramSfoPath == null) {
+            return R.string.folder_direct_boot_unreadable
+        }
+
+        val gameRoot = FolderGames.gameRootOf(paramSfoPath)
+
+        if (!File(gameRoot).isDirectory) {
+            return R.string.folder_direct_boot_unreadable
+        }
+
+        val details = GameDetailsReader.read(gameRoot)
+
+        if (details.category.isEmpty()) {
+            return R.string.folder_direct_boot_no_game
+        }
+
+        if (details.category == "DG" && !File(gameRoot, "PS3_DISC.SFB").isFile) {
+            return R.string.folder_direct_boot_no_disc
+        }
+
+        if (GameRepository.find(gameRoot) != null) {
+            return R.string.folder_direct_boot_exists
+        }
+
+        if (FolderGames.link(gameRoot, details.titleId) == null) {
+            return R.string.folder_direct_boot_link_failed
+        }
+
+        GameRepository.add(
+            arrayOf(
+                GameInfo(
+                    gameRoot,
+                    details.title.ifEmpty { details.titleId },
+                    FolderGames.iconPathOf(gameRoot),
+                    0
+                )
+            ),
+            PrecompilerService.NoProgress
+        )
+
+        return 0
+    }
+
+    fun directBootFolder(context: Context, rootFolderUri: Uri) {
+        thread {
+            val progress = ProgressRepository.create(
+                context, context.getString(R.string.progress_adding_game_folder)
+            )
+
+            val paramSfos = findGameParamSfos(context, rootFolderUri)
+
+            if (paramSfos.isEmpty()) {
+                ProgressRepository.onProgressEvent(
+                    progress, -1, 0, context.getString(R.string.folder_direct_boot_no_game)
+                )
+                return@thread
+            }
+
+            var added = 0
+            var failure = R.string.folder_direct_boot_no_game
+
+            paramSfos.forEach { paramSfo ->
+                val result = addDirectBootGame(context, paramSfo)
+
+                if (result == 0) {
+                    added++
+                } else {
+                    failure = result
+                }
+            }
+
+            if (added == 0) {
+                ProgressRepository.onProgressEvent(progress, -1, 0, context.getString(failure))
+            } else {
+                ProgressRepository.onProgressEvent(progress, added.toLong(), added.toLong())
+            }
+        }
+    }
+
     fun saveGameFolderUri(prefs: SharedPreferences, uri: Uri) {
         prefs.edit { putString("selected_game_folder", uri.toString()) }
     }

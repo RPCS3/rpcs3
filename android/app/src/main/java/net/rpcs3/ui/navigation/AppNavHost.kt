@@ -101,7 +101,7 @@ import net.rpcs3.RPCS3Activity
 import net.rpcs3.overlay.OverlayEditActivity
 import net.rpcs3.dialogs.AlertDialogQueue
 import net.rpcs3.ui.drivers.GpuDriversScreen
-import net.rpcs3.ui.games.IsoChoiceDialog
+import net.rpcs3.ui.games.GameSourceChoiceDialog
 import net.rpcs3.ui.games.GamesScreen
 import net.rpcs3.ui.games.GameUpdatesScreen
 import net.rpcs3.ui.games.PackageInstallFlow
@@ -321,6 +321,7 @@ fun GamesDestination(
     }
 
     var pendingIso by remember { mutableStateOf<Uri?>(null) }
+    var pendingFolder by remember { mutableStateOf<Uri?>(null) }
     var needsStorage by remember { mutableStateOf(false) }
     val firmwareLoaded by FirmwareRepository.loaded
     var setupActive by remember { mutableStateOf<Boolean?>(null) }
@@ -349,7 +350,12 @@ fun GamesDestination(
     }
 
     pendingIso?.let { uri ->
-        IsoChoiceDialog(
+        GameSourceChoiceDialog(
+            title = stringResource(R.string.iso_title),
+            subtitle = stringResource(R.string.iso_subtitle),
+            sourceIcon = Icons.Outlined.Album,
+            directBootDetail = stringResource(R.string.iso_direct_boot_detail),
+            installDetail = stringResource(R.string.iso_install_detail),
             onDirectBoot = {
                 pendingIso = null
                 PrecompilerService.start(context, PrecompilerServiceAction.AddIso, uri)
@@ -359,6 +365,25 @@ fun GamesDestination(
                 PrecompilerService.start(context, PrecompilerServiceAction.Install, uri)
             },
             onDismiss = { pendingIso = null }
+        )
+    }
+
+    pendingFolder?.let { uri ->
+        GameSourceChoiceDialog(
+            title = stringResource(R.string.folder_title),
+            subtitle = stringResource(R.string.folder_subtitle),
+            sourceIcon = Icons.Outlined.Folder,
+            directBootDetail = stringResource(R.string.folder_direct_boot_detail),
+            installDetail = stringResource(R.string.folder_install_detail),
+            onDirectBoot = {
+                pendingFolder = null
+                FileUtil.directBootFolder(context, uri)
+            },
+            onInstall = {
+                pendingFolder = null
+                FileUtil.installPackages(context, uri)
+            },
+            onDismiss = { pendingFolder = null }
         )
     }
 
@@ -379,7 +404,7 @@ fun GamesDestination(
             uri?.let {
                 val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION
                 context.contentResolver.takePersistableUriPermission(it, takeFlags)
-                FileUtil.installPackages(context, it)
+                pendingFolder = it
             }
         }
     )
@@ -687,7 +712,14 @@ fun DropUpFloatingActionButton(
                         )
                     }
                     FloatingActionButton(
-                        onClick = { gameFolderPickerLauncher.launch(null); expanded = false },
+                        onClick = {
+                            expanded = false
+                            if (hasStorageAccess()) {
+                                gameFolderPickerLauncher.launch(null)
+                            } else {
+                                onNeedsStorage()
+                            }
+                        },
                         containerColor = MaterialTheme.colorScheme.secondary
                     ) {
                         Icon(

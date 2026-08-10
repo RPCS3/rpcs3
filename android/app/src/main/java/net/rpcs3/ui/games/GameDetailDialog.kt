@@ -147,6 +147,8 @@ fun GameDetailDialog(
     onInstallUpdate: (() -> Unit)?,
     onPatches: (() -> Unit)?,
     uninstallLabel: String = stringResource(R.string.action_uninstall),
+    uninstallTitle: String = stringResource(R.string.games_uninstall_title, title),
+    uninstallMessage: String = stringResource(R.string.games_uninstall_message),
     onUninstall: (() -> Unit)?,
     onDismissRequest: () -> Unit
 ) {
@@ -414,7 +416,9 @@ fun GameDetailDialog(
 
             if (confirmUninstall && onUninstall != null) {
                 UninstallConfirm(
-                    name = title,
+                    title = uninstallTitle,
+                    message = uninstallMessage,
+                    action = uninstallLabel,
                     onCancel = { confirmUninstall = false },
                     onConfirm = {
                         confirmUninstall = false
@@ -674,7 +678,13 @@ private fun IconActionButton(
 }
 
 @Composable
-private fun UninstallConfirm(name: String, onCancel: () -> Unit, onConfirm: () -> Unit) {
+private fun UninstallConfirm(
+    title: String,
+    message: String,
+    action: String,
+    onCancel: () -> Unit,
+    onConfirm: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -700,14 +710,14 @@ private fun UninstallConfirm(name: String, onCancel: () -> Unit, onConfirm: () -
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text(
-                    text = stringResource(R.string.detail_uninstall_title, name),
+                    text = title,
                     color = LaunchTextPrimary,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = stringResource(R.string.detail_uninstall_message),
+                    text = message,
                     color = LaunchTextSecondary,
                     fontSize = 13.sp
                 )
@@ -727,7 +737,7 @@ private fun UninstallConfirm(name: String, onCancel: () -> Unit, onConfirm: () -
                             .padding(horizontal = 14.dp, vertical = 8.dp)
                     )
                     Text(
-                        text = stringResource(R.string.action_uninstall),
+                        text = action,
                         color = LaunchDanger,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,

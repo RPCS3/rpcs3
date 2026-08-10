@@ -1,5 +1,6 @@
 package net.rpcs3.ui.games
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -93,12 +94,36 @@ import net.rpcs3.ui.components.chasingBorder
 import net.rpcs3.ui.library.GameSort
 import net.rpcs3.ui.theme.SettingsStyle
 import net.rpcs3.utils.FileUtil
+import net.rpcs3.utils.FolderGames
 import net.rpcs3.utils.GameDetails
 import net.rpcs3.utils.GameDetailsReader
 
 internal fun isInternalGame(path: String): Boolean {
     val root = RPCS3.rootDirectory
     return root.isNotEmpty() && File(path).absolutePath.startsWith(File(root).absolutePath)
+}
+
+internal fun isManagedGame(path: String) = isInternalGame(path) && !FolderGames.isDirectBoot(path)
+
+internal data class UninstallPrompt(val title: String, val message: String, val action: String)
+
+internal fun uninstallPrompt(context: Context, path: String, name: String): UninstallPrompt {
+    val directBoot = FolderGames.isDirectBoot(path)
+    val internal = isInternalGame(path) && !directBoot
+
+    return UninstallPrompt(
+        title = context.getString(
+            if (internal) R.string.games_uninstall_title else R.string.games_remove_title, name
+        ),
+        message = when {
+            internal -> context.getString(R.string.games_uninstall_message)
+            directBoot -> context.getString(R.string.games_remove_direct_boot_message, path)
+            else -> context.getString(R.string.games_remove_message, path)
+        },
+        action = context.getString(
+            if (internal) R.string.action_uninstall else R.string.action_remove
+        )
+    )
 }
 
 private fun withAlpha(color: Color, alpha: Float): Color {
@@ -162,6 +187,7 @@ fun GameItem(
         GameRepository.onBoot(game)
         val emulatorWindow = Intent(context, RPCS3Activity::class.java)
         emulatorWindow.putExtra("path", game.info.path)
+        emulatorWindow.putExtra("bootPath", FolderGames.bootPath(game.info.path))
         context.startActivity(emulatorWindow)
     }
 
@@ -237,7 +263,8 @@ fun GameItem(
         ProgressRepository.onProgressEvent(deleteProgress, 0, 0L)
 
         val path = File(game.info.path)
-        val internal = isInternalGame(game.info.path)
+        val directBoot = FolderGames.isDirectBoot(game.info.path)
+        val internal = isInternalGame(game.info.path) && !directBoot
         val titleId = gameTitleId(game.info.path)
 
         deleteScope.launch {
@@ -246,19 +273,23 @@ fun GameItem(
             }.ifEmpty { titleId }
 
             withContext(Dispatchers.IO) {
-                if (internal && path.exists()) {
-                    path.deleteRecursively()
-                }
-
-                runCatching {
-                    parseUpdates(RPCS3.instance.installedUpdates(serial)).forEach { entry ->
-                        RPCS3.instance.uninstallUpdate(entry.path)
+                if (directBoot) {
+                    FolderGames.removeLinks(game.info.path)
+                } else {
+                    if (internal && path.exists()) {
+                        path.deleteRecursively()
                     }
-                }
 
-                if (!internal) {
                     runCatching {
-                        File(RPCS3.rootDirectory + "config/Icons/iso/$serial.PNG").delete()
+                        parseUpdates(RPCS3.instance.installedUpdates(serial)).forEach { entry ->
+                            RPCS3.instance.uninstallUpdate(entry.path)
+                        }
+                    }
+
+                    if (!internal) {
+                        runCatching {
+                            File(RPCS3.rootDirectory + "config/Icons/iso/$serial.PNG").delete()
+                        }
                     }
                 }
             }
@@ -289,23 +320,12 @@ fun GameItem(
 
     fun confirmUninstall() {
         val name = game.info.name.value ?: gameTitleId(game.info.path)
-        val internal = isInternalGame(game.info.path)
-        val action = context.getString(
-            if (internal) R.string.action_uninstall else R.string.action_remove
-        )
+        val prompt = uninstallPrompt(context, game.info.path, name)
 
         AlertDialogQueue.showDialog(
-            title = if (internal) {
-                context.getString(R.string.games_uninstall_title, name)
-            } else {
-                context.getString(R.string.games_remove_title, name)
-            },
-            message = if (internal) {
-                context.getString(R.string.games_uninstall_message)
-            } else {
-                context.getString(R.string.games_remove_message, game.info.path)
-            },
-            confirmText = action,
+            title = prompt.title,
+            message = prompt.message,
+            confirmText = prompt.action,
             dismissText = context.getString(R.string.action_cancel),
             onConfirm = { uninstallGame() }
         )
@@ -336,7 +356,7 @@ fun GameItem(
                     text = {
                         Text(
                             stringResource(
-                                if (isInternalGame(game.info.path)) {
+                                if (isManagedGame(game.info.path)) {
                                     R.string.action_uninstall
                                 } else {
                                     R.string.action_remove
@@ -514,6 +534,10 @@ fun GameItem(
         }
     }
     if (detailVisible.value) {
+        val detailPrompt = uninstallPrompt(
+            context, game.info.path, game.info.name.value ?: gameTitleId(game.info.path)
+        )
+
         GameDetailDialog(
             title = game.info.name.value ?: gameTitleId(game.info.path),
             subtitle = detailsState?.titleId?.ifEmpty { null } ?: gameTitleId(game.info.path),
@@ -536,19 +560,15 @@ fun GameItem(
                 detailVisible.value = false
                 navigateToGamePatches(gameTitleId(game.info.path))
             },
-            uninstallLabel = stringResource(
-                if (isInternalGame(game.info.path)) {
-                    R.string.action_uninstall
-                } else {
-                    R.string.action_remove
-                }
-            ),
+            uninstallLabel = detailPrompt.action,
+            uninstallTitle = detailPrompt.title,
+            uninstallMessage = detailPrompt.message,
             onUninstall = if (game.info.name.value == "VSH") {
                 null
             } else {
                 {
                     detailVisible.value = false
-                    confirmUninstall()
+                    uninstallGame()
                 }
             },
             onDismissRequest = { detailVisible.value = false }
@@ -598,6 +618,7 @@ fun GamesScreen(
                         RPCS3.rootDirectory + "/config/dev_hdd0/game", -1
                     )
                     RPCS3.instance.collectGameInfo(RPCS3.rootDirectory + "/config/games", -1)
+                    FolderGames.restore()
                     Thread.sleep(300)
                     isRefreshing.value = false
                 }

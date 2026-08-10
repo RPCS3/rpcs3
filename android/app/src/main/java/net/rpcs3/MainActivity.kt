@@ -77,6 +77,8 @@ class MainActivity : ComponentActivity() {
             RPCS3.rootDirectory += "/"
         }
 
+        RPCS3.internalDirectory = applicationContext.filesDir.absolutePath
+
         Permission.PostNotifications.requestPermission(this)
 
         with(getSystemService(NOTIFICATION_SERVICE) as NotificationManager) {

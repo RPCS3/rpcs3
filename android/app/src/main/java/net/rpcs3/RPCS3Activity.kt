@@ -108,6 +108,7 @@ class RPCS3Activity : ComponentActivity() {
 
         val isoUriString = intent.getStringExtra("isoUri")
         val gamePath = intent.getStringExtra("path") ?: isoUriString!!
+        val bootPath = intent.getStringExtra("bootPath") ?: gamePath
 
         if (isoUriString != null) {
             isoDescriptor = runCatching {
@@ -151,13 +152,13 @@ class RPCS3Activity : ComponentActivity() {
             Log.w("RPCS3 State", RPCS3.getState().name)
             RPCS3.activeGame.value = gamePath
 
-            DriverFlags.apply(this@RPCS3Activity, GameDetailsReader.read(gamePath).titleId)
+            DriverFlags.apply(this@RPCS3Activity, GameDetailsReader.read(bootPath).titleId)
 
             val descriptor = isoDescriptor
             val bootResult = if (descriptor != null) {
                 BootResult.fromInt(RPCS3.instance.bootIso(descriptor.fd))
             } else {
-                RPCS3.boot(gamePath)
+                RPCS3.boot(bootPath)
             }
             if (bootResult != BootResult.NoErrors) {
                 AlertDialogQueue.showDialog(

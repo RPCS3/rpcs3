@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Album
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -33,7 +32,12 @@ import net.rpcs3.R
 import net.rpcs3.ui.theme.SettingsStyle
 
 @Composable
-fun IsoChoiceDialog(
+fun GameSourceChoiceDialog(
+    title: String,
+    subtitle: String,
+    sourceIcon: ImageVector,
+    directBootDetail: String,
+    installDetail: String,
     onDirectBoot: () -> Unit,
     onInstall: () -> Unit,
     onDismiss: () -> Unit
@@ -48,30 +52,30 @@ fun IsoChoiceDialog(
                 .padding(18.dp)
         ) {
             Text(
-                text = stringResource(R.string.iso_title),
+                text = title,
                 color = SettingsStyle.TextPrimary,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = stringResource(R.string.iso_subtitle),
+                text = subtitle,
                 color = SettingsStyle.TextSecondary,
                 fontSize = 12.sp
             )
             Spacer(Modifier.height(16.dp))
 
-            IsoChoice(
-                icon = Icons.Outlined.Album,
-                title = stringResource(R.string.iso_direct_boot),
-                detail = stringResource(R.string.iso_direct_boot_detail),
+            GameSourceChoice(
+                icon = sourceIcon,
+                title = stringResource(R.string.source_direct_boot),
+                detail = directBootDetail,
                 onClick = onDirectBoot
             )
             Spacer(Modifier.height(10.dp))
-            IsoChoice(
+            GameSourceChoice(
                 icon = Icons.Outlined.Download,
-                title = stringResource(R.string.iso_install),
-                detail = stringResource(R.string.iso_install_detail),
+                title = stringResource(R.string.source_install),
+                detail = installDetail,
                 onClick = onInstall
             )
 
@@ -94,7 +98,7 @@ fun IsoChoiceDialog(
 }
 
 @Composable
-private fun IsoChoice(
+private fun GameSourceChoice(
     icon: ImageVector,
     title: String,
     detail: String,
