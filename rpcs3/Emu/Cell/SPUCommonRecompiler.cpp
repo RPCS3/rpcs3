@@ -445,6 +445,10 @@ DECLARE(spu_runtime::tr_all) = []
 #endif
 }();
 
+#if defined(ARCH_ARM64)
+static constexpr u32 s_spu_scratchpad_size = 32768;
+#endif
+
 DECLARE(spu_runtime::g_gateway) = build_function_asm<spu_function_t>("spu_gateway", [](native_asm& c, auto& args)
 {
 	// Gateway for SPU dispatcher, converts from native to GHC calling convention, also saves RSP value for spu_escape
@@ -564,7 +568,7 @@ DECLARE(spu_runtime::g_gateway) = build_function_asm<spu_function_t>("spu_gatewa
 	c.mov(a64::x22, args[3]);
 
 	// Inject stack frame for scratchpad. Alternatively use per-function frames but that adds some overhead
-	c.sub(a64::sp, a64::sp, Imm(8192));
+	c.sub(a64::sp, a64::sp, Imm(s_spu_scratchpad_size));
 
 	c.mov(a64::x0, Imm(reinterpret_cast<u64>(spu_runtime::tr_all)));
 	c.blr(a64::x0);
@@ -660,14 +664,14 @@ DECLARE(spu_runtime::g_tail_escape) = build_function_asm<void(*)(spu_thread*, sp
 	c.str(args[0], arm::Mem(a64::sp));
 
 	// Allocate scratchpad. Not needed if using per-function frames, or if we just don't care about returning to C++ (jump to gw exit instead)
-	c.sub(a64::sp, a64::sp, Imm(8192));
+	c.sub(a64::sp, a64::sp, Imm(s_spu_scratchpad_size));
 
 	// Make the far jump
 	c.mov(a64::x15, args[1]);
 	c.blr(a64::x15);
 
 	// Clear scratch allocation
-	c.add(a64::sp, a64::sp, Imm(8192));
+	c.add(a64::sp, a64::sp, Imm(s_spu_scratchpad_size));
 
 	// Restore context. Escape point expects the current thread pointer at x19
 	c.ldr(a64::x19, arm::Mem(a64::sp));
