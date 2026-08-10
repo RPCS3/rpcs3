@@ -9,6 +9,26 @@ HOST_TOOLS="${LLVM_HOST_TOOLS:-$ROOT/.work/llvm-host/bin}"
 BUILD="${LLVM_BUILD:-$ROOT/.work/llvm-android}"
 OUT="${LLVM_PREFIX:-$ROOT/prebuilt/llvm-arm64-v8a}"
 
+if [ ! -d "$SRC/lib/Target/AArch64" ]; then
+	echo "LLVM sources not found at $SRC" >&2
+	echo "run: git submodule update --init --recursive 3rdparty/llvm/llvm" >&2
+	exit 1
+fi
+
+shopt -s nullglob
+for patchfile in "$ROOT"/patches/*.patch; do
+	name="$(basename "$patchfile")"
+	if patch -p2 -d "$SRC" -R --dry-run -s -f <"$patchfile" >/dev/null 2>&1; then
+		echo "patch already applied: $name"
+	elif patch -p2 -d "$SRC" -s -f <"$patchfile"; then
+		echo "applied patch: $name"
+	else
+		echo "failed to apply $name to $SRC" >&2
+		exit 1
+	fi
+done
+shopt -u nullglob
+
 if [ ! -x "$HOST_TOOLS/llvm-tblgen" ]; then
 	echo "building host tablegen"
 	HOST_BUILD="${LLVM_HOST_BUILD:-$ROOT/.work/llvm-host-build}"
