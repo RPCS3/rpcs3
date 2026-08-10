@@ -80,7 +80,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: android/prebuilt
-          key: android-prebuilt-${{ env.NDK_VERSION }}-${{ hashFiles('android/build-llvm-android.sh', 'android/build-ffmpeg-android.sh') }}-${{ hashFiles('.gitmodules') }}
+          key: android-prebuilt-${{ env.NDK_VERSION }}-${{ hashFiles('android/build-llvm-android.sh', 'android/build-ffmpeg-android.sh', 'android/patches/*.patch') }}-${{ hashFiles('.gitmodules') }}
 
       - name: Build FFmpeg
         if: steps.deps.outputs.cache-hit != 'true' || inputs.rebuild_deps
