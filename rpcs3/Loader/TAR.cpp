@@ -257,6 +257,11 @@ bool tar_object::extract(const std::string& prefix_path, bool is_vfs)
 				return false;
 			}
 		}
+		else if (!Emu.IsPathInsideDir(prefix_path, result, false))
+		{
+			tar_log.error("Error extracting %s: target path '%s' is outside of '%s'", name, result, prefix_path);
+			return false;
+		}
 
 		u64 mtime = octal_text_to_u64({header.mtime, std::size(header.mtime)});
 
