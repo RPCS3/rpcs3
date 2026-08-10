@@ -798,7 +798,9 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 
 	const auto sock = idm::check<lv2_socket>(s, [&, notify = lv2_obj::notify_all_t()](lv2_socket& sock)
 		{
-			const auto success = sock.recvfrom(flags, len);
+			auto lock = sock.lock();
+
+			const auto success = sock.recvfrom(flags, len, false);
 
 			if (success)
 			{
@@ -813,8 +815,6 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 				result = res;
 				return true;
 			}
-
-			auto lock = sock.lock();
 
 			sock.poll_queue(idm::get_unlocked<named_thread<ppu_thread>>(ppu.id), lv2_socket::poll_t::read, [&](bs_t<lv2_socket::poll_t> events) -> bool
 				{
