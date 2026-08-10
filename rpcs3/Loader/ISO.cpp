@@ -1049,7 +1049,13 @@ iso_archive::iso_archive(const std::string& path)
 
 		iso_file.seek(descriptor_start + ISO_SECTOR_SIZE);
 	}
-	while (descriptor_type != 255);
+	while (descriptor_type != 255 && iso_file.pos() < iso_file.size());
+
+	if (descriptor_type != 255)
+	{
+		iso_log.error("iso_archive: Corrupt ISO file '%s': Volume Descriptor Set Terminator not found", path);
+		return;
+	}
 
 	iso_form_hierarchy(iso_file, m_root, use_ucs2_decoding);
 
