@@ -2,11 +2,6 @@ name: Generate Translation Template
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - master
-    paths:
-      - 'rpcs3/**'
 
 jobs:
   Generate_Translation_Template:
