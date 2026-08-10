@@ -70,7 +70,7 @@ cmake -G Ninja -S "$SRC" -B "$BUILD" \
 	-DLLVM_ENABLE_UNWIND_TABLES=OFF \
 	-DLLVM_USE_PERF=OFF
 
-ninja -C "$BUILD" -j"$(nproc)"
+ninja -C "$BUILD" -j"${LLVM_JOBS:-$(nproc)}"
 ninja -C "$BUILD" install
 
 echo "LLVM installed to $OUT"

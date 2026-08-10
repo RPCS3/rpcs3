@@ -1,0 +1,22 @@
+--- a/llvm/lib/Target/AArch64/AArch64FrameLowering.cpp
++++ b/llvm/lib/Target/AArch64/AArch64FrameLowering.cpp
+@@ -2504,8 +2504,18 @@
+                                                 RegScavenger *RS) const {
+   // All calls are tail calls in GHC calling conv, and functions have no
+   // prologue/epilogue.
+-  if (MF.getFunction().getCallingConv() == CallingConv::GHC)
++  if (MF.getFunction().getCallingConv() == CallingConv::GHC) {
++    if (RS && MF.getFrameInfo().hasStackObjects()) {
++      const AArch64RegisterInfo *GHCRegInfo =
++          MF.getSubtarget<AArch64Subtarget>().getRegisterInfo();
++      const TargetRegisterClass &GHCRC = AArch64::GPR64RegClass;
++      int GHCFI = MF.getFrameInfo().CreateStackObject(
++          GHCRegInfo->getSpillSize(GHCRC), GHCRegInfo->getSpillAlign(GHCRC),
++          false);
++      RS->addScavengingFrameIndex(GHCFI);
++    }
+     return;
++  }
+ 
+   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
+ 
