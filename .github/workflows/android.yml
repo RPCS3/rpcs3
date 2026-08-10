@@ -75,12 +75,23 @@ jobs:
           key: android-deps-${{ env.NDK_VERSION }}
           max-size: 3G
 
+      - name: Resolve LLVM revision
+        id: llvmrev
+        run: |
+          sha=$(git rev-parse HEAD:3rdparty/llvm/llvm)
+          if [ -z "$sha" ]; then
+            echo "::error::could not resolve the 3rdparty/llvm/llvm submodule revision"
+            exit 1
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "llvm submodule pinned at $sha"
+
       - name: Cache prebuilt dependencies
         id: deps
         uses: actions/cache@v4
         with:
           path: android/prebuilt
-          key: android-prebuilt-${{ env.NDK_VERSION }}-${{ hashFiles('android/build-llvm-android.sh', 'android/build-ffmpeg-android.sh', 'android/patches/*.patch') }}-${{ hashFiles('.gitmodules') }}
+          key: android-prebuilt-${{ env.NDK_VERSION }}-${{ hashFiles('android/build-llvm-android.sh', 'android/build-ffmpeg-android.sh', 'android/patches/*.patch') }}-${{ steps.llvmrev.outputs.sha }}
 
       - name: Build FFmpeg
         if: steps.deps.outputs.cache-hit != 'true' || inputs.rebuild_deps
