@@ -3597,6 +3597,15 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 	const bool continuous_savestate_mode = savestate && !g_cfg.savestate.suspend_emu;
 
+	// Decide upfront (before the renderer is torn down) whether this stop should return to Big Picture
+	// Mode, so SetContinuousMode() takes effect before GSRender::~GSRender() runs and closes the window.
+	const bool return_to_big_picture_mode = !after_kill_callback && g_big_picture_mode_active.exchange(false);
+
+	if (return_to_big_picture_mode)
+	{
+		SetContinuousMode(true);
+	}
+
 	// Show visual feedback to the user in case that stopping takes a while.
 	// This needs to be done before actually stopping, because otherwise the necessary threads will be terminated before we can show an image.
 	if (g_fxo->try_get<named_thread<progress_dialog_server>>() && (continuous_savestate_mode || g_progr_text.operator bool()))
@@ -3631,7 +3640,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 	// There is no race condition because it is only accessed by the same thread
 	std::shared_ptr<std::shared_ptr<void>> join_thread = std::make_shared<std::shared_ptr<void>>();
 
-	*join_thread = make_ptr(new named_thread("Emulation Join Thread"sv, [join_thread, reset_emu_state, savestate, allow_autoexit, save_stage = save_stage ? *save_stage : savestate_stage{}, this]() mutable
+	*join_thread = make_ptr(new named_thread("Emulation Join Thread"sv, [join_thread, reset_emu_state, savestate, allow_autoexit, save_stage = save_stage ? *save_stage : savestate_stage{}, return_to_big_picture_mode, this]() mutable
 	{
 		fs::pending_file file;
 
@@ -4141,7 +4150,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 		set_progress_message("Resetting Objects");
 
 		// Final termination from main thread (move the last ownership of join thread in order to destroy it)
-		CallFromMainThread([join_thread = std::move(join_thread), reset_emu_state, verbose_message, stop_watchdog, init_mtx, allow_autoexit, this]()
+		CallFromMainThread([join_thread = std::move(join_thread), reset_emu_state, verbose_message, stop_watchdog, init_mtx, allow_autoexit, return_to_big_picture_mode, this]()
 		{
 			cpu_thread::cleanup();
 
@@ -4199,14 +4208,11 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			// Complete the operation
 			m_state = system_state::stopped;
 
-			// Only return to Big Picture Mode on a genuinely final stop, not an internal
-			// chainload/restart continuation (those leave after_kill_callback set already).
-			if (!after_kill_callback && g_big_picture_mode_active.exchange(false))
+			if (return_to_big_picture_mode)
 			{
 				after_kill_callback = [this]()
 				{
 					sys_log.notice("Big Picture Mode: game stopped, returning to Big Picture Mode.");
-					SetContinuousMode(true);
 					const bool result = BootBigPictureMode();
 					sys_log.notice("Big Picture Mode: BootBigPictureMode() returned %d", result);
 				};
