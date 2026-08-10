@@ -166,6 +166,8 @@ public:
 class iso_archive
 {
 private:
+	void invalidate();
+
 	std::string m_path;
 	iso_fs_node m_root {};
 	std::shared_ptr<iso_file_decryption> m_dec;
@@ -177,6 +179,7 @@ public:
 	const iso_fs_node& root() const { return m_root; }
 
 	iso_fs_node* retrieve(const std::string& path);
+	bool is_valid() const;
 	bool exists(const std::string& path);
 	bool is_file(const std::string& path);
 

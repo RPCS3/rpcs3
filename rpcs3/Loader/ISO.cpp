@@ -919,15 +919,20 @@ static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, 
 	};
 }
 
-static void iso_form_hierarchy(fs::file& file, iso_fs_node& node, bool use_ucs2_decoding = false, const std::string& parent_path = "")
+static bool iso_form_hierarchy(fs::file& file, iso_fs_node& node, bool use_ucs2_decoding = false, const std::string& parent_path = "")
 {
 	if (!node.metadata.is_directory)
 	{
-		return;
+		return !parent_path.empty();
 	}
 
 	const std::string node_path = parent_path + "/" + node.metadata.name;
-	ensure(parent_path.empty() || Emu.IsPathInsideDir(node_path, parent_path, false));
+
+	if (!parent_path.empty() && !Emu.IsPathInsideDir(node_path, parent_path, false))
+	{
+		iso_log.error("iso_archive::iso_form_hierarchy: node path outside of parent (parent_path='%s', node_path='%s')", parent_path, node_path);
+		return false;
+	}
 
 	std::vector<usz> multi_extent_node_indices;
 
@@ -986,9 +991,14 @@ static void iso_form_hierarchy(fs::file& file, iso_fs_node& node, bool use_ucs2_
 	{
 		if (child_node->metadata.name != "." && child_node->metadata.name != "..")
 		{
-			iso_form_hierarchy(file, *child_node, use_ucs2_decoding, node_path);
+			if (!iso_form_hierarchy(file, *child_node, use_ucs2_decoding, node_path))
+			{
+				return false;
+			}
 		}
 	}
+
+	return true;
 }
 
 u64 iso_fs_metadata::size() const
@@ -1012,8 +1022,8 @@ iso_archive::iso_archive(const std::string& path)
 
 	if (!is_iso_file(m_path))
 	{
-		// Not ISO... TODO: throw something?
 		iso_log.error("iso_archive: Failed to recognize ISO file: '%s'", path);
+		invalidate();
 		return;
 	}
 
@@ -1054,24 +1064,31 @@ iso_archive::iso_archive(const std::string& path)
 	if (descriptor_type != 255)
 	{
 		iso_log.error("iso_archive: Corrupt ISO file '%s': Volume Descriptor Set Terminator not found", path);
+		invalidate();
 		return;
 	}
 
-	iso_form_hierarchy(iso_file, m_root, use_ucs2_decoding);
+	if (!iso_form_hierarchy(iso_file, m_root, use_ucs2_decoding))
+	{
+		iso_log.error("iso_archive: Corrupt ISO file '%s': Failed to form hierarchy", path);
+		invalidate();
+		return;
+	}
 
 	// Only when the archive object is fully set, we can finally initialize the decryption object needing the archive object
 	m_dec = std::make_shared<iso_file_decryption>();
 
 	if (!m_dec->init(m_path, this))
 	{
-		// TODO: throw something?
+		iso_log.error("iso_archive: Corrupt ISO file '%s': Decryption failed", path);
+		invalidate();
 		return;
 	}
 }
 
 iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
 {
-	if (passed_path.empty())
+	if (passed_path.empty() || !is_valid())
 	{
 		return nullptr;
 	}
@@ -1146,6 +1163,17 @@ iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
 	return search_stack.top();
 }
 
+void iso_archive::invalidate()
+{
+	m_root = {};
+	m_dec.reset();
+}
+
+bool iso_archive::is_valid() const
+{
+	return !m_root.metadata.name.empty();
+}
+
 bool iso_archive::exists(const std::string& path)
 {
 	return retrieve(path) != nullptr;
@@ -1165,6 +1193,11 @@ bool iso_archive::is_file(const std::string& path)
 
 std::unique_ptr<fs::file_base> iso_archive::get_iso_file(const std::string& path, bs_t<fs::open_mode> mode, const iso_fs_node& node)
 {
+	if (!is_valid())
+	{
+		return nullptr;
+	}
+
 	if (m_dec->get_enc_type() == iso_encryption_type::NONE)
 	{
 		return std::make_unique<iso_file>(path, mode, node);
