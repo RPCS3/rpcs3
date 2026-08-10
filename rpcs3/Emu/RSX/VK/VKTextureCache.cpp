@@ -971,8 +971,12 @@ namespace vk
 
 	void texture_cache::initialize_subresource_from_memory(vk::command_buffer& cmd, vk::image* dst, const deferred_subresource& desc, rsx::texture_dimension_extended type) const
 	{
-		const auto subresources_layout = rsx::get_subresources_layout(desc, type);
+		auto subresources_layout = rsx::get_subresources_layout(desc, type);
 		const u16 layer_count = (type == rsx::texture_dimension_extended::texture_dimension_cubemap) ? 6 : 1;
+		std::erase_if(subresources_layout, [mipmaps = dst->mipmaps()](const rsx::subresource_layout& layout)
+		{
+			return layout.level >= mipmaps;
+		});
 		vk::upload_image(cmd, dst, subresources_layout, desc.gcm_format, desc.swizzled, layer_count,
 			dst->aspect(), *vk::get_upload_heap(), desc.pitch, vk::upload_contents_inline);
 	}
