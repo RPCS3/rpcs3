@@ -1387,7 +1387,7 @@ int run_rpcs3(int argc, char** argv)
 		Emu.Quit(true);
 		return 0;
 	}
-	else if (qobject_cast<gui_application*>(app.data()) && g_cfg.misc.start_big_picture_mode && !Emu.IsBootingRestricted() && Emu.IsStopped())
+	else if (!g_headless && g_cfg.misc.start_big_picture_mode)
 	{
 		Emu.BootBigPictureMode();
 	}

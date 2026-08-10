@@ -962,7 +962,7 @@ bool Emulator::BootBigPictureMode()
 		return false;
 	}
 
-	sys_log.notice("Big Picture Mode: booting shell");
+	sys_log.notice("Big Picture Mode: booting window");
 
 	m_state = system_state::loading;
 
@@ -1008,7 +1008,7 @@ bool Emulator::BootBigPictureMode()
 		rsx::overlays::open_big_picture_mode();
 	}));
 
-	sys_log.notice("Big Picture Mode: shell booted successfully");
+	sys_log.notice("Big Picture Mode: booted successfully");
 
 	return true;
 }
@@ -4210,6 +4210,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			if (return_to_big_picture_mode)
 			{
+				ensure(!after_kill_callback);  
 				after_kill_callback = [this]()
 				{
 					sys_log.notice("Big Picture Mode: game stopped, returning to Big Picture Mode.");
