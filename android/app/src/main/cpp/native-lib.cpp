@@ -3094,7 +3094,7 @@ Java_net_rpcs3_RPCS3_supportsCustomDriverLoading(JNIEnv *env,
   return access("/dev/kgsl-3d0", F_OK) == 0;
 }
 
-static patch_engine::patch_map loadAllPatches() {
+static patch_engine::patch_map loadAllPatches(const std::string &titleId) {
   patch_engine::patch_map result;
 
   const std::string dir = patch_engine::get_patches_path();
@@ -3104,14 +3104,14 @@ static patch_engine::patch_map loadAllPatches() {
       if (entry.is_directory || !entry.name.ends_with(".yml")) {
         continue;
       }
-      patch_engine::load(result, dir + entry.name);
+      patch_engine::load(result, dir + entry.name, "", false, nullptr, titleId);
     }
   }
 
   const std::string imported = patch_engine::get_imported_patch_path();
 
   if (fs::is_file(imported)) {
-    patch_engine::load(result, imported);
+    patch_engine::load(result, imported, "", false, nullptr, titleId);
   }
 
   return result;
@@ -3127,7 +3127,7 @@ extern "C" JNIEXPORT jstring JNICALL Java_net_rpcs3_RPCS3_patchesGet(
   auto array = nlohmann::json::array();
 
   try {
-    auto patches = loadAllPatches();
+    auto patches = loadAllPatches(titleId);
 
     for (const auto &[hash, container] : patches) {
       for (const auto &[description, info] : container.patch_info_map) {
@@ -3166,10 +3166,66 @@ extern "C" JNIEXPORT jstring JNICALL Java_net_rpcs3_RPCS3_patchesGet(
   return wrap(env, array.dump());
 }
 
+extern "C" JNIEXPORT jstring JNICALL Java_net_rpcs3_RPCS3_patchesAll(
+    JNIEnv *env, jobject) {
+  auto array = nlohmann::json::array();
+
+  try {
+    auto patches = loadAllPatches({});
+
+    for (const auto &[hash, container] : patches) {
+      for (const auto &[description, info] : container.patch_info_map) {
+        for (const auto &[title, serials] : info.titles) {
+          std::string serialList;
+          std::string versionList;
+
+          for (const auto &[serial, app_versions] : serials) {
+            if (!serialList.empty()) {
+              serialList += ", ";
+            }
+            serialList += serial;
+
+            for (const auto &[app_version, values] : app_versions) {
+              if (versionList.find(app_version) != std::string::npos) {
+                continue;
+              }
+              if (!versionList.empty()) {
+                versionList += ", ";
+              }
+              versionList += app_version;
+            }
+          }
+
+          array.push_back({
+              {"hash", hash},
+              {"description", description},
+              {"title", title},
+              {"serials", serialList},
+              {"appVersions", versionList},
+              {"author", info.author},
+              {"notes", info.notes},
+              {"group", info.patch_group},
+              {"patchVersion", info.patch_version},
+          });
+        }
+      }
+    }
+  } catch (const std::exception &e) {
+    rpcs3_android.error("patchesAll failed: %s", e.what());
+    return wrap(env, nlohmann::json::array().dump());
+  } catch (...) {
+    rpcs3_android.error("patchesAll failed");
+    return wrap(env, nlohmann::json::array().dump());
+  }
+
+  return wrap(env, array.dump());
+}
+
 extern "C" JNIEXPORT jboolean JNICALL Java_net_rpcs3_RPCS3_patchSet(
     JNIEnv *env, jobject, jstring jtitleId, jstring jhash,
     jstring jdescription, jstring jtitle, jstring jserial,
     jstring jappVersion, jboolean enabled) {
+  const std::string titleId = unwrap(env, jtitleId);
   const std::string hash = unwrap(env, jhash);
   const std::string description = unwrap(env, jdescription);
   const std::string title = unwrap(env, jtitle);
@@ -3177,7 +3233,7 @@ extern "C" JNIEXPORT jboolean JNICALL Java_net_rpcs3_RPCS3_patchSet(
   const std::string appVersion = unwrap(env, jappVersion);
 
   try {
-    auto patches = loadAllPatches();
+    auto patches = loadAllPatches(titleId);
 
     auto container = patches.find(hash);
     if (container == patches.end()) {
@@ -3190,7 +3246,7 @@ extern "C" JNIEXPORT jboolean JNICALL Java_net_rpcs3_RPCS3_patchSet(
     }
 
     info->second.titles[title][serial][appVersion].enabled = enabled;
-    patch_engine::save_config(patches);
+    patch_engine::save_config(patches, titleId);
   } catch (const std::exception &e) {
     rpcs3_android.error("patchSet failed: %s", e.what());
     return false;

@@ -1766,7 +1766,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			g_fxo->need<patch_engine>();
 
 			// Load patches from different locations
-			g_fxo->get<patch_engine>().append_global_patches();
+			g_fxo->get<patch_engine>().append_global_patches(m_title_id);
 			g_fxo->get<patch_engine>().append_title_patches(m_title_id);
 		}
 

@@ -123,16 +123,30 @@ patch_engine::patch_engine()
 {
 }
 
-std::string patch_engine::get_patch_config_path()
+std::string patch_engine::get_patch_config_path(std::string_view title_id)
 {
 	const std::string config_dir = fs::get_config_dir(true);
-	const std::string patch_path = config_dir + "patch_config.yml";
-#ifdef _WIN32
-	if (!fs::create_path(config_dir))
+
+	if (title_id.empty())
 	{
-		patch_log.error("Could not create path: %s (%s)", patch_path, fs::g_tls_error);
-	}
+		const std::string patch_path = config_dir + "patch_config.yml";
+#ifdef _WIN32
+		if (!fs::create_path(config_dir))
+		{
+			patch_log.error("Could not create path: %s (%s)", patch_path, fs::g_tls_error);
+		}
 #endif
+		return patch_path;
+	}
+
+	const std::string per_title_dir = config_dir + "patch_configs/";
+	const std::string patch_path = fmt::format("%spatch_config_%s.yml", per_title_dir, title_id);
+
+	if (!fs::is_dir(per_title_dir) && !fs::create_path(per_title_dir))
+	{
+		patch_log.error("Could not create path: %s (%s)", per_title_dir, fs::g_tls_error);
+	}
+
 	return patch_path;
 }
 
@@ -159,7 +173,7 @@ static void append_log_message(std::stringstream* log_messages, std::string_view
 	}
 };
 
-bool patch_engine::load(patch_map& patches_map, const std::string& path, std::string content, bool importing, std::stringstream* log_messages)
+bool patch_engine::load(patch_map& patches_map, const std::string& path, std::string content, bool importing, std::stringstream* log_messages, std::string_view title_id)
 {
 	if (content.empty())
 	{
@@ -190,7 +204,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 
 	if (!importing)
 	{
-		patch_config = load_config();
+		patch_config = load_config(title_id);
 	}
 
 	std::string version;
@@ -886,13 +900,13 @@ bool patch_engine::read_patch_node(patch_info& info, YAML::Node node, const YAML
 	return is_valid;
 }
 
-void patch_engine::append_global_patches()
+void patch_engine::append_global_patches(std::string_view title_id)
 {
 	// Regular patch.yml
-	load(m_map, get_patches_path() + "patch.yml");
+	load(m_map, get_patches_path() + "patch.yml", "", false, nullptr, title_id);
 
 	// Imported patch.yml
-	load(m_map, get_imported_patch_path());
+	load(m_map, get_imported_patch_path(), "", false, nullptr, title_id);
 }
 
 void patch_engine::append_title_patches(std::string_view title_id)
@@ -903,7 +917,7 @@ void patch_engine::append_title_patches(std::string_view title_id)
 	}
 
 	// Regular patch.yml
-	load(m_map, fmt::format("%s%s_patch.yml", get_patches_path(), title_id));
+	load(m_map, fmt::format("%s%s_patch.yml", get_patches_path(), title_id), "", false, nullptr, title_id);
 }
 
 void unmap_vm_area(std::shared_ptr<vm::block_t>& ptr)
@@ -1637,9 +1651,9 @@ void patch_engine::unload(const std::string& name)
 	}
 }
 
-void patch_engine::save_config(const patch_map& patches_map)
+void patch_engine::save_config(const patch_map& patches_map, std::string_view title_id)
 {
-	const std::string path = get_patch_config_path();
+	const std::string path = get_patch_config_path(title_id);
 	patch_log.notice("Saving patch config file %s", path);
 
 	YAML::Emitter out;
@@ -1957,11 +1971,11 @@ bool patch_engine::remove_patch(const patch_info& info)
 	return false;
 }
 
-patch_engine::patch_map patch_engine::load_config()
+patch_engine::patch_map patch_engine::load_config(std::string_view title_id)
 {
 	patch_map config_map{};
 
-	const std::string path = get_patch_config_path();
+	const std::string path = get_patch_config_path(title_id);
 	patch_log.notice("Loading patch config file %s", path);
 
 	if (fs::file f{ path })

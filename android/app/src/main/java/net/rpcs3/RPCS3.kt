@@ -94,6 +94,7 @@ class RPCS3 {
     external fun addIsoEntry(fd: Int, progressId: Long): Boolean
 
     external fun patchesGet(titleId: String): String
+    external fun patchesAll(): String
     external fun patchFiles(): String
     external fun patchImport(fd: Int, name: String): Boolean
     external fun patchFileDelete(name: String): Boolean

@@ -31,6 +31,7 @@ import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Healing
 import androidx.compose.material.icons.outlined.Memory
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
@@ -106,6 +107,7 @@ import net.rpcs3.ui.games.GamesScreen
 import net.rpcs3.ui.games.GameUpdatesScreen
 import net.rpcs3.ui.games.PackageInstallFlow
 import net.rpcs3.ui.settings.AdvancedSettingsScreen
+import net.rpcs3.ui.patches.AllPatchesScreen
 import net.rpcs3.ui.patches.GamePatchesScreen
 import net.rpcs3.ui.settings.GameSettingsScreen
 import net.rpcs3.utils.FileUtil
@@ -152,6 +154,7 @@ fun AppNavHost() {
                     navController.navigate("gameSettings?titleId=" + Uri.encode(titleId))
                 },
                 navigateToDrivers = { navController.navigate("drivers") },
+                navigateToAllPatches = { navController.navigate("allPatches") },
                 navigateToGamePatches = { titleId ->
                     navController.navigate("gamePatches?titleId=" + Uri.encode(titleId))
                 },
@@ -281,6 +284,14 @@ fun AppNavHost() {
             )
         }
 
+        composable(
+            route = "allPatches"
+        ) {
+            AllPatchesScreen(
+                onClose = navController::navigateUp
+            )
+        }
+
         unwrapSetting(settings.value)
     }
 }
@@ -291,6 +302,7 @@ fun GamesDestination(
     navigateToSettings: () -> Unit,
     navigateToGameSettings: (titleId: String) -> Unit,
     navigateToDrivers: () -> Unit,
+    navigateToAllPatches: () -> Unit,
     navigateToGamePatches: (titleId: String) -> Unit,
     navigateToGameUpdates: (titleId: String) -> Unit,
     navigateToDiagnostics: () -> Unit,
@@ -507,6 +519,16 @@ fun GamesDestination(
                         onClick = {
                             scope.launch { drawerState.close() }
                             navigateToDebug()
+                        }
+                    )
+
+                    NavigationDrawerItem(
+                        label = { Text(stringResource(R.string.drawer_patches)) },
+                        selected = false,
+                        icon = { Icon(Icons.Outlined.Healing, null) },
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            navigateToAllPatches()
                         }
                     )
 

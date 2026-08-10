@@ -170,7 +170,7 @@ public:
 	patch_engine& operator=(const patch_engine&) = delete;
 
 	// Returns the directory in which patch_config.yml is located
-	static std::string get_patch_config_path();
+	static std::string get_patch_config_path(std::string_view title_id = {});
 
 	// Returns the directory in which patches are located
 	static std::string get_patches_path();
@@ -179,7 +179,7 @@ public:
 	static std::string get_imported_patch_path();
 
 	// Load from file and append to specified patches map
-	static bool load(patch_map& patches, const std::string& path, std::string content = "", bool importing = false, std::stringstream* log_messages = nullptr);
+	static bool load(patch_map& patches, const std::string& path, std::string content = "", bool importing = false, std::stringstream* log_messages = nullptr, std::string_view title_id = {});
 
 	// Read and add a patch node to the patch info
 	static bool read_patch_node(patch_info& info, YAML::Node node, const YAML::Node& root, std::string_view path, std::stringstream* log_messages = nullptr);
@@ -194,7 +194,7 @@ public:
 	static bool add_patch_data(YAML::Node node, patch_info& info, u32 modifier, const YAML::Node& root, std::string_view path, std::stringstream* log_messages = nullptr);
 
 	// Save to patch_config.yml
-	static void save_config(const patch_map& patches_map);
+	static void save_config(const patch_map& patches_map, std::string_view title_id = {});
 
 	// Save a patch file
 	static bool save_patches(const patch_map& patches, const std::string& path, std::stringstream* log_messages = nullptr);
@@ -206,10 +206,10 @@ public:
 	static bool remove_patch(const patch_info& info);
 
 	// Load patch_config.yml
-	static patch_map load_config();
+	static patch_map load_config(std::string_view title_id = {});
 
 	// Load from file and append to member patches map
-	void append_global_patches();
+	void append_global_patches(std::string_view title_id = {});
 
 	// Load from title relevant files and append to member patches map
 	void append_title_patches(std::string_view title_id);

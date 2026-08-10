@@ -54,6 +54,7 @@
     <string name="drawer_diagnostics">Diagnostics</string>
     <string name="drawer_debug">Debug</string>
     <string name="drawer_gpu_drivers">GPU Drivers</string>
+    <string name="drawer_patches">Patches</string>
     <string name="drawer_edit_overlay">Edit Overlay</string>
     <string name="drawer_system_info">System Info</string>
 
@@ -298,6 +299,10 @@
     <string name="patches_empty_title">No patches for this title</string>
     <string name="patches_empty_message">Place patch .yml files in the patches folder and they will appear here.</string>
     <string name="patches_state_on">Enabled</string>
+    <string name="patches_all_title">Patches</string>
+    <string name="patches_all_tab">All patches</string>
+    <string name="patches_all_summary">%1$d patches across %2$d games</string>
+    <string name="patches_all_hint">Read-only catalogue of everything installed. Open a game\'s Patches screen to turn any of these on.</string>
     <string name="patches_ingame_hint">Tap a patch to enable it. Changes apply the next time the game boots.</string>
     <string name="patches_update_title">Patch database</string>
     <string name="patches_update_available">Update Available</string>
