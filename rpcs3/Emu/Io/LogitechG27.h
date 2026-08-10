@@ -38,7 +38,8 @@ struct logitech_g27_ffb_slot
 	logitech_g27_ffb_state state = logitech_g27_ffb_state::inactive;
 	u64 last_update = 0;
 	SDL_HapticEffect last_effect {};
-	SDL_HapticEffectID effect_id = -1;
+//	SDL_HapticEffectID effect_id = -1;
+	int effect_id = -1;
 };
 
 struct sdl_mapping

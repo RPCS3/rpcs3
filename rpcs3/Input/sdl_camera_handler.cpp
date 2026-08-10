@@ -358,15 +358,15 @@ void sdl_camera_handler::start_camera()
 	const auto camera_permission = SDL_GetCameraPermissionState(m_camera);
 	switch (camera_permission)
 	{
-	case SDL_CameraPermissionState::SDL_CAMERA_PERMISSION_STATE_DENIED:
+	case -1:
 		camera_log.error("Camera permission denied");
 		set_state(camera_handler_state::closed);
 		reset();
 		return;
-	case SDL_CameraPermissionState::SDL_CAMERA_PERMISSION_STATE_PENDING:
+	case 0:
 		// TODO: try to get permission
 		break;
-	case SDL_CameraPermissionState::SDL_CAMERA_PERMISSION_STATE_APPROVED:
+	case 1:
 		break;
 	default:
 		fmt::throw_exception("Unknown SDL_CameraPermissionState %d", static_cast<s32>(camera_permission));
