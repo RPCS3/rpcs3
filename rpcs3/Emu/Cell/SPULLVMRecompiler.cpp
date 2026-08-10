@@ -1633,6 +1633,12 @@ public:
 
 	virtual spu_function_t compile(spu_program&& _func) override
 	{
+		if (m_jit.is_poisoned())
+		{
+			spu_log.error("Refusing to compile SPU block 0x%05x on a poisoned LLVM engine", _func.entry_point);
+			return nullptr;
+		}
+
 		if (_func.data.empty() && m_interp_magn)
 		{
 			return compile_interpreter();
@@ -4033,6 +4039,12 @@ public:
 	spu_function_t compile_interpreter()
 	{
 		using namespace llvm;
+
+		if (m_jit.is_poisoned())
+		{
+			spu_log.error("Refusing to compile the SPU interpreter on a poisoned LLVM engine");
+			return nullptr;
+		}
 
 		m_engine->clearAllGlobalMappings();
 

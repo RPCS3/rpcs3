@@ -113,8 +113,38 @@ static spu_program analyse_spu_llvm_program(spu_recompiler_base& compiler, const
 	return compiler.analyse(ls.data(), program.entry_point);
 }
 
+static shared_mutex s_spu_failed_blocks_mutex;
+static std::unordered_set<u32> s_spu_failed_blocks;
+
+static bool spu_interpreter_fallback_available()
+{
+	const auto interp = spu_runtime::g_interpreter;
+	return interp && interp != spu_runtime::g_gateway;
+}
+
+static bool spu_block_compile_failed(u32 entry_point)
+{
+	reader_lock lock(s_spu_failed_blocks_mutex);
+	return s_spu_failed_blocks.find(entry_point) != s_spu_failed_blocks.end();
+}
+
+static void spu_mark_block_compile_failed(u32 entry_point)
+{
+	std::lock_guard lock(s_spu_failed_blocks_mutex);
+
+	if (s_spu_failed_blocks.emplace(entry_point).second)
+	{
+		spu_log.error("SPU block 0x%05x cannot be compiled on this backend, its thread switches to the interpreter", entry_point);
+	}
+}
+
 static spu_function_t compile_spu_llvm_with_retry(std::unique_ptr<spu_recompiler_base>& compiler, const spu_program& program)
 {
+	if (spu_block_compile_failed(program.entry_point))
+	{
+		return nullptr;
+	}
+
 	spu_llvm_compile_context context;
 
 	{
@@ -126,23 +156,31 @@ static spu_function_t compile_spu_llvm_with_retry(std::unique_ptr<spu_recompiler
 		}
 	}
 
-	if (context.llvm_error.find(s_spu_llvm_reg_scavenge_error) == std::string::npos)
+	if (context.llvm_error.empty())
 	{
-		if (!context.llvm_error.empty())
-		{
-			spu_log.error("LLVM failed to compile SPU block 0x%x: %s", program.entry_point, context.llvm_error);
-		}
-
 		return nullptr;
 	}
 
-	spu_log.warning("LLVM failed to compile SPU block 0x%x with TBL2/TBX2: %s. Retrying without TBL2/TBX2.", program.entry_point, context.llvm_error);
+	const bool scavenge_failure = context.llvm_error.find(s_spu_llvm_reg_scavenge_error) != std::string::npos;
 
-	// LLVM fatal recovery does not unwind MCJIT state. Abandon the failed
-	// compiler and retry from a fresh analysis/JIT instance.
+	if (scavenge_failure)
+	{
+		spu_log.warning("LLVM failed to compile SPU block 0x%x with TBL2/TBX2: %s. Retrying without TBL2/TBX2.", program.entry_point, context.llvm_error);
+	}
+	else
+	{
+		spu_log.error("LLVM failed to compile SPU block 0x%x: %s. Discarding the poisoned JIT instance.", program.entry_point, context.llvm_error);
+	}
+
 	static_cast<void>(compiler.release());
 	compiler = spu_recompiler_base::make_llvm_recompiler();
 	compiler->init();
+
+	if (!scavenge_failure)
+	{
+		spu_mark_block_compile_failed(program.entry_point);
+		return nullptr;
+	}
 
 	const auto retry_program = analyse_spu_llvm_program(*compiler, program);
 
@@ -153,20 +191,32 @@ static spu_function_t compile_spu_llvm_with_retry(std::unique_ptr<spu_recompiler
 	}
 
 	spu_llvm_compile_context retry_context;
-	spu_llvm_compile_scope scope(retry_context, false);
+	spu_function_t result = nullptr;
 
-	const auto result = compiler->compile(spu_program{retry_program});
+	{
+		spu_llvm_compile_scope scope(retry_context, false);
+
+		result = compiler->compile(spu_program{retry_program});
+	}
 
 	if (result)
 	{
 		spu_log.notice("SPU LLVM block 0x%x compiled successfully without TBL2/TBX2.", program.entry_point);
-	}
-	else if (!retry_context.llvm_error.empty())
-	{
-		spu_log.error("LLVM failed to compile SPU block 0x%x without TBL2/TBX2: %s", program.entry_point, retry_context.llvm_error);
+		return result;
 	}
 
-	return result;
+	if (!retry_context.llvm_error.empty())
+	{
+		spu_log.error("LLVM failed to compile SPU block 0x%x without TBL2/TBX2: %s. Discarding the poisoned JIT instance.", program.entry_point, retry_context.llvm_error);
+
+		static_cast<void>(compiler.release());
+		compiler = spu_recompiler_base::make_llvm_recompiler();
+		compiler->init();
+
+		spu_mark_block_compile_failed(program.entry_point);
+	}
+
+	return nullptr;
 }
 #endif
 
@@ -2205,6 +2255,15 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 		return;
 	}
 
+#ifdef ARCH_ARM64
+	if (spu_interpreter_fallback_available() && spu_block_compile_failed(spu.pc))
+	{
+		spu.interp_fallback = true;
+		spu_runtime::g_escape(&spu);
+		return;
+	}
+#endif
+
 #if defined(__APPLE__)
 	pthread_jit_write_protect_np(false);
 #endif
@@ -2217,6 +2276,18 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 
 	if (!func)
 	{
+#ifdef ARCH_ARM64
+		if (spu_interpreter_fallback_available())
+		{
+#if defined(__APPLE__)
+			pthread_jit_write_protect_np(true);
+#endif
+			spu.interp_fallback = true;
+			spu_runtime::g_escape(&spu);
+			return;
+		}
+#endif
+
 		spu_log.fatal("[0x%05x] Compilation failed.", spu.pc);
 		return;
 	}

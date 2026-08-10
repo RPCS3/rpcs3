@@ -1563,6 +1563,13 @@ void spu_thread::cpu_task()
 				continue;
 			}
 
+			if (interp_fallback) [[unlikely]]
+			{
+				allow_interrupts_in_cpu_work = true;
+				spu_runtime::g_interpreter(*this, _ptr<u8>(0), nullptr);
+				continue;
+			}
+
 			spu_runtime::g_gateway(*this, _ptr<u8>(0), nullptr);
 		}
 

@@ -6,6 +6,9 @@ import org.json.JSONObject
 
 internal const val LogNodePath = "Log"
 internal const val LogLevelOff = "Nothing"
+internal const val LogLevelDiagnostic = "Error"
+
+private val DiagnosticChannels = setOf("SPU", "PPU", "JIT", "LDR", "SYS", "RSX")
 
 internal data class LogChannelState(
     val levels: List<String> = listOf(LogLevelOff),
@@ -72,12 +75,23 @@ internal fun writeLogLevels(updates: Map<String, String>): Boolean {
 }
 
 internal fun applyDefaultLogLevels(): Int {
-    val configured = keysOf(readLogNode()?.optJSONObject("values")).toSet()
+    val node = readLogNode() ?: return 0
+    val stored = node.optJSONObject("values") ?: return 0
+    val configured = keysOf(stored).toSet()
+
+    if (configured.isEmpty()) {
+        return 0
+    }
+
     val missing = readRegisteredChannels().filterNot { configured.contains(it) }
 
     if (missing.isEmpty()) {
         return 0
     }
 
-    return if (writeLogLevels(missing.associateWith { LogLevelOff })) missing.size else 0
+    val defaults = missing.associateWith {
+        if (DiagnosticChannels.contains(it)) LogLevelDiagnostic else LogLevelOff
+    }
+
+    return if (writeLogLevels(defaults)) missing.size else 0
 }

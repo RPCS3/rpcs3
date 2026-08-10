@@ -545,10 +545,17 @@ class jit_compiler final
 	// Disk Space left
 	atomic_t<usz> m_disk_space = umax;
 
+	bool m_poisoned = false;
+
 public:
 	jit_compiler(const std::unordered_map<std::string, u64>& _link, std::string_view _cpu, u32 flags = 0, std::function<u64(const std::string&)> symbols_cement = {}) noexcept;
 	jit_compiler& operator=(thread_state) noexcept;
 	~jit_compiler() noexcept;
+
+	bool is_poisoned() const noexcept
+	{
+		return m_poisoned;
+	}
 
 	// Get LLVM context
 	auto& get_context()

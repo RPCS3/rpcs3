@@ -819,17 +819,26 @@ jit_compiler& jit_compiler::operator=(thread_state s) noexcept
 
 jit_compiler::~jit_compiler() noexcept
 {
+	if (m_poisoned)
+	{
+		jit_log.error("Abandoning poisoned LLVM execution engine (leaked to avoid a deadlock in ~MCJIT)");
+		static_cast<void>(m_engine.release());
+		static_cast<void>(m_context.release());
+	}
 }
 
 void jit_compiler::add(std::unique_ptr<llvm::Module> _module, const std::string& path)
 {
 	ObjectCache cache{path, this};
+
+	m_poisoned = true;
 	m_engine->setObjectCache(&cache);
 
 	const auto ptr = _module.get();
 	m_engine->addModule(std::move(_module));
 	m_engine->generateCodeForModule(ptr);
 	m_engine->setObjectCache(nullptr);
+	m_poisoned = false;
 
 	for (auto& func : ptr->functions())
 	{
@@ -851,6 +860,7 @@ bool jit_compiler::try_add(std::unique_ptr<llvm::Module> _module, const std::str
 		m_engine->generateCodeForModule(ptr);
 	}, error))
 	{
+		m_poisoned = true;
 		return false;
 	}
 
@@ -868,8 +878,11 @@ bool jit_compiler::try_add(std::unique_ptr<llvm::Module> _module, const std::str
 void jit_compiler::add(std::unique_ptr<llvm::Module> _module)
 {
 	const auto ptr = _module.get();
+
+	m_poisoned = true;
 	m_engine->addModule(std::move(_module));
 	m_engine->generateCodeForModule(ptr);
+	m_poisoned = false;
 
 	for (auto& func : ptr->functions())
 	{
@@ -888,6 +901,7 @@ bool jit_compiler::try_add(std::unique_ptr<llvm::Module> _module, std::string& e
 		m_engine->generateCodeForModule(ptr);
 	}, error))
 	{
+		m_poisoned = true;
 		return false;
 	}
 
@@ -948,15 +962,23 @@ void jit_compiler::update_global_mapping(const std::string& name, u64 addr)
 
 void jit_compiler::fin()
 {
+	m_poisoned = true;
 	m_engine->finalizeObject();
+	m_poisoned = false;
 }
 
 bool jit_compiler::try_fin(std::string& error)
 {
-	return run_recoverable_llvm([&]()
+	if (!run_recoverable_llvm([&]()
 	{
 		m_engine->finalizeObject();
-	}, error);
+	}, error))
+	{
+		m_poisoned = true;
+		return false;
+	}
+
+	return true;
 }
 
 u64 jit_compiler::get(const std::string& name)
