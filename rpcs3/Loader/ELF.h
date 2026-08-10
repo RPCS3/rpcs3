@@ -373,7 +373,7 @@ public:
 					// Try to find it in phdr data instead of allocating new section
 					p_index++;
 
-					if (hdr.p_offset <= shdr.sh_offset && shdr.sh_offset + shdr.sh_size - 1 <= hdr.p_offset + hdr.p_filesz - 1)
+					if (hdr.p_offset <= shdr.sh_offset && shdr.sh_offset + shdr.sh_size <= hdr.p_offset + hdr.p_filesz)
 					{
 						const auto& prog = ::at32(progs, p_index);
 						shdrs.back().bin_view = {prog.bin.data() + shdr.sh_offset - hdr.p_offset, shdr.sh_size};

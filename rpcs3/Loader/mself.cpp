@@ -3,6 +3,7 @@
 #include "Utilities/File.h"
 #include "util/logs.hpp"
 #include "Emu/VFS.h"
+#include "Emu/System.h"
 
 #include "mself.hpp"
 
@@ -50,6 +51,13 @@ bool extract_mself(const std::string& file, const std::string& extract_to)
 	for (const mself_record& rec : recs)
 	{
 		const std::string name = vfs::escape(rec.name);
+		const std::string file_path = extract_to + name;
+
+		if (!Emu.IsPathInsideDir(extract_to, file_path, false))
+		{
+			mself_log.error("Error extracting %s from MSELF: target path '%s' would be extracted outside of '%s'", name, file_path, extract_to);
+			return false;
+		}
 
 		const u64 pos = rec.get_pos(mself_size);
 
@@ -63,19 +71,19 @@ bool extract_mself(const std::string& file, const std::string& extract_to)
 		mself.seek(pos);
 		mself.read(buffer.data(), rec.size);
 
-		if (!fs::create_path(fs::get_parent_dir(extract_to + name)))
+		if (!fs::create_path(fs::get_parent_dir(file_path)))
 		{
-			mself_log.error("Error creating directory %s (%s)", fs::get_parent_dir(extract_to + name), fs::g_tls_error);
+			mself_log.error("Error creating directory %s (%s)", fs::get_parent_dir(file_path), fs::g_tls_error);
 			return false;
 		}
 
-		if (!fs::write_file(extract_to + name, fs::rewrite, buffer))
+		if (!fs::write_file(file_path, fs::rewrite, buffer))
 		{
-			mself_log.error("Error creating %s (%s)", extract_to + name, fs::g_tls_error);
+			mself_log.error("Error creating %s (%s)", file_path, fs::g_tls_error);
 			return false;
 		}
 
-		mself_log.success("Extracted '%s' to '%s'", name, extract_to + name);
+		mself_log.success("Extracted '%s' to '%s'", name, file_path);
 	}
 
 	mself_log.success("Extraction complete!");
