@@ -859,9 +859,13 @@ static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, 
 
 	std::string file_name;
 
-	entry.read(file_name, header.file_name_length);
+	if (!entry.read(file_name, header.file_name_length))
+	{
+		iso_log.error("iso_archive: Failed to read file name");
+		return std::nullopt;
+	}
 
-	if (header.file_name_length == 1 && file_name[0] == 0)
+	if (file_name.size() == 1 && file_name[0] == '\0')
 	{
 		file_name = ".";
 	}
@@ -875,7 +879,7 @@ static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, 
 		const be_t<u16>* raw = utils::bless<const be_t<u16>>(file_name.data());
 		std::u16string utf16;
 
-		utf16.resize(header.file_name_length / 2);
+		utf16.resize(file_name.size() / 2);
 
 		for (usz i = 0; i < utf16.size(); i++)
 		{
@@ -890,7 +894,7 @@ static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, 
 		file_name.erase(file_name.end() - 2, file_name.end());
 	}
 
-	if (header.file_name_length > 1 && file_name.ends_with("."))
+	if (file_name.size() > 1 && file_name.ends_with("."))
 	{
 		file_name.pop_back();
 	}
