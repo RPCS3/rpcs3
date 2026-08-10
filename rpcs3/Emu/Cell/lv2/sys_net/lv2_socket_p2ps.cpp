@@ -100,93 +100,102 @@ public:
 			if (thread_ctrl::state() == thread_state::aborting)
 				return;
 
-			std::lock_guard lock(data_mutex);
+			std::vector<s32> streams_to_close;
 
-			const auto now = steady_clock::now();
-			// Check for messages that haven't been acked
-			std::set<s32> rtt_increased;
-			for (auto it = msgs.begin(); it != msgs.end();)
 			{
-				if (it->first > now)
-					break;
+				std::lock_guard lock(data_mutex);
 
-				// reply is late, increases rtt
-				auto& msg       = it->second;
-				rtt_info rtt    = rtts[msg.sock_id];
-				// Only increases rtt once per loop(in case a big number of packets are sent at once)
-				if (!rtt_increased.count(msg.sock_id))
+				const auto now = steady_clock::now();
+				// Check for messages that haven't been acked
+				std::set<s32> rtt_increased;
+				for (auto it = msgs.begin(); it != msgs.end();)
 				{
-					rtt.num_retries += 1;
-					// Increases current rtt by 10%
-					rtt.rtt_time += (rtt.rtt_time / 10);
-					rtts[msg.sock_id] = rtt;
+					if (it->first > now)
+						break;
 
-					rtt_increased.emplace(msg.sock_id);
-				}
+					// reply is late, increases rtt
+					auto& msg       = it->second;
+					rtt_info rtt    = rtts[msg.sock_id];
+					// Only increases rtt once per loop(in case a big number of packets are sent at once)
+					if (!rtt_increased.count(msg.sock_id))
+					{
+						rtt.num_retries += 1;
+						// Increases current rtt by 10%
+						rtt.rtt_time += (rtt.rtt_time / 10);
+						rtts[msg.sock_id] = rtt;
 
-				if (rtt.num_retries >= 10)
-				{
-					// Too many retries, need to notify the socket that the connection is dead
-					idm::check<lv2_socket>(msg.sock_id, [&](lv2_socket& sock)
+						rtt_increased.emplace(msg.sock_id);
+					}
+
+					if (rtt.num_retries >= 10)
+					{
+						// Too many retries, need to notify the socket that the connection is dead
+						sys_net.error("[P2PS] Too many retries, closing the stream");
+						streams_to_close.push_back(msg.sock_id);
+						it = msgs.erase(it);
+						continue;
+					}
+
+					// resend the message
+					const auto res = idm::check<lv2_socket>(msg.sock_id, [&](lv2_socket& sock) -> bool
 						{
-							sys_net.error("[P2PS] Too many retries, closing the stream");
 							ensure(sock.get_type() == SYS_NET_SOCK_STREAM_P2P);
 							auto& sock_p2ps = reinterpret_cast<lv2_socket_p2ps&>(sock);
-							sock_p2ps.close_stream();
-						});
-					it = msgs.erase(it);
-					continue;
-				}
 
-				// resend the message
-				const auto res = idm::check<lv2_socket>(msg.sock_id, [&](lv2_socket& sock) -> bool
-					{
-						ensure(sock.get_type() == SYS_NET_SOCK_STREAM_P2P);
-						auto& sock_p2ps = reinterpret_cast<lv2_socket_p2ps&>(sock);
-
-						while (np::sendto_possibly_ipv6(sock_p2ps.get_socket(), reinterpret_cast<const char*>(msg.data.data()), ::size32(msg.data), &msg.dst_addr, 0) == -1)
-						{
-							const sys_net_error err = get_last_error(false);
-							// concurrency on the socket(from a sendto for example) can result in EAGAIN error in which case we try again
-							if (err == SYS_NET_EAGAIN)
+							while (np::sendto_possibly_ipv6(sock_p2ps.get_socket(), reinterpret_cast<const char*>(msg.data.data()), ::size32(msg.data), &msg.dst_addr, 0) == -1)
 							{
-								continue;
+								const sys_net_error err = get_last_error(false);
+								// concurrency on the socket(from a sendto for example) can result in EAGAIN error in which case we try again
+								if (err == SYS_NET_EAGAIN)
+								{
+									continue;
+								}
+
+								sys_net.error("[P2PS] Resending the packet failed(%s), closing the stream", err);
+								streams_to_close.push_back(msg.sock_id);
+								return false;
 							}
+							return true;
+						});
 
-							sys_net.error("[P2PS] Resending the packet failed(%s), closing the stream", err);
-							sock_p2ps.close_stream();
-							return false;
-						}
-						return true;
-					});
+					if (!res || !res.ret)
+					{
+						it = msgs.erase(it);
+						continue;
+					}
 
-				if (!res || !res.ret)
-				{
+					// Update key timeout
+					msgs.insert(std::make_pair(now + rtt.rtt_time, std::move(msg)));
 					it = msgs.erase(it);
-					continue;
 				}
 
-				// Update key timeout
-				msgs.insert(std::make_pair(now + rtt.rtt_time, std::move(msg)));
-				it = msgs.erase(it);
-			}
-
-			if (!msgs.empty())
-			{
-				const auto current_timepoint = steady_clock::now();
-				const auto expected_timepoint = msgs.begin()->first;
-				if (current_timepoint > expected_timepoint)
+				if (!msgs.empty())
 				{
-					wakey = 1;
+					const auto current_timepoint = steady_clock::now();
+					const auto expected_timepoint = msgs.begin()->first;
+					if (current_timepoint > expected_timepoint)
+					{
+						wakey = 1;
+					}
+					else
+					{
+						timeout = static_cast<atomic_wait_timeout>(std::chrono::duration_cast<std::chrono::nanoseconds>(expected_timepoint - current_timepoint).count());
+					}
 				}
 				else
 				{
-					timeout = static_cast<atomic_wait_timeout>(std::chrono::duration_cast<std::chrono::nanoseconds>(expected_timepoint - current_timepoint).count());
+					timeout = atomic_wait_timeout::inf;
 				}
 			}
-			else
+
+			for (const s32 sock_id : streams_to_close)
 			{
-				timeout = atomic_wait_timeout::inf;
+				idm::check<lv2_socket>(sock_id, [](lv2_socket& sock)
+					{
+						ensure(sock.get_type() == SYS_NET_SOCK_STREAM_P2P);
+						auto& sock_p2ps = reinterpret_cast<lv2_socket_p2ps&>(sock);
+						sock_p2ps.close_stream();
+					});
 			}
 		}
 	}
@@ -292,12 +301,49 @@ lv2_socket_p2ps::lv2_socket_p2ps(utils::serial& ar, lv2_socket_type type)
 	: lv2_socket_p2p(ar, type)
 {
 	ar(status, max_backlog, backlog, op_port, op_vport, op_addr, data_beg_seq, received_data, cur_seq);
+
+	if (GET_SERIALIZATION_VERSION(lv2_net) < 3 && status == p2ps_stream_status::stream_closed && op_addr)
+	{
+		status = p2ps_stream_status::stream_disconnected;
+	}
 }
 
 void lv2_socket_p2ps::save(utils::serial& ar)
 {
 	static_cast<lv2_socket_p2p*>(this)->save(ar);
 	ar(status, max_backlog, backlog, op_port, op_vport, op_addr, data_beg_seq, received_data, cur_seq);
+}
+
+void lv2_socket_p2ps::signal_pending_events()
+{
+	const bs_t<lv2_socket::poll_t> pending = get_pending_events();
+	bs_t<lv2_socket::poll_t> events_happening{};
+
+	if ((pending & lv2_socket::poll_t::read) && events.test_and_reset(lv2_socket::poll_t::read))
+		events_happening += lv2_socket::poll_t::read;
+	if ((pending & lv2_socket::poll_t::write) && events.test_and_reset(lv2_socket::poll_t::write))
+		events_happening += lv2_socket::poll_t::write;
+
+	if (!events_happening)
+	{
+		return;
+	}
+
+	for (auto it = queue.begin(); it != queue.end();)
+	{
+		if (it->second(events_happening))
+		{
+			it = queue.erase(it);
+			continue;
+		}
+
+		it++;
+	}
+
+	if (queue.empty())
+	{
+		events.store({});
+	}
 }
 
 bool lv2_socket_p2ps::handle_connected(p2ps_encapsulated_tcp* tcp_header, u8* data, ::sockaddr_storage* op_addr, nt_p2p_port* p2p_port)
@@ -334,25 +380,8 @@ bool lv2_socket_p2ps::handle_connected(p2ps_encapsulated_tcp* tcp_header, u8* da
 		sys_net.trace("[P2PS] Sent ack %d", final_ack);
 		send_u2s_packet(std::move(packet), reinterpret_cast<::sockaddr_in*>(op_addr), 0, false);
 
-		// check if polling is happening
-		if (data_available && events.test_and_reset(lv2_socket::poll_t::read))
-		{
-			bs_t<lv2_socket::poll_t> read_event = lv2_socket::poll_t::read;
-			for (auto it = queue.begin(); it != queue.end();)
-			{
-				if (it->second(read_event))
-				{
-					it = queue.erase(it);
-					continue;
-				}
-				it++;
-			}
-
-			if (queue.empty())
-			{
-				events.store({});
-			}
-		}
+		// Report that it is writeable if any poll/select are waiting on it
+		signal_pending_events();
 	};
 
 	if (status == p2ps_stream_status::stream_handshaking)
@@ -428,7 +457,7 @@ bool lv2_socket_p2ps::handle_listening(p2ps_encapsulated_tcp* tcp_header, [[mayb
 
 	if (status != p2ps_stream_status::stream_listening)
 	{
-		sys_net.error("[P2PS] lv2_socket_p2ps::handle_listening() called on a non listening socket(%d)!", static_cast<u8>(status));
+		sys_net.warning("[P2PS] lv2_socket_p2ps::handle_listening() called on a non listening socket(%d)!", static_cast<u8>(status));
 		return false;
 	}
 
@@ -483,24 +512,7 @@ bool lv2_socket_p2ps::handle_listening(p2ps_encapsulated_tcp* tcp_header, [[mayb
 		}
 
 		backlog.push_back(new_sock_id);
-		if (events.test_and_reset(lv2_socket::poll_t::read))
-		{
-			bs_t<lv2_socket::poll_t> read_event = lv2_socket::poll_t::read;
-			for (auto it = queue.begin(); it != queue.end();)
-			{
-				if (it->second(read_event))
-				{
-					it = queue.erase(it);
-					continue;
-				}
-				it++;
-			}
-
-			if (queue.empty())
-			{
-				events.store({});
-			}
-		}
+		signal_pending_events();
 	}
 	else
 	{
@@ -541,7 +553,7 @@ void lv2_socket_p2ps::send_u2s_packet(std::vector<u8> data, const ::sockaddr_in*
 
 void lv2_socket_p2ps::close_stream_nl(nt_p2p_port* p2p_port)
 {
-	status = p2ps_stream_status::stream_closed;
+	status = p2ps_stream_status::stream_disconnected;
 
 	for (auto it = p2p_port->bound_p2p_streams.begin(); it != p2p_port->bound_p2p_streams.end();)
 	{
@@ -555,17 +567,28 @@ void lv2_socket_p2ps::close_stream_nl(nt_p2p_port* p2p_port)
 
 	auto& tcpm = g_fxo->get<named_thread<tcp_timeout_monitor>>();
 	tcpm.clear_all_messages(lv2_id);
+
+	// Notify poll/select waiting on read, now that the stream is closed, it will read as readable with 0 bytes
+	signal_pending_events();
 }
 
 void lv2_socket_p2ps::close_stream()
 {
 	auto& nc = g_fxo->get<p2p_context>();
 
-	std::lock_guard lock(nc.list_p2p_ports_mutex);
-	auto& p2p_port = ::at32(nc.list_p2p_ports, port);
+	std::lock_guard threads_lock(nc.mutex_thread_loop);
 
-	std::scoped_lock more_lock(p2p_port.bound_p2p_vports_mutex, mutex);
-	close_stream_nl(&p2p_port);
+	{
+		std::lock_guard lock(nc.list_p2p_ports_mutex);
+		auto& p2p_port = ::at32(nc.list_p2p_ports, port);
+
+		std::scoped_lock more_lock(p2p_port.bound_p2p_vports_mutex, mutex);
+		close_stream_nl(&p2p_port);
+	}
+
+	// close_stream() is only called from tcp_timeout_monitor which is outside of p2p thread scope so
+	// we need to wake the threads here.
+	nc.wake_threads();
 }
 
 p2ps_stream_status lv2_socket_p2ps::get_status() const
@@ -738,51 +761,60 @@ std::pair<s32, sys_net_sockaddr> lv2_socket_p2ps::getsockname()
 
 std::optional<s32> lv2_socket_p2ps::connect(const sys_net_sockaddr& addr)
 {
-	std::lock_guard lock(mutex);
-
-	if (status != p2ps_stream_status::stream_closed)
-	{
-		sys_net.error("[P2PS] Called connect on a socket that is not closed!");
-		return -SYS_NET_EALREADY;
-	}
-
 	p2ps_encapsulated_tcp send_hdr;
 	const auto psa_in_p2p = reinterpret_cast<const sys_net_sockaddr_in_p2p*>(&addr);
 	auto name             = sys_net_addr_to_native_addr(addr);
 
 	// This is purposefully inverted, not a bug
 	const u16 dst_vport = psa_in_p2p->sin_port;
-	const u16 dst_port  = psa_in_p2p->sin_vport;
+	u16 dst_port = psa_in_p2p->sin_vport;
 
-	socket_type real_socket{};
+	sys_net.trace("[P2PS] Connecting to %s:%d:%d", name.sin_addr, dst_port, dst_vport);
 
-	auto& nc = g_fxo->get<p2p_context>();
+	if (!dst_vport)
 	{
-		std::lock_guard list_lock(nc.list_p2p_ports_mutex);
-
-		nc.create_p2p_port(port);
-		auto& pport = ::at32(nc.list_p2p_ports, port);
-		real_socket = pport.p2p_socket;
-
-		{
-			std::lock_guard lock(pport.bound_p2p_vports_mutex);
-			if (vport == 0)
-			{
-				// Unassigned vport, assigns one
-				sys_net.warning("[P2PS] vport was unassigned before connect!");
-				vport = pport.get_port();
-
-				while (pport.bound_p2p_vports.count(vport) || pport.bound_p2p_streams.count(static_cast<u64>(vport) << 32))
-				{
-					vport = pport.get_port();
-				}
-			}
-			const u64 key = name.sin_addr.s_addr | (static_cast<u64>(vport) << 32) | (static_cast<u64>(dst_vport) << 48);
-			pport.bound_p2p_streams.emplace(key, lv2_id);
-		}
+		return -SYS_NET_EADDRNOTAVAIL;
 	}
 
-	native_socket = real_socket;
+	if (!dst_port)
+	{
+		dst_port = SCE_NP_PORT;
+	}
+
+	auto& nc = g_fxo->get<p2p_context>();
+	std::lock_guard list_lock(nc.list_p2p_ports_mutex);
+
+	nc.create_p2p_port(port);
+	auto& pport = ::at32(nc.list_p2p_ports, port);
+
+	std::lock_guard vport_lock(pport.bound_p2p_vports_mutex);
+	std::lock_guard lock(mutex);
+
+	if (status != p2ps_stream_status::stream_closed && status != p2ps_stream_status::stream_disconnected)
+	{
+		sys_net.error("[P2PS] Called connect on a socket that is not closed!");
+		return -SYS_NET_EALREADY;
+	}
+
+	if (vport == 0)
+	{
+		// Unassigned vport, assigns one
+		sys_net.warning("[P2PS] vport was unassigned before connect!");
+		vport = pport.get_port();
+
+		while (pport.bound_p2ps_vports.count(vport))
+		{
+			vport = pport.get_port();
+		}
+
+		std::set<s32> bound_ports{lv2_id};
+		pport.bound_p2ps_vports.insert(std::make_pair(vport, std::move(bound_ports)));
+	}
+
+	const u64 key = name.sin_addr.s_addr | (static_cast<u64>(vport) << 32) | (static_cast<u64>(dst_vport) << 48);
+	pport.bound_p2p_streams.emplace(key, lv2_id);
+
+	native_socket = pport.p2p_socket;
 
 	send_hdr.src_port = vport;
 	send_hdr.dst_port = dst_vport;
@@ -826,10 +858,16 @@ std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> lv2_socket_p2p
 
 	if (!data_available)
 	{
+		if (status == p2ps_stream_status::stream_disconnected)
+		{
+			sys_net.trace("[P2PS] Called recvfrom on a disconnected socket");
+			return {{0, {}, {}}};
+		}
+
 		if (status == p2ps_stream_status::stream_closed)
 		{
-			sys_net.error("[P2PS] Called recvfrom on closed socket!");
-			return {{0, {}, {}}};
+			sys_net.error("[P2PS] Called recvfrom on an unconnected socket!");
+			return {{-SYS_NET_ENOTCONN, {}, {}}};
 		}
 
 		if (so_nbio || (flags & SYS_NET_MSG_DONTWAIT))
@@ -888,10 +926,16 @@ std::optional<s32> lv2_socket_p2ps::sendto([[maybe_unused]] s32 flags, const std
 		lock.lock();
 	}
 
+	if (status == p2ps_stream_status::stream_disconnected)
+	{
+		sys_net.error("[P2PS] Called sendto on a disconnected socket!");
+		return -SYS_NET_ECONNRESET;
+	}
+
 	if (status == p2ps_stream_status::stream_closed)
 	{
-		sys_net.error("[P2PS] Called sendto on a closed socket!");
-		return -SYS_NET_ECONNRESET;
+		sys_net.error("[P2PS] Called sendto on an unconnected socket!");
+		return -SYS_NET_ENOTCONN;
 	}
 
 	constexpr u32 max_data_len = (65535 - (VPORT_P2P_HEADER_SIZE + sizeof(p2ps_encapsulated_tcp)));
@@ -985,23 +1029,71 @@ s32 lv2_socket_p2ps::shutdown([[maybe_unused]] s32 how)
 	return CELL_OK;
 }
 
+void lv2_socket_p2ps::get_sockinfo(sys_net_sockinfo_t& info)
+{
+	std::lock_guard lock(mutex);
+
+	switch (status)
+	{
+	case p2ps_stream_status::stream_closed:
+		info.state = vport ? SYS_NET_STATE_OPENED : SYS_NET_STATE_CREATED;
+		break;
+	case p2ps_stream_status::stream_listening: info.state = SYS_NET_STATE_LISTEN; break;
+	case p2ps_stream_status::stream_handshaking: info.state = SYS_NET_STATE_SYN_SENT; break;
+	case p2ps_stream_status::stream_connected: info.state = SYS_NET_STATE_ESTABLISHED; break;
+	case p2ps_stream_status::stream_disconnected: info.state = SYS_NET_STATE_CLOSED; break;
+	}
+
+	info.recv_queue_length = static_cast<s32>(data_available);
+}
+
+bs_t<lv2_socket::poll_t> lv2_socket_p2ps::get_pending_events() const
+{
+	bs_t<lv2_socket::poll_t> pending{};
+
+	if (status == p2ps_stream_status::stream_connected)
+	{
+		if (data_available)
+		{
+			sys_net.trace("[P2PS] socket has %d bytes available", data_available);
+			pending += lv2_socket::poll_t::read;
+		}
+
+		pending += lv2_socket::poll_t::write;
+	}
+	else if (status == p2ps_stream_status::stream_listening)
+	{
+		if (const auto bsize = backlog.size())
+		{
+			sys_net.trace("[P2PS] socket has %d clients available", bsize);
+			pending += lv2_socket::poll_t::read;
+		}
+	}
+	else if (status == p2ps_stream_status::stream_disconnected)
+	{
+		// Reads return EOF(0 bytes) and writes fail with ECONNRESET, report both so that
+		// waiters blocked on either one wake up instead of hanging until their timeout
+		pending += lv2_socket::poll_t::read;
+		pending += lv2_socket::poll_t::write;
+	}
+
+	return pending;
+}
+
 void lv2_socket_p2ps::poll(sys_net_pollfd& sn_pfd, [[maybe_unused]] pollfd& native_pfd)
 {
 	std::lock_guard lock(mutex);
-	sys_net.trace("[P2PS] poll checking for 0x%X", sn_pfd.events);
-	if (status == p2ps_stream_status::stream_connected)
-	{
-		if ((sn_pfd.events & SYS_NET_POLLIN) && data_available)
-		{
-			sys_net.trace("[P2PS] p2ps has %u bytes available", data_available);
-			sn_pfd.revents |= SYS_NET_POLLIN;
-		}
 
-		// Data can only be written if the socket is connected
-		if (sn_pfd.events & SYS_NET_POLLOUT && status == p2ps_stream_status::stream_connected)
-		{
-			sn_pfd.revents |= SYS_NET_POLLOUT;
-		}
+	const bs_t<lv2_socket::poll_t> pending = get_pending_events();
+
+	if ((sn_pfd.events & SYS_NET_POLLIN) && (pending & lv2_socket::poll_t::read))
+	{
+		sn_pfd.revents |= SYS_NET_POLLIN;
+	}
+
+	if ((sn_pfd.events & SYS_NET_POLLOUT) && (pending & lv2_socket::poll_t::write))
+	{
+		sn_pfd.revents |= SYS_NET_POLLOUT;
 	}
 }
 
@@ -1009,32 +1101,10 @@ std::tuple<bool, bool, bool> lv2_socket_p2ps::select(bs_t<lv2_socket::poll_t> se
 {
 	std::lock_guard lock(mutex);
 
-	bool read_set  = false;
-	bool write_set = false;
+	const bs_t<lv2_socket::poll_t> pending = get_pending_events() & selected;
 
-	if (status == p2ps_stream_status::stream_connected)
-	{
-		if ((selected & lv2_socket::poll_t::read) && data_available)
-		{
-			sys_net.trace("[P2PS] socket has %d bytes available", data_available);
-			read_set = true;
-		}
-
-		if (selected & lv2_socket::poll_t::write)
-		{
-			sys_net.trace("[P2PS] socket is writeable");
-			write_set = true;
-		}
-	}
-	else if (status == p2ps_stream_status::stream_listening)
-	{
-		const auto bsize = backlog.size();
-		if ((selected & lv2_socket::poll_t::read) && bsize)
-		{
-			sys_net.trace("[P2PS] socket has %d clients available", bsize);
-			read_set = true;
-		}
-	}
+	const bool read_set = !!(pending & lv2_socket::poll_t::read);
+	const bool write_set = !!(pending & lv2_socket::poll_t::write);
 
 	return {read_set, write_set, false};
 }
