@@ -123,8 +123,10 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	add_column(gui::game_list_columns::compat);
 	add_column(gui::game_list_columns::dir_size);
 
-	m_progress_dialog = new progress_dialog(tr("Loading games"), tr("Loading games, please wait..."), tr("Cancel"), 0, 0, false, this, Qt::Dialog | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
+	m_progress_dialog = new progress_dialog(tr("Loading games"), tr("Loading games, please wait..."), tr("Cancel"), 0, 100, false, this, Qt::Dialog | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
 	m_progress_dialog->setMinimumDuration(200); // Only show the progress dialog after some time has passed
+	m_progress_dialog->SetValue(m_progress_dialog->maximum());
+	m_progress_dialog->accept();
 
 	// Events
 	connect(m_progress_dialog, &QProgressDialog::canceled, this, [this]()
