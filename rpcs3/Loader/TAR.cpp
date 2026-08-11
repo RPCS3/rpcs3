@@ -257,7 +257,7 @@ bool tar_object::extract(const std::string& prefix_path, bool is_vfs)
 				return false;
 			}
 		}
-		else if (!Emu.IsPathInsideDir(prefix_path, result, false))
+		else if (!Emu.IsPathInsideDir(result, prefix_path, false))
 		{
 			tar_log.error("Error extracting %s: target path '%s' is outside of '%s'", name, result, prefix_path);
 			return false;
