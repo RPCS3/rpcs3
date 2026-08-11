@@ -571,6 +571,7 @@ void game_list_frame::OnParsingFinished()
 			if (is_raw_device || !iso_cache::load(dir_or_elf, iso_cache_key, cache_entry))
 			{
 				archive = std::make_unique<iso_archive>(dir_or_elf);
+				if (!archive->is_valid()) return;
 			}
 
 			// Track this ISO path for cache cleanup after scan completes.
@@ -609,6 +610,8 @@ void game_list_frame::OnParsingFinished()
 			{
 				game_list_log.warning("Cached psf for iso not valid: '%s'", game.info.path);
 				archive = std::make_unique<iso_archive>(dir_or_elf);
+				if (!archive->is_valid()) return;
+
 				cache_entry = {}; // Reset so the cache gets rewritten after scan.
 				psf = {};
 			}
@@ -768,11 +771,11 @@ void game_list_frame::OnParsingFinished()
 				if (game.icon_in_archive)
 				{
 					auto icon_file = archive->open(game.info.icon_path);
-					const auto icon_size = icon_file->size();
-					if (icon_size > 0)
+
+					if (icon_file && icon_file->size() > 0)
 					{
-						cache_entry.icon_data.resize(icon_size);
-						icon_file->read(cache_entry.icon_data.data(), icon_size);
+						cache_entry.icon_data.resize(icon_file->size());
+						icon_file->read(cache_entry.icon_data.data(), icon_file->size());
 					}
 				}
 
@@ -883,6 +886,8 @@ void game_list_frame::OnParsingFinished()
 				}
 
 				iso_archive archive(entry.path);
+				if (!archive.is_valid()) return;
+
 				const iso_fs_node& root = archive.root();
 				const std::regex ps3_gm_regex("^PS3_GM[[:digit:]]{2}$");
 
