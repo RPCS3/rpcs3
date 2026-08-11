@@ -14,13 +14,13 @@ namespace rsx
 	namespace nv0039
 	{
 		// Transfer with stride
-		inline void block2d_copy_with_stride(u8* dst, const u8* src, u32 element_count, u32 height, s32 src_pitch, s32 dst_pitch, u8 src_stride, u8 dst_stride)
+		inline void block2d_copy_with_stride(u8* dst, const u8* src, u32 column_count, u32 height, s32 src_pitch, s32 dst_pitch, u8 src_stride, u8 dst_stride)
 		{
 			for (u32 row = 0; row < height; ++row)
 			{
 				auto dst_ptr = dst;
 				auto src_ptr = src;
-				for (u32 element = 0; element < element_count; ++element)
+				for (u32 column = 0; column < column_count; ++column)
 				{
 					*dst_ptr = *src_ptr;
 
