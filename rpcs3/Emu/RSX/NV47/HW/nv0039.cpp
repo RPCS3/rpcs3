@@ -14,13 +14,13 @@ namespace rsx
 	namespace nv0039
 	{
 		// Transfer with stride
-		inline void block2d_copy_with_stride(u8* dst, const u8* src, u32 width, u32 height, s32 src_pitch, s32 dst_pitch, u8 src_stride, u8 dst_stride)
+		inline void block2d_copy_with_stride(u8* dst, const u8* src, u32 column_count, u32 height, s32 src_pitch, s32 dst_pitch, u8 src_stride, u8 dst_stride)
 		{
 			for (u32 row = 0; row < height; ++row)
 			{
 				auto dst_ptr = dst;
 				auto src_ptr = src;
-				while (src_ptr < src + width)
+				for (u32 column = 0; column < column_count; ++column)
 				{
 					*dst_ptr = *src_ptr;
 
@@ -69,11 +69,16 @@ namespace rsx
 			u32 dst_offset = REGS(ctx)->nv0039_output_offset();
 			u32 dst_dma = REGS(ctx)->nv0039_output_location();
 
-			const bool is_block_transfer = (in_pitch == out_pitch && out_pitch + 0u == line_length);
+			const auto in_width_in_bytes = line_length * in_format;
+			const auto out_width_in_bytes = line_length * out_format;
+			const bool is_block_transfer =
+				in_format == 1 && out_format == 1 &&
+				in_pitch + 0u == in_width_in_bytes &&
+				out_pitch + 0u == out_width_in_bytes;
 			const auto read_address = get_address(src_offset, src_dma);
 			const auto write_address = get_address(dst_offset, dst_dma);
-			const auto read_length = in_pitch * (line_count - 1) + line_length;
-			const auto write_length = out_pitch * (line_count - 1) + line_length;
+			const auto read_length = in_pitch * (line_count - 1) + in_width_in_bytes;
+			const auto write_length = out_pitch * (line_count - 1) + out_width_in_bytes;
 
 			RSX(ctx)->invalidate_fragment_program(dst_dma, dst_offset, write_length);
 
@@ -110,7 +115,7 @@ namespace rsx
 			const bool is_overlapping = dst_dma == src_dma && [&]() -> bool
 			{
 				const u32 src_max = src_offset + read_length;
-				const u32 dst_max = dst_offset + (out_pitch * (line_count - 1) + line_length);
+				const u32 dst_max = dst_offset + write_length;
 				return (src_offset >= dst_offset && src_offset < dst_max) ||
 				 (dst_offset >= src_offset && dst_offset < src_max);
 			}();
