@@ -73,10 +73,8 @@ namespace rsx
 			const auto read_address = get_address(src_offset, src_dma);
 			const auto write_address = get_address(dst_offset, dst_dma);
 			// LINE_LENGTH_IN is an element count; FORMAT_IN/OUT select the byte stride between elements.
-			const auto read_length =
-				in_pitch * (line_count - 1) + line_length * in_format;
-			const auto write_length =
-				out_pitch * (line_count - 1) + line_length * out_format;
+			const auto read_length = in_pitch * (line_count - 1) + line_length * in_format;
+			const auto write_length = out_pitch * (line_count - 1) + line_length * out_format;
 
 			RSX(ctx)->invalidate_fragment_program(dst_dma, dst_offset, write_length);
 
