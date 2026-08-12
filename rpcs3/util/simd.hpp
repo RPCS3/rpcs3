@@ -3018,6 +3018,10 @@ inline v128 gv_rol32(const v128& a, const v128& b)
 {
 #if defined(__AVX512VL__)
 	return _mm_rolv_epi32(a, b);
+#elif defined(__AVX2__)
+	const auto amt1 = _mm_and_si128(b, _mm_set1_epi32(31));
+	const auto amt2 = _mm_sub_epi32(_mm_set1_epi32(32), amt1);
+	return _mm_or_si128(_mm_sllv_epi32(a, amt1), _mm_srlv_epi32(a, amt2));
 #elif defined(ARCH_ARM64)
 	const auto amt1 = vandq_s32(b, gv_bcst32(31));
 	const auto amt2 = vsubq_s32(amt1, gv_bcst32(32));

@@ -14,9 +14,9 @@ namespace rsx
 	namespace nv0039
 	{
 		// Transfer with stride
-		inline void block2d_copy_with_stride(u8* dst, const u8* src, u32 column_count, u32 height, s32 src_pitch, s32 dst_pitch, u8 src_stride, u8 dst_stride)
+		inline void block2d_copy_with_stride(u8* dst, const u8* src, u32 column_count, u32 row_count, s32 src_pitch, s32 dst_pitch, u8 src_stride, u8 dst_stride)
 		{
-			for (u32 row = 0; row < height; ++row)
+			for (u32 row = 0; row < row_count; ++row)
 			{
 				auto dst_ptr = dst;
 				auto src_ptr = src;
@@ -43,20 +43,41 @@ namespace rsx
 			}
 		}
 
+		inline bool validate_buffer_notify(s32 col_count, s32 row_count, s32 in_stride, s32 out_stride)
+		{
+			if (!col_count || !row_count)
+			{
+				rsx_log.warning("NV0039_BUFFER_NOTIFY NOPed out: 2D area is zero.");
+				return false;
+			}
+
+			if (in_stride <= 0 || in_stride > 4)
+			{
+				rsx_log.error("NV0039_BUFFER_NOTIFY NOPed out: Invalid input stride (=%d)", in_stride);
+				return false;
+			}
+
+			if (out_stride <= 0 || out_stride > 4)
+			{
+				rsx_log.error("NV0039_BUFFER_NOTIFY NOPed out: Invalid output stride (=%d)", out_stride);
+				return false;
+			}
+
+			return true;
+		}
+
 		void buffer_notify(context* ctx, u32, u32 arg)
 		{
 			s32 in_pitch = REGS(ctx)->nv0039_input_pitch();
 			s32 out_pitch = REGS(ctx)->nv0039_output_pitch();
-			const u32 line_length = REGS(ctx)->nv0039_line_length();
-			const u32 line_count = REGS(ctx)->nv0039_line_count();
-			const u8 out_format = REGS(ctx)->nv0039_output_format();
-			const u8 in_format = REGS(ctx)->nv0039_input_format();
+			const u32 line_length = REGS(ctx)->nv0039_line_length();  // Number of columns per row
+			const u32 line_count = REGS(ctx)->nv0039_line_count();    // Number of rows to copy
+			const u8 out_format = REGS(ctx)->nv0039_output_format();  // Column stride in bytes. Only the first byte is actually written to.
+			const u8 in_format = REGS(ctx)->nv0039_input_format();    // Column stride in bytes. Only the first byte is actually read from.
 			const u32 notify = arg;
 
-			if (!line_count || !line_length)
+			if (!validate_buffer_notify(line_length, line_count, in_format, out_format))
 			{
-				rsx_log.warning("NV0039_BUFFER_NOTIFY NOPed out: pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
-					in_pitch, out_pitch, line_length, line_count, in_format, out_format, notify);
 				return;
 			}
 
