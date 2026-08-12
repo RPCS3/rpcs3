@@ -1,4 +1,5 @@
 #include "vkutils/data_heap.h"
+#include "VKFramebuffer.h"
 #include "VKRenderTargets.h"
 #include "VKResourceManager.h"
 #include "Emu/RSX/rsx_methods.h"
@@ -303,6 +304,19 @@ namespace vk
 
 		rsx_log.warning("Surface cache will attempt to spill %llu bytes.", bytes_spilled);
 		return (bytes_spilled > 0);
+	}
+
+	render_target::~render_target()
+	{
+		if (value)
+		{
+			vk::remove_framebuffers_with_image(this);
+		}
+
+		if (resolve_surface)
+		{
+			vk::remove_framebuffers_with_image(resolve_surface.get());
+		}
 	}
 
 	// Get the linear resolve target bound to this surface. Initialize if none exists
