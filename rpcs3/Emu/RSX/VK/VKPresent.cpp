@@ -83,6 +83,12 @@ bool VKGSRender::reinitialize_swapchain()
 	// Drain all the queues
 	vkDeviceWaitIdle(*m_device);
 
+	// Clean the FBO caches
+	for (u32 i = 0; i < m_swapchain->get_swap_image_count(); ++i)
+	{
+		vk::remove_framebuffers_with_image(m_swapchain->get_image(i));
+	}
+
 	// Reset frame context storage
 	for (auto& ctx : m_frame_context_storage)
 	{
@@ -704,17 +710,25 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			single_target_pass = vk::get_renderpass(*m_device, key);
 			ensure(single_target_pass != VK_NULL_HANDLE);
 
-			if (!m_overlay_recording_img ||
-				m_overlay_recording_img->type() != image_to_flip->type() ||
-				m_overlay_recording_img->format() != image_to_flip->format() ||
-				m_overlay_recording_img->width() != image_to_flip->width() ||
-				m_overlay_recording_img->height() != image_to_flip->height() ||
-				m_overlay_recording_img->layers() != image_to_flip->layers())
+			if (m_overlay_recording_img)
+			{
+				// Validate
+				if (m_overlay_recording_img->format() != image_to_flip->format() ||
+					m_overlay_recording_img->width() != image_to_flip->width() ||
+					m_overlay_recording_img->height() != image_to_flip->height())
+				{
+					// Dispose correctly
+					vk::remove_framebuffers_with_image(m_overlay_recording_img.get());
+					vk::get_resource_manager()->dispose(m_overlay_recording_img);
+				}
+			}
+
+			if (!m_overlay_recording_img)
 			{
 				m_overlay_recording_img = std::make_unique<vk::image>(*m_device, m_device->get_memory_mapping().device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-					image_to_flip->type(), image_to_flip->format(), image_to_flip->width(), image_to_flip->height(), 1, 1, image_to_flip->layers(), VK_SAMPLE_COUNT_1_BIT,
+					VK_IMAGE_TYPE_2D, image_to_flip->format(), image_to_flip->width(), image_to_flip->height(), 1, 1, 1, VK_SAMPLE_COUNT_1_BIT,
 					VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-					0, VMM_ALLOCATION_POOL_UNDEFINED);
+					0, VMM_ALLOCATION_POOL_SYSTEM);
 			}
 
 			m_overlay_recording_img->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
