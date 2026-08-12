@@ -527,10 +527,67 @@ void sys_process_exit3(ppu_thread& ppu, s32 status)
 	return _sys_process_exit(ppu, status, 0, 0);
 }
 
-error_code sys_process_spawns_a_self2(vm::ptr<u32> pid, u32 primary_prio, u64 flags, vm::ptr<void> stack, u32 stack_size, u32 mem_id, vm::ptr<void> param_sfo, vm::ptr<void> dbg_data)
+error_code sys_process_spawns_a_self2(ppu_thread& ppu, vm::ptr<u32> pid, u32 primary_prio, u64 flags, vm::ptr<void> stack, u32 stack_size, u32 mem_id, vm::ptr<void> param_sfo, vm::ptr<void> dbg_data)
 {
 	sys_process.todo("sys_process_spawns_a_self2(pid=*0x%x, primary_prio=0x%x, flags=0x%llx, stack=*0x%x, stack_size=0x%x, mem_id=0x%x, param_sfo=*0x%x, dbg_data=*0x%x"
 		, pid, primary_prio, flags, stack, stack_size, mem_id, param_sfo, dbg_data);
+
+	// VSH uses this syscall both for concurrent system processes and for games.
+	// RPCS3 cannot emulate the former yet, so preserve their existing stub behavior.
+	if (!stack || stack_size < sizeof(u64) * 3 || stack_size % sizeof(u64) ||
+		!vm::check_addr(stack.addr(), vm::page_readable, stack_size))
+	{
+		return CELL_OK;
+	}
+
+	auto pstr = vm::bpptr<char, u64, u64>::make(stack.addr());
+	const auto executable = *pstr;
+
+	if (!executable)
+	{
+		return CELL_OK;
+	}
+
+	const std::string path = executable.get_ptr();
+	const bool is_hdd_game = path.starts_with("/dev_hdd0/game/"sv) && path.ends_with("/USRDIR/EBOOT.BIN"sv);
+	const bool is_disc_game = path == "/dev_bdvd/PS3_GAME/USRDIR/EBOOT.BIN"sv;
+
+	if (!is_hdd_game && !is_disc_game)
+	{
+		return CELL_OK;
+	}
+
+	std::vector<std::string> argv;
+	std::vector<std::string> envp;
+	bool reading_env = false;
+	bool complete = false;
+
+	for (u32 i = 0; i < stack_size / sizeof(u64); i++)
+	{
+		auto ptr = *pstr++;
+
+		if (!ptr)
+		{
+			if (reading_env)
+			{
+				complete = true;
+				break;
+			}
+
+			reading_env = true;
+			continue;
+		}
+
+		(reading_env ? envp : argv).emplace_back(ptr.get_ptr());
+	}
+
+	if (!complete)
+	{
+		return CELL_OK;
+	}
+
+	std::vector<u8> data;
+	lv2_exitspawn(ppu, argv, envp, data);
 
 	return CELL_OK;
 }
