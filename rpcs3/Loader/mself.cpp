@@ -53,7 +53,7 @@ bool extract_mself(const std::string& file, const std::string& extract_to)
 		const std::string name = vfs::escape(rec.name);
 		const std::string file_path = extract_to + name;
 
-		if (!Emu.IsPathInsideDir(extract_to, file_path, false))
+		if (!Emu.IsPathInsideDir(file_path, extract_to, false))
 		{
 			mself_log.error("Error extracting %s from MSELF: target path '%s' would be extracted outside of '%s'", name, file_path, extract_to);
 			return false;

@@ -21,7 +21,7 @@ headless_application::headless_application(int& argc, char** argv) : QCoreApplic
 {
 }
 
-bool headless_application::Init()
+void headless_application::Init()
 {
 	// Create callbacks from the emulator, which reference the handlers.
 	InitializeCallbacks();
@@ -34,8 +34,6 @@ bool headless_application::Init()
 
 	// As per Qt recommendations to avoid conflicts for POSIX functions
 	std::setlocale(LC_NUMERIC, "C");
-
-	return true;
 }
 
 void headless_application::InitializeConnects() const

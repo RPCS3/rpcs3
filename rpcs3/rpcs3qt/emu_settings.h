@@ -29,9 +29,8 @@ class emu_settings : public QObject
 	*
 	*/
 	Q_OBJECT
-public:
-	std::set<emu_settings_type> m_broken_types; // list of broken settings
 
+public:
 	/** Creates a settings object which reads in the config.yml file at rpcs3/bin/%path%/config.yml
 	* Settings are only written when SaveSettings is called.
 	*/
@@ -91,15 +90,6 @@ public:
 	/** Try to find the settings type for a given string.*/
 	emu_settings_type FindSettingsType(const cfg::_base* node) const;
 
-	/** Gets all the renderer info for gpu settings.*/
-	std::shared_ptr<render_creator> m_render_creator;
-
-	/** Gets a list of all the microphones available.*/
-	microphone_creator m_microphone_creator;
-
-	/** Gets a list of all the midi devices available.*/
-	midi_creator m_midi_creator;
-
 	/** Loads the settings from path.*/
 	void LoadSettings(const std::string& title_id = "", bool create_config_from_global = true, const std::string& db_config = "");
 
@@ -121,6 +111,15 @@ public:
 	/** Resets the current settings to the global default. This includes all connected widgets. */
 	void RestoreDefaults();
 
+	/** Gets all the renderer info for gpu settings.*/
+	std::shared_ptr<render_creator> m_render_creator;
+
+	/** Gets a list of all the microphones available.*/
+	microphone_creator m_microphone_creator;
+
+	/** Gets a list of all the midi devices available.*/
+	midi_creator m_midi_creator;
+
 Q_SIGNALS:
 	void RestoreDefaultsSignal();
 
@@ -129,6 +128,7 @@ public Q_SLOTS:
 	void SaveSettings() const;
 
 private:
+	std::set<emu_settings_type> m_broken_types; // list of broken settings
 	YAML::Node m_default_settings; // The default settings as a YAML node.
 	YAML::Node m_current_settings; // The current settings as a YAML node.
 	std::string m_title_id;

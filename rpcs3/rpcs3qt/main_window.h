@@ -70,9 +70,10 @@ class main_window : public QMainWindow
 	};
 
 public:
-	explicit main_window(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget* parent = nullptr);
+	explicit main_window(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, bool with_cli_boot, QWidget* parent = nullptr);
 	~main_window();
-	bool Init(bool with_cli_boot);
+	void show();
+	void Init();
 	QIcon GetAppIcon() const;
 	void OnMissingFw();
 	static bool InstallPackages(main_window* mw, QStringList file_paths = {}, bool from_boot = false);
@@ -201,4 +202,6 @@ private:
 	std::unique_ptr<gui_pad_thread> m_gui_pad_thread;
 
 	system_state m_system_state = system_state::stopped;
+	bool m_with_cli_boot = false;
+	bool m_shown = false;
 };
