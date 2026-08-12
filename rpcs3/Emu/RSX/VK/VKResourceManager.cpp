@@ -10,6 +10,7 @@ namespace vk
 		std::unordered_map<uptr, vmm_allocation_t> allocations;
 		std::unordered_map<uptr, atomic_t<u64>> memory_usage;
 		std::unordered_map<vmm_allocation_pool, atomic_t<u64>> pool_usage;
+		shared_mutex mutex;
 
 		void clear()
 		{
@@ -87,19 +88,13 @@ namespace vk
 		return g_last_completed_event.load();
 	}
 
-	void on_event_completed(u64 event_id, bool flush)
+	void on_event_completed(u64 event_id)
 	{
-		if (!flush && g_cfg.video.multithreaded_rsx)
+		g_fxo->get<vk::driver_manager_thread>().notify_completed(event_id);
+		g_last_completed_event.atomic_op([event_id](u64& value)
 		{
-			auto& offloader_thread = g_fxo->get<rsx::dma_manager>();
-			ensure(!offloader_thread.is_current_thread());
-
-			offloader_thread.backend_ctrl(rctrl_run_gc, reinterpret_cast<void*>(event_id));
-			return;
-		}
-
-		g_resource_manager.eid_completed(event_id);
-		g_last_completed_event = std::max(event_id, g_last_completed_event.load());
+			value = std::max(event_id, value);
+		});
 	}
 
 	void print_debug_markers()
@@ -119,6 +114,8 @@ namespace vk
 	{
 		auto key = reinterpret_cast<uptr>(handle);
 		const vmm_allocation_t info = { memory_size, memory_type, pool };
+
+		std::lock_guard lock(g_vmm_stats.mutex);
 
 		if (const auto ins = g_vmm_stats.allocations.insert_or_assign(key, info);
 			!ins.second)
@@ -140,6 +137,8 @@ namespace vk
 
 	void vmm_notify_memory_freed(void* handle)
 	{
+		std::lock_guard lock(g_vmm_stats.mutex);
+
 		auto key = reinterpret_cast<uptr>(handle);
 		if (auto found = g_vmm_stats.allocations.find(key);
 			found != g_vmm_stats.allocations.end())
@@ -153,12 +152,14 @@ namespace vk
 
 	void vmm_reset()
 	{
+		std::lock_guard lock(g_vmm_stats.mutex);
+
 		g_vmm_stats.clear();
 		g_event_ctr = 0;
 		g_last_completed_event = 0;
 	}
 
-	u64 vmm_get_application_memory_usage(const memory_type_info& memory_type)
+	u64 vmm_get_application_memory_usage_impl(const memory_type_info& memory_type)
 	{
 		u64 result = 0;
 		for (const auto& memory_type_index : memory_type)
@@ -175,13 +176,32 @@ namespace vk
 		return result;
 	}
 
+	u64 vmm_get_application_memory_usage(const memory_type_info& memory_type)
+	{
+		reader_lock lock(g_vmm_stats.mutex);
+		return vmm_get_application_memory_usage_impl(memory_type);
+	}
+
+	u64 vmm_get_application_pool_usage_impl(vmm_allocation_pool pool)
+	{
+		if (auto found = g_vmm_stats.pool_usage.find(pool);
+			found != g_vmm_stats.pool_usage.end())
+		{
+			return found->second;
+		}
+		return 0ull;
+	}
+
 	u64 vmm_get_application_pool_usage(vmm_allocation_pool pool)
 	{
-		return g_vmm_stats.pool_usage[pool];
+		reader_lock lock(g_vmm_stats.mutex);
+		return vmm_get_application_pool_usage_impl(pool);
 	}
 
 	rsx::problem_severity vmm_determine_memory_load_severity()
 	{
+		reader_lock lock(g_vmm_stats.mutex);
+
 		const auto vmm_load = get_current_mem_allocator()->get_memory_usage();
 		rsx::problem_severity load_severity = rsx::problem_severity::low;
 
@@ -211,7 +231,7 @@ namespace vk
 
 			// Query actual usage for comparison. Maybe we just have really fragmented memory...
 			const auto mem_info = get_current_renderer()->get_memory_mapping();
-			const auto local_memory_usage = vmm_get_application_memory_usage(mem_info.device_local);
+			const auto local_memory_usage = vmm_get_application_memory_usage_impl(mem_info.device_local);
 
 			constexpr u64 _1M = 0x100000;
 			const auto res_scale = rsx::get_current_renderer()->resolution_scaling_config.scale_factor();
@@ -264,12 +284,16 @@ namespace vk
 
 	void vmm_notify_object_allocated(vmm_allocation_pool pool)
 	{
+		std::lock_guard lock(g_vmm_stats.mutex);
+
 		ensure(pool >= VMM_ALLOCATION_POOL_SAMPLER);
 		g_vmm_stats.pool_usage[pool]++;
 	}
 
 	void vmm_notify_object_freed(vmm_allocation_pool pool)
 	{
+		std::lock_guard lock(g_vmm_stats.mutex);
+
 		ensure(pool >= VMM_ALLOCATION_POOL_SAMPLER);
 		g_vmm_stats.pool_usage[pool]--;
 	}
