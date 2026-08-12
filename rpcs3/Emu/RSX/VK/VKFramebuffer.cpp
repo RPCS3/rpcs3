@@ -135,6 +135,11 @@ namespace vk
 
 	void remove_framebuffers_with_image(const vk::image* image)
 	{
+		if (!image)
+		{
+			return;
+		}
+
 		remove_framebuffers_with_filter([image](const auto& fbo)
 		{
 			return fbo->references(image);
@@ -143,6 +148,11 @@ namespace vk
 
 	void remove_framebuffers_with_image(VkImage handle)
 	{
+		if (!handle)
+		{
+			return;
+		}
+
 		remove_framebuffers_with_filter([handle](const auto& fbo)
 		{
 			return fbo->references(handle);
