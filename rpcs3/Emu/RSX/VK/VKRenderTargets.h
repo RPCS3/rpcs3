@@ -67,7 +67,14 @@ namespace vk
 		}
 	};
 
-	class render_target : public viewable_image, public rsx::render_target_descriptor<vk::viewable_image*>
+	struct drawable_surface_t : public viewable_image
+	{
+		using viewable_image::viewable_image;
+
+		virtual ~drawable_surface_t();
+	};
+
+	class render_target : public drawable_surface_t, public rsx::render_target_descriptor<vk::viewable_image*>
 	{
 		// Cyclic reference hazard tracking
 		image_reference_sync_barrier m_cyclic_ref_tracker;
@@ -103,8 +110,7 @@ namespace vk
 		u64 spill_request_tag = 0;      // timestamp when spilling was requested
 		bool is_bound = false;          // set when the surface is bound for rendering
 
-		using viewable_image::viewable_image;
-		virtual ~render_target();
+		using drawable_surface_t::drawable_surface_t;
 
 		vk::viewable_image* get_surface(rsx::surface_access access_type) override;
 		bool is_depth_surface() const override;
