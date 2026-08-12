@@ -2,6 +2,7 @@
 #include "sys_time.h"
 
 #include "sys_process.h"
+#include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/timers.hpp"
@@ -434,6 +435,18 @@ error_code sys_time_set_current_time(s64 sec, s64 nsec)
 		return CELL_ENOSYS;
 	}
 
+	if (nsec < 0 || nsec >= 1'000'000'000)
+	{
+		return CELL_EINVAL;
+	}
+
+	g_cfg.sys.console_time_offset.set(sec - std::time(nullptr));
+
+	if (Emu.GetCallbacks().save_emu_settings)
+	{
+		Emu.GetCallbacks().save_emu_settings();
+	}
+
 	return CELL_OK;
 }
 
@@ -446,7 +459,14 @@ u64 sys_time_get_timebase_frequency()
 
 error_code sys_time_get_rtc(vm::ptr<u64> rtc)
 {
-	sys_time.todo("sys_time_get_rtc(rtc=*0x%x)", rtc);
+	sys_time.trace("sys_time_get_rtc(rtc=*0x%x)", rtc);
+
+	if (!rtc)
+	{
+		return CELL_EFAULT;
+	}
+
+	*rtc = std::time(nullptr);
 
 	return CELL_OK;
 }
