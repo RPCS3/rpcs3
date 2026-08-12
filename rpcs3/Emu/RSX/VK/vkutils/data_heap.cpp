@@ -185,7 +185,27 @@ namespace vk
 		const auto current_usage = vmm_get_application_memory_usage(target_heap);
 		const auto after_usage = current_usage + size;
 		const auto limit = (target_heap.total_bytes() * max_usage_percent) / 100;
-		return after_usage < limit;
+
+		if (after_usage >= limit)
+			return false;
+
+		auto allocator = g_render_device->get_allocator();
+		bool budget_info_available = false;
+
+		for (const auto& type_index : target_heap)
+		{
+			u64 heap_used = 0, heap_budget = 0;
+
+			if (!allocator->get_memory_budget(type_index, heap_used, heap_budget))
+				continue;
+
+			budget_info_available = true;
+
+			if ((heap_used + size) < (heap_budget * max_usage_percent) / 100)
+				return true;
+		}
+
+		return !budget_info_available;
 	}
 
 	void* data_heap::map_impl(usz offset, usz size)

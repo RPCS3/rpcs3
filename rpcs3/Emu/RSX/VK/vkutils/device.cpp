@@ -121,6 +121,7 @@ namespace vk
 		optional_features_support.shader_stencil_export    = device_extensions.is_supported(VK_EXT_SHADER_STENCIL_EXPORT_EXTENSION_NAME);
 		optional_features_support.conditional_rendering    = device_extensions.is_supported(VK_EXT_CONDITIONAL_RENDERING_EXTENSION_NAME);
 		optional_features_support.external_memory_host     = device_extensions.is_supported(VK_EXT_EXTERNAL_MEMORY_HOST_EXTENSION_NAME);
+		optional_features_support.memory_budget            = device_extensions.is_supported(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
 		optional_features_support.synchronization_2        = device_extensions.is_supported(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
 		optional_features_support.unrestricted_depth_range = device_extensions.is_supported(VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME);
 #ifdef __APPLE__
@@ -560,6 +561,11 @@ namespace vk
 		if (pgpu->optional_features_support.extended_device_fault)
 		{
 			requested_extensions.push_back(VK_EXT_DEVICE_FAULT_EXTENSION_NAME);
+		}
+
+		if (pgpu->optional_features_support.memory_budget)
+		{
+			requested_extensions.push_back(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
 		}
 		
 #ifdef __APPLE__

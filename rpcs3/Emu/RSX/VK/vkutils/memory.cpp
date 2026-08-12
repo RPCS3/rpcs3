@@ -179,6 +179,12 @@ namespace vk
 		allocatorInfo.instance = inst;
 		allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_2;
 
+		if (dev.get_memory_budget_support())
+		{
+			allocatorInfo.flags |= VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
+			m_has_memory_budget_ext = true;
+		}
+
 		std::vector<VkDeviceSize> heap_limits;
 		const auto vram_allocation_limit = g_cfg.video.vk.vram_allocation_limit * 0x100000ull;
 		if (vram_allocation_limit < dev.get_memory_mapping().device_local_total_bytes)
@@ -327,6 +333,26 @@ namespace vk
 
 		vmaGetAllocationInfo(m_allocator, static_cast<VmaAllocation>(mem_handle), &alloc_info);
 		return alloc_info.offset;
+	}
+
+	bool mem_allocator_vma::get_memory_budget(u32 memory_type_index, u64& out_used, u64& out_budget)
+	{
+		if (!m_has_memory_budget_ext)
+			return false;
+
+		const VkPhysicalDeviceMemoryProperties* mem_props = nullptr;
+		vmaGetMemoryProperties(m_allocator, &mem_props);
+
+		if (memory_type_index >= mem_props->memoryTypeCount)
+			return false;
+
+		const u32 heap_index = mem_props->memoryTypes[memory_type_index].heapIndex;
+		std::array<VmaBudget, VK_MAX_MEMORY_HEAPS> budgets;
+		vmaGetHeapBudgets(m_allocator, budgets.data());
+
+		out_used = budgets[heap_index].usage;
+		out_budget = budgets[heap_index].budget;
+		return true;
 	}
 
 	f32 mem_allocator_vma::get_memory_usage()
