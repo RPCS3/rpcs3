@@ -1,5 +1,7 @@
 #pragma once
 #include "VulkanAPI.h"
+#include "Utilities/mutex.h"
+
 #include <deque>
 
 namespace vk
@@ -34,10 +36,12 @@ namespace vk
 		};
 
 		std::vector<std::unique_ptr<query_pool>> m_consumed_pools;
-		std::deque<std::unique_ptr<query_pool>> m_query_pool_cache;
 		std::unique_ptr<query_pool> m_current_query_pool;
 		std::deque<u32> m_available_slots;
 		u32 m_pool_lifetime_counter = 0;
+
+		std::deque<std::unique_ptr<query_pool>> m_query_pool_cache;
+		shared_mutex m_query_pool_cache_lock;
 
 		VkQueryType query_type = VK_QUERY_TYPE_OCCLUSION;
 		VkQueryResultFlags result_flags = VK_QUERY_RESULT_PARTIAL_BIT;
