@@ -1,6 +1,7 @@
 #pragma once
 
 #include "VulkanAPI.h"
+#include "Utilities/Thread.h"
 
 namespace vk
 {
@@ -9,7 +10,6 @@ namespace vk
 	enum rctrl_command : u32 // callback commands
 	{
 		rctrl_queue_submit = 0x80000000,
-		rctrl_run_gc       = 0x80000001,
 	};
 
 	struct submit_packet
@@ -47,4 +47,22 @@ namespace vk
 			}
 		}
 	};
+
+	struct driver_manager_t
+	{
+		static constexpr std::string_view thread_name = "Vulkan Driver Manager"sv;
+		void operator()();
+
+		void notify_completed(u64 eid);
+		void drain();
+
+	private:
+		atomic_t<u64> m_eid_ctr = 0ull;
+		atomic_t<u64> m_last_completed_eid = 0ull;
+
+		atomic_t<u32> m_wake_event = 0u;
+		atomic_t<u32> m_completed_signal = 0u;     //<- Works around atomic_engine's lack of 64-bit observables support
+	};
+
+	using driver_manager_thread = named_thread<driver_manager_t>;
 }

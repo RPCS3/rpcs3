@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "VKCommandStream.h"
+#include "VKResourceManager.h"
 #include "vkutils/descriptors.h"
 #include "vkutils/sync.h"
 
@@ -71,5 +72,65 @@ namespace vk
 	{
 		// Flush-only version used by asynchronous submit processing (MTRSX)
 		queue_submit_impl(*packet);
+	}
+
+	void driver_manager_t::operator()()
+	{
+		while (thread_ctrl::state() != thread_state::aborting)
+		{
+			const auto wake_token = m_wake_event.observe();
+			const auto last_eid = m_last_completed_eid.load();
+
+			if (auto eid = m_eid_ctr.load(); eid != last_eid)
+			{
+				vk::get_resource_manager()->eid_completed(eid);
+
+				m_last_completed_eid.store(eid);
+				m_completed_signal++;
+				m_completed_signal.notify_all();
+			}
+
+			thread_ctrl::wait_on(m_wake_event, wake_token);
+		}
+	}
+
+	void driver_manager_t::notify_completed(u64 eid)
+	{
+		m_eid_ctr.atomic_op([eid](u64& value)
+		{
+			value = std::max(value, eid);
+		});
+
+		m_wake_event++;
+		m_wake_event.notify_one();
+	}
+
+	void driver_manager_t::drain()
+	{
+		const u64 target_eid = m_eid_ctr.load(); //<- Last request at time of calling
+
+		// Now, we spam queue wake until our EID is reached
+		while (true)
+		{
+			const u32 completion_token = m_completed_signal.observe();
+			if (m_last_completed_eid.load() >= target_eid)
+			{
+				// Abort, watermark reached.
+				break;
+			}
+
+			if (thread_ctrl::state() == thread_state::aborting)
+			{
+				// Abort, emulation state changed.
+				break;
+			}
+
+			// Wake the worker thread.
+			m_wake_event++;
+			m_wake_event.notify_one();
+
+			// Wait for worker thread.
+			thread_ctrl::wait_on(m_completed_signal, completion_token);
+		}
 	}
 }
