@@ -104,6 +104,7 @@ namespace vk
 		bool is_bound = false;          // set when the surface is bound for rendering
 
 		using viewable_image::viewable_image;
+		virtual ~render_target();
 
 		vk::viewable_image* get_surface(rsx::surface_access access_type) override;
 		bool is_depth_surface() const override;
