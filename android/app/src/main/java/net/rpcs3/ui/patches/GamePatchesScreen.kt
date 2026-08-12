@@ -133,11 +133,12 @@ fun GamePatchesScreen(
         }
     }
 
-    val ungroupedLabel = stringResource(R.string.patches_group_ungrouped)
-    val grouped = remember(patches, ungroupedLabel) {
-        patches.groupBy { it.group.ifEmpty { ungroupedLabel } }.toList().sortedBy { it.first }
+    val thisGameLabel = stringResource(R.string.patches_section_this_game)
+    val allTitlesLabel = stringResource(R.string.patches_section_all_titles)
+    val rows = remember(patches, titleId, thisGameLabel, allTitlesLabel) {
+        buildPatchRows(titleId, patches, thisGameLabel, allTitlesLabel)
     }
-    var selected by remember(grouped) { mutableIntStateOf(0) }
+    var selected by remember(titleId) { mutableIntStateOf(0) }
 
     if (loading) {
         Box(
@@ -151,8 +152,10 @@ fun GamePatchesScreen(
         return
     }
 
-    val tabs = grouped.map { PaneTab(it.first, Icons.Outlined.Tune) } +
+    val tabs = listOf(
+        PaneTab(stringResource(R.string.patches_tab_available), Icons.Outlined.Tune),
         PaneTab(stringResource(R.string.patches_tab_files), Icons.Outlined.Description)
+    )
     val filesTab = tabs.lastIndex
     val current = selected.coerceIn(0, filesTab)
 
@@ -216,15 +219,13 @@ fun GamePatchesScreen(
                         }
                     }
                 }
-            } else if (grouped.isNotEmpty()) {
-                val entries = grouped[current].second
-
+            } else if (patches.isNotEmpty()) {
                 PaneSectionTitle(
-                    pluralStringResource(R.plurals.patches_count, entries.size, entries.size)
+                    pluralStringResource(R.plurals.patches_count, patches.size, patches.size)
                 )
                 PaneCard {
-                    entries.forEach { patch ->
-                        PatchToggleRow(titleId = titleId, patch = patch)
+                    rows.forEach { row ->
+                        PatchListRowContent(titleId = titleId, row = row)
                     }
                 }
             } else {

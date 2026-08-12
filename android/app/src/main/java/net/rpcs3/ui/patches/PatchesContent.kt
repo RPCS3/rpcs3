@@ -90,7 +90,7 @@ internal fun loadPatchesFor(titleId: String): List<Patch> =
     parsePatches(runCatching { RPCS3.instance.patchesGet(titleId) }.getOrDefault("[]"))
 
 @Composable
-internal fun PatchToggleRow(titleId: String, patch: Patch) {
+internal fun PatchToggleRow(titleId: String, patch: Patch, disambiguator: String? = null) {
     var enabled by remember(patch.hash + patch.description) { mutableStateOf(patch.enabled) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -113,6 +113,9 @@ internal fun PatchToggleRow(titleId: String, patch: Patch) {
     )
 
     val detail = buildList {
+        if (disambiguator != null) {
+            add(disambiguator)
+        }
         if (patch.author.isNotEmpty()) {
             add(context.getString(R.string.patches_detail_author, patch.author))
         }
@@ -406,31 +409,129 @@ fun InGamePatchesPanel(titleId: String, modifier: Modifier = Modifier) {
     }
 }
 
+internal sealed interface PatchListRow {
+    data class Section(val label: String, val count: Int) : PatchListRow
+    data class GroupLabel(val label: String) : PatchListRow
+    data class Entry(val patch: Patch, val disambiguator: String?) : PatchListRow
+}
+
+internal fun shortHash(hash: String): String =
+    hash.substringAfter('-').take(8).ifEmpty { hash.take(8) }
+
+internal fun buildPatchRows(
+    titleId: String,
+    patches: List<Patch>,
+    thisGameLabel: String,
+    allTitlesLabel: String
+): List<PatchListRow> {
+    val repeated = patches
+        .groupBy { it.description }
+        .filterValues { it.size > 1 }
+        .keys
+
+    val own = patches.filter { it.serial.equals(titleId, ignoreCase = true) }
+    val generic = patches.filter { !it.serial.equals(titleId, ignoreCase = true) }
+
+    val rows = ArrayList<PatchListRow>()
+
+    fun appendSection(label: String, entries: List<Patch>) {
+        if (entries.isEmpty()) return
+
+        rows.add(PatchListRow.Section(label, entries.size))
+
+        entries
+            .groupBy { it.group }
+            .toList()
+            .sortedWith(compareBy({ it.first.isEmpty() }, { it.first.lowercase() }))
+            .forEach { (group, groupEntries) ->
+                if (group.isNotEmpty()) {
+                    rows.add(PatchListRow.GroupLabel(group))
+                }
+                groupEntries
+                    .sortedBy { it.description.lowercase() }
+                    .forEach { patch ->
+                        rows.add(
+                            PatchListRow.Entry(
+                                patch = patch,
+                                disambiguator = if (patch.description in repeated) {
+                                    shortHash(patch.hash)
+                                } else {
+                                    null
+                                }
+                            )
+                        )
+                    }
+            }
+    }
+
+    appendSection(thisGameLabel, own)
+    appendSection(allTitlesLabel, generic)
+
+    return rows
+}
+
+@Composable
+internal fun PatchSectionHeader(row: PatchListRow.Section) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 12.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            modifier = Modifier.weight(1f),
+            text = row.label,
+            color = Rpcs.Accent,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+        Text(
+            text = row.count.toString(),
+            color = Rpcs.TextDim,
+            fontSize = 11.sp
+        )
+    }
+}
+
+@Composable
+internal fun PatchGroupLabel(row: PatchListRow.GroupLabel) {
+    Text(
+        text = row.label,
+        color = Rpcs.TextSecondary,
+        fontSize = 11.sp,
+        fontWeight = FontWeight.SemiBold,
+        modifier = Modifier.padding(top = 6.dp, bottom = 2.dp)
+    )
+}
+
+@Composable
+internal fun PatchListRowContent(titleId: String, row: PatchListRow) {
+    when (row) {
+        is PatchListRow.Section -> PatchSectionHeader(row)
+        is PatchListRow.GroupLabel -> PatchGroupLabel(row)
+        is PatchListRow.Entry -> PatchToggleRow(
+            titleId = titleId,
+            patch = row.patch,
+            disambiguator = row.disambiguator
+        )
+    }
+}
+
 @Composable
 internal fun PatchGroupList(
     titleId: String,
     patches: List<Patch>,
     modifier: Modifier = Modifier
 ) {
-    val ungrouped = stringResource(R.string.patches_group_ungrouped)
-    val grouped = remember(patches, ungrouped) {
-        patches.groupBy { it.group.ifEmpty { ungrouped } }.toList().sortedBy { it.first }
+    val thisGame = stringResource(R.string.patches_section_this_game)
+    val allTitles = stringResource(R.string.patches_section_all_titles)
+    val rows = remember(patches, titleId, thisGame, allTitles) {
+        buildPatchRows(titleId, patches, thisGame, allTitles)
     }
 
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        grouped.forEach { (group, entries) ->
-            Text(
-                text = group,
-                color = Rpcs.TextSecondary,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-            entries.forEach { patch ->
-                PatchToggleRow(titleId = titleId, patch = patch)
-            }
+    Column(modifier = modifier.fillMaxWidth()) {
+        rows.forEach { row ->
+            PatchListRowContent(titleId = titleId, row = row)
         }
     }
 }

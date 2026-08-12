@@ -277,7 +277,10 @@
 
     <string name="patches_title">Patches · %1$s</string>
     <string name="patches_group_ungrouped">Ungrouped</string>
+    <string name="patches_tab_available">Available</string>
     <string name="patches_tab_files">Patch files</string>
+    <string name="patches_section_this_game">This game</string>
+    <string name="patches_section_all_titles">All titles</string>
     <string name="patches_files_none">No patch files installed</string>
     <plurals name="patches_file_count">
         <item quantity="one">%1$d file in config/patches</item>
