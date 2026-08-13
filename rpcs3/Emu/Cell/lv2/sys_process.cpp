@@ -350,6 +350,16 @@ void _sys_process_exit(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3)
 
 	sys_process.warning("_sys_process_exit(status=%d, arg2=0x%x, arg3=0x%x)", status, arg2, arg3);
 
+	if (Emu.IsChildProcess() && !Emu.IsVsh() && Emu.GetLastBoot().ends_with("/vsh/module/vsh.self"sv))
+	{
+		sys_process.success("Returning to VSH");
+
+		std::vector<std::string> argv{"/dev_flash/vsh/module/vsh.self"};
+		std::vector<std::string> envp;
+		std::vector<u8> data;
+		return lv2_exitspawn(ppu, argv, envp, data);
+	}
+
 	Emu.CallFromMainThread([]()
 	{
 		sys_process.success("Process finished");
@@ -420,6 +430,8 @@ void lv2_exitspawn(ppu_thread& ppu, std::vector<std::string>& argv, std::vector<
 	Emu.CallFromMainThread([is_real_reboot, argv = std::move(argv), envp = std::move(envp), data = std::move(data)]() mutable
 	{
 		sys_process.success("Process finished -> %s", argv[0]);
+		const bool is_vsh_return = Emu.IsChildProcess() && !Emu.IsVsh() &&
+		                           Emu.GetLastBoot().ends_with("/vsh/module/vsh.self"sv) && argv[0] == "/dev_flash/vsh/module/vsh.self"sv;
 
 		std::string disc;
 
@@ -430,6 +442,7 @@ void lv2_exitspawn(ppu_thread& ppu, std::vector<std::string>& argv, std::vector<
 
 		std::string path = vfs::get(argv[0]);
 		std::string hdd1 = vfs::get("/dev_hdd1/");
+		std::string vsh_turnoff = is_vsh_return ? vfs::get("/dev_hdd0/tmp/turnoff") : std::string{};
 
 		const u128 klic = g_fxo->get<loaded_npdrm_keys>().last_key();
 
@@ -475,7 +488,8 @@ void lv2_exitspawn(ppu_thread& ppu, std::vector<std::string>& argv, std::vector<
 		};
 
 		Emu.after_kill_callback = [func = std::move(func), argv = std::move(argv), envp = std::move(envp), data = std::move(data),
-			disc = std::move(disc), path = std::move(path), hdd1 = std::move(hdd1), old_config = Emu.GetUsedConfig(), old_db_config = Emu.GetUsedDatabaseConfig(), klic]() mutable
+									  disc = std::move(disc), path = std::move(path), hdd1 = std::move(hdd1), vsh_turnoff = std::move(vsh_turnoff),
+									  old_config = Emu.GetUsedConfig(), old_db_config = Emu.GetUsedDatabaseConfig(), klic]() mutable
 		{
 			Emu.argv = std::move(argv);
 			Emu.envp = std::move(envp);
@@ -490,6 +504,12 @@ void lv2_exitspawn(ppu_thread& ppu, std::vector<std::string>& argv, std::vector<
 			}
 
 			Emu.SetForceBoot(true);
+
+			// VSH normally remains resident while a game runs. Clear its active-session marker before emulating the return with a fresh boot.
+			if (!vsh_turnoff.empty() && fs::is_file(vsh_turnoff) && !fs::remove_file(vsh_turnoff))
+			{
+				sys_process.error("Failed to remove VSH turnoff marker: %s", fs::g_tls_error);
+			}
 
 			auto res = Emu.BootGame(path, "", true, cfg_mode::continuous, old_config, old_db_config);
 
