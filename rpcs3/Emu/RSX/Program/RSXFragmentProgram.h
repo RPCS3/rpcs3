@@ -123,7 +123,7 @@ union SRC1
 	struct
 	{
 		u32                  : 2;
-		u32 end_counter      : 8; // End counter value for LOOP or rep count for REP
+		u32 rep_count        : 8; // Repeat count for LOOP and REP
 		u32 init_counter     : 8; // Initial counter value for LOOP
 		u32                  : 1;
 		u32 increment        : 8; // Increment value for LOOP

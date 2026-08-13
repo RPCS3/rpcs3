@@ -402,12 +402,12 @@ void CgBinaryDisasm::TaskFP()
 			{
 				if (!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt)
 				{
-					AddCodeAsm(fmt::format("{ %u, %u, %u }", src1.end_counter, src1.init_counter, src1.increment));
+					AddCodeAsm(fmt::format("{ %u, %u, %u }", src1.rep_count, src1.init_counter, src1.increment));
 				}
 				else
 				{
 					m_loop_end_offsets.push_back(src2.end_offset << 2);
-					AddCodeAsm(fmt::format("{ %u, %u, %u }", src1.end_counter, src1.init_counter, src1.increment));
+					AddCodeAsm(fmt::format("{ %u, %u, %u }", src1.rep_count, src1.init_counter, src1.increment));
 				}
 				break;
 			}
