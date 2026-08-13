@@ -29,17 +29,23 @@
   <layout class="QVBoxLayout" name="settings_dialog_layout" stretch="1,0,0">
    <item>
     <widget class="QTabWidget" name="tab_widget_settings">
-     <property name="enabled">
-      <bool>true</bool>
-     </property>
-     <property name="currentIndex">
-      <number>0</number>
-     </property>
      <widget class="QWidget" name="coreTab">
       <attribute name="title">
        <string>CPU</string>
       </attribute>
-      <layout class="QVBoxLayout" name="coreTabLayout" stretch="1">
+      <layout class="QVBoxLayout" name="coreTabLayout">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
        <item>
         <widget class="QScrollArea" name="coreTabScrollArea">
          <property name="frameShape">
@@ -53,8 +59,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>814</width>
-            <height>498</height>
+            <width>832</width>
+            <height>516</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="coreTabScrollContentsLayout">
@@ -329,7 +335,19 @@
       <attribute name="title">
        <string>GPU</string>
       </attribute>
-      <layout class="QVBoxLayout" name="gpuTab_layout" stretch="1">
+      <layout class="QVBoxLayout" name="gpuTab_layout">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
        <item>
         <widget class="QScrollArea" name="gpuTabScrollArea">
          <property name="frameShape">
@@ -343,7 +361,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>802</width>
+            <width>820</width>
             <height>688</height>
            </rect>
           </property>
@@ -1027,7 +1045,19 @@
       <attribute name="title">
        <string>Audio</string>
       </attribute>
-      <layout class="QVBoxLayout" name="audioTab_layout" stretch="1">
+      <layout class="QVBoxLayout" name="audioTab_layout">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
        <item>
         <widget class="QScrollArea" name="audioTabScrollArea">
          <property name="frameShape">
@@ -1041,7 +1071,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>802</width>
+            <width>820</width>
             <height>606</height>
            </rect>
           </property>
@@ -1569,7 +1599,19 @@
       <attribute name="title">
        <string>I/O</string>
       </attribute>
-      <layout class="QVBoxLayout" name="inputTab_layout" stretch="1">
+      <layout class="QVBoxLayout" name="inputTab_layout">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
        <item>
         <widget class="QScrollArea" name="inputTabScrollArea">
          <property name="frameShape">
@@ -1583,7 +1625,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>802</width>
+            <width>820</width>
             <height>526</height>
            </rect>
           </property>
@@ -1874,7 +1916,19 @@
       <attribute name="title">
        <string>System</string>
       </attribute>
-      <layout class="QVBoxLayout" name="systemTab_layout" stretch="1">
+      <layout class="QVBoxLayout" name="systemTab_layout">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
        <item>
         <widget class="QScrollArea" name="systemTabScrollArea">
          <property name="frameShape">
@@ -1888,8 +1942,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>814</width>
-            <height>498</height>
+            <width>832</width>
+            <height>516</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="systemTabScrollContentsLayout">
@@ -2176,7 +2230,19 @@
       <attribute name="title">
        <string>Network</string>
       </attribute>
-      <layout class="QVBoxLayout" name="networkTab_layout" stretch="1">
+      <layout class="QVBoxLayout" name="networkTab_layout">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
        <item>
         <widget class="QScrollArea" name="networkTabScrollArea">
          <property name="frameShape">
@@ -2190,8 +2256,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>814</width>
-            <height>498</height>
+            <width>832</width>
+            <height>516</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="networkTabScrollContentsLayout">
@@ -2389,7 +2455,19 @@
       <attribute name="title">
        <string>Advanced</string>
       </attribute>
-      <layout class="QVBoxLayout" name="advancedTab_layout" stretch="1">
+      <layout class="QVBoxLayout" name="advancedTab_layout">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
        <item>
         <widget class="QScrollArea" name="advancedTabScrollArea">
          <property name="frameShape">
@@ -2403,7 +2481,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>802</width>
+            <width>820</width>
             <height>737</height>
            </rect>
           </property>
@@ -2933,7 +3011,19 @@
       <attribute name="title">
        <string>Emulator</string>
       </attribute>
-      <layout class="QVBoxLayout" name="emulatorTab_layout" stretch="1">
+      <layout class="QVBoxLayout" name="emulatorTab_layout">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
        <item>
         <widget class="QScrollArea" name="emulatorTabScrollArea">
          <property name="frameShape">
@@ -3818,7 +3908,19 @@
       <attribute name="title">
        <string>GUI</string>
       </attribute>
-      <layout class="QVBoxLayout" name="guiTab_layout" stretch="1">
+      <layout class="QVBoxLayout" name="guiTab_layout">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
        <item>
         <widget class="QScrollArea" name="guiTabScrollArea">
          <property name="frameShape">
@@ -3832,7 +3934,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>802</width>
+            <width>820</width>
             <height>530</height>
            </rect>
           </property>
@@ -4275,7 +4377,19 @@
       <attribute name="title">
        <string>Debug</string>
       </attribute>
-      <layout class="QVBoxLayout" name="debugTab_layout" stretch="1">
+      <layout class="QVBoxLayout" name="debugTab_layout">
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
        <item>
         <widget class="QScrollArea" name="debugTabScrollArea">
          <property name="frameShape">
@@ -4777,9 +4891,6 @@
    </item>
    <item>
     <widget class="QGroupBox" name="gb_description">
-     <property name="flat">
-      <bool>true</bool>
-     </property>
      <layout class="QVBoxLayout" name="gb_description_debug_layout">
       <item>
        <widget class="auto_scroll_label" name="description">
