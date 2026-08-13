@@ -3,6 +3,7 @@
 
 #include "sys_process.h"
 #include "Emu/System.h"
+#include "Emu/IdManager.h"
 #include "Emu/system_config.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/timers.hpp"
@@ -12,6 +13,11 @@
 
 u64 g_timebase_offs{};
 static u64 systemtime_offset;
+
+struct vsh_time_state
+{
+	atomic_t<bool> startup_restore_seen = false;
+};
 
 #ifndef __linux__
 #include "util/asm.hpp"
@@ -440,7 +446,37 @@ error_code sys_time_set_current_time(s64 sec, s64 nsec)
 		return CELL_EINVAL;
 	}
 
-	g_cfg.sys.console_time_offset.set(sec - std::time(nullptr));
+	const b8 is_vsh = Emu.IsVsh();
+
+	if (is_vsh)
+	{
+		g_fxo->need<vsh_time_state>();
+
+		// VSH first calls this during startup to restore its persisted RTC delta.
+		// Keep RPCS3's persisted time for that call, then accept later XMB changes.
+		if (!g_fxo->get<vsh_time_state>().startup_restore_seen.exchange(true))
+		{
+			return CELL_OK;
+		}
+	}
+
+	const s64 host_time = std::time(nullptr);
+	s64 console_time_offset = std::bit_cast<s64>(static_cast<u64>(sec) - static_cast<u64>(host_time));
+
+	if (is_vsh && static_cast<u64>(sec) == (1ull << 32) + static_cast<u32>(sec) &&
+		(console_time_offset < g_cfg.sys.console_time_offset.min || console_time_offset > g_cfg.sys.console_time_offset.max))
+	{
+		// VSH zero-extends its signed 32-bit RTC delta before adding it to the clock.
+		// Recover the intended seconds from the single observed 32-bit wrap.
+		console_time_offset = std::bit_cast<s64>(static_cast<u64>(static_cast<u32>(sec)) - static_cast<u64>(host_time));
+	}
+
+	if (console_time_offset < g_cfg.sys.console_time_offset.min || console_time_offset > g_cfg.sys.console_time_offset.max)
+	{
+		return CELL_EINVAL;
+	}
+
+	g_cfg.sys.console_time_offset.set(console_time_offset);
 
 	if (Emu.GetCallbacks().save_emu_settings)
 	{
