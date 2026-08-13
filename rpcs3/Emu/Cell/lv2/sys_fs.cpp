@@ -1569,6 +1569,13 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 			// Preprocess entries
 			data.back().name = vfs::unescape(data.back().name);
 
+			// TEST12345 is an RPCS3 scaffold required by some test ELFs, not an installed title.
+			if (Emu.IsVsh() && vpath == "/dev_hdd0/game"sv && data.back().name == "TEST12345"sv)
+			{
+				data.pop_back();
+				continue;
+			}
+
 			if (!data.back().is_directory && data.back().name == "."sv)
 			{
 				// Files hidden from emulation
