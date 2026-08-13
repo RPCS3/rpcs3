@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1073</width>
-    <height>902</height>
+    <width>856</width>
+    <height>688</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -33,7 +33,7 @@
       <bool>true</bool>
      </property>
      <property name="currentIndex">
-      <number>4</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="coreTab">
       <attribute name="title">
@@ -53,8 +53,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>1031</width>
-            <height>716</height>
+            <width>814</width>
+            <height>498</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="coreTabScrollContentsLayout">
@@ -343,8 +343,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>1031</width>
-            <height>716</height>
+            <width>802</width>
+            <height>688</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="gpuTabScrollContentsLayout">
@@ -1041,8 +1041,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>1031</width>
-            <height>716</height>
+            <width>802</width>
+            <height>606</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="audioTabScrollContentsLayout">
@@ -1583,8 +1583,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>1031</width>
-            <height>716</height>
+            <width>802</width>
+            <height>526</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="inputTabScrollContentsLayout">
@@ -1888,8 +1888,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>1031</width>
-            <height>716</height>
+            <width>814</width>
+            <height>498</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="systemTabScrollContentsLayout">
@@ -2190,8 +2190,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>1031</width>
-            <height>716</height>
+            <width>814</width>
+            <height>498</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="networkTabScrollContentsLayout">
@@ -2403,7 +2403,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>1019</width>
+            <width>802</width>
             <height>737</height>
            </rect>
           </property>
@@ -2947,7 +2947,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>1019</width>
+            <width>827</width>
             <height>874</height>
            </rect>
           </property>
@@ -3832,8 +3832,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>1031</width>
-            <height>716</height>
+            <width>802</width>
+            <height>530</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="guiTabScrollContentsLayout">
@@ -4289,8 +4289,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>1031</width>
-            <height>716</height>
+            <width>825</width>
+            <height>552</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="debugTabScrollContentsLayout">
