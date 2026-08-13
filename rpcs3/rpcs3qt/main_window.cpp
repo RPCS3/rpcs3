@@ -3090,8 +3090,9 @@ void main_window::CreateConnects()
 
 	const auto open_pad_settings = [this]
 	{
-		pad_settings_dialog dlg(m_gui_settings, this);
-		dlg.exec();
+		pad_settings_dialog* dlg = new pad_settings_dialog(m_gui_settings, this);
+		dlg->setAttribute(Qt::WA_DeleteOnClose);
+		dlg->open();
 	};
 
 	connect(ui->confPadsAct, &QAction::triggered, this, open_pad_settings);
