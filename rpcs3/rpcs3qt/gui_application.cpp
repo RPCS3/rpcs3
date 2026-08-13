@@ -97,35 +97,20 @@ int gui_application::exec()
 	// We used to do this synchronous with e.g. QDialog::exec() before we called gui_application::exec(),
 	// but when you call quit() (as seen in these dialogs) without a running event loop,
 	// then the destructors of QObjects won't be called, leading to all sorts of issues.
-	struct dialog_step
-	{
-		bool condition {};
-		std::function<void()> func {};
-	};
-
 	std::shared_ptr<u32> step_index = std::make_shared<u32>(0);
-	std::shared_ptr<std::vector<dialog_step>> steps = std::make_shared<std::vector<dialog_step>>();
+	std::shared_ptr<std::vector<std::function<void()>>> steps = std::make_shared<std::vector<std::function<void()>>>();
 
 	m_show_next_dialog = [this, step_index, steps]()
 	{
 		ensure(steps && step_index);
-		const dialog_step step = ::at32(*steps, (*step_index)++);
-		ensure(step.func);
-
-		if (step.condition)
-		{
-			step.func();
-		}
-		else
-		{
-			m_show_next_dialog();
-		}
+		const auto& func = ::at32(*steps, (*step_index)++);
+		ensure(func);
+		func();
 	};
 
-	steps->push_back(dialog_step
+	if (!rpcs3::is_release_build() && !rpcs3::is_local_build())
 	{
-		.condition = !rpcs3::is_release_build() && !rpcs3::is_local_build(),
-		.func = [this]()
+		steps->push_back([this]()
 		{
 			const std::string_view branch_name = rpcs3::get_full_branch();
 			gui_log.warning("Experimental Build Warning! Build origin: %s", branch_name);
@@ -159,12 +144,53 @@ int gui_application::exec()
 				m_show_next_dialog();
 			});
 			msg->open();
-		}
-	});
-	steps->push_back(dialog_step
+		});
+	}
+#ifdef __linux__
+	const bool is_flatpak = qEnvironmentVariableIsSet("FLATPAK_ID");
+	const bool is_snap = qEnvironmentVariableIsSet("SNAP");
+	const QString unofficial_build = is_flatpak ? "Flatpak" : (is_snap ? "Snap" : "");
+	if (!unofficial_build.isEmpty())
 	{
-		.condition = m_render_creator->vulkan_timed_out,
-		.func = [this]()
+		steps->push_back([this, unofficial_build]()
+		{
+			gui_log.warning("%s Build Warning!", unofficial_build);
+
+			QMessageBox* msg = new QMessageBox();
+			msg->setAttribute(Qt::WA_DeleteOnClose);
+			msg->setWindowModality(Qt::WindowModal);
+			msg->setWindowTitle(tr("Unofficial Build Warning"));
+			msg->setIcon(QMessageBox::Critical);
+			msg->setTextFormat(Qt::RichText);
+			msg->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+			msg->setDefaultButton(QMessageBox::No);
+			msg->setText(gui::utils::make_paragraph(tr(
+				"Warning! You're running an unofficial %0 build of RPCS3.\n"
+				"You will get no official support for this build.\n"
+				"Issues opened on the RPCS3 GitHub related to %0 builds are not allowed and will be closed.\n"
+				"We recommend to download and use the official build from the %1.\n"
+				"\n"
+				"Do you wish to use this build anyway?")
+				.arg(unofficial_build)
+				.arg(gui::utils::make_link(tr("RPCS3 website"), "https://rpcs3.net/download"))));
+			msg->layout()->setSizeConstraint(QLayout::SetFixedSize);
+			connect(msg, &QMessageBox::finished, this, [this](int)
+			{
+				const QMessageBox* box = qobject_cast<QMessageBox*>(sender());
+				if (!box || box->standardButton(box->clickedButton()) == QMessageBox::No)
+				{
+					Emu.Quit(true);
+					return;
+				}
+				m_show_next_dialog();
+			});
+			msg->open();
+		});
+	}
+#endif
+	if (m_render_creator->vulkan_timed_out)
+	{
+		steps->push_back([this]()
 		{
 			gui_log.error("Vulkan device enumeration timed out");
 
@@ -190,12 +216,11 @@ int gui_application::exec()
 				m_show_next_dialog();
 			});
 			msg->open();
-		}
-	});
-	steps->push_back(dialog_step
+		});
+	}
+	if (m_gui_settings->GetValue(gui::ib_show_welcome).toBool())
 	{
-		.condition = m_gui_settings->GetValue(gui::ib_show_welcome).toBool(),
-		.func = [this]()
+		steps->push_back([this]()
 		{
 			welcome_dialog* welcome = new welcome_dialog(m_gui_settings, false);
 			connect(welcome, &QDialog::finished, this, [this](int result)
@@ -208,38 +233,35 @@ int gui_application::exec()
 				m_show_next_dialog();
 			});
 			welcome->open();
-		}
-	});
-	steps->push_back(dialog_step
+		});
+	}
+
+	steps->push_back([this]()
 	{
-		.condition = true,
-		.func = [this]()
+		if (m_main_window)
 		{
-			if (m_main_window)
-			{
-				m_main_window->show();
-			}
+			m_main_window->show();
+		}
 
 #ifdef __APPLE__
-			if (!m_render_creator->Vulkan.supported)
-			{
-				QMessageBox::warning(nullptr,
-									 tr("Warning"),
-									 tr("Vulkan is not supported on this Mac.\n"
-										"No graphics will be rendered."));
-			}
+		if (!m_render_creator->Vulkan.supported)
+		{
+			QMessageBox::warning(nullptr,
+									tr("Warning"),
+									tr("Vulkan is not supported on this Mac.\n"
+									"No graphics will be rendered."));
+		}
 #endif
 
-			// Check maxfiles
-			if (utils::get_maxfiles() < 4096)
-			{
-				QMessageBox::warning(nullptr,
-										tr("Warning"),
-										tr("The current limit of maximum file descriptors is too low.\n"
-										"Some games will crash.\n"
-										"\n"
-										"Please increase the limit before running RPCS3."));
-			}
+		// Check maxfiles
+		if (utils::get_maxfiles() < 4096)
+		{
+			QMessageBox::warning(nullptr,
+									tr("Warning"),
+									tr("The current limit of maximum file descriptors is too low.\n"
+									"Some games will crash.\n"
+									"\n"
+									"Please increase the limit before running RPCS3."));
 		}
 	});
 
