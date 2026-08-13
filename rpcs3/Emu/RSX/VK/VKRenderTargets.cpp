@@ -1,4 +1,5 @@
 #include "vkutils/data_heap.h"
+#include "VKFramebuffer.h"
 #include "VKRenderTargets.h"
 #include "VKResourceManager.h"
 #include "Emu/RSX/rsx_methods.h"
@@ -305,6 +306,14 @@ namespace vk
 		return (bytes_spilled > 0);
 	}
 
+	drawable_surface_t::~drawable_surface_t()
+	{
+		if (value)
+		{
+			vk::remove_framebuffers_with_image(this);
+		}
+	}
+
 	// Get the linear resolve target bound to this surface. Initialize if none exists
 	vk::viewable_image* render_target::get_resolve_target_safe(vk::command_buffer& cmd)
 	{
@@ -317,7 +326,7 @@ namespace vk
 			VkImageUsageFlags usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 			usage |= (this->info.usage & (VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT));
 
-			resolve_surface.reset(new vk::viewable_image(
+			resolve_surface.reset(new vk::drawable_surface_t(
 				*g_render_device,
 				g_render_device->get_memory_mapping().device_local,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,

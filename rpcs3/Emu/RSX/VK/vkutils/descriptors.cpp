@@ -256,12 +256,24 @@ namespace vk
 
 		do
 		{
-			for (u32 index = 0; index < m_device_subpools.size(); ++index)
+			// Happy path - maybe we have a free subpool
 			{
-				if (!m_device_subpools[index].busy)
+				reader_lock lock(m_subpool_lock);
+
+				for (u32 index = 0; index < m_device_subpools.size(); ++index)
 				{
-					m_current_subpool_index = index;
-					goto done; // Nested break
+					if (!m_device_subpools[index].busy)
+					{
+						m_current_subpool_index = index;
+						m_device_subpools[m_current_subpool_index].busy = VK_TRUE;
+						m_current_pool_handle = m_device_subpools[m_current_subpool_index].handle;
+						break;
+					}
+				}
+
+				if (m_current_subpool_index != umax)
+				{
+					return;
 				}
 			}
 
@@ -286,16 +298,13 @@ namespace vk
 			{
 				.handle = subpool,
 				.size = m_autoscaling_config.current_size,
-				.busy = VK_FALSE
+				.busy = VK_TRUE
 			});
 
 			m_current_subpool_index = m_device_subpools.size() - 1;
+			m_current_pool_handle = m_device_subpools[m_current_subpool_index].handle;
 
 		} while (m_current_subpool_index == umax);
-
-	done:
-		m_device_subpools[m_current_subpool_index].busy = VK_TRUE;
-		m_current_pool_handle = m_device_subpools[m_current_subpool_index].handle;
 	}
 
 	std::pair<VkResult, VkDescriptorPool> descriptor_pool::new_subpool()
