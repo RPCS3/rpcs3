@@ -76,16 +76,19 @@ namespace vk
 	void query_pool_manager::allocate_new_pool(vk::command_buffer& cmd)
 	{
 		ensure(!m_current_query_pool);
+		{
+			std::lock_guard lock(m_query_pool_cache_lock); // If we're creating a new pool, we probably have items in the cache.
 
-		if (m_query_pool_cache.size() > 0)
-		{
-			m_current_query_pool = std::move(m_query_pool_cache.front());
-			m_query_pool_cache.pop_front();
-		}
-		else
-		{
-			const u32 count = ::size32(query_slot_status);
-			m_current_query_pool = std::make_unique<query_pool>(*owner, query_type, count);
+			if (m_query_pool_cache.size() > 0)
+			{
+				m_current_query_pool = std::move(m_query_pool_cache.front());
+				m_query_pool_cache.pop_front();
+			}
+			else
+			{
+				const u32 count = ::size32(query_slot_status);
+				m_current_query_pool = std::make_unique<query_pool>(*owner, query_type, count);
+			}
 		}
 
 		// From spec: "After query pool creation, each query must be reset before it is used."
@@ -241,6 +244,7 @@ namespace vk
 			return;
 		}
 
+		std::lock_guard lock(m_query_pool_cache_lock);
 		m_query_pool_cache.emplace_back(std::move(pool));
 	}
 

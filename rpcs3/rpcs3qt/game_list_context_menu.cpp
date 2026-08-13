@@ -545,6 +545,18 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 		});
 	}
 
+	if (gameinfo->has_custom_pad_config)
+	{
+		QAction* open_config_folder = open_folder_menu->addAction(tr("&Open Custom Gamepad Config Folder"));
+		connect(open_config_folder, &QAction::triggered, this, [serial]()
+		{
+			const std::string config_path = rpcs3::utils::get_custom_input_config_path(serial);
+
+			if (fs::is_file(config_path))
+				gui::utils::open_dir(config_path);
+		});
+	}
+
 	// This is a debug feature, let's hide it by reusing debug tab protection
 	if (m_gui_settings->GetValue(gui::m_showDebugTab).toBool() && !cache_base_dir.empty())
 	{
