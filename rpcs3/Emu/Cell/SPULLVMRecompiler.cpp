@@ -7639,7 +7639,7 @@ public:
 		{
 			idx_consts = eval(splat<u8[16]>(0));
 		}
-		else if (m_use_gfni)
+		else if (m_use_avx512_icl)
 		{
 			const auto gfni = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
 			idx_consts = eval(select(noncast<s8[16]>(gfni) >= 0, splat<u8[16]>(0), gfni));
