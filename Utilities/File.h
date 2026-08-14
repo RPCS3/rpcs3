@@ -496,6 +496,9 @@ namespace fs
 		}
 	};
 
+	// Enable sparse-file semantics when required by the host platform.
+	bool set_sparse(const file& file);
+
 	class dir final
 	{
 		std::unique_ptr<dir_base> m_dir{};

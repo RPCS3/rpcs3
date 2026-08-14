@@ -909,9 +909,14 @@ namespace utils
 
 #ifdef _WIN32
 		::MEMORY_BASIC_INFORMATION mem{};
-		if (!::VirtualQuery(target, &mem, sizeof(mem)) || mem.State != MEM_RESERVE)
+		if (!::VirtualQuery(target, &mem, sizeof(mem)))
 		{
-			return {nullptr, fmt::format("VirtualQuery() Unexpceted memory info: state=0x%x, %s", mem.State, std::as_bytes(std::span(&mem, 1)))};
+			return {nullptr, fmt::format("VirtualQuery() Failed with %s", fmt::win_error{GetLastError(), nullptr})};
+		}
+
+		if (mem.State != MEM_RESERVE)
+		{
+			return {nullptr, fmt::format("VirtualQuery() reported unexpected memory info: state=0x%x, %s", mem.State, std::as_bytes(std::span(&mem, 1)))};
 		}
 
 		const auto base = static_cast<u8*>(mem.AllocationBase);
@@ -977,8 +982,14 @@ namespace utils
 			return {nullptr, "VirtualAlloc() failed to reserve allocation end"};
 		}
 #endif
+		const auto mapped_addr = this->map(target, prot, cow);
 
-		return {this->map(target, prot, cow), "Failed to map"};
+		if (!mapped_addr)
+		{
+			return {nullptr, "Failed to map"};
+		}
+
+		return {mapped_addr, {}};
 	}
 
 	u8* shm::map_self(protection prot)

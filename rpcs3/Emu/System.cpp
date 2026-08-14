@@ -1432,6 +1432,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				return game_boot_result::invalid_file_or_folder;
 			}
 
+			// The game id token is primarily the Title ID found in param.sfo which may.
+			// If a tail exists then it is usually an alternate directory.
+			// e.g. Title ID is SLUS12345 but the actual folder is NPUB12345
 			std::string tail = m_path.substr(game_id_boot_prefix.size() + m_title_id.size());
 
 			if (tail.find_first_not_of(fs::delim) == umax)
@@ -1443,12 +1446,13 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			bool ok = false;
 			std::string title_path;
 
-			// const overload does not create new node on failure
+			// Check if there's a known games.yml path for the Title ID
 			if (std::string game_path = m_games_config.get_path(m_title_id); !game_path.empty())
 			{
 				title_path = std::move(game_path);
 			}
 
+			// Check if it's an ISO
 			if (is_iso_file(title_path))
 			{
 				m_path = std::move(title_path);
@@ -1456,16 +1460,39 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			}
 			else
 			{
-				for (std::string test_path :
+				std::vector<std::string> test_dirs;
+
+				// Check in hdd game directory first
+				const std::string hdd0_game = rpcs3::utils::get_hdd0_dir() + "game";
+				test_dirs.push_back(hdd0_game + "/" + m_title_id + "/USRDIR/");
+
+				if (!tail.empty())
 				{
-					rpcs3::utils::get_hdd0_dir() + "game/" + m_title_id + "/USRDIR/EBOOT.BIN"
-					, tail.empty() ? "" : title_path + tail + "/USRDIR/EBOOT.BIN"
-					, title_path + "/PS3_GAME/USRDIR/EBOOT.BIN"
-					, title_path + "/USRDIR/EBOOT.BIN"
-				})
-				{
-					if (!test_path.empty() && fs::is_file(test_path))
+					// Check in tail directory
+					test_dirs.push_back(title_path + tail + "/USRDIR/");
+
+					// Check in alternate hdd game directory if the tail looks like a Title ID
+					if (tail.size() == 10 && tail.find_first_of(fs::delim) == 0)
 					{
+						test_dirs.push_back(hdd0_game + tail + "/USRDIR/");
+					}
+				}
+
+				// Check games.yml paths
+				if (!title_path.empty())
+				{
+					test_dirs.push_back(title_path + "/PS3_GAME/USRDIR/");
+					test_dirs.push_back(title_path + "/USRDIR/");
+				}
+
+				for (const std::string& dir : test_dirs)
+				{
+					// Check for regular binaries as well as PS1 binaries
+					for (const std::string& bin_suffix : {"EBOOT.BIN"s, "ISO.BIN.EDAT"s})
+					{
+						std::string test_path = dir + bin_suffix;
+						if (!fs::is_file(test_path)) continue;
+
 						m_path = std::move(test_path);
 						ok = true;
 						break;
@@ -4457,6 +4484,12 @@ game_boot_result Emulator::AddGameToYml(std::string path)
 	if (is_iso_file(path))
 	{
 		archive = std::make_unique<iso_archive>(path);
+
+		if (!archive->is_valid())
+		{
+			sys_log.error("Failed to load ISO.");
+			return game_boot_result::invalid_file_or_folder;
+		}
 	}
 
 	// Load PARAM.SFO
@@ -4634,10 +4667,10 @@ game_boot_result Emulator::RemoveGameFromYml(const std::string& title_id)
 	return game_boot_result::generic_error;
 }
 
-bool Emulator::IsPathInsideDir(std::string_view path, std::string_view dir) const
+bool Emulator::IsPathInsideDir(std::string_view path, std::string_view dir, bool check_if_exists) const
 {
-	const std::string dir_path = GetCallbacks().resolve_path(dir);
-	const std::string resolved_path = GetCallbacks().resolve_path(path);
+	const std::string dir_path = check_if_exists ? GetCallbacks().resolve_path(dir) : GetCallbacks().resolve_path_may_not_exist(dir);
+	const std::string resolved_path = check_if_exists ? GetCallbacks().resolve_path(path) : GetCallbacks().resolve_path_may_not_exist(path);
 
 	return !dir_path.empty() && !resolved_path.empty() && (resolved_path + '/').starts_with((dir_path.back() == '/') ? dir_path : (dir_path + '/'));
 }
@@ -4853,7 +4886,9 @@ utils::serial* Emulator::DeserialManager() const
 
 bool Emulator::IsVsh()
 {
-	return g_ps3_process_info.self_info.valid && (g_ps3_process_info.self_info.prog_id_hdr.program_authority_id >> 36 == 0x1070000); // Not only VSH but also most CoreOS LV2 SELFs need the special treatment
+	const auto process = &g_ps3_process_info;
+
+	return process->self_info.valid && (process->self_info.prog_id_hdr.program_authority_id == 0x10700005FF000001L); // VSH.self ID
 }
 
 bool Emulator::IsValidSfb(const std::string& path)

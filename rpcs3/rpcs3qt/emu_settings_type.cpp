@@ -47,7 +47,6 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::AccuratePPU128Loop,         get_cfg_location(local_cfg.core.ppu_128_reservations_loop_max_length) },
 	{ emu_settings_type::PerformanceReport,          get_cfg_location(local_cfg.core.perf_report) },
 	{ emu_settings_type::NumPPUThreads,              get_cfg_location(local_cfg.core.ppu_threads) },
-	{ emu_settings_type::PPUNJFixup,                 get_cfg_location(local_cfg.core.ppu_llvm_nj_fixup) },
 	{ emu_settings_type::PPUVNANFixup,               get_cfg_location(local_cfg.core.ppu_fix_vnan) },
 	{ emu_settings_type::AccurateDFMA,               get_cfg_location(local_cfg.core.use_accurate_dfma) },
 	{ emu_settings_type::AccuratePPUSAT,             get_cfg_location(local_cfg.core.ppu_set_sat_bit) },

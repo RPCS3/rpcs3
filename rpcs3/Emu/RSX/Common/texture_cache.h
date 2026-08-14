@@ -152,6 +152,7 @@ namespace rsx
 
 			utils::address_range32 cache_range;
 			bool do_not_cache = false;
+			bool force_bg_load = false;
 
 			deferred_subresource() = default;
 
@@ -481,8 +482,7 @@ namespace rsx
 		/**
 		 * Virtual Methods
 		 */
-		virtual image_view_type create_temporary_subresource_view(commandbuffer_type&, image_resource_type* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h, const texture_channel_remap_t& remap_vector) = 0;
-		virtual image_view_type create_temporary_subresource_view(commandbuffer_type&, image_storage_type* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h, const texture_channel_remap_t& remap_vector) = 0;
+		virtual image_view_type create_temporary_subresource_view(commandbuffer_type&, const deferred_subresource& desc) = 0;
 		virtual void release_temporary_subresource(image_view_type rsc) = 0;
 		virtual section_storage_type* create_new_texture(commandbuffer_type&, const address_range32 &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u32 pitch, u32 gcm_format,
 			rsx::texture_upload_context context, rsx::texture_dimension_extended type, bool swizzled, component_order swizzle_flags, rsx::flags32_t flags) = 0;
@@ -491,10 +491,10 @@ namespace rsx
 		virtual section_storage_type* create_nul_section(commandbuffer_type&, const address_range32 &rsx_range, const image_section_attributes_t& attrs, const GCM_tile_reference& tile, bool memory_load) = 0;
 		virtual void set_component_order(section_storage_type& section, u32 gcm_format, component_order expected) = 0;
 		virtual void insert_texture_barrier(commandbuffer_type&, image_storage_type* tex, bool strong_ordering = true) = 0;
-		virtual image_view_type generate_cubemap_from_images(commandbuffer_type&, u32 gcm_format, u16 size, const rsx::simple_array<copy_region_descriptor>& sources, const texture_channel_remap_t& remap_vector) = 0;
-		virtual image_view_type generate_3d_from_2d_images(commandbuffer_type&, u32 gcm_format, u16 width, u16 height, u16 depth, const rsx::simple_array<copy_region_descriptor>& sources, const texture_channel_remap_t& remap_vector) = 0;
-		virtual image_view_type generate_atlas_from_images(commandbuffer_type&, u32 gcm_format, u16 width, u16 height, const rsx::simple_array<copy_region_descriptor>& sections_to_copy, const texture_channel_remap_t& remap_vector) = 0;
-		virtual image_view_type generate_2d_mipmaps_from_images(commandbuffer_type&, u32 gcm_format, u16 width, u16 height, const rsx::simple_array<copy_region_descriptor>& sections_to_copy, const texture_channel_remap_t& remap_vector) = 0;
+		virtual image_view_type generate_cubemap_from_images(commandbuffer_type&, const deferred_subresource& desc) = 0;
+		virtual image_view_type generate_3d_from_2d_images(commandbuffer_type&, const deferred_subresource& desc) = 0;
+		virtual image_view_type generate_atlas_from_images(commandbuffer_type&, const deferred_subresource& desc) = 0;
+		virtual image_view_type generate_2d_mipmaps_from_images(commandbuffer_type&, const deferred_subresource& desc) = 0;
 		virtual void update_image_contents(commandbuffer_type&, image_view_type dst, image_resource_type src, u16 width, u16 height) = 0;
 		virtual bool render_target_format_is_compatible(image_storage_type* tex, u32 gcm_format) = 0;
 		virtual void prepare_for_dma_transfers(commandbuffer_type&) = 0;
@@ -1709,7 +1709,8 @@ namespace rsx
 					if (found_desc.external_handle != desc.external_handle ||
 						found_desc.op != desc.op ||
 						found_desc.x != desc.x || found_desc.y != desc.y ||
-						found_desc.width != desc.width || found_desc.height != desc.height)
+						found_desc.width != desc.width || found_desc.height != desc.height ||
+						found_desc.gcm_format != desc.gcm_format)
 						continue;
 
 					if (desc.op == deferred_request_command::copy_image_dynamic)
@@ -1726,7 +1727,7 @@ namespace rsx
 			{
 			case deferred_request_command::cubemap_gather:
 			{
-				result = generate_cubemap_from_images(cmd, desc.gcm_format, desc.width, desc.sections_to_copy, desc.remap);
+				result = generate_cubemap_from_images(cmd, desc);
 				break;
 			}
 			case deferred_request_command::cubemap_unwrap:
@@ -1761,12 +1762,15 @@ namespace rsx
 					}
 				}
 
-				result = generate_cubemap_from_images(cmd, desc.gcm_format, desc.width, sections, desc.remap);
+				auto unwrap_desc = desc;
+				unwrap_desc.sections_to_copy = std::move(sections);
+
+				result = generate_cubemap_from_images(cmd, unwrap_desc);
 				break;
 			}
 			case deferred_request_command::_3d_gather:
 			{
-				result = generate_3d_from_2d_images(cmd, desc.gcm_format, desc.width, desc.height, desc.depth, desc.sections_to_copy, desc.remap);
+				result = generate_3d_from_2d_images(cmd, desc);
 				break;
 			}
 			case deferred_request_command::_3d_unwrap:
@@ -1792,24 +1796,27 @@ namespace rsx
 					};
 				}
 
-				result = generate_3d_from_2d_images(cmd, desc.gcm_format, desc.width, desc.height, desc.depth, sections, desc.remap);
+				auto unwrap_desc = desc;
+				unwrap_desc.sections_to_copy = std::move(sections);
+
+				result = generate_3d_from_2d_images(cmd, unwrap_desc);
 				break;
 			}
 			case deferred_request_command::atlas_gather:
 			case deferred_request_command::blit_image_static:
 			{
-				result = generate_atlas_from_images(cmd, desc.gcm_format, desc.width, desc.height, desc.sections_to_copy, desc.remap);
+				result = generate_atlas_from_images(cmd, desc);
 				break;
 			}
 			case deferred_request_command::copy_image_static:
 			case deferred_request_command::copy_image_dynamic:
 			{
-				result = create_temporary_subresource_view(cmd, &desc.external_handle, desc.gcm_format, desc.x, desc.y, desc.width, desc.height, desc.remap);
+				result = create_temporary_subresource_view(cmd, desc);
 				break;
 			}
 			case deferred_request_command::mipmap_gather:
 			{
-				result = generate_2d_mipmaps_from_images(cmd, desc.gcm_format, desc.width, desc.height, desc.sections_to_copy, desc.remap);
+				result = generate_2d_mipmaps_from_images(cmd, desc);
 				break;
 			}
 			default:
@@ -2111,19 +2118,15 @@ namespace rsx
 					return {};
 				}
 
-				bool result_is_valid;
-				if (_pool == 0 && !g_cfg.video.write_color_buffers && !g_cfg.video.write_depth_buffer)
+				bool result_is_valid = result.atlas_covers_target_area(section_count == 1 ? 99 : 90);
+				if (_pool == 0 && !result_is_valid && !g_cfg.video.write_color_buffers && !g_cfg.video.write_depth_buffer)
 				{
-					// HACK: Avoid WCB requirement for some games with wrongly declared sampler dimensions.
-					// TODO: Some games may render a small region (e.g 1024x256x2) and sample a huge texture (e.g 1024x1024).
+					// Avoid WCB requirement for some games with wrongly declared sampler dimensions.
+					// Some games may render a small region (e.g 1024x256x2) and sample a huge texture (e.g 1024x1024).
 					// Seen in APF2k8 - this causes missing bits to be reuploaded from CPU which can cause WCB requirement.
-					// Properly fix this by introducing partial data upload into the surface cache in such cases and making RCB/RDB
-					// enabled by default. Blit engine already handles this correctly.
+					// We work around the issue by forcing a background data load on the subresource to fill the missing data hole.
 					result_is_valid = true;
-				}
-				else
-				{
-					result_is_valid = result.atlas_covers_target_area(section_count == 1 ? 99 : 90);
+					result.external_subresource_desc.force_bg_load = true;
 				}
 
 				if (!result_is_valid)

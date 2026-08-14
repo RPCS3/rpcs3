@@ -20,6 +20,8 @@ welcome_dialog::welcome_dialog(std::shared_ptr<gui_settings> gui_settings, bool 
 
 	setAttribute(Qt::WA_DeleteOnClose);
 	setWindowFlag(Qt::WindowCloseButtonHint, false); // disable the close button shown on the dialog's top right corner
+	setModal(true);
+
 	layout()->setSizeConstraint(QLayout::SetFixedSize);
 
 	ui->icon_label->load(QStringLiteral(":/rpcs3.svg"));

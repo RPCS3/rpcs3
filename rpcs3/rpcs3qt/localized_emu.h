@@ -208,6 +208,7 @@ private:
 		case localized_string_id::HOME_MENU_RESUME: return tr("Resume Game");
 		case localized_string_id::HOME_MENU_FRIENDS: return tr("Friends");
 		case localized_string_id::HOME_MENU_FRIENDS_REQUESTS: return tr("Pending Friend Requests");
+		case localized_string_id::HOME_MENU_FRIENDS_GAME_INVITES: return tr("Game Invitations");
 		case localized_string_id::HOME_MENU_FRIENDS_BLOCKED: return tr("Blocked Users");
 		case localized_string_id::HOME_MENU_FRIENDS_STATUS_ONLINE: return tr("Online");
 		case localized_string_id::HOME_MENU_FRIENDS_STATUS_OFFLINE: return tr("Offline");
@@ -221,6 +222,9 @@ private:
 		case localized_string_id::HOME_MENU_FRIENDS_CANCEL_REQUEST_MSG: return tr("Cancel Request?\n\n%0").arg(std::forward<Args>(args)...);
 		case localized_string_id::HOME_MENU_FRIENDS_REJECT_REQUEST_MSG: return tr("Reject Request?\n\n%0").arg(std::forward<Args>(args)...);
 		case localized_string_id::HOME_MENU_FRIENDS_REJECT_REQUEST: return tr("Reject Request");
+		case localized_string_id::HOME_MENU_FRIENDS_ACCEPT_GAME_INVITE_MSG: return tr("Accept game invitation from %0?").arg(std::forward<Args>(args)...);
+		case localized_string_id::HOME_MENU_FRIENDS_REJECT_GAME_INVITE_MSG: return tr("Reject game invitation from %0?").arg(std::forward<Args>(args)...);
+		case localized_string_id::HOME_MENU_FRIENDS_REJECT_GAME_INVITE: return tr("Reject Invitation");
 		case localized_string_id::HOME_MENU_FRIENDS_NEXT_LIST: return tr("Next list");
 		case localized_string_id::HOME_MENU_RESTART: return tr("Restart Game");
 		case localized_string_id::HOME_MENU_SETTINGS: return tr("Settings");
@@ -323,6 +327,10 @@ private:
 		case localized_string_id::HOME_MENU_TROPHY_GRADE_SILVER: return tr("Silver", "Trophy type");
 		case localized_string_id::HOME_MENU_TROPHY_GRADE_GOLD: return tr("Gold", "Trophy type");
 		case localized_string_id::HOME_MENU_TROPHY_GRADE_PLATINUM: return tr("Platinum", "Trophy type");
+		case localized_string_id::HOME_MENU_TROPHY_SORT_GAME_DEFAULT: return tr("Sort: Game Default");
+		case localized_string_id::HOME_MENU_TROPHY_SORT_NOT_EARNED: return tr("Sort: Not Earned");
+		case localized_string_id::HOME_MENU_TROPHY_SORT_EARNED_DATE: return tr("Sort: Earned Date");
+		case localized_string_id::HOME_MENU_TROPHY_SORT_GRADE: return tr("Sort: Grade");
 		case localized_string_id::AUDIO_MUTED: return tr("Audio muted", "Audio");
 		case localized_string_id::AUDIO_UNMUTED: return tr("Audio unmuted", "Audio");
 		case localized_string_id::AUDIO_CHANGED: return tr("Volume changed to %0", "Audio").arg(std::forward<Args>(args)...);

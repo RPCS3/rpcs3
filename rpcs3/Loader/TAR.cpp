@@ -226,6 +226,12 @@ bool tar_object::extract(const std::string& prefix_path, bool is_vfs)
 		}
 	};
 
+	if (prefix_path.empty())
+	{
+		// Must be VFS here
+		is_vfs = true;
+	}
+
 	for (iter = get_next(true); iter != m_map.end(); iter = get_next(false))
 	{
 		const TARHeader& header = iter->second.second;
@@ -234,18 +240,7 @@ bool tar_object::extract(const std::string& prefix_path, bool is_vfs)
 		// Backwards compatibility measure
 		const bool should_ignore = name.find(reinterpret_cast<const char*>(u8"＄")) != umax;
 
-		std::string result = name;
-
-		if (!prefix_path.empty())
-		{
-			result = prefix_path + '/' + result;
-		}
-		else
-		{
-			// Must be VFS here
-			is_vfs = true;
-			result.insert(result.begin(), '/');
-		}
+		std::string result = prefix_path + "/" + name;
 
 		if (is_vfs)
 		{
@@ -257,8 +252,13 @@ bool tar_object::extract(const std::string& prefix_path, bool is_vfs)
 				return false;
 			}
 		}
+		else if (!Emu.IsPathInsideDir(result, prefix_path, false))
+		{
+			tar_log.error("Error extracting %s: target path '%s' is outside of '%s'", name, result, prefix_path);
+			return false;
+		}
 
-		u64 mtime = octal_text_to_u64({header.mtime, std::size(header.mtime)});
+		const u64 mtime = octal_text_to_u64({header.mtime, std::size(header.mtime)});
 
 		// Let's use it for optional atime
 		u64 atime = octal_text_to_u64({header.padding, 12});

@@ -16,10 +16,10 @@ namespace vfs
 	bool unmount(std::string_view vpath);
 
 	// Convert VFS path to fs path, optionally listing directories mounted in it
-	std::string get(std::string_view vpath, std::vector<std::string>* out_dir = nullptr, std::string* out_path = nullptr);
+	std::string get(std::string_view vpath, std::vector<std::string>* out_dir = nullptr, std::string* out_path = nullptr, std::source_location src_loc = std::source_location::current());
 
 	// Convert fs path to VFS path
-	std::string retrieve(std::string_view path, const vfs_directory* node = nullptr, std::vector<std::string_view>* mount_path = nullptr);
+	std::string retrieve(std::string_view path, const vfs_directory* node = nullptr, std::vector<std::string_view>* mount_path = nullptr, std::source_location src_loc = std::source_location::current());
 
 	// Escape VFS name by replacing non-portable characters with surrogates
 	std::string escape(std::string_view name, bool escape_slash = false);

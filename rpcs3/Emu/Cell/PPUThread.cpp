@@ -1291,6 +1291,8 @@ extern bool ppu_patch(u32 addr, u32 value)
 		return false;
 	}
 
+	ensure(!cpu_thread::get_current());
+
 	vm::writer_lock rlock;
 
 	if (!vm::check_addr(addr))
@@ -3263,6 +3265,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 			auto range_lock = vm::alloc_range_lock();
 			bool success = false;
 			{
+				ppu.state += cpu_flag::wait; // for vm::writer_lock
 				rsx::reservation_lock rsx_lock(addr, 128);
 
 				auto& super_data = *vm::get_super_ptr<spu_rdata_t>(addr);
@@ -3285,6 +3288,7 @@ static bool ppu_store_reservation(ppu_thread& ppu, u32 addr, u64 reg_value)
 			}
 			vm::free_range_lock(range_lock);
 
+			static_cast<void>(ppu.test_stopped());
 			return success;
 		}
 
@@ -5144,21 +5148,23 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				platform_bit,
 				accurate_dfma,
 				fixup_vnan,
-				fixup_nj_denormals,
+				_reserved_for_backwards_compatibility,
 				accurate_cache_line_stores,
 				reservations_128_byte,
-				greedy_mode,
+				_reserved_for_backwards_compatibility_2,
 				accurate_sat,
 				accurate_fpcc,
 				accurate_vnan,
 				accurate_nj_mode,
 				contains_symbol_resolver,
+				daz_and_ftz,
 
 				__bitset_enum_max
 			};
 
 			be_t<bs_t<ppu_settings>> settings{};
 
+			settings += ppu_settings::_reserved_for_backwards_compatibility;
 #if !defined(_WIN32) && !defined(__APPLE__)
 			settings += ppu_settings::platform_bit;
 #endif
@@ -5166,14 +5172,10 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				settings += ppu_settings::accurate_dfma;
 			if (g_cfg.core.ppu_fix_vnan)
 				settings += ppu_settings::fixup_vnan;
-			if (g_cfg.core.ppu_llvm_nj_fixup)
-				settings += ppu_settings::fixup_nj_denormals;
 			if (has_dcbz == 2)
 				settings += ppu_settings::accurate_cache_line_stores;
 			if (g_cfg.core.ppu_128_reservations_loop_max_length)
 				settings += ppu_settings::reservations_128_byte;
-			if (g_cfg.core.ppu_llvm_greedy_mode)
-				settings += ppu_settings::greedy_mode;
 			if (has_mfvscr && g_cfg.core.ppu_set_sat_bit)
 				settings += ppu_settings::accurate_sat;
 			if (g_cfg.core.ppu_set_fpcc)
@@ -5181,12 +5183,14 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 			if (g_cfg.core.ppu_set_vnan)
 				settings += ppu_settings::accurate_vnan, settings -= ppu_settings::fixup_vnan, fmt::throw_exception("VNAN Not implemented");
 			if (g_cfg.core.ppu_use_nj_bit)
-				settings += ppu_settings::accurate_nj_mode, settings -= ppu_settings::fixup_nj_denormals, fmt::throw_exception("NJ Not implemented");
+				settings += ppu_settings::accurate_nj_mode, fmt::throw_exception("NJ Not implemented");
 			if (fpos >= info.get_funcs().size() || module_counter % c_moudles_per_jit == c_moudles_per_jit - 1)
 				settings += ppu_settings::contains_symbol_resolver; // Avoid invalidating all modules for this purpose
+			if (g_cfg.core.set_daz_and_ftz)
+				settings += ppu_settings::daz_and_ftz;
 
 			// Write version, hash, CPU, settings
-			fmt::append(obj_name, "v7-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu.to_string()));
+			fmt::append(obj_name, "v8-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu.to_string()));
 		}
 
 		if (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped())
@@ -5306,7 +5310,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 
 				jit_write_guard jit_guard;
 
-				for (u32 i = (*work_cv)++; i < workload.size(); i = (*work_cv)++, (*work_done)++, g_progr_pdone++)
+				for (usz i = (*work_cv)++; i < workload.size(); i = (*work_cv)++, (*work_done)++, g_progr_pdone++)
 				{
 					if (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped())
 					{
@@ -5484,7 +5488,6 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 	{
 		usz index = umax;
 
-
 #ifdef __APPLE__
 		named_thread sym_worker("PPU Symbol Resolver", [&]()
 		{
@@ -5585,11 +5588,7 @@ static void ppu_initialize2(jit_compiler& jit, const ppu_module<lv2_obj>& module
 	std::unique_ptr<Module> _module = std::make_unique<Module>(obj_name, jit.get_context());
 
 	// Initialize target
-#if LLVM_VERSION_MAJOR >= 21 && (LLVM_VERSION_MINOR >= 1 || LLVM_VERSION_MAJOR >= 22)
 	_module->setTargetTriple(Triple(jit_compiler::triple1()));
-#else
-	_module->setTargetTriple(jit_compiler::triple1());
-#endif
 	_module->setDataLayout(jit.get_engine().getTargetMachine()->createDataLayout());
 
 	// Initialize translator

@@ -132,6 +132,8 @@ private:
 	std::string m_title_id;
 	std::shared_ptr<gui_settings> m_gui_settings;
 
+	QObject* m_clear_binding_object = nullptr;
+
 	// Tooltips
 	QString m_description;
 	QHash<QObject*, QString> m_descriptions;

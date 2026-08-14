@@ -147,29 +147,100 @@ bool verify_mself(const fs::file& mself_file)
 }
 
 // TODO: May not be thread-safe (or even, process-safe)
-bool has_non_directory_components(std::string_view path)
+bool has_non_directory_components(std::string_view path, bool ends_with_delim_dot_or_dotdot)
 {
-	std::string path0{path};
+	std::string sub_path{path};
 
-	while (true)
+	fs::stat_t stat{};
+
+	if (ends_with_delim_dot_or_dotdot)
 	{
-		const std::string sub_path = fs::get_parent_dir(path0);
+		// Special case: /dev_bdvd/PS3_GAME/USRDIR/EBOOT.BIN/./ is not allowed
+		// Because lookup inside a file is not allowed, even if /./ points to itself
+		// This check is relevant only for when it is at the end of path
+		// Because if it is other path componenets the functions handle it fine
+		// We cannot know this from `path` argument because it is resolved by VFS
+		std::string_view edited_path{path};
 
-		if (sub_path.size() >= path0.size())
+		edited_path = edited_path.substr(0, edited_path.find_last_not_of(fs::delim) + 1);
+
+		const auto elem = edited_path.substr(edited_path.find_last_of(fs::delim) + 1); 
+
+		if (elem == "." || elem == "..")
 		{
-			break;
+			edited_path.remove_suffix(elem.size());
+			edited_path = edited_path.substr(0, edited_path.find_last_not_of(fs::delim) + 1);
 		}
 
-		fs::stat_t stat{};
-		if (fs::get_stat(sub_path, stat))
+		if (fs::get_stat(std::string{edited_path}, stat))
 		{
+			if (!stat.is_directory)
+			{
+				sys_fs.warning("has_non_directory_components() returned an affirmative (edited_path=%s)", edited_path);
+			}
+
 			return !stat.is_directory;
 		}
 
-		path0 = std::move(sub_path);
+		if (fs::g_tls_error == fs::error::notdir)
+		{
+			return true;
+		}
+
+		if (fs::g_tls_error != fs::error::inval && fs::g_tls_error != fs::error::noent)
+		{
+			fmt::throw_exception("sys_fs: fs::get_stat() failed with error '%s' (edited_path=%s)", fs::g_tls_error, edited_path);
+		}
+	}
+
+	while (true)
+	{
+		std::string_view path_sv = fs::get_parent_dir_view(sub_path);
+		const usz sv_size = path_sv.size();
+
+		if (sv_size >= sub_path.size())
+		{
+			sys_fs.warning("has_non_directory_components() did not find a directory! (path=%s, sub_path=%s)", path, sub_path);
+			break;
+		}
+
+		// Trim child path tail
+		path_sv = {};
+		sub_path.resize(sv_size);
+
+		if (fs::get_stat(sub_path, stat))
+		{
+			if (!stat.is_directory)
+			{
+				sys_fs.warning("has_non_directory_components() returned an affirmative (sub_path=%s)", sub_path);
+			}
+
+			return !stat.is_directory;
+		}
+
+		if (fs::g_tls_error == fs::error::notdir)
+		{
+			return true;
+		}
+
+		if (fs::g_tls_error != fs::error::inval && fs::g_tls_error != fs::error::noent)
+		{
+			fmt::throw_exception("sys_fs: fs::get_stat() failed with error '%s' (sub_path=%s)", fs::g_tls_error, sub_path);
+		}
 	}
 
 	return false;
+}
+
+// Takes virtual path only
+bool ends_with_delim_dot_or_dotdot(std::string_view vpath)
+{
+	if (vpath.find_last_not_of('/') != vpath.size() - 1)
+	{
+		return true;
+	}
+
+	return vpath.ends_with("/.") || vpath.ends_with("/..");
 }
 
 lv2_fs_mount_info_map::lv2_fs_mount_info_map()
@@ -864,7 +935,7 @@ error_code sys_fs_test(ppu_thread&, u32 arg1, u32 arg2, vm::ptr<u32> arg3, u32 a
 	return CELL_OK;
 }
 
-lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s32 flags, bool has_write_access, lv2_file_type type, const lv2_fs_mount_info& mp)
+lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s32 flags, bool has_write_access, lv2_file_type type, const lv2_fs_mount_info& mp, bool ends_with_dot)
 {
 	// TODO: other checks for path
 
@@ -995,12 +1066,12 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 		case fs::error::isdir: return {CELL_EISDIR};
 		default:
 		{
-			if (has_non_directory_components(local_path))
+			if (has_non_directory_components(local_path, ends_with_dot))
 			{
 				return {CELL_ENOTDIR};
 			}
 
-			fmt::throw_exception("unknown error %s", error);
+			fmt::throw_exception("unknown error %s (local=%s)", error, local_path);
 		}
 		}
 	}
@@ -1137,7 +1208,7 @@ lv2_file::open_result_t lv2_file::open(std::string_view vpath, s32 flags, s32 /*
 		}
 	}
 
-	auto [error, file] = open_raw(local_path, flags, has_fs_write_rights(vpath), type, mp);
+	auto [error, file] = open_raw(local_path, flags, has_fs_write_rights(vpath), type, mp, ends_with_delim_dot_or_dotdot(vpath));
 
 	return {.error = error, .ppath = std::move(path), .real_path = std::move(local_path), .file = std::move(file), .type = type};
 }
@@ -1477,7 +1548,7 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 		}
 		default:
 		{
-			if (has_non_directory_components(local_path))
+			if (has_non_directory_components(local_path, ends_with_delim_dot_or_dotdot(vpath)))
 			{
 				return { CELL_ENOTDIR, path };
 			}
@@ -1708,14 +1779,20 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 		}
 		default:
 		{
-			if (has_non_directory_components(local_path))
+			if (has_non_directory_components(local_path, ends_with_delim_dot_or_dotdot(vpath)))
 			{
 				return { CELL_ENOTDIR, path };
 			}
 
-			fmt::throw_exception("unknown error %s", error);
+			fmt::throw_exception("unknown error %s (local=%s)", error, local_path);
 		}
 		}
+	}
+
+	if (ends_with_delim_dot_or_dotdot(vpath) && !info.is_directory)
+	{
+		// If ending with "/.", it must be a directory
+		return { CELL_ENOTDIR, path };
 	}
 
 	lock.unlock();
@@ -1853,7 +1930,7 @@ error_code sys_fs_mkdir(ppu_thread& ppu, vm::cptr<char> path, s32 mode)
 		}
 		default:
 		{
-			if (has_non_directory_components(local_path))
+			if (has_non_directory_components(local_path, ends_with_delim_dot_or_dotdot(vpath)))
 			{
 				return { CELL_ENOTDIR, path };
 			}
@@ -1925,7 +2002,7 @@ error_code sys_fs_rename(ppu_thread& ppu, vm::cptr<char> from, vm::cptr<char> to
 		case fs::error::exist: return {CELL_EEXIST, to};
 		default:
 		{
-			if (has_non_directory_components(local_from))
+			if (has_non_directory_components(local_from, ends_with_delim_dot_or_dotdot(vfrom)))
 			{
 				return {CELL_ENOTDIR, from};
 			}
@@ -1987,7 +2064,7 @@ error_code sys_fs_rmdir(ppu_thread& ppu, vm::cptr<char> path)
 		case fs::error::notempty: return {CELL_ENOTEMPTY, path};
 		default:
 		{
-			if (has_non_directory_components(local_path))
+			if (has_non_directory_components(local_path, ends_with_delim_dot_or_dotdot(vpath)))
 			{
 				return { CELL_ENOTDIR, vpath };
 			}
@@ -2055,7 +2132,7 @@ error_code sys_fs_unlink(ppu_thread& ppu, vm::cptr<char> path)
 		}
 		default:
 		{
-			if (has_non_directory_components(local_path))
+			if (has_non_directory_components(local_path, ends_with_delim_dot_or_dotdot(vpath)))
 			{
 				return { CELL_ENOTDIR, path };
 			}
@@ -2900,7 +2977,7 @@ error_code sys_fs_get_block_size(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u
 		case fs::error::noent: return {CELL_ENOENT, path};
 		default:
 		{
-			if (has_non_directory_components(local_path))
+			if (has_non_directory_components(local_path, ends_with_delim_dot_or_dotdot(vpath)))
 			{
 				return { CELL_ENOTDIR, path };
 			}
@@ -2968,7 +3045,7 @@ error_code sys_fs_truncate(ppu_thread& ppu, vm::cptr<char> path, u64 size)
 		}
 		default:
 		{
-			if (has_non_directory_components(local_path))
+			if (has_non_directory_components(local_path, ends_with_delim_dot_or_dotdot(vpath)))
 			{
 				return { CELL_ENOTDIR, path };
 			}
@@ -3088,7 +3165,7 @@ error_code sys_fs_chmod(ppu_thread&, vm::cptr<char> path, s32 mode)
 		}
 		default:
 		{
-			if (has_non_directory_components(local_path))
+			if (has_non_directory_components(local_path, ends_with_delim_dot_or_dotdot(vpath)))
 			{
 				return { CELL_ENOTDIR, path };
 			}
@@ -3235,7 +3312,7 @@ error_code sys_fs_utime(ppu_thread& ppu, vm::cptr<char> path, vm::cptr<CellFsUti
 		}
 		default:
 		{
-			if (has_non_directory_components(local_path))
+			if (has_non_directory_components(local_path, ends_with_delim_dot_or_dotdot(vpath)))
 			{
 				return { CELL_ENOTDIR, path };
 			}

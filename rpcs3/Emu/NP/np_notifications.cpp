@@ -294,6 +294,7 @@ namespace np
 		MatchingRoomStatus_to_SceNpMatchingRoomStatus(edata, *update_info, room_status);
 		np_memory.shrink_allocation(edata.addr(), edata.size());
 
+		rpcn_log.notice("Received GUI notification: %s", name);
 		extra_nps::print_SceNpMatchingRoomStatus(room_status);
 
 		switch (notification_type)
