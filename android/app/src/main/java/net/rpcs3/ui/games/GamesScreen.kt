@@ -318,6 +318,15 @@ fun GameItem(
         }
     }
 
+    fun openGamePatches() {
+        deleteScope.launch {
+            val resolved = withContext(Dispatchers.IO) {
+                GameDetailsReader.read(game.info.path).titleId
+            }
+            navigateToGamePatches(resolved.ifEmpty { gameTitleId(game.info.path) })
+        }
+    }
+
     fun confirmUninstall() {
         val name = game.info.name.value ?: gameTitleId(game.info.path)
         val prompt = uninstallPrompt(context, game.info.path, name)
@@ -558,7 +567,7 @@ fun GameItem(
             },
             onPatches = {
                 detailVisible.value = false
-                navigateToGamePatches(gameTitleId(game.info.path))
+                openGamePatches()
             },
             uninstallLabel = detailPrompt.action,
             uninstallTitle = detailPrompt.title,
