@@ -6,10 +6,16 @@
 #include "../RSXTexture.h"
 
 #include <vector>
+#include <concepts>
 
 namespace rsx
 {
 	using flags32_t = u32;
+
+	template <typename T>
+	concept RSXTexture =
+			std::same_as<T, rsx::fragment_texture> ||
+			std::same_as<T, rsx::vertex_texture>;
 
 	enum texture_upload_context : u32
 	{
@@ -345,10 +351,12 @@ namespace rsx
 	u8 get_format_texel_rows_per_line(u32 format);
 
 	/**
-	* Get number of bytes occupied by texture in RSX mem
+	* Get number of bytes occupied by texture in RSX mem.
+	* Specify mip_level to compute size for exactly one mipmap level.
 	*/
-	usz get_texture_size(const rsx::fragment_texture &texture);
-	usz get_texture_size(const rsx::vertex_texture &texture);
+	constexpr u8 RSX_GCM_MIP_LEVEL_IGNORED = UINT8_MAX;
+	usz get_texture_size(const rsx::fragment_texture &texture, u8 mip_level = RSX_GCM_MIP_LEVEL_IGNORED);
+	usz get_texture_size(const rsx::vertex_texture &texture, u8 mip_level = RSX_GCM_MIP_LEVEL_IGNORED);
 
 	/**
 	* Get packed pitch

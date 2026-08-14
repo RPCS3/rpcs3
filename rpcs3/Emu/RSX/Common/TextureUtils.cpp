@@ -1634,18 +1634,45 @@ namespace rsx
 		return size;
 	}
 
-	usz get_texture_size(const rsx::fragment_texture& texture)
+	usz get_texture_size_with_mipmaps(const RSXTexture auto& texture, u16 mipmaps)
 	{
 		return get_texture_size(texture.format(), texture.width(), texture.height(), texture.depth(),
-			texture.pitch(), texture.get_exact_mipmap_count(), texture.cubemap() ? 6 : 1,
+			texture.pitch(), mipmaps, texture.cubemap() ? 6 : 1,
 			texture.border_type() ^ 1);
 	}
 
-	usz get_texture_size(const rsx::vertex_texture& texture)
+	usz get_texture_size_impl(const RSXTexture auto& texture, u8 mip_level)
 	{
-		return get_texture_size(texture.format(), texture.width(), texture.height(), texture.depth(),
-			texture.pitch(), texture.get_exact_mipmap_count(), texture.cubemap() ? 6 : 1,
-			texture.border_type() ^ 1);
+		const auto max_levels = texture.get_exact_mipmap_count();
+		if (mip_level != RSX_GCM_MIP_LEVEL_IGNORED &&
+			mip_level >= max_levels)
+		{
+			// Mip level out of bounds
+			return 0;
+		}
+
+		const auto base_levels = (mip_level != RSX_GCM_MIP_LEVEL_IGNORED)
+			? static_cast<u16>(mip_level + 1)
+			: max_levels;
+
+		const auto base_size = get_texture_size_with_mipmaps(texture, base_levels);
+		if (mip_level == 0 || mip_level == RSX_GCM_MIP_LEVEL_IGNORED)
+		{
+			return base_size;
+		}
+
+		const auto leading_size = get_texture_size_with_mipmaps(texture, base_levels - 1);
+		return base_size - leading_size;
+	}
+
+	usz get_texture_size(const rsx::fragment_texture& texture, u8 mip_level)
+	{
+		return get_texture_size_impl(texture, mip_level);
+	}
+
+	usz get_texture_size(const rsx::vertex_texture& texture, u8 mip_level)
+	{
+		return get_texture_size_impl(texture, mip_level);
 	}
 
 	u32 get_remap_encoding(const texture_channel_remap_t& remap)
