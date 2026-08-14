@@ -2391,10 +2391,16 @@ shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2
 	}
 
 	// Set for delayed initialization in ppu_initialize()
+	const u32 parent_process = cpu_thread::get_current() ? id_manager::g_process : u32{umax};
 	const auto process_ptr = ar ? ensure(idm::get_unlocked<lv2_obj, lv2_process>(idm::last_id<lv2_process>())) : idm::make_ptr<lv2_obj, lv2_process>();
 
 	id_manager::g_process = idm::last_id<lv2_process>();
 	const auto vm_globals = process_ptr->acquire_globals(idm::last_id<lv2_process>());
+
+	if (!ar)
+	{
+		process_ptr->parent_process = parent_process;
+	}
 
 	const std::string elf_path = argv0[0];
 	process_ptr->ELF_file_path = elf_path;

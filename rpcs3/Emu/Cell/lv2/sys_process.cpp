@@ -52,6 +52,9 @@ lv2_process::lv2_process(shared_ptr<lv2_memory_container> pp_memory) noexcept
 
 lv2_process::lv2_process(utils::serial& ar) noexcept
 {
+	ar(parent_process, exit_code);
+	state = ar.pop<u32>();
+
 	memory_4GB_model = std::make_shared<vm::ps3_virtual_memory_object>();
 
 	vm::initialize_ps3_mmemory_object(memory_4GB_model.get());
@@ -99,6 +102,9 @@ lv2_process::lv2_process(utils::serial& ar) noexcept
 
 void lv2_process::save(utils::serial& ar) noexcept
 {
+	ar(parent_process, exit_code);
+	ar(state.load());
+
 	vm::save(memory_4GB_model.get(), ar);
 
 	vm::initialize_ps3_mmemory_object(memory_4GB_model.get());
@@ -663,36 +669,250 @@ error_code sys_process_get_sdk_version(u32 pid, vm::ptr<s32> version)
 	}
 }
 
-error_code sys_process_kill(u32 pid)
+error_code sys_process_kill(ppu_thread& ppu, u32 pid)
 {
 	sys_process.todo("sys_process_kill(pid=0x%x)", pid);
+
+	if (!ppu.has_root_perm)
+	{
+		return CELL_ENOSYS;
+	}
+
 	return CELL_OK;
 }
 
-error_code sys_process_wait_for_child(u32 pid, vm::ptr<u32> status, u64 unk)
+error_code process_wait_for_child(ppu_thread& ppu, u32 claimed_id, vm::ptr<u32> target_pid, vm::ptr<u32> process_status, void* data_returned, u64 data_size, vm::ptr<u32> data_written, u64 flags)
 {
-	sys_process.todo("sys_process_wait_for_child(pid=0x%x, status=*0x%x, unk=0x%llx", pid, status, unk);
+	if (claimed_id == umax)
+	{
+		fmt::throw_exception("Unimplemented annonymous sys_process_wait_for_child2()!");
+	}
+
+	if (flags == 1)
+	{
+		fmt::throw_exception("Unimplemented sys_process_wait_for_child2() flags==1");
+	}
+
+	if (flags > 1)
+	{
+		return CELL_EINVAL;
+	}
+
+	if (ppu.proc_id == claimed_id)
+	{
+		return CELL_ENOCHILD;
+	}
+
+	const bool is_savestate = ppu.loaded_from_savestate;
+
+	const auto child = idm::get_unlocked<lv2_obj, lv2_process>(idm::id_index(claimed_id, nullptr));
+
+	if (!child)
+	{
+		return CELL_ENOCHILD;
+	}
+
+	if (child->parent_process != ppu.proc_id)
+	{
+		return CELL_ENOCHILD;
+	}
+
+	ppu.cancel_sleep = 1;
+
+	const auto res = is_savestate ? CellError{} : child->state.atomic_op([&](u32& state) -> CellError
+	{
+		if ((state % 65536) == PS3_PROCESS_ZOMBIE)
+		{
+			return CELL_EAGAIN;
+		}
+
+		if ((state & -65536) == PS3_PROCESS_IS_BEING_JOINED)
+		{
+			// This seems to join wait_for_chiled
+			ensure(false);
+			return CELL_EBUSY;
+		}
+
+		if ((state & -65536) == PS3_PROCESS_IS_DETACHED)
+		{
+			// Already detached, no track of child
+			return CELL_ENOCHILD;
+		}
+
+		state |= PS3_PROCESS_IS_BEING_JOINED;
+		return {};
+	});
+
+	if (res == CELL_EAGAIN)
+	{
+		//child->ki11_self();
+		ensure(idm::remove_verify<lv2_obj, lv2_process>(idm::id_index(claimed_id, nullptr), child));
+		ppu.cancel_sleep = 0;
+		return CELL_OK;
+	}
+
+	if (res == CELL_ENOCHILD)
+	{
+		ppu.cancel_sleep = 0;
+		return CELL_ENOCHILD;
+	}
+
+	if (lv2_obj::sleep(ppu))
+	{
+		while (auto state = +ppu.state)
+		{
+			if (child->state == PS3_PROCESS_IS_DESTROYED)
+			{
+				break;
+			}
+
+			if (::is_stopped(state))
+			{
+				ppu.state += cpu_flag::again;
+				return {};
+			}
+
+			thread_ctrl::wait_on(ppu.state, state);
+		}
+	}
+
+	//child->ki11_self();
+	ensure(idm::remove_verify<lv2_obj, lv2_process>(idm::id_index(claimed_id, nullptr), child));
+
+	*process_status = child->exit_code;
+	*target_pid = claimed_id;
+
+	// The difference between sys_process_wait_for_child2 and sys_process_wait_for_child
+	if (data_returned)
+	{
+		if (!data_written)
+		{
+			return CELL_EFAULT;
+		}
+
+		*data_written = 0;
+	}
 
 	return CELL_OK;
 }
 
-error_code sys_process_wait_for_child2(u64 unk1, u64 unk2, u64 unk3, u64 unk4, u64 unk5, u64 unk6)
+error_code sys_process_wait_for_child(ppu_thread& ppu, vm::ptr<u32> target_pid, vm::ptr<u32> status, u64 flags)
 {
-	sys_process.todo("sys_process_wait_for_child2(unk1=0x%llx, unk2=0x%llx, unk3=0x%llx, unk4=0x%llx, unk5=0x%llx, unk6=0x%llx)",
-		unk1, unk2, unk3, unk4, unk5, unk6);
+	const u32 claimed_id = target_pid ? +*target_pid : 0;
+
+	sys_process.todo("sys_process_wait_for_child(pid=%s (0x%x), status=*0x%x, flags=0x%llx", target_pid, claimed_id, status, flags);
+
+	if (!ppu.has_root_perm)
+	{
+		return CELL_ENOSYS;
+	}
+
+	return process_wait_for_child(ppu, claimed_id, target_pid, status, nullptr, 0, vm::null, flags);
+}
+
+error_code sys_process_wait_for_child2(ppu_thread& ppu, vm::ptr<u32> target_pid, vm::ptr<u32> process_status, vm::ptr<void> data_returned, u64 data_size, vm::ptr<u32> data_written, u64 flags)
+{
+	ppu.state += cpu_flag::wait;
+
+	const u32 claimed_id = target_pid ? +*target_pid : 0;
+
+	sys_process.todo("sys_process_wait_for_child2(target_pid=%s (0x%x), process_status=%s, data_returned=%s, data_size=0x%llx, data_written=0x%llx, flags=0x%llx)",
+		target_pid, claimed_id, process_status, data_returned, data_size, data_written, flags);
+
+	if (!ppu.has_root_perm)
+	{
+		return CELL_ENOSYS;
+	}
+
+	return process_wait_for_child(ppu, claimed_id, target_pid, process_status, data_returned.get_ptr(), data_size, data_written, flags);
+}
+
+error_code sys_process_get_status(ppu_thread& ppu, u32 pid)
+{
+	ppu.state += cpu_flag::wait;
+
+	sys_process.todo("sys_process_get_status(pid=0x%llx)", pid);
+
+	if (!ppu.has_root_perm)
+	{
+		return CELL_ENOSYS;
+	}
+
+	const auto child = idm::get_unlocked<lv2_obj, lv2_process>(idm::id_index(pid, nullptr));
+
+	if (!child)
+	{
+		return CELL_ESRCH;
+	}
+
 	return CELL_OK;
 }
 
-error_code sys_process_get_status(u64 unk)
+error_code sys_process_detach_child(ppu_thread& ppu, u32 pid)
 {
-	sys_process.todo("sys_process_get_status(unk=0x%llx)", unk);
-	//vm::write32(CPU.gpr[4], GetPPUThreadStatus(CPU));
-	return CELL_OK;
-}
+	sys_process.todo("sys_process_detach_child(pid=0x%x)", pid);
 
-error_code sys_process_detach_child(u64 unk)
-{
-	sys_process.todo("sys_process_detach_child(unk=0x%llx)", unk);
+	if (!ppu.has_root_perm)
+	{
+		return CELL_ENOSYS;
+	}
+
+	if (ppu.proc_id == pid)
+	{
+		return CELL_ENOCHILD;
+	}
+
+	const auto child = idm::get_unlocked<lv2_obj, lv2_process>(idm::id_index(pid, nullptr));
+
+	if (!child)
+	{
+		return CELL_ENOCHILD;
+	}
+
+	if (child->parent_process != ppu.proc_id)
+	{
+		return CELL_ENOCHILD;
+	}
+
+	const auto res = child->state.atomic_op([&](u32& state) -> CellError
+	{
+		if ((state % 65536) == PS3_PROCESS_ZOMBIE)
+		{
+			return CELL_EAGAIN;
+		}
+
+		if ((state & -65536) == PS3_PROCESS_IS_BEING_JOINED)
+		{
+			// This seems to join wait_for_chiled
+			ensure(false);
+			return CELL_EBUSY;
+		}
+
+		if ((state & -65536) == PS3_PROCESS_IS_DETACHED)
+		{
+			// Already detached, no track of child
+			return CELL_ENOCHILD;
+		}
+
+		state |= PS3_PROCESS_IS_DETACHED;
+		return {};
+	});
+
+	if (res == CELL_EAGAIN)
+	{
+		if (!idm::remove_verify<lv2_obj, lv2_process>(pid, child))
+		{
+			return CELL_ENOCHILD;
+		}
+
+		return CELL_OK;
+	}
+
+	if (res)
+	{
+		return res;
+	}
+
 	return CELL_OK;
 }
 
@@ -715,9 +935,67 @@ void _sys_process_exit(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3)
 		ppu.exports_table = nullptr;
 
 		const auto current = ensure(idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process));
+
+		current->exit_code = status;
+
+		bool remove_self = false;
+		bool signal_ppu = false;
+
+		current->state.atomic_op([&](u32& state)
+		{
+			remove_self = false;
+			signal_ppu = false;
+
+			if ((state & -65536) == PS3_PROCESS_IS_BEING_JOINED)
+			{
+				// Let the joiner PPU do this
+				//remove_self = true;
+				signal_ppu = true;
+				state = PS3_PROCESS_IS_DESTROYED;
+				return;
+			}
+			else if ((state & -65536) == PS3_PROCESS_IS_DETACHED)
+			{
+				remove_self = true;
+				state = PS3_PROCESS_IS_DESTROYED;
+				return;
+			}
+
+			state &= ~0xffff;
+			state |= PS3_PROCESS_ZOMBIE;
+		});
+
 		current->ki11_self();
 
-		ensure(idm::remove_verify<lv2_obj, lv2_process>(id_manager::g_process, current));
+		if (remove_self)
+		{
+			ensure(idm::remove_verify<lv2_obj, lv2_process>(id_manager::g_process, current));
+		}
+		else if (signal_ppu)
+		{
+			// I don't want to save PPU information.. so the search for waiting PPU is manual (simplifying serialization)
+			id_manager::g_process = current->parent_process;
+
+			bool signal = false;
+
+			idm::select<named_thread<ppu_thread>>([&, notify = lv2_obj::notify_all_t()](u32, ppu_thread& join_ppu)
+			{
+				const auto func = atomic_storage<const char*>::load(join_ppu.current_function);
+
+				if (join_ppu.state & cpu_flag::suspend && func && std::string_view(func).starts_with("sys_process_wait_for_child"sv) && func == atomic_storage<const char*>::load(join_ppu.current_function))
+				{
+					lv2_obj::awake(&join_ppu);
+					signal = true;
+				}
+			});
+
+			if (!signal)
+			{
+				fmt::throw_exception("PPU joiner thread of process was not found!");
+			}
+
+			id_manager::g_process = ppu.proc_id;
+		}
 		return;
 	}
 

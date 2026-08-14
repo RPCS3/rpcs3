@@ -91,6 +91,17 @@ struct sys_exit2_param
 	vm::bpptr<char, u64, u64> args;
 };
 
+enum ps3_process_state : u32
+{
+	PS3_PROCESS_RUNNING = 0x1234, // TODO
+	PS3_PROCESS_ZOMBIE = 3, // Correct value
+ 
+	// Made up values for the upper 16-bites which are used for something else on firmware
+	PS3_PROCESS_IS_BEING_JOINED = 0x10000,
+	PS3_PROCESS_IS_DETACHED = 0x20000,
+	PS3_PROCESS_IS_DESTROYED = 0x30000,
+};
+
 namespace vm
 {
 	struct ps3_virtual_memory_object;
@@ -119,6 +130,10 @@ struct lv2_process : public ppu_module<lv2_obj>
 	std::string ELF_file_path;
 	std::array<u8, 256> ELF_file_hash{};
 	std::unique_ptr<std::array<u8, 0x40>> provided_paramsfo;
+
+	u32 parent_process = umax;
+	u32 exit_code = umax;
+	atomic_t<u32> state{PS3_PROCESS_RUNNING};
 
 	atomic_t<bool> is_terminating = false;
 
@@ -195,12 +210,12 @@ error_code sys_process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::ptr
 error_code sys_process_get_id2(u32 object, vm::ptr<u32> buffer, u32 size, vm::ptr<u32> set_size);
 error_code _sys_process_get_paramsfo(vm::ptr<char> buffer);
 error_code sys_process_get_sdk_version(u32 pid, vm::ptr<s32> version);
-error_code sys_process_get_status(u64 unk);
+error_code sys_process_get_status(ppu_thread& ppu, u32 pid);
 error_code sys_process_is_spu_lock_line_reservation_address(ppu_thread& ppu, u32 addr, u64 flags);
-error_code sys_process_kill(u32 pid);
-error_code sys_process_wait_for_child(u32 pid, vm::ptr<u32> status, u64 unk);
-error_code sys_process_wait_for_child2(u64 unk1, u64 unk2, u64 unk3, u64 unk4, u64 unk5, u64 unk6);
-error_code sys_process_detach_child(u64 unk);
+error_code sys_process_kill(ppu_thread& ppu, u32 pid);
+error_code sys_process_wait_for_child(ppu_thread& ppu, vm::ptr<u32> target_pid, vm::ptr<u32> status, u64 flags);
+error_code sys_process_wait_for_child2(ppu_thread& ppu, vm::ptr<u32> target_pid, vm::ptr<u32> process_status, vm::ptr<void> data_returned, u64 data_size, vm::ptr<u32> data_written, u64 flags);
+error_code sys_process_detach_child(ppu_thread& ppu, u32 pid);
 void _sys_process_exit(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3);
 void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> arg, u32 arg_size, u32 arg4);
 void sys_process_exit3(ppu_thread& ppu, s32 status);
