@@ -1591,10 +1591,12 @@ namespace rsx
 			for (u32 layer = 0; layer < layers; ++layer)
 			{
 				u32 mip_height = internal_height;
+				u32 mip_depth = depth;
 				for (u32 mipmap = 0; mipmap < mipmaps && mip_height > 0; ++mipmap)
 				{
-					size += pitch * mip_height * depth;
+					size += pitch * mip_height * mip_depth;
 					mip_height = std::max(mip_height / 2u, 1u);
+					mip_depth  = std::max(mip_depth / 2u, 1u);
 				}
 			}
 		}
@@ -1610,11 +1612,13 @@ namespace rsx
 			{
 				u32 mip_height = internal_height;
 				u32 mip_width = internal_width;
+				u32 mip_depth = depth;
 				for (u32 mipmap = 0; mipmap < mipmaps && mip_height > 0; ++mipmap)
 				{
-					size += (mip_width * bytes_per_block * mip_height * depth);
+					size += (mip_width * bytes_per_block * mip_height * mip_depth);
 					mip_height = std::max(mip_height / 2u, 1u);
 					mip_width = std::max(mip_width / 2u, 1u);
+					mip_depth  = std::max(mip_depth / 2u, 1u);
 				}
 			}
 		}
