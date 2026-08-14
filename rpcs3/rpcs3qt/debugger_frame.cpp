@@ -17,6 +17,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/lv2/sys_sync.h"
+#include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/PPUAnalyser.h"
 #include "Emu/Cell/PPUDisAsm.h"
 #include "Emu/Cell/PPUThread.h"
@@ -1731,15 +1732,17 @@ void debugger_frame::DoStep(bool step_over)
 			{
 				const u32 current_instruction_pc = cpu->get_pc();
 
+				const auto process = ensure(idm::get_unlocked<lv2_obj, lv2_process>(static_cast<ppu_thread*>(cpu)->proc_id));
+
 				// Set breakpoint on next instruction
 				const u32 next_instruction_pc = current_instruction_pc + 4;
-				m_ppu_breakpoint_handler->AddBreakpoint(next_instruction_pc, breakpoint_types::bp_exec);
+				m_ppu_breakpoint_handler->AddBreakpoint(process.get(), process->get_unique_key(), next_instruction_pc, breakpoint_types::bp_exec);
 
 				// Undefine previous step over breakpoint if it hasn't been already
 				// This can happen when the user steps over a branch that doesn't return to itself
 				if (m_last_step_over_breakpoint != umax)
 				{
-					m_ppu_breakpoint_handler->RemoveBreakpoint(next_instruction_pc);
+					m_ppu_breakpoint_handler->RemoveBreakpoint(process.get(), process->get_unique_key(), next_instruction_pc);
 				}
 
 				m_last_step_over_breakpoint = next_instruction_pc;

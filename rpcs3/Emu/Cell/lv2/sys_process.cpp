@@ -46,6 +46,8 @@ lv2_process::lv2_process(shared_ptr<lv2_memory_container> pp_memory) noexcept
 	rsx_info = std::make_shared<lv2_rsx_process_info>();
 	local_typemap = std::make_unique<std::remove_cvref_t<decltype(*local_typemap)>>();
 	local_typemap->init(true);
+
+	self_id = idm::last_id<lv2_process>();
 }
 
 lv2_process::lv2_process(utils::serial& ar) noexcept
@@ -91,6 +93,8 @@ lv2_process::lv2_process(utils::serial& ar) noexcept
 
 	local_typemap = std::make_unique<std::remove_cvref_t<decltype(*local_typemap)>>();
 	local_typemap->init(true, std::addressof(ar));
+
+	self_id = idm::last_id<lv2_process>();
 }
 
 void lv2_process::save(utils::serial& ar) noexcept
@@ -245,6 +249,11 @@ u64 lv2_process::ki11_self()
 
 	// Returns the time this process took
 	return get_system_time() - start_time;
+}
+
+u64 lv2_process::get_unique_key() const
+{
+	return (u64{seg0_code_end} << 32) + self_id;
 }
 
 lv2_process::~lv2_process() noexcept

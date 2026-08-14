@@ -1235,18 +1235,26 @@ static void ppu_break(ppu_thread& ppu, ppu_opcode_t, be_t<u32>* this_op, ppu_int
 }
 
 // Set or remove breakpoint
-extern bool ppu_breakpoint(u32 addr, bool is_adding)
+extern bool ppu_breakpoint(lv2_process* process, u32 addr, bool is_adding)
 {
-	if (addr % 4 || !vm::check_addr(addr, vm::page_executable) || g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
+	if (!process || addr % 4 || !vm::check_addr(process->memory_4GB_model, addr, vm::page_executable) || g_cfg.core.ppu_decoder == ppu_decoder_type::llvm)
 	{
 		return false;
 	}
+
+	const auto old_base = vm::g_base_addr;
+	const auto old_sudo = vm::g_sudo_addr;
+	const auto old_exec = vm::g_exec_addr;
+
+	vm::g_base_addr = process->memory_4GB_model->base_addr;
+	vm::g_sudo_addr = process->memory_4GB_model->sudo_addr;
+	vm::g_exec_addr = process->memory_4GB_model->exec_addr;
 
 	// Remove breakpoint parameters
 	ppu_intrp_func_t func_original = 0;
 	ppu_intrp_func_t breakpoint = &ppu_break;
 
-	const auto func_manager = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->local_typemap->try_get<ppu_function_manager>();
+	const auto func_manager = process->local_typemap->try_get<ppu_function_manager>();
 
 	if (u32 hle_addr{}; func_manager && (hle_addr = func_manager->save_addr()))
 	{
@@ -1276,19 +1284,23 @@ extern bool ppu_breakpoint(u32 addr, bool is_adding)
 
 		if (ppu_read(addr) != func_original)
 		{
+			std::tie(vm::g_base_addr, vm::g_sudo_addr, vm::g_exec_addr) = std::make_tuple(old_base, old_sudo, old_exec); 
 			return false;
 		}
 
 		write_to_ptr_unsafe<ppu_intrp_func_t>(ppu_ptr(addr), breakpoint);
+		std::tie(vm::g_base_addr, vm::g_sudo_addr, vm::g_exec_addr) = std::make_tuple(old_base, old_sudo, old_exec); 
 		return true;
 	}
 
 	if (ppu_read(addr) != breakpoint)
 	{
+		std::tie(vm::g_base_addr, vm::g_sudo_addr, vm::g_exec_addr) = std::make_tuple(old_base, old_sudo, old_exec); 
 		return false;
 	}
 
 	write_to_ptr_unsafe<ppu_intrp_func_t>(ppu_ptr(addr), func_original);
+	std::tie(vm::g_base_addr, vm::g_sudo_addr, vm::g_exec_addr) = std::make_tuple(old_base, old_sudo, old_exec); 
 	return true;
 }
 

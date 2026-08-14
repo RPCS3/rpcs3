@@ -40,7 +40,7 @@
 #include <regex>
 #include <string_view>
 
-extern bool ppu_breakpoint(u32 addr, bool is_adding);
+extern bool ppu_breakpoint(struct lv2_process* process, u32 addr, bool is_adding);
 
 LOG_CHANNEL(GDB);
 
@@ -883,7 +883,7 @@ bool gdb_thread::cmd_set_breakpoint(gdb_cmd& cmd)
 			GDB.warning("Can't parse breakpoint request, data: '%s'.", cmd.data);
 			return send_cmd_ack("E02");
 		}
-		ppu_breakpoint(addr, true);
+		//ppu_breakpoint(addr, true);
 		return send_cmd_ack("OK");
 	}
 	//other breakpoint types are not supported
@@ -903,7 +903,7 @@ bool gdb_thread::cmd_remove_breakpoint(gdb_cmd& cmd)
 			GDB.warning("Can't parse breakpoint remove request, data: '%s'.", cmd.data);
 			return send_cmd_ack("E01");
 		}
-		ppu_breakpoint(addr, false);
+		//ppu_breakpoint(addr, false);
 		return send_cmd_ack("OK");
 	}
 	//other breakpoint types are not supported

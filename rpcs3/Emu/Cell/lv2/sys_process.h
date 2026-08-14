@@ -106,6 +106,8 @@ struct lv2_process : public ppu_module<lv2_obj>
 {
 	static constexpr u32 id_base = 0x50000000;
 
+	u32 self_id = umax;
+
 	u32 seg0_code_end = 0;
 	u32 elf_entry = 0;
 
@@ -148,6 +150,7 @@ struct lv2_process : public ppu_module<lv2_obj>
 	~lv2_process() noexcept;
 	void save(utils::serial&) noexcept;
 	u64 ki11_self();
+	u64 get_unique_key() const;
 	int operator=(thread_state s) noexcept;
 	static std::shared_ptr<void> acquire_globals(u32 proc_id);
 	static void release_globals();
