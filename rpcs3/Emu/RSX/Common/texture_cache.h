@@ -2502,15 +2502,14 @@ namespace rsx
 				attributes.depth = 6;
 				subsurface_count = 1;
 				tex_size = static_cast<u32>(get_texture_size(tex));
-				required_surface_height = tex_size / attributes.pitch;
-				attributes.slice_h = required_surface_height / attributes.depth;
+				required_surface_height = tex_size / attributes.pitch;                                   //<- Cubemap mipmaps are laid inline with their respective faces.
+				attributes.slice_h = required_surface_height / attributes.depth;                         //<- Slice height should match attr.height * 2 assuming full mipchain per face.
 				break;
 			case rsx::texture_dimension_extended::texture_dimension_3d:
 				attributes.depth = tex.depth();
 				subsurface_count = 1;
-				tex_size = static_cast<u32>(get_texture_size(tex));
-				required_surface_height = tex_size / attributes.pitch;
-				attributes.slice_h = required_surface_height / attributes.depth;
+				required_surface_height = static_cast<u32>(get_texture_size(tex, 0)) / attributes.pitch; //<- Mipmaps for 3D are laid out one at a time, we compute only level 0 size.
+				attributes.slice_h = required_surface_height / attributes.depth;                         //<- Should match attr.height for most cases unless block textures or borders are involved.
 				break;
 			default:
 				fmt::throw_exception("Unsupported texture dimension %d", static_cast<int>(extended_dimension));
