@@ -340,6 +340,7 @@ namespace rsx
 				std::tie(dst_x, dst_y) = rsx::apply_resolution_scale<false>(section.surface->resolution_scaling_config, dst_x, dst_y, attr.width, attr.height);
 
 				section.surface->memory_barrier(cmd, rsx::surface_access::transfer_read);
+				const bool output_covered = (section.dst_area.width >= attr.width) && (section_end >= slice_end);
 
 				out.push_back
 				({
@@ -358,7 +359,7 @@ namespace rsx
 					.dst_h = dst_height
 				});
 
-				return { section_end <= slice_end, section_end >= slice_end };
+				return { section_end <= slice_end, output_covered };
 			};
 
 			auto add_local_resource = [&](auto& section, u32 address, u16 slice, bool scaling) -> std::pair<bool, bool> // [ input fully consumed, output fully covered ]
@@ -404,7 +405,7 @@ namespace rsx
 				const u16 dst_w = static_cast<u16>(dst_size.width);
 				const u16 src_w = static_cast<u16>(src_size.width);
 				const u16 height = std::min(dst_slice_h, write_section_end) - dst_y;
-				const bool output_covered = (write_section_end >= dst_slice_h);
+				const bool output_covered = (dst_w >= attr.width) && (write_section_end >= dst_slice_h);
 
 				if (scaling)
 				{
