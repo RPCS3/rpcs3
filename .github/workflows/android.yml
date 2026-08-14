@@ -193,10 +193,16 @@ jobs:
         run: |
           apksigner=$(find "$ANDROID_SDK_ROOT/build-tools" -name apksigner | sort -V | tail -1)
           echo "using $apksigner"
+          certs="$RUNNER_TEMP/apksigner-certs.txt"
           for apk in $(find app/build/outputs/apk -name '*-release*.apk'); do
-            echo "== $apk"
-            "$apksigner" verify --print-certs "$apk" | grep -E 'Signer #1 certificate (DN|SHA-256 digest)'
-            if "$apksigner" verify --print-certs "$apk" | grep -qi 'CN=Android Debug'; then
+            echo "== $(basename "$apk")"
+            if ! "$apksigner" verify --print-certs "$apk" > "$certs" 2>&1; then
+              cat "$certs"
+              echo "::error::$apk failed signature verification"
+              exit 1
+            fi
+            grep -E 'certificate DN|certificate SHA-256 digest' "$certs" || true
+            if grep -qi 'CN=Android Debug' "$certs"; then
               echo "::error::$apk is debug-signed"
               exit 1
             fi
