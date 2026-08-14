@@ -57,10 +57,7 @@ class RPCS3Activity : ComponentActivity() {
             RPCS3Theme {
                 InGameDrawer(
                     visible = drawerVisible.value,
-                    titleId = runCatching { RPCS3.instance.getTitleId() }
-                        .getOrNull()
-                        ?.takeIf { it.isNotEmpty() }
-                        ?: gameTitleId(intent.getStringExtra("path").orEmpty()),
+                    titleId = drawerTitleId.value,
                     paused = drawerPaused.value,
                     onDismiss = { setDrawerVisible(false) },
                     onTogglePause = {
@@ -197,6 +194,22 @@ class RPCS3Activity : ComponentActivity() {
 
     private val drawerVisible = mutableStateOf(false)
     private val drawerPaused = mutableStateOf(false)
+    private val drawerTitleId = mutableStateOf("")
+
+    private fun resolveTitleId(): String {
+        val running = runCatching { RPCS3.instance.getTitleId() }.getOrNull().orEmpty()
+        if (running.isNotEmpty()) {
+            return running
+        }
+
+        val path = intent.getStringExtra("path").orEmpty()
+        val fromDetails = runCatching { GameDetailsReader.read(path).titleId }.getOrNull().orEmpty()
+        if (fromDetails.isNotEmpty()) {
+            return fromDetails
+        }
+
+        return gameTitleId(path)
+    }
 
     private fun releaseAllPadInput() {
         gamePadState.digital[0] = 0
@@ -213,6 +226,7 @@ class RPCS3Activity : ComponentActivity() {
     private fun setDrawerVisible(visible: Boolean) {
         if (visible) {
             releaseAllPadInput()
+            drawerTitleId.value = resolveTitleId()
             drawerPaused.value = RPCS3.getState() == EmulatorState.Paused
             binding.drawerHost.visibility = View.VISIBLE
             binding.drawerHost.requestFocus()
