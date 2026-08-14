@@ -2495,7 +2495,7 @@ namespace rsx
 			bool force_bg_load = desc.force_bg_load;
 			u16 levels_found = 1;
 
-			options.skip_texture_merge = false;        //<- We should use this for a speedup but it is currently broken :(
+			options.skip_texture_merge = true;         //<- We expect all the data to live on either host or guest. Gaps here will be closed by the blit-engine surface cache integration work later (e.g mipchain gen using nv3089).
 			options.skip_texture_barriers = true;      //<- We'll be copying the data out, ignore texture barriers.
 			options.prefer_surface_cache = (base_level.upload_context == rsx::texture_upload_context::framebuffer_storage);
 
