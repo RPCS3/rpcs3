@@ -395,6 +395,11 @@ namespace rsx
 		virtual void sync_hint(FIFO::interrupt_hint hint, reports::sync_hint_payload_t payload);
 		virtual bool release_GCM_label(u32 /*type*/, u32 /*address*/, u32 /*value*/) { return false; }
 
+		bool has_urgent_interrupts() const
+		{
+			return !!(m_eng_interrupt_mask & rsx::dma_control_interrupt);
+		}
+
 	protected:
 
 		/**

@@ -1056,6 +1056,11 @@ namespace rsx
 	{
 		bool changed = false;
 
+		if (fifo_ctrl)
+		{
+			fifo_ctrl->sync_get();
+		}
+
 		idm::select<lv2_rsx_context>([&](u32 id, u32 proc, lv2_rsx_context& context)
 		{
 			if (lv2_context != &context)
@@ -1074,7 +1079,7 @@ namespace rsx
 			}
 		});
 
-		if (changed)
+		if (changed && lv2_context)
 		{
 			fifo_ctrl = std::make_unique<::rsx::FIFO::FIFO_control>(this);
 			fifo_ctrl->set_get(ctrl->get);
@@ -1468,6 +1473,18 @@ namespace rsx
 				}
 
 				decide_rsx_context_queue(0, 0);
+
+				if (const u64 get_put = !lv2_context ? u64{umax} : lv2_context->new_get_put.exchange(u64{umax});
+					get_put != umax)
+				{
+					vm::_ptr<atomic_be_t<u64>>(lv2_context->dma_address + ::offset32(&RsxDmaControl::put))->release(get_put);
+					fifo_ctrl->set_get(static_cast<u32>(get_put));
+					fifo_ctrl->abort();
+					fifo_ret_addr = RSX_CALL_STACK_EMPTY;
+					last_known_code_start = static_cast<u32>(get_put);
+					sync_point_request.release(true);
+				}
+
 				m_eng_interrupt_mask.clear(rsx::dma_control_interrupt);
 			}
 		}

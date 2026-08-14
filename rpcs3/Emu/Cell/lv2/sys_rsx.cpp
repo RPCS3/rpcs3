@@ -530,6 +530,7 @@ error_code sys_rsx_context_free(ppu_thread& ppu, u32 context_id)
 	{
 		render->lv2_context = nullptr;
 		render->ctrl = nullptr;
+		render->fifo_ctrl.reset();
 	}
 
 	ensure(idm::remove_verify<lv2_rsx_context>(context_id, rsx_context));

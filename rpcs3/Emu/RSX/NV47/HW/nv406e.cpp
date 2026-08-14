@@ -59,6 +59,14 @@ namespace rsx
 					return;
 				}
 
+				if (RSX(ctx)->has_urgent_interrupts())
+				{
+					// HACK
+					rsx_log.error("nv406e::semaphore_acquire aborted due to FIFO reset!");
+					RSX(ctx)->fifo_ctrl->set_get(RSX(ctx)->fifo_ctrl->get_pos() - 8);
+					return;
+				}
+
 				if (const auto tdr = static_cast<u64>(g_cfg.video.driver_recovery_timeout))
 				{
 					const u64 current = get_system_time();
