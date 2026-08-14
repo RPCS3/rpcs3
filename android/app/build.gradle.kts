@@ -144,7 +144,10 @@ android {
         kotlinCompilerExtensionVersion = "1.5.15"
     }
 
-    sourceSets["main"].assets.srcDir(layout.buildDirectory.dir("generated/rpcs3-assets"))
+    sourceSets["main"].assets.srcDir(
+        files(layout.buildDirectory.dir("generated/rpcs3-assets"))
+            .builtBy("copyRpcs3Icons", "copyRpcs3Patches")
+    )
 
     packaging {
         // This is necessary for libadrenotools custom driver loading
@@ -191,9 +194,4 @@ val copyRpcs3Patches by tasks.registering(Copy::class) {
         include("patch.yml")
     }
     into(layout.buildDirectory.dir("generated/rpcs3-assets/patches"))
-}
-
-tasks.matching { it.name.startsWith("merge") && it.name.endsWith("Assets") }.configureEach {
-    dependsOn(copyRpcs3Icons)
-    dependsOn(copyRpcs3Patches)
 }
