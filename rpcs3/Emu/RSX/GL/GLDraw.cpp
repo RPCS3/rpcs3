@@ -391,13 +391,9 @@ void GLGSRender::load_texture_env()
 		{
 			actual_mipcount = tex.get_exact_mipmap_count();
 		}
-		else if (sampler_state->external_subresource_desc.op == rsx::deferred_request_command::mipmap_gather)
+		else if (sampler_state->external_subresource_desc.op != rsx::deferred_request_command::nop)
 		{
-			actual_mipcount = sampler_state->external_subresource_desc.sections_to_copy.size();
-		}
-		else if (sampler_state->external_subresource_desc.op == rsx::deferred_request_command::cubemap_unwrap)
-		{
-			actual_mipcount = sampler_state->external_subresource_desc.mipmaps;
+			actual_mipcount = sampler_state->external_subresource_desc.exact_mip_count();
 		}
 
 		m_fs_sampler_states[i].apply(tex, fs_sampler_state[i].get(), actual_mipcount > 1);
