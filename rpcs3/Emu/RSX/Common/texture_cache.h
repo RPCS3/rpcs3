@@ -200,19 +200,21 @@ namespace rsx
 			// One large surface to be partitioned into cubemap faces.
 			static deferred_subresource create_cubemap_unwrap(
 				image_resource_type src,
+				const position2u& src_offset,
 				const image_section_attributes_t& attr,
 				const texture_channel_remap_t& remap)
 			{
-				return make_unwrap(deferred_request_command::cubemap_unwrap, src, attr, remap);
+				return make_unwrap(deferred_request_command::cubemap_unwrap, src, src_offset, attr, remap);
 			}
 
 			// One large surface to be partitioned into a 3D array.
 			static deferred_subresource create_3d_unwrap(
 				image_resource_type src,
+				const position2u& src_offset,
 				const image_section_attributes_t& attr,
 				const texture_channel_remap_t& remap)
 			{
-				return make_unwrap(deferred_request_command::_3d_unwrap, src, attr, remap);
+				return make_unwrap(deferred_request_command::_3d_unwrap, src, src_offset, attr, remap);
 			}
 
 			// 2D section splat
@@ -319,6 +321,14 @@ namespace rsx
 				return external_handle;
 			}
 
+			position2u unwrap_offset() const
+			{
+				ensure(op == deferred_request_command::cubemap_unwrap || op == deferred_request_command::_3d_unwrap);
+				ensure(sections_to_copy.size() == 1);
+				const auto& section = sections_to_copy.front();
+				return { section.src_x, section.src_y };
+			}
+
 			u8 exact_mip_count() const
 			{
 				switch (op)
@@ -335,9 +345,19 @@ namespace rsx
 			}
 
 		private:
+			static void embed_src_offset(deferred_subresource& target, const position2u& offset)
+			{
+				ensure(target.sections_to_copy.empty());
+				// Embed a single copy block with the src offsets.
+				target.sections_to_copy.push_back({});
+				target.sections_to_copy.back().src_x = static_cast<u16>(offset.x);
+				target.sections_to_copy.back().src_y = static_cast<u16>(offset.y);
+			}
+
 			static deferred_subresource make_unwrap(
 				deferred_request_command op,
 				image_resource_type src,
+				const position2u& src_offset,
 				const image_section_attributes_t& attr,
 				const texture_channel_remap_t& remap)
 			{
@@ -349,6 +369,7 @@ namespace rsx
 				result.external_handle = src;
 				result.op = op;
 				result.remap = remap;
+				embed_src_offset(result, src_offset);
 				return result;
 			}
 
@@ -1879,6 +1900,7 @@ namespace rsx
 		static void expand_3d_unwrap_sections(rsx::simple_array<copy_region_descriptor>& sections, const deferred_subresource& desc, u8 level)
 		{
 			sections.reserve(sections.size() + desc.depth);
+			const auto src_offset = desc.unwrap_offset();
 
 			for (u16 n = 0; n < desc.depth; ++n)
 			{
@@ -1887,8 +1909,8 @@ namespace rsx
 					.src = desc.external_handle,
 					.xform = surface_transform::coordinate_transform,
 					.level = level,
-					.src_x = 0,
-					.src_y = static_cast<u16>(desc.slice_h * n),
+					.src_x = static_cast<u16>(src_offset.x),
+					.src_y = static_cast<u16>(src_offset.y + (desc.slice_h * n)),
 					.dst_x = 0,
 					.dst_y = 0,
 					.dst_z = n,
@@ -1897,6 +1919,42 @@ namespace rsx
 					.dst_w = desc.width,
 					.dst_h = desc.height
 				});
+			}
+		}
+
+		// Expands a cube_unwrap descriptor into explicit slice list for use with cube_gather
+		static void expand_cube_unwrap_sections(rsx::simple_array<copy_region_descriptor>& sections, const deferred_subresource& desc)
+		{
+			sections.resize(6u * desc.mipmaps);
+			const auto src_offset = desc.unwrap_offset();
+
+			for (u16 n = 0, section_id = 0; n < 6; ++n)
+			{
+				u16 mip_w = desc.width, mip_h = desc.height;
+				u16 y_offset = static_cast<u16>(src_offset.y + (desc.slice_h * n));
+
+				for (u8 mip = 0; mip < desc.mipmaps; ++mip)
+				{
+					sections[section_id++] =
+					{
+						.src = desc.external_handle,
+						.xform = surface_transform::coordinate_transform,
+						.level = mip,
+						.src_x = static_cast<u16>(src_offset.x),
+						.src_y = y_offset,
+						.dst_x = 0,
+						.dst_y = 0,
+						.dst_z = n,
+						.src_w = mip_w,
+						.src_h = mip_h,
+						.dst_w = mip_w,
+						.dst_h = mip_h
+					};
+
+					y_offset += mip_h;
+					mip_w = std::max<u16>(mip_w / 2, 1);
+					mip_h = std::max<u16>(mip_h / 2, 1);
+				}
 			}
 		}
 
@@ -1930,37 +1988,11 @@ namespace rsx
 			}
 			case deferred_request_command::cubemap_unwrap:
 			{
-				rsx::simple_array<copy_region_descriptor> sections(6 * desc.mipmaps);
-				for (u16 n = 0, section_id = 0; n < 6; ++n)
-				{
-					u16 mip_w = desc.width, mip_h = desc.height;
-					u16 y_offset = static_cast<u16>(desc.slice_h * n);
-
-					for (u8 mip = 0; mip < desc.mipmaps; ++mip)
-					{
-						sections[section_id++] =
-						{
-							.src = desc.external_handle,
-							.xform = surface_transform::coordinate_transform,
-							.level = mip,
-							.src_x = 0,
-							.src_y = y_offset,
-							.dst_x = 0,
-							.dst_y = 0,
-							.dst_z = n,
-							.src_w = mip_w,
-							.src_h = mip_h,
-							.dst_w = mip_w,
-							.dst_h = mip_h
-						};
-
-						y_offset += mip_h;
-						mip_w = std::max<u16>(mip_w / 2, 1);
-						mip_h = std::max<u16>(mip_h / 2, 1);
-					}
-				}
+				rsx::simple_array<copy_region_descriptor> sections;
+				expand_cube_unwrap_sections(sections, desc);
 
 				auto unwrap_desc = desc;
+				unwrap_desc.op = deferred_request_command::cubemap_gather;
 				unwrap_desc.sections_to_copy = std::move(sections);
 
 				result = generate_cubemap_from_images(cmd, unwrap_desc);
@@ -1977,6 +2009,7 @@ namespace rsx
 				expand_3d_unwrap_sections(sections, desc, 0);
 
 				auto unwrap_desc = desc;
+				unwrap_desc.op = deferred_request_command::_3d_gather;
 				unwrap_desc.sections_to_copy = std::move(sections);
 
 				result = generate_3d_from_2d_images(cmd, unwrap_desc);
@@ -2079,7 +2112,7 @@ namespace rsx
 					const bool force_convert = !render_target_format_is_compatible(texptr, attr.gcm_format);
 
 					auto result = helpers::process_framebuffer_resource_fast<sampled_image_descriptor>(
-						cmd, texptr, attr, scale, extended_dimension, remap, true, force_convert);
+						cmd, texptr, attr, {}, scale, extended_dimension, remap, true, force_convert);
 
 					if (!options.skip_texture_barriers && result.is_cyclic_reference)
 					{
@@ -2098,12 +2131,13 @@ namespace rsx
 			auto fast_fbo_check = [&]() -> sampled_image_descriptor
 			{
 				const auto& last = overlapping_fbos.back();
-				if (last.src_area.x == 0 && last.src_area.y == 0 && !last.is_clipped)
+
+				if (!last.is_clipped) //<- A non-clipped hit fully contains the requested box. We're good to go with the framebuffer processing.
 				{
 					const bool force_convert = !render_target_format_is_compatible(last.surface, attr.gcm_format);
 
 					return helpers::process_framebuffer_resource_fast<sampled_image_descriptor>(
-						cmd, last.surface, attr, scale, extended_dimension, remap, false, force_convert);
+						cmd, last.surface, attr, position2u(last.src_area.x, last.src_area.y), scale, extended_dimension, remap, false, force_convert);
 				}
 
 				return {};
