@@ -395,35 +395,39 @@ namespace rsx
 				const size2u dst_size = { dimensions.width / attr.bpp, dimensions.height };
 				const size2u src_size = { dimensions.width / section_bpp, dimensions.height };
 
-				const u32 dst_slice_begin = slice * attr.slice_h;      // Output slice low watermark
-				const u32 dst_slice_end = dst_slice_begin + attr.height;   // Output slice high watermark
-
+				// NOTE: Computed dst_y is slice-local, not 2d-local. Our slice_h becomes our height.
+				// FIXME: This approach does not support mipmap levels.
+				const u32 dst_slice_h = attr.height;
 				const auto dst_y = dst_offset.y;
 				const auto dst_h = dst_size.height;
 
 				const auto write_section_end = dst_y + dst_h;
-				if (dst_y >= dst_slice_end || write_section_end <= dst_slice_begin)
+				const bool input_consumed = (write_section_end < attr.slice_h);
+
+				if (dst_y >= dst_slice_h)
 				{
 					// Belongs to a different slice
-					return { write_section_end <= dst_slice_begin, false };
+					return { input_consumed, false };
 				}
 
 				const u16 dst_w = static_cast<u16>(dst_size.width);
 				const u16 src_w = static_cast<u16>(src_size.width);
-				const u16 height = std::min(dst_slice_end, write_section_end) - dst_y;
+				const u16 height = std::min(dst_slice_h, write_section_end) - dst_y;
+				const bool output_covered = (write_section_end >= dst_slice_h);
 
 				if (scaling)
 				{
 					// Since output is upscaled, also upscale on dst
 
 					const auto& scaling_config = rsx::get_current_renderer()->resolution_scaling_config;
-					const auto [_dst_x, _dst_y] = rsx::apply_resolution_scale<false>(scaling_config, static_cast<u16>(dst_offset.x), static_cast<u16>(dst_y - dst_slice_begin), attr.width, attr.height);
+					const auto [_dst_x, _dst_y] = rsx::apply_resolution_scale<false>(scaling_config, static_cast<u16>(dst_offset.x), static_cast<u16>(dst_y), attr.width, attr.height);
 					const auto [_dst_w, _dst_h] = rsx::apply_resolution_scale<true>(scaling_config, dst_w, height, attr.width, attr.height);
 
 					out.push_back
 					({
 						.src = section->get_raw_texture(),
 						.xform = surface_transform::identity,
+						.base_addr = section->get_section_base(),
 						.level = 0,
 						.src_x = static_cast<u16>(src_offset.x),   // src.x
 						.src_y = static_cast<u16>(src_offset.y),   // src.y
@@ -436,26 +440,27 @@ namespace rsx
 						.dst_h = _dst_h
 					});
 
-					return { write_section_end <= dst_slice_end, write_section_end >= dst_slice_end };
+					return { input_consumed, output_covered };
 				}
 
 				out.push_back
 				({
 					.src = section->get_raw_texture(),
 					.xform = surface_transform::identity,
+					.base_addr = section->get_section_base(),
 					.level = 0,
 					.src_x = static_cast<u16>(src_offset.x),         // src.x
 					.src_y = static_cast<u16>(src_offset.y),         // src.y
 					.dst_x = static_cast<u16>(dst_offset.x),         // dst.x
-					.dst_y = static_cast<u16>(dst_y - dst_slice_begin),  // dst.y
-					.dst_z = 0,
+					.dst_y = static_cast<u16>(dst_y),                // dst.y
+					.dst_z = slice,
 					.src_w = src_w,
 					.src_h = height,
 					.dst_w = dst_w,
 					.dst_h = height
 				});
 
-				return { write_section_end <= dst_slice_end, write_section_end >= dst_slice_end };
+				return { input_consumed, output_covered };
 			};
 
 			u32 current_address = attr.address;
