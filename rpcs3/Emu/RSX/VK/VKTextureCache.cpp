@@ -760,7 +760,7 @@ namespace vk
 	{
 		const auto& sections_to_copy = desc.sections_to_copy;
 		auto _template = get_template_from_collection_impl(sections_to_copy);
-		const u8 mip_count = 1 + sections_to_copy.reduce(0, FN(std::max<u8>(x, y.level)));
+		const u8 mip_count = desc.exact_mip_count();
 		auto result = create_temporary_subresource_view_impl(cmd, _template, VK_IMAGE_TYPE_2D,
 			VK_IMAGE_VIEW_TYPE_CUBE, desc.gcm_format, desc.width, desc.height, 1, mip_count, desc.remap);
 
@@ -809,8 +809,9 @@ namespace vk
 	{
 		const auto& sections_to_copy = desc.sections_to_copy;
 		auto _template = get_template_from_collection_impl(sections_to_copy);
+		const u8 mip_count = desc.exact_mip_count();
 		auto result = create_temporary_subresource_view_impl(cmd, _template, VK_IMAGE_TYPE_3D,
-			VK_IMAGE_VIEW_TYPE_3D, desc.gcm_format, desc.width, desc.height, desc.depth, 1, desc.remap);
+			VK_IMAGE_VIEW_TYPE_3D, desc.gcm_format, desc.width, desc.height, desc.depth, mip_count, desc.remap);
 
 		if (!result)
 		{
@@ -820,7 +821,7 @@ namespace vk
 
 		const auto image = result->image();
 		VkImageAspectFlags dst_aspect = vk::get_aspect_flags(result->info.format);
-		VkImageSubresourceRange dst_range = { dst_aspect, 0, 1, 0, 1 };
+		VkImageSubresourceRange dst_range = { dst_aspect, 0, mip_count, 0, 1 };
 		vk::change_image_layout(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dst_range);
 
 		if (desc.force_bg_load)
