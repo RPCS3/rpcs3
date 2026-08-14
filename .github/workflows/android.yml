@@ -11,6 +11,14 @@ on:
         type: choice
         options: [debug, release]
         default: debug
+      publish_release:
+        description: Publish a signed GitHub Release (release variant only)
+        type: boolean
+        default: false
+      release_tag:
+        description: Release tag, e.g. v0.1.0 (blank = auto from date and commit)
+        type: string
+        default: ''
       rebuild_deps:
         description: Force rebuild of LLVM and FFmpeg (ignores cache)
         type: boolean
@@ -25,11 +33,14 @@ env:
   CMAKE_VERSION: 3.31.6
   ANDROID_API: 31
   VARIANT: ${{ inputs.variant || 'debug' }}
+  PUBLISH_RELEASE: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_release && inputs.variant == 'release' }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 350
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout
@@ -126,11 +137,30 @@ jobs:
           restore-keys: |
             cxx-${{ env.VARIANT }}-${{ env.NDK_VERSION }}-
 
+      - name: Decode signing keystore
+        if: env.VARIANT == 'release'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::VARIANT=release needs the KEYSTORE_BASE64 secret; refusing to ship a debug-signed release"
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/signing"
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/signing/release.jks"
+          if [ ! -s "$RUNNER_TEMP/signing/release.jks" ]; then
+            echo "::error::decoded keystore is empty - check the KEYSTORE_BASE64 secret"
+            exit 1
+          fi
+          echo "KEYSTORE_PATH=$RUNNER_TEMP/signing/release.jks" >> "$GITHUB_ENV"
+
       - name: Build APK
         working-directory: android
         env:
           CMAKE_C_COMPILER_LAUNCHER: ccache
           CMAKE_CXX_COMPILER_LAUNCHER: ccache
+          KEYSTORE_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
         run: |
           if [ "$VARIANT" = "release" ]; then suffix=Release; else suffix=Debug; fi
           flavors="standard antutu ludashi pubg"
@@ -156,6 +186,57 @@ jobs:
               exit 1
             fi
           done
+
+      - name: Verify release signature
+        if: env.VARIANT == 'release'
+        working-directory: android
+        run: |
+          apksigner=$(find "$ANDROID_SDK_ROOT/build-tools" -name apksigner | sort -V | tail -1)
+          echo "using $apksigner"
+          for apk in $(find app/build/outputs/apk -name '*-release*.apk'); do
+            echo "== $apk"
+            "$apksigner" verify --print-certs "$apk" | grep -E 'Signer #1 certificate (DN|SHA-256 digest)'
+            if "$apksigner" verify --print-certs "$apk" | grep -qi 'CN=Android Debug'; then
+              echo "::error::$apk is debug-signed"
+              exit 1
+            fi
+          done
+
+      - name: Stage release assets
+        if: env.PUBLISH_RELEASE == 'true'
+        id: assets
+        working-directory: android
+        run: |
+          tag="${{ inputs.release_tag }}"
+          if [ -z "$tag" ]; then
+            tag="v$(date -u +%Y.%m.%d)-$(git rev-parse --short HEAD)"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+          mkdir -p "$RUNNER_TEMP/release"
+          for f in standard antutu ludashi pubg; do
+            src=$(find "app/build/outputs/apk/$f/release" -name '*.apk' | head -1)
+            [ -n "$src" ] || { echo "::error::no release APK for flavor $f"; exit 1; }
+            cp "$src" "$RUNNER_TEMP/release/ps3native-$f-$tag.apk"
+          done
+
+          cd "$RUNNER_TEMP/release"
+          sha256sum *.apk > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Publish GitHub Release
+        if: env.PUBLISH_RELEASE == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.assets.outputs.tag }}
+          name: PS3Native ${{ steps.assets.outputs.tag }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            ${{ runner.temp }}/release/*.apk
+            ${{ runner.temp }}/release/SHA256SUMS.txt
 
       - name: Upload standard APK
         uses: actions/upload-artifact@v4
