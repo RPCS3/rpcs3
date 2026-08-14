@@ -321,6 +321,16 @@ namespace rsx
 
 			u8 exact_mip_count() const
 			{
+				switch (op)
+				{
+				case rsx::deferred_request_command::cubemap_unwrap:
+					return static_cast<u8>(mipmaps);
+				case rsx::deferred_request_command::mipmap_gather:
+					return static_cast<u8>(sections_to_copy.size());
+				default:
+					break;
+				}
+
 				return 1 + sections_to_copy.reduce(0, FN(std::max<u8>(x, y.level)));
 			}
 
@@ -1865,6 +1875,31 @@ namespace rsx
 			return evicted_set.violation_handled;
 		}
 
+		// Expands a _3d_unwrap descriptor into the explicit slice list used by _3d_gather.
+		static void expand_3d_unwrap_sections(rsx::simple_array<copy_region_descriptor>& sections, const deferred_subresource& desc, u8 level)
+		{
+			sections.reserve(sections.size() + desc.depth);
+
+			for (u16 n = 0; n < desc.depth; ++n)
+			{
+				sections.push_back(
+				{
+					.src = desc.external_handle,
+					.xform = surface_transform::coordinate_transform,
+					.level = level,
+					.src_x = 0,
+					.src_y = static_cast<u16>(desc.slice_h * n),
+					.dst_x = 0,
+					.dst_y = 0,
+					.dst_z = n,
+					.src_w = desc.width,
+					.src_h = desc.height,
+					.dst_w = desc.width,
+					.dst_h = desc.height
+				});
+			}
+		}
+
 		image_view_type create_temporary_subresource(commandbuffer_type &cmd, deferred_subresource& desc)
 		{
 			if (!desc.do_not_cache) [[likely]]
@@ -1939,25 +1974,7 @@ namespace rsx
 			case deferred_request_command::_3d_unwrap:
 			{
 				rsx::simple_array<copy_region_descriptor> sections;
-				sections.resize(desc.depth);
-				for (u16 n = 0; n < desc.depth; ++n)
-				{
-					sections[n] =
-					{
-						.src = desc.external_handle,
-						.xform = surface_transform::coordinate_transform,
-						.level = 0,
-						.src_x = 0,
-						.src_y = static_cast<u16>(desc.slice_h * n),
-						.dst_x = 0,
-						.dst_y = 0,
-						.dst_z = n,
-						.src_w = desc.width,
-						.src_h = desc.height,
-						.dst_w = desc.width,
-						.dst_h = desc.height
-					};
-				}
+				expand_3d_unwrap_sections(sections, desc, 0);
 
 				auto unwrap_desc = desc;
 				unwrap_desc.sections_to_copy = std::move(sections);
@@ -2425,6 +2442,133 @@ namespace rsx
 			return result.first;
 		}
 
+		// Combine multiple mip level scan results into one gather op
+		template <typename RsxTextureType, typename surface_store_type, typename ...Args>
+		void gather_3d_mipmap_levels(
+			commandbuffer_type& cmd,
+			sampled_image_descriptor& base_level,
+			const RsxTextureType& tex,
+			const image_section_attributes_t& attributes,
+			const size3f& scale,
+			texture_cache_search_options options,
+			surface_store_type& m_rtts,
+			Args&&... extras)
+		{
+			auto& desc = base_level.external_subresource_desc;
+			rsx::simple_array<copy_region_descriptor> sections;
+			auto attr2 = attributes;
+			u32 mipchain_length = static_cast<u32>(get_texture_size(tex, 0));
+			bool force_bg_load = desc.force_bg_load;
+			u16 levels_found = 1;
+
+			options.skip_texture_merge = false;        //<- We should use this for a speedup but it is currently broken :(
+			options.skip_texture_barriers = true;      //<- We'll be copying the data out, ignore texture barriers.
+			options.prefer_surface_cache = (base_level.upload_context == rsx::texture_upload_context::framebuffer_storage);
+
+			for (u8 level = 1; level < attributes.mipmaps; ++level)
+			{
+				attr2.address = attributes.address + mipchain_length;
+				attr2.width = std::max<u16>(attr2.width / 2, 1);
+				attr2.height = std::max<u16>(attr2.height / 2, 1);
+				attr2.depth = std::max<u16>(attr2.depth / 2, 1);
+				attr2.mipmaps = 1;
+
+				// NOTE: Linear textures have the higher mip levels keep the same pitch as the base. This does not work for swizzled though.
+				if (attributes.swizzled)
+				{
+					attr2.pitch = get_format_packed_pitch(attr2.gcm_format, attr2.width, tex.border_type() == CELL_GCM_TEXTURE_BORDER_TEXTURE, true);
+				}
+
+				const u32 level_size = static_cast<u32>(get_texture_size(tex, level));
+				if (!level_size || !attr2.pitch)
+				{
+					break;
+				}
+
+				attr2.slice_h = static_cast<u16>((level_size / attr2.pitch) / attr2.depth);
+
+				const auto range = utils::address_range32::start_length(attr2.address, level_size);
+				auto ret = fast_texture_search(cmd, attr2, scale, tex.decoded_remap(),
+					options, range, rsx::texture_dimension_extended::texture_dimension_3d,
+					m_rtts, std::forward<Args>(extras)...);
+
+				if (!ret.validate() || ret.image_handle)
+				{
+					// Level is unavailable, or resolved to a whole image which we cannot splice in as a 2D source.
+					break;
+				}
+
+				if (sections.empty())
+				{
+					// Expand the base sections here. One-shot.
+					if (desc.op == deferred_request_command::_3d_unwrap)
+					{
+						expand_3d_unwrap_sections(sections, desc, 0);
+					}
+					else
+					{
+						sections = std::move(desc.sections_to_copy);
+					}
+
+					ensure(!sections.empty()); // Impossible situation
+				}
+
+				auto& sub_desc = ret.external_subresource_desc;
+				const auto insert_pos = sections.size();
+
+				switch (sub_desc.op)
+				{
+				case deferred_request_command::_3d_unwrap:
+					expand_3d_unwrap_sections(sections, sub_desc, level);
+					break;
+				case deferred_request_command::copy_image_static:
+				case deferred_request_command::copy_image_dynamic:
+				case deferred_request_command::blit_image_static:
+				case deferred_request_command::atlas_gather:
+					if (attr2.depth > 1) break;
+					[[ fallthrough ]];
+				case deferred_request_command::_3d_gather:
+					for (const auto& section : sub_desc.sections_to_copy)
+					{
+						sections.push_back(section);
+						sections.back().level = level;
+					}
+					break;
+				default:
+					break;
+				}
+
+				if (sections.size() == insert_pos)
+				{
+					// Nothing was added.
+					break;
+				}
+
+				force_bg_load |= sub_desc.force_bg_load;
+				mipchain_length += level_size;
+				levels_found++;
+			}
+
+			if (levels_found == 1)
+			{
+				// No new mip levels found. Restore the original desc if it was modified.
+				if (desc.sections_to_copy.empty() &&
+					desc.op != deferred_request_command::_3d_unwrap)
+				{
+					ensure(!sections.empty());
+					desc.sections_to_copy = std::move(sections);
+				}
+				return;
+			}
+
+			// Create the new descriptor for all our new data.
+			desc.op = deferred_request_command::_3d_gather;
+			desc.mipmaps = levels_found;
+			desc.force_bg_load = force_bg_load;
+			desc.sections_to_copy = std::move(sections);
+			desc.cache_range = utils::address_range32::start_length(attributes.address, mipchain_length);
+		}
+
 		template <typename RsxTextureType, typename surface_store_type, typename ...Args>
 		sampled_image_descriptor upload_texture(commandbuffer_type& cmd, const RsxTextureType& tex, surface_store_type& m_rtts, Args&&... extras)
 		{
@@ -2560,6 +2704,15 @@ namespace rsx
 				}
 
 				result.surface_cache_tag = m_rtts.write_tag;
+
+				// A 3D texture keeps each mipmap level in its own group of depth slices separate as complete sub-textures.
+				// Scan for each of the mip levels individually. Best-effort impl, we cannot promise to capture all of them.
+				if (attributes.mipmaps > 1 && !result.image_handle &&
+					(result.external_subresource_desc.op == deferred_request_command::_3d_gather ||
+					 result.external_subresource_desc.op == deferred_request_command::_3d_unwrap))
+				{
+					gather_3d_mipmap_levels(cmd, result, tex, attributes, scale, options, m_rtts, std::forward<Args>(extras)...);
+				}
 
 				if (subsurface_count == 1)
 				{
