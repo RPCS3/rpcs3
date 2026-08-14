@@ -255,15 +255,12 @@ namespace rsx
 			bool unordered_list = false;
 
 			rsx::simple_array<sort_helper> sort_list;
-			rsx::simple_array<utils::address_range32> sort_ranges;
 			sort_list.reserve(available_slices);
-			sort_ranges.reserve(available_slices);
 
 			// Generate sorting tree if both resources are available and overlapping
 			for (u32 index = 0; index < fbos.size(); ++index)
 			{
 				const auto range = fbos[index].surface->get_memory_range();
-				sort_ranges.push_back(range);
 				sort_list.push_back({
 					.tag = fbos[index].surface->last_use_tag,
 					.list = 0,
@@ -278,7 +275,6 @@ namespace rsx
 					continue;
 
 				const auto range = local[index]->get_section_range();
-				sort_ranges.push_back(range);
 				sort_list.push_back({
 					.tag = local[index]->last_write_tag,
 					.list = 1,
@@ -293,14 +289,9 @@ namespace rsx
 			}
 
 			// Check if ordered
-			for (u32 i = 0; i < sort_list.size(); ++i)
+			for (u32 i = 1; i < sort_list.size(); ++i)
 			{
-				if (i == 0)
-				{
-					continue;
-				}
-
-				if (sort_ranges[i].start < sort_ranges[i - 1].end)
+				if (sort_list[i].bounds.start <= sort_list[i - 1].bounds.end)
 				{
 					unordered_list = true;
 					break;
