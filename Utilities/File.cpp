@@ -148,6 +148,7 @@ static fs::error to_error(DWORD e)
 #include <sys/statvfs.h>
 #include <sys/file.h>
 #include <sys/uio.h>
+#include <sys/ioctl.h>
 #include <dirent.h>
 #include <fcntl.h>
 #include <libgen.h>
@@ -159,12 +160,19 @@ static fs::error to_error(DWORD e)
 #include <copyfile.h>
 #include <mach-o/dyld.h>
 #include <limits.h>
+#include <sys/disk.h>
+#include <sys/param.h>
+#include <sys/mount.h>
 #elif defined(__linux__) || defined(__sun)
 #include <sys/sendfile.h>
 #include <sys/syscall.h>
+#include <sys/sysmacros.h>
 #include <linux/fs.h>
 #else
 #include <fstream>
+#include <sys/disk.h>
+#include <sys/param.h>
+#include <sys/mount.h>
 #endif
 
 static fs::error to_error(int e)
@@ -183,6 +191,59 @@ static fs::error to_error(int e)
 	case EXDEV: return fs::error::xdev;
 	default: return fs::error::unknown;
 	}
+}
+
+// Check whether the provided device node is an optical drive (e.g. a Blu-Ray Disc drive)
+static bool is_optical_device_node(const struct ::stat& file_info)
+{
+#if defined(__linux__)
+	// An optical drive is exposed as a block device using the SCSI CD-ROM major number (e.g. "/dev/sr0", "/dev/scd0" or the "/dev/cdrom" link)
+	return S_ISBLK(file_info.st_mode) && major(file_info.st_rdev) == 11;
+#elif defined(__APPLE__)
+	// The raw (unbuffered) device is a character device (e.g. "/dev/rdisk2").
+	// NOTE: there is no cheap way to tell an optical drive from any other raw disk here, so any raw disk node is accepted
+	return S_ISCHR(file_info.st_mode);
+#else
+	// On the BSDs an optical drive is a character device (e.g. "/dev/cd0")
+	return S_ISCHR(file_info.st_mode) || S_ISBLK(file_info.st_mode);
+#endif
+}
+
+// Retrieve the size of a raw device: "fstat()" reports no size (0) on such a device
+static u64 get_raw_device_size(int fd)
+{
+#if defined(BLKGETSIZE64)
+	if (u64 size = 0; ::ioctl(fd, BLKGETSIZE64, &size) == 0)
+	{
+		return size;
+	}
+#endif
+#if defined(DKIOCGETBLOCKCOUNT) && defined(DKIOCGETBLOCKSIZE)
+	if (u64 block_count = 0; ::ioctl(fd, DKIOCGETBLOCKCOUNT, &block_count) == 0)
+	{
+		if (u32 block_size = 0; ::ioctl(fd, DKIOCGETBLOCKSIZE, &block_size) == 0)
+		{
+			return block_count * block_size;
+		}
+	}
+#endif
+#if defined(DIOCGMEDIASIZE)
+	if (off_t media_size = 0; ::ioctl(fd, DIOCGMEDIASIZE, &media_size) == 0)
+	{
+		return static_cast<u64>(media_size);
+	}
+#endif
+
+	// Fallback: seek to the end of the device (restoring the current position afterwards)
+	const off_t old_pos = ::lseek(fd, 0, SEEK_CUR);
+	const off_t end_pos = ::lseek(fd, 0, SEEK_END);
+
+	if (old_pos >= 0)
+	{
+		::lseek(fd, old_pos, SEEK_SET);
+	}
+
+	return end_pos > 0 ? static_cast<u64>(end_pos) : 0;
 }
 
 #endif
@@ -629,10 +690,11 @@ namespace fs
 	class unix_file final : public file_base
 	{
 		int m_fd;
+		bool m_raw_device;
 
 	public:
-		unix_file(int fd)
-			: m_fd(fd)
+		unix_file(int fd, bool raw_device = false)
+			: m_fd(fd), m_raw_device(raw_device)
 		{
 		}
 
@@ -651,8 +713,8 @@ namespace fs
 
 			stat_t info {};
 			info.is_directory = S_ISDIR(file_info.st_mode);
-			info.is_writable = file_info.st_mode & 0200; // HACK: approximation
-			info.size = file_info.st_size;
+			info.is_writable = !m_raw_device && (file_info.st_mode & 0200); // HACK: approximation
+			info.size = m_raw_device ? get_raw_device_size(m_fd) : file_info.st_size; // A raw device reports no size through "fstat()"
 			info.atime = file_info.st_atime;
 			info.mtime = file_info.st_mtime;
 			info.ctime = info.mtime;
@@ -758,6 +820,12 @@ namespace fs
 
 		u64 size() override
 		{
+			if (m_raw_device)
+			{
+				// For a raw device, we need to use an ioctl ("fstat()" would always report a null size)
+				return get_raw_device_size(m_fd);
+			}
+
 			struct ::stat file_info;
 			ensure(::fstat(m_fd, &file_info) == 0); // "file::size"
 
@@ -1120,8 +1188,24 @@ bool fs::is_optical_raw_device([[maybe_unused]] const std::string& path)
 	{
 		return true;
 	}
-#endif
+
 	return false;
+#else
+	// Skip a useless check if the path cannot point to a device node (device nodes always live in "/dev")
+	if (!path.starts_with("/dev/"))
+	{
+		return false;
+	}
+
+	struct ::stat file_info;
+
+	if (::stat(path.c_str(), &file_info) != 0)
+	{
+		return false;
+	}
+
+	return is_optical_device_node(file_info);
+#endif
 }
 
 bool fs::get_optical_raw_device(const std::string& path, std::string* raw_device)
@@ -1158,8 +1242,109 @@ bool fs::get_optical_raw_device(const std::string& path, std::string* raw_device
 
 		return true;
 	}
-#endif
+
 	return false;
+#elif defined(__linux__)
+	// Here the path points to a mounted optical disc (e.g. "/media/user/PS3_DISC"), so retrieve the device backing it.
+	// NOTE: "st_dev" of anything stored on a filesystem backed by a block device matches "st_rdev" of the device itself
+	struct ::stat file_info;
+
+	if (::stat(path.c_str(), &file_info) != 0)
+	{
+		return false;
+	}
+
+	const dev_t device_id = S_ISBLK(file_info.st_mode) ? file_info.st_rdev : file_info.st_dev;
+
+	// Skip a useless check to detect an optical raw device if the device is not using the SCSI CD-ROM major number
+	if (major(device_id) != 11)
+	{
+		return false;
+	}
+
+	const std::string dev_major = std::to_string(major(device_id));
+	const std::string dev_minor = std::to_string(minor(device_id));
+
+	// Retrieve the device name from sysfs (e.g. "/sys/dev/block/11:0" -> "../../devices/[...]/block/sr0")
+	std::string device_path;
+	char link_target[1024]{};
+
+	if (const ssize_t len = ::readlink(("/sys/dev/block/" + dev_major + ":" + dev_minor).c_str(), link_target, sizeof(link_target) - 1); len > 0)
+	{
+		const std::string_view target{link_target, static_cast<usz>(len)};
+
+		device_path = "/dev/" + std::string(target.substr(target.find_last_of('/') + 1));
+	}
+	else
+	{
+		// Fallback: the minor number matches the index of the SCSI CD-ROM device
+		device_path = "/dev/sr" + dev_minor;
+	}
+
+	// Ensure the resolved node really points to the same optical device
+	struct ::stat device_info;
+
+	if (::stat(device_path.c_str(), &device_info) != 0 || device_info.st_rdev != device_id || !is_optical_device_node(device_info))
+	{
+		return false;
+	}
+
+	if (raw_device)
+	{
+		*raw_device = device_path;
+	}
+
+	return true;
+#elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
+	// Here the path points to a mounted optical disc, so retrieve the device backing the filesystem it belongs to
+	struct ::statfs mount_info;
+
+	if (::statfs(path.c_str(), &mount_info) != 0)
+	{
+		return false;
+	}
+
+	// Skip a useless check to detect an optical raw device if the filesystem is not one of those used by a PS3 disc
+	const std::string_view fs_type = mount_info.f_fstypename;
+
+	if (fs_type != "cd9660" && fs_type != "udf")
+	{
+		return false;
+	}
+
+	std::string device_path = mount_info.f_mntfromname; // e.g. "/dev/disk2"
+
+	if (!device_path.starts_with("/dev/"))
+	{
+		return false;
+	}
+
+#ifdef __APPLE__
+	// Use the raw (unbuffered) device (e.g. "/dev/disk2" -> "/dev/rdisk2")
+	if (!device_path.starts_with("/dev/r"))
+	{
+		device_path.insert(5, 1, 'r');
+	}
+#endif
+
+	// Ensure the resolved node really points to a raw device
+	struct ::stat device_info;
+
+	if (::stat(device_path.c_str(), &device_info) != 0 || !is_optical_device_node(device_info))
+	{
+		return false;
+	}
+
+	if (raw_device)
+	{
+		*raw_device = device_path;
+	}
+
+	return true;
+#else
+	// Not supported on this platform
+	return false;
+#endif
 }
 
 bool fs::statfs(const std::string& path, fs::device_stat& info)
@@ -1790,6 +1975,9 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 
 	m_file = std::make_unique<windows_file>(handle);
 #else
+	// An optical raw device can only be read: any write related flag makes the opening fail (handled as any other error)
+	const bool raw_device = is_optical_raw_device(path);
+
 	int flags = O_CLOEXEC; // Ensures all files are closed on execl for auto updater
 
 	if (mode & fs::read && mode & fs::write) flags |= O_RDWR;
@@ -1805,7 +1993,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 
 	if (mode & fs::write && mode & fs::unread)
 	{
-		if (!(mode & (fs::excl + fs::lock)) && mode & fs::trunc)
+		if (!raw_device && !(mode & (fs::excl + fs::lock)) && mode & fs::trunc)
 		{
 			// Alternative to truncation for "unread" flag (TODO)
 			if (mode & fs::create)
@@ -1836,6 +2024,21 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 	{
 		// Postpone truncation in order to avoid using O_TRUNC on a locked file
 		ensure(::ftruncate(fd, 0) == 0);
+	}
+
+	// If path points to an optical raw device, complete the file opening
+	if (raw_device)
+	{
+		// Try to retrieve the size of the content. If it fails, no disc is probably mounted so abort the file opening
+		if (!get_raw_device_size(fd))
+		{
+			::close(fd);
+			g_tls_error = fs::error::noent;
+			return;
+		}
+
+		m_file = std::make_unique<unix_file>(fd, true);
+		return;
 	}
 
 	m_file = std::make_unique<unix_file>(fd);

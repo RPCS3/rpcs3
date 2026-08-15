@@ -213,10 +213,11 @@ namespace fs
 	// Check whether the path points to an existing symlink
 	bool is_symlink(const std::string& path);
 
-	// Check whether the path points to a raw device
+	// Check whether the path points to a raw device (e.g. "\\.\E:" on Windows, "/dev/sr0" on Linux, "/dev/rdisk2" on macOS)
 	bool is_optical_raw_device(const std::string& path);
 
-	// Check whether the path points to an optical drive. If so, provide the raw device in "raw_device" if requested
+	// Check whether the path points to an optical drive (either the raw device itself or the mount point of the disc
+	// inserted in it). If so, provide the raw device in "raw_device" if requested
 	bool get_optical_raw_device(const std::string& path, std::string* raw_device = nullptr);
 
 	// Get filesystem information
