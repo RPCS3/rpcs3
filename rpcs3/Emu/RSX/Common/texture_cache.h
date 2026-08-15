@@ -280,13 +280,22 @@ namespace rsx
 				});
 			}
 
+			// Key layout:
+			//   [00..15] width      - 4096 native, but res scaling can get this up to 64k.
+			//   [16..31] height     - ditto
+			//   [32..42] depth      - 512 max on RSX. One spare bit in case we ever expand 3D host-side.
+			//   [43..47] mipmaps    - log2(4096) + 1 = 13 max. Allow upto 31.
+			//   [48..55] gcm_format - only a few actual enumerants but the values are in the 0x80-0x9F range
+			//   [56..60] op         - deferred_request_command, 10 values defined, allow upto 31
+			//   [61..63] unused
 			u64 encoded_properties() const
 			{
-				return (static_cast<u64>(op) << 56) |
-					(static_cast<u64>(gcm_format & 0xff) << 48) |
-					(static_cast<u64>(depth) << 32) |
+				return (static_cast<u64>(width)) |
 					(static_cast<u64>(height) << 16) |
-					static_cast<u64>(width);
+					((static_cast<u64>(depth) & 0x7ff) << 32) |
+					((static_cast<u64>(mipmaps) & 0x1f) << 43) |
+					((static_cast<u64>(gcm_format) & 0xff) << 48) |
+					((static_cast<u64>(op) & 0x1f) << 56);
 			}
 
 			viewable_image_type as_viewable() const
