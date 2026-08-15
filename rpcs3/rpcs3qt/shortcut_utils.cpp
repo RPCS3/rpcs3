@@ -492,7 +492,7 @@ namespace gui::utils
 		std::string gameid_token_value;
 
 		const bool is_disc_without_patch = !is_archive && game->info.category == "DG" && !fs::is_file(rpcs3::utils::get_hdd0_dir() + "/game/" + game->info.serial + "/USRDIR/EBOOT.BIN");
-		const bool is_in_hdd0_game = !is_archive && !is_disc_without_patch && Emu.IsPathInsideDir(game->info.path, vfs::get("/dev_hdd0/game/"));
+		const bool is_in_hdd0_game = !is_archive && !is_disc_without_patch && Emu.IsPathInsideDir(game->info.path, rpcs3::utils::get_hdd0_dir() + "game/");
 		const bool is_hdd_game_with_different_foldername = is_in_hdd0_game && game->info.category == "HG" && !fs::is_file(rpcs3::utils::get_hdd0_dir() + "/game/" + game->info.serial + "/USRDIR/EBOOT.BIN");
 		const bool is_ps1_game_with_different_foldername = is_in_hdd0_game && game->info.category == "1P" && !fs::is_file(rpcs3::utils::get_hdd0_dir() + "/game/" + game->info.serial + "/USRDIR/ISO.BIN.EDAT");
 
