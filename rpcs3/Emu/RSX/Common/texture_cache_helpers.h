@@ -954,7 +954,7 @@ namespace rsx
 					copy_region_descriptor_type mip
 					{
 						.src = base_xfer.src,
-						.xform = surface_transform::identity,
+						.xform = base_xfer.xform,
 						.level = mipmap_level,
 
 						// NOTE: gather_texture_slices pre-applies resolution scaling

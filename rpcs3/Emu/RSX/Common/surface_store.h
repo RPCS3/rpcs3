@@ -1174,6 +1174,12 @@ namespace rsx
 						height = std::min<u32>(required_height, surface_height - src_y);
 					}
 
+					if (width_in_bytes < required_bpp) [[unlikely]]
+					{
+						// There is nothing transferable here; less than 1 pixel available.
+						continue;
+					}
+
 					// Drop any excess subpixels on the requester side if any. Ensures division generates a perfect fitting rect without rounding bugs.
 					width_in_bytes -= (width_in_bytes % required_bpp);
 
