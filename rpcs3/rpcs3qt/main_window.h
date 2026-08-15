@@ -76,7 +76,7 @@ public:
 	void Init();
 	QIcon GetAppIcon() const;
 	void OnMissingFw();
-	static bool InstallPackages(main_window* mw, QStringList file_paths = {}, bool from_boot = false);
+	static bool InstallPackages(main_window* mw, QStringList file_paths = {}, bool from_boot = false, bool from_optical_drive = false);
 	static void InstallPup(main_window* mw, QString file_path = "");
 
 Q_SIGNALS:
@@ -147,7 +147,7 @@ private:
 	void CreateShortCuts(const std::map<std::string, QString>& paths, std::set<gui::utils::shortcut_location> locations);
 
 	static bool InstallFileInExData(const std::string& extension, const QString& path, const std::string& filename);
-	static bool HandlePackageInstallation(main_window* mw, QStringList file_paths, bool from_boot);
+	static bool HandlePackageInstallation(main_window* mw, QStringList file_paths, bool from_boot, bool from_optical_drive);
 	static void HandlePupInstallation(main_window* mw, const QString& file_path, const QString& dir_path = "");
 
 	void ExtractPup();

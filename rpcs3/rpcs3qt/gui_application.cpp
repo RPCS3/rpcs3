@@ -946,7 +946,7 @@ void gui_application::InitializeCallbacks()
 
 	if (m_show_gui) // If this is false, we already have a fallback in the main_application.
 	{
-		callbacks.on_install_pkgs = [this](const std::vector<std::string>& pkgs)
+		callbacks.on_install_pkgs = [this](const std::vector<std::string>& pkgs, bool from_optical_drive)
 		{
 			ensure(!pkgs.empty());
 			QStringList pkg_list;
@@ -954,7 +954,7 @@ void gui_application::InitializeCallbacks()
 			{
 				pkg_list << QString::fromStdString(pkg);
 			}
-			return main_window::InstallPackages(m_main_window, pkg_list, true);
+			return main_window::InstallPackages(m_main_window, pkg_list, true, from_optical_drive);
 		};
 	}
 
