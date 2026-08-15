@@ -39,8 +39,8 @@ namespace rsx
 		bool is_depth = false;
 		bool is_clipped = false;
 
-		coordu src_area;
-		coordu dst_area;
+		coordu src_area;  //<- Always computed in source image coordinates
+		coordu dst_area;  //<- Always computed in destination (requester) image coordinates
 	};
 
 	template <typename surface_type>
