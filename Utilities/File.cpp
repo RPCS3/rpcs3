@@ -820,16 +820,16 @@ namespace fs
 
 		u64 size() override
 		{
-			if (m_raw_device)
+			if (!m_raw_device)
 			{
-				// For a raw device, we need to use an ioctl ("fstat()" would always report a null size)
-				return get_raw_device_size(m_fd);
+				struct ::stat file_info;
+				ensure(::fstat(m_fd, &file_info) == 0); // "file::size"
+
+				return file_info.st_size;
 			}
 
-			struct ::stat file_info;
-			ensure(::fstat(m_fd, &file_info) == 0); // "file::size"
-
-			return file_info.st_size;
+			// For a raw device, we need to use an ioctl ("fstat()" would always report a null size)
+			return get_raw_device_size(m_fd);
 		}
 
 		native_handle get_handle() override
