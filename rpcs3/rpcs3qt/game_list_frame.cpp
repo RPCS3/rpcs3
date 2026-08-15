@@ -349,6 +349,8 @@ bool game_list_frame::IsEntryVisible(const game_info& game, bool search_fallback
 // Show the amount of listed games (and the Disc/HDD/Other share) in the dock title
 void game_list_frame::UpdateWindowTitle(const std::vector<game_info>& matching_apps)
 {
+	const std::string cat_disc_game = cat::cat_disc_game.toStdString();
+	const std::string cat_hdd_game = cat::cat_hdd_game.toStdString();
 	usz disc_games = 0;
 	usz hdd_games = 0;
 	usz other_games = 0;
@@ -357,13 +359,11 @@ void game_list_frame::UpdateWindowTitle(const std::vector<game_info>& matching_a
 	{
 		if (!app) continue;
 
-		const QString category = QString::fromStdString(app->info.category);
-
-		if (category == cat::cat_disc_game)
+		if (app->info.category == cat_disc_game)
 		{
 			disc_games++;
 		}
-		else if (category == cat::cat_hdd_game)
+		else if (app->info.category == cat_hdd_game)
 		{
 			hdd_games++;
 		}
