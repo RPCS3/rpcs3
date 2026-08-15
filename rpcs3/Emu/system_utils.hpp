@@ -23,7 +23,7 @@ namespace rpcs3::utils
 
 	u32 check_user(std::string_view user);
 
-	bool install_pkg(const std::string& path);
+	bool install_pkg(const std::string& path, bool from_optical_drive);
 
 	// VFS directories and disk usage
 	std::vector<std::pair<std::string, u64>> get_vfs_disk_usage();

@@ -1310,7 +1310,7 @@ void package_reader::extract_worker()
 	}
 }
 
-package_install_result package_reader::extract_data(std::deque<package_reader>& readers, std::deque<std::string>& bootable_paths)
+package_install_result package_reader::extract_data(std::deque<package_reader>& readers, std::deque<std::string>& bootable_paths, bool from_optical_drive)
 {
 	package_install_result::error_type error = package_install_result::error_type::no_error;
 	usz num_failures = 0;
@@ -1362,7 +1362,8 @@ package_install_result package_reader::extract_data(std::deque<package_reader>& 
 
 		if (reader.m_num_failures == 0)
 		{
-			const usz thread_count = std::min<usz>(utils::get_thread_count(), reader.m_install_entries.size());
+			// Disc archives don't like multithreaded file reads, so let's just use a single thread here
+			const usz thread_count = from_optical_drive ? 1 : std::min<usz>(utils::get_thread_count(), reader.m_install_entries.size());
 			atomic_t<u32> num_threads_succeeded {0}; // Check if any thread didn't finish. For example when hitting an exception.
 
 			if (thread_count > 1)
