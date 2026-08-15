@@ -593,7 +593,7 @@ namespace rsx
 		}
 
 		template <typename sampled_image_descriptor>
-		void convert_image_blit_to_clip_descriptor(
+		void convert_image_transfer_to_clip_descriptor(
 			sampled_image_descriptor& desc,
 			const texture_channel_remap_t& decoded_remap,
 			bool cyclic_reference)
@@ -601,9 +601,9 @@ namespace rsx
 			// Our "desired" output is the source window, and the "actual" output is the real size
 			const auto& section = desc.external_subresource_desc.sections_to_copy[0];
 
-			// Apply AA correct factor
 			auto surface_width = section.src->width();
 			auto surface_height = section.src->height();
+
 			switch (section.src->samples())
 			{
 			case 1:
@@ -681,6 +681,10 @@ namespace rsx
 				ensure(is_gcm_depth_format(attr2.gcm_format) == is_depth);
 			}
 
+			// This function is only ever called when the source region fully covers the request.
+			// In that case, src_rect == dst_rect in normalized dimensions.
+			const coord3u xfer_rect = { 0, 0, 0, attr2.width, attr2.height, 1 };
+
 			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_2d ||
 				extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d) [[likely]]
 			{
@@ -729,7 +733,8 @@ namespace rsx
 					const auto command = surface_is_rop_target ? deferred_request_command::copy_image_dynamic : deferred_request_command::copy_image_static;
 
 					texptr->memory_barrier(cmd, rsx::surface_access::transfer_read);
-					return { texptr->get_surface(rsx::surface_access::transfer_read), command, attr2, {},
+					return { texptr->get_surface(rsx::surface_access::transfer_read), command, attr2,
+							xfer_rect, xfer_rect, rsx::surface_transform::coordinate_transform,
 							texture_upload_context::framebuffer_storage, format_class, scale,
 							extended_dimension, decoded_remap };
 				}
@@ -753,7 +758,7 @@ namespace rsx
 			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_3d)
 			{
 				return{ texptr->get_surface(rsx::surface_access::transfer_read), deferred_request_command::_3d_unwrap,
-						attr2, {},
+						attr2, xfer_rect, xfer_rect, rsx::surface_transform::coordinate_transform, //<- TODO: Check if the 3D unwrap propagates the xform properly
 						texture_upload_context::framebuffer_storage, format_class, scale,
 						rsx::texture_dimension_extended::texture_dimension_3d, decoded_remap };
 			}
@@ -761,7 +766,7 @@ namespace rsx
 			ensure(extended_dimension == rsx::texture_dimension_extended::texture_dimension_cubemap);
 
 			return{ texptr->get_surface(rsx::surface_access::transfer_read), deferred_request_command::cubemap_unwrap,
-					attr2, {},
+					attr2, xfer_rect, xfer_rect, rsx::surface_transform::coordinate_transform, //<- TODO: Check if the Cube unwrap propagates the xform properly
 					texture_upload_context::framebuffer_storage, format_class, scale,
 					rsx::texture_dimension_extended::texture_dimension_cubemap, decoded_remap };
 		}
@@ -842,7 +847,7 @@ namespace rsx
 				attr2.height = scaled_h;
 
 				sampled_image_descriptor desc = { nullptr, deferred_request_command::cubemap_gather,
-						attr2, {},
+						attr2, {}, {}, rsx::surface_transform::identity,
 						upload_context, format_class, scale,
 						rsx::texture_dimension_extended::texture_dimension_cubemap, decoded_remap };
 
@@ -855,7 +860,7 @@ namespace rsx
 				attr2.height = scaled_h;
 
 				sampled_image_descriptor desc = { nullptr, deferred_request_command::_3d_gather,
-					attr2, {},
+					attr2, {}, {}, rsx::surface_transform::identity,
 					upload_context, format_class, scale,
 					rsx::texture_dimension_extended::texture_dimension_3d, decoded_remap };
 
@@ -875,7 +880,7 @@ namespace rsx
 			}
 
 			sampled_image_descriptor result = { nullptr, deferred_request_command::atlas_gather,
-					attr2, {}, upload_context, format_class,
+					attr2, {}, {}, rsx::surface_transform::identity, upload_context, format_class,
 					scale, rsx::texture_dimension_extended::texture_dimension_2d, decoded_remap };
 
 			result.external_subresource_desc.force_bg_load = !gather_texture_slices(cmd, result.external_subresource_desc.sections_to_copy, fbos, local, attr, 1, is_depth);
@@ -926,17 +931,18 @@ namespace rsx
 				case deferred_request_command::copy_image_dynamic:
 				case deferred_request_command::copy_image_static:
 				{
+					const auto& base_xfer = level.external_subresource_desc.sections_to_copy.front();
 					copy_region_descriptor_type mip
 					{
-						.src = level.external_subresource_desc.external_handle,
-						.xform = surface_transform::coordinate_transform,
+						.src = base_xfer.src,
+						.xform = surface_transform::identity,
 						.level = mipmap_level,
 
 						// NOTE: gather_texture_slices pre-applies resolution scaling
-						.src_x = level.external_subresource_desc.x,
-						.src_y = level.external_subresource_desc.y,
-						.src_w = level.external_subresource_desc.width,
-						.src_h = level.external_subresource_desc.height,
+						.src_x = base_xfer.src_x,
+						.src_y = base_xfer.src_y,
+						.src_w = base_xfer.src_w,
+						.src_h = base_xfer.src_h,
 
 						.dst_w = attr.width,
 						.dst_h = attr.height

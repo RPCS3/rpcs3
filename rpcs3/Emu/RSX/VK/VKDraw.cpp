@@ -869,12 +869,16 @@ bool VKGSRender::bind_interpreter_texture_env()
 			flatten_op.op = desc->is_cyclic_reference
 				? rsx::deferred_request_command::copy_image_dynamic
 				: rsx::deferred_request_command::copy_image_static;
-			flatten_op.width = flatten_op.external_handle->width();
-			flatten_op.height = flatten_op.external_handle->height();
+			flatten_op.width = image->width();
+			flatten_op.height = image->height();
 			flatten_op.depth = 1;
 			flatten_op.gcm_format = desc->format_ex.format();
 			flatten_op.remap = decoded_remap;
 			flatten_op.cache_range = utils::address_range32::start_length(desc->ref_address, attr.pitch * attr.height);
+
+			const coord3u flatten_rect = { 0, 0, 0, flatten_op.width, flatten_op.height, 1 };
+			flatten_op.add_copy_region(image, flatten_rect, flatten_rect, desc->ref_address);
+
 			return m_texture_cache.create_temporary_subresource(*m_current_command_buffer, flatten_op);
 		}
 
