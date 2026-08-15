@@ -346,6 +346,40 @@ bool game_list_frame::IsEntryVisible(const game_info& game, bool search_fallback
 	return is_visible && matches_category() && SearchMatchesApp(QString::fromStdString(game->info.name), serial, search_fallback);
 }
 
+// Show the amount of listed games (and the Disc/HDD/Other share) in the dock title
+void game_list_frame::UpdateWindowTitle(const std::vector<game_info>& matching_apps)
+{
+	const std::string cat_disc_game = cat::cat_disc_game.toStdString();
+	const std::string cat_hdd_game = cat::cat_hdd_game.toStdString();
+	usz disc_games = 0;
+	usz hdd_games = 0;
+	usz other_games = 0;
+
+	for (const auto& app : matching_apps)
+	{
+		if (!app) continue;
+
+		if (app->info.category == cat_disc_game)
+		{
+			disc_games++;
+		}
+		else if (app->info.category == cat_hdd_game)
+		{
+			hdd_games++;
+		}
+		else
+		{
+			other_games++;
+		}
+	}
+
+	setWindowTitle(tr("Game List (%0) - Disc: %1 | HDD: %2 | Other: %3")
+		.arg(matching_apps.size())
+		.arg(disc_games)
+		.arg(hdd_games)
+		.arg(other_games));
+}
+
 void game_list_frame::push_path(const std::string& path, std::vector<std::string>& legit_paths)
 {
 	{
@@ -534,6 +568,8 @@ void game_list_frame::Refresh(const bool from_drive, const std::vector<std::stri
 		m_game_grid->populate(matching_apps, m_notes, m_titles, selected_items, m_play_hover_movies, m_play_hover_music);
 		RepaintIcons();
 	}
+
+	UpdateWindowTitle(matching_apps);
 }
 
 void game_list_frame::OnParsingFinished()
