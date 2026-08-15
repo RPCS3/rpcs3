@@ -170,7 +170,7 @@ game_list_actions::content_info game_list_actions::GetContentInfo(const std::vec
 			}
 		}
 
-		text = tr("%0 selected games - Disc: %1 | Non Disc: %2\n").arg(games.size())
+		text = tr("%0 selected games - Disc: %1 | Other: %2\n").arg(games.size())
 				.arg(content_info.disc_list.size()).arg(games.size() - content_info.disc_list.size());
 
 		text += tr("\nDisc Game Info:\n");
