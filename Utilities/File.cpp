@@ -1181,7 +1181,7 @@ bool fs::is_symlink(const std::string& path)
 	return true;
 }
 
-bool fs::is_optical_raw_device([[maybe_unused]] const std::string& path)
+bool fs::is_optical_raw_device(const std::string& path)
 {
 #ifdef _WIN32
 	if (path.starts_with("\\\\.\\"))
