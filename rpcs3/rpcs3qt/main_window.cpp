@@ -881,7 +881,7 @@ bool main_window::InstallFileInExData(const std::string& extension, const QStrin
 	return to.commit();
 }
 
-bool main_window::InstallPackages(main_window* mw, QStringList file_paths, bool from_boot)
+bool main_window::InstallPackages(main_window* mw, QStringList file_paths, bool from_boot, bool from_optical_drive)
 {
 	if (file_paths.isEmpty())
 	{
@@ -926,7 +926,7 @@ bool main_window::InstallPackages(main_window* mw, QStringList file_paths, bool 
 				return true;
 			}
 
-			return InstallPackages(mw, dir_file_paths, from_boot);
+			return InstallPackages(mw, dir_file_paths, from_boot, from_optical_drive);
 		}
 	}
 
@@ -986,26 +986,23 @@ bool main_window::InstallPackages(main_window* mw, QStringList file_paths, bool 
 
 	if (from_boot)
 	{
-		return HandlePackageInstallation(mw, file_paths, true);
+		return HandlePackageInstallation(mw, file_paths, true, from_optical_drive);
 	}
 
-	// Handle further installations with a timeout. Otherwise the source explorer instance is not usable during the following file processing.
 	if (mw)
 	{
-		QTimer::singleShot(0, [mw, paths = std::move(file_paths)]()
+		// Handle further installations with a timeout. Otherwise the source explorer instance is not usable during the following file processing.
+		QTimer::singleShot(0, [mw, from_optical_drive, paths = std::move(file_paths)]()
 		{
-			HandlePackageInstallation(mw, paths, false);
+			HandlePackageInstallation(mw, paths, false, from_optical_drive);
 		});
-	}
-	else
-	{
-		return HandlePackageInstallation(nullptr, file_paths, false);
+		return true;
 	}
 
-	return true;
+	return HandlePackageInstallation(nullptr, file_paths, false, from_optical_drive);
 }
 
-bool main_window::HandlePackageInstallation(main_window* mw, QStringList file_paths, bool from_boot)
+bool main_window::HandlePackageInstallation(main_window* mw, QStringList file_paths, bool from_boot, bool from_optical_drive)
 {
 	if (file_paths.empty())
 	{
@@ -1135,9 +1132,9 @@ bool main_window::HandlePackageInstallation(main_window* mw, QStringList file_pa
 	std::deque<std::string> bootable_paths;
 
 	// Run PKG unpacking asynchronously
-	named_thread worker("PKG Installer", [&readers, &result, &bootable_paths]
+	named_thread worker("PKG Installer", [&readers, &result, &bootable_paths, from_optical_drive]
 	{
-		result = package_reader::extract_data(readers, bootable_paths);
+		result = package_reader::extract_data(readers, bootable_paths, from_optical_drive);
 		return result.error == package_install_result::error_type::no_error;
 	});
 

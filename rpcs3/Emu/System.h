@@ -109,7 +109,7 @@ struct EmuCallbacks
 	std::function<std::string(std::string_view)> resolve_path = [](std::string_view arg){ return std::string{arg}; }; // Resolve path using Qt (returns empty string if the file doesn't exist)
 	std::function<std::string(std::string_view)> resolve_path_may_not_exist = [](std::string_view arg){ return std::string{arg}; }; // Resolve path using Qt
 	std::function<std::vector<std::string>()> get_font_dirs;
-	std::function<bool(const std::vector<std::string>&)> on_install_pkgs;
+	std::function<bool(const std::vector<std::string>&, bool)> on_install_pkgs;
 	std::function<void(u32)> add_breakpoint;
 	std::function<bool()> display_sleep_control_supported;
 	std::function<void(bool)> enable_display_sleep;
