@@ -545,8 +545,6 @@ void game_list_frame::Refresh(const bool from_drive, const std::vector<std::stri
 		}
 	}
 
-	UpdateWindowTitle(matching_apps);
-
 	if (m_is_list_layout)
 	{
 		m_game_grid->clear_list();
@@ -570,6 +568,8 @@ void game_list_frame::Refresh(const bool from_drive, const std::vector<std::stri
 		m_game_grid->populate(matching_apps, m_notes, m_titles, selected_items, m_play_hover_movies, m_play_hover_music);
 		RepaintIcons();
 	}
+
+	UpdateWindowTitle(matching_apps);
 }
 
 void game_list_frame::OnParsingFinished()
