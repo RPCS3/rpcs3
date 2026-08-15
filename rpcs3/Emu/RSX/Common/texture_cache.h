@@ -147,8 +147,6 @@ namespace rsx
 			texture_channel_remap_t remap;
 			deferred_request_command op = deferred_request_command::nop;
 			u32 external_ref_addr = 0;
-			u16 x = 0;
-			u16 y = 0;
 
 			utils::address_range32 cache_range;
 			bool do_not_cache = false;
@@ -156,16 +154,59 @@ namespace rsx
 
 			deferred_subresource() = default;
 
-			deferred_subresource(image_resource_type _res, deferred_request_command _op,
-				const image_section_attributes_t& attr, position2u offset,
+			deferred_subresource(
+				image_resource_type _res,
+				deferred_request_command _op,
+				const image_section_attributes_t& attr,
+				const coord3u& src_rect,
+				const coord3u& dst_rect,
+				rsx::surface_transform xform,
 				texture_channel_remap_t _remap)
 				: external_handle(_res)
 				, remap(std::move(_remap))
 				, op(_op)
-				, x(offset.x)
-				, y(offset.y)
 			{
 				static_cast<image_section_attributes_t&>(*this) = attr;
+
+				// Maybe this should be an assert. Why would you set up a deferred subresource command with nop?
+				if (_res && _op != deferred_request_command::nop)
+				{
+					add_copy_region(_res, src_rect, dst_rect, attr.address, xform);
+				}
+			}
+
+			void add_copy_region(
+				image_resource_type src,
+				const coord3u& src_rect,
+				const coord3u& dst_rect,
+				u32 base_addr = 0,
+				flags32_t xform = rsx::surface_transform::identity,
+				u8 level = 0)
+			{
+				sections_to_copy.push_back({
+					.src = src,
+					.xform = xform,
+					.base_addr = base_addr,
+					.level = level,
+					.src_x = static_cast<u16>(src_rect.x),
+					.src_y = static_cast<u16>(src_rect.y),
+					.dst_x = static_cast<u16>(dst_rect.x),
+					.dst_y = static_cast<u16>(dst_rect.y),
+					.dst_z = static_cast<u16>(dst_rect.z),
+					.src_w = static_cast<u16>(src_rect.width),
+					.src_h = static_cast<u16>(src_rect.height),
+					.dst_w = static_cast<u16>(dst_rect.width),
+					.dst_h = static_cast<u16>(dst_rect.height),
+				});
+			}
+
+			u64 encoded_properties() const
+			{
+				return (static_cast<u64>(op) << 56) |
+					(static_cast<u64>(gcm_format & 0xff) << 48) |
+					(static_cast<u64>(depth) << 32) |
+					(static_cast<u64>(height) << 16) |
+					static_cast<u64>(width);
 			}
 
 			viewable_image_type as_viewable() const
@@ -219,11 +260,12 @@ namespace rsx
 			}
 
 			sampled_image_descriptor(image_resource_type external_handle, deferred_request_command reason,
-				const image_section_attributes_t& attr, position2u src_offset,
+				const image_section_attributes_t& attr, const coord3u& src_rect, const coord3u& dst_rect,
+				surface_transform xform,
 				texture_upload_context ctx, rsx::format_class ftype, size3f scale,
 				rsx::texture_dimension_extended type, const texture_channel_remap_t& remap)
 			{
-				external_subresource_desc = { external_handle, reason, attr, src_offset, remap };
+				external_subresource_desc = { external_handle, reason, attr, src_rect, dst_rect, xform, remap };
 
 				image_handle = 0;
 				upload_context = ctx;
@@ -267,7 +309,7 @@ namespace rsx
 						if (section_fills_target(sections[idx]))
 						{
 							const auto remaining = sections.size() - idx;
-							std::memcpy(
+							std::memmove(
 								sections.data(),
 								&sections[idx],
 								remaining * sizeof(sections[0])
@@ -281,17 +323,13 @@ namespace rsx
 				// Optimizations in the straightforward methods copy_image_static and copy_image_dynamic make them preferred over the atlas method
 				if (sections.size() == 1 && section_fills_target(sections[0]))
 				{
-					const auto cpy = sections[0];
+					const auto& cpy = sections[0];
 					external_subresource_desc.external_ref_addr = cpy.base_addr;
 
 					if (section_is_transfer_only(cpy))
 					{
 						// Change the command to copy_image_static
 						external_subresource_desc.external_handle = cpy.src;
-						external_subresource_desc.x = cpy.src_x;
-						external_subresource_desc.y = cpy.src_y;
-						external_subresource_desc.width = cpy.src_w;
-						external_subresource_desc.height = cpy.src_h;
 						external_subresource_desc.op = deferred_request_command::copy_image_static;
 					}
 					else
@@ -1702,19 +1740,15 @@ namespace rsx
 		{
 			if (!desc.do_not_cache) [[likely]]
 			{
+				const auto desc_key = desc.encoded_properties();
 				const auto found = m_temporary_subresource_cache.equal_range(desc.address);
 				for (auto It = found.first; It != found.second; ++It)
 				{
-					const auto& found_desc = It->second.first;
-					if (found_desc.external_handle != desc.external_handle ||
-						found_desc.op != desc.op ||
-						found_desc.x != desc.x || found_desc.y != desc.y ||
-						found_desc.width != desc.width || found_desc.height != desc.height ||
-						found_desc.gcm_format != desc.gcm_format)
+					if (It->second.first.encoded_properties() != desc_key)
 						continue;
 
 					if (desc.op == deferred_request_command::copy_image_dynamic)
-						update_image_contents(cmd, It->second.second, desc.external_handle, desc.width, desc.height);
+						update_image_contents(cmd, It->second.second, desc.src0(), desc.width, desc.height);
 
 					return It->second.second;
 				}
@@ -2027,7 +2061,8 @@ namespace rsx
 				else if (extended_dimension <= rsx::texture_dimension_extended::texture_dimension_2d)
 				{
 					const auto last = overlapping_locals.back();
-					const auto normalized_width = u16(last->get_width() * get_format_block_size_in_bytes(last->get_gcm_format())) / attr.bpp;
+					const auto src_bpp = get_format_block_size_in_bytes(last->get_gcm_format());
+					const auto normalized_width = u16((last->get_width() * src_bpp) / attr.bpp);
 
 					if (last->get_section_base() == attr.address &&
 						normalized_width >= attr.width && last->get_height() >= attr.height)
@@ -2055,8 +2090,22 @@ namespace rsx
 							return result;
 						}
 
-						return { last->get_raw_texture(), deferred_request_command::copy_image_static, new_attr, {},
-								last->get_context(), classify_format(gcm_format), scale, extended_dimension, remap };
+						const coord3u dst_rect = { 0, 0, 0, attr.width, attr.height, 1 };
+						const coord3u src_rect = { 0, 0, 0, last->get_width() , attr.height, 1 };
+						return
+						{
+							last->get_raw_texture(),
+							deferred_request_command::copy_image_static,
+							new_attr,
+							src_rect,
+							dst_rect,
+							surface_transform::identity,
+							last->get_context(),
+							classify_format(gcm_format),
+							scale,
+							extended_dimension,
+							remap
+						};
 					}
 				}
 
@@ -2073,22 +2122,7 @@ namespace rsx
 					is_simple_subresource_copy &&
 					render_target_format_is_compatible(result.external_subresource_desc.src0(), attr.gcm_format))
 				{
-					if (result.external_subresource_desc.op != deferred_request_command::blit_image_static) [[ likely ]]
-					{
-						helpers::convert_image_copy_to_clip_descriptor(
-							result,
-							position2i(result.external_subresource_desc.x, result.external_subresource_desc.y),
-							size2i(result.external_subresource_desc.width, result.external_subresource_desc.height),
-							size2i(result.external_subresource_desc.external_handle->width(), result.external_subresource_desc.external_handle->height()),
-							remap, false);
-					}
-					else
-					{
-						helpers::convert_image_blit_to_clip_descriptor(
-							result,
-							remap,
-							false);
-					}
+					helpers::convert_image_transfer_to_clip_descriptor(result, remap, false);
 
 					if (!!result.ref_address && m_rtts.address_is_bound(result.ref_address))
 					{
@@ -2243,12 +2277,15 @@ namespace rsx
 						attr.gcm_format = helpers::get_compatible_depth_format(attr.gcm_format);
 					}
 
+					const coord3u copy_rect = { 0, 0, 0, attr.width, attr.height, 1 };
 					descriptor->external_subresource_desc =
 					{
 						src,
 						rsx::deferred_request_command::copy_image_dynamic,
 						attr,
-						{},
+						copy_rect,
+						copy_rect,
+						rsx::surface_transform::identity,
 						rsx::default_remap_vector
 					};
 
@@ -2477,8 +2514,16 @@ namespace rsx
 				{
 					// NOTE: Do not disable 'cyclic ref' since the texture_barrier may have already been issued!
 					result.image_handle = 0;
-					result.external_subresource_desc = { 0, deferred_request_command::mipmap_gather, attributes, {}, tex.decoded_remap() };
 					result.format_class = rsx::classify_format(attributes.gcm_format);
+					result.external_subresource_desc =
+					{
+						0,
+						deferred_request_command::mipmap_gather,
+						attributes,
+						{}, {},
+						rsx::surface_transform::identity,
+						tex.decoded_remap()
+					};
 
 					if (result.texcoord_xform.clamp)
 					{

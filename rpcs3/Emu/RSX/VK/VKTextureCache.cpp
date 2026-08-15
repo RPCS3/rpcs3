@@ -695,8 +695,11 @@ namespace vk
 		vk::get_resource_manager()->dispose(disposable);
 	}
 
-	vk::image_view* texture_cache::create_temporary_subresource_view_impl(vk::command_buffer& cmd, vk::image* source, VkImageType image_type, VkImageViewType view_type,
-		u32 gcm_format, u16 x, u16 y, u16 w, u16 h, u16 d, u8 mips, const rsx::texture_channel_remap_t& remap_vector, bool copy)
+	vk::image_view* texture_cache::create_temporary_subresource_view_impl(
+		vk::command_buffer& cmd, vk::image* source, VkImageType image_type, VkImageViewType view_type,
+		u32 gcm_format, u16 w, u16 h, u16 d, u8 mips,
+		const rsx::texture_channel_remap_t& remap_vector,
+		const copy_region_descriptor* copy)
 	{
 		const VkImageCreateFlags image_flags = (view_type == VK_IMAGE_VIEW_TYPE_CUBE) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
 		const VkImageUsageFlags usage_flags = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -734,18 +737,7 @@ namespace vk
 
 		if (copy)
 		{
-			rsx::simple_array<copy_region_descriptor> region =
-			{ {
-				.src = source,
-				.xform = rsx::surface_transform::coordinate_transform,
-				.src_x = x,
-				.src_y = y,
-				.src_w = w,
-				.src_h = h,
-				.dst_w = w,
-				.dst_h = h
-			} };
-
+			rsx::simple_array<copy_region_descriptor> region = { *copy };
 			vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 			copy_transfer_regions_impl(cmd, image.get(), region);
 			vk::change_image_layout(cmd, image.get(), VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -758,8 +750,10 @@ namespace vk
 
 	vk::image_view* texture_cache::create_temporary_subresource_view(vk::command_buffer& cmd, const deferred_subresource& desc)
 	{
-		return create_temporary_subresource_view_impl(cmd, desc.external_handle, desc.external_handle->info.imageType, VK_IMAGE_VIEW_TYPE_2D,
-			desc.gcm_format, desc.x, desc.y, desc.width, desc.height, 1, 1, desc.remap, true);
+		ensure(desc.sections_to_copy.size() == 1);
+		const auto& section = desc.sections_to_copy.front();
+		return create_temporary_subresource_view_impl(cmd, section.src, section.src->info.imageType, VK_IMAGE_VIEW_TYPE_2D,
+			desc.gcm_format, desc.width, desc.height, 1, 1, desc.remap, &section);
 	}
 
 	vk::image_view* texture_cache::generate_cubemap_from_images(vk::command_buffer& cmd, const deferred_subresource& desc)
@@ -768,7 +762,7 @@ namespace vk
 		auto _template = get_template_from_collection_impl(sections_to_copy);
 		const u8 mip_count = 1 + sections_to_copy.reduce(0, FN(std::max<u8>(x, y.level)));
 		auto result = create_temporary_subresource_view_impl(cmd, _template, VK_IMAGE_TYPE_2D,
-			VK_IMAGE_VIEW_TYPE_CUBE, desc.gcm_format, 0, 0, desc.width, desc.height, 1, mip_count, desc.remap, false);
+			VK_IMAGE_VIEW_TYPE_CUBE, desc.gcm_format, desc.width, desc.height, 1, mip_count, desc.remap);
 
 		if (!result)
 		{
@@ -816,7 +810,7 @@ namespace vk
 		const auto& sections_to_copy = desc.sections_to_copy;
 		auto _template = get_template_from_collection_impl(sections_to_copy);
 		auto result = create_temporary_subresource_view_impl(cmd, _template, VK_IMAGE_TYPE_3D,
-			VK_IMAGE_VIEW_TYPE_3D, desc.gcm_format, 0, 0, desc.width, desc.height, desc.depth, 1, desc.remap, false);
+			VK_IMAGE_VIEW_TYPE_3D, desc.gcm_format, desc.width, desc.height, desc.depth, 1, desc.remap);
 
 		if (!result)
 		{
@@ -864,7 +858,7 @@ namespace vk
 		const auto& sections_to_copy = desc.sections_to_copy;
 		auto _template = get_template_from_collection_impl(sections_to_copy);
 		auto result = create_temporary_subresource_view_impl(cmd, _template, VK_IMAGE_TYPE_2D,
-			VK_IMAGE_VIEW_TYPE_2D, desc.gcm_format, 0, 0, desc.width, desc.height, 1, 1, desc.remap, false);
+			VK_IMAGE_VIEW_TYPE_2D, desc.gcm_format, desc.width, desc.height, 1, 1, desc.remap);
 
 		if (!result)
 		{
@@ -916,7 +910,7 @@ namespace vk
 		const auto mipmaps = ::narrow<u8>(sections_to_copy.size());
 		auto _template = get_template_from_collection_impl(sections_to_copy);
 		auto result = create_temporary_subresource_view_impl(cmd, _template, VK_IMAGE_TYPE_2D,
-			VK_IMAGE_VIEW_TYPE_2D, desc.gcm_format, 0, 0, desc.width, desc.height, 1, mipmaps, desc.remap, false);
+			VK_IMAGE_VIEW_TYPE_2D, desc.gcm_format, desc.width, desc.height, 1, mipmaps, desc.remap);
 
 		if (!result)
 		{
