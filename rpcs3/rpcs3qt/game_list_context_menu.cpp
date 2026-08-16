@@ -17,7 +17,7 @@
 #include "Utilities/File.h"
 #include "Emu/system_utils.hpp"
 #include "Loader/ISO.h"
-#include "Loader/iso_validation.h"
+#include "Loader/content_validation.h"
 
 #include "QApplication"
 #include "QClipboard"
@@ -327,9 +327,15 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 	manage_game_menu->addSeparator();
 
 	// Hide/rename game in game list
-	QAction* hide_serial = manage_game_menu->addAction(tr("&Hide In Game List"));
-	hide_serial->setCheckable(true);
-	hide_serial->setChecked(m_game_list_frame->hidden_list().contains(QString::fromStdString(serial)));
+	QAction* hide_hidden_serial = manage_game_menu->addAction(tr("&Hide Game In Game List"));
+	hide_hidden_serial->setCheckable(true);
+	hide_hidden_serial->setChecked(m_game_list_frame->hidden_list().contains(QString::fromStdString(serial)));
+	QAction* hide_broken_serial = manage_game_menu->addAction(tr("&Hide Broken Game In Game List"));
+	hide_broken_serial->setCheckable(true);
+	hide_broken_serial->setChecked(m_game_list_frame->broken_list().contains(QString::fromStdString(serial)));
+	QAction* hide_completed_serial = manage_game_menu->addAction(tr("&Hide Completed Game In Game List"));
+	hide_completed_serial->setCheckable(true);
+	hide_completed_serial->setChecked(m_game_list_frame->completed_list().contains(QString::fromStdString(serial)));
 	QAction* rename_title = manage_game_menu->addAction(tr("&Rename In Game List"));
 
 	// Edit tooltip notes/reset time played
@@ -339,7 +345,7 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 	manage_game_menu->addSeparator();
 
 	// Remove game
-	QAction* remove_game = manage_game_menu->addAction(tr("&Remove %1").arg(gameinfo->localized_category));
+	QAction* remove_game = manage_game_menu->addAction(tr("&Remove %0").arg(gameinfo->localized_category));
 	remove_game->setEnabled(!is_current_running_game);
 
 	// Custom Images menu
@@ -539,6 +545,18 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 		});
 	}
 
+	if (gameinfo->has_custom_pad_config)
+	{
+		QAction* open_config_folder = open_folder_menu->addAction(tr("&Open Custom Gamepad Config Folder"));
+		connect(open_config_folder, &QAction::triggered, this, [serial]()
+		{
+			const std::string config_path = rpcs3::utils::get_custom_input_config_path(serial);
+
+			if (fs::is_file(config_path))
+				gui::utils::open_dir(config_path);
+		});
+	}
+
 	// This is a debug feature, let's hide it by reusing debug tab protection
 	if (m_gui_settings->GetValue(gui::m_showDebugTab).toBool() && !cache_base_dir.empty())
 	{
@@ -602,45 +620,36 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 
 	addSeparator();
 
-	// Check integrity
+	// Check disc game integrity
 	if (QString::fromStdString(current_game.category) == cat::cat_disc_game)
 	{
+		const bool raw_archive = is_iso_file(current_game.path);
 		const iso_type_status iso_type = iso_file_decryption::check_type(current_game.path);
 
 		// If it's an ISO file (e.g. even a decrypted ISO), always provide the entry on the context menu but disable
 		// it if the ISO does not support integrity check (e.g. non Redump ISO) or no integrity DB is found.
 		// That is to highlight a Redump ISO from a non Redump ISO
-		if (iso_type != iso_type_status::NOT_ISO)
+		if (raw_archive || iso_type != iso_type_status::NOT_ISO)
 		{
-			const iso_integrity_status iso_integrity = iso_file_validation::check_integrity("");
-
-			QAction* check_integrity = addAction(tr("&Check ISO Integrity"));
+			QAction* check_iso_integrity = addAction(tr("&Check ISO Integrity"));
 
 			// If it's a Redump ISO and the integrity DB exists
-			if (iso_type == iso_type_status::REDUMP_ISO && iso_integrity != iso_integrity_status::ERROR_OPENING_DB)
+			if ((raw_archive || iso_type == iso_type_status::REDUMP_ISO) &&
+				content_validation::check_integrity(content_file_type::ISO, "") != content_integrity_status::ERROR_OPENING_DB)
 			{
-				connect(check_integrity, &QAction::triggered, this, [this, gameinfo]()
+				connect(check_iso_integrity, &QAction::triggered, this, [this, gameinfo]()
 				{
-					m_game_list_actions->ShowGameIntegrityDialog(gameinfo);
+					m_game_list_actions->ShowGameIntegrityDialog(content_file_type::ISO, gameinfo->info.path);
 				});
 			}
 			else
 			{
-				check_integrity->setEnabled(false);
+				check_iso_integrity->setEnabled(false);
 			}
-
-			QAction* download_integrity = addAction(tr("&Download Integrity Database"));
-			connect(download_integrity, &QAction::triggered, m_game_list_frame, [this]
-			{
-				ensure(m_game_list_frame->GetIsoIntegrity())->download();
-			});
 		}
 	}
 
 	QAction* check_compat = addAction(tr("&Check Game Compatibility"));
-	QAction* download_compat = addAction(tr("&Download Compatibility Database"));
-	QAction* download_config_db = addAction(tr("&Download Config Database"));
-
 	addSeparator();
 
 	// Disk usage
@@ -703,7 +712,7 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 			m_game_list_frame->ShowCustomConfigIcon(gameinfo);
 		}
 	});
-	connect(hide_serial, &QAction::triggered, m_game_list_frame, [this, serial = QString::fromStdString(serial)](bool checked)
+	connect(hide_hidden_serial, &QAction::triggered, m_game_list_frame, [this, serial = QString::fromStdString(serial)](bool checked)
 	{
 		if (checked)
 			m_game_list_frame->hidden_list().insert(serial);
@@ -711,6 +720,26 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 			m_game_list_frame->hidden_list().remove(serial);
 
 		m_gui_settings->SetValue(gui::gl_hidden_list, QStringList(m_game_list_frame->hidden_list().values()));
+		m_game_list_frame->Refresh();
+	});
+	connect(hide_broken_serial, &QAction::triggered, m_game_list_frame, [this, serial = QString::fromStdString(serial)](bool checked)
+	{
+		if (checked)
+			m_game_list_frame->broken_list().insert(serial);
+		else
+			m_game_list_frame->broken_list().remove(serial);
+
+		m_gui_settings->SetValue(gui::gl_broken_list, QStringList(m_game_list_frame->broken_list().values()));
+		m_game_list_frame->Refresh();
+	});
+	connect(hide_completed_serial, &QAction::triggered, m_game_list_frame, [this, serial = QString::fromStdString(serial)](bool checked)
+	{
+		if (checked)
+			m_game_list_frame->completed_list().insert(serial);
+		else
+			m_game_list_frame->completed_list().remove(serial);
+
+		m_gui_settings->SetValue(gui::gl_completed_list, QStringList(m_game_list_frame->completed_list().values()));
 		m_game_list_frame->Refresh();
 	});
 	connect(create_cpu_cache, &QAction::triggered, m_game_list_frame, [this, gameinfo]
@@ -733,14 +762,6 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 	{
 		const QString link = "https://rpcs3.net/compatibility?g=" + serial;
 		QDesktopServices::openUrl(QUrl(link));
-	});
-	connect(download_compat, &QAction::triggered, m_game_list_frame, [this]
-	{
-		m_game_list_frame->GetGameCompatibility()->RequestCompatibility(true);
-	});
-	connect(download_config_db, &QAction::triggered, m_game_list_frame, [this]
-	{
-		m_game_list_frame->GetConfigDatabase()->request_config_database(true);
 	});
 	connect(rename_title, &QAction::triggered, m_game_list_frame, [this, name, serial = QString::fromStdString(serial), global_pos]
 	{
@@ -942,10 +963,10 @@ void game_list_context_menu::show_multi_selection_context_menu(const std::vector
 	manage_game_menu->addSeparator();
 
 	// Hide game in game list
-	QAction* hide_serial = manage_game_menu->addAction(tr("&Hide In Game List"));
-	connect(hide_serial, &QAction::triggered, m_game_list_frame, [this, games]()
+	QAction* hide_hidden_serial = manage_game_menu->addAction(tr("&Hide Game In Game List"));
+	connect(hide_hidden_serial, &QAction::triggered, m_game_list_frame, [this, games]()
 	{
-		if (QMessageBox::question(m_game_list_frame, tr("Confirm Hiding"), tr("Hide in game list?")) != QMessageBox::Yes)
+		if (QMessageBox::question(m_game_list_frame, tr("Confirm Hiding"), tr("Hide game in game list?")) != QMessageBox::Yes)
 			return;
 
 		for (const auto& game : games)
@@ -956,10 +977,38 @@ void game_list_context_menu::show_multi_selection_context_menu(const std::vector
 		m_gui_settings->SetValue(gui::gl_hidden_list, QStringList(m_game_list_frame->hidden_list().values()));
 		m_game_list_frame->Refresh();
 	});
+	QAction* hide_broken_serial = manage_game_menu->addAction(tr("&Hide Broken Game In Game List"));
+	connect(hide_broken_serial, &QAction::triggered, m_game_list_frame, [this, games]()
+	{
+		if (QMessageBox::question(m_game_list_frame, tr("Confirm Hiding"), tr("Hide broken game in game list?")) != QMessageBox::Yes)
+			return;
+
+		for (const auto& game : games)
+		{
+			m_game_list_frame->broken_list().insert(QString::fromStdString(game->info.serial));
+		}
+
+		m_gui_settings->SetValue(gui::gl_broken_list, QStringList(m_game_list_frame->broken_list().values()));
+		m_game_list_frame->Refresh();
+	});
+	QAction* hide_completed_serial = manage_game_menu->addAction(tr("&Hide Completed Game In Game List"));
+	connect(hide_completed_serial, &QAction::triggered, m_game_list_frame, [this, games]()
+	{
+		if (QMessageBox::question(m_game_list_frame, tr("Confirm Hiding"), tr("Hide completed game in game list?")) != QMessageBox::Yes)
+			return;
+
+		for (const auto& game : games)
+		{
+			m_game_list_frame->completed_list().insert(QString::fromStdString(game->info.serial));
+		}
+
+		m_gui_settings->SetValue(gui::gl_completed_list, QStringList(m_game_list_frame->completed_list().values()));
+		m_game_list_frame->Refresh();
+	});
 
 	// Show game in game list
-	QAction* show_serial = manage_game_menu->addAction(tr("&Show In Game List"));
-	connect(show_serial, &QAction::triggered, m_game_list_frame, [this, games]()
+	QAction* show_hidden_serial = manage_game_menu->addAction(tr("&Show Hidden Game In Game List"));
+	connect(show_hidden_serial, &QAction::triggered, m_game_list_frame, [this, games]()
 	{
 		for (const auto& game : games)
 		{
@@ -967,6 +1016,28 @@ void game_list_context_menu::show_multi_selection_context_menu(const std::vector
 		}
 
 		m_gui_settings->SetValue(gui::gl_hidden_list, QStringList(m_game_list_frame->hidden_list().values()));
+		m_game_list_frame->Refresh();
+	});
+	QAction* show_broken_serial = manage_game_menu->addAction(tr("&Show Broken Game In Game List"));
+	connect(show_broken_serial, &QAction::triggered, m_game_list_frame, [this, games]()
+	{
+		for (const auto& game : games)
+		{
+			m_game_list_frame->broken_list().remove(QString::fromStdString(game->info.serial));
+		}
+
+		m_gui_settings->SetValue(gui::gl_broken_list, QStringList(m_game_list_frame->broken_list().values()));
+		m_game_list_frame->Refresh();
+	});
+	QAction* show_completed_serial = manage_game_menu->addAction(tr("&Show Completed Game In Game List"));
+	connect(show_completed_serial, &QAction::triggered, m_game_list_frame, [this, games]()
+	{
+		for (const auto& game : games)
+		{
+			m_game_list_frame->completed_list().remove(QString::fromStdString(game->info.serial));
+		}
+
+		m_gui_settings->SetValue(gui::gl_completed_list, QStringList(m_game_list_frame->completed_list().values()));
 		m_game_list_frame->Refresh();
 	});
 
@@ -997,20 +1068,6 @@ void game_list_context_menu::show_multi_selection_context_menu(const std::vector
 	connect(remove_game, &QAction::triggered, this, [this, games]()
 	{
 		m_game_list_actions->ShowRemoveGameDialog(games);
-	});
-
-	addSeparator();
-
-	QAction* download_compat = addAction(tr("&Download Compatibility Database"));
-	connect(download_compat, &QAction::triggered, m_game_list_frame, [this]
-	{
-		m_game_list_frame->GetGameCompatibility()->RequestCompatibility(true);
-	});
-
-	QAction* download_config_db = addAction(tr("&Download Config Database"));
-	connect(download_config_db, &QAction::triggered, m_game_list_frame, [this]
-	{
-		m_game_list_frame->GetConfigDatabase()->request_config_database(true);
 	});
 
 	addSeparator();

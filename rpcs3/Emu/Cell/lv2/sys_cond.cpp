@@ -114,7 +114,7 @@ error_code sys_cond_create(ppu_thread& ppu, vm::ptr<u32> cond_id, u32 mutex_id, 
 	}
 
 	ppu.check_state();
-	*cond_id = idm::last_id();
+	*cond_id = idm::last_id<lv2_cond>();
 	return CELL_OK;
 }
 

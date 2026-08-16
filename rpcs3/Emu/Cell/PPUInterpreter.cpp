@@ -501,7 +501,7 @@ auto ppu_feed_data(ppu_thread& ppu, u64 addr)
 		if (raddr / 128 == addr / 128)
 			src = &ppu.rdata[addr & 127], size = std::min<u32>(128 - (addr % 128), sizeof(T));
 		else
-			src = &ppu.rdata[0], size = (addr + u32{sizeof(T)}) % 127, offs = sizeof(T) - size;
+			src = &ppu.rdata[0], size = (addr + u32{sizeof(T)}) % 128, offs = sizeof(T) - size;
 
 		if (std::memcmp(buffer + offs, src, size))
 		{
@@ -7354,7 +7354,7 @@ ppu_interpreter_rt_base::ppu_interpreter_rt_base() noexcept
 		selected += set_sat;
 	if (g_cfg.core.ppu_use_nj_bit)
 		selected += use_nj + fix_nj;
-	if (g_cfg.core.ppu_llvm_nj_fixup)
+	if (!g_cfg.core.set_daz_and_ftz)
 		selected += fix_nj;
 	if (g_cfg.core.ppu_set_vnan)
 		selected += set_vnan + fix_vnan;

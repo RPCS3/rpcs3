@@ -148,11 +148,6 @@ namespace vk
 			vk_prog->binding_table.cbuf_location = location++;
 		}
 
-		if (vk::emulate_conditional_rendering())
-		{
-			vk_prog->binding_table.cr_pred_buffer_location = location++;
-		}
-
 		// Return next index
 		return location;
 	}
@@ -262,13 +257,14 @@ namespace vk
 		// Declare local inputs
 		auto vs_inputs = comp.get_inputs();
 
-		vk::glsl::program_input in;
-		in.set = 0;
-		in.domain = ::glsl::glsl_vertex_program;
-		in.location = vertex_instruction_start;
-		in.type = glsl::input_type_storage_buffer;
-		in.name = "VertexInstructionBlock";
-		vs_inputs.push_back(in);
+		vs_inputs.push_back(vk::glsl::program_input::make
+		(
+			::glsl::glsl_vertex_program,
+			"VertexInstructionBlock",
+			glsl::input_type_storage_buffer,
+			0,
+			vertex_instruction_start
+		));
 
 		vk_prog->SetInputs(vs_inputs);
 
@@ -289,10 +285,11 @@ namespace vk
 			}
 		}
 
-		[[maybe_unused]] ::glsl::shader_properties properties{};
-		properties.domain = ::glsl::program_domain::glsl_fragment_program;
-		properties.require_depth_conversion = true;
-		properties.require_wpos = true;
+		::glsl::shader_properties properties
+		{
+			.domain = ::glsl::program_domain::glsl_fragment_program,
+			.require_lit_emulation = true,
+		};
 
 		u32 len;
 		ParamArray arr;
@@ -421,6 +418,7 @@ namespace vk
 			"	uint rop_control = fs_contexts[_fs_context_offset].rop_control;\n"
 			"	float alpha_ref = fs_contexts[_fs_context_offset].alpha_ref;\n\n";
 
+		::glsl::insert_glsl_legacy_function(builder, properties);
 		builder << program_common::interpreter::get_fragment_interpreter();
 		const std::string s = builder.str();
 
@@ -431,12 +429,14 @@ namespace vk
 		// Declare local inputs
 		auto inputs = comp.get_inputs();
 
-		vk::glsl::program_input in;
-		in.set = 1;
-		in.domain = ::glsl::glsl_fragment_program;
-		in.location = fragment_instruction_start;
-		in.type = glsl::input_type_storage_buffer;
-		in.name = "FragmentInstructionBlock";
+		vk::glsl::program_input in = vk::glsl::program_input::make
+		(
+			::glsl::glsl_fragment_program,
+			"FragmentInstructionBlock",
+			glsl::input_type_storage_buffer,
+			1,
+			fragment_instruction_start
+		);
 		inputs.push_back(in);
 
 		if (compiler_options & COMPILER_OPT_ENABLE_TEXTURES)

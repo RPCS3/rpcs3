@@ -547,6 +547,7 @@ void emulated_logitech_g27_settings_dialog::save_ui_state_to_config()
 
 	g_cfg_logitech_g27.enabled.set(m_enabled->isChecked());
 	g_cfg_logitech_g27.reverse_effects.set(m_reverse_effects->isChecked());
+	g_cfg_logitech_g27.ffb_direction_type.set(static_cast<g27_ffb_direction_type>(m_ffb_direction_type->currentData().toInt()));
 	g_cfg_logitech_g27.compatibility_limit.set(m_compatibility_limit->currentData().toInt());
 
 	if (m_ffb_device->get_device_choice() == mapping_device::NONE)
@@ -597,6 +598,7 @@ void emulated_logitech_g27_settings_dialog::load_ui_state_from_config()
 
 	m_enabled->setChecked(g_cfg_logitech_g27.enabled.get());
 	m_reverse_effects->setChecked(g_cfg_logitech_g27.reverse_effects.get());
+	m_ffb_direction_type->setCurrentIndex(m_ffb_direction_type->findData(static_cast<int>(g_cfg_logitech_g27.ffb_direction_type.get())));
 	m_compatibility_limit->setCurrentIndex(4 - g_cfg_logitech_g27.compatibility_limit.get());
 }
 
@@ -657,6 +659,18 @@ emulated_logitech_g27_settings_dialog::emulated_logitech_g27_settings_dialog(QWi
 
 	m_reverse_effects = new QCheckBox(tr("Reverse force feedback effects"), this);
 	v_layout->addWidget(m_reverse_effects);
+
+	QHBoxLayout* ffb_dir_layout = new QHBoxLayout(this);
+	ffb_dir_layout->setContentsMargins(0, 0, 0, 0);
+	QLabel* ffb_dir_label = new QLabel(tr("Force feedback direction encoding:"), this);
+	ffb_dir_layout->addWidget(ffb_dir_label);
+	m_ffb_direction_type = new QComboBox(this);
+	m_ffb_direction_type->addItem(tr("Steering Axis (Default)"), static_cast<int>(g27_ffb_direction_type::steering_axis));
+	m_ffb_direction_type->addItem(tr("Cartesian"), static_cast<int>(g27_ffb_direction_type::cartesian));
+	m_ffb_direction_type->addItem(tr("Polar"), static_cast<int>(g27_ffb_direction_type::polar));
+	m_ffb_direction_type->setToolTip(tr("Selects the direction encoding used for force feedback effects on the host wheel.\nSteering Axis is SDL's recommended encoding for steering wheels and the safest default.\nSwitch to Cartesian or Polar only if your wheel reports no force feedback with the default."));
+	ffb_dir_layout->addWidget(m_ffb_direction_type);
+	v_layout->addLayout(ffb_dir_layout);
 
 	QHBoxLayout* compat_layout = new QHBoxLayout(this);
 	compat_layout->setContentsMargins(0, 0, 0, 0);
@@ -880,6 +894,7 @@ void emulated_logitech_g27_settings_dialog::set_enable(bool enable)
 
 	m_enabled->setEnabled(enable);
 	m_reverse_effects->setEnabled(enable);
+	m_ffb_direction_type->setEnabled(enable);
 
 	m_ffb_device->set_enable(enable);
 	m_led_device->set_enable(enable);

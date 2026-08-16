@@ -56,9 +56,9 @@ void fmt_class_string<CellPadFilterError>::format(std::string& out, u64 arg)
 extern void sys_io_serialize(utils::serial& ar);
 
 pad_info::pad_info(utils::serial& ar)
-	: max_connect(ar)
-	, port_setting(ar)
-	, reported_info(ar)
+	: max_connect(ar.pop<u32>())
+	, port_setting(ar.pop<decltype(port_setting)>())
+	, reported_info(ar.pop<decltype(reported_info)>())
 {
 	//reported_info = {};
 	sys_io_serialize(ar);

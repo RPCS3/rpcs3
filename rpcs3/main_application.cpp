@@ -39,12 +39,14 @@
 #endif
 
 #include <QDateTime>
+#include <QDir>
 #include <QFileInfo> // This shouldn't be outside rpcs3qt...
 #include <QImageReader> // This shouldn't be outside rpcs3qt...
 #include <QStandardPaths> // This shouldn't be outside rpcs3qt...
 #include <thread>
 
 LOG_CHANNEL(sys_log, "SYS");
+LOG_CHANNEL(cfg_log, "CFG");
 
 namespace audio
 {
@@ -60,10 +62,41 @@ namespace rsx::overlays
 
 extern void qt_events_aware_op(int repeat_duration_ms, std::function<bool()> wrapped_op);
 
+main_application::main_application()
+	: m_render_creator(std::make_shared<render_creator>())
+{
+	std::set<video_renderer> supported_renderers;
+	supported_renderers.insert(video_renderer::null);
+
+	if (m_render_creator->OpenGL.supported)
+	{
+		supported_renderers.insert(video_renderer::opengl);
+	}
+
+	// Make Vulkan default setting if it is supported
+	if (m_render_creator->Vulkan.supported && !m_render_creator->Vulkan.adapters.empty())
+	{
+		const std::string adapter = ::at32(m_render_creator->Vulkan.adapters, 0).toStdString();
+		cfg_log.notice("Setting the default renderer to Vulkan. Default GPU: '%s'", adapter);
+		Emu.SetDefaultRenderer(video_renderer::vulkan);
+		Emu.SetDefaultGraphicsAdapter(adapter);
+
+		supported_renderers.insert(video_renderer::vulkan);
+	}
+	else if (m_render_creator->OpenGL.supported)
+	{
+		cfg_log.notice("Setting the default renderer to OpenGl");
+		Emu.SetDefaultRenderer(video_renderer::opengl);
+	}
+
+	Emu.SetSupportedRenderers(supported_renderers);
+}
+
 /** Emu.Init() wrapper for user management */
-void main_application::InitializeEmulator(const std::string& user, bool show_gui)
+void main_application::InitializeEmulator(const std::string& user, bool show_gui, bool headless)
 {
 	Emu.SetHasGui(show_gui);
+	Emu.SetHeadless(headless);
 	Emu.SetUsr(user);
 	Emu.Init();
 
@@ -351,6 +384,24 @@ EmuCallbacks main_application::CreateCallbacks()
 		return QFileInfo(QString::fromUtf8(sv.data(), static_cast<int>(sv.size()))).canonicalFilePath().toStdString();
 	};
 
+	callbacks.resolve_path_may_not_exist = [](std::string_view sv)
+	{
+		const QString path = QString::fromUtf8(sv.data(), static_cast<int>(sv.size()));
+		QFileInfo fi(path);
+
+		QString tail;
+
+		while (!fi.exists())
+		{
+			tail = fi.fileName() + "/" + tail;
+			fi.setFile(fi.path());
+		}
+
+		const QString result = QDir(fi.canonicalFilePath()).filePath(tail);
+
+		return QDir::cleanPath(result).toStdString();
+	};
+
 	callbacks.get_font_dirs = []()
 	{
 		const QStringList locations = QStandardPaths::standardLocations(QStandardPaths::FontsLocation);
@@ -362,7 +413,7 @@ EmuCallbacks main_application::CreateCallbacks()
 			{
 				font_dir += '/';
 			}
-			font_dirs.push_back(font_dir);
+			font_dirs.push_back(std::move(font_dir));
 		}
 		return font_dirs;
 	};

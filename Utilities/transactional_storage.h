@@ -33,7 +33,7 @@ public:
 		std::lock_guard lock(mutex);
 		if (std::shared_ptr<void> new_val = std::invoke(func); new_val)
 		{
-			storage.push_back(new_val);
+			storage.push_back(std::move(new_val));
 		}
 		delete_unused();
 	}

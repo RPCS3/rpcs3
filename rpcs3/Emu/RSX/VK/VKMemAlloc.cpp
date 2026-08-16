@@ -56,7 +56,7 @@ private:
 #endif
 #endif
 #include <vk_mem_alloc.h>
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(__clang__)
 #pragma warning(pop)
 #else
 #pragma GCC diagnostic pop

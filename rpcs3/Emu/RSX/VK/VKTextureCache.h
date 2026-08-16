@@ -453,28 +453,24 @@ namespace vk
 		std::unique_ptr<vk::viewable_image> find_cached_image(VkFormat format, u16 w, u16 h, u16 d, u16 mipmaps, VkImageType type, VkImageCreateFlags create_flags, VkImageUsageFlags usage, VkSharingMode sharing);
 
 	protected:
-		vk::image_view* create_temporary_subresource_view_impl(vk::command_buffer& cmd, vk::image* source, VkImageType image_type, VkImageViewType view_type,
-			u32 gcm_format, u16 x, u16 y, u16 w, u16 h, u16 d, u8 mips, const rsx::texture_channel_remap_t& remap_vector, bool copy);
+		vk::image_view* create_temporary_subresource_view_impl(
+			vk::command_buffer& cmd, vk::image* source, VkImageType image_type, VkImageViewType view_type,
+			u32 gcm_format, u16 w, u16 h, u16 d, u8 mips, const rsx::texture_channel_remap_t& remap_vector,
+			const copy_region_descriptor* copy = nullptr);
 
-		vk::image_view* create_temporary_subresource_view(vk::command_buffer& cmd, vk::image* source, u32 gcm_format,
-			u16 x, u16 y, u16 w, u16 h, const rsx::texture_channel_remap_t& remap_vector) override;
+		vk::image_view* create_temporary_subresource_view(vk::command_buffer& cmd, const deferred_subresource& desc) override;
 
-		vk::image_view* create_temporary_subresource_view(vk::command_buffer& cmd, vk::image** source, u32 gcm_format,
-			u16 x, u16 y, u16 w, u16 h, const rsx::texture_channel_remap_t& remap_vector) override;
+		vk::image_view* generate_cubemap_from_images(vk::command_buffer& cmd, const deferred_subresource& desc) override;
 
-		vk::image_view* generate_cubemap_from_images(vk::command_buffer& cmd, u32 gcm_format, u16 size,
-			const rsx::simple_array<copy_region_descriptor>& sections_to_copy, const rsx::texture_channel_remap_t& remap_vector) override;
+		vk::image_view* generate_3d_from_2d_images(vk::command_buffer& cmd, const deferred_subresource& desc) override;
 
-		vk::image_view* generate_3d_from_2d_images(vk::command_buffer& cmd, u32 gcm_format, u16 width, u16 height, u16 depth,
-			const rsx::simple_array<copy_region_descriptor>& sections_to_copy, const rsx::texture_channel_remap_t& remap_vector) override;
+		vk::image_view* generate_atlas_from_images(vk::command_buffer& cmd, const deferred_subresource& desc) override;
 
-		vk::image_view* generate_atlas_from_images(vk::command_buffer& cmd, u32 gcm_format, u16 width, u16 height,
-			const rsx::simple_array<copy_region_descriptor>& sections_to_copy, const rsx::texture_channel_remap_t& remap_vector) override;
-
-		vk::image_view* generate_2d_mipmaps_from_images(vk::command_buffer& cmd, u32 gcm_format, u16 width, u16 height,
-			const rsx::simple_array<copy_region_descriptor>& sections_to_copy, const rsx::texture_channel_remap_t& remap_vector) override;
+		vk::image_view* generate_2d_mipmaps_from_images(vk::command_buffer& cmd, const deferred_subresource& desc) override;
 
 		void release_temporary_subresource(vk::image_view* view) override;
+
+		void initialize_subresource_from_memory(vk::command_buffer& cmd, vk::image* dst, const deferred_subresource& desc, rsx::texture_dimension_extended type) const;
 
 		void update_image_contents(vk::command_buffer& cmd, vk::image_view* dst_view, vk::image* src, u16 width, u16 height) override;
 

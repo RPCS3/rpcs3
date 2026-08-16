@@ -595,8 +595,7 @@ namespace
 
 			for (int row = 0; row < row_count; ++row)
 			{
-				rsx::memory_transfer_cmd cmd{ dst_, src_, width_in_bytes };
-				result.push_back(cmd);
+				result.push_back(rsx::memory_transfer_cmd{ dst_, src_, width_in_bytes });
 				src_ += src_pitch_in_bytes;
 				dst_ += dst_pitch_in_bytes;
 			}
@@ -750,27 +749,15 @@ std::tuple<u16, u16, u8> get_height_depth_layer(const RsxTextureType &tex)
 	}
 	fmt::throw_exception("Unsupported texture dimension");
 }
-}
 
-template<typename RsxTextureType>
-std::vector<rsx::subresource_layout> get_subresources_layout_impl(const RsxTextureType &texture)
+// Common implementation for packing texture definitions into subresource layout arrays
+std::vector<rsx::subresource_layout> get_subresources_layout_impl(
+	const std::byte* pixels,
+	u32 format,
+	u16 w, u16 h, u16 depth,
+	u8 layer, u16 mipmap_count, u32 pitch,
+	bool is_swizzled, bool has_border)
 {
-	u16 w = texture.width();
-	u16 h;
-	u16 depth;
-	u8 layer;
-
-	std::tie(h, depth, layer) = get_height_depth_layer(texture);
-
-	const auto format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-	auto pitch = texture.pitch();
-
-	const u32 texaddr = rsx::get_address(texture.offset(), texture.location());
-	auto pixels = vm::_ptr<const std::byte>(texaddr);
-
-	const bool is_swizzled = !(texture.format() & CELL_GCM_TEXTURE_LN);
-	const bool has_border = !texture.border_type();
-
 	if (!is_swizzled)
 	{
 		if (const auto packed_pitch = rsx::get_format_packed_pitch(format, w, has_border, false); pitch < packed_pitch) [[unlikely]]
@@ -791,10 +778,10 @@ std::vector<rsx::subresource_layout> get_subresources_layout_impl(const RsxTextu
 	switch (format)
 	{
 	case CELL_GCM_TEXTURE_B8:
-		return get_subresources_layout_impl<1, u8>(pixels, w, h, depth, layer, texture.get_exact_mipmap_count(), pitch, !is_swizzled, has_border);
+		return get_subresources_layout_impl<1, u8>(pixels, w, h, depth, layer, mipmap_count, pitch, !is_swizzled, has_border);
 	case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
 	case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
-		return get_subresources_layout_impl<2, u32>(pixels, w, h, depth, layer, texture.get_exact_mipmap_count(), pitch, !is_swizzled, has_border);
+		return get_subresources_layout_impl<2, u32>(pixels, w, h, depth, layer, mipmap_count, pitch, !is_swizzled, has_border);
 	case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
 	case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
 	case CELL_GCM_TEXTURE_DEPTH16:
@@ -807,7 +794,7 @@ std::vector<rsx::subresource_layout> get_subresources_layout_impl(const RsxTextu
 	case CELL_GCM_TEXTURE_R6G5B5:
 	case CELL_GCM_TEXTURE_G8B8:
 	case CELL_GCM_TEXTURE_X16:
-		return get_subresources_layout_impl<1, u16>(pixels, w, h, depth, layer, texture.get_exact_mipmap_count(), pitch, !is_swizzled, has_border);
+		return get_subresources_layout_impl<1, u16>(pixels, w, h, depth, layer, mipmap_count, pitch, !is_swizzled, has_border);
 	case CELL_GCM_TEXTURE_DEPTH24_D8: // Untested
 	case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT: // Untested
 	case CELL_GCM_TEXTURE_D8R8G8B8:
@@ -815,18 +802,35 @@ std::vector<rsx::subresource_layout> get_subresources_layout_impl(const RsxTextu
 	case CELL_GCM_TEXTURE_Y16_X16:
 	case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
 	case CELL_GCM_TEXTURE_X32_FLOAT:
-		return get_subresources_layout_impl<1, u32>(pixels, w, h, depth, layer, texture.get_exact_mipmap_count(), pitch, !is_swizzled, has_border);
+		return get_subresources_layout_impl<1, u32>(pixels, w, h, depth, layer, mipmap_count, pitch, !is_swizzled, has_border);
 	case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
-		return get_subresources_layout_impl<1, u64>(pixels, w, h, depth, layer, texture.get_exact_mipmap_count(), pitch, !is_swizzled, has_border);
+		return get_subresources_layout_impl<1, u64>(pixels, w, h, depth, layer, mipmap_count, pitch, !is_swizzled, has_border);
 	case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
-		return get_subresources_layout_impl<1, u128>(pixels, w, h, depth, layer, texture.get_exact_mipmap_count(), pitch, !is_swizzled, has_border);
+		return get_subresources_layout_impl<1, u128>(pixels, w, h, depth, layer, mipmap_count, pitch, !is_swizzled, has_border);
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
-		return get_subresources_layout_impl<4, u64>(pixels, w, h, depth, layer, texture.get_exact_mipmap_count(), pitch, !is_swizzled, false);
+		return get_subresources_layout_impl<4, u64>(pixels, w, h, depth, layer, mipmap_count, pitch, !is_swizzled, false);
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
-		return get_subresources_layout_impl<4, u128>(pixels, w, h, depth, layer, texture.get_exact_mipmap_count(), pitch, !is_swizzled, false);
+		return get_subresources_layout_impl<4, u128>(pixels, w, h, depth, layer, mipmap_count, pitch, !is_swizzled, false);
 	}
 	fmt::throw_exception("Wrong format 0x%x", format);
+}
+}
+
+template<typename RsxTextureType>
+std::vector<rsx::subresource_layout> get_subresources_layout_impl(const RsxTextureType &texture)
+{
+	const auto [h, depth, layer] = get_height_depth_layer(texture);
+	const u32 texaddr = rsx::get_address(texture.offset(), texture.location());
+
+	return get_subresources_layout_impl(
+		vm::_ptr<const std::byte>(texaddr),
+		texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN),
+		texture.width(), h, depth, layer,
+		texture.get_exact_mipmap_count(),
+		texture.pitch(),
+		!(texture.format() & CELL_GCM_TEXTURE_LN),
+		!texture.border_type());
 }
 
 namespace rsx
@@ -865,6 +869,40 @@ namespace rsx
 	std::vector<rsx::subresource_layout> get_subresources_layout(const rsx::vertex_texture& texture)
 	{
 		return get_subresources_layout_impl(texture);
+	}
+
+	std::vector<rsx::subresource_layout> get_subresources_layout(const rsx::image_section_attributes_t& attrs, rsx::texture_dimension_extended type)
+	{
+		u16 height = attrs.height;
+		u16 depth = 1;
+		u8 layer = 1;
+
+		switch (type)
+		{
+		case rsx::texture_dimension_extended::texture_dimension_1d:
+			height = 1;
+			break;
+		case rsx::texture_dimension_extended::texture_dimension_2d:
+			break;
+		case rsx::texture_dimension_extended::texture_dimension_cubemap:
+			layer = 6;
+			break;
+		case rsx::texture_dimension_extended::texture_dimension_3d:
+			depth = attrs.depth;
+			break;
+		default:
+			fmt::throw_exception("Unsupported texture dimension");
+		}
+
+		// NOTE: This variant goes through the hv pointer.
+		return get_subresources_layout_impl(
+			vm::get_super_ptr<const std::byte>(attrs.address),
+			attrs.gcm_format,
+			attrs.width, height, depth, layer,
+			attrs.mipmaps,
+			attrs.pitch,
+			attrs.swizzled,
+			false);
 	}
 
 	texture_memory_info upload_texture_subresource(rsx::io_buffer& dst_buffer, const rsx::subresource_layout& src_layout, int format, bool is_swizzled, texture_uploader_capabilities& caps)
@@ -1701,6 +1739,48 @@ namespace rsx
 			return RSX_FORMAT_CLASS_DEPTH24_FLOAT_X8_PACK32;
 		default:
 			return RSX_FORMAT_CLASS_COLOR;
+		}
+	}
+
+	rsx::surface_color_format get_compatible_surface_color_format(u32 gcm_format)
+	{
+		switch (gcm_format)
+		{
+		case CELL_GCM_TEXTURE_R5G6B5:
+			return rsx::surface_color_format::r5g6b5;
+		case CELL_GCM_TEXTURE_A8R8G8B8:
+			return rsx::surface_color_format::a8b8g8r8;
+		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
+			return rsx::surface_color_format::w16z16y16x16;
+		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
+			return rsx::surface_color_format::w32z32y32x32;
+		case CELL_GCM_TEXTURE_A1R5G5B5:
+			return rsx::surface_color_format::x1r5g5b5_o1r5g5b5;
+		case CELL_GCM_TEXTURE_B8:
+			return rsx::surface_color_format::b8;
+		case CELL_GCM_TEXTURE_G8B8:
+			return rsx::surface_color_format::g8b8;
+		case CELL_GCM_TEXTURE_X32_FLOAT:
+			return rsx::surface_color_format::x32;
+		default:
+			fmt::throw_exception("Unhandled surface format 0x%x", gcm_format);
+		}
+	}
+
+	rsx::surface_depth_format2 get_compatible_surface_depth_format(u32 gcm_format)
+	{
+		switch (gcm_format)
+		{
+		case RSX_FORMAT_CLASS_DEPTH16_UNORM:
+			return rsx::surface_depth_format2::z16_uint;
+		case RSX_FORMAT_CLASS_DEPTH24_UNORM_X8_PACK32:
+			return rsx::surface_depth_format2::z24s8_uint;
+		case RSX_FORMAT_CLASS_DEPTH16_FLOAT:
+			return rsx::surface_depth_format2::z16_float;
+		case RSX_FORMAT_CLASS_DEPTH24_FLOAT_X8_PACK32:
+			return rsx::surface_depth_format2::z24s8_float;
+		default:
+			fmt::throw_exception("Invalid depth format 0x%x", gcm_format);
 		}
 	}
 

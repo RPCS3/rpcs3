@@ -520,7 +520,7 @@ namespace gui::utils
 		return !path.empty() && fs::is_dir(path);
 	}
 
-	u32 steam_shortcut::crc32(const std::string& data)
+	u32 steam_shortcut::crc32(std::string_view data)
 	{
 		u32 crc = 0xFFFFFFFF;
 
@@ -882,7 +882,7 @@ namespace gui::utils
 	}
 #endif
 
-	std::string steam_shortcut::steamid64_to_32(const std::string& steam_id)
+	std::string steam_shortcut::steamid64_to_32(std::string_view steam_id)
 	{
 		u64 id = 0;
 		if (!try_to_uint64(&id, steam_id, 0, umax))
@@ -992,6 +992,8 @@ namespace gui::utils
 			return "";
 		}
 
+		sys_log.notice("get_last_active_steam_user: Parsing steam loginusers file '%s'", vdf_path);
+
 		// The file looks roughly like this. We need the numerical ID.
 		// "users"
 		// {
@@ -1009,10 +1011,14 @@ namespace gui::utils
 
 		usz user_count = 0;
 
-		const auto find_user_id = [&content, &user_count](const std::string& key, const std::string& comp) -> std::string
+		std::function<std::string(const std::string&, std::string_view, bool)> find_user_id;
+		find_user_id = [&find_user_id, &content, &user_count](const std::string& key, std::string_view comp, bool get_max) -> std::string
 		{
 			user_count = 0;
 			usz pos = 0;
+			u64 maximum = 0;
+			std::string maximum_value;
+
 			while (true)
 			{
 				pos = content.find(key, pos);
@@ -1026,10 +1032,23 @@ namespace gui::utils
 				const usz val_end = content.find('"', val_start + 1);
 				if (val_end == umax) break;
 
-				const std::string value = content.substr(val_start + 1, val_end - val_start - 1);
+				std::string value = content.substr(val_start + 1, val_end - val_start - 1);
 
-				if (value != comp)
+				if (comp.empty() || value != comp)
 				{
+					if (get_max)
+					{
+						u64 current_max = 0;
+						if (try_to_uint64(&current_max, value, 0, umax))
+						{
+							if (maximum < current_max)
+							{
+								maximum = current_max;
+								maximum_value = std::move(value);
+							}
+						}
+					}
+
 					pos = val_end + 1;
 					continue;
 				}
@@ -1047,10 +1066,30 @@ namespace gui::utils
 				return steamid64_to_32(user_id_64);
 			}
 
+			if (get_max && !maximum_value.empty())
+			{
+				return find_user_id(key, maximum_value, false);
+			}
+
 			return "";
 		};
 
-		if (const std::string id = find_user_id("\"MostRecent\"", "1"); !id.empty())
+		sys_log.notice("get_last_active_steam_user: Checking AutoLogin");
+		if (const std::string id = find_user_id("\"AutoLogin\"", "1", false); !id.empty())
+		{
+			return id;
+		}
+
+		// Fallback to MostRecent
+		sys_log.notice("get_last_active_steam_user: Checking MostRecent");
+		if (const std::string id = find_user_id("\"MostRecent\"", "1", false); !id.empty())
+		{
+			return id;
+		}
+
+		// Fallback to Timestamp
+		sys_log.notice("get_last_active_steam_user: Checking Timestamp");
+		if (const std::string id = find_user_id("\"Timestamp\"", {}, true); !id.empty())
 		{
 			return id;
 		}
@@ -1066,7 +1105,7 @@ namespace gui::utils
 
 		sys_log.notice("get_last_active_steam_user: Found steam user: '%s'", username);
 
-		if (const std::string id = find_user_id("\"AccountName\"", username); !id.empty())
+		if (const std::string id = find_user_id("\"AccountName\"", username, false); !id.empty())
 		{
 			return id;
 		}

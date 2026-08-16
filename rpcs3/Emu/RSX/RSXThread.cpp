@@ -393,13 +393,13 @@ namespace rsx
 
 			_max_index = 0;
 
-			auto re_evaluate = [&] <typename T> (const std::byte* ptr, T)
+			const auto re_evaluate = [&] <typename T> (const std::byte* ptr, T)
 			{
 				const u64 restart = rsx::method_registers.restart_index_enabled() ? rsx::method_registers.restart_index() : u64{umax};
 
 				for (u32 _index = first; _index < first + count; _index++)
 				{
-					const auto value = read_from_ptr<be_t<T>>(ptr, _index * sizeof(T));
+					const auto value = read_from_ptr_unsafe<be_t<T>>(ptr, _index * sizeof(T));
 
 					if (value == restart)
 					{
@@ -680,7 +680,7 @@ namespace rsx
 				ar(u32{0});
 			}
 		}
-		else if (u32 count = ar)
+		else if (u32 count{ar})
 		{
 			restore_fifo_count = count;
 			ar(restore_fifo_cmd);
@@ -765,7 +765,7 @@ namespace rsx
 		ar(stereo_enabled, format, aspect, resolution_id, scanline_pitch, gamma, resolution_x, resolution_y, state, scan_mode);
 	}
 
-	void thread::capture_frame(const std::string& name)
+	void thread::capture_frame(const std::string& name) const
 	{
 		frame_trace_data::draw_state draw_state{};
 
@@ -843,7 +843,7 @@ namespace rsx
 
 		if (capture_current_frame)
 		{
-			u32 element_count = rsx::method_registers.current_draw_clause.get_elements_count();
+			const u32 element_count = rsx::method_registers.current_draw_clause.get_elements_count();
 			capture_frame(fmt::format("Draw %s %d", rsx::method_registers.current_draw_clause.primitive, element_count));
 		}
 	}
@@ -2176,24 +2176,9 @@ namespace rsx
 				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION;
 			}
 
-			if (m_ctx->register_state->alpha_test_enabled())
-			{
-				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ALPHA_TEST;
-			}
-
 			if (m_ctx->register_state->polygon_stipple_enabled())
 			{
 				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_POLYGON_STIPPLE;
-			}
-
-			if (m_ctx->register_state->msaa_alpha_to_coverage_enabled())
-			{
-				const bool is_multiple_samples = m_ctx->register_state->surface_antialias() != rsx::surface_antialiasing::center_1_sample;
-				if (!backend_config.supports_hw_a2c || (!is_multiple_samples && !backend_config.supports_hw_a2c_1spp))
-				{
-					// Emulation required
-					current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ALPHA_TO_COVERAGE;
-				}
 			}
 
 			current_fragment_program.ctrl |= get_fragment_program_export_config();
@@ -2203,6 +2188,21 @@ namespace rsx
 		{
 			// Set high word of the control mask to store point sprite control
 			current_fragment_program.texcoord_control_mask |= u32(m_ctx->register_state->point_sprite_control_mask()) << 16;
+		}
+
+		if (m_ctx->register_state->alpha_test_enabled())
+		{
+			current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ALPHA_TEST;
+		}
+
+		if (m_ctx->register_state->msaa_alpha_to_coverage_enabled())
+		{
+			const bool is_multiple_samples = m_ctx->register_state->surface_antialias() != rsx::surface_antialiasing::center_1_sample;
+			if (!backend_config.supports_hw_a2c || (!is_multiple_samples && !backend_config.supports_hw_a2c_1spp))
+			{
+				// Emulation required
+				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ALPHA_TO_COVERAGE;
+			}
 		}
 
 		// Check if framebuffer is actually an XRGB format and not a WZYX format
@@ -3222,7 +3222,7 @@ namespace rsx
 			// capture first tile state with nop cmd
 			rsx::frame_capture_data::replay_command replay_cmd;
 			replay_cmd.rsx_command = std::make_pair(NV4097_NO_OPERATION, 0);
-			frame_capture.replay_commands.push_back(replay_cmd);
+			frame_capture.replay_commands.push_back(std::move(replay_cmd));
 			capture::capture_display_tile_state(this, frame_capture.replay_commands.back());
 		}
 		else if (capture_current_frame)

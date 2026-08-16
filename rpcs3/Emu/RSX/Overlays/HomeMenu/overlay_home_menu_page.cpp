@@ -155,7 +155,7 @@ namespace rsx
 			refresh();
 		}
 
-		void home_menu_page::show_dialog(const std::string& text, std::function<void()> on_accept, std::function<void()> on_cancel)
+		void home_menu_page::show_dialog(std::string_view text, std::function<void()> on_accept, std::function<void()> on_cancel)
 		{
 			if (m_message_box && !m_message_box->visible)
 			{

@@ -960,13 +960,13 @@ std::string FragmentProgramDecompiler::BuildCode()
 	}
 
 	OS <<
-	"#define _builtin_lit lit_legacy\n"
 	"#define _builtin_log2 log2\n"
 	"#define _builtin_normalize(x) (length(x) > 0? normalize(x) : x)\n" // HACK!! Workaround for some games that generate NaNs unless texture filtering exactly matches PS3 (BFBC)
 	"#define _builtin_sqrt(x) sqrt(abs(x))\n"
 	"#define _builtin_rcp(x) (1. / x)\n"
 	"#define _builtin_rsq(x) (1. / _builtin_sqrt(x))\n"
-	"#define _builtin_div(x, y) (x / y)\n";
+	"#define _builtin_div(x, y) (x / y)\n"
+	"#define _builtin_lerp mix\n";
 
 	if (device_props.has_low_precision_rounding)
 	{
@@ -1118,8 +1118,11 @@ bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 		SetDst("_builtin_lit($0)");
 		properties.has_lit_op = true;
 		return true;
-	case RSX_FP_OPCODE_LIF: SetDst("$Ty(1.0, $0.y, ($0.y > 0 ? exp2($0.w) : 0.0), 1.0)", OPFLAGS::op_extern); return true;
-	case RSX_FP_OPCODE_LRP: SetDst("$Ty($2 * (1 - $0) + $1 * $0)", OPFLAGS::skip_type_cast); return true;
+	case RSX_FP_OPCODE_LIF:
+		SetDst("_builtin_lif($0)");
+		properties.has_lit_op = true;
+		return true;
+	case RSX_FP_OPCODE_LRP: SetDst("_builtin_lerp($2, $1, $0)", OPFLAGS::skip_type_cast); return true;
 	case RSX_FP_OPCODE_LG2: SetDst("_builtin_log2($0.x).xxxx"); return true;
 	// Pack operations. See https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt
 	// PK2 = PK2H (2 16-bit floats)
@@ -1420,6 +1423,8 @@ std::string FragmentProgramDecompiler::Decompile()
 			!block.succ.empty() &&
 			(block.succ.front().type == EdgeType::IF || block.succ.front().type == EdgeType::LOOP);
 
+		auto sext8 = [](u32 value) { return static_cast<s32>(value << 24u) >> 24; };
+
 		for (const auto& inst : block.instructions)
 		{
 			if (early_epilogue && &inst == &block.instructions.back())
@@ -1458,12 +1463,16 @@ std::string FragmentProgramDecompiler::Decompile()
 					AddCode("if($cond)");
 					break;
 				case RSX_FP_OPCODE_LOOP:
-					AddCode(fmt::format("$ifcond for(int i%u = %u; i%u < %u; i%u += %u) //LOOP",
-							m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment));
-					break;
 				case RSX_FP_OPCODE_REP:
-					AddCode(fmt::format("if($cond) for(int i%u = %u; i%u < %u; i%u += %u) //REP",
-							m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment));
+					AddCode(
+						fmt::format("$ifcond for(int i%u = 0; i%u < %u; i%u++) // %s { %u, %d }",
+							m_loop_count,
+							m_loop_count, src1.rep_count,
+							m_loop_count,
+							FP::get_opcode_name(static_cast<FP_opcode>(m_instruction->opcode)),
+							src1.init_counter,
+							sext8(src1.increment))
+					);
 					break;
 				case RSX_FP_OPCODE_RET:
 					AddFlowOp("return");

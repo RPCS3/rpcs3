@@ -806,7 +806,7 @@ namespace rsx
 			// Make sure min/max reflects the data being displayed, not the entire datapoints vector
 			for (usz i = m_datapoints.size() - m_datapoint_count; i < m_datapoints.size(); i++)
 			{
-				const f32& dp = m_datapoints[i];
+				const f32 dp = m_datapoints[i];
 
 				if (dp < 0) continue; // Skip initial negative values. They don't count.
 

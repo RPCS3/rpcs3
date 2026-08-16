@@ -195,8 +195,12 @@ pkg_install_dialog::pkg_install_dialog(const QStringList& paths, bool from_boot,
 	}
 
 	QLabel* description = new QLabel(m_dir_list->count() == 1
-		? tr("Do you want to install this package?")
-		: tr("You are about to install multiple packages.\nReorder and/or exclude them if needed, then click \"Install\" to proceed.")
+		? from_boot
+			? tr("We found a package bundled with the game.\nDo you want to install this package?")
+			: tr("Do you want to install this package?")
+		: from_boot
+			? tr("We found multiple packages bundled with the game.\nReorder and/or exclude them if needed, then click \"Install\" to proceed.")
+			: tr("You are about to install multiple packages.\nReorder and/or exclude them if needed, then click \"Install\" to proceed.")
 	);
 	QLabel* label = new QLabel(tr("Would you like to precompile caches and install shortcuts to the installed software?"));
 
@@ -293,13 +297,13 @@ std::vector<compat::package_info> pkg_install_dialog::get_paths_to_install() con
 		const QListWidgetItem* item = m_dir_list->item(i);
 		if (item && (m_dir_list->count() == 1 || item->checkState() == Qt::Checked))
 		{
-			compat::package_info info;
+			compat::package_info info {};
 			info.path      = item->data(Roles::FullPathRole).toString();
 			info.title     = item->data(Roles::TitleRole).toString();
 			info.title_id  = item->data(Roles::TitleIdRole).toString();
 			info.changelog = item->data(Roles::ChangelogRole).toString();
 			info.version   = item->data(Roles::VersionRole).toString();
-			result.push_back(info);
+			result.push_back(std::move(info));
 		}
 	}
 

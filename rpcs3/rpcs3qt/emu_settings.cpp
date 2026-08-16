@@ -91,30 +91,10 @@ namespace
 	}
 }
 
-emu_settings::emu_settings()
+emu_settings::emu_settings(std::shared_ptr<render_creator> r_creator)
 	: QObject()
+	, m_render_creator(ensure(r_creator))
 {
-}
-
-bool emu_settings::Init()
-{
-	m_render_creator = new render_creator(this);
-
-	if (m_render_creator->abort_requested)
-	{
-		return false;
-	}
-
-	// Make Vulkan default setting if it is supported
-	if (m_render_creator->Vulkan.supported && !m_render_creator->Vulkan.adapters.empty())
-	{
-		const std::string adapter = ::at32(m_render_creator->Vulkan.adapters, 0).toStdString();
-		cfg_log.notice("Setting the default renderer to Vulkan. Default GPU: '%s'", adapter);
-		Emu.SetDefaultRenderer(video_renderer::vulkan);
-		Emu.SetDefaultGraphicsAdapter(adapter);
-	}
-
-	return true;
 }
 
 void emu_settings::LoadSettings(const std::string& title_id, bool create_config_from_global, const std::string& db_config)

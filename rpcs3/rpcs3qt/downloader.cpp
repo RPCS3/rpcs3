@@ -29,7 +29,7 @@ int curl_xferinfo_cb(void* userdata, curl_off_t /*dltotal*/, curl_off_t /*dlnow*
 downloader::downloader(QWidget* parent)
 	: QObject(parent)
 	, m_parent(parent)
-	, m_curl(new rpcs3::curl::curl_handle())
+	, m_curl(std::make_unique<rpcs3::curl::curl_handle>())
 {
 }
 

@@ -26,6 +26,12 @@ bool mouse_gyro_handler::toggle_enabled()
 	return m_enabled;
 }
 
+void mouse_gyro_handler::set_enabled(bool enabled)
+{
+	m_enabled = enabled;
+	clear();
+}
+
 void mouse_gyro_handler::set_gyro_active()
 {
 	gui_log.notice("Mouse-based gyro activated");

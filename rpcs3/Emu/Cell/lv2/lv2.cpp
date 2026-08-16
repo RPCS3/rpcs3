@@ -833,8 +833,8 @@ const std::array<std::pair<ppu_intrp_func_t, std::string_view>, 1024> g_ppu_sysc
 	NULL_FUNC(sys_ss_get_cache_of_analog_sunset_flag),      //860 (0x35C)  AUTHID
 	NULL_FUNC(sys_ss_protected_file_db),                    //861  ROOT
 	BIND_SYSC(sys_ss_virtual_trm_manager),                  //862  ROOT
-	BIND_SYSC(sys_ss_update_manager),                       //863  ROOT
-	NULL_FUNC(sys_ss_sec_hw_framework),                     //864  DBG
+	BIND_SYSC(sys_ss_update_manager),                       //863 (0x35F) ROOT
+	NULL_FUNC(sys_ss_sec_hw_framework),                     //864 (0x360) DBG
 	BIND_SYSC(sys_ss_random_number_generator),              //865 (0x361)
 	BIND_SYSC(sys_ss_secure_rtc),                           //866  ROOT
 	BIND_SYSC(sys_ss_appliance_info_manager),               //867  ROOT
@@ -985,9 +985,18 @@ enum CellSpursJobError : u32;
 enum CellSyncError : u32;
 
 enum CellGameError : u32;
+enum CellSysutilError : u32;
+enum CellSaveDataError : u32;
 enum CellGameDataError : u32;
-enum CellDiscGameError : u32;
 enum CellHddGameError : u32;
+enum CellDiscGameError : u32;
+
+enum CellCameraError : u32;
+enum CellGemError : u32;
+
+enum CellKbError : u32;
+enum CellPadError : u32;
+enum CellMouseError : u32;
 
 enum SceNpTrophyError : u32;
 enum SceNpError : u32;
@@ -1013,15 +1022,24 @@ const std::map<u64, void(*)(std::string&, u64)> s_error_codes_formatting_by_type
 	formatter_of<0x80410A00, CellSpursJobError>,
 
 	formatter_of<0x8002cb00, CellGameError>,
+	formatter_of<0x8002b100, CellSysutilError>,
+	formatter_of<0x8002b400, CellSaveDataError>,
 	formatter_of<0x8002b600, CellGameDataError>,
-	formatter_of<0x8002bd00, CellDiscGameError>,
 	formatter_of<0x8002ba00, CellHddGameError>,
+	formatter_of<0x8002bd00, CellDiscGameError>,
+
+	formatter_of<0x80140800, CellCameraError>,
+	formatter_of<0x80121800, CellGemError>,
+
+	formatter_of<0x80121000, CellKbError>,
+	formatter_of<0x80121100, CellPadError>,
+	formatter_of<0x80121200, CellMouseError>,
 
 	formatter_of<0x80022900, SceNpTrophyError>,
 	formatter_of<0x80029500, SceNpError>,
 };
 
-template<>
+template <>
 void fmt_class_string<CellError>::format(std::string& out, u64 arg)
 {
 	// Test if can be formatted by this formatter
@@ -1034,8 +1052,12 @@ void fmt_class_string<CellError>::format(std::string& out, u64 arg)
 
 		if (upper == s_error_codes_formatting_by_type.begin())
 		{
-			// Format as unknown by another enum formatter
-			upper->second(out, arg);
+			// Format as unknown
+			format_enum(out, arg, [](auto error)
+			{
+				return unknown;
+			});
+
 			return;
 		}
 
@@ -1115,6 +1137,12 @@ void fmt_class_string<CellError>::format(std::string& out, u64 arg)
 
 		return unknown;
 	});
+}
+
+template <>
+void fmt_class_string<error_code>::format(std::string& out, u64 arg)
+{
+	fmt_class_string<CellError>::format(out, arg);
 }
 
 stx::init_lock acquire_lock(stx::init_mutex& mtx, ppu_thread* ppu)
@@ -1252,16 +1280,8 @@ extern void ppu_execute_syscall(ppu_thread& ppu, u64 code)
 
 		if (const auto func = g_ppu_syscall_table[code].first)
 		{
-#ifdef __APPLE__
-			pthread_jit_write_protect_np(false);
-#endif
 			func(ppu, {}, vm::_ptr<u32>(ppu.cia), nullptr);
 			ppu_log.trace("Syscall '%s' (%llu) finished, r3=0x%llx", ppu_syscall_code(code), code, ppu.gpr[3]);
-
-#ifdef __APPLE__
-			pthread_jit_write_protect_np(true);
-			// No need to flush cache lines after a syscall, since we didn't generate any code.
-#endif
 			return;
 		}
 	}

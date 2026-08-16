@@ -3,7 +3,7 @@
 #include "game_list.h"
 #include "game_list_actions.h"
 #include "custom_dock_widget.h"
-#include "iso_integrity.h"
+#include "content_integrity.h"
 
 #include "Utilities/lockless.h"
 #include "Utilities/mutex.h"
@@ -56,7 +56,14 @@ public:
 
 	void SetShowHidden(bool show);
 
-	iso_integrity* GetIsoIntegrity() const { return m_iso_integrity; }
+	void SetShowBroken(bool show);
+
+	void SetShowCompleted(bool show);
+
+	content_integrity* GetIsoIntegrity() const { return ensure(m_iso_integrity); }
+	content_integrity* GetPsnContentIntegrity() const { return ensure(m_psn_content_integrity); }
+	content_integrity* GetPsnDlcIntegrity() const { return ensure(m_psn_dlc_integrity); }
+	content_integrity* GetPsnUpdateIntegrity() const { return ensure(m_psn_update_integrity); }
 	game_compatibility* GetGameCompatibility() const { return ensure(m_game_compat); }
 	config_database* GetConfigDatabase() const { return ensure(m_config_db); }
 	const std::vector<game_info>& GetGameInfo() const { return m_game_data; }
@@ -67,10 +74,14 @@ public:
 	std::map<QString, QString>& notes() { return m_notes; }
 	std::map<QString, QString>& titles() { return m_titles; }
 	QSet<QString>& hidden_list() { return m_hidden_list; }
+	QSet<QString>& broken_list() { return m_broken_list; }
+	QSet<QString>& completed_list() { return m_completed_list; }
 
 	bool IsEntryVisible(const game_info& game, bool search_fallback = false) const;
 
 	void ShowCustomConfigIcon(const game_info& game);
+
+	void stop_movie();
 
 	// Enqueue slot for refreshed signal
 	// Allowing for an individual container for each distinct use case (currently disabled and contains only one such entry)
@@ -130,6 +141,8 @@ private:
 		std::set<std::string> m_done_paths;
 	};
 
+	void UpdateWindowTitle(const std::vector<game_info>& matching_apps);
+
 	void push_path(const std::string& path, std::vector<std::string>& legit_paths);
 
 	QString get_header_text(int col) const;
@@ -156,7 +169,10 @@ private:
 
 	// Game List
 	game_list_table* m_game_list = nullptr;
-	iso_integrity* m_iso_integrity = nullptr;
+	content_integrity* m_iso_integrity = nullptr;
+	content_integrity* m_psn_content_integrity = nullptr;
+	content_integrity* m_psn_dlc_integrity = nullptr;
+	content_integrity* m_psn_update_integrity = nullptr;
 	game_compatibility* m_game_compat = nullptr;
 	config_database* m_config_db = nullptr;
 	progress_dialog* m_progress_dialog = nullptr;
@@ -198,6 +214,10 @@ private:
 	QFutureWatcher<void> m_refresh_watcher;
 	QSet<QString> m_hidden_list;
 	bool m_show_hidden{false};
+	QSet<QString> m_broken_list;
+	bool m_show_broken{false};
+	QSet<QString> m_completed_list;
+	bool m_show_completed{false};
 
 	// Search
 	QString m_search_text;

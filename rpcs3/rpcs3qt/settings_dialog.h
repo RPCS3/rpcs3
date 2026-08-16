@@ -30,6 +30,8 @@ Q_SIGNALS:
 	void EmuSettingsApplied();
 	void signal_restore_dependant_defaults();
 private:
+	void EnhanceCheckBox(emu_settings_type settings_type, QCheckBox* checkbox, const QString& tooltip, QObject* tooltip_object = nullptr);
+	void EnhanceComboBox(emu_settings_type settings_type, QComboBox* combobox, const QString& tooltip, QObject* tooltip_object = nullptr, bool is_ranged = false, bool use_max = false, int max = 0, bool sorted = false, bool strict = true);
 	void EnhanceSlider(emu_settings_type settings_type, QSlider* slider, QLabel* label, const QString& label_text) const;
 
 	// Snapping of sliders when moved with mouse
@@ -62,9 +64,8 @@ private:
 	QString m_discord_state;
 
 	// Descriptions
-	std::vector<std::pair<QLabel*, QString>> m_description_labels;
+	QString m_default_description;
 	QHash<QObject*, QString> m_descriptions;
-	void SubscribeDescription(QLabel* description);
 	void SubscribeTooltip(QObject* object, const QString& tooltip);
 	bool eventFilter(QObject* object, QEvent* event) override;
 	void closeEvent(QCloseEvent* event) override;

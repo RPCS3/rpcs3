@@ -2,6 +2,8 @@
 
 #include "geometry.h"
 #include "Emu/system_config_types.h"
+#include "util/atomic.hpp"
+#include "Utilities/StrFmt.h"
 #include "Utilities/StrUtil.h"
 #include <map>
 #include <mutex>

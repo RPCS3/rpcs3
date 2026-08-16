@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/lv2/sys_tty.h"
 #include "Emu/Cell/PPUModule.h"
+#include "Emu/Cell/PPUFunction.h"
 #include "Utilities/cfmt.h"
 
 LOG_CHANNEL(sysPrxForUser);
@@ -367,27 +368,50 @@ vm::cptr<char> _sys_strrchr(vm::cptr<char> str, char ch)
 	return res;
 }
 
-u32 _sys_malloc(u32 size)
+u32 _sys_malloc(ppu_thread& ppu, u32 size)
 {
+	ppu.state += cpu_flag::wait;
+
 	sysPrxForUser.warning("_sys_malloc(size=0x%x)", size);
 
-	return vm::alloc(size, vm::main);
+	const u32 res = vm::alloc(size, vm::main);
+	ppu.check_state();
+	return res;
 }
 
-u32 _sys_memalign(u32 align, u32 size)
+u32 _sys_memalign(ppu_thread& ppu, u32 align, u32 size)
 {
+	ppu.state += cpu_flag::wait;
+
 	sysPrxForUser.warning("_sys_memalign(align=0x%x, size=0x%x)", align, size);
 
-	return vm::alloc(size, vm::main, std::max<u32>(align, 0x10000));
+	const u32 res = vm::alloc(size, vm::main, std::max<u32>(align, 0x10000));
+	ppu.check_state();
+	return res;
 }
 
-error_code _sys_free(u32 addr)
+void _sys_free(ppu_thread& ppu, u32 addr)
 {
+	ppu.state += cpu_flag::wait;
+
 	sysPrxForUser.warning("_sys_free(addr=0x%x)", addr);
 
 	vm::dealloc(addr, vm::main);
 
-	return CELL_OK;
+	ppu.check_state();
+}
+
+std::pair<vm::addr_t, u32> vm::hle_malloc_allocator::alloc(u32 size, u32 align)
+{
+	const auto ppu = ensure(cpu_thread::get_current<ppu_thread>());
+	const u32 addr = vm::cast(ppu_execute<&_sys_memalign>(*ppu, align, size));
+	return { vm::cast(addr), addr ? size : 0 };
+}
+
+void vm::hle_malloc_allocator::dealloc(u32 addr, u32 size) noexcept
+{
+	const auto ppu = ensure(cpu_thread::get_current<ppu_thread>());
+	ppu_execute<&_sys_free>(*ppu, addr);
 }
 
 s32 _sys_snprintf(ppu_thread& ppu, vm::ptr<char> dst, u32 count, vm::cptr<char> fmt, ppu_va_args_t va_args)

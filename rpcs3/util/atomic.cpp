@@ -55,6 +55,10 @@ static bool has_waitv()
 #include <pthread.h>
 #endif
 
+#if defined(__DragonFly__) || defined(__FreeBSD__) || defined(__OpenBSD__)
+#include <pthread_np.h>
+#endif
+
 #include "asm.hpp"
 #include "endian.hpp"
 #include "tsc.hpp"
@@ -186,9 +190,17 @@ namespace
 #ifdef _WIN32
 			tid = GetCurrentThreadId();
 #elif defined(ANDROID)
-			tid = pthread_self();
+			tid = pthread_gettid_np(pthread_self());
+#elif defined(__linux__)
+			tid = syscall(SYS_gettid);
+#elif defined(__APPLE__)
+			u64 tid_temp{};
+			pthread_threadid_np(nullptr, &tid_temp);
+			tid = tid_temp; // Use a temporary for extra safety
+#elif defined(__FreeBSD__)
+			tid = pthread_getthreadid_np();
 #else
-			tid = reinterpret_cast<u64>(pthread_self());
+			tid = pthread_self();
 #endif
 
 #ifdef USE_STD

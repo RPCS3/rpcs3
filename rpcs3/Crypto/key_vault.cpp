@@ -5,7 +5,7 @@
 
 LOG_CHANNEL(key_vault_log, "KEY_VAULT");
 
-SELF_KEY::SELF_KEY(u64 ver_start, u64 ver_end, u16 rev, u32 type, const std::string& e, const std::string& r, const std::string& pb, const std::string& pr, u32 ct)
+SELF_KEY::SELF_KEY(u64 ver_start, u64 ver_end, u16 rev, u32 type, std::string_view e, std::string_view r, std::string_view pb, std::string_view pr, u32 ct)
 {
 	version_start = ver_start;
 	version_end   = ver_end;

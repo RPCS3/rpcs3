@@ -457,12 +457,9 @@ namespace rsx
 			return render_text_ex(unused_x, unused_y, text, -1, max_width, wrap);
 		}
 
-		std::pair<f32, f32> font::get_char_offset(const char32_t* text, usz max_length, u16 max_width, bool wrap)
+		void font::get_char_offset(f32& loc_x, f32& loc_y, const char32_t* text, usz max_length, u16 max_width, bool wrap)
 		{
-			f32 loc_x, loc_y;
-
 			render_text_ex(loc_x, loc_y, text, max_length, max_width, wrap);
-			return {loc_x, loc_y};
 		}
 
 		const std::vector<u8>& font::get_glyph_data() const

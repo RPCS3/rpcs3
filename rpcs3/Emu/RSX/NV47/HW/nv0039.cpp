@@ -14,13 +14,13 @@ namespace rsx
 	namespace nv0039
 	{
 		// Transfer with stride
-		inline void block2d_copy_with_stride(u8* dst, const u8* src, u32 width, u32 height, s32 src_pitch, s32 dst_pitch, u8 src_stride, u8 dst_stride)
+		inline void block2d_copy_with_stride(u8* dst, const u8* src, u32 column_count, u32 row_count, s32 src_pitch, s32 dst_pitch, u8 src_stride, u8 dst_stride)
 		{
-			for (u32 row = 0; row < height; ++row)
+			for (u32 row = 0; row < row_count; ++row)
 			{
 				auto dst_ptr = dst;
 				auto src_ptr = src;
-				while (src_ptr < src + width)
+				for (u32 column = 0; column < column_count; ++column)
 				{
 					*dst_ptr = *src_ptr;
 
@@ -43,20 +43,41 @@ namespace rsx
 			}
 		}
 
+		inline bool validate_buffer_notify(s32 col_count, s32 row_count, s32 in_stride, s32 out_stride)
+		{
+			if (!col_count || !row_count)
+			{
+				rsx_log.warning("NV0039_BUFFER_NOTIFY NOPed out: 2D area is zero.");
+				return false;
+			}
+
+			if (in_stride <= 0 || in_stride > 4)
+			{
+				rsx_log.error("NV0039_BUFFER_NOTIFY NOPed out: Invalid input stride (=%d)", in_stride);
+				return false;
+			}
+
+			if (out_stride <= 0 || out_stride > 4)
+			{
+				rsx_log.error("NV0039_BUFFER_NOTIFY NOPed out: Invalid output stride (=%d)", out_stride);
+				return false;
+			}
+
+			return true;
+		}
+
 		void buffer_notify(context* ctx, u32, u32 arg)
 		{
 			s32 in_pitch = REGS(ctx)->nv0039_input_pitch();
 			s32 out_pitch = REGS(ctx)->nv0039_output_pitch();
-			const u32 line_length = REGS(ctx)->nv0039_line_length();
-			const u32 line_count = REGS(ctx)->nv0039_line_count();
-			const u8 out_format = REGS(ctx)->nv0039_output_format();
-			const u8 in_format = REGS(ctx)->nv0039_input_format();
+			const u32 line_length = REGS(ctx)->nv0039_line_length();  // Number of columns per row
+			const u32 line_count = REGS(ctx)->nv0039_line_count();    // Number of rows to copy
+			const u8 out_format = REGS(ctx)->nv0039_output_format();  // Column stride in bytes. Only the first byte is actually written to.
+			const u8 in_format = REGS(ctx)->nv0039_input_format();    // Column stride in bytes. Only the first byte is actually read from.
 			const u32 notify = arg;
 
-			if (!line_count || !line_length)
+			if (!validate_buffer_notify(line_length, line_count, in_format, out_format))
 			{
-				rsx_log.warning("NV0039_BUFFER_NOTIFY NOPed out: pitch(in=0x%x, out=0x%x), line(len=0x%x, cnt=0x%x), fmt(in=0x%x, out=0x%x), notify=0x%x",
-					in_pitch, out_pitch, line_length, line_count, in_format, out_format, notify);
 				return;
 			}
 
@@ -69,11 +90,16 @@ namespace rsx
 			u32 dst_offset = REGS(ctx)->nv0039_output_offset();
 			u32 dst_dma = REGS(ctx)->nv0039_output_location();
 
-			const bool is_block_transfer = (in_pitch == out_pitch && out_pitch + 0u == line_length);
+			const auto in_width_in_bytes = line_length * in_format;
+			const auto out_width_in_bytes = line_length * out_format;
+			const bool is_block_transfer =
+				in_format == 1 && out_format == 1 &&
+				in_pitch + 0u == in_width_in_bytes &&
+				out_pitch + 0u == out_width_in_bytes;
 			const auto read_address = get_address(src_offset, src_dma);
 			const auto write_address = get_address(dst_offset, dst_dma);
-			const auto read_length = in_pitch * (line_count - 1) + line_length;
-			const auto write_length = out_pitch * (line_count - 1) + line_length;
+			const auto read_length = in_pitch * (line_count - 1) + in_width_in_bytes;
+			const auto write_length = out_pitch * (line_count - 1) + out_width_in_bytes;
 
 			RSX(ctx)->invalidate_fragment_program(dst_dma, dst_offset, write_length);
 
@@ -110,7 +136,7 @@ namespace rsx
 			const bool is_overlapping = dst_dma == src_dma && [&]() -> bool
 			{
 				const u32 src_max = src_offset + read_length;
-				const u32 dst_max = dst_offset + (out_pitch * (line_count - 1) + line_length);
+				const u32 dst_max = dst_offset + write_length;
 				return (src_offset >= dst_offset && src_offset < dst_max) ||
 				 (dst_offset >= src_offset && dst_offset < src_max);
 			}();

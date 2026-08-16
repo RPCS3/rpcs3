@@ -54,7 +54,7 @@ struct NPD_HEADER
 struct EDAT_HEADER
 {
 	s32 flags;
-	s32 block_size;
+	u32 block_size;
 	u64 file_size;
 };
 
@@ -62,7 +62,7 @@ struct EDAT_HEADER
 extern fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, u8 *custom_klic);
 
 extern void read_npd_edat_header(const fs::file* input, NPD_HEADER& NPD, EDAT_HEADER& EDAT);
-extern bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& input_file_name, const u8* custom_klic, NPD_HEADER *npd_out = nullptr);
+extern bool VerifyEDATHeaderWithKLicense(const fs::file& input, std::string_view input_file_name, const u8* custom_klic, NPD_HEADER *npd_out = nullptr);
 
 u128 GetEdatRifKeyFromRapFile(const fs::file& rap_file);
 

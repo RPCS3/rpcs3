@@ -130,7 +130,7 @@ namespace rsx::assembler
 		rsx::simple_array<u32> get_register_file_range(const RegisterRef& reg);
 
 		// Compile a register file annotated blob to register references
-		std::vector<RegisterRef> compile_register_file(const std::array<char, 48 * 8>& file);
+		std::vector<RegisterRef> compile_register_file(const register_file_t& file);
 
 		// Invert execution mask on an instruction
 		void invert_conditional_execution_mask(Instruction* instruction);

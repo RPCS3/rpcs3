@@ -301,7 +301,7 @@ namespace vk
 			color_attachment_description.initialLayout = layout;
 			color_attachment_description.finalLayout = layout;
 
-			attachments.push_back(color_attachment_description);
+			attachments.push_back(std::move(color_attachment_description));
 			attachment_references.push_back({ attachment_count++, layout });
 		}
 
@@ -316,7 +316,7 @@ namespace vk
 			depth_attachment_description.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
 			depth_attachment_description.initialLayout = dsv_layout;
 			depth_attachment_description.finalLayout = dsv_layout;
-			attachments.push_back(depth_attachment_description);
+			attachments.push_back(std::move(depth_attachment_description));
 
 			attachment_references.push_back({ attachment_count, dsv_layout });
 		}

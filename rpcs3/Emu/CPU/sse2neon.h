@@ -81,6 +81,8 @@
 #if defined(__GNUC__) || defined(__clang__)
 #pragma push_macro("FORCE_INLINE")
 #pragma push_macro("ALIGN_STRUCT")
+#undef FORCE_INLINE
+#undef ALIGN_STRUCT
 #define FORCE_INLINE static inline __attribute__((always_inline))
 #define ALIGN_STRUCT(x) __attribute__((aligned(x)))
 #define _sse2neon_likely(x) __builtin_expect(!!(x), 1)

@@ -66,6 +66,16 @@ struct spu_program
 	bool operator<(const spu_program& rhs) const noexcept;
 };
 
+#ifdef ARCH_ARM64
+struct spu_llvm_compile_context
+{
+	bool use_tbl2 = true;
+	std::string llvm_error;
+};
+
+void spu_llvm_set_compile_context(spu_llvm_compile_context* context) noexcept;
+#endif
+
 class spu_item
 {
 public:
@@ -673,9 +683,13 @@ public:
 			return true;
 		}
 
-		bool is_gpr_not_NaN_hint(u32 i) const noexcept
+		bool is_gpr_not_NaN_hint([[maybe_unused]] u32 i) const noexcept
 		{
+#ifdef ARCH_X64
 			return gpr_not_nans.test(i);
+#else
+			return false;
+#endif
 		}
 
 		origin_t get_reg(u32 reg_val) noexcept

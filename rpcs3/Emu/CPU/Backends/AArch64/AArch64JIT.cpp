@@ -219,7 +219,7 @@ namespace aarch64
         return result;
     }
 
-    gpr GHC_frame_preservation_pass::get_base_register_for_call(const std::string& callee_name, gpr default_reg)
+    gpr GHC_frame_preservation_pass::get_base_register_for_call(std::string_view callee_name, gpr default_reg)
     {
         // We go over the base_register_lookup table and find the first matching pattern
         for (const auto& pattern : m_config.base_register_lookup)

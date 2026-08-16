@@ -43,6 +43,7 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	, m_persistent_settings(std::move(persistent_settings))
 {
 	setObjectName("gamelist");
+	setFeatures(features() & ~QDockWidget::DockWidgetClosable);
 
 	m_game_list_actions = std::make_shared<game_list_actions>(this, m_gui_settings);
 
@@ -54,6 +55,8 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	m_col_sort_order  = m_gui_settings->GetValue(gui::gl_sortAsc).toBool() ? Qt::AscendingOrder : Qt::DescendingOrder;
 	m_sort_column     = m_gui_settings->GetValue(gui::gl_sortCol).toInt();
 	m_hidden_list     = gui::utils::list_to_set(m_gui_settings->GetValue(gui::gl_hidden_list).toStringList());
+	m_broken_list     = gui::utils::list_to_set(m_gui_settings->GetValue(gui::gl_broken_list).toStringList());
+	m_completed_list  = gui::utils::list_to_set(m_gui_settings->GetValue(gui::gl_completed_list).toStringList());
 
 	m_old_layout_is_list = m_is_list_layout;
 
@@ -74,7 +77,10 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	m_game_list->installEventFilter(this);
 	m_game_list->verticalScrollBar()->installEventFilter(this);
 
-	m_iso_integrity = new iso_integrity(this);
+	m_iso_integrity = new content_integrity(this, content_file_type::ISO);
+	m_psn_content_integrity = new content_integrity(this, content_file_type::PSN_CONTENT);
+	m_psn_dlc_integrity = new content_integrity(this, content_file_type::PSN_DLC);
+	m_psn_update_integrity = new content_integrity(this, content_file_type::PSN_UPDATE);
 	m_game_compat = new game_compatibility(this);
 	m_config_db = new config_database(this);
 
@@ -117,8 +123,10 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	add_column(gui::game_list_columns::compat);
 	add_column(gui::game_list_columns::dir_size);
 
-	m_progress_dialog = new progress_dialog(tr("Loading games"), tr("Loading games, please wait..."), tr("Cancel"), 0, 0, false, this, Qt::Dialog | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
+	m_progress_dialog = new progress_dialog(tr("Loading games"), tr("Loading games, please wait..."), tr("Cancel"), 0, 100, false, this, Qt::Dialog | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
 	m_progress_dialog->setMinimumDuration(200); // Only show the progress dialog after some time has passed
+	m_progress_dialog->SetValue(m_progress_dialog->maximum());
+	m_progress_dialog->accept();
 
 	// Events
 	connect(m_progress_dialog, &QProgressDialog::canceled, this, [this]()
@@ -332,8 +340,44 @@ bool game_list_frame::IsEntryVisible(const game_info& game, bool search_fallback
 	};
 
 	const QString serial = QString::fromStdString(game->info.serial);
-	const bool is_visible = m_show_hidden || !m_hidden_list.contains(serial);
+	const bool is_visible = (m_show_hidden || !m_hidden_list.contains(serial)) &&
+							(m_show_broken || !m_broken_list.contains(serial)) &&
+							(m_show_completed || !m_completed_list.contains(serial));
 	return is_visible && matches_category() && SearchMatchesApp(QString::fromStdString(game->info.name), serial, search_fallback);
+}
+
+// Show the amount of listed games (and the Disc/HDD/Other share) in the dock title
+void game_list_frame::UpdateWindowTitle(const std::vector<game_info>& matching_apps)
+{
+	const std::string cat_disc_game = cat::cat_disc_game.toStdString();
+	const std::string cat_hdd_game = cat::cat_hdd_game.toStdString();
+	usz disc_games = 0;
+	usz hdd_games = 0;
+	usz other_games = 0;
+
+	for (const auto& app : matching_apps)
+	{
+		if (!app) continue;
+
+		if (app->info.category == cat_disc_game)
+		{
+			disc_games++;
+		}
+		else if (app->info.category == cat_hdd_game)
+		{
+			hdd_games++;
+		}
+		else
+		{
+			other_games++;
+		}
+	}
+
+	setWindowTitle(tr("Game List (%0) - Disc: %1 | HDD: %2 | Other: %3")
+		.arg(matching_apps.size())
+		.arg(disc_games)
+		.arg(hdd_games)
+		.arg(other_games));
 }
 
 void game_list_frame::push_path(const std::string& path, std::vector<std::string>& legit_paths)
@@ -524,6 +568,8 @@ void game_list_frame::Refresh(const bool from_drive, const std::vector<std::stri
 		m_game_grid->populate(matching_apps, m_notes, m_titles, selected_items, m_play_hover_movies, m_play_hover_music);
 		RepaintIcons();
 	}
+
+	UpdateWindowTitle(matching_apps);
 }
 
 void game_list_frame::OnParsingFinished()
@@ -563,6 +609,7 @@ void game_list_frame::OnParsingFinished()
 			if (is_raw_device || !iso_cache::load(dir_or_elf, iso_cache_key, cache_entry))
 			{
 				archive = std::make_unique<iso_archive>(dir_or_elf);
+				if (!archive->is_valid()) return;
 			}
 
 			// Track this ISO path for cache cleanup after scan completes.
@@ -601,6 +648,8 @@ void game_list_frame::OnParsingFinished()
 			{
 				game_list_log.warning("Cached psf for iso not valid: '%s'", game.info.path);
 				archive = std::make_unique<iso_archive>(dir_or_elf);
+				if (!archive->is_valid()) return;
+
 				cache_entry = {}; // Reset so the cache gets rewritten after scan.
 				psf = {};
 			}
@@ -760,11 +809,11 @@ void game_list_frame::OnParsingFinished()
 				if (game.icon_in_archive)
 				{
 					auto icon_file = archive->open(game.info.icon_path);
-					const auto icon_size = icon_file->size();
-					if (icon_size > 0)
+
+					if (icon_file && icon_file->size() > 0)
 					{
-						cache_entry.icon_data.resize(icon_size);
-						icon_file->read(cache_entry.icon_data.data(), icon_size);
+						cache_entry.icon_data.resize(icon_file->size());
+						icon_file->read(cache_entry.icon_data.data(), icon_file->size());
 					}
 				}
 
@@ -875,6 +924,8 @@ void game_list_frame::OnParsingFinished()
 				}
 
 				iso_archive archive(entry.path);
+				if (!archive.is_valid()) return;
+
 				const iso_fs_node& root = archive.root();
 				const std::regex ps3_gm_regex("^PS3_GM[[:digit:]]{2}$");
 
@@ -1063,9 +1114,13 @@ void game_list_frame::OnRefreshFinished()
 		return title1.toLower() < title2.toLower();
 	});
 
-	// clean up hidden games list
+	// clean up hidden lists (Hide, Broken, Completed)
 	m_hidden_list.intersect(m_serials);
 	m_gui_settings->SetValue(gui::gl_hidden_list, QStringList(m_hidden_list.values()));
+	m_broken_list.intersect(m_serials);
+	m_gui_settings->SetValue(gui::gl_broken_list, QStringList(m_broken_list.values()));
+	m_completed_list.intersect(m_serials);
+	m_gui_settings->SetValue(gui::gl_completed_list, QStringList(m_completed_list.values()));
 	m_serials.clear();
 	m_path_list.clear();
 	m_path_entries.clear();
@@ -1233,6 +1288,12 @@ void game_list_frame::ShowCustomConfigIcon(const game_info& game)
 	RepaintIcons();
 }
 
+void game_list_frame::stop_movie()
+{
+	if (m_game_list) m_game_list->stop_movie();
+	if (m_game_grid) m_game_grid->stop_movie();
+}
+
 void game_list_frame::ResizeIcons(int slider_pos)
 {
 	m_icon_size_index = slider_pos;
@@ -1273,6 +1334,16 @@ void game_list_frame::RepaintIcons(bool from_settings)
 void game_list_frame::SetShowHidden(bool show)
 {
 	m_show_hidden = show;
+}
+
+void game_list_frame::SetShowBroken(bool show)
+{
+	m_show_broken = show;
+}
+
+void game_list_frame::SetShowCompleted(bool show)
+{
+	m_show_completed = show;
 }
 
 void game_list_frame::SetListMode(bool is_list)

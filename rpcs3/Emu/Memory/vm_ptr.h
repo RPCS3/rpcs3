@@ -336,7 +336,7 @@ namespace vm
 
 		// Perform reinterpret cast
 		template <typename CT, typename T, typename AT>
-			requires requires(T* t) { reinterpret_cast<to_be_t<CT>*>(t); }
+			requires std::is_object_v<T> && std::is_object_v<to_be_t<CT>>
 		inline _ptr_base<to_be_t<CT>, u32> unsafe_ptr_cast(const _ptr_base<T, AT>& other)
 		{
 			return vm::cast(other.addr());

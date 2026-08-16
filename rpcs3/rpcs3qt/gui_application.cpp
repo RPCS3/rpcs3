@@ -91,49 +91,194 @@ gui_application::~gui_application()
 #endif
 }
 
-bool gui_application::Init()
+int gui_application::exec()
+{
+	// Show a series of dialogs using the main event loop before finally showing the main window.
+	// We used to do this synchronous with e.g. QDialog::exec() before we called gui_application::exec(),
+	// but when you call quit() (as seen in these dialogs) without a running event loop,
+	// then the destructors of QObjects won't be called, leading to all sorts of issues.
+	std::shared_ptr<u32> step_index = std::make_shared<u32>(0);
+	std::shared_ptr<std::vector<std::function<void()>>> steps = std::make_shared<std::vector<std::function<void()>>>();
+
+	m_show_next_dialog = [this, step_index, steps]()
+	{
+		ensure(steps && step_index);
+		const auto& func = ::at32(*steps, (*step_index)++);
+		ensure(func);
+		func();
+	};
+
+	if (!rpcs3::is_release_build() && !rpcs3::is_local_build())
+	{
+		steps->push_back([this]()
+		{
+			const std::string_view branch_name = rpcs3::get_full_branch();
+			gui_log.warning("Experimental Build Warning! Build origin: %s", branch_name);
+
+			QMessageBox* msg = new QMessageBox();
+			msg->setAttribute(Qt::WA_DeleteOnClose);
+			msg->setWindowModality(Qt::WindowModal);
+			msg->setWindowTitle(tr("Experimental Build Warning"));
+			msg->setIcon(QMessageBox::Critical);
+			msg->setTextFormat(Qt::RichText);
+			msg->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+			msg->setDefaultButton(QMessageBox::No);
+			msg->setText(gui::utils::make_paragraph(tr(
+				"Please understand that this build is not an official RPCS3 release.\n"
+				"This build contains changes that may break games, or even <b>damage</b> your data.\n"
+				"We recommend to download and use the official build from the %0.\n"
+				"\n"
+				"Build origin: %1\n"
+				"Do you wish to use this build anyway?")
+				.arg(gui::utils::make_link(tr("RPCS3 website"), "https://rpcs3.net/download"))
+				.arg(Qt::convertFromPlainText(branch_name.data()))));
+			msg->layout()->setSizeConstraint(QLayout::SetFixedSize);
+			connect(msg, &QMessageBox::finished, this, [this](int)
+			{
+				const QMessageBox* box = qobject_cast<QMessageBox*>(sender());
+				if (!box || box->standardButton(box->clickedButton()) == QMessageBox::No)
+				{
+					Emu.Quit(true);
+					return;
+				}
+				m_show_next_dialog();
+			});
+			msg->open();
+		});
+	}
+#ifdef __linux__
+	const bool is_flatpak = qEnvironmentVariableIsSet("FLATPAK_ID");
+	const bool is_snap = qEnvironmentVariableIsSet("SNAP");
+	const QString unofficial_build = is_flatpak ? "Flatpak" : (is_snap ? "Snap" : "");
+	if (!unofficial_build.isEmpty())
+	{
+		steps->push_back([this, unofficial_build]()
+		{
+			gui_log.warning("%s Build Warning!", unofficial_build);
+
+			QMessageBox* msg = new QMessageBox();
+			msg->setAttribute(Qt::WA_DeleteOnClose);
+			msg->setWindowModality(Qt::WindowModal);
+			msg->setWindowTitle(tr("Unofficial Build Warning"));
+			msg->setIcon(QMessageBox::Critical);
+			msg->setTextFormat(Qt::RichText);
+			msg->setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+			msg->setDefaultButton(QMessageBox::No);
+			msg->setText(gui::utils::make_paragraph(tr(
+				"Warning! You're running an unofficial %0 build of RPCS3.\n"
+				"You will get no official support for this build.\n"
+				"Issues opened on the RPCS3 GitHub related to %0 builds are not allowed and will be closed.\n"
+				"We recommend to download and use the official build from the %1.\n"
+				"\n"
+				"Do you wish to use this build anyway?")
+				.arg(unofficial_build)
+				.arg(gui::utils::make_link(tr("RPCS3 website"), "https://rpcs3.net/download"))));
+			msg->layout()->setSizeConstraint(QLayout::SetFixedSize);
+			connect(msg, &QMessageBox::finished, this, [this](int)
+			{
+				const QMessageBox* box = qobject_cast<QMessageBox*>(sender());
+				if (!box || box->standardButton(box->clickedButton()) == QMessageBox::No)
+				{
+					Emu.Quit(true);
+					return;
+				}
+				m_show_next_dialog();
+			});
+			msg->open();
+		});
+	}
+#endif
+	if (m_render_creator->vulkan_timed_out)
+	{
+		steps->push_back([this]()
+		{
+			gui_log.error("Vulkan device enumeration timed out");
+
+			QMessageBox* msg = new QMessageBox();
+			msg->setAttribute(Qt::WA_DeleteOnClose);
+			msg->setWindowModality(Qt::WindowModal);
+			msg->setIcon(QMessageBox::Critical);
+			msg->setStandardButtons(QMessageBox::Ignore | QMessageBox::Abort);
+			msg->setDefaultButton(QMessageBox::Abort);
+			msg->setWindowTitle(tr("Vulkan Check Timeout"));
+			msg->setText(tr("Querying for Vulkan-compatible devices is taking too long. This is usually caused by malfunctioning "
+			                "graphics drivers, reinstalling them could fix the issue.\n\n"
+			                "Selecting ignore starts the emulator without Vulkan support."));
+			msg->layout()->setSizeConstraint(QLayout::SetFixedSize);
+			connect(msg, &QMessageBox::finished, this, [this](int)
+			{
+				const QMessageBox* box = qobject_cast<QMessageBox*>(sender());
+				if (!box || box->standardButton(box->clickedButton()) == QMessageBox::Abort)
+				{
+					Emu.Quit(true);
+					return;
+				}
+				m_show_next_dialog();
+			});
+			msg->open();
+		});
+	}
+	if (m_gui_settings->GetValue(gui::ib_show_welcome).toBool())
+	{
+		steps->push_back([this]()
+		{
+			welcome_dialog* welcome = new welcome_dialog(m_gui_settings, false);
+			connect(welcome, &QDialog::finished, this, [this](int result)
+			{
+				if (result == QDialog::Rejected)
+				{
+					Emu.Quit(true);
+					return;
+				}
+				m_show_next_dialog();
+			});
+			welcome->open();
+		});
+	}
+
+	steps->push_back([this]()
+	{
+		if (m_main_window)
+		{
+			m_main_window->show();
+		}
+
+#ifdef __APPLE__
+		if (!m_render_creator->Vulkan.supported)
+		{
+			QMessageBox::warning(nullptr,
+									tr("Warning"),
+									tr("Vulkan is not supported on this Mac.\n"
+									"No graphics will be rendered."));
+		}
+#endif
+
+		// Check maxfiles
+		if (utils::get_maxfiles() < 4096)
+		{
+			QMessageBox::warning(nullptr,
+									tr("Warning"),
+									tr("The current limit of maximum file descriptors is too low.\n"
+									"Some games will crash.\n"
+									"\n"
+									"Please increase the limit before running RPCS3."));
+		}
+	});
+
+	m_show_next_dialog();
+
+	return QGuiApplication::exec();
+}
+
+void gui_application::Init()
 {
 #ifndef __APPLE__
 	setWindowIcon(QIcon(":/rpcs3.ico"));
 #endif
 
-	if (!rpcs3::is_release_build() && !rpcs3::is_local_build())
-	{
-		const std::string_view branch_name = rpcs3::get_full_branch();
-		gui_log.warning("Experimental Build Warning! Build origin: %s", branch_name);
-
-		QMessageBox msg;
-		msg.setWindowModality(Qt::WindowModal);
-		msg.setWindowTitle(tr("Experimental Build Warning"));
-		msg.setIcon(QMessageBox::Critical);
-		msg.setTextFormat(Qt::RichText);
-		msg.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
-		msg.setDefaultButton(QMessageBox::No);
-		msg.setText(gui::utils::make_paragraph(tr(
-			"Please understand that this build is not an official RPCS3 release.\n"
-			"This build contains changes that may break games, or even <b>damage</b> your data.\n"
-			"We recommend to download and use the official build from the %0.\n"
-			"\n"
-			"Build origin: %1\n"
-			"Do you wish to use this build anyway?")
-			.arg(gui::utils::make_link(tr("RPCS3 website"), "https://rpcs3.net/download"))
-			.arg(Qt::convertFromPlainText(branch_name.data()))));
-		msg.layout()->setSizeConstraint(QLayout::SetFixedSize);
-
-		if (msg.exec() == QMessageBox::No)
-		{
-			return false;
-		}
-	}
-
-	m_emu_settings = std::make_shared<emu_settings>();
+	m_emu_settings = std::make_shared<emu_settings>(m_render_creator);
 	m_gui_settings = std::make_shared<gui_settings>();
 	m_persistent_settings = std::make_shared<persistent_settings>();
-
-	if (!m_emu_settings->Init())
-	{
-		return false;
-	}
 
 	if (m_gui_settings->GetValue(gui::m_attachCommandLine).toBool())
 	{
@@ -151,11 +296,11 @@ bool gui_application::Init()
 		m_active_user = m_persistent_settings->GetCurrentUser("00000001").toStdString();
 	}
 
-	// Force init the emulator
-	InitializeEmulator(m_active_user, m_show_gui);
-
 	// Create callbacks from the emulator, which reference the handlers.
 	InitializeCallbacks();
+
+	// Force init the emulator
+	InitializeEmulator(m_active_user, m_show_gui, false);
 
 	// Create connects to propagate events throughout Gui.
 	InitializeConnects();
@@ -163,7 +308,7 @@ bool gui_application::Init()
 	// Create the main window
 	if (m_show_gui)
 	{
-		m_main_window = new main_window(m_gui_settings, m_emu_settings, m_persistent_settings, nullptr);
+		m_main_window = new main_window(m_gui_settings, m_emu_settings, m_persistent_settings, m_with_cli_boot, nullptr);
 
 		const auto codes    = GetAvailableLanguageCodes();
 		const auto language = m_gui_settings->GetValue(gui::loc_language).toString();
@@ -185,33 +330,8 @@ bool gui_application::Init()
 		connect(this, &gui_application::OnEnableDiscInsert, m_main_window, &main_window::OnEnableDiscInsert);
 
 		connect(QGuiApplication::styleHints(), &QStyleHints::colorSchemeChanged, this, [this](){ OnChangeStyleSheetRequest(); });
-	}
 
-	if (m_gui_settings->GetValue(gui::ib_show_welcome).toBool())
-	{
-		welcome_dialog* welcome = new welcome_dialog(m_gui_settings, false);
-
-		if (welcome->exec() == QDialog::Rejected)
-		{
-			// If the agreement on RPCS3's usage conditions was not accepted by the user, ask the main window to gracefully terminate
-			return false;
-		}
-	}
-
-	// Check maxfiles
-	if (utils::get_maxfiles() < 4096)
-	{
-		QMessageBox::warning(nullptr,
-							 tr("Warning"),
-							 tr("The current limit of maximum file descriptors is too low.\n"
-								"Some games will crash.\n"
-								"\n"
-								"Please increase the limit before running RPCS3."));
-	}
-
-	if (m_main_window && !m_main_window->Init(m_with_cli_boot))
-	{
-		return false;
+		m_main_window->Init();
 	}
 
 #ifdef WITH_DISCORD_RPC
@@ -231,8 +351,6 @@ bool gui_application::Init()
 		register_device_notification(m_main_window->winId());
 	}
 #endif
-
-	return true;
 }
 
 void gui_application::SwitchTranslator(const QString& language_code)
@@ -830,14 +948,13 @@ void gui_application::InitializeCallbacks()
 	{
 		callbacks.on_install_pkgs = [this](const std::vector<std::string>& pkgs)
 		{
-			ensure(m_main_window);
 			ensure(!pkgs.empty());
 			QStringList pkg_list;
 			for (const std::string& pkg : pkgs)
 			{
 				pkg_list << QString::fromStdString(pkg);
 			}
-			return m_main_window->InstallPackages(pkg_list, true);
+			return main_window::InstallPackages(m_main_window, pkg_list, true);
 		};
 	}
 
@@ -1361,7 +1478,7 @@ bool gui_application::native_event_filter::nativeEventFilter([[maybe_unused]] co
 			{
 				if (Emu.IsRunning() || Emu.IsStarting())
 				{
-					handle_hotplug_event(msg->wParam == DBT_DEVICEARRIVAL);
+					handle_hotplug_event(msg->wParam == DBT_DEVICEARRIVAL, false);
 				}
 				return false;
 			}

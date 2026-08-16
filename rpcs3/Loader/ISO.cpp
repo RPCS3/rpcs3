@@ -3,6 +3,7 @@
 #include "ISO.h"
 #include "Emu/VFS.h"
 #include "Emu/system_utils.hpp"
+#include "Emu/System.h"
 #include "Crypto/utils.h"
 
 #include <codecvt>
@@ -10,6 +11,7 @@
 #include <cmath>
 #include <filesystem>
 #include <stack>
+#include <span>
 #include <cstdlib>
 
 LOG_CHANNEL(sys_log, "SYS");
@@ -51,7 +53,7 @@ static void* get_aligned_buf()
 		}
 	} s_aligned_buf {};
 
-	return s_aligned_buf.buf;
+	return ensure(s_aligned_buf.buf);
 }
 
 static bool is_iso_file(iso_file& file, u64* size = nullptr)
@@ -63,7 +65,10 @@ static bool is_iso_file(iso_file& file, u64* size = nullptr)
 
 	char magic[5];
 
-	file.read_at(32768ULL + 1, magic, 5);
+	if (!file.read_at(32768ULL + 1, magic, 5) == 5)
+	{
+		return false;
+	}
 
 	const bool ret = magic[0] == 'C' && magic[1] == 'D' && magic[2] == '0' && magic[3] == '0' && magic[4] == '1';
 
@@ -102,12 +107,6 @@ bool is_iso_file(const std::string& path, u64* size, bool* is_raw_device)
 	return is_iso_file(file, size);
 }
 
-// Convert 4 bytes in big-endian format to an unsigned integer
-static u32 char_arr_BE_to_uint(const u8* arr)
-{
-	return arr[0] << 24 | arr[1] << 16 | arr[2] << 8 | arr[3];
-}
-
 // Reset the iv to a particular LBA
 static void reset_iv(std::array<u8, 16>& iv, u32 lba)
 {
@@ -120,7 +119,7 @@ static void reset_iv(std::array<u8, 16>& iv, u32 lba)
 }
 
 // Main function that will decrypt the sector(s)
-static bool decrypt_data(aes_context& aes, u64 offset, const unsigned char* buffer, unsigned char* out_buffer, u64 size)
+static bool decrypt_data(aes_context& aes, u64 offset, const std::span<u8> buffer, const std::span<u8> out_buffer, u64 size)
 {
 	// The following preliminary checks are good to be provided.
 	// Commented out to gain a bit of performance, just because we know the caller is providing values in the expected range
@@ -142,15 +141,14 @@ static bool decrypt_data(aes_context& aes, u64 offset, const unsigned char* buff
 
 	std::array<u8, 16> iv;
 	u64 cur_offset;
-	u64 cur_size;
 
 	// If the offset is not at the beginning of a sector, the first 16 bytes in the buffer
 	// represents the IV for decrypting the next data in the buffer.
 	// Otherwise, the IV is based on sector's LBA
 	if (sector_offset != 0)
 	{
-		std::memcpy(iv.data(), buffer, 16);
-		cur_offset = 16;
+		std::memcpy(iv.data(), buffer.data(), iv.size());
+		cur_offset = iv.size();
 	}
 	else
 	{
@@ -158,7 +156,7 @@ static bool decrypt_data(aes_context& aes, u64 offset, const unsigned char* buff
 		cur_offset = 0;
 	}
 
-	cur_size = sector_offset + size <= ISO_SECTOR_SIZE ? size : ISO_SECTOR_SIZE - sector_offset;
+	u64 cur_size = sector_offset + size <= ISO_SECTOR_SIZE ? size : ISO_SECTOR_SIZE - sector_offset;
 	cur_size -= cur_offset;
 
 	// Partial (or even full) first sector
@@ -213,25 +211,32 @@ iso_type_status iso_file_decryption::get_key(const std::string& key_path, aes_co
 		return iso_type_status::ERROR_OPENING_KEY;
 	}
 
-	char key_str[32];
+	std::array<char, 32> key_str {};
 	std::array<u8, 16> key {};
 
-	const u64 key_len = key_file.read(key_str, sizeof(key_str));
+	const u64 key_len = key_file.read(key_str.data(), key_str.size());
 
-	if (key_len == sizeof(key_str) || key_len == sizeof(key))
+	if (key_len == key_str.size() || key_len == key.size())
 	{
 		// If the key read from the key file is 16 bytes long instead of 32, consider the file as
 		// binary (".key") and so not needing any further conversion from hex string to bytes
-		if (key_len == sizeof(key))
+		if (key_len == key.size())
 		{
-			std::memcpy(key.data(), key_str, sizeof(key));
+			std::memcpy(key.data(), key_str.data(), key.size());
 		}
 		else
 		{
-			hex_to_bytes(key.data(), std::string_view(key_str, key_len), static_cast<unsigned int>(key_len));
+			std::string error;
+			hex_to_bytes(key.data(), std::string_view(key_str.data(), key_str.size()), key_str.size(), &error);
+
+			if (!error.empty())
+			{
+				iso_log.error("get_key(%s): %s", key_path, error);
+				return iso_type_status::ERROR_PROCESSING_KEY;
+			}
 		}
 
-		aes_context aes_dec;
+		aes_context aes_dec {};
 
 		// If "aes_ctx" not requested
 		if (!aes_ctx)
@@ -306,7 +311,7 @@ iso_type_status iso_file_decryption::retrieve_key(iso_archive& archive, std::str
 
 	for (auto path_it = entries.begin(); path_it != entries.end(); path_it++)
 	{
-		const auto dir_entry = std::move(*path_it);
+		const fs::dir_entry dir_entry = std::move(*path_it);
 
 		if (dir_entry.name == "." || dir_entry.name == ".." || dir_entry.is_directory)
 		{
@@ -322,7 +327,7 @@ iso_type_status iso_file_decryption::retrieve_key(iso_archive& archive, std::str
 		}
 
 		// If the decryption fails
-		if (!decrypt_data(aes_ctx, iso_file.file_offset(0), enc_sec.data(), dec_sec.data(), ISO_SECTOR_SIZE))
+		if (!decrypt_data(aes_ctx, iso_file.file_offset(0), enc_sec, dec_sec, ISO_SECTOR_SIZE))
 		{
 			continue;
 		}
@@ -415,7 +420,7 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 	// Following checks and assigned values are based on PS3 ISO specification.
 	// E.g. all even regions (0, 2, 4 etc.) are always unencrypted while the odd ones are encrypted
 
-	const u32 region_count = char_arr_BE_to_uint(sec0_sec1.data());
+	const u32 region_count = read_from_ptr<be_t<u32>>(sec0_sec1);
 
 	// Ensure the region count is a proper value
 	if (region_count < 1 || region_count > 127) // It's non-PS3ISO
@@ -426,13 +431,13 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 
 	m_region_info.resize(region_count * 2 - 1);
 
-	for (size_t i = 0; i < m_region_info.size(); i++)
+	for (usz i = 0; i < m_region_info.size(); i++)
 	{
 		// Store the region information in address format
-		m_region_info[i].encrypted = (i % 2 == 1);
+		const usz modulo_2 = i % 2;
+		m_region_info[i].encrypted = (modulo_2 == 1);
 		m_region_info[i].region_first_addr = (i == 0 ? 0ULL : m_region_info[i - 1].region_last_addr + 1ULL);
-		m_region_info[i].region_last_addr = (static_cast<u64>(char_arr_BE_to_uint(sec0_sec1.data() + 12 + (i * 4)))
-			- (i % 2 == 1 ? 1ULL : 0ULL)) * ISO_SECTOR_SIZE + ISO_SECTOR_SIZE - 1ULL;
+		m_region_info[i].region_last_addr = (static_cast<u64>(read_from_ptr<be_t<u32>>(sec0_sec1, 12 + (i * 4))) - modulo_2) * ISO_SECTOR_SIZE + ISO_SECTOR_SIZE - 1ULL;
 	}
 
 	//
@@ -481,21 +486,19 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 	if (m_enc_type == iso_encryption_type::NONE)
 	{
 		// The 3k3y watermarks located at offset 0xF70: (D|E)ncrypted 3K BLD
-		static const unsigned char k3k3y_enc_watermark[16] =
-			{0x45, 0x6E, 0x63, 0x72, 0x79, 0x70, 0x74, 0x65, 0x64, 0x20, 0x33, 0x4B, 0x20, 0x42, 0x4C, 0x44};
-		static const unsigned char k3k3y_dec_watermark[16] =
-			{0x44, 0x6E, 0x63, 0x72, 0x79, 0x70, 0x74, 0x65, 0x64, 0x20, 0x33, 0x4B, 0x20, 0x42, 0x4C, 0x44};
+		static const u8 k3k3y_enc_watermark[16] = {0x45, 0x6E, 0x63, 0x72, 0x79, 0x70, 0x74, 0x65, 0x64, 0x20, 0x33, 0x4B, 0x20, 0x42, 0x4C, 0x44};
+		static const u8 k3k3y_dec_watermark[16] = {0x44, 0x6E, 0x63, 0x72, 0x79, 0x70, 0x74, 0x65, 0x64, 0x20, 0x33, 0x4B, 0x20, 0x42, 0x4C, 0x44};
 
 		if (std::memcmp(&k3k3y_enc_watermark[0], &sec0_sec1[0xF70], sizeof(k3k3y_enc_watermark)) == 0)
 		{
 			// Grab D1 from the 3k3y sector
-			unsigned char key[16];
+			u8 key[16];
 
 			std::memcpy(key, &sec0_sec1[0xF80], 0x10);
 
 			// Convert D1 to KEY and generate the "m_aes_dec" context
-			unsigned char key_d1[] = {0x38, 11, 0xcf, 11, 0x53, 0x45, 0x5b, 60, 120, 0x17, 0xab, 0x4f, 0xa3, 0xba, 0x90, 0xed};
-			unsigned char iv_d1[] = {0x69, 0x47, 0x47, 0x72, 0xaf, 0x6f, 0xda, 0xb3, 0x42, 0x74, 0x3a, 0xef, 170, 0x18, 0x62, 0x87};
+			u8 key_d1[] = {0x38, 11, 0xcf, 11, 0x53, 0x45, 0x5b, 60, 120, 0x17, 0xab, 0x4f, 0xa3, 0xba, 0x90, 0xed};
+			u8 iv_d1[] = {0x69, 0x47, 0x47, 0x72, 0xaf, 0x6f, 0xda, 0xb3, 0x42, 0x74, 0x3a, 0xef, 170, 0x18, 0x62, 0x87};
 
 			aes_context aes_d1;
 
@@ -540,7 +543,7 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 	return true;
 }
 
-bool iso_file_decryption::decrypt(u64 offset, void* buffer, u64 size, const std::string& name)
+bool iso_file_decryption::decrypt(u64 offset, const std::span<u8> buffer, const std::string& name)
 {
 	// If it's a non-encrypted type, nothing more to do
 	if (m_enc_type == iso_encryption_type::NONE)
@@ -551,13 +554,22 @@ bool iso_file_decryption::decrypt(u64 offset, void* buffer, u64 size, const std:
 	// If it's a 3k3y ISO and data at offset 0xF70 is being requested, we should null it out
 	if (m_enc_type == iso_encryption_type::DEC_3K3Y || m_enc_type == iso_encryption_type::ENC_3K3Y)
 	{
-		if (offset + size >= 0xF70ULL && offset <= 0x1070ULL)
+		constexpr u64 range_start = 0xF70ULL;
+		constexpr u64 range_end = 0x1070ULL;
+		constexpr u64 range = range_end - range_start;
+
+		const u64 buffer_size = buffer.size();
+
+		ensure(offset <= (u64{umax} - buffer_size)); // Check for overflow
+		const u64 buffer_end = offset + buffer_size;
+
+		if (buffer_end > range_start && offset < range_end)
 		{
 			// Zero out the 0xF70 - 0x1070 overlap
-			unsigned char* buf = reinterpret_cast<unsigned char*>(buffer);
-			unsigned char* buf_overlap_start = offset < 0xF70ULL ? buf + 0xF70ULL - offset : buf;
+			const u64 buf_overlap_start = offset < range_start ? range_start - offset : 0;
+			const u64 buf_overlap_end = buffer_end < range_end ? buffer_size : range;
 
-			memset(buf_overlap_start, 0x00, offset + size < 0x1070ULL ? size - (buf_overlap_start - buf) : 0x100ULL - (buf_overlap_start - buf));
+			std::memset(&buffer[buf_overlap_start], 0x00, buf_overlap_end - buf_overlap_start);
 		}
 
 		// If it's a decrypted ISO then return, otherwise go on to the decryption logic
@@ -579,7 +591,7 @@ bool iso_file_decryption::decrypt(u64 offset, void* buffer, u64 size, const std:
 			}
 
 			// Decrypt the region before sending it back
-			decrypt_data(m_aes_dec, offset, reinterpret_cast<unsigned char*>(buffer), reinterpret_cast<unsigned char*>(buffer), size);
+			decrypt_data(m_aes_dec, offset, buffer, buffer, buffer.size());
 
 			return true;
 		}
@@ -588,9 +600,9 @@ bool iso_file_decryption::decrypt(u64 offset, void* buffer, u64 size, const std:
 	iso_log.error("decrypt: %s: LBA request wasn't in the 'm_region_info' for an encrypted ISO? - RP: 0x%lx, RC: 0x%lx, LR: (0x%016lx - 0x%016lx)",
 		name,
 		offset,
-		static_cast<unsigned long int>(m_region_info.size()),
-		static_cast<unsigned long int>(!m_region_info.empty() ? m_region_info.back().region_first_addr : 0),
-		static_cast<unsigned long int>(!m_region_info.empty() ? m_region_info.back().region_last_addr : 0));
+		static_cast<u32>(m_region_info.size()),
+		static_cast<u32>(!m_region_info.empty() ? m_region_info.back().region_first_addr : 0),
+		static_cast<u32>(!m_region_info.empty() ? m_region_info.back().region_last_addr : 0));
 
 	return true;
 }
@@ -633,13 +645,14 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 	const u64 total_size = this->size();
 	const u64 archive_first_offset = file_offset(offset);
 	const u64 archive_last_offset = archive_first_offset + max_size - 1;
-	iso_sector first_sec, last_sec;
 	void* aligned_buf = get_aligned_buf(); // thread-safe buffer
 
+	iso_sector first_sec {};
 	first_sec.lba_address = (archive_first_offset / ISO_SECTOR_SIZE) * ISO_SECTOR_SIZE;
 	first_sec.offset = archive_first_offset % ISO_SECTOR_SIZE;
 	first_sec.size = first_sec.offset + max_size <= ISO_SECTOR_SIZE ? max_size : ISO_SECTOR_SIZE - first_sec.offset;
 
+	iso_sector last_sec {};
 	last_sec.lba_address = last_sec.address_aligned = (archive_last_offset / ISO_SECTOR_SIZE) * ISO_SECTOR_SIZE;
 	// last_sec.offset = last_sec.offset_aligned = 0; // Always 0 so no need to set and use those attributes
 	last_sec.size = (archive_last_offset % ISO_SECTOR_SIZE) + 1;
@@ -670,7 +683,7 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 
 	u64 total_read = m_file.read_at(first_sec.address_aligned, &reinterpret_cast<u8*>(aligned_buf)[first_sec.offset_aligned], first_sec.size_aligned);
 
-	m_dec->decrypt(first_sec.address_aligned, &reinterpret_cast<u8*>(aligned_buf)[first_sec.offset_aligned], first_sec.size_aligned, m_meta.name);
+	m_dec->decrypt(first_sec.address_aligned, {&reinterpret_cast<u8*>(aligned_buf)[first_sec.offset_aligned], first_sec.size_aligned}, m_meta.name);
 	std::memcpy(buffer, &reinterpret_cast<u8*>(aligned_buf)[first_sec.offset], first_sec.size);
 
 	const u64 sector_count = (last_sec.lba_address - first_sec.lba_address) / ISO_SECTOR_SIZE + 1;
@@ -707,7 +720,7 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 
 			total_read += m_file.read_at(first_sec.lba_address + ISO_SECTOR_SIZE, &reinterpret_cast<u8*>(buffer)[first_sec.size], inner_sector_size);
 
-			m_dec->decrypt(first_sec.lba_address + ISO_SECTOR_SIZE, &reinterpret_cast<u8*>(buffer)[first_sec.size], inner_sector_size, m_meta.name);
+			m_dec->decrypt(first_sec.lba_address + ISO_SECTOR_SIZE, {&reinterpret_cast<u8*>(buffer)[first_sec.size], inner_sector_size}, m_meta.name);
 		}
 		else
 		{
@@ -717,7 +730,7 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 			{
 				total_read += m_file.read_at(first_sec.lba_address + ISO_SECTOR_SIZE + inner_sector_offset, aligned_buf, ISO_SECTOR_SIZE);
 
-				m_dec->decrypt(first_sec.lba_address + ISO_SECTOR_SIZE + inner_sector_offset, aligned_buf, ISO_SECTOR_SIZE, m_meta.name);
+				m_dec->decrypt(first_sec.lba_address + ISO_SECTOR_SIZE + inner_sector_offset, {reinterpret_cast<u8*>(aligned_buf), ISO_SECTOR_SIZE}, m_meta.name);
 				std::memcpy(&reinterpret_cast<u8*>(buffer)[first_sec.size + inner_sector_offset], aligned_buf, ISO_SECTOR_SIZE);
 			}
 		}
@@ -740,7 +753,7 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 
 	total_read += m_file.read_at(last_sec.address_aligned, aligned_buf, last_sec.size_aligned);
 
-	m_dec->decrypt(last_sec.address_aligned, aligned_buf, last_sec.size_aligned, m_meta.name);
+	m_dec->decrypt(last_sec.address_aligned, {reinterpret_cast<u8*>(aligned_buf), last_sec.size_aligned}, m_meta.name);
 	std::memcpy(&reinterpret_cast<u8*>(buffer)[max_size - last_sec.size], aligned_buf, last_sec.size);
 
 	//
@@ -846,9 +859,13 @@ static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, 
 
 	std::string file_name;
 
-	entry.read(file_name, header.file_name_length);
+	if (!entry.read(file_name, header.file_name_length))
+	{
+		iso_log.error("iso_archive: Failed to read file name");
+		return std::nullopt;
+	}
 
-	if (header.file_name_length == 1 && file_name[0] == 0)
+	if (file_name.size() == 1 && file_name[0] == '\0')
 	{
 		file_name = ".";
 	}
@@ -859,14 +876,14 @@ static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, 
 	else if (names_in_ucs2) // For strings in joliet descriptor
 	{
 		// Characters are stored in big endian format
-		const u16* raw = reinterpret_cast<const u16*>(file_name.data());
+		const be_t<u16>* raw = utils::bless<const be_t<u16>>(file_name.data());
 		std::u16string utf16;
 
-		utf16.resize(header.file_name_length / 2);
+		utf16.resize(file_name.size() / 2);
 
-		for (usz i = 0; i < utf16.size(); i++, raw++)
+		for (usz i = 0; i < utf16.size(); i++)
 		{
-			utf16[i] = *reinterpret_cast<const be_t<u16>*>(raw);
+			utf16[i] = raw[i];
 		}
 
 		file_name = utf16_to_utf8(utf16);
@@ -877,7 +894,7 @@ static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, 
 		file_name.erase(file_name.end() - 2, file_name.end());
 	}
 
-	if (header.file_name_length > 1 && file_name.ends_with("."))
+	if (file_name.size() > 1 && file_name.ends_with("."))
 	{
 		file_name.pop_back();
 	}
@@ -902,17 +919,25 @@ static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, 
 	};
 }
 
-static void iso_form_hierarchy(fs::file& file, iso_fs_node& node, bool use_ucs2_decoding = false, const std::string& parent_path = "")
+static bool iso_form_hierarchy(fs::file& file, iso_fs_node& node, bool use_ucs2_decoding = false, const std::string& parent_path = "")
 {
 	if (!node.metadata.is_directory)
 	{
-		return;
+		return !parent_path.empty();
+	}
+
+	const std::string node_path = parent_path + "/" + node.metadata.name;
+
+	if (!parent_path.empty() && !Emu.IsPathInsideDir(node_path, parent_path, false))
+	{
+		iso_log.error("iso_archive::iso_form_hierarchy: node path outside of parent (parent_path='%s', node_path='%s')", parent_path, node_path);
+		return false;
 	}
 
 	std::vector<usz> multi_extent_node_indices;
 
 	// Assuming the directory spans a single extent
-	const auto& directory_extent = node.metadata.extents[0];
+	const auto& directory_extent = ::at32(node.metadata.extents, 0);
 	const u64 end_pos = (directory_extent.start * ISO_SECTOR_SIZE) + directory_extent.size;
 
 	file.seek(directory_extent.start * ISO_SECTOR_SIZE);
@@ -939,7 +964,7 @@ static void iso_form_hierarchy(fs::file& file, iso_fs_node& node, bool use_ucs2_
 			if (selected_node->metadata.name == entry->name)
 			{
 				// Merge into selected_node
-				selected_node->metadata.extents.push_back(entry->extents[0]);
+				selected_node->metadata.extents.push_back(::at32(entry->extents, 0));
 
 				extent_added = true;
 				break;
@@ -966,9 +991,14 @@ static void iso_form_hierarchy(fs::file& file, iso_fs_node& node, bool use_ucs2_
 	{
 		if (child_node->metadata.name != "." && child_node->metadata.name != "..")
 		{
-			iso_form_hierarchy(file, *child_node, use_ucs2_decoding, parent_path + "/" + node.metadata.name);
+			if (!iso_form_hierarchy(file, *child_node, use_ucs2_decoding, node_path))
+			{
+				return false;
+			}
 		}
 	}
+
+	return true;
 }
 
 u64 iso_fs_metadata::size() const
@@ -992,8 +1022,8 @@ iso_archive::iso_archive(const std::string& path)
 
 	if (!is_iso_file(m_path))
 	{
-		// Not ISO... TODO: throw something?
 		iso_log.error("iso_archive: Failed to recognize ISO file: '%s'", path);
+		invalidate();
 		return;
 	}
 
@@ -1029,23 +1059,36 @@ iso_archive::iso_archive(const std::string& path)
 
 		iso_file.seek(descriptor_start + ISO_SECTOR_SIZE);
 	}
-	while (descriptor_type != 255);
+	while (descriptor_type != 255 && iso_file.pos() < iso_file.size());
 
-	iso_form_hierarchy(iso_file, m_root, use_ucs2_decoding);
+	if (descriptor_type != 255)
+	{
+		iso_log.error("iso_archive: Corrupt ISO file '%s': Volume Descriptor Set Terminator not found", path);
+		invalidate();
+		return;
+	}
+
+	if (!iso_form_hierarchy(iso_file, m_root, use_ucs2_decoding))
+	{
+		iso_log.error("iso_archive: Corrupt ISO file '%s': Failed to form hierarchy", path);
+		invalidate();
+		return;
+	}
 
 	// Only when the archive object is fully set, we can finally initialize the decryption object needing the archive object
 	m_dec = std::make_shared<iso_file_decryption>();
 
 	if (!m_dec->init(m_path, this))
 	{
-		// TODO: throw something?
+		iso_log.error("iso_archive: Corrupt ISO file '%s': Decryption failed", path);
+		invalidate();
 		return;
 	}
 }
 
 iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
 {
-	if (passed_path.empty())
+	if (passed_path.empty() || !is_valid())
 	{
 		return nullptr;
 	}
@@ -1120,6 +1163,17 @@ iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
 	return search_stack.top();
 }
 
+void iso_archive::invalidate()
+{
+	m_root = {};
+	m_dec.reset();
+}
+
+bool iso_archive::is_valid() const
+{
+	return !m_root.metadata.name.empty();
+}
+
 bool iso_archive::exists(const std::string& path)
 {
 	return retrieve(path) != nullptr;
@@ -1139,6 +1193,11 @@ bool iso_archive::is_file(const std::string& path)
 
 std::unique_ptr<fs::file_base> iso_archive::get_iso_file(const std::string& path, bs_t<fs::open_mode> mode, const iso_fs_node& node)
 {
+	if (!is_valid())
+	{
+		return nullptr;
+	}
+
 	if (m_dec->get_enc_type() == iso_encryption_type::NONE)
 	{
 		return std::make_unique<iso_file>(path, mode, node);
@@ -1197,7 +1256,7 @@ iso_file::iso_file(const std::string& path, bs_t<fs::open_mode> mode, const iso_
 		return;
 	}
 
-	m_file.seek(m_meta.extents[0].start * ISO_SECTOR_SIZE);
+	m_file.seek(::at32(m_meta.extents, 0).start * ISO_SECTOR_SIZE);
 
 	m_raw_device = fs::is_optical_raw_device(path);
 }

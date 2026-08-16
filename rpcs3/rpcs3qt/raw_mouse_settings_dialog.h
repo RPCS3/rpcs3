@@ -30,10 +30,10 @@ private:
 	void on_enumeration();
 	void reset_config();
 	void on_button_click(int id);
-	void mouse_press(const std::string& device_name, s32 button_code, bool pressed);
-	void key_press(const std::string& device_name, s32 scan_code, bool pressed);
-	void handle_device_change(const std::string& device_name);
-	bool is_device_active(const std::string& device_name);
+	void mouse_press(std::string_view device_name, s32 button_code, bool pressed);
+	void key_press(std::string_view device_name, s32 scan_code, bool pressed);
+	void handle_device_change(std::string_view device_name);
+	bool is_device_active(std::string_view device_name);
 	std::string get_current_device_name(int player);
 	void reactivate_buttons();
 

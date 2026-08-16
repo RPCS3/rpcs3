@@ -43,8 +43,6 @@ namespace glsl
 	{
 		switch (elementCount)
 		{
-		default:
-			abort();
 		case 1:
 			return "float";
 		case 2:
@@ -53,6 +51,8 @@ namespace glsl
 			return "vec3";
 		case 4:
 			return "vec4";
+		default:
+			fmt::throw_exception("Unexpected element count %d", elementCount);
 		}
 	}
 
@@ -60,8 +60,6 @@ namespace glsl
 	{
 		switch (elementCount)
 		{
-		default:
-			abort();
 		case 1:
 			return "float16_t";
 		case 2:
@@ -70,10 +68,12 @@ namespace glsl
 			return "f16vec3";
 		case 4:
 			return "f16vec4";
+		default:
+			fmt::throw_exception("Unexpected element count %d", elementCount);
 		}
 	}
 
-	std::string compareFunctionImpl(COMPARE f, const std::string &Op0, const std::string &Op1, bool scalar)
+	std::string compareFunctionImpl(COMPARE f, std::string_view Op0, std::string_view Op1, bool scalar)
 	{
 		if (scalar)
 		{
@@ -474,8 +474,6 @@ namespace glsl
 	{
 		switch (f)
 		{
-		default:
-			abort();
 		case FUNCTION::DP2:
 			return "$Ty(dot($0.xy, $1.xy))";
 		case FUNCTION::DP2A:
@@ -578,6 +576,8 @@ namespace glsl
 			return "textureLod($t, $0.xyz, 0)";
 		case FUNCTION::VERTEX_TEXTURE_FETCH2DMS:
 			return "texelFetch($t, ivec2($0.xy * textureSize($t)), 0)";
+		default:
+			fmt::throw_exception("Unexpected function request: %d", static_cast<int>(f));
 		}
 
 		rsx_log.error("Unexpected function request: %d", static_cast<int>(f));
@@ -636,7 +636,7 @@ namespace glsl
 					}
 				}
 
-				varying_list.push_back({ reg_location, var_name, PT.type });
+				varying_list.push_back({ reg_location, std::move(var_name), PT.type });
 			}
 		}
 

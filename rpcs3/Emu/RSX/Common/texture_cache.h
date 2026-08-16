@@ -147,24 +147,155 @@ namespace rsx
 			texture_channel_remap_t remap;
 			deferred_request_command op = deferred_request_command::nop;
 			u32 external_ref_addr = 0;
-			u16 x = 0;
-			u16 y = 0;
 
 			utils::address_range32 cache_range;
 			bool do_not_cache = false;
+			bool force_bg_load = false;
+
+			using section_array_type = rsx::simple_array<copy_region_descriptor>;
 
 			deferred_subresource() = default;
 
-			deferred_subresource(image_resource_type _res, deferred_request_command _op,
-				const image_section_attributes_t& attr, position2u offset,
-				texture_channel_remap_t _remap)
-				: external_handle(_res)
-				, remap(std::move(_remap))
-				, op(_op)
-				, x(offset.x)
-				, y(offset.y)
+			//
+			// Named constructor wrappers - tighten the API contracts a bit.
+			// Replaces the giant ctor which was very error-prone and had many unused or conditionally used inputs.
+			//
+
+			// Single-section transfer. src_rect is in source image space, dst_rect in destination image space.
+			static deferred_subresource create_copy(
+				image_resource_type src,
+				const image_section_attributes_t& attr,
+				const coord3u& src_rect,
+				const coord3u& dst_rect,
+				rsx::surface_transform xform,
+				const texture_channel_remap_t& remap,
+				bool cyclic_reference = false)
 			{
-				static_cast<image_section_attributes_t&>(*this) = attr;
+				ensure(src);
+
+				deferred_subresource result{};
+				static_cast<image_section_attributes_t&>(result) = attr;
+				result.external_handle = src;
+				result.op = cyclic_reference
+					? deferred_request_command::copy_image_dynamic
+					: deferred_request_command::copy_image_static;
+				result.remap = remap;
+				result.add_copy_region(src, src_rect, dst_rect, attr.address, xform);
+				return result;
+			}
+
+			// Shorthand for transfers where the source and destination regions are equal.
+			// xform allows to declare both as native or request conversion at the consumer side.
+			static deferred_subresource create_copy(
+				image_resource_type src,
+				const image_section_attributes_t& attr,
+				const coord3u& rect,
+				rsx::surface_transform xform,
+				const texture_channel_remap_t& remap,
+				bool cyclic_reference = false)
+			{
+				return create_copy(src, attr, rect, rect, xform, remap, cyclic_reference);
+			}
+
+			// One large surface to be partitioned into cubemap faces.
+			static deferred_subresource create_cubemap_unwrap(
+				image_resource_type src,
+				const image_section_attributes_t& attr,
+				const texture_channel_remap_t& remap)
+			{
+				return make_unwrap(deferred_request_command::cubemap_unwrap, src, attr, remap);
+			}
+
+			// One large surface to be partitioned into a 3D array.
+			static deferred_subresource create_3d_unwrap(
+				image_resource_type src,
+				const image_section_attributes_t& attr,
+				const texture_channel_remap_t& remap)
+			{
+				return make_unwrap(deferred_request_command::_3d_unwrap, src, attr, remap);
+			}
+
+			// 2D section splat
+			static deferred_subresource create_atlas_gather(
+				const image_section_attributes_t& attr,
+				section_array_type&& sections,
+				const texture_channel_remap_t& remap,
+				bool force_bg_load = false)
+			{
+				return make_gather(deferred_request_command::atlas_gather, attr, std::move(sections), remap, force_bg_load);
+			}
+
+			// Cubemap builder from discrete images per face and/or mip
+			static deferred_subresource create_cubemap_gather(
+				const image_section_attributes_t& attr,
+				section_array_type&& sections,
+				const texture_channel_remap_t& remap,
+				bool force_bg_load = false)
+			{
+				return make_gather(deferred_request_command::cubemap_gather, attr, std::move(sections), remap, force_bg_load);
+			}
+
+			// 3D builder from discrete images per face and/or mip
+			static deferred_subresource create_3d_gather(
+				const image_section_attributes_t& attr,
+				section_array_type&& sections,
+				const texture_channel_remap_t& remap,
+				bool force_bg_load = false)
+			{
+				return make_gather(deferred_request_command::_3d_gather, attr, std::move(sections), remap, force_bg_load);
+			}
+
+			// 2D mipchain builder
+			static deferred_subresource create_mipmap_gather(
+				const image_section_attributes_t& attr,
+				section_array_type&& sections,
+				const texture_channel_remap_t& remap,
+				bool force_bg_load = false)
+			{
+				return make_gather(deferred_request_command::mipmap_gather, attr, std::move(sections), remap, force_bg_load);
+			}
+
+			void add_copy_region(
+				image_resource_type src,
+				const coord3u& src_rect,
+				const coord3u& dst_rect,
+				u32 base_addr = 0,
+				flags32_t xform = rsx::surface_transform::identity,
+				u8 level = 0)
+			{
+				sections_to_copy.push_back({
+					.src = src,
+					.xform = xform,
+					.base_addr = base_addr,
+					.level = level,
+					.src_x = static_cast<u16>(src_rect.x),
+					.src_y = static_cast<u16>(src_rect.y),
+					.dst_x = static_cast<u16>(dst_rect.x),
+					.dst_y = static_cast<u16>(dst_rect.y),
+					.dst_z = static_cast<u16>(dst_rect.z),
+					.src_w = static_cast<u16>(src_rect.width),
+					.src_h = static_cast<u16>(src_rect.height),
+					.dst_w = static_cast<u16>(dst_rect.width),
+					.dst_h = static_cast<u16>(dst_rect.height),
+				});
+			}
+
+			// Key layout:
+			//   [00..15] width      - 4096 native, but res scaling can get this up to 64k.
+			//   [16..31] height     - ditto
+			//   [32..42] depth      - 512 max on RSX. One spare bit in case we ever expand 3D host-side.
+			//   [43..47] mipmaps    - log2(4096) + 1 = 13 max. Allow upto 31.
+			//   [48..55] gcm_format - only a few actual enumerants but the values are in the 0x80-0x9F range
+			//   [56..60] op         - deferred_request_command, 10 values defined, allow upto 31
+			//   [61..63] unused
+			u64 encoded_properties() const
+			{
+				return (static_cast<u64>(width)) |
+					(static_cast<u64>(height) << 16) |
+					((static_cast<u64>(depth) & 0x7ff) << 32) |
+					((static_cast<u64>(mipmaps) & 0x1f) << 43) |
+					((static_cast<u64>(gcm_format) & 0xff) << 48) |
+					((static_cast<u64>(op) & 0x1f) << 56);
 			}
 
 			viewable_image_type as_viewable() const
@@ -187,10 +318,47 @@ namespace rsx
 				// Return typed null
 				return external_handle;
 			}
+
+		private:
+			static deferred_subresource make_unwrap(
+				deferred_request_command op,
+				image_resource_type src,
+				const image_section_attributes_t& attr,
+				const texture_channel_remap_t& remap)
+			{
+				ensure(src);
+
+				// Unwrap commands do not define sections by themselves. That data is autogenerated at the consumer site.
+				deferred_subresource result{};
+				static_cast<image_section_attributes_t&>(result) = attr;
+				result.external_handle = src;
+				result.op = op;
+				result.remap = remap;
+				return result;
+			}
+
+			static deferred_subresource make_gather(
+				deferred_request_command op,
+				const image_section_attributes_t& attr,
+				section_array_type&& sections,
+				const texture_channel_remap_t& remap,
+				bool force_bg_load)
+			{
+				deferred_subresource result{};
+				static_cast<image_section_attributes_t&>(result) = attr;
+				result.op = op;
+				result.remap = remap;
+				result.sections_to_copy = std::move(sections);
+				result.force_bg_load = force_bg_load;
+				return result;
+			}
 		};
 
 		struct sampled_image_descriptor : public sampled_image_descriptor_base
 		{
+			// Lets the templated helpers in texture_cache_helpers.h name the deferred type.
+			using deferred_subresource_type = deferred_subresource;
+
 			image_view_type image_handle = 0;
 			deferred_subresource external_subresource_desc = {};
 			bool flag = false;
@@ -217,12 +385,11 @@ namespace rsx
 				texcoord_xform.clamp = false;
 			}
 
-			sampled_image_descriptor(image_resource_type external_handle, deferred_request_command reason,
-				const image_section_attributes_t& attr, position2u src_offset,
+			sampled_image_descriptor(deferred_subresource&& desc,
 				texture_upload_context ctx, rsx::format_class ftype, size3f scale,
-				rsx::texture_dimension_extended type, const texture_channel_remap_t& remap)
+				rsx::texture_dimension_extended type)
 			{
-				external_subresource_desc = { external_handle, reason, attr, src_offset, remap };
+				external_subresource_desc = std::move(desc);
 
 				image_handle = 0;
 				upload_context = ctx;
@@ -266,7 +433,7 @@ namespace rsx
 						if (section_fills_target(sections[idx]))
 						{
 							const auto remaining = sections.size() - idx;
-							std::memcpy(
+							std::memmove(
 								sections.data(),
 								&sections[idx],
 								remaining * sizeof(sections[0])
@@ -280,17 +447,13 @@ namespace rsx
 				// Optimizations in the straightforward methods copy_image_static and copy_image_dynamic make them preferred over the atlas method
 				if (sections.size() == 1 && section_fills_target(sections[0]))
 				{
-					const auto cpy = sections[0];
+					const auto& cpy = sections[0];
 					external_subresource_desc.external_ref_addr = cpy.base_addr;
 
 					if (section_is_transfer_only(cpy))
 					{
 						// Change the command to copy_image_static
 						external_subresource_desc.external_handle = cpy.src;
-						external_subresource_desc.x = cpy.src_x;
-						external_subresource_desc.y = cpy.src_y;
-						external_subresource_desc.width = cpy.src_w;
-						external_subresource_desc.height = cpy.src_h;
 						external_subresource_desc.op = deferred_request_command::copy_image_static;
 					}
 					else
@@ -481,8 +644,7 @@ namespace rsx
 		/**
 		 * Virtual Methods
 		 */
-		virtual image_view_type create_temporary_subresource_view(commandbuffer_type&, image_resource_type* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h, const texture_channel_remap_t& remap_vector) = 0;
-		virtual image_view_type create_temporary_subresource_view(commandbuffer_type&, image_storage_type* src, u32 gcm_format, u16 x, u16 y, u16 w, u16 h, const texture_channel_remap_t& remap_vector) = 0;
+		virtual image_view_type create_temporary_subresource_view(commandbuffer_type&, const deferred_subresource& desc) = 0;
 		virtual void release_temporary_subresource(image_view_type rsc) = 0;
 		virtual section_storage_type* create_new_texture(commandbuffer_type&, const address_range32 &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u32 pitch, u32 gcm_format,
 			rsx::texture_upload_context context, rsx::texture_dimension_extended type, bool swizzled, component_order swizzle_flags, rsx::flags32_t flags) = 0;
@@ -491,10 +653,10 @@ namespace rsx
 		virtual section_storage_type* create_nul_section(commandbuffer_type&, const address_range32 &rsx_range, const image_section_attributes_t& attrs, const GCM_tile_reference& tile, bool memory_load) = 0;
 		virtual void set_component_order(section_storage_type& section, u32 gcm_format, component_order expected) = 0;
 		virtual void insert_texture_barrier(commandbuffer_type&, image_storage_type* tex, bool strong_ordering = true) = 0;
-		virtual image_view_type generate_cubemap_from_images(commandbuffer_type&, u32 gcm_format, u16 size, const rsx::simple_array<copy_region_descriptor>& sources, const texture_channel_remap_t& remap_vector) = 0;
-		virtual image_view_type generate_3d_from_2d_images(commandbuffer_type&, u32 gcm_format, u16 width, u16 height, u16 depth, const rsx::simple_array<copy_region_descriptor>& sources, const texture_channel_remap_t& remap_vector) = 0;
-		virtual image_view_type generate_atlas_from_images(commandbuffer_type&, u32 gcm_format, u16 width, u16 height, const rsx::simple_array<copy_region_descriptor>& sections_to_copy, const texture_channel_remap_t& remap_vector) = 0;
-		virtual image_view_type generate_2d_mipmaps_from_images(commandbuffer_type&, u32 gcm_format, u16 width, u16 height, const rsx::simple_array<copy_region_descriptor>& sections_to_copy, const texture_channel_remap_t& remap_vector) = 0;
+		virtual image_view_type generate_cubemap_from_images(commandbuffer_type&, const deferred_subresource& desc) = 0;
+		virtual image_view_type generate_3d_from_2d_images(commandbuffer_type&, const deferred_subresource& desc) = 0;
+		virtual image_view_type generate_atlas_from_images(commandbuffer_type&, const deferred_subresource& desc) = 0;
+		virtual image_view_type generate_2d_mipmaps_from_images(commandbuffer_type&, const deferred_subresource& desc) = 0;
 		virtual void update_image_contents(commandbuffer_type&, image_view_type dst, image_resource_type src, u16 width, u16 height) = 0;
 		virtual bool render_target_format_is_compatible(image_storage_type* tex, u32 gcm_format) = 0;
 		virtual void prepare_for_dma_transfers(commandbuffer_type&) = 0;
@@ -1702,18 +1864,15 @@ namespace rsx
 		{
 			if (!desc.do_not_cache) [[likely]]
 			{
+				const auto desc_key = desc.encoded_properties();
 				const auto found = m_temporary_subresource_cache.equal_range(desc.address);
 				for (auto It = found.first; It != found.second; ++It)
 				{
-					const auto& found_desc = It->second.first;
-					if (found_desc.external_handle != desc.external_handle ||
-						found_desc.op != desc.op ||
-						found_desc.x != desc.x || found_desc.y != desc.y ||
-						found_desc.width != desc.width || found_desc.height != desc.height)
+					if (It->second.first.encoded_properties() != desc_key)
 						continue;
 
 					if (desc.op == deferred_request_command::copy_image_dynamic)
-						update_image_contents(cmd, It->second.second, desc.external_handle, desc.width, desc.height);
+						update_image_contents(cmd, It->second.second, desc.src0(), desc.width, desc.height);
 
 					return It->second.second;
 				}
@@ -1726,7 +1885,7 @@ namespace rsx
 			{
 			case deferred_request_command::cubemap_gather:
 			{
-				result = generate_cubemap_from_images(cmd, desc.gcm_format, desc.width, desc.sections_to_copy, desc.remap);
+				result = generate_cubemap_from_images(cmd, desc);
 				break;
 			}
 			case deferred_request_command::cubemap_unwrap:
@@ -1761,12 +1920,15 @@ namespace rsx
 					}
 				}
 
-				result = generate_cubemap_from_images(cmd, desc.gcm_format, desc.width, sections, desc.remap);
+				auto unwrap_desc = desc;
+				unwrap_desc.sections_to_copy = std::move(sections);
+
+				result = generate_cubemap_from_images(cmd, unwrap_desc);
 				break;
 			}
 			case deferred_request_command::_3d_gather:
 			{
-				result = generate_3d_from_2d_images(cmd, desc.gcm_format, desc.width, desc.height, desc.depth, desc.sections_to_copy, desc.remap);
+				result = generate_3d_from_2d_images(cmd, desc);
 				break;
 			}
 			case deferred_request_command::_3d_unwrap:
@@ -1792,24 +1954,27 @@ namespace rsx
 					};
 				}
 
-				result = generate_3d_from_2d_images(cmd, desc.gcm_format, desc.width, desc.height, desc.depth, sections, desc.remap);
+				auto unwrap_desc = desc;
+				unwrap_desc.sections_to_copy = std::move(sections);
+
+				result = generate_3d_from_2d_images(cmd, unwrap_desc);
 				break;
 			}
 			case deferred_request_command::atlas_gather:
 			case deferred_request_command::blit_image_static:
 			{
-				result = generate_atlas_from_images(cmd, desc.gcm_format, desc.width, desc.height, desc.sections_to_copy, desc.remap);
+				result = generate_atlas_from_images(cmd, desc);
 				break;
 			}
 			case deferred_request_command::copy_image_static:
 			case deferred_request_command::copy_image_dynamic:
 			{
-				result = create_temporary_subresource_view(cmd, &desc.external_handle, desc.gcm_format, desc.x, desc.y, desc.width, desc.height, desc.remap);
+				result = create_temporary_subresource_view(cmd, desc);
 				break;
 			}
 			case deferred_request_command::mipmap_gather:
 			{
-				result = generate_2d_mipmaps_from_images(cmd, desc.gcm_format, desc.width, desc.height, desc.sections_to_copy, desc.remap);
+				result = generate_2d_mipmaps_from_images(cmd, desc);
 				break;
 			}
 			default:
@@ -2020,7 +2185,8 @@ namespace rsx
 				else if (extended_dimension <= rsx::texture_dimension_extended::texture_dimension_2d)
 				{
 					const auto last = overlapping_locals.back();
-					const auto normalized_width = u16(last->get_width() * get_format_block_size_in_bytes(last->get_gcm_format())) / attr.bpp;
+					const auto src_bpp = get_format_block_size_in_bytes(last->get_gcm_format());
+					const auto normalized_width = u16((last->get_width() * src_bpp) / attr.bpp);
 
 					if (last->get_section_base() == attr.address &&
 						normalized_width >= attr.width && last->get_height() >= attr.height)
@@ -2048,8 +2214,21 @@ namespace rsx
 							return result;
 						}
 
-						return { last->get_raw_texture(), deferred_request_command::copy_image_static, new_attr, {},
-								last->get_context(), classify_format(gcm_format), scale, extended_dimension, remap };
+						// Declare transfer rect in dest space and request coordinate transform
+						const coord3u xfer_rect = { 0, 0, 0, attr.width, attr.height, 1 };
+						return
+						{
+							deferred_subresource::create_copy(
+								last->get_raw_texture(),
+								new_attr,
+								xfer_rect,
+								surface_transform::coordinate_transform,
+								remap),
+							last->get_context(),
+							classify_format(gcm_format),
+							scale,
+							extended_dimension
+						};
 					}
 				}
 
@@ -2066,22 +2245,7 @@ namespace rsx
 					is_simple_subresource_copy &&
 					render_target_format_is_compatible(result.external_subresource_desc.src0(), attr.gcm_format))
 				{
-					if (result.external_subresource_desc.op != deferred_request_command::blit_image_static) [[ likely ]]
-					{
-						helpers::convert_image_copy_to_clip_descriptor(
-							result,
-							position2i(result.external_subresource_desc.x, result.external_subresource_desc.y),
-							size2i(result.external_subresource_desc.width, result.external_subresource_desc.height),
-							size2i(result.external_subresource_desc.external_handle->width(), result.external_subresource_desc.external_handle->height()),
-							remap, false);
-					}
-					else
-					{
-						helpers::convert_image_blit_to_clip_descriptor(
-							result,
-							remap,
-							false);
-					}
+					helpers::convert_image_transfer_to_clip_descriptor(result, remap, false);
 
 					if (!!result.ref_address && m_rtts.address_is_bound(result.ref_address))
 					{
@@ -2111,19 +2275,15 @@ namespace rsx
 					return {};
 				}
 
-				bool result_is_valid;
-				if (_pool == 0 && !g_cfg.video.write_color_buffers && !g_cfg.video.write_depth_buffer)
+				bool result_is_valid = result.atlas_covers_target_area(section_count == 1 ? 99 : 90);
+				if (_pool == 0 && !result_is_valid && !g_cfg.video.write_color_buffers && !g_cfg.video.write_depth_buffer)
 				{
-					// HACK: Avoid WCB requirement for some games with wrongly declared sampler dimensions.
-					// TODO: Some games may render a small region (e.g 1024x256x2) and sample a huge texture (e.g 1024x1024).
+					// Avoid WCB requirement for some games with wrongly declared sampler dimensions.
+					// Some games may render a small region (e.g 1024x256x2) and sample a huge texture (e.g 1024x1024).
 					// Seen in APF2k8 - this causes missing bits to be reuploaded from CPU which can cause WCB requirement.
-					// Properly fix this by introducing partial data upload into the surface cache in such cases and making RCB/RDB
-					// enabled by default. Blit engine already handles this correctly.
+					// We work around the issue by forcing a background data load on the subresource to fill the missing data hole.
 					result_is_valid = true;
-				}
-				else
-				{
-					result_is_valid = result.atlas_covers_target_area(section_count == 1 ? 99 : 90);
+					result.external_subresource_desc.force_bg_load = true;
 				}
 
 				if (!result_is_valid)
@@ -2216,11 +2376,14 @@ namespace rsx
 				}
 				else if (descriptor->image_handle)
 				{
+					// Sanity check
+					ensure(descriptor->format_ex.format_bits == tex.format());
+
 					// Rebuild duplicate surface
 					auto src = descriptor->image_handle->image();
 					rsx::image_section_attributes_t attr;
 					attr.address = descriptor->ref_address;
-					attr.gcm_format = tex.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
+					attr.gcm_format = descriptor->format_ex.format();
 					attr.width = src->width();
 					attr.height = src->height();
 					attr.depth = 1;
@@ -2240,14 +2403,9 @@ namespace rsx
 						attr.gcm_format = helpers::get_compatible_depth_format(attr.gcm_format);
 					}
 
-					descriptor->external_subresource_desc =
-					{
-						src,
-						rsx::deferred_request_command::copy_image_dynamic,
-						attr,
-						{},
-						rsx::default_remap_vector
-					};
+					const coord3u copy_rect = { 0, 0, 0, attr.width, attr.height, 1 };
+					descriptor->external_subresource_desc = deferred_subresource::create_copy(
+						src, attr, copy_rect, rsx::surface_transform::identity, rsx::default_remap_vector, true);
 
 					descriptor->external_subresource_desc.do_not_cache = true;
 					descriptor->image_handle = nullptr;
@@ -2472,10 +2630,14 @@ namespace rsx
 				}
 				else
 				{
+					// Grab the correct image dimensions from the base mipmap level before the list is consumed
+					const auto mip0 = sections.front();
+
 					// NOTE: Do not disable 'cyclic ref' since the texture_barrier may have already been issued!
 					result.image_handle = 0;
-					result.external_subresource_desc = { 0, deferred_request_command::mipmap_gather, attributes, {}, tex.decoded_remap() };
 					result.format_class = rsx::classify_format(attributes.gcm_format);
+					result.external_subresource_desc = deferred_subresource::create_mipmap_gather(
+						attributes, std::move(sections), tex.decoded_remap());
 
 					if (result.texcoord_xform.clamp)
 					{
@@ -2485,8 +2647,6 @@ namespace rsx
 
 					if (use_upscaling)
 					{
-						// Grab the correct image dimensions from the base mipmap level
-						const auto& mip0 = sections.front();
 						result.external_subresource_desc.width = mip0.dst_w;
 						result.external_subresource_desc.height = mip0.dst_h;
 					}
@@ -2494,7 +2654,6 @@ namespace rsx
 					const u32 cache_end = attr2.address + (attr2.pitch * attr2.height);
 					result.external_subresource_desc.cache_range = utils::address_range32::start_end(attributes.address, cache_end);
 
-					result.external_subresource_desc.sections_to_copy = std::move(sections);
 					return result;
 				}
 			}
@@ -3180,7 +3339,7 @@ namespace rsx
 					subres.pitch_in_block = full_width;
 					subres.depth = 1;
 					subres.data = { vm::_ptr<const std::byte>(image_base), static_cast<std::span<const std::byte>::size_type>(src.pitch * image_height) };
-					subresource_layout.push_back(subres);
+					subresource_layout.push_back(std::move(subres));
 
 					const u32 gcm_format = helpers::get_sized_blit_format(src_is_argb8, dst_is_depth_surface, is_format_convert);
 					const auto rsx_range = address_range32::start_length(image_base, src.pitch * image_height);
@@ -3321,7 +3480,7 @@ namespace rsx
 						subres.pitch_in_block = pitch_in_block;
 						subres.depth = 1;
 						subres.data = { vm::get_super_ptr<const std::byte>(dst_base_address), static_cast<std::span<const std::byte>::size_type>(dst.pitch * dst_dimensions.height) };
-						subresource_layout.push_back(subres);
+						subresource_layout.push_back(std::move(subres));
 
 						cached_dest = upload_image_from_cpu(cmd, rsx_range, dst_dimensions.width, dst_dimensions.height, 1, 1, dst.pitch,
 							preferred_dst_format, rsx::texture_upload_context::blit_engine_dst, subresource_layout,

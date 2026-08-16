@@ -707,6 +707,11 @@ namespace cfg
 			return *m_value.load().get();
 		}
 
+		std::string get() const
+		{
+			return *m_value.load().get();
+		}
+
 		std::string def_to_string() const override
 		{
 			return def;
@@ -716,6 +721,11 @@ namespace cfg
 		{
 			m_value = std::string(value);
 			return true;
+		}
+
+		void set(std::string_view value)
+		{
+			m_value = std::string(value);
 		}
 	};
 

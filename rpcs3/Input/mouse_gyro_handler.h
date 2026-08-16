@@ -13,6 +13,7 @@ class mouse_gyro_handler
 public:
 	void clear();
 	bool toggle_enabled();
+	void set_enabled(bool enabled);
 
 	void handle_event(QEvent* ev, const QWindow& win);
 	void apply_gyro(const std::shared_ptr<Pad>& pad);

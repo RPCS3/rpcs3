@@ -255,7 +255,27 @@ bool package_reader::read_metadata()
 			if (packet.size == sizeof(m_metadata.package_type))
 			{
 				archive_read(&m_metadata.package_type, sizeof(m_metadata.package_type));
+
+				std::vector<std::string> package_flags;
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_0x01)             package_flags.push_back("0x01");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_EBOOT)            package_flags.push_back("EBOOT");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_REQUIRE_LICENSE)  package_flags.push_back("REQUIRE_LICENSE");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_HDD_MC)           package_flags.push_back("HDD_MC");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_PATCH)            package_flags.push_back("PATCH");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_0x20)             package_flags.push_back("0x20");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_RENAME_DIRECTORY) package_flags.push_back("RENAME_DIRECTORY");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_EDAT)             package_flags.push_back("EDAT");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_0x100)            package_flags.push_back("0x100");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_EMULATOR)         package_flags.push_back("EMULATOR");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_VSH_MODULE)       package_flags.push_back("VSH_MODULE");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_DISC_BOUND)       package_flags.push_back("DISC_BOUND");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_UNKNOWN)          package_flags.push_back("UNKNOWN");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_PS_VITA_CARD)     package_flags.push_back("PS_VITA_CARD");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_PS_VITA_NON_GAME) package_flags.push_back("PS_VITA_NON_GAME");
+				if (m_metadata.package_type & pkg_flag::PKG_FLAG_0x8000)           package_flags.push_back("0x8000");
+
 				pkg_log.notice("Metadata: Package Type = 0x%x = %d", m_metadata.package_type, m_metadata.package_type);
+				pkg_log.notice("Metadata: Package Flags = %s", package_flags.empty() ? "{}" : fmt::merge(package_flags, ", "));
 				continue;
 			}
 			else
@@ -653,7 +673,6 @@ bool package_reader::read_param_sfo()
 	return false;
 }
 
-// TODO: maybe also check if VERSION matches
 package_install_result package_reader::check_target_app_version() const
 {
 	if (!m_is_valid)
@@ -698,7 +717,13 @@ package_install_result package_reader::check_target_app_version() const
 		{
 			// We are unable to compare anything with the target app version
 			pkg_log.error("A target app version is required (%s), but no PARAM.SFO was found for %s. (path='%s', error=%s)", target_app_ver, title_id, sfo_path, fs::g_tls_error);
-			return {package_install_result::error_type::app_version, {std::string(target_app_ver)}};
+			return {
+				.error = package_install_result::error_type::app_version,
+				.version = {
+					.app_ver = std::string(app_ver),
+					.expected = std::string(target_app_ver)
+				}
+			};
 		}
 
 		// There is nothing we need to compare, so we may install the package
@@ -727,6 +752,12 @@ package_install_result package_reader::check_target_app_version() const
 
 	if (target_app_ver.empty())
 	{
+		if (!(m_metadata.package_type & pkg_flag::PKG_FLAG_PATCH))
+		{
+			// This should be a DLC. Let's allow DLCs even with smaller APP_VER.
+			return {package_install_result::error_type::no_error};
+		}
+
 		// This is most likely the first patch. Let's make sure its version is high enough for the installed game.
 
 		const double new_version = std::strtod(app_ver.data(), &ev1);
@@ -744,7 +775,13 @@ package_install_result package_reader::check_target_app_version() const
 		}
 
 		pkg_log.error("The new app version (%s) is smaller than the installed app version (%s)", app_ver, installed_app_ver);
-		return {package_install_result::error_type::app_version, {std::string(app_ver), std::string(installed_app_ver)}};
+		return {
+			.error = package_install_result::error_type::app_version,
+			.version = {
+				.app_ver = std::string(app_ver),
+				.installed = std::string(installed_app_ver)
+			}
+		};
 	}
 
 	// Check if the installed app version matches the target app version
@@ -764,7 +801,14 @@ package_install_result package_reader::check_target_app_version() const
 	}
 
 	pkg_log.error("The installed app version (%s) does not match the target app version (%s)", installed_app_ver, target_app_ver);
-	return {package_install_result::error_type::app_version, {std::string(target_app_ver), std::string(installed_app_ver)}};
+	return {
+		.error = package_install_result::error_type::app_version,
+		.version = {
+			.app_ver = std::string(app_ver),
+			.expected = std::string(target_app_ver),
+			.installed = std::string(installed_app_ver)
+		}
+	};
 }
 
 bool package_reader::set_install_path()
@@ -807,7 +851,8 @@ bool package_reader::set_install_path()
 	}
 
 	// TODO: Verify whether other content types require appending title ID
-	if (m_metadata.content_type != PKG_CONTENT_TYPE_LICENSE)
+	// Append title ID depending on content type
+	if (m_metadata.content_type != PKG_CONTENT_TYPE_THEME && m_metadata.content_type != PKG_CONTENT_TYPE_LICENSE)
 		dir += m_install_dir + '/';
 
 	// If false, an existing directory is being overwritten: cannot cancel the operation
@@ -1431,8 +1476,8 @@ usz package_reader::decrypt(u64 offset, u64 size, const uchar* key, void* local_
 
 			sha1(reinterpret_cast<const u8*>(input), sizeof(input), hash.data);
 
-			const u128 v = read_from_ptr<u128>(out_data, i * 16);
-			write_to_ptr<u128>(out_data, i * 16, v ^ read_from_ptr<u128>(hash.data));
+			const u128 v = read_from_ptr_unsafe<u128>(out_data, i * 16);
+			write_to_ptr_unsafe<u128>(out_data, i * 16, v ^ read_from_ptr<u128>(hash.data));
 		}
 	}
 	else if (m_header.pkg_type == PKG_RELEASE_TYPE_RELEASE)
@@ -1452,8 +1497,8 @@ usz package_reader::decrypt(u64 offset, u64 size, const uchar* key, void* local_
 
 			aes_crypt_ecb(&ctx, AES_ENCRYPT, reinterpret_cast<const u8*>(&input), reinterpret_cast<u8*>(&key));
 
-			const u128 v = read_from_ptr<u128>(out_data, i * 16);
-			write_to_ptr<u128>(out_data, i * 16, v ^ key);
+			const u128 v = read_from_ptr_unsafe<u128>(out_data, i * 16);
+			write_to_ptr_unsafe<u128>(out_data, i * 16, v ^ key);
 		}
 	}
 	else

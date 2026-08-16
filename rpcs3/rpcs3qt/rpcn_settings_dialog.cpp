@@ -1353,7 +1353,7 @@ rpcn_friends_dialog::~rpcn_friends_dialog()
 	}
 }
 
-bool rpcn_friends_dialog::add_friend_with_error_dialog(const std::string& friend_username)
+bool rpcn_friends_dialog::add_friend_with_error_dialog(std::string_view friend_username)
 {
 	QString err_msg;
 	const auto opt_error = m_rpcn->add_friend(friend_username);

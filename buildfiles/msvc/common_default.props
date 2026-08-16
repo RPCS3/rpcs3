@@ -3,6 +3,9 @@
 <!-- Common default props for defining properties without macros. Import right before Microsoft.Cpp.Default.props -->
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <EnableLibUsbWindowsHotplug>true</EnableLibUsbWindowsHotplug>
+  </PropertyGroup>
   <PropertyGroup Label="Globals">
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>

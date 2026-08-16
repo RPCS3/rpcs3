@@ -6,7 +6,7 @@
 
 LOG_CHANNEL(rb3_midi_guitar_log);
 
-usb_device_rb3_midi_guitar::usb_device_rb3_midi_guitar(const std::array<u8, 7>& location, const std::string& device_name, bool twentytwo_fret)
+usb_device_rb3_midi_guitar::usb_device_rb3_midi_guitar(const std::array<u8, 7>& location, std::string_view device_name, bool twentytwo_fret)
 	: usb_device_emulated(location)
 {
 	// For the 22-fret guitar (Fender Squier), the only thing that's different
@@ -100,7 +100,10 @@ usb_device_rb3_midi_guitar::usb_device_rb3_midi_guitar(const std::array<u8, 7>& 
 
 usb_device_rb3_midi_guitar::~usb_device_rb3_midi_guitar()
 {
-	rtmidi_in_free(midi_in);
+	if (midi_in)
+	{
+		rtmidi_in_free(midi_in);
+	}
 }
 
 static const std::array<u8, 40> disabled_response = {

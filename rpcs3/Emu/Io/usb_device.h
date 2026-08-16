@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Emu/Cell/lv2/sys_usbd.h"
+
 #ifdef _MSC_VER
 #pragma warning(push, 0)
 #else
@@ -14,8 +16,6 @@
 #else
 #pragma GCC diagnostic pop
 #endif
-
-#include "Emu/Cell/lv2/sys_usbd.h"
 
 struct UsbTransfer;
 
@@ -277,6 +277,9 @@ protected:
 protected:
 	libusb_device* lusb_device        = nullptr;
 	libusb_device_handle* lusb_handle = nullptr;
+
+private:
+	void patch_descriptors();
 };
 
 class usb_device_emulated : public usb_device

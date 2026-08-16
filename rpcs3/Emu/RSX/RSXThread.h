@@ -86,6 +86,7 @@ namespace rsx
 		bool supports_hw_msaa;                 // MSAA support
 		bool supports_hw_a2one;                // Alpha to one
 		bool supports_hw_conditional_render;   // Conditional render
+		bool supports_hw_instanced_rendering;  // Instanced draws
 		bool supports_passthrough_dma;         // DMA passthrough
 		bool supports_asynchronous_compute;    // Async compute
 		bool supports_host_gpu_labels;         // Advanced host synchronization
@@ -217,7 +218,7 @@ namespace rsx
 
 		surface_scaling_config_t resolution_scaling_config{};
 
-		void capture_frame(const std::string& name);
+		void capture_frame(const std::string& name) const;
 		const backend_configuration& get_backend_config() const { return backend_config; }
 
 		const draw_command_processor* draw_processor() const { return &m_draw_processor; }
