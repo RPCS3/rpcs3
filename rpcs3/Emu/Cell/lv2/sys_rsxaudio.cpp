@@ -846,12 +846,14 @@ void rsxaudio_data_thread::extract_audio_data()
 	{
 		if (&ptr == rsxaudio_obj.get())
 		{
+			ensure(used_process_vm == id_manager::id_traits<lv2_process>::invalid);
 			used_process_vm = process;
 		}
 	});
 
 	if (used_process_vm == id_manager::id_traits<lv2_process>::invalid)
 	{
+		advance_all_timers();
 		return;
 	}
 
