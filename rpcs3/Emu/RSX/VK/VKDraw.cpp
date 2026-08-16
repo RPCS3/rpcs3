@@ -863,18 +863,18 @@ bool VKGSRender::bind_interpreter_texture_env()
 		if (is_redirected)
 		{
 			// Force bitcast
-			deferred_subresource_t flatten_op{};
-			flatten_op.address = desc->ref_address;
-			flatten_op.external_handle = image;
-			flatten_op.op = desc->is_cyclic_reference
-				? rsx::deferred_request_command::copy_image_dynamic
-				: rsx::deferred_request_command::copy_image_static;
-			flatten_op.width = flatten_op.external_handle->width();
-			flatten_op.height = flatten_op.external_handle->height();
-			flatten_op.depth = 1;
-			flatten_op.gcm_format = desc->format_ex.format();
-			flatten_op.remap = decoded_remap;
+			rsx::image_section_attributes_t flatten_attrs{};
+			flatten_attrs.address = desc->ref_address;
+			flatten_attrs.gcm_format = desc->format_ex.format();
+			flatten_attrs.width = image->width();
+			flatten_attrs.height = image->height();
+			flatten_attrs.depth = 1;
+
+			const coord3u flatten_rect = { 0, 0, 0, flatten_attrs.width, flatten_attrs.height, 1 };
+			auto flatten_op = deferred_subresource_t::create_copy(
+				image, flatten_attrs, flatten_rect, rsx::surface_transform::identity, decoded_remap, desc->is_cyclic_reference);
 			flatten_op.cache_range = utils::address_range32::start_length(desc->ref_address, attr.pitch * attr.height);
+
 			return m_texture_cache.create_temporary_subresource(*m_current_command_buffer, flatten_op);
 		}
 
