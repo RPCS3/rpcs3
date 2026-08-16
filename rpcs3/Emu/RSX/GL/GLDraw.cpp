@@ -512,11 +512,12 @@ void GLGSRender::bind_texture_env()
 
 		using deferred_subresource_t = gl::texture_cache::deferred_subresource;
 		auto image = static_cast<gl::viewable_image*>(base->image());
+		auto rtt = gl::try_as_rtt(base->image());
 
 		if (is_msaa)
 		{
 			// MSAA resolve
-			auto rtt = gl::as_rtt(base->image());
+			ensure(rtt);
 			rtt->memory_barrier(cmd, rsx::surface_access::transfer_read);
 			image = rtt->get_surface(rsx::surface_access::transfer_read);
 		}
@@ -534,7 +535,11 @@ void GLGSRender::bind_texture_env()
 			const coord3u flatten_rect = { 0, 0, 0, flatten_attrs.width, flatten_attrs.height, 1 };
 			auto flatten_op = deferred_subresource_t::create_copy(
 				image, flatten_attrs, flatten_rect, rsx::surface_transform::identity, decoded_remap, desc->is_cyclic_reference);
-			flatten_op.cache_range = utils::address_range32::start_length(desc->ref_address, attr.pitch * attr.height);
+
+			ensure(desc->ref_address);
+			flatten_op.cache_range = rtt
+				? rtt->get_memory_range()
+				: utils::address_range32::start_length(desc->ref_address, attr.pitch * attr.height);
 
 			return m_gl_texture_cache.create_temporary_subresource(cmd, flatten_op);
 		}
