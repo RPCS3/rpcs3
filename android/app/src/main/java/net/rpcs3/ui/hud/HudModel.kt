@@ -57,6 +57,7 @@ object HudPrefs {
     private const val KEY_HAS_POSITION = "hud_has_position"
     private const val KEY_SCALE = "hud_scale"
     private const val KEY_ELEMENT = "hud_element_"
+    private const val KEY_FRAMETIME_NUMERIC = "hud_frametime_numeric"
 
     fun of(context: Context): SharedPreferences =
         context.getSharedPreferences(NAME, Context.MODE_PRIVATE)
@@ -105,6 +106,13 @@ object HudPrefs {
             .putFloat(KEY_POS_Y, y)
             .putBoolean(KEY_HAS_POSITION, true)
             .apply()
+    }
+
+    fun frametimeNumeric(prefs: SharedPreferences) =
+        prefs.getBoolean(KEY_FRAMETIME_NUMERIC, false)
+
+    fun setFrametimeNumeric(prefs: SharedPreferences, value: Boolean) {
+        prefs.edit().putBoolean(KEY_FRAMETIME_NUMERIC, value).apply()
     }
 
     fun isElementEnabled(prefs: SharedPreferences, element: HudElement) =

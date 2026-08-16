@@ -122,6 +122,7 @@ class RPCS3 {
     external fun openHomeMenu()
     external fun getTitleId(): String
     external fun perfMetrics(): String
+    external fun frameTimeMs(): Float
     external fun supportsCustomDriverLoading() : Boolean
     external fun isInstallableFile(fd: Int) : Boolean
     external fun getDirInstallPath(sfoFd: Int) : String?

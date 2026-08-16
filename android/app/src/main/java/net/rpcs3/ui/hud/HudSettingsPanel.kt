@@ -41,6 +41,7 @@ fun HudSettingsPanel(modifier: Modifier = Modifier) {
     var active by remember { mutableStateOf(HudPrefs.enabledElements(prefs)) }
     var scale by remember { mutableFloatStateOf(HudPrefs.scale(prefs)) }
     var mode by remember { mutableStateOf(HudPrefs.mode(prefs)) }
+    var numericFrametime by remember { mutableStateOf(HudPrefs.frametimeNumeric(prefs)) }
 
     Column(modifier = modifier.fillMaxWidth()) {
         HudToggleRow(
@@ -75,6 +76,22 @@ fun HudSettingsPanel(modifier: Modifier = Modifier) {
             )
             Spacer(Modifier.height(4.dp))
         }
+
+        Spacer(Modifier.height(10.dp))
+
+        HudToggleRow(
+            title = "Frame time as number",
+            subtitle = if (numericFrametime) {
+                "Showing milliseconds as text"
+            } else {
+                "Showing the frame time line graph"
+            },
+            checked = numericFrametime,
+            onCheckedChange = {
+                numericFrametime = it
+                HudPrefs.setFrametimeNumeric(prefs, it)
+            }
+        )
 
         Spacer(Modifier.height(14.dp))
 

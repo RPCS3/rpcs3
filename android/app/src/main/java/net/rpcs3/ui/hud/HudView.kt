@@ -73,6 +73,8 @@ class HudView @JvmOverloads constructor(
         cornerRadius = dp(6f)
     }
 
+    private var graph: FrametimeGraphView? = null
+    private var frametimeNumeric = HudPrefs.frametimeNumeric(prefs)
     private var mode = HudPrefs.mode(prefs)
     private var active = HudPrefs.enabledElements(prefs)
     private var scale = HudPrefs.scale(prefs)
@@ -125,6 +127,12 @@ class HudView @JvmOverloads constructor(
             }
             readouts[element] = readout
             addView(readout, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
+
+            if (element == HudElement.Frametime) {
+                val view = FrametimeGraphView(context, COLOR_FRAMETIME)
+                graph = view
+                addView(view, LayoutParams(dp(50f).toInt(), dp(14f).toInt()))
+            }
         }
 
         applyScale()
@@ -168,6 +176,13 @@ class HudView @JvmOverloads constructor(
         setMode(next)
     }
 
+    fun setFrametimeNumeric(value: Boolean) {
+        frametimeNumeric = value
+        applyElements()
+        requestLayout()
+        reanchorIfUnpinned()
+    }
+
     fun setElements(elements: Set<HudElement>) {
         active = elements
         applyElements()
@@ -186,6 +201,10 @@ class HudView @JvmOverloads constructor(
     fun submit(value: HudSample) {
         sample = value
         render()
+    }
+
+    fun addFrameSample(ms: Float) {
+        graph?.addFrame(ms)
     }
 
     private fun applyMode() {
@@ -214,6 +233,11 @@ class HudView @JvmOverloads constructor(
         readouts.forEach { (element, view) ->
             view.visibility = if (active.contains(element)) View.VISIBLE else View.GONE
         }
+
+        val frametimeOn = active.contains(HudElement.Frametime)
+        readouts[HudElement.Frametime]?.visibility =
+            if (frametimeOn && frametimeNumeric) View.VISIBLE else View.GONE
+        graph?.visibility = if (frametimeOn && !frametimeNumeric) View.VISIBLE else View.GONE
 
         if (!mode.horizontal) {
             separators.forEach { it.visibility = View.GONE }
@@ -266,11 +290,11 @@ class HudView @JvmOverloads constructor(
     private fun percentValue(value: Int) = if (value >= 0) "$value%" else "N/A"
 
     private fun render() {
-        readouts[HudElement.Fps]?.text = if (sample.fps > 0f) {
-            String.format(java.util.Locale.US, "%.0f", sample.fps)
-        } else {
-            "0"
-        }
+        readouts[HudElement.Fps]?.text = labelled(
+            "FPS ",
+            COLOR_FPS,
+            if (sample.fps > 0f) String.format(java.util.Locale.US, "%.0f", sample.fps) else "0"
+        )
 
         readouts[HudElement.Frametime]?.text = if (sample.frametimeMs > 0f) {
             String.format(java.util.Locale.US, "%.1f ms", sample.frametimeMs)

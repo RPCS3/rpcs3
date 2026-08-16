@@ -97,6 +97,7 @@ static bool g_initialized;
 static std::atomic<ANativeWindow *> g_native_window;
 static std::atomic<float> g_hud_fps{0.f};
 static std::atomic<float> g_hud_frametime{0.f};
+static std::atomic<float> g_hud_last_frame_ms{0.f};
 
 extern std::string g_android_executable_dir;
 extern std::string g_android_config_dir;
@@ -154,11 +155,13 @@ struct GraphicsFrame : GSFrameBase {
   mutable int height = 0;
 
   std::chrono::steady_clock::time_point fpsWindowStart{};
+  std::chrono::steady_clock::time_point lastFlip{};
   u32 fpsFrames = 0;
 
   ~GraphicsFrame() {
     g_hud_fps.store(0.f);
     g_hud_frametime.store(0.f);
+    g_hud_last_frame_ms.store(0.f);
 
     if (activeNativeWindow != nullptr) {
       ANativeWindow_release(activeNativeWindow);
@@ -210,7 +213,16 @@ struct GraphicsFrame : GSFrameBase {
 
     if (fpsWindowStart.time_since_epoch().count() == 0) {
       fpsWindowStart = now;
+      lastFlip = now;
       return;
+    }
+
+    const double sinceLast =
+        std::chrono::duration<double, std::milli>(now - lastFlip).count();
+    lastFlip = now;
+
+    if (sinceLast > 0.0 && sinceLast < 500.0) {
+      g_hud_last_frame_ms.store(static_cast<float>(sinceLast));
     }
 
     fpsFrames++;
@@ -1844,6 +1856,11 @@ extern "C" JNIEXPORT void JNICALL Java_net_rpcs3_RPCS3_openHomeMenu(JNIEnv *env,
 extern "C" JNIEXPORT jstring JNICALL
 Java_net_rpcs3_RPCS3_getTitleId(JNIEnv *env, jobject) {
   return wrap(env, Emu.GetTitleID());
+}
+
+extern "C" JNIEXPORT jfloat JNICALL
+Java_net_rpcs3_RPCS3_frameTimeMs(JNIEnv *, jobject) {
+  return g_hud_last_frame_ms.load();
 }
 
 extern "C" JNIEXPORT jstring JNICALL

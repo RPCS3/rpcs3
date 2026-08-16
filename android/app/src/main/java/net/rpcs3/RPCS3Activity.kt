@@ -33,6 +33,7 @@ import kotlin.concurrent.thread
 import kotlin.math.abs
 
 private const val HUD_REFRESH_MS = 500L
+private const val HUD_GRAPH_MS = 50L
 
 class RPCS3Activity : ComponentActivity() {
     private lateinit var binding: ActivityRpcs3Binding
@@ -44,6 +45,7 @@ class RPCS3Activity : ComponentActivity() {
     private var bootThread: Thread? = null
     private val hudHandler = Handler(Looper.getMainLooper())
     private var hudPump: Runnable? = null
+    private var hudGraphPump: Runnable? = null
     private var hudPrefsListener:
         android.content.SharedPreferences.OnSharedPreferenceChangeListener? = null
     private val modeHoldRunnable = Runnable {
@@ -258,6 +260,7 @@ class RPCS3Activity : ComponentActivity() {
         val wasHidden = binding.hudView.visibility != View.VISIBLE
         binding.hudView.visibility = View.VISIBLE
         binding.hudView.setMode(HudPrefs.mode(prefs))
+        binding.hudView.setFrametimeNumeric(HudPrefs.frametimeNumeric(prefs))
         binding.hudView.setElements(HudPrefs.enabledElements(prefs))
         binding.hudView.setScale(HudPrefs.scale(prefs))
 
@@ -309,12 +312,25 @@ class RPCS3Activity : ComponentActivity() {
             }
         }
 
+        hudGraphPump = object : Runnable {
+            override fun run() {
+                val ms = runCatching { RPCS3.instance.frameTimeMs() }.getOrDefault(0f)
+                if (ms > 0f) {
+                    binding.hudView.addFrameSample(ms)
+                }
+                hudHandler.postDelayed(this, HUD_GRAPH_MS)
+            }
+        }
+
         hudHandler.post(hudPump!!)
+        hudHandler.post(hudGraphPump!!)
     }
 
     private fun stopPump() {
         hudPump?.let { hudHandler.removeCallbacks(it) }
+        hudGraphPump?.let { hudHandler.removeCallbacks(it) }
         hudPump = null
+        hudGraphPump = null
     }
 
     private fun stopHud() {

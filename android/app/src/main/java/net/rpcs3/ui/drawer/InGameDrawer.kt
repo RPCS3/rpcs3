@@ -201,10 +201,10 @@ private fun InGameSettingsPanel(
         }
 
         val categories = remember(tree) {
-            categoriesOf(tree) +
+            listOf(SettingsCategory(HudCategory, listOf(HudCategory), null)) +
+                categoriesOf(tree) +
                 SettingsCategory(ControlsCategory, listOf(ControlsCategory), null) +
-                SettingsCategory(PatchesCategory, listOf(PatchesCategory), null) +
-                SettingsCategory(HudCategory, listOf(HudCategory), null)
+                SettingsCategory(PatchesCategory, listOf(PatchesCategory), null)
         }
 
         Column(modifier = Modifier.fillMaxSize()) {
