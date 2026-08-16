@@ -7593,7 +7593,7 @@ public:
 
 		// Calculate shuffle
 
-		bool shuf_zero_when_msb = false;
+		bool or_combine_safe = false;
 
 		value_t<u8[16]> ab_shuf;
 		if (single_src)
@@ -7605,7 +7605,7 @@ public:
 			else
 			{
 				ab_shuf = eval(pshufb(single_src.value(), cv));
-				shuf_zero_when_msb = true;
+				or_combine_safe = true;
 			}
 		}
 		else if (a_is_splat && b_is_splat)
@@ -7635,7 +7635,7 @@ public:
 			ab_shuf = eval(select_by_bit4(c, a_shuf, b_shuf));
 
 			// pshufb zeros when the MSB is set
-			shuf_zero_when_msb = !(a_is_splat || b_is_splat);
+			or_combine_safe = !(a_is_splat || b_is_splat);
 		}
 
 		if (perm_only)
@@ -7651,10 +7651,14 @@ public:
 		{
 			idx_consts = eval(splat<u8[16]>(0));
 		}
-		else if (m_use_avx512_icl)
+		else if (m_use_gfni)
 		{
+			// TODO: Due to vpblendvb, the pshufb OR combine path is one fewer micro-ops post Rocket Lake. Check if it is faster.
 			const auto gfni = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
 			idx_consts = eval(select(noncast<s8[16]>(gfni) >= 0, splat<u8[16]>(0), gfni));
+			
+			// Logic assumes that the MSB is always set
+			or_combine_safe = false;
 		}
 		else
 		{
@@ -7664,7 +7668,7 @@ public:
 
 		// Combine shuffle and special index constants
 
-		if (shuf_zero_when_msb)
+		if (or_combine_safe)
 			set_vr(op.rt4, ab_shuf | idx_consts);
 		else
 			set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab_shuf, idx_consts));
