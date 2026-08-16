@@ -193,12 +193,27 @@ static fs::error to_error(int e)
 	}
 }
 
-// Check whether the provided device node is an optical drive (e.g. a Blu-Ray Disc drive)
+#if defined(__linux__)
+// Major numbers of the block devices an optical disc can be accessed through (see "Documentation/admin-guide/devices.txt")
+constexpr unsigned int s_scsi_cdrom_major = 11; // Optical drive (e.g. "/dev/sr0")
+constexpr unsigned int s_loopback_major = 7; // Disc image attached with "mount"/"losetup" (e.g. "/dev/loop0")
+#endif
+
+// Check whether the provided device node is an optical drive (e.g. a Blu-Ray Disc drive) or a mounted disc image
 static bool is_optical_device_node(const struct ::stat& file_info)
 {
 #if defined(__linux__)
-	// An optical drive is exposed as a block device using the SCSI CD-ROM major number (e.g. "/dev/sr0", "/dev/scd0" or the "/dev/cdrom" link)
-	return S_ISBLK(file_info.st_mode) && major(file_info.st_rdev) == 11;
+	// An optical drive is exposed as a block device using the SCSI CD-ROM major number (e.g. "/dev/sr0", "/dev/scd0" or the "/dev/cdrom" link).
+	// A disc image attached through "mount -o loop" (or "losetup") is exposed as a loopback block device instead (e.g. "/dev/loop0"):
+	// it is the counterpart of an ISO file mounted on Windows, where the resulting virtual drive is reported as DRIVE_CDROM
+	if (!S_ISBLK(file_info.st_mode))
+	{
+		return false;
+	}
+
+	const unsigned int device_major = major(file_info.st_rdev);
+
+	return device_major == s_scsi_cdrom_major || device_major == s_loopback_major;
 #elif defined(__APPLE__)
 	// The raw (unbuffered) device is a character device (e.g. "/dev/rdisk2").
 	// NOTE: there is no cheap way to tell an optical drive from any other raw disk here, so any raw disk node is accepted
@@ -207,6 +222,20 @@ static bool is_optical_device_node(const struct ::stat& file_info)
 	// On the BSDs an optical drive is a character device (e.g. "/dev/cd0")
 	return S_ISCHR(file_info.st_mode) || S_ISBLK(file_info.st_mode);
 #endif
+}
+
+// Check whether the path is the root of a mounted filesystem (e.g. the mount point of a disc): "st_dev" changes when crossing a mount point
+[[maybe_unused]] static bool is_mount_point(const std::string& path, const struct ::stat& file_info)
+{
+	struct ::stat parent_info;
+
+	// NOTE: it also fails (ENOTDIR) if the path is a file, which is never a mount point
+	if (::stat((path + "/..").c_str(), &parent_info) != 0)
+	{
+		return false;
+	}
+
+	return parent_info.st_dev != file_info.st_dev;
 }
 
 // Retrieve the size of a raw device: "fstat()" reports no size (0) on such a device
@@ -1245,8 +1274,8 @@ bool fs::get_optical_raw_device(const std::string& path, std::string* raw_device
 
 	return false;
 #elif defined(__linux__)
-	// Here the path points to a mounted optical disc (e.g. "/media/user/PS3_DISC"), so retrieve the device backing it.
-	// NOTE: "st_dev" of anything stored on a filesystem backed by a block device matches "st_rdev" of the device itself
+	// Here the path points to a mounted optical disc (e.g. "/media/user/PS3_DISC") or to a mounted disc image
+	// (e.g. "mount -o loop game.iso /mnt/game"), so retrieve the device backing the filesystem it belongs to
 	struct ::stat file_info;
 
 	if (::stat(path.c_str(), &file_info) != 0)
@@ -1254,14 +1283,15 @@ bool fs::get_optical_raw_device(const std::string& path, std::string* raw_device
 		return false;
 	}
 
-	const dev_t device_id = S_ISBLK(file_info.st_mode) ? file_info.st_rdev : file_info.st_dev;
-
-	// Skip a useless check to detect an optical raw device if the device is not using the SCSI CD-ROM major number
-	if (major(device_id) != 11)
+	// Skip a useless check to detect an optical raw device if the path is not the mount point of the disc, it means we are
+	// navigating on subfolders (on Windows, in the same way, only the drive root is accepted)
+	if (!is_mount_point(path, file_info))
 	{
 		return false;
 	}
 
+	// "st_dev" of anything stored on a filesystem backed by a block device matches "st_rdev" of the device itself
+	const dev_t device_id = file_info.st_dev;
 	const std::string dev_major = std::to_string(major(device_id));
 	const std::string dev_minor = std::to_string(minor(device_id));
 
@@ -1275,10 +1305,14 @@ bool fs::get_optical_raw_device(const std::string& path, std::string* raw_device
 
 		device_path = "/dev/" + std::string(target.substr(target.find_last_of('/') + 1));
 	}
+	else if (major(device_id) == s_scsi_cdrom_major)
+	{
+		// Fallback (sysfs not available): the minor number matches the index of the SCSI CD-ROM device
+		device_path = "/dev/sr" + dev_minor;
+	}
 	else
 	{
-		// Fallback: the minor number matches the index of the SCSI CD-ROM device
-		device_path = "/dev/sr" + dev_minor;
+		return false;
 	}
 
 	// Ensure the resolved node really points to the same optical device
@@ -1296,18 +1330,25 @@ bool fs::get_optical_raw_device(const std::string& path, std::string* raw_device
 
 	return true;
 #elif defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
-	// Here the path points to a mounted optical disc, so retrieve the device backing the filesystem it belongs to
-	struct ::statfs mount_info;
+	// Here the path points to a mounted optical disc or to a mounted disc image (e.g. attached with "hdiutil"/"mdconfig"),
+	// so retrieve the device backing the filesystem it belongs to
+	struct ::stat file_info;
 
-	if (::statfs(path.c_str(), &mount_info) != 0)
+	if (::stat(path.c_str(), &file_info) != 0)
 	{
 		return false;
 	}
 
-	// Skip a useless check to detect an optical raw device if the filesystem is not one of those used by a PS3 disc
-	const std::string_view fs_type = mount_info.f_fstypename;
+	// Skip a useless check to detect an optical raw device if the path is not the mount point of the disc, it means we are
+	// navigating on subfolders (on Windows, in the same way, only the drive root is accepted)
+	if (!is_mount_point(path, file_info))
+	{
+		return false;
+	}
 
-	if (fs_type != "cd9660" && fs_type != "udf")
+	struct ::statfs mount_info;
+
+	if (::statfs(path.c_str(), &mount_info) != 0)
 	{
 		return false;
 	}
