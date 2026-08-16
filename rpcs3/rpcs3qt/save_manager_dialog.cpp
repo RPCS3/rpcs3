@@ -109,7 +109,7 @@ save_manager_dialog::save_manager_dialog(std::shared_ptr<gui_settings> gui_setti
 	m_button_delete = new QPushButton(tr("Delete Selection"), this);
 	m_button_delete->setDisabled(true);
 	m_button_folder = new QPushButton(tr("View Folder"), this);
-	m_button_delete->setDisabled(true);
+	m_button_folder->setDisabled(true);
 
 	// Details layout
 	QVBoxLayout *vbox_details = new QVBoxLayout();
