@@ -622,12 +622,19 @@ fun GamesScreen(
             if (gameInProgress == null) {
                 isRefreshing.value = true
                 thread {
-                    GameRepository.clear()
-                    RPCS3.instance.collectGameInfo(
-                        RPCS3.rootDirectory + "/config/dev_hdd0/game", -1
+                    val roots = listOf(
+                        RPCS3.rootDirectory + "/config/dev_hdd0/game",
+                        RPCS3.rootDirectory + "/config/games"
                     )
-                    RPCS3.instance.collectGameInfo(RPCS3.rootDirectory + "/config/games", -1)
-                    FolderGames.restore()
+
+                    GameRepository.beginScan()
+                    try {
+                        roots.forEach { RPCS3.instance.collectGameInfo(it, -1) }
+                        FolderGames.restore()
+                    } finally {
+                        GameRepository.endScan(roots)
+                    }
+
                     Thread.sleep(300)
                     isRefreshing.value = false
                 }

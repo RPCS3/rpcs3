@@ -67,6 +67,26 @@ data class Game(
     fun hasFlag(flag: GameFlag) = (info.gameFlags.intValue and (1 shl flag.ordinal)) != 0
 }
 
+internal fun scanRootPrefixes(roots: List<String>, canonical: (String) -> String?) =
+    roots.mapNotNull { root -> canonical(root)?.trimEnd('/')?.plus("/") }
+
+internal fun isStaleAfterScan(
+    path: String,
+    seen: Set<String>,
+    ownedRoots: List<String>,
+    exists: (String) -> Boolean
+): Boolean {
+    if (path == "$" || seen.contains(path)) {
+        return false
+    }
+
+    if (ownedRoots.none { root -> path.startsWith(root) }) {
+        return false
+    }
+
+    return !exists(path)
+}
+
 private fun toStore(info: GameInfo) =
     GameInfoStore(
         info.path,
@@ -83,33 +103,86 @@ class GameRepository {
 
     companion object {
         private val instance = GameRepository()
+        private var scanSink: MutableSet<String>? = null
+
+        private fun storeFile() = File(RPCS3.rootDirectory + "games.json")
+
+        private fun backupFile() = File(RPCS3.rootDirectory + "games.json.bak")
 
         fun save() {
             try {
-                File(RPCS3.rootDirectory + "games.json").writeText(Json.encodeToString(instance.games.map { game ->
+                val payload = Json.encodeToString(instance.games.map { game ->
                     toInfo(
                         game.info
                     )
-                }.filter { info -> info.path != "$" }))
+                }.filter { info -> info.path != "$" })
+
+                val target = storeFile()
+                target.parentFile?.mkdirs()
+                val staging = File(target.parentFile, "games.json.tmp")
+                staging.writeText(payload)
+
+                if (target.isFile) {
+                    target.copyTo(backupFile(), overwrite = true)
+                }
+
+                if (!staging.renameTo(target)) {
+                    staging.copyTo(target, overwrite = true)
+                    staging.delete()
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
         }
 
+        private fun readStore(file: File): Array<GameInfo>? = try {
+            if (file.isFile) Json.decodeFromString<Array<GameInfo>>(file.readText()) else null
+        } catch (_: NotFoundException) {
+            null
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+
         suspend fun load() {
             withContext(Dispatchers.IO) {
-                try {
+                val stored = readStore(storeFile()) ?: readStore(backupFile()) ?: return@withContext
+
+                synchronized(instance) {
+                    val unsaved = instance.games.filter { game ->
+                        stored.none { info -> info.path == game.info.path }
+                    }
+
                     instance.games.clear()
-                    instance.games += Json.decodeFromString<Array<GameInfo>>(
-                        File(RPCS3.rootDirectory + "games.json").readText()
-                    ).map { info -> Game(toStore(info)) }
-                } catch (_: NotFoundException) {
-                } catch (e: Exception) {
-                    e.printStackTrace()
+                    instance.games += stored.map { info -> Game(toStore(info)) }
+                    instance.games += unsaved
                 }
             }
         }
-        
+
+        fun beginScan() {
+            synchronized(instance) {
+                scanSink = mutableSetOf()
+            }
+        }
+
+        fun endScan(roots: List<String>) {
+            synchronized(instance) {
+                val seen = scanSink ?: return
+                scanSink = null
+
+                val owned = scanRootPrefixes(roots) { root ->
+                    runCatching { File(root).canonicalPath }.getOrNull()
+                }
+
+                instance.games.removeIf { game ->
+                    isStaleAfterScan(game.info.path, seen, owned) { path -> File(path).exists() }
+                }
+
+                save()
+            }
+        }
+
         @Keep
         @JvmStatic
         fun add(gameInfos: Array<GameInfo>, progressId: Long) {
@@ -128,6 +201,7 @@ class GameRepository {
                 }
 
                 gameInfos.forEach { info ->
+                    scanSink?.add(info.path)
                     val existsGame = instance.games.find { x -> x.info.path == info.path }
                     if (existsGame == null) {
                         val newGame = Game(toStore(info))
@@ -150,17 +224,22 @@ class GameRepository {
                         }
                     }
                 }
-                save()
+
+                if (scanSink == null) {
+                    save()
+                }
             }
         }
 
         fun addPreview(gameInfos: Array<GameInfo>) {
-            instance.games += gameInfos.map { info -> Game(toStore(info)) }
+            synchronized(instance) {
+                instance.games += gameInfos.map { info -> Game(toStore(info)) }
+            }
         }
 
         fun onBoot(game: Game) {
             synchronized(instance) {
-                if (instance.games.first() != game) {
+                if (instance.games.firstOrNull() != game) {
                     instance.games.remove(game)
                     instance.games.add(0, game)
                     save()
@@ -197,10 +276,6 @@ class GameRepository {
         }
 
         fun list() = instance.games
-
-        fun clear() {
-            instance.games.clear()
-        }
     }
 }
 
