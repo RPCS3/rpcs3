@@ -141,6 +141,21 @@ namespace vk
 		return ensure(dynamic_cast<const vk::render_target*>(t));
 	}
 
+	static inline vk::render_target* try_as_rtt(vk::image* t)
+	{
+		return dynamic_cast<vk::render_target*>(t);
+	}
+
+	static inline const vk::render_target* try_as_rtt(const vk::image* t)
+	{
+		return dynamic_cast<const vk::render_target*>(t);
+	}
+
+	static inline bool is_rtt(const vk::image* t)
+	{
+		return dynamic_cast<const vk::render_target*>(t) != nullptr;
+	}
+
 	struct surface_cache_traits
 	{
 		using surface_storage_type = std::unique_ptr<vk::render_target>;
