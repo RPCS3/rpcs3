@@ -108,7 +108,7 @@ namespace rsx
 			m_sort_button->set_text(localized_string_id::HOME_MENU_TROPHY_SORT_GAME_DEFAULT);
 			m_sort_button->set_image_resource(resource_config::standard_image_resource::triangle);
 			m_sort_button->set_size(120, 30);
-			m_sort_button->set_pos(560, trophy_list_y + trophy_list_h + 20);
+			m_sort_button->set_pos(460, trophy_list_y + trophy_list_h + 20);
 			m_sort_button->set_font("Arial", 16);
 
 			m_show_hidden_trophies_button = std::make_unique<image_button>();
@@ -122,7 +122,7 @@ namespace rsx
 			m_sync_trophies_button->set_text(localized_string_id::HOME_MENU_TROPHY_SYNC_TROPHIES);
 			m_sync_trophies_button->set_image_resource(resource_config::standard_image_resource::select);
 			m_sync_trophies_button->set_size(120, 30);
-			m_sync_trophies_button->set_pos(460, trophy_list_y + trophy_list_h + 20);
+			m_sync_trophies_button->set_pos(700, trophy_list_y + trophy_list_h + 20);
 			m_sync_trophies_button->set_font("Arial", 16);
 
 			fade_animation.duration_sec = 0.15f;
@@ -342,12 +342,16 @@ namespace rsx
 			}
 
 			const u32 trophy_count = m_trophy_data->trop_usr->GetTrophiesCount();
-			std::vector<std::pair<s32, u64>> local_unlocked;
+			std::vector<std::pair<s32, s64>> local_unlocked;
 			local_unlocked.reserve(trophy_count);
 			for (u32 i = 0; i < trophy_count; i++)
 			{
 				if (m_trophy_data->trop_usr->GetTrophyUnlockState(static_cast<s32>(i)))
-					local_unlocked.emplace_back(static_cast<s32>(i), u64{0});
+				{
+					local_unlocked.emplace_back(
+						static_cast<s32>(i),
+						static_cast<s64>(m_trophy_data->trop_usr->GetTrophyTimestamp(static_cast<s32>(i))));
+				}
 			}
 
 			const std::string tropusr_vfs_path = "/dev_hdd0/home/" + Emu.GetUsr() + "/trophy/" + trop_name + "/TROPUSR.DAT";
@@ -373,7 +377,7 @@ namespace rsx
 					return;
 				}
 
-				std::vector<std::pair<s32, u64>> srv_trophies = rpcn->sync_trophies(comm_id, local_unlocked);
+				std::vector<std::pair<s32, s64>> srv_trophies = rpcn->sync_trophies(comm_id, local_unlocked);
 
 				if (!srv_trophies.empty())
 				{
@@ -384,9 +388,9 @@ namespace rsx
 						bool changed = false;
 						for (const auto& [tid, ts] : srv_trophies)
 						{
-							if (tid >= 0 && tid < static_cast<s32>(count) && !tropusr->GetTrophyUnlockState(tid))
+							if (tid >= 0 && tid < static_cast<s32>(count) && ts >= 0 && !tropusr->GetTrophyUnlockState(tid))
 							{
-								(void)tropusr->UnlockTrophy(tid, ts, ts);
+								(void)tropusr->UnlockTrophy(tid, static_cast<u64>(ts), static_cast<u64>(ts));
 								changed = true;
 							}
 						}

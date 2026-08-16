@@ -2608,22 +2608,22 @@ namespace rpcn
 		return forge_request_with_com_id(serialized, pr_com_id, CommandType::SetPresence, rpcn_request_counter.fetch_add(1));
 	}
 
-	bool rpcn_client::unlock_trophy(const SceNpCommunicationId& communication_id, s32 trophy_id, u64 timestamp)
+	bool rpcn_client::unlock_trophy(const SceNpCommunicationId& communication_id, s32 trophy_id, s64 timestamp)
 	{
-		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(s32) + sizeof(u64));
+		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(s32) + sizeof(s64));
 		rpcn_client::write_communication_id(communication_id, data);
 		reinterpret_cast<le_t<s32>&>(data[COMMUNICATION_ID_SIZE]) = trophy_id;
-		reinterpret_cast<le_t<u64>&>(data[COMMUNICATION_ID_SIZE + sizeof(s32)]) = timestamp;
+		reinterpret_cast<le_t<s64>&>(data[COMMUNICATION_ID_SIZE + sizeof(s32)]) = timestamp;
 		return forge_send(CommandType::UnlockTrophy, rpcn_request_counter.fetch_add(1), data);
 	}
 
-	std::vector<std::pair<s32, u64>> rpcn_client::sync_trophies(
+	std::vector<std::pair<s32, s64>> rpcn_client::sync_trophies(
 		const SceNpCommunicationId& communication_id,
-		const std::vector<std::pair<s32, u64>>& local_unlocked)
+		const std::vector<std::pair<s32, s64>>& local_unlocked)
 	{
 		const u32 count = static_cast<u32>(local_unlocked.size());
 
-		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + count * (sizeof(s32) + sizeof(u64))), reply_data;
+		std::vector<u8> data(COMMUNICATION_ID_SIZE + sizeof(u32) + count * (sizeof(s32) + sizeof(s64))), reply_data;
 
 		rpcn_client::write_communication_id(communication_id, data);
 		reinterpret_cast<le_t<u32>&>(data[COMMUNICATION_ID_SIZE]) = count;
@@ -2633,8 +2633,8 @@ namespace rpcn
 		{
 			reinterpret_cast<le_t<s32>&>(data[offset]) = tid;
 			offset += sizeof(s32);
-			reinterpret_cast<le_t<u64>&>(data[offset]) = ts;
-			offset += sizeof(u64);
+			reinterpret_cast<le_t<s64>&>(data[offset]) = ts;
+			offset += sizeof(s64);
 		}
 
 		if (!forge_send_reply(CommandType::SyncTrophies, rpcn_request_counter.fetch_add(1), data, reply_data))
@@ -2649,12 +2649,12 @@ namespace rpcn
 		}
 
 		const u32 server_count = reply.get<u32>();
-		std::vector<std::pair<s32, u64>> result;
+		std::vector<std::pair<s32, s64>> result;
 		result.reserve(server_count);
 		for (u32 i = 0; i < server_count; i++)
 		{
 			const s32 tid = reply.get<s32>();
-			const u64 ts  = reply.get<u64>();
+			const s64 ts  = reply.get<s64>();
 			result.emplace_back(tid, ts);
 		}
 

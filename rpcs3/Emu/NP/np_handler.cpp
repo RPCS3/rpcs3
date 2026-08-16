@@ -1638,7 +1638,7 @@ namespace np
 		}
 	}
 
-	void np_handler::rpcn_trophy_unlock(const SceNpCommunicationId& communication_id, s32 trophy_id, u64 timestamp)
+	void np_handler::rpcn_trophy_unlock(const SceNpCommunicationId& communication_id, s32 trophy_id, s64 timestamp)
 	{
 		if (!is_psn_active || g_cfg.net.psn_status != np_psn_status::psn_rpcn)
 			return;
@@ -1650,9 +1650,9 @@ namespace np
 		rpcn->unlock_trophy(communication_id, trophy_id, timestamp);
 	}
 
-	std::vector<std::pair<s32, u64>> np_handler::rpcn_trophy_sync(
+	std::vector<std::pair<s32, s64>> np_handler::rpcn_trophy_sync(
 		const SceNpCommunicationId& communication_id,
-		const std::vector<std::pair<s32, u64>>& local_unlocked)
+		const std::vector<std::pair<s32, s64>>& local_unlocked)
 	{
 		if (!is_psn_active || g_cfg.net.psn_status != np_psn_status::psn_rpcn)
 			return {};

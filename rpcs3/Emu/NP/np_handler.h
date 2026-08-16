@@ -250,9 +250,9 @@ namespace np
 		void set_presence(std::optional<std::string> status, std::optional<std::vector<u8>> data);
 
 		// RPCN trophy support
-		void rpcn_trophy_unlock(const SceNpCommunicationId& communication_id, s32 trophy_id, u64 timestamp);
-		std::vector<std::pair<s32, u64>> rpcn_trophy_sync(const SceNpCommunicationId& communication_id,
-		    const std::vector<std::pair<s32, u64>>& local_unlocked);
+		void rpcn_trophy_unlock(const SceNpCommunicationId& communication_id, s32 trophy_id, s64 timestamp);
+		std::vector<std::pair<s32, s64>> rpcn_trophy_sync(const SceNpCommunicationId& communication_id,
+		    const std::vector<std::pair<s32, s64>>& local_unlocked);
 
 		template <typename T>
 		error_code get_friend_presence_by_index(u32 index, SceNpUserInfo* user, T* pres);
