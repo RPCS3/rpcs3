@@ -18,7 +18,7 @@ curl -fsSL 'https://api.rpcs3.net/config/?api=v1' | iconv -t UTF-8 1> ./bin/GuiC
 
 # Download translations
 mkdir -p ./bin/qt6/translations
-ZIP_URL=$(curl -fsSL "https://api.github.com/repos/RPCS3/rpcs3_translations/releases/latest" \
+ZIP_URL=$(curl -fsSL --retry 3 --retry-delay 60 "https://api.github.com/repos/RPCS3/rpcs3_translations/releases/latest" \
   | grep "browser_download_url" \
   | grep "RPCS3-languages.zip" \
   | cut -d '"' -f 4)
@@ -26,7 +26,7 @@ if [ -z "$ZIP_URL" ]; then
   echo "Failed to find RPCS3-languages.zip in the latest release. Continuing without translations."
 else
   echo "Downloading translations from: $ZIP_URL"
-  curl -L -o translations.zip "$ZIP_URL" || {
+  curl -fsSL --retry 3 --retry-delay 60 -o translations.zip "$ZIP_URL" || {
     echo "Failed to download translations.zip. Continuing without translations."
     exit 0
   }
