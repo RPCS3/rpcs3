@@ -651,19 +651,9 @@ namespace gl
 			}
 		}
 
-		void update_image_contents(gl::command_context& cmd, gl::texture_view* dst, gl::texture* src, u16 width, u16 height) override
+		void update_image_contents(gl::command_context& cmd, gl::texture_view* dst, const deferred_subresource& desc) override
 		{
-			rsx::simple_array<copy_region_descriptor> region =
-			{{
-				.src = src,
-				.xform = rsx::surface_transform::identity,
-				.src_w = width,
-				.src_h = height,
-				.dst_w = width,
-				.dst_h = height
-			}};
-
-			copy_transfer_regions_impl(cmd, dst->image(), region);
+			copy_transfer_regions_impl(cmd, dst->image(), desc.sections_to_copy);
 		}
 
 		cached_texture_section* create_new_texture(gl::command_context& cmd, const utils::address_range32 &rsx_range, u16 width, u16 height, u16 depth, u16 mipmaps, u32 pitch,
