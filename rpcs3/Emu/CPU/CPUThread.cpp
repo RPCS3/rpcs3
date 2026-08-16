@@ -1259,7 +1259,7 @@ std::string cpu_thread::get_name() const
 
 		if (get_class() == thread_class::rsx)
 		{
-			return fmt::format("rsx::thread");
+			return fmt::format("RSX[0x%x]", static_cast<const rsx::thread*>(this)->lv2_context_id);
 		}
 
 		return fmt::format("Invalid cpu_thread type (0x%x)", id_type());

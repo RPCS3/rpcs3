@@ -5,29 +5,58 @@
 #include "gcm_enums.h"
 #include "gcm_printing.h"
 #include "rsx_methods.h"
+#include "Emu/Cell/lv2/sys_process.h"
 
 namespace rsx
 {
 	void invalid_method(context*, u32, u32);
 }
 
+struct lv2_rsx_context* RSXDisAsm::get_context() const
+{
+	return rsx_context_ptr.get();
+}
+
+const u8* RSXDisAsm::get_offset_from_context(lv2_rsx_context* context) const
+{
+	const auto p = idm::get_unlocked<lv2_obj, lv2_process>(context->belonging_process);
+
+	if (!p)
+	{
+		return nullptr;
+	}
+
+	return p->memory_4GB_model->sudo_addr;
+}
+
+shared_ptr<lv2_rsx_context> RSXDisAsm::get_context_from_id(const cpu_thread* _this, u32 id) const
+{
+	return idm::get_unlocked<lv2_rsx_context>(idm::id_index{static_cast<const rsx::thread*>(_this)->lv2_context_id, nullptr});
+}
+
 u32 RSXDisAsm::disasm(u32 pc)
 {
+	const auto lv2_context = get_context();
+
+	if (!lv2_context)
+	{
+		return 0;
+	}
+
 	last_opcode.clear();
 
-	auto try_read_op = [this](u32 pc) -> bool
+	auto try_read_op = [this, lv2_context](u32 pc) -> bool
 	{
 		if (pc < m_start_pc)
 		{
 			return false;
 		}
 
-		if (m_offset == vm::g_sudo_addr)
-		{
-			// Translation needed
-			pc = static_cast<const rsx::thread*>(m_cpu)->lv2_context->iomap_table.get_addr(pc);
+		pc = lv2_context->iomap_table.get_addr(pc);
 
-			if (pc == umax) return false;
+		if (pc == umax)
+		{
+			return false;
 		}
 
 		m_op = *reinterpret_cast<const atomic_be_t<u32>*>(m_offset + pc);

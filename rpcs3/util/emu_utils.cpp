@@ -6,7 +6,10 @@
 #include "Emu/Cell/SPUDisAsm.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/Cell/lv2/sys_rsx.h"
+#include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/RSX/RSXDisAsm.h"
+#include "Emu/RSX/RSXThread.h"
 #include "Emu/Memory/vm.h"
 #include "Utilities/Thread.h"
 
@@ -38,7 +41,7 @@ std::shared_ptr<CPUDisAsm> make_disasm(const cpu_thread* cpu, shared_ptr<cpu_thr
 	{
 	case thread_class::ppu: result = std::make_shared<PPUDisAsm>(cpu_disasm_mode::interpreter, static_cast<const ppu_thread*>(cpu)->vm_sudo, cpu); break;
 	case thread_class::spu: result = std::make_shared<SPUDisAsm>(cpu_disasm_mode::interpreter, static_cast<const spu_thread*>(cpu)->ls); break;
-	//case thread_class::rsx: result = std::make_shared<RSXDisAsm>(cpu_disasm_mode::interpreter, static_cast<const rsx::thread*>(cpu)->vm_sudo, 0, cpu); break;
+	case thread_class::rsx: result = std::make_shared<RSXDisAsm>(cpu_disasm_mode::interpreter, static_cast<const rsx::thread*>(cpu)->lv2_context_id, 0, cpu); break;
 	default: return result;
 	}
 

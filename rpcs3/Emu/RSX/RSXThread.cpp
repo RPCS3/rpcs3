@@ -1143,9 +1143,8 @@ namespace rsx
 	{
 		g_tls_log_prefix = [] -> std::string
 		{
-			return  "RSX[]";
 			const auto rsx = get_current_renderer();
-			return fmt::format("RSX [0x%07x]", rsx->ctrl ? +rsx->ctrl->get : 0);
+			return fmt::format("RSX[%d] [0x%07x]", rsx->lv2_context_id % 16, rsx->ctrl && rsx->lv2_context && rsx->lv2_context->dma_address ? +rsx->ctrl->get : 0);
 		};
 
 		if (!serialized) method_registers.init();
@@ -2979,7 +2978,7 @@ namespace rsx
 		u32 true_get = ctrl->get;
 		u32 start = last_known_code_start;
 
-		RSXDisAsm disasm(cpu_disasm_mode::survey_cmd_size, vm::g_sudo_addr, 0, this);
+		RSXDisAsm disasm(cpu_disasm_mode::survey_cmd_size, lv2_context_id, 0, this);
 
 		std::vector<u32> pcs_of_valid_cmds;
 
@@ -3094,9 +3093,11 @@ namespace rsx
 		recovered_fifo_cmds_history.push({fifo_ctrl->last_cmd(), current_time});
 	}
 
-	void thread::dump_misc(std::string& ret, std::any& custom_data) const
+	void thread::dump_misc(std::string& ret, std::any& /*custom_data*/) const
 	{
-		cpu_thread::dump_misc(ret, custom_data);
+		const auto ctx = idm::get_unlocked<lv2_rsx_context>(idm::id_index(lv2_context_id, nullptr));
+
+		fmt::append(ret, "RSX[0x%x]; State: %s, Process: 0x%x\n", lv2_context_id, state.load(), ctx ? ctx->belonging_process : 0);
 
 		const auto flags = +state;
 

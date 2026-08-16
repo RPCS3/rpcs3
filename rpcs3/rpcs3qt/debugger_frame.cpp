@@ -827,7 +827,7 @@ cpu_thread* debugger_frame::get_cpu()
 		}
 	}
 
-	if (!!m_disasm != !!m_cpu)
+	if (!!m_disasm != !!m_cpu && !m_rsx)
 	{
 		// Fixup for HW PPU viewer
 		if (m_cpu)
@@ -1085,7 +1085,7 @@ void debugger_frame::UpdateUnitList()
 		}
 
 		// Space at the end is to pad a gap on the right
-		cpu_list.emplace_back(QString::fromStdString((id >> 24 == 0x55 ? "RSX[0x55555555]" : cpu.get_name()) + ' '), std::move(func_cpu));
+		cpu_list.emplace_back(QString::fromStdString((cpu.get_name()) + ' '), std::move(func_cpu));
 
 		if (old_cpu_ptr == std::addressof(cpu) && hw_ppu_idx == umax)
 		{
