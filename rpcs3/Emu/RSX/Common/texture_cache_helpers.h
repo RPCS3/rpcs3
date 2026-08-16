@@ -652,11 +652,23 @@ namespace rsx
 			// Track the clipping offset. Typically it is {0, 0} which means exact match, but subregions can also use this function and we need to scale this up from guest to host.
 			auto scaled_offset = offset;
 
+			// If src and dst are mismatched in bpp, scale the offset to match dest bpp.
+			// That way we can use coordinate transform to reverse the conversion, which we already need to do anyway.
+			// We do that before res scaling to avoid rounding errors.
+			if (scaled_offset.x)
+			{
+				if (const auto surface_bpp = texptr->get_bpp();
+					surface_bpp != attr.bpp)
+				{
+					scaled_offset.x = (scaled_offset.x * surface_bpp) / attr.bpp;
+				}
+			}
+
 			if (texptr->resolution_scaling_config.scale_percent != 100)
 			{
 				const auto [scaled_w, scaled_h] = rsx::apply_resolution_scale<true>(texptr->resolution_scaling_config, attr.width, attr.height, surface_width, surface_height);
 				const auto [unused, scaled_slice_h] = rsx::apply_resolution_scale<false>(texptr->resolution_scaling_config, RSX_SURFACE_DIMENSION_IGNORED, attr.slice_h, surface_width, surface_height);
-				const auto [scaled_off_x, scaled_off_y] = rsx::apply_resolution_scale<false>(texptr->resolution_scaling_config, static_cast<u16>(offset.x), static_cast<u16>(offset.y), surface_width, surface_height);
+				const auto [scaled_off_x, scaled_off_y] = rsx::apply_resolution_scale<false>(texptr->resolution_scaling_config, static_cast<u16>(scaled_offset.x), static_cast<u16>(scaled_offset.y), surface_width, surface_height);
 				attr2.width = scaled_w;
 				attr2.height = scaled_h;
 				attr2.slice_h = scaled_slice_h;
