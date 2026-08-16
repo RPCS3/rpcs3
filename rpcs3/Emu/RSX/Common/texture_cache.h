@@ -2136,8 +2136,19 @@ namespace rsx
 				{
 					const bool force_convert = !render_target_format_is_compatible(last.surface, attr.gcm_format);
 
-					return helpers::process_framebuffer_resource_fast<sampled_image_descriptor>(
-						cmd, last.surface, attr, position2u(last.src_area.x, last.src_area.y), scale, extended_dimension, remap, false, force_convert);
+					// Need to check for cyclic ref since we now allow offsets.
+					const bool surface_is_rop_target = m_rtts.address_is_bound(last.base_address);
+
+					auto result = helpers::process_framebuffer_resource_fast<sampled_image_descriptor>(
+						cmd, last.surface, attr, position2u(last.src_area.x, last.src_area.y), scale, extended_dimension, remap, surface_is_rop_target, force_convert);
+
+					if (!options.skip_texture_barriers && result.is_cyclic_reference)
+					{
+						ensure(surface_is_rop_target);
+						insert_texture_barrier(cmd, last.surface);
+					}
+
+					return result;
 				}
 
 				return {};
