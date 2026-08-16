@@ -76,6 +76,7 @@ import net.rpcs3.dialogs.AlertDialogQueue
 import net.rpcs3.ui.components.GhostButton
 import net.rpcs3.ui.components.SectionLabel
 import net.rpcs3.ui.components.SettingGroup
+import net.rpcs3.ui.hud.HudCategory
 import net.rpcs3.ui.patches.PatchesCategory
 import net.rpcs3.ui.theme.Dimens
 import net.rpcs3.ui.theme.Dims
@@ -100,6 +101,7 @@ internal fun iconForCategory(name: String): ImageVector = when (name) {
     ControlsCategory -> Icons.Outlined.SportsEsports
     DriverCategory -> Icons.Outlined.Memory
     PatchesCategory -> Icons.Outlined.Healing
+    HudCategory -> Icons.Outlined.Speed
     else -> Icons.Outlined.MoreHoriz
 }
 

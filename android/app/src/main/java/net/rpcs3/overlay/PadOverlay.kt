@@ -23,6 +23,8 @@ import kotlin.math.min
 
 
 
+const val PS_HOLD_MS = 1000L
+
 data class State(
     val digital: IntArray = IntArray(2),
     var leftStickX: Int = 127,
@@ -55,7 +57,31 @@ class PadOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(context,
         }
         
     var onSelectedInputChange: ((Any) -> Unit)? = null
+    var onPsHold: (() -> Unit)? = null
     var isEditing = false
+
+    private val psHoldHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private var psHoldArmed = false
+    private val psHoldRunnable = Runnable {
+        psHoldArmed = false
+        onPsHold?.invoke()
+    }
+
+    private fun trackPsHold(digital1: Int) {
+        val pressed = (digital1 and Digital1Flags.CELL_PAD_CTRL_PS.bit) != 0
+
+        if (pressed && !psHoldArmed) {
+            psHoldArmed = true
+            psHoldHandler.removeCallbacks(psHoldRunnable)
+            psHoldHandler.postDelayed(psHoldRunnable, PS_HOLD_MS)
+            return
+        }
+
+        if (!pressed && psHoldArmed) {
+            psHoldArmed = false
+            psHoldHandler.removeCallbacks(psHoldRunnable)
+        }
+    }
     
     private val outlinePaint = Paint().apply {
         color = Color.RED
@@ -411,6 +437,8 @@ class PadOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(context,
                     }
                 }
             }
+
+            trackPsHold(state.digital[0])
 
             RPCS3.instance.overlayPadData(
                 state.digital[0],

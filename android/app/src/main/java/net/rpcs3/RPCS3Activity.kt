@@ -10,6 +10,10 @@ import android.view.InputDevice
 import android.view.View
 import androidx.compose.runtime.mutableStateOf
 import net.rpcs3.ui.drawer.InGameDrawer
+import net.rpcs3.ui.hud.DeviceStatsReader
+import net.rpcs3.ui.hud.HudPrefs
+import net.rpcs3.overlay.PS_HOLD_MS
+import org.json.JSONObject
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.ViewGroup.MarginLayoutParams
@@ -28,6 +32,8 @@ import net.rpcs3.utils.GameDetailsReader
 import kotlin.concurrent.thread
 import kotlin.math.abs
 
+private const val HUD_REFRESH_MS = 500L
+
 class RPCS3Activity : ComponentActivity() {
     private lateinit var binding: ActivityRpcs3Binding
     private lateinit var unregisterUsbEventListener: () -> Unit
@@ -36,6 +42,13 @@ class RPCS3Activity : ComponentActivity() {
     private var usesAxisL2 = false
     private var usesAxisR2 = false
     private var bootThread: Thread? = null
+    private val hudHandler = Handler(Looper.getMainLooper())
+    private var hudPump: Runnable? = null
+    private var hudPrefsListener:
+        android.content.SharedPreferences.OnSharedPreferenceChangeListener? = null
+    private val modeHoldRunnable = Runnable {
+        setDrawerVisible(!drawerVisible.value)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -89,6 +102,16 @@ class RPCS3Activity : ComponentActivity() {
                 )
             }
         }
+
+        binding.padOverlay.onPsHold = {
+            runOnUiThread {
+                if (!drawerVisible.value) {
+                    setDrawerVisible(true)
+                }
+            }
+        }
+
+        startHud()
 
         binding.oscToggle.setOnClickListener {
             binding.padOverlay.isInvisible = !binding.padOverlay.isInvisible
@@ -223,6 +246,85 @@ class RPCS3Activity : ComponentActivity() {
         sendGamepadData()
     }
 
+    private fun applyHudPreferences() {
+        val prefs = HudPrefs.of(this)
+
+        if (!HudPrefs.isEnabled(prefs)) {
+            binding.hudView.visibility = View.GONE
+            stopPump()
+            return
+        }
+
+        val wasHidden = binding.hudView.visibility != View.VISIBLE
+        binding.hudView.visibility = View.VISIBLE
+        binding.hudView.setMode(HudPrefs.mode(prefs))
+        binding.hudView.setElements(HudPrefs.enabledElements(prefs))
+        binding.hudView.setScale(HudPrefs.scale(prefs))
+
+        if (wasHidden) {
+            binding.hudView.restorePosition()
+        }
+
+        startPump()
+    }
+
+    private fun startHud() {
+        val prefs = HudPrefs.of(this)
+
+        hudPrefsListener =
+            android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+                runOnUiThread { applyHudPreferences() }
+            }
+        prefs.registerOnSharedPreferenceChangeListener(hudPrefsListener)
+
+        applyHudPreferences()
+    }
+
+    private fun startPump() {
+        if (hudPump != null) {
+            return
+        }
+
+        val reader = DeviceStatsReader(this)
+
+        hudPump = object : Runnable {
+            override fun run() {
+                val device = reader.read()
+                val emu = runCatching { JSONObject(RPCS3.instance.perfMetrics()) }.getOrNull()
+
+                binding.hudView.submit(
+                    device.copy(
+                        fps = emu?.optDouble("fps", 0.0)?.toFloat() ?: 0f,
+                        frametimeMs = emu?.optDouble("frametime", 0.0)?.toFloat() ?: 0f,
+                        renderer = emu?.optString("renderer").orEmpty(),
+                        gpuPercent = if (device.gpuPercent >= 0) {
+                            device.gpuPercent
+                        } else {
+                            emu?.optInt("rsxLoad", -1) ?: -1
+                        }
+                    )
+                )
+
+                hudHandler.postDelayed(this, HUD_REFRESH_MS)
+            }
+        }
+
+        hudHandler.post(hudPump!!)
+    }
+
+    private fun stopPump() {
+        hudPump?.let { hudHandler.removeCallbacks(it) }
+        hudPump = null
+    }
+
+    private fun stopHud() {
+        stopPump()
+        hudPrefsListener?.let {
+            HudPrefs.of(this).unregisterOnSharedPreferenceChangeListener(it)
+        }
+        hudPrefsListener = null
+    }
+
     private fun setDrawerVisible(visible: Boolean) {
         if (visible) {
             releaseAllPadInput()
@@ -264,6 +366,7 @@ class RPCS3Activity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        stopHud()
         RPCS3.onEmulationStopped = null
         if (RPCS3.getState().isEmulationActive) {
             RPCS3.state.value = EmulatorState.Paused
@@ -315,7 +418,11 @@ class RPCS3Activity : ComponentActivity() {
         }
 
         if (keyCode == KeyEvent.KEYCODE_BUTTON_MODE) {
-            setDrawerVisible(!drawerVisible.value)
+            hudHandler.removeCallbacks(modeHoldRunnable)
+            hudHandler.postDelayed(modeHoldRunnable, PS_HOLD_MS)
+            gamePadState.digital[0] =
+                gamePadState.digital[0] or Digital1Flags.CELL_PAD_CTRL_PS.bit
+            sendGamepadData()
             return true
         }
 
@@ -339,6 +446,10 @@ class RPCS3Activity : ComponentActivity() {
         }
 
         if (keyCode == KeyEvent.KEYCODE_BUTTON_MODE) {
+            hudHandler.removeCallbacks(modeHoldRunnable)
+            gamePadState.digital[0] =
+                gamePadState.digital[0] and Digital1Flags.CELL_PAD_CTRL_PS.bit.inv()
+            sendGamepadData()
             return true
         }
 

@@ -63,6 +63,8 @@ import kotlinx.coroutines.withContext
 import net.rpcs3.R
 import net.rpcs3.RPCS3
 import net.rpcs3.ui.patches.InGamePatchesPanel
+import net.rpcs3.ui.hud.HudCategory
+import net.rpcs3.ui.hud.HudSettingsPanel
 import net.rpcs3.ui.patches.PatchesCategory
 import net.rpcs3.ui.settings.ControlsCategory
 import net.rpcs3.ui.settings.ControlsSettings
@@ -201,7 +203,8 @@ private fun InGameSettingsPanel(
         val categories = remember(tree) {
             categoriesOf(tree) +
                 SettingsCategory(ControlsCategory, listOf(ControlsCategory), null) +
-                SettingsCategory(PatchesCategory, listOf(PatchesCategory), null)
+                SettingsCategory(PatchesCategory, listOf(PatchesCategory), null) +
+                SettingsCategory(HudCategory, listOf(HudCategory), null)
         }
 
         Column(modifier = Modifier.fillMaxSize()) {
@@ -292,6 +295,16 @@ private fun InGameSettingsPanel(
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
                     InGamePatchesPanel(titleId = titleId)
+                    Spacer(Modifier.height(Dimens.SectionGap))
+                }
+            } else if (name == HudCategory) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    HudSettingsPanel()
                     Spacer(Modifier.height(Dimens.SectionGap))
                 }
             } else if (name == ControlsCategory) {

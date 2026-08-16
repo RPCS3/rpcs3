@@ -121,6 +121,7 @@ class RPCS3 {
     external fun pause()
     external fun openHomeMenu()
     external fun getTitleId(): String
+    external fun perfMetrics(): String
     external fun supportsCustomDriverLoading() : Boolean
     external fun isInstallableFile(fd: Int) : Boolean
     external fun getDirInstallPath(sfoFd: Int) : String?

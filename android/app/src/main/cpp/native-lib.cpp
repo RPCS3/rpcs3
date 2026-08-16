@@ -95,6 +95,8 @@ struct AtExit {
 
 static bool g_initialized;
 static std::atomic<ANativeWindow *> g_native_window;
+static std::atomic<float> g_hud_fps{0.f};
+static std::atomic<float> g_hud_frametime{0.f};
 
 extern std::string g_android_executable_dir;
 extern std::string g_android_config_dir;
@@ -151,7 +153,13 @@ struct GraphicsFrame : GSFrameBase {
   mutable int width = 0;
   mutable int height = 0;
 
+  std::chrono::steady_clock::time_point fpsWindowStart{};
+  u32 fpsFrames = 0;
+
   ~GraphicsFrame() {
+    g_hud_fps.store(0.f);
+    g_hud_frametime.store(0.f);
+
     if (activeNativeWindow != nullptr) {
       ANativeWindow_release(activeNativeWindow);
     }
@@ -193,7 +201,30 @@ struct GraphicsFrame : GSFrameBase {
   void delete_context(draw_context_t ctx) override {}
   draw_context_t make_context() override { return nullptr; }
   void set_current(draw_context_t ctx) override {}
-  void flip(draw_context_t ctx, bool skip_frame = false) override {}
+  void flip(draw_context_t ctx, bool skip_frame = false) override {
+    if (skip_frame) {
+      return;
+    }
+
+    const auto now = std::chrono::steady_clock::now();
+
+    if (fpsWindowStart.time_since_epoch().count() == 0) {
+      fpsWindowStart = now;
+      return;
+    }
+
+    fpsFrames++;
+
+    const double elapsed =
+        std::chrono::duration<double>(now - fpsWindowStart).count();
+
+    if (elapsed >= 0.5) {
+      g_hud_fps.store(static_cast<float>(fpsFrames / elapsed));
+      g_hud_frametime.store(static_cast<float>(elapsed * 1000.0 / fpsFrames));
+      fpsFrames = 0;
+      fpsWindowStart = now;
+    }
+  }
   int client_width() override { return width; }
   int client_height() override { return height; }
   f64 client_display_rate() override { return 30.f; }
@@ -1604,13 +1635,6 @@ extern "C" JNIEXPORT jboolean JNICALL Java_net_rpcs3_RPCS3_overlayPadData(
   for (auto &btn : pad->m_buttons) {
     if (btn.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1) {
       btn.m_pressed = (digital1 & btn.m_outKeyCode) != 0;
-
-      if (btn.m_outKeyCode == CELL_PAD_CTRL_PS && btn.m_pressed) {
-        if (auto padThread = pad::get_pad_thread(true)) {
-          padThread->open_home_menu();
-        }
-      }
-
     } else if (btn.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL2) {
       btn.m_pressed = (digital2 & btn.m_outKeyCode) != 0;
     }
@@ -1820,6 +1844,20 @@ extern "C" JNIEXPORT void JNICALL Java_net_rpcs3_RPCS3_openHomeMenu(JNIEnv *env,
 extern "C" JNIEXPORT jstring JNICALL
 Java_net_rpcs3_RPCS3_getTitleId(JNIEnv *env, jobject) {
   return wrap(env, Emu.GetTitleID());
+}
+
+extern "C" JNIEXPORT jstring JNICALL
+Java_net_rpcs3_RPCS3_perfMetrics(JNIEnv *env, jobject) {
+  u32 rsxLoad = 0;
+
+  if (auto renderer = rsx::get_current_renderer()) {
+    rsxLoad = renderer->get_load();
+  }
+
+  return wrap(env, fmt::format(R"({"fps":%.2f,"frametime":%.3f,"rsxLoad":%u,)"
+                               R"("renderer":"%s"})",
+                               g_hud_fps.load(), g_hud_frametime.load(),
+                               rsxLoad, g_cfg.video.renderer.to_string()));
 }
 
 extern "C" JNIEXPORT jboolean JNICALL Java_net_rpcs3_RPCS3_surfaceEvent(
