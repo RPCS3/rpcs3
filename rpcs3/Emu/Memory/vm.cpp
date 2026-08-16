@@ -894,7 +894,7 @@ namespace vm
 		flags_set   &= ~flags_both;
 		flags_clear &= ~flags_both;
 
-		if (!check_addr(addr, flags_test, size))
+		if (!check_addr(memory_4GB_model.get(), addr, flags_test, size))
 		{
 			return false;
 		}
@@ -961,7 +961,7 @@ namespace vm
 					if ((old_val ^ start_value) & (page_readable | page_writable))
 					{
 						const auto protection = start_value & page_writable ? utils::protection::rw : (start_value & page_readable ? utils::protection::ro : utils::protection::no);
-						utils::memory_protect(g_base_addr + start * 4096, page_size, protection);
+						utils::memory_protect(memory_4GB_model->base_addr + start * 4096, page_size, protection);
 					}
 
 					range_lock->release(0);
@@ -1060,12 +1060,12 @@ namespace vm
 		}
 		else if (is_noop)
 		{
-			std::memset(g_sudo_addr + addr, 0, size);
+			std::memset(memory_4GB_model->sudo_addr + addr, 0, size);
 		}
 		else if (!shm)
 		{
-			utils::memory_protect(g_base_addr + addr, size, utils::protection::no);
-			std::memset(g_sudo_addr + addr, 0, size);
+			utils::memory_protect(memory_4GB_model->base_addr + addr, size, utils::protection::no);
+			std::memset(memory_4GB_model->sudo_addr + addr, 0, size);
 		}
 		else
 		{
@@ -1290,8 +1290,8 @@ namespace vm
 			};
 
 			const u32 enda = addr + size - 4096;
-			fill64(g_sudo_addr + addr, "STACKGRD"_u64, 4096 / sizeof(u64));
-			fill64(g_sudo_addr + enda, "UNDERFLO"_u64, 4096 / sizeof(u64));
+			fill64(memory_4GB_model->sudo_addr + addr, "STACKGRD"_u64, 4096 / sizeof(u64));
+			fill64(memory_4GB_model->sudo_addr + enda, "UNDERFLO"_u64, 4096 / sizeof(u64));
 		}
 
 		// Add entry
@@ -1439,9 +1439,9 @@ namespace vm
 
 			if (m_common)
 			{
-				m_common->unmap_critical(vm::base(addr));
+				m_common->unmap_critical(memory_4GB_model->base_addr + addr);
 #ifdef _WIN32
-				m_common->unmap_critical(vm::get_super_ptr(addr));
+				m_common->unmap_critical(memory_4GB_model->sudo_addr + addr);
 #endif
 				ensure(m_common.use_count() == 1);
 				m_common.reset();
@@ -1642,8 +1642,8 @@ namespace vm
 			// Clear stack guards
 			if (flags & stack_guarded)
 			{
-				std::memset(g_sudo_addr + addr - 4096, 0, 4096);
-				std::memset(g_sudo_addr + addr + size, 0, 4096);
+				std::memset(memory_4GB_model->sudo_addr + addr - 4096, 0, 4096);
+				std::memset(memory_4GB_model->sudo_addr + addr + size, 0, 4096);
 			}
 
 			// Remove entry
