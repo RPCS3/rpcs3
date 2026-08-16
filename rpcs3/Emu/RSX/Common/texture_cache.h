@@ -401,8 +401,14 @@ namespace rsx
 
 			sampled_image_descriptor() = default;
 
-			sampled_image_descriptor(image_view_type handle, texture_upload_context ctx, rsx::format_class ftype,
-				size3f scale, rsx::texture_dimension_extended type, bool cyclic_reference = false,
+			sampled_image_descriptor(
+				image_view_type handle,
+				texture_upload_context ctx,
+				rsx::format_class ftype,
+				size3f scale,
+				rsx::texture_dimension_extended type,
+				u32 ref_address_,
+				bool cyclic_reference = false,
 				u8 msaa_samples = 1)
 			{
 				image_handle = handle;
@@ -411,6 +417,7 @@ namespace rsx
 				is_cyclic_reference = cyclic_reference;
 				image_type = type;
 				samples = msaa_samples;
+				ref_address = ref_address_;
 
 				texcoord_xform.scale[0] = scale.width;
 				texcoord_xform.scale[1] = scale.height;
@@ -421,9 +428,13 @@ namespace rsx
 				texcoord_xform.clamp = false;
 			}
 
-			sampled_image_descriptor(deferred_subresource&& desc,
-				texture_upload_context ctx, rsx::format_class ftype, size3f scale,
-				rsx::texture_dimension_extended type)
+			sampled_image_descriptor(
+				deferred_subresource&& desc,
+				texture_upload_context ctx,
+				rsx::format_class ftype,
+				size3f scale,
+				rsx::texture_dimension_extended type,
+				u32 ref_address_)
 			{
 				external_subresource_desc = std::move(desc);
 
@@ -431,6 +442,7 @@ namespace rsx
 				upload_context = ctx;
 				format_class = ftype;
 				image_type = type;
+				ref_address = ref_address_;
 
 				texcoord_xform.scale[0] = scale.width;
 				texcoord_xform.scale[1] = scale.height;
@@ -2097,7 +2109,15 @@ namespace rsx
 				// Most mesh textures are stored as compressed to make the most of the limited memory
 				if (auto cached_texture = find_texture_from_dimensions(attr.address, attr.gcm_format, attr.width, attr.height, attr.depth))
 				{
-					return{ cached_texture->get_view(remap), cached_texture->get_context(), cached_texture->get_format_class(), scale, cached_texture->get_image_type() };
+					return
+					{
+						cached_texture->get_view(remap),
+						cached_texture->get_context(),
+						cached_texture->get_format_class(),
+						scale,
+						cached_texture->get_image_type(),
+						cached_texture->get_section_base()
+					};
 				}
 
 				return {};
@@ -2202,7 +2222,15 @@ namespace rsx
 						break;
 					}
 
-					return{ cached_texture->get_view(remap), cached_texture->get_context(), cached_texture->get_format_class(), scale, cached_texture->get_image_type() };
+					return
+					{
+						cached_texture->get_view(remap),
+						cached_texture->get_context(),
+						cached_texture->get_format_class(),
+						scale,
+						cached_texture->get_image_type(),
+						cached_texture->get_section_base()
+					};
 				}
 			}
 
@@ -2274,8 +2302,17 @@ namespace rsx
 						{
 							// Clipped view
 							auto viewed_image = last->get_raw_texture();
-							sampled_image_descriptor result = { viewed_image->get_view(remap), last->get_context(),
-								viewed_image->format_class(), scale, extended_dimension, false, viewed_image->samples() };
+							sampled_image_descriptor result =
+							{
+								viewed_image->get_view(remap),
+								last->get_context(),
+								viewed_image->format_class(),
+								scale,
+								extended_dimension,
+								attr.address,
+								false,
+								viewed_image->samples()
+							};
 
 							helpers::calculate_sample_clip_parameters(result, position2i(0, 0), size2i(attr.width, attr.height), size2i(normalized_width, last->get_height()));
 							return result;
@@ -2294,7 +2331,8 @@ namespace rsx
 							last->get_context(),
 							classify_format(gcm_format),
 							scale,
-							extended_dimension
+							extended_dimension,
+							attr.address
 						};
 					}
 				}
@@ -2881,8 +2919,15 @@ namespace rsx
 			auto uploaded = upload_image_from_cpu(cmd, tex_range, attributes.width, attributes.height, attributes.depth, tex.get_exact_mipmap_count(), attributes.pitch, attributes.gcm_format,
 				texture_upload_context::shader_read, subresources_layout, extended_dimension, attributes.swizzled);
 
-			return{ uploaded->get_view(tex.decoded_remap()),
-					texture_upload_context::shader_read, format_class, scale, extended_dimension };
+			return
+			{
+				uploaded->get_view(tex.decoded_remap()),
+				texture_upload_context::shader_read,
+				format_class,
+				scale,
+				extended_dimension,
+				attributes.address
+			};
 		}
 
 		// FIXME: This function is way too large and needs an urgent refactor.
