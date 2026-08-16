@@ -742,14 +742,25 @@ namespace rsx
 						deferred_subresource_type::create_copy(
 							texptr->get_surface(rsx::surface_access::transfer_read),
 							attr2, src_rect, dst_rect, rsx::surface_transform::coordinate_transform, decoded_remap, surface_is_rop_target),
-						texture_upload_context::framebuffer_storage, format_class, scale, extended_dimension
+						texture_upload_context::framebuffer_storage,
+						format_class, scale, extended_dimension,
+						texptr->base_addr
 					};
 				}
 
 				texptr->memory_barrier(cmd, access_type);
 				auto viewed_surface = texptr->get_surface(access_type);
-				sampled_image_descriptor result = { viewed_surface->get_view(decoded_remap), texture_upload_context::framebuffer_storage,
-						texptr->format_class(), scale, rsx::texture_dimension_extended::texture_dimension_2d, surface_is_rop_target, viewed_surface->samples() };
+				sampled_image_descriptor result =
+				{
+					viewed_surface->get_view(decoded_remap),
+					texture_upload_context::framebuffer_storage,
+					texptr->format_class(),
+					scale,
+					rsx::texture_dimension_extended::texture_dimension_2d,
+					texptr->base_addr,
+					surface_is_rop_target,
+					viewed_surface->samples()
+				};
 
 				if (requires_clip)
 				{
@@ -768,7 +779,8 @@ namespace rsx
 				{
 					deferred_subresource_type::create_3d_unwrap(texptr->get_surface(rsx::surface_access::transfer_read), scaled_offset, attr2, decoded_remap),
 					texture_upload_context::framebuffer_storage, format_class, scale,
-					rsx::texture_dimension_extended::texture_dimension_3d
+					rsx::texture_dimension_extended::texture_dimension_3d,
+					texptr->base_addr
 				};
 			}
 
@@ -778,7 +790,8 @@ namespace rsx
 			{
 				deferred_subresource_type::create_cubemap_unwrap(texptr->get_surface(rsx::surface_access::transfer_read), scaled_offset, attr2, decoded_remap),
 				texture_upload_context::framebuffer_storage, format_class, scale,
-				rsx::texture_dimension_extended::texture_dimension_cubemap
+				rsx::texture_dimension_extended::texture_dimension_cubemap,
+				texptr->base_addr
 			};
 		}
 
@@ -867,7 +880,8 @@ namespace rsx
 				{
 					deferred_subresource_type::create_cubemap_gather(attr2, std::move(sections), decoded_remap, !complete),
 					upload_context, format_class, scale,
-					rsx::texture_dimension_extended::texture_dimension_cubemap
+					rsx::texture_dimension_extended::texture_dimension_cubemap,
+					attr.address
 				};
 			}
 			else if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_3d && attr.depth > 1)
@@ -882,7 +896,8 @@ namespace rsx
 				{
 					deferred_subresource_type::create_3d_gather(attr2, std::move(sections), decoded_remap, !complete),
 					upload_context, format_class, scale,
-					rsx::texture_dimension_extended::texture_dimension_3d
+					rsx::texture_dimension_extended::texture_dimension_3d,
+					attr.address
 				};
 			}
 
@@ -904,7 +919,8 @@ namespace rsx
 			{
 				deferred_subresource_type::create_atlas_gather(attr2, std::move(sections), decoded_remap, !complete),
 				upload_context, format_class, scale,
-				rsx::texture_dimension_extended::texture_dimension_2d
+				rsx::texture_dimension_extended::texture_dimension_2d,
+				attr.address
 			};
 
 			result.simplify();
