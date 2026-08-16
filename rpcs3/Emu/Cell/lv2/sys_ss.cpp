@@ -590,3 +590,15 @@ error_code sys_ss_individual_info_manager(u64 pkg_id, u64 a2, vm::ptr<u64> out_s
 
 	return CELL_OK;
 }
+
+error_code sys_npdrm_check_ekc(ppu_thread& ppu, u32 arg_1, vm::ptr<void> some_struct)
+{
+	sys_ss.warning("sys_npdrm_regist_ekc(arg_1=0x%X, some_struct=0x%x)", arg_1, some_struct);
+	return not_an_error(1);
+}
+
+error_code sys_npdrm_regist_ekc(ppu_thread& ppu)
+{
+	sys_ss.warning("sys_npdrm_regist_ekc()");
+	return not_an_error(CELL_EINVAL);
+}

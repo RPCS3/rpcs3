@@ -518,8 +518,8 @@ const std::array<std::pair<ppu_intrp_func_t, std::string_view>, 1024> g_ppu_sysc
 	BIND_SYSC(sys_prx_get_ppu_guid),                        //467 (0x1D3)
 	null_func,//BIND_SYSC(sys_...),                         //468 (0x1D4) ROOT
 	uns_func,                                               //469 (0x1D5)  UNS
-	NULL_FUNC(sys_npdrm_check_ekc),                         //470 (0x1D6)  ROOT
-	NULL_FUNC(sys_npdrm_regist_ekc),                        //471 (0x1D7)  ROOT
+	BIND_SYSC(sys_npdrm_check_ekc),                         //470 (0x1D6)  ROOT
+	BIND_SYSC(sys_npdrm_regist_ekc),                        //471 (0x1D7)  ROOT
 	null_func,//BIND_SYSC(sys_...),                         //472 (0x1D8)  ROOT
 	null_func,//BIND_SYSC(sys_...),                         //473 (0x1D9)
 	null_func,//BIND_SYSC(sys_...),                         //474 (0x1DA)

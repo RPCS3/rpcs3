@@ -19,6 +19,8 @@ struct CellSsOpenPSID
 	be_t<u64> low;
 };
 
+class ppu_thread;
+
 error_code sys_ss_random_number_generator(u64 pkg_id, vm::ptr<void> buf, u64 size);
 error_code sys_ss_access_control_engine(u64 pkg_id, u64 a2, u64 a3);
 error_code sys_ss_get_console_id(vm::ptr<u8> buf);
@@ -31,3 +33,5 @@ error_code sys_ss_get_boot_device(vm::ptr<u64> dev);
 error_code sys_ss_update_manager(ppu_thread& ppu, u64 pkg_id, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 a6);
 error_code sys_ss_virtual_trm_manager(u64 pkg_id, u64 a1, u64 a2, u64 a3, u64 a4);
 error_code sys_ss_individual_info_manager(u64 pkg_id, u64 a2, vm::ptr<u64> out_size, u64 a4, u64 a5, u64 a6);
+error_code sys_npdrm_check_ekc(ppu_thread& ppu, u32 arg_1, vm::ptr<void> some_struct);
+error_code sys_npdrm_regist_ekc(ppu_thread& ppu);
