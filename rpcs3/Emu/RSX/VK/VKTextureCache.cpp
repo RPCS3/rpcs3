@@ -972,21 +972,11 @@ namespace vk
 			dst->aspect(), *vk::get_upload_heap(), desc.pitch, vk::upload_contents_inline);
 	}
 
-	void texture_cache::update_image_contents(vk::command_buffer& cmd, vk::image_view* dst_view, vk::image* src, u16 width, u16 height)
+	void texture_cache::update_image_contents(vk::command_buffer& cmd, vk::image_view* dst_view, const deferred_subresource& desc)
 	{
-		rsx::simple_array<copy_region_descriptor> region =
-		{ {
-			.src = src,
-			.xform = rsx::surface_transform::identity,
-			.src_w = width,
-			.src_h = height,
-			.dst_w = width,
-			.dst_h = height
-		} };
-
 		auto dst = dst_view->image();
 		dst->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-		copy_transfer_regions_impl(cmd, dst, region);
+		copy_transfer_regions_impl(cmd, dst, desc.sections_to_copy);
 		dst->pop_layout(cmd);
 	}
 

@@ -693,7 +693,7 @@ namespace rsx
 		virtual image_view_type generate_3d_from_2d_images(commandbuffer_type&, const deferred_subresource& desc) = 0;
 		virtual image_view_type generate_atlas_from_images(commandbuffer_type&, const deferred_subresource& desc) = 0;
 		virtual image_view_type generate_2d_mipmaps_from_images(commandbuffer_type&, const deferred_subresource& desc) = 0;
-		virtual void update_image_contents(commandbuffer_type&, image_view_type dst, image_resource_type src, u16 width, u16 height) = 0;
+		virtual void update_image_contents(commandbuffer_type&, image_view_type dst, const deferred_subresource& desc) = 0;
 		virtual bool render_target_format_is_compatible(image_storage_type* tex, u32 gcm_format) = 0;
 		virtual void prepare_for_dma_transfers(commandbuffer_type&) = 0;
 		virtual void cleanup_after_dma_transfers(commandbuffer_type&) = 0;
@@ -1970,7 +1970,7 @@ namespace rsx
 						continue;
 
 					if (desc.op == deferred_request_command::copy_image_dynamic)
-						update_image_contents(cmd, It->second.second, desc.src0(), desc.width, desc.height);
+						update_image_contents(cmd, It->second.second, desc);
 
 					return It->second.second;
 				}
