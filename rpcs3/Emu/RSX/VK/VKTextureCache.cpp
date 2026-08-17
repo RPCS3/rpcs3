@@ -496,7 +496,7 @@ namespace vk
 					// TODO: Handle level and layer offsets
 					const areai src_rect = coordi{{ src_x, src_y }, { src_w, src_h }};
 					const areai dst_rect = coordi{{ section.dst_x, section.dst_y }, { section.dst_w, section.dst_h }};
-					vk::copy_image_typeless(cmd, section.src, dst, src_rect, dst_rect, 1);
+					vk::copy_image_typeless(cmd, section.src, dst, src_rect, dst_rect);
 					continue;
 				}
 
@@ -505,7 +505,7 @@ namespace vk
 
 				const areai src_rect = coordi{{ src_x, src_y }, { src_w, src_h }};
 				const areai dst_rect = coordi{{ 0, 0 }, { convert_w, src_h }};
-				vk::copy_image_typeless(cmd, section.src, src_image, src_rect, dst_rect, 1);
+				vk::copy_image_typeless(cmd, section.src, src_image, src_rect, dst_rect);
 				src_image->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
 				src_x = 0;
@@ -546,7 +546,7 @@ namespace vk
 				vk::copy_scaled_image(cmd, src_image, _dst,
 					coordi{ { src_x, src_y }, { src_w, src_h } },
 					coordi{ { dst_x, dst_y }, { section.dst_w, section.dst_h } },
-					1, src_image->format() == _dst->format(),
+					{}, src_image->format() == _dst->format(),
 					VK_FILTER_NEAREST);
 
 				if (_dst != dst) [[unlikely]]
