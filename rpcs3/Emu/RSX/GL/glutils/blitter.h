@@ -41,16 +41,31 @@ namespace gl
 			areai src_rect,
 			areai dst_rect,
 			bool linear_interpolation,
-			const rsx::typeless_xfer& xfer_info);
+			const rsx::typeless_xfer& xfer_info,
+			const rsx::image_copy_subresource_layers& mip_layers = {});
 
-		void copy_image(gl::command_context& cmd, const texture* src, const texture* dst, int src_level, int dst_level, const position3i& src_offset, const position3i& dst_offset, const size3i& size) const;
+		void copy_image(
+			gl::command_context& cmd,
+			const texture* src,
+			const texture* dst,
+			const position3i& src_offset,
+			const position3i& dst_offset,
+			const size3i& size,
+			const rsx::image_copy_subresource_layers& mip_layers = {}) const;
 
 		void fast_clear_image(gl::command_context& cmd, const texture* dst, const color4f& color);
 		void fast_clear_image(gl::command_context& cmd, const texture* dst, float depth, u8 stencil);
 
-		void copy_image(gl::command_context& cmd, const texture* src, const texture* dst, int src_level, int dst_level, const position3u& src_offset, const position3u& dst_offset, const size3u& size) const
+		void copy_image(
+			gl::command_context& cmd,
+			const texture* src,
+			const texture* dst,
+			const position3u& src_offset,
+			const position3u& dst_offset,
+			const size3u& size,
+			const rsx::image_copy_subresource_layers& mip_layers = {}) const
 		{
-			copy_image(cmd, src, dst, src_level, dst_level, static_cast<position3i>(src_offset), static_cast<position3i>(dst_offset), static_cast<size3i>(size));
+			copy_image(cmd, src, dst, static_cast<position3i>(src_offset), static_cast<position3i>(dst_offset), static_cast<size3i>(size), mip_layers);
 		}
 	};
 
