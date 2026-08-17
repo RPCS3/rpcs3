@@ -688,7 +688,7 @@ namespace glsl
 		const auto is_flat_color = [&prog](const _varying_register_config& reg)
 		{
 			return (prog.ctrl & RSX_SHADER_CONTROL_FLAT_SHADING) &&
-				(reg.name.starts_with("diff_color") || reg.name.starts_with("spec_color"));
+				(reg.name.starts_with("diff_color"sv) || reg.name.starts_with("spec_color"sv));
 		};
 
 		if (!(prog.ctrl & RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION))
