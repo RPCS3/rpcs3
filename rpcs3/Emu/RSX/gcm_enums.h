@@ -458,6 +458,7 @@ namespace gcm
 		RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION  = 0x00010000, // Rasterizing triangles and not lines or points
 		RSX_SHADER_CONTROL_INSTANCED_CONSTANTS      = 0x00020000, // Support instance ID offsets when loading constants
 		RSX_SHADER_CONTROL_INTERPRETER_MODEL        = 0x00040000, // Compile internals expecting interpreter
+		RSX_SHADER_CONTROL_FLAT_SHADING             = 0x00000800, // Interpolate front/back colors using the provoking vertex
 
 		RSX_SHADER_CONTROL_8BIT_FRAMEBUFFER         = 0x00080000, // Quantize outputs to 8-bit FBO
 		RSX_SHADER_CONTROL_SRGB_FRAMEBUFFER         = 0x00100000, // Outputs are SRGB. We could reuse UNKNOWN1 but we just keep the namespaces separate.

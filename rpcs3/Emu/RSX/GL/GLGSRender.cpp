@@ -139,6 +139,8 @@ void GLGSRender::on_init_thread()
 
 	gl::init();
 	gl::set_command_context(gl_state);
+	// OpenGL 3.2+ defaults to GL_LAST_VERTEX_CONVENTION.
+	backend_config.supports_last_provoking_vertex = true;
 
 	update_swap_interval();
 
