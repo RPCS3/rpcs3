@@ -234,7 +234,7 @@ namespace vk
 				vk::copy_scaled_image(cmd, locked_resource, target,
 					{ 0, 0, static_cast<s32>(locked_resource->width()), static_cast<s32>(locked_resource->height()) },
 					{ 0, 0, static_cast<s32>(transfer_width), static_cast<s32>(transfer_height) },
-					1, true, filter);
+					{}, true, filter);
 
 				target->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 			}

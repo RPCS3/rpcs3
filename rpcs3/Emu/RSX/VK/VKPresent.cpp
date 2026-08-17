@@ -407,11 +407,11 @@ vk::viewable_image* VKGSRender::get_present_source(/* inout */ vk::present_surfa
 
 			if (vk::formats_are_bitcast_compatible(dst_img.get(), image_to_flip))
 			{
-				vk::copy_image(*m_current_command_buffer, image_to_flip, dst_img.get(), src_rect, dst_rect, 1);
+				vk::copy_image(*m_current_command_buffer, image_to_flip, dst_img.get(), src_rect, dst_rect);
 			}
 			else
 			{
-				vk::copy_image_typeless(*m_current_command_buffer, image_to_flip, dst_img.get(), src_rect, dst_rect, 1);
+				vk::copy_image_typeless(*m_current_command_buffer, image_to_flip, dst_img.get(), src_rect, dst_rect);
 			}
 
 			image_to_flip = dst_img.get();
@@ -735,7 +735,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			image_to_flip->push_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
 			const areai rect = areai(0, 0, buffer_width, buffer_height);
-			vk::copy_image(*m_current_command_buffer, image_to_flip, m_overlay_recording_img.get(), rect, rect, 1);
+			vk::copy_image(*m_current_command_buffer, image_to_flip, m_overlay_recording_img.get(), rect, rect);
 
 			image_to_flip->pop_layout(*m_current_command_buffer);
 			m_overlay_recording_img->change_layout(*m_current_command_buffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);

@@ -305,6 +305,40 @@ namespace rsx
 		bool edge_clamped;
 	};
 
+	struct image_copy_subresource_layers
+	{
+		u8 src_mip_level = 0;
+		u8 dst_mip_level = 0;
+		u8 mipmap_count = 1;
+		u8 src_layer = 0;
+		u8 dst_layer = 0;
+		u8 layer_count = 1;
+
+		image_copy_subresource_layers without_src() const
+		{
+			return {
+				.src_mip_level = 0,
+				.dst_mip_level = dst_mip_level,
+				.mipmap_count = 1,
+				.src_layer = 0,
+				.dst_layer = dst_layer,
+				.layer_count = 1
+			};
+		}
+
+		image_copy_subresource_layers without_dst() const
+		{
+			return {
+				.src_mip_level = src_mip_level,
+				.dst_mip_level = 0,
+				.mipmap_count = 1,
+				.src_layer = src_layer,
+				.dst_layer = 0,
+				.layer_count = 1
+			};
+		}
+	};
+
 	/**
 	* Get size to store texture in a linear fashion.
 	* Storage is assumed to use a rowPitchAlignment boundary for every row of texture.

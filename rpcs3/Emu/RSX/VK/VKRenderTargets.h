@@ -611,7 +611,7 @@ namespace vk
 				const areai dst_rect = { 0, 0, surface->get_surface_width<rsx::surface_metrics::samples, int>(), surface->get_surface_height<rsx::surface_metrics::samples, int>() };
 
 				auto scratch = vk::get_typeless_helper(source->format(), source->format_class(), dst_rect.x2, dst_rect.y2);
-				vk::copy_scaled_image(cmd, source, scratch, src_rect, dst_rect, 1, true, VK_FILTER_NEAREST);
+				vk::copy_scaled_image(cmd, source, scratch, src_rect, dst_rect, {}, true, VK_FILTER_NEAREST);
 
 				source = scratch;
 			}
