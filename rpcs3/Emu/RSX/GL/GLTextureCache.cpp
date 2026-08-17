@@ -258,10 +258,11 @@ namespace gl
 
 			if (src_w == slice.dst_w && src_h == slice.dst_h)
 			{
-				gl::g_hw_blitter->copy_image(cmd, src_image, dst_image, 0, slice.level,
+				gl::g_hw_blitter->copy_image(cmd, src_image, dst_image,
 					position3i{ src_x, src_y, 0 },
 					position3i{ slice.dst_x, slice.dst_y, slice.dst_z },
-					size3i{ src_w, src_h, 1 });
+					size3i{ src_w, src_h, 1 },
+					{ .dst_mip_level = slice.level });
 			}
 			else
 			{
@@ -289,10 +290,11 @@ namespace gl
 				if (_dst != dst_image)
 				{
 					// Data cast comes after scaling
-					gl::g_hw_blitter->copy_image(cmd, tmp.get(), dst_image, 0, slice.level,
+					gl::g_hw_blitter->copy_image(cmd, tmp.get(), dst_image,
 						position3i{slice.dst_x, slice.dst_y, 0},
 						position3i{slice.dst_x, slice.dst_y, slice.dst_z},
-						size3i{slice.dst_w, slice.dst_h, 1});
+						size3i{slice.dst_w, slice.dst_h, 1},
+						{ .dst_mip_level = slice.level });
 				}
 			}
 		}

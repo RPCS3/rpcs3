@@ -8,6 +8,44 @@ namespace gl
 {
 	blitter* g_hw_blitter = nullptr;
 
+	// Max operation on the magnitude of value while preserving the sign
+	// Clamp_val must be >= 0
+	static int mag_max(int value, int clamp_val)
+	{
+		if (value >= 0)
+		{
+			return std::max(value, clamp_val);
+		}
+
+		return -std::max(-value, clamp_val);
+	}
+
+	// Shrink a blit rectangle to describe the same window one mipmap level down.
+	static void increment_mip_level(areai& rect)
+	{
+		const int mip_w = (rect.x2 - rect.x1) / 2;
+		const int mip_h = (rect.y2 - rect.y1) / 2;
+
+		rect.x1 /= 2;
+		rect.y1 /= 2;
+		rect.x2 = rect.x1 + mag_max(mip_w, 1);
+		rect.y2 = rect.y1 + mag_max(mip_h, 1);
+	}
+
+	// Targets whose slices have to be selected explicitly. A flat attach binds every slice of these at once.
+	static bool is_layered_target(const texture* tex)
+	{
+		switch (tex->get_target())
+		{
+		case texture::target::texture3D:
+		case texture::target::texture2DArray:
+		case texture::target::textureCUBE:
+			return true;
+		default:
+			return false;
+		}
+	}
+
 	void blitter::init()
 	{
 		blit_src.create();
@@ -20,27 +58,75 @@ namespace gl
 		blit_src.remove();
 	}
 
-	void blitter::copy_image(gl::command_context&, const texture* src, const texture* dst, int src_level, int dst_level, const position3i& src_offset, const position3i& dst_offset, const size3i& size) const
+	void blitter::copy_image(
+		gl::command_context& cmd,
+		const texture* src, const texture* dst,
+		const position3i& src_offset,
+		const position3i& dst_offset,
+		const size3i& size,
+		const rsx::image_copy_subresource_layers& mip_layers) const
 	{
-		ensure(src_level == 0);
+		// Sanity check - disallow layered volumes. Either set the layer parameters or the Z parameters, not both.
+		ensure(!src_offset.z || !mip_layers.src_layer);
+		ensure(!dst_offset.z || !mip_layers.dst_layer);
+		ensure(size.depth == 1 || mip_layers.layer_count == 1);
 
-		// Typeless bypass for BGRA8
-		std::unique_ptr<gl::texture> temp_image;
-		const texture* real_src = src;
+		// Sanity check - 3D textures can only copy 1 mip level ata a time
+		if (src->get_target() == texture::target::texture3D || dst->get_target() == texture::target::texture3D )
+		{
+			ensure(mip_layers.mipmap_count == 1);
+		}
 
-		glCopyImageSubData(real_src->id(), static_cast<GLenum>(real_src->get_target()), src_level,
-			src_offset.x, src_offset.y, src_offset.z,
-			dst->id(), static_cast<GLenum>(dst->get_target()), dst_level,
-			dst_offset.x, dst_offset.y, dst_offset.z, size.width, size.height, size.depth);
+		auto src_pos = src_offset;
+		auto dst_pos = dst_offset;
+		auto extents = size;
+
+		// Wrap the mess of layers and Z to match OpenGL's dumb specification. OGL only provides X/Y/Z to mean both volume and layers.
+		if (mip_layers.src_layer) src_pos.z = mip_layers.src_layer;
+		if (mip_layers.dst_layer) dst_pos.z = mip_layers.dst_layer;
+		if (mip_layers.layer_count > 1) extents.depth = mip_layers.layer_count;
+
+		int src_level = mip_layers.src_mip_level;
+		int dst_level = mip_layers.dst_mip_level;
+
+		for (u32 remaining_levels = mip_layers.mipmap_count; remaining_levels > 0; --remaining_levels)
+		{
+			glCopyImageSubData(src->id(), static_cast<GLenum>(src->get_target()), src_level,
+				src_pos.x, src_pos.y, src_pos.z,
+				dst->id(), static_cast<GLenum>(dst->get_target()), dst_level,
+				dst_pos.x, dst_pos.y, dst_pos.z, extents.width, extents.height, extents.depth);
+
+			if (remaining_levels > 1)
+			{
+				// NOTE: We don't touch Z here, it's a layer index not a depth slice.
+				src_pos.x /= 2;
+				src_pos.y /= 2;
+				dst_pos.x /= 2;
+				dst_pos.y /= 2;
+
+				extents.width = std::max(extents.width / 2, 1);
+				extents.height = std::max(extents.height / 2, 1);
+
+				src_level++;
+				dst_level++;
+			}
+		}
 	}
 
 	void blitter::scale_image(gl::command_context& cmd, const texture* src, texture* dst, areai src_rect, areai dst_rect,
-		bool linear_interpolation, const rsx::typeless_xfer& xfer_info)
+		bool linear_interpolation, const rsx::typeless_xfer& xfer_info, const rsx::image_copy_subresource_layers& mip_layers)
 	{
 		std::unique_ptr<texture> typeless_src;
 		std::unique_ptr<texture> typeless_dst;
 		const gl::texture* real_src = src;
 		const gl::texture* real_dst = dst;
+
+		const bool targets_subresource =
+			mip_layers.src_mip_level || mip_layers.dst_mip_level || mip_layers.mipmap_count > 1 ||
+			mip_layers.src_layer || mip_layers.dst_layer || mip_layers.layer_count > 1;
+
+		// Typeless scratch images are allocated as flat level-0 2D surfaces sized from the base mip, so they cannot carry a subresource selection.
+		ensure(!targets_subresource || (!xfer_info.src_is_typeless && !xfer_info.dst_is_typeless));
 
 		// Optimization pass; check for pass-through data transfer
 		if (!xfer_info.flip_horizontal && !xfer_info.flip_vertical && src_rect.height() == dst_rect.height())
@@ -58,11 +144,11 @@ namespace gl
 				{
 					const coord3i src_region = { { src_rect.x1, src_rect.y1, 0 }, { src_rect.width(), src_rect.height(), 1 } };
 					const coord3i dst_region = { { dst_rect.x1, dst_rect.y1, 0 }, { dst_rect.width(), dst_rect.height(), 1 } };
-					gl::copy_typeless(cmd, dst, src, static_cast<coord3u>(dst_region), static_cast<coord3u>(src_region));
+					gl::copy_typeless(cmd, dst, src, static_cast<coord3u>(dst_region), static_cast<coord3u>(src_region), mip_layers);
 				}
 				else
 				{
-					copy_image(cmd, src, dst, 0, 0, position3i{ src_rect.x1, src_rect.y1, 0u }, position3i{ dst_rect.x1, dst_rect.y1, 0 }, size3i{ src_rect.width(), src_rect.height(), 1 });
+					copy_image(cmd, src, dst, position3i{ src_rect.x1, src_rect.y1, 0u }, position3i{ dst_rect.x1, dst_rect.y1, 0 }, size3i{ src_rect.width(), src_rect.height(), 1 }, mip_layers);
 				}
 
 				return;
@@ -121,7 +207,7 @@ namespace gl
 			src_rect.height() == dst_rect.height() &&
 			!src_rect.is_flipped() && !dst_rect.is_flipped())
 		{
-			copy_image(cmd, real_src, real_dst, 0, 0, position3i{ src_rect.x1, src_rect.y1, 0 }, position3i{ dst_rect.x1, dst_rect.y1, 0 }, size3i{ src_rect.width(), src_rect.height(), 1 });
+			copy_image(cmd, real_src, real_dst, position3i{ src_rect.x1, src_rect.y1, 0 }, position3i{ dst_rect.x1, dst_rect.y1, 0 }, size3i{ src_rect.width(), src_rect.height(), 1 }, mip_layers);
 		}
 		else
 		{
@@ -149,20 +235,52 @@ namespace gl
 				target = gl::buffers::color;
 			}
 
+			// Bulk layer transfers are not doable in OpenGL. We can only process one layer at a time.
+			ensure(mip_layers.layer_count == 1);
+
 			cmd->disable(GL_SCISSOR_TEST);
 
 			save_binding_state saved;
 
 			gl::fbo::attachment src_att{ blit_src, static_cast<fbo::attachment::type>(attachment) };
-			src_att = *real_src;
-
 			gl::fbo::attachment dst_att{ blit_dst, static_cast<fbo::attachment::type>(attachment) };
-			dst_att = *real_dst;
 
-			blit_src.check();
-			blit_dst.check();
+			auto attach_slice = [](fbo::attachment& att, const texture* tex, int level, u8 layer)
+			{
+				if (is_layered_target(tex)) [[ unlikely ]]
+				{
+					att.bind_layer(*tex, level, layer);
+					return;
+				}
 
-			blit_src.blit(blit_dst, src_rect, dst_rect, target, interp);
+				ensure(!layer);
+				att.bind(*tex, level);
+			};
+
+			areai src_area = src_rect;
+			areai dst_area = dst_rect;
+			int src_level = mip_layers.src_mip_level;
+			int dst_level = mip_layers.dst_mip_level;
+
+			for (u32 remaining_levels = mip_layers.mipmap_count; remaining_levels > 0; --remaining_levels)
+			{
+				attach_slice(src_att, real_src, src_level, mip_layers.src_layer);
+				attach_slice(dst_att, real_dst, dst_level, mip_layers.dst_layer);
+
+				blit_src.check();
+				blit_dst.check();
+
+				blit_src.blit(blit_dst, src_area, dst_area, target, interp);
+
+				if (remaining_levels > 1)
+				{
+					increment_mip_level(src_area);
+					increment_mip_level(dst_area);
+
+					src_level++;
+					dst_level++;
+				}
+			}
 
 			// Release the attachments explicitly (not doing so causes glitches, e.g Journey Menu)
 			src_att = GL_NONE;
