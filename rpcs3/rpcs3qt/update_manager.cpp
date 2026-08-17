@@ -388,7 +388,7 @@ void update_manager::update(bool auto_accept, bool is_first_call)
 
 			if (entry.pr > 0)
 			{
-				entry_html = tr("&nbsp;&nbsp;&bull; %0: %1 (<a href=\"https://github.com/RPCS3/rpcs3/pull/%2\">#%2</a>)").arg(version_str, title_str, QString::number(entry.pr));
+				entry_html = tr("&nbsp;&nbsp;&bull; %0 (<a href=\"https://github.com/RPCS3/rpcs3/pull/%1\">#%1</a>): %2").arg(version_str, QString::number(entry.pr), title_str);
 			}
 			else
 			{

@@ -1098,17 +1098,17 @@ namespace rsx
 			rsx::simple_array<surface_overlap_info> result;
 			rsx::simple_array<utils::pair<u32, bool>> dirty;
 
-			const auto surface_internal_pitch = (required_width * required_bpp);
+			const u32 required_width_in_bytes = (required_width * required_bpp);
 
 			// Sanity check
-			if (surface_internal_pitch > required_pitch) [[unlikely]]
+			if (required_width_in_bytes > required_pitch) [[unlikely]]
 			{
 				rsx_log.warning("Invalid 2D region descriptor. w=%d, h=%d, bpp=%d, pitch=%d",
 							required_width, required_height, required_bpp, required_pitch);
 				return {};
 			}
 
-			const auto test_range = utils::address_range32::start_length(texaddr, (required_pitch * required_height) - (required_pitch - surface_internal_pitch));
+			const auto test_range = utils::address_range32::start_length(texaddr, (required_pitch * required_height) - (required_pitch - required_width_in_bytes));
 
 			auto process_list_function = [&](surface_ranged_map& data, bool is_depth)
 			{
@@ -1128,51 +1128,60 @@ namespace rsx
 					if (!rsx::pitch_compatible(surface, required_pitch, required_height))
 						continue;
 
-					surface_overlap_info info;
-					u32 width, height;
-					info.surface = surface;
-					info.base_address = range.start;
-					info.is_depth = is_depth;
+					// 2D tests are done in format-agnostic rectangles (1bpp)
+					const u32 surface_width_in_bytes = surface->template get_surface_width<rsx::surface_metrics::bytes>();
+					const u32 surface_height = surface->template get_surface_height<rsx::surface_metrics::samples>();
+					const u32 surface_bpp = surface->get_bpp();
 
-					const u32 normalized_surface_width = surface->template get_surface_width<rsx::surface_metrics::bytes>() / required_bpp;
-					const u32 normalized_surface_height = surface->template get_surface_height<rsx::surface_metrics::samples>();
+					u32 src_x, src_y, dst_x, dst_y, width_in_bytes, height;
 
 					if (range.start >= texaddr) [[likely]]
 					{
+						// The surface begins somewhere inside the requested region
 						const auto offset = range.start - texaddr;
-						info.dst_area.y = (offset / required_pitch);
-						info.dst_area.x = (offset % required_pitch) / required_bpp;
+						dst_y = (offset / required_pitch);
+						dst_x = (offset % required_pitch);
 
-						if (info.dst_area.x >= required_width || info.dst_area.y >= required_height) [[unlikely]]
+						if (dst_x >= required_width_in_bytes || dst_y >= required_height) [[unlikely]]
 						{
 							// Out of bounds
 							continue;
 						}
 
-						info.src_area.x = 0;
-						info.src_area.y = 0;
-						width = std::min<u32>(normalized_surface_width, required_width - info.dst_area.x);
-						height = std::min<u32>(normalized_surface_height, required_height - info.dst_area.y);
+						src_x = 0;
+						src_y = 0;
+						width_in_bytes = std::min<u32>(surface_width_in_bytes, required_width_in_bytes - dst_x);
+						height = std::min<u32>(surface_height, required_height - dst_y);
 					}
 					else
 					{
-						const auto pitch = surface->get_rsx_pitch();
+						// The requested region begins somewhere inside the surface
+						const auto surface_pitch = surface->get_rsx_pitch();
 						const auto offset = texaddr - range.start;
-						info.src_area.y = (offset / pitch);
-						info.src_area.x = (offset % pitch) / required_bpp;
+						src_y = (offset / surface_pitch);
+						src_x = (offset % surface_pitch);
 
-						if (info.src_area.x >= normalized_surface_width || info.src_area.y >= normalized_surface_height) [[unlikely]]
+						if (src_x >= surface_width_in_bytes || src_y >= surface_height) [[unlikely]]
 						{
 							// Region lies outside the actual texture area, but inside the 'tile'
 							// In this case, a small region lies to the top-left corner, partially occupying the  target
 							continue;
 						}
 
-						info.dst_area.x = 0;
-						info.dst_area.y = 0;
-						width = std::min<u32>(required_width, normalized_surface_width - info.src_area.x);
-						height = std::min<u32>(required_height, normalized_surface_height - info.src_area.y);
+						dst_x = 0;
+						dst_y = 0;
+						width_in_bytes = std::min<u32>(required_width_in_bytes, surface_width_in_bytes - src_x);
+						height = std::min<u32>(required_height, surface_height - src_y);
 					}
+
+					if (width_in_bytes < required_bpp) [[unlikely]]
+					{
+						// There is nothing transferable here; less than 1 pixel available.
+						continue;
+					}
+
+					// Drop any excess subpixels on the requester side if any. Ensures division generates a perfect fitting rect without rounding bugs.
+					width_in_bytes -= (width_in_bytes % required_bpp);
 
 					// Delay this as much as possible to avoid side-effects of spamming barrier
 					if (surface->memory_barrier(cmd, access); !surface->test())
@@ -1181,20 +1190,23 @@ namespace rsx
 						continue;
 					}
 
-					info.is_clipped = (width < required_width || height < required_height);
-					info.src_area.height = info.dst_area.height = height;
-					info.dst_area.width = width;
+					surface_overlap_info info;
+					info.surface = surface;
+					info.base_address = range.start;
+					info.is_depth = is_depth;
+					info.is_clipped = (width_in_bytes < required_width_in_bytes || height < required_height);
 
-					if (auto surface_bpp = surface->get_bpp(); surface_bpp != required_bpp) [[unlikely]]
-					{
-						// Width is calculated in the coordinate-space of the requester; normalize
-						info.src_area.x = (info.src_area.x * required_bpp) / surface_bpp;
-						info.src_area.width = utils::align(width * required_bpp, surface_bpp) / surface_bpp;
-					}
-					else
-					{
-						info.src_area.width = width;
-					}
+					// Decode source
+					info.src_area.x = src_x / surface_bpp;
+					info.src_area.y = src_y;
+					info.src_area.width = utils::aligned_div(width_in_bytes, surface_bpp);
+					info.src_area.height = height;
+
+					// Decode dest
+					info.dst_area.x = dst_x / required_bpp;
+					info.dst_area.y = dst_y;
+					info.dst_area.width = width_in_bytes / required_bpp;
+					info.dst_area.height = height;
 
 					result.push_back(std::move(info));
 				}
