@@ -502,8 +502,8 @@ error_code cellGifDecDecodeData(vm::ptr<GifDecoder> mainHandle, vm::cptr<GifStre
 	}
 
 	//Decode GIF file. (TODO: Is there any faster alternative? Can we do it without external libraries?)
-	int width, height, actual_components;
-	auto image = std::unique_ptr<unsigned char,decltype(&::free)>
+	int width = 0, height = 0, actual_components = 0;
+	auto image = std::unique_ptr<u8, decltype(&::free)>
 		(
 			stbi_load_from_memory(gif.get(), ::narrow<int>(fileSize), &width, &height, &actual_components, 4),
 			&::free
@@ -515,6 +515,7 @@ error_code cellGifDecDecodeData(vm::ptr<GifDecoder> mainHandle, vm::cptr<GifStre
 	const int bytesPerLine = static_cast<int>(dataCtrlParam->outputBytesPerLine);
 	constexpr char nComponents = 4;
 	const u32 image_size = width * height * nComponents;
+	u8* src = image.get();
 
 	switch(current_outParam.outputColorSpace)
 	{
@@ -527,12 +528,12 @@ error_code cellGifDecDecodeData(vm::ptr<GifDecoder> mainHandle, vm::cptr<GifStre
 			{
 				const int dstOffset = i * bytesPerLine;
 				const int srcOffset = width * nComponents * i;
-				memcpy(&data[dstOffset], &image.get()[srcOffset], linesize);
+				std::memcpy(&data[dstOffset], &src[srcOffset], linesize);
 			}
 		}
 		else
 		{
-			memcpy(data.get_ptr(), image.get(), image_size);
+			std::memcpy(data.get_ptr(), src, image_size);
 		}
 		break;
 	}
@@ -549,10 +550,10 @@ error_code cellGifDecDecodeData(vm::ptr<GifDecoder> mainHandle, vm::cptr<GifStre
 				const int srcOffset = width * nComponents * i;
 				for (int j = 0; j < linesize; j += nComponents)
 				{
-					output[j + 0] = image.get()[srcOffset + j + 3];
-					output[j + 1] = image.get()[srcOffset + j + 0];
-					output[j + 2] = image.get()[srcOffset + j + 1];
-					output[j + 3] = image.get()[srcOffset + j + 2];
+					output[j + 0] = src[srcOffset + j + 3];
+					output[j + 1] = src[srcOffset + j + 0];
+					output[j + 2] = src[srcOffset + j + 1];
+					output[j + 3] = src[srcOffset + j + 2];
 				}
 				std::memcpy(&data[dstOffset], output.get(), linesize);
 			}
@@ -560,7 +561,7 @@ error_code cellGifDecDecodeData(vm::ptr<GifDecoder> mainHandle, vm::cptr<GifStre
 		else
 		{
 			const auto img = std::make_unique<uint[]>(image_size);
-			uint* source_current = reinterpret_cast<uint*>(image.get());
+			uint* source_current = reinterpret_cast<uint*>(src);
 			uint* dest_current = img.get();
 			for (uint i = 0; i < image_size / nComponents; i++)
 			{
