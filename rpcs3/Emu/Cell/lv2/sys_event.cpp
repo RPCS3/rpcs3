@@ -830,7 +830,7 @@ error_code sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 			return not_an_error(CELL_EBUSY);
 		}
 
-		return port.ret;
+		return { port.ret, eport_id };
 	}
 
 	return CELL_OK;
