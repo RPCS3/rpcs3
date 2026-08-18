@@ -398,10 +398,12 @@ namespace vk
 	void copy_image_typeless(
 		const vk::command_buffer& cmd,
 		vk::image* src, vk::image* dst,
-		const areai& src_rect, const areai& dst_rect,
+		const coord3i& src_rect, const coord3i& dst_rect,
 		const rsx::image_copy_subresource_layers& mip_layers,
 		VkImageAspectFlags src_transfer_mask, VkImageAspectFlags dst_transfer_mask)
 	{
+		ensure(!src_rect.is_flipped() && !dst_rect.is_flipped()); //<- Flip conversion must be handled by the caller.
+
 		if (src->format() == dst->format())
 		{
 			if (src->format_class() == dst->format_class())
@@ -437,12 +439,12 @@ namespace vk
 		}
 
 		VkBufferImageCopy src_copy{}, dst_copy{};
-		src_copy.imageExtent = { u32(src_rect.x2 - src_rect.x1), u32(src_rect.y2 - src_rect.y1), 1 };
-		src_copy.imageOffset = { src_rect.x1, src_rect.y1, 0 };
+		src_copy.imageExtent = { static_cast<u32>(src_rect.width), static_cast<u32>(src_rect.height), static_cast<u32>(src_rect.depth) };
+		src_copy.imageOffset = { src_rect.x, src_rect.y, src_rect.z };
 		src_copy.imageSubresource = { src->aspect() & src_transfer_mask, mip_layers.src_mip_level, mip_layers.src_layer, mip_layers.layer_count };
 
-		dst_copy.imageExtent = { u32(dst_rect.x2 - dst_rect.x1), u32(dst_rect.y2 - dst_rect.y1), 1 };
-		dst_copy.imageOffset = { dst_rect.x1, dst_rect.y1, 0 };
+		dst_copy.imageExtent = { static_cast<u32>(dst_rect.width), static_cast<u32>(dst_rect.height), static_cast<u32>(dst_rect.depth)};
+		dst_copy.imageOffset = { dst_rect.x, dst_rect.y, dst_rect.z };
 		dst_copy.imageSubresource = { dst->aspect() & dst_transfer_mask, mip_layers.dst_mip_level, mip_layers.dst_layer, mip_layers.layer_count };
 
 		const auto src_texel_size = vk::get_format_texel_width(src->info.format);
@@ -532,7 +534,7 @@ namespace vk
 
 	void copy_image(const vk::command_buffer& cmd,
 		vk::image* src, vk::image* dst,
-		const areai& src_rect, const areai& dst_rect,
+		const coord3i& src_rect, const coord3i& dst_rect,
 		const rsx::image_copy_subresource_layers& mip_layers,
 		VkImageAspectFlags src_transfer_mask, VkImageAspectFlags dst_transfer_mask)
 	{
@@ -546,6 +548,8 @@ namespace vk
 			copy_image_typeless(cmd, src, dst, src_rect, dst_rect, mip_layers);
 			return;
 		}
+
+		ensure(!src_rect.is_flipped() && !dst_rect.is_flipped()); //<- Flip conversion must be handled by the caller.
 
 		VkImageSubresourceLayers a_src =
 		{
@@ -564,11 +568,11 @@ namespace vk
 		};
 
 		VkImageCopy rgn = {};
-		rgn.extent.depth = 1;
-		rgn.extent.width = u32(src_rect.x2 - src_rect.x1);
-		rgn.extent.height = u32(src_rect.y2 - src_rect.y1);
-		rgn.dstOffset = { dst_rect.x1, dst_rect.y1, 0 };
-		rgn.srcOffset = { src_rect.x1, src_rect.y1, 0 };
+		rgn.extent.depth = static_cast<u32>(src_rect.depth);
+		rgn.extent.width = static_cast<u32>(src_rect.width);
+		rgn.extent.height = static_cast<u32>(src_rect.height);
+		rgn.dstOffset = { dst_rect.x, dst_rect.y, dst_rect.z };
+		rgn.srcOffset = { src_rect.x, src_rect.y, src_rect.z };
 		rgn.srcSubresource = a_src;
 		rgn.dstSubresource = a_dst;
 
@@ -607,7 +611,7 @@ namespace vk
 
 	void copy_scaled_image(const vk::command_buffer& cmd,
 		vk::image* src, vk::image* dst,
-		const areai& src_rect, const areai& dst_rect,
+		const coord3i& src_rect, const coord3i& dst_rect,
 		const rsx::image_copy_subresource_layers& mip_layers,
 		bool compatible_formats,
 		VkFilter filter)
@@ -616,7 +620,7 @@ namespace vk
 		compatible_formats |= (src->format() == dst->format());
 
 		if (compatible_formats && !src_rect.is_flipped() && !dst_rect.is_flipped() &&
-			src_rect.width() == dst_rect.width() && src_rect.height() == dst_rect.height())
+			src_rect.width == dst_rect.width && src_rect.height == dst_rect.height && src_rect.depth == dst_rect.depth)
 		{
 			copy_image(cmd, src, dst, src_rect, dst_rect, mip_layers);
 			return;
@@ -662,10 +666,10 @@ namespace vk
 		if (src->aspect() == VK_IMAGE_ASPECT_COLOR_BIT)
 		{
 			VkImageBlit rgn = {};
-			rgn.srcOffsets[0] = { src_rect.x1, src_rect.y1, 0 };
-			rgn.srcOffsets[1] = { src_rect.x2, src_rect.y2, 1 };
-			rgn.dstOffsets[0] = { dst_rect.x1, dst_rect.y1, 0 };
-			rgn.dstOffsets[1] = { dst_rect.x2, dst_rect.y2, 1 };
+			rgn.srcOffsets[0] = { src_rect.x, src_rect.y, src_rect.z };
+			rgn.srcOffsets[1] = { src_rect.x + src_rect.width, src_rect.y + src_rect.height, src_rect.z + src_rect.depth };
+			rgn.dstOffsets[0] = { dst_rect.x, dst_rect.y, dst_rect.z };
+			rgn.dstOffsets[1] = { dst_rect.x + dst_rect.width, dst_rect.y + dst_rect.height, dst_rect.z + dst_rect.depth };
 			rgn.dstSubresource = a_dst;
 			rgn.srcSubresource = a_src;
 
@@ -686,14 +690,15 @@ namespace vk
 			return;
 		}
 
-		ensure(mip_layers.layer_count == 1);  //<- Unimplemented, but also not really needed. We don't currently support non-2D typeless scratch.
-		ensure(mip_layers.mipmap_count == 1); //<- Also unimplemented.
+		ensure(mip_layers.layer_count == 1);                //<- Unimplemented, but also not really needed. We don't currently support non-2D typeless scratch.
+		ensure(mip_layers.mipmap_count == 1);               //<- Unsupported.
+		ensure(dst_rect.depth == 1 && src_rect.depth == 1); //<- Unsupported.
 
 		// Most depth/stencil formats cannot be scaled using hw blit
 		if (src->format() != dst->format())
 		{
 			// Can happen because of depth float mismatch. Format width should be equal RSX-side
-			auto typeless = vk::get_typeless_helper(dst->format(), dst->format_class(), src_rect.width(), src_rect.height());
+			auto typeless = vk::get_typeless_helper(dst->format(), dst->format_class(), src_rect.abs_width(), src_rect.abs_height());
 			copy_image_typeless(cmd, src, typeless, src_rect, src_rect, mip_layers.without_dst());
 			copy_scaled_image(cmd, typeless, dst, src_rect, dst_rect, mip_layers.without_src(), true, filter);
 			return;
@@ -701,42 +706,50 @@ namespace vk
 
 		ensure(!dst_rect.is_flipped());
 
+		auto to_abs_offset = [](const coord3i& coord) -> VkOffset3D
+		{
+			const int x = coord.width >= 0 ? coord.x : (coord.x + coord.width);
+			const int y = coord.height >= 0 ? coord.y : (coord.y + coord.height);
+			const int z = coord.depth >= 0 ? coord.z : (coord.z + coord.depth);
+			return { x, y, z };
+		};
+
 		auto stretch_image_typeless_unsafe = [&cmd, filter](
 			vk::image* src, vk::image* dst,
 			vk::image* typeless,
-			const areai& src_rect, const areai& dst_rect,
+			const coord3i& src_rect, const coord3i& dst_rect,
 			const rsx::image_copy_subresource_layers& mip_layers,
 			VkImageAspectFlags /*aspect*/, VkImageAspectFlags transfer_flags = 0xFF)
 		{
-			const auto src_w = src_rect.width();
-			const auto src_h = src_rect.height();
-			const auto dst_w = dst_rect.width();
-			const auto dst_h = dst_rect.height();
+			const auto src_w = src_rect.abs_width();
+			const auto src_h = src_rect.abs_height();
+			const auto dst_w = dst_rect.abs_width();
+			const auto dst_h = dst_rect.abs_height();
 
 			// Drivers are not very accepting of aspect COLOR -> aspect DEPTH or aspect STENCIL separately
 			// However, this works okay for D24S8 (nvidia-only format)
 			// NOTE: Tranfers of single aspect D/S from Nvidia's D24S8 is very slow
 
 			// 1. Copy unscaled to typeless surface
-			copy_image(cmd, src, typeless, src_rect, { 0, 0, src_w, src_h }, mip_layers.without_dst(), transfer_flags, 0xFF);
+			copy_image(cmd, src, typeless, src_rect, { 0, 0, 0, src_w, src_h, 1 }, mip_layers.without_dst(), transfer_flags, 0xFF);
 
 			// 2. Blit typeless surface to self
-			copy_scaled_image(cmd, typeless, typeless, { 0, 0, src_w, src_h }, { 0, src_h, dst_w, (src_h + dst_h) }, {}, true, filter);
+			copy_scaled_image(cmd, typeless, typeless, { 0, 0, 0, src_w, src_h, 1 }, { 0, src_h, 0, dst_w, dst_h, 1 }, {}, true, filter);
 
 			// 3. Copy back the aspect bits
-			copy_image(cmd, typeless, dst, { 0, src_h, dst_w, (src_h + dst_h) }, dst_rect, mip_layers.without_src(), 0xFF, transfer_flags);
+			copy_image(cmd, typeless, dst, { 0, src_h, 0, dst_w, dst_h, 1 }, dst_rect, mip_layers.without_src(), 0xFF, transfer_flags);
 		};
 
-		auto stretch_image_typeless_safe = [&cmd, filter](
+		auto stretch_image_typeless_safe = [&cmd, filter, &to_abs_offset](
 			vk::image* src, vk::image* dst, vk::image* typeless,
-			const areai& src_rect, const areai& dst_rect,
+			const coord3i& src_rect, const coord3i& dst_rect,
 			const rsx::image_copy_subresource_layers& mip_layers,
 			VkImageAspectFlags aspect, VkImageAspectFlags transfer_flags = 0xFF)
 		{
-			const auto src_w = src_rect.width();
-			const auto src_h = src_rect.height();
-			const auto dst_w = dst_rect.width();
-			const auto dst_h = dst_rect.height();
+			const auto src_w = src_rect.abs_width();
+			const auto src_h = src_rect.abs_height();
+			const auto dst_w = dst_rect.abs_width();
+			const auto dst_h = dst_rect.abs_height();
 
 			auto scratch_size = std::max(src_w, dst_w) * std::max(src_h, dst_h) * 4 * mip_layers.layer_count;
 			auto scratch_buf = vk::get_scratch_buffer(
@@ -748,12 +761,12 @@ namespace vk
 			VkBufferImageCopy src_copy_info{};
 			VkBufferImageCopy dst_copy_info{};
 
-			src_copy_info.imageOffset = { std::min(src_rect.x1, src_rect.x2), std::min(src_rect.y1, src_rect.y2), 0 };
-			src_copy_info.imageExtent = { static_cast<u32>(src_w), static_cast<u32>(src_h), 1 };
+			src_copy_info.imageOffset = to_abs_offset(src_rect);
+			src_copy_info.imageExtent = { static_cast<u32>(src_w), static_cast<u32>(src_h), static_cast<u32>(src_rect.abs_depth()) };
 			src_copy_info.imageSubresource = { aspect & transfer_flags, mip_layers.src_mip_level, mip_layers.src_layer, mip_layers.layer_count };
 
-			dst_copy_info.imageOffset = { std::min(dst_rect.x1, dst_rect.x2), std::min(dst_rect.y1, dst_rect.y2), 0 };
-			dst_copy_info.imageExtent = { static_cast<u32>(dst_w), static_cast<u32>(dst_h), 1 };
+			dst_copy_info.imageOffset = to_abs_offset(dst_rect);
+			dst_copy_info.imageExtent = { static_cast<u32>(dst_w), static_cast<u32>(dst_h), static_cast<u32>(dst_rect.abs_depth()) };
 			dst_copy_info.imageSubresource = { aspect & transfer_flags, mip_layers.dst_mip_level, mip_layers.dst_layer, mip_layers.layer_count };
 
 			// 1. Copy unscaled to typeless surface
@@ -767,15 +780,15 @@ namespace vk
 
 			// 2. Blit typeless surface to self and apply transform if necessary
 			areai src_rect2 = { 0, 0, src_w, src_h };
-			if (src_rect.x1 > src_rect.x2) src_rect2.flip_horizontal();
-			if (src_rect.y1 > src_rect.y2) src_rect2.flip_vertical();
+			if (src_rect.width < 0) src_rect2.flip_horizontal();
+			if (src_rect.height < 0) src_rect2.flip_vertical();
 
 			insert_image_memory_barrier(cmd, typeless->value, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL,
 				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
 				{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
 
-			copy_scaled_image(cmd, typeless, typeless, src_rect2, { 0, src_h, dst_w, (src_h + dst_h) }, {}, true, filter);
+			copy_scaled_image(cmd, typeless, typeless, src_rect2, { 0, src_h, 0, dst_w, dst_h, 1 }, {}, true, filter);
 
 			insert_image_memory_barrier(cmd, typeless->value, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_GENERAL,
 				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -791,8 +804,8 @@ namespace vk
 			vkCmdCopyBufferToImage(cmd, scratch_buf->value, dst->value, dst->current_layout, 1, &dst_copy_info);
 		};
 
-		const u32 typeless_w = std::max(dst_rect.width(), src_rect.width());
-		const u32 typeless_h = src_rect.height() + dst_rect.height();
+		const u32 typeless_w = std::max(dst_rect.abs_width(), src_rect.abs_width());
+		const u32 typeless_h = src_rect.abs_height() + dst_rect.abs_height();
 
 		const auto gpu_family = vk::get_chip_family();
 		const bool use_unsafe_transport = !g_cfg.video.strict_rendering_mode && (gpu_family != chip_class::NV_generic && gpu_family < chip_class::NV_turing);

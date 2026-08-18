@@ -544,8 +544,8 @@ namespace vk
 				}
 
 				vk::copy_scaled_image(cmd, src_image, _dst,
-					coordi{ { src_x, src_y }, { src_w, src_h } },
-					coordi{ { dst_x, dst_y }, { section.dst_w, section.dst_h } },
+					coord3i{ { src_x, src_y, 0 }, { src_w, src_h, 1 } },
+					coord3i{ { dst_x, dst_y, 0 }, { section.dst_w, section.dst_h, 1 } },
 					{}, src_image->format() == _dst->format(),
 					VK_FILTER_NEAREST);
 
