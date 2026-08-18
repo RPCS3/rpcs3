@@ -960,12 +960,48 @@ namespace rsx
 					.dst_h = attr.height
 				};
 
-				// "Fast" framebuffer results are a perfect match for attr so we do not store transfer sizes
-				// Calculate transfer dimensions from attr
-				if (level.upload_context == rsx::texture_upload_context::framebuffer_storage) [[likely]]
+				// Stash the surface cache view and dimensions for later
+				using surface_type = std::invoke_result_t<to_surface_type_converter, copy_region_descriptor_type>;
+				surface_type rtv = nullptr;
+				u16 surface_w, surface_h;
+
+				if (level.upload_context == rsx::texture_upload_context::framebuffer_storage)
 				{
-					auto rtv = as_surface_type(mip);
-					std::tie(mip.src_w, mip.src_h) = rsx::apply_resolution_scale<true>(rtv->resolution_scaling_config, attr.width, attr.height);
+					rtv = as_surface_type(mip);
+					surface_w = rtv->template get_surface_width<rsx::surface_metrics::samples, u16>();
+					surface_h = rtv->template get_surface_height<rsx::surface_metrics::samples, u16>();
+				}
+				else
+				{
+					surface_w = static_cast<u16>(level.image_handle->image()->width());
+					surface_h = static_cast<u16>(level.image_handle->image()->height());
+				}
+
+				// "Fast" framebuffer results are a perfect match for attr so we do not store transfer sizes
+				// We need to account for the offsets however.
+				if (level.texcoord_xform.clamp)
+				{
+					// What we got back was a 'window' of attr.w/attr.h inside a bigger texture region.
+					// Reverse construct the src_x and src_y parameters
+					mip.src_x = static_cast<u16>(level.texcoord_xform.bias[0] * surface_w + 0.5f);
+					mip.src_y = static_cast<u16>(level.texcoord_xform.bias[1] * surface_h + 0.5f);
+
+					// We cannot get here if bpp is mismatched. The whole point of getting a window back is that we avoid a bitcast operation.
+					ensure(!rtv || rtv->get_bpp() == attr.bpp);
+				}
+
+				// Calculate transfer dimensions from attr
+				if (rtv) [[likely]]
+				{
+					std::tie(mip.src_x, mip.src_y) = rsx::apply_resolution_scale<false>(
+						rtv->resolution_scaling_config,
+						mip.src_x, mip.src_y,
+						surface_w, surface_h);
+
+					std::tie(mip.src_w, mip.src_h) = rsx::apply_resolution_scale<true>(
+						rtv->resolution_scaling_config,
+						attr.width, attr.height,
+						surface_w, surface_h);
 				}
 				else
 				{
@@ -1013,11 +1049,23 @@ namespace rsx
 			// Check for upscaling if requested
 			if (apply_upscaling)
 			{
+				// NOTE: Due to how mipmaps clamp at the lower levels, we will not blindly allow upscaling for the mip dimensions.
+				// If we try to upscale we end up trying to write OOB - crash.
 				const auto base_mip = as_surface_type(sections.front());
 				auto& mip = sections.back();
-				std::tie(mip.dst_w, mip.dst_h) = rsx::apply_resolution_scale<true>(
-					base_mip->resolution_scaling_config,
-					mip.dst_w, mip.dst_h, level0_attr.width, level0_attr.height);
+
+				if (mipmap_level == 0)
+				{
+					std::tie(mip.dst_w, mip.dst_h) = rsx::apply_resolution_scale<true>(
+						base_mip->resolution_scaling_config,
+						mip.dst_w, mip.dst_h, level0_attr.width, level0_attr.height);
+				}
+				else
+				{
+					const auto& mip0 = sections.front();
+					mip.dst_w = std::max<u16>(mip0.dst_w >> mipmap_level, 1);
+					mip.dst_h = std::max<u16>(mip0.dst_h >> mipmap_level, 1);
+				}
 			}
 
 			return true;
