@@ -417,35 +417,51 @@ namespace vk
 
 		std::unordered_set<decltype(sections_to_transfer.front().src)> processed_input_images;
 
+		// Generates a region to write data to the final destination
+		const auto get_output_region = [&](const copy_region_descriptor& section, s32 in_x, s32 in_y, u32 w, u32 h, vk::image* data_src)
+		{
+			VkImageCopy copy_rgn = {
+				.srcSubresource = { data_src->aspect(), 0, 0, 1},
+				.srcOffset = { in_x, in_y, 0 },
+				.dstSubresource = { dst_aspect, section.level, 0, 1 },
+				.dstOffset = { section.dst_x, section.dst_y, 0 },
+				.extent = { w, h, 1 }
+			};
+
+			if (dst->info.imageType == VK_IMAGE_TYPE_3D)
+			{
+				copy_rgn.dstOffset.z = section.dst_z;
+			}
+			else
+			{
+				copy_rgn.dstSubresource.baseArrayLayer = section.dst_z;
+			}
+
+			return copy_rgn;
+		};
+
+		const auto configure_subresource = [&](const copy_region_descriptor& section, coord3i& coord, rsx::image_copy_subresource_layers& mip_layers)
+		{
+			mip_layers.dst_mip_level = section.level;
+			coord.position = { section.dst_x, section.dst_y, 0 };
+			coord.size = { section.dst_w, section.dst_h, 1 };
+
+			if (dst->type() == VK_IMAGE_TYPE_3D)
+			{
+				coord.position.z = section.dst_z;
+			}
+			else
+			{
+				mip_layers.dst_layer = static_cast<u8>(section.dst_z);
+			}
+		};
+
 		for (const auto& section : sections_to_transfer)
 		{
 			if (!section.src)
 			{
 				continue;
 			}
-
-			// Generates a region to write data to the final destination
-			const auto get_output_region = [&](s32 in_x, s32 in_y, u32 w, u32 h, vk::image* data_src)
-			{
-				VkImageCopy copy_rgn = {
-					.srcSubresource = { data_src->aspect(), 0, 0, 1},
-					.srcOffset = { in_x, in_y, 0 },
-					.dstSubresource = { dst_aspect, section.level, 0, 1 },
-					.dstOffset = { section.dst_x, section.dst_y, 0 },
-					.extent = { w, h, 1 }
-				};
-
-				if (dst->info.imageType == VK_IMAGE_TYPE_3D)
-				{
-					copy_rgn.dstOffset.z = section.dst_z;
-				}
-				else
-				{
-					copy_rgn.dstSubresource.baseArrayLayer = section.dst_z;
-				}
-
-				return copy_rgn;
-			};
 
 			const bool typeless = section.src->aspect() != dst_aspect ||
 				!formats_are_bitcast_compatible(dst, section.src);
@@ -489,14 +505,15 @@ namespace vk
 				const u16 convert_x = u16(src_x * src_bpp) / dst_bpp;
 
 				if (convert_w == section.dst_w && src_h == section.dst_h &&
-					transform == rsx::surface_transform::identity &&
-					section.level == 0 && section.dst_z == 0)
+					transform == rsx::surface_transform::identity)
 				{
 					// Optimization to avoid double transfer
-					// TODO: Handle level and layer offsets
-					const areai src_rect = coordi{{ src_x, src_y }, { src_w, src_h }};
-					const areai dst_rect = coordi{{ section.dst_x, section.dst_y }, { section.dst_w, section.dst_h }};
-					vk::copy_image_typeless(cmd, section.src, dst, src_rect, dst_rect, 1);
+					coord3i dst_rect;
+					rsx::image_copy_subresource_layers mip_layers;
+					configure_subresource(section, dst_rect, mip_layers);
+
+					const auto src_rect = coord3i{{ src_x, src_y, 0 }, { src_w, src_h, 1 }};
+					vk::copy_image_typeless(cmd, section.src, dst, src_rect, dst_rect, mip_layers);
 					continue;
 				}
 
@@ -505,7 +522,7 @@ namespace vk
 
 				const areai src_rect = coordi{{ src_x, src_y }, { src_w, src_h }};
 				const areai dst_rect = coordi{{ 0, 0 }, { convert_w, src_h }};
-				vk::copy_image_typeless(cmd, section.src, src_image, src_rect, dst_rect, 1);
+				vk::copy_image_typeless(cmd, section.src, src_image, src_rect, dst_rect);
 				src_image->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
 				src_x = 0;
@@ -518,15 +535,14 @@ namespace vk
 
 			if (src_w == section.dst_w && src_h == section.dst_h) [[likely]]
 			{
-				const auto copy_rgn = get_output_region(src_x, src_y, src_w, src_h, src_image);
+				const auto copy_rgn = get_output_region(section, src_x, src_y, src_w, src_h, src_image);
 				vkCmdCopyImage(cmd, src_image->value, src_image->current_layout, dst->value, dst->current_layout, 1, &copy_rgn);
 			}
 			else
 			{
-				u16 dst_x = section.dst_x, dst_y = section.dst_y;
 				vk::image* _dst = dst;
 
-				if (src_image->info.format != dst->info.format || section.level != 0 || section.dst_z != 0) [[ unlikely ]]
+				if (src_image->info.format != dst->info.format) [[ unlikely ]]
 				{
 					// Either a bitcast is required or a scale+copy to mipmap level / layer
 					const u32 requested_width = dst->width();
@@ -535,24 +551,37 @@ namespace vk
 					_dst->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 				}
 
+				auto dst_rect = coord3i{ { section.dst_x, section.dst_y, 0 }, { section.dst_w, section.dst_h, 1 } };
+				rsx::image_copy_subresource_layers mip_layers{ .dst_mip_level = section.level };
+
 				if (_dst != dst)
 				{
 					// We place the output after the source to account for the initial typeless-xfer if applicable
 					// If src_image == _dst then this is just a write-to-self. Either way, use best-fit placement.
-					dst_x = 0;
-					dst_y = src_y + src_h;
+					dst_rect.position.x = 0;
+					dst_rect.position.y = src_y + src_h;
+					mip_layers = {};
+				}
+				else if (dst->type() == VK_IMAGE_TYPE_3D)
+				{
+					dst_rect.position.z = section.dst_z;
+				}
+				else
+				{
+					mip_layers.dst_layer = static_cast<u8>(section.dst_z);
 				}
 
 				vk::copy_scaled_image(cmd, src_image, _dst,
-					coordi{ { src_x, src_y }, { src_w, src_h } },
-					coordi{ { dst_x, dst_y }, { section.dst_w, section.dst_h } },
-					1, src_image->format() == _dst->format(),
+					coord3i{ { src_x, src_y, 0 }, { src_w, src_h, 1 } },
+					dst_rect,
+					mip_layers,
+					src_image->format() == _dst->format(),
 					VK_FILTER_NEAREST);
 
 				if (_dst != dst) [[unlikely]]
 				{
 					// Casting comes after the scaling!
-					const auto copy_rgn = get_output_region(dst_x, dst_y, section.dst_w, section.dst_h, _dst);
+					const auto copy_rgn = get_output_region(section, dst_rect.position.x, dst_rect.position.y, section.dst_w, section.dst_h, _dst);
 					_dst->change_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 					vkCmdCopyImage(cmd, _dst->value, _dst->current_layout, dst->value, dst->current_layout, 1, &copy_rgn);
 				}
