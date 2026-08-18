@@ -91,6 +91,11 @@ import net.rpcs3.utils.GpuDriverHelper
 import net.rpcs3.utils.GpuDriverInstallResult
 import net.rpcs3.utils.GpuDriverMetadata
 import net.rpcs3.utils.DriversFetcher
+import androidx.compose.material.icons.outlined.Download
+import androidx.compose.runtime.mutableIntStateOf
+import kotlinx.coroutines.withContext
+import net.rpcs3.utils.DriverRepo
+import net.rpcs3.utils.DriverRepos
 import net.rpcs3.utils.DriversFetcher.FetchResult
 import net.rpcs3.utils.DriversFetcher.FetchResultOutput
 import net.rpcs3.utils.DriversFetcher.DownloadResult
@@ -114,6 +119,16 @@ fun GpuDriversScreen(navigateBack: () -> Unit) {
     var repoUrl by remember { mutableStateOf<String?>(null) }
     var driverToDownload by remember { mutableStateOf<Pair<String, String>?>(null) }
     var shouldDownloadDriver by remember { mutableStateOf(false) }
+    var selectedTab by remember { mutableIntStateOf(0) }
+    val repoPrefs = remember { DriverRepos.prefsOf(context) }
+    var downloadState by remember {
+        mutableStateOf(DriverDownloadState(repos = DriverRepos.load(repoPrefs)))
+    }
+
+    fun persistRepos(repos: List<DriverRepo>) {
+        DriverRepos.save(repoPrefs, repos)
+        downloadState = downloadState.copy(repos = repos)
+    }
     
     val driverPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -205,12 +220,133 @@ fun GpuDriversScreen(navigateBack: () -> Unit) {
         PaneScaffold(
             title = stringResource(R.string.drivers_title),
             tabs = listOf(
+                PaneTab(stringResource(R.string.drivers_tab_download), Icons.Outlined.Download),
                 PaneTab(stringResource(R.string.drivers_tab_installed), Icons.Outlined.Memory)
             ),
-            selected = 0,
-            onSelect = {},
+            selected = selectedTab,
+            onSelect = { selectedTab = it },
             onBack = navigateBack
         ) {
+            if (selectedTab == 0) {
+                DriverDownloadTab(
+                    state = downloadState,
+                    onRepoTapped = { repo ->
+                        if (downloadState.expandedRepo == repo.apiUrl) {
+                            downloadState = downloadState.copy(
+                                expandedRepo = null,
+                                expandedRelease = null
+                            )
+                            return@DriverDownloadTab
+                        }
+
+                        downloadState = downloadState.copy(
+                            expandedRepo = repo.apiUrl,
+                            expandedRelease = null
+                        )
+
+                        if (downloadState.releases.containsKey(repo.apiUrl)) {
+                            return@DriverDownloadTab
+                        }
+
+                        downloadState = downloadState.copy(loadingRepo = repo.apiUrl)
+                        coroutineScope.launch {
+                            val outcome = runCatching { DriverRepos.fetchReleases(repo) }
+                            downloadState = downloadState.copy(
+                                loadingRepo = null,
+                                releases = downloadState.releases +
+                                    (repo.apiUrl to outcome.getOrDefault(emptyList())),
+                                errors = if (outcome.isFailure) {
+                                    downloadState.errors + (repo.apiUrl to
+                                        (outcome.exceptionOrNull()?.message ?: "Fetch failed"))
+                                } else {
+                                    downloadState.errors - repo.apiUrl
+                                }
+                            )
+                        }
+                    },
+                    onReleaseTapped = { release ->
+                        downloadState = downloadState.copy(
+                            expandedRelease = if (downloadState.expandedRelease == release.id) {
+                                null
+                            } else {
+                                release.id
+                            }
+                        )
+                    },
+                    onDownload = { asset ->
+                        downloadState = downloadState.copy(
+                            busyAsset = asset.name,
+                            progress = -1f,
+                            progressLabel = context.getString(R.string.drivers_downloading)
+                        )
+
+                        coroutineScope.launch {
+                            val target = File(context.cacheDir, "driver_${'$'}{System.currentTimeMillis()}.zip")
+
+                            val result = DriversFetcher.downloadAsset(
+                                context,
+                                asset.downloadUrl,
+                                target
+                            ) { read, total ->
+                                downloadState = downloadState.copy(
+                                    progress = if (total > 0L) {
+                                        (read.toFloat() / total.toFloat()).coerceIn(0f, 1f)
+                                    } else {
+                                        -1f
+                                    }
+                                )
+                            }
+
+                            if (result is DriversFetcher.DownloadResult.Error) {
+                                target.delete()
+                                downloadState = downloadState.copy(busyAsset = null, progress = -1f)
+                                snackbarHostState.showSnackbar(
+                                    result.message ?: context.getString(R.string.drivers_fetch_failed)
+                                )
+                                return@launch
+                            }
+
+                            downloadState = downloadState.copy(
+                                progress = -1f,
+                                progressLabel = context.getString(R.string.drivers_installing)
+                            )
+
+                            val installResult = withContext(Dispatchers.IO) {
+                                GpuDriverHelper.installDriver(context, target)
+                            }
+                            target.delete()
+
+                            drivers = GpuDriverHelper.getInstalledDrivers(context)
+                            downloadState = downloadState.copy(busyAsset = null, progress = -1f)
+
+                            snackbarHostState.showSnackbar(
+                                GpuDriverHelper.resolveInstallResultToString(context, installResult)
+                            )
+                        }
+                    },
+                    onAddRepo = { name, url ->
+                        persistRepos(downloadState.repos + DriverRepos.normalize(name, url))
+                    },
+                    onEditRepo = { index, name, url ->
+                        persistRepos(
+                            downloadState.repos.toMutableList().also {
+                                it[index] = DriverRepos.normalize(name, url)
+                            }
+                        )
+                    },
+                    onDeleteRepo = { index ->
+                        persistRepos(
+                            downloadState.repos.toMutableList().also { it.removeAt(index) }
+                        )
+                    },
+                    onRestoreDefaults = {
+                        persistRepos(DriverRepos.withDefaultsRestored(downloadState.repos))
+                    }
+                )
+
+                return@PaneScaffold
+            }
+
             PaneSectionTitle(stringResource(R.string.drivers_select))
 
             drivers.entries.toList().forEach { (file, metadata) ->

@@ -248,6 +248,7 @@
     <string name="diagnostics_system">System</string>
 
     <string name="drivers_title">GPU Drivers</string>
+    <string name="drivers_tab_download">Download</string>
     <string name="drivers_tab_installed">Installed</string>
     <string name="drivers_select">Select a GPU driver</string>
     <string name="drivers_installing">Installing…</string>

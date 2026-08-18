@@ -493,46 +493,6 @@ fun GamesDestination(
                     )
 
                     NavigationDrawerItem(
-                        label = { Text(stringResource(R.string.drawer_setup)) },
-                        selected = false,
-                        icon = { Icon(Icons.Outlined.CheckCircle, null) },
-                        onClick = {
-                            scope.launch { drawerState.close() }
-                            setupActive = true
-                        }
-                    )
-
-                    NavigationDrawerItem(
-                        label = { Text(stringResource(R.string.drawer_diagnostics)) },
-                        selected = false,
-                        icon = { Icon(Icons.Outlined.MonitorHeart, null) },
-                        onClick = {
-                            scope.launch { drawerState.close() }
-                            navigateToDiagnostics()
-                        }
-                    )
-
-                    NavigationDrawerItem(
-                        label = { Text(stringResource(R.string.drawer_debug)) },
-                        selected = false,
-                        icon = { Icon(Icons.Outlined.BugReport, null) },
-                        onClick = {
-                            scope.launch { drawerState.close() }
-                            navigateToDebug()
-                        }
-                    )
-
-                    NavigationDrawerItem(
-                        label = { Text(stringResource(R.string.drawer_patches)) },
-                        selected = false,
-                        icon = { Icon(Icons.Outlined.Healing, null) },
-                        onClick = {
-                            scope.launch { drawerState.close() }
-                            navigateToAllPatches()
-                        }
-                    )
-
-                    NavigationDrawerItem(
                         label = { Text(stringResource(R.string.drawer_gpu_drivers)) },
                         selected = false,
                         icon = { Icon(Icons.Outlined.Memory, null) },
@@ -557,6 +517,36 @@ fun GamesDestination(
                     )
 
                     NavigationDrawerItem(
+                        label = { Text(stringResource(R.string.drawer_patches)) },
+                        selected = false,
+                        icon = { Icon(Icons.Outlined.Healing, null) },
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            navigateToAllPatches()
+                        }
+                    )
+
+                    NavigationDrawerItem(
+                        label = { Text(stringResource(R.string.drawer_debug)) },
+                        selected = false,
+                        icon = { Icon(Icons.Outlined.BugReport, null) },
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            navigateToDebug()
+                        }
+                    )
+
+                    NavigationDrawerItem(
+                        label = { Text(stringResource(R.string.drawer_diagnostics)) },
+                        selected = false,
+                        icon = { Icon(Icons.Outlined.MonitorHeart, null) },
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            navigateToDiagnostics()
+                        }
+                    )
+
+                    NavigationDrawerItem(
                         label = { Text(stringResource(R.string.drawer_system_info)) },
                         selected = false,
                         icon = { Icon(Icons.Outlined.Info, contentDescription = null) },
@@ -572,7 +562,17 @@ fun GamesDestination(
                             }
                         }
                     )
-                }
+                NavigationDrawerItem(
+                        label = { Text(stringResource(R.string.drawer_setup)) },
+                        selected = false,
+                        icon = { Icon(Icons.Outlined.CheckCircle, null) },
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            setupActive = true
+                        }
+                    )
+
+                    }
             }
         }
     ) {
