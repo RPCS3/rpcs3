@@ -190,6 +190,8 @@ namespace gl
 		const auto dst_bpp = dst_image->pitch() / dst_image->width();
 		const auto dst_aspect = dst_image->aspect();
 
+		std::unique_ptr<gl::texture> tmp;
+
 		for (const auto &slice : sources)
 		{
 			if (!slice.src)
@@ -200,7 +202,6 @@ namespace gl
 			const bool typeless = !formats_are_bitcast_compatible(slice.src, dst_image);
 			ensure(typeless || dst_aspect == slice.src->aspect());
 
-			std::unique_ptr<gl::texture> tmp;
 			auto src_image = slice.src;
 			auto src_x = slice.src_x;
 			auto src_y = slice.src_y;
@@ -224,12 +225,19 @@ namespace gl
 			{
 				const auto src_bpp = slice.src->pitch() / slice.src->width();
 				const u16 convert_w = u16(slice.src->width() * src_bpp) / dst_bpp;
-				tmp = std::make_unique<texture>(
-					GL_TEXTURE_2D,
-					convert_w, slice.src->height(),
-					1, 1, 1,
-					static_cast<GLenum>(dst_image->get_internal_format()),
-					dst_image->format_class());
+
+				if (!tmp ||
+					tmp->width() < convert_w ||
+					tmp->height() < slice.src->height() ||
+					tmp->get_internal_format() != dst_image->get_internal_format())
+				{
+					tmp = std::make_unique<texture>(
+						GL_TEXTURE_2D,
+						convert_w, slice.src->height(),
+						1, 1, 1,
+						static_cast<GLenum>(dst_image->get_internal_format()),
+						dst_image->format_class());
+				}
 
 				src_image = tmp.get();
 
@@ -271,21 +279,39 @@ namespace gl
 				const areai dst_rect = { slice.dst_x, slice.dst_y, slice.dst_x + slice.dst_w, slice.dst_y + slice.dst_h };
 
 				gl::texture* _dst = dst_image;
-				if (src_image->get_internal_format() != dst_image->get_internal_format() ||
-					slice.level != 0 ||
-					slice.dst_z != 0) [[ unlikely ]]
+				rsx::image_copy_subresource_layers mip_layers{ .dst_mip_level = slice.level };
+
+				const coord3i src_vol = { src_rect.x1, src_rect.y1, 0, src_rect.x2 - src_rect.x1, src_rect.y2 - src_rect.y1, 1 };
+				coord3i dst_vol = { dst_rect.x1, dst_rect.y1, 0, dst_rect.x2 - dst_rect.x1, dst_rect.y2 - dst_rect.y1, 1 };
+
+				if (src_image->get_internal_format() != dst_image->get_internal_format())
 				{
-					tmp = std::make_unique<texture>(
-						GL_TEXTURE_2D,
-						dst_rect.x2, dst_rect.y2,
-						1, 1, 1,
-						static_cast<GLenum>(slice.src->get_internal_format()),
-						slice.src->format_class());
+					ensure(src_image == slice.src);
+
+					if (!tmp ||
+						tmp->width() < dst_rect.x2 ||
+						tmp->height() < dst_rect.y2 ||
+						tmp->get_internal_format() != slice.src->get_internal_format()) [[ unlikely ]]
+					{
+						tmp = std::make_unique<texture>(
+							GL_TEXTURE_2D,
+							dst_rect.x2, dst_rect.y2,
+							1, 1, 1,
+							static_cast<GLenum>(slice.src->get_internal_format()),
+							slice.src->format_class());
+					}
 
 					_dst = tmp.get();
+					mip_layers = {};
+				}
+				else
+				{
+					// We can set either the target layer or target Z.
+					// Set target Z due to integer limits with the mip_layers.
+					dst_vol.z = slice.dst_z;
 				}
 
-				_blitter->scale_image(cmd, src_image, _dst, src_rect, dst_rect, false, {});
+				_blitter->scale_image(cmd, src_image, _dst, src_vol, dst_vol, false, {}, mip_layers);
 
 				if (_dst != dst_image)
 				{
