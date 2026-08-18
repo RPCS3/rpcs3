@@ -329,7 +329,16 @@ void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKey
 	{
 		if (!Emu.IsStopped())
 		{
-			Emu.GracefulShutdown(true, true);
+			if (m_gui_settings->GetValue(gui::ib_confirm_exit).toBool() && visibility() == FullScreen)
+			{
+				// The confirmation dialog would be hidden behind the game window in fullscreen mode
+				toggle_fullscreen();
+			}
+
+			if (m_gui_settings->GetStopConfirmation(nullptr, tr("Exit Game?"), tr("Do you really want to exit the game?<br><br>Any unsaved progress will be lost!<br>")))
+			{
+				Emu.GracefulShutdown(true, true);
+			}
 		}
 		break;
 	}
@@ -1206,22 +1215,15 @@ bool gs_frame::event(QEvent* ev)
 {
 	if (ev->type() == QEvent::Close)
 	{
-		if (m_gui_settings->GetValue(gui::ib_confirm_exit).toBool())
+		if (m_gui_settings->GetValue(gui::ib_confirm_exit).toBool() && visibility() == FullScreen)
 		{
-			if (visibility() == FullScreen)
-			{
-				toggle_fullscreen();
-			}
+			// The confirmation dialog would be hidden behind the game window in fullscreen mode
+			toggle_fullscreen();
+		}
 
-			int result = QMessageBox::Yes;
-			m_gui_settings->ShowConfirmationBox(tr("Exit Game?"),
-				tr("Do you really want to exit the game?<br><br>Any unsaved progress will be lost!<br>"),
-				gui::ib_confirm_exit, &result, nullptr);
-
-			if (result != QMessageBox::Yes)
-			{
-				return true;
-			}
+		if (!m_gui_settings->GetStopConfirmation(nullptr, tr("Exit Game?"), tr("Do you really want to exit the game?<br><br>Any unsaved progress will be lost!<br>")))
+		{
+			return true;
 		}
 
 		gui_log.notice("Game window close event issued");
@@ -1233,7 +1235,7 @@ bool gs_frame::event(QEvent* ev)
 
 		if (Emu.IsStopped())
 		{
-			// This should be unreachable, but never say never. Properly close the window anyway.
+			// Reachable if the confirmation above created a savestate, which stops the emulation. Properly close the window anyway.
 			close();
 		}
 		else

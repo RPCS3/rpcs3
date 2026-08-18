@@ -437,8 +437,10 @@ void main_window::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const Q
 	}
 	case gui::shortcuts::shortcut::mw_stop:
 	{
-		if (status != system_state::stopped)
+		if (m_gui_settings->GetStopConfirmation(this))
+		{
 			Emu.GracefulShutdown(false, true);
+		}
 		break;
 	}
 	default:
@@ -3016,10 +3018,14 @@ void main_window::CreateConnects()
 	connect(ui->createFirmwareCacheAct, &QAction::triggered, this, &main_window::CreateFirmwareCache);
 
 	connect(ui->sysPauseAct, &QAction::triggered, this, &main_window::OnPlayOrPause);
-	connect(ui->sysStopAct, &QAction::triggered, this, []()
+	connect(ui->sysStopAct, &QAction::triggered, this, [this]()
 	{
 		gui_log.notice("User triggered stop action in menu bar");
-		Emu.GracefulShutdown(false, true);
+
+		if (m_gui_settings->GetStopConfirmation(this))
+		{
+			Emu.GracefulShutdown(false, true);
+		}
 	});
 	connect(ui->sysRebootAct, &QAction::triggered, this, []()
 	{
@@ -3685,10 +3691,14 @@ void main_window::CreateConnects()
 
 	connect(ui->toolbar_open, &QAction::triggered, this, &main_window::BootGame);
 	connect(ui->toolbar_refresh, &QAction::triggered, this, [this]() { m_game_list_frame->Refresh(true); });
-	connect(ui->toolbar_stop, &QAction::triggered, this, []()
+	connect(ui->toolbar_stop, &QAction::triggered, this, [this]()
 	{
 		gui_log.notice("User triggered stop action in toolbar");
-		Emu.GracefulShutdown(false);
+
+		if (m_gui_settings->GetStopConfirmation(this))
+		{
+			Emu.GracefulShutdown(false);
+		}
 	});
 	connect(ui->toolbar_start, &QAction::triggered, this, &main_window::OnPlayOrPause);
 

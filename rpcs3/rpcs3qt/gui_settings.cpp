@@ -7,6 +7,8 @@
 
 #include <QCheckBox>
 #include <QCoreApplication>
+#include <QDialogButtonBox>
+#include <QGridLayout>
 #include <QMessageBox>
 
 LOG_CHANNEL(cfg_log, "CFG");
@@ -179,7 +181,7 @@ void gui_settings::SetCategoryVisibility(int cat, bool val, bool is_list_mode) c
 	SetValue(value, val);
 }
 
-void gui_settings::ShowBox(QMessageBox::Icon icon, const QString& title, const QString& text, const gui_save& entry, int* result = nullptr, QWidget* parent = nullptr, bool always_on_top = false)
+void gui_settings::ShowBox(QMessageBox::Icon icon, const QString& title, const QString& text, const gui_save& entry, int* result = nullptr, QWidget* parent = nullptr, bool always_on_top = false, const QString& option_text = {}, bool* option_checked = nullptr)
 {
 	const std::string dialog_type = icon != QMessageBox::Information ? "Confirmation" : "Info";
 	const bool has_gui_setting = !entry.name.isEmpty();
@@ -195,9 +197,61 @@ void gui_settings::ShowBox(QMessageBox::Icon icon, const QString& title, const Q
 	QMessageBox mb(icon, title, text, buttons, parent, Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint | (always_on_top ? Qt::WindowStaysOnTopHint : Qt::Widget));
 	mb.setTextFormat(Qt::RichText);
 
+	QCheckBox* dont_show_again = nullptr;
+
 	if (has_gui_setting && icon != QMessageBox::Critical)
 	{
-		mb.setCheckBox(new QCheckBox(tr("Don't show again")));
+		dont_show_again = new QCheckBox(tr("Don't show again"));
+		mb.setCheckBox(dont_show_again);
+	}
+
+	QCheckBox* option_box = nullptr;
+
+	if (!option_text.isEmpty())
+	{
+		QCheckBox* existing_box = mb.checkBox();
+
+		if (!existing_box)
+		{
+			// The check box slot of the message box is still free
+			option_box = new QCheckBox(option_text);
+			mb.setCheckBox(option_box);
+		}
+		else if (QGridLayout* grid = qobject_cast<QGridLayout*>(mb.layout()))
+		{
+			// The message box only manages a single check box, so the additional option has to be put into the layout manually
+			int row = 0, column = 0, row_span = 1, column_span = 1;
+
+			if (const int index = grid->indexOf(existing_box); index >= 0)
+			{
+				grid->getItemPosition(index, &row, &column, &row_span, &column_span);
+			}
+
+			option_box = new QCheckBox(option_text, &mb);
+
+			QDialogButtonBox* button_box = mb.findChild<QDialogButtonBox*>();
+			const int button_index = button_box ? grid->indexOf(button_box) : -1;
+
+			if (button_index >= 0)
+			{
+				int button_row, button_column, button_row_span, button_column_span;
+				grid->getItemPosition(button_index, &button_row, &button_column, &button_row_span, &button_column_span);
+
+				// Move the buttons one row down in order to insert the additional option right below the existing check box
+				grid->removeWidget(button_box);
+				grid->addWidget(option_box, button_row, column, row_span, column_span);
+				grid->addWidget(button_box, button_row + 1, button_column, button_row_span, button_column_span);
+			}
+			else
+			{
+				grid->addWidget(option_box, grid->rowCount(), column, row_span, column_span);
+			}
+		}
+		else if (QLayout* layout = mb.layout())
+		{
+			option_box = new QCheckBox(option_text, &mb);
+			layout->addWidget(option_box);
+		}
 	}
 
 	connect(&mb, &QMessageBox::finished, [&](int res)
@@ -207,9 +261,12 @@ void gui_settings::ShowBox(QMessageBox::Icon icon, const QString& title, const Q
 			*result = res;
 		}
 
-		const auto checkBox = mb.checkBox();
+		if (option_checked)
+		{
+			*option_checked = option_box && option_box->isChecked();
+		}
 
-		if (checkBox && checkBox->isChecked())
+		if (dont_show_again && dont_show_again->isChecked())
 		{
 			SetValue(entry, false);
 			cfg_log.notice("%s Dialog for Entry %s is now disabled", dialog_type, entry.name);
@@ -219,9 +276,9 @@ void gui_settings::ShowBox(QMessageBox::Icon icon, const QString& title, const Q
 	mb.exec();
 }
 
-void gui_settings::ShowConfirmationBox(const QString& title, const QString& text, const gui_save& entry, int* result = nullptr, QWidget* parent = nullptr)
+void gui_settings::ShowConfirmationBox(const QString& title, const QString& text, const gui_save& entry, int* result, QWidget* parent, const QString& option_text, bool* option_checked)
 {
-	ShowBox(QMessageBox::Question, title, text, entry, result, parent, true);
+	ShowBox(QMessageBox::Question, title, text, entry, result, parent, true, option_text, option_checked);
 }
 
 void gui_settings::ShowInfoBox(const QString& title, const QString& text, const gui_save& entry, QWidget* parent = nullptr)
@@ -250,6 +307,13 @@ bool gui_settings::GetBootConfirmation(QWidget* parent, const gui_save& gui_save
 
 	if (!Emu.IsStopped())
 	{
+		// The emulation is already being closed (e.g. a savestate is being created). Do not interfere with it.
+		if (Emu.IsClosePending())
+		{
+			cfg_log.notice("Ignoring the request: the current emulation is already being closed.");
+			return false;
+		}
+
 		QString title = tr("Close Running Game?");
 		QString message = tr("Performing this action will close the current game.<br>Do you really want to continue?<br><br>Any unsaved progress will be lost!<br>");
 
@@ -264,8 +328,9 @@ bool gui_settings::GetBootConfirmation(QWidget* parent, const gui_save& gui_save
 		}
 
 		int result = QMessageBox::Yes;
+		bool create_savestate = false;
 
-		ShowBox(QMessageBox::Question, title, message, gui_save_entry, &result, parent);
+		ShowBox(QMessageBox::Question, title, message, gui_save_entry, &result, parent, false, tr("Create savestate"), &create_savestate);
 
 		if (result != QMessageBox::Yes)
 		{
@@ -273,6 +338,77 @@ bool gui_settings::GetBootConfirmation(QWidget* parent, const gui_save& gui_save
 		}
 
 		cfg_log.notice("User accepted to stop the current emulation.");
+
+		if (create_savestate && !CreateSavestateAndStop(parent))
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool gui_settings::GetStopConfirmation(QWidget* parent, const QString& title, const QString& message, const gui_save& gui_save_entry)
+{
+	// Only ask if the user did not disable this confirmation
+	if (Emu.IsStopped() || (!gui_save_entry.name.isEmpty() && !GetValue(gui_save_entry).toBool()))
+	{
+		return true;
+	}
+
+	// The emulation is already being closed (e.g. a savestate is being created). Do not interfere with it.
+	if (Emu.IsClosePending())
+	{
+		cfg_log.notice("Ignoring the request: the current emulation is already being closed.");
+		return false;
+	}
+
+	int result = QMessageBox::Yes;
+	bool create_savestate = false;
+
+	ShowConfirmationBox(title.isEmpty() ? tr("Close Running Game?") : title,
+		message.isEmpty() ? tr("Performing this action will close the current game.<br>Do you really want to continue?<br><br>Any unsaved progress will be lost!<br>") : message,
+		gui_save_entry, &result, parent, tr("Create savestate"), &create_savestate);
+
+	if (result != QMessageBox::Yes)
+	{
+		return false;
+	}
+
+	cfg_log.notice("User accepted to stop the current emulation.");
+
+	if (create_savestate && !CreateSavestateAndStop(parent))
+	{
+		return false;
+	}
+
+	return true;
+}
+
+// Creates a savestate of the currently running game and stops the emulation.
+// Any subsequent shutdown of the caller becomes a no-op. Returns false if the savestate could not be created.
+bool gui_settings::CreateSavestateAndStop(QWidget* parent)
+{
+	cfg_log.notice("User requested a savestate before stopping the current emulation.");
+
+	// Make sure no game can be booted while the savestate is being created
+	const auto guard = Emu.MakeEmulationStateGuard();
+
+	const auto info = Emu.GetEmulationIdentifier();
+
+	Emu.Kill(false, true);
+
+	// Savestate creation is asynchronous, so wait for it to either finish or fail
+	qt_events_aware_op(16, [&]()
+	{
+		return Emu.IsStopped() || info != Emu.GetEmulationIdentifier() || !Emu.IsClosePending();
+	});
+
+	if (!Emu.IsStopped() && info == Emu.GetEmulationIdentifier())
+	{
+		cfg_log.error("Savestate creation failed. The current emulation will not be stopped.");
+		ShowInfoBox(tr("Savestate failed!"), tr("Failed to create a savestate.<br>The game will keep running.<br><br>See the log for more information."), gui_save(), parent);
+		return false;
 	}
 
 	return true;

@@ -349,9 +349,10 @@ public:
 
 	bool GetCategoryVisibility(int cat, bool is_list_mode) const;
 
-	void ShowConfirmationBox(const QString& title, const QString& text, const gui_save& entry, int* result, QWidget* parent);
+	void ShowConfirmationBox(const QString& title, const QString& text, const gui_save& entry, int* result = nullptr, QWidget* parent = nullptr, const QString& option_text = {}, bool* option_checked = nullptr);
 	void ShowInfoBox(const QString& title, const QString& text, const gui_save& entry, QWidget* parent);
 	bool GetBootConfirmation(QWidget* parent, const gui_save& gui_save_entry = gui_save());
+	bool GetStopConfirmation(QWidget* parent, const QString& title = {}, const QString& message = {}, const gui_save& gui_save_entry = gui::ib_confirm_exit);
 
 	logs::level GetLogLevel() const;
 	bool GetSavestateGamelistColVisibility(gui::savestate_game_list_columns col) const;
@@ -384,5 +385,6 @@ private:
 	static gui_save GetGuiSaveForGameColumn(gui::game_list_columns col);
 	static gui_save GetGuiSaveForCategory(int cat, bool is_list_mode);
 
-	void ShowBox(QMessageBox::Icon icon, const QString& title, const QString& text, const gui_save& entry, int* result, QWidget* parent, bool always_on_top);
+	void ShowBox(QMessageBox::Icon icon, const QString& title, const QString& text, const gui_save& entry, int* result, QWidget* parent, bool always_on_top, const QString& option_text, bool* option_checked);
+	bool CreateSavestateAndStop(QWidget* parent);
 };
