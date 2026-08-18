@@ -737,7 +737,7 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 		// Release lock before the blocking network call
 		lock2.unlock();
 
-		auto& np = g_fxo->get<np::np_handler>();
+		auto& np = g_fxo->get<named_thread<np::np_handler>>();
 		std::vector<std::pair<s32, s64>> srv_trophies = np.rpcn_trophy_sync(ctx_comm_id, local_unlocked);
 
 		bool changed = false;
@@ -1154,7 +1154,7 @@ error_code sceNpTrophyUnlockTrophy(ppu_thread& ppu, u32 context, u32 handle, s32
 
 	if (g_cfg.net.psn_status == np_psn_status::psn_rpcn)
 	{
-		auto& np = g_fxo->get<np::np_handler>();
+		auto& np = g_fxo->get<named_thread<np::np_handler>>();
 		np.rpcn_trophy_unlock(ctxt->comm_id, trophyId, static_cast<s64>(tick->tick));
 
 		if (unlocked_platinum_id != SCE_NP_TROPHY_INVALID_TROPHY_ID)
