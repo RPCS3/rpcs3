@@ -662,7 +662,7 @@ namespace rsx
 		}
 	}
 
-	void draw_command_processor::fill_fragment_state_buffer(void* buffer, const RSXFragmentProgram& /*fragment_program*/) const
+	void draw_command_processor::fill_fragment_state_buffer(void* buffer, const RSXFragmentProgram& fragment_program) const
 	{
 #pragma pack(push, 1)
 		struct fragment_context_t
@@ -683,6 +683,12 @@ namespace rsx
 		// Always encode the alpha function. Toggling alpha-test is not guaranteed to trigger context param reload anymore.
 		const u32 alpha_func = static_cast<u32>(REGS(m_ctx)->alpha_func());
 		rop_control.set_alpha_test_func(alpha_func);
+
+		if (fragment_program.ctrl & RSX_SHADER_CONTROL_ROP_OUTPUT_REMAP)
+		{
+			const u32 remap_index = get_ROP_output_shuffle_index(REGS(m_ctx)->surface_color());
+			rop_control.set_output_remap(remap_index);
+		}
 
 		// Generate wpos coefficients
 		// wpos equation is now as follows (ignoring pixel center offset):

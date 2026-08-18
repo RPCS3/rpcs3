@@ -935,6 +935,11 @@ namespace rsx
 			return decode<NV4097_SET_SURFACE_FORMAT>().log2width();
 		}
 
+		bool surface_is_swizzle_remapped() const
+		{
+			return decode<NV4097_SET_SURFACE_FORMAT>().is_remapped_format();
+		}
+
 		u32 vertex_data_base_offset() const
 		{
 			return decode<NV4097_SET_VERTEX_DATA_BASE_OFFSET>().vertex_data_base_offset();

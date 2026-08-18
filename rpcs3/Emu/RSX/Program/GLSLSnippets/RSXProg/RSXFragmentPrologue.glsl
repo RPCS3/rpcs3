@@ -160,20 +160,22 @@ vec4 remap_vector(const in vec4 color, const in uint remap)
 #endif
 
 #ifdef _ENABLE_ROP_CHANNEL_REMAPPING
-uint get_ROP_channel_remap()
+#define get_ROP_channel_remap() _get_bits(rop_control, MRT_CHANNEL_REMAP_OFFSET, MRT_CHANNEL_REMAP_LENGTH)
+vec4 remap_ROP_output(const in vec4 col, const in uint remap_index)
 {
-	switch (_get_bits(rop_control, MRT_CHANNEL_REMAP_OFFSET, MRT_CHANNEL_REMAP_LENGTH))
+	switch (remap_index)
 	{
-	case ROP_REMAP_SWIZZLE_BBBB: // B8
-		return 0xAAFFu;
-	case ROP_REMAP_SWIZZLE_GBGB: // G8B8
-		return 0xAABBu;
-	case ROP_REMAP_SWIZZLE_RGB1: // RGB1
-		return 0xA9E4u;
-	case ROP_REMAP_SWIZZLE_RGB0: // RGB0
-		return 0xA8E4u;
 	default:
-		return 0xAAE4u;
+	case ROP_REMAP_SWIZZLE_RGBA: // RGBA
+		return col;
+	case ROP_REMAP_SWIZZLE_BBBB: // B8
+		return col.bbbb;
+	case ROP_REMAP_SWIZZLE_GBGB: // G8B8
+		return col.bgbg;
+	case ROP_REMAP_SWIZZLE_RGB1: // RGB1
+		return vec4(col.rgb, 1.f);
+	case ROP_REMAP_SWIZZLE_RGB0: // RGB0
+		return vec4(col.rgb, 0.f);
 	}
 }
 #endif

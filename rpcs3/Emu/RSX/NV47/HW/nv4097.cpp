@@ -250,12 +250,26 @@ namespace rsx
 			const auto current = REGS(ctx)->decode<NV4097_SET_SURFACE_FORMAT>(arg);
 			const auto previous = REGS(ctx)->decode<NV4097_SET_SURFACE_FORMAT>(REGS(ctx)->latch);
 
-			if (current.is_integer_color_format() != previous.is_integer_color_format()) // Different ROP emulation
+			// Check for different ROP emulation
+			if (current.is_integer_color_format() != previous.is_integer_color_format())
 			{
 				RSX(ctx)->m_graphics_state |= rsx::pipeline_state::fragment_program_state_dirty;
 			}
 
-			if (*current.antialias() != *previous.antialias()) // Antialias control has changed, update ROP parameters
+			// If swizzle remap changed, we have to flag both the shader and the ROP parameters
+			if (current.is_remapped_format() != previous.is_remapped_format())
+			{
+				RSX(ctx)->m_graphics_state |=
+					rsx::pipeline_state::fragment_program_state_dirty |
+					rsx::pipeline_state::fragment_state_dirty;
+			}
+			// If we're still remapping outputs but the format changed, reload ROP params
+			else if ((current.is_remapped_format() && *current.color_fmt() != *previous.color_fmt()))
+			{
+				RSX(ctx)->m_graphics_state |= rsx::pipeline_state::fragment_state_dirty;
+			}
+			// If antialias control has changed, also update ROP parameters
+			else if (*current.antialias() != *previous.antialias())
 			{
 				RSX(ctx)->m_graphics_state |= rsx::pipeline_state::fragment_state_dirty;
 			}
