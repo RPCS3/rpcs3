@@ -1049,11 +1049,23 @@ namespace rsx
 			// Check for upscaling if requested
 			if (apply_upscaling)
 			{
+				// NOTE: Due to how mipmaps clamp at the lower levels, we will not blindly allow upscaling for the mip dimensions.
+				// If we try to upscale we end up trying to write OOB - crash.
 				const auto base_mip = as_surface_type(sections.front());
 				auto& mip = sections.back();
-				std::tie(mip.dst_w, mip.dst_h) = rsx::apply_resolution_scale<true>(
-					base_mip->resolution_scaling_config,
-					mip.dst_w, mip.dst_h, level0_attr.width, level0_attr.height);
+
+				if (mipmap_level == 0)
+				{
+					std::tie(mip.dst_w, mip.dst_h) = rsx::apply_resolution_scale<true>(
+						base_mip->resolution_scaling_config,
+						mip.dst_w, mip.dst_h, level0_attr.width, level0_attr.height);
+				}
+				else
+				{
+					const auto& mip0 = sections.front();
+					mip.dst_w = std::max<u16>(mip0.dst_w >> mipmap_level, 1);
+					mip.dst_h = std::max<u16>(mip0.dst_h >> mipmap_level, 1);
+				}
 			}
 
 			return true;
