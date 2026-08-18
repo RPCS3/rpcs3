@@ -289,8 +289,8 @@ namespace gl
 					ensure(src_image == slice.src);
 
 					if (!tmp ||
-						tmp->width() < dst_rect.x2 ||
-						tmp->height() < dst_rect.y2 ||
+						tmp->width() < static_cast<u32>(dst_rect.x2) ||
+						tmp->height() < static_cast<u32>(dst_rect.y2) ||
 						tmp->get_internal_format() != slice.src->get_internal_format()) [[ unlikely ]]
 					{
 						tmp = std::make_unique<texture>(
