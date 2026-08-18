@@ -1235,20 +1235,48 @@ void game_list_actions::BatchActionBySerials(progress_dialog* pdlg, const std::s
 
 void game_list_actions::BatchCreateCPUCaches(const std::vector<game_info>& games, bool is_fast_compilation, bool is_interactive)
 {
-	if (is_interactive && QMessageBox::question(m_game_list_frame, tr("Confirm Creation"), tr("Create LLVM cache?")) != QMessageBox::Yes)
+	// The VSH cache is only part of this batch if no specific games were selected
+	const bool vsh_selectable = games.empty();
+
+	// Non-interactive callers keep the previous behaviour
+	bool include_vsh = vsh_selectable && !is_interactive;
+
+	if (is_interactive)
 	{
-		return;
+		QMessageBox mb(QMessageBox::Question, tr("Confirm Creation"), tr("Create LLVM cache?"), QMessageBox::Yes | QMessageBox::No, m_game_list_frame);
+
+		QCheckBox* vsh_check = nullptr;
+
+		if (vsh_selectable)
+		{
+			vsh_check = new QCheckBox(tr("Include PS3 Interface (XMB, or VSH)"));
+			vsh_check->setChecked(false);
+			mb.setCheckBox(vsh_check);
+		}
+
+		if (mb.exec() != QMessageBox::Yes)
+		{
+			return;
+		}
+
+		include_vsh = vsh_check && vsh_check->isChecked();
 	}
 
 	std::set<std::string> serials;
 
-	if (games.empty())
+	if (include_vsh)
 	{
 		serials.emplace("vsh.self");
 	}
 
 	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
 	{
+		// The VSH entry is part of the game list, so it has to be filtered out as well
+		if (vsh_selectable && !include_vsh && game->info.serial == "vsh.self")
+		{
+			continue;
+		}
+
 		serials.emplace(game->info.serial);
 	}
 
