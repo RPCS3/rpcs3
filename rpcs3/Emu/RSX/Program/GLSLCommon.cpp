@@ -321,6 +321,11 @@ namespace glsl
 			enabled_options.push_back("_ENABLE_COMPARISON_FUNC");
 		}
 
+		if (props.require_texture_ops && props.require_depth_conversion)
+		{
+			enabled_options.push_back("_ENABLE_COLOR_CHANNEL_REMAPPING");
+		}
+
 		if (props.require_fog_read)
 		{
 			program_common::define_glsl_constants<rsx::fog_mode>(OS,

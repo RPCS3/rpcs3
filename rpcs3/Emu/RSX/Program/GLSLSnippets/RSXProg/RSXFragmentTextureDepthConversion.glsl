@@ -26,35 +26,6 @@ vec4 decode_depth24(const in float depth_value, const in bool depth_float)
 	return color / scale;
 }
 
-vec4 remap_vector(const in vec4 color, const in uint remap)
-{
-	vec4 result;
-	if (_get_bits(remap, 0, 8) == 0xE4)
-	{
-		result = color;
-	}
-	else
-	{
-		uvec4 remap_channel = uvec4(remap) >> uvec4(2, 4, 6, 0);
-		remap_channel &= 3;
-		remap_channel = (remap_channel + 3) % 4; // Map A-R-G-B to R-G-B-A
-
-		// Generate remapped result
-		result.a = color[remap_channel.a];
-		result.r = color[remap_channel.r];
-		result.g = color[remap_channel.g];
-		result.b = color[remap_channel.b];
-	}
-
-	if (_get_bits(remap, 8, 8) == 0xAA)
-		return result;
-
-	uvec4 remap_select = uvec4(remap) >> uvec4(10, 12, 14, 8);
-	remap_select &= 3;
-	bvec4 choice = lessThan(remap_select, uvec4(2));
-	return _select(result, vec4(remap_select), choice);
-}
-
 vec4 convert_z24x8_to_rgba8(const in vec2 depth_stencil, const in uint remap, const in uint flags)
 {
 	vec4 result = decode_depth24(depth_stencil.x, _test_bit(flags, DEPTH_FLOAT));
