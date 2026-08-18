@@ -76,6 +76,14 @@ R"(
 	}
 #endif
 
+#ifdef _ENABLE_ROP_CHANNEL_REMAPPING
+	const uint ROP_remap = get_ROP_channel_remap();
+	col0 = _mrt_color_t(remap_vector(col0, ROP_remap));
+	col1 = _mrt_color_t(remap_vector(col1, ROP_remap));
+	col2 = _mrt_color_t(remap_vector(col2, ROP_remap));
+	col3 = _mrt_color_t(remap_vector(col3, ROP_remap));
+#endif
+
 	// Commit
 	ocol0 = col0;
 	ocol1 = col1;

@@ -10,6 +10,14 @@ struct RSXFragmentProgram;
 
 namespace rsx
 {
+	enum class ROP_channel_remap : u32
+	{
+		BBBB = 0,
+		GBGB,
+		RGB1,
+		RGB0,
+	};
+
 	enum ROP_control_bits : u32
 	{
 		// Commands. These trigger explicit action.
