@@ -53,6 +53,15 @@ namespace rsx
 		FORMAT_FEATURES_OFFSET = FF_SIGNED_BIT,
 	};
 
+	enum class ROP_channel_remap : u32
+	{
+		RGBA = 0,
+		BBBB,
+		GBGB,
+		RGB1,
+		RGB0,
+	};
+
 	struct texture_channel_remap_t
 	{
 		u32 encoded = 0xDEAD;
@@ -301,14 +310,14 @@ namespace rsx
 		case rsx::surface_color_format::a8b8g8r8:
 		case rsx::surface_color_format::w16z16y16x16:
 		case rsx::surface_color_format::w32z32y32x32:
-			return rgba;
 		case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
 		case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
-		case rsx::surface_color_format::r5g6b5:
 		case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
 		case rsx::surface_color_format::x8r8g8b8_o8r8g8b8:
 		case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
 		case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
+			return rgba;
+		case rsx::surface_color_format::r5g6b5:
 			return rgb;
 		case rsx::surface_color_format::g8b8:
 			return rg;

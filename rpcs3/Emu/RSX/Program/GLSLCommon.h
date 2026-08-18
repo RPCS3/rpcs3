@@ -10,14 +10,6 @@ struct RSXFragmentProgram;
 
 namespace rsx
 {
-	enum class ROP_channel_remap : u32
-	{
-		BBBB = 0,
-		GBGB,
-		RGB1,
-		RGB0,
-	};
-
 	enum ROP_control_bits : u32
 	{
 		// Commands. These trigger explicit action.
@@ -40,7 +32,7 @@ namespace rsx
 		// Data lengths
 		ALPHA_FUNC_NUM_BITS          = 3,
 		MSAA_SAMPLE_CTRL_NUM_BITS    = 2,
-		MRT_CHANNEL_REMAP_NUM_BITS   = 2,
+		MRT_CHANNEL_REMAP_NUM_BITS   = 3,
 
 		// Meta
 		ROP_CMD_MASK                 = 0xF // Commands are encoded in the lower 4 bits
@@ -60,6 +52,8 @@ namespace rsx
 
 		void set_alpha_test_func(uint func) { value |= (func << ROP_control_bits::ALPHA_FUNC_OFFSET); }
 		void set_msaa_control(uint ctrl) { value |= (ctrl << ROP_control_bits::MSAA_SAMPLE_CTRL_OFFSET); }
+
+		void set_output_remap(uint remap) { value |= (remap << ROP_control_bits::MRT_CHANNEL_REMAP_OFFSET); }
 	};
 }
 
