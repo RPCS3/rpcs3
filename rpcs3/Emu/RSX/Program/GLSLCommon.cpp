@@ -3,6 +3,7 @@
 #include "GLSLCommon.h"
 #include "RSXFragmentProgram.h"
 
+#include "Emu/RSX/color_utils.h"
 #include "Emu/RSX/gcm_enums.h"
 #include "Utilities/StrFmt.h"
 
@@ -211,6 +212,7 @@ namespace glsl
 			{
 				program_common::define_glsl_constants<rsx::ROP_channel_remap>(OS,
 				{
+					{ "ROP_REMAP_SWIZZLE_RGBA", rsx::ROP_channel_remap::RGBA },
 					{ "ROP_REMAP_SWIZZLE_BBBB", rsx::ROP_channel_remap::BBBB },
 					{ "ROP_REMAP_SWIZZLE_GBGB", rsx::ROP_channel_remap::GBGB },
 					{ "ROP_REMAP_SWIZZLE_RGB1", rsx::ROP_channel_remap::RGB1 },
@@ -334,7 +336,7 @@ namespace glsl
 			enabled_options.push_back("_ENABLE_COMPARISON_FUNC");
 		}
 
-		if (props.ROP_channel_remap || (props.require_texture_ops && props.require_depth_conversion))
+		if (props.require_texture_ops && props.require_depth_conversion)
 		{
 			enabled_options.push_back("_ENABLE_COLOR_CHANNEL_REMAPPING");
 		}

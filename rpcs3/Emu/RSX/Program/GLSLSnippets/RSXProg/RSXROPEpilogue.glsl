@@ -58,6 +58,14 @@ R"(
 	}
 #endif
 
+#ifdef _ENABLE_ROP_CHANNEL_REMAPPING
+	const uint ROP_remap = get_ROP_channel_remap();
+	col0 = _mrt_color_t(remap_ROP_output(col0, ROP_remap));
+	col1 = _mrt_color_t(remap_ROP_output(col1, ROP_remap));
+	col2 = _mrt_color_t(remap_ROP_output(col2, ROP_remap));
+	col3 = _mrt_color_t(remap_ROP_output(col3, ROP_remap));
+#endif
+
 #ifdef _ENABLE_PROGRAMMABLE_BLENDING
 	switch (framebufferCount)
 	{
@@ -74,14 +82,6 @@ R"(
 			col0 = do_blend(col0, mrt_color[0]);
 			break;
 	}
-#endif
-
-#ifdef _ENABLE_ROP_CHANNEL_REMAPPING
-	const uint ROP_remap = get_ROP_channel_remap();
-	col0 = _mrt_color_t(remap_vector(col0, ROP_remap));
-	col1 = _mrt_color_t(remap_vector(col1, ROP_remap));
-	col2 = _mrt_color_t(remap_vector(col2, ROP_remap));
-	col3 = _mrt_color_t(remap_vector(col3, ROP_remap));
 #endif
 
 	// Commit
