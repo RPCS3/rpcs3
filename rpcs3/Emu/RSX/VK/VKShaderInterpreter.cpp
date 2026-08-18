@@ -289,6 +289,7 @@ namespace vk
 		{
 			.domain = ::glsl::program_domain::glsl_fragment_program,
 			.require_lit_emulation = true,
+			.ROP_channel_remap = true,
 		};
 
 		u32 len;

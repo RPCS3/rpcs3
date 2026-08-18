@@ -412,6 +412,7 @@ namespace gl
 		{
 			.domain = ::glsl::program_domain::glsl_fragment_program,
 			.require_lit_emulation = true,
+			.ROP_channel_remap = true,
 		};
 
 		::glsl::insert_glsl_legacy_function(builder, properties);
