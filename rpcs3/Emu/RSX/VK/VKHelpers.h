@@ -96,18 +96,18 @@ namespace vk
 	u64  calculate_working_buffer_size(u64 base_size, VkImageAspectFlags aspect);
 
 	void copy_image_typeless(const command_buffer &cmd, image *src, image *dst,
-			const areai& src_rect, const areai& dst_rect,
+			const coord3i& src_rect, const coord3i& dst_rect,
 			const rsx::image_copy_subresource_layers& mip_layers = {},
 			VkImageAspectFlags src_transfer_mask = 0xFF, VkImageAspectFlags dst_transfer_mask = 0xFF);
 
 	void copy_image(const vk::command_buffer& cmd, vk::image* src, vk::image* dst,
-			const areai& src_rect, const areai& dst_rect,
+			const coord3i& src_rect, const coord3i& dst_rect,
 			const rsx::image_copy_subresource_layers& mip_layers = {},
 			VkImageAspectFlags src_transfer_mask = 0xFF, VkImageAspectFlags dst_transfer_mask = 0xFF);
 
 	void copy_scaled_image(const vk::command_buffer& cmd,
 			vk::image* src, vk::image* dst,
-			const areai& src_rect, const areai& dst_rect,
+			const coord3i& src_rect, const coord3i& dst_rect,
 			const rsx::image_copy_subresource_layers& mip_layers = {},
 			bool compatible_formats = false, VkFilter filter = VK_FILTER_LINEAR);
 
