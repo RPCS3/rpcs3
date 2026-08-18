@@ -755,6 +755,33 @@ struct coord3_base
 	{
 		return{ static_cast<NT>(x), static_cast<NT>(y), static_cast<NT>(z), static_cast<NT>(width), static_cast<NT>(height), static_cast<NT>(depth) };
 	}
+
+	void flip_horizontal()
+		requires std::is_signed_v<T>
+	{
+		auto x2 = x + width;
+		x = x2;
+		width = -width;
+	}
+
+	void flip_vertical()
+		requires std::is_signed_v<T>
+	{
+		auto y2 = y + height;
+		y = y2;
+		height = -height;
+	}
+
+	bool is_flipped() const
+		requires std::is_signed_v<T>
+	{
+		return width < 0 || height < 0 || depth < 0;
+	}
+
+	area_base<T> to_area() const
+	{
+		return { x, y, x + width, y + height };
+	}
 };
 
 
