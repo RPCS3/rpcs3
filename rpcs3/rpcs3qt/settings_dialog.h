@@ -64,9 +64,8 @@ private:
 	QString m_discord_state;
 
 	// Descriptions
-	std::vector<std::pair<QLabel*, QString>> m_description_labels;
+	QString m_default_description;
 	QHash<QObject*, QString> m_descriptions;
-	void SubscribeDescription(QLabel* description);
 	void SubscribeTooltip(QObject* object, const QString& tooltip);
 	bool eventFilter(QObject* object, QEvent* event) override;
 	void closeEvent(QCloseEvent* event) override;
