@@ -704,15 +704,21 @@ namespace rsx
 			area.y2 *= samples_y;
 		}
 
+		// NOTE: This overload takes an origin and an extent, not a pair of coordinates.
+		// Both call sites (the GL and VK texture caches) pass (x, width, y, height).
 		template <typename T>
-		void transform_samples_to_pixels(T& x1, T& x2, T& y1, T& y2)
+		void transform_samples_to_pixels(T& x, T& width, T& y, T& height)
 		{
 			if (spp == 1) [[likely]] return;
 
-			x1 /= samples_x;
-			x2 /= samples_x;
-			y1 /= samples_y;
-			y2 /= samples_y;
+			x /= samples_x;
+			y /= samples_y;
+
+			// A region narrower than one whole pixel must not vanish. Truncating it to 0 yields a
+			// zero-extent image transfer, which is invalid and takes out the D24S8 conversion path.
+			// Happens on deep mipmap levels gathered from an MSAA framebuffer.
+			width  = std::max<T>(static_cast<T>(width / samples_x), 1);
+			height = std::max<T>(static_cast<T>(height / samples_y), 1);
 		}
 
 		template <typename T>
