@@ -900,7 +900,7 @@ static s16 fetch_sdl_as_axis(SDL_Joystick* joystick, const sdl_mapping& mapping)
 	return 0;
 }
 
-static s16 fetch_sdl_axis_avg(const std::map<u64, std::vector<SDL_Joystick*>>& joysticks, const sdl_mapping& mapping)
+static s16 fetch_sdl_axis_avg(const std::map<u64, std::vector<SDL_Joystick*>>& joysticks, const sdl_mapping& mapping, bool centered_axis)
 {
 	constexpr s16 MAX = 0x7FFF;
 	constexpr s16 MIN = -0x8000;
@@ -908,12 +908,16 @@ static s16 fetch_sdl_axis_avg(const std::map<u64, std::vector<SDL_Joystick*>>& j
 	auto joysticks_of_type = joysticks.find(mapping.device_type_id);
 	if (joysticks_of_type == joysticks.end())
 	{
-		return mapping.reverse ? MAX : MIN;
+		// Report the axis neutral position when the mapped device is not connected. A centered
+		// axis (steering) must fall back to the mid position: falling back to MIN meant the
+		// emulated wheel reported full-left steering whenever the physical device was unplugged
+		// or the user was playing with a regular controller.
+		return centered_axis ? 0 : (mapping.reverse ? MAX : MIN);
 	}
 
 	if (joysticks_of_type->second.empty())
 	{
-		return mapping.reverse ? MAX : MIN;
+		return centered_axis ? 0 : (mapping.reverse ? MAX : MIN);
 	}
 
 	// TODO account for deadzone and only pick up active devices
@@ -949,14 +953,14 @@ static bool sdl_to_logitech_g27_button(const std::map<u64, std::vector<SDL_Joyst
 
 static u16 sdl_to_logitech_g27_steering(const std::map<u64, std::vector<SDL_Joystick*>>& joysticks, const sdl_mapping& mapping)
 {
-	const s16 avg = fetch_sdl_axis_avg(joysticks, mapping);
+	const s16 avg = fetch_sdl_axis_avg(joysticks, mapping, true); // centered axis, neutral steering is the mid position
 	const u16 unsigned_avg = avg + 0x8000;
 	return unsigned_avg * (0xFFFF >> 2) / 0xFFFF;
 }
 
 static u8 sdl_to_logitech_g27_pedal(const std::map<u64, std::vector<SDL_Joystick*>>& joysticks, const sdl_mapping& mapping)
 {
-	const s16 avg = fetch_sdl_axis_avg(joysticks, mapping);
+	const s16 avg = fetch_sdl_axis_avg(joysticks, mapping, false); // neutral pedal is the released position
 	const u16 unsigned_avg = avg + 0x8000;
 	return unsigned_avg * 0xFF / 0xFFFF;
 }
