@@ -41,14 +41,20 @@ object DriverRepos {
     private const val WINNATIVE_API =
         "https://api.github.com/repos/nicholasx417/WinNative-Components/releases"
 
+    private const val TURNIP_NAME = "WN Turnip Drivers"
+    private const val TURNIP_REPO = "https://github.com/StevenMXZ/freedreno_turnip-CI/releases"
+    private const val TURNIP_API =
+        "https://api.github.com/repos/StevenMXZ/freedreno_turnip-CI/releases"
+
     private const val ADRENO_NAME = "AdrenoToolsDrivers"
     private const val ADRENO_REPO = "https://github.com/K11MCH1/AdrenoToolsDrivers/releases"
     private const val ADRENO_API =
         "https://api.github.com/repos/K11MCH1/AdrenoToolsDrivers/releases"
 
     fun defaults() = listOf(
-        DriverRepo(WINNATIVE_NAME, WINNATIVE_REPO, WINNATIVE_API),
-        DriverRepo(ADRENO_NAME, ADRENO_REPO, ADRENO_API)
+        DriverRepo(TURNIP_NAME, TURNIP_REPO, TURNIP_API),
+        DriverRepo(ADRENO_NAME, ADRENO_REPO, ADRENO_API),
+        DriverRepo(WINNATIVE_NAME, WINNATIVE_REPO, WINNATIVE_API)
     )
 
     fun normalize(name: String, rawUrl: String): DriverRepo {
@@ -120,6 +126,7 @@ object DriverRepos {
             readTimeout = 15000
             setRequestProperty("Accept", "application/vnd.github+json")
             setRequestProperty("User-Agent", "PS3Native")
+            instanceFollowRedirects = true
         }
 
         try {
