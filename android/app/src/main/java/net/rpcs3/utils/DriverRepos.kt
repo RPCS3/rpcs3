@@ -13,6 +13,14 @@ import java.util.Locale
 
 private const val TAG = "DriverRepos"
 private const val PREFS_KEY = "custom_driver_repos"
+private const val PREFS_VERSION_KEY = "custom_driver_repos_version"
+private const val DEFAULTS_VERSION = 2
+
+private val SUPERSEDED_DEFAULTS = setOf(
+    "https://api.github.com/repos/nicholasx417/WinNative-Components/releases",
+    "https://api.github.com/repos/K11MCH1/AdrenoToolsDrivers/releases",
+    "https://api.github.com/repos/StevenMXZ/freedreno_turnip-CI/releases"
+)
 
 data class DriverRepo(
     val name: String,
@@ -36,25 +44,26 @@ data class DriverRelease(
 )
 
 object DriverRepos {
-    private const val WINNATIVE_NAME = "WinNative Components"
-    private const val WINNATIVE_REPO = "https://github.com/nicholasx417/WinNative-Components/releases"
-    private const val WINNATIVE_API =
-        "https://api.github.com/repos/nicholasx417/WinNative-Components/releases"
+    private const val WN_DRIVERS_NAME = "WinNative Turnip Drivers"
+    private const val WN_DRIVERS_REPO = "https://github.com/WinNative-Emu/Drivers/releases"
+    private const val WN_DRIVERS_API =
+        "https://api.github.com/repos/WinNative-Emu/Drivers/releases"
 
-    private const val TURNIP_NAME = "WN Turnip Drivers"
-    private const val TURNIP_REPO = "https://github.com/StevenMXZ/freedreno_turnip-CI/releases"
-    private const val TURNIP_API =
-        "https://api.github.com/repos/StevenMXZ/freedreno_turnip-CI/releases"
+    private const val STEVEN_NAME = "StevenMXZ/Adreno-Tools-Drivers"
+    private const val STEVEN_REPO = "https://github.com/StevenMXZ/Adreno-Tools-Drivers/releases"
+    private const val STEVEN_API =
+        "https://api.github.com/repos/StevenMXZ/Adreno-Tools-Drivers/releases"
 
-    private const val ADRENO_NAME = "AdrenoToolsDrivers"
-    private const val ADRENO_REPO = "https://github.com/K11MCH1/AdrenoToolsDrivers/releases"
-    private const val ADRENO_API =
-        "https://api.github.com/repos/K11MCH1/AdrenoToolsDrivers/releases"
+    private const val WHITEBELYASH_NAME = "whitebelyash/freedreno_turnip-CI"
+    private const val WHITEBELYASH_REPO =
+        "https://github.com/whitebelyash/freedreno_turnip-CI/releases"
+    private const val WHITEBELYASH_API =
+        "https://api.github.com/repos/whitebelyash/freedreno_turnip-CI/releases"
 
     fun defaults() = listOf(
-        DriverRepo(TURNIP_NAME, TURNIP_REPO, TURNIP_API),
-        DriverRepo(ADRENO_NAME, ADRENO_REPO, ADRENO_API),
-        DriverRepo(WINNATIVE_NAME, WINNATIVE_REPO, WINNATIVE_API)
+        DriverRepo(WN_DRIVERS_NAME, WN_DRIVERS_REPO, WN_DRIVERS_API),
+        DriverRepo(STEVEN_NAME, STEVEN_REPO, STEVEN_API),
+        DriverRepo(WHITEBELYASH_NAME, WHITEBELYASH_REPO, WHITEBELYASH_API)
     )
 
     fun normalize(name: String, rawUrl: String): DriverRepo {
@@ -74,7 +83,7 @@ object DriverRepos {
     fun load(prefs: SharedPreferences): List<DriverRepo> {
         val raw = prefs.getString(PREFS_KEY, null) ?: return defaults()
 
-        return runCatching {
+        val stored = runCatching {
             val array = JSONArray(raw)
             (0 until array.length()).mapNotNull { index ->
                 val item = array.optJSONObject(index) ?: return@mapNotNull null
@@ -89,8 +98,19 @@ object DriverRepos {
             }
         }.getOrElse {
             Log.e(TAG, "Failed to parse stored repos", it)
-            defaults()
+            return defaults()
         }
+
+        if (prefs.getInt(PREFS_VERSION_KEY, 1) >= DEFAULTS_VERSION) {
+            return stored
+        }
+
+        val kept = stored.filterNot { it.apiUrl in SUPERSEDED_DEFAULTS }
+        val known = kept.map { it.apiUrl }.toHashSet()
+        val migrated = defaults().filter { it.apiUrl !in known } + kept
+
+        save(prefs, migrated)
+        return migrated
     }
 
     fun save(prefs: SharedPreferences, repos: List<DriverRepo>) {
@@ -105,7 +125,10 @@ object DriverRepos {
             )
         }
 
-        prefs.edit().putString(PREFS_KEY, array.toString()).apply()
+        prefs.edit()
+            .putString(PREFS_KEY, array.toString())
+            .putInt(PREFS_VERSION_KEY, DEFAULTS_VERSION)
+            .apply()
     }
 
     fun withDefaultsRestored(repos: List<DriverRepo>): List<DriverRepo> {
