@@ -289,7 +289,7 @@ namespace vk
 		{
 			.domain = ::glsl::program_domain::glsl_fragment_program,
 			.require_lit_emulation = true,
-			.ROP_channel_remap = true,
+			.ROP_channel_remap = !!(compiler_options & COMPILER_OPT_ENABLE_ROP_REMAP),
 		};
 
 		u32 len;
@@ -591,6 +591,7 @@ namespace vk
 		if (fp_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT) key.compiler_opt |= COMPILER_OPT_ENABLE_DEPTH_EXPORT;
 		if (fp_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) key.compiler_opt |= COMPILER_OPT_ENABLE_F32_EXPORT;
 		if (fp_ctrl & RSX_SHADER_CONTROL_USES_KIL) key.compiler_opt |= COMPILER_OPT_ENABLE_KIL;
+		if (fp_ctrl & RSX_SHADER_CONTROL_ROP_OUTPUT_REMAP) key.compiler_opt |= COMPILER_OPT_ENABLE_ROP_REMAP;
 		if (fp_metadata.referenced_textures_mask) key.compiler_opt |= COMPILER_OPT_ENABLE_TEXTURES;
 		if (fp_metadata.has_branch_instructions) key.compiler_opt |= COMPILER_OPT_ENABLE_FLOW_CTRL;
 		if (fp_metadata.has_pack_instructions) key.compiler_opt |= COMPILER_OPT_ENABLE_PACKING;

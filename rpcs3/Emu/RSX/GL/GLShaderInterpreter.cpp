@@ -145,6 +145,7 @@ namespace gl
 		if (fp_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT) opt |= COMPILER_OPT_ENABLE_DEPTH_EXPORT;
 		if (fp_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) opt |= COMPILER_OPT_ENABLE_F32_EXPORT;
 		if (fp_ctrl & RSX_SHADER_CONTROL_USES_KIL) opt |= COMPILER_OPT_ENABLE_KIL;
+		if (fp_ctrl & RSX_SHADER_CONTROL_ROP_OUTPUT_REMAP) opt |= COMPILER_OPT_ENABLE_ROP_REMAP;
 		if (metadata.referenced_textures_mask) opt |= COMPILER_OPT_ENABLE_TEXTURES;
 		if (metadata.has_branch_instructions) opt |= COMPILER_OPT_ENABLE_FLOW_CTRL;
 		if (metadata.has_pack_instructions) opt |= COMPILER_OPT_ENABLE_PACKING;
@@ -412,7 +413,7 @@ namespace gl
 		{
 			.domain = ::glsl::program_domain::glsl_fragment_program,
 			.require_lit_emulation = true,
-			.ROP_channel_remap = true,
+			.ROP_channel_remap = !!(compiler_options & COMPILER_OPT_ENABLE_ROP_REMAP),
 		};
 
 		::glsl::insert_glsl_legacy_function(builder, properties);
