@@ -58,7 +58,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Divider
-import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -93,8 +92,8 @@ import net.rpcs3.utils.GpuDriverMetadata
 import net.rpcs3.utils.DriversFetcher
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.runtime.mutableIntStateOf
-import kotlinx.coroutines.withContext
 import net.rpcs3.utils.DriverRepo
+import net.rpcs3.utils.DriverSelection
 import net.rpcs3.utils.DriverRepos
 import net.rpcs3.utils.DriversFetcher.FetchResult
 import net.rpcs3.utils.DriversFetcher.FetchResultOutput
@@ -107,7 +106,7 @@ import java.io.FileInputStream
 fun GpuDriversScreen(navigateBack: () -> Unit) {
     val context = LocalContext.current
     var drivers by remember { mutableStateOf(GpuDriverHelper.getInstalledDrivers(context)) }
-    var selectedDriver by remember { mutableStateOf<String?>(null) }
+    var selectedDriverPath by remember { mutableStateOf<String?>(null) }
     val prefs = remember { context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE) }
     var isInstalling by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
@@ -164,7 +163,11 @@ fun GpuDriversScreen(navigateBack: () -> Unit) {
         }
     }
 
-    selectedDriver = prefs.getString("selected_gpu_driver", "Default")
+    LaunchedEffect(drivers) {
+        selectedDriverPath = withContext(Dispatchers.IO) {
+            DriverSelection.globalPath(context)
+        }
+    }
 
     if (showDriverDialog) {
         DriverDialog(
@@ -353,20 +356,13 @@ fun GpuDriversScreen(navigateBack: () -> Unit) {
                 DriverItem(
                     file = file,
                     metadata = metadata,
-                    isSelected = metadata.label == selectedDriver,
+                    isSelected = driverPathOf(file, metadata) == selectedDriverPath,
                     onSelect = {
-                        selectedDriver = metadata.label
-                        prefs.edit {
-                            putString(
-                                "selected_gpu_driver", selectedDriver ?: ""
-                            )
-                        }
-
-                        val path = if (metadata.name == "Default") "" else file.path
+                        val path = driverPathOf(file, metadata)
+                        selectedDriverPath = path
 
                         coroutineScope.launch(Dispatchers.IO) {
-                            RPCS3.instance.settingsSet("Video@@Vulkan@@Custom Driver@@Path", "\"" + path + "\"", "")
-                            RPCS3.instance.settingsSet("Video@@Vulkan@@Custom Driver@@Internal Data Directory", "\"" + context.filesDir + "\"", "")
+                            DriverSelection.setGlobal(context, path)
                         }
                     },
                     onDelete = if (metadata.name == "Default") null else { driverFile ->
@@ -826,3 +822,6 @@ fun downloadDriver(
         }
     )
 }
+
+internal fun driverPathOf(file: java.io.File, metadata: GpuDriverMetadata): String =
+    if (metadata.name == "Default") "" else file.path

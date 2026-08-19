@@ -143,6 +143,8 @@
     <string name="packages_required_size">Required %1$s</string>
     <string name="packages_free_size">"  ·  Free %1$s"</string>
     <string name="packages_not_enough_space">Not enough space</string>
+    <string name="settings_driver_use_global">Use global driver</string>
+    <string name="settings_driver_use_global_detail">Follows whatever is selected in GPU Drivers, including later changes.</string>
     <string name="packages_other_title">Belongs to %1$s, not %2$s. It will install as a separate title.</string>
     <string name="updates_tab_download">Download</string>
     <string name="updater_title">Updater</string>

@@ -28,6 +28,7 @@ import net.rpcs3.databinding.ActivityRpcs3Binding
 import net.rpcs3.dialogs.AlertDialogQueue
 import net.rpcs3.overlay.State
 import net.rpcs3.utils.DriverFlags
+import net.rpcs3.utils.DriverSelection
 import net.rpcs3.utils.GameDetailsReader
 import kotlin.concurrent.thread
 import kotlin.math.abs
@@ -51,6 +52,8 @@ class RPCS3Activity : ComponentActivity() {
     private val modeHoldRunnable = Runnable {
         setDrawerVisible(!drawerVisible.value)
     }
+    private val stopHandler = Handler(Looper.getMainLooper())
+    private var pendingStopCheck: Runnable? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,11 +64,7 @@ class RPCS3Activity : ComponentActivity() {
         enableFullScreenImmersive()
 
         RPCS3.onEmulationStopped = {
-            runOnUiThread {
-                if (!isFinishing && !isDestroyed) {
-                    finish()
-                }
-            }
+            runOnUiThread { scheduleStopCheck() }
         }
 
         binding.drawerHost.setContent {
@@ -174,7 +173,9 @@ class RPCS3Activity : ComponentActivity() {
             Log.w("RPCS3 State", RPCS3.getState().name)
             RPCS3.activeGame.value = gamePath
 
-            DriverFlags.apply(this@RPCS3Activity, GameDetailsReader.read(bootPath).titleId)
+            val bootTitleId = GameDetailsReader.read(bootPath).titleId
+            DriverSelection.apply(this@RPCS3Activity, bootTitleId)
+            DriverFlags.apply(this@RPCS3Activity, bootTitleId)
 
             val descriptor = isoDescriptor
             val bootResult = if (descriptor != null) {
@@ -190,6 +191,20 @@ class RPCS3Activity : ComponentActivity() {
                 finish()
             }
         }
+    }
+
+    private fun scheduleStopCheck() {
+        pendingStopCheck?.let { stopHandler.removeCallbacks(it) }
+
+        val check = Runnable {
+            pendingStopCheck = null
+            if (!isFinishing && !isDestroyed && !RPCS3.getState().isEmulationActive) {
+                finish()
+            }
+        }
+
+        pendingStopCheck = check
+        stopHandler.postDelayed(check, EMULATION_STOP_GRACE_MS)
     }
 
     private val toggleHandler = Handler(Looper.getMainLooper())
@@ -383,6 +398,8 @@ class RPCS3Activity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         stopHud()
+        pendingStopCheck?.let { stopHandler.removeCallbacks(it) }
+        pendingStopCheck = null
         RPCS3.onEmulationStopped = null
         if (RPCS3.getState().isEmulationActive) {
             RPCS3.state.value = EmulatorState.Paused
@@ -588,5 +605,9 @@ class RPCS3Activity : ComponentActivity() {
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) enableFullScreenImmersive()
+    }
+
+    private companion object {
+        const val EMULATION_STOP_GRACE_MS = 1500L
     }
 }
