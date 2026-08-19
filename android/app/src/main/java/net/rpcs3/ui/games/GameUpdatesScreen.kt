@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.outlined.CloudDownload
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.outlined.SystemUpdateAlt
@@ -42,9 +43,14 @@ import net.rpcs3.ui.components.PaneProgressOverlay
 import net.rpcs3.ui.components.PaneScaffold
 import net.rpcs3.ui.components.PaneSectionTitle
 import net.rpcs3.ui.components.PaneTab
+import net.rpcs3.utils.DownloadOutcome
 import net.rpcs3.utils.GameDetails
 import net.rpcs3.utils.GameDetailsReader
 import net.rpcs3.utils.PackageInspector
+import net.rpcs3.utils.UpdateDownloader
+import net.rpcs3.utils.UpdateEntry
+import net.rpcs3.utils.UpdateFinder
+import net.rpcs3.utils.UpdateSources
 import org.json.JSONArray
 
 data class InstalledUpdate(
@@ -77,7 +83,8 @@ internal fun parseUpdates(raw: String): List<InstalledUpdate> = runCatching {
 fun GameUpdatesScreen(
     gamePath: String,
     modifier: Modifier = Modifier,
-    onClose: (() -> Unit)? = null
+    onClose: (() -> Unit)? = null,
+    onManageSources: (() -> Unit)? = null
 ) {
     var entries by remember(gamePath) { mutableStateOf<List<InstalledUpdate>>(emptyList()) }
     var details by remember(gamePath) { mutableStateOf<GameDetails?>(null) }
@@ -138,7 +145,93 @@ fun GameUpdatesScreen(
     }
 
     var selected by remember { mutableIntStateOf(0) }
-    val shown = if (selected == 0) entries.filter { it.isUpdate } else entries.filter { !it.isUpdate }
+    var downloadState by remember(gamePath) { mutableStateOf(UpdateDownloadState()) }
+    val sourcePrefs = remember { UpdateSources.prefsOf(context) }
+
+    LaunchedEffect(selected, details?.titleId, reloadToken) {
+        val serial = details?.titleId.orEmpty()
+
+        if (selected != 0 || serial.isEmpty() || downloadState.searched) {
+            return@LaunchedEffect
+        }
+
+        val sources = UpdateSources.load(sourcePrefs)
+        downloadState = downloadState.copy(loading = true, sourceCount = sources.count { it.enabled })
+        val result = UpdateFinder.lookup(serial, sources)
+        downloadState = downloadState.copy(
+            loading = false,
+            searched = true,
+            entries = result.entries,
+            errors = result.errors
+        )
+    }
+
+    fun searchUpdates() {
+        val serial = details?.titleId.orEmpty()
+
+        if (serial.isEmpty()) {
+            return
+        }
+
+        scope.launch {
+            UpdateFinder.clearCache()
+            val sources = UpdateSources.load(sourcePrefs)
+            downloadState = downloadState.copy(
+                loading = true,
+                failure = null,
+                sourceCount = sources.count { it.enabled }
+            )
+            val result = UpdateFinder.lookup(serial, sources)
+            downloadState = downloadState.copy(
+                loading = false,
+                searched = true,
+                entries = result.entries,
+                errors = result.errors
+            )
+        }
+    }
+
+    fun downloadUpdate(entry: UpdateEntry) {
+        scope.launch {
+            downloadState = downloadState.copy(
+                busyKey = entry.key,
+                progress = -1f,
+                progressLabel = context.getString(R.string.updater_downloading, entry.version),
+                failure = null
+            )
+
+            val outcome = UpdateDownloader.download(context, entry) { done, total, mirror ->
+                downloadState = downloadState.copy(
+                    progress = if (total > 0L) (done.toFloat() / total.toFloat()) else -1f,
+                    progressLabel = context.getString(
+                        R.string.updater_downloading_from,
+                        entry.version,
+                        mirror.sourceName
+                    )
+                )
+            }
+
+            when (outcome) {
+                is DownloadOutcome.Success -> {
+                    downloadState = downloadState.copy(busyKey = null, progress = -1f)
+                    pendingPackages = listOf(Uri.fromFile(outcome.file))
+                }
+
+                is DownloadOutcome.Failure -> {
+                    downloadState = downloadState.copy(
+                        busyKey = null,
+                        progress = -1f,
+                        failure = context.getString(
+                            R.string.updater_download_failed,
+                            outcome.attempts.joinToString("; ")
+                        )
+                    )
+                }
+            }
+        }
+    }
+
+    val shown = if (selected == 1) entries.filter { it.isUpdate } else entries.filter { !it.isUpdate }
 
     Box(modifier.fillMaxSize()) {
         PaneScaffold(
@@ -147,6 +240,10 @@ fun GameUpdatesScreen(
                 details?.titleId?.ifEmpty { null } ?: gameTitleId(gamePath)
             ),
             tabs = listOf(
+                PaneTab(
+                    stringResource(R.string.updates_tab_download),
+                    Icons.Outlined.CloudDownload
+                ),
                 PaneTab(
                     stringResource(R.string.updates_tab_updates),
                     Icons.Outlined.SystemUpdateAlt
@@ -166,6 +263,20 @@ fun GameUpdatesScreen(
             details?.versionLabel(context)?.takeIf { it.isNotEmpty() }?.let { label ->
                 PaneSectionTitle(stringResource(R.string.updates_installed_version, label))
                 Spacer(Modifier.height(4.dp))
+            }
+
+            if (selected == 0) {
+                GameUpdateDownloadTab(
+                    state = downloadState,
+                    installedVersions = (
+                        entries.filter { it.isUpdate }.map { it.version } +
+                            listOfNotNull(details?.version)
+                        ).filter { it.isNotEmpty() }.toSet(),
+                    onRefresh = { searchUpdates() },
+                    onDownload = { downloadUpdate(it) },
+                    onManageSources = { onManageSources?.invoke() }
+                )
+                return@PaneScaffold
             }
 
             PaneSectionTitle(

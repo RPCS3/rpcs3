@@ -28,6 +28,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Album
 import androidx.compose.material.icons.outlined.BugReport
+import androidx.compose.material.icons.outlined.CloudDownload
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.outlined.CheckCircle
@@ -105,6 +106,7 @@ import net.rpcs3.ui.drivers.GpuDriversScreen
 import net.rpcs3.ui.games.GameSourceChoiceDialog
 import net.rpcs3.ui.games.GamesScreen
 import net.rpcs3.ui.games.GameUpdatesScreen
+import net.rpcs3.ui.updater.UpdaterScreen
 import net.rpcs3.ui.games.PackageInstallFlow
 import net.rpcs3.ui.settings.AdvancedSettingsScreen
 import net.rpcs3.ui.patches.AllPatchesScreen
@@ -154,6 +156,7 @@ fun AppNavHost() {
                     navController.navigate("gameSettings?titleId=" + Uri.encode(titleId))
                 },
                 navigateToDrivers = { navController.navigate("drivers") },
+                navigateToUpdater = { navController.navigate("updater") },
                 navigateToAllPatches = { navController.navigate("allPatches") },
                 navigateToGamePatches = { titleId ->
                     navController.navigate("gamePatches?titleId=" + Uri.encode(titleId))
@@ -268,8 +271,13 @@ fun AppNavHost() {
         ) { entry ->
             GameUpdatesScreen(
                 gamePath = entry.arguments?.getString("path").orEmpty(),
-                onClose = navController::navigateUp
+                onClose = navController::navigateUp,
+                onManageSources = { navController.navigate("updater") }
             )
+        }
+
+        composable(route = "updater") {
+            UpdaterScreen(onClose = navController::navigateUp)
         }
 
         composable(route = "diagnostics") {
@@ -302,6 +310,7 @@ fun GamesDestination(
     navigateToSettings: () -> Unit,
     navigateToGameSettings: (titleId: String) -> Unit,
     navigateToDrivers: () -> Unit,
+    navigateToUpdater: () -> Unit,
     navigateToAllPatches: () -> Unit,
     navigateToGamePatches: (titleId: String) -> Unit,
     navigateToGameUpdates: (titleId: String) -> Unit,
@@ -513,6 +522,16 @@ fun GamesDestination(
                                     OverlayEditActivity::class.java
                                 )
                             )
+                        }
+                    )
+
+                    NavigationDrawerItem(
+                        label = { Text(stringResource(R.string.drawer_updater)) },
+                        selected = false,
+                        icon = { Icon(Icons.Outlined.CloudDownload, null) },
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            navigateToUpdater()
                         }
                     )
 
