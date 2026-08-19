@@ -998,6 +998,7 @@ fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, 
 void package_reader::extract_worker()
 {
 	std::vector<u8> read_cache;
+	std::vector<u8> block_cache;
 
 	while (m_num_failures == 0 && !m_aborted)
 	{
@@ -1163,7 +1164,6 @@ void package_reader::extract_worker()
 						return 0;
 					}
 
-					const usz original_size = size;
 					size = std::min<u64>(entry.file_size - pos, size);
 
 					u64 size_cache_end = 0;
@@ -1193,7 +1193,11 @@ void package_reader::extract_worker()
 					// Try to cache for later
 					if (size <= BUF_SIZE && !size_cache_end && !read_size)
 					{
-						const u64 block_size = std::min<u64>({BUF_SIZE, std::max<u64>(size * 5 / 3, 65536), entry.file_size - pos});
+						// Keep the cached block 16-byte aligned: a read that only partially hits the cache continues
+						// at cache_off + read_cache.size(), and decrypt() derives its keystream index from that
+						// offset / sizeof(u128). Clamping to the end of the entry can leave it unaligned, but no
+						// read can continue past that point anyway.
+						const u64 block_size = std::min<u64>({BUF_SIZE, utils::align<u64>(std::max<u64>(size * 5 / 3, 65536), sizeof(u128)), entry.file_size - pos});
 
 						read_cache.resize(block_size + BUF_PADDING);
 						cache_off = pos;
@@ -1216,18 +1220,26 @@ void package_reader::extract_worker()
 					while (read_size < size)
 					{
 						const u64 block_size = std::min<u64>(BUF_SIZE, size - read_size);
-						const u64 available_buffer_size = buffer.size() - read_size;
 
-						ensure(buffer.data() == ptr);
-						ensure(buffer.size() == original_size + BUF_PADDING);
-						ensure(available_buffer_size >= block_size);
+						// decrypt() needs BUF_PADDING slack behind the block, and we can not make any assumption
+						// about the size of the caller's buffer: ptr may belong to any layer stacked on top of this
+						// reader (e.g. EDATADecrypter for SDAT entries), and it may already hold data taken from
+						// read_cache. So decrypt into our own buffer and only copy back what was actually read.
+						block_cache.resize(block_size + BUF_PADDING);
 
-						const usz advance_size = decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), std::span<u8>{static_cast<u8*>(ptr) + read_size, available_buffer_size});
+						ensure(block_cache.size() >= block_size + BUF_PADDING);
+
+						const usz advance_size = decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), block_cache);
 
 						if (!advance_size)
 						{
 							break;
 						}
+
+						ensure(advance_size <= block_size);
+						ensure(read_size + advance_size <= size);
+
+						std::memcpy(static_cast<u8*>(ptr) + read_size, block_cache.data(), advance_size);
 
 						read_size += advance_size;
 						pos += advance_size;
@@ -1462,10 +1474,13 @@ usz package_reader::decrypt(u64 offset, u64 size, const uchar* key, std::span<u8
 	ensure(data_span.data() == static_cast<void*>(local_buf.data()));
 	ensure(data_span.size() <= size);
 
-	// Clear padding
-	if (data_span.size() < local_buf.size())
+	// Clear the unread remainder of the requested range and the alignment padding behind it.
+	// Never touch anything past that: local_buf may be larger than the requested size.
+	const u64 clear_end = std::min<u64>(local_buf.size(), utils::align<u64>(size, sizeof(u128)));
+
+	if (data_span.size() < clear_end)
 	{
-		std::memset(&local_buf[data_span.size()], 0, local_buf.size() - data_span.size());
+		std::memset(&local_buf[data_span.size()], 0, clear_end - data_span.size());
 	}
 
 	// Get block count. Round up.
