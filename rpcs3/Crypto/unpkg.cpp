@@ -1359,14 +1359,32 @@ package_install_result package_reader::extract_data(std::deque<package_reader>& 
 		if (reader.m_num_failures == 0)
 		{
 			const usz thread_count = std::min<usz>(utils::get_thread_count(), reader.m_install_entries.size());
+			atomic_t<u32> num_threads_succeeded {0}; // Check if any thread didn't finish. For example when hitting an exception.
 
-			named_thread_group workers("PKG Installer "sv, std::max<u32>(::narrow<u32>(thread_count), 1) - 1, [&]()
+			if (thread_count > 1)
+			{
+				named_thread_group workers("PKG Installer "sv, ::narrow<u32>(thread_count) - 1, [&]()
+				{
+					reader.extract_worker();
+					num_threads_succeeded++;
+				});
+
+				reader.extract_worker();
+				num_threads_succeeded++;
+
+				workers.join();
+			}
+			else
 			{
 				reader.extract_worker();
-			});
+				num_threads_succeeded++;
+			}
 
-			reader.extract_worker();
-			workers.join();
+			if (thread_count != num_threads_succeeded)
+			{
+				pkg_log.error("%d thread(s) failed with an exception!", thread_count - num_threads_succeeded);
+				reader.m_num_failures++;
+			}
 		}
 
 		num_failures += reader.m_num_failures;
