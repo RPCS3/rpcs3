@@ -578,7 +578,7 @@ namespace gl
 		}
 	}
 
-	void shader_interpreter::flush_vertex_texture_bindings(glsl::program* program)
+	void shader_interpreter::flush_vertex_texture_bindings(glsl::program* /*program*/)
 	{
 		// TODO
 	}
