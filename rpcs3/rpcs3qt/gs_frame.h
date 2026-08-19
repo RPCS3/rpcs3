@@ -47,6 +47,7 @@ private:
 	u32 m_hide_mouse_idletime = 2000; // ms
 	bool m_flip_showed_frame = false;
 	bool m_start_games_fullscreen = false;
+	bool m_fullscreen_for_dialog = false;
 	bool m_ignore_stop_events = false;
 
 	std::shared_ptr<utils::video_encoder> m_video_encoder{};
@@ -110,6 +111,7 @@ protected:
 
 private:
 	void load_gui_settings();
+	bool confirm_stop();
 	void hide_on_close();
 	void toggle_recording();
 	void toggle_mouselock();

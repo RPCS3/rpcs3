@@ -438,9 +438,7 @@ void main_window::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const Q
 	case gui::shortcuts::shortcut::mw_stop:
 	{
 		if (m_gui_settings->GetStopConfirmation(this))
-		{
 			Emu.GracefulShutdown(false, true);
-		}
 		break;
 	}
 	default:
@@ -2214,6 +2212,7 @@ void main_window::EnableMenus(bool enabled) const
 	ui->toolsSystemCommandsAct->setEnabled(enabled);
 	ui->actionCreate_RSX_Capture->setEnabled(enabled);
 	ui->actionCreate_Savestate->setEnabled(enabled);
+	ui->actionCreate_Savestate_And_Exit->setEnabled(enabled);
 }
 
 void main_window::OnAddBreakpoint(u32 addr) const

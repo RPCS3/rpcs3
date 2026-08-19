@@ -25,7 +25,6 @@
 #include <QApplication>
 #include <QDateTime>
 #include <QKeyEvent>
-#include <QMessageBox>
 #include <QPainter>
 #include <QScreen>
 
@@ -327,18 +326,9 @@ void gs_frame::handle_shortcut(gui::shortcuts::shortcut shortcut_key, const QKey
 	}
 	case gui::shortcuts::shortcut::gw_stop:
 	{
-		if (!Emu.IsStopped())
+		if (confirm_stop())
 		{
-			if (m_gui_settings->GetValue(gui::ib_confirm_exit).toBool() && visibility() == FullScreen)
-			{
-				// The confirmation dialog would be hidden behind the game window in fullscreen mode
-				toggle_fullscreen();
-			}
-
-			if (m_gui_settings->GetStopConfirmation(nullptr, tr("Exit Game?"), tr("Do you really want to exit the game?<br><br>Any unsaved progress will be lost!<br>")))
-			{
-				Emu.GracefulShutdown(true, true);
-			}
+			Emu.GracefulShutdown(true, true);
 		}
 		break;
 	}
@@ -659,7 +649,8 @@ bool gs_frame::get_mouse_lock_state()
 void gs_frame::hide_on_close()
 {
 	// Make sure not to save the hidden state, which is useless to us.
-	const Visibility current_visibility = visibility();
+	// If fullscreen was only left to make room for a confirmation dialog, save what the user actually had.
+	const Visibility current_visibility = m_fullscreen_for_dialog ? Visibility::FullScreen : visibility();
 	m_gui_settings->SetValue(gui::gs_visibility, gui::visibility_to_string(current_visibility == Visibility::Hidden ? m_visibility : current_visibility), false);
 	m_gui_settings->SetValue(gui::gs_geometry, geometry(), true);
 
@@ -1211,17 +1202,42 @@ void gs_frame::mouse_hide_timeout()
 	}
 }
 
+bool gs_frame::confirm_stop()
+{
+	// These are the conditions under which GetStopConfirmation actually shows its dialog. Leaving fullscreen for one that never appears would be a glitch.
+	const bool dialog_expected = !Emu.IsStopped() && !Emu.IsClosePending() && m_gui_settings->GetValue(gui::ib_confirm_exit).toBool();
+	const bool left_fullscreen = dialog_expected && visibility() == FullScreen;
+
+	// Remember it, so that closing the window does not persist the windowed state we are about to force
+	m_fullscreen_for_dialog = left_fullscreen;
+
+	if (left_fullscreen)
+	{
+		// The confirmation dialog would be hidden behind the game window in fullscreen mode
+		toggle_fullscreen();
+	}
+
+	// This is a top level window of its own, so the dialog gets no parent and is kept on top instead
+	if (m_gui_settings->GetStopConfirmation(nullptr, tr("Exit Game?"), tr("Do you really want to exit the game?<br><br>Any unsaved progress will be lost!<br>")))
+	{
+		return true;
+	}
+
+	// The game keeps running, so put the window back the way the user had it
+	if (left_fullscreen && visibility() != FullScreen)
+	{
+		toggle_fullscreen();
+	}
+
+	m_fullscreen_for_dialog = false;
+	return false;
+}
+
 bool gs_frame::event(QEvent* ev)
 {
 	if (ev->type() == QEvent::Close)
 	{
-		if (m_gui_settings->GetValue(gui::ib_confirm_exit).toBool() && visibility() == FullScreen)
-		{
-			// The confirmation dialog would be hidden behind the game window in fullscreen mode
-			toggle_fullscreen();
-		}
-
-		if (!m_gui_settings->GetStopConfirmation(nullptr, tr("Exit Game?"), tr("Do you really want to exit the game?<br><br>Any unsaved progress will be lost!<br>")))
+		if (!confirm_stop())
 		{
 			return true;
 		}

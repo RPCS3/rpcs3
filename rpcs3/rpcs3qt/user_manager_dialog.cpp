@@ -351,8 +351,11 @@ void user_manager_dialog::OnUserLogin()
 {
 	if (!Emu.IsStopped())
 	{
-		if (!m_gui_settings->GetStopConfirmation(this, tr("Stop emulator?"),
-			tr("In order to change the user you have to stop the emulator first.<br><br>Stop the emulator now?"), gui_save()))
+		// Keep the original wording as the translation key. ShowBox renders rich text, so only the line breaks need converting.
+		QString message = tr("In order to change the user you have to stop the emulator first.\n\nStop the emulator now?");
+		message.replace(QStringLiteral("\n"), QStringLiteral("<br>"));
+
+		if (!m_gui_settings->GetStopConfirmation(this, tr("Stop emulator?"), message, gui_save()))
 		{
 			return;
 		}
