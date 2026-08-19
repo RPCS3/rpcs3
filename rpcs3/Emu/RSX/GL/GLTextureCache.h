@@ -578,8 +578,13 @@ namespace gl
 		{
 			ensure(desc.sections_to_copy.size() == 1);
 			const auto& section = desc.sections_to_copy.front();
-			return create_temporary_subresource_impl(cmd, section.src, static_cast<GLenum>(section.src->get_internal_format()),
-					GL_TEXTURE_2D, desc.gcm_format, desc.width, desc.height, 1, 1, desc.remap, &section);
+			return create_temporary_subresource_impl(
+				cmd, section.src,
+				GL_NONE,                          // NOTE: Do not force this to section.get_sized_internal_fmt(). Leave it as GL_NONE, let the callee find the right type in case of bitcast.
+				GL_TEXTURE_2D, desc.gcm_format,
+				desc.width, desc.height, 1, 1,
+				desc.remap,
+				&section);
 		}
 
 		gl::texture_view* generate_cubemap_from_images(gl::command_context& cmd, const deferred_subresource& desc) override
