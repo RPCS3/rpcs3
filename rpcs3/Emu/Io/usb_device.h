@@ -226,6 +226,12 @@ public:
 
 	virtual bool open_device() = 0;
 
+	// Emulated devices can decline attachment to the bus, e.g. while the real hardware they are backed by is not connected
+	virtual bool is_attachable() const
+	{
+		return true;
+	}
+
 	void get_location(u8* location) const;
 	virtual void read_descriptors();
 
