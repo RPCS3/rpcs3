@@ -147,6 +147,7 @@ public:
 	void connect_usb_device(std::shared_ptr<usb_device> dev, bool update_usb_devices = false);
 	void disconnect_usb_device(std::shared_ptr<usb_device> dev, bool update_usb_devices = false);
 	void reconnect_usb_device(u32 assigned_number);
+	void set_usb_device_attached(usb_device* raw_dev, bool attached);
 
 	// Map of devices actively handled by the ps3(device_id, device)
 	std::map<u32, std::pair<UsbInternalDevice, std::shared_ptr<usb_device>>> handled_devices;
@@ -962,6 +963,12 @@ void usb_handler_thread::connect_usb_device(std::shared_ptr<usb_device> dev, boo
 	if (update_usb_devices)
 		usb_devices.push_back(dev);
 
+	if (!dev->is_attachable())
+	{
+		sys_usbd.trace("USB device(VID=0x%04x, PID=0x%04x) is not attachable, skipping connection", dev->device._device.idVendor, dev->device._device.idProduct);
+		return;
+	}
+
 	for (const auto& [name, ldd] : ldds)
 	{
 		if (dev->device._device.idVendor == ldd.id_vendor && dev->device._device.idProduct >= ldd.id_product_min && dev->device._device.idProduct <= ldd.id_product_max)
@@ -1016,6 +1023,23 @@ void usb_handler_thread::reconnect_usb_device(u32 assigned_number)
 			connect_usb_device(dev, false);
 			break;
 		}
+	}
+}
+
+void usb_handler_thread::set_usb_device_attached(usb_device* raw_dev, bool attached)
+{
+	std::lock_guard lock(mutex);
+	for (const auto& dev : usb_devices)
+	{
+		if (dev.get() != raw_dev)
+			continue;
+
+		if (attached && !dev->assigned_number)
+			connect_usb_device(dev, false);
+		else if (!attached && dev->assigned_number)
+			disconnect_usb_device(dev, false);
+
+		break;
 	}
 }
 
@@ -1113,6 +1137,16 @@ void reconnect_usb(u32 assigned_number)
 		return;
 	}
 	usbh->reconnect_usb_device(assigned_number);
+}
+
+void set_usb_device_attached(usb_device* dev, bool attached)
+{
+	auto usbh = g_fxo->try_get<named_thread<usb_handler_thread>>();
+	if (!usbh)
+	{
+		return;
+	}
+	usbh->set_usb_device_attached(dev, attached);
 }
 
 void handle_hotplug_event(bool connected, bool source_is_libusb)

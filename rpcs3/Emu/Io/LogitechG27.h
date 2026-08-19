@@ -117,6 +117,7 @@ public:
 	void control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer) override;
 	void interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer) override;
 	bool open_device() override;
+	bool is_attachable() const override;
 
 private:
 	void sdl_refresh();
@@ -148,6 +149,9 @@ private:
 	int m_default_spring_effect_id = -1;
 
 	bool m_enabled = false;
+
+	// Updated by sdl_refresh, read by is_attachable which cannot take m_sdl_handles_mutex (called from the usb handler)
+	atomic_t<bool> m_steering_device_present = false;
 
 	std::unique_ptr<named_thread<std::function<void()>>> m_house_keeping_thread;
 };
