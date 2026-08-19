@@ -408,7 +408,7 @@ std::pair<vm::addr_t, u32> vm::hle_malloc_allocator::alloc(u32 size, u32 align)
 	return { vm::cast(addr), addr ? size : 0 };
 }
 
-void vm::hle_malloc_allocator::dealloc(u32 addr, u32 size) noexcept
+void vm::hle_malloc_allocator::dealloc(u32 addr, u32 /*size*/) noexcept
 {
 	const auto ppu = ensure(cpu_thread::get_current<ppu_thread>());
 	ppu_execute<&_sys_free>(*ppu, addr);
