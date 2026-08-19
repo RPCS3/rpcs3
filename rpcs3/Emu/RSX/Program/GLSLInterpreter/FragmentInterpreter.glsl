@@ -888,6 +888,14 @@ void main()
 #ifdef ALPHA_TEST_NEQUAL
 	if (ocol0.a == alpha_ref) discard; // nequal
 #endif
+
+#ifdef _ENABLE_ROP_CHANNEL_REMAPPING
+	const uint ROP_remap = get_ROP_channel_remap();
+	ocol0 = remap_ROP_output(ocol0, ROP_remap);
+	ocol1 = remap_ROP_output(ocol1, ROP_remap);
+	ocol2 = remap_ROP_output(ocol2, ROP_remap);
+	ocol3 = remap_ROP_output(ocol3, ROP_remap);
+#endif
 }
 
 )"

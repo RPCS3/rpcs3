@@ -128,4 +128,56 @@ bool comparison_passes(const in float a, const in float b, const in uint func)
 }
 #endif
 
+#ifdef _ENABLE_COLOR_CHANNEL_REMAPPING
+vec4 remap_vector(const in vec4 color, const in uint remap)
+{
+	vec4 result;
+	if (_get_bits(remap, 0, 8) == 0xE4)
+	{
+		result = color;
+	}
+	else
+	{
+		uvec4 remap_channel = uvec4(remap) >> uvec4(2, 4, 6, 0);
+		remap_channel &= 3;
+		remap_channel = (remap_channel + 3) % 4; // Map A-R-G-B to R-G-B-A
+
+		// Generate remapped result
+		result.a = color[remap_channel.a];
+		result.r = color[remap_channel.r];
+		result.g = color[remap_channel.g];
+		result.b = color[remap_channel.b];
+	}
+
+	if (_get_bits(remap, 8, 8) == 0xAA)
+		return result;
+
+	uvec4 remap_select = uvec4(remap) >> uvec4(10, 12, 14, 8);
+	remap_select &= 3;
+	bvec4 choice = lessThan(remap_select, uvec4(2));
+	return _select(result, vec4(remap_select), choice);
+}
+#endif
+
+#ifdef _ENABLE_ROP_CHANNEL_REMAPPING
+#define get_ROP_channel_remap() _get_bits(rop_control, MRT_CHANNEL_REMAP_OFFSET, MRT_CHANNEL_REMAP_LENGTH)
+vec4 remap_ROP_output(const in vec4 col, const in uint remap_index)
+{
+	switch (remap_index)
+	{
+	default:
+	case ROP_REMAP_SWIZZLE_RGBA: // RGBA
+		return col;
+	case ROP_REMAP_SWIZZLE_BBBB: // B8
+		return col.bbbb;
+	case ROP_REMAP_SWIZZLE_GBGB: // G8B8
+		return col.bgbg;
+	case ROP_REMAP_SWIZZLE_RGB1: // RGB1
+		return vec4(col.rgb, 1.f);
+	case ROP_REMAP_SWIZZLE_RGB0: // RGB0
+		return vec4(col.rgb, 0.f);
+	}
+}
+#endif
+
 )"
