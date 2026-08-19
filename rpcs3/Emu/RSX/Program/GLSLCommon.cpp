@@ -3,6 +3,7 @@
 #include "GLSLCommon.h"
 #include "RSXFragmentProgram.h"
 
+#include "Emu/RSX/color_utils.h"
 #include "Emu/RSX/gcm_enums.h"
 #include "Utilities/StrFmt.h"
 
@@ -202,8 +203,22 @@ namespace glsl
 				{ "MSAA_SAMPLE_CTRL_LENGTH     ", rsx::ROP_control_bits::MSAA_SAMPLE_CTRL_NUM_BITS },
 				{ "FRAG_DEPTH_24_BIT           ", rsx::ROP_control_bits::FRAG_DEPTH_24_BIT },
 				{ "FRAG_DEPTH_FLOAT_BIT        ", rsx::ROP_control_bits::FRAG_DEPTH_FLOAT_BIT },
+				{ "MRT_CHANNEL_REMAP_OFFSET    ", rsx::ROP_control_bits::MRT_CHANNEL_REMAP_OFFSET },
+				{ "MRT_CHANNEL_REMAP_LENGTH    ", rsx::ROP_control_bits::MRT_CHANNEL_REMAP_NUM_BITS },
 				{ "ROP_CMD_MASK                ", rsx::ROP_control_bits::ROP_CMD_MASK }
 			});
+
+			if (props.ROP_channel_remap)
+			{
+				program_common::define_glsl_constants<rsx::ROP_channel_remap>(OS,
+				{
+					{ "ROP_REMAP_SWIZZLE_RGBA", rsx::ROP_channel_remap::RGBA },
+					{ "ROP_REMAP_SWIZZLE_BBBB", rsx::ROP_channel_remap::BBBB },
+					{ "ROP_REMAP_SWIZZLE_GBGB", rsx::ROP_channel_remap::GBGB },
+					{ "ROP_REMAP_SWIZZLE_RGB1", rsx::ROP_channel_remap::RGB1 },
+					{ "ROP_REMAP_SWIZZLE_RGB0", rsx::ROP_channel_remap::RGB0 }
+				});
+			}
 
 			program_common::define_glsl_constants<const char*>(OS,
 			{
@@ -319,6 +334,16 @@ namespace glsl
 		if (props.ROP_alpha_test || (props.require_msaa_ops && props.require_tex_shadow_ops))
 		{
 			enabled_options.push_back("_ENABLE_COMPARISON_FUNC");
+		}
+
+		if (props.require_texture_ops && props.require_depth_conversion)
+		{
+			enabled_options.push_back("_ENABLE_COLOR_CHANNEL_REMAPPING");
+		}
+
+		if (props.ROP_channel_remap)
+		{
+			enabled_options.push_back("_ENABLE_ROP_CHANNEL_REMAPPING");
 		}
 
 		if (props.require_fog_read)

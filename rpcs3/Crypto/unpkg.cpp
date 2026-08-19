@@ -1216,10 +1216,14 @@ void package_reader::extract_worker()
 					while (read_size < size)
 					{
 						const u64 block_size = std::min<u64>(BUF_SIZE, size - read_size);
-						const u64 available_buffer_size = buffer.size() - read_size;
+						u64 available_buffer_size = original_size - read_size;
 
-						ensure(buffer.data() == ptr);
-						ensure(buffer.size() == original_size + BUF_PADDING);
+						if (buffer.data() == ptr)
+						{
+							available_buffer_size = buffer.size() - read_size;
+							ensure(buffer.size() == original_size + BUF_PADDING);
+						}
+
 						ensure(available_buffer_size >= block_size);
 
 						const usz advance_size = decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), std::span<u8>{static_cast<u8*>(ptr) + read_size, available_buffer_size});
@@ -1359,14 +1363,32 @@ package_install_result package_reader::extract_data(std::deque<package_reader>& 
 		if (reader.m_num_failures == 0)
 		{
 			const usz thread_count = std::min<usz>(utils::get_thread_count(), reader.m_install_entries.size());
+			atomic_t<u32> num_threads_succeeded {0}; // Check if any thread didn't finish. For example when hitting an exception.
 
-			named_thread_group workers("PKG Installer "sv, std::max<u32>(::narrow<u32>(thread_count), 1) - 1, [&]()
+			if (thread_count > 1)
+			{
+				named_thread_group workers("PKG Installer "sv, ::narrow<u32>(thread_count) - 1, [&]()
+				{
+					reader.extract_worker();
+					num_threads_succeeded++;
+				});
+
+				reader.extract_worker();
+				num_threads_succeeded++;
+
+				workers.join();
+			}
+			else
 			{
 				reader.extract_worker();
-			});
+				num_threads_succeeded++;
+			}
 
-			reader.extract_worker();
-			workers.join();
+			if (thread_count != num_threads_succeeded)
+			{
+				pkg_log.error("%d thread(s) failed with an exception!", thread_count - num_threads_succeeded);
+				reader.m_num_failures++;
+			}
 		}
 
 		num_failures += reader.m_num_failures;

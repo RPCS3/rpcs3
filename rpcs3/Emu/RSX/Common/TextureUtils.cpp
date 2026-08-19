@@ -3,6 +3,8 @@
 #include "TextureUtils.h"
 #include "../RSXThread.h"
 #include "../rsx_utils.h"
+#include "../color_utils.h"
+
 #include "3rdparty/bcdec/bcdec.hpp"
 
 #include "util/asm.hpp"
@@ -1868,6 +1870,27 @@ namespace rsx
 			return wrap_s == rsx::texture_wrap_mode::border || wrap_t == rsx::texture_wrap_mode::border || wrap_r == rsx::texture_wrap_mode::border;
 		default:
 			return false;
+		}
+	}
+
+	u32 get_ROP_output_shuffle_index(rsx::surface_color_format format)
+	{
+		switch (format)
+		{
+		case surface_color_format::b8:
+			return static_cast<u32>(ROP_channel_remap::BBBB);
+		case surface_color_format::g8b8:
+			return static_cast<u32>(ROP_channel_remap::GBGB);
+		case surface_color_format::x1r5g5b5_z1r5g5b5:
+		case surface_color_format::x8r8g8b8_z8r8g8b8:
+		case surface_color_format::x8b8g8r8_z8b8g8r8:
+			return static_cast<u32>(ROP_channel_remap::RGB0);
+		case surface_color_format::x1r5g5b5_o1r5g5b5:
+		case surface_color_format::x8r8g8b8_o8r8g8b8:
+		case surface_color_format::x8b8g8r8_o8b8g8r8:
+			return static_cast<u32>(ROP_channel_remap::RGB1);
+		default:
+			return static_cast<u32>(ROP_channel_remap::RGBA);
 		}
 	}
 }

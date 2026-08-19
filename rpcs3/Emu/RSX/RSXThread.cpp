@@ -2221,6 +2221,10 @@ namespace rsx
 			{
 				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_SRGB_FRAMEBUFFER;
 			}
+			if (m_ctx->register_state->surface_is_swizzle_remapped())
+			{
+				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ROP_OUTPUT_REMAP;
+			}
 			break;
 		}
 

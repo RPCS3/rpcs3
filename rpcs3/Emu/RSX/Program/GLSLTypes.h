@@ -50,6 +50,7 @@ namespace glsl
 		bool ROP_alpha_to_coverage_test : 1;
 		bool ROP_polygon_stipple_test : 1;
 		bool ROP_discard : 1;
+		bool ROP_channel_remap : 1;
 
 		// Texturing spec
 		bool require_texture_ops : 1;           // Global switch to enable/disable all texture code
