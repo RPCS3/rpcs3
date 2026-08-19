@@ -1216,10 +1216,14 @@ void package_reader::extract_worker()
 					while (read_size < size)
 					{
 						const u64 block_size = std::min<u64>(BUF_SIZE, size - read_size);
-						const u64 available_buffer_size = buffer.size() - read_size;
+						u64 available_buffer_size = original_size - read_size;
 
-						ensure(buffer.data() == ptr);
-						ensure(buffer.size() == original_size + BUF_PADDING);
+						if (buffer.data() == ptr)
+						{
+							available_buffer_size = buffer.size() - read_size;
+							ensure(buffer.size() == original_size + BUF_PADDING);
+						}
+
 						ensure(available_buffer_size >= block_size);
 
 						const usz advance_size = decrypt(entry.file_offset + pos, block_size, is_psp ? PKG_AES_KEY2 : m_dec_key.data(), std::span<u8>{static_cast<u8*>(ptr) + read_size, available_buffer_size});
