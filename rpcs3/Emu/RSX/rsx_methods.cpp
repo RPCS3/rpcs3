@@ -10,9 +10,11 @@
 #include "Emu/RSX/NV47/HW/nv47_sync.hpp"
 #include "Emu/RSX/NV47/HW/context_accessors.define.h" // TODO: Context objects belong in FW not HW
 
+#define REGS(ctx) (rsx::method_registers)
+
 namespace rsx
 {
-	rsx_state method_registers;
+	thread_local rsx_state* method_registers{};
 
 	std::array<rsx_method_t, 0x10000 / 4> methods{};
 	std::array<u32, 0x10000 / 4> state_signals{};
@@ -1738,9 +1740,6 @@ namespace rsx
 
 		// FIFO
 		bind(FIFO::FIFO_DRAW_BARRIER >> 2, fifo::draw_barrier);
-
-		// REGS(ctx)->init();
-		method_registers.init();
 
 		return true;
 	}();

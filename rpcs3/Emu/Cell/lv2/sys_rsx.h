@@ -132,6 +132,7 @@ struct GcmZcullInfo;
 namespace rsx
 {
 	struct GCM_tile_reference;
+	struct rsx_state;
 }
 
 namespace utils
@@ -172,6 +173,8 @@ struct lv2_rsx_context
 	//atomic_t<bool> requested_vsync = false;
 	atomic_t<bool> enable_second_vhandler = false;
 	atomic_t<u64> unsent_gcm_events = 0; // Unsent event bits when aborting RSX/VBLANK thread (will be sent on savestate load)
+
+	std::shared_ptr<rsx::rsx_state> method_regs;
 
 	u32 belonging_process = umax; // Debug information
 

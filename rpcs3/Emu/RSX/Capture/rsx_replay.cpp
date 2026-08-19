@@ -178,7 +178,7 @@ namespace rsx
 		while (thread_ctrl::state() != thread_state::aborting)
 		{
 			// Load registers while the RSX is still idle
-			method_registers = frame->reg_state;
+			*method_registers = frame->reg_state;
 			atomic_fence_seq_cst();
 
 			// start up fifo buffer by dumping the put ptr to first stop

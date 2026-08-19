@@ -2,6 +2,8 @@
 #include "rsx_vertex_data.h"
 #include "rsx_methods.h"
 
+#define REGS(ctx) (rsx::method_registers)
+
 namespace rsx
 {
 	void push_buffer_vertex_info::clear()
@@ -86,7 +88,7 @@ namespace rsx
 		// Internally it appears RSX actually executes the draw commands as they are encountered.
 		// You can change register data contents mid-way for example and it will pick up for the next N draws.
 		// This is how immediate mode is implemented internally.
-		u32* src = rsx::method_registers.register_vertex_info[attr].data.data();
+		u32* src = REGS(0)->register_vertex_info[attr].data.data();
 		u32* dst = data.data() + (vertex_count * vertex_size);
 		u32* end = data.data() + ((required_vertex_count - (skip_last ? 1 : 0)) * vertex_size);
 

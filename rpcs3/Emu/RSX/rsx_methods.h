@@ -1367,7 +1367,7 @@ namespace rsx
 		}
 	};
 
-	extern rsx_state method_registers;
+	extern thread_local rsx_state* method_registers;
 	extern std::array<rsx_method_t, 0x10000 / 4> methods;
 	extern std::array<u32, 0x10000 / 4> state_signals;
 }

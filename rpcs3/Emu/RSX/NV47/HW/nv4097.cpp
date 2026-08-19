@@ -7,7 +7,7 @@
 #include "Emu/system_config.h"
 
 #define RSX(ctx) ctx->rsxthr
-#define REGS(ctx) (&rsx::method_registers)
+#define REGS(ctx) (rsx::method_registers)
 #define RSX_CAPTURE_EVENT(name) if (RSX(ctx)->capture_current_frame) { RSX(ctx)->capture_frame(name); }
 
 namespace rsx

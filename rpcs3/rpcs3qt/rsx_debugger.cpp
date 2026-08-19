@@ -22,6 +22,8 @@
 
 #include <span>
 
+#define REGS(ctx) (rsx::method_registers)
+
 enum GCMEnumTypes
 {
 	CELL_GCM_ENUM,
@@ -678,9 +680,9 @@ void rsx_debugger::GetBuffers() const
 	for (u32 buffer_it = 0; buffer_it < addrs.size(); buffer_it++)
 	{
 		const u32 rsx_buffer_addr = addrs[buffer_it];
-		const u32 width = rsx::method_registers.surface_clip_width();
-		const u32 pitch = rsx::method_registers.surface_pitch(buffer_it);
-		const u32 height = rsx::method_registers.surface_clip_height();
+		const u32 width = REGS(0)->surface_clip_width();
+		const u32 pitch = REGS(0)->surface_pitch(buffer_it);
+		const u32 height = REGS(0)->surface_clip_height();
 
 		Buffer* panel{};
 		switch (buffer_it)
@@ -699,7 +701,7 @@ void rsx_debugger::GetBuffers() const
 
 		u32 bpp = 4;
 		QImage::Format format = QImage::Format_RGB32;
-		const auto fmt = rsx::method_registers.surface_color();
+		const auto fmt = REGS(0)->surface_color();
 		bool bswap = true;
 		u32 dst_bpp = 0;
 
@@ -868,13 +870,13 @@ void rsx_debugger::GetBuffers() const
 	{
 		const u32 rsx_buffer_addr = render->get_zeta_surface_address();
 
-		const u32 width  = rsx::method_registers.surface_clip_width();
-		const u32 height = rsx::method_registers.surface_clip_height();
-		const u32 pitch = rsx::method_registers.surface_z_pitch();
+		const u32 width  = REGS(0)->surface_clip_width();
+		const u32 height = REGS(0)->surface_clip_height();
+		const u32 pitch = REGS(0)->surface_z_pitch();
 
 		u32 bpp = 4;
 		QImage::Format format = QImage::Format_Grayscale16;
-		const auto fmt = rsx::method_registers.surface_depth_fmt();
+		const auto fmt = REGS(0)->surface_depth_fmt();
 		bool has_stencil = false;
 		bool is_stencil = buffer_it == 1;
 		bool is_float = false;
@@ -999,7 +1001,7 @@ void rsx_debugger::GetBuffers() const
 		panel->showImage(QImage(panel->cache.data(), width, height, format));
 	}
 
-	auto& textures = rsx::method_registers.fragment_textures;
+	auto& textures = REGS(0)->fragment_textures;
 
 	u32 texture_addr = m_cur_texture;
 	u32 tex_fmt_raw = 0;
@@ -1238,10 +1240,10 @@ void rsx_debugger::GetVertexProgram() const
 	RSXVertexProgram vp;
 	vp.data.reserve(512 * 4);
 
-	const u32 vp_entry = rsx::method_registers.transform_program_start();
+	const u32 vp_entry = REGS(0)->transform_program_start();
 	program_hash_util::vertex_program_utils::analyse_vertex_program
 	(
-		rsx::method_registers.transform_program.data(),  // Input raw block
+		REGS(0)->transform_program.data(),  // Input raw block
 		vp_entry,                                       // Address of entry point
 		vp                                          // [out] Program object
 	);
@@ -1260,9 +1262,9 @@ void rsx_debugger::GetVertexProgram() const
 		::size32(vp.data) / 4, // Instruction count
 		0,                     // Slot
 		16u,                   // Registers used
-		rsx::method_registers.vertex_attrib_input_mask(),
-		rsx::method_registers.vertex_attrib_output_mask(),
-		rsx::method_registers.clip_planes_mask()
+		REGS(0)->vertex_attrib_input_mask(),
+		REGS(0)->vertex_attrib_output_mask(),
+		REGS(0)->clip_planes_mask()
 	};
 
 	vp_blob.reserve(vp_blob.size() + vp.data.size());
@@ -1284,7 +1286,7 @@ void rsx_debugger::GetFragmentProgram() const
 		return;
 	}
 
-	const auto [program_offset, program_location] = rsx::method_registers.shader_program_address();
+	const auto [program_offset, program_location] = REGS(0)->shader_program_address();
 	const auto address = rsx::get_address(program_offset, program_location, 4);
 	if (!address)
 	{
@@ -1296,8 +1298,8 @@ void rsx_debugger::GetFragmentProgram() const
 	auto data_ptr = vm::get_super_ptr(address);
 	const auto fp_metadata = program_hash_util::fragment_program_utils::analyse_fragment_program(data_ptr);
 
-	const bool output_h0 = rsx::method_registers.shader_control() & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? false : true;
-	const bool depth_replace = rsx::method_registers.shader_control() & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT ? true : false;
+	const bool output_h0 = REGS(0)->shader_control() & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? false : true;
+	const bool depth_replace = REGS(0)->shader_control() & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT ? true : false;
 	const u32 flags = 16u /* Reg count */ | ((output_h0 /* 16-bit exports? */ ? 1u : 0u) << 8u) | ((depth_replace /* Export depth? */ ? 1u : 0u) << 16u) | (0u /* Uses KILL? */ << 24u);
 	const auto ucode_len = fp_metadata.program_ucode_length;
 
@@ -1312,9 +1314,9 @@ void rsx_debugger::GetFragmentProgram() const
 		56u,               // Ucode start
 
 		ucode_len / 16,                                               // Instruction count
-		rsx::method_registers.vertex_attrib_output_mask(),            // Slot
+		REGS(0)->vertex_attrib_output_mask(),            // Slot
 		0u,                                                           // Partial load
-		0u | (rsx::method_registers.texcoord_control_mask() << 16u),  // Texcoord input mask | tex2d control
+		0u | (REGS(0)->texcoord_control_mask() << 16u),  // Texcoord input mask | tex2d control
 		0u | (flags << 16u),                                          // Centroid inputs (xor tex2d control) | flags (regs, 16-bit, fragDepth, KILL)
 
 		0u,                                                           // Padding

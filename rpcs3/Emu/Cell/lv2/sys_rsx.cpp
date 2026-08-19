@@ -94,6 +94,7 @@ lv2_rsx_context::lv2_rsx_context() noexcept
 	tiles.resize(15);
 	zculls.resize(8);
 	belonging_process = id_manager::g_process;
+	method_regs = std::make_shared<rsx::rsx_state>();
 }
 
 lv2_rsx_context::lv2_rsx_context(utils::serial& ar) noexcept
@@ -109,6 +110,7 @@ void lv2_rsx_context::save(utils::serial& ar) noexcept
 	ar(enable_second_vhandler);
 	ar(label_addr, main_mem_size, rsx_event_port, driver_info);
 	ar(unsent_gcm_events);
+	ar(*method_regs, method_regs->current_draw_clause);
 }
 
 bool rsx::thread::send_event(lv2_rsx_context* context, u64 data1, u64 event_flags, u64 data3)
