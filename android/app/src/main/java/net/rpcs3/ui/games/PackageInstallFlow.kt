@@ -27,7 +27,8 @@ private fun freeSpaceBytes(): Long = runCatching {
 fun PackageInstallFlow(
     uris: List<Uri>,
     onFinished: () -> Unit,
-    onInstallStarted: (Long) -> Unit = {}
+    onInstallStarted: (Long) -> Unit = {},
+    expectedTitleId: String = ""
 ) {
     val context = LocalContext.current
     var scanned by remember(uris) { mutableStateOf<List<PackageInfo>?>(null) }
@@ -78,7 +79,8 @@ fun PackageInstallFlow(
                 onInstallStarted(progress)
             }
         },
-        onDismiss = onFinished
+        onDismiss = onFinished,
+        expectedTitleId = expectedTitleId
     )
 }
 

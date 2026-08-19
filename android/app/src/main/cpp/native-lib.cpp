@@ -582,6 +582,18 @@ static std::string locateEbootPath(const std::string &root) {
   return {};
 }
 
+static std::string canonicalOrSelf(const std::string &path) {
+  std::string trimmed = path;
+
+  while (trimmed.size() > 1 && trimmed.back() == '/') {
+    trimmed.pop_back();
+  }
+
+  std::error_code ec;
+  auto resolved = std::filesystem::weakly_canonical(trimmed, ec).string();
+  return ec ? trimmed : resolved;
+}
+
 static std::string locateParamSfoPath(const std::string &root) {
   if (std::filesystem::is_regular_file(root)) {
     return root;
@@ -2748,25 +2760,35 @@ Java_net_rpcs3_RPCS3_patchFileDelete(JNIEnv *env, jobject, jstring jname) {
 }
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_net_rpcs3_RPCS3_installedUpdates(JNIEnv *env, jobject, jstring jtitleId) {
+Java_net_rpcs3_RPCS3_installedUpdates(JNIEnv *env, jobject, jstring jtitleId,
+                                      jstring jgamePath) {
   const std::string titleId = unwrap(env, jtitleId);
   auto array = nlohmann::json::array();
   const std::string gameDir = rpcs3::utils::get_hdd0_game_dir();
 
-  if (!fs::is_dir(gameDir)) {
+  if (titleId.empty() || !fs::is_dir(gameDir)) {
     return wrap(env, array.dump());
   }
+
+  const std::string gamePath =
+      jgamePath != nullptr ? canonicalOrSelf(unwrap(env, jgamePath))
+                           : std::string();
 
   for (auto &&entry : fs::dir(gameDir)) {
     if (!entry.is_directory || entry.name == "." || entry.name == "..") {
       continue;
     }
 
-    if (!titleId.empty() && entry.name.find(titleId) == std::string::npos) {
+    if (entry.name != titleId && !entry.name.starts_with(titleId + "_")) {
       continue;
     }
 
     const std::string path = gameDir + entry.name;
+
+    if (!gamePath.empty() && canonicalOrSelf(path) == gamePath) {
+      continue;
+    }
+
     const std::string sfoPath = path + "/PARAM.SFO";
 
     std::string title;

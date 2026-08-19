@@ -143,6 +143,7 @@
     <string name="packages_required_size">Required %1$s</string>
     <string name="packages_free_size">"  ·  Free %1$s"</string>
     <string name="packages_not_enough_space">Not enough space</string>
+    <string name="packages_other_title">Belongs to %1$s, not %2$s. It will install as a separate title.</string>
     <plurals name="packages_skipped_count">
         <item quantity="one">%1$d file skipped as unreadable</item>
         <item quantity="other">%1$d files skipped as unreadable</item>

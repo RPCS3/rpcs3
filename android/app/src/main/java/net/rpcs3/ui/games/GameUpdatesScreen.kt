@@ -90,7 +90,9 @@ fun GameUpdatesScreen(
         withContext(Dispatchers.IO) {
             val resolved = GameDetailsReader.read(gamePath)
             val loaded = parseUpdates(
-                runCatching { RPCS3.instance.installedUpdates(resolved.titleId) }.getOrDefault("[]")
+                runCatching {
+                    RPCS3.instance.installedUpdates(resolved.titleId, gamePath)
+                }.getOrDefault("[]")
             )
             withContext(Dispatchers.Main) {
                 details = resolved
@@ -117,7 +119,8 @@ fun GameUpdatesScreen(
             onInstallStarted = { id ->
                 installProgress = id
                 overlayHidden = false
-            }
+            },
+            expectedTitleId = details?.titleId.orEmpty()
         )
     }
 

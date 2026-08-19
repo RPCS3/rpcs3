@@ -53,7 +53,8 @@ fun PackageInstallDialog(
     scanning: Boolean,
     freeSpace: Long,
     onConfirm: (List<PackageInfo>) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    expectedTitleId: String = ""
 ) {
     var excluded by remember(packages) { mutableStateOf(setOf<String>()) }
 
@@ -61,6 +62,11 @@ fun PackageInstallDialog(
     val selected = ordered.filter { it.valid && it.uri.toString() !in excluded }
     val requiredSize = selected.sumOf { it.dataSize }
     val corrupted = ordered.filter { !it.valid }
+    val foreign = if (expectedTitleId.isEmpty()) {
+        emptyList()
+    } else {
+        selected.filter { it.titleId.isNotEmpty() && it.titleId != expectedTitleId }
+    }
     val enoughSpace = freeSpace <= 0L || requiredSize <= freeSpace
 
     val context = LocalContext.current
@@ -174,6 +180,19 @@ fun PackageInstallDialog(
                             R.plurals.packages_skipped_count,
                             corrupted.size,
                             corrupted.size
+                        ),
+                        color = SettingsStyle.WarningAmber,
+                        fontSize = 12.sp
+                    )
+                }
+
+                if (foreign.isNotEmpty()) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = stringResource(
+                            R.string.packages_other_title,
+                            foreign.joinToString(", ") { it.titleId }.take(120),
+                            expectedTitleId
                         ),
                         color = SettingsStyle.WarningAmber,
                         fontSize = 12.sp

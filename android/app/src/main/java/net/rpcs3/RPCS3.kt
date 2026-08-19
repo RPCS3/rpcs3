@@ -99,7 +99,7 @@ class RPCS3 {
     external fun patchImport(fd: Int, name: String): Boolean
     external fun patchFileDelete(name: String): Boolean
     external fun gameDetails(path: String): String
-    external fun installedUpdates(titleId: String): String
+    external fun installedUpdates(titleId: String, gamePath: String): String
     external fun uninstallUpdate(path: String): Boolean
     external fun patchSet(
         titleId: String,

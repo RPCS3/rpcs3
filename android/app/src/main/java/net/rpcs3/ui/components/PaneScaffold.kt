@@ -410,9 +410,15 @@ fun PaneProgressOverlay(
     Box(
         modifier = modifier
             .fillMaxSize()
+            .background(Rpcs.Background.copy(alpha = 0.72f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = {}
+            )
             .windowInsetsPadding(WindowInsets.systemBars)
             .padding(Dims.ScreenPadding),
-        contentAlignment = Alignment.BottomCenter
+        contentAlignment = Alignment.Center
     ) {
         Column(
             modifier = Modifier

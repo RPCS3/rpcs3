@@ -281,7 +281,9 @@ fun GameItem(
                     }
 
                     runCatching {
-                        parseUpdates(RPCS3.instance.installedUpdates(serial)).forEach { entry ->
+                        parseUpdates(
+                            RPCS3.instance.installedUpdates(serial, game.info.path)
+                        ).forEach { entry ->
                             RPCS3.instance.uninstallUpdate(entry.path)
                         }
                     }
