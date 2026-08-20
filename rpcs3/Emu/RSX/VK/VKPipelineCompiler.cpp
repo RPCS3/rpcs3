@@ -161,8 +161,9 @@ namespace vk
 
 		VkPipelineRasterizationStateCreateInfo rs = create_info.state.rs;
 		VkPipelineRasterizationProvokingVertexStateCreateInfoEXT provoking_vertex_state{};
-		if (m_device->get_provoking_vertex_last_support())
+		if (flags & USE_LAST_PROVOKING_VERTEX)
 		{
+			ensure(m_device->get_provoking_vertex_last_support());
 			provoking_vertex_state.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_PROVOKING_VERTEX_STATE_CREATE_INFO_EXT;
 			provoking_vertex_state.pNext = rs.pNext;
 			provoking_vertex_state.provokingVertexMode = VK_PROVOKING_VERTEX_MODE_LAST_VERTEX_EXT;

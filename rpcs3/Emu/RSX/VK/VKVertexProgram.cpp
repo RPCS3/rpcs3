@@ -497,6 +497,8 @@ VKVertexProgram::~VKVertexProgram()
 
 void VKVertexProgram::Decompile(const RSXVertexProgram& prog)
 {
+	use_last_provoking_vertex = !!(prog.ctrl & RSX_SHADER_CONTROL_FLAT_SHADING);
+
 	std::string source;
 	VKVertexDecompilerThread decompiler(prog, source, parr, *this);
 	decompiler.Task();
