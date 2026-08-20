@@ -839,7 +839,7 @@ bool EDATADecrypter::ReadHeader()
 		// Type 2: Use key from RAP file (RIF key). (also used for type 1 at the moment)
 		else 
 		{
-			const std::string rap_path = rpcs3::utils::get_rap_file_path(npdHeader.content_id);
+			const std::string rap_path = rpcs3::utils::get_rap_file_path(npdHeader.get_content_id());
 
 			if (fs::file rap{rap_path}; rap && rap.size() >= sizeof(dec_key))
 			{

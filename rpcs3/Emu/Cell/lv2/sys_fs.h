@@ -246,8 +246,8 @@ public:
 
 	lv2_fs_object& operator=(const lv2_fs_object&) = delete;
 
-	// Get the device's root path (e.g. "/dev_hdd0") from a given path
-	// Cut the trail and return it in seccond argument
+	// Get the device's root path (e.g. "dev_hdd0") from a given path
+	// Cut the trail and return it in second argument
 	static std::pair<std::string_view, std::string> get_path_root_and_trail(std::string_view path);
 
 	// Get the device's root path (e.g. "/dev_hdd0") from a given path
