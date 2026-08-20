@@ -717,6 +717,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 		const auto x = m_ir->CreateZExt(val, get_type<u64[4]>());
 
+		// Use integer operations here so LLVM can fold the masks into VPTERNLOG
 		if (m_use_avx512)
 		{
 			const auto s = m_ir->CreateAnd(m_ir->CreateShl(x, 32), 0x8000000000000000);
@@ -739,6 +740,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	{
 		ensure(val && val->getType() == get_type<f64[4]>());
 
+		// Use integer operations here so LLVM can fold the masks into VPTERNLOG
 		if (m_use_avx512)
 		{
 			const auto d = double_as_uint64(val);
