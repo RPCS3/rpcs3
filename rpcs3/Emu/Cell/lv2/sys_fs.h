@@ -264,14 +264,7 @@ public:
 	static std::array<char, 0x420> get_name(std::string_view filename)
 	{
 		std::array<char, 0x420> name;
-
-		if (filename.size() >= 0x420)
-		{
-			filename = filename.substr(0, 0x420 - 1);
-		}
-
-		filename.copy(name.data(), filename.size());
-		name[filename.size()] = 0;
+		strcpy_trunc(name, filename);
 		return name;
 	}
 

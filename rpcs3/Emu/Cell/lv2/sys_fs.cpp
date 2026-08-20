@@ -466,7 +466,7 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename, std::string
 	{
 		for (auto mp = &g_mp_sys_dev_root; mp; mp = mp->next)
 		{
-			const auto& device_alias_check = !is_path && (
+			const bool device_alias_check = !is_path && (
 				(mp == &g_mp_sys_dev_hdd0 && mp_name == "CELL_FS_IOS:PATA0_HDD_DRIVE"sv) ||
 				(mp == &g_mp_sys_dev_hdd1 && mp_name == "CELL_FS_IOS:PATA1_HDD_DRIVE"sv) ||
 				(mp == &g_mp_sys_dev_flash && mp_name == "CELL_FS_IOS:BUILTIN_FLASH"sv) ||
