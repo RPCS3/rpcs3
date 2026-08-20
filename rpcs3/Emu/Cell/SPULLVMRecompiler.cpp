@@ -7265,7 +7265,7 @@ public:
 
 				if (auto [a, b] = match_vrs<f64[4]>(op.ra, op.rb); a || b)
 				{
-					set_vr(op.rt4, select(sel_bool, get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.ra)));
+					set_vr(op.rt4, select(sel_bool, get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.ra)), nullptr, !(a && b));
 					return true;
 				}
 
@@ -7323,7 +7323,7 @@ public:
 			{
 				if (const auto [a_f64, b_f64] = match_vrs<f64[4]>(op.ra, op.rb); a_f64 || b_f64)
 				{
-					set_vr(op.rt4, select(noncast<s32[4]>(c) != 0, get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.ra)));
+					set_vr(op.rt4, select(noncast<s32[4]>(c) != 0, get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.ra)), nullptr, !(a_f64 && b_f64));
 					return;
 				}
 
