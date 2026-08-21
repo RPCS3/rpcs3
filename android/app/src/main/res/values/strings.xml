@@ -6,6 +6,7 @@
     <string name="action_close">Close</string>
     <string name="action_save">Save</string>
     <string name="action_reset">Reset</string>
+    <string name="action_apply">Apply</string>
     <string name="action_delete">Delete</string>
     <string name="action_uninstall">Uninstall</string>
     <string name="action_remove">Remove</string>
@@ -179,6 +180,10 @@
         <item quantity="one">%1$d source enabled</item>
         <item quantity="other">%1$d sources enabled</item>
     </plurals>
+    <plurals name="config_source_recommended_detail">
+        <item quantity="one">%1$d tuned setting from the RPCS3 compatibility list</item>
+        <item quantity="other">%1$d tuned settings from the RPCS3 compatibility list</item>
+    </plurals>
     <plurals name="updater_mirror_count">
         <item quantity="one">%1$d source</item>
         <item quantity="other">%1$d sources</item>
@@ -223,6 +228,16 @@
     <string name="settings_reset_game_title">Reset %1$s settings</string>
     <string name="settings_reset_global_message">Every global setting will be restored to its factory default. This is applied immediately and cannot be undone.</string>
     <string name="settings_reset_game_message">Every setting for %1$s will be changed to match your current Global Settings. This is applied immediately and cannot be undone.</string>
+    <string name="settings_reset_recommended_message">Every setting for %1$s will be restored to the recommended configuration. This is applied immediately and cannot be undone.</string>
+    <string name="config_source_recommended">Recommended Config</string>
+    <string name="config_source_global">Global Settings</string>
+    <string name="config_source_expand">Choose configuration source</string>
+    <string name="config_source_recommended_none">Listed as needing no changes</string>
+    <string name="config_source_recommended_missing">Not in the compatibility list</string>
+    <string name="config_source_global_detail">Follow the global configuration</string>
+    <string name="config_source_switch_title">Use %1$s for %2$s?</string>
+    <string name="config_source_switch_recommended_message">The per-game configuration is replaced by the %1$d settings the RPCS3 compatibility list recommends for %2$s. Settings you changed for this game are discarded.</string>
+    <string name="config_source_switch_global_message">The per-game configuration for %1$s is discarded so it follows your Global Settings.</string>
     <string name="settings_error_title">Setting error</string>
     <string name="settings_error_assign">Failed to assign %1$s</string>
     <string name="settings_error_assign_value">Failed to assign %1$s value %2$s</string>

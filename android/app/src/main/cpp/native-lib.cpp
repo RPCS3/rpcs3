@@ -3154,6 +3154,34 @@ extern "C" JNIEXPORT jboolean JNICALL Java_net_rpcs3_RPCS3_settingsSet(
   return true;
 }
 
+extern "C" JNIEXPORT jboolean JNICALL
+Java_net_rpcs3_RPCS3_settingsResetCustom(JNIEnv *env, jobject,
+                                         jstring jtitleId) {
+  const std::string titleId = unwrap(env, jtitleId);
+
+  if (titleId.empty()) {
+    return false;
+  }
+
+  std::lock_guard lock(g_settings_mutex);
+
+  {
+    std::unique_lock save_lock(g_save_mutex);
+    g_save_cv.wait(save_lock, [] { return !g_save_busy; });
+    g_save_pending.erase(titleId);
+  }
+
+  const std::string path = rpcs3::utils::get_custom_config_path(titleId);
+  const bool removed = !path.empty() && fs::is_file(path) && fs::remove_file(path);
+
+  if (g_settings_title == titleId) {
+    g_settings_cfg.reset();
+    g_settings_title.clear();
+  }
+
+  return removed;
+}
+
 extern "C" JNIEXPORT jstring JNICALL
 Java_net_rpcs3_RPCS3_logChannels(JNIEnv *env, jobject) {
   auto result = nlohmann::json::array();

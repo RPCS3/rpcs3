@@ -97,6 +97,7 @@ import net.rpcs3.utils.FileUtil
 import net.rpcs3.utils.FolderGames
 import net.rpcs3.utils.GameDetails
 import net.rpcs3.utils.GameDetailsReader
+import net.rpcs3.utils.RecommendedConfigs
 
 internal fun isInternalGame(path: String): Boolean {
     val root = RPCS3.rootDirectory
@@ -614,8 +615,20 @@ fun GamesScreen(
     val isRefreshing = remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val state = rememberPullToRefreshState()
+    val context = LocalContext.current
+    val seeded = remember { mutableSetOf<String>() }
 
     val gameInProgress = games.find { it.progressList.isNotEmpty() }
+
+    LaunchedEffect(games.toList()) {
+        withContext(Dispatchers.IO) {
+            games.map { it.info.path }
+                .filter { it != "$" && seeded.add(it) }
+                .forEach { path ->
+                    RecommendedConfigs.seedIfNeeded(context, GameDetailsReader.read(path).titleId)
+                }
+        }
+    }
 
     PullToRefreshBox(
         isRefreshing = isRefreshing.value,

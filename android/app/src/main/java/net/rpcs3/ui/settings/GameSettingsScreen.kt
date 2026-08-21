@@ -82,6 +82,8 @@ import net.rpcs3.ui.theme.Dimens
 import net.rpcs3.ui.theme.Dims
 import net.rpcs3.ui.theme.Rpcs
 import net.rpcs3.ui.theme.SettingsStyle
+import net.rpcs3.utils.ConfigSource
+import net.rpcs3.utils.RecommendedConfigs
 import org.json.JSONObject
 
 internal fun iconForCategory(name: String): ImageVector = when (name) {
@@ -158,14 +160,23 @@ fun GameSettingsScreen(
     var baseline by remember(titleId) { mutableStateOf<JSONObject?>(null) }
     var selected by remember(titleId) { mutableIntStateOf(0) }
     var resetToken by remember(titleId) { mutableIntStateOf(0) }
+    var reloadToken by remember(titleId) { mutableIntStateOf(0) }
+    var configSource by remember(titleId) { mutableStateOf(ConfigSource.Global) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val recommended = remember(titleId) {
+        if (titleId.isEmpty()) null else RecommendedConfigs.entryFor(context, titleId)
+    }
 
-    LaunchedEffect(titleId) {
-        root = withContext(Dispatchers.IO) {
-            runCatching { JSONObject(RPCS3.instance.settingsGet("", titleId)) }.getOrNull()
+    LaunchedEffect(titleId, reloadToken) {
+        val (source, loaded) = withContext(Dispatchers.IO) {
+            RecommendedConfigs.sourceOf(context, titleId) to
+                runCatching { JSONObject(RPCS3.instance.settingsGet("", titleId)) }.getOrNull()
         }
-        baseline = root?.let { snapshotOf(it) }
+        configSource = source
+        root = loaded
+        baseline = loaded?.let { snapshotOf(it) }
+        resetToken++
     }
 
     val tree = root
@@ -199,17 +210,36 @@ fun GameSettingsScreen(
                     .background(SettingsStyle.SidebarBg)
                     .padding(top = 14.dp, bottom = 12.dp)
             ) {
-                Text(
-                    text = title,
-                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 10.dp),
-                    color = SettingsStyle.TextPrimary,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 0.2.sp,
-                    lineHeight = 15.sp,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+                if (titleId.isEmpty()) {
+                    Text(
+                        text = title,
+                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 10.dp),
+                        color = SettingsStyle.TextPrimary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 0.2.sp,
+                        lineHeight = 15.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                } else {
+                    ConfigSourceSelector(
+                        titleId = titleId,
+                        source = configSource,
+                        entry = recommended,
+                        modifier = Modifier.padding(
+                            start = 12.dp,
+                            end = 12.dp,
+                            bottom = 10.dp
+                        ),
+                        onSelect = { next ->
+                            scope.launch(Dispatchers.IO) {
+                                RecommendedConfigs.setSource(context, titleId, next)
+                                withContext(Dispatchers.Main) { reloadToken++ }
+                            }
+                        }
+                    )
+                }
                 Box(
                     Modifier
                         .padding(horizontal = 12.dp)
@@ -283,10 +313,19 @@ fun GameSettingsScreen(
                                             titleId
                                         )
                                     },
-                                    message = if (titleId.isEmpty()) {
-                                        context.getString(R.string.settings_reset_global_message)
-                                    } else {
-                                        context.getString(
+                                    message = when {
+                                        titleId.isEmpty() -> {
+                                            context.getString(R.string.settings_reset_global_message)
+                                        }
+
+                                        configSource == ConfigSource.Recommended -> {
+                                            context.getString(
+                                                R.string.settings_reset_recommended_message,
+                                                titleId
+                                            )
+                                        }
+
+                                        else -> context.getString(
                                             R.string.settings_reset_game_message,
                                             titleId
                                         )
@@ -298,27 +337,10 @@ fun GameSettingsScreen(
                                             if (titleId.isEmpty()) {
                                                 resetToDefaults(tree, titleId)
                                             } else {
-                                                val global = runCatching {
-                                                    JSONObject(RPCS3.instance.settingsGet("", ""))
-                                                }.getOrNull()
-                                                if (global != null) {
-                                                    revertTo(global, tree, titleId)
-                                                }
+                                                RecommendedConfigs.applyCurrent(context, titleId)
                                             }
 
-                                            val refreshed = runCatching {
-                                                JSONObject(
-                                                    RPCS3.instance.settingsGet("", titleId)
-                                                )
-                                            }.getOrNull()
-
-                                            withContext(Dispatchers.Main) {
-                                                if (refreshed != null) {
-                                                    root = refreshed
-                                                    baseline = snapshotOf(refreshed)
-                                                }
-                                                resetToken++
-                                            }
+                                            withContext(Dispatchers.Main) { reloadToken++ }
                                         }
                                     }
                                 )

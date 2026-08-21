@@ -114,6 +114,7 @@ class RPCS3 {
     external fun settingsGet(path: String, titleId: String): String
     external fun settingsSet(path: String, value: String, titleId: String): Boolean
     external fun settingsFlush()
+    external fun settingsResetCustom(titleId: String): Boolean
     external fun logChannels(): String
     external fun getState() : Int
     external fun kill()
