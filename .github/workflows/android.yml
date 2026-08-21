@@ -15,6 +15,10 @@ on:
         description: Publish a signed GitHub Release (release variant only)
         type: boolean
         default: false
+      draft_release:
+        description: Create it as a draft so it can be reviewed before going live
+        type: boolean
+        default: true
       release_tag:
         description: Release tag, e.g. v0.1.0 (blank = auto from date and commit)
         type: string
@@ -34,6 +38,7 @@ env:
   ANDROID_API: 31
   VARIANT: ${{ inputs.variant || 'debug' }}
   PUBLISH_RELEASE: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_release && inputs.variant == 'release' }}
+  DRAFT_RELEASE: ${{ github.event_name != 'workflow_dispatch' || inputs.draft_release }}
 
 jobs:
   build:
@@ -232,17 +237,41 @@ jobs:
 
       - name: Publish GitHub Release
         if: env.PUBLISH_RELEASE == 'true'
+        id: release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.assets.outputs.tag }}
           name: PS3Native ${{ steps.assets.outputs.tag }}
-          draft: false
+          draft: ${{ env.DRAFT_RELEASE == 'true' }}
           prerelease: false
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: |
             ${{ runner.temp }}/release/*.apk
             ${{ runner.temp }}/release/SHA256SUMS.txt
+
+      - name: Summarise release
+        if: env.PUBLISH_RELEASE == 'true'
+        run: |
+          tag="${{ steps.assets.outputs.tag }}"
+          url="${{ steps.release.outputs.url }}"
+          if [ "$DRAFT_RELEASE" = "true" ]; then
+            {
+              echo "### Draft release $tag"
+              echo
+              echo "Nothing is public yet and the tag is not created until you publish."
+              echo "Review the APKs and notes, then hit **Publish release**."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "### Published release $tag"
+              echo
+              echo "This is live now."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -n "$url" ]; then
+            echo "$url" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Upload standard APK
         uses: actions/upload-artifact@v4
