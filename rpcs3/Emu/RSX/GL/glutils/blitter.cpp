@@ -59,7 +59,7 @@ namespace gl
 	}
 
 	void blitter::copy_image(
-		gl::command_context& cmd,
+		gl::command_context& /*cmd*/,
 		const texture* src, const texture* dst,
 		const position3i& src_offset,
 		const position3i& dst_offset,
