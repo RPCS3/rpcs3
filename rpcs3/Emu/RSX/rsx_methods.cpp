@@ -709,6 +709,7 @@ namespace rsx
 			state_signals[NV4097_SET_TEX_COORD_CONTROL + 9] = rsx::fragment_program_state_dirty;
 			state_signals[NV4097_SET_TWO_SIDE_LIGHT_EN] = rsx::fragment_program_state_dirty;
 			state_signals[NV4097_SET_POINT_SPRITE_CONTROL] = rsx::fragment_program_state_dirty;
+			state_signals[NV4097_SET_SHADE_MODE] = rsx::vertex_program_state_dirty | rsx::fragment_program_state_dirty;
 			state_signals[NV4097_SET_USER_CLIP_PLANE_CONTROL] = rsx::vertex_state_dirty;
 			state_signals[NV4097_SET_TRANSFORM_BRANCH_BITS] = rsx::vertex_state_dirty;
 			state_signals[NV4097_SET_CLIP_MIN] = rsx::invalidate_zclip_bits;

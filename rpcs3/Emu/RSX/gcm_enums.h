@@ -455,6 +455,7 @@ namespace gcm
 		RSX_SHADER_CONTROL_UNKNOWN1                 = 0x00008000, // seemingly set when srgb packer is used??
 
 		// Custom
+		RSX_SHADER_CONTROL_FLAT_SHADING             = 0x00000800, // Interpolate front/back colors using the provoking vertex
 		RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION  = 0x00010000, // Rasterizing triangles and not lines or points
 		RSX_SHADER_CONTROL_INSTANCED_CONSTANTS      = 0x00020000, // Support instance ID offsets when loading constants
 		RSX_SHADER_CONTROL_INTERPRETER_MODEL        = 0x00040000, // Compile internals expecting interpreter
