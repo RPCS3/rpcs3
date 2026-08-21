@@ -1685,7 +1685,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	EnhanceCheckBox(emu_settings_type::ExitRPCS3OnFinish, ui->exitOnStop, tooltips.settings.exit_on_stop);
 	EnhanceCheckBox(emu_settings_type::PauseOnFocusLoss, ui->pauseOnFocusLoss, tooltips.settings.pause_on_focus_loss);
 	EnhanceCheckBox(emu_settings_type::StartGameFullscreen, ui->startGameFullscreen, tooltips.settings.start_game_fullscreen);
-	EnhanceCheckBox(emu_settings_type::StartBigPictureModeOnBoot, ui->startBigPictureModeOnBoot, tooltips.settings.start_big_picture_mode_on_boot);
 	EnhanceCheckBox(emu_settings_type::PreventDisplaySleep, ui->preventDisplaySleep, tooltips.settings.prevent_display_sleep);
 	ui->preventDisplaySleep->setEnabled(Emu.GetCallbacks().display_sleep_control_supported());
 
@@ -1813,6 +1812,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		SubscribeTooltip(ui->gs_showMouseInFullscreen, tooltips.settings.show_mouse_in_fullscreen);
 		SubscribeTooltip(ui->gs_lockMouseInFullscreen, tooltips.settings.lock_mouse_in_fullscreen);
 		SubscribeTooltip(ui->gs_hideMouseOnIdle_widget, tooltips.settings.hide_mouse_on_idle);
+
+		EnhanceCheckBox(emu_settings_type::StartBigPictureModeOnBoot, ui->startBigPictureModeOnBoot, tooltips.settings.start_big_picture_mode_on_boot);
 
 		ui->gs_disableMouse->setChecked(m_gui_settings->GetValue(gui::gs_disableMouse).toBool());
 		connect(ui->gs_disableMouse, &QCheckBox::toggled, [this](bool checked)
