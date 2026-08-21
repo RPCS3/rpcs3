@@ -11,14 +11,14 @@ on:
         type: choice
         options: [debug, release]
         default: debug
-      publish_release:
-        description: Publish a signed GitHub Release (release variant only)
+      draft_release:
+        description: Create a draft GitHub Release to review before it goes live (release variant only)
         type: boolean
         default: false
-      draft_release:
-        description: Create it as a draft so it can be reviewed before going live
+      publish_release:
+        description: Create a GitHub Release that goes live immediately (release variant only)
         type: boolean
-        default: true
+        default: false
       release_tag:
         description: Release tag, e.g. v0.1.0 (blank = auto from date and commit)
         type: string
@@ -37,7 +37,7 @@ env:
   CMAKE_VERSION: 3.31.6
   ANDROID_API: 31
   VARIANT: ${{ inputs.variant || 'debug' }}
-  PUBLISH_RELEASE: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_release && inputs.variant == 'release' }}
+  PUBLISH_RELEASE: ${{ github.event_name == 'workflow_dispatch' && (inputs.draft_release || inputs.publish_release) && inputs.variant == 'release' }}
   DRAFT_RELEASE: ${{ github.event_name != 'workflow_dispatch' || inputs.draft_release }}
 
 jobs:
@@ -272,6 +272,18 @@ jobs:
           if [ -n "$url" ]; then
             echo "$url" >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      - name: Explain the missing release
+        if: env.VARIANT == 'release' && env.PUBLISH_RELEASE != 'true'
+        run: |
+          {
+            echo "### No GitHub Release was created"
+            echo
+            echo "This run built signed release APKs but neither release box was ticked,"
+            echo "so they are only attached to this run as artifacts."
+            echo
+            echo "Re-run with **Create a draft GitHub Release** to get one you can review."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload standard APK
         uses: actions/upload-artifact@v4
