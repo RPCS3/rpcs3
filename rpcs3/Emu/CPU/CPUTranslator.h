@@ -8,6 +8,10 @@
 #include "Utilities/JIT.h"
 #include "util/v128.hpp"
 
+#ifdef ARCH_X64
+#include <immintrin.h>
+#endif
+
 #ifdef _MSC_VER
 #pragma warning(push, 0)
 #else
@@ -41,6 +45,13 @@
 #pragma warning(pop)
 #else
 #pragma GCC diagnostic pop
+#endif
+
+// MSVC can use intrinsics without compiling for its target feature
+#if defined(_MSC_VER) || !defined(ARCH_X64)
+#define GNUC_X64_TARGET(x)
+#else
+#define GNUC_X64_TARGET(x) [[gnu::target(x)]]
 #endif
 
 #include <functional>
@@ -3807,13 +3818,25 @@ public:
 	}
 
 	template <typename T1, typename T2>
-	value_t<u8[16]> gf2p8affineqb(T1 a, T2 b, u8 c)
+	GNUC_X64_TARGET("gfni") value_t<u8[16]> gf2p8affineqb(T1 a, T2 b, u8 c)
 	{
 		value_t<u8[16]> result;
 
 		const auto data0 = a.eval(m_ir);
 		const auto data1 = b.eval(m_ir);
 
+#ifdef ARCH_X64
+		const auto [a_is_const, a_data] = get_const_vector(data0, -1);
+		const auto [b_is_const, b_data] = get_const_vector(data1, -1);
+
+		if (a_is_const && b_is_const)
+		{
+			const auto affine = _mm_xor_si128(_mm_gf2p8affine_epi64_epi8(a_data, b_data, 0), _mm_set1_epi8(c));
+			result.value = llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(static_cast<v128>(affine)._u8.m_data, 16));
+			return result;
+		}
+#endif
+		
 		const auto immediate = (llvm_const_int<u8>{c});
 		const auto imm8 = immediate.eval(m_ir);
 
@@ -3829,6 +3852,24 @@ public:
 		const auto data0 = a.eval(m_ir);
 		const auto data1 = b.eval(m_ir);
 		const auto data2 = c.eval(m_ir);
+		
+#ifdef ARCH_X64
+		const auto [a_is_const, a_data] = get_const_vector(data0, -1);
+		const auto [b_is_const, b_data] = get_const_vector(data1, -1);
+		const auto [c_is_const, c_data] = get_const_vector(data2, -1);
+
+		if (a_is_const && b_is_const && c_is_const)
+		{
+			__m128i dpbusd;
+			if (utils::has_avx512_icl())
+				dpbusd = _mm_wrapper_dpbusd_avx512vnni(a_data, b_data, c_data);
+			else
+				dpbusd = _mm_wrapper_dpbusd_avxvnni(a_data, b_data, c_data);
+
+			result.value = llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(static_cast<v128>(dpbusd)._u32.m_data, 4));
+			return result;
+		}
+#endif
 
 		result.value = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::x86_avx512_vpdpbusd_128),
 			{data0, m_ir->CreateBitCast(data1, get_type<u8[16]>()), m_ir->CreateBitCast(data2, get_type<u8[16]>())});
@@ -4197,13 +4238,27 @@ template <typename T1, typename T2, typename T3>
 	}
 
 	template <typename T1, typename T2, typename T3>
-	value_t<f32[4]> vfixupimmps(T1 a, T2 b, T3 c, u8 d, u8 e)
+	GNUC_X64_TARGET("avx512vl") value_t<f32[4]> vfixupimmps(T1 a, T2 b, T3 c, u8 d, u8 e)
 	{
 		value_t<f32[4]> result;
 
 		const auto data0 = a.eval(m_ir);
 		const auto data1 = b.eval(m_ir);
 		const auto data2 = c.eval(m_ir);
+		
+#ifdef ARCH_X64
+		const auto [a_is_const, a_data] = get_const_vector(data0, -1);
+		const auto [b_is_const, b_data] = get_const_vector(data1, -1);
+		const auto [c_is_const, c_data] = get_const_vector(data2, -1);
+
+		if (a_is_const && b_is_const && c_is_const)
+		{
+			const auto vfixup = _mm_mask_fixupimm_ps(a_data, e, b_data, c_data, 0); // flag reporting doesn't matter for constants
+			result.value = llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(static_cast<v128>(vfixup)._f.m_data, 4));
+			return result;
+		}
+#endif
+		
 		const auto immediate = (llvm_const_int<u32>{d});
 		const auto imm32 = immediate.eval(m_ir);
 		const auto immediate2 = (llvm_const_int<u8>{e});
@@ -4313,6 +4368,19 @@ template <typename T1, typename T2, typename T3>
 private:
 	// Custom intrinsic table
 	std::unordered_map<std::string_view, std::function<llvm::Value*(llvm::CallInst*)>> m_intrinsics;
+
+#ifdef ARCH_X64
+	// LLVM uses the same intrinsic despite different encodings
+	GNUC_X64_TARGET("avx512vnni,avx512vl") __m128i _mm_wrapper_dpbusd_avx512vnni(__m128i a, __m128i b, __m128i c)
+	{
+		return _mm_dpbusd_epi32(a, b, c);
+	}
+
+	GNUC_X64_TARGET("avxvnni") __m128i _mm_wrapper_dpbusd_avxvnni(__m128i a, __m128i b, __m128i c)
+	{
+		return _mm_dpbusd_avx_epi32(a, b, c);
+	}
+#endif
 
 public:
 	// Call custom intrinsic by name

@@ -165,6 +165,8 @@ namespace gui
 	const gui_save ib_restart_hint = gui_save(main_window, "confirmationRestart",      true);
 
 	const gui_save fd_install_pkg  = gui_save(main_window, "lastExplorePathPKG",  "");
+	const gui_save fd_add_games    = gui_save(main_window, "lastExplorePathADDGAMES", "");
+	const gui_save fd_add_iso      = gui_save(main_window, "lastExplorePathADDISO",   "");
 	const gui_save fd_install_pup  = gui_save(main_window, "lastExplorePathPUP",  "");
 	const gui_save fd_boot_elf     = gui_save(main_window, "lastExplorePathELF",  "");
 	const gui_save fd_boot_game    = gui_save(main_window, "lastExplorePathGAME", "");
@@ -182,7 +184,7 @@ namespace gui
 	const gui_save mw_logger           = gui_save(main_window, "loggerVisible",    false);
 	const gui_save mw_gamelist         = gui_save(main_window, "gamelistVisible",  true);
 	const gui_save mw_toolBarVisible   = gui_save(main_window, "toolBarVisible",   true);
-	const gui_save mw_titleBarsVisible = gui_save(main_window, "titleBarsVisible", true);
+	const gui_save mw_titleBarsVisible = gui_save(main_window, "titleBarsVisible", false);
 	const gui_save mw_geometry         = gui_save(main_window, "geometry",         QByteArray());
 	const gui_save mw_windowState      = gui_save(main_window, "windowState",      QByteArray());
 	const gui_save mw_mwState          = gui_save(main_window, "mwState",          QByteArray());

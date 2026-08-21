@@ -1323,6 +1323,9 @@
     <ClCompile Include="rpcs3qt\guest_memory_dumper.cpp">
       <Filter>Gui\utils</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\auto_scroll_label.cpp">
+      <Filter>Gui\widgets</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Input\ds4_pad_handler.h">
@@ -1576,6 +1579,9 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\render_creator.h">
       <Filter>Gui\settings</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\auto_scroll_label.h">
+      <Filter>Gui\widgets</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

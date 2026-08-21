@@ -123,8 +123,10 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	add_column(gui::game_list_columns::compat);
 	add_column(gui::game_list_columns::dir_size);
 
-	m_progress_dialog = new progress_dialog(tr("Loading games"), tr("Loading games, please wait..."), tr("Cancel"), 0, 0, false, this, Qt::Dialog | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
+	m_progress_dialog = new progress_dialog(tr("Loading games"), tr("Loading games, please wait..."), tr("Cancel"), 0, 100, false, this, Qt::Dialog | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
 	m_progress_dialog->setMinimumDuration(200); // Only show the progress dialog after some time has passed
+	m_progress_dialog->SetValue(m_progress_dialog->maximum());
+	m_progress_dialog->accept();
 
 	// Events
 	connect(m_progress_dialog, &QProgressDialog::canceled, this, [this]()
@@ -344,6 +346,40 @@ bool game_list_frame::IsEntryVisible(const game_info& game, bool search_fallback
 	return is_visible && matches_category() && SearchMatchesApp(QString::fromStdString(game->info.name), serial, search_fallback);
 }
 
+// Show the amount of listed games (and the Disc/HDD/Other share) in the dock title
+void game_list_frame::UpdateWindowTitle(const std::vector<game_info>& matching_apps)
+{
+	const std::string cat_disc_game = cat::cat_disc_game.toStdString();
+	const std::string cat_hdd_game = cat::cat_hdd_game.toStdString();
+	usz disc_games = 0;
+	usz hdd_games = 0;
+	usz other_games = 0;
+
+	for (const auto& app : matching_apps)
+	{
+		if (!app) continue;
+
+		if (app->info.category == cat_disc_game)
+		{
+			disc_games++;
+		}
+		else if (app->info.category == cat_hdd_game)
+		{
+			hdd_games++;
+		}
+		else
+		{
+			other_games++;
+		}
+	}
+
+	setWindowTitle(tr("Game List (%0) - Disc: %1 | HDD: %2 | Other: %3")
+		.arg(matching_apps.size())
+		.arg(disc_games)
+		.arg(hdd_games)
+		.arg(other_games));
+}
+
 void game_list_frame::push_path(const std::string& path, std::vector<std::string>& legit_paths)
 {
 	{
@@ -532,6 +568,8 @@ void game_list_frame::Refresh(const bool from_drive, const std::vector<std::stri
 		m_game_grid->populate(matching_apps, m_notes, m_titles, selected_items, m_play_hover_movies, m_play_hover_music);
 		RepaintIcons();
 	}
+
+	UpdateWindowTitle(matching_apps);
 }
 
 void game_list_frame::OnParsingFinished()
@@ -571,6 +609,7 @@ void game_list_frame::OnParsingFinished()
 			if (is_raw_device || !iso_cache::load(dir_or_elf, iso_cache_key, cache_entry))
 			{
 				archive = std::make_unique<iso_archive>(dir_or_elf);
+				if (!archive->is_valid()) return;
 			}
 
 			// Track this ISO path for cache cleanup after scan completes.
@@ -609,6 +648,8 @@ void game_list_frame::OnParsingFinished()
 			{
 				game_list_log.warning("Cached psf for iso not valid: '%s'", game.info.path);
 				archive = std::make_unique<iso_archive>(dir_or_elf);
+				if (!archive->is_valid()) return;
+
 				cache_entry = {}; // Reset so the cache gets rewritten after scan.
 				psf = {};
 			}
@@ -768,11 +809,11 @@ void game_list_frame::OnParsingFinished()
 				if (game.icon_in_archive)
 				{
 					auto icon_file = archive->open(game.info.icon_path);
-					const auto icon_size = icon_file->size();
-					if (icon_size > 0)
+
+					if (icon_file && icon_file->size() > 0)
 					{
-						cache_entry.icon_data.resize(icon_size);
-						icon_file->read(cache_entry.icon_data.data(), icon_size);
+						cache_entry.icon_data.resize(icon_file->size());
+						icon_file->read(cache_entry.icon_data.data(), icon_file->size());
 					}
 				}
 
@@ -883,6 +924,8 @@ void game_list_frame::OnParsingFinished()
 				}
 
 				iso_archive archive(entry.path);
+				if (!archive.is_valid()) return;
+
 				const iso_fs_node& root = archive.root();
 				const std::regex ps3_gm_regex("^PS3_GM[[:digit:]]{2}$");
 

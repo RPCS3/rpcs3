@@ -2110,7 +2110,7 @@ namespace rsx
 	{
 		if (m_graphics_state.test(rsx::pipeline_state::xform_instancing_state_dirty))
 		{
-			current_vertex_program.ctrl = 0;
+			current_vertex_program.ctrl &= ~RSX_SHADER_CONTROL_INSTANCED_CONSTANTS;
 			if (rsx::method_registers.current_draw_clause.is_trivial_instanced_draw)
 			{
 				current_vertex_program.ctrl |= RSX_SHADER_CONTROL_INSTANCED_CONSTANTS;
@@ -2129,6 +2129,13 @@ namespace rsx
 
 		ensure(!m_graphics_state.test(rsx::pipeline_state::vertex_program_ucode_dirty));
 		current_vertex_program.output_mask = rsx::method_registers.vertex_attrib_output_mask();
+
+		current_vertex_program.ctrl &= ~RSX_SHADER_CONTROL_FLAT_SHADING;
+		if (rsx::method_registers.shade_mode() == rsx::shading_mode::flat &&
+			backend_config.supports_last_provoking_vertex)
+		{
+			current_vertex_program.ctrl |= RSX_SHADER_CONTROL_FLAT_SHADING;
+		}
 
 		for (u32 textures_ref = current_vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 		{
@@ -2169,6 +2176,12 @@ namespace rsx
 		current_fragment_program.two_sided_lighting = m_ctx->register_state->two_side_light_en();
 		current_fragment_program.mrt_buffers_count = rsx::utility::get_mrt_buffers_count(m_ctx->register_state->surface_color_target());
 
+		if (m_ctx->register_state->shade_mode() == rsx::shading_mode::flat &&
+			backend_config.supports_last_provoking_vertex)
+		{
+			current_fragment_program.ctrl |= RSX_SHADER_CONTROL_FLAT_SHADING;
+		}
+
 		if (m_ctx->register_state->current_draw_clause.classify_mode() == primitive_class::polygon)
 		{
 			if (!backend_config.supports_normalized_barycentrics)
@@ -2176,24 +2189,9 @@ namespace rsx
 				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION;
 			}
 
-			if (m_ctx->register_state->alpha_test_enabled())
-			{
-				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ALPHA_TEST;
-			}
-
 			if (m_ctx->register_state->polygon_stipple_enabled())
 			{
 				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_POLYGON_STIPPLE;
-			}
-
-			if (m_ctx->register_state->msaa_alpha_to_coverage_enabled())
-			{
-				const bool is_multiple_samples = m_ctx->register_state->surface_antialias() != rsx::surface_antialiasing::center_1_sample;
-				if (!backend_config.supports_hw_a2c || (!is_multiple_samples && !backend_config.supports_hw_a2c_1spp))
-				{
-					// Emulation required
-					current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ALPHA_TO_COVERAGE;
-				}
 			}
 
 			current_fragment_program.ctrl |= get_fragment_program_export_config();
@@ -2203,6 +2201,21 @@ namespace rsx
 		{
 			// Set high word of the control mask to store point sprite control
 			current_fragment_program.texcoord_control_mask |= u32(m_ctx->register_state->point_sprite_control_mask()) << 16;
+		}
+
+		if (m_ctx->register_state->alpha_test_enabled())
+		{
+			current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ALPHA_TEST;
+		}
+
+		if (m_ctx->register_state->msaa_alpha_to_coverage_enabled())
+		{
+			const bool is_multiple_samples = m_ctx->register_state->surface_antialias() != rsx::surface_antialiasing::center_1_sample;
+			if (!backend_config.supports_hw_a2c || (!is_multiple_samples && !backend_config.supports_hw_a2c_1spp))
+			{
+				// Emulation required
+				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ALPHA_TO_COVERAGE;
+			}
 		}
 
 		// Check if framebuffer is actually an XRGB format and not a WZYX format
@@ -2220,6 +2233,10 @@ namespace rsx
 				m_ctx->register_state->framebuffer_srgb_enabled())
 			{
 				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_SRGB_FRAMEBUFFER;
+			}
+			if (m_ctx->register_state->surface_is_swizzle_remapped())
+			{
+				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ROP_OUTPUT_REMAP;
 			}
 			break;
 		}

@@ -328,6 +328,10 @@ private:
 		case localized_string_id::HOME_MENU_TROPHY_GRADE_SILVER: return tr("Silver", "Trophy type");
 		case localized_string_id::HOME_MENU_TROPHY_GRADE_GOLD: return tr("Gold", "Trophy type");
 		case localized_string_id::HOME_MENU_TROPHY_GRADE_PLATINUM: return tr("Platinum", "Trophy type");
+		case localized_string_id::HOME_MENU_TROPHY_SYNC_TROPHIES: return tr("Sync trophies");
+		case localized_string_id::HOME_MENU_TROPHY_SYNCING_TROPHIES: return tr("Syncing...");
+		case localized_string_id::HOME_MENU_TROPHY_SYNC_SUCCESS: return tr("Synced!");
+		case localized_string_id::HOME_MENU_TROPHY_SYNC_FAILED: return tr("Sync failed");
 		case localized_string_id::HOME_MENU_TROPHY_SORT_GAME_DEFAULT: return tr("Sort: Game Default");
 		case localized_string_id::HOME_MENU_TROPHY_SORT_NOT_EARNED: return tr("Sort: Not Earned");
 		case localized_string_id::HOME_MENU_TROPHY_SORT_EARNED_DATE: return tr("Sort: Earned Date");
