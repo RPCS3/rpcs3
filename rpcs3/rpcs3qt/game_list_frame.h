@@ -60,6 +60,12 @@ public:
 
 	void SetShowCompleted(bool show);
 
+	/** Restrict the game list to the games of a user defined game category. An empty name shows every game. */
+	void SetGameCategory(const QString& name);
+
+	/** Re-reads the members of the selected game category, after games were moved between categories */
+	void ReloadGameCategory();
+
 	content_integrity* GetIsoIntegrity() const { return ensure(m_iso_integrity); }
 	content_integrity* GetPsnContentIntegrity() const { return ensure(m_psn_content_integrity); }
 	content_integrity* GetPsnDlcIntegrity() const { return ensure(m_psn_dlc_integrity); }
@@ -186,6 +192,10 @@ private:
 	// Categories
 	QStringList m_category_filters;
 	QStringList m_grid_category_filters;
+
+	// User defined game category used as an additional filter. Empty means "All Games".
+	QString m_game_category;
+	QSet<QString> m_game_category_serials;
 
 	// List Mode
 	bool m_is_list_layout = true;

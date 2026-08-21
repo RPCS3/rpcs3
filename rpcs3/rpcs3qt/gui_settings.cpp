@@ -167,6 +167,261 @@ QStringList gui_settings::GetGameListCategoryFilters(bool is_list_mode) const
 	return filters;
 }
 
+namespace
+{
+	// Name prefix of the per-category member lists stored in the GameCategory section
+	constexpr QLatin1String gc_games_prefix("games_");
+
+	// '/' is the group separator of QSettings and would split the ini key in two.
+	// ',' separates the entries of the stored category list. The rest is ini syntax.
+	constexpr QStringView gc_forbidden_chars = u"/\\[]=;,";
+	constexpr int gc_max_name_length = 64;
+}
+
+QString gui_settings::GetAllGamesCategoryLabel()
+{
+	return tr("All Games");
+}
+
+bool gui_settings::IsReservedGameCategoryName(const QString& name)
+{
+	// Always reject the English string, plus whatever "All Games" reads as in the current language. A name
+	// created under a different language can still end up matching the label, which merely looks odd: the
+	// default entry is identified by an empty category name, never by its text.
+	return name.compare(GetAllGamesCategoryLabel(), Qt::CaseInsensitive) == 0 ||
+	       name.compare(QStringLiteral("All Games"), Qt::CaseInsensitive) == 0;
+}
+
+QString gui_settings::GetGameCategoryNameHint()
+{
+	QStringList chars;
+
+	for (const QChar c : gc_forbidden_chars)
+	{
+		chars << c;
+	}
+
+	return tr("A category name may be at most %0 characters long, must not start or end with a space, "
+		"and must not contain any of these characters: %1").arg(QString::number(gc_max_name_length), chars.join(QLatin1Char(' ')));
+}
+
+bool gui_settings::IsValidGameCategoryName(const QString& name)
+{
+	if (name.isEmpty() || name.size() > gc_max_name_length || name != name.trimmed())
+	{
+		return false;
+	}
+
+	for (const QChar c : name)
+	{
+		// Control characters would break the line structure of the ini file
+		if (!c.isPrint() || gc_forbidden_chars.contains(c))
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+QStringList gui_settings::GetGameCategories() const
+{
+	QStringList categories = GetValue(gui::gc_categories).toStringList();
+
+	// A hand edited ini could name anything here. Drop what the member accessors would refuse anyway,
+	// so a name that shows up in the menus can always actually hold games.
+	categories.removeIf([](const QString& name) { return !IsValidGameCategoryName(name); });
+	categories.removeDuplicates();
+
+	return categories;
+}
+
+bool gui_settings::AddGameCategory(const QString& name) const
+{
+	if (!IsValidGameCategoryName(name) || IsReservedGameCategoryName(name))
+	{
+		return false;
+	}
+
+	QStringList categories = GetGameCategories();
+
+	if (categories.contains(name, Qt::CaseInsensitive))
+	{
+		return false;
+	}
+
+	categories.append(name);
+	categories.sort(Qt::CaseInsensitive);
+
+	SetValue(gui::gc_categories, categories);
+	return true;
+}
+
+bool gui_settings::RemoveGameCategory(const QString& name) const
+{
+	QStringList categories = GetGameCategories();
+
+	if (!categories.removeOne(name))
+	{
+		return false;
+	}
+
+	// Read the raw value, so this keeps working no matter where the category list below is written
+	const bool reset_current = GetValue(gui::gc_current).toString() == name;
+
+	if (categories.isEmpty())
+	{
+		RemoveValue(gui::gc_categories, false);
+	}
+	else
+	{
+		SetValue(gui::gc_categories, categories, false);
+	}
+
+	RemoveValue(gui::game_category, gc_games_prefix + name, false);
+
+	if (reset_current)
+	{
+		SetCurrentGameCategory({}, false);
+	}
+
+	sync();
+	return true;
+}
+
+QString gui_settings::GetCurrentGameCategory() const
+{
+	const QString name = GetValue(gui::gc_current).toString();
+
+	// Don't report a category that was removed behind our back
+	return GetGameCategories().contains(name) ? name : QString();
+}
+
+void gui_settings::SetCurrentGameCategory(const QString& name, bool sync) const
+{
+	// Falling back to "All Games" means having no selection at all, not an empty one
+	if (name.isEmpty())
+	{
+		RemoveValue(gui::gc_current, sync);
+		return;
+	}
+
+	SetValue(gui::gc_current, name, sync);
+}
+
+QStringList gui_settings::GetGamesInCategory(const QString& name) const
+{
+	if (!IsValidGameCategoryName(name))
+	{
+		return {};
+	}
+
+	return GetValue(gui::game_category, gc_games_prefix + name, QStringList()).toStringList();
+}
+
+void gui_settings::SetGamesInCategory(const QString& name, const QStringList& serials) const
+{
+	if (!IsValidGameCategoryName(name))
+	{
+		return;
+	}
+
+	// QSettings writes an empty list as "@Invalid()", so drop the key instead of leaving that in the ini
+	if (serials.isEmpty())
+	{
+		RemoveValue(gui::game_category, gc_games_prefix + name, false);
+		return;
+	}
+
+	SetValue(gui::game_category, gc_games_prefix + name, serials, false);
+}
+
+QString gui_settings::GetCategoryOfGame(const QString& serial) const
+{
+	for (const QString& category : GetGameCategories())
+	{
+		if (GetGamesInCategory(category).contains(serial))
+		{
+			return category;
+		}
+	}
+
+	return {};
+}
+
+bool gui_settings::MoveGamesToCategory(const QStringList& serials, const QString& name) const
+{
+	const QStringList categories = GetGameCategories();
+
+	if (serials.isEmpty() || (!name.isEmpty() && !categories.contains(name)))
+	{
+		return false;
+	}
+
+	// A bulk move can carry a few hundred serials, so don't scan the list once per moved game
+	const QSet<QString> moved(serials.cbegin(), serials.cend());
+	bool changed = false;
+
+	for (const QString& category : categories)
+	{
+		const QStringList old_games = GetGamesInCategory(category);
+		QStringList games = old_games;
+
+		games.removeIf([&moved](const QString& serial) { return moved.contains(serial); });
+
+		if (category == name)
+		{
+			games.append(serials);
+			games.removeDuplicates();
+			games.sort();
+		}
+
+		// Compare the content: removeDuplicates() and sort() can leave the size untouched while changing it
+		if (games != old_games)
+		{
+			SetGamesInCategory(category, games);
+			changed = true;
+		}
+	}
+
+	if (changed)
+	{
+		sync();
+	}
+
+	return changed;
+}
+
+usz gui_settings::PruneGameCategories(const QSet<QString>& serials) const
+{
+	// A scan that turned up nothing at all is far more likely an unavailable drive than an emptied library,
+	// and wiping every category would throw away work the user cannot get back. Keep them until a scan sees games.
+	if (serials.isEmpty())
+	{
+		return 0;
+	}
+
+	usz dropped = 0;
+
+	for (const QString& category : GetGameCategories())
+	{
+		QStringList games = GetGamesInCategory(category);
+
+		if (const qsizetype removed = games.removeIf([&serials](const QString& serial) { return !serials.contains(serial); }); removed > 0)
+		{
+			SetGamesInCategory(category, games);
+			dropped += removed;
+		}
+	}
+
+	if (dropped > 0)
+	{
+		sync();
+	}
+
+	return dropped;
+}
+
 bool gui_settings::GetCategoryVisibility(int cat, bool is_list_mode) const
 {
 	const gui_save value = GetGuiSaveForCategory(cat, is_list_mode);

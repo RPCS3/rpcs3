@@ -241,6 +241,8 @@ void game_list_frame::LoadSettings()
 	m_sort_column = m_gui_settings->GetValue(gui::gl_sortCol).toInt();
 	m_category_filters = m_gui_settings->GetGameListCategoryFilters(true);
 	m_grid_category_filters = m_gui_settings->GetGameListCategoryFilters(false);
+	m_game_category = m_gui_settings->GetCurrentGameCategory();
+	m_game_category_serials = gui::utils::list_to_set(m_gui_settings->GetGamesInCategory(m_game_category));
 	m_draw_compat_status_to_grid = m_gui_settings->GetValue(gui::gl_draw_compat).toBool();
 	m_prefer_game_data_icons = m_gui_settings->GetValue(gui::gl_pref_gd_icon).toBool();
 	m_show_custom_icons = m_gui_settings->GetValue(gui::gl_custom_icon).toBool();
@@ -342,7 +344,8 @@ bool game_list_frame::IsEntryVisible(const game_info& game, bool search_fallback
 	const QString serial = QString::fromStdString(game->info.serial);
 	const bool is_visible = (m_show_hidden || !m_hidden_list.contains(serial)) &&
 							(m_show_broken || !m_broken_list.contains(serial)) &&
-							(m_show_completed || !m_completed_list.contains(serial));
+							(m_show_completed || !m_completed_list.contains(serial)) &&
+							(m_game_category.isEmpty() || m_game_category_serials.contains(serial));
 	return is_visible && matches_category() && SearchMatchesApp(QString::fromStdString(game->info.name), serial, search_fallback);
 }
 
@@ -1121,6 +1124,17 @@ void game_list_frame::OnRefreshFinished()
 	m_gui_settings->SetValue(gui::gl_broken_list, QStringList(m_broken_list.values()));
 	m_completed_list.intersect(m_serials);
 	m_gui_settings->SetValue(gui::gl_completed_list, QStringList(m_completed_list.values()));
+
+	// ... and the user defined game categories, which are keyed by serial as well
+	if (const usz dropped = m_gui_settings->PruneGameCategories(m_serials); dropped > 0)
+	{
+		game_list_log.notice("Dropped %d game(s) from the game categories: no longer in the game list", dropped);
+
+		// Deliberately not ReloadGameCategory(): a Refresh() follows below anyway, and going through it
+		// would run a second full one whenever the prune touched the selected category.
+		m_game_category_serials = gui::utils::list_to_set(m_gui_settings->GetGamesInCategory(m_game_category));
+	}
+
 	m_serials.clear();
 	m_path_list.clear();
 	m_path_entries.clear();
@@ -1173,6 +1187,34 @@ void game_list_frame::ToggleCategoryFilter(const QStringList& categories, bool s
 			filters.removeAll(cat);
 		}
 	}
+
+	Refresh();
+}
+
+void game_list_frame::SetGameCategory(const QString& name)
+{
+	if (m_game_category == name)
+	{
+		ReloadGameCategory();
+		return;
+	}
+
+	m_game_category = name;
+	m_game_category_serials = gui::utils::list_to_set(m_gui_settings->GetGamesInCategory(name));
+
+	Refresh();
+}
+
+void game_list_frame::ReloadGameCategory()
+{
+	QSet<QString> serials = gui::utils::list_to_set(m_gui_settings->GetGamesInCategory(m_game_category));
+
+	if (m_game_category_serials == serials)
+	{
+		return;
+	}
+
+	m_game_category_serials = std::move(serials);
 
 	Refresh();
 }
