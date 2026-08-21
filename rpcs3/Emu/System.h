@@ -225,20 +225,14 @@ public:
 		return m_boot_source_type;
 	}
 
-	const std::string& GetBoot() const
-	{
-		return m_path;
-	}
+	const std::string& GetBoot() const;
 
 	const std::string& GetLastBoot() const
 	{
 		return m_path_original;
 	}
 
-	const std::string& GetTitleID() const
-	{
-		return m_title_id;
-	}
+	const std::string& GetTitleID() const;
 
 	const std::string& GetTitle() const
 	{
@@ -267,19 +261,12 @@ public:
 
 	void SetExecutableHash(std::string hash) { m_hash = std::move(hash); }
 
-	const std::string& GetCat() const
-	{
-		return m_cat;
-	}
-
+	const std::string& GetCat() const;
 	const std::string& GetFakeCat() const;
 
-	const std::string& GetDir() const
-	{
-		return m_dir;
-	}
+	std::string GetDir() const;
 
-	const std::string GetSfoDir(bool prefer_disc_sfo) const;
+	const std::string GetSfoDir(bool prefer_disc_sfo = false) const;
 
 	// String for GUI dialogs.
 	const std::string& GetUsr() const

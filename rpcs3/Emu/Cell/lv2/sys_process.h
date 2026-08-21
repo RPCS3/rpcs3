@@ -128,6 +128,10 @@ struct lv2_process : public ppu_module<lv2_obj>
 	u32 ctrl_flags1 = 0;
 
 	std::string ELF_file_path;
+	std::string supposed_param_sfo_path;
+	std::string supposed_app_home_path;
+	std::string supposed_title_id;
+	std::string supposed_cat;
 	std::array<u8, 256> ELF_file_hash{};
 	std::unique_ptr<std::array<u8, 0x40>> provided_paramsfo;
 

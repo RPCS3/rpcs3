@@ -3,6 +3,7 @@
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/System.h"
 #include "Emu/VFS.h"
+#include "Loader/PSF.h"
 #include "Emu/IdManager.h"
 
 #include "Crypto/unedat.h"
@@ -53,6 +54,7 @@ lv2_process::lv2_process(shared_ptr<lv2_memory_container> pp_memory) noexcept
 lv2_process::lv2_process(utils::serial& ar) noexcept
 {
 	ar(parent_process, exit_code);
+	ar(ELF_file_path, supposed_param_sfo_path);
 	state = ar.pop<u32>();
 
 	memory_4GB_model = std::make_shared<vm::ps3_virtual_memory_object>();
@@ -103,6 +105,7 @@ lv2_process::lv2_process(utils::serial& ar) noexcept
 void lv2_process::save(utils::serial& ar) noexcept
 {
 	ar(parent_process, exit_code);
+	ar(ELF_file_path, supposed_param_sfo_path);
 	ar(state.load());
 
 	vm::save(memory_4GB_model.get(), ar);

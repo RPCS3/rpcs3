@@ -4806,9 +4806,47 @@ game_boot_result Emulator::VerifyPathCasing(
 	return game_boot_result::no_errors;
 }
 
+const std::string& Emulator::GetBoot() const
+{
+	const auto process = thread_ctrl::get_current() && id_manager::g_process != lv2_process::id_base ? idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process) : null_ptr;
+
+	if (process)
+	{
+		return vfs::get(process->ELF_file_path);
+	}
+
+	return m_path;
+}
+
+const std::string& Emulator::GetTitleID() const
+{
+	const auto process = thread_ctrl::get_current() && id_manager::g_process != lv2_process::id_base ? idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process) : null_ptr;
+
+	if (process)
+	{
+		return process->supposed_title_id;
+	}
+
+	return m_title_id;
+}
+
+const std::string& Emulator::GetCat() const
+{
+	const auto process = thread_ctrl::get_current() && id_manager::g_process != lv2_process::id_base ? idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process) : null_ptr;
+
+	if (process)
+	{
+		return process->supposed_cat;
+	}
+
+	return m_cat;
+}
+
 const std::string& Emulator::GetFakeCat() const
 {
-	if (m_cat == "DG")
+	const std::string* cat = &GetCat();
+
+	if (*cat == "DG")
 	{
 		const std::string mount_point = vfs::get("/dev_bdvd");
 
@@ -4819,7 +4857,7 @@ const std::string& Emulator::GetFakeCat() const
 		}
 	}
 
-	return m_cat;
+	return *cat;
 }
 
 const std::string Emulator::GetSfoDir(bool prefer_disc_sfo) const
@@ -4834,7 +4872,26 @@ const std::string Emulator::GetSfoDir(bool prefer_disc_sfo) const
 		}
 	}
 
+	const auto process = id_manager::g_process != lv2_process::id_base ? idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process) : null_ptr;
+
+	if (process)
+	{
+		return vfs::get(fs::get_parent_dir(process->supposed_param_sfo_path));
+	}
+
 	return m_sfo_dir;
+}
+
+std::string Emulator::GetDir() const
+{
+	const auto process = thread_ctrl::get_current() && id_manager::g_process != lv2_process::id_base ? idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process) : null_ptr;
+
+	if (process)
+	{
+		return process->supposed_app_home_path;
+	}
+
+	return m_dir;
 }
 
 void Emulator::GetBdvdDir(std::string& bdvd_dir, std::string& sfb_dir, std::string& game_dir, const std::string& elf_dir)

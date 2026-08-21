@@ -8,8 +8,10 @@
 #include "Crypto/sha1.h"
 #include "Crypto/unself.h"
 #include "Loader/ELF.h"
+#include "Loader/PSF.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
+#include "Emu/system_utils.hpp"
 #include "Emu/VFS.h"
 
 #include "Emu/Cell/PPUOpcodes.h"
@@ -2404,6 +2406,47 @@ shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2
 
 	const std::string elf_path = argv0[0];
 	process_ptr->ELF_file_path = elf_path;
+
+	if (!lv2_paramsfo.empty())
+	{
+		std::string title_id;
+		title_id.resize(9);
+		std::memcpy(title_id.data(), lv2_paramsfo.data() + 1, 9);
+
+		std::string checked_path = argv0[0];
+
+		for (int i = 100; i; i--)
+		{
+			const std::string parent_path = fs::get_parent_dir(checked_path);
+			if (parent_path.size() >= checked_path.size())
+			{
+				break;
+			}
+
+			fs::file param_sfo(vfs::get(parent_path + "/PARAM.SFO"));
+
+			if (auto loaded = psf::load_object(param_sfo, parent_path); !loaded.empty())
+			{
+				if (psf::get_string(loaded, "TITLE_ID", "") == title_id)
+				{
+					process_ptr->supposed_app_home_path = parent_path + "/";
+					process_ptr->supposed_cat = psf::get_string(loaded, "CATEGORY", "");
+					process_ptr->supposed_title_id = psf::get_string(loaded, "TITLE_ID", "");
+					process_ptr->supposed_param_sfo_path = vfs::retrieve(rpcs3::utils::get_sfo_dir_from_game_path(vfs::get(process_ptr->supposed_app_home_path), title_id) + "/PARAM.SFO");
+					break;
+				}
+			}
+
+			checked_path = parent_path;
+		}
+
+		if (process_ptr->supposed_cat.empty())
+		{
+			process_ptr->supposed_app_home_path = fs::get_parent_dir(argv0[0]);
+			process_ptr->supposed_cat = "HG";
+			process_ptr->supposed_param_sfo_path = "/";
+		}
+	}
 
 	auto& _main = *process_ptr;
 
