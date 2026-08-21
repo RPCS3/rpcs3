@@ -495,6 +495,11 @@ namespace rsx
 			return decode<NV4097_SET_LINE_SMOOTH_ENABLE>().line_smooth_enabled();
 		}
 
+		shading_mode shade_mode() const
+		{
+			return decode<NV4097_SET_SHADE_MODE>().shading();
+		}
+
 		bool poly_offset_point_enabled() const
 		{
 			return decode<NV4097_SET_POLY_OFFSET_POINT_ENABLE>().poly_offset_point_enabled();
