@@ -71,7 +71,8 @@ error_code sys_hid_manager_open(ppu_thread& ppu, u8 device_type, u8 port_no, vm:
 
 error_code sys_hid_manager_ioctl(u32 hid_handle, u32 pkg_id, vm::ptr<void> buf, u64 buf_size)
 {
-	sys_hid.todo("sys_hid_manager_ioctl(hid_handle=0x%x, pkg_id=0x%llx, buf=*0x%x, buf_size=0x%llx)", hid_handle, pkg_id, buf, buf_size);
+	const bool trace = pkg_id == 4;
+	(trace ? sys_hid.trace :  sys_hid.todo)("sys_hid_manager_ioctl(hid_handle=0x%x, pkg_id=0x%llx, buf=*0x%x, buf_size=0x%llx)", hid_handle, pkg_id, buf, buf_size);
 
 	const auto handle = idm::get_unlocked<lv2_hidio_handle>(hid_handle % 256);
 
@@ -114,6 +115,11 @@ error_code sys_hid_manager_ioctl(u32 hid_handle, u32 pkg_id, vm::ptr<void> buf, 
 
 		u8 realhw[17] = { 0x01, 0x02, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x03, 0x50, 0x00, 0x00, 0x1c, 0x1f };
 		memcpy(info->unk, &realhw, 17);
+	}
+	else if (pkg_id == 4)
+	{
+		// Battery
+		vm::write8(buf.addr(), 60);
 	}
 	else if (pkg_id == 5)
 	{
