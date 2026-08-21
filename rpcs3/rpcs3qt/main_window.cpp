@@ -4345,7 +4345,7 @@ void main_window::AddGamesFromDirs(QStringList&& paths)
 		{
 			for (const auto& dir_path : paths)
 			{
-				if (dir_path.startsWith(game->info.path.c_str()) && fs::exists(game->info.path))
+				if (Emu.IsPathInsideDir(game->info.path, dir_path.toStdString()))
 				{
 					existing.insert(game->info.path);
 					break;
