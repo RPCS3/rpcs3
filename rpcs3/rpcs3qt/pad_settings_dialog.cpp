@@ -1,4 +1,5 @@
 #include <QCheckBox>
+#include <QCollator>
 #include <QPushButton>
 #include <QPainter>
 #include <QPainterPath>
@@ -24,11 +25,35 @@
 #include "Input/product_info.h"
 #include "Input/keyboard_pad_handler.h"
 
+#include <algorithm>
 #include <thread>
 
 LOG_CHANNEL(cfg_log, "CFG");
 
 cfg_input_configurations g_cfg_input_configs;
+
+// The default configuration is always listed first, the custom configurations follow in natural order
+inline bool config_file_less_than(const QString& lhs, const QString& rhs)
+{
+	static const QString default_config_file = QString::fromStdString(g_cfg_input_configs.default_config);
+
+	if (lhs == default_config_file || rhs == default_config_file)
+	{
+		return lhs != rhs && lhs == default_config_file;
+	}
+
+	// Sort numbers by value instead of by digit, e.g. "Config 2" before "Config 10"
+	static QCollator collator = []()
+	{
+		QCollator col;
+		col.setNumericMode(true);
+		col.setCaseSensitivity(Qt::CaseInsensitive);
+		return col;
+	}();
+
+	const int result = collator.compare(lhs, rhs);
+	return result ? result < 0 : QString::compare(lhs, rhs) < 0;
+}
 
 inline bool CreateConfigFile(const QString& dir, const QString& name)
 {
@@ -299,6 +324,8 @@ std::pair<QStringList, QString> pad_settings_dialog::get_config_files()
 
 		active_config_file = default_config_file;
 	}
+
+	std::sort(config_files.begin(), config_files.end(), config_file_less_than);
 
 	return std::make_pair<QStringList, QString>(std::move(config_files), std::move(active_config_file));
 }
@@ -1535,8 +1562,6 @@ void pad_settings_dialog::ChangeHandler()
 	else
 	{
 		handler = ui->chooseHandler->currentData().toString().toStdString();
-		device = player_config->device.to_string();
-		buddy_device = player_config->buddy_device.to_string();
 	}
 
 	cfg_pad& cfg = player_config->config;
@@ -1544,6 +1569,13 @@ void pad_settings_dialog::ChangeHandler()
 	// Change and get this player's current handler.
 	if (auto& cfg_handler = player_config->handler; handler != cfg_handler.to_string())
 	{
+		// Save the config of the old handler, so the user doesn't lose their bindings.
+		// Make sure to apply the current GUI values to the config first.
+		// The device dropdown still contains the devices of the old handler, and its first entry is the one
+		// that gets selected automatically, so it doesn't have to be saved on its own.
+		ApplyCurrentPlayerConfig(m_last_player_id);
+		player_config->backup_config(ui->chooseDevice->count() > 0 ? get_pad_info(ui->chooseDevice, 0).name : std::string{});
+
 		if (!cfg_handler.from_string(handler))
 		{
 			cfg_log.error("Failed to convert input string: %s", handler);
@@ -1553,6 +1585,9 @@ void pad_settings_dialog::ChangeHandler()
 		// Initialize the new pad config's defaults
 		m_handler = pad_thread::GetHandler(player_config->handler);
 		pad_thread::InitPadConfig(cfg, cfg_handler, m_handler);
+
+		// Restore the config of the new handler if the user configured it before
+		player_config->restore_config(cfg_handler.get());
 	}
 	else
 	{
@@ -1560,6 +1595,13 @@ void pad_settings_dialog::ChangeHandler()
 	}
 
 	ensure(m_handler);
+
+	if (!is_ldd_pad)
+	{
+		// This may be a restored device if the handler changed
+		device = player_config->device.to_string();
+		buddy_device = player_config->buddy_device.to_string();
+	}
 
 	// Get the handler's currently available devices.
 	const std::vector<pad_list_entry> device_list = m_handler->list_devices();
@@ -2029,7 +2071,15 @@ void pad_settings_dialog::AddConfigFile()
 		}
 		if (CreateConfigFile(QString::fromStdString(rpcs3::utils::get_input_config_dir(m_title_id)), config_name))
 		{
-			ui->chooseConfig->addItem(config_name);
+			// Insert the new configuration at its sorted position
+			int index = 0;
+
+			while (index < ui->chooseConfig->count() && config_file_less_than(ui->chooseConfig->itemText(index), config_name))
+			{
+				index++;
+			}
+
+			ui->chooseConfig->insertItem(index, config_name);
 			ui->chooseConfig->setCurrentText(config_name);
 		}
 		break;
