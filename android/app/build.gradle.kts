@@ -177,6 +177,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.coil.compose)
     implementation("io.ktor:ktor-client-core:3.0.3")
+    implementation("io.ktor:ktor-client-android:3.0.3")
     implementation("io.ktor:ktor-client-cio:3.0.3")
     implementation("io.ktor:ktor-client-json:3.0.3")
     implementation("io.ktor:ktor-serialization-kotlinx-json:3.0.3")

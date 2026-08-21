@@ -2,6 +2,7 @@ package net.rpcs3.utils
 
 import android.content.Context
 import android.util.Log
+import io.ktor.client.engine.android.Android
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
@@ -33,7 +34,7 @@ object PatchUpdater {
         data class Failed(val message: String) : State
     }
 
-    private val httpClient = HttpClient()
+    private val httpClient = HttpClient(Android)
 
     private val _state = MutableStateFlow<State>(State.Unknown)
     val state: StateFlow<State> = _state
