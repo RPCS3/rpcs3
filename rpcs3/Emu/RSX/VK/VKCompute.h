@@ -674,6 +674,4 @@ namespace vk
 
 		return static_cast<T*>(e.get());
 	}
-
-	void reset_compute_tasks();
 }

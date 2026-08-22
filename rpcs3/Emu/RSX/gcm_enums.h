@@ -87,12 +87,6 @@ namespace gcm
 		CELL_GCM_FREQUENCY_DIVIDE = 0,
 	};
 
-	enum CellRescTableElement
-	{
-		CELL_RESC_ELEMENT_HALF = 0,
-		CELL_RESC_ELEMENT_FLOAT = 1,
-	};
-
 	enum CellGcmDefaultFifoMode
 	{
 		CELL_GCM_DEFAULT_FIFO_MODE_TRADITIONAL = 0,
