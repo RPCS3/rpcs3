@@ -13,7 +13,7 @@
 enum : u32
 {
 	SYS_SPU_THREAD_GROUP_OBJECT      = 0x04,
-	SYS_PROCESS_OBJECT               = 0x05,
+	SYS_PROCESS_OBJECT               = 0x01,
 	SYS_CONFIG_OBJECT                = 0x41,
 	SYS_MEM_OBJECT                   = 0x08,
 	SYS_MUTEX_OBJECT                 = 0x85,
@@ -115,7 +115,7 @@ enum class thread_state : u32;
 
 struct lv2_process : public ppu_module<lv2_obj>
 {
-	static constexpr u32 id_base = 0x50000000;
+	static constexpr u32 id_base = 0x01000000;
 
 	u32 self_id = umax;
 

@@ -211,14 +211,6 @@ kernel_explorer::kernel_explorer(QWidget* parent)
 
 void kernel_explorer::update()
 {
-	const auto dct = g_fxo->try_get<lv2_memory_container>();
-
-	if (!dct)
-	{
-		m_tree->clear();
-		return;
-	}
-
 	const std::initializer_list<std::pair<u32, QString>> tree_item_names =
 	{
 		{ process_info                   , tr("Process Info")},
@@ -311,13 +303,10 @@ void kernel_explorer::update()
 		clean_up_tree(root);
 	}
 
-	const u32 total_memory_usage = dct->used;
+	const u32 total_memory_usage = 256;
 
-	root->setText(0, QString::fromStdString(fmt::format("Process 0x%08x: Total Memory Usage: 0x%x/0x%x (%0.2f/%0.2f MB)", process_getpid(), total_memory_usage, dct->size, 1. * total_memory_usage / (1024 * 1024)
-		, 1. * dct->size / (1024 * 1024))));
-
-	shared_ptr<lv2_process> process; // TODO
-	add_solid_node(find_node(root, additional_nodes::process_info), QString::fromStdString(fmt::format("Process Info, Sdk Version: 0x%08x, PPC SEG: %#x, SFO Category: %s (Fake: %s)", process->sdk_ver, process->ppc_seg, Emu.GetCat(), Emu.GetFakeCat())));
+	root->setText(0, QString::fromStdString(fmt::format("Process 0x%08x: Total Memory Usage: 0x%x/0x%x (%0.2f/%0.2f MB)", process_getpid(), total_memory_usage, 256, 1. * total_memory_usage / (1024 * 1024)
+		, 1. * 256 / (1024 * 1024))));
 
 	auto display_program_segments = [](QTreeWidgetItem* tree, const ppu_module<lv2_obj>& m)
 	{
@@ -331,7 +320,7 @@ void kernel_explorer::update()
 		}
 	};
 
-	idm::select<lv2_obj>([&](u32 id, lv2_obj& obj)
+	idm::select<lv2_obj>([&](u32 id, u32, lv2_obj& obj)
 	{
 		const auto node = find_node(root, id >> 24);
 		if (!node)
@@ -349,6 +338,13 @@ void kernel_explorer::update()
 
 		switch (id >> 24)
 		{
+		case SYS_PROCESS_OBJECT:
+		{
+			auto& process = static_cast<lv2_process&>(obj);
+			add_leaf(node, QString::fromStdString(fmt::format("Process 0x%08x: ELF: \"%s\", PARAM.SFO: \"%s\", Parent: 0x%x, SDK: 0x%x, MContainer: 0x%x, TItle ID: %s"
+					, id, process.ELF_file_path, process.supposed_param_sfo_path, process.parent_process, process.sdk_ver, process.parent_memory_container->id, process.supposed_title_id)));
+			break;
+		}
 		case SYS_MEM_OBJECT:
 		{
 			auto& mem = static_cast<lv2_memory&>(obj);
@@ -438,7 +434,7 @@ void kernel_explorer::update()
 
 			if (const auto queue = ep.queue.get(); lv2_obj::check(queue))
 			{
-				if (queue == idm::check_unlocked<lv2_obj, lv2_event_queue>(queue->id))
+				if (queue == idm::check_unlocked<lv2_obj, lv2_event_queue>(idm::id_index(queue->id, nullptr)))
 				{
 					add_leaf(node, QString::fromStdString(fmt::format("Event Port 0x%08x: %s, Name: %#llx, Event Queue (ID): 0x%08x", id, type, ep.name, queue->id)));
 					break;
@@ -510,7 +506,7 @@ void kernel_explorer::update()
 				case lwmutex_reserved: owner_str = "reserved"; break;
 				default:
 				{
-					if (idm::check_unlocked<named_thread<ppu_thread>>(owner))
+					if (idm::check_unlocked<named_thread<ppu_thread>>(idm::id_index(owner, nullptr)))
 					{
 						owner_str = fmt::format("0x%x", owner);
 					}
@@ -611,19 +607,19 @@ void kernel_explorer::update()
 		}
 	});
 
-	idm::select<sys_vm_t>([&](u32 /*id*/, sys_vm_t& vmo)
+	idm::select<sys_vm_t>([&](u32 /*id*/, u32, sys_vm_t& vmo)
 	{
 		const u32 psize = vmo.psize;
 		add_leaf(find_node(root, additional_nodes::virtual_memory), QString::fromStdString(fmt::format("Virtual Mem 0x%08x: Virtual Size: 0x%x (%0.2f MB), Physical Size: 0x%x (%0.2f MB), Mem Container: %s", vmo.addr
 			, vmo.size, vmo.size * 1. / (1024 * 1024), psize, psize * 1. / (1024 * 1024), vmo.ct->id)));
 	});
 
-	idm::select<lv2_socket>([&](u32 id, lv2_socket& sock)
+	idm::select<lv2_socket>([&](u32 id, u32, lv2_socket& sock)
 	{
 		add_leaf(find_node(root, additional_nodes::sockets), QString::fromStdString(fmt::format("Socket %u: Type: %s, Family: %s, Wq: %zu", id, sock.get_type(), sock.get_family(), sock.get_queue_size())));
 	});
 
-	idm::select<lv2_memory_container>([&](u32 id, lv2_memory_container& container)
+	idm::select<lv2_memory_container>([&](u32 id, u32, lv2_memory_container& container)
 	{
 		const u32 used = container.used;
 		add_leaf(find_node(root, additional_nodes::memory_containers), QString::fromStdString(fmt::format("Memory Container 0x%08x: Used: 0x%x/0x%x (%0.2f/%0.2f MB)", id, used, container.size, used * 1. / (1024 * 1024), container.size * 1. / (1024 * 1024))));
@@ -664,7 +660,7 @@ void kernel_explorer::update()
 
 	std::vector<std::pair<s32, std::string>> ppu_threads;
 
-	idm::select<named_thread<ppu_thread>>([&](u32 id, ppu_thread& ppu)
+	idm::select<named_thread<ppu_thread>>([&](u32 id, u32, ppu_thread& ppu)
 	{
 		const auto func = ppu.last_function;
 		const ppu_thread_status status = lv2_obj::ppu_state(&ppu, false, false).first;
@@ -687,7 +683,7 @@ void kernel_explorer::update()
 
 	lock_idm_lv2.reset();
 
-	idm::select<named_thread<spu_thread>>([&](u32 /*id*/, spu_thread& spu)
+	idm::select<named_thread<spu_thread>>([&](u32 /*id*/, u32, spu_thread& spu)
 	{
 		const auto func = spu.current_func;
 		const u64 start_time = spu.start_time;
@@ -746,10 +742,11 @@ void kernel_explorer::update()
 		}
 	});
 
-	idm::select<lv2_spu_group>([&](u32 id, lv2_spu_group& tg)
+	idm::select<lv2_spu_group>([&](u32 id, u32, lv2_spu_group& tg)
 	{
 		QTreeWidgetItem* spu_tree = add_solid_node(find_node(root, additional_nodes::spu_thread_groups), QString::fromStdString(fmt::format(u8"SPU Group 0x%07x: “%s”, Type = 0x%x", id, tg.name, tg.type)), QString::fromStdString(fmt::format(u8"SPU Group 0x%07x: “%s”, Status = %s, Priority = %d, Type = 0x%x", id, tg.name, tg.run_state.load(), tg.prio.load().prio, tg.type)));
 
+		return;
 		if (tg.name.ends_with("CellSpursKernelGroup"sv))
 		{
 			vm::ptr<CellSpurs> pspurs{};
@@ -838,26 +835,32 @@ void kernel_explorer::update()
 
 	QTreeWidgetItem* rsx_context_node = find_node(root, additional_nodes::rsx_contexts);
 
-	do
+	idm::select<lv2_rsx_context>([&](u32 id, u32, lv2_rsx_context& lv2_context)
 	{
 		// Currently a single context is supported at a time
 		const auto rsx = rsx::get_current_renderer();
 
-		if (!rsx)
+		if (!rsx || !lv2_context.inited)
 		{
-			break;
+			return;
 		}
 
-		const auto base = rsx->lv2_context->dma_address;
+		const auto base = lv2_context.dma_address;
+		const auto process = lv2_context.belonging_process;
+		const auto pp = idm::get_unlocked<lv2_obj, lv2_process>(idm::id_index(process, nullptr));
 
-		if (!base)
+		if (!pp)
 		{
-			break;
+			return;
 		}
 
-		const QString branch_name = "RSX Context 0x55555555";
+		const auto globals = lv2_process::acquire_globals(process);
+
+		const auto lv2_rsx_process = ensure(pp->rsx_info);
+
+		const QString branch_name = QString::fromStdString(fmt::format("RSX Context 0x%x", id));
 		QTreeWidgetItem* rsx_tree = add_solid_node(rsx_context_node, branch_name,
-			branch_name + QString::fromStdString(fmt::format(u8", Local Size: %u MB, Base Addr: 0x%x, Device Addr: 0x%x, Handlers: 0x%x", rsx->lv2_rsx_process->local_mem_size >> 20, base, rsx->lv2_rsx_process->device_addr[8], +vm::_ref<RsxDriverInfo>(rsx->lv2_context->driver_info).handlers)));
+			branch_name + QString::fromStdString(fmt::format(u8", Local Size: %u MB, Base Addr: 0x%x, Device Addr: 0x%x, Handlers: 0x%x", lv2_rsx_process->local_mem_size >> 20, base, lv2_rsx_process->device_addr[8], +vm::_ref<RsxDriverInfo>(lv2_context.driver_info).handlers)));
 
 		QTreeWidgetItem* io_tree = add_volatile_node(rsx_tree, tr("IO-EA Table"));
 		QTreeWidgetItem* zc_tree = add_volatile_node(rsx_tree, tr("Zcull Bindings"));
@@ -868,9 +871,9 @@ void kernel_explorer::update()
 		decltype(rsx->lv2_context->zculls) zcs;
 		{
 			reader_lock lock(rsx->sys_rsx_mtx);
-			std::memcpy(&table, &rsx->lv2_context->iomap_table, sizeof(table));
-			std::memcpy(&dbs, rsx->lv2_context->display_buffers, sizeof(dbs));
-			std::memcpy(&zcs, &rsx->lv2_context->zculls, sizeof(zcs));
+			std::memcpy(&table, &lv2_context.iomap_table, sizeof(table));
+			std::memcpy(&dbs, &lv2_context.display_buffers, sizeof(dbs));
+			std::memcpy(&zcs, lv2_context.zculls.data(), sizeof(zcs));
 		}
 
 		for (u32 i = 0, size_block = 0, first_ea = 0, first_io = 0;;)
@@ -939,19 +942,18 @@ void kernel_explorer::update()
 					, db.offset, db.height, db.width, db.pitch)));
 			}
 		}
-	}
-	while (false);
+	});
 
-	idm::select<lv2_fs_object>([&](u32 id, lv2_fs_object& fo)
+	idm::select<lv2_fs_object>([&](u32 id, u32, lv2_fs_object& fo)
 	{
 		const std::string str = fmt::format("FD %u: %s", id, [&]() -> std::string
 		{
-			if (idm::check_unlocked<lv2_fs_object, lv2_file>(id))
+			if (idm::check_unlocked<lv2_fs_object, lv2_file>(idm::id_index(id, nullptr)))
 			{
 				return fmt::format("%s", static_cast<lv2_file&>(fo));
 			}
 
-			if (idm::check_unlocked<lv2_fs_object, lv2_dir>(id))
+			if (idm::check_unlocked<lv2_fs_object, lv2_dir>(idm::id_index(id, nullptr)))
 			{
 				return fmt::format("%s", static_cast<lv2_dir&>(fo));
 			}
