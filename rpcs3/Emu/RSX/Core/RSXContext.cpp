@@ -29,7 +29,10 @@ namespace rsx
 			const auto tile_base_address = iomap_table.get_addr(tile.offset);
 			const auto tile_range = utils::address_range32::start_length(tile_base_address, tile.size);
 
-			if (range.inside(tile_range))
+			// NOTE: Some games will use contiguous ranges over multiple tiles.
+			// For such reasons, checking range.inside(tile_range) is not good enough.
+			// Instead, check for the first tile in the sequence.
+			if (range.overlaps(tile_range) && tile_range.overlaps(range.start))
 			{
 				ensure(tile_base_address + 1);
 				return { .base_address = tile_base_address, .tile = &tile };
