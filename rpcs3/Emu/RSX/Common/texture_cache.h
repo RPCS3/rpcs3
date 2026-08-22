@@ -3655,7 +3655,8 @@ namespace rsx
 				u32 block_end = dst_base_address + (dst.pitch * dst_dimensions.height);
 
 				// Confirm if the pages actually exist in vm
-				if (!validate_memory_range(dst_base_address, write_end, block_end))
+				const bool block_is_backed = validate_memory_range(dst_base_address, write_end, block_end);
+				if (!block_is_backed)
 				{
 					block_end = write_end;
 				}
@@ -3663,7 +3664,27 @@ namespace rsx
 				const u32 usable_section_length = std::max(write_end, block_end) - dst_base_address;
 				dst_dimensions.height = align2(usable_section_length, dst.pitch) / dst.pitch;
 
-				const u32 full_section_length = ((dst_dimensions.height - 1) * dst.pitch) + (dst_dimensions.width * dst_bpp);
+				u32 full_section_length = ((dst_dimensions.height - 1) * dst.pitch) + (dst_dimensions.width * dst_bpp);
+
+				// Rounding the row count up hands back the padding at the end of the last row that the check above just
+				// rejected, so re-test the block we ended up with. If that padding really is not there, narrow the block
+				// down to the data that does exist instead of speculating on the full width. This happens when the transfer
+				// targets a region that is inset in X - the guessed full-width block is then anchored past the real image
+				// corner and runs off the end of the guest allocation.
+				// NOTE: block_end was clamped to write_end above, so the block now ends exactly where this transfer ends.
+				// Its last row is therefore the last row written, and the width computed here resolves to the rightmost
+				// column that is actually written (dst_offset.x + dst_w) - the block never gets too narrow for the blit.
+				// That only holds if the transfer stays inside one row, hence the pitch test; a transfer that spills past
+				// the pitch cannot be described by this block at all and is left to the pre-existing behaviour.
+				if (!block_is_backed &&
+					((static_cast<u32>(dst_offset.x) + dst_w) * dst_bpp) <= dst.pitch &&
+					!validate_memory_range(dst_base_address, write_end, dst_base_address + full_section_length))
+				{
+					const u32 last_row_length = usable_section_length - ((dst_dimensions.height - 1) * dst.pitch);
+					dst_dimensions.width = std::min<s32>(dst_dimensions.width, static_cast<s32>(last_row_length / dst_bpp));
+					full_section_length = ((dst_dimensions.height - 1) * dst.pitch) + (dst_dimensions.width * dst_bpp);
+				}
+
 				const auto rsx_range = address_range32::start_length(dst_base_address, full_section_length);
 
 				lock.upgrade();
