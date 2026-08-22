@@ -14,6 +14,7 @@ enum class FUNCTION
 	DP2,
 	DP2A,
 	DP3,
+	DP3_FP32,
 	DP4,
 	DPH,
 	SFL, // Set zero

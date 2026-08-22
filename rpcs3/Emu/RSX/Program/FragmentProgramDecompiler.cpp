@@ -1088,7 +1088,9 @@ bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 		properties.has_divsq = true;
 		return true;
 	case RSX_FP_OPCODE_DP2: SetDst(getFunction(FUNCTION::DP2), OPFLAGS::op_extern); return true;
-	case RSX_FP_OPCODE_DP3: SetDst(getFunction(FUNCTION::DP3), OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_DP3:
+		SetDst(getFunction(dst.prec == RSX_FP_PRECISION_REAL && g_cfg.video.shader_precision == gpu_preset_level::ultra ? FUNCTION::DP3_FP32 : FUNCTION::DP3), OPFLAGS::op_extern);
+		return true;
 	case RSX_FP_OPCODE_DP4: SetDst(getFunction(FUNCTION::DP4), OPFLAGS::op_extern); return true;
 	case RSX_FP_OPCODE_DP2A: SetDst(getFunction(FUNCTION::DP2A), OPFLAGS::op_extern); return true;
 	case RSX_FP_OPCODE_MAD: SetDst("fma($0, $1, $2)", OPFLAGS::src_cast_f32); return true;
