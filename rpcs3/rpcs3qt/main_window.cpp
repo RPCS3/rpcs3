@@ -2547,8 +2547,7 @@ void main_window::CreateGameCategory()
 	// is told which one was broken, instead of one "could not create" for every kind of bad name.
 	if (!gui_settings::IsValidGameCategoryName(name))
 	{
-		QMessageBox::warning(this, title,
-			tr("'%0' is not a valid category name.\n\n%1").arg(name, gui_settings::GetGameCategoryNameHint()));
+		QMessageBox::warning(this, title, tr("'%0' is not a valid category name.\n\n%1").arg(name, gui_settings::GetGameCategoryNameHint()));
 		return;
 	}
 
