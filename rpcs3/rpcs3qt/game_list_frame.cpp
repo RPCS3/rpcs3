@@ -1125,7 +1125,7 @@ void game_list_frame::OnRefreshFinished()
 	m_completed_list.intersect(m_serials);
 	m_gui_settings->SetValue(gui::gl_completed_list, QStringList(m_completed_list.values()));
 
-	// ... and the user defined game categories, which are keyed by serial as well
+	// Clean up user defined game categories, which are keyed by serial
 	if (const usz dropped = m_gui_settings->PruneGameCategories(m_serials); dropped > 0)
 	{
 		game_list_log.notice("Dropped %d game(s) from the game categories: no longer in the game list", dropped);
