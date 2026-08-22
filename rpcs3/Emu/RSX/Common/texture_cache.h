@@ -3346,6 +3346,7 @@ namespace rsx
 
 			const bool is_copy_op = (fcmp(scale_x, 1.f) && fcmp(scale_y, 1.f));
 			const bool is_format_convert = (dst_is_argb8 != src_is_argb8);
+			const bool is_graphics2d = !is_copy_op || (dst.clip_height > 1 && ((static_cast<u32>(dst.clip_width) * dst.bpp) < dst.pitch));
 
 			// Offset in x and y for src is 0 (it is already accounted for when getting pixels_src)
 			// Reproject final clip onto source...
@@ -3378,23 +3379,21 @@ namespace rsx
 			auto src_subres = blit_engine_internals::rtt_lookup(m_rtts, cmd, src_address, src_w, src_h, src.pitch, src_bpp, surface_access::transfer_read, false, scale_x, scale_y);
 			src_is_render_target = src_subres.surface != nullptr;
 
-			if (get_location(dst_address) == CELL_GCM_LOCATION_LOCAL)
-			{
-				// TODO: HACK
-				// After writing, it is required to lock the memory range from access!
-				dst_subres = blit_engine_internals::rtt_lookup(m_rtts, cmd, dst_address, dst_w, dst_h, dst.pitch, dst_bpp, surface_access::transfer_write, false, scale_x, scale_y);
-				dst_is_render_target = dst_subres.surface != nullptr;
-			}
-			else
-			{
-				// Surface exists in main memory.
-				use_null_region = (is_copy_op && !is_format_convert);
+			// All blit targets now live in surface cache. We must check for a match there first before proceeding.
+			dst_subres = blit_engine_internals::rtt_lookup(m_rtts, cmd, dst_address, dst_w, dst_h, dst.pitch, dst_bpp, surface_access::transfer_write, false, scale_x, scale_y);
+			dst_is_render_target = dst_subres.surface != nullptr;
 
+			if (!dst_is_render_target && get_location(dst_address) != CELL_GCM_LOCATION_LOCAL)
+			{
+				// Surface only exists in main memory.
 				// Now we have a blit write into main memory. This really could be anything, so we need to be careful here.
 				// If we have a pitched write, or a suspiciously large transfer, we likely have a valid write.
-
-				// Invalidate surfaces in range. Sample tests should catch overlaps in theory.
-				m_rtts.invalidate_range(utils::address_range32::start_length(dst_address, dst.pitch * dst_h));
+				if (use_null_region = (is_copy_op && !is_format_convert && !is_graphics2d); use_null_region)
+				{
+					// Invalidate surfaces in range. Sample tests should catch overlaps in theory.
+					// We only do this for non-2D sections though, since blit_dst targets now live in the surface cache always.
+					m_rtts.invalidate_range(utils::address_range32::start_length(dst_address, dst.pitch * dst_h));
+				}
 			}
 
 			// FBO re-validation. It is common for GPU and CPU data to desync as we do not have a way to share memory pages directly between the two (in most setups)
