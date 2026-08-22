@@ -251,14 +251,14 @@ void debugger_list::ShowAddress(u32 addr, bool select_addr, bool direct)
 				list_item->setBackground(default_background);
 			}
 
-			if (cpu && cpu->get_class() == thread_class::ppu && !vm::check_addr(ppu->vm_owner, pc, 0))
+			if (cpu && cpu->get_class() == thread_class::ppu && ppu->vm_owner &&!vm::check_addr(ppu->vm_owner, pc, 0))
 			{
 				list_item->setText((IsBreakpoint(pc) ? ">> " : "   ") + QString::fromStdString(fmt::format("[%08x]  ?? ?? ?? ??:", pc)));
 				count = 4;
 				continue;
 			}
 
-			if (cpu && cpu->get_class() == thread_class::ppu && !vm::check_addr(ppu->vm_owner, pc, vm::page_executable))
+			if (cpu && cpu->get_class() == thread_class::ppu && ppu->vm_owner && !vm::check_addr(ppu->vm_owner, pc, vm::page_executable))
 			{
 				const u32 data = *reinterpret_cast<const atomic_be_t<u32>*>(ppu->vm_sudo + pc);
 				list_item->setText((IsBreakpoint(pc) ? ">> " : "   ") + QString::fromStdString(fmt::format("[%08x]  %02x %02x %02x %02x:", pc,
