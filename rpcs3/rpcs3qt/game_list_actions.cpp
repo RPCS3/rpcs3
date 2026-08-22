@@ -683,7 +683,7 @@ void game_list_actions::MoveGamesToCategory(const QStringList& serials, const QS
 
 	if (!m_gui_settings->MoveGamesToCategory(serials, name))
 	{
-		// Picking the entry the games already sit in
+		// The user picked the category the games already sit in
 		return;
 	}
 
