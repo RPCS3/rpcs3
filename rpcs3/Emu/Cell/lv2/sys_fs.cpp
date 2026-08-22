@@ -1927,6 +1927,19 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 		mode &= ~0222;
 	}
 
+	if (mp == &g_mp_sys_dev_hdd0)
+	{
+		const auto [root_name, trail] = lv2_fs_object::get_path_root_and_trail(vpath);
+
+		if (trail != "game" && !trail.starts_with("game/") && !trail.starts_with("tmp/"))
+		{
+			// Leave only "other" permissions
+			// User and group permissions removed
+			// This seems to be standard across HDD0 non-game files
+			mode &= ~0077;
+		}
+	}
+
 	sb->mode = mode;
 	sb->uid = mp->flags & lv2_mp_flag::no_uid_gid ? -1 : 0;
 	sb->gid = mp->flags & lv2_mp_flag::no_uid_gid ? -1 : 0;
