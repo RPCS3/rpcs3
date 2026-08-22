@@ -2633,20 +2633,6 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="startBigPictureModeOnBoot">
-                 <property name="text">
-                  <string>Open Big Picture Mode on boot</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="useNativeInterface">
-                 <property name="text">
-                  <string>Use native user interface</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
                 <widget class="QGroupBox" name="gb_clockScale">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
@@ -3116,12 +3102,19 @@
                    </widget>
                   </item>
                   <item>
-                   <widget class="QCheckBox" name="useNativeInterface">
+                   <widget class="QCheckBox" name="startBigPictureModeOnBoot">
                     <property name="text">
-                     <string>Use native user interface</string>
-                    </property>
-                   </widget>
-                  </item>
+                     <string>Open Big Picture Mode on boot</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="useNativeInterface">
+                 <property name="text">
+                  <string>Use native user interface</string>
+                 </property>
+                </widget>
+               </item>
                   <item>
                    <widget class="QCheckBox" name="useRecursiveScan">
                     <property name="text">
