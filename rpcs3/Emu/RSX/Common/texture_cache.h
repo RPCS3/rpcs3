@@ -3413,7 +3413,7 @@ namespace rsx
 				// This is a lot more serious that the src case. We have to signal surface cache to reload the memory and discard what we have GPU-side.
 				// Do the transfer CPU side and we should eventually "read" the data on RCB/RDB barrier.
 				dst_subres.surface->invalidate_GPU_memory();
-				return false;
+				dst_subres.surface->state_flags |= rsx::surface_state_flags::force_data_load;
 			}
 
 			if (src_is_render_target)
