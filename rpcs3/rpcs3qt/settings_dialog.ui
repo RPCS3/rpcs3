@@ -2633,16 +2633,6 @@
                 </widget>
                </item>
                <item>
-                <widget class="QCheckBox" name="startBigPictureModeOnBoot">
-                 <property name="text">
-                  <string>Open Big Picture Mode on boot</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QCheckBox" name="useNativeInterface">
-                 <property name="text">
-                  <string>Use native user interface</string>
                 <widget class="QGroupBox" name="gb_clockScale">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
@@ -3108,6 +3098,13 @@
                    <widget class="QCheckBox" name="startGameFullscreen">
                     <property name="text">
                      <string>Start games in fullscreen mode</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QCheckBox" name="startBigPictureModeOnBoot">
+                    <property name="text">
+                     <string>Open Big Picture Mode on boot</string>
                     </property>
                    </widget>
                   </item>
