@@ -39,7 +39,9 @@ static void* get_aligned_buf()
 #if defined(_WIN32)
 			buf = _aligned_malloc(ISO_SECTOR_SIZE, ISO_SECTOR_SIZE * 2);
 #else
-			buf = std::aligned_alloc(ISO_SECTOR_SIZE * 2, ISO_SECTOR_SIZE);
+			// NOTE: unlike "_aligned_malloc", "aligned_alloc" requires the size to be a multiple of the alignment
+			// (macOS returns NULL with EINVAL otherwise), so the size is rounded up: only ISO_SECTOR_SIZE bytes are used
+			buf = std::aligned_alloc(ISO_SECTOR_SIZE * 2, ISO_SECTOR_SIZE * 2);
 #endif
 		}
 
