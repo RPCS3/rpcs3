@@ -2560,8 +2560,7 @@ void main_window::CreateGameCategory()
 	if (!m_gui_settings->AddGameCategory(name))
 	{
 		// Not "already exists": the clash may be with a name that differs only in case
-		QMessageBox::warning(this, title,
-			tr("'%0' clashes with an existing game category. Names are not case sensitive.").arg(name));
+		QMessageBox::warning(this, title, tr("'%0' clashes with an existing game category. Names are not case sensitive.").arg(name));
 		return;
 	}
 
