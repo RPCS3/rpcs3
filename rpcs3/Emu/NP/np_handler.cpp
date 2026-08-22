@@ -8,6 +8,7 @@
 #include "Emu/Cell/timers.hpp"
 #include "Utilities/StrUtil.h"
 #include "Emu/IdManager.h"
+#include "Emu/Memory/vm_var.h"
 #include "Emu/System.h"
 #include "Emu/NP/rpcn_config.h"
 #include "Emu/NP/np_contexts.h"
@@ -863,6 +864,19 @@ namespace np
 	{
 		np_memory.release();
 
+		{
+			std::lock_guard lock(mutex_custom_menu);
+			custom_menu_registered = false;
+			custom_menu_handler = {};
+			custom_menu_user_arg = {};
+			custom_menu_actions.clear();
+			custom_menu_activation = {};
+			custom_menu_exception_list.clear();
+			last_custom_menu_action.reset();
+			custom_menu_invitation_action.reset();
+			pending_custom_menu_invitation.reset();
+		}
+
 		manager_cb = {};
 		manager_cb_arg = {};
 		basic_handler_registered = false;
@@ -1098,6 +1112,128 @@ namespace np
 		}
 	}
 
+	void np_handler::mark_message_used(u64 msg_id)
+	{
+		get_rpcn()->mark_message_used(msg_id);
+	}
+
+	std::vector<np_handler::custom_menu_action> np_handler::get_custom_menu_actions(SceNpCustomMenuActionMask mask)
+	{
+		std::lock_guard lock(mutex_custom_menu);
+		std::vector<custom_menu_action> actions;
+
+		if (!custom_menu_registered)
+		{
+			return actions;
+		}
+
+		for (const auto& action : custom_menu_actions)
+		{
+			const u32 index = action.id;
+
+			if ((action.mask & mask) && index < SCE_NP_CUSTOM_MENU_INDEX_SETSIZE && SCE_NP_CUSTOM_MENU_INDEX_ISSET(index, &custom_menu_activation))
+			{
+				actions.push_back(action);
+			}
+		}
+
+		return actions;
+	}
+
+	std::optional<u32> np_handler::get_custom_menu_invitation_action()
+	{
+		std::lock_guard lock(mutex_custom_menu);
+
+		if (!custom_menu_registered || !custom_menu_invitation_action)
+		{
+			return std::nullopt;
+		}
+
+		const u32 index = *custom_menu_invitation_action;
+		const auto action = std::find_if(custom_menu_actions.cbegin(), custom_menu_actions.cend(), [index](const custom_menu_action& item)
+		{
+			return item.id == static_cast<s32>(index);
+		});
+
+		if (action == custom_menu_actions.cend() || !(action->mask & SCE_NP_CUSTOM_MENU_ACTION_MASK_ME) ||
+			index >= SCE_NP_CUSTOM_MENU_INDEX_SETSIZE || !SCE_NP_CUSTOM_MENU_INDEX_ISSET(index, &custom_menu_activation))
+		{
+			return std::nullopt;
+		}
+
+		return index;
+	}
+
+	void np_handler::record_custom_menu_message_type(u16 main_type)
+	{
+		std::lock_guard lock(mutex_custom_menu);
+
+		if (main_type == SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE && last_custom_menu_action)
+		{
+			custom_menu_invitation_action = last_custom_menu_action;
+			rpcn_log.notice("Custom menu action %u handles invitation selection", *last_custom_menu_action);
+		}
+
+		last_custom_menu_action.reset();
+	}
+
+	std::optional<u64> np_handler::take_pending_custom_menu_invitation()
+	{
+		std::lock_guard lock(mutex_custom_menu);
+		return std::exchange(pending_custom_menu_invitation, std::nullopt);
+	}
+
+	bool np_handler::invoke_custom_menu_action(u32 index, const SceNpId& npid, SceNpCustomMenuSelectedType type, std::optional<u64> selected_invitation)
+	{
+		vm::ptr<SceNpCustomMenuEventHandler> handler;
+		vm::ptr<void> user_arg;
+		SceNpCustomMenuActionMask mask;
+
+		switch (type)
+		{
+		case SCE_NP_CUSTOM_MENU_SELECTED_TYPE_ME: mask = SCE_NP_CUSTOM_MENU_ACTION_MASK_ME; break;
+		case SCE_NP_CUSTOM_MENU_SELECTED_TYPE_FRIEND: mask = SCE_NP_CUSTOM_MENU_ACTION_MASK_FRIEND; break;
+		case SCE_NP_CUSTOM_MENU_SELECTED_TYPE_PLAYER: mask = SCE_NP_CUSTOM_MENU_ACTION_MASK_PLAYER; break;
+		default: return false;
+		}
+
+		{
+			std::lock_guard lock(mutex_custom_menu);
+
+			if (!custom_menu_registered || index >= SCE_NP_CUSTOM_MENU_INDEX_SETSIZE || !SCE_NP_CUSTOM_MENU_INDEX_ISSET(index, &custom_menu_activation))
+			{
+				return false;
+			}
+
+			const auto action = std::find_if(custom_menu_actions.cbegin(), custom_menu_actions.cend(), [index](const custom_menu_action& item)
+			{
+				return item.id == static_cast<s32>(index);
+			});
+
+			if (action == custom_menu_actions.cend() || !(action->mask & mask))
+			{
+				return false;
+			}
+
+			handler = custom_menu_handler;
+			user_arg = custom_menu_user_arg;
+		}
+
+		sysutil_register_cb([this, handler, user_arg, index, npid, type, selected_invitation](ppu_thread& ppu) -> s32
+		{
+			{
+				std::lock_guard lock(mutex_custom_menu);
+				last_custom_menu_action = index;
+				pending_custom_menu_invitation = selected_invitation;
+			}
+
+			const vm::var<SceNpId> selected_npid(npid);
+			return handler(ppu, CELL_OK, index, selected_npid, type, user_arg);
+		});
+
+		return true;
+	}
+
 	void np_handler::send_message(const message_data& msg_data, const std::set<std::string>& npids)
 	{
 		rpcn_log.notice("Sending message to \"%s\":", fmt::merge(npids, "\",\""));
@@ -1117,6 +1253,7 @@ namespace np
 		}
 
 		set_message_selected(SCE_NP_BASIC_SELECTED_INVITATION_DATA, msg_id);
+		rpcn_log.notice("Selected invitation: msg_id=%d", msg_id);
 
 		if (sysutil_send_system_cmd(CELL_SYSUTIL_NP_INVITATION_SELECTED, 0) <= 0)
 		{

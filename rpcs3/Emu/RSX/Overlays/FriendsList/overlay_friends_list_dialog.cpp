@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "../overlay_manager.h"
 #include "overlay_friends_list_dialog.h"
+#include "Emu/RSX/Overlays/HomeMenu/overlay_home_menu.h"
+#include "Emu/Cell/Modules/cellSysutil.h"
 #include "Emu/NP/np_handler.h"
 #include "Emu/NP/rpcn_config.h"
 #include "Emu/vfs_config.h"
@@ -328,10 +330,36 @@ namespace rsx
 					{
 						m_message_box->show(get_localized_string(prompt, message->first.c_str()), [this, message_id]()
 						{
-							if (g_fxo->get<named_thread<np::np_handler>>().select_invitation(message_id))
+							// Native system software reports the selected invitation after closing the home menu.
+							auto home_menu = ensure(g_fxo->get<display_manager>().get<home_menu_dialog>());
+							close(true, false);
+							home_menu->request_close([message_id]()
 							{
-								remove_game_invite(message_id);
-							}
+								auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+								std::optional<u32> action = nph.get_custom_menu_invitation_action();
+
+								if (!action)
+								{
+									const auto actions = nph.get_custom_menu_actions(SCE_NP_CUSTOM_MENU_ACTION_MASK_ME);
+
+									if (actions.size() == 1)
+									{
+										action = static_cast<u32>(actions.front().id);
+									}
+								}
+
+								if (action && nph.invoke_custom_menu_action(*action, nph.get_npid(), SCE_NP_CUSTOM_MENU_SELECTED_TYPE_ME, message_id))
+								{
+									return;
+								}
+
+								// Let the game process all system menu close callbacks before reporting the selected invitation.
+								sysutil_register_cb([message_id](ppu_thread&) -> s32
+								{
+									g_fxo->get<named_thread<np::np_handler>>().select_invitation(message_id);
+									return CELL_OK;
+								});
+							});
 						});
 					}
 					else

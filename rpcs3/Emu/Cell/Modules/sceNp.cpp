@@ -1593,6 +1593,7 @@ error_code sceNpBasicRecvMessageCustom(ppu_thread& ppu, u16 mainType, u32 recvOp
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
+	nph.record_custom_menu_message_type(mainType);
 	return recv_message_gui(ppu, mainType, recvOptions);
 }
 
@@ -1604,25 +1605,40 @@ error_code recv_message_gui(ppu_thread& ppu, u16 mainType, u32 recvOptions)
 
 	SceNpBasicMessageRecvAction recv_result{};
 	u64 chosen_msg_id{};
+	bool preselected = false;
 
-	ppu.state += cpu_flag::wait;
-
-	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
+	if (mainType == SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE)
 	{
-		auto recv_dlg = manager->create<rsx::overlays::recvmessage_dialog>();
-		result = recv_dlg->Exec(static_cast<SceNpBasicMessageMainType>(mainType), static_cast<SceNpBasicMessageRecvOptions>(recvOptions), recv_result, chosen_msg_id);
-	}
-	else
-	{
-		input::SetIntercepted(true);
-
-		Emu.BlockingCallFromMainThread([=, &result, &recv_result, &chosen_msg_id]()
+		if (const auto pending_invitation = nph.take_pending_custom_menu_invitation())
 		{
-			auto recv_dlg = Emu.GetCallbacks().get_recvmessage_dialog();
-			result = recv_dlg->Exec(static_cast<SceNpBasicMessageMainType>(mainType), static_cast<SceNpBasicMessageRecvOptions>(recvOptions), recv_result, chosen_msg_id);
-		});
+			chosen_msg_id = *pending_invitation;
+			recv_result = SCE_NP_BASIC_MESSAGE_ACTION_ACCEPT;
+			result = CELL_OK;
+			preselected = true;
+		}
+	}
 
-		input::SetIntercepted(false);
+	if (!preselected)
+	{
+		ppu.state += cpu_flag::wait;
+
+		if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
+		{
+			auto recv_dlg = manager->create<rsx::overlays::recvmessage_dialog>();
+			result = recv_dlg->Exec(static_cast<SceNpBasicMessageMainType>(mainType), static_cast<SceNpBasicMessageRecvOptions>(recvOptions), recv_result, chosen_msg_id);
+		}
+		else
+		{
+			input::SetIntercepted(true);
+
+			Emu.BlockingCallFromMainThread([=, &result, &recv_result, &chosen_msg_id]()
+			{
+				auto recv_dlg = Emu.GetCallbacks().get_recvmessage_dialog();
+				result = recv_dlg->Exec(static_cast<SceNpBasicMessageMainType>(mainType), static_cast<SceNpBasicMessageRecvOptions>(recvOptions), recv_result, chosen_msg_id);
+			});
+
+			input::SetIntercepted(false);
+		}
 	}
 
 	if (result != CELL_OK)
@@ -1640,6 +1656,11 @@ error_code recv_message_gui(ppu_thread& ppu, u16 mainType, u32 recvOptions)
 
 	const auto msg_pair = opt_msg.value();
 	const auto& msg     = msg_pair->second;
+
+	if (preselected && !(recvOptions & SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_PRESERVE))
+	{
+		nph.mark_message_used(chosen_msg_id);
+	}
 
 	u32 event_to_send;
 	SceNpBasicAttachmentData data{};
@@ -3062,6 +3083,9 @@ error_code sceNpCustomMenuRegisterActions(vm::cptr<SceNpCustomMenu> menu, vm::pt
 	nph.custom_menu_registered = true;
 	nph.custom_menu_activation = {};
 	nph.custom_menu_exception_list = {};
+	nph.last_custom_menu_action.reset();
+	nph.custom_menu_invitation_action.reset();
+	nph.pending_custom_menu_invitation.reset();
 
 	return CELL_OK;
 }
