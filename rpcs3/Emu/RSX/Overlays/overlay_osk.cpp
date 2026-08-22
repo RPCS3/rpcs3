@@ -1057,7 +1057,7 @@ namespace rsx
 		{
 			const std::u16string ws = u32string_to_utf16(m_preview.value);
 			const usz length = std::min(osk_text.size(), ws.length() + 1) * sizeof(char16_t);
-			memcpy(osk_text.data(), ws.c_str(), length);
+			std::memcpy(osk_text.data(), ws.c_str(), length);
 
 			osk.notice("on_text_changed: osk_text='%s'", utf16_to_ascii8(ws));
 
