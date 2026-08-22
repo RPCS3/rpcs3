@@ -561,6 +561,9 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 		return;
 	}
 
+	// A manual boot from the game list bypasses Big Picture Mode, so exiting it shouldn't relaunch Big Picture Mode.
+	Emu.DeactivateBigPictureMode();
+
 	Emu.GracefulShutdown(false);
 
 	m_app_icon = gui::utils::get_app_icon_from_path(path, title_id);
@@ -2138,6 +2141,7 @@ void main_window::OnEmuStop()
 	ui->actionManage_Users->setEnabled(true);
 	ui->confCamerasAct->setEnabled(true);
 	ui->actionPS_Move_Tracker->setEnabled(true);
+	ui->bigPictureModeAct->setEnabled(true);
 
 	// Refresh game list in order to update time played
 	if (m_game_list_frame && m_is_list_mode)
@@ -2180,6 +2184,7 @@ void main_window::OnEmuReady()
 	ui->actionManage_Users->setEnabled(false);
 	ui->confCamerasAct->setEnabled(false);
 	ui->actionPS_Move_Tracker->setEnabled(false);
+	ui->bigPictureModeAct->setEnabled(false);
 
 	ui->batchRemoveShaderCachesAct->setEnabled(false);
 	ui->batchRemovePPUCachesAct->setEnabled(false);
@@ -3457,6 +3462,29 @@ void main_window::CreateConnects()
 	{
 		checked ? m_debugger_frame->show() : m_debugger_frame->hide();
 		m_gui_settings->SetValue(gui::mw_debugger, checked);
+	});
+
+	connect(ui->bigPictureModeAct, &QAction::triggered, this, [this]()
+	{
+		if (Emu.IsBootingRestricted())
+		{
+			gui_log.notice("Big Picture Mode: boot request ignored, booting is currently restricted.");
+			return;
+		}
+
+		if (!m_gui_settings->GetBootConfirmation(this, gui::ib_confirm_boot))
+		{
+			gui_log.notice("Big Picture Mode: boot cancelled by user at confirmation dialog.");
+			return;
+		}
+
+		gui_log.notice("Booting Big Picture Mode from main window");
+		Emu.GracefulShutdown(false);
+
+		if (!Emu.BootBigPictureMode())
+		{
+			gui_log.error("Failed to start Big Picture Mode.");
+		}
 	});
 
 	connect(ui->showLogAct, &QAction::triggered, this, [this](bool checked)
