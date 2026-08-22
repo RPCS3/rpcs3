@@ -418,11 +418,11 @@ EmuCallbacks main_application::CreateCallbacks()
 		return font_dirs;
 	};
 
-	callbacks.on_install_pkgs = [](const std::vector<std::string>& pkgs)
+	callbacks.on_install_pkgs = [](const std::vector<std::string>& pkgs, bool from_optical_drive)
 	{
 		for (const std::string& pkg : pkgs)
 		{
-			if (!rpcs3::utils::install_pkg(pkg))
+			if (!rpcs3::utils::install_pkg(pkg, from_optical_drive))
 			{
 				sys_log.error("Failed to install %s", pkg);
 				return false;

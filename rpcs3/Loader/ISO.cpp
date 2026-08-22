@@ -82,6 +82,11 @@ static bool is_iso_file(iso_file& file, u64* size = nullptr)
 
 bool is_iso_file(const std::string& path, u64* size, bool* is_raw_device)
 {
+	if (is_raw_device)
+	{
+		*is_raw_device = false;
+	}
+
 	if (path.empty())
 	{
 		return false;

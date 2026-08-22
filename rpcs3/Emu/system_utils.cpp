@@ -68,7 +68,7 @@ namespace rpcs3::utils
 		return id;
 	}
 
-	bool install_pkg(const std::string& path)
+	bool install_pkg(const std::string& path, bool from_optical_drive)
 	{
 		sys_log.success("Installing package: %s", path);
 
@@ -81,7 +81,7 @@ namespace rpcs3::utils
 		named_thread worker("PKG Installer", [&]
 		{
 			std::deque<std::string> bootables;
-			const package_install_result result = package_reader::extract_data(reader, bootables);
+			const package_install_result result = package_reader::extract_data(reader, bootables, from_optical_drive);
 			return result.error == package_install_result::error_type::no_error;
 		});
 
