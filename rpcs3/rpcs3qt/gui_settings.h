@@ -6,6 +6,7 @@
 #include <QVariant>
 #include <QSize>
 #include <QColor>
+#include <QSet>
 #include <QMessageBox>
 #include <QWindow>
 
@@ -121,23 +122,24 @@ namespace gui
 	const QString NativeStylesheet  = "native";
 	const QString DarkStylesheet    = "Darker Style by TheMitoSan";
 
-	const QString main_window  = "main_window";
-	const QString game_list    = "GameList";
-	const QString logger       = "Logger";
-	const QString debugger     = "Debugger";
-	const QString rsx          = "RSX_Debugger";
-	const QString meta         = "Meta";
-	const QString fs           = "FileSystem";
-	const QString gs_frame     = "GSFrame";
-	const QString trophy       = "Trophy";
-	const QString patches      = "Patches";
-	const QString localization = "Localization";
-	const QString pad_settings = "PadSettings";
-	const QString config       = "Config";
-	const QString log_viewer   = "LogViewer";
-	const QString sc           = "Shortcuts";
-	const QString navigation   = "PadNavigation";
-	const QString savestate    = "Savestate";
+	const QString main_window   = "main_window";
+	const QString game_list     = "GameList";
+	const QString game_category = "GameCategory";
+	const QString logger        = "Logger";
+	const QString debugger      = "Debugger";
+	const QString rsx           = "RSX_Debugger";
+	const QString meta          = "Meta";
+	const QString fs            = "FileSystem";
+	const QString gs_frame      = "GSFrame";
+	const QString trophy        = "Trophy";
+	const QString patches       = "Patches";
+	const QString localization  = "Localization";
+	const QString pad_settings  = "PadSettings";
+	const QString config        = "Config";
+	const QString log_viewer    = "LogViewer";
+	const QString sc            = "Shortcuts";
+	const QString navigation    = "PadNavigation";
+	const QString savestate     = "Savestate";
 
 	const QString update_on   = "true";
 	const QString update_off  = "false";
@@ -234,6 +236,9 @@ namespace gui
 	const gui_save gl_custom_icon  = gui_save(game_list, "custom_icon",  true);
 	const gui_save gl_hover_gifs   = gui_save(game_list, "hover_gifs",   true);
 	const gui_save gl_hover_music  = gui_save(game_list, "hover_music",  true);
+
+	const gui_save gc_categories = gui_save(game_category, "categories", QStringList());
+	const gui_save gc_current    = gui_save(game_category, "current",    "");
 
 	const gui_save fs_emulator_dir_list = gui_save(fs, "emulator_dir_list", QStringList());
 	const gui_save fs_dev_hdd0_list     = gui_save(fs, "dev_hdd0_list",     QStringList());
@@ -363,6 +368,36 @@ public:
 	QStringList GetStylesheetEntries() const;
 	QStringList GetGameListCategoryFilters(bool is_list_mode) const;
 
+	/** User defined game categories, stored in the GameCategory section of CurrentSettings.ini */
+	QStringList GetGameCategories() const;
+	bool AddGameCategory(const QString& name) const;
+	bool RemoveGameCategory(const QString& name) const;
+	QString GetCurrentGameCategory() const;
+	void SetCurrentGameCategory(const QString& name, bool sync = true) const;
+	QStringList GetGamesInCategory(const QString& name) const;
+
+	/** Returns the game category the given game belongs to, empty if it belongs to none */
+	QString GetCategoryOfGame(const QString& serial) const;
+
+	/** Moves the given games to a game category, removing them from any other one. An empty name only
+	    removes them. Returns whether anything actually changed. */
+	bool MoveGamesToCategory(const QStringList& serials, const QString& name) const;
+
+	/** Drops every game category member that is not part of the given serials. Returns how many were dropped. */
+	usz PruneGameCategories(const QSet<QString>& serials) const;
+
+	/** Label of the default game category entry. Reserved, so it can never name a real category. */
+	static QString GetAllGamesCategoryLabel();
+
+	/** Returns true if the name may be used as a game category name and as an ini key */
+	static bool IsValidGameCategoryName(const QString& name);
+
+	/** Spells out the rule enforced by IsValidGameCategoryName(), for error messages */
+	static QString GetGameCategoryNameHint();
+
+	/** Returns true if the name is taken by the default entry of the game category menus */
+	static bool IsReservedGameCategoryName(const QString& name);
+
 	static QSize SizeFromSlider(int pos);
 
 	/** Sets the visibility of the chosen category. */
@@ -377,6 +412,9 @@ public:
 	void SetCustomColor(int col, const QColor& val) const;
 
 private:
+	/** Writes the members of a game category, dropping the key when empty. Batched: the caller flushes with sync(). */
+	void SetGamesInCategory(const QString& name, const QStringList& serials) const;
+
 	static gui_save GetGuiSaveForSavestateGameColumn(gui::savestate_game_list_columns col);
 	static gui_save GetGuiSaveForSavestateColumn(gui::savestate_list_columns col);
 	static gui_save GetGuiSaveForTrophyGameColumn(gui::trophy_game_list_columns col);

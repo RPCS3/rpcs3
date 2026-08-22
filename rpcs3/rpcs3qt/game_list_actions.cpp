@@ -18,6 +18,7 @@
 
 #include <thread>
 
+#include <QActionGroup>
 #include <QApplication>
 #include <QCheckBox>
 #include <QtConcurrent>
@@ -25,6 +26,7 @@
 #include <QDirIterator>
 #include <QFileDialog>
 #include <QGridLayout>
+#include <QMenu>
 #include <QMessageBox>
 #include <QTimer>
 
@@ -603,6 +605,99 @@ void game_list_actions::ShowDiskUsageDialog()
 			QMessageBox::information(m_game_list_frame, tr("Disk usage"), text);
 		}, nullptr, false);
 	});
+}
+
+void game_list_actions::AddMoveToCategoryMenu(QMenu* parent, const std::vector<game_info>& games)
+{
+	const QStringList categories = m_gui_settings->GetGameCategories();
+
+	QMenu* category_menu = parent->addMenu(tr("&Move To Category"));
+	category_menu->setEnabled(!categories.isEmpty());
+
+	if (categories.isEmpty())
+	{
+		// Nothing to move to yet. The categories are created in Manage > Game Categories.
+		return;
+	}
+
+	QStringList serials;
+
+	for (const game_info& game : games)
+	{
+		if (game) serials.append(QString::fromStdString(game->info.serial));
+	}
+
+	serials.removeDuplicates();
+
+	// A single game shows the category it currently sits in. A multi selection is a bulk move to whatever
+	// entry is picked, no matter which categories the games come from, so it shows no state at all.
+	const bool is_single_game = serials.size() == 1;
+	const QString current = is_single_game ? m_gui_settings->GetCategoryOfGame(serials.front()) : QString();
+
+	QActionGroup* category_act_group = is_single_game ? new QActionGroup(category_menu) : nullptr;
+
+	const auto add_entry = [&](const QString& text, const QString& name)
+	{
+		QAction* act = category_menu->addAction(text);
+
+		if (category_act_group)
+		{
+			act->setCheckable(true);
+			act->setChecked(name == current);
+			category_act_group->addAction(act);
+		}
+
+		// Moving one game is trivially undone. Moving a block is not: the games can come from several
+		// categories at once and where each of them was is not recorded anywhere, so that one asks first.
+		connect(act, &QAction::triggered, this, [this, serials, name, is_single_game]()
+		{
+			MoveGamesToCategory(serials, name, !is_single_game);
+		});
+	};
+
+	// Same layout as Manage > Game Categories: the default entry first, then the categories
+	add_entry(gui_settings::GetAllGamesCategoryLabel(), {});
+
+	for (const QString& category : categories)
+	{
+		// One pass: a category may be named "%1", and a chained arg() would substitute into it
+		const QString text = QString("%0 (%1)").arg(gui::utils::escape_mnemonics(category),
+			QString::number(m_gui_settings->GetGamesInCategory(category).size()));
+		add_entry(text, category);
+	}
+}
+
+void game_list_actions::MoveGamesToCategory(const QStringList& serials, const QString& name, bool is_interactive)
+{
+	if (is_interactive)
+	{
+		const QString question = name.isEmpty()
+			? tr("Remove %0 games from their game category?").arg(serials.size())
+			: tr("Move %0 games to the '%1' game category?").arg(QString::number(serials.size()), name);
+
+		if (QMessageBox::question(m_game_list_frame, tr("Confirm Move"), question) != QMessageBox::Yes)
+		{
+			return;
+		}
+	}
+
+	if (!m_gui_settings->MoveGamesToCategory(serials, name))
+	{
+		// The user picked the category the games already sit in
+		return;
+	}
+
+	if (name.isEmpty())
+	{
+		game_list_log.notice("Removed %d game(s) from their game category", serials.size());
+	}
+	else
+	{
+		game_list_log.notice("Moved %d game(s) to game category '%s'", serials.size(), name);
+	}
+
+	// The moved games may have entered or left the category the game list is filtered by
+	m_game_list_frame->ReloadGameCategory();
 }
 
 bool game_list_actions::IsGameRunning(std::string_view serial)

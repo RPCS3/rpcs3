@@ -62,6 +62,7 @@
 #include <QBuffer>
 #include <QTemporaryFile>
 #include <QDesktopServices>
+#include <QInputDialog>
 
 #include "rpcs3_version.h"
 #include "Emu/IdManager.h"
@@ -104,6 +105,10 @@
 #endif
 
 LOG_CHANNEL(gui_log, "GUI");
+LOG_CHANNEL(game_list_log, "GameList");
+
+// Holds the menu text of a recent boot action without the ampersand escaping applied to text()
+constexpr const char* recent_action_name = "shown_name";
 
 extern atomic_t<bool> g_user_asked_for_frame_capture;
 extern atomic_t<bool> g_headless;
@@ -221,7 +226,7 @@ void main_window::Init()
 	// enable play options if a recent game exists
 	const bool enable_play_last = !m_recent_game.actions.isEmpty() && m_recent_game.actions.first();
 
-	const QString start_tooltip = enable_play_last ? tr("Play %0").arg(m_recent_game.actions.first()->text()) : tr("Play");
+	const QString start_tooltip = enable_play_last ? tr("Play %0").arg(m_recent_game.actions.first()->property(recent_action_name).toString()) : tr("Play");
 
 	if (enable_play_last)
 	{
@@ -2325,17 +2330,20 @@ QAction* main_window::CreateRecentAction(const q_string_pair& entry, u32 sc_idx,
 		shown_name = entry.second.section('/', -1);
 	}
 
-	// create new action
-	QAction* act = new QAction(shown_name, this);
+	// truncate if too long
+	if (shown_name.length() > 60)
+	{
+		shown_name = shown_name.left(27) + "(....)" + shown_name.right(27);
+	}
+
+	// create new action. A title like "Ratchet & Clank" would turn its ampersand into a menu mnemonic.
+	QAction* act = new QAction(gui::utils::escape_mnemonics(shown_name), this);
 	act->setData(entry.first);
 	act->setToolTip(entry.second + "\n" + entry.first);
 	act->setShortcut(QString("%0+%1").arg(is_savestate ? "Alt" : "Ctrl").arg(sc_idx));
 
-	// truncate if too long
-	if (shown_name.length() > 60)
-	{
-		act->setText(shown_name.left(27) + "(....)" + shown_name.right(27));
-	}
+	// Keep the plain name around: text() is only fit for a menu
+	act->setProperty(recent_action_name, shown_name);
 
 	// connect boot
 	connect(act, &QAction::triggered, this, [this, act, is_savestate](){ BootRecentAction(act, is_savestate); });
@@ -2455,6 +2463,149 @@ void main_window::UpdateFilterActions()
 	ui->showCatOSAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::OS, m_is_list_mode));
 	ui->showCatUnknownAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Unknown_Cat, m_is_list_mode));
 	ui->showCatOtherAct->setChecked(m_gui_settings->GetCategoryVisibility(Category::Others, m_is_list_mode));
+}
+
+void main_window::UpdateGameCategoryActions()
+{
+	// Only ever runs from the aboutToShow of the two menus, so the whole ui and both action groups exist
+	const QStringList categories = m_gui_settings->GetGameCategories();
+	const QString current = m_gui_settings->GetCurrentGameCategory();
+
+	// Rebuild the removal submenu. This can run from the handler of one of the actions it drops,
+	// so the old ones are detached now and destroyed once the handler has returned.
+	for (QAction* act : ui->menuRemove_Game_Category->actions())
+	{
+		ui->menuRemove_Game_Category->removeAction(act);
+		act->deleteLater();
+	}
+
+	ui->menuRemove_Game_Category->setEnabled(!categories.isEmpty());
+
+	for (const QString& name : categories)
+	{
+		connect(ui->menuRemove_Game_Category->addAction(gui::utils::escape_mnemonics(name)), &QAction::triggered, this, [this, name]()
+		{
+			RemoveGameCategory(name);
+		});
+	}
+
+	// Both menus show the same entries, so build the labels once. The default one carries no category name.
+	q_pair_list entries;
+	entries.append({gui_settings::GetAllGamesCategoryLabel(), {}});
+
+	for (const QString& name : categories)
+	{
+		// Same shape as the Game Types menu: an empty category is obvious before it is picked.
+		// One pass: a category may be named "%1", and a chained arg() would substitute into it.
+		entries.append({QString("%0 (%1)").arg(gui::utils::escape_mnemonics(name),
+			QString::number(m_gui_settings->GetGamesInCategory(name).size())), name});
+	}
+
+	// Rebuild the selection entries of both menus. They are always appended, so the static entries keep their place.
+	const auto rebuild_selection = [this, &entries, &current](QMenu* menu, QActionGroup* act_group)
+	{
+		for (QAction* act : act_group->actions())
+		{
+			act_group->removeAction(act);
+			menu->removeAction(act);
+			act->deleteLater();
+		}
+
+		for (const auto& [text, name] : entries)
+		{
+			// Constructing it with the group as parent inserts it into the group
+			QAction* act = new QAction(text, act_group);
+			act->setCheckable(true);
+			act->setChecked(name == current);
+
+			connect(act, &QAction::triggered, this, [this, name]()
+			{
+				SelectGameCategory(name);
+			});
+
+			menu->addAction(act);
+		}
+	};
+
+	rebuild_selection(ui->menuManage_Game_Categories, m_manage_game_category_act_group);
+	rebuild_selection(ui->menuView_Game_Categories, m_view_game_category_act_group);
+}
+
+void main_window::CreateGameCategory()
+{
+	const QString title = tr("Create Game Category");
+
+	bool ok = false;
+	const QString name = QInputDialog::getText(this, title, tr("Category name:"), QLineEdit::Normal, {}, &ok).trimmed();
+
+	if (!ok || name.isEmpty())
+	{
+		return;
+	}
+
+	// AddGameCategory enforces these two rules as well. They are checked here first only so that the user
+	// is told which one was broken, instead of one "could not create" for every kind of bad name.
+	if (!gui_settings::IsValidGameCategoryName(name))
+	{
+		QMessageBox::warning(this, title, tr("'%0' is not a valid category name.\n\n%1").arg(name, gui_settings::GetGameCategoryNameHint()));
+		return;
+	}
+
+	if (gui_settings::IsReservedGameCategoryName(name))
+	{
+		QMessageBox::warning(this, title, tr("'%0' is reserved for the default game category entry. Please choose another name.").arg(name));
+		return;
+	}
+
+	if (!m_gui_settings->AddGameCategory(name))
+	{
+		// Not "already exists": the clash may be with a name that differs only in case
+		QMessageBox::warning(this, title, tr("'%0' clashes with an existing game category. Names are not case sensitive.").arg(name));
+		return;
+	}
+
+	game_list_log.notice("Created game category '%s'", name);
+}
+
+void main_window::RemoveGameCategory(const QString& name)
+{
+	const qsizetype games = m_gui_settings->GetGamesInCategory(name).size();
+	const QString question = games > 0
+		? tr("Remove the game category '%0'?\n\nIts %1 games will no longer be assigned to any category.").arg(name, QString::number(games))
+		: tr("Remove the game category '%0'?").arg(name);
+
+	if (QMessageBox::question(this, tr("Confirm Removal"), question,
+		QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
+	{
+		return;
+	}
+
+	if (!m_gui_settings->RemoveGameCategory(name))
+	{
+		// The entry was built from the stored list, so this means the list changed under us
+		game_list_log.warning("Could not remove game category '%s': it is not in the category list", name);
+		return;
+	}
+
+	game_list_log.notice("Removed game category '%s'", name);
+
+	if (m_game_list_frame)
+	{
+		// Falls back to "All Games" if the removed category was the selected one, and is a no-op otherwise
+		m_game_list_frame->SetGameCategory(m_gui_settings->GetCurrentGameCategory());
+	}
+}
+
+void main_window::SelectGameCategory(const QString& name)
+{
+	m_gui_settings->SetCurrentGameCategory(name);
+
+	if (m_game_list_frame)
+	{
+		m_game_list_frame->SetGameCategory(name);
+	}
+
+	// The other menu picks the new state up from the settings when it is rebuilt on aboutToShow
 }
 
 void main_window::RepaintGui()
@@ -2680,6 +2831,12 @@ void main_window::CreateActions()
 	m_category_visible_act_group->addAction(ui->showCatUnknownAct);
 	m_category_visible_act_group->addAction(ui->showCatOtherAct);
 	m_category_visible_act_group->setExclusive(false);
+
+	m_manage_game_category_act_group = new QActionGroup(this);
+	m_manage_game_category_act_group->setExclusive(true);
+
+	m_view_game_category_act_group = new QActionGroup(this);
+	m_view_game_category_act_group->setExclusive(true);
 
 	m_icon_size_act_group = new QActionGroup(this);
 	m_icon_size_act_group->addAction(ui->setIconSizeTinyAct);
@@ -3511,6 +3668,12 @@ void main_window::CreateConnects()
 		m_game_list_frame->Refresh(true);
 	});
 
+	connect(ui->createGameCategoryAct, &QAction::triggered, this, &main_window::CreateGameCategory);
+
+	// This is the only thing that fills the two category menus: they are rebuilt from the settings on every show
+	connect(ui->menuManage_Game_Categories, &QMenu::aboutToShow, this, &main_window::UpdateGameCategoryActions);
+	connect(ui->menuView_Game_Categories, &QMenu::aboutToShow, this, &main_window::UpdateGameCategoryActions);
+
 	const auto get_cats = [this](QAction* act, int& id) -> QStringList
 	{
 		QStringList categories;
@@ -3542,7 +3705,7 @@ void main_window::CreateConnects()
 		}
 	});
 
-	connect(ui->menuGame_Categories, &QMenu::aboutToShow, ui->menuGame_Categories, [this, get_cats]()
+	connect(ui->menuGame_Types, &QMenu::aboutToShow, ui->menuGame_Types, [this, get_cats]()
 	{
 		const auto set_cat_count = [&](QAction* act, const QString& text)
 		{
@@ -3844,7 +4007,7 @@ void main_window::CreateDockWindows()
 				}
 				else if (!m_recent_game.actions.isEmpty()) // Get last played game
 				{
-					tooltip = tr("Play %0").arg(m_recent_game.actions.first()->text());
+					tooltip = tr("Play %0").arg(m_recent_game.actions.first()->property(recent_action_name).toString());
 				}
 				else
 				{

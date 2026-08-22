@@ -118,6 +118,9 @@ namespace gui
 		// Returns a richtext paragraph with white-space: nowrap;
 		QString make_paragraph(QString text, const QString& white_space_style = "nowrap");
 
+		// Doubles the ampersands of a string used as menu or button text, so it is not taken for a mnemonic
+		QString escape_mnemonics(const QString& text);
+
 		template <typename T>
 		void set_font_size(T& qobj, int size)
 		{

@@ -273,6 +273,11 @@ namespace gui
 				.arg(text.replace("\n", "<br>"));
 		}
 
+		QString escape_mnemonics(const QString& text)
+		{
+			return QString(text).replace(QLatin1Char('&'), QLatin1String("&&"));
+		}
+
 		QPixmap get_aligned_pixmap(QPixmap pixmap, const QSize& icon_size, qreal device_pixel_ratio, Qt::TransformationMode mode, align_h h_alignment, align_v v_alignment)
 		{
 			// Create empty canvas for expanded image

@@ -7,6 +7,8 @@
 #include <QFuture>
 #include <QObject>
 
+class QMenu;
+
 class progress_dialog;
 class game_list_frame;
 class gui_settings;
@@ -57,6 +59,9 @@ public:
 	void ShowGameInfoDialog(const std::vector<game_info>& games);
 	void ShowGameIntegrityDialog(content_file_type file_type, const std::string& game_path);
 	void ShowDiskUsageDialog();
+
+	/** Appends the "Move To Category" submenu, which moves the given games to a user defined game category */
+	void AddMoveToCategoryMenu(QMenu* parent, const std::vector<game_info>& games);
 
 	// NOTES:
 	//   - SetContentList() MUST always be called to set the content's info to be removed by:
@@ -111,6 +116,9 @@ private:
 	//   - BatchRemoveContentLists()
 	//
 	content_info m_content_info;
+
+	/** Performs what an entry of the "Move To Category" submenu does. Confirms first when interactive. */
+	void MoveGamesToCategory(const QStringList& serials, const QString& name, bool is_interactive);
 
 	void BatchActionBySerials(progress_dialog* pdlg, const std::set<std::string>& serials,
 		QString progressLabel, std::function<bool(const std::string&)> action,

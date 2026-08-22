@@ -298,6 +298,19 @@
     <property name="title">
      <string>Manage</string>
     </property>
+    <widget class="QMenu" name="menuManage_Game_Categories">
+     <property name="title">
+      <string>Game Categories</string>
+     </property>
+     <widget class="QMenu" name="menuRemove_Game_Category">
+      <property name="title">
+       <string>Remove Category</string>
+      </property>
+     </widget>
+     <addaction name="createGameCategoryAct"/>
+     <addaction name="menuRemove_Game_Category"/>
+     <addaction name="separator"/>
+    </widget>
     <widget class="QMenu" name="menuNetworkServices">
      <property name="title">
       <string>Network Services</string>
@@ -342,6 +355,8 @@
     <addaction name="separator"/>
     <addaction name="actionManage_Cheats"/>
     <addaction name="actionManage_Game_Patches"/>
+    <addaction name="menuManage_Game_Categories"/>
+    <addaction name="separator"/>
     <addaction name="menuDatabases"/>
     <addaction name="menuPackages"/>
     <addaction name="separator"/>
@@ -405,9 +420,9 @@
      </property>
      <addaction name="showCompatibilityInGridAct"/>
     </widget>
-    <widget class="QMenu" name="menuGame_Categories">
+    <widget class="QMenu" name="menuGame_Types">
      <property name="title">
-      <string>Game Categories</string>
+      <string>Game Types</string>
      </property>
      <addaction name="showCatHDDGameAct"/>
      <addaction name="showCatDiscGameAct"/>
@@ -420,6 +435,11 @@
      <addaction name="showCatOSAct"/>
      <addaction name="showCatUnknownAct"/>
      <addaction name="showCatOtherAct"/>
+    </widget>
+    <widget class="QMenu" name="menuView_Game_Categories">
+     <property name="title">
+      <string>Game Categories</string>
+     </property>
     </widget>
     <addaction name="showDebuggerAct"/>
     <addaction name="showLogAct"/>
@@ -435,7 +455,8 @@
     <addaction name="menuGame_List_View"/>
     <addaction name="menuGame_List_Grid_Mode"/>
     <addaction name="menuGame_List_Icons"/>
-    <addaction name="menuGame_Categories"/>
+    <addaction name="menuGame_Types"/>
+    <addaction name="menuView_Game_Categories"/>
     <addaction name="separator"/>
     <addaction name="refreshGameListAct"/>
    </widget>
@@ -1316,6 +1337,11 @@
   <action name="actionManage_Screenshots">
    <property name="text">
     <string>Screenshots</string>
+   </property>
+  </action>
+  <action name="createGameCategoryAct">
+   <property name="text">
+    <string>Create Category</string>
    </property>
   </action>
   <action name="removeFirmwareCacheAct">
