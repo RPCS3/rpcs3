@@ -3484,7 +3484,8 @@ namespace rsx
 					dst_range,
 					dst.pitch,
 					src_dimensions,
-					static_cast<size2u>(dst_dimensions)
+					static_cast<size2u>(dst_dimensions),
+					dst_tile
 				);
 
 				if (props.use_dma_region)
