@@ -122,6 +122,23 @@ enum : u32
 	PORT_BUFFER_TAG_LAST_8CH = AUDIO_BLOCK_SIZE_8CH - 1,
 	PORT_BUFFER_TAG_DELTA_8CH = PORT_BUFFER_TAG_LAST_8CH / (PORT_BUFFER_TAG_COUNT - 1),
 	PORT_BUFFER_TAG_FIRST_8CH = PORT_BUFFER_TAG_LAST_8CH % (PORT_BUFFER_TAG_COUNT - 1),
+
+	// The tags above are spread over the block diagonally, so on an 8 channel port they all land on channels
+	// 2 to 7. A game may legitimately never write those: one that was told the output is stereo fills only
+	// front left/right of an 8 channel port, and cellAudioAdd2chData does the same. Such a port keeps every
+	// tag at its initial value and looks untouched forever, which silences it while buffering is enabled.
+	// These extra marks sit on the front right channel, which any audio content writes, and are only used to
+	// tell "the game wrote nothing" apart from "the game wrote the front channels only". They carry no state:
+	// a mark counts as written when it no longer is the negative zero that tag() put there.
+	PORT_BUFFER_MARK_CHANNEL = 1,
+	PORT_BUFFER_MARK_DELTA_SAMPLE = (AUDIO_BUFFER_SAMPLES - 1) / (PORT_BUFFER_TAG_COUNT - 1),
+
+	// How many periods a port must go without moving a single tag before the marks are believed and it is
+	// treated as one that only ever fills its front channels. A game writing genuine surround moves a tag
+	// every period, so it never gets anywhere near this; one that fills the buffer one channel at a time
+	// and stalls mid-pass is covered by the same margin. Below the threshold the tags alone decide, so the
+	// marks are a fallback for a case the tags cannot see rather than a rule of their own.
+	PORT_FRONT_ONLY_SETTLE_PERIODS = 8,
 };
 
 enum class audio_port_state : u32
@@ -187,6 +204,11 @@ struct audio_port
 	// Tags
 	u32 prev_touched_tag_nr = 0;
 	f32 last_tag_value[PORT_BUFFER_TAG_COUNT] = { 0 };
+
+	u32 mark_position(u32 tag_nr) const
+	{
+		return tag_nr * PORT_BUFFER_MARK_DELTA_SAMPLE * num_channels + PORT_BUFFER_MARK_CHANNEL;
+	}
 
 	void tag(s32 offset = 0);
 
@@ -413,6 +435,18 @@ public:
 	f32 m_average_playtime = 0.0f;
 	bool m_backend_failed = false;
 	bool m_audio_should_restart = false;
+
+	// Whether we already reported that a port carries front channel audio only. Diagnostics for a condition
+	// that is otherwise indistinguishable from a game that simply went silent, so it is worth one line per
+	// port. Deliberately not serialized: a savestate that reloads into the same condition may report it
+	// again, which is harmless and arguably useful.
+	std::array<bool, AUDIO_PORT_COUNT> m_front_only_reported{};
+
+	// Periods since each port last moved one of its buffer tags, saturating. Tells a port that fills only
+	// its front channels apart from one that is merely between two passes of a channel by channel write,
+	// see PORT_FRONT_ONLY_SETTLE_PERIODS. Deliberately not serialized: it starts at zero, which is the
+	// conservative end, and settles again within a few periods.
+	std::array<u8, AUDIO_PORT_COUNT> m_periods_without_tag{};
 
 	void operator()();
 
