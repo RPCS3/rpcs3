@@ -323,7 +323,7 @@ void supplemental_header::Show() const
 		self_log.notice("Version: 0x%08x", PS3_npdrm_header.npd.version);
 		self_log.notice("License: 0x%08x", PS3_npdrm_header.npd.license);
 		self_log.notice("Type: 0x%08x", PS3_npdrm_header.npd.type);
-		self_log.notice("ContentID: %s", PS3_npdrm_header.npd.content_id);
+		self_log.notice("ContentID: %s", PS3_npdrm_header.npd.get_content_id());
 		self_log.notice("Digest: %s", PS3_npdrm_header.npd.digest);
 		self_log.notice("Inverse digest: %s", PS3_npdrm_header.npd.title_hash);
 		self_log.notice("XOR digest: %s", PS3_npdrm_header.npd.dev_hash);
@@ -1074,7 +1074,7 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 	if (npd->license == 1)  // Network license.
 	{
 		// Try to find a RAP file to get the key.
-		if (!GetKeyFromRap(npd->content_id, npdrm_key))
+		if (!GetKeyFromRap(npd->get_content_id(), npdrm_key))
 		{
 			self_log.error("Can't decrypt network NPDRM!");
 			return false;
@@ -1083,7 +1083,7 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 	else if (npd->license == 2)  // Local license.
 	{
 		// Try to find a RAP file to get the key.
-		if (!GetKeyFromRap(npd->content_id, npdrm_key))
+		if (!GetKeyFromRap(npd->get_content_id(), npdrm_key))
 		{
 			self_log.error("Can't find RAP file for NPDRM decryption!");
 			return false;
@@ -1301,14 +1301,13 @@ fs::file SELFDecrypter::MakeElf(bool isElf32)
 	return e;
 }
 
-bool SELFDecrypter::GetKeyFromRap(const char* content_id, u8* npdrm_key)
+bool SELFDecrypter::GetKeyFromRap(std::string_view content_id, u8* npdrm_key)
 {
 	// Set empty RAP key.
 	std::array<u8, 0x10> rap_key {};
 
 	// Try to find a matching RAP file under exdata folder.
-	const std::string ci_str = content_id;
-	const std::string rap_path = rpcs3::utils::get_rap_file_path(ci_str);
+	const std::string rap_path = rpcs3::utils::get_rap_file_path(content_id);
 
 	// Open the RAP file and read the key.
 	const fs::file rap_file(rap_path);
@@ -1321,7 +1320,7 @@ bool SELFDecrypter::GetKeyFromRap(const char* content_id, u8* npdrm_key)
 		return false;
 	}
 
-	self_log.notice("Loading RAP file %s.rap", ci_str);
+	self_log.notice("Loading RAP file %s.rap", content_id);
 
 	if (rap_file.read(rap_key.data(), rap_key.size()) != rap_key.size())
 	{

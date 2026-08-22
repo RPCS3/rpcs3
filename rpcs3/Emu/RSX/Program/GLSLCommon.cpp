@@ -505,6 +505,8 @@ namespace glsl
 			return "$Ty(dot($0.xy, $1.xy) + $2.x)";
 		case FUNCTION::DP3:
 			return "$Ty(dot($0.xyz, $1.xyz))";
+		case FUNCTION::DP3_PRECISE:
+			return "$Ty(fma($0.x, $1.x, fma($0.y, $1.y, $0.z * $1.z)))";
 		case FUNCTION::DP4:
 			return "$Ty(dot($0, $1))";
 		case FUNCTION::DPH:
@@ -685,12 +687,18 @@ namespace glsl
 
 		// Make the output a little nicer
 		std::sort(varying_list.begin(), varying_list.end(), FN(x.location < y.location));
+		const auto is_flat_color = [&prog](const _varying_register_config& reg)
+		{
+			return (prog.ctrl & RSX_SHADER_CONTROL_FLAT_SHADING) &&
+				(reg.name.starts_with("diff_color"sv) || reg.name.starts_with("spec_color"sv));
+		};
 
 		if (!(prog.ctrl & RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION))
 		{
 			for (const auto& reg : varying_list)
 			{
-				OS << "layout(location=" << reg.location << ") in " << reg.type << " " << reg.name << ";\n";
+				OS << "layout(location=" << reg.location << ") in " << (is_flat_color(reg) ? "flat " : "")
+					<< reg.type << " " << reg.name << ";\n";
 			}
 
 			OS << "\n";
@@ -718,7 +726,14 @@ namespace glsl
 
 		for (const auto& reg : varying_list)
 		{
-			OS << "vec4 " << reg.name << " = _interpolate_varying3(" << reg.name << "_raw);\n";
+			if (is_flat_color(reg))
+			{
+				OS << "vec4 " << reg.name << " = " << reg.name << "_raw[2];\n";
+			}
+			else
+			{
+				OS << "vec4 " << reg.name << " = _interpolate_varying3(" << reg.name << "_raw);\n";
+			}
 		}
 
 		OS << "\n";

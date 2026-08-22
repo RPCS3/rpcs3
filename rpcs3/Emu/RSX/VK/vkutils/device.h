@@ -103,6 +103,7 @@ namespace vk
 			bool extended_device_fault = false;
 			bool texture_compression_bc = false;
 			bool portability = false;
+			bool provoking_vertex_last = false;
 		} optional_features_support;
 
 		friend class render_device;
@@ -193,6 +194,7 @@ namespace vk
 		bool get_synchronization2_support() const { return pgpu->optional_features_support.synchronization_2; }
 		bool get_extended_device_fault_support() const { return pgpu->optional_features_support.extended_device_fault; }
 		bool get_texture_compression_bc_support() const { return pgpu->optional_features_support.texture_compression_bc; }
+		bool get_provoking_vertex_last_support() const { return pgpu->optional_features_support.provoking_vertex_last; }
 
 		u64 get_descriptor_update_after_bind_support() const { return pgpu->descriptor_indexing_support.update_after_bind_mask; }
 		u32 get_descriptor_max_draw_calls() const { return pgpu->descriptor_max_draw_calls; }
