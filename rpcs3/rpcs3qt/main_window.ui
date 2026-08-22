@@ -338,6 +338,7 @@
     <addaction name="actionManage_RAP_Licenses"/>
     <addaction name="confSavedataManagerAct"/>
     <addaction name="actionManage_Trophy_Data"/>
+    <addaction name="confRetroAchievementsAct"/>
     <addaction name="actionManage_Savestates"/>
     <addaction name="separator"/>
     <addaction name="actionManage_Cheats"/>
@@ -720,6 +721,11 @@
    </property>
    <property name="toolTip">
     <string>Manage save data</string>
+   </property>
+  </action>
+  <action name="confRetroAchievementsAct">
+   <property name="text">
+    <string>RetroAchievements</string>
    </property>
   </action>
   <action name="actionManage_Trophy_Data">
