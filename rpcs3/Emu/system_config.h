@@ -180,6 +180,7 @@ struct cfg_root : cfg::node
 		cfg::_bool record_with_overlays{ this, "Record With Overlays", true, true };
 		cfg::_bool disable_hardware_texel_remapping{ this, "Disable Hardware ColorSpace Remapping", false, true };
 		cfg::uint<0, 100> rcas_sharpening_intensity{ this, "FidelityFX CAS Sharpening Intensity", 50, true };
+		cfg::_bool allow_blit_engine_upscaling{ this, "Allow Blit Engine Upscaling", false, true };
 
 		struct node_vk : cfg::node
 		{
