@@ -154,6 +154,8 @@ struct lv2_rsx_context
 
 	SAVESTATE_INIT_POS(56);
 
+	atomic_t<bool> inited = false;
+
 	rsx::rsx_iomap_table iomap_table;
 	
 	// Vector for incomplete typename

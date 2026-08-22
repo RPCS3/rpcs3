@@ -1063,7 +1063,7 @@ namespace rsx
 
 		idm::select<lv2_rsx_context>([&](u32 id, u32 proc, lv2_rsx_context& context)
 		{
-			if (lv2_context != &context)
+			if (lv2_context != &context && !!context.inited)
 			{
 				changed = true;
 
@@ -1121,9 +1121,12 @@ namespace rsx
 
 			std::vector<std::pair<u32, u32>> process_context;
 
-			idm::select<lv2_rsx_context>([&](u32 id, u32 process, lv2_rsx_context&)
+			idm::select<lv2_rsx_context>([&](u32 id, u32 process, lv2_rsx_context& ctx)
 			{
-				process_context.emplace_back(process, id);
+				if (ctx.inited)
+				{
+					process_context.emplace_back(process, id);
+				}
 			});
 
 			// Save previous procxess ID
@@ -2755,7 +2758,8 @@ namespace rsx
 		//vm::write32(_lv2_rsx_process->device_addr[8] + 0x30, 1);
 		std::memset(_lv2_context->display_buffers, 0, sizeof(_lv2_context->display_buffers));
 		_lv2_context->method_regs->init();
- 
+ 		_lv2_context->inited = true;
+
 		// Schedule FIFO interrupt to deal with this immediately
 		m_eng_interrupt_mask |= rsx::dma_control_interrupt;
 	}

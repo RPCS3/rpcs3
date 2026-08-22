@@ -101,6 +101,7 @@ lv2_rsx_context::lv2_rsx_context(utils::serial& ar) noexcept
 	: lv2_rsx_context()
 {
 	save(ar);
+	inited = true;
 }
 
 void lv2_rsx_context::save(utils::serial& ar) noexcept
@@ -495,6 +496,7 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 	render->init(rsx_context, rsx_info, rsx_context_id);
 
 	*context_id = rsx_context_id;
+	rsx_context->inited = true;
 
 	return CELL_OK;
 }
@@ -686,7 +688,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 	const auto rsx_context = idm::get_unlocked<lv2_rsx_context>(context_id);
 
-	if (!rsx_context)
+	if (!rsx_context || !rsx_context->inited)
 	{
 		return { CELL_EINVAL, "context_id is 0x%x", context_id };
 	}
