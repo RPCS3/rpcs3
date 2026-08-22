@@ -1077,10 +1077,11 @@ namespace rsx
 			Args&&... extra_params)
 		{
 			cache_tag = rsx::get_shared_tag();
+			surface_type result;
 
 			if (rsx::classify_format(attributes.gcm_format) == RSX_FORMAT_CLASS_COLOR)
 			{
-				return bind_address_as_render_targets(
+				result = bind_address_as_render_targets(
 					command_list,
 					attributes.address,
 					rsx::get_compatible_surface_color_format(attributes.gcm_format),
@@ -1091,17 +1092,22 @@ namespace rsx
 					scaling_config,
 					std::forward<Args>(extra_params)...);
 			}
+			else
+			{
+				result = bind_address_as_depth_stencil(
+					command_list,
+					attributes.address,
+					rsx::get_compatible_surface_depth_format(attributes.gcm_format),
+					rsx::surface_antialiasing::center_1_sample,
+					attributes.width,
+					attributes.height,
+					attributes.pitch,
+					{},
+					std::forward<Args>(extra_params)...);
+			}
 
-			return bind_address_as_depth_stencil(
-				command_list,
-				attributes.address,
-				rsx::get_compatible_surface_depth_format(attributes.gcm_format),
-				rsx::surface_antialiasing::center_1_sample,
-				attributes.width,
-				attributes.height,
-				attributes.pitch,
-				{},
-				std::forward<Args>(extra_params)...);
+			result->raster_type = attributes.swizzled ? surface_raster_type::swizzle : surface_raster_type::linear;
+			return result;
 		}
 
 		u8 get_color_surface_count() const
