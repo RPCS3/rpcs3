@@ -278,6 +278,21 @@ namespace gui
 			return QString(text).replace(QLatin1Char('&'), QLatin1String("&&"));
 		}
 
+		QMessageBox::StandardButton plain_message(QWidget* parent, QMessageBox::Icon icon, const QString& title,
+			const QString& text, QMessageBox::StandardButtons buttons, QMessageBox::StandardButton default_button)
+		{
+			QMessageBox mb(icon, title, text, buttons, parent);
+			mb.setTextFormat(Qt::PlainText);
+
+			if (default_button != QMessageBox::NoButton)
+			{
+				mb.setDefaultButton(default_button);
+			}
+
+			mb.exec();
+			return mb.standardButton(mb.clickedButton());
+		}
+
 		QPixmap get_aligned_pixmap(QPixmap pixmap, const QSize& icon_size, qreal device_pixel_ratio, Qt::TransformationMode mode, align_h h_alignment, align_v v_alignment)
 		{
 			// Create empty canvas for expanded image

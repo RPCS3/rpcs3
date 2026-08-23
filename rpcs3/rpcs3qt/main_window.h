@@ -168,12 +168,6 @@ private:
 	void UpdateLanguageActions(const QStringList& language_codes, const QString& language);
 	void UpdateFilterActions();
 
-	// User defined game categories (Manage and View > Game Categories)
-	void UpdateGameCategoryActions();
-	void CreateGameCategory();
-	void RemoveGameCategory(const QString& name);
-	void SelectGameCategory(const QString& name);
-
 	static QString GetCurrentTitle();
 
 	struct recent_game_wrapper
@@ -189,8 +183,8 @@ private:
 	QActionGroup* m_icon_size_act_group = nullptr;
 	QActionGroup* m_list_mode_act_group = nullptr;
 	QActionGroup* m_category_visible_act_group = nullptr;
-	QActionGroup* m_manage_game_category_act_group = nullptr;
-	QActionGroup* m_view_game_category_act_group = nullptr;
+	QActionGroup* m_manage_game_collection_act_group = nullptr;
+	QActionGroup* m_view_game_collection_act_group = nullptr;
 
 	// Dockable widget frames
 	QMainWindow* m_mw = nullptr;

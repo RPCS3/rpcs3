@@ -26,6 +26,7 @@
 #include <QDirIterator>
 #include <QFileDialog>
 #include <QGridLayout>
+#include <QInputDialog>
 #include <QMenu>
 #include <QMessageBox>
 #include <QTimer>
@@ -607,97 +608,283 @@ void game_list_actions::ShowDiskUsageDialog()
 	});
 }
 
-void game_list_actions::AddMoveToCategoryMenu(QMenu* parent, const std::vector<game_info>& games)
+void game_list_actions::UpdateGameCollectionMenu(QMenu* menu, QActionGroup* act_group, QMenu* rename_menu, QMenu* remove_menu)
 {
-	const QStringList categories = m_gui_settings->GetGameCategories();
+	const QStringList collections = m_gui_settings->GetGameCollections();
+	const QString current = m_gui_settings->GetCurrentGameCollection();
 
-	QMenu* category_menu = parent->addMenu(tr("&Move To Category"));
-	category_menu->setEnabled(!categories.isEmpty());
-
-	if (categories.isEmpty())
+	// Every entry of these is built here, so they can be emptied wholesale
+	const auto fill = [this, &collections](QMenu* sub, std::function<void(const QString&)> handler)
 	{
-		// Nothing to move to yet. The categories are created in Manage > Game Categories.
-		return;
-	}
-
-	QStringList serials;
-
-	for (const game_info& game : games)
-	{
-		if (game) serials.append(QString::fromStdString(game->info.serial));
-	}
-
-	serials.removeDuplicates();
-
-	// A single game shows the category it currently sits in. A multi selection is a bulk move to whatever
-	// entry is picked, no matter which categories the games come from, so it shows no state at all.
-	const bool is_single_game = serials.size() == 1;
-	const QString current = is_single_game ? m_gui_settings->GetCategoryOfGame(serials.front()) : QString();
-
-	QActionGroup* category_act_group = is_single_game ? new QActionGroup(category_menu) : nullptr;
-
-	const auto add_entry = [&](const QString& text, const QString& name)
-	{
-		QAction* act = category_menu->addAction(text);
-
-		if (category_act_group)
+		if (!sub)
 		{
-			act->setCheckable(true);
-			act->setChecked(name == current);
-			category_act_group->addAction(act);
+			return;
 		}
 
-		// Moving one game is trivially undone. Moving a block is not: the games can come from several
-		// categories at once and where each of them was is not recorded anywhere, so that one asks first.
-		connect(act, &QAction::triggered, this, [this, serials, name, is_single_game]()
+		sub->clear();
+		sub->setEnabled(!collections.isEmpty());
+
+		for (const QString& name : collections)
 		{
-			MoveGamesToCategory(serials, name, !is_single_game);
-		});
+			connect(sub->addAction(gui::utils::escape_mnemonics(name)), &QAction::triggered, this, [name, handler]()
+			{
+				handler(name);
+			});
+		}
 	};
 
-	// Same layout as Manage > Game Categories: the default entry first, then the categories
-	add_entry(gui_settings::GetAllGamesCategoryLabel(), {});
+	fill(rename_menu, [this](const QString& name) { RenameGameCollection(name); });
+	fill(remove_menu, [this](const QString& name) { RemoveGameCollection(name); });
 
-	for (const QString& category : categories)
+	// Rebuild the selection entries. They are always appended, so the static entries keep their place.
+	for (QAction* act : act_group->actions())
 	{
-		// One pass: a category may be named "%1", and a chained arg() would substitute into it
-		const QString text = QString("%0 (%1)").arg(gui::utils::escape_mnemonics(category),
-			QString::number(m_gui_settings->GetGamesInCategory(category).size()));
-		add_entry(text, category);
+		act_group->removeAction(act);
+		menu->removeAction(act);
+		act->deleteLater();
+	}
+
+	const auto add_entry = [this, menu, act_group, &current](const QString& text, const QString& name)
+	{
+		QAction* act = new QAction(text, act_group);
+		act->setCheckable(true);
+		act->setChecked(name == current);
+
+		connect(act, &QAction::triggered, this, [this, name]()
+		{
+			SelectGameCollection(name);
+		});
+
+		menu->addAction(act);
+	};
+
+	const QHash<QString, qsizetype> counts = m_game_list_frame->CountGamesPerCollection(collections);
+
+	add_entry(gui_settings::GetAllGamesCollectionLabel(), {});
+
+	for (const QString& name : collections)
+	{
+		// One pass: a collection may be named "%1", and a chained arg() would substitute into it.
+		add_entry(QString("%0 (%1)").arg(gui::utils::escape_mnemonics(name),
+			QString::number(counts.value(name))), name);
 	}
 }
 
-void game_list_actions::MoveGamesToCategory(const QStringList& serials, const QString& name, bool is_interactive)
+void game_list_actions::CreateGameCollection()
 {
-	if (is_interactive)
+	const QString name = AskForCollectionName(tr("Create Game Collection"), {},
+		[this](const QString& to) { return m_gui_settings->AddGameCollection(to); });
+
+	if (!name.isEmpty())
+	{
+		game_list_log.notice("Created game collection '%s'", name);
+	}
+}
+
+void game_list_actions::RenameGameCollection(const QString& name)
+{
+	// The name goes in the title, which is plain by construction: a QLabel is not, and a collection named
+	// like a tag would parse away in the very line naming it
+	const QString renamed = AskForCollectionName(tr("Rename '%0'").arg(name), name,
+		[this, &name](const QString& to) { return m_gui_settings->RenameGameCollection(name, to); });
+
+	if (renamed.isEmpty())
+	{
+		return;
+	}
+
+	game_list_log.notice("Renamed game collection '%s' to '%s'", name, renamed);
+
+	// The games did not move, but the name the game list is filtered by may have just changed
+	m_game_list_frame->SetGameCollection(m_gui_settings->GetCurrentGameCollection());
+}
+
+void game_list_actions::RemoveGameCollection(const QString& name)
+{
+	const qsizetype games = m_gui_settings->GetGamesInCollection(name).size();
+	const QString question = games > 0
+		? tr("Remove the game collection '%0'?\n\nIts %Ln game(s) will no longer be assigned to any collection.",
+			"", static_cast<int>(games)).arg(name)
+		: tr("Remove the game collection '%0'?").arg(name);
+
+	if (gui::utils::plain_message(m_game_list_frame, QMessageBox::Question, tr("Confirm Removal"), question,
+		QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
+	{
+		return;
+	}
+
+	if (!m_gui_settings->RemoveGameCollection(name))
+	{
+		// The entry was built from the stored list, so this means the list changed under us
+		game_list_log.warning("Could not remove game collection '%s': it is not in the collection list", name);
+		return;
+	}
+
+	game_list_log.notice("Removed game collection '%s'", name);
+
+	// Falls back to "All Games" if the removed collection was the selected one, and is a no-op otherwise
+	m_game_list_frame->SetGameCollection(m_gui_settings->GetCurrentGameCollection());
+}
+
+void game_list_actions::SelectGameCollection(const QString& name)
+{
+	m_gui_settings->SetCurrentGameCollection(name);
+	m_game_list_frame->SetGameCollection(name);
+}
+
+void game_list_actions::AddMoveToCollectionMenu(QMenu* parent, const std::vector<game_info>& games)
+{
+	QSet<QString> serials;
+
+	for (const game_info& game : games)
+	{
+		if (game)
+		{
+			serials.insert(QString::fromStdString(game->info.serial));
+		}
+	}
+
+	if (serials.isEmpty())
+	{
+		return;
+	}
+
+	const QStringList collections = m_gui_settings->GetGameCollections();
+
+	QMenu* collection_menu = parent->addMenu(tr("&Move To Collection"));
+	collection_menu->setEnabled(!collections.isEmpty());
+
+	if (collections.isEmpty())
+	{
+		return;
+	}
+
+	// A single game shows the collection it currently sits in. A multi selection is a bulk move to whatever
+	// entry is picked, no matter which collections the games come from, so it shows no state at all.
+	const bool is_single_game = serials.size() == 1;
+	const QString current = is_single_game ? m_gui_settings->GetCollectionOfGame(*serials.cbegin()) : QString();
+
+	QActionGroup* collection_act_group = is_single_game ? new QActionGroup(collection_menu) : nullptr;
+
+	const auto add_entry = [&](const QString& text, const QString& name)
+	{
+		QAction* act = collection_menu->addAction(text);
+
+		if (collection_act_group)
+		{
+			act->setCheckable(true);
+			act->setChecked(name == current);
+			collection_act_group->addAction(act);
+		}
+
+		// Moving one game is trivially undone. Moving a block is not: the games can come from several
+		// collections at once and where each of them was is not recorded anywhere, so that one asks first.
+		connect(act, &QAction::triggered, this, [this, serials, name, is_single_game]()
+		{
+			MoveGamesToCollection(serials, name, !is_single_game);
+		});
+	};
+
+	const QHash<QString, qsizetype> counts = m_game_list_frame->CountGamesPerCollection(collections);
+
+	add_entry(gui_settings::GetAllGamesCollectionLabel(), {});
+
+	for (const QString& collection : collections)
+	{
+		// One pass: a collection may be named "%1", and a chained arg() would substitute into it.
+		const QString text = QString("%0 (%1)").arg(gui::utils::escape_mnemonics(collection),
+			QString::number(counts.value(collection)));
+		add_entry(text, collection);
+	}
+}
+
+QString game_list_actions::AskForCollectionName(const QString& title, const QString& initial,
+	const std::function<bool(const QString&)>& accept)
+{
+	QInputDialog dialog(m_game_list_frame);
+	dialog.setWindowTitle(title);
+	dialog.setLabelText(tr("Collection name:"));
+	dialog.setTextValue(initial);
+
+	// The dialog keeps what was typed, so a refused name is corrected instead of typed again
+	while (dialog.exec() != QDialog::Rejected)
+	{
+		const QString name = dialog.textValue().trimmed();
+
+		if (name.isEmpty())
+		{
+			continue;
+		}
+
+		if (name == initial)
+		{
+			return {};
+		}
+
+		// AddGameCollection and RenameGameCollection enforce these two rules as well. They are checked
+		// here first only so that the user is told which one was broken, instead of one refusal for
+		// every kind of bad name.
+		if (!gui_settings::IsValidGameCollectionName(name))
+		{
+			gui::utils::plain_message(m_game_list_frame, QMessageBox::Warning, title,
+				tr("'%0' is not a valid collection name.\n\n%1").arg(name, gui_settings::GetGameCollectionNameHint()));
+			continue;
+		}
+
+		if (gui_settings::IsReservedGameCollectionName(name))
+		{
+			gui::utils::plain_message(m_game_list_frame, QMessageBox::Warning, title,
+				tr("'%0' is reserved for the default game collection entry. Please choose another name.").arg(name));
+			continue;
+		}
+
+		if (!accept(name))
+		{
+			gui::utils::plain_message(m_game_list_frame, QMessageBox::Warning, title,
+				tr("'%0' clashes with an existing game collection. Names are not case sensitive.").arg(name));
+			continue;
+		}
+
+		return name;
+	}
+
+	return {};
+}
+
+void game_list_actions::MoveGamesToCollection(const QSet<QString>& serials, const QString& name, bool is_interactive)
+{
+	const bool moves_anything = !m_gui_settings->GetGamesInCollection(name).contains(serials);
+
+	if (is_interactive && moves_anything)
 	{
 		const QString question = name.isEmpty()
-			? tr("Remove %0 games from their game category?").arg(serials.size())
-			: tr("Move %0 games to the '%1' game category?").arg(QString::number(serials.size()), name);
+			? tr("Remove %Ln game(s) from their game collection?", "", static_cast<int>(serials.size()))
+			: tr("Move %Ln game(s) to the '%0' game collection?", "", static_cast<int>(serials.size())).arg(name);
 
-		if (QMessageBox::question(m_game_list_frame, tr("Confirm Move"), question) != QMessageBox::Yes)
+		if (gui::utils::plain_message(m_game_list_frame, QMessageBox::Question, tr("Confirm Move"), question,
+			QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
 		{
 			return;
 		}
 	}
 
-	if (!m_gui_settings->MoveGamesToCategory(serials, name))
+	// The user picked the collection the games already sit in
+	if (!m_gui_settings->MoveGamesToCollection(serials, name))
 	{
-		// The user picked the category the games already sit in
 		return;
 	}
 
 	if (name.isEmpty())
 	{
-		game_list_log.notice("Removed %d game(s) from their game category", serials.size());
+		game_list_log.notice("Removed %d game(s) from their game collection", serials.size());
 	}
 	else
 	{
-		game_list_log.notice("Moved %d game(s) to game category '%s'", serials.size(), name);
+		game_list_log.notice("Moved %d game(s) to game collection '%s'", serials.size(), name);
 	}
 
-	// The moved games may have entered or left the category the game list is filtered by
-	m_game_list_frame->ReloadGameCategory();
+	// The moved games may have entered or left the collection the game list is filtered by
+	m_game_list_frame->ReloadGameCollection();
 }
 
 bool game_list_actions::IsGameRunning(std::string_view serial)
