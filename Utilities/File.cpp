@@ -227,9 +227,14 @@ static bool is_optical_device_node(const struct ::stat& file_info)
 // Check whether the path is the root of a mounted filesystem (e.g. the mount point of a disc): "st_dev" changes when crossing a mount point
 [[maybe_unused]] static bool is_mount_point(const std::string& path, const struct ::stat& file_info)
 {
+	// A file is never a mount point: discard it without any syscall (the "stat()" below would fail with ENOTDIR anyway)
+	if (!S_ISDIR(file_info.st_mode))
+	{
+		return false;
+	}
+
 	struct ::stat parent_info;
 
-	// NOTE: it also fails (ENOTDIR) if the path is a file, which is never a mount point
 	if (::stat((path + "/..").c_str(), &parent_info) != 0)
 	{
 		return false;
@@ -241,22 +246,20 @@ static bool is_optical_device_node(const struct ::stat& file_info)
 // Retrieve the size of a raw device: "fstat()" reports no size (0) on such a device
 static u64 get_raw_device_size(int fd)
 {
-#if defined(BLKGETSIZE64)
+#if defined(__linux__)
 	if (u64 size = 0; ::ioctl(fd, BLKGETSIZE64, &size) == 0)
 	{
 		return size;
 	}
-#endif
-#if defined(DKIOCGETBLOCKCOUNT) && defined(DKIOCGETBLOCKSIZE)
-	if (u64 block_count = 0; ::ioctl(fd, DKIOCGETBLOCKCOUNT, &block_count) == 0)
+#elif defined(__APPLE__)
+	u64 block_count = 0;
+	u32 block_size = 0;
+
+	if (::ioctl(fd, DKIOCGETBLOCKCOUNT, &block_count) == 0 && ::ioctl(fd, DKIOCGETBLOCKSIZE, &block_size) == 0)
 	{
-		if (u32 block_size = 0; ::ioctl(fd, DKIOCGETBLOCKSIZE, &block_size) == 0)
-		{
-			return block_count * block_size;
-		}
+		return block_count * block_size;
 	}
-#endif
-#if defined(DIOCGMEDIASIZE)
+#elif defined(__FreeBSD__) || defined(__DragonFly__)
 	if (off_t media_size = 0; ::ioctl(fd, DIOCGMEDIASIZE, &media_size) == 0)
 	{
 		return static_cast<u64>(media_size);
@@ -667,20 +670,20 @@ namespace fs
 
 		u64 size() override
 		{
-			if (!m_raw_device)
+			if (m_raw_device)
 			{
-				// NOTE: this can fail if we access a mounted empty drive (e.g. after unmounting an iso).
-				LARGE_INTEGER size;
+				// For a raw device, we need to use DeviceIoControl.
+				DISK_GEOMETRY_EX geometry;
 
-				ensure(GetFileSizeEx(m_handle, &size)); // "file::size"
-				return size.QuadPart;
+				ensure(DeviceIoControl(m_handle, IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, nullptr, 0, &geometry, sizeof(geometry), nullptr, nullptr));
+				return geometry.DiskSize.QuadPart;
 			}
 
-			// For a raw device, we need to use DeviceIoControl.
-			DISK_GEOMETRY_EX geometry;
+			// NOTE: this can fail if we access a mounted empty drive (e.g. after unmounting an iso).
+			LARGE_INTEGER size;
 
-			ensure(DeviceIoControl(m_handle, IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, nullptr, 0, &geometry, sizeof(geometry), nullptr, nullptr));
-			return geometry.DiskSize.QuadPart;
+			ensure(GetFileSizeEx(m_handle, &size)); // "file::size"
+			return size.QuadPart;
 		}
 
 		native_handle get_handle() override
@@ -849,16 +852,16 @@ namespace fs
 
 		u64 size() override
 		{
-			if (!m_raw_device)
+			if (m_raw_device)
 			{
-				struct ::stat file_info;
-				ensure(::fstat(m_fd, &file_info) == 0); // "file::size"
-
-				return file_info.st_size;
+				// For a raw device, we need to use an ioctl ("fstat()" would always report a null size)
+				return get_raw_device_size(m_fd);
 			}
 
-			// For a raw device, we need to use an ioctl ("fstat()" would always report a null size)
-			return get_raw_device_size(m_fd);
+			struct ::stat file_info;
+			ensure(::fstat(m_fd, &file_info) == 0); // "file::size"
+
+			return file_info.st_size;
 		}
 
 		native_handle get_handle() override
@@ -1283,6 +1286,17 @@ bool fs::get_optical_raw_device(const std::string& path, std::string* raw_device
 		return false;
 	}
 
+	// "st_dev" of anything stored on a filesystem backed by a block device matches "st_rdev" of the device itself
+	const dev_t device_id = file_info.st_dev;
+	const unsigned int device_major = major(device_id);
+
+	// Discard at once anything which is not backed by an optical drive or by a loopback device, so that the checks
+	// below (each one costing at least a syscall) only run on an actual candidate
+	if (device_major != s_scsi_cdrom_major && device_major != s_loopback_major)
+	{
+		return false;
+	}
+
 	// Skip a useless check to detect an optical raw device if the path is not the mount point of the disc, it means we are
 	// navigating on subfolders (on Windows, in the same way, only the drive root is accepted)
 	if (!is_mount_point(path, file_info))
@@ -1290,25 +1304,23 @@ bool fs::get_optical_raw_device(const std::string& path, std::string* raw_device
 		return false;
 	}
 
-	// "st_dev" of anything stored on a filesystem backed by a block device matches "st_rdev" of the device itself
-	const dev_t device_id = file_info.st_dev;
-	const std::string dev_major = std::to_string(major(device_id));
-	const std::string dev_minor = std::to_string(minor(device_id));
+	const unsigned int device_minor = minor(device_id);
 
 	// Retrieve the device name from sysfs (e.g. "/sys/dev/block/11:0" -> "../../devices/[...]/block/sr0")
 	std::string device_path;
-	char link_target[1024]{};
+	char link_target[1024]; // NOTE: "readlink()" never null terminates, so the buffer is used through the returned length only
 
-	if (const ssize_t len = ::readlink(("/sys/dev/block/" + dev_major + ":" + dev_minor).c_str(), link_target, sizeof(link_target) - 1); len > 0)
+	if (const ssize_t len = ::readlink(("/sys/dev/block/" + std::to_string(device_major) + ":" + std::to_string(device_minor)).c_str(), link_target, sizeof(link_target)); len > 0)
 	{
 		const std::string_view target{link_target, static_cast<usz>(len)};
 
-		device_path = "/dev/" + std::string(target.substr(target.find_last_of('/') + 1));
+		device_path = "/dev/";
+		device_path += target.substr(target.find_last_of('/') + 1);
 	}
-	else if (major(device_id) == s_scsi_cdrom_major)
+	else if (device_major == s_scsi_cdrom_major)
 	{
 		// Fallback (sysfs not available): the minor number matches the index of the SCSI CD-ROM device
-		device_path = "/dev/sr" + dev_minor;
+		device_path = "/dev/sr" + std::to_string(device_minor);
 	}
 	else
 	{
@@ -1340,7 +1352,9 @@ bool fs::get_optical_raw_device(const std::string& path, std::string* raw_device
 	}
 
 	// Skip a useless check to detect an optical raw device if the path is not the mount point of the disc, it means we are
-	// navigating on subfolders (on Windows, in the same way, only the drive root is accepted)
+	// navigating on subfolders (on Windows, in the same way, only the drive root is accepted). There is no cheap way to
+	// discard a device here (unlike the major number on Linux), so this is the filter which must come first: it rejects
+	// any file without a single syscall and any other folder with just one more
 	if (!is_mount_point(path, file_info))
 	{
 		return false;
