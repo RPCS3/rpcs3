@@ -670,20 +670,20 @@ namespace fs
 
 		u64 size() override
 		{
-			if (m_raw_device)
+			if (!m_raw_device)
 			{
-				// For a raw device, we need to use DeviceIoControl.
-				DISK_GEOMETRY_EX geometry;
+				// NOTE: this can fail if we access a mounted empty drive (e.g. after unmounting an iso).
+				LARGE_INTEGER size;
 
-				ensure(DeviceIoControl(m_handle, IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, nullptr, 0, &geometry, sizeof(geometry), nullptr, nullptr));
-				return geometry.DiskSize.QuadPart;
+				ensure(GetFileSizeEx(m_handle, &size)); // "file::size"
+				return size.QuadPart;
 			}
 
-			// NOTE: this can fail if we access a mounted empty drive (e.g. after unmounting an iso).
-			LARGE_INTEGER size;
+			// For a raw device, we need to use DeviceIoControl.
+			DISK_GEOMETRY_EX geometry;
 
-			ensure(GetFileSizeEx(m_handle, &size)); // "file::size"
-			return size.QuadPart;
+			ensure(DeviceIoControl(m_handle, IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, nullptr, 0, &geometry, sizeof(geometry), nullptr, nullptr));
+			return geometry.DiskSize.QuadPart;
 		}
 
 		native_handle get_handle() override
@@ -852,16 +852,16 @@ namespace fs
 
 		u64 size() override
 		{
-			if (m_raw_device)
+			if (!m_raw_device)
 			{
-				// For a raw device, we need to use an ioctl ("fstat()" would always report a null size)
-				return get_raw_device_size(m_fd);
+				struct ::stat file_info;
+				ensure(::fstat(m_fd, &file_info) == 0); // "file::size"
+
+				return file_info.st_size;
 			}
 
-			struct ::stat file_info;
-			ensure(::fstat(m_fd, &file_info) == 0); // "file::size"
-
-			return file_info.st_size;
+			// For a raw device, we need to use an ioctl ("fstat()" would always report a null size)
+			return get_raw_device_size(m_fd);
 		}
 
 		native_handle get_handle() override
