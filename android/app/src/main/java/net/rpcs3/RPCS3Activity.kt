@@ -22,10 +22,11 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.core.view.isInvisible
+import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import net.rpcs3.databinding.ActivityRpcs3Binding
 import net.rpcs3.dialogs.AlertDialogQueue
+import net.rpcs3.overlay.OverlayPrefs
 import net.rpcs3.overlay.State
 import net.rpcs3.utils.DriverFlags
 import net.rpcs3.utils.DriverSelection
@@ -41,6 +42,7 @@ class RPCS3Activity : ComponentActivity() {
     private lateinit var unregisterUsbEventListener: () -> Unit
     private var isoDescriptor: android.os.ParcelFileDescriptor? = null
     private var gamePadState: State = State()
+    private var overlayPadState: State = State()
     private var usesAxisL2 = false
     private var usesAxisR2 = false
     private var bootThread: Thread? = null
@@ -48,6 +50,8 @@ class RPCS3Activity : ComponentActivity() {
     private var hudPump: Runnable? = null
     private var hudGraphPump: Runnable? = null
     private var hudPrefsListener:
+        android.content.SharedPreferences.OnSharedPreferenceChangeListener? = null
+    private var overlayPrefsListener:
         android.content.SharedPreferences.OnSharedPreferenceChangeListener? = null
     private val modeHoldRunnable = Runnable {
         setDrawerVisible(!drawerVisible.value)
@@ -112,11 +116,17 @@ class RPCS3Activity : ComponentActivity() {
             }
         }
 
+        binding.padOverlay.onPadState = { state ->
+            overlayPadState = state
+            sendGamepadData()
+        }
+
         startHud()
+        startOverlay()
 
         binding.oscToggle.setOnClickListener {
-            binding.padOverlay.isInvisible = !binding.padOverlay.isInvisible
-            binding.oscToggle.setImageResource(if (binding.padOverlay.isInvisible) R.drawable.ic_osc_off else R.drawable.ic_show_osc)
+            OverlayPrefs.setEnabled(this, !OverlayPrefs.isEnabled(this))
+            applyOverlayPreferences()
             wakeToggle()
         }
 
@@ -260,7 +270,45 @@ class RPCS3Activity : ComponentActivity() {
         gamePadState.rightStickY = 127
         usesAxisL2 = false
         usesAxisR2 = false
+        binding.padOverlay.releaseAllInput()
         sendGamepadData()
+    }
+
+    private fun startOverlay() {
+        val prefs = OverlayPrefs.of(this)
+
+        overlayPrefsListener =
+            android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+                if (key == OverlayPrefs.ENABLED_KEY) {
+                    runOnUiThread { applyOverlayPreferences() }
+                }
+            }
+        prefs.registerOnSharedPreferenceChangeListener(overlayPrefsListener)
+
+        applyOverlayPreferences()
+    }
+
+    private fun stopOverlay() {
+        overlayPrefsListener?.let {
+            OverlayPrefs.of(this).unregisterOnSharedPreferenceChangeListener(it)
+        }
+        overlayPrefsListener = null
+    }
+
+    private fun applyOverlayPreferences() {
+        val enabled = OverlayPrefs.isEnabled(this)
+
+        if (binding.padOverlay.isVisible != enabled) {
+            binding.padOverlay.isVisible = enabled
+        }
+
+        binding.oscToggle.setImageResource(
+            if (enabled) R.drawable.ic_show_osc else R.drawable.ic_osc_off
+        )
+
+        if (enabled) {
+            binding.padOverlay.invalidate()
+        }
     }
 
     private fun applyHudPreferences() {
@@ -371,6 +419,7 @@ class RPCS3Activity : ComponentActivity() {
         binding.drawerHost.postDelayed({
             if (!drawerVisible.value) {
                 binding.drawerHost.visibility = View.GONE
+                applyOverlayPreferences()
             }
         }, 260)
     }
@@ -390,14 +439,21 @@ class RPCS3Activity : ComponentActivity() {
         super.onBackPressed()
     }
 
+    override fun onResume() {
+        super.onResume()
+        applyOverlayPreferences()
+    }
+
     override fun onPause() {
         super.onPause()
+        releaseAllPadInput()
         RPCS3.instance.settingsFlush()
     }
 
     override fun onDestroy() {
         super.onDestroy()
         stopHud()
+        stopOverlay()
         pendingStopCheck?.let { stopHandler.removeCallbacks(it) }
         pendingStopCheck = null
         RPCS3.onEmulationStopped = null
@@ -564,14 +620,16 @@ class RPCS3Activity : ComponentActivity() {
         return true
     }
 
+    private fun mergeAxis(pad: Int, overlay: Int) = if (overlay != 127) overlay else pad
+
     private fun sendGamepadData() {
         RPCS3.instance.overlayPadData(
-            gamePadState.digital[0],
-            gamePadState.digital[1],
-            gamePadState.leftStickX,
-            gamePadState.leftStickY,
-            gamePadState.rightStickX,
-            gamePadState.rightStickY
+            gamePadState.digital[0] or overlayPadState.digital[0],
+            gamePadState.digital[1] or overlayPadState.digital[1],
+            mergeAxis(gamePadState.leftStickX, overlayPadState.leftStickX),
+            mergeAxis(gamePadState.leftStickY, overlayPadState.leftStickY),
+            mergeAxis(gamePadState.rightStickX, overlayPadState.rightStickX),
+            mergeAxis(gamePadState.rightStickY, overlayPadState.rightStickY)
         )
     }
 
@@ -604,7 +662,12 @@ class RPCS3Activity : ComponentActivity() {
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) enableFullScreenImmersive()
+        if (hasFocus) {
+            enableFullScreenImmersive()
+            applyOverlayPreferences()
+        } else {
+            releaseAllPadInput()
+        }
     }
 
     private companion object {

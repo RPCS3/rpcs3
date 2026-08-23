@@ -296,7 +296,8 @@ fun ControlPanel(
                     SliderComponent(
                         stringResource(R.string.overlay_scale),
                         scaleValue,
-                        onScaleChange
+                        onScaleChange,
+                        OverlayPrefs.MIN_SCALE.toFloat()..100f
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     SliderComponent(
@@ -326,7 +327,12 @@ fun ControlPanel(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SliderComponent(label: String, value: Float, onValueChange: (Float) -> Unit) {
+fun SliderComponent(
+    label: String,
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float> = 0f..100f
+) {
     Column {
         Text(
             text = stringResource(R.string.overlay_slider_value, label, value.roundToInt()),
@@ -334,9 +340,9 @@ fun SliderComponent(label: String, value: Float, onValueChange: (Float) -> Unit)
             color = MaterialTheme.colorScheme.onSurface
         )
         Slider(
-            value = value,
+            value = value.coerceIn(valueRange),
             onValueChange = onValueChange,
-            valueRange = 0f..100f,
+            valueRange = valueRange,
             thumb = {
                 Box(
                     modifier = Modifier

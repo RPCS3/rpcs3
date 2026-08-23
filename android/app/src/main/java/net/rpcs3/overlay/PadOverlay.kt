@@ -11,7 +11,7 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.VectorDrawable
 import android.util.AttributeSet
 import android.view.MotionEvent
-import android.view.SurfaceView
+import android.view.View
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.graphics.scale
@@ -33,7 +33,7 @@ data class State(
     var rightStickY: Int = 127
 )
 
-class PadOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(context, attrs) {
+class PadOverlay(context: Context?, attrs: AttributeSet?) : View(context, attrs) {
     private val buttons: Array<PadOverlayButton>
     private val dpad: PadOverlayDpad
     private val triangleSquareCircleCross: PadOverlayDpad
@@ -58,6 +58,7 @@ class PadOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(context,
         
     var onSelectedInputChange: ((Any) -> Unit)? = null
     var onPsHold: (() -> Unit)? = null
+    var onPadState: ((State) -> Unit)? = null
     var isEditing = false
 
     private val psHoldHandler = android.os.Handler(android.os.Looper.getMainLooper())
@@ -440,14 +441,7 @@ class PadOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(context,
 
             trackPsHold(state.digital[0])
 
-            RPCS3.instance.overlayPadData(
-                state.digital[0],
-                state.digital[1],
-                state.leftStickX,
-                state.leftStickY,
-                state.rightStickX,
-                state.rightStickY
-            )
+            publishState()
 
             if (!hit && (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_POINTER_DOWN)) {
                 val xInFloatingArea = x > buttonSize * 2 && x < totalWidth - buttonSize * 2
@@ -481,6 +475,62 @@ class PadOverlay(context: Context?, attrs: AttributeSet?) : SurfaceView(context,
 
             hit || performClick()
         }
+    }
+
+    private fun publishState() {
+        val sink = onPadState
+        if (sink != null) {
+            sink(state)
+            return
+        }
+
+        RPCS3.instance.overlayPadData(
+            state.digital[0],
+            state.digital[1],
+            state.leftStickX,
+            state.leftStickY,
+            state.rightStickX,
+            state.rightStickY
+        )
+    }
+
+    fun releaseAllInput() {
+        psHoldArmed = false
+        psHoldHandler.removeCallbacks(psHoldRunnable)
+
+        buttons.forEach { it.release(state) }
+        dpad.release(state)
+        triangleSquareCircleCross.release(state)
+        sticks.forEach { it.release(state) }
+
+        for (i in floatingSticks.indices) {
+            floatingSticks[i]?.release(state)
+            floatingSticks[i] = null
+        }
+
+        state.digital[0] = 0
+        state.digital[1] = 0
+        state.leftStickX = 127
+        state.leftStickY = 127
+        state.rightStickX = 127
+        state.rightStickY = 127
+
+        publishState()
+        invalidate()
+    }
+
+    override fun onVisibilityChanged(changedView: View, visibility: Int) {
+        super.onVisibilityChanged(changedView, visibility)
+
+        if (changedView === this && visibility != VISIBLE && isAttachedToWindow && !isEditing) {
+            releaseAllInput()
+        }
+    }
+
+    override fun onDetachedFromWindow() {
+        psHoldArmed = false
+        psHoldHandler.removeCallbacks(psHoldRunnable)
+        super.onDetachedFromWindow()
     }
 
     override fun draw(canvas: Canvas) {

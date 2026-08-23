@@ -155,6 +155,36 @@ class PadOverlayStick(
         return 0
     }
 
+    fun release(padState: State) {
+        if (locked == -1) {
+            return
+        }
+
+        locked = -1
+
+        bg.setBounds(
+            bg.bounds.left + bgOffsetX,
+            bg.bounds.top + bgOffsetY,
+            bg.bounds.right + bgOffsetX,
+            bg.bounds.bottom + bgOffsetY
+        )
+        bgOffsetX = 0
+        bgOffsetY = 0
+
+        padState.digital[pressDigitalIndex] =
+            padState.digital[pressDigitalIndex] and pressBit.inv()
+
+        super.setBounds(bg.bounds)
+
+        if (isLeft) {
+            padState.leftStickX = 127
+            padState.leftStickY = 127
+        } else {
+            padState.rightStickX = 127
+            padState.rightStickY = 127
+        }
+    }
+
     override fun setBounds(left: Int, top: Int, right: Int, bottom: Int) {
         super.setBounds(left, top, right, bottom)
         bg.setBounds(left, top, right, bottom)

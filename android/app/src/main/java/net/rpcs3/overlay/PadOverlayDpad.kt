@@ -107,7 +107,8 @@ class PadOverlayDpad(
     }
 
     fun setScale(percent: Int) {
-        val scaleFactor = percent / 100f
+        val safePercent = percent.coerceIn(OverlayPrefs.MIN_SCALE, 100)
+        val scaleFactor = safePercent / 100f
         val newWidth = (1024 * scaleFactor).roundToInt()
         val newHeight = (1024 * scaleFactor).roundToInt()
         val centerX = area.centerX()
@@ -121,7 +122,7 @@ class PadOverlayDpad(
         prefs.edit()
             .putInt("${inputId}_x", area.left)
             .putInt("${inputId}_y", area.top)
-            .putInt("${inputId}_scale", percent)
+            .putInt("${inputId}_scale", safePercent)
             .apply()
     }
 
@@ -300,6 +301,17 @@ class PadOverlayDpad(
         )
     }
     
+    fun release(padState: State) {
+        for (touchIndex in 0..1) {
+            locked[touchIndex] = -1
+            digitalBits[touchIndex] = 0
+            btnState[touchIndex].clear()
+        }
+
+        padState.digital[digitalIndex] =
+            padState.digital[digitalIndex] and (leftBit or rightBit or topBit or bottomBit).inv()
+    }
+
     fun getBounds(): Rect {
         return area
     }

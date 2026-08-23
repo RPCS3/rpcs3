@@ -70,6 +70,17 @@ class PadOverlayButton(private val context: Context, resources: Resources, image
         return hit
     }
 
+    fun release(padState: State) {
+        if (locked != -1) {
+            alpha = origAlpha
+        }
+
+        locked = -1
+        pressed = false
+        padState.digital[0] = padState.digital[0] and digital1.inv()
+        padState.digital[1] = padState.digital[1] and digital2.inv()
+    }
+
     fun startDragging(startX: Int, startY: Int) {
         dragging = true
         offsetX = startX - bounds.left
@@ -97,11 +108,12 @@ class PadOverlayButton(private val context: Context, resources: Resources, image
     }
 
     fun setScale(percent: Int) {
-        scaleFactor = percent / 100f
+        val safePercent = percent.coerceIn(OverlayPrefs.MIN_SCALE, 100)
+        scaleFactor = safePercent / 100f
         val newWidth = (intrinsicWidth * scaleFactor).roundToInt()
         val newHeight = (intrinsicHeight * scaleFactor).roundToInt()
         setBounds(bounds.left, bounds.top, bounds.left + newWidth, bounds.top + newHeight)
-        prefs.edit().putInt("button_${digital1}_${digital2}_scale", percent).apply()
+        prefs.edit().putInt("button_${digital1}_${digital2}_scale", safePercent).apply()
     }
 
     fun setOpacity(percent: Int) {

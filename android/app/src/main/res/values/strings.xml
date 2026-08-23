@@ -252,6 +252,8 @@
     <string name="controls_applies_to">Applies to</string>
     <string name="controls_applies_to_value">All on-screen buttons and sticks</string>
     <string name="controls_edit_layout">Edit layout</string>
+    <string name="controls_show_overlay">Show controls</string>
+    <string name="controls_show_overlay_hint">Also toggled by the button next to R3 in game</string>
 
     <string name="advanced_title">Advanced Settings</string>
     <string name="advanced_search_placeholder">Search settings...</string>
