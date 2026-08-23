@@ -3,10 +3,16 @@
 # shellcheck shell=sh disable=SC2096
 
 # RPCS3 often needs recent Qt and Vulkan-Headers
-sed -i '' 's/quarterly/latest/' /etc/pkg/FreeBSD.conf
+sed -i '' 's/latest/quarterly/' /etc/pkg/FreeBSD.conf
 
 export ASSUME_ALWAYS_YES=true
+freebsd-version # debug
 pkg info # debug
+pkg search -x 'qt6.*' # debug
+pkg search -x '.*multimedia.*' # debug
+pkg search -x 'qt6.*multimedia' # debug
+pkg search qt6 | grep -i multimedia # debug
+pkg -vv # debug
 
 # WITH_LLVM and Clang compiler
 pkg install "llvm$LLVM_COMPILER_VER"
