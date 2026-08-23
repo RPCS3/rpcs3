@@ -140,6 +140,7 @@ struct lv2_process : public ppu_module<lv2_obj>
 	atomic_t<u32> state{PS3_PROCESS_RUNNING};
 
 	atomic_t<bool> is_terminating = false;
+	atomic_t<u32> is_terminated = 0;
 
 	// shared_ptr so it will be initialized externally (incomplete typename)
 	std::shared_ptr<vm::ps3_virtual_memory_object> memory_4GB_model;

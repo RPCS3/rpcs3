@@ -256,6 +256,9 @@ u64 lv2_process::ki11_self()
 		parent_memory_container->free(used_memory);
 	}
 
+	is_terminated = 1;
+	is_terminated.notify_all();
+
 	// Returns the time this process took
 	return get_system_time() - start_time;
 }
@@ -748,6 +751,12 @@ error_code process_wait_for_child(ppu_thread& ppu, u32 claimed_id, vm::ptr<u32> 
 
 	if (res == CELL_EAGAIN)
 	{
+		while (!child->is_terminated)
+		{
+			// Wait for ki11_self() to complete
+			thread_ctrl::wait_on(child->is_terminated, 0);
+		}
+
 		//child->ki11_self();
 		ensure(idm::remove_verify<lv2_obj, lv2_process>(idm::id_index(claimed_id, nullptr), child));
 		ppu.cancel_sleep = 0;
