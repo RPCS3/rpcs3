@@ -19,21 +19,23 @@ namespace rsx
 		POLYGON_STIPPLE_ENABLE_BIT   = 3,
 
 		// Auxilliary config
-		INT_FRAMEBUFFER_BIT          = 16,
-		MSAA_WRITE_ENABLE_BIT        = 17,
-		FRAG_DEPTH_24_BIT            = 18,
-		FRAG_DEPTH_FLOAT_BIT         = 19,
+		INT_FRAMEBUFFER_BIT          = 8,
+		MSAA_WRITE_ENABLE_BIT        = 9,
+		FRAG_DEPTH_24_BIT            = 10,
+		FRAG_DEPTH_FLOAT_BIT         = 11,
 
 		// Data
-		ALPHA_FUNC_OFFSET            = 20,
-		MSAA_SAMPLE_CTRL_OFFSET      = 23,
+		ALPHA_FUNC_OFFSET            = 12,
+		MSAA_SAMPLE_CTRL_OFFSET      = 15,
+		MRT_CHANNEL_REMAP_OFFSET     = 17,
 
 		// Data lengths
 		ALPHA_FUNC_NUM_BITS          = 3,
 		MSAA_SAMPLE_CTRL_NUM_BITS    = 2,
+		MRT_CHANNEL_REMAP_NUM_BITS   = 3,
 
 		// Meta
-		ROP_CMD_MASK                 = 0xF // Commands are encoded in the lower 16 bits
+		ROP_CMD_MASK                 = 0xF // Commands are encoded in the lower 4 bits
 	};
 
 	struct ROP_control_t
@@ -50,6 +52,8 @@ namespace rsx
 
 		void set_alpha_test_func(uint func) { value |= (func << ROP_control_bits::ALPHA_FUNC_OFFSET); }
 		void set_msaa_control(uint ctrl) { value |= (ctrl << ROP_control_bits::MSAA_SAMPLE_CTRL_OFFSET); }
+
+		void set_output_remap(uint remap) { value |= (remap << ROP_control_bits::MRT_CHANNEL_REMAP_OFFSET); }
 	};
 }
 

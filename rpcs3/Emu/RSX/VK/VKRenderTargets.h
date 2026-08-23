@@ -141,6 +141,21 @@ namespace vk
 		return ensure(dynamic_cast<const vk::render_target*>(t));
 	}
 
+	static inline vk::render_target* try_as_rtt(vk::image* t)
+	{
+		return dynamic_cast<vk::render_target*>(t);
+	}
+
+	static inline const vk::render_target* try_as_rtt(const vk::image* t)
+	{
+		return dynamic_cast<const vk::render_target*>(t);
+	}
+
+	static inline bool is_rtt(const vk::image* t)
+	{
+		return dynamic_cast<const vk::render_target*>(t) != nullptr;
+	}
+
 	struct surface_cache_traits
 	{
 		using surface_storage_type = std::unique_ptr<vk::render_target>;
@@ -596,7 +611,7 @@ namespace vk
 				const areai dst_rect = { 0, 0, surface->get_surface_width<rsx::surface_metrics::samples, int>(), surface->get_surface_height<rsx::surface_metrics::samples, int>() };
 
 				auto scratch = vk::get_typeless_helper(source->format(), source->format_class(), dst_rect.x2, dst_rect.y2);
-				vk::copy_scaled_image(cmd, source, scratch, src_rect, dst_rect, 1, true, VK_FILTER_NEAREST);
+				vk::copy_scaled_image(cmd, source, scratch, src_rect, dst_rect, {}, true, VK_FILTER_NEAREST);
 
 				source = scratch;
 			}

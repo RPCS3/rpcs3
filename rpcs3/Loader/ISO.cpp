@@ -67,7 +67,7 @@ static bool is_iso_file(iso_file& file, u64* size = nullptr)
 
 	char magic[5];
 
-	if (!file.read_at(32768ULL + 1, magic, 5) == 5)
+	if (file.read_at(32768ULL + 1, magic, 5) != 5)
 	{
 		return false;
 	}

@@ -1053,7 +1053,7 @@ void fmt_class_string<CellError>::format(std::string& out, u64 arg)
 		if (upper == s_error_codes_formatting_by_type.begin())
 		{
 			// Format as unknown
-			format_enum(out, arg, [](auto error)
+			format_enum(out, arg, [](auto /*error*/)
 			{
 				return unknown;
 			});
