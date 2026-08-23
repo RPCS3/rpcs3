@@ -55,6 +55,8 @@ namespace rsx
 
 		void set_render_mode(context* ctx, u32, u32 arg);
 
+		void set_shading_mode(context* ctx, u32 reg, u32 arg);
+
 		void set_zcull_render_enable(context* ctx, u32, u32);
 
 		void set_zcull_stats_enable(context* ctx, u32, u32);

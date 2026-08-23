@@ -672,6 +672,23 @@ namespace rsx
 			RSX(ctx)->enable_conditional_rendering(vm::cast(address_ptr));
 		}
 
+		void set_shading_mode(context* ctx, u32 reg, u32 arg)
+		{
+			if (arg == REGS(ctx)->latch)
+			{
+				return;
+			}
+
+			if (to_shading_mode(arg))
+			{
+				RSX(ctx)->m_graphics_state |= rsx::vertex_program_state_dirty | rsx::fragment_program_state_dirty;
+				return;
+			}
+
+			// Rollback
+			REGS(ctx)->decode(reg, REGS(ctx)->latch);
+		}
+
 		void set_zcull_render_enable(context* ctx, u32, u32)
 		{
 			RSX(ctx)->notify_zcull_info_changed();
