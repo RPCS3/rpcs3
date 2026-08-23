@@ -2,21 +2,89 @@
 #include "Emu/IdManager.h"
 
 #include "Emu/Cell/ErrorCodes.h"
+#include "Emu/Cell/PPUThread.h"
 #include "sys_event.h"
 #include "sys_fs.h"
 #include "util/shared_ptr.hpp"
 
 #include "sys_storage.h"
+#include "sys_event.h"
 
 LOG_CHANNEL(sys_storage);
 
 namespace
 {
-	struct storage_manager
+	struct storage_manager_impl
 	{
 		// This is probably wrong and should be assigned per fd or something
 		atomic_ptr<lv2_event_queue> asyncequeue;
+		atomic_ptr<lv2_event_queue> device_queue;
+
+		storage_manager_impl() {}
+		storage_manager_impl(const storage_manager_impl&) = delete;
+		int operator=(const storage_manager_impl&) = delete;
+
+		void operator()() noexcept
+		{
+			u32 events[] =
+			{
+				// First class
+				3,
+				4,
+				7,
+				8,
+
+				0x101,
+				0x102,
+			};
+
+			//u64 start_time = get_system_time();
+			u64 start_count = 0;
+			u64 event_index = 0;
+
+			while (thread_ctrl::state() != thread_state::aborting)
+			{
+				thread_ctrl::wait_for(25000);
+				start_count++;
+
+				const auto q = device_queue.load();
+				if (q)
+				{
+					if (start_count % 10)
+					{
+						//sys_storage.notice("storage_manager(): Sending 0xf2");
+
+						//q->send(0, 0xF2, 0, 0);
+					}
+					else
+					{
+						event_index++;
+						event_index = event_index % std::size(events);
+						sys_storage.notice("storage_manager(): Sending 0x%x", events[event_index]);
+						q->send(0, events[event_index], 0x1234567, (u64{events[event_index]} << 32) + 6);
+					}
+				}
+			}
+		}
+
+		static constexpr auto thread_name = "VSH Storage Events"sv;
 	};
+
+	using storage_manager = named_thread<storage_manager_impl>;
+}
+
+lv2_storage::lv2_storage(utils::serial& ar) noexcept
+	: lv2_obj{1}
+	, device_id(ar)
+	, mode(ar)
+	, flags(ar)
+{
+
+}
+
+void lv2_storage::save(utils::serial& ar)
+{
+	ar(device_id, mode, flags);
 }
 
 error_code sys_storage_open(u64 device, u64 mode, vm::ptr<u32> fd, u64 flags)
@@ -36,7 +104,7 @@ error_code sys_storage_open(u64 device, u64 mode, vm::ptr<u32> fd, u64 flags)
 	[[maybe_unused]] u64 storage_id = device & 0xFFFFF00FFFFFFFF;
 	fs::file file;
 
-	if (const u32 id = idm::make<lv2_storage>(device, std::move(file), mode, flags))
+	if (const u32 id = idm::make<lv2_obj, lv2_storage>(device, std::move(file), mode, flags))
 	{
 		*fd = id;
 		return CELL_OK;
@@ -49,7 +117,7 @@ error_code sys_storage_close(u32 fd)
 {
 	sys_storage.todo("sys_storage_close(fd=0x%x)", fd);
 
-	idm::remove<lv2_storage>(fd);
+	ensure(idm::remove<lv2_obj, lv2_storage>(fd));
 
 	return CELL_OK;
 }
@@ -64,7 +132,7 @@ error_code sys_storage_read(u32 fd, u32 mode, u32 start_sector, u32 num_sectors,
 	}
 
 	std::memset(bounce_buf.get_ptr(), 0, num_sectors * 0x200ull);
-	const auto handle = idm::get_unlocked<lv2_storage>(fd);
+	const auto handle = idm::get_unlocked<lv2_obj, lv2_storage>(fd);
 
 	if (!handle)
 	{
@@ -93,7 +161,7 @@ error_code sys_storage_write(u32 fd, u32 mode, u32 start_sector, u32 num_sectors
 		return CELL_EFAULT;
 	}
 
-	const auto handle = idm::get_unlocked<lv2_storage>(fd);
+	const auto handle = idm::get_unlocked<lv2_obj, lv2_storage>(fd);
 
 	if (!handle)
 	{
@@ -219,8 +287,18 @@ error_code sys_storage_get_device_info(u64 device, vm::ptr<StorageDeviceInfo> bu
 
 		std::string u = "unnamed";
 		memcpy(buffer->name, u.c_str(), u.size());
-		buffer->sector_count = 0x4D955;
-		buffer->sector_size = 0x800;
+
+		if (false)
+		{
+			buffer->sector_count = 0;
+			buffer->sector_size = 0x7FFFFFFF;
+		}
+		else
+		{
+			buffer->sector_count = 0x4D955;
+			buffer->sector_size = 0x800;
+		}
+
 		buffer->one = 1;
 		buffer->flags[1] = 0;
 		buffer->flags[2] = 1;
@@ -389,14 +467,42 @@ error_code sys_storage_report_devices(u32 storages, u32 start, u32 devices, vm::
 	return CELL_OK;
 }
 
-error_code sys_storage_configure_medium_event(u32 fd, u32 equeue_id, u32 c)
+error_code sys_storage_configure_medium_event(ppu_thread& ppu, u32 fd, u32 equeue_id, vm::ptr<u32> handle)
 {
-	sys_storage.todo("sys_storage_configure_medium_event(fd=0x%x, equeue_id=0x%x, c=0x%x)", fd, equeue_id, c);
+	sys_storage.todo("sys_storage_configure_medium_event(fd=0x%x, equeue_id=0x%x, c=0x%x)", fd, equeue_id, handle);
+
+	if (!ppu.has_root_perm)
+	{
+		return CELL_EPERM;
+	}
+
+	// What does it do with the handle???
+	// Device specific notifications??
+	if (fd)
+	{
+		const auto storage = idm::get_unlocked<lv2_obj, lv2_storage>(fd);
+
+		if (!storage)
+		{
+			return {CELL_ESRCH, "storage"};
+		}
+	}
+
+	auto& manager = *ensure(g_fxo->try_get<storage_manager>());
+
+	if (auto queue = idm::get_unlocked<lv2_obj, lv2_event_queue>(equeue_id))
+	{
+		manager.device_queue.store(queue);
+	}
+	else
+	{
+		return CELL_ESRCH;
+	}
 
 	return CELL_OK;
 }
 
-error_code sys_storage_set_medium_polling_interval()
+error_code sys_storage_set_medium_polling_interval(ppu_thread& ppu, u32 fd, u64 interval)
 {
 	sys_storage.todo("sys_storage_set_medium_polling_interval()");
 

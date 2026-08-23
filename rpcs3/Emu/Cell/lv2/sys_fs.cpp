@@ -3706,9 +3706,18 @@ error_code sys_fs_mount(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char>
 	if (vfs_path.empty())
 		return {CELL_ENOTSUP, device_name};
 
-	if (root_name.empty() || !vfs::get(path_sv).empty())
+	if (root_name.empty())
 		return {CELL_EEXIST, path_sv};
 
+	if (!vfs::get(path_sv).empty())
+	{
+		if (path_sv == "/dev_hdd0")
+		{
+			return CELL_OK;
+		}
+
+		return {CELL_EEXIST, path_sv};
+	}
 	if (mp == &g_mp_sys_dev_hdd1)
 	{
 		const std::string_view appname = process->get_cellos_appname();

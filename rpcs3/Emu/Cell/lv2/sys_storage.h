@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Emu/Memory/vm_ptr.h"
+#include "Emu/Cell/lv2//sys_sync.h"
 #include "Emu/Cell/ErrorCodes.h"
 
 enum Devices : u64
@@ -21,25 +22,26 @@ enum Devices : u64
 	USB_MASS_STORAGE_2_BASE = 0x10300000000001F,
 };
 
-struct lv2_storage
+struct lv2_storage : public lv2_obj
 {
 	static const u32 id_base = 0x45000000;
-	static const u32 id_step = 1;
-	static const u32 id_count = 2048;
-	SAVESTATE_INIT_POS(45);
 
 	const u64 device_id;
 	const fs::file file;
 	const u64 mode;
 	const u64 flags;
 
-	lv2_storage(u64 device_id, fs::file&& file, u64 mode, u64 flags)
-		: device_id(device_id)
+	lv2_storage(u64 device_id, fs::file&& file, u64 mode, u64 flags) noexcept
+		: lv2_obj{}
+		, device_id(device_id)
 		, file(std::move(file))
 		, mode(mode)
 		, flags(flags)
 	{
 	}
+
+	lv2_storage(utils::serial& ar)  noexcept;
+	void save(utils::serial& ar);
 };
 
 struct StorageDeviceInfo
@@ -57,6 +59,7 @@ struct StorageDeviceInfo
 #define USB_MASS_STORAGE_2(n) (USB_MASS_STORAGE_2_BASE + (n - 6)) /* For 6-127 */
 
 // SysCalls
+class ppu_thread;
 
 error_code sys_storage_open(u64 device, u64 mode, vm::ptr<u32> fd, u64 flags);
 error_code sys_storage_close(u32 fd);
@@ -70,8 +73,8 @@ error_code sys_storage_async_cancel();
 error_code sys_storage_get_device_info(u64 device, vm::ptr<StorageDeviceInfo> buffer);
 error_code sys_storage_get_device_config(vm::ptr<u32> storages, vm::ptr<u32> devices);
 error_code sys_storage_report_devices(u32 storages, u32 start, u32 devices, vm::ptr<u64> device_ids);
-error_code sys_storage_configure_medium_event(u32 fd, u32 equeue_id, u32 c);
-error_code sys_storage_set_medium_polling_interval();
+error_code sys_storage_configure_medium_event(ppu_thread& ppu, u32 fd, u32 equeue_id, vm::ptr<u32> handle);
+error_code sys_storage_set_medium_polling_interval(ppu_thread& ppu, u32 fd, u64 interval);
 error_code sys_storage_create_region();
 error_code sys_storage_delete_region();
 error_code sys_storage_execute_device_command(u32 fd, u64 cmd, vm::ptr<char> cmdbuf, u64 cmdbuf_size, vm::ptr<char> databuf, u64 databuf_size, vm::ptr<u32> driver_status);
