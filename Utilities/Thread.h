@@ -13,7 +13,8 @@ enum class native_core_arrangement : u32
 	undefined,
 	generic,
 	intel_ht,
-	amd_ccx
+	amd_ccx,
+	arm_big_little
 };
 
 enum class thread_class : u32

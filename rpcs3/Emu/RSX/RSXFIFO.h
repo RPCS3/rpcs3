@@ -1,6 +1,7 @@
 #pragma once
 
 #include "util/types.hpp"
+#include "util/endian.hpp"
 #include "Emu/RSX/gcm_enums.h"
 
 #include <span>
@@ -153,7 +154,28 @@ namespace rsx
 
 			u32 translate_address(u32 addr) const;
 
-			std::pair<bool, u32> fetch_u32(u32 addr);
+			/**
+			 * Read one command word, serving it from the local cache when possible.
+			 *
+			 * The hit path is inlined and the refill is not, deliberately. This is called
+			 * once per FIFO command word and the guest pushes on the order of 52,000 of
+			 * them per frame, while the cache refills only about 208 times, so better than
+			 * 99% of calls are a compare and a load. Leaving the whole thing out of line
+			 * made every one of them a real call into another translation unit for the sake
+			 * of the rare case, and fetch_u32 was 15.6% of RSX thread samples against only
+			 * 18us of actual refill work per frame.
+			 */
+			std::pair<bool, u32> fetch_u32_refill(u32 addr);
+
+			inline std::pair<bool, u32> fetch_u32(u32 addr)
+			{
+				if (addr - m_cache_addr >= m_cache_size) [[unlikely]]
+				{
+					return fetch_u32_refill(addr);
+				}
+
+				return {true, read_from_ptr_unsafe<be_t<u32>>(+m_cache[0], addr - m_cache_addr)};
+			}
 			void invalidate_cache() { m_cache_size = 0; }
 
 			u32 get_pos() const { return m_internal_get; }

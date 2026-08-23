@@ -85,7 +85,7 @@ namespace rsx
 			}
 		}
 
-		std::pair<bool, u32> FIFO_control::fetch_u32(u32 addr)
+		std::pair<bool, u32> FIFO_control::fetch_u32_refill(u32 addr)
 		{
 			if (addr - m_cache_addr >= m_cache_size)
 			{

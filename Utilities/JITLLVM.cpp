@@ -238,6 +238,10 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 	// May be a memory container internally
 	std::function<u64(const std::string&)> m_symbols_cement;
 
+#if defined(ARCH_ARM64)
+	std::vector<std::pair<u8*, uptr>> m_code_ranges;
+#endif
+
 	MemoryManager1(std::function<u64(const std::string&)> symbols_cement = {}) noexcept
 		: m_symbols_cement(std::move(symbols_cement))
 	{
@@ -346,7 +350,16 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 
 	u8* allocateCodeSection(uptr size, uint align, uint /*sec_id*/, llvm::StringRef /*sec_name*/) override
 	{
-		return allocate(code_ptr, m_code_mems, size, align, utils::protection::wx);
+		u8* const p = allocate(code_ptr, m_code_mems, size, align, utils::protection::wx);
+
+#if defined(ARCH_ARM64)
+		if (p)
+		{
+			m_code_ranges.emplace_back(p, size);
+		}
+#endif
+
+		return p;
 	}
 
 	u8* allocateDataSection(uptr size, uint align, uint /*sec_id*/, llvm::StringRef /*sec_name*/, bool is_ro) override
@@ -362,6 +375,14 @@ struct MemoryManager1 : llvm::RTDyldMemoryManager
 
 	bool finalizeMemory(std::string* = nullptr) override
 	{
+#if defined(ARCH_ARM64)
+		for (const auto& [p, size] : m_code_ranges)
+		{
+			asmjit::VirtMem::flushInstructionCache(p, size);
+		}
+
+		m_code_ranges.clear();
+#endif
 		return false;
 	}
 
@@ -380,6 +401,10 @@ struct MemoryManager2 : llvm::RTDyldMemoryManager
 	// First fallback for non-existing symbols
 	// May be a memory container internally
 	std::function<u64(const std::string&)> m_symbols_cement;
+
+#if defined(ARCH_ARM64)
+	std::vector<std::pair<u8*, uptr>> m_code_ranges;
+#endif
 
 	MemoryManager2(std::function<u64(const std::string&)> symbols_cement = {}) noexcept
 		: m_symbols_cement(std::move(symbols_cement))
@@ -414,7 +439,16 @@ struct MemoryManager2 : llvm::RTDyldMemoryManager
 
 	u8* allocateCodeSection(uptr size, uint align, uint /*sec_id*/, llvm::StringRef /*sec_name*/) override
 	{
-		return jit_runtime::alloc(size, align, true);
+		u8* const p = jit_runtime::alloc(size, align, true);
+
+#if defined(ARCH_ARM64)
+		if (p)
+		{
+			m_code_ranges.emplace_back(p, size);
+		}
+#endif
+
+		return p;
 	}
 
 	u8* allocateDataSection(uptr size, uint align, uint /*sec_id*/, llvm::StringRef /*sec_name*/, bool /*is_ro*/) override
@@ -424,6 +458,14 @@ struct MemoryManager2 : llvm::RTDyldMemoryManager
 
 	bool finalizeMemory(std::string* = nullptr) override
 	{
+#if defined(ARCH_ARM64)
+		for (const auto& [p, size] : m_code_ranges)
+		{
+			asmjit::VirtMem::flushInstructionCache(p, size);
+		}
+
+		m_code_ranges.clear();
+#endif
 		return false;
 	}
 

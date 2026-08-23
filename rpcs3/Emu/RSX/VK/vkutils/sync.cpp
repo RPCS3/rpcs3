@@ -8,6 +8,9 @@
 
 #include "Emu/Cell/timers.hpp"
 
+#include <chrono>
+#include <thread>
+
 #include "util/sysinfo.hpp"
 #include "util/asm.hpp"
 
@@ -569,20 +572,27 @@ namespace vk
 		}
 		else
 		{
-			while (auto status = VK_GET_SYMBOL(vkGetFenceStatus)(*g_render_device, pFence->handle))
+			constexpr u64 hot_polls = 512;
+
+			for (u64 poll = 0; poll < hot_polls; poll++)
 			{
-				switch (status)
+				const VkResult status = VK_GET_SYMBOL(vkGetFenceStatus)(*g_render_device, pFence->handle);
+
+				if (status == VK_SUCCESS)
 				{
-				case VK_NOT_READY:
-					utils::pause();
-					continue;
-				default:
+					return VK_SUCCESS;
+				}
+
+				if (status != VK_NOT_READY)
+				{
 					die_with_error(status);
 					return status;
 				}
+
+				utils::pause();
 			}
 
-			return VK_SUCCESS;
+			return VK_GET_SYMBOL(vkWaitForFences)(*g_render_device, 1, &pFence->handle, VK_FALSE, UINT64_MAX);
 		}
 	}
 
@@ -597,6 +607,9 @@ namespace vk
 		}
 
 		u64 start = 0;
+
+		u64 polls = 0;
+		constexpr u64 hot_polls = 512;
 
 		while (true)
 		{
@@ -629,7 +642,14 @@ namespace vk
 				}
 			}
 
-			utils::pause();
+			if (++polls <= hot_polls)
+			{
+				utils::pause();
+			}
+			else
+			{
+				std::this_thread::sleep_for(std::chrono::microseconds(50));
+			}
 		}
 	}
 }

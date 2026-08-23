@@ -57,7 +57,13 @@ namespace vk
 		V3DV,
 		HONEYKRISP,
 		PANVK,
-		ARM_MALI
+		ARM_MALI,
+		ADRENO,
+		TURNIP,
+		POWERVR,
+		XCLIPSE,
+		BROADCOM,
+		VERISILICON
 	};
 
 	driver_vendor get_driver_vendor();
@@ -83,4 +89,14 @@ namespace vk
 	static inline bool is_NVIDIA(driver_vendor vendor) { return vendor == driver_vendor::NVIDIA || vendor == driver_vendor::NVK; }
 	static inline bool is_AMD(driver_vendor vendor) { return vendor == driver_vendor::AMD || vendor == driver_vendor::RADV; }
 	static inline bool is_INTEL(driver_vendor vendor) { return vendor == driver_vendor::INTEL || vendor == driver_vendor::ANV; }
+	static inline bool is_ADRENO(driver_vendor vendor) { return vendor == driver_vendor::ADRENO || vendor == driver_vendor::TURNIP; }
+	static inline bool is_MALI(driver_vendor vendor) { return vendor == driver_vendor::ARM_MALI || vendor == driver_vendor::PANVK; }
+
+	static inline bool is_MOBILE(driver_vendor vendor)
+	{
+		return is_ADRENO(vendor) || is_MALI(vendor) ||
+		       vendor == driver_vendor::POWERVR || vendor == driver_vendor::XCLIPSE ||
+		       vendor == driver_vendor::BROADCOM || vendor == driver_vendor::VERISILICON ||
+		       vendor == driver_vendor::V3DV;
+	}
 }

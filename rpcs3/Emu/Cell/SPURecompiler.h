@@ -91,6 +91,8 @@ public:
 	atomic_t<u8> cached = false;
 	atomic_t<u8> logged = false;
 
+	atomic_t<u32> llvm_compile_state = 0;
+
 	spu_item(spu_program&& data)
 		: data(std::move(data))
 	{

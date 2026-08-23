@@ -250,6 +250,10 @@ void* jit_runtime_base::_add(asmjit::CodeHolder* code, usz align) noexcept
 		}
 	}
 
+#if defined(ARCH_ARM64)
+	asmjit::VirtMem::flushInstructionCache(p, codeSize);
+#endif
+
 	return p;
 }
 
@@ -326,16 +330,18 @@ void jit_runtime::finalize() noexcept
 	s_data_pos = 0;
 
 	// Restore code/data snapshot
-	std::memcpy(alloc(s_code_init.size(), 1, true), s_code_init.data(), s_code_init.size());
+	u8* const code_ptr = alloc(s_code_init.size(), 1, true);
+	std::memcpy(code_ptr, s_code_init.data(), s_code_init.size());
 	std::memcpy(alloc(s_data_init.size(), 1, false), s_data_init.data(), s_data_init.size());
 
 #ifdef __APPLE__
 	pthread_jit_write_protect_np(true);
 #endif
 #ifdef ARCH_ARM64
-	// Flush all cache lines after potentially writing executable code
-	asm("ISB");
-	asm("DSB ISH");
+	if (code_ptr && !s_code_init.empty())
+	{
+		asmjit::VirtMem::flushInstructionCache(code_ptr, s_code_init.size());
+	}
 #endif
 }
 

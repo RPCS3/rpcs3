@@ -1682,14 +1682,49 @@ public:
 
 		if (func.entry_point != start0)
 		{
-			// Wait for the duplicate
 			while (!add_loc->compiled)
 			{
-				add_loc->compiled.wait(nullptr);
+				if (add_loc->llvm_compile_state == 3)
+				{
+					return nullptr;
+				}
+
+				add_loc->compiled.wait(nullptr, atomic_wait_timeout{10'000'000});
 			}
 
 			return add_loc->compiled;
 		}
+
+		if (add_loc->llvm_compile_state.compare_and_swap(0, 1) != 0)
+		{
+			while (add_loc->llvm_compile_state == 1)
+			{
+				add_loc->llvm_compile_state.wait(1);
+			}
+
+			if (add_loc->llvm_compile_state == 2)
+			{
+				return add_loc->compiled;
+			}
+
+			return nullptr;
+		}
+
+		struct claim_guard_t
+		{
+			spu_item* item;
+
+			~claim_guard_t()
+			{
+				if (item && item->llvm_compile_state == 1)
+				{
+					item->llvm_compile_state.release(3);
+					item->llvm_compile_state.notify_all();
+
+					item->compiled.notify_all();
+				}
+			}
+		} claim_guard{add_loc};
 
 		bool add_to_file = false;
 
@@ -3999,6 +4034,9 @@ public:
 		}
 
 		add_loc->compiled.notify_all();
+
+		add_loc->llvm_compile_state.release(2);
+		add_loc->llvm_compile_state.notify_all();
 
 		if (g_cfg.core.spu_debug)
 		{
@@ -7496,7 +7534,11 @@ public:
 		const auto known_idx = get_known_bits(c);
 		const bool perm_only = known_idx.Zero[7];
 		const bool perm_or_zero_only = known_idx.Zero[6];
+#ifdef ARCH_ARM64
+		const bool idx_selects_single = false;
+#else
 		const bool idx_selects_single = known_idx.extractBits(1, 4).isConstant();
+#endif
 
 		const auto a = get_vr<u8[16]>(op.ra);
 		const auto b = get_vr<u8[16]>(op.rb);
@@ -7511,6 +7553,13 @@ public:
 		const bool a_is_splat = a_is_const && a_data == v128::from8p(a_data._u8[0]);
 		const bool b_is_splat = b_is_const && b_data == v128::from8p(b_data._u8[0]);
 
+#ifdef ARCH_ARM64
+		const bool a_fold_const = a_is_splat;
+		const bool b_fold_const = b_is_splat;
+#else
+		const bool a_fold_const = a_is_const;
+		const bool b_fold_const = b_is_const;
+#endif
 
 		auto get_swap_from_const = [this](v128 data, bool is_splat) {
 			// Splats are their own byteswap
@@ -7520,15 +7569,15 @@ public:
 			return make_const_vector(data, get_type<u8[16]>());
 		};
 
-		if (a_is_const)
+		if (a_fold_const)
 			a_swap.value = get_swap_from_const(a_data, a_is_splat);
 
-		if (b_is_const)
+		if (b_fold_const)
 			b_swap.value = get_swap_from_const(b_data, b_is_splat);
 
 		// Shuffle index reversal is equivalent to a byteswap
 		value_t<u8[16]> av, bv, cv;
-		if ((a_was_swapped || a_is_const) && (b_was_swapped || b_is_const))
+		if ((a_was_swapped || a_fold_const) && (b_was_swapped || b_fold_const))
 		{
 			av = eval(a_swap);
 			bv = eval(b_swap);
@@ -8445,6 +8494,18 @@ public:
 		return eval(fpcast<f32[4]>(xr));
 	}
 
+	value_t<f32[4]> negate_addend(value_t<f32[4]> c)
+	{
+		const auto c_known = get_known_fp_class<4>(c, llvm::FPClassTest::fcNan);
+
+		if (c_known.isKnownNeverNaN())
+		{
+			return eval(-c);
+		}
+
+		return eval(select(fcmp_uno(c != c), c, -c));
+	}
+
 	template <typename T, typename U, typename V>
 	static llvm_calli<f32[4], T, U, V> fnms(T&& a, U&& b, V&& c)
 	{
@@ -8840,7 +8901,7 @@ public:
 				const auto a_clamp = clamp_smax(a, a_known);
 				const auto b_clamp = clamp_smax(b, b_known);
 
-				return fma32x4(a_clamp, b_clamp, eval(-c), a_known, b_known);
+				return fma32x4(a_clamp, b_clamp, negate_addend(c), a_known, b_known);
 			}
 			else
 			{
@@ -8851,7 +8912,7 @@ public:
 				}
 #endif
 
-				return fma32x4(a, b, eval(-c));
+				return fma32x4(a, b, negate_addend(c));
 			}
 		});
 
@@ -9074,7 +9135,11 @@ public:
 			}
 
 			r.value = m_ir->CreateFPToSI(a.value, get_type<s32[4]>());
+#if defined(ARCH_ARM64)
+			set_vr(op.rt, select(fcmp_ord(a >= fsplat<f64[4]>(std::exp2(31.f))), splat<s32[4]>(0x7fffffff), r));
+#else
 			set_vr(op.rt, r ^ sext<s32[4]>(fcmp_ord(a >= fsplat<f64[4]>(std::exp2(31.f)))));
+#endif
 		}
 		else
 		{
@@ -9089,7 +9154,12 @@ public:
 
 			value_t<s32[4]> r;
 			r.value = m_ir->CreateFPToSI(a.value, get_type<s32[4]>());
+#if defined(ARCH_ARM64)
+			const auto sat_hi = bitcast<s32[4]>(a) > splat<s32[4]>(((31 + 127) << 23) - 1);
+			set_vr(op.rt, select(sat_hi, splat<s32[4]>(0x7fffffff), select(fcmp_uno(a != a), splat<s32[4]>(0x80000000), r)));
+#else
 			set_vr(op.rt, r ^ sext<s32[4]>(bitcast<s32[4]>(a) > splat<s32[4]>(((31 + 127) << 23) - 1)));
+#endif
 		}
 	}
 

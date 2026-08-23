@@ -95,7 +95,11 @@ namespace vk
 
 	class descriptor_set
 	{
+#ifdef __ANDROID__
+		static constexpr size_t max_cache_size = 1024;
+#else
 		static constexpr size_t max_cache_size = 16384;
+#endif
 		static constexpr size_t max_overflow_size = 64;
 		static constexpr size_t m_pool_size = max_cache_size + max_overflow_size;
 

@@ -393,6 +393,26 @@ extern void mov_rdata(spu_rdata_t& _dst, const spu_rdata_t& _src)
 	_mm_storeu_si128(reinterpret_cast<__m128i*>(_dst + 80), v1);
 	_mm_storeu_si128(reinterpret_cast<__m128i*>(_dst + 96), v2);
 	_mm_storeu_si128(reinterpret_cast<__m128i*>(_dst + 112), v3);
+#elif defined(ARCH_ARM64)
+	const u8* const src_b = reinterpret_cast<const u8*>(_src);
+	u8* const dst_b = reinterpret_cast<u8*>(_dst);
+
+	const uint8x16_t v0 = vld1q_u8(src_b + 0x00);
+	const uint8x16_t v1 = vld1q_u8(src_b + 0x10);
+	const uint8x16_t v2 = vld1q_u8(src_b + 0x20);
+	const uint8x16_t v3 = vld1q_u8(src_b + 0x30);
+	const uint8x16_t v4 = vld1q_u8(src_b + 0x40);
+	const uint8x16_t v5 = vld1q_u8(src_b + 0x50);
+	const uint8x16_t v6 = vld1q_u8(src_b + 0x60);
+	const uint8x16_t v7 = vld1q_u8(src_b + 0x70);
+	vst1q_u8(dst_b + 0x00, v0);
+	vst1q_u8(dst_b + 0x10, v1);
+	vst1q_u8(dst_b + 0x20, v2);
+	vst1q_u8(dst_b + 0x30, v3);
+	vst1q_u8(dst_b + 0x40, v4);
+	vst1q_u8(dst_b + 0x50, v5);
+	vst1q_u8(dst_b + 0x60, v6);
+	vst1q_u8(dst_b + 0x70, v7);
 #else
 	std::memcpy(_dst, _src, 128);
 #endif
@@ -477,6 +497,26 @@ extern void mov_rdata_nt(spu_rdata_t& _dst, const spu_rdata_t& _src)
 	_mm_stream_si128(reinterpret_cast<__m128i*>(_dst + 80), v1);
 	_mm_stream_si128(reinterpret_cast<__m128i*>(_dst + 96), v2);
 	_mm_stream_si128(reinterpret_cast<__m128i*>(_dst + 112), v3);
+#elif defined(ARCH_ARM64)
+	const u8* const src_b = reinterpret_cast<const u8*>(_src);
+	u8* const dst_b = reinterpret_cast<u8*>(_dst);
+
+	const uint8x16_t v0 = vld1q_u8(src_b + 0x00);
+	const uint8x16_t v1 = vld1q_u8(src_b + 0x10);
+	const uint8x16_t v2 = vld1q_u8(src_b + 0x20);
+	const uint8x16_t v3 = vld1q_u8(src_b + 0x30);
+	const uint8x16_t v4 = vld1q_u8(src_b + 0x40);
+	const uint8x16_t v5 = vld1q_u8(src_b + 0x50);
+	const uint8x16_t v6 = vld1q_u8(src_b + 0x60);
+	const uint8x16_t v7 = vld1q_u8(src_b + 0x70);
+	vst1q_u8(dst_b + 0x00, v0);
+	vst1q_u8(dst_b + 0x10, v1);
+	vst1q_u8(dst_b + 0x20, v2);
+	vst1q_u8(dst_b + 0x30, v3);
+	vst1q_u8(dst_b + 0x40, v4);
+	vst1q_u8(dst_b + 0x50, v5);
+	vst1q_u8(dst_b + 0x60, v6);
+	vst1q_u8(dst_b + 0x70, v7);
 #else
 	std::memcpy(_dst, _src, 128);
 #endif
@@ -4341,7 +4381,7 @@ bool spu_thread::process_mfc_cmd()
 							}
 
 							// Check if LSA points to an OUT buffer on the stack from a caller - unlikely to be a loop
-							if (last_getllar_lsa >= SPU_LS_SIZE - 0x10000 && last_getllar_lsa > last_getllar_gpr1)
+							if (getllar_spin_count == 0 && last_getllar_lsa >= SPU_LS_SIZE - 0x10000 && last_getllar_lsa > last_getllar_gpr1)
 							{
 								auto cs = dump_callstack_list();
 

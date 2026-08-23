@@ -446,7 +446,7 @@ DECLARE(spu_runtime::tr_all) = []
 }();
 
 #if defined(ARCH_ARM64)
-static constexpr u32 s_spu_scratchpad_size = 32768;
+static constexpr u32 s_spu_scratchpad_size = 262144;
 #endif
 
 DECLARE(spu_runtime::g_gateway) = build_function_asm<spu_function_t>("spu_gateway", [](native_asm& c, auto& args)
@@ -2026,6 +2026,10 @@ spu_function_t spu_runtime::rebuild_ubertrampoline(u32 id_inst)
 		std::string fname;
 		fmt::append(fname, "__ub%u", m_flat_list.size());
 		jit_announce(wxptr, raw - wxptr, fname);
+
+#if defined(ARCH_ARM64)
+		asmjit::VirtMem::flushInstructionCache(wxptr, raw - wxptr);
+#endif
 	}
 
 	if (auto _old = stuff_it->trampoline.compare_and_swap(nullptr, result))
@@ -2167,9 +2171,7 @@ spu_function_t spu_runtime::make_branch_patchpoint(u16 data) const
 	pthread_jit_write_protect_np(true);
 #endif
 
-	// Flush all cache lines after potentially writing executable code
-	asm("ISB");
-	asm("DSB ISH");
+	asmjit::VirtMem::flushInstructionCache(patch_fn, raw - patch_fn);
 
 	return reinterpret_cast<spu_function_t>(patch_fn);
 #else
@@ -2235,9 +2237,7 @@ void spu_recompiler_base::dispatch(spu_thread& spu, void*, u8* rip)
 		pthread_jit_write_protect_np(true);
 #endif
 
-		// Flush all cache lines after potentially writing executable code
-		asm("ISB");
-		asm("DSB ISH");
+		asmjit::VirtMem::flushInstructionCache(rip, 16);
 #else
 #error "Unimplemented"
 #endif
@@ -2404,9 +2404,7 @@ void spu_recompiler_base::branch(spu_thread& spu, void*, u8* rip)
 	pthread_jit_write_protect_np(true);
 #endif
 
-	// Flush all cache lines after potentially writing executable code
-	asm("ISB");
-	asm("DSB ISH");
+	asmjit::VirtMem::flushInstructionCache(rip, 16);
 #else
 #error "Unimplemented"
 #endif

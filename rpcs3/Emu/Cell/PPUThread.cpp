@@ -3466,7 +3466,27 @@ struct jit_core_allocator
 
 	static s16 limit()
 	{
-		return static_cast<s16>(std::min<s32>(0x7fff, utils::get_thread_count()));
+		const s32 by_cores = std::min<s32>(0x7fff, utils::get_thread_count());
+
+#ifdef __ANDROID__
+		if (const u64 avail_mem = utils::get_avail_memory())
+		{
+			constexpr u64 emulator_reserve = 2048ull * 1024 * 1024;
+			constexpr u64 per_worker = 1536ull * 1024 * 1024;
+
+			const u64 spare = (avail_mem > emulator_reserve) ? avail_mem - emulator_reserve : 0;
+			const s32 by_memory = static_cast<s32>(spare / per_worker);
+			return static_cast<s16>(std::max<s32>(1, std::min<s32>(by_cores, by_memory)));
+		}
+
+		if (const u64 total_mem = utils::get_total_memory())
+		{
+			const s32 by_memory = static_cast<s32>(total_mem / (3072ull * 1024 * 1024));
+			return static_cast<s16>(std::max<s32>(1, std::min<s32>(by_cores, by_memory)));
+		}
+#endif
+
+		return static_cast<s16>(by_cores);
 	}
 };
 

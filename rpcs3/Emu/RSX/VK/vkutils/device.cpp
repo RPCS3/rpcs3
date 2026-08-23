@@ -276,6 +276,24 @@ namespace vk
 			// Disable fp16 if driver uses LLVM emitter. It does fine with AMD proprietary drivers though.
 			shader_types_support.allow_float16 = (driver_properties.driverID == VK_DRIVER_ID_AMD_PROPRIETARY_KHR);
 		}
+
+		constexpr u32 s_adreno_fp16_min_driver = (512u << 22) | (676u << 12) | 53u;
+		const auto mobile_vendor = get_driver_vendor();
+		const bool mobile_fp16_ok =
+			mobile_vendor == driver_vendor::TURNIP ||
+			(mobile_vendor == driver_vendor::ADRENO && props.driverVersion >= s_adreno_fp16_min_driver);
+
+		if (!mobile_fp16_ok && is_MOBILE(mobile_vendor) && shader_types_support.allow_float16)
+		{
+			rsx_log.warning("Mobile GPU: disabling native float16 shader types (driver shader compiler rejects them).");
+			shader_types_support.allow_float16 = false;
+		}
+
+		if (optional_features_support.conditional_rendering && is_ADRENO(mobile_vendor))
+		{
+			rsx_log.notice("Conditional rendering disabled: unreliable on this driver (device loss on Turnip, unbounded render pass allocations on Adreno).");
+			optional_features_support.conditional_rendering = false;
+		}
 	}
 
 	std::string physical_device::get_name() const
@@ -364,6 +382,25 @@ namespace vk
 				return driver_vendor::ARM_MALI;
 			}
 
+			if (gpu_name.find("Turnip") != umax)
+			{
+				return driver_vendor::TURNIP;
+			}
+			else if (gpu_name.find("Adreno") != umax)
+			{
+				return driver_vendor::ADRENO;
+			}
+
+			if (gpu_name.find("PowerVR") != umax || gpu_name.find("Imagination") != umax)
+			{
+				return driver_vendor::POWERVR;
+			}
+
+			if (gpu_name.find("Xclipse") != umax || gpu_name.find("Samsung") != umax)
+			{
+				return driver_vendor::XCLIPSE;
+			}
+
 			return driver_vendor::unknown;
 		}
 		else
@@ -395,8 +432,20 @@ namespace vk
 				return driver_vendor::PANVK;
 			case VK_DRIVER_ID_ARM_PROPRIETARY:
 				return driver_vendor::ARM_MALI;
+			case VK_DRIVER_ID_QUALCOMM_PROPRIETARY:
+				return driver_vendor::ADRENO;
+			case VK_DRIVER_ID_MESA_TURNIP:
+				return driver_vendor::TURNIP;
+			case VK_DRIVER_ID_IMAGINATION_PROPRIETARY:
+			case VK_DRIVER_ID_IMAGINATION_OPEN_SOURCE_MESA:
+				return driver_vendor::POWERVR;
+			case VK_DRIVER_ID_SAMSUNG_PROPRIETARY:
+				return driver_vendor::XCLIPSE;
+			case VK_DRIVER_ID_BROADCOM_PROPRIETARY:
+				return driver_vendor::BROADCOM;
+			case VK_DRIVER_ID_VERISILICON_PROPRIETARY:
+				return driver_vendor::VERISILICON;
 			default:
-				// Mobile?
 				return driver_vendor::unknown;
 			}
 		}

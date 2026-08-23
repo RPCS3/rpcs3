@@ -3,10 +3,13 @@
 #include "Emu/System.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/Cell/PPUDisAsm.h"
 #include "Emu/Cell/lv2/sys_mmapper.h"
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/Cell/lv2/sys_process.h"
 #include "Thread.h"
+#include <cstring>
+#include <cerrno>
 #include "Utilities/JIT.h"
 #include <cfenv>
 
@@ -55,9 +58,14 @@ DYNAMIC_IMPORT_RENAME("Kernel32.dll", SetThreadDescriptionImport, "SetThreadDesc
 #include <time.h>
 #endif
 #ifdef __linux__
+#include <fcntl.h>
 #include <sys/syscall.h>
 #include <sys/timerfd.h>
 #include <unistd.h>
+#endif
+#ifdef __ANDROID__
+#include <android/log.h>
+#include <dlfcn.h>
 #endif
 
 #if defined(__APPLE__) || defined(__DragonFly__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__)
@@ -1455,7 +1463,6 @@ a64_mem_info_t decode_a64_mem_inst(u32 inst)
 	// LDR Wt, label
 	// LDR Xt, label
 	// LDRSW Xt, label
-	//
 
 	// This is not needed for MMIO (which is the only use for this function)
 
@@ -2536,9 +2543,114 @@ const bool s_exception_handler_set = []() -> bool
 
 #else
 
-static void signal_handler(int /*sig*/, siginfo_t* info, void* uct) noexcept
+#ifdef __ANDROID__
+static struct ::sigaction s_prev_fault_action[NSIG]{};
+
+static bool is_emulator_fault(void* addr)
+{
+	const u64 exec64 = (reinterpret_cast<u64>(addr) - reinterpret_cast<u64>(vm::g_exec_addr)) / 2;
+	const u64 seg_off = (reinterpret_cast<u64>(addr) - reinterpret_cast<u64>(vm::g_exec_addr)) - vm::g_exec_addr_seg_offset;
+
+	return vm::try_get_addr(addr).second || exec64 < 0x100000000ull || seg_off < 0x80000000ull;
+}
+
+using sigaction_fn = int (*)(int, const struct ::sigaction*, struct ::sigaction*);
+
+static sigaction_fn real_sigaction()
+{
+	void* const libc = ::dlopen("libc.so", RTLD_NOLOAD | RTLD_LOCAL);
+
+	return libc ? reinterpret_cast<sigaction_fn>(::dlsym(libc, "sigaction")) : nullptr;
+}
+
+static int install_fault_handler(int sig, const struct ::sigaction& sa)
+{
+	return ::sigaction(sig, &sa, sig > 0 && sig < NSIG ? &s_prev_fault_action[sig] : nullptr);
+}
+#else
+static int install_fault_handler(int sig, const struct ::sigaction& sa)
+{
+	return ::sigaction(sig, &sa, nullptr);
+}
+#endif
+
+static bool install_fault_handler_first(int sig, const struct ::sigaction& sa)
+{
+#ifdef __ANDROID__
+	if (const sigaction_fn real_sa = real_sigaction())
+	{
+		if (real_sa(sig, nullptr, &s_prev_fault_action[sig]) != -1 && real_sa(sig, &sa, nullptr) != -1)
+		{
+			char line[96];
+
+			if (::snprintf(line, sizeof(line), "sigchain: installed ahead of the runtime for signal %d", sig) > 0)
+			{
+				__android_log_write(ANDROID_LOG_INFO, "RPCS3", line);
+			}
+
+			return true;
+		}
+	}
+
+	__android_log_write(ANDROID_LOG_WARN, "RPCS3", "sigchain: could not get ahead of the runtime; it will see faults first");
+#endif
+
+	return install_fault_handler(sig, sa) != -1;
+}
+
+
+static const char* bus_error_kind(int code) noexcept
+{
+	switch (code)
+	{
+	case BUS_ADRALN: return "misaligned operand";
+	case BUS_ADRERR: return "mapped page has no backing";
+	case BUS_OBJERR: return "hardware error on the mapped object";
+	default: return "unrecognised si_code";
+	}
+}
+
+static void signal_handler(int sig, siginfo_t* info, void* uct) noexcept
 {
 	ucontext_t* context = static_cast<ucontext_t*>(uct);
+
+#ifdef __ANDROID__
+	if (!is_emulator_fault(info->si_addr))
+	{
+		static thread_local bool s_forwarding = false;
+
+		if (s_forwarding)
+		{
+			struct ::sigaction dfl{};
+			dfl.sa_handler = SIG_DFL;
+			sigemptyset(&dfl.sa_mask);
+			::sigaction(sig, &dfl, nullptr);
+			return;
+		}
+
+		const struct ::sigaction& prev = s_prev_fault_action[sig];
+		s_forwarding = true;
+
+		if ((prev.sa_flags & SA_SIGINFO) && prev.sa_sigaction)
+		{
+			prev.sa_sigaction(sig, info, uct);
+			s_forwarding = false;
+			return;
+		}
+
+		if (prev.sa_handler && prev.sa_handler != SIG_DFL && prev.sa_handler != SIG_IGN)
+		{
+			prev.sa_handler(sig);
+			s_forwarding = false;
+			return;
+		}
+
+		s_forwarding = false;
+	}
+#endif
+
+
+	const bool is_bus_error = sig == SIGBUS;
 
 #if defined(ARCH_X64)
 #ifdef __APPLE__
@@ -2597,7 +2709,9 @@ static void signal_handler(int /*sig*/, siginfo_t* info, void* uct) noexcept
 	const u64 seg_off = (reinterpret_cast<u64>(info->si_addr) - reinterpret_cast<u64>(vm::g_exec_addr)) - vm::g_exec_addr_seg_offset;
 	const auto cause = is_executing ? "executing" : is_writing ? "writing" : "reading";
 
-	if (auto [addr, ok] = vm::try_get_addr(info->si_addr); ok && !is_executing)
+	const bool try_recovery = !is_executing && !is_bus_error;
+
+	if (auto [addr, ok] = vm::try_get_addr(info->si_addr); ok && try_recovery)
 	{
 		// Try to process access violation
 		if (thread_ctrl::get_current() && handle_access_violation(addr, is_writing, false, context))
@@ -2606,14 +2720,14 @@ static void signal_handler(int /*sig*/, siginfo_t* info, void* uct) noexcept
 		}
 	}
 
-	if (exec64 < 0x100000000ull && !is_executing)
+	if (exec64 < 0x100000000ull && try_recovery)
 	{
 		if (thread_ctrl::get_current() && handle_access_violation(static_cast<u32>(exec64), is_writing, true, context))
 		{
 			return;
 		}
 	}
-	else if (seg_off < 0x80000000ull && !is_executing)
+	else if (seg_off < 0x80000000ull && try_recovery)
 	{
 		if (thread_ctrl::get_current() && handle_access_violation(static_cast<u32>(seg_off * 2), is_writing, true, context))
 		{
@@ -2621,7 +2735,57 @@ static void signal_handler(int /*sig*/, siginfo_t* info, void* uct) noexcept
 		}
 	}
 
-	std::string msg = fmt::format("Segfault %s location %p at %p.\n", cause, info->si_addr, RIP(context));
+#ifdef __ANDROID__
+	{
+		char line[256];
+		const u64 pc = RIP(context);
+
+		if (::snprintf(line, sizeof(line), "fatal signal %d (si_code %d) at %p, pc 0x%llx, tid %d",
+			sig, info->si_code, info->si_addr, static_cast<unsigned long long>(pc),
+			static_cast<int>(::syscall(__NR_gettid))) > 0)
+		{
+			__android_log_write(ANDROID_LOG_FATAL, "RPCS3", line);
+		}
+
+#if defined(ARCH_ARM64)
+		if (!is_executing && ::snprintf(line, sizeof(line), "  insn 0x%08x", *reinterpret_cast<const u32*>(pc)) > 0)
+		{
+			__android_log_write(ANDROID_LOG_FATAL, "RPCS3", line);
+		}
+
+		for (int i = 0; i < 31; i += 4)
+		{
+			char* p = line;
+			int rem = static_cast<int>(sizeof(line));
+
+			for (int j = i; j < i + 4 && j < 31; ++j)
+			{
+				const int w = ::snprintf(p, rem, "  x%d=0x%llx", j, static_cast<unsigned long long>(GPR(context, j)));
+
+				if (w <= 0 || w >= rem)
+				{
+					break;
+				}
+
+				p += w;
+				rem -= w;
+			}
+
+			__android_log_write(ANDROID_LOG_FATAL, "RPCS3", line);
+		}
+#endif
+	}
+
+	if (!vm::try_get_addr(info->si_addr).second && s_prev_fault_action[sig].sa_sigaction)
+	{
+		::sigaction(sig, &s_prev_fault_action[sig], nullptr);
+		return;
+	}
+#endif
+
+	std::string msg = sig == SIGBUS
+		? fmt::format("Bus error (%s) %s location %p at %p.\n", bus_error_kind(info->si_code), cause, info->si_addr, RIP(context))
+		: fmt::format("Segfault %s location %p at %p.\n", cause, info->si_addr, RIP(context));
 
 	if (vm::try_get_addr(info->si_addr).second)
 	{
@@ -2662,6 +2826,9 @@ static void signal_handler(int /*sig*/, siginfo_t* info, void* uct) noexcept
 #endif
 
 	sys_log.fatal("\n%s", msg);
+
+	logs::listener::sync_all();
+
 	sys_log.notice("\n%s", dump_useful_thread_info());
 	logs::listener::sync_all();
 
@@ -2706,14 +2873,14 @@ const bool s_exception_handler_set = []() -> bool
 	sigemptyset(&sa.sa_mask);
 	sa.sa_sigaction = signal_handler;
 
-	if (::sigaction(SIGSEGV, &sa, NULL) == -1)
+	if (!install_fault_handler_first(SIGSEGV, sa))
 	{
 		std::fprintf(stderr, "sigaction(SIGSEGV) failed (%d).\n", errno);
 		std::abort();
 	}
 
-#ifdef __APPLE__
-	if (::sigaction(SIGBUS, &sa, NULL) == -1)
+#if defined(__APPLE__) || defined(__ANDROID__)
+	if (!install_fault_handler_first(SIGBUS, sa))
 	{
 		std::fprintf(stderr, "sigaction(SIGBUS) failed (%d).\n", errno);
 		std::abort();
@@ -2721,7 +2888,7 @@ const bool s_exception_handler_set = []() -> bool
 #endif
 
 	sa.sa_sigaction = sigill_handler;
-	if (::sigaction(SIGILL, &sa, NULL) == -1)
+	if (install_fault_handler(SIGILL, sa) == -1)
 	{
 		std::fprintf(stderr, "sigaction(SIGILL) failed (%d).\n", errno);
 		std::abort();
@@ -2787,6 +2954,14 @@ void thread_base::start()
 	pthread_attr_setschedpolicy(&attrs, SCHED_RR);
 	pthread_attr_setschedparam(&attrs, &sp);
 	ensure(pthread_create(&thread_id, &attrs, entry_point, this) == 0);
+#elif defined(__ANDROID__)
+	pthread_t thread_id{};
+	pthread_attr_t attrs;
+	pthread_attr_init(&attrs);
+	pthread_attr_setstacksize(&attrs, 0x800000);
+	const int thread_rc = pthread_create(&thread_id, &attrs, entry_point, this);
+	pthread_attr_destroy(&attrs);
+	ensure(thread_rc == 0);
 #else
 	pthread_t thread_id{};
 	ensure(pthread_create(&thread_id, nullptr, entry_point, this) == 0);
@@ -3585,10 +3760,68 @@ void thread_ctrl::silent_exit() noexcept
 	std::abort();
 }
 
+#if defined(ARCH_ARM64) && defined(__linux__)
+static const std::array<u32, 64>& get_arm_core_capacities()
+{
+	static const std::array<u32, 64> s_caps = []
+	{
+		std::array<u32, 64> caps{};
+
+		for (u32 core = 0; core < 64u; core++)
+		{
+			char path[128];
+			std::snprintf(path, sizeof(path), "/sys/devices/system/cpu/cpu%u/cpu_capacity", core);
+
+			const int fd = ::open(path, O_RDONLY | O_CLOEXEC);
+			if (fd < 0)
+			{
+				continue;
+			}
+
+			char buf[32]{};
+			const auto got = ::read(fd, buf, sizeof(buf) - 1);
+			::close(fd);
+
+			if (got > 0)
+			{
+				caps[core] = static_cast<u32>(std::atoi(buf));
+			}
+		}
+
+		return caps;
+	}();
+
+	return s_caps;
+}
+#endif
+
 void thread_ctrl::detect_cpu_layout()
 {
 	if (!g_native_core_layout.compare_and_swap_test(native_core_arrangement::undefined, native_core_arrangement::generic))
 		return;
+
+#if defined(ARCH_ARM64) && defined(__linux__)
+	{
+		const auto& caps = get_arm_core_capacities();
+		u32 lowest = umax, highest = 0;
+
+		for (u32 core = 0; core < 64u; core++)
+		{
+			if (caps[core])
+			{
+				lowest = std::min(lowest, caps[core]);
+				highest = std::max(highest, caps[core]);
+			}
+		}
+
+		if (highest && lowest != umax && highest > lowest)
+		{
+			sig_log.notice("Detected ARM heterogeneous CPU (capacity %u..%u)", lowest, highest);
+			g_native_core_layout.store(native_core_arrangement::arm_big_little);
+			return;
+		}
+	}
+#endif
 
 	const auto system_id = utils::get_cpu_brand();
 	if (system_id.find("Ryzen") != umax)
@@ -3689,6 +3922,72 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 		{
 			return all_cores_mask;
 		}
+#if defined(ARCH_ARM64) && defined(__linux__)
+		case native_core_arrangement::arm_big_little:
+		{
+			const auto& caps = get_arm_core_capacities();
+			u64 fast_mask = 0;
+			u64 slow_mask = 0;
+			u32 threshold = 0;
+
+			for (u32 core = 0; core < 64u; core++)
+			{
+				threshold = std::max(threshold, caps[core]);
+			}
+
+			threshold = threshold * 3 / 4;
+
+			for (u32 core = 0; core < 64u; core++)
+			{
+				if (~process_affinity_mask & (u64{1} << core))
+				{
+					continue;
+				}
+
+				const u32 capacity = caps[core];
+
+				((capacity && capacity >= threshold) ? fast_mask : slow_mask) |= (u64{1} << core);
+			}
+
+			if (!fast_mask || !slow_mask)
+			{
+				return all_cores_mask;
+			}
+
+			u64 prime_mask = 0;
+			u32 best_capacity = 0;
+
+			for (u32 core = 0; core < 64u; core++)
+			{
+				if (~fast_mask & (u64{1} << core))
+				{
+					continue;
+				}
+
+				if (caps[core] > best_capacity)
+				{
+					best_capacity = caps[core];
+					prime_mask = (u64{1} << core);
+				}
+			}
+
+			const u64 spu_mask = (std::popcount(fast_mask & ~prime_mask) > 1)
+				? (fast_mask & ~prime_mask)
+				: fast_mask;
+
+			switch (group)
+			{
+			case thread_class::spu:
+				return spu_mask;
+			case thread_class::rsx:
+				return fast_mask;
+			case thread_class::ppu:
+				return all_cores_mask;
+			default:
+				return slow_mask;
+			}
+		}
+#endif
 		case native_core_arrangement::amd_ccx:
 		{
 			if (thread_count <= 8)
@@ -3897,6 +4196,14 @@ void thread_ctrl::set_native_priority(int priority)
 	if (!SetThreadPriority(_this_thread, native_priority))
 	{
 		sig_log.error("SetThreadPriority() failed: %s", fmt::win_error{GetLastError(), nullptr});
+	}
+#elif defined(__ANDROID__)
+	const int nice_value = (priority > 0) ? -8 : (priority < 0 ? 8 : 0);
+
+	errno = 0;
+	if (setpriority(PRIO_PROCESS, static_cast<id_t>(gettid()), nice_value) == -1 && errno)
+	{
+		sig_log.warning("setpriority(%d) failed: %s", nice_value, strerror(errno));
 	}
 #else
 	int policy;

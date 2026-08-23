@@ -54,10 +54,20 @@ namespace vk
 				optimal_kernel_size = 1;
 				optimal_group_size = 128;
 				break;
+			case vk::driver_vendor::ADRENO:
+			case vk::driver_vendor::TURNIP:
+				unroll_loops = true;
+				optimal_kernel_size = 1;
+				optimal_group_size = 64;
+				break;
 			case vk::driver_vendor::LAVAPIPE:
 			case vk::driver_vendor::V3DV:
 			case vk::driver_vendor::PANVK:
 			case vk::driver_vendor::ARM_MALI:
+			case vk::driver_vendor::POWERVR:
+			case vk::driver_vendor::XCLIPSE:
+			case vk::driver_vendor::BROADCOM:
+			case vk::driver_vendor::VERISILICON:
 				// TODO: Actually bench this. Using 32 for now to match other common configurations.
 			case vk::driver_vendor::DOZEN:
 				// Actual optimal size depends on the D3D device. Use 32 since it should work well on both AMD and NVIDIA
