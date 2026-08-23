@@ -621,6 +621,7 @@ if(TARGET 3rdparty_vulkan)
         RSX/VK/vkutils/commands.cpp
         RSX/VK/vkutils/ex.cpp
         RSX/VK/vkutils/data_heap.cpp
+        RSX/VK/vkutils/debug_print.cpp
         RSX/VK/vkutils/descriptors.cpp
         RSX/VK/vkutils/image.cpp
         RSX/VK/vkutils/image_helpers.cpp
