@@ -134,7 +134,7 @@ jobs:
     runs-on: ${{ matrix.runs-on }} 
     env:
       CCACHE_DIR: /tmp/ccache_dir
-      QT_VER: '6.11.1'
+      QT_VER: '6.11.2'
       QT_VER_MAIN: '6'
       LLVM_COMPILER_VER: '22'
       RELEASE_MESSAGE: ../GitHubReleaseMessage.txt
@@ -212,9 +212,9 @@ jobs:
     env:
       COMPILER: msvc
       QT_VER_MAIN: '6'
-      QT_VER: '6.11.1'
+      QT_VER: '6.11.2'
       QT_VER_MSVC: 'msvc2022'
-      QT_DATE: '202605090529'
+      QT_DATE: '202608131017'
       LLVM_VER: '22.1.8'
       VULKAN_VER: '1.4.341.1'
       VULKAN_SDK_SHA: 'bcf2d75aa9556889ab974858666e20b3655b6055a0db704ccb47279ff33b5bfe'
