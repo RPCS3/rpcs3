@@ -26,6 +26,8 @@ public:
 	virtual ~ps_move_tracker_dialog();
 
 private:
+	bool eventFilter(QObject* object, QEvent* event) override;
+
 	void update_color(bool update_sliders = false);
 	void update_hue(bool update_slider = false);
 	void update_hue_threshold(bool update_slider = false);

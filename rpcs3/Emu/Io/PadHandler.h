@@ -17,6 +17,7 @@ extern "C" {
 #endif
 
 #include <cmath>
+#include <numbers>
 #include <functional>
 #include <string>
 #include <set>
@@ -292,16 +293,14 @@ public:
 	virtual void get_motion_sensors(const std::string& pad_id, const motion_callback& callback, const motion_fail_callback& fail_callback, motion_preview_values preview_values, const std::array<AnalogSensor, 4>& sensors);
 	virtual std::unordered_map<u32, std::string> get_motion_axis_list() const { return {}; }
 
-	static constexpr f32 PI = 3.14159265f;
-
 	static f32 degree_to_rad(f32 degree)
 	{
-		return degree * PI / 180.0f;
+		return degree * std::numbers::pi_v<f32> / 180.0f;
 	}
 
 	static f32 rad_to_degree(f32 radians)
 	{
-		return radians * 180.0f / PI;
+		return radians * 180.0f / std::numbers::pi_v<f32>;
 	};
 
 private:

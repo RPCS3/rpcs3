@@ -14,6 +14,7 @@
 #include <QPushButton>
 #include <QSlider>
 #include <QMessageBox>
+#include <QMouseEvent>
 
 LOG_CHANNEL(ps_move);
 
@@ -252,6 +253,8 @@ ps_move_tracker_dialog::ps_move_tracker_dialog(QWidget* parent)
 			QMessageBox::warning(this, QObject::tr("Tracking not supported!"), QObject::tr("The PS Move tracking is not yet supported on this operating system."));
 		});
 	}
+
+	ui->imageLabel->installEventFilter(this);
 }
 
 ps_move_tracker_dialog::~ps_move_tracker_dialog()
@@ -271,6 +274,69 @@ ps_move_tracker_dialog::~ps_move_tracker_dialog()
 
 	// Join thread
 	m_input_thread.reset();
+}
+
+bool ps_move_tracker_dialog::eventFilter(QObject* object, QEvent* event)
+{
+	if (event && object == ui->imageLabel && event->type() == QEvent::Type::MouseButtonRelease && m_view_mode == view_mode::contours)
+	{
+		const QMouseEvent* me = reinterpret_cast<QMouseEvent*>(event);
+
+		if (me->button() == Qt::MouseButton::LeftButton)
+		{
+			ps_move.notice("Selecting color with mouse click.");
+
+			f32 r = 0.0f;
+			f32 g = 0.0f;
+			f32 b = 0.0f;
+			u32 count = 0;
+
+			{
+				std::lock_guard lock(m_image_mutex);
+
+				const auto pos = me->localPos().toPoint();
+				const QPixmap pixmap = ui->imageLabel->pixmap();
+
+				if (pixmap.rect().contains(pos))
+				{
+					const QImage image = pixmap.toImage();
+					constexpr int radius = 3;
+
+					for (int y = pos.y() - radius; y <= pos.y() + radius; ++y)
+					{
+						for (int x = pos.x() - radius; x <= pos.x() + radius; ++x)
+						{
+							if (!image.rect().contains(x, y))
+								continue;
+
+							const QColor color = image.pixelColor(x, y);
+
+							r += color.redF();
+							g += color.greenF();
+							b += color.blueF();
+							count++;
+						}
+					}
+				}
+			}
+
+			if (count > 0)
+			{
+				r /= count;
+				g /= count;
+				b /= count;
+
+				ps_move.notice("Selected new color with mouse click (r=%f, b=%f, g=%f)", r, g, b);
+
+				cfg_ps_move* config = ::at32(g_cfg_move.move, m_index);
+				const auto [hue, saturation, value] = ps_move_tracker<true>::rgb_to_hsv(r, g, b);
+				config->hue.set(std::clamp<u32>(hue, config->hue.min, config->hue.max));
+				update_hue(true);
+			}
+		}
+	}
+
+	return QDialog::eventFilter(object, event);
 }
 
 void ps_move_tracker_dialog::update_color(bool update_sliders)
