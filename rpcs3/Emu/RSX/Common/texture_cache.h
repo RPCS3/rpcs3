@@ -1702,6 +1702,24 @@ namespace rsx
 				{
 					block_end = write_end;
 				}
+				else if (!use_null_region && block_end > write_end)
+				{
+					// Before attempting to create any surface that would exceed our bounds, ensure we don't end up in a pitch conflict!
+					// TODO: Remove this when pitch conversion is implemented or at least revise usefulness. It may still be beneficial to some extent.
+					const auto prev_surface = m_rtts.get_surface_at(dst_base_address);
+					const u64 reference_tag = prev_surface ? prev_surface->last_use_tag : 0ull;
+
+					const u32 block_length = block_end - dst_base_address;
+					const u32 safe_length = m_rtts.truncate_memory_range_by_pitch(dst_base_address, dst.pitch, block_length, reference_tag);
+
+					if (safe_length < block_length) [[ unlikely ]]
+					{
+						// We have pitch conflicts. Play it safe.
+						const auto aligned_safe_length = (safe_length / dst.pitch) * dst.pitch; // <- Align safe_length down to a multiple of pitch.
+						const auto proposed_end = aligned_safe_length + dst_base_address;
+						block_end = std::max(proposed_end, write_end);
+					}
+				}
 
 				const u32 usable_section_length = std::max(write_end, block_end) - dst_base_address;
 				dst_dimensions.height = align2(usable_section_length, dst.pitch) / dst.pitch;
