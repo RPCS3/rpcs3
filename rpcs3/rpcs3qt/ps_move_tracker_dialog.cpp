@@ -547,7 +547,7 @@ void ps_move_tracker_dialog::process_camera_frame()
 	{
 		result = &m_ps_move_tracker->rgba();
 		format = QImage::Format::Format_RGBA8888;
-		bytes_per_line = width * 4;
+		bytes_per_line = width * 4ULL;
 		break;
 	}
 	case view_mode::grayscale:
@@ -561,11 +561,11 @@ void ps_move_tracker_dialog::process_camera_frame()
 	case view_mode::hsv_saturation:
 	case view_mode::hsv_value:
 	{
-		const int index = static_cast<int>(m_view_mode) - static_cast<int>(view_mode::hsv_hue);
+		const u32 index = static_cast<u32>(m_view_mode) - static_cast<u32>(view_mode::hsv_hue);
 		const std::vector<u8>& hsv = m_ps_move_tracker->hsv();
 		static std::vector<u8> hsv_single;
 		hsv_single.resize(hsv.size() / 3);
-		for (int i = 0; i < static_cast<int>(hsv_single.size()); i++)
+		for (usz i = 0; i < hsv_single.size(); i++)
 		{
 			hsv_single[i] = hsv[i * 3 + index];
 		}
@@ -585,7 +585,7 @@ void ps_move_tracker_dialog::process_camera_frame()
 	{
 		result = &m_ps_move_tracker->rgba_contours();
 		format = QImage::Format::Format_RGBA8888;
-		bytes_per_line = width * 4;
+		bytes_per_line = width * 4ULL;
 		break;
 	}
 	}
