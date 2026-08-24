@@ -17,6 +17,7 @@
 #include <unordered_map>
 
 class game_list;
+class QPushButton;
 class gui_settings;
 class TROPUSRLoader;
 
@@ -69,6 +70,11 @@ private:
 	void DeleteOnlineTrophiesForCommunicationId(std::string_view communication_id, const QString& game_name = {});
 	void SyncOnlineTrophiesForGame(int db_ind);
 	bool SyncOnlineTrophyGame(int db_ind, const std::shared_ptr<rpcn::rpcn_client>& rpcn, QString& error_message);
+	bool CanStartOnlineTrophySync();
+	void BeginOnlineTrophySync();
+	void EndOnlineTrophySync();
+	void UpdateOnlineTrophySyncCooldown();
+	qint64 GetOnlineTrophySyncCooldownRemainingMs() const;
 
 	/** Populate the trophy database (multithreaded). */
 	void StartTrophyLoadThreads();
@@ -110,6 +116,7 @@ private:
 	QSplitter* m_splitter; //! Contains the game and trophy tables
 	game_list* m_trophy_table; //! UI element to display trophy stuff.
 	game_list* m_game_table; //! UI element to display games.
+	QPushButton* m_btn_sync_all_trophies = nullptr;
 
 	std::map<int, QAction*> m_trophy_column_acts;
 	std::map<int, QAction*> m_game_column_acts;
