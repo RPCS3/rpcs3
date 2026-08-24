@@ -104,6 +104,7 @@ ps_move_tracker_dialog::ps_move_tracker_dialog(QWidget* parent)
 		}
 	});
 
+	ui->hueSlider->setRange(g_cfg_move.move1.hue.min, g_cfg_move.move1.hue.max);
 	connect(ui->hueSlider, &QSlider::valueChanged, this, [this](int value)
 	{
 		cfg_ps_move* config = ::at32(g_cfg_move.move, m_index);
@@ -111,8 +112,8 @@ ps_move_tracker_dialog::ps_move_tracker_dialog(QWidget* parent)
 		config->hue.set(hue);
 		update_hue();
 	});
-	ui->hueSlider->setRange(g_cfg_move.move1.hue.min, g_cfg_move.move1.hue.max);
 
+	ui->hueThresholdSlider->setRange(g_cfg_move.move1.hue_threshold.min, g_cfg_move.move1.hue_threshold.max);
 	connect(ui->hueThresholdSlider, &QSlider::valueChanged, this, [this](int value)
 	{
 		cfg_ps_move* config = ::at32(g_cfg_move.move, m_index);
@@ -120,8 +121,8 @@ ps_move_tracker_dialog::ps_move_tracker_dialog(QWidget* parent)
 		config->hue_threshold.set(hue_threshold);
 		update_hue_threshold();
 	});
-	ui->hueThresholdSlider->setRange(g_cfg_move.move1.hue_threshold.min, g_cfg_move.move1.hue_threshold.max);
 
+	ui->saturationThresholdSlider->setRange(g_cfg_move.move1.saturation_threshold.min, g_cfg_move.move1.saturation_threshold.max);
 	connect(ui->saturationThresholdSlider, &QSlider::valueChanged, this, [this](int value)
 	{
 		cfg_ps_move* config = ::at32(g_cfg_move.move, m_index);
@@ -129,24 +130,26 @@ ps_move_tracker_dialog::ps_move_tracker_dialog(QWidget* parent)
 		config->saturation_threshold.set(saturation_threshold);
 		update_saturation_threshold();
 	});
-	ui->saturationThresholdSlider->setRange(g_cfg_move.move1.saturation_threshold.min, g_cfg_move.move1.saturation_threshold.max);
 
+	ui->minRadiusSlider->setRange(0, radius_range);
 	connect(ui->minRadiusSlider, &QSlider::valueChanged, this, [this](int value)
 	{
 		const f32 min_radius = std::clamp(value / min_radius_conversion, g_cfg_move.min_radius.min, g_cfg_move.min_radius.max);
 		g_cfg_move.min_radius.set(min_radius);
 		update_min_radius();
 	});
-	ui->minRadiusSlider->setRange(0, radius_range);
 
+	ui->maxRadiusSlider->setRange(0, radius_range);
 	connect(ui->maxRadiusSlider, &QSlider::valueChanged, this, [this](int value)
 	{
 		const f32 max_radius = std::clamp(value / max_radius_conversion, g_cfg_move.max_radius.min, g_cfg_move.max_radius.max);
 		g_cfg_move.max_radius.set(max_radius);
 		update_max_radius();
 	});
-	ui->maxRadiusSlider->setRange(0, radius_range);
 
+	ui->colorSliderR->setRange(g_cfg_move.move1.r.min, g_cfg_move.move1.r.max);
+	ui->colorSliderG->setRange(g_cfg_move.move1.g.min, g_cfg_move.move1.g.max);
+	ui->colorSliderB->setRange(g_cfg_move.move1.b.min, g_cfg_move.move1.b.max);
 	connect(ui->colorSliderR, &QSlider::valueChanged, this, [this](int value)
 	{
 		cfg_ps_move* config = ::at32(g_cfg_move.move, m_index);
@@ -165,9 +168,6 @@ ps_move_tracker_dialog::ps_move_tracker_dialog(QWidget* parent)
 		config->b.set(std::clamp<u8>(value, config->b.min, config->b.max));
 		update_color();
 	});
-	ui->colorSliderR->setRange(g_cfg_move.move1.r.min, g_cfg_move.move1.r.max);
-	ui->colorSliderG->setRange(g_cfg_move.move1.g.min, g_cfg_move.move1.g.max);
-	ui->colorSliderB->setRange(g_cfg_move.move1.b.min, g_cfg_move.move1.b.max);
 
 	connect(ui->filterSmallContoursBox, &QCheckBox::toggled, [this](bool checked)
 	{
