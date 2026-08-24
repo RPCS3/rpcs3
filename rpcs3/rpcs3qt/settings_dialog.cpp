@@ -116,20 +116,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	// Localized tooltips
 	const Tooltips tooltips;
 
-	// Add description labels
-	SubscribeDescription(ui->description_cpu);
-	SubscribeDescription(ui->description_gpu);
-	SubscribeDescription(ui->description_audio);
-	SubscribeDescription(ui->description_io);
-	SubscribeDescription(ui->description_system);
-	SubscribeDescription(ui->description_network);
-	SubscribeDescription(ui->description_advanced);
-	SubscribeDescription(ui->description_emulator);
-	if (!game)
-	{
-		SubscribeDescription(ui->description_gui);
-	}
-	SubscribeDescription(ui->description_debug);
+	m_default_description = ui->description->text();
+	ui->description->setFixedHeight(ui->description->sizeHint().height());
 
 	if (game)
 	{
@@ -2461,12 +2449,6 @@ void settings_dialog::open()
 	});
 }
 
-void settings_dialog::SubscribeDescription(QLabel* description)
-{
-	description->setFixedHeight(description->sizeHint().height());
-	m_description_labels.push_back(std::pair<QLabel*, QString>(description, description->text()));
-}
-
 void settings_dialog::SubscribeTooltip(QObject* object, const QString& tooltip)
 {
 	m_descriptions[object] = tooltip;
@@ -2488,28 +2470,15 @@ bool settings_dialog::eventFilter(QObject* object, QEvent* event)
 		}
 	}
 
-	if (!m_descriptions.contains(object))
+	if (m_descriptions.contains(object))
 	{
-		return QDialog::eventFilter(object, event);
-	}
-
-	if (event->type() == QEvent::Enter || event->type() == QEvent::Leave)
-	{
-		const int i = ui->tab_widget_settings->currentIndex();
-
-		if (i >= 0 && static_cast<usz>(i) < m_description_labels.size())
+		if (event->type() == QEvent::Enter)
 		{
-			if (QLabel* label = m_description_labels[i].first)
-			{
-				if (event->type() == QEvent::Enter)
-				{
-					label->setText(m_descriptions[object]);
-				}
-				else if (event->type() == QEvent::Leave)
-				{
-					label->setText(m_description_labels[i].second);
-				}
-			}
+			ui->description->setText(m_descriptions[object]);
+		}
+		else if (event->type() == QEvent::Leave)
+		{
+			ui->description->setText(m_default_description);
 		}
 	}
 

@@ -141,6 +141,8 @@ private:
 		std::set<std::string> m_done_paths;
 	};
 
+	void UpdateWindowTitle(const std::vector<game_info>& matching_apps);
+
 	void push_path(const std::string& path, std::vector<std::string>& legit_paths);
 
 	QString get_header_text(int col) const;

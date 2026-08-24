@@ -1088,7 +1088,9 @@ bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 		properties.has_divsq = true;
 		return true;
 	case RSX_FP_OPCODE_DP2: SetDst(getFunction(FUNCTION::DP2), OPFLAGS::op_extern); return true;
-	case RSX_FP_OPCODE_DP3: SetDst(getFunction(FUNCTION::DP3), OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_DP3:
+		SetDst(getFunction(dst.prec == RSX_FP_PRECISION_REAL && g_cfg.video.shader_precision == gpu_preset_level::ultra ? FUNCTION::DP3_PRECISE : FUNCTION::DP3), OPFLAGS::op_extern);
+		return true;
 	case RSX_FP_OPCODE_DP4: SetDst(getFunction(FUNCTION::DP4), OPFLAGS::op_extern); return true;
 	case RSX_FP_OPCODE_DP2A: SetDst(getFunction(FUNCTION::DP2A), OPFLAGS::op_extern); return true;
 	case RSX_FP_OPCODE_MAD: SetDst("fma($0, $1, $2)", OPFLAGS::src_cast_f32); return true;
@@ -1423,6 +1425,8 @@ std::string FragmentProgramDecompiler::Decompile()
 			!block.succ.empty() &&
 			(block.succ.front().type == EdgeType::IF || block.succ.front().type == EdgeType::LOOP);
 
+		auto sext8 = [](u32 value) { return static_cast<s32>(value << 24u) >> 24; };
+
 		for (const auto& inst : block.instructions)
 		{
 			if (early_epilogue && &inst == &block.instructions.back())
@@ -1461,12 +1465,16 @@ std::string FragmentProgramDecompiler::Decompile()
 					AddCode("if($cond)");
 					break;
 				case RSX_FP_OPCODE_LOOP:
-					AddCode(fmt::format("$ifcond for(int i%u = %u; i%u < %u; i%u += %u) //LOOP",
-							m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment));
-					break;
 				case RSX_FP_OPCODE_REP:
-					AddCode(fmt::format("if($cond) for(int i%u = %u; i%u < %u; i%u += %u) //REP",
-							m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment));
+					AddCode(
+						fmt::format("$ifcond for(int i%u = 0; i%u < %u; i%u++) // %s { %u, %d }",
+							m_loop_count,
+							m_loop_count, src1.rep_count,
+							m_loop_count,
+							FP::get_opcode_name(static_cast<FP_opcode>(m_instruction->opcode)),
+							src1.init_counter,
+							sext8(src1.increment))
+					);
 					break;
 				case RSX_FP_OPCODE_RET:
 					AddFlowOp("return");

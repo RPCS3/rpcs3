@@ -255,15 +255,12 @@ namespace rsx
 			bool unordered_list = false;
 
 			rsx::simple_array<sort_helper> sort_list;
-			rsx::simple_array<utils::address_range32> sort_ranges;
 			sort_list.reserve(available_slices);
-			sort_ranges.reserve(available_slices);
 
 			// Generate sorting tree if both resources are available and overlapping
 			for (u32 index = 0; index < fbos.size(); ++index)
 			{
 				const auto range = fbos[index].surface->get_memory_range();
-				sort_ranges.push_back(range);
 				sort_list.push_back({
 					.tag = fbos[index].surface->last_use_tag,
 					.list = 0,
@@ -278,7 +275,6 @@ namespace rsx
 					continue;
 
 				const auto range = local[index]->get_section_range();
-				sort_ranges.push_back(range);
 				sort_list.push_back({
 					.tag = local[index]->last_write_tag,
 					.list = 1,
@@ -293,14 +289,9 @@ namespace rsx
 			}
 
 			// Check if ordered
-			for (u32 i = 0; i < sort_list.size(); ++i)
+			for (u32 i = 1; i < sort_list.size(); ++i)
 			{
-				if (i == 0)
-				{
-					continue;
-				}
-
-				if (sort_ranges[i].start < sort_ranges[i - 1].end)
+				if (sort_list[i].bounds.start <= sort_list[i - 1].bounds.end)
 				{
 					unordered_list = true;
 					break;
@@ -349,6 +340,7 @@ namespace rsx
 				std::tie(dst_x, dst_y) = rsx::apply_resolution_scale<false>(section.surface->resolution_scaling_config, dst_x, dst_y, attr.width, attr.height);
 
 				section.surface->memory_barrier(cmd, rsx::surface_access::transfer_read);
+				const bool output_covered = (section.dst_area.width >= attr.width) && (section_end >= slice_end);
 
 				out.push_back
 				({
@@ -367,7 +359,7 @@ namespace rsx
 					.dst_h = dst_height
 				});
 
-				return { section_end <= slice_end, section_end >= slice_end };
+				return { section_end <= slice_end, output_covered };
 			};
 
 			auto add_local_resource = [&](auto& section, u32 address, u16 slice, bool scaling) -> std::pair<bool, bool> // [ input fully consumed, output fully covered ]
@@ -395,35 +387,39 @@ namespace rsx
 				const size2u dst_size = { dimensions.width / attr.bpp, dimensions.height };
 				const size2u src_size = { dimensions.width / section_bpp, dimensions.height };
 
-				const u32 dst_slice_begin = slice * attr.slice_h;      // Output slice low watermark
-				const u32 dst_slice_end = dst_slice_begin + attr.height;   // Output slice high watermark
-
+				// NOTE: Computed dst_y is slice-local, not 2d-local. Our slice_h becomes our height.
+				// FIXME: This approach does not support mipmap levels.
+				const u32 dst_slice_h = attr.height;
 				const auto dst_y = dst_offset.y;
 				const auto dst_h = dst_size.height;
 
 				const auto write_section_end = dst_y + dst_h;
-				if (dst_y >= dst_slice_end || write_section_end <= dst_slice_begin)
+				const bool input_consumed = (write_section_end < attr.slice_h);
+
+				if (dst_y >= dst_slice_h)
 				{
 					// Belongs to a different slice
-					return { write_section_end <= dst_slice_begin, false };
+					return { input_consumed, false };
 				}
 
 				const u16 dst_w = static_cast<u16>(dst_size.width);
 				const u16 src_w = static_cast<u16>(src_size.width);
-				const u16 height = std::min(dst_slice_end, write_section_end) - dst_y;
+				const u16 height = std::min(dst_slice_h, write_section_end) - dst_y;
+				const bool output_covered = (dst_w >= attr.width) && (write_section_end >= dst_slice_h);
 
 				if (scaling)
 				{
 					// Since output is upscaled, also upscale on dst
 
 					const auto& scaling_config = rsx::get_current_renderer()->resolution_scaling_config;
-					const auto [_dst_x, _dst_y] = rsx::apply_resolution_scale<false>(scaling_config, static_cast<u16>(dst_offset.x), static_cast<u16>(dst_y - dst_slice_begin), attr.width, attr.height);
+					const auto [_dst_x, _dst_y] = rsx::apply_resolution_scale<false>(scaling_config, static_cast<u16>(dst_offset.x), static_cast<u16>(dst_y), attr.width, attr.height);
 					const auto [_dst_w, _dst_h] = rsx::apply_resolution_scale<true>(scaling_config, dst_w, height, attr.width, attr.height);
 
 					out.push_back
 					({
 						.src = section->get_raw_texture(),
 						.xform = surface_transform::identity,
+						.base_addr = section->get_section_base(),
 						.level = 0,
 						.src_x = static_cast<u16>(src_offset.x),   // src.x
 						.src_y = static_cast<u16>(src_offset.y),   // src.y
@@ -436,26 +432,27 @@ namespace rsx
 						.dst_h = _dst_h
 					});
 
-					return { write_section_end <= dst_slice_end, write_section_end >= dst_slice_end };
+					return { input_consumed, output_covered };
 				}
 
 				out.push_back
 				({
 					.src = section->get_raw_texture(),
 					.xform = surface_transform::identity,
+					.base_addr = section->get_section_base(),
 					.level = 0,
 					.src_x = static_cast<u16>(src_offset.x),         // src.x
 					.src_y = static_cast<u16>(src_offset.y),         // src.y
 					.dst_x = static_cast<u16>(dst_offset.x),         // dst.x
-					.dst_y = static_cast<u16>(dst_y - dst_slice_begin),  // dst.y
-					.dst_z = 0,
+					.dst_y = static_cast<u16>(dst_y),                // dst.y
+					.dst_z = slice,
 					.src_w = src_w,
 					.src_h = height,
 					.dst_w = dst_w,
 					.dst_h = height
 				});
 
-				return { write_section_end <= dst_slice_end, write_section_end >= dst_slice_end };
+				return { input_consumed, output_covered };
 			};
 
 			u32 current_address = attr.address;
@@ -593,7 +590,7 @@ namespace rsx
 		}
 
 		template <typename sampled_image_descriptor>
-		void convert_image_blit_to_clip_descriptor(
+		void convert_image_transfer_to_clip_descriptor(
 			sampled_image_descriptor& desc,
 			const texture_channel_remap_t& decoded_remap,
 			bool cyclic_reference)
@@ -601,9 +598,9 @@ namespace rsx
 			// Our "desired" output is the source window, and the "actual" output is the real size
 			const auto& section = desc.external_subresource_desc.sections_to_copy[0];
 
-			// Apply AA correct factor
 			auto surface_width = section.src->width();
 			auto surface_height = section.src->height();
+
 			switch (section.src->samples())
 			{
 			case 1:
@@ -637,25 +634,45 @@ namespace rsx
 		sampled_image_descriptor process_framebuffer_resource_fast(commandbuffer_type& cmd,
 			render_target_type texptr,
 			const image_section_attributes_t& attr,
+			const position2u& offset,
 			const size3f& scale,
 			texture_dimension_extended extended_dimension,
 			const texture_channel_remap_t& decoded_remap,
 			bool surface_is_rop_target,
 			bool force_convert)
 		{
+			using deferred_subresource_type = typename sampled_image_descriptor::deferred_subresource_type;
+
 			const auto surface_width = texptr->template get_surface_width<rsx::surface_metrics::samples>();
 			const auto surface_height = texptr->template get_surface_height<rsx::surface_metrics::samples>();
 
 			bool is_depth = texptr->is_depth_surface();
 			auto attr2 = attr;
 
+			// Track the clipping offset. Typically it is {0, 0} which means exact match, but subregions can also use this function and we need to scale this up from guest to host.
+			auto scaled_offset = offset;
+
+			// If src and dst are mismatched in bpp, scale the offset to match dest bpp.
+			// That way we can use coordinate transform to reverse the conversion, which we already need to do anyway.
+			// We do that before res scaling to avoid rounding errors.
+			if (scaled_offset.x)
+			{
+				if (const auto surface_bpp = texptr->get_bpp();
+					surface_bpp != attr.bpp)
+				{
+					scaled_offset.x = (scaled_offset.x * surface_bpp) / attr.bpp;
+				}
+			}
+
 			if (texptr->resolution_scaling_config.scale_percent != 100)
 			{
 				const auto [scaled_w, scaled_h] = rsx::apply_resolution_scale<true>(texptr->resolution_scaling_config, attr.width, attr.height, surface_width, surface_height);
 				const auto [unused, scaled_slice_h] = rsx::apply_resolution_scale<false>(texptr->resolution_scaling_config, RSX_SURFACE_DIMENSION_IGNORED, attr.slice_h, surface_width, surface_height);
+				const auto [scaled_off_x, scaled_off_y] = rsx::apply_resolution_scale<false>(texptr->resolution_scaling_config, static_cast<u16>(scaled_offset.x), static_cast<u16>(scaled_offset.y), surface_width, surface_height);
 				attr2.width = scaled_w;
 				attr2.height = scaled_h;
 				attr2.slice_h = scaled_slice_h;
+				scaled_offset = { scaled_off_x, scaled_off_y };
 			}
 
 			if (const bool gcm_format_is_depth = is_gcm_depth_format(attr2.gcm_format);
@@ -696,7 +713,7 @@ namespace rsx
 
 				rsx::surface_access access_type = rsx::surface_access::shader_read;
 
-				if (attr.width != surface_width || attr.height != surface_height)
+				if (offset.x || offset.y || attr.width != surface_width || attr.height != surface_height)
 				{
 					// If we can get away with clip only, do it
 					if (attr.edge_clamped)
@@ -726,22 +743,40 @@ namespace rsx
 				if (requires_processing)
 				{
 					const auto format_class = (force_convert) ? classify_format(attr2.gcm_format) : texptr->format_class();
-					const auto command = surface_is_rop_target ? deferred_request_command::copy_image_dynamic : deferred_request_command::copy_image_static;
+
+					// This path is only reachable when the source region fully covers the request.
+					const coord3u dst_rect = { 0, 0, 0, attr2.width, attr2.height, 1 };
+					const coord3u src_rect = { scaled_offset.x, scaled_offset.y, 0, attr2.width, attr2.height, 1 };
 
 					texptr->memory_barrier(cmd, rsx::surface_access::transfer_read);
-					return { texptr->get_surface(rsx::surface_access::transfer_read), command, attr2, {},
-							texture_upload_context::framebuffer_storage, format_class, scale,
-							extended_dimension, decoded_remap };
+					return
+					{
+						deferred_subresource_type::create_copy(
+							texptr->get_surface(rsx::surface_access::transfer_read),
+							attr2, src_rect, dst_rect, rsx::surface_transform::coordinate_transform, decoded_remap, surface_is_rop_target),
+						texture_upload_context::framebuffer_storage,
+						format_class, scale, extended_dimension,
+						texptr->base_addr
+					};
 				}
 
 				texptr->memory_barrier(cmd, access_type);
 				auto viewed_surface = texptr->get_surface(access_type);
-				sampled_image_descriptor result = { viewed_surface->get_view(decoded_remap), texture_upload_context::framebuffer_storage,
-						texptr->format_class(), scale, rsx::texture_dimension_extended::texture_dimension_2d, surface_is_rop_target, viewed_surface->samples() };
+				sampled_image_descriptor result =
+				{
+					viewed_surface->get_view(decoded_remap),
+					texture_upload_context::framebuffer_storage,
+					texptr->format_class(),
+					scale,
+					rsx::texture_dimension_extended::texture_dimension_2d,
+					texptr->base_addr,
+					surface_is_rop_target,
+					viewed_surface->samples()
+				};
 
 				if (requires_clip)
 				{
-					calculate_sample_clip_parameters(result, position2i(0, 0), size2i(attr.width, attr.height), size2i(surface_width, surface_height));
+					calculate_sample_clip_parameters(result, position2i(offset.x, offset.y), size2i(attr.width, attr.height), size2i(surface_width, surface_height));
 				}
 
 				return result;
@@ -752,18 +787,24 @@ namespace rsx
 
 			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_3d)
 			{
-				return{ texptr->get_surface(rsx::surface_access::transfer_read), deferred_request_command::_3d_unwrap,
-						attr2, {},
-						texture_upload_context::framebuffer_storage, format_class, scale,
-						rsx::texture_dimension_extended::texture_dimension_3d, decoded_remap };
+				return
+				{
+					deferred_subresource_type::create_3d_unwrap(texptr->get_surface(rsx::surface_access::transfer_read), scaled_offset, attr2, decoded_remap),
+					texture_upload_context::framebuffer_storage, format_class, scale,
+					rsx::texture_dimension_extended::texture_dimension_3d,
+					texptr->base_addr
+				};
 			}
 
 			ensure(extended_dimension == rsx::texture_dimension_extended::texture_dimension_cubemap);
 
-			return{ texptr->get_surface(rsx::surface_access::transfer_read), deferred_request_command::cubemap_unwrap,
-					attr2, {},
-					texture_upload_context::framebuffer_storage, format_class, scale,
-					rsx::texture_dimension_extended::texture_dimension_cubemap, decoded_remap };
+			return
+			{
+				deferred_subresource_type::create_cubemap_unwrap(texptr->get_surface(rsx::surface_access::transfer_read), scaled_offset, attr2, decoded_remap),
+				texture_upload_context::framebuffer_storage, format_class, scale,
+				rsx::texture_dimension_extended::texture_dimension_cubemap,
+				texptr->base_addr
+			};
 		}
 
 		template <typename sampled_image_descriptor, typename commandbuffer_type, typename surface_store_list_type, typename section_storage_type>
@@ -776,6 +817,9 @@ namespace rsx
 			const texture_channel_remap_t& decoded_remap,
 			int select_hint = -1)
 		{
+			using deferred_subresource_type = typename sampled_image_descriptor::deferred_subresource_type;
+			using transfer_sections_list_t = typename deferred_subresource_type::section_array_type;
+
 			ensure((select_hint & 0x1) == select_hint);
 
 			bool is_depth = (select_hint == 0) ? fbos.back().is_depth : local.back()->is_depth_texture();
@@ -841,26 +885,32 @@ namespace rsx
 				attr2.width = scaled_w;
 				attr2.height = scaled_h;
 
-				sampled_image_descriptor desc = { nullptr, deferred_request_command::cubemap_gather,
-						attr2, {},
-						upload_context, format_class, scale,
-						rsx::texture_dimension_extended::texture_dimension_cubemap, decoded_remap };
+				transfer_sections_list_t sections;
+				const bool complete = gather_texture_slices(cmd, sections, fbos, local, attr, 6, is_depth);
 
-				desc.external_subresource_desc.force_bg_load = !gather_texture_slices(cmd, desc.external_subresource_desc.sections_to_copy, fbos, local, attr, 6, is_depth);
-				return desc;
+				return
+				{
+					deferred_subresource_type::create_cubemap_gather(attr2, std::move(sections), decoded_remap, !complete),
+					upload_context, format_class, scale,
+					rsx::texture_dimension_extended::texture_dimension_cubemap,
+					attr.address
+				};
 			}
 			else if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_3d && attr.depth > 1)
 			{
 				attr2.width = scaled_w;
 				attr2.height = scaled_h;
 
-				sampled_image_descriptor desc = { nullptr, deferred_request_command::_3d_gather,
-					attr2, {},
-					upload_context, format_class, scale,
-					rsx::texture_dimension_extended::texture_dimension_3d, decoded_remap };
+				transfer_sections_list_t sections;
+				const bool complete = gather_texture_slices(cmd, sections, fbos, local, attr, attr.depth, is_depth);
 
-				desc.external_subresource_desc.force_bg_load = !gather_texture_slices(cmd, desc.external_subresource_desc.sections_to_copy, fbos, local, attr, attr.depth, is_depth);
-				return desc;
+				return
+				{
+					deferred_subresource_type::create_3d_gather(attr2, std::move(sections), decoded_remap, !complete),
+					upload_context, format_class, scale,
+					rsx::texture_dimension_extended::texture_dimension_3d,
+					attr.address
+				};
 			}
 
 			if (extended_dimension == rsx::texture_dimension_extended::texture_dimension_1d)
@@ -874,11 +924,17 @@ namespace rsx
 				attr2.height = scaled_h;
 			}
 
-			sampled_image_descriptor result = { nullptr, deferred_request_command::atlas_gather,
-					attr2, {}, upload_context, format_class,
-					scale, rsx::texture_dimension_extended::texture_dimension_2d, decoded_remap };
+			typename deferred_subresource_type::section_array_type sections;
+			const bool complete = gather_texture_slices(cmd, sections, fbos, local, attr, 1, is_depth);
 
-			result.external_subresource_desc.force_bg_load = !gather_texture_slices(cmd, result.external_subresource_desc.sections_to_copy, fbos, local, attr, 1, is_depth);
+			sampled_image_descriptor result =
+			{
+				deferred_subresource_type::create_atlas_gather(attr2, std::move(sections), decoded_remap, !complete),
+				upload_context, format_class, scale,
+				rsx::texture_dimension_extended::texture_dimension_2d,
+				attr.address
+			};
+
 			result.simplify();
 			return result;
 		}
@@ -904,12 +960,48 @@ namespace rsx
 					.dst_h = attr.height
 				};
 
-				// "Fast" framebuffer results are a perfect match for attr so we do not store transfer sizes
-				// Calculate transfer dimensions from attr
-				if (level.upload_context == rsx::texture_upload_context::framebuffer_storage) [[likely]]
+				// Stash the surface cache view and dimensions for later
+				using surface_type = std::invoke_result_t<to_surface_type_converter, copy_region_descriptor_type>;
+				surface_type rtv = nullptr;
+				u16 surface_w, surface_h;
+
+				if (level.upload_context == rsx::texture_upload_context::framebuffer_storage)
 				{
-					auto rtv = as_surface_type(mip);
-					std::tie(mip.src_w, mip.src_h) = rsx::apply_resolution_scale<true>(rtv->resolution_scaling_config, attr.width, attr.height);
+					rtv = as_surface_type(mip);
+					surface_w = rtv->template get_surface_width<rsx::surface_metrics::samples, u16>();
+					surface_h = rtv->template get_surface_height<rsx::surface_metrics::samples, u16>();
+				}
+				else
+				{
+					surface_w = static_cast<u16>(level.image_handle->image()->width());
+					surface_h = static_cast<u16>(level.image_handle->image()->height());
+				}
+
+				// "Fast" framebuffer results are a perfect match for attr so we do not store transfer sizes
+				// We need to account for the offsets however.
+				if (level.texcoord_xform.clamp)
+				{
+					// What we got back was a 'window' of attr.w/attr.h inside a bigger texture region.
+					// Reverse construct the src_x and src_y parameters
+					mip.src_x = static_cast<u16>(level.texcoord_xform.bias[0] * surface_w + 0.5f);
+					mip.src_y = static_cast<u16>(level.texcoord_xform.bias[1] * surface_h + 0.5f);
+
+					// We cannot get here if bpp is mismatched. The whole point of getting a window back is that we avoid a bitcast operation.
+					ensure(!rtv || rtv->get_bpp() == attr.bpp);
+				}
+
+				// Calculate transfer dimensions from attr
+				if (rtv) [[likely]]
+				{
+					std::tie(mip.src_x, mip.src_y) = rsx::apply_resolution_scale<false>(
+						rtv->resolution_scaling_config,
+						mip.src_x, mip.src_y,
+						surface_w, surface_h);
+
+					std::tie(mip.src_w, mip.src_h) = rsx::apply_resolution_scale<true>(
+						rtv->resolution_scaling_config,
+						attr.width, attr.height,
+						surface_w, surface_h);
 				}
 				else
 				{
@@ -926,17 +1018,18 @@ namespace rsx
 				case deferred_request_command::copy_image_dynamic:
 				case deferred_request_command::copy_image_static:
 				{
+					const auto& base_xfer = level.external_subresource_desc.sections_to_copy.front();
 					copy_region_descriptor_type mip
 					{
-						.src = level.external_subresource_desc.external_handle,
-						.xform = surface_transform::coordinate_transform,
+						.src = base_xfer.src,
+						.xform = base_xfer.xform,
 						.level = mipmap_level,
 
 						// NOTE: gather_texture_slices pre-applies resolution scaling
-						.src_x = level.external_subresource_desc.x,
-						.src_y = level.external_subresource_desc.y,
-						.src_w = level.external_subresource_desc.width,
-						.src_h = level.external_subresource_desc.height,
+						.src_x = base_xfer.src_x,
+						.src_y = base_xfer.src_y,
+						.src_w = base_xfer.src_w,
+						.src_h = base_xfer.src_h,
 
 						.dst_w = attr.width,
 						.dst_h = attr.height
@@ -956,11 +1049,23 @@ namespace rsx
 			// Check for upscaling if requested
 			if (apply_upscaling)
 			{
+				// NOTE: Due to how mipmaps clamp at the lower levels, we will not blindly allow upscaling for the mip dimensions.
+				// If we try to upscale we end up trying to write OOB - crash.
 				const auto base_mip = as_surface_type(sections.front());
 				auto& mip = sections.back();
-				std::tie(mip.dst_w, mip.dst_h) = rsx::apply_resolution_scale<true>(
-					base_mip->resolution_scaling_config,
-					mip.dst_w, mip.dst_h, level0_attr.width, level0_attr.height);
+
+				if (mipmap_level == 0)
+				{
+					std::tie(mip.dst_w, mip.dst_h) = rsx::apply_resolution_scale<true>(
+						base_mip->resolution_scaling_config,
+						mip.dst_w, mip.dst_h, level0_attr.width, level0_attr.height);
+				}
+				else
+				{
+					const auto& mip0 = sections.front();
+					mip.dst_w = std::max<u16>(mip0.dst_w >> mipmap_level, 1);
+					mip.dst_h = std::max<u16>(mip0.dst_h >> mipmap_level, 1);
+				}
 			}
 
 			return true;

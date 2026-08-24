@@ -171,13 +171,14 @@ extern void qt_events_aware_op(int repeat_duration_ms, std::function<bool()> wra
 	}
 }
 
-main_window::main_window(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget* parent)
+main_window::main_window(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, bool with_cli_boot, QWidget* parent)
 	: QMainWindow(parent)
 	, ui(new Ui::main_window)
 	, m_gui_settings(gui_settings)
 	, m_emu_settings(std::move(emu_settings))
 	, m_persistent_settings(std::move(persistent_settings))
 	, m_updater(nullptr, gui_settings)
+	, m_with_cli_boot(with_cli_boot)
 {
 	Q_INIT_RESOURCE(resources);
 
@@ -194,7 +195,7 @@ main_window::~main_window()
 /* An init method is used so that RPCS3App can create the necessary connects before calling init (specifically the stylesheet connect).
  * Simplifies logic a bit.
  */
-bool main_window::Init([[maybe_unused]] bool with_cli_boot)
+void main_window::Init()
 {
 	setAcceptDrops(true);
 
@@ -280,13 +281,6 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 		m_game_list_frame->GetGameCompatibility()->RequestCompatibility(true);
 	});
 #endif
-
-	if (const auto update_value = m_gui_settings->GetValue(gui::m_check_upd_start).toString(); update_value != gui::update_off)
-	{
-		const bool in_background = with_cli_boot || update_value == gui::update_bkg;
-		const bool auto_accept   = !in_background && update_value == gui::update_auto;
-		m_updater.check_for_updates(true, in_background, auto_accept, this);
-	}
 #endif
 
 	// Disable vsh if not present.
@@ -295,14 +289,30 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 	// Focus to search bar by default
 	ui->mw_searchbar->setFocus();
 
-	// Refresh gamelist last
-	m_game_list_frame->Refresh(true);
-
 	update_gui_pad_thread();
+}
 
-	show();
+void main_window::show()
+{
+	QMainWindow::show();
 
-	return true;
+	if (std::exchange(m_shown, true))
+	{
+		return;
+	}
+
+	// Check for updates when the main window is shown for the first time
+#ifdef RPCS3_UPDATE_SUPPORTED
+	if (const auto update_value = m_gui_settings->GetValue(gui::m_check_upd_start).toString(); update_value != gui::update_off)
+	{
+		const bool in_background = m_with_cli_boot || update_value == gui::update_bkg;
+		const bool auto_accept   = !in_background && update_value == gui::update_auto;
+		m_updater.check_for_updates(true, in_background, auto_accept, this);
+	}
+#endif
+
+	// Refresh gamelist when the main window is shown for the first time
+	m_game_list_frame->Refresh(true);
 }
 
 void main_window::update_gui_pad_thread()
@@ -3080,8 +3090,9 @@ void main_window::CreateConnects()
 
 	const auto open_pad_settings = [this]
 	{
-		pad_settings_dialog dlg(m_gui_settings, this);
-		dlg.exec();
+		pad_settings_dialog* dlg = new pad_settings_dialog(m_gui_settings, this);
+		dlg->setAttribute(Qt::WA_DeleteOnClose);
+		dlg->open();
 	};
 
 	connect(ui->confPadsAct, &QAction::triggered, this, open_pad_settings);
@@ -4169,7 +4180,7 @@ void main_window::AddGamesFromDirs(QStringList&& paths)
 		{
 			for (const auto& dir_path : paths)
 			{
-				if (dir_path.startsWith(game->info.path.c_str()) && fs::exists(game->info.path))
+				if (Emu.IsPathInsideDir(game->info.path, dir_path.toStdString()))
 				{
 					existing.insert(game->info.path);
 					break;
@@ -4298,7 +4309,7 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 		{
 			return set_result(drop_type::drop_error);
 		}
-		else if (info.suffix() == "PUP")
+		else if (suffix_lo == "pup")
 		{
 			if (m_drop_file_url_list.size() != 1)
 			{
