@@ -151,10 +151,11 @@ namespace np
 
 		// Messages-related functions
 		std::optional<shared_ptr<std::pair<std::string, message_data>>> get_message(u64 id);
-		void set_message_selected(SceNpBasicAttachmentDataId id, u64 msg_id);
+		void set_message_selected(SceNpBasicAttachmentDataId id, shared_ptr<std::pair<std::string, message_data>> message);
 		std::optional<shared_ptr<std::pair<std::string, message_data>>> get_message_selected(SceNpBasicAttachmentDataId id);
 		void clear_message_selected(SceNpBasicAttachmentDataId id);
 		void mark_message_used(u64 msg_id);
+		bool complete_message_selection(u64 msg_id, u16 main_type, u32 recv_result, u32 recv_options);
 		void send_message(const message_data& msg_data, const std::set<std::string>& npids);
 		bool select_invitation(u64 msg_id);
 
@@ -294,15 +295,6 @@ namespace np
 		std::vector<custom_menu_action> custom_menu_actions;
 		SceNpCustomMenuIndexArray custom_menu_activation{};
 		std::vector<SceNpCustomMenuActionExceptions> custom_menu_exception_list{};
-		std::optional<u32> last_custom_menu_action;
-		std::optional<u32> custom_menu_invitation_action;
-		std::optional<u64> pending_custom_menu_invitation;
-
-		std::vector<custom_menu_action> get_custom_menu_actions(SceNpCustomMenuActionMask mask);
-		std::optional<u32> get_custom_menu_invitation_action();
-		void record_custom_menu_message_type(u16 main_type);
-		std::optional<u64> take_pending_custom_menu_invitation();
-		bool invoke_custom_menu_action(u32 index, const SceNpId& npid, SceNpCustomMenuSelectedType type, std::optional<u64> selected_invitation = std::nullopt);
 
 		// Mutex for NP status change
 		shared_mutex mutex_status;
@@ -457,8 +449,8 @@ namespace np
 
 		// Messages related
 		shared_mutex m_mutex_selected_messages;
-		std::optional<u64> selected_invite_id{};
-		std::optional<u64> selected_message_id{};
+		shared_ptr<std::pair<std::string, message_data>> selected_invite{};
+		shared_ptr<std::pair<std::string, message_data>> selected_message{};
 
 		// Misc
 		s64 network_time_offset = 0;
