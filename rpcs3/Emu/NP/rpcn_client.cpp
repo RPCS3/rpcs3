@@ -1485,25 +1485,16 @@ namespace rpcn
 
 	ErrorType rpcn_client::delete_trophies()
 	{
-		const auto npid = g_cfg_rpcn.get_npid();
-		const auto password = g_cfg_rpcn.get_password();
-
 		std::vector<u8> data;
-		std::copy(npid.begin(), npid.end(), std::back_inserter(data));
-		data.push_back(0);
-		std::copy(password.begin(), password.end(), std::back_inserter(data));
-		data.push_back(0);
-
-		const u64 req_id = rpcn_request_counter.fetch_add(1);
-
 		std::vector<u8> packet_data;
-		if (!forge_send_reply(CommandType::DeleteTrophies, req_id, data, packet_data))
+
+		if (!forge_send_reply(CommandType::DeleteTrophies, rpcn_request_counter.fetch_add(1), data, packet_data))
 		{
 			return ErrorType::Malformed;
 		}
 
 		vec_stream reply(packet_data);
-		auto error = static_cast<ErrorType>(reply.get<u8>());
+		const auto error = static_cast<ErrorType>(reply.get<u8>());
 
 		if (error == rpcn::ErrorType::NoError)
 		{

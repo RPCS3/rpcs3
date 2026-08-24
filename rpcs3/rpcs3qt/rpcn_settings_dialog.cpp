@@ -1004,13 +1004,18 @@ void rpcn_account_edit_dialog::delete_trophies()
 	if (!rpcn)
 		return;
 
+	if (auto res = rpcn->wait_for_authentified(); res != rpcn::rpcn_state::failure_no_failure)
+	{
+		const QString error_msg = tr("Failed to authentify to RPCN:\n%0").arg(QString::fromStdString(rpcn::rpcn_state_to_string(res)));
+		QMessageBox::warning(this, tr("Error authentifying to RPCN!"), error_msg, QMessageBox::Ok);
+		return;
+	}
+
 	if (const auto error = rpcn->delete_trophies(); error != rpcn::ErrorType::NoError)
 	{
 		QString error_message;
 		switch (error)
 		{
-		case rpcn::ErrorType::LoginError: error_message = tr("Invalid login or password."); break;
-		case rpcn::ErrorType::InvalidInput: error_message = tr("RPCN is currently authenticated as a different account."); break;
 		case rpcn::ErrorType::DbFail: error_message = tr("A database related error happened on the server."); break;
 		default: error_message = tr("An unknown error occurred."); break;
 		}
