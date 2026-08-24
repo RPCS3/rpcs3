@@ -6,6 +6,10 @@
 
 #include <QFuture>
 #include <QObject>
+#include <QSet>
+
+class QActionGroup;
+class QMenu;
 
 class progress_dialog;
 class game_list_frame;
@@ -57,6 +61,25 @@ public:
 	void ShowGameInfoDialog(const std::vector<game_info>& games);
 	void ShowGameIntegrityDialog(content_file_type file_type, const std::string& game_path);
 	void ShowDiskUsageDialog();
+
+	// Fills a game collection menu with the default entry and one per collection. The rename and removal
+	// submenus belong to the Manage menu, and are null for the View one, which carries neither.
+	void UpdateGameCollectionMenu(QMenu* menu, QActionGroup* act_group, QMenu* rename_menu, QMenu* remove_menu);
+
+	// Asks for a name until it is accepted or the dialog is dismissed
+	void CreateGameCollection();
+
+	// Asks for a new name for a game collection until it is accepted or the dialog is dismissed
+	void RenameGameCollection(const QString& name);
+
+	// Drops a game collection after confirmation. Its games keep existing, assigned to none.
+	void RemoveGameCollection(const QString& name);
+
+	// Makes a game collection the one the game list is filtered by. An empty name shows every game.
+	void SelectGameCollection(const QString& name);
+
+	// Appends the "Move To Collection" submenu, which moves the given games to a user defined game collection
+	void AddMoveToCollectionMenu(QMenu* parent, const std::vector<game_info>& games);
 
 	// NOTES:
 	//   - SetContentList() MUST always be called to set the content's info to be removed by:
@@ -111,6 +134,14 @@ private:
 	//   - BatchRemoveContentLists()
 	//
 	content_info m_content_info;
+
+	// Asks for a collection name until accept takes it or the dialog is dismissed, warning about whichever
+	// rule was broken. Returns what was accepted, or nothing.
+	QString AskForCollectionName(const QString& title, const QString& initial,
+		const std::function<bool(const QString&)>& accept);
+
+	// Performs what an entry of the "Move To Collection" submenu does. Confirms first when interactive.
+	void MoveGamesToCollection(const QSet<QString>& serials, const QString& name, bool is_interactive);
 
 	void BatchActionBySerials(progress_dialog* pdlg, const std::set<std::string>& serials,
 		QString progressLabel, std::function<bool(const std::string&)> action,

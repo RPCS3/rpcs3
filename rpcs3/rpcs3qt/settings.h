@@ -29,7 +29,7 @@ public:
 	explicit settings(QObject* parent = nullptr);
 	~settings();
 
-	void sync();
+	void sync() const;
 
 	static QString GetSettingsDir();
 
