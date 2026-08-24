@@ -12,6 +12,8 @@
 #include "Emu/savestate_utils.hpp"
 #include "Emu/cache_utils.hpp"
 
+#include "RetroAchievements.h"
+
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/PPUDisAsm.h"
@@ -814,6 +816,10 @@ void Emulator::Init()
 	{
 		g_fxo->init<IPC_socket::IPC_server_manager>(true);
 	}
+
+#ifdef RPCS3_RA_ENABLED
+	rpcs3::ra::initialize();
+#endif
 }
 
 void Emulator::SetUsr(const std::string& user)
@@ -2731,6 +2737,10 @@ void Emulator::Run(bool start_playtime)
 
 	GetCallbacks().on_run(start_playtime);
 
+#ifdef RPCS3_RA_ENABLED
+	rpcs3::ra::on_game_start(m_path);
+#endif
+
 	m_pause_start_time = 0;
 	m_pause_amend_time = 0;
 
@@ -4131,6 +4141,9 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			// Complete the operation
 			m_state = system_state::stopped;
+#ifdef RPCS3_RA_ENABLED
+			rpcs3::ra::on_game_stop();
+#endif
 			GetCallbacks().on_stop();
 
 			// Always Enable display sleep, not only if it was prevented.

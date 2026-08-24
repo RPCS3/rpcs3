@@ -19,6 +19,8 @@ add_library(rpcs3_emu STATIC
     perf_monitor.cpp
     IPC_config.cpp
     IPC_socket.cpp
+    RetroAchievements.cpp
+    ra_config.cpp
 )
 
 if(USE_LTO)
@@ -46,6 +48,10 @@ endif()
 
 if(HAS_MEMORY_BREAKPOINTS)
     target_compile_definitions(rpcs3_emu PRIVATE RPCS3_HAS_MEMORY_BREAKPOINTS)
+endif()
+
+if(RPCS3_RA_ENABLED)
+    target_compile_definitions(rpcs3_emu PRIVATE RPCS3_RA_ENABLED=1)
 endif()
 
 # For stdafx.h
@@ -705,6 +711,10 @@ target_link_libraries(rpcs3_emu
         3rdparty::zstd
         3rdparty::libcurl
 )
+
+if(RPCS3_RA_ENABLED)
+    target_link_libraries(rpcs3_emu PRIVATE 3rdparty::rcheevos)
+endif()
 
 if(APPLE)
     check_function_exists(clock_gettime HAVE_CLOCK_GETTIME)
