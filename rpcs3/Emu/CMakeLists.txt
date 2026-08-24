@@ -668,6 +668,29 @@ if(TARGET 3rdparty_vulkan)
             RSX/VK/vkutils/metal_layer.mm
         )
     endif()
+    if(ANDROID)
+        target_sources(rpcs3_emu PRIVATE
+            RSX/VK/lsfg/lsfg_alpha.cpp
+            RSX/VK/lsfg/lsfg_beta.cpp
+            RSX/VK/lsfg/lsfg_chain.cpp
+            RSX/VK/lsfg/lsfg_common.cpp
+            RSX/VK/lsfg/lsfg_delta.cpp
+            RSX/VK/lsfg/lsfg_dll.cpp
+            RSX/VK/lsfg/lsfg_gamma.cpp
+            RSX/VK/lsfg/lsfg_generate.cpp
+            RSX/VK/lsfg/lsfg_mipmaps.cpp
+            RSX/VK/lsfg/lsfg_pacer.cpp
+            RSX/VK/lsfg/lsfg_shaders.cpp
+            RSX/VK/VKFrameGeneration.cpp
+        )
+
+        add_library(rpcs3_lsfg_dxbc STATIC RSX/VK/lsfg/lsfg_dxbc.cpp)
+        set_target_properties(rpcs3_lsfg_dxbc PROPERTIES POSITION_INDEPENDENT_CODE ON)
+        target_compile_options(rpcs3_lsfg_dxbc PRIVATE -fexceptions -w)
+        target_link_libraries(rpcs3_lsfg_dxbc PRIVATE 3rdparty::dxbc)
+
+        target_link_libraries(rpcs3_emu PRIVATE rpcs3_lsfg_dxbc)
+    endif()
 endif()
 
 if(NOT WIN32)

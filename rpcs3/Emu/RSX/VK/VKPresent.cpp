@@ -34,6 +34,112 @@ namespace
 	}
 }
 
+u32 VKGSRender::available_frame_contexts()
+{
+	const u32 total = m_swapchain->get_swap_image_count();
+
+#ifdef ANDROID
+	m_requested_swap_reserve = vk::frame_generation_reserved_images();
+	m_reserved_swap_images = (total > 3) ? std::min(m_requested_swap_reserve, total - 3) : 0;
+	return total - m_reserved_swap_images;
+#else
+	return total;
+#endif
+}
+
+#ifdef ANDROID
+void VKGSRender::discard_generated_frames()
+{
+	m_generated_present_images.clear();
+	m_generated_wait_semaphores.clear();
+	m_generated_signal_semaphores.clear();
+}
+
+void VKGSRender::run_frame_generation(VkImage target_image, VkImageLayout target_layout, VkImageLayout present_layout)
+{
+	discard_generated_frames();
+
+	const auto settings = vk::get_frame_generation_settings();
+
+	if (!settings.enabled || !m_reserved_swap_images)
+	{
+		if (m_frame_generator)
+		{
+			m_frame_generator->reset();
+		}
+
+		return;
+	}
+
+	if (!m_frame_generator)
+	{
+		m_frame_generator = std::make_unique<vk::frame_generator>(*m_device);
+	}
+
+	if (!m_frame_generator->is_usable())
+	{
+		return;
+	}
+
+	const u32 width = m_swapchain_dims.width;
+	const u32 height = m_swapchain_dims.height;
+
+	if (!m_frame_generator->prepare(width, height))
+	{
+		return;
+	}
+
+	m_frame_generator->plan(m_reserved_swap_images);
+	m_frame_generator->process(*m_current_command_buffer, target_image, target_layout, width, height);
+
+	const u32 wanted = std::min(m_frame_generator->generated_count(), m_reserved_swap_images);
+
+	for (u32 i = 0; i < wanted; ++i)
+	{
+		const VkSemaphore acquire_semaphore = m_frame_generator->next_acquire_semaphore();
+		u32 image_index = umax;
+
+		const VkResult status = m_swapchain->acquire_next_swapchain_image(acquire_semaphore, 8000000ull, &image_index);
+
+		if (status != VK_SUCCESS && status != VK_SUBOPTIMAL_KHR)
+		{
+			break;
+		}
+
+		m_generated_present_images.push_back(image_index);
+		m_generated_wait_semaphores.push_back(acquire_semaphore);
+		m_generated_signal_semaphores.push_back(m_frame_generator->present_semaphore(image_index));
+	}
+
+	for (usz i = 0; i < m_generated_present_images.size(); ++i)
+	{
+		m_frame_generator->emit(*m_current_command_buffer, static_cast<u32>(i),
+			m_swapchain->get_image(m_generated_present_images[i]), present_layout, width, height);
+	}
+
+	vk::frame_generation_count_generated(::size32(m_generated_present_images));
+}
+
+void VKGSRender::present_generated_frames()
+{
+	for (usz i = 0; i < m_generated_present_images.size(); ++i)
+	{
+		const VkResult status = m_swapchain->present(m_generated_signal_semaphores[i], m_generated_present_images[i]);
+
+		if (status == VK_SUCCESS || status == VK_SUBOPTIMAL_KHR)
+		{
+			vk::frame_generation_count_presented(1);
+		}
+		else
+		{
+			rsx_log.warning("Frame generation: presenting an interpolated frame returned %d", static_cast<s32>(status));
+		}
+	}
+
+	discard_generated_frames();
+}
+#endif
+
 bool VKGSRender::reinitialize_swapchain()
 {
 	if (surface_lost)
@@ -100,6 +206,11 @@ bool VKGSRender::reinitialize_swapchain()
 	// Drain all the queues
 	VK_GET_SYMBOL(vkDeviceWaitIdle)(*m_device);
 
+#ifdef ANDROID
+	discard_generated_frames();
+	m_frame_generator.reset();
+#endif
+
 	// Clean the FBO caches
 	for (u32 i = 0; i < m_swapchain->get_swap_image_count(); ++i)
 	{
@@ -126,7 +237,7 @@ bool VKGSRender::reinitialize_swapchain()
 	}
 
 	// Re-initialize CPU frame contexts
-	m_max_async_frames = m_swapchain->get_swap_image_count();
+	m_max_async_frames = available_frame_contexts();
 	m_frame_context_storage.resize(m_max_async_frames);
 	for (auto& ctx : m_frame_context_storage)
 	{
@@ -176,8 +287,14 @@ void VKGSRender::present(vk::frame_context_t *ctx)
 		switch (VkResult error = m_swapchain->present(ctx->present_wait_semaphore, ctx->present_image))
 		{
 		case VK_SUCCESS:
+#ifdef ANDROID
+			vk::frame_generation_count_presented(1);
+#endif
 			break;
 		case VK_SUBOPTIMAL_KHR:
+#ifdef ANDROID
+			vk::frame_generation_count_presented(1);
+#endif
 #ifndef ANDROID
 			should_reinitialize_swapchain = true;
 #endif
@@ -248,8 +365,16 @@ void VKGSRender::queue_swap_request()
 		close_and_submit_command_buffer(nullptr,
 			m_current_frame->acquire_signal_semaphore,
 			m_current_frame->present_wait_semaphore,
-			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT);
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT
+#ifdef ANDROID
+			, m_generated_wait_semaphores, m_generated_signal_semaphores
+#endif
+		);
 	}
+
+#ifdef ANDROID
+	present_generated_frames();
+#endif
 
 	// Set up a present request for this frame as well
 	present(m_current_frame);
@@ -460,6 +585,24 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	{
 		swapchain_unavailable = true;
 	}
+
+#ifdef ANDROID
+	if (const u32 requested = vk::frame_generation_reserved_images(); requested != m_requested_swap_reserve)
+	{
+		m_requested_swap_reserve = requested;
+		should_reinitialize_swapchain = true;
+	}
+
+	if (const u64 revision = vk::frame_generation_shader_revision(); revision != m_frame_generation_revision)
+	{
+		m_frame_generation_revision = revision;
+
+		if (m_frame_generator)
+		{
+			should_reinitialize_swapchain = true;
+		}
+	}
+#endif
 
 	if (swapchain_unavailable || should_reinitialize_swapchain)
 	{
@@ -999,6 +1142,10 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 		direct_fbo->release();
 	}
+
+#ifdef ANDROID
+	run_frame_generation(target_image, target_layout, present_layout);
+#endif
 
 	if (target_layout != present_layout)
 	{

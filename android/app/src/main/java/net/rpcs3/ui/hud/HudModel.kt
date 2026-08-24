@@ -35,6 +35,7 @@ enum class HudAnchor(val label: String, val bearingDegrees: Float) {
 
 data class HudSample(
     val fps: Float = 0f,
+    val outputFps: Float = 0f,
     val frametimeMs: Float = 0f,
     val renderer: String = "",
     val cpuPercent: Int = -1,

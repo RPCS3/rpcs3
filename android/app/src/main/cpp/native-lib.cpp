@@ -20,7 +20,9 @@
 #include "Emu/RSX/Overlays/overlay_manager.h"
 #include "Emu/RSX/Overlays/overlay_save_dialog.h"
 #include "Emu/RSX/RSXThread.h"
+#include "Emu/RSX/VK/VKFrameGeneration.h"
 #include "Emu/RSX/VK/VKGSRender.h"
+#include "Emu/RSX/VK/lsfg/lsfg_dll.h"
 #include "Emu/RSX/VK/vkutils/instance.h"
 #include "Emu/localized_string_id.h"
 #include "Emu/system_config.h"
@@ -1884,9 +1886,74 @@ Java_net_rpcs3_RPCS3_perfMetrics(JNIEnv *env, jobject) {
   }
 
   return wrap(env, fmt::format(R"({"fps":%.2f,"frametime":%.3f,"rsxLoad":%u,)"
-                               R"("renderer":"%s"})",
+                               R"("renderer":"%s","presented":%u,"generated":%u})",
                                g_hud_fps.load(), g_hud_frametime.load(),
-                               rsxLoad, g_cfg.video.renderer.to_string()));
+                               rsxLoad, g_cfg.video.renderer.to_string(),
+                               vk::frame_generation_presented_count(),
+                               vk::frame_generation_generated_count()));
+}
+
+extern "C" JNIEXPORT jint JNICALL Java_net_rpcs3_RPCS3_frameGenImport(
+    JNIEnv *env, jobject, jint fd, jstring jcachePath) {
+  const auto cachePath = unwrap(env, jcachePath);
+
+  if (const auto parent = fs::get_parent_dir(cachePath); !parent.empty()) {
+    fs::create_path(parent);
+  }
+
+  const LsfgStatus status = lsfg_build_cache_fd(fd, cachePath.c_str(), false);
+
+  if (status == LSFG_OK) {
+    vk::set_frame_generation_shader_cache(cachePath);
+    vk::invalidate_frame_generation_shaders();
+  }
+
+  return static_cast<jint>(status);
+}
+
+extern "C" JNIEXPORT jstring JNICALL Java_net_rpcs3_RPCS3_frameGenState(
+    JNIEnv *env, jobject, jstring jcachePath) {
+  const auto cachePath = unwrap(env, jcachePath);
+
+  LsfgCacheInfo info{};
+  const LsfgStatus status = lsfg_cache_info(cachePath.c_str(), &info);
+  const bool imported = status == LSFG_OK;
+
+  if (imported) {
+    vk::set_frame_generation_shader_cache(cachePath);
+  } else {
+    vk::set_frame_generation_shader_cache({});
+  }
+
+  const auto runtime = vk::get_frame_generation_status();
+
+  return wrap(env, fmt::format(
+                       R"({"imported":%s,"status":%d,"variant":"%s","modules":%u,)"
+                       R"("sourceSize":%u,"ready":%s,"unsupported":%s,"width":%u,"height":%u})",
+                       imported ? "true" : "false", static_cast<int>(status),
+                       lsfg_variant_name(info.variant), info.module_count,
+                       info.source_size, runtime.ready ? "true" : "false",
+                       runtime.unsupported ? "true" : "false", runtime.width,
+                       runtime.height));
+}
+
+extern "C" JNIEXPORT void JNICALL Java_net_rpcs3_RPCS3_frameGenConfigure(
+    JNIEnv *, jobject, jboolean enabled, jint multiplier, jint targetRate,
+    jint flowScalePercent) {
+  vk::frame_generation_settings settings{};
+  settings.enabled = enabled == JNI_TRUE;
+  settings.multiplier = static_cast<u32>(std::max<jint>(multiplier, 2));
+  settings.target_rate = static_cast<u32>(std::max<jint>(targetRate, 0));
+  settings.flow_scale_percent = static_cast<u32>(std::max<jint>(flowScalePercent, 25));
+  vk::set_frame_generation_settings(settings);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL Java_net_rpcs3_RPCS3_frameGenForget(
+    JNIEnv *env, jobject, jstring jcachePath) {
+  const auto cachePath = unwrap(env, jcachePath);
+  vk::set_frame_generation_shader_cache({});
+  vk::set_frame_generation_status({});
+  return fs::remove_file(cachePath) ? JNI_TRUE : JNI_FALSE;
 }
 
 extern "C" JNIEXPORT jboolean JNICALL Java_net_rpcs3_RPCS3_surfaceEvent(

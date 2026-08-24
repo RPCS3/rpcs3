@@ -430,4 +430,54 @@
     <string name="game_version_updated">v%1$s (disc v%2$s)</string>
 
     <string name="system_info_title">System Info</string>
+
+    <string name="drawer_frame_gen">Frame Gen</string>
+    <string name="framegen_title">Frame Gen</string>
+    <string name="framegen_tab">Frame generation</string>
+
+    <string name="framegen_source_title">Lossless Scaling shaders</string>
+    <string name="framegen_source_missing">No shader source imported yet. Pick your own copy of Lossless.dll to enable frame generation.</string>
+    <string name="framegen_source_importing">Reading the shader chain out of the file…</string>
+    <string name="framegen_source_loaded">Loaded — %1$d shaders (%2$s)</string>
+    <string name="framegen_source_loaded_named">Loaded from %1$s — %2$d shaders (%3$s)</string>
+    <string name="framegen_source_select">Select Lossless.dll</string>
+    <string name="framegen_source_replace">Update Lossless.dll</string>
+    <string name="framegen_source_remove">Remove</string>
+    <string name="framegen_source_hint">The shaders are translated once and cached. Pick the file again whenever you update Lossless Scaling.</string>
+
+    <string name="framegen_import_title">Frame generation</string>
+    <string name="framegen_import_ok">Shader chain imported. Frame generation is ready to enable.</string>
+    <string name="framegen_import_not_found">That file could not be opened.</string>
+    <string name="framegen_import_unreadable">That file could not be read.</string>
+    <string name="framegen_import_not_executable">That is not a Windows DLL.</string>
+    <string name="framegen_import_missing_shaders">That DLL does not carry the frame generation shaders. Pick Lossless.dll from your Lossless Scaling install.</string>
+    <string name="framegen_import_translation_failed">The shaders could not be translated for this device.</string>
+    <string name="framegen_import_cache_unusable">The translated shaders could not be saved.</string>
+
+    <string name="framegen_enable">Frame generation</string>
+    <string name="framegen_enable_hint">Interpolates extra frames between rendered ones</string>
+    <string name="framegen_enable_blocked">Import Lossless.dll first</string>
+
+    <string name="framegen_section_pacing">PACING</string>
+    <string name="framegen_mode_fixed">Fixed</string>
+    <string name="framegen_mode_fixed_detail">set multiplier</string>
+    <string name="framegen_mode_adaptive">Adaptive</string>
+    <string name="framegen_mode_adaptive_detail">hold a rate</string>
+
+    <string name="framegen_section_multiplier">MULTIPLIER</string>
+    <string name="framegen_multiplier_value">%1$d×</string>
+    <string name="framegen_multiplier_detail">+%1$d frames</string>
+
+    <string name="framegen_section_target">TARGET RATE</string>
+    <string name="framegen_target_value">%1$d fps</string>
+    <string name="framegen_target_detail">up to 4×</string>
+
+    <string name="framegen_section_flow">FLOW SCALE</string>
+    <string name="framegen_flow_value">Motion search resolution  %1$d%%</string>
+    <string name="framegen_flow_hint">Lower values cost less GPU time and soften fast motion.</string>
+
+    <string name="framegen_runtime_active">Running at %1$d × %2$d.</string>
+    <string name="framegen_runtime_idle">Starts once a game is running.</string>
+    <string name="framegen_runtime_unsupported">This GPU rejected the frame generation pipelines, so it stays off.</string>
+    <string name="framegen_latency_note">Interpolation always adds a little latency: the real frame is held back while the frames before it are shown. It buys smoothness, not response.</string>
 </resources>

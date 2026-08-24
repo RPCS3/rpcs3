@@ -1,6 +1,10 @@
 #include "stdafx.h"
 #include "swapchain.h"
 
+#ifdef ANDROID
+#include "../VKFrameGeneration.h"
+#endif
+
 namespace vk
 {
 	// Swapchain image RPCS3
@@ -304,12 +308,16 @@ namespace vk
 			//Try to negotiate for a triple buffer setup
 			//In cases where the front-buffer isnt available for present, its better to have a spare surface
 			nb_swap_images = std::max(surface_descriptors.minImageCount + 2u, 3u);
+		}
 
-			if (nb_swap_images > surface_descriptors.maxImageCount)
-			{
-				// Application must settle for fewer images than desired:
-				nb_swap_images = surface_descriptors.maxImageCount;
-			}
+#ifdef ANDROID
+		nb_swap_images += vk::frame_generation_reserved_images();
+#endif
+
+		if (surface_descriptors.maxImageCount > 0 && nb_swap_images > surface_descriptors.maxImageCount)
+		{
+			// Application must settle for fewer images than desired:
+			nb_swap_images = surface_descriptors.maxImageCount;
 		}
 
 		VkSurfaceTransformFlagBitsKHR pre_transform = surface_descriptors.currentTransform;

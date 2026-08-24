@@ -9,6 +9,7 @@ import android.util.Log
 import android.view.InputDevice
 import android.view.View
 import androidx.compose.runtime.mutableStateOf
+import net.rpcs3.framegen.FrameGen
 import net.rpcs3.ui.drawer.InGameDrawer
 import net.rpcs3.ui.hud.DeviceStatsReader
 import net.rpcs3.ui.hud.HudPrefs
@@ -66,6 +67,8 @@ class RPCS3Activity : ComponentActivity() {
 
         unregisterUsbEventListener = listenUsbEvents(this)
         enableFullScreenImmersive()
+
+        FrameGen.sync(this)
 
         RPCS3.onEmulationStopped = {
             runOnUiThread { scheduleStopCheck() }
@@ -353,14 +356,33 @@ class RPCS3Activity : ComponentActivity() {
 
         val reader = DeviceStatsReader(this)
 
+        var lastPresented = -1L
+        var lastGenerated = 0L
+        var lastSampleAt = 0L
+
         hudPump = object : Runnable {
             override fun run() {
                 val device = reader.read()
                 val emu = runCatching { JSONObject(RPCS3.instance.perfMetrics()) }.getOrNull()
 
+                val presented = emu?.optLong("presented", 0L) ?: 0L
+                val generated = emu?.optLong("generated", 0L) ?: 0L
+                val now = android.os.SystemClock.elapsedRealtime()
+
+                val outputFps = if (lastPresented >= 0 && now > lastSampleAt && generated > lastGenerated) {
+                    (presented - lastPresented) * 1000f / (now - lastSampleAt)
+                } else {
+                    0f
+                }
+
+                lastPresented = presented
+                lastGenerated = generated
+                lastSampleAt = now
+
                 binding.hudView.submit(
                     device.copy(
                         fps = emu?.optDouble("fps", 0.0)?.toFloat() ?: 0f,
+                        outputFps = outputFps,
                         frametimeMs = emu?.optDouble("frametime", 0.0)?.toFloat() ?: 0f,
                         renderer = emu?.optString("renderer").orEmpty(),
                         gpuPercent = if (device.gpuPercent >= 0) {
