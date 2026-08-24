@@ -1483,10 +1483,11 @@ namespace rpcn
 		return error;
 	}
 
-	ErrorType rpcn_client::delete_trophies()
+	ErrorType rpcn_client::delete_trophies(std::string_view communication_id)
 	{
 		std::vector<u8> data;
-		data.push_back(0); // Empty communication ID means delete all synchronized trophies.
+		std::copy(communication_id.begin(), communication_id.end(), std::back_inserter(data));
+		data.push_back(0);
 
 		std::vector<u8> packet_data;
 
@@ -1500,7 +1501,14 @@ namespace rpcn
 
 		if (error == rpcn::ErrorType::NoError)
 		{
-			rpcn_log.success("RPCN trophies were successfully deleted!");
+			if (communication_id.empty())
+			{
+				rpcn_log.success("RPCN trophies were successfully deleted!");
+			}
+			else
+			{
+				rpcn_log.success("RPCN trophies for %s were successfully deleted!", communication_id);
+			}
 		}
 
 		return error;

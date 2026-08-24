@@ -104,7 +104,6 @@ private Q_SLOTS:
 	void resend_token();
 	void change_password();
 	void delete_account();
-	void delete_trophies();
 
 protected:
 	QLineEdit *m_edit_username, *m_edit_token;

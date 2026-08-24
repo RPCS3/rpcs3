@@ -13,11 +13,17 @@
 
 #include <memory>
 #include <mutex>
+#include <string_view>
 #include <unordered_map>
 
 class game_list;
 class gui_settings;
 class TROPUSRLoader;
+
+namespace rpcn
+{
+	class rpcn_client;
+}
 
 struct GameTrophiesData
 {
@@ -26,6 +32,7 @@ struct GameTrophiesData
 	std::unordered_map<int, QPixmap> trophy_images; // Cache trophy images to avoid loading from disk as much as possible.
 	std::unordered_map<int, QString> trophy_image_paths;
 	std::string game_name;
+	std::string communication_id;
 	std::string path;
 };
 
@@ -47,6 +54,8 @@ private Q_SLOTS:
 	void ApplyFilter();
 	void ShowTrophyTableContextMenu(const QPoint& pos);
 	void ShowGameTableContextMenu(const QPoint& pos);
+	void DeleteOnlineTrophies();
+	void SyncAllOnlineTrophies();
 
 Q_SIGNALS:
 	void GameIconReady(int index, const QPixmap& pixmap);
@@ -57,6 +66,9 @@ private:
 	Returns true if successful.  Does not attempt to install if failure occurs, like sceNpTrophy.
 	*/
 	bool LoadTrophyFolderToDB(const std::string& trop_name);
+	void DeleteOnlineTrophiesForCommunicationId(std::string_view communication_id, const QString& game_name = {});
+	void SyncOnlineTrophiesForGame(int db_ind);
+	bool SyncOnlineTrophyGame(int db_ind, const std::shared_ptr<rpcn::rpcn_client>& rpcn, QString& error_message);
 
 	/** Populate the trophy database (multithreaded). */
 	void StartTrophyLoadThreads();
