@@ -257,6 +257,11 @@ static u64 get_raw_device_size(int fd)
 
 	if (::ioctl(fd, DKIOCGETBLOCKCOUNT, &block_count) == 0 && ::ioctl(fd, DKIOCGETBLOCKSIZE, &block_size) == 0)
 	{
+		if (block_size && block_count > u64{umax} / block_size)
+		{
+			fmt::throw_exception("Raw device size overflow (block count: 0x%x, block size: 0x%x)", block_count, block_size);
+		}
+
 		return block_count * block_size;
 	}
 #elif defined(__FreeBSD__) || defined(__DragonFly__)
@@ -505,12 +510,12 @@ namespace fs
 	class windows_file final : public file_base
 	{
 		HANDLE m_handle;
-		bool m_raw_device;
+		u64 m_raw_device_size; // Size of the raw device, 0 if it's not one: it never changes, so it's retrieved once when the file is opened
 		atomic_t<u64> m_pos {0};
 
 	public:
-		windows_file(HANDLE handle, bool raw_device = false)
-			: m_handle(handle), m_raw_device(raw_device)
+		windows_file(HANDLE handle, u64 raw_device_size = 0)
+			: m_handle(handle), m_raw_device_size(raw_device_size)
 		{
 		}
 
@@ -670,7 +675,7 @@ namespace fs
 
 		u64 size() override
 		{
-			if (!m_raw_device)
+			if (!m_raw_device_size)
 			{
 				// NOTE: this can fail if we access a mounted empty drive (e.g. after unmounting an iso).
 				LARGE_INTEGER size;
@@ -679,11 +684,8 @@ namespace fs
 				return size.QuadPart;
 			}
 
-			// For a raw device, we need to use DeviceIoControl.
-			DISK_GEOMETRY_EX geometry;
-
-			ensure(DeviceIoControl(m_handle, IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, nullptr, 0, &geometry, sizeof(geometry), nullptr, nullptr));
-			return geometry.DiskSize.QuadPart;
+			// For a raw device, the size was already retrieved with DeviceIoControl() when the file was opened
+			return m_raw_device_size;
 		}
 
 		native_handle get_handle() override
@@ -722,11 +724,11 @@ namespace fs
 	class unix_file final : public file_base
 	{
 		int m_fd;
-		bool m_raw_device;
+		u64 m_raw_device_size; // Size of the raw device, 0 if it's not one: it never changes, so it's retrieved once when the file is opened
 
 	public:
-		unix_file(int fd, bool raw_device = false)
-			: m_fd(fd), m_raw_device(raw_device)
+		unix_file(int fd, u64 raw_device_size = 0)
+			: m_fd(fd), m_raw_device_size(raw_device_size)
 		{
 		}
 
@@ -745,8 +747,8 @@ namespace fs
 
 			stat_t info {};
 			info.is_directory = S_ISDIR(file_info.st_mode);
-			info.is_writable = !m_raw_device && (file_info.st_mode & 0200); // HACK: approximation
-			info.size = m_raw_device ? get_raw_device_size(m_fd) : file_info.st_size; // A raw device reports no size through "fstat()"
+			info.is_writable = !m_raw_device_size && (file_info.st_mode & 0200); // HACK: approximation
+			info.size = m_raw_device_size ? m_raw_device_size : static_cast<u64>(file_info.st_size); // A raw device reports no size through "fstat()"
 			info.atime = file_info.st_atime;
 			info.mtime = file_info.st_mtime;
 			info.ctime = info.mtime;
@@ -852,7 +854,7 @@ namespace fs
 
 		u64 size() override
 		{
-			if (!m_raw_device)
+			if (!m_raw_device_size)
 			{
 				struct ::stat file_info;
 				ensure(::fstat(m_fd, &file_info) == 0); // "file::size"
@@ -860,8 +862,8 @@ namespace fs
 				return file_info.st_size;
 			}
 
-			// For a raw device, we need to use an ioctl ("fstat()" would always report a null size)
-			return get_raw_device_size(m_fd);
+			// For a raw device, the size was already retrieved with an ioctl when the file was opened
+			return m_raw_device_size;
 		}
 
 		native_handle get_handle() override
@@ -1984,7 +1986,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			return;
 		}
 
-		m_file = std::make_unique<windows_file>(handle, true);
+		m_file = std::make_unique<windows_file>(handle, static_cast<u64>(geometry.DiskSize.QuadPart));
 		return;
 	}
 
@@ -2085,14 +2087,16 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 	if (raw_device)
 	{
 		// Try to retrieve the size of the content. If it fails, no disc is probably mounted so abort the file opening
-		if (!get_raw_device_size(fd))
+		const u64 raw_device_size = get_raw_device_size(fd);
+
+		if (!raw_device_size)
 		{
 			::close(fd);
 			g_tls_error = fs::error::noent;
 			return;
 		}
 
-		m_file = std::make_unique<unix_file>(fd, true);
+		m_file = std::make_unique<unix_file>(fd, raw_device_size);
 		return;
 	}
 
