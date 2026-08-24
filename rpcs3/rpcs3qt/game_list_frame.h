@@ -13,6 +13,7 @@
 #include <QMainWindow>
 #include <QStackedWidget>
 #include <QSet>
+#include <QHash>
 #include <QTableWidgetItem>
 #include <QFutureWatcher>
 
@@ -41,6 +42,19 @@ public:
 
 	/** Adds/removes categories that should be shown on gamelist. Public so that main frame menu actions can apply them */
 	void ToggleCategoryFilter(const QStringList& categories, bool show);
+
+	/** Restrict the game list to the games of a user defined game collection. An empty name shows every game. */
+	void SetGameCollection(const QString& name);
+
+	/** Re-reads the members of the selected game collection, after games were moved between collections */
+	void ReloadGameCollection();
+
+	/** How many games of each of the given collections the library holds. Membership may name games that
+	    are not installed, and those are what this leaves out; the other filters - category, hidden, broken,
+	    completed, the search box - are not applied, so the number does not move while the user types.
+	    Selecting the collection can therefore show fewer than the menu says.
+	    The list comes from the caller, which has already read it to build the entries being counted. */
+	QHash<QString, qsizetype> CountGamesPerCollection(const QStringList& collections) const;
 
 	/** Loads from settings. Public so that main frame can easily reset these settings if needed. */
 	void LoadSettings();
@@ -186,6 +200,10 @@ private:
 	// Categories
 	QStringList m_category_filters;
 	QStringList m_grid_category_filters;
+
+	// User defined game collection used as an additional filter. Empty means "All Games".
+	QString m_game_collection;
+	QSet<QString> m_game_collection_serials;
 
 	// List Mode
 	bool m_is_list_layout = true;
