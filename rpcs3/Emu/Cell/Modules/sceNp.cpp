@@ -699,7 +699,7 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 			}
 			else
 			{
-				const std::string rap_file = rpcs3::utils::get_rap_file_path(npd.content_id);
+				const std::string rap_file = rpcs3::utils::get_rap_file_path(npd.get_content_id());
 
 				if (fs::file rap_fd{rap_file})
 				{

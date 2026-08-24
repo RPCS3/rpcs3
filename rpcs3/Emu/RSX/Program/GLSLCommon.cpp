@@ -505,6 +505,8 @@ namespace glsl
 			return "$Ty(dot($0.xy, $1.xy) + $2.x)";
 		case FUNCTION::DP3:
 			return "$Ty(dot($0.xyz, $1.xyz))";
+		case FUNCTION::DP3_PRECISE:
+			return "$Ty(fma($0.x, $1.x, fma($0.y, $1.y, $0.z * $1.z)))";
 		case FUNCTION::DP4:
 			return "$Ty(dot($0, $1))";
 		case FUNCTION::DPH:

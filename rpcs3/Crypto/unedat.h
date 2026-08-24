@@ -49,6 +49,12 @@ struct NPD_HEADER
 	u8 dev_hash[0x10];
 	s64 activate_time;
 	s64 expire_time;
+
+	std::string get_content_id() const
+	{
+		const std::string_view id{content_id, sizeof(content_id)};
+		return std::string{id.substr(0, id.find_first_of('\0'))};
+	}
 };
 
 struct EDAT_HEADER
