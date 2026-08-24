@@ -412,6 +412,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 {
 	// Initialize dependencies
 	g_fxo->need<rsx::dma_manager>();
+	g_fxo->need<vk::driver_manager_thread>();
 
 	if (!m_instance.create("RPCS3"))
 	{
@@ -641,6 +642,12 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 
 	backend_config.supports_multidraw = true;
 	backend_config.supports_hw_instanced_rendering = true;
+
+	backend_config.supports_last_provoking_vertex = m_device->get_provoking_vertex_last_support();
+	if (!backend_config.supports_last_provoking_vertex)
+	{
+		rsx_log.warning("VK_EXT_provoking_vertex with provokingVertexLast is unavailable; RSX flat shading will fall back to smooth interpolation.");
+	}
 
 	// NVIDIA has broken attribute interpolation
 	backend_config.supports_normalized_barycentrics = (
@@ -1028,6 +1035,7 @@ bool VKGSRender::on_vram_exhausted(rsx::problem_severity severity)
 		// Hard sync before trying to evict anything. This guarantees no UAF crashes in the driver.
 		// As a bonus, we also get a free gc pass
 		flush_command_queue(true, true);
+		g_fxo->get<vk::driver_manager_thread>().drain();
 
 		if (m_texture_cache.is_overallocated())
 		{
@@ -2687,12 +2695,6 @@ void VKGSRender::renderctl(u32 request_code, void* args)
 		const auto packet = reinterpret_cast<vk::queue_submit_t*>(args);
 		vk::queue_submit(packet);
 		free(packet);
-		break;
-	}
-	case vk::rctrl_run_gc:
-	{
-		auto eid = reinterpret_cast<u64>(args);
-		vk::on_event_completed(eid, true);
 		break;
 	}
 	default:

@@ -1211,6 +1211,36 @@ void lv2_socket_native::set_non_blocking()
 	np::set_socket_non_blocking(native_socket);
 }
 
+void lv2_socket_native::get_sockinfo(sys_net_sockinfo_t& info)
+{
+	if (type != SYS_NET_SOCK_STREAM)
+	{
+		info.state = info.local_port ? SYS_NET_STATE_OPENED : SYS_NET_STATE_CREATED;
+		return;
+	}
+
+	if (info.remote_port)
+	{
+		info.state = SYS_NET_STATE_ESTABLISHED;
+		return;
+	}
+
+	{
+		std::lock_guard lock(mutex);
+
+		int listening = 0;
+		socklen_t len = sizeof(listening);
+
+		if (::getsockopt(native_socket, SOL_SOCKET, SO_ACCEPTCONN, reinterpret_cast<char*>(&listening), &len) == 0 && listening)
+		{
+			info.state = SYS_NET_STATE_LISTEN;
+			return;
+		}
+	}
+
+	info.state = info.local_port ? SYS_NET_STATE_OPENED : SYS_NET_STATE_CREATED;
+}
+
 bool lv2_socket_native::is_socket_connected()
 {
 	if (type != SYS_NET_SOCK_STREAM)

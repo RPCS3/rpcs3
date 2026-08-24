@@ -699,7 +699,7 @@ error_code npDrmIsAvailable(vm::cptr<u8> k_licensee_addr, vm::cptr<char> drm_pat
 			}
 			else
 			{
-				const std::string rap_file = rpcs3::utils::get_rap_file_path(npd.content_id);
+				const std::string rap_file = rpcs3::utils::get_rap_file_path(npd.get_content_id());
 
 				if (fs::file rap_fd{rap_file})
 				{
@@ -6798,6 +6798,11 @@ error_code sceNpSignalingActivateConnection(u32 ctx_id, vm::ptr<SceNpId> npId, v
 	if (!nph.is_NP_init)
 	{
 		return SCE_NP_SIGNALING_ERROR_NOT_INITIALIZED;
+	}
+
+	if (!get_signaling_context(ctx_id))
+	{
+		return SCE_NP_SIGNALING_ERROR_CTX_NOT_FOUND;
 	}
 
 	if (!npId || !conn_id)

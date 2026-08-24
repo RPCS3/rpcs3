@@ -455,6 +455,7 @@ namespace gcm
 		RSX_SHADER_CONTROL_UNKNOWN1                 = 0x00008000, // seemingly set when srgb packer is used??
 
 		// Custom
+		RSX_SHADER_CONTROL_FLAT_SHADING             = 0x00000800, // Interpolate front/back colors using the provoking vertex
 		RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION  = 0x00010000, // Rasterizing triangles and not lines or points
 		RSX_SHADER_CONTROL_INSTANCED_CONSTANTS      = 0x00020000, // Support instance ID offsets when loading constants
 		RSX_SHADER_CONTROL_INTERPRETER_MODEL        = 0x00040000, // Compile internals expecting interpreter
@@ -472,6 +473,8 @@ namespace gcm
 		RSX_SHADER_CONTROL_TEXTURE_FORMAT_CONVERT   = 0x04000000, // Allow format conversions (BX2, SNORM, SRGB, RENORM)
 		RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE    = 0x08000000, // Emulate depth comparisons
 		RSX_SHADER_CONTROL_MULTISAMPLED_ZBUFFER     = 0x10000000, // Z buffer is multisampled. Only affects depth comparison behavior at this time.
+
+		RSX_SHADER_CONTROL_ROP_OUTPUT_REMAP         = 0x20000000, // ROP outputs need channel swizzles.
 
 		// Meta
 		RSX_SHADER_CONTROL_META_USES_DISCARD       = (RSX_SHADER_CONTROL_USES_KIL | RSX_SHADER_CONTROL_TEXTURE_ALPHA_KILL | RSX_SHADER_CONTROL_ALPHA_TEST | RSX_SHADER_CONTROL_POLYGON_STIPPLE | RSX_SHADER_CONTROL_ALPHA_TO_COVERAGE)

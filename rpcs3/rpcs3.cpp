@@ -32,6 +32,7 @@
 #include "module_verifier.hpp"
 #include "util/dyn_lib.hpp"
 #include <shellapi.h>
+#include <process.h>
 
 // TODO(cjj19970505@live.cn)
 // When compiling with WIN32_LEAN_AND_MEAN definition
@@ -984,23 +985,14 @@ int run_rpcs3(int argc, char** argv)
 			gui_app->SetGameScreenIndex(game_screen_index);
 		}
 
-		if (!gui_app->Init())
-		{
-			Emu.Quit(true);
-			return 0;
-		}
+		gui_app->Init();
 	}
 	else if (headless_application* headless_app = qobject_cast<headless_application*>(app.data()))
 	{
 		g_headless = true;
 
 		headless_app->SetActiveUser(active_user);
-
-		if (!headless_app->Init())
-		{
-			Emu.Quit(true);
-			return 0;
-		}
+		headless_app->Init();
 	}
 	else
 	{
@@ -1389,5 +1381,11 @@ int run_rpcs3(int argc, char** argv)
 	}
 
 	// run event loop (maybe only needed for the gui application)
+	if (gui_application* gui_app = qobject_cast<gui_application*>(app.data()))
+	{
+		// call gui_application::exec
+		return gui_app->exec();
+	}
+
 	return app->exec();
 }

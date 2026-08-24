@@ -121,7 +121,8 @@ namespace gl
 	}
 
 	gl::texture_view* texture_cache::create_temporary_subresource_impl(gl::command_context& cmd, gl::texture* src, GLenum sized_internal_fmt, GLenum dst_target,
-		u32 gcm_format, u16 x, u16 y, u16 width, u16 height, u16 depth, u8 mipmaps, const rsx::texture_channel_remap_t& remap, bool copy)
+		u32 gcm_format, u16 width, u16 height, u16 depth, u8 mipmaps, const rsx::texture_channel_remap_t& remap,
+		const copy_region_descriptor* copy)
 	{
 		if (sized_internal_fmt == GL_NONE)
 		{
@@ -160,18 +161,7 @@ namespace gl
 
 		if (copy)
 		{
-			rsx::simple_array<copy_region_descriptor> region =
-			{{
-				.src = src,
-				.xform = rsx::surface_transform::coordinate_transform,
-				.src_x = x,
-				.src_y = y,
-				.src_w = width,
-				.src_h = height,
-				.dst_w = width,
-				.dst_h = height
-			}};
-
+			rsx::simple_array<copy_region_descriptor> region = { *copy };
 			copy_transfer_regions_impl(cmd, dst, region);
 		}
 
@@ -200,6 +190,8 @@ namespace gl
 		const auto dst_bpp = dst_image->pitch() / dst_image->width();
 		const auto dst_aspect = dst_image->aspect();
 
+		std::unique_ptr<gl::texture> tmp;
+
 		for (const auto &slice : sources)
 		{
 			if (!slice.src)
@@ -210,7 +202,6 @@ namespace gl
 			const bool typeless = !formats_are_bitcast_compatible(slice.src, dst_image);
 			ensure(typeless || dst_aspect == slice.src->aspect());
 
-			std::unique_ptr<gl::texture> tmp;
 			auto src_image = slice.src;
 			auto src_x = slice.src_x;
 			auto src_y = slice.src_y;
@@ -234,12 +225,19 @@ namespace gl
 			{
 				const auto src_bpp = slice.src->pitch() / slice.src->width();
 				const u16 convert_w = u16(slice.src->width() * src_bpp) / dst_bpp;
-				tmp = std::make_unique<texture>(
-					GL_TEXTURE_2D,
-					convert_w, slice.src->height(),
-					1, 1, 1,
-					static_cast<GLenum>(dst_image->get_internal_format()),
-					dst_image->format_class());
+
+				if (!tmp ||
+					tmp->width() < convert_w ||
+					tmp->height() < slice.src->height() ||
+					tmp->get_internal_format() != dst_image->get_internal_format())
+				{
+					tmp = std::make_unique<texture>(
+						GL_TEXTURE_2D,
+						convert_w, slice.src->height(),
+						1, 1, 1,
+						static_cast<GLenum>(dst_image->get_internal_format()),
+						dst_image->format_class());
+				}
 
 				src_image = tmp.get();
 
@@ -268,10 +266,11 @@ namespace gl
 
 			if (src_w == slice.dst_w && src_h == slice.dst_h)
 			{
-				gl::g_hw_blitter->copy_image(cmd, src_image, dst_image, 0, slice.level,
+				gl::g_hw_blitter->copy_image(cmd, src_image, dst_image,
 					position3i{ src_x, src_y, 0 },
 					position3i{ slice.dst_x, slice.dst_y, slice.dst_z },
-					size3i{ src_w, src_h, 1 });
+					size3i{ src_w, src_h, 1 },
+					{ .dst_mip_level = slice.level });
 			}
 			else
 			{
@@ -280,29 +279,48 @@ namespace gl
 				const areai dst_rect = { slice.dst_x, slice.dst_y, slice.dst_x + slice.dst_w, slice.dst_y + slice.dst_h };
 
 				gl::texture* _dst = dst_image;
-				if (src_image->get_internal_format() != dst_image->get_internal_format() ||
-					slice.level != 0 ||
-					slice.dst_z != 0) [[ unlikely ]]
+				rsx::image_copy_subresource_layers mip_layers{ .dst_mip_level = slice.level };
+
+				const coord3i src_vol = { src_rect.x1, src_rect.y1, 0, src_rect.x2 - src_rect.x1, src_rect.y2 - src_rect.y1, 1 };
+				coord3i dst_vol = { dst_rect.x1, dst_rect.y1, 0, dst_rect.x2 - dst_rect.x1, dst_rect.y2 - dst_rect.y1, 1 };
+
+				if (src_image->get_internal_format() != dst_image->get_internal_format())
 				{
-					tmp = std::make_unique<texture>(
-						GL_TEXTURE_2D,
-						dst_rect.x2, dst_rect.y2,
-						1, 1, 1,
-						static_cast<GLenum>(slice.src->get_internal_format()),
-						slice.src->format_class());
+					ensure(src_image == slice.src);
+
+					if (!tmp ||
+						tmp->width() < static_cast<u32>(dst_rect.x2) ||
+						tmp->height() < static_cast<u32>(dst_rect.y2) ||
+						tmp->get_internal_format() != slice.src->get_internal_format()) [[ unlikely ]]
+					{
+						tmp = std::make_unique<texture>(
+							GL_TEXTURE_2D,
+							dst_rect.x2, dst_rect.y2,
+							1, 1, 1,
+							static_cast<GLenum>(slice.src->get_internal_format()),
+							slice.src->format_class());
+					}
 
 					_dst = tmp.get();
+					mip_layers = {};
+				}
+				else
+				{
+					// We can set either the target layer or target Z.
+					// Set target Z due to integer limits with the mip_layers.
+					dst_vol.z = slice.dst_z;
 				}
 
-				_blitter->scale_image(cmd, src_image, _dst, src_rect, dst_rect, false, {});
+				_blitter->scale_image(cmd, src_image, _dst, src_vol, dst_vol, false, {}, mip_layers);
 
 				if (_dst != dst_image)
 				{
 					// Data cast comes after scaling
-					gl::g_hw_blitter->copy_image(cmd, tmp.get(), dst_image, 0, slice.level,
+					gl::g_hw_blitter->copy_image(cmd, tmp.get(), dst_image,
 						position3i{slice.dst_x, slice.dst_y, 0},
 						position3i{slice.dst_x, slice.dst_y, slice.dst_z},
-						size3i{slice.dst_w, slice.dst_h, 1});
+						size3i{slice.dst_w, slice.dst_h, 1},
+						{ .dst_mip_level = slice.level });
 				}
 			}
 		}
