@@ -634,11 +634,14 @@ void ps_move_tracker_dialog::process_camera_frame()
 QPixmap ps_move_tracker_dialog::get_histogram(const std::array<u32, 360>& hues, bool ignore_zero) const
 {
 	// Create image
+	const int width = ui->histogramLabel->width();
 	const int height = ui->histogramLabel->height();
+	const f32 pixelsPerHue = width / static_cast<f32>(hues.size());
+
 	static QPixmap background = [&]()
 	{
 		// Paint background
-		QPixmap pxmap(static_cast<int>(hues.size()), height);
+		QPixmap pxmap(width, height);
 		pxmap.fill(Qt::white);
 		return pxmap;
 	}();
@@ -664,10 +667,18 @@ QPixmap ps_move_tracker_dialog::get_histogram(const std::array<u32, 360>& hues, 
 		painter.fillRect(0, 0, max_hue - 360, histo.height(), Qt::lightGray);
 	}
 
+	const auto get_hue_bar_x = [pixelsPerHue](u16 hue)
+	{
+		const int x0 = hue * pixelsPerHue;
+		const int x1 = std::max<int>(x0, x0 + pixelsPerHue - 1);
+		return std::pair<int, int>(x0, x1);
+	};
+
 	// Paint target hue
 	const auto [r, g, b] = ps_move_tracker<true>::hsv_to_rgb(hue, 1.0f, 1.0f);
+	const auto [x0, x1] = get_hue_bar_x(hue);
 	painter.setPen(QColor(r, g, b));
-	painter.drawLine(hue, 0, hue, histo.height() - 1);
+	painter.drawLine(x0, 0, x1, histo.height() - 1);
 
 	// Paint histogram
 	painter.setPen(Qt::black);
@@ -684,7 +695,9 @@ QPixmap ps_move_tracker_dialog::get_histogram(const std::array<u32, 360>& hues, 
 	{
 		const int bar_height = (hues[i] / static_cast<float>(max_value)) * height;
 		if (bar_height <= 0) continue;
-		painter.drawLine(i, height - 1, i, height - bar_height);
+
+		const auto [x0, x1] = get_hue_bar_x(i);
+		painter.drawLine(x0, height - 1, x1, height - bar_height);
 	}
 
 	return histo;
