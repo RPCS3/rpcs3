@@ -289,7 +289,7 @@ bool ps_move_tracker_dialog::eventFilter(QObject* object, QEvent* event)
 {
 	if (event && object == ui->imageLabel && event->type() == QEvent::Type::MouseButtonRelease && m_view_mode == view_mode::contours)
 	{
-		const QMouseEvent* me = reinterpret_cast<QMouseEvent*>(event);
+		const QMouseEvent* me = static_cast<QMouseEvent*>(event);
 
 		if (me->button() == Qt::MouseButton::LeftButton)
 		{
@@ -303,7 +303,7 @@ bool ps_move_tracker_dialog::eventFilter(QObject* object, QEvent* event)
 			{
 				std::lock_guard lock(m_image_mutex);
 
-				const auto pos = me->localPos().toPoint();
+				const auto pos = me->position().toPoint();
 				const QPixmap pixmap = ui->imageLabel->pixmap();
 
 				if (pixmap.rect().contains(pos))
