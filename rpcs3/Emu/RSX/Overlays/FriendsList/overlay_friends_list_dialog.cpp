@@ -335,6 +335,13 @@ namespace rsx
 							close(true, false);
 							home_menu->request_close([message_id]()
 							{
+								auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+								if (nph.invoke_custom_menu_invitation_action(message_id))
+								{
+									return;
+								}
+
 								// Let the game process all system menu close callbacks before reporting the selected invitation.
 								sysutil_register_cb([message_id](ppu_thread&) -> s32
 								{

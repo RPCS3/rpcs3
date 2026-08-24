@@ -295,6 +295,10 @@ namespace np
 		std::vector<custom_menu_action> custom_menu_actions;
 		SceNpCustomMenuIndexArray custom_menu_activation{};
 		std::vector<SceNpCustomMenuActionExceptions> custom_menu_exception_list{};
+		std::optional<u64> pending_custom_menu_invitation;
+
+		bool invoke_custom_menu_invitation_action(u64 msg_id);
+		std::optional<u64> take_pending_custom_menu_invitation();
 
 		// Mutex for NP status change
 		shared_mutex mutex_status;

@@ -6,6 +6,7 @@
 #include "Emu/Cell/Modules/sceNp2.h"
 #include "Emu/Cell/Modules/cellNetCtl.h"
 #include "Emu/Cell/timers.hpp"
+#include "Emu/Memory/vm_var.h"
 #include "Utilities/StrUtil.h"
 #include "Emu/IdManager.h"
 #include "Emu/System.h"
@@ -871,6 +872,7 @@ namespace np
 			custom_menu_actions.clear();
 			custom_menu_activation = {};
 			custom_menu_exception_list.clear();
+			pending_custom_menu_invitation.reset();
 		}
 
 		{
@@ -1120,6 +1122,79 @@ namespace np
 		get_rpcn()->mark_message_used(msg_id);
 	}
 
+	bool np_handler::invoke_custom_menu_invitation_action(u64 msg_id)
+	{
+		const auto message = get_message(msg_id);
+
+		if (!message || message.value()->second.mainType != SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE)
+		{
+			return false;
+		}
+
+		vm::ptr<SceNpCustomMenuEventHandler> handler;
+		vm::ptr<void> user_arg;
+		u32 action_index = 0;
+		u32 action_count = 0;
+
+		{
+			std::lock_guard lock(mutex_custom_menu);
+
+			if (!custom_menu_registered)
+			{
+				return false;
+			}
+
+			for (const auto& action : custom_menu_actions)
+			{
+				const u32 index = action.id;
+
+				if ((action.mask & SCE_NP_CUSTOM_MENU_ACTION_MASK_ME) && index < SCE_NP_CUSTOM_MENU_INDEX_SETSIZE &&
+					SCE_NP_CUSTOM_MENU_INDEX_ISSET(index, &custom_menu_activation))
+				{
+					action_index = index;
+					action_count++;
+				}
+			}
+
+			// There is no reliable way to choose between multiple actions without presenting them to the user.
+			if (action_count != 1)
+			{
+				return false;
+			}
+
+			handler = custom_menu_handler;
+			user_arg = custom_menu_user_arg;
+		}
+
+		sysutil_register_cb([this, handler, user_arg, action_index, msg_id, npid = get_npid()](ppu_thread& ppu) -> s32
+		{
+			{
+				std::lock_guard lock(mutex_custom_menu);
+				pending_custom_menu_invitation = msg_id;
+			}
+
+			const vm::var<SceNpId> selected_npid(npid);
+			const s32 result = handler(ppu, CELL_OK, action_index, selected_npid, SCE_NP_CUSTOM_MENU_SELECTED_TYPE_ME, user_arg);
+
+			if (result != CELL_OK)
+			{
+				std::lock_guard lock(mutex_custom_menu);
+				pending_custom_menu_invitation.reset();
+			}
+
+			return result;
+		});
+
+		rpcn_log.notice("Forwarding invitation %d through custom menu action %u", msg_id, action_index);
+		return true;
+	}
+
+	std::optional<u64> np_handler::take_pending_custom_menu_invitation()
+	{
+		std::lock_guard lock(mutex_custom_menu);
+		return std::exchange(pending_custom_menu_invitation, std::nullopt);
+	}
+
 	bool np_handler::complete_message_selection(u64 msg_id, u16 main_type, u32 recv_result, u32 recv_options)
 	{
 		const auto opt_msg = get_message(msg_id);
@@ -1198,8 +1273,26 @@ namespace np
 
 	bool np_handler::select_invitation(u64 msg_id)
 	{
+		const auto message = get_message(msg_id);
+
+		if (!message || message.value()->second.mainType != SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE)
+		{
+			rpcn_log.error("Cannot select invalid invitation: msg_id=%d", msg_id);
+			return false;
+		}
+
+		set_message_selected(SCE_NP_BASIC_SELECTED_INVITATION_DATA, message.value());
+
+		if (sysutil_send_system_cmd(CELL_SYSUTIL_NP_INVITATION_SELECTED, 0) <= 0)
+		{
+			clear_message_selected(SCE_NP_BASIC_SELECTED_INVITATION_DATA);
+			rpcn_log.error("Failed to notify the game about selected invitation: msg_id=%d", msg_id);
+			return false;
+		}
+
+		mark_message_used(msg_id);
 		rpcn_log.notice("Selected invitation: msg_id=%d", msg_id);
-		return complete_message_selection(msg_id, SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE, SCE_NP_BASIC_MESSAGE_ACTION_ACCEPT, 0);
+		return true;
 	}
 
 	void np_handler::operator()()

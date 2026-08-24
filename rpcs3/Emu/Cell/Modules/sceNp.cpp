@@ -1593,6 +1593,20 @@ error_code sceNpBasicRecvMessageCustom(ppu_thread& ppu, u16 mainType, u32 recvOp
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
 	}
 
+	const auto pending_invitation = nph.take_pending_custom_menu_invitation();
+
+	if (mainType == SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE && pending_invitation)
+	{
+		// The user already selected and accepted this invitation in the home menu. Complete that
+		// selection only after the game's custom menu handler requests the invitation receive flow.
+		if (nph.complete_message_selection(*pending_invitation, mainType, SCE_NP_BASIC_MESSAGE_ACTION_ACCEPT, recvOptions))
+		{
+			return CELL_OK;
+		}
+
+		return not_an_error(SCE_NP_BASIC_ERROR_CANCEL);
+	}
+
 	return recv_message_gui(ppu, mainType, recvOptions);
 }
 
@@ -3001,6 +3015,7 @@ error_code sceNpCustomMenuRegisterActions(vm::cptr<SceNpCustomMenu> menu, vm::pt
 	nph.custom_menu_registered = true;
 	nph.custom_menu_activation = {};
 	nph.custom_menu_exception_list = {};
+	nph.pending_custom_menu_invitation.reset();
 
 	return CELL_OK;
 }
