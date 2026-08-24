@@ -1486,6 +1486,8 @@ namespace rpcn
 	ErrorType rpcn_client::delete_trophies()
 	{
 		std::vector<u8> data;
+		data.push_back(0); // Empty communication ID means delete all synchronized trophies.
+
 		std::vector<u8> packet_data;
 
 		if (!forge_send_reply(CommandType::DeleteTrophies, rpcn_request_counter.fetch_add(1), data, packet_data))
