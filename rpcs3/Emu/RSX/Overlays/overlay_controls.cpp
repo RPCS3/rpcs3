@@ -7,6 +7,8 @@
 #include "Utilities/File.h"
 #include "Emu/Cell/timers.hpp"
 
+#include <numbers>
+
 #ifndef _WIN32
 #include <unistd.h>
 #include <libgen.h>
@@ -350,9 +352,8 @@ namespace rsx
 		{
 			if (sinus_modifier >= 0)
 			{
-				static constexpr f32 PI = 3.14159265f;
 				const f32 pulse_sinus_x = static_cast<f32>(get_system_time() / 1000) * pulse_speed_modifier;
-				pulse_sinus_offset = fmod(pulse_sinus_x + sinus_modifier * PI, 2.0f * PI);
+				pulse_sinus_offset = fmod(pulse_sinus_x + sinus_modifier * std::numbers::pi_v<f32>, 2.0f * std::numbers::pi_v<f32>);
 			}
 		}
 
