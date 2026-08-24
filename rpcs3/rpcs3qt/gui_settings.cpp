@@ -423,7 +423,7 @@ QString gui_settings::GetGameCollectionNameHint()
 		chars << c;
 	}
 
-	return tr("A collection name may be at most %0 characters long, must not start or end with a space, "
+	return tr("A collection name may be at most %0 characters long, "
 		"may only contain printable characters, and must not contain any of these: %1")
 		.arg(QString::number(gc_max_name_length), chars.join(QLatin1Char(' ')));
 }
