@@ -62,6 +62,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import net.rpcs3.R
 import net.rpcs3.RPCS3
+import net.rpcs3.ui.framegen.FrameGenCategory
+import net.rpcs3.ui.framegen.FrameGenPanel
 import net.rpcs3.ui.patches.InGamePatchesPanel
 import net.rpcs3.ui.hud.HudCategory
 import net.rpcs3.ui.hud.HudSettingsPanel
@@ -201,7 +203,10 @@ private fun InGameSettingsPanel(
         }
 
         val categories = remember(tree) {
-            listOf(SettingsCategory(HudCategory, listOf(HudCategory), null)) +
+            listOf(
+                SettingsCategory(HudCategory, listOf(HudCategory), null),
+                SettingsCategory(FrameGenCategory, listOf(FrameGenCategory), null)
+            ) +
                 categoriesOf(tree) +
                 SettingsCategory(ControlsCategory, listOf(ControlsCategory), null) +
                 SettingsCategory(PatchesCategory, listOf(PatchesCategory), null)
@@ -305,6 +310,16 @@ private fun InGameSettingsPanel(
                         .padding(horizontal = 16.dp, vertical = 12.dp)
                 ) {
                     HudSettingsPanel()
+                    Spacer(Modifier.height(Dimens.SectionGap))
+                }
+            } else if (name == FrameGenCategory) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    FrameGenPanel()
                     Spacer(Modifier.height(Dimens.SectionGap))
                 }
             } else if (name == ControlsCategory) {

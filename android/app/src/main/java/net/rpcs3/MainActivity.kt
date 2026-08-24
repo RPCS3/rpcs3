@@ -28,6 +28,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import net.rpcs3.ui.debug.applyDefaultLogLevels
 import net.rpcs3.ui.navigation.AppNavHost
+import net.rpcs3.framegen.FrameGen
 import net.rpcs3.utils.PatchUpdater
 import net.rpcs3.utils.installBundledAssets
 import net.rpcs3.utils.installBundledPatches
@@ -156,6 +157,10 @@ class MainActivity : ComponentActivity() {
 
                 lifecycleScope.launch(Dispatchers.IO) {
                     PatchUpdater.checkIfDue(applicationContext)
+                }
+
+                lifecycleScope.launch(Dispatchers.IO) {
+                    FrameGen.sync(applicationContext)
                 }
             }
         } else {

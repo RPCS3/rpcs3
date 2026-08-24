@@ -353,6 +353,8 @@ add_subdirectory(fusion EXCLUDE_FROM_ALL)
 # FERAL INTERACTIVE
 add_subdirectory(feralinteractive EXCLUDE_FROM_ALL)
 
+add_subdirectory(dxbc EXCLUDE_FROM_ALL)
+
 # nlohmann json
 add_library(3rdparty_json INTERFACE)
 target_include_directories(3rdparty_json INTERFACE json/include)
@@ -398,4 +400,5 @@ add_library(3rdparty::opencv ALIAS ${OPENCV_TARGET})
 add_library(3rdparty::fusion ALIAS Fusion)
 add_library(3rdparty::feralinteractive ALIAS 3rdparty_feralinteractive)
 add_library(3rdparty::json ALIAS 3rdparty_json)
+add_library(3rdparty::dxbc ALIAS 3rdparty_dxbc)
 add_library(3rdparty::adrenotools ALIAS adrenotools)

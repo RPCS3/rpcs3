@@ -22,6 +22,7 @@ private const val TAP_MAX_MS = 400L
 private const val BACKDROP_COLOR = 0xA6000000.toInt()
 
 private const val COLOR_FPS = 0xFF76FF03.toInt()
+private const val COLOR_FPS_GENERATED = 0xFF00E5FF.toInt()
 private const val COLOR_FRAMETIME = 0xFFB2FF59.toInt()
 private const val COLOR_RENDERER = 0xFF90A4AE.toInt()
 private const val COLOR_GPU = 0xFFE040FB.toInt()
@@ -289,12 +290,35 @@ class HudView @JvmOverloads constructor(
 
     private fun percentValue(value: Int) = if (value >= 0) "$value%" else "N/A"
 
-    private fun render() {
-        readouts[HudElement.Fps]?.text = labelled(
-            "FPS ",
-            COLOR_FPS,
-            if (sample.fps > 0f) String.format(java.util.Locale.US, "%.0f", sample.fps) else "0"
+    private fun frameRateText(): CharSequence {
+        val rendered = if (sample.fps > 0f) {
+            String.format(java.util.Locale.US, "%.0f", sample.fps)
+        } else {
+            "0"
+        }
+
+        val base = labelled("FPS ", COLOR_FPS, rendered)
+
+        if (sample.outputFps <= 0f) {
+            return base
+        }
+
+        val builder = android.text.SpannableStringBuilder(base)
+        val start = builder.length
+        builder.append(" → ")
+        builder.append(String.format(java.util.Locale.US, "%.0f", sample.outputFps))
+        builder.setSpan(
+            android.text.style.ForegroundColorSpan(COLOR_FPS_GENERATED),
+            start,
+            builder.length,
+            android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
         )
+
+        return builder
+    }
+
+    private fun render() {
+        readouts[HudElement.Fps]?.text = frameRateText()
 
         readouts[HudElement.Frametime]?.text = if (sample.frametimeMs > 0f) {
             String.format(java.util.Locale.US, "%.1f ms", sample.frametimeMs)

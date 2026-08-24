@@ -19,10 +19,15 @@
 #include "VKShaderInterpreter.h"
 #include "VKQueryPool.h"
 
+#ifdef ANDROID
+#include "VKFrameGeneration.h"
+#endif
+
 #include "Emu/RSX/GSRender.h"
 #include "Emu/RSX/Host/RSXDMAWriter.h"
 #include <functional>
 #include <initializer_list>
+#include <span>
 
 using namespace vk::vmm_allocation_pool_; // clang workaround.
 using namespace vk::upscaling_flags_;     // ditto
@@ -197,6 +202,22 @@ private:
 
 	std::unique_ptr<vk::image> m_overlay_recording_img;
 
+#ifdef ANDROID
+	std::unique_ptr<vk::frame_generator> m_frame_generator;
+	std::vector<u32> m_generated_present_images;
+	std::vector<VkSemaphore> m_generated_wait_semaphores;
+	std::vector<VkSemaphore> m_generated_signal_semaphores;
+	u32 m_reserved_swap_images = 0;
+	u32 m_requested_swap_reserve = 0;
+	u64 m_frame_generation_revision = 0;
+
+	void run_frame_generation(VkImage target_image, VkImageLayout target_layout, VkImageLayout present_layout);
+	void present_generated_frames();
+	void discard_generated_frames();
+#endif
+
+	u32 available_frame_contexts();
+
 	//Vertex layout
 	rsx::vertex_input_layout m_vertex_layout;
 
@@ -221,7 +242,9 @@ private:
 		vk::fence* fence = nullptr,
 		VkSemaphore wait_semaphore = VK_NULL_HANDLE,
 		VkSemaphore signal_semaphore = VK_NULL_HANDLE,
-		VkPipelineStageFlags pipeline_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+		VkPipelineStageFlags pipeline_stage_flags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+		const std::span<const VkSemaphore>& extra_wait_semaphores = {},
+		const std::span<const VkSemaphore>& extra_signal_semaphores = {});
 
 	void flush_command_queue(bool hard_sync = false, bool do_not_switch = false);
 	void queue_swap_request();

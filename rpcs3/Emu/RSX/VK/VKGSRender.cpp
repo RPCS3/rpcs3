@@ -585,7 +585,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 		rsx_log.warning("Current driver may crash due to memory limitations (%uk)", m_texbuffer_view_size / 1024);
 	}
 
-	m_max_async_frames = m_swapchain->get_swap_image_count();
+	m_max_async_frames = available_frame_contexts();
 	m_frame_context_storage.resize(m_max_async_frames);
 	m_current_frame = &m_frame_context_storage[0];
 
@@ -871,6 +871,12 @@ VKGSRender::~VKGSRender()
 
 	m_overlay_recording_img.reset();
 	m_stencil_mirror_sampler.reset();
+
+#ifdef ANDROID
+	discard_generated_frames();
+	m_frame_generator.reset();
+	vk::set_frame_generation_status({});
+#endif
 
 	// Queries
 	m_occlusion_query_manager.reset();
@@ -2345,7 +2351,8 @@ void VKGSRender::init_buffers(rsx::framebuffer_creation_context context, bool)
 	prepare_rtts(context);
 }
 
-void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore wait_semaphore, VkSemaphore signal_semaphore, VkPipelineStageFlags pipeline_stage_flags)
+void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore wait_semaphore, VkSemaphore signal_semaphore, VkPipelineStageFlags pipeline_stage_flags,
+	const std::span<const VkSemaphore>& extra_wait_semaphores, const std::span<const VkSemaphore>& extra_signal_semaphores)
 {
 	ensure(!m_queue_status.test_and_set(flush_queue_state::flushing));
 
@@ -2425,6 +2432,11 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 		primary_submit_info.wait_on(wait_semaphore, pipeline_stage_flags);
 	}
 
+	for (VkSemaphore semaphore : extra_wait_semaphores)
+	{
+		primary_submit_info.wait_on(semaphore, pipeline_stage_flags);
+	}
+
 	if (auto async_scheduler = g_fxo->try_get<vk::AsyncTaskScheduler>();
 		async_scheduler && async_scheduler->is_recording())
 	{
@@ -2444,6 +2456,11 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 	if (signal_semaphore)
 	{
 		primary_submit_info.queue_signal(signal_semaphore);
+	}
+
+	for (VkSemaphore semaphore : extra_signal_semaphores)
+	{
+		primary_submit_info.queue_signal(semaphore);
 	}
 
 	m_current_command_buffer->submit(primary_submit_info, force_flush);

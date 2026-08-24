@@ -27,6 +27,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Album
+import androidx.compose.material.icons.outlined.AutoAwesomeMotion
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.CloudDownload
 import androidx.compose.material.icons.outlined.Folder
@@ -103,6 +104,7 @@ import net.rpcs3.RPCS3Activity
 import net.rpcs3.overlay.OverlayEditActivity
 import net.rpcs3.dialogs.AlertDialogQueue
 import net.rpcs3.ui.drivers.GpuDriversScreen
+import net.rpcs3.ui.framegen.FrameGenScreen
 import net.rpcs3.ui.games.GameSourceChoiceDialog
 import net.rpcs3.ui.games.GamesScreen
 import net.rpcs3.ui.games.GameUpdatesScreen
@@ -166,6 +168,7 @@ fun AppNavHost() {
                 },
                 navigateToDiagnostics = { navController.navigate("diagnostics") },
                 navigateToDebug = { navController.navigate("debug") },
+                navigateToFrameGen = { navController.navigate("frameGen") },
                 drawerState
             )
         }
@@ -280,6 +283,10 @@ fun AppNavHost() {
             UpdaterScreen(onClose = navController::navigateUp)
         }
 
+        composable(route = "frameGen") {
+            FrameGenScreen(onClose = navController::navigateUp)
+        }
+
         composable(route = "diagnostics") {
             DiagnosticsScreen(onClose = { navController.popBackStack() })
         }
@@ -316,6 +323,7 @@ fun GamesDestination(
     navigateToGameUpdates: (titleId: String) -> Unit,
     navigateToDiagnostics: () -> Unit,
     navigateToDebug: () -> Unit,
+    navigateToFrameGen: () -> Unit,
     drawerState: androidx.compose.material3.DrawerState
 ) {
     val context = LocalContext.current
@@ -522,6 +530,16 @@ fun GamesDestination(
                                     OverlayEditActivity::class.java
                                 )
                             )
+                        }
+                    )
+
+                    NavigationDrawerItem(
+                        label = { Text(stringResource(R.string.drawer_frame_gen)) },
+                        selected = false,
+                        icon = { Icon(Icons.Outlined.AutoAwesomeMotion, null) },
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            navigateToFrameGen()
                         }
                     )
 
