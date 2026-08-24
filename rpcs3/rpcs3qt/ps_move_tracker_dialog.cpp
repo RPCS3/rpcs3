@@ -103,6 +103,14 @@ ps_move_tracker_dialog::ps_move_tracker_dialog(QWidget* parent)
 		}
 	});
 
+	ui->brightnessSlider->setRange(g_cfg_move.default_brightness.min, g_cfg_move.default_brightness.max);
+	connect(ui->brightnessSlider, &QSlider::valueChanged, this, [this](int value)
+	{
+		const u32 brightness = std::clamp<u32>(value, g_cfg_move.default_brightness.min, g_cfg_move.default_brightness.max);
+		g_cfg_move.default_brightness.set(brightness);
+		update_default_brightness(false);
+	});
+
 	ui->hueSlider->setRange(g_cfg_move.move1.hue.min, g_cfg_move.move1.hue.max);
 	connect(ui->hueSlider, &QSlider::valueChanged, this, [this](int value)
 	{
@@ -210,6 +218,7 @@ ps_move_tracker_dialog::ps_move_tracker_dialog(QWidget* parent)
 		if (const auto qvar = ui->comboSelectDevice->currentData(); qvar.canConvert<int>())
 		{
 			m_index = qvar.toInt();
+			update_default_brightness(true);
 			update_color(true, false);
 			update_hue(true, false, true);
 			update_hue_threshold(true);
@@ -238,6 +247,7 @@ ps_move_tracker_dialog::ps_move_tracker_dialog(QWidget* parent)
 
 	adjustSize();
 
+	update_default_brightness(true);
 	update_color(true, false);
 	update_hue(true, false, true);
 	update_hue_threshold(true);
@@ -379,6 +389,17 @@ void ps_move_tracker_dialog::update_color(bool update_rgb_sliders, bool update_h
 	}
 }
 
+void ps_move_tracker_dialog::update_default_brightness(bool update_slider)
+{
+	const u32 brightness = g_cfg_move.default_brightness.get();
+	ui->brightnessGb->setTitle(tr("Default Orb Brightness: %0 %").arg(brightness));
+
+	if (update_slider)
+	{
+		ui->brightnessSlider->setValue(brightness);
+	}
+}
+
 void ps_move_tracker_dialog::update_hue(bool update_slider, bool update_rgb_sliders, bool no_signal)
 {
 	const u32 hue = ::at32(g_cfg_move.move, m_index)->hue.get();
@@ -393,10 +414,11 @@ void ps_move_tracker_dialog::update_hue(bool update_slider, bool update_rgb_slid
 	else if (update_rgb_sliders)
 	{
 		cfg_ps_move* config = ::at32(g_cfg_move.move, m_index);
+		const f32 default_brightness = g_cfg_move.default_brightness.get() / static_cast<f32>(g_cfg_move.default_brightness.max);
 		const auto [r, g, b] = ps_move_tracker<true>::hsv_to_rgb(hue, 1.0f, 1.0f);
-		config->r.set(r / 100);
-		config->g.set(g / 100);
-		config->b.set(b / 100);
+		config->r.set(r * default_brightness);
+		config->g.set(g * default_brightness);
+		config->b.set(b * default_brightness);
 		update_color(true, false);
 	}
 }
