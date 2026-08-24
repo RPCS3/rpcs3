@@ -50,6 +50,10 @@ namespace vk
 		{
 			vk::pipe_compiler::op_flags compiler_flags = compile_async ? vk::pipe_compiler::COMPILE_DEFERRED : vk::pipe_compiler::COMPILE_INLINE;
 			compiler_flags |= vk::pipe_compiler::SEPARATE_SHADER_OBJECTS;
+			if (vertexProgramData.use_last_provoking_vertex)
+			{
+				compiler_flags |= vk::pipe_compiler::USE_LAST_PROVOKING_VERTEX;
+			}
 
 			auto compiler = vk::get_pipe_compiler();
 			auto result = compiler->compile(

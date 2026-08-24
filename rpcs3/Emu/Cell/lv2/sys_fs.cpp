@@ -460,13 +460,13 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename, std::string
 		filename.remove_prefix(cell_fs_path.size());
 
 	const bool is_path = filename.starts_with("/"sv);
-	std::string mp_name = is_path ? std::string{get_path_root_and_trail(filename).first} : std::string(filename);
+	std::string mp_name = is_path ? "/" + std::string{get_path_root_and_trail(filename).first} : std::string(filename);
 
 	const auto check_mp = [&]()
 	{
 		for (auto mp = &g_mp_sys_dev_root; mp; mp = mp->next)
 		{
-			const auto& device_alias_check = !is_path && (
+			const bool device_alias_check = !is_path && (
 				(mp == &g_mp_sys_dev_hdd0 && mp_name == "CELL_FS_IOS:PATA0_HDD_DRIVE"sv) ||
 				(mp == &g_mp_sys_dev_hdd1 && mp_name == "CELL_FS_IOS:PATA1_HDD_DRIVE"sv) ||
 				(mp == &g_mp_sys_dev_flash && mp_name == "CELL_FS_IOS:BUILTIN_FLASH"sv) ||
@@ -521,9 +521,6 @@ lv2_fs_mount_point* lv2_fs_object::get_mp(std::string_view filename, std::string
 			*vfs_path = g_cfg_vfs.get_dev_flash3();
 		else
 			*vfs_path = {};
-
-		if (is_path && !is_cell_fs_path && !vfs_path->empty())
-			vfs_path->append(filename.substr(mp_name.size()));
 	}
 
 	return result;

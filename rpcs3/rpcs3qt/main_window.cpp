@@ -4180,7 +4180,7 @@ void main_window::AddGamesFromDirs(QStringList&& paths)
 		{
 			for (const auto& dir_path : paths)
 			{
-				if (dir_path.startsWith(game->info.path.c_str()) && fs::exists(game->info.path))
+				if (Emu.IsPathInsideDir(game->info.path, dir_path.toStdString()))
 				{
 					existing.insert(game->info.path);
 					break;
@@ -4309,7 +4309,7 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 		{
 			return set_result(drop_type::drop_error);
 		}
-		else if (info.suffix() == "PUP")
+		else if (suffix_lo == "pup")
 		{
 			if (m_drop_file_url_list.size() != 1)
 			{
