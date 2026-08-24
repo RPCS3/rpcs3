@@ -749,10 +749,11 @@ rpcn_account_edit_dialog::rpcn_account_edit_dialog(QWidget* parent)
 	m_edit_token              = new QLineEdit();
 	m_edit_token->setMaxLength(16);
 
-	QPushButton* btn_resendtoken     = new QPushButton(tr("Resend Token"), this);
-	QPushButton* btn_change_password = new QPushButton(tr("Change Password"), this);
-	QPushButton* btn_delete_account = new QPushButton(tr("Delete Account"), this);
-	QPushButton* btn_save            = new QPushButton(tr("Save"), this);
+	QPushButton* btn_resendtoken      = new QPushButton(tr("Resend Token"), this);
+	QPushButton* btn_change_password  = new QPushButton(tr("Change Password"), this);
+	QPushButton* btn_delete_trophies  = new QPushButton(tr("Delete Trophies"), this);
+	QPushButton* btn_delete_account   = new QPushButton(tr("Delete Account"), this);
+	QPushButton* btn_save             = new QPushButton(tr("Save"), this);
 
 	vbox_labels->addWidget(lbl_username);
 	vbox_labels->addWidget(lbl_pass);
@@ -764,6 +765,7 @@ rpcn_account_edit_dialog::rpcn_account_edit_dialog(QWidget* parent)
 
 	hbox_buttons->addWidget(btn_resendtoken);
 	hbox_buttons->addWidget(btn_change_password);
+	hbox_buttons->addWidget(btn_delete_trophies);
 	hbox_buttons->addWidget(btn_delete_account);
 	hbox_buttons->addStretch();
 	hbox_buttons->addWidget(btn_save);
@@ -798,6 +800,7 @@ rpcn_account_edit_dialog::rpcn_account_edit_dialog(QWidget* parent)
 		});
 	connect(btn_resendtoken, &QAbstractButton::clicked, this, &rpcn_account_edit_dialog::resend_token);
 	connect(btn_change_password, &QAbstractButton::clicked, this, &rpcn_account_edit_dialog::change_password);
+	connect(btn_delete_trophies, &QAbstractButton::clicked, this, &rpcn_account_edit_dialog::delete_trophies);
 	connect(btn_delete_account, &QAbstractButton::clicked, this, &rpcn_account_edit_dialog::delete_account);
 
 	g_cfg_rpcn.load();
@@ -974,6 +977,49 @@ void rpcn_account_edit_dialog::delete_account()
 	}
 	rpcn_confirm_delete_dialog dlg_delete(this);
 	dlg_delete.exec();
+}
+
+void rpcn_account_edit_dialog::delete_trophies()
+{
+	if (g_cfg_rpcn.get_npid().empty() || g_cfg_rpcn.get_password().empty())
+	{
+		QMessageBox::warning(this, tr("Account Not Configured"), tr("Please configure your account in the settings before deleting RPCN trophies."), QMessageBox::Ok);
+		return;
+	}
+
+	const auto answer = QMessageBox::warning(
+		this,
+		tr("Delete RPCN Trophies"),
+		tr("Are you sure you want to delete all trophies synchronized to RPCN for account \"%1\"?\n\n"
+		   "This only removes trophies stored on RPCN. Your local RPCS3 trophy data will not be deleted.\n\n"
+		   "If trophy synchronization runs again, your local trophies may be uploaded to RPCN again.")
+			.arg(QString::fromStdString(g_cfg_rpcn.get_npid())),
+		QMessageBox::Yes | QMessageBox::No,
+		QMessageBox::No);
+
+	if (answer != QMessageBox::Yes)
+		return;
+
+	const auto rpcn = get_rpcn_connection(this);
+	if (!rpcn)
+		return;
+
+	if (const auto error = rpcn->delete_trophies(); error != rpcn::ErrorType::NoError)
+	{
+		QString error_message;
+		switch (error)
+		{
+		case rpcn::ErrorType::LoginError: error_message = tr("Invalid login or password."); break;
+		case rpcn::ErrorType::InvalidInput: error_message = tr("RPCN is currently authenticated as a different account."); break;
+		case rpcn::ErrorType::DbFail: error_message = tr("A database related error happened on the server."); break;
+		default: error_message = tr("An unknown error occurred."); break;
+		}
+
+		QMessageBox::critical(this, tr("Trophy Deletion Failed"), tr("Failed to delete RPCN trophies:\n%1").arg(error_message), QMessageBox::Ok);
+		return;
+	}
+
+	QMessageBox::information(this, tr("RPCN Trophies Deleted"), tr("All trophies synchronized to RPCN have been successfully deleted.\n\nYour local RPCS3 trophy data was not changed and can be synchronized again later."), QMessageBox::Ok);
 }
 
 void friend_callback(void* param, rpcn::NotificationType ntype, const std::string& username, bool status)

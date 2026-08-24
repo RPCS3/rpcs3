@@ -163,6 +163,7 @@ void fmt_class_string<rpcn::CommandType>::format(std::string& out, u64 arg)
 			case rpcn::CommandType::SearchJoinRoomGUI: return "SearchJoinRoomGUI";
 			case rpcn::CommandType::UnlockTrophy: return "UnlockTrophy";
 			case rpcn::CommandType::SyncTrophies: return "SyncTrophies";
+			case rpcn::CommandType::DeleteTrophies: return "DeleteTrophies";
 			}
 
 			return unknown;
@@ -259,7 +260,7 @@ namespace rpcn
 		rpcn_log.notice("online: %s, pr_com_id: %s, pr_title: %s, pr_status: %s, pr_comment: %s, pr_data: %s", online ? "true" : "false", pr_com_id.data, pr_title, pr_status, pr_comment, fmt::buf_to_hexstring(pr_data.data(), pr_data.size()));
 	}
 
-	constexpr u32 RPCN_PROTOCOL_VERSION = 31;
+	constexpr u32 RPCN_PROTOCOL_VERSION = 32;
 	constexpr usz RPCN_HEADER_SIZE = 15;
 
 	const char* error_to_explanation(rpcn::ErrorType error)
@@ -676,7 +677,7 @@ namespace rpcn
 				command == CommandType::SendMessage || command == CommandType::SendToken ||
 				command == CommandType::SendResetToken || command == CommandType::ResetPassword ||
 				command == CommandType::GetNetworkTime || command == CommandType::SetPresence || command == CommandType::Terminate ||
-				command == CommandType::SyncTrophies)
+				command == CommandType::SyncTrophies || command == CommandType::DeleteTrophies)
 			{
 				std::lock_guard lock(mutex_replies_sync);
 				replies_sync.insert(std::make_pair(packet_id, std::make_pair(command, std::move(data))));
@@ -1477,6 +1478,36 @@ namespace rpcn
 		if (error == rpcn::ErrorType::NoError)
 		{
 			rpcn_log.success("Account was successfully deleted!");
+		}
+
+		return error;
+	}
+
+	ErrorType rpcn_client::delete_trophies()
+	{
+		const auto npid = g_cfg_rpcn.get_npid();
+		const auto password = g_cfg_rpcn.get_password();
+
+		std::vector<u8> data;
+		std::copy(npid.begin(), npid.end(), std::back_inserter(data));
+		data.push_back(0);
+		std::copy(password.begin(), password.end(), std::back_inserter(data));
+		data.push_back(0);
+
+		const u64 req_id = rpcn_request_counter.fetch_add(1);
+
+		std::vector<u8> packet_data;
+		if (!forge_send_reply(CommandType::DeleteTrophies, req_id, data, packet_data))
+		{
+			return ErrorType::Malformed;
+		}
+
+		vec_stream reply(packet_data);
+		auto error = static_cast<ErrorType>(reply.get<u8>());
+
+		if (error == rpcn::ErrorType::NoError)
+		{
+			rpcn_log.success("RPCN trophies were successfully deleted!");
 		}
 
 		return error;
