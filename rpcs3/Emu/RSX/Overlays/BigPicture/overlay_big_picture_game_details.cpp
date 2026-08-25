@@ -73,7 +73,8 @@ namespace rsx
 
 			if (const std::string icon1_path = game_dir + "/ICON1.PAM"; fs::is_file(icon1_path))
 			{
-				m_video = std::make_unique<video_view>(icon1_path, "", info.icon_path);
+				const std::string snd0_path = game_dir + "/SND0.AT3";
+				m_video = std::make_unique<video_view>(icon1_path, snd0_path, info.icon_path);
 				m_video->set_pos(m_icon.x, m_icon.y);
 				m_video->set_size(m_icon.w, m_icon.h);
 				m_video->set_active(true);
