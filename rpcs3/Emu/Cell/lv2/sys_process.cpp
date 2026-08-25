@@ -711,7 +711,7 @@ error_code process_wait_for_child(ppu_thread& ppu, u32 claimed_id, vm::ptr<u32> 
 
 	const bool is_savestate = ppu.loaded_from_savestate;
 
-	const auto child = idm::get_unlocked<lv2_obj, lv2_process>(idm::id_index(claimed_id, nullptr));
+	auto child = idm::get_unlocked<lv2_obj, lv2_process>(idm::id_index(claimed_id, nullptr));
 
 	if (!child)
 	{
@@ -760,12 +760,16 @@ error_code process_wait_for_child(ppu_thread& ppu, u32 claimed_id, vm::ptr<u32> 
 		//child->ki11_self();
 		ensure(idm::remove_verify<lv2_obj, lv2_process>(idm::id_index(claimed_id, nullptr), child));
 		ppu.cancel_sleep = 0;
+		ppu.state += cpu_flag::wait;
+		child.reset();
 		return CELL_OK;
 	}
 
 	if (res == CELL_ENOCHILD)
 	{
 		ppu.cancel_sleep = 0;
+		ppu.state += cpu_flag::wait;
+		child.reset();
 		return CELL_ENOCHILD;
 	}
 
@@ -781,6 +785,8 @@ error_code process_wait_for_child(ppu_thread& ppu, u32 claimed_id, vm::ptr<u32> 
 			if (::is_stopped(state))
 			{
 				ppu.state += cpu_flag::again;
+				ppu.state += cpu_flag::wait;
+				child.reset();
 				return {};
 			}
 
@@ -793,6 +799,9 @@ error_code process_wait_for_child(ppu_thread& ppu, u32 claimed_id, vm::ptr<u32> 
 
 	*process_status = child->exit_code;
 	*target_pid = claimed_id;
+
+	ppu.state += cpu_flag::wait;
+	child.reset();
 
 	// The difference between sys_process_wait_for_child2 and sys_process_wait_for_child
 	if (data_returned)
