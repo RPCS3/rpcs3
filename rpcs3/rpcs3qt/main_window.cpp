@@ -105,6 +105,9 @@
 
 LOG_CHANNEL(gui_log, "GUI");
 
+// Holds the menu text of a recent boot action without the ampersand escaping applied to text()
+constexpr const char* recent_action_name = "shown_name";
+
 extern atomic_t<bool> g_user_asked_for_frame_capture;
 extern atomic_t<bool> g_headless;
 
@@ -221,7 +224,7 @@ void main_window::Init()
 	// enable play options if a recent game exists
 	const bool enable_play_last = !m_recent_game.actions.isEmpty() && m_recent_game.actions.first();
 
-	const QString start_tooltip = enable_play_last ? tr("Play %0").arg(m_recent_game.actions.first()->text()) : tr("Play");
+	const QString start_tooltip = enable_play_last ? tr("Play %0").arg(m_recent_game.actions.first()->property(recent_action_name).toString()) : tr("Play");
 
 	if (enable_play_last)
 	{
@@ -2330,17 +2333,20 @@ QAction* main_window::CreateRecentAction(const q_string_pair& entry, u32 sc_idx,
 		shown_name = entry.second.section('/', -1);
 	}
 
-	// create new action
-	QAction* act = new QAction(shown_name, this);
+	// truncate if too long
+	if (shown_name.length() > 60)
+	{
+		shown_name = shown_name.left(27) + "(....)" + shown_name.right(27);
+	}
+
+	// create new action. A title like "Ratchet & Clank" would turn its ampersand into a menu mnemonic.
+	QAction* act = new QAction(gui::utils::escape_mnemonics(shown_name), this);
 	act->setData(entry.first);
 	act->setToolTip(entry.second + "\n" + entry.first);
 	act->setShortcut(QString("%0+%1").arg(is_savestate ? "Alt" : "Ctrl").arg(sc_idx));
 
-	// truncate if too long
-	if (shown_name.length() > 60)
-	{
-		act->setText(shown_name.left(27) + "(....)" + shown_name.right(27));
-	}
+	// Keep the plain name around: text() is only fit for a menu
+	act->setProperty(recent_action_name, shown_name);
 
 	// connect boot
 	connect(act, &QAction::triggered, this, [this, act, is_savestate](){ BootRecentAction(act, is_savestate); });
@@ -2685,6 +2691,9 @@ void main_window::CreateActions()
 	m_category_visible_act_group->addAction(ui->showCatUnknownAct);
 	m_category_visible_act_group->addAction(ui->showCatOtherAct);
 	m_category_visible_act_group->setExclusive(false);
+
+	m_manage_game_collection_act_group = new QActionGroup(this);
+	m_view_game_collection_act_group = new QActionGroup(this);
 
 	m_icon_size_act_group = new QActionGroup(this);
 	m_icon_size_act_group->addAction(ui->setIconSizeTinyAct);
@@ -3539,6 +3548,23 @@ void main_window::CreateConnects()
 		m_game_list_frame->Refresh(true);
 	});
 
+	connect(ui->createGameCollectionAct, &QAction::triggered, this, [this]()
+	{
+		m_game_list_frame->actions()->CreateGameCollection();
+	});
+
+	// This is the only thing that fills the two collection menus: each is rebuilt from the settings when shown
+	connect(ui->menuManage_Game_Collections, &QMenu::aboutToShow, this, [this]()
+	{
+		m_game_list_frame->actions()->UpdateGameCollectionMenu(ui->menuManage_Game_Collections,
+			m_manage_game_collection_act_group, ui->menuRename_Game_Collection, ui->menuRemove_Game_Collection);
+	});
+	connect(ui->menuView_Game_Collections, &QMenu::aboutToShow, this, [this]()
+	{
+		m_game_list_frame->actions()->UpdateGameCollectionMenu(ui->menuView_Game_Collections,
+			m_view_game_collection_act_group, nullptr, nullptr);
+	});
+
 	const auto get_cats = [this](QAction* act, int& id) -> QStringList
 	{
 		QStringList categories;
@@ -3872,7 +3898,7 @@ void main_window::CreateDockWindows()
 				}
 				else if (!m_recent_game.actions.isEmpty()) // Get last played game
 				{
-					tooltip = tr("Play %0").arg(m_recent_game.actions.first()->text());
+					tooltip = tr("Play %0").arg(m_recent_game.actions.first()->property(recent_action_name).toString());
 				}
 				else
 				{
@@ -4337,7 +4363,7 @@ main_window::drop_type main_window::IsValidFile(const QMimeData& md, QStringList
 		{
 			return set_result(drop_type::drop_error);
 		}
-		else if (info.suffix() == "PUP")
+		else if (suffix_lo == "pup")
 		{
 			if (m_drop_file_url_list.size() != 1)
 			{
