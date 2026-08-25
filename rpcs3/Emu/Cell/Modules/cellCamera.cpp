@@ -1716,20 +1716,20 @@ void camera_context::operator()()
 			{
 				if (auto queue = lv2_event_queue::find(key))
 				{
+					constexpr u64 camera_id = 0;
 					u64 data2 = 0;
 					u64 data3 = 0;
 
 					if (read_mode.load() == CELL_CAMERA_READ_DIRECT)
 					{
 						const u64 image_data_size = static_cast<u64>(info.bytesize);
-						const u64 camera_id = 0;
 
 						data2 = image_data_size << 32 | buffer_number << 16 | camera_id;
 						data3 = get_guest_system_time() - start_timestamp_us; // timestamp
 					}
 					else // CELL_CAMERA_READ_FUNCCALL, also default
 					{
-						data2 = 0; // device id (always 0)
+						data2 = camera_id;
 						data3 = 0; // unused
 					}
 
