@@ -1888,15 +1888,17 @@ error_code cellVdecGetPicItem(ppu_thread& ppu, u32 handle, vm::pptr<CellVdecPicI
 		} picInfo;
 	};
 
-	AVFrame* frame{};
+	s32 pict_type = AV_PICTURE_TYPE_NONE;
+	s32 frame_width{};
+	s32 frame_height{};
 	u64 seq_id{};
 	u64 cmd_id{};
-	u64 pts;
-	u64 dts;
-	u64 usrd;
+	u64 pts{};
+	u64 dts{};
+	u64 usrd{};
 	u32 frc = 0;
 	CellVdecPicAttr attr = CELL_VDEC_PICITEM_ATTR_NORMAL;
-	vm::ptr<CellVdecPicItem> info;
+	vm::ptr<CellVdecPicItem> info = vm::null;
 	{
 		std::lock_guard lock(vdec->mutex);
 
@@ -1905,7 +1907,10 @@ error_code cellVdecGetPicItem(ppu_thread& ppu, u32 handle, vm::pptr<CellVdecPicI
 			if (!picture.pic_item_received)
 			{
 				picture.pic_item_received = true;
-				frame = picture.avf.get();
+				ensure(picture.avf);
+				pict_type = picture.avf->pict_type;
+				frame_width = picture.avf->width;
+				frame_height = picture.avf->height;
 				seq_id = picture.seq_id;
 				cmd_id = picture.cmd_id;
 				pts = picture.pts;
@@ -1929,10 +1934,9 @@ error_code cellVdecGetPicItem(ppu_thread& ppu, u32 handle, vm::pptr<CellVdecPicI
 		}
 	}
 
-	if (!frame || seq_id != sequence_id)
+	if (!info || seq_id != sequence_id)
 	{
-		// If frame is empty info was not found
-		return { CELL_VDEC_ERROR_EMPTY, " frame=%d, sequence_id=%d, seq_id=%d", !!frame, sequence_id, seq_id };
+		return { CELL_VDEC_ERROR_EMPTY, " info=%d, sequence_id=%d, seq_id=%d", !!info, sequence_id, seq_id };
 	}
 
 	info->codecType = vdec->type;
@@ -1961,10 +1965,10 @@ error_code cellVdecGetPicItem(ppu_thread& ppu, u32 handle, vm::pptr<CellVdecPicI
 	{
 		const vm::ptr<CellVdecAvcInfo> avc = picinfo_addr;
 
-		avc->horizontalSize = frame->width;
-		avc->verticalSize = frame->height;
+		avc->horizontalSize = frame_width;
+		avc->verticalSize = frame_height;
 
-		switch (s32 pct = frame->pict_type)
+		switch (pict_type)
 		{
 		case AV_PICTURE_TYPE_I: avc->pictureType[0] = CELL_VDEC_AVC_PCT_I; break;
 		case AV_PICTURE_TYPE_P: avc->pictureType[0] = CELL_VDEC_AVC_PCT_P; break;
@@ -1972,7 +1976,7 @@ error_code cellVdecGetPicItem(ppu_thread& ppu, u32 handle, vm::pptr<CellVdecPicI
 		default:
 		{
 			avc->pictureType[0] = CELL_VDEC_AVC_PCT_UNKNOWN;
-			cellVdec.error("cellVdecGetPicItem(AVC): unknown pict_type value (handle=0x%x, seq_id=%d, cmd_id=%d, pct=0x%x)", handle, seq_id, cmd_id, pct);
+			cellVdec.error("cellVdecGetPicItem(AVC): unknown pict_type value (handle=0x%x, seq_id=%d, cmd_id=%d, pct=0x%x)", handle, seq_id, cmd_id, pict_type);
 			break;
 		}
 		}
@@ -2023,16 +2027,16 @@ error_code cellVdecGetPicItem(ppu_thread& ppu, u32 handle, vm::pptr<CellVdecPicI
 	{
 		const vm::ptr<CellVdecDivxInfo> dvx = picinfo_addr;
 
-		switch (s32 pct = frame->pict_type)
+		switch (pict_type)
 		{
 		case AV_PICTURE_TYPE_I: dvx->pictureType = CELL_VDEC_DIVX_VCT_I; break;
 		case AV_PICTURE_TYPE_P: dvx->pictureType = CELL_VDEC_DIVX_VCT_P; break;
 		case AV_PICTURE_TYPE_B: dvx->pictureType = CELL_VDEC_DIVX_VCT_B; break;
-		default: cellVdec.error("cellVdecGetPicItem(DivX): unknown pict_type value (handle=0x%x, seq_id=%d, cmd_id=%d, pct=0x%x)", handle, seq_id, cmd_id, pct);
+		default: cellVdec.error("cellVdecGetPicItem(DivX): unknown pict_type value (handle=0x%x, seq_id=%d, cmd_id=%d, pct=0x%x)", handle, seq_id, cmd_id, pict_type);
 		}
 
-		dvx->horizontalSize = frame->width;
-		dvx->verticalSize = frame->height;
+		dvx->horizontalSize = frame_width;
+		dvx->verticalSize = frame_height;
 		dvx->pixelAspectRatio = CELL_VDEC_DIVX_ARI_PAR_1_1; // ???
 		dvx->parHeight = 0;
 		dvx->parWidth = 0;
@@ -2060,8 +2064,8 @@ error_code cellVdecGetPicItem(ppu_thread& ppu, u32 handle, vm::pptr<CellVdecPicI
 		const vm::ptr<CellVdecMpeg2Info> mp2 = picinfo_addr;
 
 		std::memset(mp2.get_ptr(), 0, sizeof(CellVdecMpeg2Info));
-		mp2->horizontal_size = frame->width;
-		mp2->vertical_size = frame->height;
+		mp2->horizontal_size = frame_width;
+		mp2->vertical_size = frame_height;
 		mp2->aspect_ratio_information = CELL_VDEC_MPEG2_ARI_SAR_1_1; // ???
 
 		switch (frc)
@@ -2082,12 +2086,12 @@ error_code cellVdecGetPicItem(ppu_thread& ppu, u32 handle, vm::pptr<CellVdecPicI
 		mp2->video_format = CELL_VDEC_MPEG2_VF_UNSPECIFIED; // ???
 		mp2->colour_description = false; // ???
 
-		switch (s32 pct = frame->pict_type)
+		switch (pict_type)
 		{
 		case AV_PICTURE_TYPE_I: mp2->picture_coding_type[0] = CELL_VDEC_MPEG2_PCT_I; break;
 		case AV_PICTURE_TYPE_P: mp2->picture_coding_type[0] = CELL_VDEC_MPEG2_PCT_P; break;
 		case AV_PICTURE_TYPE_B: mp2->picture_coding_type[0] = CELL_VDEC_MPEG2_PCT_B; break;
-		default: cellVdec.error("cellVdecGetPicItem(MPEG2): unknown pict_type value (handle=0x%x, seq_id=%d, cmd_id=%d, pct=0x%x)", handle, seq_id, cmd_id, pct);
+		default: cellVdec.error("cellVdecGetPicItem(MPEG2): unknown pict_type value (handle=0x%x, seq_id=%d, cmd_id=%d, pct=0x%x)", handle, seq_id, cmd_id, pict_type);
 		}
 
 		mp2->picture_coding_type[1] = CELL_VDEC_MPEG2_PCT_FORBIDDEN; // ???
