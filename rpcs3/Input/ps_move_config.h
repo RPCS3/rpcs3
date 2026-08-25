@@ -28,6 +28,7 @@ struct cfg_ps_moves final : cfg::node
 
 	cfg::_float<0, 50> min_radius{ this, "Minimum Radius", 1.0f, true }; // Percentage of image width
 	cfg::_float<0, 50> max_radius{ this, "Maximum Radius", 10.0f, true }; // Percentage of image width
+	cfg::uint<1, 100> default_brightness{ this, "Default Orb Brightness", 1, true }; // Percentage
 
 	std::array<cfg_ps_move*, 4> move{ &move1, &move2, &move3, &move4 };
 
