@@ -4689,9 +4689,9 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 	// Its disadvantage:
 	// 1. B instruction can wander up to 16MB relatively to its range,
 	// each additional split of JIT instance results in a downgraded version of around (100% / N-1th) - (100% / Nth) percent of instructions
-	// where N is the total amunt of JIT instances
+	// where N is the total amount of JIT instances
 	// Subject to change
-	constexpr u32 c_moudles_per_jit = 100;
+	constexpr u32 c_modules_per_jit = 100;
 
 	std::shared_ptr<std::pair<u32, u32>> local_jit_bounds = std::make_shared<std::pair<u32, u32>>(u32{umax}, 0);
 
@@ -5091,7 +5091,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				sha1_update(&ctx, ensure(info.get_ptr<const u8>(func.addr)), func.size);
 			}
 
-			if (fpos >= info.get_funcs().size() || module_counter % c_moudles_per_jit == c_moudles_per_jit - 1)
+			if (fpos >= info.get_funcs().size() || (module_counter % c_modules_per_jit) == (c_modules_per_jit - 1))
 			{
 				// Hash the entire function grouped addresses for the integrity of the symbol resolver function
 				// Potentially occuring during patches
@@ -5184,7 +5184,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				settings += ppu_settings::accurate_vnan, settings -= ppu_settings::fixup_vnan, fmt::throw_exception("VNAN Not implemented");
 			if (g_cfg.core.ppu_use_nj_bit)
 				settings += ppu_settings::accurate_nj_mode, fmt::throw_exception("NJ Not implemented");
-			if (fpos >= info.get_funcs().size() || module_counter % c_moudles_per_jit == c_moudles_per_jit - 1)
+			if (fpos >= info.get_funcs().size() || (module_counter % c_modules_per_jit) == (c_modules_per_jit - 1))
 				settings += ppu_settings::contains_symbol_resolver; // Avoid invalidating all modules for this purpose
 			if (g_cfg.core.set_daz_and_ftz)
 				settings += ppu_settings::daz_and_ftz;
@@ -5386,7 +5386,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 	}
 
 	// Initialize compiler instance
-	while (jits.size() < utils::aligned_div<u64>(module_counter, c_moudles_per_jit) && is_being_used_in_emulation)
+	while (jits.size() < utils::aligned_div<u64>(module_counter, c_modules_per_jit) && is_being_used_in_emulation)
 	{
 		jits.emplace_back(std::make_shared<jit_compiler>(s_link_table, g_cfg.core.llvm_cpu.to_string(), 0, symbols_cement));
 
@@ -5429,7 +5429,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				break;
 			}
 
-			if (!failed_to_load && !jits[mod_index / c_moudles_per_jit]->add(cache_path + obj_name))
+			if (!failed_to_load && !jits[mod_index / c_modules_per_jit]->add(cache_path + obj_name))
 			{
 				ppu_log.error("LLVM: Failed to load module %s", obj_name);
 				failed_to_load = true;
