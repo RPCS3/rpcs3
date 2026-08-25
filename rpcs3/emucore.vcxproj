@@ -146,6 +146,11 @@
     <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_page.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_settings.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_savestate.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_sidebar_page.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture_game_details.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture_game_grid.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture_main_menu.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\Network\overlay_recvmessage_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\Network\overlay_sendmessage_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\overlay_animated_icon.cpp" />
@@ -724,6 +729,11 @@
     <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_page.h" />
     <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_settings.h" />
     <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_savestate.h" />
+    <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_sidebar_page.h" />
+    <ClInclude Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture.h" />
+    <ClInclude Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture_game_details.h" />
+    <ClInclude Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture_game_grid.h" />
+    <ClInclude Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture_main_menu.h" />
     <ClInclude Include="Emu\RSX\Overlays\Network\overlay_recvmessage_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\Network\overlay_sendmessage_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\overlay_animated_icon.h" />

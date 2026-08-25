@@ -442,6 +442,8 @@
      <addaction name="showCatUnknownAct"/>
      <addaction name="showCatOtherAct"/>
     </widget>
+    <addaction name="bigPictureModeAct"/>
+    <addaction name="separator"/>
     <widget class="QMenu" name="menuView_Game_Collections">
      <property name="title">
       <string>Game Collections</string>
@@ -837,6 +839,14 @@
    </property>
    <property name="text">
     <string>Show Debugger</string>
+   </property>
+  </action>
+  <action name="bigPictureModeAct">
+   <property name="text">
+    <string>Big Picture Mode</string>
+   </property>
+   <property name="toolTip">
+    <string>Browse and launch your installed games in a controller-friendly full screen grid</string>
    </property>
   </action>
   <action name="showLogAct">
