@@ -1379,6 +1379,10 @@ int run_rpcs3(int argc, char** argv)
 		Emu.Quit(true);
 		return 0;
 	}
+	else if (!g_headless && g_cfg.misc.start_big_picture_mode)
+	{
+		Emu.BootBigPictureMode();
+	}
 
 	// run event loop (maybe only needed for the gui application)
 	if (gui_application* gui_app = qobject_cast<gui_application*>(app.data()))

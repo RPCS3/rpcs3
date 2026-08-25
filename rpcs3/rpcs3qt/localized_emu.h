@@ -305,6 +305,7 @@ private:
 		case localized_string_id::HOME_MENU_SETTINGS_MOUSE_DEBUG_INPUT_OVERLAY: return tr("Mouse Debug Overlay", "Debug");
 		case localized_string_id::HOME_MENU_SETTINGS_DEBUG_DISABLE_VIDEO_OUTPUT: return tr("Disable Video Output", "Debug");
 		case localized_string_id::HOME_MENU_SETTINGS_DEBUG_TEXTURE_LOD_BIAS: return tr("Texture LOD Bias Addend", "Debug");
+		case localized_string_id::HOME_MENU_SETTINGS_SYSTEM_START_BIG_PICTURE_MODE: return tr("Open Big Picture Mode On Boot", "System");
 		case localized_string_id::HOME_MENU_SCREENSHOT: return tr("Take Screenshot");
 		case localized_string_id::HOME_MENU_SAVESTATE: return tr("SaveState");
 		case localized_string_id::HOME_MENU_SAVESTATE_SAVE: return tr("Save Emulation State");
@@ -363,6 +364,13 @@ private:
 		case localized_string_id::SAVESTATE_FAILED_DUE_TO_VDEC: return tr("SaveState failed: VDEC-based video/cutscenes are in order, wait for them to end or enable libvdec.sprx.");
 		case localized_string_id::SAVESTATE_FAILED_DUE_TO_MISSING_SPU_SETTING: return tr("SaveState failed: Failed to lock SPU state, enabling SPU-Compatible mode may fix it.");
 		case localized_string_id::SAVESTATE_FAILED_DUE_TO_SPU: return tr("SaveState failed: Failed to lock SPU state, using SPU ASMJIT will fix it.");
+		case localized_string_id::BIG_PICTURE_MODE_TITLE: return tr("Big Picture Mode");
+		case localized_string_id::BIG_PICTURE_MENU_GAMES: return tr("Games");
+		case localized_string_id::BIG_PICTURE_MENU_EXIT: return tr("Exit Big Picture Mode");
+		case localized_string_id::BIG_PICTURE_NO_GAMES_FOUND: return tr("No games found.\nAdd games in the main RPCS3 window.");
+		case localized_string_id::BIG_PICTURE_GAME_DETAILS_START: return tr("Start");
+		case localized_string_id::BIG_PICTURE_HINT_BACK: return tr("Back");
+		case localized_string_id::BIG_PICTURE_HINT_SELECT: return tr("Select");
 		case localized_string_id::INVALID: return tr("Invalid");
 		default: return tr("Unknown");
 		}
