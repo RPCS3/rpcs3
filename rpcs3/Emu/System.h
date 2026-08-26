@@ -79,6 +79,7 @@ struct EmuCallbacks
 	std::function<void(std::shared_ptr<atomic_t<bool>>, stx::shared_ptr<utils::serial>, stx::atomic_ptr<std::string>*, std::shared_ptr<void>)> on_save_state_progress;
 	std::function<void(bool enabled)> enable_disc_eject;
 	std::function<void(bool enabled)> enable_disc_insert;
+	std::function<void(bool visible)> show_main_window; // Hidden while Big Picture Mode is active, shown again once it's fully exited
 	std::function<bool(bool, std::function<void()>)> try_to_quit; // (force_quit, on_exit) Try to close RPCS3
 	std::function<void(s32, s32)> handle_taskbar_progress; // (type, value) type: 0 for reset, 1 for increment, 2 for set_limit, 3 for set_value
 	std::function<void()> init_kb_handler;
