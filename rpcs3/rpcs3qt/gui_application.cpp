@@ -885,9 +885,19 @@ void gui_application::InitializeCallbacks()
 	{
 		Emu.CallFromMainThread([this, visible]()
 		{
-			if (m_main_window)
+			if (!m_main_window)
 			{
-				m_main_window->setVisible(visible);
+				return;
+			}
+
+			m_main_window->setVisible(visible);
+
+			if (visible)
+			{
+				// Bring it above the Big Picture Mode / game render surface, best-effort:
+				// a true exclusive-fullscreen render window can still occlude it on some platforms.
+				m_main_window->raise();
+				m_main_window->activateWindow();
 			}
 		});
 	};
