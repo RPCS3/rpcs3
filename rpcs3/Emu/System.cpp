@@ -970,6 +970,9 @@ bool Emulator::BootBigPictureMode()
 
 	sys_log.notice("Big Picture Mode: booting window");
 
+	// The grid only reads games.yml, so rescan the Games folder for anything not registered there yet.
+	AddGamesFromDir(rpcs3::utils::get_games_dir());
+
 	m_state = system_state::loading;
 
 	m_path.clear();
