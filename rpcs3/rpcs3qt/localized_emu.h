@@ -366,6 +366,7 @@ private:
 		case localized_string_id::SAVESTATE_FAILED_DUE_TO_SPU: return tr("SaveState failed: Failed to lock SPU state, using SPU ASMJIT will fix it.");
 		case localized_string_id::BIG_PICTURE_MODE_TITLE: return tr("Big Picture Mode");
 		case localized_string_id::BIG_PICTURE_MENU_GAMES: return tr("Games");
+		case localized_string_id::BIG_PICTURE_MENU_OPEN_INTERFACE: return tr("Open QT Interface");
 		case localized_string_id::BIG_PICTURE_MENU_EXIT: return tr("Exit Big Picture Mode");
 		case localized_string_id::BIG_PICTURE_NO_GAMES_FOUND: return tr("No games found.\nAdd games in the main RPCS3 window.");
 		case localized_string_id::BIG_PICTURE_GAME_DETAILS_START: return tr("Start");
