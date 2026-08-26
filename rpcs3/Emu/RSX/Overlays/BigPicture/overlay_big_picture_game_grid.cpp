@@ -4,13 +4,27 @@
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
 #include "Loader/PSF.h"
+#include "Loader/ISO.h"
+#include "Loader/iso_cache.h"
 
 #include <algorithm>
+#include <unordered_set>
 
 namespace rsx
 {
 	namespace overlays
 	{
+		namespace
+		{
+			// ISO icons have no on-disk file of their own, so cache the extracted bytes to one.
+			std::string get_iso_icon_cache_path(const std::string& title_id)
+			{
+				const std::string dir = rpcs3::utils::get_cache_dir() + "big_picture_iso_icons/";
+				fs::create_path(dir);
+				return dir + title_id + ".png";
+			}
+		}
+
 		big_picture_game_tile::big_picture_game_tile(const big_picture_game_entry& entry, u16 tile_width)
 		{
 			pack_padding = 8;
@@ -89,14 +103,105 @@ namespace rsx
 			m_games.clear();
 			m_tiles.clear();
 
-			for (const auto& [title_id, raw_path] : Emu.GetGamesConfig().get_games())
+			std::unordered_set<std::string> added_serials;
+
+			const auto add_game_entry = [&](const std::string& title_id, const std::string& path, const psf::registry& psf, std::string icon_path)
+			{
+				GameInfo info{};
+				info.path = path;
+				info.icon_path = std::move(icon_path);
+				info.serial = title_id;
+				info.name = std::string(psf::get_string(psf, "TITLE", title_id));
+				info.category = std::string(psf::get_string(psf, "CATEGORY"));
+				info.app_ver = std::string(psf::get_string(psf, "APP_VER"));
+
+				added_serials.insert(title_id);
+				m_games.push_back({ std::move(info) });
+			};
+
+			const auto try_add_game = [&](const std::string& title_id, const std::string& raw_path)
 			{
 				std::string path = raw_path;
 				path.resize(path.find_last_not_of('/') + 1);
 
 				if (path.empty())
 				{
-					continue;
+					return;
+				}
+
+				if (is_iso_file(path))
+				{
+					iso_metadata_cache_entry cache_entry{};
+					std::vector<u8> psf_data;
+					std::vector<u8> icon_data;
+
+					if (iso_cache::load(path, path, cache_entry))
+					{
+						psf_data = std::move(cache_entry.psf_data);
+						icon_data = std::move(cache_entry.icon_data);
+					}
+					else
+					{
+						iso_archive archive(path);
+
+						if (!archive.is_valid())
+						{
+							return;
+						}
+
+						const psf::registry iso_psf = archive.open_psf("PS3_GAME/PARAM.SFO");
+
+						if (iso_psf.empty())
+						{
+							return;
+						}
+
+						psf_data = psf::save_object(iso_psf);
+
+						if (archive.exists("PS3_GAME/ICON0.PNG"))
+						{
+							if (auto icon_file = archive.open("PS3_GAME/ICON0.PNG"); icon_file && icon_file->size() > 0)
+							{
+								icon_data.resize(icon_file->size());
+								icon_file->read(icon_data.data(), icon_data.size());
+							}
+						}
+
+						fs::stat_t iso_stat{};
+
+						if (fs::get_stat(path, iso_stat))
+						{
+							iso_metadata_cache_entry entry_to_save{};
+							entry_to_save.mtime = iso_stat.mtime;
+							entry_to_save.psf_data = psf_data;
+							entry_to_save.icon_data = icon_data;
+							entry_to_save.icon_path = "PS3_GAME/ICON0.PNG";
+							iso_cache::save(path, path, entry_to_save);
+						}
+					}
+
+					if (psf_data.empty())
+					{
+						return;
+					}
+
+					const psf::registry psf = psf::load_object(fs::file(psf_data.data(), psf_data.size()), "PARAM.SFO");
+
+					if (psf.empty())
+					{
+						return;
+					}
+
+					std::string icon_path;
+
+					if (!icon_data.empty())
+					{
+						icon_path = get_iso_icon_cache_path(title_id);
+						fs::write_file(icon_path, fs::rewrite, icon_data);
+					}
+
+					add_game_entry(title_id, path, psf, std::move(icon_path));
+					return;
 				}
 
 				const std::string sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(path, title_id);
@@ -104,18 +209,33 @@ namespace rsx
 
 				if (psf.empty())
 				{
+					return;
+				}
+
+				add_game_entry(title_id, path, psf, sfo_dir + "/ICON0.PNG");
+			};
+
+			// dev_hdd0/game/ (regular PKG installs) is never registered into games.yml, so list it directly.
+			const std::string hdd0_game_dir = rpcs3::utils::get_hdd0_game_dir();
+
+			for (const auto& entry : fs::dir(hdd0_game_dir))
+			{
+				if (!entry.is_directory || entry.name == "." || entry.name == "..")
+				{
 					continue;
 				}
 
-				GameInfo info{};
-				info.path = path;
-				info.icon_path = sfo_dir + "/ICON0.PNG";
-				info.serial = title_id;
-				info.name = std::string(psf::get_string(psf, "TITLE", title_id));
-				info.category = std::string(psf::get_string(psf, "CATEGORY"));
-				info.app_ver = std::string(psf::get_string(psf, "APP_VER"));
+				try_add_game(entry.name, hdd0_game_dir + entry.name);
+			}
 
-				m_games.push_back({ std::move(info) });
+			for (const auto& [title_id, raw_path] : Emu.GetGamesConfig().get_games())
+			{
+				if (added_serials.contains(title_id))
+				{
+					continue;
+				}
+
+				try_add_game(title_id, raw_path);
 			}
 
 			std::sort(m_games.begin(), m_games.end(), [](const big_picture_game_entry& a, const big_picture_game_entry& b)
