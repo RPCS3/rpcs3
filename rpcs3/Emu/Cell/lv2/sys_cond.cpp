@@ -393,6 +393,14 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 
 		if (!cond.ret)
 		{
+			const std::string ppu_name = ppu.get_name();
+
+			if (ppu_name.find("_libsail") != umax)
+			{
+				sys_cond.warning("MACROSS LLE SAIL: sys_cond_signal_to(cond_id=0x%x, thread_id=0x%x) target not waiting; returning CELL_OK instead of CELL_EPERM", cond_id, thread_id);
+				return CELL_OK;
+			}
+
 			return not_an_error(CELL_EPERM);
 		}
 

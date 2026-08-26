@@ -7,6 +7,29 @@
 
 LOG_CHANNEL(cellSail);
 
+static constexpr s32 cell_sail_max_player_descriptors = 2;
+
+static void cellSailLogPlayerState(const char* action, vm::ptr<CellSailPlayer> pSelf, s32 descriptor_index)
+{
+	if (!pSelf)
+	{
+		cellSail.notice("MACROSS SAIL %s: self=*0x%x index=%d", action, pSelf, descriptor_index);
+		return;
+	}
+
+	cellSail.notice("MACROSS SAIL %s: self=*0x%x count=%d index=%d paused=%d booted=%d sAdapter=*0x%x gAdapter=*0x%x desc0=*0x%x desc1=*0x%x",
+		action,
+		pSelf,
+		pSelf->descriptors,
+		descriptor_index,
+		pSelf->paused,
+		pSelf->booted,
+		pSelf->sAdapter,
+		pSelf->gAdapter,
+		pSelf->registeredDescriptors[0],
+		pSelf->registeredDescriptors[1]);
+}
+
 template <>
 void fmt_class_string<CellSailError>::format(std::string& out, u64 arg)
 {
@@ -630,14 +653,29 @@ error_code cellSailPlayerInitialize2(ppu_thread& ppu,
 	cellSail.warning("cellSailPlayerInitialize2(pSelf=*0x%x, pAllocator=*0x%x, pCallback=*0x%x, callbackArg=*0x%x, pAttribute=*0x%x, pResource=*0x%x)",
 		pSelf, pAllocator, pCallback, callbackArg, pAttribute, pResource);
 
+	if (!pSelf || !pAllocator || !pAttribute || !pResource)
+	{
+		return CELL_SAIL_ERROR_INVALID_ARG;
+	}
+
 	pSelf->allocator = *pAllocator;
 	pSelf->callback = pCallback;
 	pSelf->callbackArg = callbackArg;
 	pSelf->attribute = *pAttribute;
 	pSelf->resource = *pResource;
+	pSelf->playbackCommand = vm::null;
+	pSelf->repeatMode = 0;
+	pSelf->descriptors = 0;
+	pSelf->registeredDescriptors[0] = vm::null;
+	pSelf->registeredDescriptors[1] = vm::null;
 	pSelf->booted = false;
 	pSelf->paused = true;
+	pSelf->sAdapter = vm::null;
+	pSelf->gAdapter = vm::null;
 
+	cellSailLogPlayerState("INIT", pSelf, -1);
+
+	if (pSelf->callback)
 	{
 		CellSailEvent event{};
 		event.u32x2.major = CELL_SAIL_EVENT_PLAYER_STATE_CHANGED;
@@ -801,16 +839,27 @@ error_code cellSailPlayerAddDescriptor(vm::ptr<CellSailPlayer> pSelf, vm::ptr<Ce
 {
 	cellSail.warning("cellSailPlayerAddDescriptor(pSelf=*0x%x, pDesc=*0x%x)", pSelf, pDesc);
 
-	if (pSelf && pSelf->descriptors < 3 && pDesc)
+	if (!pSelf || !pDesc)
 	{
-		pSelf->descriptors++;
-		pSelf->registeredDescriptors[pSelf->descriptors] = pDesc;
-		pDesc->registered = true;
+		cellSail.error("cellSailPlayerAddDescriptor(): invalid arguments");
+		cellSailLogPlayerState("ADD_INVALID_ARG", pSelf, -1);
+		return CELL_SAIL_ERROR_INVALID_ARG;
 	}
-	else
+
+	if (pSelf->descriptors < 0 || pSelf->descriptors >= cell_sail_max_player_descriptors)
 	{
-		cellSail.error("Descriptor limit reached or the descriptor is unspecified! This should never happen, report this to a developer.");
+		cellSail.error("cellSailPlayerAddDescriptor(): descriptor limit reached");
+		cellSailLogPlayerState("ADD_FULL", pSelf, -1);
+		return CELL_SAIL_ERROR_FULLED;
 	}
+
+	const s32 index = pSelf->descriptors;
+
+	pSelf->registeredDescriptors[index] = pDesc;
+	pSelf->descriptors++;
+	pDesc->registered = true;
+
+	cellSailLogPlayerState("ADD", pSelf, index);
 
 	return CELL_OK;
 }
@@ -869,7 +918,7 @@ error_code cellSailPlayerCreateDescriptor(vm::ptr<CellSailPlayer> pSelf, s32 str
 
 error_code cellSailPlayerDestroyDescriptor(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailDescriptor> pDesc)
 {
-	cellSail.todo("cellSailPlayerAddDescriptor(pSelf=*0x%x, pDesc=*0x%x)", pSelf, pDesc);
+	cellSail.todo("cellSailPlayerDestroyDescriptor(pSelf=*0x%x, pDesc=*0x%x)", pSelf, pDesc);
 
 	if (pDesc->registered)
 		return CELL_SAIL_ERROR_INVALID_STATE;
@@ -877,19 +926,45 @@ error_code cellSailPlayerDestroyDescriptor(vm::ptr<CellSailPlayer> pSelf, vm::pt
 	return CELL_OK;
 }
 
-error_code cellSailPlayerRemoveDescriptor(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailDescriptor> ppDesc)
+error_code cellSailPlayerRemoveDescriptor(vm::ptr<CellSailPlayer> pSelf, vm::ptr<CellSailDescriptor> pDesc)
 {
-	cellSail.warning("cellSailPlayerAddDescriptor(pSelf=*0x%x, pDesc=*0x%x)", pSelf, ppDesc);
+	cellSail.warning("cellSailPlayerRemoveDescriptor(pSelf=*0x%x, pDesc=*0x%x)", pSelf, pDesc);
 
-	if (pSelf->descriptors > 0)
+	if (!pSelf || !pDesc)
 	{
-		ppDesc = pSelf->registeredDescriptors[pSelf->descriptors];
-		// TODO: Figure out how properly free a descriptor. Use game specified memory dealloc function?
-		//delete &pSelf->registeredDescriptors[pSelf->descriptors];
-		pSelf->descriptors--;
+		cellSail.error("cellSailPlayerRemoveDescriptor(): invalid arguments");
+		cellSailLogPlayerState("REMOVE_INVALID_ARG", pSelf, -1);
+		return CELL_SAIL_ERROR_INVALID_ARG;
 	}
 
-	return pSelf->descriptors;
+	if (pSelf->descriptors <= 0 || pSelf->descriptors > cell_sail_max_player_descriptors)
+	{
+		cellSail.error("cellSailPlayerRemoveDescriptor(): invalid descriptor count %d", pSelf->descriptors);
+		cellSailLogPlayerState("REMOVE_INVALID_STATE", pSelf, -1);
+		return CELL_SAIL_ERROR_INVALID_STATE;
+	}
+
+	for (s32 index = 0; index < pSelf->descriptors; index++)
+	{
+		if (pSelf->registeredDescriptors[index] != pDesc)
+		{
+			continue;
+		}
+
+		const s32 last_index = pSelf->descriptors - 1;
+
+		pDesc->registered = false;
+		pSelf->registeredDescriptors[index] = pSelf->registeredDescriptors[last_index];
+		pSelf->registeredDescriptors[last_index] = vm::null;
+		pSelf->descriptors--;
+
+		cellSailLogPlayerState("REMOVE", pSelf, index);
+		return CELL_OK;
+	}
+
+	cellSail.error("cellSailPlayerRemoveDescriptor(): descriptor is not registered");
+	cellSailLogPlayerState("REMOVE_NOT_FOUND", pSelf, -1);
+	return CELL_SAIL_ERROR_INVALID_ARG;
 }
 
 error_code cellSailPlayerGetDescriptorCount(vm::ptr<CellSailPlayer> pSelf)
@@ -996,7 +1071,17 @@ error_code cellSailPlayerCancel()
 
 error_code cellSailPlayerSetPaused(vm::ptr<CellSailPlayer> pSelf, b8 paused)
 {
-	cellSail.todo("cellSailPlayerSetPaused(pSelf=*0x%x, paused=%d)", pSelf, paused);
+	cellSail.warning("cellSailPlayerSetPaused(pSelf=*0x%x, paused=%d)", pSelf, paused);
+
+	if (!pSelf)
+	{
+		return CELL_SAIL_ERROR_INVALID_ARG;
+	}
+
+	pSelf->paused = paused;
+
+	cellSailLogPlayerState("PAUSE", pSelf, -1);
+
 	return CELL_OK;
 }
 
