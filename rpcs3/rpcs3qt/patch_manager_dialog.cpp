@@ -342,7 +342,7 @@ void patch_manager_dialog::populate_tree()
 							std::pair<int, QVariant>(persistance_role, true)
 						};
 
-						// Add counter to leafs if the name already exists due to different hashes of the same game (PPU, SPU, PRX, OVL)
+						// Add hash to leafs if the name already exists due to different hashes of the same game (PPU, SPU, PRX, OVL)
 						std::vector<QTreeWidgetItem*> matches;
 						gui::utils::find_children_by_data(serial_level_item, matches, match_criteria, false);
 
@@ -350,12 +350,9 @@ void patch_manager_dialog::populate_tree()
 						{
 							if (auto only_match = matches.size() == 1 ? matches[0] : nullptr)
 							{
-								only_match->setText(0, q_description + QStringLiteral(" (01)"));
+								only_match->setText(0, q_description + QStringLiteral(" (") + only_match->data(0, hash_role).toString() + QStringLiteral(")"));
 							}
-							const usz counter = matches.size() + 1;
-							visible_description += QStringLiteral(" (");
-							if (counter < 10) visible_description += '0';
-							visible_description += QString::number(counter) + ')';
+							visible_description += QStringLiteral(" (") + q_hash + QStringLiteral(")");
 						}
 
 						QVariantMap q_config_values;
