@@ -405,6 +405,7 @@ constexpr auto arg_input_config   = "input-config"; // only useful with no-gui
 constexpr auto arg_q_debug        = "qDebug";
 constexpr auto arg_error          = "error";
 constexpr auto arg_updating       = "updating";
+constexpr auto arg_big_picture    = "big-picture";
 constexpr auto arg_user_id        = "user-id";
 constexpr auto arg_installfw      = "installfw";
 constexpr auto arg_installpkg     = "installpkg";
@@ -612,10 +613,10 @@ int run_rpcs3(int argc, char** argv)
 
 	static fs::file instance_lock;
 
-	// True if an argument --updating found
-	const bool is_updating = find_arg(arg_updating, qt_argv) != -1;
+	// True if an argument --updating or --big-picture was found
+	const bool is_updating = find_arg(arg_updating, qt_argv) != -1 || find_arg(arg_big_picture, qt_argv) != -1;
 
-	// Keep trying to lock the file for ~2s normally, and for ~10s in the case of --updating
+	// Keep trying to lock the file for ~2s normally, and for ~10s in the case of --updating/--big-picture
 	for (u32 num = 0; num < (is_updating ? 500u : 100u) && !instance_lock.open(lock_name, fs::rewrite + fs::lock); num++)
 	{
 		std::this_thread::sleep_for(20ms);
@@ -851,6 +852,7 @@ int run_rpcs3(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_q_debug, "Log qDebug to RPCS3.log."));
 	parser.addOption(QCommandLineOption(arg_error, "For internal usage."));
 	parser.addOption(QCommandLineOption(arg_updating, "For internal usage."));
+	parser.addOption(QCommandLineOption(arg_big_picture, "Boot directly into Big Picture Mode. For internal usage (used to recover after a failed runtime switch)."));
 	parser.addOption(QCommandLineOption(arg_timer, "Enable high resolution timer for better performance (windows)", "enabled", "1"));
 	parser.addOption(QCommandLineOption(arg_verbose_curl, "Enable verbose curl logging."));
 	parser.addOption(QCommandLineOption(arg_any_location, "Allow RPCS3 to be run from any location. Dangerous"));
@@ -1379,7 +1381,7 @@ int run_rpcs3(int argc, char** argv)
 		Emu.Quit(true);
 		return 0;
 	}
-	else if (!g_headless && g_cfg.misc.start_big_picture_mode)
+	else if (!g_headless && (g_cfg.misc.start_big_picture_mode || parser.isSet(arg_big_picture)))
 	{
 		Emu.BootBigPictureMode();
 	}

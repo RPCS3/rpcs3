@@ -894,8 +894,7 @@ void gui_application::InitializeCallbacks()
 
 			if (visible)
 			{
-				// Bring it above the Big Picture Mode / game render surface, best-effort:
-				// a true exclusive-fullscreen render window can still occlude it on some platforms.
+				// Best-effort: an exclusive-fullscreen render surface can still occlude it on some platforms.
 				m_main_window->raise();
 				m_main_window->activateWindow();
 			}

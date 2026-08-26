@@ -48,6 +48,12 @@
 #include "util/init_mutex.hpp"
 #include "util/sysinfo.hpp"
 
+#ifdef _WIN32
+#include <process.h>
+#else
+#include <unistd.h>
+#endif
+
 #include <memory>
 #include <regex>
 #include <shared_mutex>
@@ -1018,6 +1024,26 @@ bool Emulator::BootBigPictureMode()
 void Emulator::DeactivateBigPictureMode() const
 {
 	g_big_picture_mode_active = false;
+}
+
+void Emulator::RestartForBigPictureMode()
+{
+	sys_log.notice("Big Picture Mode: could not be entered in the running process, restarting RPCS3 to recover");
+
+	GracefulShutdown(false);
+	CleanUp();
+
+	const std::string orig_path = fs::get_executable_path();
+
+#ifdef _WIN32
+	const std::wstring wchar_orig_path = utf8_to_wchar(orig_path);
+	const int ret = _wexecl(wchar_orig_path.data(), wchar_orig_path.data(), L"--big-picture", nullptr);
+#else
+	const char* const params[3] = { orig_path.c_str(), "--big-picture", nullptr };
+	const int ret = execv(orig_path.c_str(), const_cast<char* const*>(&params[0]));
+#endif
+
+	sys_log.error("Big Picture Mode: relaunching '%s' failed with result: %d (%s)", orig_path, ret, strerror(errno));
 }
 
 game_boot_result Emulator::GetElfPathFromDir(std::string& elf_path, const std::string& path)
@@ -4216,8 +4242,13 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 				after_kill_callback = [this]()
 				{
 					sys_log.notice("Big Picture Mode: game stopped, returning to Big Picture Mode.");
-					const bool result = BootBigPictureMode();
-					sys_log.notice("Big Picture Mode: BootBigPictureMode() returned %d", result);
+
+					if (!BootBigPictureMode())
+					{
+						// Main window is still hidden here, so retrying in-process would leave a blank screen.
+						sys_log.error("Big Picture Mode: BootBigPictureMode() failed, restarting RPCS3 to recover");
+						RestartForBigPictureMode();
+					}
 				};
 			}
 
@@ -4225,8 +4256,6 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			if (!return_to_big_picture_mode)
 			{
-				// Show the main window again, in case it was hidden for Big Picture Mode and we aren't
-				// about to reboot straight back into it.
 				GetCallbacks().show_main_window(true);
 			}
 

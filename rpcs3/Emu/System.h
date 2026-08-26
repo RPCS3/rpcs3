@@ -438,6 +438,8 @@ public:
 	bool BootBigPictureMode();
 	// Cancel any pending return to Big Picture Mode, e.g. when a game is booted manually and bypasses the shell.
 	void DeactivateBigPictureMode() const;
+	// Fallback for when BootBigPictureMode() can't switch at runtime: relaunches RPCS3 straight into it.
+	void RestartForBigPictureMode();
 
 	void SetForceBoot(bool force_boot);
 	void SetContinuousMode(bool continuous_mode);
