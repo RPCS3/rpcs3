@@ -1008,6 +1008,8 @@ bool Emulator::BootBigPictureMode()
 		rsx::overlays::open_big_picture_mode();
 	}));
 
+	GetCallbacks().show_main_window(false);
+
 	sys_log.notice("Big Picture Mode: booted successfully");
 
 	return true;
@@ -4220,6 +4222,13 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 			}
 
 			GetCallbacks().on_stop();
+
+			if (!return_to_big_picture_mode)
+			{
+				// Show the main window again, in case it was hidden for Big Picture Mode and we aren't
+				// about to reboot straight back into it.
+				GetCallbacks().show_main_window(true);
+			}
 
 			// Always Enable display sleep, not only if it was prevented.
 			Emu.GetCallbacks().enable_display_sleep(true);

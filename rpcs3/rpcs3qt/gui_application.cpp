@@ -881,6 +881,16 @@ void gui_application::InitializeCallbacks()
 			OnEnableDiscInsert(enabled);
 		});
 	};
+	callbacks.show_main_window = [this](bool visible)
+	{
+		Emu.CallFromMainThread([this, visible]()
+		{
+			if (m_main_window)
+			{
+				m_main_window->setVisible(visible);
+			}
+		});
+	};
 
 	callbacks.on_missing_fw = [this]()
 	{
