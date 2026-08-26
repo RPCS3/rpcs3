@@ -70,11 +70,11 @@ private:
 	void DeleteOnlineTrophiesForCommunicationId(std::string_view communication_id, const QString& game_name = {});
 	void SyncOnlineTrophiesForGame(int db_ind);
 	bool SyncOnlineTrophyGame(int db_ind, const std::shared_ptr<rpcn::rpcn_client>& rpcn, QString& error_message);
-	bool CanStartOnlineTrophySync();
-	void BeginOnlineTrophySync();
+	bool CanStartOnlineTrophySync(bool sync_all);
+	void BeginOnlineTrophySync(bool sync_all);
 	void EndOnlineTrophySync();
 	void UpdateOnlineTrophySyncCooldown();
-	qint64 GetOnlineTrophySyncCooldownRemainingMs() const;
+	qint64 GetOnlineTrophySyncCooldownRemainingMs(bool sync_all) const;
 
 	/** Populate the trophy database (multithreaded). */
 	void StartTrophyLoadThreads();

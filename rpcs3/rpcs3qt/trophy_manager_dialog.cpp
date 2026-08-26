@@ -44,8 +44,10 @@
 
 LOG_CHANNEL(gui_log, "GUI");
 
-static constexpr qint64 RPCN_TROPHY_SYNC_COOLDOWN_MS = 60'000;
-static QElapsedTimer s_rpcn_trophy_sync_cooldown;
+static constexpr qint64 RPCN_TROPHY_SYNC_ALL_COOLDOWN_MS = 300'000;
+static constexpr qint64 RPCN_TROPHY_SYNC_SINGLE_COOLDOWN_MS = 5'000;
+static QElapsedTimer s_rpcn_trophy_sync_all_cooldown;
+static QElapsedTimer s_rpcn_trophy_sync_single_cooldown;
 static bool s_rpcn_trophy_sync_in_progress = false;
 
 enum GameUserRole
@@ -584,18 +586,20 @@ bool trophy_manager_dialog::SyncOnlineTrophyGame(int db_ind, const std::shared_p
 	return true;
 }
 
-qint64 trophy_manager_dialog::GetOnlineTrophySyncCooldownRemainingMs() const
+qint64 trophy_manager_dialog::GetOnlineTrophySyncCooldownRemainingMs(bool sync_all) const
 {
-	if (!s_rpcn_trophy_sync_cooldown.isValid())
+	const QElapsedTimer& cooldown = sync_all ? s_rpcn_trophy_sync_all_cooldown : s_rpcn_trophy_sync_single_cooldown;
+	if (!cooldown.isValid())
 	{
 		return 0;
 	}
 
-	const qint64 remaining_ms = RPCN_TROPHY_SYNC_COOLDOWN_MS - s_rpcn_trophy_sync_cooldown.elapsed();
+	const qint64 cooldown_ms = sync_all ? RPCN_TROPHY_SYNC_ALL_COOLDOWN_MS : RPCN_TROPHY_SYNC_SINGLE_COOLDOWN_MS;
+	const qint64 remaining_ms = cooldown_ms - cooldown.elapsed();
 	return remaining_ms > 0 ? remaining_ms : 0;
 }
 
-bool trophy_manager_dialog::CanStartOnlineTrophySync()
+bool trophy_manager_dialog::CanStartOnlineTrophySync(bool sync_all)
 {
 	if (s_rpcn_trophy_sync_in_progress)
 	{
@@ -603,7 +607,7 @@ bool trophy_manager_dialog::CanStartOnlineTrophySync()
 		return false;
 	}
 
-	const qint64 remaining_ms = GetOnlineTrophySyncCooldownRemainingMs();
+	const qint64 remaining_ms = GetOnlineTrophySyncCooldownRemainingMs(sync_all);
 	if (remaining_ms > 0)
 	{
 		const qint64 remaining_seconds = (remaining_ms + 999) / 1000;
@@ -615,10 +619,17 @@ bool trophy_manager_dialog::CanStartOnlineTrophySync()
 	return true;
 }
 
-void trophy_manager_dialog::BeginOnlineTrophySync()
+void trophy_manager_dialog::BeginOnlineTrophySync(bool sync_all)
 {
 	s_rpcn_trophy_sync_in_progress = true;
-	s_rpcn_trophy_sync_cooldown.restart();
+	if (sync_all)
+	{
+		s_rpcn_trophy_sync_all_cooldown.restart();
+	}
+	else
+	{
+		s_rpcn_trophy_sync_single_cooldown.restart();
+	}
 	UpdateOnlineTrophySyncCooldown();
 }
 
@@ -635,7 +646,7 @@ void trophy_manager_dialog::UpdateOnlineTrophySyncCooldown()
 		return;
 	}
 
-	const qint64 remaining_ms = GetOnlineTrophySyncCooldownRemainingMs();
+	const qint64 remaining_ms = GetOnlineTrophySyncCooldownRemainingMs(true);
 	m_btn_sync_all_trophies->setEnabled(!s_rpcn_trophy_sync_in_progress && remaining_ms == 0);
 
 	if (s_rpcn_trophy_sync_in_progress)
@@ -664,7 +675,7 @@ void trophy_manager_dialog::UpdateOnlineTrophySyncCooldown()
 
 void trophy_manager_dialog::SyncOnlineTrophiesForGame(int db_ind)
 {
-	if (!CanStartOnlineTrophySync())
+	if (!CanStartOnlineTrophySync(false))
 	{
 		return;
 	}
@@ -694,7 +705,7 @@ void trophy_manager_dialog::SyncOnlineTrophiesForGame(int db_ind)
 		return;
 	}
 
-	BeginOnlineTrophySync();
+	BeginOnlineTrophySync(false);
 
 	QString error_message;
 	const bool sync_success = SyncOnlineTrophyGame(db_ind, rpcn, error_message);
@@ -713,7 +724,7 @@ void trophy_manager_dialog::SyncOnlineTrophiesForGame(int db_ind)
 
 void trophy_manager_dialog::SyncAllOnlineTrophies()
 {
-	if (!CanStartOnlineTrophySync())
+	if (!CanStartOnlineTrophySync(true))
 	{
 		return;
 	}
@@ -744,7 +755,7 @@ void trophy_manager_dialog::SyncAllOnlineTrophies()
 		return;
 	}
 
-	BeginOnlineTrophySync();
+	BeginOnlineTrophySync(true);
 
 	const int game_count = static_cast<int>(m_trophies_db.size());
 	progress_dialog progress_dlg(tr("Synchronizing trophies"), tr("Synchronizing trophy data with RPCN..."), tr("Cancel"), 0, game_count, false, this, Qt::Dialog | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
@@ -1424,7 +1435,7 @@ void trophy_manager_dialog::ShowGameTableContextMenu(const QPoint& pos)
 	QAction* sync_rpcn_trophies = new QAction(tr("&Sync This Game to RPCN"), menu);
 	QAction* delete_rpcn_trophies = new QAction(tr("Delete &RPCN Trophies for This Game"), menu);
 
-	const qint64 sync_cooldown_remaining_ms = GetOnlineTrophySyncCooldownRemainingMs();
+	const qint64 sync_cooldown_remaining_ms = GetOnlineTrophySyncCooldownRemainingMs(false);
 	if (s_rpcn_trophy_sync_in_progress)
 	{
 		sync_rpcn_trophies->setEnabled(false);
