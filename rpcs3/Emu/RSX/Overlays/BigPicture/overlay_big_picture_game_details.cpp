@@ -53,9 +53,17 @@ namespace rsx
 
 			const std::string game_dir = fs::get_parent_dir(info.icon_path);
 
-			if (const std::string pic1_path = game_dir + "/PIC1.PNG"; fs::is_file(pic1_path))
+			std::string pic_path = game_dir + "/PIC1.PNG";
+
+			if (!fs::is_file(pic_path))
 			{
-				m_pic_data = std::make_unique<image_info>(pic1_path);
+				// Some games only ship the PIC0 overlay layer, not the PIC1 background layer.
+				pic_path = game_dir + "/PIC0.PNG";
+			}
+
+			if (fs::is_file(pic_path))
+			{
+				m_pic_data = std::make_unique<image_info>(pic_path);
 				// The renderer's texture cache is keyed by this object's address, which can be reused by an
 				// unrelated image after the old one is freed - force a re-upload instead of trusting the cache.
 				m_pic_data->dirty = true;
