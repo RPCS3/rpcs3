@@ -22,6 +22,9 @@ struct iso_metadata_cache_entry
 
 namespace iso_cache
 {
+	// Path a cached icon is (or would be) saved to by save() below.
+	std::string get_icon_cache_path(std::string_view cache_key);
+
 	// Returns false if no valid cache entry exists or mtime has changed.
 	bool load(const std::string& iso_path, std::string_view cache_key, iso_metadata_cache_entry& out_entry);
 

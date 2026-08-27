@@ -14,17 +14,6 @@ namespace rsx
 {
 	namespace overlays
 	{
-		namespace
-		{
-			// ISO icons have no on-disk file of their own, so cache the extracted bytes to one.
-			std::string get_iso_icon_cache_path(const std::string& title_id)
-			{
-				const std::string dir = rpcs3::utils::get_cache_dir() + "big_picture_iso_icons/";
-				fs::create_path(dir);
-				return dir + title_id + ".png";
-			}
-		}
-
 		big_picture_game_tile::big_picture_game_tile(const big_picture_game_entry& entry, u16 tile_width)
 		{
 			pack_padding = 8;
@@ -192,15 +181,10 @@ namespace rsx
 						return;
 					}
 
-					std::string icon_path;
+					// iso_cache::save()/load() above already wrote the icon bytes to this exact path.
+					const std::string icon_path = icon_data.empty() ? std::string() : iso_cache::get_icon_cache_path(path);
 
-					if (!icon_data.empty())
-					{
-						icon_path = get_iso_icon_cache_path(title_id);
-						fs::write_file(icon_path, fs::rewrite, icon_data);
-					}
-
-					add_game_entry(title_id, path, psf, std::move(icon_path));
+					add_game_entry(title_id, path, psf, icon_path);
 					return;
 				}
 

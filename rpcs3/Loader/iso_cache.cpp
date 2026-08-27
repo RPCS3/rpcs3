@@ -40,6 +40,11 @@ namespace
 
 namespace iso_cache
 {
+	std::string get_icon_cache_path(std::string_view cache_key)
+	{
+		return get_cache_dir() + get_cache_stem(cache_key) + ".png";
+	}
+
 	bool load(const std::string& iso_path, std::string_view cache_key, iso_metadata_cache_entry& out_entry)
 	{
 		fs::stat_t iso_stat{};
