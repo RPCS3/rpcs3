@@ -298,6 +298,25 @@
     <property name="title">
      <string>Manage</string>
     </property>
+    <widget class="QMenu" name="menuManage_Game_Collections">
+     <property name="title">
+      <string>Game Collections</string>
+     </property>
+     <widget class="QMenu" name="menuRename_Game_Collection">
+      <property name="title">
+       <string>Rename Collection</string>
+      </property>
+     </widget>
+     <widget class="QMenu" name="menuRemove_Game_Collection">
+      <property name="title">
+       <string>Remove Collection</string>
+      </property>
+     </widget>
+     <addaction name="createGameCollectionAct"/>
+     <addaction name="menuRename_Game_Collection"/>
+     <addaction name="menuRemove_Game_Collection"/>
+     <addaction name="separator"/>
+    </widget>
     <widget class="QMenu" name="menuNetworkServices">
      <property name="title">
       <string>Network Services</string>
@@ -342,6 +361,8 @@
     <addaction name="separator"/>
     <addaction name="actionManage_Cheats"/>
     <addaction name="actionManage_Game_Patches"/>
+    <addaction name="menuManage_Game_Collections"/>
+    <addaction name="separator"/>
     <addaction name="menuDatabases"/>
     <addaction name="menuPackages"/>
     <addaction name="separator"/>
@@ -421,6 +442,13 @@
      <addaction name="showCatUnknownAct"/>
      <addaction name="showCatOtherAct"/>
     </widget>
+    <addaction name="bigPictureModeAct"/>
+    <addaction name="separator"/>
+    <widget class="QMenu" name="menuView_Game_Collections">
+     <property name="title">
+      <string>Game Collections</string>
+     </property>
+    </widget>
     <addaction name="showDebuggerAct"/>
     <addaction name="showLogAct"/>
     <addaction name="separator"/>
@@ -436,6 +464,7 @@
     <addaction name="menuGame_List_Grid_Mode"/>
     <addaction name="menuGame_List_Icons"/>
     <addaction name="menuGame_Categories"/>
+    <addaction name="menuView_Game_Collections"/>
     <addaction name="separator"/>
     <addaction name="refreshGameListAct"/>
    </widget>
@@ -810,6 +839,14 @@
    </property>
    <property name="text">
     <string>Show Debugger</string>
+   </property>
+  </action>
+  <action name="bigPictureModeAct">
+   <property name="text">
+    <string>Big Picture Mode</string>
+   </property>
+   <property name="toolTip">
+    <string>Browse and launch your installed games in a controller-friendly full screen grid</string>
    </property>
   </action>
   <action name="showLogAct">
@@ -1316,6 +1353,11 @@
   <action name="actionManage_Screenshots">
    <property name="text">
     <string>Screenshots</string>
+   </property>
+  </action>
+  <action name="createGameCollectionAct">
+   <property name="text">
+    <string>Create Collection</string>
    </property>
   </action>
   <action name="removeFirmwareCacheAct">

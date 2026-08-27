@@ -132,3 +132,6 @@ CMakeUserPresets.json
 *.keystore
 *.p12
 keystore.properties
+
+# claude
+CLAUDE.md
