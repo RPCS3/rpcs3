@@ -2037,7 +2037,367 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 		is_first = false;
 	}
 
-	return call_stack_list;
+	// Experimental: include tail calls in callstack
+	// Debuggers are often so naive to calling optimizations 
+	// Try to have higher standards
+	std::vector<std::pair<u32, u32>> call_stack_list_expanded_with_tail_calls;
+
+	if (!call_stack_list.empty())
+	{
+		for (usz i = 0; i < call_stack_list.size(); i++)
+		{
+			const auto [func_call_before, stack_frame_addr_prev] = call_stack_list[i];
+			const auto [func_call_next, stack_frame_addr_next] = i == 0 ? std::make_pair(_cia, stack_ptr) : call_stack_list[i - 1];
+
+			ensure(func_call_before > 4);
+
+			be_t<u32> opcode;
+			if (!vm::try_access(func_call_before - 4, &opcode, sizeof(opcode), false))
+			{
+				// Fail
+				call_stack_list_expanded_with_tail_calls.emplace_back(call_stack_list[i]);
+				continue;
+			}
+
+			const ppu_opcode_t op{opcode};
+
+			const auto results = op_branch_targets(func_call_before - 4, op);
+
+			bool proceeded = false;
+			u32 func_call_before_target = umax;
+
+			for (usz res_i = 0; res_i < results.size(); res_i++)
+			{
+				const u32 route_pc = results[res_i];
+
+				if (route_pc == umax || route_pc == func_call_before)
+				{
+					continue;
+				}
+
+				if (vm::check_addr(route_pc, vm::page_executable))
+				{
+					ensure(!proceeded);
+
+					// Next PC
+					func_call_before_target = route_pc;
+					proceeded = true;
+					break;
+				}
+			}
+
+			if (!proceeded)
+			{
+				// Fail
+				call_stack_list_expanded_with_tail_calls.emplace_back(call_stack_list[i]);
+				continue;
+			}
+
+			struct context_t
+			{
+				u32 start_point;
+				bool modified_stack = false;
+				bool restored_stack = false;
+
+				bool can_be_tail_call() const
+				{
+					// Either stack was not touched or was saved and restored
+					// Either way, stack address did not change in the end
+					return modified_stack == restored_stack;
+				}
+			};
+
+			std::deque<context_t> workload{context_t{func_call_before_target}};
+
+			std::vector<be_t<u32>> inst_pos;
+
+			auto get_inst = [&](u32 pos, u32 low_bound) -> be_t<u32>&
+			{
+				static be_t<u32> s_inst_empty{};
+
+				if (pos < low_bound)
+				{
+					return s_inst_empty;
+				}
+
+				const u32 pos_dist = (pos - low_bound) / 4;
+
+				if (pos_dist >= inst_pos.size())
+				{
+					const u32 inst_bound = utils::align<u32>(pos, 256);
+
+					const usz old_size = inst_pos.size();
+					const usz new_size = pos_dist + (inst_bound - pos) / 4 + 1;
+
+					if (new_size >= 0x2000)
+					{
+						// Let's not analyse a function this far at the moment
+						// Functions using tail calls are very short
+						return s_inst_empty;
+					}
+
+					inst_pos.resize(new_size);
+
+					if (!vm::try_access(pos, &inst_pos[old_size], ::narrow<u32>((new_size - old_size) * sizeof(be_t<u32>)), false))
+					{
+						// Failure (this would be detected as failure by zeroes)
+					}
+				}
+
+				return inst_pos[pos_dist];
+			};
+
+			// Tail call CIAs
+			std::vector<u32> tail_calls_found;
+
+			// Highest target address, but must be lower than func_call_before_target
+			// Which would be the only option to be the parent function
+			u32 highest_CIA_target_of_tail_call = 0;
+
+			for (usz wi = 0; wi < workload.size(); wi++)
+			{
+				auto& [work_pc, modified_stack, restored_stack] = workload[wi];
+
+				for (usz inst_pc = work_pc;;)
+				{
+					be_t<u32>& opcode = get_inst(inst_pc, func_call_before_target);
+
+					if (!opcode)
+					{
+						// Already passed or failure of reading
+						break;
+					}
+
+					const ppu_opcode_t op{opcode};
+
+					// Mark as passed through
+					opcode = 0;
+
+					const auto type = g_ppu_itype.decode(op.opcode);
+
+					if ((type & ppu_itype::branch) && op.lk)
+					{
+						if (!modified_stack || restored_stack)
+						{
+							// Cannot be a valid call, abort
+							highest_CIA_target_of_tail_call = 0;
+							tail_calls_found.clear();
+							break;
+						}
+
+						// We do not care about the target here
+						inst_pc += 4;
+						continue;
+					}
+
+					if (type == ppu_itype::B || type == ppu_itype::BC)
+					{
+						const u32 target = ((op.aa ? 0 : inst_pc) + (type == ppu_itype::B ? +op.bt24 : +op.bt14));
+
+						if (modified_stack == restored_stack)
+						{
+							// Can be a tail call
+
+							if (target && highest_CIA_target_of_tail_call < target && target < func_call_before_target)
+							{
+								// All the previous list is discarded as being irrelevant
+								tail_calls_found.clear();
+								highest_CIA_target_of_tail_call = target;
+							}
+
+							if (target && highest_CIA_target_of_tail_call == target)
+							{
+								tail_calls_found.emplace_back(inst_pc);
+							}
+						}
+					}
+
+					if (type == ppu_itype::STDU && op.rs == 1u && op.ra == 1u)
+					{
+						if (modified_stack)
+						{
+							highest_CIA_target_of_tail_call = 0;
+							tail_calls_found.clear();
+							break;
+						}
+
+						modified_stack = true;
+					}
+					else if (type == ppu_itype::ADDI && op.ra == 1u && op.rd == 1u)
+					{
+						if (!modified_stack || restored_stack)
+						{
+							highest_CIA_target_of_tail_call = 0;
+							tail_calls_found.clear();
+							break;
+						}
+
+						restored_stack = true;
+					}
+
+					// Even if BCLR is conditional, it still counts because LR value is ready for return
+					if (type == ppu_itype::BCLR || type == ppu_itype::BCCTR)
+					{
+						// This is more complex than that but let's treat it as function return for now
+						// Jump table is not to be supported in this short and humble function analyzer
+						break;
+					}
+
+					const auto results = op_branch_targets(inst_pc, op);
+
+					bool proceeded = false;
+
+					for (usz res_i = 0; res_i < results.size(); res_i++)
+					{
+						const u32 route_pc = results[res_i];
+
+						if (route_pc == umax)
+						{
+							continue;
+						}
+
+						if (vm::check_addr(route_pc, vm::page_executable) && get_inst(route_pc, func_call_before_target))
+						{
+							if (proceeded)
+							{
+								// Remember next route start point
+								workload.push_back(context_t{route_pc, modified_stack, restored_stack});
+							}
+							else
+							{
+								// Next PC
+								inst_pc = route_pc;
+								proceeded = true;
+							}
+						}
+					}
+
+					if (!proceeded)
+					{
+						break;
+					}
+				}
+			}
+
+			if (tail_calls_found.empty() || !highest_CIA_target_of_tail_call)
+			{
+				// Fail
+				call_stack_list_expanded_with_tail_calls.emplace_back(call_stack_list[i]);
+				continue;
+			}
+
+			if (tail_calls_found.size() >= 2)
+			{
+				// Ambiguity: it is impossible to handle
+				// There is more than one tail call that targets the function
+				call_stack_list_expanded_with_tail_calls.emplace_back(call_stack_list[i]);
+				continue;
+			}
+
+			const u32 tail_call_cia = ::at32(tail_calls_found, 0);
+
+			// Now we check if highest_CIA_target_of_tail_call is actually the function that hosts the program counter
+
+			workload.clear();
+			inst_pos.clear();
+			workload.push_back(context_t{highest_CIA_target_of_tail_call});
+
+			bool path_to_current_frame_found = false;
+
+			for (usz wi = 0; !path_to_current_frame_found && wi < workload.size(); wi++)
+			{
+				auto& [work_pc, modified_stack, restored_stack] = workload[wi];
+
+				for (usz inst_pc = work_pc;;)
+				{
+					if (inst_pc == func_call_next)
+					{
+						// Match found!
+						path_to_current_frame_found = true;
+						break;
+					}
+
+					be_t<u32>& opcode = get_inst(inst_pc, highest_CIA_target_of_tail_call);
+
+					if (!opcode)
+					{
+						// Already passed or failure of reading
+						break;
+					}
+
+					const ppu_opcode_t op{opcode};
+
+					// Mark as passed through
+					opcode = 0;
+
+					const auto type = g_ppu_itype.decode(op.opcode);
+
+					if ((type & ppu_itype::branch) && op.lk)
+					{
+						// We do not care about the target here
+						inst_pc += 4;
+						continue;
+					}
+
+					// Even if BCLR is conditional, it still counts because LR value is ready for return
+					if (type == ppu_itype::BCLR || type == ppu_itype::BCCTR)
+					{
+						// This is more complex than that but let's treat it as function return for now
+						// Jump table is not to be supported in this short and humble function analyzer
+						break;
+					}
+
+					const auto results = op_branch_targets(inst_pc, op);
+
+					bool proceeded = false;
+
+					for (usz res_i = 0; res_i < results.size(); res_i++)
+					{
+						const u32 route_pc = results[res_i];
+
+						if (route_pc == umax)
+						{
+							continue;
+						}
+
+						if (vm::check_addr(route_pc, vm::page_executable) && get_inst(route_pc, highest_CIA_target_of_tail_call))
+						{
+							if (proceeded)
+							{
+								// Remember next route start point
+								workload.push_back(context_t{route_pc, modified_stack, restored_stack});
+							}
+							else
+							{
+								// Next PC
+								inst_pc = route_pc;
+								proceeded = true;
+							}
+						}
+					}
+
+					if (!proceeded)
+					{
+						break;
+					}
+				}
+			}
+
+			if (!path_to_current_frame_found)
+			{
+				// Fail
+				call_stack_list_expanded_with_tail_calls.emplace_back(call_stack_list[i]);
+				continue;
+			}
+
+			// Tail call found!
+			call_stack_list_expanded_with_tail_calls.emplace_back(tail_call_cia, stack_frame_addr_next); // TODO: Check stack frame, maybe it is stack_frame_addr_prev
+			call_stack_list_expanded_with_tail_calls.emplace_back(call_stack_list[i]);
+		}
+	}
+
+	ensure(call_stack_list_expanded_with_tail_calls.size() >= call_stack_list.size());
+	return call_stack_list_expanded_with_tail_calls;
 }
 
 void ppu_thread::dump_misc(std::string& ret, std::any& custom_data) const
