@@ -126,7 +126,10 @@ namespace rsx
 				result.font_names.emplace_back("Roboto-Regular.ttf");
 				result.font_names.emplace_back("OpenSans-Regular.ttf");
 				result.font_names.emplace_back("FreeSans.ttf");
-#elif !defined(_WIN32)
+#elif defined(_WIN32)
+				// Covers symbol blocks (e.g. Roman numerals) that plain Arial may be missing glyphs for.
+				result.font_names.emplace_back("tahoma.ttf");
+#else
 				result.font_names.emplace_back("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"); // ubuntu
 				result.font_names.emplace_back("/usr/share/fonts/TTF/DejaVuSans.ttf");             // arch
 #endif
@@ -360,6 +363,14 @@ namespace rsx
 				default:
 				{
 					const bool is_whitespace = c == ' ';
+
+					// CJK/Hangul scripts don't use spaces between words, so allow breaking right
+					// before each such character instead of only at whitespace.
+					if (!is_whitespace && classify(get_page_id(c)) != language_class::default_)
+					{
+						begin_of_word = result.size();
+					}
+
 					stbtt_aligned_quad quad{};
 
 					if (is_whitespace)
