@@ -1980,7 +1980,7 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 
 			if (res.maybe_leaf && !res.non_leaf)
 			{
-				const u32 result = res.maybe_use_reg0_instead_of_lr ? static_cast<u32>(gpr0) : static_cast<u32>(_lr);
+				const u32 result = res.maybe_use_reg0_instead_of_lr && !is_invalid(static_cast<u32>(gpr0)) ? static_cast<u32>(gpr0) : static_cast<u32>(_lr);
 
 				// Same stack as far as we know
 				call_stack_list.emplace_back(result, static_cast<u32>(sp));
