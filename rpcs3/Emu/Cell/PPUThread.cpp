@@ -1665,6 +1665,8 @@ std::string ppu_thread::dump_callstack() const
 
 std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 {
+	const auto accc = proc_id && !cpu_thread::get_current() ? lv2_process::acquire_globals(proc_id) : nullptr;
+
 	//std::shared_lock rlock(vm::g_mutex); // Needs optimizations
 
 	// Determine stack range
