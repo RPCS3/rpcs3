@@ -365,8 +365,8 @@ const std::array<std::pair<ppu_intrp_func_t, std::string_view>, 1024> g_ppu_sysc
 	NULL_FUNC(sys_spu_thread_group_system_unset_next_group),//245 (0x0F5)  ROOT
 	NULL_FUNC(sys_spu_thread_group_system_set_switch_group),//246 (0x0F6)  ROOT
 	NULL_FUNC(sys_spu_thread_group_system_unset_switch_group),//247 (0x0F7)  ROOT
-	null_func,//BIND_SYSC(sys_spu_thread_group...),         //248 (0x0F8)  ROOT
-	null_func,//BIND_SYSC(sys_spu_thread_group...),         //249 (0x0F9)  ROOT
+	BIND_SYSC(sys_spu_thread_group_syscall_248),            //248 (0x0F8)  ROOT
+	BIND_SYSC(sys_spu_thread_group_syscall_249),            //249 (0x0F9)  ROOT
 	BIND_SYSC(sys_spu_thread_group_set_cooperative_victims),//250 (0x0FA)
 	BIND_SYSC(sys_spu_thread_group_connect_event_all_threads), //251 (0x0FB)
 	BIND_SYSC(sys_spu_thread_group_disconnect_event_all_threads), //252 (0x0FC)

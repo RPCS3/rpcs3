@@ -1817,6 +1817,62 @@ error_code sys_spu_thread_group_set_cooperative_victims(ppu_thread& ppu, u32 id,
 	return CELL_OK;
 }
 
+error_code sys_spu_thread_group_syscall_248(ppu_thread& ppu, u32 id, u32 arg1, u32 arg2, u32 arg3, u32 arg4)
+{
+	if (!ppu.has_root_perm)
+	{
+		return CELL_ENOSYS;
+	}
+
+	const auto group = idm::get_unlocked<lv2_spu_group>(id);
+
+	if (!group)
+	{
+		return CELL_ESRCH;
+	}
+
+	lv2_obj::prepare_for_sleep(ppu);
+
+	std::unique_lock lock(group->mutex);
+
+	const auto state = +group->run_state;
+
+	if (state == SPU_THREAD_GROUP_STATUS_DESTROYED)
+	{
+		return CELL_ESRCH;
+	}
+
+	if (state < SPU_THREAD_GROUP_STATUS_INITIALIZED)
+	{
+		return CELL_ESTAT;
+	}
+
+	if (group->waiter)
+	{
+		// another PPU thread is joining this thread group
+		return CELL_EBUSY;
+	}
+
+	return CELL_OK;
+}
+
+error_code sys_spu_thread_group_syscall_249(ppu_thread& ppu, u32 id)
+{
+	if (!ppu.has_root_perm)
+	{
+		return CELL_ENOSYS;
+	}
+
+	const auto group = idm::get_unlocked<lv2_spu_group>(id);
+
+	if (!group)
+	{
+		return CELL_ESRCH;
+	}
+
+	return CELL_OK;
+}
+
 error_code sys_spu_thread_group_syscall_253(ppu_thread& ppu, u32 id, vm::ptr<sys_spu_thread_group_syscall_253_info> info)
 {
 	ppu.state += cpu_flag::wait;
