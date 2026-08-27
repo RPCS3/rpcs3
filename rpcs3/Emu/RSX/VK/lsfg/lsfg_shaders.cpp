@@ -35,10 +35,12 @@ LsfgShaders::LsfgShaders(const Device& device_, const std::string& cache_path)
         modules.emplace(module.id, handle);
     }
 
+    const LsfgVariant variant = set.variant;
     lsfg_release_modules(&set);
     valid = modules.size() == LSFG_SHADER_COUNT;
     if (valid) {
-        rsx_log.notice("Frame generation: created %zu shader modules", modules.size());
+        rsx_log.notice("Frame generation: created %zu shader modules, variant=%s", modules.size(),
+                       lsfg_variant_name(variant));
     } else {
         rsx_log.error("Frame generation: expected %u shader modules, got %zu", LSFG_SHADER_COUNT, modules.size());
         Release();

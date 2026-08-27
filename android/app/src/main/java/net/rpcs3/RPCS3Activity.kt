@@ -1,6 +1,7 @@
 package net.rpcs3
 
 import androidx.activity.ComponentActivity
+import android.hardware.display.DisplayManager
 import android.os.Handler
 import android.os.Looper
 import android.net.Uri
@@ -10,6 +11,7 @@ import android.view.InputDevice
 import android.view.View
 import androidx.compose.runtime.mutableStateOf
 import net.rpcs3.framegen.FrameGen
+import net.rpcs3.framegen.FrameGenPrefs
 import net.rpcs3.ui.drawer.InGameDrawer
 import net.rpcs3.ui.hud.DeviceStatsReader
 import net.rpcs3.ui.hud.HudPrefs
@@ -54,6 +56,9 @@ class RPCS3Activity : ComponentActivity() {
         android.content.SharedPreferences.OnSharedPreferenceChangeListener? = null
     private var overlayPrefsListener:
         android.content.SharedPreferences.OnSharedPreferenceChangeListener? = null
+    private var framegenPrefsListener:
+        android.content.SharedPreferences.OnSharedPreferenceChangeListener? = null
+    private var displayListener: DisplayManager.DisplayListener? = null
     private val modeHoldRunnable = Runnable {
         setDrawerVisible(!drawerVisible.value)
     }
@@ -69,6 +74,7 @@ class RPCS3Activity : ComponentActivity() {
         enableFullScreenImmersive()
 
         FrameGen.sync(this)
+        startFrameGenDisplay()
 
         RPCS3.onEmulationStopped = {
             runOnUiThread { scheduleStopCheck() }
@@ -314,6 +320,68 @@ class RPCS3Activity : ComponentActivity() {
         }
     }
 
+    private fun startFrameGenDisplay() {
+        val prefs = FrameGenPrefs.of(this)
+
+        framegenPrefsListener =
+            android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
+                runOnUiThread { applyFrameGenDisplayMode() }
+            }
+        prefs.registerOnSharedPreferenceChangeListener(framegenPrefsListener)
+
+        val listener = object : DisplayManager.DisplayListener {
+            override fun onDisplayAdded(displayId: Int) {}
+
+            override fun onDisplayRemoved(displayId: Int) {}
+
+            override fun onDisplayChanged(displayId: Int) {
+                if (displayId == display?.displayId) {
+                    FrameGen.pushRefreshRate(display?.refreshRate ?: 0f)
+                }
+            }
+        }
+
+        getSystemService(DisplayManager::class.java)?.registerDisplayListener(listener, hudHandler)
+        displayListener = listener
+
+        applyFrameGenDisplayMode()
+    }
+
+    private fun stopFrameGenDisplay() {
+        framegenPrefsListener?.let {
+            FrameGenPrefs.of(this).unregisterOnSharedPreferenceChangeListener(it)
+        }
+        framegenPrefsListener = null
+
+        displayListener?.let {
+            getSystemService(DisplayManager::class.java)?.unregisterDisplayListener(it)
+        }
+        displayListener = null
+    }
+
+    private fun applyFrameGenDisplayMode() {
+        val active = display?.mode
+        val enabled = FrameGenPrefs.isEnabled(FrameGenPrefs.of(this)) && FrameGen.state.value.imported
+
+        val wanted = if (active == null || !enabled) {
+            0
+        } else {
+            display?.supportedModes
+                ?.filter {
+                    it.physicalWidth == active.physicalWidth && it.physicalHeight == active.physicalHeight
+                }
+                ?.maxByOrNull { it.refreshRate }
+                ?.takeIf { it.refreshRate > active.refreshRate }
+                ?.modeId ?: 0
+        }
+
+        if (window.attributes.preferredDisplayModeId != wanted) {
+            window.attributes = window.attributes.also { it.preferredDisplayModeId = wanted }
+        }
+
+        FrameGen.pushRefreshRate(display?.refreshRate ?: 0f)
+    }
+
     private fun applyHudPreferences() {
         val prefs = HudPrefs.of(this)
 
@@ -464,6 +532,7 @@ class RPCS3Activity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         applyOverlayPreferences()
+        applyFrameGenDisplayMode()
     }
 
     override fun onPause() {
@@ -476,6 +545,7 @@ class RPCS3Activity : ComponentActivity() {
         super.onDestroy()
         stopHud()
         stopOverlay()
+        stopFrameGenDisplay()
         pendingStopCheck?.let { stopHandler.removeCallbacks(it) }
         pendingStopCheck = null
         RPCS3.onEmulationStopped = null

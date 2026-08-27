@@ -62,7 +62,7 @@ object SettingsStyle {
     val TextDim = Rpcs.TextDim
     val Divider = Rpcs.OutlineSoft
     val CheckBorder = Rpcs.Outline
-    val SliderInactive = Rpcs.SurfaceRaised
+    val SliderInactive = Rpcs.Outline
     val ChipSurface = Rpcs.SurfaceInset
     val ChipBorder = Rpcs.Outline
     val DangerRed = Rpcs.Danger

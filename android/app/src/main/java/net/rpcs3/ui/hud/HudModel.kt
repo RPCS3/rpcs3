@@ -2,35 +2,36 @@ package net.rpcs3.ui.hud
 
 import android.content.Context
 import android.content.SharedPreferences
+import net.rpcs3.R
 
-enum class HudElement(val key: String, val label: String, val enabledByDefault: Boolean) {
-    Fps("fps", "Frame rate", true),
-    Frametime("frametime", "Frame time", true),
-    Renderer("renderer", "Renderer", false),
-    Gpu("gpu", "GPU load", true),
-    Cpu("cpu", "CPU load", true),
-    Ram("ram", "Memory", true),
-    Battery("battery", "Battery", false),
-    Power("power", "Power draw", false),
-    Temperature("temp", "Temperature", false)
+enum class HudElement(val key: String, val labelRes: Int, val enabledByDefault: Boolean) {
+    Renderer("renderer", R.string.hud_element_renderer, false),
+    Gpu("gpu", R.string.hud_element_gpu, true),
+    Cpu("cpu", R.string.hud_element_cpu, true),
+    Ram("ram", R.string.hud_element_ram, true),
+    Battery("battery", R.string.hud_element_battery, false),
+    Power("power", R.string.hud_element_power, false),
+    Temperature("temp", R.string.hud_element_temperature, false),
+    Fps("fps", R.string.hud_element_fps, true),
+    Frametime("frametime", R.string.hud_element_frametime, true)
 }
 
-enum class HudMode(val horizontal: Boolean, val backdrop: Boolean) {
-    HorizontalPlain(true, false),
-    HorizontalShaded(true, true),
-    VerticalPlain(false, false),
-    VerticalShaded(false, true)
+enum class HudMode(val horizontal: Boolean, val backdrop: Boolean, val labelRes: Int, val detailRes: Int) {
+    HorizontalPlain(true, false, R.string.hud_mode_row, R.string.hud_mode_plain),
+    HorizontalShaded(true, true, R.string.hud_mode_row, R.string.hud_mode_shaded),
+    VerticalPlain(false, false, R.string.hud_mode_stack, R.string.hud_mode_plain),
+    VerticalShaded(false, true, R.string.hud_mode_stack, R.string.hud_mode_shaded)
 }
 
-enum class HudAnchor(val label: String, val bearingDegrees: Float) {
-    TopLeft("Top left", -45f),
-    TopCenter("Top centre", 0f),
-    TopRight("Top right", 45f),
-    LeftCenter("Left", -90f),
-    RightCenter("Right", 90f),
-    BottomLeft("Bottom left", -135f),
-    BottomCenter("Bottom centre", 180f),
-    BottomRight("Bottom right", 135f)
+enum class HudAnchor(val labelRes: Int, val bearingDegrees: Float) {
+    TopLeft(R.string.hud_anchor_top_left, -45f),
+    TopCenter(R.string.hud_anchor_top_centre, 0f),
+    TopRight(R.string.hud_anchor_top_right, 45f),
+    LeftCenter(R.string.hud_anchor_left, -90f),
+    RightCenter(R.string.hud_anchor_right, 90f),
+    BottomLeft(R.string.hud_anchor_bottom_left, -135f),
+    BottomCenter(R.string.hud_anchor_bottom_centre, 180f),
+    BottomRight(R.string.hud_anchor_bottom_right, 135f)
 }
 
 data class HudSample(

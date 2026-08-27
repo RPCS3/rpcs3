@@ -20,7 +20,9 @@ namespace lsfg {
 
 class LsfgShaders;
 
-constexpr size_t LSFG_DELTA_INSTANCES = 3;
+constexpr size_t LSFG_FIRST_DELTA_LEVEL = 4;
+constexpr size_t LSFG_LAST_DELTA_LEVEL = LSFG_MIP_LEVELS - 1;
+constexpr size_t LSFG_DELTA_INSTANCES = LSFG_LAST_DELTA_LEVEL + 1 - LSFG_FIRST_DELTA_LEVEL;
 
 class LsfgChain {
 public:

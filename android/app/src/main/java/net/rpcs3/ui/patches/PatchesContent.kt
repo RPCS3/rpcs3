@@ -47,6 +47,10 @@ import kotlinx.coroutines.withContext
 import net.rpcs3.R
 import net.rpcs3.RPCS3
 import net.rpcs3.dialogs.AlertDialogQueue
+import net.rpcs3.ui.components.SettingGroup
+import net.rpcs3.ui.components.SettingsHint
+import net.rpcs3.ui.components.SettingsSection
+import net.rpcs3.ui.theme.Dimens
 import net.rpcs3.ui.theme.Dims
 import net.rpcs3.ui.theme.Rpcs
 import net.rpcs3.utils.PatchUpdater
@@ -376,10 +380,13 @@ fun InGamePatchesPanel(titleId: String, modifier: Modifier = Modifier) {
 
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(Dimens.SectionGap)
     ) {
-        PatchUpdateCard(onUpdated = { reloadToken++ })
+        SettingsSection(title = stringResource(R.string.patches_section_source)) {
+            PatchUpdateCard(onUpdated = { reloadToken++ })
+        }
 
+    SettingsSection(title = stringResource(R.string.patches_section_available)) {
         when {
             loading -> Box(
                 modifier = Modifier
@@ -390,22 +397,20 @@ fun InGamePatchesPanel(titleId: String, modifier: Modifier = Modifier) {
                 CircularProgressIndicator(color = Rpcs.Accent, strokeWidth = 2.dp)
             }
 
-            patches.isEmpty() -> Text(
-                text = stringResource(R.string.patches_none_available),
-                color = Rpcs.TextSecondary,
-                fontSize = 12.sp
-            )
+            patches.isEmpty() -> SettingGroup {
+                Text(
+                    text = stringResource(R.string.patches_none_available),
+                    color = Rpcs.TextSecondary,
+                    fontSize = Dimens.ValueSize
+                )
+            }
 
             else -> {
-                Text(
-                    text = stringResource(R.string.patches_ingame_hint),
-                    color = Rpcs.TextDim,
-                    fontSize = 11.sp,
-                    lineHeight = 14.sp
-                )
+                SettingsHint(text = stringResource(R.string.patches_ingame_hint))
                 PatchGroupList(titleId = titleId, patches = patches)
             }
         }
+    }
     }
 }
 

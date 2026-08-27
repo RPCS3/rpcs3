@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import net.rpcs3.R
 import net.rpcs3.RPCS3
-import net.rpcs3.ui.components.SettingDropdown
+import net.rpcs3.ui.components.SettingInlineDropdown
 import net.rpcs3.ui.components.SettingSlider
 import net.rpcs3.ui.components.InfoRow
 import net.rpcs3.ui.components.SettingSwitch
@@ -98,13 +98,13 @@ fun SettingItem(
             var value by remember(path) { mutableStateOf(item.optString("value")) }
             val default = item.optString("default")
             val index = variants.indexOf(value).coerceAtLeast(0)
-            SettingDropdown(
+            SettingInlineDropdown(
                 label = label + if (value == default) "" else " *",
                 entries = variants,
                 selectedIndex = index,
                 modifier = modifier,
                 onSelected = { next ->
-                    val chosen = variants.getOrNull(next) ?: return@SettingDropdown
+                    val chosen = variants.getOrNull(next) ?: return@SettingInlineDropdown
                     if (commit(context, path, JSONObject.quote(chosen), titleId, label)) {
                         item.put("value", chosen)
                         value = chosen

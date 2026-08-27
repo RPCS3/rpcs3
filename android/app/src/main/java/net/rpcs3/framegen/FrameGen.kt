@@ -10,8 +10,6 @@ import net.rpcs3.RPCS3
 import org.json.JSONObject
 import java.io.File
 
-enum class FrameGenMode { Fixed, Adaptive }
-
 enum class FrameGenImportResult(val code: Int, val messageRes: Int) {
     Ok(0, R.string.framegen_import_ok),
     NotFound(1, R.string.framegen_import_not_found),
@@ -36,7 +34,11 @@ data class FrameGenState(
     val ready: Boolean = false,
     val unsupported: Boolean = false,
     val width: Int = 0,
-    val height: Int = 0
+    val height: Int = 0,
+    val flowWidth: Int = 0,
+    val flowHeight: Int = 0,
+    val guestWidth: Int = 0,
+    val guestHeight: Int = 0
 )
 
 object FrameGenPrefs {
@@ -59,15 +61,6 @@ object FrameGenPrefs {
         prefs.edit().putBoolean(KEY_ENABLED, value).apply()
     }
 
-    fun mode(prefs: SharedPreferences): FrameGenMode {
-        val ordinal = prefs.getInt(KEY_MODE, FrameGenMode.Fixed.ordinal)
-        return FrameGenMode.entries.getOrElse(ordinal) { FrameGenMode.Fixed }
-    }
-
-    fun setMode(prefs: SharedPreferences, value: FrameGenMode) {
-        prefs.edit().putInt(KEY_MODE, value.ordinal).apply()
-    }
-
     fun multiplier(prefs: SharedPreferences) =
         prefs.getInt(KEY_MULTIPLIER, 2).coerceIn(2, 4)
 
@@ -75,17 +68,32 @@ object FrameGenPrefs {
         prefs.edit().putInt(KEY_MULTIPLIER, value.coerceIn(2, 4)).apply()
     }
 
-    fun targetRate(prefs: SharedPreferences) = prefs.getInt(KEY_TARGET_RATE, 120)
-
-    fun setTargetRate(prefs: SharedPreferences, value: Int) {
-        prefs.edit().putInt(KEY_TARGET_RATE, value).apply()
+    fun targetRate(prefs: SharedPreferences): Int {
+        migrateMode(prefs)
+        return prefs.getInt(KEY_TARGET_RATE, 0).coerceAtLeast(0)
     }
 
-    fun flowScale(prefs: SharedPreferences) =
-        prefs.getInt(KEY_FLOW_SCALE, 100).coerceIn(25, 100)
+    fun setTargetRate(prefs: SharedPreferences, value: Int) {
+        prefs.edit().putInt(KEY_TARGET_RATE, value.coerceAtLeast(0)).apply()
+    }
 
-    fun setFlowScale(prefs: SharedPreferences, value: Int) {
-        prefs.edit().putInt(KEY_FLOW_SCALE, value.coerceIn(25, 100)).apply()
+    private fun migrateMode(prefs: SharedPreferences) {
+        if (!prefs.contains(KEY_MODE)) {
+            return
+        }
+
+        val wasAdaptive = prefs.getInt(KEY_MODE, 0) == 1
+        prefs.edit()
+            .putInt(KEY_TARGET_RATE, if (wasAdaptive) prefs.getInt(KEY_TARGET_RATE, 120) else 0)
+            .remove(KEY_MODE)
+            .apply()
+    }
+
+    fun preset(prefs: SharedPreferences): FrameGenPreset =
+        FrameGenPreset.fromFlowScale(prefs.getInt(KEY_FLOW_SCALE, FrameGenPreset.Default.flowScale))
+
+    fun setPreset(prefs: SharedPreferences, value: FrameGenPreset) {
+        prefs.edit().putInt(KEY_FLOW_SCALE, value.flowScale).apply()
     }
 
     fun sourceName(prefs: SharedPreferences): String = prefs.getString(KEY_SOURCE_NAME, "").orEmpty()
@@ -127,7 +135,11 @@ object FrameGen {
             ready = raw?.optBoolean("ready", false) == true,
             unsupported = raw?.optBoolean("unsupported", false) == true,
             width = raw?.optInt("width", 0) ?: 0,
-            height = raw?.optInt("height", 0) ?: 0
+            height = raw?.optInt("height", 0) ?: 0,
+            flowWidth = raw?.optInt("flowWidth", 0) ?: 0,
+            flowHeight = raw?.optInt("flowHeight", 0) ?: 0,
+            guestWidth = raw?.optInt("guestWidth", 0) ?: 0,
+            guestHeight = raw?.optInt("guestHeight", 0) ?: 0
         )
 
         state.value = result
@@ -136,14 +148,19 @@ object FrameGen {
 
     fun push(context: Context) {
         val prefs = FrameGenPrefs.of(context)
-        val adaptive = FrameGenPrefs.mode(prefs) == FrameGenMode.Adaptive
 
         RPCS3.instance.frameGenConfigure(
             FrameGenPrefs.isEnabled(prefs) && state.value.imported,
             FrameGenPrefs.multiplier(prefs),
-            if (adaptive) FrameGenPrefs.targetRate(prefs) else 0,
-            FrameGenPrefs.flowScale(prefs)
+            FrameGenPrefs.targetRate(prefs),
+            FrameGenPrefs.preset(prefs).flowScale
         )
+    }
+
+    fun pushRefreshRate(hz: Float) {
+        if (hz > 0f) {
+            RPCS3.instance.frameGenSetRefreshRate(hz)
+        }
     }
 
     fun sync(context: Context) {

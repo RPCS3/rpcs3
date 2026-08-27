@@ -248,6 +248,7 @@
     <string name="settings_not_saved_message">PS3Native could not write %1$s. The change will be lost when you close the app.</string>
 
     <string name="controls_section">On-screen controls</string>
+    <string name="controls_section_layout">Button layout</string>
     <string name="controls_button_transparency">Button transparency</string>
     <string name="controls_applies_to">Applies to</string>
     <string name="controls_applies_to_value">All on-screen buttons and sticks</string>
@@ -334,7 +335,6 @@
     <string name="drivers_install_already_installed">Selected driver is already installed</string>
 
     <string name="patches_title">Patches · %1$s</string>
-    <string name="patches_group_ungrouped">Ungrouped</string>
     <string name="patches_tab_available">Available</string>
     <string name="patches_tab_files">Patch files</string>
     <string name="patches_section_this_game">This game</string>
@@ -357,14 +357,14 @@
     <string name="patches_import_failed_message">Added %1$d. These were not valid patch files:\n%2$s</string>
     <string name="patches_detail_author">by %1$s</string>
     <string name="patches_detail_app_version">app %1$s</string>
-    <string name="patches_empty_title">No patches for this title</string>
-    <string name="patches_empty_message">Place patch .yml files in the patches folder and they will appear here.</string>
     <string name="patches_state_on">Enabled</string>
     <string name="patches_all_title">Patches</string>
     <string name="patches_all_tab">All patches</string>
     <string name="patches_all_summary">%1$d patches across %2$d games</string>
     <string name="patches_all_hint">Read-only catalogue of everything installed. Open a game\'s Patches screen to turn any of these on.</string>
     <string name="patches_ingame_hint">Tap a patch to enable it. Changes apply the next time the game boots.</string>
+    <string name="patches_section_source">Patch set</string>
+    <string name="patches_section_available">Available patches</string>
     <string name="patches_update_title">Patch database</string>
     <string name="patches_update_available">Update Available</string>
     <string name="patches_update_available_detail">A newer patch set is ready to install (%1$d KB).</string>
@@ -408,7 +408,49 @@
     <string name="ingame_resume">Resume</string>
     <string name="ingame_pause">Pause</string>
     <string name="ingame_exit">Exit Game</string>
-    <string name="ingame_settings">Settings</string>
+    <string name="ingame_menu_title">Menu</string>
+
+    <string name="settings_category_hud">HUD</string>
+    <string name="settings_category_frame_gen">Frame Gen</string>
+    <string name="settings_category_patches">Patches</string>
+
+    <string name="hud_section_overlay">Overlay</string>
+    <string name="hud_section_readouts">Readouts</string>
+    <string name="hud_section_layout">Layout</string>
+    <string name="hud_show">Show HUD</string>
+    <string name="hud_show_hint">Overlay performance readouts on the game</string>
+    <string name="hud_frametime_numeric">Frame time as a number</string>
+    <string name="hud_frametime_numeric_on">Showing milliseconds as text</string>
+    <string name="hud_frametime_numeric_off">Showing the frame time graph</string>
+    <string name="hud_text_size">Text size</string>
+    <string name="hud_gesture_hint">Tap the HUD to cycle layouts, drag to move it, hold to snap it to an edge.</string>
+    <string name="hud_snap_position">Snap position</string>
+    <string name="hud_renderer_unknown">API</string>
+    <string name="hud_value_unavailable">N/A</string>
+
+    <string name="hud_element_renderer">Renderer</string>
+    <string name="hud_element_gpu">GPU load</string>
+    <string name="hud_element_cpu">CPU load</string>
+    <string name="hud_element_ram">Memory</string>
+    <string name="hud_element_battery">Battery</string>
+    <string name="hud_element_power">Power draw</string>
+    <string name="hud_element_temperature">Temperature</string>
+    <string name="hud_element_fps">Frame rate</string>
+    <string name="hud_element_frametime">Frame time</string>
+
+    <string name="hud_mode_row">Row</string>
+    <string name="hud_mode_stack">Stack</string>
+    <string name="hud_mode_plain">plain</string>
+    <string name="hud_mode_shaded">shaded</string>
+
+    <string name="hud_anchor_top_left">Top left</string>
+    <string name="hud_anchor_top_centre">Top centre</string>
+    <string name="hud_anchor_top_right">Top right</string>
+    <string name="hud_anchor_left">Left</string>
+    <string name="hud_anchor_right">Right</string>
+    <string name="hud_anchor_bottom_left">Bottom left</string>
+    <string name="hud_anchor_bottom_centre">Bottom centre</string>
+    <string name="hud_anchor_bottom_right">Bottom right</string>
 
     <string name="boot_failed_title">Boot Failed</string>
     <string name="boot_failed_open_image">Could not open the selected disc image</string>
@@ -435,13 +477,18 @@
     <string name="framegen_title">Frame Gen</string>
     <string name="framegen_tab">Frame generation</string>
 
-    <string name="framegen_source_title">Lossless Scaling shaders</string>
+    <string name="framegen_section_source">Shader source</string>
+    <string name="framegen_section_generation">Generation</string>
+    <string name="framegen_section_status">Status</string>
+    <string name="framegen_section_manage">Shader DLL</string>
+    <string name="framegen_label_multiplier">Multiplier</string>
+    <string name="framegen_label_target">Target rate</string>
     <string name="framegen_source_missing">No shader source imported yet. Pick your own copy of Lossless.dll to enable frame generation.</string>
     <string name="framegen_source_importing">Reading the shader chain out of the file…</string>
     <string name="framegen_source_loaded">Loaded — %1$d shaders (%2$s)</string>
     <string name="framegen_source_loaded_named">Loaded from %1$s — %2$d shaders (%3$s)</string>
-    <string name="framegen_source_select">Select Lossless.dll</string>
-    <string name="framegen_source_replace">Update Lossless.dll</string>
+    <string name="framegen_source_select">Import DLL</string>
+    <string name="framegen_source_replace">Update DLL</string>
     <string name="framegen_source_remove">Remove</string>
     <string name="framegen_source_hint">The shaders are translated once and cached. Pick the file again whenever you update Lossless Scaling.</string>
 
@@ -457,25 +504,28 @@
     <string name="framegen_enable">Frame generation</string>
     <string name="framegen_enable_hint">Interpolates extra frames between rendered ones</string>
     <string name="framegen_enable_blocked">Import Lossless.dll first</string>
-
-    <string name="framegen_section_pacing">PACING</string>
-    <string name="framegen_mode_fixed">Fixed</string>
-    <string name="framegen_mode_fixed_detail">set multiplier</string>
-    <string name="framegen_mode_adaptive">Adaptive</string>
-    <string name="framegen_mode_adaptive_detail">hold a rate</string>
-
-    <string name="framegen_section_multiplier">MULTIPLIER</string>
     <string name="framegen_multiplier_value">%1$d×</string>
     <string name="framegen_multiplier_detail">+%1$d frames</string>
-
-    <string name="framegen_section_target">TARGET RATE</string>
     <string name="framegen_target_value">%1$d fps</string>
     <string name="framegen_target_detail">up to 4×</string>
 
-    <string name="framegen_section_flow">FLOW SCALE</string>
-    <string name="framegen_flow_value">Motion search resolution  %1$d%%</string>
-    <string name="framegen_flow_hint">Lower values cost less GPU time and soften fast motion.</string>
-
+    <string name="framegen_label_preset">Quality preset</string>
+    <string name="framegen_target_off">Off</string>
+    <string name="framegen_target_off_detail">use multiplier</string>
+    <string name="framegen_target_note">The multiplier is chosen each frame to hold the rate you picked.</string>
+    <string name="framegen_preset_ultra_performance">Ultra Performance</string>
+    <string name="framegen_preset_performance">Performance</string>
+    <string name="framegen_preset_balanced">Balanced</string>
+    <string name="framegen_preset_quality">Quality</string>
+    <string name="framegen_preset_ultra_performance_short">Ultra</string>
+    <string name="framegen_preset_performance_short">Perf</string>
+    <string name="framegen_preset_balanced_short">Balanced</string>
+    <string name="framegen_preset_quality_short">Quality</string>
+    <string name="framegen_preset_ultra_performance_note" formatted="false">Motion estimated at 40% resolution. Around 40% of Quality\'s GPU cost. Fine detail softens during fast motion.</string>
+    <string name="framegen_preset_performance_note" formatted="false">Motion estimated at 50% resolution. Around 46% of Quality\'s GPU cost, with almost no visible loss.</string>
+    <string name="framegen_preset_balanced_note" formatted="false">Motion estimated at 70% resolution. Around 61% of Quality\'s GPU cost. Recommended for handhelds.</string>
+    <string name="framegen_preset_quality_note" formatted="false">Motion estimated at full resolution. Highest cost; use it only when the game has GPU headroom to spare.</string>
+    <string name="framegen_runtime_active_motion">Running at %1$d \u00d7 %2$d. The game outputs %3$d \u00d7 %4$d, so motion is searched at %5$d \u00d7 %6$d.</string>
     <string name="framegen_runtime_active">Running at %1$d × %2$d.</string>
     <string name="framegen_runtime_idle">Starts once a game is running.</string>
     <string name="framegen_runtime_unsupported">This GPU rejected the frame generation pipelines, so it stays off.</string>

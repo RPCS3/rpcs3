@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <array>
 #include <atomic>
+#include <cmath>
 #include <mutex>
 
 namespace vk
@@ -23,9 +24,18 @@ namespace vk
 		std::atomic<u64> g_frame_generation_presented{0};
 		std::atomic<u64> g_frame_generation_generated{0};
 		std::atomic<u64> g_frame_generation_revision{0};
+		std::atomic<s32> g_frame_generation_refresh_mhz{0};
 
 		constexpr u64 required_history_frames = 2;
 		constexpr u32 recurrence_frames = 2;
+		constexpr u64 telemetry_interval = 120;
+
+		constexpr u64 acquire_timeout_min_ns = 3'000'000;
+		constexpr u64 acquire_timeout_max_ns = 12'000'000;
+
+		constexpr float flow_scale_min = 0.25f;
+		constexpr float flow_scale_max = 1.f;
+		constexpr float flow_scale_steps = 20.f;
 
 		VkImageMemoryBarrier make_barrier(VkImage image, VkAccessFlags src_access, VkAccessFlags dst_access,
 			VkImageLayout old_layout, VkImageLayout new_layout)
@@ -83,6 +93,31 @@ namespace vk
 	{
 		std::lock_guard lock(g_frame_generation_lock);
 		return g_frame_generation_settings;
+	}
+
+	void set_frame_generation_refresh_rate(float hz)
+	{
+		const s32 mhz = hz > 0.f ? static_cast<s32>(hz * 1000.f + 0.5f) : 0;
+		g_frame_generation_refresh_mhz.store(mhz, std::memory_order_relaxed);
+	}
+
+	float frame_generation_refresh_rate()
+	{
+		const s32 mhz = g_frame_generation_refresh_mhz.load(std::memory_order_relaxed);
+		return mhz > 0 ? static_cast<float>(mhz) / 1000.f : 0.f;
+	}
+
+	u64 frame_generation_acquire_timeout()
+	{
+		const float refresh = frame_generation_refresh_rate();
+
+		if (refresh <= 1.f)
+		{
+			return acquire_timeout_min_ns;
+		}
+
+		const u64 period = static_cast<u64>(1'000'000'000.f / refresh);
+		return std::clamp(period, acquire_timeout_min_ns, acquire_timeout_max_ns);
 	}
 
 	u32 frame_generation_reserved_images()
@@ -144,14 +179,31 @@ namespace vk
 		lsfg::LsfgPlan plan{};
 
 		VkExtent2D built_extent{};
+		VkExtent2D peak_guest_extent{};
 		VkFormat built_format = VK_FORMAT_UNDEFINED;
 		float built_flow_scale = 0.f;
 
 		u64 frame_count = 0;
 		u64 last_frame = 0;
+		u64 plan_calls = 0;
 		usz last_generations = 0;
 		u32 warm_streak = 0;
+		bool warm = false;
 		bool generating = false;
+
+		float effective_flow_scale(const frame_generation_settings& settings, u32 output_width) const
+		{
+			const float preset = std::clamp(settings.flow_scale_percent / 100.f, flow_scale_min, flow_scale_max);
+
+			if (!peak_guest_extent.width || !output_width)
+			{
+				return preset;
+			}
+
+			const float ratio = static_cast<float>(peak_guest_extent.width) / static_cast<float>(output_width);
+			const float stepped = std::ceil(ratio * flow_scale_steps) / flow_scale_steps;
+			return std::clamp(std::min(stepped, preset), flow_scale_min, flow_scale_max);
+		}
 	};
 
 	frame_generator::frame_generator(const vk::render_device& dev)
@@ -238,6 +290,17 @@ namespace vk
 		return m_present_semaphores[image_index];
 	}
 
+	void frame_generator::set_guest_extent(u32 width, u32 height)
+	{
+		if (!m_impl || !width || !height)
+		{
+			return;
+		}
+
+		m_impl->peak_guest_extent.width = std::max(m_impl->peak_guest_extent.width, width);
+		m_impl->peak_guest_extent.height = std::max(m_impl->peak_guest_extent.height, height);
+	}
+
 	bool frame_generator::prepare(u32 width, u32 height)
 	{
 		constexpr VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
@@ -248,11 +311,12 @@ namespace vk
 		}
 
 		const auto settings = get_frame_generation_settings();
-		const float flow_scale = std::clamp(settings.flow_scale_percent / 100.f, 0.25f, 1.f);
+		const float flow_scale = m_impl->effective_flow_scale(settings, width);
 
 		lsfg::LsfgPacerConfig pacer_config;
 		pacer_config.multiplier = settings.multiplier;
 		pacer_config.target_rate = settings.target_rate;
+		pacer_config.refresh_rate = frame_generation_refresh_rate();
 		m_impl->pacer.SetConfig(pacer_config);
 
 		if (m_impl->chain &&
@@ -301,12 +365,21 @@ namespace vk
 		m_impl->built_format = format;
 		m_impl->built_flow_scale = flow_scale;
 		m_impl->frame_count = 0;
+		m_impl->plan_calls = 0;
 		m_impl->warm_streak = 0;
+		m_impl->warm = false;
 		m_impl->generating = false;
 		m_impl->pacer.Reset();
 
-		set_frame_generation_status({ .ready = true, .unsupported = false, .width = width, .height = height });
-		rsx_log.notice("Frame generation: chain built at %ux%u, flow scale %.2f", width, height, flow_scale);
+		const u32 flow_width = static_cast<u32>(width * flow_scale);
+		const u32 flow_height = static_cast<u32>(height * flow_scale);
+
+		set_frame_generation_status({ .ready = true, .unsupported = false, .width = width, .height = height,
+			.flow_width = flow_width, .flow_height = flow_height,
+			.guest_width = m_impl->peak_guest_extent.width, .guest_height = m_impl->peak_guest_extent.height });
+		rsx_log.notice("Frame generation: chain built at %ux%u, motion at %ux%u scale %.2f (preset %.2f, game outputs %ux%u)",
+			width, height, flow_width, flow_height, flow_scale, settings.flow_scale_percent / 100.f,
+			m_impl->peak_guest_extent.width, m_impl->peak_guest_extent.height);
 		return true;
 	}
 
@@ -317,11 +390,36 @@ namespace vk
 			return 0;
 		}
 
-		m_impl->plan = m_impl->pacer.Plan(std::min<usz>(capacity, max_generated_frames));
-		return static_cast<u32>(m_impl->plan.generations);
+		const float refresh_rate = frame_generation_refresh_rate();
+
+		if (lsfg::LsfgPacerConfig config = m_impl->pacer.Config(); config.refresh_rate != refresh_rate)
+		{
+			config.refresh_rate = refresh_rate;
+			m_impl->pacer.SetConfig(config);
+		}
+
+		m_impl->plan = m_impl->pacer.Plan(std::min<usz>(capacity, max_generated_frames), m_impl->frame_count);
+
+		m_impl->warm = m_impl->plan.warm && (m_impl->frame_count + 1) >= required_history_frames;
+		m_impl->warm_streak = m_impl->warm ? m_impl->warm_streak + 1 : 0;
+		m_impl->generating = m_impl->warm && m_impl->warm_streak >= recurrence_frames && m_impl->plan.generations > 0;
+
+		if ((m_impl->plan_calls++ % telemetry_interval) == 0)
+		{
+			const lsfg::LsfgPacerStats stats = m_impl->pacer.Stats();
+			const float wanted = stats.source_rate * static_cast<float>(m_impl->plan.generations + 1);
+			rsx_log.notice("Frame generation: gen=%zu max=%zu cap=%u guest=%.1f loop=%.1f refresh=%.1f target=%.0f "
+				"slots=%.2f needs=%.1fHz%s%s",
+				m_impl->plan.generations, m_impl->pacer.MaxGenerations(), capacity, stats.source_rate, stats.loop_rate,
+				stats.refresh_rate, stats.target_rate, stats.slots, wanted,
+				(stats.refresh_rate > 0.f && wanted > stats.refresh_rate + 1.f) ? " PANEL-BOUND" : "",
+				stats.rates_settled ? (m_impl->warm ? "" : " cold") : " sampling");
+		}
+
+		return m_impl->generating ? static_cast<u32>(m_impl->plan.generations) : 0;
 	}
 
-	void frame_generator::process(VkCommandBuffer cmd, VkImage source, VkImageLayout source_layout, u32 width, u32 height)
+	void frame_generator::process(VkCommandBuffer cmd, VkImage source, VkImageLayout source_layout, u32 width, u32 height, u32 generations)
 	{
 		if (!is_usable() || !m_impl->chain || !m_impl->chain->Valid())
 		{
@@ -330,11 +428,7 @@ namespace vk
 
 		const u64 count = m_impl->frame_count++;
 		m_impl->last_frame = count;
-		m_impl->last_generations = m_impl->plan.generations;
-
-		const bool warm = m_impl->plan.warm && (count + 1) >= required_history_frames;
-		m_impl->warm_streak = warm ? m_impl->warm_streak + 1 : 0;
-		m_impl->generating = warm && m_impl->warm_streak >= recurrence_frames && m_impl->plan.generations > 0;
+		m_impl->last_generations = generations;
 
 		auto& destination = m_impl->chain->Input(count);
 
@@ -372,25 +466,15 @@ namespace vk
 
 		destination.SetLayout(VK_IMAGE_LAYOUT_GENERAL);
 
-		if (warm)
+		if (m_impl->warm)
 		{
 			m_impl->chain->DispatchShared(cmd, count);
 		}
 	}
 
-	u32 frame_generator::generated_count() const
-	{
-		if (!m_impl || !m_impl->generating)
-		{
-			return 0;
-		}
-
-		return static_cast<u32>(m_impl->last_generations);
-	}
-
 	void frame_generator::emit(VkCommandBuffer cmd, u32 index, VkImage target, VkImageLayout present_layout, u32 width, u32 height)
 	{
-		if (!is_usable() || !m_impl->chain || !m_impl->chain->Valid() || index >= max_generated_frames)
+		if (!is_usable() || !m_impl->chain || !m_impl->chain->Valid() || index >= m_impl->last_generations)
 		{
 			return;
 		}
@@ -431,7 +515,9 @@ namespace vk
 		}
 
 		m_impl->pacer.Reset();
+		m_impl->peak_guest_extent = VkExtent2D{};
 		m_impl->warm_streak = 0;
+		m_impl->warm = false;
 		m_impl->generating = false;
 		m_impl->plan = {};
 

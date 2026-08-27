@@ -1929,12 +1929,14 @@ extern "C" JNIEXPORT jstring JNICALL Java_net_rpcs3_RPCS3_frameGenState(
 
   return wrap(env, fmt::format(
                        R"({"imported":%s,"status":%d,"variant":"%s","modules":%u,)"
-                       R"("sourceSize":%u,"ready":%s,"unsupported":%s,"width":%u,"height":%u})",
+                       R"("sourceSize":%u,"ready":%s,"unsupported":%s,"width":%u,"height":%u,)"
+                       R"("flowWidth":%u,"flowHeight":%u,"guestWidth":%u,"guestHeight":%u})",
                        imported ? "true" : "false", static_cast<int>(status),
                        lsfg_variant_name(info.variant), info.module_count,
                        info.source_size, runtime.ready ? "true" : "false",
                        runtime.unsupported ? "true" : "false", runtime.width,
-                       runtime.height));
+                       runtime.height, runtime.flow_width, runtime.flow_height,
+                       runtime.guest_width, runtime.guest_height));
 }
 
 extern "C" JNIEXPORT void JNICALL Java_net_rpcs3_RPCS3_frameGenConfigure(
@@ -1946,6 +1948,11 @@ extern "C" JNIEXPORT void JNICALL Java_net_rpcs3_RPCS3_frameGenConfigure(
   settings.target_rate = static_cast<u32>(std::max<jint>(targetRate, 0));
   settings.flow_scale_percent = static_cast<u32>(std::max<jint>(flowScalePercent, 25));
   vk::set_frame_generation_settings(settings);
+}
+
+extern "C" JNIEXPORT void JNICALL Java_net_rpcs3_RPCS3_frameGenSetRefreshRate(
+    JNIEnv *, jobject, jfloat hz) {
+  vk::set_frame_generation_refresh_rate(static_cast<float>(hz));
 }
 
 extern "C" JNIEXPORT jboolean JNICALL Java_net_rpcs3_RPCS3_frameGenForget(

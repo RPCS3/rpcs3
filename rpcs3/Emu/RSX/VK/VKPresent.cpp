@@ -55,7 +55,8 @@ void VKGSRender::discard_generated_frames()
 	m_generated_signal_semaphores.clear();
 }
 
-void VKGSRender::run_frame_generation(VkImage target_image, VkImageLayout target_layout, VkImageLayout present_layout)
+void VKGSRender::run_frame_generation(VkImage target_image, VkImageLayout target_layout, VkImageLayout present_layout,
+	u32 guest_width, u32 guest_height)
 {
 	discard_generated_frames();
 
@@ -84,22 +85,22 @@ void VKGSRender::run_frame_generation(VkImage target_image, VkImageLayout target
 	const u32 width = m_swapchain_dims.width;
 	const u32 height = m_swapchain_dims.height;
 
+	m_frame_generator->set_guest_extent(guest_width, guest_height);
+
 	if (!m_frame_generator->prepare(width, height))
 	{
 		return;
 	}
 
-	m_frame_generator->plan(m_reserved_swap_images);
-	m_frame_generator->process(*m_current_command_buffer, target_image, target_layout, width, height);
-
-	const u32 wanted = std::min(m_frame_generator->generated_count(), m_reserved_swap_images);
+	const u32 wanted = std::min(m_frame_generator->plan(m_reserved_swap_images), m_reserved_swap_images);
+	const u64 acquire_timeout = vk::frame_generation_acquire_timeout();
 
 	for (u32 i = 0; i < wanted; ++i)
 	{
 		const VkSemaphore acquire_semaphore = m_frame_generator->next_acquire_semaphore();
 		u32 image_index = umax;
 
-		const VkResult status = m_swapchain->acquire_next_swapchain_image(acquire_semaphore, 8000000ull, &image_index);
+		const VkResult status = m_swapchain->acquire_next_swapchain_image(acquire_semaphore, acquire_timeout, &image_index);
 
 		if (status != VK_SUCCESS && status != VK_SUBOPTIMAL_KHR)
 		{
@@ -110,6 +111,9 @@ void VKGSRender::run_frame_generation(VkImage target_image, VkImageLayout target
 		m_generated_wait_semaphores.push_back(acquire_semaphore);
 		m_generated_signal_semaphores.push_back(m_frame_generator->present_semaphore(image_index));
 	}
+
+	m_frame_generator->process(*m_current_command_buffer, target_image, target_layout, width, height,
+		::size32(m_generated_present_images));
 
 	for (usz i = 0; i < m_generated_present_images.size(); ++i)
 	{
@@ -129,10 +133,23 @@ void VKGSRender::present_generated_frames()
 		if (status == VK_SUCCESS || status == VK_SUBOPTIMAL_KHR)
 		{
 			vk::frame_generation_count_presented(1);
+			continue;
 		}
-		else
+
+		if (status == VK_ERROR_OUT_OF_DATE_KHR || status == VK_ERROR_SURFACE_LOST_KHR)
 		{
-			rsx_log.warning("Frame generation: presenting an interpolated frame returned %d", static_cast<s32>(status));
+			swapchain_unavailable = true;
+
+			if (status == VK_ERROR_SURFACE_LOST_KHR)
+			{
+				surface_lost = true;
+			}
+		}
+
+		if ((m_generated_present_failures++ % 120) == 0)
+		{
+			rsx_log.warning("Frame generation: presenting an interpolated frame returned %d (failures=%llu)",
+				static_cast<s32>(status), m_generated_present_failures);
 		}
 	}
 
@@ -704,6 +721,9 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			buffer_pitch = buffer_width * 4;
 	}
 
+	const u32 guest_width = buffer_width;
+	const u32 guest_height = buffer_height;
+
 	// Scan memory for required data. This is done early to optimize waiting for the driver image acquire below.
 	vk::viewable_image* image_to_flip = nullptr;
 	vk::viewable_image* image_to_flip2 = nullptr;
@@ -1144,7 +1164,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	}
 
 #ifdef ANDROID
-	run_frame_generation(target_image, target_layout, present_layout);
+	run_frame_generation(target_image, target_layout, present_layout, guest_width, guest_height);
 #endif
 
 	if (target_layout != present_layout)

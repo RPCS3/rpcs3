@@ -26,6 +26,11 @@ public:
 
     void Dispatch(VkCommandBuffer cmdbuf, uint64_t frame_count, size_t slot);
 
+    void PushStepBarriers(LsfgBarriers& barriers, uint64_t frame_count, size_t step);
+
+    void DispatchStep(VkCommandBuffer cmdbuf, uint64_t frame_count, size_t slot,
+                      size_t step);
+
     [[nodiscard]] LsfgImage& Output() {
         return out_image;
     }

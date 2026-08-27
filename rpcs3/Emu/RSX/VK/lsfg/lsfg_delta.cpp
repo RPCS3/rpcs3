@@ -207,88 +207,82 @@ LsfgDelta::LsfgDelta(const Device& device, const LsfgShaders& shaders, LsfgResou
     allocated = true;
 }
 
-void LsfgDelta::Dispatch(VkCommandBuffer cmdbuf, uint64_t frame_count, size_t slot) {
-    const Generation& pass = generations[slot];
-
-    const VkExtent2D extent = temp1[0].Extent();
-    const uint32_t groups_x = GroupCount(extent.width);
-    const uint32_t groups_y = GroupCount(extent.height);
-
+void LsfgDelta::PushStepBarriers(LsfgBarriers& barriers, uint64_t frame_count, size_t step) {
     const size_t history = frame_count % LSFG_HISTORY_SLOTS;
     const size_t previous_history = (frame_count + 2) % LSFG_HISTORY_SLOTS;
 
-    LsfgBarriers(cmdbuf)
-        .WriteToReadAll((*inputs)[previous_history])
-        .WriteToReadAll((*inputs)[history])
-        .WriteToRead(previous_gamma)
-        .ReadToWriteAll(temp1)
-        .Build();
-    passes[0].Bind(cmdbuf, pass.first_descriptor_sets[history]);
-    VK_GET_SYMBOL(vkCmdDispatch)(cmdbuf, groups_x, groups_y, 1);
+    switch (step) {
+    case 0:
+        barriers.WriteToReadAll((*inputs)[previous_history])
+            .WriteToReadAll((*inputs)[history])
+            .WriteToRead(previous_gamma)
+            .ReadToWriteAll(temp1);
+        break;
+    case 1:
+        barriers.WriteToReadAll(temp1).ReadToWriteAll(temp2);
+        break;
+    case 2:
+        barriers.WriteToReadAll(temp2).ReadToWriteAll(temp1);
+        break;
+    case 3:
+        barriers.WriteToReadAll(temp1).ReadToWriteAll(temp2);
+        break;
+    case 4:
+        barriers.WriteToReadAll(temp2)
+            .WriteToRead(previous_gamma)
+            .WriteToRead(*flow_input)
+            .ReadToWrite(out_image1);
+        break;
+    case 5:
+        barriers.WriteToReadAll((*inputs)[previous_history])
+            .WriteToReadAll((*inputs)[history])
+            .WriteToRead(previous_gamma)
+            .WriteToRead(previous1)
+            .ReadToWriteAll(temp2);
+        break;
+    case 6:
+        barriers.WriteToReadAll(temp2).ReadToWrite(temp1[0]).ReadToWrite(temp1[1]);
+        break;
+    case 7:
+        barriers.WriteToRead(temp1[0]).WriteToRead(temp1[1]).ReadToWriteAll(temp2);
+        break;
+    case 8:
+        barriers.WriteToReadAll(temp2).ReadToWrite(temp1[0]).ReadToWrite(temp1[1]);
+        break;
+    default:
+        barriers.WriteToRead(temp1[0])
+            .WriteToRead(temp1[1])
+            .WriteToRead(previous2)
+            .ReadToWrite(out_image2);
+        break;
+    }
+}
 
-    LsfgBarriers(cmdbuf).WriteToReadAll(temp1).ReadToWriteAll(temp2).Build();
-    passes[1].Bind(cmdbuf, pass.descriptor_sets[0]);
-    VK_GET_SYMBOL(vkCmdDispatch)(cmdbuf, groups_x, groups_y, 1);
+void LsfgDelta::DispatchStep(VkCommandBuffer cmdbuf, uint64_t frame_count, size_t slot,
+                             size_t step) {
+    const Generation& pass = generations[slot];
+    const VkExtent2D extent = temp1[0].Extent();
+    const size_t history = frame_count % LSFG_HISTORY_SLOTS;
 
-    LsfgBarriers(cmdbuf).WriteToReadAll(temp2).ReadToWriteAll(temp1).Build();
-    passes[2].Bind(cmdbuf, pass.descriptor_sets[1]);
-    VK_GET_SYMBOL(vkCmdDispatch)(cmdbuf, groups_x, groups_y, 1);
+    if (step == 0) {
+        passes[0].Bind(cmdbuf, pass.first_descriptor_sets[history]);
+    } else if (step == 5) {
+        passes[5].Bind(cmdbuf, pass.sixth_descriptor_sets[history]);
+    } else if (step < 5) {
+        passes[step].Bind(cmdbuf, pass.descriptor_sets[step - 1]);
+    } else {
+        passes[step].Bind(cmdbuf, pass.descriptor_sets[step - 2]);
+    }
+    VK_GET_SYMBOL(vkCmdDispatch)(cmdbuf, GroupCount(extent.width), GroupCount(extent.height), 1);
+}
 
-    LsfgBarriers(cmdbuf).WriteToReadAll(temp1).ReadToWriteAll(temp2).Build();
-    passes[3].Bind(cmdbuf, pass.descriptor_sets[2]);
-    VK_GET_SYMBOL(vkCmdDispatch)(cmdbuf, groups_x, groups_y, 1);
-
-    LsfgBarriers(cmdbuf)
-        .WriteToReadAll(temp2)
-        .WriteToRead(previous_gamma)
-        .WriteToRead(*flow_input)
-        .ReadToWrite(out_image1)
-        .Build();
-    passes[4].Bind(cmdbuf, pass.descriptor_sets[3]);
-    VK_GET_SYMBOL(vkCmdDispatch)(cmdbuf, groups_x, groups_y, 1);
-
-    LsfgBarriers(cmdbuf)
-        .WriteToReadAll((*inputs)[previous_history])
-        .WriteToReadAll((*inputs)[history])
-        .WriteToRead(previous_gamma)
-        .WriteToRead(previous1)
-        .ReadToWriteAll(temp2)
-        .Build();
-    passes[5].Bind(cmdbuf, pass.sixth_descriptor_sets[history]);
-    VK_GET_SYMBOL(vkCmdDispatch)(cmdbuf, groups_x, groups_y, 1);
-
-    LsfgBarriers(cmdbuf)
-        .WriteToReadAll(temp2)
-        .ReadToWrite(temp1[0])
-        .ReadToWrite(temp1[1])
-        .Build();
-    passes[6].Bind(cmdbuf, pass.descriptor_sets[4]);
-    VK_GET_SYMBOL(vkCmdDispatch)(cmdbuf, groups_x, groups_y, 1);
-
-    LsfgBarriers(cmdbuf)
-        .WriteToRead(temp1[0])
-        .WriteToRead(temp1[1])
-        .ReadToWriteAll(temp2)
-        .Build();
-    passes[7].Bind(cmdbuf, pass.descriptor_sets[5]);
-    VK_GET_SYMBOL(vkCmdDispatch)(cmdbuf, groups_x, groups_y, 1);
-
-    LsfgBarriers(cmdbuf)
-        .WriteToReadAll(temp2)
-        .ReadToWrite(temp1[0])
-        .ReadToWrite(temp1[1])
-        .Build();
-    passes[8].Bind(cmdbuf, pass.descriptor_sets[6]);
-    VK_GET_SYMBOL(vkCmdDispatch)(cmdbuf, groups_x, groups_y, 1);
-
-    LsfgBarriers(cmdbuf)
-        .WriteToRead(temp1[0])
-        .WriteToRead(temp1[1])
-        .WriteToRead(previous2)
-        .ReadToWrite(out_image2)
-        .Build();
-    passes[9].Bind(cmdbuf, pass.descriptor_sets[7]);
-    VK_GET_SYMBOL(vkCmdDispatch)(cmdbuf, groups_x, groups_y, 1);
+void LsfgDelta::Dispatch(VkCommandBuffer cmdbuf, uint64_t frame_count, size_t slot) {
+    for (size_t step = 0; step < LSFG_DELTA_STAGES; ++step) {
+        LsfgBarriers barriers(cmdbuf);
+        PushStepBarriers(barriers, frame_count, step);
+        barriers.Build();
+        DispatchStep(cmdbuf, frame_count, slot, step);
+    }
 }
 
 }

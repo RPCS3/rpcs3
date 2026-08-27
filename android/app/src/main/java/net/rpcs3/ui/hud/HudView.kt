@@ -23,13 +23,13 @@ private const val BACKDROP_COLOR = 0xA6000000.toInt()
 
 private const val COLOR_FPS = 0xFF76FF03.toInt()
 private const val COLOR_FPS_GENERATED = 0xFF00E5FF.toInt()
-private const val COLOR_FRAMETIME = 0xFFB2FF59.toInt()
-private const val COLOR_RENDERER = 0xFF90A4AE.toInt()
+private const val COLOR_FRAMETIME = COLOR_FPS
+private const val COLOR_RENDERER = 0xFFFFEA00.toInt()
 private const val COLOR_GPU = 0xFFE040FB.toInt()
 private const val COLOR_CPU = 0xFFFF8200.toInt()
 private const val COLOR_RAM = 0xFF26C6DA.toInt()
 private const val COLOR_BATTERY = 0xFFE03A94.toInt()
-private const val COLOR_POWER = 0xFF00BCD4.toInt()
+private const val COLOR_POWER = COLOR_BATTERY
 private const val COLOR_TEMP = 0xFFE53935.toInt()
 private const val COLOR_TEMP_WARM = 0xFFFFC107.toInt()
 private const val COLOR_TEMP_HOT = 0xFFFF1744.toInt()
@@ -132,7 +132,12 @@ class HudView @JvmOverloads constructor(
             if (element == HudElement.Frametime) {
                 val view = FrametimeGraphView(context, COLOR_FRAMETIME)
                 graph = view
-                addView(view, LayoutParams(dp(50f).toInt(), dp(14f).toInt()))
+                addView(
+                    view,
+                    LayoutParams(dp(50f).toInt(), dp(14f).toInt()).apply {
+                        leftMargin = dp(4f).toInt()
+                    }
+                )
             }
         }
 
@@ -258,7 +263,7 @@ class HudView @JvmOverloads constructor(
                 return@forEachIndexed
             }
 
-            if (previousVisibleIndex >= 0) {
+            if (previousVisibleIndex >= 0 && element != HudElement.Frametime) {
                 separators.getOrNull(index - 1)?.visibility = View.VISIBLE
             }
 
@@ -288,7 +293,10 @@ class HudView @JvmOverloads constructor(
         return builder
     }
 
-    private fun percentValue(value: Int) = if (value >= 0) "$value%" else "N/A"
+    private val unavailable: String
+        get() = context.getString(net.rpcs3.R.string.hud_value_unavailable)
+
+    private fun percentValue(value: Int) = if (value >= 0) "$value%" else unavailable
 
     private fun frameRateText(): CharSequence {
         val rendered = if (sample.fps > 0f) {
@@ -297,24 +305,26 @@ class HudView @JvmOverloads constructor(
             "0"
         }
 
-        val base = labelled("FPS ", COLOR_FPS, rendered)
-
         if (sample.outputFps <= 0f) {
-            return base
+            return rendered
         }
 
-        val builder = android.text.SpannableStringBuilder(base)
+        val builder = android.text.SpannableStringBuilder()
+        append(builder, rendered, COLOR_FPS)
+        append(builder, " → ", COLOR_SEPARATOR)
+        append(builder, String.format(java.util.Locale.US, "%.0f", sample.outputFps), COLOR_FPS_GENERATED)
+        return builder
+    }
+
+    private fun append(builder: android.text.SpannableStringBuilder, text: String, color: Int) {
         val start = builder.length
-        builder.append(" → ")
-        builder.append(String.format(java.util.Locale.US, "%.0f", sample.outputFps))
+        builder.append(text)
         builder.setSpan(
-            android.text.style.ForegroundColorSpan(COLOR_FPS_GENERATED),
+            android.text.style.ForegroundColorSpan(color),
             start,
             builder.length,
             android.text.Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
         )
-
-        return builder
     }
 
     private fun render() {
@@ -326,7 +336,8 @@ class HudView @JvmOverloads constructor(
             "0.0 ms"
         }
 
-        readouts[HudElement.Renderer]?.text = sample.renderer.ifEmpty { "API" }
+        readouts[HudElement.Renderer]?.text =
+            sample.renderer.ifEmpty { context.getString(net.rpcs3.R.string.hud_renderer_unknown) }
 
         readouts[HudElement.Gpu]?.text =
             labelled("GPU ", COLOR_GPU, percentValue(sample.gpuPercent))
@@ -337,7 +348,7 @@ class HudView @JvmOverloads constructor(
             "RAM ",
             COLOR_RAM,
             when {
-                sample.ramUsedMb < 0 -> "N/A"
+                sample.ramUsedMb < 0 -> unavailable
                 sample.ramTotalMb > 0 -> "${sample.ramUsedMb}/${sample.ramTotalMb}"
                 else -> "${sample.ramUsedMb}"
             }
@@ -346,7 +357,7 @@ class HudView @JvmOverloads constructor(
         readouts[HudElement.Battery]?.text = labelled(
             "BAT ",
             COLOR_BATTERY,
-            if (sample.batteryPercent >= 0) "${sample.batteryPercent}%" else "N/A"
+            if (sample.batteryPercent >= 0) "${sample.batteryPercent}%" else unavailable
         )
 
         readouts[HudElement.Power]?.text = labelled(
@@ -355,14 +366,14 @@ class HudView @JvmOverloads constructor(
             if (!sample.watts.isNaN()) {
                 String.format(java.util.Locale.US, "%.1fw", sample.watts)
             } else {
-                "N/A"
+                unavailable
             }
         )
 
         val temp = readouts[HudElement.Temperature]
         if (temp != null) {
             if (sample.temperatureC < 0) {
-                temp.text = labelled("TMP ", COLOR_TEMP, "N/A")
+                temp.text = labelled("TMP ", COLOR_TEMP, unavailable)
             } else {
                 val valueColor = when {
                     sample.temperatureC >= 45 -> COLOR_TEMP_HOT
@@ -567,7 +578,7 @@ class HudView @JvmOverloads constructor(
             background = rippleFor(POPUP_RIPPLE)
             isClickable = true
             isFocusable = true
-            contentDescription = anchor.label
+            contentDescription = context.getString(anchor.labelRes)
             setOnClickListener {
                 applyAnchor(anchor)
                 dismissPositionMenu()
@@ -609,7 +620,7 @@ class HudView @JvmOverloads constructor(
 
         container.addView(
             TextView(context).apply {
-                text = "Snap position"
+                text = context.getString(net.rpcs3.R.string.hud_snap_position)
                 setTextColor(POPUP_TEXT)
                 alpha = 0.7f
                 textSize = 10f

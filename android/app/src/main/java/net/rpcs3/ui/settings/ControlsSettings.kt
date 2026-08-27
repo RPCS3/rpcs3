@@ -20,10 +20,10 @@ import net.rpcs3.overlay.OverlayEditActivity
 import net.rpcs3.overlay.OverlayPrefs
 import net.rpcs3.ui.components.GhostButton
 import net.rpcs3.ui.components.InfoRow
-import net.rpcs3.ui.components.SectionLabel
 import net.rpcs3.ui.components.SettingGroup
 import net.rpcs3.ui.components.SettingSlider
 import net.rpcs3.ui.components.SettingSwitch
+import net.rpcs3.ui.components.SettingsSection
 import net.rpcs3.ui.components.ThinDivider
 import net.rpcs3.ui.theme.Dimens
 
@@ -43,8 +43,7 @@ fun ControlsSettings(modifier: Modifier = Modifier) {
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(Dimens.SectionGap)
     ) {
-        SectionLabel(text = stringResource(R.string.controls_section))
-
+    SettingsSection(title = stringResource(R.string.controls_section)) {
         SettingGroup {
             SettingSwitch(
                 label = stringResource(R.string.controls_show_overlay),
@@ -63,12 +62,17 @@ fun ControlsSettings(modifier: Modifier = Modifier) {
                 value = opacity,
                 valueRange = 0f..100f,
                 valueText = stringResource(R.string.percent_value, opacity.toInt()),
+                enabled = overlayEnabled,
                 onValueChange = { opacity = it },
                 onValueChangeFinished = {
                     OverlayPrefs.setOpacity(context, opacity.toInt())
                 }
             )
+        }
+    }
 
+    SettingsSection(title = stringResource(R.string.controls_section_layout)) {
+        SettingGroup {
             InfoRow(
                 label = stringResource(R.string.controls_applies_to),
                 value = stringResource(R.string.controls_applies_to_value)
@@ -77,10 +81,13 @@ fun ControlsSettings(modifier: Modifier = Modifier) {
             GhostButton(
                 label = stringResource(R.string.controls_edit_layout),
                 icon = Icons.Outlined.Edit,
+                accent = true,
+                modifier = Modifier.fillMaxWidth(),
                 onClick = {
                     context.startActivity(Intent(context, OverlayEditActivity::class.java))
                 }
             )
         }
+    }
     }
 }

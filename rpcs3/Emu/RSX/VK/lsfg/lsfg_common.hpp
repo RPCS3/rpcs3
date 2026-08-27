@@ -28,6 +28,7 @@ constexpr size_t LSFG_MAX_GENERATIONS = 3;
 constexpr size_t LSFG_MIP_LEVELS = 7;
 
 constexpr size_t LSFG_GENERATION_SLOTS = LSFG_MAX_GENERATIONS * (LSFG_MAX_GENERATIONS + 1) / 2;
+constexpr size_t LSFG_BARRIER_CAPACITY = 32;
 
 constexpr std::array<uint32_t, 4> LSFG_ALPHA_SHADERS{290, 291, 292, 293};
 constexpr std::array<uint32_t, 5> LSFG_BETA_SHADERS{298, 299, 300, 301, 302};
@@ -194,7 +195,9 @@ private:
 
 class LsfgBarriers {
 public:
-    explicit LsfgBarriers(VkCommandBuffer cmdbuf_) : cmdbuf{cmdbuf_} {}
+    explicit LsfgBarriers(VkCommandBuffer cmdbuf_) : cmdbuf{cmdbuf_} {
+        barriers.reserve(LSFG_BARRIER_CAPACITY);
+    }
 
     LsfgBarriers& WriteToRead(LsfgImage& image);
     LsfgBarriers& ReadToWrite(LsfgImage& image);
