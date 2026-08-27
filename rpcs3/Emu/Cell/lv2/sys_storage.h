@@ -52,7 +52,12 @@ struct StorageDeviceInfo
 	be_t<u64> sector_count; // 0x28
 	be_t<u32> sector_size;  // 0x30
 	be_t<u32> one;          // 0x34
-	u8 flags[8];            // 0x38
+	u8 connected;           // 0x38
+	u8 one1;                // 0x39
+	u8 one2;                // 0x3A
+	u8 flag3;               // 0x3B
+	u8 flag4[3];            // 0x3C
+	u8 flag5;               // 0x3F
 };
 
 #define USB_MASS_STORAGE_1(n) (USB_MASS_STORAGE_1_BASE + n)       /* For 0-5 */

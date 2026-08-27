@@ -3704,7 +3704,7 @@ error_code sys_fs_mount(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char>
 		return {CELL_EBUSY, device_name};
 
 	if (vfs_path.empty())
-		return {CELL_ENOTSUP, device_name};
+		return {0, device_name};
 
 	if (root_name.empty())
 		return {CELL_EEXIST, path_sv};

@@ -3,6 +3,7 @@
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/System.h"
 #include "sys_event.h"
 #include "sys_fs.h"
 #include "util/shared_ptr.hpp"
@@ -29,39 +30,95 @@ namespace
 			u32 events[] =
 			{
 				// First class
-				3,
-				4,
-				7,
-				8,
+				//3,
+				// 4,
+				 7,
+				// 8,
 
-				0x101,
-				0x102,
+				// 0x101,
+				// 0x102,
 			};
 
 			//u64 start_time = get_system_time();
 			u64 start_count = 0;
 			u64 event_index = 0;
 
+			while (Emu.IsPausedOrReady())
+			{
+				thread_ctrl::wait_for(2500);
+			}
+
+			thread_ctrl::wait_for(5 * 1000 * 1000);
 			while (thread_ctrl::state() != thread_state::aborting)
 			{
 				thread_ctrl::wait_for(25000);
-				start_count++;
 
 				const auto q = device_queue.load();
 				if (q)
 				{
-					if (start_count % 10)
-					{
-						//sys_storage.notice("storage_manager(): Sending 0xf2");
+					start_count++;
 
-						//q->send(0, 0xF2, 0, 0);
+					while (!q->pq)
+					{
+						thread_ctrl::wait_for(250);
 					}
-					else
+					if (start_count == 1)
 					{
 						event_index++;
 						event_index = event_index % std::size(events);
-						sys_storage.notice("storage_manager(): Sending 0x%x", events[event_index]);
-						q->send(0, events[event_index], 0x1234567, (u64{events[event_index]} << 32) + 6);
+						sys_storage.notice("storage_manager(): Sending 0x%x (Media ID = 0x%x)", events[event_index], start_count);
+
+
+
+						u64 data0, data1, data2, data3;
+
+						if (false)
+						{
+							data0=0x800000000062d200, data1=0x0000000000000003, data2=0x0000000000000000, data3=0x010300000000000b;
+							q->send(data0, data1, data2, data3);
+							thread_ctrl::wait_for(2500000);
+						}
+
+						if (true)
+						{
+							data0=0x800000000062d4c0, data1=0x0000000000000003, data2=0x000000000000ff71, data3=0x0101000000000006;
+							q->send(data0, data1, data2, data3);
+							thread_ctrl::wait_for(2500000);
+						}
+
+						// if (false)
+						// {
+						// 	data0=0x800000000062d200, data1=0x0000000000000004, data2=0x0000000000000000, data3=0x010300000000000b;
+						// 	q->send(data0, data1, data2, data3);
+						// 	thread_ctrl::wait_for(2500000);
+
+						// 	data0=0x80000000005ae920, data1=0x0000000000000007, data2=0x0000000000000000, data3=0x010300000000000b;
+						// 	q->send(data0, data1, data2, data3);
+						// 	thread_ctrl::wait_for(2500000);
+
+						// 	data0=0x80000000005ae920, data1=0x0000000000000003, data2=0x0000000000000000, data3=0x010300000000000b;
+						// 	q->send(data0, data1, data2, data3);
+						// 	thread_ctrl::wait_for(2500000);
+						// }
+
+						// if (true)
+						// {
+						// 	data0=0x800000000062d4c0, data1=0x0000000000000004, data2=0x0000000000000000, data3=0x0101000000000006;
+						// 	q->send(data0, data1, data2, data3);
+						// 	thread_ctrl::wait_for(2500000);
+
+						// 	data0=0x800000000062d4c0, data1=0x0000000000000008, data2=0x0000000000000000, data3=0x0101000000000006;
+						// 	q->send(data0, data1, data2, data3);
+						// 	thread_ctrl::wait_for(2500000);
+
+						// 	data0=0x800000000062d4c0, data1=0x0000000000000007, data2=0x0000000000000000, data3=0x0101000000000006;
+						// 	q->send(data0, data1, data2, data3);
+						// 	thread_ctrl::wait_for(2500000);
+
+						// 	data0=0x800000000062d4c0, data1=0x0000000000000003, data2=0x000000000000ff71, data3=0x0101000000000006;
+						// 	q->send(data0, data1, data2, data3);
+						// 	thread_ctrl::wait_for(2500000);
+						// }
 					}
 				}
 			}
@@ -107,6 +164,7 @@ error_code sys_storage_open(u64 device, u64 mode, vm::ptr<u32> fd, u64 flags)
 	if (const u32 id = idm::make<lv2_obj, lv2_storage>(device, std::move(file), mode, flags))
 	{
 		*fd = id;
+		sys_storage.notice("sys_storage_open(): Handle=0x%x", id);
 		return CELL_OK;
 	}
 
@@ -258,9 +316,9 @@ error_code sys_storage_get_device_info(u64 device, vm::ptr<StorageDeviceInfo> bu
 		memcpy(buffer->name, u.c_str(), u.size());
 		buffer->sector_size = 0x200;
 		buffer->one = 1;
-		buffer->flags[1] = 1;
-		buffer->flags[2] = 1;
-		buffer->flags[7] = 1;
+		buffer->one1 = 1;
+		buffer->one2 = 1;
+		buffer->flag5 = 1;
 
 		// set partition size based on dev_num
 		// stole these sizes from kernel dump, unknown if they are 100% correct
@@ -288,21 +346,44 @@ error_code sys_storage_get_device_info(u64 device, vm::ptr<StorageDeviceInfo> bu
 		std::string u = "unnamed";
 		memcpy(buffer->name, u.c_str(), u.size());
 
-		if (false)
+		const bool connected = true;
+		if (!connected)
 		{
 			buffer->sector_count = 0;
 			buffer->sector_size = 0x7FFFFFFF;
 		}
 		else
 		{
-			buffer->sector_count = 0x4D955;
+			buffer->sector_count = 0x1EC4B00;
 			buffer->sector_size = 0x800;
 		}
+// [000] | 75 6E 6E 61 | 6D 65 64 00 |
+// [008] | 00 00 00 00 | 00 00 00 00 |
+// [010] | 00 00 00 00 | 00 00 00 00 |
+// [018] | 00 00 00 00 | 00 00 00 00 |
+// [020] | 00 00 00 00 | 00 00 00 00 |
+// [028] | 00 00 00 00 | 01 EC 4B 00 |
+// [030] | 00 00 02 00 | 00 00 00 01 |
+// [038] | 01 01 01 00 | 01 01 00 01 |
+
+
+
+// [000] | 75 6E 6E 61 | 6D 65 64 00 |
+// [008] | 00 00 00 00 | 00 00 00 00 |
+// [010] | 00 00 00 00 | 00 00 00 00 |
+// [018] | 00 00 00 00 | 00 00 00 00 |
+// [020] | 00 00 00 00 | 00 00 00 00 |
+// [028] | 00 00 00 00 | 00 62 83 E0 |
+// [030] | 00 00 08 00 | 00 00 00 01 |
+// [038] | 00 01 01 00 | 00 00 00 01 |
 
 		buffer->one = 1;
-		buffer->flags[1] = 0;
-		buffer->flags[2] = 1;
-		buffer->flags[7] = 1;
+		buffer->connected = connected;
+		buffer->one1 = 1;
+		buffer->one2 = 1;
+		buffer->flag3 = 0;
+		//buffer->flags4 = 0;
+		buffer->flag5 = 1;
 	}
 	else if (storage == USB_MASS_STORAGE_1(0))
 	{
@@ -316,9 +397,9 @@ error_code sys_storage_get_device_info(u64 device, vm::ptr<StorageDeviceInfo> bu
 		/*buffer->sector_count = 0x4D955;*/
 		buffer->sector_size = 0x200;
 		buffer->one = 1;
-		buffer->flags[1] = 0;
-		buffer->flags[2] = 1;
-		buffer->flags[7] = 1;
+		buffer->one1 = 1;
+		buffer->one2 = 1;
+		buffer->flag5 = 1;
 	}
 	else if (storage == NAND_FLASH)
 	{
@@ -331,9 +412,9 @@ error_code sys_storage_get_device_info(u64 device, vm::ptr<StorageDeviceInfo> bu
 		memcpy(buffer->name, u.c_str(), u.size());
 		buffer->sector_size = 0x200;
 		buffer->one = 1;
-		buffer->flags[1] = 1;
-		buffer->flags[2] = 1;
-		buffer->flags[7] = 1;
+		buffer->one1 = 1;
+		buffer->one2 = 1;
+		buffer->flag5 = 1;
 
 		// see ata_hdd for explanation
 		switch (dev_num)
@@ -365,9 +446,9 @@ error_code sys_storage_get_device_info(u64 device, vm::ptr<StorageDeviceInfo> bu
 		memcpy(buffer->name, u.c_str(), u.size());
 		buffer->sector_size = 0x200;
 		buffer->one = 1;
-		buffer->flags[1] = 0;
-		buffer->flags[2] = 1;
-		buffer->flags[7] = 1;
+		buffer->one1 = 0;
+		buffer->one2 = 1;
+		buffer->flag5 = 1;
 
 		// see ata_hdd for explanation
 		switch (dev_num)
@@ -393,9 +474,9 @@ error_code sys_storage_get_device_info(u64 device, vm::ptr<StorageDeviceInfo> bu
 		memcpy(buffer->name, u.c_str(), u.size());
 		buffer->sector_size = 0x800;
 		buffer->one = 1;
-		buffer->flags[1] = 0;
-		buffer->flags[2] = 1;
-		buffer->flags[7] = 1;
+		buffer->one1 = 0;
+		buffer->one2 = 1;
+		buffer->flag5 = 1;
 
 		// see ata_hdd for explanation
 		switch (dev_num)
@@ -429,6 +510,11 @@ error_code sys_storage_report_devices(u32 storages, u32 start, u32 devices, vm::
 	if (!device_ids)
 	{
 		return CELL_EFAULT;
+	}
+
+	if (storages != 6)
+	{
+		return -5;
 	}
 
 	static constexpr std::array<u64, 0x11> all_devs = []
@@ -499,6 +585,7 @@ error_code sys_storage_configure_medium_event(ppu_thread& ppu, u32 fd, u32 equeu
 		return CELL_ESRCH;
 	}
 
+	*handle = 0x5D7280;
 	return CELL_OK;
 }
 

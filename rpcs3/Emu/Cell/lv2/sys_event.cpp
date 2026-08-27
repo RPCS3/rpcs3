@@ -520,6 +520,14 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 	}
 	else
 	{
+		if (queue->key == 0x8006020000000070ULL)
+		{
+			if (ppu.gpr[5] == 3)
+			{
+				ppu.state += cpu_flag::dbg_pause;
+			}
+		}
+
 		return CELL_OK;
 	}
 
