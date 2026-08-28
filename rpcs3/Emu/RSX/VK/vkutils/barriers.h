@@ -17,7 +17,7 @@ namespace vk
 
 	void insert_image_memory_barrier(const vk::command_buffer& cmd, VkImage image, VkImageLayout current_layout, VkImageLayout new_layout,
 		VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage, VkAccessFlags src_mask, VkAccessFlags dst_mask,
-		const VkImageSubresourceRange& range, bool preserve_renderpass = false);
+		const VkImageSubresourceRange& range, bool preserve_renderpass = false, VkFlags flags = 0);
 
 	void insert_global_memory_barrier(const vk::command_buffer& cmd,
 		VkPipelineStageFlags src_stage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,

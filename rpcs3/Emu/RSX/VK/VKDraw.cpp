@@ -1108,6 +1108,27 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		reload_state = true;
 	});
 
+	if (current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING)
+	{
+		// Subpass inter-draw dependency for input attachment reads. Preserves open renderpasses.
+		for (u32 i = 0; i < current_fragment_program.mrt_buffers_count; ++i)
+		{
+			vk::insert_image_memory_barrier(
+				*m_current_command_buffer,
+				m_fbo_images[i]->value,
+				m_fbo_images[i]->current_layout,
+				m_fbo_images[i]->current_layout,
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+				VK_ACCESS_INPUT_ATTACHMENT_READ_BIT,
+				{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
+				true,
+				VK_DEPENDENCY_BY_REGION_BIT
+			);
+		}
+	}
+
 	// Bind both pipe and descriptors in one go
 	// FIXME: We only need to rebind the pipeline when reload state is set. Flags?
 	m_program->bind(*m_current_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS);
