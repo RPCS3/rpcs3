@@ -1784,7 +1784,7 @@ namespace rsx
 					};
 
 					surface_scaling_config_t scaling_config{};
-					if (g_cfg.video.allow_blit_engine_upscaling)
+					if (!g_cfg.video.disable_blit_engine_upscaling)
 					{
 						scaling_config =
 						{

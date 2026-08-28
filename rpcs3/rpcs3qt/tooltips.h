@@ -217,7 +217,7 @@ public:
 
 		const QString texture_lod_bias = tr("Changes Texture sampling accuracy. (Small changes have a big effect.)\nAvoid using values outside the range of -12 to +12 if you're unsure.\n-3 to +3 is plenty for most usecases");
 
-		const QString blit_engine_scaling = tr("Allow upscaling to affect the RSX image scaling and rotation engine (NV3089) output images.\nThis can allow upscaling to work on some games where it normally doesn't work, but can also cause visual artifacts in other titles.");
+		const QString blit_engine_scaling = tr("Disable upscaling on the RSX image scaling and rotation engine (NV3089) output images.\nThis may fix some bugs that are present when upscaling is being used, but some games will appear as if they're running at 100% resolution regardless of the real setting.");
 
 		// gui
 

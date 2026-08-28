@@ -112,7 +112,7 @@ enum class emu_settings_type
 	UseReBAR,
 	RecordWithOverlays,
 	DisableHWTexelRemapping,
-	EnableBlitEngineScaling,
+	DisableBlitEngineScaling,
 
 	// Anaglyph Matrix
 	CustomAnaglyphMatrixLeft,
