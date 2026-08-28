@@ -333,11 +333,22 @@ namespace vk
 		subpass.pColorAttachments = attachment_count? attachment_references.data() : nullptr;
 		subpass.pDepthStencilAttachment = depth_format? &attachment_references.back() : nullptr;
 
+		rsx::simple_array<VkSubpassDependency> subpass_dependencies;
 		const auto input_attachments = key.get_input_attachments();
 		if (!input_attachments.empty())
 		{
 			subpass.inputAttachmentCount = ::size32(input_attachments);
 			subpass.pInputAttachments = input_attachments.data();
+
+			subpass_dependencies.push_back({
+				.srcSubpass = 0,
+				.dstSubpass = 0,
+				.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+				.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+				.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+				.dstAccessMask = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT,
+				.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT
+			});
 		}
 
 		VkRenderPassCreateInfo rp_info = {};
@@ -346,6 +357,8 @@ namespace vk
 		rp_info.pAttachments = attachments.data();
 		rp_info.subpassCount = 1;
 		rp_info.pSubpasses = &subpass;
+		rp_info.dependencyCount = subpass_dependencies.size();
+		rp_info.pDependencies = subpass_dependencies.data();
 
 		VkRenderPass result;
 		CHECK_RESULT(vkCreateRenderPass(dev, &rp_info, NULL, &result));
