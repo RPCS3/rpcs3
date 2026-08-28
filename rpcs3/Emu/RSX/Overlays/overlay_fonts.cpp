@@ -364,13 +364,6 @@ namespace rsx
 				{
 					const bool is_whitespace = c == ' ';
 
-					// CJK/Hangul scripts don't use spaces between words, so allow breaking right
-					// before each such character instead of only at whitespace.
-					if (!is_whitespace && classify(get_page_id(c)) != language_class::default_)
-					{
-						begin_of_word = result.size();
-					}
-
 					stbtt_aligned_quad quad{};
 
 					if (is_whitespace)
@@ -413,8 +406,9 @@ namespace rsx
 					result.emplace_back(quad.x0, quad.y1, quad.s0, quad.t1);
 					result.emplace_back(quad.x1, quad.y1, quad.s1, quad.t1);
 
-					// The next word will begin after any whitespaces.
-					if (is_whitespace)
+					// The next word will begin after any whitespaces. CJK/Hangul scripts don't use spaces
+					// between words, so also allow breaking right after each such character.
+					if (is_whitespace || classify(get_page_id(c)) != language_class::default_)
 					{
 						begin_of_word = result.size();
 					}
