@@ -35,6 +35,14 @@ R"(
 #define BLEND_FUNC_ADD_SIGNED 0x0000F006
 #define BLEND_FUNC_REVERSE_ADD_SIGNED 0x0000F007
 
+#ifdef INT_FRAMEBUFFER_BIT
+#define _blend_saturate _saturate
+#define _blend_saturate_signed(v) clamp(v, -1.f, 1.f)
+#else
+#define _blend_saturate(v) v
+#define _blend_saturate_signed(v) v
+#endif
+
 float get_blend_factor_a(const in uint op, const in vec4 src, const in vec4 dst)
 {
 	switch (op)
@@ -51,9 +59,9 @@ float get_blend_factor_a(const in uint op, const in vec4 src, const in vec4 dst)
 	case BLEND_FACTOR_ONE_MINUS_DST_COLOR: return 1. - dst.a;
 	case BLEND_FACTOR_SRC_ALPHA_SATURATE: return 1;
 	case BLEND_FACTOR_CONSTANT_COLOR:
-	case BLEND_FACTOR_CONSTANT_ALPHA: return constants.a;
+	case BLEND_FACTOR_CONSTANT_ALPHA: return blend_constants.a;
 	case BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR:
-	case BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA: return 1. - constants.a;
+	case BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA: return 1. - blend_constants.a;
 	}
 	return 0.;
 }
@@ -69,10 +77,10 @@ vec3 get_blend_factor_rgb(const in uint op, const in vec4 src, const in vec4 dst
 	case BLEND_FACTOR_ONE_MINUS_SRC_COLOR: return 1. - src.rgb;
 	case BLEND_FACTOR_ONE_MINUS_SRC_ALPHA: return 1. - src.aaa;
 	case BLEND_FACTOR_DST_COLOR: return dst.rgb;
-	case BLEND_FACTOR_DST_ALPHA: return dst.a;
+	case BLEND_FACTOR_DST_ALPHA: return dst.aaa;
 	case BLEND_FACTOR_ONE_MINUS_DST_COLOR: return 1. - dst.rgb;
-	case BLEND_FACTOR_ONE_MINUS_DST_ALPHA: return 1. - dst.a;
-	case BLEND_FACTOR_SRC_ALPHA_SATURATE: return src.rgb;
+	case BLEND_FACTOR_ONE_MINUS_DST_ALPHA: return 1. - dst.aaa;
+	case BLEND_FACTOR_SRC_ALPHA_SATURATE: return vec3(min(src.a, 1. - dst.a));
 	case BLEND_FACTOR_CONSTANT_COLOR: return blend_constants.rgb;
 	case BLEND_FACTOR_CONSTANT_ALPHA: return blend_constants.aaa;
 	case BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR: return 1. - blend_constants.rgb;
@@ -96,17 +104,17 @@ float apply_blend_func_a(const in vec4 src, const in vec4 dst)
 
 	switch (func)
 	{
-	case BLEND_FUNC_ADD: return _saturate(s) + d;
-	case BLEND_MIN: return min(_saturate(s), d);
-	case BLEND_MAX: return max(_saturate(s), d);
-	case BLEND_FUNC_SUBTRACT: return _saturate(s) - d;
-	case BLEND_FUNC_REVERSE_SUBTRACT: return d - _saturate(s);
-	case BLEND_FUNC_REVERSE_SUBTRACT_SIGNED: return d - s;
-	case BLEND_FUNC_ADD_SIGNED: return s + d;
-	case BLEND_FUNC_REVERSE_ADD_SIGNED: return s + d;
+	case BLEND_FUNC_ADD: return _blend_saturate(s) + d;
+	case BLEND_MIN: return min(_blend_saturate(src.a), dst.a);
+	case BLEND_MAX: return max(_blend_saturate(src.a), dst.a);
+	case BLEND_FUNC_SUBTRACT: return _blend_saturate(s) - d;
+	case BLEND_FUNC_REVERSE_SUBTRACT: return d - _blend_saturate(s);
+	case BLEND_FUNC_REVERSE_SUBTRACT_SIGNED: return d - _blend_saturate_signed(s);
+	case BLEND_FUNC_ADD_SIGNED: return _blend_saturate_signed(s) + d;
+	case BLEND_FUNC_REVERSE_ADD_SIGNED: return _blend_saturate(s) + _blend_saturate_signed(d);
 	}
 
-	return vec3(0.);
+	return 0.f;
 }
 
 vec3 apply_blend_func_rgb(const in vec4 src, const in vec4 dst)
@@ -124,14 +132,14 @@ vec3 apply_blend_func_rgb(const in vec4 src, const in vec4 dst)
 
 	switch (func)
 	{
-	case BLEND_FUNC_ADD: return _saturate(s) + d;
-	case BLEND_MIN: return min(_saturate(s), d);
-	case BLEND_MAX: return max(_saturate(s), d);
-	case BLEND_FUNC_SUBTRACT: return _saturate(s) - d;
-	case BLEND_FUNC_REVERSE_SUBTRACT: return d - _saturate(s);
-	case BLEND_FUNC_REVERSE_SUBTRACT_SIGNED: return d - s;
-	case BLEND_FUNC_ADD_SIGNED: return s + d;
-	case BLEND_FUNC_REVERSE_ADD_SIGNED: return s + d;
+	case BLEND_FUNC_ADD: return _blend_saturate(s) + d;
+	case BLEND_MIN: return min(_blend_saturate(src.rgb), dst.rgb);
+	case BLEND_MAX: return max(_blend_saturate(src.rgb), dst.rgb);
+	case BLEND_FUNC_SUBTRACT: return _blend_saturate(s) - d;
+	case BLEND_FUNC_REVERSE_SUBTRACT: return d - _blend_saturate(s);
+	case BLEND_FUNC_REVERSE_SUBTRACT_SIGNED: return d - _blend_saturate_signed(s);
+	case BLEND_FUNC_ADD_SIGNED: return _blend_saturate_signed(s) + d;
+	case BLEND_FUNC_REVERSE_ADD_SIGNED: return _blend_saturate(s) + _blend_saturate_signed(d);
 	}
 
 	return vec3(0.);
@@ -145,8 +153,12 @@ vec4 do_blend(const in vec4 src, const in vec4 dst)
 		apply_blend_func_a(src, dst)
 	);
 
+#ifdef _ENABLE_ROP_OUTPUT_ROUNDING
 	// Accurate int conversion with wrapping
 	return round_to_8bit(result);
+#else
+	return result;
+#endif
 }
 
 )"
