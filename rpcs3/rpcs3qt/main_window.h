@@ -103,6 +103,9 @@ public Q_SLOTS:
 private Q_SLOTS:
 	void OnPlayOrPause();
 	void open_ra_settings();
+#ifdef RPCS3_RA_ENABLED
+	void UpdateRAIntegrationMenu();
+#endif
 	void Boot(const std::string& path, const std::string& title_id = "", bool direct = false, bool refresh_list = false, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "");
 	void BootElf();
 	void BootTest();
@@ -197,6 +200,10 @@ private:
 	std::shared_ptr<persistent_settings> m_persistent_settings;
 
 	update_manager m_updater;
+
+#ifdef RPCS3_RA_ENABLED
+	QMenu* m_ra_menu{};
+#endif
 
 	shortcut_handler* m_shortcut_handler = nullptr;
 

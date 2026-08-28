@@ -636,9 +636,27 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 	}
 #endif
 
+	connect(m_game_window, &gs_frame::visibilityChanged, this, [this](QWindow::Visibility visibility)
+	{
+#ifdef RPCS3_RA_ENABLED
+#ifdef RC_CLIENT_SUPPORTS_RAINTEGRATION
+		if (visibility != QWindow::Hidden && visibility != QWindow::Minimized && m_game_window)
+			rpcs3::ra::set_main_window(reinterpret_cast<void*>(m_game_window->winId()));
+#endif
+#endif
+	});
+
 	connect(m_game_window, &gs_frame::destroyed, this, [this]()
 	{
 		gui_log.notice("gui_application: Deleting old game window");
+
+#ifdef RPCS3_RA_ENABLED
+#ifdef RC_CLIENT_SUPPORTS_RAINTEGRATION
+		if (m_main_window)
+			rpcs3::ra::set_main_window(reinterpret_cast<void*>(m_main_window->winId()));
+#endif
+#endif
+
 		m_game_window = nullptr;
 
 #ifdef _WIN32

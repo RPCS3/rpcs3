@@ -21,7 +21,7 @@ namespace rsx
 		{
 		public:
 			template <typename T>
-			message_item(const T& msg_id, u64 expiration, std::shared_ptr<atomic_t<u32>> refs, std::shared_ptr<overlay_element> icon = {});
+			message_item(const T& msg_id, u64 expiration, std::shared_ptr<atomic_t<u32>> refs, std::shared_ptr<overlay_element> icon = {}, color4f bg_color = {0.25f, 0.25f, 0.25f, 0.85f});
 			void update(usz index, u64 timestamp_us, s16 x_offset, s16 y_offset);
 			void set_pos(s16 _x, s16 _y) override;
 
@@ -64,7 +64,8 @@ namespace rsx
 				message_pin_location location = message_pin_location::top_left,
 				std::shared_ptr<overlay_element> icon = {},
 				bool allow_refresh = false,
-				bool compare_id = false)
+				bool compare_id = false,
+				color4f bg_color = {0.25f, 0.25f, 0.25f, 0.85f})
 			{
 				std::lock_guard lock(m_mutex_queue);
 
@@ -92,13 +93,13 @@ namespace rsx
 					{
 						if (!message_exists(location, id, allow_refresh, compare_id))
 						{
-							queue->emplace_back(id, expiration, refs, icon);
+							queue->emplace_back(id, expiration, refs, icon, bg_color);
 						}
 					}
 				}
 				else if (!message_exists(location, msg_id, allow_refresh, compare_id))
 				{
-					queue->emplace_back(msg_id, expiration, std::move(refs), icon);
+					queue->emplace_back(msg_id, expiration, std::move(refs), icon, bg_color);
 				}
 
 				visible = true;
@@ -139,7 +140,8 @@ namespace rsx
 			message_pin_location location = message_pin_location::top_left,
 			std::shared_ptr<overlay_element> icon = {},
 			bool allow_refresh = false,
-			bool compare_id = false)
+			bool compare_id = false,
+			color4f bg_color = {0.25f, 0.25f, 0.25f, 0.85f})
 		{
 			if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 			{
@@ -149,7 +151,7 @@ namespace rsx
 					msg_overlay = std::make_shared<rsx::overlays::message>();
 					msg_overlay = manager->add(msg_overlay);
 				}
-				msg_overlay->queue_message(msg_id, expiration, std::move(refs), location, std::move(icon), allow_refresh, compare_id);
+				msg_overlay->queue_message(msg_id, expiration, std::move(refs), location, std::move(icon), allow_refresh, compare_id, bg_color);
 			}
 		}
 

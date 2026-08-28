@@ -65,6 +65,9 @@
 #include <QDesktopServices>
 
 #include "rpcs3_version.h"
+#ifdef RPCS3_RA_ENABLED
+#include "Emu/RetroAchievements.h"
+#endif
 #include "Emu/IdManager.h"
 #include "Emu/VFS.h"
 #include "Emu/vfs_config.h"
@@ -260,6 +263,12 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 	{
 		ui->menuUpdate_Available->menuAction()->setVisible(update_available);
 	});
+#endif
+
+#ifdef RPCS3_RA_ENABLED
+	m_ra_menu = new QMenu(tr("RetroAchievements"), this);
+	ui->menuBar->insertMenu(ui->menuHelp->menuAction(), m_ra_menu);
+	connect(m_ra_menu, &QMenu::aboutToShow, this, &main_window::UpdateRAIntegrationMenu);
 #endif
 
 #ifdef RPCS3_UPDATE_SUPPORTED
@@ -545,6 +554,36 @@ void main_window::open_ra_settings()
 	ra_settings_dialog dlg(this);
 	dlg.exec();
 }
+
+#ifdef RPCS3_RA_ENABLED
+void main_window::UpdateRAIntegrationMenu()
+{
+	m_ra_menu->clear();
+#ifdef RC_CLIENT_SUPPORTS_RAINTEGRATION
+	namespace RA = rpcs3::ra;
+	const auto items = RA::get_menu_items();
+	for (const auto& item : items)
+	{
+		if (item.id == 0)
+		{
+			m_ra_menu->addSeparator();
+			continue;
+		}
+		QAction* action = m_ra_menu->addAction(QString::fromStdString(item.label));
+		if (item.checked)
+		{
+			action->setCheckable(true);
+			action->setChecked(true);
+		}
+		const uint32_t id = item.id;
+		connect(action, &QAction::triggered, this, [id]()
+		{
+			RA::activate_menu_item(id);
+		});
+	}
+#endif
+}
+#endif
 
 void main_window::Boot(const std::string& path, const std::string& title_id, bool direct, bool refresh_list, cfg_mode config_mode, const std::string& config_path)
 {

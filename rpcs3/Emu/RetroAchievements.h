@@ -5,6 +5,7 @@
 #include "rc_client.h"
 #include <functional>
 #include <string>
+#include <vector>
 
 namespace rpcs3::ra
 {
@@ -26,7 +27,16 @@ namespace rpcs3::ra
 	void logout();
 
 #ifdef RC_CLIENT_SUPPORTS_RAINTEGRATION
+	struct RAIntegrationMenuItem
+	{
+		uint32_t id;
+		std::string label;
+		bool checked;
+	};
+	std::vector<RAIntegrationMenuItem> get_menu_items();
 	void load_integration(void* hwnd);
+	void set_main_window(void* hwnd);
+	void activate_menu_item(uint32_t id);
 #endif
 
 } // namespace rpcs3::ra

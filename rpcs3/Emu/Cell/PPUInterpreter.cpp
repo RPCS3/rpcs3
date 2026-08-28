@@ -38,6 +38,47 @@ void ppubreak(ppu_thread& ppu)
 	}
 }
 
+static std::atomic<void(*)(unsigned int, unsigned int, unsigned int)> s_ra_bp_hit_fn{nullptr};
+
+void ra_set_write_bp_callback(void (*fn)(unsigned int, unsigned int, unsigned int)) noexcept
+{
+	s_ra_bp_hit_fn.store(fn, std::memory_order_release);
+}
+
+void ra_call_write_bp_impl(u32 addr, ppu_thread* ppu) noexcept
+{
+	auto* fn = s_ra_bp_hit_fn.load(std::memory_order_acquire);
+	if (!fn || !ppu)
+		return;
+
+	const u32 instr = static_cast<u32>(vm::read32(ppu->cia));
+	const u32 opcode = instr >> 26;
+	const u32 rA = (instr >> 16) & 0x1Fu;
+	const u32 base_reg_value = rA ? static_cast<u32>(ppu->gpr[rA]) : 0u;
+
+	u32 offset;
+	switch (opcode)
+	{
+	// D-form stores: stw(36), stwu(37), stb(38), stbu(39), sth(44), sthu(45), stmw(47),
+	//                stfs(52), stfsu(53), stfd(54), stfdu(55)
+	case 36: case 37: case 38: case 39: case 44: case 45: case 47:
+	case 52: case 53: case 54: case 55:
+		offset = static_cast<u32>(static_cast<s32>(static_cast<s16>(instr & 0xFFFFu)));
+		break;
+	// DS-form stores: std(62)
+	case 62:
+		offset = static_cast<u32>(static_cast<s32>(static_cast<s16>(instr & 0xFFFCu)));
+		break;
+	default:
+		offset = base_reg_value ? (addr - base_reg_value) : addr;
+		break;
+	}
+
+	fn(static_cast<unsigned int>(addr),
+	   static_cast<unsigned int>(base_reg_value),
+	   static_cast<unsigned int>(offset));
+}
+
 #define PPU_WRITE(type, addr, value) vm::write<type>(addr, value, &ppu);
 #define PPU_WRITE_8(addr, value) vm::write8(addr, value, &ppu);
 #define PPU_WRITE_16(addr, value) vm::write16(addr, value, &ppu);

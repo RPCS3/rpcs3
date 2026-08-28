@@ -17,6 +17,8 @@ class ppu_thread;
 LOG_CHANNEL(debugbp_log, "DebugBP");
 
 void ppubreak(ppu_thread& ppu);
+void ra_call_write_bp_impl(u32 addr, ppu_thread* ppu) noexcept;
+void ra_set_write_bp_callback(void (*fn)(unsigned int, unsigned int, unsigned int)) noexcept;
 #endif
 
 namespace utils
@@ -279,6 +281,7 @@ namespace vm
 		if (ppu && g_breakpoint_handler.HasBreakpoint(addr, breakpoint_types::bp_write))
 		{
 			debugbp_log.success("BPMW: breakpoint writing(8) 0x%x at 0x%x", value, addr);
+			ra_call_write_bp_impl(addr, ppu);
 			ppubreak(*ppu);
 		}
 #endif
@@ -332,8 +335,9 @@ namespace vm
 #ifdef RPCS3_HAS_MEMORY_BREAKPOINTS
 			if (ppu && g_breakpoint_handler.HasBreakpoint(addr, breakpoint_types::bp_write))
 			{
-				debugbp_log.success("BPMW: breakpoint writing(%d) 0x%x at 0x%x",
-					sizeof(dest_t) * CHAR_BIT, value, addr);
+				debugbp_log.success("BPMW: breakpoint writing(%zu) at 0x%x",
+					sizeof(dest_t), addr);
+				ra_call_write_bp_impl(addr, ppu);
 				ppubreak(*ppu);
 			}
 #endif

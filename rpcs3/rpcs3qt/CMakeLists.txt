@@ -192,6 +192,7 @@ endif()
 
 if(RPCS3_RA_ENABLED)
     target_compile_definitions(rpcs3_ui PRIVATE RPCS3_RA_ENABLED=1)
+    target_compile_definitions(rpcs3_ui PRIVATE RPCS3_HAS_MEMORY_BREAKPOINTS)
     target_include_directories(rpcs3_ui PRIVATE
         "${CMAKE_SOURCE_DIR}/3rdparty/rcheevos/rcheevos/include"
     )

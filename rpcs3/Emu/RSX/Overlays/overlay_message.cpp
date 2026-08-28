@@ -17,7 +17,7 @@ namespace rsx
 		}
 
 		template <typename T>
-		message_item::message_item(const T& msg_id, u64 expiration, std::shared_ptr<atomic_t<u32>> refs, std::shared_ptr<overlay_element> icon)
+		message_item::message_item(const T& msg_id, u64 expiration, std::shared_ptr<atomic_t<u32>> refs, std::shared_ptr<overlay_element> icon, color4f bg_color)
 		{
 			if constexpr (std::is_same_v<T, localized_string_id>)
 			{
@@ -47,23 +47,27 @@ namespace rsx
 			m_fade_out_animation.duration_sec = 1.f;
 			m_fade_out_animation.active = false;
 
-			back_color = color4f(0.25f, 0.25f, 0.25f, 0.85f);
+			back_color = bg_color;
 
 			if (icon)
 			{
 				m_icon = icon;
-				m_icon->set_pos(m_text.x + m_text.w + 8, m_text.y);
+				// Icon on the left, text to the right (PS3 trophy style)
+				const s16 icon_x = m_margin;
+				const s16 icon_y = m_margin;
+				m_icon->set_pos(icon_x, icon_y);
+				m_text.set_pos(icon_x + static_cast<s16>(m_icon->w) + 8, icon_y);
 
-				set_size(m_margin + m_text.w + m_icon->w + m_margin, m_margin + std::max(m_text.h, m_icon->h) + m_margin);
+				set_size(m_margin + m_icon->w + 8 + m_text.w + m_margin, m_margin + std::max(m_text.h, m_icon->h) + m_margin);
 			}
 			else
 			{
 				set_size(m_text.w + m_margin + m_margin, m_text.h + m_margin + m_margin);
 			}
 		}
-		template message_item::message_item(const std::string& msg_id, u64, std::shared_ptr<atomic_t<u32>>, std::shared_ptr<overlay_element>);
-		template message_item::message_item(const localized_string_id& msg_id, u64, std::shared_ptr<atomic_t<u32>>, std::shared_ptr<overlay_element>);
-		template message_item::message_item(const localized_string& msg_id, u64, std::shared_ptr<atomic_t<u32>>, std::shared_ptr<overlay_element>);
+		template message_item::message_item(const std::string& msg_id, u64, std::shared_ptr<atomic_t<u32>>, std::shared_ptr<overlay_element>, color4f);
+		template message_item::message_item(const localized_string_id& msg_id, u64, std::shared_ptr<atomic_t<u32>>, std::shared_ptr<overlay_element>, color4f);
+		template message_item::message_item(const localized_string& msg_id, u64, std::shared_ptr<atomic_t<u32>>, std::shared_ptr<overlay_element>, color4f);
 
 		void message_item::reset_expiration()
 		{
@@ -104,11 +108,15 @@ namespace rsx
 		void message_item::set_pos(s16 _x, s16 _y)
 		{
 			rounded_rect::set_pos(_x, _y);
-			m_text.set_pos(_x + m_margin, y + m_margin);
 
 			if (m_icon)
 			{
-				m_icon->set_pos(m_icon->x, m_text.y);
+				m_icon->set_pos(_x + m_margin, _y + m_margin);
+				m_text.set_pos(_x + m_margin + static_cast<s16>(m_icon->w) + 8, _y + m_margin);
+			}
+			else
+			{
+				m_text.set_pos(_x + m_margin, _y + m_margin);
 			}
 		}
 
