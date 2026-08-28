@@ -3109,6 +3109,13 @@
                    </widget>
                   </item>
                   <item>
+                   <widget class="QCheckBox" name="startBigPictureModeOnBoot">
+                    <property name="text">
+                     <string>Open Big Picture Mode on boot</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
                    <widget class="QCheckBox" name="useNativeInterface">
                     <property name="text">
                      <string>Use native user interface</string>

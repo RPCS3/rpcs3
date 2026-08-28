@@ -188,6 +188,7 @@ enum class emu_settings_type
 	StartOnBoot,
 	PauseOnFocusLoss,
 	StartGameFullscreen,
+	StartBigPictureModeOnBoot,
 	PreventDisplaySleep,
 	ShowTrophyPopups,
 	ShowRpcnPopups,
