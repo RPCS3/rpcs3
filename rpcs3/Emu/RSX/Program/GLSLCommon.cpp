@@ -151,8 +151,13 @@ namespace glsl
 			;
 	}
 
-	void insert_rop_init(std::ostream& OS)
+	void insert_rop_init(std::ostream& OS, u32 mrt_buffer_count)
 	{
+		program_common::define_glsl_constants<u32>(OS,
+		{
+			{ "_MRT_BUFFERS_COUNT", mrt_buffer_count },
+		});
+
 		OS <<
 			#include "GLSLSnippets/RSXProg/RSXROPPrologue.glsl"
 			;
@@ -346,6 +351,11 @@ namespace glsl
 			enabled_options.push_back("_ENABLE_ROP_CHANNEL_REMAPPING");
 		}
 
+		if (props.ROP_programmable_blend)
+		{
+			enabled_options.push_back("_ENABLE_PROGRAMMABLE_BLENDING");
+		}
+
 		if (props.require_fog_read)
 		{
 			program_common::define_glsl_constants<rsx::fog_mode>(OS,
@@ -492,6 +502,11 @@ namespace glsl
 					OS << fmt::replace_all(msaa_sampling_impl, "_MSAA_SAMPLER_TYPE_", "usampler2DMS");
 				}
 			}
+		}
+
+		if (props.ROP_programmable_blend)
+		{
+			insert_blend_prologue(OS);
 		}
 	}
 

@@ -344,7 +344,7 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 	OS << "void main()\n";
 	OS << "{\n";
 
-	::glsl::insert_rop_init(OS);
+	::glsl::insert_rop_init(OS, m_prog.mrt_buffers_count);
 
 	OS << "\n" << "	fs_main();\n\n";
 

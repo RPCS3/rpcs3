@@ -4,9 +4,9 @@ R"(
  * Required register definitions from ROP config
  struct {
  	vec4 blend_constants;    // fp32x4
-	uint blend_func;         // rgb16, a16
-	uint blend_factors_a;    // src16, dst16
-	uint blend_factors_rgb;  // src16, dst16
+	uint blend_eqn;          // Packed RGB in lower 16 bits, A in upper 16 bits
+	uint blend_sfactors;     // Ditto
+	uint blend_dfactors;     // Ditto
  }
 */
 
@@ -91,9 +91,9 @@ vec3 get_blend_factor_rgb(const in uint op, const in vec4 src, const in vec4 dst
 
 float apply_blend_func_a(const in vec4 src, const in vec4 dst)
 {
-	uint blend_factor_a_s = _get_bits(blend_factors_a, 0, 16);
-	uint blend_factor_a_d = _get_bits(blend_factors_a, 16, 16);
-	uint func = _get_bits(blend_func, 16, 16);
+	uint blend_factor_a_s = _get_bits(blend_sfactors, 16, 16);
+	uint blend_factor_a_d = _get_bits(blend_dfactors, 16, 16);
+	uint func = _get_bits(blend_eqn, 16, 16);
 
 	const float src_factor_a = get_blend_factor_a(blend_factor_a_s, src, dst);
 	const float dst_factor_a = get_blend_factor_a(blend_factor_a_d, src, dst);
@@ -119,9 +119,9 @@ float apply_blend_func_a(const in vec4 src, const in vec4 dst)
 
 vec3 apply_blend_func_rgb(const in vec4 src, const in vec4 dst)
 {
-	uint blend_factor_rgb_s = _get_bits(blend_factors_rgb, 0, 16);
-	uint blend_factor_rgb_d = _get_bits(blend_factors_rgb, 16, 16);
-	uint func = _get_bits(blend_func, 0, 16);
+	uint blend_factor_rgb_s = _get_bits(blend_sfactors, 0, 16);
+	uint blend_factor_rgb_d = _get_bits(blend_dfactors, 0, 16);
+	uint func = _get_bits(blend_eqn, 0, 16);
 
 	const vec3 src_factor_rgb = get_blend_factor_rgb(blend_factor_rgb_s, src, dst);
 	const vec3 dst_factor_rgb = get_blend_factor_rgb(blend_factor_rgb_d, src, dst);
