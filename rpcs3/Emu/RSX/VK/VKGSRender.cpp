@@ -1804,6 +1804,12 @@ bool VKGSRender::load_program()
 
 		get_current_vertex_program(vs_sampler_state);
 
+		if (!!(current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING) !=
+			vk::renderpass_has_input_attachments(m_current_renderpass_key))
+		{
+			invalidate_render_pass();
+		}
+
 		m_graphics_state.clear(rsx::pipeline_state::invalidate_pipeline_bits);
 	}
 	else if (!(m_graphics_state & rsx::pipeline_state::pipeline_config_dirty) &&
@@ -2665,7 +2671,15 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		}
 	}
 
-	m_current_renderpass_key = vk::get_renderpass_key(m_fbo_images);
+	std::vector<u8> input_attachments{};
+	if ((current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING) &&
+		!m_graphics_state.test(rsx::pipeline_state::fragment_program_state_dirty))
+	{
+		input_attachments.resize(m_draw_buffers.size());
+		std::iota(input_attachments.begin(), input_attachments.end(), 0);
+	}
+
+	m_current_renderpass_key = vk::get_renderpass_key(m_fbo_images, input_attachments);
 	m_cached_renderpass = vk::get_renderpass(*m_device, m_current_renderpass_key);
 
 	// Search old framebuffers for this same configuration
@@ -2677,7 +2691,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		m_draw_fbo->release();
 	}
 
-	m_draw_fbo = vk::get_framebuffer(*m_device, fbo_width, fbo_height, VK_FALSE, m_cached_renderpass, m_fbo_images);
+	m_draw_fbo = vk::get_framebuffer(*m_device, fbo_width, fbo_height, vk::to_bool32(!input_attachments.empty()), m_cached_renderpass, m_fbo_images);
 	m_draw_fbo->add_ref();
 
 	set_viewport();

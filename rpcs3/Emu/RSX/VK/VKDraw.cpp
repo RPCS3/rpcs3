@@ -147,7 +147,14 @@ VkRenderPass VKGSRender::get_render_pass()
 void VKGSRender::invalidate_render_pass()
 {
 	// Regenerate renderpass key for the next draw call
-	if (const auto key = vk::get_renderpass_key(m_fbo_images, m_current_renderpass_key);
+	std::vector<u8> input_attachments{};
+	if (current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING)
+	{
+		input_attachments.resize(m_draw_buffers.size());
+		std::iota(input_attachments.begin(), input_attachments.end(), 0);
+	}
+
+	if (const auto key = vk::get_renderpass_key(m_fbo_images, m_current_renderpass_key, input_attachments);
 		key != m_current_renderpass_key)
 	{
 		m_current_renderpass_key = key;

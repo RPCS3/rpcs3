@@ -189,15 +189,21 @@ namespace vk
 		return key.encoded;
 	}
 
-	u64 get_renderpass_key(const std::vector<vk::image*>& images, u64 previous_key)
+	u64 get_renderpass_key(const std::vector<vk::image*>& images, u64 previous_key, const std::vector<u8>& input_attachment_ids)
 	{
 		// Partial update; assumes compatible renderpass keys
 		renderpass_key_blob key(previous_key);
 		key.layout_blob = 0;
+		key.input_attachments_mask = 0;
 
 		for (u32 i = 0; i < ::size32(images); ++i)
 		{
 			key.set_layout(i, images[i]->current_layout);
+		}
+
+		for (const auto& ref_id : input_attachment_ids)
+		{
+			key.set_input_attachment(ref_id);
 		}
 
 		return key.encoded;
@@ -346,6 +352,12 @@ namespace vk
 
 		g_renderpass_cache[renderpass_key] = result;
 		return result;
+	}
+
+	bool renderpass_has_input_attachments(u64 renderpass_key)
+	{
+		renderpass_key_blob key(renderpass_key);
+		return key.input_attachments_mask != 0u;
 	}
 
 	void clear_renderpass_cache(VkDevice dev)
