@@ -788,6 +788,19 @@ bool VKGSRender::bind_texture_env()
 		m_program->bind_uniform({ *view, vk::null_sampler() }, vk::glsl::binding_set_index_fragment, m_fs_binding_table->frag_depth_input_location);
 	}
 
+	if (current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING)
+	{
+		ensure(current_fragment_program.mrt_buffers_count == m_draw_buffers.size());
+		const auto remap = rsx::default_remap_vector.with_encoding(vk::VK_REMAP_IDENTITY);
+
+		for (u32 i = 0; i < current_fragment_program.mrt_buffers_count; ++i)
+		{
+			auto viewable = static_cast<vk::viewable_image*>(m_fbo_images[i]);
+			const auto view = viewable->get_view(remap);
+			m_program->bind_uniform(*view, vk::glsl::binding_set_index_fragment, m_fs_binding_table->frag_src_location[i]);
+		}
+	}
+
 	return out_of_memory;
 }
 
