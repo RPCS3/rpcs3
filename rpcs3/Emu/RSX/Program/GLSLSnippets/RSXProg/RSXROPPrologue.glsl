@@ -20,11 +20,26 @@ R"(
 #endif
 
 #if defined(_ENABLE_PROGRAMMABLE_BLENDING) && _MRT_BUFFERS_COUNT >= 1
+#define FRAG_LOAD(n) mrt_color[n] = subpassLoad(frag_src_##n)
 	// TODO: Multisampled output support.
 	vec4 mrt_color[_MRT_BUFFERS_COUNT];
-	for (int n = 0; n < _MRT_BUFFERS_COUNT; ++n)
-	{
-		mrt_color[n] = subpassLoad(mrtAttachments[n]);
-	}
+
+#if _MRT_BUFFERS_COUNT >= 1
+	FRAG_LOAD(0);
+#endif
+
+#if _MRT_BUFFERS_COUNT >= 2
+	FRAG_LOAD(1);
+#endif
+
+#if _MRT_BUFFERS_COUNT >= 3
+	FRAG_LOAD(2);
+#endif
+
+#if _MRT_BUFFERS_COUNT == 4
+	FRAG_LOAD(3);
+#endif
+
+#undef FRAG_LOAD
 #endif
 )"

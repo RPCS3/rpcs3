@@ -22,6 +22,7 @@ namespace vk
 			input_type_storage_buffer,
 			input_type_storage_texture,
 			input_type_push_constant,
+			input_type_attachment,
 
 			// Meta
 			input_type_max_enum,

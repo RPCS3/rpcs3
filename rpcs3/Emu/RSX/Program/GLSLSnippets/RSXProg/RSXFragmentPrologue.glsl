@@ -1,7 +1,5 @@
 R"(
 
-#define _MRT_BUFFERS_COUNT 4 // TODO
-
 #ifdef _32_BIT_OUTPUT
 // Everything is fp32 on ouput channels
 #define _mrt_color_t(expr) expr

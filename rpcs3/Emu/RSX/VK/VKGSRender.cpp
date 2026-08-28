@@ -2290,6 +2290,29 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 		4,
 		&push_val);
 
+	if (current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING)
+	{
+		// TODO: This should be cached aggressively.
+		u32 blend_config[7];
+		blend_config[0] = REGS(m_ctx)->registers[NV4097_SET_BLEND_EQUATION];
+		blend_config[1] = REGS(m_ctx)->registers[NV4097_SET_BLEND_FUNC_SFACTOR];
+		blend_config[2] = REGS(m_ctx)->registers[NV4097_SET_BLEND_FUNC_DFACTOR];
+
+		const auto blend_colors = rsx::get_constant_blend_colors();
+		blend_config[3] = std::bit_cast<u32>(blend_colors[0]);
+		blend_config[4] = std::bit_cast<u32>(blend_colors[1]);
+		blend_config[5] = std::bit_cast<u32>(blend_colors[2]);
+		blend_config[6] = std::bit_cast<u32>(blend_colors[3]);
+
+		vkCmdPushConstants(
+			*m_current_command_buffer,
+			m_program->layout(),
+			VK_SHADER_STAGE_FRAGMENT_BIT,
+			4,
+			28,
+			blend_config);
+	}
+
 	// Now actually fill in the data
 	m_draw_processor.fill_vertex_layout_state(
 		m_vertex_layout,
