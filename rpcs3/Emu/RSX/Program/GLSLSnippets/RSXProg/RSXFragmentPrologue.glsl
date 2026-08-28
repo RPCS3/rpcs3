@@ -1,5 +1,7 @@
 R"(
 
+#define _MRT_BUFFERS_COUNT 4 // TODO
+
 #ifdef _32_BIT_OUTPUT
 // Everything is fp32 on ouput channels
 #define _mrt_color_t(expr) expr
@@ -15,16 +17,24 @@ R"(
 // Default. Used when we're not utilizing native fp16
 vec4 round_to_8bit(const in vec4 v4)
 {
-	uvec4 raw = uvec4(max(floor(fma(_fx12_truncate(v4), vec4(255.), vec4(0.5))), vec4(0.)));
+	const uvec4 raw = uvec4(max(floor(fma(_fx12_truncate(v4), vec4(255.), vec4(0.5))), vec4(0.)));
 	return vec4(raw) / vec4(255.);
 }
 #ifndef _32_BIT_OUTPUT
 f16vec4 round_to_8bit(const in f16vec4 v4)
 {
-	uvec4 raw = uvec4(max(floor(fma(_fx12_truncate(vec4(v4)), f16vec4(255.), f16vec4(0.5))), vec4(0.)));
+	const uvec4 raw = uvec4(max(floor(fma(_fx12_truncate(vec4(v4)), f16vec4(255.), f16vec4(0.5))), vec4(0.)));
 	return f16vec4(raw) / f16vec4(255.);
 }
 #endif
+
+// Scalar variant of 8-bit rounding is only available for f32.
+float round_to_8bit(const in float v)
+{
+	const uint raw = uint(max(floor(fma(_fx12_truncate(v), 255.f, 0.5f)), 0.f));
+	return float(raw) / 255.f;
+}
+
 #endif
 
 #ifdef _DISABLE_EARLY_DISCARD

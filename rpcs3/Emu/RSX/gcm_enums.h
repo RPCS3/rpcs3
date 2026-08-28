@@ -450,9 +450,12 @@ namespace gcm
 		RSX_SHADER_CONTROL_USED_REGS_MASK           = 0x0000000f,
 		RSX_SHADER_CONTROL_USED_TEMP_REGS_MASK      = 0xff000000,
 
-		RSX_SHADER_CONTROL_USES_KIL                 = 0x00000080,   // program uses KIL op
-		RSX_SHADER_CONTROL_UNKNOWN0                 = 0x00000400,  // seemingly always set
+		RSX_SHADER_CONTROL_USES_KIL                 = 0x00000080, // program uses KIL op
+		RSX_SHADER_CONTROL_UNKNOWN0                 = 0x00000400, // seemingly always set
 		RSX_SHADER_CONTROL_UNKNOWN1                 = 0x00008000, // seemingly set when srgb packer is used??
+
+		// Meta
+		RSX_SHADER_CONTROL_GCM_FLAGS_MASK           = 0x000007ff, // Reserved range for GCM flags. We don't care about most GCM-specific flags.
 
 		// Custom
 		RSX_SHADER_CONTROL_FLAT_SHADING             = 0x00000800, // Interpolate front/back colors using the provoking vertex

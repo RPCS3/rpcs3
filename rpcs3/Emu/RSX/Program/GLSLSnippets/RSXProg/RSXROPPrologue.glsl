@@ -19,11 +19,12 @@ R"(
 	}
 #endif
 
-#ifdef _ENABLE_PROGRAMMABLE_BLENDING
-	vec4 mrt_color[4];
-	for (int n = 0; n < framebufferCount; ++n)
+#if defined(_ENABLE_PROGRAMMABLE_BLENDING) && _MRT_BUFFERS_COUNT >= 1
+	// TODO: Multisampled output support.
+	vec4 mrt_color[_MRT_BUFFERS_COUNT];
+	for (int n = 0; n < _MRT_BUFFERS_COUNT; ++n)
 	{
-		mrt_color[n] = subPassLoad(mrtAttachments[n]);
+		mrt_color[n] = subpassLoad(mrtAttachments[n]);
 	}
 #endif
 )"
