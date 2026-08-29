@@ -5,7 +5,6 @@
 
 #include "Emu/GameInfo.h"
 
-#include <set>
 #include <QPixmap>
 
 /* Having the icons associated with the game info simplifies logic internally */
