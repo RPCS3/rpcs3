@@ -306,19 +306,6 @@ QSet<QString> gui_settings::GetGamesInCollection(const QString& name) const
 	return gui::utils::list_to_set(GetValue(gui::game_collection, gc_games_prefix + name, QStringList()).toStringList());
 }
 
-QString gui_settings::GetCollectionOfGame(const QString& serial) const
-{
-	for (const QString& collection : GetGameCollections())
-	{
-		if (GetGamesInCollection(collection).contains(serial))
-		{
-			return collection;
-		}
-	}
-
-	return {};
-}
-
 bool gui_settings::CleanupCollections(const QSet<QString>& serials) const
 {
 	const QStringList& collections = GetGameCollections();
@@ -352,42 +339,33 @@ bool gui_settings::CleanupCollections(const QSet<QString>& serials) const
 	return changed;
 }
 
-bool gui_settings::MoveGamesToCollection(const QSet<QString>& serials, const QString& name) const
+bool gui_settings::SetGameCollectionMembership(const QSet<QString>& serials, const QString& name, bool add) const
 {
-	const QStringList collections = GetGameCollections();
-
-	if (serials.isEmpty() || (!name.isEmpty() && !collections.contains(name)))
+	if (serials.isEmpty() || !GetGameCollections().contains(name))
 	{
 		return false;
 	}
 
-	bool changed = false;
+	const QSet<QString> old_games = GetGamesInCollection(name);
+	QSet<QString> games = old_games;
 
-	for (const QString& collection : collections)
+	if (add)
 	{
-		const QSet<QString> old_games = GetGamesInCollection(collection);
-		QSet<QString> games = old_games;
-
+		games.unite(serials);
+	}
+	else
+	{
 		games.subtract(serials);
-
-		if (collection == name)
-		{
-			games.unite(serials);
-		}
-
-		if (games != old_games)
-		{
-			SetGamesInCollection(collection, games);
-			changed = true;
-		}
 	}
 
-	if (changed)
+	if (games == old_games)
 	{
-		sync();
+		return false;
 	}
 
-	return changed;
+	SetGamesInCollection(name, games);
+	sync();
+	return true;
 }
 
 QString gui_settings::GetAllGamesCollectionLabel()
