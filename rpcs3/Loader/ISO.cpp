@@ -36,13 +36,12 @@ static void* get_aligned_buf()
 
 		aligned_buf() noexcept
 		{
-			// IMPORTANT NOTE: It must be aligned (probably enough on multiple of 4) to support raw device, otherwise any read from file will fail
+			// IMPORTANT NOTE: it must be aligned on the sector size of the volume to support a raw device, otherwise any read from
+			// file will fail (an optical medium always uses ISO_SECTOR_SIZE, so allocating a sector aligned on itself is enough)
 #if defined(_WIN32)
-			buf = _aligned_malloc(ISO_SECTOR_SIZE, ISO_SECTOR_SIZE * 2);
+			buf = _aligned_malloc(ISO_SECTOR_SIZE, ISO_SECTOR_SIZE);
 #else
-			// NOTE: unlike "_aligned_malloc", "aligned_alloc" requires the size to be a multiple of the alignment
-			// (macOS returns NULL with EINVAL otherwise), so the size is rounded up: only ISO_SECTOR_SIZE bytes are used
-			buf = std::aligned_alloc(ISO_SECTOR_SIZE * 2, ISO_SECTOR_SIZE * 2);
+			buf = std::aligned_alloc(ISO_SECTOR_SIZE, ISO_SECTOR_SIZE);
 #endif
 		}
 
