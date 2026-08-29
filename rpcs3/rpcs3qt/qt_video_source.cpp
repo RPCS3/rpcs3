@@ -482,7 +482,7 @@ void qt_video_source_wrapper::set_active(bool active)
 	Emu.CallFromMainThread([this, active]()
 	{
 		ensure(m_qt_video_source);
-		m_qt_video_source->set_active(true);
+		m_qt_video_source->set_active(active);
 	});
 }
 

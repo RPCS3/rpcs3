@@ -71,7 +71,7 @@ namespace rsx
 
 			if (!info.movie_path.empty())
 			{
-				m_video = std::make_unique<video_view>(info.movie_path, "", info.icon_path);
+				m_video = std::make_unique<video_view>(info.movie_path, info.audio_path, info.icon_path);
 				m_video->set_pos(m_icon.x, m_icon.y);
 				m_video->set_size(m_icon.w, m_icon.h);
 				m_video->set_active(true);
