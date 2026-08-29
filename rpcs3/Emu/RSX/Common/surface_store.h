@@ -112,11 +112,21 @@ namespace rsx
 					}
 					else
 					{
+						const bool is_pitch_compatible = Traits::surface_is_pitch_compatible(found->second, prev_surface->get_rsx_pitch());
+						if (!is_pitch_compatible && found->second->last_use_tag >= prev_surface->last_use_tag) [[unlikely]]
+						{
+							// HACK: A newer surface with an incompatible pitch owns the memory, do not evict.
+							// TODO: Pitch conversion is required to resolve this properly.
+							rsx_log.warning("[SURFACE CACHE] Discarding block at 0x%x from surface at 0x%x (pitch=%u); block is owned by a newer surface with pitch=%u.",
+								new_address, prev_surface->base_addr, prev_surface->get_rsx_pitch(), found->second->get_rsx_pitch());
+							return;
+						}
+
 						invalidate(found->second);
 						data.erase(new_address);
 
 						auto &old = invalidated_resources.back();
-						if (Traits::surface_is_pitch_compatible(old, prev_surface->get_rsx_pitch()))
+						if (is_pitch_compatible)
 						{
 							if (old->last_use_tag >= prev_surface->last_use_tag) [[unlikely]]
 							{
@@ -532,7 +542,7 @@ namespace rsx
 			if (!new_surface)
 			{
 				ensure(store);
-				new_surface_storage = Traits::create_new_surface(address, format, width, height, pitch, antialias, scaling_config, std::forward<Args>(extra_params)...);
+				new_surface_storage = Traits::create_new_surface(command_list, address, format, width, height, pitch, antialias, scaling_config, std::forward<Args>(extra_params)...);
 				new_surface = Traits::get(new_surface_storage);
 				Traits::prepare_surface_for_drawing(command_list, new_surface);
 				allocate_rsx_memory(new_surface);
@@ -1027,6 +1037,89 @@ namespace rsx
 			}
 		}
 
+		// Prepare a render target surface for drawing without binding it to the current RTV/DSV set.
+		// Useful for transfer operations to ensure watertight writes.
+		template <typename ...Args>
+		void prepare_transfer_target(
+			command_list_type command_list,
+			surface_type surface,
+			rsx::surface_access access,
+			Args&&... extra_params)
+		{
+			// We need to reintersect the surface against the surface hierarchy tree to avoid data loss
+			if (!surface->is_depth_surface()) [[ likely ]]
+			{
+				bind_address_as_render_targets(
+					command_list,
+					surface->base_addr,
+					surface->format_info.gcm_color_format,
+					surface->get_aa_mode(),
+					surface->get_surface_width(),
+					surface->get_surface_height(),
+					surface->get_rsx_pitch(),
+					surface->get_resolution_scaling_config(),
+					std::forward<Args>(extra_params)...);
+			}
+			else
+			{
+				bind_address_as_depth_stencil(
+					command_list,
+					surface->base_addr,
+					surface->format_info.gcm_depth_format,
+					surface->get_aa_mode(),
+					surface->get_surface_width(),
+					surface->get_surface_height(),
+					surface->get_rsx_pitch(),
+					surface->get_resolution_scaling_config(),
+					std::forward<Args>(extra_params)...);
+			}
+
+			ensure(access.is_transfer());
+			surface->memory_barrier(command_list, access);
+		}
+
+		// Create surface on-demand from an RSX image description
+		template <typename ...Args>
+		surface_type create_surface_from_rsx_section(
+			command_list_type command_list,
+			const rsx::image_section_attributes_t& attributes,
+			const rsx::surface_scaling_config_t& scaling_config,
+			Args&&... extra_params)
+		{
+			cache_tag = rsx::get_shared_tag();
+			surface_type result;
+
+			if (rsx::classify_format(attributes.gcm_format) == RSX_FORMAT_CLASS_COLOR)
+			{
+				result = bind_address_as_render_targets(
+					command_list,
+					attributes.address,
+					rsx::get_compatible_surface_color_format(attributes.gcm_format),
+					rsx::surface_antialiasing::center_1_sample,
+					attributes.width,
+					attributes.height,
+					attributes.pitch,
+					scaling_config,
+					std::forward<Args>(extra_params)...);
+			}
+			else
+			{
+				result = bind_address_as_depth_stencil(
+					command_list,
+					attributes.address,
+					rsx::get_compatible_surface_depth_format(attributes.gcm_format),
+					rsx::surface_antialiasing::center_1_sample,
+					attributes.width,
+					attributes.height,
+					attributes.pitch,
+					{},
+					std::forward<Args>(extra_params)...);
+			}
+
+			result->raster_type = attributes.swizzled ? surface_raster_type::swizzle : surface_raster_type::linear;
+			return result;
+		}
+
 		u8 get_color_surface_count() const
 		{
 			return static_cast<u8>(m_bound_render_target_ids.size());
@@ -1043,6 +1136,69 @@ namespace rsx
 				return Traits::get(_It->second);
 
 			return nullptr;
+		}
+
+		// Workaround to handle overlapping surfaces with differing pitch
+		// For a surface region defined by range [address, length] and pitch, we return the max length we can write without clobbering a surface of different pitch.
+		// TODO: Re-evaluate usefulness once pitch-conversion work is completed.
+		u32 truncate_memory_range_by_pitch(u32 address, u32 pitch, u32 length, u64 reference_tag)
+		{
+			if (!length || !pitch)
+			{
+				return length;
+			}
+
+			const auto test_range = rsx::address_range32::start_length(address, length);
+			const auto test_height = static_cast<u16>(utils::aligned_div(length, pitch));
+			u32 limit = address + length;
+
+			auto process_list_function = [&](surface_ranged_map& data)
+			{
+				for (auto it = data.begin_range(test_range); it != data.end(); ++it)
+				{
+					// Only a surface that begins after us can shorten the length. An exact address match is (hackishly) handled in bind_surface_address instead.
+					const auto base_address = it->first;
+					if (base_address <= address || base_address >= limit)
+					{
+						continue;
+					}
+
+					const auto surface = Traits::get(it->second);
+					if (!surface->get_memory_range().overlaps(test_range))
+					{
+						continue;
+					}
+
+					if (rsx::pitch_compatible(surface, pitch, test_height))
+					{
+						// Normal inheritance resolves this overlap. Nothing to do.
+						continue;
+					}
+
+					if (surface->last_use_tag <= reference_tag)
+					{
+						// Stale data, safe to swallow.
+						continue;
+					}
+
+					// min() is already handled in the original address bounds check
+					limit = base_address;
+				}
+			};
+
+			if (m_render_targets_memory_range.valid() &&
+				test_range.overlaps(m_render_targets_memory_range))
+			{
+				process_list_function(m_render_targets_storage);
+			}
+
+			if (m_depth_stencil_memory_range.valid() &&
+				test_range.overlaps(m_depth_stencil_memory_range))
+			{
+				process_list_function(m_depth_stencil_storage);
+			}
+
+			return limit - address;
 		}
 
 		/**
@@ -1183,6 +1339,9 @@ namespace rsx
 					// Drop any excess subpixels on the requester side if any. Ensures division generates a perfect fitting rect without rounding bugs.
 					width_in_bytes -= (width_in_bytes % required_bpp);
 
+					// We need to track if this surface is reloaded from CPU during this next step.
+					const bool needs_reload = surface->needs_cpu_upload();
+
 					// Delay this as much as possible to avoid side-effects of spamming barrier
 					if (surface->memory_barrier(cmd, access); !surface->test())
 					{
@@ -1195,6 +1354,7 @@ namespace rsx
 					info.base_address = range.start;
 					info.is_depth = is_depth;
 					info.is_clipped = (width_in_bytes < required_width_in_bytes || height < required_height);
+					info.is_reloaded = needs_reload;
 
 					// Decode source
 					info.src_area.x = src_x / surface_bpp;

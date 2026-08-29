@@ -209,8 +209,15 @@ namespace rsx
 					continue;
 				}
 
-				try_add_game(entry.name, hdd0_game_dir + entry.name);
-			}
+				GameInfo info{};
+				info.path = path;
+				info.serial = title_id;
+				info.name = std::string(psf::get_string(psf, "TITLE", title_id));
+				info.category = std::string(psf::get_string(psf, "CATEGORY"));
+				info.app_ver = std::string(psf::get_string(psf, "APP_VER"));
+				info.icon_path = rpcs3::utils::get_game_content_path(game_content_type::content_icon, info, sfo_dir);
+				info.movie_path = rpcs3::utils::get_game_content_path(game_content_type::content_video, info, sfo_dir);
+				info.audio_path = rpcs3::utils::get_game_content_path(game_content_type::content_sound, info, sfo_dir);
 
 			for (const auto& [title_id, raw_path] : Emu.GetGamesConfig().get_games())
 			{

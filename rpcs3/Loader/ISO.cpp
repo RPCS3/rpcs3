@@ -40,7 +40,7 @@ static void* get_aligned_buf()
 #if defined(_WIN32)
 			buf = _aligned_malloc(ISO_SECTOR_SIZE, ISO_SECTOR_SIZE * 2);
 #else
-			buf = std::aligned_alloc(ISO_SECTOR_SIZE * 2, ISO_SECTOR_SIZE);
+			buf = std::aligned_alloc(ISO_SECTOR_SIZE * 2, ISO_SECTOR_SIZE * 2);
 #endif
 		}
 

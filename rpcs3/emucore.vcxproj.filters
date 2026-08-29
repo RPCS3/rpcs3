@@ -142,6 +142,9 @@
     <Filter Include="Emu\GPU\RSX\Program\Assembler\Passes\FP">
       <UniqueIdentifier>{7fb59544-9761-4b4a-bb04-07deb43cf3c2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Emu\GPU\RSX\Overlays\BigPicture">
+      <UniqueIdentifier>{37ae1158-fac7-4a4c-929a-115d8deb7505}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Crypto\aes.cpp">
@@ -1219,18 +1222,6 @@
     <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_sidebar_page.cpp">
       <Filter>Emu\GPU\RSX\Overlays\HomeMenu\Pages</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture.cpp">
-      <Filter>Emu\GPU\RSX\Overlays\HomeMenu\Pages</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture_game_details.cpp">
-      <Filter>Emu\GPU\RSX\Overlays\HomeMenu\Pages</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture_game_grid.cpp">
-      <Filter>Emu\GPU\RSX\Overlays\HomeMenu\Pages</Filter>
-    </ClCompile>
-    <ClCompile Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture_main_menu.cpp">
-      <Filter>Emu\GPU\RSX\Overlays\HomeMenu\Pages</Filter>
-    </ClCompile>
     <ClCompile Include="Emu\RSX\Overlays\overlay_animated_icon.cpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClCompile>
@@ -1482,6 +1473,18 @@
     </ClCompile>
     <ClCompile Include="Emu\Io\gem_config.cpp">
       <Filter>Emu\Io</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture.cpp">
+      <Filter>Emu\GPU\RSX\Overlays\BigPicture</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture_game_details.cpp">
+      <Filter>Emu\GPU\RSX\Overlays\BigPicture</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture_game_grid.cpp">
+      <Filter>Emu\GPU\RSX\Overlays\BigPicture</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture_main_menu.cpp">
+      <Filter>Emu\GPU\RSX\Overlays\BigPicture</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -2611,18 +2614,6 @@
     <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu_sidebar_page.h">
       <Filter>Emu\GPU\RSX\Overlays\HomeMenu\Pages</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture.h">
-      <Filter>Emu\GPU\RSX\Overlays\HomeMenu\Pages</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture_game_details.h">
-      <Filter>Emu\GPU\RSX\Overlays\HomeMenu\Pages</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture_game_grid.h">
-      <Filter>Emu\GPU\RSX\Overlays\HomeMenu\Pages</Filter>
-    </ClInclude>
-    <ClInclude Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture_main_menu.h">
-      <Filter>Emu\GPU\RSX\Overlays\HomeMenu\Pages</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\overlay_loading_icon.hpp">
       <Filter>Emu\GPU\RSX\Overlays</Filter>
     </ClInclude>
@@ -2979,6 +2970,21 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\Modules\libsvc1d.h">
       <Filter>Emu\Cell\Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\texture_cache_blit_helpers.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture_main_menu.h">
+      <Filter>Emu\GPU\RSX\Overlays\BigPicture</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture.h">
+      <Filter>Emu\GPU\RSX\Overlays\BigPicture</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture_game_details.h">
+      <Filter>Emu\GPU\RSX\Overlays\BigPicture</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture_game_grid.h">
+      <Filter>Emu\GPU\RSX\Overlays\BigPicture</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
