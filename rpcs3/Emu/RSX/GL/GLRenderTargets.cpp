@@ -325,10 +325,6 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 
 	if (!m_rtts.orphaned_surfaces.empty())
 	{
-		gl::texture::format format;
-		gl::texture::type type;
-		bool swap_bytes;
-
 		for (auto& [base_addr, surface] : m_rtts.orphaned_surfaces)
 		{
 			bool lock = surface->is_depth_surface() ? !!g_cfg.video.write_depth_buffer :
@@ -354,31 +350,15 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 				continue;
 			}
 
-			if (surface->is_depth_surface())
-			{
-				const auto depth_format_gl = rsx::internals::surface_depth_format_to_gl(surface->get_surface_depth_format());
-				format = depth_format_gl.format;
-				type = depth_format_gl.type;
-				swap_bytes = (type != gl::texture::type::uint_24_8);
-			}
-			else
-			{
-				const auto color_format_gl = rsx::internals::surface_color_format_to_gl(surface->get_surface_color_format());
-				format = color_format_gl.format;
-				type = color_format_gl.type;
-				swap_bytes = color_format_gl.swap_bytes;
-			}
-
 			m_gl_texture_cache.lock_memory_region(
 				cmd, surface, surface->get_memory_range(), false,
 				surface->get_surface_width<rsx::surface_metrics::pixels>(), surface->get_surface_height<rsx::surface_metrics::pixels>(), surface->get_rsx_pitch(),
-				format, type, swap_bytes);
+				surface);
 		}
 
 		m_rtts.orphaned_surfaces.clear();
 	}
 
-	const auto color_format = rsx::internals::surface_color_format_to_gl(m_framebuffer_layout.color_format);
 	for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
 	{
 		if (!m_surface_info[i].address || !m_surface_info[i].pitch) continue;
@@ -390,7 +370,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 			m_gl_texture_cache.lock_memory_region(
 				cmd, m_rtts.m_bound_render_targets[i].second, surface_range, true,
 				m_surface_info[i].width, m_surface_info[i].height, m_surface_info[i].pitch,
-				color_format.format, color_format.type, color_format.swap_bytes);
+				m_rtts.m_bound_render_targets[i].second);
 		}
 		else
 		{
@@ -403,11 +383,10 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 		const auto surface_range = m_depth_surface_info.get_memory_range();
 		if (g_cfg.video.write_depth_buffer)
 		{
-			const auto depth_format_gl = rsx::internals::surface_depth_format_to_gl(m_framebuffer_layout.depth_format);
 			m_gl_texture_cache.lock_memory_region(
 				cmd, m_rtts.m_bound_depth_stencil.second, surface_range, true,
 				m_depth_surface_info.width, m_depth_surface_info.height, m_depth_surface_info.pitch,
-				depth_format_gl.format, depth_format_gl.type, depth_format_gl.type != gl::texture::type::uint_24_8);
+				m_rtts.m_bound_depth_stencil.second);
 		}
 		else
 		{
@@ -472,14 +451,16 @@ void gl::render_target::load_memory(gl::command_context& cmd)
 		}
 	}
 
-	state_flags &= ~rsx::surface_state_flags::erase_bkgnd;
+	state_flags &= ~(rsx::surface_state_flags::erase_bkgnd | rsx::surface_state_flags::force_data_load);
 }
 
 void gl::render_target::initialize_memory(gl::command_context& cmd, rsx::surface_access access)
 {
-	const bool memory_load = is_depth_surface() ?
+	const bool read_buffers_config = is_depth_surface() ?
 		!!g_cfg.video.read_depth_buffer :
 		!!g_cfg.video.read_color_buffers;
+
+	const bool memory_load = (state_flags & rsx::surface_state_flags::force_data_load) || read_buffers_config;
 
 	if (!memory_load)
 	{
