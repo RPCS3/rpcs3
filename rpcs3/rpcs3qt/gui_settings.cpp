@@ -346,8 +346,8 @@ bool gui_settings::SetGameCollectionMembership(const QSet<QString>& serials, con
 		return false;
 	}
 
-	const QSet<QString> old_games = GetGamesInCollection(name);
-	QSet<QString> games = old_games;
+	QSet<QString> games = GetGamesInCollection(name);
+	const qsizetype old_size = games.size();
 
 	if (add)
 	{
@@ -358,7 +358,8 @@ bool gui_settings::SetGameCollectionMembership(const QSet<QString>& serials, con
 		games.subtract(serials);
 	}
 
-	if (games == old_games)
+	// unite only adds and subtract only removes, so a size that did not move is a set that did not either
+	if (games.size() == old_size)
 	{
 		return false;
 	}
