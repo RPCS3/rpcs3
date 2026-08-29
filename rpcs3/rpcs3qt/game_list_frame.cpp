@@ -577,7 +577,7 @@ void game_list_frame::Refresh(const bool from_drive, const std::vector<std::stri
 
 void game_list_frame::OnParsingFinished()
 {
-	const Localized localized;
+	const std::shared_ptr<const Localized> localized = std::make_shared<const Localized>();
 	const std::string dev_flash = g_cfg_vfs.get_dev_flash();
 	const std::string _hdd = rpcs3::utils::get_hdd0_dir();
 
@@ -593,8 +593,8 @@ void game_list_frame::OnParsingFinished()
 	const std::string localized_icon = fmt::format("ICON0_%02d.PNG", language_index);
 	const std::string localized_movie = fmt::format("ICON1_%02d.PAM", language_index);
 
-	const auto add_game = [this, localized_title, localized_icon, localized_movie, dev_flash, game_icon_path, _hdd,
-	                       cat_unknown_localized = localized.category.unknown.toStdString(), cat_unknown = cat::cat_unknown.toStdString(),
+	const auto add_game = [this, localized, localized_title, localized_icon, localized_movie, dev_flash, game_icon_path, _hdd,
+	                       cat_unknown_localized = localized->category.unknown.toStdString(), cat_unknown = cat::cat_unknown.toStdString(),
 	                       play_hover_movies = m_play_hover_movies, play_hover_music = m_play_hover_music, show_custom_icons = m_show_custom_icons]
 	                       (const std::string& dir_or_elf, const std::string& game_dir = "PS3_GAME")
 	{
@@ -632,8 +632,6 @@ void game_list_frame::OnParsingFinished()
 		gui_game_info game{};
 		game.info.path = dir_or_elf;
 		game.info.game_dir = (game_dir == "PS3_GAME") ? "" : game_dir;
-
-		const Localized thread_localized;
 
 		const std::string sfo_dir = (archive || !cache_entry.psf_data.empty()) ? game_dir : rpcs3::utils::get_sfo_dir_from_game_path(dir_or_elf);
 		const std::string sfo_path = sfo_dir + "/PARAM.SFO";
@@ -697,7 +695,7 @@ void game_list_frame::OnParsingFinished()
 					path_vfs = path_vfs.substr(pos);
 				}
 
-				if (const auto it = thread_localized.title.titles.find(path_vfs); it != thread_localized.title.titles.cend())
+				if (const auto it = localized->title.titles.find(path_vfs); it != localized->title.titles.cend())
 				{
 					game.info.name = it->second.toStdString();
 				}
@@ -858,21 +856,21 @@ void game_list_frame::OnParsingFinished()
 
 		QString qt_cat = QString::fromStdString(game.info.category);
 
-		if (const auto boot_cat = thread_localized.category.cat_boot.find(qt_cat); boot_cat != thread_localized.category.cat_boot.cend())
+		if (const auto boot_cat = localized->category.cat_boot.find(qt_cat); boot_cat != localized->category.cat_boot.cend())
 		{
 			qt_cat = boot_cat->second;
 		}
-		else if (const auto data_cat = thread_localized.category.cat_data.find(qt_cat); data_cat != thread_localized.category.cat_data.cend())
+		else if (const auto data_cat = localized->category.cat_data.find(qt_cat); data_cat != localized->category.cat_data.cend())
 		{
 			qt_cat = data_cat->second;
 		}
 		else if (game.info.category == cat_unknown)
 		{
-			qt_cat = thread_localized.category.unknown;
+			qt_cat = localized->category.unknown;
 		}
 		else
 		{
-			qt_cat = thread_localized.category.other;
+			qt_cat = localized->category.other;
 		}
 
 		game.localized_category = std::move(qt_cat);

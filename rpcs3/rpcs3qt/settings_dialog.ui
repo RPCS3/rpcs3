@@ -997,6 +997,13 @@
                    </widget>
                   </item>
                   <item>
+                    <widget class="QCheckBox" name="blitEngineScaling">
+                    <property name="text">
+                      <string>Allow Blit Engine Upscaling</string>
+                    </property>
+                    </widget>
+                  </item>
+                  <item>
                    <spacer name="additional_settings_spacer">
                     <property name="orientation">
                      <enum>Qt::Orientation::Vertical</enum>
