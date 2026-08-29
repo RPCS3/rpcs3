@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Core/RSXEngLock.hpp"
 #include "Core/RSXReservationLock.hpp"
+#include "Host/MM.h"
 #include "RSXThread.h"
 
 namespace rsx
@@ -361,6 +362,9 @@ namespace rsx
 				value = (surface_active && stats_enabled) ? -1 : 0;
 				break;
 			}
+
+			// Reports are strongly ordered.
+			rsx::mm_flush();
 
 			rsx::reservation_lock<true> lock(sink, 16);
 			auto report = vm::get_super_ptr<atomic_t<CellGcmReportData>>(sink);
