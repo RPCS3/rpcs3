@@ -95,6 +95,15 @@ float apply_blend_func_a(const in vec4 src, const in vec4 dst)
 	uint blend_factor_a_d = _get_bits(blend_dfactors, 16, 16);
 	uint func = _get_bits(blend_eqn, 16, 16);
 
+	switch (func)
+	{
+	case BLEND_MIN: return min(_blend_saturate(src.a), dst.a);
+	case BLEND_MAX: return max(_blend_saturate(src.a), dst.a);
+	case BLEND_FUNC_REVERSE_SUBTRACT_SIGNED: return dst.a - _blend_saturate_signed(src.a);
+	case BLEND_FUNC_ADD_SIGNED: return _blend_saturate_signed(src.a) + dst.a;
+	case BLEND_FUNC_REVERSE_ADD_SIGNED: return _blend_saturate(src.a) + _blend_saturate_signed(dst.a);
+	}
+
 	const float src_factor_a = get_blend_factor_a(blend_factor_a_s, src, dst);
 	const float dst_factor_a = get_blend_factor_a(blend_factor_a_d, src, dst);
 
@@ -105,13 +114,8 @@ float apply_blend_func_a(const in vec4 src, const in vec4 dst)
 	switch (func)
 	{
 	case BLEND_FUNC_ADD: return _blend_saturate(s) + d;
-	case BLEND_MIN: return min(_blend_saturate(src.a), dst.a);
-	case BLEND_MAX: return max(_blend_saturate(src.a), dst.a);
 	case BLEND_FUNC_SUBTRACT: return _blend_saturate(s) - d;
 	case BLEND_FUNC_REVERSE_SUBTRACT: return d - _blend_saturate(s);
-	case BLEND_FUNC_REVERSE_SUBTRACT_SIGNED: return d - _blend_saturate_signed(s);
-	case BLEND_FUNC_ADD_SIGNED: return _blend_saturate_signed(s) + d;
-	case BLEND_FUNC_REVERSE_ADD_SIGNED: return _blend_saturate(s) + _blend_saturate_signed(d);
 	}
 
 	return 0.f;
@@ -123,6 +127,15 @@ vec3 apply_blend_func_rgb(const in vec4 src, const in vec4 dst)
 	uint blend_factor_rgb_d = _get_bits(blend_dfactors, 0, 16);
 	uint func = _get_bits(blend_eqn, 0, 16);
 
+	switch (func)
+	{
+	case BLEND_MIN: return min(_blend_saturate(src.rgb), dst.rgb);
+	case BLEND_MAX: return max(_blend_saturate(src.rgb), dst.rgb);
+	case BLEND_FUNC_REVERSE_SUBTRACT_SIGNED: return dst.rgb - _blend_saturate_signed(src.rgb);
+	case BLEND_FUNC_ADD_SIGNED: return _blend_saturate_signed(src.rgb) + dst.rgb;
+	case BLEND_FUNC_REVERSE_ADD_SIGNED: return _blend_saturate(src.rgb) + _blend_saturate_signed(dst.rgb);
+	}
+
 	const vec3 src_factor_rgb = get_blend_factor_rgb(blend_factor_rgb_s, src, dst);
 	const vec3 dst_factor_rgb = get_blend_factor_rgb(blend_factor_rgb_d, src, dst);
 
@@ -133,13 +146,8 @@ vec3 apply_blend_func_rgb(const in vec4 src, const in vec4 dst)
 	switch (func)
 	{
 	case BLEND_FUNC_ADD: return _blend_saturate(s) + d;
-	case BLEND_MIN: return min(_blend_saturate(src.rgb), dst.rgb);
-	case BLEND_MAX: return max(_blend_saturate(src.rgb), dst.rgb);
 	case BLEND_FUNC_SUBTRACT: return _blend_saturate(s) - d;
 	case BLEND_FUNC_REVERSE_SUBTRACT: return d - _blend_saturate(s);
-	case BLEND_FUNC_REVERSE_SUBTRACT_SIGNED: return d - _blend_saturate_signed(s);
-	case BLEND_FUNC_ADD_SIGNED: return _blend_saturate_signed(s) + d;
-	case BLEND_FUNC_REVERSE_ADD_SIGNED: return _blend_saturate(s) + _blend_saturate_signed(d);
 	}
 
 	return vec3(0.);
