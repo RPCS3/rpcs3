@@ -1986,7 +1986,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 			return;
 		}
 
-		m_file = std::make_unique<windows_file>(handle, static_cast<u64>(geometry.DiskSize.QuadPart));
+		m_file = std::make_unique<windows_file>(handle, static_cast<u64>(ensure(geometry.DiskSize.QuadPart)));
 		return;
 	}
 
