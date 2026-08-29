@@ -175,7 +175,7 @@ void VKGSRender::update_draw_state()
 		vkCmdSetLineWidth(*m_current_command_buffer, actual_line_width);
 	}
 
-	if (rsx::method_registers.blend_enabled())
+	if (rsx::method_registers.blend_enabled_mask())
 	{
 		// Update blend constants
 		auto blend_colors = rsx::get_constant_blend_colors();

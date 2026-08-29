@@ -92,6 +92,7 @@ namespace rsx
 		bool supports_host_gpu_labels;         // Advanced host synchronization
 		bool supports_normalized_barycentrics; // Basically all GPUs except NVIDIA have properly normalized barycentrics
 		bool supports_last_provoking_vertex;   // Flat shading using RSX's last-vertex convention
+		bool supports_programmable_blending;   // Can handle programmable blending requests
 	};
 
 	struct desync_fifo_cmd_info
