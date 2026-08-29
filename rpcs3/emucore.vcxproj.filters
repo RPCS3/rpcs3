@@ -2986,6 +2986,9 @@
     <ClInclude Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture_game_grid.h">
       <Filter>Emu\GPU\RSX\Overlays\BigPicture</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\game_enumeration.h">
+      <Filter>Emu</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Emu\RSX\Program\GLSLSnippets\GPUDeswizzle.glsl">
