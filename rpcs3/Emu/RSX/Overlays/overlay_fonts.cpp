@@ -363,7 +363,6 @@ namespace rsx
 				default:
 				{
 					const bool is_whitespace = c == ' ';
-
 					stbtt_aligned_quad quad{};
 
 					if (is_whitespace)
