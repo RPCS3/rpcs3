@@ -53,7 +53,7 @@ namespace rsx
 
 			if (const std::string pic1_path = rpcs3::utils::get_game_content_path(game_content_type::background_picture, info); !pic1_path.empty())
 			{
-				m_pic_data = std::make_unique<image_info>(pic_path);
+				m_pic_data = std::make_unique<image_info>(pic1_path);
 				// The renderer's texture cache is keyed by this object's address, which can be reused by an
 				// unrelated image after the old one is freed - force a re-upload instead of trusting the cache.
 				m_pic_data->dirty = true;

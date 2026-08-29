@@ -94,7 +94,7 @@ namespace rsx
 
 			std::unordered_set<std::string> added_serials;
 
-			const auto add_game_entry = [&](const std::string& title_id, const std::string& path, const psf::registry& psf, std::string icon_path)
+			const auto add_game_entry = [&](const std::string& title_id, const std::string& path, const psf::registry& psf, std::string icon_path, const std::string& sfo_dir = {})
 			{
 				GameInfo info{};
 				info.path = path;
@@ -103,6 +103,13 @@ namespace rsx
 				info.name = std::string(psf::get_string(psf, "TITLE", title_id));
 				info.category = std::string(psf::get_string(psf, "CATEGORY"));
 				info.app_ver = std::string(psf::get_string(psf, "APP_VER"));
+
+				// sfo_dir is only available for regular (non-ISO) installs, so movie/audio lookup is skipped for ISOs.
+				if (!sfo_dir.empty())
+				{
+					info.movie_path = rpcs3::utils::get_game_content_path(game_content_type::content_video, info, sfo_dir);
+					info.audio_path = rpcs3::utils::get_game_content_path(game_content_type::content_sound, info, sfo_dir);
+				}
 
 				added_serials.insert(title_id);
 				m_games.push_back({ std::move(info) });
@@ -196,7 +203,7 @@ namespace rsx
 					return;
 				}
 
-				add_game_entry(title_id, path, psf, sfo_dir + "/ICON0.PNG");
+				add_game_entry(title_id, path, psf, sfo_dir + "/ICON0.PNG", sfo_dir);
 			};
 
 			// dev_hdd0/game/ (regular PKG installs) is never registered into games.yml, so list it directly.
@@ -209,15 +216,8 @@ namespace rsx
 					continue;
 				}
 
-				GameInfo info{};
-				info.path = path;
-				info.serial = title_id;
-				info.name = std::string(psf::get_string(psf, "TITLE", title_id));
-				info.category = std::string(psf::get_string(psf, "CATEGORY"));
-				info.app_ver = std::string(psf::get_string(psf, "APP_VER"));
-				info.icon_path = rpcs3::utils::get_game_content_path(game_content_type::content_icon, info, sfo_dir);
-				info.movie_path = rpcs3::utils::get_game_content_path(game_content_type::content_video, info, sfo_dir);
-				info.audio_path = rpcs3::utils::get_game_content_path(game_content_type::content_sound, info, sfo_dir);
+				try_add_game(entry.name, hdd0_game_dir + entry.name);
+			}
 
 			for (const auto& [title_id, raw_path] : Emu.GetGamesConfig().get_games())
 			{
