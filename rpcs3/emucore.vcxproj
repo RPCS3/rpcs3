@@ -615,6 +615,7 @@
     <ClInclude Include="Emu\CPU\Hypervisor.h" />
     <ClInclude Include="Emu\CPU\sse2neon.h" />
     <ClInclude Include="Emu\games_config.h" />
+    <ClInclude Include="Emu\game_enumeration.h" />
     <ClInclude Include="Emu\Io\Buzz.h" />
     <ClInclude Include="Emu\Io\buzz_config.h" />
     <ClInclude Include="Emu\Io\camera_config.h" />
