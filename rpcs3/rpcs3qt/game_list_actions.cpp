@@ -608,6 +608,13 @@ void game_list_actions::ShowDiskUsageDialog()
 	});
 }
 
+// How a game collection is listed in either menu: its name, and how many of its games the game list is
+// showing. One pass: a collection may be named "%1", and a chained arg() would substitute into it.
+static QString collection_entry_text(const QString& name, qsizetype count)
+{
+	return QString("%0 (%1)").arg(gui::utils::escape_mnemonics(name), QString::number(count));
+}
+
 void game_list_actions::UpdateGameCollectionMenu(QMenu* menu, QActionGroup* act_group, QMenu* rename_menu, QMenu* remove_menu)
 {
 	const QStringList collections = m_gui_settings->GetGameCollections();
@@ -664,20 +671,25 @@ void game_list_actions::UpdateGameCollectionMenu(QMenu* menu, QActionGroup* act_
 
 	for (const QString& name : collections)
 	{
-		// One pass: a collection may be named "%1", and a chained arg() would substitute into it.
-		add_entry(QString("%0 (%1)").arg(gui::utils::escape_mnemonics(name),
-			QString::number(counts.value(name))), name);
+		add_entry(collection_entry_text(name, counts.value(name)), name);
 	}
 }
 
-void game_list_actions::CreateGameCollection()
+void game_list_actions::CreateGameCollection(const QSet<QString>& serials)
 {
 	const QString name = AskForCollectionName(tr("Create Game Collection"), {},
 		[this](const QString& to) { return m_gui_settings->AddGameCollection(to); });
 
-	if (!name.isEmpty())
+	if (name.isEmpty())
 	{
-		game_list_log.notice("Created game collection '%s'", name);
+		return;
+	}
+
+	game_list_log.notice("Created game collection '%s'", name);
+
+	if (!serials.isEmpty())
+	{
+		ChangeCollectionMembership(serials, name, true);
 	}
 }
 
@@ -732,7 +744,7 @@ void game_list_actions::SelectGameCollection(const QString& name)
 	m_game_list_frame->SetGameCollection(name);
 }
 
-void game_list_actions::AddMoveToCollectionMenu(QMenu* parent, const std::vector<game_info>& games)
+void game_list_actions::AddCollectionMenu(QMenu* parent, const std::vector<game_info>& games)
 {
 	QSet<QString> serials;
 
@@ -750,51 +762,47 @@ void game_list_actions::AddMoveToCollectionMenu(QMenu* parent, const std::vector
 	}
 
 	const QStringList collections = m_gui_settings->GetGameCollections();
-
-	QMenu* collection_menu = parent->addMenu(tr("&Move To Collection"));
-	collection_menu->setEnabled(!collections.isEmpty());
-
-	if (collections.isEmpty())
-	{
-		return;
-	}
-
-	// A single game shows the collection it currently sits in. A multi selection is a bulk move to whatever
-	// entry is picked, no matter which collections the games come from, so it shows no state at all.
-	const bool is_single_game = serials.size() == 1;
-	const QString current = is_single_game ? m_gui_settings->GetCollectionOfGame(*serials.cbegin()) : QString();
-
-	QActionGroup* collection_act_group = is_single_game ? new QActionGroup(collection_menu) : nullptr;
-
-	const auto add_entry = [&](const QString& text, const QString& name)
-	{
-		QAction* act = collection_menu->addAction(text);
-
-		if (collection_act_group)
-		{
-			act->setCheckable(true);
-			act->setChecked(name == current);
-			collection_act_group->addAction(act);
-		}
-
-		// Moving one game is trivially undone. Moving a block is not: the games can come from several
-		// collections at once and where each of them was is not recorded anywhere, so that one asks first.
-		connect(act, &QAction::triggered, this, [this, serials, name, is_single_game]()
-		{
-			MoveGamesToCollection(serials, name, !is_single_game);
-		});
-	};
-
 	const QHash<QString, qsizetype> counts = m_game_list_frame->CountGamesPerCollection(collections);
 
-	add_entry(gui_settings::GetAllGamesCollectionLabel(), {});
+	QMenu* collection_menu = parent->addMenu(tr("&Add to Collection"));
+
+	// Always there: with no collection yet this is the only thing the submenu can offer
+	connect(collection_menu->addAction(tr("&Create and Add")), &QAction::triggered, this, [this, serials]()
+	{
+		CreateGameCollection(serials);
+	});
+
+	if (!collections.isEmpty())
+	{
+		collection_menu->addSeparator();
+	}
 
 	for (const QString& collection : collections)
 	{
-		// One pass: a collection may be named "%1", and a chained arg() would substitute into it.
-		const QString text = QString("%0 (%1)").arg(gui::utils::escape_mnemonics(collection),
-			QString::number(counts.value(collection)));
-		add_entry(text, collection);
+		// A multi selection is ticked only once every game in it belongs to the collection, so that the
+		// entry finishes adding the ones that are missing before it starts taking any out
+		const bool is_member = m_gui_settings->GetGamesInCollection(collection).contains(serials);
+
+		QAction* act = collection_menu->addAction(collection_entry_text(collection, counts.value(collection)));
+		act->setCheckable(true);
+		act->setChecked(is_member);
+
+		connect(act, &QAction::triggered, this, [this, serials, collection, is_member]()
+		{
+			ChangeCollectionMembership(serials, collection, !is_member);
+		});
+	}
+
+	const QString current = m_gui_settings->GetCurrentGameCollection();
+
+	// Acts on the collection the game list is filtered by, which is the one the user is looking at
+	if (!current.isEmpty() && m_gui_settings->GetGamesInCollection(current).intersects(serials))
+	{
+		connect(parent->addAction(tr("&Remove from Collection '%0'").arg(gui::utils::escape_mnemonics(current))),
+			&QAction::triggered, this, [this, serials, current]()
+		{
+			ChangeCollectionMembership(serials, current, false);
+		});
 	}
 }
 
@@ -851,39 +859,40 @@ QString game_list_actions::AskForCollectionName(const QString& title, const QStr
 	return {};
 }
 
-void game_list_actions::MoveGamesToCollection(const QSet<QString>& serials, const QString& name, bool is_interactive)
+void game_list_actions::ChangeCollectionMembership(const QSet<QString>& serials, const QString& name, bool add)
 {
-	const bool moves_anything = !m_gui_settings->GetGamesInCollection(name).contains(serials);
-
-	if (is_interactive && moves_anything)
+	// Adding is undone by the very entry that did it, but a removal takes memberships that were given one
+	// game at a time and cannot be handed back the same way, so a block of them asks first
+	if (!add && serials.size() > 1)
 	{
-		const QString question = name.isEmpty()
-			? tr("Remove %Ln game(s) from their game collection?", "", static_cast<int>(serials.size()))
-			: tr("Move %Ln game(s) to the '%0' game collection?", "", static_cast<int>(serials.size())).arg(name);
+		const QString question = tr("Remove %Ln game(s) from the '%0' game collection?", "",
+			static_cast<int>(serials.size())).arg(name);
 
-		if (gui::utils::plain_message(m_game_list_frame, QMessageBox::Question, tr("Confirm Move"), question,
+		if (gui::utils::plain_message(m_game_list_frame, QMessageBox::Question, tr("Confirm Removal"), question,
 			QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
 		{
 			return;
 		}
 	}
 
-	// The user picked the collection the games already sit in
-	if (!m_gui_settings->MoveGamesToCollection(serials, name))
+	const bool changed = m_gui_settings->SetGameCollectionMembership(serials, name, add);
+
+	// The menu was built before the collection changed under it
+	if (!changed)
 	{
 		return;
 	}
 
-	if (name.isEmpty())
+	if (add)
 	{
-		game_list_log.notice("Removed %d game(s) from their game collection", serials.size());
+		game_list_log.notice("Added %d game(s) to game collection '%s'", serials.size(), name);
 	}
 	else
 	{
-		game_list_log.notice("Moved %d game(s) to game collection '%s'", serials.size(), name);
+		game_list_log.notice("Removed %d game(s) from game collection '%s'", serials.size(), name);
 	}
 
-	// The moved games may have entered or left the collection the game list is filtered by
+	// The games may have entered or left the collection the game list is filtered by
 	m_game_list_frame->ReloadGameCollection();
 }
 
