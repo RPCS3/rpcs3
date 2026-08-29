@@ -159,13 +159,15 @@ namespace vk
 		switch (op)
 		{
 		case rsx::blend_equation::add_signed:
-			rsx_log.trace("blend equation add_signed used. Emulating using FUNC_ADD");
+			rsx_log.error("blend equation add_signed used. Emulating using FUNC_ADD");
 			[[fallthrough]];
-		case rsx::blend_equation::add:
+		case rsx::blend_equation::add: return VK_BLEND_OP_ADD;
+		case rsx::blend_equation::reverse_add_signed:
+			rsx_log.error("blend equation reverse_add_signed used. Emulating using FUNC_ADD");
 			return VK_BLEND_OP_ADD;
 		case rsx::blend_equation::subtract: return VK_BLEND_OP_SUBTRACT;
 		case rsx::blend_equation::reverse_subtract_signed:
-			rsx_log.trace("blend equation reverse_subtract_signed used. Emulating using FUNC_REVERSE_SUBTRACT");
+			rsx_log.error("blend equation reverse_subtract_signed used. Emulating using FUNC_REVERSE_SUBTRACT");
 			[[fallthrough]];
 		case rsx::blend_equation::reverse_subtract: return VK_BLEND_OP_REVERSE_SUBTRACT;
 		case rsx::blend_equation::min: return VK_BLEND_OP_MIN;
@@ -247,7 +249,8 @@ namespace vk
 		const rsx::backend_configuration& backend_config,
 		u8 num_draw_buffers,
 		u8 num_rasterization_samples,
-		bool depth_bounds_support)
+		bool depth_bounds_support,
+		bool force_disable_blending)
 	{
 		vk::pipeline_props properties{};
 
@@ -307,20 +310,12 @@ namespace vk
 		{
 			properties.state.enable_logic_op(vk::get_logic_op(rsx::method_registers.logic_operation()));
 		}
-		else
+		else if (!force_disable_blending)
 		{
-			bool mrt_blend_enabled[] =
-			{
-				rsx::method_registers.blend_enabled(),
-				rsx::method_registers.blend_enabled_surface_1(),
-				rsx::method_registers.blend_enabled_surface_2(),
-				rsx::method_registers.blend_enabled_surface_3()
-			};
-
 			VkBlendFactor sfactor_rgb, sfactor_a, dfactor_rgb, dfactor_a;
 			VkBlendOp equation_rgb, equation_a;
 
-			if (mrt_blend_enabled[0] || mrt_blend_enabled[1] || mrt_blend_enabled[2] || mrt_blend_enabled[3])
+			if (const auto blend_enabled = rsx::method_registers.blend_enabled_mask())
 			{
 				sfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_rgb());
 				sfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_a());
@@ -331,7 +326,7 @@ namespace vk
 
 				for (u8 idx = 0; idx < num_draw_buffers; ++idx)
 				{
-					if (mrt_blend_enabled[idx])
+					if (blend_enabled & (1u << idx))
 					{
 						properties.state.enable_blend(idx, sfactor_rgb, sfactor_a, dfactor_rgb, dfactor_a, equation_rgb, equation_a);
 					}
@@ -642,6 +637,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 
 	backend_config.supports_multidraw = true;
 	backend_config.supports_hw_instanced_rendering = true;
+	backend_config.supports_programmable_blending = true;
 
 	backend_config.supports_last_provoking_vertex = m_device->get_provoking_vertex_last_support();
 	if (!backend_config.supports_last_provoking_vertex)
@@ -1804,12 +1800,6 @@ bool VKGSRender::load_program()
 
 		get_current_vertex_program(vs_sampler_state);
 
-		if (!!(current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING) !=
-			vk::renderpass_has_input_attachments(m_current_renderpass_key))
-		{
-			invalidate_render_pass();
-		}
-
 		m_graphics_state.clear(rsx::pipeline_state::invalidate_pipeline_bits);
 	}
 	else if (!(m_graphics_state & rsx::pipeline_state::pipeline_config_dirty) &&
@@ -1836,6 +1826,12 @@ bool VKGSRender::load_program()
 		}
 	}
 
+	if (!!(current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING) !=
+		vk::renderpass_has_input_attachments(m_current_renderpass_key))
+	{
+		invalidate_render_pass();
+	}
+
 	auto &vertex_program = current_vertex_program;
 	auto &fragment_program = current_fragment_program;
 
@@ -1847,7 +1843,8 @@ bool VKGSRender::load_program()
 			backend_config,
 			static_cast<u8>(m_draw_buffers.size()),
 			u8((m_current_renderpass_key >> 16) & 0xF),
-			m_device->get_depth_bounds_support()
+			m_device->get_depth_bounds_support(),
+			!!(current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING)
 		);
 
 		properties.renderpass_key = m_current_renderpass_key;
