@@ -166,17 +166,24 @@ namespace vk
 		using download_buffer_object = void*;
 		using barrier_descriptor_t = rsx::deferred_clipped_region<vk::render_target*>;
 
-		static std::pair<VkImageUsageFlags, VkImageCreateFlags> get_attachment_create_flags(VkFormat format, [[maybe_unused]] u8 samples)
+		static std::pair<VkImageUsageFlags, VkImageCreateFlags> get_attachment_create_flags(VkFormat format, [[maybe_unused]] u8 samples, bool depth)
 		{
+			VkImageUsageFlags usage_flags = 0;
+			if (!depth)
+			{
+				// For programmable blending
+				usage_flags = VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
+			}
+
 			if (g_cfg.video.strict_rendering_mode)
 			{
-				return {};
+				return { usage_flags, 0 };
 			}
 
 			// If we have driver support for FBO loops, set the usage flag for it.
 			if (vk::get_current_renderer()->get_framebuffer_loops_support())
 			{
-				return { VK_IMAGE_USAGE_ATTACHMENT_FEEDBACK_LOOP_BIT_EXT, VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT };
+				return { usage_flags | VK_IMAGE_USAGE_ATTACHMENT_FEEDBACK_LOOP_BIT_EXT, VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT };
 			}
 
 			// Workarounds to force transition to GENERAL to decompress.
@@ -188,7 +195,7 @@ namespace vk
 					format_features.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)
 				{
 					// Only set if supported by hw
-					return { VK_IMAGE_USAGE_STORAGE_BIT, 0 };
+					return { usage_flags | VK_IMAGE_USAGE_STORAGE_BIT, 0 };
 				}
 				break;
 			case driver_vendor::AMD:
@@ -196,7 +203,7 @@ namespace vk
 				if (vk::get_chip_family() >= chip_class::AMD_navi1x)
 				{
 					// Only needed for GFX10+
-					return { 0, VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT };
+					return { usage_flags, VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT };
 				}
 				break;
 			default:
@@ -214,7 +221,7 @@ namespace vk
 				break;
 			}
 
-			return {};
+			return { usage_flags, 0 };
 		}
 
 		static std::unique_ptr<vk::render_target> create_new_surface(
@@ -241,7 +248,7 @@ namespace vk
 				sample_layout = rsx::surface_sample_layout::null;
 			}
 
-			auto [usage_flags, create_flags] = get_attachment_create_flags(requested_format, samples);
+			auto [usage_flags, create_flags] = get_attachment_create_flags(requested_format, samples, false);
 			usage_flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
 			if (samples == 1) [[likely]]
@@ -314,7 +321,7 @@ namespace vk
 				sample_layout = rsx::surface_sample_layout::null;
 			}
 
-			auto [usage_flags, create_flags] = get_attachment_create_flags(requested_format, samples);
+			auto [usage_flags, create_flags] = get_attachment_create_flags(requested_format, samples, true);
 			usage_flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
 			if (samples == 1) [[likely]]
