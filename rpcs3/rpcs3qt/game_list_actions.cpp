@@ -32,7 +32,6 @@
 #include <QTimer>
 
 LOG_CHANNEL(game_list_log, "GameList");
-LOG_CHANNEL(sys_log, "SYS");
 
 extern atomic_t<bool> g_system_progress_canceled;
 
@@ -92,37 +91,35 @@ game_list_actions::content_info game_list_actions::GetContentInfo(const std::vec
 
 	for (const auto& game : games)
 	{
-		GameInfo& current_game = game->info;
-
-		is_disc_game = QString::fromStdString(current_game.category) == cat::cat_disc_game;
+		is_disc_game = QString::fromStdString(game->category) == cat::cat_disc_game;
 
 		// +1 if it's a disc game's path and it's present in the shared games folder
-		content_info.in_games_dir_count += (is_disc_game && Emu.IsPathInsideDir(current_game.path, rpcs3::utils::get_games_dir())) ? 1 : 0;
+		content_info.in_games_dir_count += (is_disc_game && Emu.IsPathInsideDir(game->path, rpcs3::utils::get_games_dir())) ? 1 : 0;
 
 		// Add the name to the content's name list for the related serial
-		content_info.name_list[current_game.serial].insert(current_game.name);
+		content_info.name_list[game->serial].insert(game->name);
 
 		if (is_disc_game)
 		{
-			if (current_game.size_on_disk != umax) // If size was properly detected
-				total_disc_size += current_game.size_on_disk;
+			if (game->size_on_disk != umax) // If size was properly detected
+				total_disc_size += game->size_on_disk;
 
 			// Add the serial to the disc list
-			content_info.disc_list.insert(current_game.serial);
+			content_info.disc_list.insert(game->serial);
 
 			// It could be an empty list for a disc game
-			std::set<std::string> data_dir_list = rpcs3::utils::get_dir_list(rpcs3::utils::get_hdd0_game_dir(), current_game.serial);
+			std::set<std::string> data_dir_list = rpcs3::utils::get_dir_list(rpcs3::utils::get_hdd0_game_dir(), game->serial);
 
 			// Add the path list to the content's path list for the related serial
 			for (const auto& data_dir : data_dir_list)
 			{
-				content_info.path_list[current_game.serial].insert(data_dir);
+				content_info.path_list[game->serial].insert(data_dir);
 			}
 		}
 		else
 		{
 			// Add the path to the content's path list for the related serial
-			content_info.path_list[current_game.serial].insert(current_game.path);
+			content_info.path_list[game->serial].insert(game->path);
 		}
 	}
 
@@ -130,22 +127,22 @@ game_list_actions::content_info game_list_actions::GetContentInfo(const std::vec
 
 	if (content_info.is_single_selection) // Single selection
 	{
-		GameInfo& current_game = games[0]->info;
+		auto& current_game = games[0];
 
-		text = tr("%0 - %1\n").arg(QString::fromStdString(current_game.serial)).arg(QString::fromStdString(current_game.name));
+		text = tr("%0 - %1\n").arg(QString::fromStdString(current_game->serial)).arg(QString::fromStdString(current_game->name));
 
 		if (is_disc_game)
 		{
-			text += tr("\nDisc Game Info:\nPath: %0\n").arg(QString::fromStdString(current_game.path));
+			text += tr("\nDisc Game Info:\nPath: %0\n").arg(QString::fromStdString(current_game->path));
 
 			if (total_disc_size)
 				text += tr("Size: %0\n").arg(gui::utils::format_byte_size(total_disc_size));
 		}
 
 		// if a path is present (it could be an empty list for a disc game)
-		if (const auto& it = content_info.path_list.find(current_game.serial); it != content_info.path_list.end())
+		if (const auto& it = content_info.path_list.find(current_game->serial); it != content_info.path_list.end())
 		{
-			text += tr("\n%0 Info:\n").arg(is_disc_game ? tr("Game Data") : games[0]->localized_category);
+			text += tr("\n%0 Info:\n").arg(is_disc_game ? tr("Game Data") : current_game->localized_category);
 
 			for (const auto& data_dir : it->second)
 			{
@@ -348,11 +345,11 @@ void game_list_actions::ShowRemoveGameDialog(const std::vector<game_info>& games
 
 	if (content_info.is_single_selection) // Single selection
 	{
-		if (!RemoveContentList(games[0]->info.serial))
+		if (!RemoveContentList(games[0]->serial))
 		{
 			QMessageBox::critical(m_game_list_frame, tr("Failure!"), caches->isChecked()
-				? tr("Failed to remove %0 from drive!\nCaches and custom configs have been left intact.").arg(QString::fromStdString(games[0]->info.name))
-				: tr("Failed to remove %0 from drive!").arg(QString::fromStdString(games[0]->info.name)));
+				? tr("Failed to remove %0 from drive!\nCaches and custom configs have been left intact.").arg(QString::fromStdString(games[0]->name))
+				: tr("Failed to remove %0 from drive!").arg(QString::fromStdString(games[0]->name)));
 
 			return;
 		}
@@ -752,7 +749,7 @@ void game_list_actions::AddCollectionMenu(QMenu* parent, const std::vector<game_
 	{
 		if (game)
 		{
-			serials.insert(QString::fromStdString(game->info.serial));
+			serials.insert(QString::fromStdString(game->serial));
 		}
 	}
 
@@ -977,7 +974,7 @@ bool game_list_actions::CreateCPUCaches(const std::string& path, const std::stri
 
 bool game_list_actions::CreateCPUCaches(const game_info& game, bool is_fast_compilation)
 {
-	return game && CreateCPUCaches(game->info.path, game->info.serial, is_fast_compilation);
+	return game && CreateCPUCaches(game->path, game->serial, is_fast_compilation);
 }
 
 bool game_list_actions::RemoveCustomConfiguration(const std::string& serial, const game_info& game, bool is_interactive)
@@ -1553,7 +1550,7 @@ void game_list_actions::BatchCreateCPUCaches(const std::vector<game_info>& games
 
 	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
 	{
-		serials.emplace(game->info.serial);
+		serials.emplace(game->serial);
 	}
 
 	if (include_vsh)
@@ -1606,11 +1603,11 @@ void game_list_actions::BatchCreateCPUCaches(const std::vector<game_info>& games
 			{
 				const auto& games = m_game_list_frame->GetGameInfo();
 
-				const auto it = std::find_if(games.cbegin(), games.cend(), FN(x->info.serial == serial));
+				const auto it = std::find_if(games.cbegin(), games.cend(), FN(x->serial == serial));
 
 				if (it != games.cend())
 				{
-					return CreateCPUCaches((*it)->info.path, serial, is_fast_compilation);
+					return CreateCPUCaches((*it)->path, serial, is_fast_compilation);
 				}
 			}
 
@@ -1637,9 +1634,9 @@ void game_list_actions::BatchRemoveCustomConfigurations(const std::vector<game_i
 
 	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
 	{
-		if (game->has_custom_config && !serials.count(game->info.serial))
+		if (game->has_custom_config && !serials.count(game->serial))
 		{
-			serials.emplace(game->info.serial);
+			serials.emplace(game->serial);
 		}
 	}
 
@@ -1677,9 +1674,9 @@ void game_list_actions::BatchRemoveCustomPadConfigurations(const std::vector<gam
 
 	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
 	{
-		if (game->has_custom_pad_config && !serials.count(game->info.serial))
+		if (game->has_custom_pad_config && !serials.count(game->serial))
 		{
-			serials.emplace(game->info.serial);
+			serials.emplace(game->serial);
 		}
 	}
 
@@ -1722,7 +1719,7 @@ void game_list_actions::BatchRemoveShaderCaches(const std::vector<game_info>& ga
 
 	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
 	{
-		serials.emplace(game->info.serial);
+		serials.emplace(game->serial);
 	}
 
 	const u32 total = ::size32(serials);
@@ -1764,7 +1761,7 @@ void game_list_actions::BatchRemovePPUCaches(const std::vector<game_info>& games
 
 	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
 	{
-		serials.emplace(game->info.serial);
+		serials.emplace(game->serial);
 	}
 
 	const u32 total = ::size32(serials);
@@ -1807,7 +1804,7 @@ void game_list_actions::BatchRemoveSPUCaches(const std::vector<game_info>& games
 
 	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
 	{
-		serials.emplace(game->info.serial);
+		serials.emplace(game->serial);
 	}
 
 	const u32 total = ::size32(serials);
@@ -1850,7 +1847,7 @@ void game_list_actions::BatchRemoveHDD1Caches(const std::vector<game_info>& game
 
 	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
 	{
-		serials.emplace(game->info.serial);
+		serials.emplace(game->serial);
 	}
 
 	const u32 total = ::size32(serials);
@@ -1893,7 +1890,7 @@ void game_list_actions::BatchRemoveAllCaches(const std::vector<game_info>& games
 
 	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
 	{
-		serials.emplace(game->info.serial);
+		serials.emplace(game->serial);
 	}
 
 	const u32 total = ::size32(serials);
@@ -1940,7 +1937,7 @@ void game_list_actions::BatchRemoveContentLists(const std::vector<game_info>& ga
 
 	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
 	{
-		serials.emplace(game->info.serial);
+		serials.emplace(game->serial);
 	}
 
 	const u32 total = ::size32(serials);

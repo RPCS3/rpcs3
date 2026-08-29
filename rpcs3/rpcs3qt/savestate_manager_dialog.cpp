@@ -614,15 +614,15 @@ void savestate_manager_dialog::StartSavestateLoadThreads()
 		auto game_data_ptr = std::make_unique<game_savestates_data>();
 		game_data_ptr->title_id = folder_list[i].toStdString();
 
-		for (const game_info& gameinfo : m_game_info)
+		for (const game_info& game : m_game_info)
 		{
-			if (gameinfo && gameinfo->info.serial == game_data_ptr->title_id)
+			if (game && game->serial == game_data_ptr->title_id)
 			{
-				game_data_ptr->game_name = gameinfo->info.name;
-				game_data_ptr->game_icon_path = gameinfo->info.icon_path;
-				if (gameinfo->icon_in_archive)
+				game_data_ptr->game_name = game->name;
+				game_data_ptr->game_icon_path = game->icon_path;
+				if (game->icon_in_archive)
 				{
-					game_data_ptr->archive_path = gameinfo->info.path;
+					game_data_ptr->archive_path = game->path;
 				}
 
 				break;

@@ -1,7 +1,6 @@
 #include "stdafx.h"
 
 #include "iso_cache.h"
-#include "Loader/PSF.h"
 #include "util/yaml.hpp"
 #include "util/fnv_hash.hpp"
 #include "Utilities/File.h"

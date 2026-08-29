@@ -62,9 +62,9 @@ patch_manager_dialog::patch_manager_dialog(std::shared_ptr<gui_settings> gui_set
 	// Get owned games
 	for (const auto& game : games)
 	{
-		if (game && game->info.bootable)
+		if (game && game->bootable)
 		{
-			m_owned_games[game->info.serial].insert(game->GetGameVersion());
+			m_owned_games[game->serial].insert(game->GetGameVersion());
 		}
 	}
 
