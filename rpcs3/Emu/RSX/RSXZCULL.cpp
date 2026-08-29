@@ -803,6 +803,8 @@ namespace rsx
 		u32 ZCULL_control::copy_reports_to(u32 start, u32 range, u32 dest)
 		{
 			u32 bytes_to_write = 0;
+			std::unordered_set<u32> unique_addresses;
+
 			const auto memory_range = utils::address_range32::start_length(start, range);
 			for (auto& writer : m_pending_writes)
 			{
@@ -811,8 +813,14 @@ namespace rsx
 
 				if (!writer.forwarder && memory_range.overlaps(writer.sink))
 				{
-					u32 address = (writer.sink - start) + dest;
+					const u32 address = (writer.sink - start) + dest;
 					writer.sink_alias.push_back(vm::cast(address));
+
+					if (!unique_addresses.contains(address))
+					{
+						bytes_to_write += sizeof(RsxReport);
+						unique_addresses.insert(address);
+					}
 				}
 			}
 
