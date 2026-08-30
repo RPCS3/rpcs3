@@ -14,14 +14,41 @@ namespace rsx
 	rsx::simple_array<MM_block> g_deferred_mprotect_queue;
 	shared_mutex g_mprotect_queue_lock;
 
-	void mm_flush_mprotect_queue_internal()
+	void mm_flush_mprotect_queue_internal(u32 count)
 	{
-		for (const auto& block : g_deferred_mprotect_queue)
+		AUDIT(count <= g_deferred_mprotect_queue.size());
+
+		for (u32 i = 0; i < count; ++i)
 		{
+			const auto& block = g_deferred_mprotect_queue[i];
 			utils::memory_protect(reinterpret_cast<void*>(block.range.start), block.range.length(), block.prot);
 		}
 
-		g_deferred_mprotect_queue.clear();
+		const u32 remaining = g_deferred_mprotect_queue.size() - count;
+		if (!remaining)
+		{
+			g_deferred_mprotect_queue.clear();
+			return;
+		}
+
+		// Pop count entries from the queue
+		std::memmove(g_deferred_mprotect_queue.data(), g_deferred_mprotect_queue.data() + count, remaining * sizeof(MM_block));
+		g_deferred_mprotect_queue.resize(remaining);
+	}
+
+	// Reverse scan to find the latest overlapping MM conflict. The result is a count of prefix blocks.
+	template <typename F>
+	u32 mm_find_conflict_internal(F&& predicate)
+	{
+		for (u32 i = g_deferred_mprotect_queue.size(); i > 0; --i)
+		{
+			if (std::invoke(predicate, g_deferred_mprotect_queue[i - 1]))
+			{
+				return i;
+			}
+		}
+
+		return 0;
 	}
 
 	void mm_defer_mprotect_internal(u64 start, u64 length, utils::protection prot)
@@ -47,14 +74,10 @@ namespace rsx
 
 		if (prot == utils::protection::rw || prot == utils::protection::wx)
 		{
-			// Basically an unlock op. Flush if any overlap is detected
-			for (const auto& block : g_deferred_mprotect_queue)
+			// Basically an unlock op. Flush the conflicting prefix block if any overlap is detected.
+			if (const u32 count = mm_find_conflict_internal(FN(x.overlaps(range))))
 			{
-				if (block.overlaps(range))
-				{
-					mm_flush_mprotect_queue_internal();
-					break;
-				}
+				mm_flush_mprotect_queue_internal(count);
 			}
 
 			utils::memory_protect(ptr, length, prot);
@@ -68,7 +91,7 @@ namespace rsx
 	void mm_flush()
 	{
 		std::lock_guard lock(g_mprotect_queue_lock);
-		mm_flush_mprotect_queue_internal();
+		mm_flush_mprotect_queue_internal(g_deferred_mprotect_queue.size());
 	}
 
 	void mm_flush(u32 vm_address)
@@ -80,31 +103,24 @@ namespace rsx
 		}
 
 		const auto addr = reinterpret_cast<u64>(vm::base(vm_address));
-		for (const auto& block : g_deferred_mprotect_queue)
+		if (const u32 count = mm_find_conflict_internal(FN(x.overlaps(addr))))
 		{
-			if (block.overlaps(addr))
-			{
-				mm_flush_mprotect_queue_internal();
-				return;
-			}
+			mm_flush_mprotect_queue_internal(count);
 		}
 	}
 
 	void mm_flush(const rsx::simple_array<utils::address_range64>& ranges)
 	{
 		std::lock_guard lock(g_mprotect_queue_lock);
-		if (g_deferred_mprotect_queue.empty())
+		if (g_deferred_mprotect_queue.empty() || ranges.empty())
 		{
 			return;
 		}
 
-		for (const auto& block : g_deferred_mprotect_queue)
+		const auto block_overlaps_ranges = [&](const MM_block& block) { return ranges.any(FN(block.overlaps(x))); };
+		if (const u32 count = mm_find_conflict_internal(block_overlaps_ranges))
 		{
-			if (ranges.any(FN(block.overlaps(x))))
-			{
-				mm_flush_mprotect_queue_internal();
-				return;
-			}
+			mm_flush_mprotect_queue_internal(count);
 		}
 	}
 
