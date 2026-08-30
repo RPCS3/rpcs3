@@ -14,14 +14,32 @@ namespace rsx
 	rsx::simple_array<MM_block> g_deferred_mprotect_queue;
 	shared_mutex g_mprotect_queue_lock;
 
+	void mm_sanitize_queue_internal()
+	{
+		u32 w = 0, r = 0;
+		for (; r < g_deferred_mprotect_queue.size(); ++r)
+		{
+			auto& block = g_deferred_mprotect_queue[r];
+			if (!block.range.valid())
+			{
+				continue;
+			}
+			g_deferred_mprotect_queue[w++] = block;
+		}
+		g_deferred_mprotect_queue.resize(w);
+	}
+
 	void mm_flush_mprotect_queue_internal(u32 count)
 	{
 		AUDIT(count <= g_deferred_mprotect_queue.size());
 
 		for (u32 i = 0; i < count; ++i)
 		{
-			const auto& block = g_deferred_mprotect_queue[i];
+			auto& block = g_deferred_mprotect_queue[i];
+			ensure(block.range.valid());
+
 			utils::memory_protect(reinterpret_cast<void*>(block.range.start), block.range.length(), block.prot);
+			block.range.invalidate();
 		}
 
 		const u32 remaining = g_deferred_mprotect_queue.size() - count;
@@ -31,9 +49,8 @@ namespace rsx
 			return;
 		}
 
-		// Pop count entries from the queue
-		std::memmove(g_deferred_mprotect_queue.data(), g_deferred_mprotect_queue.data() + count, remaining * sizeof(MM_block));
-		g_deferred_mprotect_queue.resize(remaining);
+		// Pop processed entries from the queue
+		mm_sanitize_queue_internal();
 	}
 
 	// Reverse scan to find the latest overlapping MM conflict. The result is a count of prefix blocks.
@@ -53,9 +70,57 @@ namespace rsx
 
 	void mm_defer_mprotect_internal(u64 start, u64 length, utils::protection prot)
 	{
-		// We could stack and merge requests here, but that is more trouble than it is truly worth.
-		// A fresh call to memory_protect only takes a few nanoseconds of setup overhead, it is not worth the risk of hanging because of conflicts.
-		g_deferred_mprotect_queue.push_back({ utils::address_range64::start_length(start, length), prot });
+		const auto range = utils::address_range64::start_length(start, length);
+		bool has_invalid = false;
+		bool is_merged = false;
+
+		// Attempt a merge first. The queue length is short but the time taken to run mprotect is very high in comparison.
+		for (auto it = g_deferred_mprotect_queue.rbegin();
+			it != g_deferred_mprotect_queue.rend();
+			++it)
+		{
+			auto& block = *it;
+			if (!block.touches(range))
+			{
+				continue;
+			}
+
+			if (block.prot != prot)
+			{
+				// Optimization. If our new range swallows the old one, replace it.
+				if (block.range.inside(range))
+				{
+					block.range.invalidate();
+					has_invalid = true;
+					continue;
+				}
+
+				if (!block.overlaps(range))
+				{
+					// Adjacent. Skip.
+					continue;
+				}
+
+				// Preserve ordering. Do not proceed with merge.
+				break;
+			}
+
+			block.merge(range);
+			is_merged = true;
+			break;
+		}
+
+		if (has_invalid)
+		{
+			mm_sanitize_queue_internal();
+		}
+
+		if (is_merged)
+		{
+			return;
+		}
+
+		g_deferred_mprotect_queue.push_back({ range, prot });
 	}
 
 	void mm_protect(void* ptr, u64 length, utils::protection prot)
@@ -75,9 +140,24 @@ namespace rsx
 		if (prot == utils::protection::rw || prot == utils::protection::wx)
 		{
 			// Basically an unlock op. Flush the conflicting prefix block if any overlap is detected.
-			if (const u32 count = mm_find_conflict_internal(FN(x.overlaps(range))))
+			if (u32 count = mm_find_conflict_internal(FN(x.overlaps(range))))
 			{
-				mm_flush_mprotect_queue_internal(count);
+				// Check for degenerate ranges that we'll be crushing
+				for (auto pblock = &g_deferred_mprotect_queue[count - 1];
+					count > 0 && pblock->range.inside(range);
+					count--, pblock--)
+				{
+					pblock->range.invalidate();
+				}
+
+				if (count)
+				{
+					mm_flush_mprotect_queue_internal(count);
+				}
+				else
+				{
+					mm_sanitize_queue_internal();
+				}
 			}
 
 			utils::memory_protect(ptr, length, prot);
