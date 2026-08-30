@@ -1455,9 +1455,15 @@ void debugger_frame::OnSelectSPUDisassembler()
 void debugger_frame::DoUpdate(cpu_thread* cpu0)
 {
 	// Check if we need to disable a step over bp
-	if (cpu0 && m_last_step_over_breakpoint != umax && cpu0->get_pc() == m_last_step_over_breakpoint)
+	if (cpu0 && cpu0->get_class() == thread_class::ppu && m_last_step_over_breakpoint != umax && cpu0->get_pc() == m_last_step_over_breakpoint)
 	{
-		m_ppu_breakpoint_handler->RemoveBreakpoint(m_last_step_over_breakpoint);
+		const auto process = ensure(idm::get_unlocked<lv2_obj, lv2_process>(static_cast<ppu_thread*>(cpu0)->proc_id));
+
+		if (process)
+		{
+			m_ppu_breakpoint_handler->RemoveBreakpoint(process.get(), process->get_unique_key(), m_last_step_over_breakpoint);
+		}
+
 		m_last_step_over_breakpoint = -1;
 	}
 
