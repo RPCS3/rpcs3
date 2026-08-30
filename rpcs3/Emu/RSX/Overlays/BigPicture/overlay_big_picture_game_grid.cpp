@@ -292,9 +292,9 @@ namespace rsx
 				break;
 			case pad_button::dpad_down:
 			case pad_button::ls_down:
-				if ((m_selected_index + m_columns) < static_cast<s32>(m_tiles.size()))
+				if (!m_tiles.empty())
 				{
-					select_tile(m_selected_index + m_columns);
+					select_tile(std::min(m_selected_index + m_columns, static_cast<s32>(m_tiles.size()) - 1));
 				}
 				break;
 			case pad_button::cross:
