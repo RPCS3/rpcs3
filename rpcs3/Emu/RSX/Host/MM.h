@@ -13,6 +13,15 @@ namespace rsx
 		utils::address_range64 range;
 		utils::protection prot;
 
+		inline void merge(const utils::address_range64& other)
+		{
+			AUDIT(other.valid());
+			range = utils::address_range64::start_end(
+				std::min(range.start, other.start),
+				std::max(range.end, other.end)
+			);
+		}
+
 		inline bool overlaps(const utils::address_range64& test) const
 		{
 			return range.overlaps(test);
@@ -21,6 +30,11 @@ namespace rsx
 		inline bool overlaps(u64 addr) const
 		{
 			return range.overlaps(addr);
+		}
+
+		inline bool touches(const utils::address_range64& test) const
+		{
+			return range.touches(test);
 		}
 	};
 
