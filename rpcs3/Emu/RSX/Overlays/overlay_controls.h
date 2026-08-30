@@ -107,12 +107,12 @@ namespace rsx
 			{
 				sdf_function func = sdf_function::none;
 
-				f32 cx; // Center x
-				f32 cy; // Center y
-				f32 hx; // Half-size in X
-				f32 hy; // Half-size in Y
-				f32 br; // Border radius
-				f32 bw; // Border width
+				f32 cx {}; // Center x
+				f32 cy {}; // Center y
+				f32 hx {}; // Half-size in X
+				f32 hy {}; // Half-size in Y
+				f32 br {}; // Border radius
+				f32 bw {}; // Border width
 
 				color4f border_color;
 
@@ -132,7 +132,7 @@ namespace rsx
 				f32 pulse_sinus_offset = 0.0f; // The current pulse offset
 				f32 pulse_speed_modifier = 0.005f;
 
-				sdf_config_t sdf_config;
+				sdf_config_t sdf_config {};
 
 				areaf clip_rect = {};
 				bool clip_region = false;

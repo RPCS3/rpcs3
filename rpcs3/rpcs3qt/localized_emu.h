@@ -368,6 +368,7 @@ private:
 		case localized_string_id::BIG_PICTURE_MENU_GAMES: return tr("Games");
 		case localized_string_id::BIG_PICTURE_MENU_EXIT: return tr("Exit Big Picture Mode");
 		case localized_string_id::BIG_PICTURE_NO_GAMES_FOUND: return tr("No games found.\nAdd games in the main RPCS3 window.");
+		case localized_string_id::BIG_PICTURE_LOADING: return tr("Loading games...");
 		case localized_string_id::BIG_PICTURE_GAME_DETAILS_START: return tr("Start");
 		case localized_string_id::BIG_PICTURE_HINT_BACK: return tr("Back");
 		case localized_string_id::BIG_PICTURE_HINT_SELECT: return tr("Select");
