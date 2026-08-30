@@ -399,7 +399,22 @@ EmuCallbacks main_application::CreateCallbacks()
 
 		const QString result = QDir(fi.canonicalFilePath()).filePath(tail);
 
+#ifdef _WIN32
+		std::string result_with_drive = QDir::cleanPath(result).toStdString();
+
+		if (!tail.isEmpty() && sv.starts_with("/") && !sv.starts_with("//"))
+		{
+			// Erase absolute path for non-existant path
+			if (result_with_drive.size() > 1 && result_with_drive[1] == ':')
+			{
+				result_with_drive.erase(result_with_drive.begin(), result_with_drive.begin() + 2);
+			}
+		}
+
+		return result_with_drive;
+#else
 		return QDir::cleanPath(result).toStdString();
+#endif
 	};
 
 	callbacks.get_font_dirs = []()

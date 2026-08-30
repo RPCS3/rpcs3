@@ -399,7 +399,7 @@ std::string vfs::retrieve(std::string_view path, const vfs_directory* node, std:
 
 		std::vector<std::string_view> mount_path_empty;
 
-		const std::string rpath = Emu.GetCallbacks().resolve_path(path);
+		const std::string rpath = Emu.GetCallbacks().resolve_path_may_not_exist(path);
 
 		if (!rpath.empty())
 		{
