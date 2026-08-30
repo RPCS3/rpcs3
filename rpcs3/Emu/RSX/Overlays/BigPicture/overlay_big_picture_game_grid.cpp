@@ -2,6 +2,7 @@
 #include "overlay_big_picture_game_grid.h"
 #include "overlay_big_picture_game_details.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/system_utils.hpp"
 #include "Loader/PSF.h"
 
@@ -22,9 +23,9 @@ namespace rsx
 			icon->set_size(tile_width, icon_h);
 			icon->back_color = color4f(1.f, 1.f, 1.f, 0.08f);
 
-			if (fs::exists(entry.info.icon_path))
+			if (fs::exists(entry.icon_path))
 			{
-				m_icon_data = std::make_unique<image_info>(entry.info.icon_path);
+				m_icon_data = std::make_unique<image_info>(entry.icon_path);
 				// The renderer's texture cache is keyed by this object's address, which can be reused by an
 				// unrelated image after the old one is freed - force a re-upload instead of trusting the cache.
 				m_icon_data->dirty = true;
@@ -35,7 +36,7 @@ namespace rsx
 				static_cast<image_view*>(icon.get())->set_image_resource(resource_config::standard_image_resource::new_entry);
 			}
 
-			std::unique_ptr<overlay_element> title = std::make_unique<label>(entry.info.name.empty() ? entry.info.serial : entry.info.name);
+			std::unique_ptr<overlay_element> title = std::make_unique<label>(entry.name.empty() ? entry.serial : entry.name);
 			title->set_font("Arial", 13);
 			title->set_size(tile_width, 84);
 			title->set_wrap_text(true);
@@ -89,40 +90,49 @@ namespace rsx
 			m_games.clear();
 			m_tiles.clear();
 
-			for (const auto& [title_id, raw_path] : Emu.GetGamesConfig().get_games())
+			// Configure game enumeration
+			m_game_enumeration.initialize_paths();
+			m_game_enumeration.set_localization(g_cfg.sys.language, "Unknown", [](const std::string&){ return std::string(); });
+			m_game_enumeration.set_show_custom_icons(true);
+			m_game_enumeration.set_prefer_game_data_icons(true);
+			m_game_enumeration.set_play_hover_movies(true);
+			m_game_enumeration.set_play_hover_music(true);
+			m_game_enumeration.set_canceled_callback([](){ return Emu.IsStopped(); });
+	
+			// Parse directories
+			m_game_enumeration.parse_directories();
+
+			// Add VFS entry
+			m_game_enumeration.add_vfs_entry();
+
+			// Remove duplicate entries
+			m_game_enumeration.remove_duplicates();
+
+			// Parse entries
+			for (const game_enumeration<big_picture_game_entry>::path_entry& entry : m_game_enumeration.path_entries())
 			{
-				std::string path = raw_path;
-				path.resize(path.find_last_not_of('/') + 1);
-
-				if (path.empty())
-				{
-					continue;
-				}
-
-				const std::string sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(path, title_id);
-				const psf::registry psf = psf::load_object(sfo_dir + "/PARAM.SFO");
-
-				if (psf.empty())
-				{
-					continue;
-				}
-
-				GameInfo info{};
-				info.path = path;
-				info.serial = title_id;
-				info.name = std::string(psf::get_string(psf, "TITLE", title_id));
-				info.category = std::string(psf::get_string(psf, "CATEGORY"));
-				info.app_ver = std::string(psf::get_string(psf, "APP_VER"));
-				info.icon_path = rpcs3::utils::get_game_content_path(game_content_type::content_icon, info, sfo_dir);
-				info.movie_path = rpcs3::utils::get_game_content_path(game_content_type::content_video, info, sfo_dir);
-				info.audio_path = rpcs3::utils::get_game_content_path(game_content_type::content_sound, info, sfo_dir);
-
-				m_games.push_back({ std::move(info) });
+				m_game_enumeration.parse_entry(entry);
 			}
 
+			// Try to update the app version for disc games if there is a patch
+			// Also try to find updated game icons and movies
+			m_game_enumeration.apply_patches();
+
+			// Get final enumerated games
+			for (big_picture_game_entry& game : m_game_enumeration.take_games())
+			{
+				if (!game.bootable) continue; // Let's restrict this to bootable entries
+
+				m_games.push_back(std::move(game));
+			}
+
+			// Reset enumeration
+			m_game_enumeration.clear(true);
+
+			// Sort by name
 			std::sort(m_games.begin(), m_games.end(), [](const big_picture_game_entry& a, const big_picture_game_entry& b)
 			{
-				return a.info.name < b.info.name;
+				return a.name < b.name;
 			});
 
 			m_grid = std::make_unique<vertical_layout>();
@@ -233,7 +243,7 @@ namespace rsx
 				case big_picture_game_details::result::start:
 				{
 					rsx_log.notice("Big Picture Mode: Start pressed for index=%d", m_selected_index);
-					const GameInfo& info = m_games[m_selected_index].info;
+					const big_picture_game_entry& info = m_games[m_selected_index];
 					rsx_log.notice("Big Picture Mode: selected game path='%s' serial='%s'", info.path, info.serial);
 					m_details->hide();
 					if (m_on_game_selected)
@@ -300,7 +310,7 @@ namespace rsx
 			case pad_button::cross:
 				play_sound(sound_effect::accept);
 				rsx_log.notice("Big Picture Mode: opening details for index=%d", m_selected_index);
-				m_details->show(m_games[m_selected_index].info, m_tiles[m_selected_index]->get_icon_data());
+				m_details->show(m_games[m_selected_index], m_tiles[m_selected_index]->get_icon_data());
 				rsx_log.notice("Big Picture Mode: details shown");
 				return page_navigation::stay;
 			case pad_button::circle:
