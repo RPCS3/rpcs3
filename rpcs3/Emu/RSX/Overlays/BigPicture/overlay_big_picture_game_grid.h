@@ -46,17 +46,21 @@ namespace rsx
 			compiled_resource& get_compiled() override;
 
 		private:
-			void reload();
+			void start_reload();
+			void finish_reload();
 			void select_tile(s32 index);
 
 			static constexpr u16 m_columns = 5;
 			static constexpr u16 m_tile_size = 200;
 
+			std::mutex m_reload_mutex;
+			std::unique_ptr<named_thread<std::function<void()>>> m_game_enumeration_thread;
+
 			game_enumeration<big_picture_game_entry> m_game_enumeration;
 			std::vector<big_picture_game_entry> m_games;
 			std::vector<big_picture_game_tile*> m_tiles; // non-owning, owned by m_grid
 			std::unique_ptr<vertical_layout> m_grid;
-			std::unique_ptr<label> m_no_games_text;
+			std::unique_ptr<label> m_placeholder_text;
 			std::unique_ptr<rounded_rect> m_highlight;
 			std::unique_ptr<big_picture_game_details> m_details;
 			std::function<void(std::string, std::string)> m_on_game_selected;
@@ -66,8 +70,9 @@ namespace rsx
 
 			s32 m_selected_index = 0;
 			u16 m_row_stride = 0;
-			u16 m_content_height = 0; 
-			compiled_resource m_compiled_grid;
+			u16 m_content_height = 0;
+
+			atomic_t<bool> m_loading = true;
 		};
 	}
 }

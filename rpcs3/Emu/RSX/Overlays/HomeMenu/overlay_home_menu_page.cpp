@@ -63,6 +63,7 @@ namespace rsx
 				is_current_page = false;
 				page->is_current_page = true;
 				rsx_log.notice("Home menu: changing current page from '%s' to '%s'", title, page->title);
+				refresh();
 			}
 		}
 

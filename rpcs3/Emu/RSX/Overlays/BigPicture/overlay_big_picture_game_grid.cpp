@@ -3,8 +3,7 @@
 #include "overlay_big_picture_game_details.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
-#include "Emu/system_utils.hpp"
-#include "Loader/PSF.h"
+#include "Utilities/Thread.h"
 
 #include <algorithm>
 
@@ -51,12 +50,12 @@ namespace rsx
 			: home_menu_page(x, y, width, height, false, parent, get_localized_string(localized_string_id::BIG_PICTURE_MENU_GAMES))
 			, m_on_game_selected(std::move(on_game_selected))
 		{
-			m_no_games_text = std::make_unique<label>(get_localized_string(localized_string_id::BIG_PICTURE_NO_GAMES_FOUND));
-			m_no_games_text->set_font("Arial", 20);
-			m_no_games_text->set_pos(x, y + (height / 2) - 20);
-			m_no_games_text->set_size(width, 40);
-			m_no_games_text->align_text(text_align::center);
-			m_no_games_text->back_color.a = 0.f;
+			m_placeholder_text = std::make_unique<label>(get_localized_string(localized_string_id::BIG_PICTURE_LOADING));
+			m_placeholder_text->set_font("Arial", 20);
+			m_placeholder_text->set_pos(x, y + (height / 2) - 20);
+			m_placeholder_text->set_size(width, 40);
+			m_placeholder_text->align_text(text_align::center);
+			m_placeholder_text->back_color.a = 0.f;
 
 			// Bezel around game cover art.
 			m_highlight = std::make_unique<rounded_rect>();
@@ -78,15 +77,24 @@ namespace rsx
 
 			m_details = std::make_unique<big_picture_game_details>(x, y, width, height);
 
-			reload();
+			start_reload();
 		}
 
-		big_picture_game_grid::~big_picture_game_grid() = default;
+		big_picture_game_grid::~big_picture_game_grid()
+		{
+			if (m_game_enumeration_thread)
+			{
+				*m_game_enumeration_thread = thread_state::aborting; // abort
+				(*m_game_enumeration_thread)(); // wait
+				m_game_enumeration_thread.reset(); // join
+			}
+		}
 
-		void big_picture_game_grid::reload()
+		void big_picture_game_grid::start_reload()
 		{
 			rsx_log.notice("Big Picture Mode: reload() start");
 
+			m_loading = true;
 			m_games.clear();
 			m_tiles.clear();
 
@@ -97,43 +105,100 @@ namespace rsx
 			m_game_enumeration.set_prefer_game_data_icons(true);
 			m_game_enumeration.set_play_hover_movies(true);
 			m_game_enumeration.set_play_hover_music(true);
-			m_game_enumeration.set_canceled_callback([](){ return Emu.IsStopped(); });
-	
-			// Parse directories
-			m_game_enumeration.parse_directories();
+			m_game_enumeration.set_canceled_callback([](){ return thread_ctrl::state() == thread_state::aborting; });
 
-			// Add VFS entry
-			m_game_enumeration.add_vfs_entry();
-
-			// Remove duplicate entries
-			m_game_enumeration.remove_duplicates();
-
-			// Parse entries
-			for (const game_enumeration<big_picture_game_entry>::path_entry& entry : m_game_enumeration.path_entries())
+			m_game_enumeration_thread = std::make_unique<named_thread<std::function<void()>>>("BPM Reload", [this]()
 			{
-				m_game_enumeration.parse_entry(entry);
-			}
+				// Parse directories
+				m_game_enumeration.parse_directories();
 
-			// Try to update the app version for disc games if there is a patch
-			// Also try to find updated game icons and movies
-			m_game_enumeration.apply_patches();
+				// Add VFS entry
+				m_game_enumeration.add_vfs_entry();
 
-			// Get final enumerated games
-			for (big_picture_game_entry& game : m_game_enumeration.take_games())
-			{
-				if (!game.bootable) continue; // Let's restrict this to bootable entries
+				// Remove duplicate entries
+				m_game_enumeration.remove_duplicates();
 
-				m_games.push_back(std::move(game));
-			}
+				// Parse entries (multithreaded)
+				const std::vector<game_enumeration<big_picture_game_entry>::path_entry>& entries = m_game_enumeration.path_entries();
+				const usz thread_count = std::min<usz>(utils::get_thread_count(), entries.size());
+				if (thread_count > 1)
+				{
+					atomic_t<usz> entry_indexer = 0;
+					const auto parse_entries = [this, &entry_indexer, &entries]()
+					{
+						while (thread_ctrl::state() != thread_state::aborting)
+						{
+							// Make sure entry_indexer does not exceed m_install_entries
+							const usz index = entry_indexer.fetch_op([&entries](usz& v)
+							{
+								if (v < entries.size())
+								{
+									v++;
+									return true;
+								}
 
-			// Reset enumeration
-			m_game_enumeration.clear(true);
+								return false;
+							}).first;
 
-			// Sort by name
-			std::sort(m_games.begin(), m_games.end(), [](const big_picture_game_entry& a, const big_picture_game_entry& b)
-			{
-				return a.name < b.name;
+							if (index >= entries.size())
+							{
+								break;
+							}
+
+							m_game_enumeration.parse_entry(entries[index]);
+						}
+					};
+					named_thread_group workers("BPM Parser "sv, ::narrow<u32>(thread_count) - 1, [&parse_entries]()
+					{
+						parse_entries();
+					});
+
+					parse_entries();
+
+					workers.join();
+				}
+				else
+				{
+					for (const game_enumeration<big_picture_game_entry>::path_entry& entry : entries)
+					{
+						m_game_enumeration.parse_entry(entry);
+					}
+				}
+
+				// Try to update the app version for disc games if there is a patch
+				// Also try to find updated game icons and movies
+				m_game_enumeration.apply_patches();
+
+				// Get final enumerated games
+				for (big_picture_game_entry& game : m_game_enumeration.take_games())
+				{
+					if (!game.bootable) continue; // Let's restrict this to bootable entries
+
+					m_games.push_back(std::move(game));
+				}
+
+				// Reset enumeration
+				m_game_enumeration.clear(true);
+
+				// Sort by name
+				std::sort(m_games.begin(), m_games.end(), [](const big_picture_game_entry& a, const big_picture_game_entry& b)
+				{
+					return a.name < b.name;
+				});
+
+				finish_reload();
 			});
+		}
+
+		void big_picture_game_grid::finish_reload()
+		{
+			std::lock_guard lock(m_reload_mutex);
+
+			if (thread_ctrl::state() == thread_state::aborting)
+			{
+				m_loading = false;
+				return;
+			}
 
 			m_grid = std::make_unique<vertical_layout>();
 			m_grid->set_pos(x, y);
@@ -173,12 +238,19 @@ namespace rsx
 
 			m_selected_index = m_tiles.empty() ? 0 : std::clamp(m_selected_index, 0, static_cast<s32>(m_tiles.size()) - 1);
 
-			if (!m_tiles.empty())
+			if (m_tiles.empty())
+			{
+				m_placeholder_text->set_text(get_localized_string(localized_string_id::BIG_PICTURE_NO_GAMES_FOUND));
+			}
+			else
 			{
 				select_tile(m_selected_index);
 			}
 
 			rsx_log.notice("Big Picture Mode: reload() finished, games=%u, tiles=%u", m_games.size(), m_tiles.size());
+
+			m_loading = false;
+			refresh();
 		}
 
 		void big_picture_game_grid::select_tile(s32 index)
@@ -212,7 +284,7 @@ namespace rsx
 				}
 
 				m_grid->scroll_offset_value = static_cast<u16>(std::clamp(offset, 0, max_offset));
-				m_grid->refresh(); 
+				m_grid->refresh();
 			}
 
 			const big_picture_game_tile* tile = m_tiles[m_selected_index];
@@ -224,10 +296,14 @@ namespace rsx
 			m_highlight->set_size(icon->w + bezel_margin * 2, icon->h + bezel_margin * 2);
 			m_highlight->set_sinus_offset(1.6f);
 			m_highlight->refresh();
+
+			refresh();
 		}
 
 		page_navigation big_picture_game_grid::handle_button_press(pad_button button_press, bool is_auto_repeat, u64 auto_repeat_interval_ms)
 		{
+			if (m_loading) return page_navigation::stay;
+
 			const bool do_play_sound = !is_auto_repeat || auto_repeat_interval_ms >= user_interface::m_auto_repeat_ms_interval_default;
 
 			if (m_details && m_details->is_visible())
@@ -239,6 +315,7 @@ namespace rsx
 				{
 				case big_picture_game_details::result::back:
 					m_details->hide();
+					refresh();
 					break;
 				case big_picture_game_details::result::start:
 				{
@@ -252,6 +329,7 @@ namespace rsx
 						m_on_game_selected(info.path, info.serial);
 						rsx_log.notice("Big Picture Mode: on_game_selected callback returned");
 					}
+					refresh();
 					break;
 				}
 				default:
@@ -312,6 +390,7 @@ namespace rsx
 				rsx_log.notice("Big Picture Mode: opening details for index=%d", m_selected_index);
 				m_details->show(m_games[m_selected_index], m_tiles[m_selected_index]->get_icon_data());
 				rsx_log.notice("Big Picture Mode: details shown");
+				refresh();
 				return page_navigation::stay;
 			case pad_button::circle:
 				play_sound(sound_effect::cancel);
@@ -335,36 +414,53 @@ namespace rsx
 
 		compiled_resource& big_picture_game_grid::get_compiled()
 		{
-			m_compiled_grid.clear();
+			if (!m_highlight->is_compiled() ||
+				(!m_tiles.empty() && m_grid && !m_grid->is_compiled()) ||
+				(m_details && m_details->is_visible()))
+			{
+				m_is_compiled = false;
+			}
+
+			if (is_compiled())
+			{
+				return compiled_resources;
+			}
+
+			m_is_compiled = true;
+			compiled_resources.clear();
+
+			if (!visible)
+			{
+				return compiled_resources;
+			}
+
+			std::lock_guard lock(m_reload_mutex);
 
 			if (m_tiles.empty())
 			{
-				m_compiled_grid.add(m_no_games_text->get_compiled());
+				compiled_resources.add(m_placeholder_text->get_compiled());
 			}
 			else if (m_grid)
 			{
-				m_compiled_grid.add(m_grid->get_compiled());
-				m_compiled_grid.add(m_highlight->get_compiled());
+				compiled_resources.add(m_grid->get_compiled());
+				compiled_resources.add(m_highlight->get_compiled());
 			}
 
-			const bool details_visible = m_details && m_details->is_visible();
-
-			if (!details_visible)
+			if (m_details && m_details->is_visible())
 			{
-				m_compiled_grid.add(m_back_hint.get_compiled());
+				compiled_resources.add(m_details->get_compiled());
+			}
+			else
+			{
+				compiled_resources.add(m_back_hint.get_compiled());
 
 				if (!m_tiles.empty())
 				{
-					m_compiled_grid.add(m_select_hint.get_compiled());
+					compiled_resources.add(m_select_hint.get_compiled());
 				}
 			}
 
-			if (m_details)
-			{
-				m_compiled_grid.add(m_details->get_compiled());
-			}
-
-			return m_compiled_grid;
+			return compiled_resources;
 		}
 	}
 }
