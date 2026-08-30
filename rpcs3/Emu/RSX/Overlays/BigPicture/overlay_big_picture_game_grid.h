@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Emu/RSX/Overlays/HomeMenu/overlay_home_menu_page.h"
+#include "Emu/game_enumeration.h"
 #include "Emu/GameInfo.h"
 
 #include <functional>
@@ -11,9 +12,8 @@ namespace rsx
 	{
 		struct big_picture_game_details;
 
-		struct big_picture_game_entry
+		struct big_picture_game_entry : public GameInfo
 		{
-			GameInfo info;
 		};
 
 		// A single selectable tile (icon + title) inside the game grid.
@@ -52,6 +52,7 @@ namespace rsx
 			static constexpr u16 m_columns = 5;
 			static constexpr u16 m_tile_size = 200;
 
+			game_enumeration<big_picture_game_entry> m_game_enumeration;
 			std::vector<big_picture_game_entry> m_games;
 			std::vector<big_picture_game_tile*> m_tiles; // non-owning, owned by m_grid
 			std::unique_ptr<vertical_layout> m_grid;
