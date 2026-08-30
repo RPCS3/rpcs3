@@ -347,7 +347,7 @@ std::function<void(void*)> lv2_prx::load(utils::serial& ar)
 		{
 			u128 klic = g_fxo->get<loaded_npdrm_keys>().last_key();
 			file = make_file_view(std::move(file), offset, umax);
-			prx = ppu_load_prx(ppu_prx_object{decrypt_self(std::move(file), reinterpret_cast<u8*>(&klic))}, false, path, 0, &ar);
+			prx = ppu_load_prx(ppu_prx_object{decrypt_self(std::move(file), reinterpret_cast<u8*>(&klic))}, false, path, offset, &ar);
 			prx->m_loaded_flags = std::move(loaded_flags);
 			prx->m_external_loaded_flags = std::move(external_flags);
 
