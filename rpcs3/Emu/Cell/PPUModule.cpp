@@ -163,8 +163,6 @@ void ppu_module_manager::initialize_modules()
 	}
 }
 
-#pragma optimize("", off)
-
 // Global linkage information
 struct ppu_linkage_info
 {

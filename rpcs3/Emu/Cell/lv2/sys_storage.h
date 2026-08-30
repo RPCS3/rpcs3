@@ -1,7 +1,8 @@
 #pragma once
 
 #include "Emu/Memory/vm_ptr.h"
-#include "Emu/Cell/lv2//sys_sync.h"
+#include "Emu/Cell/lv2/sys_sync.h"
+#include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/Cell/ErrorCodes.h"
 
 enum Devices : u64
@@ -30,6 +31,7 @@ struct lv2_storage : public lv2_obj
 	const fs::file file;
 	const u64 mode;
 	const u64 flags;
+	atomic_ptr<lv2_event_queue> async_port;
 
 	lv2_storage(u64 device_id, fs::file&& file, u64 mode, u64 flags) noexcept
 		: lv2_obj{}
@@ -42,6 +44,29 @@ struct lv2_storage : public lv2_obj
 
 	lv2_storage(utils::serial& ar)  noexcept;
 	void save(utils::serial& ar);
+};
+
+struct lv2_storage_medium_event_port
+{
+	// Fake attributes (internal object)
+	static const u32 id_base = 1;
+	static const u32 id_count = 256; // Note: can be increased if needed
+	static const u32 id_step = 1;
+
+	const u64 device_id; // 0 means global
+	shared_ptr<lv2_event_queue> medium_port;
+
+	SAVESTATE_INIT_POS(59);
+
+	lv2_storage_medium_event_port(u64 device_id, shared_ptr<lv2_event_queue> medium_port) noexcept
+		: device_id(device_id)
+		, medium_port(std::move(medium_port))
+	{
+	}
+
+	lv2_storage_medium_event_port(utils::serial& ar)  noexcept;
+	void save(utils::serial& ar);
+	bool savable() const;
 };
 
 struct StorageDeviceInfo
@@ -66,7 +91,7 @@ struct StorageDeviceInfo
 // SysCalls
 class ppu_thread;
 
-error_code sys_storage_open(u64 device, u64 mode, vm::ptr<u32> fd, u64 flags);
+error_code sys_storage_open(ppu_thread& ppu, u64 device, u64 mode, vm::ptr<u32> fd, u64 flags);
 error_code sys_storage_close(u32 fd);
 error_code sys_storage_read(u32 fd, u32 mode, u32 start_sector, u32 num_sectors, vm::ptr<void> bounce_buf, vm::ptr<u32> sectors_read, u64 flags);
 error_code sys_storage_write(u32 fd, u32 mode, u32 start_sector, u32 num_sectors, vm::ptr<void> data, vm::ptr<u32> sectors_wrote, u64 flags);

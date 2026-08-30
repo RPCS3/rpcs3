@@ -563,6 +563,25 @@ error_code sys_ss_update_manager(ppu_thread& ppu, u64 pkg_id, u64 a1, u64 a2, u6
 	return CELL_OK;
 }
 
+error_code sys_ss_sec_hw_framework(ppu_thread& ppu, u64 pkg_id, u64 a1)
+{
+	sys_ss.todo("sys_ss_sec_hw_framework(pkg=0x%llx, a1=0x%llx)", pkg_id, a1);
+	sys_ss.todo("Callstack:\n%s", ppu.dump_callstack());
+
+	switch (pkg_id)
+	{
+	case 0x5004: return CELL_OK;
+	case 0x5007:
+	{
+		sys_ss.todo("sys_ss_sec_hw_framework(0x5007): input: %s", std::span<u8>(ppu._sudo<u8>(a1), 0x18));
+		return CELL_OK;
+	}
+	default: break;
+	}
+
+	return 0x8001051D;
+}
+
 error_code sys_ss_virtual_trm_manager(u64 pkg_id, u64 a1, u64 a2, u64 a3, u64 a4)
 {
 	sys_ss.todo("sys_ss_virtual_trm_manager(pkg=0x%llx, a1=0x%llx, a2=0x%llx, a3=0x%llx, a4=0x%llx)", pkg_id, a1, a2, a3, a4);
