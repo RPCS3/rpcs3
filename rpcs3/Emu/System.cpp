@@ -981,6 +981,10 @@ bool Emulator::BootBigPictureMode()
 	m_ar.reset();
 
 	Init();
+
+	// Make sure the games folder is parsed before we enter big picture mode.
+	AddGamesFromDir(rpcs3::utils::get_games_dir());
+
 	g_cfg.video.disable_on_disk_shader_cache.set(true);
 
 	vm::init();
