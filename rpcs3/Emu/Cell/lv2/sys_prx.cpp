@@ -390,7 +390,9 @@ void lv2_prx::save(utils::serial& ar)
 {
 	USING_SERIALIZATION_VERSION(lv2_prx_overlay);
 
-	ar(vfs::retrieve(path), offset, state);
+	const std::string vpath = vfs::retrieve(path);
+
+	ar(vpath, offset, state);
 
 	// Save segments count
 	ar.serialize_vle(segs.size());
@@ -401,10 +403,18 @@ void lv2_prx::save(utils::serial& ar)
 		ar(m_external_loaded_flags);
 	}
 
+	std::string segments;
+
 	for (const ppu_segment& seg : segs)
 	{
-		if (seg.type == 0x1u && seg.size) ar(seg.addr);
+		if (seg.type == 0x1u && seg.size)
+		{
+			fmt::append(segments, " 0x%x", seg.addr);
+			ar(seg.addr);
+		}
 	}
+
+	(vpath.empty() ? sys_prx.error : sys_prx.success)("lv2_prx::save(): vpath='%s', offset=0x%x, state=%x, segments:%s", vpath, offset, +state, segments);
 }
 
 error_code sys_prx_get_ppu_guid(ppu_thread& ppu)
