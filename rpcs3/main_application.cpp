@@ -397,24 +397,19 @@ EmuCallbacks main_application::CreateCallbacks()
 			fi.setFile(fi.path());
 		}
 
-		const QString result = QDir(fi.canonicalFilePath()).filePath(tail);
+		QString result = QDir::cleanPath(QDir(fi.canonicalFilePath()).filePath(tail));
 
 #ifdef _WIN32
-		std::string result_with_drive = QDir::cleanPath(result).toStdString();
-
-		if (!tail.isEmpty() && sv.starts_with("/") && !sv.starts_with("//"))
+		if (sv.starts_with("/") && !sv.starts_with("//"))
 		{
 			// Erase absolute path for non-existant path
-			if (result_with_drive.size() > 1 && result_with_drive[1] == ':')
+			if (result.size() >= 3 && result[1] == ':' && result[2] == '/')
 			{
-				result_with_drive.erase(result_with_drive.begin(), result_with_drive.begin() + 2);
+				result.remove(0, 2);
 			}
 		}
-
-		return result_with_drive;
-#else
-		return QDir::cleanPath(result).toStdString();
 #endif
+		return result.toStdString();
 	};
 
 	callbacks.get_font_dirs = []()
