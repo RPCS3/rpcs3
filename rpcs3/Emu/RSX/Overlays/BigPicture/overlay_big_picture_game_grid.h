@@ -47,7 +47,7 @@ namespace rsx
 
 		private:
 			void start_reload();
-			void finish_reload();
+			void finish_reload(std::vector<std::unique_ptr<big_picture_game_tile>>&& tiles);
 			void select_tile(s32 index);
 
 			static constexpr u16 m_columns = 5;
