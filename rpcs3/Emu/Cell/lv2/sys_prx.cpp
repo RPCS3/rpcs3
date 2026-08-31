@@ -347,7 +347,7 @@ std::function<void(void*)> lv2_prx::load(utils::serial& ar)
 		{
 			u128 klic = g_fxo->get<loaded_npdrm_keys>().last_key();
 			file = make_file_view(std::move(file), offset, umax);
-			prx = ppu_load_prx(ppu_prx_object{decrypt_self(std::move(file), reinterpret_cast<u8*>(&klic))}, false, path, 0, &ar);
+			prx = ppu_load_prx(ppu_prx_object{decrypt_self(std::move(file), reinterpret_cast<u8*>(&klic))}, false, path, offset, &ar);
 			prx->m_loaded_flags = std::move(loaded_flags);
 			prx->m_external_loaded_flags = std::move(external_flags);
 
@@ -390,7 +390,9 @@ void lv2_prx::save(utils::serial& ar)
 {
 	USING_SERIALIZATION_VERSION(lv2_prx_overlay);
 
-	ar(vfs::retrieve(path), offset, state);
+	const std::string vpath = vfs::retrieve(path);
+
+	ar(vpath, offset, state);
 
 	// Save segments count
 	ar.serialize_vle(segs.size());
@@ -401,10 +403,18 @@ void lv2_prx::save(utils::serial& ar)
 		ar(m_external_loaded_flags);
 	}
 
+	std::string segments;
+
 	for (const ppu_segment& seg : segs)
 	{
-		if (seg.type == 0x1u && seg.size) ar(seg.addr);
+		if (seg.type == 0x1u && seg.size)
+		{
+			fmt::append(segments, " 0x%x", seg.addr);
+			ar(seg.addr);
+		}
 	}
+
+	(vpath.empty() ? sys_prx.error : sys_prx.success)("lv2_prx::save(): vpath='%s', offset=0x%x, state=%x, segments:%s", vpath, offset, +state, segments);
 }
 
 error_code sys_prx_get_ppu_guid(ppu_thread& ppu)

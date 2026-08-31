@@ -109,11 +109,13 @@ namespace rsx
 
 				GameInfo info{};
 				info.path = path;
-				info.icon_path = sfo_dir + "/ICON0.PNG";
 				info.serial = title_id;
 				info.name = std::string(psf::get_string(psf, "TITLE", title_id));
 				info.category = std::string(psf::get_string(psf, "CATEGORY"));
 				info.app_ver = std::string(psf::get_string(psf, "APP_VER"));
+				info.icon_path = rpcs3::utils::get_game_content_path(game_content_type::content_icon, info, sfo_dir);
+				info.movie_path = rpcs3::utils::get_game_content_path(game_content_type::content_video, info, sfo_dir);
+				info.audio_path = rpcs3::utils::get_game_content_path(game_content_type::content_sound, info, sfo_dir);
 
 				m_games.push_back({ std::move(info) });
 			}
@@ -290,9 +292,9 @@ namespace rsx
 				break;
 			case pad_button::dpad_down:
 			case pad_button::ls_down:
-				if ((m_selected_index + m_columns) < static_cast<s32>(m_tiles.size()))
+				if (!m_tiles.empty())
 				{
-					select_tile(m_selected_index + m_columns);
+					select_tile(std::min(m_selected_index + m_columns, static_cast<s32>(m_tiles.size()) - 1));
 				}
 				break;
 			case pad_button::cross:

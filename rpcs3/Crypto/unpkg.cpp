@@ -952,11 +952,11 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 		default:
 		{
 			// TODO: check for valid utf8 characters
-			const std::string true_path = std::filesystem::weakly_canonical(path).string();
+			const std::string true_path = std::filesystem::path(path).lexically_normal().string();
 			if (true_path.empty())
 			{
 				num_failures++;
-				pkg_log.error("Failed to get weakly_canonical path for '%s'", path);
+				pkg_log.error("Failed to normalize package path for '%s'", path);
 				break;
 			}
 
