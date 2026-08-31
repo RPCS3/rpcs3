@@ -95,7 +95,7 @@ std::function<void(void*)> lv2_overlay::load(utils::serial& ar)
 	{
 		u128 klic = g_fxo->get<loaded_npdrm_keys>().last_key();
 		file = make_file_view(std::move(file), offset, umax);
-		ovlm = ppu_load_overlay(ppu_exec_object{ decrypt_self(std::move(file), reinterpret_cast<u8*>(&klic)) }, false, path, 0, &ar).first;
+		ovlm = ppu_load_overlay(ppu_exec_object{ decrypt_self(std::move(file), reinterpret_cast<u8*>(&klic)) }, false, path, offset, &ar).first;
 
 		if (!ovlm)
 		{

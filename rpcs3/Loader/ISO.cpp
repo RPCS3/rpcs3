@@ -6,6 +6,7 @@
 #include "Emu/System.h"
 #include "Crypto/utils.h"
 
+#include <chrono>
 #include <codecvt>
 #include <algorithm>
 #include <cmath>
@@ -39,7 +40,7 @@ static void* get_aligned_buf()
 #if defined(_WIN32)
 			buf = _aligned_malloc(ISO_SECTOR_SIZE, ISO_SECTOR_SIZE * 2);
 #else
-			buf = std::aligned_alloc(ISO_SECTOR_SIZE * 2, ISO_SECTOR_SIZE);
+			buf = std::aligned_alloc(ISO_SECTOR_SIZE * 2, ISO_SECTOR_SIZE * 2);
 #endif
 		}
 
@@ -65,7 +66,7 @@ static bool is_iso_file(iso_file& file, u64* size = nullptr)
 
 	char magic[5];
 
-	if (!file.read_at(32768ULL + 1, magic, 5) == 5)
+	if (file.read_at(32768ULL + 1, magic, 5) != 5)
 	{
 		return false;
 	}
@@ -839,19 +840,21 @@ static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, 
 	const u32 start_sector = retrieve_endian_int<u32>(header.start_sector);
 	const u32 file_size = retrieve_endian_int<u32>(header.file_size);
 
-	std::tm file_date = {};
+	// The recorded ECMA-119 date holds the local time of the recorder, paired with its offset from GMT.
+	// std::chrono::sys_days is anchored to the UNIX epoch, so the host time zone never enters the result.
+	const std::chrono::year_month_day file_date
+	{
+		std::chrono::year{1900 + header.year},
+		std::chrono::month{header.month},
+		std::chrono::day{header.day}
+	};
 
-	file_date.tm_year = header.year;
-	file_date.tm_mon = header.month - 1;
-	file_date.tm_mday = header.day;
-	file_date.tm_hour = header.hour;
-	file_date.tm_min = header.minute;
-	file_date.tm_sec = header.second;
+	// The offset from GMT is stored as a signed number of 15 minute intervals (ECMA-119 9.1.5),
+	// so it has to be subtracted from the recorded local time in order to obtain UTC
+	const auto file_time = std::chrono::sys_days{file_date} + std::chrono::hours{header.hour} + std::chrono::minutes{header.minute}
+		+ std::chrono::seconds{header.second} - std::chrono::minutes{static_cast<s8>(header.timezone_value) * 15};
 
-	const s16 timezone_value = header.timezone_value;
-	const s16 timezone_offset = (timezone_value - 50) * 15 * 60;
-
-	const std::time_t date_time = std::mktime(&file_date) + timezone_offset;
+	const std::time_t date_time = static_cast<std::time_t>(file_time.time_since_epoch().count());
 
 	// 2nd flag bit indicates whether a given fs node is a directory
 	const bool is_directory = header.flags & 0b00000010;

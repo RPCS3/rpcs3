@@ -58,7 +58,8 @@ namespace vk
 			COMPILE_DEFAULT = 0,
 			COMPILE_INLINE = 1,
 			COMPILE_DEFERRED = 2,
-			SEPARATE_SHADER_OBJECTS = 4
+			SEPARATE_SHADER_OBJECTS = 4,
+			USE_LAST_PROVOKING_VERTEX = 8
 		};
 
 		using op_flags = rsx::flags32_t;

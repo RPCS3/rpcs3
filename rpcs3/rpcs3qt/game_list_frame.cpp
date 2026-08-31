@@ -241,6 +241,8 @@ void game_list_frame::LoadSettings()
 	m_sort_column = m_gui_settings->GetValue(gui::gl_sortCol).toInt();
 	m_category_filters = m_gui_settings->GetGameListCategoryFilters(true);
 	m_grid_category_filters = m_gui_settings->GetGameListCategoryFilters(false);
+	m_game_collection = m_gui_settings->GetCurrentGameCollection();
+	m_game_collection_serials = m_gui_settings->GetGamesInCollection(m_game_collection);
 	m_draw_compat_status_to_grid = m_gui_settings->GetValue(gui::gl_draw_compat).toBool();
 	m_prefer_game_data_icons = m_gui_settings->GetValue(gui::gl_pref_gd_icon).toBool();
 	m_show_custom_icons = m_gui_settings->GetValue(gui::gl_custom_icon).toBool();
@@ -342,7 +344,8 @@ bool game_list_frame::IsEntryVisible(const game_info& game, bool search_fallback
 	const QString serial = QString::fromStdString(game->info.serial);
 	const bool is_visible = (m_show_hidden || !m_hidden_list.contains(serial)) &&
 							(m_show_broken || !m_broken_list.contains(serial)) &&
-							(m_show_completed || !m_completed_list.contains(serial));
+							(m_show_completed || !m_completed_list.contains(serial)) &&
+							(m_game_collection.isEmpty() || m_game_collection_serials.contains(serial));
 	return is_visible && matches_category() && SearchMatchesApp(QString::fromStdString(game->info.name), serial, search_fallback);
 }
 
@@ -574,7 +577,7 @@ void game_list_frame::Refresh(const bool from_drive, const std::vector<std::stri
 
 void game_list_frame::OnParsingFinished()
 {
-	const Localized localized;
+	const std::shared_ptr<const Localized> localized = std::make_shared<const Localized>();
 	const std::string dev_flash = g_cfg_vfs.get_dev_flash();
 	const std::string _hdd = rpcs3::utils::get_hdd0_dir();
 
@@ -590,8 +593,8 @@ void game_list_frame::OnParsingFinished()
 	const std::string localized_icon = fmt::format("ICON0_%02d.PNG", language_index);
 	const std::string localized_movie = fmt::format("ICON1_%02d.PAM", language_index);
 
-	const auto add_game = [this, localized_title, localized_icon, localized_movie, dev_flash, game_icon_path, _hdd,
-	                       cat_unknown_localized = localized.category.unknown.toStdString(), cat_unknown = cat::cat_unknown.toStdString(),
+	const auto add_game = [this, localized, localized_title, localized_icon, localized_movie, dev_flash, game_icon_path, _hdd,
+	                       cat_unknown_localized = localized->category.unknown.toStdString(), cat_unknown = cat::cat_unknown.toStdString(),
 	                       play_hover_movies = m_play_hover_movies, play_hover_music = m_play_hover_music, show_custom_icons = m_show_custom_icons]
 	                       (const std::string& dir_or_elf, const std::string& game_dir = "PS3_GAME")
 	{
@@ -629,8 +632,6 @@ void game_list_frame::OnParsingFinished()
 		gui_game_info game{};
 		game.info.path = dir_or_elf;
 		game.info.game_dir = (game_dir == "PS3_GAME") ? "" : game_dir;
-
-		const Localized thread_localized;
 
 		const std::string sfo_dir = (archive || !cache_entry.psf_data.empty()) ? game_dir : rpcs3::utils::get_sfo_dir_from_game_path(dir_or_elf);
 		const std::string sfo_path = sfo_dir + "/PARAM.SFO";
@@ -694,7 +695,7 @@ void game_list_frame::OnParsingFinished()
 					path_vfs = path_vfs.substr(pos);
 				}
 
-				if (const auto it = thread_localized.title.titles.find(path_vfs); it != thread_localized.title.titles.cend())
+				if (const auto it = localized->title.titles.find(path_vfs); it != localized->title.titles.cend())
 				{
 					game.info.name = it->second.toStdString();
 				}
@@ -855,21 +856,21 @@ void game_list_frame::OnParsingFinished()
 
 		QString qt_cat = QString::fromStdString(game.info.category);
 
-		if (const auto boot_cat = thread_localized.category.cat_boot.find(qt_cat); boot_cat != thread_localized.category.cat_boot.cend())
+		if (const auto boot_cat = localized->category.cat_boot.find(qt_cat); boot_cat != localized->category.cat_boot.cend())
 		{
 			qt_cat = boot_cat->second;
 		}
-		else if (const auto data_cat = thread_localized.category.cat_data.find(qt_cat); data_cat != thread_localized.category.cat_data.cend())
+		else if (const auto data_cat = localized->category.cat_data.find(qt_cat); data_cat != localized->category.cat_data.cend())
 		{
 			qt_cat = data_cat->second;
 		}
 		else if (game.info.category == cat_unknown)
 		{
-			qt_cat = thread_localized.category.unknown;
+			qt_cat = localized->category.unknown;
 		}
 		else
 		{
-			qt_cat = thread_localized.category.other;
+			qt_cat = localized->category.other;
 		}
 
 		game.localized_category = std::move(qt_cat);
@@ -1121,6 +1122,7 @@ void game_list_frame::OnRefreshFinished()
 	m_gui_settings->SetValue(gui::gl_broken_list, QStringList(m_broken_list.values()));
 	m_completed_list.intersect(m_serials);
 	m_gui_settings->SetValue(gui::gl_completed_list, QStringList(m_completed_list.values()));
+	m_gui_settings->CleanupCollections(m_serials);
 	m_serials.clear();
 	m_path_list.clear();
 	m_path_entries.clear();
@@ -1175,6 +1177,67 @@ void game_list_frame::ToggleCategoryFilter(const QStringList& categories, bool s
 	}
 
 	Refresh();
+}
+
+void game_list_frame::SetGameCollection(const QString& name)
+{
+	if (m_game_collection == name)
+	{
+		ReloadGameCollection();
+		return;
+	}
+
+	m_game_collection = name;
+	m_game_collection_serials = m_gui_settings->GetGamesInCollection(name);
+
+	Refresh();
+}
+
+void game_list_frame::ReloadGameCollection()
+{
+	QSet<QString> serials = m_gui_settings->GetGamesInCollection(m_game_collection);
+
+	if (m_game_collection_serials == serials)
+	{
+		return;
+	}
+
+	m_game_collection_serials = std::move(serials);
+
+	Refresh();
+}
+
+QHash<QString, qsizetype> game_list_frame::CountGamesPerCollection(const QStringList& collections) const
+{
+	if (collections.isEmpty())
+	{
+		return {};
+	}
+
+	QSet<QString> present;
+	present.reserve(m_game_data.size());
+
+	for (const game_info& game : m_game_data)
+	{
+		if (game) present.insert(QString::fromStdString(game->info.serial));
+	}
+
+	QHash<QString, qsizetype> counts;
+	counts.reserve(collections.size());
+
+	for (const QString& name : collections)
+	{
+		qsizetype count = 0;
+
+		for (const QString& serial : m_gui_settings->GetGamesInCollection(name))
+		{
+			if (present.contains(serial)) count++;
+		}
+
+		counts.insert(name, count);
+	}
+
+	return counts;
 }
 
 void game_list_frame::SaveSettings()

@@ -214,6 +214,16 @@ int check_filename(std::string_view file_path, bool disallow_system_files, bool 
 	return 0;
 }
 
+static bool is_valid_dir_name(const std::string& dir_name)
+{
+	if (dir_name.empty() || dir_name.find_first_of('\0') != umax)
+	{
+		return false;
+	}
+
+	return sysutil_check_name_string(dir_name.c_str(), 1, CELL_SAVEDATA_DIRNAME_SIZE) == 0;
+}
+
 static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, const std::string& prefix)
 {
 	std::vector<SaveDataEntry> save_entries;
@@ -250,6 +260,12 @@ static std::vector<SaveDataEntry> get_save_entries(const std::string& base_dir, 
 		save_entry.title     = psf::get_string(psf, "TITLE");
 		save_entry.subtitle  = psf::get_string(psf, "SUB_TITLE");
 		save_entry.details   = psf::get_string(psf, "DETAIL");
+
+		if (!is_valid_dir_name(save_entry.dirName))
+		{
+			cellSaveData.error("Savedata '%s' has an invalid SAVEDATA_DIRECTORY entry ('%s')", entry.name, save_entry.dirName);
+			continue;
+		}
 
 		for (const auto& entry2 : fs::dir(base_dir + entry.name))
 		{
@@ -847,6 +863,12 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 						save_entry2.title     = psf::get_string(psf, "TITLE");
 						save_entry2.subtitle  = psf::get_string(psf, "SUB_TITLE");
 						save_entry2.details   = psf::get_string(psf, "DETAIL");
+
+						if (!is_valid_dir_name(save_entry2.dirName))
+						{
+							cellSaveData.error("Savedata '%s' has an invalid SAVEDATA_DIRECTORY entry ('%s')", entry.name, save_entry2.dirName);
+							break;
+						}
 
 						for (const auto& entry2 : fs::dir(base_dir + entry.name))
 						{
@@ -1466,6 +1488,12 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	{
 		save_entry.dirName = dirName.get_ptr();
 		save_entry.escaped = vfs::escape(save_entry.dirName);
+	}
+
+	if (!is_valid_dir_name(save_entry.dirName))
+	{
+		cellSaveData.error("savedata_op(): invalid savedata directory name ('%s')", save_entry.dirName);
+		return {CELL_SAVEDATA_ERROR_BROKEN, save_entry.dirName};
 	}
 
 	const std::string dir_path = base_dir + save_entry.escaped + "/";
@@ -2215,7 +2243,7 @@ static NEVER_INLINE error_code savedata_get_list_item(vm::cptr<char> dirName, vm
 		return {CELL_SAVEDATA_ERROR_PARAM, "107"};
 	}
 
-	switch (sysutil_check_name_string(dirName.get_ptr(), 1, CELL_SAVEDATA_DIRLIST_MAX))
+	switch (sysutil_check_name_string(dirName.get_ptr(), 1, CELL_SAVEDATA_DIRNAME_SIZE))
 	{
 	case -1:
 	{

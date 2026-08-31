@@ -6,13 +6,11 @@
 #include <cmath>
 
 #ifdef HAVE_OPENCV
-#include <opencv2/photo.hpp>
-
-// OpenCV 5.x moved some functions to this header
-#if __has_include(<opencv2/geometry.hpp>)
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#if CV_VERSION_MAJOR >= 5
 #include <opencv2/geometry.hpp>
 #endif
-
 #endif
 
 LOG_CHANNEL(ps_move);
@@ -71,7 +69,7 @@ void ps_move_tracker<DiagnosticsEnabled>::set_valid(ps_move_info& info, u32 inde
 
 	info.valid = valid;
 	fail_count = 0; // Reset fail count
-};
+}
 
 template <bool DiagnosticsEnabled>
 void ps_move_tracker<DiagnosticsEnabled>::set_image_data(const void* buf, u64 size, u32 width, u32 height, s32 format)
@@ -388,7 +386,7 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 			// Simply drop dark and colorless pixels as well as pixels that don't match our hue
 			if ((wrapped_hue ? (hue < config.min_hue && hue > config.max_hue) : (hue < config.min_hue || hue > config.max_hue)) ||
 				saturation < config.saturation_threshold_u8 || saturation > 200 ||
-				value < 150 || value > 255)
+				value < 150)
 			{
 				dst[x] = 0;
 			}
@@ -436,19 +434,24 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 	}
 
 	std::vector<std::vector<cv::Point>> contours;
-	contours.reserve(all_contours.size());
-
 	std::vector<cv::Point2f> centers;
-	centers.reserve(all_contours.size());
-
 	std::vector<f32> radii;
-	radii.reserve(all_contours.size());
+
+	if constexpr (DiagnosticsEnabled)
+	{
+		contours.reserve(all_contours.size());
+		centers.reserve(all_contours.size());
+		radii.reserve(all_contours.size());
+	}
 
 	const f32 min_radius = m_min_radius * width;
 	const f32 max_radius = m_max_radius * width;
 
 	usz best_index = umax;
 	f32 best_area = 0.0f;
+	f32 best_radius = 0.0f;
+	cv::Point2f best_center {};
+
 	for (usz i = 0; i < all_contours.size(); i++)
 	{
 		const std::vector<cv::Point>& contour = all_contours[i];
@@ -465,18 +468,27 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 		if (radius < min_radius || radius > max_radius)
 			continue;
 
-		contours.push_back(std::move(all_contours[i]));
-		centers.push_back(std::move(center));
-		radii.push_back(std::move(radius));
+		if constexpr (DiagnosticsEnabled)
+		{
+			contours.push_back(std::move(all_contours[i]));
+			centers.push_back(center);
+			radii.push_back(radius);
+		}
 
 		if (area > best_area)
 		{
 			best_area = area;
-			best_index = contours.size() - 1;
+			best_center = center;
+			best_radius = radius;
+
+			if constexpr (DiagnosticsEnabled)
+			{
+				best_index = contours.size() - 1;
+			}
 		}
 	}
 
-	if (best_index == umax)
+	if (best_area <= 0.0f)
 	{
 		set_valid(info, index, false);
 
@@ -488,7 +500,7 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 	}
 
 	// Calculate distance from sphere to camera
-	const f32 sphere_radius_pixels = radii[best_index];
+	const f32 sphere_radius_pixels = best_radius;
 	constexpr f32 focal_length_mm = 3.5f; // Based on common webcam specs
 	constexpr f32 sensor_width_mm = 3.6f; // Based on common webcam specs
 	const f32 image_width_pixels = static_cast<f32>(width);
@@ -498,16 +510,20 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 	// Set results
 	set_valid(info, index, true);
 
-	const u32 x_pos = std::clamp(static_cast<u32>(centers[best_index].x), 0u, width);
-	const u32 y_pos = std::clamp(static_cast<u32>(centers[best_index].y), 0u, height);
+	const u32 x_pos = std::clamp(static_cast<u32>(best_center.x), 0u, width);
+	const u32 y_pos = std::clamp(static_cast<u32>(best_center.y), 0u, height);
 
 	// Only set new values if the new shape and position are relatively similar to the old ones.
-	const auto distance_travelled = [](int x1, int y1, int x2, int y2)
+	const auto distance_squared = [](int x1, int y1, int x2, int y2)
 	{
-		return std::sqrt(std::pow(x2 - x1, 2) + pow(y2 - y1, 2));
+		const int dx = x2 - x1;
+		const int dy = y2 - y1;
+		return dx * dx + dy * dy;
 	};
+	const f32 max_distance = info.radius * 8.0f;
+	const f32 max_distance_squared = max_distance * max_distance;
 	const bool shape_matches = std::abs(info.radius - sphere_radius_pixels) < (info.radius * 2) &&
-	                           distance_travelled(info.x_pos, info.y_pos, x_pos, y_pos) < (info.radius * 8);
+	                           distance_squared(info.x_pos, info.y_pos, x_pos, y_pos) < max_distance_squared;
 
 	if (shape_matches || ++m_shape_fail_count[index] >= 3)
 	{
@@ -534,8 +550,8 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 	{
 		std::vector<cv::Point> contour = std::move(contours[best_index]);
 		contours = { std::move(contour) };
-		centers = { centers[best_index] };
-		radii = { radii[best_index] };
+		centers = { best_center };
+		radii = { best_radius };
 	}
 
 	static const cv::Scalar contour_color(255, 0, 0, 255);

@@ -326,6 +326,9 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 
 	manage_game_menu->addSeparator();
 
+	// Add the game to user defined game collections
+	m_game_list_actions->AddCollectionMenu(manage_game_menu, {gameinfo});
+
 	// Hide/rename game in game list
 	QAction* hide_hidden_serial = manage_game_menu->addAction(tr("&Hide Game In Game List"));
 	hide_hidden_serial->setCheckable(true);
@@ -962,6 +965,9 @@ void game_list_context_menu::show_multi_selection_context_menu(const std::vector
 
 	manage_game_menu->addSeparator();
 
+	// Add the games to user defined game collections
+	m_game_list_actions->AddCollectionMenu(manage_game_menu, games);
+
 	// Hide game in game list
 	QAction* hide_hidden_serial = manage_game_menu->addAction(tr("&Hide Game In Game List"));
 	connect(hide_hidden_serial, &QAction::triggered, m_game_list_frame, [this, games]()
@@ -1040,8 +1046,6 @@ void game_list_context_menu::show_multi_selection_context_menu(const std::vector
 		m_gui_settings->SetValue(gui::gl_completed_list, QStringList(m_game_list_frame->completed_list().values()));
 		m_game_list_frame->Refresh();
 	});
-
-	manage_game_menu->addSeparator();
 
 	// Reset time played
 	QAction* reset_time_played = manage_game_menu->addAction(tr("&Reset Time Played"));

@@ -120,6 +120,30 @@ namespace gl
 			baseclass::on_section_resources_created();
 		}
 
+		void create(u16 w, u16 h, u16 depth, u16 mipmaps, gl::texture* image, u32 rsx_pitch, bool managed, const gl::render_target* surface)
+		{
+			gl::texture::format format;
+			gl::texture::type type;
+			bool swap_bytes;
+
+			if (surface->is_depth_surface())
+			{
+				const auto depth_format_gl = rsx::internals::surface_depth_format_to_gl(surface->get_surface_depth_format());
+				format = depth_format_gl.format;
+				type = depth_format_gl.type;
+				swap_bytes = (type != gl::texture::type::uint_24_8);
+			}
+			else
+			{
+				const auto color_format_gl = rsx::internals::surface_color_format_to_gl(surface->get_surface_color_format());
+				format = color_format_gl.format;
+				type = color_format_gl.type;
+				swap_bytes = color_format_gl.swap_bytes;
+			}
+
+			create(w, h, depth, mipmaps, image, rsx_pitch, managed, format, type, swap_bytes);
+		}
+
 		void set_dimensions(u32 width, u32 height, u32 /*depth*/, u32 pitch)
 		{
 			this->width = width;
@@ -578,8 +602,13 @@ namespace gl
 		{
 			ensure(desc.sections_to_copy.size() == 1);
 			const auto& section = desc.sections_to_copy.front();
-			return create_temporary_subresource_impl(cmd, section.src, static_cast<GLenum>(section.src->get_internal_format()),
-					GL_TEXTURE_2D, desc.gcm_format, desc.width, desc.height, 1, 1, desc.remap, &section);
+			return create_temporary_subresource_impl(
+				cmd, section.src,
+				GL_NONE,                          // NOTE: Do not force this to section.get_sized_internal_fmt(). Leave it as GL_NONE, let the callee find the right type in case of bitcast.
+				GL_TEXTURE_2D, desc.gcm_format,
+				desc.width, desc.height, 1, 1,
+				desc.remap,
+				&section);
 		}
 
 		gl::texture_view* generate_cubemap_from_images(gl::command_context& cmd, const deferred_subresource& desc) override
