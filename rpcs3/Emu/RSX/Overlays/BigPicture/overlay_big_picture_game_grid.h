@@ -2,7 +2,7 @@
 
 #include "Emu/RSX/Overlays/HomeMenu/overlay_home_menu_page.h"
 #include "Emu/game_enumeration.h"
-#include "Emu/GameInfo.h"
+#include "overlay_big_picture_game_info.h"
 
 #include <functional>
 
@@ -12,14 +12,10 @@ namespace rsx
 	{
 		struct big_picture_game_details;
 
-		struct big_picture_game_entry : public GameInfo
-		{
-		};
-
 		// A single selectable tile (icon + title) inside the game grid.
 		struct big_picture_game_tile : public vertical_layout
 		{
-			big_picture_game_tile(const big_picture_game_entry& entry, u16 tile_width);
+			big_picture_game_tile(const big_picture_game_info& entry, u16 tile_width);
 
 			// PS3 ICON0.PNG is always 320x176 - keep tiles at that exact aspect ratio instead of stretching it.
 			static constexpr u16 icon_height(u16 tile_width) { return static_cast<u16>(tile_width * 176 / 320); }
@@ -56,8 +52,8 @@ namespace rsx
 			std::mutex m_reload_mutex;
 			std::unique_ptr<named_thread<std::function<void()>>> m_game_enumeration_thread;
 
-			game_enumeration<big_picture_game_entry> m_game_enumeration;
-			std::vector<big_picture_game_entry> m_games;
+			game_enumeration<big_picture_game_info> m_game_enumeration;
+			std::vector<big_picture_game_info> m_games;
 			std::vector<big_picture_game_tile*> m_tiles; // non-owning, owned by m_grid
 			std::unique_ptr<vertical_layout> m_grid;
 			std::unique_ptr<label> m_placeholder_text;

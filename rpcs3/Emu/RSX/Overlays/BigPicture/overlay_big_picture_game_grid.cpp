@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "overlay_big_picture_game_grid.h"
 #include "overlay_big_picture_game_details.h"
-#include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Utilities/Thread.h"
 
@@ -11,7 +10,7 @@ namespace rsx
 {
 	namespace overlays
 	{
-		big_picture_game_tile::big_picture_game_tile(const big_picture_game_entry& entry, u16 tile_width)
+		big_picture_game_tile::big_picture_game_tile(const big_picture_game_info& entry, u16 tile_width)
 		{
 			pack_padding = 8;
 			back_color.a = 0.f;
@@ -22,9 +21,9 @@ namespace rsx
 			icon->set_size(tile_width, icon_h);
 			icon->back_color = color4f(1.f, 1.f, 1.f, 0.08f);
 
-			if (fs::exists(entry.icon_path))
+			if (auto icon_data = entry.load_icon())
 			{
-				m_icon_data = std::make_unique<image_info>(entry.icon_path);
+				m_icon_data = std::move(icon_data);
 				// The renderer's texture cache is keyed by this object's address, which can be reused by an
 				// unrelated image after the old one is freed - force a re-upload instead of trusting the cache.
 				m_icon_data->dirty = true;
@@ -119,7 +118,7 @@ namespace rsx
 				m_game_enumeration.remove_duplicates();
 
 				// Parse entries (multithreaded)
-				const std::vector<game_enumeration<big_picture_game_entry>::path_entry>& entries = m_game_enumeration.path_entries();
+				const std::vector<game_enumeration<big_picture_game_info>::path_entry>& entries = m_game_enumeration.path_entries();
 				usz thread_count = std::min<usz>(utils::get_thread_count(), entries.size());
 				map_workload("BPM Parser "sv, thread_count, entries.size(), [this, &entries](usz index)
 				{
@@ -131,7 +130,7 @@ namespace rsx
 				m_game_enumeration.apply_patches();
 
 				// Get final enumerated games
-				for (big_picture_game_entry& game : m_game_enumeration.take_games())
+				for (big_picture_game_info& game : m_game_enumeration.take_games())
 				{
 					if (!game.bootable) continue; // Let's restrict this to bootable entries
 
@@ -142,7 +141,7 @@ namespace rsx
 				m_game_enumeration.clear(true);
 
 				// Sort by name
-				std::sort(m_games.begin(), m_games.end(), [](const big_picture_game_entry& a, const big_picture_game_entry& b)
+				std::sort(m_games.begin(), m_games.end(), [](const big_picture_game_info& a, const big_picture_game_info& b)
 				{
 					return a.name < b.name;
 				});
@@ -288,7 +287,7 @@ namespace rsx
 				case big_picture_game_details::result::start:
 				{
 					rsx_log.notice("Big Picture Mode: Start pressed for index=%d", m_selected_index);
-					const big_picture_game_entry& info = m_games[m_selected_index];
+					const big_picture_game_info& info = m_games[m_selected_index];
 					rsx_log.notice("Big Picture Mode: selected game path='%s' serial='%s'", info.path, info.serial);
 					m_details->hide();
 					if (m_on_game_selected)

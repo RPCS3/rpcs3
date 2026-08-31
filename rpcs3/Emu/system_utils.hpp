@@ -87,7 +87,7 @@ namespace rpcs3::utils
 	std::string get_input_config_dir(const std::string& title_id = "");
 	std::string get_custom_input_config_path(const std::string& title_id);
 
-	std::string get_game_content_path(game_content_type type, const GameInfo& info, const std::string& sfo_dir = {});
+	std::pair<std::string, bool> get_game_content_path(game_content_type type, const GameInfo& info);
 	std::string get_game_content_path(game_content_type type);
 
 	bool version_is_bigger(std::string_view v0, std::string_view v1, std::string_view serial, bool is_fw);

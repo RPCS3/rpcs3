@@ -68,6 +68,8 @@ namespace rsx
 
 			void load_data(const std::vector<u8>& bytes, bool grayscaled = false);
 			const u8* get_data() const override { return channels == 4 ? data : data_grey.empty() ? nullptr : data_grey.data(); }
+
+			static std::unique_ptr<image_info> load_icon(const std::string& icon_path, const std::string& archive_path);
 		};
 
 		struct resource_config

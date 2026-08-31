@@ -8,8 +8,9 @@ class video_source
 public:
 	video_source() {};
 	virtual ~video_source() {};
-	virtual void set_video_path(const std::string& video_path) = 0;
-	virtual void set_audio_path(const std::string& audio_path) = 0;
+	virtual void set_iso_path(const std::string& iso_path) = 0;
+	virtual void set_video_path(const std::string& video_path, bool video_in_archive) = 0;
+	virtual void set_audio_path(const std::string& audio_path, bool audio_in_archive) = 0;
 	virtual void set_active(bool active) = 0;
 	virtual bool get_active() const = 0;
 	virtual bool has_new() const = 0;

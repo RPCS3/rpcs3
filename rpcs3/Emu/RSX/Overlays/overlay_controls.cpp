@@ -6,6 +6,7 @@
 #include "Utilities/geometry.h"
 #include "Utilities/File.h"
 #include "Emu/Cell/timers.hpp"
+#include "Loader/ISO.h"
 
 #include <numbers>
 
@@ -141,6 +142,34 @@ namespace rsx
 			{
 				data_grey.clear();
 			}
+		}
+
+		std::unique_ptr<image_info> image_info::load_icon(const std::string& icon_path, const std::string& archive_path)
+		{
+			if (icon_path.empty()) return nullptr;
+
+			if (archive_path.empty())
+			{
+				if (!fs::exists(icon_path)) return nullptr;
+				return std::make_unique<image_info>(icon_path);
+			}
+
+			const bool is_archive = is_iso_file(archive_path);
+			if (!is_archive) return nullptr;
+
+			iso_archive archive(archive_path);
+			if (!archive.exists(icon_path)) return nullptr;
+
+			auto icon_file = archive.open(icon_path);
+			if (!icon_file) return nullptr;
+
+			const auto icon_size = icon_file->size();
+			if (icon_size == 0) return nullptr;
+
+			std::vector<u8> data(icon_size);
+			icon_file->read(data.data(), icon_size);
+
+			return std::make_unique<image_info>(data);
 		}
 
 		resource_config::resource_config()

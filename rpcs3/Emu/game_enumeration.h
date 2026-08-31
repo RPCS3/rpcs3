@@ -115,11 +115,10 @@ std::optional<game_info_type> game_enumeration<game_info_type>::get_game_info(co
 	bool is_raw_device = is_raw;
 	info.is_iso_file = is_iso && is_iso_file(dir_or_elf, nullptr, &is_raw_device);
 	const bool is_ps3_game = game_dir == "PS3_GAME";
-	std::string iso_cache_key;
 
 	if (info.is_iso_file)
 	{
-		iso_cache_key = is_ps3_game ? dir_or_elf : dir_or_elf + "//" + game_dir;
+		const std::string iso_cache_key = is_ps3_game ? dir_or_elf : dir_or_elf + "//" + game_dir;
 		// Only construct iso_archive (which walks the full directory tree) in case of raw device or
 		// when no valid cache entry exists for this ISO path + mtime
 		if (is_raw_device || !iso_cache::load(dir_or_elf, iso_cache_key, cache_entry))
