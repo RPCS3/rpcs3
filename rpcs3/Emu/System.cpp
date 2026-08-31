@@ -4846,7 +4846,7 @@ const std::string& Emulator::GetFakeCat() const
 {
 	const std::string* cat = &GetCat();
 
-	if (*cat == "DG")
+	if (*cat == "DG" && (!thread_ctrl::get_current() || id_manager::g_process == lv2_process::id_base))
 	{
 		const std::string mount_point = vfs::get("/dev_bdvd");
 

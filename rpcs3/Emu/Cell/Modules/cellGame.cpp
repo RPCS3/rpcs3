@@ -967,6 +967,7 @@ error_code cellGameContentPermit(ppu_thread& ppu, vm::ptr<char[CELL_GAME_PATH_MA
 		perm.reset();
 		strcpy_trunc(*contentInfoPath, "");
 		strcpy_trunc(*usrdirPath, "");
+		cellGame.warning("cellGameContentPermit(): content path empty");
 		return CELL_OK;
 	}
 
@@ -1044,6 +1045,8 @@ error_code cellGameContentPermit(ppu_thread& ppu, vm::ptr<char[CELL_GAME_PATH_MA
 
 	strcpy_trunc(*contentInfoPath, dir);
 	strcpy_trunc(*usrdirPath, dir + "/USRDIR");
+
+	cellGame.warning("cellGameContentPermit(): content path: %s", dir);
 	return CELL_OK;
 }
 
@@ -1563,6 +1566,8 @@ error_code cellGameGetParamString(s32 id, vm::ptr<char> buf, u32 bufsize)
 
 	std::span dst(buf.get_ptr(), bufsize);
 	strcpy_trunc(dst, value);
+
+	(value.size() >= bufsize ? cellGame.error : cellGame.warning)("cellGameGetParamString(): returned '%s'", value);
 	return CELL_OK;
 }
 
