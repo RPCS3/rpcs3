@@ -522,6 +522,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Overlays/BigPicture/overlay_big_picture.cpp
     RSX/Overlays/BigPicture/overlay_big_picture_game_details.cpp
     RSX/Overlays/BigPicture/overlay_big_picture_game_grid.cpp
+    RSX/Overlays/BigPicture/overlay_big_picture_game_info.cpp
     RSX/Overlays/BigPicture/overlay_big_picture_main_menu.cpp
     RSX/Overlays/Network/overlay_recvmessage_dialog.cpp
     RSX/Overlays/Network/overlay_sendmessage_dialog.cpp

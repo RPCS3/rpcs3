@@ -300,13 +300,13 @@ void game_list_table::populate(
 
 		if (play_hover_movies && !game->movie_path.empty())
 		{
-			icon_item->set_video_path(game->movie_path);
+			icon_item->set_video_path(game->movie_path, game->movie_in_archive);
 			check_iso |= game->movie_in_archive;
 		}
 
 		if (play_hover_music && !game->audio_path.empty())
 		{
-			icon_item->set_audio_path(game->audio_path);
+			icon_item->set_audio_path(game->audio_path, game->audio_in_archive);
 			check_iso |= game->audio_in_archive;
 		}
 
