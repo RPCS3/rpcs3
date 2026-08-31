@@ -15,7 +15,9 @@
     <ClInclude Include="fusion\Fusion\FusionAhrs.h" />
     <ClInclude Include="fusion\Fusion\FusionBias.h" />
     <ClInclude Include="fusion\Fusion\FusionCompass.h" />
+    <ClInclude Include="fusion\Fusion\FusionConfig.h" />
     <ClInclude Include="fusion\Fusion\FusionConvention.h" />
+    <ClInclude Include="fusion\Fusion\FusionInline.h" />
     <ClInclude Include="fusion\Fusion\FusionMath.h" />
     <ClInclude Include="fusion\Fusion\FusionModel.h" />
     <ClInclude Include="fusion\Fusion\FusionRemap.h" />
@@ -24,6 +26,8 @@
     <ClCompile Include="fusion\Fusion\FusionAhrs.c" />
     <ClCompile Include="fusion\Fusion\FusionBias.c" />
     <ClCompile Include="fusion\Fusion\FusionCompass.c" />
+    <ClCompile Include="fusion\Fusion\FusionConvention.c" />
+    <ClCompile Include="fusion\Fusion\FusionRemap.c" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <RootNamespace>Fusion</RootNamespace>
