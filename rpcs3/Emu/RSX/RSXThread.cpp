@@ -1075,6 +1075,7 @@ namespace rsx
 				vm::g_base_addr = process->memory_4GB_model->base_addr;
 				vm::g_sudo_addr = process->memory_4GB_model->sudo_addr;
 				vm::g_vm_image = process->memory_4GB_model;
+				id_manager::g_process = proc;
 				ctrl = vm::_ptr<RsxDmaControl>(lv2_context->dma_address);
 				rsx::method_registers = lv2_context->method_regs.get();
 				s_ctx.register_state = lv2_context->method_regs.get();
