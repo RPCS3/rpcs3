@@ -477,7 +477,7 @@ namespace gui::utils
 		if (!game || locations.empty()) return false;
 
 		const std::string dev_flash = g_cfg_vfs.get_dev_flash();
-		const bool is_archive = is_iso_file(game->path);
+		const bool is_archive = game->is_iso_file && is_iso_file(game->path);
 		std::shared_ptr<iso_archive> archive;
 
 		const auto file_exists = [&archive](const std::string& path)

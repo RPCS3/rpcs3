@@ -126,16 +126,16 @@ void game_list_grid::populate(
 		if (play_hover_movies && !game->movie_path.empty())
 		{
 			item->set_video_path(game->movie_path);
-			check_iso |= !fs::exists(game->movie_path);
+			check_iso |= game->movie_in_archive;
 		}
 
 		if (play_hover_music && !game->audio_path.empty())
 		{
 			item->set_audio_path(game->audio_path);
-			check_iso |= !fs::exists(game->audio_path);
+			check_iso |= game->audio_in_archive;
 		}
 
-		if (check_iso && is_iso_file(game->path))
+		if (check_iso && game->is_iso_file && is_iso_file(game->path))
 		{
 			item->set_iso_path(game->path);
 		}
