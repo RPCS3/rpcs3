@@ -58,3 +58,5 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id);
 error_code sys_ppu_thread_rename(ppu_thread& ppu, u32 thread_id, vm::cptr<char> name);
 error_code sys_ppu_thread_recover_page_fault(ppu_thread& ppu, u32 thread_id);
 error_code sys_ppu_thread_get_page_fault_context(ppu_thread& ppu, u32 thread_id, vm::ptr<sys_ppu_thread_icontext_t> ctxt);
+error_code sys_ppu_thread_syscall_54(ppu_thread& ppu, u32 cmd, vm::ptr<u32> max_thread_count);
+error_code sys_ppu_thread_syscall_55(ppu_thread& ppu, u32 cmd, u32 max_thread_count);

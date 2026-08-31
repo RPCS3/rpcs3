@@ -717,3 +717,46 @@ error_code sys_ppu_thread_get_page_fault_context(ppu_thread& ppu, u32 thread_id,
 
 	return CELL_OK;
 }
+
+error_code sys_ppu_thread_syscall_54(ppu_thread& ppu, u32 cmd, vm::ptr<u32> max_thread_count)
+{
+	ppu.state += cpu_flag::wait;
+
+	sys_ppu_thread.todo("sys_ppu_thread_syscall_54(cmd=0x%x, max_thread_count=*0x%x)", cmd, max_thread_count);
+
+	if (!ppu.has_root_perm)
+	{
+		return CELL_ENOSYS;
+	}
+
+	switch (cmd)
+	{
+	case 0x111:
+	case 0x109:
+	{
+		*max_thread_count = 0xFF;
+		break;
+	}
+	}
+
+	return CELL_OK;
+}
+
+error_code sys_ppu_thread_syscall_55(ppu_thread& ppu, u32 cmd, u32 max_thread_count)
+{
+	ppu.state += cpu_flag::wait;
+
+	sys_ppu_thread.todo("sys_ppu_thread_syscall_54(cmd=0x%x, max_thread_count=*0x%x)", cmd, max_thread_count);
+
+	if (!ppu.has_root_perm)
+	{
+		return CELL_ENOSYS;
+	}
+
+	if (cmd != 0x111)
+	{
+		return CELL_EINVAL;
+	}
+
+	return CELL_OK;
+}

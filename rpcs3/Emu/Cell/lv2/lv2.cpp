@@ -187,8 +187,8 @@ const std::array<std::pair<ppu_intrp_func_t, std::string_view>, 1024> g_ppu_sysc
 	BIND_SYSC(sys_ppu_thread_restart),                      //51  (0x033)  ROOT
 	BIND_SYSC(_sys_ppu_thread_create),                      //52  (0x034)  DBG
 	BIND_SYSC(sys_ppu_thread_start),                        //53  (0x035)
-	null_func,//BIND_SYSC(sys_ppu_...),                     //54  (0x036)  ROOT
-	null_func,//BIND_SYSC(sys_ppu_...),                     //55  (0x037)  ROOT
+	BIND_SYSC(sys_ppu_thread_syscall_54),                   //54  (0x036)  ROOT
+	BIND_SYSC(sys_ppu_thread_syscall_55),                   //55  (0x037)  ROOT
 	BIND_SYSC(sys_ppu_thread_rename),                       //56  (0x038)
 	BIND_SYSC(sys_ppu_thread_recover_page_fault),           //57  (0x039)
 	BIND_SYSC(sys_ppu_thread_get_page_fault_context),       //58  (0x03A)
