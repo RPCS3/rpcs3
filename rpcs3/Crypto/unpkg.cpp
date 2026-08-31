@@ -1364,26 +1364,10 @@ package_install_result package_reader::extract_data(std::deque<package_reader>& 
 		{
 			// Disc archives don't like multithreaded file reads, so let's just use a single thread here
 			const usz thread_count = from_optical_drive ? 1 : std::min<usz>(utils::get_thread_count(), reader.m_install_entries.size());
-			atomic_t<u32> num_threads_succeeded {0}; // Check if any thread didn't finish. For example when hitting an exception.
-
-			if (thread_count > 1)
-			{
-				named_thread_group workers("PKG Installer "sv, ::narrow<u32>(thread_count) - 1, [&]()
-				{
-					reader.extract_worker();
-					num_threads_succeeded++;
-				});
-
-				reader.extract_worker();
-				num_threads_succeeded++;
-
-				workers.join();
-			}
-			else
+			const usz num_threads_succeeded = map_workload("PKG Installer "sv, thread_count, [&reader]()
 			{
 				reader.extract_worker();
-				num_threads_succeeded++;
-			}
+			});
 
 			if (thread_count != num_threads_succeeded)
 			{
