@@ -13,7 +13,6 @@
 #include <set>
 #include <unordered_set>
 #include <vector>
-#include <mutex>
 #include <regex>
 
 LOG_CHANNEL(sys_log, "SYS");
@@ -51,12 +50,12 @@ public:
 	std::vector<game_info_type> take_games() { return std::move(m_games); }
 
 private:
-	std::optional<game_info_type> get_game_info(const std::string& dir_or_elf, const std::string& game_dir);
+	std::optional<game_info_type> get_game_info(const std::string& dir_or_elf, const std::string& game_dir, bool is_iso, bool is_raw);
 
 	bool was_canceled() const { return m_canceled_callback && m_canceled_callback(); }
 
 	void push_path(const std::string& path, std::vector<std::string>& legit_paths);
-	void add_game(const std::string& path, const std::string& game_dir = "PS3_GAME");
+	void add_game(const std::string& path, const std::string& game_dir = "PS3_GAME", bool is_iso = false, bool is_raw = false);
 	virtual void add_game_apply_extras([[maybe_unused]] game_info_type& game) {}
 	void add_disc_dir(const std::string& path, std::vector<std::string>& legit_paths);
 
@@ -107,16 +106,18 @@ void game_enumeration<game_info_type>::set_localization(s32 index, std::string&&
 }
 
 template <typename game_info_type>
-std::optional<game_info_type> game_enumeration<game_info_type>::get_game_info(const std::string& dir_or_elf, const std::string& game_dir)
+std::optional<game_info_type> game_enumeration<game_info_type>::get_game_info(const std::string& dir_or_elf, const std::string& game_dir, bool is_iso, bool is_raw)
 {
+	game_info_type info{};
+
 	std::unique_ptr<iso_archive> archive;
 	iso_metadata_cache_entry cache_entry{};
-	bool is_raw_device = false;
-	const bool is_archive = is_iso_file(dir_or_elf, nullptr, &is_raw_device);
+	bool is_raw_device = is_raw;
+	info.is_iso_file = is_iso && is_iso_file(dir_or_elf, nullptr, &is_raw_device);
 	const bool is_ps3_game = game_dir == "PS3_GAME";
 	std::string iso_cache_key;
 
-	if (is_archive)
+	if (info.is_iso_file)
 	{
 		iso_cache_key = is_ps3_game ? dir_or_elf : dir_or_elf + "//" + game_dir;
 		// Only construct iso_archive (which walks the full directory tree) in case of raw device or
@@ -141,7 +142,6 @@ std::optional<game_info_type> game_enumeration<game_info_type>::get_game_info(co
 		return fs::is_file(path);
 	};
 
-	game_info_type info{};
 	info.path = dir_or_elf;
 	info.game_dir = is_ps3_game ? "" : game_dir;
 
@@ -273,14 +273,17 @@ std::optional<game_info_type> game_enumeration<game_info_type>::get_game_info(co
 		{
 			// Cache hit — restore previously resolved movie path.
 			info.movie_path = cache_entry.movie_path;
+			info.movie_in_archive = true;
 		}
 		else if (std::string movie_path = sfo_dir + "/" + m_localized_movie; file_exists(movie_path))
 		{
 			info.movie_path = std::move(movie_path);
+			info.movie_in_archive = archive && archive->exists(info.movie_path);
 		}
 		else if (std::string movie_path = sfo_dir + "/ICON1.PAM"; file_exists(movie_path))
 		{
 			info.movie_path = std::move(movie_path);
+			info.movie_in_archive = archive && archive->exists(info.movie_path);
 		}
 	}
 
@@ -290,16 +293,18 @@ std::optional<game_info_type> game_enumeration<game_info_type>::get_game_info(co
 		{
 			// Cache hit — restore previously resolved audio path.
 			info.audio_path = cache_entry.audio_path;
+			info.audio_in_archive = true;
 		}
 		else if (std::string audio_path = sfo_dir + "/SND0.AT3"; file_exists(audio_path))
 		{
 			info.audio_path = std::move(audio_path);
+			info.audio_in_archive = archive && archive->exists(info.audio_path);
 		}
 	}
 
 	// With the exception of raw device, on cache miss for an ISO, persist the resolved metadata so subsequent
 	// launches skip iso_archive construction entirely
-	if (archive && is_archive && !is_raw_device)
+	if (archive && info.is_iso_file && !is_raw_device)
 	{
 		fs::stat_t iso_stat{};
 		if (fs::get_stat(dir_or_elf, iso_stat))
@@ -343,9 +348,9 @@ void game_enumeration<game_info_type>::push_path(const std::string& path, std::v
 }
 
 template <typename game_info_type>
-void game_enumeration<game_info_type>::add_game(const std::string& path, const std::string& game_dir)
+void game_enumeration<game_info_type>::add_game(const std::string& path, const std::string& game_dir, bool is_iso, bool is_raw)
 {
-	if (std::optional<game_info_type> game = get_game_info(path, game_dir))
+	if (std::optional<game_info_type> game = get_game_info(path, game_dir, is_iso, is_raw))
 	{
 		add_game_apply_extras(*game);
 
@@ -430,7 +435,8 @@ void game_enumeration<game_info_type>::parse_entry(const path_entry& entry)
 
 	if (entry.is_from_yml)
 	{
-		if (is_iso_file(entry.path))
+		bool is_raw_device = false;
+		if (is_iso_file(entry.path, nullptr, &is_raw_device))
 		{
 			std::vector<std::string> subdirs;
 
@@ -439,7 +445,7 @@ void game_enumeration<game_info_type>::parse_entry(const path_entry& entry)
 				for (const std::string& name : subdirs)
 				{
 					if (was_canceled()) break;
-					add_game(entry.path, name);
+					add_game(entry.path, name, true, is_raw_device);
 				}
 
 				return;
@@ -466,13 +472,13 @@ void game_enumeration<game_info_type>::parse_entry(const path_entry& entry)
 				if (name == "PS3_GAME" || std::regex_match(name, ps3_gm_regex))
 				{
 					subdirs.push_back(name);
-					add_game(entry.path, name);
+					add_game(entry.path, name, true, is_raw_device);
 				}
 			}
 			if (subdirs.empty())
 			{
-				add_game(entry.path);
 				subdirs.push_back("PS3_GAME");
+				add_game(entry.path, "PS3_GAME", true, is_raw_device);
 			}
 			if (!was_canceled())
 			{
@@ -551,10 +557,12 @@ void game_enumeration<game_info_type>::apply_patches()
 				if (std::string icon_path = other.path + "/" + m_localized_icon; fs::is_file(icon_path))
 				{
 					info.icon_path = std::move(icon_path);
+					info.icon_in_archive = false;
 				}
 				else if (std::string icon_path = other.path + "/ICON0.PNG"; fs::is_file(icon_path))
 				{
 					info.icon_path = std::move(icon_path);
+					info.icon_in_archive = false;
 				}
 			}
 
@@ -564,10 +572,12 @@ void game_enumeration<game_info_type>::apply_patches()
 				if (std::string movie_path = other.path + "/" + m_localized_icon; fs::is_file(movie_path))
 				{
 					info.movie_path = std::move(movie_path);
+					info.movie_in_archive = false;
 				}
 				else if (std::string movie_path = other.path + "/ICON1.PAM"; fs::is_file(movie_path))
 				{
 					info.movie_path = std::move(movie_path);
+					info.movie_in_archive = false;
 				}
 			}
 		}
