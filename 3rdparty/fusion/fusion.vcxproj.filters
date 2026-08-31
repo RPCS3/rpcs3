@@ -14,6 +14,8 @@
     <ClInclude Include="fusion\Fusion\FusionBias.h" />
     <ClInclude Include="fusion\Fusion\FusionModel.h" />
     <ClInclude Include="fusion\Fusion\FusionRemap.h" />
+    <ClInclude Include="fusion\Fusion\FusionConfig.h" />
+    <ClInclude Include="fusion\Fusion\FusionInline.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="fusion\Fusion\FusionAhrs.c">
@@ -23,6 +25,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="fusion\Fusion\FusionBias.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="fusion\Fusion\FusionConvention.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="fusion\Fusion\FusionRemap.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
