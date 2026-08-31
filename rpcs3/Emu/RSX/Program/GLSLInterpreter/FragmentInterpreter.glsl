@@ -83,6 +83,8 @@ layout(location=0) in vec4 in_regs[16];
 #define RSX_FP_REGISTER_TYPE_CONSTANT 2
 #define RSX_FP_REGISTER_TYPE_UNKNOWN 3
 
+#define RSX_FP_PRECISION_SATURATE 4
+
 #define CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT 0xe
 #define CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS 0x40
 
@@ -241,6 +243,11 @@ vec4 read_src(const in int index)
 
 	ur1 = GET_INST_BITS(index + 1, 9, 8);
 	vr0 = shuffle(vr0, ur1);
+
+	if (GET_INST_BITS(2, 19 + index * 3, 3) == RSX_FP_PRECISION_SATURATE)
+	{
+		vr0 = clamp(select(vr0, vr_zero, isnan(vr0)), 0., 1.);
+	}
 
 	// abs
 	if (index == 0)
