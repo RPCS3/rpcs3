@@ -3114,7 +3114,7 @@ namespace rsx
 
 		const auto flags = +state;
 
-		if (is_paused(flags) && flags & cpu_flag::wait)
+		if (is_paused(flags) && flags & cpu_flag::wait && false) 
 		{
 			fmt::append(ret, "\nFragment Program Hash: %X.fp", current_fragment_program.get_data() ? program_hash_util::fragment_program_utils::get_fragment_program_ucode_hash(current_fragment_program) : 0);
 			fmt::append(ret, "\nVertex Program Hash: %X.vp", current_vertex_program.data.empty() ? 0 : program_hash_util::vertex_program_utils::get_vertex_program_ucode_hash(current_vertex_program));
@@ -3202,18 +3202,20 @@ namespace rsx
 	void thread::dump_regs(std::string& result, std::any& /*custom_data*/) const
 	{
 		const auto context = idm::get_unlocked<lv2_rsx_context>(idm::id_index(lv2_context_id, nullptr));
+		const auto process = context ? idm::get_unlocked<lv2_obj, lv2_process>(idm::id_index(context->belonging_process, nullptr)) : null_ptr;
 		const auto method_regs = context && context->inited ? context->method_regs.get() : nullptr;
 
-		if (!method_regs)
+		if (!method_regs || !process || !context->dma_address)
 		{
 			fmt::append(result, "\n[0000] Context-less");
 			return;
 		}
 
-		if (ctrl)
-		{
-			//fmt::append(result, "FIFO: GET=0x%07x, PUT=0x%07x, REF=0x%08x\n", +ctrl->get, +ctrl->put, +ctrl->ref);
-		}
+		const auto globals = !thread_ctrl::get_current() ? lv2_process::acquire_globals(context->belonging_process) : nullptr;
+
+		const auto raw_ctrl = vm::_ptr<RsxDmaControl>(context->dma_address);
+
+		fmt::append(result, "FIFO: GET=0x%07x, PUT=0x%07x, REF=0x%08x\n", +raw_ctrl->get, +raw_ctrl->put, +raw_ctrl->ref);
 
 		for (u32 i = 0; i < 1 << 14; i++)
 		{

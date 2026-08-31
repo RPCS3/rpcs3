@@ -873,7 +873,7 @@ void kernel_explorer::update()
 			reader_lock lock(rsx->sys_rsx_mtx);
 			std::memcpy(&table, &lv2_context.iomap_table, sizeof(table));
 			std::memcpy(&dbs, &lv2_context.display_buffers, sizeof(dbs));
-			std::memcpy(&zcs, lv2_context.zculls.data(), sizeof(zcs));
+			zcs = lv2_context.zculls;
 		}
 
 		for (u32 i = 0, size_block = 0, first_ea = 0, first_io = 0;;)
