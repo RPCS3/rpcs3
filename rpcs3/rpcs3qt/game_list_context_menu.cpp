@@ -326,8 +326,8 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 
 	manage_game_menu->addSeparator();
 
-	// Move the game to a user defined game collection
-	m_game_list_actions->AddMoveToCollectionMenu(manage_game_menu, {gameinfo});
+	// Add the game to user defined game collections
+	m_game_list_actions->AddCollectionMenu(manage_game_menu, {gameinfo});
 
 	// Hide/rename game in game list
 	QAction* hide_hidden_serial = manage_game_menu->addAction(tr("&Hide Game In Game List"));
@@ -965,8 +965,8 @@ void game_list_context_menu::show_multi_selection_context_menu(const std::vector
 
 	manage_game_menu->addSeparator();
 
-	// Move the games to a user defined game collection
-	m_game_list_actions->AddMoveToCollectionMenu(manage_game_menu, games);
+	// Add the games to user defined game collections
+	m_game_list_actions->AddCollectionMenu(manage_game_menu, games);
 
 	// Hide game in game list
 	QAction* hide_hidden_serial = manage_game_menu->addAction(tr("&Hide Game In Game List"));

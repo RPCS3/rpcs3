@@ -232,8 +232,14 @@ namespace rsx
 
 			if (src_is_render_target)
 			{
-				// Attempt to optimize...
-				if (dst_dimensions.width == 1280 || dst_dimensions.width == 2560) [[likely]]
+				// Attempt to optimize for performance...
+				if (get_location(dst_range.start) == CELL_GCM_LOCATION_MAIN)
+				{
+					// Don't guess when working with main memory
+					const auto min_fitted_height = utils::aligned_div(dst_range.length(), dst_pitch);
+					dst_dimensions.height = std::min(dst_dimensions.height, min_fitted_height);
+				}
+				else if (dst_dimensions.width == 1280 || dst_dimensions.width == 2560)
 				{
 					// Optimizations table based on common width/height pairings. If we guess wrong, the upload resolver will fix it anyway
 					// TODO: Add more entries based on empirical data
