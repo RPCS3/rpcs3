@@ -952,16 +952,7 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 		default:
 		{
 			// TODO: check for valid utf8 characters
-			std::error_code ec;
-			std::filesystem::path normalized_path = std::filesystem::weakly_canonical(path, ec);
-
-			if (ec)
-			{
-				pkg_log.warning("Failed to canonicalize package path '%s' (%s); falling back to lexical normalization.", path, ec.message());
-				normalized_path = std::filesystem::path(path).lexically_normal();
-			}
-
-			const std::string true_path = normalized_path.string();
+			const std::string true_path = std::filesystem::path(path).lexically_normal().string();
 			if (true_path.empty())
 			{
 				num_failures++;
