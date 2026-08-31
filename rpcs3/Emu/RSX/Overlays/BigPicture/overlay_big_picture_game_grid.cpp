@@ -120,50 +120,11 @@ namespace rsx
 
 				// Parse entries (multithreaded)
 				const std::vector<game_enumeration<big_picture_game_entry>::path_entry>& entries = m_game_enumeration.path_entries();
-				const usz thread_count = std::min<usz>(utils::get_thread_count(), entries.size());
-				if (thread_count > 1)
+				usz thread_count = std::min<usz>(utils::get_thread_count(), entries.size());
+				map_workload("BPM Parser "sv, thread_count, entries.size(), [this, &entries](usz index)
 				{
-					atomic_t<usz> entry_indexer = 0;
-					const auto parse_entries = [this, &entry_indexer, &entries]()
-					{
-						while (thread_ctrl::state() != thread_state::aborting)
-						{
-							// Make sure entry_indexer does not exceed m_install_entries
-							const usz index = entry_indexer.fetch_op([&entries](usz& v)
-							{
-								if (v < entries.size())
-								{
-									v++;
-									return true;
-								}
-
-								return false;
-							}).first;
-
-							if (index >= entries.size())
-							{
-								break;
-							}
-
-							m_game_enumeration.parse_entry(entries[index]);
-						}
-					};
-					named_thread_group workers("BPM Parser "sv, ::narrow<u32>(thread_count) - 1, [&parse_entries]()
-					{
-						parse_entries();
-					});
-
-					parse_entries();
-
-					workers.join();
-				}
-				else
-				{
-					for (const game_enumeration<big_picture_game_entry>::path_entry& entry : entries)
-					{
-						m_game_enumeration.parse_entry(entry);
-					}
-				}
+					m_game_enumeration.parse_entry(entries[index]);
+				});
 
 				// Try to update the app version for disc games if there is a patch
 				// Also try to find updated game icons and movies
@@ -186,11 +147,19 @@ namespace rsx
 					return a.name < b.name;
 				});
 
-				finish_reload();
+				// Create tiles (multithreaded)
+				std::vector<std::unique_ptr<big_picture_game_tile>> tiles(m_games.size());
+				thread_count = std::min<usz>(utils::get_thread_count(), tiles.size());
+				map_workload("BPM Tiles "sv, thread_count, tiles.size(), [this, &tiles](usz index)
+				{
+					tiles[index] = std::make_unique<big_picture_game_tile>(m_games[index], m_tile_size);
+				});
+
+				finish_reload(std::move(tiles));
 			});
 		}
 
-		void big_picture_game_grid::finish_reload()
+		void big_picture_game_grid::finish_reload(std::vector<std::unique_ptr<big_picture_game_tile>>&& tiles)
 		{
 			std::lock_guard lock(m_reload_mutex);
 
@@ -206,7 +175,7 @@ namespace rsx
 
 			std::unique_ptr<horizontal_layout> row;
 
-			for (usz i = 0; i < m_games.size(); i++)
+			for (usz i = 0; i < tiles.size(); i++)
 			{
 				if (i % m_columns == 0)
 				{
@@ -219,8 +188,7 @@ namespace rsx
 					row->pack_padding = 20;
 				}
 
-				auto tile = std::make_unique<big_picture_game_tile>(m_games[i], m_tile_size);
-				m_tiles.push_back(row->add_element(tile));
+				m_tiles.push_back(row->add_element(tiles[i]));
 			}
 
 			if (row)
