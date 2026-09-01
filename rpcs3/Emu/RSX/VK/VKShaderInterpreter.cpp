@@ -6,10 +6,11 @@
 #include "VKHelpers.h"
 #include "VKRenderPass.h"
 
-#include "../Overlays/Shaders/shader_loading_dialog.h"
-#include "../Program/GLSLCommon.h"
-#include "../Program/ShaderInterpreter.h"
-#include "../rsx_methods.h"
+#include "Emu/RSX/Overlays/Shaders/shader_loading_dialog.h"
+#include "Emu/RSX/Program/GLSLCommon.h"
+#include "Emu/RSX/Program/ShaderInterpreter.h"
+#include "Emu/RSX/rsx_methods.h"
+#include "Emu/localized_string.h"
 
 #include <thread>
 
@@ -719,7 +720,7 @@ namespace vk
 
 	void shader_interpreter::preload(rsx::shader_loading_dialog* dlg)
 	{
-		dlg->create("Precompiling interpreter variants.\nPlease wait...", "Shader Compilation");
+		dlg->create(get_localized_string(localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS), get_localized_string(localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_TITLE));
 
 		// Create some basic pipelines that we'll use to seed the base pipeline queue
 		std::vector<vk::pipeline_props> pipe_properties;
@@ -778,7 +779,7 @@ namespace vk
 			std::this_thread::sleep_for(16ms);
 
 			const auto completed = ctr.load();
-			dlg->update_msg(0, fmt::format("Building base variant %u of %u...", completed, limit1));
+			dlg->update_msg(0, get_localized_string(localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_VULKAN, "%u %s %u", completed, get_localized_string(localized_string_id::PROGRESS_DIALOG_OF), limit1));
 			dlg->set_value(0, completed);
 		}
 		while (ctr.load() < limit1);

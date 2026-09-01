@@ -8,6 +8,7 @@
 #include "Emu/RSX/rsx_methods.h"
 #include "Emu/RSX/Overlays/Shaders/shader_loading_dialog.h"
 #include "Emu/RSX/Program/GLSLCommon.h"
+#include "Emu/localized_string.h"
 
 namespace gl
 {
@@ -17,7 +18,7 @@ namespace gl
 
 	void shader_interpreter::create(rsx::shader_loading_dialog* dlg)
 	{
-		dlg->create("Precompiling interpreter variants.\nPlease wait...", "Shader Compilation");
+		dlg->create(get_localized_string(localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS), get_localized_string(localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_TITLE));
 
 		const auto variants = program_common::interpreter::get_interpreter_variants();
 		const u32 limit1 = ::size32(variants.base_pipelines);
@@ -32,7 +33,7 @@ namespace gl
 		{
 			const auto completed = ctr.load();
 			const auto limit = stage ? limit2 : limit1;
-			const auto message = fmt::format("%s variant %u of %u...", stage ? "Linking" : "Building", ctr.load(), limit);
+			const auto message = get_localized_string(stage ? localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_OPENGL_LINK : localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_OPENGL_BUILD, "%u %s %u", ctr.load(), get_localized_string(localized_string_id::PROGRESS_DIALOG_OF), limit);
 			dlg->update_msg(stage, message);
 			dlg->set_value(stage, completed);
 		};
