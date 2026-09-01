@@ -267,6 +267,16 @@ namespace rsx
 			refresh();
 		}
 
+		u16 big_picture_game_grid::column(s32 tile_index) const
+		{
+			return (tile_index < 0) ? 0 : (tile_index % m_columns);
+		}
+
+		u16 big_picture_game_grid::row(s32 tile_index) const
+		{
+			return (tile_index < 0) ? 0 : (tile_index / m_columns);
+		}
+
 		page_navigation big_picture_game_grid::handle_button_press(pad_button button_press, bool is_auto_repeat, u64 auto_repeat_interval_ms)
 		{
 			if (m_loading) return page_navigation::stay;
@@ -326,14 +336,14 @@ namespace rsx
 			{
 			case pad_button::dpad_left:
 			case pad_button::ls_left:
-				if ((m_selected_index % m_columns) > 0)
+				if (column(m_selected_index) > 0)
 				{
 					select_tile(m_selected_index - 1);
 				}
 				break;
 			case pad_button::dpad_right:
 			case pad_button::ls_right:
-				if (((m_selected_index % m_columns) + 1) < m_columns && (m_selected_index + 1) < static_cast<s32>(m_tiles.size()))
+				if ((column(m_selected_index) + 1) < m_columns && (m_selected_index + 1) < static_cast<s32>(m_tiles.size()))
 				{
 					select_tile(m_selected_index + 1);
 				}
@@ -347,7 +357,7 @@ namespace rsx
 				break;
 			case pad_button::dpad_down:
 			case pad_button::ls_down:
-				if (!m_tiles.empty())
+				if (!m_tiles.empty() && row(m_selected_index) < row(static_cast<s32>(m_tiles.size()) - 1))
 				{
 					select_tile(std::min(m_selected_index + m_columns, static_cast<s32>(m_tiles.size()) - 1));
 				}
