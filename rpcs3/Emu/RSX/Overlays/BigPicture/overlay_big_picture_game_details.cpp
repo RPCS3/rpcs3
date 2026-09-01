@@ -82,10 +82,12 @@ namespace rsx
 
 				if (icon_data)
 				{
+					m_icon.set_keep_aspect_ratio(true);
 					m_icon.set_raw_image(icon_data);
 				}
 				else
 				{
+					m_icon.set_keep_aspect_ratio(false);
 					m_icon.set_image_resource(resource_config::standard_image_resource::new_entry);
 				}
 
