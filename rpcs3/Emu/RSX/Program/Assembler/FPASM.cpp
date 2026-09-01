@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "FPASM.h"
 #include "Emu/RSX/Program/RSXFragmentProgram.h"
+#include "util/cctype.hpp"
 
 #include <stack>
 
@@ -198,7 +199,7 @@ namespace rsx::assembler
 			result.reserve(s.size());
 
 			bool literal = false;
-			for (const auto& c : s)
+			for (const char c : s)
 			{
 				if (c == ' ')
 				{
@@ -209,7 +210,7 @@ namespace rsx::assembler
 					continue;
 				}
 
-				if (std::isspace(c))
+				if (utils::isspace(c))
 				{
 					continue;
 				}

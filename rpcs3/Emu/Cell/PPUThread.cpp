@@ -54,7 +54,6 @@
 #endif
 
 #include <cfenv>
-#include <cctype>
 #include <span>
 #include <optional>
 #include <charconv>
@@ -65,6 +64,7 @@
 #include "util/simd.hpp"
 #include "util/sysinfo.hpp"
 #include "util/fnv_hash.hpp"
+#include "util/cctype.hpp"
 
 #include "Utilities/sema.h"
 
@@ -1481,7 +1481,7 @@ void ppu_thread::dump_regs(std::string& ret, std::any& custom_data) const
 			// NTS: size of 3 and above is required
 			// If ends with a newline, only one character is required
 			else if ((sv.size() == buf_tmp.size() || (sv.size() >= (buf_tmp[sv.size()] == '\n' ? 1 : 3))) &&
-				std::all_of(sv.begin(), sv.end(), [](u8 c){ return std::isprint(c); }))
+				std::all_of(sv.begin(), sv.end(), [](u8 c){ return utils::isprint(c); }))
 			{
 				fmt::append(ret, " -> \"%s\"", sv);
 			}

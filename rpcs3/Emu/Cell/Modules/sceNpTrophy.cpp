@@ -25,6 +25,7 @@
 #include <functional>
 #include <shared_mutex>
 #include "util/asm.hpp"
+#include "util/cctype.hpp"
 
 LOG_CHANNEL(sceNpTrophy);
 
@@ -254,7 +255,7 @@ void fmt_class_string<SceNpCommunicationId>::format(std::string& out, u64 arg)
 	const auto& id = get_object(arg);
 
 	const u8 term = id.data[9];
-	fmt::append(out, "{ data='%s', term='%s' (0x%x), num=%d, dummy=%d }", id.data, std::isprint(term) ? fmt::format("%c", term) : "", term, id.num, id.dummy);
+	fmt::append(out, "{ data='%s', term='%s' (0x%x), num=%d, dummy=%d }", id.data, utils::isprint(term) ? fmt::format("%c", term) : "", term, id.num, id.dummy);
 }
 
 // Helpers

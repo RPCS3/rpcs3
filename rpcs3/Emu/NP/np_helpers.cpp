@@ -1,6 +1,7 @@
 #include "Emu/Cell/Modules/sceNp.h"
 #include "stdafx.h"
 #include "util/types.hpp"
+#include "util/cctype.hpp"
 #include "Utilities/StrUtil.h"
 #include "rpcn_client.h"
 
@@ -42,7 +43,7 @@ namespace np
 
 		const auto split_id = fmt::split_sv(str, {"_"});
 
-		if (split_id.size() != 2 || split_id[0].length() != 9 || split_id[1].length() != 2 || !std::isdigit(split_id[1][0]) || !std::isdigit(split_id[1][1]))
+		if (split_id.size() != 2 || split_id[0].length() != 9 || split_id[1].length() != 2 || !utils::isdigit(split_id[1][0]) || !utils::isdigit(split_id[1][1]))
 		{
 			rpcn_log.error("Tried to parse an invalid communication_id!");
 			return std::nullopt;
@@ -110,7 +111,7 @@ namespace np
 
 	bool is_valid_npid(const SceNpId& npid)
 	{
-		if (!std::all_of(npid.handle.data, npid.handle.data + 16, [](char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '-' || c == '_' || c == 0; } )
+		if (!std::all_of(npid.handle.data, npid.handle.data + 16, [](char c) { return utils::isalnum(c) || c == '-' || c == '_' || c == 0; } )
 			|| npid.handle.data[16] != 0
 			|| !std::all_of(npid.handle.dummy, npid.handle.dummy + 3, [](char val) { return val == 0; }) )
 		{

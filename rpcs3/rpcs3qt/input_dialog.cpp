@@ -1,5 +1,6 @@
 #include "input_dialog.h"
 #include "qt_utils.h"
+#include "util/cctype.hpp"
 
 #include <QVBoxLayout>
 #include <QDialogButtonBox>
@@ -46,7 +47,7 @@ void input_dialog::set_clear_button_enabled(bool enabled) const
 
 void input_dialog::set_input_font(const QFont& font, bool fix_width, char sample) const
 {
-	if (const int max = m_input->maxLength(); max > 0 && fix_width && std::isprint(static_cast<uchar>(sample)))
+	if (const int max = m_input->maxLength(); max > 0 && fix_width && utils::isprint(sample))
 	{
 		const QString str = QString(max, sample);
 		m_input->setFixedWidth(gui::utils::get_label_width(str, &font));

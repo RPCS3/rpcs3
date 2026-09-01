@@ -18,6 +18,7 @@
 #include "Utilities/StrUtil.h"
 #include "util/init_mutex.hpp"
 #include "util/asm.hpp"
+#include "util/cctype.hpp"
 #include "Crypto/utils.h"
 
 #include <span>
@@ -228,13 +229,13 @@ static bool check_system_ver(vm::cptr<char> systemVersion)
 	return (
 		systemVersion &&
 		std::strlen(systemVersion.get_ptr()) == 7 &&
-		std::isdigit(systemVersion[0]) &&
-		std::isdigit(systemVersion[1]) &&
+		utils::isdigit(systemVersion[0]) &&
+		utils::isdigit(systemVersion[1]) &&
 		systemVersion[2] == '.' &&
-		std::isdigit(systemVersion[3]) &&
-		std::isdigit(systemVersion[4]) &&
-		std::isdigit(systemVersion[5]) &&
-		std::isdigit(systemVersion[6])
+		utils::isdigit(systemVersion[3]) &&
+		utils::isdigit(systemVersion[4]) &&
+		utils::isdigit(systemVersion[5]) &&
+		utils::isdigit(systemVersion[6])
 	);
 }
 
