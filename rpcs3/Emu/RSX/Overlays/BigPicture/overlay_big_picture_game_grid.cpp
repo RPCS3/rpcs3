@@ -391,6 +391,8 @@ namespace rsx
 
 		compiled_resource& big_picture_game_grid::get_compiled()
 		{
+			std::lock_guard lock(m_reload_mutex);
+
 			if (!m_highlight->is_compiled() ||
 				(!m_tiles.empty() && m_grid && !m_grid->is_compiled()) ||
 				(m_details && m_details->is_visible()))
@@ -410,8 +412,6 @@ namespace rsx
 			{
 				return compiled_resources;
 			}
-
-			std::lock_guard lock(m_reload_mutex);
 
 			if (m_tiles.empty())
 			{
