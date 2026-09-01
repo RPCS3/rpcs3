@@ -77,7 +77,7 @@ namespace rsx
 			case pad_button::dpad_right:
 			case pad_button::ls_left:
 			case pad_button::ls_right:
-				m_auto_repeat_ms_interval = 10;
+				m_auto_repeat_ms_interval = 100;
 				break;
 			default:
 				m_auto_repeat_ms_interval = m_auto_repeat_ms_interval_default;
