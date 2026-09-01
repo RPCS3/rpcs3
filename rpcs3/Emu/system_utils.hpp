@@ -5,6 +5,8 @@
 #include <set>
 #include <vector>
 
+struct GameInfo;
+
 enum class game_content_type
 {
 	content_icon,         // ICON0.PNG
@@ -23,7 +25,7 @@ namespace rpcs3::utils
 
 	u32 check_user(std::string_view user);
 
-	bool install_pkg(const std::string& path);
+	bool install_pkg(const std::string& path, bool from_optical_drive);
 
 	// VFS directories and disk usage
 	std::vector<std::pair<std::string, u64>> get_vfs_disk_usage();
@@ -85,6 +87,7 @@ namespace rpcs3::utils
 	std::string get_input_config_dir(const std::string& title_id = "");
 	std::string get_custom_input_config_path(const std::string& title_id);
 
+	std::string get_game_content_path(game_content_type type, const GameInfo& info, const std::string& sfo_dir = {});
 	std::string get_game_content_path(game_content_type type);
 
 	bool version_is_bigger(std::string_view v0, std::string_view v1, std::string_view serial, bool is_fw);

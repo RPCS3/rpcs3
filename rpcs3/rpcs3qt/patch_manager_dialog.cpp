@@ -23,17 +23,6 @@
 
 LOG_CHANNEL(patch_log, "PAT");
 
-enum patch_column : int
-{
-	enabled,
-	title,
-	serials,
-	description,
-	patch_version,
-	author,
-	notes
-};
-
 enum patch_role : int
 {
 	hash_role = Qt::UserRole,
@@ -342,7 +331,7 @@ void patch_manager_dialog::populate_tree()
 							std::pair<int, QVariant>(persistance_role, true)
 						};
 
-						// Add counter to leafs if the name already exists due to different hashes of the same game (PPU, SPU, PRX, OVL)
+						// Add hash to leafs if the name already exists due to different hashes of the same game (PPU, SPU, PRX, OVL)
 						std::vector<QTreeWidgetItem*> matches;
 						gui::utils::find_children_by_data(serial_level_item, matches, match_criteria, false);
 
@@ -350,12 +339,9 @@ void patch_manager_dialog::populate_tree()
 						{
 							if (auto only_match = matches.size() == 1 ? matches[0] : nullptr)
 							{
-								only_match->setText(0, q_description + QStringLiteral(" (01)"));
+								only_match->setText(0, q_description + QStringLiteral(" (") + only_match->data(0, hash_role).toString() + QStringLiteral(")"));
 							}
-							const usz counter = matches.size() + 1;
-							visible_description += QStringLiteral(" (");
-							if (counter < 10) visible_description += '0';
-							visible_description += QString::number(counter) + ')';
+							visible_description += QStringLiteral(" (") + q_hash + QStringLiteral(")");
 						}
 
 						QVariantMap q_config_values;
@@ -450,18 +436,21 @@ void patch_manager_dialog::filter_patches(const QString& term)
 {
 	// Recursive function to show all matching items and their children.
 	// @return number of visible children of item, including item
-	std::function<int(QTreeWidgetItem*, bool)> show_matches;
-	show_matches = [this, &show_matches, search_text = term.toLower()](QTreeWidgetItem* item, bool parent_visible) -> int
+	std::function<int(QTreeWidgetItem*, bool, bool)> show_matches;
+	show_matches = [this, &show_matches, search_text = term.toLower()](QTreeWidgetItem* item, bool parent_visible, bool parent_is_all) -> int
 	{
 		if (!item) return 0;
 
 		const node_level level = static_cast<node_level>(item->data(0, node_level_role).toInt());
+		bool is_all = false;
 
-		// Hide nodes that aren't in the game list
-		if (m_show_owned_games_only && level == node_level::serial_level)
+		if (level == node_level::serial_level)
 		{
 			const std::string serial = item->data(0, serial_role).toString().toStdString();
-			if (serial != patch_key::all)
+			is_all = serial == patch_key::all;
+
+			// Hide nodes that aren't in the game list
+			if (m_show_owned_games_only && !is_all)
 			{
 				const std::string app_version = item->data(0, app_version_role).toString().toStdString();
 
@@ -475,12 +464,30 @@ void patch_manager_dialog::filter_patches(const QString& term)
 
 		// Only try to match if the parent is not visible
 		parent_visible = parent_visible || item->text(0).toLower().contains(search_text);
+
+		// Try to match text in the notes as well
+		if (!parent_visible && parent_is_all && level == node_level::patch_level)
+		{
+			const std::string hash = item->data(0, hash_role).toString().toStdString();
+			if (m_map.contains(hash))
+			{
+				const patch_engine::patch_container& container = ::at32(m_map, hash);
+				const std::string description = item->data(0, description_role).toString().toStdString();
+
+				if (container.patch_info_map.contains(description))
+				{
+					const patch_engine::patch_info& found_info = ::at32(container.patch_info_map, description);
+					parent_visible = QString::fromStdString(found_info.notes).toLower().contains(search_text);
+				}
+			}
+		}
+
 		int visible_items = 0;
 
 		// Get the number of visible children recursively
 		for (int i = 0; i < item->childCount(); i++)
 		{
-			visible_items += show_matches(item->child(i), parent_visible);
+			visible_items += show_matches(item->child(i), parent_visible, is_all);
 		}
 
 		if (parent_visible)
@@ -505,7 +512,7 @@ void patch_manager_dialog::filter_patches(const QString& term)
 		if (!top_level_item)
 			continue;
 
-		const int matches = show_matches(top_level_item, false);
+		const int matches = show_matches(top_level_item, false, false);
 
 		if (matches <= 0 || !m_expand_current_match)
 			continue;

@@ -36,11 +36,12 @@ static void* get_aligned_buf()
 
 		aligned_buf() noexcept
 		{
-			// IMPORTANT NOTE: It must be aligned (probably enough on multiple of 4) to support raw device, otherwise any read from file will fail
+			// IMPORTANT NOTE: it must be aligned on the sector size of the volume to support a raw device, otherwise any read from
+			// file will fail (an optical medium always uses ISO_SECTOR_SIZE, so allocating a sector aligned on itself is enough)
 #if defined(_WIN32)
-			buf = _aligned_malloc(ISO_SECTOR_SIZE, ISO_SECTOR_SIZE * 2);
+			buf = _aligned_malloc(ISO_SECTOR_SIZE, ISO_SECTOR_SIZE);
 #else
-			buf = std::aligned_alloc(ISO_SECTOR_SIZE * 2, ISO_SECTOR_SIZE);
+			buf = std::aligned_alloc(ISO_SECTOR_SIZE, ISO_SECTOR_SIZE);
 #endif
 		}
 
@@ -83,6 +84,11 @@ static bool is_iso_file(iso_file& file, u64* size = nullptr)
 
 bool is_iso_file(const std::string& path, u64* size, bool* is_raw_device)
 {
+	if (is_raw_device)
+	{
+		*is_raw_device = false;
+	}
+
 	if (path.empty())
 	{
 		return false;

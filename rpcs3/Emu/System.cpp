@@ -31,6 +31,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/RSX/Capture/rsx_replay.h"
 #include "Emu/RSX/Overlays/overlay_message.h"
+#include "Emu/RSX/Overlays/BigPicture/overlay_big_picture.h"
 
 #include "Loader/PSF.h"
 #include "Loader/TAR.h"
@@ -94,6 +95,8 @@ extern void signal_system_cache_can_stay();
 fs::file make_file_view(const fs::file& file, u64 offset, u64 size);
 
 extern std::string get_syscache_state_corruption_indicator_file_path(std::string_view dir_path);
+
+extern atomic_t<bool> g_big_picture_mode_active;
 
 fs::file g_tty;
 atomic_t<s64> g_tty_size{0};
@@ -951,6 +954,70 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	return true;
 }
 
+bool Emulator::BootBigPictureMode()
+{
+	if (m_state != system_state::stopped || m_restrict_emu_state_change)
+	{
+		sys_log.error("Big Picture Mode: cannot boot, state=%d, restricted=%d", static_cast<u32>(m_state.load()), +m_restrict_emu_state_change);
+		return false;
+	}
+
+	sys_log.notice("Big Picture Mode: booting window");
+
+	m_state = system_state::loading;
+
+	m_path.clear();
+	m_path_old.clear();
+	m_path_original.clear();
+	m_path_real.clear();
+	m_title_id.clear();
+	m_title.clear();
+	m_localized_title.clear();
+	m_app_version.clear();
+	m_hash.clear();
+	m_cat.clear();
+	m_dir.clear();
+	m_sfo_dir.clear();
+	m_ar.reset();
+
+	Init();
+	g_cfg.video.disable_on_disk_shader_cache.set(true);
+
+	vm::init();
+	g_fxo->init(false);
+
+	// Initialize progress dialog
+	g_fxo->init<named_thread<progress_dialog_server>>();
+
+	// Initialize performance monitor
+	g_fxo->init<named_thread<perf_monitor>>();
+
+	// No PS3 executable is loaded. GSRender/pad_thread only exist to host the Big Picture Mode overlay.
+	m_state = system_state::ready;
+	GetCallbacks().on_ready();
+
+	GetCallbacks().init_gs_render(nullptr);
+	GetCallbacks().init_pad_handler("");
+
+	GetCallbacks().on_run(false);
+	m_state = system_state::starting;
+	m_state.notify_all();
+
+	ensure(g_fxo->init<named_thread>("Big Picture Mode"sv, []()
+	{
+		rsx::overlays::open_big_picture_mode();
+	}));
+
+	sys_log.notice("Big Picture Mode: booted successfully");
+
+	return true;
+}
+
+void Emulator::DeactivateBigPictureMode() const
+{
+	g_big_picture_mode_active = false;
+}
+
 game_boot_result Emulator::GetElfPathFromDir(std::string& elf_path, const std::string& path)
 {
 	if (!fs::is_dir(path))
@@ -1159,6 +1226,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 	std::string inherited_ps3_game_path;
 	bool launching_from_disc_archive = false;
+	bool launching_from_optical_drive = false;
 
 	{
 		Init();
@@ -1250,7 +1318,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			std::string disc_info;
 			m_ar->serialize(argv.emplace_back(), disc_info, klic.emplace_back(), m_game_dir, hdd1);
 
-			launching_from_disc_archive = is_iso_file(disc_info);
+			launching_from_disc_archive = is_iso_file(disc_info, nullptr, &launching_from_optical_drive);
 
 			sys_log.notice("Savestate: is iso archive = %d ('%s')", launching_from_disc_archive, disc_info);
 
@@ -1556,7 +1624,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		}
 
 		const std::string resolved_path = GetCallbacks().resolve_path(m_path);
-		if (!launching_from_disc_archive && is_iso_file(m_path))
+		if (!launching_from_disc_archive && is_iso_file(m_path, nullptr, &launching_from_optical_drive))
 		{
 			sys_log.notice("Loading iso archive '%s'", m_path);
 
@@ -2033,7 +2101,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			// Load /dev_bdvd/ from game list if available
 			if (std::string game_path = m_games_config.get_path(m_title_id); !game_path.empty())
 			{
-				if (is_iso_file(game_path))
+				if (is_iso_file(game_path, nullptr, &launching_from_optical_drive))
 				{
 					sys_log.notice("Loading iso archive for patch ('%s')", game_path);
 
@@ -2301,9 +2369,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			if (!pkgs.empty())
 			{
 				bool install_success = true;
-				BlockingCallFromMainThread([this, &pkgs, &install_success]()
+				BlockingCallFromMainThread([this, &pkgs, &install_success, launching_from_optical_drive]()
 				{
-					if (!GetCallbacks().on_install_pkgs(pkgs))
+					if (!GetCallbacks().on_install_pkgs(pkgs, launching_from_optical_drive))
 					{
 						install_success = false;
 					}
@@ -3530,6 +3598,15 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 	const bool continuous_savestate_mode = savestate && !g_cfg.savestate.suspend_emu;
 
+	// Decide upfront (before the renderer is torn down) whether this stop should return to Big Picture
+	// Mode, so SetContinuousMode() takes effect before GSRender::~GSRender() runs and closes the window.
+	const bool return_to_big_picture_mode = !after_kill_callback && g_big_picture_mode_active.exchange(false);
+
+	if (return_to_big_picture_mode)
+	{
+		SetContinuousMode(true);
+	}
+
 	// Show visual feedback to the user in case that stopping takes a while.
 	// This needs to be done before actually stopping, because otherwise the necessary threads will be terminated before we can show an image.
 	if (g_fxo->try_get<named_thread<progress_dialog_server>>() && (continuous_savestate_mode || g_progr_text.operator bool()))
@@ -3564,7 +3641,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 	// There is no race condition because it is only accessed by the same thread
 	std::shared_ptr<std::shared_ptr<void>> join_thread = std::make_shared<std::shared_ptr<void>>();
 
-	*join_thread = make_ptr(new named_thread("Emulation Join Thread"sv, [join_thread, reset_emu_state, savestate, allow_autoexit, save_stage = save_stage ? *save_stage : savestate_stage{}, this]() mutable
+	*join_thread = make_ptr(new named_thread("Emulation Join Thread"sv, [join_thread, reset_emu_state, savestate, allow_autoexit, save_stage = save_stage ? *save_stage : savestate_stage{}, return_to_big_picture_mode, this]() mutable
 	{
 		fs::pending_file file;
 
@@ -4074,7 +4151,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 		set_progress_message("Resetting Objects");
 
 		// Final termination from main thread (move the last ownership of join thread in order to destroy it)
-		CallFromMainThread([join_thread = std::move(join_thread), reset_emu_state, verbose_message, stop_watchdog, init_mtx, allow_autoexit, this]()
+		CallFromMainThread([join_thread = std::move(join_thread), reset_emu_state, verbose_message, stop_watchdog, init_mtx, allow_autoexit, return_to_big_picture_mode, this]()
 		{
 			cpu_thread::cleanup();
 
@@ -4131,6 +4208,18 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 
 			// Complete the operation
 			m_state = system_state::stopped;
+
+			if (return_to_big_picture_mode)
+			{
+				ensure(!after_kill_callback);  
+				after_kill_callback = [this]()
+				{
+					sys_log.notice("Big Picture Mode: game stopped, returning to Big Picture Mode.");
+					const bool result = BootBigPictureMode();
+					sys_log.notice("Big Picture Mode: BootBigPictureMode() returned %d", result);
+				};
+			}
+
 			GetCallbacks().on_stop();
 
 			// Always Enable display sleep, not only if it was prevented.
