@@ -43,7 +43,11 @@ private:
 		case localized_string_id::RSX_OVERLAYS_TROPHY_SILVER: return tr("You have earned a silver trophy.\n%0", "Trophy text").arg(std::forward<Args>(args)...);
 		case localized_string_id::RSX_OVERLAYS_TROPHY_GOLD: return tr("You have earned a gold trophy.\n%0", "Trophy text").arg(std::forward<Args>(args)...);
 		case localized_string_id::RSX_OVERLAYS_TROPHY_PLATINUM: return tr("You have earned a platinum trophy.\n%0", "Trophy text").arg(std::forward<Args>(args)...);
-		case localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS: return tr("Compiling shaders");
+		case localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS: return tr("Precompiling shader interpreter variants.\nPlease wait...");
+		case localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_TITLE: return tr("Shader Compilation");
+		case localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_VULKAN: return tr("Building base variant %0...").arg(std::forward<Args>(args)...);
+		case localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_OPENGL_BUILD: return tr("Building variant %0...").arg(std::forward<Args>(args)...);
+		case localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_OPENGL_LINK: return tr("Linking variant %0...").arg(std::forward<Args>(args)...);
 		case localized_string_id::RSX_OVERLAYS_COMPILING_PPU_MODULES: return tr("Compiling PPU Modules");
 		case localized_string_id::RSX_OVERLAYS_MSG_DIALOG_YES: return tr("Yes", "Message Dialog");
 		case localized_string_id::RSX_OVERLAYS_MSG_DIALOG_NO: return tr("No", "Message Dialog");
