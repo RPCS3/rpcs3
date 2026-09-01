@@ -49,7 +49,6 @@
 #include "util/sysinfo.hpp"
 
 #include <memory>
-#include <regex>
 #include <shared_mutex>
 
 #include "Utilities/JIT.h"
@@ -4412,16 +4411,30 @@ u32 Emulator::AddGamesFromDir(std::string path)
 
 	fmt::trim_back(path, fs::delim);
 
+	// Don't write "games.yml" on each added game: it is saved once, at the end of the scan.
+	// NOTE: this function is recursive, so the previous value is restored instead of being forced back to enabled,
+	//       otherwise a nested scan would re-enable the write for the remaining part of the outer one
+	const bool save_on_dirty = m_games_config.is_save_on_dirty();
 	m_games_config.set_save_on_dirty(false);
 
+	// A game was found on a path if it has just been added or if it was already registered
+	const auto game_found = [](game_boot_result error)
+	{
+		return error == game_boot_result::no_errors || error == game_boot_result::already_added;
+	};
+
 	// search for a game on the provided path first (game on ISO file or on folder type)
-	if (const game_boot_result error = AddGame(path); error == game_boot_result::no_errors)
+	const game_boot_result path_error = AddGame(path);
+
+	if (path_error == game_boot_result::no_errors)
 	{
 		games_added++;
 	}
 
-	// search for games on subfolders only if not nested inside a discovered game folder
-	if (games_added == 0)
+	// search for games on subfolders only if not nested inside a discovered game folder, otherwise the same title
+	// would be registered again through a different path (e.g. the root of a BD drive "E:/" is registered as a raw
+	// device, its subfolder "E:/PS3_GAME" would register it again as a disc folder)
+	if (!game_found(path_error))
 	{
 		std::vector<fs::dir_entry> entries;
 
@@ -4447,16 +4460,20 @@ u32 Emulator::AddGamesFromDir(std::string path)
 
 				const std::string dir_path = path + "/" + dir_entry.name;
 
-				if (!dir_entry.is_directory && !is_iso_file(dir_path))
+				// The outcome is handed over to "AddGame()" so that the ISO is not recognized twice: each check
+				// reads the volume descriptor, which is a physical read when the path points to an optical drive
+				const bool is_iso = !dir_entry.is_directory && is_iso_file(dir_path);
+
+				if (!dir_entry.is_directory && !is_iso)
 				{
 					continue;
 				}
 
-				if (const game_boot_result error = AddGame(dir_path); error == game_boot_result::no_errors)
+				if (const game_boot_result error = AddGame(dir_path, is_iso); error == game_boot_result::no_errors)
 				{
 					games_added++;
 				}
-				else if (g_cfg.misc.use_recursive_scan)
+				else if (!game_found(error) && g_cfg.misc.use_recursive_scan)
 				{
 					games_added += AddGamesFromDir(dir_path);
 				}
@@ -4471,9 +4488,10 @@ u32 Emulator::AddGamesFromDir(std::string path)
 		});
 	}
 
-	m_games_config.set_save_on_dirty(true);
+	m_games_config.set_save_on_dirty(save_on_dirty);
 
-	if (m_games_config.is_dirty() && !m_games_config.save())
+	// Flush the changes only when the outermost scan is done
+	if (save_on_dirty && m_games_config.is_dirty() && !m_games_config.save())
 	{
 		sys_log.error("Failed to save games.yml after adding games");
 	}
@@ -4481,14 +4499,14 @@ u32 Emulator::AddGamesFromDir(std::string path)
 	return games_added;
 }
 
-game_boot_result Emulator::AddGame(std::string path)
+game_boot_result Emulator::AddGame(std::string path, bool is_iso)
 {
 	fmt::trim_back(path, fs::delim);
 
 	// Handle files directly
 	if (!fs::is_dir(path) || fs::get_optical_raw_device(path))
 	{
-		return AddGameToYml(path);
+		return AddGameToYml(path, is_iso);
 	}
 
 	game_boot_result result = game_boot_result::nothing_to_boot;
@@ -4509,7 +4527,7 @@ game_boot_result Emulator::AddGame(std::string path)
 			continue;
 		}
 
-		if (entry.is_directory && std::regex_match(entry.name, std::regex("^PS3_GM[[:digit:]]{2}$")))
+		if (entry.is_directory && rpcs3::utils::is_ps3_gm_dir_name(entry.name))
 		{
 			const std::string elf = path + "/" + entry.name + "/USRDIR/EBOOT.BIN";
 
@@ -4530,7 +4548,7 @@ game_boot_result Emulator::AddGame(std::string path)
 	return result;
 }
 
-game_boot_result Emulator::AddGameToYml(std::string path)
+game_boot_result Emulator::AddGameToYml(std::string path, bool is_iso)
 {
 	fmt::trim_back(path, fs::delim);
 
@@ -4559,7 +4577,9 @@ game_boot_result Emulator::AddGameToYml(std::string path)
 	}
 
 	std::unique_ptr<iso_archive> archive;
-	if (is_iso_file(path))
+
+	// Skip the check if the caller already recognized the path as an ISO: it would read the volume descriptor again
+	if (is_iso || is_iso_file(path))
 	{
 		archive = std::make_unique<iso_archive>(path);
 
@@ -4826,7 +4846,7 @@ void Emulator::GetBdvdDir(std::string& bdvd_dir, std::string& sfb_dir, std::stri
 			continue;
 		}
 
-		if (dir_name == "PS3_GAME"sv || std::regex_match(dir_name.begin(), dir_name.end(), std::regex("^PS3_GM[[:digit:]]{2}$")))
+		if (dir_name == "PS3_GAME"sv || rpcs3::utils::is_ps3_gm_dir_name(dir_name))
 		{
 			if (IsValidSfb(parent_dir + "/PS3_DISC.SFB"))
 			{

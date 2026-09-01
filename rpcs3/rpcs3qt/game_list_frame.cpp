@@ -24,7 +24,6 @@
 
 #include <algorithm>
 #include <memory>
-#include <regex>
 #include <unordered_set>
 
 #include <QtConcurrent>
@@ -596,13 +595,24 @@ void game_list_frame::OnParsingFinished()
 	const auto add_game = [this, localized, localized_title, localized_icon, localized_movie, dev_flash, game_icon_path, _hdd,
 	                       cat_unknown_localized = localized->category.unknown.toStdString(), cat_unknown = cat::cat_unknown.toStdString(),
 	                       play_hover_movies = m_play_hover_movies, play_hover_music = m_play_hover_music, show_custom_icons = m_show_custom_icons]
-	                       (const std::string& dir_or_elf, const std::string& game_dir = "PS3_GAME")
+	                       (const std::string& dir_or_elf, const std::string& game_dir = "PS3_GAME", const std::shared_ptr<iso_archive>& shared_archive = {})
 	{
-		std::unique_ptr<iso_archive> archive;
+		std::shared_ptr<iso_archive> archive;
 		iso_metadata_cache_entry cache_entry{};
 		bool is_raw_device = false;
-		const bool is_archive = is_iso_file(dir_or_elf, nullptr, &is_raw_device);
+		bool is_archive = true;
 		std::string iso_cache_key;
+
+		if (shared_archive)
+		{
+			// The caller provides the archive only for a path it has already recognized: just the raw device flag is
+			// still needed here, and it is answered without reading the volume descriptor of the disc
+			is_raw_device = fs::get_optical_raw_device(dir_or_elf);
+		}
+		else
+		{
+			is_archive = is_iso_file(dir_or_elf, nullptr, &is_raw_device);
+		}
 		
 		if (is_archive)
 		{
@@ -611,7 +621,9 @@ void game_list_frame::OnParsingFinished()
 			// when no valid cache entry exists for this ISO path + mtime
 			if (is_raw_device || !iso_cache::load(dir_or_elf, iso_cache_key, cache_entry))
 			{
-				archive = std::make_unique<iso_archive>(dir_or_elf);
+				// Reuse the archive the caller has already built for this path: constructing another one walks the
+				// whole file system of the disc again (and a raw device never uses the cache)
+				archive = shared_archive ? shared_archive : std::make_shared<iso_archive>(dir_or_elf);
 				if (!archive->is_valid()) return;
 			}
 
@@ -648,7 +660,7 @@ void game_list_frame::OnParsingFinished()
 			if (!psf_valid)
 			{
 				game_list_log.warning("Cached psf for iso not valid: '%s'", game.info.path);
-				archive = std::make_unique<iso_archive>(dir_or_elf);
+				archive = shared_archive ? shared_archive : std::make_shared<iso_archive>(dir_or_elf);
 				if (!archive->is_valid()) return;
 
 				cache_entry = {}; // Reset so the cache gets rewritten after scan.
@@ -896,7 +908,7 @@ void game_list_frame::OnParsingFinished()
 				continue;
 			}
 
-			if (entry.name == "PS3_GAME" || std::regex_match(entry.name, std::regex("^PS3_GM[[:digit:]]{2}$")))
+			if (entry.name == "PS3_GAME" || rpcs3::utils::is_ps3_gm_dir_name(entry.name))
 			{
 				push_path(path + "/" + entry.name, legit_paths);
 			}
@@ -924,11 +936,11 @@ void game_list_frame::OnParsingFinished()
 					return;
 				}
 
-				iso_archive archive(entry.path);
-				if (!archive.is_valid()) return;
+				// Shared with "add_game()" below, so that the file system of the disc is walked only once
+				const auto archive = std::make_shared<iso_archive>(entry.path);
+				if (!archive->is_valid()) return;
 
-				const iso_fs_node& root = archive.root();
-				const std::regex ps3_gm_regex("^PS3_GM[[:digit:]]{2}$");
+				const iso_fs_node& root = archive->root();
 
 				for (const auto& child : root.children)
 				{
@@ -942,15 +954,15 @@ void game_list_frame::OnParsingFinished()
 					}
 
 					const std::string& name = child->metadata.name;
-					if (name == "PS3_GAME" || std::regex_match(name, ps3_gm_regex))
+					if (name == "PS3_GAME" || rpcs3::utils::is_ps3_gm_dir_name(name))
 					{
 						subdirs.push_back(name);
-						add_game(entry.path, name);
+						add_game(entry.path, name, archive);
 					}
 				}
 				if (subdirs.empty())
 				{
-					add_game(entry.path);
+					add_game(entry.path, "PS3_GAME", archive);
 					subdirs.push_back("PS3_GAME");
 				}
 				if (!m_refresh_watcher.isCanceled())
