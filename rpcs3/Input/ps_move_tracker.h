@@ -28,7 +28,8 @@ public:
 
 	void set_image_data(const void* buf, u64 size, u32 width, u32 height, s32 format);
 
-	void init_workers();
+	void init_worker(u32 index);
+	void join_worker(u32 index);
 	void process_image();
 	void convert_image(s32 output_format);
 	void process_hues();
