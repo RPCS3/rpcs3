@@ -751,7 +751,7 @@ rpcn_account_edit_dialog::rpcn_account_edit_dialog(QWidget* parent)
 
 	QPushButton* btn_resendtoken     = new QPushButton(tr("Resend Token"), this);
 	QPushButton* btn_change_password = new QPushButton(tr("Change Password"), this);
-	QPushButton* btn_delete_account = new QPushButton(tr("Delete Account"), this);
+	QPushButton* btn_delete_account  = new QPushButton(tr("Delete Account"), this);
 	QPushButton* btn_save            = new QPushButton(tr("Save"), this);
 
 	vbox_labels->addWidget(lbl_username);
