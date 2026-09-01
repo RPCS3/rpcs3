@@ -14,6 +14,7 @@ namespace rsx
 			if (!thumbnail_path.empty())
 			{
 				m_thumbnail_info = std::make_unique<image_info>(thumbnail_path);
+				set_keep_aspect_ratio(true);
 				set_raw_image(m_thumbnail_info.get());
 			}
 		}
@@ -25,6 +26,7 @@ namespace rsx
 			if (!thumbnail_buf.empty())
 			{
 				m_thumbnail_info = std::make_unique<image_info>(thumbnail_buf);
+				set_keep_aspect_ratio(true);
 				set_raw_image(m_thumbnail_info.get());
 			}
 		}
@@ -48,6 +50,7 @@ namespace rsx
 			if (auto img = image_info::load_icon(info.icon_path, info.icon_in_archive ? info.path : ""))
 			{
 				m_thumbnail_info = std::move(img);
+				set_keep_aspect_ratio(true);
 				set_raw_image(m_thumbnail_info.get());
 			}
 		}
@@ -102,6 +105,7 @@ namespace rsx
 				m_video_source->get_image(info->data, info->w, info->h, info->channels, info->bpp);
 				info->dirty = true;
 
+				set_keep_aspect_ratio(true);
 				set_raw_image(info.get());
 				m_is_compiled = false;
 				return;
@@ -109,6 +113,7 @@ namespace rsx
 
 			if (m_thumbnail_info && m_thumbnail_info.get() != external_ref)
 			{
+				set_keep_aspect_ratio(true);
 				set_raw_image(m_thumbnail_info.get());
 				m_is_compiled = false;
 				return;
@@ -116,6 +121,7 @@ namespace rsx
 
 			if (m_thumbnail_id != image_resource_id::none && m_thumbnail_id != image_resource_ref)
 			{
+				set_keep_aspect_ratio(false);
 				set_image_resource(m_thumbnail_id);
 				m_is_compiled = false;
 				return;

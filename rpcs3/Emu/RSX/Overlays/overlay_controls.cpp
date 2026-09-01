@@ -1041,6 +1041,59 @@ namespace rsx
 			return result;
 		}
 
+		void image_view::adjust_padding()
+		{
+			overlay_element::set_padding(m_original_padding_left, m_original_padding_right, m_original_padding_top, m_original_padding_bottom);
+
+			if (!m_keep_aspect_ratio || !external_ref || external_ref->w <= 0 || external_ref->h <= 0)
+			{
+				return;
+			}
+
+			// Adjust padding so that the image keeps its aspect ratio
+
+			const u16 p_left   = m_original_padding_left;
+			const u16 p_right  = m_original_padding_right;
+			const u16 p_top    = m_original_padding_top;
+			const u16 p_bottom = m_original_padding_bottom;
+
+			const u16 target_width = w - (p_left + p_right);
+			const u16 target_height = h - (p_top + p_bottom);
+			const f32 target_ratio = target_width / static_cast<f32>(target_height);
+			const f32 image_ratio = external_ref->w / static_cast<f32>(external_ref->h);
+
+			if (image_ratio > target_ratio)
+			{
+				const u16 new_padding = static_cast<u16>(target_height - target_width / image_ratio) / 2;
+				overlay_element::set_padding(p_left, p_right, p_top + new_padding, p_bottom + new_padding);
+			}
+			else if (image_ratio < target_ratio)
+			{
+				const u16 new_padding = static_cast<u16>(target_width - target_height * image_ratio) / 2;
+				overlay_element::set_padding(p_left + new_padding, p_right + new_padding, p_top, p_bottom);
+			}
+		}
+
+		void image_view::set_padding(u16 left, u16 right, u16 top, u16 bottom)
+		{
+			m_original_padding_left = left;
+			m_original_padding_right = right;
+			m_original_padding_top = top;
+			m_original_padding_bottom = bottom;
+
+			adjust_padding();
+		}
+
+		void image_view::set_padding(u16 padding)
+		{
+			m_original_padding_left = padding;
+			m_original_padding_right = padding;
+			m_original_padding_top = padding;
+			m_original_padding_bottom = padding;
+
+			adjust_padding();
+		}
+
 		compiled_resource& image_view::get_compiled()
 		{
 			if (is_compiled())
@@ -1086,6 +1139,8 @@ namespace rsx
 		{
 			image_resource_ref = image_resource_id::raw_image;
 			external_ref = raw_image;
+
+			adjust_padding();
 		}
 
 		void image_view::clear_image()
@@ -1097,6 +1152,15 @@ namespace rsx
 		void image_view::set_blur_strength(u8 strength)
 		{
 			blur_strength = strength;
+		}
+
+		void image_view::set_keep_aspect_ratio(bool enabled)
+		{
+			if (m_keep_aspect_ratio != enabled)
+			{
+				m_keep_aspect_ratio = enabled;
+				adjust_padding();
+			}
 		}
 
 		image_button::image_button()

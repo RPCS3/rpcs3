@@ -368,13 +368,26 @@ namespace rsx
 		{
 		protected:
 			u8 image_resource_ref = image_resource_id::none;
-			const void* external_ref = nullptr;
+			const image_info_base* external_ref = nullptr;
+
+			// Original padding of inherited class. Helps us to keep the image aspect ratio when padding is adjusted.
+			u16 m_original_padding_left = 0;
+			u16 m_original_padding_right = 0;
+			u16 m_original_padding_top = 0;
+			u16 m_original_padding_bottom = 0;
+
+			bool m_keep_aspect_ratio = false;
 
 			// Strength of blur effect
 			u8 blur_strength = 0;
 
+			void adjust_padding();
+
 		public:
 			using overlay_element::overlay_element;
+
+			void set_padding(u16 left, u16 right, u16 top, u16 bottom) override;
+			void set_padding(u16 padding) override;
 
 			compiled_resource& get_compiled() override;
 
@@ -382,6 +395,7 @@ namespace rsx
 			void set_raw_image(const image_info_base* raw_image);
 			void clear_image();
 			void set_blur_strength(u8 strength);
+			void set_keep_aspect_ratio(bool enabled);
 		};
 
 		struct image_button : public image_view
