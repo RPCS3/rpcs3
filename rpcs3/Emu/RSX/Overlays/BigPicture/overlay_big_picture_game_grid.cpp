@@ -27,6 +27,7 @@ namespace rsx
 				// The renderer's texture cache is keyed by this object's address, which can be reused by an
 				// unrelated image after the old one is freed - force a re-upload instead of trusting the cache.
 				m_icon_data->dirty = true;
+				static_cast<image_view*>(icon.get())->set_keep_aspect_ratio(true);
 				static_cast<image_view*>(icon.get())->set_raw_image(m_icon_data.get());
 			}
 			else
