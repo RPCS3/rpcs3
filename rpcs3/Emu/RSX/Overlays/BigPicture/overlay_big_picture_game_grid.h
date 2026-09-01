@@ -46,6 +46,9 @@ namespace rsx
 			void finish_reload(std::vector<std::unique_ptr<big_picture_game_tile>>&& tiles);
 			void select_tile(s32 index);
 
+			u16 column(s32 tile_index) const;
+			u16 row(s32 tile_index) const;
+
 			static constexpr u16 m_columns = 5;
 			static constexpr u16 m_tile_size = 200;
 
