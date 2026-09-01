@@ -2,6 +2,7 @@
 #include "capabilities.h"
 
 #include "Utilities/StrUtil.h"
+#include "util/cctype.hpp"
 #include "Emu/system_config.h"
 
 #include <unordered_set>
@@ -118,7 +119,7 @@ namespace gl
 		// Workaround for intel drivers which have terrible capability reporting
 		if (!vendor_string.empty())
 		{
-			std::transform(vendor_string.begin(), vendor_string.end(), vendor_string.begin(), ::tolower);
+			std::transform(vendor_string.begin(), vendor_string.end(), vendor_string.begin(), utils::tolower<char>);
 		}
 		else
 		{

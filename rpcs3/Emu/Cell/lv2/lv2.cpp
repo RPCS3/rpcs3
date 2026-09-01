@@ -59,6 +59,7 @@
 #include "util/tsc.hpp"
 #include "util/sysinfo.hpp"
 #include "util/init_mutex.hpp"
+#include "util/cctype.hpp"
 
 #if defined(ARCH_X64)
 #ifdef _MSC_VER
@@ -1341,7 +1342,7 @@ std::string lv2_obj::name64(u64 name_u64)
 	// NTS string, ignore invalid/newline characters
 	// Example: "lv2\n\0tx" will be printed as "lv2"
 	std::string str{ptr, std::find(ptr, ptr + 7, '\0')};
-	str.erase(std::remove_if(str.begin(), str.end(), [](uchar c){ return !std::isprint(c); }), str.end());
+	str.erase(std::remove_if(str.begin(), str.end(), [](uchar c){ return !utils::isprint(c); }), str.end());
 
 	return str;
 }

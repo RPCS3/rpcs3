@@ -9,6 +9,8 @@
 #include "Emu/system_utils.hpp"
 
 #include "util/asm.hpp"
+#include "util/cctype.hpp"
+
 #include <algorithm>
 #include <span>
 
@@ -628,8 +630,8 @@ bool validate_npd_hashes(std::string_view file_name, const u8* klicensee, const 
 	for (usz i = std::distance(it, buf_span.rend()) - 1; i < buf_len; ++i)
 	{
 		const u8 c = buf[i];
-		buf_upper[i] = std::toupper(c);
-		buf_lower[i] = std::tolower(c);
+		buf_upper[i] = utils::toupper(c);
+		buf_lower[i] = utils::tolower(c);
 	}
 
 	// Hash with NPDRM_OMAC_KEY_3 and compare with title_hash.
