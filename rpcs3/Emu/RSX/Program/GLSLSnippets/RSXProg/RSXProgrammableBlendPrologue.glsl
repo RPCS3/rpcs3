@@ -37,7 +37,19 @@ R"(
 
 #ifdef INT_FRAMEBUFFER_BIT
 #define _blend_saturate _saturate
-#define _blend_saturate_signed(v) clamp(v, -1.f, 1.f)
+#define _blend_saturate_signed_imp(U8Type, S8Type, FloatType, v) \
+	const U8Type u8 = U8Type(clamp(v, 0.f, 1.f) * 255.f + 0.5f); \
+	const S8Type s8 = S8Type(u8 << 24) >> 24; \
+	return FloatType(s8 / 255.f);
+
+float _blend_saturate_signed(float v)
+{
+	_blend_saturate_signed_imp(uint, int, float, v);
+}
+vec3 _blend_saturate_signed(vec3 v)
+{
+	_blend_saturate_signed_imp(uvec3, ivec3, vec3, v);
+}
 #else
 #define _blend_saturate(v) v
 #define _blend_saturate_signed(v) v

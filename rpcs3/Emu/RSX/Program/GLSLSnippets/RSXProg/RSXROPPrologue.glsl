@@ -19,27 +19,54 @@ R"(
 	}
 #endif
 
-#if defined(_ENABLE_PROGRAMMABLE_BLENDING) && _MRT_BUFFERS_COUNT >= 1
-#define FRAG_LOAD(n) mrt_color[n] = subpassLoad(frag_src_##n)
-	// TODO: Multisampled output support.
-	vec4 mrt_color[_MRT_BUFFERS_COUNT];
+#if _MRT_BUFFERS_COUNT >= 1
+  #define MRT0_DO(expr) expr
+#else
+  #define MRT0_DO(expr) expr
+#endif
+#if _MRT_BUFFERS_COUNT >= 2
+  #define MRT1_DO(expr) expr
+#else
+  #define MRT1_DO(expr)
+#endif
+#if _MRT_BUFFERS_COUNT >= 3
+  #define MRT2_DO(expr) expr
+#else
+  #define MRT2_DO(expr)
+#endif
+#if _MRT_BUFFERS_COUNT == 4
+  #define MRT3_DO(expr) expr
+#else
+  #define MRT3_DO(expr)
+#endif
 
 #if _MRT_BUFFERS_COUNT >= 1
-	FRAG_LOAD(0);
+
+#ifdef _ENABLE_ROP_CHANNEL_REMAPPING
+const uint ROP_remap = get_ROP_channel_remap();
 #endif
 
-#if _MRT_BUFFERS_COUNT >= 2
-	FRAG_LOAD(1);
-#endif
+#ifdef _ENABLE_PROGRAMMABLE_BLENDING
+#define FRAG_LOAD(n) mrt_color##n = subpassLoad(frag_src_##n)
 
-#if _MRT_BUFFERS_COUNT >= 3
-	FRAG_LOAD(2);
-#endif
+MRT0_DO(vec4 mrt_color0;)
+MRT1_DO(vec4 mrt_color1;)
+MRT2_DO(vec4 mrt_color2;)
+MRT3_DO(vec4 mrt_color3;)
 
-#if _MRT_BUFFERS_COUNT == 4
-	FRAG_LOAD(3);
-#endif
+MRT0_DO(FRAG_LOAD(0);)
+MRT1_DO(FRAG_LOAD(1);)
+MRT2_DO(FRAG_LOAD(2);)
+MRT3_DO(FRAG_LOAD(3);)
+
+#ifdef _ENABLE_ROP_CHANNEL_REMAPPING
+	MRT0_DO(mrt_color0 = _mrt_color_t(remap_ROP_input(mrt_color0, ROP_remap));)
+	MRT1_DO(mrt_color1 = _mrt_color_t(remap_ROP_input(mrt_color1, ROP_remap));)
+	MRT2_DO(mrt_color2 = _mrt_color_t(remap_ROP_input(mrt_color2, ROP_remap));)
+	MRT3_DO(mrt_color3 = _mrt_color_t(remap_ROP_input(mrt_color3, ROP_remap));)
+#endif // _ENABLE_ROP_CHANNEL_REMAPPING
 
 #undef FRAG_LOAD
-#endif
+#endif // _ENABLE_PROGRAMMABLE_BLENDING
+#endif // _MRT_BUFFERS_COUNT >= 1
 )"

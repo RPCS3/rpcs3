@@ -186,6 +186,23 @@ vec4 remap_ROP_output(const in vec4 col, const in uint remap_index)
 		return vec4(col.rgb, 0.f);
 	}
 }
+vec4 remap_ROP_input(const in vec4 col, const in uint remap_index)
+{
+	switch (remap_index)
+	{
+	default:
+	case ROP_REMAP_SWIZZLE_RGBA: // RGBA
+		return col;
+	case ROP_REMAP_SWIZZLE_BBBB: // B8
+		return col.rrrr;
+	case ROP_REMAP_SWIZZLE_GBGB: // G8B8
+		return col.rgrg;
+	case ROP_REMAP_SWIZZLE_RGB1: // RGB1
+		return vec4(col.rgb, 1.f);
+	case ROP_REMAP_SWIZZLE_RGB0: // RGB0
+		return vec4(col.rgb, 0.f);
+	}
+}
 #endif
 
 )"
