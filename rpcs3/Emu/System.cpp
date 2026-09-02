@@ -943,6 +943,8 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	GetCallbacks().on_ready();
 
 	GetCallbacks().init_gs_render(nullptr);
+	GetCallbacks().init_kb_handler();
+	GetCallbacks().init_mouse_handler();
 	GetCallbacks().init_pad_handler("");
 
 	GetCallbacks().on_run(false);
@@ -1001,6 +1003,8 @@ bool Emulator::BootBigPictureMode()
 	GetCallbacks().on_ready();
 
 	GetCallbacks().init_gs_render(nullptr);
+	GetCallbacks().init_kb_handler();
+	GetCallbacks().init_mouse_handler();
 	GetCallbacks().init_pad_handler("");
 
 	GetCallbacks().on_run(false);
