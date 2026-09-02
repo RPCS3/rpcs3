@@ -723,7 +723,7 @@ namespace rsx
 			ensure(addr != umax);
 
 			// Notify ticks are strongly ordered
-			rsx::mm_flush();
+			RSX(ctx)->sync();
 
 			vm::_ptr<atomic_t<RsxNotify>>(addr)->store(
 			{
