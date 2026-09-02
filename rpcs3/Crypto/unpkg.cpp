@@ -943,7 +943,12 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 
 		for (const auto& component : entry_path)
 		{
-			if (component == "." || component == "..")
+			if (component == "..")
+			{
+				fmt::throw_exception("PKG entry path contains a parent directory component: '%s'", name);
+			}
+
+			if (component == ".")
 			{
 				num_failures++;
 				pkg_log.error("PKG entry path contains a special component: '%s'", name);
