@@ -322,12 +322,8 @@ namespace rsx
 				if (button_press == pad_button::circle)
 				{
 					play_sound(sound_effect::cancel);
-					if (parent)
-					{
-						set_current_page(parent);
-						return page_navigation::back;
-					}
-					return page_navigation::exit;
+					set_current_page(ensure(parent));
+					return page_navigation::back;
 				}
 
 				return page_navigation::stay;
@@ -372,12 +368,8 @@ namespace rsx
 				return page_navigation::stay;
 			case pad_button::circle:
 				play_sound(sound_effect::cancel);
-				if (parent)
-				{
-					set_current_page(parent);
-					return page_navigation::back;
-				}
-				return page_navigation::exit;
+				set_current_page(ensure(parent));
+				return page_navigation::back;
 			default:
 				return page_navigation::stay;
 			}
