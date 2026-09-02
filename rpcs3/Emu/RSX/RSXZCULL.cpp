@@ -156,6 +156,9 @@ namespace rsx
 
 				if (m_pending_writes.empty())
 				{
+					// Immediate write, flush MM queue
+					rsx::mm_flush();
+
 					// No need to queue this if there is no pending request in the pipeline anyway
 					write(sink, ptimer->timestamp(), type, m_statistics_map[m_statistics_tag_id].result);
 					return;
@@ -174,6 +177,7 @@ namespace rsx
 					It->counter_tag = m_statistics_tag_id;
 					It->sink = sink;
 					It->type = type;
+					It->sync_tag = rsx::get_shared_tag();
 
 					if (forwarder != &(*It))
 					{
@@ -363,9 +367,6 @@ namespace rsx
 				break;
 			}
 
-			// Reports are strongly ordered.
-			rsx::mm_flush();
-
 			rsx::reservation_lock<true> lock(sink, 16);
 			auto report = vm::get_super_ptr<atomic_t<CellGcmReportData>>(sink);
 			report->store({timestamp, value, 0});
@@ -373,6 +374,9 @@ namespace rsx
 
 		void ZCULL_control::write(queued_report_write* writer, u64 timestamp, u32 value)
 		{
+			// Reports are strongly ordered.
+			rsx::mm_flush_partial(writer->sync_tag);
+
 			write(writer->sink, timestamp, writer->type, value);
 			on_report_completed(writer->sink);
 
