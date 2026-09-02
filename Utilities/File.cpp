@@ -1234,7 +1234,7 @@ bool fs::is_optical_raw_device(const std::string& path)
 #if defined(__APPLE__)
 	// On Mac OS X optical disks will only ever be mounted under /dev/disk(whatever), similar for raw devices,
 	// so reject anything not containing the disk string.
-	if (!path.contains("disk"))
+	if (!path.starts_with("/dev/disk") && !path.starts_with("/dev/rdisk"))
 	{
 		return false;
 	}
