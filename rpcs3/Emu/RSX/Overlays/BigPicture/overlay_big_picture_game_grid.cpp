@@ -161,7 +161,7 @@ namespace rsx
 
 		void big_picture_game_grid::finish_reload(std::vector<std::unique_ptr<big_picture_game_tile>>&& tiles)
 		{
-			std::lock_guard lock(m_reload_mutex);
+			std::lock_guard lock(m_mutex);
 
 			if (thread_ctrl::state() == thread_state::aborting)
 			{
@@ -280,6 +280,8 @@ namespace rsx
 
 		page_navigation big_picture_game_grid::handle_button_press(pad_button button_press, bool is_auto_repeat, u64 auto_repeat_interval_ms)
 		{
+			std::lock_guard lock(m_mutex);
+
 			if (m_loading) return page_navigation::stay;
 
 			const bool do_play_sound = !is_auto_repeat || auto_repeat_interval_ms >= user_interface::m_auto_repeat_ms_interval_default;
@@ -384,7 +386,7 @@ namespace rsx
 
 		compiled_resource& big_picture_game_grid::get_compiled()
 		{
-			std::lock_guard lock(m_reload_mutex);
+			std::lock_guard lock(m_mutex);
 
 			if (!m_highlight->is_compiled() ||
 				(!m_tiles.empty() && m_grid && !m_grid->is_compiled()) ||
