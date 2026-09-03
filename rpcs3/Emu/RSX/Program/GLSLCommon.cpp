@@ -270,9 +270,9 @@ namespace glsl
 				enabled_options.push_back("_ENABLE_DEPTH_COMPARE");
 			}
 
-			if (props.depth_buffer_multisampled)
+			if (props.ROP_output_multisampled)
 			{
-				enabled_options.push_back("_ENABLE_DEPTH_BUFFER_MULTISAMPLED");
+				enabled_options.push_back("_ENABLE_ROP_OUTPUT_MULTISAMPLED");
 			}
 		}
 

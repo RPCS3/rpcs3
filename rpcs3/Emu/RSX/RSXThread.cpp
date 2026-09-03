@@ -300,15 +300,6 @@ namespace rsx
 		const bool is_blend_config_dirty = RSX(ctx)->m_graphics_state.test(rsx::blend_config_dirty);
 		RSX(ctx)->m_graphics_state.clear(rsx::blend_config_dirty);
 
-		// FIXME: Unimplemented
-		if (RSX(ctx)->get_backend_config().supports_hw_msaa &&
-			REGS(ctx)->surface_antialias() != rsx::surface_antialiasing::center_1_sample)
-		{
-			const bool changed = !!(fragment_ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING);
-			fragment_ctrl &= ~RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
-			return changed;
-		}
-
 		const auto blend_enable_mask = REGS(ctx)->blend_enabled_mask() & REGS(ctx)->surface_color_target_mask();
 		const bool programmable_blend_active = !!(fragment_ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING);
 		const bool is_blending_active = !!blend_enable_mask && !REGS(ctx)->logic_op_enabled();
