@@ -472,8 +472,8 @@ namespace gcm
 
 		RSX_SHADER_CONTROL_TEXTURE_FORMAT_CONVERT   = 0x04000000, // Allow format conversions (BX2, SNORM, SRGB, RENORM)
 		RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE    = 0x08000000, // Emulate depth comparisons
-		RSX_SHADER_CONTROL_MULTISAMPLED_ZBUFFER     = 0x10000000, // Z buffer is multisampled. Only affects depth comparison behavior at this time.
 
+		RSX_SHADER_CONTROL_ROP_MULTISAMPLED         = 0x10000000, // ROP outputs are multisampled
 		RSX_SHADER_CONTROL_ROP_OUTPUT_REMAP         = 0x20000000, // ROP outputs need channel swizzles.
 		RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING    = 0x40000000, // Enable programmable blending.
 
