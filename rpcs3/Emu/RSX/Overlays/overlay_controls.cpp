@@ -7,6 +7,7 @@
 #include "Utilities/File.h"
 #include "Emu/Cell/timers.hpp"
 #include "Loader/ISO.h"
+#include "Emu/system_config.h"
 
 #include <numbers>
 
@@ -257,6 +258,16 @@ namespace rsx
 			}
 
 			return info;
+		}
+
+		resource_config::standard_image_resource resource_config::confirm_button_resource()
+		{
+			return g_cfg.sys.enter_button_assignment == enter_button_assign::circle ? circle : cross;
+		}
+
+		resource_config::standard_image_resource resource_config::cancel_button_resource()
+		{
+			return g_cfg.sys.enter_button_assignment == enter_button_assign::circle ? cross : circle;
 		}
 
 		void resource_config::load_files()
