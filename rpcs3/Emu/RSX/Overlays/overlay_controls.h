@@ -101,6 +101,10 @@ namespace rsx
 			void free_resources();
 
 			static std::unique_ptr<image_info> load_icon(std::string_view relative_path);
+
+			// Cross/Circle icon for confirm/cancel prompts, swapped when "Enter button assignment" is Circle.
+			static standard_image_resource confirm_button_resource();
+			static standard_image_resource cancel_button_resource();
 		};
 
 		struct compiled_resource

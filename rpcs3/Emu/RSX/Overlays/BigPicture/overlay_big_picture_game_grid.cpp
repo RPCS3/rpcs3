@@ -65,12 +65,12 @@ namespace rsx
 			m_highlight->back_color = color4f(0.f, 0.f, 0.f, 0.f);
 			m_highlight->pulse_effect_enabled = true;
 
-			m_back_hint.set_image_resource(resource_config::standard_image_resource::circle);
+			m_back_hint.set_image_resource(resource_config::cancel_button_resource());
 			m_back_hint.set_text(localized_string_id::BIG_PICTURE_HINT_BACK);
 			m_back_hint.set_font("Arial", 16);
 			m_back_hint.set_pos(x + width - 2 * (30 + 120), y + height + 20);
 
-			m_select_hint.set_image_resource(resource_config::standard_image_resource::cross);
+			m_select_hint.set_image_resource(resource_config::confirm_button_resource());
 			m_select_hint.set_text(localized_string_id::BIG_PICTURE_HINT_SELECT);
 			m_select_hint.set_font("Arial", 16);
 			m_select_hint.set_pos(x + width - (30 + 120), y + height + 20);

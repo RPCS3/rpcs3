@@ -47,16 +47,8 @@ namespace rsx
 			btn_cancel.set_pos(685, 420);
 			btn_cancel.set_font("Arial", 16);
 
-			if (g_cfg.sys.enter_button_assignment == enter_button_assign::circle)
-			{
-				btn_ok.set_image_resource(resource_config::standard_image_resource::circle);
-				btn_cancel.set_image_resource(resource_config::standard_image_resource::cross);
-			}
-			else
-			{
-				btn_ok.set_image_resource(resource_config::standard_image_resource::cross);
-				btn_cancel.set_image_resource(resource_config::standard_image_resource::circle);
-			}
+			btn_ok.set_image_resource(resource_config::confirm_button_resource());
+			btn_cancel.set_image_resource(resource_config::cancel_button_resource());
 
 			fade_animation.duration_sec = 0.15f;
 
