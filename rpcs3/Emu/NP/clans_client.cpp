@@ -923,11 +923,14 @@ namespace clan
 
 		pugi::xml_node status = clan.append_child("bin-attr1"sv);
 
-		byte bin_attr_1[SCE_NP_CLANS_MEMBER_BINARY_ATTRIBUTE1_MAX_SIZE * 2 + 1] = {0};
-		uint32_t bin_attr_1_size = UINT32_MAX;
-		Base64_Encode_NoNl(info.binAttr1, info.binData1Size, bin_attr_1, &bin_attr_1_size);
+		const u32 bin_data_size = static_cast<u32>(info.binData1Size);
+		if (bin_data_size > sizeof(info.binAttr1))
+			return SCE_NP_CLANS_ERROR_INVALID_ARGUMENT;
 
-		if (bin_attr_1_size == UINT32_MAX)
+		byte bin_attr_1[SCE_NP_CLANS_MEMBER_BINARY_ATTRIBUTE1_MAX_SIZE * 2 + 1] = {0};
+		uint32_t bin_attr_1_size = sizeof(bin_attr_1);
+
+		if (Base64_Encode_NoNl(info.binAttr1, bin_data_size, bin_attr_1, &bin_attr_1_size) != 0)
 			return SCE_NP_CLANS_ERROR_INVALID_ARGUMENT;
 
 		// `reinterpret_cast` used to let the compiler select the correct overload of `set`
