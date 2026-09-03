@@ -290,7 +290,7 @@ namespace rsx
 		}
 	}
 
-	static bool evaluate_programmable_blending_state(rsx::context* ctx, RSXFragmentProgram& fragment_program)
+	static bool evaluate_programmable_blending_state(rsx::context* ctx, u32& fragment_ctrl)
 	{
 		// FIXME: Performance
 		auto& graphics_state = RSX(ctx)->m_graphics_state;
@@ -306,13 +306,13 @@ namespace rsx
 		if (RSX(ctx)->get_backend_config().supports_hw_msaa &&
 			REGS(ctx)->surface_antialias() != rsx::surface_antialiasing::center_1_sample)
 		{
-			const bool changed = !!(fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING);
-			fragment_program.ctrl &= ~RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
+			const bool changed = !!(fragment_ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING);
+			fragment_ctrl &= ~RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
 			return changed;
 		}
 
 		const auto blend_enable_mask = REGS(ctx)->blend_enabled_mask() & REGS(ctx)->surface_color_target_mask();
-		const bool programmable_blend_active = !!(fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING);
+		const bool programmable_blend_active = !!(fragment_ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING);
 		const bool is_blending_active = !!blend_enable_mask && !REGS(ctx)->logic_op_enabled();
 
 		if (!is_blending_active && !programmable_blend_active)
@@ -322,7 +322,7 @@ namespace rsx
 
 		if (!is_blending_active)
 		{
-			fragment_program.ctrl &= ~RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
+			fragment_ctrl &= ~RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
 			return true;
 		}
 
@@ -372,11 +372,11 @@ namespace rsx
 
 		if (!need_programmable_blending)
 		{
-			fragment_program.ctrl &= ~RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
+			fragment_ctrl &= ~RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
 			return true;
 		}
 
-		fragment_program.ctrl |= RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
+		fragment_ctrl |= RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
 		return true;
 	}
 
@@ -2060,29 +2060,51 @@ namespace rsx
 
 	rsx::flags32_t thread::get_fragment_program_export_config()
 	{
+		u32 expected_ctrl = 0;
+
+		// Programmable blending
+		if (backend_config.supports_programmable_blending)
+		{
+			expected_ctrl = current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
+
+			if (m_graphics_state.test(rsx::pipeline_config_dirty))
+			{
+				evaluate_programmable_blending_state(m_ctx, expected_ctrl);
+			}
+		}
+
+		// Resolve MSAA here if needed
+		if (!!(expected_ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING) &&
+			REGS(m_ctx)->surface_antialias() != rsx::surface_antialiasing::center_1_sample &&
+			backend_config.supports_hw_msaa)
+		{
+			expected_ctrl |= RSX_SHADER_CONTROL_ROP_MULTISAMPLED;
+		}
+
+		// Depth compare
 		if (!g_cfg.video.emulate_depth_compare) [[ likely ]]
 		{
-			return 0;
+			return expected_ctrl;
 		}
 
 		if (REGS(m_ctx)->current_draw_clause.classify_mode() != primitive_class::polygon)
 		{
-			return 0;
+			return expected_ctrl;
 		}
-
-		u32 expected_ctrl = 0;
 
 		if (m_framebuffer_layout.zeta_address &&
 			REGS(m_ctx)->depth_test_enabled() &&
 			REGS(m_ctx)->depth_func() == rsx::comparison_function::equal)
 		{
 			expected_ctrl |= RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE;
+		}
 
-			if (backend_config.supports_hw_msaa &&
-				REGS(m_ctx)->surface_antialias() != rsx::surface_antialiasing::center_1_sample)
-			{
-				expected_ctrl |= RSX_SHADER_CONTROL_MULTISAMPLED_ZBUFFER;
-			}
+		// Resolve MSAA here if needed
+		if ((expected_ctrl & (RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE | RSX_SHADER_CONTROL_ROP_MULTISAMPLED)) == RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE &&
+			REGS(m_ctx)->surface_antialias() != rsx::surface_antialiasing::center_1_sample &&
+			backend_config.supports_hw_msaa)
+		{
+			expected_ctrl |= RSX_SHADER_CONTROL_ROP_MULTISAMPLED;
 		}
 
 		return expected_ctrl;
@@ -2182,7 +2204,11 @@ namespace rsx
 	{
 		m_program_cache_hint.invalidate(m_graphics_state.load());
 
-		constexpr u32 fs_export_config_mask = (RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE | RSX_SHADER_CONTROL_MULTISAMPLED_ZBUFFER);
+		constexpr u32 fs_export_config_mask =
+			RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE |
+			RSX_SHADER_CONTROL_ROP_MULTISAMPLED |
+			RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
+
 		if (u32 export_ctrl = get_fragment_program_export_config();
 			(current_fragment_program.ctrl & fs_export_config_mask) != export_ctrl)
 		{
@@ -2192,17 +2218,6 @@ namespace rsx
 
 			// Signal backend to reload pipeline
 			m_graphics_state.set(rsx::pipeline_state::fragment_program_state_dirty);
-		}
-
-		if (m_graphics_state.test(rsx::pipeline_config_dirty) &&
-			backend_config.supports_programmable_blending)
-		{
-			if (evaluate_programmable_blending_state(m_ctx, current_fragment_program) &&
-				(current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING))
-			{
-				// Reload ROP control
-				m_graphics_state.set(rsx::pipeline_state::fragment_state_dirty);
-			}
 		}
 
 		prefetch_vertex_program();
@@ -2274,7 +2289,11 @@ namespace rsx
 
 		m_graphics_state.clear(rsx::pipeline_state::fragment_program_dirty);
 
-		current_fragment_program.ctrl = REGS(m_ctx)->shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT | RSX_SHADER_CONTROL_USES_KIL);
+		const u32 propagated_options_mask =
+			RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
+
+		current_fragment_program.ctrl &= propagated_options_mask;
+		current_fragment_program.ctrl |= REGS(m_ctx)->shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT | RSX_SHADER_CONTROL_USES_KIL);
 		current_fragment_program.texcoord_control_mask = REGS(m_ctx)->texcoord_control_mask();
 		current_fragment_program.two_sided_lighting = REGS(m_ctx)->two_side_light_en();
 		current_fragment_program.mrt_buffers_count = rsx::utility::get_mrt_buffers_count(REGS(m_ctx)->surface_color_target());
@@ -2296,8 +2315,6 @@ namespace rsx
 			{
 				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_POLYGON_STIPPLE;
 			}
-
-			current_fragment_program.ctrl |= get_fragment_program_export_config();
 		}
 		else if (REGS(m_ctx)->point_sprite_enabled() &&
 			REGS(m_ctx)->current_draw_clause.primitive == primitive_type::points)
@@ -2321,6 +2338,8 @@ namespace rsx
 			}
 		}
 
+		current_fragment_program.ctrl |= get_fragment_program_export_config();
+
 		// Check if framebuffer is actually an XRGB format and not a WZYX format
 		switch (REGS(m_ctx)->surface_color())
 		{
@@ -2342,16 +2361,6 @@ namespace rsx
 				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ROP_OUTPUT_REMAP;
 			}
 			break;
-		}
-
-		if (backend_config.supports_programmable_blending)
-		{
-			if (evaluate_programmable_blending_state(m_ctx, current_fragment_program) &&
-				!!(current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING))
-			{
-				// Reload ROP control bits. Is this really needed here?
-				m_graphics_state.set(rsx::pipeline_state::fragment_state_dirty);
-			}
 		}
 
 		const bool zeta_was_cyclic = m_graphics_state & rsx::zeta_address_is_cyclic;
