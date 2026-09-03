@@ -124,6 +124,11 @@ namespace rsx
 	// TODO: Proper context manager
 	static rsx::context s_ctx{ .rsxthr = nullptr, .register_state = &method_registers };
 
+	constexpr u32 fs_export_config_mask =
+		RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE |
+		RSX_SHADER_CONTROL_ROP_MULTISAMPLED |
+		RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
+
 	rsx_iomap_table::rsx_iomap_table() noexcept
 		: ea(fill_array(-1))
 		, io(fill_array(-1))
@@ -292,13 +297,6 @@ namespace rsx
 
 	static bool evaluate_programmable_blending_state(rsx::context* ctx, u32& fragment_ctrl)
 	{
-		// FIXME: Performance
-		auto& graphics_state = RSX(ctx)->m_graphics_state;
-		if (graphics_state.test(rsx::fragment_program_state_dirty))
-		{
-			return false;
-		}
-
 		const bool is_blend_config_dirty = RSX(ctx)->m_graphics_state.test(rsx::blend_config_dirty);
 		RSX(ctx)->m_graphics_state.clear(rsx::blend_config_dirty);
 
@@ -2204,11 +2202,6 @@ namespace rsx
 	{
 		m_program_cache_hint.invalidate(m_graphics_state.load());
 
-		constexpr u32 fs_export_config_mask =
-			RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE |
-			RSX_SHADER_CONTROL_ROP_MULTISAMPLED |
-			RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
-
 		if (u32 export_ctrl = get_fragment_program_export_config();
 			(current_fragment_program.ctrl & fs_export_config_mask) != export_ctrl)
 		{
@@ -2289,10 +2282,7 @@ namespace rsx
 
 		m_graphics_state.clear(rsx::pipeline_state::fragment_program_dirty);
 
-		const u32 propagated_options_mask =
-			RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
-
-		current_fragment_program.ctrl &= propagated_options_mask;
+		current_fragment_program.ctrl &= fs_export_config_mask;
 		current_fragment_program.ctrl |= REGS(m_ctx)->shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT | RSX_SHADER_CONTROL_USES_KIL);
 		current_fragment_program.texcoord_control_mask = REGS(m_ctx)->texcoord_control_mask();
 		current_fragment_program.two_sided_lighting = REGS(m_ctx)->two_side_light_en();
@@ -2337,8 +2327,6 @@ namespace rsx
 				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ALPHA_TO_COVERAGE;
 			}
 		}
-
-		current_fragment_program.ctrl |= get_fragment_program_export_config();
 
 		// Check if framebuffer is actually an XRGB format and not a WZYX format
 		switch (REGS(m_ctx)->surface_color())
