@@ -210,6 +210,8 @@ namespace glsl
 				{ "FRAG_DEPTH_FLOAT_BIT        ", rsx::ROP_control_bits::FRAG_DEPTH_FLOAT_BIT },
 				{ "MRT_CHANNEL_REMAP_OFFSET    ", rsx::ROP_control_bits::MRT_CHANNEL_REMAP_OFFSET },
 				{ "MRT_CHANNEL_REMAP_LENGTH    ", rsx::ROP_control_bits::MRT_CHANNEL_REMAP_NUM_BITS },
+				{ "MRT_BLEND_TARGETS_OFFSET    ", rsx::ROP_control_bits::MRT_BLEND_TARGETS_OFFSET },
+				{ "MRT_BLEND_TARGETS_LENGTH    ", rsx::ROP_control_bits::MRT_BLEND_TARGETS_NUM_BITS },
 				{ "ROP_CMD_MASK                ", rsx::ROP_control_bits::ROP_CMD_MASK }
 			});
 

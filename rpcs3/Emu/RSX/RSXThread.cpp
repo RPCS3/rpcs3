@@ -299,6 +299,9 @@ namespace rsx
 			return false;
 		}
 
+		const bool is_blend_config_dirty = RSX(ctx)->m_graphics_state.test(rsx::blend_config_dirty);
+		RSX(ctx)->m_graphics_state.clear(rsx::blend_config_dirty);
+
 		// FIXME: Unimplemented
 		if (RSX(ctx)->get_backend_config().supports_hw_msaa &&
 			REGS(ctx)->surface_antialias() != rsx::surface_antialiasing::center_1_sample)
@@ -355,6 +358,11 @@ namespace rsx
 			default:
 				break;
 			}
+		}
+
+		if (need_programmable_blending && is_blend_config_dirty)
+		{
+			RSX(ctx)->m_graphics_state.set(rsx::fragment_state_dirty);
 		}
 
 		if (need_programmable_blending == programmable_blend_active)
@@ -2189,7 +2197,12 @@ namespace rsx
 		if (m_graphics_state.test(rsx::pipeline_config_dirty) &&
 			backend_config.supports_programmable_blending)
 		{
-			evaluate_programmable_blending_state(m_ctx, current_fragment_program);
+			if (evaluate_programmable_blending_state(m_ctx, current_fragment_program) &&
+				(current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING))
+			{
+				// Reload ROP control
+				m_graphics_state.set(rsx::pipeline_state::fragment_state_dirty);
+			}
 		}
 
 		prefetch_vertex_program();
@@ -2333,7 +2346,12 @@ namespace rsx
 
 		if (backend_config.supports_programmable_blending)
 		{
-			evaluate_programmable_blending_state(m_ctx, current_fragment_program);
+			if (evaluate_programmable_blending_state(m_ctx, current_fragment_program) &&
+				!!(current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING))
+			{
+				// Reload ROP control bits. Is this really needed here?
+				m_graphics_state.set(rsx::pipeline_state::fragment_state_dirty);
+			}
 		}
 
 		const bool zeta_was_cyclic = m_graphics_state & rsx::zeta_address_is_cyclic;

@@ -40,21 +40,13 @@ R"(
 // ================= Post-output color stages =================
 #if _MRT_BUFFERS_COUNT >= 1
 
-#ifdef _ENABLE_PROGRAMMABLE_BLENDING
-	// Stash the raw source data
-	MRT0_DO(vec4 blend_s0 = col0;)
-	MRT1_DO(vec4 blend_s1 = col1;)
-	MRT2_DO(vec4 blend_s2 = col2;)
-	MRT3_DO(vec4 blend_s3 = col3;)
-#endif
-
 // NOTE: Blending happens before output remapping as per hardware tests.
 // Sources = raw shader output, Dest = Remapped output from previous draw
 #ifdef _ENABLE_PROGRAMMABLE_BLENDING
-	MRT0_DO(col0 = _mrt_color_t(do_blend(blend_s0, mrt_color0));)
-	MRT1_DO(col1 = _mrt_color_t(do_blend(blend_s1, mrt_color1));)
-	MRT2_DO(col2 = _mrt_color_t(do_blend(blend_s2, mrt_color2));)
-	MRT3_DO(col3 = _mrt_color_t(do_blend(blend_s3, mrt_color3));)
+	MRT0_BLEND_DO(col0 = _mrt_color_t(do_blend(col0, mrt_color0));)
+	MRT1_BLEND_DO(col1 = _mrt_color_t(do_blend(col1, mrt_color1));)
+	MRT2_BLEND_DO(col2 = _mrt_color_t(do_blend(col2, mrt_color2));)
+	MRT3_BLEND_DO(col3 = _mrt_color_t(do_blend(col3, mrt_color3));)
 #endif
 
 #ifdef _ENABLE_ROP_CHANNEL_REMAPPING
