@@ -52,7 +52,7 @@ namespace rsx
 			static constexpr u16 m_columns = 5;
 			static constexpr u16 m_tile_size = 200;
 
-			std::mutex m_reload_mutex;
+			std::mutex m_mutex;
 			std::unique_ptr<named_thread<std::function<void()>>> m_game_enumeration_thread;
 
 			game_enumeration<big_picture_game_info> m_game_enumeration;

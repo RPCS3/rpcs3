@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "overlay_manager.h"
-#include "Emu/System.h"
 #include <util/asm.hpp>
 
 namespace rsx
