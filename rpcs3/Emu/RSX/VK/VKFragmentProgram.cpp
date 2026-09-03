@@ -273,9 +273,13 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 	if (m_prog.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING)
 	{
+		const std::string_view att_type = (m_prog.ctrl & RSX_SHADER_CONTROL_ROP_MULTISAMPLED)
+			? "subpassInputMS"sv
+			: "subpassInput"sv;
+
 		for (u32 i = 0; i < m_prog.mrt_buffers_count; ++i)
 		{
-			OS << "layout(input_attachment_index= " << i << ", set=" << vk::glsl::binding_set_index_fragment << ", binding=" << vk_prog->binding_table.frag_src_location[i] << ") uniform subpassInput frag_src_" << i << ";\n";
+			OS << "layout(input_attachment_index= " << i << ", set=" << vk::glsl::binding_set_index_fragment << ", binding=" << vk_prog->binding_table.frag_src_location[i] << ") uniform " << att_type << " frag_src_" << i << ";\n";
 
 			inputs.push_back(vk::glsl::program_input::make(
 				glsl::glsl_fragment_program,
@@ -414,7 +418,7 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.require_alpha_kill = !!(m_prog.ctrl & RSX_SHADER_CONTROL_TEXTURE_ALPHA_KILL);
 	m_shader_props.require_color_format_convert = !!(m_prog.ctrl & RSX_SHADER_CONTROL_TEXTURE_FORMAT_CONVERT);
 	m_shader_props.emulate_depth_compare = !!(m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE);
-	m_shader_props.depth_buffer_multisampled = !!(m_prog.ctrl & RSX_SHADER_CONTROL_ROP_MULTISAMPLED);
+	m_shader_props.ROP_output_multisampled = !!(m_prog.ctrl & RSX_SHADER_CONTROL_ROP_MULTISAMPLED);
 
 	// Declare global constants
 	if (m_shader_props.require_fog_read)
@@ -539,13 +543,22 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 	OS << "void main()\n";
 	OS << "{\n";
 
-	if ((m_prog.ctrl & RSX_SHADER_CONTROL_ALPHA_TEST) ||
-		(m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE) ||
-		(m_prog.ctrl & RSX_SHADER_CONTROL_ROP_OUTPUT_REMAP))
+	constexpr u32 ROP_control_access_options =
+		RSX_SHADER_CONTROL_ALPHA_TEST |
+		RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE |
+		RSX_SHADER_CONTROL_ROP_OUTPUT_REMAP |
+		RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
+
+	if (m_prog.ctrl & ROP_control_access_options)
 	{
-		OS <<
-			"	const uint rop_control = fs_contexts[_fs_context_offset].rop_control;\n"
-			"	const float alpha_ref = fs_contexts[_fs_context_offset].alpha_ref;\n\n";
+		OS << "	const uint rop_control = fs_contexts[_fs_context_offset].rop_control;\n";
+
+		if (m_prog.ctrl & RSX_SHADER_CONTROL_ALPHA_TEST)
+		{
+			OS << "	const float alpha_ref = fs_contexts[_fs_context_offset].alpha_ref;\n";
+		}
+
+		OS << "\n";
 	}
 
 	::glsl::insert_rop_init(OS, m_prog.mrt_buffers_count);

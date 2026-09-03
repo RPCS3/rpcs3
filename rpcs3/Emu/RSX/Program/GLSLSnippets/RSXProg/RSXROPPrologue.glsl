@@ -48,7 +48,12 @@ const uint ROP_remap = get_ROP_channel_remap();
 
 #ifdef _ENABLE_PROGRAMMABLE_BLENDING
 #define IS_MRT_BLEND_ENABLED(n) _test_bit(rop_control, (n) + MRT_BLEND_TARGETS_OFFSET)
+
+#ifdef _ENABLE_ROP_OUTPUT_MULTISAMPLED
+#define FRAG_LOAD(n) mrt_color##n = subpassLoad(frag_src_##n, gl_SampleID)
+#else
 #define FRAG_LOAD(n) mrt_color##n = subpassLoad(frag_src_##n)
+#endif
 
 #define MRT0_BLEND_DO(expr) MRT0_DO(if (IS_MRT_BLEND_ENABLED(0)) expr)
 #define MRT1_BLEND_DO(expr) MRT1_DO(if (IS_MRT_BLEND_ENABLED(1)) expr)
