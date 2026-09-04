@@ -244,6 +244,7 @@ namespace vk
 
 	// TODO: This should be deprecated soon (kd)
 	vk::pipeline_props decode_rsx_state(
+		const rsx::context* ctx,
 		const vertex_input_assembly_state& vertex_input,
 		vk::render_target* ds,
 		const rsx::backend_configuration& backend_config,
@@ -260,32 +261,32 @@ namespace vk
 
 		// Rasterizer state
 		properties.state.set_attachment_count(num_draw_buffers);
-		properties.state.set_front_face(vk::get_front_face(rsx::method_registers.front_face_mode()));
-		properties.state.enable_depth_clamp(rsx::method_registers.depth_clamp_enabled() || !rsx::method_registers.depth_clip_enabled());
+		properties.state.set_front_face(vk::get_front_face(REGS(ctx)->front_face_mode()));
+		properties.state.enable_depth_clamp(REGS(ctx)->depth_clamp_enabled() || !REGS(ctx)->depth_clip_enabled());
 		properties.state.enable_depth_bias(true);
 		properties.state.enable_depth_bounds_test(depth_bounds_support);
 
-		if (rsx::method_registers.depth_test_enabled())
+		if (REGS(ctx)->depth_test_enabled())
 		{
 			//NOTE: Like stencil, depth write is meaningless without depth test
-			properties.state.set_depth_mask(rsx::method_registers.depth_write_enabled());
-			properties.state.enable_depth_test(vk::get_compare_func(rsx::method_registers.depth_func()));
+			properties.state.set_depth_mask(REGS(ctx)->depth_write_enabled());
+			properties.state.enable_depth_test(vk::get_compare_func(REGS(ctx)->depth_func()));
 		}
 
-		if (rsx::method_registers.cull_face_enabled())
+		if (REGS(ctx)->cull_face_enabled())
 		{
-			properties.state.enable_cull_face(vk::get_cull_face(rsx::method_registers.cull_face_mode()));
+			properties.state.enable_cull_face(vk::get_cull_face(REGS(ctx)->cull_face_mode()));
 		}
 
-		const auto host_write_mask = rsx::get_write_output_mask(rsx::method_registers.surface_color());
+		const auto host_write_mask = rsx::get_write_output_mask(REGS(ctx)->surface_color());
 		for (uint index = 0; index < num_draw_buffers; ++index)
 		{
-			bool color_mask_b = rsx::method_registers.color_mask_b(index);
-			bool color_mask_g = rsx::method_registers.color_mask_g(index);
-			bool color_mask_r = rsx::method_registers.color_mask_r(index);
-			bool color_mask_a = rsx::method_registers.color_mask_a(index);
+			bool color_mask_b = REGS(ctx)->color_mask_b(index);
+			bool color_mask_g = REGS(ctx)->color_mask_g(index);
+			bool color_mask_r = REGS(ctx)->color_mask_r(index);
+			bool color_mask_a = REGS(ctx)->color_mask_a(index);
 
-			switch (rsx::method_registers.surface_color())
+			switch (REGS(ctx)->surface_color())
 			{
 			case rsx::surface_color_format::b8:
 				rsx::get_b8_colormask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
@@ -306,23 +307,23 @@ namespace vk
 		}
 
 		// LogicOp and Blend are mutually exclusive. If both are enabled, LogicOp takes precedence.
-		if (rsx::method_registers.logic_op_enabled())
+		if (REGS(ctx)->logic_op_enabled())
 		{
-			properties.state.enable_logic_op(vk::get_logic_op(rsx::method_registers.logic_operation()));
+			properties.state.enable_logic_op(vk::get_logic_op(REGS(ctx)->logic_operation()));
 		}
 		else if (!force_disable_blending)
 		{
 			VkBlendFactor sfactor_rgb, sfactor_a, dfactor_rgb, dfactor_a;
 			VkBlendOp equation_rgb, equation_a;
 
-			if (const auto blend_enabled = rsx::method_registers.blend_enabled_mask())
+			if (const auto blend_enabled = REGS(ctx)->blend_enabled_mask())
 			{
-				sfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_rgb());
-				sfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_sfactor_a());
-				dfactor_rgb = vk::get_blend_factor(rsx::method_registers.blend_func_dfactor_rgb());
-				dfactor_a = vk::get_blend_factor(rsx::method_registers.blend_func_dfactor_a());
-				equation_rgb = vk::get_blend_op(rsx::method_registers.blend_equation_rgb());
-				equation_a = vk::get_blend_op(rsx::method_registers.blend_equation_a());
+				sfactor_rgb = vk::get_blend_factor(REGS(ctx)->blend_func_sfactor_rgb());
+				sfactor_a = vk::get_blend_factor(REGS(ctx)->blend_func_sfactor_a());
+				dfactor_rgb = vk::get_blend_factor(REGS(ctx)->blend_func_dfactor_rgb());
+				dfactor_a = vk::get_blend_factor(REGS(ctx)->blend_func_dfactor_a());
+				equation_rgb = vk::get_blend_op(REGS(ctx)->blend_equation_rgb());
+				equation_a = vk::get_blend_op(REGS(ctx)->blend_equation_a());
 
 				for (u8 idx = 0; idx < num_draw_buffers; ++idx)
 				{
@@ -334,31 +335,31 @@ namespace vk
 			}
 		}
 
-		if (rsx::method_registers.stencil_test_enabled())
+		if (REGS(ctx)->stencil_test_enabled())
 		{
-			if (!rsx::method_registers.two_sided_stencil_test_enabled())
+			if (!REGS(ctx)->two_sided_stencil_test_enabled())
 			{
 				properties.state.enable_stencil_test(
-					vk::get_stencil_op(rsx::method_registers.stencil_op_fail()),
-					vk::get_stencil_op(rsx::method_registers.stencil_op_zfail()),
-					vk::get_stencil_op(rsx::method_registers.stencil_op_zpass()),
-					vk::get_compare_func(rsx::method_registers.stencil_func()),
+					vk::get_stencil_op(REGS(ctx)->stencil_op_fail()),
+					vk::get_stencil_op(REGS(ctx)->stencil_op_zfail()),
+					vk::get_stencil_op(REGS(ctx)->stencil_op_zpass()),
+					vk::get_compare_func(REGS(ctx)->stencil_func()),
 					0xFF, 0xFF); //write mask, func_mask, ref are dynamic
 			}
 			else
 			{
 				properties.state.enable_stencil_test_separate(0,
-					vk::get_stencil_op(rsx::method_registers.stencil_op_fail()),
-					vk::get_stencil_op(rsx::method_registers.stencil_op_zfail()),
-					vk::get_stencil_op(rsx::method_registers.stencil_op_zpass()),
-					vk::get_compare_func(rsx::method_registers.stencil_func()),
+					vk::get_stencil_op(REGS(ctx)->stencil_op_fail()),
+					vk::get_stencil_op(REGS(ctx)->stencil_op_zfail()),
+					vk::get_stencil_op(REGS(ctx)->stencil_op_zpass()),
+					vk::get_compare_func(REGS(ctx)->stencil_func()),
 					0xFF, 0xFF); //write mask, func_mask, ref are dynamic
 
 				properties.state.enable_stencil_test_separate(1,
-					vk::get_stencil_op(rsx::method_registers.back_stencil_op_fail()),
-					vk::get_stencil_op(rsx::method_registers.back_stencil_op_zfail()),
-					vk::get_stencil_op(rsx::method_registers.back_stencil_op_zpass()),
-					vk::get_compare_func(rsx::method_registers.back_stencil_func()),
+					vk::get_stencil_op(REGS(ctx)->back_stencil_op_fail()),
+					vk::get_stencil_op(REGS(ctx)->back_stencil_op_zfail()),
+					vk::get_stencil_op(REGS(ctx)->back_stencil_op_zpass()),
+					vk::get_compare_func(REGS(ctx)->back_stencil_func()),
 					0xFF, 0xFF); //write mask, func_mask, ref are dynamic
 			}
 
@@ -379,13 +380,13 @@ namespace vk
 
 		if (backend_config.supports_hw_a2c || num_rasterization_samples > 1)
 		{
-			const bool alpha_to_one_enable = rsx::method_registers.msaa_alpha_to_one_enabled() && backend_config.supports_hw_a2one;
+			const bool alpha_to_one_enable = REGS(ctx)->msaa_alpha_to_one_enabled() && backend_config.supports_hw_a2one;
 
 			properties.state.set_multisample_state(
 				num_rasterization_samples,
-				rsx::method_registers.msaa_sample_mask(),
-				rsx::method_registers.msaa_enabled(),
-				rsx::method_registers.msaa_alpha_to_coverage_enabled(),
+				REGS(ctx)->msaa_sample_mask(),
+				REGS(ctx)->msaa_enabled(),
+				REGS(ctx)->msaa_alpha_to_coverage_enabled(),
 				alpha_to_one_enable);
 
 			// A problem observed on multiple GPUs is that interior geometry edges can resolve 0 samples unless we force shading rate of 1.
@@ -1838,6 +1839,7 @@ bool VKGSRender::load_program()
 	if (m_graphics_state & rsx::pipeline_state::pipeline_config_dirty)
 	{
 		vk::pipeline_props properties = vk::decode_rsx_state(
+			m_ctx,
 			vertex_state,
 			m_rtts.m_bound_depth_stencil.second,
 			backend_config,
