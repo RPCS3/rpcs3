@@ -206,9 +206,12 @@ public:
 			return true;
 		}
 
-		template <typename T> requires Integral<T>
+		template <uint MaxBits = 0, typename T> requires Integral<T> && (MaxBits <= sizeof(T) * 8)
 		bool deserialize_vle(T& value)
 		{
+			using unsigned_type = std::make_unsigned_t<T>;
+			unsigned_type result{};
+			constexpr u32 bit_width = MaxBits ? sizeof(T) * 8 : MaxBits;
 			value = {};
 
 			for (u32 i = 0;; i += 7)
@@ -220,11 +223,24 @@ public:
 					return false;
 				}
 
-				value |= static_cast<T>(byte_data % 0x80) << i;
+				const unsigned_type payload = static_cast<unsigned_type>(byte_data % 0x80);
+
+				if (i >= bit_width || payload > (~unsigned_type{} >> i))
+				{
+					return false;
+				}
+
+				result |= payload << i;
 
 				if (!(byte_data & 0x80))
 				{
+					value = static_cast<T>(result);
 					break;
+				}
+
+				if (i > bit_width - 7)
+				{
+					return false;
 				}
 			}
 
@@ -290,14 +306,21 @@ public:
 			}
 
 			usz size = 0;
-			if (!deserialize_vle(size))
+			if (!deserialize_vle<28>(size))
 			{
 				return false;
 			}
 
 			if constexpr (Bitcopy<typename T::value_type>)
 			{
-				if (!raw_serialize([&](){ obj.resize(size); return obj.data(); }, sizeof(obj[0]) * size))
+				if (size > static_cast<usz>(umax) / sizeof(obj[0]))
+				{
+					return false;
+				}
+
+				const usz data_size = sizeof(obj[0]) * size;
+
+				if (!raw_serialize([&](){ obj.resize(size); return obj.data(); }, data_size))
 				{
 					obj.clear();
 					return false;
@@ -400,7 +423,7 @@ public:
 			}
 
 			usz size = 0;
-			if (!deserialize_vle(size))
+			if (!deserialize_vle<28>(size))
 			{
 				return false;
 			}
