@@ -690,6 +690,12 @@ namespace rsx
 			rop_control.set_output_remap(remap_index);
 		}
 
+		if (fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING)
+		{
+			const auto blend_enable_mask = REGS(m_ctx)->blend_enabled_mask() & REGS(m_ctx)->surface_color_target_mask();
+			rop_control.set_blend_target_mask(blend_enable_mask);
+		}
+
 		// Generate wpos coefficients
 		// wpos equation is now as follows (ignoring pixel center offset):
 		// wpos.y = (frag_coord / resolution_scale) * ((window_origin!=top)?-1.: 1.) + ((window_origin!=top)? window_height : 0)

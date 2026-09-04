@@ -76,6 +76,7 @@ public:
 		u32 ftex_location[16];                        // Texture locations array
 		u32 ftex_stencil_location[16];                // Texture stencil mirror array
 		u32 frag_depth_input_location = umax;         // Fragment depth compare
+		u32 frag_src_location[4];                     // Fragment input attachment locations
 
 	} binding_table;
 

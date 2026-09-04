@@ -7,29 +7,36 @@ R"(
 	}
 #endif
 
+// This definitely happens before output quantization.
 #ifdef _ENABLE_FRAMEBUFFER_SRGB
-	col0.rgb = _mrt_color_t(linear_to_srgb(col0)).rgb;
-	col1.rgb = _mrt_color_t(linear_to_srgb(col1)).rgb;
-	col2.rgb = _mrt_color_t(linear_to_srgb(col2)).rgb;
-	col3.rgb = _mrt_color_t(linear_to_srgb(col3)).rgb;
+	MRT0_DO(col0.rgb = _mrt_color_t(linear_to_srgb(col0)).rgb;)
+	MRT1_DO(col1.rgb = _mrt_color_t(linear_to_srgb(col1)).rgb;)
+	MRT2_DO(col2.rgb = _mrt_color_t(linear_to_srgb(col2)).rgb;)
+	MRT3_DO(col3.rgb = _mrt_color_t(linear_to_srgb(col3)).rgb;)
 #endif
 
-#ifdef _ENABLE_ROP_OUTPUT_ROUNDING
-	col0 = round_to_8bit(col0);
-	col1 = round_to_8bit(col1);
-	col2 = round_to_8bit(col2);
-	col3 = round_to_8bit(col3);
+#if defined(_ENABLE_ROP_OUTPUT_ROUNDING)
+	MRT0_DO(col0 = round_to_8bit(col0);)
+	MRT1_DO(col1 = round_to_8bit(col1);)
+	MRT2_DO(col2 = round_to_8bit(col2);)
+	MRT3_DO(col3 = round_to_8bit(col3);)
 #endif
 
-	// Post-output stages
-	// Alpha Testing
+// Alpha Testing. This stage always runs even without a color output.
 #ifdef _ENABLE_ALPHA_TEST
+	// TODO: Verify that alpha test actually runs on quantized output!
+	// Behavior was inferred from game observations but real tests will be needed here.
+#if _MRT_BUFFERS_COUNT >= 1
+  #define _alpha_quantize(v) v
+#else
+  #define _alpha_quantize(v) round_to_8bit(v)
+#endif // _MRT_BUFFERS_COUNT
 	const uint alpha_func = _get_bits(rop_control, ALPHA_TEST_FUNC_OFFSET, ALPHA_TEST_FUNC_LENGTH);
-	if (!comparison_passes(col0.a, alpha_ref, alpha_func))
+	if (!comparison_passes(_alpha_quantize(col0.a), alpha_ref, alpha_func))
 	{
 		discard;
 	}
-#endif
+#endif // _ENABLE_ALPHA_TEST
 
 #ifdef _ENABLE_ALPHA_TO_COVERAGE_TEST
 	if (!coverage_test_passes(col0))
@@ -38,12 +45,41 @@ R"(
 	}
 #endif
 
+// ================= Post-output color stages =================
+#if _MRT_BUFFERS_COUNT >= 1
+
+// NOTE: Blending happens before output remapping as per hardware tests.
+// Sources = raw shader output, Dest = Remapped output from previous draw
+#ifdef _ENABLE_PROGRAMMABLE_BLENDING
+	MRT0_BLEND_DO(col0 = _mrt_color_t(do_blend(col0, mrt_color0));)
+	MRT1_BLEND_DO(col1 = _mrt_color_t(do_blend(col1, mrt_color1));)
+	MRT2_BLEND_DO(col2 = _mrt_color_t(do_blend(col2, mrt_color2));)
+	MRT3_BLEND_DO(col3 = _mrt_color_t(do_blend(col3, mrt_color3));)
+#endif
+
+#ifdef _ENABLE_ROP_CHANNEL_REMAPPING
+	MRT0_DO(col0 = _mrt_color_t(remap_ROP_output(col0, ROP_remap));)
+	MRT1_DO(col1 = _mrt_color_t(remap_ROP_output(col1, ROP_remap));)
+	MRT2_DO(col2 = _mrt_color_t(remap_ROP_output(col2, ROP_remap));)
+	MRT3_DO(col3 = _mrt_color_t(remap_ROP_output(col3, ROP_remap));)
+#endif // _ENABLE_ROP_CHANNEL_REMAPPING
+
+	// Commit COLOR aspect
+	MRT0_DO(ocol0 = col0;)
+	MRT1_DO(ocol1 = col1;)
+	MRT2_DO(ocol2 = col2;)
+	MRT3_DO(ocol3 = col3;)
+
+#endif // _MRT_BUFFERS_COUNT >= 1
+
+//// ====================== Depth Export ===========================
+
 #ifdef _ENABLE_DEPTH_COMPARE
-#ifdef _ENABLE_DEPTH_BUFFER_MULTISAMPLED
+#ifdef _ENABLE_ROP_OUTPUT_MULTISAMPLED
 	float dstDepth = texelFetch(frag_depth, ivec2(gl_FragCoord.xy), gl_SampleID).r;
 #else
 	float dstDepth = texelFetch(frag_depth, ivec2(gl_FragCoord.xy), 0).r;
-#endif
+#endif // _ENABLE_ROP_OUTPUT_MULTISAMPLED
 	float srcDepth = gl_FragCoord.z;
 	float scale = _test_bit(rop_control, FRAG_DEPTH_24_BIT) ? float(0xffffffu) : float(0xffffu);
 
@@ -56,37 +92,5 @@ R"(
 	{
 		gl_FragDepth = srcDepth;
 	}
-#endif
-
-#ifdef _ENABLE_ROP_CHANNEL_REMAPPING
-	const uint ROP_remap = get_ROP_channel_remap();
-	col0 = _mrt_color_t(remap_ROP_output(col0, ROP_remap));
-	col1 = _mrt_color_t(remap_ROP_output(col1, ROP_remap));
-	col2 = _mrt_color_t(remap_ROP_output(col2, ROP_remap));
-	col3 = _mrt_color_t(remap_ROP_output(col3, ROP_remap));
-#endif
-
-#ifdef _ENABLE_PROGRAMMABLE_BLENDING
-	switch (framebufferCount)
-	{
-		case 4:
-			col3 = do_blend(col3, mrt_color[3]);
-			// Fallthrough
-		case 3:
-			col2 = do_blend(col2, mrt_color[2]);
-			// Fallthrough
-		case 2:
-			col1 = do_blend(col1, mrt_color[1]);
-			// Fallthrough
-		default:
-			col0 = do_blend(col0, mrt_color[0]);
-			break;
-	}
-#endif
-
-	// Commit
-	ocol0 = col0;
-	ocol1 = col1;
-	ocol2 = col2;
-	ocol3 = col3;
+#endif // _ENABLE_DEPTH_COMPARE
 )"
