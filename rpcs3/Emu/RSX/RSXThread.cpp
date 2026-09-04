@@ -315,6 +315,12 @@ namespace rsx
 			return true;
 		}
 
+		if (g_cfg.video.disable_hardware_blending)
+		{
+			fragment_ctrl |= RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
+			return !programmable_blend_active;
+		}
+
 		// We actually need to handle this, we're still blending
 		const auto is_signed_equation = [](rsx::blend_equation equation)
 		{

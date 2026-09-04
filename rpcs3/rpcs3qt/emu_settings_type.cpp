@@ -111,9 +111,10 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::ForceHwMSAAResolve,         get_cfg_location(local_cfg.video.force_hw_MSAA_resolve) },
 	{ emu_settings_type::DisableAsyncHostMM,         get_cfg_location(local_cfg.video.disable_async_host_memory_manager) },
 	{ emu_settings_type::RecordWithOverlays,         get_cfg_location(local_cfg.video.record_with_overlays) },
-	{ emu_settings_type::DisableHWTexelRemapping,    get_cfg_location(local_cfg.video.disable_hardware_texel_remapping) },
+	{ emu_settings_type::DisableHWBlending,          get_cfg_location(local_cfg.video.disable_hardware_texel_remapping) },
+	{ emu_settings_type::DisableHWTexelRemapping,    get_cfg_location(local_cfg.video.disable_hardware_blending) },
 	{ emu_settings_type::FsrSharpeningStrength,      get_cfg_location(local_cfg.video.rcas_sharpening_intensity) },
-	{ emu_settings_type::DisableBlitEngineScaling,    get_cfg_location(local_cfg.video.disable_blit_engine_upscaling) },
+	{ emu_settings_type::DisableBlitEngineScaling,   get_cfg_location(local_cfg.video.disable_blit_engine_upscaling) },
 
 	// Vulkan
 	{ emu_settings_type::VulkanAdapter,                    get_cfg_location(local_cfg.video.vk.adapter) },
