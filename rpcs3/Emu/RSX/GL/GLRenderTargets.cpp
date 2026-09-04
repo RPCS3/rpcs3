@@ -16,9 +16,9 @@ color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_forma
 	case rsx::surface_color_format::a8r8g8b8:
 		return{ ::gl::texture::type::uint_8_8_8_8_rev, ::gl::texture::format::bgra, ::gl::texture::internal_format::bgra8, true };
 
-	//These formats discard their alpha component, forced to 0 or 1
-	//All XBGR formats will have remapping before they can be read back in shaders as DRGB8
-	//Prefix o = 1, z = 0
+	// These formats discard their alpha component, forced to 0 or 1
+	// All XBGR formats will have remapping before they can be read back in shaders as DRGB8
+	// Prefix o = 1, z = 0
 	case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
 		return{ ::gl::texture::type::ushort_5_5_5_1, ::gl::texture::format::rgb, ::gl::texture::internal_format::bgr5a1, true,
 		{ ::gl::texture::channel::one, ::gl::texture::channel::r, ::gl::texture::channel::g, ::gl::texture::channel::b } };
@@ -54,7 +54,7 @@ color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_forma
 		{ ::gl::texture::channel::one, ::gl::texture::channel::r, ::gl::texture::channel::r, ::gl::texture::channel::r } };
 
 	case rsx::surface_color_format::g8b8:
-		return{ ::gl::texture::type::ubyte, ::gl::texture::format::rg, ::gl::texture::internal_format::rg8, false,
+		return{ ::gl::texture::type::ubyte, ::gl::texture::format::rg, ::gl::texture::internal_format::rg8, true,
 		{ ::gl::texture::channel::g, ::gl::texture::channel::r, ::gl::texture::channel::g, ::gl::texture::channel::r } };
 
 	case rsx::surface_color_format::x32:
