@@ -7,6 +7,14 @@ R"(
 	}
 #endif
 
+// This definitely happens before output quantization.
+#ifdef _ENABLE_FRAMEBUFFER_SRGB
+	MRT0_DO(col0.rgb = _mrt_color_t(linear_to_srgb(col0)).rgb;)
+	MRT1_DO(col1.rgb = _mrt_color_t(linear_to_srgb(col1)).rgb;)
+	MRT2_DO(col2.rgb = _mrt_color_t(linear_to_srgb(col2)).rgb;)
+	MRT3_DO(col3.rgb = _mrt_color_t(linear_to_srgb(col3)).rgb;)
+#endif
+
 #if defined(_ENABLE_ROP_OUTPUT_ROUNDING)
 	MRT0_DO(col0 = round_to_8bit(col0);)
 	MRT1_DO(col1 = round_to_8bit(col1);)
@@ -55,14 +63,6 @@ R"(
 	MRT2_DO(col2 = _mrt_color_t(remap_ROP_output(col2, ROP_remap));)
 	MRT3_DO(col3 = _mrt_color_t(remap_ROP_output(col3, ROP_remap));)
 #endif // _ENABLE_ROP_CHANNEL_REMAPPING
-
-// TODO: Check order on real hw. Does this happen before quantization or after?
-#ifdef _ENABLE_FRAMEBUFFER_SRGB
-	MRT0_DO(col0.rgb = _mrt_color_t(linear_to_srgb(col0)).rgb;)
-	MRT1_DO(col1.rgb = _mrt_color_t(linear_to_srgb(col1)).rgb;)
-	MRT2_DO(col2.rgb = _mrt_color_t(linear_to_srgb(col2)).rgb;)
-	MRT3_DO(col3.rgb = _mrt_color_t(linear_to_srgb(col3)).rgb;)
-#endif
 
 	// Commit COLOR aspect
 	MRT0_DO(ocol0 = col0;)
