@@ -206,12 +206,12 @@ public:
 			return true;
 		}
 
-		template <typename T> requires Integral<T>
+		template <uint MaxBits = 0, typename T> requires Integral<T> && (MaxBits <= sizeof(T) * 8)
 		bool deserialize_vle(T& value)
 		{
 			using unsigned_type = std::make_unsigned_t<T>;
 			unsigned_type result{};
-			constexpr u32 bit_width = sizeof(T) * 8;
+			constexpr u32 bit_width = MaxBits ? sizeof(T) * 8 : MaxBits;
 			value = {};
 
 			for (u32 i = 0;; i += 7)
@@ -306,7 +306,7 @@ public:
 			}
 
 			usz size = 0;
-			if (!deserialize_vle(size))
+			if (!deserialize_vle<28>(size))
 			{
 				return false;
 			}
@@ -423,7 +423,7 @@ public:
 			}
 
 			usz size = 0;
-			if (!deserialize_vle(size))
+			if (!deserialize_vle<28>(size))
 			{
 				return false;
 			}
