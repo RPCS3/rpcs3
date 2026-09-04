@@ -1694,15 +1694,16 @@ namespace rsx
 
 	std::pair<u32, bool> get_compatible_gcm_format(rsx::surface_color_format format)
 	{
+		// NOTE: HW tests prove that all multibyte formats need to swap bytes
 		switch (format)
 		{
 		case rsx::surface_color_format::r5g6b5:
-			return{ CELL_GCM_TEXTURE_R5G6B5, false };
+			return{ CELL_GCM_TEXTURE_R5G6B5, true };
 
 		case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
 		case rsx::surface_color_format::x8r8g8b8_o8r8g8b8:
 		case rsx::surface_color_format::a8r8g8b8:
-			return{ CELL_GCM_TEXTURE_A8R8G8B8, true }; //verified
+			return{ CELL_GCM_TEXTURE_A8R8G8B8, true };
 
 		case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
 		case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
@@ -1717,7 +1718,7 @@ namespace rsx
 
 		case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
 		case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
-			return{ CELL_GCM_TEXTURE_A1R5G5B5, false };
+			return{ CELL_GCM_TEXTURE_A1R5G5B5, true };
 
 		case rsx::surface_color_format::b8:
 			return{ CELL_GCM_TEXTURE_B8, false };
@@ -1726,7 +1727,7 @@ namespace rsx
 			return{ CELL_GCM_TEXTURE_G8B8, true };
 
 		case rsx::surface_color_format::x32:
-			return{ CELL_GCM_TEXTURE_X32_FLOAT, true }; //verified
+			return{ CELL_GCM_TEXTURE_X32_FLOAT, true };
 		default:
 			fmt::throw_exception("Unhandled surface format 0x%x", static_cast<u32>(format));
 		}
