@@ -198,9 +198,10 @@ vec4 remap_ROP_input(const in vec4 col, const in uint remap_index)
 	case ROP_REMAP_SWIZZLE_GBGB: // G8B8
 		return col.rgrg;
 	case ROP_REMAP_SWIZZLE_RGB1: // RGB1
-		return vec4(col.rgb, 1.f);
 	case ROP_REMAP_SWIZZLE_RGB0: // RGB0
-		return vec4(col.rgb, 0.f);
+		// This seems completely wrong but hwtest shows that blending with DST_ALPHA reads 1 for all XRGB8 formats regardless of the 0/1 values.
+		// Lucky for us this opens up the optimization opportunity to not need PB for such formats when only DST_A is referenced. SRC_A is another matter altogether.
+		return vec4(col.rgb, 1.f);
 	}
 }
 #endif
