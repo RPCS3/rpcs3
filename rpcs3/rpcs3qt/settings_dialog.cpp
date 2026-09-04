@@ -1446,6 +1446,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	EnhanceCheckBox(emu_settings_type::DisableSpinOptimization, ui->disableSpinOptimization, tooltips.settings.disable_spin_optimization);
 	EnhanceCheckBox(emu_settings_type::EnabledSPUEventsBusyLoop, ui->enableSpuEventsBusyLoop, tooltips.settings.enable_spu_events_busy_loop);
 	EnhanceCheckBox(emu_settings_type::DisableHWTexelRemapping, ui->disableHardwareTexelRemapping, tooltips.settings.disable_hw_texel_remapping);
+	EnhanceCheckBox(emu_settings_type::DisableHWBlending, ui->disableHardwareBlending, tooltips.settings.disable_hw_blending);
 
 	// Comboboxes
 
