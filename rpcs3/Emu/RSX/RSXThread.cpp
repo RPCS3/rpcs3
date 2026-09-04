@@ -329,24 +329,69 @@ namespace rsx
 			}
 		};
 
-		bool need_programmable_blending = is_signed_equation(REGS(ctx)->blend_equation_rgb()) || is_signed_equation(REGS(ctx)->blend_equation_a());
-		if (!need_programmable_blending)
+		const auto factor_references_alpha = [](rsx::blend_factor factor)
 		{
-			switch (REGS(ctx)->surface_color())
+			switch (factor)
 			{
-			case surface_color_format::x1r5g5b5_z1r5g5b5:
-			case surface_color_format::x1r5g5b5_o1r5g5b5:
-			case surface_color_format::x8r8g8b8_z8r8g8b8:
-			case surface_color_format::x8r8g8b8_o8r8g8b8:
-			case surface_color_format::b8:
-			case surface_color_format::g8b8:
-			case surface_color_format::x8b8g8r8_z8b8g8r8:
-			case surface_color_format::x8b8g8r8_o8b8g8r8:
-				need_programmable_blending = true;
-				break;
+			case rsx::blend_factor::src_alpha:
+			case rsx::blend_factor::one_minus_src_alpha:
+			case rsx::blend_factor::dst_alpha:
+			case rsx::blend_factor::one_minus_dst_alpha:
+			case rsx::blend_factor::src_alpha_saturate:
+				return true;
 			default:
-				break;
+				return false;
 			}
+		};
+
+		const auto shader_writes_alpha = [&]()
+		{
+			for (u32 i = 0, mask = blend_enable_mask; !!mask; mask >>= 1, i++)
+			{
+				if (REGS(ctx)->color_mask_a(i))
+				{
+					return true;
+				}
+			}
+			return false;
+		};
+
+		bool need_programmable_blending = false;
+		const auto surface_format = REGS(ctx)->surface_color();
+
+		switch (surface_format)
+		{
+		case surface_color_format::x1r5g5b5_z1r5g5b5:
+		case surface_color_format::x1r5g5b5_o1r5g5b5:
+		case surface_color_format::x8r8g8b8_z8r8g8b8:
+		case surface_color_format::x8r8g8b8_o8r8g8b8:
+		case surface_color_format::x8b8g8r8_z8b8g8r8:
+		case surface_color_format::x8b8g8r8_o8b8g8r8:
+			// Force PB if alpha is read in the RGB factors or A is written without passthrough.
+			if (factor_references_alpha(REGS(ctx)->blend_func_sfactor_rgb()) ||
+				factor_references_alpha(REGS(ctx)->blend_func_dfactor_rgb()))
+			{
+				need_programmable_blending = true;
+			}
+			else
+			{
+				need_programmable_blending = shader_writes_alpha() && (
+					REGS(ctx)->blend_equation_a() == rsx::blend_equation::reverse_subtract ||
+					REGS(ctx)->blend_equation_a() == rsx::blend_equation::min ||
+					REGS(ctx)->blend_equation_a() == rsx::blend_equation::max ||
+					REGS(ctx)->blend_func_sfactor_a() != rsx::blend_factor::one ||
+					REGS(ctx)->blend_func_dfactor_a() != rsx::blend_factor::zero);
+			}
+			break;
+		case surface_color_format::b8:
+		case surface_color_format::g8b8:
+			// These 2 don't accept custom factors anyway
+			[[ fallthrough ]];
+		default:
+			need_programmable_blending = need_programmable_blending ||
+				is_signed_equation(REGS(ctx)->blend_equation_rgb()) ||
+				is_signed_equation(REGS(ctx)->blend_equation_a());
+			break;
 		}
 
 		if (need_programmable_blending && is_blend_config_dirty)
