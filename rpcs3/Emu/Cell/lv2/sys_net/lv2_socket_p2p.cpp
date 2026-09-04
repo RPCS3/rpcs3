@@ -288,6 +288,12 @@ std::optional<s32> lv2_socket_p2p::sendto(s32 flags, const std::vector<u8>& buf,
 	inet_ntop(AF_INET, &native_addr.sin_addr, ip_str, sizeof(ip_str));
 	sys_net.trace("[P2P] Sending a packet to %s:%d:%d", ip_str, p2p_port, p2p_vport);
 
+	if (native_addr.sin_addr.s_addr == 0xFFFFFFFF && !so_broadcast)
+	{
+		sys_net.error("[P2P] Tried to send to broadcast address without SO_BROADCAST");
+		return {-SYS_NET_EACCES};
+	}
+
 	std::vector<u8> p2p_data(buf.size() + VPORT_P2P_HEADER_SIZE);
 	const le_t<u16> p2p_vport_le = p2p_vport;
 	const le_t<u16> src_vport_le = vport;
