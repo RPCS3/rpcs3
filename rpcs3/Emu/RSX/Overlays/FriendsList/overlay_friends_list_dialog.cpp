@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "../overlay_manager.h"
 #include "overlay_friends_list_dialog.h"
+#include "Emu/RSX/Overlays/HomeMenu/overlay_home_menu.h"
+#include "Emu/Cell/Modules/cellSysutil.h"
 #include "Emu/NP/np_handler.h"
 #include "Emu/NP/rpcn_config.h"
 #include "Emu/vfs_config.h"
@@ -328,10 +330,25 @@ namespace rsx
 					{
 						m_message_box->show(get_localized_string(prompt, message->first.c_str()), [this, message_id]()
 						{
-							if (g_fxo->get<named_thread<np::np_handler>>().select_invitation(message_id))
+							// Native system software reports the selected invitation after closing the home menu.
+							auto home_menu = ensure(g_fxo->get<display_manager>().get<home_menu_dialog>());
+							close(true, false);
+							home_menu->request_close([message_id]()
 							{
-								remove_game_invite(message_id);
-							}
+								auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+								if (nph.invoke_custom_menu_invitation_action(message_id))
+								{
+									return;
+								}
+
+								// Let the game process all system menu close callbacks before reporting the selected invitation.
+								sysutil_register_cb([message_id](ppu_thread&) -> s32
+								{
+									g_fxo->get<named_thread<np::np_handler>>().select_invitation(message_id);
+									return CELL_OK;
+								});
+							});
 						});
 					}
 					else
