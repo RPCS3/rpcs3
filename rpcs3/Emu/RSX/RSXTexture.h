@@ -1,6 +1,6 @@
 #pragma once
 #include "gcm_enums.h"
-#include "color_utils.h"
+#include "Utils/color_utils.hpp"
 
 namespace rsx
 {

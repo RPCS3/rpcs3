@@ -5,7 +5,7 @@
 #include "ranged_map.hpp"
 #include "surface_cache_dma.hpp"
 #include "../gcm_enums.h"
-#include "../rsx_utils.h"
+#include "../Utils/rsx_utils.h"
 #include <list>
 
 #include "util/asm.hpp"

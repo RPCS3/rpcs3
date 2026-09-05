@@ -1,9 +1,10 @@
 #include "stdafx.h"
 #include "RSXTexture.h"
 
-#include "rsx_utils.h"
 #include "Common/TextureUtils.h"
 #include "Program/GLSLCommon.h"
+#include "Utils/algorithm.hpp"
+#include "Utils/rsx_utils.h"
 
 #include "Emu/system_config.h"
 #include "util/simd.hpp"

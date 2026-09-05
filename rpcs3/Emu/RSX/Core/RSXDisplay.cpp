@@ -2,7 +2,7 @@
 #include "RSXDisplay.h"
 
 #include "../Common/simple_array.hpp"
-#include "../rsx_utils.h"
+#include "../Utils/rsx_utils.h"
 
 namespace rsx
 {

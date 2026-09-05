@@ -2,7 +2,7 @@
 #include "draw_call.hpp"
 
 #include "Emu/RSX/rsx_methods.h" // FIXME
-#include "Emu/RSX/rsx_utils.h"
+#include "Emu/RSX/Utils/rsx_utils.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/RSX/Common/BufferUtils.h"
 #include "Emu/RSX/NV47/HW/context.h"

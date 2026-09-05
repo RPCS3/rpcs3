@@ -1,6 +1,6 @@
 #pragma once
 #include "../Common/surface_store.h"
-#include "../rsx_utils.h"
+#include "../Utils/rsx_utils.h"
 
 #include "glutils/fbo.h"
 

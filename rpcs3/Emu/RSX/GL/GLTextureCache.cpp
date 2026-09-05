@@ -2,6 +2,7 @@
 #include "GLTexture.h"
 #include "GLTextureCache.h"
 #include "../Common/BufferUtils.h"
+#include "../Utils/image_utils.hpp"
 
 #include "util/asm.hpp"
 
