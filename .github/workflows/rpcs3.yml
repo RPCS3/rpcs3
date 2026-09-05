@@ -130,6 +130,11 @@ jobs:
             runs-on: macos-15
             UPLOAD_COMMIT_HASH: 8e21bdbc40711a3fccd18fbf17b742348b0f4281
             UPLOAD_REPO_FULL_NAME: rpcs3/rpcs3-binaries-mac-arm64
+          - name: Apple Silicon (KosmicKrisp)
+            runs-on: macos-26
+            BUILD_MAC_KK: 1
+            UPLOAD_COMMIT_HASH: ""
+            UPLOAD_REPO_FULL_NAME: ""
     name: RPCS3 Mac ${{ matrix.name }} 
     runs-on: ${{ matrix.runs-on }} 
     env:
@@ -140,6 +145,7 @@ jobs:
       RELEASE_MESSAGE: ../GitHubReleaseMessage.txt
       UPLOAD_COMMIT_HASH: ${{ matrix.UPLOAD_COMMIT_HASH }}
       UPLOAD_REPO_FULL_NAME: ${{ matrix.UPLOAD_REPO_FULL_NAME }}
+      BUILD_MAC_KK: ${{ matrix.BUILD_MAC_KK }}
       RUN_UNIT_TESTS: ${{ matrix.name == 'Apple Silicon' && (github.event_name == 'pull_request' && 'ON') || 'OFF' }}
     steps:
       - name: Checkout repository
@@ -183,6 +189,7 @@ jobs:
 
       - name: Deploy master build to GitHub Releases
         if: |
+          env.BUILD_MAC_KK == 0 &&
           github.event_name != 'pull_request' &&
           github.repository == 'RPCS3/rpcs3' &&
           github.ref == 'refs/heads/master'
@@ -191,14 +198,14 @@ jobs:
         run: .ci/github-upload.sh
 
       - name: Save Build Ccache
-        if: github.ref == 'refs/heads/master'
+        if: env.BUILD_MAC_KK == 0 && github.ref == 'refs/heads/master'
         uses: actions/cache/save@main
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ${{ steps.restore-build-ccache.outputs.cache-primary-key }}
 
       - name: Save Qt Cache
-        if: github.ref == 'refs/heads/master'
+        if: env.BUILD_MAC_KK == 0 && github.ref == 'refs/heads/master'
         uses: actions/cache/save@main
         with:
           path: /tmp/Qt
