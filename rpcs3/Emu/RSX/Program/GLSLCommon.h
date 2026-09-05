@@ -4,7 +4,7 @@
 
 #include "GLSLTypes.h"
 #include "ShaderParam.h"
-#include "../color_utils.h"
+#include "../Utils/color_utils.hpp"
 
 struct RSXFragmentProgram;
 

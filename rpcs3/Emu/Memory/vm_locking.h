@@ -1,7 +1,7 @@
 #pragma once
 
 #include "vm.h"
-#include "Emu/RSX/rsx_utils.h"
+#include "Emu/RSX/Utils/rsx_utils.h"
 
 class cpu_thread;
 class shared_mutex;

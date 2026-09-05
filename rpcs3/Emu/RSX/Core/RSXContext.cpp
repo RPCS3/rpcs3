@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "Emu/RSX/rsx_utils.h"
+#include "Emu/RSX/Utils/algorithm.hpp"
 #include "RSXContext.h"
 
 namespace rsx

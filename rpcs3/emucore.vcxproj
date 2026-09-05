@@ -522,7 +522,7 @@
     <ClCompile Include="Emu\RSX\RSXFIFO.cpp" />
     <ClCompile Include="Emu\RSX\RSXOffload.cpp" />
     <ClCompile Include="Emu\RSX\rsx_methods.cpp" />
-    <ClCompile Include="Emu\RSX\rsx_utils.cpp" />
+    <ClCompile Include="Emu\RSX\Utils\rsx_utils.cpp" />
     <ClCompile Include="Crypto\aes.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -682,7 +682,6 @@
     <ClInclude Include="Emu\NP\rpcn_config.h" />
     <ClInclude Include="Emu\NP\ip_address.h" />
     <ClInclude Include="Emu\perf_monitor.hpp" />
-    <ClInclude Include="Emu\RSX\color_utils.h" />
     <ClInclude Include="Emu\RSX\Common\aligned_malloc.hpp" />
     <ClInclude Include="Emu\RSX\Common\bitfield.hpp" />
     <ClInclude Include="Emu\RSX\Common\buffer_stream.hpp" />
@@ -1073,7 +1072,10 @@
     <ClInclude Include="Emu\Memory\vm_reservation.h" />
     <ClInclude Include="Emu\Memory\vm_var.h" />
     <ClInclude Include="Emu\RSX\rsx_methods.h" />
-    <ClInclude Include="Emu\RSX\rsx_utils.h" />
+    <ClInclude Include="Emu\RSX\Utils\algorithm.hpp" />
+    <ClInclude Include="Emu\RSX\Utils\color_utils.hpp" />
+    <ClInclude Include="Emu\RSX\Utils\image_utils.hpp" />
+    <ClInclude Include="Emu\RSX\Utils\rsx_utils.h" />
     <ClInclude Include="Emu\System.h" />
     <ClInclude Include="Emu\perf_meter.hpp" />
     <ClInclude Include="Emu\GDB.h" />

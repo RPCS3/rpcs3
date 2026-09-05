@@ -8,6 +8,7 @@
 
 #include "../Common/texture_cache.h"
 #include "../Common/tiled_dma_copy.hpp"
+#include "../Utils/image_utils.hpp"
 
 #include <memory>
 #include <vector>

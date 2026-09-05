@@ -2,7 +2,7 @@
 #include "image_helpers.h"
 #include "image.h"
 #include "../VKRenderPass.h"
-#include "../../color_utils.h"
+#include "../../Utils/color_utils.hpp"
 
 namespace vk
 {

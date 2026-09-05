@@ -3,6 +3,7 @@
 #include "Emu/RSX/Common/simple_array.hpp"
 #include "Emu/RSX/Core/RSXContext.h"
 #include "Emu/RSX/RSXThread.h"
+#include "Emu/RSX/Utils/algorithm.hpp"
 
 #include "texture_cache_utils.h"
 #include "texture_cache_predictor.h"

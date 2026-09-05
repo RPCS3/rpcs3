@@ -6,7 +6,7 @@
 
 #include "Utilities/mutex.h"
 
-#include "rsx_utils.h"
+#include "Utils/rsx_utils.h"
 
 #include <vector>
 #include <stack>

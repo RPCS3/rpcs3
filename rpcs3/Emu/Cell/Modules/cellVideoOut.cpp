@@ -3,7 +3,7 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/IdManager.h"
-#include "Emu/RSX/rsx_utils.h"
+#include "Emu/RSX/Utils/rsx_utils.h"
 #include "Emu/RSX/RSXThread.h"
 
 #include "cellVideoOut.h"

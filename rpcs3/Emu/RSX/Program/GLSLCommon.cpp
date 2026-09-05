@@ -3,7 +3,7 @@
 #include "GLSLCommon.h"
 #include "RSXFragmentProgram.h"
 
-#include "Emu/RSX/color_utils.h"
+#include "Emu/RSX/Utils/color_utils.hpp"
 #include "Emu/RSX/gcm_enums.h"
 #include "Utilities/StrFmt.h"
 

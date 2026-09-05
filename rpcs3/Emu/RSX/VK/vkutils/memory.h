@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../VulkanAPI.h"
-#include "../../rsx_utils.h"
 #include "shared.h"
+
+#include "Emu/RSX/Utils/rsx_utils.h"
 
 #ifdef __clang__
 #pragma clang diagnostic push

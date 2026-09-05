@@ -6,7 +6,7 @@
 #include <tuple>
 #include <algorithm>
 #include "gcm_enums.h"
-#include "rsx_utils.h"
+#include "Utils/rsx_utils.h"
 
 namespace rsx
 {

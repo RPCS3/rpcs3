@@ -7,7 +7,7 @@
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/CPU/CPUDisAsm.h"
 #include "Emu/RSX/RSXThread.h"
-#include "Emu/RSX/rsx_utils.h"
+#include "Emu/RSX/Utils/rsx_utils.h"
 #include "Emu/IdManager.h"
 #include "Emu/System.h"
 #include <QVBoxLayout>

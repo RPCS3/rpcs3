@@ -2,6 +2,7 @@
 #include "MM.h"
 #include <Emu/RSX/Common/simple_array.hpp>
 #include <Emu/RSX/RSXOffload.h>
+#include <Emu/RSX/Utils/rsx_utils.h>
 
 #include <Emu/Memory/vm.h>
 #include <Emu/IdManager.h>

@@ -3,7 +3,7 @@
 #include "util/types.hpp"
 #include "Utilities/geometry.h"
 #include "TextureUtils.h"
-#include "../rsx_utils.h"
+#include "../Utils/rsx_utils.h"
 #include "Emu/Memory/vm.h"
 
 #define ENABLE_SURFACE_CACHE_DEBUG 0

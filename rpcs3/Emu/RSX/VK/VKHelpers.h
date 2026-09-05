@@ -6,7 +6,7 @@
 #include "VulkanAPI.h"
 #include "Utilities/geometry.h"
 #include "Emu/RSX/Common/TextureUtils.h"
-#include "Emu/RSX/rsx_utils.h"
+#include "Emu/RSX/Utils/rsx_utils.h"
 
 #define OCCLUSION_MAX_POOL_SIZE   DESCRIPTOR_MAX_DRAW_CALLS
 
