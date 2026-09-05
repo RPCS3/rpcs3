@@ -35,7 +35,7 @@
   <PropertyGroup>
     <PreferredToolArchitecture>x64</PreferredToolArchitecture>
     <IntDir>$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
-    <IncludePath>.\;$(SolutionDir);$(SolutionDir)rpcs3;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(UniversalCRT_IncludePath);</IncludePath>
+    <IncludePath>.\;$(SolutionDir);$(SolutionDir)rpcs3;$(SolutionDir)3rdparty/ffmpeg/include;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(UniversalCRT_IncludePath);</IncludePath>
     <LibraryPath>$(SolutionDir)build\lib\$(Configuration)-$(Platform)\;$(UniversalCRT_LibraryPath_x64);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

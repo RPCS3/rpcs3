@@ -2,6 +2,7 @@
 #include "MM.h"
 #include <Emu/RSX/Common/simple_array.hpp>
 #include <Emu/RSX/RSXOffload.h>
+#include <Emu/RSX/rsx_utils.h>
 
 #include <Emu/Memory/vm.h>
 #include <Emu/IdManager.h>
@@ -120,7 +121,7 @@ namespace rsx
 			return;
 		}
 
-		g_deferred_mprotect_queue.push_back({ range, prot });
+		g_deferred_mprotect_queue.push_back({ range, prot, rsx::get_shared_tag() });
 	}
 
 	void mm_protect(void* ptr, u64 length, utils::protection prot)
@@ -220,5 +221,25 @@ namespace rsx
 
 		auto& rsxdma = g_fxo->get<rsx::dma_manager>();
 		rsxdma.backend_ctrl(mm_backend_ctrl::cmd_mm_flush, nullptr);
+	}
+
+	void mm_flush_partial(u64 last_tag)
+	{
+		std::lock_guard lock(g_mprotect_queue_lock);
+
+		u32 count = 0;
+		for (const auto& block : g_deferred_mprotect_queue)
+		{
+			if (block.sync_tag > last_tag)
+			{
+				break;
+			}
+			count++;
+		}
+
+		if (count)
+		{
+			mm_flush_mprotect_queue_internal(count);
+		}
 	}
 }
