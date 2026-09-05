@@ -47,16 +47,8 @@ namespace rsx
 			btn_cancel.set_pos(685, 420);
 			btn_cancel.set_font("Arial", 16);
 
-			if (g_cfg.sys.enter_button_assignment == enter_button_assign::circle)
-			{
-				btn_ok.set_image_resource(resource_config::standard_image_resource::circle);
-				btn_cancel.set_image_resource(resource_config::standard_image_resource::cross);
-			}
-			else
-			{
-				btn_ok.set_image_resource(resource_config::standard_image_resource::cross);
-				btn_cancel.set_image_resource(resource_config::standard_image_resource::circle);
-			}
+			btn_ok.set_image_resource(resource_config::confirm_button_resource());
+			btn_cancel.set_image_resource(resource_config::cancel_button_resource());
 
 			fade_animation.duration_sec = 0.15f;
 
@@ -391,24 +383,9 @@ namespace rsx
 					background.back_color.a      = 0.f;
 
 					background_poster.set_size(virtual_width, virtual_height);
+					background_poster.set_keep_aspect_ratio(true);
 					background_poster.set_raw_image(background_image.get());
 					background_poster.set_blur_strength(static_cast<u8>(background_blur_strength));
-
-					ensure(background_image->w > 0);
-					ensure(background_image->h > 0);
-					ensure(background_poster.h > 0);
-
-					// Set padding in order to keep the aspect ratio
-					if ((background_image->w / static_cast<double>(background_image->h)) > (background_poster.w / static_cast<double>(background_poster.h)))
-					{
-						const int padding = (background_poster.h - static_cast<int>(background_image->h * (background_poster.w / static_cast<double>(background_image->w)))) / 2;
-						background_poster.set_padding(0, 0, padding, padding);
-					}
-					else
-					{
-						const int padding = (background_poster.w - static_cast<int>(background_image->w * (background_poster.h / static_cast<double>(background_image->h)))) / 2;
-						background_poster.set_padding(padding, padding, 0, 0);
-					}
 
 					if (background_overlay_image && background_overlay_image->get_data())
 					{

@@ -1486,6 +1486,9 @@
     <ClCompile Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture_main_menu.cpp">
       <Filter>Emu\GPU\RSX\Overlays\BigPicture</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture_game_info.cpp">
+      <Filter>Emu\GPU\RSX\Overlays\BigPicture</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2984,6 +2987,12 @@
       <Filter>Emu\GPU\RSX\Overlays\BigPicture</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture_game_grid.h">
+      <Filter>Emu\GPU\RSX\Overlays\BigPicture</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\game_enumeration.h">
+      <Filter>Emu</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture_game_info.h">
       <Filter>Emu\GPU\RSX\Overlays\BigPicture</Filter>
     </ClInclude>
   </ItemGroup>

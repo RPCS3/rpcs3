@@ -3,7 +3,7 @@
 #include "Emu/RSX/Overlays/overlays.h"
 #include "Emu/RSX/Overlays/overlay_controls.h"
 #include "Emu/RSX/Overlays/overlay_video.h"
-#include "Emu/GameInfo.h"
+#include "overlay_big_picture_game_info.h"
 
 namespace rsx
 {
@@ -22,7 +22,7 @@ namespace rsx
 				start
 			};
 
-			void show(const GameInfo& info, const image_info* icon_data);
+			void show(const big_picture_game_info& info, const image_info* icon_data);
 			void hide();
 			bool is_visible() const { return m_visible; }
 

@@ -2,19 +2,18 @@
 
 #include "game_list.h"
 #include "game_list_actions.h"
+#include "gui_game_info.h"
 #include "custom_dock_widget.h"
 #include "content_integrity.h"
 
-#include "Utilities/lockless.h"
-#include "Utilities/mutex.h"
 #include "util/auto_typemap.hpp"
 #include "Emu/config_mode.h"
+#include "Emu/game_enumeration.h"
 
 #include <QMainWindow>
 #include <QStackedWidget>
 #include <QSet>
 #include <QHash>
-#include <QTableWidgetItem>
 #include <QFutureWatcher>
 
 #include <memory>
@@ -28,6 +27,9 @@ class gui_settings;
 class emu_settings;
 class persistent_settings;
 class progress_dialog;
+class Localized;
+
+class QTableWidgetItem;
 
 class game_list_frame : public custom_dock_widget
 {
@@ -157,8 +159,6 @@ private:
 
 	void UpdateWindowTitle(const std::vector<game_info>& matching_apps);
 
-	void push_path(const std::string& path, std::vector<std::string>& legit_paths);
-
 	QString get_header_text(int col) const;
 	QString get_action_text(int col) const;
 
@@ -210,23 +210,24 @@ private:
 	bool m_old_layout_is_list = true;
 
 	// Data
+	void add_game_apply_extras(gui_game_info& game);
+	class gui_game_enumeration : public game_enumeration<gui_game_info>
+	{
+	public:
+		gui_game_enumeration(game_list_frame& parent) : game_enumeration<gui_game_info>(), m_parent(parent) {}
+		void add_game_apply_extras(gui_game_info& game) override { m_parent.add_game_apply_extras(game); }
+	private:
+		game_list_frame& m_parent;
+	};
+	gui_game_enumeration m_game_enumeration;
+
+	std::shared_ptr<Localized> m_localized;
 	std::shared_ptr<gui_settings> m_gui_settings;
 	std::shared_ptr<emu_settings> m_emu_settings;
 	std::shared_ptr<persistent_settings> m_persistent_settings;
 	std::vector<game_info> m_game_data;
-	struct path_entry
-	{
-		std::string path;
-		bool is_disc{};
-		bool is_from_yml{};
-	};
-	std::vector<path_entry> m_path_entries;
-	shared_mutex m_path_mutex;
-	std::set<std::string> m_path_list;
-	std::unordered_set<std::string> m_scanned_iso_paths;
 	QSet<QString> m_serials;
-	QMutex m_games_mutex;
-	lf_queue<game_info> m_games;
+	std::mutex m_games_mutex;
 	const std::array<int, 1> m_parsing_threads{0};
 	QFutureWatcher<void> m_parsing_watcher;
 	QFutureWatcher<void> m_refresh_watcher;

@@ -15,6 +15,7 @@
 #include "RSXDisAsm.h"
 
 #include "Emu/System.h"
+#include "Emu/system_utils.hpp"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/timers.hpp"
 #include "Emu/Cell/lv2/sys_event.h"
@@ -714,7 +715,7 @@ namespace rsx
 
 			if (g_cfg.misc.play_music_during_boot)
 			{
-				if (const std::string audio_path = Emu.GetSfoDir(true) + "/SND0.AT3"; fs::is_file(audio_path))
+				if (const std::string audio_path = rpcs3::utils::get_game_content_path(game_content_type::content_sound); !audio_path.empty())
 				{
 					m_overlay_manager->start_audio(audio_path);
 				}
