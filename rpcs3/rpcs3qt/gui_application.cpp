@@ -629,10 +629,11 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 	auto [w, h] = ::at32(g_video_out_resolution_map, g_cfg.video.resolution);
 
 	const bool resize_game_window = m_gui_settings->GetValue(gui::gs_resize).toBool();
+	const bool resize_manually = m_gui_settings->GetValue(gui::gs_resize_manual).toBool();
 
 	if (resize_game_window)
 	{
-		if (m_gui_settings->GetValue(gui::gs_resize_manual).toBool())
+		if (resize_manually)
 		{
 			w = m_gui_settings->GetValue(gui::gs_width).toInt();
 			h = m_gui_settings->GetValue(gui::gs_height).toInt();
@@ -699,6 +700,8 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 		// Apply size override to our saved geometry if needed
 		frame_geometry.setSize(QSize(w, h));
 	}
+
+	gui_log.notice("gui_application: game window geometry: x=%d, y=%d, w=%d, h=%d, screen=%d, resize=%d, manually=%d", frame_geometry.left(), frame_geometry.top(), frame_geometry.width(), frame_geometry.height(), screen_index, resize_game_window, resize_manually);
 
 	gs_frame* frame = nullptr;
 
@@ -946,7 +949,7 @@ void gui_application::InitializeCallbacks()
 
 	if (m_show_gui) // If this is false, we already have a fallback in the main_application.
 	{
-		callbacks.on_install_pkgs = [this](const std::vector<std::string>& pkgs)
+		callbacks.on_install_pkgs = [this](const std::vector<std::string>& pkgs, bool from_optical_drive)
 		{
 			ensure(!pkgs.empty());
 			QStringList pkg_list;
@@ -954,7 +957,7 @@ void gui_application::InitializeCallbacks()
 			{
 				pkg_list << QString::fromStdString(pkg);
 			}
-			return main_window::InstallPackages(m_main_window, pkg_list, true);
+			return main_window::InstallPackages(m_main_window, pkg_list, true, from_optical_drive);
 		};
 	}
 

@@ -23,6 +23,7 @@
 #include <QJsonObject>
 #include <QJsonDocument>
 #include <QTextBrowser>
+#include <QScrollBar>
 
 #if defined(_WIN32) || defined(__APPLE__)
 #include <7z.h>
@@ -432,7 +433,6 @@ void update_manager::update(bool auto_accept, bool is_first_call)
 				changelog_browser->setReadOnly(true);
 				changelog_browser->setFrameShape(QFrame::NoFrame);
 				changelog_browser->setLineWrapMode(QTextBrowser::NoWrap);
-				changelog_browser->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
 				changelog_browser->setHtml(QStringLiteral("<h3>%0</h3>%1").arg(tr("Changelog:"), changelog_html));
 
 				// Natural height for ≤6 entries, capped at 6-entry height for more
@@ -449,7 +449,6 @@ void update_manager::update(bool auto_accept, bool is_first_call)
 					browser_height = static_cast<int>(changelog_browser->document()->size().height());
 				}
 
-				changelog_browser->setFixedHeight(browser_height);
 				changelog_browser->setVisible(false);
 
 				const QString show_text = tr("Show Changelog");
@@ -459,10 +458,18 @@ void update_manager::update(bool auto_accept, bool is_first_call)
 				grid->addWidget(toggle_btn, row++, 0, 1, cols);
 				grid->addWidget(changelog_browser, row++, 0, 1, cols);
 
-				QObject::connect(toggle_btn, &QPushButton::clicked, [changelog_browser, toggle_btn, &mb, show_text, hide_text]()
+				QObject::connect(toggle_btn, &QPushButton::clicked, [changelog_browser, toggle_btn, &mb, show_text, hide_text, browser_height]() mutable
 				{
 					const bool becoming_visible = !changelog_browser->isVisible();
 					changelog_browser->setVisible(becoming_visible);
+
+					// Adjust height for horizontal scrollbar
+					if (changelog_browser->isVisible() && changelog_browser->horizontalScrollBar() && changelog_browser->horizontalScrollBar()->isVisible())
+					{
+						browser_height += changelog_browser->horizontalScrollBar()->sizeHint().height();
+					}
+
+					changelog_browser->setFixedHeight(browser_height);
 					toggle_btn->setText(becoming_visible ? hide_text : show_text);
 					mb.adjustSize();
 				});

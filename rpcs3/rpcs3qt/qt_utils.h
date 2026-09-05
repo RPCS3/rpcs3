@@ -8,6 +8,7 @@
 #include <QFont>
 #include <QIcon>
 #include <QLabel>
+#include <QMessageBox>
 #include <QTableWidget>
 #include <QHeaderView>
 #include <QTreeWidgetItem>
@@ -117,6 +118,16 @@ namespace gui
 
 		// Returns a richtext paragraph with white-space: nowrap;
 		QString make_paragraph(QString text, const QString& white_space_style = "nowrap");
+
+		// Doubles the ampersands of a string used as menu or button text, so it is not taken for a mnemonic
+		QString escape_mnemonics(const QString& text);
+
+		// Shows a message box that takes its text literally. Qt detects rich text on its own, so a message
+		// built around a name the user chose turns into HTML as soon as that name looks like a tag, and the
+		// name disappears from the very sentence that is there to report it.
+		QMessageBox::StandardButton plain_message(QWidget* parent, QMessageBox::Icon icon, const QString& title,
+			const QString& text, QMessageBox::StandardButtons buttons = QMessageBox::Ok,
+			QMessageBox::StandardButton default_button = QMessageBox::NoButton);
 
 		template <typename T>
 		void set_font_size(T& qobj, int size)

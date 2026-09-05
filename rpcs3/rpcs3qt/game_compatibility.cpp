@@ -7,10 +7,9 @@
 #include "Crypto/unpkg.h"
 #include "Loader/PSF.h"
 
-#include <QApplication>
-#include <QMessageBox>
 #include <QJsonArray>
 #include <QJsonDocument>
+#include <QJsonObject>
 
 LOG_CHANNEL(compat_log, "Compat");
 

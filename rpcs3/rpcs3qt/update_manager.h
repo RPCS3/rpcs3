@@ -9,7 +9,7 @@
 class downloader;
 class gui_settings;
 
-class update_manager final :  public QObject
+class update_manager final : public QObject
 {
 	Q_OBJECT
 

@@ -112,6 +112,7 @@ enum class emu_settings_type
 	UseReBAR,
 	RecordWithOverlays,
 	DisableHWTexelRemapping,
+	DisableBlitEngineScaling,
 
 	// Anaglyph Matrix
 	CustomAnaglyphMatrixLeft,
@@ -187,6 +188,7 @@ enum class emu_settings_type
 	StartOnBoot,
 	PauseOnFocusLoss,
 	StartGameFullscreen,
+	StartBigPictureModeOnBoot,
 	PreventDisplaySleep,
 	ShowTrophyPopups,
 	ShowRpcnPopups,
