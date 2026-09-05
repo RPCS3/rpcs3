@@ -303,8 +303,10 @@ void usb_device_logitech_g27::set_personality(logitech_personality personality, 
 		index += raw_config[index];
 	}
 
-	if (reconnect)
+	if (reconnect && assigned_number)
 	{
+		// assigned_number can be 0 if the device was detached (mapped steering device unplugged)
+		// after the game requested the personality change
 		reconnect_usb(assigned_number);
 	}
 }
@@ -332,11 +334,30 @@ usb_device_logitech_g27::usb_device_logitech_g27(u32 controller_index, const std
 	if (!m_enabled)
 		return;
 
+	// Initial refresh before the usb handler connects the device, so is_attachable() already reflects the physical state
+	sdl_refresh();
+
 	m_house_keeping_thread = std::make_unique<named_thread<std::function<void()>>>("Logitech G27", [this]()
 	{
+		bool last_steering_device_present = m_steering_device_present;
+
 		while (thread_ctrl::state() != thread_state::aborting)
 		{
+			// Pump SDL events here as well: while the device is detached no interrupt transfers run,
+			// so this is the only pump that lets SDL notice the wheel being plugged back in
+			sdl_instance::get_instance().pump_events();
+
 			sdl_refresh();
+
+			// Mirror the physical presence of the mapped steering device on the emulated usb bus, so games
+			// fall back to the pad when the real wheel is not connected instead of reading a phantom wheel
+			const bool steering_device_present = m_steering_device_present;
+			if (steering_device_present != last_steering_device_present)
+			{
+				set_usb_device_attached(this, steering_device_present);
+				last_steering_device_present = steering_device_present;
+			}
+
 			thread_ctrl::wait_for(1'000'000);
 
 			std::unique_lock lock(g_cfg_logitech_g27.m_mutex);
@@ -352,6 +373,11 @@ usb_device_logitech_g27::usb_device_logitech_g27(u32 controller_index, const std
 bool usb_device_logitech_g27::open_device()
 {
 	return m_enabled;
+}
+
+bool usb_device_logitech_g27::is_attachable() const
+{
+	return m_enabled && m_steering_device_present;
 }
 
 static void clear_sdl_joysticks(std::map<u64, std::vector<SDL_Joystick*>>& joystick_map)
@@ -611,6 +637,13 @@ void usb_device_logitech_g27::sdl_refresh()
 	{
 		if (new_haptic_handle)
 			SDL_CloseHaptic(new_haptic_handle);
+	}
+
+	{
+		// Cache the presence of the mapped steering device for is_attachable()
+		const std::lock_guard<std::mutex> handles_lock(m_sdl_handles_mutex);
+		const auto steering_joysticks = m_joysticks.find(m_mapping.steering.device_type_id);
+		m_steering_device_present = steering_joysticks != m_joysticks.end() && !steering_joysticks->second.empty();
 	}
 }
 
@@ -900,7 +933,7 @@ static s16 fetch_sdl_as_axis(SDL_Joystick* joystick, const sdl_mapping& mapping)
 	return 0;
 }
 
-static s16 fetch_sdl_axis_avg(const std::map<u64, std::vector<SDL_Joystick*>>& joysticks, const sdl_mapping& mapping)
+static s16 fetch_sdl_axis_avg(const std::map<u64, std::vector<SDL_Joystick*>>& joysticks, const sdl_mapping& mapping, bool centered_axis)
 {
 	constexpr s16 MAX = 0x7FFF;
 	constexpr s16 MIN = -0x8000;
@@ -908,12 +941,16 @@ static s16 fetch_sdl_axis_avg(const std::map<u64, std::vector<SDL_Joystick*>>& j
 	auto joysticks_of_type = joysticks.find(mapping.device_type_id);
 	if (joysticks_of_type == joysticks.end())
 	{
-		return mapping.reverse ? MAX : MIN;
+		// Report the axis neutral position when the mapped device is not connected. A centered
+		// axis (steering) must fall back to the mid position: falling back to MIN meant the
+		// emulated wheel reported full-left steering whenever the physical device was unplugged
+		// or the user was playing with a regular controller.
+		return centered_axis ? 0 : (mapping.reverse ? MAX : MIN);
 	}
 
 	if (joysticks_of_type->second.empty())
 	{
-		return mapping.reverse ? MAX : MIN;
+		return centered_axis ? 0 : (mapping.reverse ? MAX : MIN);
 	}
 
 	// TODO account for deadzone and only pick up active devices
@@ -949,14 +986,14 @@ static bool sdl_to_logitech_g27_button(const std::map<u64, std::vector<SDL_Joyst
 
 static u16 sdl_to_logitech_g27_steering(const std::map<u64, std::vector<SDL_Joystick*>>& joysticks, const sdl_mapping& mapping)
 {
-	const s16 avg = fetch_sdl_axis_avg(joysticks, mapping);
+	const s16 avg = fetch_sdl_axis_avg(joysticks, mapping, true); // centered axis, neutral steering is the mid position
 	const u16 unsigned_avg = avg + 0x8000;
 	return unsigned_avg * (0xFFFF >> 2) / 0xFFFF;
 }
 
 static u8 sdl_to_logitech_g27_pedal(const std::map<u64, std::vector<SDL_Joystick*>>& joysticks, const sdl_mapping& mapping)
 {
-	const s16 avg = fetch_sdl_axis_avg(joysticks, mapping);
+	const s16 avg = fetch_sdl_axis_avg(joysticks, mapping, false); // neutral pedal is the released position
 	const u16 unsigned_avg = avg + 0x8000;
 	return unsigned_avg * 0xFF / 0xFFFF;
 }
