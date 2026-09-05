@@ -633,10 +633,10 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 		// That is to highlight a Redump ISO from a non Redump ISO
 		if (raw_archive || iso_type != iso_type_status::NOT_ISO)
 		{
-			QAction* check_iso_integrity = addAction(tr("&Check ISO Integrity"));
+			QAction* check_iso_integrity = addAction(tr("&Check ISO Integrity (Redump)"));
 
 			// If it's a Redump ISO and the integrity DB exists
-			if ((raw_archive || iso_type == iso_type_status::REDUMP_ISO) &&
+			if ((iso_type == iso_type_status::REDUMP_ISO) &&
 				content_validation::check_integrity(content_file_type::ISO, "") != content_integrity_status::ERROR_OPENING_DB)
 			{
 				connect(check_iso_integrity, &QAction::triggered, this, [this, gameinfo]()
@@ -648,6 +648,26 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 			{
 				check_iso_integrity->setEnabled(false);
 			}
+
+			// Unlike the check above, which weighs the image as a whole against the Redump DB, this one weighs each
+			// file of the image against the IRD file of the disc, so it also tells which file is wrong
+			QAction* check_iso_files_integrity = addAction(tr("&Check ISO Integrity (IRD)"));
+
+			connect(check_iso_files_integrity, &QAction::triggered, this, [this, gameinfo]()
+			{
+				m_game_list_actions->ShowIrdIntegrityDialog(gameinfo->path);
+			});
+		}
+		else if (fs::is_file(current_game.path + "/PARAM.SFO") || fs::is_file(current_game.path + "/PS3_GAME/PARAM.SFO"))
+		{
+			// The game is not held by an ISO file but by a "JB folder": it is validated file by file against the
+			// IRD file of the disc it was ripped from
+			QAction* check_jb_folder_integrity = addAction(tr("&Check JB Folder Integrity (IRD)"));
+
+			connect(check_jb_folder_integrity, &QAction::triggered, this, [this, gameinfo]()
+			{
+				m_game_list_actions->ShowIrdIntegrityDialog(gameinfo->path);
+			});
 		}
 	}
 

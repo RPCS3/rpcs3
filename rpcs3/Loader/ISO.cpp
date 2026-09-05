@@ -60,14 +60,15 @@ static void* get_aligned_buf()
 
 static bool is_iso_file(iso_file& file, u64* size = nullptr)
 {
-	if (!file || file.size() < 32768ULL + 6)
+	// The standard identifier ("CD001") follows the type of the first volume descriptor
+	if (!file || file.size() < ISO_DESCRIPTORS_OFFSET + 6)
 	{
 		return false;
 	}
 
 	char magic[5];
 
-	if (file.read_at(32768ULL + 1, magic, 5) != 5)
+	if (file.read_at(ISO_DESCRIPTORS_OFFSET + 1, magic, 5) != 5)
 	{
 		return false;
 	}
@@ -550,6 +551,34 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 	return true;
 }
 
+bool iso_file_decryption::set_key_from_d1(const std::array<u8, 16>& disc_key)
+{
+	// The "D1" of a disc is not the key itself: the key comes out of encrypting it with the very same constants
+	// the 3k3y watermark path above uses, since both carry that same field of the disc
+	static constexpr u8 key_d1[] = {0x38, 0x0b, 0xcf, 0x0b, 0x53, 0x45, 0x5b, 0x3c, 0x78, 0x17, 0xab, 0x4f, 0xa3, 0xba, 0x90, 0xed};
+	static constexpr u8 iv_d1[] = {0x69, 0x47, 0x47, 0x72, 0xaf, 0x6f, 0xda, 0xb3, 0x42, 0x74, 0x3a, 0xef, 0xaa, 0x18, 0x62, 0x87};
+
+	u8 key[16];
+	u8 iv[16];
+
+	std::memcpy(key, disc_key.data(), sizeof(key));
+	std::memcpy(iv, iv_d1, sizeof(iv));
+
+	aes_context aes_d1;
+
+	if (aes_setkey_enc(&aes_d1, key_d1, 128) != 0 || aes_crypt_cbc(&aes_d1, AES_ENCRYPT, sizeof(key), iv, key, key) != 0 ||
+		aes_setkey_dec(&m_aes_dec, key, 128) != 0)
+	{
+		iso_log.error("set_key_from_d1: Failed to derive the decryption key from the disc key");
+		return false;
+	}
+
+	// The regions of the image are already known: only its type was left as "not encrypted" for the lack of a key
+	m_enc_type = iso_encryption_type::REDUMP;
+
+	return !m_region_info.empty();
+}
+
 bool iso_file_decryption::decrypt(u64 offset, const std::span<u8> buffer, const std::string& name)
 {
 	// If it's a non-encrypted type, nothing more to do
@@ -1010,6 +1039,60 @@ static bool iso_form_hierarchy(fs::file& file, iso_fs_node& node, bool use_ucs2_
 	return true;
 }
 
+bool iso_parse_file_system(fs::file& file, iso_fs_node& root, const std::string& path)
+{
+	u8 descriptor_type = -2;
+	bool use_ucs2_decoding = false;
+
+	// Skip the system area: scanning it sector by sector would read 16 sectors (a physical read each, on an optical
+	// drive) only to find boot data, which could even be mistaken for a volume descriptor.
+	// NOTE: the caller already verified the standard identifier is right here
+	file.seek(ISO_DESCRIPTORS_OFFSET);
+
+	do
+	{
+		const auto descriptor_start = file.pos();
+
+		descriptor_type = file.read<u8>();
+
+		// 1 = primary vol descriptor, 2 = joliet SVD
+		if (descriptor_type == 1 || descriptor_type == 2)
+		{
+			use_ucs2_decoding = descriptor_type == 2;
+
+			// Skip the rest of descriptor's data
+			file.seek(155, fs::seek_cur);
+
+			const auto node = iso_read_directory_entry(file, use_ucs2_decoding);
+
+			if (node)
+			{
+				root = iso_fs_node
+				{
+					.metadata = node.value()
+				};
+			}
+		}
+
+		file.seek(descriptor_start + ISO_SECTOR_SIZE);
+	}
+	while (descriptor_type != 255 && file.pos() < file.size());
+
+	if (descriptor_type != 255)
+	{
+		iso_log.error("iso_parse_file_system: Corrupt ISO file system '%s': Volume Descriptor Set Terminator not found", path);
+		return false;
+	}
+
+	if (!iso_form_hierarchy(file, root, use_ucs2_decoding))
+	{
+		iso_log.error("iso_parse_file_system: Corrupt ISO file system '%s': Failed to form hierarchy", path);
+		return false;
+	}
+
+	return true;
+}
+
 u64 iso_fs_metadata::size() const
 {
 	u64 total_size = 0;
@@ -1029,57 +1112,24 @@ iso_archive::iso_archive(const std::string& path)
 	// "m_path" is updated with the raw device path in case "path" points to a BD drive
 	fs::get_optical_raw_device(path, &m_path);
 
-	if (!is_iso_file(m_path))
+	// NOTE: the file is opened once here and then handed over to the parsing below. Recognizing the ISO through its
+	//       path (i.e. "is_iso_file(m_path)") would open it and read its volume descriptor a second time, which is a
+	//       physical read when the path points to an optical drive
+	auto file = std::make_unique<iso_file>(m_path);
+
+	if (!is_iso_file(*file))
 	{
 		iso_log.error("iso_archive: Failed to recognize ISO file: '%s'", path);
 		invalidate();
 		return;
 	}
 
-	fs::file iso_file(std::make_unique<iso_file>(m_path));
+	// NOTE: "is_iso_file()" reads through "read_at()", which does not move the position, so the file is still at its
+	//       beginning here
+	fs::file iso_file(std::move(file));
 
-	u8 descriptor_type = -2;
-	bool use_ucs2_decoding = false;
-
-	do
+	if (!iso_parse_file_system(iso_file, m_root, path))
 	{
-		const auto descriptor_start = iso_file.pos();
-
-		descriptor_type = iso_file.read<u8>();
-
-		// 1 = primary vol descriptor, 2 = joliet SVD
-		if (descriptor_type == 1 || descriptor_type == 2)
-		{
-			use_ucs2_decoding = descriptor_type == 2;
-
-			// Skip the rest of descriptor's data
-			iso_file.seek(155, fs::seek_cur);
-
-			const auto node = iso_read_directory_entry(iso_file, use_ucs2_decoding);
-
-			if (node)
-			{
-				m_root = iso_fs_node
-				{
-					.metadata = node.value()
-				};
-			}
-		}
-
-		iso_file.seek(descriptor_start + ISO_SECTOR_SIZE);
-	}
-	while (descriptor_type != 255 && iso_file.pos() < iso_file.size());
-
-	if (descriptor_type != 255)
-	{
-		iso_log.error("iso_archive: Corrupt ISO file '%s': Volume Descriptor Set Terminator not found", path);
-		invalidate();
-		return;
-	}
-
-	if (!iso_form_hierarchy(iso_file, m_root, use_ucs2_decoding))
-	{
-		iso_log.error("iso_archive: Corrupt ISO file '%s': Failed to form hierarchy", path);
 		invalidate();
 		return;
 	}
@@ -1093,6 +1143,11 @@ iso_archive::iso_archive(const std::string& path)
 		invalidate();
 		return;
 	}
+}
+
+bool iso_archive::set_disc_key(const std::array<u8, 16>& disc_key)
+{
+	return m_dec && m_dec->set_key_from_d1(disc_key);
 }
 
 iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
