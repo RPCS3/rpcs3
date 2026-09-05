@@ -711,6 +711,30 @@ void cell_audio_thread::operator()()
 
 	u32 untouched_expected = 0;
 
+	// A port the game feeds irregularly - the audio port of a movie that has just been started and whose
+	// decoder is still spinning up, typically - makes untouched oscillate. Without hysteresis the
+	// expectation follows it straight back down, so the next period re-arms the wait below and the thread
+	// stalls again, up to partially_untouched_timeout every time. Hold the expectation for a while instead:
+	// keeping it high only ever means "I already know that port is quiet, do not wait for it".
+	u64 untouched_hold_until = 0;
+
+	// Long enough to outlast the few-period oscillation a decoder produces while it spins up, short enough
+	// that a port going quiet for good is noticed promptly.
+	const u64 untouched_hold_periods = 340'000 / std::max<u32>(1, cfg.audio_block_period);
+
+	const auto expect_untouched = [&](u32 count)
+	{
+		if (count >= untouched_expected)
+		{
+			untouched_expected = count;
+			untouched_hold_until = m_counter + untouched_hold_periods;
+		}
+		else if (m_counter >= untouched_hold_until)
+		{
+			untouched_expected = count;
+		}
+	};
+
 	u32 loop_count = 0;
 
 	// Main cellAudio loop
@@ -904,40 +928,56 @@ void cell_audio_thread::operator()()
 
 			// Wait until buffers have been touched
 			//cellAudio.error("active=%u, in_progress=%u, untouched=%u, incomplete=%u", active_ports, in_progress, untouched, incomplete);
+			bool waited_long_enough = false;
+
 			if (untouched > untouched_expected)
 			{
 				// Games may sometimes "skip" audio periods entirely if they're falling behind (a sort of "frameskip" for audio)
-				// As such, if the game doesn't touch buffers for too long we advance time hoping the game recovers
+				// As such, if the game doesn't touch buffers for too long we stop waiting for them
 				if (
 					(untouched == active_ports && time_since_last_period > cfg.fully_untouched_timeout) ||
 					(time_since_last_period > cfg.partially_untouched_timeout) || g_cfg.audio.disable_sampling_skip
 				   )
 				{
-					// There's no audio in the buffers, simply advance time and hope the game recovers
-					cellAudio.trace("advancing time: untouched=%u/%u (expected=%u), enqueued_buffers=%llu", untouched, active_ports, untouched_expected, enqueued_buffers);
-					untouched_expected = untouched;
-					advance(timestamp);
+					expect_untouched(untouched);
+
+					if (untouched >= active_ports)
+					{
+						// There's no audio in any buffer, simply advance time and hope the game recovers
+						cellAudio.trace("advancing time: untouched=%u/%u (expected=%u), enqueued_buffers=%llu", untouched, active_ports, untouched_expected, enqueued_buffers);
+						advance(timestamp);
+						continue;
+					}
+
+					// Some ports do hold audio for this period. Advancing without enqueueing would throw that
+					// away as well, one block at a time, for as long as a port keeps alternating between
+					// touched and untouched. Mix what is there instead: the untouched ports were memset, so
+					// they contribute silence, which is exactly what they hold.
+					cellAudio.trace("mixing partially untouched buffers: untouched=%u/%u, enqueued_buffers=%llu", untouched, active_ports, enqueued_buffers);
+					waited_long_enough = true;
+				}
+				else
+				{
+					cellAudio.trace("waiting: untouched=%u/%u (expected=%u), enqueued_buffers=%llu", untouched, active_ports, untouched_expected, enqueued_buffers);
+					thread_ctrl::wait_for(1000);
 					continue;
 				}
-
-				cellAudio.trace("waiting: untouched=%u/%u (expected=%u), enqueued_buffers=%llu", untouched, active_ports, untouched_expected, enqueued_buffers);
-				thread_ctrl::wait_for(1000);
-				continue;
 			}
 
 			// Fast-path for when there is no audio in the buffers
+			// (unreachable once we waited long enough: that path only runs with untouched < active_ports)
 			if (untouched == active_ports)
 			{
 				// There's no audio in the buffers, simply advance time
 				cellAudio.trace("enqueuing silence: untouched=%u/%u (expected=%u), enqueued_buffers=%llu", untouched, active_ports, untouched_expected, enqueued_buffers);
 				ringbuffer->enqueue_silence();
-				untouched_expected = untouched;
+				expect_untouched(untouched);
 				advance(timestamp);
 				continue;
 			}
 
 			// Wait for buffer(s) to be completely filled
-			if (in_progress > 0)
+			if (!waited_long_enough && in_progress > 0)
 			{
 				cellAudio.trace("waiting: in_progress=%u/%u, enqueued_buffers=%u", in_progress, active_ports, enqueued_buffers);
 				thread_ctrl::wait_for(500);
@@ -947,7 +987,7 @@ void cell_audio_thread::operator()()
 			//cellAudio.error("active=%u, untouched=%u, in_progress=%d, incomplete=%d, enqueued_buffers=%u", active_ports, untouched, in_progress, incomplete, enqueued_buffers);
 
 			// Store number of untouched buffers for future reference
-			untouched_expected = untouched;
+			expect_untouched(untouched);
 
 			// Log if we enqueued untouched/incomplete buffers
 			if (untouched > 0 || incomplete > 0)
