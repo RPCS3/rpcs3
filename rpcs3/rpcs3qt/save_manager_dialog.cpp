@@ -353,16 +353,16 @@ void save_manager_dialog::UpdateList()
 
 		if (const std::string movie_path = dir_path + localized_movie; fs::is_file(movie_path))
 		{
-			icon_item->set_video_path(movie_path);
+			icon_item->set_video_path(movie_path, false);
 		}
 		else if (const std::string movie_path = dir_path + "ICON1.PAM"; fs::is_file(movie_path))
 		{
-			icon_item->set_video_path(movie_path);
+			icon_item->set_video_path(movie_path, false);
 		}
 
 		if (const std::string audio_path = dir_path + "SND0.AT3"; fs::is_file(audio_path))
 		{
-			icon_item->set_audio_path(audio_path);
+			icon_item->set_audio_path(audio_path, false);
 		}
 
 		icon_item->set_image_change_callback([this, icon_item](const QVideoFrame& frame)
@@ -700,8 +700,8 @@ void save_manager_dialog::UpdateDetails()
 		const int idx = item->data(Qt::UserRole).toInt();
 		const SaveDataEntry& save = ::at32(m_save_entries, idx);
 
-		m_details_icon->set_video_path(icon_item->video_path().toStdString());
-		m_details_icon->set_audio_path(icon_item->audio_path().toStdString());
+		m_details_icon->set_video_path(icon_item->video_path().toStdString(), false);
+		m_details_icon->set_audio_path(icon_item->audio_path().toStdString(), false);
 		m_details_icon->set_thumbnail(icon_item->data(SaveUserRole::Pixmap).value<QPixmap>());
 		m_details_icon->set_active(false);
 

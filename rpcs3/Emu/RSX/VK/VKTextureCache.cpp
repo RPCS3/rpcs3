@@ -1384,11 +1384,11 @@ namespace vk
 			//TODO
 			warn_once("Format incompatibility detected, reporting failure to force data copy (VK_FORMAT=0x%X, GCM_FORMAT=0x%X)", static_cast<u32>(vk_format), gcm_format);
 			return false;
-#ifndef __APPLE__
+#if !defined(__APPLE__) || !defined(ARCH_X64)
 		case CELL_GCM_TEXTURE_R5G6B5:
 			return (vk_format == VK_FORMAT_R5G6B5_UNORM_PACK16);
 #else
-		// R5G6B5 is not supported by Metal
+		// R5G6B5 is not supported by Metal on non-Apple GPUs
 		case CELL_GCM_TEXTURE_R5G6B5:
 			return (vk_format == VK_FORMAT_B8G8R8A8_UNORM);
 #endif

@@ -33,7 +33,7 @@ namespace utils
 namespace
 {
 
-#ifndef __APPLE__
+#if !defined(__APPLE__) || !defined(ARCH_X64)
 u16 convert_rgb655_to_rgb565(const u16 bits)
 {
 	// g6 = g5
@@ -946,7 +946,7 @@ namespace rsx
 			break;
 		}
 
-#ifndef __APPLE__
+#if !defined(__APPLE__) || !defined(ARCH_X64)
 		case CELL_GCM_TEXTURE_R6G5B5:
 		{
 			if (is_swizzled)
@@ -1790,7 +1790,7 @@ namespace rsx
 		case CELL_GCM_TEXTURE_R5G6B5:
 			return rsx::surface_color_format::r5g6b5;
 		case CELL_GCM_TEXTURE_A8R8G8B8:
-			return rsx::surface_color_format::a8b8g8r8;
+			return rsx::surface_color_format::a8r8g8b8;
 		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
 			return rsx::surface_color_format::w16z16y16x16;
 		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:

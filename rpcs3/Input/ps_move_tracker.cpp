@@ -69,7 +69,7 @@ void ps_move_tracker<DiagnosticsEnabled>::set_valid(ps_move_info& info, u32 inde
 
 	info.valid = valid;
 	fail_count = 0; // Reset fail count
-};
+}
 
 template <bool DiagnosticsEnabled>
 void ps_move_tracker<DiagnosticsEnabled>::set_image_data(const void* buf, u64 size, u32 width, u32 height, s32 format)
