@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include <QJsonObject>
+#include <QObject>
 
 class downloader;
 
@@ -35,7 +35,7 @@ namespace compat
 		std::vector<pkg_changelog> changelogs;
 		std::vector<pkg_title> titles;
 
-		std::string get_changelog(const std::string& type) const
+		std::string get_changelog(std::string_view type) const
 		{
 			if (const auto it = std::find_if(changelogs.cbegin(), changelogs.cend(), [type](const pkg_changelog& cl) { return cl.type == type; });
 				it != changelogs.cend())
@@ -50,7 +50,7 @@ namespace compat
 			return "";
 		}
 
-		std::string get_title(const std::string& type) const
+		std::string get_title(std::string_view type) const
 		{
 			if (const auto it = std::find_if(titles.cbegin(), titles.cend(), [type](const pkg_title& t) { return t.type == type; });
 				it != titles.cend())

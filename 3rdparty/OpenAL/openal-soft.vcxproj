@@ -49,16 +49,57 @@
   <PropertyGroup Label="UserMacros">
     <CmakeReleaseCLI>call vsdevcmd.bat -arch=amd64
       cd "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)"
-      cmake -G Ninja -DCMAKE_CXX_COMPILER="cl.exe" -DCMAKE_C_COMPILER="cl.exe" -DCMAKE_BUILD_TYPE="Release" -DCMAKE_INSTALL_PREFIX="./Release" -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded -DCMAKE_SYSTEM_VERSION=10.0 -DLIBTYPE=STATIC -DFORCE_STATIC_VCRT=true -DALSOFT_UTILS=false -DALSOFT_EXAMPLES=false -DALSOFT_INSTALL=false -DALSOFT_INSTALL_CONFIG=false -DALSOFT_INSTALL_HRTF_DATA=false -DALSOFT_INSTALL_AMBDEC_PRESETS=false -DALSOFT_INSTALL_EXAMPLES=false -DALSOFT_INSTALL_UTILS=false "$(SolutionDir)3rdparty\OpenAL\openal-soft"
+      if not defined CCACHE_LAUNCH_ARGS set CCACHE_LAUNCH_ARGS=
+      cmake -G Ninja ^
+        -DCMAKE_CXX_COMPILER="cl.exe" ^
+        -DCMAKE_C_COMPILER="cl.exe" ^
+        %25CCACHE_LAUNCH_ARGS%25 ^
+        -DCMAKE_BUILD_TYPE="Release" ^
+        -DCMAKE_INSTALL_PREFIX="./Release" ^
+        -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded ^
+        -DCMAKE_SYSTEM_VERSION=10.0 ^
+        -DLIBTYPE=STATIC ^
+        -DFORCE_STATIC_VCRT=true ^
+        -DALSOFT_UTILS=false ^
+        -DALSOFT_EXAMPLES=false ^
+        -DALSOFT_INSTALL=false ^
+        -DALSOFT_INSTALL_CONFIG=false ^
+        -DALSOFT_INSTALL_HRTF_DATA=false ^
+        -DALSOFT_INSTALL_AMBDEC_PRESETS=false ^
+        -DALSOFT_INSTALL_EXAMPLES=false ^
+        -DALSOFT_INSTALL_UTILS=false ^
+        "$(SolutionDir)3rdparty\OpenAL\openal-soft"
     </CmakeReleaseCLI>
     <CmakeDebugCLI>call vsdevcmd.bat -arch=amd64
       cd "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)"
-      cmake -G Ninja -DCMAKE_CXX_COMPILER="cl.exe" -DCMAKE_C_COMPILER="cl.exe" -DCMAKE_BUILD_TYPE="Debug" -DCMAKE_INSTALL_PREFIX="./Debug" -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDebug -DCMAKE_SYSTEM_VERSION=10.0 -DLIBTYPE=STATIC -DALSOFT_UTILS=false -DALSOFT_EXAMPLES=false -DALSOFT_INSTALL=false -DALSOFT_INSTALL_CONFIG=false -DALSOFT_INSTALL_HRTF_DATA=false -DALSOFT_INSTALL_AMBDEC_PRESETS=false -DALSOFT_INSTALL_EXAMPLES=false -DALSOFT_INSTALL_UTILS=false "$(SolutionDir)3rdparty\OpenAL\openal-soft"
+      if not defined CCACHE_LAUNCH_ARGS set CCACHE_LAUNCH_ARGS=
+      cmake -G Ninja ^
+        -DCMAKE_CXX_COMPILER="cl.exe" ^
+        -DCMAKE_C_COMPILER="cl.exe" ^
+        %25CCACHE_LAUNCH_ARGS%25 ^
+        -DCMAKE_BUILD_TYPE="Debug" ^
+        -DCMAKE_INSTALL_PREFIX="./Debug" ^
+        -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDebug ^
+        -DCMAKE_SYSTEM_VERSION=10.0 ^
+        -DALSOFT_UTILS=false ^
+        -DALSOFT_EXAMPLES=false ^
+        -DALSOFT_INSTALL=false ^
+        -DALSOFT_INSTALL_CONFIG=false ^
+        -DALSOFT_INSTALL_HRTF_DATA=false ^
+        -DALSOFT_INSTALL_AMBDEC_PRESETS=false ^
+        -DALSOFT_INSTALL_EXAMPLES=false ^
+        -DALSOFT_INSTALL_UTILS=false ^
+        "$(SolutionDir)3rdparty\OpenAL\openal-soft"
     </CmakeDebugCLI>
     <CmakeCopyCLI>
       echo Copying..
       copy "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\OpenAL32.lib" "$(SolutionDir)build\lib\$(Configuration)-$(Platform)"
     </CmakeCopyCLI>
+    <CmakeCopyDebugCLI>
+      echo Copying..
+      copy "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\OpenAL32.lib" "$(SolutionDir)build\lib\$(Configuration)-$(Platform)"
+      copy "$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\OpenAL32.dll" "$(SolutionDir)bin"
+    </CmakeCopyDebugCLI>
     <CmakeCleanCLI>
       echo Cleaning..
       del "$(SolutionDir)build\lib\$(Configuration)-$(Platform)\OpenAL32.lib"
@@ -71,13 +112,13 @@
     <NMakeBuildCommandLine>
       $(CmakeDebugCLI)
       ninja
-      $(CmakeCopyCLI)
+      $(CmakeCopyDebugCLI)
     </NMakeBuildCommandLine>
     <NMakeReBuildCommandLine>
       $(CmakeCleanCLI)
       $(CmakeDebugCLI)
       ninja
-      $(CmakeCopyCLI)
+      $(CmakeCopyDebugCLI)
     </NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>
       $(CmakeCleanCLI)

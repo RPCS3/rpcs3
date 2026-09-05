@@ -567,6 +567,10 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		return _ptr(m_thread, ::offset32(offset_args...));
 	}
 
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnonnull"
+#endif
 	template <typename T>
 	T* spu_mem_attr(T* inst)
 	{
@@ -600,6 +604,9 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 
 		return inst;
 	}
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 
 	// Return default register type
 	llvm::Type* get_reg_type(u32 index)
@@ -709,6 +716,17 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		ensure(val && val->getType() == get_type<u32[4]>());
 
 		const auto x = m_ir->CreateZExt(val, get_type<u64[4]>());
+
+		// Use integer operations here so LLVM can fold the masks into VPTERNLOG
+		if (m_use_avx512)
+		{
+			const auto s = m_ir->CreateAnd(m_ir->CreateShl(x, 32), 0x8000000000000000);
+			const auto m = m_ir->CreateAnd(m_ir->CreateShl(x, 29), 0x0fffffffe0000000);
+			const auto f = m_ir->CreateAdd(m_ir->CreateOr(s, m), splat<u64[4]>(0x3800000000000000).eval(m_ir));
+			const auto e = m_ir->CreateAnd(val, 0x7f800000);
+			return uint64_as_double(m_ir->CreateSelect(m_ir->CreateIsNotNull(e), f, s));
+		}
+
 		const auto s = m_ir->CreateShl(m_ir->CreateAnd(x, 0x80000000), 32);
 		const auto a = m_ir->CreateAnd(x, 0x7fffffff);
 		const auto m = m_ir->CreateShl(m_ir->CreateAdd(a, splat<u64[4]>(0x1c0000000).eval(m_ir)), 29);
@@ -721,6 +739,19 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	llvm::Value* xfloat_in_double(llvm::Value* val)
 	{
 		ensure(val && val->getType() == get_type<f64[4]>());
+
+		// Use integer operations here so LLVM can fold the masks into VPTERNLOG
+		if (m_use_avx512)
+		{
+			const auto d = double_as_uint64(val);
+			const auto smax = splat<u64[4]>(0x47ffffffe0000000).eval(m_ir);
+			const auto smin = splat<u64[4]>(0x3810000000000000).eval(m_ir);
+			const auto a = m_ir->CreateAnd(d, 0x7fffffffe0000000);
+			const auto n = m_ir->CreateICmpUGE(a, smin);
+			const auto c = m_ir->CreateSelect(m_ir->CreateICmpULT(a, smax), a, smax);
+			const auto r = m_ir->CreateOr(c, m_ir->CreateAnd(d, 0x8000000000000000));
+			return uint64_as_double(m_ir->CreateSelect(n, r, splat<u64[4]>(0).eval(m_ir)));
+		}
 
 		const auto smax = uint64_as_double(splat<u64[4]>(0x47ffffffe0000000).eval(m_ir));
 		const auto smin = uint64_as_double(splat<u64[4]>(0x3810000000000000).eval(m_ir));
@@ -1733,11 +1764,7 @@ public:
 
 		// Create LLVM module
 		std::unique_ptr<Module> _module = std::make_unique<Module>(m_hash + ".obj", m_context);
-#if LLVM_VERSION_MAJOR >= 21 && (LLVM_VERSION_MINOR >= 1 || LLVM_VERSION_MAJOR >= 22)
 		_module->setTargetTriple(Triple(jit_compiler::triple2()));
-#else
-		_module->setTargetTriple(jit_compiler::triple2());
-#endif
 		_module->setDataLayout(m_jit.get_engine().getTargetMachine()->createDataLayout());
 		m_module = _module.get();
 
@@ -3663,11 +3690,7 @@ public:
 						{
 							if (b2 != bqbi)
 							{
-#if LLVM_VERSION_MAJOR >= 21 || (LLVM_VERSION_MAJOR == 20 && LLVM_VERSION_MINOR >= 1)
 								auto ins = &*b2->block->getFirstNonPHIIt();
-#else
-								auto ins = b2->block->getFirstNonPHI();
-#endif
 
 								if (b2->bb->preds.size() == 1)
 								{
@@ -4039,11 +4062,7 @@ public:
 
 		// Create LLVM module
 		std::unique_ptr<Module> _module = std::make_unique<Module>("spu_interpreter.obj", m_context);
-#if LLVM_VERSION_MAJOR >= 21 && (LLVM_VERSION_MINOR >= 1 || LLVM_VERSION_MAJOR >= 22)
 		_module->setTargetTriple(Triple(jit_compiler::triple2()));
-#else
-		_module->setTargetTriple(jit_compiler::triple2());
-#endif
 		_module->setDataLayout(m_jit.get_engine().getTargetMachine()->createDataLayout());
 		m_module = _module.get();
 
@@ -7246,7 +7265,7 @@ public:
 
 				if (auto [a, b] = match_vrs<f64[4]>(op.ra, op.rb); a || b)
 				{
-					set_vr(op.rt4, select(sel_bool, get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.ra)));
+					set_vr(op.rt4, select(sel_bool, get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.ra)), nullptr, !(a && b));
 					return true;
 				}
 
@@ -7304,7 +7323,7 @@ public:
 			{
 				if (const auto [a_f64, b_f64] = match_vrs<f64[4]>(op.ra, op.rb); a_f64 || b_f64)
 				{
-					set_vr(op.rt4, select(noncast<s32[4]>(c) != 0, get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.ra)));
+					set_vr(op.rt4, select(noncast<s32[4]>(c) != 0, get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.ra)), nullptr, !(a_f64 && b_f64));
 					return;
 				}
 
@@ -7465,6 +7484,9 @@ public:
 		const auto known_idx = get_known_bits(c);
 		const bool perm_only = known_idx.Zero[7];
 		const bool perm_or_zero_only = known_idx.Zero[6];
+		const bool consts_only = known_idx.One[7];
+		const bool consts_never_msb = known_idx.Zero[5];
+		const bool consts_never_allones = known_idx.One[5];
 		const bool idx_selects_single = known_idx.extractBits(1, 4).isConstant();
 
 		const auto a = get_vr<u8[16]>(op.ra);
@@ -7527,7 +7549,11 @@ public:
 		// NOTE: LLVM doesn't emit BCAX	(llvm-project/issues/200699)
 		//		 Verify if `(x ^ 0x0F) & 0x?F` is reassociated when upstreamed
 
-		if (single_src)
+		if (consts_only)
+		{
+			// NOP to avoid doing any shuffles
+		}
+		else if (single_src)
 		{
 			const auto only_src = single_src.value();
 
@@ -7539,8 +7565,7 @@ public:
 
 			if (only_src_is_splat)
 			{
-				const auto lut = build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x80, 0x80, 0x80, 0x80);
-				set_vr(op.rt4, tbx(only_src, lut, (c >> 3) ^ 0x10));
+				set_vr(op.rt4, tbl(splat_lut, (c >> 4)));
 				return;
 			}
 
@@ -7550,15 +7575,8 @@ public:
 				set_vr(op.rt4, tbl(only_src, cm));
 				return;
 			}
-
-			const auto x = tbl(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
-			const auto xv = perm_or_zero_only ? eval(splat<u8[16]>(0)) : x;
-			const auto cm = eval(cv & 0x8f);
-			set_vr(op.rt4, tbx(xv, only_src, cm));
-			return;
 		}
-
-		if (a_is_splat && b_is_splat)
+		else if (a_is_splat && b_is_splat)
 		{
 			if (perm_only)
 			{
@@ -7577,19 +7595,53 @@ public:
 			return;
 		}
 
-		const auto x = tbl(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
-		const auto xv = perm_or_zero_only ? eval(splat<u8[16]>(0)) : x;
+		// Calculate special index constants
+
+		value_t<u8[16]> idx_consts;
+		if (perm_or_zero_only)
+		{
+			idx_consts = eval(splat<u8[16]>(0));
+		}
+		else if (consts_never_msb)
+		{
+			idx_consts = eval(noncast<u8[16]>(sext<s8[16]>(c >= 0xc0)));
+		}
+		else
+		{
+			idx_consts = tbl(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
+		}
+
+		if (consts_only)
+		{
+			set_vr(op.rt4, idx_consts);
+			return;
+		}
+
+		// Combine shuffle and special index constants
+
+		if (single_src)
+		{
+			const auto cm = eval(cv & 0x8f);
+			set_vr(op.rt4, tbx(idx_consts, single_src.value(), cm));
+			return;
+		}
+
 		const auto cm = eval(cv & 0x9f);
-		set_vr(op.rt4, tbx2(xv, av, bv, cm));
+		set_vr(op.rt4, tbx2(idx_consts, av, bv, cm));
 		return;
 #else
 
 		// Calculate shuffle
 
-		bool shuf_zero_when_msb = false;
+		bool or_combine_safe = false;
 
 		value_t<u8[16]> ab_shuf;
-		if (single_src)
+		if (consts_only)
+		{
+			// NOP to avoid doing any shuffles
+			ab_shuf = value_t<u8[16]>();
+		}
+		else if (single_src)
 		{
 			if (only_src_is_splat)
 			{
@@ -7598,7 +7650,7 @@ public:
 			else
 			{
 				ab_shuf = eval(pshufb(single_src.value(), cv));
-				shuf_zero_when_msb = true;
+				or_combine_safe = true;
 			}
 		}
 		else if (a_is_splat && b_is_splat)
@@ -7628,7 +7680,7 @@ public:
 			ab_shuf = eval(select_by_bit4(c, a_shuf, b_shuf));
 
 			// pshufb zeros when the MSB is set
-			shuf_zero_when_msb = !(a_is_splat || b_is_splat);
+			or_combine_safe = !(a_is_splat || b_is_splat);
 		}
 
 		if (perm_only)
@@ -7644,10 +7696,26 @@ public:
 		{
 			idx_consts = eval(splat<u8[16]>(0));
 		}
-		else if (m_use_avx512_icl)
+		else if (consts_never_msb)
 		{
+			// Saves on a constant + prevents pessimation where kmask implementation has worse latency than GFNI
+			if (or_combine_safe)
+				idx_consts = eval(bitcast<u8[16]>(sext<s8[16]>(c >= 0xc0)));
+			else
+				idx_consts = eval(bitcast<u8[16]>(noncast<s8[16]>(c + c) >> 7));
+		}
+		else if (consts_never_allones)
+		{
+			idx_consts = eval(sub_sat(c, splat<u8[16]>(0x60)) & 0x80);
+		}
+		else if (m_use_gfni)
+		{
+			// TODO: Due to vpblendvb, the pshufb OR combine path is one fewer micro-ops post Rocket Lake. Check if it is faster.
 			const auto gfni = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
 			idx_consts = eval(select(noncast<s8[16]>(gfni) >= 0, splat<u8[16]>(0), gfni));
+			
+			// Logic assumes that the MSB is always set
+			or_combine_safe = false;
 		}
 		else
 		{
@@ -7655,9 +7723,15 @@ public:
 			idx_consts = eval(pshufb(pshufb_lut, (c >> 4)));
 		}
 
+		if (consts_only)
+		{
+			set_vr(op.rt4, idx_consts);
+			return;
+		}
+
 		// Combine shuffle and special index constants
 
-		if (shuf_zero_when_msb)
+		if (or_combine_safe)
 			set_vr(op.rt4, ab_shuf | idx_consts);
 		else
 			set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab_shuf, idx_consts));
@@ -7805,6 +7879,8 @@ public:
 		// Avoid pessimation when full clamping isn't needed
 		if (m_use_avx512 && !(known.isKnownNeverNaN() && (known.isKnownNeverPosInfinity() || known.isKnownNeverNegInfinity())))
 		{
+			// Fails to clamp SNaN
+			// Normally doesn't cause issues as SNaN frequently gets quieted beforehand
 			return eval(vrangeps(v, fsplat<f32[4]>(std::bit_cast<f32, u32>(0x7f7fffff)), 0x2, 0xff));
 		}
 
@@ -8847,13 +8923,17 @@ public:
 			const auto a = bitcast<u32[4]>(value<f32[4]>(ci->getOperand(0)));
 			const auto b = bitcast<u32[4]>(value<f32[4]>(ci->getOperand(1)));
 
+			// The AVX512 path in `clamp_smax` doesn't properly clamp SNaN
+			// Normally this is fine, but it can cause issues if we generate them from normalized inputs
+
 			const auto base = (b & 0x007ffc00u) << 9; // Base fraction
 			const auto ymul = (b & 0x3ff) * (a & 0x7ffff); // Step fraction * Y fraction (fixed point at 2^-32)
-			const auto comparison = (ymul > base); // Should exponent be adjusted?
-			const auto bnew = (base - ymul) >> (zext<u32[4]>(comparison) ^ 9); // Shift one less bit if exponent is adjusted
-			const auto base_result = (b & 0xff800000u) | (bnew & ~0xff800000u); // Inject old sign and exponent
-			const auto adjustment = bitcast<u32[4]>(sext<s32[4]>(comparison)) & (1 << 23); // exponent adjustement for negative bnew
-			return clamp_smax(eval(bitcast<f32[4]>(base_result - adjustment)));
+			const auto comparison = bitcast<u32[4]>(sext<s32[4]>(ymul > base)); // Should exponent be adjusted?
+			const auto bnew = (base - ymul) >> (comparison + 9); // Shift one less bit if exponent is adjusted
+			const auto adjustment = comparison & (1 << 23); // exponent adjustement for negative bnew
+			const auto adjust_expo = (b & 0xff800000u) - adjustment;
+			const auto result_expo = clamp_smax(eval(bitcast<f32[4]>(adjust_expo)));
+			return bitcast<f32[4]>(bitcast<u32[4]>(result_expo) | (bnew & 0x007fffffu)); // clamped overwrites mantissa
 		});
 
 		const auto [a, b] = get_vrs<f32[4]>(op.ra, op.rb);
@@ -8892,15 +8972,13 @@ public:
 					}
 				}
 
-				b = eval(b | fix_exponent | a_sign);
-
 				const auto base = (b & 0x007ffc00u) << 9; // Base fraction
 				const auto ymul = (b & 0x3ff) * (a & 0x7ffff); // Step fraction * Y fraction (fixed point at 2^-32)
-				const auto comparison = (ymul > base); // Should exponent be adjusted?
-				const auto bnew = (base - ymul) >> (zext<u32[4]>(comparison) ^ 9); // Shift one less bit if exponent is adjusted
-				const auto base_result = (b & 0xff800000u) | (bnew & ~0xff800000u); // Inject old sign and exponent
-				const auto adjustment = bitcast<u32[4]>(sext<s32[4]>(comparison)) & (1 << 23); // exponent adjustement for negative bnew
-				return clamp_smax(eval(bitcast<f32[4]>(base_result - adjustment)));
+				const auto comparison = bitcast<u32[4]>(sext<s32[4]>(ymul > base)); // Should exponent be adjusted?
+				const auto bnew = (base - ymul) >> (comparison + 9); // Shift one less bit if exponent is adjusted
+				const auto adjust_expo = (fix_exponent | a_sign) - (comparison & (1 << 23)); // exponent adjustement for negative bnew
+				const auto result_expo = clamp_smax(eval(bitcast<f32[4]>(adjust_expo)));
+				return bitcast<f32[4]>(bitcast<u32[4]>(result_expo) | (bnew & 0x007fffffu)); // clamped overwrites mantissa
 			});
 
 			register_intrinsic("spu_rsqrte", [&](llvm::CallInst* ci)
@@ -8923,15 +9001,15 @@ public:
 					final_fraction = eval(insert(final_fraction, i, r_fraction));
 				}
 
-				const auto b = eval(final_fraction | final_exponent);
+				const auto b = final_fraction;
 
 				const auto base = (b & 0x007ffc00u) << 9; // Base fraction
 				const auto ymul = (b & 0x3ff) * (a & 0x7ffff); // Step fraction * Y fraction (fixed point at 2^-32)
-				const auto comparison = (ymul > base); // Should exponent be adjusted?
-				const auto bnew = (base - ymul) >> (zext<u32[4]>(comparison) ^ 9); // Shift one less bit if exponent is adjusted
-				const auto base_result = (b & 0xff800000u) | (bnew & ~0xff800000u); // Inject old sign and exponent
-				const auto adjustment = bitcast<u32[4]>(sext<s32[4]>(comparison)) & (1 << 23); // exponent adjustement for negative bnew
-				return clamp_smax(eval(bitcast<f32[4]>(base_result - adjustment)));
+				const auto comparison = bitcast<u32[4]>(sext<s32[4]>(ymul > base)); // Should exponent be adjusted?
+				const auto bnew = (base - ymul) >> (comparison + 9); // Shift one less bit if exponent is adjusted
+				const auto adjust_expo = final_exponent - (comparison & (1 << 23)); // exponent adjustement for negative bnew
+				const auto result_expo = clamp_positive_smax(eval(bitcast<f32[4]>(adjust_expo)));
+				return bitcast<f32[4]>(bitcast<u32[4]>(result_expo) | (bnew & 0x007fffffu)); // clamped overwrites mantissa
 			});
 			break;
 		}

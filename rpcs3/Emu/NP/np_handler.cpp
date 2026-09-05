@@ -1045,6 +1045,8 @@ namespace np
 
 	void np_handler::set_message_selected(SceNpBasicAttachmentDataId id, u64 msg_id)
 	{
+		std::lock_guard lock(m_mutex_selected_messages);
+
 		switch (id)
 		{
 		case SCE_NP_BASIC_SELECTED_INVITATION_DATA:
@@ -1060,6 +1062,8 @@ namespace np
 
 	std::optional<shared_ptr<std::pair<std::string, message_data>>> np_handler::get_message_selected(SceNpBasicAttachmentDataId id)
 	{
+		std::lock_guard lock(m_mutex_selected_messages);
+
 		switch (id)
 		{
 		case SCE_NP_BASIC_SELECTED_INVITATION_DATA:
@@ -1079,6 +1083,8 @@ namespace np
 
 	void np_handler::clear_message_selected(SceNpBasicAttachmentDataId id)
 	{
+		std::lock_guard lock(m_mutex_selected_messages);
+
 		switch (id)
 		{
 		case SCE_NP_BASIC_SELECTED_INVITATION_DATA:
@@ -1098,6 +1104,29 @@ namespace np
 		msg_data.print();
 
 		get_rpcn()->send_message(msg_data, npids);
+	}
+
+	bool np_handler::select_invitation(u64 msg_id)
+	{
+		const auto message = get_message(msg_id);
+
+		if (!message || message.value()->second.mainType != SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE)
+		{
+			rpcn_log.error("Cannot select invalid invitation: msg_id=%d", msg_id);
+			return false;
+		}
+
+		set_message_selected(SCE_NP_BASIC_SELECTED_INVITATION_DATA, msg_id);
+
+		if (sysutil_send_system_cmd(CELL_SYSUTIL_NP_INVITATION_SELECTED, 0) <= 0)
+		{
+			clear_message_selected(SCE_NP_BASIC_SELECTED_INVITATION_DATA);
+			rpcn_log.error("Failed to notify the game about selected invitation: msg_id=%d", msg_id);
+			return false;
+		}
+
+		get_rpcn()->mark_message_used(msg_id);
+		return true;
 	}
 
 	void np_handler::operator()()
@@ -1607,6 +1636,32 @@ namespace np
 			presence_self.advertised = true;
 			rpcn->send_presence(presence_self.pr_com_id, presence_self.pr_title, presence_self.pr_status, presence_self.pr_comment, presence_self.pr_data);
 		}
+	}
+
+	void np_handler::rpcn_trophy_unlock(const SceNpCommunicationId& communication_id, s32 trophy_id, s64 timestamp)
+	{
+		if (!is_psn_active || g_cfg.net.psn_status != np_psn_status::psn_rpcn)
+			return;
+
+		std::lock_guard lock(mutex_rpcn);
+		if (!rpcn || !rpcn->is_authentified())
+			return;
+
+		rpcn->unlock_trophy(communication_id, trophy_id, timestamp);
+	}
+
+	std::vector<std::pair<s32, s64>> np_handler::rpcn_trophy_sync(
+		const SceNpCommunicationId& communication_id,
+		const std::vector<std::pair<s32, s64>>& local_unlocked)
+	{
+		if (!is_psn_active || g_cfg.net.psn_status != np_psn_status::psn_rpcn)
+			return {};
+
+		std::lock_guard lock(mutex_rpcn);
+		if (!rpcn || !rpcn->is_authentified())
+			return {};
+
+		return rpcn->sync_trophies(communication_id, local_unlocked);
 	}
 
 	template <typename T>

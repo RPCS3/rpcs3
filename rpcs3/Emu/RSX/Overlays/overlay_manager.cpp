@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "overlay_manager.h"
-#include "Emu/System.h"
 #include <util/asm.hpp>
 
 namespace rsx
@@ -177,7 +176,7 @@ namespace rsx
 
 			rsx_log.notice("display_manager::start_audio: path='%s'", audio_path);
 
-			m_audio_player = std::make_unique<audio_player>(audio_path);
+			m_audio_player = std::make_unique<audio_player>(audio_path, false, "");
 			m_audio_player->set_active(true);
 		}
 

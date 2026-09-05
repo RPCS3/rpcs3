@@ -62,6 +62,8 @@ layout(location=0) out vec4 dest[16];
 
 #define reg_mov(d, s, m) d = mix(d, s, m)
 
+#define MAX_STACK_DEPTH 8
+
 struct D0
 {
     uint addr_swz;
@@ -230,28 +232,36 @@ vec4 get_cond()
 	return shuffle(cc[d0.cond_reg_sel_1], d0.swizzle);
 }
 
-void write_sca(in float value)
+void write_sca(in vec4 value)
 {
 	if (d0.saturate)
 	{
 		value = clamp(value, 0, 1);
 	}
 
-	if (d3.sca_dst_tmp == 0x3f)
+	const bool write_out_reg = !d0.vec_result;
+	const bool write_gpr_reg = d3.sca_dst_tmp != 0x3f;
+
+	// NOTE: SCA does not support double register writes.
+	if (write_gpr_reg)
 	{
-		if (!d0.vec_result)
-		{
-			reg_mov(dest[d3.dst], vec4(value), d3.sca_mask);
-		}
-		else
-		{
-			reg_mov(cc[d0.cond_reg_sel_1], vec4(value), d3.sca_mask);
-		}
+		// Write to GPR. Most likely scenario.
+		reg_mov(temp[d3.sca_dst_tmp], value, d3.sca_mask);
+		return;
 	}
-	else
+
+	if (write_out_reg)
 	{
-		reg_mov(temp[d3.sca_dst_tmp], vec4(value), d3.sca_mask);
+		if (d3.dst < 16)
+		{
+			reg_mov(dest[d3.dst], value, d3.sca_mask);
+		}
+
+		return;
 	}
+
+	// Not writing to temp or out register. Update CC
+	reg_mov(cc[d0.cond_reg_sel_1], value, d3.sca_mask);
 }
 
 void write_vec(in vec4 value)
@@ -268,22 +278,32 @@ void write_vec(in vec4 value)
 		write_mask = bvec4(uvec4(write_mask) & uvec4(mask));
 	}
 
-	if (d0.dst_tmp == 0x3f && !d0.vec_result)
+	if (d0.dst_tmp != 0x3f)
 	{
-		reg_mov(cc[d0.cond_reg_sel_1], value, write_mask);
+		// GPR write
+		reg_mov(temp[d0.dst_tmp], value, write_mask);
+
+		if (!d0.vec_result)
+		{
+			return;
+		}
+
+		// Fallthrough - VEC engine allows double write to one output register and one GPR
 	}
-	else
+
+	if (d0.vec_result)
 	{
-		if (d0.vec_result && d3.dst < 16)
+		if (d3.dst < 16)
 		{
 			reg_mov(dest[d3.dst], value, write_mask);
 		}
 
-		if (d0.dst_tmp != 0x3f)
-		{
-			reg_mov(temp[d0.dst_tmp], value, write_mask);
-		}
+		return;
 	}
+
+	// Writes to neither GPR nor OUT reg. Update CC
+	reg_mov(cc[d0.cond_reg_sel_1], value, write_mask);
+
 }
 
 void write_output(const in int oid, const in int mask_bit)
@@ -308,9 +328,10 @@ ivec4 read_addr_reg()
 
 int branch_addr()
 {
-	uint addr_h = GET_BITS(instr.z, 0, 6);
-	uint addr_l = GET_BITS(instr.w, 29, 3);
-	return int((addr_h << 3) + addr_l);
+	const uint addr_2 = GET_BITS(instr.x, 23, 1);        // Allows indexing beyond 512 instructions. Some games push upto 544 instructions on CEX firmware.
+	const uint addr_1 = GET_BITS(instr.z, 0, 6);
+	const uint addr_0 = GET_BITS(instr.w, 29, 3);
+	return int((addr_2 << 9) + (addr_1 << 3) + addr_0);  // NOTE: Encoded jump addresses are already rebased by the VP analyser pass.
 }
 
 bool static_branch()
@@ -410,13 +431,13 @@ void main()
 		dest[i] = vec4(0., 0., 0., 1.);
 	}
 
-	int callstack[8];
+	int callstack[MAX_STACK_DEPTH];
 	int stack_ptr = 0;
-	int current_instruction = 0;
+	int current_instruction = int(entry - base_address);
 
 	d3.end = false;
 
-	while (current_instruction < 512)
+	while (current_instruction >= 0 && current_instruction < 544) // NOTE: CEX can hold upto 544 instructions
 	{
 		if (d3.end)
 		{
@@ -442,7 +463,7 @@ void main()
 
 		if (vec_opcode == RSX_VEC_OPCODE_ARL)
 		{
-			a[d0.dst_tmp] = ivec4(read_src(0));
+			a[d0.dst_tmp & 0x1u] = ivec4(read_src(0));
 		}
 		else if (vec_opcode != RSX_VEC_OPCODE_NOP)
 		{
@@ -475,7 +496,13 @@ void main()
 			write_vec(value);
 		}
 
-		if (sca_opcode != RSX_SCA_OPCODE_NOP)
+		if (sca_opcode == RSX_SCA_OPCODE_LIT)
+		{
+			// Ridiculously hacky instruction. It is a vector opcode, not scalar
+			// TODO: More HWTEST
+			write_sca(_builtin_lit(read_src(2)));
+		}
+		else if (sca_opcode != RSX_SCA_OPCODE_NOP)
 		{
 			float value = read_src(2).x;
 			switch (sca_opcode)
@@ -486,7 +513,6 @@ void main()
 			case RSX_SCA_OPCODE_RSQ: value = 1.0 / sqrt(value); break;
 			case RSX_SCA_OPCODE_EXP: value = exp(value); break;
 			case RSX_SCA_OPCODE_LOG: value = log(value); break;
-			//case RSX_SCA_OPCODE_LIT: value = lit_legacy(value); break;
 			case RSX_SCA_OPCODE_LG2: value = log2(value); break;
 			case RSX_SCA_OPCODE_EX2: value = exp2(value); break;
 			case RSX_SCA_OPCODE_SIN: value = sin(value); break;
@@ -494,7 +520,7 @@ void main()
 
 			case RSX_SCA_OPCODE_BRA:
 				// Jump by address register
-				if (dynamic_branch()) current_instruction = int(read_addr_reg().x);
+				if (dynamic_branch()) current_instruction = int(read_addr_reg().x - base_address);
 				continue;
 			case RSX_SCA_OPCODE_BRI:
 				// Jump immediate
@@ -504,7 +530,8 @@ void main()
 				// Call immediate
 				if (dynamic_branch())
 				{
-					callstack[stack_ptr] = current_instruction;
+					if (stack_ptr == MAX_STACK_DEPTH) return;
+					callstack[stack_ptr] = current_instruction; // Already incremented, points to next
 					stack_ptr++;
 					current_instruction = branch_addr();
 				}
@@ -517,8 +544,7 @@ void main()
 				if (dynamic_branch())
 				{
 					if (stack_ptr == 0) return;
-					current_instruction = callstack[stack_ptr];
-					stack_ptr--;
+					current_instruction = callstack[--stack_ptr];
 				}
 				continue;
 			case RSX_SCA_OPCODE_BRB:
@@ -532,6 +558,7 @@ void main()
 				// Call by boolean mask
 				if (static_branch())
 				{
+					if (stack_ptr == MAX_STACK_DEPTH) return;
 					callstack[stack_ptr] = current_instruction;
 					stack_ptr++;
 					current_instruction = branch_addr();
@@ -541,7 +568,7 @@ void main()
 			//case RSX_SCA_OPCODE_POP:
 			}
 
-			write_sca(value);
+			write_sca(vec4(value));
 		}
 	}
 

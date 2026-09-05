@@ -93,6 +93,13 @@ namespace utils
 			media_log.notice("av_log: %s", msg);
 	};
 
+	template <typename T>
+	T media_info::get_metadata([[maybe_unused]] const std::string& key, const T& def) const
+	{
+		static_assert("unimplemented");
+		return def;
+	}
+
 	template <>
 	std::string media_info::get_metadata(const std::string& key, const std::string& def) const
 	{
@@ -400,6 +407,40 @@ namespace utils
 			}
 		}
 		return best_sample_rate;
+	}
+
+	static int select_sample_format(const AVCodec* codec)
+	{
+		constexpr AVSampleFormat default_sample_format = AV_SAMPLE_FMT_FLTP;
+
+		if (!codec)
+			return default_sample_format;
+
+		const void* sample_formats = nullptr;
+		int num = 0;
+
+		if (const int err = avcodec_get_supported_config(nullptr, codec, AVCodecConfig::AV_CODEC_CONFIG_SAMPLE_FORMAT, 0, &sample_formats, &num))
+		{
+			media_log.error("select_sample_format: avcodec_get_supported_config error: %d='%s'", err, av_error_to_string(err));
+			return default_sample_format;
+		}
+
+		if (!sample_formats)
+			return default_sample_format;
+
+		int i = 0;
+		std::set<AVSampleFormat> formats;
+		for (const AVSampleFormat* sample_format = static_cast<const AVSampleFormat*>(sample_formats); sample_format && *sample_format != AV_SAMPLE_FMT_NONE && i < num; sample_format++, i++)
+		{
+			media_log.notice("select_sample_format: found sample format: '%s'", av_get_sample_fmt_name(*sample_format));
+			formats.insert(*sample_format);
+		}
+
+		if (formats.contains(AV_SAMPLE_FMT_FLT)) return AV_SAMPLE_FMT_FLT;
+		if (formats.contains(AV_SAMPLE_FMT_FLTP)) return AV_SAMPLE_FMT_FLTP;
+
+		media_log.warning("select_sample_format: using default sample format: '%s'", av_get_sample_fmt_name(default_sample_format));
+		return default_sample_format;
 	}
 
 	AVChannelLayout get_preferred_channel_layout(int channels)
@@ -799,9 +840,10 @@ namespace utils
 		m_out_format = std::move(format);
 	}
 
-	void video_encoder::set_video_codec(s32 codec_id)
+	void video_encoder::set_video_codec(s32 codec_id, std::string_view codec_name)
 	{
 		m_video_codec_id = codec_id;
+		m_video_codec_name = codec_name;
 	}
 
 	void video_encoder::set_max_b_frames(s32 max_b_frames)
@@ -829,9 +871,10 @@ namespace utils
 		m_audio_bitrate_bps = bitrate;
 	}
 
-	void video_encoder::set_audio_codec(s32 codec_id)
+	void video_encoder::set_audio_codec(s32 codec_id, std::string_view codec_name)
 	{
 		m_audio_codec_id = codec_id;
+		m_audio_codec_name = codec_name;
 	}
 
 	void video_encoder::pause(bool flush)
@@ -992,9 +1035,32 @@ namespace utils
 				return nullptr;
 			};
 
-			const AVCodecID video_codec = static_cast<AVCodecID>(m_video_codec_id);
-			const AVCodecID audio_codec = static_cast<AVCodecID>(m_audio_codec_id);
-			const AVOutputFormat* out_format = find_format(video_codec, audio_codec);
+			const auto get_codec = [](const std::string& name, AVCodecID fallback, bool is_video)
+			{
+				const AVCodec* codec = name.empty() ? nullptr : avcodec_find_encoder_by_name(name.c_str());
+				if (codec) return codec;
+				media_log.warning("video_encoder: avcodec_find_encoder_by_name('%s') for %s failed or name is empty. Using fallback coded %d", name, is_video ? "video" : "audio", static_cast<int>(fallback));
+				return avcodec_find_encoder(fallback);
+			};
+
+			const AVCodec* selected_video_codec = get_codec(m_video_codec_name, static_cast<AVCodecID>(m_video_codec_id), true);
+			const AVCodec* selected_audio_codec = get_codec(m_audio_codec_name, static_cast<AVCodecID>(m_audio_codec_id), false);
+
+			if (!selected_video_codec)
+			{
+				media_log.error("video_encoder: avcodec_find_encoder for video failed");
+				has_error = true;
+				return;
+			}
+
+			if (!selected_audio_codec)
+			{
+				media_log.error("video_encoder: avcodec_find_encoder for audio failed");
+				has_error = true;
+				return;
+			}
+
+			const AVOutputFormat* out_format = find_format(selected_video_codec->id, selected_audio_codec->id);
 
 			if (out_format)
 			{
@@ -1002,7 +1068,7 @@ namespace utils
 			}
 			else
 			{
-				media_log.error("video_encoder: Could not find a format for the requested video_codec %d and audio_codec %d", m_video_codec_id, m_audio_codec_id);
+				media_log.error("video_encoder: Could not find a format for the requested video_codec '%s' (ID=%d) and audio_codec '%s' (ID=%d)", m_video_codec_name, static_cast<int>(selected_video_codec->id), m_audio_codec_name, static_cast<int>(selected_audio_codec->id));
 
 				// Fallback to some other codec
 				for (const AVCodec* video_codec : video_codecs)
@@ -1014,6 +1080,8 @@ namespace utils
 						if (out_format)
 						{
 							media_log.success("video_encoder: Found fallback output format '%s'", out_format->name);
+							selected_video_codec = video_codec;
+							selected_audio_codec = audio_codec;
 							break;
 						}
 					}
@@ -1046,27 +1114,11 @@ namespace utils
 				return;
 			}
 
-			const auto create_context = [this, &av](bool is_video) -> bool
+			const auto create_context = [this, &av, &selected_video_codec, &selected_audio_codec](bool is_video) -> bool
 			{
 				const std::string type = is_video ? "video" : "audio";
 				scoped_av::ctx& ctx = is_video ? av.video : av.audio;
-
-				if (is_video)
-				{
-					if (!(ctx.codec = avcodec_find_encoder(av.format_context->oformat->video_codec)))
-					{
-						media_log.error("video_encoder: avcodec_find_encoder for video failed. video_codec=%d", static_cast<int>(av.format_context->oformat->video_codec));
-						return false;
-					}
-				}
-				else
-				{
-					if (!(ctx.codec = avcodec_find_encoder(av.format_context->oformat->audio_codec)))
-					{
-						media_log.error("video_encoder: avcodec_find_encoder for audio failed. audio_codec=%d", static_cast<int>(av.format_context->oformat->audio_codec));
-						return false;
-					}
-				}
+				ctx.codec = is_video ? selected_video_codec : selected_audio_codec;
 
 				if (!(ctx.stream = avformat_new_stream(av.format_context, nullptr)))
 				{
@@ -1150,13 +1202,14 @@ namespace utils
 				}
 
 				m_sample_rate = select_sample_rate(av.audio.codec);
+				m_sample_format = select_sample_format(av.audio.codec);
 
 				av.audio.context->codec_id = av.format_context->oformat->audio_codec;
 				av.audio.context->codec_type = AVMEDIA_TYPE_AUDIO;
 				av.audio.context->bit_rate = m_audio_bitrate_bps;
 				av.audio.context->sample_rate = m_sample_rate;
 				av.audio.context->time_base = {.num = 1, .den = av.audio.context->sample_rate};
-				av.audio.context->sample_fmt = AV_SAMPLE_FMT_FLTP; // AV_SAMPLE_FMT_FLT is not supported in regular AC3
+				av.audio.context->sample_fmt = static_cast<AVSampleFormat>(m_sample_format);
 				av.audio.stream->time_base = av.audio.context->time_base;
 
 				// check that the encoder supports the format
@@ -1188,7 +1241,7 @@ namespace utils
 					return;
 				}
 
-				av.audio.frame->format = AV_SAMPLE_FMT_FLTP;
+				av.audio.frame->format = static_cast<AVSampleFormat>(m_sample_format);
 				av.audio.frame->nb_samples = av.audio.context->frame_size;
 
 				if (int err = av_channel_layout_copy(&av.audio.frame->ch_layout, &av.audio.context->ch_layout); err < 0)

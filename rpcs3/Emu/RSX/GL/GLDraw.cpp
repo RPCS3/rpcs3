@@ -391,13 +391,9 @@ void GLGSRender::load_texture_env()
 		{
 			actual_mipcount = tex.get_exact_mipmap_count();
 		}
-		else if (sampler_state->external_subresource_desc.op == rsx::deferred_request_command::mipmap_gather)
+		else if (sampler_state->external_subresource_desc.op != rsx::deferred_request_command::nop)
 		{
-			actual_mipcount = sampler_state->external_subresource_desc.sections_to_copy.size();
-		}
-		else if (sampler_state->external_subresource_desc.op == rsx::deferred_request_command::cubemap_unwrap)
-		{
-			actual_mipcount = sampler_state->external_subresource_desc.mipmaps;
+			actual_mipcount = sampler_state->external_subresource_desc.exact_mip_count();
 		}
 
 		m_fs_sampler_states[i].apply(tex, fs_sampler_state[i].get(), actual_mipcount > 1);
@@ -494,6 +490,63 @@ void GLGSRender::bind_texture_env()
 	gl::command_context cmd{ gl_state };
 	const bool is_interpreter = m_shader_interpreter.is_interpreter(m_program);
 
+	auto decay_view_for_interpreter = [&](
+		const rsx::image_section_attributes_t& attr,
+		gl::texture_cache::sampled_image_descriptor* desc,
+		gl::texture_view* base,
+		const rsx::texture_channel_remap_t& decoded_remap,
+		bool is_msaa,
+		bool is_redirected) -> gl::texture_view*
+	{
+		if (!is_msaa && !is_redirected)
+		{
+			return base;
+		}
+
+		if (is_redirected && desc->image_type > rsx::texture_dimension_extended::texture_dimension_2d)
+		{
+			// Cannot handle redirect on 3D or cubemap with the interpreter.
+			const auto target = gl::get_target(desc->image_type);
+			return m_null_textures[target]->get_view(rsx::default_remap_vector);
+		}
+
+		using deferred_subresource_t = gl::texture_cache::deferred_subresource;
+		auto image = static_cast<gl::viewable_image*>(base->image());
+		auto rtt = gl::try_as_rtt(base->image());
+
+		if (is_msaa)
+		{
+			// MSAA resolve
+			ensure(rtt);
+			rtt->memory_barrier(cmd, rsx::surface_access::transfer_read);
+			image = rtt->get_surface(rsx::surface_access::transfer_read);
+		}
+
+		if (is_redirected)
+		{
+			// Force bitcast
+			rsx::image_section_attributes_t flatten_attrs{};
+			flatten_attrs.address = desc->ref_address;
+			flatten_attrs.gcm_format = desc->format_ex.format();
+			flatten_attrs.width = image->width();
+			flatten_attrs.height = image->height();
+			flatten_attrs.depth = 1;
+
+			const coord3u flatten_rect = { 0, 0, 0, flatten_attrs.width, flatten_attrs.height, 1 };
+			auto flatten_op = deferred_subresource_t::create_copy(
+				image, flatten_attrs, flatten_rect, rsx::surface_transform::identity, decoded_remap, desc->is_cyclic_reference);
+
+			ensure(desc->ref_address);
+			flatten_op.cache_range = rtt
+				? rtt->get_memory_range()
+				: utils::address_range32::start_length(desc->ref_address, attr.pitch * attr.height);
+
+			return m_gl_texture_cache.create_temporary_subresource(cmd, flatten_op);
+		}
+
+		return image->get_view(decoded_remap, base->aspect());
+	};
+
 	for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
 		if (!(textures_ref & 1))
@@ -505,8 +558,8 @@ void GLGSRender::bind_texture_env()
 		gl::texture_view* stencil_mirror = nullptr;
 		auto sampler_state = static_cast<gl::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
 
-		if (rsx::method_registers.fragment_textures[i].enabled() &&
-			sampler_state->validate())
+		auto& tex = rsx::method_registers.fragment_textures[i];
+		if (tex.enabled() && sampler_state->validate())
 		{
 			if (primary_view = sampler_state->image_handle; !primary_view) [[unlikely]]
 			{
@@ -533,7 +586,26 @@ void GLGSRender::bind_texture_env()
 
 		if (is_interpreter) [[ unlikely ]]
 		{
-			m_shader_interpreter.bind_fragment_texture(i, primary_view->handle(), *sampler_state);
+			// Interpreter does not support MSAA or DEPTH->RGBA conversion a.k.a aspect redirection
+			auto view = primary_view;
+			if (primary_view->aspect() != gl::image_aspect::color || primary_view->image()->samples() != 1)
+			{
+				const auto mask = (1u << i);
+				const bool is_redirected = !!(current_fragment_program.texture_state.redirected_textures & mask);
+				const bool is_msaa = !!(current_fragment_program.texture_state.multisampled_textures & mask);
+				if (is_redirected || is_msaa)
+				{
+					view = decay_view_for_interpreter(
+						tex.attributes(),
+						sampler_state,
+						primary_view,
+						tex.decoded_remap(),
+						is_msaa,
+						is_redirected);
+				}
+			}
+
+			m_shader_interpreter.bind_fragment_texture(i, view->handle(), *sampler_state);
 			continue;
 		}
 
@@ -576,7 +648,15 @@ void GLGSRender::bind_texture_env()
 
 	if (is_interpreter)
 	{
-		m_shader_interpreter.flush_texture_bindings();
+		if (current_fp_metadata.referenced_textures_mask)
+		{
+			m_shader_interpreter.flush_fragment_texture_bindings();
+		}
+
+		if (current_vp_metadata.referenced_textures_mask)
+		{
+			m_shader_interpreter.flush_vertex_texture_bindings();
+		}
 	}
 
 	if (current_fragment_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE)

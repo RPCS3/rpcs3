@@ -1290,11 +1290,11 @@ error_code cellRecOpen(vm::cptr<char> pDirName, vm::cptr<char> pFileName, vm::cp
 	rec.encoder->set_path(vfs::get(rec.param.filename));
 	rec.encoder->set_framerate(rec.fps);
 	rec.encoder->set_video_bitrate(rec.video_bps);
-	rec.encoder->set_video_codec(rec.video_codec_id);
+	rec.encoder->set_video_codec(rec.video_codec_id, "");
 	rec.encoder->set_sample_rate(rec.sample_rate);
 	rec.encoder->set_audio_channels(rec.channels);
 	rec.encoder->set_audio_bitrate(rec.audio_bps);
-	rec.encoder->set_audio_codec(rec.audio_codec_id);
+	rec.encoder->set_audio_codec(rec.audio_codec_id, "");
 	rec.encoder->set_output_format(rec.output_format);
 
 	sysutil_register_cb([&rec](ppu_thread& ppu) -> s32
@@ -1333,13 +1333,13 @@ error_code cellRecClose(s32 isDiscard)
 				rec.sink->stop(true);
 			}
 
-			if (fs::is_file(rec.param.filename))
+			if (const std::string local_path = vfs::get(rec.param.filename); fs::is_file(local_path))
 			{
 				cellRec.warning("cellRecClose: removing discarded recording '%s'", rec.param.filename);
 
-				if (!fs::remove_file(rec.param.filename))
+				if (!fs::remove_file(local_path))
 				{
-					cellRec.error("cellRecClose: failed to remove recording '%s'", rec.param.filename);
+					cellRec.error("cellRecClose: failed to remove recording '%s' (%s)", rec.param.filename, fs::g_tls_error);
 				}
 			}
 		}

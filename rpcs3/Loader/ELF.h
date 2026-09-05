@@ -373,7 +373,9 @@ public:
 					// Try to find it in phdr data instead of allocating new section
 					p_index++;
 
-					if (hdr.p_offset <= shdr.sh_offset && shdr.sh_offset + shdr.sh_size - 1 <= hdr.p_offset + hdr.p_filesz - 1)
+					if (hdr.p_offset <= shdr.sh_offset &&
+						shdr.sh_size <= hdr.p_filesz &&
+						shdr.sh_offset - hdr.p_offset <= hdr.p_filesz - shdr.sh_size)
 					{
 						const auto& prog = ::at32(progs, p_index);
 						shdrs.back().bin_view = {prog.bin.data() + shdr.sh_offset - hdr.p_offset, shdr.sh_size};
@@ -469,7 +471,9 @@ public:
 					p_index++;
 
 					// Rely on previous sh_offset value!
-					if (hdr.p_offset <= shdr.sh_offset && shdr.sh_offset + shdr.sh_size - 1 <= hdr.p_offset + hdr.p_filesz - 1)
+					if (hdr.p_offset <= shdr.sh_offset &&
+						shdr.sh_size <= hdr.p_filesz &&
+						shdr.sh_offset - hdr.p_offset <= hdr.p_filesz - shdr.sh_size)
 					{
 						out.sh_offset = ::narrow<sz_t>(data_base + static_cast<usz>(shdr.sh_offset - hdr.p_offset));
 						result = true;

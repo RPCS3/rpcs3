@@ -356,6 +356,7 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.ROP_alpha_to_coverage_test = !!(m_prog.ctrl & RSX_SHADER_CONTROL_ALPHA_TO_COVERAGE);
 	m_shader_props.ROP_polygon_stipple_test = !!(m_prog.ctrl & RSX_SHADER_CONTROL_POLYGON_STIPPLE);
 	m_shader_props.ROP_discard = !!(m_prog.ctrl & RSX_SHADER_CONTROL_USES_KIL);
+	m_shader_props.ROP_channel_remap = !!(m_prog.ctrl & RSX_SHADER_CONTROL_ROP_OUTPUT_REMAP);
 
 	m_shader_props.require_tex1D_ops = properties.has_tex1D;
 	m_shader_props.require_tex2D_ops = properties.has_tex2D;
@@ -465,10 +466,10 @@ void VKFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 	if (m_prog.two_sided_lighting)
 	{
 		if (properties.in_register_mask & in_diff_color)
-			OS << "	vec4 diff_color = gl_FrontFacing ? diff_color1 : diff_color0;\n";
+			OS << "	vec4 diff_color = gl_FrontFacing ? diff_color0 : diff_color1;\n";
 
 		if (properties.in_register_mask & in_spec_color)
-			OS << "	vec4 spec_color = gl_FrontFacing ? spec_color1 : spec_color0;\n";
+			OS << "	vec4 spec_color = gl_FrontFacing ? spec_color0 : spec_color1;\n";
 	}
 
 	for (u16 i = 0, mask = (properties.common_access_sampler_mask | properties.shadow_sampler_mask); mask != 0; ++i, mask >>= 1)
@@ -490,7 +491,8 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 	OS << "{\n";
 
 	if ((m_prog.ctrl & RSX_SHADER_CONTROL_ALPHA_TEST) ||
-		(m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE))
+		(m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE) ||
+		(m_prog.ctrl & RSX_SHADER_CONTROL_ROP_OUTPUT_REMAP))
 	{
 		OS <<
 			"	const uint rop_control = fs_contexts[_fs_context_offset].rop_control;\n"

@@ -77,13 +77,21 @@ std::string CgBinaryDisasm::GetCgParamValue(u32 offset, u32 end_offset) const
 	return fmt::format("num %d ", num) + offsets;
 }
 
-void CgBinaryDisasm::ConvertToLE(CgBinaryProgram& prog)
+bool CgBinaryDisasm::ConvertToLE(CgBinaryProgram& prog)
 {
 	// BE payload, requires that data be swapped
 	const auto be_profile = prog.profile;
 
 	auto swap_be32 = [&](u32 start_offset, size_t size_bytes)
 	{
+		if (static_cast<usz>(start_offset) > m_buffer.size()
+			|| size_bytes > m_buffer.size() - start_offset
+			|| start_offset % alignof(u32)
+			|| size_bytes % sizeof(u32))
+		{
+			return false;
+		}
+
 		auto start = reinterpret_cast<u32*>(m_buffer.data() + start_offset);
 		auto end = reinterpret_cast<u32*>(m_buffer.data() + start_offset + size_bytes);
 
@@ -91,20 +99,40 @@ void CgBinaryDisasm::ConvertToLE(CgBinaryProgram& prog)
 		{
 			*data = std::bit_cast<be_t<u32>>(*data);
 		}
+
+		return true;
 	};
 
 	// 1. Swap the header
-	swap_be32(0, sizeof(CgBinaryProgram));
+	if (!swap_be32(0, sizeof(CgBinaryProgram)))
+	{
+		return false;
+	}
 
 	// 2. Swap parameters
-	swap_be32(prog.parameterArray, sizeof(CgBinaryParameter) * prog.parameterCount);
+	if (static_cast<usz>(prog.parameterCount) > static_cast<usz>(umax) / sizeof(CgBinaryParameter)
+		|| !swap_be32(prog.parameterArray, sizeof(CgBinaryParameter) * prog.parameterCount))
+	{
+		return false;
+	}
 
 	// 3. Swap the ucode
-	swap_be32(prog.ucode, m_buffer.size() - prog.ucode);
+	if (static_cast<usz>(prog.ucode) > m_buffer.size()
+		|| !swap_be32(prog.ucode, m_buffer.size() - prog.ucode))
+	{
+		return false;
+	}
 
 	// 4. Swap the domain header
 	if (be_profile == 7004u)
 	{
+		if (static_cast<usz>(prog.program) > m_buffer.size()
+			|| sizeof(CgBinaryFragmentProgram) > m_buffer.size() - prog.program
+			|| prog.program % alignof(u32))
+		{
+			return false;
+		}
+
 		// Need to swap each field individually
 		auto& fprog = GetCgRef<CgBinaryFragmentProgram>(prog.program);
 		fprog.instructionCount = std::bit_cast<be_t<u32>>(fprog.instructionCount);
@@ -117,20 +145,34 @@ void CgBinaryDisasm::ConvertToLE(CgBinaryProgram& prog)
 	else
 	{
 		// Swap entire header block as all fields are u32
-		swap_be32(prog.program, sizeof(CgBinaryVertexProgram));
+		if (!swap_be32(prog.program, sizeof(CgBinaryVertexProgram)))
+		{
+			return false;
+		}
 	}
+
+	return true;
 }
 
 void CgBinaryDisasm::BuildShaderBody(bool include_glsl)
 {
 	ParamArray param_array;
 
+	if (m_buffer.size() < sizeof(CgBinaryProgram))
+	{
+		return;
+	}
+
 	auto& prog = GetCgRef<CgBinaryProgram>(0);
 
 	if (const u32 be_profile = std::bit_cast<be_t<u32>>(prog.profile);
 		be_profile == 7003u || be_profile == 7004u)
 	{
-		ConvertToLE(prog);
+		if (!ConvertToLE(prog))
+		{
+			return;
+		}
+
 		ensure(be_profile == prog.profile);
 	}
 
@@ -173,11 +215,9 @@ void CgBinaryDisasm::BuildShaderBody(bool include_glsl)
 		std::vector<u32> be_data;
 
 		// Swap bytes. FP decompiler expects input in BE
-		for (u32* ptr = reinterpret_cast<u32*>(m_buffer.data() + m_offset),
-			*end = reinterpret_cast<u32*>(m_buffer.data() + m_buffer.size());
-			ptr < end; ++ptr)
+		for (usz i = m_offset; i < m_buffer.size(); i += sizeof(u32))
 		{
-			be_data.push_back(std::bit_cast<be_t<u32>>(*ptr));
+			be_data.push_back(std::bit_cast<be_t<u32>>(read_from_ptr<u32>(m_buffer, i)));
 		}
 
 		RSXFragmentProgram rsx_prog;
@@ -209,13 +249,13 @@ void CgBinaryDisasm::BuildShaderBody(bool include_glsl)
 		CgBinaryParameterOffset offset = prog.parameterArray;
 		for (u32 i = 0; i < prog.parameterCount; i++)
 		{
-			auto& vparam = GetCgRef<CgBinaryParameter>(offset);
+			const auto& vparam = GetCgRef<CgBinaryParameter>(offset);
 
-			std::string param_type = GetCgParamType(vparam.type) + " ";
-			std::string param_name = GetCgParamName(vparam.name) + " ";
-			std::string param_res = GetCgParamRes(vparam.res) + " ";
-			std::string param_semantic = GetCgParamSemantic(vparam.semantic) + " ";
-			std::string param_const = GetCgParamValue(vparam.embeddedConst, vparam.name);
+			const std::string param_type = GetCgParamType(vparam.type) + " ";
+			const std::string param_name = GetCgParamName(vparam.name) + " ";
+			const std::string param_res = GetCgParamRes(vparam.res) + " ";
+			const std::string param_semantic = GetCgParamSemantic(vparam.semantic) + " ";
+			const std::string param_const = GetCgParamValue(vparam.embeddedConst, vparam.name);
 
 			fmt::append(m_arb_shader, "#%d%s%s%s%s\n", i, param_type, param_name, param_semantic, param_const);
 
@@ -226,7 +266,7 @@ void CgBinaryDisasm::BuildShaderBody(bool include_glsl)
 		m_offset = prog.ucode;
 		ensure((m_buffer.size() - m_offset) % sizeof(u32) == 0);
 
-		u32* vdata = reinterpret_cast<u32*>(&m_buffer[m_offset]);
+		const u32* vdata = reinterpret_cast<const u32*>(&m_buffer[m_offset]);
 		m_data.resize(prog.ucodeSize / sizeof(u32));
 		std::memcpy(m_data.data(), vdata, prog.ucodeSize);
 		TaskVP();

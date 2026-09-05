@@ -559,7 +559,8 @@ namespace gl
 			case texture::target::texture1D:
 			{
 				const position3u transfer_offset = { dst_region.position.x, 0, 0 };
-				g_hw_blitter->copy_image(cmd, scratch.get(), dst, 0, dst_level, transfer_offset, transfer_offset, { dst_region.width, 1, 1 });
+				g_hw_blitter->copy_image(cmd, scratch.get(), dst, transfer_offset, transfer_offset, { dst_region.width, 1, 1 },
+					{ .dst_mip_level = static_cast<u8>(dst_level) });
 				break;
 			}
 			case texture::target::texture3D:
@@ -569,7 +570,8 @@ namespace gl
 				{
 					const position3u src_offset = { dst_region.position.x, dst_region.position.y + (i * dst_region.height), 0 };
 					const position3u dst_offset = { dst_region.position.x, dst_region.position.y, layer };
-					g_hw_blitter->copy_image(cmd, scratch.get(), dst, 0, dst_level, src_offset, dst_offset, { dst_region.width, dst_region.height, 1 });
+					g_hw_blitter->copy_image(cmd, scratch.get(), dst, src_offset, dst_offset, { dst_region.width, dst_region.height, 1 },
+						{ .dst_mip_level = static_cast<u8>(dst_level) });
 				}
 				break;
 			}
@@ -664,6 +666,12 @@ namespace gl
 
 			for (const rsx::subresource_layout& layout : input_layouts)
 			{
+				if (layout.level >= dst->levels())
+				{
+					rsx_log.error("Invalid subresource definition for the output texture. Mip level does not exist.");
+					continue;
+				}
+
 				rsx::io_buffer io_buf = staging_buffer;
 				upload_texture_subresource(io_buf, layout, format, is_swizzled, caps);
 
@@ -741,6 +749,12 @@ namespace gl
 
 		for (const rsx::subresource_layout& layout : input_layouts)
 		{
+			if (layout.level >= dst->levels())
+			{
+				rsx_log.error("Invalid subresource definition for the output texture. Mip level does not exist.");
+				continue;
+			}
+
 			if (driver_caps.ARB_compute_shader_supported)
 			{
 				u64 row_pitch = rsx::align2<u64, u64>(layout.width_in_block * block_size_in_bytes, caps.alignment);
@@ -1029,7 +1043,11 @@ namespace gl
 		return formats_are_bitcast_compatible(static_cast<GLenum>(texture1->get_internal_format()), static_cast<GLenum>(texture2->get_internal_format()));
 	}
 
-	void copy_typeless(gl::command_context& cmd, texture * dst, const texture * src, const coord3u& dst_region, const coord3u& src_region)
+	static void copy_typeless_impl(
+		gl::command_context& cmd,
+		texture * dst, const texture * src,
+		const coord3u& dst_region, const coord3u& src_region,
+		int src_level, int dst_level)
 	{
 		const auto src_bpp = src->pitch() / src->width();
 		const auto dst_bpp = dst->pitch() / dst->width();
@@ -1083,8 +1101,8 @@ namespace gl
 				g_typeless_transfer_buffer.create(gl::buffer::target::ssbo, new_size);
 			}
 
-			void* data_ptr = copy_image_to_buffer(cmd, pack_info, src, &g_typeless_transfer_buffer.get(), scratch_offset, 0, src_region, &src_mem);
-			copy_buffer_to_image(cmd, unpack_info, &g_typeless_transfer_buffer.get(), dst, data_ptr, 0, dst_region, &dst_mem);
+			void* data_ptr = copy_image_to_buffer(cmd, pack_info, src, &g_typeless_transfer_buffer.get(), scratch_offset, src_level, src_region, &src_mem);
+			copy_buffer_to_image(cmd, unpack_info, &g_typeless_transfer_buffer.get(), dst, data_ptr, dst_level, dst_region, &dst_mem);
 
 			// Not truly range-accurate, but should cover most of what we care about
 			g_typeless_transfer_buffer.push_barrier(scratch_offset, static_cast<u32>(min_storage_requirement));
@@ -1158,7 +1176,7 @@ namespace gl
 			// Start pack operation
 			pixel_pack_settings pack_settings{};
 			pack_settings.swap_bytes(pack_info.swap_bytes);
-			src->copy_to(g_typeless_transfer_buffer.get(), 0, static_cast<texture::format>(pack_info.format), static_cast<texture::type>(pack_info.type), 0, src_region, pack_settings);
+			src->copy_to(g_typeless_transfer_buffer.get(), 0, static_cast<texture::format>(pack_info.format), static_cast<texture::type>(pack_info.type), src_level, src_region, pack_settings);
 
 			glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_NONE);
 
@@ -1166,8 +1184,52 @@ namespace gl
 			pixel_unpack_settings unpack_settings{};
 			unpack_settings.swap_bytes(unpack_info.swap_bytes);
 
-			dst->copy_from(g_typeless_transfer_buffer.get(), 0, static_cast<texture::format>(unpack_info.format), static_cast<texture::type>(unpack_info.type), 0, dst_region, unpack_settings);
+			dst->copy_from(g_typeless_transfer_buffer.get(), 0, static_cast<texture::format>(unpack_info.format), static_cast<texture::type>(unpack_info.type), dst_level, dst_region, unpack_settings);
 			glBindBuffer(GL_PIXEL_UNPACK_BUFFER, GL_NONE);
+		}
+	}
+
+	void copy_typeless(
+		gl::command_context& cmd,
+		texture* dst, const texture* src,
+		const coord3u& dst_region, const coord3u& src_region,
+		const rsx::image_copy_subresource_layers& mip_layers)
+	{
+		ensure(mip_layers.layer_count == 1);
+
+		// Can either be volume (3D/Cube) or layered, not both.
+		ensure(!src_region.z || !mip_layers.src_layer);
+		ensure(!dst_region.z || !mip_layers.dst_layer);
+
+		coord3u src_rgn = src_region;
+		coord3u dst_rgn = dst_region;
+
+		// Encode properties into OpenGL's X/Y/Z layout
+		if (mip_layers.src_layer) src_rgn.z = mip_layers.src_layer;
+		if (mip_layers.dst_layer) dst_rgn.z = mip_layers.dst_layer;
+
+		int src_level = mip_layers.src_mip_level;
+		int dst_level = mip_layers.dst_mip_level;
+
+		for (u32 remaining_levels = mip_layers.mipmap_count; remaining_levels > 0; --remaining_levels)
+		{
+			copy_typeless_impl(cmd, dst, src, dst_rgn, src_rgn, src_level, dst_level);
+
+			if (remaining_levels > 1)
+			{
+				src_rgn.x /= 2;
+				src_rgn.y /= 2;
+				src_rgn.width = std::max(src_rgn.width / 2, 1u);
+				src_rgn.height = std::max(src_rgn.height / 2, 1u);
+
+				dst_rgn.x /= 2;
+				dst_rgn.y /= 2;
+				dst_rgn.width = std::max(dst_rgn.width / 2, 1u);
+				dst_rgn.height = std::max(dst_rgn.height / 2, 1u);
+
+				src_level++;
+				dst_level++;
+			}
 		}
 	}
 

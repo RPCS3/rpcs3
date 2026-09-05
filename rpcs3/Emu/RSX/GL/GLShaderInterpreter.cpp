@@ -8,6 +8,7 @@
 #include "Emu/RSX/rsx_methods.h"
 #include "Emu/RSX/Overlays/Shaders/shader_loading_dialog.h"
 #include "Emu/RSX/Program/GLSLCommon.h"
+#include "Emu/localized_string.h"
 
 namespace gl
 {
@@ -17,7 +18,7 @@ namespace gl
 
 	void shader_interpreter::create(rsx::shader_loading_dialog* dlg)
 	{
-		dlg->create("Precompiling interpreter variants.\nPlease wait...", "Shader Compilation");
+		dlg->create(get_localized_string(localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS), get_localized_string(localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_TITLE));
 
 		const auto variants = program_common::interpreter::get_interpreter_variants();
 		const u32 limit1 = ::size32(variants.base_pipelines);
@@ -32,7 +33,7 @@ namespace gl
 		{
 			const auto completed = ctr.load();
 			const auto limit = stage ? limit2 : limit1;
-			const auto message = fmt::format("%s variant %u of %u...", stage ? "Linking" : "Building", ctr.load(), limit);
+			const auto message = get_localized_string(stage ? localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_OPENGL_LINK : localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_OPENGL_BUILD, "%u %s %u", ctr.load(), get_localized_string(localized_string_id::PROGRESS_DIALOG_OF), limit);
 			dlg->update_msg(stage, message);
 			dlg->set_value(stage, completed);
 		};
@@ -145,6 +146,7 @@ namespace gl
 		if (fp_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT) opt |= COMPILER_OPT_ENABLE_DEPTH_EXPORT;
 		if (fp_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) opt |= COMPILER_OPT_ENABLE_F32_EXPORT;
 		if (fp_ctrl & RSX_SHADER_CONTROL_USES_KIL) opt |= COMPILER_OPT_ENABLE_KIL;
+		if (fp_ctrl & RSX_SHADER_CONTROL_ROP_OUTPUT_REMAP) opt |= COMPILER_OPT_ENABLE_ROP_REMAP;
 		if (metadata.referenced_textures_mask) opt |= COMPILER_OPT_ENABLE_TEXTURES;
 		if (metadata.has_branch_instructions) opt |= COMPILER_OPT_ENABLE_FLOW_CTRL;
 		if (metadata.has_pack_instructions) opt |= COMPILER_OPT_ENABLE_PACKING;
@@ -295,7 +297,7 @@ namespace gl
 			}
 		}
 
-		u32 len;
+		u32 len {};
 		ParamArray arr;
 		std::string shader_str;
 		RSXFragmentProgram frag;
@@ -408,6 +410,14 @@ namespace gl
 			"	uvec4 fp_instructions[];\n"
 			"};\n\n";
 
+		const ::glsl::shader_properties properties
+		{
+			.domain = ::glsl::program_domain::glsl_fragment_program,
+			.require_lit_emulation = true,
+			.ROP_channel_remap = !!(compiler_options & COMPILER_OPT_ENABLE_ROP_REMAP),
+		};
+
+		::glsl::insert_glsl_legacy_function(builder, properties);
 		builder << program_common::interpreter::get_fragment_interpreter();
 		const std::string s = builder.str();
 
@@ -486,10 +496,15 @@ namespace gl
 		data->prog->uniforms[0] = GL_STREAM_BUFFER_START + 0;
 		data->prog->uniforms[1] = GL_STREAM_BUFFER_START + 1;
 
+		// Initialize texture bindings
 		if (compiler_options & COMPILER_OPT_ENABLE_TEXTURES)
 		{
-			// Initialize texture bindings
-			flush_texture_bindings(data->prog.get());
+			flush_fragment_texture_bindings(data->prog.get());
+		}
+
+		if (compiler_options & COMPILER_OPT_ENABLE_VTX_TEXTURES)
+		{
+			flush_vertex_texture_bindings(data->prog.get());
 		}
 
 		data->flags &= ~CACHED_PIPE_UNINITIALIZED;
@@ -518,7 +533,7 @@ namespace gl
 		}
 	}
 
-	void shader_interpreter::flush_texture_bindings(glsl::program* program)
+	void shader_interpreter::flush_fragment_texture_bindings(glsl::program* program)
 	{
 		using enum rsx::texture_dimension_extended;
 
@@ -529,9 +544,15 @@ namespace gl
 		}
 
 		const bool is_bound_interpreter = m_current_interpreter && m_current_interpreter->prog.get() == program;
-		const u32 dirty_mask = is_bound_interpreter
-			? 0xff
-			: m_texture_bindings.dirty;
+		u32 dirty_mask = m_texture_bindings.dirty;
+
+		if (is_bound_interpreter) [[ likely ]]
+		{
+			// Check if we even support textures
+			dirty_mask = (m_current_interpreter->build_compiler_options & COMPILER_OPT_ENABLE_TEXTURES)
+				? 0xff
+				: 0x0;
+		}
 
 		if (!dirty_mask)
 		{
@@ -556,5 +577,10 @@ namespace gl
 		{
 			m_texture_bindings.dirty = 0;
 		}
+	}
+
+	void shader_interpreter::flush_vertex_texture_bindings(glsl::program* /*program*/)
+	{
+		// TODO
 	}
 }

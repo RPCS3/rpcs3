@@ -181,6 +181,24 @@ enum
 	SYS_NET_POLLWRBAND     = 0x0100,
 };
 
+enum
+{
+	SYS_NET_STATE_UNKNOWN = 0,
+	SYS_NET_STATE_CLOSED = 1,
+	SYS_NET_STATE_CREATED = 2,
+	SYS_NET_STATE_OPENED = 3,
+	SYS_NET_STATE_LISTEN = 4,
+	SYS_NET_STATE_SYN_SENT = 5,
+	SYS_NET_STATE_SYN_RECEIVED = 6,
+	SYS_NET_STATE_ESTABLISHED = 7,
+	SYS_NET_STATE_FIN_WAIT_1 = 8,
+	SYS_NET_STATE_FIN_WAIT_2 = 9,
+	SYS_NET_STATE_CLOSE_WAIT = 10,
+	SYS_NET_STATE_CLOSING = 11,
+	SYS_NET_STATE_LAST_ACK = 12,
+	SYS_NET_STATE_TIME_WAIT = 13,
+};
+
 enum lv2_socket_abort_flags : s32
 {
 	SYS_NET_ABORT_STRICT_CHECK = 1,
@@ -333,6 +351,19 @@ struct sys_net_linger
 {
 	be_t<s32> l_onoff;
 	be_t<s32> l_linger;
+};
+
+struct sys_net_sockinfo_t
+{
+	be_t<s32> s;
+	be_t<s32> proto;
+	be_t<s32> recv_queue_length;
+	be_t<s32> send_queue_length;
+	sys_net_in_addr local_adr;
+	be_t<s32> local_port;
+	sys_net_in_addr remote_adr;
+	be_t<s32> remote_port;
+	be_t<s32> state;
 };
 
 class ppu_thread;

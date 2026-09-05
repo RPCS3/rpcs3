@@ -9,8 +9,8 @@
     <IntDir>$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
     <GTestPath>$(SolutionDir)packages\Microsoft.googletest.v140.windesktop.msvcstl.static.rt-static.1.8.1.8\build\native\Microsoft.googletest.v140.windesktop.msvcstl.static.rt-static.targets</GTestPath>
     <GTestInstalled Condition="Exists('$(GTestPath)')">true</GTestInstalled>
-    <OpenCvBuildDir>$(SolutionDir)3rdparty\opencv\opencv\opencv413\build</OpenCvBuildDir>
-    <OpenCvWorld>opencv_world4130</OpenCvWorld>
+    <OpenCvBuildDir>$(SolutionDir)3rdparty\opencv\opencv\opencv414\build</OpenCvBuildDir>
+    <OpenCvWorld>opencv_world4140</OpenCvWorld>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <Lib>
@@ -36,6 +36,7 @@
         avutil.lib;
         swresample.lib;
         swscale.lib;
+        LLVMABI.lib;
         LLVMAggressiveInstCombine.lib;
         LLVMAnalysis.lib;
         LLVMAsmParser.lib;
@@ -44,9 +45,10 @@
         LLVMBitReader.lib;
         LLVMBitstreamReader.lib;
         LLVMBitWriter.lib;
+        LLVMCAS.lib;
         LLVMCFGuard.lib;
+        LLVMCGData.lib;
         LLVMCodeGen.lib;
-        LLVMCodeGenData.lib;
         LLVMCodeGenTypes.lib;
         LLVMCore.lib;
         LLVMCoroutines.lib;
@@ -55,12 +57,15 @@
         LLVMDebugInfoCodeView.lib;
         LLVMDebuginfod.lib;
         LLVMDebugInfoDWARF.lib;
+        LLVMDebugInfoDWARFLowLevel.lib;
         LLVMDebugInfoGSYM.lib;
         LLVMDebugInfoLogicalView.lib;
         LLVMDebugInfoMSF.lib;
         LLVMDebugInfoPDB.lib;
         LLVMDemangle.lib;
         LLVMDlltoolDriver.lib;
+        LLVMDTLTO.lib;
+        LLVMDWARFCFIChecker.lib;
         LLVMDWARFLinker.lib;
         LLVMDWARFLinkerClassic.lib;
         LLVMDWARFLinkerParallel.lib;
@@ -68,6 +73,8 @@
         LLVMExecutionEngine.lib;
         LLVMExtensions.lib;
         LLVMFileCheck.lib;
+        LLVMFrontendAtomic.lib;
+        LLVMFrontendDirective.lib;
         LLVMFrontendDriver.lib;
         LLVMFrontendHLSL.lib;
         LLVMFrontendOffloading.lib;
@@ -107,6 +114,7 @@
         LLVMOrcShared.lib;
         LLVMOrcTargetProcess.lib;
         LLVMPasses.lib;
+        LLVMPlugins.lib;
         LLVMProfileData.lib;
         LLVMRemarks.lib;
         LLVMRuntimeDyld.lib;
@@ -114,12 +122,14 @@
         LLVMScalarOpts.lib;
         LLVMSelectionDAG.lib;
         LLVMSupport.lib;
+        LLVMSupportLSP.lib;
         LLVMSymbolize.lib;
         LLVMTableGen.lib;
         LLVMTableGenBasic.lib;
         LLVMTableGenCommon.lib;
         LLVMTarget.lib;
         LLVMTargetParser.lib;
+        LLVMTelemetry.lib;
         LLVMTextAPI.lib;
         LLVMTextAPIBinaryReader.lib;
         LLVMTransformUtils.lib;
@@ -223,11 +233,22 @@
         absl_time_zone.lib;
         libutf8_validity.lib;
         libutf8_range.lib;
-        libprotobuf-lite.lib;
       </AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)3rdparty\ffmpeg\lib\windows\x86_64</AdditionalLibraryDirectories>
       <StackReserveSize>8388608</StackReserveSize>
       <StackCommitSize>1048576</StackCommitSize>
+    </Link>
+    <Link Condition="'$(Configuration)'=='Release'">
+      <AdditionalDependencies>
+        libprotobuf-lite.lib;
+        %(AdditionalDependencies)
+      </AdditionalDependencies>
+    </Link>
+    <Link Condition="'$(Configuration)'=='Debug'">
+      <AdditionalDependencies>
+        libprotobuf-lited.lib;
+        %(AdditionalDependencies)
+      </AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup />

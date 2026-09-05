@@ -155,6 +155,7 @@ namespace np
 		std::optional<shared_ptr<std::pair<std::string, message_data>>> get_message_selected(SceNpBasicAttachmentDataId id);
 		void clear_message_selected(SceNpBasicAttachmentDataId id);
 		void send_message(const message_data& msg_data, const std::set<std::string>& npids);
+		bool select_invitation(u64 msg_id);
 
 		// Those should probably be under match2 ctx
 		vm::ptr<SceNpMatching2RoomEventCallback> room_event_cb{}; // Room events
@@ -247,6 +248,11 @@ namespace np
 		u32 get_num_blocks();
 		std::pair<error_code, std::optional<SceNpId>> get_friend_by_index(u32 index);
 		void set_presence(std::optional<std::string> status, std::optional<std::vector<u8>> data);
+
+		// RPCN trophy support
+		void rpcn_trophy_unlock(const SceNpCommunicationId& communication_id, s32 trophy_id, s64 timestamp);
+		std::vector<std::pair<s32, s64>> rpcn_trophy_sync(const SceNpCommunicationId& communication_id,
+		    const std::vector<std::pair<s32, s64>>& local_unlocked);
 
 		template <typename T>
 		error_code get_friend_presence_by_index(u32 index, SceNpUserInfo* user, T* pres);
@@ -440,6 +446,7 @@ namespace np
 		gui_cache_manager gui_cache;
 
 		// Messages related
+		shared_mutex m_mutex_selected_messages;
 		std::optional<u64> selected_invite_id{};
 		std::optional<u64> selected_message_id{};
 

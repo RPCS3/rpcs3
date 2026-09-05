@@ -44,14 +44,16 @@ qt_video_source::~qt_video_source()
 	stop_movie();
 }
 
-void qt_video_source::set_video_path(const std::string& video_path)
+void qt_video_source::set_video_path(const std::string& video_path, bool video_in_archive)
 {
 	m_video_path = QString::fromStdString(video_path);
+	m_video_in_archive = video_in_archive;
 }
 
-void qt_video_source::set_audio_path(const std::string& audio_path)
+void qt_video_source::set_audio_path(const std::string& audio_path, bool audio_in_archive)
 {
 	m_audio_path = QString::fromStdString(audio_path);
+	m_audio_in_archive = audio_in_archive;
 }
 
 void qt_video_source::set_iso_path(const std::string& iso_path)
@@ -95,7 +97,7 @@ void qt_video_source::init_movie()
 		return;
 	}
 
-	if (!m_image_change_callback || m_video_path.isEmpty() || (m_iso_path.empty() && !QFile::exists(m_video_path)))
+	if (!m_image_change_callback || m_video_path.isEmpty() || (!m_video_in_archive && !QFile::exists(m_video_path)))
 	{
 		m_video_path.clear();
 		return;
@@ -105,14 +107,16 @@ void qt_video_source::init_movie()
 
 	if (lower.endsWith(".gif"))
 	{
-		if (m_iso_path.empty())
+		if (!m_video_in_archive || m_iso_path.empty())
 		{
 			m_movie = std::make_unique<QMovie>(m_video_path);
 		}
-		else
+		else if (m_video_in_archive)
 		{
 			iso_archive archive(m_iso_path);
 			auto movie_file = archive.open(m_video_path.toStdString());
+			if (!movie_file) return;
+
 			const auto movie_size = movie_file->size();
 			if (movie_size == 0) return;
 
@@ -141,7 +145,7 @@ void qt_video_source::init_movie()
 	if (lower.endsWith(".pam"))
 	{
 		// We can't set PAM files as source of the video player, so we have to feed them as raw data.
-		if (m_iso_path.empty())
+		if (!m_video_in_archive || m_iso_path.empty())
 		{
 			QFile file(m_video_path);
 			if (!file.open(QFile::OpenModeFlag::ReadOnly))
@@ -152,15 +156,14 @@ void qt_video_source::init_movie()
 			// TODO: Decode the pam properly before pushing it to the player
 			m_video_data = file.readAll();
 		}
-		else
+		else if (m_video_in_archive)
 		{
 			iso_archive archive(m_iso_path);
 			auto movie_file = archive.open(m_video_path.toStdString());
+			if (!movie_file) return;
+
 			const auto movie_size = movie_file->size();
-			if (movie_size == 0)
-			{
-				return;
-			}
+			if (movie_size == 0) return;
 
 			m_video_data = QByteArray(movie_size, 0);
 			movie_file->read(m_video_data.data(), movie_size);
@@ -272,14 +275,16 @@ void qt_video_source::start_audio()
 		audio.player->setLoops(QMediaPlayer::Infinite);
 	}
 
-	if (m_iso_path.empty())
+	if (!m_audio_in_archive || m_iso_path.empty())
 	{
 		audio.player->setSource(QUrl::fromLocalFile(m_audio_path));
 	}
-	else
+	else if (m_audio_in_archive)
 	{
 		iso_archive archive(m_iso_path);
 		auto audio_file = archive.open(m_audio_path.toStdString());
+		if (!audio_file) return;
+
 		const auto audio_size = audio_file->size();
 		if (audio_size == 0) return;
 
@@ -427,9 +432,14 @@ void qt_video_source_wrapper::init_video_source()
 	}
 }
 
-void qt_video_source_wrapper::set_video_path(const std::string& video_path)
+void qt_video_source_wrapper::set_iso_path(const std::string& iso_path)
 {
-	Emu.CallFromMainThread([this, path = video_path]()
+	m_qt_video_source->set_iso_path(iso_path);
+}
+
+void qt_video_source_wrapper::set_video_path(const std::string& video_path, bool video_in_archive)
+{
+	Emu.CallFromMainThread([this, video_in_archive, path = video_path]()
 	{
 		init_video_source();
 
@@ -460,17 +470,17 @@ void qt_video_source_wrapper::set_video_path(const std::string& video_path)
 
 			notify_update();
 		};
-		m_qt_video_source->set_video_path(path);
+		m_qt_video_source->set_video_path(path, video_in_archive);
 	});
 }
 
-void qt_video_source_wrapper::set_audio_path(const std::string& audio_path)
+void qt_video_source_wrapper::set_audio_path(const std::string& audio_path, bool audio_in_archive)
 {
-	Emu.CallFromMainThread([this, path = audio_path]()
+	Emu.CallFromMainThread([this, audio_in_archive, path = audio_path]()
 	{
 		init_video_source();
 
-		m_qt_video_source->set_audio_path(path);
+		m_qt_video_source->set_audio_path(path, audio_in_archive);
 	});
 }
 
@@ -479,7 +489,7 @@ void qt_video_source_wrapper::set_active(bool active)
 	Emu.CallFromMainThread([this, active]()
 	{
 		ensure(m_qt_video_source);
-		m_qt_video_source->set_active(true);
+		m_qt_video_source->set_active(active);
 	});
 }
 

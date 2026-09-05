@@ -3,6 +3,7 @@
 #include "system_config.h"
 #include "vfs_config.h"
 #include "Emu/Io/pad_config.h"
+#include "Emu/GameInfo.h"
 #include "Emu/System.h"
 #include "Emu/VFS.h"
 #include "util/sysinfo.hpp"
@@ -11,6 +12,7 @@
 #include "Crypto/unpkg.h"
 #include "Crypto/unself.h"
 #include "Crypto/unedat.h"
+#include "Loader/ISO.h"
 
 #include <charconv>
 #include <thread>
@@ -68,7 +70,7 @@ namespace rpcs3::utils
 		return id;
 	}
 
-	bool install_pkg(const std::string& path)
+	bool install_pkg(const std::string& path, bool from_optical_drive)
 	{
 		sys_log.success("Installing package: %s", path);
 
@@ -81,7 +83,7 @@ namespace rpcs3::utils
 		named_thread worker("PKG Installer", [&]
 		{
 			std::deque<std::string> bootables;
-			const package_install_result result = package_reader::extract_data(reader, bootables);
+			const package_install_result result = package_reader::extract_data(reader, bootables, from_optical_drive);
 			return result.error == package_install_result::error_type::no_error;
 		});
 
@@ -378,8 +380,27 @@ namespace rpcs3::utils
 		return file_list;
 	}
 
+	static bool is_valid_content_id(std::string_view content_id)
+	{
+		if (content_id.empty() || content_id.size() > 0x30)
+		{
+			return false;
+		}
+
+		return std::all_of(content_id.begin(), content_id.end(), [](char c)
+		{
+			return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' || c == '_';
+		});
+	}
+
 	std::string get_rap_file_path(const std::string_view& rap)
 	{
+		if (!is_valid_content_id(rap))
+		{
+			sys_log.error("get_rap_file_path(): invalid content id '%s'", rap);
+			return {};
+		}
+
 		const std::string home_dir = get_hdd0_dir() + "home";
 
 		std::string rap_path;
@@ -402,6 +423,12 @@ namespace rpcs3::utils
 
 	std::string get_c00_unlock_edat_path(const std::string_view& content_id)
 	{
+		if (!is_valid_content_id(content_id))
+		{
+			sys_log.error("get_c00_unlock_edat_path(): invalid content id '%s'", content_id);
+			return {};
+		}
+
 		const std::string home_dir = get_hdd0_dir() + "home";
 
 		std::string edat_path;
@@ -448,7 +475,7 @@ namespace rpcs3::utils
 			return false;
 		}
 
-		std::string edat_content_id = npd.content_id;
+		std::string edat_content_id{npd.get_content_id()};
 
 		if (edat_content_id != content_id)
 		{
@@ -569,22 +596,36 @@ namespace rpcs3::utils
 		return get_input_config_dir(title_id) + g_cfg_input_configs.default_config + ".yml";
 	}
 
-	std::string get_game_content_path(game_content_type type)
+	std::string get_game_content_path(game_content_type type, const std::string& serial, std::string sfo_dir, const std::string& disc_dir, const std::string& archive_path, const std::string& game_dir, bool* in_archive)
 	{
-		const std::string locale_suffix = fmt::format("_%02d", static_cast<s32>(g_cfg.sys.language.get()));
-		const std::string disc_dir = vfs::get("/dev_bdvd/PS3_GAME");
-		std::string hdd0_dir = Emu.GetSfoDir(false);
+		if (in_archive) *in_archive = false;
 
-		if (hdd0_dir == disc_dir)
+		const std::string locale_suffix = fmt::format("_%02d", static_cast<s32>(g_cfg.sys.language.get()));
+
+		if (sfo_dir == disc_dir)
 		{
-			hdd0_dir.clear(); // No hdd0 dir
+			sfo_dir.clear(); // No hdd0 dir
 		}
 
 		const bool check_disc = !disc_dir.empty();
-		const bool check_hdd0 = !hdd0_dir.empty() && !check_disc;
+		const bool check_hdd0 = !sfo_dir.empty() && !check_disc;
 
 		const auto find_content = [&](std::string_view name, std::string_view extension) -> std::string
 		{
+			std::unique_ptr<iso_archive> archive;
+
+			if (!archive_path.empty() && is_iso_file(archive_path))
+			{
+				archive = std::make_unique<iso_archive>(archive_path);
+				if (!archive->is_valid()) archive.reset();
+			}
+
+			const auto file_exists = [&archive](const std::string& path)
+			{
+				if (archive && archive->is_file(path)) return true;
+				return fs::is_file(path);
+			};
+
 			// Check localized content first
 			for (bool localized : { true, false })
 			{
@@ -593,8 +634,9 @@ namespace rpcs3::utils
 				// Check content on hdd0 first
 				if (check_hdd0)
 				{
-					if (std::string path = hdd0_dir + filename; fs::is_file(path))
+					if (std::string path = sfo_dir + filename; file_exists(path))
 					{
+						if (in_archive) *in_archive = archive && archive->exists(path);
 						return path;
 					}
 				}
@@ -602,8 +644,9 @@ namespace rpcs3::utils
 				// Check content on disc
 				if (check_disc)
 				{
-					if (std::string path = disc_dir + filename; fs::is_file(path))
+					if (std::string path = disc_dir + filename; file_exists(path))
 					{
+						if (in_archive) *in_archive = archive && archive->exists(path);
 						return path;
 					}
 				}
@@ -635,7 +678,7 @@ namespace rpcs3::utils
 		case game_content_type::background_picture_2:
 		{
 			// Try to find a custom background first
-			if (std::string path = fs::get_config_dir() + "/Icons/game_icons/" + Emu.GetTitleID() + "/PIC1.PNG"; fs::is_file(path))
+			if (std::string path = fs::get_config_dir() + "/Icons/game_icons/" + serial + "/PIC1.PNG"; fs::is_file(path))
 			{
 				return path;
 			}
@@ -646,6 +689,19 @@ namespace rpcs3::utils
 		}
 
 		return {};
+	}
+
+	std::pair<std::string, bool> get_game_content_path(game_content_type type, const GameInfo& info)
+	{
+		const std::string sfo_dir = info.is_iso_file ? (info.game_dir.empty() ? "PS3_GAME" : info.game_dir) : rpcs3::utils::get_sfo_dir_from_game_path(info.path, info.serial);
+		bool in_archive = false;
+		std::string path = get_game_content_path(type, info.serial, sfo_dir, {}, info.is_iso_file ? info.path : "", info.game_dir, &in_archive);
+		return { std::move(path), in_archive };
+	}
+
+	std::string get_game_content_path(game_content_type type)
+	{
+		return get_game_content_path(type, Emu.GetTitleID(), Emu.GetSfoDir(false), vfs::get("/dev_bdvd/PS3_GAME"), {}, {}, nullptr);
 	}
 
 	bool version_is_bigger(std::string_view v0, std::string_view v1, std::string_view serial, bool is_fw)

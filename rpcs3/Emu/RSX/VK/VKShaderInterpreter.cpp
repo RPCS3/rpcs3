@@ -6,10 +6,11 @@
 #include "VKHelpers.h"
 #include "VKRenderPass.h"
 
-#include "../Overlays/Shaders/shader_loading_dialog.h"
-#include "../Program/GLSLCommon.h"
-#include "../Program/ShaderInterpreter.h"
-#include "../rsx_methods.h"
+#include "Emu/RSX/Overlays/Shaders/shader_loading_dialog.h"
+#include "Emu/RSX/Program/GLSLCommon.h"
+#include "Emu/RSX/Program/ShaderInterpreter.h"
+#include "Emu/RSX/rsx_methods.h"
+#include "Emu/localized_string.h"
 
 #include <thread>
 
@@ -285,10 +286,12 @@ namespace vk
 			}
 		}
 
-		[[maybe_unused]] ::glsl::shader_properties properties{};
-		properties.domain = ::glsl::program_domain::glsl_fragment_program;
-		properties.require_depth_conversion = true;
-		properties.require_wpos = true;
+		::glsl::shader_properties properties
+		{
+			.domain = ::glsl::program_domain::glsl_fragment_program,
+			.require_lit_emulation = true,
+			.ROP_channel_remap = !!(compiler_options & COMPILER_OPT_ENABLE_ROP_REMAP),
+		};
 
 		u32 len;
 		ParamArray arr;
@@ -417,6 +420,7 @@ namespace vk
 			"	uint rop_control = fs_contexts[_fs_context_offset].rop_control;\n"
 			"	float alpha_ref = fs_contexts[_fs_context_offset].alpha_ref;\n\n";
 
+		::glsl::insert_glsl_legacy_function(builder, properties);
 		builder << program_common::interpreter::get_fragment_interpreter();
 		const std::string s = builder.str();
 
@@ -588,6 +592,7 @@ namespace vk
 		if (fp_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT) key.compiler_opt |= COMPILER_OPT_ENABLE_DEPTH_EXPORT;
 		if (fp_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) key.compiler_opt |= COMPILER_OPT_ENABLE_F32_EXPORT;
 		if (fp_ctrl & RSX_SHADER_CONTROL_USES_KIL) key.compiler_opt |= COMPILER_OPT_ENABLE_KIL;
+		if (fp_ctrl & RSX_SHADER_CONTROL_ROP_OUTPUT_REMAP) key.compiler_opt |= COMPILER_OPT_ENABLE_ROP_REMAP;
 		if (fp_metadata.referenced_textures_mask) key.compiler_opt |= COMPILER_OPT_ENABLE_TEXTURES;
 		if (fp_metadata.has_branch_instructions) key.compiler_opt |= COMPILER_OPT_ENABLE_FLOW_CTRL;
 		if (fp_metadata.has_pack_instructions) key.compiler_opt |= COMPILER_OPT_ENABLE_PACKING;
@@ -715,7 +720,7 @@ namespace vk
 
 	void shader_interpreter::preload(rsx::shader_loading_dialog* dlg)
 	{
-		dlg->create("Precompiling interpreter variants.\nPlease wait...", "Shader Compilation");
+		dlg->create(get_localized_string(localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS), get_localized_string(localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_TITLE));
 
 		// Create some basic pipelines that we'll use to seed the base pipeline queue
 		std::vector<vk::pipeline_props> pipe_properties;
@@ -774,7 +779,7 @@ namespace vk
 			std::this_thread::sleep_for(16ms);
 
 			const auto completed = ctr.load();
-			dlg->update_msg(0, fmt::format("Building base variant %u of %u...", completed, limit1));
+			dlg->update_msg(0, get_localized_string(localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_VULKAN, "%u %s %u", completed, get_localized_string(localized_string_id::PROGRESS_DIALOG_OF), limit1));
 			dlg->set_value(0, completed);
 		}
 		while (ctr.load() < limit1);

@@ -6,10 +6,16 @@
 #include "../RSXTexture.h"
 
 #include <vector>
+#include <concepts>
 
 namespace rsx
 {
 	using flags32_t = u32;
+
+	template <typename T>
+	concept RSXTexture =
+			std::same_as<T, rsx::fragment_texture> ||
+			std::same_as<T, rsx::vertex_texture>;
 
 	enum texture_upload_context : u32
 	{
@@ -284,6 +290,55 @@ namespace rsx
 		usz alignment;
 	};
 
+	struct image_section_attributes_t
+	{
+		u32 address;
+		u32 gcm_format;
+		u32 pitch;
+		u16 width;
+		u16 height;
+		u16 depth;
+		u16 mipmaps;
+		u16 slice_h;
+		u8  bpp;
+		bool swizzled;
+		bool edge_clamped;
+	};
+
+	struct image_copy_subresource_layers
+	{
+		u8 src_mip_level = 0;
+		u8 dst_mip_level = 0;
+		u8 mipmap_count = 1;
+		u8 src_layer = 0;
+		u8 dst_layer = 0;
+		u8 layer_count = 1;
+
+		image_copy_subresource_layers without_src() const
+		{
+			return {
+				.src_mip_level = 0,
+				.dst_mip_level = dst_mip_level,
+				.mipmap_count = 1,
+				.src_layer = 0,
+				.dst_layer = dst_layer,
+				.layer_count = 1
+			};
+		}
+
+		image_copy_subresource_layers without_dst() const
+		{
+			return {
+				.src_mip_level = src_mip_level,
+				.dst_mip_level = 0,
+				.mipmap_count = 1,
+				.src_layer = src_layer,
+				.dst_layer = 0,
+				.layer_count = 1
+			};
+		}
+	};
+
 	/**
 	* Get size to store texture in a linear fashion.
 	* Storage is assumed to use a rowPitchAlignment boundary for every row of texture.
@@ -298,6 +353,7 @@ namespace rsx
 	 */
 	std::vector<subresource_layout> get_subresources_layout(const rsx::fragment_texture &texture);
 	std::vector<subresource_layout> get_subresources_layout(const rsx::vertex_texture &texture);
+	std::vector<subresource_layout> get_subresources_layout(const image_section_attributes_t& attrs, texture_dimension_extended type);
 
 	texture_memory_info upload_texture_subresource(rsx::io_buffer& dst_buffer, const subresource_layout &src_layout, int format, bool is_swizzled, texture_uploader_capabilities& caps);
 
@@ -329,10 +385,12 @@ namespace rsx
 	u8 get_format_texel_rows_per_line(u32 format);
 
 	/**
-	* Get number of bytes occupied by texture in RSX mem
+	* Get number of bytes occupied by texture in RSX mem.
+	* Specify mip_level to compute size for exactly one mipmap level.
 	*/
-	usz get_texture_size(const rsx::fragment_texture &texture);
-	usz get_texture_size(const rsx::vertex_texture &texture);
+	constexpr u8 RSX_GCM_MIP_LEVEL_IGNORED = UINT8_MAX;
+	usz get_texture_size(const rsx::fragment_texture &texture, u8 mip_level = RSX_GCM_MIP_LEVEL_IGNORED);
+	usz get_texture_size(const rsx::vertex_texture &texture, u8 mip_level = RSX_GCM_MIP_LEVEL_IGNORED);
 
 	/**
 	* Get packed pitch
@@ -350,6 +408,9 @@ namespace rsx
 	std::pair<u32, bool> get_compatible_gcm_format(rsx::surface_color_format format);
 	std::pair<u32, bool> get_compatible_gcm_format(rsx::surface_depth_format2 format);
 
+	rsx::surface_color_format get_compatible_surface_color_format(u32 gcm_format);
+	rsx::surface_depth_format2 get_compatible_surface_depth_format(u32 gcm_format);
+
 	format_class classify_format(rsx::surface_depth_format2 format);
 	format_class classify_format(u32 gcm_format);
 
@@ -361,4 +422,6 @@ namespace rsx
 	{
 		return is_border_clamped_texture(tex.wrap_s(), tex.wrap_t(), tex.wrap_r(), tex.dimension());
 	}
+
+	u32 get_ROP_output_shuffle_index(rsx::surface_color_format format);
 }

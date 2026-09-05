@@ -74,7 +74,11 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 {
 	m_window_title = Emu.GetFormattedTitle(0);
 
-	if (!g_cfg_recording.load())
+	if (g_cfg_recording.load())
+	{
+		gui_log.notice("Using recording config:\n%s", g_cfg_recording.to_string());
+	}
+	else
 	{
 		gui_log.notice("Could not load recording config. Using defaults.");
 	}
@@ -527,7 +531,7 @@ void gs_frame::toggle_recording()
 		m_video_encoder->set_path(video_path);
 		m_video_encoder->set_framerate(g_cfg_recording.video.framerate);
 		m_video_encoder->set_video_bitrate(g_cfg_recording.video.video_bps);
-		m_video_encoder->set_video_codec(g_cfg_recording.video.video_codec);
+		m_video_encoder->set_video_codec(g_cfg_recording.video.codec_id, g_cfg_recording.video.codec_name.get());
 		m_video_encoder->set_max_b_frames(g_cfg_recording.video.max_b_frames);
 		m_video_encoder->set_gop_size(g_cfg_recording.video.gop_size);
 		m_video_encoder->set_output_format(output_format);
@@ -557,7 +561,7 @@ void gs_frame::toggle_recording()
 		}
 
 		m_video_encoder->set_audio_bitrate(g_cfg_recording.audio.audio_bps);
-		m_video_encoder->set_audio_codec(g_cfg_recording.audio.audio_codec);
+		m_video_encoder->set_audio_codec(g_cfg_recording.audio.codec_id, g_cfg_recording.audio.codec_name.get());
 		m_video_encoder->encode();
 
 		if (m_video_encoder->has_error)
@@ -718,7 +722,7 @@ void gs_frame::show()
 		{
 			setVisibility(FullScreen);
 		}
-		else if (const QVariant var = m_gui_settings->GetValue(gui::gs_visibility); var.canConvert<QString>())
+		else if (const QVariant var = m_gui_settings->GetValue(gui::gs_visibility); var.canConvert<QString>() && !m_gui_settings->GetValue(gui::gs_resize).toBool())
 		{
 			// Restore saved visibility from last time. Make sure not to hide the window, or the user can't access it anymore.
 			if (const Visibility visibility = gui::string_to_visibility(var.value<QString>()); visibility != Visibility::Hidden)
