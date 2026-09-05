@@ -25,10 +25,10 @@ struct sys_lwmutex_t;
 struct sys_lwmutex_attribute_t;
 
 error_code sys_lwmutex_create(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, vm::ptr<sys_lwmutex_attribute_t> attr);
-error_code sys_lwmutex_lock(ppu_thread& CPU, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout);
-error_code sys_lwmutex_trylock(ppu_thread& CPU, vm::ptr<sys_lwmutex_t> lwmutex);
-error_code sys_lwmutex_unlock(ppu_thread& CPU, vm::ptr<sys_lwmutex_t> lwmutex);
-error_code sys_lwmutex_destroy(ppu_thread& CPU, vm::ptr<sys_lwmutex_t> lwmutex);
+error_code sys_lwmutex_lock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex, u64 timeout);
+error_code sys_lwmutex_trylock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex);
+error_code sys_lwmutex_unlock(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex);
+error_code sys_lwmutex_destroy(ppu_thread& ppu, vm::ptr<sys_lwmutex_t> lwmutex);
 
 struct sys_lwmutex_locker
 {
