@@ -6,6 +6,7 @@
 #include "util/types.hpp"
 #include "Crypto/aes.h"
 
+#include <array>
 #include <span>
 
 bool is_iso_file(const std::string& path, u64* size = nullptr, bool* is_raw_device = nullptr);
@@ -14,6 +15,9 @@ void load_iso(const std::string& path);
 void unload_iso();
 
 constexpr u64 ISO_SECTOR_SIZE = 2048;
+
+// The first 16 sectors are the system area (boot data): the volume descriptors always start right after it (ECMA-119)
+constexpr u64 ISO_DESCRIPTORS_OFFSET = ISO_SECTOR_SIZE * 16;
 
 /*
 - Hijacked the "iso_archive::iso_archive" method to test if the ".iso" file is encrypted and sets a flag.
@@ -78,6 +82,11 @@ public:
 	iso_encryption_type get_enc_type() const { return m_enc_type; }
 
 	bool init(const std::string& path, iso_archive* archive = nullptr);
+
+	// Sets the decryption key out of the "D1" of the disc, for an encrypted image no key file was found for
+	// (an IRD file stores that very field, so a game checked against one can be read back without a ".dkey")
+	bool set_key_from_d1(const std::array<u8, 16>& disc_key);
+
 	bool decrypt(u64 offset, const std::span<u8> buffer, const std::string& name);
 };
 
@@ -103,6 +112,12 @@ struct iso_fs_node
 	iso_fs_metadata metadata {};
 	std::vector<std::unique_ptr<iso_fs_node>> children;
 };
+
+// Parses the volume descriptor set and the directory records of an ISO9660 file system out of an already opened
+// stream, filling in the hierarchy rooted at "root" ("path" is only used for logging).
+// It works on any stream holding the ECMA-119 structures at the sector positions they lie at on the disc, so it
+// serves both a whole ISO image and the ISO header an IRD file stores
+bool iso_parse_file_system(fs::file& file, iso_fs_node& root, const std::string& path);
 
 class iso_file : public fs::file_base
 {
@@ -174,6 +189,10 @@ private:
 
 public:
 	iso_archive(const std::string& path);
+
+	// Hands the decryption the "D1" of the disc, so that an encrypted image whose key file is missing can still
+	// be read back. Only worth calling when the image turned out to be unreadable as it is
+	bool set_disc_key(const std::array<u8, 16>& disc_key);
 
 	const std::string& path() const { return m_path; }
 	const iso_fs_node& root() const { return m_root; }

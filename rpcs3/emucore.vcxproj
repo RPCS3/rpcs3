@@ -569,6 +569,7 @@
     <ClCompile Include="Loader\PSF.cpp" />
     <ClCompile Include="Loader\PUP.cpp" />
     <ClCompile Include="Loader\TAR.cpp" />
+    <ClCompile Include="Loader\IRD.cpp" />
     <ClCompile Include="Loader\ISO.cpp" />
     <ClCompile Include="Loader\iso_cache.cpp" />
     <ClCompile Include="Loader\mself.cpp" />
@@ -1081,6 +1082,7 @@
     <ClInclude Include="Loader\PSF.h" />
     <ClInclude Include="Loader\PUP.h" />
     <ClInclude Include="Loader\TAR.h" />
+    <ClInclude Include="Loader\IRD.h" />
     <ClInclude Include="Loader\ISO.h" />
     <ClInclude Include="Loader\TROPUSR.h" />
     <ClInclude Include="Loader\TRP.h" />

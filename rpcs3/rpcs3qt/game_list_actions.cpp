@@ -502,7 +502,7 @@ void game_list_actions::ShowGameIntegrityDialog(content_file_type file_type, con
 
 		if (m_game_validator->get_status() == content_hash_status::ABORTED)
 		{
-			text_dialog = tr("Hash calculation failed!\n\nIntegrity check aborted");
+			text_dialog = tr("Integrity check aborted!\n\nHash calculation failed!");
 			info_dialog = false;
 		}
 		else
@@ -528,6 +528,11 @@ void game_list_actions::ShowGameIntegrityDialog(content_file_type file_type, con
 		}, nullptr, false);
 	});
 
+	StartHashProgressDialog();
+}
+
+void game_list_actions::StartHashProgressDialog()
+{
 	progress_dialog* pdlg = new progress_dialog(tr("File Hash Calculation"), "", tr("Cancel"),
 		0, 100, false, m_game_list_frame);
 
@@ -566,6 +571,189 @@ void game_list_actions::ShowGameIntegrityDialog(content_file_type file_type, con
 	});
 
 	update_timer->start(500);
+}
+
+void game_list_actions::ShowIrdIntegrityDialog(const std::string& game_path)
+{
+	if (m_game_integrity_future.isRunning()) // Still running the last request
+		return;
+
+	// A game is validated file by file against the IRD file of the disc it comes from: it is the only place the
+	// MD5 hash of each file of the disc can be read from (and the key of an encrypted image, when its key file is
+	// missing), so the user has to provide it
+	const QString ird_path = QFileDialog::getOpenFileName(nullptr, tr("Select the IRD file of the game"),
+		QString::fromStdString(game_path), tr("IRD files (*.ird *.IRD);;All files (*.*)"));
+
+	if (ird_path.isEmpty())
+	{
+		return;
+	}
+
+	// Tell the progress bar thread that a check is running: how far it got is reported by the validator itself,
+	// which knows how many files are left only once the IRD is parsed
+	m_game_validator->set_count(1);
+
+	// Hashing every file of a game can take a while (in particular on non ssd/m.2 disks) so run it on a concurrent
+	// thread avoiding to block the entire GUI
+	m_game_integrity_future = QtConcurrent::run([this, game_path, ird_path]()
+	{
+		thread_base::set_name("Game Integrity");
+
+		disc_check_report report;
+
+		m_game_validator->check_content(game_path, ird_path.toStdString(), report);
+
+		QString text_result, text_dialog, text_details;
+		bool info_dialog = false;
+
+		switch (report.status)
+		{
+		case disc_check_status::PASSED:
+		case disc_check_status::FAILED:
+		{
+			info_dialog = report.status == disc_check_status::PASSED;
+
+			text_result = (info_dialog ? tr("Game check PASSED\n\n") : tr("Game check NOT PASSED\n\n"));
+
+			text_result += tr("Main info:\n - %0: %1\n - Game: %2 [%3]\n - IRD: %4 [%5] (game v%6, app v%7, firmware v%8)\n\n"
+				"%9 valid | %10 invalid | %11 missing | %12 not required")
+				.arg(report.is_iso ? tr("ISO") : tr("Folder"))
+				.arg(QString::fromStdString(game_path))
+				.arg(QString::fromStdString(report.game_title))
+				.arg(QString::fromStdString(report.game_id))
+				.arg(QString::fromStdString(report.ird_game_name))
+				.arg(QString::fromStdString(report.ird_game_id))
+				.arg(QString::fromStdString(report.ird_game_version))
+				.arg(QString::fromStdString(report.ird_app_version))
+				.arg(QString::fromStdString(report.ird_update_version))
+				.arg(report.matched)
+				.arg(report.mismatched)
+				.arg(report.missing)
+				.arg(report.not_required);
+
+			if (report.decrypted_with_ird_key)
+			{
+				text_result += tr("\n\nNOTE: no key file was found for this encrypted image, so it was read back through "
+					"the key stored in the IRD file");
+			}
+
+			if (report.serial_mismatch)
+			{
+				text_result += tr("\n\nWARNING: the IRD file belongs to another game!");
+				info_dialog = false;
+			}
+
+			if (!report.ird_crc_valid)
+			{
+				text_result += tr("\n\nWARNING: the IRD file is corrupted (wrong CRC32)!");
+				info_dialog = false;
+			}
+
+			// A rip regularly leaves out the firmware update the disc holds: it does not belong to the game, so
+			// telling it apart from a game file spares the user the hunt through the list of the details
+			bool game_data_matches = report.status == disc_check_status::FAILED;
+
+			for (const disc_file_entry& entry : report.entries)
+			{
+				if ((entry.status == disc_file_status::MISMATCH || entry.status == disc_file_status::MISSING) &&
+					!entry.path.starts_with("/PS3_UPDATE/"))
+				{
+					game_data_matches = false;
+				}
+
+				switch (entry.status)
+				{
+				case disc_file_status::MATCH:
+					continue;
+				case disc_file_status::MATCH_REBUILT:
+					text_details += tr("[VALID, TO BE REBUILT] %0\n").arg(QString::fromStdString(entry.path));
+					break;
+				case disc_file_status::MISMATCH:
+					text_details += tr("[INVALID] %0\n").arg(QString::fromStdString(entry.path));
+					break;
+				case disc_file_status::MISSING:
+					text_details += tr("[MISSING] %0\n").arg(QString::fromStdString(entry.path));
+					break;
+				case disc_file_status::NOT_REQUIRED:
+					text_details += tr("[NOT REQUIRED] %0\n").arg(QString::fromStdString(entry.path));
+					break;
+				}
+			}
+
+			if (report.rebuilt)
+			{
+				text_result += tr("\n\nNOTE: %0 file(s) match the disc only once rebuilt (e.g. a missing license file or "
+					"a firmware update not padded to its size on the disc)").arg(report.rebuilt);
+			}
+
+			if (game_data_matches)
+			{
+				text_result += tr("\n\nNOTE: only the firmware update of the disc is missing or invalid: the data of the "
+					"game itself fully matches the disc");
+			}
+
+			break;
+		}
+		case disc_check_status::ABORTED:
+			text_dialog = tr("Integrity check aborted!\n\nHash calculation failed!");
+			break;
+		case disc_check_status::ERROR_NOT_A_PS3_GAME:
+			text_dialog = tr("Integrity check failed!\n\n'%0' does not hold a PS3 game").arg(QString::fromStdString(game_path));
+
+			// The file system of a disc lies in the clear even on an encrypted image, while its "PARAM.SFO" does
+			// not: an image whose files are listed but unreadable is one no key was found for
+			if (report.is_iso)
+			{
+				text_dialog += tr("\n\nNOTE: if the image is encrypted, check that its key file (.dkey or .key) is next "
+					"to it or in the Redump keys folder");
+			}
+
+			break;
+		case disc_check_status::ERROR_OPENING_ISO:
+			text_dialog = tr("Integrity check failed!\n\nFailed to open the ISO file: '%0'").arg(QString::fromStdString(game_path));
+			break;
+		case disc_check_status::ERROR_ISO_ENCRYPTED:
+			text_dialog = tr("Integrity check failed!\n\nThe ISO file is encrypted and no key to read it back was found:\n'%0'\n\n"
+				"Put its key file (.dkey or .key), named after the image, next to it or in the Redump keys folder")
+				.arg(QString::fromStdString(game_path));
+			break;
+		case disc_check_status::ERROR_PARSING_IRD:
+			text_dialog = tr("Integrity check failed!\n\nFailed to parse the IRD file: '%0'").arg(ird_path);
+			break;
+		}
+
+		if (!text_result.isEmpty())
+		{
+			text_dialog = tr("Integrity check completed!\n\n%0").arg(text_result);
+		}
+
+		// Tell the progress bar thread to terminate
+		m_game_validator->set_count(0);
+
+		Emu.CallFromMainThread([this, text_dialog, text_details, info_dialog]()
+		{
+			QMessageBox mb(info_dialog ? QMessageBox::Information : QMessageBox::Critical, tr("Game Integrity"),
+				text_dialog, QMessageBox::Ok, m_game_list_frame);
+
+			if (!text_details.isEmpty())
+			{
+				mb.setDetailedText(text_details);
+			}
+
+			if (info_dialog)
+			{
+				sys_log.success("%s", text_dialog.toStdString());
+			}
+			else
+			{
+				sys_log.error("%s", text_dialog.toStdString());
+			}
+
+			mb.exec();
+		}, nullptr, false);
+	});
+
+	StartHashProgressDialog();
 }
 
 void game_list_actions::ShowDiskUsageDialog()

@@ -60,6 +60,11 @@ public:
 	void ShowRemoveGameDialog(const std::vector<game_info>& games);
 	void ShowGameInfoDialog(const std::vector<game_info>& games);
 	void ShowGameIntegrityDialog(content_file_type file_type, const std::string& game_path);
+
+	// Validates a game, held either by a JB folder or by an ISO image, against the IRD file of the disc it
+	// comes from, asking the user for the IRD file to check it against
+	void ShowIrdIntegrityDialog(const std::string& game_path);
+
 	void ShowDiskUsageDialog();
 
 	// Fills a game collection menu with the default entry and one per collection. The rename and removal
@@ -122,6 +127,10 @@ public:
 	static bool RemoveContentBySerial(const std::string& base_dir, const std::string& serial, const std::string& desc);
 
 private:
+	// Opens the progress dialog reporting how far the hash calculation driven by the validator has got, and
+	// closes it as soon as the validator reports it is done
+	void StartHashProgressDialog();
+
 	game_list_frame* m_game_list_frame = nullptr;
 	std::shared_ptr<gui_settings> m_gui_settings;
 	QFuture<void> m_disk_usage_future;
