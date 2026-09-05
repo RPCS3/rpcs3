@@ -381,6 +381,9 @@ void audio_port::tag(s32 offset)
 	{
 		port_buf[tag_pos] = tag;
 		last_tag_value[tag_nr] = -0.0f;
+
+		// Mark the front right channel as well, see PORT_BUFFER_MARK_CHANNEL
+		port_buf[mark_position(tag_nr)] = tag;
 	}
 
 	prev_touched_tag_nr = -1;
@@ -441,8 +444,10 @@ std::tuple<u32, u32, u32, u32> cell_audio_thread::count_port_buffer_tags()
 	u32 untouched = 0;
 	u32 incomplete = 0;
 
-	for (audio_port& port : ports)
+	for (u32 port_index = 0; port_index < ports.size(); port_index++)
 	{
+		audio_port& port = ports[port_index];
+
 		if (port.state != audio_port_state::started) continue;
 		active++;
 
@@ -454,6 +459,7 @@ std::tuple<u32, u32, u32, u32> cell_audio_thread::count_port_buffer_tags()
 
 		u32 last_touched_tag_nr = port.prev_touched_tag_nr;
 		bool retouched = false;
+		bool tag_moved = false;
 		for (u32 tag_pos = tag_first_pos, tag_nr = 0; tag_nr < PORT_BUFFER_TAG_COUNT; tag_pos += tag_delta, tag_nr++)
 		{
 			const f32 val = port_buf[tag_pos];
@@ -465,14 +471,58 @@ std::tuple<u32, u32, u32, u32> cell_audio_thread::count_port_buffer_tags()
 
 				retouched |= (tag_nr <= port.prev_touched_tag_nr) && port.prev_touched_tag_nr != umax;
 				last_touched_tag_nr = tag_nr;
+				tag_moved = true;
 			}
+		}
+
+		if (tag_moved)
+		{
+			// This port reaches its surround channels, so its tags track it on their own and the marks below
+			// are never consulted for it.
+			m_periods_without_tag[port_index] = 0;
 		}
 
 		// Decide whether the buffer is untouched, in progress, incomplete, or complete
 		if (last_touched_tag_nr == umax)
 		{
-			// no tag has been touched yet
-			untouched++;
+			// No tag has been touched yet. That normally means the buffer is untouched, but it also happens
+			// when the game filled the front channels only: no tag can ever move then, and the port would
+			// stay silent forever. The marks tell the two apart. They are only consulted once this port has
+			// gone long enough without moving a tag to rule out a game writing the buffer one channel at a
+			// time, which looks identical in between its front right and its center pass.
+			bool front_only = false;
+
+			if (m_periods_without_tag[port_index] > PORT_FRONT_ONLY_SETTLE_PERIODS)
+			{
+				for (u32 tag_nr = 0; tag_nr < PORT_BUFFER_TAG_COUNT; tag_nr++)
+				{
+					const f32 val = port_buf[port.mark_position(tag_nr)];
+
+					if (val != -0.0f || !std::signbit(val))
+					{
+						front_only = true;
+						break;
+					}
+				}
+			}
+
+			if (!front_only)
+			{
+				// nothing has been written at all, or this port has not settled yet
+				untouched++;
+			}
+			else
+			{
+				// The game only ever fills the front channels of this port, so the block is as complete as it
+				// is ever going to get. Incomplete is the verdict that says so, and it still gets mixed.
+				incomplete++;
+
+				if (!m_front_only_reported[port_index])
+				{
+					m_front_only_reported[port_index] = true;
+					cellAudio.notice("Port %u carries front channel audio only (num_channels=%u). Its buffer tags all sit on surround channels and can never move, so the front channel marks decide whether it is silent.", port.number, port.num_channels);
+				}
+			}
 		}
 		else if (last_touched_tag_nr == PORT_BUFFER_TAG_COUNT - 1)
 		{
@@ -512,8 +562,10 @@ std::tuple<u32, u32, u32, u32> cell_audio_thread::count_port_buffer_tags()
 void cell_audio_thread::reset_ports(s32 offset)
 {
 	// Memset buffer to 0 and tag
-	for (audio_port& port : ports)
+	for (u32 port_index = 0; port_index < ports.size(); port_index++)
 	{
+		audio_port& port = ports[port_index];
+
 		if (port.state != audio_port_state::started) continue;
 
 		memset(port.get_vm_ptr(offset), 0, port.block_size() * sizeof(float));
@@ -521,6 +573,13 @@ void cell_audio_thread::reset_ports(s32 offset)
 		if (cfg.buffering_enabled)
 		{
 			port.tag(offset);
+
+			// One period is about to elapse for this port. count_port_buffer_tags() zeroes this again as
+			// soon as it sees a tag move, so it counts periods during which none did.
+			if (m_periods_without_tag[port_index] < 0xFF)
+			{
+				m_periods_without_tag[port_index]++;
+			}
 		}
 	}
 }
@@ -1034,6 +1093,8 @@ audio_port* cell_audio_thread::open_port()
 	{
 		if (ports[i].state.compare_and_swap_test(audio_port_state::closed, audio_port_state::opened))
 		{
+			m_front_only_reported[i] = false;
+			m_periods_without_tag[i] = 0;
 			return &ports[i];
 		}
 	}
