@@ -14,6 +14,7 @@ enum : u32
 {
 	PKG_HEADER_SIZE  = 0xC0, // sizeof(pkg_header) + sizeof(pkg_unk_checksum)
 	PKG_HEADER_SIZE2 = 0x280,
+	PKG_MAX_FILE_COUNT = 1'000'000,
 	PKG_MAX_FILENAME_SIZE = 256,
 };
 
