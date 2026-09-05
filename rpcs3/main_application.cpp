@@ -39,6 +39,7 @@
 #endif
 
 #include <QDateTime>
+#include <QDir>
 #include <QFileInfo> // This shouldn't be outside rpcs3qt...
 #include <QImageReader> // This shouldn't be outside rpcs3qt...
 #include <QStandardPaths> // This shouldn't be outside rpcs3qt...
@@ -383,6 +384,34 @@ EmuCallbacks main_application::CreateCallbacks()
 		return QFileInfo(QString::fromUtf8(sv.data(), static_cast<int>(sv.size()))).canonicalFilePath().toStdString();
 	};
 
+	callbacks.resolve_path_may_not_exist = [](std::string_view sv)
+	{
+		const QString path = QString::fromUtf8(sv.data(), static_cast<int>(sv.size()));
+		QFileInfo fi(path);
+
+		QString tail;
+
+		while (!fi.exists())
+		{
+			tail = fi.fileName() + "/" + tail;
+			fi.setFile(fi.path());
+		}
+
+		QString result = QDir::cleanPath(QDir(fi.canonicalFilePath()).filePath(tail));
+
+#ifdef _WIN32
+		if (sv.starts_with("/") && !sv.starts_with("//"))
+		{
+			// Erase absolute path for non-existant path
+			if (result.size() >= 3 && result[1] == ':' && result[2] == '/')
+			{
+				result.remove(0, 2);
+			}
+		}
+#endif
+		return result.toStdString();
+	};
+
 	callbacks.get_font_dirs = []()
 	{
 		const QStringList locations = QStandardPaths::standardLocations(QStandardPaths::FontsLocation);
@@ -399,11 +428,11 @@ EmuCallbacks main_application::CreateCallbacks()
 		return font_dirs;
 	};
 
-	callbacks.on_install_pkgs = [](const std::vector<std::string>& pkgs)
+	callbacks.on_install_pkgs = [](const std::vector<std::string>& pkgs, bool from_optical_drive)
 	{
 		for (const std::string& pkg : pkgs)
 		{
-			if (!rpcs3::utils::install_pkg(pkg))
+			if (!rpcs3::utils::install_pkg(pkg, from_optical_drive))
 			{
 				sys_log.error("Failed to install %s", pkg);
 				return false;

@@ -9,8 +9,8 @@
     <IntDir>$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
     <GTestPath>$(SolutionDir)packages\Microsoft.googletest.v140.windesktop.msvcstl.static.rt-static.1.8.1.8\build\native\Microsoft.googletest.v140.windesktop.msvcstl.static.rt-static.targets</GTestPath>
     <GTestInstalled Condition="Exists('$(GTestPath)')">true</GTestInstalled>
-    <OpenCvBuildDir>$(SolutionDir)3rdparty\opencv\opencv\opencv413\build</OpenCvBuildDir>
-    <OpenCvWorld>opencv_world4130</OpenCvWorld>
+    <OpenCvBuildDir>$(SolutionDir)3rdparty\opencv\opencv\opencv414\build</OpenCvBuildDir>
+    <OpenCvWorld>opencv_world4140</OpenCvWorld>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <Lib>
@@ -233,11 +233,22 @@
         absl_time_zone.lib;
         libutf8_validity.lib;
         libutf8_range.lib;
-        libprotobuf-lite.lib;
       </AdditionalDependencies>
       <AdditionalLibraryDirectories>$(SolutionDir)3rdparty\ffmpeg\lib\windows\x86_64</AdditionalLibraryDirectories>
       <StackReserveSize>8388608</StackReserveSize>
       <StackCommitSize>1048576</StackCommitSize>
+    </Link>
+    <Link Condition="'$(Configuration)'=='Release'">
+      <AdditionalDependencies>
+        libprotobuf-lite.lib;
+        %(AdditionalDependencies)
+      </AdditionalDependencies>
+    </Link>
+    <Link Condition="'$(Configuration)'=='Debug'">
+      <AdditionalDependencies>
+        libprotobuf-lited.lib;
+        %(AdditionalDependencies)
+      </AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup />

@@ -467,14 +467,9 @@ void VKGSRender::load_texture_env()
 			{
 				actual_mipmaps = static_cast<f32>(mipmap_count);
 			}
-			else if (sampler_state->external_subresource_desc.op == rsx::deferred_request_command::mipmap_gather)
+			else if (sampler_state->external_subresource_desc.op != rsx::deferred_request_command::nop)
 			{
-				// Clamp min and max lod
-				actual_mipmaps = static_cast<f32>(sampler_state->external_subresource_desc.sections_to_copy.size());
-			}
-			else if (sampler_state->external_subresource_desc.op == rsx::deferred_request_command::cubemap_unwrap)
-			{
-				actual_mipmaps = static_cast<f32>(sampler_state->external_subresource_desc.mipmaps);
+				actual_mipmaps = sampler_state->external_subresource_desc.exact_mip_count();
 			}
 			else
 			{
@@ -851,11 +846,12 @@ bool VKGSRender::bind_interpreter_texture_env()
 
 		using deferred_subresource_t = vk::texture_cache::deferred_subresource;
 		auto image = static_cast<vk::viewable_image*>(base->image());
+		auto rtt = vk::try_as_rtt(base->image());
 
 		if (is_msaa)
 		{
 			// MSAA resolve
-			auto rtt = vk::as_rtt(base->image());
+			ensure(rtt);
 			rtt->memory_barrier(*m_current_command_buffer, rsx::surface_access::transfer_read);
 			image = rtt->get_surface(rsx::surface_access::transfer_read);
 		}
@@ -863,18 +859,22 @@ bool VKGSRender::bind_interpreter_texture_env()
 		if (is_redirected)
 		{
 			// Force bitcast
-			deferred_subresource_t flatten_op{};
-			flatten_op.address = desc->ref_address;
-			flatten_op.external_handle = image;
-			flatten_op.op = desc->is_cyclic_reference
-				? rsx::deferred_request_command::copy_image_dynamic
-				: rsx::deferred_request_command::copy_image_static;
-			flatten_op.width = flatten_op.external_handle->width();
-			flatten_op.height = flatten_op.external_handle->height();
-			flatten_op.depth = 1;
-			flatten_op.gcm_format = desc->format_ex.format();
-			flatten_op.remap = decoded_remap;
-			flatten_op.cache_range = utils::address_range32::start_length(desc->ref_address, attr.pitch * attr.height);
+			rsx::image_section_attributes_t flatten_attrs{};
+			flatten_attrs.address = desc->ref_address;
+			flatten_attrs.gcm_format = desc->format_ex.format();
+			flatten_attrs.width = image->width();
+			flatten_attrs.height = image->height();
+			flatten_attrs.depth = 1;
+
+			const coord3u flatten_rect = { 0, 0, 0, flatten_attrs.width, flatten_attrs.height, 1 };
+			auto flatten_op = deferred_subresource_t::create_copy(
+				image, flatten_attrs, flatten_rect, rsx::surface_transform::identity, decoded_remap, desc->is_cyclic_reference);
+
+			ensure(desc->ref_address);
+			flatten_op.cache_range = rtt
+				? rtt->get_memory_range()
+				: utils::address_range32::start_length(desc->ref_address, attr.pitch * attr.height);
+
 			return m_texture_cache.create_temporary_subresource(*m_current_command_buffer, flatten_op);
 		}
 

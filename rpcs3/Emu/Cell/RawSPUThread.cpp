@@ -40,9 +40,6 @@ bool spu_thread::read_reg(const u32 addr, u32& value)
 {
 	const u32 offset = addr - (RAW_SPU_BASE_ADDR + RAW_SPU_OFFSET * index) - RAW_SPU_PROB_OFFSET;
 
-	raw_spu_log_stats_t stats{};
-	stats.mmio_offset = offset;
-
 	const auto [old_stats, is_changed] = mmio_stats.fetch_op([&](raw_spu_log_stats_t& old)
 	{
 		if (old.mmio_offset == offset)
@@ -299,13 +296,8 @@ bool spu_thread::write_reg(const u32 addr, const u32 value)
 	{
 	case MFC_LSA_offs:
 	{
-		if (value >= SPU_LS_SIZE)
-		{
-			break;
-		}
-
 		std::lock_guard lock(mfc_prxy_mtx);
-		mfc_prxy_cmd.lsa = value;
+		mfc_prxy_cmd.lsa = value & (SPU_LS_SIZE - 1);
 		mfc_prxy_write_state.lsa = true;
 		return true;
 	}

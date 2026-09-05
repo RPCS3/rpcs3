@@ -3,9 +3,22 @@ if(USE_SYSTEM_ZLIB)
     find_package(ZLIB)
     list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 else()
-    add_library(ZLIB::ZLIB STATIC IMPORTED)
-    set_target_properties(ZLIB::ZLIB PROPERTIES
-        IMPORTED_LOCATION "${CMAKE_BINARY_DIR}/3rdparty/zlib/zlib/libzlibstatic.a"
-        INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/3rdparty/zlib/zlib;${CMAKE_BINARY_DIR}/3rdparty/zlib/zlib")
+    if(NOT TARGET ZLIB::ZLIB)
+        add_library(ZLIB::ZLIB STATIC IMPORTED GLOBAL)
+        if(MSVC)
+            # On MSVC, zlib builds as zs.lib (Release) / zsd.lib (Debug) in per-config subdirectories
+            set_target_properties(ZLIB::ZLIB PROPERTIES
+                IMPORTED_LOCATION_RELEASE         "${CMAKE_BINARY_DIR}/3rdparty/zlib/zlib/Release/zs.lib"
+                IMPORTED_LOCATION_DEBUG           "${CMAKE_BINARY_DIR}/3rdparty/zlib/zlib/Debug/zsd.lib"
+                IMPORTED_LOCATION_RELWITHDEBINFO  "${CMAKE_BINARY_DIR}/3rdparty/zlib/zlib/RelWithDebInfo/zs.lib"
+                IMPORTED_LOCATION_MINSIZEREL      "${CMAKE_BINARY_DIR}/3rdparty/zlib/zlib/MinSizeRel/zs.lib")
+        else()
+            # On non-MSVC, zlib OUTPUT_NAME is "z" → libz.a
+            set_target_properties(ZLIB::ZLIB PROPERTIES
+                IMPORTED_LOCATION "${CMAKE_BINARY_DIR}/3rdparty/zlib/zlib/libz.a")
+        endif()
+        set_target_properties(ZLIB::ZLIB PROPERTIES
+            INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/3rdparty/zlib/zlib;${CMAKE_BINARY_DIR}/3rdparty/zlib/zlib")
+    endif()
     set(ZLIB_FOUND TRUE)
 endif()

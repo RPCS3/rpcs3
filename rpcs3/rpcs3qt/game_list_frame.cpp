@@ -13,31 +13,22 @@
 #include "config_database.h"
 
 #include "Emu/System.h"
-#include "Emu/vfs_config.h"
 #include "Emu/system_utils.hpp"
-#include "Loader/PSF.h"
-#include "Loader/ISO.h"
-#include "Loader/iso_cache.h"
 #include "util/types.hpp"
 #include "Utilities/File.h"
-#include "util/sysinfo.hpp"
 
 #include <algorithm>
 #include <memory>
-#include <regex>
-#include <unordered_set>
 
 #include <QtConcurrent>
-#include <QHeaderView>
-#include <QMessageBox>
 #include <QScrollBar>
-#include <QApplication>
 
 LOG_CHANNEL(game_list_log, "GameList");
-LOG_CHANNEL(sys_log, "SYS");
 
 game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std::shared_ptr<emu_settings> emu_settings, std::shared_ptr<persistent_settings> persistent_settings, QWidget* parent)
 	: custom_dock_widget(tr("Game List"), parent)
+	, m_game_enumeration(*this)
+	, m_localized(std::make_shared<Localized>())
 	, m_gui_settings(std::move(gui_settings))
 	, m_emu_settings(std::move(emu_settings))
 	, m_persistent_settings(std::move(persistent_settings))
@@ -123,8 +114,10 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 	add_column(gui::game_list_columns::compat);
 	add_column(gui::game_list_columns::dir_size);
 
-	m_progress_dialog = new progress_dialog(tr("Loading games"), tr("Loading games, please wait..."), tr("Cancel"), 0, 0, false, this, Qt::Dialog | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
+	m_progress_dialog = new progress_dialog(tr("Loading games"), tr("Loading games, please wait..."), tr("Cancel"), 0, 100, false, this, Qt::Dialog | Qt::WindowTitleHint | Qt::CustomizeWindowHint);
 	m_progress_dialog->setMinimumDuration(200); // Only show the progress dialog after some time has passed
+	m_progress_dialog->SetValue(m_progress_dialog->maximum());
+	m_progress_dialog->accept();
 
 	// Events
 	connect(m_progress_dialog, &QProgressDialog::canceled, this, [this]()
@@ -132,12 +125,10 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 		gui::utils::stop_future_watcher(m_parsing_watcher, true);
 		gui::utils::stop_future_watcher(m_refresh_watcher, true);
 
-		m_path_entries.clear();
-		m_path_list.clear();
+		m_game_enumeration.clear(false);
 		m_serials.clear();
 		m_game_data.clear();
 		m_notes.clear();
-		m_games.pop_all();
 	});
 	connect(&m_parsing_watcher, &QFutureWatcher<void>::finished, this, &game_list_frame::OnParsingFinished);
 	connect(&m_parsing_watcher, &QFutureWatcher<void>::canceled, this, [this]()
@@ -145,11 +136,9 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 		WaitAndAbortSizeCalcThreads();
 		WaitAndAbortRepaintThreads();
 
-		m_path_entries.clear();
-		m_path_list.clear();
+		m_game_enumeration.clear(false);
 		m_game_data.clear();
 		m_serials.clear();
-		m_games.pop_all();
 	});
 	connect(&m_refresh_watcher, &QFutureWatcher<void>::finished, this, &game_list_frame::OnRefreshFinished);
 	connect(&m_refresh_watcher, &QFutureWatcher<void>::canceled, this, [this]()
@@ -157,11 +146,9 @@ game_list_frame::game_list_frame(std::shared_ptr<gui_settings> gui_settings, std
 		WaitAndAbortSizeCalcThreads();
 		WaitAndAbortRepaintThreads();
 
-		m_path_entries.clear();
-		m_path_list.clear();
+		m_game_enumeration.clear(false);
 		m_game_data.clear();
 		m_serials.clear();
-		m_games.pop_all();
 
 		if (m_progress_dialog)
 		{
@@ -239,6 +226,8 @@ void game_list_frame::LoadSettings()
 	m_sort_column = m_gui_settings->GetValue(gui::gl_sortCol).toInt();
 	m_category_filters = m_gui_settings->GetGameListCategoryFilters(true);
 	m_grid_category_filters = m_gui_settings->GetGameListCategoryFilters(false);
+	m_game_collection = m_gui_settings->GetCurrentGameCollection();
+	m_game_collection_serials = m_gui_settings->GetGamesInCollection(m_game_collection);
 	m_draw_compat_status_to_grid = m_gui_settings->GetValue(gui::gl_draw_compat).toBool();
 	m_prefer_game_data_icons = m_gui_settings->GetValue(gui::gl_pref_gd_icon).toBool();
 	m_show_custom_icons = m_gui_settings->GetValue(gui::gl_custom_icon).toBool();
@@ -331,29 +320,52 @@ bool game_list_frame::IsEntryVisible(const game_info& game, bool search_fallback
 	{
 		if (m_is_list_layout)
 		{
-			return m_category_filters.contains(QString::fromStdString(game->info.category));
+			return m_category_filters.contains(QString::fromStdString(game->category));
 		}
 
-		return m_grid_category_filters.contains(QString::fromStdString(game->info.category));
+		return m_grid_category_filters.contains(QString::fromStdString(game->category));
 	};
 
-	const QString serial = QString::fromStdString(game->info.serial);
+	const QString serial = QString::fromStdString(game->serial);
 	const bool is_visible = (m_show_hidden || !m_hidden_list.contains(serial)) &&
 							(m_show_broken || !m_broken_list.contains(serial)) &&
-							(m_show_completed || !m_completed_list.contains(serial));
-	return is_visible && matches_category() && SearchMatchesApp(QString::fromStdString(game->info.name), serial, search_fallback);
+							(m_show_completed || !m_completed_list.contains(serial)) &&
+							(m_game_collection.isEmpty() || m_game_collection_serials.contains(serial));
+	return is_visible && matches_category() && SearchMatchesApp(QString::fromStdString(game->name), serial, search_fallback);
 }
 
-void game_list_frame::push_path(const std::string& path, std::vector<std::string>& legit_paths)
+// Show the amount of listed games (and the Disc/HDD/Other share) in the dock title
+void game_list_frame::UpdateWindowTitle(const std::vector<game_info>& matching_apps)
 {
+	const std::string cat_disc_game = cat::cat_disc_game.toStdString();
+	const std::string cat_hdd_game = cat::cat_hdd_game.toStdString();
+	usz disc_games = 0;
+	usz hdd_games = 0;
+	usz other_games = 0;
+
+	for (const auto& app : matching_apps)
 	{
-		std::lock_guard lock(m_path_mutex);
-		if (!m_path_list.insert(path).second)
+		if (!app) continue;
+
+		if (app->category == cat_disc_game)
 		{
-			return;
+			disc_games++;
+		}
+		else if (app->category == cat_hdd_game)
+		{
+			hdd_games++;
+		}
+		else
+		{
+			other_games++;
 		}
 	}
-	legit_paths.push_back(path);
+
+	setWindowTitle(tr("Game List (%0) - Disc: %1 | HDD: %2 | Other: %3")
+		.arg(matching_apps.size())
+		.arg(disc_games)
+		.arg(hdd_games)
+		.arg(other_games));
 }
 
 void game_list_frame::Refresh(const bool from_drive, const std::vector<std::string>& serials_to_remove_from_yml, const bool scroll_after)
@@ -374,12 +386,10 @@ void game_list_frame::Refresh(const bool from_drive, const std::vector<std::stri
 
 	if (from_drive)
 	{
-		m_path_entries.clear();
-		m_path_list.clear();
+		m_game_enumeration.clear(false);
 		m_serials.clear();
 		m_game_data.clear();
 		m_notes.clear();
-		m_games.pop_all();
 
 		if (m_progress_dialog)
 		{
@@ -413,64 +423,35 @@ void game_list_frame::Refresh(const bool from_drive, const std::vector<std::stri
 			game_list_log.notice("Refresh added %d new entries found in %s", games_added, games_dir);
 		}
 
-		const std::string _hdd = Emu.GetCallbacks().resolve_path(rpcs3::utils::get_hdd0_dir()) + '/';
+		// Update game localization
+		m_localized = std::make_shared<Localized>();
 
-		m_parsing_watcher.setFuture(QtConcurrent::map(m_parsing_threads, [this, _hdd](int index)
+		// Configure game enumeration
+		m_game_enumeration.initialize_paths();
+		m_game_enumeration.set_localization(gui_application::get_language_id(), m_localized->category.unknown.toStdString(), [this](const std::string& path)
 		{
-			if (index > 0)
+			if (const auto it = m_localized->title.titles.find(path); it != m_localized->title.titles.cend())
+			{
+				return it->second.toStdString();
+			}
+			return std::string();
+		});
+		m_game_enumeration.set_show_custom_icons(m_show_custom_icons);
+		m_game_enumeration.set_prefer_game_data_icons(m_prefer_game_data_icons);
+		m_game_enumeration.set_play_hover_movies(m_play_hover_movies);
+		m_game_enumeration.set_play_hover_music(m_play_hover_music);
+
+		// Parse directories async
+		m_game_enumeration.set_canceled_callback([this](){ return m_parsing_watcher.isCanceled(); });
+		m_parsing_watcher.setFuture(QtConcurrent::map(m_parsing_threads, [this](int index)
+		{
+			if (index != 0)
 			{
 				game_list_log.error("Unexpected thread index: %d", index);
 				return;
 			}
 
-			const auto add_dir = [this](const std::string& path, bool is_disc)
-			{
-				for (const auto& entry : fs::dir(path))
-				{
-					if (m_parsing_watcher.isCanceled())
-					{
-						break;
-					}
-
-					if (!entry.is_directory || entry.name == "." || entry.name == "..")
-					{
-						continue;
-					}
-
-					std::lock_guard lock(m_path_mutex);
-					m_path_entries.emplace_back(path_entry{path + entry.name, is_disc, false});
-				}
-			};
-
-			const std::string hdd0_game = _hdd + "game/";
-
-			add_dir(hdd0_game, false);
-			add_dir(_hdd + "disc/", true); // Deprecated
-
-			for (const auto& [serial, path] : Emu.GetGamesConfig().get_games())
-			{
-				if (m_parsing_watcher.isCanceled())
-				{
-					break;
-				}
-
-				std::string game_dir = path;
-				game_dir.resize(game_dir.find_last_not_of('/') + 1);
-
-				if (game_dir.empty() || path.starts_with(hdd0_game))
-				{
-					continue;
-				}
-
-				// Don't use the C00 subdirectory in our game list
-				if (game_dir.ends_with("/C00") || game_dir.ends_with("\\C00"))
-				{
-					game_dir = game_dir.substr(0, game_dir.size() - 4);
-				}
-
-				std::lock_guard lock(m_path_mutex);
-				m_path_entries.emplace_back(path_entry{game_dir, false, true});
-			}
+			m_game_enumeration.parse_directories();
 		}));
 
 		return;
@@ -532,257 +513,16 @@ void game_list_frame::Refresh(const bool from_drive, const std::vector<std::stri
 		m_game_grid->populate(matching_apps, m_notes, m_titles, selected_items, m_play_hover_movies, m_play_hover_music);
 		RepaintIcons();
 	}
+
+	UpdateWindowTitle(matching_apps);
 }
 
-void game_list_frame::OnParsingFinished()
+void game_list_frame::add_game_apply_extras(gui_game_info& game)
 {
-	const Localized localized;
-	const std::string dev_flash = g_cfg_vfs.get_dev_flash();
-	const std::string _hdd = rpcs3::utils::get_hdd0_dir();
-
-	m_path_entries.emplace_back(path_entry{dev_flash + "vsh/module/vsh.self", false, false});
-
-	// Remove duplicates
-	sort(m_path_entries.begin(), m_path_entries.end(), [](const path_entry& l, const path_entry& r){return l.path < r.path;});
-	m_path_entries.erase(unique(m_path_entries.begin(), m_path_entries.end(), [](const path_entry& l, const path_entry& r){return l.path == r.path;}), m_path_entries.end());
-
-	const s32 language_index = gui_application::get_language_id();
-	const std::string game_icon_path = fs::get_config_dir() + "/Icons/game_icons/";
-	const std::string localized_title = fmt::format("TITLE_%02d", language_index);
-	const std::string localized_icon = fmt::format("ICON0_%02d.PNG", language_index);
-	const std::string localized_movie = fmt::format("ICON1_%02d.PAM", language_index);
-
-	const auto add_game = [this, localized_title, localized_icon, localized_movie, dev_flash, game_icon_path, _hdd,
-	                       cat_unknown_localized = localized.category.unknown.toStdString(), cat_unknown = cat::cat_unknown.toStdString(),
-	                       play_hover_movies = m_play_hover_movies, play_hover_music = m_play_hover_music, show_custom_icons = m_show_custom_icons]
-	                       (const std::string& dir_or_elf, const std::string& game_dir = "PS3_GAME")
 	{
-		std::unique_ptr<iso_archive> archive;
-		iso_metadata_cache_entry cache_entry{};
-		bool is_raw_device = false;
-		const bool is_archive = is_iso_file(dir_or_elf, nullptr, &is_raw_device);
-		std::string iso_cache_key;
-		
-		if (is_archive)
-		{
-			iso_cache_key = (game_dir == "PS3_GAME") ? dir_or_elf : dir_or_elf + "//" + game_dir;
-			// Only construct iso_archive (which walks the full directory tree) in case of raw device or
-			// when no valid cache entry exists for this ISO path + mtime
-			if (is_raw_device || !iso_cache::load(dir_or_elf, iso_cache_key, cache_entry))
-			{
-				archive = std::make_unique<iso_archive>(dir_or_elf);
-			}
+		const QString serial = QString::fromStdString(game.serial);
 
-			// Track this ISO path for cache cleanup after scan completes.
-			std::lock_guard lock(m_path_mutex);
-			m_scanned_iso_paths.insert(dir_or_elf);
-		}
-
-		const auto file_exists = [&archive, &cache_entry](const std::string& path)
-		{
-			if (archive) return archive->is_file(path);
-			// On cache hit, paths inside the ISO are not accessible via fs::is_file.
-			// Return false here — cache hit paths are handled separately.
-			if (!cache_entry.psf_data.empty()) return false;
-			return fs::is_file(path);
-		};
-
-		gui_game_info game{};
-		game.info.path = dir_or_elf;
-		game.info.game_dir = (game_dir == "PS3_GAME") ? "" : game_dir;
-
-		const Localized thread_localized;
-
-		const std::string sfo_dir = (archive || !cache_entry.psf_data.empty()) ? game_dir : rpcs3::utils::get_sfo_dir_from_game_path(dir_or_elf);
-		const std::string sfo_path = sfo_dir + "/PARAM.SFO";
-
-		// Load PSF: from archive on cache miss, rehydrate from cached SFO bytes on hit.
-		psf::registry psf{};
-		if (!cache_entry.psf_data.empty())
-		{
-			psf = psf::load_object(fs::make_stream<std::vector<u8>>(std::vector<u8>(cache_entry.psf_data)), sfo_path);
-			// Fallback to archive scan if cached PSF is corrupted or missing critical fields.
-			const bool psf_valid = !psf::get_string(psf, "TITLE_ID", "").empty()
-				&& !psf::get_string(psf, "TITLE", "").empty()
-				&& !psf::get_string(psf, "CATEGORY", "").empty();
-			if (!psf_valid)
-			{
-				game_list_log.warning("Cached psf for iso not valid: '%s'", game.info.path);
-				archive = std::make_unique<iso_archive>(dir_or_elf);
-				cache_entry = {}; // Reset so the cache gets rewritten after scan.
-				psf = {};
-			}
-		}
-
-		if (psf.empty())
-		{
-			if (archive)
-			{
-				psf = archive->open_psf(sfo_path);
-			}
-			else
-			{
-				psf = psf::load_object(sfo_path);
-			}
-		}
-
-		const std::string_view title_id = psf::get_string(psf, "TITLE_ID", "");
-
-		if (title_id.empty())
-		{
-			if (!fs::is_file(dir_or_elf))
-			{
-				// Do not care about invalid entries
-				return;
-			}
-
-			game.info.serial = dir_or_elf.substr(dir_or_elf.find_last_of(fs::delim) + 1);
-			game.info.category = cat::cat_ps3_os.toStdString(); // Key for operating system executables
-			game.info.version = utils::get_firmware_version();
-			game.info.app_ver = game.info.version;
-			game.info.fw = game.info.version;
-			game.info.bootable = 1;
-			game.info.icon_path = dev_flash + "vsh/resource/explore/icon/icon_home.png";
-
-			if (dir_or_elf.starts_with(dev_flash))
-			{
-				std::string path_vfs = dir_or_elf.substr(dev_flash.size());
-
-				if (const usz pos = path_vfs.find_first_not_of(fs::delim); pos != umax && pos != 0)
-				{
-					path_vfs = path_vfs.substr(pos);
-				}
-
-				if (const auto it = thread_localized.title.titles.find(path_vfs); it != thread_localized.title.titles.cend())
-				{
-					game.info.name = it->second.toStdString();
-				}
-			}
-
-			if (game.info.name.empty())
-			{
-				game.info.name = game.info.serial;
-			}
-		}
-		else
-		{
-			std::string_view name = psf::get_string(psf, localized_title);
-			if (name.empty()) name = psf::get_string(psf, "TITLE", cat_unknown_localized);
-
-			game.info.serial       = std::string(title_id);
-			game.info.name         = std::string(name);
-			game.info.app_ver      = std::string(psf::get_string(psf, "APP_VER", cat_unknown_localized));
-			game.info.version      = std::string(psf::get_string(psf, "VERSION", cat_unknown_localized));
-			game.info.category     = std::string(psf::get_string(psf, "CATEGORY", cat_unknown));
-			game.info.fw           = std::string(psf::get_string(psf, "PS3_SYSTEM_VER", cat_unknown_localized));
-			game.info.parental_lvl = psf::get_integer(psf, "PARENTAL_LEVEL", 0);
-			game.info.resolution   = psf::get_integer(psf, "RESOLUTION", 0);
-			game.info.sound_format = psf::get_integer(psf, "SOUND_FORMAT", 0);
-			game.info.bootable     = psf::get_integer(psf, "BOOTABLE", 0);
-			game.info.attr         = psf::get_integer(psf, "ATTRIBUTE", 0);
-		}
-
-		if (show_custom_icons)
-		{
-			if (std::string icon_path = game_icon_path + game.info.serial + "/ICON0.PNG"; fs::is_file(icon_path))
-			{
-				game.info.icon_path = std::move(icon_path);
-				game.has_custom_icon = true;
-			}
-		}
-
-		if (game.info.icon_path.empty())
-		{
-			if (!cache_entry.icon_path.empty())
-			{
-				// Cache hit — icon path already resolved on a previous scan.
-				game.info.icon_path = cache_entry.icon_path;
-				game.icon_in_archive = true;
-			}
-			else if (std::string icon_path = sfo_dir + "/" + localized_icon; file_exists(icon_path))
-			{
-				game.info.icon_path = std::move(icon_path);
-				game.icon_in_archive = archive && archive->exists(game.info.icon_path);
-			}
-			else
-			{
-				game.info.icon_path = sfo_dir + "/ICON0.PNG";
-				game.icon_in_archive = archive && archive->exists(game.info.icon_path);
-			}
-		}
-
-		if (play_hover_movies)
-		{
-			if (std::string movie_path = game_icon_path + game.info.serial + "/hover.gif"; file_exists(movie_path))
-			{
-				game.info.movie_path = std::move(movie_path);
-				game.has_hover_gif = true;
-			}
-			else if (!cache_entry.movie_path.empty() && !archive)
-			{
-				// Cache hit — restore previously resolved movie path.
-				game.info.movie_path = cache_entry.movie_path;
-				game.has_hover_pam = true;
-			}
-			else if (std::string movie_path = sfo_dir + "/" + localized_movie; file_exists(movie_path))
-			{
-				game.info.movie_path = std::move(movie_path);
-				game.has_hover_pam = true;
-			}
-			else if (std::string movie_path = sfo_dir + "/ICON1.PAM"; file_exists(movie_path))
-			{
-				game.info.movie_path = std::move(movie_path);
-				game.has_hover_pam = true;
-			}
-		}
-
-		if (play_hover_music)
-		{
-			if (!cache_entry.audio_path.empty() && !archive)
-			{
-				// Cache hit — restore previously resolved audio path.
-				game.info.audio_path = cache_entry.audio_path;
-				game.has_audio_file = true;
-			}
-			else if (std::string audio_path = sfo_dir + "/SND0.AT3"; file_exists(audio_path))
-			{
-				game.info.audio_path = std::move(audio_path);
-				game.has_audio_file = true;
-			}
-		}
-
-		// With the exception of raw device, on cache miss for an ISO, persist the resolved metadata so subsequent
-		// launches skip iso_archive construction entirely
-		if (archive && is_archive && !is_raw_device)
-		{
-			fs::stat_t iso_stat{};
-			if (fs::get_stat(dir_or_elf, iso_stat))
-			{
-				cache_entry.mtime      = iso_stat.mtime;
-				cache_entry.psf_data   = psf::save_object(psf);
-				cache_entry.icon_path  = game.info.icon_path;
-				cache_entry.movie_path = game.info.movie_path;
-				cache_entry.audio_path = game.info.audio_path;
-
-				// Cache raw icon bytes so load_iso_icon can skip archive open.
-				if (game.icon_in_archive)
-				{
-					auto icon_file = archive->open(game.info.icon_path);
-					const auto icon_size = icon_file->size();
-					if (icon_size > 0)
-					{
-						cache_entry.icon_data.resize(icon_size);
-						icon_file->read(cache_entry.icon_data.data(), icon_size);
-					}
-				}
-
-				iso_cache::save(dir_or_elf, (game_dir == "PS3_GAME") ? dir_or_elf : dir_or_elf + "//" + game_dir, cache_entry);
-			}
-		}
-
-		const QString serial = QString::fromStdString(game.info.serial);
-
-		m_games_mutex.lock();
+		std::lock_guard lock(m_games_mutex);
 
 		// Read persistent_settings values
 		const QString last_played = m_persistent_settings->GetValue(gui::persistent::last_played, serial, "").toString();
@@ -809,177 +549,47 @@ void game_list_frame::OnParsingFinished()
 		{
 			m_titles.insert_or_assign(serial, std::move(title));
 		}
+	}
 
-		m_games_mutex.unlock();
+	QString qt_cat = QString::fromStdString(game.category);
 
-		QString qt_cat = QString::fromStdString(game.info.category);
-
-		if (const auto boot_cat = thread_localized.category.cat_boot.find(qt_cat); boot_cat != thread_localized.category.cat_boot.cend())
-		{
-			qt_cat = boot_cat->second;
-		}
-		else if (const auto data_cat = thread_localized.category.cat_data.find(qt_cat); data_cat != thread_localized.category.cat_data.cend())
-		{
-			qt_cat = data_cat->second;
-		}
-		else if (game.info.category == cat_unknown)
-		{
-			qt_cat = thread_localized.category.unknown;
-		}
-		else
-		{
-			qt_cat = thread_localized.category.other;
-		}
-
-		game.localized_category = std::move(qt_cat);
-		game.compat = m_game_compat->GetCompatibility(game.info.serial);
-		game.has_database_config = m_config_db->has_config(game.info.serial);
-		game.has_custom_config = fs::is_file(rpcs3::utils::get_custom_config_path(game.info.serial));
-		game.has_custom_pad_config = fs::is_file(rpcs3::utils::get_custom_input_config_path(game.info.serial));
-
-		m_games.push(std::make_shared<gui_game_info>(std::move(game)));
-	};
-
-	const auto add_disc_dir = [this](const std::string& path, std::vector<std::string>& legit_paths)
+	if (const auto boot_cat = m_localized->category.cat_boot.find(qt_cat); boot_cat != m_localized->category.cat_boot.cend())
 	{
-		for (const auto& entry : fs::dir(path))
-		{
-			if (m_refresh_watcher.isCanceled())
-			{
-				break;
-			}
-
-			if (!entry.is_directory || entry.name == "." || entry.name == "..")
-			{
-				continue;
-			}
-
-			if (entry.name == "PS3_GAME" || std::regex_match(entry.name, std::regex("^PS3_GM[[:digit:]]{2}$")))
-			{
-				push_path(path + "/" + entry.name, legit_paths);
-			}
-		}
-	};
-
-	m_refresh_watcher.setFuture(QtConcurrent::map(m_path_entries, [this, _hdd, add_disc_dir, add_game](const path_entry& entry)
+		qt_cat = boot_cat->second;
+	}
+	else if (const auto data_cat = m_localized->category.cat_data.find(qt_cat); data_cat != m_localized->category.cat_data.cend())
 	{
-		std::vector<std::string> legit_paths;
+		qt_cat = data_cat->second;
+	}
+	else if (game.category == "Unknown")
+	{
+		qt_cat = m_localized->category.unknown;
+	}
+	else
+	{
+		qt_cat = m_localized->category.other;
+	}
 
-		if (entry.is_from_yml)
-		{
-			if (is_iso_file(entry.path))
-			{
-				std::vector<std::string> subdirs;
+	game.localized_category = std::move(qt_cat);
+	game.compat = m_game_compat->GetCompatibility(game.serial);
+	game.has_database_config = m_config_db->has_config(game.serial);
+	game.has_custom_config = fs::is_file(rpcs3::utils::get_custom_config_path(game.serial));
+	game.has_custom_pad_config = fs::is_file(rpcs3::utils::get_custom_input_config_path(game.serial));
+}
 
-				if (iso_cache::load_index(entry.path, subdirs))
-				{
-					for (const std::string& name : subdirs)
-					{
-						if (m_refresh_watcher.isCanceled()) break;
-						add_game(entry.path, name);
-					}
+void game_list_frame::OnParsingFinished()
+{
+	// Add VFS entry
+	m_game_enumeration.add_vfs_entry();
 
-					return;
-				}
+	// Remove duplicate entries
+	m_game_enumeration.remove_duplicates();
 
-				iso_archive archive(entry.path);
-				const iso_fs_node& root = archive.root();
-				const std::regex ps3_gm_regex("^PS3_GM[[:digit:]]{2}$");
-
-				for (const auto& child : root.children)
-				{
-					if (m_refresh_watcher.isCanceled())
-					{
-						break;
-					}
-					if (!child->metadata.is_directory)
-					{
-						continue;
-					}
-
-					const std::string& name = child->metadata.name;
-					if (name == "PS3_GAME" || std::regex_match(name, ps3_gm_regex))
-					{
-						subdirs.push_back(name);
-						add_game(entry.path, name);
-					}
-				}
-				if (subdirs.empty())
-				{
-					add_game(entry.path);
-					subdirs.push_back("PS3_GAME");
-				}
-				if (!m_refresh_watcher.isCanceled())
-				{
-					iso_cache::save_index(entry.path, subdirs);
-				}
-
-				return;
-			}
-			else if (fs::is_file(entry.path + "/PARAM.SFO"))
-			{
-				push_path(entry.path, legit_paths);
-			}
-			else if (fs::is_file(entry.path + "/PS3_DISC.SFB"))
-			{
-				// Check if a path loaded from games.yml is already registered in add_dir(_hdd + "disc/");
-				if (entry.path.starts_with(_hdd))
-				{
-					std::string_view frag = std::string_view(entry.path).substr(_hdd.size());
-
-					if (frag.starts_with("disc/"))
-					{
-						// Our path starts from _hdd + 'disc/'
-						frag.remove_prefix(5);
-
-						// Check if the remaining part is the only path component
-						if (frag.find_first_of('/') + 1 == 0)
-						{
-							game_list_log.trace("Removed duplicate: %s", entry.path);
-
-							if (static std::unordered_set<std::string> warn_once_list; warn_once_list.emplace(entry.path).second)
-							{
-								game_list_log.todo("Game at '%s' is using deprecated directory '/dev_hdd0/disc/'.\nConsider moving into '%s'.", entry.path, rpcs3::utils::get_games_dir());
-							}
-
-							return;
-						}
-					}
-				}
-
-				add_disc_dir(entry.path, legit_paths);
-			}
-			else
-			{
-				game_list_log.trace("Invalid game path registered: %s", entry.path);
-				return;
-			}
-		}
-		else if (fs::is_file(entry.path + "/PS3_DISC.SFB"))
-		{
-			if (!entry.is_disc)
-			{
-				game_list_log.error("Invalid game path found in %s", entry.path);
-				return;
-			}
-
-			add_disc_dir(entry.path, legit_paths);
-		}
-		else
-		{
-			if (entry.is_disc)
-			{
-				game_list_log.error("Invalid disc path found in %s", entry.path);
-				return;
-			}
-
-			push_path(entry.path, legit_paths);
-		}
-
-		for (const std::string& path : legit_paths)
-		{
-			add_game(path);
-		}
+	// Parse entries async
+	m_game_enumeration.set_canceled_callback([this](){ return m_refresh_watcher.isCanceled(); });
+	m_refresh_watcher.setFuture(QtConcurrent::map(m_game_enumeration.path_entries(), [this](const gui_game_enumeration::path_entry& entry)
+	{
+		m_game_enumeration.parse_entry(entry);
 	}));
 }
 
@@ -989,85 +599,28 @@ void game_list_frame::OnRefreshFinished()
 	WaitAndAbortRepaintThreads();
 
 	// Remove cache entries for ISOs that are no longer present in the scanned paths.
-	iso_cache::cleanup(m_scanned_iso_paths);
-
-	for (auto&& g : m_games.pop_all())
-	{
-		m_game_data.push_back(g);
-	}
-
-	const Localized localized;
-	const std::string cat_unknown_localized = localized.category.unknown.toStdString();
-	const s32 language_index = gui_application::get_language_id();
-	const std::string localized_icon = fmt::format("ICON0_%02d.PNG", language_index);
-	const std::string localized_movie = fmt::format("ICON1_%02d.PAM", language_index);
+	m_game_enumeration.cleanup_iso_cache();
 
 	// Try to update the app version for disc games if there is a patch
 	// Also try to find updated game icons and movies
-	for (const game_info& entry : m_game_data)
+	m_game_enumeration.apply_patches();
+
+	// Get final enumerated games
+	for (gui_game_info& game : m_game_enumeration.take_games())
 	{
-		if (entry->info.category != "DG") continue;
-
-		for (const auto& other : m_game_data)
-		{
-			if (other->info.category == "DG") continue;
-			if (entry->info.serial != other->info.serial) continue;
-
-			// The patch is game data and must have the same serial and an app version
-			if (other->info.app_ver != cat_unknown_localized)
-			{
-				// Update the app version if it's higher than the disc's version (old games may not have an app version)
-				if (entry->info.app_ver == cat_unknown_localized || rpcs3::utils::version_is_bigger(other->info.app_ver, entry->info.app_ver, entry->info.serial, false))
-				{
-					entry->info.app_ver = other->info.app_ver;
-				}
-				// Update the firmware version if possible and if it's higher than the disc's version
-				if (other->info.fw != cat_unknown_localized && rpcs3::utils::version_is_bigger(other->info.fw, entry->info.fw, entry->info.serial, true))
-				{
-					entry->info.fw = other->info.fw;
-				}
-				// Update the parental level if possible and if it's higher than the disc's level
-				if (other->info.parental_lvl != 0 && other->info.parental_lvl > entry->info.parental_lvl)
-				{
-					entry->info.parental_lvl = other->info.parental_lvl;
-				}
-			}
-
-			// Let's fetch the game data icon if preferred or if the path was empty for some reason
-			if ((m_prefer_game_data_icons && !entry->has_custom_icon) || entry->info.icon_path.empty())
-			{
-				if (std::string icon_path = other->info.path + "/" + localized_icon; fs::is_file(icon_path))
-				{
-					entry->info.icon_path = std::move(icon_path);
-				}
-				else if (std::string icon_path = other->info.path + "/ICON0.PNG"; fs::is_file(icon_path))
-				{
-					entry->info.icon_path = std::move(icon_path);
-				}
-			}
-
-			// Let's fetch the game data movie if preferred or if the path was empty
-			if (m_prefer_game_data_icons || entry->info.movie_path.empty())
-			{
-				if (std::string movie_path = other->info.path + "/" + localized_movie; fs::is_file(movie_path))
-				{
-					entry->info.movie_path = std::move(movie_path);
-				}
-				else if (std::string movie_path = other->info.path + "/ICON1.PAM"; fs::is_file(movie_path))
-				{
-					entry->info.movie_path = std::move(movie_path);
-				}
-			}
-		}
+		m_game_data.push_back(std::make_shared<gui_game_info>(std::move(game)));
 	}
+
+	// Reset enumeration
+	m_game_enumeration.clear(true);
 
 	// Sort by name at the very least.
 	std::sort(m_game_data.begin(), m_game_data.end(), [&](const game_info& game1, const game_info& game2)
 	{
-		const QString serial1 = QString::fromStdString(game1->info.serial);
-		const QString serial2 = QString::fromStdString(game2->info.serial);
-		const QString& title1 = m_titles.contains(serial1) ? m_titles.at(serial1) : QString::fromStdString(game1->info.name);
-		const QString& title2 = m_titles.contains(serial2) ? m_titles.at(serial2) : QString::fromStdString(game2->info.name);
+		const QString serial1 = QString::fromStdString(game1->serial);
+		const QString serial2 = QString::fromStdString(game2->serial);
+		const QString& title1 = m_titles.contains(serial1) ? m_titles.at(serial1) : QString::fromStdString(game1->name);
+		const QString& title2 = m_titles.contains(serial2) ? m_titles.at(serial2) : QString::fromStdString(game2->name);
 		return title1.toLower() < title2.toLower();
 	});
 
@@ -1078,10 +631,8 @@ void game_list_frame::OnRefreshFinished()
 	m_gui_settings->SetValue(gui::gl_broken_list, QStringList(m_broken_list.values()));
 	m_completed_list.intersect(m_serials);
 	m_gui_settings->SetValue(gui::gl_completed_list, QStringList(m_completed_list.values()));
+	m_gui_settings->CleanupCollections(m_serials);
 	m_serials.clear();
-	m_path_list.clear();
-	m_path_entries.clear();
-	m_scanned_iso_paths.clear();
 
 	Refresh();
 
@@ -1101,7 +652,7 @@ void game_list_frame::OnCompatFinished()
 {
 	for (const auto& game : m_game_data)
 	{
-		game->compat = m_game_compat->GetCompatibility(game->info.serial);
+		game->compat = m_game_compat->GetCompatibility(game->serial);
 	}
 	Refresh();
 }
@@ -1110,7 +661,7 @@ void game_list_frame::OnConfigDatabaseFinished()
 {
 	for (const auto& game : m_game_data)
 	{
-		game->has_database_config = m_config_db->has_config(game->info.serial);
+		game->has_database_config = m_config_db->has_config(game->serial);
 	}
 	Refresh();
 }
@@ -1132,6 +683,67 @@ void game_list_frame::ToggleCategoryFilter(const QStringList& categories, bool s
 	}
 
 	Refresh();
+}
+
+void game_list_frame::SetGameCollection(const QString& name)
+{
+	if (m_game_collection == name)
+	{
+		ReloadGameCollection();
+		return;
+	}
+
+	m_game_collection = name;
+	m_game_collection_serials = m_gui_settings->GetGamesInCollection(name);
+
+	Refresh();
+}
+
+void game_list_frame::ReloadGameCollection()
+{
+	QSet<QString> serials = m_gui_settings->GetGamesInCollection(m_game_collection);
+
+	if (m_game_collection_serials == serials)
+	{
+		return;
+	}
+
+	m_game_collection_serials = std::move(serials);
+
+	Refresh();
+}
+
+QHash<QString, qsizetype> game_list_frame::CountGamesPerCollection(const QStringList& collections) const
+{
+	if (collections.isEmpty())
+	{
+		return {};
+	}
+
+	QSet<QString> present;
+	present.reserve(m_game_data.size());
+
+	for (const game_info& game : m_game_data)
+	{
+		if (game) present.insert(QString::fromStdString(game->serial));
+	}
+
+	QHash<QString, qsizetype> counts;
+	counts.reserve(collections.size());
+
+	for (const QString& name : collections)
+	{
+		qsizetype count = 0;
+
+		for (const QString& serial : m_gui_settings->GetGamesInCollection(name))
+		{
+			if (present.contains(serial)) count++;
+		}
+
+		counts.insert(name, count);
+	}
+
+	return counts;
 }
 
 void game_list_frame::SaveSettings()
@@ -1227,13 +839,13 @@ void game_list_frame::ShowCustomConfigIcon(const game_info& game)
 		return;
 	}
 
-	const std::string serial         = game->info.serial;
+	const std::string serial         = game->serial;
 	const bool has_custom_config     = game->has_custom_config;
 	const bool has_custom_pad_config = game->has_custom_pad_config;
 
 	for (const auto& other_game : m_game_data)
 	{
-		if (other_game->info.serial == serial)
+		if (other_game->serial == serial)
 		{
 			other_game->has_custom_config     = has_custom_config;
 			other_game->has_custom_pad_config = has_custom_pad_config;
@@ -1514,7 +1126,7 @@ std::set<std::string> game_list_frame::CurrentSelectionPaths()
 				{
 					if (const game_info game = var.value<game_info>())
 					{
-						selection.insert(game->info.path + game->info.icon_path);
+						selection.insert(game->path + game->icon_path);
 					}
 				}
 			}
@@ -1528,7 +1140,7 @@ std::set<std::string> game_list_frame::CurrentSelectionPaths()
 			{
 				if (const game_info& game = item->game())
 				{
-					selection.insert(game->info.path + game->info.icon_path);
+					selection.insert(game->path + game->icon_path);
 				}
 			}
 		}

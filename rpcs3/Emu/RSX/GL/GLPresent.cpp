@@ -145,7 +145,7 @@ gl::texture* GLGSRender::get_present_source(gl::present_surface_info* info, cons
 		if (gl::formats_are_bitcast_compatible(flip_image.get(), image))
 		{
 			const position3u offset{};
-			gl::g_hw_blitter->copy_image(cmd, image, flip_image.get(), 0, 0, offset, offset, { info->width, info->height, 1 });
+			gl::g_hw_blitter->copy_image(cmd, image, flip_image.get(), offset, offset, { info->width, info->height, 1 });
 		}
 		else
 		{
@@ -378,7 +378,7 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 				tex = m_sshot_tex.get();
 
 				static const position3u offset{};
-				gl::g_hw_blitter->copy_image(cmd, image_to_flip, tex, 0, 0, offset, offset, { tex->width(), tex->height(), 1 });
+				gl::g_hw_blitter->copy_image(cmd, image_to_flip, tex, offset, offset, { tex->width(), tex->height(), 1 });
 
 				render_overlays(tex, areau(0, 0, image_to_flip->width(), image_to_flip->height()), true);
 				m_sshot_fbo.remove();

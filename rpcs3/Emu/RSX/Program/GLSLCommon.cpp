@@ -3,6 +3,7 @@
 #include "GLSLCommon.h"
 #include "RSXFragmentProgram.h"
 
+#include "Emu/RSX/color_utils.h"
 #include "Emu/RSX/gcm_enums.h"
 #include "Utilities/StrFmt.h"
 
@@ -202,8 +203,22 @@ namespace glsl
 				{ "MSAA_SAMPLE_CTRL_LENGTH     ", rsx::ROP_control_bits::MSAA_SAMPLE_CTRL_NUM_BITS },
 				{ "FRAG_DEPTH_24_BIT           ", rsx::ROP_control_bits::FRAG_DEPTH_24_BIT },
 				{ "FRAG_DEPTH_FLOAT_BIT        ", rsx::ROP_control_bits::FRAG_DEPTH_FLOAT_BIT },
+				{ "MRT_CHANNEL_REMAP_OFFSET    ", rsx::ROP_control_bits::MRT_CHANNEL_REMAP_OFFSET },
+				{ "MRT_CHANNEL_REMAP_LENGTH    ", rsx::ROP_control_bits::MRT_CHANNEL_REMAP_NUM_BITS },
 				{ "ROP_CMD_MASK                ", rsx::ROP_control_bits::ROP_CMD_MASK }
 			});
+
+			if (props.ROP_channel_remap)
+			{
+				program_common::define_glsl_constants<rsx::ROP_channel_remap>(OS,
+				{
+					{ "ROP_REMAP_SWIZZLE_RGBA", rsx::ROP_channel_remap::RGBA },
+					{ "ROP_REMAP_SWIZZLE_BBBB", rsx::ROP_channel_remap::BBBB },
+					{ "ROP_REMAP_SWIZZLE_GBGB", rsx::ROP_channel_remap::GBGB },
+					{ "ROP_REMAP_SWIZZLE_RGB1", rsx::ROP_channel_remap::RGB1 },
+					{ "ROP_REMAP_SWIZZLE_RGB0", rsx::ROP_channel_remap::RGB0 }
+				});
+			}
 
 			program_common::define_glsl_constants<const char*>(OS,
 			{
@@ -319,6 +334,16 @@ namespace glsl
 		if (props.ROP_alpha_test || (props.require_msaa_ops && props.require_tex_shadow_ops))
 		{
 			enabled_options.push_back("_ENABLE_COMPARISON_FUNC");
+		}
+
+		if (props.require_texture_ops && props.require_depth_conversion)
+		{
+			enabled_options.push_back("_ENABLE_COLOR_CHANNEL_REMAPPING");
+		}
+
+		if (props.ROP_channel_remap)
+		{
+			enabled_options.push_back("_ENABLE_ROP_CHANNEL_REMAPPING");
 		}
 
 		if (props.require_fog_read)
@@ -480,6 +505,8 @@ namespace glsl
 			return "$Ty(dot($0.xy, $1.xy) + $2.x)";
 		case FUNCTION::DP3:
 			return "$Ty(dot($0.xyz, $1.xyz))";
+		case FUNCTION::DP3_PRECISE:
+			return "$Ty(fma($0.x, $1.x, fma($0.y, $1.y, $0.z * $1.z)))";
 		case FUNCTION::DP4:
 			return "$Ty(dot($0, $1))";
 		case FUNCTION::DPH:
@@ -660,12 +687,18 @@ namespace glsl
 
 		// Make the output a little nicer
 		std::sort(varying_list.begin(), varying_list.end(), FN(x.location < y.location));
+		const auto is_flat_color = [&prog](const _varying_register_config& reg)
+		{
+			return (prog.ctrl & RSX_SHADER_CONTROL_FLAT_SHADING) &&
+				(reg.name.starts_with("diff_color"sv) || reg.name.starts_with("spec_color"sv));
+		};
 
 		if (!(prog.ctrl & RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION))
 		{
 			for (const auto& reg : varying_list)
 			{
-				OS << "layout(location=" << reg.location << ") in " << reg.type << " " << reg.name << ";\n";
+				OS << "layout(location=" << reg.location << ") in " << (is_flat_color(reg) ? "flat " : "")
+					<< reg.type << " " << reg.name << ";\n";
 			}
 
 			OS << "\n";
@@ -693,7 +726,14 @@ namespace glsl
 
 		for (const auto& reg : varying_list)
 		{
-			OS << "vec4 " << reg.name << " = _interpolate_varying3(" << reg.name << "_raw);\n";
+			if (is_flat_color(reg))
+			{
+				OS << "vec4 " << reg.name << " = " << reg.name << "_raw[2];\n";
+			}
+			else
+			{
+				OS << "vec4 " << reg.name << " = _interpolate_varying3(" << reg.name << "_raw);\n";
+			}
 		}
 
 		OS << "\n";

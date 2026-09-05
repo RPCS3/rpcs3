@@ -18,6 +18,7 @@
 
 #include <thread>
 
+#include <QActionGroup>
 #include <QApplication>
 #include <QCheckBox>
 #include <QtConcurrent>
@@ -25,11 +26,12 @@
 #include <QDirIterator>
 #include <QFileDialog>
 #include <QGridLayout>
+#include <QInputDialog>
+#include <QMenu>
 #include <QMessageBox>
 #include <QTimer>
 
 LOG_CHANNEL(game_list_log, "GameList");
-LOG_CHANNEL(sys_log, "SYS");
 
 extern atomic_t<bool> g_system_progress_canceled;
 
@@ -89,37 +91,35 @@ game_list_actions::content_info game_list_actions::GetContentInfo(const std::vec
 
 	for (const auto& game : games)
 	{
-		GameInfo& current_game = game->info;
-
-		is_disc_game = QString::fromStdString(current_game.category) == cat::cat_disc_game;
+		is_disc_game = QString::fromStdString(game->category) == cat::cat_disc_game;
 
 		// +1 if it's a disc game's path and it's present in the shared games folder
-		content_info.in_games_dir_count += (is_disc_game && Emu.IsPathInsideDir(current_game.path, rpcs3::utils::get_games_dir())) ? 1 : 0;
+		content_info.in_games_dir_count += (is_disc_game && Emu.IsPathInsideDir(game->path, rpcs3::utils::get_games_dir())) ? 1 : 0;
 
 		// Add the name to the content's name list for the related serial
-		content_info.name_list[current_game.serial].insert(current_game.name);
+		content_info.name_list[game->serial].insert(game->name);
 
 		if (is_disc_game)
 		{
-			if (current_game.size_on_disk != umax) // If size was properly detected
-				total_disc_size += current_game.size_on_disk;
+			if (game->size_on_disk != umax) // If size was properly detected
+				total_disc_size += game->size_on_disk;
 
 			// Add the serial to the disc list
-			content_info.disc_list.insert(current_game.serial);
+			content_info.disc_list.insert(game->serial);
 
 			// It could be an empty list for a disc game
-			std::set<std::string> data_dir_list = rpcs3::utils::get_dir_list(rpcs3::utils::get_hdd0_game_dir(), current_game.serial);
+			std::set<std::string> data_dir_list = rpcs3::utils::get_dir_list(rpcs3::utils::get_hdd0_game_dir(), game->serial);
 
 			// Add the path list to the content's path list for the related serial
 			for (const auto& data_dir : data_dir_list)
 			{
-				content_info.path_list[current_game.serial].insert(data_dir);
+				content_info.path_list[game->serial].insert(data_dir);
 			}
 		}
 		else
 		{
 			// Add the path to the content's path list for the related serial
-			content_info.path_list[current_game.serial].insert(current_game.path);
+			content_info.path_list[game->serial].insert(game->path);
 		}
 	}
 
@@ -127,22 +127,22 @@ game_list_actions::content_info game_list_actions::GetContentInfo(const std::vec
 
 	if (content_info.is_single_selection) // Single selection
 	{
-		GameInfo& current_game = games[0]->info;
+		auto& current_game = games[0];
 
-		text = tr("%0 - %1\n").arg(QString::fromStdString(current_game.serial)).arg(QString::fromStdString(current_game.name));
+		text = tr("%0 - %1\n").arg(QString::fromStdString(current_game->serial)).arg(QString::fromStdString(current_game->name));
 
 		if (is_disc_game)
 		{
-			text += tr("\nDisc Game Info:\nPath: %0\n").arg(QString::fromStdString(current_game.path));
+			text += tr("\nDisc Game Info:\nPath: %0\n").arg(QString::fromStdString(current_game->path));
 
 			if (total_disc_size)
 				text += tr("Size: %0\n").arg(gui::utils::format_byte_size(total_disc_size));
 		}
 
 		// if a path is present (it could be an empty list for a disc game)
-		if (const auto& it = content_info.path_list.find(current_game.serial); it != content_info.path_list.end())
+		if (const auto& it = content_info.path_list.find(current_game->serial); it != content_info.path_list.end())
 		{
-			text += tr("\n%0 Info:\n").arg(is_disc_game ? tr("Game Data") : games[0]->localized_category);
+			text += tr("\n%0 Info:\n").arg(is_disc_game ? tr("Game Data") : current_game->localized_category);
 
 			for (const auto& data_dir : it->second)
 			{
@@ -170,7 +170,7 @@ game_list_actions::content_info game_list_actions::GetContentInfo(const std::vec
 			}
 		}
 
-		text = tr("%0 selected games: %1 Disc Game - %2 not Disc Game\n").arg(games.size())
+		text = tr("%0 selected games - Disc: %1 | Other: %2\n").arg(games.size())
 				.arg(content_info.disc_list.size()).arg(games.size() - content_info.disc_list.size());
 
 		text += tr("\nDisc Game Info:\n");
@@ -345,11 +345,11 @@ void game_list_actions::ShowRemoveGameDialog(const std::vector<game_info>& games
 
 	if (content_info.is_single_selection) // Single selection
 	{
-		if (!RemoveContentList(games[0]->info.serial))
+		if (!RemoveContentList(games[0]->serial))
 		{
 			QMessageBox::critical(m_game_list_frame, tr("Failure!"), caches->isChecked()
-				? tr("Failed to remove %0 from drive!\nCaches and custom configs have been left intact.").arg(QString::fromStdString(games[0]->info.name))
-				: tr("Failed to remove %0 from drive!").arg(QString::fromStdString(games[0]->info.name)));
+				? tr("Failed to remove %0 from drive!\nCaches and custom configs have been left intact.").arg(QString::fromStdString(games[0]->name))
+				: tr("Failed to remove %0 from drive!").arg(QString::fromStdString(games[0]->name)));
 
 			return;
 		}
@@ -605,6 +605,294 @@ void game_list_actions::ShowDiskUsageDialog()
 	});
 }
 
+// How a game collection is listed in either menu: its name, and how many of its games the game list is
+// showing. One pass: a collection may be named "%1", and a chained arg() would substitute into it.
+static QString collection_entry_text(const QString& name, qsizetype count)
+{
+	return QString("%0 (%1)").arg(gui::utils::escape_mnemonics(name), QString::number(count));
+}
+
+void game_list_actions::UpdateGameCollectionMenu(QMenu* menu, QActionGroup* act_group, QMenu* rename_menu, QMenu* remove_menu)
+{
+	const QStringList collections = m_gui_settings->GetGameCollections();
+	const QString current = m_gui_settings->GetCurrentGameCollection();
+
+	// Every entry of these is built here, so they can be emptied wholesale
+	const auto fill = [this, &collections](QMenu* sub, std::function<void(const QString&)> handler)
+	{
+		if (!sub)
+		{
+			return;
+		}
+
+		sub->clear();
+		sub->setEnabled(!collections.isEmpty());
+
+		for (const QString& name : collections)
+		{
+			connect(sub->addAction(gui::utils::escape_mnemonics(name)), &QAction::triggered, this, [name, handler]()
+			{
+				handler(name);
+			});
+		}
+	};
+
+	fill(rename_menu, [this](const QString& name) { RenameGameCollection(name); });
+	fill(remove_menu, [this](const QString& name) { RemoveGameCollection(name); });
+
+	// Rebuild the selection entries. They are always appended, so the static entries keep their place.
+	for (QAction* act : act_group->actions())
+	{
+		act_group->removeAction(act);
+		menu->removeAction(act);
+		act->deleteLater();
+	}
+
+	const auto add_entry = [this, menu, act_group, &current](const QString& text, const QString& name)
+	{
+		QAction* act = new QAction(text, act_group);
+		act->setCheckable(true);
+		act->setChecked(name == current);
+
+		connect(act, &QAction::triggered, this, [this, name]()
+		{
+			SelectGameCollection(name);
+		});
+
+		menu->addAction(act);
+	};
+
+	const QHash<QString, qsizetype> counts = m_game_list_frame->CountGamesPerCollection(collections);
+
+	add_entry(gui_settings::GetAllGamesCollectionLabel(), {});
+
+	for (const QString& name : collections)
+	{
+		add_entry(collection_entry_text(name, counts.value(name)), name);
+	}
+}
+
+void game_list_actions::CreateGameCollection(const QSet<QString>& serials)
+{
+	const QString name = AskForCollectionName(tr("Create Game Collection"), {},
+		[this](const QString& to) { return m_gui_settings->AddGameCollection(to); });
+
+	if (name.isEmpty())
+	{
+		return;
+	}
+
+	game_list_log.notice("Created game collection '%s'", name);
+
+	if (!serials.isEmpty())
+	{
+		ChangeCollectionMembership(serials, name, true);
+	}
+}
+
+void game_list_actions::RenameGameCollection(const QString& name)
+{
+	// The name goes in the title, which is plain by construction: a QLabel is not, and a collection named
+	// like a tag would parse away in the very line naming it
+	const QString renamed = AskForCollectionName(tr("Rename '%0'").arg(name), name,
+		[this, &name](const QString& to) { return m_gui_settings->RenameGameCollection(name, to); });
+
+	if (renamed.isEmpty())
+	{
+		return;
+	}
+
+	game_list_log.notice("Renamed game collection '%s' to '%s'", name, renamed);
+
+	// The games did not move, but the name the game list is filtered by may have just changed
+	m_game_list_frame->SetGameCollection(m_gui_settings->GetCurrentGameCollection());
+}
+
+void game_list_actions::RemoveGameCollection(const QString& name)
+{
+	const qsizetype games = m_gui_settings->GetGamesInCollection(name).size();
+	const QString question = games > 0
+		? tr("Remove the game collection '%0'?\n\nIts %Ln game(s) will no longer be assigned to any collection.",
+			"", static_cast<int>(games)).arg(name)
+		: tr("Remove the game collection '%0'?").arg(name);
+
+	if (gui::utils::plain_message(m_game_list_frame, QMessageBox::Question, tr("Confirm Removal"), question,
+		QMessageBox::Yes | QMessageBox::No, QMessageBox::No) != QMessageBox::Yes)
+	{
+		return;
+	}
+
+	if (!m_gui_settings->RemoveGameCollection(name))
+	{
+		// The entry was built from the stored list, so this means the list changed under us
+		game_list_log.warning("Could not remove game collection '%s': it is not in the collection list", name);
+		return;
+	}
+
+	game_list_log.notice("Removed game collection '%s'", name);
+
+	// Falls back to "All Games" if the removed collection was the selected one, and is a no-op otherwise
+	m_game_list_frame->SetGameCollection(m_gui_settings->GetCurrentGameCollection());
+}
+
+void game_list_actions::SelectGameCollection(const QString& name)
+{
+	m_gui_settings->SetCurrentGameCollection(name);
+	m_game_list_frame->SetGameCollection(name);
+}
+
+void game_list_actions::AddCollectionMenu(QMenu* parent, const std::vector<game_info>& games)
+{
+	QSet<QString> serials;
+
+	for (const game_info& game : games)
+	{
+		if (game)
+		{
+			serials.insert(QString::fromStdString(game->serial));
+		}
+	}
+
+	if (serials.isEmpty())
+	{
+		return;
+	}
+
+	const QStringList collections = m_gui_settings->GetGameCollections();
+	const QHash<QString, qsizetype> counts = m_game_list_frame->CountGamesPerCollection(collections);
+
+	QMenu* collection_menu = parent->addMenu(tr("&Add to Collection"));
+
+	// Always there: with no collection yet this is the only thing the submenu can offer
+	connect(collection_menu->addAction(tr("&Create and Add")), &QAction::triggered, this, [this, serials]()
+	{
+		CreateGameCollection(serials);
+	});
+
+	if (!collections.isEmpty())
+	{
+		collection_menu->addSeparator();
+	}
+
+	for (const QString& collection : collections)
+	{
+		// A multi selection is ticked only once every game in it belongs to the collection, so that the
+		// entry finishes adding the ones that are missing before it starts taking any out
+		const bool is_member = m_gui_settings->GetGamesInCollection(collection).contains(serials);
+
+		QAction* act = collection_menu->addAction(collection_entry_text(collection, counts.value(collection)));
+		act->setCheckable(true);
+		act->setChecked(is_member);
+
+		connect(act, &QAction::triggered, this, [this, serials, collection, is_member]()
+		{
+			ChangeCollectionMembership(serials, collection, !is_member);
+		});
+	}
+
+	const QString current = m_gui_settings->GetCurrentGameCollection();
+
+	// Acts on the collection the game list is filtered by, which is the one the user is looking at
+	if (!current.isEmpty() && m_gui_settings->GetGamesInCollection(current).intersects(serials))
+	{
+		connect(parent->addAction(tr("&Remove from Collection '%0'").arg(gui::utils::escape_mnemonics(current))),
+			&QAction::triggered, this, [this, serials, current]()
+		{
+			ChangeCollectionMembership(serials, current, false);
+		});
+	}
+}
+
+QString game_list_actions::AskForCollectionName(const QString& title, const QString& initial,
+	const std::function<bool(const QString&)>& accept)
+{
+	QInputDialog dialog(m_game_list_frame);
+	dialog.setWindowTitle(title);
+	dialog.setLabelText(tr("Collection name:"));
+	dialog.setTextValue(initial);
+
+	// The dialog keeps what was typed, so a refused name is corrected instead of typed again
+	while (dialog.exec() != QDialog::Rejected)
+	{
+		const QString name = dialog.textValue().trimmed();
+
+		if (name.isEmpty())
+		{
+			continue;
+		}
+
+		if (name == initial)
+		{
+			return {};
+		}
+
+		// AddGameCollection and RenameGameCollection enforce these two rules as well. They are checked
+		// here first only so that the user is told which one was broken, instead of one refusal for
+		// every kind of bad name.
+		if (!gui_settings::IsValidGameCollectionName(name))
+		{
+			gui::utils::plain_message(m_game_list_frame, QMessageBox::Warning, title,
+				tr("'%0' is not a valid collection name.\n\n%1").arg(name, gui_settings::GetGameCollectionNameHint()));
+			continue;
+		}
+
+		if (gui_settings::IsReservedGameCollectionName(name))
+		{
+			gui::utils::plain_message(m_game_list_frame, QMessageBox::Warning, title,
+				tr("'%0' is reserved for the default game collection entry. Please choose another name.").arg(name));
+			continue;
+		}
+
+		if (!accept(name))
+		{
+			gui::utils::plain_message(m_game_list_frame, QMessageBox::Warning, title,
+				tr("'%0' clashes with an existing game collection. Names are not case sensitive.").arg(name));
+			continue;
+		}
+
+		return name;
+	}
+
+	return {};
+}
+
+void game_list_actions::ChangeCollectionMembership(const QSet<QString>& serials, const QString& name, bool add)
+{
+	// Adding is undone by the very entry that did it, but a removal takes memberships that were given one
+	// game at a time and cannot be handed back the same way, so a block of them asks first
+	if (!add && serials.size() > 1)
+	{
+		const QString question = tr("Remove %Ln game(s) from the '%0' game collection?", "",
+			static_cast<int>(serials.size())).arg(name);
+
+		if (gui::utils::plain_message(m_game_list_frame, QMessageBox::Question, tr("Confirm Removal"), question,
+			QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
+		{
+			return;
+		}
+	}
+
+	const bool changed = m_gui_settings->SetGameCollectionMembership(serials, name, add);
+
+	// The menu was built before the collection changed under it
+	if (!changed)
+	{
+		return;
+	}
+
+	if (add)
+	{
+		game_list_log.notice("Added %d game(s) to game collection '%s'", serials.size(), name);
+	}
+	else
+	{
+		game_list_log.notice("Removed %d game(s) from game collection '%s'", serials.size(), name);
+	}
+
+	// The games may have entered or left the collection the game list is filtered by
+	m_game_list_frame->ReloadGameCollection();
+}
+
 bool game_list_actions::IsGameRunning(std::string_view serial)
 {
 	return !Emu.IsStopped(true) && (serial == Emu.GetTitleID() || (serial == "vsh.self" && Emu.IsVsh()));
@@ -686,7 +974,7 @@ bool game_list_actions::CreateCPUCaches(const std::string& path, const std::stri
 
 bool game_list_actions::CreateCPUCaches(const game_info& game, bool is_fast_compilation)
 {
-	return game && CreateCPUCaches(game->info.path, game->info.serial, is_fast_compilation);
+	return game && CreateCPUCaches(game->path, game->serial, is_fast_compilation);
 }
 
 bool game_list_actions::RemoveCustomConfiguration(const std::string& serial, const game_info& game, bool is_interactive)
@@ -1235,21 +1523,44 @@ void game_list_actions::BatchActionBySerials(progress_dialog* pdlg, const std::s
 
 void game_list_actions::BatchCreateCPUCaches(const std::vector<game_info>& games, bool is_fast_compilation, bool is_interactive)
 {
-	if (is_interactive && QMessageBox::question(m_game_list_frame, tr("Confirm Creation"), tr("Create LLVM cache?")) != QMessageBox::Yes)
+	// The VSH cache is only part of this batch if no specific games were selected
+	const bool vsh_selectable = games.empty();
+
+	// Without a dialog to ask the user, a batch of all titles includes the VSH cache
+	bool include_vsh = vsh_selectable;
+
+	if (is_interactive)
 	{
-		return;
+		QMessageBox mb(QMessageBox::Question, tr("Confirm Creation"), tr("Create LLVM cache?"), QMessageBox::Yes | QMessageBox::No, m_game_list_frame);
+
+		if (vsh_selectable)
+		{
+			mb.setCheckBox(new QCheckBox(tr("Include PS3 Interface (XMB, or VSH)")));
+		}
+
+		if (mb.exec() != QMessageBox::Yes)
+		{
+			return;
+		}
+
+		include_vsh = mb.checkBox() && mb.checkBox()->isChecked();
 	}
 
 	std::set<std::string> serials;
 
-	if (games.empty())
+	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
+	{
+		serials.emplace(game->serial);
+	}
+
+	if (include_vsh)
 	{
 		serials.emplace("vsh.self");
 	}
-
-	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
+	else if (vsh_selectable)
 	{
-		serials.emplace(game->info.serial);
+		// The VSH entry is part of the full game list, so it has to be removed if unwanted
+		serials.erase("vsh.self");
 	}
 
 	const usz total = serials.size();
@@ -1292,11 +1603,11 @@ void game_list_actions::BatchCreateCPUCaches(const std::vector<game_info>& games
 			{
 				const auto& games = m_game_list_frame->GetGameInfo();
 
-				const auto it = std::find_if(games.cbegin(), games.cend(), FN(x->info.serial == serial));
+				const auto it = std::find_if(games.cbegin(), games.cend(), FN(x->serial == serial));
 
 				if (it != games.cend())
 				{
-					return CreateCPUCaches((*it)->info.path, serial, is_fast_compilation);
+					return CreateCPUCaches((*it)->path, serial, is_fast_compilation);
 				}
 			}
 
@@ -1323,9 +1634,9 @@ void game_list_actions::BatchRemoveCustomConfigurations(const std::vector<game_i
 
 	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
 	{
-		if (game->has_custom_config && !serials.count(game->info.serial))
+		if (game->has_custom_config && !serials.count(game->serial))
 		{
-			serials.emplace(game->info.serial);
+			serials.emplace(game->serial);
 		}
 	}
 
@@ -1363,9 +1674,9 @@ void game_list_actions::BatchRemoveCustomPadConfigurations(const std::vector<gam
 
 	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
 	{
-		if (game->has_custom_pad_config && !serials.count(game->info.serial))
+		if (game->has_custom_pad_config && !serials.count(game->serial))
 		{
-			serials.emplace(game->info.serial);
+			serials.emplace(game->serial);
 		}
 	}
 
@@ -1408,7 +1719,7 @@ void game_list_actions::BatchRemoveShaderCaches(const std::vector<game_info>& ga
 
 	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
 	{
-		serials.emplace(game->info.serial);
+		serials.emplace(game->serial);
 	}
 
 	const u32 total = ::size32(serials);
@@ -1450,7 +1761,7 @@ void game_list_actions::BatchRemovePPUCaches(const std::vector<game_info>& games
 
 	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
 	{
-		serials.emplace(game->info.serial);
+		serials.emplace(game->serial);
 	}
 
 	const u32 total = ::size32(serials);
@@ -1493,7 +1804,7 @@ void game_list_actions::BatchRemoveSPUCaches(const std::vector<game_info>& games
 
 	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
 	{
-		serials.emplace(game->info.serial);
+		serials.emplace(game->serial);
 	}
 
 	const u32 total = ::size32(serials);
@@ -1536,7 +1847,7 @@ void game_list_actions::BatchRemoveHDD1Caches(const std::vector<game_info>& game
 
 	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
 	{
-		serials.emplace(game->info.serial);
+		serials.emplace(game->serial);
 	}
 
 	const u32 total = ::size32(serials);
@@ -1579,7 +1890,7 @@ void game_list_actions::BatchRemoveAllCaches(const std::vector<game_info>& games
 
 	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
 	{
-		serials.emplace(game->info.serial);
+		serials.emplace(game->serial);
 	}
 
 	const u32 total = ::size32(serials);
@@ -1626,7 +1937,7 @@ void game_list_actions::BatchRemoveContentLists(const std::vector<game_info>& ga
 
 	for (const auto& game : (games.empty() ? m_game_list_frame->GetGameInfo() : games))
 	{
-		serials.emplace(game->info.serial);
+		serials.emplace(game->serial);
 	}
 
 	const u32 total = ::size32(serials);

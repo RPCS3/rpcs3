@@ -8,6 +8,7 @@
 #include "Emu/RSX/rsx_methods.h"
 #include "Emu/RSX/Overlays/Shaders/shader_loading_dialog.h"
 #include "Emu/RSX/Program/GLSLCommon.h"
+#include "Emu/localized_string.h"
 
 namespace gl
 {
@@ -17,7 +18,7 @@ namespace gl
 
 	void shader_interpreter::create(rsx::shader_loading_dialog* dlg)
 	{
-		dlg->create("Precompiling interpreter variants.\nPlease wait...", "Shader Compilation");
+		dlg->create(get_localized_string(localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS), get_localized_string(localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_TITLE));
 
 		const auto variants = program_common::interpreter::get_interpreter_variants();
 		const u32 limit1 = ::size32(variants.base_pipelines);
@@ -32,7 +33,7 @@ namespace gl
 		{
 			const auto completed = ctr.load();
 			const auto limit = stage ? limit2 : limit1;
-			const auto message = fmt::format("%s variant %u of %u...", stage ? "Linking" : "Building", ctr.load(), limit);
+			const auto message = get_localized_string(stage ? localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_OPENGL_LINK : localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_OPENGL_BUILD, "%u %s %u", ctr.load(), get_localized_string(localized_string_id::PROGRESS_DIALOG_OF), limit);
 			dlg->update_msg(stage, message);
 			dlg->set_value(stage, completed);
 		};
@@ -145,6 +146,7 @@ namespace gl
 		if (fp_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT) opt |= COMPILER_OPT_ENABLE_DEPTH_EXPORT;
 		if (fp_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) opt |= COMPILER_OPT_ENABLE_F32_EXPORT;
 		if (fp_ctrl & RSX_SHADER_CONTROL_USES_KIL) opt |= COMPILER_OPT_ENABLE_KIL;
+		if (fp_ctrl & RSX_SHADER_CONTROL_ROP_OUTPUT_REMAP) opt |= COMPILER_OPT_ENABLE_ROP_REMAP;
 		if (metadata.referenced_textures_mask) opt |= COMPILER_OPT_ENABLE_TEXTURES;
 		if (metadata.has_branch_instructions) opt |= COMPILER_OPT_ENABLE_FLOW_CTRL;
 		if (metadata.has_pack_instructions) opt |= COMPILER_OPT_ENABLE_PACKING;
@@ -412,6 +414,7 @@ namespace gl
 		{
 			.domain = ::glsl::program_domain::glsl_fragment_program,
 			.require_lit_emulation = true,
+			.ROP_channel_remap = !!(compiler_options & COMPILER_OPT_ENABLE_ROP_REMAP),
 		};
 
 		::glsl::insert_glsl_legacy_function(builder, properties);
@@ -576,7 +579,7 @@ namespace gl
 		}
 	}
 
-	void shader_interpreter::flush_vertex_texture_bindings(glsl::program* program)
+	void shader_interpreter::flush_vertex_texture_bindings(glsl::program* /*program*/)
 	{
 		// TODO
 	}

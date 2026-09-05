@@ -106,9 +106,10 @@ struct EmuCallbacks
 	std::function<void(const std::string&, std::optional<f32>)> play_sound;
 	std::function<bool(const std::string&, std::string&, s32&, s32&, s32&)> get_image_info; // (filename, sub_type, width, height, CellSearchOrientation)
 	std::function<bool(const std::string&, s32, s32, s32&, s32&, u8*, bool)> get_scaled_image; // (filename, target_width, target_height, width, height, dst, force_fit)
-	std::string(*resolve_path)(std::string_view) = [](std::string_view arg){ return std::string{arg}; }; // Resolve path using Qt
+	std::function<std::string(std::string_view)> resolve_path = [](std::string_view arg){ return std::string{arg}; }; // Resolve path using Qt (returns empty string if the file doesn't exist)
+	std::function<std::string(std::string_view)> resolve_path_may_not_exist = [](std::string_view arg){ return std::string{arg}; }; // Resolve path using Qt
 	std::function<std::vector<std::string>()> get_font_dirs;
-	std::function<bool(const std::vector<std::string>&)> on_install_pkgs;
+	std::function<bool(const std::vector<std::string>&, bool)> on_install_pkgs;
 	std::function<void(u32)> add_breakpoint;
 	std::function<bool()> display_sleep_control_supported;
 	std::function<void(bool)> enable_display_sleep;
@@ -281,7 +282,7 @@ public:
 
 	u32 m_boot_source_type = 0; // CELL_GAME_GAMETYPE_SYS
 
-	const u32& GetBootSourceType() const
+	u32 GetBootSourceType() const
 	{
 		return m_boot_source_type;
 	}
@@ -432,6 +433,11 @@ public:
 	game_boot_result BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "", const std::optional<std::string>& db_config = std::nullopt);
 	bool BootRsxCapture(const std::string& path);
 
+	// Boots a minimal shell (no PS3 executable) that hosts the RSX-overlay-based Big Picture Mode game grid.
+	bool BootBigPictureMode();
+	// Cancel any pending return to Big Picture Mode, e.g. when a game is booted manually and bypasses the shell.
+	void DeactivateBigPictureMode() const;
+
 	void SetForceBoot(bool force_boot);
 	void SetContinuousMode(bool continuous_mode);
 
@@ -497,7 +503,7 @@ public:
 	game_boot_result RemoveGameFromYml(const std::string& title_id);
 
 	// Check if path is inside the specified directory
-	bool IsPathInsideDir(std::string_view path, std::string_view dir) const;
+	bool IsPathInsideDir(std::string_view path, std::string_view dir, bool check_if_exists = true) const;
 	game_boot_result VerifyPathCasing(std::string_view path, std::string_view dir, bool from_dir) const;
 
 	void EjectDisc();

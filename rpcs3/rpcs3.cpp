@@ -32,6 +32,7 @@
 #include "module_verifier.hpp"
 #include "util/dyn_lib.hpp"
 #include <shellapi.h>
+#include <process.h>
 
 // TODO(cjj19970505@live.cn)
 // When compiling with WIN32_LEAN_AND_MEAN definition
@@ -654,14 +655,6 @@ int run_rpcs3(int argc, char** argv)
 	}
 #endif
 
-#if defined(__APPLE__) && defined(__x86_64__)
-	if (const utils::OS_version os = utils::get_OS_version();
-		os.version_major == 14 && os.version_minor < 3 && (utils::get_cpu_brand().rfind("VirtualApple", 0) == 0))
-	{
-		report_fatal_error(fmt::format("RPCS3 requires macOS 14.3.0 or later.\nYou're currently using macOS %i.%i.%i.\nPlease update macOS from System Settings.\n\n", os.version_major, os.version_minor, os.version_patch));
-	}
-#endif
-
 	ensure(thread_ctrl::is_main(), "Not main thread");
 
 	// Initialize thread pool finalizer (on first use)
@@ -984,23 +977,14 @@ int run_rpcs3(int argc, char** argv)
 			gui_app->SetGameScreenIndex(game_screen_index);
 		}
 
-		if (!gui_app->Init())
-		{
-			Emu.Quit(true);
-			return 0;
-		}
+		gui_app->Init();
 	}
 	else if (headless_application* headless_app = qobject_cast<headless_application*>(app.data()))
 	{
 		g_headless = true;
 
 		headless_app->SetActiveUser(active_user);
-
-		if (!headless_app->Init())
-		{
-			Emu.Quit(true);
-			return 0;
-		}
+		headless_app->Init();
 	}
 	else
 	{
@@ -1387,7 +1371,17 @@ int run_rpcs3(int argc, char** argv)
 		Emu.Quit(true);
 		return 0;
 	}
+	else if (!g_headless && g_cfg.misc.start_big_picture_mode)
+	{
+		Emu.BootBigPictureMode();
+	}
 
 	// run event loop (maybe only needed for the gui application)
+	if (gui_application* gui_app = qobject_cast<gui_application*>(app.data()))
+	{
+		// call gui_application::exec
+		return gui_app->exec();
+	}
+
 	return app->exec();
 }

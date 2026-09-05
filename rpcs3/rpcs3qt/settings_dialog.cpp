@@ -116,20 +116,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	// Localized tooltips
 	const Tooltips tooltips;
 
-	// Add description labels
-	SubscribeDescription(ui->description_cpu);
-	SubscribeDescription(ui->description_gpu);
-	SubscribeDescription(ui->description_audio);
-	SubscribeDescription(ui->description_io);
-	SubscribeDescription(ui->description_system);
-	SubscribeDescription(ui->description_network);
-	SubscribeDescription(ui->description_advanced);
-	SubscribeDescription(ui->description_emulator);
-	if (!game)
-	{
-		SubscribeDescription(ui->description_gui);
-	}
-	SubscribeDescription(ui->description_debug);
+	m_default_description = ui->description->text();
+	ui->description->setFixedHeight(ui->description->sizeHint().height());
 
 	if (game)
 	{
@@ -611,6 +599,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	connect(ui->strictModeRendering, &QCheckBox::toggled, this, on_strict_rendering_mode);
 
 	EnhanceCheckBox(emu_settings_type::VulkanAsyncTextureUploads, ui->asyncTextureStreaming, tooltips.settings.async_texture_streaming);
+
+	m_emu_settings->EnhanceCheckBox(ui->blitEngineScaling, emu_settings_type::DisableBlitEngineScaling);
+	SubscribeTooltip(ui->blitEngineScaling, tooltips.settings.blit_engine_scaling);
 
 	// Radio buttons
 
@@ -1812,6 +1803,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		SubscribeTooltip(ui->gs_showMouseInFullscreen, tooltips.settings.show_mouse_in_fullscreen);
 		SubscribeTooltip(ui->gs_lockMouseInFullscreen, tooltips.settings.lock_mouse_in_fullscreen);
 		SubscribeTooltip(ui->gs_hideMouseOnIdle_widget, tooltips.settings.hide_mouse_on_idle);
+		
+		EnhanceCheckBox(emu_settings_type::StartBigPictureModeOnBoot, ui->startBigPictureModeOnBoot, tooltips.settings.start_big_picture_mode_on_boot);
 
 		ui->gs_disableMouse->setChecked(m_gui_settings->GetValue(gui::gs_disableMouse).toBool());
 		connect(ui->gs_disableMouse, &QCheckBox::toggled, [this](bool checked)
@@ -1894,6 +1887,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		ui->gb_viewport->setEnabled(false);
 		ui->gb_viewport->setVisible(false);
+		ui->startBigPictureModeOnBoot->setDisabled(true);
 	}
 
 	// Game window title builder
@@ -2461,12 +2455,6 @@ void settings_dialog::open()
 	});
 }
 
-void settings_dialog::SubscribeDescription(QLabel* description)
-{
-	description->setFixedHeight(description->sizeHint().height());
-	m_description_labels.push_back(std::pair<QLabel*, QString>(description, description->text()));
-}
-
 void settings_dialog::SubscribeTooltip(QObject* object, const QString& tooltip)
 {
 	m_descriptions[object] = tooltip;
@@ -2488,28 +2476,15 @@ bool settings_dialog::eventFilter(QObject* object, QEvent* event)
 		}
 	}
 
-	if (!m_descriptions.contains(object))
+	if (m_descriptions.contains(object))
 	{
-		return QDialog::eventFilter(object, event);
-	}
-
-	if (event->type() == QEvent::Enter || event->type() == QEvent::Leave)
-	{
-		const int i = ui->tab_widget_settings->currentIndex();
-
-		if (i >= 0 && static_cast<usz>(i) < m_description_labels.size())
+		if (event->type() == QEvent::Enter)
 		{
-			if (QLabel* label = m_description_labels[i].first)
-			{
-				if (event->type() == QEvent::Enter)
-				{
-					label->setText(m_descriptions[object]);
-				}
-				else if (event->type() == QEvent::Leave)
-				{
-					label->setText(m_description_labels[i].second);
-				}
-			}
+			ui->description->setText(m_descriptions[object]);
+		}
+		else if (event->type() == QEvent::Leave)
+		{
+			ui->description->setText(m_default_description);
 		}
 	}
 
