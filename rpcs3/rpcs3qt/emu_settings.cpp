@@ -13,6 +13,7 @@
 #include "Emu/Io/Keyboard.h"
 
 #include "util/yaml.hpp"
+#include "util/cctype.hpp"
 #include "Utilities/File.h"
 #include "Utilities/Config.h"
 
@@ -444,7 +445,7 @@ void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, emu_settings_type type)
 	}
 
 	std::string def = GetSettingDefault(type);
-	std::transform(def.begin(), def.end(), def.begin(), ::tolower);
+	std::transform(def.begin(), def.end(), def.begin(), utils::tolower<char>);
 
 	if (def != "true" && def != "false")
 	{
@@ -453,7 +454,7 @@ void emu_settings::EnhanceCheckBox(QCheckBox* checkbox, emu_settings_type type)
 	}
 
 	std::string selected = GetSetting(type);
-	std::transform(selected.begin(), selected.end(), selected.begin(), ::tolower);
+	std::transform(selected.begin(), selected.end(), selected.begin(), utils::tolower<char>);
 
 	if (selected == "true")
 	{

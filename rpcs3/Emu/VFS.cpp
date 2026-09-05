@@ -7,6 +7,7 @@
 
 #include "Utilities/mutex.h"
 #include "Utilities/StrUtil.h"
+#include "util/cctype.hpp"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -527,7 +528,7 @@ std::string vfs::escape(std::string_view name, bool escape_slash)
 	if (name.size() > 2)
 	{
 		// Pack first 3 characters
-		const u32 triple = std::bit_cast<le_t<u32>, u32>(toupper(name[0]) | toupper(name[1]) << 8 | toupper(name[2]) << 16);
+		const u32 triple = std::bit_cast<le_t<u32>, u32>(utils::toupper(name[0]) | utils::toupper(name[1]) << 8 | utils::toupper(name[2]) << 16);
 
 		switch (triple)
 		{

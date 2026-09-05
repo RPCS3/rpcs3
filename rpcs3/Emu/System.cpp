@@ -47,6 +47,7 @@
 #include "util/logs.hpp"
 #include "util/init_mutex.hpp"
 #include "util/sysinfo.hpp"
+#include "util/cctype.hpp"
 
 #include <memory>
 #include <regex>
@@ -4048,7 +4049,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 					tty_buffer.resize(tty_read_fd.read_at(m_tty_file_init_pos, tty_buffer.data(), tty_buffer.size()));
 					tty_read_fd.close();
 
-					if (!tty_buffer.empty() && std::isspace(tty_buffer.back()))
+					if (!tty_buffer.empty() && utils::isspace(tty_buffer.back()))
 					{
 						tty_buffer.resize(tty_buffer.find_last_not_of(" \f\n\r\t\v"sv) + 1);
 					}
@@ -4141,7 +4142,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 							iter = index + 1;
 						}
 
-						if (!new_log.empty() && std::isspace(new_log.back()))
+						if (!new_log.empty() && utils::isspace(new_log.back()))
 						{
 							new_log.resize(new_log.find_last_not_of(" \f\n\r\t\v"sv) + 1);
 						}

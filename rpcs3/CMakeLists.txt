@@ -182,17 +182,19 @@ if(BUILD_RPCS3_TESTS)
     target_sources(rpcs3_test
         PRIVATE
             tests/test.cpp
+            tests/test_address_range.cpp
             tests/test_bit_set.cpp
+            tests/test_cctype.cpp
+            tests/test_dmux_pamf.cpp
             tests/test_fmt.cpp
             tests/test_pair.cpp
-            tests/test_tuple.cpp
-            tests/test_simple_array.cpp
-            tests/test_address_range.cpp
-            tests/test_sys_fs.cpp
             tests/test_rsx_cfg.cpp
             tests/test_rsx_fp_asm.cpp
-            tests/test_dmux_pamf.cpp
+            tests/test_rsx_mm_queue.cpp
+            tests/test_simple_array.cpp
             tests/test_spu_analyser.cpp
+            tests/test_sys_fs.cpp
+            tests/test_tuple.cpp
             tests/test_types_util.cpp
     )
 

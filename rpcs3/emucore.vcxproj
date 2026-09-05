@@ -802,6 +802,7 @@
     <ClInclude Include="util\atomic.hpp" />
     <ClInclude Include="util\bit_set.hpp" />
     <ClInclude Include="util\bless.hpp" />
+    <ClInclude Include="util\cctype.hpp" />
     <ClInclude Include="util\pair.hpp" />
     <ClInclude Include="util\tuple.hpp" />
     <ClInclude Include="util\video_sink.h" />

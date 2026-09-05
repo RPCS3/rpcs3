@@ -2,6 +2,7 @@
 #include "Config.h"
 #include "util/types.hpp"
 #include "util/yaml.hpp"
+#include "util/cctype.hpp"
 
 #include <charconv>
 
@@ -710,6 +711,26 @@ bool cfg::node::validate(std::string_view value)
 
 	cfg_log.error("Failed to load node: %s", error);
 	return false;
+}
+
+bool cfg::_bool::from_string(std::string_view value, bool /*dynamic*/)
+{
+	if (value.size() != 4 && value.size() != 5)
+	{
+		return false;
+	}
+
+	char copy[5];
+	std::transform(value.begin(), value.end(), std::begin(copy), utils::tolower<char>);
+
+	if (value.size() == 5 && std::string_view{copy, 5} == "false")
+		m_value = false;
+	else if (value.size() == 4 && std::string_view{copy, 4} == "true")
+		m_value = true;
+	else
+		return false;
+
+	return true;
 }
 
 std::string cfg::map_entry::get_value(std::string_view key)

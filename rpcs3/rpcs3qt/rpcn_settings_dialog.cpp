@@ -15,6 +15,7 @@
 #include "Emu/System.h"
 #include "Emu/NP/rpcn_config.h"
 #include "Emu/NP/ip_address.h"
+#include "util/cctype.hpp"
 
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -36,9 +37,9 @@ bool validate_rpcn_username(std::string_view username)
 		return false;
 
 	return std::all_of(username.cbegin(), username.cend(), [](const char c)
-		{
-			return std::isalnum(static_cast<unsigned char>(c)) || c == '-' || c == '_';
-		});
+	{
+		return utils::isalnum(c) || c == '-' || c == '_';
+	});
 }
 
 bool validate_email(std::string_view email)
