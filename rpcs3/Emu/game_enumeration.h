@@ -13,7 +13,6 @@
 #include <set>
 #include <unordered_set>
 #include <vector>
-#include <regex>
 
 LOG_CHANNEL(sys_log, "SYS");
 
@@ -50,12 +49,14 @@ public:
 	std::vector<game_info_type> take_games() { return std::move(m_games); }
 
 private:
-	std::optional<game_info_type> get_game_info(const std::string& dir_or_elf, const std::string& game_dir, bool is_iso, bool is_raw);
+	// "shared_archive" is the archive the caller has already built for "dir_or_elf", if any: constructing another one
+	// walks the whole file system of the disc again
+	std::optional<game_info_type> get_game_info(const std::string& dir_or_elf, const std::string& game_dir, bool is_iso, bool is_raw, const std::shared_ptr<iso_archive>& shared_archive = {});
 
 	bool was_canceled() const { return m_canceled_callback && m_canceled_callback(); }
 
 	void push_path(const std::string& path, std::vector<std::string>& legit_paths);
-	void add_game(const std::string& path, const std::string& game_dir = "PS3_GAME", bool is_iso = false, bool is_raw = false);
+	void add_game(const std::string& path, const std::string& game_dir = "PS3_GAME", bool is_iso = false, bool is_raw = false, const std::shared_ptr<iso_archive>& shared_archive = {});
 	virtual void add_game_apply_extras([[maybe_unused]] game_info_type& game) {}
 	void add_disc_dir(const std::string& path, std::vector<std::string>& legit_paths);
 
@@ -106,14 +107,16 @@ void game_enumeration<game_info_type>::set_localization(s32 index, std::string&&
 }
 
 template <typename game_info_type>
-std::optional<game_info_type> game_enumeration<game_info_type>::get_game_info(const std::string& dir_or_elf, const std::string& game_dir, bool is_iso, bool is_raw)
+std::optional<game_info_type> game_enumeration<game_info_type>::get_game_info(const std::string& dir_or_elf, const std::string& game_dir, bool is_iso, bool is_raw, const std::shared_ptr<iso_archive>& shared_archive)
 {
 	game_info_type info{};
 
-	std::unique_ptr<iso_archive> archive;
+	std::shared_ptr<iso_archive> archive;
 	iso_metadata_cache_entry cache_entry{};
 	bool is_raw_device = is_raw;
-	info.is_iso_file = is_iso && is_iso_file(dir_or_elf, nullptr, &is_raw_device);
+	// The caller provides the archive only for a path it has already recognized, so checking it again here would
+	// read the volume descriptor of the disc once more ("is_raw_device" is the flag the caller passed in)
+	info.is_iso_file = is_iso && (shared_archive || is_iso_file(dir_or_elf, nullptr, &is_raw_device));
 	const bool is_ps3_game = game_dir == "PS3_GAME";
 
 	if (info.is_iso_file)
@@ -123,7 +126,8 @@ std::optional<game_info_type> game_enumeration<game_info_type>::get_game_info(co
 		// when no valid cache entry exists for this ISO path + mtime
 		if (is_raw_device || !iso_cache::load(dir_or_elf, iso_cache_key, cache_entry))
 		{
-			archive = std::make_unique<iso_archive>(dir_or_elf);
+			// Reuse the archive the caller has already built for this path (a raw device never uses the cache)
+			archive = shared_archive ? shared_archive : std::make_shared<iso_archive>(dir_or_elf);
 			if (!archive->is_valid()) return std::nullopt;
 		}
 
@@ -159,7 +163,7 @@ std::optional<game_info_type> game_enumeration<game_info_type>::get_game_info(co
 		if (!psf_valid)
 		{
 			sys_log.warning("Cached psf for iso not valid: '%s'", info.path);
-			archive = std::make_unique<iso_archive>(dir_or_elf);
+			archive = shared_archive ? shared_archive : std::make_shared<iso_archive>(dir_or_elf);
 			if (!archive->is_valid()) return std::nullopt;
 
 			cache_entry = {}; // Reset so the cache gets rewritten after scan.
@@ -347,9 +351,9 @@ void game_enumeration<game_info_type>::push_path(const std::string& path, std::v
 }
 
 template <typename game_info_type>
-void game_enumeration<game_info_type>::add_game(const std::string& path, const std::string& game_dir, bool is_iso, bool is_raw)
+void game_enumeration<game_info_type>::add_game(const std::string& path, const std::string& game_dir, bool is_iso, bool is_raw, const std::shared_ptr<iso_archive>& shared_archive)
 {
-	if (std::optional<game_info_type> game = get_game_info(path, game_dir, is_iso, is_raw))
+	if (std::optional<game_info_type> game = get_game_info(path, game_dir, is_iso, is_raw, shared_archive))
 	{
 		add_game_apply_extras(*game);
 
@@ -373,7 +377,7 @@ void game_enumeration<game_info_type>::add_disc_dir(const std::string& path, std
 			continue;
 		}
 
-		if (entry.name == "PS3_GAME" || std::regex_match(entry.name, std::regex("^PS3_GM[[:digit:]]{2}$")))
+		if (entry.name == "PS3_GAME" || rpcs3::utils::is_ps3_gm_dir_name(entry.name))
 		{
 			push_path(path + "/" + entry.name, legit_paths);
 		}
@@ -450,11 +454,11 @@ void game_enumeration<game_info_type>::parse_entry(const path_entry& entry)
 				return;
 			}
 
-			iso_archive archive(entry.path);
-			if (!archive.is_valid()) return;
+			// Shared with "add_game()" below, so that the file system of the disc is walked only once
+			const auto archive = std::make_shared<iso_archive>(entry.path);
+			if (!archive->is_valid()) return;
 
-			const iso_fs_node& root = archive.root();
-			const std::regex ps3_gm_regex("^PS3_GM[[:digit:]]{2}$");
+			const iso_fs_node& root = archive->root();
 
 			for (const auto& child : root.children)
 			{
@@ -468,16 +472,16 @@ void game_enumeration<game_info_type>::parse_entry(const path_entry& entry)
 				}
 
 				const std::string& name = child->metadata.name;
-				if (name == "PS3_GAME" || std::regex_match(name, ps3_gm_regex))
+				if (name == "PS3_GAME" || rpcs3::utils::is_ps3_gm_dir_name(name))
 				{
 					subdirs.push_back(name);
-					add_game(entry.path, name, true, is_raw_device);
+					add_game(entry.path, name, true, is_raw_device, archive);
 				}
 			}
 			if (subdirs.empty())
 			{
 				subdirs.push_back("PS3_GAME");
-				add_game(entry.path, "PS3_GAME", true, is_raw_device);
+				add_game(entry.path, "PS3_GAME", true, is_raw_device, archive);
 			}
 			if (!was_canceled())
 			{
