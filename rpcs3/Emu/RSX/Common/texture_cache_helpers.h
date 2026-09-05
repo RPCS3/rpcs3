@@ -171,8 +171,10 @@ namespace rsx
 			address_range32 dst_range,
 			u32 dst_pitch,
 			const sizeu src_dimensions,
-			const sizeu dst_dimensions)
+			const sizeu dst_dimensions_,
+			const GCM_tile_reference& dst_tile)
 		{
+			auto dst_dimensions = dst_dimensions_;
 			if (get_location(dst_range.start) == CELL_GCM_LOCATION_LOCAL)
 			{
 				// Check if this is a blit to the output buffer
@@ -211,14 +213,38 @@ namespace rsx
 				}
 			}
 
+			// Check if we're writing into a tiled region.
+			if (dst_tile)
+			{
+				const auto tile_range = utils::address_range32::start_length(dst_tile.base_address, dst_tile.tile->size);
+				if (dst_range.inside(tile_range))
+				{
+					// Limit the height if we go beyond the limit
+					const auto proposed_range = utils::address_range32::start_length(dst_range.start, dst_dimensions.height * dst_pitch);
+					if (!proposed_range.inside(tile_range))
+					{
+						const auto max_height = utils::aligned_div((tile_range.end + 1u) - dst_range.start, dst_pitch);
+						const auto min_fitted_height = utils::aligned_div(dst_range.length(), dst_pitch);
+						dst_dimensions.height = std::clamp(dst_dimensions.height, min_fitted_height, max_height);
+					}
+				}
+			}
+
 			if (src_is_render_target)
 			{
-				// Attempt to optimize...
-				if (dst_dimensions.width == 1280 || dst_dimensions.width == 2560) [[likely]]
+				// Attempt to optimize for performance...
+				if (get_location(dst_range.start) == CELL_GCM_LOCATION_MAIN)
+				{
+					// Don't guess when working with main memory
+					const auto min_fitted_height = utils::aligned_div(dst_range.length(), dst_pitch);
+					dst_dimensions.height = std::min(dst_dimensions.height, min_fitted_height);
+				}
+				else if (dst_dimensions.width == 1280 || dst_dimensions.width == 2560)
 				{
 					// Optimizations table based on common width/height pairings. If we guess wrong, the upload resolver will fix it anyway
 					// TODO: Add more entries based on empirical data
-					const auto optimal_height = std::max(dst_dimensions.height, 720u);
+					const auto min_fitted_height = utils::aligned_div(dst_range.length(), dst_pitch);
+					const auto optimal_height = std::max(std::min(dst_dimensions.height, min_fitted_height), 720u);
 					return { false, 0, dst_dimensions.width, optimal_height };
 				}
 

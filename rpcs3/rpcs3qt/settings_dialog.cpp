@@ -600,6 +600,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	EnhanceCheckBox(emu_settings_type::VulkanAsyncTextureUploads, ui->asyncTextureStreaming, tooltips.settings.async_texture_streaming);
 
+	m_emu_settings->EnhanceCheckBox(ui->blitEngineScaling, emu_settings_type::DisableBlitEngineScaling);
+	SubscribeTooltip(ui->blitEngineScaling, tooltips.settings.blit_engine_scaling);
+
 	// Radio buttons
 
 	SubscribeTooltip(ui->rb_legacy_recompiler, tooltips.settings.legacy_shader_recompiler);
@@ -1800,6 +1803,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		SubscribeTooltip(ui->gs_showMouseInFullscreen, tooltips.settings.show_mouse_in_fullscreen);
 		SubscribeTooltip(ui->gs_lockMouseInFullscreen, tooltips.settings.lock_mouse_in_fullscreen);
 		SubscribeTooltip(ui->gs_hideMouseOnIdle_widget, tooltips.settings.hide_mouse_on_idle);
+		
+		EnhanceCheckBox(emu_settings_type::StartBigPictureModeOnBoot, ui->startBigPictureModeOnBoot, tooltips.settings.start_big_picture_mode_on_boot);
 
 		ui->gs_disableMouse->setChecked(m_gui_settings->GetValue(gui::gs_disableMouse).toBool());
 		connect(ui->gs_disableMouse, &QCheckBox::toggled, [this](bool checked)
@@ -1882,6 +1887,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		ui->gb_viewport->setEnabled(false);
 		ui->gb_viewport->setVisible(false);
+		ui->startBigPictureModeOnBoot->setDisabled(true);
 	}
 
 	// Game window title builder

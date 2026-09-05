@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Emu/System.h"
 #include "texture_cache_types.h"
 #include "texture_cache_predictor.h"
 #include "TextureUtils.h"
@@ -1066,13 +1065,13 @@ namespace rsx
 
 	protected:
 
-		u16 width;
-		u16 height;
-		u16 depth;
-		u16 mipmaps;
+		u16 width = 0;
+		u16 height = 0;
+		u16 depth = 0;
+		u16 mipmaps = 0;
 
-		u32 real_pitch;
-		u32 rsx_pitch;
+		u32 real_pitch = 0;
+		u32 rsx_pitch = 0;
 
 		u32 gcm_format = 0;
 		bool pack_unpack_swap_bytes = false;
@@ -1090,9 +1089,9 @@ namespace rsx
 
 		address_range_vector32 flush_exclusions; // Address ranges that will be skipped during flush
 
-		predictor_type *m_predictor = nullptr;
+		predictor_type* m_predictor = nullptr;
 		usz m_predictor_key_hash = 0;
-		predictor_entry_type *m_predictor_entry = nullptr;
+		predictor_entry_type* m_predictor_entry = nullptr;
 
 	public:
 		u64 cache_tag = 0;
@@ -1104,12 +1103,12 @@ namespace rsx
 		}
 
 		cached_texture_section() = default;
-		cached_texture_section(ranged_storage_block_type *block)
+		cached_texture_section(ranged_storage_block_type* block)
 		{
 			initialize(block);
 		}
 
-		void initialize(ranged_storage_block_type *block)
+		void initialize(ranged_storage_block_type* block)
 		{
 			ensure(m_block == nullptr && m_tex_cache == nullptr && m_storage == nullptr);
 			m_block = block;
@@ -1120,11 +1119,10 @@ namespace rsx
 			update_unreleased();
 		}
 
-
 		/**
 		 * Reset
 		 */
-		void reset(const address_range32 &memory_range)
+		void reset(const address_range32& memory_range)
 		{
 			AUDIT(memory_range.valid());
 			AUDIT(!is_locked());
