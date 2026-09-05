@@ -2,8 +2,9 @@
 #include "Emu/Memory/vm.h"
 #include "TextureUtils.h"
 #include "../RSXThread.h"
-#include "../rsx_utils.h"
-#include "../color_utils.h"
+#include "../Utils/rsx_utils.h"
+#include "../Utils/color_utils.hpp"
+#include "../Utils/image_utils.hpp"
 
 #include "3rdparty/bcdec/bcdec.hpp"
 

@@ -5,6 +5,7 @@
 #include "Emu/RSX/Core/RSXReservationLock.hpp"
 #include "Emu/RSX/Common/tiled_dma_copy.hpp"
 #include "Emu/RSX/Host/MM.h"
+#include "Emu/RSX/Utils/image_utils.hpp"
 
 #include "context_accessors.define.h"
 

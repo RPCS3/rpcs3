@@ -1,9 +1,11 @@
 #pragma once
 
-#include "Emu/IdManager.h"
 #include "GLHelpers.h"
 #include "glutils/program.h"
-#include "../rsx_utils.h"
+
+#include "Emu/IdManager.h"
+#include "Emu/RSX/Utils/algorithm.hpp"
+#include "Utilities/StrUtil.h"
 
 #include <unordered_map>
 

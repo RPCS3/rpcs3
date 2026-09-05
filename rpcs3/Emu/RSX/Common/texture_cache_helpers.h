@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../rsx_utils.h"
 #include "simple_array.hpp"
 #include "TextureUtils.h"
+#include "../Utils/rsx_utils.h"
 
 namespace rsx
 {

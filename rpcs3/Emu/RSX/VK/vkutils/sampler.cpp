@@ -1,7 +1,7 @@
 #include "memory.h"
 #include "sampler.h"
-#include "../../color_utils.h"
-#include "../../rsx_utils.h"
+#include "../../Utils/color_utils.hpp"
+#include "../../Utils/algorithm.hpp"
 
 namespace vk
 {
