@@ -1217,7 +1217,15 @@ std::unique_ptr<fs::file_base> iso_archive::get_iso_file(const std::string& path
 
 std::unique_ptr<fs::file_base> iso_archive::open(const std::string& path)
 {
-	return get_iso_file(m_path, fs::read, *ensure(retrieve(path)));
+	const auto node = retrieve(path);
+
+	if (!node)
+	{
+		fs::g_tls_error = fs::error::noent;
+		return nullptr;
+	}
+
+	return get_iso_file(m_path, fs::read, *node);
 }
 
 psf::registry iso_archive::open_psf(const std::string& path)
