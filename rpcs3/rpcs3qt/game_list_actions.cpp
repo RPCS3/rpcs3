@@ -601,7 +601,7 @@ void game_list_actions::ShowIrdIntegrityDialog(const std::string& game_path)
 
 		disc_check_report report;
 
-		m_game_validator->check_content(game_path, ird_path.toStdString(), report);
+		m_game_validator->check_ird_content(game_path, ird_path.toStdString(), report);
 
 		QString text_result, text_dialog, text_details;
 		bool info_dialog = false;
@@ -615,7 +615,7 @@ void game_list_actions::ShowIrdIntegrityDialog(const std::string& game_path)
 
 			text_result = (info_dialog ? tr("Game check PASSED\n\n") : tr("Game check NOT PASSED\n\n"));
 
-			text_result += tr("Main info:\n - %0: %1\n - Game: %2 [%3]\n - IRD: %4 [%5] (game v%6, app v%7, firmware v%8)\n\n"
+			text_result += tr("Summary:\n - %0: %1\n - Game: %2 [%3]\n - IRD: %4 [%5] (game v%6, app v%7, firmware v%8)\n\n"
 				"%9 valid | %10 invalid | %11 missing | %12 not required")
 				.arg(report.is_iso ? tr("ISO") : tr("Folder"))
 				.arg(QString::fromStdString(game_path))

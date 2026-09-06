@@ -148,7 +148,7 @@ namespace
 //       and an IRD file can carry padding past the end of its gzip stream (some writers leave a block of 0x10
 //       bytes behind): on one of those, inflate reports the end of the stream over and over without ever
 //       consuming that tail, and the helper grows its output buffer forever
-static std::vector<u8> ird_ungzip(const std::vector<u8>& data)
+static std::vector<u8> ird_ungzip(const std::vector<u8>& data, u32 expected_size = 0)
 {
 	// A gzip member is never shorter than its header plus its trailer
 	if (data.size() < 18)
@@ -156,7 +156,10 @@ static std::vector<u8> ird_ungzip(const std::vector<u8>& data)
 		return {};
 	}
 
-	std::vector<u8> out(std::max<usz>(data.size() * 6, 0x10000));
+	// "expected_size" is what the gzip trailer of the block promises, which a caller holding the exact block can
+	// read beforehand: the output is then allocated in one go rather than grown a megabyte at a time, copying
+	// everything decompressed so far on the way. It is only ever a hint, so a wrong one costs nothing but that
+	std::vector<u8> out(expected_size ? expected_size : std::max<usz>(data.size() * 6, 0x10000));
 
 	z_stream zs{};
 
@@ -323,13 +326,17 @@ ird_parse_status ird_file::parse(const std::vector<u8>& data)
 	// The ISO header (the ECMA-119 structures the disc begins with) and the ISO footer, both gzipped
 	const u32 header_size = reader.read<u32>();
 	const std::vector<u8> header_data = reader.read_bytes(header_size);
-	const std::vector<u8> header = ird_ungzip(header_data);
+
+	// The size the trailer of the block promises: the IRD gives the exact length of it, so it can be trusted
+	// both to allocate the output and, below, to tell a short decompression from a good one
+	const u32 header_isize = header_size >= 4 ? static_cast<u32>(read_from_ptr<le_t<u32>>(header_data, header_size - 4)) : 0;
+	const std::vector<u8> header = ird_ungzip(header_data, header_isize);
 	const u32 footer_size = reader.read<u32>();
 	reader.skip(footer_size); // The footer holds no data the validation needs
 
-	// The gzip trailer of a block tells how big its content is: a header decompressed short would silently turn
-	// the files it does not reach any more into missing ones, so it is caught right here
-	if (header_size >= 4 && header.size() != read_from_ptr<le_t<u32>>(header_data, header_size - 4))
+	// A header decompressed short would silently turn the files it does not reach any more into missing ones,
+	// so it is caught right here
+	if (header_isize && header.size() != header_isize)
 	{
 		ird_log.error("ird_file: Failed to decompress the ISO header of file: '%s'", m_path);
 		return ird_parse_status::ERROR_TRUNCATED;
