@@ -114,9 +114,7 @@ std::optional<game_info_type> game_enumeration<game_info_type>::get_game_info(co
 	std::shared_ptr<iso_archive> archive;
 	iso_metadata_cache_entry cache_entry{};
 	bool is_raw_device = is_raw;
-	// The caller provides the archive only for a path it has already recognized, so checking it again here would
-	// read the volume descriptor of the disc once more ("is_raw_device" is the flag the caller passed in)
-	info.is_iso_file = is_iso && (shared_archive || is_iso_file(dir_or_elf, nullptr, &is_raw_device));
+	info.is_iso_file = is_iso && is_iso_file(dir_or_elf, nullptr, &is_raw_device);
 	const bool is_ps3_game = game_dir == "PS3_GAME";
 
 	if (info.is_iso_file)
