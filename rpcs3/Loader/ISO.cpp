@@ -1318,7 +1318,7 @@ u64 iso_file::local_extent_remaining(u64 pos) const
 {
 	const auto [local_pos, extent] = get_extent_pos(pos);
 
-	return extent.size - local_pos;
+	return local_pos < extent.size ? extent.size - local_pos : 0;
 }
 
 u64 iso_file::local_extent_size(u64 pos) const
