@@ -22,3 +22,43 @@ TEST_F(iso_test, InvalidArchiveReturnsEmptyHandle)
 	ASSERT_FALSE(archive.is_valid());
 	EXPECT_FALSE(archive.open("TEST.BIN"));
 }
+
+TEST_F(iso_test, TruncatedMetadataRejectsArchive)
+{
+	for (usz length : {16 * ISO_SECTOR_SIZE + 157, 18 * ISO_SECTOR_SIZE, 18 * ISO_SECTOR_SIZE + 10, 18 * ISO_SECTOR_SIZE + 33})
+	{
+		SCOPED_TRACE(length);
+		{
+			std::ofstream out(m_path, std::ios::binary);
+			out.write(reinterpret_cast<const char*>(m_image.data()), length);
+			ASSERT_TRUE(out.good());
+		}
+		iso_archive archive(m_path);
+		EXPECT_FALSE(archive.is_valid());
+	}
+}
+
+TEST_F(iso_test, InvalidDirectoryRecordRejectsArchive)
+{
+	const auto original = m_image;
+	for (bool invalid_length : {false, true})
+	{
+		SCOPED_TRACE(invalid_length);
+		m_image = original;
+		if (invalid_length)
+		{
+			m_image[18 * ISO_SECTOR_SIZE] = 1;
+		}
+		else
+		{
+			m_image[18 * ISO_SECTOR_SIZE + 32] = 255;
+		}
+		{
+			std::ofstream out(m_path, std::ios::binary);
+			out.write(reinterpret_cast<const char*>(m_image.data()), m_image.size());
+			ASSERT_TRUE(out.good());
+		}
+		iso_archive archive(m_path);
+		EXPECT_FALSE(archive.is_valid());
+	}
+}
