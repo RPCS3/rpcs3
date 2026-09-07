@@ -1475,6 +1475,9 @@ void spu_thread::cpu_task()
 	pthread_jit_write_protect_np(true);
 #endif
 	start_time = 0;
+	
+	// Raise priority above other threads
+	thread_ctrl::scoped_priority high_prio(+1);
 
 	// Get next PC and SPU Interrupt status
 	pc = status_npc.load().npc;
