@@ -225,7 +225,7 @@ struct iso_magic_block
 	u64 offset = 0;                               // Where they start, which the decryption IV is built out of
 };
 
-static iso_type_status read_magic_blocks(iso_archive& archive, std::vector<iso_magic_block>& blocks)
+static iso_type_status read_magic_blocks(iso_archive& archive, const std::shared_ptr<fs::file>& source, bool raw_device, std::vector<iso_magic_block>& blocks)
 {
 	//
 	// Read the leading bytes of every file of the archive present on the list of well known encrypted files: those are
@@ -241,7 +241,7 @@ static iso_type_status read_magic_blocks(iso_archive& archive, std::vector<iso_m
 
 	// One handle serves every block: it is pointed at each of the files in turn, which costs nothing but the
 	// metadata of the node, while building a file object per node would open the image again for each of them
-	iso_file iso_file(archive.path());
+	iso_file iso_file(source, raw_device, {});
 
 	if (!iso_file)
 	{
@@ -363,7 +363,7 @@ iso_type_status iso_file_decryption::retrieve_key(iso_archive& archive, std::str
 
 	content_encrypted = false;
 
-	if (const iso_type_status status = read_magic_blocks(archive, blocks); status != iso_type_status::REDUMP_ISO)
+	if (const iso_type_status status = read_magic_blocks(archive, archive.m_source, archive.m_raw_device, blocks); status != iso_type_status::REDUMP_ISO)
 	{
 		return status;
 	}
@@ -426,7 +426,7 @@ void iso_file_decryption::verify_key_file(iso_archive& archive)
 {
 	std::vector<iso_magic_block> blocks;
 
-	if (m_region_info.size() <= 1 || read_magic_blocks(archive, blocks) != iso_type_status::REDUMP_ISO)
+	if (m_region_info.size() <= 1 || read_magic_blocks(archive, archive.m_source, archive.m_raw_device, blocks) != iso_type_status::REDUMP_ISO)
 	{
 		return;
 	}
@@ -462,6 +462,11 @@ iso_type_status iso_file_decryption::check_type(const std::string& path, std::st
 		return iso_type_status::NOT_ISO;
 	}
 
+	return find_key(path, key_path, aes_ctx);
+}
+
+iso_type_status iso_file_decryption::find_key(const std::string& path, std::string* key_path, aes_context* aes_ctx)
+{
 	// Remove file extension from file path
 	const usz ext_pos = path.rfind('.');
 	const std::string name_path = ext_pos == umax ? path : path.substr(0, ext_pos);
@@ -503,7 +508,9 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 	// Store the ISO region information (needed by both the "Redump" type (only on "decrypt()" method) and "3k3y" type)
 	//
 
-	iso_file iso_file(path);
+	iso_file iso_file = archive
+		? ::iso_file(archive->m_source, archive->m_raw_device, { .name = path, .extents = {{0, archive->m_source->size()}} })
+		: ::iso_file(path);
 
 	if (!is_iso_file(iso_file))
 	{
@@ -574,7 +581,7 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 	else
 	{
 		// Try to detect the Redump type. If so, the decryption context is set into "m_aes_dec"
-		status = check_type(path, &key_path, &m_aes_dec);
+		status = find_key(path, &key_path, &m_aes_dec);
 	}
 
 	switch (status)
@@ -698,7 +705,7 @@ iso_key_status iso_file_decryption::get_key_status(iso_archive& archive)
 	// the test back when it was set up, since that decides how every read behaves. A single region means the image
 	// declares nothing but region 0, and the even ones are never encrypted, so there is nothing to look at there
 	if (m_enc_type == iso_encryption_type::NONE && m_region_info.size() > 1 &&
-		read_magic_blocks(archive, blocks) == iso_type_status::REDUMP_ISO && is_any_block_encrypted(blocks))
+		read_magic_blocks(archive, archive.m_source, archive.m_raw_device, blocks) == iso_type_status::REDUMP_ISO && is_any_block_encrypted(blocks))
 	{
 		m_key_status = iso_key_status::MISSING;
 
@@ -846,7 +853,7 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 		first_sec.address_aligned = first_sec.lba_address;
 	}
 
-	u64 total_read = m_file.read_at(first_sec.address_aligned, &reinterpret_cast<u8*>(aligned_buf)[first_sec.offset_aligned], first_sec.size_aligned);
+	u64 total_read = m_file->read_at(first_sec.address_aligned, &reinterpret_cast<u8*>(aligned_buf)[first_sec.offset_aligned], first_sec.size_aligned);
 
 	m_dec->decrypt(first_sec.address_aligned, {&reinterpret_cast<u8*>(aligned_buf)[first_sec.offset_aligned], first_sec.size_aligned}, m_meta.name);
 	std::memcpy(buffer, &reinterpret_cast<u8*>(aligned_buf)[first_sec.offset], first_sec.size);
@@ -883,7 +890,7 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 		{
 			const u64 inner_sector_size = (sector_count - 2) * ISO_SECTOR_SIZE;
 
-			total_read += m_file.read_at(first_sec.lba_address + ISO_SECTOR_SIZE, &reinterpret_cast<u8*>(buffer)[first_sec.size], inner_sector_size);
+			total_read += m_file->read_at(first_sec.lba_address + ISO_SECTOR_SIZE, &reinterpret_cast<u8*>(buffer)[first_sec.size], inner_sector_size);
 
 			m_dec->decrypt(first_sec.lba_address + ISO_SECTOR_SIZE, {&reinterpret_cast<u8*>(buffer)[first_sec.size], inner_sector_size}, m_meta.name);
 		}
@@ -895,7 +902,7 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 			{
 				const u64 block_size = std::min<u64>(inner_sector_size - inner_sector_offset, ISO_RAW_READ_SIZE);
 
-				total_read += m_file.read_at(first_sec.lba_address + ISO_SECTOR_SIZE + inner_sector_offset, aligned_buf, block_size);
+				total_read += m_file->read_at(first_sec.lba_address + ISO_SECTOR_SIZE + inner_sector_offset, aligned_buf, block_size);
 
 				m_dec->decrypt(first_sec.lba_address + ISO_SECTOR_SIZE + inner_sector_offset, {reinterpret_cast<u8*>(aligned_buf), block_size}, m_meta.name);
 				std::memcpy(&reinterpret_cast<u8*>(buffer)[first_sec.size + inner_sector_offset], aligned_buf, block_size);
@@ -920,7 +927,7 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 		last_sec.size_aligned = ISO_SECTOR_SIZE;
 	}
 
-	total_read += m_file.read_at(last_sec.address_aligned, aligned_buf, last_sec.size_aligned);
+	total_read += m_file->read_at(last_sec.address_aligned, aligned_buf, last_sec.size_aligned);
 
 	m_dec->decrypt(last_sec.address_aligned, {reinterpret_cast<u8*>(aligned_buf), last_sec.size_aligned}, m_meta.name);
 	std::memcpy(&reinterpret_cast<u8*>(buffer)[max_size - last_sec.size], aligned_buf, last_sec.size);
@@ -1218,23 +1225,19 @@ iso_archive::iso_archive(const std::string& path)
 	m_path = path;
 
 	// "m_path" is updated with the raw device path in case "path" points to a BD drive
-	fs::get_optical_raw_device(path, &m_path);
+	m_raw_device = fs::get_optical_raw_device(path, &m_path);
+	m_source = std::make_shared<fs::file>(m_path);
+	::iso_file probe(m_source, m_raw_device, { .name = m_path, .extents = {{0, *m_source ? m_source->size() : 0}} });
 
-	// NOTE: the file is opened once here and then handed over to the parsing below. Recognizing the ISO through its
-	//       path (i.e. "is_iso_file(m_path)") would open it and read its volume descriptor a second time, which is a
-	//       physical read when the path points to an optical drive
-	auto file = std::make_unique<iso_file>(m_path);
-
-	if (!is_iso_file(*file))
+	// Recognize and parse the same opened source, including optical drives.
+	if (!is_iso_file(probe))
 	{
 		iso_log.error("iso_archive: Failed to recognize ISO file: '%s'", path);
 		invalidate();
 		return;
 	}
 
-	// NOTE: "is_iso_file()" reads through "read_at()", which does not move the position, so the file is still at its
-	//       beginning here
-	fs::file iso_file(std::move(file));
+	fs::file iso_file(std::make_unique<::iso_file>(std::move(probe)));
 
 	u8 descriptor_type = -2;
 	bool use_ucs2_decoding = false;
@@ -1390,6 +1393,7 @@ void iso_archive::invalidate()
 {
 	m_root = {};
 	m_dec.reset();
+	m_source.reset();
 }
 
 bool iso_archive::is_valid() const
@@ -1414,8 +1418,14 @@ bool iso_archive::is_file(const std::string& path)
 	return !file_node->metadata.is_directory;
 }
 
-std::unique_ptr<fs::file_base> iso_archive::get_iso_file(const std::string& path, bs_t<fs::open_mode> mode, const iso_fs_node& node)
+std::unique_ptr<fs::file_base> iso_archive::get_iso_file(const std::string&, bs_t<fs::open_mode> mode, const iso_fs_node& node)
 {
+	if (mode & (fs::write + fs::create + fs::trunc + fs::append))
+	{
+		fs::g_tls_error = fs::error::readonly;
+		return nullptr;
+	}
+
 	if (!is_valid())
 	{
 		return nullptr;
@@ -1423,10 +1433,10 @@ std::unique_ptr<fs::file_base> iso_archive::get_iso_file(const std::string& path
 
 	if (m_dec->get_enc_type() == iso_encryption_type::NONE)
 	{
-		return std::make_unique<iso_file>(path, mode, node);
+		return std::make_unique<iso_file>(m_source, m_raw_device, node.metadata);
 	}
 
-	return std::make_unique<iso_file_encrypted>(path, mode, node, m_dec);
+	return std::make_unique<iso_file_encrypted>(m_source, m_raw_device, node.metadata, m_dec);
 }
 
 std::unique_ptr<fs::file_base> iso_archive::open(const std::string& path)
@@ -1458,9 +1468,9 @@ psf::registry iso_archive::open_psf(const std::string& path)
 
 iso_file::iso_file(const std::string& path, bs_t<fs::open_mode> mode)
 {
-	m_file = fs::file(path, mode);
+	m_file = std::make_shared<fs::file>(path, mode);
 
-	if (!m_file)
+	if (!*m_file)
 	{
 		// Should never happen... TODO: throw something?
 		iso_log.error("iso_file: Failed to open file: '%s'", path);
@@ -1468,9 +1478,7 @@ iso_file::iso_file(const std::string& path, bs_t<fs::open_mode> mode)
 	}
 
 	m_meta.name = path;
-	m_meta.extents.push_back({0, m_file.size()});
-
-	m_file.seek(m_meta.extents[0].start * ISO_SECTOR_SIZE);
+	m_meta.extents.push_back({0, m_file->size()});
 
 	m_raw_device = fs::is_optical_raw_device(path);
 }
@@ -1478,16 +1486,14 @@ iso_file::iso_file(const std::string& path, bs_t<fs::open_mode> mode)
 iso_file::iso_file(const std::string& path, bs_t<fs::open_mode> mode, const iso_fs_node& node)
 	: m_meta(node.metadata)
 {
-	m_file = fs::file(path, mode);
+	m_file = std::make_shared<fs::file>(path, mode);
 
-	if (!m_file)
+	if (!*m_file)
 	{
 		// Should never happen... TODO: throw something?
 		iso_log.error("iso_file: Failed to open file: '%s'", path);
 		return;
 	}
-
-	m_file.seek(::at32(m_meta.extents, 0).start * ISO_SECTOR_SIZE);
 
 	m_raw_device = fs::is_optical_raw_device(path);
 }
@@ -1496,11 +1502,16 @@ void iso_file::rebind(const iso_fs_node& node)
 {
 	m_meta = node.metadata;
 	m_pos = 0;
+}
 
-	if (m_file && !m_meta.extents.empty())
-	{
-		m_file.seek(m_meta.extents.front().start * ISO_SECTOR_SIZE);
-	}
+iso_file::iso_file(std::shared_ptr<fs::file> source, bool raw_device, const iso_fs_metadata& metadata)
+	: m_file(std::move(source)), m_meta(metadata), m_raw_device(raw_device)
+{
+}
+
+iso_file_encrypted::iso_file_encrypted(std::shared_ptr<fs::file> source, bool raw_device, const iso_fs_metadata& metadata, std::shared_ptr<iso_file_decryption> dec)
+	: iso_file(std::move(source), raw_device, metadata), m_dec(std::move(dec))
+{
 }
 
 fs::stat_t iso_file::get_stat()
@@ -1582,7 +1593,7 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 	// If it's not a raw device
 	if (!m_raw_device)
 	{
-		u64 total_read = m_file.read_at(archive_first_offset, buffer, max_size);
+		u64 total_read = m_file->read_at(archive_first_offset, buffer, max_size);
 
 		if (total_read != max_size)
 		{
@@ -1639,7 +1650,7 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 	// First sector
 	//
 
-	u64 total_read = m_file.read_at(first_sec.lba_address, aligned_buf, ISO_SECTOR_SIZE);
+	u64 total_read = m_file->read_at(first_sec.lba_address, aligned_buf, ISO_SECTOR_SIZE);
 
 	std::memcpy(buffer, &reinterpret_cast<u8*>(aligned_buf)[first_sec.offset], first_sec.size);
 
@@ -1677,7 +1688,7 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 		{
 			const u64 block_size = std::min<u64>(inner_sector_size - sector_offset, ISO_RAW_READ_SIZE);
 
-			total_read += m_file.read_at(first_sec.lba_address + ISO_SECTOR_SIZE + sector_offset, aligned_buf, block_size);
+			total_read += m_file->read_at(first_sec.lba_address + ISO_SECTOR_SIZE + sector_offset, aligned_buf, block_size);
 
 			std::memcpy(&reinterpret_cast<u8*>(buffer)[first_sec.size + sector_offset], aligned_buf, block_size);
 
@@ -1689,7 +1700,7 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 	// Last sector
 	//
 
-	total_read += m_file.read_at(last_sec.address_aligned, aligned_buf, ISO_SECTOR_SIZE);
+	total_read += m_file->read_at(last_sec.address_aligned, aligned_buf, ISO_SECTOR_SIZE);
 
 	std::memcpy(&reinterpret_cast<u8*>(buffer)[max_size - last_sec.size], aligned_buf, last_sec.size);
 
@@ -1735,11 +1746,6 @@ u64 iso_file::seek(s64 offset, fs::seek_mode whence)
 		return -1;
 	}
 
-	if (m_file.seek(file_offset(new_pos)) == umax)
-	{
-		return umax;
-	}
-
 	m_pos = new_pos;
 	return m_pos;
 }
@@ -1758,7 +1764,7 @@ u64 iso_file::size()
 
 void iso_file::release()
 {
-	m_file.release();
+	m_file.reset();
 }
 
 bool iso_dir::read(fs::dir_entry& entry)

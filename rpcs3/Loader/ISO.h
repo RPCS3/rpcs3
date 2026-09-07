@@ -88,6 +88,7 @@ private:
 	// image anyway. Nothing but a failing boot ever asks, so a game list scan never pays for the answer
 	std::optional<iso_key_status> m_key_status;
 
+	static iso_type_status find_key(const std::string& path, std::string* key_path, aes_context* aes_ctx);
 	static iso_type_status get_key(const std::string& key_path, aes_context* aes_ctx = nullptr);
 
 	// "content_encrypted" comes back set when the content turned out to still be encrypted, which the blocks read to
@@ -138,7 +139,8 @@ struct iso_fs_node
 class iso_file : public fs::file_base
 {
 protected:
-	fs::file m_file;
+	// Shared backing is accessed only through positional reads. Member cursors are local.
+	std::shared_ptr<fs::file> m_file;
 	iso_fs_metadata m_meta;
 	bool m_raw_device = false;
 	u64 m_pos = 0;
@@ -157,7 +159,9 @@ public:
 	// drive is what the whole walk costs
 	void rebind(const iso_fs_node& node);
 
-	explicit operator bool() const { return m_file.operator bool(); }
+	iso_file(std::shared_ptr<fs::file> source, bool raw_device, const iso_fs_metadata& metadata);
+
+	explicit operator bool() const { return m_file && *m_file; }
 
 	fs::stat_t get_stat() override;
 	bool trunc(u64 length) override;
@@ -179,6 +183,8 @@ private:
 
 public:
 	iso_file_encrypted(const std::string& path, bs_t<fs::open_mode> mode, const iso_fs_node& node, std::shared_ptr<iso_file_decryption> dec);
+
+	iso_file_encrypted(std::shared_ptr<fs::file> source, bool raw_device, const iso_fs_metadata& metadata, std::shared_ptr<iso_file_decryption> dec);
 
 	u64 read_at(u64 offset, void* buffer, u64 size) override;
 };
@@ -205,6 +211,8 @@ private:
 	void invalidate();
 
 	std::string m_path;
+	std::shared_ptr<fs::file> m_source;
+	bool m_raw_device = false;
 	iso_fs_node m_root {};
 	std::shared_ptr<iso_file_decryption> m_dec;
 
@@ -225,6 +233,7 @@ public:
 	psf::registry open_psf(const std::string& path);
 
 	friend class iso_file;
+	friend class iso_file_decryption;
 };
 
 class iso_device : public fs::device_base
