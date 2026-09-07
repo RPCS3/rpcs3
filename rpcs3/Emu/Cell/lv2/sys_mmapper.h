@@ -25,7 +25,7 @@ struct lv2_memory : lv2_obj
 	const u64 flags;
 	const u64 key; // IPC key
 	const bool pshared; // Process shared flag
-	lv2_memory_container* const ct; // Associated memory container
+	lv2_memory_container* const ct; // null for system memory
 	atomic_ptr<std::shared_ptr<utils::shm>> shm;
 
 	atomic_t<u32> counter{0};
@@ -35,6 +35,7 @@ struct lv2_memory : lv2_obj
 	lv2_memory(utils::serial& ar);
 	static std::function<void(void*)> load(utils::serial& ar);
 	void save(utils::serial& ar);
+	void save_data(utils::serial& ar);
 
 	CellError on_id_create();
 };

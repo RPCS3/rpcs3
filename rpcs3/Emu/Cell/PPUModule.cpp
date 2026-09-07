@@ -27,6 +27,7 @@
 #include <map>
 #include <span>
 #include <set>
+#include <shared_mutex>
 #include <algorithm>
 #include "util/asm.hpp"
 
@@ -698,7 +699,18 @@ bool ppu_form_branch_to_code(u32 entry, u32 target);
 
 extern u32 ppu_get_exported_func_addr(u32 fnid, const std::string& module_name)
 {
-	return g_fxo->get<ppu_linkage_info>().modules[module_name].functions[fnid].export_addr;
+	auto& link = g_fxo->get<ppu_linkage_info>();
+	std::shared_lock lock(link.mutex);
+
+	const auto module = link.modules.find(module_name);
+
+	if (module == link.modules.end())
+	{
+		return 0;
+	}
+
+	const auto function = module->second.functions.find(fnid);
+	return function == module->second.functions.end() ? 0 : function->second.export_addr;
 }
 
 extern bool ppu_register_library_lock(std::string_view libname, bool lock_lib)
