@@ -370,6 +370,23 @@ extern void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = 
 
 	CellPadData& output = pad->data;
 
+	using pad_t = decltype(pad);
+
+	struct debug_outyput_t
+	{
+		CellPadData* data{};
+		pad_t pad{};
+		pad_info* config{};
+
+		~debug_outyput_t() noexcept
+		{
+			if (data && g_cfg.io.pad_debug_overlay && !g_cfg.video.debug_overlay)
+			{
+				show_debug_overlay(*data, *pad, *config);
+			}
+		}
+	} out_obj{port_no == 0 ? data : nullptr, pad, &config};
+
 	if (rinfo.ignore_input || !is_input_allowed())
 	{
 		// Needed for Hotline Miami and Ninja Gaiden Sigma after dialogs were closed and buttons are still pressed.
@@ -717,12 +734,6 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	pad_get_data(port_no, data.get_ptr());
-
-	if (g_cfg.io.pad_debug_overlay && !g_cfg.video.debug_overlay && port_no == 0)
-	{
-		show_debug_overlay(*data, *pad, config);
-	}
-
 	return CELL_OK;
 }
 
