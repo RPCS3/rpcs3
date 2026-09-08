@@ -22,8 +22,52 @@ env:
   BUILD_ARTIFACTSTAGINGDIRECTORY: ${{ github.workspace }}/artifacts/
 
 jobs:
+  Clean_Code_Caches:
+    name: Clean caches
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Look for the 'Shaders' label on the merged PR
+        id: labels
+        if: github.event_name == 'push' && github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          found=false
+          for sha in $(jq -r '[.after, (.commits[]?.id)] | map(select(. != null)) | unique[]' "$GITHUB_EVENT_PATH"); do
+            labels=$(gh api "repos/${{ github.repository }}/commits/$sha/pulls" --jq '.[].labels[].name' 2>/dev/null || true)
+            echo "$sha: ${labels:-<no associated PR>}"
+            if grep -qix 'shaders' <<< "$labels"; then
+              found=true
+            fi
+          done
+          echo "shaders=$found" >> "$GITHUB_OUTPUT"
+
+      - name: Remove all code caches
+        if: steps.labels.outputs.shaders == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api --paginate "repos/${{ github.repository }}/actions/caches?per_page=100" \
+            --jq '.actions_caches[] | select(.key | contains("-ccache-")) | "\(.id)\t\(.key)"' > code_caches.tsv
+          if [ ! -s code_caches.tsv ]; then
+            echo "No code caches to remove."
+            exit 0
+          fi
+          while IFS=$'\t' read -r id key; do
+            echo "Removing $key (id $id)"
+            gh api -X DELETE "repos/${{ github.repository }}/actions/caches/$id" --silent
+          done < code_caches.tsv
+          echo "Removed $(wc -l < code_caches.tsv) code cache(s) after a 'Shaders' PR merge." >> "$GITHUB_STEP_SUMMARY"
+
   Linux_Build:
     # Only run push event on master branch of main repo, but run all PRs
+    needs: Clean_Code_Caches
     if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
     strategy:
       fail-fast: false
@@ -117,6 +161,7 @@ jobs:
 
   Mac_Build:
     # Only run push event on master branch of main repo, but run all PRs
+    needs: Clean_Code_Caches
     if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
     strategy:
       fail-fast: false
@@ -206,6 +251,7 @@ jobs:
 
   Windows_Build:
     # Only run push event on master branch of main repo, but run all PRs
+    needs: Clean_Code_Caches
     if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
     name: RPCS3 Windows
     runs-on: windows-2025-vs2026
@@ -328,6 +374,7 @@ jobs:
 
   Windows_Build_Clang:
     # Only run push event on master branch of main repo, but run all PRs
+    needs: Clean_Code_Caches
     if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
     strategy:
       fail-fast: false
@@ -437,6 +484,7 @@ jobs:
 
   FreeBSD_Build:
       # Only run push event on master branch of main repo, but run all PRs
+    needs: Clean_Code_Caches
     if: github.event_name != 'push' || (github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master')
     name: RPCS3 FreeBSD 
     runs-on: ubuntu-latest
