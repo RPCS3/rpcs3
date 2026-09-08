@@ -22,11 +22,11 @@ namespace
 
 	struct storage_manager_impl
 	{
-		storage_manager_impl() {}
+		storage_manager_impl() noexcept {}
 		storage_manager_impl(const storage_manager_impl&) = delete;
 		int operator=(const storage_manager_impl&) = delete;
 
-		void send_event(u64 device_id, u64 data1, u64 data2, u64 data3)
+		bool send_event(u64 device_id, u64 data1, u64 data2, u64 data3)
 		{
 			id_manager::g_process = 0;
 			std::vector<shared_ptr<lv2_storage_medium_event_port>> ports;
@@ -41,79 +41,122 @@ namespace
 				}
 			});
 
+			bool send = false;
 			u64 dummy_kernel_port_address = 0x800000000062d4c0;
 
 			for (auto& port : ports)
 			{
 				dummy_kernel_port_address += 0x100;
 
-				port->medium_port->send(dummy_kernel_port_address, data1, data2, data3);
+				if (port->medium_port->send(dummy_kernel_port_address, data1, data2, data3) == CELL_OK)
+				{
+					send = true;
+				}
 			}
+
+			return send;
+		}
+
+		lf_fifo<atomic_t<u32>, 8> cmd_queue;
+
+		bool pop(u32& out)
+		{
+			const u32 pos = cmd_queue.peek();
+
+			// Clean command buffer for command tail
+			out = cmd_queue[pos].exchange(0);
+
+			if (!out)
+			{
+				return false;
+			}
+
+			// Free
+			cmd_queue.pop_end(1);
+			return true;
+		}
+
+		void push(u32 cmd)
+		{
+			const u32 pos = cmd_queue.push_begin();
+
+			// Write single command
+			cmd_queue[pos] = cmd;
+
+			thread_ctrl::notify(static_cast<named_thread<storage_manager_impl>&>(*this));
 		}
 
 		void operator()() noexcept
 		{
-			u32 events[] =
-			{
-				// First class
-				//3,
-				// 4,
-				 7,
-				// 8,
-
-				// 0x101,
-				// 0x102,
-			};
-
-			//u64 start_time = get_system_time();
-			u64 start_count = 0;
-			u64 event_index = 0;
-
 			while (Emu.IsPausedOrReady())
 			{
 				thread_ctrl::wait_for(2500);
 			}
 
-			for (u32 ii = 0; ii < 10; ii++)
+			// Send startup(?) events
+			thread_ctrl::wait_for(2500000);
+
+			while (!send_event(0x0101000000000006, 0x0000000000000101, 0x0000000000000000, 0x0101000000000006))
 			{
-				thread_ctrl::wait_for(1000 * 1000);
+				thread_ctrl::wait_for(2500000);
 			}
 
 			while (thread_ctrl::state() != thread_state::aborting)
 			{
-				thread_ctrl::wait_for(25000);
+				u32 cmd_val = 0;
 
-				start_count++;
-
-				if (start_count == 1)
+				if (!pop(cmd_val))
 				{
-					sys_storage.notice("storage_manager(): Sending 0x%x (Media ID = 0x%x)", events[event_index], start_count);
-
-
-					if (true)
-					{
-						send_event(0x0101000000000006, 0x0000000000000101, 0x0000000000000000, 0x0101000000000006);
-						thread_ctrl::wait_for(2500000);
-
-						send_event(0x0101000000000006, 0x0000000000000003, 0x000000000000ff71, 0x0101000000000006);
-						thread_ctrl::wait_for(2500000);
-
-						send_event(0x0101000000000006, 0x0000000000000003, 0, 0x0101000000000004);
-						thread_ctrl::wait_for(2500000);
-						send_event(0x0101000000000006, 0x0000000000000003, 0, 0x0101000000000008);
-						thread_ctrl::wait_for(2500000);
-						send_event(0x0101000000000006, 0x0000000000000003, 0x000000000000ff71, 0x0101000000000003);
-						thread_ctrl::wait_for(2500000);
-					}
-
+					thread_ctrl::wait();
+					continue;
 				}
+
+				if (cmd_val == 1)
+				{
+					sys_storage.notice("storage_manager(): Received insert event");
+
+					send_event(0x0101000000000006, 0x0000000000000003, 0x000000000000ff71, 0x0101000000000006);
+				}
+
+				if (cmd_val == 2)
+				{
+					sys_storage.notice("storage_manager(): Received eject event");
+
+					send_event(0x0101000000000006, 0x0000000000000004, 0x0000000000000000, 0x0101000000000006);
+					send_event(0x0101000000000006, 0x0000000000000008, 0x0000000000000000, 0x0101000000000006);
+					send_event(0x0101000000000006, 0x0000000000000007, 0x0000000000000000, 0x0101000000000006);
+					//send_event(0x0101000000000006, 0x0000000000000102, 0x0000000000000000, 0x0101000000000006);
+				}
+
+				// Cooldown
+				thread_ctrl::wait_for(250000);
 			}
+		}
+
+		void send_bdvd_insert()
+		{
+			push(1);
+		}
+
+		void send_bdvd_eject()
+		{
+			push(2);
 		}
 
 		static constexpr auto thread_name = "VSH Storage Events"sv;
 	};
 
 	using storage_manager = named_thread<storage_manager_impl>;
+}
+
+extern void signal_sys_storage_about_BDVD_insert()
+{
+	ensure(g_fxo->try_get<storage_manager>())->send_bdvd_insert();
+}
+
+extern void signal_sys_storage_about_BDVD_eject()
+{
+	ensure(g_fxo->try_get<storage_manager>())->send_bdvd_eject();
 }
 
 lv2_storage::lv2_storage(utils::serial& ar) noexcept

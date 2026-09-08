@@ -5057,9 +5057,26 @@ utils::serial* Emulator::DeserialManager() const
 
 bool Emulator::IsVsh()
 {
+	if (IsStopped(true))
+	{
+		return false;
+	}
+
 	const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
 
-	return process->self_info.valid && (process->self_info.prog_id_hdr.program_authority_id == 0x10700005FF000001L); // VSH.self ID
+	return process && process->self_info.valid && (process->self_info.prog_id_hdr.program_authority_id == 0x10700005FF000001L); // VSH.self ID
+}
+
+bool Emulator::IsVshControlled()
+{
+	if (IsStopped(true))
+	{
+		return false;
+	}
+
+	const auto process = idm::get_unlocked<lv2_obj, lv2_process>(lv2_process::id_base);
+
+	return process && process->self_info.valid && (process->self_info.prog_id_hdr.program_authority_id == 0x10700005FF000001L); // VSH.self ID
 }
 
 bool Emulator::IsValidSfb(const std::string& path)

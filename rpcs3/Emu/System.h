@@ -445,7 +445,8 @@ public:
 	static void GetBdvdDir(std::string& bdvd_dir, std::string& sfb_dir, std::string& game_dir, const std::string& elf_dir);
 	friend void init_fxo_for_exec(shared_ptr<lv2_process> process, utils::serial* ar, bool full);
 
-	static bool IsVsh();
+	bool IsVsh();
+	bool IsVshControlled();
 	static bool IsValidSfb(const std::string& path);
 
 	static void SaveSettings(std::string_view settings, const std::string& title_id);

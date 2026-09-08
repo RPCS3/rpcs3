@@ -3711,7 +3711,7 @@ error_code sys_fs_mount(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char>
 
 	if (!vfs::get(path_sv).empty())
 	{
-		if (path_sv == "/dev_hdd0")
+		if (path_sv == "/dev_hdd0" || path_sv == "/dev_bdvd")
 		{
 			return CELL_OK;
 		}
@@ -3749,12 +3749,6 @@ error_code sys_fs_mount(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char>
 			sys_fs.error("Failed to create simplefs file \"%s\"", vfs_path);
 			return {CELL_EIO, vfs_path};
 		}
-	}
-
-	if (root_name == "dev_bdvd")
-	{
-		// TO BE HOOKED
-		// vfs_path = "";
 	}
 
 	if (!vfs::mount("/" + std::string{root_name}, vfs_path, !is_simplefs))

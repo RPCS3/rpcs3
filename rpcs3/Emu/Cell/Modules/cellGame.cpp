@@ -243,7 +243,21 @@ static bool check_system_ver(vm::cptr<char> systemVersion)
 disc_change_manager::disc_change_manager()
 {
 	g_emu_callbacks.enable_disc_eject(false);
-	g_emu_callbacks.enable_disc_insert(false);
+
+	if (Emu.IsVshControlled())
+	{
+		// if (fs::is_dir(vfs::get("/dev_bdvd/PS3_GAME")))
+		// {
+		// 	cellGame.fatal("BDVD is mounted with VSH!");
+		// }
+
+		g_emu_callbacks.enable_disc_insert(true);
+		state = eject_state::ejected;
+	}
+	else
+	{
+		g_emu_callbacks.enable_disc_insert(false);
+	}
 }
 
 disc_change_manager::~disc_change_manager()
@@ -298,6 +312,9 @@ error_code disc_change_manager::unregister_callbacks()
 	return CELL_OK;
 }
 
+extern void signal_sys_storage_about_BDVD_insert();
+extern void signal_sys_storage_about_BDVD_eject();
+
 void disc_change_manager::eject_disc()
 {
 	cellGame.notice("Ejecting disc...");
@@ -313,22 +330,49 @@ void disc_change_manager::eject_disc()
 	state = eject_state::busy;
 	g_emu_callbacks.enable_disc_eject(false);
 
-	ensure(eject_callback);
+	const bool is_vsh = Emu.IsVshControlled();
 
-	sysutil_register_cb([](ppu_thread& cb_ppu) -> s32
+	ensure(is_vsh || eject_callback);
+
+	if (is_vsh)
 	{
+		signal_sys_storage_about_BDVD_eject();
+		state = eject_state::ejected;
+		Emu.GetCallbacks().enable_disc_insert(true);
+	}
+
+	const auto cb_func = eject_callback;
+
+	if (!cb_func)
+	{
+		return;
+	}
+
+	sysutil_register_cb([is_vsh, cb_func](ppu_thread& cb_ppu) -> s32
+	{
+		if (is_vsh)
+		{
+			return 0;
+		}
+
 		auto& dcm = g_fxo->get<disc_change_manager>();
 		std::lock_guard lock(dcm.mtx);
 
-		cellGame.notice("Executing eject_callback...");
-		dcm.eject_callback(cb_ppu);
+		ensure(dcm.state == eject_state::inserted);
 
-		ensure(vfs::unmount("/dev_bdvd"));
-		ensure(vfs::unmount("/dev_ps2disc"));
+		cellGame.notice("Executing eject_callback...");
+		cb_func(cb_ppu);
+
+		if (!Emu.IsVshControlled())
+		{
+			ensure(vfs::unmount("/dev_bdvd"));
+			ensure(vfs::unmount("/dev_ps2disc"));
+		}
+
 		dcm.state = eject_state::ejected;
 
 		// Re-enable disc insertion only if the callback is still registered
-		g_emu_callbacks.enable_disc_insert(!!dcm.insert_callback);
+		g_emu_callbacks.enable_disc_insert(is_vsh || !!dcm.insert_callback);
 
 		return CELL_OK;
 	});
@@ -349,25 +393,49 @@ void disc_change_manager::insert_disc(u32 disc_type, std::string title_id)
 	state = eject_state::busy;
 	g_emu_callbacks.enable_disc_insert(false);
 
-	ensure(insert_callback);
-
 	is_inserting = true;
 
-	sysutil_register_cb([disc_type, title_id = std::move(title_id)](ppu_thread& cb_ppu) -> s32
+	const bool is_vsh = Emu.IsVshControlled();
+
+	ensure(is_vsh || insert_callback);
+
+	if (is_vsh)
 	{
+		signal_sys_storage_about_BDVD_insert();
+		state = eject_state::inserted;
+		Emu.GetCallbacks().enable_disc_eject(true);
+	}
+
+	const auto cb_func = insert_callback;
+
+	if (!cb_func)
+	{
+		return;
+	}
+
+
+	sysutil_register_cb([is_vsh, cb_func, disc_type, title_id = std::move(title_id)](ppu_thread& cb_ppu) -> s32
+	{
+		if (is_vsh)
+		{
+			return 0;
+		}
+
 		auto& dcm = g_fxo->get<disc_change_manager>();
 		std::lock_guard lock(dcm.mtx);
+
+		ensure(dcm.state == eject_state::ejected);
 
 		if (disc_type == CELL_GAME_DISCTYPE_PS3)
 		{
 			vm::var<char[]> _title_id = vm::make_str(title_id);
 			cellGame.notice("Executing insert_callback for title '%s' with disc_type %d...", _title_id.get_ptr(), disc_type);
-			dcm.insert_callback(cb_ppu, disc_type, _title_id);
+			cb_func(cb_ppu, disc_type, _title_id);
 		}
 		else
 		{
 			cellGame.notice("Executing insert_callback with disc_type %d...", disc_type);
-			dcm.insert_callback(cb_ppu, disc_type, vm::null);
+			cb_func(cb_ppu, disc_type, vm::null);
 		}
 
 		dcm.state = eject_state::inserted;
