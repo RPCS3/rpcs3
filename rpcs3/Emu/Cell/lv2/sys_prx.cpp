@@ -209,7 +209,12 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 
 	if (is_firmware_sprx)
 	{
-		if (g_cfg.core.libraries_control.get_set().count(name + ":lle"))
+		if (Emu.IsVsh() || Emu.GetDir().starts_with("/dev_flash/"))
+		{
+			// No HLE at all with in VSH
+			ignore = false;
+		}
+		else if (g_cfg.core.libraries_control.get_set().count(name + ":lle"))
 		{
 			// Force LLE
 			ignore = false;
