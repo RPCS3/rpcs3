@@ -214,7 +214,7 @@ void page_fault_notification_entries::save(utils::serial& ar)
 	ar(entries);
 }
 
-template <bool exclusive = false>
+template <bool exclusive_syscall_only = false>
 error_code create_lv2_shm(bool pshared, u64 ipc_key, u64 size, u32 align, u64 flags, lv2_memory_container* ct)
 {
 	const u32 _pshared = pshared ? SYS_SYNC_PROCESS_SHARED : SYS_SYNC_NOT_PROCESS_SHARED;
@@ -232,8 +232,28 @@ error_code create_lv2_shm(bool pshared, u64 ipc_key, u64 size, u32 align, u64 fl
 		authid = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->self_info.prog_id_hdr.program_authority_id; 
 	}
 
-	shared_ptr<lv2_memory> created;
-	return lv2_obj::create<lv2_memory>(_pshared, ipc_key, create_mode, [&]()
+	u32 creation_policy = exclusive_syscall_only ? SYS_SYNC_NEWLY_CREATED : SYS_SYNC_NOT_CARE;
+
+	if (pshared && !exclusive_syscall_only)
+	{
+		if (flags & SYS_MMAPPER_SHM_CAN_CREATE)
+		{
+			if (flags & SYS_MMAPPER_SHM_MUST_CREATE)
+			{
+				creation_policy = SYS_SYNC_NEWLY_CREATED;
+			}
+			else
+			{
+				creation_policy = SYS_SYNC_NOT_CARE;
+			}
+		}
+		else
+		{
+			creation_policy = SYS_SYNC_NOT_PROCESS_SHARED;
+		}
+	}
+
+	if (auto error = lv2_obj::create<lv2_memory>(_pshared, ipc_key, creation_policy, [&]()
 	{
 		created = make_shared<lv2_memory>(
 			static_cast<u32>(size),
@@ -244,7 +264,7 @@ error_code create_lv2_shm(bool pshared, u64 ipc_key, u64 size, u32 align, u64 fl
 			authid,
 			ct);
 		return created;
-	}, false)
+	}, false))
 	{
 		return error;
 	}
