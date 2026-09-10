@@ -688,7 +688,7 @@ void game_list_actions::ShowIrdIntegrityDialog(const std::string& game_path)
 			// check passes all the same, and this is what tells the user why it did despite the count above
 			if (report.missing_update && report.status == disc_check_status::PASSED)
 			{
-				text_result += tr("\n\nNOTE: only the optional firmware update is missing. All the game data matches the disc");
+				text_result += tr("\n\nNOTE: only the firmware update is missing. All the game data matches the disc");
 			}
 
 			break;
