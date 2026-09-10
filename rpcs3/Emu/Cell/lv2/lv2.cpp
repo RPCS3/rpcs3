@@ -51,6 +51,7 @@
 #include "sys_storage.h"
 #include "sys_uart.h"
 #include "sys_crypto_engine.h"
+#include "sys_bluetooth.h"
 
 #include <algorithm>
 #include <optional>
@@ -622,7 +623,7 @@ const std::array<std::pair<ppu_intrp_func_t, std::string_view>, 1024> g_ppu_sysc
 	uns_func,                                               //576 (0x240)  UNS
 	null_func,//BIND_SYSC(sys_pad_manager_...),             //577 (0x241)  ROOT  PM
 	null_func,//BIND_SYSC(sys_bluetooth_...),               //578 (0x242)
-	null_func,//BIND_SYSC(sys_bluetooth_aud_serial_...),    //579 (0x243)
+	BIND_SYSC(sys_bluetooth_aud_serial_get_event_579),      //579 (0x243)
 	null_func,//BIND_SYSC(sys_bluetooth_...),               //580 (0x244)  ROOT
 	null_func,//BIND_SYSC(sys_bluetooth_...),               //581 (0x245)  ROOT
 	null_func,//BIND_SYSC(sys_bluetooth_...),               //582 (0x246)  ROOT

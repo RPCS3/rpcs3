@@ -76,6 +76,7 @@
     </ClCompile>
     <ClCompile Include="Emu\cache_utils.cpp" />
     <ClCompile Include="Emu\Cell\ErrorCodes.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_bluetooth.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_game.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellMusicSelectionContext.cpp" />
     <ClCompile Include="Emu\Cell\Modules\libfs_utility_init.cpp" />
@@ -601,6 +602,7 @@
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClInclude>
     <ClInclude Include="Emu\cache_utils.hpp" />
+    <ClInclude Include="Emu\Cell\lv2\sys_bluetooth.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_crypto_engine.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_game.h" />
     <ClInclude Include="Emu\Cell\Modules\cellCrossController.h" />
