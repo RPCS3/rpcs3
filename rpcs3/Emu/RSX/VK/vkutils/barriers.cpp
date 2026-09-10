@@ -13,7 +13,8 @@ namespace vk
 		VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage,
 		VkAccessFlags src_mask, VkAccessFlags dst_mask,
 		const VkImageSubresourceRange& range,
-		bool preserve_renderpass)
+		bool preserve_renderpass,
+		VkFlags flags)
 	{
 		if (!preserve_renderpass && vk::is_renderpass_open(cmd))
 		{
@@ -31,7 +32,7 @@ namespace vk
 		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		barrier.subresourceRange = range;
 
-		vkCmdPipelineBarrier(cmd, src_stage, dst_stage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+		vkCmdPipelineBarrier(cmd, src_stage, dst_stage, flags, 0, nullptr, 0, nullptr, 1, &barrier);
 	}
 
 	void insert_buffer_memory_barrier(

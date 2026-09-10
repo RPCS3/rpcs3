@@ -88,7 +88,7 @@ namespace rsx
 			u16 blend_color_b = rsx::method_registers.blend_color_16b_b();
 			u16 blend_color_a = rsx::method_registers.blend_color_16b_a();
 
-			return { blend_color_r / 65535.f, blend_color_g / 65535.f, blend_color_b / 65535.f, blend_color_a / 65535.f };
+			return { decode_fp16(blend_color_r), decode_fp16(blend_color_g), decode_fp16(blend_color_b), decode_fp16(blend_color_a) };
 		}
 		else
 		{

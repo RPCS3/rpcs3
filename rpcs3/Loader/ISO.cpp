@@ -835,13 +835,20 @@ inline T retrieve_endian_int(const u8* buf)
 }
 
 // Assumed that directory entry is at file head
-static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, bool names_in_ucs2 = false)
+static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, bool& read_error, bool names_in_ucs2 = false)
 {
+	read_error = true;
 	const auto start_pos = entry.pos();
-	const u8 entry_length = entry.read<u8>();
+	u8 entry_length = 0;
+	if (!entry.read(entry_length))
+	{
+		return std::nullopt;
+	}
 
 	if (entry_length == 0)
 	{
+		// Zero marks sector padding, not an unreadable directory record.
+		read_error = false;
 		return std::nullopt;
 	}
 
@@ -870,7 +877,12 @@ static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, 
 #pragma pack(pop)
 	static_assert(sizeof(iso_entry_header) == 32);
 
-	const iso_entry_header header = entry.read<iso_entry_header>();
+	iso_entry_header header{};
+	if (entry_length < 1 + sizeof(header) || !entry.read(header)
+		|| header.file_name_length > entry_length - 1 - sizeof(header))
+	{
+		return std::nullopt;
+	}
 
 	const u32 start_sector = retrieve_endian_int<u32>(header.start_sector);
 	const u32 file_size = retrieve_endian_int<u32>(header.file_size);
@@ -940,6 +952,7 @@ static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, 
 	// Skip the rest of the entry
 	entry.seek(entry_length + start_pos);
 
+	read_error = false;
 	return iso_fs_metadata
 	{
 		.name = std::move(file_name),
@@ -976,13 +989,24 @@ static bool iso_form_hierarchy(fs::file& file, iso_fs_node& node, bool use_ucs2_
 
 	// Assuming the directory spans a single extent
 	const auto& directory_extent = ::at32(node.metadata.extents, 0);
-	const u64 end_pos = (directory_extent.start * ISO_SECTOR_SIZE) + directory_extent.size;
+	const u64 start_pos = directory_extent.start * ISO_SECTOR_SIZE;
+	const u64 size = file.size();
+	if (start_pos > size || directory_extent.size > size - start_pos)
+	{
+		return false;
+	}
+	const u64 end_pos = start_pos + directory_extent.size;
 
-	file.seek(directory_extent.start * ISO_SECTOR_SIZE);
+	file.seek(start_pos);
 
 	while (file.pos() < end_pos)
 	{
-		auto entry = iso_read_directory_entry(file, use_ucs2_decoding);
+		bool read_error = false;
+		auto entry = iso_read_directory_entry(file, read_error, use_ucs2_decoding);
+		if (read_error || file.pos() > end_pos)
+		{
+			return false;
+		}
 
 		if (!entry)
 		{
@@ -1053,7 +1077,12 @@ bool iso_parse_file_system(fs::file& file, iso_fs_node& root, const std::string&
 	{
 		const auto descriptor_start = file.pos();
 
-		descriptor_type = file.read<u8>();
+		if (!file.read(descriptor_type))
+		{
+			iso_log.error("iso_archive: Failed to read volume descriptor: '%s'", path);
+			invalidate();
+			return;
+		}
 
 		// 1 = primary vol descriptor, 2 = joliet SVD
 		if (descriptor_type == 1 || descriptor_type == 2)
@@ -1063,7 +1092,15 @@ bool iso_parse_file_system(fs::file& file, iso_fs_node& root, const std::string&
 			// Skip the rest of descriptor's data
 			file.seek(155, fs::seek_cur);
 
-			const auto node = iso_read_directory_entry(file, use_ucs2_decoding);
+			bool read_error = false;
+			const auto node = iso_read_directory_entry(iso_file, read_error, use_ucs2_decoding);
+
+      if (read_error)
+			{
+				iso_log.error("iso_archive: Failed to read root directory record: '%s'", path);
+				invalidate();
+				return;
+			}
 
 			if (node)
 			{
@@ -1272,7 +1309,15 @@ std::unique_ptr<fs::file_base> iso_archive::get_iso_file(const std::string& path
 
 std::unique_ptr<fs::file_base> iso_archive::open(const std::string& path)
 {
-	return get_iso_file(m_path, fs::read, *ensure(retrieve(path)));
+	const auto node = retrieve(path);
+
+	if (!node)
+	{
+		fs::g_tls_error = fs::error::noent;
+		return nullptr;
+	}
+
+	return get_iso_file(m_path, fs::read, *node);
 }
 
 psf::registry iso_archive::open_psf(const std::string& path)
@@ -1365,7 +1410,7 @@ u64 iso_file::local_extent_remaining(u64 pos) const
 {
 	const auto [local_pos, extent] = get_extent_pos(pos);
 
-	return extent.size - local_pos;
+	return local_pos < extent.size ? extent.size - local_pos : 0;
 }
 
 u64 iso_file::local_extent_size(u64 pos) const
