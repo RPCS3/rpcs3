@@ -10,6 +10,7 @@ public:
 	virtual ~games_config();
 
 	void set_save_on_dirty(bool enabled) { m_save_on_dirty = enabled; }
+	bool is_save_on_dirty() const { return m_save_on_dirty; }
 
 	const std::map<std::string, std::string> get_games() const;
 	bool is_dirty() const { return m_dirty; }

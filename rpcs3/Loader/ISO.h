@@ -15,6 +15,9 @@ void unload_iso();
 
 constexpr u64 ISO_SECTOR_SIZE = 2048;
 
+// The first 16 sectors are the system area (boot data): the volume descriptors always start right after it (ECMA-119)
+constexpr u64 ISO_DESCRIPTORS_OFFSET = ISO_SECTOR_SIZE * 16;
+
 /*
 - Hijacked the "iso_archive::iso_archive" method to test if the ".iso" file is encrypted and sets a flag.
   The flag is set according to the first matching encryption type found following the order below:
