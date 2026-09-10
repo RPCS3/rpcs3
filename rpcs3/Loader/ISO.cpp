@@ -840,6 +840,7 @@ static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, 
 	read_error = true;
 	const auto start_pos = entry.pos();
 	u8 entry_length = 0;
+
 	if (!entry.read(entry_length))
 	{
 		return std::nullopt;
@@ -878,6 +879,7 @@ static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, 
 	static_assert(sizeof(iso_entry_header) == 32);
 
 	iso_entry_header header{};
+
 	if (entry_length < 1 + sizeof(header) || !entry.read(header)
 		|| header.file_name_length > entry_length - 1 - sizeof(header))
 	{
@@ -991,10 +993,12 @@ static bool iso_form_hierarchy(fs::file& file, iso_fs_node& node, bool use_ucs2_
 	const auto& directory_extent = ::at32(node.metadata.extents, 0);
 	const u64 start_pos = directory_extent.start * ISO_SECTOR_SIZE;
 	const u64 size = file.size();
+
 	if (start_pos > size || directory_extent.size > size - start_pos)
 	{
 		return false;
 	}
+
 	const u64 end_pos = start_pos + directory_extent.size;
 
 	file.seek(start_pos);
@@ -1003,6 +1007,7 @@ static bool iso_form_hierarchy(fs::file& file, iso_fs_node& node, bool use_ucs2_
 	{
 		bool read_error = false;
 		auto entry = iso_read_directory_entry(file, read_error, use_ucs2_decoding);
+
 		if (read_error || file.pos() > end_pos)
 		{
 			return false;
@@ -1079,9 +1084,8 @@ bool iso_parse_file_system(fs::file& file, iso_fs_node& root, const std::string&
 
 		if (!file.read(descriptor_type))
 		{
-			iso_log.error("iso_archive: Failed to read volume descriptor: '%s'", path);
-			invalidate();
-			return;
+			iso_log.error("iso_parse_file_system: Failed to read volume descriptor: '%s'", path);
+			return false;
 		}
 
 		// 1 = primary vol descriptor, 2 = joliet SVD
@@ -1093,13 +1097,12 @@ bool iso_parse_file_system(fs::file& file, iso_fs_node& root, const std::string&
 			file.seek(155, fs::seek_cur);
 
 			bool read_error = false;
-			const auto node = iso_read_directory_entry(iso_file, read_error, use_ucs2_decoding);
+			const auto node = iso_read_directory_entry(file, read_error, use_ucs2_decoding);
 
-      if (read_error)
+			if (read_error)
 			{
-				iso_log.error("iso_archive: Failed to read root directory record: '%s'", path);
-				invalidate();
-				return;
+				iso_log.error("iso_parse_file_system: Failed to read root directory record: '%s'", path);
+				return false;
 			}
 
 			if (node)

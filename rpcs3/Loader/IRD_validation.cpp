@@ -22,6 +22,10 @@ LOG_CHANNEL(sys_log, "VALIDATION");
 // is fully determined by the id of the game (see "check_content")
 static const std::string s_lic_dat_path = "/PS3_GAME/LICDIR/LIC.DAT";
 
+// Folder holding the firmware update of a PS3 disc. A rip regularly leaves it out, and the update is not part
+// of the game, so a game missing nothing else still is a valid one
+static const std::string s_update_dir_path = "/PS3_UPDATE/";
+
 // Rebuilds the "LIC.DAT" file of a game the very same way the dumping tools do, so that a folder missing it (or
 // holding a stripped one) can still be validated against the disc without writing anything to the drive
 static std::vector<u8> generate_lic_dat(const std::string& game_id)
@@ -505,6 +509,10 @@ disc_check_status content_validation::check_ird_content(const std::string& game_
 			break;
 		case disc_file_status::MISSING:
 			report.missing++;
+			if (disc_file->path.starts_with(s_update_dir_path))
+			{
+				report.missing_update++;
+			}
 			break;
 		case disc_file_status::NOT_REQUIRED:
 			break;
@@ -526,7 +534,11 @@ disc_check_status content_validation::check_ird_content(const std::string& game_
 		report.entries.push_back(disc_file_entry{content_file.path, content_file.size, disc_file_status::NOT_REQUIRED});
 	}
 
-	report.status = (report.mismatched || report.missing) ? disc_check_status::FAILED : disc_check_status::PASSED;
+	// A game the firmware update of its disc was left out of is still a valid one, so those missing files alone
+	// do not make the check fail (an update whose content differs from the one of the disc does, since that is a
+	// file the game actually holds and the drive gives back damaged)
+	report.status = (report.mismatched || report.missing > report.missing_update) ?
+		disc_check_status::FAILED : disc_check_status::PASSED;
 
 	const auto ms = [](auto from, auto to) { return std::chrono::duration_cast<std::chrono::milliseconds>(to - from).count(); };
 

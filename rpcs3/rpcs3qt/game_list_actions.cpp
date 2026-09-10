@@ -649,18 +649,8 @@ void game_list_actions::ShowIrdIntegrityDialog(const std::string& game_path)
 				info_dialog = false;
 			}
 
-			// A rip regularly leaves out the firmware update the disc holds: it does not belong to the game, so
-			// telling it apart from a game file spares the user the hunt through the list of the details
-			bool game_data_matches = report.status == disc_check_status::FAILED;
-
 			for (const disc_file_entry& entry : report.entries)
 			{
-				if ((entry.status == disc_file_status::MISMATCH || entry.status == disc_file_status::MISSING) &&
-					!entry.path.starts_with("/PS3_UPDATE/"))
-				{
-					game_data_matches = false;
-				}
-
 				switch (entry.status)
 				{
 				case disc_file_status::MATCH:
@@ -672,6 +662,14 @@ void game_list_actions::ShowIrdIntegrityDialog(const std::string& game_path)
 					text_details += tr("[INVALID] %0\n").arg(QString::fromStdString(entry.path));
 					break;
 				case disc_file_status::MISSING:
+					// The firmware update a rip left out is the one missing file a check survives, so it is not worth
+					// a line of its own: the note below is what tells the user about it, and nothing else being wrong
+					// there is no list of files to go through
+					if (report.status == disc_check_status::PASSED)
+					{
+						continue;
+					}
+
 					text_details += tr("[MISSING] %0\n").arg(QString::fromStdString(entry.path));
 					break;
 				case disc_file_status::NOT_REQUIRED:
@@ -686,10 +684,11 @@ void game_list_actions::ShowIrdIntegrityDialog(const std::string& game_path)
 					"a firmware update not padded to its size on the disc)").arg(report.rebuilt);
 			}
 
-			if (game_data_matches)
+			// A rip regularly leaves out the firmware update the disc holds: it does not belong to the game, so the
+			// check passes all the same, and this is what tells the user why it did despite the count above
+			if (report.missing_update && report.status == disc_check_status::PASSED)
 			{
-				text_result += tr("\n\nNOTE: only the firmware update of the disc is missing or invalid: the data of the "
-					"game itself fully matches the disc");
+				text_result += tr("\n\nNOTE: only the optional firmware update is missing. All the game data matches the disc");
 			}
 
 			break;

@@ -26,8 +26,8 @@ struct disc_file_entry
 // Enum returned by validating the content of a game against an IRD file
 enum class disc_check_status
 {
-	PASSED,               // Every file the IRD lists is there and matches
-	FAILED,               // At least one file is missing or does not match
+	PASSED,               // Every file the IRD lists is there and matches, the firmware update aside
+	FAILED,               // At least one file of the game is missing or does not match
 	ABORTED,              // Validation aborted by the user
 	ERROR_NOT_A_PS3_GAME, // No "PS3_GAME/PARAM.SFO" file found
 	ERROR_OPENING_ISO,    // The ISO file could not be opened or recognized
@@ -56,11 +56,12 @@ struct disc_check_report
 	std::string ird_app_version;   // APP_VER of the disc
 	std::string ird_update_version;// PS3_SYSTEM_VER of the disc
 
-	u32 matched = 0;      // Files matching the disc (rebuilt ones included)
-	u32 rebuilt = 0;      // Files matching the disc only once rebuilt
-	u32 mismatched = 0;   // Files whose content differs from the one of the disc
-	u32 missing = 0;      // Files of the disc the game does not hold
-	u32 not_required = 0; // Files of the game the disc does not hold
+	u32 matched = 0;        // Files matching the disc (rebuilt ones included)
+	u32 rebuilt = 0;        // Files matching the disc only once rebuilt
+	u32 mismatched = 0;     // Files whose content differs from the one of the disc
+	u32 missing = 0;        // Files of the disc the game does not hold
+	u32 missing_update = 0; // Of those, the ones belonging to the firmware update of the disc
+	u32 not_required = 0;   // Files of the game the disc does not hold
 
 	std::vector<disc_file_entry> entries; // Only the files needing the attention of the user
 };
