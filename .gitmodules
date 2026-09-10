@@ -112,3 +112,7 @@
 	path = 3rdparty/protobuf/protobuf
 	url = ../../protocolbuffers/protobuf.git
 	ignore = dirty
+[submodule "3rdparty/libchdr/libchdr"]
+	path = 3rdparty/libchdr/libchdr
+	url = ../../rtissera/libchdr.git
+	ignore = dirty
