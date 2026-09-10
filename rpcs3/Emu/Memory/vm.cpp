@@ -2454,6 +2454,12 @@ namespace vm
 	}
 }
 
+template <>
+void fmt_class_string<vm::addr_t>::format(std::string& out, u64 arg)
+{
+	fmt_class_string<u32>::format(out, arg);
+}
+
 void fmt_class_string<vm::_ptr_base<const void, u32>>::format(std::string& out, u64 arg)
 {
 	fmt_class_string<u32>::format(out, arg);
