@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include "ISO.h"
+#include "CHD.h"
 #include "Emu/VFS.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/System.h"
@@ -58,6 +59,27 @@ static void* get_aligned_buf()
 	return ensure(s_aligned_buf.buf);
 }
 
+static std::shared_ptr<fs::file> open_iso_source(const std::string& path, bool raw_device, bool* is_chd = nullptr)
+{
+	fs::file file(path);
+	if (is_chd)
+	{
+		*is_chd = false;
+	}
+	if (file && !raw_device)
+	{
+		if (is_chd_image(file))
+		{
+			if (is_chd)
+			{
+				*is_chd = true;
+			}
+			file = fs::file(open_chd_image(std::move(file), path));
+		}
+	}
+	return std::make_shared<fs::file>(std::move(file));
+}
+
 static bool is_iso_file(iso_file& file, u64* size = nullptr)
 {
 	// The standard identifier ("CD001") follows the type of the first volume descriptor
@@ -110,7 +132,8 @@ bool is_iso_file(const std::string& path, u64* size, bool* is_raw_device)
 		*is_raw_device = raw_device;
 	}
 
-	iso_file file(new_path);
+	auto source = open_iso_source(new_path, raw_device);
+	iso_file file(source, raw_device, { .name = new_path, .extents = {{0, *source ? source->size() : 0}} });
 
 	return is_iso_file(file, size);
 }
@@ -1060,7 +1083,8 @@ iso_archive::iso_archive(const std::string& path)
 
 	// "m_path" is updated with the raw device path in case "path" points to a BD drive
 	m_raw_device = fs::get_optical_raw_device(path, &m_path);
-	m_source = std::make_shared<fs::file>(m_path);
+	bool is_chd = false;
+	m_source = open_iso_source(m_path, m_raw_device, &is_chd);
 	::iso_file probe(m_source, m_raw_device, { .name = m_path, .extents = {{0, *m_source ? m_source->size() : 0}} });
 
 	// Recognize and parse the same opened source, including optical drives.
@@ -1138,6 +1162,19 @@ iso_archive::iso_archive(const std::string& path)
 
 	// Only when the archive object is fully set, we can finally initialize the decryption object needing the archive object
 	m_dec = std::make_shared<iso_file_decryption>();
+
+	if (is_chd)
+	{
+		// CHDs expose decrypted bytes. Never activate decryption from a sidecar key.
+		std::array<char, 16> watermark{};
+		if (m_source->read_at(0xF70, watermark.data(), watermark.size()) != watermark.size()
+			|| std::memcmp(watermark.data(), "Encrypted 3K BLD", 16) == 0)
+		{
+			iso_log.error("iso_archive: Encrypted or unreadable CHD is unsupported: '%s'", path);
+			invalidate();
+		}
+		return;
+	}
 
 	if (!m_dec->init(m_path, this))
 	{
