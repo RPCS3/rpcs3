@@ -1489,6 +1489,9 @@
     <ClCompile Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture_game_info.cpp">
       <Filter>Emu\GPU\RSX\Overlays\BigPicture</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Cell\lv2\sys_bluetooth.cpp">
+      <Filter>Emu\Cell\lv2</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">
@@ -2566,6 +2569,9 @@
     <ClInclude Include="Emu\Cell\lv2\sys_game.h">
       <Filter>Emu\Cell\lv2</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Cell\lv2\sys_bluetooth.h">
+      <Filter>Emu\Cell\lv2</Filter>
+    </ClInclude>
     <ClInclude Include="util\video_provider.h">
       <Filter>Utilities</Filter>
     </ClInclude>
@@ -3000,6 +3006,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture_game_info.h">
       <Filter>Emu\GPU\RSX\Overlays\BigPicture</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\lv2\sys_bluetooth.h">
+      <Filter>Emu\Cell\lv2</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
