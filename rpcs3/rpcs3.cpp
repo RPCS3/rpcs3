@@ -1373,7 +1373,10 @@ int run_rpcs3(int argc, char** argv)
 	}
 	else if (!g_headless && g_cfg.misc.start_big_picture_mode)
 	{
-		Emu.BootBigPictureMode();
+		Emu.CallFromMainThread([]()
+		{
+			Emu.BootBigPictureMode();
+		});
 	}
 
 	// run event loop (maybe only needed for the gui application)
