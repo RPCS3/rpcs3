@@ -26,10 +26,10 @@ R"(
 #ifdef _ENABLE_ALPHA_TEST
 	// TODO: Verify that alpha test actually runs on quantized output!
 	// Behavior was inferred from game observations but real tests will be needed here.
-#if _MRT_BUFFERS_COUNT >= 1
+#if _MRT_BUFFERS_COUNT >= 1 || !defined(_ENABLE_ROP_OUTPUT_ROUNDING)
   #define _alpha_quantize(v) v
 #else
-  #define _alpha_quantize(v) round_to_8bit(v)
+  #define _alpha_quantize(v) round_to_8bit(float(v))
 #endif // _MRT_BUFFERS_COUNT
 	const uint alpha_func = _get_bits(rop_control, ALPHA_TEST_FUNC_OFFSET, ALPHA_TEST_FUNC_LENGTH);
 	if (!comparison_passes(_alpha_quantize(col0.a), alpha_ref, alpha_func))
