@@ -789,6 +789,9 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 
 VKGSRender::~VKGSRender()
 {
+	// Force-release ZCULL-ctrl since it is a pointer to self.
+	zcull_ctrl.release();
+
 	if (m_device == VK_NULL_HANDLE)
 	{
 		//Initialization failed
