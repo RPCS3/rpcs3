@@ -450,8 +450,8 @@ namespace gcm
 		RSX_SHADER_CONTROL_USED_REGS_MASK           = 0x0000000f,
 		RSX_SHADER_CONTROL_USED_TEMP_REGS_MASK      = 0xff000000,
 
-		RSX_SHADER_CONTROL_USES_KIL                 = 0x00000080,   // program uses KIL op
-		RSX_SHADER_CONTROL_UNKNOWN0                 = 0x00000400,  // seemingly always set
+		RSX_SHADER_CONTROL_USES_KIL                 = 0x00000080, // program uses KIL op
+		RSX_SHADER_CONTROL_UNKNOWN0                 = 0x00000400, // seemingly always set
 		RSX_SHADER_CONTROL_UNKNOWN1                 = 0x00008000, // seemingly set when srgb packer is used??
 
 		// Custom
@@ -472,12 +472,14 @@ namespace gcm
 
 		RSX_SHADER_CONTROL_TEXTURE_FORMAT_CONVERT   = 0x04000000, // Allow format conversions (BX2, SNORM, SRGB, RENORM)
 		RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE    = 0x08000000, // Emulate depth comparisons
-		RSX_SHADER_CONTROL_MULTISAMPLED_ZBUFFER     = 0x10000000, // Z buffer is multisampled. Only affects depth comparison behavior at this time.
 
+		RSX_SHADER_CONTROL_ROP_MULTISAMPLED         = 0x10000000, // ROP outputs are multisampled
 		RSX_SHADER_CONTROL_ROP_OUTPUT_REMAP         = 0x20000000, // ROP outputs need channel swizzles.
+		RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING    = 0x40000000, // Enable programmable blending.
 
 		// Meta
-		RSX_SHADER_CONTROL_META_USES_DISCARD       = (RSX_SHADER_CONTROL_USES_KIL | RSX_SHADER_CONTROL_TEXTURE_ALPHA_KILL | RSX_SHADER_CONTROL_ALPHA_TEST | RSX_SHADER_CONTROL_POLYGON_STIPPLE | RSX_SHADER_CONTROL_ALPHA_TO_COVERAGE)
+		RSX_SHADER_CONTROL_META_USES_DISCARD       = (RSX_SHADER_CONTROL_USES_KIL | RSX_SHADER_CONTROL_TEXTURE_ALPHA_KILL | RSX_SHADER_CONTROL_ALPHA_TEST | RSX_SHADER_CONTROL_POLYGON_STIPPLE | RSX_SHADER_CONTROL_ALPHA_TO_COVERAGE),
+		RSX_SHADER_CONTROL_META_GCM_FLAGS_MASK     = 0x000007ff, // Reserved range for GCM flags. We don't care about most GCM-specific flags.
 	};
 
 	// GCM Reports

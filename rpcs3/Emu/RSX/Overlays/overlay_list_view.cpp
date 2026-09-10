@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "overlay_list_view.hpp"
-#include "Emu/system_config.h"
 
 namespace rsx
 {
@@ -31,16 +30,8 @@ namespace rsx
 			m_accept_btn->set_size(120, 30);
 			m_cancel_btn->set_size(120, 30);
 
-			if (g_cfg.sys.enter_button_assignment == enter_button_assign::circle)
-			{
-				m_accept_btn->set_image_resource(resource_config::standard_image_resource::circle);
-				m_cancel_btn->set_image_resource(resource_config::standard_image_resource::cross);
-			}
-			else
-			{
-				m_accept_btn->set_image_resource(resource_config::standard_image_resource::cross);
-				m_cancel_btn->set_image_resource(resource_config::standard_image_resource::circle);
-			}
+			m_accept_btn->set_image_resource(resource_config::confirm_button_resource());
+			m_cancel_btn->set_image_resource(resource_config::cancel_button_resource());
 
 			m_scroll_indicator->set_pos(width - 7, 0);
 			m_accept_btn->set_pos(30, height + 20);

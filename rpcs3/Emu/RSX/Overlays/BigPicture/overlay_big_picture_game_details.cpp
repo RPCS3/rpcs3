@@ -33,12 +33,12 @@ namespace rsx
 			m_info_text.set_wrap_text(true);
 			m_info_text.set_size(width - 80, 200);
 
-			m_start_btn.set_image_resource(resource_config::standard_image_resource::cross);
+			m_start_btn.set_image_resource(resource_config::confirm_button_resource());
 			m_start_btn.set_text(localized_string_id::BIG_PICTURE_GAME_DETAILS_START);
 			m_start_btn.set_font("Arial", 16);
 			m_start_btn.set_pos(x + 40, y + height - 80);
 
-			m_back_hint.set_image_resource(resource_config::standard_image_resource::circle);
+			m_back_hint.set_image_resource(resource_config::cancel_button_resource());
 			m_back_hint.set_text(localized_string_id::BIG_PICTURE_HINT_BACK);
 			m_back_hint.set_font("Arial", 16);
 			m_back_hint.set_pos(x + 40 + 120 + 20, y + height - 80);

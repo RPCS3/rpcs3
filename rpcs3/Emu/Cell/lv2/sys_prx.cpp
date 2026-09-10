@@ -324,7 +324,7 @@ std::function<void(void*)> lv2_prx::load(utils::serial& ar)
 	const u32 state{ar};
 
 	usz seg_count = 0;
-	ar.deserialize_vle(seg_count);
+	ar.deserialize_vle<9>(seg_count);
 
 	shared_ptr<lv2_prx> prx;
 

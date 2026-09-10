@@ -1333,7 +1333,7 @@
     <ClCompile Include="Emu\RSX\gcm_printing.cpp">
       <Filter>Emu\GPU\RSX\Utils</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\rsx_utils.cpp">
+    <ClCompile Include="Emu\RSX\Utils\rsx_utils.cpp">
       <Filter>Emu\GPU\RSX\Utils</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\rsx_vertex_data.cpp">
@@ -2800,9 +2800,6 @@
     <ClInclude Include="Emu\RSX\gcm_printing.h">
       <Filter>Emu\GPU\RSX\Utils</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\rsx_utils.h">
-      <Filter>Emu\GPU\RSX\Utils</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\RSX\rsx_vertex_data.h">
       <Filter>Emu\GPU\RSX\Host Mini-Driver</Filter>
     </ClInclude>
@@ -2830,7 +2827,16 @@
     <ClInclude Include="Emu\RSX\display.h">
       <Filter>Emu\GPU\RSX\Utils</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\color_utils.h">
+    <ClInclude Include="Emu\RSX\Utils\algorithm.hpp">
+      <Filter>Emu\GPU\RSX\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Utils\color_utils.hpp">
+      <Filter>Emu\GPU\RSX\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Utils\image_utils.hpp">
+      <Filter>Emu\GPU\RSX\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Utils\rsx_utils.h">
       <Filter>Emu\GPU\RSX\Utils</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Host\RSXDMAWriter.h">
