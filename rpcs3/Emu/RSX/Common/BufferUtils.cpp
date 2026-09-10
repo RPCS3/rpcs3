@@ -6,6 +6,10 @@
 #include "util/v128.hpp"
 #include "util/simd.hpp"
 
+#if defined(ARCH_X64)
+#include "BufferUtils_avx512.h"
+#endif
+
 #if !defined(_MSC_VER)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
@@ -412,6 +416,15 @@ namespace
 		}
 	};
 
+	using upload_skip_restart_u16 = std::tuple<u16, u16, u32>(*)(std::span<to_be_t<const u16>> src, std::span<u16> dst, u16 restart_index);
+	using upload_skip_restart_u32 = std::tuple<u32, u32, u32>(*)(std::span<to_be_t<const u32>> src, std::span<u32> dst, u32 restart_index);
+
+	struct upload_untouched_skip_restart_dispatch
+	{
+		upload_skip_restart_u16 u16 = nullptr;
+		upload_skip_restart_u32 u32 = nullptr;
+	};
+
 	template <typename T>
 	NEVER_INLINE std::tuple<T, T, u32> upload_untouched_skip_restart(std::span<to_be_t<const T>> src, std::span<T> dst, T restart_index)
 	{
@@ -431,6 +444,42 @@ namespace
 
 		return std::make_tuple(min_index, max_index, written);
 	}
+
+	const upload_untouched_skip_restart_dispatch s_generic_upload_untouched_skip_restart_dispatch =
+	{
+		upload_untouched_skip_restart<u16>,
+		upload_untouched_skip_restart<u32>,
+	};
+
+#if defined(ARCH_X64)
+	const upload_untouched_skip_restart_dispatch s_avx512_upload_untouched_skip_restart_dispatch =
+	{
+		upload_untouched_skip_restart<u16>,
+		upload_u32_swapped_avx3_skip_restart,
+	};
+
+	const upload_untouched_skip_restart_dispatch s_avx512_icl_upload_untouched_skip_restart_dispatch =
+	{
+		upload_u16_swapped_avx512_icl_skip_restart,
+		upload_u32_swapped_avx3_skip_restart,
+	};
+#endif
+
+	static const upload_untouched_skip_restart_dispatch& s_upload_untouched_skip_restart_dispatch = []() -> const upload_untouched_skip_restart_dispatch&
+	{
+#if defined(ARCH_X64)
+		if (utils::has_avx512_icl())
+		{
+			return s_avx512_icl_upload_untouched_skip_restart_dispatch;
+		}
+
+		if (utils::has_avx512())
+		{
+			return s_avx512_upload_untouched_skip_restart_dispatch;
+		}
+#endif
+		return s_generic_upload_untouched_skip_restart_dispatch;
+	}();
 
 	template<typename T, typename U = remove_be_t<T>>
 		requires std::is_same_v<U, u32> || std::is_same_v<U, u16>
@@ -452,7 +501,14 @@ namespace
 
 		if (is_primitive_disjointed(draw_mode))
 		{
-			return upload_untouched_skip_restart(src, dst, static_cast<U>(primitive_restart_index));
+			if constexpr (std::is_same_v<T, u16>)
+			{
+				return s_upload_untouched_skip_restart_dispatch.u16(src, dst, static_cast<U>(primitive_restart_index));
+			}
+			else
+			{
+				return s_upload_untouched_skip_restart_dispatch.u32(src, dst, static_cast<U>(primitive_restart_index));
+			}
 		}
 
 		return primitive_restart_impl::upload_untouched(src, dst, static_cast<U>(primitive_restart_index));
