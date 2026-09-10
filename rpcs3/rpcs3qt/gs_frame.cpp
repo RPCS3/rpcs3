@@ -16,7 +16,8 @@
 #include "Emu/Cell/Modules/cellAudio.h"
 #include "Emu/Cell/lv2/sys_rsxaudio.h"
 #include "Emu/RSX/RSXThread.h"
-#include "Emu/RSX/rsx_utils.h"
+#include "Emu/RSX/Utils/image_utils.hpp"
+#include "Emu/RSX/Utils/rsx_utils.h"
 #include "Emu/RSX/Overlays/overlay_message.h"
 #include "Emu/Io/interception.h"
 #include "Emu/Io/recording_config.h"
@@ -722,7 +723,7 @@ void gs_frame::show()
 		{
 			setVisibility(FullScreen);
 		}
-		else if (const QVariant var = m_gui_settings->GetValue(gui::gs_visibility); var.canConvert<QString>())
+		else if (const QVariant var = m_gui_settings->GetValue(gui::gs_visibility); var.canConvert<QString>() && !m_gui_settings->GetValue(gui::gs_resize).toBool())
 		{
 			// Restore saved visibility from last time. Make sure not to hide the window, or the user can't access it anymore.
 			if (const Visibility visibility = gui::string_to_visibility(var.value<QString>()); visibility != Visibility::Hidden)

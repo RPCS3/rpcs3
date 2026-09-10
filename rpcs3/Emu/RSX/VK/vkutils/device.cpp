@@ -35,6 +35,7 @@ namespace vk
 		VkPhysicalDeviceBorderColorSwizzleFeaturesEXT border_color_swizzle_info{};
 		VkPhysicalDeviceFaultFeaturesEXT device_fault_info{};
 		VkPhysicalDeviceMultiDrawFeaturesEXT multidraw_info{};
+		VkPhysicalDeviceProvokingVertexFeaturesEXT provoking_vertex_info{};
 
 		// Core features
 		shader_support_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES;
@@ -88,6 +89,13 @@ namespace vk
 			features2.pNext      = &multidraw_info;
 		}
 
+		if (device_extensions.is_supported(VK_EXT_PROVOKING_VERTEX_EXTENSION_NAME))
+		{
+			provoking_vertex_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROVOKING_VERTEX_FEATURES_EXT;
+			provoking_vertex_info.pNext = features2.pNext;
+			features2.pNext             = &provoking_vertex_info;
+		}
+
 		vkGetPhysicalDeviceFeatures2(dev, &features2);
 
 		shader_types_support.allow_float64 = !!features2.features.shaderFloat64;
@@ -104,6 +112,7 @@ namespace vk
 		optional_features_support.barycentric_coords  = !!shader_barycentric_info.fragmentShaderBarycentric;
 		optional_features_support.framebuffer_loops   = !!fbo_loops_info.attachmentFeedbackLoopLayout;
 		optional_features_support.extended_device_fault = !!device_fault_info.deviceFault;
+		optional_features_support.provoking_vertex_last = !!provoking_vertex_info.provokingVertexLast;
 
 		features = features2.features;
 
@@ -561,6 +570,11 @@ namespace vk
 		{
 			requested_extensions.push_back(VK_EXT_DEVICE_FAULT_EXTENSION_NAME);
 		}
+
+		if (pgpu->optional_features_support.provoking_vertex_last)
+		{
+			requested_extensions.push_back(VK_EXT_PROVOKING_VERTEX_EXTENSION_NAME);
+		}
 		
 #ifdef __APPLE__
 		if (pgpu->optional_features_support.portability)
@@ -803,6 +817,15 @@ namespace vk
 			shader_barycentric_info.pNext = const_cast<void*>(device.pNext);
 			shader_barycentric_info.fragmentShaderBarycentric = VK_TRUE;
 			device.pNext = &shader_barycentric_info;
+		}
+
+		VkPhysicalDeviceProvokingVertexFeaturesEXT provoking_vertex_info{};
+		if (pgpu->optional_features_support.provoking_vertex_last)
+		{
+			provoking_vertex_info.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROVOKING_VERTEX_FEATURES_EXT;
+			provoking_vertex_info.pNext = const_cast<void*>(device.pNext);
+			provoking_vertex_info.provokingVertexLast = VK_TRUE;
+			device.pNext = &provoking_vertex_info;
 		}
 
 		if (auto error = vkCreateDevice(*pgpu, &device, nullptr, &dev))

@@ -185,7 +185,7 @@ u64 memory_viewer_panel::OnSearch(std::string wstr, u32 mode)
 
 	vm::writer_lock rlock;
 
-	const named_thread_group workers("Memory Searcher "sv, max_threads, [&]()
+	map_workload("Memory Searcher "sv, max_threads, [&]()
 	{
 		if (mode == as_inst || mode == as_fake_spu_inst || mode == as_regex_inst || mode == as_regex_fake_spu_inst)
 		{
@@ -447,8 +447,6 @@ u64 memory_viewer_panel::OnSearch(std::string wstr, u32 mode)
 
 		found += local_found;
 	});
-
-	workers.join();
 
 	return found;
 }

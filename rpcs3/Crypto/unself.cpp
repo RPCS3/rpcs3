@@ -323,7 +323,7 @@ void supplemental_header::Show() const
 		self_log.notice("Version: 0x%08x", PS3_npdrm_header.npd.version);
 		self_log.notice("License: 0x%08x", PS3_npdrm_header.npd.license);
 		self_log.notice("Type: 0x%08x", PS3_npdrm_header.npd.type);
-		self_log.notice("ContentID: %s", PS3_npdrm_header.npd.content_id);
+		self_log.notice("ContentID: %s", PS3_npdrm_header.npd.get_content_id());
 		self_log.notice("Digest: %s", PS3_npdrm_header.npd.digest);
 		self_log.notice("Inverse digest: %s", PS3_npdrm_header.npd.title_hash);
 		self_log.notice("XOR digest: %s", PS3_npdrm_header.npd.dev_hash);
@@ -627,7 +627,20 @@ bool SCEDecrypter::LoadMetadata(const u8 erk[32], const u8 riv[16])
 {
 	aes_context aes;
 	std::vector<u8> metadata_info(sizeof(meta_info));
-	std::vector<u8> metadata_headers(sce_hdr.se_hsize - (sizeof(sce_hdr) + sce_hdr.se_meta + sizeof(meta_info)));
+	constexpr usz sizeof_meta_and_header = sizeof(meta_info) + sizeof(sce_hdr);
+	const usz metadata_offset = static_cast<usz>(sce_hdr.se_meta);
+
+	if (metadata_offset > usz{umax} - sizeof_meta_and_header ||
+		sce_hdr.se_hsize < sizeof_meta_and_header + metadata_offset ||
+		sce_hdr.se_hsize - (sizeof_meta_and_header + metadata_offset) < sizeof(meta_hdr) ||
+		sce_hdr.se_hsize > sce_f.size())
+	{
+		self_log.error("Invalid SCE metadata header size!");
+		return false;
+	}
+
+	const usz metadata_headers_offset = sizeof_meta_and_header + metadata_offset;
+	std::vector<u8> metadata_headers(sce_hdr.se_hsize - metadata_headers_offset);
 
 	// Locate and read the encrypted metadata info.
 	sce_f.seek(sce_hdr.se_meta + sizeof(sce_hdr));
@@ -1065,7 +1078,7 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 	if (npd->license == 1)  // Network license.
 	{
 		// Try to find a RAP file to get the key.
-		if (!GetKeyFromRap(npd->content_id, npdrm_key))
+		if (!GetKeyFromRap(npd->get_content_id(), npdrm_key))
 		{
 			self_log.error("Can't decrypt network NPDRM!");
 			return false;
@@ -1074,7 +1087,7 @@ bool SELFDecrypter::DecryptNPDRM(u8 *metadata, u32 metadata_size)
 	else if (npd->license == 2)  // Local license.
 	{
 		// Try to find a RAP file to get the key.
-		if (!GetKeyFromRap(npd->content_id, npdrm_key))
+		if (!GetKeyFromRap(npd->get_content_id(), npdrm_key))
 		{
 			self_log.error("Can't find RAP file for NPDRM decryption!");
 			return false;
@@ -1123,7 +1136,20 @@ bool SELFDecrypter::LoadMetadata(const u8* klic_key)
 {
 	aes_context aes;
 	std::vector<u8> metadata_info(sizeof(meta_info));
-	std::vector<u8> metadata_headers(sce_hdr.se_hsize - (sizeof(sce_hdr) + sce_hdr.se_meta + sizeof(meta_info)));
+	constexpr usz sizeof_meta_and_header = sizeof(meta_info) + sizeof(sce_hdr);
+	const usz metadata_offset = static_cast<usz>(sce_hdr.se_meta);
+
+	if (metadata_offset > usz{umax} - sizeof_meta_and_header ||
+		sce_hdr.se_hsize < sizeof_meta_and_header + metadata_offset ||
+		sce_hdr.se_hsize - (sizeof_meta_and_header + metadata_offset) < sizeof(meta_hdr) ||
+		sce_hdr.se_hsize > self_f.size())
+	{
+		self_log.error("Invalid SELF metadata header size!");
+		return false;
+	}
+
+	const usz metadata_headers_offset = sizeof_meta_and_header + metadata_offset;
+	std::vector<u8> metadata_headers(sce_hdr.se_hsize - metadata_headers_offset);
 
 	// Locate and read the encrypted metadata info.
 	self_f.seek(sce_hdr.se_meta + sizeof(sce_hdr));
@@ -1283,14 +1309,13 @@ fs::file SELFDecrypter::MakeElf(bool isElf32)
 	return e;
 }
 
-bool SELFDecrypter::GetKeyFromRap(const char* content_id, u8* npdrm_key)
+bool SELFDecrypter::GetKeyFromRap(std::string_view content_id, u8* npdrm_key)
 {
 	// Set empty RAP key.
 	std::array<u8, 0x10> rap_key {};
 
 	// Try to find a matching RAP file under exdata folder.
-	const std::string ci_str = content_id;
-	const std::string rap_path = rpcs3::utils::get_rap_file_path(ci_str);
+	const std::string rap_path = rpcs3::utils::get_rap_file_path(content_id);
 
 	// Open the RAP file and read the key.
 	const fs::file rap_file(rap_path);
@@ -1303,7 +1328,7 @@ bool SELFDecrypter::GetKeyFromRap(const char* content_id, u8* npdrm_key)
 		return false;
 	}
 
-	self_log.notice("Loading RAP file %s.rap", ci_str);
+	self_log.notice("Loading RAP file %s.rap", content_id);
 
 	if (rap_file.read(rap_key.data(), rap_key.size()) != rap_key.size())
 	{

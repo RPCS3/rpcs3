@@ -1333,13 +1333,13 @@ error_code cellRecClose(s32 isDiscard)
 				rec.sink->stop(true);
 			}
 
-			if (fs::is_file(rec.param.filename))
+			if (const std::string local_path = vfs::get(rec.param.filename); fs::is_file(local_path))
 			{
 				cellRec.warning("cellRecClose: removing discarded recording '%s'", rec.param.filename);
 
-				if (!fs::remove_file(rec.param.filename))
+				if (!fs::remove_file(local_path))
 				{
-					cellRec.error("cellRecClose: failed to remove recording '%s'", rec.param.filename);
+					cellRec.error("cellRecClose: failed to remove recording '%s' (%s)", rec.param.filename, fs::g_tls_error);
 				}
 			}
 		}

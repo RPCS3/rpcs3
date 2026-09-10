@@ -2,18 +2,18 @@
 
 #include "game_list.h"
 #include "game_list_actions.h"
+#include "gui_game_info.h"
 #include "custom_dock_widget.h"
 #include "content_integrity.h"
 
-#include "Utilities/lockless.h"
-#include "Utilities/mutex.h"
 #include "util/auto_typemap.hpp"
 #include "Emu/config_mode.h"
+#include "Emu/game_enumeration.h"
 
 #include <QMainWindow>
 #include <QStackedWidget>
 #include <QSet>
-#include <QTableWidgetItem>
+#include <QHash>
 #include <QFutureWatcher>
 
 #include <memory>
@@ -27,6 +27,9 @@ class gui_settings;
 class emu_settings;
 class persistent_settings;
 class progress_dialog;
+class Localized;
+
+class QTableWidgetItem;
 
 class game_list_frame : public custom_dock_widget
 {
@@ -41,6 +44,19 @@ public:
 
 	/** Adds/removes categories that should be shown on gamelist. Public so that main frame menu actions can apply them */
 	void ToggleCategoryFilter(const QStringList& categories, bool show);
+
+	/** Restrict the game list to the games of a user defined game collection. An empty name shows every game. */
+	void SetGameCollection(const QString& name);
+
+	/** Re-reads the members of the selected game collection, after games were moved between collections */
+	void ReloadGameCollection();
+
+	/** How many games of each of the given collections the library holds. Membership may name games that
+	    are not installed, and those are what this leaves out; the other filters - category, hidden, broken,
+	    completed, the search box - are not applied, so the number does not move while the user types.
+	    Selecting the collection can therefore show fewer than the menu says.
+	    The list comes from the caller, which has already read it to build the entries being counted. */
+	QHash<QString, qsizetype> CountGamesPerCollection(const QStringList& collections) const;
 
 	/** Loads from settings. Public so that main frame can easily reset these settings if needed. */
 	void LoadSettings();
@@ -141,7 +157,7 @@ private:
 		std::set<std::string> m_done_paths;
 	};
 
-	void push_path(const std::string& path, std::vector<std::string>& legit_paths);
+	void UpdateWindowTitle(const std::vector<game_info>& matching_apps);
 
 	QString get_header_text(int col) const;
 	QString get_action_text(int col) const;
@@ -185,28 +201,33 @@ private:
 	QStringList m_category_filters;
 	QStringList m_grid_category_filters;
 
+	// User defined game collection used as an additional filter. Empty means "All Games".
+	QString m_game_collection;
+	QSet<QString> m_game_collection_serials;
+
 	// List Mode
 	bool m_is_list_layout = true;
 	bool m_old_layout_is_list = true;
 
 	// Data
+	void add_game_apply_extras(gui_game_info& game);
+	class gui_game_enumeration : public game_enumeration<gui_game_info>
+	{
+	public:
+		gui_game_enumeration(game_list_frame& parent) : game_enumeration<gui_game_info>(), m_parent(parent) {}
+		void add_game_apply_extras(gui_game_info& game) override { m_parent.add_game_apply_extras(game); }
+	private:
+		game_list_frame& m_parent;
+	};
+	gui_game_enumeration m_game_enumeration;
+
+	std::shared_ptr<Localized> m_localized;
 	std::shared_ptr<gui_settings> m_gui_settings;
 	std::shared_ptr<emu_settings> m_emu_settings;
 	std::shared_ptr<persistent_settings> m_persistent_settings;
 	std::vector<game_info> m_game_data;
-	struct path_entry
-	{
-		std::string path;
-		bool is_disc{};
-		bool is_from_yml{};
-	};
-	std::vector<path_entry> m_path_entries;
-	shared_mutex m_path_mutex;
-	std::set<std::string> m_path_list;
-	std::unordered_set<std::string> m_scanned_iso_paths;
 	QSet<QString> m_serials;
-	QMutex m_games_mutex;
-	lf_queue<game_info> m_games;
+	std::mutex m_games_mutex;
 	const std::array<int, 1> m_parsing_threads{0};
 	QFutureWatcher<void> m_parsing_watcher;
 	QFutureWatcher<void> m_refresh_watcher;

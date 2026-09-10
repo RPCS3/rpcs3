@@ -478,7 +478,7 @@ public:
 	bool DecryptData();
 	bool DecryptNPDRM(u8 *metadata, u32 metadata_size);
 	const NPD_HEADER* GetNPDHeader() const;
-	static bool GetKeyFromRap(const char *content_id, u8 *npdrm_key);
+	static bool GetKeyFromRap(std::string_view content_id, u8 *npdrm_key);
 
 private:
 	template<typename EHdr, typename SHdr, typename PHdr>

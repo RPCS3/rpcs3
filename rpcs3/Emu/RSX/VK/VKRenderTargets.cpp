@@ -787,9 +787,9 @@ namespace vk
 				content->push_layout(cmd, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 
 				vk::copy_scaled_image(cmd, content, final_dst,
-					{ 0, 0, subres.width_in_block, subres.height_in_block },
-					{ 0, 0, static_cast<s32>(final_dst->width()), static_cast<s32>(final_dst->height()) },
-					1, true, aspect() == VK_IMAGE_ASPECT_COLOR_BIT ? VK_FILTER_LINEAR : VK_FILTER_NEAREST);
+					areai{ 0, 0, subres.width_in_block, subres.height_in_block },
+					areai{ 0, 0, static_cast<s32>(final_dst->width()), static_cast<s32>(final_dst->height()) },
+					{}, true, aspect() == VK_IMAGE_ASPECT_COLOR_BIT ? VK_FILTER_LINEAR : VK_FILTER_NEAREST);
 
 				content->pop_layout(cmd);
 			}
@@ -803,13 +803,16 @@ namespace vk
 			}
 		}
 
-		state_flags &= ~rsx::surface_state_flags::erase_bkgnd;
+		state_flags &= ~(rsx::surface_state_flags::erase_bkgnd | rsx::surface_state_flags::force_data_load);
 	}
 
 	void render_target::initialize_memory(vk::command_buffer& cmd, rsx::surface_access access)
 	{
-		const bool is_depth = is_depth_surface();
-		const bool should_read_buffers = is_depth ? !!g_cfg.video.read_depth_buffer : !!g_cfg.video.read_color_buffers;
+		const bool read_buffers_config = is_depth_surface() ?
+			!!g_cfg.video.read_depth_buffer :
+			!!g_cfg.video.read_color_buffers;
+
+		const bool should_read_buffers = (state_flags & rsx::surface_state_flags::force_data_load) || read_buffers_config;
 
 		if (!should_read_buffers)
 		{
@@ -947,7 +950,8 @@ namespace vk
 		}
 
 		const bool is_depth = is_depth_surface();
-		const bool should_read_buffers = is_depth ? !!g_cfg.video.read_depth_buffer : !!g_cfg.video.read_color_buffers;
+		const bool read_buffers_config = is_depth ? !!g_cfg.video.read_depth_buffer : !!g_cfg.video.read_color_buffers;
+		const bool should_read_buffers = (state_flags & rsx::surface_state_flags::force_data_load) || read_buffers_config;
 
 		if (should_read_buffers)
 		{

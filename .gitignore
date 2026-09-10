@@ -126,3 +126,6 @@ CMakeUserPresets.json
 
 .cache/
 .lldbinit
+
+# claude
+CLAUDE.md

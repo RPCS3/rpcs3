@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "ps_move_calibration.h"
 
+#include <numbers>
+
 LOG_CHANNEL(move_log, "Move");
 
 // This is basically the same as in ps move api
@@ -176,8 +178,7 @@ void psmove_calibration_get_usb_gyro_values(const reports::ps_move_calibration_b
 {
 	const u8* data = calibration.data.data();
 
-	constexpr f32 PI = 3.14159265f;
-	constexpr f32 rpm_to_rad_per_sec = (2.0f * PI) / 60.0f;
+	constexpr f32 rpm_to_rad_per_sec = (2.0f * std::numbers::pi_v<f32>) / 60.0f;
 
 	switch (device.model)
 	{

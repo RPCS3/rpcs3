@@ -36,10 +36,12 @@ std::string cfg_vfs::get(std::string_view _cfg, std::string_view def, std::strin
 
 		if (_emu_dir.empty())
 		{
-			_emu_dir = fs::get_config_dir() + '/';
+			_emu_dir = fs::get_config_dir();
+			ensure(!_emu_dir.empty());
 		}
+
 		// Check if path does not end with a delimiter
-		else if (_emu_dir.back() != fs::delim[0] && _emu_dir.back() != fs::delim[1])
+		if (_emu_dir.back() != fs::delim[0] && _emu_dir.back() != fs::delim[1])
 		{
 			_emu_dir += '/';
 		}

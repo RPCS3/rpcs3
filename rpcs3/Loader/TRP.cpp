@@ -1,10 +1,17 @@
 #include "stdafx.h"
 #include "Emu/VFS.h"
+#include "Emu/System.h"
 #include "TRP.h"
 #include "Crypto/sha1.h"
 #include "Utilities/StrUtil.h"
 
 LOG_CHANNEL(trp_log, "Trophy");
+
+static std::string get_entry_name(const TRPEntry& entry)
+{
+	const std::string_view name{entry.name, sizeof(entry.name)};
+	return std::string{name.substr(0, name.find_first_of('\0'))};
+}
 
 TRPLoader::TRPLoader(const fs::file& f)
 	: m_file(f)
@@ -51,7 +58,16 @@ bool TRPLoader::Install(std::string_view dest, bool /*show*/)
 		}
 
 		// Create the file in the temporary directory
-		const std::string filename = temp + '/' + vfs::escape(entry.name);
+		const std::string entry_name = get_entry_name(entry);
+		const std::string filename = temp + '/' + vfs::escape(entry_name, true);
+
+		if (!Emu.IsPathInsideDir(filename, temp, false))
+		{
+			trp_log.error("Error extracting %s from TRP: target path '%s' would be extracted outside of '%s'", entry_name, filename, temp);
+			success = false;
+			break;
+		}
+
 		success = fs::write_file<true>(filename, fs::create + fs::excl, buffer);
 		if (!success)
 		{
@@ -160,7 +176,7 @@ bool TRPLoader::LoadHeader(bool show)
 	{
 		for (const auto& entry : m_entries)
 		{
-			trp_log.notice("TRP entry #%u: %s", &entry - m_entries.data(), entry.name);
+			trp_log.notice("TRP entry #%u: %s", &entry - m_entries.data(), get_entry_name(entry));
 		}
 	}
 
@@ -184,7 +200,7 @@ bool TRPLoader::ContainsEntry(std::string_view filename)
 
 	for (const TRPEntry& entry : m_entries)
 	{
-		if (entry.name == filename)
+		if (get_entry_name(entry) == filename)
 		{
 			return true;
 		}
@@ -202,7 +218,7 @@ void TRPLoader::RemoveEntry(std::string_view filename)
 	std::vector<TRPEntry>::iterator i = m_entries.begin();
 	while (i != m_entries.end())
 	{
-		if (i->name == filename)
+		if (get_entry_name(*i) == filename)
 		{
 			i = m_entries.erase(i);
 		}
@@ -222,7 +238,7 @@ void TRPLoader::RenameEntry(std::string_view oldname, std::string_view newname)
 
 	for (TRPEntry& entry : m_entries)
 	{
-		if (entry.name == oldname)
+		if (get_entry_name(entry) == oldname)
 		{
 			strcpy_trunc(entry.name, newname);
 		}

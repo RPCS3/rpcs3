@@ -6,6 +6,7 @@
 #include "Emu/System.h"
 #include "Crypto/utils.h"
 
+#include <chrono>
 #include <codecvt>
 #include <algorithm>
 #include <cmath>
@@ -35,11 +36,12 @@ static void* get_aligned_buf()
 
 		aligned_buf() noexcept
 		{
-			// IMPORTANT NOTE: It must be aligned (probably enough on multiple of 4) to support raw device, otherwise any read from file will fail
+			// IMPORTANT NOTE: it must be aligned on the sector size of the volume to support a raw device, otherwise any read from
+			// file will fail (an optical medium always uses ISO_SECTOR_SIZE, so allocating a sector aligned on itself is enough)
 #if defined(_WIN32)
-			buf = _aligned_malloc(ISO_SECTOR_SIZE, ISO_SECTOR_SIZE * 2);
+			buf = _aligned_malloc(ISO_SECTOR_SIZE, ISO_SECTOR_SIZE);
 #else
-			buf = std::aligned_alloc(ISO_SECTOR_SIZE * 2, ISO_SECTOR_SIZE);
+			buf = std::aligned_alloc(ISO_SECTOR_SIZE, ISO_SECTOR_SIZE);
 #endif
 		}
 
@@ -65,7 +67,7 @@ static bool is_iso_file(iso_file& file, u64* size = nullptr)
 
 	char magic[5];
 
-	if (!file.read_at(32768ULL + 1, magic, 5) == 5)
+	if (file.read_at(32768ULL + 1, magic, 5) != 5)
 	{
 		return false;
 	}
@@ -82,6 +84,11 @@ static bool is_iso_file(iso_file& file, u64* size = nullptr)
 
 bool is_iso_file(const std::string& path, u64* size, bool* is_raw_device)
 {
+	if (is_raw_device)
+	{
+		*is_raw_device = false;
+	}
+
 	if (path.empty())
 	{
 		return false;
@@ -799,13 +806,20 @@ inline T retrieve_endian_int(const u8* buf)
 }
 
 // Assumed that directory entry is at file head
-static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, bool names_in_ucs2 = false)
+static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, bool& read_error, bool names_in_ucs2 = false)
 {
+	read_error = true;
 	const auto start_pos = entry.pos();
-	const u8 entry_length = entry.read<u8>();
+	u8 entry_length = 0;
+	if (!entry.read(entry_length))
+	{
+		return std::nullopt;
+	}
 
 	if (entry_length == 0)
 	{
+		// Zero marks sector padding, not an unreadable directory record.
+		read_error = false;
 		return std::nullopt;
 	}
 
@@ -834,24 +848,31 @@ static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, 
 #pragma pack(pop)
 	static_assert(sizeof(iso_entry_header) == 32);
 
-	const iso_entry_header header = entry.read<iso_entry_header>();
+	iso_entry_header header{};
+	if (entry_length < 1 + sizeof(header) || !entry.read(header)
+		|| header.file_name_length > entry_length - 1 - sizeof(header))
+	{
+		return std::nullopt;
+	}
 
 	const u32 start_sector = retrieve_endian_int<u32>(header.start_sector);
 	const u32 file_size = retrieve_endian_int<u32>(header.file_size);
 
-	std::tm file_date = {};
+	// The recorded ECMA-119 date holds the local time of the recorder, paired with its offset from GMT.
+	// std::chrono::sys_days is anchored to the UNIX epoch, so the host time zone never enters the result.
+	const std::chrono::year_month_day file_date
+	{
+		std::chrono::year{1900 + header.year},
+		std::chrono::month{header.month},
+		std::chrono::day{header.day}
+	};
 
-	file_date.tm_year = header.year;
-	file_date.tm_mon = header.month - 1;
-	file_date.tm_mday = header.day;
-	file_date.tm_hour = header.hour;
-	file_date.tm_min = header.minute;
-	file_date.tm_sec = header.second;
+	// The offset from GMT is stored as a signed number of 15 minute intervals (ECMA-119 9.1.5),
+	// so it has to be subtracted from the recorded local time in order to obtain UTC
+	const auto file_time = std::chrono::sys_days{file_date} + std::chrono::hours{header.hour} + std::chrono::minutes{header.minute}
+		+ std::chrono::seconds{header.second} - std::chrono::minutes{static_cast<s8>(header.timezone_value) * 15};
 
-	const s16 timezone_value = header.timezone_value;
-	const s16 timezone_offset = (timezone_value - 50) * 15 * 60;
-
-	const std::time_t date_time = std::mktime(&file_date) + timezone_offset;
+	const std::time_t date_time = static_cast<std::time_t>(file_time.time_since_epoch().count());
 
 	// 2nd flag bit indicates whether a given fs node is a directory
 	const bool is_directory = header.flags & 0b00000010;
@@ -902,6 +923,7 @@ static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, 
 	// Skip the rest of the entry
 	entry.seek(entry_length + start_pos);
 
+	read_error = false;
 	return iso_fs_metadata
 	{
 		.name = std::move(file_name),
@@ -938,13 +960,24 @@ static bool iso_form_hierarchy(fs::file& file, iso_fs_node& node, bool use_ucs2_
 
 	// Assuming the directory spans a single extent
 	const auto& directory_extent = ::at32(node.metadata.extents, 0);
-	const u64 end_pos = (directory_extent.start * ISO_SECTOR_SIZE) + directory_extent.size;
+	const u64 start_pos = directory_extent.start * ISO_SECTOR_SIZE;
+	const u64 size = file.size();
+	if (start_pos > size || directory_extent.size > size - start_pos)
+	{
+		return false;
+	}
+	const u64 end_pos = start_pos + directory_extent.size;
 
-	file.seek(directory_extent.start * ISO_SECTOR_SIZE);
+	file.seek(start_pos);
 
 	while (file.pos() < end_pos)
 	{
-		auto entry = iso_read_directory_entry(file, use_ucs2_decoding);
+		bool read_error = false;
+		auto entry = iso_read_directory_entry(file, read_error, use_ucs2_decoding);
+		if (read_error || file.pos() > end_pos)
+		{
+			return false;
+		}
 
 		if (!entry)
 		{
@@ -1036,7 +1069,12 @@ iso_archive::iso_archive(const std::string& path)
 	{
 		const auto descriptor_start = iso_file.pos();
 
-		descriptor_type = iso_file.read<u8>();
+		if (!iso_file.read(descriptor_type))
+		{
+			iso_log.error("iso_archive: Failed to read volume descriptor: '%s'", path);
+			invalidate();
+			return;
+		}
 
 		// 1 = primary vol descriptor, 2 = joliet SVD
 		if (descriptor_type == 1 || descriptor_type == 2)
@@ -1046,7 +1084,14 @@ iso_archive::iso_archive(const std::string& path)
 			// Skip the rest of descriptor's data
 			iso_file.seek(155, fs::seek_cur);
 
-			const auto node = iso_read_directory_entry(iso_file, use_ucs2_decoding);
+			bool read_error = false;
+			const auto node = iso_read_directory_entry(iso_file, read_error, use_ucs2_decoding);
+			if (read_error)
+			{
+				iso_log.error("iso_archive: Failed to read root directory record: '%s'", path);
+				invalidate();
+				return;
+			}
 
 			if (node)
 			{
@@ -1208,7 +1253,15 @@ std::unique_ptr<fs::file_base> iso_archive::get_iso_file(const std::string& path
 
 std::unique_ptr<fs::file_base> iso_archive::open(const std::string& path)
 {
-	return get_iso_file(m_path, fs::read, *ensure(retrieve(path)));
+	const auto node = retrieve(path);
+
+	if (!node)
+	{
+		fs::g_tls_error = fs::error::noent;
+		return nullptr;
+	}
+
+	return get_iso_file(m_path, fs::read, *node);
 }
 
 psf::registry iso_archive::open_psf(const std::string& path)
@@ -1301,7 +1354,7 @@ u64 iso_file::local_extent_remaining(u64 pos) const
 {
 	const auto [local_pos, extent] = get_extent_pos(pos);
 
-	return extent.size - local_pos;
+	return local_pos < extent.size ? extent.size - local_pos : 0;
 }
 
 u64 iso_file::local_extent_size(u64 pos) const

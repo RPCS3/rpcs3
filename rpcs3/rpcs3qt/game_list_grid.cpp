@@ -77,8 +77,8 @@ void game_list_grid::populate(
 
 	for (const auto& game : game_data)
 	{
-		const QString serial = QString::fromStdString(game->info.serial);
-		const QString title = get_title(serial, game->info.name);
+		const QString serial = QString::fromStdString(game->serial);
+		const QString title = get_title(serial, game->name);
 
 		game_list_grid_item* item = new game_list_grid_item(this, game, title);
 		item->installEventFilter(this);
@@ -114,7 +114,7 @@ void game_list_grid::populate(
 			{
 				item->set_icon(game->pxmap);
 
-				if (!game->has_hover_gif && !game->has_hover_pam)
+				if (game->movie_path.empty())
 				{
 					game->pxmap = {};
 				}
@@ -123,24 +123,24 @@ void game_list_grid::populate(
 
 		bool check_iso = false;
 
-		if (play_hover_movies && (game->has_hover_gif || game->has_hover_pam))
+		if (play_hover_movies && !game->movie_path.empty())
 		{
-			item->set_video_path(game->info.movie_path);
-			check_iso |= !fs::exists(game->info.movie_path);
+			item->set_video_path(game->movie_path, game->movie_in_archive);
+			check_iso |= game->movie_in_archive;
 		}
 
-		if (play_hover_music && game->has_audio_file)
+		if (play_hover_music && !game->audio_path.empty())
 		{
-			item->set_audio_path(game->info.audio_path);
-			check_iso |= !fs::exists(game->info.audio_path);
+			item->set_audio_path(game->audio_path, game->audio_in_archive);
+			check_iso |= game->audio_in_archive;
 		}
 
-		if (check_iso && is_iso_file(game->info.path))
+		if (check_iso && game->is_iso_file && is_iso_file(game->path))
 		{
-			item->set_iso_path(game->info.path);
+			item->set_iso_path(game->path);
 		}
 
-		if (selected_item_ids.contains(game->info.path + game->info.icon_path))
+		if (selected_item_ids.contains(game->path + game->icon_path))
 		{
 			selected_items.insert(item);
 		}

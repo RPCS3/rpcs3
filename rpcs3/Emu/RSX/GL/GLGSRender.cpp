@@ -50,6 +50,8 @@ GLGSRender::GLGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	backend_config.supports_multidraw = true;
 	backend_config.supports_normalized_barycentrics = true;
 	backend_config.supports_hw_instanced_rendering = true;
+	// OpenGL 3.2+ defaults to GL_LAST_VERTEX_CONVENTION.
+	backend_config.supports_last_provoking_vertex = true;
 
 	if (g_cfg.video.antialiasing_level != msaa_level::none)
 	{
@@ -62,6 +64,9 @@ GLGSRender::GLGSRender(utils::serial* ar) noexcept : GSRender(ar)
 
 GLGSRender::~GLGSRender()
 {
+	// Force-release ZCULL-ctrl since it is a pointer to self.
+	zcull_ctrl.release();
+
 	if (m_frame)
 	{
 		m_frame->reset();

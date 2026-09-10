@@ -17,7 +17,22 @@ bool music_selection_context::set(const CellMusicSelectionContext& in)
 	}
 
 	constexpr u32 pos = sizeof(magic);
-	hash = &in.data[pos];
+
+	const std::string_view data{&in.data[pos], sizeof(in.data) - pos};
+	const std::string_view new_hash = data.substr(0, data.find_first_of('\0'));
+
+	const bool is_valid_hash = !new_hash.empty() && std::all_of(new_hash.begin(), new_hash.end(), [](char c)
+	{
+		return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-' || c == '_';
+	});
+
+	if (!is_valid_hash)
+	{
+		cellMusicSelectionContext.error("Invalid music selection context hash, context = %s", context_to_hex(in));
+		return false;
+	}
+
+	hash = std::string{new_hash};
 
 	return load_playlist();
 }
@@ -35,7 +50,7 @@ CellMusicSelectionContext music_selection_context::get() const
 	std::memset(out.data, 0, CELL_MUSIC_SELECTION_CONTEXT_SIZE);
 	std::memcpy(out.data, magic, sizeof(magic));
 	pos += sizeof(magic);
-	std::memcpy(&out.data[pos], hash.c_str(), hash.size());
+	std::memcpy(&out.data[pos], hash.data(), hash.size());
 
 	return out;
 }

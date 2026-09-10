@@ -6,13 +6,13 @@
 #include "RSXFIFO.h"
 #include "RSXOffload.h"
 #include "RSXZCULL.h"
-#include "rsx_utils.h"
 #include "Common/bitfield.hpp"
 #include "Common/profiling_timer.hpp"
 #include "Common/texture_cache_types.h"
 #include "Common/TextureUtils.h"
 #include "Program/RSXVertexProgram.h"
 #include "Program/RSXFragmentProgram.h"
+#include "Utils/rsx_utils.h"
 
 #include "Utilities/Thread.h"
 #include "Utilities/geometry.h"
@@ -91,6 +91,8 @@ namespace rsx
 		bool supports_asynchronous_compute;    // Async compute
 		bool supports_host_gpu_labels;         // Advanced host synchronization
 		bool supports_normalized_barycentrics; // Basically all GPUs except NVIDIA have properly normalized barycentrics
+		bool supports_last_provoking_vertex;   // Flat shading using RSX's last-vertex convention
+		bool supports_programmable_blending;   // Can handle programmable blending requests
 	};
 
 	struct desync_fifo_cmd_info

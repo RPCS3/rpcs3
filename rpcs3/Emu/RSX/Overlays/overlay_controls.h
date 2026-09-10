@@ -68,6 +68,8 @@ namespace rsx
 
 			void load_data(const std::vector<u8>& bytes, bool grayscaled = false);
 			const u8* get_data() const override { return channels == 4 ? data : data_grey.empty() ? nullptr : data_grey.data(); }
+
+			static std::unique_ptr<image_info> load_icon(const std::string& icon_path, const std::string& archive_path);
 		};
 
 		struct resource_config
@@ -99,6 +101,10 @@ namespace rsx
 			void free_resources();
 
 			static std::unique_ptr<image_info> load_icon(std::string_view relative_path);
+
+			// Cross/Circle icon for confirm/cancel prompts, swapped when "Enter button assignment" is Circle.
+			static standard_image_resource confirm_button_resource();
+			static standard_image_resource cancel_button_resource();
 		};
 
 		struct compiled_resource
@@ -107,12 +113,12 @@ namespace rsx
 			{
 				sdf_function func = sdf_function::none;
 
-				f32 cx; // Center x
-				f32 cy; // Center y
-				f32 hx; // Half-size in X
-				f32 hy; // Half-size in Y
-				f32 br; // Border radius
-				f32 bw; // Border width
+				f32 cx {}; // Center x
+				f32 cy {}; // Center y
+				f32 hx {}; // Half-size in X
+				f32 hy {}; // Half-size in Y
+				f32 br {}; // Border radius
+				f32 bw {}; // Border width
 
 				color4f border_color;
 
@@ -132,7 +138,7 @@ namespace rsx
 				f32 pulse_sinus_offset = 0.0f; // The current pulse offset
 				f32 pulse_speed_modifier = 0.005f;
 
-				sdf_config_t sdf_config;
+				sdf_config_t sdf_config {};
 
 				areaf clip_rect = {};
 				bool clip_region = false;
@@ -366,13 +372,26 @@ namespace rsx
 		{
 		protected:
 			u8 image_resource_ref = image_resource_id::none;
-			const void* external_ref = nullptr;
+			const image_info_base* external_ref = nullptr;
+
+			// Original padding of inherited class. Helps us to keep the image aspect ratio when padding is adjusted.
+			u16 m_original_padding_left = 0;
+			u16 m_original_padding_right = 0;
+			u16 m_original_padding_top = 0;
+			u16 m_original_padding_bottom = 0;
+
+			bool m_keep_aspect_ratio = false;
 
 			// Strength of blur effect
 			u8 blur_strength = 0;
 
+			void adjust_padding();
+
 		public:
 			using overlay_element::overlay_element;
+
+			void set_padding(u16 left, u16 right, u16 top, u16 bottom) override;
+			void set_padding(u16 padding) override;
 
 			compiled_resource& get_compiled() override;
 
@@ -380,6 +399,7 @@ namespace rsx
 			void set_raw_image(const image_info_base* raw_image);
 			void clear_image();
 			void set_blur_strength(u8 strength);
+			void set_keep_aspect_ratio(bool enabled);
 		};
 
 		struct image_button : public image_view

@@ -49,19 +49,19 @@ void game_list_base::IconLoadFunction(game_info game, qreal device_pixel_ratio, 
 	static std::unordered_set<std::string> warn_once_list;
 	static shared_mutex s_mtx;
 
-	if (game->icon.isNull() && !gui::utils::load_icon(game->icon, game->info.icon_path, game->icon_in_archive ? game->info.path : "", game->info.game_dir))
+	if (game->icon.isNull() && !gui::utils::load_icon(game->icon, game->icon_path, game->icon_in_archive ? game->path : "", game->game_dir))
 	{
 		if (game_list_log.warning)
 		{
 			bool logged = false;
 			{
 				std::lock_guard lock(s_mtx);
-				logged = !warn_once_list.emplace(game->info.icon_path).second;
+				logged = !warn_once_list.emplace(game->icon_path).second;
 			}
 
 			if (!logged)
 			{
-				game_list_log.warning("Could not load image from path %s", QDir(QString::fromStdString(game->info.icon_path)).absolutePath());
+				game_list_log.warning("Could not load image from path %s", QDir(QString::fromStdString(game->icon_path)).absolutePath());
 			}
 		}
 	}

@@ -4,7 +4,7 @@
 
 #include "GLSLTypes.h"
 #include "ShaderParam.h"
-#include "../color_utils.h"
+#include "../Utils/color_utils.hpp"
 
 struct RSXFragmentProgram;
 
@@ -19,21 +19,25 @@ namespace rsx
 		POLYGON_STIPPLE_ENABLE_BIT   = 3,
 
 		// Auxilliary config
-		INT_FRAMEBUFFER_BIT          = 16,
-		MSAA_WRITE_ENABLE_BIT        = 17,
-		FRAG_DEPTH_24_BIT            = 18,
-		FRAG_DEPTH_FLOAT_BIT         = 19,
+		INT_FRAMEBUFFER_BIT          = 8,
+		MSAA_WRITE_ENABLE_BIT        = 9,
+		FRAG_DEPTH_24_BIT            = 10,
+		FRAG_DEPTH_FLOAT_BIT         = 11,
 
 		// Data
-		ALPHA_FUNC_OFFSET            = 20,
-		MSAA_SAMPLE_CTRL_OFFSET      = 23,
+		ALPHA_FUNC_OFFSET            = 12,
+		MSAA_SAMPLE_CTRL_OFFSET      = 15,
+		MRT_CHANNEL_REMAP_OFFSET     = 17,
+		MRT_BLEND_TARGETS_OFFSET     = 20,
 
 		// Data lengths
 		ALPHA_FUNC_NUM_BITS          = 3,
 		MSAA_SAMPLE_CTRL_NUM_BITS    = 2,
+		MRT_CHANNEL_REMAP_NUM_BITS   = 3,
+		MRT_BLEND_TARGETS_NUM_BITS   = 4,
 
 		// Meta
-		ROP_CMD_MASK                 = 0xF // Commands are encoded in the lower 16 bits
+		ROP_CMD_MASK                 = 0xF // Commands are encoded in the lower 4 bits
 	};
 
 	struct ROP_control_t
@@ -50,6 +54,9 @@ namespace rsx
 
 		void set_alpha_test_func(uint func) { value |= (func << ROP_control_bits::ALPHA_FUNC_OFFSET); }
 		void set_msaa_control(uint ctrl) { value |= (ctrl << ROP_control_bits::MSAA_SAMPLE_CTRL_OFFSET); }
+
+		void set_output_remap(uint remap) { value |= (remap << ROP_control_bits::MRT_CHANNEL_REMAP_OFFSET); }
+		void set_blend_target_mask(uint mask) { value |= ((mask & 0xF) << ROP_control_bits::MRT_BLEND_TARGETS_OFFSET); }
 	};
 }
 
@@ -73,7 +80,7 @@ namespace glsl
 	std::string getHalfTypeNameImpl(usz elementCount);
 	std::string compareFunctionImpl(COMPARE f, std::string_view Op0, std::string_view Op1, bool scalar = false);
 	void insert_vertex_input_fetch(std::stringstream& OS, glsl_rules rules, bool glsl4_compliant=true);
-	void insert_rop_init(std::ostream& OS);
+	void insert_rop_init(std::ostream& OS, u32 mrt_buffers_count);
 	void insert_rop(std::ostream& OS, const shader_properties& props);
 	void insert_glsl_legacy_function(std::ostream& OS, const shader_properties& props);
 	std::string getFunctionImpl(FUNCTION f);

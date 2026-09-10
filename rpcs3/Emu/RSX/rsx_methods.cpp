@@ -775,8 +775,8 @@ namespace rsx
 			state_signals[NV4097_SET_ZMIN_MAX_CONTROL] = rsx::pipeline_config_dirty;
 			state_signals[NV4097_SET_LOGIC_OP_ENABLE] = rsx::pipeline_config_dirty;
 			state_signals[NV4097_SET_LOGIC_OP] = rsx::pipeline_config_dirty;
-			state_signals[NV4097_SET_BLEND_ENABLE] = rsx::pipeline_config_dirty;
-			state_signals[NV4097_SET_BLEND_ENABLE_MRT] = rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_BLEND_ENABLE] = rsx::pipeline_config_dirty | rsx::blend_config_dirty;
+			state_signals[NV4097_SET_BLEND_ENABLE_MRT] = rsx::pipeline_config_dirty | rsx::blend_config_dirty;
 			state_signals[NV4097_SET_STENCIL_FUNC] = rsx::pipeline_config_dirty;
 			state_signals[NV4097_SET_BACK_STENCIL_FUNC] = rsx::pipeline_config_dirty;
 			state_signals[NV4097_SET_RESTART_INDEX_ENABLE] = rsx::pipeline_config_dirty;
@@ -1703,6 +1703,7 @@ namespace rsx
 		bind(NV4097_WAIT_FOR_IDLE, nv4097::sync);
 		bind(NV4097_INVALIDATE_L2, nv4097::set_shader_program_dirty);
 		bind(NV4097_SET_SHADER_PROGRAM, nv4097::set_shader_program_dirty);
+		bind(NV4097_SET_SHADE_MODE, nv4097::set_shading_mode);
 
 		bind(NV4097_SET_TRANSFORM_PROGRAM_START, nv4097::set_transform_program_start);
 		bind(NV4097_SET_VERTEX_ATTRIB_OUTPUT_MASK, nv4097::set_vertex_attribute_output_mask);

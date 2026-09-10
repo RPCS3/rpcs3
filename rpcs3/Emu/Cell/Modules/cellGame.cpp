@@ -1313,7 +1313,7 @@ error_code cellGameDeleteGameData(vm::cptr<char> dirName)
 {
 	cellGame.warning("cellGameDeleteGameData(dirName=%s)", dirName);
 
-	if (!dirName)
+	if (!dirName || sysutil_check_name_string(dirName.get_ptr(), 1, CELL_GAME_DIRNAME_SIZE) != 0)
 	{
 		return CELL_GAME_ERROR_PARAM;
 	}

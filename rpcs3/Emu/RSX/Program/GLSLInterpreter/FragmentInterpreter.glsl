@@ -83,6 +83,8 @@ layout(location=0) in vec4 in_regs[16];
 #define RSX_FP_REGISTER_TYPE_CONSTANT 2
 #define RSX_FP_REGISTER_TYPE_UNKNOWN 3
 
+#define RSX_FP_PRECISION_SATURATE 4
+
 #define CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT 0xe
 #define CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS 0x40
 
@@ -241,6 +243,11 @@ vec4 read_src(const in int index)
 
 	ur1 = GET_INST_BITS(index + 1, 9, 8);
 	vr0 = shuffle(vr0, ur1);
+
+	if (GET_INST_BITS(2, 19 + index * 3, 3) == RSX_FP_PRECISION_SATURATE)
+	{
+		vr0 = clamp(select(vr0, vr_zero, isnan(vr0)), 0., 1.);
+	}
 
 	// abs
 	if (index == 0)
@@ -887,6 +894,14 @@ void main()
 #endif
 #ifdef ALPHA_TEST_NEQUAL
 	if (ocol0.a == alpha_ref) discard; // nequal
+#endif
+
+#ifdef _ENABLE_ROP_CHANNEL_REMAPPING
+	const uint ROP_remap = get_ROP_channel_remap();
+	ocol0 = remap_ROP_output(ocol0, ROP_remap);
+	ocol1 = remap_ROP_output(ocol1, ROP_remap);
+	ocol2 = remap_ROP_output(ocol2, ROP_remap);
+	ocol3 = remap_ROP_output(ocol3, ROP_remap);
 #endif
 }
 

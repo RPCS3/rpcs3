@@ -49,7 +49,7 @@ game_list_table::game_list_table(game_list_frame* frame, std::shared_ptr<persist
 		if (!game || !game->item || game->item != item) return;
 		if (QTableWidgetItem* size_item = this->item(static_cast<movie_item*>(game->item)->row(), static_cast<int>(gui::game_list_columns::dir_size)))
 		{
-			const u64& game_size = game->info.size_on_disk;
+			const u64& game_size = game->size_on_disk;
 			size_item->setText(game_size != umax ? gui::utils::format_byte_size(game_size) : tr("Unknown"));
 			size_item->setData(Qt::UserRole, QVariant::fromValue<qulonglong>(game_size));
 		}
@@ -191,7 +191,7 @@ void game_list_table::set_custom_config_icon(const game_info& game)
 		return;
 	}
 
-	const QString serial = QString::fromStdString(game->info.serial);
+	const QString serial = QString::fromStdString(game->serial);
 
 	for (int row = 0; row < rowCount(); ++row)
 	{
@@ -241,8 +241,8 @@ void game_list_table::populate(
 	{
 		index++;
 
-		const QString serial = QString::fromStdString(game->info.serial);
-		const QString title = get_title(serial, game->info.name);
+		const QString serial = QString::fromStdString(game->serial);
+		const QString title = get_title(serial, game->name);
 
 		// Icon
 		custom_table_widget_item* icon_item = new custom_table_widget_item;
@@ -267,7 +267,7 @@ void game_list_table::populate(
 			{
 				icon_item->setData(Qt::DecorationRole, game->pxmap);
 
-				if (!game->has_hover_gif && !game->has_hover_pam)
+				if (game->movie_path.empty())
 				{
 					game->pxmap = {};
 				}
@@ -276,19 +276,16 @@ void game_list_table::populate(
 
 		icon_item->set_size_calc_func([this, game, cancel = icon_item->size_on_disk_loading_aborted(), dev_flash]()
 		{
-			if (game && game->info.size_on_disk == umax && (!cancel || !cancel->load()))
+			if (game && game->size_on_disk == umax && (!cancel || !cancel->load()))
 			{
-				if (game->info.path.starts_with(dev_flash))
+				if (game->path.starts_with(dev_flash))
 				{
 					// Do not report size of apps inside /dev_flash (it does not make sense to do so)
-					game->info.size_on_disk = 0;
+					game->size_on_disk = 0;
 				}
-				else if (is_iso_file(game->info.path, &game->info.size_on_disk)) // If iso file, game->info.size_on_disk is also set
+				else if (!game->is_iso_file || !is_iso_file(game->path, &game->size_on_disk)) // If iso file, game->size_on_disk is also set
 				{
-				}
-				else
-				{
-					game->info.size_on_disk = fs::get_dir_size(game->info.path, 1, cancel.get());
+					game->size_on_disk = fs::get_dir_size(game->path, 1, cancel.get());
 				}
 
 				if (!cancel || !cancel->load())
@@ -301,21 +298,21 @@ void game_list_table::populate(
 
 		bool check_iso = false;
 
-		if (play_hover_movies && (game->has_hover_gif || game->has_hover_pam))
+		if (play_hover_movies && !game->movie_path.empty())
 		{
-			icon_item->set_video_path(game->info.movie_path);
-			check_iso |= !fs::exists(game->info.movie_path);
+			icon_item->set_video_path(game->movie_path, game->movie_in_archive);
+			check_iso |= game->movie_in_archive;
 		}
 
-		if (play_hover_music && game->has_audio_file)
+		if (play_hover_music && !game->audio_path.empty())
 		{
-			icon_item->set_audio_path(game->info.audio_path);
-			check_iso |= !fs::exists(game->info.audio_path);
+			icon_item->set_audio_path(game->audio_path, game->audio_in_archive);
+			check_iso |= game->audio_in_archive;
 		}
 
-		if (check_iso && is_iso_file(game->info.path))
+		if (check_iso && game->is_iso_file && is_iso_file(game->path))
 		{
-			icon_item->set_iso_path(game->info.path);
+			icon_item->set_iso_path(game->path);
 		}
 
 		icon_item->setData(Qt::UserRole, index, true);
@@ -326,7 +323,7 @@ void game_list_table::populate(
 		title_item->setIcon(game_list_base::GetCustomConfigIcon(game));
 
 		// Serial
-		custom_table_widget_item* serial_item = new custom_table_widget_item(game->info.serial);
+		custom_table_widget_item* serial_item = new custom_table_widget_item(game->serial);
 
 		if (const auto it = notes_map.find(serial); it != notes_map.cend() && !it->second.isEmpty())
 		{
@@ -336,7 +333,7 @@ void game_list_table::populate(
 		}
 
 		// Move Support (http://www.psdevwiki.com/ps3/PARAM.SFO#ATTRIBUTE)
-		const bool supports_move = game->info.attr & 0x800000;
+		const bool supports_move = game->attr & 0x800000;
 
 		// Compatibility
 		custom_table_widget_item* compat_item = new custom_table_widget_item;
@@ -351,7 +348,7 @@ void game_list_table::populate(
 		// Version
 		QString app_version = QString::fromStdString(game->GetGameVersion());
 
-		if (game->info.bootable && !game->compat.latest_version.isEmpty())
+		if (game->bootable && !game->compat.latest_version.isEmpty())
 		{
 			f64 top_ver = 0.0, app_ver = 0.0;
 			const bool unknown = app_version == localized.category.unknown;
@@ -383,25 +380,25 @@ void game_list_table::populate(
 			}
 		}
 
-		const u64 game_size = game->info.size_on_disk;
+		const u64 game_size = game->size_on_disk;
 
 		setItem(row, static_cast<int>(gui::game_list_columns::icon),       icon_item);
 		setItem(row, static_cast<int>(gui::game_list_columns::name),       title_item);
 		setItem(row, static_cast<int>(gui::game_list_columns::serial),     serial_item);
-		setItem(row, static_cast<int>(gui::game_list_columns::firmware),   new custom_table_widget_item(game->info.fw));
+		setItem(row, static_cast<int>(gui::game_list_columns::firmware),   new custom_table_widget_item(game->fw));
 		setItem(row, static_cast<int>(gui::game_list_columns::version),    new custom_table_widget_item(app_version));
 		setItem(row, static_cast<int>(gui::game_list_columns::category),   new custom_table_widget_item(game->localized_category));
-		setItem(row, static_cast<int>(gui::game_list_columns::path),       new custom_table_widget_item(game->info.path));
+		setItem(row, static_cast<int>(gui::game_list_columns::path),       new custom_table_widget_item(game->path));
 		setItem(row, static_cast<int>(gui::game_list_columns::move),       new custom_table_widget_item((supports_move ? tr("Supported") : tr("Not Supported")).toStdString(), Qt::UserRole, !supports_move));
-		setItem(row, static_cast<int>(gui::game_list_columns::resolution), new custom_table_widget_item(Localized::GetStringFromU32(game->info.resolution, localized.resolution.mode, true)));
-		setItem(row, static_cast<int>(gui::game_list_columns::sound),      new custom_table_widget_item(Localized::GetStringFromU32(game->info.sound_format, localized.sound.format, true)));
-		setItem(row, static_cast<int>(gui::game_list_columns::parental),   new custom_table_widget_item(Localized::GetStringFromU32(game->info.parental_lvl, localized.parental.level), Qt::UserRole, game->info.parental_lvl));
+		setItem(row, static_cast<int>(gui::game_list_columns::resolution), new custom_table_widget_item(Localized::GetStringFromU32(game->resolution, localized.resolution.mode, true)));
+		setItem(row, static_cast<int>(gui::game_list_columns::sound),      new custom_table_widget_item(Localized::GetStringFromU32(game->sound_format, localized.sound.format, true)));
+		setItem(row, static_cast<int>(gui::game_list_columns::parental),   new custom_table_widget_item(Localized::GetStringFromU32(game->parental_lvl, localized.parental.level), Qt::UserRole, game->parental_lvl));
 		setItem(row, static_cast<int>(gui::game_list_columns::last_play),  new custom_table_widget_item(locale.toString(last_played, last_played >= QDateTime::currentDateTime().addDays(-7) ? gui::persistent::last_played_date_with_time_of_day_format : gui::persistent::last_played_date_format_new), Qt::UserRole, last_played));
 		setItem(row, static_cast<int>(gui::game_list_columns::playtime),   new custom_table_widget_item(elapsed_ms == 0 ? tr("Never played") : localized.GetVerboseTimeByMs(elapsed_ms), Qt::UserRole, elapsed_ms));
 		setItem(row, static_cast<int>(gui::game_list_columns::compat),     compat_item);
 		setItem(row, static_cast<int>(gui::game_list_columns::dir_size),   new custom_table_widget_item(game_size != umax ? gui::utils::format_byte_size(game_size) : tr("Unknown"), Qt::UserRole, QVariant::fromValue<qulonglong>(game_size)));
 
-		if (selected_item_ids.contains(game->info.path + game->info.icon_path))
+		if (selected_item_ids.contains(game->path + game->icon_path))
 		{
 			selected_rows.insert(row);
 		}

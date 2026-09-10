@@ -246,8 +246,8 @@ public:
 
 	lv2_fs_object& operator=(const lv2_fs_object&) = delete;
 
-	// Get the device's root path (e.g. "/dev_hdd0") from a given path
-	// Cut the trail and return it in seccond argument
+	// Get the device's root path (e.g. "dev_hdd0") from a given path
+	// Cut the trail and return it in second argument
 	static std::pair<std::string_view, std::string> get_path_root_and_trail(std::string_view path);
 
 	// Get the device's root path (e.g. "/dev_hdd0") from a given path
@@ -264,14 +264,7 @@ public:
 	static std::array<char, 0x420> get_name(std::string_view filename)
 	{
 		std::array<char, 0x420> name;
-
-		if (filename.size() >= 0x420)
-		{
-			filename = filename.substr(0, 0x420 - 1);
-		}
-
-		filename.copy(name.data(), filename.size());
-		name[filename.size()] = 0;
+		strcpy_trunc(name, filename);
 		return name;
 	}
 

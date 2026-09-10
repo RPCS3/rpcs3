@@ -147,7 +147,14 @@ VkRenderPass VKGSRender::get_render_pass()
 void VKGSRender::invalidate_render_pass()
 {
 	// Regenerate renderpass key for the next draw call
-	if (const auto key = vk::get_renderpass_key(m_fbo_images, m_current_renderpass_key);
+	std::vector<u8> input_attachments{};
+	if (current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING)
+	{
+		input_attachments.resize(m_draw_buffers.size());
+		std::iota(input_attachments.begin(), input_attachments.end(), 0);
+	}
+
+	if (const auto key = vk::get_renderpass_key(m_fbo_images, m_current_renderpass_key, input_attachments);
 		key != m_current_renderpass_key)
 	{
 		m_current_renderpass_key = key;
@@ -168,7 +175,7 @@ void VKGSRender::update_draw_state()
 		vkCmdSetLineWidth(*m_current_command_buffer, actual_line_width);
 	}
 
-	if (rsx::method_registers.blend_enabled())
+	if (rsx::method_registers.blend_enabled_mask())
 	{
 		// Update blend constants
 		auto blend_colors = rsx::get_constant_blend_colors();
@@ -467,14 +474,9 @@ void VKGSRender::load_texture_env()
 			{
 				actual_mipmaps = static_cast<f32>(mipmap_count);
 			}
-			else if (sampler_state->external_subresource_desc.op == rsx::deferred_request_command::mipmap_gather)
+			else if (sampler_state->external_subresource_desc.op != rsx::deferred_request_command::nop)
 			{
-				// Clamp min and max lod
-				actual_mipmaps = static_cast<f32>(sampler_state->external_subresource_desc.sections_to_copy.size());
-			}
-			else if (sampler_state->external_subresource_desc.op == rsx::deferred_request_command::cubemap_unwrap)
-			{
-				actual_mipmaps = static_cast<f32>(sampler_state->external_subresource_desc.mipmaps);
+				actual_mipmaps = sampler_state->external_subresource_desc.exact_mip_count();
 			}
 			else
 			{
@@ -786,6 +788,19 @@ bool VKGSRender::bind_texture_env()
 		m_program->bind_uniform({ *view, vk::null_sampler() }, vk::glsl::binding_set_index_fragment, m_fs_binding_table->frag_depth_input_location);
 	}
 
+	if (current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING)
+	{
+		ensure(current_fragment_program.mrt_buffers_count == m_draw_buffers.size());
+		const auto remap = rsx::default_remap_vector.with_encoding(vk::VK_REMAP_IDENTITY);
+
+		for (u32 i = 0; i < current_fragment_program.mrt_buffers_count; ++i)
+		{
+			auto viewable = static_cast<vk::viewable_image*>(m_fbo_images[i]);
+			const auto view = viewable->get_view(remap);
+			m_program->bind_uniform(*view, vk::glsl::binding_set_index_fragment, m_fs_binding_table->frag_src_location[i]);
+		}
+	}
+
 	return out_of_memory;
 }
 
@@ -851,11 +866,12 @@ bool VKGSRender::bind_interpreter_texture_env()
 
 		using deferred_subresource_t = vk::texture_cache::deferred_subresource;
 		auto image = static_cast<vk::viewable_image*>(base->image());
+		auto rtt = vk::try_as_rtt(base->image());
 
 		if (is_msaa)
 		{
 			// MSAA resolve
-			auto rtt = vk::as_rtt(base->image());
+			ensure(rtt);
 			rtt->memory_barrier(*m_current_command_buffer, rsx::surface_access::transfer_read);
 			image = rtt->get_surface(rsx::surface_access::transfer_read);
 		}
@@ -863,18 +879,22 @@ bool VKGSRender::bind_interpreter_texture_env()
 		if (is_redirected)
 		{
 			// Force bitcast
-			deferred_subresource_t flatten_op{};
-			flatten_op.address = desc->ref_address;
-			flatten_op.external_handle = image;
-			flatten_op.op = desc->is_cyclic_reference
-				? rsx::deferred_request_command::copy_image_dynamic
-				: rsx::deferred_request_command::copy_image_static;
-			flatten_op.width = flatten_op.external_handle->width();
-			flatten_op.height = flatten_op.external_handle->height();
-			flatten_op.depth = 1;
-			flatten_op.gcm_format = desc->format_ex.format();
-			flatten_op.remap = decoded_remap;
-			flatten_op.cache_range = utils::address_range32::start_length(desc->ref_address, attr.pitch * attr.height);
+			rsx::image_section_attributes_t flatten_attrs{};
+			flatten_attrs.address = desc->ref_address;
+			flatten_attrs.gcm_format = desc->format_ex.format();
+			flatten_attrs.width = image->width();
+			flatten_attrs.height = image->height();
+			flatten_attrs.depth = 1;
+
+			const coord3u flatten_rect = { 0, 0, 0, flatten_attrs.width, flatten_attrs.height, 1 };
+			auto flatten_op = deferred_subresource_t::create_copy(
+				image, flatten_attrs, flatten_rect, rsx::surface_transform::identity, decoded_remap, desc->is_cyclic_reference);
+
+			ensure(desc->ref_address);
+			flatten_op.cache_range = rtt
+				? rtt->get_memory_range()
+				: utils::address_range32::start_length(desc->ref_address, attr.pitch * attr.height);
+
 			return m_texture_cache.create_temporary_subresource(*m_current_command_buffer, flatten_op);
 		}
 
@@ -1087,6 +1107,27 @@ void VKGSRender::emit_geometry(u32 sub_index)
 
 		reload_state = true;
 	});
+
+	if (current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING)
+	{
+		// Subpass inter-draw dependency for input attachment reads. Preserves open renderpasses.
+		for (u32 i = 0; i < current_fragment_program.mrt_buffers_count; ++i)
+		{
+			vk::insert_image_memory_barrier(
+				*m_current_command_buffer,
+				m_fbo_images[i]->value,
+				m_fbo_images[i]->current_layout,
+				m_fbo_images[i]->current_layout,
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+				VK_ACCESS_INPUT_ATTACHMENT_READ_BIT,
+				{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 },
+				true,
+				VK_DEPENDENCY_BY_REGION_BIT
+			);
+		}
+	}
 
 	// Bind both pipe and descriptors in one go
 	// FIXME: We only need to rebind the pipeline when reload state is set. Flags?

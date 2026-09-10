@@ -716,6 +716,17 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		ensure(val && val->getType() == get_type<u32[4]>());
 
 		const auto x = m_ir->CreateZExt(val, get_type<u64[4]>());
+
+		// Use integer operations here so LLVM can fold the masks into VPTERNLOG
+		if (m_use_avx512)
+		{
+			const auto s = m_ir->CreateAnd(m_ir->CreateShl(x, 32), 0x8000000000000000);
+			const auto m = m_ir->CreateAnd(m_ir->CreateShl(x, 29), 0x0fffffffe0000000);
+			const auto f = m_ir->CreateAdd(m_ir->CreateOr(s, m), splat<u64[4]>(0x3800000000000000).eval(m_ir));
+			const auto e = m_ir->CreateAnd(val, 0x7f800000);
+			return uint64_as_double(m_ir->CreateSelect(m_ir->CreateIsNotNull(e), f, s));
+		}
+
 		const auto s = m_ir->CreateShl(m_ir->CreateAnd(x, 0x80000000), 32);
 		const auto a = m_ir->CreateAnd(x, 0x7fffffff);
 		const auto m = m_ir->CreateShl(m_ir->CreateAdd(a, splat<u64[4]>(0x1c0000000).eval(m_ir)), 29);
@@ -728,6 +739,19 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	llvm::Value* xfloat_in_double(llvm::Value* val)
 	{
 		ensure(val && val->getType() == get_type<f64[4]>());
+
+		// Use integer operations here so LLVM can fold the masks into VPTERNLOG
+		if (m_use_avx512)
+		{
+			const auto d = double_as_uint64(val);
+			const auto smax = splat<u64[4]>(0x47ffffffe0000000).eval(m_ir);
+			const auto smin = splat<u64[4]>(0x3810000000000000).eval(m_ir);
+			const auto a = m_ir->CreateAnd(d, 0x7fffffffe0000000);
+			const auto n = m_ir->CreateICmpUGE(a, smin);
+			const auto c = m_ir->CreateSelect(m_ir->CreateICmpULT(a, smax), a, smax);
+			const auto r = m_ir->CreateOr(c, m_ir->CreateAnd(d, 0x8000000000000000));
+			return uint64_as_double(m_ir->CreateSelect(n, r, splat<u64[4]>(0).eval(m_ir)));
+		}
 
 		const auto smax = uint64_as_double(splat<u64[4]>(0x47ffffffe0000000).eval(m_ir));
 		const auto smin = uint64_as_double(splat<u64[4]>(0x3810000000000000).eval(m_ir));
@@ -5598,7 +5622,23 @@ public:
 
 	void ABSDB(spu_opcode_t op)
 	{
+		const auto matches_compare = [&](auto val, auto MP)
+		{
+			using VT = typename decltype(MP)::type;
+			auto [ok, x] = match_expr(val, sext<VT>(match<bool[std::extent_v<VT>]>()));
+			return ok;
+		};
+
 		const auto [a, b] = get_vrs<u8[16]>(op.ra, op.rb);
+
+		if (match_vr<s8[16], s16[8], s32[4], s64[2]>(op.ra, matches_compare) ||
+			match_vr<s8[16], s16[8], s32[4], s64[2]>(op.rb, matches_compare))
+		{
+			// 0xff - x = ~x
+			set_vr(op.rt, a ^ b);
+			return;
+		}
+
 		set_vr(op.rt, absd(a, b));
 	}
 
@@ -7241,7 +7281,7 @@ public:
 
 				if (auto [a, b] = match_vrs<f64[4]>(op.ra, op.rb); a || b)
 				{
-					set_vr(op.rt4, select(sel_bool, get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.ra)));
+					set_vr(op.rt4, select(sel_bool, get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.ra)), nullptr, !(a && b));
 					return true;
 				}
 
@@ -7299,7 +7339,7 @@ public:
 			{
 				if (const auto [a_f64, b_f64] = match_vrs<f64[4]>(op.ra, op.rb); a_f64 || b_f64)
 				{
-					set_vr(op.rt4, select(noncast<s32[4]>(c) != 0, get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.ra)));
+					set_vr(op.rt4, select(noncast<s32[4]>(c) != 0, get_vr<f64[4]>(op.rb), get_vr<f64[4]>(op.ra)), nullptr, !(a_f64 && b_f64));
 					return;
 				}
 
@@ -7313,6 +7353,40 @@ public:
 			case 2:
 			case 1:
 			{
+				// Match 8-bit addition/subtraction idioms
+				const bool lhs_to_lo = mask == v128::from16p(0xff00);
+				if (lhs_to_lo || mask == v128::from16p(0x00ff))
+				{
+					const auto lhs = get_vr<u16[8]>(op.ra);
+					const auto rhs = get_vr<u16[8]>(op.rb);
+
+					const auto lo_op = lhs_to_lo ? lhs : rhs;
+					const auto hi_op = lhs_to_lo ? rhs : lhs;
+
+					// Fold: selb(add16(a, b & 0xff00), add16(a, b), low16_mask) => add8(a, b)
+					if (const auto [lo_match, add_a, add_b] = match_expr(lo_op, match<u16[8]>() + match<u16[8]>()); lo_match)
+					{
+						const auto [ab_hi_match] = match_expr(hi_op, add_a + (add_b & 0xff00));
+						const auto [ba_hi_match] = match_expr(hi_op, add_b + (add_a & 0xff00));
+
+						if (ab_hi_match || ba_hi_match)
+						{
+							set_vr(op.rt4, bitcast<u8[16]>(add_a) + bitcast<u8[16]>(add_b));
+							return;
+						}
+					}
+
+					// Fold: selb(sub16(a, b & 0xff00), sub16(a, b), low16_mask) => sub8(a, b)
+					if (const auto [lo_match, sub_a, sub_b] = match_expr(lo_op, match<u16[8]>() - match<u16[8]>()); lo_match)
+					{
+						if (const auto [hi_match] = match_expr(hi_op, sub_a - (sub_b & 0xff00)); hi_match)
+						{
+							set_vr(op.rt4, bitcast<u8[16]>(sub_a) - bitcast<u8[16]>(sub_b));
+							return;
+						}
+					}
+				}
+
 				set_vr(op.rt4, select(bitcast<s8[16]>(c) != 0, get_vr<u8[16]>(op.rb), get_vr<u8[16]>(op.ra)));
 				return;
 			}
@@ -7348,6 +7422,24 @@ public:
 			if (auto [ok, i] = match_expr(c, spu_get_insertion_shuffle_mask<VT>(match<u32>())); ok)
 			{
 				set_vr(op.rt4, insert(get_vr<VT>(op.rb), i, get_scalar(get_vr<VT>(op.ra))));
+				return true;
+			}
+
+			return false;
+		}))
+		{
+			return;
+		}
+		
+		if (match_vr<s8[16], s16[8], s32[4], s64[2]>(op.rc, [&](auto c, auto MP)
+		{
+			using VT = typename decltype(MP)::type;
+
+			// Indexes come from a compare
+			if (auto [ok, i] = match_expr(c, sext<VT>(match<bool[std::extent_v<VT>]>())); ok)
+			{
+				const auto a_splat = zshuffle(get_vr<u8[16]>(op.ra), 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15);
+				set_vr(op.rt4, select(bitcast<s8[16]>(c) != 0, splat<u8[16]>(0x80), a_splat));
 				return true;
 			}
 
@@ -7460,6 +7552,9 @@ public:
 		const auto known_idx = get_known_bits(c);
 		const bool perm_only = known_idx.Zero[7];
 		const bool perm_or_zero_only = known_idx.Zero[6];
+		const bool consts_only = known_idx.One[7];
+		const bool consts_never_msb = known_idx.Zero[5];
+		const bool consts_never_allones = known_idx.One[5];
 		const bool idx_selects_single = known_idx.extractBits(1, 4).isConstant();
 
 		const auto a = get_vr<u8[16]>(op.ra);
@@ -7522,7 +7617,11 @@ public:
 		// NOTE: LLVM doesn't emit BCAX	(llvm-project/issues/200699)
 		//		 Verify if `(x ^ 0x0F) & 0x?F` is reassociated when upstreamed
 
-		if (single_src)
+		if (consts_only)
+		{
+			// NOP to avoid doing any shuffles
+		}
+		else if (single_src)
 		{
 			const auto only_src = single_src.value();
 
@@ -7534,8 +7633,7 @@ public:
 
 			if (only_src_is_splat)
 			{
-				const auto lut = build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0x80, 0x80, 0x80, 0x80);
-				set_vr(op.rt4, tbx(only_src, lut, (c >> 3) ^ 0x10));
+				set_vr(op.rt4, tbl(splat_lut, (c >> 4)));
 				return;
 			}
 
@@ -7545,15 +7643,8 @@ public:
 				set_vr(op.rt4, tbl(only_src, cm));
 				return;
 			}
-
-			const auto x = tbl(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
-			const auto xv = perm_or_zero_only ? eval(splat<u8[16]>(0)) : x;
-			const auto cm = eval(cv & 0x8f);
-			set_vr(op.rt4, tbx(xv, only_src, cm));
-			return;
 		}
-
-		if (a_is_splat && b_is_splat)
+		else if (a_is_splat && b_is_splat)
 		{
 			if (perm_only)
 			{
@@ -7572,19 +7663,53 @@ public:
 			return;
 		}
 
-		const auto x = tbl(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
-		const auto xv = perm_or_zero_only ? eval(splat<u8[16]>(0)) : x;
+		// Calculate special index constants
+
+		value_t<u8[16]> idx_consts;
+		if (perm_or_zero_only)
+		{
+			idx_consts = eval(splat<u8[16]>(0));
+		}
+		else if (consts_never_msb)
+		{
+			idx_consts = eval(noncast<u8[16]>(sext<s8[16]>(c >= 0xc0)));
+		}
+		else
+		{
+			idx_consts = tbl(build<u8[16]>(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x80, 0x80), (c >> 4));
+		}
+
+		if (consts_only)
+		{
+			set_vr(op.rt4, idx_consts);
+			return;
+		}
+
+		// Combine shuffle and special index constants
+
+		if (single_src)
+		{
+			const auto cm = eval(cv & 0x8f);
+			set_vr(op.rt4, tbx(idx_consts, single_src.value(), cm));
+			return;
+		}
+
 		const auto cm = eval(cv & 0x9f);
-		set_vr(op.rt4, tbx2(xv, av, bv, cm));
+		set_vr(op.rt4, tbx2(idx_consts, av, bv, cm));
 		return;
 #else
 
 		// Calculate shuffle
 
-		bool shuf_zero_when_msb = false;
+		bool or_combine_safe = false;
 
 		value_t<u8[16]> ab_shuf;
-		if (single_src)
+		if (consts_only)
+		{
+			// NOP to avoid doing any shuffles
+			ab_shuf = value_t<u8[16]>();
+		}
+		else if (single_src)
 		{
 			if (only_src_is_splat)
 			{
@@ -7593,7 +7718,7 @@ public:
 			else
 			{
 				ab_shuf = eval(pshufb(single_src.value(), cv));
-				shuf_zero_when_msb = true;
+				or_combine_safe = true;
 			}
 		}
 		else if (a_is_splat && b_is_splat)
@@ -7623,7 +7748,7 @@ public:
 			ab_shuf = eval(select_by_bit4(c, a_shuf, b_shuf));
 
 			// pshufb zeros when the MSB is set
-			shuf_zero_when_msb = !(a_is_splat || b_is_splat);
+			or_combine_safe = !(a_is_splat || b_is_splat);
 		}
 
 		if (perm_only)
@@ -7639,10 +7764,26 @@ public:
 		{
 			idx_consts = eval(splat<u8[16]>(0));
 		}
-		else if (m_use_avx512_icl)
+		else if (consts_never_msb)
 		{
+			// Saves on a constant + prevents pessimation where kmask implementation has worse latency than GFNI
+			if (or_combine_safe)
+				idx_consts = eval(bitcast<u8[16]>(sext<s8[16]>(c >= 0xc0)));
+			else
+				idx_consts = eval(bitcast<u8[16]>(noncast<s8[16]>(c + c) >> 7));
+		}
+		else if (consts_never_allones)
+		{
+			idx_consts = eval(sub_sat(c, splat<u8[16]>(0x60)) & 0x80);
+		}
+		else if (m_use_gfni)
+		{
+			// TODO: Due to vpblendvb, the pshufb OR combine path is one fewer micro-ops post Rocket Lake. Check if it is faster.
 			const auto gfni = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
 			idx_consts = eval(select(noncast<s8[16]>(gfni) >= 0, splat<u8[16]>(0), gfni));
+			
+			// Logic assumes that the MSB is always set
+			or_combine_safe = false;
 		}
 		else
 		{
@@ -7650,9 +7791,15 @@ public:
 			idx_consts = eval(pshufb(pshufb_lut, (c >> 4)));
 		}
 
+		if (consts_only)
+		{
+			set_vr(op.rt4, idx_consts);
+			return;
+		}
+
 		// Combine shuffle and special index constants
 
-		if (shuf_zero_when_msb)
+		if (or_combine_safe)
 			set_vr(op.rt4, ab_shuf | idx_consts);
 		else
 			set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab_shuf, idx_consts));

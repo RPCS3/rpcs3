@@ -43,7 +43,11 @@ private:
 		case localized_string_id::RSX_OVERLAYS_TROPHY_SILVER: return tr("You have earned a silver trophy.\n%0", "Trophy text").arg(std::forward<Args>(args)...);
 		case localized_string_id::RSX_OVERLAYS_TROPHY_GOLD: return tr("You have earned a gold trophy.\n%0", "Trophy text").arg(std::forward<Args>(args)...);
 		case localized_string_id::RSX_OVERLAYS_TROPHY_PLATINUM: return tr("You have earned a platinum trophy.\n%0", "Trophy text").arg(std::forward<Args>(args)...);
-		case localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS: return tr("Compiling shaders");
+		case localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS: return tr("Precompiling shader interpreter variants.\nPlease wait...");
+		case localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_TITLE: return tr("Shader Compilation");
+		case localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_VULKAN: return tr("Building base variant %0...").arg(std::forward<Args>(args)...);
+		case localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_OPENGL_BUILD: return tr("Building variant %0...").arg(std::forward<Args>(args)...);
+		case localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_OPENGL_LINK: return tr("Linking variant %0...").arg(std::forward<Args>(args)...);
 		case localized_string_id::RSX_OVERLAYS_COMPILING_PPU_MODULES: return tr("Compiling PPU Modules");
 		case localized_string_id::RSX_OVERLAYS_MSG_DIALOG_YES: return tr("Yes", "Message Dialog");
 		case localized_string_id::RSX_OVERLAYS_MSG_DIALOG_NO: return tr("No", "Message Dialog");
@@ -305,6 +309,7 @@ private:
 		case localized_string_id::HOME_MENU_SETTINGS_MOUSE_DEBUG_INPUT_OVERLAY: return tr("Mouse Debug Overlay", "Debug");
 		case localized_string_id::HOME_MENU_SETTINGS_DEBUG_DISABLE_VIDEO_OUTPUT: return tr("Disable Video Output", "Debug");
 		case localized_string_id::HOME_MENU_SETTINGS_DEBUG_TEXTURE_LOD_BIAS: return tr("Texture LOD Bias Addend", "Debug");
+		case localized_string_id::HOME_MENU_SETTINGS_SYSTEM_START_BIG_PICTURE_MODE: return tr("Open Big Picture Mode On Boot", "System");
 		case localized_string_id::HOME_MENU_SCREENSHOT: return tr("Take Screenshot");
 		case localized_string_id::HOME_MENU_SAVESTATE: return tr("SaveState");
 		case localized_string_id::HOME_MENU_SAVESTATE_SAVE: return tr("Save Emulation State");
@@ -327,6 +332,10 @@ private:
 		case localized_string_id::HOME_MENU_TROPHY_GRADE_SILVER: return tr("Silver", "Trophy type");
 		case localized_string_id::HOME_MENU_TROPHY_GRADE_GOLD: return tr("Gold", "Trophy type");
 		case localized_string_id::HOME_MENU_TROPHY_GRADE_PLATINUM: return tr("Platinum", "Trophy type");
+		case localized_string_id::HOME_MENU_TROPHY_SYNC_TROPHIES: return tr("Sync trophies");
+		case localized_string_id::HOME_MENU_TROPHY_SYNCING_TROPHIES: return tr("Syncing...");
+		case localized_string_id::HOME_MENU_TROPHY_SYNC_SUCCESS: return tr("Synced!");
+		case localized_string_id::HOME_MENU_TROPHY_SYNC_FAILED: return tr("Sync failed");
 		case localized_string_id::HOME_MENU_TROPHY_SORT_GAME_DEFAULT: return tr("Sort: Game Default");
 		case localized_string_id::HOME_MENU_TROPHY_SORT_NOT_EARNED: return tr("Sort: Not Earned");
 		case localized_string_id::HOME_MENU_TROPHY_SORT_EARNED_DATE: return tr("Sort: Earned Date");
@@ -359,6 +368,14 @@ private:
 		case localized_string_id::SAVESTATE_FAILED_DUE_TO_VDEC: return tr("SaveState failed: VDEC-based video/cutscenes are in order, wait for them to end or enable libvdec.sprx.");
 		case localized_string_id::SAVESTATE_FAILED_DUE_TO_MISSING_SPU_SETTING: return tr("SaveState failed: Failed to lock SPU state, enabling SPU-Compatible mode may fix it.");
 		case localized_string_id::SAVESTATE_FAILED_DUE_TO_SPU: return tr("SaveState failed: Failed to lock SPU state, using SPU ASMJIT will fix it.");
+		case localized_string_id::BIG_PICTURE_MODE_TITLE: return tr("Big Picture Mode");
+		case localized_string_id::BIG_PICTURE_MENU_GAMES: return tr("Games");
+		case localized_string_id::BIG_PICTURE_MENU_EXIT: return tr("Exit Big Picture Mode");
+		case localized_string_id::BIG_PICTURE_NO_GAMES_FOUND: return tr("No games found.\nAdd games in the main RPCS3 window.");
+		case localized_string_id::BIG_PICTURE_LOADING: return tr("Loading games...");
+		case localized_string_id::BIG_PICTURE_GAME_DETAILS_START: return tr("Start");
+		case localized_string_id::BIG_PICTURE_HINT_BACK: return tr("Back");
+		case localized_string_id::BIG_PICTURE_HINT_SELECT: return tr("Select");
 		case localized_string_id::INVALID: return tr("Invalid");
 		default: return tr("Unknown");
 		}

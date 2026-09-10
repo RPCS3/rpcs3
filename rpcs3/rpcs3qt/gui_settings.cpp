@@ -167,6 +167,272 @@ QStringList gui_settings::GetGameListCategoryFilters(bool is_list_mode) const
 	return filters;
 }
 
+namespace
+{
+	constexpr QLatin1String gc_games_prefix("games_");
+
+	// '/' is the group separator of QSettings and would split the ini key in two.
+	// ',' separates the entries of the stored collection list. The rest is ini syntax.
+	constexpr QStringView gc_forbidden_chars = u"/\\[]=;,";
+	constexpr int gc_max_name_length = 64;
+}
+
+QStringList gui_settings::GetGameCollections() const
+{
+	return GetValue(gui::gc_collections).toStringList();
+}
+
+bool gui_settings::AddGameCollection(const QString& name) const
+{
+	if (!IsValidGameCollectionName(name) || IsReservedGameCollectionName(name))
+	{
+		return false;
+	}
+
+	QStringList collections = GetGameCollections();
+
+	// Two names that differ only in case would land on the same games_ key and share one member list.
+	// QSettings folds those keys the way toLower does, not the way Qt::CaseInsensitive compares: the two
+	// disagree on the Greek sigmas, which QSettings keeps apart.
+	const QString key = name.toLower();
+
+	if (std::any_of(collections.cbegin(), collections.cend(), [&key](const QString& c) { return c.toLower() == key; }))
+	{
+		return false;
+	}
+
+	collections.append(name);
+
+	SetValue(gui::gc_collections, collections);
+	return true;
+}
+
+bool gui_settings::RenameGameCollection(const QString& from, const QString& to) const
+{
+	if (!IsValidGameCollectionName(to) || IsReservedGameCollectionName(to))
+	{
+		return false;
+	}
+
+	QStringList collections = GetGameCollections();
+	const qsizetype at = collections.indexOf(from);
+
+	if (at < 0 || collections[at] == to)
+	{
+		return false;
+	}
+
+	// The collection may take the key it already owns, which is what a change of case alone does, but not
+	// one another collection owns
+	const QString key = to.toLower();
+
+	for (qsizetype i = 0; i < collections.size(); i++)
+	{
+		if (i != at && collections[i].toLower() == key)
+		{
+			return false;
+		}
+	}
+
+	// Read the members before the key they live under goes away
+	const QSet<QString> games = GetGamesInCollection(from);
+
+	collections[at] = to;
+	SetValue(gui::gc_collections, collections, false);
+
+	RemoveValue(gui::game_collection, gc_games_prefix + from, false);
+	SetGamesInCollection(to, games);
+
+	if (GetValue(gui::gc_current).toString() == from)
+	{
+		SetCurrentGameCollection(to, false);
+	}
+
+	sync();
+	return true;
+}
+
+bool gui_settings::RemoveGameCollection(const QString& name) const
+{
+	QStringList collections = GetGameCollections();
+
+	if (!collections.removeOne(name))
+	{
+		return false;
+	}
+
+	const bool reset_current = GetValue(gui::gc_current).toString() == name;
+
+	if (collections.isEmpty())
+	{
+		RemoveValue(gui::gc_collections, false);
+	}
+	else
+	{
+		SetValue(gui::gc_collections, collections, false);
+	}
+
+	RemoveValue(gui::game_collection, gc_games_prefix + name, false);
+
+	if (reset_current)
+	{
+		SetCurrentGameCollection({}, false);
+	}
+
+	sync();
+	return true;
+}
+
+QString gui_settings::GetCurrentGameCollection() const
+{
+	return GetValue(gui::gc_current).toString();
+}
+
+void gui_settings::SetCurrentGameCollection(const QString& name, bool sync) const
+{
+	// Removing the entry lets the whole [GameCollection] section disappear with the last collection, and
+	// matches SetGamesInCollection, where dropping the key is mandatory rather than tidy.
+	if (name.isEmpty())
+	{
+		RemoveValue(gui::gc_current, sync);
+		return;
+	}
+
+	SetValue(gui::gc_current, name, sync);
+}
+
+QSet<QString> gui_settings::GetGamesInCollection(const QString& name) const
+{
+	return gui::utils::list_to_set(GetValue(gui::game_collection, gc_games_prefix + name, QStringList()).toStringList());
+}
+
+bool gui_settings::CleanupCollections(const QSet<QString>& serials) const
+{
+	const QStringList& collections = GetGameCollections();
+
+	if (collections.isEmpty())
+	{
+		return false;
+	}
+
+	bool changed = false;
+
+	for (const QString& collection : collections)
+	{
+		const QSet<QString> old_games = GetGamesInCollection(collection);
+		QSet<QString> games = old_games;
+
+		games.intersect(serials);
+
+		if (games != old_games)
+		{
+			SetGamesInCollection(collection, games);
+			changed = true;
+		}
+	}
+
+	if (changed)
+	{
+		sync();
+	}
+
+	return changed;
+}
+
+bool gui_settings::SetGameCollectionMembership(const QSet<QString>& serials, const QString& name, bool add) const
+{
+	if (serials.isEmpty() || !GetGameCollections().contains(name))
+	{
+		return false;
+	}
+
+	QSet<QString> games = GetGamesInCollection(name);
+	const qsizetype old_size = games.size();
+
+	if (add)
+	{
+		games.unite(serials);
+	}
+	else
+	{
+		games.subtract(serials);
+	}
+
+	// unite only adds and subtract only removes, so a size that did not move is a set that did not either
+	if (games.size() == old_size)
+	{
+		return false;
+	}
+
+	SetGamesInCollection(name, games);
+	sync();
+	return true;
+}
+
+QString gui_settings::GetAllGamesCollectionLabel()
+{
+	return tr("All Games");
+}
+
+bool gui_settings::IsValidGameCollectionName(const QString& name)
+{
+	if (name.isEmpty() || name.size() > gc_max_name_length || name != name.trimmed())
+	{
+		return false;
+	}
+
+	for (const QChar c : name)
+	{
+		// Control characters would break the line structure of the ini file
+		if (!c.isPrint() || gc_forbidden_chars.contains(c))
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+QString gui_settings::GetGameCollectionNameHint()
+{
+	QStringList chars;
+
+	for (const QChar c : gc_forbidden_chars)
+	{
+		chars << c;
+	}
+
+	return tr("A collection name may be at most %0 characters long, "
+		"may only contain printable characters, and must not contain any of these: %1")
+		.arg(QString::number(gc_max_name_length), chars.join(QLatin1Char(' ')));
+}
+
+bool gui_settings::IsReservedGameCollectionName(const QString& name)
+{
+	// Always reject the English string, plus whatever "All Games" reads as in the current language. A name
+	// created under a different language can still end up matching the label, which merely looks odd: the
+	// default entry is identified by an empty collection name, never by its text.
+	return name.compare(GetAllGamesCollectionLabel(), Qt::CaseInsensitive) == 0 ||
+	       name.compare(QStringLiteral("All Games"), Qt::CaseInsensitive) == 0;
+}
+
+void gui_settings::SetGamesInCollection(const QString& name, const QSet<QString>& serials) const
+{
+	if (!IsValidGameCollectionName(name))
+	{
+		return;
+	}
+
+	// QSettings writes an empty list as "@Invalid()", so drop the key instead of leaving that in the ini
+	if (serials.isEmpty())
+	{
+		RemoveValue(gui::game_collection, gc_games_prefix + name, false);
+		return;
+	}
+
+	SetValue(gui::game_collection, gc_games_prefix + name, QStringList(serials.values()), false);
+}
+
 bool gui_settings::GetCategoryVisibility(int cat, bool is_list_mode) const
 {
 	const gui_save value = GetGuiSaveForCategory(cat, is_list_mode);
