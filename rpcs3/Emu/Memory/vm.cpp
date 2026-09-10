@@ -2362,7 +2362,7 @@ namespace vm
 		map_lookup.clear();
 
 #ifndef _MSC_VER
-		shm_list.erase(std::unique(shm_list.begin(), shm_list.end(), [](auto& a, auto& b) { return a.first == b.first; }), shm_list.end());
+		shm_list.erase(std::unique(shm_list.begin(), shm_list.end(), [](auto& a, auto& b) { return a.get() == b.get(); }), shm_list.end());
 #else
 		// Workaround for bugged std::unique
 		for (auto it = shm_list.begin(); it != shm_list.end();)
