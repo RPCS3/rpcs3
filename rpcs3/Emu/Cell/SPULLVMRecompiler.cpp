@@ -1690,6 +1690,13 @@ public:
 		if (auto& cache = g_fxo->get<spu_cache>(); cache && g_cfg.core.spu_cache && !add_loc->cached.exchange(1))
 		{
 			add_to_file = true;
+
+			if (g_cfg.core.spu_debug)
+			{
+				add_to_file = false;
+				cache.add(func);
+				spu_log.success("New SPU block detected (size=%u)", func_size);
+			}
 		}
 
 		{
