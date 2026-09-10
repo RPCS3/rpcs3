@@ -987,8 +987,6 @@ bool Emulator::BootBigPictureMode()
 
 	g_cfg.video.disable_on_disk_shader_cache.set(true);
 
-	vm::init();
-	vm::reserve_map(vm::main, 0, 0x1FFF0000, vm::page_64k_size);
 	g_fxo->init(false);
 
 	// Initialize progress dialog
