@@ -16,6 +16,7 @@
 
 #include "Utilities/File.h"
 #include "Emu/system_utils.hpp"
+#include "Loader/CHD.h"
 #include "Loader/ISO.h"
 #include "Loader/content_validation.h"
 
@@ -625,7 +626,9 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 	// Check disc game integrity
 	if (QString::fromStdString(current_game.category) == cat::cat_disc_game)
 	{
-		const bool raw_archive = current_game.is_iso_file && is_iso_file(current_game.path);
+		bool raw_device = false;
+		const bool raw_archive = current_game.is_iso_file && is_iso_file(current_game.path, nullptr, &raw_device);
+		const bool chd_image = raw_archive && !raw_device && is_chd_image(fs::file(current_game.path));
 		const iso_type_status iso_type = iso_file_decryption::check_type(current_game.path);
 
 		// If it's an ISO file (e.g. even a decrypted ISO), always provide the entry on the context menu but disable
@@ -636,7 +639,7 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 			QAction* check_iso_integrity = addAction(tr("&Check ISO Integrity"));
 
 			// If it's a Redump ISO and the integrity DB exists
-			if ((raw_archive || iso_type == iso_type_status::REDUMP_ISO) &&
+			if (!chd_image && (raw_archive || iso_type == iso_type_status::REDUMP_ISO) &&
 				content_validation::check_integrity(content_file_type::ISO, "") != content_integrity_status::ERROR_OPENING_DB)
 			{
 				connect(check_iso_integrity, &QAction::triggered, this, [this, gameinfo]()
@@ -647,6 +650,10 @@ void game_list_context_menu::show_single_selection_context_menu(const game_info&
 			else
 			{
 				check_iso_integrity->setEnabled(false);
+				if (chd_image)
+				{
+					check_iso_integrity->setToolTip(tr("Redump verification requires an uncompressed disc dump."));
+				}
 			}
 		}
 	}
