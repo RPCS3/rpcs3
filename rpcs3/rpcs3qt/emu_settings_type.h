@@ -111,6 +111,7 @@ enum class emu_settings_type
 	DisableAsyncHostMM,
 	UseReBAR,
 	RecordWithOverlays,
+	DisableHWBlending,
 	DisableHWTexelRemapping,
 	DisableBlitEngineScaling,
 

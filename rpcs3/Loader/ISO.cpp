@@ -60,14 +60,15 @@ static void* get_aligned_buf()
 
 static bool is_iso_file(iso_file& file, u64* size = nullptr)
 {
-	if (!file || file.size() < 32768ULL + 6)
+	// The standard identifier ("CD001") follows the type of the first volume descriptor
+	if (!file || file.size() < ISO_DESCRIPTORS_OFFSET + 6)
 	{
 		return false;
 	}
 
 	char magic[5];
 
-	if (file.read_at(32768ULL + 1, magic, 5) != 5)
+	if (file.read_at(ISO_DESCRIPTORS_OFFSET + 1, magic, 5) != 5)
 	{
 		return false;
 	}
@@ -806,13 +807,20 @@ inline T retrieve_endian_int(const u8* buf)
 }
 
 // Assumed that directory entry is at file head
-static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, bool names_in_ucs2 = false)
+static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, bool& read_error, bool names_in_ucs2 = false)
 {
+	read_error = true;
 	const auto start_pos = entry.pos();
-	const u8 entry_length = entry.read<u8>();
+	u8 entry_length = 0;
+	if (!entry.read(entry_length))
+	{
+		return std::nullopt;
+	}
 
 	if (entry_length == 0)
 	{
+		// Zero marks sector padding, not an unreadable directory record.
+		read_error = false;
 		return std::nullopt;
 	}
 
@@ -841,7 +849,12 @@ static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, 
 #pragma pack(pop)
 	static_assert(sizeof(iso_entry_header) == 32);
 
-	const iso_entry_header header = entry.read<iso_entry_header>();
+	iso_entry_header header{};
+	if (entry_length < 1 + sizeof(header) || !entry.read(header)
+		|| header.file_name_length > entry_length - 1 - sizeof(header))
+	{
+		return std::nullopt;
+	}
 
 	const u32 start_sector = retrieve_endian_int<u32>(header.start_sector);
 	const u32 file_size = retrieve_endian_int<u32>(header.file_size);
@@ -911,6 +924,7 @@ static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, 
 	// Skip the rest of the entry
 	entry.seek(entry_length + start_pos);
 
+	read_error = false;
 	return iso_fs_metadata
 	{
 		.name = std::move(file_name),
@@ -947,13 +961,24 @@ static bool iso_form_hierarchy(fs::file& file, iso_fs_node& node, bool use_ucs2_
 
 	// Assuming the directory spans a single extent
 	const auto& directory_extent = ::at32(node.metadata.extents, 0);
-	const u64 end_pos = (directory_extent.start * ISO_SECTOR_SIZE) + directory_extent.size;
+	const u64 start_pos = directory_extent.start * ISO_SECTOR_SIZE;
+	const u64 size = file.size();
+	if (start_pos > size || directory_extent.size > size - start_pos)
+	{
+		return false;
+	}
+	const u64 end_pos = start_pos + directory_extent.size;
 
-	file.seek(directory_extent.start * ISO_SECTOR_SIZE);
+	file.seek(start_pos);
 
 	while (file.pos() < end_pos)
 	{
-		auto entry = iso_read_directory_entry(file, use_ucs2_decoding);
+		bool read_error = false;
+		auto entry = iso_read_directory_entry(file, read_error, use_ucs2_decoding);
+		if (read_error || file.pos() > end_pos)
+		{
+			return false;
+		}
 
 		if (!entry)
 		{
@@ -1029,23 +1054,40 @@ iso_archive::iso_archive(const std::string& path)
 	// "m_path" is updated with the raw device path in case "path" points to a BD drive
 	fs::get_optical_raw_device(path, &m_path);
 
-	if (!is_iso_file(m_path))
+	// NOTE: the file is opened once here and then handed over to the parsing below. Recognizing the ISO through its
+	//       path (i.e. "is_iso_file(m_path)") would open it and read its volume descriptor a second time, which is a
+	//       physical read when the path points to an optical drive
+	auto file = std::make_unique<iso_file>(m_path);
+
+	if (!is_iso_file(*file))
 	{
 		iso_log.error("iso_archive: Failed to recognize ISO file: '%s'", path);
 		invalidate();
 		return;
 	}
 
-	fs::file iso_file(std::make_unique<iso_file>(m_path));
+	// NOTE: "is_iso_file()" reads through "read_at()", which does not move the position, so the file is still at its
+	//       beginning here
+	fs::file iso_file(std::move(file));
 
 	u8 descriptor_type = -2;
 	bool use_ucs2_decoding = false;
+
+	// Skip the system area: scanning it sector by sector would read 16 sectors (a physical read each, on an optical
+	// drive) only to find boot data, which could even be mistaken for a volume descriptor.
+	// NOTE: "is_iso_file()" above already verified the standard identifier is right here
+	iso_file.seek(ISO_DESCRIPTORS_OFFSET);
 
 	do
 	{
 		const auto descriptor_start = iso_file.pos();
 
-		descriptor_type = iso_file.read<u8>();
+		if (!iso_file.read(descriptor_type))
+		{
+			iso_log.error("iso_archive: Failed to read volume descriptor: '%s'", path);
+			invalidate();
+			return;
+		}
 
 		// 1 = primary vol descriptor, 2 = joliet SVD
 		if (descriptor_type == 1 || descriptor_type == 2)
@@ -1055,7 +1097,14 @@ iso_archive::iso_archive(const std::string& path)
 			// Skip the rest of descriptor's data
 			iso_file.seek(155, fs::seek_cur);
 
-			const auto node = iso_read_directory_entry(iso_file, use_ucs2_decoding);
+			bool read_error = false;
+			const auto node = iso_read_directory_entry(iso_file, read_error, use_ucs2_decoding);
+			if (read_error)
+			{
+				iso_log.error("iso_archive: Failed to read root directory record: '%s'", path);
+				invalidate();
+				return;
+			}
 
 			if (node)
 			{
@@ -1217,7 +1266,15 @@ std::unique_ptr<fs::file_base> iso_archive::get_iso_file(const std::string& path
 
 std::unique_ptr<fs::file_base> iso_archive::open(const std::string& path)
 {
-	return get_iso_file(m_path, fs::read, *ensure(retrieve(path)));
+	const auto node = retrieve(path);
+
+	if (!node)
+	{
+		fs::g_tls_error = fs::error::noent;
+		return nullptr;
+	}
+
+	return get_iso_file(m_path, fs::read, *node);
 }
 
 psf::registry iso_archive::open_psf(const std::string& path)
@@ -1310,7 +1367,7 @@ u64 iso_file::local_extent_remaining(u64 pos) const
 {
 	const auto [local_pos, extent] = get_extent_pos(pos);
 
-	return extent.size - local_pos;
+	return local_pos < extent.size ? extent.size - local_pos : 0;
 }
 
 u64 iso_file::local_extent_size(u64 pos) const
