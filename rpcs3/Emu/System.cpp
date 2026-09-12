@@ -158,6 +158,7 @@ void fmt_class_string<game_boot_result>::format(std::string& out, u64 arg)
 		case game_boot_result::firmware_missing: return "Firmware is missing";
 		case game_boot_result::firmware_version: return "Firmware is too old";
 		case game_boot_result::unsupported_disc_type: return "This disc type is not supported yet";
+		case game_boot_result::disc_key_missing: return "Missing decryption key for the disc";
 		case game_boot_result::savestate_corrupted: return "Savestate data is corrupted or it's not an RPCS3 savestate";
 		case game_boot_result::savestate_version_unsupported: return "Savestate versioning data differs from your RPCS3 build.\nTry to use an older or newer RPCS3 build.\nEspecially if you know the build that created the savestate.";
 		case game_boot_result::still_running: return "Game is still running";
@@ -1154,6 +1155,17 @@ void Emulator::SetContinuousMode(bool continuous_mode)
 	}
 }
 
+// Drops the image that was just found unreadable and reports why the boot cannot go on: every file of an encrypted
+// disc whose key is missing reads back as garbage, which would otherwise surface as an unrelated boot failure
+static game_boot_result report_missing_disc_key(const std::string& path)
+{
+	sys_log.error("The disc image '%s' is encrypted and no matching decryption key was found in '%s'", path, rpcs3::utils::get_redump_key_dir());
+
+	unload_iso();
+
+	return game_boot_result::disc_key_missing;
+}
+
 game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch, usz recursion_count)
 {
 	if (recursion_count == 0 && m_restrict_emu_state_change)
@@ -1457,6 +1469,12 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				sys_log.notice("Savestate: Loading iso archive");
 
 				load_iso(disc_info);
+
+				if (is_iso_key_missing())
+				{
+					return report_missing_disc_key(disc_info);
+				}
+
 				m_path = iso_device::virtual_device_name + "/" + argv[0];
 
 				resolve_path_as_vfs_path = false;
@@ -1636,6 +1654,11 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			sys_log.notice("Loading iso archive '%s'", m_path);
 
 			load_iso(m_path);
+
+			if (is_iso_key_missing())
+			{
+				return report_missing_disc_key(m_path);
+			}
 
 			launching_from_disc_archive = true;
 
@@ -2113,6 +2136,12 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 					sys_log.notice("Loading iso archive for patch ('%s')", game_path);
 
 					load_iso(game_path);
+
+					if (is_iso_key_missing())
+					{
+						return report_missing_disc_key(game_path);
+					}
+
 					launching_from_disc_archive = true;
 					game_path = iso_device::virtual_device_name + "/PS3_GAME/./";
 				}

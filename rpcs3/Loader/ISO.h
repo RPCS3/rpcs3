@@ -6,12 +6,17 @@
 #include "util/types.hpp"
 #include "Crypto/aes.h"
 
+#include <optional>
 #include <span>
 
 bool is_iso_file(const std::string& path, u64* size = nullptr, bool* is_raw_device = nullptr);
 
 void load_iso(const std::string& path);
 void unload_iso();
+
+// True when the image currently loaded turned out to be encrypted while no matching decryption key was found for it.
+// Every read off such an image comes back as garbage, so the failure is worth reporting to the user on its own
+bool is_iso_key_missing();
 
 constexpr u64 ISO_SECTOR_SIZE = 2048;
 
@@ -72,13 +77,31 @@ private:
 	iso_encryption_type m_enc_type = iso_encryption_type::NONE;
 	std::vector<iso_region_info> m_region_info;
 
+	// Left unset until asked, since the key search only answers it for free on the paths that read a sector off the
+	// image anyway. Nothing but a failing boot ever asks, so a game list scan never pays for the answer
+	std::optional<bool> m_key_missing;
+
 	static iso_type_status get_key(const std::string& key_path, aes_context* aes_ctx = nullptr);
-	static iso_type_status retrieve_key(iso_archive& archive, std::string& key_path, aes_context& aes_ctx);
+	// "content_encrypted" comes back set when the content turned out to still be encrypted, which the sector read to
+	// test the keys tells on its own: it spares the caller reading one a second time
+	static iso_type_status retrieve_key(iso_archive& archive, std::string& key_path, aes_context& aes_ctx, bool& content_encrypted);
+
+	// Locates the first well known file of the archive whose first sector carries a magic value once decrypted, and
+	// reads that sector as it lies on the disc. Returns REDUMP_ISO when the sector was read, or the reason it was not
+	static iso_type_status read_magic_sector(iso_archive& archive, std::string_view& magic_value, std::array<u8, ISO_SECTOR_SIZE>& sector, u64& offset);
+
+	// True when the content of the archive is still encrypted. Only worth calling on the paths that never read a
+	// sector off the image, since "retrieve_key" already answers it for the ones that did
+	static bool is_content_encrypted(iso_archive& archive);
 
 public:
 	static iso_type_status check_type(const std::string& path, std::string* key_path = nullptr, aes_context* aes_ctx = nullptr);
 
 	iso_encryption_type get_enc_type() const { return m_enc_type; }
+
+	// True when the image is encrypted while no matching key was found: its content cannot be read back as it is.
+	// Resolving the answer may read a sector, so this is not for a caller that only wants the metadata of the image
+	bool is_key_missing(iso_archive& archive);
 
 	bool init(const std::string& path, iso_archive* archive = nullptr);
 	bool decrypt(u64 offset, const std::span<u8> buffer, const std::string& name);
@@ -180,6 +203,7 @@ public:
 
 	const std::string& path() const { return m_path; }
 	const iso_fs_node& root() const { return m_root; }
+	bool is_key_missing() { return m_dec && m_dec->is_key_missing(*this); }
 
 	iso_fs_node* retrieve(const std::string& path);
 	bool is_valid() const;
@@ -211,6 +235,7 @@ public:
 	~iso_device() override = default;
 
 	const std::string& get_loaded_iso() const { return m_path; }
+	bool is_key_missing() { return m_archive.is_key_missing(); }
 
 	bool stat(const std::string& path, fs::stat_t& info) override;
 	bool statfs(const std::string& path, fs::device_stat& info) override;

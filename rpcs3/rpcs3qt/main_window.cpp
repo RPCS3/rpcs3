@@ -62,6 +62,7 @@
 #include <QBuffer>
 #include <QTemporaryFile>
 #include <QDesktopServices>
+#include <QPushButton>
 
 #include "rpcs3_version.h"
 #include "Emu/IdManager.h"
@@ -489,6 +490,12 @@ void main_window::OnPlayOrPause()
 
 void main_window::show_boot_error(game_boot_result status)
 {
+	// Built on demand: the cases that bail out early have no dialog to put it in
+	const auto quickstart_link = []()
+	{
+		return tr("<br /><br />For information on setting up the emulator and dumping your PS3 games, read the <a %0 href=\"https://rpcs3.net/quickstart\">quickstart guide</a>.").arg(gui::utils::get_link_style());
+	};
+
 	QString message;
 	switch (status)
 	{
@@ -516,6 +523,36 @@ void main_window::show_boot_error(game_boot_result status)
 	case game_boot_result::unsupported_disc_type:
 		message = tr("This disc type is not supported yet.");
 		break;
+	case game_boot_result::disc_key_missing:
+	{
+		// This one gets a dialog of its own: the user is one file away from booting the game, so point them at the folder it goes in
+		const std::string key_dir = rpcs3::utils::get_redump_key_dir();
+
+		QMessageBox* msg = new QMessageBox(this);
+		msg->setWindowTitle(tr("Boot Failed"));
+		msg->setIcon(QMessageBox::Critical);
+		msg->setTextFormat(Qt::RichText);
+		msg->setText(tr("You are missing the decryption key for your disc.<br><br>Please add your decryption key to the <b>%0</b> folder.%1")
+			.arg(QString::fromStdString(key_dir).toHtmlEscaped())
+			.arg(quickstart_link()));
+		msg->setAttribute(Qt::WA_DeleteOnClose);
+
+		QPushButton* open_button = msg->addButton(tr("Open keys folder"), QMessageBox::ActionRole);
+		msg->addButton(QMessageBox::Close);
+		msg->setDefaultButton(QMessageBox::Close);
+
+		connect(msg, &QDialog::finished, this, [msg, open_button, key_dir]()
+		{
+			// An "ActionRole" button closes the dialog just like any other one, so the folder is opened on the way out
+			if (msg->clickedButton() == open_button)
+			{
+				gui::utils::open_dir(key_dir);
+			}
+		});
+
+		msg->open();
+		return;
+	}
 	case game_boot_result::savestate_corrupted:
 		message = tr("Savestate data is corrupted or it's not an RPCS3 savestate.");
 		break;
@@ -540,14 +577,13 @@ void main_window::show_boot_error(game_boot_result status)
 		message = tr("Unknown error.");
 		break;
 	}
-	const QString link = tr("<br /><br />For information on setting up the emulator and dumping your PS3 games, read the <a %0 href=\"https://rpcs3.net/quickstart\">quickstart guide</a>.").arg(gui::utils::get_link_style());
 
 	QMessageBox* msg = new QMessageBox(this);
 	msg->setWindowTitle(tr("Boot Failed"));
 	msg->setIcon(QMessageBox::Critical);
 	msg->setTextFormat(Qt::RichText);
 	msg->setStandardButtons(QMessageBox::Ok);
-	msg->setText(tr("Booting failed: %1 %2").arg(message).arg(link));
+	msg->setText(tr("Booting failed: %1 %2").arg(message).arg(quickstart_link()));
 	msg->setAttribute(Qt::WA_DeleteOnClose);
 	msg->open();
 }

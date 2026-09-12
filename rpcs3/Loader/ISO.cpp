@@ -263,19 +263,99 @@ iso_type_status iso_file_decryption::get_key(const std::string& key_path, aes_co
 	return iso_type_status::ERROR_PROCESSING_KEY;
 }
 
-iso_type_status iso_file_decryption::retrieve_key(iso_archive& archive, std::string& key_path, aes_context& aes_ctx)
+iso_type_status iso_file_decryption::retrieve_key(iso_archive& archive, std::string& key_path, aes_context& aes_ctx, bool& content_encrypted)
+{
+	// Only the leading AES block has to be decrypted to test a key: in CBC the first 16 bytes of plaintext come out
+	// of the first 16 bytes of ciphertext and the IV alone, and every magic value is shorter than that
+	constexpr u64 test_size = 16;
+
+	std::string_view magic_value;
+	std::array<u8, ISO_SECTOR_SIZE> enc_sec;
+	// One block more than what is decrypted: an offset that is not sector aligned spends the leading one as the IV,
+	// which leaves the leading block of the output untouched, so it is zeroed rather than compared as it comes
+	std::array<u8, test_size * 2> dec_blk {};
+	u64 enc_sec_offset = 0;
+
+	content_encrypted = false;
+
+	if (const iso_type_status status = read_magic_sector(archive, magic_value, enc_sec, enc_sec_offset); status != iso_type_status::REDUMP_ISO)
+	{
+		return status;
+	}
+
+	ensure(magic_value.size() <= test_size);
+
+	// The very same sector tells an image that needs no key at all from one whose key is simply missing: a decrypted
+	// image carries the magic value in the clear. No key can ever match such an image, so the scan below is pointless
+	// on it, and skipping it spares opening every single file of a keys folder that commonly holds thousands of them
+	content_encrypted = std::memcmp(magic_value.data(), enc_sec.data(), magic_value.size()) != 0;
+
+	if (!content_encrypted)
+	{
+		return iso_type_status::ERROR_OPENING_KEY;
+	}
+
+	//
+	// Scan all the key files present in the redump keys folder, decrypt the read sector and test for a match with file's magic value
+	//
+
+	// A keys folder commonly holds thousands of files: build its path once instead of on every entry
+	const std::string key_dir = rpcs3::utils::get_redump_key_dir();
+
+	std::vector<fs::dir_entry> entries;
+
+	for (auto&& dir_entry : fs::dir(key_dir))
+	{
+		// Prefetch entries, it is unsafe to keep fs::dir for a long time or for many operations
+		entries.emplace_back(std::move(dir_entry));
+	}
+
+	for (const fs::dir_entry& dir_entry : entries)
+	{
+		if (dir_entry.is_directory || dir_entry.name == "." || dir_entry.name == "..")
+		{
+			continue;
+		}
+
+		// Assigning in place keeps the buffer the previous entry already grew
+		key_path.assign(key_dir).append(dir_entry.name);
+
+		// If no valid key is present on the file
+		if (get_key(key_path, &aes_ctx) != iso_type_status::REDUMP_ISO)
+		{
+			continue;
+		}
+
+		// If the decryption fails
+		if (!decrypt_data(aes_ctx, enc_sec_offset, enc_sec, dec_blk, test_size))
+		{
+			continue;
+		}
+
+		// If the decrypted data match the magic value
+		if (std::memcmp(magic_value.data(), dec_blk.data(), magic_value.size()) == 0)
+		{
+			return iso_type_status::REDUMP_ISO;
+		}
+	}
+
+	return iso_type_status::ERROR_OPENING_KEY;
+}
+
+iso_type_status iso_file_decryption::read_magic_sector(iso_archive& archive, std::string_view& magic_value, std::array<u8, ISO_SECTOR_SIZE>& sector, u64& offset)
 {
 	//
 	// Find the first existing file in the archive present on the list of well known encrypted files to use for testing a matching key
 	//
 
-	const std::map<std::string, std::string> dec_magics {
+	// Built once: the paths are looked up as they are, so keeping them as strings spares an allocation on every call.
+	// LIC.DAT comes first because every disc carries one, while an install disc has no EBOOT.BIN
+	static const std::array<std::pair<std::string, std::string_view>, 2> dec_magics {{
 		{"PS3_GAME/LICDIR/LIC.DAT", "PS3LICDA"},
 		{"PS3_GAME/USRDIR/EBOOT.BIN", "SCE"}
-	};
+	}};
 
 	iso_fs_node* node = nullptr;
-	std::string magic_value;
 
 	for (const auto& magic : dec_magics)
 	{
@@ -296,58 +376,49 @@ iso_type_status iso_file_decryption::retrieve_key(iso_archive& archive, std::str
 	// Read the first encrypted sector to use for testing a matching key
 	//
 
-	std::array<u8, ISO_SECTOR_SIZE> enc_sec;
-	std::array<u8, ISO_SECTOR_SIZE> dec_sec;
 	iso_file iso_file(archive.path(), fs::read, *node);
 
-	if (!iso_file || iso_file.read(enc_sec.data(), ISO_SECTOR_SIZE) != ISO_SECTOR_SIZE)
+	if (!iso_file || iso_file.read(sector.data(), ISO_SECTOR_SIZE) != ISO_SECTOR_SIZE)
 	{
 		return iso_type_status::NOT_ISO;
 	}
 
-	//
-	// Scan all the key files present in the redump keys folder, decrypt the read sector and test for a match with file's magic value
-	//
+	offset = iso_file.file_offset(0);
 
-	std::vector<fs::dir_entry> entries;
+	return iso_type_status::REDUMP_ISO;
+}
 
-	for (auto&& dir_entry : fs::dir(rpcs3::utils::get_redump_key_dir()))
+bool iso_file_decryption::is_content_encrypted(iso_archive& archive)
+{
+	std::string_view magic_value;
+	std::array<u8, ISO_SECTOR_SIZE> sector;
+	u64 offset = 0;
+
+	// Without a well known file to look at there is nothing to tell the two cases apart: assume the image is fine
+	if (read_magic_sector(archive, magic_value, sector, offset) != iso_type_status::REDUMP_ISO)
 	{
-		// Prefetch entries, it is unsafe to keep fs::dir for a long time or for many operations
-		entries.emplace_back(std::move(dir_entry));
+		return false;
 	}
 
-	for (auto path_it = entries.begin(); path_it != entries.end(); path_it++)
+	// An image needing no key at all already carries the magic value in the clear: anything else is still encrypted
+	return std::memcmp(magic_value.data(), sector.data(), magic_value.size()) != 0;
+}
+
+bool iso_file_decryption::is_key_missing(iso_archive& archive)
+{
+	if (!m_key_missing)
 	{
-		const fs::dir_entry dir_entry = std::move(*path_it);
+		// A single region means the image declares nothing but region 0, and the even regions are never encrypted,
+		// so there is nothing to look at. Anything else has to be read to be told apart
+		m_key_missing = m_enc_type == iso_encryption_type::NONE && m_region_info.size() > 1 && is_content_encrypted(archive);
 
-		if (dir_entry.name == "." || dir_entry.name == ".." || dir_entry.is_directory)
+		if (*m_key_missing)
 		{
-			continue;
-		}
-
-		key_path = rpcs3::utils::get_redump_key_dir() + dir_entry.name;
-
-		// If no valid key is present on the file
-		if (get_key(key_path, &aes_ctx) != iso_type_status::REDUMP_ISO)
-		{
-			continue;
-		}
-
-		// If the decryption fails
-		if (!decrypt_data(aes_ctx, iso_file.file_offset(0), enc_sec, dec_sec, ISO_SECTOR_SIZE))
-		{
-			continue;
-		}
-
-		// If the decrypted data match the magic value
-		if (std::memcmp(magic_value.data(), dec_sec.data(), magic_value.size()) == 0)
-		{
-			return iso_type_status::REDUMP_ISO;
+			iso_log.error("is_key_missing: The image is encrypted and no matching decryption key was found: '%s'", archive.path());
 		}
 	}
 
-	return iso_type_status::ERROR_OPENING_KEY;
+	return *m_key_missing;
 }
 
 iso_type_status iso_file_decryption::check_type(const std::string& path, std::string* key_path, aes_context* aes_ctx)
@@ -455,11 +526,16 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 	iso_type_status status;
 	std::string key_path;
 
+	// Set by the key search below, which reads a sector off the image anyway, so that the content is never read twice
+	bool content_encrypted = false;
+
 	// If raw device and requested by the caller ("archive" provided), scan the redump keys folder and retrieve
 	// (if present) the first key that allows decrypting a sector of the ISO file
-	if (fs::is_optical_raw_device(path) && archive)
+	const bool scan_keys_folder = fs::is_optical_raw_device(path) && archive;
+
+	if (scan_keys_folder)
 	{
-		status = retrieve_key(*archive, key_path, m_aes_dec);
+		status = retrieve_key(*archive, key_path, m_aes_dec, content_encrypted);
 	}
 	else
 	{
@@ -530,6 +606,14 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 		{
 			m_enc_type = iso_encryption_type::DEC_3K3Y; // SET ENCRYPTION TYPE: DEC_3K3Y
 		}
+	}
+
+	// An image needing no key at all and one whose key is simply missing both end up with no encryption type set.
+	// The key search told the two apart out of the sector it read anyway, so that answer is kept here; every other
+	// path leaves it unset and only pays for it if it is ever asked for
+	if (scan_keys_folder && m_enc_type == iso_encryption_type::NONE)
+	{
+		m_key_missing = content_encrypted;
 	}
 
 	switch (m_enc_type)
@@ -812,6 +896,7 @@ static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, 
 	read_error = true;
 	const auto start_pos = entry.pos();
 	u8 entry_length = 0;
+
 	if (!entry.read(entry_length))
 	{
 		return std::nullopt;
@@ -850,6 +935,7 @@ static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, 
 	static_assert(sizeof(iso_entry_header) == 32);
 
 	iso_entry_header header{};
+
 	if (entry_length < 1 + sizeof(header) || !entry.read(header)
 		|| header.file_name_length > entry_length - 1 - sizeof(header))
 	{
@@ -963,10 +1049,12 @@ static bool iso_form_hierarchy(fs::file& file, iso_fs_node& node, bool use_ucs2_
 	const auto& directory_extent = ::at32(node.metadata.extents, 0);
 	const u64 start_pos = directory_extent.start * ISO_SECTOR_SIZE;
 	const u64 size = file.size();
+
 	if (start_pos > size || directory_extent.size > size - start_pos)
 	{
 		return false;
 	}
+
 	const u64 end_pos = start_pos + directory_extent.size;
 
 	file.seek(start_pos);
@@ -975,6 +1063,7 @@ static bool iso_form_hierarchy(fs::file& file, iso_fs_node& node, bool use_ucs2_
 	{
 		bool read_error = false;
 		auto entry = iso_read_directory_entry(file, read_error, use_ucs2_decoding);
+
 		if (read_error || file.pos() > end_pos)
 		{
 			return false;
@@ -1704,11 +1793,18 @@ std::unique_ptr<fs::dir_base> iso_device::open_dir(const std::string& path)
 	return std::make_unique<iso_dir>(*node);
 }
 
+// Set while an image is loaded, so that a boot failing for the lack of a decryption key can be told apart
+static atomic_t<bool> s_iso_key_missing = false;
+
 void load_iso(const std::string& path)
 {
 	sys_log.notice("Loading ISO '%s'", path);
 
-	fs::set_virtual_device("iso_overlay_fs_dev", stx::make_shared<iso_device>(path));
+	stx::shared_ptr<iso_device> device = stx::make_shared<iso_device>(path);
+
+	s_iso_key_missing = device->is_key_missing();
+
+	fs::set_virtual_device("iso_overlay_fs_dev", std::move(device));
 
 	vfs::mount("/dev_bdvd/"sv, iso_device::virtual_device_name + "/");
 }
@@ -1717,5 +1813,12 @@ void unload_iso()
 {
 	sys_log.notice("Unloading ISO");
 
+	s_iso_key_missing = false;
+
 	fs::set_virtual_device("iso_overlay_fs_dev", stx::shared_ptr<iso_device>());
+}
+
+bool is_iso_key_missing()
+{
+	return s_iso_key_missing;
 }
