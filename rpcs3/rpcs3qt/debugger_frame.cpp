@@ -17,6 +17,7 @@
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/RSX/RSXDisAsm.h"
 #include "Emu/Cell/lv2/sys_sync.h"
+#include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/PPUAnalyser.h"
 #include "Emu/Cell/PPUDisAsm.h"
 #include "Emu/Cell/PPUThread.h"
@@ -570,7 +571,7 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 
 				std::string ret;
 
-				PPUDisAsm dis_asm(cpu_disasm_mode::normal, vm::g_sudo_addr);
+				PPUDisAsm dis_asm(cpu_disasm_mode::normal, cpu->try_get<ppu_thread>()->vm_sudo, cpu);
 				u32 i = 0;
 
 				for (auto it = copy.rbegin(); it != copy.rend(); it++, i++)
@@ -688,9 +689,9 @@ void debugger_frame::keyPressEvent(QKeyEvent* event)
 			{
 				if (cpu->get_class() == thread_class::rsx)
 				{
-					if (u32 addr = static_cast<rsx::thread*>(cpu)->label_addr)
+					if (u32 addr = 0 * static_cast<rsx::thread*>(cpu)->lv2_context->label_addr)
 					{
-						// Memory viewer pointing to RSX semaphores
+						// Memory viewer pointing to RSX semaphores (disabled for now)
 						idm::make<memory_viewer_handle>(this, m_disasm, addr, make_check_cpu(nullptr));
 					}
 
@@ -818,7 +819,7 @@ cpu_thread* debugger_frame::get_cpu()
 		}
 		else if (ppu)
 		{
-			m_cpu = idm::get_unlocked<named_thread<ppu_thread>>(ppu->id);
+			m_cpu = idm::get_unlocked<named_thread<ppu_thread>>(idm::id_index(ppu->id, nullptr));
 		}
 		else
 		{
@@ -826,7 +827,7 @@ cpu_thread* debugger_frame::get_cpu()
 		}
 	}
 
-	if (!!m_disasm != !!m_cpu)
+	if (!!m_disasm != !!m_cpu && !m_rsx)
 	{
 		// Fixup for HW PPU viewer
 		if (m_cpu)
@@ -888,22 +889,22 @@ std::function<cpu_thread*()> debugger_frame::make_check_cpu(cpu_thread* cpu, boo
 		{
 			if (type == thread_class::ppu)
 			{
-				shared = idm::get_unlocked<named_thread<ppu_thread>>(cpu->id);
+				shared = idm::get_unlocked<named_thread<ppu_thread>>(idm::id_index(cpu->id, nullptr));
 			}
 			else if (type == thread_class::spu)
 			{
-				shared = idm::get_unlocked<named_thread<spu_thread>>(cpu->id);
+				shared = idm::get_unlocked<named_thread<spu_thread>>(idm::id_index(cpu->id, nullptr));
 			}
 		}
 		else
 		{
 			if (type == thread_class::ppu)
 			{
-				shared = idm::get_unlocked<named_thread<ppu_thread>>(cpu->id);
+				shared = idm::get_unlocked<named_thread<ppu_thread>>(idm::id_index(cpu->id, nullptr));
 			}
 			else if (type == thread_class::spu)
 			{
-				shared = idm::get_unlocked<named_thread<spu_thread>>(cpu->id);
+				shared = idm::get_unlocked<named_thread<spu_thread>>(idm::id_index(cpu->id, nullptr));
 			}
 		}
 	}
@@ -1074,7 +1075,7 @@ void debugger_frame::UpdateUnitList()
 
 	m_hw_ppu_idx = umax;
 
-	const auto on_select = [&](u32 id, cpu_thread& cpu)
+	const auto on_select = [&](u32 id, u32, cpu_thread& cpu)
 	{
 		std::function<cpu_thread*()> func_cpu = make_check_cpu(std::addressof(cpu), true);
 
@@ -1084,7 +1085,7 @@ void debugger_frame::UpdateUnitList()
 		}
 
 		// Space at the end is to pad a gap on the right
-		cpu_list.emplace_back(QString::fromStdString((id >> 24 == 0x55 ? "RSX[0x55555555]" : cpu.get_name()) + ' '), std::move(func_cpu));
+		cpu_list.emplace_back(QString::fromStdString((cpu.get_name()) + ' '), std::move(func_cpu));
 
 		if (old_cpu_ptr == std::addressof(cpu) && hw_ppu_idx == umax)
 		{
@@ -1115,7 +1116,7 @@ void debugger_frame::UpdateUnitList()
 				}
 				else if (ppu)
 				{
-					cpu_storage = idm::get_unlocked<named_thread<ppu_thread>>(ppu->id);
+					cpu_storage = idm::get_unlocked<named_thread<ppu_thread>>(idm::id_index(ppu->id, nullptr));
 				}
 				else
 				{
@@ -1138,9 +1139,9 @@ void debugger_frame::UpdateUnitList()
 			idm::select<named_thread<spu_thread>>(on_select, idm::unlocked);
 		}
 
-		if (const auto render = g_fxo->try_get<rsx::thread>(); render && render->ctrl)
+		if (const auto render = g_fxo->try_get<rsx::thread>(); render && render->lv2_context && render->lv2_context->main_mem_size)
 		{
-			on_select(render->id, *render);
+			on_select(render->id, 0, *render);
 		}
 	}
 
@@ -1256,7 +1257,7 @@ void debugger_frame::OnSelectUnit()
 		{
 		case 1:
 		{
-			m_cpu = idm::get_unlocked<named_thread<ppu_thread>>(cpu_id);
+			m_cpu = idm::get_unlocked<named_thread<ppu_thread>>(idm::id_index(cpu_id, nullptr));
 
 			if (selected == m_cpu.get())
 			{
@@ -1267,7 +1268,7 @@ void debugger_frame::OnSelectUnit()
 		}
 		case 2:
 		{
-			m_cpu = idm::get_unlocked<named_thread<spu_thread>>(cpu_id);
+			m_cpu = idm::get_unlocked<named_thread<spu_thread>>(idm::id_index(cpu_id, nullptr));
 
 			if (selected == m_cpu.get())
 			{
@@ -1454,9 +1455,15 @@ void debugger_frame::OnSelectSPUDisassembler()
 void debugger_frame::DoUpdate(cpu_thread* cpu0)
 {
 	// Check if we need to disable a step over bp
-	if (cpu0 && m_last_step_over_breakpoint != umax && cpu0->get_pc() == m_last_step_over_breakpoint)
+	if (cpu0 && cpu0->get_class() == thread_class::ppu && m_last_step_over_breakpoint != umax && cpu0->get_pc() == m_last_step_over_breakpoint)
 	{
-		m_ppu_breakpoint_handler->RemoveBreakpoint(m_last_step_over_breakpoint);
+		const auto process = ensure(idm::get_unlocked<lv2_obj, lv2_process>(static_cast<ppu_thread*>(cpu0)->proc_id));
+
+		if (process)
+		{
+			m_ppu_breakpoint_handler->RemoveBreakpoint(process.get(), process->get_unique_key(), m_last_step_over_breakpoint);
+		}
+
 		m_last_step_over_breakpoint = -1;
 	}
 
@@ -1731,15 +1738,17 @@ void debugger_frame::DoStep(bool step_over)
 			{
 				const u32 current_instruction_pc = cpu->get_pc();
 
+				const auto process = ensure(idm::get_unlocked<lv2_obj, lv2_process>(static_cast<ppu_thread*>(cpu)->proc_id));
+
 				// Set breakpoint on next instruction
 				const u32 next_instruction_pc = current_instruction_pc + 4;
-				m_ppu_breakpoint_handler->AddBreakpoint(next_instruction_pc, breakpoint_types::bp_exec);
+				m_ppu_breakpoint_handler->AddBreakpoint(process.get(), process->get_unique_key(), next_instruction_pc, breakpoint_types::bp_exec);
 
 				// Undefine previous step over breakpoint if it hasn't been already
 				// This can happen when the user steps over a branch that doesn't return to itself
 				if (m_last_step_over_breakpoint != umax)
 				{
-					m_ppu_breakpoint_handler->RemoveBreakpoint(next_instruction_pc);
+					m_ppu_breakpoint_handler->RemoveBreakpoint(process.get(), process->get_unique_key(), next_instruction_pc);
 				}
 
 				m_last_step_over_breakpoint = next_instruction_pc;

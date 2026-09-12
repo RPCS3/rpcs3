@@ -5,6 +5,7 @@
 #include "hex_validator.h"
 
 #include "Emu/Cell/SPUThread.h"
+#include "Emu/Cell/PPUThread.h"
 #include "Emu/CPU/CPUDisAsm.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/RSX/Utils/rsx_utils.h"
@@ -724,11 +725,16 @@ void* memory_viewer_panel::to_ptr(u32 addr, u32 size) const
 	switch (m_type)
 	{
 	case thread_class::general:
+	{
+		return nullptr;
+	}
 	case thread_class::ppu:
 	{
-		if (vm::check_addr(addr, 0, size))
+		const auto ppu = static_cast<ppu_thread*>(m_get_cpu());
+
+		if (ppu && vm::check_addr(ppu->vm_owner.get(), addr, 0, size))
 		{
-			return vm::get_super_ptr(addr);
+			return ppu->_sudo<u8>(addr);
 		}
 
 		break;

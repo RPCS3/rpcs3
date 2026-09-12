@@ -186,8 +186,8 @@ const std::array<std::pair<ppu_intrp_func_t, std::string_view>, 1024> g_ppu_sysc
 	BIND_SYSC(sys_ppu_thread_restart),                      //51  (0x033)  ROOT
 	BIND_SYSC(_sys_ppu_thread_create),                      //52  (0x034)  DBG
 	BIND_SYSC(sys_ppu_thread_start),                        //53  (0x035)
-	null_func,//BIND_SYSC(sys_ppu_...),                     //54  (0x036)  ROOT
-	null_func,//BIND_SYSC(sys_ppu_...),                     //55  (0x037)  ROOT
+	BIND_SYSC(sys_ppu_thread_syscall_54),                   //54  (0x036)  ROOT
+	BIND_SYSC(sys_ppu_thread_syscall_55),                   //55  (0x037)  ROOT
 	BIND_SYSC(sys_ppu_thread_rename),                       //56  (0x038)
 	BIND_SYSC(sys_ppu_thread_recover_page_fault),           //57  (0x039)
 	BIND_SYSC(sys_ppu_thread_get_page_fault_context),       //58  (0x03A)
@@ -364,8 +364,8 @@ const std::array<std::pair<ppu_intrp_func_t, std::string_view>, 1024> g_ppu_sysc
 	NULL_FUNC(sys_spu_thread_group_system_unset_next_group),//245 (0x0F5)  ROOT
 	NULL_FUNC(sys_spu_thread_group_system_set_switch_group),//246 (0x0F6)  ROOT
 	NULL_FUNC(sys_spu_thread_group_system_unset_switch_group),//247 (0x0F7)  ROOT
-	null_func,//BIND_SYSC(sys_spu_thread_group...),         //248 (0x0F8)  ROOT
-	null_func,//BIND_SYSC(sys_spu_thread_group...),         //249 (0x0F9)  ROOT
+	BIND_SYSC(sys_spu_thread_group_syscall_248),            //248 (0x0F8)  ROOT
+	BIND_SYSC(sys_spu_thread_group_syscall_249),            //249 (0x0F9)  ROOT
 	BIND_SYSC(sys_spu_thread_group_set_cooperative_victims),//250 (0x0FA)
 	BIND_SYSC(sys_spu_thread_group_connect_event_all_threads), //251 (0x0FB)
 	BIND_SYSC(sys_spu_thread_group_disconnect_event_all_threads), //252 (0x0FC)
@@ -416,7 +416,7 @@ const std::array<std::pair<ppu_intrp_func_t, std::string_view>, 1024> g_ppu_sysc
 	BIND_SYSC(sys_mmapper_search_and_map),                  //337 (0x151)
 	NULL_FUNC(sys_mmapper_get_shared_memory_attribute),     //338 (0x152)
 	BIND_SYSC(sys_mmapper_allocate_shared_memory_ext),      //339 (0x153)
-	null_func,//BIND_SYSC(sys_...),                         //340 (0x154)
+	BIND_SYSC(sys_mmapper_shared_memory_get_auth_id),       //340 (0x154)
 	BIND_SYSC(sys_memory_container_create),                 //341 (0x155)
 	BIND_SYSC(sys_memory_container_destroy),                //342 (0x156)
 	BIND_SYSC(sys_memory_container_get_size),               //343 (0x157)
@@ -430,7 +430,7 @@ const std::array<std::pair<ppu_intrp_func_t, std::string_view>, 1024> g_ppu_sysc
 	BIND_SYSC(sys_memory_get_page_attribute),               //351 (0x15F)
 	BIND_SYSC(sys_memory_get_user_memory_size),             //352 (0x160)
 	BIND_SYSC(sys_memory_get_user_memory_stat),             //353 (0x161)
-	null_func,//BIND_SYSC(sys_memory_...),                  //354 (0x162)
+	BIND_SYSC(sys_memory_container_create_child_container),                  //354 (0x162)
 	null_func,//BIND_SYSC(sys_memory_...),                  //355 (0x163)
 	NULL_FUNC(sys_memory_allocate_colored),                 //356 (0x164)
 	null_func,//BIND_SYSC(sys_memory_...),                  //357 (0x165)
@@ -517,8 +517,8 @@ const std::array<std::pair<ppu_intrp_func_t, std::string_view>, 1024> g_ppu_sysc
 	BIND_SYSC(sys_prx_get_ppu_guid),                        //467 (0x1D3)
 	null_func,//BIND_SYSC(sys_...),                         //468 (0x1D4) ROOT
 	uns_func,                                               //469 (0x1D5)  UNS
-	NULL_FUNC(sys_npdrm_check_ekc),                         //470 (0x1D6)  ROOT
-	NULL_FUNC(sys_npdrm_regist_ekc),                        //471 (0x1D7)  ROOT
+	BIND_SYSC(sys_npdrm_check_ekc),                         //470 (0x1D6)  ROOT
+	BIND_SYSC(sys_npdrm_regist_ekc),                        //471 (0x1D7)  ROOT
 	null_func,//BIND_SYSC(sys_...),                         //472 (0x1D8)  ROOT
 	null_func,//BIND_SYSC(sys_...),                         //473 (0x1D9)
 	null_func,//BIND_SYSC(sys_...),                         //474 (0x1DA)
@@ -835,7 +835,7 @@ const std::array<std::pair<ppu_intrp_func_t, std::string_view>, 1024> g_ppu_sysc
 	NULL_FUNC(sys_ss_protected_file_db),                    //861  ROOT
 	BIND_SYSC(sys_ss_virtual_trm_manager),                  //862  ROOT
 	BIND_SYSC(sys_ss_update_manager),                       //863 (0x35F) ROOT
-	NULL_FUNC(sys_ss_sec_hw_framework),                     //864 (0x360) DBG
+	BIND_SYSC(sys_ss_sec_hw_framework),                     //864 (0x360) DBG
 	BIND_SYSC(sys_ss_random_number_generator),              //865 (0x361)
 	BIND_SYSC(sys_ss_secure_rtc),                           //866  ROOT
 	BIND_SYSC(sys_ss_appliance_info_manager),               //867  ROOT
@@ -2318,7 +2318,7 @@ void lv2_obj::notify_all() noexcept
 
 	const auto cpu = cpu_thread::get_current();
 
-	if (!cpu)
+	if (!cpu || cpu->is_stopped())
 	{
 		return;
 	}

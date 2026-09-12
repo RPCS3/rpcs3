@@ -52,7 +52,8 @@ error_code sys_mutex_create(ppu_thread& ppu, vm::ptr<u32> mutex_id, vm::ptr<sys_
 
 	if (ipc_key)
 	{
-		sys_mutex.warning("sys_mutex_create(mutex_id=*0x%x, attr=*0x%x): IPC=0x%016x", mutex_id, attr, ipc_key);
+		sys_mutex.warning("sys_mutex_create(mutex_id=*0x%x, attr=*0x%x): IPC=0x%016x, flags=0x%x, name='%s'"
+			, mutex_id, attr, ipc_key, _attr.flags, lv2_obj::name64(_attr.name_u64));
 	}
 
 	switch (_attr.protocol)
@@ -84,7 +85,6 @@ error_code sys_mutex_create(ppu_thread& ppu, vm::ptr<u32> mutex_id, vm::ptr<sys_
 	{
 		sys_mutex.todo("sys_mutex_create(): unexpected adaptive (0x%x)", _attr.adaptive);
 	}
-
 	if (auto error = lv2_obj::create<lv2_mutex>(_attr.pshared, ipc_key, _attr.flags, [&]()
 	{
 		return make_shared<lv2_mutex>(
@@ -100,6 +100,12 @@ error_code sys_mutex_create(ppu_thread& ppu, vm::ptr<u32> mutex_id, vm::ptr<sys_
 
 	ppu.check_state();
 	*mutex_id = idm::last_id<lv2_mutex>();
+
+	if (ipc_key)
+	{
+		sys_mutex.warning("sys_mutex_create(): mutex_id=0x%x", idm::last_id<lv2_mutex>());
+	}
+
 	return CELL_OK;
 }
 
@@ -139,6 +145,11 @@ error_code sys_mutex_destroy(ppu_thread& ppu, u32 mutex_id)
 
 	if (mutex.ret)
 	{
+		if (mutex.ret == CELL_EAGAIN)
+		{
+			return CELL_OK;
+		}
+
 		return mutex.ret;
 	}
 

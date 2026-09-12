@@ -345,7 +345,7 @@ s32 sysutil_check_name_string(const char* src, s32 minlen, s32 maxlen)
 {
 	s32 lastpos;
 
-	if (g_ps3_process_info.sdk_ver > 0x36FFFF)
+	if (ensure(cpu_thread::get_current<ppu_thread>())->sdk_version > 0x36FFFF)
 	{
 		// Limit null terminator boundary to before buffer max size
 		lastpos = std::max(maxlen - 1, 0);
@@ -404,7 +404,7 @@ error_code _cellSysutilGetSystemParamInt()
 	return CELL_OK;
 }
 
-error_code cellSysutilGetSystemParamInt(CellSysutilParamId id, vm::ptr<s32> value)
+error_code cellSysutilGetSystemParamInt(ppu_thread& ppu, CellSysutilParamId id, vm::ptr<s32> value)
 {
 	cellSysutil.warning("cellSysutilGetSystemParamInt(id=0x%x(%s), value=*0x%x)", id, id, value);
 
@@ -447,7 +447,7 @@ error_code cellSysutilGetSystemParamInt(CellSysutilParamId id, vm::ptr<s32> valu
 
 	case CELL_SYSUTIL_SYSTEMPARAM_ID_LICENSE_AREA:
 	{
-		if (g_ps3_process_info.sdk_ver > 0x23FFFFu)
+		if (ppu.sdk_version > 0x23FFFFu)
 		{
 			return CELL_SYSUTIL_ERROR_VALUE;
 		}

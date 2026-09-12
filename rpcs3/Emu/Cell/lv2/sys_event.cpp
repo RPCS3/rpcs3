@@ -92,6 +92,41 @@ shared_ptr<lv2_event_queue> lv2_event_queue::load_ptr(utils::serial& ar, shared_
 	return {};
 }
 
+shared_ptr<lv2_event_queue> lv2_event_queue::load_ptr(utils::serial& ar, atomic_ptr<lv2_event_queue>& queue, std::string_view msg)
+{
+	const u32 id = ar.pop<u32>();
+
+	if (!id)
+	{
+		return {};
+	}
+
+	if (auto q = idm::get_unlocked<lv2_obj, lv2_event_queue>(id))
+	{
+		// Already initialized
+		return q;
+	}
+
+	if (id >> 24 != id_base >> 24)
+	{
+		fmt::throw_exception("Failed in event queue pointer deserialization (invalid ID): location: %s, id=0x%x", msg, id);
+	}
+
+	Emu.PostponeInitCode([id, &queue, msg_str = std::string{msg}]()
+	{
+		// Defer resolving
+		queue = idm::get_unlocked<lv2_obj, lv2_event_queue>(id);
+
+		if (!queue.load())
+		{
+			fmt::throw_exception("Failed in event queue pointer deserialization (not found): location: %s, id=0x%x", msg_str, id);
+		}
+	});
+
+	// Null until resolved
+	return {};
+}
+
 lv2_event_port::lv2_event_port(utils::serial& ar)
 	: type(ar)
 	, name(ar)
@@ -261,6 +296,12 @@ error_code sys_event_queue_create(cpu_thread& cpu, vm::ptr<u32> equeue_id, vm::p
 
 	cpu.check_state();
 	*equeue_id = idm::last_id<lv2_event_queue>();
+
+	if (ipc_key != SYS_EVENT_QUEUE_LOCAL)
+	{
+		sys_event.warning("sys_event_queue_create(): created IPC event queue: 0x%x (IPC: 0x%x)", idm::last_id(), ipc_key);
+	}
+
 	return CELL_OK;
 }
 
@@ -485,8 +526,7 @@ error_code sys_event_queue_receive(ppu_thread& ppu, u32 equeue_id, vm::ptr<sys_e
 		// This is a hack to avoid waiting for 1m40s every time we boot vsh
 		if (queue.key == 0x8005911000000012 && Emu.IsVsh())
 		{
-			sys_event.todo("sys_event_queue_receive(equeue_id=0x%x, *0x%x, timeout=0x%llx) Bypassing timeout for msmw2.sprx", equeue_id, dummy_event, timeout);
-			timeout = 1;
+			sys_event.success("sys_event_queue_receive(equeue_id=0x%x, *0x%x, timeout=0x%llx) Not bypassing timeout for msmw2.sprx!", equeue_id, dummy_event, timeout);
 		}
 
 		if (queue.events.empty())
@@ -825,7 +865,7 @@ error_code sys_event_port_send(u32 eport_id, u64 data1, u64 data2, u64 data3)
 			return not_an_error(CELL_EBUSY);
 		}
 
-		return port.ret;
+		return { port.ret, eport_id };
 	}
 
 	return CELL_OK;

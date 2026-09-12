@@ -10,9 +10,11 @@
 #include "Emu/RSX/NV47/HW/nv47_sync.hpp"
 #include "Emu/RSX/NV47/HW/context_accessors.define.h" // TODO: Context objects belong in FW not HW
 
+#define REGS(ctx) (rsx::method_registers)
+
 namespace rsx
 {
-	rsx_state method_registers;
+	thread_local rsx_state* method_registers{};
 
 	std::array<rsx_method_t, 0x10000 / 4> methods{};
 	std::array<u32, 0x10000 / 4> state_signals{};
@@ -62,7 +64,7 @@ namespace rsx
 		RSX(ctx)->reset();
 		RSX(ctx)->on_frame_end(arg);
 		RSX(ctx)->request_emu_flip(arg);
-		vm::_ptr<atomic_t<u128>>(RSX(ctx)->label_addr + 0x10)->store(u128{});
+		vm::_ptr<atomic_t<u128>>(RSX(ctx)->lv2_context->label_addr + 0x10)->store(u128{});
 	}
 
 	void user_command(context* ctx, u32, u32 arg)
@@ -92,9 +94,9 @@ namespace rsx
 		template<u32 index>
 		struct driver_flip
 		{
-			static void impl(context*, u32 /*reg*/, u32 arg)
+			static void impl(context* ctx, u32 /*reg*/, u32 arg)
 			{
-				sys_rsx_context_attribute(0x55555555, 0x102, index, arg, 0, 0);
+				sys_rsx_context_attribute(RSX(ctx)->lv2_context_id, 0x102, index, arg, 0, 0);
 			}
 		};
 
@@ -108,7 +110,7 @@ namespace rsx
 					RSX(ctx)->flip_notification_count++;
 				}
 
-				sys_rsx_context_attribute(0x55555555, 0x103, index, arg, 0, 0);
+				sys_rsx_context_attribute(RSX(ctx)->lv2_context_id, 0x103, index, arg, 0, 0);
 			}
 		};
 	}
@@ -1735,9 +1737,6 @@ namespace rsx
 
 		// FIFO
 		bind(FIFO::FIFO_DRAW_BARRIER >> 2, fifo::draw_barrier);
-
-		// REGS(ctx)->init();
-		method_registers.init();
 
 		return true;
 	}();

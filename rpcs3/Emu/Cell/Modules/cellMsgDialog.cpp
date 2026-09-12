@@ -3,6 +3,7 @@
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/lv2/sys_sync.h"
+#include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/timers.hpp"
 #include "Emu/Io/interception.h"
 
@@ -348,7 +349,8 @@ error_code open_exit_dialog(const std::string& message, bool is_exit_requested, 
 
 	if (is_exit_requested)
 	{
-		callback.set(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(exit_game)));
+		const auto& funcs = ensure(idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process))->local_typemap->get<ppu_function_manager>();
+		callback.set(funcs.func_addr(FIND_FUNC(exit_game)));
 	}
 
 	const error_code res = open_msg_dialog

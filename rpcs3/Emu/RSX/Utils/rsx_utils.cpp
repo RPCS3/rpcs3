@@ -24,6 +24,8 @@ extern "C"
 
 #include "util/sysinfo.hpp"
 
+#define REGS(ctx) (rsx::method_registers)
+
 namespace rsx
 {
 	atomic_t<u64> g_rsx_shared_tag{ 0 };
@@ -81,21 +83,21 @@ namespace rsx
 	std::array<float, 4> get_constant_blend_colors()
 	{
 		//TODO: check another color formats (probably all integer formats with > 8-bits wide channels)
-		if (rsx::method_registers.surface_color() == rsx::surface_color_format::w16z16y16x16)
+		if (REGS(0)->surface_color() == rsx::surface_color_format::w16z16y16x16)
 		{
-			u16 blend_color_r = rsx::method_registers.blend_color_16b_r();
-			u16 blend_color_g = rsx::method_registers.blend_color_16b_g();
-			u16 blend_color_b = rsx::method_registers.blend_color_16b_b();
-			u16 blend_color_a = rsx::method_registers.blend_color_16b_a();
+			u16 blend_color_r = REGS(0)->blend_color_16b_r();
+			u16 blend_color_g = REGS(0)->blend_color_16b_g();
+			u16 blend_color_b = REGS(0)->blend_color_16b_b();
+			u16 blend_color_a = REGS(0)->blend_color_16b_a();
 
 			return { decode_fp16(blend_color_r), decode_fp16(blend_color_g), decode_fp16(blend_color_b), decode_fp16(blend_color_a) };
 		}
 		else
 		{
-			u8 blend_color_r = rsx::method_registers.blend_color_8b_r();
-			u8 blend_color_g = rsx::method_registers.blend_color_8b_g();
-			u8 blend_color_b = rsx::method_registers.blend_color_8b_b();
-			u8 blend_color_a = rsx::method_registers.blend_color_8b_a();
+			u8 blend_color_r = REGS(0)->blend_color_8b_r();
+			u8 blend_color_g = REGS(0)->blend_color_8b_g();
+			u8 blend_color_b = REGS(0)->blend_color_8b_b();
+			u8 blend_color_a = REGS(0)->blend_color_8b_a();
 
 			return { blend_color_r / 255.f, blend_color_g / 255.f, blend_color_b / 255.f, blend_color_a / 255.f };
 		}

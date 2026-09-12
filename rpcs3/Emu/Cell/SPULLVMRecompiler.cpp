@@ -46,6 +46,7 @@ const extern spu_decoder<spu_iflag> g_spu_iflag;
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
 #include <llvm/Analysis/CGSCCPassManager.h>
 #include <llvm/Analysis/LoopAnalysisManager.h>
+#include <llvm/Analysis/ValueTracking.h>
 #include <llvm/IR/PassManager.h>
 #include <llvm/Passes/PassBuilder.h>
 #include <llvm/Transforms/Scalar/ADCE.h>

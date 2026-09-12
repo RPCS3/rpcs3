@@ -48,7 +48,7 @@ SERIALIZATION_VER(lv2_vm, 4,                                    1)
 SERIALIZATION_VER(lv2_net, 5,                                   1, 2/*TCP Feign conection loss*/, 3/*P2PS stream_disconnected status*/)
 SERIALIZATION_VER(lv2_fs, 6,                                    1, 2/*NPDRM key saving*/)
 SERIALIZATION_VER(lv2_prx_overlay, 7,                           1)
-SERIALIZATION_VER(lv2_memory, 8,                                1)
+SERIALIZATION_VER(lv2_memory, 8,                                2)
 SERIALIZATION_VER(lv2_config, 9,                                1)
 
 namespace rsx

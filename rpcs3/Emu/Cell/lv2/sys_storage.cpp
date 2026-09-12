@@ -2,26 +2,198 @@
 #include "Emu/IdManager.h"
 
 #include "Emu/Cell/ErrorCodes.h"
+#include "Emu/Cell/PPUThread.h"
+#include "Emu/System.h"
 #include "sys_event.h"
 #include "sys_fs.h"
 #include "util/shared_ptr.hpp"
 
 #include "sys_storage.h"
+#include "sys_event.h"
 
 LOG_CHANNEL(sys_storage);
 
 namespace
 {
-	struct storage_manager
+	auto log_callback(ppu_thread& ppu)
+	{	
+		sys_storage.todo("Callstack:\n%s", ppu.dump_callstack());
+	}
+
+	struct storage_manager_impl
 	{
-		// This is probably wrong and should be assigned per fd or something
-		atomic_ptr<lv2_event_queue> asyncequeue;
+		storage_manager_impl() noexcept {}
+		storage_manager_impl(const storage_manager_impl&) = delete;
+		int operator=(const storage_manager_impl&) = delete;
+
+		bool send_event(u64 device_id, u64 data1, u64 data2, u64 data3)
+		{
+			id_manager::g_process = 0;
+			std::vector<shared_ptr<lv2_storage_medium_event_port>> ports;
+
+			idm::select<lv2_storage_medium_event_port>([&](u32 id, u32 proc, lv2_storage_medium_event_port& port)
+			{
+				// Check port status
+				if (port.savable() && (!port.device_id || port.device_id == device_id))
+				{
+					// Detached ports can be removed
+					ports.emplace_back(ensure(idm::get_unlocked<lv2_storage_medium_event_port>(idm::id_index(id, proc))));
+				}
+			});
+
+			bool send = false;
+			u64 dummy_kernel_port_address = 0x800000000062d4c0;
+
+			for (auto& port : ports)
+			{
+				dummy_kernel_port_address += 0x100;
+
+				if (port->medium_port->send(dummy_kernel_port_address, data1, data2, data3) == CELL_OK)
+				{
+					send = true;
+				}
+			}
+
+			return send;
+		}
+
+		lf_fifo<atomic_t<u32>, 8> cmd_queue;
+
+		bool pop(u32& out)
+		{
+			const u32 pos = cmd_queue.peek();
+
+			// Clean command buffer for command tail
+			out = cmd_queue[pos].exchange(0);
+
+			if (!out)
+			{
+				return false;
+			}
+
+			// Free
+			cmd_queue.pop_end(1);
+			return true;
+		}
+
+		void push(u32 cmd)
+		{
+			const u32 pos = cmd_queue.push_begin();
+
+			// Write single command
+			cmd_queue[pos] = cmd;
+
+			thread_ctrl::notify(static_cast<named_thread<storage_manager_impl>&>(*this));
+		}
+
+		void operator()() noexcept
+		{
+			while (Emu.IsPausedOrReady())
+			{
+				thread_ctrl::wait_for(2500);
+			}
+
+			// Send startup(?) events
+			thread_ctrl::wait_for(2500000);
+
+			while (!send_event(0x0101000000000006, 0x0000000000000101, 0x0000000000000000, 0x0101000000000006))
+			{
+				thread_ctrl::wait_for(2500000);
+			}
+
+			while (thread_ctrl::state() != thread_state::aborting)
+			{
+				u32 cmd_val = 0;
+
+				if (!pop(cmd_val))
+				{
+					thread_ctrl::wait();
+					continue;
+				}
+
+				if (cmd_val == 1)
+				{
+					sys_storage.notice("storage_manager(): Received insert event");
+
+					send_event(0x0101000000000006, 0x0000000000000003, 0x000000000000ff71, 0x0101000000000006);
+				}
+
+				if (cmd_val == 2)
+				{
+					sys_storage.notice("storage_manager(): Received eject event");
+
+					send_event(0x0101000000000006, 0x0000000000000004, 0x0000000000000000, 0x0101000000000006);
+					send_event(0x0101000000000006, 0x0000000000000008, 0x0000000000000000, 0x0101000000000006);
+					send_event(0x0101000000000006, 0x0000000000000007, 0x0000000000000000, 0x0101000000000006);
+					//send_event(0x0101000000000006, 0x0000000000000102, 0x0000000000000000, 0x0101000000000006);
+				}
+
+				// Cooldown
+				thread_ctrl::wait_for(250000);
+			}
+		}
+
+		void send_bdvd_insert()
+		{
+			push(1);
+		}
+
+		void send_bdvd_eject()
+		{
+			push(2);
+		}
+
+		static constexpr auto thread_name = "VSH Storage Events"sv;
 	};
+
+	using storage_manager = named_thread<storage_manager_impl>;
 }
 
-error_code sys_storage_open(u64 device, u64 mode, vm::ptr<u32> fd, u64 flags)
+extern void signal_sys_storage_about_BDVD_insert()
+{
+	ensure(g_fxo->try_get<storage_manager>())->send_bdvd_insert();
+}
+
+extern void signal_sys_storage_about_BDVD_eject()
+{
+	ensure(g_fxo->try_get<storage_manager>())->send_bdvd_eject();
+}
+
+lv2_storage::lv2_storage(utils::serial& ar) noexcept
+	: lv2_obj{1}
+	, device_id(ar)
+	, mode(ar)
+	, flags(ar)
+{
+	lv2_event_queue::load_ptr(ar, async_port, "lv2_storage");}
+
+void lv2_storage::save(utils::serial& ar)
+{
+	ar(device_id, mode, flags);
+	lv2_event_queue::save_ptr(ar, async_port.load().get());
+}
+
+lv2_storage_medium_event_port::lv2_storage_medium_event_port(utils::serial& ar) noexcept
+	: device_id(ar)
+{
+	lv2_event_queue::load_ptr(ar, medium_port, "lv2_storage_medium_event_port");
+}
+
+void lv2_storage_medium_event_port::save(utils::serial& ar)
+{
+	ar(device_id);
+	lv2_event_queue::save_ptr(ar, medium_port.get());
+}
+
+bool lv2_storage_medium_event_port::savable() const
+{
+	return lv2_obj::check(medium_port);
+}
+
+error_code sys_storage_open(ppu_thread& ppu, u64 device, u64 mode, vm::ptr<u32> fd, u64 flags)
 {
 	sys_storage.todo("sys_storage_open(device=0x%x, mode=0x%x, fd=*0x%x, flags=0x%x)", device, mode, fd, flags);
+	log_callback(*cpu_thread::get_current<ppu_thread>());
 
 	if (device == 0)
 	{
@@ -36,9 +208,21 @@ error_code sys_storage_open(u64 device, u64 mode, vm::ptr<u32> fd, u64 flags)
 	[[maybe_unused]] u64 storage_id = device & 0xFFFFF00FFFFFFFF;
 	fs::file file;
 
-	if (const u32 id = idm::make<lv2_storage>(device, std::move(file), mode, flags))
+	thread_local u32 weird = 0;
+
+	// if (device == 0x0101000000000006)
+	// {
+	// 	if (weird < 1)
+	// 	{
+	// 		weird++;
+	// 		return CELL_ENOEXEC;
+	// 	}
+	// }
+
+	if (const u32 id = idm::make<lv2_obj, lv2_storage>(device, std::move(file), mode, flags))
 	{
 		*fd = id;
+		sys_storage.notice("sys_storage_open(): Handle=0x%x", id);
 		return CELL_OK;
 	}
 
@@ -49,13 +233,14 @@ error_code sys_storage_close(u32 fd)
 {
 	sys_storage.todo("sys_storage_close(fd=0x%x)", fd);
 
-	idm::remove<lv2_storage>(fd);
+	ensure(idm::remove<lv2_obj, lv2_storage>(fd));
 
 	return CELL_OK;
 }
 
 error_code sys_storage_read(u32 fd, u32 mode, u32 start_sector, u32 num_sectors, vm::ptr<void> bounce_buf, vm::ptr<u32> sectors_read, u64 flags)
 {
+	log_callback(*cpu_thread::get_current<ppu_thread>());
 	sys_storage.todo("sys_storage_read(fd=0x%x, mode=0x%x, start_sector=0x%x, num_sectors=0x%x, bounce_buf=*0x%x, sectors_read=*0x%x, flags=0x%x)", fd, mode, start_sector, num_sectors, bounce_buf, sectors_read, flags);
 
 	if (!bounce_buf || !sectors_read)
@@ -64,7 +249,7 @@ error_code sys_storage_read(u32 fd, u32 mode, u32 start_sector, u32 num_sectors,
 	}
 
 	std::memset(bounce_buf.get_ptr(), 0, num_sectors * 0x200ull);
-	const auto handle = idm::get_unlocked<lv2_storage>(fd);
+	const auto handle = idm::get_unlocked<lv2_obj, lv2_storage>(fd);
 
 	if (!handle)
 	{
@@ -93,7 +278,7 @@ error_code sys_storage_write(u32 fd, u32 mode, u32 start_sector, u32 num_sectors
 		return CELL_EFAULT;
 	}
 
-	const auto handle = idm::get_unlocked<lv2_storage>(fd);
+	const auto handle = idm::get_unlocked<lv2_obj, lv2_storage>(fd);
 
 	if (!handle)
 	{
@@ -108,6 +293,7 @@ error_code sys_storage_write(u32 fd, u32 mode, u32 start_sector, u32 num_sectors
 error_code sys_storage_send_device_command(u32 dev_handle, u64 cmd, vm::ptr<void> in, u64 inlen, vm::ptr<void> out, u64 outlen)
 {
 	sys_storage.todo("sys_storage_send_device_command(dev_handle=0x%x, cmd=0x%llx, in=*0x%, inlen=0x%x, out=*0x%x, outlen=0x%x)", dev_handle, cmd, in, inlen, out, outlen);
+	log_callback(*cpu_thread::get_current<ppu_thread>());
 
 	return CELL_OK;
 }
@@ -115,12 +301,18 @@ error_code sys_storage_send_device_command(u32 dev_handle, u64 cmd, vm::ptr<void
 error_code sys_storage_async_configure(u32 fd, u32 io_buf, u32 equeue_id, u32 unk)
 {
 	sys_storage.todo("sys_storage_async_configure(fd=0x%x, io_buf=0x%x, equeue_id=0x%x, unk=*0x%x)", fd, io_buf, equeue_id, unk);
+	log_callback(*cpu_thread::get_current<ppu_thread>());
 
-	auto& manager = g_fxo->get<storage_manager>();
+	const auto handle = idm::get_unlocked<lv2_obj, lv2_storage>(fd);
+
+	if (!handle)
+	{
+		return CELL_ESRCH;
+	}
 
 	if (auto queue = idm::get_unlocked<lv2_obj, lv2_event_queue>(equeue_id))
 	{
-		manager.asyncequeue.store(queue);
+		handle->async_port.store(queue);
 	}
 	else
 	{
@@ -130,15 +322,231 @@ error_code sys_storage_async_configure(u32 fd, u32 io_buf, u32 equeue_id, u32 un
 	return CELL_OK;
 }
 
-error_code sys_storage_async_send_device_command(u32 dev_handle, u64 cmd, vm::ptr<void> in, u64 inlen, vm::ptr<void> out, u64 outlen, u64 unk)
+error_code sys_storage_async_send_device_command(u32 dev_handle, u64 cmd, vm::ptr<void> in, u64 inlen, vm::ptr<void> out, u64 outlen, u64 operation_name)
 {
-	sys_storage.todo("sys_storage_async_send_device_command(dev_handle=0x%x, cmd=0x%llx, in=*0x%x, inlen=0x%x, out=*0x%x, outlen=0x%x, unk=0x%x)", dev_handle, cmd, in, inlen, out, outlen, unk);
+	sys_storage.todo("sys_storage_async_send_device_command(dev_handle=0x%x, cmd=0x%llx, in=*0x%x, inlen=0x%x, out=*0x%x, outlen=0x%x, operation_name=0x%x)", dev_handle, cmd, in, inlen, out, outlen, operation_name);
+	sys_storage.todo("sys_storage_async_send_device_command(): BUF: %s", std::span<u8>(vm::get_super_ptr(in.addr()), inlen));
+	log_callback(*cpu_thread::get_current<ppu_thread>());
 
 	auto& manager = g_fxo->get<storage_manager>();
 
-	if (auto q = manager.asyncequeue.load())
+	const auto handle = idm::get_unlocked<lv2_obj, lv2_storage>(dev_handle);
+
+	if (!handle)
 	{
-		q->send(0, unk, unk, unk);
+		return CELL_ESRCH;
+	}
+
+	std::vector<u8> data_in(inlen);
+
+	if (inlen && !vm::try_access(in.addr(), data_in.data(), inlen, false))
+	{
+		fmt::throw_exception("Failed to read input data!");
+	}
+
+	std::memset(out.get_ptr(), 0, outlen);
+
+	struct input_output
+	{
+		u32 ID; // So we can identify the command later and fill response_base accordingly
+		std::vector<u8> data_in; // Data input (masked)
+		std::vector<u8> data_mask; // Input mask
+		std::vector<u8> response_base; // Dat to be memcpy'ed to output, prior to possibly doing more modifications
+		u64 response_event_data2; // Event data sent
+		u64 response_event_data3; // Event data sent
+	};
+
+	static const std::vector<input_output> inputs_outputs
+	{
+		input_output
+		{
+			1, 
+			std::vector<u8> // input
+			{
+				0x51, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x22, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x0C,
+				0x00, 0x00, 0x00, 0x01,
+				0x00, 0x00, 0x00, 0x23,
+				0x00, 0x00, 0x00, 0x03,
+				0x00, 0x00, 0x00, 0x01,
+				0x00, 0x00, 0x00, 0x00
+			},
+			std::vector<u8> // input mask
+			{
+				0xFF, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0xFF, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0xFF,
+				0x00, 0x00, 0x00, 0xFF,
+				0x00, 0x00, 0x00, 0xFF,
+				0x00, 0x00, 0x00, 0xFF,
+				0x00, 0x00, 0x00, 0xFF,
+				0x00, 0x00, 0x00, 0x00
+			},
+			std::vector<u8> // output base
+			{
+				0x00, 0x00, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00
+			},
+			0x8000000002050000, 0,
+		},
+
+		input_output
+		{
+			2, 
+			std::vector<u8> // input
+			{
+				0xA4, 0x00, 0x00, 0x00,
+		 		0x00, 0x00, 0x00, 0xE0,
+		 		0x00, 0x08, 0x03, 0x00,
+		 		0x00, 0x00, 0x00, 0x00,
+		 		0x00, 0x00, 0x00, 0x00,
+		 		0x00, 0x00, 0x00, 0x00,
+		 		0x00, 0x00, 0x00, 0x00,
+		 		0x00, 0x00, 0x00, 0x00,
+		 		0x00, 0x00, 0x00, 0x0C,
+		 		0x00, 0x00, 0x00, 0x01,
+		 		0x00, 0x00, 0x00, 0x08,
+		 		0x00, 0x00, 0x00, 0x03,
+		 		0x00, 0x00, 0x00, 0x01,
+		 		0x00, 0x00, 0x00, 0x00
+			},
+			std::vector<u8> // input mask
+			{
+				0xFF, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0xFF,
+				0x00, 0xFF, 0xFF, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0xFF,
+				0x00, 0x00, 0x00, 0xFF,
+				0x00, 0x00, 0x00, 0xFF,
+				0x00, 0x00, 0x00, 0xFF,
+				0x00, 0x00, 0x00, 0xFF,
+				0x00, 0x00, 0x00, 0x00
+			},
+			std::vector<u8> // output base
+			{
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			},
+			0, 0,
+		},
+
+		input_output
+		{
+			3,
+			std::vector<u8> // input
+			{
+				0xAD, 0x01, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x73, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x0C,
+				0x00, 0x00, 0x00, 0x01,
+				0x00, 0x00, 0x00, 0x73,
+				0x00, 0x00, 0x00, 0x03,
+				0x00, 0x00, 0x00, 0x01,
+				0x00, 0x00, 0x00, 0x00
+			},
+			std::vector<u8> // input mask
+			{
+				0xFF, 0xFF, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0xFF, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,//
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0x00,
+				0x00, 0x00, 0x00, 0xFF,
+				0x00, 0x00, 0x00, 0xFF,
+				0x00, 0x00, 0x00, 0xFF,
+				0x00, 0x00, 0x00, 0xFF,
+				0x00, 0x00, 0x00, 0xFF,
+				0x00, 0x00, 0x00, 0x00
+			},
+			std::vector<u8> // outout base
+			{
+				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			    0x40, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			    0x00, 0x00, 0x00,
+			},
+			0, 0
+		}
+	};
+
+	std::vector<u8> data_for_comparison;
+
+	u32 found_ID = umax;
+	u64 response_event_data2 = 0;
+	u64 response_event_data3 = 0;
+
+	for (const input_output& info : inputs_outputs)
+	{
+		if (data_in.size() != info.data_in.size())
+		{
+			continue;
+		}
+
+		data_for_comparison.resize(data_in.size());
+		std::memcpy(data_for_comparison.data(), data_in.data(), data_in.size());
+
+		for (u32 index = 0; index < data_for_comparison.size(); index++)
+		{
+			data_for_comparison[index] &= info.data_mask[index];
+		}
+
+		if (data_for_comparison == data_in)
+		{
+			if (info.response_base.size() != outlen)
+			{
+				fmt::throw_exception("Misidentification of input data type! ID=x%d (response size: %d)", info.ID, info.response_base.size());
+			}
+
+			found_ID = info.ID;
+			response_event_data2 = info.response_event_data2;
+			response_event_data3 = info.response_event_data3;
+			ensure(vm::try_access(out.addr(), const_cast<u8*>(info.response_base.data()), outlen, true));
+		}
+	}
+
+	if (auto q = handle->async_port.load())
+	{
+		q->send(0, operation_name, response_event_data2, response_event_data3);
 	}
 
 	return CELL_OK;
@@ -168,6 +576,7 @@ error_code sys_storage_async_cancel()
 error_code sys_storage_get_device_info(u64 device, vm::ptr<StorageDeviceInfo> buffer)
 {
 	sys_storage.todo("sys_storage_get_device_info(device=0x%x, buffer=*0x%x)", device, buffer);
+	log_callback(*cpu_thread::get_current<ppu_thread>());
 
 	if (!buffer)
 	{
@@ -190,9 +599,9 @@ error_code sys_storage_get_device_info(u64 device, vm::ptr<StorageDeviceInfo> bu
 		memcpy(buffer->name, u.c_str(), u.size());
 		buffer->sector_size = 0x200;
 		buffer->one = 1;
-		buffer->flags[1] = 1;
-		buffer->flags[2] = 1;
-		buffer->flags[7] = 1;
+		buffer->one1 = 1;
+		buffer->one2 = 1;
+		buffer->flag5 = 1;
 
 		// set partition size based on dev_num
 		// stole these sizes from kernel dump, unknown if they are 100% correct
@@ -219,12 +628,73 @@ error_code sys_storage_get_device_info(u64 device, vm::ptr<StorageDeviceInfo> bu
 
 		std::string u = "unnamed";
 		memcpy(buffer->name, u.c_str(), u.size());
-		buffer->sector_count = 0x4D955;
-		buffer->sector_size = 0x800;
+
+		const bool connected = true;
+		if (!connected)
+		{
+			buffer->sector_count = 0;
+			buffer->sector_size = 0x7FFFFFFF;
+		}
+		else
+		{
+			buffer->sector_count = 0x1EC4B00;
+			buffer->sector_size = 0x800;
+		}
+// [000] | 75 6E 6E 61 | 6D 65 64 00 |
+// [008] | 00 00 00 00 | 00 00 00 00 |
+// [010] | 00 00 00 00 | 00 00 00 00 |
+// [018] | 00 00 00 00 | 00 00 00 00 |
+// [020] | 00 00 00 00 | 00 00 00 00 |
+// [028] | 00 00 00 00 | 01 EC 4B 00 |
+// [030] | 00 00 02 00 | 00 00 00 01 |
+// [038] | 01 01 01 00 | 01 01 00 01 |
+
+
+
+// [000] | 75 6E 6E 61 | 6D 65 64 00 |
+// [008] | 00 00 00 00 | 00 00 00 00 |
+// [010] | 00 00 00 00 | 00 00 00 00 |
+// [018] | 00 00 00 00 | 00 00 00 00 |
+// [020] | 00 00 00 00 | 00 00 00 00 |
+// [028] | 00 00 00 00 | 00 62 83 E0 |
+// [030] | 00 00 08 00 | 00 00 00 01 |
+// [038] | 00 01 01 00 | 00 00 00 01 |
+
 		buffer->one = 1;
-		buffer->flags[1] = 0;
-		buffer->flags[2] = 1;
-		buffer->flags[7] = 1;
+		buffer->connected = connected;
+		buffer->one1 = 1;
+		buffer->one2 = 1;
+		buffer->flag3 = 0;
+		//buffer->flags4 = 0;
+		buffer->flag5 = 1;
+
+		static const unsigned char dump2[0x40] =
+		{
+			0x75, 0x6E, 0x6E, 0x61, 0x6D, 0x65, 0x64, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x62, 0x83, 0xE0,
+			0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x01,
+			0x00, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x01
+		};
+
+		static const unsigned char data_mode_8[0x40] =
+		{
+		    0x75, 0x6E, 0x6E, 0x61, 0x6D, 0x65, 0x64, 0x00,
+		    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		    0x00, 0x00, 0x00, 0x00, 0x00, 0x62, 0x83, 0xE0,
+		    0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x01,
+		    0x00, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x01
+		};
+
+
+		std::memcpy(&*buffer, data_mode_8, sizeof(data_mode_8));
+	//	buffer->sector_size = 0x200;
 	}
 	else if (storage == USB_MASS_STORAGE_1(0))
 	{
@@ -238,9 +708,9 @@ error_code sys_storage_get_device_info(u64 device, vm::ptr<StorageDeviceInfo> bu
 		/*buffer->sector_count = 0x4D955;*/
 		buffer->sector_size = 0x200;
 		buffer->one = 1;
-		buffer->flags[1] = 0;
-		buffer->flags[2] = 1;
-		buffer->flags[7] = 1;
+		buffer->one1 = 1;
+		buffer->one2 = 1;
+		buffer->flag5 = 1;
 	}
 	else if (storage == NAND_FLASH)
 	{
@@ -253,9 +723,9 @@ error_code sys_storage_get_device_info(u64 device, vm::ptr<StorageDeviceInfo> bu
 		memcpy(buffer->name, u.c_str(), u.size());
 		buffer->sector_size = 0x200;
 		buffer->one = 1;
-		buffer->flags[1] = 1;
-		buffer->flags[2] = 1;
-		buffer->flags[7] = 1;
+		buffer->one1 = 1;
+		buffer->one2 = 1;
+		buffer->flag5 = 1;
 
 		// see ata_hdd for explanation
 		switch (dev_num)
@@ -287,9 +757,9 @@ error_code sys_storage_get_device_info(u64 device, vm::ptr<StorageDeviceInfo> bu
 		memcpy(buffer->name, u.c_str(), u.size());
 		buffer->sector_size = 0x200;
 		buffer->one = 1;
-		buffer->flags[1] = 0;
-		buffer->flags[2] = 1;
-		buffer->flags[7] = 1;
+		buffer->one1 = 0;
+		buffer->one2 = 1;
+		buffer->flag5 = 1;
 
 		// see ata_hdd for explanation
 		switch (dev_num)
@@ -315,9 +785,9 @@ error_code sys_storage_get_device_info(u64 device, vm::ptr<StorageDeviceInfo> bu
 		memcpy(buffer->name, u.c_str(), u.size());
 		buffer->sector_size = 0x800;
 		buffer->one = 1;
-		buffer->flags[1] = 0;
-		buffer->flags[2] = 1;
-		buffer->flags[7] = 1;
+		buffer->one1 = 0;
+		buffer->one2 = 1;
+		buffer->flag5 = 1;
 
 		// see ata_hdd for explanation
 		switch (dev_num)
@@ -337,6 +807,7 @@ error_code sys_storage_get_device_info(u64 device, vm::ptr<StorageDeviceInfo> bu
 error_code sys_storage_get_device_config(vm::ptr<u32> storages, vm::ptr<u32> devices)
 {
 	sys_storage.todo("sys_storage_get_device_config(storages=*0x%x, devices=*0x%x)", storages, devices);
+	log_callback(*cpu_thread::get_current<ppu_thread>());
 
 	if (storages) *storages = 6; else return CELL_EFAULT;
 	if (devices)  *devices = 17; else return CELL_EFAULT;
@@ -347,10 +818,16 @@ error_code sys_storage_get_device_config(vm::ptr<u32> storages, vm::ptr<u32> dev
 error_code sys_storage_report_devices(u32 storages, u32 start, u32 devices, vm::ptr<u64> device_ids)
 {
 	sys_storage.todo("sys_storage_report_devices(storages=0x%x, start=0x%x, devices=0x%x, device_ids=0x%x)", storages, start, devices, device_ids);
+	log_callback(*cpu_thread::get_current<ppu_thread>());
 
 	if (!device_ids)
 	{
 		return CELL_EFAULT;
+	}
+
+	if (storages != 6)
+	{
+		return -5;
 	}
 
 	static constexpr std::array<u64, 0x11> all_devs = []
@@ -389,14 +866,79 @@ error_code sys_storage_report_devices(u32 storages, u32 start, u32 devices, vm::
 	return CELL_OK;
 }
 
-error_code sys_storage_configure_medium_event(u32 fd, u32 equeue_id, u32 c)
+error_code sys_storage_configure_medium_event(ppu_thread& ppu, u32 fd, u32 equeue_id, vm::ptr<u32> handle)
 {
-	sys_storage.todo("sys_storage_configure_medium_event(fd=0x%x, equeue_id=0x%x, c=0x%x)", fd, equeue_id, c);
+	sys_storage.todo("sys_storage_configure_medium_event(fd=0x%x, equeue_id=0x%x, c=0x%x)", fd, equeue_id, handle);
+	log_callback(*cpu_thread::get_current<ppu_thread>());
 
+	if (!ppu.has_root_perm)
+	{
+		return CELL_EPERM;
+	}
+
+	u64 device_id = 0; // 0 means global
+
+	if (fd)
+	{
+		const auto storage = idm::get_unlocked<lv2_obj, lv2_storage>(fd);
+
+		if (!storage)
+		{
+			return {CELL_ESRCH, "storage"};
+		}
+
+		// Oddly that is all it needs from the storage descriptor
+		// It closes the handle right after device ID extraction
+		// Perhaps because not calling sys_storage_open's routines saves on expensive "error checking" the device ID?
+		device_id = storage->device_id;
+	}
+
+	auto& manager = *ensure(g_fxo->try_get<storage_manager>());
+
+	if (auto queue = idm::get_unlocked<lv2_obj, lv2_event_queue>(equeue_id))
+	{
+		while (!idm::make_ptr<lv2_storage_medium_event_port>(device_id, queue))
+		{
+			std::vector<std::pair<u32, u32>> cleanup_list;
+
+			// Try cleanup
+			id_manager::g_process = 0;
+			idm::select<lv2_storage_medium_event_port>([&](u32 id, u32 proc, lv2_storage_medium_event_port& port)
+			{
+				// Check port status
+				if (!port.savable())
+				{
+					// Detached ports can be removed
+					cleanup_list.emplace_back(id, proc);
+				}
+			});
+
+			bool success = false;
+
+			for (auto [id, proc] : cleanup_list)
+			{
+				success = idm::remove<lv2_storage_medium_event_port>(idm::id_index(id, proc));
+			}
+
+			id_manager::g_process = ppu.proc_id;
+
+			if (!success)
+			{
+				fmt::throw_exception("lv2_storage_medium_event_port() entries depletion, consider increases lv2_storage_medium_event_port::id_count!");
+			}
+		}
+	}
+	else
+	{
+		return CELL_ESRCH;
+	}
+
+	// No idea what this means, seems like it returns uninitialized memory
+	*handle = 0x5D7280;
 	return CELL_OK;
 }
 
-error_code sys_storage_set_medium_polling_interval()
+error_code sys_storage_set_medium_polling_interval(ppu_thread& ppu, u32 fd, u64 interval)
 {
 	sys_storage.todo("sys_storage_set_medium_polling_interval()");
 

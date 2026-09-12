@@ -14,6 +14,8 @@
 
 #include <thread>
 
+#define REGS(ctx) (rsx::method_registers)
+
 namespace vk
 {
 	using enum program_common::interpreter::compiler_option;
@@ -560,9 +562,9 @@ namespace vk
 		key.compiler_opt = 0;
 		key.properties = properties;
 
-		if (rsx::method_registers.alpha_test_enabled()) [[unlikely]]
+		if (REGS(0)->alpha_test_enabled()) [[unlikely]]
 		{
-			switch (rsx::method_registers.alpha_func())
+			switch (REGS(0)->alpha_func())
 			{
 			case rsx::comparison_function::always:
 				break;
@@ -596,7 +598,7 @@ namespace vk
 		if (fp_metadata.referenced_textures_mask) key.compiler_opt |= COMPILER_OPT_ENABLE_TEXTURES;
 		if (fp_metadata.has_branch_instructions) key.compiler_opt |= COMPILER_OPT_ENABLE_FLOW_CTRL;
 		if (fp_metadata.has_pack_instructions) key.compiler_opt |= COMPILER_OPT_ENABLE_PACKING;
-		if (rsx::method_registers.polygon_stipple_enabled()) key.compiler_opt |= COMPILER_OPT_ENABLE_STIPPLING;
+		if (REGS(0)->polygon_stipple_enabled()) key.compiler_opt |= COMPILER_OPT_ENABLE_STIPPLING;
 		if (vp_ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS) key.compiler_opt |= COMPILER_OPT_ENABLE_INSTANCING;
 		if (vp_metadata.referenced_textures_mask) key.compiler_opt |= COMPILER_OPT_ENABLE_VTX_TEXTURES;
 

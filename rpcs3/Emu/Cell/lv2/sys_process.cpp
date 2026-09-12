@@ -3,11 +3,13 @@
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/System.h"
 #include "Emu/VFS.h"
+#include "Loader/PSF.h"
 #include "Emu/IdManager.h"
 
 #include "Crypto/unedat.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/Cell/PPUFunction.h"
 #include "sys_lwmutex.h"
 #include "sys_lwcond.h"
 #include "sys_mutex.h"
@@ -25,55 +27,370 @@
 #include "sys_fs.h"
 #include "sys_vm.h"
 #include "sys_spu.h"
+#include "sys_rsx.h"
+
+lv2_process::lv2_process() noexcept
+	: lv2_process(null_ptr)
+{
+}
+
+lv2_process::lv2_process(shared_ptr<lv2_memory_container> pp_memory) noexcept
+{
+	memory_4GB_model = std::make_shared<vm::ps3_virtual_memory_object>();
+
+	vm::initialize_ps3_mmemory_object(memory_4GB_model.get());
+
+	// Parent memory container (default for sys_memory_allocate etc)
+	// Current process is oblivious to its ID
+	parent_memory_container = pp_memory;
+
+	rsx_info = std::make_shared<lv2_rsx_process_info>();
+	local_typemap = std::make_unique<std::remove_cvref_t<decltype(*local_typemap)>>();
+	local_typemap->init(true);
+
+	self_id = idm::last_id<lv2_process>();
+}
+
+lv2_process::lv2_process(utils::serial& ar) noexcept
+{
+	ar(parent_process, exit_code);
+	ar(ELF_file_path, supposed_param_sfo_path);
+	state = ar.pop<u32>();
+
+	memory_4GB_model = std::make_shared<vm::ps3_virtual_memory_object>();
+
+	vm::initialize_ps3_mmemory_object(memory_4GB_model.get());
+
+	vm::load(memory_4GB_model.get(), ar);
+
+	u32 pp_memory_id = 0;
+	ar(pp_memory_id);
+
+	if (!pp_memory_id)
+	{
+		// First process (ID oblivious)
+		atomic_ptr<lv2_memory_container> temp;
+		const auto load_func = lv2_memory_container::load(ar);
+		load_func(&temp);
+		parent_memory_container = temp.load();
+	}
+	else
+	{
+		parent_memory_container = idm::get_unlocked<lv2_memory_container>(idm::id_index(pp_memory_id, nullptr));
+
+		if (!parent_memory_container)
+		{		
+			ensure(!!Emu.DeserialManager());
+
+			Emu.PostponeInitCode([this, pp_memory_id]()
+			{
+				if (!parent_memory_container)
+				{
+					parent_memory_container = idm::get_unlocked<lv2_memory_container>(idm::id_index(pp_memory_id, nullptr));
+					ensure(parent_memory_container);
+				}
+			});
+		}
+	}
+
+	rsx_info = std::make_shared<lv2_rsx_process_info>();
+	ar(rsx_info->device_addr, rsx_info->local_mem_size);
+
+	local_typemap = std::make_unique<std::remove_cvref_t<decltype(*local_typemap)>>();
+	local_typemap->init(true, std::addressof(ar));
+
+	self_id = idm::last_id<lv2_process>();
+}
+
+void lv2_process::save(utils::serial& ar) noexcept
+{
+	ar(parent_process, exit_code);
+	ar(ELF_file_path, supposed_param_sfo_path);
+	ar(state.load());
+
+	vm::save(memory_4GB_model.get(), ar);
+
+	vm::initialize_ps3_mmemory_object(memory_4GB_model.get());
+
+	// Parent memory container (default for sys_memory_allocate etc)
+	// Current process is oblivious to its ID
+
+	u32 pp_id = 0;
+
+	idm::select<lv2_memory_container>([&](u32 id, u32, lv2_memory_container& ctr)
+	{
+		if (&ctr == parent_memory_container.get())
+		{
+			pp_id = id;
+		}
+	});
+
+	ar(pp_id);
+
+	if (!pp_id)
+	{
+		parent_memory_container->save(ar);
+	}
+
+	ar(rsx_info->device_addr, rsx_info->local_mem_size);
+
+	local_typemap->save(ar);
+}
+
+u64 lv2_process::ki11_self()
+{
+	if (is_terminating.exchange(true))
+	{
+		return 0;
+	}
+
+	extern u64 get_system_time();
+
+	const u64 start_time = get_system_time();
+
+	ppu_thread& this_ppu = *cpu_thread::get_current<ppu_thread>();
+
+	std::map<u32, shared_ptr<cpu_thread>> terminate_threads;
+
+	while (true)
+	{
+		const u64 old_created = cpu_thread::g_threads_created;
+
+		idm::select<named_thread<ppu_thread>>([&](u32 id, named_thread<ppu_thread>&)
+		{
+			terminate_threads.emplace(id, ensure(idm::get_unlocked<named_thread<ppu_thread>>(id)));
+		});
+
+		idm::select<named_thread<spu_thread>>([&](u32 id, named_thread<spu_thread>&)
+		{
+			terminate_threads.emplace(id, ensure(idm::get_unlocked<named_thread<spu_thread>>(id)));
+		});
+
+		if (old_created != cpu_thread::g_threads_created)
+		{
+			continue;
+		}
+
+		for (auto& cpu : terminate_threads)
+		{
+			cpu.second->state += cpu_flag::req_exit;
+			cpu.second->notify();
+		}
+
+		if (old_created != cpu_thread::g_threads_created)
+		{
+			continue;
+		}
+
+		// Join threads
+		for (auto& cpu : terminate_threads)
+		{
+			if (cpu.second->try_get<ppu_thread>() && cpu.second.get() != &this_ppu)
+			{
+				static_cast<named_thread<ppu_thread>&>(*cpu.second).operator()();
+			}
+
+			if (cpu.second->try_get<spu_thread>())
+			{
+				static_cast<named_thread<spu_thread>&>(*cpu.second).operator()();
+			}
+		}
+
+		if (old_created != cpu_thread::g_threads_created)
+		{
+			continue;
+		}
+
+		break;
+	}
+
+	std::vector<u32> IDs;
+
+	auto remove_handles = [&](std::function<void(u32)> syscall_func)
+	{
+		for (u32 id : IDs)
+		{
+			syscall_func(id);
+		}
+
+		// Clean list for tthe next round
+		IDs.clear();
+	};
+
+	// Clean mmapper handles
+	idm::select<lv2_memory>([&](u32 id, lv2_memory& mem)
+	{
+		mem.counters.at(id_manager::g_process) = 0;
+		IDs.emplace_back(id);
+	});
+
+	remove_handles(FN(sys_mmapper_free_shared_memory(this_ppu, x)));
+
+	// Clean sys_memory
+	extern void clean_sys_memory(lv2_process* process);
+	clean_sys_memory(this);
+
+	// Clean PPU threads
+	void ppu_thread_exit(ppu_thread& ppu, ppu_opcode_t, be_t<u32>*, struct ppu_intrp_func*);
+
+	idm::select<named_thread<ppu_thread>>([&](u32 id, ppu_thread& ppu)
+	{
+		ppu_thread_exit(ppu, {}, nullptr, nullptr);
+		IDs.emplace_back(id);
+	});
+
+	remove_handles(FN(this_ppu.id == x ? true : ensure(idm::remove<named_thread<ppu_thread>>(x))));
+
+	extern shared_ptr<named_thread<ppu_thread>> use_ppu_thread_cleaner(u32 id);
+
+	shared_ptr<named_thread<ppu_thread>> old_ppu;
+
+	if (this_ppu.vm_base == memory_4GB_model->base_addr)
+	{
+		std::lock_guard idm_full_lock(id_manager::g_mutex);
+		old_ppu = use_ppu_thread_cleaner(this_ppu.id);
+	}
+
+	if (parent_memory_container)
+	{
+		parent_memory_container->free(used_memory);
+	}
+
+	is_terminated = 1;
+	is_terminated.notify_all();
+
+	// Returns the time this process took
+	return get_system_time() - start_time;
+}
+
+u64 lv2_process::get_unique_key() const
+{
+	return (u64{seg0_code_end} << 32) + self_id;
+}
+
+lv2_process::~lv2_process() noexcept
+{
+	if (memory_4GB_model)
+	{
+		memory_4GB_model->terminate();
+	}
+
+	local_typemap->clear();
+}
+
+int lv2_process::operator=(thread_state s) noexcept
+{
+	if (s == thread_state::finished)
+	{
+		// TODO
+	}
+
+	return 0;
+}
+
+namespace vm
+{
+	std::shared_ptr<vm::ps3_virtual_memory_object> get_current_memory_object()
+	{
+		return idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->memory_4GB_model;
+	}
+}
+
+stx::manual_typemap<lv2_process, 0x2'00000, 128>* lv2_process::get_typemap(u32 proc_id)
+{
+	return ensure(idm::get_unlocked<lv2_obj, lv2_process>(proc_id == umax ? id_manager::g_process : proc_id))->local_typemap.get();
+}
+
+extern shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2_memory_container> mem_ct, bool virtual_load, const std::vector<std::string>& argv0, const std::vector<std::string>& envp0, const std::vector<u8>& data0, const std::vector<u8>& lv2_paramsfo, utils::serial* ar = nullptr);
 
 // Check all flags known to be related to extended permissions (TODO)
 // It's possible anything which has root flags implicitly has debug perm as well
 // But I haven't confirmed it.
-bool ps3_process_info_t::debug_or_root() const
+bool lv2_process::debug_or_root() const
 {
 	return (ctrl_flags1 & (0xe << 28)) != 0;
 }
 
-bool ps3_process_info_t::has_root_perm() const
+bool lv2_process::has_root_perm() const
 {
 	return (ctrl_flags1 & (0xc << 28)) != 0;
 }
 
-bool ps3_process_info_t::has_debug_perm() const
+bool lv2_process::has_process_root_perm()
+{
+	const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
+
+	return process->has_root_perm();
+}
+
+bool lv2_process::has_debug_perm() const
 {
 	return (ctrl_flags1 & (0xa << 28)) != 0;
 }
 
 // If a SELF file is of CellOS return its filename, otheriwse return an empty string
-std::string_view ps3_process_info_t::get_cellos_appname() const
+std::string_view lv2_process::get_cellos_appname() const
 {
 	if (!has_root_perm() || !Emu.GetTitleID().empty())
 	{
 		return {};
 	}
 
-	return std::string_view(Emu.GetBoot()).substr(Emu.GetBoot().find_last_of('/') + 1);
+	return std::string_view(ELF_file_path).substr(ELF_file_path.find_last_of('/') + 1);
+}
+
+std::shared_ptr<void> lv2_process::acquire_globals(u32 proc_id)
+{
+	const auto memory_4GB_model = ensure(idm::get_unlocked<lv2_obj, lv2_process>(idm::id_index{proc_id, nullptr}))->memory_4GB_model;
+
+	vm::g_base_addr = memory_4GB_model->base_addr;
+	vm::g_sudo_addr = memory_4GB_model->sudo_addr;
+	vm::g_exec_addr = memory_4GB_model->exec_addr;
+	vm::g_stat_addr = memory_4GB_model->stat_addr;
+	vm::g_vm_image  = memory_4GB_model;
+
+	return std::make_shared<cleanup_t>();
+}
+
+void lv2_process::release_globals()
+{
+	vm::g_base_addr = nullptr;
+	vm::g_sudo_addr = nullptr;
+	vm::g_exec_addr = nullptr;
+	vm::g_stat_addr = nullptr;
+	vm::g_vm_image  = nullptr;
+}
+
+std::shared_ptr<utils::serial> default_tls_initializer::operator()() const noexcept
+{
+	const auto ar = std::make_shared<utils::serial>();
+	(*ar)(id_manager::g_process);
+	ar->set_reading_state();
+	return ar;
+}
+
+void default_tls_initializer::operator()(std::shared_ptr<utils::serial> serial) const noexcept
+{
+	ensure(serial && !serial->is_writing());
+	(*serial)(id_manager::g_process);
 }
 
 LOG_CHANNEL(sys_process);
 
-ps3_process_info_t g_ps3_process_info;
-
 s32 process_getpid()
 {
-	// TODO: get current process id
-	return 1;
+	return id_manager::g_process;
 }
 
 s32 sys_process_getpid()
 {
-	sys_process.trace("sys_process_getpid() -> 1");
+	sys_process.trace("sys_process_getpid()");
 	return process_getpid();
 }
 
 s32 sys_process_getppid()
 {
-	sys_process.todo("sys_process_getppid() -> 0");
+	sys_process.todo("sys_process_getppid()");
 	return 0;
 }
 
@@ -190,7 +507,7 @@ error_code sys_process_get_id2(u32 object, vm::ptr<u32> buffer, u32 size, vm::pt
 {
 	sys_process.error("sys_process_get_id2(object=0x%x, buffer=*0x%x, size=%d, set_size=*0x%x)", object, buffer, size, set_size);
 
-	if (!g_ps3_process_info.has_root_perm())
+	if (!lv2_process::has_process_root_perm())
 	{
 		// This syscall is more capable than sys_process_get_id but also needs a root perm check
 		return CELL_ENOSYS;
@@ -273,22 +590,50 @@ error_code _sys_process_get_paramsfo(vm::ptr<char> buffer)
 {
 	sys_process.warning("_sys_process_get_paramsfo(buffer=0x%x)", buffer);
 
-	if (Emu.GetTitleID().empty())
+	const auto current = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
+
+	if (!current->provided_paramsfo && Emu.GetTitleID().empty())
 	{
 		return CELL_ENOENT;
 	}
 
-	memset(buffer.get_ptr(), 0, 0x40);
-	memcpy(buffer.get_ptr() + 1, Emu.GetTitleID().c_str(), std::min<usz>(Emu.GetTitleID().length(), 9));
+	char buffer_out[0x40]{};
+	if (!current->provided_paramsfo)
+	{
+		std::memcpy(buffer_out + 1, Emu.GetTitleID().c_str(), std::min<usz>(Emu.GetTitleID().length(), 9));
+	}
+	else
+	{
+		std::memcpy(buffer_out, current->provided_paramsfo->data(), current->provided_paramsfo->size());
+	}
+
+	std::memcpy(buffer.get_ptr(), buffer_out, 0x40);
 
 	return CELL_OK;
 }
 
-s32 process_get_sdk_version(u32 /*pid*/, s32& ver)
+s32 process_get_sdk_version(u32 pid, s32& ver)
 {
-	// get correct SDK version for selected pid
-	ver = g_ps3_process_info.sdk_ver;
+	ver = u32{umax};
 
+	// get correct SDK version for selected pid
+	const auto current = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
+	const auto process = pid == id_manager::g_process ? current : idm::get_unlocked<lv2_obj, lv2_process>(pid);
+
+	if (pid != id_manager::g_process)
+	{
+		if (!current->has_root_perm())
+		{
+			return CELL_ENOSYS;
+		}
+	}
+
+	if (!process)
+	{
+		return CELL_ESRCH;
+	}
+
+	ver = process->sdk_ver;
 	return CELL_OK;
 }
 
@@ -309,36 +654,265 @@ error_code sys_process_get_sdk_version(u32 pid, vm::ptr<s32> version)
 	}
 }
 
-error_code sys_process_kill(u32 pid)
+error_code sys_process_kill(ppu_thread& ppu, u32 pid)
 {
 	sys_process.todo("sys_process_kill(pid=0x%x)", pid);
+
+	if (!ppu.has_root_perm)
+	{
+		return CELL_ENOSYS;
+	}
+
 	return CELL_OK;
 }
 
-error_code sys_process_wait_for_child(u32 pid, vm::ptr<u32> status, u64 unk)
+error_code process_wait_for_child(ppu_thread& ppu, u32 claimed_id, vm::ptr<u32> target_pid, vm::ptr<u32> process_status, void* data_returned, u64 data_size, vm::ptr<u32> data_written, u64 flags)
 {
-	sys_process.todo("sys_process_wait_for_child(pid=0x%x, status=*0x%x, unk=0x%llx", pid, status, unk);
+	if (claimed_id == umax)
+	{
+		fmt::throw_exception("Unimplemented annonymous sys_process_wait_for_child2()!");
+	}
+
+	if (flags == 1)
+	{
+		fmt::throw_exception("Unimplemented sys_process_wait_for_child2() flags==1");
+	}
+
+	if (flags > 1)
+	{
+		return CELL_EINVAL;
+	}
+
+	if (ppu.proc_id == claimed_id)
+	{
+		return CELL_ENOCHILD;
+	}
+
+	const bool is_savestate = ppu.loaded_from_savestate;
+
+	auto child = idm::get_unlocked<lv2_obj, lv2_process>(idm::id_index(claimed_id, nullptr));
+
+	if (!child)
+	{
+		return CELL_ENOCHILD;
+	}
+
+	if (child->parent_process != ppu.proc_id)
+	{
+		return CELL_ENOCHILD;
+	}
+
+	ppu.cancel_sleep = 1;
+
+	const auto res = is_savestate ? CellError{} : child->state.atomic_op([&](u32& state) -> CellError
+	{
+		if ((state % 65536) == PS3_PROCESS_ZOMBIE)
+		{
+			return CELL_EAGAIN;
+		}
+
+		if ((state & -65536) == PS3_PROCESS_IS_BEING_JOINED)
+		{
+			// This seems to join wait_for_chiled
+			ensure(false);
+			return CELL_EBUSY;
+		}
+
+		if ((state & -65536) == PS3_PROCESS_IS_DETACHED)
+		{
+			// Already detached, no track of child
+			return CELL_ENOCHILD;
+		}
+
+		state |= PS3_PROCESS_IS_BEING_JOINED;
+		return {};
+	});
+
+	if (res == CELL_EAGAIN)
+	{
+		while (!child->is_terminated)
+		{
+			// Wait for ki11_self() to complete
+			thread_ctrl::wait_on(child->is_terminated, 0);
+		}
+
+		//child->ki11_self();
+		ensure(idm::remove_verify<lv2_obj, lv2_process>(idm::id_index(claimed_id, nullptr), child));
+		ppu.cancel_sleep = 0;
+		ppu.state += cpu_flag::wait;
+		child.reset();
+		return CELL_OK;
+	}
+
+	if (res == CELL_ENOCHILD)
+	{
+		ppu.cancel_sleep = 0;
+		ppu.state += cpu_flag::wait;
+		child.reset();
+		return CELL_ENOCHILD;
+	}
+
+	if (lv2_obj::sleep(ppu))
+	{
+		while (auto state = +ppu.state)
+		{
+			if (child->state == PS3_PROCESS_IS_DESTROYED)
+			{
+				break;
+			}
+
+			if (::is_stopped(state))
+			{
+				ppu.state += cpu_flag::again;
+				ppu.state += cpu_flag::wait;
+				child.reset();
+				return {};
+			}
+
+			thread_ctrl::wait_on(ppu.state, state);
+		}
+	}
+
+	//child->ki11_self();
+	ensure(idm::remove_verify<lv2_obj, lv2_process>(idm::id_index(claimed_id, nullptr), child));
+
+	*process_status = child->exit_code;
+	*target_pid = claimed_id;
+
+	ppu.state += cpu_flag::wait;
+	child.reset();
+
+	// The difference between sys_process_wait_for_child2 and sys_process_wait_for_child
+	if (data_returned)
+	{
+		if (!data_written)
+		{
+			return CELL_EFAULT;
+		}
+
+		*data_written = 0;
+	}
 
 	return CELL_OK;
 }
 
-error_code sys_process_wait_for_child2(u64 unk1, u64 unk2, u64 unk3, u64 unk4, u64 unk5, u64 unk6)
+error_code sys_process_wait_for_child(ppu_thread& ppu, vm::ptr<u32> target_pid, vm::ptr<u32> status, u64 flags)
 {
-	sys_process.todo("sys_process_wait_for_child2(unk1=0x%llx, unk2=0x%llx, unk3=0x%llx, unk4=0x%llx, unk5=0x%llx, unk6=0x%llx)",
-		unk1, unk2, unk3, unk4, unk5, unk6);
+	const u32 claimed_id = target_pid ? +*target_pid : 0;
+
+	sys_process.todo("sys_process_wait_for_child(pid=%s (0x%x), status=*0x%x, flags=0x%llx", target_pid, claimed_id, status, flags);
+
+	if (!ppu.has_root_perm)
+	{
+		return CELL_ENOSYS;
+	}
+
+	return process_wait_for_child(ppu, claimed_id, target_pid, status, nullptr, 0, vm::null, flags);
+}
+
+error_code sys_process_wait_for_child2(ppu_thread& ppu, vm::ptr<u32> target_pid, vm::ptr<u32> process_status, vm::ptr<void> data_returned, u64 data_size, vm::ptr<u32> data_written, u64 flags)
+{
+	ppu.state += cpu_flag::wait;
+
+	const u32 claimed_id = target_pid ? +*target_pid : 0;
+
+	sys_process.todo("sys_process_wait_for_child2(target_pid=%s (0x%x), process_status=%s, data_returned=%s, data_size=0x%llx, data_written=0x%llx, flags=0x%llx)",
+		target_pid, claimed_id, process_status, data_returned, data_size, data_written, flags);
+
+	if (!ppu.has_root_perm)
+	{
+		return CELL_ENOSYS;
+	}
+
+	return process_wait_for_child(ppu, claimed_id, target_pid, process_status, data_returned.get_ptr(), data_size, data_written, flags);
+}
+
+error_code sys_process_get_status(ppu_thread& ppu, u32 pid)
+{
+	ppu.state += cpu_flag::wait;
+
+	sys_process.todo("sys_process_get_status(pid=0x%llx)", pid);
+
+	if (!ppu.has_root_perm)
+	{
+		return CELL_ENOSYS;
+	}
+
+	const auto child = idm::get_unlocked<lv2_obj, lv2_process>(idm::id_index(pid, nullptr));
+
+	if (!child)
+	{
+		return CELL_ESRCH;
+	}
+
 	return CELL_OK;
 }
 
-error_code sys_process_get_status(u64 unk)
+error_code sys_process_detach_child(ppu_thread& ppu, u32 pid)
 {
-	sys_process.todo("sys_process_get_status(unk=0x%llx)", unk);
-	//vm::write32(CPU.gpr[4], GetPPUThreadStatus(CPU));
-	return CELL_OK;
-}
+	sys_process.todo("sys_process_detach_child(pid=0x%x)", pid);
 
-error_code sys_process_detach_child(u64 unk)
-{
-	sys_process.todo("sys_process_detach_child(unk=0x%llx)", unk);
+	if (!ppu.has_root_perm)
+	{
+		return CELL_ENOSYS;
+	}
+
+	if (ppu.proc_id == pid)
+	{
+		return CELL_ENOCHILD;
+	}
+
+	const auto child = idm::get_unlocked<lv2_obj, lv2_process>(idm::id_index(pid, nullptr));
+
+	if (!child)
+	{
+		return CELL_ENOCHILD;
+	}
+
+	if (child->parent_process != ppu.proc_id)
+	{
+		return CELL_ENOCHILD;
+	}
+
+	const auto res = child->state.atomic_op([&](u32& state) -> CellError
+	{
+		if ((state % 65536) == PS3_PROCESS_ZOMBIE)
+		{
+			return CELL_EAGAIN;
+		}
+
+		if ((state & -65536) == PS3_PROCESS_IS_BEING_JOINED)
+		{
+			// This seems to join wait_for_chiled
+			ensure(false);
+			return CELL_EBUSY;
+		}
+
+		if ((state & -65536) == PS3_PROCESS_IS_DETACHED)
+		{
+			// Already detached, no track of child
+			return CELL_ENOCHILD;
+		}
+
+		state |= PS3_PROCESS_IS_DETACHED;
+		return {};
+	});
+
+	if (res == CELL_EAGAIN)
+	{
+		if (!idm::remove_verify<lv2_obj, lv2_process>(pid, child))
+		{
+			return CELL_ENOCHILD;
+		}
+
+		return CELL_OK;
+	}
+
+	if (res)
+	{
+		return res;
+	}
+
 	return CELL_OK;
 }
 
@@ -348,7 +922,82 @@ void _sys_process_exit(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3)
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_process.warning("_sys_process_exit(status=%d, arg2=0x%x, arg3=0x%x)", status, arg2, arg3);
+	if (id_manager::g_process != lv2_process::id_base)
+	{
+		sys_process.success("Sub-process 0x%x terminated!", id_manager::g_process);
+	}
+
+	sys_process.success("_sys_process_exit(status=%d, arg2=0x%x, arg3=0x%x)", status, arg2, arg3);
+
+	if (id_manager::g_process != lv2_process::id_base)
+	{
+		lv2_obj::sleep(ppu);
+		ppu.exports_table = nullptr;
+
+		const auto current = ensure(idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process));
+
+		current->exit_code = status;
+
+		bool remove_self = false;
+		bool signal_ppu = false;
+
+		current->state.atomic_op([&](u32& state)
+		{
+			remove_self = false;
+			signal_ppu = false;
+
+			if ((state & -65536) == PS3_PROCESS_IS_BEING_JOINED)
+			{
+				// Let the joiner PPU do this
+				//remove_self = true;
+				signal_ppu = true;
+				state = PS3_PROCESS_IS_DESTROYED;
+				return;
+			}
+			else if ((state & -65536) == PS3_PROCESS_IS_DETACHED)
+			{
+				remove_self = true;
+				state = PS3_PROCESS_IS_DESTROYED;
+				return;
+			}
+
+			state &= ~0xffff;
+			state |= PS3_PROCESS_ZOMBIE;
+		});
+
+		current->ki11_self();
+
+		if (remove_self)
+		{
+			ensure(idm::remove_verify<lv2_obj, lv2_process>(id_manager::g_process, current));
+		}
+		else if (signal_ppu)
+		{
+			// I don't want to save PPU information.. so the search for waiting PPU is manual (simplifying serialization)
+			id_manager::g_process = current->parent_process;
+
+			bool signal = false;
+
+			idm::select<named_thread<ppu_thread>>([&, notify = lv2_obj::notify_all_t()](u32, ppu_thread& join_ppu)
+			{
+				const auto func = atomic_storage<const char*>::load(join_ppu.current_function);
+
+				if (join_ppu.state & cpu_flag::suspend && func && std::string_view(func).starts_with("sys_process_wait_for_child"sv) && func == atomic_storage<const char*>::load(join_ppu.current_function))
+				{
+					lv2_obj::awake(&join_ppu);
+					signal = true;
+				}
+			});
+
+			if (!signal)
+			{
+				fmt::throw_exception("PPU joiner thread of process was not found!");
+			}
+
+			id_manager::g_process = ppu.proc_id;
+		}
+		return;
+	}
 
 	Emu.CallFromMainThread([]()
 	{
@@ -407,15 +1056,57 @@ void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> ar
 
 	// TODO: set prio, flags
 
-	lv2_exitspawn(ppu, argv, envp, data);
+	lv2_exitspawn(ppu, true, null_ptr, argv, envp, data, *std::make_unique<std::vector<u8>>());
 }
 
-void lv2_exitspawn(ppu_thread& ppu, std::vector<std::string>& argv, std::vector<std::string>& envp, std::vector<u8>& data)
+void lv2_exitspawn(ppu_thread& ppu, bool exit_current, shared_ptr<lv2_memory_container> pp_mem, std::vector<std::string>& argv, std::vector<std::string>& envp, std::vector<u8>& data, std::vector<u8>& lv2_paramsfo)
 {
 	ppu.state += cpu_flag::wait;
 
 	// sys_sm_shutdown
 	const bool is_real_reboot = (ppu.gpr[11] == 379);
+
+	if (!exit_current)
+	{
+		const u128 klic = g_fxo->get<loaded_npdrm_keys>().last_key();
+		
+		fs::file self_file = lv2_file::open(argv[0], 0, 0).file;
+
+		if (!self_file)
+		{
+			ppu.gpr[3] = CELL_ENOEXEC;
+			return;
+		}
+
+		SelfAdditionalInfo self_info{};
+
+		const auto elf_file = decrypt_self(self_file, klic ? reinterpret_cast<const u8*>(&klic) : nullptr, &self_info);
+
+		if (!elf_file)
+		{
+			ppu.gpr[3] = CELL_ENOEXEC;
+			return;
+		}
+
+		const ppu_exec_object obj = elf_file;
+
+		if (obj != elf_error::ok)
+		{
+			ppu.gpr[3] = CELL_ENOEXEC;
+			return;
+		}
+
+		obj.set_encrypted_layer_data(&self_info);
+
+		if (!ppu_load_self(obj, pp_mem, false, argv, envp, data, lv2_paramsfo, nullptr))
+		{
+			ppu.gpr[3] = CELL_ENOEXEC;
+			return;
+		}
+
+		ppu.gpr[3] = 0;
+		return;
+	}
 
 	Emu.CallFromMainThread([is_real_reboot, argv = std::move(argv), envp = std::move(envp), data = std::move(data)]() mutable
 	{
@@ -446,18 +1137,9 @@ void lv2_exitspawn(ppu_thread& ppu, std::vector<std::string>& argv, std::vector<
 
 		idm_capture->set_reading_state();
 
-		auto func = [is_real_reboot, old_size = g_fxo->get<lv2_memory_container>().size, idm_capture](u32 sdk_suggested_mem) mutable
+		auto func = [old_size = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->parent_memory_container->size, idm_capture](u32 sdk_suggested_mem) mutable
 		{
-			if (is_real_reboot)
-			{
-				// Do not save containers on actual reboot
-				ensure(g_fxo->init<id_map<lv2_memory_container>>());
-			}
-			else
-			{
-				// Save LV2 memory containers
-				ensure(g_fxo->init<id_map<lv2_memory_container>>(*idm_capture));
-			}
+			ensure(g_fxo->init<id_map<lv2_memory_container>>(*idm_capture));
 
 			// Empty the containers, accumulate their total size
 			u32 total_size = 0;
@@ -471,10 +1153,10 @@ void lv2_exitspawn(ppu_thread& ppu, std::vector<std::string>& argv, std::vector<
 			// 1. If newer SDK version suggests higher memory capacity - it is ignored
 			// 2. If newer SDK version suggests lower memory capacity - it is lowered
 			// And if 2. happens while user memory containers exist, the left space can be spent on user memory containers
-			ensure(g_fxo->init<lv2_memory_container>(std::min(old_size - total_size, sdk_suggested_mem) + total_size));
+			//ensure(g_fxo->init<lv2_memory_container>(std::min(old_size - total_size, sdk_suggested_mem) + total_size));
 		};
 
-		Emu.after_kill_callback = [func = std::move(func), argv = std::move(argv), envp = std::move(envp), data = std::move(data),
+		Emu.after_kill_callback = [is_real_reboot, func = std::move(func), argv = std::move(argv), envp = std::move(envp), data = std::move(data),
 			disc = std::move(disc), path = std::move(path), hdd1 = std::move(hdd1), old_config = Emu.GetUsedConfig(), old_db_config = Emu.GetUsedDatabaseConfig(), klic]() mutable
 		{
 			Emu.argv = std::move(argv);
@@ -482,7 +1164,11 @@ void lv2_exitspawn(ppu_thread& ppu, std::vector<std::string>& argv, std::vector<
 			Emu.data = std::move(data);
 			Emu.disc = std::move(disc);
 			Emu.hdd1 = std::move(hdd1);
-			Emu.init_mem_containers = std::move(func);
+
+			if (!is_real_reboot)
+			{
+				Emu.init_mem_containers = std::move(func);
+			}
 
 			if (klic)
 			{
@@ -527,10 +1213,111 @@ void sys_process_exit3(ppu_thread& ppu, s32 status)
 	return _sys_process_exit(ppu, status, 0, 0);
 }
 
-error_code sys_process_spawns_a_self2(vm::ptr<u32> pid, u32 primary_prio, u64 flags, vm::ptr<void> stack, u32 stack_size, u32 mem_id, vm::ptr<void> param_sfo, vm::ptr<void> dbg_data)
+#pragma optimize("", off)
+error_code sys_process_spawns_a_self2(ppu_thread& ppu, vm::ptr<u32> pid, u32 primary_prio, u64 flags, vm::ptr<void> stack, u32 stack_size, u32 mem_id, vm::ptr<void> param_sfo, vm::ptr<void> dbg_data)
 {
 	sys_process.todo("sys_process_spawns_a_self2(pid=*0x%x, primary_prio=0x%x, flags=0x%llx, stack=*0x%x, stack_size=0x%x, mem_id=0x%x, param_sfo=*0x%x, dbg_data=*0x%x"
 		, pid, primary_prio, flags, stack, stack_size, mem_id, param_sfo, dbg_data);
+
+	if (!vm::check_addr(ppu.vm_owner.get(), stack.addr(), 0, stack_size))
+	{
+		return { CELL_EFAULT, stack };
+	}
+
+	std::vector<u8> paramsfo(0x40);
+
+	if (!vm::check_addr(ppu.vm_owner.get(), param_sfo.addr(), 0, 0x40))
+	{
+		return {CELL_EFAULT, param_sfo.addr()};
+	}
+
+	std::memcpy(paramsfo.data(), vm::base(param_sfo.addr()), 0x40);
+
+	// This syscall does something special: it provides a single buffer for all arguments
+	// All arguments must be contained within [stack, stack + stack_size]
+	// And instead of using offsets within the buffer, it provides direct addresses that must reisde in [stack, stack + stack_size] range
+	// But the actual buffer read is done once internally.
+	// So all arguments are extracted from the buffer of std::vector<u8> data manaually
+	std::vector<u8> data(stack_size);
+	std::memcpy(data.data(), vm::base(stack.addr()), stack_size);
+
+	vm::bpptr<char, u64, u64> vpstr = vm::cast(stack.addr());
+
+	std::vector<std::string> argv;
+	std::vector<std::string> envp;
+
+	u64 faulting_address = stack.addr();
+
+	auto get_host_ptr = [&](vm::bpptr<char, u64, u64> addr) -> const char*
+	{
+		if (faulting_address != stack.addr())
+		{
+			return nullptr;
+		}
+
+		const auto data_ptr = read_from_ptr<vm::bpptr<char, u64, u64>>(data, addr.addr() - stack.addr());
+
+		if (!data_ptr)
+		{
+			return nullptr;
+		}
+
+		if (data_ptr.addr() < stack.addr() || data_ptr.addr() >= stack.addr() + stack_size)
+		{
+			// This is EFAULT
+			faulting_address = data_ptr.addr();
+			return nullptr;
+		}
+
+		return reinterpret_cast<const char*>(data.data() + (data_ptr.addr() - stack.addr()));
+	};
+
+	while (const char* ptr = get_host_ptr(vpstr++))
+	{
+		argv.emplace_back(ptr);
+		sys_process.notice(" *** arg: %s", argv.back());
+	}
+
+	while (const char* ptr = get_host_ptr(vpstr++))
+	{
+		envp.emplace_back(ptr);
+		sys_process.notice(" *** env: %s", envp.back());
+	}
+
+	if (faulting_address != stack.addr())
+	{
+		return { CELL_EFAULT, faulting_address };
+	}
+
+	//if (arg_size > 0x1030)
+	//{
+	//	// data.resize(0x1000);
+	//	// std::memcpy(data.data(), vm::base(arg.addr() + arg_size - 0x1000), 0x1000);
+	//}
+
+	const u32 old_proc = id_manager::g_process;
+	const auto saved = std::make_tuple(vm::g_base_addr, vm::g_sudo_addr, vm::g_exec_addr, vm::g_stat_addr, vm::g_vm_image);
+
+	const auto mem_ct = idm::get_unlocked<lv2_memory_container>(mem_id);
+
+	if (!mem_ct)
+	{
+		return CELL_ESRCH;
+	}
+
+	lv2_exitspawn(ppu, false, mem_ct, argv, envp, data, paramsfo);
+
+	if (ppu.gpr[3] != CELL_OK)
+	{
+		return CellError{static_cast<u32>(ppu.gpr[3])};
+	}
+
+	const u32 new_proc = id_manager::g_process;
+
+	id_manager::g_process = old_proc;
+	std::tie(vm::g_base_addr, vm::g_sudo_addr, vm::g_exec_addr, vm::g_stat_addr, vm::g_vm_image) = saved;
+
+	*pid = new_proc;
 
 	return CELL_OK;
 }

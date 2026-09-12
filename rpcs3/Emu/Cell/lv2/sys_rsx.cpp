@@ -12,6 +12,7 @@
 #include "util/asm.hpp"
 #include "sys_event.h"
 #include "sys_vm.h"
+#include "sys_process.h"
 
 LOG_CHANNEL(sys_rsx);
 
@@ -40,14 +41,14 @@ static u64 rsx_timeStamp()
 	return get_timebased_time();
 }
 
-static void set_rsx_dmactl(rsx::thread* render, u64 get_put)
+static void set_rsx_dmactl(rsx::thread* render, u64 get_put, lv2_rsx_context* context)
 {
 	{
 		rsx::eng_lock rlock(render);
 		render->fifo_ctrl->abort();
 
 		// Unconditional set
-		while (!render->new_get_put.compare_and_swap_test(u64{umax}, get_put))
+		while (!context->new_get_put.compare_and_swap_test(u64{umax}, get_put))
 		{
 			// Wait for the first store to complete (or be aborted)
 			if (auto cpu = cpu_thread::get_current())
@@ -70,11 +71,11 @@ static void set_rsx_dmactl(rsx::thread* render, u64 get_put)
 	if (auto cpu = cpu_thread::get_current())
 	{
 		// Wait for the first store to complete (or be aborted)
-		while (render->new_get_put != usz{umax})
+		while (render->lv2_context == context && context->new_get_put != usz{umax})
 		{
 			if (cpu->state & cpu_flag::exit)
 			{
-				if (render->new_get_put.compare_and_swap_test(get_put, umax))
+				if (context->new_get_put.compare_and_swap_test(get_put, umax))
 				{
 					// Retry
 					cpu->state += cpu_flag::again;
@@ -87,11 +88,36 @@ static void set_rsx_dmactl(rsx::thread* render, u64 get_put)
 	}
 }
 
-bool rsx::thread::send_event(u64 data1, u64 event_flags, u64 data3)
+lv2_rsx_context::lv2_rsx_context() noexcept
+{
+	tiles.resize(15);
+	zculls.resize(8);
+	belonging_process = id_manager::g_process;
+	method_regs = std::make_shared<rsx::rsx_state>();
+}
+
+lv2_rsx_context::lv2_rsx_context(utils::serial& ar) noexcept
+	: lv2_rsx_context()
+{
+	save(ar);
+	inited = true;
+}
+
+void lv2_rsx_context::save(utils::serial& ar) noexcept
+{
+	ar(display_buffers, display_buffers_count, current_display_buffer);
+	ar(dma_address, iomap_table, std::span(tiles.data(), 15), std::span(zculls.data(), 8), display_buffers, display_buffers_count, current_display_buffer);
+	ar(enable_second_vhandler);
+	ar(label_addr, main_mem_size, rsx_event_port, driver_info);
+	ar(unsent_gcm_events);
+	ar(*method_regs, method_regs->current_draw_clause);
+}
+
+bool rsx::thread::send_event(lv2_rsx_context* context, u64 data1, u64 event_flags, u64 data3)
 {
 	// Filter event bits, send them only if they are masked by gcm
 	// Except the upper 32-bits, they are reserved for unmapped io events and execute unconditionally
-	event_flags &= vm::_ref<RsxDriverInfo>(driver_info).handlers | 0xffff'ffffull << 32;
+	event_flags &= vm::_ref<RsxDriverInfo>(context->driver_info).handlers | 0xffff'ffffull << 32;
 
 	if (!event_flags)
 	{
@@ -99,7 +125,7 @@ bool rsx::thread::send_event(u64 data1, u64 event_flags, u64 data3)
 		return true;
 	}
 
-	auto error = sys_event_port_send(rsx_event_port, data1, event_flags, data3);
+	auto error = sys_event_port_send(context->rsx_event_port, data1, event_flags, data3);
 
 	while (error + 0u == CELL_EBUSY)
 	{
@@ -123,13 +149,13 @@ bool rsx::thread::send_event(u64 data1, u64 event_flags, u64 data3)
 			break;
 		}
 
-		error = sys_event_port_send(rsx_event_port, data1, event_flags, data3);
+		error = sys_event_port_send(context->rsx_event_port, data1, event_flags, data3);
 	}
 
 	if (error + 0u == CELL_EAGAIN)
 	{
 		// Thread has aborted when sending event (VBLANK duplicates are allowed)
-		ensure((unsent_gcm_events.fetch_or(event_flags) & event_flags & ~(SYS_RSX_EVENT_VBLANK | SYS_RSX_EVENT_SECOND_VBLANK_BASE | SYS_RSX_EVENT_SECOND_VBLANK_BASE * 2)) == 0);
+		ensure((context->unsent_gcm_events.fetch_or(event_flags) & event_flags & ~(SYS_RSX_EVENT_VBLANK | SYS_RSX_EVENT_SECOND_VBLANK_BASE | SYS_RSX_EVENT_SECOND_VBLANK_BASE * 2)) == 0);
 		return false;
 	}
 
@@ -193,14 +219,16 @@ error_code sys_rsx_memory_allocate(cpu_thread& cpu, vm::ptr<u32> mem_handle, vm:
 
 	const u32 mem_size = static_cast<u32>(size);
 
+	const auto rsx_info = ensure(idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process))->rsx_info;
+
+	std::lock_guard lock(rsx_info->mutex);
+
+	// TODO(?): Implement
+	ensure(!rsx_info->local_mem_size);
+
 	if (vm::falloc(rsx::constants::local_mem_base, mem_size, vm::video))
 	{
-		rsx::get_current_renderer()->local_mem_size = mem_size;
-
-		if (u32 addr = rsx::get_current_renderer()->driver_info)
-		{
-			vm::_ptr<RsxDriverInfo>(addr)->memory_size = mem_size;
-		}
+		rsx_info->local_mem_size = mem_size;
 
 		*mem_addr = rsx::constants::local_mem_base;
 		*mem_handle = 0x5a5a5a5b;
@@ -220,15 +248,43 @@ error_code sys_rsx_memory_free(cpu_thread& cpu, u32 mem_handle)
 
 	sys_rsx.warning("sys_rsx_memory_free(mem_handle=0x%x)", mem_handle);
 
+	const auto rsx_info = ensure(idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process))->rsx_info;
+
+	std::lock_guard lock(rsx_info->mutex);
+
 	if (!vm::check_addr(rsx::constants::local_mem_base))
 	{
 		return CELL_ENOMEM;
 	}
 
-	if (rsx::get_current_renderer()->dma_address)
+	bool is_bad = false;
+
+	if (auto current = rsx::get_current_renderer()->lv2_context)
+	{
+		std::vector<shared_ptr<lv2_rsx_context>> ctx_ptr;
+
+		idm::select<lv2_rsx_context>([&](u32 id, lv2_rsx_context&)
+		{
+			ctx_ptr.emplace_back(idm::get_unlocked<lv2_rsx_context>(id));
+		});
+
+		for (auto p : ctx_ptr)
+		{
+			if (p.get() == current)
+			{
+				is_bad = true;
+				break;
+			}
+		}
+	}
+
+	if (is_bad)
 	{
 		fmt::throw_exception("Attempting to dealloc rsx memory when the context is still being used");
 	}
+
+	ensure(rsx_info->local_mem_size);
+	rsx_info->local_mem_size = 0;
 
 	if (!vm::dealloc(rsx::constants::local_mem_base))
 	{
@@ -263,10 +319,36 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 
 	std::lock_guard lock(render->sys_rsx_mtx);
 
-	if (render->dma_address)
+	// if (render->dma_address)
+	// {
+	// 	// We currently do not support multiple contexts
+	// 	fmt::throw_exception("sys_rsx_context_allocate was called twice");
+	// }
+
+	// Process local bounds: 4 contexts max
+	// For all processes combined: 16 contexts
+
+	u32 local_ctx_count = 0;
+
+	idm::select<lv2_rsx_context>([&](u32, lv2_rsx_context&)
 	{
-		// We currently do not support multiple contexts
-		fmt::throw_exception("sys_rsx_context_allocate was called twice");
+		local_ctx_count++;
+	});
+
+	if (local_ctx_count >= 4)
+	{
+		return CELL_EAGAIN;
+	}
+
+	const auto rsx_context = idm::make_ptr<lv2_rsx_context>();
+	const u32 rsx_context_id = idm::last_id<lv2_rsx_context>();
+
+	ensure(rsx_context);
+
+	if (!rsx_context)
+	{
+		// TODO: Check in LV1
+		return CELL_EAGAIN;
 	}
 
 	const auto area = vm::reserve_map(vm::rsx_context, 0, 0x10000000, 0x403);
@@ -306,11 +388,13 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 
 	auto &driverInfo = *vm::_ptr<RsxDriverInfo>(vm::cast(*lpar_driver_info));
 
+	const auto rsx_info = ensure(idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process))->rsx_info;
+
 	std::memset(&driverInfo, 0, sizeof(RsxDriverInfo));
 
 	driverInfo.version_driver = 0x211;
 	driverInfo.version_gpu = 0x5c;
-	driverInfo.memory_size = render->local_mem_size;
+	driverInfo.memory_size = rsx_info->local_mem_size;
 	driverInfo.nvcore_frequency = 500000000; // 0x1DCD6500
 	driverInfo.memory_frequency = 650000000; // 0x26BE3680
 	driverInfo.reportsNotifyOffset = 0x1000;
@@ -319,7 +403,7 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 	driverInfo.systemModeFlags = static_cast<u32>(system_mode);
 	driverInfo.hardware_channel = 1; // * i think* this 1 for games, 0 for vsh
 
-	render->driver_info = vm::cast(*lpar_driver_info);
+	rsx_context->driver_info = vm::cast(*lpar_driver_info);
 
 	auto &dmaControl = *vm::_ptr<RsxDmaControl>(vm::cast(*lpar_dma_control));
 	dmaControl.get = 0;
@@ -328,9 +412,9 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 
 	if ((false/*system_mode & something*/ || g_cfg.video.decr_memory_layout)
 		&& g_cfg.core.debug_console_mode)
-		rsx::get_current_renderer()->main_mem_size = 0x20000000; //512MB
+		rsx_context->main_mem_size = 0x20000000; //512MB
 	else
-		rsx::get_current_renderer()->main_mem_size = 0x10000000; //256MB
+		rsx_context->main_mem_size = 0x10000000; //256MB
 
 	vm::var<sys_event_queue_attribute_t, vm::page_allocator<>> attr;
 	attr->protocol = SYS_SYNC_PRIORITY;
@@ -338,16 +422,18 @@ error_code sys_rsx_context_allocate(cpu_thread& cpu, vm::ptr<u32> context_id, vm
 	attr->name_u64 = 0;
 
 	sys_event_port_create(cpu, vm::get_addr(&driverInfo.handler_queue), SYS_EVENT_PORT_LOCAL, 0);
-	render->rsx_event_port = driverInfo.handler_queue;
+	rsx_context->rsx_event_port = driverInfo.handler_queue;
 	sys_event_queue_create(cpu, vm::get_addr(&driverInfo.handler_queue), attr, 0, 0x20);
-	sys_event_port_connect_local(cpu, render->rsx_event_port, driverInfo.handler_queue);
+	sys_event_port_connect_local(cpu, rsx_context->rsx_event_port, driverInfo.handler_queue);
 
-	render->display_buffers_count = 0;
-	render->current_display_buffer = 0;
-	render->label_addr = vm::cast(*lpar_reports);
-	render->init(dma_address);
+	rsx_context->display_buffers_count = 0;
+	rsx_context->current_display_buffer = 0;
+	rsx_context->label_addr = vm::cast(*lpar_reports);
+	rsx_context->dma_address = dma_address;
+	render->init(rsx_context, rsx_info, rsx_context_id);
 
-	*context_id = 0x55555555;
+	*context_id = rsx_context_id;
+	rsx_context->inited = true;
 
 	return CELL_OK;
 }
@@ -367,40 +453,29 @@ error_code sys_rsx_context_free(ppu_thread& ppu, u32 context_id)
 	rsx::eng_lock fifo_lock(render);
 	std::scoped_lock lock(render->sys_rsx_mtx);
 
-	const u32 dma_address = render->dma_address;
-	render->dma_address = 0;
+	auto rsx_context = idm::get_unlocked<lv2_rsx_context>(context_id);
 
-	if (context_id != 0x55555555 || !dma_address || render->state & cpu_flag::ret)
+	if (!rsx_context)
 	{
-		return CELL_EINVAL;
+		return { CELL_EINVAL, "context_id is 0x%x", context_id };
 	}
 
-	g_fxo->get<rsx::vblank_thread>() = thread_state::finished;
+	const u32 queue_id = vm::_ptr<RsxDriverInfo>(rsx_context->driver_info)->handler_queue;
 
-	const u32 queue_id = vm::_ptr<RsxDriverInfo>(render->driver_info)->handler_queue;
-
-	render->state += cpu_flag::ret;
-
-	while (render->state & cpu_flag::ret)
-	{
-		thread_ctrl::wait_for(1000);
-	}
-
-	sys_event_port_disconnect(ppu, render->rsx_event_port);
-	sys_event_port_destroy(ppu, render->rsx_event_port);
+	sys_event_port_disconnect(ppu, rsx_context->rsx_event_port);
+	sys_event_port_destroy(ppu, rsx_context->rsx_event_port);
 	sys_event_queue_destroy(ppu, queue_id, SYS_EVENT_QUEUE_DESTROY_FORCE);
 
-	render->label_addr = 0;
-	render->driver_info = 0;
-	render->main_mem_size = 0;
-	render->rsx_event_port = 0;
-	render->display_buffers_count = 0;
-	render->current_display_buffer = 0;
-	render->ctrl = nullptr;
-	render->rsx_thread_running = false;
 	render->serialized = false;
+	if (render->lv2_context == rsx_context.get())
+	{
+		render->lv2_context = nullptr;
+		render->ctrl = nullptr;
+		render->fifo_ctrl.reset();
+	}
 
-	ensure(vm::get(vm::rsx_context)->dealloc(dma_address));
+	ensure(idm::remove_verify<lv2_rsx_context>(context_id, rsx_context));
+	ensure(vm::get(vm::rsx_context)->dealloc(rsx_context->dma_address));
 
 	return CELL_OK;
 }
@@ -426,14 +501,16 @@ error_code sys_rsx_context_iomap(cpu_thread& cpu, u32 context_id, u64 io, u64 ea
 		return CELL_EINVAL;
 	}
 
-	if (context_id != 0x55555555 || render->main_mem_size < io + size)
-	{
-		return CELL_EINVAL;
-	}
-
 	if (!render->is_fifo_idle())
 	{
 		sys_rsx.warning("sys_rsx_context_iomap(): RSX is not idle while mapping io");
+	}
+
+	const auto rsx_context = idm::get_unlocked<lv2_rsx_context>(context_id);
+
+	if (!rsx_context || rsx_context->main_mem_size < io + size)
+	{
+		return { CELL_EINVAL, "context_id is 0x%x", context_id };
 	}
 
 	// Wait until we have no active RSX locks and reserve iomap for use. Must do so before acquiring vm lock to avoid deadlocks
@@ -462,7 +539,7 @@ error_code sys_rsx_context_iomap(cpu_thread& cpu, u32 context_id, u64 io, u64 ea
 
 	for (u32 i = 0; i < size; i++)
 	{
-		auto& table = render->iomap_table;
+		auto& table = rsx_context->iomap_table;
 
 		// TODO: Investigate relaxed memory ordering
 		const u32 prev_ea = table.ea[io + i];
@@ -493,9 +570,11 @@ error_code sys_rsx_context_iounmap(cpu_thread& cpu, u32 context_id, u64 io, u64 
 		return CELL_EINVAL;
 	}
 
-	if (context_id != 0x55555555 || render->main_mem_size < io + size)
+	const auto rsx_context = idm::get_unlocked<lv2_rsx_context>(context_id);
+
+	if (!rsx_context || render->lv2_context->main_mem_size < io + size)
 	{
-		return CELL_EINVAL;
+		return { CELL_EINVAL, "context_id is 0x%x", context_id };
 	}
 
 	if (!render->is_fifo_idle())
@@ -509,7 +588,7 @@ error_code sys_rsx_context_iounmap(cpu_thread& cpu, u32 context_id, u64 io, u64 
 
 	for (const u64 end = (io >>= 20) + (size >>= 20); io < end;)
 	{
-		auto& table = render->iomap_table;
+		auto& table = rsx_context->iomap_table;
 
 		const u32 ea_entry = table.ea[io];
 		table.ea[io++].release(-1);
@@ -528,6 +607,7 @@ error_code sys_rsx_context_iounmap(cpu_thread& cpu, u32 context_id, u64 io, u64 
  * @param a5 (IN):
  * @param a6 (IN):
  */
+#pragma optimize("", off)
 error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64 a4, u64 a5, u64 a6)
 {
 	if (auto cpu = get_current_cpu_thread())
@@ -543,17 +623,17 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 	const auto render = rsx::get_current_renderer();
 
-	if (!render->dma_address)
-	{
-		return { CELL_EINVAL, "dma_address is 0" };
-	}
+	const auto rsx_context = idm::get_unlocked<lv2_rsx_context>(context_id);
 
-	if (context_id != 0x55555555)
+	if (!rsx_context || !rsx_context->inited)
 	{
 		return { CELL_EINVAL, "context_id is 0x%x", context_id };
 	}
 
-	auto &driverInfo = *vm::_ptr<RsxDriverInfo>(render->driver_info);
+	auto &driverInfo = *vm::_ptr<RsxDriverInfo>(rsx_context->driver_info);
+
+	const auto rsx_info = ensure(idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process))->rsx_info;
+
 	switch (package_id)
 	{
 	case 0x001: // FIFO
@@ -563,7 +643,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		const u64 get_put = put << 32 | get;
 
 		std::lock_guard lock(render->sys_rsx_mtx);
-		set_rsx_dmactl(render, get_put);
+		set_rsx_dmactl(render, get_put, rsx_context.get());
 		break;
 	}
 	case 0x100: // Display mode set
@@ -600,9 +680,9 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		}
 		else
 		{
-			for (u32 i = 0; i < render->display_buffers_count; ++i)
+			for (u32 i = 0; i < rsx_context->display_buffers_count; ++i)
 			{
-				if (render->display_buffers[i].offset == a4)
+				if (rsx_context->display_buffers[i].offset == a4)
 				{
 					flip_idx = i;
 					break;
@@ -618,6 +698,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		if (!render->request_emu_flip(flip_idx))
 		{
 			if (auto cpu = get_current_cpu_thread())
+				if (1)
 			{
 				cpu->state += cpu_flag::exit;
 				cpu->state += cpu_flag::again;
@@ -636,7 +717,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		driverInfo.head[a3].flipFlags |= 0x40000000 | (1 << a4);
 
 		render->on_frame_end(static_cast<u32>(a4));
-		if (!render->send_event(0, SYS_RSX_EVENT_QUEUE_BASE << a3, 0))
+		if (!render->send_event(rsx_context.get(), 0, SYS_RSX_EVENT_QUEUE_BASE << a3, 0))
 		{
 			break;
 		}
@@ -664,12 +745,12 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		const u32 pitch = (a5 >> 32) & 0xFFFFFFFF;
 		const u32 offset = a5 & 0xFFFFFFFF;
 
-		render->display_buffers[id].width = width;
-		render->display_buffers[id].height = height;
-		render->display_buffers[id].pitch = pitch;
-		render->display_buffers[id].offset = offset;
+		rsx_context->display_buffers[id].width = width;
+		rsx_context->display_buffers[id].height = height;
+		rsx_context->display_buffers[id].pitch = pitch;
+		rsx_context->display_buffers[id].offset = offset;
 
-		render->display_buffers_count = std::max<u32>(id + 1, render->display_buffers_count);
+		rsx_context->display_buffers_count = std::max<u32>(id + 1, rsx_context->display_buffers_count);
 		break;
 	}
 	case 0x105: // destroy buffer?
@@ -693,7 +774,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		else if (ensure(a5 == 2u))
 		{
 			// TODO: Implement its frequency as well
-			render->enable_second_vhandler.store(a4 != 4);
+			rsx_context->enable_second_vhandler.store(a4 != 4);
 		}
 
 		break;
@@ -724,14 +805,14 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		//a5 high bits = ret.pitch = (pitch / 0x100) << 8;
 		//a5 low bits = ret.format = base | ((base + ((size - 1) / 0x10000)) << 13) | (comp << 26) | (1 << 30);
 
-		ensure(a3 < std::size(render->tiles));
+		ensure(a3 < std::size(rsx_context->tiles));
 
 		if (!render->is_fifo_idle())
 		{
 			sys_rsx.warning("sys_rsx_context_attribute(): RSX is not idle while setting tile");
 		}
 
-		auto& tile = render->tiles[a3];
+		auto& tile = rsx_context->tiles[a3];
 
 		const u32 location = ((a4 >> 32) & 0x3) - 1;
 		const u32 offset = ((((a4 >> 32) & 0x7FFFFFFF) >> 16) * 0x10000);
@@ -755,8 +836,8 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 			switch (location)
 			{
-			case CELL_GCM_LOCATION_MAIN: limit = render->main_mem_size; break;
-			case CELL_GCM_LOCATION_LOCAL: limit = render->local_mem_size; break;
+			case CELL_GCM_LOCATION_MAIN: limit = rsx_context->main_mem_size; break;
+			case CELL_GCM_LOCATION_LOCAL: limit = rsx_info->local_mem_size; break;
 			default: fmt::throw_exception("sys_rsx_context_attribute(): Unexpected location value (location=0x%x)", location);
 			}
 
@@ -782,7 +863,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 			for (u32 io = (offset >> 20), end = (range.end >> 20); io <= end; io++)
 			{
-				if (render->iomap_table.ea[io] == umax)
+				if (rsx_context->iomap_table.ea[io] == umax)
 				{
 					return { CELL_EINVAL, "iomap_table ea is umax" };
 				}
@@ -808,7 +889,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		//a6 high = status0 = (zcullDir << 1) | (zcullFormat << 2) | ((sFunc & 0xF) << 12) | (sRef << 16) | (sMask << 24);
 		//a6 low = status1 = (0x2000 << 0) | (0x20 << 16);
 
-		if (a3 >= std::size(render->zculls))
+		if (a3 >= std::size(rsx_context->zculls))
 		{
 			return LV1_ILLEGAL_PARAMETER_VALUE;
 		}
@@ -830,9 +911,9 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 			// cullStart is an offset inside ZCULL RAM which is 3MB long, check bounds
 			// width and height are not allowed to be zero (checked by range.valid())
-			if (!cull_range.valid() || cull_range.end >= 3u << 20 || offset >= render->local_mem_size)
+			if (!cull_range.valid() || cull_range.end >= 3u << 20 || offset >= rsx_info->local_mem_size)
 			{
-				return { CELL_EINVAL, "cull_range invalid (valid=%d, end=%d, offset=%d, local_mem_size=%d)", cull_range.valid(), cull_range.end, offset, render->local_mem_size };
+				return { CELL_EINVAL, "cull_range invalid (valid=%d, end=%d, offset=%d, local_mem_size=%d)", cull_range.valid(), cull_range.end, offset, rsx_info->local_mem_size };
 			}
 
 			if (a5 & 0xF0000000)
@@ -847,7 +928,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 		std::lock_guard lock(render->sys_rsx_mtx);
 
-		auto &zcull = render->zculls[a3];
+		auto &zcull = rsx_context->zculls[a3];
 
 		zcull.zFormat = ((a4 >> 32) >> 4) & 0xF;
 		zcull.aaFormat = ((a4 >> 32) >> 8) & 0xF;
@@ -888,9 +969,9 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 		// seems gcmSysWaitLabel uses this offset, so lets set it to 0 every flip
 		// NOTE: Realhw resets 16 bytes of this semaphore for some reason
-		vm::_ptr<atomic_t<u128>>(render->label_addr + 0x10)->store(u128{});
+		vm::_ptr<atomic_t<u128>>(rsx_context->label_addr + 0x10)->store(u128{});
 
-		render->send_event(0, SYS_RSX_EVENT_FLIP_BASE << 1, 0);
+		render->send_event(rsx_context.get(), 0, SYS_RSX_EVENT_FLIP_BASE << 1, 0);
 		break;
 	}
 	case 0xFED: // hack: vblank command
@@ -926,7 +1007,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		if (render->enable_second_vhandler)
 			event_flags |= SYS_RSX_EVENT_SECOND_VBLANK_BASE << a3; // second vhandler
 
-		render->send_event(0, event_flags, 0);
+		render->send_event(rsx_context.get(), 0, event_flags, 0);
 		break;
 	}
 
@@ -936,7 +1017,7 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		// as i think we need custom lv1 interrupts to handle this accurately
 		// this also should probly be set by rsxthread
 		driverInfo.userCmdParam = static_cast<u32>(a4);
-		render->send_event(0, SYS_RSX_EVENT_USER_CMD, 0);
+		render->send_event(rsx_context.get(), 0, SYS_RSX_EVENT_USER_CMD, 0);
 		break;
 	}
 
@@ -946,6 +1027,88 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 	return CELL_OK;
 }
+
+struct global_rsx_device_mapping
+{
+	global_rsx_device_mapping() noexcept = default;
+	global_rsx_device_mapping(const global_rsx_device_mapping&) = delete;
+	int operator=(const global_rsx_device_mapping&) = delete;
+
+	SAVESTATE_INIT_POS(58);
+
+	std::array<std::shared_ptr<utils::shm>, 16> device_shms;
+	shared_mutex mutex;
+
+	global_rsx_device_mapping(utils::serial& ar) noexcept
+	{
+		const bool mapped_bitset = ar.pop<u16>();
+
+		for (u32 i = 0; i < device_shms.size(); i++)
+		{
+			if (~mapped_bitset & (1u << i))
+			{
+				continue;
+			}
+
+			const u32 mapped_index = ar.pop<u32>();
+
+			if (mapped_index != umax)
+			{
+				device_shms[i] = ensure(::at32(g_fxo->get<vm::ps3_physical_memory_entries>().shm_list, mapped_index));
+			}
+			else
+			{
+				device_shms[i] = std::make_shared<utils::shm>(0x100000);
+				ar(std::span(device_shms[i]->map_self(), 0x100000));
+			}
+		}
+	}
+
+	void save(utils::serial& ar) noexcept
+	{
+		u16 mapped_bitset = 0;
+
+		for (u32 i = 0; i < device_shms.size(); i++)
+		{
+			mapped_bitset |= (device_shms[i] ? 1u : 0u) << i;
+		}
+
+		ar(mapped_bitset);
+
+		for (u32 i = 0; i < device_shms.size(); i++)
+		{
+			if (~mapped_bitset & (1u << i))
+			{
+				continue;
+			}
+
+			if (!g_fxo->get<vm::ps3_physical_memory_entries>().map_lookup.contains(device_shms[i].get()))
+			{
+				ar(::at32(g_fxo->get<vm::ps3_physical_memory_entries>().map_lookup, device_shms[i].get()));
+			}
+			else
+			{
+				ar(u32{umax});
+				;
+				ar(std::span(device_shms[i]->map_self(), 0x100000));
+			}
+		}
+	}
+
+	std::shared_ptr<utils::shm> access_device(u32 i)
+	{
+		std::lock_guard lock(mutex);
+
+		if (device_shms[i])
+		{
+			return device_shms[i];
+		}
+
+		device_shms[i] = std::make_shared<utils::shm>(0x100000);
+		return device_shms[i];
+	}
+};
+
 
 /*
  * lv2 SysCall 675 (0x2A3): sys_rsx_device_map
@@ -959,34 +1122,42 @@ error_code sys_rsx_device_map(cpu_thread& cpu, vm::ptr<u64> dev_addr, vm::ptr<u6
 
 	sys_rsx.warning("sys_rsx_device_map(dev_addr=*0x%x, a2=*0x%x, dev_id=0x%x)", dev_addr, a2, dev_id);
 
+	if (dev_id >= 16)
+	{
+		return CELL_EINVAL;
+	}
+
 	if (dev_id != 8)
 	{
 		// TODO: lv1 related
 		fmt::throw_exception("sys_rsx_device_map: Invalid dev_id %d", dev_id);
 	}
 
-	const auto render = rsx::get_current_renderer();
+	const auto rsx_info = ensure(idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process))->rsx_info;
 
-	std::scoped_lock lock(render->sys_rsx_mtx);
+	const auto rsx_map = g_fxo->try_get<global_rsx_device_mapping>();
 
-	if (!render->device_addr)
+	std::lock_guard lock(rsx_info->mutex);
+
+	u32& addr_ret = rsx_info->device_addr[dev_id];
+
+	if (!addr_ret)
 	{
+		const auto map = rsx_map->access_device(dev_id);
 		const auto area = vm::reserve_map(vm::rsx_context, 0, 0x10000000, 0x403);
-		const u32 addr = area ? area->alloc(0x100000) : 0;
+		const u32 addr = area ? area->alloc(0x100000, &map) : 0;
 
 		if (!addr)
 		{
+			// map remains (inefficiency)
 			return CELL_ENOMEM;
 		}
 
 		sys_rsx.warning("sys_rsx_device_map(): Mapped address 0x%x", addr);
-
-		*dev_addr = addr;
-		render->device_addr = addr;
-		return CELL_OK;
+		addr_ret = addr;
 	}
 
-	*dev_addr = render->device_addr;
+	*dev_addr = addr_ret;
 	return CELL_OK;
 }
 
@@ -999,6 +1170,11 @@ error_code sys_rsx_device_unmap(cpu_thread& cpu, u32 dev_id)
 	cpu.state += cpu_flag::wait;
 
 	sys_rsx.todo("sys_rsx_device_unmap(dev_id=0x%x)", dev_id);
+
+	if (dev_id > 16)
+	{
+		return CELL_EINVAL;
+	}
 
 	return CELL_OK;
 }

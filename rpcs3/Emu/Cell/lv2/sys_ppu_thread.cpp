@@ -50,6 +50,11 @@ struct ppu_thread_cleaner
 	}
 };
 
+extern shared_ptr<named_thread<ppu_thread>> use_ppu_thread_cleaner(u32 id)
+{
+	return g_fxo->get<ppu_thread_cleaner>().clean(idm::withdraw<named_thread<ppu_thread>>(id, 0, std::false_type{}));
+}
+
 void ppu_thread_exit(ppu_thread& ppu, ppu_opcode_t, be_t<u32>*, struct ppu_intrp_func*)
 {
 	ppu.state += cpu_flag::exit + cpu_flag::wait;
@@ -57,7 +62,7 @@ void ppu_thread_exit(ppu_thread& ppu, ppu_opcode_t, be_t<u32>*, struct ppu_intrp
 	// Deallocate Stack Area
 	ensure(vm::dealloc(ppu.stack_addr, vm::stack) == ppu.stack_size);
 
-	if (auto dct = g_fxo->try_get<lv2_memory_container>())
+	if (auto dct = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->parent_memory_container)
 	{
 		dct->free(ppu.stack_size);
 	}
@@ -333,9 +338,18 @@ error_code sys_ppu_thread_set_priority(ppu_thread& ppu, u32 thread_id, s32 prio)
 
 	sys_ppu_thread.trace("sys_ppu_thread_set_priority(thread_id=0x%x, prio=%d)", thread_id, prio);
 
-	if (prio < (g_ps3_process_info.debug_or_root() ? -512 : 0) || prio > 3071)
+	if (prio < 0 || prio > 3071)
 	{
-		return CELL_EINVAL;
+		if (prio < -512 || prio > 3199)
+		{
+			return CELL_EINVAL;
+		}
+
+		// VSH and processes with debug permissions can create threads with priority lower than 0 or greater than 3071
+		if (!ppu.has_debug_or_root_perm)
+		{
+			return CELL_EINVAL;
+		}
 	}
 
 	if (thread_id == ppu.id)
@@ -440,7 +454,7 @@ error_code sys_ppu_thread_stop(ppu_thread& ppu, u32 thread_id)
 
 	sys_ppu_thread.todo("sys_ppu_thread_stop(thread_id=0x%x)", thread_id);
 
-	if (!g_ps3_process_info.has_root_perm())
+	if (!ppu.has_root_perm)
 	{
 		return CELL_ENOSYS;
 	}
@@ -461,7 +475,7 @@ error_code sys_ppu_thread_restart(ppu_thread& ppu)
 
 	sys_ppu_thread.todo("sys_ppu_thread_restart()");
 
-	if (!g_ps3_process_info.has_root_perm())
+	if (!ppu.has_root_perm)
 	{
 		return CELL_ENOSYS;
 	}
@@ -481,13 +495,25 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 
 	if (!param || !param->entry)
 	{
+		ppu.state += cpu_flag::dbg_pause;
+		vm::read_string(threadname.addr(), 44, *std::make_unique<std::string>(), true);
 		return CELL_EFAULT;
 	}
 
-	if (prio < (g_ps3_process_info.debug_or_root() ? -512 : 0) || prio > 3071)
+	if (prio < 0 || prio > 3071)
 	{
-		return CELL_EINVAL;
+		if (prio < -512 || prio > 3199)
+		{
+			return CELL_EINVAL;
+		}
+
+		// VSH and processes with debug permissions can create threads with priority lower than 0 or greater than 3071
+		if (!ppu.has_debug_or_root_perm)
+		{
+			return CELL_EINVAL;
+		}
 	}
+
 
 	if ((flags & 3) == 3) // Check two flags: joinable + interrupt not allowed
 	{
@@ -501,7 +527,7 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 	// 0 and UINT64_MAX both convert to 4096
 	const u64 stack_size = FN(x ? x : 4096)(utils::align<u64>(_stacksz, 4096));
 
-	auto& dct = g_fxo->get<lv2_memory_container>();
+	auto& dct = *idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->parent_memory_container;
 
 	// Try to obtain "physical memory" from the default container
 	if (!dct.take(stack_size))
@@ -525,6 +551,7 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 
 		if (!vm::read_string(threadname.addr(), max_size, ppu_name, true))
 		{
+			vm::read_string(threadname.addr(), max_size, ppu_name, true);
 			dct.free(stack_size);
 			return CELL_EFAULT;
 		}
@@ -676,6 +703,49 @@ error_code sys_ppu_thread_get_page_fault_context(ppu_thread& ppu, u32 thread_id,
 	}
 
 	// TODO: Fill ctxt with proper information.
+
+	return CELL_OK;
+}
+
+error_code sys_ppu_thread_syscall_54(ppu_thread& ppu, u32 cmd, vm::ptr<u32> max_thread_count)
+{
+	ppu.state += cpu_flag::wait;
+
+	sys_ppu_thread.todo("sys_ppu_thread_syscall_54(cmd=0x%x, max_thread_count=*0x%x)", cmd, max_thread_count);
+
+	if (!ppu.has_root_perm)
+	{
+		return CELL_ENOSYS;
+	}
+
+	switch (cmd)
+	{
+	case 0x111:
+	case 0x109:
+	{
+		*max_thread_count = 0xFF;
+		break;
+	}
+	}
+
+	return CELL_OK;
+}
+
+error_code sys_ppu_thread_syscall_55(ppu_thread& ppu, u32 cmd, u32 max_thread_count)
+{
+	ppu.state += cpu_flag::wait;
+
+	sys_ppu_thread.todo("sys_ppu_thread_syscall_54(cmd=0x%x, max_thread_count=*0x%x)", cmd, max_thread_count);
+
+	if (!ppu.has_root_perm)
+	{
+		return CELL_ENOSYS;
+	}
+
+	if (cmd != 0x111)
+	{
+		return CELL_EINVAL;
+	}
 
 	return CELL_OK;
 }

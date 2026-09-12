@@ -3380,7 +3380,7 @@ namespace rsx
 			const auto get_tiled_region = [&](const utils::address_range32& range)
 			{
 				auto rsxthr = rsx::get_current_renderer();
-				return rsxthr->get_tiled_memory_region(range);
+				return rsxthr->lv2_context->get_tiled_memory_region(range);
 			};
 
 			// Check tiled mem

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "sys_memory.h"
+#include "sys_process.h"
 
 #include "Emu/Memory/vm_locking.h"
 #include "Emu/CPU/CPUThread.h"
@@ -61,8 +62,10 @@ lv2_memory_container* lv2_memory_container::search(u32 id)
 		return idm::check_unlocked<lv2_memory_container>(id);
 	}
 
-	return &g_fxo->get<lv2_memory_container>();
+	return idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->parent_memory_container.get();
 }
+
+static std::string make_named_allocation(u32 addr, [[maybe_unused]] u32 amount);
 
 struct sys_memory_address_table
 {
@@ -98,12 +101,42 @@ struct sys_memory_address_table
 
 		ar(mm);
 	}
+
+	int operator=(thread_state s) noexcept
+	{
+		if (s == thread_state::finished)
+		{
+			for (u32 i = 0; i <= u32{umax} / 65536; i++)
+			{
+				if (auto ptr = addrs[i].exchange(nullptr))
+				{
+					const u32 addr = i * 65536;
+					const u32 size = ensure(vm::dealloc(addr));
+
+					ptr->free(size);
+					ptr->free_named(make_named_allocation(addr, size), size);
+				}
+			}
+		}
+
+		return 0;
+	}
 };
+
+extern void clean_sys_memory(lv2_process* process)
+{
+	process->local_typemap->get<sys_memory_address_table>() = thread_state::finished;
+}
 
 std::shared_ptr<vm::block_t> reserve_map(u32 alloc_size, u32 align)
 {
 	return vm::reserve_map(align == 0x10000 ? vm::user64k : vm::user1m, 0, align == 0x10000 ? 0x20000000 : utils::align(alloc_size, 0x10000000)
 		, align == 0x10000 ? (vm::page_size_64k | vm::bf0_0x1) : (vm::page_size_1m | vm::bf0_0x1));
+}
+
+static std::string make_named_allocation(u32 addr, [[maybe_unused]] u32 amount)
+{
+	return fmt::format("sys_memory: addr 0x%x", addr);
 }
 
 // Todo: fix order of error checks
@@ -136,7 +169,7 @@ error_code sys_memory_allocate(cpu_thread& cpu, u64 size, u64 flags, vm::ptr<u32
 	}
 
 	// Get "default" memory container
-	auto& dct = g_fxo->get<lv2_memory_container>();
+	auto& dct = *idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->parent_memory_container;
 
 	// Try to get "physical memory"
 	if (!dct.take(size))
@@ -148,10 +181,11 @@ error_code sys_memory_allocate(cpu_thread& cpu, u64 size, u64 flags, vm::ptr<u32
 	{
 		if (const u32 addr = area->alloc(static_cast<u32>(size), nullptr, align))
 		{
-			ensure(!g_fxo->get<sys_memory_address_table>().addrs[addr >> 16].exchange(&dct));
+			ensure(!lv2_process::get_typemap()->get<sys_memory_address_table>().addrs[addr >> 16].exchange(&dct));
 
 			if (alloc_addr)
 			{
+				dct.take_named(make_named_allocation(addr, size), size);
 				sys_memory.notice("sys_memory_allocate(): Allocated 0x%x address (size=0x%x)", addr, size);
 
 				vm::lock_sudo(addr, static_cast<u32>(size));
@@ -222,10 +256,11 @@ error_code sys_memory_allocate_from_container(cpu_thread& cpu, u64 size, u32 cid
 	{
 		if (const u32 addr = area->alloc(static_cast<u32>(size)))
 		{
-			ensure(!g_fxo->get<sys_memory_address_table>().addrs[addr >> 16].exchange(ct.ptr.get()));
+			ensure(!lv2_process::get_typemap()->get<sys_memory_address_table>().addrs[addr >> 16].exchange(ct.ptr.get()));
 
 			if (alloc_addr)
 			{
+				ct->take_named(make_named_allocation(addr, size), size);
 				sys_memory.notice("sys_memory_allocate_from_container(): Allocated 0x%x address (size=0x%x)", addr, size);
 
 				vm::lock_sudo(addr, static_cast<u32>(size));
@@ -250,15 +285,29 @@ error_code sys_memory_free(cpu_thread& cpu, u32 addr)
 
 	sys_memory.warning("sys_memory_free(addr=0x%x)", addr);
 
-	const auto ct = addr % 0x10000 ? nullptr : g_fxo->get<sys_memory_address_table>().addrs[addr >> 16].exchange(nullptr);
+	auto ct = addr % 0x10000 ? nullptr : lv2_process::get_typemap()->get<sys_memory_address_table>().addrs[addr >> 16].exchange(nullptr);
 
 	if (!ct)
 	{
 		return {CELL_EINVAL, addr};
 	}
 
+	// Get "default" memory container
+	auto& dct = *idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->parent_memory_container;
+
 	const auto size = (ensure(vm::dealloc(addr)));
-	reader_lock{id_manager::g_mutex}, ct->free(size);
+	reader_lock lock(id_manager::g_mutex);
+
+	const u32 used_amount = ct->free(size);
+
+	if (ct != &dct)
+	{
+		sys_memory.warning("sys_memory_free(): CT 0x%x has 0x%x of memory being used.", ct->id, used_amount);
+	}
+
+	ct->free_named(make_named_allocation(addr, size), size);
+
+	ct = nullptr;
 	return CELL_OK;
 }
 
@@ -288,7 +337,7 @@ error_code sys_memory_get_page_attribute(ppu_thread& ppu, u32 addr, vm::ptr<sys_
 		return CELL_OK;
 	}
 
-	const auto [ok, vm_flags] = vm::get_addr_flags(addr);
+	const auto [ok, vm_flags] = vm::get_addr_flags(ppu.vm_owner, addr);
 
 	if (!ok || addr >= SPU_FAKE_BASE_ADDR)
 	{
@@ -326,7 +375,7 @@ error_code sys_memory_get_user_memory_size(cpu_thread& cpu, vm::ptr<sys_memory_i
 	cpu.state += cpu_flag::wait;
 
 	// Get "default" memory container
-	auto& dct = g_fxo->get<lv2_memory_container>();
+	auto& dct = *idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->parent_memory_container;
 
 	sys_memory_info_t out{};
 	{
@@ -386,7 +435,7 @@ error_code sys_memory_container_create(cpu_thread& cpu, vm::ptr<u32> cid, u64 si
 		return CELL_ENOMEM;
 	}
 
-	auto& dct = g_fxo->get<lv2_memory_container>();
+	auto& dct = *idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->parent_memory_container;
 
 	std::lock_guard lock(s_memstats_mtx);
 
@@ -405,6 +454,47 @@ error_code sys_memory_container_create(cpu_thread& cpu, vm::ptr<u32> cid, u64 si
 	}
 
 	dct.free(size);
+	return CELL_EAGAIN;
+}
+
+error_code sys_memory_container_create_child_container(cpu_thread& cpu, vm::ptr<u32> cid, u32 parent_mc_id, u32 size)
+{
+	cpu.state += cpu_flag::wait;
+
+	sys_memory.warning("sys_memory_container_create_child_container(cid=*0x%x, parent_mc_id=0x%x, size=0x%x)", cid, parent_mc_id, size);
+
+	const auto ct = idm::get_unlocked<lv2_memory_container>(parent_mc_id);
+
+	if (!ct)
+	{
+		return CELL_ESRCH;
+	}
+
+	// Round down to 1 MB granularity
+	size &= ~0xfffff;
+
+	if (!size)
+	{
+		return CELL_ENOMEM;
+	}
+
+	std::lock_guard lock(s_memstats_mtx);
+
+	// Try to obtain "physical memory" from the default container
+	if (!ct->take(size))
+	{
+		return CELL_ENOMEM;
+	}
+
+	// Create the memory container
+	if (const u32 id = idm::make<lv2_memory_container>(static_cast<u32>(size), true))
+	{
+		cpu.check_state();
+		*cid = id;
+		return CELL_OK;
+	}
+
+	ct->free(size);
 	return CELL_EAGAIN;
 }
 
@@ -434,11 +524,23 @@ error_code sys_memory_container_destroy(cpu_thread& cpu, u32 cid)
 
 	if (ct.ret)
 	{
-		return ct.ret;
+		std::lock_guard lock(ct->m_allocations_mtx);
+
+		for (auto [named, amount] : ct->m_allocations)
+		{
+			sys_memory.error("Allocations \"%s\" remained (size=0x%x)", named, amount);
+		}
+
+		if (ct->m_allocations.empty())
+		{
+			sys_memory.error("No recognized allocations!");
+		}
+
+		return { ct.ret, +ct->used };
 	}
 
 	// Return "physical memory" to the default container
-	g_fxo->get<lv2_memory_container>().free(ct->size);
+	idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->parent_memory_container->free(ct->size);
 
 	return CELL_OK;
 }

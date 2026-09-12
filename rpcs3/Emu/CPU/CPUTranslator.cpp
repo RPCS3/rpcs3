@@ -421,7 +421,9 @@ llvm::Constant* cpu_translator::make_const_vector<v128>(v128 v, llvm::Type* t, u
 {
 	if (const auto ct = llvm::dyn_cast<llvm::IntegerType>(t); ct && ct->getBitWidth() == 128)
 	{
-		return llvm::ConstantInt::get(t, llvm::APInt(128, llvm::ArrayRef(reinterpret_cast<const u64*>(v._bytes), 2)));
+		u64 _u64[2];
+		std::memcpy(_u64, &v, sizeof(v));
+		return llvm::ConstantInt::get(t, llvm::APInt(128, llvm::ArrayRef(_u64, 2)));
 	}
 
 	ensure(t->isVectorTy());
@@ -431,27 +433,39 @@ llvm::Constant* cpu_translator::make_const_vector<v128>(v128 v, llvm::Type* t, u
 
 	if (sct->isIntegerTy(8))
 	{
-		return llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(reinterpret_cast<const u8*>(v._bytes), 16));
+		u8 _u8[16];
+		std::memcpy(_u8, &v, sizeof(v));
+		return llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(_u8, 16));
 	}
 	if (sct->isIntegerTy(16))
 	{
-		return llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(reinterpret_cast<const u16*>(v._bytes), 8));
+		u16 _u16[8];
+		std::memcpy(_u16, &v, sizeof(v));
+		return llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(_u16, 8));
 	}
 	if (sct->isIntegerTy(32))
 	{
-		return llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(reinterpret_cast<const u32*>(v._bytes), 4));
+		u32 _u32[4];
+		std::memcpy(_u32, &v, sizeof(v));
+		return llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(_u32, 4));
 	}
 	if (sct->isIntegerTy(64))
 	{
-		return llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(reinterpret_cast<const u64*>(v._bytes), 2));
+		u64 _u64[2];
+		std::memcpy(_u64, &v, sizeof(v));
+		return llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(_u64, 2));
 	}
 	if (sct->isFloatTy())
 	{
-		return llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(reinterpret_cast<const f32*>(v._bytes), 4));
+		f32 _f32[4];
+		std::memcpy(_f32, &v, sizeof(v));
+		return llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(_f32, 4));
 	}
 	if (sct->isDoubleTy())
 	{
-		return llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(reinterpret_cast<const f64*>(v._bytes), 2));
+		f64 _f64[2];
+		std::memcpy(_f64, &v, sizeof(v));
+		return llvm::ConstantDataVector::get(m_context, llvm::ArrayRef(_f64, 2));
 	}
 
 	fmt::throw_exception("[line %u] No supported constant type", _line);

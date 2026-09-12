@@ -1594,7 +1594,7 @@ error_code cellRtcSetCurrentSecureTick(vm::ptr<CellRtcTick> pTick)
 	return sys_ss_secure_rtc(0x3003, (pTick->tick - RTC_SYSTEM_TIME_MIN) / cellRtcGetTickResolution(), 0, 0);
 }
 
-error_code cellRtcSetCurrentTick(vm::cptr<CellRtcTick> pTick)
+error_code cellRtcSetCurrentTick(ppu_thread& ppu, vm::cptr<CellRtcTick> pTick)
 {
 	cellRtc.notice("cellRtcSetCurrentTick(pTick=*0x%x)", pTick);
 
@@ -1610,17 +1610,17 @@ error_code cellRtcSetCurrentTick(vm::cptr<CellRtcTick> pTick)
 
 	const u64 unix_time = pTick->tick - RTC_MAGIC_OFFSET;
 
-	const error_code ret = sys_time_set_current_time(unix_time / cellRtcGetTickResolution(), unix_time % cellRtcGetTickResolution() * 1000);
+	const error_code ret = sys_time_set_current_time(ppu, unix_time / cellRtcGetTickResolution(), unix_time % cellRtcGetTickResolution() * 1000);
 
 	return ret >= CELL_OK ? CELL_OK : ret;
 }
 
-error_code cellRtcSetConf(s64 unk1, s64 unk2, u32 timezone, u32 summertime)
+error_code cellRtcSetConf(ppu_thread& ppu, s64 unk1, s64 unk2, u32 timezone, u32 summertime)
 {
 	cellRtc.notice("cellRtcSetConf(unk1=0x%x, unk2=0x%x, timezone=%d, summertime=%d)", unk1, unk2, timezone, summertime);
 	// Seems the first 2 args are ignored :|
 
-	return sys_time_set_timezone(timezone, summertime);
+	return sys_time_set_timezone(ppu, timezone, summertime);
 }
 
 error_code cellRtcSetDosTime(ppu_thread& ppu, vm::ptr<CellRtcDateTime> pDateTime, u32 uiDosTime)

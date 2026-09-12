@@ -212,7 +212,7 @@ namespace gui
 	const gui_save grid_cat_home        = gui_save(game_list, "gridCategoryVisibleHome",       true);
 	const gui_save grid_cat_audio_video = gui_save(game_list, "gridCategoryVisibleAudioVideo", true);
 	const gui_save grid_cat_game_data   = gui_save(game_list, "gridCategoryVisibleGameData",   false);
-	const gui_save grid_cat_os          = gui_save(game_list, "gridCategoryVisibleOS",         false);
+	const gui_save grid_cat_os          = gui_save(game_list, "gridCategoryVisibleOSNew",      true);
 	const gui_save grid_cat_unknown     = gui_save(game_list, "gridCategoryVisibleUnknown",    true);
 	const gui_save grid_cat_other       = gui_save(game_list, "gridCategoryVisibleOther",      true);
 

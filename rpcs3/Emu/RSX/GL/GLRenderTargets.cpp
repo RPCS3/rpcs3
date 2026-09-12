@@ -5,6 +5,8 @@
 
 #include <span>
 
+#define REGS(ctx) (rsx::method_registers)
+
 color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_format color_format)
 {
 	//color format
@@ -268,7 +270,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 
 	ensure(m_draw_fbo);
 
-	switch (rsx::method_registers.surface_color_target())
+	switch (REGS(0)->surface_color_target())
 	{
 	case rsx::surface_target::none: break;
 

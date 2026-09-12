@@ -5,7 +5,7 @@
 #include "Emu/RSX/RSXThread.h"
 
 #define RSX(ctx) ctx->rsxthr
-#define REGS(ctx) (&rsx::method_registers)
+#define REGS(ctx) (rsx::method_registers)
 
 namespace rsx
 {

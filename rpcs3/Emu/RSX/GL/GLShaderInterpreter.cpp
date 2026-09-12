@@ -10,6 +10,8 @@
 #include "Emu/RSX/Program/GLSLCommon.h"
 #include "Emu/localized_string.h"
 
+#define REGS(ctx) (rsx::method_registers)
+
 namespace gl
 {
 	using glsl::shader;
@@ -114,9 +116,9 @@ namespace gl
 	{
 		// Build options
 		u64 opt = 0;
-		if (rsx::method_registers.alpha_test_enabled()) [[unlikely]]
+		if (REGS(0)->alpha_test_enabled()) [[unlikely]]
 		{
-			switch (rsx::method_registers.alpha_func())
+			switch (REGS(0)->alpha_func())
 			{
 			case rsx::comparison_function::always:
 				break;
@@ -150,7 +152,7 @@ namespace gl
 		if (metadata.referenced_textures_mask) opt |= COMPILER_OPT_ENABLE_TEXTURES;
 		if (metadata.has_branch_instructions) opt |= COMPILER_OPT_ENABLE_FLOW_CTRL;
 		if (metadata.has_pack_instructions) opt |= COMPILER_OPT_ENABLE_PACKING;
-		if (rsx::method_registers.polygon_stipple_enabled()) opt |= COMPILER_OPT_ENABLE_STIPPLING;
+		if (REGS(0)->polygon_stipple_enabled()) opt |= COMPILER_OPT_ENABLE_STIPPLING;
 		if (vp_ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS) opt |= COMPILER_OPT_ENABLE_INSTANCING;
 
 		auto previous = m_current_interpreter ? m_current_interpreter.get() : nullptr;
