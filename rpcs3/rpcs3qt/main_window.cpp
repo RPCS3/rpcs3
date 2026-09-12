@@ -62,7 +62,6 @@
 #include <QBuffer>
 #include <QTemporaryFile>
 #include <QDesktopServices>
-#include <QPushButton>
 
 #include "rpcs3_version.h"
 #include "Emu/IdManager.h"
@@ -490,12 +489,6 @@ void main_window::OnPlayOrPause()
 
 void main_window::show_boot_error(game_boot_result status, const std::string& path)
 {
-	// Built on demand: the cases that bail out early have no dialog to put it in
-	const auto quickstart_link = []()
-	{
-		return tr("<br /><br />For information on setting up the emulator and dumping your PS3 games, read the <a %0 href=\"https://rpcs3.net/quickstart\">quickstart guide</a>.").arg(gui::utils::get_link_style());
-	};
-
 	QString message;
 	switch (status)
 	{
@@ -525,68 +518,9 @@ void main_window::show_boot_error(game_boot_result status, const std::string& pa
 		break;
 	case game_boot_result::disc_key_missing:
 	case game_boot_result::disc_key_invalid:
-	{
 		// These get a dialog of their own: the user is one file away from booting the game, so point them at the folder it goes in
-		const std::string key_dir = rpcs3::utils::get_redump_key_dir();
-		const QString keys = QString::fromStdString(key_dir).toHtmlEscaped();
-
-		// An image held in a file gives its key a name to go by, the very one the emulator looks for, so the user can
-		// be told exactly what to put where. A disc in a drive has no such name: every key of the folder is tried
-		const bool named_image = !path.empty() && !fs::get_optical_raw_device(path);
-		const std::string file_name = named_image ? path.substr(path.find_last_of("/\\") + 1) : std::string();
-		const QString image = QString::fromStdString(file_name).toHtmlEscaped();
-		const QString stem = QString::fromStdString(file_name.substr(0, file_name.rfind('.'))).toHtmlEscaped();
-
-		QString text;
-
-		if (status == game_boot_result::disc_key_invalid)
-		{
-			// Only a key file picked up by the name of the image can be the wrong one: the keys folder of a disc in a
-			// drive is scanned until one of its files actually decrypts it, so none of them can be taken for a match
-			text = named_image
-				? tr("The disc image '%0' is encrypted and the key file found for it does not decrypt it: it belongs to another disc."
-					"<br><br>Replace it with the right key file, '%1.dkey' or '%1.key', next to the image or in the Redump keys folder:<br>'%2'")
-					.arg(image).arg(stem).arg(keys)
-				: tr("The disc is encrypted and the key file found for it does not decrypt it: it belongs to another disc."
-					"<br><br>Replace it with the right key file (.dkey or .key) in the Redump keys folder:<br>'%0'")
-					.arg(keys);
-		}
-		else if (named_image)
-		{
-			text = tr("The disc image '%0' is encrypted and no key to read it back was found."
-				"<br><br>Put its key file '%1.dkey' or '%1.key' next to the image or in the Redump keys folder:<br>'%2'")
-				.arg(image).arg(stem).arg(keys);
-		}
-		else
-		{
-			text = tr("The disc on BD Drive is encrypted and no key to read it back was found."
-				"<br><br>Put its key file (.dkey or .key) in the Redump keys folder:<br>'%0'")
-				.arg(keys);
-		}
-
-		QMessageBox* msg = new QMessageBox(this);
-		msg->setWindowTitle(tr("Boot Failed"));
-		msg->setIcon(QMessageBox::Critical);
-		msg->setTextFormat(Qt::RichText);
-		msg->setText(text + quickstart_link());
-		msg->setAttribute(Qt::WA_DeleteOnClose);
-
-		QPushButton* open_button = msg->addButton(tr("Open keys folder"), QMessageBox::ActionRole);
-		msg->addButton(QMessageBox::Close);
-		msg->setDefaultButton(QMessageBox::Close);
-
-		connect(msg, &QDialog::finished, this, [msg, open_button, key_dir]()
-		{
-			// An "ActionRole" button closes the dialog just like any other one, so the folder is opened on the way out
-			if (msg->clickedButton() == open_button)
-			{
-				gui::utils::open_dir(key_dir);
-			}
-		});
-
-		msg->open();
+		gui::utils::show_disc_key_error(this, tr("Boot Failed"), path, status == game_boot_result::disc_key_invalid);
 		return;
-	}
 	case game_boot_result::savestate_corrupted:
 		message = tr("Savestate data is corrupted or it's not an RPCS3 savestate.");
 		break;
@@ -611,13 +545,14 @@ void main_window::show_boot_error(game_boot_result status, const std::string& pa
 		message = tr("Unknown error.");
 		break;
 	}
+	const QString link = tr("<br /><br />For information on setting up the emulator and dumping your PS3 games, read the <a %0 href=\"https://rpcs3.net/quickstart\">quickstart guide</a>.").arg(gui::utils::get_link_style());
 
 	QMessageBox* msg = new QMessageBox(this);
 	msg->setWindowTitle(tr("Boot Failed"));
 	msg->setIcon(QMessageBox::Critical);
 	msg->setTextFormat(Qt::RichText);
 	msg->setStandardButtons(QMessageBox::Ok);
-	msg->setText(tr("Booting failed: %1 %2").arg(message).arg(quickstart_link()));
+	msg->setText(tr("Booting failed: %1 %2").arg(message).arg(link));
 	msg->setAttribute(Qt::WA_DeleteOnClose);
 	msg->open();
 }
