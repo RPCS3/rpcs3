@@ -209,6 +209,96 @@ static bool decrypt_data(aes_context& aes, u64 offset, const std::span<u8> buffe
 	return true;
 }
 
+// Only the leading AES block of a file has to be decrypted to check its magic value: in CBC the first 16 bytes of
+// plaintext come out of the first 16 bytes of ciphertext and the IV alone, and every magic value is shorter than
+// that. One block more is held because an offset that is not sector aligned spends the leading one as the IV
+constexpr u64 ISO_MAGIC_TEST_SIZE = 16;
+constexpr u64 ISO_MAGIC_BLOCK_SIZE = ISO_MAGIC_TEST_SIZE * 2;
+
+// The leading bytes of a well known file of the image, the ones its magic value lies in once properly decrypted
+struct iso_magic_block
+{
+	std::string_view magic;                       // What those bytes must read as
+	std::array<u8, ISO_MAGIC_BLOCK_SIZE> data {}; // The bytes as they lie on the disc
+	u64 offset = 0;                               // Where they start, which the decryption IV is built out of
+};
+
+static iso_type_status read_magic_blocks(iso_archive& archive, std::vector<iso_magic_block>& blocks)
+{
+	//
+	// Read the leading bytes of every file of the archive present on the list of well known encrypted files: those are
+	// the bytes a candidate key is tested against
+	//
+
+	// Built once: the paths are looked up as they are, so keeping them as strings spares an allocation on every call.
+	// Every one the image holds is read, since an install disc has no EBOOT.BIN while a disc always carries a LIC.DAT
+	static const std::array<std::pair<std::string, std::string_view>, 2> dec_magics {{
+		{"PS3_GAME/LICDIR/LIC.DAT", "PS3LICDA"},
+		{"PS3_GAME/USRDIR/EBOOT.BIN", "SCE"}
+	}};
+
+	// One handle on the whole image serves every block, since the position of each of them is absolute: binding a
+	// file object to each node instead would open the image again and deep copy the metadata of the node with it
+	iso_file iso_file(archive.path());
+
+	if (!iso_file)
+	{
+		return iso_type_status::NOT_ISO;
+	}
+
+	blocks.reserve(dec_magics.size());
+
+	for (const auto& [file_path, magic] : dec_magics)
+	{
+		const iso_fs_node* node = archive.retrieve(file_path);
+
+		if (!node || node->metadata.extents.empty())
+		{
+			continue;
+		}
+
+		// Only the leading block is ever decrypted to check a magic value, so none of them may outgrow it
+		ensure(magic.size() <= ISO_MAGIC_TEST_SIZE);
+
+		// Where the file begins in the image, which is where a file object bound to that node would have landed
+		iso_magic_block block {.magic = magic, .offset = node->metadata.extents.front().start * ISO_SECTOR_SIZE};
+
+		if (iso_file.read_at(block.offset, block.data.data(), block.data.size()) != block.data.size())
+		{
+			return iso_type_status::NOT_ISO;
+		}
+
+		blocks.emplace_back(std::move(block));
+	}
+
+	return blocks.empty() ? iso_type_status::ERROR_OPENING_KEY : iso_type_status::REDUMP_ISO;
+}
+
+// True when any of the well known files does not carry its magic value in the clear, which only a still encrypted
+// image can do: a decrypted one has every one of them readable just as it lies on the disc
+static bool is_any_block_encrypted(const std::vector<iso_magic_block>& blocks)
+{
+	return std::any_of(blocks.begin(), blocks.end(), [](const iso_magic_block& block)
+	{
+		return std::memcmp(block.magic.data(), block.data.data(), block.magic.size()) != 0;
+	});
+}
+
+// A key is only the right one once it decrypts every well known file the image holds. Trusting a single one would be
+// far too easy to hit by chance on a magic value as short as the three bytes of an "EBOOT.BIN"
+static bool decrypts_all_blocks(aes_context& aes_ctx, std::vector<iso_magic_block>& blocks)
+{
+	// An offset that is not sector aligned spends the leading block as the IV, leaving it untouched in the output,
+	// so it is zeroed rather than compared as it comes
+	std::array<u8, ISO_MAGIC_BLOCK_SIZE> dec_blk {};
+
+	return std::all_of(blocks.begin(), blocks.end(), [&aes_ctx, &dec_blk](iso_magic_block& block)
+	{
+		return decrypt_data(aes_ctx, block.offset, block.data, dec_blk, ISO_MAGIC_TEST_SIZE) &&
+			std::memcmp(block.magic.data(), dec_blk.data(), block.magic.size()) == 0;
+	});
+}
+
 iso_type_status iso_file_decryption::get_key(const std::string& key_path, aes_context* aes_ctx)
 {
 	fs::file key_file(key_path);
@@ -265,30 +355,19 @@ iso_type_status iso_file_decryption::get_key(const std::string& key_path, aes_co
 
 iso_type_status iso_file_decryption::retrieve_key(iso_archive& archive, std::string& key_path, aes_context& aes_ctx, bool& content_encrypted)
 {
-	// Only the leading AES block has to be decrypted to test a key: in CBC the first 16 bytes of plaintext come out
-	// of the first 16 bytes of ciphertext and the IV alone, and every magic value is shorter than that
-	constexpr u64 test_size = 16;
-
-	std::string_view magic_value;
-	std::array<u8, ISO_SECTOR_SIZE> enc_sec;
-	// One block more than what is decrypted: an offset that is not sector aligned spends the leading one as the IV,
-	// which leaves the leading block of the output untouched, so it is zeroed rather than compared as it comes
-	std::array<u8, test_size * 2> dec_blk {};
-	u64 enc_sec_offset = 0;
+	std::vector<iso_magic_block> blocks;
 
 	content_encrypted = false;
 
-	if (const iso_type_status status = read_magic_sector(archive, magic_value, enc_sec, enc_sec_offset); status != iso_type_status::REDUMP_ISO)
+	if (const iso_type_status status = read_magic_blocks(archive, blocks); status != iso_type_status::REDUMP_ISO)
 	{
 		return status;
 	}
 
-	ensure(magic_value.size() <= test_size);
-
-	// The very same sector tells an image that needs no key at all from one whose key is simply missing: a decrypted
-	// image carries the magic value in the clear. No key can ever match such an image, so the scan below is pointless
-	// on it, and skipping it spares opening every single file of a keys folder that commonly holds thousands of them
-	content_encrypted = std::memcmp(magic_value.data(), enc_sec.data(), magic_value.size()) != 0;
+	// The very same blocks tell an image that needs no key at all from one whose key is simply missing: a decrypted
+	// image carries its magic values in the clear. No key can ever match such an image, so the scan below is
+	// pointless on it, and skipping it spares opening every file of a folder that commonly holds thousands of them
+	content_encrypted = is_any_block_encrypted(blocks);
 
 	if (!content_encrypted)
 	{
@@ -296,7 +375,8 @@ iso_type_status iso_file_decryption::retrieve_key(iso_archive& archive, std::str
 	}
 
 	//
-	// Scan all the key files present in the redump keys folder, decrypt the read sector and test for a match with file's magic value
+	// Scan all the key files present in the redump keys folder, decrypt the blocks read above and test them for a
+	// match with the magic value of the file each of them comes from
 	//
 
 	// A keys folder commonly holds thousands of files: build its path once instead of on every entry
@@ -326,99 +406,74 @@ iso_type_status iso_file_decryption::retrieve_key(iso_archive& archive, std::str
 			continue;
 		}
 
-		// If the decryption fails
-		if (!decrypt_data(aes_ctx, enc_sec_offset, enc_sec, dec_blk, test_size))
-		{
-			continue;
-		}
-
-		// If the decrypted data match the magic value
-		if (std::memcmp(magic_value.data(), dec_blk.data(), magic_value.size()) == 0)
+		if (decrypts_all_blocks(aes_ctx, blocks))
 		{
 			return iso_type_status::REDUMP_ISO;
 		}
 	}
 
+	// Nothing matched: leave no path behind, or the caller would report the last file tried as the key it missed
+	key_path.clear();
+
 	return iso_type_status::ERROR_OPENING_KEY;
 }
 
-iso_type_status iso_file_decryption::read_magic_sector(iso_archive& archive, std::string_view& magic_value, std::array<u8, ISO_SECTOR_SIZE>& sector, u64& offset)
+void iso_file_decryption::verify_key_file(iso_archive& archive)
 {
-	//
-	// Find the first existing file in the archive present on the list of well known encrypted files to use for testing a matching key
-	//
+	std::vector<iso_magic_block> blocks;
 
-	// Built once: the paths are looked up as they are, so keeping them as strings spares an allocation on every call.
-	// LIC.DAT comes first because every disc carries one, while an install disc has no EBOOT.BIN
-	static const std::array<std::pair<std::string, std::string_view>, 2> dec_magics {{
-		{"PS3_GAME/LICDIR/LIC.DAT", "PS3LICDA"},
-		{"PS3_GAME/USRDIR/EBOOT.BIN", "SCE"}
-	}};
-
-	iso_fs_node* node = nullptr;
-
-	for (const auto& magic : dec_magics)
+	if (m_region_info.size() <= 1 || read_magic_blocks(archive, blocks) != iso_type_status::REDUMP_ISO)
 	{
-		if (iso_fs_node* _node = archive.retrieve(magic.first))
-		{
-			magic_value = magic.second;
-			node = _node;
-			break;
-		}
+		return;
 	}
 
-	if (!node)
+	if (!is_any_block_encrypted(blocks))
 	{
-		return iso_type_status::ERROR_OPENING_KEY;
+		// The content lies in the clear, so the key is not needed: keeping it would run every read through the
+		// decryption and turn readable data into garbage, which is what a key file left next to a decrypted dump does
+		iso_log.warning("verify_key_file: The image is not encrypted, the key file found for it is ignored: '%s'", archive.path());
+
+		m_enc_type = iso_encryption_type::NONE; // RESET ENCRYPTION TYPE: NONE
+		m_key_status = iso_key_status::OK;
+
+		return;
 	}
 
-	//
-	// Read the first encrypted sector to use for testing a matching key
-	//
-
-	iso_file iso_file(archive.path(), fs::read, *node);
-
-	if (!iso_file || iso_file.read(sector.data(), ISO_SECTOR_SIZE) != ISO_SECTOR_SIZE)
+	if (decrypts_all_blocks(m_aes_dec, blocks))
 	{
-		return iso_type_status::NOT_ISO;
+		m_key_status = iso_key_status::OK;
+
+		return;
 	}
 
-	offset = iso_file.file_offset(0);
+	m_key_status = iso_key_status::INVALID;
 
-	return iso_type_status::REDUMP_ISO;
+	iso_log.error("verify_key_file: The key file found for the image does not decrypt it: '%s'", archive.path());
 }
 
-bool iso_file_decryption::is_content_encrypted(iso_archive& archive)
+iso_key_status iso_file_decryption::get_key_status(iso_archive& archive)
 {
-	std::string_view magic_value;
-	std::array<u8, ISO_SECTOR_SIZE> sector;
-	u64 offset = 0;
-
-	// Without a well known file to look at there is nothing to tell the two cases apart: assume the image is fine
-	if (read_magic_sector(archive, magic_value, sector, offset) != iso_type_status::REDUMP_ISO)
+	if (m_key_status)
 	{
-		return false;
+		return *m_key_status;
 	}
 
-	// An image needing no key at all already carries the magic value in the clear: anything else is still encrypted
-	return std::memcmp(magic_value.data(), sector.data(), magic_value.size()) != 0;
-}
+	m_key_status = iso_key_status::OK;
 
-bool iso_file_decryption::is_key_missing(iso_archive& archive)
-{
-	if (!m_key_missing)
+	std::vector<iso_magic_block> blocks;
+
+	// Only an image left with no key at all can still be hiding something: the key file of one that has it was put to
+	// the test back when it was set up, since that decides how every read behaves. A single region means the image
+	// declares nothing but region 0, and the even ones are never encrypted, so there is nothing to look at there
+	if (m_enc_type == iso_encryption_type::NONE && m_region_info.size() > 1 &&
+		read_magic_blocks(archive, blocks) == iso_type_status::REDUMP_ISO && is_any_block_encrypted(blocks))
 	{
-		// A single region means the image declares nothing but region 0, and the even regions are never encrypted,
-		// so there is nothing to look at. Anything else has to be read to be told apart
-		m_key_missing = m_enc_type == iso_encryption_type::NONE && m_region_info.size() > 1 && is_content_encrypted(archive);
+		m_key_status = iso_key_status::MISSING;
 
-		if (*m_key_missing)
-		{
-			iso_log.error("is_key_missing: The image is encrypted and no matching decryption key was found: '%s'", archive.path());
-		}
+		iso_log.error("get_key_status: The image is encrypted and no matching decryption key was found: '%s'", archive.path());
 	}
 
-	return *m_key_missing;
+	return *m_key_status;
 }
 
 iso_type_status iso_file_decryption::check_type(const std::string& path, std::string* key_path, aes_context* aes_ctx)
@@ -553,7 +608,14 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 		m_enc_type = iso_encryption_type::REDUMP; // SET ENCRYPTION TYPE: REDUMP
 		break;
 	case iso_type_status::ERROR_OPENING_KEY:
-		iso_log.warning("init: Failed to open, or missing, key file: '%s'", key_path);
+		if (!key_path.empty())
+		{
+			iso_log.warning("init: Failed to open key file: '%s'", key_path);
+		}
+		else
+		{
+			iso_log.warning("init: Missing key file for ISO file: '%s'", path);
+		}
 		break;
 	case iso_type_status::ERROR_PROCESSING_KEY:
 		iso_log.error("init: Failed to process key file: '%s'", key_path);
@@ -609,11 +671,18 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 	}
 
 	// An image needing no key at all and one whose key is simply missing both end up with no encryption type set.
-	// The key search told the two apart out of the sector it read anyway, so that answer is kept here; every other
-	// path leaves it unset and only pays for it if it is ever asked for
-	if (scan_keys_folder && m_enc_type == iso_encryption_type::NONE)
+	// The key search told the two apart out of the blocks it read anyway, and whatever key it did settle on was
+	// tested against them, so that answer is kept here; every other path leaves it unset and only pays if asked
+	if (scan_keys_folder)
 	{
-		m_key_missing = content_encrypted;
+		m_key_status = m_enc_type == iso_encryption_type::NONE && content_encrypted ? iso_key_status::MISSING : iso_key_status::OK;
+	}
+	else if (m_enc_type == iso_encryption_type::REDUMP && archive)
+	{
+		// "check_type" takes a key file at face value for carrying the name of the image. Putting it to the test
+		// cannot wait for someone to ask, the way the question below can: whether that key is used at all decides
+		// how every later read of the image behaves
+		verify_key_file(*archive);
 	}
 
 	switch (m_enc_type)
@@ -1793,8 +1862,8 @@ std::unique_ptr<fs::dir_base> iso_device::open_dir(const std::string& path)
 	return std::make_unique<iso_dir>(*node);
 }
 
-// Set while an image is loaded, so that a boot failing for the lack of a decryption key can be told apart
-static atomic_t<bool> s_iso_key_missing = false;
+// Set while an image is loaded, so that a boot failing over its decryption key can be told apart
+static atomic_t<iso_key_status> s_iso_key_status = iso_key_status::OK;
 
 void load_iso(const std::string& path)
 {
@@ -1802,7 +1871,7 @@ void load_iso(const std::string& path)
 
 	stx::shared_ptr<iso_device> device = stx::make_shared<iso_device>(path);
 
-	s_iso_key_missing = device->is_key_missing();
+	s_iso_key_status = device->get_key_status();
 
 	fs::set_virtual_device("iso_overlay_fs_dev", std::move(device));
 
@@ -1813,12 +1882,12 @@ void unload_iso()
 {
 	sys_log.notice("Unloading ISO");
 
-	s_iso_key_missing = false;
+	s_iso_key_status = iso_key_status::OK;
 
 	fs::set_virtual_device("iso_overlay_fs_dev", stx::shared_ptr<iso_device>());
 }
 
-bool is_iso_key_missing()
+iso_key_status get_iso_key_status()
 {
-	return s_iso_key_missing;
+	return s_iso_key_status;
 }
