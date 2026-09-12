@@ -155,6 +155,12 @@ namespace rsx
 			bool do_not_cache = false;
 			bool force_bg_load = false;
 
+			// width/height describe the destination image, which is resolution-scaled for framebuffer sources.
+			// Guest memory can only be interpreted with the dimensions that match 'pitch', so they are kept here
+			// whenever the destination was scaled. Zero means the destination matches the guest layout.
+			u16 guest_width = 0;
+			u16 guest_height = 0;
+
 			using section_array_type = rsx::simple_array<copy_region_descriptor>;
 
 			deferred_subresource() = default;
@@ -258,6 +264,28 @@ namespace rsx
 				bool force_bg_load = false)
 			{
 				return make_gather(deferred_request_command::mipmap_gather, attr, std::move(sections), remap, force_bg_load);
+			}
+
+			void set_guest_dimensions(u16 w, u16 h)
+			{
+				guest_width = w;
+				guest_height = h;
+			}
+
+			bool is_scaled() const
+			{
+				return guest_width && (guest_width != width || guest_height != height);
+			}
+
+			image_section_attributes_t guest_attributes() const
+			{
+				image_section_attributes_t attrs = *this;
+				if (guest_width)
+				{
+					attrs.width = guest_width;
+					attrs.height = guest_height;
+				}
+				return attrs;
 			}
 
 			void add_copy_region(
@@ -3295,6 +3323,7 @@ namespace rsx
 
 					if (use_upscaling)
 					{
+						result.external_subresource_desc.set_guest_dimensions(attributes.width, attributes.height);
 						result.external_subresource_desc.width = mip0.dst_w;
 						result.external_subresource_desc.height = mip0.dst_h;
 					}
