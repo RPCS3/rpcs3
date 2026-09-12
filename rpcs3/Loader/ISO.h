@@ -89,6 +89,7 @@ private:
 	std::optional<iso_key_status> m_key_status;
 
 	static iso_type_status get_key(const std::string& key_path, aes_context* aes_ctx = nullptr);
+
 	// "content_encrypted" comes back set when the content turned out to still be encrypted, which the blocks read to
 	// test the keys tell on their own: it spares the caller reading them a second time
 	static iso_type_status retrieve_key(iso_archive& archive, std::string& key_path, aes_context& aes_ctx, bool& content_encrypted);
