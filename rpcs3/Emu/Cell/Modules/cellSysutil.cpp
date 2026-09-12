@@ -24,43 +24,6 @@ LOG_CHANNEL(cellSysutil);
 
 namespace
 {
-	struct sysutil_shared_memory
-	{
-		shared_ptr<lv2_memory> memory;
-
-		SAVESTATE_INIT_POS(3.5);
-
-		sysutil_shared_memory()
-			: memory(make_shared<lv2_memory>(0x10000, 0x10000, 0x200, 0x8006010000000010, true, nullptr))
-		{
-			register_memory();
-		}
-
-		sysutil_shared_memory(utils::serial& ar)
-			: memory(make_shared<lv2_memory>(stx::exact_t<utils::serial&>(ar)))
-		{
-			ensure(!memory->ct && memory->key == 0x8006010000000010);
-			register_memory();
-		}
-
-		sysutil_shared_memory(const sysutil_shared_memory&) = delete;
-		sysutil_shared_memory& operator=(const sysutil_shared_memory&) = delete;
-
-		void register_memory()
-		{
-			g_fxo->need<ipc_manager<lv2_memory, u64>>();
-			ensure((g_fxo->get<ipc_manager<lv2_memory, u64>>().add(memory->key, [&]
-			{
-				return memory;
-			}).first));
-		}
-
-		void save(utils::serial& ar)
-		{
-			memory->save_data(ar);
-		}
-	};
-
 	struct sysutil_module
 	{
 		be_t<u32> start[2];
@@ -90,10 +53,9 @@ error_code sysutilModuleStart(ppu_thread& ppu, u32 args, vm::ptr<void> argp)
 	}
 
 	const vm::var<u32> memory_id;
-	const auto& memory = g_fxo->get<sysutil_shared_memory>().memory;
 
 	// firmware still returns success if setup fails, a failed map leaves the handle around
-	if (sys_mmapper_allocate_shared_memory(ppu, memory->key, memory->size, memory->flags, memory_id))
+	if (sys_mmapper_allocate_shared_memory(ppu, SYS_MMAPPER_SYSUTIL_SHM_KEY, 0x10000, 0x200, memory_id))
 	{
 		return CELL_OK;
 	}

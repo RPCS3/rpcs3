@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/lv2/sys_sync.h"
+#include "Emu/savestate_utils.hpp"
 
 #include "cellAudio.h"
 #include "libmixer.h"
@@ -35,7 +36,6 @@ struct SurMixerConfig
 {
 	std::mutex mutex;
 
-	u32 audio_port = 0;
 	s32 priority = 0;
 	u32 ch_strips_1 = 0;
 	u32 ch_strips_2 = 0;
@@ -71,6 +71,22 @@ struct SSPlayer
 SurMixerConfig g_surmx {};
 
 std::vector<SSPlayer> g_ssp;
+
+static audio_port* get_mixer_port(cell_audio_thread& audio)
+{
+	if (audio.init)
+	{
+		for (auto& port : audio.ports)
+		{
+			if (port.is_sur_mixer)
+			{
+				return &port;
+			}
+		}
+	}
+
+	return nullptr;
+}
 
 s32 cellAANAddData(u32 aan_handle, u32 aan_port, u32 offset, vm::ptr<f32> addr, u32 samples)
 {
@@ -353,7 +369,19 @@ struct surmixer_thread : ppu_thread
 	{
 		auto& g_audio = g_fxo->get<cell_audio>();
 
-		audio_port& port = g_audio.ports[g_surmx.audio_port];
+		audio_port* mixer_port;
+		{
+			std::lock_guard lock(g_audio.mutex);
+			mixer_port = get_mixer_port(g_audio);
+		}
+
+		if (!mixer_port)
+		{
+			idm::remove<ppu_thread>(id);
+			return;
+		}
+
+		audio_port& port = *mixer_port;
 
 		while (port.state != audio_port_state::closed)
 		{
@@ -455,6 +483,18 @@ struct surmixer_thread : ppu_thread
 
 				//u64 stamp2 = get_guest_system_time();
 
+				std::lock_guard lock(g_audio.mutex);
+
+				if (!port.is_sur_mixer)
+				{
+					break;
+				}
+
+				if (port.state != audio_port_state::started)
+				{
+					continue;
+				}
+
 				auto buf = vm::_ptr<f32>(port.addr.addr() + (g_surmx.mixcount % port.num_blocks) * port.num_channels * AUDIO_BUFFER_SAMPLES * sizeof(f32));
 
 				for (auto& mixdata : g_surmx.mixdata)
@@ -475,34 +515,75 @@ struct surmixer_thread : ppu_thread
 	}
 };
 
-s32 cellSurMixerCreate(vm::cptr<CellSurMixerConfig> config)
+s32 cellSurMixerCreate(ppu_thread& ppu, vm::cptr<CellSurMixerConfig> config)
 {
 	libmixer.warning("cellSurMixerCreate(config=*0x%x)", config);
 
+	const std::unique_lock savestate_lock{ g_fxo->get<hle_locks_t>(), std::try_to_lock };
+
+	if (!savestate_lock)
+	{
+		ppu.state += cpu_flag::again;
+		return {};
+	}
+
 	auto& g_audio = g_fxo->get<cell_audio>();
+	std::lock_guard lock(g_audio.mutex);
+
+	if (g_audio.mixer_initialized)
+	{
+		return CELL_LIBMIXER_ERROR_ALREADY_EXIST;
+	}
+
+	if (!g_audio.init)
+	{
+		return CELL_AUDIO_ERROR_NOT_INIT;
+	}
+
+	const auto failed_open = [&](s32 error)
+	{
+		// failed opens still close the last mixer port
+		auto& port = g_audio.ports[g_audio.last_mixer_port];
+		if (port.state != audio_port_state::closed)
+		{
+			g_audio.close_port(ppu, port);
+		}
+
+		return error;
+	};
 
 	const auto port = g_audio.open_port();
 
 	if (!port)
 	{
-		return CELL_LIBMIXER_ERROR_FULL;
+		return failed_open(CELL_AUDIO_ERROR_PORT_FULL);
 	}
 
-	g_surmx.audio_port = port->number;
+	port->num_channels = 8;
+	port->num_blocks = 8;
+	port->attr = 0;
+	port->size = port->num_channels * port->num_blocks * AUDIO_BUFFER_SAMPLES * sizeof(f32);
+	port->level = 1.0f;
+	port->level_set.store({ 1.0f, 0.0f });
+	port->cur_pos = 0;
+	port->active_counter = 0;
+
+	if (auto result = g_audio.allocate_port(ppu, *port))
+	{
+		return failed_open(result);
+	}
+
+	g_audio.last_mixer_port = port->number;
+	g_audio.mixer_initialized = true;
+	g_audio.mixer_started = false;
+	port->is_sur_mixer = true;
 	g_surmx.priority = config->priority;
 	g_surmx.ch_strips_1 = config->chStrips1;
 	g_surmx.ch_strips_2 = config->chStrips2;
 	g_surmx.ch_strips_6 = config->chStrips6;
 	g_surmx.ch_strips_8 = config->chStrips8;
 
-	port->num_channels = 8;
-	port->num_blocks = 16;
-	port->attr = 0;
-	port->size = port->num_channels * port->num_blocks * AUDIO_BUFFER_SAMPLES * sizeof(f32);
-	port->level = 1.0f;
-	port->level_set.store({ 1.0f, 0.0f });
-
-	libmixer.warning("*** audio port opened (port=%d)", g_surmx.audio_port);
+	libmixer.warning("*** audio port opened (port=%d)", port->number);
 
 	g_surmx.mixcount = 0;
 	g_surmx.cb = vm::null;
@@ -564,13 +645,28 @@ s32 cellSurMixerStart()
 	libmixer.warning("cellSurMixerStart()");
 
 	auto& g_audio = g_fxo->get<cell_audio>();
+	std::lock_guard lock(g_audio.mutex);
 
-	if (g_surmx.audio_port >= AUDIO_PORT_COUNT)
+	const auto port = get_mixer_port(g_audio);
+
+	if (!port)
 	{
 		return CELL_LIBMIXER_ERROR_NOT_INITIALIZED;
 	}
 
-	g_audio.ports[g_surmx.audio_port].state.compare_and_swap(audio_port_state::opened, audio_port_state::started);
+	if (port->state == audio_port_state::opened)
+	{
+		if (!g_audio.mixer_started)
+		{
+			g_audio.start_port(*port);
+			g_audio.mixer_started = true;
+		}
+		else
+		{
+			// our pause stops the port, don't clear the buffer again when resuming
+			port->state = audio_port_state::started;
+		}
+	}
 
 	return CELL_OK;
 }
@@ -581,18 +677,33 @@ s32 cellSurMixerSetParameter(u32 param, f32 value)
 	return CELL_OK;
 }
 
-s32 cellSurMixerFinalize()
+s32 cellSurMixerFinalize(ppu_thread& ppu)
 {
 	libmixer.warning("cellSurMixerFinalize()");
 
-	auto& g_audio = g_fxo->get<cell_audio>();
+	const std::unique_lock savestate_lock{ g_fxo->get<hle_locks_t>(), std::try_to_lock };
 
-	if (g_surmx.audio_port >= AUDIO_PORT_COUNT)
+	if (!savestate_lock)
 	{
-		return CELL_LIBMIXER_ERROR_NOT_INITIALIZED;
+		ppu.state += cpu_flag::again;
+		return {};
 	}
 
-	g_audio.ports[g_surmx.audio_port].state.compare_and_swap(audio_port_state::opened, audio_port_state::closed);
+	auto& g_audio = g_fxo->get<cell_audio>();
+	std::lock_guard lock(g_audio.mutex);
+
+	if (!g_audio.mixer_initialized)
+	{
+		return CELL_OK;
+	}
+
+	g_audio.mixer_initialized = false;
+	auto& port = g_audio.ports[g_audio.last_mixer_port];
+
+	if (port.state != audio_port_state::closed)
+	{
+		g_audio.close_port(ppu, port);
+	}
 
 	return CELL_OK;
 }
@@ -631,13 +742,16 @@ s32 cellSurMixerPause(u32 type)
 	libmixer.warning("cellSurMixerPause(type=%d)", type);
 
 	auto& g_audio = g_fxo->get<cell_audio>();
+	std::lock_guard lock(g_audio.mutex);
 
-	if (g_surmx.audio_port >= AUDIO_PORT_COUNT)
+	const auto port = get_mixer_port(g_audio);
+
+	if (!port)
 	{
 		return CELL_LIBMIXER_ERROR_NOT_INITIALIZED;
 	}
 
-	g_audio.ports[g_surmx.audio_port].state.compare_and_swap(audio_port_state::started, audio_port_state::opened);
+	port->state.compare_and_swap(audio_port_state::started, audio_port_state::opened);
 
 	return CELL_OK;
 }
