@@ -446,7 +446,7 @@ namespace
 cell_audio_thread::cell_audio_thread(utils::serial& ar)
 	: cell_audio_thread()
 {
-	ar(init, shared_area, shared_address, shared_refs, last_mixer_port, mixer_initialized, mixer_started, ports);
+	ar(init, shared_area, shared_address, shared_refs, ports);
 
 	if (!init)
 	{
@@ -476,7 +476,7 @@ void cell_audio_thread::save(utils::serial& ar)
 	USING_SERIALIZATION_VERSION(cellAudio);
 
 	// closed ports keep their descriptor after audio quits
-	ar(init, shared_area, shared_address, shared_refs, last_mixer_port, mixer_initialized, mixer_started, ports);
+	ar(init, shared_area, shared_address, shared_refs, ports);
 
 	if (!init)
 	{
@@ -1129,12 +1129,6 @@ audio_port* cell_audio_thread::open_port()
 	return &port;
 }
 
-void cell_audio_thread::start_port(audio_port& port)
-{
-	std::memset(port.addr.get_ptr(), 0, port.size);
-	port.state = audio_port_state::started;
-}
-
 error_code cell_audio_thread::allocate_port(ppu_thread& ppu, audio_port& port)
 {
 	const u32 size = std::max<u32>(0x10000, utils::align(port.size, 0x10000));
@@ -1189,7 +1183,6 @@ error_code cell_audio_thread::allocate_port(ppu_thread& ppu, audio_port& port)
 void cell_audio_thread::close_port(ppu_thread& ppu, audio_port& port)
 {
 	port.state = audio_port_state::closed;
-	port.is_sur_mixer = false;
 	const vm::var<u32> memory_id;
 
 	if (port.mapped && !sys_mmapper_unmap_shared_memory(ppu, port.addr.addr(), memory_id))
@@ -1464,7 +1457,6 @@ error_code cellAudioInit(ppu_thread& ppu)
 	{
 		g_audio.ports[i].state = audio_port_state::closed;
 		g_audio.ports[i].mapped = false;
-		g_audio.ports[i].is_sur_mixer = false;
 		g_audio.ports[i].number = i;
 		// closed ports keep their buffer fields and their slot in the new index mapping
 		g_audio.ports[i].index = vm::cast(g_audio.shared_address + g_audio.ports[i].server_index * 16);
@@ -1719,7 +1711,8 @@ error_code cellAudioPortStart(u32 portNum)
 	case audio_port_state::closed: return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
 	case audio_port_state::started: return CELL_AUDIO_ERROR_PORT_ALREADY_RUN;
 	case audio_port_state::opened:
-		g_audio.start_port(port);
+		std::memset(port.addr.get_ptr(), 0, port.size);
+		port.state = audio_port_state::started;
 		return CELL_OK;
 	default: fmt::throw_exception("Invalid port state (%d: %d)", portNum, static_cast<u32>(state));
 	}

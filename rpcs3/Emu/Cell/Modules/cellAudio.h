@@ -141,7 +141,6 @@ struct audio_port
 	u32 number = 0;
 	u32 server_index = 0;
 	bool mapped = false;
-	bool is_sur_mixer = false;
 	vm::ptr<char> addr{};
 	vm::ptr<u64> index{};
 
@@ -399,9 +398,6 @@ public:
 	u32 free_port_count = 0;
 	std::array<u32, AUDIO_PORT_COUNT> free_ports{};
 	std::array<u32, AUDIO_PORT_COUNT> free_indices{};
-	u32 last_mixer_port = 0;
-	bool mixer_initialized = false; // closing its audio port does not finalize the mixer
-	bool mixer_started = false;
 
 	u32 key_count = 0;
 	u8 event_period = 0;
@@ -438,7 +434,6 @@ public:
 
 	audio_port* open_port();
 	error_code allocate_port(ppu_thread& ppu, audio_port& port);
-	void start_port(audio_port& port);
 	void close_port(ppu_thread& ppu, audio_port& port);
 	void release_shared_memory(ppu_thread& ppu);
 
