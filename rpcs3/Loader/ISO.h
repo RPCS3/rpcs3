@@ -152,6 +152,11 @@ public:
 	iso_file(const std::string& path, bs_t<fs::open_mode> mode = fs::read);
 	iso_file(const std::string& path, bs_t<fs::open_mode> mode, const iso_fs_node& node);
 
+	// Points the object at another node of the same image, keeping the handle it already holds open: a caller
+	// walking many files of an image pays for a single open instead of one per file, which on a disc held by a
+	// drive is what the whole walk costs
+	void rebind(const iso_fs_node& node);
+
 	explicit operator bool() const { return m_file.operator bool(); }
 
 	fs::stat_t get_stat() override;

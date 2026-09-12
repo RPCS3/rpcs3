@@ -209,11 +209,11 @@ static bool decrypt_data(aes_context& aes, u64 offset, const std::span<u8> buffe
 	return true;
 }
 
-// Only the leading AES block of a file has to be decrypted to check its magic value: in CBC the first 16 bytes of
-// plaintext come out of the first 16 bytes of ciphertext and the IV alone, and every magic value is shorter than
-// that. One block more is held because an offset that is not sector aligned spends the leading one as the IV
-constexpr u64 ISO_MAGIC_TEST_SIZE = 16;
-constexpr u64 ISO_MAGIC_BLOCK_SIZE = ISO_MAGIC_TEST_SIZE * 2;
+// Only the leading AES block of a file has to be read and decrypted to check its magic value: in CBC the first 16
+// bytes of plaintext come out of the first 16 bytes of ciphertext and the IV alone, and every magic value is
+// shorter than that. The IV is the one of the sector, never the block before it, since a file begins where an
+// extent does, which is always a sector boundary
+constexpr u64 ISO_MAGIC_BLOCK_SIZE = 16;
 
 // The leading bytes of a well known file of the image, the ones its magic value lies in once properly decrypted
 struct iso_magic_block
@@ -237,8 +237,8 @@ static iso_type_status read_magic_blocks(iso_archive& archive, std::vector<iso_m
 		{"PS3_GAME/USRDIR/EBOOT.BIN", "SCE"}
 	}};
 
-	// One handle on the whole image serves every block, since the position of each of them is absolute: binding a
-	// file object to each node instead would open the image again and deep copy the metadata of the node with it
+	// One handle serves every block: it is pointed at each of the files in turn, which costs nothing but the
+	// metadata of the node, while building a file object per node would open the image again for each of them
 	iso_file iso_file(archive.path());
 
 	if (!iso_file)
@@ -258,12 +258,14 @@ static iso_type_status read_magic_blocks(iso_archive& archive, std::vector<iso_m
 		}
 
 		// Only the leading block is ever decrypted to check a magic value, so none of them may outgrow it
-		ensure(magic.size() <= ISO_MAGIC_TEST_SIZE);
+		ensure(magic.size() <= ISO_MAGIC_BLOCK_SIZE);
 
-		// Where the file begins in the image, which is where a file object bound to that node would have landed
+		// Where the file begins in the image, which is what the decryption builds its IV out of
 		iso_magic_block block {.magic = magic, .offset = node->metadata.extents.front().start * ISO_SECTOR_SIZE};
 
-		if (iso_file.read_at(block.offset, block.data.data(), block.data.size()) != block.data.size())
+		iso_file.rebind(*node);
+
+		if (iso_file.read(block.data.data(), block.data.size()) != block.data.size())
 		{
 			return iso_type_status::NOT_ISO;
 		}
@@ -288,13 +290,13 @@ static bool is_any_block_encrypted(const std::vector<iso_magic_block>& blocks)
 // far too easy to hit by chance on a magic value as short as the three bytes of an "EBOOT.BIN"
 static bool decrypts_all_blocks(aes_context& aes_ctx, std::vector<iso_magic_block>& blocks)
 {
-	// An offset that is not sector aligned spends the leading block as the IV, leaving it untouched in the output,
-	// so it is zeroed rather than compared as it comes
-	std::array<u8, ISO_MAGIC_BLOCK_SIZE> dec_blk {};
+	// The plaintext of every block lands here in turn, and always whole: nothing of the previous one is left
+	// behind to be compared by mistake
+	std::array<u8, ISO_MAGIC_BLOCK_SIZE> dec_blk;
 
 	return std::all_of(blocks.begin(), blocks.end(), [&aes_ctx, &dec_blk](iso_magic_block& block)
 	{
-		return decrypt_data(aes_ctx, block.offset, block.data, dec_blk, ISO_MAGIC_TEST_SIZE) &&
+		return decrypt_data(aes_ctx, block.offset, block.data, dec_blk, ISO_MAGIC_BLOCK_SIZE) &&
 			std::memcmp(block.magic.data(), dec_blk.data(), block.magic.size()) == 0;
 	});
 }
@@ -1483,6 +1485,17 @@ iso_file::iso_file(const std::string& path, bs_t<fs::open_mode> mode, const iso_
 	m_file.seek(::at32(m_meta.extents, 0).start * ISO_SECTOR_SIZE);
 
 	m_raw_device = fs::is_optical_raw_device(path);
+}
+
+void iso_file::rebind(const iso_fs_node& node)
+{
+	m_meta = node.metadata;
+	m_pos = 0;
+
+	if (m_file && !m_meta.extents.empty())
+	{
+		m_file.seek(m_meta.extents.front().start * ISO_SECTOR_SIZE);
+	}
 }
 
 fs::stat_t iso_file::get_stat()
