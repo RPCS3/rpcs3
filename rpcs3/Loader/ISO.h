@@ -101,13 +101,14 @@ private:
 public:
 	static iso_type_status check_type(const std::string& path, std::string* key_path = nullptr, aes_context* aes_ctx = nullptr);
 
+	bool init(const std::string& path, iso_archive* archive = nullptr);
+
 	iso_encryption_type get_enc_type() const { return m_enc_type; }
 
 	// Tells whether the content of the image can be read back at all, and if not what is wrong with its key.
 	// Resolving the answer may read a block, so this is not for a caller that only wants the metadata of the image
 	iso_key_status get_key_status(iso_archive& archive);
 
-	bool init(const std::string& path, iso_archive* archive = nullptr);
 	bool decrypt(u64 offset, const std::span<u8> buffer, const std::string& name);
 };
 

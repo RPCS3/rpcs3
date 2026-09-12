@@ -489,31 +489,6 @@ iso_type_status iso_file_decryption::check_type(const std::string& path, std::st
 	return iso_type_status::ERROR_OPENING_KEY;
 }
 
-iso_key_status iso_file_decryption::get_key_status(iso_archive& archive)
-{
-	if (m_key_status)
-	{
-		return *m_key_status;
-	}
-
-	m_key_status = iso_key_status::OK;
-
-	std::vector<iso_magic_block> blocks;
-
-	// Only an image left with no key at all can still be hiding something: the key file of one that has it was put to
-	// the test back when it was set up, since that decides how every read behaves. A single region means the image
-	// declares nothing but region 0, and the even ones are never encrypted, so there is nothing to look at there
-	if (m_enc_type == iso_encryption_type::NONE && m_region_info.size() > 1 &&
-		read_magic_blocks(archive, blocks) == iso_type_status::REDUMP_ISO && is_any_block_encrypted(blocks))
-	{
-		m_key_status = iso_key_status::MISSING;
-
-		iso_log.error("get_key_status: The image is encrypted and no matching decryption key was found: '%s'", archive.path());
-	}
-
-	return *m_key_status;
-}
-
 bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 {
 	// Reset attributes first
@@ -702,6 +677,31 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 	}
 
 	return true;
+}
+
+iso_key_status iso_file_decryption::get_key_status(iso_archive& archive)
+{
+	if (m_key_status)
+	{
+		return *m_key_status;
+	}
+
+	m_key_status = iso_key_status::OK;
+
+	std::vector<iso_magic_block> blocks;
+
+	// Only an image left with no key at all can still be hiding something: the key file of one that has it was put to
+	// the test back when it was set up, since that decides how every read behaves. A single region means the image
+	// declares nothing but region 0, and the even ones are never encrypted, so there is nothing to look at there
+	if (m_enc_type == iso_encryption_type::NONE && m_region_info.size() > 1 &&
+		read_magic_blocks(archive, blocks) == iso_type_status::REDUMP_ISO && is_any_block_encrypted(blocks))
+	{
+		m_key_status = iso_key_status::MISSING;
+
+		iso_log.error("get_key_status: The image is encrypted and no matching decryption key was found: '%s'", archive.path());
+	}
+
+	return *m_key_status;
 }
 
 bool iso_file_decryption::decrypt(u64 offset, const std::span<u8> buffer, const std::string& name)
