@@ -473,7 +473,7 @@ void main_window::OnPlayOrPause()
 			if (const auto error = Emu.Load(); error != game_boot_result::no_errors)
 			{
 				gui_log.error("Boot failed: reason: %s, path: %s", error, path);
-				show_boot_error(error);
+				show_boot_error(error, path);
 			}
 		}
 		else if (!m_recent_game.actions.isEmpty())
@@ -488,7 +488,7 @@ void main_window::OnPlayOrPause()
 	}
 }
 
-void main_window::show_boot_error(game_boot_result status)
+void main_window::show_boot_error(game_boot_result status, const std::string& path)
 {
 	// Built on demand: the cases that bail out early have no dialog to put it in
 	const auto quickstart_link = []()
@@ -526,22 +526,42 @@ void main_window::show_boot_error(game_boot_result status)
 	case game_boot_result::disc_key_missing:
 	{
 		// This one gets a dialog of its own: the user is one file away from booting the game, so point them at the folder it goes in
-		const std::string key_dir = rpcs3::utils::get_redump_key_dir();
+		const QString keys = QString::fromStdString(rpcs3::utils::get_redump_key_dir()).toHtmlEscaped();
+
+		// An image held in a file gives its key a name to go by, the very one the emulator looks for, so the user can
+		// be told exactly what to put where. A disc in a drive has no such name: every key of the folder is tried
+		const bool named_image = !path.empty() && !fs::get_optical_raw_device(path);
+		const std::string file_name = named_image ? path.substr(path.find_last_of("/\\") + 1) : std::string();
+
+		QString text;
+
+		if (named_image)
+		{
+			text = tr("The disc image '%0' is encrypted and no key to read it back was found."
+				"<br><br>Put its key file '%1.dkey' or '%1.key' next to the image or in the Redump keys folder:<br>'%2'")
+				.arg(QString::fromStdString(file_name).toHtmlEscaped())
+				.arg(QString::fromStdString(file_name.substr(0, file_name.rfind('.'))).toHtmlEscaped())
+				.arg(keys);
+		}
+		else
+		{
+			text = tr("The disc on BD Drive is encrypted and no key to read it back was found."
+				"<br><br>Put its key file (.dkey or .key) in the Redump keys folder:<br>'%0'")
+				.arg(keys);
+		}
 
 		QMessageBox* msg = new QMessageBox(this);
 		msg->setWindowTitle(tr("Boot Failed"));
 		msg->setIcon(QMessageBox::Critical);
 		msg->setTextFormat(Qt::RichText);
-		msg->setText(tr("You are missing the decryption key for your disc.<br><br>Please add your decryption key to the <b>%0</b> folder.%1")
-			.arg(QString::fromStdString(key_dir).toHtmlEscaped())
-			.arg(quickstart_link()));
+		msg->setText(text + quickstart_link());
 		msg->setAttribute(Qt::WA_DeleteOnClose);
 
 		QPushButton* open_button = msg->addButton(tr("Open keys folder"), QMessageBox::ActionRole);
 		msg->addButton(QMessageBox::Close);
 		msg->setDefaultButton(QMessageBox::Close);
 
-		connect(msg, &QDialog::finished, this, [msg, open_button, key_dir]()
+		connect(msg, &QDialog::finished, this, [msg, open_button, key_dir = rpcs3::utils::get_redump_key_dir()]()
 		{
 			// An "ActionRole" button closes the dialog just like any other one, so the folder is opened on the way out
 			if (msg->clickedButton() == open_button)
@@ -633,7 +653,7 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 	if (const auto error = Emu.BootGame(path, title_id, direct, config_mode, config_path, db_config); error != game_boot_result::no_errors)
 	{
 		gui_log.error("Boot failed: reason: %s, path: %s", error, path);
-		show_boot_error(error);
+		show_boot_error(error, path);
 		return;
 	}
 
@@ -4531,7 +4551,7 @@ void main_window::dropEvent(QDropEvent* event)
 		if (const auto error = Emu.BootGame(path, "", true); error != game_boot_result::no_errors)
 		{
 			gui_log.error("Boot failed: reason: %s, path: %s", error, path);
-			show_boot_error(error);
+			show_boot_error(error, path);
 			return;
 		}
 

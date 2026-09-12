@@ -111,7 +111,7 @@ private Q_SLOTS:
 	void BootSavestate();
 	void BootRsxCapture(std::string path = "");
 	void DecryptSPRXLibraries();
-	void show_boot_error(game_boot_result status);
+	void show_boot_error(game_boot_result status, const std::string& path = {});
 
 	void SaveWindowState() const;
 	void SetIconSizeActions(int idx) const;
