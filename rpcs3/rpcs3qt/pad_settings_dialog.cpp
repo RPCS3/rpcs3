@@ -241,6 +241,8 @@ pad_settings_dialog::pad_settings_dialog(std::shared_ptr<gui_settings> gui_setti
 	// Set up first tab
 	OnTabChanged(0);
 	ChangeConfig(ui->chooseConfig->currentText());
+
+	gui::utils::keep_tab_bar_focused(ui->tabWidget);
 }
 
 void pad_settings_dialog::closeEvent(QCloseEvent* event)
