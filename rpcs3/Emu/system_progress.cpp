@@ -8,6 +8,7 @@
 #include "Emu/RSX/Overlays/overlay_compile_notification.h"
 #include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 
 #include "util/asm.hpp"
 

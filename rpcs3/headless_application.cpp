@@ -1,7 +1,7 @@
 #include "headless_application.h"
 
 #include "Emu/emu_callbacks.h"
-#include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
 #include "Emu/Cell/Modules/cellOskDialog.h"
