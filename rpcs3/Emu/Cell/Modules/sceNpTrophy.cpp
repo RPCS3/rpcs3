@@ -513,13 +513,11 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 	*context = idm::last_id();
 
 	// set current trophy name for trophy list overlay
+	if (!ctxt->read_only)
 	{
 		current_trophy_name& current_id = g_fxo->get<current_trophy_name>();
 		std::lock_guard lock(current_id.mtx);
-		if(current_id.name.empty())
-		{
-			current_id.name = std::move(name);
-		}
+		current_id.name = std::move(name);
 	}
 
 	return CELL_OK;
