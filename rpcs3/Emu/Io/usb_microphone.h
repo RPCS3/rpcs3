@@ -7,6 +7,8 @@ enum class MicType
 	SingStar,
 	Logitech,
 	Rocksmith,
+	EyeToy,
+	PsEye,
 };
 
 enum
