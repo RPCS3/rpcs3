@@ -8,7 +8,11 @@
 
 #include "Emu/Cell/lv2/sys_game.h"
 #include "Emu/Cell/lv2/sys_process.h"
+#include "Emu/Cell/lv2/sys_mmapper.h"
+#include "Emu/Cell/lv2/sys_prx.h"
+#include "Emu/savestate_utils.hpp"
 #include "cellSysutil.h"
+#include "sysPrxForUser.h"
 
 #include "Utilities/StrUtil.h"
 #include "Utilities/lockless.h"
@@ -17,6 +21,110 @@
 #include <deque>
 
 LOG_CHANNEL(cellSysutil);
+
+namespace
+{
+	struct sysutil_module
+	{
+		be_t<u32> start[2];
+		be_t<u32> stop[2];
+		be_t<u32> address;
+		be_t<u32> ref_count;
+	};
+}
+
+error_code sysutilModuleStart(ppu_thread& ppu, u32 args, vm::ptr<void> argp)
+{
+	cellSysutil.notice("module_start(args=%d, argp=*0x%x)", args, argp);
+
+	const std::unique_lock savestate_lock{ g_fxo->get<hle_locks_t>(), std::try_to_lock };
+
+	if (!savestate_lock)
+	{
+		ppu.state += cpu_flag::again;
+		return {};
+	}
+
+	const vm::ptr<sysutil_module> data = vm::cast(ppu.gpr[2]);
+
+	if (++data->ref_count != 1u)
+	{
+		return CELL_OK;
+	}
+
+	const vm::var<u32> memory_id;
+
+	// firmware still returns success if setup fails, a failed map leaves the handle around
+	if (sys_mmapper_allocate_shared_memory(ppu, SYS_MMAPPER_SYSUTIL_SHM_KEY, 0x10000, 0x200, memory_id))
+	{
+		return CELL_OK;
+	}
+
+	const vm::var<u32> area;
+
+	if (!sys_mmapper_get_shared_memory_area(ppu, 0x20full, +area))
+	{
+		sys_mmapper_search_and_map(ppu, *area, *memory_id, 0x40000, data.ptr(&sysutil_module::address));
+	}
+
+	return CELL_OK;
+}
+
+error_code sysutilModuleStop(ppu_thread& ppu)
+{
+	cellSysutil.notice("module_stop()");
+
+	const std::unique_lock savestate_lock{ g_fxo->get<hle_locks_t>(), std::try_to_lock };
+
+	if (!savestate_lock)
+	{
+		ppu.state += cpu_flag::again;
+		return {};
+	}
+
+	const vm::ptr<sysutil_module> data = vm::cast(ppu.gpr[2]);
+
+	if (--data->ref_count || !data->address)
+	{
+		return CELL_OK;
+	}
+
+	const vm::var<u32> memory_id;
+
+	if (!sys_mmapper_unmap_shared_memory(ppu, data->address, memory_id))
+	{
+		data->address = 0;
+		// another mapping can keep this busy, firmware leaves the handle around here too
+		sys_mmapper_free_shared_memory(ppu, *memory_id);
+	}
+
+	return CELL_OK;
+}
+
+bool sysutilModuleInit(lv2_prx& prx)
+{
+	if (!prx.hle_data)
+	{
+		prx.hle_data = vm::alloc(sizeof(sysutil_module), vm::main);
+
+		if (!prx.hle_data)
+		{
+			return false;
+		}
+
+		*vm::ptr<sysutil_module>{vm::cast(prx.hle_data)} = {};
+	}
+
+	const vm::ptr<sysutil_module> data = vm::cast(prx.hle_data);
+	const auto& funcs = g_fxo->get<ppu_function_manager>();
+	data->start[0] = funcs.func_addr(FIND_FUNC(sysutilModuleStart), true);
+	data->start[1] = data.addr();
+	data->stop[0] = funcs.func_addr(FIND_FUNC(sysutilModuleStop), true);
+	data->stop[1] = data.addr();
+	prx.start = vm::cast(data.ptr(&sysutil_module::start).addr());
+	prx.stop = vm::cast(data.ptr(&sysutil_module::stop).addr());
+	return true;
+}
 
 template<>
 void fmt_class_string<CellSysutilError>::format(std::string& out, u64 arg)
@@ -1122,6 +1230,9 @@ extern void cellSysutil_SysCache_init();
 
 DECLARE(ppu_module_manager::cellSysutil)("cellSysutil", []()
 {
+	REG_HIDDEN_FUNC(sysutilModuleStart);
+	REG_HIDDEN_FUNC(sysutilModuleStop);
+
 	cellSysutil_SaveData_init(); // cellSaveData functions
 	cellSysutil_GameData_init(); // cellGameData, cellHddGame functions
 	cellSysutil_MsgDialog_init(); // cellMsgDialog functions
