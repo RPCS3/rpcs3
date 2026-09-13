@@ -247,6 +247,8 @@ public:
 		const QString keyboard_handler  = tr("Some games support native keyboard input.\nBasic will work in these cases.");
 		const QString mouse_handler     = tr("Some games support native mouse input.\nBasic or Raw will work in these cases.");
 		const QString music_handler     = tr("Currently only used for cellMusic emulation.\nSelect Qt to use the default output device of your operating system.\nThis may not be able to play all audio formats.");
+		const QString music_repeat      = tr("Start the custom soundtrack over again after the last track instead of stopping the playback.");
+		const QString music_shuffle     = tr("Play the custom soundtrack in a random order.\nThe playlist is shuffled again on every pass, which requires the repeat option.");
 		const QString camera            = tr("Select Qt Camera to use the default camera device of your operating system.");
 		const QString camera_type       = tr("Depending on the game, you may need to select a specific camera type.");
 		const QString camera_flip       = tr("Flips the camera image either horizontally, vertically, or on both axes.");

@@ -268,6 +268,8 @@ struct cfg_root : cfg::node
 		cfg::_enum<microphone_handler> microphone_type{ this, "Microphone Type", microphone_handler::null };
 		cfg::string microphone_devices{ this, "Microphone Devices", "@@@@@@@@@@@@" };
 		cfg::_enum<music_handler> music{ this, "Music Handler", music_handler::qt };
+		cfg::_bool music_repeat{ this, "Music Repeat Playlist", true, true };
+		cfg::_bool music_shuffle{ this, "Music Shuffle Playlist", false, true };
 	} audio{ this };
 
 	struct node_io : cfg::node

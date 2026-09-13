@@ -1155,6 +1155,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	}
 
 	EnhanceComboBox(emu_settings_type::MusicHandler, ui->musicHandlerBox, tooltips.settings.music_handler, ui->gb_music_handler);
+	EnhanceCheckBox(emu_settings_type::MusicRepeatPlaylist, ui->musicRepeatBox, tooltips.settings.music_repeat);
+	EnhanceCheckBox(emu_settings_type::MusicShufflePlaylist, ui->musicShuffleBox, tooltips.settings.music_shuffle);
 	EnhanceComboBox(emu_settings_type::PadHandlerMode, ui->padModeBox, tooltips.settings.pad_mode, ui->gb_pad_mode);
 	EnhanceComboBox(emu_settings_type::Move, ui->moveBox, tooltips.settings.move, ui->gb_move_handler);
 	EnhanceComboBox(emu_settings_type::Buzz, ui->buzzBox, tooltips.settings.buzz, ui->gb_buzz_emulated);

@@ -294,6 +294,18 @@ void music_selection_context::set_track(std::string_view track)
 	cellMusicSelectionContext.error("set_track: Track '%s' not found...", track);
 }
 
+void music_selection_context::shuffle_playlist()
+{
+	if (playlist.size() < 2)
+	{
+		return;
+	}
+
+	std::random_device rd;
+	auto engine = std::default_random_engine{rd()};
+	std::shuffle(std::begin(playlist), std::end(playlist), engine);
+}
+
 u32 music_selection_context::step_track(bool next)
 {
 	if (playlist.empty())
@@ -379,9 +391,7 @@ u32 music_selection_context::step_track(bool next)
 		{
 			// We reached the first or last track again. Let's shuffle!
 			cellMusicSelectionContext.notice("step_track: Shuffling playlist...");
-			std::random_device rd;
-			auto engine = std::default_random_engine{rd()};
-			std::shuffle(std::begin(playlist), std::end(playlist), engine);
+			shuffle_playlist();
 
 			// Don't play the same track twice
 			if (last_track == ::at32(playlist, current_track))

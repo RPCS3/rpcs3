@@ -169,6 +169,8 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::MicrophoneType,          get_cfg_location(local_cfg.audio.microphone_type) },
 	{ emu_settings_type::MicrophoneDevices,       get_cfg_location(local_cfg.audio.microphone_devices) },
 	{ emu_settings_type::MusicHandler,            get_cfg_location(local_cfg.audio.music) },
+	{ emu_settings_type::MusicRepeatPlaylist,     get_cfg_location(local_cfg.audio.music_repeat) },
+	{ emu_settings_type::MusicShufflePlaylist,    get_cfg_location(local_cfg.audio.music_shuffle) },
 
 	// Input / Output
 	{ emu_settings_type::BackgroundInput,         get_cfg_location(local_cfg.io.background_input_enabled) },
