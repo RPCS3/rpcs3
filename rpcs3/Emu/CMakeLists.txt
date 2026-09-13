@@ -198,6 +198,7 @@ target_sources(rpcs3_emu PRIVATE
     Cell/SPUThread.cpp
     Cell/lv2/lv2.cpp
     Cell/lv2/sys_bdemu.cpp
+    Cell/lv2/sys_bluetooth.cpp
     Cell/lv2/sys_btsetting.cpp
     Cell/lv2/sys_cond.cpp
     Cell/lv2/sys_console.cpp
@@ -580,8 +581,8 @@ target_sources(rpcs3_emu PRIVATE
     RSX/RSXThread.cpp
     RSX/RSXZCULL.cpp
     RSX/rsx_methods.cpp
-    RSX/rsx_utils.cpp
     RSX/rsx_vertex_data.cpp
+    RSX/Utils/rsx_utils.cpp
 )
 
 if(NOT ANDROID AND NOT APPLE)

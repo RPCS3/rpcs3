@@ -1690,6 +1690,13 @@ public:
 		if (auto& cache = g_fxo->get<spu_cache>(); cache && g_cfg.core.spu_cache && !add_loc->cached.exchange(1))
 		{
 			add_to_file = true;
+
+			if (g_cfg.core.spu_debug)
+			{
+				add_to_file = false;
+				cache.add(func);
+				spu_log.success("New SPU block detected (size=%u)", func_size);
+			}
 		}
 
 		{
@@ -5622,7 +5629,23 @@ public:
 
 	void ABSDB(spu_opcode_t op)
 	{
+		const auto matches_compare = [&](auto val, auto MP)
+		{
+			using VT = typename decltype(MP)::type;
+			auto [ok, x] = match_expr(val, sext<VT>(match<bool[std::extent_v<VT>]>()));
+			return ok;
+		};
+
 		const auto [a, b] = get_vrs<u8[16]>(op.ra, op.rb);
+
+		if (match_vr<s8[16], s16[8], s32[4], s64[2]>(op.ra, matches_compare) ||
+			match_vr<s8[16], s16[8], s32[4], s64[2]>(op.rb, matches_compare))
+		{
+			// 0xff - x = ~x
+			set_vr(op.rt, a ^ b);
+			return;
+		}
+
 		set_vr(op.rt, absd(a, b));
 	}
 
@@ -7337,6 +7360,40 @@ public:
 			case 2:
 			case 1:
 			{
+				// Match 8-bit addition/subtraction idioms
+				const bool lhs_to_lo = mask == v128::from16p(0xff00);
+				if (lhs_to_lo || mask == v128::from16p(0x00ff))
+				{
+					const auto lhs = get_vr<u16[8]>(op.ra);
+					const auto rhs = get_vr<u16[8]>(op.rb);
+
+					const auto lo_op = lhs_to_lo ? lhs : rhs;
+					const auto hi_op = lhs_to_lo ? rhs : lhs;
+
+					// Fold: selb(add16(a, b & 0xff00), add16(a, b), low16_mask) => add8(a, b)
+					if (const auto [lo_match, add_a, add_b] = match_expr(lo_op, match<u16[8]>() + match<u16[8]>()); lo_match)
+					{
+						const auto [ab_hi_match] = match_expr(hi_op, add_a + (add_b & 0xff00));
+						const auto [ba_hi_match] = match_expr(hi_op, add_b + (add_a & 0xff00));
+
+						if (ab_hi_match || ba_hi_match)
+						{
+							set_vr(op.rt4, bitcast<u8[16]>(add_a) + bitcast<u8[16]>(add_b));
+							return;
+						}
+					}
+
+					// Fold: selb(sub16(a, b & 0xff00), sub16(a, b), low16_mask) => sub8(a, b)
+					if (const auto [lo_match, sub_a, sub_b] = match_expr(lo_op, match<u16[8]>() - match<u16[8]>()); lo_match)
+					{
+						if (const auto [hi_match] = match_expr(hi_op, sub_a - (sub_b & 0xff00)); hi_match)
+						{
+							set_vr(op.rt4, bitcast<u8[16]>(sub_a) - bitcast<u8[16]>(sub_b));
+							return;
+						}
+					}
+				}
+
 				set_vr(op.rt4, select(bitcast<s8[16]>(c) != 0, get_vr<u8[16]>(op.rb), get_vr<u8[16]>(op.ra)));
 				return;
 			}
@@ -7372,6 +7429,24 @@ public:
 			if (auto [ok, i] = match_expr(c, spu_get_insertion_shuffle_mask<VT>(match<u32>())); ok)
 			{
 				set_vr(op.rt4, insert(get_vr<VT>(op.rb), i, get_scalar(get_vr<VT>(op.ra))));
+				return true;
+			}
+
+			return false;
+		}))
+		{
+			return;
+		}
+		
+		if (match_vr<s8[16], s16[8], s32[4], s64[2]>(op.rc, [&](auto c, auto MP)
+		{
+			using VT = typename decltype(MP)::type;
+
+			// Indexes come from a compare
+			if (auto [ok, i] = match_expr(c, sext<VT>(match<bool[std::extent_v<VT>]>())); ok)
+			{
+				const auto a_splat = zshuffle(get_vr<u8[16]>(op.ra), 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15);
+				set_vr(op.rt4, select(bitcast<s8[16]>(c) != 0, splat<u8[16]>(0x80), a_splat));
 				return true;
 			}
 

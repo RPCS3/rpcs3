@@ -775,8 +775,8 @@ namespace rsx
 			state_signals[NV4097_SET_ZMIN_MAX_CONTROL] = rsx::pipeline_config_dirty;
 			state_signals[NV4097_SET_LOGIC_OP_ENABLE] = rsx::pipeline_config_dirty;
 			state_signals[NV4097_SET_LOGIC_OP] = rsx::pipeline_config_dirty;
-			state_signals[NV4097_SET_BLEND_ENABLE] = rsx::pipeline_config_dirty;
-			state_signals[NV4097_SET_BLEND_ENABLE_MRT] = rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_BLEND_ENABLE] = rsx::pipeline_config_dirty | rsx::blend_config_dirty;
+			state_signals[NV4097_SET_BLEND_ENABLE_MRT] = rsx::pipeline_config_dirty | rsx::blend_config_dirty;
 			state_signals[NV4097_SET_STENCIL_FUNC] = rsx::pipeline_config_dirty;
 			state_signals[NV4097_SET_BACK_STENCIL_FUNC] = rsx::pipeline_config_dirty;
 			state_signals[NV4097_SET_RESTART_INDEX_ENABLE] = rsx::pipeline_config_dirty;

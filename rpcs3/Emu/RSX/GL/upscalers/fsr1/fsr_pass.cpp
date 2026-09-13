@@ -26,6 +26,8 @@
 #pragma clang diagnostic pop
 #endif
 
+#include "Emu/system_config.h"
+
 namespace gl
 {
 	namespace FidelityFX

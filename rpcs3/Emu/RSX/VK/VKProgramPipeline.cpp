@@ -60,6 +60,8 @@ namespace vk
 				return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 			case input_type_storage_texture:
 				return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+			case input_type_attachment:
+				return VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
 			default:
 				fmt::throw_exception("Unexpected program input type %d", static_cast<int>(type));
 			}

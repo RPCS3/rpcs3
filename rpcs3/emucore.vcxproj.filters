@@ -1333,7 +1333,7 @@
     <ClCompile Include="Emu\RSX\gcm_printing.cpp">
       <Filter>Emu\GPU\RSX\Utils</Filter>
     </ClCompile>
-    <ClCompile Include="Emu\RSX\rsx_utils.cpp">
+    <ClCompile Include="Emu\RSX\Utils\rsx_utils.cpp">
       <Filter>Emu\GPU\RSX\Utils</Filter>
     </ClCompile>
     <ClCompile Include="Emu\RSX\rsx_vertex_data.cpp">
@@ -1488,6 +1488,9 @@
     </ClCompile>
     <ClCompile Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture_game_info.cpp">
       <Filter>Emu\GPU\RSX\Overlays\BigPicture</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Cell\lv2\sys_bluetooth.cpp">
+      <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -1672,6 +1675,9 @@
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Common\BufferUtils.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\BufferUtils_avx512.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
     <ClInclude Include="util\types.hpp">
@@ -2566,6 +2572,9 @@
     <ClInclude Include="Emu\Cell\lv2\sys_game.h">
       <Filter>Emu\Cell\lv2</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\Cell\lv2\sys_bluetooth.h">
+      <Filter>Emu\Cell\lv2</Filter>
+    </ClInclude>
     <ClInclude Include="util\video_provider.h">
       <Filter>Utilities</Filter>
     </ClInclude>
@@ -2800,9 +2809,6 @@
     <ClInclude Include="Emu\RSX\gcm_printing.h">
       <Filter>Emu\GPU\RSX\Utils</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\rsx_utils.h">
-      <Filter>Emu\GPU\RSX\Utils</Filter>
-    </ClInclude>
     <ClInclude Include="Emu\RSX\rsx_vertex_data.h">
       <Filter>Emu\GPU\RSX\Host Mini-Driver</Filter>
     </ClInclude>
@@ -2830,7 +2836,16 @@
     <ClInclude Include="Emu\RSX\display.h">
       <Filter>Emu\GPU\RSX\Utils</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\color_utils.h">
+    <ClInclude Include="Emu\RSX\Utils\algorithm.hpp">
+      <Filter>Emu\GPU\RSX\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Utils\color_utils.hpp">
+      <Filter>Emu\GPU\RSX\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Utils\image_utils.hpp">
+      <Filter>Emu\GPU\RSX\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Utils\rsx_utils.h">
       <Filter>Emu\GPU\RSX\Utils</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Host\RSXDMAWriter.h">
@@ -2994,6 +3009,9 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture_game_info.h">
       <Filter>Emu\GPU\RSX\Overlays\BigPicture</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Cell\lv2\sys_bluetooth.h">
+      <Filter>Emu\Cell\lv2</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

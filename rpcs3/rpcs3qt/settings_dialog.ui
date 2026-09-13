@@ -4465,6 +4465,13 @@
                  </widget>
                 </item>
                 <item>
+                 <widget class="QCheckBox" name="disableHardwareBlending">
+                  <property name="text">
+                   <string>Disable Hardware Blending</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
                  <widget class="QCheckBox" name="disableHardwareTexelRemapping">
                   <property name="text">
                    <string>Disable Hardware ColorSpace Remapping</string>
