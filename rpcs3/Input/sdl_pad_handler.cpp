@@ -5,9 +5,6 @@
 #include "sdl_instance.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/system_config.h"
-#include "Emu/System.h"
-
-#include <mutex>
 
 LOG_CHANNEL(sdl_log, "SDL");
 
