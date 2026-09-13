@@ -280,6 +280,8 @@ struct lv2_file final : lv2_fs_object
 	const s32 flags;
 	std::string real_path;
 	const lv2_file_type type;
+	atomic_t<u64> reads_total{};
+	atomic_t<u64> writes_total{};
 
 	// IO Container
 	u32 ct_id{}, ct_used{};
