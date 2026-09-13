@@ -2,6 +2,7 @@
 
 #include "Utilities/Thread.h"
 #include "Utilities/mutex.h"
+#include "Emu/system_config_types.h"
 
 #include "alc.h"
 

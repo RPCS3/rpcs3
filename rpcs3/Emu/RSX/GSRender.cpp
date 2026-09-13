@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include "Emu/emu_callbacks.h"
+#include "Emu/system_config.h"
 #include "GSRender.h"
 
 GSRender::GSRender(utils::serial* ar) noexcept : rsx::thread(ar)
