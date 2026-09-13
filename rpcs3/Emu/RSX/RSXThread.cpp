@@ -297,9 +297,6 @@ namespace rsx
 
 	static bool evaluate_programmable_blending_state(rsx::context* ctx, u32& fragment_ctrl)
 	{
-		const bool is_blend_config_dirty = RSX(ctx)->m_graphics_state.test(rsx::blend_config_dirty);
-		RSX(ctx)->m_graphics_state.clear(rsx::blend_config_dirty);
-
 		const auto blend_enable_mask = REGS(ctx)->blend_enabled_mask() & REGS(ctx)->surface_color_target_mask();
 		const bool programmable_blend_active = !!(fragment_ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING);
 		const bool is_blending_active = !!blend_enable_mask && !REGS(ctx)->logic_op_enabled();
@@ -317,6 +314,8 @@ namespace rsx
 
 		if (g_cfg.video.disable_hardware_blending)
 		{
+			// Same as below; the ROP control blend mask has to be live before the PB shader can run.
+			RSX(ctx)->m_graphics_state.set(rsx::fragment_state_dirty);
 			fragment_ctrl |= RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
 			return !programmable_blend_active;
 		}
@@ -400,8 +399,13 @@ namespace rsx
 			break;
 		}
 
-		if (need_programmable_blending && is_blend_config_dirty)
+		if (need_programmable_blending)
 		{
+			// ROP control carries the per-MRT blend enable mask (MRT_BLEND_TARGETS_OFFSET) and is only ever written
+			// while PB is active. The PB shader skips subpassLoad()/do_blend() for every target whose bit is clear, and
+			// hardware blending is disabled for PB draws, so a stale mask makes the draw overwrite the framebuffer with
+			// raw, unblended shader output. Refresh it unconditionally here; the mask tracks both blend enables and
+			// NV4097_SET_SURFACE_COLOR_TARGET, and it was never uploaded at all before PB transitions off->on.
 			RSX(ctx)->m_graphics_state.set(rsx::fragment_state_dirty);
 		}
 
