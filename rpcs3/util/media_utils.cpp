@@ -753,8 +753,7 @@ namespace utils
 					copy_samples<f32>(out_buffer, out_buffer, size / sizeof(f32), true);
 				}
 
-				// Append resampled frames to data.
-				// NOTE: Do not resize and then copy. That would zero-initialize the whole track just to overwrite it right away.
+				// Append resampled frames to data
 				{
 					std::scoped_lock lock(m_mtx);
 					data.insert(data.cend(), out_buffer, out_buffer + size);
