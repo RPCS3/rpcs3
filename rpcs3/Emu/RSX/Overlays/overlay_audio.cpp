@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "overlay_audio.h"
-#include "Emu/System.h"
+#include "Emu/emu_callbacks.h"
 
 namespace rsx
 {
@@ -15,7 +15,7 @@ namespace rsx
 		{
 			if (audio_path.empty()) return;
 
-			m_video_source = ensure(Emu.GetCallbacks().make_video_source());
+			m_video_source = ensure(g_emu_callbacks.make_video_source());
 			m_video_source->set_audio_path(audio_path, audio_in_archive);
 
 			if (audio_in_archive)
