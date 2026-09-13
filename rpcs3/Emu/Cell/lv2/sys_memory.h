@@ -3,6 +3,8 @@
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/ErrorCodes.h"
 
+u32 allocate_user_memory(u32 size, u32 align);
+
 class cpu_thread;
 class ppu_thread;
 
