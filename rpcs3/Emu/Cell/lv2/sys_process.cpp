@@ -241,6 +241,58 @@ u64 lv2_process::ki11_self()
 
 	remove_handles(FN(this_ppu.id == x ? true : ensure(idm::remove<named_thread<ppu_thread>>(x))));
 
+	idm::select<lv2_spu_group>([&](u32 id, lv2_spu_group& ppu)
+	{
+		IDs.emplace_back(id);
+	});
+
+	remove_handles(FN(sys_spu_thread_group_terminate(this_ppu, x, 0), sys_spu_thread_group_destroy(this_ppu, x)));
+
+	idm::select<lv2_obj, lv2_event_port>([&](u32 id, lv2_event_port& ppu)
+	{
+		IDs.emplace_back(id);
+	});
+
+	remove_handles(FN(sys_event_port_disconnect(this_ppu, x), sys_event_port_destroy(this_ppu, x)));
+
+	idm::select<lv2_obj, lv2_event_queue>([&](u32 id, lv2_event_queue& ppu)
+	{
+		IDs.emplace_back(id);
+	});
+
+	remove_handles(FN(sys_event_queue_destroy(this_ppu, x, SYS_EVENT_QUEUE_DESTROY_FORCE)));
+
+	idm::select<lv2_obj, lv2_lwcond>([&](u32 id, lv2_lwcond& ppu)
+	{
+		IDs.emplace_back(id);
+	});
+
+	remove_handles(FN(_sys_lwcond_signal_all(this_ppu, x, 0, 2), _sys_lwcond_destroy(this_ppu, x)));
+
+	idm::select<lv2_obj, lv2_cond>([&](u32 id, lv2_cond& ppu)
+	{
+		IDs.emplace_back(id);
+	});
+
+	remove_handles(FN(sys_cond_signal_all(this_ppu, x), _sys_lwcond_destroy(this_ppu, x)));
+
+	// idm::select<lv2_obj, lv2_mutex>([&](u32 id, lv2_mutex& ppu)
+	// {
+	// 	IDs.emplace_back(id);
+	// });
+
+	// remove_handles(FN(sys_cond_signal_all(ppu, x), _sys_lwcond_destroy(ppu, x)));
+
+	idm::select<lv2_rsx_context>([&](u32 id, lv2_rsx_context& ppu)
+	{
+		IDs.emplace_back(id);
+	});
+
+	remove_handles(FN(sys_rsx_context_free(this_ppu, x)));
+
+	// May error if no memory allocation was made
+	sys_rsx_memory_free(this_ppu, 0x5A5A5A5A);
+
 	extern shared_ptr<named_thread<ppu_thread>> use_ppu_thread_cleaner(u32 id);
 
 	shared_ptr<named_thread<ppu_thread>> old_ppu;
