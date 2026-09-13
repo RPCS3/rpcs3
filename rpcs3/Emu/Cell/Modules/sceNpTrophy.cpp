@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/VFS.h"
@@ -278,7 +279,7 @@ static void show_trophy_notification(const trophy_context_t* ctxt, s32 trophyId)
 		sceNpTrophy.error("Failed to get info for trophy dialog. Error code 0x%x", +ret);
 	}
 
-	if (auto trophy_notification_dialog = Emu.GetCallbacks().get_trophy_notification_dialog())
+	if (auto trophy_notification_dialog = g_emu_callbacks.get_trophy_notification_dialog())
 	{
 		trophy_notification_dialog->ShowTrophyNotification(details, trophy_icon_data);
 	}

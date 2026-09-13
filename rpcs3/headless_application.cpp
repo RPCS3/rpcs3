@@ -1,5 +1,6 @@
 #include "headless_application.h"
 
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/Cell/Modules/cellMsgDialog.h"
@@ -24,7 +25,7 @@ headless_application::headless_application(int& argc, char** argv) : QCoreApplic
 void headless_application::Init()
 {
 	// Create callbacks from the emulator, which reference the handlers.
-	InitializeCallbacks();
+	create_callbacks();
 
 	// Force init the emulator
 	InitializeEmulator(m_active_user.empty() ? "00000001" : m_active_user, false, true);
@@ -42,12 +43,11 @@ void headless_application::InitializeConnects() const
 	connect(this, &headless_application::RequestCallFromMainThread, this, &headless_application::CallFromMainThread);
 }
 
-/** RPCS3 emulator has functions it desires to call from the GUI at times. Initialize them in here. */
-void headless_application::InitializeCallbacks()
+void headless_application::create_callbacks()
 {
-	EmuCallbacks callbacks = CreateCallbacks();
+	main_application::create_callbacks();
 
-	callbacks.try_to_quit = [](bool force_quit, std::function<void()> on_exit) -> bool
+	g_emu_callbacks.try_to_quit = [](bool force_quit, std::function<void()> on_exit) -> bool
 	{
 		if (force_quit)
 		{
@@ -63,12 +63,12 @@ void headless_application::InitializeCallbacks()
 
 		return false;
 	};
-	callbacks.call_from_main_thread = [this](std::function<void()> func, atomic_t<u32>* wake_up)
+	g_emu_callbacks.call_from_main_thread = [this](std::function<void()> func, atomic_t<u32>* wake_up)
 	{
 		RequestCallFromMainThread(std::move(func), wake_up);
 	};
 
-	callbacks.init_gs_render = [](utils::serial* ar)
+	g_emu_callbacks.init_gs_render = [](utils::serial* ar)
 	{
 		switch (const video_renderer type = g_cfg.video.renderer)
 		{
@@ -90,7 +90,7 @@ void headless_application::InitializeCallbacks()
 		}
 	};
 
-	callbacks.get_camera_handler = []() -> std::shared_ptr<camera_handler_base>
+	g_emu_callbacks.get_camera_handler = []() -> std::shared_ptr<camera_handler_base>
 	{
 		switch (g_cfg.io.camera.get())
 		{
@@ -110,7 +110,7 @@ void headless_application::InitializeCallbacks()
 		return nullptr;
 	};
 
-	callbacks.get_music_handler = []() -> std::shared_ptr<music_handler_base>
+	g_emu_callbacks.get_music_handler = []() -> std::shared_ptr<music_handler_base>
 	{
 		switch (g_cfg.audio.music.get())
 		{
@@ -126,8 +126,8 @@ void headless_application::InitializeCallbacks()
 		return nullptr;
 	};
 
-	callbacks.close_gs_frame = [](){};
-	callbacks.get_gs_frame = []() -> std::unique_ptr<GSFrameBase>
+	g_emu_callbacks.close_gs_frame = [](){};
+	g_emu_callbacks.get_gs_frame = []() -> std::unique_ptr<GSFrameBase>
 	{
 		if (g_cfg.video.renderer != video_renderer::null)
 		{
@@ -136,17 +136,17 @@ void headless_application::InitializeCallbacks()
 		return std::unique_ptr<GSFrameBase>();
 	};
 
-	callbacks.get_msg_dialog                 = []() -> std::shared_ptr<MsgDialogBase> { return std::shared_ptr<MsgDialogBase>(); };
-	callbacks.get_osk_dialog                 = []() -> std::shared_ptr<OskDialogBase> { return std::shared_ptr<OskDialogBase>(); };
-	callbacks.get_save_dialog                = []() -> std::unique_ptr<SaveDialogBase> { return std::unique_ptr<SaveDialogBase>(); };
-	callbacks.get_trophy_notification_dialog = []() -> std::unique_ptr<TrophyNotificationBase> { return std::unique_ptr<TrophyNotificationBase>(); };
+	g_emu_callbacks.get_msg_dialog                 = []() -> std::shared_ptr<MsgDialogBase> { return std::shared_ptr<MsgDialogBase>(); };
+	g_emu_callbacks.get_osk_dialog                 = []() -> std::shared_ptr<OskDialogBase> { return std::shared_ptr<OskDialogBase>(); };
+	g_emu_callbacks.get_save_dialog                = []() -> std::unique_ptr<SaveDialogBase> { return std::unique_ptr<SaveDialogBase>(); };
+	g_emu_callbacks.get_trophy_notification_dialog = []() -> std::unique_ptr<TrophyNotificationBase> { return std::unique_ptr<TrophyNotificationBase>(); };
 
-	callbacks.on_run    = [](bool /*start_playtime*/) {};
-	callbacks.on_pause  = []() {};
-	callbacks.on_resume = []() {};
-	callbacks.on_stop   = []() {};
-	callbacks.on_ready  = []() {};
-	callbacks.on_emulation_stop_no_response = [](std::shared_ptr<atomic_t<bool>> closed_successfully, int /*seconds_waiting_already*/)
+	g_emu_callbacks.on_run    = [](bool /*start_playtime*/) {};
+	g_emu_callbacks.on_pause  = []() {};
+	g_emu_callbacks.on_resume = []() {};
+	g_emu_callbacks.on_stop   = []() {};
+	g_emu_callbacks.on_ready  = []() {};
+	g_emu_callbacks.on_emulation_stop_no_response = [](std::shared_ptr<atomic_t<bool>> closed_successfully, int /*seconds_waiting_already*/)
 	{
 		if (!closed_successfully || !*closed_successfully)
 		{
@@ -155,32 +155,30 @@ void headless_application::InitializeCallbacks()
 		}
 	};
 
-	callbacks.on_save_state_progress = [](std::shared_ptr<atomic_t<bool>>, stx::shared_ptr<utils::serial>, stx::atomic_ptr<std::string>*, std::shared_ptr<void>)
+	g_emu_callbacks.on_save_state_progress = [](std::shared_ptr<atomic_t<bool>>, stx::shared_ptr<utils::serial>, stx::atomic_ptr<std::string>*, std::shared_ptr<void>)
 	{
 	};
 
-	callbacks.enable_disc_eject  = [](bool) {};
-	callbacks.enable_disc_insert = [](bool) {};
+	g_emu_callbacks.enable_disc_eject  = [](bool) {};
+	g_emu_callbacks.enable_disc_insert = [](bool) {};
 
-	callbacks.on_missing_fw = []() {};
+	g_emu_callbacks.on_missing_fw = []() {};
 
-	callbacks.handle_taskbar_progress = [](s32, s32) {};
+	g_emu_callbacks.handle_taskbar_progress = [](s32, s32) {};
 
-	callbacks.get_localized_string    = [](localized_string_id, const char*) -> std::string { return {}; };
-	callbacks.get_localized_u32string = [](localized_string_id, const char*) -> std::u32string { return {}; };
-	callbacks.get_localized_setting   = [](const cfg::_base*, u32) -> std::string { return {}; };
+	g_emu_callbacks.get_localized_string    = [](localized_string_id, const char*) -> std::string { return {}; };
+	g_emu_callbacks.get_localized_u32string = [](localized_string_id, const char*) -> std::u32string { return {}; };
+	g_emu_callbacks.get_localized_setting   = [](const cfg::_base*, u32) -> std::string { return {}; };
 
-	callbacks.play_sound = [](const std::string&, std::optional<f32>){};
-	callbacks.add_breakpoint = [](u32 /*addr*/){};
+	g_emu_callbacks.play_sound = [](const std::string&, std::optional<f32>){};
+	g_emu_callbacks.add_breakpoint = [](u32 /*addr*/){};
 
-	callbacks.display_sleep_control_supported = [](){ return false; };
-	callbacks.enable_display_sleep = [](bool /*enabled*/){};
+	g_emu_callbacks.display_sleep_control_supported = [](){ return false; };
+	g_emu_callbacks.enable_display_sleep = [](bool /*enabled*/){};
 
-	callbacks.check_microphone_permissions = [](){};
+	g_emu_callbacks.check_microphone_permissions = [](){};
 
-	callbacks.make_video_source = [](){ return nullptr; };
-
-	Emu.SetCallbacks(std::move(callbacks));
+	g_emu_callbacks.make_video_source = [](){ return nullptr; };
 }
 
 /**

@@ -87,7 +87,7 @@ private:
 	void LoadLanguage(const QString& language_code);
 	static QStringList GetAvailableLanguageCodes();
 
-	void InitializeCallbacks();
+	void create_callbacks() override;
 	void InitializeConnects();
 
 	void StartPlaytime(bool start_playtime);

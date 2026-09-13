@@ -5,6 +5,7 @@
 #include "version.h"
 #include "Emu/IdManager.h"
 #include "Emu/Memory/vm.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/VFS.h"
 
@@ -1387,7 +1388,7 @@ static usz apply_modification(std::vector<u32>& applied, patch_engine::patch_inf
 
 			if (exec_addr)
 			{
-				Emu.GetCallbacks().add_breakpoint(exec_addr);
+				g_emu_callbacks.add_breakpoint(exec_addr);
 			}
 
 			break;
