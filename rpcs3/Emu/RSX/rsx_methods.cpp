@@ -4,8 +4,8 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
 
-
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/RSX/NV47/HW/nv47.h"
 #include "Emu/RSX/NV47/HW/nv47_sync.hpp"
 #include "Emu/RSX/NV47/HW/context_accessors.define.h" // TODO: Context objects belong in FW not HW

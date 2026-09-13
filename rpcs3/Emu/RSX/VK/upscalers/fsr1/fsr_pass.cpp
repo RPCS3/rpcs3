@@ -4,6 +4,8 @@
 
 #include "../fsr_pass.h"
 
+#include "Emu/system_config.h"
+
 #if defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wignored-qualifiers"

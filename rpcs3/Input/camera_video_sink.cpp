@@ -2,7 +2,6 @@
 #include "camera_video_sink.h"
 
 #include "Emu/Cell/Modules/cellCamera.h"
-#include "Emu/system_config.h"
 
 LOG_CHANNEL(camera_log, "Camera");
 

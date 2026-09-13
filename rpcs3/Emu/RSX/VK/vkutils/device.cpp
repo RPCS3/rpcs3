@@ -933,6 +933,11 @@ namespace vk
 		memory_map.device_local.rebalance();
 	}
 
+	bool render_device::get_debug_utils_support() const
+	{
+		return g_cfg.video.renderdoc_compatiblity && pgpu->optional_features_support.debug_utils;
+	}
+
 	void render_device::dump_debug_info(
 		const std::vector<const char*>& requested_extensions,
 		const VkPhysicalDeviceFeatures& requested_features) const

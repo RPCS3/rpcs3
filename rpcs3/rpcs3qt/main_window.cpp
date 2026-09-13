@@ -86,7 +86,6 @@
 
 #include "Utilities/Thread.h"
 #include "util/sysinfo.hpp"
-#include "util/serialization_ext.hpp"
 
 #include "Input/gui_pad_thread.h"
 

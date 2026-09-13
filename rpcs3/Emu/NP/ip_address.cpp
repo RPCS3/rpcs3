@@ -3,7 +3,6 @@
 #include "ip_address.h"
 #include "Utilities/StrFmt.h"
 #include "Emu/IdManager.h"
-#include "util/endian.hpp"
 #include "util/types.hpp"
 #include "Emu/NP/rpcn_config.h"
 #include "Emu/Cell/lv2/sys_net/sys_net_helpers.h"

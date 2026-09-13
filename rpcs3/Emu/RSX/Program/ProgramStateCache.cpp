@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "ProgramStateCache.h"
-#include "FragmentProgramDecompiler.h"
 #include "Emu/system_config.h"
 #include "Emu/RSX/Core/RSXDriverState.h"
 #include "util/sysinfo.hpp"

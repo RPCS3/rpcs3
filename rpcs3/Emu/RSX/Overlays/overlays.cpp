@@ -7,6 +7,7 @@
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 
 LOG_CHANNEL(overlays);
 

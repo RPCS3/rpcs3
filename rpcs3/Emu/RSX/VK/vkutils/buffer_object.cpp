@@ -1,6 +1,7 @@
 #include "buffer_object.h"
 #include "device.h"
 #include "shared.h"
+#include "util/logs.hpp"
 
 namespace vk
 {

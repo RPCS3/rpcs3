@@ -13,8 +13,6 @@
 
 #include "LogitechG27.h"
 #include "Emu/Cell/lv2/sys_usbd.h"
-#include "Emu/system_config.h"
-#include "Input/pad_thread.h"
 #include "Input/sdl_instance.h"
 
 LOG_CHANNEL(logitech_g27_log, "logitech_g27");

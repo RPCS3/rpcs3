@@ -4,6 +4,8 @@
 #include "../Common/simple_array.hpp"
 #include "../Utils/rsx_utils.h"
 
+#include "Emu/system_config.h"
+
 namespace rsx
 {
 	std::string framebuffer_dimensions_t::to_string(bool skip_aa_suffix) const

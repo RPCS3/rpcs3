@@ -1,6 +1,7 @@
 #pragma once
 
 #include "swapchain_core.h"
+#include "util/logs.hpp"
 
 #ifdef HAVE_X11
 #include <X11/Xutil.h>
