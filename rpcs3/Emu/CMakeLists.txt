@@ -199,6 +199,7 @@ target_sources(rpcs3_emu PRIVATE
     Cell/SPUThread.cpp
     Cell/lv2/lv2.cpp
     Cell/lv2/sys_bdemu.cpp
+    Cell/lv2/sys_bluetooth.cpp
     Cell/lv2/sys_btsetting.cpp
     Cell/lv2/sys_cond.cpp
     Cell/lv2/sys_console.cpp

@@ -496,8 +496,11 @@ public:
 
 	std::set<std::string> GetGameDirs() const;
 	u32 AddGamesFromDir(std::string path);
-	game_boot_result AddGame(std::string path);
-	game_boot_result AddGameToYml(std::string path);
+
+	// "is_iso" tells the caller has already recognized the path as an ISO file (or as a raw device holding a disc):
+	// checking it again would read its volume descriptor once more, which is a physical read on an optical drive
+	game_boot_result AddGame(std::string path, bool is_iso = false);
+	game_boot_result AddGameToYml(std::string path, bool is_iso = false);
 	u32 RemoveGamesFromDir(const std::string& games_dir, const std::vector<std::string>& serials_to_remove_from_yml = {}, bool save_on_disk = true);
 	u32 RemoveGames(const std::vector<std::string>& title_id_list, bool save_on_disk = true);
 	game_boot_result RemoveGameFromYml(const std::string& title_id);
