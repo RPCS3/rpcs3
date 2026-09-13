@@ -47,7 +47,7 @@ error_code sysutilModuleStart(ppu_thread& ppu, u32 args, vm::ptr<void> argp)
 
 	const vm::ptr<sysutil_module> data = vm::cast(ppu.gpr[2]);
 
-	if (++data->ref_count != 1)
+	if (++data->ref_count != 1u)
 	{
 		return CELL_OK;
 	}
