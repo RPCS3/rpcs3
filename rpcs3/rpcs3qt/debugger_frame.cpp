@@ -15,7 +15,6 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/RSX/RSXThread.h"
-#include "Emu/RSX/RSXDisAsm.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/PPUAnalyser.h"
 #include "Emu/Cell/PPUDisAsm.h"
