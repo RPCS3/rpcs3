@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Emu/Memory/vm_ptr.h"
+#include "Emu/Cell/ErrorCodes.h"
 #include "Utilities/Thread.h"
 #include "Utilities/simple_ringbuf.h"
 #include "Emu/Memory/vm.h"
@@ -10,6 +11,8 @@
 #include "Emu/system_config_types.h"
 
 struct lv2_event_queue;
+struct lv2_memory;
+class ppu_thread;
 
 // Error codes
 enum CellAudioError : u32
@@ -153,6 +156,8 @@ struct audio_port
 	atomic_t<audio_port_state> state = audio_port_state::closed;
 
 	u32 number = 0;
+	u32 server_index = 0;
+	bool mapped = false;
 	vm::ptr<char> addr{};
 	vm::ptr<u64> index{};
 
@@ -176,7 +181,7 @@ struct audio_port
 
 	u32 block_size() const
 	{
-		return num_channels * AUDIO_BUFFER_SAMPLES;
+		return std::max(num_channels, 1u) * AUDIO_BUFFER_SAMPLES;
 	}
 
 	u32 buf_size() const
@@ -190,14 +195,10 @@ struct audio_port
 		return (cur_pos + ofs) % num_blocks;
 	}
 
-	u32 buf_addr(s32 offset = 0) const
+	be_t<f32>* get_vm_ptr() const
 	{
-		return addr.addr() + position(offset) * buf_size();
-	}
-
-	be_t<f32>* get_vm_ptr(s32 offset = 0) const
-	{
-		return vm::_ptr<f32>(buf_addr(offset));
+		const u32 block = static_cast<u16>(*index) & (num_blocks - 1);
+		return vm::_ptr<f32>(addr.addr() + block * buf_size());
 	}
 
 
@@ -210,7 +211,7 @@ struct audio_port
 		return tag_nr * PORT_BUFFER_MARK_DELTA_SAMPLE * num_channels + PORT_BUFFER_MARK_CHANNEL;
 	}
 
-	void tag(s32 offset = 0);
+	void tag(be_t<f32>* port_buf);
 
 	audio_port() = default;
 
@@ -392,6 +393,7 @@ class cell_audio_thread
 {
 private:
 	std::unique_ptr<audio_ringbuffer> ringbuffer{};
+	be_t<f32>* get_buffer(const audio_port& port, s32 offset = 0) const;
 
 	void reset_ports(s32 offset = 0);
 	void advance(u64 timestamp);
@@ -410,6 +412,14 @@ public:
 
 	shared_mutex mutex{};
 	atomic_t<u8> init = 0;
+	u32 shared_area = 0;
+	u32 shared_address = 0;
+	u32 shared_refs = 0;
+	shared_ptr<lv2_memory> shared_memory;
+	std::array<shared_ptr<lv2_memory>, AUDIO_PORT_COUNT> port_memories;
+	u32 free_port_count = 0;
+	std::array<u32, AUDIO_PORT_COUNT> free_ports{};
+	std::array<u32, AUDIO_PORT_COUNT> free_indices{};
 
 	u32 key_count = 0;
 	u8 event_period = 0;
@@ -457,6 +467,9 @@ public:
 	void save(utils::serial& ar);
 
 	audio_port* open_port();
+	error_code allocate_port(ppu_thread& ppu, audio_port& port);
+	void close_port(ppu_thread& ppu, audio_port& port);
+	void release_shared_memory(ppu_thread& ppu);
 
 	static constexpr auto thread_name = "cellAudio Thread"sv;
 };
