@@ -879,6 +879,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			break;
 		case microphone_handler::real_singstar:
 		case microphone_handler::rocksmith:
+		case microphone_handler::eye_toy:
+		case microphone_handler::ps_eye:
 			max = 1;
 			break;
 		case microphone_handler::null:

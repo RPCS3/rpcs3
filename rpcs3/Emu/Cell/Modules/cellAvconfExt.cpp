@@ -89,6 +89,50 @@ avconf_manager::avconf_manager()
 			}
 			break;
 		}
+		case microphone_handler::eye_toy:
+		{
+			for (u32 index = 0; index < mic_list.size(); index++)
+			{
+				device_info device {};
+				device.info.portType                  = CELL_AUDIO_IN_PORT_EYETOY1;
+				device.info.availableModeCount        = 1;
+				device.info.state                     = CELL_AUDIO_IN_DEVICE_STATE_AVAILABLE;
+				device.info.deviceId                  = 0xE11CC0DE + curindex;
+				device.info.type                      = 0xC0DEE11C;
+				device.info.availableModes[0].type    = CELL_AUDIO_IN_CODING_TYPE_LPCM;
+				device.info.availableModes[0].channel = CELL_AUDIO_IN_CHNUM_2;
+				device.info.availableModes[0].fs      = CELL_AUDIO_IN_FS_8KHZ | CELL_AUDIO_IN_FS_12KHZ | CELL_AUDIO_IN_FS_16KHZ | CELL_AUDIO_IN_FS_24KHZ | CELL_AUDIO_IN_FS_32KHZ | CELL_AUDIO_IN_FS_48KHZ;
+				device.info.deviceNumber              = curindex;
+				device.full_device_name               = mic_list[index];
+				strcpy_trunc(device.info.name, device.full_device_name);
+
+				devices.push_back(std::move(device));
+				curindex++;
+			}
+			break;
+		}
+		case microphone_handler::ps_eye:
+		{
+			for (u32 index = 0; index < mic_list.size(); index++)
+			{
+				device_info device {};
+				device.info.portType                  = CELL_AUDIO_IN_PORT_EYETOY2;
+				device.info.availableModeCount        = 1;
+				device.info.state                     = CELL_AUDIO_IN_DEVICE_STATE_AVAILABLE;
+				device.info.deviceId                  = 0xE11CC0DE + curindex;
+				device.info.type                      = 0xC0DEE11C;
+				device.info.availableModes[0].type    = CELL_AUDIO_IN_CODING_TYPE_LPCM;
+				device.info.availableModes[0].channel = CELL_AUDIO_IN_CHNUM_2;
+				device.info.availableModes[0].fs      = CELL_AUDIO_IN_FS_8KHZ | CELL_AUDIO_IN_FS_12KHZ | CELL_AUDIO_IN_FS_16KHZ | CELL_AUDIO_IN_FS_24KHZ | CELL_AUDIO_IN_FS_32KHZ | CELL_AUDIO_IN_FS_48KHZ;
+				device.info.deviceNumber              = curindex;
+				device.full_device_name               = mic_list[index];
+				strcpy_trunc(device.info.name, device.full_device_name);
+
+				devices.push_back(std::move(device));
+				curindex++;
+			}
+			break;
+		}
 		case microphone_handler::real_singstar:
 		case microphone_handler::singstar:
 		{

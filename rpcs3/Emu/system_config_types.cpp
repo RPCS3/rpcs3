@@ -358,6 +358,8 @@ void fmt_class_string<microphone_handler>::format(std::string& out, u64 arg)
 		case microphone_handler::singstar: return "SingStar";
 		case microphone_handler::real_singstar: return "Real SingStar";
 		case microphone_handler::rocksmith: return "Rocksmith";
+		case microphone_handler::eye_toy: return "Eye Toy";
+		case microphone_handler::ps_eye: return "PS Eye";
 		}
 
 		return unknown;
