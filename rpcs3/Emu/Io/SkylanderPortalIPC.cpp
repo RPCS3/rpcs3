@@ -8,36 +8,82 @@
 using sky_socket_t = SOCKET;
 static constexpr sky_socket_t sky_invalid_socket = INVALID_SOCKET;
 static int sky_recv(sky_socket_t s, char* buf, int len) { return recv(s, buf, len, 0); }
-static int sky_send(sky_socket_t s, const char* buf, int len) { return send(s, buf, len, 0); }
+static int sky_send_some(sky_socket_t s, const char* buf, int len) { return send(s, buf, len, 0); }
 static void sky_close(sky_socket_t s) { closesocket(s); }
+static bool sky_interrupted() { return WSAGetLastError() == WSAEINTR; }
+
+static bool sky_set_recv_timeout(sky_socket_t s, u32 timeout_ms)
+{
+	const DWORD timeout = timeout_ms;
+	return setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char*>(&timeout), sizeof(timeout)) == 0;
+}
 #else
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <sys/un.h>
 #include <poll.h>
 #include <unistd.h>
 using sky_socket_t = int;
 static constexpr sky_socket_t sky_invalid_socket = -1;
 static int sky_recv(sky_socket_t s, char* buf, int len) { return static_cast<int>(read(s, buf, len)); }
-static int sky_send(sky_socket_t s, const char* buf, int len) { return static_cast<int>(write(s, buf, len)); }
+static int sky_send_some(sky_socket_t s, const char* buf, int len) { return static_cast<int>(write(s, buf, len)); }
 static void sky_close(sky_socket_t s) { close(s); }
+static bool sky_interrupted() { return errno == EINTR; }
+
+static bool sky_set_recv_timeout(sky_socket_t s, u32 timeout_ms)
+{
+	timeval timeout{};
+	timeout.tv_sec  = static_cast<time_t>(timeout_ms / 1000);
+	timeout.tv_usec = static_cast<suseconds_t>(timeout_ms % 1000 * 1000);
+	return setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) == 0;
+}
 #endif
 
 #include "Skylander.h"
+#include "3rdparty/pine/pine_server.h"
+
+#include <chrono>
 
 LOG_CHANNEL(skylander_ipc_log, "SkylanderIPC");
+
+static constexpr usz max_command_size = 4096;
+static constexpr u32 client_timeout_ms = 1000;
+
+static bool is_absolute_local_path(std::string_view path)
+{
+#ifdef _WIN32
+	// Requiring a drive letter also rules out network (\\server\share) and device (\\.\) paths
+	const bool has_drive_letter = path.size() >= 3 && ((path[0] >= 'A' && path[0] <= 'Z') || (path[0] >= 'a' && path[0] <= 'z')) && path[1] == ':';
+	return has_drive_letter && (path[2] == '\\' || path[2] == '/');
+#else
+	return path.starts_with('/');
+#endif
+}
 
 static std::string handle_load(int slot, const std::string& path)
 {
 	if (slot < -1 || slot > 7)
 		return "error invalid slot\n";
 
+	if (!is_absolute_local_path(path))
+		return "error path must be absolute\n";
+
+	std::array<u8, 0x40 * 0x10> buf{};
+
+	// Checked before opening, so that devices and pipes are rejected without ever being opened
+	fs::stat_t info{};
+	if (!fs::get_stat(path, info) || info.is_directory || info.size != buf.size())
+		return "error not a skylander file\n";
+
 	fs::file sky_file(path, fs::read + fs::write + fs::lock);
 	if (!sky_file)
 		return "error cannot open file\n";
 
-	std::array<u8, 0x40 * 0x10> buf{};
 	if (sky_file.read(buf.data(), buf.size()) != buf.size())
 		return "error file too small\n";
+
+	if (read_from_ptr<le_t<u16>>(buf, 0x1E) != skylander_crc16(0xFFFF, buf.data(), 0x1E))
+		return "error not a skylander file\n";
 
 	const u8 result = g_skyportal.load_skylander(buf, std::move(sky_file), slot);
 	if (result == 0xFF)
@@ -136,9 +182,57 @@ static std::string process_command(const std::string& line)
 	return "error unknown command\n";
 }
 
+static bool sky_send(sky_socket_t s, std::string_view data)
+{
+	while (!data.empty())
+	{
+		const int sent = sky_send_some(s, data.data(), ::narrow<int>(data.size()));
+
+		if (sent > 0)
+			data.remove_prefix(sent);
+		else if (sent < 0 && sky_interrupted())
+			continue;
+		else
+			return false;
+	}
+
+	return true;
+}
+
+static bool read_command(sky_socket_t client_sock, std::string& line)
+{
+	if (!sky_set_recv_timeout(client_sock, client_timeout_ms))
+		return false;
+
+	const auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(client_timeout_ms);
+
+	while (line.size() < max_command_size && std::chrono::steady_clock::now() < deadline)
+	{
+		char ch;
+		const int received = sky_recv(client_sock, &ch, 1);
+
+		if (received == 0)
+			return true;
+
+		if (received < 0)
+		{
+			if (sky_interrupted())
+				continue;
+
+			return false;
+		}
+
+		if (ch == '\n' || ch == '\r')
+			return true;
+
+		line += ch;
+	}
+
+	return false;
+}
+
 void SkylanderPortalIPCServer::operator()()
 {
-	sky_socket_t listen_sock = sky_invalid_socket;
 	const int port = g_cfg_sky_ipc.get_port();
 
 #ifdef _WIN32
@@ -149,7 +243,7 @@ void SkylanderPortalIPCServer::operator()()
 		return;
 	}
 
-	listen_sock = socket(AF_INET, SOCK_STREAM, 0);
+	const sky_socket_t listen_sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (listen_sock == sky_invalid_socket)
 	{
 		skylander_ipc_log.error("Cannot create socket");
@@ -157,50 +251,34 @@ void SkylanderPortalIPCServer::operator()()
 		return;
 	}
 
-	sockaddr_in server{};
-	server.sin_family = AF_INET;
-	if (!inet_pton(AF_INET, "127.0.0.1", &server.sin_addr.s_addr))
+	if (const char* failure = pine::bind_and_listen(listen_sock, static_cast<u16>(port)))
 	{
-		skylander_ipc_log.error("inet_pton failed");
+		skylander_ipc_log.error("Cannot start server on port %d: %s", port, failure);
 		sky_close(listen_sock);
 		WSACleanup();
 		return;
 	}
-	server.sin_port = htons(static_cast<u_short>(port));
 
-	if (bind(listen_sock, reinterpret_cast<sockaddr*>(&server), sizeof(server)) == SOCKET_ERROR)
-	{
-		skylander_ipc_log.error("Cannot bind on port %d (already in use?)", port);
-		sky_close(listen_sock);
-		WSACleanup();
-		return;
-	}
+	skylander_ipc_log.notice("Server started on port %d", port);
 #else
-	const std::string socket_path = "/tmp/rpcs3.skylanders.sock";
-	unlink(socket_path.c_str());
+	const std::string socket_path = pine::get_socket_path("rpcs3.skylanders.sock", port, g_cfg_sky_ipc.sky_ipc_port.def);
 
-	listen_sock = socket(AF_UNIX, SOCK_STREAM, 0);
+	const sky_socket_t listen_sock = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (listen_sock == sky_invalid_socket)
 	{
 		skylander_ipc_log.error("Cannot create socket");
 		return;
 	}
 
-	sockaddr_un server{};
-	server.sun_family = AF_UNIX;
-	strncpy(server.sun_path, socket_path.c_str(), sizeof(server.sun_path) - 1);
-
-	if (bind(listen_sock, reinterpret_cast<sockaddr*>(&server), sizeof(server)) < 0)
+	if (const char* failure = pine::bind_and_listen(listen_sock, socket_path))
 	{
-		skylander_ipc_log.error("Cannot bind socket at %s", socket_path);
+		skylander_ipc_log.error("Cannot start server at %s: %s", socket_path, failure);
 		sky_close(listen_sock);
 		return;
 	}
-#endif
 
-	// Maximum queue before refusing; SOMAXCONN is unreliable on Windows
-	listen(listen_sock, 4096);
-	skylander_ipc_log.notice("Server started (port %d)", port);
+	skylander_ipc_log.notice("Server started at %s", socket_path);
+#endif
 
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
@@ -213,6 +291,12 @@ void SkylanderPortalIPCServer::operator()()
 #else
 		const int poll_result = poll(&pfd, 1, 10);
 #endif
+		if (poll_result < 0 && !sky_interrupted())
+		{
+			skylander_ipc_log.error("Waiting for connections failed, stopping server");
+			break;
+		}
+
 		if (poll_result <= 0)
 			continue;
 
@@ -220,22 +304,11 @@ void SkylanderPortalIPCServer::operator()()
 		if (client_sock == sky_invalid_socket)
 			continue;
 
-		// Read one newline-terminated command (max 4 KB)
 		std::string line;
-		char ch;
-		while (line.size() < 4096)
+		if (read_command(client_sock, line) && !line.empty())
 		{
-			if (sky_recv(client_sock, &ch, 1) <= 0)
-				break;
-			if (ch == '\n' || ch == '\r')
-				break;
-			line += ch;
-		}
-
-		if (!line.empty())
-		{
-			const std::string response = process_command(line);
-			sky_send(client_sock, response.c_str(), static_cast<int>(response.size()));
+			if (!sky_send(client_sock, process_command(line)))
+				skylander_ipc_log.warning("Failed to send the response");
 		}
 
 		sky_close(client_sock);

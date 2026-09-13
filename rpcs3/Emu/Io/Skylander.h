@@ -42,6 +42,8 @@ protected:
 
 extern sky_portal g_skyportal;
 
+u16 skylander_crc16(u16 init_value, const u8* buffer, u32 size);
+
 class usb_device_skylander : public usb_device_emulated
 {
 public:

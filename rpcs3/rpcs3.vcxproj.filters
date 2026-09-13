@@ -1035,6 +1035,15 @@
     <ClCompile Include="QTGeneratedFiles\Release\moc_ipc_settings_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\sky_ipc_settings_dialog.cpp">
+      <Filter>Gui\ipc</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_sky_ipc_settings_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_sky_ipc_settings_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
     <ClCompile Include="rpcs3qt\uuid.cpp">
       <Filter>Gui\utils</Filter>
     </ClCompile>
@@ -1859,6 +1868,9 @@
       <Filter>Gui\vfs</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\ipc_settings_dialog.h">
+      <Filter>Gui\ipc</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\sky_ipc_settings_dialog.h">
       <Filter>Gui\ipc</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\pad_motion_settings_dialog.h">
