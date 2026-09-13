@@ -4,7 +4,7 @@
 #include "Emu/Cell/lv2/sys_lwcond.h"
 #include "Emu/Cell/lv2/sys_spu.h"
 #include "Emu/Io/music_handler_base.h"
-#include "Emu/System.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/VFS.h"
 #include "Emu/RSX/Overlays/overlay_media_list_dialog.h"
 #include "cellSearch.h"
@@ -79,7 +79,7 @@ public:
 
 	music_state()
 	{
-		handler = Emu.GetCallbacks().get_music_handler();
+		handler = g_emu_callbacks.get_music_handler();
 		handler->set_event_status_callback([this](u32 status)
 		{
 			if (!func)

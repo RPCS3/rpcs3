@@ -21,7 +21,7 @@ public:
 	void Init() override;
 
 private:
-	void InitializeCallbacks();
+	void create_callbacks() override;
 	void InitializeConnects() const;
 
 	QThread* get_thread() override

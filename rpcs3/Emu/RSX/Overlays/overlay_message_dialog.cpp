@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "overlay_manager.h"
 #include "overlay_message_dialog.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/system_utils.hpp"
@@ -187,7 +188,7 @@ namespace rsx
 		{
 			if (num_progress_bars > 0)
 			{
-				Emu.GetCallbacks().handle_taskbar_progress(0, 1);
+				g_emu_callbacks.handle_taskbar_progress(0, 1);
 			}
 
 			user_interface::close(use_callback, stop_pad_interception);
@@ -451,7 +452,7 @@ namespace rsx
 			::at32(progress_bars, index).inc(value);
 
 			if (index == static_cast<u32>(taskbar_index) || taskbar_index == -1)
-				Emu.GetCallbacks().handle_taskbar_progress(1, static_cast<s32>(value));
+				g_emu_callbacks.handle_taskbar_progress(1, static_cast<s32>(value));
 
 			return CELL_OK;
 		}
@@ -464,7 +465,7 @@ namespace rsx
 			::at32(progress_bars, index).set_value(value);
 
 			if (index == static_cast<u32>(taskbar_index) || taskbar_index == -1)
-				Emu.GetCallbacks().handle_taskbar_progress(3, static_cast<s32>(value));
+				g_emu_callbacks.handle_taskbar_progress(3, static_cast<s32>(value));
 
 			return CELL_OK;
 		}
@@ -476,7 +477,7 @@ namespace rsx
 
 			::at32(progress_bars, index).set_value(0.f);
 
-			Emu.GetCallbacks().handle_taskbar_progress(0, 0);
+			g_emu_callbacks.handle_taskbar_progress(0, 0);
 
 			return CELL_OK;
 		}
@@ -491,12 +492,12 @@ namespace rsx
 			if (index == static_cast<u32>(taskbar_index))
 			{
 				taskbar_limit = limit;
-				Emu.GetCallbacks().handle_taskbar_progress(2, taskbar_limit);
+				g_emu_callbacks.handle_taskbar_progress(2, taskbar_limit);
 			}
 			else if (taskbar_index == -1)
 			{
 				taskbar_limit += limit;
-				Emu.GetCallbacks().handle_taskbar_progress(2, taskbar_limit);
+				g_emu_callbacks.handle_taskbar_progress(2, taskbar_limit);
 			}
 
 			return CELL_OK;

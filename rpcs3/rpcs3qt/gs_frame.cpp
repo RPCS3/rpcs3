@@ -6,6 +6,7 @@
 #include "Utilities/date_time.h"
 #include "Utilities/File.h"
 #include "util/video_provider.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/system_progress.hpp"
@@ -483,7 +484,7 @@ void gs_frame::toggle_recording()
 		// Play a sound
 		if (const std::string sound_path = fs::get_config_dir() + "sounds/snd_recording.wav"; fs::is_file(sound_path))
 		{
-			Emu.GetCallbacks().play_sound(sound_path, std::nullopt);
+			g_emu_callbacks.play_sound(sound_path, std::nullopt);
 		}
 		else
 		{
@@ -1074,7 +1075,7 @@ void gs_frame::take_screenshot(std::vector<u8>&& data, u32 sshot_width, u32 ssho
 					}
 				}
 
-				const std::string cell_sshot_filename = Emu.GetCallbacks().get_photo_path(manager.get_photo_title() + ".png");
+				const std::string cell_sshot_filename = g_emu_callbacks.get_photo_path(manager.get_photo_title() + ".png");
 				const std::string cell_sshot_dir      = fs::get_parent_dir(cell_sshot_filename);
 
 				screenshot_log.notice("Saving cell screenshot to %s", cell_sshot_filename);
@@ -1104,7 +1105,7 @@ void gs_frame::take_screenshot(std::vector<u8>&& data, u32 sshot_width, u32 ssho
 			{
 				if (const std::string sound_path = fs::get_config_dir() + "sounds/snd_screenshot.wav"; fs::is_file(sound_path))
 				{
-					Emu.GetCallbacks().play_sound(sound_path, std::nullopt);
+					g_emu_callbacks.play_sound(sound_path, std::nullopt);
 				}
 				else
 				{

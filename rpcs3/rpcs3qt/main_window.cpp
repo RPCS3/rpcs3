@@ -1258,7 +1258,7 @@ bool main_window::HandlePackageInstallation(main_window* mw, QStringList file_pa
 				// Try to claim operations on ID
 				for (auto it = paths.begin(); it != paths.end();)
 				{
-					std::string resolved_path = Emu.GetCallbacks().resolve_path(it->first);
+					std::string resolved_path = g_emu_callbacks.resolve_path(it->first);
 
 					if (resolved_path.empty() || claimed_paths.contains(resolved_path))
 					{
@@ -4267,7 +4267,7 @@ void main_window::AddGamesFromDirs(QStringList&& paths)
 					{
 						// Try to claim operation on directory path
 
-						std::string resolved_path = Emu.GetCallbacks().resolve_path(game->path);
+						std::string resolved_path = g_emu_callbacks.resolve_path(game->path);
 
 						if (!resolved_path.empty() && !claimed_paths.count(resolved_path))
 						{

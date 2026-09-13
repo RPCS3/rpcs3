@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "media_utils.h"
-#include "Emu/System.h"
+#include "Emu/emu_callbacks.h"
 
 #include <random>
 #include <thread>
@@ -168,7 +168,7 @@ namespace utils
 
 		if (av_media_type == AVMEDIA_TYPE_UNKNOWN) // Let's use this for image info
 		{
-			const bool success = Emu.GetCallbacks().get_image_info(path, info.sub_type, info.width, info.height, info.orientation);
+			const bool success = g_emu_callbacks.get_image_info(path, info.sub_type, info.width, info.height, info.orientation);
 			if (!success) media_log.error("get_media_info: failed to get image info for '%s'", path);
 			return { success, std::move(info) };
 		}
