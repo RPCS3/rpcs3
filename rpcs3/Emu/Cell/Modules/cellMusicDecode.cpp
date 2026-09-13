@@ -3,7 +3,6 @@
 #include "Emu/Cell/lv2/sys_lwmutex.h"
 #include "Emu/Cell/lv2/sys_lwcond.h"
 #include "Emu/Cell/lv2/sys_spu.h"
-#include "Emu/system_config.h"
 #include "Emu/RSX/Overlays/overlay_media_list_dialog.h"
 #include "Emu/VFS.h"
 #include "cellMusicDecode.h"
@@ -158,11 +157,8 @@ error_code cell_music_decode_select_contents()
 					music_selection_context context{};
 					context.set_playlist(dir);
 					context.set_track(track);
-
-					// The real dialog lets the user choose these. We have no such UI, so let the user decide in the settings instead.
-					// NOTE: The playlist itself is shuffled by the decoder on each start, so we must not shuffle it here.
-					context.repeat_mode = g_cfg.audio.music_repeat ? CELL_SEARCH_REPEATMODE_ALL : CELL_SEARCH_REPEATMODE_NONE;
-					context.context_option = g_cfg.audio.music_shuffle ? CELL_SEARCH_CONTEXTOPTION_SHUFFLE : CELL_SEARCH_CONTEXTOPTION_NONE;
+					// TODO: context.repeat_mode = CELL_SEARCH_REPEATMODE_NONE;
+					// TODO: context.context_option = CELL_SEARCH_CONTEXTOPTION_NONE;
 					dec.current_selection_context = std::move(context);
 					dec.current_selection_context.create_playlist(music_selection_context::get_next_hash());
 					cellMusicDecode.success("Media list dialog: selected entry '%s'", dec.current_selection_context.playlist.front());

@@ -2,6 +2,7 @@
 #include "media_utils.h"
 #include "Emu/System.h"
 
+#include <random>
 #include <thread>
 
 #ifdef _MSC_VER
@@ -856,7 +857,9 @@ namespace utils
 			{
 				// Shuffle once if necessary
 				media_log.notice("audio_decoder: shuffling initial playlist...");
-				m_context.shuffle_playlist();
+				std::random_device rd;
+				auto engine = std::default_random_engine{rd()};
+				std::shuffle(std::begin(m_context.playlist), std::end(m_context.playlist), engine);
 			}
 
 			while (thread_ctrl::state() != thread_state::aborting)

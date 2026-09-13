@@ -161,8 +161,6 @@ enum class emu_settings_type
 	MicrophoneType,
 	MicrophoneDevices,
 	MusicHandler,
-	MusicRepeatPlaylist,
-	MusicShufflePlaylist,
 
 	// Input / Output
 	BackgroundInput,

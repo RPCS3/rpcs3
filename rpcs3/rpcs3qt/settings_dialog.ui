@@ -1233,20 +1233,6 @@
                   <item>
                    <widget class="QComboBox" name="musicHandlerBox"/>
                   </item>
-                  <item>
-                   <widget class="QCheckBox" name="musicRepeatBox">
-                    <property name="text">
-                     <string>Repeat playlist</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
-                   <widget class="QCheckBox" name="musicShuffleBox">
-                    <property name="text">
-                     <string>Shuffle playlist</string>
-                    </property>
-                   </widget>
-                  </item>
                  </layout>
                 </widget>
                </item>
