@@ -20,12 +20,12 @@ LOG_CHANNEL(iso_log, "ISO");
 
 struct iso_sector
 {
-	u64 lba_address;
-	u64 offset;
-	u64 size;
-	u64 address_aligned;
-	u64 offset_aligned;
-	u64 size_aligned;
+	u64 lba_address = 0;
+	u64 offset = 0;
+	u64 size = 0;
+	u64 address_aligned = 0;
+	u64 offset_aligned = 0;
+	u64 size_aligned = 0;
 };
 
 static void* get_aligned_buf()
