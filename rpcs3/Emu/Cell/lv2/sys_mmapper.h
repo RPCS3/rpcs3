@@ -26,6 +26,7 @@ struct lv2_memory : lv2_obj
 	const u64 key; // IPC key
 	const bool pshared; // Process shared flag
 	lv2_memory_container* const ct; // null for system memory
+	u32 system_handle = 0; // stands in for the vsh handle
 	atomic_ptr<std::shared_ptr<utils::shm>> shm;
 
 	atomic_t<u32> counter{0};
@@ -106,6 +107,7 @@ struct mmapper_unk_entry_struct0
 // Aux
 class ppu_thread;
 
+void init_system_shared_memory();
 error_code mmapper_thread_recover_page_fault(cpu_thread* cpu);
 
 // SysCalls

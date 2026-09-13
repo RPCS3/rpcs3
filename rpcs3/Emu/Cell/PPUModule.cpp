@@ -20,6 +20,7 @@
 #include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/lv2/sys_prx.h"
 #include "Emu/Cell/lv2/sys_memory.h"
+#include "Emu/Cell/lv2/sys_mmapper.h"
 #include "Emu/Cell/lv2/sys_overlay.h"
 
 #include "Emu/Cell/Modules/StaticHLE.h"
@@ -2663,6 +2664,11 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 
 		void init_fxo_for_exec(utils::serial* ar, bool full);
 		init_fxo_for_exec(ar, false);
+
+		if (!ar && !Emu.IsVsh())
+		{
+			init_system_shared_memory();
+		}
 
 		liblv2_begin = 0;
 		liblv2_end = 0;

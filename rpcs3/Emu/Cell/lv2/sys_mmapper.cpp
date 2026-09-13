@@ -15,76 +15,17 @@
 
 LOG_CHANNEL(sys_mmapper);
 
-namespace
+void init_system_shared_memory()
 {
-	constexpr std::array<u64, 2> system_memory_keys{SYS_MMAPPER_SYSUTIL_SHM_KEY, SYS_MMAPPER_MIO_SHM_KEY};
-
-	bool is_system_memory_key(u64 key)
+	for (u64 key : {SYS_MMAPPER_SYSUTIL_SHM_KEY, SYS_MMAPPER_MIO_SHM_KEY})
 	{
-		return std::find(system_memory_keys.begin(), system_memory_keys.end(), key) != system_memory_keys.end();
+		ensure(idm::import<lv2_obj, lv2_memory>([&]() -> shared_ptr<lv2_memory>
+		{
+			auto memory = make_shared<lv2_memory>(0x10000, 0x10000, 0x200, key, true, nullptr);
+			memory->system_handle = idm::last_id<lv2_memory>();
+			return lv2_obj::load(key, std::move(memory));
+		}));
 	}
-
-	struct system_shared_memory
-	{
-		shared_mutex mutex;
-		std::array<shared_ptr<lv2_memory>, system_memory_keys.size()> memories;
-
-		SAVESTATE_INIT_POS(3.5);
-
-		system_shared_memory() = default;
-
-		system_shared_memory(utils::serial& ar)
-		{
-			for (usz i = 0; i < memories.size(); i++)
-			{
-				if (ar.pop<bool>())
-				{
-					auto& memory = memories[i];
-					memory = make_shared<lv2_memory>(stx::exact_t<utils::serial&>(ar));
-					ensure(!memory->ct && memory->key == system_memory_keys[i]);
-					register_memory(memory);
-				}
-			}
-		}
-
-		system_shared_memory(const system_shared_memory&) = delete;
-		system_shared_memory& operator=(const system_shared_memory&) = delete;
-
-		void init(u64 key)
-		{
-			std::lock_guard lock(mutex);
-			const usz index = std::find(system_memory_keys.begin(), system_memory_keys.end(), key) - system_memory_keys.begin();
-			auto& memory = at32(memories, index);
-
-			if (!memory)
-			{
-				memory = make_shared<lv2_memory>(0x10000, 0x10000, 0x200, key, true, nullptr);
-				register_memory(memory);
-			}
-		}
-
-		void register_memory(const shared_ptr<lv2_memory>& memory)
-		{
-			g_fxo->need<ipc_manager<lv2_memory, u64>>();
-			ensure((g_fxo->get<ipc_manager<lv2_memory, u64>>().add(memory->key, [&]
-			{
-				return memory;
-			}).first));
-		}
-
-		void save(utils::serial& ar)
-		{
-			for (const auto& memory : memories)
-			{
-				ar(static_cast<bool>(memory));
-
-				if (memory)
-				{
-					memory->save_data(ar);
-				}
-			}
-		}
-	};
 }
 
 template <>
@@ -123,6 +64,7 @@ lv2_memory::lv2_memory(utils::serial& ar)
 	{
 		return id ? ensure(lv2_memory_container::search(id)) : nullptr;
 	}(ar.pop<u32>()))
+	, system_handle(ar)
 	, shm(null_ptr)
 {
 	const u32 addr{ar};
@@ -160,7 +102,7 @@ CellError lv2_memory::on_id_create(u64 requested_size, u32 requested_align, cons
 		return CELL_EPERM;
 	}
 
-	if (exists)
+	if (exists > (system_handle ? 1u : 0u))
 	{
 		return CELL_EEXIST;
 	}
@@ -170,14 +112,18 @@ CellError lv2_memory::on_id_create(u64 requested_size, u32 requested_align, cons
 
 std::function<void(void*)> lv2_memory::load(utils::serial& ar)
 {
-	if (ar.pop<bool>())
+	auto mem = make_shared<lv2_memory>(stx::exact_t<utils::serial&>(ar));
+
+	if (mem->system_handle)
 	{
-		auto mem = ensure(g_fxo->get<ipc_manager<lv2_memory, u64>>().get(ar.pop<u64>()));
-		ensure(!mem->ct && !mem->exists);
-		return load_func(std::move(mem), 0);
+		g_fxo->need<ipc_manager<lv2_memory, u64>>();
+
+		if (auto existing = g_fxo->get<ipc_manager<lv2_memory, u64>>().get(mem->key))
+		{
+			mem = std::move(existing);
+		}
 	}
 
-	auto mem = make_shared<lv2_memory>(stx::exact_t<utils::serial&>(ar));
 	mem->exists++; // Disable on_id_create()
 	auto func = load_func(mem, +mem->pshared);
 	mem->exists--;
@@ -186,17 +132,6 @@ std::function<void(void*)> lv2_memory::load(utils::serial& ar)
 
 void lv2_memory::save(utils::serial& ar)
 {
-	USING_SERIALIZATION_VERSION(lv2_memory);
-
-	const bool persistent = !ct && is_system_memory_key(key);
-	ar(persistent);
-
-	if (persistent)
-	{
-		ar(key);
-		return;
-	}
-
 	save_data(ar);
 }
 
@@ -204,7 +139,7 @@ void lv2_memory::save_data(utils::serial& ar)
 {
 	USING_SERIALIZATION_VERSION(lv2_memory);
 
-	ar(size, align, flags, key, pshared, ct ? static_cast<u32>(ct->id) : 0);
+	ar(size, align, flags, key, pshared, ct ? static_cast<u32>(ct->id) : 0, system_handle);
 	const auto data = shm.load();
 	const u32 addr = data ? vm::get_shm_addr(*data) : 0;
 	ar(addr);
@@ -229,7 +164,7 @@ void lv2_memory::release_memory()
 		return;
 	}
 
-	if (pshared && (ct || !is_system_memory_key(key)))
+	if (pshared)
 	{
 		g_fxo->get<ipc_manager<lv2_memory, u64>>().remove(key);
 	}
@@ -260,12 +195,6 @@ error_code create_lv2_shm(bool pshared, u64 ipc_key, u64 size, u32 align, u64 fl
 	if (!pshared)
 	{
 		ipc_key = 0;
-	}
-
-	if (pshared && is_system_memory_key(ipc_key))
-	{
-		// these keys already exist on ps3, we add them on first use
-		g_fxo->get<system_shared_memory>().init(ipc_key);
 	}
 
 	shared_ptr<lv2_memory> created;
@@ -767,6 +696,11 @@ error_code sys_mmapper_free_shared_memory(ppu_thread& ppu, u32 mem_id)
 	// Conditionally remove memory ID
 	const auto mem = idm::withdraw<lv2_obj, lv2_memory>(mem_id, [&](lv2_memory& mem) -> CellError
 	{
+		if (mem_id == mem.system_handle)
+		{
+			return CELL_ESRCH;
+		}
+
 		if (mem.counter)
 		{
 			return CELL_EBUSY;
@@ -806,6 +740,11 @@ error_code sys_mmapper_map_shared_memory(ppu_thread& ppu, u32 addr, u32 mem_id, 
 
 	const auto mem = idm::get<lv2_obj, lv2_memory>(mem_id, [&](lv2_memory& mem) -> CellError
 	{
+		if (mem_id == mem.system_handle)
+		{
+			return CELL_ESRCH;
+		}
+
 		const u32 page_alignment = area->flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 : 0x100000;
 
 		if (mem.align < page_alignment)
@@ -881,6 +820,11 @@ error_code sys_mmapper_search_and_map(ppu_thread& ppu, u32 start_addr, u32 mem_i
 
 	const auto mem = idm::get<lv2_obj, lv2_memory>(mem_id, [&](lv2_memory& mem) -> CellError
 	{
+		if (mem_id == mem.system_handle)
+		{
+			return CELL_ESRCH;
+		}
+
 		const u32 page_alignment = area->flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 : 0x100000;
 
 		if (mem.align < page_alignment)
@@ -964,7 +908,7 @@ error_code sys_mmapper_unmap_shared_memory(ppu_thread& ppu, u32 addr, vm::ptr<u3
 
 	const auto mem = idm::select<lv2_obj, lv2_memory>([&](u32 id, lv2_memory& mem) -> u32
 	{
-		if (auto shm0 = mem.shm.load(); shm0 && shm0->get() == shm.second.get())
+		if (auto shm0 = mem.shm.load(); id != mem.system_handle && shm0 && shm0->get() == shm.second.get())
 		{
 			return id;
 		}
