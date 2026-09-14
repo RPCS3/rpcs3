@@ -15,7 +15,6 @@
 #include "Emu/System.h"
 #include "Emu/IdManager.h"
 #include "Emu/RSX/RSXThread.h"
-#include "Emu/RSX/RSXDisAsm.h"
 #include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/PPUAnalyser.h"
 #include "Emu/Cell/PPUDisAsm.h"
@@ -1478,17 +1477,29 @@ void debugger_frame::WritePanels(cpu_thread* cpu)
 
 	m_last_misc_state.clear();
 	cpu->dump_misc(m_last_misc_state, m_dump_misc_func_data);
-	m_misc_state->clear();
-	m_misc_state->setPlainText(QString::fromStdString(m_last_misc_state));
+
+	if (m_last_misc_state != m_old_misc_state)
+	{
+		m_misc_state->clear();
+		m_misc_state->setPlainText(QString::fromStdString(m_last_misc_state));
+		m_old_misc_state = m_last_misc_state;
+	}
+
 	m_misc_state->verticalScrollBar()->setValue(loc);
 	m_misc_state->horizontalScrollBar()->setValue(hloc);
 
 	loc = m_regs->verticalScrollBar()->value();
 	hloc = m_regs->horizontalScrollBar()->value();
-	m_regs->clear();
 	m_last_reg_state.clear();
 	cpu->dump_regs(m_last_reg_state, m_dump_reg_func_data);
-	m_regs->setPlainText(QString::fromStdString(m_last_reg_state));
+
+	if (m_last_reg_state != m_old_reg_state)
+	{
+		m_regs->clear();
+		m_regs->setPlainText(QString::fromStdString(m_last_reg_state));
+		m_old_reg_state = m_last_reg_state;
+	}
+
 	m_regs->verticalScrollBar()->setValue(loc);
 	m_regs->horizontalScrollBar()->setValue(hloc);
 
