@@ -105,9 +105,10 @@ struct sys_memory_address_table
 
 	u32 allocate(u32 size, u32 align)
 	{
+		constexpr u32 _256mb = 0x10000000;
 		const auto location = align == 0x10000 ? vm::user64k : vm::user1m;
 		const u64 flags = (align == 0x10000 ? vm::page_size_64k : vm::page_size_1m) | vm::bf0_0x1;
-		const u32 area_size = utils::align(size, 0x10000000);
+		const u32 area_size = utils::align(size, _256mb);
 		const auto area = vm::reserve_map(location, 0, area_size, flags);
 
 		if (!area)
@@ -115,22 +116,48 @@ struct sys_memory_address_table
 			return 0;
 		}
 
-		if (const u32 addr = area->alloc(size, nullptr, align))
+		if (u32 addr = area->alloc(size, nullptr, align))
 		{
 			return addr;
 		}
 
+		// Check if secondary area is mapped already
+		if (u32 base_non0 = atomic_storage<u32>::load(secondary_areas[align == 0x10000 ? 0 : 1]))
+		{
+			if (u32 addr = ensure(vm::get(vm::any, base_non0))->alloc(size, nullptr, align))
+			{
+				return addr;
+			}
+
+			fmt::throw_exception("Uncharted area of allocations (size=0x%x, align=0x%x)", size, align);
+		}
+
+		if (size > _256mb)
+		{
+			fmt::throw_exception("Uncharted area of allocations (size=0x%x, align=0x%x)", size, align);
+		}
+
 		std::lock_guard lock(mutex);
 		auto& base = secondary_areas[align == 0x10000 ? 0 : 1];
-		const auto secondary = base ? vm::get(vm::any, base) : vm::find_map(area_size, 0x10000000, flags);
+		const auto secondary = base ? vm::get(vm::any, base) : vm::find_map(area_size, _256mb, flags);
 
 		if (!secondary)
 		{
 			return 0;
 		}
 
-		base = secondary->addr;
-		return secondary->alloc(size, nullptr, align);
+		if (!base)
+		{
+			atomic_storage<u32>::store(base, secondary->addr);
+		}
+
+		if (u32 addr = secondary->alloc(size, nullptr, align))
+		{
+			return addr;
+		}
+
+		fmt::throw_exception("Uncharted area of allocations (size=0x%x, align=0x%x)", size, align);
+		return 0;
 	}
 };
 
