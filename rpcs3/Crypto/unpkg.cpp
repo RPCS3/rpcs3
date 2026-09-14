@@ -895,31 +895,47 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 	const auto canonicalize_path = [](std::filesystem::path path, std::error_code& ec)
 	{
 		std::vector<std::filesystem::path> missing;
+		ec.clear();
 
-		while (!std::filesystem::exists(path, ec))
+		for (;;)
 		{
-			if (ec)
+			std::error_code status_ec;
+			const auto status = std::filesystem::status(path, status_ec);
+
+			if (!status_ec && status.type() != std::filesystem::file_type::not_found && status.type() != std::filesystem::file_type::none)
 			{
+				break;
+			}
+
+			if (status_ec && status_ec != std::errc::no_such_file_or_directory)
+			{
+				ec = status_ec;
 				return std::filesystem::path{};
 			}
 
 			// Do not treat a dangling symlink as a missing component.
-			if (std::filesystem::is_symlink(path, ec))
+			std::error_code symlink_ec;
+			const auto symlink_status = std::filesystem::symlink_status(path, symlink_ec);
+			if (!symlink_ec && symlink_status.type() == std::filesystem::file_type::symlink)
 			{
-				if (!ec)
-				{
-					ec = std::make_error_code(std::errc::too_many_symbolic_link_levels);
-				}
-
+				ec = std::make_error_code(std::errc::too_many_symbolic_link_levels);
 				return std::filesystem::path{};
 			}
 
-			if (ec || path.empty() || path == path.parent_path())
+			if (symlink_ec && symlink_ec != std::errc::no_such_file_or_directory)
 			{
+				ec = symlink_ec;
 				return std::filesystem::path{};
 			}
 
-			missing.emplace_back(path.filename());
+			const auto filename = path.filename();
+			if (filename.empty() || path.empty() || path == path.parent_path())
+			{
+				ec = std::make_error_code(std::errc::no_such_file_or_directory);
+				return std::filesystem::path{};
+			}
+
+			missing.emplace_back(filename);
 			path = path.parent_path();
 		}
 
