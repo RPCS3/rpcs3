@@ -1014,7 +1014,8 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 		}
 		default:
 		{
-			// TODO: check for valid utf8 characters
+			// The name reached "path" through "vfs::escape", which turns whatever the host file system cannot take
+			// into characters it can, a byte that is not valid UTF-8 included (macOS refuses a name carrying one)
 			auto map_ptr = &*all_install_entries.try_emplace(path).first;
 
 			m_install_entries.push_back({
