@@ -55,7 +55,10 @@
 #include <clocale>
 
 #include "Emu/RSX/Null/NullGSRender.h"
+
+#ifndef __APPLE__
 #include "Emu/RSX/GL/GLGSRender.h"
+#endif
 
 #if defined(HAVE_VULKAN)
 #include "Emu/RSX/VK/VKGSRender.h"
