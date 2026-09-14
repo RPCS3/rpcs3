@@ -2,14 +2,12 @@
 
 #include <util/types.hpp>
 #include "Emu/RSX/RSXThread.h"
+#include "Emu/RSX/Host/MM.h"
 
 #include "context_accessors.define.h"
 
 namespace rsx
 {
-	void mm_flush_lazy();
-	void mm_flush();
-
 	namespace util
 	{
 		template <bool FlushDMA, bool FlushPipe>
