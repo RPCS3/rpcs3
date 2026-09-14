@@ -643,7 +643,7 @@ void main_window::BootElf()
 		"SELF files (EBOOT.BIN *.self);;"
 		"BOOT files (*BOOT.BIN);;"
 		"BIN files (*.bin);;"
-		"ISO files (*.iso);;"
+		"Disc image files (*.iso *.chd);;"
 		"All executable files (*.SAVESTAT.zst *.SAVESTAT.gz *.SAVESTAT *.sprx *.SPRX *.self *.SELF *.bin *.BIN *.prx *.PRX *.elf *.ELF *.o *.O);;"
 		"All files (*.*)"),
 		Q_NULLPTR, QFileDialog::DontResolveSymlinks);
@@ -776,7 +776,7 @@ void main_window::BootISO()
 	}
 
 	const QString path_last_game = m_gui_settings->GetValue(gui::fd_boot_game).toString();
-	const QString path = QFileDialog::getOpenFileName(this, tr("Select ISO"), path_last_game, tr("ISO files (*.iso);;All files (*.*)"));
+	const QString path = QFileDialog::getOpenFileName(this, tr("Select disc image"), path_last_game, tr("Disc image files (*.iso *.chd);;All files (*.*)"));
 
 	if (path.isEmpty())
 	{
@@ -2772,7 +2772,7 @@ void main_window::CreateConnects()
 		}
 
 		const QString path_last_add_iso = m_gui_settings->GetValue(gui::fd_add_iso).toString();
-		QStringList paths = QFileDialog::getOpenFileNames(this, tr("Select ISO files to add"), path_last_add_iso, tr("ISO files (*.iso);;All files (*.*)"));
+		QStringList paths = QFileDialog::getOpenFileNames(this, tr("Select disc images to add"), path_last_add_iso, tr("Disc image files (*.iso *.chd);;All files (*.*)"));
 		if (paths.isEmpty())
 		{
 			return;
