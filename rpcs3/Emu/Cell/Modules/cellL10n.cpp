@@ -2149,7 +2149,6 @@ s32 MSJISstoUCS2s()
 s32 l10n_get_converter(u32 src_code, u32 dst_code)
 {
 	cellL10n.warning("l10n_get_converter(src_code=%d, dst_code=%d)", src_code, dst_code);
-	return (src_code << 16) | dst_code;
 
 	if (_L10N_CODE_ <= src_code || _L10N_CODE_ <= dst_code)
 	{
