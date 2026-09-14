@@ -240,9 +240,9 @@ s32 _ConvertStr(s32 src_code, const void *src, s32 src_len, s32 dst_code, void *
 		char buf[16];
 		while (srcLen > 0)
 		{
-			//char *bufPtr = buf;
+			char *bufPtr = buf;
 			usz bufLeft = sizeof(buf);
-			usz ictd = iconv(ict, utils::bless<char*>(&src), &srcLen, utils::bless<char*>(&dst), &bufLeft);
+			usz ictd = iconv(ict, utils::bless<char*>(&src), &srcLen, &bufPtr, &bufLeft);
 			*dst_len += sizeof(buf) - bufLeft;
 			if (ictd == umax && errno != E2BIG)
 			{
