@@ -62,7 +62,7 @@ bool _L10nCodeParse(s32 code, HostCode& retCode)
 	case L10N_EUC_KR:           retCode = 51949;        return true;
 	case L10N_ISO_2022_JP:      retCode = 50222;        return true;
 	// Maybe 708/720/864/1256/10004/20420/28596/
-	case L10N_ARIB:             retCode = 20420;        return true; // TODO: think that should be ARABIC.
+	case L10N_ARIB:             retCode = 20420;        return true; // ARIB STD-B24/TR-B14 (Japanese broadcasting). Placeholder, no proper ARIB codepage in Windows.
 	case L10N_HZ:               retCode = 52936;        return true;
 	case L10N_GB18030:          retCode = 54936;        return true;
 	case L10N_RIS_506:          retCode = 932;          return true; // MS_KANJI, TODO: Code page
@@ -122,7 +122,7 @@ bool _L10nCodeParse(s32 code, HostCode& retCode)
 	case L10N_EUC_JP:           retCode = "EUC-JP";         return true;
 	case L10N_EUC_KR:           retCode = "EUC-KR";         return true;
 	case L10N_ISO_2022_JP:      retCode = "ISO-2022-JP";    return true;
-	case L10N_ARIB:             retCode = "ARABIC";         return true; // TODO: think that should be ARABIC.
+	case L10N_ARIB:             retCode = "ARABIC";         return true; // ARIB STD-B24/TR-B14 (Japanese broadcasting). Placeholder, no proper ARIB codepage in Windows.
 	case L10N_HZ:               retCode = "HZ";             return true;
 	case L10N_GB18030:          retCode = "GB18030";        return true;
 	case L10N_RIS_506:          retCode = "Shift_JIS";      return true; // MS_KANJI
