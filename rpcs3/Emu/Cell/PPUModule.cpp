@@ -367,7 +367,6 @@ static void ppu_initialize_modules(ppu_linkage_info* link, utils::serial* ar = n
 		vm::write32(addr + 4, 0);
 
 		// Register the HLE function directly
-		ppu_register_function_at(addr + 0, 4, nullptr);
 		ppu_register_function_at(addr + 4, 4, hle_funcs[index]);
 	}
 
