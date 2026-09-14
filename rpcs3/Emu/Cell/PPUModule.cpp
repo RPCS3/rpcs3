@@ -367,7 +367,6 @@ static void ppu_initialize_modules(ppu_linkage_info* link, utils::serial* ar = n
 		vm::write32(addr + 4, 0);
 
 		// Register the HLE function directly
-		ppu_register_function_at(addr + 0, 4, nullptr);
 		ppu_register_function_at(addr + 4, 4, hle_funcs[index]);
 	}
 
@@ -2142,6 +2141,143 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 		}
 	}
 
+	// Process information
+	u32 sdk_version = SYS_PROCESS_PARAM_SDK_VERSION_UNKNOWN;
+	s32 primary_prio = 1001;
+	u32 primary_stacksize = SYS_PROCESS_PARAM_STACK_SIZE_MAX;
+	u32 malloc_pagesize = SYS_PROCESS_PARAM_MALLOC_PAGE_SIZE_1M;
+	u32 ppc_seg = 0;
+
+	// Something that is exclusive for very old SDKs
+	// Another 256MB for PPU private area, but allocated at the front instead of after vm::main
+	bool has_private_ppu_executable_area = false;
+
+	// Fetch information needed for allocating memory segmnents
+	for (auto& prog : elf.progs)
+	{
+		switch (const u32 p_type = prog.p_type)
+		{
+		case 0x1: // LOAD
+		{
+			if (prog.p_filesz)
+			{
+				if ((prog.p_flags & 0x7) == prog.p_flags)
+				{
+					// PPU Private area location
+					if (prog.p_vaddr < 0x10000000)
+					{
+						// Is the first area
+						has_private_ppu_executable_area = true;
+					}
+				}
+			}
+
+			break;
+		}
+		case 0x60000001: // LOOS+1
+		{
+			if (prog.p_filesz)
+			{
+				struct process_param_t
+				{
+					be_t<u32> size;
+					be_t<u32> magic;
+					be_t<u32> version;
+					be_t<u32> sdk_version;
+					be_t<s32> primary_prio;
+					be_t<u32> primary_stacksize;
+					be_t<u32> malloc_pagesize;
+					be_t<u32> ppc_seg;
+					//be_t<u32> crash_dump_param_addr;
+				};
+
+				process_param_t info{};
+				std::memcpy(&info, prog.bin.data(), sizeof(process_param_t));
+
+				if (info.size < sizeof(process_param_t))
+				{
+					ppu_loader.warning("Bad process_param size! [0x%x : 0x%x]", info.size, sizeof(process_param_t));
+				}
+
+				if (info.magic != SYS_PROCESS_PARAM_MAGIC)
+				{
+					ppu_loader.error("Bad process_param magic! [0x%x]", info.magic);
+				}
+				else
+				{
+					sdk_version = info.sdk_version;
+
+					if (s32 prio = info.primary_prio; prio < 3072
+						&& (prio >= (g_ps3_process_info.debug_or_root() ? 0 : -512)))
+					{
+						primary_prio = prio;
+					}
+
+					primary_stacksize = info.primary_stacksize;
+					malloc_pagesize = info.malloc_pagesize;
+					ppc_seg = info.ppc_seg;
+
+					ppu_loader.notice("*** sdk version: 0x%x", info.sdk_version);
+					ppu_loader.notice("*** primary prio: %d", info.primary_prio);
+					ppu_loader.notice("*** primary stacksize: 0x%x", info.primary_stacksize);
+					ppu_loader.notice("*** malloc pagesize: 0x%x", info.malloc_pagesize);
+					ppu_loader.notice("*** ppc seg: 0x%x", info.ppc_seg);
+					//ppu_loader.notice("*** crash dump param addr: 0x%x", info.crash_dump_param_addr);
+				}
+			}
+			break;
+		}
+		default: break;
+		}
+	}
+
+	if (ppc_seg != 0x0 && !ar)
+	{
+		if (ppc_seg != 0x1)
+		{
+			ppu_loader.todo("Unknown ppc_seg flag value = 0x%x", ppc_seg);
+		}
+
+		// Additional segment for fixed allocations
+		if (!vm::map(0x30000000, 0x10000000, 0x200))
+		{
+			fmt::throw_exception("Failed to map ppc_seg's segment!");
+		}
+	}
+
+	if (has_private_ppu_executable_area)
+	{
+		if (!vm::reserve_map(vm::any, 0x10000, 0x0FFF0000, vm::page_size_64k))
+		{
+			ppu_loader.error("ppu_load_exec(): Failed to map PPU_PRIVATE (sdk_version=0x%x)", sdk_version);
+			return false;
+		}
+	}
+
+	const bool is_vm_main_512 = sdk_version < 0x200000;
+
+	if (is_vm_main_512)
+	{
+		if (!vm::reserve_map(vm::main, has_private_ppu_executable_area ? 0x10000000 : 0x10000, 0x1FFF0000 + (has_private_ppu_executable_area ? 0x10000 : 0), vm::page_size_64k))
+		{
+			ppu_loader.error("ppu_load_exec(): Failed to map vm::main (sdk_version=0x%x)", sdk_version);
+			return false;
+		}
+	}
+	else
+	{
+		if (has_private_ppu_executable_area)
+		{
+			ppu_loader.error("ppu_load_exec(): Unexpected segments state, report to developers!");
+		}
+
+		if (!vm::reserve_map(vm::main, has_private_ppu_executable_area ? 0x10000000 : 0x10000, 0x0FFF0000 + (has_private_ppu_executable_area ? 0x10000 : 0), vm::page_size_64k))
+		{
+			ppu_loader.error("ppu_load_exec(): Failed to map vm::main (sdk_version=0x%x)", sdk_version);
+			return false;
+		}
+	}
+
 	init_ppu_functions(ar, false);
 
 	// Set for delayed initialization in ppu_initialize()
@@ -2154,13 +2290,6 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 	u32 tls_vaddr = 0;
 	u32 tls_fsize = 0;
 	u32 tls_vsize = 0;
-
-	// Process information
-	u32 sdk_version = SYS_PROCESS_PARAM_SDK_VERSION_UNKNOWN;
-	s32 primary_prio = 1001;
-	u32 primary_stacksize = SYS_PROCESS_PARAM_STACK_SIZE_MAX;
-	u32 malloc_pagesize = SYS_PROCESS_PARAM_MALLOC_PAGE_SIZE_1M;
-	u32 ppc_seg = 0;
 
 	// Limit for analysis
 	u32 end = 0;
@@ -2246,9 +2375,9 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 			{
 				// 1M pages if it is RSX shared
 				const u32 area_flags = (_seg.flags >> 28) ? vm::page_size_1m : vm::page_size_64k;
-				const u32 alloc_at = std::max<u32>(addr & -0x10000000, 0x10000);
+				const u32 alloc_at = has_private_ppu_executable_area && addr >= 0x10000000 ? 0x10000000 : std::max<u32>(addr & -0x10000000, 0x10000);
 
-				const auto area = vm::reserve_map(vm::any, std::max<u32>(addr & -0x10000000, 0x10000), 0x10000000, area_flags);
+				const auto area = vm::reserve_map(vm::any, alloc_at, 0x10000000, area_flags);
 
 				if (!area)
 				{
@@ -2455,54 +2584,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 
 		case 0x60000001: // LOOS+1
 		{
-			if (prog.p_filesz)
-			{
-				struct process_param_t
-				{
-					be_t<u32> size;
-					be_t<u32> magic;
-					be_t<u32> version;
-					be_t<u32> sdk_version;
-					be_t<s32> primary_prio;
-					be_t<u32> primary_stacksize;
-					be_t<u32> malloc_pagesize;
-					be_t<u32> ppc_seg;
-					//be_t<u32> crash_dump_param_addr;
-				};
-
-				const auto& info = *ensure(_main.get_ptr<process_param_t>(vm::cast(prog.p_vaddr)));
-
-				if (info.size < sizeof(process_param_t))
-				{
-					ppu_loader.warning("Bad process_param size! [0x%x : 0x%x]", info.size, sizeof(process_param_t));
-				}
-
-				if (info.magic != SYS_PROCESS_PARAM_MAGIC)
-				{
-					ppu_loader.error("Bad process_param magic! [0x%x]", info.magic);
-				}
-				else
-				{
-					sdk_version = info.sdk_version;
-
-					if (s32 prio = info.primary_prio; prio < 3072
-						&& (prio >= (g_ps3_process_info.debug_or_root() ? 0 : -512)))
-					{
-						primary_prio = prio;
-					}
-
-					primary_stacksize = info.primary_stacksize;
-					malloc_pagesize = info.malloc_pagesize;
-					ppc_seg = info.ppc_seg;
-
-					ppu_loader.notice("*** sdk version: 0x%x", info.sdk_version);
-					ppu_loader.notice("*** primary prio: %d", info.primary_prio);
-					ppu_loader.notice("*** primary stacksize: 0x%x", info.primary_stacksize);
-					ppu_loader.notice("*** malloc pagesize: 0x%x", info.malloc_pagesize);
-					ppu_loader.notice("*** ppc seg: 0x%x", info.ppc_seg);
-					//ppu_loader.notice("*** crash dump param addr: 0x%x", info.crash_dump_param_addr);
-				}
-			}
+			// Obtained
 			break;
 		}
 
@@ -2568,7 +2650,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 	{
 		mem_size = 0xD500000;
 	}
-	else if (sdk_version > 0x00192FFF)
+	else if (sdk_version > 0x0019FFFF)
 	{
 		mem_size = 0xD300000;
 	}
@@ -2723,20 +2805,6 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 	{
 		error_handler.errored = false;
 		return true;
-	}
-
-	if (ppc_seg != 0x0)
-	{
-		if (ppc_seg != 0x1)
-		{
-			ppu_loader.todo("Unknown ppc_seg flag value = 0x%x", ppc_seg);
-		}
-
-		// Additional segment for fixed allocations
-		if (!vm::map(0x30000000, 0x10000000, 0x200))
-		{
-			fmt::throw_exception("Failed to map ppc_seg's segment!");
-		}
 	}
 
 	// Fix primary stack size
