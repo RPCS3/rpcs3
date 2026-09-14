@@ -1423,15 +1423,6 @@
     <ClCompile Include="Loader\ZAR.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
-    <ClCompile Include="..\3rdparty\zarchive\zarchive\src\zarchivereader.cpp">
-      <Filter>Loader</Filter>
-    </ClCompile>
-    <ClCompile Include="..\3rdparty\zarchive\zarchive\src\zarchivewriter.cpp">
-      <Filter>Loader</Filter>
-    </ClCompile>
-    <ClCompile Include="..\3rdparty\zarchive\zarchive\src\sha_256.c">
-      <Filter>Loader</Filter>
-    </ClCompile>
     <ClCompile Include="Loader\iso_cache.cpp">
       <Filter>Loader</Filter>
     </ClCompile>

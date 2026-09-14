@@ -572,16 +572,6 @@
     <ClCompile Include="Loader\TAR.cpp" />
     <ClCompile Include="Loader\ISO.cpp" />
     <ClCompile Include="Loader\ZAR.cpp" />
-    <ClCompile Include="..\3rdparty\zarchive\zarchive\src\zarchivereader.cpp">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\3rdparty\zarchive\zarchive\src\zarchivewriter.cpp">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="..\3rdparty\zarchive\zarchive\src\sha_256.c">
-      <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <CompileAs>CompileAsC</CompileAs>
-    </ClCompile>
     <ClCompile Include="Loader\iso_cache.cpp" />
     <ClCompile Include="Loader\mself.cpp" />
     <ClCompile Include="Loader\TROPUSR.cpp" />
@@ -1122,6 +1112,9 @@
     </ProjectReference>
     <ProjectReference Include="..\3rdparty\zstd\zstd.vcxproj">
       <Project>{4e52a41a-f33b-4c7a-8c36-a1a6b4f4277c}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\3rdparty\zarchive\zarchive.vcxproj">
+      <Project>{D7C46C53-2EF6-4A0D-AED4-2F6A8CB4D18C}</Project>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

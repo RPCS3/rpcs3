@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "disc_compression_manager_dialog.h"
+#include "game_source_dialog.h"
 
 #include "qt_utils.h"
 #include "Loader/ISO.h"
@@ -41,79 +42,6 @@ namespace
 		output,
 		status,
 		count,
-	};
-
-	class compression_source_dialog final : public QFileDialog
-	{
-	public:
-		explicit compression_source_dialog(QWidget* parent)
-			: QFileDialog(parent, tr("Add PS3 Disc Games"))
-		{
-			setAcceptMode(QFileDialog::AcceptOpen);
-			setFileMode(QFileDialog::ExistingFiles);
-			setNameFilters({
-				tr("PS3 disc games (*.iso *.ISO *.zar *.ZAR)"),
-				tr("ISO disc images (*.iso *.ISO)"),
-				tr("ZArchive disc games (*.zar *.ZAR)"),
-				tr("All files (*.*)")
-			});
-			setOption(QFileDialog::DontUseNativeDialog, true);
-			setOption(QFileDialog::DontResolveSymlinks, true);
-			setLabelText(QFileDialog::Accept, tr("Add Games"));
-		}
-
-		const QStringList& sources() const
-		{
-			return m_sources;
-		}
-
-	protected:
-		void accept() override
-		{
-			const QStringList selected = selectedFiles();
-			if (selected.isEmpty())
-			{
-				return;
-			}
-
-			QStringList sources;
-			for (const QString& path : selected)
-			{
-				const QFileInfo info(path);
-				if (!info.exists())
-				{
-					QMessageBox::warning(this, tr("Invalid Game Source"), tr("The selected path does not exist:\n%1").arg(path));
-					return;
-				}
-
-				if (info.isDir())
-				{
-					sources.append(info.absoluteFilePath());
-					continue;
-				}
-
-				if (!info.isFile())
-				{
-					QMessageBox::warning(this, tr("Invalid Game Source"), tr("The selected path is not a regular file or directory:\n%1").arg(path));
-					return;
-				}
-
-				const QString suffix = info.suffix().toLower();
-				if (suffix != QStringLiteral("iso") && suffix != QStringLiteral("zar"))
-				{
-					QMessageBox::warning(this, tr("Unsupported Game Format"), tr("Disc Compression Manager accepts PS3 JB folders, ISO images, and existing ZArchive files.\n\nUnsupported file:\n%1").arg(path));
-					return;
-				}
-				sources.append(info.absoluteFilePath());
-			}
-
-			sources.removeDuplicates();
-			m_sources = std::move(sources);
-			QDialog::accept();
-		}
-
-	private:
-		QStringList m_sources;
 	};
 
 	QString source_name(const QString& path)
@@ -265,13 +193,19 @@ void disc_compression_manager_dialog::closeEvent(QCloseEvent* event)
 
 void disc_compression_manager_dialog::add_games()
 {
-	compression_source_dialog dialog(this);
+	game_source_dialog dialog(this,
+	{
+		.caption = tr("Add PS3 Disc Games"),
+		.accept_label = tr("Add Games"),
+		.allow_multiple = true,
+		.validate_file_sources = false,
+	});
 	if (dialog.exec() != QDialog::Accepted)
 	{
 		return;
 	}
 
-	for (const QString& source : dialog.sources())
+	for (const QString& source : dialog.selected_sources())
 	{
 		add_source(source);
 	}

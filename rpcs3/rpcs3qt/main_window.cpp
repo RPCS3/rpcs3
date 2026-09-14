@@ -8,6 +8,7 @@
 #include "screenshot_manager_dialog.h"
 #include "kernel_explorer.h"
 #include "game_list_frame.h"
+#include "game_source_dialog.h"
 #include "debugger_frame.h"
 #include "log_frame.h"
 #include "settings_dialog.h"
@@ -111,110 +112,6 @@ constexpr const char* recent_action_name = "shown_name";
 
 extern atomic_t<bool> g_user_asked_for_frame_capture;
 extern atomic_t<bool> g_headless;
-
-namespace
-{
-	class game_source_dialog final : public QFileDialog
-	{
-	public:
-		game_source_dialog(QWidget* parent, const QString& caption, const QString& directory, bool allow_multiple)
-			: QFileDialog(parent, caption, directory)
-			, m_allow_multiple(allow_multiple)
-		{
-			setAcceptMode(QFileDialog::AcceptOpen);
-			setFileMode(allow_multiple ? QFileDialog::ExistingFiles : QFileDialog::ExistingFile);
-			setNameFilters({
-				tr("PS3 disc games (*.iso *.ISO *.zar *.ZAR)"),
-				tr("ISO disc images (*.iso *.ISO)"),
-				tr("ZArchive disc games (*.zar *.ZAR)"),
-				tr("All files (*.*)")
-			});
-			setOption(QFileDialog::DontUseNativeDialog, true);
-			setOption(QFileDialog::DontResolveSymlinks, true);
-			setLabelText(QFileDialog::Accept, allow_multiple ? tr("Add") : tr("Boot"));
-		}
-
-		const QStringList& selected_sources() const
-		{
-			return m_selected_sources;
-		}
-
-	protected:
-		void accept() override
-		{
-			QStringList sources = selectedFiles();
-
-			if (sources.isEmpty())
-			{
-				return;
-			}
-
-			if (!m_allow_multiple && sources.size() != 1)
-			{
-				QMessageBox::warning(this, tr("Invalid Game Selection"), tr("Select exactly one game folder, ISO image, or ZArchive file."));
-				return;
-			}
-
-			QStringList valid_sources;
-
-			for (const QString& source : sources)
-			{
-				const QFileInfo info(source);
-
-				if (!info.exists())
-				{
-					QMessageBox::warning(this, tr("Invalid Game Source"), tr("The selected path does not exist:\n%1").arg(source));
-					return;
-				}
-
-				if (info.isDir())
-				{
-					if (!valid_sources.contains(info.absoluteFilePath()))
-					{
-						valid_sources.append(info.absoluteFilePath());
-					}
-					continue;
-				}
-
-				if (!info.isFile())
-				{
-					QMessageBox::warning(this, tr("Invalid Game Source"), tr("The selected path is neither a regular file nor a directory:\n%1").arg(source));
-					return;
-				}
-
-				const QString suffix = info.suffix().toLower();
-				if (suffix != QStringLiteral("iso") && suffix != QStringLiteral("zar"))
-				{
-					QMessageBox::warning(this, tr("Unsupported Game Format"), tr("RPCS3 supports disc games from JB folders, ISO images, and ZArchive files.\n\nUnsupported file:\n%1").arg(source));
-					return;
-				}
-
-				if (!is_iso_file(info.absoluteFilePath().toStdString()))
-				{
-					QMessageBox::warning(this, tr("Invalid Disc Image"), tr("The selected file is not a valid PS3 ISO/ZArchive disc game or the archive is corrupted:\n%1").arg(source));
-					return;
-				}
-
-				if (!valid_sources.contains(info.absoluteFilePath()))
-				{
-					valid_sources.append(info.absoluteFilePath());
-				}
-			}
-
-			if (valid_sources.isEmpty())
-			{
-				return;
-			}
-
-			m_selected_sources = std::move(valid_sources);
-			QDialog::accept();
-		}
-
-	private:
-		bool m_allow_multiple = false;
-		QStringList m_selected_sources;
-	};
-}
 
 class CPUDisAsm;
 std::shared_ptr<CPUDisAsm> make_basic_ppu_disasm();
@@ -853,7 +750,14 @@ void main_window::BootGame()
 	}
 
 	const QString path_last_game = m_gui_settings->GetValue(gui::fd_boot_game).toString();
-	game_source_dialog dialog(this, tr("Select PS3 Disc Game"), path_last_game, false);
+	game_source_dialog dialog(this,
+	{
+		.caption = tr("Select PS3 Disc Game"),
+		.directory = path_last_game,
+		.accept_label = tr("Boot"),
+		.allow_multiple = false,
+		.validate_file_sources = true,
+	});
 
 	if (dialog.exec() != QDialog::Accepted || dialog.selected_sources().isEmpty())
 	{
@@ -2848,7 +2752,14 @@ void main_window::CreateConnects()
 			path_last_add_games = m_gui_settings->GetValue(gui::fd_add_iso).toString();
 		}
 
-		game_source_dialog dialog(this, tr("Add PS3 Disc Games"), path_last_add_games, true);
+		game_source_dialog dialog(this,
+		{
+			.caption = tr("Add PS3 Disc Games"),
+			.directory = path_last_add_games,
+			.accept_label = tr("Add"),
+			.allow_multiple = true,
+			.validate_file_sources = true,
+		});
 		if (dialog.exec() != QDialog::Accepted || dialog.selected_sources().isEmpty())
 		{
 			return;

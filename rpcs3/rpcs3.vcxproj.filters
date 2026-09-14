@@ -675,6 +675,9 @@
     <ClCompile Include="rpcs3qt\disc_compression_manager_dialog.cpp">
       <Filter>Gui</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\game_source_dialog.cpp">
+      <Filter>Gui</Filter>
+    </ClCompile>
     <ClCompile Include="rpcs3qt\infinity_dialog.cpp">
       <Filter>Gui\infinity</Filter>
     </ClCompile>
@@ -1591,6 +1594,9 @@
     </ClInclude>
     <ClInclude Include="rpcs3qt\auto_scroll_label.h">
       <Filter>Gui\widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="rpcs3qt\game_source_dialog.h">
+      <Filter>Gui</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
