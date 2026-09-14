@@ -2115,8 +2115,16 @@ namespace vm
 
 			if (!loc)
 			{
-				// Deferred allocation
-				loc = _find_map(area_size, 0x10000000, flags);
+				if (location == vm::main || addr == 0x00010000)
+				{
+					// Special
+					loc = std::make_shared<block_t>(addr, area_size, page_size_64k | preallocated);
+				}
+				else
+				{
+					// Deferred allocation
+					loc = _find_map(area_size, 0x10000000, flags);
+				}
 			}
 
 			return loc;
@@ -2264,7 +2272,7 @@ namespace vm
 
 			g_locations =
 			{
-				std::make_shared<block_t>(0x00010000, 0x0FFF0000, page_size_64k | preallocated), // main
+				nullptr,                                                                         // main
 				nullptr,		                                                                 // user 64k pages
 				nullptr,                                                                         // user 1m pages
 				nullptr,                                                                         // rsx context
