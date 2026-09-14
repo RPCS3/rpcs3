@@ -2568,7 +2568,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 	{
 		mem_size = 0xD500000;
 	}
-	else if (sdk_version > 0x00192FFF)
+	else if (sdk_version > 0x0019FFFF)
 	{
 		mem_size = 0xD300000;
 	}
