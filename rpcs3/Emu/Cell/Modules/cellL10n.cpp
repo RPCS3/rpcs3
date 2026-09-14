@@ -228,7 +228,7 @@ s32 _ConvertStr(s32 src_code, const void *src, s32 src_len, s32 dst_code, void *
 			else if (errno == EINVAL)
 			{
 				if (allowIncomplete)
-					*dst_len = -1;  // TODO: correct value?
+					*dst_len = -1;  // SDK: dst_len is undefined on conversion failure
 				else
 					retValue = SRCIllegal;
 			}
@@ -251,7 +251,7 @@ s32 _ConvertStr(s32 src_code, const void *src, s32 src_len, s32 dst_code, void *
 				else if (errno == EINVAL)
 				{
 					if (allowIncomplete)
-						*dst_len = -1;  // TODO: correct value?
+						*dst_len = -1;  // SDK: dst_len is undefined on conversion failure
 					else
 						retValue = SRCIllegal;
 				}
