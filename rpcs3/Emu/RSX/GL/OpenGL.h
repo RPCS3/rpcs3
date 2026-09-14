@@ -16,11 +16,6 @@ typedef BOOL (WINAPI* PFNWGLSWAPINTERVALEXTPROC) (int interval);
 #undef OPENGL_PROC
 #undef WGL_PROC
 #undef OPENGL_PROC2
-
-#elif defined(__APPLE__)
-#include <OpenGL/gl.h>
-#include <OpenGL/glu.h>
-
 #else
 #include <GL/gl.h>
 #ifdef HAVE_X11

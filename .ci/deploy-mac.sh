@@ -5,14 +5,11 @@ cd build || exit 1
 
 cd bin
 mkdir -p "rpcs3.app/Contents/Resources/vulkan/icd.d" || true
-wget https://github.com/KhronosGroup/MoltenVK/releases/download/v1.4.2-rc1/MoltenVK-macos-privateapi.tar
+wget https://github.com/KhronosGroup/MoltenVK/releases/download/v1.4.2/MoltenVK-macos-privateapi.tar
 tar -xvf MoltenVK-macos-privateapi.tar
 cp "MoltenVK/MoltenVK/dynamic/dylib/macOS/libMoltenVK.dylib" "rpcs3.app/Contents/Frameworks/libMoltenVK.dylib"
 cp "MoltenVK/MoltenVK/dynamic/dylib/macOS/MoltenVK_icd.json" "rpcs3.app/Contents/Resources/vulkan/icd.d/MoltenVK_icd.json"
 sed -i '' "s/.\//..\/..\/..\/Frameworks\//g" "rpcs3.app/Contents/Resources/vulkan/icd.d/MoltenVK_icd.json"
-
-cp "$(realpath $BREW_PATH/opt/llvm@$LLVM_COMPILER_VER/lib/c++/libc++abi.1.0.dylib)" "rpcs3.app/Contents/Frameworks/libc++abi.1.dylib"
-cp "$(realpath $BREW_PATH/opt/gcc/lib/gcc/current/libgcc_s.1.1.dylib)" "rpcs3.app/Contents/Frameworks/libgcc_s.1.1.dylib"
 
 rm -rf "rpcs3.app/Contents/Frameworks/QtPdf.framework" \
 "rpcs3.app/Contents/Frameworks/QtQml.framework" \
@@ -51,26 +48,6 @@ rm -f rpcs3.app/Contents/translations/qt_help_*.qm || true
 # Need to do this rename hack due to case insensitive filesystem
 mv rpcs3.app RPCS3_.app
 mv RPCS3_.app RPCS3.app
-
-# Hack to fix rpath issues
-BIN="RPCS3.app/Contents/MacOS/rpcs3"
-install_name_tool -delete_rpath /opt/homebrew/lib $BIN || true
-install_name_tool -delete_rpath /usr/local/lib $BIN || true
-
-# Fix dylib IDs
-for lib in RPCS3.app/Contents/Frameworks/*.dylib; do
-  name=$(basename "$lib")
-  install_name_tool -id "@rpath/$name" "$lib"
-done
-
-# Rewrite any hardcoded Homebrew paths to use @rpath
-find "RPCS3.app/Contents/" -type f \( -perm +111 -o -name "*.dylib" \) | while read -r bin; do
-  otool -L "$bin" | grep -E "/opt/homebrew|/usr/local" | awk '{print $1}' | while read -r dep; do
-    base=$(basename "$dep")
-    echo "Fixing $dep -> @rpath/$base in $bin"
-    install_name_tool -change "$dep" "@rpath/$base" "$bin"
-  done
-done
 
 # NOTE: "--deep" is deprecated
 codesign --deep -fs - RPCS3.app
