@@ -2415,7 +2415,8 @@ s32 GB18030toUTF8()
 s32 UTF8toSJIS(u8 ch, vm::ptr<u8> dst, vm::ptr<u32> dst_len) // Doesn't work backwards
 {
 	cellL10n.warning("UTF8toSJIS(ch=%d, dst=*0x%x, dst_len=*0x%x)", ch, dst, dst_len);
-	return _L10nConvertChar(L10N_UTF8, &ch, sizeof(ch), L10N_CODEPAGE_932, dst, dst_len);
+	const s32 result = _L10nConvertChar(L10N_UTF8, &ch, sizeof(ch), L10N_CODEPAGE_932, dst, dst_len);
+	return result == ConversionOK ? 1 : 0;
 }
 
 s32 ARIBstoUCS2s()
