@@ -83,6 +83,7 @@ namespace gui
 		case trophy_list_columns::id: return "trophy_column_id";
 		case trophy_list_columns::platinum_link: return "trophy_column_platinum_link";
 		case trophy_list_columns::time_unlocked: return "trophy_column_time_unlocked";
+		case trophy_list_columns::trophy_set: return "trophy_column_trophy_set";
 		case trophy_list_columns::count: return "";
 		}
 	
@@ -97,6 +98,11 @@ namespace gui
 		case trophy_game_list_columns::name: return "trophy_game_column_name";
 		case trophy_game_list_columns::progress: return "trophy_game_column_progress";
 		case trophy_game_list_columns::trophies: return "trophy_game_column_trophies";
+		case trophy_game_list_columns::bronze: return "trophy_game_column_bronze";
+		case trophy_game_list_columns::silver: return "trophy_game_column_silver";
+		case trophy_game_list_columns::gold: return "trophy_game_column_gold";
+		case trophy_game_list_columns::platinum: return "trophy_game_column_platinum";
+		case trophy_game_list_columns::comm_id: return "trophy_game_column_comm_id";
 		case trophy_game_list_columns::count: return "";
 		}
 	
