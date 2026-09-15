@@ -87,8 +87,6 @@ extern shared_ptr<lv2_prx> ppu_load_prx(const ppu_prx_object&, bool virtual_load
 extern std::pair<shared_ptr<lv2_overlay>, CellError> ppu_load_overlay(const ppu_exec_object&, bool virtual_load, const std::string& path, s64 = 0, utils::serial* = nullptr);
 extern bool ppu_load_rel_exec(const ppu_rel_object&);
 
-extern void send_close_home_menu_cmds();
-
 extern void signal_system_cache_can_stay();
 
 fs::file make_file_view(const fs::file& file, u64 offset, u64 size);

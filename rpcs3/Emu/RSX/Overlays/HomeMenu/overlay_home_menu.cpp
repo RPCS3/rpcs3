@@ -103,30 +103,17 @@ namespace rsx
 				break;
 			}
 			case page_navigation::exit:
+			{
+				request_close();
+				break;
+			}
 			case page_navigation::exit_for_screenshot:
 			{
-				fade_animation.current = color4f(1.f);
-				fade_animation.end = color4f(0.f);
-				fade_animation.active = true;
-
-				fade_animation.on_finish = [this, navigation]
+				request_close([]
 				{
-					close(true, true);
-
-					if (g_cfg.misc.pause_during_home_menu)
-					{
-						Emu.BlockingCallFromMainThread([]()
-						{
-							Emu.Resume();
-						});
-					}
-
-					if (navigation == page_navigation::exit_for_screenshot)
-					{
-						rsx_log.notice("Taking screenshot after exiting home menu");
-						g_user_asked_for_screenshot = true;
-					}
-				};
+					rsx_log.notice("Taking screenshot after exiting home menu");
+					g_user_asked_for_screenshot = true;
+				});
 				break;
 			}
 			case page_navigation::stay:
@@ -134,6 +121,33 @@ namespace rsx
 				break;
 			}
 			}
+		}
+
+		void home_menu_dialog::request_close(std::function<void()> on_close)
+		{
+			m_close_callback = std::move(on_close);
+
+			fade_animation.current = color4f(1.f);
+			fade_animation.end = color4f(0.f);
+			fade_animation.active = true;
+
+			fade_animation.on_finish = [this]
+			{
+				close(true, true);
+
+				if (g_cfg.misc.pause_during_home_menu)
+				{
+					Emu.BlockingCallFromMainThread([]()
+					{
+						Emu.Resume();
+					});
+				}
+			};
+		}
+
+		std::function<void()> home_menu_dialog::take_close_callback()
+		{
+			return std::move(m_close_callback);
 		}
 
 		compiled_resource home_menu_dialog::get_compiled()
