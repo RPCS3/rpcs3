@@ -575,6 +575,12 @@ usb_handler_thread::usb_handler_thread()
 		case microphone_handler::standard:
 			usb_devices.push_back(std::make_shared<usb_device_mic>(0, get_new_location(), MicType::Logitech));
 			break;
+		case microphone_handler::eye_toy:
+			usb_devices.push_back(std::make_shared<usb_device_mic>(0, get_new_location(), MicType::EyeToy));
+			break;
+		case microphone_handler::ps_eye:
+			usb_devices.push_back(std::make_shared<usb_device_mic>(0, get_new_location(), MicType::PsEye));
+			break;
 		case microphone_handler::real_singstar:
 		case microphone_handler::singstar:
 			usb_devices.push_back(std::make_shared<usb_device_mic>(0, get_new_location(), MicType::SingStar));
