@@ -14,6 +14,8 @@
 
 #if defined(__APPLE__)
 #include <pthread.h>
+#elif defined(ANDROID)
+#include "util/cctype.hpp"
 #endif
 
 LOG_CHANNEL(jit_log, "JIT");
@@ -1039,7 +1041,7 @@ const char * fallback_cpu_detection()
 			return "cortex-a78";
 		}
 
-		std::transform(result.begin(), result.end(), result.begin(), ::tolower);
+		std::transform(result.begin(), result.end(), result.begin(), utils::tolower<char>);
 		return result;
 	}();
 

@@ -2112,6 +2112,15 @@
     <None Include="..\.github\workflows\qt-ts.yml">
       <Filter>CI</Filter>
     </None>
+    <None Include="..\bin\GuiConfigs\Old Steam by FlexBy.qss">
+      <Filter>StyleSheets</Filter>
+    </None>
+    <None Include="..\bin\GuiConfigs\Windows 11 (Dark Mode) by GustavoGraziano.qss">
+      <Filter>StyleSheets</Filter>
+    </None>
+    <None Include="..\bin\GuiConfigs\Windows 11 (Light Mode) by GustavoGraziano.qss">
+      <Filter>StyleSheets</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Text Include="rpcs3qt\CMakeLists.txt">

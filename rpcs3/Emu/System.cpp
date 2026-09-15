@@ -47,6 +47,7 @@
 #include "util/logs.hpp"
 #include "util/init_mutex.hpp"
 #include "util/sysinfo.hpp"
+#include "util/cctype.hpp"
 
 #include <memory>
 #include <shared_mutex>
@@ -929,6 +930,7 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	g_cfg.video.disable_on_disk_shader_cache.set(true);
 
 	vm::init();
+	vm::reserve_map(vm::main, 0, 0x1FFF0000, vm::page_64k_size);
 	g_fxo->init(false);
 
 	// Initialize progress dialog
@@ -989,6 +991,7 @@ bool Emulator::BootBigPictureMode()
 	g_cfg.video.disable_on_disk_shader_cache.set(true);
 
 	vm::init();
+	vm::reserve_map(vm::main, 0, 0x1FFF0000, vm::page_64k_size);
 	g_fxo->init(false);
 
 	// Initialize progress dialog
@@ -1886,6 +1889,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			GetCallbacks().on_ready();
 			ensure(g_fxo->init<main_ppu_module<lv2_obj>>());
 			vm::init();
+			vm::reserve_map(vm::main, 0, 0x1FFF0000, vm::page_64k_size);
 			m_force_boot = false;
 
 			// Force LLVM recompiler
@@ -4047,7 +4051,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 					tty_buffer.resize(tty_read_fd.read_at(m_tty_file_init_pos, tty_buffer.data(), tty_buffer.size()));
 					tty_read_fd.close();
 
-					if (!tty_buffer.empty() && std::isspace(tty_buffer.back()))
+					if (!tty_buffer.empty() && utils::isspace(tty_buffer.back()))
 					{
 						tty_buffer.resize(tty_buffer.find_last_not_of(" \f\n\r\t\v"sv) + 1);
 					}
@@ -4140,7 +4144,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 							iter = index + 1;
 						}
 
-						if (!new_log.empty() && std::isspace(new_log.back()))
+						if (!new_log.empty() && utils::isspace(new_log.back()))
 						{
 							new_log.resize(new_log.find_last_not_of(" \f\n\r\t\v"sv) + 1);
 						}

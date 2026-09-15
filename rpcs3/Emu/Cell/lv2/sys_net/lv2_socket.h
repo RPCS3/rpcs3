@@ -138,6 +138,8 @@ protected:
 	// Socket options value keepers
 	// Non-blocking IO option
 	s32 so_nbio = 0;
+	// Broadcast option
+	s32 so_broadcast = 0;
 	// Error, only used for connection result for non blocking stream sockets
 	s32 so_error = 0;
 	// Unsupported option

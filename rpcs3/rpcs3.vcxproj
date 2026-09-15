@@ -2351,8 +2351,11 @@
     <None Include="..\bin\GuiConfigs\Kuroi (Dark) by Ani.qss" />
     <None Include="..\bin\GuiConfigs\ModernBlue Theme by TheMitoSan.qss" />
     <None Include="..\bin\GuiConfigs\Nekotekina by GooseWing.qss" />
+    <None Include="..\bin\GuiConfigs\Old Steam by FlexBy.qss" />
     <None Include="..\bin\GuiConfigs\Skyline (Nightfall).qss" />
     <None Include="..\bin\GuiConfigs\Skyline.qss" />
+    <None Include="..\bin\GuiConfigs\Windows 11 (Dark Mode) by GustavoGraziano.qss" />
+    <None Include="..\bin\GuiConfigs\Windows 11 (Light Mode) by GustavoGraziano.qss" />
     <None Include="..\bin\GuiConfigs\YoRHa by Ani.qss" />
     <None Include="..\buildfiles\cmake\ConfigureCompiler.cmake" />
     <None Include="..\buildfiles\cmake\FindFFMPEG.cmake" />
