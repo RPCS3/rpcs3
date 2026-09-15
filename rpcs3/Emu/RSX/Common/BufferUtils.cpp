@@ -8,6 +8,8 @@
 
 #if defined(ARCH_X64)
 #include "BufferUtils_avx512.h"
+#elif defined(ARCH_ARM64)
+#include "BufferUtils_neon.h"
 #endif
 
 #if !defined(_MSC_VER)
@@ -183,6 +185,9 @@ namespace
 #if defined(ARCH_X64)
 DECLARE(copy_data_swap_u32) = build_function_asm<void(*)(u32*, const u32*, u32), asmjit::simd_builder>("copy_data_swap_u32", &build_copy_data_swap_u32<false>);
 DECLARE(copy_data_swap_u32_cmp) = build_function_asm<bool(*)(u32*, const u32*, u32), asmjit::simd_builder>("copy_data_swap_u32_cmp", &build_copy_data_swap_u32<true>);
+#elif defined(ARCH_ARM64)
+DECLARE(copy_data_swap_u32) = copy_data_swap_u32_neon<false>;
+DECLARE(copy_data_swap_u32_cmp) = copy_data_swap_u32_neon<true>;
 #else
 DECLARE(copy_data_swap_u32) = copy_data_swap_u32_naive<false>;
 DECLARE(copy_data_swap_u32_cmp) = copy_data_swap_u32_naive<true>;
@@ -299,6 +304,8 @@ namespace
 				r = upload_xi16(src.data(), dst.data(), count);
 			else
 				r = upload_xi32(src.data(), dst.data(), count);
+#elif defined(ARCH_ARM64)
+			r = upload_untouched_neon<T, false>(src.data(), dst.data(), count);
 #else
 			r = upload_untouched_naive(src.data(), dst.data(), count);
 #endif
@@ -405,6 +412,8 @@ namespace
 				r = upload_xi16(src.data(), dst.data(), count, restart_index);
 			else
 				r = upload_xi32(src.data(), dst.data(), count, restart_index);
+#elif defined(ARCH_ARM64)
+			r = upload_untouched_neon<T, true>(src.data(), dst.data(), count, restart_index);
 #else
 			r = upload_untouched_naive(src.data(), dst.data(), count, restart_index);
 #endif
@@ -699,10 +708,13 @@ void iota16(u16* dst, u32 count)
 		iota16_avx2(dst, count);
 		return;
 	}
+#elif defined(ARCH_ARM64)
+	iota16_neon(dst, count);
+	return;
 #endif
 
 	u32 i = 0;
-#if defined(ARCH_X64) || defined(ARCH_ARM64)
+#if defined(ARCH_X64)
 	// Force 16-byte alignment
 	const uptr mem_addr = reinterpret_cast<uptr>(dst);
 	const u32 head = std::min<u32>(count, ((0 - mem_addr) & 15) / sizeof(u16));
