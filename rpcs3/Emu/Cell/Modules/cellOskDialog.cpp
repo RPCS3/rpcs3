@@ -799,29 +799,28 @@ error_code cellOskDialogAbort()
 		return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
 	}
 
-	const error_code result = osk->state.atomic_op([](OskDialogState& state) -> error_code
+	const bool abort = osk->state.atomic_op([](OskDialogState& state)
 	{
-		// Check for open dialog. In this case the dialog is "Open" if it was not unloaded before.
-		if (state == OskDialogState::Unloaded)
+		// Check for open dialog.
+		if (state == OskDialogState::Open)
 		{
-			return CELL_MSGDIALOG_ERROR_DIALOG_NOT_OPENED;
+			state = OskDialogState::Abort;
+			return true;
 		}
 
-		state = OskDialogState::Abort;
-
-		return CELL_OK;
+		return false;
 	});
 
-	if (result == CELL_OK)
+	if (abort)
 	{
 		osk->osk_input_result = CELL_OSKDIALOG_INPUT_FIELD_RESULT_ABORT;
 		osk->Close(FAKE_CELL_OSKDIALOG_CLOSE_ABORT);
+
+		g_fxo->get<osk_info>().last_dialog_state = CELL_SYSUTIL_OSKDIALOG_FINISHED;
+
+		cellOskDialog.notice("cellOskDialogAbort: sending CELL_SYSUTIL_OSKDIALOG_FINISHED");
+		sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_FINISHED, 0);
 	}
-
-	g_fxo->get<osk_info>().last_dialog_state = CELL_SYSUTIL_OSKDIALOG_FINISHED;
-
-	cellOskDialog.notice("cellOskDialogAbort: sending CELL_SYSUTIL_OSKDIALOG_FINISHED");
-	sysutil_send_system_cmd(CELL_SYSUTIL_OSKDIALOG_FINISHED, 0);
 
 	return CELL_OK;
 }
