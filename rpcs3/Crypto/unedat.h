@@ -107,10 +107,10 @@ public:
 	{
 	}
 
-	// false if invalid. "quiet" mutes the log of a key that does not fit, which for a caller trying one
-	// candidate after another is an answer rather than a failure
-	bool ReadHeader(bool quiet = false);
-	u64 ReadData(u64 pos, u8* data, u64 size, bool quiet = false);
+	// false if invalid. Clearing "verbose" mutes the log of a key that does not fit, which for a caller
+	// trying one candidate after another is an answer rather than a failure
+	bool ReadHeader(bool verbose = true);
+	u64 ReadData(u64 pos, u8* data, u64 size, bool verbose = true);
 
 	fs::stat_t get_stat() override
 	{

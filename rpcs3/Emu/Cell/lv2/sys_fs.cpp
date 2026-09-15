@@ -1178,7 +1178,7 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 
 					// Try all registered keys, quietly: the ones that do not fit are what the loop is looking for
 					auto edata_file = std::make_unique<EDATADecrypter>(std::move(file), dec_keys[(init_pos - i - 1) % std::size(dec_keys)].load());
-					if (!edata_file->ReadHeader(true))
+					if (!edata_file->ReadHeader(false))
 					{
 						// Prepare file for the next iteration
 						file = std::move(edata_file->m_edata_file);
