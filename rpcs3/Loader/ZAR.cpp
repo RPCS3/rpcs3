@@ -1,13 +1,13 @@
 #include "stdafx.h"
 #include "ZAR.h"
 #include "ISO.h"
+#include "util/cctype.hpp"
 
 #include <zarchive/zarchivereader.h>
 #include <zarchive/zarchivewriter.h>
 
 #include <algorithm>
 #include <array>
-#include <cctype>
 #include <cstring>
 #include <filesystem>
 #include <limits>
@@ -135,18 +135,8 @@ namespace
 		value.remove_prefix(value.size() - ext.size());
 		return std::equal(value.begin(), value.end(), ext.begin(), ext.end(), [](char a, char b)
 		{
-			return std::tolower(static_cast<unsigned char>(a)) == std::tolower(static_cast<unsigned char>(b));
+			return utils::tolower(a) == utils::tolower(b);
 		});
-	}
-
-	u32 load_be32(const u8* p)
-	{
-		return (static_cast<u32>(p[0]) << 24) | (static_cast<u32>(p[1]) << 16) | (static_cast<u32>(p[2]) << 8) | p[3];
-	}
-
-	u64 load_be64(const u8* p)
-	{
-		return (static_cast<u64>(load_be32(p)) << 32) | load_be32(p + 4);
 	}
 
 	bool preflight_zar(const std::string& path, std::string* error)
@@ -165,9 +155,9 @@ namespace
 			return false;
 		}
 
-		const u64 total_size = load_be64(footer.data() + 128);
-		const u32 version = load_be32(footer.data() + 136);
-		const u32 magic = load_be32(footer.data() + 140);
+		const u64 total_size = read_from_ptr<be_t<u64>>(footer, 128);
+		const u32 version = read_from_ptr<be_t<u32>>(footer, 136);
+		const u32 magic = read_from_ptr<be_t<u32>>(footer, 140);
 		if (magic != 0x169f52d6)
 		{
 			if (error) *error = "invalid ZArchive footer magic";
@@ -187,8 +177,8 @@ namespace
 		const u64 data_end = file.size() - footer.size();
 		for (u32 section = 0; section < 6; section++)
 		{
-			const u64 offset = load_be64(footer.data() + section * 16);
-			const u64 section_size = load_be64(footer.data() + section * 16 + 8);
+			const u64 offset = read_from_ptr<be_t<u64>>(footer, section * 16);
+			const u64 section_size = read_from_ptr<be_t<u64>>(footer, section * 16 + 8);
 			if (offset > data_end || section_size > data_end - offset)
 			{
 				if (error) *error = fmt::format("ZArchive section %u is outside the file bounds", section);
@@ -197,7 +187,7 @@ namespace
 		}
 
 		// CompressionOffsetRecord is 40 bytes and FileDirectoryEntry is 16 bytes in ZArchive 0.1.x.
-		if (load_be64(footer.data() + 16 + 8) % 40 || load_be64(footer.data() + 48 + 8) % 16)
+		if (read_from_ptr<be_t<u64>>(footer, 16 + 8) % 40 || read_from_ptr<be_t<u64>>(footer, 48 + 8) % 16)
 		{
 			if (error) *error = "ZArchive index sections have invalid alignment";
 			return false;
@@ -345,7 +335,6 @@ fs::file zar_disc_container::open_file(u32 node, const std::string& display_name
 	if (!m_reader || node == ZARCHIVE_INVALID_NODE || !m_reader->IsFile(node)) return {};
 	return fs::file(std::make_unique<zar_file>(m_reader, node, m_source_path + "::" + display_name, m_source_mtime));
 }
-
 
 fs::file zar_disc_container::open_file(const std::string& path) const
 {

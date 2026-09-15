@@ -1972,8 +1972,8 @@ bool iso_device::stat(const std::string& path, fs::stat_t& info)
 		return false;
 	}
 
-
 	const auto node = m_archive.retrieve(relative_path.empty() ? "." : relative_path);
+
 	if (!node)
 	{
 		fs::g_tls_error = fs::error::noent;
@@ -1991,6 +1991,7 @@ bool iso_device::stat(const std::string& path, fs::stat_t& info)
 		.mtime = meta.time,
 		.ctime = meta.time
 	};
+
 	return true;
 }
 
@@ -2003,7 +2004,6 @@ bool iso_device::statfs(const std::string& path, fs::device_stat& info)
 		return false;
 	}
 
-
 	const auto node = m_archive.retrieve(relative_path.empty() ? "." : relative_path);
 	if (!node)
 	{
@@ -2012,6 +2012,7 @@ bool iso_device::statfs(const std::string& path, fs::device_stat& info)
 	}
 
 	const u64 size = node->metadata.size();
+
 	info = fs::device_stat
 	{
 		.block_size = size,
@@ -2019,6 +2020,7 @@ bool iso_device::statfs(const std::string& path, fs::device_stat& info)
 		.total_free = 0,
 		.avail_free = 0
 	};
+
 	return true;
 }
 
@@ -2031,18 +2033,20 @@ std::unique_ptr<fs::file_base> iso_device::open(const std::string& path, bs_t<fs
 		return nullptr;
 	}
 
-
 	const auto node = m_archive.retrieve(relative_path.empty() ? "." : relative_path);
+
 	if (!node)
 	{
 		fs::g_tls_error = fs::error::noent;
 		return nullptr;
 	}
+
 	if (node->metadata.is_directory)
 	{
 		fs::g_tls_error = fs::error::isdir;
 		return nullptr;
 	}
+
 	return m_archive.get_iso_file(m_archive.path(), mode, *node);
 }
 
@@ -2055,18 +2059,20 @@ std::unique_ptr<fs::dir_base> iso_device::open_dir(const std::string& path)
 		return nullptr;
 	}
 
-
 	const auto node = m_archive.retrieve(relative_path.empty() ? "." : relative_path);
+
 	if (!node)
 	{
 		fs::g_tls_error = fs::error::noent;
 		return nullptr;
 	}
+
 	if (!node->metadata.is_directory)
 	{
 		fs::g_tls_error = fs::error::notdir;
 		return nullptr;
 	}
+
 	return std::make_unique<iso_dir>(*node);
 }
 
