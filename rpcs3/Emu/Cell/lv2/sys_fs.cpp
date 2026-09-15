@@ -1632,8 +1632,10 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 		data.back().is_directory = true;
 	}
 
-	// Sort files, keeping . and ..
-	std::stable_sort(data.begin() + 2, data.end(), FN(x.name < y.name));
+	// Sort files, keeping . and .. when the backend supplies them.
+	// Do not form an iterator past end() for virtual backends with fewer entries.
+	const usz sort_offset = std::min<usz>(2, data.size());
+	std::stable_sort(data.begin() + sort_offset, data.end(), FN(x.name < y.name));
 
 	// Remove duplicates
 	data.erase(std::unique(data.begin(), data.end(), FN(x.name == y.name)), data.end());

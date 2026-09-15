@@ -40,7 +40,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <AdditionalIncludeDirectories>..\3rdparty\miniupnp\miniupnp\miniupnpc\include;..\3rdparty\wolfssl\wolfssl;$(SolutionDir)build\lib\$(Configuration)-$(Platform)\protobuf_build\include;..\3rdparty\libusb\libusb\libusb;..\3rdparty\yaml-cpp\yaml-cpp\include;..\3rdparty\SoundTouch\soundtouch\include;..\3rdparty\rtmidi\rtmidi;..\3rdparty\zlib\zlib;$(SolutionDir)build\lib\$(Configuration)-$(Platform)\llvm_build\include;$(SolutionDir)build\lib_ext\$(Configuration)-$(Platform)\llvm_build\include;$(SolutionDir)build\lib_ext\$(Configuration)-$(Platform)\llvm\include;$(SolutionDir)build\lib_ext\$(Configuration)-$(Platform)\llvm_build\include;$(VULKAN_SDK)\Include;..\3rdparty\zstd\zstd\lib;$(SolutionDir)3rdparty\fusion\fusion\Fusion;$(SolutionDir)3rdparty\wolfssl\extra\win32;$(SolutionDir)3rdparty\libsdl-org\SDL\include;$(SolutionDir)3rdparty\glslang\glslang;$(SolutionDir)3rdparty\curl\curl\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\3rdparty\zarchive\zarchive\include;..\3rdparty\miniupnp\miniupnp\miniupnpc\include;..\3rdparty\wolfssl\wolfssl;$(SolutionDir)build\lib\$(Configuration)-$(Platform)\protobuf_build\include;..\3rdparty\libusb\libusb\libusb;..\3rdparty\yaml-cpp\yaml-cpp\include;..\3rdparty\SoundTouch\soundtouch\include;..\3rdparty\rtmidi\rtmidi;..\3rdparty\zlib\zlib;$(SolutionDir)build\lib\$(Configuration)-$(Platform)\llvm_build\include;$(SolutionDir)build\lib_ext\$(Configuration)-$(Platform)\llvm_build\include;$(SolutionDir)build\lib_ext\$(Configuration)-$(Platform)\llvm\include;$(SolutionDir)build\lib_ext\$(Configuration)-$(Platform)\llvm_build\include;$(VULKAN_SDK)\Include;..\3rdparty\zstd\zstd\lib;$(SolutionDir)3rdparty\fusion\fusion\Fusion;$(SolutionDir)3rdparty\wolfssl\extra\win32;$(SolutionDir)3rdparty\libsdl-org\SDL\include;$(SolutionDir)3rdparty\glslang\glslang;$(SolutionDir)3rdparty\curl\curl\include</AdditionalIncludeDirectories>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">AL_LIBTYPE_STATIC;MINIUPNP_STATICLIB;HAVE_VULKAN;HAVE_SDL3;ZLIB_CONST;WOLFSSL_USER_SETTINGS;CURL_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='Release|x64'">AL_LIBTYPE_STATIC;MINIUPNP_STATICLIB;HAVE_VULKAN;HAVE_SDL3;ZLIB_CONST;WOLFSSL_USER_SETTINGS;CURL_STATICLIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -571,6 +571,7 @@
     <ClCompile Include="Loader\PUP.cpp" />
     <ClCompile Include="Loader\TAR.cpp" />
     <ClCompile Include="Loader\ISO.cpp" />
+    <ClCompile Include="Loader\ZAR.cpp" />
     <ClCompile Include="Loader\iso_cache.cpp" />
     <ClCompile Include="Loader\mself.cpp" />
     <ClCompile Include="Loader\TROPUSR.cpp" />
@@ -1088,6 +1089,7 @@
     <ClInclude Include="Loader\PUP.h" />
     <ClInclude Include="Loader\TAR.h" />
     <ClInclude Include="Loader\ISO.h" />
+    <ClInclude Include="Loader\ZAR.h" />
     <ClInclude Include="Loader\TROPUSR.h" />
     <ClInclude Include="Loader\TRP.h" />
     <ClInclude Include="rpcs3_version.h" />
@@ -1111,6 +1113,9 @@
     </ProjectReference>
     <ProjectReference Include="..\3rdparty\zstd\zstd.vcxproj">
       <Project>{4e52a41a-f33b-4c7a-8c36-a1a6b4f4277c}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\3rdparty\zarchive\zarchive.vcxproj">
+      <Project>{D7C46C53-2EF6-4A0D-AED4-2F6A8CB4D18C}</Project>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

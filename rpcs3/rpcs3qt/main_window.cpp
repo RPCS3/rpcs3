@@ -8,6 +8,7 @@
 #include "screenshot_manager_dialog.h"
 #include "kernel_explorer.h"
 #include "game_list_frame.h"
+#include "game_source_dialog.h"
 #include "debugger_frame.h"
 #include "log_frame.h"
 #include "settings_dialog.h"
@@ -24,6 +25,7 @@
 #include "skylander_dialog.h"
 #include "infinity_dialog.h"
 #include "dimensions_dialog.h"
+#include "disc_compression_manager_dialog.h"
 #include "kamen_rider_dialog.h"
 #include "cheat_manager.h"
 #include "patch_manager_dialog.h"
@@ -643,7 +645,7 @@ void main_window::BootElf()
 		"SELF files (EBOOT.BIN *.self);;"
 		"BOOT files (*BOOT.BIN);;"
 		"BIN files (*.bin);;"
-		"ISO files (*.iso);;"
+		"Disc image files (*.iso *.zar);;"
 		"All executable files (*.SAVESTAT.zst *.SAVESTAT.gz *.SAVESTAT *.sprx *.SPRX *.self *.SELF *.bin *.BIN *.prx *.PRX *.elf *.ELF *.o *.O);;"
 		"All files (*.*)"),
 		Q_NULLPTR, QFileDialog::DontResolveSymlinks);
@@ -748,9 +750,16 @@ void main_window::BootGame()
 	}
 
 	const QString path_last_game = m_gui_settings->GetValue(gui::fd_boot_game).toString();
-	const QString dir_path = QFileDialog::getExistingDirectory(this, tr("Select Game Folder"), path_last_game, QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+	game_source_dialog dialog(this,
+	{
+		.caption = tr("Select PS3 Disc Game"),
+		.directory = path_last_game,
+		.accept_label = tr("Boot"),
+		.allow_multiple = false,
+		.validate_file_sources = true,
+	});
 
-	if (dir_path.isEmpty())
+	if (dialog.exec() != QDialog::Accepted || dialog.selected_sources().isEmpty())
 	{
 		if (stopped)
 		{
@@ -759,38 +768,12 @@ void main_window::BootGame()
 		return;
 	}
 
-	m_gui_settings->SetValue(gui::fd_boot_game, QFileInfo(dir_path).path());
+	const QString path = dialog.selected_sources().front();
+	const QFileInfo info(path);
+	m_gui_settings->SetValue(gui::fd_boot_game, info.absolutePath());
 
 	gui_log.notice("Booting from BootGame...");
-	Boot(dir_path.toStdString(), "", false, true);
-}
-
-void main_window::BootISO()
-{
-	bool stopped = false;
-
-	if (Emu.IsRunning())
-	{
-		Emu.Pause();
-		stopped = true;
-	}
-
-	const QString path_last_game = m_gui_settings->GetValue(gui::fd_boot_game).toString();
-	const QString path = QFileDialog::getOpenFileName(this, tr("Select ISO"), path_last_game, tr("ISO files (*.iso);;All files (*.*)"));
-
-	if (path.isEmpty())
-	{
-		if (stopped)
-		{
-			Emu.Resume();
-		}
-		return;
-	}
-
-	m_gui_settings->SetValue(gui::fd_boot_game, QFileInfo(path).dir().path());
-
-	gui_log.notice("Booting from BootISO...");
-	Boot(path.toStdString(), "", true, true);
+	Boot(path.toStdString(), "", !info.isDir(), true);
 }
 
 void main_window::BootVSH()
@@ -2708,12 +2691,26 @@ void main_window::CreateConnects()
 	connect(ui->bootElfAct, &QAction::triggered, this, &main_window::BootElf);
 	connect(ui->bootTestAct, &QAction::triggered, this, &main_window::BootTest);
 	connect(ui->bootGameAct, &QAction::triggered, this, &main_window::BootGame);
-	connect(ui->bootIsoAct, &QAction::triggered, this, &main_window::BootISO);
 	connect(ui->bootVSHAct, &QAction::triggered, this, &main_window::BootVSH);
 	connect(ui->actionopen_rsx_capture, &QAction::triggered, this, [this](){ BootRsxCapture(); });
 	connect(ui->actionCreate_RSX_Capture, &QAction::triggered, this, []()
 	{
 		g_user_asked_for_frame_capture = true;
+	});
+
+	connect(ui->toolsDiscCompressionManagerAct, &QAction::triggered, this, [this]()
+	{
+		if (auto* dialog = findChild<disc_compression_manager_dialog*>(QStringLiteral("disc_compression_manager_dialog")))
+		{
+			dialog->show();
+			dialog->raise();
+			dialog->activateWindow();
+			return;
+		}
+
+		auto* dialog = new disc_compression_manager_dialog(this);
+		dialog->setAttribute(Qt::WA_DeleteOnClose);
+		dialog->show();
 	});
 
 	connect(ui->actionCreate_Savestate, &QAction::triggered, this, []()
@@ -2749,38 +2746,25 @@ void main_window::CreateConnects()
 			return;
 		}
 
-		// Only select one folder for now
 		const QString path_last_add_games = m_gui_settings->GetValue(gui::fd_add_games).toString();
-		const QString dir = QFileDialog::getExistingDirectory(this, tr("Select a folder containing one or more games"), path_last_add_games, QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
-		if (dir.isEmpty())
+
+		game_source_dialog dialog(this,
+		{
+			.caption = tr("Add PS3 Disc Games"),
+			.directory = path_last_add_games,
+			.accept_label = tr("Add"),
+			.allow_multiple = true,
+			.validate_file_sources = true,
+		});
+		if (dialog.exec() != QDialog::Accepted || dialog.selected_sources().isEmpty())
 		{
 			return;
 		}
 
-		m_gui_settings->SetValue(gui::fd_add_games, QFileInfo(dir).path());
+		QStringList paths = dialog.selected_sources();
+		m_gui_settings->SetValue(gui::fd_add_games, QFileInfo(paths.front()).absolutePath());
 
-		QStringList paths;
-		paths << dir;
-		AddGamesFromDirs(std::move(paths));
-	});
-
-	connect(ui->addIsoGamesAct, &QAction::triggered, this, [this]()
-	{
-		if (!m_gui_settings->GetBootConfirmation(this))
-		{
-			return;
-		}
-
-		const QString path_last_add_iso = m_gui_settings->GetValue(gui::fd_add_iso).toString();
-		QStringList paths = QFileDialog::getOpenFileNames(this, tr("Select ISO files to add"), path_last_add_iso, tr("ISO files (*.iso);;All files (*.*)"));
-		if (paths.isEmpty())
-		{
-			return;
-		}
-
-		m_gui_settings->SetValue(gui::fd_add_iso, QFileInfo(paths.front()).path());
-
-		AddGamesFromDirs(std::move(paths));
+		AddGamesFromPaths(std::move(paths));
 	});
 
 	connect(ui->bootRecentMenu, &QMenu::aboutToShow, this, [this]()
@@ -4213,9 +4197,9 @@ void main_window::changeEvent(QEvent* event)
 
 /**
 Add valid disc games to gamelist (games.yml)
-@param paths = dir paths to scan for game
+@param paths = game folders, parent folders, ISO images, or ZArchive files to scan/add
 */
-void main_window::AddGamesFromDirs(QStringList&& paths)
+void main_window::AddGamesFromPaths(QStringList&& paths)
 {
 	if (paths.isEmpty())
 	{
@@ -4249,7 +4233,7 @@ void main_window::AddGamesFromDirs(QStringList&& paths)
 
 	if (games_added)
 	{
-		gui_log.notice("AddGamesFromDirs added %d new entries", games_added);
+		gui_log.notice("AddGamesFromPaths added %d new entries", games_added);
 	}
 
 	m_game_list_frame->AddRefreshedSlot([this, paths = std::move(paths), existing = std::move(existing)](std::set<std::string>& claimed_paths)
@@ -4471,7 +4455,7 @@ void main_window::dropEvent(QDropEvent* event)
 	}
 	case drop_type::drop_dir: // import valid games to gamelist (games.yaml)
 	{
-		AddGamesFromDirs(std::move(drop_paths));
+		AddGamesFromPaths(std::move(drop_paths));
 		break;
 	}
 	case drop_type::drop_game: // import valid games to gamelist (games.yaml)

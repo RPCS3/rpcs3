@@ -106,7 +106,6 @@ private Q_SLOTS:
 	void BootElf();
 	void BootTest();
 	void BootGame();
-	void BootISO();
 	void BootVSH();
 	void BootSavestate();
 	void BootRsxCapture(std::string path = "");
@@ -159,7 +158,7 @@ private:
 	u64 m_drop_file_timestamp = umax;
 	drop_type m_drop_file_cached_drop_type = drop_type::drop_error;
 	drop_type IsValidFile(const QMimeData& md, QStringList* drop_paths = nullptr);
-	void AddGamesFromDirs(QStringList&& paths);
+	void AddGamesFromPaths(QStringList&& paths);
 
 	QAction* CreateRecentAction(const q_string_pair& entry, u32 sc_idx, bool is_savestate);
 	void BootRecentAction(const QAction* act, bool is_savestate);
