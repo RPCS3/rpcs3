@@ -9,7 +9,8 @@
 #include <QPixmap>
 #include <QTableWidget>
 #include <QSlider>
-#include <QSplitter>
+#include <QSpinBox>
+#include <QStackedWidget>
 
 #include <memory>
 #include <mutex>
@@ -18,6 +19,7 @@
 
 class game_list;
 class QPushButton;
+class QLineEdit;
 class gui_settings;
 class TROPUSRLoader;
 
@@ -53,6 +55,7 @@ private Q_SLOTS:
 	void ResizeGameIcons();
 	void ResizeTrophyIcons();
 	void ApplyFilter();
+	void ApplyGameFilter(const QString& text);
 	void ShowTrophyTableContextMenu(const QPoint& pos);
 	void ShowGameTableContextMenu(const QPoint& pos);
 	void DeleteOnlineTrophies();
@@ -88,6 +91,8 @@ private:
 	Takes results from LoadTrophyFolderToDB and puts it into the UI.
 	*/
 	void PopulateTrophyTable();
+	void OpenGameFromRow(int row);
+	void ShowGameList();
 
 	void ReadjustGameTable() const;
 	void ReadjustTrophyTable() const;
@@ -113,7 +118,10 @@ private:
 	std::mutex m_trophies_db_mtx;
 	QComboBox* m_game_combo; //! Lets you choose a game
 	QLabel* m_game_progress; //! Shows you the current game's progress
-	QSplitter* m_splitter; //! Contains the game and trophy tables
+	QLabel* m_game_title = nullptr;
+	QLabel* m_game_communication_id = nullptr;
+	QLineEdit* m_game_search = nullptr;
+	QStackedWidget* m_stack = nullptr;
 	game_list* m_trophy_table; //! UI element to display trophy stuff.
 	game_list* m_game_table; //! UI element to display games.
 	QPushButton* m_btn_sync_all_trophies = nullptr;
@@ -136,7 +144,7 @@ private:
 
 	int m_game_icon_size_index = 25;
 	QSize m_game_icon_size = QSize(m_game_icon_size_index, m_game_icon_size_index);
-	bool m_save_game_icon_size = false;
-	QSlider* m_game_icon_slider = nullptr;
+	QSpinBox* m_game_icon_size_spin = nullptr;
 	QColor m_game_icon_color;
+	int m_current_game_index = -1;
 };
