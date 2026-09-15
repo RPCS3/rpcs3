@@ -5,11 +5,13 @@
 #include "version.h"
 #include "Emu/IdManager.h"
 #include "Emu/Memory/vm.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/VFS.h"
 
 #include "util/types.hpp"
 #include "util/asm.hpp"
+#include "util/cctype.hpp"
 
 #include <charconv>
 #include <regex>
@@ -329,7 +331,7 @@ bool patch_engine::load(patch_map& patches_map, const std::string& path, std::st
 							is_valid = false;
 							continue;
 						}
-						else if (serial.size() != 9 || !std::all_of(serial.begin(), serial.end(), [](char c) { return std::isalnum(static_cast<unsigned char>(c)); }))
+						else if (serial.size() != 9 || !std::all_of(serial.begin(), serial.end(), [](char c) { return utils::isalnum(c); }))
 						{
 							append_log_message(log_messages, fmt::format("Error: Serial '%s' invalid (patch: %s, key: %s, location: %s, file: %s)", serial, description, main_key, get_yaml_node_location(serial_node), path), &patch_log.error);
 							is_valid = false;
@@ -1386,7 +1388,7 @@ static usz apply_modification(std::vector<u32>& applied, patch_engine::patch_inf
 
 			if (exec_addr)
 			{
-				Emu.GetCallbacks().add_breakpoint(exec_addr);
+				g_emu_callbacks.add_breakpoint(exec_addr);
 			}
 
 			break;
