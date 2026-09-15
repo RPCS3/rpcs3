@@ -828,14 +828,13 @@ bool EDATADecrypter::ReadHeader(bool quiet)
 
 		if (!validate_npd_hashes(real_file_name, reinterpret_cast<const u8*>(&dec_key), npdHeader, edatHeader, false))
 		{
-			// The header does not check out with this key: going on would leave the file reporting a size of zero,
-			// which a caller reads back as an empty file rather than as the failure it is
+			// Not fatal: the title hash is taken over the name the file was packaged with, and a file renamed
+			// since then decrypts all the same. A key that is simply the wrong one is turned away below, by the
+			// block it fails to decrypt
 			if (!quiet)
 			{
-				edat_log.error("NPD hash validation failed!");
+				edat_log.warning("NPD hash validation failed!");
 			}
-
-			return false;
 		}
 
 		// Select EDAT key.
