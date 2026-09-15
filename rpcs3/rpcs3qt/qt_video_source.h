@@ -18,9 +18,9 @@ public:
 	qt_video_source(bool is_emulation = false);
 	virtual ~qt_video_source();
 
-	void set_iso_path(const std::string& iso_path);
-	void set_video_path(const std::string& video_path) override;
-	void set_audio_path(const std::string& audio_path) override;
+	void set_iso_path(const std::string& iso_path) override;
+	void set_video_path(const std::string& video_path, bool video_in_archive) override;
+	void set_audio_path(const std::string& audio_path, bool audio_in_archive) override;
 	const QString& video_path() const { return m_video_path; }
 	const QString& audio_path() const { return m_audio_path; }
 
@@ -50,6 +50,9 @@ protected:
 	atomic_t<bool> m_active = false;
 	atomic_t<bool> m_has_new = false;
 
+	bool m_video_in_archive = false;
+	bool m_audio_in_archive = false;
+
 	QString m_video_path;
 	QString m_audio_path;
 	u32 m_audio_instance_index = 0;
@@ -77,8 +80,9 @@ public:
 	qt_video_source_wrapper() : video_source() {}
 	virtual ~qt_video_source_wrapper();
 
-	void set_video_path(const std::string& video_path) override;
-	void set_audio_path(const std::string& audio_path) override;
+	void set_iso_path(const std::string& iso_path) override;
+	void set_video_path(const std::string& video_path, bool video_in_archive) override;
+	void set_audio_path(const std::string& audio_path, bool audio_in_archive) override;
 	void set_active(bool active) override;
 	bool get_active() const override;
 	bool has_new() const override { return m_qt_video_source && m_qt_video_source->has_new(); }

@@ -905,3 +905,6 @@ public:
 		::operator delete(static_cast<void*>(m_threads), std::align_val_t{alignof(Thread)});
 	}
 };
+
+usz map_workload(std::string_view thread_name, usz thread_count, usz count, std::function<void(usz)>&& func);
+usz map_workload(std::string_view thread_name, usz thread_count, std::function<void()>&& func);

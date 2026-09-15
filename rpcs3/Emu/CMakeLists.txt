@@ -198,6 +198,7 @@ target_sources(rpcs3_emu PRIVATE
     Cell/SPUThread.cpp
     Cell/lv2/lv2.cpp
     Cell/lv2/sys_bdemu.cpp
+    Cell/lv2/sys_bluetooth.cpp
     Cell/lv2/sys_btsetting.cpp
     Cell/lv2/sys_cond.cpp
     Cell/lv2/sys_console.cpp
@@ -522,6 +523,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Overlays/BigPicture/overlay_big_picture.cpp
     RSX/Overlays/BigPicture/overlay_big_picture_game_details.cpp
     RSX/Overlays/BigPicture/overlay_big_picture_game_grid.cpp
+    RSX/Overlays/BigPicture/overlay_big_picture_game_info.cpp
     RSX/Overlays/BigPicture/overlay_big_picture_main_menu.cpp
     RSX/Overlays/Network/overlay_recvmessage_dialog.cpp
     RSX/Overlays/Network/overlay_sendmessage_dialog.cpp
@@ -579,8 +581,8 @@ target_sources(rpcs3_emu PRIVATE
     RSX/RSXThread.cpp
     RSX/RSXZCULL.cpp
     RSX/rsx_methods.cpp
-    RSX/rsx_utils.cpp
     RSX/rsx_vertex_data.cpp
+    RSX/Utils/rsx_utils.cpp
 )
 
 if(NOT ANDROID AND NOT APPLE)

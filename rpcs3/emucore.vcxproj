@@ -76,6 +76,7 @@
     </ClCompile>
     <ClCompile Include="Emu\cache_utils.cpp" />
     <ClCompile Include="Emu\Cell\ErrorCodes.cpp" />
+    <ClCompile Include="Emu\Cell\lv2\sys_bluetooth.cpp" />
     <ClCompile Include="Emu\Cell\lv2\sys_game.cpp" />
     <ClCompile Include="Emu\Cell\Modules\cellMusicSelectionContext.cpp" />
     <ClCompile Include="Emu\Cell\Modules\libfs_utility_init.cpp" />
@@ -137,6 +138,7 @@
     <ClCompile Include="Emu\RSX\NV47\HW\nv308a.cpp" />
     <ClCompile Include="Emu\RSX\NV47\HW\nv406e.cpp" />
     <ClCompile Include="Emu\RSX\NV47\HW\nv4097.cpp" />
+    <ClCompile Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture_game_info.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\FriendsList\overlay_friends_list_dialog.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_icons.cpp" />
     <ClCompile Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu.cpp" />
@@ -521,7 +523,7 @@
     <ClCompile Include="Emu\RSX\RSXFIFO.cpp" />
     <ClCompile Include="Emu\RSX\RSXOffload.cpp" />
     <ClCompile Include="Emu\RSX\rsx_methods.cpp" />
-    <ClCompile Include="Emu\RSX\rsx_utils.cpp" />
+    <ClCompile Include="Emu\RSX\Utils\rsx_utils.cpp" />
     <ClCompile Include="Crypto\aes.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -600,6 +602,7 @@
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClInclude>
     <ClInclude Include="Emu\cache_utils.hpp" />
+    <ClInclude Include="Emu\Cell\lv2\sys_bluetooth.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_crypto_engine.h" />
     <ClInclude Include="Emu\Cell\lv2\sys_game.h" />
     <ClInclude Include="Emu\Cell\Modules\cellCrossController.h" />
@@ -615,6 +618,7 @@
     <ClInclude Include="Emu\CPU\Hypervisor.h" />
     <ClInclude Include="Emu\CPU\sse2neon.h" />
     <ClInclude Include="Emu\games_config.h" />
+    <ClInclude Include="Emu\game_enumeration.h" />
     <ClInclude Include="Emu\Io\Buzz.h" />
     <ClInclude Include="Emu\Io\buzz_config.h" />
     <ClInclude Include="Emu\Io\camera_config.h" />
@@ -680,7 +684,6 @@
     <ClInclude Include="Emu\NP\rpcn_config.h" />
     <ClInclude Include="Emu\NP\ip_address.h" />
     <ClInclude Include="Emu\perf_monitor.hpp" />
-    <ClInclude Include="Emu\RSX\color_utils.h" />
     <ClInclude Include="Emu\RSX\Common\aligned_malloc.hpp" />
     <ClInclude Include="Emu\RSX\Common\bitfield.hpp" />
     <ClInclude Include="Emu\RSX\Common\buffer_stream.hpp" />
@@ -721,6 +724,7 @@
     <ClInclude Include="Emu\RSX\NV47\HW\nv47.h" />
     <ClInclude Include="Emu\RSX\NV47\HW\common.h" />
     <ClInclude Include="Emu\RSX\NV47\HW\nv47_sync.hpp" />
+    <ClInclude Include="Emu\RSX\Overlays\BigPicture\overlay_big_picture_game_info.h" />
     <ClInclude Include="Emu\RSX\Overlays\FriendsList\overlay_friends_list_dialog.h" />
     <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_icons.h" />
     <ClInclude Include="Emu\RSX\Overlays\HomeMenu\overlay_home_menu.h" />
@@ -799,6 +803,7 @@
     <ClInclude Include="util\atomic.hpp" />
     <ClInclude Include="util\bit_set.hpp" />
     <ClInclude Include="util\bless.hpp" />
+    <ClInclude Include="util\cctype.hpp" />
     <ClInclude Include="util\pair.hpp" />
     <ClInclude Include="util\tuple.hpp" />
     <ClInclude Include="util\video_sink.h" />
@@ -1052,6 +1057,7 @@
     <ClInclude Include="Emu\Io\PadHandler.h" />
     <ClInclude Include="Emu\RSX\Program\CgBinaryProgram.h" />
     <ClInclude Include="Emu\RSX\Common\BufferUtils.h" />
+    <ClInclude Include="Emu\RSX\Common\BufferUtils_avx512.h" />
     <ClInclude Include="Emu\RSX\Program\FragmentProgramDecompiler.h" />
     <ClInclude Include="Emu\RSX\Common\ring_buffer_helper.h" />
     <ClInclude Include="Emu\RSX\Program\ShaderParam.h" />
@@ -1070,7 +1076,10 @@
     <ClInclude Include="Emu\Memory\vm_reservation.h" />
     <ClInclude Include="Emu\Memory\vm_var.h" />
     <ClInclude Include="Emu\RSX\rsx_methods.h" />
-    <ClInclude Include="Emu\RSX\rsx_utils.h" />
+    <ClInclude Include="Emu\RSX\Utils\algorithm.hpp" />
+    <ClInclude Include="Emu\RSX\Utils\color_utils.hpp" />
+    <ClInclude Include="Emu\RSX\Utils\image_utils.hpp" />
+    <ClInclude Include="Emu\RSX\Utils\rsx_utils.h" />
     <ClInclude Include="Emu\System.h" />
     <ClInclude Include="Emu\perf_meter.hpp" />
     <ClInclude Include="Emu\GDB.h" />

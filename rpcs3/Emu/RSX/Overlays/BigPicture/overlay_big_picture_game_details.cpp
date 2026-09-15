@@ -33,27 +33,27 @@ namespace rsx
 			m_info_text.set_wrap_text(true);
 			m_info_text.set_size(width - 80, 200);
 
-			m_start_btn.set_image_resource(resource_config::standard_image_resource::cross);
+			m_start_btn.set_image_resource(resource_config::confirm_button_resource());
 			m_start_btn.set_text(localized_string_id::BIG_PICTURE_GAME_DETAILS_START);
 			m_start_btn.set_font("Arial", 16);
 			m_start_btn.set_pos(x + 40, y + height - 80);
 
-			m_back_hint.set_image_resource(resource_config::standard_image_resource::circle);
+			m_back_hint.set_image_resource(resource_config::cancel_button_resource());
 			m_back_hint.set_text(localized_string_id::BIG_PICTURE_HINT_BACK);
 			m_back_hint.set_font("Arial", 16);
 			m_back_hint.set_pos(x + 40 + 120 + 20, y + height - 80);
 		}
 
-		void big_picture_game_details::show(const GameInfo& info, const image_info* icon_data)
+		void big_picture_game_details::show(const big_picture_game_info& info, const image_info* icon_data)
 		{
 			m_title.set_text(info.name.empty() ? info.serial : info.name);
 			m_title.auto_resize(false, m_w - 80);
 
 			m_info_text.set_text(fmt::format("%s\n%s\n%s", info.serial, info.category, info.app_ver));
 
-			if (const std::string pic1_path = rpcs3::utils::get_game_content_path(game_content_type::background_picture, info); !pic1_path.empty())
+			if (const auto res = rpcs3::utils::get_game_content_path(game_content_type::background_picture, info); !res.first.empty())
 			{
-				m_pic_data = std::make_unique<image_info>(pic1_path);
+				m_pic_data = info.load_icon(res.first, res.second);
 				// The renderer's texture cache is keyed by this object's address, which can be reused by an
 				// unrelated image after the old one is freed - force a re-upload instead of trusting the cache.
 				m_pic_data->dirty = true;
@@ -71,7 +71,7 @@ namespace rsx
 
 			if (!info.movie_path.empty())
 			{
-				m_video = std::make_unique<video_view>(info.movie_path, info.audio_path, info.icon_path);
+				m_video = std::make_unique<video_view>(info);
 				m_video->set_pos(m_icon.x, m_icon.y);
 				m_video->set_size(m_icon.w, m_icon.h);
 				m_video->set_active(true);
@@ -82,10 +82,12 @@ namespace rsx
 
 				if (icon_data)
 				{
+					m_icon.set_keep_aspect_ratio(true);
 					m_icon.set_raw_image(icon_data);
 				}
 				else
 				{
+					m_icon.set_keep_aspect_ratio(false);
 					m_icon.set_image_resource(resource_config::standard_image_resource::new_entry);
 				}
 

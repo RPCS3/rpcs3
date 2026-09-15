@@ -1,7 +1,8 @@
 #pragma once
 
 #include "Emu/RSX/Overlays/HomeMenu/overlay_home_menu_page.h"
-#include "Emu/GameInfo.h"
+#include "Emu/game_enumeration.h"
+#include "overlay_big_picture_game_info.h"
 
 #include <functional>
 
@@ -11,15 +12,10 @@ namespace rsx
 	{
 		struct big_picture_game_details;
 
-		struct big_picture_game_entry
-		{
-			GameInfo info;
-		};
-
 		// A single selectable tile (icon + title) inside the game grid.
 		struct big_picture_game_tile : public vertical_layout
 		{
-			big_picture_game_tile(const big_picture_game_entry& entry, u16 tile_width);
+			big_picture_game_tile(const big_picture_game_info& entry, u16 tile_width);
 
 			// PS3 ICON0.PNG is always 320x176 - keep tiles at that exact aspect ratio instead of stretching it.
 			static constexpr u16 icon_height(u16 tile_width) { return static_cast<u16>(tile_width * 176 / 320); }
@@ -46,16 +42,24 @@ namespace rsx
 			compiled_resource& get_compiled() override;
 
 		private:
-			void reload();
+			void start_reload();
+			void finish_reload(std::vector<std::unique_ptr<big_picture_game_tile>>&& tiles);
 			void select_tile(s32 index);
+
+			u16 column(s32 tile_index) const;
+			u16 row(s32 tile_index) const;
 
 			static constexpr u16 m_columns = 5;
 			static constexpr u16 m_tile_size = 200;
 
-			std::vector<big_picture_game_entry> m_games;
+			std::mutex m_mutex;
+			std::unique_ptr<named_thread<std::function<void()>>> m_game_enumeration_thread;
+
+			game_enumeration<big_picture_game_info> m_game_enumeration;
+			std::vector<big_picture_game_info> m_games;
 			std::vector<big_picture_game_tile*> m_tiles; // non-owning, owned by m_grid
 			std::unique_ptr<vertical_layout> m_grid;
-			std::unique_ptr<label> m_no_games_text;
+			std::unique_ptr<label> m_placeholder_text;
 			std::unique_ptr<rounded_rect> m_highlight;
 			std::unique_ptr<big_picture_game_details> m_details;
 			std::function<void(std::string, std::string)> m_on_game_selected;
@@ -65,8 +69,9 @@ namespace rsx
 
 			s32 m_selected_index = 0;
 			u16 m_row_stride = 0;
-			u16 m_content_height = 0; 
-			compiled_resource m_compiled_grid;
+			u16 m_content_height = 0;
+
+			atomic_t<bool> m_loading = true;
 		};
 	}
 }

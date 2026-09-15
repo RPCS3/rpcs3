@@ -9,15 +9,24 @@
 #include <QPixmap>
 #include <QTableWidget>
 #include <QSlider>
-#include <QSplitter>
+#include <QSpinBox>
+#include <QStackedWidget>
 
 #include <memory>
 #include <mutex>
+#include <string_view>
 #include <unordered_map>
 
 class game_list;
+class QPushButton;
+class QLineEdit;
 class gui_settings;
 class TROPUSRLoader;
+
+namespace rpcn
+{
+	class rpcn_client;
+}
 
 struct GameTrophiesData
 {
@@ -26,6 +35,7 @@ struct GameTrophiesData
 	std::unordered_map<int, QPixmap> trophy_images; // Cache trophy images to avoid loading from disk as much as possible.
 	std::unordered_map<int, QString> trophy_image_paths;
 	std::string game_name;
+	std::string communication_id;
 	std::string path;
 };
 
@@ -45,8 +55,11 @@ private Q_SLOTS:
 	void ResizeGameIcons();
 	void ResizeTrophyIcons();
 	void ApplyFilter();
+	void ApplyGameFilter(const QString& text);
 	void ShowTrophyTableContextMenu(const QPoint& pos);
 	void ShowGameTableContextMenu(const QPoint& pos);
+	void DeleteOnlineTrophies();
+	void SyncAllOnlineTrophies();
 
 Q_SIGNALS:
 	void GameIconReady(int index, const QPixmap& pixmap);
@@ -57,6 +70,14 @@ private:
 	Returns true if successful.  Does not attempt to install if failure occurs, like sceNpTrophy.
 	*/
 	bool LoadTrophyFolderToDB(const std::string& trop_name);
+	void DeleteOnlineTrophiesForCommunicationId(std::string_view communication_id, const QString& game_name = {});
+	void SyncOnlineTrophiesForGame(int db_ind);
+	bool SyncOnlineTrophyGame(int db_ind, const std::shared_ptr<rpcn::rpcn_client>& rpcn, QString& error_message);
+	bool CanStartOnlineTrophySync(bool sync_all);
+	void BeginOnlineTrophySync(bool sync_all);
+	void EndOnlineTrophySync();
+	void UpdateOnlineTrophySyncCooldown();
+	qint64 GetOnlineTrophySyncCooldownRemainingMs(bool sync_all) const;
 
 	/** Populate the trophy database (multithreaded). */
 	void StartTrophyLoadThreads();
@@ -70,6 +91,8 @@ private:
 	Takes results from LoadTrophyFolderToDB and puts it into the UI.
 	*/
 	void PopulateTrophyTable();
+	void OpenGameFromRow(int row);
+	void ShowGameList();
 
 	void ReadjustGameTable() const;
 	void ReadjustTrophyTable() const;
@@ -95,9 +118,13 @@ private:
 	std::mutex m_trophies_db_mtx;
 	QComboBox* m_game_combo; //! Lets you choose a game
 	QLabel* m_game_progress; //! Shows you the current game's progress
-	QSplitter* m_splitter; //! Contains the game and trophy tables
+	QLabel* m_game_title = nullptr;
+	QLabel* m_game_communication_id = nullptr;
+	QLineEdit* m_game_search = nullptr;
+	QStackedWidget* m_stack = nullptr;
 	game_list* m_trophy_table; //! UI element to display trophy stuff.
 	game_list* m_game_table; //! UI element to display games.
+	QPushButton* m_btn_sync_all_trophies = nullptr;
 
 	std::map<int, QAction*> m_trophy_column_acts;
 	std::map<int, QAction*> m_game_column_acts;
@@ -117,7 +144,7 @@ private:
 
 	int m_game_icon_size_index = 25;
 	QSize m_game_icon_size = QSize(m_game_icon_size_index, m_game_icon_size_index);
-	bool m_save_game_icon_size = false;
-	QSlider* m_game_icon_slider = nullptr;
+	QSpinBox* m_game_icon_size_spin = nullptr;
 	QColor m_game_icon_color;
+	int m_current_game_index = -1;
 };

@@ -47,9 +47,9 @@
 #include "util/logs.hpp"
 #include "util/init_mutex.hpp"
 #include "util/sysinfo.hpp"
+#include "util/cctype.hpp"
 
 #include <memory>
-#include <regex>
 #include <shared_mutex>
 
 #include "Utilities/JIT.h"
@@ -930,6 +930,7 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	g_cfg.video.disable_on_disk_shader_cache.set(true);
 
 	vm::init();
+	vm::reserve_map(vm::main, 0, 0x1FFF0000, vm::page_64k_size);
 	g_fxo->init(false);
 
 	// Initialize progress dialog
@@ -943,6 +944,8 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	GetCallbacks().on_ready();
 
 	GetCallbacks().init_gs_render(nullptr);
+	GetCallbacks().init_kb_handler();
+	GetCallbacks().init_mouse_handler();
 	GetCallbacks().init_pad_handler("");
 
 	GetCallbacks().on_run(false);
@@ -981,9 +984,14 @@ bool Emulator::BootBigPictureMode()
 	m_ar.reset();
 
 	Init();
+
+	// Make sure the games folder is parsed before we enter big picture mode.
+	AddGamesFromDir(rpcs3::utils::get_games_dir());
+
 	g_cfg.video.disable_on_disk_shader_cache.set(true);
 
 	vm::init();
+	vm::reserve_map(vm::main, 0, 0x1FFF0000, vm::page_64k_size);
 	g_fxo->init(false);
 
 	// Initialize progress dialog
@@ -997,6 +1005,8 @@ bool Emulator::BootBigPictureMode()
 	GetCallbacks().on_ready();
 
 	GetCallbacks().init_gs_render(nullptr);
+	GetCallbacks().init_kb_handler();
+	GetCallbacks().init_mouse_handler();
 	GetCallbacks().init_pad_handler("");
 
 	GetCallbacks().on_run(false);
@@ -1226,6 +1236,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 	std::string inherited_ps3_game_path;
 	bool launching_from_disc_archive = false;
+	bool launching_from_optical_drive = false;
 
 	{
 		Init();
@@ -1317,7 +1328,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			std::string disc_info;
 			m_ar->serialize(argv.emplace_back(), disc_info, klic.emplace_back(), m_game_dir, hdd1);
 
-			launching_from_disc_archive = is_iso_file(disc_info);
+			launching_from_disc_archive = is_iso_file(disc_info, nullptr, &launching_from_optical_drive);
 
 			sys_log.notice("Savestate: is iso archive = %d ('%s')", launching_from_disc_archive, disc_info);
 
@@ -1623,7 +1634,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		}
 
 		const std::string resolved_path = GetCallbacks().resolve_path(m_path);
-		if (!launching_from_disc_archive && is_iso_file(m_path))
+		if (!launching_from_disc_archive && is_iso_file(m_path, nullptr, &launching_from_optical_drive))
 		{
 			sys_log.notice("Loading iso archive '%s'", m_path);
 
@@ -1878,6 +1889,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			GetCallbacks().on_ready();
 			ensure(g_fxo->init<main_ppu_module<lv2_obj>>());
 			vm::init();
+			vm::reserve_map(vm::main, 0, 0x1FFF0000, vm::page_64k_size);
 			m_force_boot = false;
 
 			// Force LLVM recompiler
@@ -2100,7 +2112,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			// Load /dev_bdvd/ from game list if available
 			if (std::string game_path = m_games_config.get_path(m_title_id); !game_path.empty())
 			{
-				if (is_iso_file(game_path))
+				if (is_iso_file(game_path, nullptr, &launching_from_optical_drive))
 				{
 					sys_log.notice("Loading iso archive for patch ('%s')", game_path);
 
@@ -2368,9 +2380,9 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			if (!pkgs.empty())
 			{
 				bool install_success = true;
-				BlockingCallFromMainThread([this, &pkgs, &install_success]()
+				BlockingCallFromMainThread([this, &pkgs, &install_success, launching_from_optical_drive]()
 				{
-					if (!GetCallbacks().on_install_pkgs(pkgs))
+					if (!GetCallbacks().on_install_pkgs(pkgs, launching_from_optical_drive))
 					{
 						install_success = false;
 					}
@@ -4039,7 +4051,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 					tty_buffer.resize(tty_read_fd.read_at(m_tty_file_init_pos, tty_buffer.data(), tty_buffer.size()));
 					tty_read_fd.close();
 
-					if (!tty_buffer.empty() && std::isspace(tty_buffer.back()))
+					if (!tty_buffer.empty() && utils::isspace(tty_buffer.back()))
 					{
 						tty_buffer.resize(tty_buffer.find_last_not_of(" \f\n\r\t\v"sv) + 1);
 					}
@@ -4132,7 +4144,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 							iter = index + 1;
 						}
 
-						if (!new_log.empty() && std::isspace(new_log.back()))
+						if (!new_log.empty() && utils::isspace(new_log.back()))
 						{
 							new_log.resize(new_log.find_last_not_of(" \f\n\r\t\v"sv) + 1);
 						}
@@ -4411,16 +4423,30 @@ u32 Emulator::AddGamesFromDir(std::string path)
 
 	fmt::trim_back(path, fs::delim);
 
+	// Don't write "games.yml" on each added game: it is saved once, at the end of the scan.
+	// NOTE: this function is recursive, so the previous value is restored instead of being forced back to enabled,
+	//       otherwise a nested scan would re-enable the write for the remaining part of the outer one
+	const bool save_on_dirty = m_games_config.is_save_on_dirty();
 	m_games_config.set_save_on_dirty(false);
 
+	// A game was found on a path if it has just been added or if it was already registered
+	const auto game_found = [](game_boot_result error)
+	{
+		return error == game_boot_result::no_errors || error == game_boot_result::already_added;
+	};
+
 	// search for a game on the provided path first (game on ISO file or on folder type)
-	if (const game_boot_result error = AddGame(path); error == game_boot_result::no_errors)
+	const game_boot_result path_error = AddGame(path);
+
+	if (path_error == game_boot_result::no_errors)
 	{
 		games_added++;
 	}
 
-	// search for games on subfolders only if not nested inside a discovered game folder
-	if (games_added == 0)
+	// search for games on subfolders only if not nested inside a discovered game folder, otherwise the same title
+	// would be registered again through a different path (e.g. the root of a BD drive "E:/" is registered as a raw
+	// device, its subfolder "E:/PS3_GAME" would register it again as a disc folder)
+	if (!game_found(path_error))
 	{
 		std::vector<fs::dir_entry> entries;
 
@@ -4446,16 +4472,20 @@ u32 Emulator::AddGamesFromDir(std::string path)
 
 				const std::string dir_path = path + "/" + dir_entry.name;
 
-				if (!dir_entry.is_directory && !is_iso_file(dir_path))
+				// The outcome is handed over to "AddGame()" so that the ISO is not recognized twice: each check
+				// reads the volume descriptor, which is a physical read when the path points to an optical drive
+				const bool is_iso = !dir_entry.is_directory && is_iso_file(dir_path);
+
+				if (!dir_entry.is_directory && !is_iso)
 				{
 					continue;
 				}
 
-				if (const game_boot_result error = AddGame(dir_path); error == game_boot_result::no_errors)
+				if (const game_boot_result error = AddGame(dir_path, is_iso); error == game_boot_result::no_errors)
 				{
 					games_added++;
 				}
-				else if (g_cfg.misc.use_recursive_scan)
+				else if (!game_found(error) && g_cfg.misc.use_recursive_scan)
 				{
 					games_added += AddGamesFromDir(dir_path);
 				}
@@ -4470,9 +4500,10 @@ u32 Emulator::AddGamesFromDir(std::string path)
 		});
 	}
 
-	m_games_config.set_save_on_dirty(true);
+	m_games_config.set_save_on_dirty(save_on_dirty);
 
-	if (m_games_config.is_dirty() && !m_games_config.save())
+	// Flush the changes only when the outermost scan is done
+	if (save_on_dirty && m_games_config.is_dirty() && !m_games_config.save())
 	{
 		sys_log.error("Failed to save games.yml after adding games");
 	}
@@ -4480,14 +4511,14 @@ u32 Emulator::AddGamesFromDir(std::string path)
 	return games_added;
 }
 
-game_boot_result Emulator::AddGame(std::string path)
+game_boot_result Emulator::AddGame(std::string path, bool is_iso)
 {
 	fmt::trim_back(path, fs::delim);
 
 	// Handle files directly
 	if (!fs::is_dir(path) || fs::get_optical_raw_device(path))
 	{
-		return AddGameToYml(path);
+		return AddGameToYml(path, is_iso);
 	}
 
 	game_boot_result result = game_boot_result::nothing_to_boot;
@@ -4508,7 +4539,7 @@ game_boot_result Emulator::AddGame(std::string path)
 			continue;
 		}
 
-		if (entry.is_directory && std::regex_match(entry.name, std::regex("^PS3_GM[[:digit:]]{2}$")))
+		if (entry.is_directory && rpcs3::utils::is_ps3_gm_dir_name(entry.name))
 		{
 			const std::string elf = path + "/" + entry.name + "/USRDIR/EBOOT.BIN";
 
@@ -4529,7 +4560,7 @@ game_boot_result Emulator::AddGame(std::string path)
 	return result;
 }
 
-game_boot_result Emulator::AddGameToYml(std::string path)
+game_boot_result Emulator::AddGameToYml(std::string path, bool is_iso)
 {
 	fmt::trim_back(path, fs::delim);
 
@@ -4558,7 +4589,9 @@ game_boot_result Emulator::AddGameToYml(std::string path)
 	}
 
 	std::unique_ptr<iso_archive> archive;
-	if (is_iso_file(path))
+
+	// Skip the check if the caller already recognized the path as an ISO: it would read the volume descriptor again
+	if (is_iso || is_iso_file(path))
 	{
 		archive = std::make_unique<iso_archive>(path);
 
@@ -4825,7 +4858,7 @@ void Emulator::GetBdvdDir(std::string& bdvd_dir, std::string& sfb_dir, std::stri
 			continue;
 		}
 
-		if (dir_name == "PS3_GAME"sv || std::regex_match(dir_name.begin(), dir_name.end(), std::regex("^PS3_GM[[:digit:]]{2}$")))
+		if (dir_name == "PS3_GAME"sv || rpcs3::utils::is_ps3_gm_dir_name(dir_name))
 		{
 			if (IsValidSfb(parent_dir + "/PS3_DISC.SFB"))
 			{

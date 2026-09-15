@@ -141,9 +141,9 @@ void screenshot_manager_dialog::reload()
 			std::string text = serial;
 			for (const auto& game : m_games)
 			{
-				if (game && game->info.serial == serial)
+				if (game && game->serial == serial)
 				{
-					text = fmt::format("%s (%s)", game->info.name, serial);
+					text = fmt::format("%s (%s)", game->name, serial);
 					break;
 				}
 			}

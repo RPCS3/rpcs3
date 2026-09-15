@@ -121,9 +121,9 @@ bool package_reader::read_header()
 		return false;
 	}
 
-	if (u64{umax} / sizeof(PKGEntry) < u64(m_header.file_count))
+	if (m_header.file_count > PKG_MAX_FILE_COUNT || u64(m_header.file_count) > u64(m_header.data_size) / sizeof(PKGEntry))
 	{
-		pkg_log.error("PKG file count is too large! (0x%x)", m_header.file_count);
+		pkg_log.error("PKG file count is invalid! (count=0x%x, data_size=0x%llx)", m_header.file_count, m_header.data_size);
 		return false;
 	}
 
@@ -877,6 +877,25 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 		return false;
 	}
 
+	std::error_code path_ec;
+	auto install_path = std::filesystem::weakly_canonical(m_install_path, path_ec);
+	if (path_ec)
+	{
+		pkg_log.warning("Failed to canonicalize installation path '%s' (%s); falling back to lexical normalization.", m_install_path, path_ec.message());
+		install_path = std::filesystem::path(m_install_path).lexically_normal();
+	}
+
+	if (install_path.empty())
+	{
+		pkg_log.error("Failed to normalize installation path for '%s'", m_install_path);
+		return false;
+	}
+
+	const auto is_inside_install_path = [&install_path](const std::filesystem::path& path)
+	{
+		return std::mismatch(install_path.begin(), install_path.end(), path.begin(), path.end()).first == install_path.end();
+	};
+
 	m_install_entries.clear();
 	m_bootable_file_path.clear();
 	m_entry_indexer = 0;
@@ -914,7 +933,51 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 
 		std::string_view name = fmt::trim_back_sv(name_buf, "\0"sv);
 
+		const std::filesystem::path entry_path{name};
+		if (entry_path.is_absolute())
+		{
+			num_failures++;
+			pkg_log.error("PKG entry path is absolute: '%s'", name);
+			break;
+		}
+
+		for (const auto& component : entry_path)
+		{
+			if (component == "..")
+			{
+				fmt::throw_exception("PKG entry path contains a parent directory component: '%s'", name);
+			}
+
+			if (component == ".")
+			{
+				num_failures++;
+				pkg_log.error("PKG entry path contains a special component: '%s'", name);
+				break;
+			}
+		}
+
+		if (num_failures)
+		{
+			break;
+		}
+
 		std::string path = m_install_path + vfs::escape(name);
+		path_ec.clear();
+		auto canonical_path = std::filesystem::weakly_canonical(path, path_ec);
+		if (path_ec)
+		{
+			pkg_log.warning("Failed to canonicalize package path '%s' (%s); falling back to lexical normalization.", path, path_ec.message());
+			canonical_path = std::filesystem::path(path).lexically_normal();
+		}
+
+		if (canonical_path.empty() || !is_inside_install_path(canonical_path))
+		{
+			num_failures++;
+			pkg_log.error("PKG entry path escapes installation directory: '%s'", name);
+			break;
+		}
+
+		path = canonical_path.string();
 
 		if (entry.pad || (entry.type & ~PKG_FILE_ENTRY_KNOWN_BITS))
 		{
@@ -951,16 +1014,9 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 		}
 		default:
 		{
-			// TODO: check for valid utf8 characters
-			const std::string true_path = std::filesystem::path(path).lexically_normal().string();
-			if (true_path.empty())
-			{
-				num_failures++;
-				pkg_log.error("Failed to normalize package path for '%s'", path);
-				break;
-			}
-
-			auto map_ptr = &*all_install_entries.try_emplace(true_path).first;
+			// The name reached "path" through "vfs::escape", which turns whatever the host file system cannot take
+			// into characters it can, a byte that is not valid UTF-8 included (macOS refuses a name carrying one)
+			auto map_ptr = &*all_install_entries.try_emplace(path).first;
 
 			m_install_entries.push_back({
 				.weak_reference = map_ptr,
@@ -1310,7 +1366,7 @@ void package_reader::extract_worker()
 	}
 }
 
-package_install_result package_reader::extract_data(std::deque<package_reader>& readers, std::deque<std::string>& bootable_paths)
+package_install_result package_reader::extract_data(std::deque<package_reader>& readers, std::deque<std::string>& bootable_paths, bool from_optical_drive)
 {
 	package_install_result::error_type error = package_install_result::error_type::no_error;
 	usz num_failures = 0;
@@ -1362,27 +1418,12 @@ package_install_result package_reader::extract_data(std::deque<package_reader>& 
 
 		if (reader.m_num_failures == 0)
 		{
-			const usz thread_count = std::min<usz>(utils::get_thread_count(), reader.m_install_entries.size());
-			atomic_t<u32> num_threads_succeeded {0}; // Check if any thread didn't finish. For example when hitting an exception.
-
-			if (thread_count > 1)
-			{
-				named_thread_group workers("PKG Installer "sv, ::narrow<u32>(thread_count) - 1, [&]()
-				{
-					reader.extract_worker();
-					num_threads_succeeded++;
-				});
-
-				reader.extract_worker();
-				num_threads_succeeded++;
-
-				workers.join();
-			}
-			else
+			// Disc archives don't like multithreaded file reads, so let's just use a single thread here
+			const usz thread_count = from_optical_drive ? 1 : std::min<usz>(utils::get_thread_count(), reader.m_install_entries.size());
+			const usz num_threads_succeeded = map_workload("PKG Installer "sv, thread_count, [&reader]()
 			{
 				reader.extract_worker();
-				num_threads_succeeded++;
-			}
+			});
 
 			if (thread_count != num_threads_succeeded)
 			{

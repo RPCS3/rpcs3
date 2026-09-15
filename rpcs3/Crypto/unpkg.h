@@ -14,6 +14,7 @@ enum : u32
 {
 	PKG_HEADER_SIZE  = 0xC0, // sizeof(pkg_header) + sizeof(pkg_unk_checksum)
 	PKG_HEADER_SIZE2 = 0x280,
+	PKG_MAX_FILE_COUNT = 0x7FFF'FFFF,
 	PKG_MAX_FILENAME_SIZE = 256,
 };
 
@@ -372,7 +373,7 @@ public:
 	const PKGHeader& get_header() const { return m_header; }
 	const PKGMetaData& get_metadata() const { return m_metadata; }
 	package_install_result check_target_app_version() const;
-	static package_install_result extract_data(std::deque<package_reader>& readers, std::deque<std::string>& bootable_paths);
+	static package_install_result extract_data(std::deque<package_reader>& readers, std::deque<std::string>& bootable_paths, bool from_optical_drive);
 	const psf::registry& get_psf() const { return m_psf; }
 	result get_result() const { return m_result; };
 

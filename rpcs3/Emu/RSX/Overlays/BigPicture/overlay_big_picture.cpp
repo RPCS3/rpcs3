@@ -77,13 +77,14 @@ namespace rsx
 			case pad_button::dpad_right:
 			case pad_button::ls_left:
 			case pad_button::ls_right:
-				m_auto_repeat_ms_interval = 10;
+				m_auto_repeat_ms_interval = 100;
 				break;
 			default:
 				m_auto_repeat_ms_interval = m_auto_repeat_ms_interval_default;
 				break;
 			}
 
+			const bool main_menu_is_current_page = m_main_menu.is_current_page;
 			const page_navigation navigation = m_main_menu.handle_button_press(button_press, is_auto_repeat, m_auto_repeat_ms_interval);
 
 			switch (navigation)
@@ -110,6 +111,12 @@ namespace rsx
 			}
 			case page_navigation::exit:
 			{
+				// Don't exit if circle was pressed in the main menu
+				if (main_menu_is_current_page && button_press == pad_button::circle)
+				{
+					break;
+				}
+
 				// Don't call close() synchronously from the input thread - just like the pause menu's own
 				// "Exit Game", tearing down the shell on the main thread takes this dialog down as a side effect.
 				g_big_picture_mode_active = false;

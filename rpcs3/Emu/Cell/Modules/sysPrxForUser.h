@@ -19,6 +19,8 @@ extern spu_printf_cb_t g_spu_printf_dtcb;
 
 // Functions
 
+error_code sys_mmapper_get_shared_memory_area(ppu_thread& ppu, u64 flags, vm::ptr<u32> address);
+
 vm::ptr<void> _sys_memset(vm::ptr<void> dst, s32 value, u32 size);
 
 struct sys_lwmutex_t;

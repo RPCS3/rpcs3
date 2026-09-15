@@ -71,6 +71,7 @@ namespace rpcn
 		GetRoomMemberDataExternalList,
 		UnlockTrophy,
 		SyncTrophies,
+		DeleteTrophies,
 	};
 
 	enum class NotificationType : u16

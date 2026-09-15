@@ -41,9 +41,11 @@
     <CmakeReleaseCLI>call vsdevcmd.bat -arch=amd64
       if not exist "$(SolutionDir)build\tmp\protobuf_build-$(Configuration)-$(Platform)" mkdir "$(SolutionDir)build\tmp\protobuf_build-$(Configuration)-$(Platform)"
       cd "$(SolutionDir)build\tmp\protobuf_build-$(Configuration)-$(Platform)"
+      if not defined CCACHE_LAUNCH_ARGS set CCACHE_LAUNCH_ARGS=
       cmake -G Ninja ^
         -DCMAKE_CXX_COMPILER="cl.exe" ^
         -DCMAKE_C_COMPILER="cl.exe" ^
+        %25CCACHE_LAUNCH_ARGS%25 ^
         -DCMAKE_CXX_STANDARD=20 ^
         -DCMAKE_BUILD_TYPE="Release" ^
         -DCMAKE_INSTALL_PREFIX="$(SolutionDir)build\lib\$(Configuration)-$(Platform)\protobuf_build" ^
@@ -67,9 +69,11 @@
     <CmakeDebugCLI>call vsdevcmd.bat -arch=amd64
       if not exist "$(SolutionDir)build\tmp\protobuf_build-$(Configuration)-$(Platform)" mkdir "$(SolutionDir)build\tmp\protobuf_build-$(Configuration)-$(Platform)"
       cd "$(SolutionDir)build\tmp\protobuf_build-$(Configuration)-$(Platform)"
+      if not defined CCACHE_LAUNCH_ARGS set CCACHE_LAUNCH_ARGS=
       cmake -G Ninja ^
         -DCMAKE_CXX_COMPILER="cl.exe" ^
         -DCMAKE_C_COMPILER="cl.exe" ^
+        %25CCACHE_LAUNCH_ARGS%25 ^
         -DCMAKE_CXX_STANDARD=20 ^
         -DCMAKE_BUILD_TYPE="Debug" ^
         -DCMAKE_INSTALL_PREFIX="$(SolutionDir)build\lib\$(Configuration)-$(Platform)\protobuf_build" ^

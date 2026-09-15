@@ -465,7 +465,7 @@ void main_window::OnPlayOrPause()
 		if (m_selected_game)
 		{
 			gui_log.notice("Booting from OnPlayOrPause...");
-			Boot(m_selected_game->info.path, m_selected_game->info.serial);
+			Boot(m_selected_game->path, m_selected_game->serial);
 		}
 		else if (const std::string path = Emu.GetLastBoot(); !path.empty())
 		{
@@ -881,7 +881,7 @@ bool main_window::InstallFileInExData(const std::string& extension, const QStrin
 	return to.commit();
 }
 
-bool main_window::InstallPackages(main_window* mw, QStringList file_paths, bool from_boot)
+bool main_window::InstallPackages(main_window* mw, QStringList file_paths, bool from_boot, bool from_optical_drive)
 {
 	if (file_paths.isEmpty())
 	{
@@ -926,7 +926,7 @@ bool main_window::InstallPackages(main_window* mw, QStringList file_paths, bool 
 				return true;
 			}
 
-			return InstallPackages(mw, dir_file_paths, from_boot);
+			return InstallPackages(mw, dir_file_paths, from_boot, from_optical_drive);
 		}
 	}
 
@@ -986,26 +986,23 @@ bool main_window::InstallPackages(main_window* mw, QStringList file_paths, bool 
 
 	if (from_boot)
 	{
-		return HandlePackageInstallation(mw, file_paths, true);
+		return HandlePackageInstallation(mw, file_paths, true, from_optical_drive);
 	}
 
-	// Handle further installations with a timeout. Otherwise the source explorer instance is not usable during the following file processing.
 	if (mw)
 	{
-		QTimer::singleShot(0, [mw, paths = std::move(file_paths)]()
+		// Handle further installations with a timeout. Otherwise the source explorer instance is not usable during the following file processing.
+		QTimer::singleShot(0, [mw, from_optical_drive, paths = std::move(file_paths)]()
 		{
-			HandlePackageInstallation(mw, paths, false);
+			HandlePackageInstallation(mw, paths, false, from_optical_drive);
 		});
-	}
-	else
-	{
-		return HandlePackageInstallation(nullptr, file_paths, false);
+		return true;
 	}
 
-	return true;
+	return HandlePackageInstallation(nullptr, file_paths, false, from_optical_drive);
 }
 
-bool main_window::HandlePackageInstallation(main_window* mw, QStringList file_paths, bool from_boot)
+bool main_window::HandlePackageInstallation(main_window* mw, QStringList file_paths, bool from_boot, bool from_optical_drive)
 {
 	if (file_paths.empty())
 	{
@@ -1135,9 +1132,9 @@ bool main_window::HandlePackageInstallation(main_window* mw, QStringList file_pa
 	std::deque<std::string> bootable_paths;
 
 	// Run PKG unpacking asynchronously
-	named_thread worker("PKG Installer", [&readers, &result, &bootable_paths]
+	named_thread worker("PKG Installer", [&readers, &result, &bootable_paths, from_optical_drive]
 	{
-		result = package_reader::extract_data(readers, bootable_paths);
+		result = package_reader::extract_data(readers, bootable_paths, from_optical_drive);
 		return result.error == package_install_result::error_type::no_error;
 	});
 
@@ -2625,13 +2622,13 @@ void main_window::CreateShortCuts(const std::map<std::string, QString>& paths, s
 
 	for (const auto& [boot_path, title_id] : paths)
 	{
-		for (const game_info& gameinfo : m_game_list_frame->GetGameInfo())
+		for (const game_info& game : m_game_list_frame->GetGameInfo())
 		{
-			if (gameinfo && gameinfo->info.serial == title_id.toStdString())
+			if (game && game->serial == title_id.toStdString())
 			{
-				if (Emu.IsPathInsideDir(boot_path, gameinfo->info.path))
+				if (Emu.IsPathInsideDir(boot_path, game->path))
 				{
-					game_data_shortcuts.push_back(gameinfo);
+					game_data_shortcuts.push_back(game);
 				}
 
 				break;
@@ -2651,13 +2648,13 @@ void main_window::PrecompileCachesFromInstalledPackages(const std::map<std::stri
 
 	for (const auto& [boot_path, title_id] : bootable_paths)
 	{
-		for (const game_info& gameinfo : m_game_list_frame->GetGameInfo())
+		for (const game_info& game : m_game_list_frame->GetGameInfo())
 		{
-			if (gameinfo && gameinfo->info.serial == title_id.toStdString())
+			if (game && game->serial == title_id.toStdString())
 			{
-				if (Emu.IsPathInsideDir(boot_path, gameinfo->info.path))
+				if (Emu.IsPathInsideDir(boot_path, game->path))
 				{
-					game_data.push_back(gameinfo);
+					game_data.push_back(game);
 				}
 
 				break;
@@ -3605,7 +3602,7 @@ void main_window::CreateConnects()
 			const QStringList categories = get_cats(act, id);
 			for (const game_info& game : m_game_list_frame->GetGameInfo())
 			{
-				if (game && categories.contains(QString::fromStdString(game->info.category))) count++;
+				if (game && categories.contains(QString::fromStdString(game->category))) count++;
 			}
 			act->setText(QString("%0 (%1)").arg(text).arg(count));
 		};
@@ -3715,7 +3712,7 @@ void main_window::CreateConnects()
 		connect(this, &main_window::RequestDialogRepaint, manager, &savestate_manager_dialog::HandleRepaintUiRequest);
 		connect(manager, &savestate_manager_dialog::RequestBoot, this, [this, gameinfo](const std::string& path)
 		{
-			Boot(path, gameinfo->info.serial, false, false, cfg_mode::custom, "");
+			Boot(path, gameinfo->serial, false, false, cfg_mode::custom, "");
 		});
 		manager->show();
 	});
@@ -3864,7 +3861,7 @@ void main_window::CreateDockWindows()
 
 			if (game) // A game was selected
 			{
-				const std::string title_and_title_id = game->info.name + " [" + game->info.serial + "]";
+				const std::string title_and_title_id = game->name + " [" + game->serial + "]";
 
 				if (title_and_title_id == Emu.GetTitleAndTitleID()) // This should usually not cause trouble, but feel free to improve.
 				{
@@ -3924,11 +3921,11 @@ void main_window::CreateDockWindows()
 
 	connect(m_game_list_frame, &game_list_frame::RequestBoot, this, [this](const game_info& game, cfg_mode config_mode, const std::string& config_path, const std::string& savestate)
 	{
-		if (!game->info.game_dir.empty())
+		if (!game->game_dir.empty())
 		{
-			Emu.SetGameDir(game->info.game_dir);
+			Emu.SetGameDir(game->game_dir);
 		}
-		Boot(savestate.empty() ? game->info.path : savestate, game->info.serial, false, false, config_mode, config_path);
+		Boot(savestate.empty() ? game->path : savestate, game->serial, false, false, config_mode, config_path);
 	});
 
 	connect(m_game_list_frame, &game_list_frame::NotifyEmuSettingsChange, this, &main_window::NotifyEmuSettingsChange);
@@ -4078,7 +4075,7 @@ void main_window::CleanUpGameList()
 		for (const game_info& game : m_game_list_frame->GetGameInfo()) // Loop on detected games
 		{
 			// If Disc Game and its serial is found in game list file
-			if (game && QString::fromStdString(game->info.category) == cat::cat_disc_game && game->info.serial == serial)
+			if (game && QString::fromStdString(game->category) == cat::cat_disc_game && game->serial == serial)
 			{
 				found = true;
 				break;
@@ -4234,9 +4231,9 @@ void main_window::AddGamesFromDirs(QStringList&& paths)
 		{
 			for (const auto& dir_path : paths)
 			{
-				if (Emu.IsPathInsideDir(game->info.path, dir_path.toStdString()))
+				if (Emu.IsPathInsideDir(game->path, dir_path.toStdString()))
 				{
-					existing.insert(game->info.path);
+					existing.insert(game->path);
 					break;
 				}
 			}
@@ -4262,20 +4259,20 @@ void main_window::AddGamesFromDirs(QStringList&& paths)
 
 		for (const game_info& game : m_game_list_frame->GetGameInfo())
 		{
-			if (game && !existing.contains(game->info.path))
+			if (game && !existing.contains(game->path))
 			{
 				for (const auto& dir_path : paths)
 				{
-					if (Emu.IsPathInsideDir(game->info.path, dir_path.toStdString()))
+					if (Emu.IsPathInsideDir(game->path, dir_path.toStdString()))
 					{
 						// Try to claim operation on directory path
 
-						std::string resolved_path = Emu.GetCallbacks().resolve_path(game->info.path);
+						std::string resolved_path = Emu.GetCallbacks().resolve_path(game->path);
 
 						if (!resolved_path.empty() && !claimed_paths.count(resolved_path))
 						{
-							claimed_paths.emplace(game->info.path);
-							paths_added.emplace(game->info.path, QString::fromStdString(game->info.serial));
+							claimed_paths.emplace(game->path);
+							paths_added.emplace(game->path, QString::fromStdString(game->serial));
 						}
 
 						break;

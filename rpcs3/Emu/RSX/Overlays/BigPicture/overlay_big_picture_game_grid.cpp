@@ -1,9 +1,8 @@
 #include "stdafx.h"
 #include "overlay_big_picture_game_grid.h"
 #include "overlay_big_picture_game_details.h"
-#include "Emu/System.h"
-#include "Emu/system_utils.hpp"
-#include "Loader/PSF.h"
+#include "Emu/system_config.h"
+#include "Utilities/Thread.h"
 
 #include <algorithm>
 
@@ -11,7 +10,7 @@ namespace rsx
 {
 	namespace overlays
 	{
-		big_picture_game_tile::big_picture_game_tile(const big_picture_game_entry& entry, u16 tile_width)
+		big_picture_game_tile::big_picture_game_tile(const big_picture_game_info& entry, u16 tile_width)
 		{
 			pack_padding = 8;
 			back_color.a = 0.f;
@@ -22,12 +21,13 @@ namespace rsx
 			icon->set_size(tile_width, icon_h);
 			icon->back_color = color4f(1.f, 1.f, 1.f, 0.08f);
 
-			if (fs::exists(entry.info.icon_path))
+			if (auto icon_data = entry.load_icon())
 			{
-				m_icon_data = std::make_unique<image_info>(entry.info.icon_path);
+				m_icon_data = std::move(icon_data);
 				// The renderer's texture cache is keyed by this object's address, which can be reused by an
 				// unrelated image after the old one is freed - force a re-upload instead of trusting the cache.
 				m_icon_data->dirty = true;
+				static_cast<image_view*>(icon.get())->set_keep_aspect_ratio(true);
 				static_cast<image_view*>(icon.get())->set_raw_image(m_icon_data.get());
 			}
 			else
@@ -35,7 +35,7 @@ namespace rsx
 				static_cast<image_view*>(icon.get())->set_image_resource(resource_config::standard_image_resource::new_entry);
 			}
 
-			std::unique_ptr<overlay_element> title = std::make_unique<label>(entry.info.name.empty() ? entry.info.serial : entry.info.name);
+			std::unique_ptr<overlay_element> title = std::make_unique<label>(entry.name.empty() ? entry.serial : entry.name);
 			title->set_font("Arial", 13);
 			title->set_size(tile_width, 84);
 			title->set_wrap_text(true);
@@ -50,12 +50,12 @@ namespace rsx
 			: home_menu_page(x, y, width, height, false, parent, get_localized_string(localized_string_id::BIG_PICTURE_MENU_GAMES))
 			, m_on_game_selected(std::move(on_game_selected))
 		{
-			m_no_games_text = std::make_unique<label>(get_localized_string(localized_string_id::BIG_PICTURE_NO_GAMES_FOUND));
-			m_no_games_text->set_font("Arial", 20);
-			m_no_games_text->set_pos(x, y + (height / 2) - 20);
-			m_no_games_text->set_size(width, 40);
-			m_no_games_text->align_text(text_align::center);
-			m_no_games_text->back_color.a = 0.f;
+			m_placeholder_text = std::make_unique<label>(get_localized_string(localized_string_id::BIG_PICTURE_LOADING));
+			m_placeholder_text->set_font("Arial", 20);
+			m_placeholder_text->set_pos(x, y + (height / 2) - 20);
+			m_placeholder_text->set_size(width, 40);
+			m_placeholder_text->align_text(text_align::center);
+			m_placeholder_text->back_color.a = 0.f;
 
 			// Bezel around game cover art.
 			m_highlight = std::make_unique<rounded_rect>();
@@ -65,65 +65,109 @@ namespace rsx
 			m_highlight->back_color = color4f(0.f, 0.f, 0.f, 0.f);
 			m_highlight->pulse_effect_enabled = true;
 
-			m_back_hint.set_image_resource(resource_config::standard_image_resource::circle);
+			m_back_hint.set_image_resource(resource_config::cancel_button_resource());
 			m_back_hint.set_text(localized_string_id::BIG_PICTURE_HINT_BACK);
 			m_back_hint.set_font("Arial", 16);
 			m_back_hint.set_pos(x + width - 2 * (30 + 120), y + height + 20);
 
-			m_select_hint.set_image_resource(resource_config::standard_image_resource::cross);
+			m_select_hint.set_image_resource(resource_config::confirm_button_resource());
 			m_select_hint.set_text(localized_string_id::BIG_PICTURE_HINT_SELECT);
 			m_select_hint.set_font("Arial", 16);
 			m_select_hint.set_pos(x + width - (30 + 120), y + height + 20);
 
 			m_details = std::make_unique<big_picture_game_details>(x, y, width, height);
 
-			reload();
+			start_reload();
 		}
 
-		big_picture_game_grid::~big_picture_game_grid() = default;
+		big_picture_game_grid::~big_picture_game_grid()
+		{
+			if (m_game_enumeration_thread)
+			{
+				*m_game_enumeration_thread = thread_state::aborting; // abort
+				(*m_game_enumeration_thread)(); // wait
+				m_game_enumeration_thread.reset(); // join
+			}
+		}
 
-		void big_picture_game_grid::reload()
+		void big_picture_game_grid::start_reload()
 		{
 			rsx_log.notice("Big Picture Mode: reload() start");
 
+			m_loading = true;
 			m_games.clear();
 			m_tiles.clear();
 
-			for (const auto& [title_id, raw_path] : Emu.GetGamesConfig().get_games())
-			{
-				std::string path = raw_path;
-				path.resize(path.find_last_not_of('/') + 1);
+			// Configure game enumeration
+			m_game_enumeration.initialize_paths();
+			m_game_enumeration.set_localization(g_cfg.sys.language, "Unknown", [](const std::string&){ return std::string(); });
+			m_game_enumeration.set_show_custom_icons(true);
+			m_game_enumeration.set_prefer_game_data_icons(true);
+			m_game_enumeration.set_play_hover_movies(true);
+			m_game_enumeration.set_play_hover_music(true);
+			m_game_enumeration.set_canceled_callback([](){ return thread_ctrl::state() == thread_state::aborting; });
 
-				if (path.empty())
+			m_game_enumeration_thread = std::make_unique<named_thread<std::function<void()>>>("BPM Reload", [this]()
+			{
+				// Parse directories
+				m_game_enumeration.parse_directories();
+
+				// Add VFS entry
+				m_game_enumeration.add_vfs_entry();
+
+				// Remove duplicate entries
+				m_game_enumeration.remove_duplicates();
+
+				// Parse entries (multithreaded)
+				const std::vector<game_enumeration<big_picture_game_info>::path_entry>& entries = m_game_enumeration.path_entries();
+				usz thread_count = std::min<usz>(utils::get_thread_count(), entries.size());
+				map_workload("BPM Parser "sv, thread_count, entries.size(), [this, &entries](usz index)
 				{
-					continue;
+					m_game_enumeration.parse_entry(entries[index]);
+				});
+
+				// Try to update the app version for disc games if there is a patch
+				// Also try to find updated game icons and movies
+				m_game_enumeration.apply_patches();
+
+				// Get final enumerated games
+				for (big_picture_game_info& game : m_game_enumeration.take_games())
+				{
+					if (!game.bootable) continue; // Let's restrict this to bootable entries
+
+					m_games.push_back(std::move(game));
 				}
 
-				const std::string sfo_dir = rpcs3::utils::get_sfo_dir_from_game_path(path, title_id);
-				const psf::registry psf = psf::load_object(sfo_dir + "/PARAM.SFO");
+				// Reset enumeration
+				m_game_enumeration.clear(true);
 
-				if (psf.empty())
+				// Sort by name
+				std::sort(m_games.begin(), m_games.end(), [](const big_picture_game_info& a, const big_picture_game_info& b)
 				{
-					continue;
-				}
+					return a.name < b.name;
+				});
 
-				GameInfo info{};
-				info.path = path;
-				info.serial = title_id;
-				info.name = std::string(psf::get_string(psf, "TITLE", title_id));
-				info.category = std::string(psf::get_string(psf, "CATEGORY"));
-				info.app_ver = std::string(psf::get_string(psf, "APP_VER"));
-				info.icon_path = rpcs3::utils::get_game_content_path(game_content_type::content_icon, info, sfo_dir);
-				info.movie_path = rpcs3::utils::get_game_content_path(game_content_type::content_video, info, sfo_dir);
-				info.audio_path = rpcs3::utils::get_game_content_path(game_content_type::content_sound, info, sfo_dir);
+				// Create tiles (multithreaded)
+				std::vector<std::unique_ptr<big_picture_game_tile>> tiles(m_games.size());
+				thread_count = std::min<usz>(utils::get_thread_count(), tiles.size());
+				map_workload("BPM Tiles "sv, thread_count, tiles.size(), [this, &tiles](usz index)
+				{
+					tiles[index] = std::make_unique<big_picture_game_tile>(m_games[index], m_tile_size);
+				});
 
-				m_games.push_back({ std::move(info) });
-			}
-
-			std::sort(m_games.begin(), m_games.end(), [](const big_picture_game_entry& a, const big_picture_game_entry& b)
-			{
-				return a.info.name < b.info.name;
+				finish_reload(std::move(tiles));
 			});
+		}
+
+		void big_picture_game_grid::finish_reload(std::vector<std::unique_ptr<big_picture_game_tile>>&& tiles)
+		{
+			std::lock_guard lock(m_mutex);
+
+			if (thread_ctrl::state() == thread_state::aborting)
+			{
+				m_loading = false;
+				return;
+			}
 
 			m_grid = std::make_unique<vertical_layout>();
 			m_grid->set_pos(x, y);
@@ -131,7 +175,7 @@ namespace rsx
 
 			std::unique_ptr<horizontal_layout> row;
 
-			for (usz i = 0; i < m_games.size(); i++)
+			for (usz i = 0; i < tiles.size(); i++)
 			{
 				if (i % m_columns == 0)
 				{
@@ -144,8 +188,7 @@ namespace rsx
 					row->pack_padding = 20;
 				}
 
-				auto tile = std::make_unique<big_picture_game_tile>(m_games[i], m_tile_size);
-				m_tiles.push_back(row->add_element(tile));
+				m_tiles.push_back(row->add_element(tiles[i]));
 			}
 
 			if (row)
@@ -163,12 +206,19 @@ namespace rsx
 
 			m_selected_index = m_tiles.empty() ? 0 : std::clamp(m_selected_index, 0, static_cast<s32>(m_tiles.size()) - 1);
 
-			if (!m_tiles.empty())
+			if (m_tiles.empty())
+			{
+				m_placeholder_text->set_text(get_localized_string(localized_string_id::BIG_PICTURE_NO_GAMES_FOUND));
+			}
+			else
 			{
 				select_tile(m_selected_index);
 			}
 
 			rsx_log.notice("Big Picture Mode: reload() finished, games=%u, tiles=%u", m_games.size(), m_tiles.size());
+
+			m_loading = false;
+			refresh();
 		}
 
 		void big_picture_game_grid::select_tile(s32 index)
@@ -202,7 +252,7 @@ namespace rsx
 				}
 
 				m_grid->scroll_offset_value = static_cast<u16>(std::clamp(offset, 0, max_offset));
-				m_grid->refresh(); 
+				m_grid->refresh();
 			}
 
 			const big_picture_game_tile* tile = m_tiles[m_selected_index];
@@ -214,10 +264,26 @@ namespace rsx
 			m_highlight->set_size(icon->w + bezel_margin * 2, icon->h + bezel_margin * 2);
 			m_highlight->set_sinus_offset(1.6f);
 			m_highlight->refresh();
+
+			refresh();
+		}
+
+		u16 big_picture_game_grid::column(s32 tile_index) const
+		{
+			return (tile_index < 0) ? 0 : (tile_index % m_columns);
+		}
+
+		u16 big_picture_game_grid::row(s32 tile_index) const
+		{
+			return (tile_index < 0) ? 0 : (tile_index / m_columns);
 		}
 
 		page_navigation big_picture_game_grid::handle_button_press(pad_button button_press, bool is_auto_repeat, u64 auto_repeat_interval_ms)
 		{
+			std::lock_guard lock(m_mutex);
+
+			if (m_loading) return page_navigation::stay;
+
 			const bool do_play_sound = !is_auto_repeat || auto_repeat_interval_ms >= user_interface::m_auto_repeat_ms_interval_default;
 
 			if (m_details && m_details->is_visible())
@@ -229,11 +295,12 @@ namespace rsx
 				{
 				case big_picture_game_details::result::back:
 					m_details->hide();
+					refresh();
 					break;
 				case big_picture_game_details::result::start:
 				{
 					rsx_log.notice("Big Picture Mode: Start pressed for index=%d", m_selected_index);
-					const GameInfo& info = m_games[m_selected_index].info;
+					const big_picture_game_info& info = m_games[m_selected_index];
 					rsx_log.notice("Big Picture Mode: selected game path='%s' serial='%s'", info.path, info.serial);
 					m_details->hide();
 					if (m_on_game_selected)
@@ -242,6 +309,7 @@ namespace rsx
 						m_on_game_selected(info.path, info.serial);
 						rsx_log.notice("Big Picture Mode: on_game_selected callback returned");
 					}
+					refresh();
 					break;
 				}
 				default:
@@ -256,12 +324,8 @@ namespace rsx
 				if (button_press == pad_button::circle)
 				{
 					play_sound(sound_effect::cancel);
-					if (parent)
-					{
-						set_current_page(parent);
-						return page_navigation::back;
-					}
-					return page_navigation::exit;
+					set_current_page(ensure(parent));
+					return page_navigation::back;
 				}
 
 				return page_navigation::stay;
@@ -271,14 +335,14 @@ namespace rsx
 			{
 			case pad_button::dpad_left:
 			case pad_button::ls_left:
-				if ((m_selected_index % m_columns) > 0)
+				if (column(m_selected_index) > 0)
 				{
 					select_tile(m_selected_index - 1);
 				}
 				break;
 			case pad_button::dpad_right:
 			case pad_button::ls_right:
-				if (((m_selected_index % m_columns) + 1) < m_columns && (m_selected_index + 1) < static_cast<s32>(m_tiles.size()))
+				if ((column(m_selected_index) + 1) < m_columns && (m_selected_index + 1) < static_cast<s32>(m_tiles.size()))
 				{
 					select_tile(m_selected_index + 1);
 				}
@@ -292,7 +356,7 @@ namespace rsx
 				break;
 			case pad_button::dpad_down:
 			case pad_button::ls_down:
-				if (!m_tiles.empty())
+				if (!m_tiles.empty() && row(m_selected_index) < row(static_cast<s32>(m_tiles.size()) - 1))
 				{
 					select_tile(std::min(m_selected_index + m_columns, static_cast<s32>(m_tiles.size()) - 1));
 				}
@@ -300,17 +364,14 @@ namespace rsx
 			case pad_button::cross:
 				play_sound(sound_effect::accept);
 				rsx_log.notice("Big Picture Mode: opening details for index=%d", m_selected_index);
-				m_details->show(m_games[m_selected_index].info, m_tiles[m_selected_index]->get_icon_data());
+				m_details->show(m_games[m_selected_index], m_tiles[m_selected_index]->get_icon_data());
 				rsx_log.notice("Big Picture Mode: details shown");
+				refresh();
 				return page_navigation::stay;
 			case pad_button::circle:
 				play_sound(sound_effect::cancel);
-				if (parent)
-				{
-					set_current_page(parent);
-					return page_navigation::back;
-				}
-				return page_navigation::exit;
+				set_current_page(ensure(parent));
+				return page_navigation::back;
 			default:
 				return page_navigation::stay;
 			}
@@ -325,36 +386,53 @@ namespace rsx
 
 		compiled_resource& big_picture_game_grid::get_compiled()
 		{
-			m_compiled_grid.clear();
+			std::lock_guard lock(m_mutex);
+
+			if (!m_highlight->is_compiled() ||
+				(!m_tiles.empty() && m_grid && !m_grid->is_compiled()) ||
+				(m_details && m_details->is_visible()))
+			{
+				m_is_compiled = false;
+			}
+
+			if (is_compiled())
+			{
+				return compiled_resources;
+			}
+
+			m_is_compiled = true;
+			compiled_resources.clear();
+
+			if (!visible)
+			{
+				return compiled_resources;
+			}
 
 			if (m_tiles.empty())
 			{
-				m_compiled_grid.add(m_no_games_text->get_compiled());
+				compiled_resources.add(m_placeholder_text->get_compiled());
 			}
 			else if (m_grid)
 			{
-				m_compiled_grid.add(m_grid->get_compiled());
-				m_compiled_grid.add(m_highlight->get_compiled());
+				compiled_resources.add(m_grid->get_compiled());
+				compiled_resources.add(m_highlight->get_compiled());
 			}
 
-			const bool details_visible = m_details && m_details->is_visible();
-
-			if (!details_visible)
+			if (m_details && m_details->is_visible())
 			{
-				m_compiled_grid.add(m_back_hint.get_compiled());
+				compiled_resources.add(m_details->get_compiled());
+			}
+			else
+			{
+				compiled_resources.add(m_back_hint.get_compiled());
 
 				if (!m_tiles.empty())
 				{
-					m_compiled_grid.add(m_select_hint.get_compiled());
+					compiled_resources.add(m_select_hint.get_compiled());
 				}
 			}
 
-			if (m_details)
-			{
-				m_compiled_grid.add(m_details->get_compiled());
-			}
-
-			return m_compiled_grid;
+			return compiled_resources;
 		}
 	}
 }

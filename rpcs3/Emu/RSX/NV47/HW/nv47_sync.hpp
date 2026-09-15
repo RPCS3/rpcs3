@@ -2,14 +2,12 @@
 
 #include <util/types.hpp>
 #include "Emu/RSX/RSXThread.h"
+#include "Emu/RSX/Host/MM.h"
 
 #include "context_accessors.define.h"
 
 namespace rsx
 {
-	void mm_flush_lazy();
-	void mm_flush();
-
 	namespace util
 	{
 		template <bool FlushDMA, bool FlushPipe>
@@ -24,17 +22,18 @@ namespace rsx
 				if (vm::_ref<RsxSemaphore>(address) == data)
 				{
 					// It's a no-op to write the same value (although there is a delay in real-hw so it's more accurate to allow GPU label in this case)
+					// There is no possible way for the guest to know that the label has been processed so we can skip MM sync here.
 					return;
 				}
 
 				if constexpr (FlushDMA || FlushPipe)
 				{
-					// Release op must be acoompanied by MM flush.
-					// FlushPipe implicitly does a MM flush but FlushDMA does not. Trigger the flush here
-					rsx::mm_flush();
-
 					if constexpr (FlushDMA)
 					{
+						// Release op must be acoompanied by MM flush.
+						// FlushPipe implicitly does a MM flush but FlushDMA does not. Trigger the flush here
+						rsx::mm_flush();
+
 						// If the backend handled the request, this call will basically be a NOP
 						g_fxo->get<rsx::dma_manager>().sync();
 					}

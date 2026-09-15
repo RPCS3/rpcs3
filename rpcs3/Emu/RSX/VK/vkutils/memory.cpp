@@ -1,15 +1,7 @@
 #include "device.h"
 #include "memory.h"
 
-namespace
-{
-	// Copied from rsx_utils.h. Move to a more convenient location
-	template<typename T, typename U>
-	static inline T align2(T value, U alignment)
-	{
-		return ((value + alignment - 1) / alignment) * alignment;
-	}
-}
+#include "Emu/RSX/Utils/algorithm.hpp"
 
 namespace vk
 {
@@ -236,7 +228,7 @@ namespace vk
 			for (const auto& memory_type_index : *request.memory_type)
 			{
 				mem_req.memoryTypeBits = 1u << memory_type_index;
-				mem_req.size = ::align2(request.size, request.alignment);
+				mem_req.size = rsx::align2(request.size, request.alignment);
 				mem_req.alignment = request.alignment;
 				create_info.memoryTypeBits = 1u << memory_type_index;
 				create_info.flags = m_allocation_flags;

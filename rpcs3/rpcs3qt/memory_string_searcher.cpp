@@ -16,6 +16,7 @@
 #include "util/logs.hpp"
 #include "util/sysinfo.hpp"
 #include "util/asm.hpp"
+#include "util/cctype.hpp"
 
 LOG_CHANNEL(gui_log, "GUI");
 
@@ -71,7 +72,7 @@ u64 memory_viewer_panel::OnSearch(std::string wstr, u32 mode)
 	bool case_insensitive = false;
 
 	// First characters for case insensitive search
-	const char first_chars[2]{ static_cast<char>(::tolower(wstr[0])), static_cast<char>(::toupper(wstr[0])) };
+	const char first_chars[2]{ static_cast<char>(utils::tolower(wstr[0])), static_cast<char>(utils::toupper(wstr[0])) };
 	std::string_view insensitive_search{first_chars, 2};
 
 	if (insensitive_search[0] == insensitive_search[1])
@@ -92,7 +93,7 @@ u64 memory_viewer_panel::OnSearch(std::string wstr, u32 mode)
 
 		if (case_insensitive)
 		{
-			std::transform(wstr.begin(), wstr.end(), wstr.begin(), ::tolower);
+			std::transform(wstr.begin(), wstr.end(), wstr.begin(), utils::tolower<char>);
 		}
 
 		break;
@@ -185,7 +186,7 @@ u64 memory_viewer_panel::OnSearch(std::string wstr, u32 mode)
 
 	vm::writer_lock rlock;
 
-	const named_thread_group workers("Memory Searcher "sv, max_threads, [&]()
+	map_workload("Memory Searcher "sv, max_threads, [&]()
 	{
 		if (mode == as_inst || mode == as_fake_spu_inst || mode == as_regex_inst || mode == as_regex_fake_spu_inst)
 		{
@@ -257,7 +258,7 @@ u64 memory_viewer_panel::OnSearch(std::string wstr, u32 mode)
 
 						if (case_insensitive)
 						{
-							std::transform(last.begin(), last.end(), last.begin(), ::tolower);
+							std::transform(last.begin(), last.end(), last.begin(), utils::tolower<char>);
 						}
 
 						std::smatch sm;
@@ -399,7 +400,7 @@ u64 memory_viewer_panel::OnSearch(std::string wstr, u32 mode)
 					std::string_view test_sv{get_ptr(start), addr_max - start};
 
 					// Do not use allocating functions such as fmt::to_lower
-					if (test_sv.size() >= wstr.size() && std::all_of(wstr.begin(), wstr.end(), [&](const char& c) { return c == ::tolower(test_sv[&c - wstr.data()]); }))
+					if (test_sv.size() >= wstr.size() && std::all_of(wstr.begin(), wstr.end(), [&](const char& c) { return c == utils::tolower(test_sv[&c - wstr.data()]); }))
 					{
 						// Force full logging if any character differs in case
 						log_occurance(test_sv, !test_sv.starts_with(wstr));
@@ -447,8 +448,6 @@ u64 memory_viewer_panel::OnSearch(std::string wstr, u32 mode)
 
 		found += local_found;
 	});
-
-	workers.join();
 
 	return found;
 }
