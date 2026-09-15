@@ -6224,7 +6224,17 @@ public:
 	template <typename TA>
 	static auto byteswap(TA&& a)
 	{
+#ifdef ARCH_ARM64
+// The byteswap shufflevector is usually transformed into a sequence of rev64 and ext
+// This is nice for saving on constants, but llvm refuses to turn the byteswap into tbl,
+// even when it's being called dozens of times in a loop, where the extra constant needed could easily be justified
+// The easy workaround is to just use tbl ourselves until upstream llvm fixes this issue
+// https://github.com/llvm/llvm-project/issues/223597 - Whatcookie
+		const auto indices = build<u8[16]>(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+		return llvm_calli<u8[16], TA, decltype(indices)>{"llvm.aarch64.neon.tbl1.v16i8", {std::forward<TA>(a), indices}};
+#else
 		return zshuffle(std::forward<TA>(a), 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+#endif
 	}
 
 	static auto rotqby_reverse_base()
