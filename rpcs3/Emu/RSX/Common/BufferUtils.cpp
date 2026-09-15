@@ -23,6 +23,9 @@
 #endif
 #undef FORCE_INLINE
 #include "Emu/CPU/sse2neon.h"
+#if defined(__GNUC__) || defined(__clang__)
+#include "BufferUtils_sve.h"
+#endif
 #endif
 
 #if defined(_MSC_VER) || !defined(__SSE2__)
@@ -499,6 +502,20 @@ namespace
 				upload_swapped_avx2_skip_restart<u32>,
 			};
 			return s_avx2;
+		}
+#elif defined(ARCH_ARM64) && (defined(__GNUC__) || defined(__clang__))
+		if (utils::has_sve())
+		{
+			static const upload_untouched_skip_restart_dispatch s_sve =
+			{
+#ifdef BUFFERUTILS_HAS_SVE2P2
+				utils::has_sve2p2() ? upload_swapped_sve2p2_skip_restart : upload_swapped_neon_skip_restart<u16>,
+#else
+				upload_swapped_neon_skip_restart<u16>,
+#endif
+				upload_swapped_sve_skip_restart,
+			};
+			return s_sve;
 		}
 #endif
 #if defined(ARCH_ARM64)
