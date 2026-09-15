@@ -596,7 +596,7 @@ namespace rpcs3::utils
 		return get_input_config_dir(title_id) + g_cfg_input_configs.default_config + ".yml";
 	}
 
-	std::string get_game_content_path(game_content_type type, const std::string& serial, std::string sfo_dir, const std::string& disc_dir, const std::string& archive_path, const std::string& game_dir, bool* in_archive)
+	std::string get_game_content_path(game_content_type type, const std::string& serial, std::string sfo_dir, const std::string& disc_dir, const std::string& archive_path, bool* in_archive)
 	{
 		if (in_archive) *in_archive = false;
 
@@ -695,13 +695,13 @@ namespace rpcs3::utils
 	{
 		const std::string sfo_dir = info.is_iso_file ? (info.game_dir.empty() ? "PS3_GAME" : info.game_dir) : rpcs3::utils::get_sfo_dir_from_game_path(info.path, info.serial);
 		bool in_archive = false;
-		std::string path = get_game_content_path(type, info.serial, sfo_dir, {}, info.is_iso_file ? info.path : "", info.game_dir, &in_archive);
+		std::string path = get_game_content_path(type, info.serial, sfo_dir, {}, info.is_iso_file ? info.path : "", &in_archive);
 		return { std::move(path), in_archive };
 	}
 
 	std::string get_game_content_path(game_content_type type)
 	{
-		return get_game_content_path(type, Emu.GetTitleID(), Emu.GetSfoDir(false), vfs::get("/dev_bdvd/PS3_GAME"), {}, {}, nullptr);
+		return get_game_content_path(type, Emu.GetTitleID(), Emu.GetSfoDir(false), vfs::get("/dev_bdvd/PS3_GAME"), {}, nullptr);
 	}
 
 	bool version_is_bigger(std::string_view v0, std::string_view v1, std::string_view serial, bool is_fw)
