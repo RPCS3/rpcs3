@@ -1686,6 +1686,9 @@
     <ClInclude Include="Emu\RSX\Common\BufferUtils_avx512.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\BufferUtils_neon.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
     <ClInclude Include="util\types.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
