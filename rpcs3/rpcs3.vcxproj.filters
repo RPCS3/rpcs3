@@ -673,10 +673,10 @@
       <Filter>Gui\dimensions</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\disc_compression_manager_dialog.cpp">
-      <Filter>Gui</Filter>
+      <Filter>Gui\misc dialogs</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\game_source_dialog.cpp">
-      <Filter>Gui</Filter>
+      <Filter>Gui\misc dialogs</Filter>
     </ClCompile>
     <ClCompile Include="rpcs3qt\infinity_dialog.cpp">
       <Filter>Gui\infinity</Filter>
@@ -1596,7 +1596,7 @@
       <Filter>Gui\widgets</Filter>
     </ClInclude>
     <ClInclude Include="rpcs3qt\game_source_dialog.h">
-      <Filter>Gui</Filter>
+      <Filter>Gui\misc dialogs</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -1787,7 +1787,7 @@
       <Filter>Gui\dimensions</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\disc_compression_manager_dialog.h">
-      <Filter>Gui</Filter>
+      <Filter>Gui\misc dialogs</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\infinity_dialog.h">
       <Filter>Gui\infinity</Filter>

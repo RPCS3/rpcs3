@@ -5,6 +5,7 @@
 #include <QDialog>
 
 #include <atomic>
+#include <memory>
 #include <vector>
 
 class QCloseEvent;
@@ -63,7 +64,7 @@ private:
 	QPushButton* m_compress_button = nullptr;
 	QPushButton* m_cancel_button = nullptr;
 	QPushButton* m_close_button = nullptr;
-	QThread* m_thread = nullptr;
+	std::unique_ptr<QThread> m_thread;
 	std::vector<queue_item> m_items;
 	std::atomic_bool m_cancel{false};
 	bool m_running = false;

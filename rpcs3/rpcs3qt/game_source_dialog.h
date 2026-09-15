@@ -27,6 +27,6 @@ protected:
 	void accept() override;
 
 private:
-	options m_options;
+	options m_options {};
 	QStringList m_selected_sources;
 };

@@ -29,7 +29,7 @@
 #include <QThread>
 #include <QVBoxLayout>
 
-LOG_CHANNEL(zar_gui_log, "ZAR GUI");
+LOG_CHANNEL(gui_log, "GUI");
 
 namespace
 {
@@ -251,7 +251,7 @@ void disc_compression_manager_dialog::add_source(const QString& source)
 		item.key_text = tr("Not required");
 		item.compressible = true;
 	}
-	else if (info.suffix().compare(QStringLiteral("zar"), Qt::CaseInsensitive) == 0)
+	else if (info.suffix().toLower() == "zar")
 	{
 		std::string error;
 		const std::shared_ptr<zar_disc_container> container = zar_disc_container::open(absolute.toStdString(), &error);
@@ -292,15 +292,8 @@ void disc_compression_manager_dialog::add_source(const QString& source)
 			}
 		}
 	}
-	else if (info.suffix().compare(QStringLiteral("iso"), Qt::CaseInsensitive) == 0)
+	else if (info.suffix().toLower() == "iso")
 	{
-		u64 size = 0;
-		if (!is_iso_file(absolute.toStdString(), &size))
-		{
-			QMessageBox::warning(this, tr("Invalid ISO"), tr("The selected file is not a valid PS3 ISO image:\n%1").arg(absolute));
-			return;
-		}
-
 		iso_archive archive(absolute.toStdString());
 		if (!archive.is_valid() || !archive.is_file("PS3_DISC.SFB") || !archive.is_file("PS3_GAME/PARAM.SFO"))
 		{
@@ -309,7 +302,7 @@ void disc_compression_manager_dialog::add_source(const QString& source)
 		}
 
 		item.format = format_description(archive);
-		item.input_size = size;
+		item.input_size = static_cast<u64>(info.size());
 		item.compressible = true;
 
 		std::string key_path;
@@ -413,14 +406,14 @@ void disc_compression_manager_dialog::update_output_paths()
 		}
 
 		item.output = QDir::cleanPath(output_path_for(item));
-		const QString normalized = item.output.toLower();
+		QString normalized = item.output.toLower();
 
 		if (outputs.contains(normalized))
 		{
 			item.base_status = tr("Duplicate output path");
 			continue;
 		}
-		outputs.insert(normalized);
+		outputs.insert(std::move(normalized));
 
 		const QFileInfo output_info(item.output);
 		const QFileInfo output_parent(output_info.absolutePath());
@@ -448,7 +441,7 @@ void disc_compression_manager_dialog::refresh_table()
 	for (int row = 0; row < static_cast<int>(m_items.size()); row++)
 	{
 		const queue_item& item = m_items[row];
-		const QStringList values = {
+		const std::array<QString, column::count> values = {
 			source_name(item.source),
 			item.format,
 			gui::utils::format_byte_size(static_cast<usz>(item.input_size)),
@@ -474,11 +467,7 @@ void disc_compression_manager_dialog::refresh_table()
 
 void disc_compression_manager_dialog::refresh_buttons()
 {
-	bool has_runnable = false;
-	for (const queue_item& item : m_items)
-	{
-		has_runnable |= item.runnable;
-	}
+	const bool has_runnable = std::any_of(m_items.cbegin(), m_items.cend(), [](const queue_item& item){ return item.runnable; });
 
 	const bool has_selection = m_table && !m_table->selectionModel()->selectedRows().isEmpty();
 	m_add_button->setEnabled(!m_running);
@@ -525,7 +514,7 @@ void disc_compression_manager_dialog::start_compression()
 	m_progress->setValue(0);
 	set_running(true);
 
-	m_thread = QThread::create([this, tasks = std::move(tasks)]()
+	m_thread.reset(QThread::create([this, tasks = std::move(tasks)]()
 	{
 		thread_base::set_name("DiscCompressor");
 		const double task_count = static_cast<double>(tasks.size());
@@ -572,7 +561,7 @@ void disc_compression_manager_dialog::start_compression()
 					const double ratio = result.input_size ? (static_cast<double>(result.output_size) * 100.0 / static_cast<double>(result.input_size)) : 0.0;
 					item.base_status = tr("Done - %1 (%2%)").arg(gui::utils::format_byte_size(static_cast<usz>(result.output_size))).arg(ratio, 0, 'f', 1);
 					item.runnable = false;
-					zar_gui_log.success("Compressed '%s' to '%s' (%llu -> %llu bytes)", current.source.toStdString(), current.output.toStdString(), result.input_size, result.output_size);
+					gui_log.success("Compressed '%s' to '%s' (%llu -> %llu bytes)", current.source.toStdString(), current.output.toStdString(), result.input_size, result.output_size);
 				}
 				else if (result.status == zar_compression_status::cancelled)
 				{
@@ -581,7 +570,7 @@ void disc_compression_manager_dialog::start_compression()
 				else
 				{
 					item.base_status = tr("Error: %1").arg(QString::fromStdString(result.error));
-					zar_gui_log.error("Failed to compress '%s': %s", current.source.toStdString(), result.error);
+					gui_log.error("Failed to compress '%s': %s", current.source.toStdString(), result.error);
 				}
 				refresh_table();
 			}, Qt::QueuedConnection);
@@ -591,26 +580,24 @@ void disc_compression_manager_dialog::start_compression()
 				break;
 			}
 		}
-	});
 
-	connect(m_thread, &QThread::finished, this, [this]()
-	{
 		const bool cancelled = m_cancel.load();
-		m_thread->deleteLater();
-		m_thread = nullptr;
-		set_running(false);
-		if (!cancelled)
+		QMetaObject::invokeMethod(this, [this, cancelled]()
 		{
-			m_progress->setValue(1000);
-			m_current_label->setText(tr("Compression queue finished"));
-		}
-		else
-		{
-			m_current_label->setText(tr("Compression cancelled"));
-		}
-		refresh_table();
-		refresh_buttons();
-	});
+			set_running(false);
+			if (!cancelled)
+			{
+				m_progress->setValue(1000);
+				m_current_label->setText(tr("Compression queue finished"));
+			}
+			else
+			{
+				m_current_label->setText(tr("Compression cancelled"));
+			}
+			refresh_table();
+			refresh_buttons();
+		}, Qt::QueuedConnection);
+	}));
 
 	m_thread->start();
 }
