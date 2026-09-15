@@ -137,6 +137,8 @@ target_sources(rpcs3_emu PRIVATE
     ../Loader/PSF.cpp
     ../Loader/PUP.cpp
     ../Loader/TAR.cpp
+    ../Loader/IRD.cpp
+    ../Loader/IRD_validation.cpp
     ../Loader/ISO.cpp
     ../Loader/iso_cache.cpp
     ../Loader/content_validation.cpp
