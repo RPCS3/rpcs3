@@ -6,12 +6,24 @@
 #include "util/types.hpp"
 #include "Crypto/aes.h"
 
+#include <optional>
 #include <span>
 
 bool is_iso_file(const std::string& path, u64* size = nullptr, bool* is_raw_device = nullptr);
 
 void load_iso(const std::string& path);
 void unload_iso();
+
+// Why the image currently loaded cannot be read back. Either failure turns every read into garbage, so both are
+// worth reporting to the user on their own instead of letting the boot fail later on for an unrelated reason
+enum class iso_key_status
+{
+	OK,      // Either the image needs no key at all, or the one it is read back with does decrypt it
+	MISSING, // The image is encrypted and no key was found for it
+	INVALID  // A key file was found for the image, but it does not decrypt it: it belongs to another disc
+};
+
+iso_key_status get_iso_key_status();
 
 constexpr u64 ISO_SECTOR_SIZE = 2048;
 
@@ -72,15 +84,31 @@ private:
 	iso_encryption_type m_enc_type = iso_encryption_type::NONE;
 	std::vector<iso_region_info> m_region_info;
 
+	// Left unset until asked, since the key search only answers it for free on the paths that read a block off the
+	// image anyway. Nothing but a failing boot ever asks, so a game list scan never pays for the answer
+	std::optional<iso_key_status> m_key_status;
+
 	static iso_type_status get_key(const std::string& key_path, aes_context* aes_ctx = nullptr);
-	static iso_type_status retrieve_key(iso_archive& archive, std::string& key_path, aes_context& aes_ctx);
+
+	// "content_encrypted" comes back set when the content turned out to still be encrypted, which the blocks read to
+	// test the keys tell on their own: it spares the caller reading them a second time
+	static iso_type_status retrieve_key(iso_archive& archive, std::string& key_path, aes_context& aes_ctx, bool& content_encrypted);
+
+	// Tests the key file that was picked up by the name of the image, which nothing has verified yet, and drops it
+	// when the content turns out to need no key at all
+	void verify_key_file(iso_archive& archive);
 
 public:
 	static iso_type_status check_type(const std::string& path, std::string* key_path = nullptr, aes_context* aes_ctx = nullptr);
 
+	bool init(const std::string& path, iso_archive* archive = nullptr);
+
 	iso_encryption_type get_enc_type() const { return m_enc_type; }
 
-	bool init(const std::string& path, iso_archive* archive = nullptr);
+	// Tells whether the content of the image can be read back at all, and if not what is wrong with its key.
+	// Resolving the answer may read a block, so this is not for a caller that only wants the metadata of the image
+	iso_key_status get_key_status(iso_archive& archive);
+
 	bool decrypt(u64 offset, const std::span<u8> buffer, const std::string& name);
 };
 
@@ -123,6 +151,11 @@ protected:
 public:
 	iso_file(const std::string& path, bs_t<fs::open_mode> mode = fs::read);
 	iso_file(const std::string& path, bs_t<fs::open_mode> mode, const iso_fs_node& node);
+
+	// Points the object at another node of the same image, keeping the handle it already holds open: a caller
+	// walking many files of an image pays for a single open instead of one per file, which on a disc held by a
+	// drive is what the whole walk costs
+	void rebind(const iso_fs_node& node);
 
 	explicit operator bool() const { return m_file.operator bool(); }
 
@@ -180,6 +213,7 @@ public:
 
 	const std::string& path() const { return m_path; }
 	const iso_fs_node& root() const { return m_root; }
+	iso_key_status get_key_status() { return m_dec ? m_dec->get_key_status(*this) : iso_key_status::OK; }
 
 	iso_fs_node* retrieve(const std::string& path);
 	bool is_valid() const;
@@ -211,6 +245,7 @@ public:
 	~iso_device() override = default;
 
 	const std::string& get_loaded_iso() const { return m_path; }
+	iso_key_status get_key_status() { return m_archive.get_key_status(); }
 
 	bool stat(const std::string& path, fs::stat_t& info) override;
 	bool statfs(const std::string& path, fs::device_stat& info) override;

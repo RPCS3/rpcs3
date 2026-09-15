@@ -53,6 +53,8 @@ enum class game_boot_result : u32
 	firmware_missing,
 	firmware_version,
 	unsupported_disc_type,
+	disc_key_missing,
+	disc_key_invalid,
 	savestate_corrupted,
 	savestate_version_unsupported,
 	still_running,
