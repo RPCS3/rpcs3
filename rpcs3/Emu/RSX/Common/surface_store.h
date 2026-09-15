@@ -173,7 +173,6 @@ namespace rsx
 					// Memory requirements can be altered when cloning
 					free_rsx_memory(Traits::get(sink));
 				}
-
 				else
 				{
 					sink = find_reusable_matching_surface(region.source, region.width, region.height, invalidated);
