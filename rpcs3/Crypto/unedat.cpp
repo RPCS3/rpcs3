@@ -825,8 +825,8 @@ bool EDATADecrypter::ReadHeader(bool quiet)
 		char real_file_name[CRYPTO_MAX_PATH]{};
 		extract_file_name(m_file_name, real_file_name);
 
-		// A klicensee the header does not answer to decrypts nothing, so there is nothing to carry on with.
-		// DEBUG data has no key to validate, which is why "validate_npd_hashes" lets it through untested
+		// A klicensee that does not match the header decrypts nothing, so there is nothing to carry on with.
+		// DEBUG data carries no key at all, hence the exception
 		if (!(edatHeader.flags & EDAT_DEBUG_DATA_FLAG) && !validate_dev_klic(reinterpret_cast<const u8*>(&dec_key), npdHeader))
 		{
 			if (!quiet)
@@ -837,8 +837,8 @@ bool EDATADecrypter::ReadHeader(bool quiet)
 			return false;
 		}
 
-		// Past that, the only thing left for it to check is the title hash, taken over the name the file was
-		// packaged with: a file renamed since then decrypts all the same, so this is only worth saying out loud
+		// Beyond the key, this checks the title hash, taken over the name the file was packaged with: a file
+		// renamed since then decrypts all the same, so a mismatch is only worth a warning
 		if (!validate_npd_hashes(real_file_name, reinterpret_cast<const u8*>(&dec_key), npdHeader, edatHeader, false))
 		{
 			if (!quiet)
