@@ -3016,6 +3016,9 @@
     <ClInclude Include="util\cctype.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\emu_callbacks.h">
+      <Filter>Emu</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="Emu\RSX\Program\GLSLSnippets\GPUDeswizzle.glsl">

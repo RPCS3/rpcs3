@@ -28,6 +28,7 @@
 #include "Emu/Cell/Modules/cellSysutil.h"
 #include "Emu/Io/Null/null_camera_handler.h"
 #include "Emu/Io/Null/null_music_handler.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/vfs_config.h"
 #include "util/init_mutex.hpp"
 #include "util/console.h"
@@ -297,7 +298,7 @@ void gui_application::Init()
 	}
 
 	// Create callbacks from the emulator, which reference the handlers.
-	InitializeCallbacks();
+	create_callbacks();
 
 	// Force init the emulator
 	InitializeEmulator(m_active_user, m_show_gui, false);
@@ -619,7 +620,7 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 		}
 
 		// Clean-up old game window. This should only happen if the renderer changed or there was an unexpected error during boot.
-		Emu.GetCallbacks().close_gs_frame();
+		g_emu_callbacks.close_gs_frame();
 	}
 
 	gui_log.notice("gui_application: Creating new game window");
@@ -746,12 +747,11 @@ std::unique_ptr<gs_frame> gui_application::get_gs_frame()
 	return std::unique_ptr<gs_frame>(frame);
 }
 
-/** RPCS3 emulator has functions it desires to call from the GUI at times. Initialize them in here. */
-void gui_application::InitializeCallbacks()
+void gui_application::create_callbacks()
 {
-	EmuCallbacks callbacks = CreateCallbacks();
+	main_application::create_callbacks();
 
-	callbacks.try_to_quit = [this](bool force_quit, std::function<void()> on_exit) -> bool
+	g_emu_callbacks.try_to_quit = [this](bool force_quit, std::function<void()> on_exit) -> bool
 	{
 		// Close rpcs3 if closed in no-gui mode
 		if (force_quit || !m_main_window)
@@ -776,12 +776,12 @@ void gui_application::InitializeCallbacks()
 
 		return false;
 	};
-	callbacks.call_from_main_thread = [this](std::function<void()> func, atomic_t<u32>* wake_up)
+	g_emu_callbacks.call_from_main_thread = [this](std::function<void()> func, atomic_t<u32>* wake_up)
 	{
 		RequestCallFromMainThread(std::move(func), wake_up);
 	};
 
-	callbacks.init_gs_render = [](utils::serial* ar)
+	g_emu_callbacks.init_gs_render = [](utils::serial* ar)
 	{
 		switch (g_cfg.video.renderer.get())
 		{
@@ -807,7 +807,7 @@ void gui_application::InitializeCallbacks()
 		}
 	};
 
-	callbacks.get_camera_handler = []() -> std::shared_ptr<camera_handler_base>
+	g_emu_callbacks.get_camera_handler = []() -> std::shared_ptr<camera_handler_base>
 	{
 		switch (g_cfg.io.camera.get())
 		{
@@ -830,7 +830,7 @@ void gui_application::InitializeCallbacks()
 		return nullptr;
 	};
 
-	callbacks.get_music_handler = []() -> std::shared_ptr<music_handler_base>
+	g_emu_callbacks.get_music_handler = []() -> std::shared_ptr<music_handler_base>
 	{
 		switch (g_cfg.audio.music.get())
 		{
@@ -846,7 +846,7 @@ void gui_application::InitializeCallbacks()
 		return nullptr;
 	};
 
-	callbacks.close_gs_frame  = [this]()
+	g_emu_callbacks.close_gs_frame  = [this]()
 	{
 		if (m_game_window)
 		{
@@ -856,28 +856,28 @@ void gui_application::InitializeCallbacks()
 			m_game_window = nullptr;
 		}
 	};
-	callbacks.get_gs_frame    = [this]() -> std::unique_ptr<GSFrameBase> { return get_gs_frame(); };
-	callbacks.get_msg_dialog  = [this]() -> std::shared_ptr<MsgDialogBase> { return m_show_gui ? std::make_shared<msg_dialog_frame>() : nullptr; };
-	callbacks.get_osk_dialog  = [this]() -> std::shared_ptr<OskDialogBase> { return m_show_gui ? std::make_shared<osk_dialog_frame>() : nullptr; };
-	callbacks.get_save_dialog = []() -> std::unique_ptr<SaveDialogBase> { return std::make_unique<save_data_dialog>(); };
-	callbacks.get_sendmessage_dialog = []() -> std::shared_ptr<SendMessageDialogBase> { return std::make_shared<sendmessage_dialog_frame>(); };
-	callbacks.get_recvmessage_dialog = []() -> std::shared_ptr<RecvMessageDialogBase> { return std::make_shared<recvmessage_dialog_frame>(); };
-	callbacks.get_trophy_notification_dialog = [this]() -> std::unique_ptr<TrophyNotificationBase> { return std::make_unique<trophy_notification_helper>(m_game_window); };
+	g_emu_callbacks.get_gs_frame    = [this]() -> std::unique_ptr<GSFrameBase> { return get_gs_frame(); };
+	g_emu_callbacks.get_msg_dialog  = [this]() -> std::shared_ptr<MsgDialogBase> { return m_show_gui ? std::make_shared<msg_dialog_frame>() : nullptr; };
+	g_emu_callbacks.get_osk_dialog  = [this]() -> std::shared_ptr<OskDialogBase> { return m_show_gui ? std::make_shared<osk_dialog_frame>() : nullptr; };
+	g_emu_callbacks.get_save_dialog = []() -> std::unique_ptr<SaveDialogBase> { return std::make_unique<save_data_dialog>(); };
+	g_emu_callbacks.get_sendmessage_dialog = []() -> std::shared_ptr<SendMessageDialogBase> { return std::make_shared<sendmessage_dialog_frame>(); };
+	g_emu_callbacks.get_recvmessage_dialog = []() -> std::shared_ptr<RecvMessageDialogBase> { return std::make_shared<recvmessage_dialog_frame>(); };
+	g_emu_callbacks.get_trophy_notification_dialog = [this]() -> std::unique_ptr<TrophyNotificationBase> { return std::make_unique<trophy_notification_helper>(m_game_window); };
 
-	callbacks.on_run    = [this](bool start_playtime) { OnEmulatorRun(start_playtime); };
-	callbacks.on_pause  = [this]() { OnEmulatorPause(); };
-	callbacks.on_resume = [this]() { OnEmulatorResume(true); };
-	callbacks.on_stop   = [this]() { OnEmulatorStop(); };
-	callbacks.on_ready  = [this]() { OnEmulatorReady(); };
+	g_emu_callbacks.on_run    = [this](bool start_playtime) { OnEmulatorRun(start_playtime); };
+	g_emu_callbacks.on_pause  = [this]() { OnEmulatorPause(); };
+	g_emu_callbacks.on_resume = [this]() { OnEmulatorResume(true); };
+	g_emu_callbacks.on_stop   = [this]() { OnEmulatorStop(); };
+	g_emu_callbacks.on_ready  = [this]() { OnEmulatorReady(); };
 
-	callbacks.enable_disc_eject  = [this](bool enabled)
+	g_emu_callbacks.enable_disc_eject  = [this](bool enabled)
 	{
 		Emu.CallFromMainThread([this, enabled]()
 		{
 			OnEnableDiscEject(enabled);
 		});
 	};
-	callbacks.enable_disc_insert = [this](bool enabled)
+	g_emu_callbacks.enable_disc_insert = [this](bool enabled)
 	{
 		Emu.CallFromMainThread([this, enabled]()
 		{
@@ -885,7 +885,7 @@ void gui_application::InitializeCallbacks()
 		});
 	};
 
-	callbacks.on_missing_fw = [this]()
+	g_emu_callbacks.on_missing_fw = [this]()
 	{
 		if (m_main_window)
 		{
@@ -893,7 +893,7 @@ void gui_application::InitializeCallbacks()
 		}
 	};
 
-	callbacks.handle_taskbar_progress = [this](s32 type, s32 value)
+	g_emu_callbacks.handle_taskbar_progress = [this](s32 type, s32 value)
 	{
 		if (m_game_window)
 		{
@@ -908,23 +908,23 @@ void gui_application::InitializeCallbacks()
 		}
 	};
 
-	callbacks.get_localized_string = [](localized_string_id id, const char* args) -> std::string
+	g_emu_callbacks.get_localized_string = [](localized_string_id id, const char* args) -> std::string
 	{
 		return localized_emu::get_string(id, args);
 	};
 
-	callbacks.get_localized_u32string = [](localized_string_id id, const char* args) -> std::u32string
+	g_emu_callbacks.get_localized_u32string = [](localized_string_id id, const char* args) -> std::u32string
 	{
 		return localized_emu::get_u32string(id, args);
 	};
 
-	callbacks.get_localized_setting = [this](const cfg::_base* node, u32 enum_index) -> std::string
+	g_emu_callbacks.get_localized_setting = [this](const cfg::_base* node, u32 enum_index) -> std::string
 	{
 		ensure(!!m_emu_settings);
 		return m_emu_settings->GetLocalizedSetting(node, enum_index);
 	};
 
-	callbacks.play_sound = [this](const std::string& path, std::optional<f32> volume)
+	g_emu_callbacks.play_sound = [this](const std::string& path, std::optional<f32> volume)
 	{
 		Emu.CallFromMainThread([this, path, volume]()
 		{
@@ -949,7 +949,7 @@ void gui_application::InitializeCallbacks()
 
 	if (m_show_gui) // If this is false, we already have a fallback in the main_application.
 	{
-		callbacks.on_install_pkgs = [this](const std::vector<std::string>& pkgs, bool from_optical_drive)
+		g_emu_callbacks.on_install_pkgs = [this](const std::vector<std::string>& pkgs, bool from_optical_drive)
 		{
 			ensure(!pkgs.empty());
 			QStringList pkg_list;
@@ -961,7 +961,7 @@ void gui_application::InitializeCallbacks()
 		};
 	}
 
-	callbacks.on_emulation_stop_no_response = [](std::shared_ptr<atomic_t<bool>> closed_successfully, int seconds_waiting_already)
+	g_emu_callbacks.on_emulation_stop_no_response = [](std::shared_ptr<atomic_t<bool>> closed_successfully, int seconds_waiting_already)
 	{
 		const std::string terminate_message = tr("Stopping emulator took too long."
 			"\nSome thread has probably deadlocked. Aborting.").toStdString();
@@ -1016,7 +1016,7 @@ void gui_application::InitializeCallbacks()
 		});
 	};
 
-	callbacks.on_save_state_progress = [this](std::shared_ptr<atomic_t<bool>> closed_successfully, stx::shared_ptr<utils::serial> ar_ptr, stx::atomic_ptr<std::string>* code_location, std::shared_ptr<void> init_mtx)
+	g_emu_callbacks.on_save_state_progress = [this](std::shared_ptr<atomic_t<bool>> closed_successfully, stx::shared_ptr<utils::serial> ar_ptr, stx::atomic_ptr<std::string>* code_location, std::shared_ptr<void> init_mtx)
 	{
 		Emu.CallFromMainThread([this, closed_successfully, ar_ptr, code_location, init_mtx]
 		{
@@ -1119,7 +1119,7 @@ void gui_application::InitializeCallbacks()
 		});
 	};
 
-	callbacks.add_breakpoint = [this](u32 addr)
+	g_emu_callbacks.add_breakpoint = [this](u32 addr)
 	{
 		Emu.BlockingCallFromMainThread([this, addr]()
 		{
@@ -1127,10 +1127,10 @@ void gui_application::InitializeCallbacks()
 		});
 	};
 
-	callbacks.display_sleep_control_supported = [](){ return display_sleep_control_supported(); };
-	callbacks.enable_display_sleep = [](bool enabled){ enable_display_sleep(enabled); };
+	g_emu_callbacks.display_sleep_control_supported = [](){ return display_sleep_control_supported(); };
+	g_emu_callbacks.enable_display_sleep = [](bool enabled){ enable_display_sleep(enabled); };
 
-	callbacks.check_microphone_permissions = []()
+	g_emu_callbacks.check_microphone_permissions = []()
 	{
 		Emu.BlockingCallFromMainThread([]()
 		{
@@ -1138,9 +1138,7 @@ void gui_application::InitializeCallbacks()
 		});
 	};
 
-	callbacks.make_video_source = [](){ return std::make_unique<qt_video_source_wrapper>(); };
-
-	Emu.SetCallbacks(std::move(callbacks));
+	g_emu_callbacks.make_video_source = [](){ return std::make_unique<qt_video_source_wrapper>(); };
 }
 
 void gui_application::StartPlaytime(bool start_playtime = true)
