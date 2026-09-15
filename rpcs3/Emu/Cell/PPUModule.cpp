@@ -2155,7 +2155,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 	// Fetch information needed for allocating memory segmnents
 	for (auto& prog : elf.progs)
 	{
-		switch (const u32 p_type = prog.p_type)
+		switch (prog.p_type)
 		{
 		case 0x1: // LOAD
 		{

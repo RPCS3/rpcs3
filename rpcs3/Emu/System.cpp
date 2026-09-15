@@ -2,6 +2,7 @@
 #include "VFS.h"
 #include "Utilities/bin_patch.h"
 #include "Emu/Memory/vm.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/system_progress.hpp"
 #include "Emu/system_utils.hpp"
@@ -47,6 +48,7 @@
 #include "util/logs.hpp"
 #include "util/init_mutex.hpp"
 #include "util/sysinfo.hpp"
+#include "util/cctype.hpp"
 
 #include <memory>
 #include <shared_mutex>
@@ -71,6 +73,8 @@ LOG_CHANNEL(sys_log, "SYS");
 stx::manual_typemap<void, 0x20'00000, 128> g_fixed_typemap;
 
 static constinit atomic_t<bool> s_emulator_available{false};
+
+emu_callbacks g_emu_callbacks {};
 
 std::string g_cfg_defaults;
 
@@ -204,7 +208,7 @@ void Emulator::CallFromMainThread(std::function<void()>&& func, atomic_t<u32>* w
 		}
 	};
 
-	ensure(m_cb.call_from_main_thread)(std::move(final_func), wake_up);
+	ensure(g_emu_callbacks.call_from_main_thread)(std::move(final_func), wake_up);
 }
 
 void Emulator::BlockingCallFromMainThread(std::function<void()>&& func, bool track_emu_state, std::source_location src_loc) const
@@ -247,14 +251,14 @@ void init_fxo_for_exec(utils::serial* ar, bool full = false)
 
 	g_fxo->init(false, ar, [](){ Emu.ExecPostponedInitCode(); });
 
-	Emu.GetCallbacks().init_gs_render(ar);
-	Emu.GetCallbacks().init_kb_handler();
-	Emu.GetCallbacks().init_mouse_handler();
+	g_emu_callbacks.init_gs_render(ar);
+	g_emu_callbacks.init_kb_handler();
+	g_emu_callbacks.init_mouse_handler();
 
 	stx::g_launch_retainer = 0;
 	stx::g_launch_retainer.notify_all();
 
-	Emu.GetCallbacks().init_pad_handler(Emu.GetTitleID());
+	g_emu_callbacks.init_pad_handler(Emu.GetTitleID());
 
 	usz pos = 0;
 
@@ -454,7 +458,7 @@ void Emulator::Init()
 			const std::string parent = fs::get_parent_dir(path);
 			const std::string emu_dir_no_delim = emu_dir.substr(0, emu_dir.find_last_not_of(fs::delim) + 1);
 
-			if (parent != emu_dir_no_delim && GetCallbacks().resolve_path(parent) != GetCallbacks().resolve_path(emu_dir_no_delim))
+			if (parent != emu_dir_no_delim && g_emu_callbacks.resolve_path(parent) != g_emu_callbacks.resolve_path(emu_dir_no_delim))
 			{
 				sys_log.fatal("Cannot use '%s' for Virtual File System because it does not exist.\nPlease specify an existing and writable directory path in Toolbar -> Manage -> Virtual File System.", path);
 				return false;
@@ -940,14 +944,14 @@ bool Emulator::BootRsxCapture(const std::string& path)
 
 	// PS3 'executable'
 	m_state = system_state::ready;
-	GetCallbacks().on_ready();
+	g_emu_callbacks.on_ready();
 
-	GetCallbacks().init_gs_render(nullptr);
-	GetCallbacks().init_kb_handler();
-	GetCallbacks().init_mouse_handler();
-	GetCallbacks().init_pad_handler("");
+	g_emu_callbacks.init_gs_render(nullptr);
+	g_emu_callbacks.init_kb_handler();
+	g_emu_callbacks.init_mouse_handler();
+	g_emu_callbacks.init_pad_handler("");
 
-	GetCallbacks().on_run(false);
+	g_emu_callbacks.on_run(false);
 	m_state = system_state::starting;
 	m_state.notify_all();
 
@@ -1001,14 +1005,14 @@ bool Emulator::BootBigPictureMode()
 
 	// No PS3 executable is loaded. GSRender/pad_thread only exist to host the Big Picture Mode overlay.
 	m_state = system_state::ready;
-	GetCallbacks().on_ready();
+	g_emu_callbacks.on_ready();
 
-	GetCallbacks().init_gs_render(nullptr);
-	GetCallbacks().init_kb_handler();
-	GetCallbacks().init_mouse_handler();
-	GetCallbacks().init_pad_handler("");
+	g_emu_callbacks.init_gs_render(nullptr);
+	g_emu_callbacks.init_kb_handler();
+	g_emu_callbacks.init_mouse_handler();
+	g_emu_callbacks.init_pad_handler("");
 
-	GetCallbacks().on_run(false);
+	g_emu_callbacks.on_run(false);
 	m_state = system_state::starting;
 	m_state.notify_all();
 
@@ -1080,7 +1084,7 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 				if (result != game_boot_result::no_errors)
 				{
 					unload_iso();
-					GetCallbacks().close_gs_frame();
+					g_emu_callbacks.close_gs_frame();
 				}
 			}
 			else
@@ -1094,7 +1098,7 @@ game_boot_result Emulator::BootGame(const std::string& path, const std::string& 
 
 					if (result != game_boot_result::no_errors)
 					{
-						GetCallbacks().close_gs_frame();
+						g_emu_callbacks.close_gs_frame();
 					}
 				};
 			}
@@ -1632,7 +1636,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			sys_log.notice("Restored executable path: \'%s\'", m_path);
 		}
 
-		const std::string resolved_path = GetCallbacks().resolve_path(m_path);
+		const std::string resolved_path = g_emu_callbacks.resolve_path(m_path);
 		if (!launching_from_disc_archive && is_iso_file(m_path, nullptr, &launching_from_optical_drive))
 		{
 			sys_log.notice("Loading iso archive '%s'", m_path);
@@ -1724,7 +1728,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				{
 					// Get database config if possible. This only happens if the database config hasn't been set by the UI (e.g. if booted with no-gui).
 					// We only know the title_id for sure at this point, so it doesn't make sense to retrieve it earlier.
-					m_db_config = Emu.GetCallbacks().get_database_config(m_title_id);
+					m_db_config = g_emu_callbacks.get_database_config(m_title_id);
 				}
 
 				// We add the database configuration if it is set, unless we are using a mode that specifically selects a different configuration.
@@ -1885,7 +1889,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		if (!launching_from_disc_archive && fs::is_dir(m_path))
 		{
 			m_state = system_state::ready;
-			GetCallbacks().on_ready();
+			g_emu_callbacks.on_ready();
 			ensure(g_fxo->init<main_ppu_module<lv2_obj>>());
 			vm::init();
 			vm::reserve_map(vm::main, 0, 0x1FFF0000, vm::page_64k_size);
@@ -2050,7 +2054,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		{
 			if (const std::vector<std::string> device_list = fmt::split(g_cfg.audio.microphone_devices.to_string(), {"@@@"}); !device_list.empty())
 			{
-				Emu.GetCallbacks().check_microphone_permissions();
+				g_emu_callbacks.check_microphone_permissions();
 			}
 		}
 
@@ -2381,7 +2385,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				bool install_success = true;
 				BlockingCallFromMainThread([this, &pkgs, &install_success, launching_from_optical_drive]()
 				{
-					if (!GetCallbacks().on_install_pkgs(pkgs, launching_from_optical_drive))
+					if (!g_emu_callbacks.on_install_pkgs(pkgs, launching_from_optical_drive))
 					{
 						install_success = false;
 					}
@@ -2517,8 +2521,8 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		if (const std::string hdd0_boot = hdd0_game + m_title_id + "/USRDIR/EBOOT.BIN"; !m_ar
 				&& recursion_count == 0 && disc.empty() && !bdvd_dir.empty() && !m_title_id.empty()
 				&& (launching_from_disc_archive ||
-					resolved_path == GetCallbacks().resolve_path(vfs::get("/dev_bdvd/PS3_GAME/USRDIR/EBOOT.BIN")))
-				&& resolved_path != GetCallbacks().resolve_path(hdd0_boot) && fs::is_file(hdd0_boot)
+					resolved_path == g_emu_callbacks.resolve_path(vfs::get("/dev_bdvd/PS3_GAME/USRDIR/EBOOT.BIN")))
+				&& resolved_path != g_emu_callbacks.resolve_path(hdd0_boot) && fs::is_file(hdd0_boot)
 				&& ppu_exec == elf_error::ok)
 		{
 			if (const psf::registry update_sfo = psf::load(hdd0_game + m_title_id + "/PARAM.SFO").sfo;
@@ -2571,7 +2575,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			}
 
 			// PS3 executable
-			GetCallbacks().on_ready();
+			g_emu_callbacks.on_ready();
 
 			if (argv.empty())
 			{
@@ -2606,7 +2610,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 					return fmt::merge(result, "/");
 				};
 
-				const std::string resolved_hdd0 = GetCallbacks().resolve_path(hdd0_game) + '/';
+				const std::string resolved_hdd0 = g_emu_callbacks.resolve_path(hdd0_game) + '/';
 
 				if (from_hdd0_game && m_cat == "DG")
 				{
@@ -2636,7 +2640,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 				else if (from_dev_flash)
 				{
 					// Firmware executables
-					argv[0] = "/dev_flash" + resolved_path.substr(GetCallbacks().resolve_path(g_cfg_vfs.get_dev_flash()).size());
+					argv[0] = "/dev_flash" + resolved_path.substr(g_emu_callbacks.resolve_path(g_cfg_vfs.get_dev_flash()).size());
 					m_dir = fs::get_parent_dir(argv[0]) + '/';
 				}
 				else if (!m_title_id.empty() && m_cat == "HG")
@@ -2652,7 +2656,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 					const std::string dir = std::string(fmt::trim_sv(std::string_view(game_dir).substr(fs::get_parent_dir_view(game_dir).size() + 1), fs::delim));
 
 					m_dir = "/dev_hdd0/game/" + dir + '/';
-					argv[0] = m_dir + unescape(resolved_path.substr(GetCallbacks().resolve_path(game_dir).size()));
+					argv[0] = m_dir + unescape(resolved_path.substr(g_emu_callbacks.resolve_path(game_dir).size()));
 					sys_log.notice("Boot path: %s", m_dir);
 				}
 				else if (g_cfg.vfs.host_root)
@@ -2692,7 +2696,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			// Overlay (OVL) executable (only load it)
 			else
 			{
-				GetCallbacks().on_ready();
+				g_emu_callbacks.on_ready();
 				g_fxo->init(false);
 
 				if (!vm::map(0x3000'0000, 0x1000'0000, 0x200) || !ppu_load_overlay(ppu_exec, false, m_path).first)
@@ -2719,7 +2723,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		{
 			// PPU PRX
 			m_ar.reset();
-			GetCallbacks().on_ready();
+			g_emu_callbacks.on_ready();
 			g_fxo->init(false);
 			ppu_load_prx(ppu_prx, false, m_path);
 			Pause(true);
@@ -2728,7 +2732,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		{
 			// SPU executable
 			m_ar.reset();
-			GetCallbacks().on_ready();
+			g_emu_callbacks.on_ready();
 			g_fxo->init(false);
 			spu_load_exec(spu_exec);
 			Pause(true);
@@ -2737,7 +2741,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		{
 			// SPU linker file
 			m_ar.reset();
-			GetCallbacks().on_ready();
+			g_emu_callbacks.on_ready();
 			g_fxo->init(false);
 			spu_load_rel_exec(spu_rel);
 			Pause(true);
@@ -2746,7 +2750,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		{
 			// PPU linker file
 			m_ar.reset();
-			GetCallbacks().on_ready();
+			g_emu_callbacks.on_ready();
 			g_fxo->init(false);
 			ppu_load_rel_exec(ppu_rel);
 			Pause(true);
@@ -2782,7 +2786,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 
 				CallFromMainThread([this]()
 				{
-					GetCallbacks().on_missing_fw();
+					g_emu_callbacks.on_missing_fw();
 				});
 
 				return game_boot_result::firmware_missing;
@@ -2807,7 +2811,7 @@ void Emulator::Run(bool start_playtime)
 {
 	ensure(IsReady() || GetStatus(false) == system_state::frozen);
 
-	GetCallbacks().on_run(start_playtime);
+	g_emu_callbacks.on_run(start_playtime);
 
 	m_pause_start_time = 0;
 	m_pause_amend_time = 0;
@@ -2821,12 +2825,12 @@ void Emulator::Run(bool start_playtime)
 
 	if (g_cfg.misc.prevent_display_sleep)
 	{
-		Emu.GetCallbacks().enable_display_sleep(false);
+		g_emu_callbacks.enable_display_sleep(false);
 	}
 
 	if (g_cfg.misc.enable_gamemode)
 	{
-		Emu.GetCallbacks().enable_gamemode(true);
+		g_emu_callbacks.enable_gamemode(true);
 	}
 }
 
@@ -3054,7 +3058,7 @@ bool Emulator::Pause(bool freeze_emulation, bool show_resume_message)
 		rsx->state += cpu_flag::dbg_global_pause;
 	}
 
-	GetCallbacks().on_pause();
+	g_emu_callbacks.on_pause();
 
 	BlockingCallFromMainThread([this, show_resume_message]()
 	{
@@ -3111,7 +3115,7 @@ bool Emulator::Pause(bool freeze_emulation, bool show_resume_message)
 	}
 
 	// Always Enable display sleep, not only if it was prevented.
-	Emu.GetCallbacks().enable_display_sleep(true);
+	g_emu_callbacks.enable_display_sleep(true);
 
 	return true;
 }
@@ -3191,7 +3195,7 @@ void Emulator::Resume()
 		rsx->state -= cpu_flag::dbg_global_pause;
 	}
 
-	GetCallbacks().on_resume();
+	g_emu_callbacks.on_resume();
 
 	sys_log.success("Emulation has been resumed!");
 
@@ -3208,7 +3212,7 @@ void Emulator::Resume()
 
 	if (g_cfg.misc.prevent_display_sleep)
 	{
-		Emu.GetCallbacks().enable_display_sleep(false);
+		g_emu_callbacks.enable_display_sleep(false);
 	}
 }
 
@@ -3678,7 +3682,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 				if (i >= (is_being_held_longer ? 5000 : 2000))
 				{
 					// Total amount of waiting: about 10s
-					GetCallbacks().on_emulation_stop_no_response(closed_sucessfully, is_being_held_longer ? 25 : 10);
+					g_emu_callbacks.on_emulation_stop_no_response(closed_sucessfully, is_being_held_longer ? 25 : 10);
 
 					while (thread_ctrl::state() != thread_state::aborting)
 					{
@@ -3698,7 +3702,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 					// Total amount of waiting: about 10s
 					if (g_cfg.savestate.suspend_emu)
 					{
-						GetCallbacks().on_save_state_progress(closed_sucessfully, ar_ptr, verbose_message.get(), init_mtx);
+						g_emu_callbacks.on_save_state_progress(closed_sucessfully, ar_ptr, verbose_message.get(), init_mtx);
 					}
 
 					while (thread_ctrl::state() != thread_state::aborting)
@@ -4050,7 +4054,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 					tty_buffer.resize(tty_read_fd.read_at(m_tty_file_init_pos, tty_buffer.data(), tty_buffer.size()));
 					tty_read_fd.close();
 
-					if (!tty_buffer.empty() && std::isspace(tty_buffer.back()))
+					if (!tty_buffer.empty() && utils::isspace(tty_buffer.back()))
 					{
 						tty_buffer.resize(tty_buffer.find_last_not_of(" \f\n\r\t\v"sv) + 1);
 					}
@@ -4143,7 +4147,7 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 							iter = index + 1;
 						}
 
-						if (!new_log.empty() && std::isspace(new_log.back()))
+						if (!new_log.empty() && utils::isspace(new_log.back()))
 						{
 							new_log.resize(new_log.find_last_not_of(" \f\n\r\t\v"sv) + 1);
 						}
@@ -4230,15 +4234,15 @@ void Emulator::Kill(bool allow_autoexit, bool savestate, savestate_stage* save_s
 				};
 			}
 
-			GetCallbacks().on_stop();
+			g_emu_callbacks.on_stop();
 
 			// Always Enable display sleep, not only if it was prevented.
-			Emu.GetCallbacks().enable_display_sleep(true);
+			g_emu_callbacks.enable_display_sleep(true);
 
 			// Calling Gamemode Exit on Stop
 			if (g_cfg.misc.enable_gamemode)
 			{
-				Emu.GetCallbacks().enable_gamemode(false);
+				g_emu_callbacks.enable_gamemode(false);
 			}
 
 			if (allow_autoexit)
@@ -4323,9 +4327,9 @@ bool Emulator::Quit(bool force_quit)
 		Emu.CleanUp();
 	};
 
-	if (GetCallbacks().try_to_quit)
+	if (g_emu_callbacks.try_to_quit)
 	{
-		return GetCallbacks().try_to_quit(force_quit, on_exit);
+		return g_emu_callbacks.try_to_quit(force_quit, on_exit);
 	}
 
 	on_exit();
@@ -4778,8 +4782,8 @@ game_boot_result Emulator::RemoveGameFromYml(const std::string& title_id)
 
 bool Emulator::IsPathInsideDir(std::string_view path, std::string_view dir, bool check_if_exists) const
 {
-	const std::string dir_path = check_if_exists ? GetCallbacks().resolve_path(dir) : GetCallbacks().resolve_path_may_not_exist(dir);
-	const std::string resolved_path = check_if_exists ? GetCallbacks().resolve_path(path) : GetCallbacks().resolve_path_may_not_exist(path);
+	const std::string dir_path = check_if_exists ? g_emu_callbacks.resolve_path(dir) : g_emu_callbacks.resolve_path_may_not_exist(dir);
+	const std::string resolved_path = check_if_exists ? g_emu_callbacks.resolve_path(path) : g_emu_callbacks.resolve_path_may_not_exist(path);
 
 	return !dir_path.empty() && !resolved_path.empty() && (resolved_path + '/').starts_with((dir_path.back() == '/') ? dir_path : (dir_path + '/'));
 }

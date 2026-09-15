@@ -2,6 +2,7 @@
 #include "sys_rsx.h"
 
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/timers.hpp"
