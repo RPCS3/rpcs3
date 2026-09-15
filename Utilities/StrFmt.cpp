@@ -3,6 +3,7 @@
 #include "cfmt.h"
 #include "util/endian.hpp"
 #include "util/v128.hpp"
+#include "util/cctype.hpp"
 
 #include <locale>
 #include <codecvt>
@@ -198,12 +199,12 @@ fmt::base57_result fmt::base57_result::from_string(std::string_view str)
 			{
 				auto to_val = [](u8 c) -> u64
 				{
-					if (std::isdigit(c))
+					if (utils::isdigit(c))
 					{
 						return c - '0';
 					}
 
-					if (std::isupper(c))
+					if (utils::isupper(c))
 					{
 						// Omitted characters
 						if (c == 'B' || c == 'D' || c == 'I' || c == 'O')
@@ -231,7 +232,7 @@ fmt::base57_result fmt::base57_result::from_string(std::string_view str)
 						return c - 'A' + 10;
 					}
 
-					if (std::islower(c))
+					if (utils::islower(c))
 					{
 						// Omitted characters
 						if (c == 'l')
@@ -952,7 +953,7 @@ std::string fmt::to_upper(std::string_view string)
 {
 	std::string result;
 	result.resize(string.size());
-	std::transform(string.begin(), string.end(), result.begin(), ::toupper);
+	std::transform(string.begin(), string.end(), result.begin(), utils::toupper<char>);
 	return result;
 }
 
@@ -960,7 +961,7 @@ std::string fmt::to_lower(std::string_view string)
 {
 	std::string result;
 	result.resize(string.size());
-	std::transform(string.begin(), string.end(), result.begin(), ::tolower);
+	std::transform(string.begin(), string.end(), result.begin(), utils::tolower<char>);
 	return result;
 }
 

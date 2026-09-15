@@ -10,6 +10,7 @@
 
 #include "Emu/NP/np_handler.h"
 #include "Emu/NP/np_contexts.h"
+#include "util/cctype.hpp"
 
 LOG_CHANNEL(sceNpCommerce2);
 
@@ -933,7 +934,7 @@ error_code sceNpCommerce2DoProductCodeStartAsync(u32 ctx_id, u32 container, vm::
 
 		for (u32 i = 0; i < SCE_NP_COMMERCE2_PRODUCT_CODE_BLOCK_LEN; i++)
 		{
-			if (!isalnum(param->code1[i]) || !isalnum(param->code2[i]) || !isalnum(param->code3[i]))
+			if (!utils::isalnum(param->code1[i]) || !utils::isalnum(param->code2[i]) || !utils::isalnum(param->code3[i]))
 				return SCE_NP_COMMERCE2_ERROR_INVALID_TARGET_ID;
 		}
 	}

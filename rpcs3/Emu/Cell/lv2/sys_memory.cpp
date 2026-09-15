@@ -67,6 +67,8 @@ lv2_memory_container* lv2_memory_container::search(u32 id)
 struct sys_memory_address_table
 {
 	atomic_t<lv2_memory_container*> addrs[65536]{};
+	std::array<u32, 2> secondary_areas{};
+	std::mutex mutex;
 
 	sys_memory_address_table() = default;
 
@@ -76,7 +78,7 @@ struct sys_memory_address_table
 	{
 		// First: address, second: conatiner ID (SYS_MEMORY_CONTAINER_ID_INVALID for global FXO memory container)
 		std::unordered_map<u16, u32> mm;
-		ar(mm);
+		ar(mm, secondary_areas);
 
 		for (const auto& [addr, id] : mm)
 		{
@@ -86,6 +88,8 @@ struct sys_memory_address_table
 
 	void save(utils::serial& ar)
 	{
+		USING_SERIALIZATION_VERSION(lv2_memory);
+
 		std::unordered_map<u16, u32> mm;
 
 		for (auto& ctr : addrs)
@@ -96,14 +100,70 @@ struct sys_memory_address_table
 			}
 		}
 
-		ar(mm);
+		ar(mm, secondary_areas);
+	}
+
+	u32 allocate(u32 size, u32 align)
+	{
+		constexpr u32 _256mb = 0x10000000;
+		const auto location = align == 0x10000 ? vm::user64k : vm::user1m;
+		const u64 flags = (align == 0x10000 ? vm::page_size_64k : vm::page_size_1m) | vm::bf0_0x1;
+		const u32 area_size = utils::align(size, _256mb);
+		const auto area = vm::reserve_map(location, 0, area_size, flags);
+
+		if (!area)
+		{
+			return 0;
+		}
+
+		if (u32 addr = area->alloc(size, nullptr, align))
+		{
+			return addr;
+		}
+
+		// Check if secondary area is mapped already
+		if (u32 base_non0 = atomic_storage<u32>::load(secondary_areas[align == 0x10000 ? 0 : 1]))
+		{
+			if (u32 addr = ensure(vm::get(vm::any, base_non0))->alloc(size, nullptr, align))
+			{
+				return addr;
+			}
+
+			fmt::throw_exception("Uncharted area of allocations (size=0x%x, align=0x%x)", size, align);
+		}
+
+		if (size > _256mb)
+		{
+			fmt::throw_exception("Uncharted area of allocations (size=0x%x, align=0x%x)", size, align);
+		}
+
+		std::lock_guard lock(mutex);
+		auto& base = secondary_areas[align == 0x10000 ? 0 : 1];
+		const auto secondary = base ? vm::get(vm::any, base) : vm::find_map(area_size, _256mb, flags);
+
+		if (!secondary)
+		{
+			return 0;
+		}
+
+		if (!base)
+		{
+			atomic_storage<u32>::store(base, secondary->addr);
+		}
+
+		if (u32 addr = secondary->alloc(size, nullptr, align))
+		{
+			return addr;
+		}
+
+		fmt::throw_exception("Uncharted area of allocations (size=0x%x, align=0x%x)", size, align);
+		return 0;
 	}
 };
 
-std::shared_ptr<vm::block_t> reserve_map(u32 alloc_size, u32 align)
+u32 allocate_user_memory(u32 size, u32 align)
 {
-	return vm::reserve_map(align == 0x10000 ? vm::user64k : vm::user1m, 0, align == 0x10000 ? 0x20000000 : utils::align(alloc_size, 0x10000000)
-		, align == 0x10000 ? (vm::page_size_64k | vm::bf0_0x1) : (vm::page_size_1m | vm::bf0_0x1));
+	return g_fxo->get<sys_memory_address_table>().allocate(size, align);
 }
 
 // Todo: fix order of error checks
@@ -144,26 +204,22 @@ error_code sys_memory_allocate(cpu_thread& cpu, u64 size, u64 flags, vm::ptr<u32
 		return {CELL_ENOMEM, dct.size - dct.used};
 	}
 
-	if (const auto area = reserve_map(static_cast<u32>(size), align))
+	if (const u32 addr = allocate_user_memory(static_cast<u32>(size), align))
 	{
-		if (const u32 addr = area->alloc(static_cast<u32>(size), nullptr, align))
+		ensure(!g_fxo->get<sys_memory_address_table>().addrs[addr >> 16].exchange(&dct));
+
+		if (alloc_addr)
 		{
-			ensure(!g_fxo->get<sys_memory_address_table>().addrs[addr >> 16].exchange(&dct));
+			sys_memory.notice("sys_memory_allocate(): Allocated 0x%x address (size=0x%x)", addr, size);
 
-			if (alloc_addr)
-			{
-				sys_memory.notice("sys_memory_allocate(): Allocated 0x%x address (size=0x%x)", addr, size);
-
-				vm::lock_sudo(addr, static_cast<u32>(size));
-				cpu.check_state();
-				*alloc_addr = addr;
-				return CELL_OK;
-			}
-
-			// Dealloc using the syscall
-			sys_memory_free(cpu, addr);
-			return CELL_EFAULT;
+			vm::lock_sudo(addr, static_cast<u32>(size));
+			cpu.check_state();
+			*alloc_addr = addr;
+			return CELL_OK;
 		}
+
+		sys_memory_free(cpu, addr);
+		return CELL_EFAULT;
 	}
 
 	dct.free(size);
@@ -218,26 +274,22 @@ error_code sys_memory_allocate_from_container(cpu_thread& cpu, u64 size, u32 cid
 		return {ct.ret, ct->size - ct->used};
 	}
 
-	if (const auto area = reserve_map(static_cast<u32>(size), align))
+	if (const u32 addr = allocate_user_memory(static_cast<u32>(size), align))
 	{
-		if (const u32 addr = area->alloc(static_cast<u32>(size)))
+		ensure(!g_fxo->get<sys_memory_address_table>().addrs[addr >> 16].exchange(ct.ptr.get()));
+
+		if (alloc_addr)
 		{
-			ensure(!g_fxo->get<sys_memory_address_table>().addrs[addr >> 16].exchange(ct.ptr.get()));
+			sys_memory.notice("sys_memory_allocate_from_container(): Allocated 0x%x address (size=0x%x)", addr, size);
 
-			if (alloc_addr)
-			{
-				sys_memory.notice("sys_memory_allocate_from_container(): Allocated 0x%x address (size=0x%x)", addr, size);
-
-				vm::lock_sudo(addr, static_cast<u32>(size));
-				cpu.check_state();
-				*alloc_addr = addr;
-				return CELL_OK;
-			}
-
-			// Dealloc using the syscall
-			sys_memory_free(cpu, addr);
-			return CELL_EFAULT;
+			vm::lock_sudo(addr, static_cast<u32>(size));
+			cpu.check_state();
+			*alloc_addr = addr;
+			return CELL_OK;
 		}
+
+		sys_memory_free(cpu, addr);
+		return CELL_EFAULT;
 	}
 
 	ct->free(size);
