@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "emulated_pad_settings_dialog.h"
 #include "localized_emu.h"
+#include "qt_utils.h"
 #include "Input/raw_mouse_config.h"
 #include "Emu/Io/mouse_config.h"
 #include "Emu/Io/buzz_config.h"
@@ -118,6 +119,8 @@ emulated_pad_settings_dialog::emulated_pad_settings_dialog(pad_type type, QWidge
 	v_layout->addWidget(tabs);
 	v_layout->addWidget(buttons);
 	setLayout(v_layout);
+
+	gui::utils::keep_tab_bar_focused(tabs);
 }
 
 template <typename T>
