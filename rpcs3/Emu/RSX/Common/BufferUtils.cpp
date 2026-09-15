@@ -70,6 +70,10 @@
 const v128 s_bswap_u32_mask = v128::from32(0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f);
 const v128 s_bswap_u16_mask = v128::from32(0x02030001, 0x06070405, 0x0a0b0809, 0x0e0f0c0d);
 
+#if defined(ARCH_X64) || defined(ARCH_ARM64)
+#include "BufferUtils_compact.h"
+#endif
+
 namespace utils
 {
 	template <typename T, typename U>
@@ -454,7 +458,7 @@ namespace
 		return std::make_tuple(min_index, max_index, written);
 	}
 
-	const upload_untouched_skip_restart_dispatch s_generic_upload_untouched_skip_restart_dispatch =
+	[[maybe_unused]] const upload_untouched_skip_restart_dispatch s_generic_upload_untouched_skip_restart_dispatch =
 	{
 		upload_untouched_skip_restart<u16>,
 		upload_untouched_skip_restart<u32>,
@@ -463,7 +467,7 @@ namespace
 #if defined(ARCH_X64)
 	const upload_untouched_skip_restart_dispatch s_avx512_upload_untouched_skip_restart_dispatch =
 	{
-		upload_untouched_skip_restart<u16>,
+		s_use_avx2 ? upload_swapped_avx2_skip_restart<u16> : upload_untouched_skip_restart<u16>,
 		upload_u32_swapped_avx3_skip_restart,
 	};
 
@@ -486,8 +490,27 @@ namespace
 		{
 			return s_avx512_upload_untouched_skip_restart_dispatch;
 		}
+
+		if (s_use_avx2)
+		{
+			static const upload_untouched_skip_restart_dispatch s_avx2 =
+			{
+				upload_swapped_avx2_skip_restart<u16>,
+				upload_swapped_avx2_skip_restart<u32>,
+			};
+			return s_avx2;
+		}
 #endif
+#if defined(ARCH_ARM64)
+		static const upload_untouched_skip_restart_dispatch s_neon =
+		{
+			upload_swapped_neon_skip_restart<u16>,
+			upload_swapped_neon_skip_restart<u32>,
+		};
+		return s_neon;
+#else
 		return s_generic_upload_untouched_skip_restart_dispatch;
+#endif
 	}();
 
 	template<typename T, typename U = remove_be_t<T>>
