@@ -2746,11 +2746,7 @@ void main_window::CreateConnects()
 			return;
 		}
 
-		QString path_last_add_games = m_gui_settings->GetValue(gui::fd_add_games).toString();
-		if (path_last_add_games.isEmpty())
-		{
-			path_last_add_games = m_gui_settings->GetValue(gui::fd_add_iso).toString();
-		}
+		const QString path_last_add_games = m_gui_settings->GetValue(gui::fd_add_games).toString();
 
 		game_source_dialog dialog(this,
 		{
