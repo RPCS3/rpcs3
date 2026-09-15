@@ -61,7 +61,6 @@ bool _L10nCodeParse(s32 code, HostCode& retCode)
 	case L10N_EUC_JP:           retCode = 51932;        return true;
 	case L10N_EUC_KR:           retCode = 51949;        return true;
 	case L10N_ISO_2022_JP:      retCode = 50222;        return true;
-	// Maybe 708/720/864/1256/10004/20420/28596/
 	case L10N_ARIB:             retCode = 20420;        return true; // ARIB STD-B24/TR-B14 (Japanese broadcasting). Placeholder, no proper ARIB codepage in Windows.
 	case L10N_HZ:               retCode = 52936;        return true;
 	case L10N_GB18030:          retCode = 54936;        return true;
