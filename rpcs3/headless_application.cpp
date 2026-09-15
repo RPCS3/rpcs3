@@ -161,6 +161,7 @@ void headless_application::InitializeCallbacks()
 
 	callbacks.enable_disc_eject  = [](bool) {};
 	callbacks.enable_disc_insert = [](bool) {};
+	callbacks.show_main_window   = [](bool) {};
 
 	callbacks.on_missing_fw = []() {};
 
