@@ -122,6 +122,7 @@ private:
 	QLabel* m_game_communication_id = nullptr;
 	QLineEdit* m_game_search = nullptr;
 	QStackedWidget* m_stack = nullptr;
+	QLabel* m_corrupt_warning_label = nullptr;
 	game_list* m_trophy_table; //! UI element to display trophy stuff.
 	game_list* m_game_table; //! UI element to display games.
 	QPushButton* m_btn_sync_all_trophies = nullptr;
