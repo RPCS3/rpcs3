@@ -394,6 +394,7 @@ constexpr auto arg_decrypt        = "decrypt";
 // Arguments that can be used with a gui application
 constexpr auto arg_no_gui         = "no-gui";
 constexpr auto arg_fullscreen     = "fullscreen"; // only useful with no-gui
+constexpr auto arg_big_picture    = "big-picture";
 constexpr auto arg_gs_screen      = "game-screen";
 constexpr auto arg_high_dpi       = "hidpi";
 constexpr auto arg_rounding       = "dpi-rounding";
@@ -815,6 +816,7 @@ int run_rpcs3(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_headless, "Run RPCS3 in headless mode."));
 	parser.addOption(QCommandLineOption(arg_no_gui, "Run RPCS3 without its GUI."));
 	parser.addOption(QCommandLineOption(arg_fullscreen, "Run games in fullscreen mode. Only used when no-gui is set."));
+	parser.addOption(QCommandLineOption(arg_big_picture, "Run RPCS3 in Big Picture Mode on startup."));
 	const QCommandLineOption screen_option(arg_gs_screen, "Forces the emulator to use the specified screen for the game window.", "index", "");
 	parser.addOption(screen_option);
 	parser.addOption(QCommandLineOption(arg_high_dpi, "Enables Qt High Dpi Scaling.", "enabled", "1"));
@@ -1371,7 +1373,7 @@ int run_rpcs3(int argc, char** argv)
 		Emu.Quit(true);
 		return 0;
 	}
-	else if (!g_headless && g_cfg.misc.start_big_picture_mode)
+	else if (g_cfg.misc.start_big_picture_mode || parser.isSet(arg_big_picture))
 	{
 		Emu.CallFromMainThread([]()
 		{
