@@ -3875,6 +3875,18 @@ public:
 			fpm.run(*f, fam);
 		}
 
+		if (m_test_state->use_empty())
+		{
+			m_test_state->eraseFromParent();
+			m_test_state = nullptr;
+		}
+
+		if (m_dispatch->use_empty())
+		{
+			m_dispatch->eraseFromParent();
+			m_dispatch = nullptr;
+		}
+
 		// Clear context (TODO)
 		m_blocks.clear();
 		m_block_queue.clear();
