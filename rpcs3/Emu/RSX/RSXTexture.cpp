@@ -2,7 +2,6 @@
 #include "RSXTexture.h"
 
 #include "Common/TextureUtils.h"
-#include "Program/GLSLCommon.h"
 #include "Utils/algorithm.hpp"
 #include "Utils/rsx_utils.h"
 

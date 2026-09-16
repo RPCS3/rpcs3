@@ -2,6 +2,7 @@
 #include "memory.h"
 
 #include "Emu/RSX/Utils/algorithm.hpp"
+#include "Emu/system_config.h"
 
 namespace vk
 {

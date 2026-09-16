@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "IdManager.h"
+#include "emu_callbacks.h"
 #include "System.h"
 #include "VFS.h"
 
@@ -7,6 +8,7 @@
 
 #include "Utilities/mutex.h"
 #include "Utilities/StrUtil.h"
+#include "util/cctype.hpp"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -69,7 +71,7 @@ bool vfs::mount(std::string_view vpath, std::string_view path, bool is_dir)
 		if (pos == umax)
 		{
 			// Mounting completed; fixup for directories due to resolve_path messing with trailing /
-			list.back()->path = Emu.GetCallbacks().resolve_path(path);
+			list.back()->path = g_emu_callbacks.resolve_path(path);
 			if (list.back()->path.empty())
 				list.back()->path = std::string(path); // Fallback when resolving failed
 			if (is_dir && !list.back()->path.ends_with('/'))
@@ -399,7 +401,7 @@ std::string vfs::retrieve(std::string_view path, const vfs_directory* node, std:
 
 		std::vector<std::string_view> mount_path_empty;
 
-		const std::string rpath = Emu.GetCallbacks().resolve_path_may_not_exist(path);
+		const std::string rpath = g_emu_callbacks.resolve_path_may_not_exist(path);
 
 		if (!rpath.empty())
 		{
@@ -567,7 +569,7 @@ std::string vfs::escape(std::string_view name, bool escape_slash)
 	if (name.size() > 2)
 	{
 		// Pack first 3 characters
-		const u32 triple = std::bit_cast<le_t<u32>, u32>(toupper(name[0]) | toupper(name[1]) << 8 | toupper(name[2]) << 16);
+		const u32 triple = std::bit_cast<le_t<u32>, u32>(utils::toupper(name[0]) | utils::toupper(name[1]) << 8 | utils::toupper(name[2]) << 16);
 
 		switch (triple)
 		{
@@ -1064,7 +1066,7 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 		return false;
 	}
 
-	const auto escaped_from = Emu.GetCallbacks().resolve_path(from);
+	const auto escaped_from = g_emu_callbacks.resolve_path(from);
 
 	auto check_path = [&](std::string_view path)
 	{
@@ -1078,7 +1080,7 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 			return;
 		}
 
-		std::string escaped = Emu.GetCallbacks().resolve_path(file.real_path);
+		std::string escaped = g_emu_callbacks.resolve_path(file.real_path);
 
 		if (check_path(escaped))
 		{
