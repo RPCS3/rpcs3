@@ -3875,6 +3875,18 @@ public:
 			fpm.run(*f, fam);
 		}
 
+		if (m_test_state->use_empty())
+		{
+			m_test_state->eraseFromParent();
+			m_test_state = nullptr;
+		}
+
+		if (m_dispatch->use_empty())
+		{
+			m_dispatch->eraseFromParent();
+			m_dispatch = nullptr;
+		}
+
 		// Clear context (TODO)
 		m_blocks.clear();
 		m_block_queue.clear();
@@ -9226,7 +9238,12 @@ public:
 			}
 
 			r.value = m_ir->CreateFPToSI(a.value, get_type<s32[4]>());
+#if defined(ARCH_ARM64)
+			set_vr(op.rt, select(fcmp_ord(a >= fsplat<f64[4]>(std::exp2(31.f))), splat<s32[4]>(0x7fffffff),
+				select(fcmp_ord(a < fsplat<f64[4]>(-std::exp2(31.f))), splat<s32[4]>(0x80000000), r)));
+#else
 			set_vr(op.rt, r ^ sext<s32[4]>(fcmp_ord(a >= fsplat<f64[4]>(std::exp2(31.f)))));
+#endif
 		}
 		else
 		{
@@ -9241,7 +9258,12 @@ public:
 
 			value_t<s32[4]> r;
 			r.value = m_ir->CreateFPToSI(a.value, get_type<s32[4]>());
+#if defined(ARCH_ARM64)
+			const auto sat_hi = bitcast<s32[4]>(a) > splat<s32[4]>(((31 + 127) << 23) - 1);
+			set_vr(op.rt, select(sat_hi, splat<s32[4]>(0x7fffffff), select(fcmp_uno(a != a), splat<s32[4]>(0x80000000), r)));
+#else
 			set_vr(op.rt, r ^ sext<s32[4]>(bitcast<s32[4]>(a) > splat<s32[4]>(((31 + 127) << 23) - 1)));
+#endif
 		}
 	}
 
