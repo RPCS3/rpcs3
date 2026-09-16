@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "instance.h"
 
+#include "Emu/system_config.h"
+
 namespace vk
 {
 	// Supported extensions

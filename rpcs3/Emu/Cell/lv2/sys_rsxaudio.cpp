@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/IdManager.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/Audio/audio_utils.h"
@@ -1750,7 +1751,7 @@ void rsxaudio_backend_thread::backend_init(const rsxaudio_state& ra_state, const
 	if (reset_backend || !backend)
 	{
 		backend = nullptr;
-		backend = Emu.GetCallbacks().get_audio();
+		backend = g_emu_callbacks.get_audio();
 		backend->SetWriteCallback(std::bind(&rsxaudio_backend_thread::write_data_callback, this, std::placeholders::_1, std::placeholders::_2));
 		backend->SetStateCallback(std::bind(&rsxaudio_backend_thread::state_changed_callback, this, std::placeholders::_1));
 	}

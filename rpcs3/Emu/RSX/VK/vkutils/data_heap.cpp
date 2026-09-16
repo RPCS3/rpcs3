@@ -6,6 +6,7 @@
 #include "../VKHelpers.h"
 #include "../VKResourceManager.h"
 #include "Emu/IdManager.h"
+#include "Emu/system_config.h"
 
 #include <memory>
 

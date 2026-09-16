@@ -40,15 +40,15 @@ static std::array<serial_ver_t, 34> s_serial_versions;
 		return ::s_serial_versions[identifier].current_version;\
 	}
 
-SERIALIZATION_VER(global_version, 0,                            22) // For stuff not listed here
+SERIALIZATION_VER(global_version, 0,                            24) // For stuff not listed here
 SERIALIZATION_VER(ppu, 1,                                       1, 2/*PPU sleep order*/, 3/*PPU FNID and module*/)
 SERIALIZATION_VER(spu, 2,                                       1)
 SERIALIZATION_VER(lv2_sync, 3,                                  1)
 SERIALIZATION_VER(lv2_vm, 4,                                    1)
 SERIALIZATION_VER(lv2_net, 5,                                   1, 2/*TCP Feign conection loss*/, 3/*P2PS stream_disconnected status*/)
 SERIALIZATION_VER(lv2_fs, 6,                                    1, 2/*NPDRM key saving*/)
-SERIALIZATION_VER(lv2_prx_overlay, 7,                           1)
-SERIALIZATION_VER(lv2_memory, 8,                                1)
+SERIALIZATION_VER(lv2_prx_overlay, 7,                           2)
+SERIALIZATION_VER(lv2_memory, 8,                                3)
 SERIALIZATION_VER(lv2_config, 9,                                1)
 
 namespace rsx
@@ -68,7 +68,7 @@ SERIALIZATION_VER(sceNp, 11)
 #endif
 
 SERIALIZATION_VER(cellVdec, 12,                                 1)
-SERIALIZATION_VER(cellAudio, 13,                                1)
+SERIALIZATION_VER(cellAudio, 13,                                2)
 SERIALIZATION_VER(cellCamera, 14,                               1, 2/*gem_camera_shared*/)
 SERIALIZATION_VER(cellGem, 15,                                  1, 2/*calibration_status_flags*/, 3/*video_conversion*/)
 SERIALIZATION_VER(sceNpTrophy, 16,                              1)
@@ -606,7 +606,7 @@ namespace stx
 		if ((saved ^ tag) & data_mask)
 		{
 			ensure(!ar.is_writing());
-			fmt::throw_exception("serial_breathe_and_tag(%u): %s\nobject: '%s', next-object: '%s', expected/tag: 0x%x != 0x%x\nLatest known RPCS3 build working for savestates: 0.0.41-19455", s_tls_call_count, ar, s_tls_object_name, name, tag, saved);
+			fmt::throw_exception("serial_breathe_and_tag(%u): %s\nobject: '%s', next-object: '%s', expected/tag: 0x%x != 0x%x\nLatest known RPCS3 build working for savestates: 0.0.42-19996", s_tls_call_count, ar, s_tls_object_name, name, tag, saved);
 		}
 
 		s_tls_object_name = name;
@@ -691,4 +691,3 @@ bool hle_locks_t::try_finalize(std::function<bool()> test)
 	lock_val.notify_all();
 	return true;
 }
-
