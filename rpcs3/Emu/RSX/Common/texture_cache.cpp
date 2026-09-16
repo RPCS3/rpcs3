@@ -1,6 +1,7 @@
 #include "stdafx.h"
 
 #include "Emu/RSX/RSXThread.h"
+#include "Emu/system_config.h"
 #include "Utilities/address_range.h"
 #include "util/fnv_hash.hpp"
 

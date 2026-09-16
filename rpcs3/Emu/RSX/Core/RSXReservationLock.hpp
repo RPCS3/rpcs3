@@ -2,6 +2,7 @@
 
 #include <util/types.hpp>
 #include "../RSXThread.h"
+#include "Emu/system_config.h"
 
 namespace rsx
 {

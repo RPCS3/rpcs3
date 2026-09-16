@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/Modules/sysPrxForUser.h"
@@ -141,7 +142,7 @@ std::shared_ptr<OskDialogBase> _get_osk_dialog(bool create)
 		}
 		else
 		{
-			osk.dlg = Emu.GetCallbacks().get_osk_dialog();
+			osk.dlg = g_emu_callbacks.get_osk_dialog();
 		}
 
 		return osk.dlg;

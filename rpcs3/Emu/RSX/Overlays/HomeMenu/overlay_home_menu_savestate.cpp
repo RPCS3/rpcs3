@@ -1,9 +1,9 @@
 #include "stdafx.h"
 #include "overlay_home_menu_savestate.h"
 #include "overlay_home_menu_components.h"
+#include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/savestate_utils.hpp"
-
 
 namespace rsx
 {

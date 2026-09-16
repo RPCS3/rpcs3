@@ -27,7 +27,7 @@ protected:
 
 	void OnEmuSettingsChange();
 
-	EmuCallbacks CreateCallbacks();
+	virtual void create_callbacks();
 
 	std::shared_ptr<render_creator> m_render_creator;
 	std::string m_active_user;
