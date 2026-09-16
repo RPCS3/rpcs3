@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "audio_utils.h"
 #include "Emu/system_config.h"
-#include "Emu/System.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/IdManager.h"
 #include "Emu/RSX/Overlays/overlay_message.h"
 #include <cmath>
@@ -17,7 +17,7 @@ namespace audio
 	{
 		audio_fxo& fxo = g_fxo->get<audio_fxo>();
 		fxo.audio_muted = !fxo.audio_muted;
-		Emu.GetCallbacks().update_emu_settings();
+		g_emu_callbacks.update_emu_settings();
 
 		rsx::overlays::queue_message(fxo.audio_muted ? localized_string_id::AUDIO_MUTED : localized_string_id::AUDIO_UNMUTED, 3'000'000);
 	}
@@ -50,7 +50,7 @@ namespace audio
 			return;
 
 		g_cfg.audio.volume.set(std::clamp<s32>(new_volume, g_cfg.audio.volume.min, g_cfg.audio.volume.max));
-		Emu.GetCallbacks().update_emu_settings();
+		g_emu_callbacks.update_emu_settings();
 
 		rsx::overlays::queue_message(localized_string(localized_string_id::AUDIO_CHANGED, "%d%%", g_cfg.audio.volume.get()), 3'000'000, {}, rsx::overlays::message_pin_location::top_left, {}, true, true);
 	}
