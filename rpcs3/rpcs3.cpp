@@ -1373,7 +1373,7 @@ int run_rpcs3(int argc, char** argv)
 		Emu.Quit(true);
 		return 0;
 	}
-	else if (!g_headless && (g_cfg.misc.start_big_picture_mode || parser.isSet(arg_big_picture)))
+	else if (g_cfg.misc.start_big_picture_mode || parser.isSet(arg_big_picture))
 	{
 		Emu.CallFromMainThread([]()
 		{
