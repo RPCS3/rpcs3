@@ -6,7 +6,6 @@
 
 #include "Emu/Cell/PPUThread.h"
 #include "Crypto/unedat.h"
-#include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/VFS.h"
 #include "Emu/vfs_config.h"
@@ -1170,13 +1169,15 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 				{
 					if (i == max_i)
 					{
-						// Run out of keys to try
+						// Run out of keys to try: the one failure of this loop, and the only one worth a line in the log
+						sys_fs.error("None of the %d licence key(s) the game registered decrypts '%s'", max_i, local_path);
+
 						return {CELL_EFSSPECIFIC};
 					}
 
-					// Try all registered keys
+					// Try all registered keys, quietly: the ones that do not fit are what the loop is looking for
 					auto edata_file = std::make_unique<EDATADecrypter>(std::move(file), dec_keys[(init_pos - i - 1) % std::size(dec_keys)].load());
-					if (!edata_file->ReadHeader())
+					if (!edata_file->ReadHeader(false))
 					{
 						// Prepare file for the next iteration
 						file = std::move(edata_file->m_edata_file);

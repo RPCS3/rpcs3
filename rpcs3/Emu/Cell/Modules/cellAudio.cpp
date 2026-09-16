@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/Audio/audio_utils.h"
@@ -63,7 +64,7 @@ void cell_audio_config::reset(bool backend_changed)
 	if (!backend || backend_changed)
 	{
 		backend.reset();
-		backend = Emu.GetCallbacks().get_audio();
+		backend = g_emu_callbacks.get_audio();
 	}
 
 	cellAudio.notice("cellAudio initializing. Backend: %s", backend->GetName());
