@@ -2317,10 +2317,10 @@ s32 UCS2stoEUCKRs(vm::cptr<u16> src, vm::cptr<s32> src_len, vm::ptr<u8> dst, vm:
 	return 0;
 }
 
-s32 UTF8stoSJISs()
+s32 UTF8stoSJISs(vm::cptr<void> src, vm::cptr<u32> src_len, vm::ptr<void> dst, vm::ptr<u32> dst_len)
 {
-	cellL10n.todo("UTF8stoSJISs()");
-	return ConversionOK;
+	cellL10n.warning("UTF8stoSJISs(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return _L10nConvertStr(L10N_UTF8, src, src_len, L10N_CODEPAGE_932, dst, dst_len);
 }
 
 s32 UTF8stoHZs()
