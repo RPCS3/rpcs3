@@ -1705,6 +1705,30 @@ void camera_context::operator()()
 			{
 				std::lock_guard lock(mutex);
 				send_frame_update_event = !handler || on_handler_state(handler->get_state());
+
+				// FUNCCALL normally leaves frame acquisition to cellCameraReadEx().
+				// GEM can consume the camera buffer without calling that guest API,
+				// so keep the shared FUNCCALL buffer current for GEM consumers too.
+				if (handler && send_frame_update_event && info.buffer)
+				{
+					u32 width{};
+					u32 height{};
+					u64 frame_number{};
+					u64 bytes_read{};
+
+					if (get_camera_frame(info.buffer.get_ptr(), width, height, frame_number, bytes_read))
+					{
+						bytes_read = std::min<u64>(bytes_read, info.bytesize);
+						this->bytes_read = ::narrow<u32>(bytes_read);
+						frame_timestamp_us = get_guest_system_time() - start_timestamp_us;
+						auto& shared_data = g_fxo->get<gem_camera_shared>();
+						shared_data.frame_timestamp_us.store(frame_timestamp_us);
+					}
+					else
+					{
+						send_frame_update_event = false;
+					}
+				}
 			}
 		}
 
