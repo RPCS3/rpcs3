@@ -7823,9 +7823,10 @@ public:
 		{
 			idx_consts = eval(sub_sat(c, splat<u8[16]>(0x60)) & 0x80);
 		}
-		else if (m_use_gfni)
+		else if (m_use_avx512_icl)
 		{
-			// TODO: Due to vpblendvb, the pshufb OR combine path is one fewer micro-ops post Rocket Lake. Check if it is faster.
+			// GFNI doesn't strictly require AVX512 but it caused regressions without it (#19511)
+			// Potential due to more expensive VEX-code blends post Rocket Lake
 			const auto gfni = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
 			idx_consts = eval(select(noncast<s8[16]>(gfni) >= 0, splat<u8[16]>(0), gfni));
 			
