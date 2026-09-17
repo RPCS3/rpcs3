@@ -7,6 +7,18 @@ $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 Clear-Host
 
+function Print-Elapsed {
+    param([datetime]$Start)
+
+    $Elapsed = (Get-Date) - $Start
+
+    Write-Host ''
+    Write-Host ('Total build time: {0}h {1}m {2}s' -f
+        [int]$Elapsed.TotalHours,
+        $Elapsed.Minutes,
+        $Elapsed.Seconds)
+}
+
 $StartTime = Get-Date
 
 # ============================================================
@@ -180,16 +192,3 @@ Write-Host "Build complete! Output is in `"$BuildDir\bin\`""
 Print-Elapsed $StartTime
 Read-Host 'Press Enter to exit'
 exit 0
-
-# ============================================================
-# Helper: print elapsed time
-# ============================================================
-function Print-Elapsed {
-    param([datetime]$Start)
-    $Elapsed = (Get-Date) - $Start
-    Write-Host ''
-    Write-Host ('Total build time: {0}h {1}m {2}s' -f
-        [int]$Elapsed.TotalHours,
-        $Elapsed.Minutes,
-        $Elapsed.Seconds)
-}
