@@ -949,7 +949,16 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 	// few hundred directories: a directory is resolved once, and a file not on disk is that result plus its own name
 	std::map<std::string, std::filesystem::path, std::less<>> canonical_dirs;
 
-	const std::filesystem::path install_path = canonicalize(m_install_path);
+	// The installation directory is resolved without its closing "/", like every entry below it: on a file system that
+	// cannot resolve it, the lexical form would keep that separator as an empty last element no entry can match
+	std::string_view install_dir = m_install_path;
+
+	if (install_dir.ends_with('/'))
+	{
+		install_dir.remove_suffix(1);
+	}
+
+	const std::filesystem::path install_path = canonicalize(install_dir);
 
 	if (install_path.empty())
 	{
