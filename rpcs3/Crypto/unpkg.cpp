@@ -953,7 +953,7 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 	// cannot resolve it, the lexical form would keep that separator as an empty last element no entry can match
 	std::string_view install_dir = m_install_path;
 
-	if (install_dir.ends_with('/'))
+	while (install_dir.ends_with('/'))
 	{
 		install_dir.remove_suffix(1);
 	}
