@@ -1829,6 +1829,7 @@ namespace rsx
 
 					// Fake RTT cache hit
 					dst_subres.surface = dst_surface;
+					dst_subres.base_address = section_attr.address;
 					dst_is_render_target = true;
 
 					dest_texture = dst_surface->get_surface(rsx::surface_access::transfer_write);
@@ -3798,16 +3799,17 @@ namespace rsx
 
 			if (cached_dest)
 			{
-				result.real_dst_address = cached_dest->get_section_base();
-				result.real_dst_size = cached_dest->get_section_size();
+				result.dst_range = utils::address_range32::start_length(
+					cached_dest->get_section_base(),
+					cached_dest->get_section_size());
 			}
 			else
 			{
 				ensure(dst_is_render_target);
 				dst_subres.surface->on_write_copy(rsx::get_shared_tag(), false, raster_type);
 
-				result.real_dst_address = dst_base_address;
-				result.real_dst_size = dst.pitch * dst_dimensions.height;
+				// We use the full surface range here. Blit resources are always locked after writing regardless of WCB/WDB settings.
+				result.dst_range = dst_subres.surface->get_memory_range();
 			}
 
 			return result;
