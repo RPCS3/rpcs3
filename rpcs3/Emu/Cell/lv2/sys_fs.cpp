@@ -776,6 +776,16 @@ lv2_dir::lv2_dir(utils::serial& ar)
 			ar(entry.name, static_cast<fs::stat_t&>(entry));
 		}
 
+		// Appended rather than placed first, so that a restored position still points at the entry it did when saved
+		for (std::string_view name : {"."sv, ".."sv})
+		{
+			if (std::none_of(entries.cbegin(), entries.cend(), FN(x.name == name)))
+			{
+				entries.emplace_back().name = name;
+				entries.back().is_directory = true;
+			}
+		}
+
 		return entries;
 	}())
 	, pos(ar.pop<u64>())
@@ -1724,20 +1734,20 @@ error_code sys_fs_readdir(ppu_thread& ppu, u32 fd, vm::ptr<CellFsDirent> dir, vm
 	{
 		nread_to_write = sizeof(CellFsDirent);
 	}
-	else if (!directory->entries.empty())
+	else
 	{
 		// It does actually write polling the last entry. Seems consistent across HDD0 and HDD1 (TODO: check more partitions)
+		// Every lv2_dir is built with . and .., so there is always an entry to poll
+		ensure(!directory->entries.empty());
+
 		info = &directory->entries.back();
 	}
 
 	CellFsDirent dir_write{};
 
-	if (info)
-	{
-		dir_write.d_type = info->is_directory ? CELL_FS_TYPE_DIRECTORY : CELL_FS_TYPE_REGULAR;
-		dir_write.d_namlen = u8(std::min<usz>(info->name.size(), CELL_FS_MAX_FS_FILE_NAME_LENGTH));
-		strcpy_trunc(dir_write.d_name, info->name);
-	}
+	dir_write.d_type = info->is_directory ? CELL_FS_TYPE_DIRECTORY : CELL_FS_TYPE_REGULAR;
+	dir_write.d_namlen = u8(std::min<usz>(info->name.size(), CELL_FS_MAX_FS_FILE_NAME_LENGTH));
+	strcpy_trunc(dir_write.d_name, info->name);
 
 	// TODO: Check more partitions (HDD1 is known to differ in actual filesystem implementation)
 	if (directory->mp != &g_mp_sys_dev_hdd1 && nread_to_write == 0)
