@@ -24,7 +24,8 @@
     <OutputDirectory>release\</OutputDirectory>
     <ATLMinimizesCRunTimeLibraryUsage>false</ATLMinimizesCRunTimeLibraryUsage>
     <CharacterSet>Unicode</CharacterSet>
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType Condition="'$(SKIP_RPCS3_EXE)' == ''">Application</ConfigurationType>
+    <ConfigurationType Condition="'$(SKIP_RPCS3_EXE)' != ''">StaticLibrary</ConfigurationType>
     <IntermediateDirectory>release\</IntermediateDirectory>
     <PrimaryOutput>rpcs3</PrimaryOutput>
   </PropertyGroup>
@@ -32,7 +33,8 @@
     <OutputDirectory>debug\</OutputDirectory>
     <ATLMinimizesCRunTimeLibraryUsage>false</ATLMinimizesCRunTimeLibraryUsage>
     <CharacterSet>Unicode</CharacterSet>
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType Condition="'$(SKIP_RPCS3_EXE)' == ''">Application</ConfigurationType>
+    <ConfigurationType Condition="'$(SKIP_RPCS3_EXE)' != ''">StaticLibrary</ConfigurationType>
     <IntermediateDirectory>debug\</IntermediateDirectory>
     <PrimaryOutput>rpcs3</PrimaryOutput>
   </PropertyGroup>
@@ -50,20 +52,11 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)bin\</OutDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
+    <OutDir>$(SolutionDir)bin\</OutDir>
+    <IntDir>$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">rpcs3</TargetName>
-    <IgnoreImportLibrary Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</IgnoreImportLibrary>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)bin\</OutDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">rpcs3d</TargetName>
-    <IgnoreImportLibrary Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</IgnoreImportLibrary>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(SolutionDir)3rdparty\7zip\7zip\C;$(SolutionDir)3rdparty\hidapi\hidapi\hidapi;.\;$(SolutionDir);$(SolutionDir)3rdparty\asmjit\asmjit\src;$(SolutionDir)3rdparty\yaml-cpp\yaml-cpp\include;$(SolutionDir)3rdparty\ffmpeg\include;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(UniversalCRT_IncludePath);$(SolutionDir)3rdparty\libpng\libpng;$(SolutionDir)3rdparty\GL;$(SolutionDir)3rdparty\stblib\stb;$(SolutionDir)3rdparty\openal\openal-soft\include\AL;$(SolutionDir)3rdparty\pugixml\src;$(SolutionDir)3rdparty\Optional;$(SolutionDir)3rdparty\discord-rpc\discord-rpc\include;$(SolutionDir)3rdparty\zlib\zlib;$(SolutionDir)3rdparty\libsdl-org\SDL\include;$(SolutionDir)3rdparty\fusion\fusion\Fusion;$(SolutionDir)3rdparty\GPUOpen\VulkanMemoryAllocator\include</IncludePath>
-    <LibraryPath>$(SolutionDir)build\lib\$(Configuration)-$(Platform)\;$(UniversalCRT_LibraryPath_x64);$(LibraryPath)</LibraryPath>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IgnoreImportLibrary>true</IgnoreImportLibrary>
     <LibraryPath>$(SolutionDir)build\lib\$(Configuration)-$(Platform)\;$(UniversalCRT_LibraryPath_x64);$(LibraryPath)</LibraryPath>
     <IncludePath>$(SolutionDir)3rdparty\7zip\7zip\C;$(SolutionDir)3rdparty\hidapi\hidapi\hidapi;.\;$(SolutionDir);$(SolutionDir)3rdparty\asmjit\asmjit\src;$(SolutionDir)3rdparty\yaml-cpp\yaml-cpp\include;$(SolutionDir)3rdparty\ffmpeg\include;$(VC_IncludePath);$(WindowsSDK_IncludePath);$(UniversalCRT_IncludePath);$(SolutionDir)3rdparty\libpng\libpng;$(SolutionDir)3rdparty\GL;$(SolutionDir)3rdparty\stblib\stb;$(SolutionDir)3rdparty\openal\openal-soft\include\AL;$(SolutionDir)3rdparty\pugixml\src;$(SolutionDir)3rdparty\Optional;$(SolutionDir)3rdparty\discord-rpc\discord-rpc\include;$(SolutionDir)3rdparty\zlib\zlib;$(SolutionDir)3rdparty\libsdl-org\SDL\include;$(SolutionDir)3rdparty\fusion\fusion\Fusion;$(SolutionDir)3rdparty\GPUOpen\VulkanMemoryAllocator\include</IncludePath>
   </PropertyGroup>
@@ -87,9 +80,10 @@
       <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
     </ClCompile>
     <Link>
+      <ExcludedFromBuild Condition="'$(SKIP_RPCS3_EXE)' != ''">true</ExcludedFromBuild>
       <AdditionalDependencies>$(OpenCvWorld).lib;DbgHelp.lib;Ole32.lib;gdi32.lib;hidapi.lib;libusb-1.0.lib;winmm.lib;miniupnpc_static.lib;rtmidi.lib;imm32.lib;ksuser.lib;version.lib;OpenAL32.lib;XAudio.lib;GLGSRender.lib;shlwapi.lib;VKGSRender.lib;vulkan-1.lib;wolfssl.lib;libcurl.lib;Wldap32.lib;glslang.lib;OSDependent.lib;SPIRV.lib;MachineIndependent.lib;GenericCodeGen.lib;Advapi32.lib;user32.lib;zlib.lib;zstd.lib;libpng16.lib;asmjit.lib;yaml-cpp.lib;discord-rpc.lib;emucore.lib;dxgi.lib;shell32.lib;Qt6Core.lib;Qt6Gui.lib;Qt6Widgets.lib;Qt6Concurrent.lib;Qt6Multimedia.lib;Qt6MultimediaWidgets.lib;Qt6Svg.lib;Qt6SvgWidgets.lib;7zip.lib;libcubeb.lib;cubeb.lib;soundtouch.lib;Avrt.lib;SDL.lib;fusion.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(OpenCvBuildDir)\x64\lib;$(SolutionDir)build\lib\$(Configuration)-$(Platform)\glslang;$(SolutionDir)build\lib_ext\$(CONFIGURATION)-$(PLATFORM);$(SolutionDir)build\lib\$(Configuration)-$(Platform)\protobuf_build\lib;$(QTDIR)\lib;$(VULKAN_SDK)\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalOptions>"/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'" %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>"/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'" /d2:-cgthreads8 %(AdditionalOptions)</AdditionalOptions>
       <DataExecutionPrevention>true</DataExecutionPrevention>
       <GenerateDebugInformation>Debug</GenerateDebugInformation>
       <IgnoreImportLibrary>true</IgnoreImportLibrary>
@@ -100,6 +94,9 @@
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
     </Link>
+    <Lib Condition="'$(SKIP_RPCS3_EXE)' != ''">
+      <OutputFile>$(SolutionDir)build\lib\$(Configuration)-$(Platform)\$(TargetName).lib</OutputFile>
+    </Lib>
     <Midl>
       <DefaultCharType>Unsigned</DefaultCharType>
       <EnableErrorChecks>None</EnableErrorChecks>
@@ -108,17 +105,13 @@
     <ResourceCompile>
       <PreprocessorDefinitions>_WINDOWS;UNICODE;WIN32;WIN64;WITH_DISCORD_RPC;QT_UI;QT_NO_DEBUG;QT_WIDGETS_LIB;QT_GUI_LIB;QT_CORE_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
-    <PostBuildEvent>
+    <PostBuildEvent Condition="'$(SKIP_RPCS3_EXE)' == ''">
       <Command>
         $(QTDIR)\bin\windeployqt6 --no-compiler-runtime --no-opengl-sw --no-patchqt --no-quick --no-system-d3d-compiler --no-system-dxc-compiler --no-quick-import --plugindir "$(TargetDir)qt6\plugins" --translationdir "$(TargetDir)qt6\translations" --release "$(TargetPath)"
         xcopy /y /d "$(OpenCvBuildDir)\x64\bin\$(OpenCvWorld).dll" "$(OutDir)"
       </Command>
     </PostBuildEvent>
-    <PostBuildEvent>
-      <Message>
-      </Message>
-    </PostBuildEvent>
-    <PreLinkEvent Condition="'$(GTestInstalled)' == 'true'">
+    <PreLinkEvent Condition="'$(SKIP_RPCS3_EXE)' == ''">
       <Command>@echo off
 &gt; "$(IntermediateOutputPath)obj_files.rsp" (
   for /F "delims=" %%i in ('dir "$(IntermediateOutputPath)*.obj" /B ^| findstr /V /I "main.obj"') do (
@@ -147,9 +140,10 @@
       <ProgramDataBaseFileName>$(IntDir)vc$(PlatformToolsetVersion).pdb</ProgramDataBaseFileName>
     </ClCompile>
     <Link>
+      <ExcludedFromBuild Condition="'$(SKIP_RPCS3_EXE)' != ''">true</ExcludedFromBuild>
       <AdditionalDependencies>$(OpenCvWorld).lib;DbgHelp.lib;Ole32.lib;gdi32.lib;hidapi.lib;libusb-1.0.lib;winmm.lib;miniupnpc_static.lib;rtmidi.lib;imm32.lib;ksuser.lib;version.lib;OpenAL32.lib;XAudio.lib;GLGSRender.lib;shlwapi.lib;VKGSRender.lib;vulkan-1.lib;wolfssl.lib;libcurl-d.lib;Wldap32.lib;glslangd.lib;OSDependentd.lib;SPIRVd.lib;MachineIndependentd.lib;GenericCodeGend.lib;Advapi32.lib;user32.lib;zlib.lib;zstd.lib;libpng16.lib;asmjit.lib;yaml-cpp.lib;discord-rpc.lib;emucore.lib;dxgi.lib;shell32.lib;Qt6Cored.lib;Qt6Guid.lib;Qt6Widgetsd.lib;Qt6Concurrentd.lib;Qt6Multimediad.lib;Qt6MultimediaWidgetsd.lib;Qt6Svgd.lib;Qt6SvgWidgetsd.lib;7zip.lib;libcubeb.lib;cubeb.lib;soundtouch.lib;Avrt.lib;SDL.lib;fusion.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(OpenCvBuildDir)\x64\lib;$(SolutionDir)build\lib\$(Configuration)-$(Platform)\glslang;$(SolutionDir)build\lib\$(CONFIGURATION)-$(PLATFORM);$(SolutionDir)build\lib\$(Configuration)-$(Platform)\protobuf_build\lib;$(QTDIR)\lib;$(VULKAN_SDK)\Lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalOptions>"/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'"  /VERBOSE %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>"/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'" /VERBOSE /d2:-cgthreads8 %(AdditionalOptions)</AdditionalOptions>
       <DataExecutionPrevention>true</DataExecutionPrevention>
       <GenerateDebugInformation>Debug</GenerateDebugInformation>
       <IgnoreImportLibrary>true</IgnoreImportLibrary>
@@ -159,6 +153,9 @@
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
     </Link>
+    <Lib Condition="'$(SKIP_RPCS3_EXE)' != ''">
+      <OutputFile>$(SolutionDir)build\lib\$(Configuration)-$(Platform)\$(TargetName).lib</OutputFile>
+    </Lib>
     <Midl>
       <DefaultCharType>Unsigned</DefaultCharType>
       <EnableErrorChecks>None</EnableErrorChecks>
@@ -167,17 +164,13 @@
     <ResourceCompile>
       <PreprocessorDefinitions>_WINDOWS;UNICODE;WIN32;WIN64;QT_UI;QT_WIDGETS_LIB;QT_GUI_LIB;QT_CORE_LIB;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
-    <PostBuildEvent>
+    <PostBuildEvent Condition="'$(SKIP_RPCS3_EXE)' == ''">
       <Command>
         $(QTDIR)\bin\windeployqt6 --no-compiler-runtime --no-opengl-sw --no-patchqt --no-quick --no-system-d3d-compiler --no-system-dxc-compiler --no-quick-import --plugindir "$(TargetDir)qt6\plugins" --translationdir "$(TargetDir)qt6\translations"  --debug "$(TargetPath)"
         xcopy /y /d "$(OpenCvBuildDir)\x64\bin\$(OpenCvWorld).dll" "$(OutDir)"
       </Command>
     </PostBuildEvent>
-    <PostBuildEvent>
-      <Message>
-      </Message>
-    </PostBuildEvent>
-    <PreLinkEvent Condition="'$(GTestInstalled)' == 'true'">
+    <PreLinkEvent Condition="'$(SKIP_RPCS3_EXE)' == ''">
       <Command>@echo off
 &gt; "$(IntermediateOutputPath)obj_files.rsp" (
   for /F "delims=" %%i in ('dir "$(IntermediateOutputPath)*.obj" /B ^| findstr /V /I "main.obj"') do (
@@ -206,7 +199,9 @@
     <ClCompile Include="Input\sdl_camera_video_sink.cpp" />
     <ClCompile Include="Input\sdl_instance.cpp" />
     <ClCompile Include="Input\skateboard_pad_handler.cpp" />
-    <ClCompile Include="main.cpp" />
+    <ClCompile Include="main.cpp">
+      <ExcludedFromBuild Condition="'$(SKIP_RPCS3_EXE)' != ''">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="main_application.cpp" />
     <ClCompile Include="Input\basic_keyboard_handler.cpp" />
     <ClCompile Include="Input\basic_mouse_handler.cpp" />
