@@ -776,20 +776,27 @@ lv2_dir::lv2_dir(utils::serial& ar)
 			ar(entry.name, static_cast<fs::stat_t&>(entry));
 		}
 
-		// Appended rather than placed first, so that a restored position still points at the entry it did when saved
-		for (std::string_view name : {"."sv, ".."sv})
-		{
-			if (std::none_of(entries.cbegin(), entries.cend(), FN(x.name == name)))
-			{
-				entries.emplace_back().name = name;
-				entries.back().is_directory = true;
-			}
-		}
-
 		return entries;
 	}())
 	, pos(ar.pop<u64>())
 {
+	// Every lv2_dir carries . and .., so supply the ones the saved listing lacks
+	// Taken in reverse, because each one is pushed to the front and . has to end up ahead of ..
+	for (std::string_view name : {".."sv, "."sv})
+	{
+		if (std::none_of(entries.cbegin(), entries.cend(), FN(x.name == name)))
+		{
+			fs::dir_entry& entry = *entries.emplace(entries.begin());
+			entry.name = name;
+			entry.is_directory = true;
+
+			// Each insertion shifts every index, so an enumeration already under way follows along
+			if (pos.raw())
+			{
+				pos.raw()++;
+			}
+		}
+	}
 }
 
 void lv2_dir::save(utils::serial& ar)
@@ -1737,7 +1744,7 @@ error_code sys_fs_readdir(ppu_thread& ppu, u32 fd, vm::ptr<CellFsDirent> dir, vm
 	else
 	{
 		// It does actually write polling the last entry. Seems consistent across HDD0 and HDD1 (TODO: check more partitions)
-		// Every lv2_dir is built with . and .., so there is always an entry to poll
+		// Every lv2_dir carries . and .., so there is always an entry to poll
 		ensure(!directory->entries.empty());
 
 		info = &directory->entries.back();
