@@ -49,16 +49,10 @@ namespace rsx
 	struct blit_op_result
 	{
 		bool succeeded = false;
-		u32 real_dst_address = 0;
-		u32 real_dst_size = 0;
+		utils::address_range32 dst_range{};
 
 		blit_op_result(bool success) : succeeded(success)
 		{}
-
-		inline address_range32 to_address_range() const
-		{
-			return address_range32::start_length(real_dst_address, real_dst_size);
-		}
 	};
 
 	struct blit_target_properties
