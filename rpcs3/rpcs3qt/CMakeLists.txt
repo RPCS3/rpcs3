@@ -23,6 +23,7 @@ add_library(rpcs3_ui STATIC
     debugger_list.cpp
     downloader.cpp
     dimensions_dialog.cpp
+    disc_compression_manager_dialog.cpp
     _discord_utils.cpp
     emu_settings.cpp
     emu_settings_type.cpp
@@ -35,6 +36,7 @@ add_library(rpcs3_ui STATIC
     flow_widget.cpp
     flow_widget_item.cpp
     game_compatibility.cpp
+    game_source_dialog.cpp
     game_list.cpp
     game_list_actions.cpp
     game_list_base.cpp
