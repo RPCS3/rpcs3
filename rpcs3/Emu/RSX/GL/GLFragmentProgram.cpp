@@ -4,7 +4,6 @@
 #include "Emu/system_config.h"
 #include "GLCommonDecompiler.h"
 #include "../Program/GLSLCommon.h"
-#include "../RSXThread.h"
 
 std::string GLFragmentDecompilerThread::getFloatTypeName(usz elementCount)
 {

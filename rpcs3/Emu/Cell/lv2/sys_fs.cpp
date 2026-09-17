@@ -6,7 +6,6 @@
 
 #include "Emu/Cell/PPUThread.h"
 #include "Crypto/unedat.h"
-#include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/VFS.h"
 #include "Emu/vfs_config.h"
@@ -65,11 +64,37 @@ void fmt_class_string<lv2_file>::format(std::string& out, u64 arg)
 		switch (std::bit_width(size) / 10 * 10)
 		{
 		case 0: fmt::append(size_str, "%u", size); break;
-		case 10: fmt::append(size_str, "%gKB", size / 1024.); break;
+		case 10:
+		{
+			if (size <= 9999)
+			{
+				fmt::append(size_str, "%u", size);
+				break;
+			}
+
+			fmt::append(size_str, "%gKB", size / 1024.);
+			break;
+		}
 		case 20: fmt::append(size_str, "%gMB", size / (1024. * 1024)); break;
 
 		default:
 		case 30: fmt::append(size_str, "%gGB", size / (1024. * 1024 * 1024)); break;
+		}
+
+		const usz must_be_larger = size_str.ends_with("B") ? 5 : 3;
+
+		if (usz dot_pos = size_str.find_first_of("."); size_str.size() >= must_be_larger && dot_pos < size_str.size() - must_be_larger)
+		{
+			const usz dig_pos = dot_pos + 1;
+
+			if (must_be_larger == 5)
+			{
+				size_str.erase(size_str.begin() + dig_pos + 3, size_str.begin() + (size_str.size() - 2));
+			}
+			else
+			{
+				size_str.erase(size_str.begin() + dig_pos + 3, size_str.end());
+			}
 		}
 
 		return size_str;
@@ -77,8 +102,11 @@ void fmt_class_string<lv2_file>::format(std::string& out, u64 arg)
 
 	const usz pos = file.file ? file.file.pos() : umax;
 	const usz size = file.file ? file.file.size() : umax;
+	const usz read = file.reads_total;
+	const usz write = file.writes_total;
 
-	fmt::append(out, u8"%s, '%s', Mode: 0x%x, Flags: 0x%x, Pos/Size: %s/%s (0x%x/0x%x)", file.type, file.name.data(), file.mode, file.flags, get_size(pos), get_size(size), pos, size);
+	fmt::append(out, u8"%s, '%s', Mode: 0x%x, Flags: 0x%x, Pos/Size: %s/%s (0x%x/0x%x), Read/Written: %s/%s (0x%x/0x%x)", file.type, file.name.data(), file.mode, file.flags, get_size(pos), get_size(size), pos, size
+		, get_size(read), get_size(write), read, write);
 }
 
 template<>
@@ -1141,13 +1169,15 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 				{
 					if (i == max_i)
 					{
-						// Run out of keys to try
+						// Run out of keys to try: the one failure of this loop, and the only one worth a line in the log
+						sys_fs.error("None of the %d licence key(s) the game registered decrypts '%s'", max_i, local_path);
+
 						return {CELL_EFSSPECIFIC};
 					}
 
-					// Try all registered keys
+					// Try all registered keys, quietly: the ones that do not fit are what the loop is looking for
 					auto edata_file = std::make_unique<EDATADecrypter>(std::move(file), dec_keys[(init_pos - i - 1) % std::size(dec_keys)].load());
-					if (!edata_file->ReadHeader())
+					if (!edata_file->ReadHeader(false))
 					{
 						// Prepare file for the next iteration
 						file = std::move(edata_file->m_edata_file);
@@ -1317,6 +1347,9 @@ error_code sys_fs_read(ppu_thread& ppu, u32 fd, vm::ptr<void> buf, u64 nbytes, v
 
 	const u64 read_bytes = file->op_read(buf, nbytes);
 	const bool failure = !read_bytes && file->file.pos() < file->file.size();
+
+	file->reads_total += read_bytes;
+
 	lock.unlock();
 	ppu.check_state();
 
@@ -1406,6 +1439,8 @@ error_code sys_fs_write(ppu_thread& ppu, u32 fd, vm::cptr<void> buf, u64 nbytes,
 	}
 
 	const u64 written = file->op_write(buf, nbytes);
+	file->writes_total += written;
+
 	lock.unlock();
 	ppu.check_state();
 
@@ -2270,14 +2305,18 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			file->file.seek(op_pos);
 		}
 
-		arg->out_size = op == 0x8000000a
+		const u64 done_size = op == 0x8000000a
 			? file->op_read(arg->buf, arg->size, op_pos)
 			: file->op_write(arg->buf, arg->size);
+
+		arg->out_size = done_size;
 
 		if (op == 0x8000000b)
 		{
 			ensure(old_pos == file->file.seek(old_pos));
 		}
+
+		(op == 0x8000000a ? &file->reads_total : &file->writes_total)->fetch_add(done_size);
 
 		// TODO: EDATA corruption detection
 

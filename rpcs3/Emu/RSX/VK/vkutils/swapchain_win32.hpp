@@ -1,6 +1,7 @@
 #pragma once
 
 #include "swapchain_core.h"
+#include "util/logs.hpp"
 
 namespace vk
 {

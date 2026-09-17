@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "cellCamera.h"
 
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/Cell/PPUModule.h"
@@ -1770,7 +1771,7 @@ bool camera_context::open_camera()
 	Emu.BlockingCallFromMainThread([this]()
 	{
 		handler.reset();
-		handler = Emu.GetCallbacks().get_camera_handler();
+		handler = g_emu_callbacks.get_camera_handler();
 		if (handler)
 		{
 			handler->open_camera();

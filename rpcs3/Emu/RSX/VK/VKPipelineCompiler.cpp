@@ -3,6 +3,7 @@
 #include "VKRenderPass.h"
 #include "vkutils/device.h"
 #include "Utilities/Thread.h"
+#include "Emu/system_config.h"
 
 #include "util/sysinfo.hpp"
 
