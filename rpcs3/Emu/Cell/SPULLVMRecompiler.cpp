@@ -7825,7 +7825,6 @@ public:
 		}
 		else if (m_use_gfni)
 		{
-			// TODO: Due to vpblendvb, the pshufb OR combine path is one fewer micro-ops post Rocket Lake. Check if it is faster.
 			const auto gfni = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
 			idx_consts = eval(select(noncast<s8[16]>(gfni) >= 0, splat<u8[16]>(0), gfni));
 			
@@ -7847,9 +7846,24 @@ public:
 		// Combine shuffle and special index constants
 
 		if (or_combine_safe)
+		{
 			set_vr(op.rt4, ab_shuf | idx_consts);
+		}
+		else if (m_use_avx && m_use_gfni && !m_use_avx512)
+		{
+			// The GFNI path was causing regressions post Rocket Lake due performance issues with the VEX-coded blend
+			// So we force generation of its SSE version, which is a lot faster
+			const auto asm_type = get_ftype<u8[16], u8[16], u8[16], u8[16]>();
+			const auto sse_blend = llvm::InlineAsm::get(asm_type, "pblendvb $2, $0", "=x,0,x,{xmm0}", false);
+
+			value_t<u8[16]> result;
+			result.value = m_ir->CreateCall(asm_type, sse_blend, {ab_shuf.value, idx_consts.value, c.value});
+			set_vr(op.rt4, result);
+		}
 		else
+		{
 			set_vr(op.rt4, select(noncast<s8[16]>(c) >= 0, ab_shuf, idx_consts));
+		}
 #endif
 	}
 
