@@ -366,7 +366,7 @@ struct lv2_dir final : lv2_fs_object
 {
 	static constexpr u32 id_type = 2;
 
-	const std::vector<fs::dir_entry> entries;
+	std::vector<fs::dir_entry> entries;
 
 	// Current reading position
 	atomic_t<u64> pos{0};
