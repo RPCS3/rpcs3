@@ -172,6 +172,22 @@ In case you preferred to install and use the standalone **CMake** tool:
    ```
 3) once the build is completed, the **RPCS3** application will be available under the `<rpcs3_root>\build-msvc\bin` folder
 
+#### Building with the PowerShell script
+
+As an alternative to building through Visual Studio, run the PowerShell helper from the repository root:
+
+```powershell
+.\scripts\win_build.ps1
+```
+
+The script locates a supported Visual Studio installation, finds Qt from `Qt6_ROOT` or a standard `C:\Qt` installation, configures a Release Ninja Multi-Config build, and then builds it. Pass `-Cores <count>` to set the parallel build count; by default it uses all logical processors:
+
+```powershell
+.\scripts\win_build.ps1 -Cores 8
+```
+
+The resulting application is placed in `<rpcs3_root>\build\bin`.
+
 ### Linux
 
 While still in the project root:
