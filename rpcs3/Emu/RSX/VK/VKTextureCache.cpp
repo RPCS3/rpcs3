@@ -1686,9 +1686,9 @@ namespace vk
 
 		if (reply.succeeded)
 		{
-			if (reply.real_dst_size)
+			if (reply.dst_range.valid())
 			{
-				flush_if_cache_miss_likely(cmd, reply.to_address_range());
+				flush_if_cache_miss_likely(cmd, reply.dst_range);
 			}
 
 			return true;

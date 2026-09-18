@@ -780,6 +780,23 @@ lv2_dir::lv2_dir(utils::serial& ar)
 	}())
 	, pos(ar.pop<u64>())
 {
+	// Every lv2_dir carries . and .., so supply the ones the saved listing lacks
+	// Taken in reverse, because each one is pushed to the front and . has to end up ahead of ..
+	for (std::string_view name : {".."sv, "."sv})
+	{
+		if (std::none_of(entries.cbegin(), entries.cend(), FN(x.name == name)))
+		{
+			fs::dir_entry& entry = *entries.emplace(entries.begin());
+			entry.name = name;
+			entry.is_directory = true;
+
+			// Each insertion shifts every index, so an enumeration already under way follows along
+			if (pos.raw())
+			{
+				pos.raw()++;
+			}
+		}
+	}
 }
 
 void lv2_dir::save(utils::serial& ar)
@@ -1567,7 +1584,11 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 		{
 		case fs::error::noent:
 		{
-			if (ext.empty())
+			// A Win32 search matching nothing fails like a missing path, which is how an empty volume root looks:
+			// only a stat tells the two apart, and it reports a directory through a broken reparse point as well
+			fs::stat_t info{};
+
+			if (ext.empty() && !(fs::get_stat(local_path, info) && info.is_directory && !info.is_symlink))
 			{
 				return {mp == &g_mp_sys_dev_hdd1 ? sys_fs.warning : sys_fs.error, CELL_ENOENT, path};
 			}
@@ -1590,6 +1611,20 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 		}
 	}
 
+	// A split file arrives as the parts ".66600" to ".66699", which lv2_file::open_raw gathers back into one
+	// This matches all but the first, the part whose name a game asks for
+	const auto is_split_file_tail = [](std::string_view name)
+	{
+		if (name.size() <= 6 || !name.substr(name.size() - 6).starts_with(".666"sv))
+		{
+			return false;
+		}
+
+		const std::string_view index = name.substr(name.size() - 2);
+
+		return index != "00"sv && index[0] >= '0' && index[0] <= '9' && index[1] >= '0' && index[1] <= '9';
+	};
+
 	// Build directory as a vector of entries
 	std::vector<fs::dir_entry> data;
 
@@ -1608,22 +1643,27 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 				continue;
 			}
 
-			// Add additional entries for split file candidates (while ends with .66600)
-			while (mp.mp != &g_mp_sys_dev_hdd1 && data.back().name.ends_with(".66600"))
+			if (mp.mp != &g_mp_sys_dev_hdd1 && !data.back().is_directory)
 			{
-				fs::dir_entry copy = data.back();
-				data.emplace_back(copy).name.resize(copy.name.size() - 6);
+				std::string& name = data.back().name;
+
+				// Drop the suffix off the first part, again if what is left ends in one too
+				// A name made of nothing but a suffix keeps it, since there is no name underneath
+				while (name.size() > 6 && name.ends_with(".66600"))
+				{
+					name.resize(name.size() - 6);
+				}
+
+				if (is_split_file_tail(name))
+				{
+					// Only the first part stands for the file
+					data.resize(data.size() - 1);
+					continue;
+				}
 			}
 		}
 
 		data.resize(data.size() - 1);
-	}
-	else
-	{
-		data.emplace_back().name += '.';
-		data.back().is_directory = true;
-		data.emplace_back().name = "..";
-		data.back().is_directory = true;
 	}
 
 	// Add mount points (TODO)
@@ -1631,6 +1671,27 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 	{
 		data.emplace_back().name = std::move(ex);
 		data.back().is_directory = true;
+	}
+
+	// Pull . and .. to the front, where the PS3 has them, and supply them to a Win32 volume root, which lists neither
+	usz at = 0;
+
+	for (std::string_view name : {"."sv, ".."sv})
+	{
+		const auto found = std::find_if(data.begin() + at, data.end(), FN(x.name == name));
+
+		if (found == data.end())
+		{
+			fs::dir_entry& entry = *data.emplace(data.begin() + at);
+			entry.name = name;
+			entry.is_directory = true;
+		}
+		else
+		{
+			std::rotate(data.begin() + at, found, found + 1);
+		}
+
+		at++;
 	}
 
 	// Sort files, keeping . and ..
@@ -1683,8 +1744,10 @@ error_code sys_fs_readdir(ppu_thread& ppu, u32 fd, vm::ptr<CellFsDirent> dir, vm
 	else
 	{
 		// It does actually write polling the last entry. Seems consistent across HDD0 and HDD1 (TODO: check more partitions)
+		// Every lv2_dir carries . and .., so there is always an entry to poll
+		ensure(!directory->entries.empty());
+
 		info = &directory->entries.back();
-		nread_to_write = 0;
 	}
 
 	CellFsDirent dir_write{};
