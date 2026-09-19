@@ -61,8 +61,7 @@ bool _L10nCodeParse(s32 code, HostCode& retCode)
 	case L10N_EUC_JP:           retCode = 51932;        return true;
 	case L10N_EUC_KR:           retCode = 51949;        return true;
 	case L10N_ISO_2022_JP:      retCode = 50222;        return true;
-	// Maybe 708/720/864/1256/10004/20420/28596/
-	case L10N_ARIB:             retCode = 20420;        return true; // TODO: think that should be ARABIC.
+	case L10N_ARIB:             retCode = 20420;        return true; // ARIB STD-B24/TR-B14 (Japanese broadcasting). Placeholder, no proper ARIB codepage in Windows.
 	case L10N_HZ:               retCode = 52936;        return true;
 	case L10N_GB18030:          retCode = 54936;        return true;
 	case L10N_RIS_506:          retCode = 932;          return true; // MS_KANJI, TODO: Code page
@@ -122,7 +121,7 @@ bool _L10nCodeParse(s32 code, HostCode& retCode)
 	case L10N_EUC_JP:           retCode = "EUC-JP";         return true;
 	case L10N_EUC_KR:           retCode = "EUC-KR";         return true;
 	case L10N_ISO_2022_JP:      retCode = "ISO-2022-JP";    return true;
-	case L10N_ARIB:             retCode = "ARABIC";         return true; // TODO: think that should be ARABIC.
+	case L10N_ARIB:             retCode = "ARABIC";         return true; // ARIB STD-B24/TR-B14 (Japanese broadcasting). Placeholder, no proper ARIB codepage in Windows.
 	case L10N_HZ:               retCode = "HZ";             return true;
 	case L10N_GB18030:          retCode = "GB18030";        return true;
 	case L10N_RIS_506:          retCode = "Shift_JIS";      return true; // MS_KANJI
@@ -228,7 +227,7 @@ s32 _ConvertStr(s32 src_code, const void *src, s32 src_len, s32 dst_code, void *
 			else if (errno == EINVAL)
 			{
 				if (allowIncomplete)
-					*dst_len = -1;  // TODO: correct value?
+					*dst_len = -1;  // SDK: dst_len is undefined on conversion failure
 				else
 					retValue = SRCIllegal;
 			}
@@ -240,9 +239,9 @@ s32 _ConvertStr(s32 src_code, const void *src, s32 src_len, s32 dst_code, void *
 		char buf[16];
 		while (srcLen > 0)
 		{
-			//char *bufPtr = buf;
+			char *bufPtr = buf;
 			usz bufLeft = sizeof(buf);
-			usz ictd = iconv(ict, utils::bless<char*>(&src), &srcLen, utils::bless<char*>(&dst), &bufLeft);
+			usz ictd = iconv(ict, utils::bless<char*>(&src), &srcLen, &bufPtr, &bufLeft);
 			*dst_len += sizeof(buf) - bufLeft;
 			if (ictd == umax && errno != E2BIG)
 			{
@@ -251,7 +250,7 @@ s32 _ConvertStr(s32 src_code, const void *src, s32 src_len, s32 dst_code, void *
 				else if (errno == EINVAL)
 				{
 					if (allowIncomplete)
-						*dst_len = -1;  // TODO: correct value?
+						*dst_len = -1;  // SDK: dst_len is undefined on conversion failure
 					else
 						retValue = SRCIllegal;
 				}
@@ -2149,7 +2148,6 @@ s32 MSJISstoUCS2s()
 s32 l10n_get_converter(u32 src_code, u32 dst_code)
 {
 	cellL10n.warning("l10n_get_converter(src_code=%d, dst_code=%d)", src_code, dst_code);
-	return (src_code << 16) | dst_code;
 
 	if (_L10N_CODE_ <= src_code || _L10N_CODE_ <= dst_code)
 	{
@@ -2319,10 +2317,10 @@ s32 UCS2stoEUCKRs(vm::cptr<u16> src, vm::cptr<s32> src_len, vm::ptr<u8> dst, vm:
 	return 0;
 }
 
-s32 UTF8stoSJISs()
+s32 UTF8stoSJISs(vm::cptr<void> src, vm::cptr<u32> src_len, vm::ptr<void> dst, vm::ptr<u32> dst_len)
 {
-	cellL10n.todo("UTF8stoSJISs()");
-	return ConversionOK;
+	cellL10n.warning("UTF8stoSJISs(src=*0x%x, src_len=*0x%x, dst=*0x%x, dst_len=*0x%x)", src, src_len, dst, dst_len);
+	return _L10nConvertStr(L10N_UTF8, src, src_len, L10N_CODEPAGE_932, dst, dst_len);
 }
 
 s32 UTF8stoHZs()
@@ -2416,7 +2414,8 @@ s32 GB18030toUTF8()
 s32 UTF8toSJIS(u8 ch, vm::ptr<u8> dst, vm::ptr<u32> dst_len) // Doesn't work backwards
 {
 	cellL10n.warning("UTF8toSJIS(ch=%d, dst=*0x%x, dst_len=*0x%x)", ch, dst, dst_len);
-	return _L10nConvertChar(L10N_UTF8, &ch, sizeof(ch), L10N_CODEPAGE_932, dst, dst_len);
+	const s32 result = _L10nConvertChar(L10N_UTF8, &ch, sizeof(ch), L10N_CODEPAGE_932, dst, dst_len);
+	return result == ConversionOK ? 1 : 0;
 }
 
 s32 ARIBstoUCS2s()
