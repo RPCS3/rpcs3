@@ -219,7 +219,7 @@ namespace vk
 			program(program&& other) = delete;
 			~program();
 
-			program& link(bool separate_stages);
+			program& link(VkPipelineCache pipeline_cache, bool separate_stages);
 			program& bind(const vk::command_buffer& cmd, VkPipelineBindPoint bind_point);
 
 			bool has_uniform(program_input_type type, std::string_view uniform_name);

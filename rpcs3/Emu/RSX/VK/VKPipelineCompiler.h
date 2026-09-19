@@ -70,7 +70,7 @@ namespace vk
 		pipe_compiler();
 		~pipe_compiler();
 
-		void initialize(const vk::render_device* pdev);
+		void initialize(const vk::render_device* pdev, VkPipelineCache pipe_cache);
 
 		std::unique_ptr<glsl::program> compile(
 			const VkComputePipelineCreateInfo& cs,
@@ -188,6 +188,7 @@ namespace vk
 
 		const vk::render_device* m_device = nullptr;
 		lf_queue<pipe_compiler_job> m_work_queue;
+		VkPipelineCache m_pipeline_cache = VK_NULL_HANDLE;
 
 		std::unique_ptr<glsl::program> int_compile_compute_pipe(
 			const VkComputePipelineCreateInfo& create_info,
