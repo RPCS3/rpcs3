@@ -10,7 +10,6 @@
 #include <codecvt>
 #include <algorithm>
 #include <cmath>
-#include <filesystem>
 #include <stack>
 #include <span>
 #include <cstdlib>
@@ -1144,14 +1143,13 @@ iso_archive::iso_archive(const std::string& path)
 	}
 }
 
-iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
+iso_fs_node* iso_archive::retrieve(const std::string& path)
 {
-	if (passed_path.empty() || !is_valid())
+	if (path.empty() || !is_valid())
 	{
 		return nullptr;
 	}
 
-	const std::string path = std::filesystem::path(passed_path).string();
 	const std::string_view path_sv = path;
 
 	usz start = 0;
@@ -1608,9 +1606,24 @@ void iso_dir::rewind()
 	m_pos = 0;
 }
 
+// Cuts the device prefix off a path the virtual file system handed down, leaving the part that names a node of
+// the image
+static std::string strip_device_prefix(std::string_view path, std::string_view fs_prefix)
+{
+	if (path.starts_with(fs_prefix))
+	{
+		path.remove_prefix(fs_prefix.size());
+	}
+
+	path = fmt::trim_sv(path, fs::delim);
+
+	// The prefix on its own is the root of the image, the node retrieve() reaches through "."
+	return path.empty() ? "."s : std::string{path};
+}
+
 bool iso_device::stat(const std::string& path, fs::stat_t& info)
 {
-	const auto relative_path = std::filesystem::relative(std::filesystem::path(path), std::filesystem::path(fs_prefix)).string();
+	const std::string relative_path = strip_device_prefix(path, fs_prefix);
 
 	const auto node = m_archive.retrieve(relative_path);
 
@@ -1638,7 +1651,7 @@ bool iso_device::stat(const std::string& path, fs::stat_t& info)
 
 bool iso_device::statfs(const std::string& path, fs::device_stat& info)
 {
-	const auto relative_path = std::filesystem::relative(std::filesystem::path(path), std::filesystem::path(fs_prefix)).string();
+	const std::string relative_path = strip_device_prefix(path, fs_prefix);
 
 	const auto node = m_archive.retrieve(relative_path);
 
@@ -1663,7 +1676,7 @@ bool iso_device::statfs(const std::string& path, fs::device_stat& info)
 
 std::unique_ptr<fs::file_base> iso_device::open(const std::string& path, bs_t<fs::open_mode> mode)
 {
-	const auto relative_path = std::filesystem::relative(std::filesystem::path(path), std::filesystem::path(fs_prefix)).string();
+	const std::string relative_path = strip_device_prefix(path, fs_prefix);
 
 	const auto node = m_archive.retrieve(relative_path);
 
@@ -1684,7 +1697,7 @@ std::unique_ptr<fs::file_base> iso_device::open(const std::string& path, bs_t<fs
 
 std::unique_ptr<fs::dir_base> iso_device::open_dir(const std::string& path)
 {
-	const auto relative_path = std::filesystem::relative(std::filesystem::path(path), std::filesystem::path(fs_prefix)).string();
+	const std::string relative_path = strip_device_prefix(path, fs_prefix);
 
 	const auto node = m_archive.retrieve(relative_path);
 
