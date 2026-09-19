@@ -8,7 +8,7 @@
     <LibraryPath>$(SolutionDir)build\lib\$(Configuration)-$(Platform)\;$(UniversalCRT_LibraryPath_x64);$(LibraryPath)</LibraryPath>
     <IntDir>$(SolutionDir)build\tmp\$(ProjectName)-$(Configuration)-$(Platform)\</IntDir>
     <GTestPath>$(SolutionDir)packages\Microsoft.googletest.v140.windesktop.msvcstl.static.rt-static.1.8.1.8\build\native\Microsoft.googletest.v140.windesktop.msvcstl.static.rt-static.targets</GTestPath>
-    <GTestInstalled Condition="Exists('$(GTestPath)')">true</GTestInstalled>
+    <GTestInstalled Condition="Exists('$(GTestPath)') AND '$(SKIP_RPCS3_TEST)' == ''">true</GTestInstalled>
     <OpenCvBuildDir>$(SolutionDir)3rdparty\opencv\opencv\opencv414\build</OpenCvBuildDir>
     <OpenCvWorld>opencv_world4140</OpenCvWorld>
   </PropertyGroup>
