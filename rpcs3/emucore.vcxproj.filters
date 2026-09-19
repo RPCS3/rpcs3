@@ -1417,6 +1417,12 @@
     <ClCompile Include="Emu\NP\clans_client.cpp">
       <Filter>Emu\NP</Filter>
     </ClCompile>
+    <ClCompile Include="Loader\IRD.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
+    <ClCompile Include="Loader\IRD_validation.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
     <ClCompile Include="Loader\ISO.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
@@ -2925,6 +2931,12 @@
     </ClInclude>
     <ClInclude Include="Emu\NP\clans_config.h">
       <Filter>Emu\NP</Filter>
+    </ClInclude>
+    <ClInclude Include="Loader\IRD.h">
+      <Filter>Loader</Filter>
+    </ClInclude>
+    <ClInclude Include="Loader\IRD_validation.h">
+      <Filter>Loader</Filter>
     </ClInclude>
     <ClInclude Include="Loader\ISO.h">
       <Filter>Loader</Filter>

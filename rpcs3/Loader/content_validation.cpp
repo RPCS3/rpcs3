@@ -140,48 +140,110 @@ content_hash_status content_validation::calculate_hash(std::string& hash)
 		return m_status;
 	}
 
-	iso_file file(m_path);
+	auto file = std::make_unique<iso_file>(m_path);
 
-	// If no file exists
-	if (!file)
+	// If no file exists.
+	// NOTE: it has to be asked here, while the ISO file is still at hand: wrapped into a "fs::file" it would
+	//       answer as a valid one and hand out the hash of nothing at all
+	if (!*file)
 	{
 		sys_log.error("calculate_hash: Failed to open file: %s", m_path);
 		m_status = content_hash_status::ABORTED;
 		return m_status;
 	}
 
-	constexpr u64 block_size = 4096;
-	std::array<u8, block_size> buf;
-	u64 bytes_read;
-	mbedtls_md5_context md5_ctx;
-	unsigned char md5_hash[16];
+	// The very hashing a content check goes through, over the whole file and with no tail to pad
+	std::vector<u8> buffer;
 
-	mbedtls_md5_starts_ret(&md5_ctx);
-
-	do
+	if (!hash_file(fs::file(std::move(file)), 0, buffer, hash))
 	{
-		bytes_read = file.read(buf.data(), block_size);
-		mbedtls_md5_update_ret(&md5_ctx, buf.data(), bytes_read);
+		if (m_status == content_hash_status::ABORTED)
+		{
+			sys_log.warning("calculate_hash: MD5 hash calculation aborted by user: %s", m_path);
+			return m_status;
+		}
 
-		m_bytes_read += bytes_read;
-	} while (bytes_read == block_size && m_status != content_hash_status::ABORTED);
-
-	if (m_status == content_hash_status::ABORTED)
-	{
-		sys_log.warning("calculate_hash: MD5 hash calculation aborted by user: %s", m_path);
-		return m_status;
-	}
-
-	if (mbedtls_md5_finish_ret(&md5_ctx, md5_hash) != 0)
-	{
-		sys_log.error("calculate_hash: Failed to calculate MD5 hash on file: %s", m_path);
 		m_status = content_hash_status::ABORTED;
 		return m_status;
 	}
 
-	// Convert the MD5 hash to hex string
-	bytes_to_hex(hash, md5_hash, 16);
-
 	m_status = content_hash_status::COMPLETED;
 	return m_status;
+}
+
+// Read block of the hashing below. A megabyte a time is what makes reading a whole disc worth it: on an
+// encrypted image every read is split into sectors and decrypted, so the fewer of them the better
+static constexpr u64 s_hash_block_size = 0x100000;
+
+bool content_validation::hash_file(const fs::file& file, u64 padded_size, std::vector<u8>& buffer, std::string& hash)
+{
+	if (!file)
+	{
+		sys_log.error("hash_file: Failed to open file: %s", m_name);
+		return false;
+	}
+
+	// Never bigger than what this file has to give, and never shrunk: a check over many files pays for the
+	// biggest of them once, while one over a handful of small ones does not pay for a megabyte it cannot use
+	if (const u64 wanted = std::min<u64>(s_hash_block_size, std::max<u64>({file.size(), padded_size, 1}));
+		buffer.size() < wanted)
+	{
+		buffer.resize(wanted);
+	}
+
+	const u64 block_size = buffer.size();
+	u8* const buf = buffer.data();
+	mbedtls_md5_context md5_ctx;
+	unsigned char md5_hash[16];
+	u64 size = 0;
+
+	mbedtls_md5_starts_ret(&md5_ctx);
+
+	// Only a read returning nothing at all ends the file: a short one is not to be trusted as the end of it,
+	// since a file held by an ISO image is read back extent by extent
+	while (m_status != content_hash_status::ABORTED)
+	{
+		const u64 read = file.read(buf, block_size);
+
+		if (!read)
+		{
+			break;
+		}
+
+		mbedtls_md5_update_ret(&md5_ctx, buf, read);
+
+		size += read;
+		m_bytes_read += read;
+	}
+
+	// A file shorter than the one on the disc can only match once its missing tail is hashed as zeros: that is how
+	// a "PS3UPDAT.PUP" downloaded apart is turned back into the 256 MB one the disc holds
+	if (padded_size > size)
+	{
+		std::memset(buf, 0, block_size);
+
+		for (u64 left = padded_size - size; left && m_status != content_hash_status::ABORTED;)
+		{
+			const u64 chunk = std::min<u64>(left, block_size);
+
+			mbedtls_md5_update_ret(&md5_ctx, buf, chunk);
+
+			left -= chunk;
+			m_bytes_read += chunk;
+		}
+	}
+
+	if (m_status == content_hash_status::ABORTED)
+	{
+		return false;
+	}
+
+	if (mbedtls_md5_finish_ret(&md5_ctx, md5_hash) != 0)
+	{
+		sys_log.error("hash_file: Failed to calculate MD5 hash on file: %s", m_name);
+		return false;
+	}
+
+	bytes_to_hex(hash, md5_hash, 16);
+	return true;
 }
