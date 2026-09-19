@@ -715,47 +715,64 @@ namespace vk
 		auto pdev = vk::get_current_renderer();
 
 		// Collect format information we intend to use.
-		const auto surface_format = VK_FORMAT_B8G8R8A8_UNORM;
+		// All formats to cover as many variants as possible
 		const auto depth_format = pdev->get_formats_support().d24_unorm_s8 ? VK_FORMAT_D24_UNORM_S8_UINT : VK_FORMAT_D32_SFLOAT_S8_UINT;
-
-		// Base pipeline - simple color
-		vk::pipeline_props base_props{};
-		base_props.state.set_attachment_count(1);
-		base_props.state.enable_cull_face(VK_CULL_MODE_BACK_BIT);
-		base_props.state.set_primitive_type(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-		base_props.state.set_color_mask(0, true, true, true, true);
-		base_props.state.set_attachment_count(1);
-		base_props.state.enable_depth_bias(true);
-		base_props.state.enable_depth_clamp(true);
-		base_props.state.enable_depth_bounds_test(pdev->get_depth_bounds_support());
-		base_props.renderpass_key = vk::get_renderpass_key(surface_format);
-		pipe_properties.push_back(base_props);
-
-		// Add a depth buffer
-		base_props.renderpass_key = vk::get_renderpass_key(surface_format, depth_format);
-		base_props.state.enable_depth_test(VK_COMPARE_OP_LESS);
-		base_props.state.set_depth_mask(true);
-		pipe_properties.push_back(base_props);
-
-		// Add more targets. Typical G-buffers are 1-4 color targets + depth.
-		for (auto index = 1; index < 4; ++index)
+		std::vector<VkFormat> possible_color_formats =
 		{
-			base_props.state.set_attachment_count(index + 1);
-			base_props.state.set_color_mask(index, true, true, true, true);
-			pipe_properties.push_back(base_props);
-		}
+			VK_FORMAT_B8G8R8A8_UNORM,
+			VK_FORMAT_R8G8B8A8_UNORM,
+			VK_FORMAT_R16G16B16A16_SFLOAT,
+			VK_FORMAT_R8G8_UNORM,
+			VK_FORMAT_R32_SFLOAT,
+			VK_FORMAT_R8_UNORM,
 
-		// Add in some blending
-		if (surface_format != VK_FORMAT_R32G32B32A32_SFLOAT &&
-			surface_format != VK_FORMAT_R32_SFLOAT)
+			// These formats are so rarely used, we can skip them and not stutter so badly
+			// VK_FORMAT_R5G6B5_UNORM_PACK16,
+			// VK_FORMAT_A1R5G5B5_UNORM_PACK16,
+			// VK_FORMAT_R32G32B32A32_SFLOAT,
+		};
+
+		for (const auto surface_format : possible_color_formats)
 		{
-			// Blending not supported for some F32 formats.
+			// Base pipeline - simple color
+			vk::pipeline_props base_props{};
 			base_props.state.set_attachment_count(1);
-			base_props.state.enable_blend(0,
-				VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-				VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-				VK_BLEND_OP_ADD, VK_BLEND_OP_ADD);
+			base_props.state.enable_cull_face(VK_CULL_MODE_BACK_BIT);
+			base_props.state.set_primitive_type(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+			base_props.state.set_color_mask(0, true, true, true, true);
+			base_props.state.set_attachment_count(1);
+			base_props.state.enable_depth_bias(true);
+			base_props.state.enable_depth_clamp(true);
+			base_props.state.enable_depth_bounds_test(pdev->get_depth_bounds_support());
+			base_props.renderpass_key = vk::get_renderpass_key(surface_format);
 			pipe_properties.push_back(base_props);
+
+			// Add a depth buffer
+			base_props.renderpass_key = vk::get_renderpass_key(surface_format, depth_format);
+			base_props.state.enable_depth_test(VK_COMPARE_OP_LESS);
+			base_props.state.set_depth_mask(true);
+			pipe_properties.push_back(base_props);
+
+			// Add more targets. Typical G-buffers are 1-4 color targets + depth.
+			for (auto index = 1; index < 4; ++index)
+			{
+				base_props.state.set_attachment_count(index + 1);
+				base_props.state.set_color_mask(index, true, true, true, true);
+				pipe_properties.push_back(base_props);
+			}
+
+			// Add in some blending
+			if (surface_format != VK_FORMAT_R32G32B32A32_SFLOAT &&
+				surface_format != VK_FORMAT_R32_SFLOAT)
+			{
+				// Blending not supported for some F32 formats.
+				base_props.state.set_attachment_count(1);
+				base_props.state.enable_blend(0,
+					VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+					VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+					VK_BLEND_OP_ADD, VK_BLEND_OP_ADD);
+				pipe_properties.push_back(base_props);
+			}
 		}
 
 		const auto variants = program_common::interpreter::get_interpreter_variants();
