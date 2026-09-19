@@ -790,10 +790,22 @@ bool VKGSRender::bind_texture_env()
 
 	if (current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING)
 	{
-		ensure(current_fragment_program.mrt_buffers_count == m_draw_buffers.size());
+		// NOTE: mrt_buffers_count and m_draw_buffers.size() can momentarily desync when the
+		// game reconfigures its surface targets in the same frame the fragment program is
+		// (re)compiled. Rather than fatally asserting (which previously crashed titles such as
+		// PES 2016 [BLUS31564] at the main menu), clamp to the smaller of the two counts and
+		// keep going. This avoids both the crash and any out-of-bounds access into m_fbo_images.
+		const u32 safe_mrt_count = std::min<u32>(current_fragment_program.mrt_buffers_count, ::size32(m_draw_buffers));
+		if (safe_mrt_count != current_fragment_program.mrt_buffers_count) [[unlikely]]
+		{
+			rsx_log.error(
+				"Programmable blending MRT count mismatch (shader expects %u, %u bound). Clamping to avoid a crash.",
+				current_fragment_program.mrt_buffers_count, safe_mrt_count);
+		}
+
 		const auto remap = rsx::default_remap_vector.with_encoding(vk::VK_REMAP_IDENTITY);
 
-		for (u32 i = 0; i < current_fragment_program.mrt_buffers_count; ++i)
+		for (u32 i = 0; i < safe_mrt_count; ++i)
 		{
 			auto viewable = static_cast<vk::viewable_image*>(m_fbo_images[i]);
 			const auto view = viewable->get_view(remap);
