@@ -885,6 +885,13 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 		install_path = std::filesystem::path(m_install_path).lexically_normal();
 	}
 
+	// lexically_normal preserves a trailing separator as an empty path component.
+	// Remove it before comparing path components against package entry targets.
+	if (install_path.filename().empty() && install_path != install_path.root_path())
+	{
+		install_path = install_path.parent_path();
+	}
+
 	if (install_path.empty())
 	{
 		pkg_log.error("Failed to normalize installation path for '%s'", m_install_path);
