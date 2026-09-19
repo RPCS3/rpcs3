@@ -54,6 +54,7 @@ const extern spu_decoder<spu_iflag> g_spu_iflag;
 #include <llvm/Transforms/Scalar/LICM.h>
 #include <llvm/Transforms/Scalar/LoopPassManager.h>
 #include <llvm/Transforms/Scalar/SimplifyCFG.h>
+#include <llvm/Transforms/InstCombine/InstCombine.h>
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else
@@ -3860,6 +3861,7 @@ public:
 		// Basic optimizations
 		fpm.addPass(EarlyCSEPass(true));
 		fpm.addPass(SimplifyCFGPass());
+		fpm.addPass(InstCombinePass());
 		fpm.addPass(DSEPass());
 		fpm.addPass(createFunctionToLoopPassAdaptor(LICMPass(LICMOptions()), true));
 		fpm.addPass(ADCEPass());
@@ -7823,9 +7825,9 @@ public:
 		{
 			idx_consts = eval(sub_sat(c, splat<u8[16]>(0x60)) & 0x80);
 		}
-		else if (m_use_gfni)
+		else if (m_use_gfni && !(or_combine_safe && !m_use_avx512))
 		{
-			// TODO: Due to vpblendvb, the pshufb OR combine path is one fewer micro-ops post Rocket Lake. Check if it is faster.
+			// Keep OR combine due to slow blend on later Intel (AVX512 uses faster kmask method)
 			const auto gfni = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
 			idx_consts = eval(select(noncast<s8[16]>(gfni) >= 0, splat<u8[16]>(0), gfni));
 			
