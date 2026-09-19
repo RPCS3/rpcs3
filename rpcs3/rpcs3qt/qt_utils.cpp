@@ -4,8 +4,10 @@
 #include <QApplication>
 #include <QBitmap>
 #include <QDesktopServices>
+#include <QMessageBox>
 #include <QFontMetrics>
 #include <QPainter>
+#include <QPushButton>
 #include <QProcess>
 #include <QScreen>
 #include <QUrl>
@@ -542,6 +544,70 @@ namespace gui
 		void open_dir(const QString& path)
 		{
 			open_dir(path.toStdString());
+		}
+
+		void show_disc_key_error(QWidget* parent, const QString& title, const std::string& path, bool key_invalid, const QString& prefix)
+		{
+			const std::string key_dir = rpcs3::utils::get_redump_key_dir();
+			const QString keys = QString::fromStdString(key_dir).toHtmlEscaped();
+
+			// An image held in a file gives its key a name to go by, the very one the emulator looks for, so the user can
+			// be told exactly what to put where. A disc in a drive has no such name: every key of the folder is tried
+			const bool named_image = !path.empty() && !fs::get_optical_raw_device(path);
+			const std::string file_name = named_image ? path.substr(path.find_last_of("/\\") + 1) : std::string();
+			const QString image = QString::fromStdString(file_name).toHtmlEscaped();
+			const QString stem = QString::fromStdString(file_name.substr(0, file_name.rfind('.'))).toHtmlEscaped();
+
+			QString text;
+
+			if (key_invalid)
+			{
+				// Only a key file picked up by the name of the image can be the wrong one: the keys folder of a disc in a
+				// drive is scanned until one of its files actually decrypts it, so none of them can be taken for a match
+				text = named_image
+					? QObject::tr("The disc image '%0' is encrypted and the key file found for it does not decrypt it: it belongs to another disc."
+						"<br><br>Replace it with the right key file, '%1.dkey' or '%1.key', next to the image or in the Redump keys folder:<br>'%2'")
+						.arg(image).arg(stem).arg(keys)
+					: QObject::tr("The disc is encrypted and the key file found for it does not decrypt it: it belongs to another disc."
+						"<br><br>Replace it with the right key file (.dkey or .key) in the Redump keys folder:<br>'%0'")
+						.arg(keys);
+			}
+			else if (named_image)
+			{
+				text = QObject::tr("The disc image '%0' is encrypted and no key to read it back was found."
+					"<br><br>Put its key file '%1.dkey' or '%1.key' next to the image or in the Redump keys folder:<br>'%2'")
+					.arg(image).arg(stem).arg(keys);
+			}
+			else
+			{
+				text = QObject::tr("The disc on BD Drive is encrypted and no key to read it back was found."
+					"<br><br>Put its key file (.dkey or .key) in the Redump keys folder:<br>'%0'")
+					.arg(keys);
+			}
+
+			const QString link = QObject::tr("<br /><br />For information on setting up the emulator and dumping your PS3 games, read the <a %0 href=\"https://rpcs3.net/quickstart\">quickstart guide</a>.").arg(get_link_style());
+
+			QMessageBox* msg = new QMessageBox(parent);
+			msg->setWindowTitle(title);
+			msg->setIcon(QMessageBox::Critical);
+			msg->setTextFormat(Qt::RichText);
+			msg->setText(prefix + text + link);
+			msg->setAttribute(Qt::WA_DeleteOnClose);
+
+			QPushButton* open_button = msg->addButton(QObject::tr("Open keys folder"), QMessageBox::ActionRole);
+			msg->addButton(QMessageBox::Close);
+			msg->setDefaultButton(QMessageBox::Close);
+
+			QObject::connect(msg, &QDialog::finished, msg, [msg, open_button, key_dir]()
+			{
+				// An "ActionRole" button closes the dialog just like any other one, so the folder is opened on the way out
+				if (msg->clickedButton() == open_button)
+				{
+					open_dir(key_dir);
+				}
+			});
+
+			msg->open();
 		}
 
 		QTreeWidgetItem* find_child(QTreeWidgetItem* parent, const QString& text)
