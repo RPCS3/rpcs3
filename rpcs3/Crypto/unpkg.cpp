@@ -877,12 +877,88 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 		return false;
 	}
 
+#ifdef _WIN32
+	const auto to_fs_path = [](std::string_view path)
+	{
+		return std::filesystem::path{utf8_to_wchar(path)};
+	};
+#else
+	const auto to_fs_path = [](std::string_view path)
+	{
+		return std::filesystem::path{std::string(path)};
+	};
+#endif
+
+	// Canonicalize the existing part of a path, then append any missing
+	// components without resolving them. This is equivalent to weakly_canonical
+	// but avoids mixing canonical and lexical path representations on Windows.
+	const auto canonicalize_path = [](std::filesystem::path path, std::error_code& ec)
+	{
+		std::vector<std::filesystem::path> missing;
+		ec.clear();
+
+		for (;;)
+		{
+			std::error_code status_ec;
+			const auto status = std::filesystem::status(path, status_ec);
+
+			if (!status_ec && status.type() != std::filesystem::file_type::not_found && status.type() != std::filesystem::file_type::none)
+			{
+				break;
+			}
+
+			if (status_ec && status_ec != std::errc::no_such_file_or_directory)
+			{
+				ec = status_ec;
+				return std::filesystem::path{};
+			}
+
+			// Do not treat a dangling symlink as a missing component.
+			std::error_code symlink_ec;
+			const auto symlink_status = std::filesystem::symlink_status(path, symlink_ec);
+			if (!symlink_ec && symlink_status.type() == std::filesystem::file_type::symlink)
+			{
+				ec = std::make_error_code(std::errc::too_many_symbolic_link_levels);
+				return std::filesystem::path{};
+			}
+
+			if (symlink_ec && symlink_ec != std::errc::no_such_file_or_directory)
+			{
+				ec = symlink_ec;
+				return std::filesystem::path{};
+			}
+
+			const auto filename = path.filename();
+			if (filename.empty() || path.empty() || path == path.parent_path())
+			{
+				ec = std::make_error_code(std::errc::no_such_file_or_directory);
+				return std::filesystem::path{};
+			}
+
+			missing.emplace_back(filename);
+			path = path.parent_path();
+		}
+
+		std::filesystem::path result = std::filesystem::canonical(path, ec);
+		if (ec)
+		{
+			return std::filesystem::path{};
+		}
+
+		for (auto it = missing.rbegin(); it != missing.rend(); ++it)
+		{
+			result /= *it;
+		}
+
+		return result;
+	};
+
 	std::error_code path_ec;
-	auto install_path = std::filesystem::weakly_canonical(m_install_path, path_ec);
+	auto install_path = canonicalize_path(to_fs_path(m_install_path), path_ec);
 	if (path_ec)
 	{
-		pkg_log.warning("Failed to canonicalize installation path '%s' (%s); falling back to lexical normalization.", m_install_path, path_ec.message());
-		install_path = std::filesystem::path(m_install_path).lexically_normal();
+		pkg_log.error("Failed to canonicalize installation path '%s' (%s)", m_install_path, path_ec.message());
+		return false;
 	}
 
 	if (install_path.empty())
@@ -933,8 +1009,8 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 
 		std::string_view name = fmt::trim_back_sv(name_buf, "\0"sv);
 
-		const std::filesystem::path entry_path{name};
-		if (entry_path.is_absolute())
+		const std::filesystem::path entry_path = to_fs_path(name);
+		if (entry_path.is_absolute() || entry_path.has_root_name() || entry_path.has_root_directory())
 		{
 			num_failures++;
 			pkg_log.error("PKG entry path is absolute: '%s'", name);
@@ -963,11 +1039,12 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 
 		std::string path = m_install_path + vfs::escape(name);
 		path_ec.clear();
-		auto canonical_path = std::filesystem::weakly_canonical(path, path_ec);
+		auto canonical_path = canonicalize_path(to_fs_path(path), path_ec);
 		if (path_ec)
 		{
-			pkg_log.warning("Failed to canonicalize package path '%s' (%s); falling back to lexical normalization.", path, path_ec.message());
-			canonical_path = std::filesystem::path(path).lexically_normal();
+			num_failures++;
+			pkg_log.error("Failed to canonicalize package path '%s' (%s)", path, path_ec.message());
+			break;
 		}
 
 		if (canonical_path.empty() || !is_inside_install_path(canonical_path))
@@ -977,7 +1054,8 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 			break;
 		}
 
-		path = canonical_path.string();
+		// Keep the original UTF-8 VFS path for filesystem operations.
+		// canonical_path is only used to validate containment.
 
 		if (entry.pad || (entry.type & ~PKG_FILE_ENTRY_KNOWN_BITS))
 		{
