@@ -239,7 +239,14 @@ error_code cellWebBrowserEstimate2(vm::cptr<CellWebBrowserConfig2> config, vm::p
 error_code cellWebBrowserGetUsrdataOnGameExit(vm::ptr<CellWebBrowserUsrdata> ptr)
 {
 	cellSysutil.todo("cellWebBrowserGetUsrdataOnGameExit(ptr=*0x%x)", ptr);
-	return CELL_OK;
+
+	if (!ptr)
+	{
+		return CELL_SYSUTIL_ERROR_VALUE;
+	}
+
+	// The game was started from the XMB, so the web browser has no user data to hand over
+	return CELL_SYSUTIL_ERROR_STATUS;
 }
 
 error_code cellWebBrowserInitialize(vm::ptr<CellWebBrowserSystemCallback> system_cb, u32 container)
