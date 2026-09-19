@@ -2,6 +2,7 @@
 #include "vfs_dialog_tab.h"
 #include "vfs_dialog_usb_tab.h"
 #include "gui_settings.h"
+#include "qt_utils.h"
 
 #include <QTabWidget>
 #include <QDialogButtonBox>
@@ -46,7 +47,7 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> _gui_settings, QWidget* par
 	tabs->addTab(games_tab, "games");
 
 	// Create buttons
-	QDialogButtonBox* buttons = new QDialogButtonBox(QDialogButtonBox::Close | QDialogButtonBox::Save | QDialogButtonBox::RestoreDefaults);
+	QDialogButtonBox* buttons = new QDialogButtonBox(QDialogButtonBox::Cancel | QDialogButtonBox::Save | QDialogButtonBox::RestoreDefaults);
 	buttons->button(QDialogButtonBox::RestoreDefaults)->setText(tr("Reset Directories"));
 	buttons->button(QDialogButtonBox::Save)->setDefault(true);
 
@@ -104,7 +105,7 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> _gui_settings, QWidget* par
 
 			accept();
 		}
-		else if (button == buttons->button(QDialogButtonBox::Close))
+		else if (button == buttons->button(QDialogButtonBox::Cancel))
 		{
 			reject();
 		}
@@ -116,5 +117,5 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> _gui_settings, QWidget* par
 
 	setLayout(vbox);
 
-	buttons->button(QDialogButtonBox::Save)->setFocus();
+	gui::utils::keep_tab_bar_focused(tabs);
 }

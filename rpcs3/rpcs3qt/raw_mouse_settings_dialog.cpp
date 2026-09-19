@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "raw_mouse_settings_dialog.h"
 #include "localized_emu.h"
+#include "qt_utils.h"
 #include "gui_application.h"
 #include "Input/raw_mouse_config.h"
 #include "Input/raw_mouse_handler.h"
@@ -130,6 +131,8 @@ raw_mouse_settings_dialog::raw_mouse_settings_dialog(QWidget* parent)
 	on_enumeration();
 
 	handle_device_change(get_current_device_name(0));
+
+	gui::utils::keep_tab_bar_focused(m_tab_widget);
 
 	m_update_timer.start(1000ms);
 }

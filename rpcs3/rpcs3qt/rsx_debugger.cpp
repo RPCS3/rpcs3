@@ -228,6 +228,10 @@ rsx_debugger::rsx_debugger(std::shared_ptr<gui_settings> gui_settings, QWidget* 
 	main_layout->addWidget(state_rsx, 1);
 	setLayout(main_layout);
 
+	// Both tab widgets are already in the window here, which keeps its own initial focus
+	gui::utils::keep_tab_bar_focused(m_tw_rsx);
+	gui::utils::keep_tab_bar_focused(state_rsx);
+
 	connect(m_list_captured_draw_calls, &QTableWidget::itemClicked, this, &rsx_debugger::OnClickDrawCalls);
 
 	connect(tex_idx_line, &QLineEdit::textChanged, [this](const QString& text)

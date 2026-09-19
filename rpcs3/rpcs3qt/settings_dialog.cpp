@@ -97,9 +97,13 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	, m_emu_settings(std::move(emu_settings))
 {
 	ui->setupUi(this);
-	ui->buttonBox->button(QDialogButtonBox::StandardButton::Close)->setFocus();
 	ui->tab_widget_settings->setUsesScrollButtons(false);
 	ui->tab_widget_settings->tabBar()->setObjectName("tab_bar_settings");
+
+	// The focus no longer sits on the cancel button, so make it the default one: enter keeps closing the dialog
+	ui->buttonBox->button(QDialogButtonBox::StandardButton::Cancel)->setDefault(true);
+
+	gui::utils::keep_tab_bar_focused(ui->tab_widget_settings);
 
 	if (!m_gui_settings->GetValue(gui::m_showDebugTab).toBool())
 	{
@@ -231,11 +235,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	});
 
 	connect(ui->buttonBox, &QDialogButtonBox::rejected, this, &QWidget::close);
-
-	connect(ui->tab_widget_settings, &QTabWidget::currentChanged, this, [this]()
-	{
-		ui->buttonBox->button(QDialogButtonBox::StandardButton::Close)->setFocus();
-	});
 
 	//     _____ _____  _    _   _______    _
 	//    / ____|  __ \| |  | | |__   __|  | |
