@@ -233,6 +233,7 @@ public:
 	u64 runtime_status_flags = 0; // The runtime status flags
 	bool enable_pitch_correction = false;
 	u32 inertial_counter = 0;
+	s32 camera_max_exposure = 0;
 
 	std::array<gem_controller, CELL_GEM_MAX_NUM> controllers;
 	u32 connected_controllers = 0;
@@ -2761,7 +2762,7 @@ error_code cellGemCalibrate(u32 gem_num)
 
 error_code cellGemClearStatusFlags(u32 gem_num, u64 mask)
 {
-	cellGem.todo("cellGemClearStatusFlags(gem_num=%d, mask=0x%x)", gem_num, mask);
+	cellGem.trace("cellGemClearStatusFlags(gem_num=%d, mask=0x%x)", gem_num, mask);
 
 	auto& gem = g_fxo->get<gem_config>();
 
@@ -2804,7 +2805,7 @@ error_code cellGemConvertVideoFinish(ppu_thread& ppu)
 	{
 		return {};
 	}
-
+	gem.video_conversion_in_progress = false;
 	return CELL_OK;
 }
 
@@ -3035,11 +3036,13 @@ error_code cellGemForceRGB(u32 gem_num, f32 r, f32 g, f32 b)
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	// TODO: Adjust brightness
-	//if (const f32 sum = r + g + b; sum > 2.f)
-	//{
-	//	color = color * (2.f / sum)
-	//}
+	if (const f32 sum = r + g + b; sum > 2.f)
+	{
+		const f32 scale = 2.f / sum;
+		r *= scale;
+		g *= scale;
+		b *= scale;
+	}
 
 	auto& controller = gem.controllers[gem_num];
 
@@ -3079,7 +3082,7 @@ error_code cellGemGetAccelerometerPositionInDevice(u32 gem_num, vm::ptr<f32> pos
 
 error_code cellGemGetAllTrackableHues(vm::ptr<u8> hues)
 {
-	cellGem.todo("cellGemGetAllTrackableHues(hues=*0x%x)");
+	cellGem.trace("cellGemGetAllTrackableHues(hues=*0x%x)", hues);
 
 	auto& gem = g_fxo->get<gem_config>();
 
@@ -3106,18 +3109,24 @@ error_code cellGemGetAllTrackableHues(vm::ptr<u8> hues)
 
 error_code cellGemGetCameraState(vm::ptr<CellGemCameraState> camera_state)
 {
-	cellGem.todo("cellGemGetCameraState(camera_state=0x%x)", camera_state);
+	cellGem.trace("cellGemGetCameraState(camera_state=*0x%x)", camera_state);
 
-	[[maybe_unused]] auto& gem = g_fxo->get<gem_config>();
+	auto& gem = g_fxo->get<gem_config>();
+
+	reader_lock lock(gem.mtx);
+
+	if (!gem.state)
+	{
+		return CELL_GEM_ERROR_UNINITIALIZED;
+	}
 
 	if (!camera_state)
 	{
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	// TODO: use correct camera settings
-	camera_state->exposure = 0;
-	camera_state->exposure_time = 1.0f / 60.0f;
+	camera_state->exposure = gem.camera_max_exposure;
+	camera_state->exposure_time = (static_cast<f32>(gem.camera_max_exposure) / static_cast<f32>(CELL_GEM_MAX_CAMERA_EXPOSURE)) * (1.0f / 60.0f);
 	camera_state->gain = 1.0f;
 	camera_state->pitch_angle = 0.0f;
 	camera_state->pitch_angle_estimate = 0.0f;
@@ -3765,6 +3774,15 @@ error_code cellGemPrepareCamera(s32 max_exposure, f32 image_quality)
 	max_exposure = std::clamp(max_exposure, static_cast<s32>(CELL_GEM_MIN_CAMERA_EXPOSURE), static_cast<s32>(CELL_GEM_MAX_CAMERA_EXPOSURE));
 	image_quality = std::clamp(image_quality, 0.0f, 1.0f);
 
+	{
+		std::scoped_lock lock(gem.mtx);
+		gem.camera_max_exposure = max_exposure;
+	}
+
+	if (g_cfg.io.move != move_handler::real)
+	{
+		return CELL_OK;
+	}
 	// TODO: prepare camera properly
 
 	extern error_code cellCameraGetAttribute(s32 dev_num, s32 attrib, vm::ptr<u32> arg1, vm::ptr<u32> arg2);
@@ -3792,7 +3810,7 @@ error_code cellGemPrepareCamera(s32 max_exposure, f32 image_quality)
 		cellCameraSetAttribute(0, CELL_CAMERA_GREENGAIN, 96, 0);
 		cellCameraSetAttribute(0, CELL_CAMERA_REDBLUEGAIN, 64, 96);
 		cellCameraSetAttribute(0, CELL_CAMERA_GAIN, 0, 0); // TODO
-		cellCameraSetAttribute(0, CELL_CAMERA_EXPOSURE, 0, 0); // TODO
+		cellCameraSetAttribute(0, CELL_CAMERA_EXPOSURE, static_cast<u32>(max_exposure), 0);
 	}
 
 	return CELL_OK;
@@ -3999,7 +4017,7 @@ error_code cellGemSetRumble(u32 gem_num, u8 rumble)
 
 error_code cellGemSetYaw(u32 gem_num, vm::ptr<f32> z_direction)
 {
-	cellGem.todo("cellGemSetYaw(gem_num=%d, z_direction=*0x%x)", gem_num, z_direction);
+	cellGem.trace("cellGemSetYaw(gem_num=%d, z_direction=*0x%x)", gem_num, z_direction);
 
 	auto& gem = g_fxo->get<gem_config>();
 
@@ -4022,7 +4040,7 @@ error_code cellGemSetYaw(u32 gem_num, vm::ptr<f32> z_direction)
 
 error_code cellGemTrackHues(vm::cptr<u32> req_hues, vm::ptr<u32> res_hues)
 {
-	cellGem.todo("cellGemTrackHues(req_hues=%s, res_hues=*0x%x)", req_hues ? fmt::format("*0x%x [%d, %d, %d, %d]", req_hues, req_hues[0], req_hues[1], req_hues[2], req_hues[3]) : "*0x0", res_hues);
+	cellGem.trace("cellGemTrackHues(req_hues=%s, res_hues=*0x%x)", req_hues ? fmt::format("*0x%x [%d, %d, %d, %d]", req_hues, req_hues[0], req_hues[1], req_hues[2], req_hues[3]) : "*0x0", res_hues);
 
 	auto& gem = g_fxo->get<gem_config>();
 
