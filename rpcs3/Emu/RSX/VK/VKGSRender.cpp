@@ -1170,14 +1170,22 @@ void VKGSRender::check_present_status()
 	}
 }
 
+// Programmed from two places, keep them in sync.
+static void set_viewport_depth_range(VkViewport& viewport)
+{
+	// apply_zclip_xform has already normalized the depth into [0, 1] in the vertex shader, this maps it
+	// back onto the range the game asked for. The range is clamped because the depth buffer only holds
+	// values inside [0, 1]: letting the raw window Z through instead makes a pass that uses a range
+	// beyond [0, 1] win every depth test against normally ranged geometry.
+	viewport.minDepth = std::clamp(rsx::method_registers.clip_min(), 0.f, 1.f);
+	viewport.maxDepth = std::clamp(rsx::method_registers.clip_max(), 0.f, 1.f);
+}
+
 void VKGSRender::set_viewport()
 {
 	const auto [clip_width, clip_height] = rsx::apply_resolution_scale<true>(
 		resolution_scaling_config,
 		rsx::method_registers.surface_clip_width(), rsx::method_registers.surface_clip_height());
-
-	const auto zclip_near = rsx::method_registers.clip_min();
-	const auto zclip_far = rsx::method_registers.clip_max();
 
 	//NOTE: The scale_offset matrix already has viewport matrix factored in
 	m_viewport.x = 0;
@@ -1185,16 +1193,7 @@ void VKGSRender::set_viewport()
 	m_viewport.width = clip_width;
 	m_viewport.height = clip_height;
 
-	if (m_device->get_unrestricted_depth_range_support())
-	{
-		m_viewport.minDepth = zclip_near;
-		m_viewport.maxDepth = zclip_far;
-	}
-	else
-	{
-		m_viewport.minDepth = 0.f;
-		m_viewport.maxDepth = 1.f;
-	}
+	set_viewport_depth_range(m_viewport);
 
 	m_current_command_buffer->flags |= vk::command_buffer::cb_reload_dynamic_state;
 	m_graphics_state.clear(rsx::pipeline_state::zclip_config_state_dirty);
@@ -1218,11 +1217,7 @@ void VKGSRender::bind_viewport()
 {
 	if (m_graphics_state & rsx::pipeline_state::zclip_config_state_dirty)
 	{
-		if (m_device->get_unrestricted_depth_range_support())
-		{
-			m_viewport.minDepth = rsx::method_registers.clip_min();
-			m_viewport.maxDepth = rsx::method_registers.clip_max();
-		}
+		set_viewport_depth_range(m_viewport);
 
 		m_graphics_state.clear(rsx::pipeline_state::zclip_config_state_dirty);
 	}
