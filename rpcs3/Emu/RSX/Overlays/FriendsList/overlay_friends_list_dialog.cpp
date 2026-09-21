@@ -5,6 +5,7 @@
 #include "Emu/Cell/Modules/cellSysutil.h"
 #include "Emu/NP/np_handler.h"
 #include "Emu/NP/rpcn_config.h"
+#include "Emu/System.h"
 #include "Emu/vfs_config.h"
 
 namespace rsx

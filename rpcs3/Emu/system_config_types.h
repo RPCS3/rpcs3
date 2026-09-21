@@ -178,6 +178,8 @@ enum class microphone_handler
 	singstar,
 	real_singstar,
 	rocksmith,
+	eye_toy,
+	ps_eye,
 };
 
 enum class pad_handler_mode

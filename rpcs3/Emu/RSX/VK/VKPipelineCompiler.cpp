@@ -3,6 +3,7 @@
 #include "VKRenderPass.h"
 #include "vkutils/device.h"
 #include "Utilities/Thread.h"
+#include "Emu/system_config.h"
 
 #include "util/sysinfo.hpp"
 
@@ -12,6 +13,7 @@ namespace vk
 	std::unique_ptr<named_thread_group<pipe_compiler>> g_pipe_compilers;
 	int g_num_pipe_compilers = 0;
 	atomic_t<int> g_compiler_index{};
+	VkPipelineCache g_pipeline_cache = VK_NULL_HANDLE;
 
 	pipe_compiler::pipe_compiler()
 	{
@@ -21,11 +23,13 @@ namespace vk
 	pipe_compiler::~pipe_compiler()
 	{
 		// TODO: Destroy and do cleanup
+		m_pipeline_cache = VK_NULL_HANDLE;
 	}
 
-	void pipe_compiler::initialize(const vk::render_device* pdev)
+	void pipe_compiler::initialize(const vk::render_device* pdev, VkPipelineCache pipeline_cache)
 	{
 		m_device = pdev;
+		m_pipeline_cache = pipeline_cache;
 	}
 
 	void pipe_compiler::operator()()
@@ -62,7 +66,7 @@ namespace vk
 		op_flags flags)
 	{
 		auto program = std::make_unique<glsl::program>(*m_device, create_info, cs_inputs);
-		program->link(flags & SEPARATE_SHADER_OBJECTS);
+		program->link(m_pipeline_cache, flags & SEPARATE_SHADER_OBJECTS);
 		return program;
 	}
 
@@ -73,7 +77,7 @@ namespace vk
 		op_flags flags)
 	{
 		auto program = std::make_unique<glsl::program>(*m_device, create_info, vs_inputs, fs_inputs);
-		program->link(flags & SEPARATE_SHADER_OBJECTS);
+		program->link(m_pipeline_cache, flags & SEPARATE_SHADER_OBJECTS);
 		return program;
 	}
 
@@ -299,6 +303,10 @@ namespace vk
 		ensure(num_worker_threads >= 1);
 		ensure(g_render_device); // "Cannot initialize pipe compiler before creating a logical device"
 
+		// Create the shared pipeline cache
+		VkPipelineCacheCreateInfo drv_cache_info{ VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
+		vkCreatePipelineCache(*g_render_device, &drv_cache_info, nullptr, &g_pipeline_cache);
+
 		// Create the thread pool
 		g_pipe_compilers = std::make_unique<named_thread_group<pipe_compiler>>("RSX.W", num_worker_threads);
 		g_num_pipe_compilers = num_worker_threads;
@@ -306,13 +314,19 @@ namespace vk
 		// Initialize the workers. At least one inline compiler shall exist (doesn't actually run)
 		for (pipe_compiler& compiler : *g_pipe_compilers.get())
 		{
-			compiler.initialize(g_render_device);
+			compiler.initialize(g_render_device, g_pipeline_cache);
 		}
 	}
 
 	void destroy_pipe_compiler()
 	{
 		g_pipe_compilers.reset();
+
+		if (g_pipeline_cache)
+		{
+			vkDestroyPipelineCache(*g_render_device, g_pipeline_cache, nullptr);
+			g_pipeline_cache = VK_NULL_HANDLE;
+		}
 	}
 
 	pipe_compiler* get_pipe_compiler()

@@ -6,6 +6,7 @@
 #include "Utilities/date_time.h"
 #include "Utilities/File.h"
 #include "util/video_provider.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/system_progress.hpp"
@@ -16,7 +17,8 @@
 #include "Emu/Cell/Modules/cellAudio.h"
 #include "Emu/Cell/lv2/sys_rsxaudio.h"
 #include "Emu/RSX/RSXThread.h"
-#include "Emu/RSX/rsx_utils.h"
+#include "Emu/RSX/Utils/image_utils.hpp"
+#include "Emu/RSX/Utils/rsx_utils.h"
 #include "Emu/RSX/Overlays/overlay_message.h"
 #include "Emu/Io/interception.h"
 #include "Emu/Io/recording_config.h"
@@ -482,7 +484,7 @@ void gs_frame::toggle_recording()
 		// Play a sound
 		if (const std::string sound_path = fs::get_config_dir() + "sounds/snd_recording.wav"; fs::is_file(sound_path))
 		{
-			Emu.GetCallbacks().play_sound(sound_path, std::nullopt);
+			g_emu_callbacks.play_sound(sound_path, std::nullopt);
 		}
 		else
 		{
@@ -722,7 +724,7 @@ void gs_frame::show()
 		{
 			setVisibility(FullScreen);
 		}
-		else if (const QVariant var = m_gui_settings->GetValue(gui::gs_visibility); var.canConvert<QString>())
+		else if (const QVariant var = m_gui_settings->GetValue(gui::gs_visibility); var.canConvert<QString>() && !m_gui_settings->GetValue(gui::gs_resize).toBool())
 		{
 			// Restore saved visibility from last time. Make sure not to hide the window, or the user can't access it anymore.
 			if (const Visibility visibility = gui::string_to_visibility(var.value<QString>()); visibility != Visibility::Hidden)
@@ -1073,7 +1075,7 @@ void gs_frame::take_screenshot(std::vector<u8>&& data, u32 sshot_width, u32 ssho
 					}
 				}
 
-				const std::string cell_sshot_filename = Emu.GetCallbacks().get_photo_path(manager.get_photo_title() + ".png");
+				const std::string cell_sshot_filename = g_emu_callbacks.get_photo_path(manager.get_photo_title() + ".png");
 				const std::string cell_sshot_dir      = fs::get_parent_dir(cell_sshot_filename);
 
 				screenshot_log.notice("Saving cell screenshot to %s", cell_sshot_filename);
@@ -1103,7 +1105,7 @@ void gs_frame::take_screenshot(std::vector<u8>&& data, u32 sshot_width, u32 ssho
 			{
 				if (const std::string sound_path = fs::get_config_dir() + "sounds/snd_screenshot.wav"; fs::is_file(sound_path))
 				{
-					Emu.GetCallbacks().play_sound(sound_path, std::nullopt);
+					g_emu_callbacks.play_sound(sound_path, std::nullopt);
 				}
 				else
 				{

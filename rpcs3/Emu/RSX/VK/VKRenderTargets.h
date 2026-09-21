@@ -166,17 +166,24 @@ namespace vk
 		using download_buffer_object = void*;
 		using barrier_descriptor_t = rsx::deferred_clipped_region<vk::render_target*>;
 
-		static std::pair<VkImageUsageFlags, VkImageCreateFlags> get_attachment_create_flags(VkFormat format, [[maybe_unused]] u8 samples)
+		static std::pair<VkImageUsageFlags, VkImageCreateFlags> get_attachment_create_flags(VkFormat format, [[maybe_unused]] u8 samples, bool depth)
 		{
+			VkImageUsageFlags usage_flags = 0;
+			if (!depth)
+			{
+				// For programmable blending
+				usage_flags = VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
+			}
+
 			if (g_cfg.video.strict_rendering_mode)
 			{
-				return {};
+				return { usage_flags, 0 };
 			}
 
 			// If we have driver support for FBO loops, set the usage flag for it.
 			if (vk::get_current_renderer()->get_framebuffer_loops_support())
 			{
-				return { VK_IMAGE_USAGE_ATTACHMENT_FEEDBACK_LOOP_BIT_EXT, VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT };
+				return { usage_flags | VK_IMAGE_USAGE_ATTACHMENT_FEEDBACK_LOOP_BIT_EXT, VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT };
 			}
 
 			// Workarounds to force transition to GENERAL to decompress.
@@ -188,7 +195,7 @@ namespace vk
 					format_features.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)
 				{
 					// Only set if supported by hw
-					return { VK_IMAGE_USAGE_STORAGE_BIT, 0 };
+					return { usage_flags | VK_IMAGE_USAGE_STORAGE_BIT, 0 };
 				}
 				break;
 			case driver_vendor::AMD:
@@ -196,7 +203,7 @@ namespace vk
 				if (vk::get_chip_family() >= chip_class::AMD_navi1x)
 				{
 					// Only needed for GFX10+
-					return { 0, VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT };
+					return { usage_flags, VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT };
 				}
 				break;
 			default:
@@ -214,16 +221,16 @@ namespace vk
 				break;
 			}
 
-			return {};
+			return { usage_flags, 0 };
 		}
 
 		static std::unique_ptr<vk::render_target> create_new_surface(
+			const vk::command_buffer& cmd,
 			u32 address,
 			rsx::surface_color_format format,
 			usz width, usz height, usz pitch,
 			rsx::surface_antialiasing antialias,
-			const rsx::surface_scaling_config_t& resolution_scaling_config,
-			vk::render_device& device, vk::command_buffer& cmd)
+			const rsx::surface_scaling_config_t& resolution_scaling_config)
 		{
 			const auto fmt = vk::get_compatible_surface_format(format);
 			VkFormat requested_format = fmt.first;
@@ -241,7 +248,7 @@ namespace vk
 				sample_layout = rsx::surface_sample_layout::null;
 			}
 
-			auto [usage_flags, create_flags] = get_attachment_create_flags(requested_format, samples);
+			auto [usage_flags, create_flags] = get_attachment_create_flags(requested_format, samples, false);
 			usage_flags |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
 			if (samples == 1) [[likely]]
@@ -256,7 +263,8 @@ namespace vk
 			std::unique_ptr<vk::render_target> rtt;
 			const auto [width_, height_] = rsx::apply_resolution_scale<true>(resolution_scaling_config, static_cast<u16>(width), static_cast<u16>(height));
 
-			rtt = std::make_unique<vk::render_target>(device, device.get_memory_mapping().device_local,
+			auto pdev = vk::get_current_renderer();
+			rtt = std::make_unique<vk::render_target>(*pdev, pdev->get_memory_mapping().device_local,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D,
 				requested_format,
@@ -290,14 +298,15 @@ namespace vk
 		}
 
 		static std::unique_ptr<vk::render_target> create_new_surface(
+			const vk::command_buffer& cmd,
 			u32 address,
 			rsx::surface_depth_format2 format,
 			usz width, usz height, usz pitch,
 			rsx::surface_antialiasing antialias,
-			const rsx::surface_scaling_config_t& resolution_scaling_config,
-			vk::render_device& device, vk::command_buffer& cmd)
+			const rsx::surface_scaling_config_t& resolution_scaling_config)
 		{
-			const VkFormat requested_format = vk::get_compatible_depth_surface_format(device.get_formats_support(), format);
+			auto pdev = vk::get_current_renderer();
+			const VkFormat requested_format = vk::get_compatible_depth_surface_format(pdev->get_formats_support(), format);
 
 			u8 samples;
 			rsx::surface_sample_layout sample_layout;
@@ -312,7 +321,7 @@ namespace vk
 				sample_layout = rsx::surface_sample_layout::null;
 			}
 
-			auto [usage_flags, create_flags] = get_attachment_create_flags(requested_format, samples);
+			auto [usage_flags, create_flags] = get_attachment_create_flags(requested_format, samples, true);
 			usage_flags |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 
 			if (samples == 1) [[likely]]
@@ -323,7 +332,7 @@ namespace vk
 			std::unique_ptr<vk::render_target> ds;
 			const auto [width_, height_] = rsx::apply_resolution_scale<true>(resolution_scaling_config, static_cast<u16>(width), static_cast<u16>(height));
 
-			ds = std::make_unique<vk::render_target>(device, device.get_memory_mapping().device_local,
+			ds = std::make_unique<vk::render_target>(*pdev, pdev->get_memory_mapping().device_local,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				VK_IMAGE_TYPE_2D,
 				requested_format,
@@ -356,12 +365,30 @@ namespace vk
 			return ds;
 		}
 
+		static bool is_reusable_surface(const vk::render_target* surface, const vk::render_target* ref)
+		{
+			return surface->value && surface->format() == ref->format() &&
+				surface->info.usage == ref->info.usage && surface->info.flags == ref->info.flags;
+		}
+
+		static void prepare_for_reuse(vk::command_buffer&, vk::render_target* surface)
+		{
+			surface->reset_surface_counters();
+			surface->last_rw_access_tag = 0;
+		}
+
 		static void clone_surface(
 			vk::command_buffer& cmd,
 			std::unique_ptr<vk::render_target>& sink, vk::render_target* ref,
 			u32 address, barrier_descriptor_t& prev,
 			const rsx::surface_scaling_config_t& scaling_config)
 		{
+			const bool initialize = !sink || !sink->has_refs();
+			if (sink && initialize)
+			{
+				prepare_for_reuse(cmd, sink.get());
+			}
+
 			if (!sink)
 			{
 				const auto [new_w, new_h] = rsx::apply_resolution_scale<true>(
@@ -383,16 +410,26 @@ namespace vk
 					VMM_ALLOCATION_POOL_SURFACE_CACHE,
 					ref->format_class());
 
+			}
+
+			if (initialize)
+			{
+				sink->reset();
+				sink->msaa_flags = rsx::surface_state_flags::ready;
 				sink->add_ref();
 
 				sink->sample_layout = ref->sample_layout;
 				sink->resolution_scaling_config = scaling_config;
 
-				sink->set_spp(ref->get_spp());
+				sink->set_aa_mode(ref->get_aa_mode());
 				sink->format_info = ref->format_info;
 				sink->memory_usage_flags = rsx::surface_usage_flags::storage;
 				sink->state_flags = rsx::surface_state_flags::erase_bkgnd;
-				sink->native_component_map = ref->native_component_map;
+				sink->set_native_component_layout(ref->native_component_map);
+				if (sink->resolve_surface)
+				{
+					sink->resolve_surface->set_native_component_layout(ref->native_component_map);
+				}
 				sink->sample_layout = ref->sample_layout;
 				sink->stencil_init_flags = ref->stencil_init_flags;
 				sink->native_pitch = static_cast<u32>(prev.width) * ref->get_bpp() * ref->samples_x;

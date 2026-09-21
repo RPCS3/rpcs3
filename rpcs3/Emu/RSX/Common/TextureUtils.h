@@ -2,7 +2,7 @@
 
 #include "io_buffer.h"
 #include "simple_array.hpp"
-#include "../color_utils.h"
+#include "../Utils/color_utils.hpp"
 #include "../RSXTexture.h"
 
 #include <vector>

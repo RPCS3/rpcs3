@@ -28,6 +28,7 @@
 
 #include "Emu/NP/rpcn_countries.h"
 #include "Emu/GameInfo.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/title.h"
@@ -600,6 +601,9 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	EnhanceCheckBox(emu_settings_type::VulkanAsyncTextureUploads, ui->asyncTextureStreaming, tooltips.settings.async_texture_streaming);
 
+	m_emu_settings->EnhanceCheckBox(ui->blitEngineScaling, emu_settings_type::DisableBlitEngineScaling);
+	SubscribeTooltip(ui->blitEngineScaling, tooltips.settings.blit_engine_scaling);
+
 	// Radio buttons
 
 	SubscribeTooltip(ui->rb_legacy_recompiler, tooltips.settings.legacy_shader_recompiler);
@@ -876,6 +880,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			break;
 		case microphone_handler::real_singstar:
 		case microphone_handler::rocksmith:
+		case microphone_handler::eye_toy:
+		case microphone_handler::ps_eye:
 			max = 1;
 			break;
 		case microphone_handler::null:
@@ -924,7 +930,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	const auto get_audio_output_devices = [this](bool keep_old = true)
 	{
 		const auto [text, value] = get_data(ui->audioOutBox, ui->audioOutBox->currentIndex());
-		auto dev_enum = Emu.GetCallbacks().get_audio_enumerator(value);
+		auto dev_enum = g_emu_callbacks.get_audio_enumerator(value);
 		std::vector<audio_device_enumerator::audio_device> dev_array = dev_enum->get_output_devices();
 
 		ui->audioDeviceBox->clear();
@@ -1443,6 +1449,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	EnhanceCheckBox(emu_settings_type::DisableSpinOptimization, ui->disableSpinOptimization, tooltips.settings.disable_spin_optimization);
 	EnhanceCheckBox(emu_settings_type::EnabledSPUEventsBusyLoop, ui->enableSpuEventsBusyLoop, tooltips.settings.enable_spu_events_busy_loop);
 	EnhanceCheckBox(emu_settings_type::DisableHWTexelRemapping, ui->disableHardwareTexelRemapping, tooltips.settings.disable_hw_texel_remapping);
+	EnhanceCheckBox(emu_settings_type::DisableHWBlending, ui->disableHardwareBlending, tooltips.settings.disable_hw_blending);
 
 	// Comboboxes
 
@@ -1674,7 +1681,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	EnhanceCheckBox(emu_settings_type::PauseOnFocusLoss, ui->pauseOnFocusLoss, tooltips.settings.pause_on_focus_loss);
 	EnhanceCheckBox(emu_settings_type::StartGameFullscreen, ui->startGameFullscreen, tooltips.settings.start_game_fullscreen);
 	EnhanceCheckBox(emu_settings_type::PreventDisplaySleep, ui->preventDisplaySleep, tooltips.settings.prevent_display_sleep);
-	ui->preventDisplaySleep->setEnabled(Emu.GetCallbacks().display_sleep_control_supported());
+	ui->preventDisplaySleep->setEnabled(g_emu_callbacks.display_sleep_control_supported());
 
 	EnhanceCheckBox(emu_settings_type::ShowTrophyPopups, ui->showTrophyPopups, tooltips.settings.show_trophy_popups);
 	EnhanceCheckBox(emu_settings_type::ShowRpcnPopups, ui->showRpcnPopups, tooltips.settings.show_rpcn_popups);
@@ -1800,6 +1807,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 		SubscribeTooltip(ui->gs_showMouseInFullscreen, tooltips.settings.show_mouse_in_fullscreen);
 		SubscribeTooltip(ui->gs_lockMouseInFullscreen, tooltips.settings.lock_mouse_in_fullscreen);
 		SubscribeTooltip(ui->gs_hideMouseOnIdle_widget, tooltips.settings.hide_mouse_on_idle);
+		
+		EnhanceCheckBox(emu_settings_type::StartBigPictureModeOnBoot, ui->startBigPictureModeOnBoot, tooltips.settings.start_big_picture_mode_on_boot);
 
 		ui->gs_disableMouse->setChecked(m_gui_settings->GetValue(gui::gs_disableMouse).toBool());
 		connect(ui->gs_disableMouse, &QCheckBox::toggled, [this](bool checked)
@@ -1882,6 +1891,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		ui->gb_viewport->setEnabled(false);
 		ui->gb_viewport->setVisible(false);
+		ui->startBigPictureModeOnBoot->setDisabled(true);
 	}
 
 	// Game window title builder

@@ -5,6 +5,7 @@
 #include "VKHelpers.h"
 #include "vkutils/device.h"
 #include "../Program/GLSLCommon.h"
+#include "Emu/system_config.h"
 
 std::string VKVertexDecompilerThread::getFloatTypeName(usz elementCount)
 {
@@ -497,7 +498,7 @@ VKVertexProgram::~VKVertexProgram()
 
 void VKVertexProgram::Decompile(const RSXVertexProgram& prog)
 {
-	use_last_provoking_vertex = !!(prog.ctrl & RSX_SHADER_CONTROL_FLAT_SHADING);
+	m_ctrl = prog.ctrl;
 
 	std::string source;
 	VKVertexDecompilerThread decompiler(prog, source, parr, *this);

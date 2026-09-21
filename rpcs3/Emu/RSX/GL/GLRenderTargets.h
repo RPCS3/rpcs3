@@ -1,6 +1,6 @@
 #pragma once
 #include "../Common/surface_store.h"
-#include "../rsx_utils.h"
+#include "../Utils/rsx_utils.h"
 
 #include "glutils/fbo.h"
 
@@ -150,12 +150,12 @@ struct gl_render_target_traits
 
 	static
 	std::unique_ptr<gl::render_target> create_new_surface(
+		gl::command_context&,
 		u32 address,
 		rsx::surface_color_format surface_color_format,
 		usz width, usz height, usz pitch,
 		rsx::surface_antialiasing antialias,
-		const rsx::surface_scaling_config_t& resolution_scaling_config
-	)
+		const rsx::surface_scaling_config_t& resolution_scaling_config)
 	{
 		auto format = rsx::internals::surface_color_format_to_gl(surface_color_format);
 		const auto [width_, height_] = rsx::apply_resolution_scale<true>(resolution_scaling_config, static_cast<u16>(width), static_cast<u16>(height));
@@ -196,12 +196,12 @@ struct gl_render_target_traits
 
 	static
 	std::unique_ptr<gl::render_target> create_new_surface(
-			u32 address,
-			rsx::surface_depth_format2 surface_depth_format,
-			usz width, usz height, usz pitch,
-			rsx::surface_antialiasing antialias,
-			const rsx::surface_scaling_config_t& resolution_scaling_config
-		)
+		gl::command_context&,
+		u32 address,
+		rsx::surface_depth_format2 surface_depth_format,
+		usz width, usz height, usz pitch,
+		rsx::surface_antialiasing antialias,
+		const rsx::surface_scaling_config_t& resolution_scaling_config)
 	{
 		auto format = rsx::internals::surface_depth_format_to_gl(surface_depth_format);
 		const auto [width_, height_] = rsx::apply_resolution_scale<true>(resolution_scaling_config, static_cast<u16>(width), static_cast<u16>(height));
@@ -240,6 +240,14 @@ struct gl_render_target_traits
 		return result;
 	}
 
+	static bool is_reusable_surface(const gl::render_target* surface, const gl::render_target* ref)
+	{
+		return surface->id() && surface->get_internal_format() == ref->get_internal_format();
+	}
+
+	static void prepare_for_reuse(gl::command_context&, gl::render_target*)
+	{}
+
 	static
 	void clone_surface(
 		gl::command_context& cmd,
@@ -247,6 +255,12 @@ struct gl_render_target_traits
 		u32 address, barrier_descriptor_t& prev,
 		const rsx::surface_scaling_config_t& scaling_config)
 	{
+		const bool initialize = !sink || !sink->has_refs();
+		if (sink && initialize)
+		{
+			prepare_for_reuse(cmd, sink.get());
+		}
+
 		if (!sink)
 		{
 			auto internal_format = static_cast<GLenum>(ref->get_internal_format());
@@ -257,6 +271,13 @@ struct gl_render_target_traits
 				ref->get_surface_height<rsx::surface_metrics::pixels>());
 
 			sink = std::make_unique<gl::render_target>(new_w, new_h, ref->samples(), internal_format, ref->format_class());
+		}
+
+		if (initialize)
+		{
+			sink->reset();
+			sink->msaa_flags = rsx::surface_state_flags::ready;
+			sink->stencil_init_flags = ref->stencil_init_flags;
 			sink->add_ref();
 
 			sink->memory_usage_flags = rsx::surface_usage_flags::storage;
@@ -267,11 +288,15 @@ struct gl_render_target_traits
 			sink->resolution_scaling_config = scaling_config;
 
 			sink->set_name(fmt::format("SINK_%u@0x%x", sink->id(), address));
-			sink->set_spp(ref->get_spp());
+			sink->set_aa_mode(ref->get_aa_mode());
 			sink->set_native_pitch(static_cast<u32>(prev.width) * ref->get_bpp() * ref->samples_x);
 			sink->set_rsx_pitch(ref->get_rsx_pitch());
 			sink->set_surface_dimensions(prev.width, prev.height, ref->get_rsx_pitch());
 			sink->set_native_component_layout(ref->get_native_component_layout());
+			if (sink->resolve_surface)
+			{
+				static_cast<gl::viewable_image*>(sink->resolve_surface.get())->set_native_component_layout(ref->get_native_component_layout());
+			}
 			sink->queue_tag(address);
 		}
 

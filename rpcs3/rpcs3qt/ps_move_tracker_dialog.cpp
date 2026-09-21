@@ -20,7 +20,6 @@ LOG_CHANNEL(ps_move);
 
 extern u32 get_buffer_size_by_format(s32, s32, s32);
 
-static constexpr bool tie_hue_to_color = true;
 static constexpr int radius_range = 1000;
 static const constexpr f64 min_radius_conversion = radius_range / g_cfg_move.min_radius.max;
 static const constexpr f64 max_radius_conversion = radius_range / g_cfg_move.max_radius.max;
@@ -104,15 +103,24 @@ ps_move_tracker_dialog::ps_move_tracker_dialog(QWidget* parent)
 		}
 	});
 
+	ui->brightnessSlider->setRange(g_cfg_move.default_brightness.min, g_cfg_move.default_brightness.max);
+	connect(ui->brightnessSlider, &QSlider::valueChanged, this, [this](int value)
+	{
+		const u32 brightness = std::clamp<u32>(value, g_cfg_move.default_brightness.min, g_cfg_move.default_brightness.max);
+		g_cfg_move.default_brightness.set(brightness);
+		update_default_brightness(false);
+	});
+
+	ui->hueSlider->setRange(g_cfg_move.move1.hue.min, g_cfg_move.move1.hue.max);
 	connect(ui->hueSlider, &QSlider::valueChanged, this, [this](int value)
 	{
 		cfg_ps_move* config = ::at32(g_cfg_move.move, m_index);
 		const u16 hue = std::clamp<u16>(value, config->hue.min, config->hue.max);
 		config->hue.set(hue);
-		update_hue();
+		update_hue(false, true, false);
 	});
-	ui->hueSlider->setRange(g_cfg_move.move1.hue.min, g_cfg_move.move1.hue.max);
 
+	ui->hueThresholdSlider->setRange(g_cfg_move.move1.hue_threshold.min, g_cfg_move.move1.hue_threshold.max);
 	connect(ui->hueThresholdSlider, &QSlider::valueChanged, this, [this](int value)
 	{
 		cfg_ps_move* config = ::at32(g_cfg_move.move, m_index);
@@ -120,8 +128,8 @@ ps_move_tracker_dialog::ps_move_tracker_dialog(QWidget* parent)
 		config->hue_threshold.set(hue_threshold);
 		update_hue_threshold();
 	});
-	ui->hueThresholdSlider->setRange(g_cfg_move.move1.hue_threshold.min, g_cfg_move.move1.hue_threshold.max);
 
+	ui->saturationThresholdSlider->setRange(g_cfg_move.move1.saturation_threshold.min, g_cfg_move.move1.saturation_threshold.max);
 	connect(ui->saturationThresholdSlider, &QSlider::valueChanged, this, [this](int value)
 	{
 		cfg_ps_move* config = ::at32(g_cfg_move.move, m_index);
@@ -129,45 +137,44 @@ ps_move_tracker_dialog::ps_move_tracker_dialog(QWidget* parent)
 		config->saturation_threshold.set(saturation_threshold);
 		update_saturation_threshold();
 	});
-	ui->saturationThresholdSlider->setRange(g_cfg_move.move1.saturation_threshold.min, g_cfg_move.move1.saturation_threshold.max);
 
+	ui->minRadiusSlider->setRange(0, radius_range);
 	connect(ui->minRadiusSlider, &QSlider::valueChanged, this, [this](int value)
 	{
 		const f32 min_radius = std::clamp(value / min_radius_conversion, g_cfg_move.min_radius.min, g_cfg_move.min_radius.max);
 		g_cfg_move.min_radius.set(min_radius);
 		update_min_radius();
 	});
-	ui->minRadiusSlider->setRange(0, radius_range);
 
+	ui->maxRadiusSlider->setRange(0, radius_range);
 	connect(ui->maxRadiusSlider, &QSlider::valueChanged, this, [this](int value)
 	{
 		const f32 max_radius = std::clamp(value / max_radius_conversion, g_cfg_move.max_radius.min, g_cfg_move.max_radius.max);
 		g_cfg_move.max_radius.set(max_radius);
 		update_max_radius();
 	});
-	ui->maxRadiusSlider->setRange(0, radius_range);
 
+	ui->colorSliderR->setRange(g_cfg_move.move1.r.min, g_cfg_move.move1.r.max);
+	ui->colorSliderG->setRange(g_cfg_move.move1.g.min, g_cfg_move.move1.g.max);
+	ui->colorSliderB->setRange(g_cfg_move.move1.b.min, g_cfg_move.move1.b.max);
 	connect(ui->colorSliderR, &QSlider::valueChanged, this, [this](int value)
 	{
 		cfg_ps_move* config = ::at32(g_cfg_move.move, m_index);
 		config->r.set(std::clamp<u8>(value, config->r.min, config->r.max));
-		update_color();
+		update_color(false, true);
 	});
 	connect(ui->colorSliderG, &QSlider::valueChanged, this, [this](int value)
 	{
 		cfg_ps_move* config = ::at32(g_cfg_move.move, m_index);
 		config->g.set(std::clamp<u8>(value, config->g.min, config->g.max));
-		update_color();
+		update_color(false, true);
 	});
 	connect(ui->colorSliderB, &QSlider::valueChanged, this, [this](int value)
 	{
 		cfg_ps_move* config = ::at32(g_cfg_move.move, m_index);
 		config->b.set(std::clamp<u8>(value, config->b.min, config->b.max));
-		update_color();
+		update_color(false, true);
 	});
-	ui->colorSliderR->setRange(g_cfg_move.move1.r.min, g_cfg_move.move1.r.max);
-	ui->colorSliderG->setRange(g_cfg_move.move1.g.min, g_cfg_move.move1.g.max);
-	ui->colorSliderB->setRange(g_cfg_move.move1.b.min, g_cfg_move.move1.b.max);
 
 	connect(ui->filterSmallContoursBox, &QCheckBox::toggled, [this](bool checked)
 	{
@@ -211,8 +218,9 @@ ps_move_tracker_dialog::ps_move_tracker_dialog(QWidget* parent)
 		if (const auto qvar = ui->comboSelectDevice->currentData(); qvar.canConvert<int>())
 		{
 			m_index = qvar.toInt();
-			update_color(true);
-			update_hue(true);
+			update_default_brightness(true);
+			update_color(true, false);
+			update_hue(true, false, true);
 			update_hue_threshold(true);
 			update_saturation_threshold(true);
 		}
@@ -239,8 +247,9 @@ ps_move_tracker_dialog::ps_move_tracker_dialog(QWidget* parent)
 
 	adjustSize();
 
-	update_color(true);
-	update_hue(true);
+	update_default_brightness(true);
+	update_color(true, false);
+	update_hue(true, false, true);
 	update_hue_threshold(true);
 	update_saturation_threshold(true);
 	update_min_radius(true);
@@ -280,7 +289,7 @@ bool ps_move_tracker_dialog::eventFilter(QObject* object, QEvent* event)
 {
 	if (event && object == ui->imageLabel && event->type() == QEvent::Type::MouseButtonRelease && m_view_mode == view_mode::contours)
 	{
-		const QMouseEvent* me = reinterpret_cast<QMouseEvent*>(event);
+		const QMouseEvent* me = static_cast<QMouseEvent*>(event);
 
 		if (me->button() == Qt::MouseButton::LeftButton)
 		{
@@ -294,7 +303,7 @@ bool ps_move_tracker_dialog::eventFilter(QObject* object, QEvent* event)
 			{
 				std::lock_guard lock(m_image_mutex);
 
-				const auto pos = me->localPos().toPoint();
+				const auto pos = me->position().toPoint();
 				const QPixmap pixmap = ui->imageLabel->pixmap();
 
 				if (pixmap.rect().contains(pos))
@@ -331,7 +340,7 @@ bool ps_move_tracker_dialog::eventFilter(QObject* object, QEvent* event)
 				cfg_ps_move* config = ::at32(g_cfg_move.move, m_index);
 				const auto [hue, saturation, value] = ps_move_tracker<true>::rgb_to_hsv(r, g, b);
 				config->hue.set(std::clamp<u32>(hue, config->hue.min, config->hue.max));
-				update_hue(true);
+				update_hue(true, false, false);
 			}
 		}
 	}
@@ -339,23 +348,23 @@ bool ps_move_tracker_dialog::eventFilter(QObject* object, QEvent* event)
 	return QDialog::eventFilter(object, event);
 }
 
-void ps_move_tracker_dialog::update_color(bool update_sliders)
+void ps_move_tracker_dialog::update_color(bool update_rgb_sliders, bool update_hue_slider)
 {
 	cfg_ps_move* config = ::at32(g_cfg_move.move, m_index);
 
 	ui->colorGb->setTitle(tr("Color: R=%0, G=%1, B=%2").arg(config->r.get()).arg(config->g.get()).arg(config->b.get()));
 
-	if (update_sliders)
+	if (update_rgb_sliders)
 	{
 		ui->colorSliderR->setValue(config->r.get());
 		ui->colorSliderG->setValue(config->g.get());
 		ui->colorSliderB->setValue(config->b.get());
 	}
-	else if (tie_hue_to_color)
+	else if (update_hue_slider)
 	{
 		const auto [hue, saturation, value] = ps_move_tracker<true>::rgb_to_hsv(config->r.get() / 255.0f, config->g.get() / 255.0f, config->b.get() / 255.0f);
 		config->hue.set(std::clamp<u32>(hue, config->hue.min, config->hue.max));
-		update_hue(true);
+		update_hue(true, false, true);
 	}
 
 	if (!m_input_thread)
@@ -380,23 +389,37 @@ void ps_move_tracker_dialog::update_color(bool update_sliders)
 	}
 }
 
-void ps_move_tracker_dialog::update_hue(bool update_slider)
+void ps_move_tracker_dialog::update_default_brightness(bool update_slider)
+{
+	const u32 brightness = g_cfg_move.default_brightness.get();
+	ui->brightnessGb->setTitle(tr("Default Orb Brightness: %0 %").arg(brightness));
+
+	if (update_slider)
+	{
+		ui->brightnessSlider->setValue(brightness);
+	}
+}
+
+void ps_move_tracker_dialog::update_hue(bool update_slider, bool update_rgb_sliders, bool no_signal)
 {
 	const u32 hue = ::at32(g_cfg_move.move, m_index)->hue.get();
 	ui->hueGb->setTitle(tr("Hue: %0").arg(hue));
 
 	if (update_slider)
 	{
+		if (no_signal) ui->hueSlider->blockSignals(true);
 		ui->hueSlider->setValue(hue);
+		if (no_signal) ui->hueSlider->blockSignals(false);
 	}
-	else if (tie_hue_to_color)
+	else if (update_rgb_sliders)
 	{
 		cfg_ps_move* config = ::at32(g_cfg_move.move, m_index);
+		const f32 default_brightness = g_cfg_move.default_brightness.get() / static_cast<f32>(g_cfg_move.default_brightness.max);
 		const auto [r, g, b] = ps_move_tracker<true>::hsv_to_rgb(hue, 1.0f, 1.0f);
-		config->r.set(r / 100);
-		config->g.set(g / 100);
-		config->b.set(b / 100);
-		update_color(true);
+		config->r.set(r * default_brightness);
+		config->g.set(g * default_brightness);
+		config->b.set(b * default_brightness);
+		update_color(true, false);
 	}
 }
 
@@ -547,7 +570,7 @@ void ps_move_tracker_dialog::process_camera_frame()
 	{
 		result = &m_ps_move_tracker->rgba();
 		format = QImage::Format::Format_RGBA8888;
-		bytes_per_line = width * 4;
+		bytes_per_line = width * 4ULL;
 		break;
 	}
 	case view_mode::grayscale:
@@ -561,11 +584,11 @@ void ps_move_tracker_dialog::process_camera_frame()
 	case view_mode::hsv_saturation:
 	case view_mode::hsv_value:
 	{
-		const int index = static_cast<int>(m_view_mode) - static_cast<int>(view_mode::hsv_hue);
+		const u32 index = static_cast<u32>(m_view_mode) - static_cast<u32>(view_mode::hsv_hue);
 		const std::vector<u8>& hsv = m_ps_move_tracker->hsv();
 		static std::vector<u8> hsv_single;
 		hsv_single.resize(hsv.size() / 3);
-		for (int i = 0; i < static_cast<int>(hsv_single.size()); i++)
+		for (usz i = 0; i < hsv_single.size(); i++)
 		{
 			hsv_single[i] = hsv[i * 3 + index];
 		}
@@ -585,7 +608,7 @@ void ps_move_tracker_dialog::process_camera_frame()
 	{
 		result = &m_ps_move_tracker->rgba_contours();
 		format = QImage::Format::Format_RGBA8888;
-		bytes_per_line = width * 4;
+		bytes_per_line = width * 4ULL;
 		break;
 	}
 	}
@@ -611,11 +634,14 @@ void ps_move_tracker_dialog::process_camera_frame()
 QPixmap ps_move_tracker_dialog::get_histogram(const std::array<u32, 360>& hues, bool ignore_zero) const
 {
 	// Create image
+	const int width = ui->histogramLabel->width();
 	const int height = ui->histogramLabel->height();
+	const f32 pixelsPerHue = width / static_cast<f32>(hues.size());
+
 	static QPixmap background = [&]()
 	{
 		// Paint background
-		QPixmap pxmap(static_cast<int>(hues.size()), height);
+		QPixmap pxmap(width, height);
 		pxmap.fill(Qt::white);
 		return pxmap;
 	}();
@@ -641,10 +667,18 @@ QPixmap ps_move_tracker_dialog::get_histogram(const std::array<u32, 360>& hues, 
 		painter.fillRect(0, 0, max_hue - 360, histo.height(), Qt::lightGray);
 	}
 
+	const auto get_hue_bar_x = [pixelsPerHue](u16 hue)
+	{
+		const int x0 = hue * pixelsPerHue;
+		const int x1 = std::max<int>(x0, x0 + pixelsPerHue - 1);
+		return std::pair<int, int>(x0, x1);
+	};
+
 	// Paint target hue
 	const auto [r, g, b] = ps_move_tracker<true>::hsv_to_rgb(hue, 1.0f, 1.0f);
+	const auto [x0, x1] = get_hue_bar_x(hue);
 	painter.setPen(QColor(r, g, b));
-	painter.drawLine(hue, 0, hue, histo.height() - 1);
+	painter.drawLine(x0, 0, x1, histo.height() - 1);
 
 	// Paint histogram
 	painter.setPen(Qt::black);
@@ -661,7 +695,9 @@ QPixmap ps_move_tracker_dialog::get_histogram(const std::array<u32, 360>& hues, 
 	{
 		const int bar_height = (hues[i] / static_cast<float>(max_value)) * height;
 		if (bar_height <= 0) continue;
-		painter.drawLine(i, height - 1, i, height - bar_height);
+
+		const auto [x0, x1] = get_hue_bar_x(i);
+		painter.drawLine(x0, height - 1, x1, height - bar_height);
 	}
 
 	return histo;

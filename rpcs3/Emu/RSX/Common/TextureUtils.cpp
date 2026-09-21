@@ -2,8 +2,9 @@
 #include "Emu/Memory/vm.h"
 #include "TextureUtils.h"
 #include "../RSXThread.h"
-#include "../rsx_utils.h"
-#include "../color_utils.h"
+#include "../Utils/rsx_utils.h"
+#include "../Utils/color_utils.hpp"
+#include "../Utils/image_utils.hpp"
 
 #include "3rdparty/bcdec/bcdec.hpp"
 
@@ -33,7 +34,7 @@ namespace utils
 namespace
 {
 
-#ifndef __APPLE__
+#if !defined(__APPLE__) || !defined(ARCH_X64)
 u16 convert_rgb655_to_rgb565(const u16 bits)
 {
 	// g6 = g5
@@ -946,7 +947,7 @@ namespace rsx
 			break;
 		}
 
-#ifndef __APPLE__
+#if !defined(__APPLE__) || !defined(ARCH_X64)
 		case CELL_GCM_TEXTURE_R6G5B5:
 		{
 			if (is_swizzled)
@@ -1694,15 +1695,16 @@ namespace rsx
 
 	std::pair<u32, bool> get_compatible_gcm_format(rsx::surface_color_format format)
 	{
+		// NOTE: HW tests prove that all multibyte formats need to swap bytes
 		switch (format)
 		{
 		case rsx::surface_color_format::r5g6b5:
-			return{ CELL_GCM_TEXTURE_R5G6B5, false };
+			return{ CELL_GCM_TEXTURE_R5G6B5, true };
 
 		case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
 		case rsx::surface_color_format::x8r8g8b8_o8r8g8b8:
 		case rsx::surface_color_format::a8r8g8b8:
-			return{ CELL_GCM_TEXTURE_A8R8G8B8, true }; //verified
+			return{ CELL_GCM_TEXTURE_A8R8G8B8, true };
 
 		case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
 		case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
@@ -1717,7 +1719,7 @@ namespace rsx
 
 		case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
 		case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
-			return{ CELL_GCM_TEXTURE_A1R5G5B5, false };
+			return{ CELL_GCM_TEXTURE_A1R5G5B5, true };
 
 		case rsx::surface_color_format::b8:
 			return{ CELL_GCM_TEXTURE_B8, false };
@@ -1726,7 +1728,7 @@ namespace rsx
 			return{ CELL_GCM_TEXTURE_G8B8, true };
 
 		case rsx::surface_color_format::x32:
-			return{ CELL_GCM_TEXTURE_X32_FLOAT, true }; //verified
+			return{ CELL_GCM_TEXTURE_X32_FLOAT, true };
 		default:
 			fmt::throw_exception("Unhandled surface format 0x%x", static_cast<u32>(format));
 		}
@@ -1790,7 +1792,7 @@ namespace rsx
 		case CELL_GCM_TEXTURE_R5G6B5:
 			return rsx::surface_color_format::r5g6b5;
 		case CELL_GCM_TEXTURE_A8R8G8B8:
-			return rsx::surface_color_format::a8b8g8r8;
+			return rsx::surface_color_format::a8r8g8b8;
 		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
 			return rsx::surface_color_format::w16z16y16x16;
 		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:

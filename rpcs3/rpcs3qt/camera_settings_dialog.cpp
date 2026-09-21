@@ -3,14 +3,12 @@
 #include "ui_camera_settings_dialog.h"
 #include "permissions.h"
 #include "Emu/Io/camera_config.h"
-#include "Emu/System.h"
 #include "Emu/system_config.h"
 
 #include <QCameraDevice>
 #include <QMediaDevices>
 #include <QMessageBox>
 #include <QPushButton>
-#include <QVideoSink>
 
 #ifdef HAVE_SDL3
 #include "Input/sdl_instance.h"

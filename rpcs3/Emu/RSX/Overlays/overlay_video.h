@@ -2,6 +2,7 @@
 
 #include "overlay_controls.h"
 #include "util/video_source.h"
+#include "Emu/GameInfo.h"
 
 namespace rsx
 {
@@ -22,6 +23,7 @@ namespace rsx
 			video_view(const std::string& video_path, const std::string& audio_path, const std::string& thumbnail_path);
 			video_view(const std::string& video_path, const std::string& audio_path, const std::vector<u8>& thumbnail_buf);
 			video_view(const std::string& video_path, const std::string& audio_path, u8 thumbnail_id);
+			video_view(const GameInfo& info);
 			virtual ~video_view();
 
 			void set_active(bool active);
@@ -30,7 +32,7 @@ namespace rsx
 			compiled_resource& get_compiled() override;
 
 		private:
-			void init_video(const std::string& video_path, const std::string& audio_path);
+			void init_video(const std::string& video_path, const std::string& audio_path, bool video_in_archive, bool audio_in_archive);
 
 			usz m_buffer_index = 0;
 			std::array<std::unique_ptr<video_info>, 2> m_video_info; // double buffer

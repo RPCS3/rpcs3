@@ -11,7 +11,7 @@ settings::~settings()
 	sync();
 }
 
-void settings::sync()
+void settings::sync() const
 {
 	if (m_settings)
 	{

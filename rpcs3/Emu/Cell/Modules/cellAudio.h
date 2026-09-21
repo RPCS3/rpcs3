@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Emu/Memory/vm_ptr.h"
+#include "Emu/Cell/ErrorCodes.h"
 #include "Utilities/Thread.h"
 #include "Utilities/simple_ringbuf.h"
 #include "Emu/Memory/vm.h"
@@ -10,6 +11,8 @@
 #include "Emu/system_config_types.h"
 
 struct lv2_event_queue;
+struct lv2_memory;
+class ppu_thread;
 
 // Error codes
 enum CellAudioError : u32
@@ -122,6 +125,23 @@ enum : u32
 	PORT_BUFFER_TAG_LAST_8CH = AUDIO_BLOCK_SIZE_8CH - 1,
 	PORT_BUFFER_TAG_DELTA_8CH = PORT_BUFFER_TAG_LAST_8CH / (PORT_BUFFER_TAG_COUNT - 1),
 	PORT_BUFFER_TAG_FIRST_8CH = PORT_BUFFER_TAG_LAST_8CH % (PORT_BUFFER_TAG_COUNT - 1),
+
+	// The tags above are spread over the block diagonally, so on an 8 channel port they all land on channels
+	// 2 to 7. A game may legitimately never write those: one that was told the output is stereo fills only
+	// front left/right of an 8 channel port, and cellAudioAdd2chData does the same. Such a port keeps every
+	// tag at its initial value and looks untouched forever, which silences it while buffering is enabled.
+	// These extra marks sit on the front right channel, which any audio content writes, and are only used to
+	// tell "the game wrote nothing" apart from "the game wrote the front channels only". They carry no state:
+	// a mark counts as written when it no longer is the negative zero that tag() put there.
+	PORT_BUFFER_MARK_CHANNEL = 1,
+	PORT_BUFFER_MARK_DELTA_SAMPLE = (AUDIO_BUFFER_SAMPLES - 1) / (PORT_BUFFER_TAG_COUNT - 1),
+
+	// How many periods a port must go without moving a single tag before the marks are believed and it is
+	// treated as one that only ever fills its front channels. A game writing genuine surround moves a tag
+	// every period, so it never gets anywhere near this; one that fills the buffer one channel at a time
+	// and stalls mid-pass is covered by the same margin. Below the threshold the tags alone decide, so the
+	// marks are a fallback for a case the tags cannot see rather than a rule of their own.
+	PORT_FRONT_ONLY_SETTLE_PERIODS = 8,
 };
 
 enum class audio_port_state : u32
@@ -136,6 +156,8 @@ struct audio_port
 	atomic_t<audio_port_state> state = audio_port_state::closed;
 
 	u32 number = 0;
+	u32 server_index = 0;
+	bool mapped = false;
 	vm::ptr<char> addr{};
 	vm::ptr<u64> index{};
 
@@ -159,7 +181,7 @@ struct audio_port
 
 	u32 block_size() const
 	{
-		return num_channels * AUDIO_BUFFER_SAMPLES;
+		return std::max(num_channels, 1u) * AUDIO_BUFFER_SAMPLES;
 	}
 
 	u32 buf_size() const
@@ -173,14 +195,10 @@ struct audio_port
 		return (cur_pos + ofs) % num_blocks;
 	}
 
-	u32 buf_addr(s32 offset = 0) const
+	be_t<f32>* get_vm_ptr() const
 	{
-		return addr.addr() + position(offset) * buf_size();
-	}
-
-	be_t<f32>* get_vm_ptr(s32 offset = 0) const
-	{
-		return vm::_ptr<f32>(buf_addr(offset));
+		const u32 block = static_cast<u16>(*index) & (num_blocks - 1);
+		return vm::_ptr<f32>(addr.addr() + block * buf_size());
 	}
 
 
@@ -188,7 +206,12 @@ struct audio_port
 	u32 prev_touched_tag_nr = 0;
 	f32 last_tag_value[PORT_BUFFER_TAG_COUNT] = { 0 };
 
-	void tag(s32 offset = 0);
+	u32 mark_position(u32 tag_nr) const
+	{
+		return tag_nr * PORT_BUFFER_MARK_DELTA_SAMPLE * num_channels + PORT_BUFFER_MARK_CHANNEL;
+	}
+
+	void tag(be_t<f32>* port_buf);
 
 	audio_port() = default;
 
@@ -370,6 +393,7 @@ class cell_audio_thread
 {
 private:
 	std::unique_ptr<audio_ringbuffer> ringbuffer{};
+	be_t<f32>* get_buffer(const audio_port& port, s32 offset = 0) const;
 
 	void reset_ports(s32 offset = 0);
 	void advance(u64 timestamp);
@@ -388,6 +412,14 @@ public:
 
 	shared_mutex mutex{};
 	atomic_t<u8> init = 0;
+	u32 shared_area = 0;
+	u32 shared_address = 0;
+	u32 shared_refs = 0;
+	shared_ptr<lv2_memory> shared_memory;
+	std::array<shared_ptr<lv2_memory>, AUDIO_PORT_COUNT> port_memories;
+	u32 free_port_count = 0;
+	std::array<u32, AUDIO_PORT_COUNT> free_ports{};
+	std::array<u32, AUDIO_PORT_COUNT> free_indices{};
 
 	u32 key_count = 0;
 	u8 event_period = 0;
@@ -414,6 +446,18 @@ public:
 	bool m_backend_failed = false;
 	bool m_audio_should_restart = false;
 
+	// Whether we already reported that a port carries front channel audio only. Diagnostics for a condition
+	// that is otherwise indistinguishable from a game that simply went silent, so it is worth one line per
+	// port. Deliberately not serialized: a savestate that reloads into the same condition may report it
+	// again, which is harmless and arguably useful.
+	std::array<bool, AUDIO_PORT_COUNT> m_front_only_reported{};
+
+	// Periods since each port last moved one of its buffer tags, saturating. Tells a port that fills only
+	// its front channels apart from one that is merely between two passes of a channel by channel write,
+	// see PORT_FRONT_ONLY_SETTLE_PERIODS. Deliberately not serialized: it starts at zero, which is the
+	// conservative end, and settles again within a few periods.
+	std::array<u8, AUDIO_PORT_COUNT> m_periods_without_tag{};
+
 	void operator()();
 
 	SAVESTATE_INIT_POS(9);
@@ -423,6 +467,9 @@ public:
 	void save(utils::serial& ar);
 
 	audio_port* open_port();
+	error_code allocate_port(ppu_thread& ppu, audio_port& port);
+	void close_port(ppu_thread& ppu, audio_port& port);
+	void release_shared_memory(ppu_thread& ppu);
 
 	static constexpr auto thread_name = "cellAudio Thread"sv;
 };

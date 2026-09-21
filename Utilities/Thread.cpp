@@ -6,6 +6,7 @@
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/RSX/RSXThread.h"
+#include "Emu/system_config.h"
 #include "Thread.h"
 #include "Utilities/JIT.h"
 #include <cfenv>
@@ -96,6 +97,7 @@ DYNAMIC_IMPORT_RENAME("Kernel32.dll", SetThreadDescriptionImport, "SetThreadDesc
 #include "util/asm.hpp"
 #include "util/v128.hpp"
 #include "util/simd.hpp"
+#include "util/cctype.hpp"
 #include "util/sysinfo.hpp"
 #include "Emu/Memory/vm_locking.h"
 
@@ -185,9 +187,9 @@ bool IsDebuggerPresent()
 
 	for (const char* cp = status.data() + found + 10; cp <= status.data() + num_read; ++cp)
 	{
-		if (!std::isspace(*cp))
+		if (!utils::isspace(*cp))
 		{
-			return std::isdigit(*cp) != 0 && *cp != '0';
+			return utils::isdigit(*cp) != 0 && *cp != '0';
 		}
 	}
 
@@ -4032,4 +4034,82 @@ u64 thread_ctrl::get_tid()
 bool thread_ctrl::is_main()
 {
 	return get_tid() == utils::main_tid;
+}
+
+usz map_workload(std::string_view thread_name, usz thread_count, usz count, std::function<void(usz)>&& func)
+{
+	ensure(!!func);
+
+	if (thread_count <= 1)
+	{
+		for (usz i = 0; i < count; i++)
+		{
+			func(i);
+		}
+		return 1;
+	}
+
+	atomic_t<u32> num_threads_succeeded {0}; // Check if any thread didn't finish. For example when hitting an exception.
+
+	atomic_t<usz> indexer = 0;
+	const auto iterate = [count, &func, &indexer]()
+	{
+		while (thread_ctrl::state() != thread_state::aborting)
+		{
+			// Make sure indexer does not exceed count
+			const usz index = indexer.fetch_op([count](usz& v)
+			{
+				if (v < count)
+				{
+					v++;
+					return true;
+				}
+
+				return false;
+			}).first;
+
+			if (index >= count)
+			{
+				break;
+			}
+
+			func(index);
+		}
+	};
+	named_thread_group workers(thread_name, ::narrow<u32>(thread_count) - 1, [&iterate, &num_threads_succeeded]()
+	{
+		iterate();
+		num_threads_succeeded++;
+	});
+
+	iterate();
+
+	workers.join();
+
+	return num_threads_succeeded + 1;
+}
+
+usz map_workload(std::string_view thread_name, usz thread_count, std::function<void()>&& func)
+{
+	ensure(!!func);
+
+	if (thread_count <= 1)
+	{
+		func();
+		return 1;
+	}
+
+	atomic_t<u32> num_threads_succeeded {0}; // Check if any thread didn't finish. For example when hitting an exception.
+
+	named_thread_group workers(thread_name, ::narrow<u32>(thread_count) - 1, [&func, &num_threads_succeeded]()
+	{
+		func();
+		num_threads_succeeded++;
+	});
+
+	func();
+
+	workers.join();
+
+	return num_threads_succeeded + 1;
 }

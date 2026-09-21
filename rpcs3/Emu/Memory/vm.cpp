@@ -1320,6 +1320,8 @@ namespace vm
 
 		if (m_id.exchange(0))
 		{
+			std::unordered_map<const utils::shm*, s64> mapping_refs;
+
 			// Deallocate all memory
 			for (auto it = m_map.begin(), end = m_map.end(); it != end;)
 			{
@@ -1333,7 +1335,40 @@ namespace vm
 				{
 					if (it->second.second.use_count() != 1)
 					{
-						fmt::throw_exception("External memory usage at block 0x%x (addr=0x%x, size=0x%x)", this->addr, it->first, size);
+						if (mapping_refs.empty())
+						{
+							const auto count_refs = [&mapping_refs](const auto& map)
+							{
+								for (const auto& entry : map)
+								{
+									if (entry.second.second)
+									{
+										mapping_refs[entry.second.second.get()]++;
+									}
+								}
+							};
+
+							// count this block separately, vm::unmap removes it from g_locations before calling us
+							count_refs(m_map);
+
+							for (const auto& block : g_locations)
+							{
+								if (block && block.get() != this)
+								{
+									count_refs((block->m.*block_map)());
+								}
+							}
+						}
+
+						if (it->second.second.use_count() != mapping_refs.at(it->second.second.get()))
+						{
+							fmt::throw_exception("External memory usage at block 0x%x (addr=0x%x, size=0x%x)", this->addr, it->first, size);
+						}
+					}
+
+					if (!mapping_refs.empty())
+					{
+						mapping_refs.at(it->second.second.get())--;
 					}
 
 					it->second.second.reset();
@@ -2080,8 +2115,16 @@ namespace vm
 
 			if (!loc)
 			{
-				// Deferred allocation
-				loc = _find_map(area_size, 0x10000000, flags);
+				if (location == vm::main || addr == 0x00010000)
+				{
+					// Special
+					loc = std::make_shared<block_t>(addr, area_size, page_size_64k | preallocated);
+				}
+				else
+				{
+					// Deferred allocation
+					loc = _find_map(area_size, 0x10000000, flags);
+				}
 			}
 
 			return loc;
@@ -2229,7 +2272,7 @@ namespace vm
 
 			g_locations =
 			{
-				std::make_shared<block_t>(0x00010000, 0x0FFF0000, page_size_64k | preallocated), // main
+				nullptr,                                                                         // main
 				nullptr,		                                                                 // user 64k pages
 				nullptr,                                                                         // user 1m pages
 				nullptr,                                                                         // rsx context
@@ -2294,29 +2337,10 @@ namespace vm
 
 		std::map<utils::shm*, usz> shared_map;
 
-#ifndef _MSC_VER
-		shared.erase(std::unique(shared.begin(), shared.end(), [](auto& a, auto& b) { return a.first == b.first; }), shared.end());
-#else
-		// Workaround for bugged std::unique
-		for (auto it = shared.begin(); it != shared.end();)
+		std::erase_if(shared, [&](const auto& memory)
 		{
-			if (shared_map.count(it->first))
-			{
-				it = shared.erase(it);
-				continue;
-			}
-
-			shared_map.emplace(it->first, 0);
-			it++;
-		}
-
-		shared_map.clear();
-#endif
-
-		for (auto& p : shared)
-		{
-			shared_map.emplace(p.first, &p - shared.data());
-		}
+			return !shared_map.emplace(memory.first, shared_map.size()).second;
+		});
 
 		// TODO: proper serialization of std::map
 		ar(static_cast<usz>(shared_map.size()));
@@ -2452,6 +2476,12 @@ namespace vm
 		// Non-null terminated but terminated by size limit (so the string may continue)
 		return size == max_size;
 	}
+}
+
+template <>
+void fmt_class_string<vm::addr_t>::format(std::string& out, u64 arg)
+{
+	fmt_class_string<u32>::format(out, arg);
 }
 
 void fmt_class_string<vm::_ptr_base<const void, u32>>::format(std::string& out, u64 arg)

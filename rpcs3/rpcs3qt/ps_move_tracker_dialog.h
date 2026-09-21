@@ -28,8 +28,9 @@ public:
 private:
 	bool eventFilter(QObject* object, QEvent* event) override;
 
-	void update_color(bool update_sliders = false);
-	void update_hue(bool update_slider = false);
+	void update_color(bool update_rgb_sliders, bool update_hue_slider);
+	void update_default_brightness(bool update_slider);
+	void update_hue(bool update_hue_slider, bool update_rgb_sliders, bool no_signal);
 	void update_hue_threshold(bool update_slider = false);
 	void update_saturation_threshold(bool update_slider = false);
 	void update_min_radius(bool update_slider = false);

@@ -47,7 +47,7 @@ namespace date_time
 
 		std::string parse_buf;
 
-		if constexpr(separator != 0)
+		if constexpr (separator != 0)
 			parse_buf = std::string("%Y") + separator + "%m" + separator + "%d" + separator + "%H" + separator + "%M" + separator + "%S";
 		else
 			parse_buf = "%Y%m%d%H%M%S";

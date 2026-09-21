@@ -55,27 +55,8 @@ namespace rsx
 				if (fs::exists(entry.info.path))
 				{
 					// Fit the new image into the available space
-					if (entry.info.width > 0 && entry.info.height > 0)
-					{
-						const u16 target_width = image->w - (image->padding_left + image->padding_right);
-						const u16 target_height = image->h - (image->padding_top + image->padding_bottom);
-						const f32 target_ratio = target_width / static_cast<f32>(target_height);
-						const f32 image_ratio = entry.info.width / static_cast<f32>(entry.info.height);
-						const f32 convert_ratio = image_ratio / target_ratio;
-
-						if (convert_ratio > 1.0f)
-						{
-							const u16 new_padding = static_cast<u16>(target_height - target_height / convert_ratio) / 2;
-							image->set_padding(image->padding_left, image->padding_right, new_padding + image->padding_top, new_padding + image->padding_bottom);
-						}
-						else if (convert_ratio < 1.0f)
-						{
-							const u16 new_padding = static_cast<u16>(target_width - target_width * convert_ratio) / 2;
-							image->set_padding(image->padding_left + new_padding, image->padding_right + new_padding, image->padding_top, image->padding_bottom);
-						}
-					}
-
 					icon_data = std::make_unique<image_info>(entry.info.path);
+					static_cast<image_view*>(image.get())->set_keep_aspect_ratio(true);
 					static_cast<image_view*>(image.get())->set_raw_image(icon_data.get());
 				}
 				else

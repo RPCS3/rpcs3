@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "overlay_home_menu_page.h"
-#include "Emu/System.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/system_config.h"
 
 namespace rsx
@@ -63,6 +63,7 @@ namespace rsx
 				is_current_page = false;
 				page->is_current_page = true;
 				rsx_log.notice("Home menu: changing current page from '%s' to '%s'", title, page->title);
+				refresh();
 			}
 		}
 
@@ -237,7 +238,7 @@ namespace rsx
 						if (m_config_changed && *m_config_changed)
 						{
 							g_cfg.from_string(g_backup_cfg.to_string());
-							Emu.GetCallbacks().update_emu_settings();
+							g_emu_callbacks.update_emu_settings();
 							*m_config_changed = false;
 							refresh();
 						}
@@ -252,7 +253,7 @@ namespace rsx
 					show_dialog(get_localized_string(localized_string_id::HOME_MENU_SETTINGS_SAVE), [this]()
 					{
 						rsx_log.notice("home_menu_page: saving settings...");
-						Emu.GetCallbacks().save_emu_settings();
+						g_emu_callbacks.save_emu_settings();
 
 						if (m_config_changed)
 						{
