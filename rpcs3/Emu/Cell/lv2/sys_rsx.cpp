@@ -142,6 +142,36 @@ bool rsx::thread::send_event(u64 data1, u64 event_flags, u64 data3)
 	return true;
 }
 
+void _sys_rsx_drain_event_queue(rsx::thread* rsxthr)
+{
+	const auto& driverInfo = *vm::_ptr<RsxDriverInfo>(rsxthr->driver_info);
+	const u32 rsx_queue_id = driverInfo.handler_queue;
+
+	if (const auto queue = idm::get_unlocked<lv2_obj, lv2_event_queue>(rsx_queue_id))
+	{
+		while (true)
+		{
+			// First check if the queue is empty. This is the most likely scenario.
+			{
+				std::lock_guard lock(queue->mutex);
+				if (!queue->exists || (queue->events.empty() && queue->pq))
+				{
+					break;
+				}
+			}
+
+			// Emulator still running?
+			if (Emu.IsStopped())
+			{
+				break;
+			}
+
+			// Wait
+			thread_ctrl::wait_for(100);
+		}
+	}
+}
+
 error_code sys_rsx_device_open(cpu_thread& cpu)
 {
 	cpu.state += cpu_flag::wait;
@@ -933,6 +963,11 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 	case 0xFEF: // hack: user command
 	{
+		// NOTE: Hardware tests show that back-to-back user_cmd events execute in-order.
+		// However, data is being stored in the userCmdParam value which can get clobbered if we leave the values enqueued.
+		// As an optimization, instead of draining the queue after sending the event, we do it before. That way, back-to-back calls are correctly ordered, but single events don't bother waiting.
+		_sys_rsx_drain_event_queue(render);
+
 		// 'custom' invalid package id for now
 		// as i think we need custom lv1 interrupts to handle this accurately
 		// this also should probly be set by rsxthread
