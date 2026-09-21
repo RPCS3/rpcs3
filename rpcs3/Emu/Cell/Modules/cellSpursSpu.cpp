@@ -219,7 +219,17 @@ s32 sys_spu_thread_send_event(spu_thread& spu, u8 spup, u32 data0, u32 data1)
 	}
 
 	spu.set_ch_value(SPU_WrOutMbox, data1);
-	spu.set_ch_value(SPU_WrOutIntrMbox, (spup << 24) | (data0 & 0x00FFFFFF));
+
+	// If the send is aborted (CELL_EAGAIN in spu_thread::set_ch_value(SPU_WrOutIntrMbox),
+	// e.g. the event queue is full), the mailboxes are restored and no In_Mbox completion
+	// is ever written. The SPURS kernel has already executed past the WRCH, so blocking on
+	// SPU_RdInMbox below would hang forever (Black Ops 2 split-screen, #16426).
+	// Report EBUSY instead. Callers that ignore the result drop the notification.
+	if (!spu.set_ch_value(SPU_WrOutIntrMbox, (spup << 24) | (data0 & 0x00FFFFFF)))
+	{
+		return CELL_EBUSY;
+	}
+
 	return static_cast<u32>(spu.get_ch_value(SPU_RdInMbox));
 }
 
