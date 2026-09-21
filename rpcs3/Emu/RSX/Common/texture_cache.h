@@ -3683,45 +3683,67 @@ namespace rsx
 				// We also want to grab the section alias while we're at it to make sure the memory is sane
 				section_storage_type* dest_section = nullptr;
 
-				if (const auto found = find_cached_texture(dst_subres.surface->get_memory_range(), { .gcm_format = RSX_GCM_FORMAT_IGNORED }, false, false, false);
-					found && found->is_locked())
-				{
-					if (found->get_rsx_pitch() == dst.pitch) [[ likely ]]
-					{
-						// It is possible for other resource types to overlap this fbo if it only covers a small section of its max width.
-						// Blit engine read and write resources do not allow clipping and would have been recreated at the same address.
-						// TODO: In cases of clipped data, generate the blit resources in the surface cache instead.
-						if (found->get_context() == rsx::texture_upload_context::framebuffer_storage)
-						{
-							found->touch(m_cache_update_tag);
-							update_cache_tag();
+				// Write back all host data if we're expecting to miss data on super_ptr path...
+				const auto test_range = dst_subres.surface->get_memory_range();
+				bool require_range_flush = false;
 
-							if (found->get_section_base() == dst_subres.surface->base_addr)
-							{
-								ensure(!dest_section, "More than one section matches our surface!");
-								ensure(found->get_section_range() == dst_subres.surface->get_memory_range(), "Memory range does not match!");
-								dest_section = found;
-							}
-						}
-					}
-					else
+				for (auto It = m_storage.range_begin(test_range, section_bounds::locked_range, true); It != m_storage.range_end(); ++It)
+				{
+					auto& section = *It;
+					if (!section.is_flushable())
 					{
-						// Unlikely situation, but the only one which would allow re-upload from CPU to overlap this section.
-						if (found->is_flushable())
-						{
-							// Technically this is possible in games that may change surface pitch at random (insomniac engine)
-							// FIXME: A proper fix includes pitch conversion and surface inheritance chains between surface targets and blit targets (unified cache) which is a very long-term thing.
-							const auto range = found->get_section_range();
-							rsx_log.error("[Pitch Mismatch] GPU-resident data at 0x%x->0x%x is discarded due to surface cache data clobbering it.", range.start, range.end);
-						}
-						found->discard(true);
+						continue;
+					}
+
+					// If we reached here, we overlap the output range and we're locked (have host-side data)
+					if (section.get_rsx_pitch() != dst_subres.surface->get_rsx_pitch() ||
+						section.get_context() != rsx::texture_upload_context::framebuffer_storage)
+					{
+						// Invalidate the range if we need to upload data.
+						require_range_flush = true;
+						continue;
+					}
+
+					if (section.matches(test_range))
+					{
+						section.touch(m_cache_update_tag);
+						update_cache_tag();
+
+						ensure(!dest_section, "More than one section matches our surface!");
+						dest_section = &section;
 					}
 				}
 
 				if (!dest_section || !dest_section->is_locked())
 				{
+					// Check if the transfer operation fully covers the destination...
+					const bool skip_data_load =
+						dst_area.x1 == 0 &&
+						dst_area.y1 == 0 &&
+						dst_area.x2 == dst_subres.surface->template get_surface_width<rsx::surface_metrics::samples, int>() &&
+						dst_area.y2 == dst_subres.surface->template get_surface_height<rsx::surface_metrics::samples, int>();
+
+					// Forced write-back if we actually need to upload.
+					if (require_range_flush && !skip_data_load)
+					{
+						invalidate_range_impl_base(
+							cmd,
+							dst_subres.surface->get_memory_range(),
+							invalidation_cause::cause_is_write | invalidation_cause::cause_uses_strict_data_bounds,
+							{},
+							std::forward<Args>(extras)...);
+					}
+
 					// All blit targets must be protected, regardless of WCB/RCB settings
-					dst_subres.surface->state_flags |= rsx::surface_state_flags::force_data_load | rsx::surface_state_flags::erase_bkgnd;
+					// Optimization: Ignore BG data load and BG erase if we're going to fully overwrite the destination
+					if (skip_data_load)
+					{
+						dst_subres.surface->state_flags &= ~(rsx::surface_state_flags::force_data_load | rsx::surface_state_flags::erase_bkgnd);
+					}
+					else
+					{
+						dst_subres.surface->state_flags |= rsx::surface_state_flags::force_data_load | rsx::surface_state_flags::erase_bkgnd;
+					}
 
 					if (!dest_section)
 					{
