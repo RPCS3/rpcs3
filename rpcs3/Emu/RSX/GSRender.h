@@ -2,6 +2,7 @@
 
 #include "GSFrameBase.h"
 #include "Emu/RSX/RSXThread.h"
+#include "Emu/system_config_types.h"
 
 enum wm_event
 {

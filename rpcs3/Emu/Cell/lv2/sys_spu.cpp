@@ -95,7 +95,7 @@ bool sys_spu_image::load(const fs::file& stream)
 	const s32 nsegs = sys_spu_image::get_nsegs(obj.progs);
 
 	const u32 mem_size = nsegs * sizeof(sys_spu_segment) + ::size32(stream);
-	const vm::ptr<sys_spu_segment> segs = vm::cast(vm::reserve_map(vm::user64k, 0, 0x10000000)->alloc(mem_size));
+	const vm::ptr<sys_spu_segment> segs = vm::cast(allocate_user_memory(mem_size, 0x10000));
 
 	//const u32 entry = obj.header.e_entry;
 
@@ -622,7 +622,7 @@ error_code _sys_spu_image_close(ppu_thread& ppu, vm::ptr<sys_spu_image> img)
 		return CELL_ESRCH;
 	}
 
-	ensure(vm::dealloc(handle->segs.addr(), vm::user64k));
+	ensure(vm::dealloc(handle->segs.addr()));
 	return CELL_OK;
 }
 

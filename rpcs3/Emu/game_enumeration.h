@@ -3,6 +3,7 @@
 #include "util/types.hpp"
 #include "util/sysinfo.hpp"
 #include "Utilities/mutex.h"
+#include "emu_callbacks.h"
 #include "System.h"
 #include "system_utils.hpp"
 #include "vfs_config.h"
@@ -90,7 +91,7 @@ private:
 template <typename game_info_type>
 void game_enumeration<game_info_type>::initialize_paths()
 {
-	m_hdd0 = Emu.GetCallbacks().resolve_path(rpcs3::utils::get_hdd0_dir()) + '/';
+	m_hdd0 = g_emu_callbacks.resolve_path(rpcs3::utils::get_hdd0_dir()) + '/';
 	m_dev_flash = g_cfg_vfs.get_dev_flash();
 	m_game_icon_path = fs::get_config_dir() + "/Icons/game_icons/";
 }

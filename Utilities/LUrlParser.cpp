@@ -26,6 +26,7 @@
  */
 
 #include "LUrlParser.h"
+#include "util/cctype.hpp"
 
 #include <algorithm>
 #include <cstring>
@@ -36,7 +37,7 @@ static bool IsSchemeValid( const std::string& SchemeName )
 {
 	return std::all_of(SchemeName.cbegin(), SchemeName.cend(), [](const auto& c)
 	{
-		return isalpha(c) || c == '+' || c == '-' || c == '.';
+		return utils::isalpha(c) || c == '+' || c == '-' || c == '.';
 	});
 }
 

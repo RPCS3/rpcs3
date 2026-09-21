@@ -6,7 +6,6 @@
 
 #include "Emu/Cell/PPUThread.h"
 #include "Crypto/unedat.h"
-#include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/VFS.h"
 #include "Emu/vfs_config.h"
@@ -65,11 +64,37 @@ void fmt_class_string<lv2_file>::format(std::string& out, u64 arg)
 		switch (std::bit_width(size) / 10 * 10)
 		{
 		case 0: fmt::append(size_str, "%u", size); break;
-		case 10: fmt::append(size_str, "%gKB", size / 1024.); break;
+		case 10:
+		{
+			if (size <= 9999)
+			{
+				fmt::append(size_str, "%u", size);
+				break;
+			}
+
+			fmt::append(size_str, "%gKB", size / 1024.);
+			break;
+		}
 		case 20: fmt::append(size_str, "%gMB", size / (1024. * 1024)); break;
 
 		default:
 		case 30: fmt::append(size_str, "%gGB", size / (1024. * 1024 * 1024)); break;
+		}
+
+		const usz must_be_larger = size_str.ends_with("B") ? 5 : 3;
+
+		if (usz dot_pos = size_str.find_first_of("."); size_str.size() >= must_be_larger && dot_pos < size_str.size() - must_be_larger)
+		{
+			const usz dig_pos = dot_pos + 1;
+
+			if (must_be_larger == 5)
+			{
+				size_str.erase(size_str.begin() + dig_pos + 3, size_str.begin() + (size_str.size() - 2));
+			}
+			else
+			{
+				size_str.erase(size_str.begin() + dig_pos + 3, size_str.end());
+			}
 		}
 
 		return size_str;
@@ -77,8 +102,11 @@ void fmt_class_string<lv2_file>::format(std::string& out, u64 arg)
 
 	const usz pos = file.file ? file.file.pos() : umax;
 	const usz size = file.file ? file.file.size() : umax;
+	const usz read = file.reads_total;
+	const usz write = file.writes_total;
 
-	fmt::append(out, u8"%s, '%s', Mode: 0x%x, Flags: 0x%x, Pos/Size: %s/%s (0x%x/0x%x)", file.type, file.name.data(), file.mode, file.flags, get_size(pos), get_size(size), pos, size);
+	fmt::append(out, u8"%s, '%s', Mode: 0x%x, Flags: 0x%x, Pos/Size: %s/%s (0x%x/0x%x), Read/Written: %s/%s (0x%x/0x%x)", file.type, file.name.data(), file.mode, file.flags, get_size(pos), get_size(size), pos, size
+		, get_size(read), get_size(write), read, write);
 }
 
 template<>
@@ -752,6 +780,23 @@ lv2_dir::lv2_dir(utils::serial& ar)
 	}())
 	, pos(ar.pop<u64>())
 {
+	// Every lv2_dir carries . and .., so supply the ones the saved listing lacks
+	// Taken in reverse, because each one is pushed to the front and . has to end up ahead of ..
+	for (std::string_view name : {".."sv, "."sv})
+	{
+		if (std::none_of(entries.cbegin(), entries.cend(), FN(x.name == name)))
+		{
+			fs::dir_entry& entry = *entries.emplace(entries.begin());
+			entry.name = name;
+			entry.is_directory = true;
+
+			// Each insertion shifts every index, so an enumeration already under way follows along
+			if (pos.raw())
+			{
+				pos.raw()++;
+			}
+		}
+	}
 }
 
 void lv2_dir::save(utils::serial& ar)
@@ -1141,13 +1186,15 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 				{
 					if (i == max_i)
 					{
-						// Run out of keys to try
+						// Run out of keys to try: the one failure of this loop, and the only one worth a line in the log
+						sys_fs.error("None of the %d licence key(s) the game registered decrypts '%s'", max_i, local_path);
+
 						return {CELL_EFSSPECIFIC};
 					}
 
-					// Try all registered keys
+					// Try all registered keys, quietly: the ones that do not fit are what the loop is looking for
 					auto edata_file = std::make_unique<EDATADecrypter>(std::move(file), dec_keys[(init_pos - i - 1) % std::size(dec_keys)].load());
-					if (!edata_file->ReadHeader())
+					if (!edata_file->ReadHeader(false))
 					{
 						// Prepare file for the next iteration
 						file = std::move(edata_file->m_edata_file);
@@ -1317,6 +1364,9 @@ error_code sys_fs_read(ppu_thread& ppu, u32 fd, vm::ptr<void> buf, u64 nbytes, v
 
 	const u64 read_bytes = file->op_read(buf, nbytes);
 	const bool failure = !read_bytes && file->file.pos() < file->file.size();
+
+	file->reads_total += read_bytes;
+
 	lock.unlock();
 	ppu.check_state();
 
@@ -1406,6 +1456,8 @@ error_code sys_fs_write(ppu_thread& ppu, u32 fd, vm::cptr<void> buf, u64 nbytes,
 	}
 
 	const u64 written = file->op_write(buf, nbytes);
+	file->writes_total += written;
+
 	lock.unlock();
 	ppu.check_state();
 
@@ -1532,7 +1584,11 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 		{
 		case fs::error::noent:
 		{
-			if (ext.empty())
+			// A Win32 search matching nothing fails like a missing path, which is how an empty volume root looks:
+			// only a stat tells the two apart, and it reports a directory through a broken reparse point as well
+			fs::stat_t info{};
+
+			if (ext.empty() && !(fs::get_stat(local_path, info) && info.is_directory && !info.is_symlink))
 			{
 				return {mp == &g_mp_sys_dev_hdd1 ? sys_fs.warning : sys_fs.error, CELL_ENOENT, path};
 			}
@@ -1555,6 +1611,20 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 		}
 	}
 
+	// A split file arrives as the parts ".66600" to ".66699", which lv2_file::open_raw gathers back into one
+	// This matches all but the first, the part whose name a game asks for
+	const auto is_split_file_tail = [](std::string_view name)
+	{
+		if (name.size() <= 6 || !name.substr(name.size() - 6).starts_with(".666"sv))
+		{
+			return false;
+		}
+
+		const std::string_view index = name.substr(name.size() - 2);
+
+		return index != "00"sv && index[0] >= '0' && index[0] <= '9' && index[1] >= '0' && index[1] <= '9';
+	};
+
 	// Build directory as a vector of entries
 	std::vector<fs::dir_entry> data;
 
@@ -1573,22 +1643,27 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 				continue;
 			}
 
-			// Add additional entries for split file candidates (while ends with .66600)
-			while (mp.mp != &g_mp_sys_dev_hdd1 && data.back().name.ends_with(".66600"))
+			if (mp.mp != &g_mp_sys_dev_hdd1 && !data.back().is_directory)
 			{
-				fs::dir_entry copy = data.back();
-				data.emplace_back(copy).name.resize(copy.name.size() - 6);
+				std::string& name = data.back().name;
+
+				// Drop the suffix off the first part, again if what is left ends in one too
+				// A name made of nothing but a suffix keeps it, since there is no name underneath
+				while (name.size() > 6 && name.ends_with(".66600"))
+				{
+					name.resize(name.size() - 6);
+				}
+
+				if (is_split_file_tail(name))
+				{
+					// Only the first part stands for the file
+					data.resize(data.size() - 1);
+					continue;
+				}
 			}
 		}
 
 		data.resize(data.size() - 1);
-	}
-	else
-	{
-		data.emplace_back().name += '.';
-		data.back().is_directory = true;
-		data.emplace_back().name = "..";
-		data.back().is_directory = true;
 	}
 
 	// Add mount points (TODO)
@@ -1596,6 +1671,27 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 	{
 		data.emplace_back().name = std::move(ex);
 		data.back().is_directory = true;
+	}
+
+	// Pull . and .. to the front, where the PS3 has them, and supply them to a Win32 volume root, which lists neither
+	usz at = 0;
+
+	for (std::string_view name : {"."sv, ".."sv})
+	{
+		const auto found = std::find_if(data.begin() + at, data.end(), FN(x.name == name));
+
+		if (found == data.end())
+		{
+			fs::dir_entry& entry = *data.emplace(data.begin() + at);
+			entry.name = name;
+			entry.is_directory = true;
+		}
+		else
+		{
+			std::rotate(data.begin() + at, found, found + 1);
+		}
+
+		at++;
 	}
 
 	// Sort files, keeping . and ..
@@ -1648,8 +1744,10 @@ error_code sys_fs_readdir(ppu_thread& ppu, u32 fd, vm::ptr<CellFsDirent> dir, vm
 	else
 	{
 		// It does actually write polling the last entry. Seems consistent across HDD0 and HDD1 (TODO: check more partitions)
+		// Every lv2_dir carries . and .., so there is always an entry to poll
+		ensure(!directory->entries.empty());
+
 		info = &directory->entries.back();
-		nread_to_write = 0;
 	}
 
 	CellFsDirent dir_write{};
@@ -2270,14 +2368,18 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			file->file.seek(op_pos);
 		}
 
-		arg->out_size = op == 0x8000000a
+		const u64 done_size = op == 0x8000000a
 			? file->op_read(arg->buf, arg->size, op_pos)
 			: file->op_write(arg->buf, arg->size);
+
+		arg->out_size = done_size;
 
 		if (op == 0x8000000b)
 		{
 			ensure(old_pos == file->file.seek(old_pos));
 		}
+
+		(op == 0x8000000a ? &file->reads_total : &file->writes_total)->fetch_add(done_size);
 
 		// TODO: EDATA corruption detection
 

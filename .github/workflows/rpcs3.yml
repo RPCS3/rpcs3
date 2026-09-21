@@ -185,12 +185,17 @@ jobs:
       RELEASE_MESSAGE: ../GitHubReleaseMessage.txt
       UPLOAD_COMMIT_HASH: ${{ matrix.UPLOAD_COMMIT_HASH }}
       UPLOAD_REPO_FULL_NAME: ${{ matrix.UPLOAD_REPO_FULL_NAME }}
-      RUN_UNIT_TESTS: ${{ matrix.name == 'Apple Silicon' && (github.event_name == 'pull_request' && 'ON') || 'OFF' }}
+      RUN_UNIT_TESTS: github.event_name == 'pull_request' && 'ON' || 'OFF'
     steps:
       - name: Checkout repository
         uses: actions/checkout@main
         with:
           fetch-depth: 0
+          
+      - name: Setup MacPorts
+        uses: melusina-org/setup-macports@v1
+        with:
+            cache: 'disable'
 
       - name: Restore Build Ccache
         uses: actions/cache/restore@main
@@ -269,6 +274,7 @@ jobs:
       CCACHE_DIR: 'C:\ccache'
       CCACHE_INODECACHE: 'true'
       CCACHE_SLOPPINESS: 'time_macros'
+      CCACHE_MAXSIZE: '7G'
       CCACHE_LAUNCH_ARGS: '-DCMAKE_C_COMPILER_LAUNCHER=C:\ccache_bin\ccache.exe -DCMAKE_CXX_COMPILER_LAUNCHER=C:\ccache_bin\ccache.exe'
       DEPS_CACHE_DIR: ./dependency_cache
       UPLOAD_COMMIT_HASH: 7d09e3be30805911226241afbb14f8cdc2eb054e
@@ -357,6 +363,10 @@ jobs:
         env:
           RPCS3_TOKEN: ${{ secrets.RPCS3_TOKEN }}
         run: .ci/github-upload.sh
+
+      - name: Show ccache stats
+        if: github.ref == 'refs/heads/master'
+        run: ccache --show-stats --verbose
 
       - name: Save Build Ccache
         if: github.ref == 'refs/heads/master'
