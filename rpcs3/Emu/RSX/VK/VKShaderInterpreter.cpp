@@ -754,8 +754,9 @@ namespace vk
 			pipe_properties.push_back(base_props);
 
 			// Add more targets. Typical G-buffers are 1-4 color targets + depth.
-			for (auto index = 1; index < 4; ++index)
+			for (u8 index = 1; index < 4; ++index)
 			{
+				base_props.renderpass_key = vk::get_renderpass_key(surface_format, depth_format, index + 1);
 				base_props.state.set_attachment_count(index + 1);
 				base_props.state.set_color_mask(index, true, true, true, true);
 				pipe_properties.push_back(base_props);
@@ -766,6 +767,7 @@ namespace vk
 				surface_format != VK_FORMAT_R32_SFLOAT)
 			{
 				// Blending not supported for some F32 formats.
+				base_props.renderpass_key = vk::get_renderpass_key(surface_format, depth_format);
 				base_props.state.set_attachment_count(1);
 				base_props.state.enable_blend(0,
 					VK_BLEND_FACTOR_SRC_ALPHA, VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
