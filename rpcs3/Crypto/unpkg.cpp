@@ -17,6 +17,51 @@
 
 LOG_CHANNEL(pkg_log, "PKG");
 
+// Every path in here is UTF-8, and these two conversions never fail: on Windows a byte no sequence accounts for
+// becomes U+FFFD, elsewhere a path is the bytes themselves
+static std::filesystem::path fs_path_from_utf8(std::string_view utf8)
+{
+#ifdef _WIN32
+	return utf8_to_wchar(utf8);
+#else
+	return std::filesystem::path(utf8);
+#endif
+}
+
+static std::string fs_path_to_utf8(const std::filesystem::path& path)
+{
+#ifdef _WIN32
+	return wchar_to_utf8(path.native());
+#else
+	return path.native();
+#endif
+}
+
+// Whether a name read from the package could reach outside the directory it is joined to: a leading "/", or a "."
+// or ".." component. "/" is the only separator that counts, vfs::escape writes any other one the host may know, and
+// ":", as plain characters
+static bool leaves_directory(std::string_view name)
+{
+	if (name.starts_with('/'))
+	{
+		return true;
+	}
+
+	for (std::string_view rest = name; !rest.empty();)
+	{
+		const usz sep = rest.find('/');
+		const std::string_view component = rest.substr(0, sep);
+		rest = sep == umax ? std::string_view{} : rest.substr(sep + 1);
+
+		if (component == "." || component == "..")
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 package_reader::package_reader(const std::string& path, fs::file file)
 	: m_path(path)
 	, m_file(std::move(file))
@@ -855,7 +900,16 @@ bool package_reader::set_install_path()
 	// TODO: Verify whether other content types require appending title ID
 	// Append title ID depending on content type
 	if (m_metadata.content_type != PKG_CONTENT_TYPE_THEME && m_metadata.content_type != PKG_CONTENT_TYPE_LICENSE)
-		dir += m_install_dir + '/';
+	{
+		// The name is read as it comes from the package
+		if (m_install_dir.empty() || leaves_directory(m_install_dir))
+		{
+			pkg_log.error("Invalid installation directory name '%s'", m_install_dir);
+			return false;
+		}
+
+		dir += vfs::escape(m_install_dir) + '/';
+	}
 
 	// If false, an existing directory is being overwritten: cannot cancel the operation
 	m_was_null = !fs::is_dir(dir);
@@ -877,13 +931,34 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 		return false;
 	}
 
-	std::error_code path_ec;
-	auto install_path = std::filesystem::weakly_canonical(m_install_path, path_ec);
-	if (path_ec)
+	const auto canonicalize = [](std::string_view utf8_path)
 	{
-		pkg_log.warning("Failed to canonicalize installation path '%s' (%s); falling back to lexical normalization.", m_install_path, path_ec.message());
-		install_path = std::filesystem::path(m_install_path).lexically_normal();
+		std::error_code ec;
+		auto result = std::filesystem::weakly_canonical(fs_path_from_utf8(utf8_path), ec);
+
+		if (ec)
+		{
+			pkg_log.warning("Failed to canonicalize path '%s' (%s); falling back to lexical normalization.", utf8_path, ec.message());
+			result = fs_path_from_utf8(utf8_path).lexically_normal();
+		}
+
+		return result;
+	};
+
+	// weakly_canonical stats every prefix of a path that does not exist yet, and a package holds thousands of files in a
+	// few hundred directories: a directory is resolved once, and a file not on disk is that result plus its own name
+	std::map<std::string, std::filesystem::path, std::less<>> canonical_dirs;
+
+	// The installation directory is resolved without its closing "/", like every entry below it: on a file system that
+	// cannot resolve it, the lexical form would keep that separator as an empty last element no entry can match
+	std::string_view install_dir = m_install_path;
+
+	while (install_dir.ends_with('/'))
+	{
+		install_dir.remove_suffix(1);
 	}
+
+	const std::filesystem::path install_path = canonicalize(install_dir);
 
 	if (install_path.empty())
 	{
@@ -933,41 +1008,42 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 
 		std::string_view name = fmt::trim_back_sv(name_buf, "\0"sv);
 
-		const std::filesystem::path entry_path{name};
-		if (entry_path.is_absolute())
+		if (leaves_directory(name))
 		{
 			num_failures++;
-			pkg_log.error("PKG entry path is absolute: '%s'", name);
-			break;
-		}
-
-		for (const auto& component : entry_path)
-		{
-			if (component == "..")
-			{
-				fmt::throw_exception("PKG entry path contains a parent directory component: '%s'", name);
-			}
-
-			if (component == ".")
-			{
-				num_failures++;
-				pkg_log.error("PKG entry path contains a special component: '%s'", name);
-				break;
-			}
-		}
-
-		if (num_failures)
-		{
+			pkg_log.error("PKG entry path escapes installation directory: '%s'", name);
 			break;
 		}
 
 		std::string path = m_install_path + vfs::escape(name);
-		path_ec.clear();
-		auto canonical_path = std::filesystem::weakly_canonical(path, path_ec);
-		if (path_ec)
+
+		const u8 entry_type = entry.type & 0xff;
+		const bool is_folder = entry_type == PKG_FILE_ENTRY_FOLDER || entry_type == 0x12;
+
+		std::filesystem::path canonical_path;
+
+		// A path already on disk is resolved as a whole: it may be a link, or be spelt otherwise there
+		if (is_folder || fs::exists(path))
 		{
-			pkg_log.warning("Failed to canonicalize package path '%s' (%s); falling back to lexical normalization.", path, path_ec.message());
-			canonical_path = std::filesystem::path(path).lexically_normal();
+			canonical_path = canonicalize(path);
+
+			if (is_folder)
+			{
+				canonical_dirs.emplace(path, canonical_path);
+			}
+		}
+		else
+		{
+			const usz slash = path.rfind('/');
+			const std::string_view dir(path.data(), slash);
+			auto found = canonical_dirs.find(dir);
+
+			if (found == canonical_dirs.end())
+			{
+				found = canonical_dirs.emplace(std::string(dir), canonicalize(dir)).first;
+			}
+
+			canonical_path = found->second / fs_path_from_utf8(std::string_view(path).substr(slash + 1));
 		}
 
 		if (canonical_path.empty() || !is_inside_install_path(canonical_path))
@@ -977,7 +1053,7 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 			break;
 		}
 
-		path = canonical_path.string();
+		path = fs_path_to_utf8(canonical_path);
 
 		if (entry.pad || (entry.type & ~PKG_FILE_ENTRY_KNOWN_BITS))
 		{
@@ -987,8 +1063,6 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 		{
 			pkg_log.notice("Entry: type=0x%08x, name='%s'", entry.type, name);
 		}
-
-		const u8 entry_type = entry.type & 0xff;
 
 		switch (entry_type)
 		{
@@ -1014,9 +1088,8 @@ bool package_reader::fill_data(std::map<std::string, install_entry*>& all_instal
 		}
 		default:
 		{
-			// The name reached "path" through "vfs::escape", which turns whatever the host file system cannot take
-			// into characters it can, a byte that is not valid UTF-8 included (macOS refuses a name carrying one)
-			auto map_ptr = &*all_install_entries.try_emplace(path).first;
+			// "path" went through "vfs::escape", which also takes care of the bytes that are not valid UTF-8
+			auto map_ptr = &*all_install_entries.try_emplace(std::move(path)).first;
 
 			m_install_entries.push_back({
 				.weak_reference = map_ptr,
