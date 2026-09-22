@@ -535,7 +535,6 @@ QTreeWidget::indicator:checked {
     border-left: 2px solid #d0d698;
     border-right: 2px solid #566041;
     border-bottom: 2px solid #566041;
-    image: url("GuiConfigs/check_mark_white.png");
 }
 
 QTreeWidget::indicator:disabled {
@@ -798,68 +797,6 @@ QMainWindow QTableView,
 QMainWindow QHeaderView::section:first,
 QMainWindow QHeaderView::section:last {
     border-radius: 0px;
-}
-
-/* ========================================================================== */
-/* SCROLL BARS                                                                */
-/* ========================================================================== */
-
-QScrollBar:vertical {
-    background-color: #30382c;
-    width: 14px;
-    margin: 14px 0px 14px 0px;
-    border-left: 1px solid #252b22;
-}
-
-QScrollBar::handle:vertical {
-    background-color: #53604a;
-    border-top: 1px solid #78836d;
-    border-left: 1px solid #78836d;
-    border-right: 1px solid #252b22;
-    border-bottom: 1px solid #252b22;
-    min-height: 24px;
-}
-
-QScrollBar::handle:vertical:hover {
-    background-color: #637159;
-}
-
-QScrollBar::handle:vertical:pressed {
-    background-color: #3f4939;
-}
-
-QScrollBar::add-page:vertical,
-QScrollBar::sub-page:vertical {
-    background-color: #35402f;
-}
-
-QScrollBar:horizontal {
-    background-color: #30382c;
-    height: 14px;
-    margin: 0px 14px 0px 14px;
-    border-top: 1px solid #252b22;
-}
-
-QScrollBar::handle:horizontal {
-    background-color: #53604a;
-    border-top: 1px solid #78836d;
-    border-left: 1px solid #78836d;
-    border-right: 1px solid #252b22;
-    border-bottom: 1px solid #252b22;
-    min-width: 24px;
-}
-
-QScrollBar::handle:horizontal:hover {
-    background-color: #637159;
-}
-
-QScrollBar::handle:horizontal:pressed {
-    background-color: #3f4939;
-}
-
-QScrollBar::add-page:horizontal,
-QScrollBar::sub-page:horizontal {
-    background-color: #35402f;
 }
 
 /* ========================================================================== */
