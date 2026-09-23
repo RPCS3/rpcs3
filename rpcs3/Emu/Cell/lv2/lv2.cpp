@@ -1871,7 +1871,11 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 			{
 				if (!current_ppu->state.test_and_set(cpu_flag::yield) || current_ppu->hw_sleep_time != 0)
 				{
-					current_ppu->hw_sleep_time += (is_create_thread ? 51 : 35);
+#ifdef _WIN32
+					current_ppu->hw_sleep_time += (is_create_thread ? 600 : 200);
+#else
+					current_ppu->hw_sleep_time += 100;
+#endif
 				}
 				else
 				{
