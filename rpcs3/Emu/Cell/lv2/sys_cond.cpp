@@ -6,6 +6,7 @@
 
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/Cell/timers.hpp"
 
 #include "sys_cond.h"
 
@@ -316,6 +317,9 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 
 	sys_cond.trace("sys_cond_signal_to(cond_id=0x%x, thread_id=0x%x)", cond_id, thread_id);
 
+	const u64 start_time = get_system_time();
+	bool has_lower_prio_or_is_the_mutex_owner = false;
+
 	while (true)
 	{
 		if (ppu.test_stopped())
@@ -330,9 +334,23 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 
 		const auto cond = idm::check<lv2_obj, lv2_cond>(cond_id, [&, notify = lv2_obj::notify_all_t()](lv2_cond& cond)
 		{
-			if (!idm::check_unlocked<named_thread<ppu_thread>>(thread_id))
+			const auto target_ppu = idm::check_unlocked<named_thread<ppu_thread>>(thread_id);
+
+			if (!target_ppu)
 			{
 				return -1;
+			}
+
+			if (!has_lower_prio_or_is_the_mutex_owner && cond.mutex->control.load().owner != ppu.id)
+			{
+				if (cond.mutex->control.load().owner == thread_id)
+				{
+					has_lower_prio_or_is_the_mutex_owner = true;
+				}
+				else if (target_ppu->is_lower_priority_than(ppu))
+				{
+					has_lower_prio_or_is_the_mutex_owner = true;
+				}
 			}
 
 			if (atomic_storage<ppu_thread*>::load(cond.sq))
@@ -393,7 +411,16 @@ error_code sys_cond_signal_to(ppu_thread& ppu, u32 cond_id, u32 thread_id)
 
 		if (!cond.ret)
 		{
-			return not_an_error(CELL_EPERM);
+			if (has_lower_prio_or_is_the_mutex_owner && get_system_time() - start_time < 50)
+			{
+				// RPCS3 is not cycle accurate
+				// Threads with higher (lower) priority get timing benefits that we cannot provide accurately
+				// Give the thread another chance
+				busy_wait(5000);
+				continue;
+			}
+
+			return { CELL_EPERM, thread_id };
 		}
 
 		return CELL_OK;
