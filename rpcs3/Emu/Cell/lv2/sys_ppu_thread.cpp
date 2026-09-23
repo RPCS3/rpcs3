@@ -8,6 +8,7 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/PPUCallback.h"
 #include "Emu/Cell/PPUOpcodes.h"
+#include "Emu/Cell/timers.hpp"
 #include "Emu/Memory/vm_locking.h"
 #include "sys_event.h"
 #include "sys_process.h"
@@ -563,6 +564,8 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 
 	sys_ppu_thread.trace("sys_ppu_thread_start(thread_id=0x%x)", thread_id);
 
+	bool is_lower_prio = false;
+
 	const auto thread = idm::get<named_thread<ppu_thread>>(thread_id, [&, notify = lv2_obj::notify_all_t()](ppu_thread& thread) -> CellError
 	{
 		if (!thread.state.test_and_reset(cpu_flag::stop))
@@ -571,6 +574,7 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 			return CELL_EBUSY;
 		}
 
+		is_lower_prio = thread.is_lower_priority_than(ppu);
 		ensure(lv2_obj::awake(&thread));
 
 		thread.cmd_list
@@ -590,10 +594,17 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 	{
 		return thread.ret;
 	}
-	else
+
+	thread->cmd_notify.store(1);
+	thread->cmd_notify.notify_one();
+
+	if (is_lower_prio && cpu_flag::suspend - ppu.state && cpu_flag::suspend - thread->state)
 	{
-		thread->cmd_notify.store(1);
-		thread->cmd_notify.notify_one();
+		// Check if the thread had executed an observable PPU schedular change while it is(was) running, making its execution advantage revoked
+		for (const u64 start = get_system_time(); cpu_flag::suspend - ppu.state && cpu_flag::suspend - thread->state && !ppu.is_stopped() && get_system_time() - start < 1000;)
+		{
+			std::this_thread::yield();
+		}
 	}
 
 	return CELL_OK;
