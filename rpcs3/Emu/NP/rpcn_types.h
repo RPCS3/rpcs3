@@ -72,6 +72,7 @@ namespace rpcn
 		UnlockTrophy,
 		SyncTrophies,
 		DeleteTrophies,
+		GetTss,
 	};
 
 	enum class NotificationType : u16

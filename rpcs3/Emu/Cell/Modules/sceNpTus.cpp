@@ -1325,89 +1325,63 @@ error_code sceNpTusDeleteMultiSlotDataVUserAsync(s32 transId, vm::cptr<SceNpTusV
 	return scenp_tus_delete_multislot_data(transId, targetVirtualUserId, slotIdArray, arrayNum, option, true, true);
 }
 
-void scenp_tss_no_file(const shared_ptr<tus_transaction_ctx>& trans, vm::ptr<SceNpTssDataStatus> dataStatus)
+error_code scenp_tss_get_data(s32 transId, SceNpTssSlotId slotId, vm::ptr<void> data, u32 recvSize, bool async, bool limited, vm::ptr<SceNpTssDataStatus> dataStatus, u32 dataStatusSize, vm::ptr<SceNpTssGetDataOptParam> option)
 {
-	// TSS are files stored on PSN by developers, no dumps available atm
-	std::memset(dataStatus.get_ptr(), 0, sizeof(SceNpTssDataStatus));
-	trans->result = not_an_error(0);
+	if (dataStatus && dataStatusSize != sizeof(SceNpTssDataStatus))
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ALIGNMENT;
+	}
+
+	if (slotId < 0 || (limited && slotId > 15))
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ARGUMENT;
+	}
+
+	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
+
+	if (!nph.is_NP_TUS_init)
+	{
+		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
+	}
+
+	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
+	}
+
+	auto trans_ctx = idm::get_unlocked<tus_transaction_ctx>(transId);
+
+	if (!trans_ctx)
+	{
+		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
+	}
+
+	nph.tus_get_tss(trans_ctx, slotId, dataStatus, data, recvSize, option, async);
+	return CELL_OK;
 }
 
 error_code sceNpTssGetData(s32 transId, SceNpTssSlotId slotId, vm::ptr<SceNpTssDataStatus> dataStatus, u32 dataStatusSize, vm::ptr<void> data, u32 recvSize, vm::ptr<SceNpTssGetDataOptParam> option)
 {
 	sceNpTus.warning("sceNpTssGetData(transId=%d, slotId=%d, dataStatus=*0x%x, dataStatusSize=%d, data=*0x%x, recvSize=%d, option=*0x%x)", transId, slotId, dataStatus, dataStatusSize, data, recvSize, option);
-
-	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
-
-	if (!nph.is_NP_TUS_init)
-	{
-		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
-	}
-
-	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
-	}
-
-	if (!dataStatus)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
-	}
-
-	auto trans_ctx = idm::get_unlocked<tus_transaction_ctx>(transId);
-
-	if (!trans_ctx)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
-	}
-
-	scenp_tss_no_file(trans_ctx, dataStatus);
-
-	return CELL_OK;
+	return scenp_tss_get_data(transId, slotId, data, recvSize, false, true, dataStatus, dataStatusSize, option);
 }
 
 error_code sceNpTssGetDataAsync(s32 transId, SceNpTssSlotId slotId, vm::ptr<SceNpTssDataStatus> dataStatus, u32 dataStatusSize, vm::ptr<void> data, u32 recvSize, vm::ptr<SceNpTssGetDataOptParam> option)
 {
 	sceNpTus.warning("sceNpTssGetDataAsync(transId=%d, slotId=%d, dataStatus=*0x%x, dataStatusSize=%d, data=*0x%x, recvSize=%d, option=*0x%x)", transId, slotId, dataStatus, dataStatusSize, data, recvSize, option);
-
-	auto& nph = g_fxo->get<named_thread<np::np_handler>>();
-
-	if (!nph.is_NP_TUS_init)
-	{
-		return SCE_NP_COMMUNITY_ERROR_NOT_INITIALIZED;
-	}
-
-	if (nph.get_psn_status() != SCE_NP_MANAGER_STATUS_ONLINE)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ONLINE_ID;
-	}
-
-	if (!dataStatus)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INSUFFICIENT_ARGUMENT;
-	}
-
-	auto trans_ctx = idm::get_unlocked<tus_transaction_ctx>(transId);
-
-	if (!trans_ctx)
-	{
-		return SCE_NP_COMMUNITY_ERROR_INVALID_ID;
-	}
-
-	scenp_tss_no_file(trans_ctx, dataStatus);
-
-	return CELL_OK;
+	return scenp_tss_get_data(transId, slotId, data, recvSize, true, true, dataStatus, dataStatusSize, option);
 }
 
-error_code sceNpTssGetDataNoLimit()
+error_code sceNpTssGetDataNoLimit(s32 transId, SceNpTssSlotId slotId, vm::ptr<SceNpTssDataStatus> dataStatus, u32 dataStatusSize, vm::ptr<void> data, u32 recvSize, vm::ptr<SceNpTssGetDataOptParam> option)
 {
-	UNIMPLEMENTED_FUNC(sceNpTus);
-	return CELL_OK;
+	sceNpTus.warning("sceNpTssGetDataNoLimit(transId=%d, slotId=%d, dataStatus=*0x%x, dataStatusSize=%d, data=*0x%x, recvSize=%d, option=*0x%x)", transId, slotId, dataStatus, dataStatusSize, data, recvSize, option);
+	return scenp_tss_get_data(transId, slotId, data, recvSize, false, false, dataStatus, dataStatusSize, option);
 }
 
-error_code sceNpTssGetDataNoLimitAsync()
+error_code sceNpTssGetDataNoLimitAsync(s32 transId, SceNpTssSlotId slotId, vm::ptr<SceNpTssDataStatus> dataStatus, u32 dataStatusSize, vm::ptr<void> data, u32 recvSize, vm::ptr<SceNpTssGetDataOptParam> option)
 {
-	UNIMPLEMENTED_FUNC(sceNpTus);
-	return CELL_OK;
+	sceNpTus.warning("sceNpTssGetDataNoLimitAsync(transId=%d, slotId=%d, dataStatus=*0x%x, dataStatusSize=%d, data=*0x%x, recvSize=%d, option=*0x%x)", transId, slotId, dataStatus, dataStatusSize, data, recvSize, option);
+	return scenp_tss_get_data(transId, slotId, data, recvSize, true, false, dataStatus, dataStatusSize, option);
 }
 
 
