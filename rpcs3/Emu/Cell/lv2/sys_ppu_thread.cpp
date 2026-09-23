@@ -598,10 +598,27 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 	thread->cmd_notify.store(1);
 	thread->cmd_notify.notify_one();
 
-	if (is_lower_prio && cpu_flag::suspend - ppu.state && cpu_flag::suspend - thread->state)
+	if (is_lower_prio)
 	{
-		// Check if the thread had executed an observable PPU schedular change while it is(was) running, making its execution advantage revoked
-		for (const u64 start = get_system_time(); cpu_flag::suspend - ppu.state && cpu_flag::suspend - thread->state && !ppu.is_stopped() && get_system_time() - start < 1000;)
+		// A thread with higher priority runs ahead of the caller: wait until it has started and blocked (bounded)
+		// A preempted thread is still scheduled (RUNNABLE), a blocked one is not
+		const auto is_scheduled = [&]()
+		{
+			const auto status = lv2_obj::ppu_state(thread.ptr.get()).first;
+			return status == PPU_THREAD_STATUS_ONPROC || status == PPU_THREAD_STATUS_RUNNABLE;
+		};
+
+		// Keep waiting when the caller is suspended: another thread leaving its hardware thread may resume it first
+		for (const u64 start = get_system_time(); (thread->cmd_queue.size() || is_scheduled()) && !ppu.is_stopped() && get_system_time() - start < 5000;)
+		{
+			std::this_thread::yield();
+		}
+	}
+	else
+	{
+		// A thread with lower or equal priority that got a free hardware thread starts at once on a PS3:
+		// wait until it has taken the entry command (bounded)
+		for (const u64 start = get_system_time(); thread->cmd_queue.size() && cpu_flag::suspend - thread->state && cpu_flag::suspend - ppu.state && !ppu.is_stopped() && get_system_time() - start < 5000;)
 		{
 			std::this_thread::yield();
 		}
