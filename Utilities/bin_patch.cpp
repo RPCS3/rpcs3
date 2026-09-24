@@ -1907,7 +1907,17 @@ bool patch_engine::save_patches(const patch_map& patches, const std::string& pat
 				out << YAML::Flow;
 				out << YAML::BeginSeq;
 				out << fmt::format("%s", data.type);
-				out << fmt::format("0x%.8x", data.offset);
+
+				if (patch_type_uses_hex_offset(data.type))
+				{
+					out << fmt::format("0x%.8x", data.offset);
+				}
+				else
+				{
+					// This element is a path for move_file and hide_file, not an address
+					out << data.original_offset;
+				}
+
 				out << data.original_value;
 				out << YAML::EndSeq;
 			}
