@@ -281,7 +281,7 @@ bool savestate_manager_dialog::LoadSavestateFolderToDB(std::unique_ptr<game_save
 
 	if (game_savestates->title_id.empty())
 	{
-		gui_log.error("Failed to load savestates. Path empty!");
+		gui_log.error("Failed to load savestates. title_id empty!");
 		return false;
 	}
 
@@ -292,7 +292,7 @@ bool savestate_manager_dialog::LoadSavestateFolderToDB(std::unique_ptr<game_save
 
 	if (file_list.isEmpty())
 	{
-		return false;
+		return true;
 	}
 
 	// Populate game_savestates_data
