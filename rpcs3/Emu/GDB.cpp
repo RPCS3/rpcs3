@@ -662,7 +662,7 @@ bool gdb_thread::cmd_read_memory(gdb_cmd& cmd)
 	result.reserve(len * 2);
 	for (u32 i = 0; i < len; ++i)
 	{
-		if (vm::check_addr(addr))
+		if (vm::check_addr(addr + i))
 		{
 			result += to_hexbyte(vm::read8(addr + i));
 		}
