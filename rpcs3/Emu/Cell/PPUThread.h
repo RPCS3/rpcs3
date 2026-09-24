@@ -278,6 +278,17 @@ public:
 	};
 
 	atomic_t<ppu_prio_t> prio{};
+
+	bool is_lower_priority_than(ppu_thread& other) const
+	{
+		return prio.load().prio < other.prio.load().prio;
+	}
+
+	bool is_lower_priority_than(s32 _prio) const
+	{
+		return prio.load().prio < _prio;
+	}
+
 	const u32 stack_size; // Stack size
 	const u32 stack_addr; // Stack address
 
