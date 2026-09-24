@@ -600,24 +600,22 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 
 	if (is_lower_prio)
 	{
-		// A thread with higher priority runs ahead of the caller: wait until it has started and blocked (bounded)
-		// A preempted thread is still scheduled (RUNNABLE), a blocked one is not
-		const auto is_scheduled = [&]()
+		// The new thread has higher priority: wait until it has started and stops running, blocked or preempted (bounded)
+		// A preempted thread stays ahead of the caller in the scheduler queue, so there is no need to wait for it to block
+		const auto is_running = [&]()
 		{
-			const auto status = lv2_obj::ppu_state(thread.ptr.get()).first;
-			return status == PPU_THREAD_STATUS_ONPROC || status == PPU_THREAD_STATUS_RUNNABLE;
+			return lv2_obj::ppu_state(thread.ptr.get()).first == PPU_THREAD_STATUS_ONPROC;
 		};
 
-		// Keep waiting when the caller is suspended: another thread leaving its hardware thread may resume it first
-		for (const u64 start = get_system_time(); (thread->cmd_queue.size() || is_scheduled()) && !ppu.is_stopped() && get_system_time() - start < 5000;)
+		// Keep waiting when the caller is suspended: another thread leaving its hardware thread may resume it before the new thread starts
+		for (const u64 start = get_system_time(); (thread->cmd_queue.size() || is_running()) && !ppu.is_stopped() && get_system_time() - start < 5000;)
 		{
 			std::this_thread::yield();
 		}
 	}
 	else
 	{
-		// A thread with lower or equal priority that got a free hardware thread starts at once on a PS3:
-		// wait until it has taken the entry command (bounded)
+		// The new thread has lower or equal priority: if it got a free hardware thread, wait until it has taken the entry command (bounded)
 		for (const u64 start = get_system_time(); thread->cmd_queue.size() && cpu_flag::suspend - thread->state && cpu_flag::suspend - ppu.state && !ppu.is_stopped() && get_system_time() - start < 5000;)
 		{
 			std::this_thread::yield();
