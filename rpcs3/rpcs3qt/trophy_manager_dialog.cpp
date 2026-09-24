@@ -274,7 +274,13 @@ trophy_manager_dialog::trophy_manager_dialog(std::shared_ptr<gui_settings> gui_s
 	game_toolbar->addWidget(m_btn_sync_all_trophies);
 	game_toolbar->addWidget(btn_delete_online_trophies);
 
+	m_corrupt_warning_label = new QLabel(this);
+	m_corrupt_warning_label->setWordWrap(true);
+	m_corrupt_warning_label->setStyleSheet(QStringLiteral("QLabel { color: %0; font-weight: bold; }").arg(gui::utils::get_label_color("log_level_error", Qt::red, Qt::red).name()));
+	m_corrupt_warning_label->setVisible(false);
+
 	game_page_layout->addLayout(game_toolbar);
+	game_page_layout->addWidget(m_corrupt_warning_label);
 	game_page_layout->addWidget(m_game_table, 1);
 
 	// Trophy details page
@@ -1686,6 +1692,11 @@ void trophy_manager_dialog::StartTrophyLoadThreads()
 
 	m_trophies_db.clear();
 
+	if (m_corrupt_warning_label)
+	{
+		m_corrupt_warning_label->setVisible(false);
+	}
+
 	const QString trophy_path = QString::fromStdString(vfs::get(m_trophy_dir));
 
 	if (trophy_path.isEmpty())
@@ -1731,7 +1742,6 @@ void trophy_manager_dialog::StartTrophyLoadThreads()
 
 		if (!LoadTrophyFolderToDB(dir_name))
 		{
-			// TODO: add a way of showing the number of corrupted/invalid folders in UI somewhere.
 			gui_log.error("Error occurred while parsing folder %s for trophies.", dir_name);
 			error_count++;
 		}
@@ -1744,6 +1754,16 @@ void trophy_manager_dialog::StartTrophyLoadThreads()
 	if (error_count != 0)
 	{
 		gui_log.error("Failed to load %d of %d trophy folders!", error_count.load(), count);
+	}
+
+	if (m_corrupt_warning_label)
+	{
+		const int errors = static_cast<int>(error_count.load());
+		m_corrupt_warning_label->setVisible(errors > 0);
+		if (errors > 0)
+		{
+			m_corrupt_warning_label->setText(tr("Warning: %n corrupted trophy folder(s) could not be loaded.", "", errors));
+		}
 	}
 }
 
