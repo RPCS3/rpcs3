@@ -1805,8 +1805,9 @@ static void append_patches(patch_engine::patch_map& existing_patches, const patc
 
 bool patch_engine::save_patches(const patch_map& patches, const std::string& path, std::stringstream* log_messages)
 {
-	fs::file file(path, fs::rewrite);
-	if (!file)
+	fs::pending_file file(path);
+
+	if (!file.file)
 	{
 		append_log_message(log_messages, fmt::format("Failed to open patch file %s (%s)", path, fs::g_tls_error), &patch_log.fatal);
 		return false;
@@ -1920,7 +1921,11 @@ bool patch_engine::save_patches(const patch_map& patches, const std::string& pat
 
 	out << YAML::EndMap;
 
-	file.write(out.c_str(), out.size());
+	if (file.file.write(out.c_str(), out.size()) < out.size() || !file.commit())
+	{
+		append_log_message(log_messages, fmt::format("Failed to write patch file %s (%s)", path, fs::g_tls_error), &patch_log.fatal);
+		return false;
+	}
 
 	return true;
 }
