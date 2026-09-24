@@ -96,6 +96,7 @@ public:
 		const QString preferred_spu_threads     = tr("Some SPU stages are sensitive to race conditions and allowing a limited number at a time helps alleviate performance stalls.\nSetting this to a smaller value might improve performance and reduce stuttering in some games.\nLeave this on auto if performance is negatively affected when setting a small value.");
 		const QString max_cpu_preempt           = tr("Reduces CPU usage and power consumption, improving battery life on mobile devices. (0 means disabled)\nHigher values cause a more pronounced effect, but may cause audio or performance issues. A value of 50 or less is recommended.\nThis option forces an FPS limit because it's active when framerate is stable.\nThe lighter the game is on the hardware, the more power is saved by it. (until the preemption count barrier is reached)");
 		const QString ppu_reservation_priority  = tr("Give PPUs an execution advantage when the SPUs are using reservations.\nThis setting is recommended only for a few game for improving performance.\nDO NOT use it without being advised to due to potential performance degradation.");
+		const QString accurate_spu_reservations = tr("Accurately emulates SPU reservations.\nDisabling it can greatly improve performance in some games at the cost of stability.");
 
 		// debug
 
