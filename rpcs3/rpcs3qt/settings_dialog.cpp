@@ -248,6 +248,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	EnhanceCheckBox(emu_settings_type::SPULoopDetection, ui->spuLoopDetection, tooltips.settings.spu_loop_detection);
 	EnhanceCheckBox(emu_settings_type::PPUReservationPriorityOverSPUs, ui->ppuReservationPrority, tooltips.settings.ppu_reservation_priority);
+	EnhanceCheckBox(emu_settings_type::AccurateSpuReservations, ui->accurateSpuReservations, tooltips.settings.accurate_spu_reservations);
 
 	// Comboboxes
 	EnhanceComboBox(emu_settings_type::XFloatAccuracy, ui->xfloatAccuracy, tooltips.settings.xfloat, ui->gb_xfloat_accuracy);
