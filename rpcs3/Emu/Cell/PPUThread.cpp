@@ -2663,6 +2663,7 @@ void ppu_thread::cpu_sleep()
 		ptr->compare_and_swap(this, nullptr);
 	}
 
+	hw_sleep_time = 0;
 	lv2_obj::awake(this);
 }
 
@@ -2723,6 +2724,7 @@ void ppu_thread::cpu_wait(bs_t<cpu_flag> old)
 		return;
 	}
 
+	hw_sleep_time = 0;
 	state.wait(old);
 }
 
