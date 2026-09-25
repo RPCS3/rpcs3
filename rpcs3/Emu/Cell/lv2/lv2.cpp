@@ -1860,11 +1860,11 @@ bool lv2_obj::awake_unlocked(cpu_thread* cpu, s32 prio)
 	// While signaling to the other hardware thread to execute the caller's code.
 	// Resulting in a delay to the caller after such thread is signaled
 
-	if (current_ppu && changed_queue && has_free_hw_thread_space)
+	if (current_ppu && cpu != current_ppu && changed_queue && has_free_hw_thread_space)
 	{
 		if (current_ppu->prio.load().prio > lowest_new_priority)
 		{
-			const bool is_create_thread = current_ppu->gpr[11] == 0x35;
+			const bool is_create_thread = current_ppu->current_function && current_ppu->gpr[11] == 0x35;
 
 			// When not being set to All timers - activate only for sys_ppu_thread_start
 			if (is_create_thread || g_cfg.core.sleep_timers_accuracy == sleep_timers_accuracy_level::_all_timers)
