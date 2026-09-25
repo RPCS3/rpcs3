@@ -52,6 +52,7 @@ enum class emu_settings_type
 	DisableSpinOptimization,
 	EnabledSPUEventsBusyLoop,
 	PPUReservationPriorityOverSPUs,
+	AccurateSpuReservations,
 
 	// Graphics
 	Renderer,
