@@ -25,6 +25,7 @@
 #pragma GCC diagnostic ignored "-Wmissing-noreturn"
 #pragma GCC diagnostic ignored "-Wredundant-decls"
 #endif
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/IR/IRBuilder.h"
@@ -60,6 +61,26 @@
 
 // Helper function
 llvm::Value* peek_through_bitcasts(llvm::Value*);
+
+inline bool llvm_has_terminator(const llvm::BasicBlock* bb)
+{
+#if LLVM_VERSION_MAJOR >= 23
+	return bb->hasTerminator();
+#else
+	return bb->getTerminator() != nullptr;
+#endif
+}
+
+// Constant fold the result of IRBuilder::CreateIntrinsic (LLVM 23+ IRBuilder may already return a folded constant)
+inline llvm::Constant* llvm_const_fold(llvm::Value* v)
+{
+	if (auto c = llvm::dyn_cast<llvm::Constant>(v))
+	{
+		return c;
+	}
+
+	return llvm::ConstantFoldInstruction(llvm::cast<llvm::Instruction>(v), llvm::DataLayout(""));
+}
 
 enum class i2 : char
 {
@@ -2768,7 +2789,7 @@ struct llvm_ctlz
 
 		if (llvm::isa<llvm::Constant>(v))
 		{
-			return llvm::ConstantFoldInstruction(ir->CreateIntrinsic(llvm::Intrinsic::ctlz, {v->getType()}, {v, ir->getFalse()}), llvm::DataLayout(""));
+			return llvm_const_fold(ir->CreateIntrinsic(llvm::Intrinsic::ctlz, {v->getType()}, {v, ir->getFalse()}));
 		}
 
 		return ir->CreateIntrinsic(llvm::Intrinsic::ctlz, {v->getType()}, {v, ir->getFalse()});
@@ -2813,7 +2834,7 @@ struct llvm_ctpop
 
 		if (llvm::isa<llvm::Constant>(v))
 		{
-			return llvm::ConstantFoldInstruction(ir->CreateUnaryIntrinsic(llvm::Intrinsic::ctpop, v), llvm::DataLayout(""));
+			return llvm_const_fold(ir->CreateUnaryIntrinsic(llvm::Intrinsic::ctpop, v));
 		}
 
 		return ir->CreateUnaryIntrinsic(llvm::Intrinsic::ctpop, v);
@@ -2934,7 +2955,7 @@ struct llvm_fsqrt
 
 		if (llvm::isa<llvm::Constant>(v))
 		{
-			if (auto c = llvm::ConstantFoldInstruction(ir->CreateUnaryIntrinsic(llvm::Intrinsic::sqrt, v), llvm::DataLayout("")))
+			if (auto c = llvm_const_fold(ir->CreateUnaryIntrinsic(llvm::Intrinsic::sqrt, v)))
 			{
 				// Will fail in some cases (such as negative constant)
 				return c;
@@ -2980,7 +3001,7 @@ struct llvm_fabs
 
 		if (llvm::isa<llvm::Constant>(v))
 		{
-			return llvm::ConstantFoldInstruction(ir->CreateUnaryIntrinsic(llvm::Intrinsic::fabs, v), llvm::DataLayout(""));
+			return llvm_const_fold(ir->CreateUnaryIntrinsic(llvm::Intrinsic::fabs, v));
 		}
 
 		return ir->CreateUnaryIntrinsic(llvm::Intrinsic::fabs, v);
@@ -3027,7 +3048,7 @@ struct llvm_fmuladd
 
 		if (llvm::isa<llvm::Constant>(v1) && llvm::isa<llvm::Constant>(v2) && llvm::isa<llvm::Constant>(v3))
 		{
-			return llvm::ConstantFoldInstruction(ir->CreateIntrinsic(llvm::Intrinsic::fma, {v1->getType()}, {v1, v2, v3}), llvm::DataLayout(""));
+			return llvm_const_fold(ir->CreateIntrinsic(llvm::Intrinsic::fma, {v1->getType()}, {v1, v2, v3}));
 		}
 
 		return ir->CreateIntrinsic(strict_fma ? llvm::Intrinsic::fma : llvm::Intrinsic::fmuladd, {v1->getType()}, {v1, v2, v3});
