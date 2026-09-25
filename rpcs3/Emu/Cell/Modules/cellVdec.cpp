@@ -653,6 +653,29 @@ struct vdec_context final
 	}
 };
 
+// Destroys closed decoder contexts on a host thread.
+// Freeing the FFmpeg decoder and the frames it still holds takes milliseconds, which would otherwise delay the guest thread closing the decoder.
+struct vdec_context_reaper
+{
+	lf_queue<shared_ptr<vdec_context>> contexts;
+
+	void operator()()
+	{
+		while (thread_ctrl::state() != thread_state::aborting)
+		{
+			thread_ctrl::wait_on(contexts);
+
+			// Let the closing sequence of the caller complete first: freeing this much memory slows down the other threads
+			thread_ctrl::wait_for(100'000);
+
+			// Dropping the popped contexts destroys them
+			contexts.pop_all();
+		}
+	}
+
+	static constexpr auto thread_name = "HLE Video Decoder Reaper"sv;
+};
+
 extern bool check_if_vdec_contexts_exist()
 {
 	bool context_exists = false;
@@ -1498,6 +1521,9 @@ error_code cellVdecClose(ppu_thread& ppu, u32 handle)
 		// Other thread removed it beforehead
 		return { CELL_VDEC_ERROR_ARG, "remove_verify failed" };
 	}
+
+	// Let the reaper free the decoder so that the caller does not pay for it
+	g_fxo->get<named_thread<vdec_context_reaper>>().contexts.push(std::move(vdec));
 
 	return CELL_OK;
 }

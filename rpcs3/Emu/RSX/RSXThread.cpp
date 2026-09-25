@@ -3314,6 +3314,7 @@ namespace rsx
 	void thread::pause()
 	{
 		external_interrupt_lock++;
+		external_interrupt_lock.notify_one();
 
 		while (!external_interrupt_ack && !is_stopped())
 		{
@@ -3598,7 +3599,30 @@ namespace rsx
 				if (target_rsx_flip_time > time + 1000)
 				{
 					const auto delay_us = target_rsx_flip_time - time;
-					lv2_obj::wait_timeout(delay_us, nullptr, false);
+					const u64 wait_end = get_system_time() + delay_us;
+
+					// Keep acknowledging external pause requests (eng_lock) while sleeping.
+					// A memory unmap pauses this thread and spins until it answers, stalling the caller for the whole frame-limit delay otherwise.
+					for (u64 now = get_system_time(); now < wait_end && !is_stopped(); now = get_system_time())
+					{
+						if (external_interrupt_lock)
+						{
+							wait_pause();
+							continue;
+						}
+
+						if (const u64 remaining = wait_end - now; remaining > 1000)
+						{
+							// Woken up early by pause()
+							external_interrupt_lock.wait(0, atomic_wait_timeout{(remaining - 1000) * 1000});
+						}
+						else
+						{
+							// Accurate sleep for the last part
+							lv2_obj::wait_timeout(remaining, nullptr, false);
+						}
+					}
+
 					performance_counters.idle_time += delay_us;
 				}
 			}
