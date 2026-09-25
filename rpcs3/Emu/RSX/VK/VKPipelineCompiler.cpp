@@ -262,9 +262,9 @@ namespace vk
 		return {};
 	}
 
-	void initialize_pipe_compiler(int num_worker_threads)
+	int decay_num_worker_threads(int num_worker_threads)
 	{
-		if (num_worker_threads == 0)
+		if (num_worker_threads <= 0)
 		{
 			// Select a conservative but modern default for async pipeline compilation.
 			// Older heuristics topped out too early on high-core CPUs and left large
@@ -300,12 +300,26 @@ namespace vk
 				num_worker_threads, hw_threads);
 		}
 
+		return num_worker_threads;
+	}
+
+	void initialize_pipe_compiler(int num_worker_threads, VkPipelineCache pipe_cache)
+	{
+		num_worker_threads = decay_num_worker_threads(num_worker_threads);
+
 		ensure(num_worker_threads >= 1);
 		ensure(g_render_device); // "Cannot initialize pipe compiler before creating a logical device"
 
 		// Create the shared pipeline cache
-		VkPipelineCacheCreateInfo drv_cache_info{ VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
-		vkCreatePipelineCache(*g_render_device, &drv_cache_info, nullptr, &g_pipeline_cache);
+		if (!pipe_cache)
+		{
+			VkPipelineCacheCreateInfo drv_cache_info{ VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
+			vkCreatePipelineCache(*g_render_device, &drv_cache_info, nullptr, &g_pipeline_cache);
+		}
+		else
+		{
+			g_pipeline_cache = pipe_cache;
+		}
 
 		// Create the thread pool
 		g_pipe_compilers = std::make_unique<named_thread_group<pipe_compiler>>("RSX.W", num_worker_threads);
@@ -316,6 +330,23 @@ namespace vk
 		{
 			compiler.initialize(g_render_device, g_pipeline_cache);
 		}
+	}
+
+	void resize_pipe_compiler(int num_worker_threads)
+	{
+		num_worker_threads = decay_num_worker_threads(num_worker_threads);
+		if (static_cast<u32>(num_worker_threads) <= g_pipe_compilers->size())
+		{
+			// Just lie about how many compilers we have
+			g_num_pipe_compilers = num_worker_threads;
+			return;
+		}
+
+		// We need a bigger thread pool. Very unlikely but provided for correctness.
+		g_pipe_compilers.reset();
+		g_num_pipe_compilers = 0;
+
+		initialize_pipe_compiler(num_worker_threads, g_pipeline_cache);
 	}
 
 	void destroy_pipe_compiler()
