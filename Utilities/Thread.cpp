@@ -2811,6 +2811,14 @@ void thread_base::initialize(void (*error_cb)())
 	}
 #endif
 
+#if !defined(ANDROID) && (defined(__linux__) || defined(__DragonFly__) || defined(__FreeBSD__))
+	// A new thread inherits its creator's affinity mask (e.g. compile workers spawned by a pinned PPU thread): reset it to the process mask
+	if (g_cfg.core.thread_scheduler != thread_scheduler_mode::os)
+	{
+		thread_ctrl::set_thread_affinity_mask(0);
+	}
+#endif
+
 	// Initialize TLS variables
 	thread_ctrl::g_tls_this_thread = this;
 
