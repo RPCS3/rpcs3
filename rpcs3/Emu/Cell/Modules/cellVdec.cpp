@@ -1516,7 +1516,7 @@ error_code cellVdecClose(ppu_thread& ppu, u32 handle)
 	vdec->seq_state = sequence_state::closed;
 	vdec->mutex.lock_unlock();
 
-	if (!idm::remove_verify<vdec_context>(handle, std::move(vdec)))
+	if (!idm::remove_verify<vdec_context>(handle, vdec))
 	{
 		// Other thread removed it beforehead
 		return { CELL_VDEC_ERROR_ARG, "remove_verify failed" };
