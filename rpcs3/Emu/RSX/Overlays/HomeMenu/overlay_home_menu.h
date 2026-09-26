@@ -15,6 +15,8 @@ namespace rsx
 
 			void update(u64 timestamp_us) override;
 			void on_button_pressed(pad_button button_press, bool is_auto_repeat) override;
+			void request_close(std::function<void()> on_close = nullptr);
+			std::function<void()> take_close_callback();
 
 			compiled_resource get_compiled() override;
 
@@ -27,6 +29,7 @@ namespace rsx
 			label m_time_display{};
 
 			animation_color_interpolate fade_animation{};
+			std::function<void()> m_close_callback;
 		};
 	}
 }
