@@ -121,10 +121,10 @@ namespace vm
 
 	enum block_flags_3
 	{
-		page_size_4k   = 0x100, // SYS_MEMORY_PAGE_SIZE_4K
-		page_size_64k  = 0x200, // SYS_MEMORY_PAGE_SIZE_64K
-		page_size_1m   = 0x400, // SYS_MEMORY_PAGE_SIZE_1M
-		page_size_mask = 0xF00, // SYS_MEMORY_PAGE_SIZE_MASK
+		block_size_4k   = 0x100, // SYS_MEMORY_PAGE_SIZE_4K
+		block_size_64k  = 0x200, // SYS_MEMORY_PAGE_SIZE_64K
+		block_size_1m   = 0x400, // SYS_MEMORY_PAGE_SIZE_1M
+		block_size_mask = 0xF00, // SYS_MEMORY_PAGE_SIZE_MASK
 
 		stack_guarded  = 0x10,
 		preallocated   = 0x20, // nonshareable
@@ -222,7 +222,7 @@ namespace vm
 	std::shared_ptr<block_t> get(memory_location_t location, u32 addr = 0);
 
 	// Allocate segment at specified location, does nothing if exists already
-	std::shared_ptr<block_t> reserve_map(memory_location_t location, u32 addr, u32 area_size, u64 flags = page_size_64k);
+	std::shared_ptr<block_t> reserve_map(memory_location_t location, u32 addr, u32 area_size, u64 flags = block_size_64k);
 
 	// Get PS3 virtual memory address from the provided pointer (nullptr or pointer from outside is always converted to 0)
 	// Super memory is allowed as well
