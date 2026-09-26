@@ -8,6 +8,8 @@
 #include <QPainter>
 #include <QProcess>
 #include <QScreen>
+#include <QTabBar>
+#include <QTabWidget>
 #include <QUrl>
 
 #include "Emu/system_utils.hpp"
@@ -357,6 +359,30 @@ namespace gui
 				max_width += combo->view()->autoScrollMargin();
 				combo->view()->setMinimumWidth(max_width);
 			}
+		}
+
+		void keep_tab_bar_focused(QTabWidget* tab_widget)
+		{
+			if (!tab_widget)
+				return;
+
+			QTabBar* tab_bar = tab_widget->tabBar();
+
+			// Start on the tabs, unless the window wants the focus somewhere else
+			if (!tab_bar->window()->focusWidget())
+			{
+				tab_bar->setFocus(Qt::TabFocusReason);
+			}
+
+			// And go back to them on every tab change, but not while the tabs are still being set up or while
+			// another window is used
+			QObject::connect(tab_widget, &QTabWidget::currentChanged, tab_bar, [tab_bar](int index)
+			{
+				if (index >= 0 && tab_bar->isVisible() && tab_bar->window()->isActiveWindow())
+				{
+					tab_bar->setFocus(Qt::TabFocusReason);
+				}
+			});
 		}
 
 		void update_table_item_count(QTableWidget* table)
