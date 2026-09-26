@@ -805,7 +805,10 @@ namespace vm
 		//       the RSX might try to invalidate memory that got unmapped and remapped
 		if (const auto rsxthr = g_fxo->try_get<rsx::thread>())
 		{
-			rsxthr->on_notify_memory_mapped(addr, size);
+			if (flags & page_1m_size && ~bflags & rsx_incomp)
+			{
+				rsxthr->on_notify_memory_mapped(addr, size);
+			}
 		}
 
 		auto prot = utils::protection::rw;
@@ -960,7 +963,7 @@ namespace vm
 
 		// Determine deallocation size
 		u32 size = 0;
-		bool is_exec = false;
+		u8 map_flags = 0;
 
 		for (u32 i = addr / 4096; i < addr / 4096 + max_size / 4096; i++)
 		{
@@ -969,18 +972,23 @@ namespace vm
 				break;
 			}
 
-			if (size == 0)
+			const u8 page_flags = g_pages[i] & ~(page_writable | page_readable);
+
+			if (size && map_flags != page_flags)
 			{
-				is_exec = !!(g_pages[i] & page_executable);
-			}
-			else
-			{
-				// Must be consistent
-				ensure(is_exec == !!(g_pages[i] & page_executable));
+				fmt::throw_exception("_page_unmap(): Memory inconsistency found! (addr=0x%x, flags: 0x%x vs 0x%x)", addr, map_flags, page_flags);
 			}
 
+			map_flags = page_flags;
 			size += 4096;
 		}
+
+		if (!size)
+		{
+			fmt::throw_exception("_page_unmap(): No mapping was found! (addr=0x%x)", addr);
+		}
+
+		const bool is_exec = !!(map_flags & page_executable);
 
 		// Protect range locks from actual memory protection changes
 		auto range_lock = _lock_main_range_lock(range_allocation, addr, size);
@@ -1010,7 +1018,10 @@ namespace vm
 		//       the RSX might try to call VirtualProtect on memory that is already unmapped
 		if (auto rsxthr = g_fxo->try_get<rsx::thread>())
 		{
-			rsxthr->on_notify_pre_memory_unmapped(addr, size, unmap_events);
+			if ((addr >> 28 << 28) == 0xC0000000 || (map_flags & page_1m_size && ~bflags & rsx_incomp))
+			{
+				rsxthr->on_notify_pre_memory_unmapped(addr, size, unmap_events);
+			}
 		}
 
 		// Deregister PPU related data
@@ -1823,7 +1834,7 @@ namespace vm
 		: m_id(init_block_id())
 		, addr(ar)
 		, size(ar)
-		, flags(ar)
+		, flags(process_block_flags(ar.pop<u64>()))
 	{
 		if (flags & preallocated)
 		{
