@@ -495,7 +495,7 @@ void spu_load_exec(const spu_exec_object& elf)
 	spu_thread::g_raw_spu_ctr++;
 
 	auto spu = idm::make_ptr<named_thread<spu_thread>>(nullptr, 0, "test_spu", 0);
-	ensure(vm::get(vm::spu)->falloc(spu->vm_offset(), SPU_LS_SIZE, &spu->shm, vm::page_size_64k));
+	ensure(vm::get(vm::spu)->falloc(spu->vm_offset(), SPU_LS_SIZE, &spu->shm, vm::block_size_64k));
 	spu->map_ls(*spu->shm, spu->ls);
 
 	for (const auto& prog : elf.progs)
@@ -556,7 +556,7 @@ void spu_load_rel_exec(const spu_rel_object& elf)
 	spu_thread::g_raw_spu_ctr++;
 
 	auto spu = idm::make_ptr<named_thread<spu_thread>>(nullptr, 0, "test_spu", 0);
-	ensure(vm::get(vm::spu)->falloc(spu->vm_offset(), SPU_LS_SIZE, &spu->shm, vm::page_size_64k));
+	ensure(vm::get(vm::spu)->falloc(spu->vm_offset(), SPU_LS_SIZE, &spu->shm, vm::block_size_64k));
 	spu->map_ls(*spu->shm, spu->ls);
 
 	u32 total_memsize = 0;
