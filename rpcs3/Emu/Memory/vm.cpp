@@ -744,7 +744,7 @@ namespace vm
 		}
 
 		// If native page size exceeds 4096, don't map native pages (expected to be always mapped in this case)
-		const bool is_noop = bflags & page_size_4k && utils::get_page_size() > 4096;
+		const bool is_noop = bflags & block_size_4k && utils::get_page_size() > 4096;
 
 		// Lock range being mapped
 		auto range_lock = _lock_main_range_lock(range_allocation, addr, size);
@@ -959,7 +959,7 @@ namespace vm
 		}
 
 		// If native page size exceeds 4096, don't unmap native pages (always mapped)
-		const bool is_noop = bflags & page_size_4k && utils::get_page_size() > 4096;
+		const bool is_noop = bflags & block_size_4k && utils::get_page_size() > 4096;
 
 		// Determine deallocation size
 		u32 size = 0;
@@ -1197,11 +1197,11 @@ namespace vm
 			flags |= page_executable;
 		}
 
-		if ((bflags & page_size_mask) == page_size_64k)
+		if ((bflags & block_size_mask) == block_size_64k)
 		{
 			flags |= page_64k_size;
 		}
-		else if (!(bflags & (page_size_mask & ~page_size_1m)))
+		else if (!(bflags & (block_size_mask & ~block_size_1m)))
 		{
 			flags |= page_1m_size;
 		}
@@ -1221,7 +1221,7 @@ namespace vm
 			std::remove_reference_t<decltype(map)>::value_type* result = nullptr;
 
 			// Check eligibility
-			if (!_this || !(page_size_mask & _this->flags) || _this->addr < 0x20000000 || _this->addr >= 0xC0000000)
+			if (!_this || !(block_size_mask & _this->flags) || _this->addr < 0x20000000 || _this->addr >= 0xC0000000)
 			{
 				return result;
 			}
@@ -1269,12 +1269,12 @@ namespace vm
 
 	static constexpr u64 process_block_flags(u64 flags)
 	{
-		if ((flags & page_size_mask) == 0)
+		if ((flags & block_size_mask) == 0)
 		{
-			flags |= page_size_1m;
+			flags |= block_size_1m;
 		}
 
-		if (flags & page_size_4k)
+		if (flags & block_size_4k)
 		{
 			flags |= preallocated;
 		}
@@ -1318,7 +1318,7 @@ namespace vm
 			// Special path for whole-allocated areas allowing 4k granularity
 			m_common = std::make_shared<utils::shm>(size, fmt::format("_block_x%08x", addr));
 
-			if (!map_critical(vm::_ptr<u8>(addr), this->flags & page_size_4k && utils::get_page_size() > 4096 ? utils::protection::rw : utils::protection::no) || !map_critical(vm::get_super_ptr(addr), utils::protection::rw))
+			if (!map_critical(vm::_ptr<u8>(addr), this->flags & block_size_4k && utils::get_page_size() > 4096 ? utils::protection::rw : utils::protection::no) || !map_critical(vm::get_super_ptr(addr), utils::protection::rw))
 			{
 				fmt::throw_exception("Memory mapping failed (addr=0x%x, size=0x%x, flags=0x%x): %s", addr, size, flags, map_error);
 			}
@@ -1419,7 +1419,7 @@ namespace vm
 		}
 
 		// Determine minimal alignment
-		const u32 min_page_size = flags & page_size_4k ? 0x1000 : 0x10000;
+		const u32 min_page_size = flags & block_size_4k ? 0x1000 : 0x10000;
 
 		// Align to minimal page size
 		const u32 size = utils::align(orig_size, min_page_size) + (flags & stack_guarded ? 0x2000 : 0);
@@ -1491,7 +1491,7 @@ namespace vm
 		}
 
 		// Determine minimal alignment
-		const u32 min_page_size = flags & page_size_4k ? 0x1000 : 0x10000;
+		const u32 min_page_size = flags & block_size_4k ? 0x1000 : 0x10000;
 
 		// Take address misalignment into account
 		const u32 size0 = orig_size + addr % min_page_size;
@@ -1839,7 +1839,7 @@ namespace vm
 		if (flags & preallocated)
 		{
 			m_common = std::make_shared<utils::shm>(size, fmt::format("_block_x%08x", addr));
-			m_common->map_critical(vm::base(addr), this->flags & page_size_4k && utils::get_page_size() > 4096 ? utils::protection::rw : utils::protection::no);
+			m_common->map_critical(vm::base(addr), this->flags & block_size_4k && utils::get_page_size() > 4096 ? utils::protection::rw : utils::protection::no);
 			m_common->map_critical(vm::get_super_ptr(addr));
 		}
 
@@ -1875,13 +1875,13 @@ namespace vm
 				pflags |= alloc_hidden;
 			}
 
-			if ((flags & page_size_64k) == page_size_64k)
+			if ((flags & block_size_64k) == block_size_64k)
 			{
-				pflags |= page_size_64k;
+				pflags |= block_size_64k;
 			}
-			else if (!(flags & (page_size_mask & ~page_size_1m)))
+			else if (!(flags & (block_size_mask & ~block_size_1m)))
 			{
-				pflags |= page_size_1m;
+				pflags |= block_size_1m;
 			}
 
 			// Map the memory through the same method as alloc() and falloc()
@@ -2129,7 +2129,7 @@ namespace vm
 				if (location == vm::main || addr == 0x00010000)
 				{
 					// Special
-					loc = std::make_shared<block_t>(addr, area_size, page_size_64k | preallocated);
+					loc = std::make_shared<block_t>(addr, area_size, block_size_64k | preallocated);
 				}
 				else
 				{
@@ -2287,9 +2287,9 @@ namespace vm
 				nullptr,		                                                                 // user 64k pages
 				nullptr,                                                                         // user 1m pages
 				nullptr,                                                                         // rsx context
-				std::make_shared<block_t>(0xC0000000, 0x10000000, page_size_64k | preallocated), // video
-				std::make_shared<block_t>(0xD0000000, 0x10000000, page_size_4k  | preallocated | stack_guarded | bf0_0x1), // stack
-				std::make_shared<block_t>(0xE0000000, 0x20000000, page_size_64k),                // SPU reserved
+				std::make_shared<block_t>(0xC0000000, 0x10000000, block_size_64k | preallocated), // video
+				std::make_shared<block_t>(0xD0000000, 0x10000000, block_size_4k  | preallocated | stack_guarded | bf0_0x1), // stack
+				std::make_shared<block_t>(0xE0000000, 0x20000000, block_size_64k),                // SPU reserved
 			};
 
 			std::memset(g_reservations, 0, sizeof(g_reservations));
