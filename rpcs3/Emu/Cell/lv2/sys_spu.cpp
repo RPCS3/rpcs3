@@ -116,7 +116,7 @@ bool sys_spu_image::load(const fs::file& stream)
 	this->nsegs = 0;
 	this->segs = vm::null;
 
-	vm::page_protect(segs.addr(), utils::align(mem_size, 4096), 0, 0, vm::page_writable);
+	vm::page_protect(segs.addr(), utils::align(mem_size, 0x10000), 0, 0, vm::page_writable);
 	return true;
 }
 

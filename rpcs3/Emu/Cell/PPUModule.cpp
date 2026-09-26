@@ -354,7 +354,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link, utils::serial* ar = n
 	if (!hle_funcs_addr)
 		hle_funcs_addr = vm::alloc(::size32(hle_funcs) * 8, vm::main);
 	else
-		vm::page_protect(hle_funcs_addr, utils::align(::size32(hle_funcs) * 8, 0x1000), 0, vm::page_writable);
+		vm::page_protect(hle_funcs_addr, utils::align(::size32(hle_funcs) * 8, 0x10000), 0, vm::page_writable);
 
 	// Initialize as PPU executable code
 	ppu_register_range(hle_funcs_addr, ::size32(hle_funcs) * 8);
@@ -371,7 +371,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link, utils::serial* ar = n
 	}
 
 	// Set memory protection to read-only
-	vm::page_protect(hle_funcs_addr, utils::align(::size32(hle_funcs) * 8, 0x1000), 0, 0, vm::page_writable);
+	vm::page_protect(hle_funcs_addr, utils::align(::size32(hle_funcs) * 8, 0x10000), 0, 0, vm::page_writable);
 
 	// Initialize function names
 	const bool is_first = g_ppu_function_names.empty();
