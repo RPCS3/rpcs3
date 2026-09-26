@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <map>
+#include <vector>
 #include "util/types.hpp"
 #include "util/atomic.hpp"
 #include "util/auto_typemap.hpp"
@@ -29,11 +30,59 @@ namespace utils
 
 namespace vm
 {
-	extern u8* const g_base_addr;
-	extern u8* const g_sudo_addr;
-	extern u8* const g_exec_addr;
-	extern u8* const g_stat_addr;
-	extern u8* const g_free_addr;
+	// Page information
+	using memory_page = atomic_t<u8>;
+
+	class block_t;
+
+	struct ps3_virtual_memory_object
+	{
+		std::add_pointer_t<u8> base_addr{};
+		std::add_pointer_t<u8> sudo_addr{};
+		std::add_pointer_t<u8> exec_addr{};
+		std::add_pointer_t<u8> stat_addr{};
+		std::add_pointer_t<u8> hook_addr{};
+
+		std::vector<std::shared_ptr<block_t>> locations;
+
+		// Dynamic size to ease on the compiler
+		std::add_pointer_t<memory_page> pages{};
+
+		~ps3_virtual_memory_object() noexcept;
+		void terminate();
+	};
+
+	struct ps3_physical_memory_entries
+	{
+		// elad: Now this is the first object savestates serializes
+		SAVESTATE_INIT_POS(1);
+
+		ps3_physical_memory_entries(const ps3_physical_memory_entries&) = delete;
+		int operator=(const ps3_physical_memory_entries&) = delete;
+
+		std::vector<std::shared_ptr<utils::shm>> shm_list;
+		std::map<utils::shm*, usz> map_lookup;
+
+		ps3_physical_memory_entries() = default;
+		ps3_physical_memory_entries(utils::serial& ar);
+		void save(utils::serial& ar);
+
+		void populate_map();
+	};
+
+	std::shared_ptr<vm::ps3_virtual_memory_object> get_current_memory_object();
+	void initialize_ps3_mmemory_object(ps3_virtual_memory_object* ptr);
+	void deinitialize_ps3_mmemory_object(ps3_virtual_memory_object* ptr);
+	void save(ps3_virtual_memory_object* obj, utils::serial& ar);
+	void load(ps3_virtual_memory_object* obj, utils::serial& ar);
+
+	extern thread_local u8* g_base_addr;
+	extern thread_local u8* g_sudo_addr;
+	extern thread_local u8* g_exec_addr;
+	extern thread_local u8* g_stat_addr;
+	extern thread_local u8* g_free_addr;
+	extern thread_local std::shared_ptr<ps3_virtual_memory_object> g_vm_image;
+
 	extern u8 g_reservations[65536 / 128 * 64];
 
 	static constexpr u64 g_exec_addr_seg_offset = 0x2'0000'0000ULL;
@@ -71,35 +120,44 @@ namespace vm
 	// Address type
 	enum addr_t : u32 {};
 
-	// Page information
-	using memory_page = atomic_t<u8>;
-
 	// Change memory protection of specified memory region
 	bool page_protect(u32 addr, u32 size, u8 flags_test = 0, u8 flags_set = 0, u8 flags_clear = 0);
 
 	// Check flags for specified memory range (unsafe)
+	bool check_addr(vm::ps3_virtual_memory_object* memory_4GB_model, u64 addr, u8 flags, u32 size);
 	bool check_addr(u64 addr, u8 flags, u32 size);
 
 	template <u32 Size = 1>
 	inline bool check_addr(u64 addr, u8 flags = page_readable)
 	{
-		extern std::array<memory_page, 0x100000000 / 4096> g_pages;
+		return check_addr(addr, flags, Size);
+	}
 
-		if (Size - 1 >= 4095u || Size & (Size - 1) || addr % Size)
+	template <usz Size = 1, typename Owner>
+		requires(requires(Owner&& o) { o->pages; }) && (Size != 0 && Size < 4096) 
+	inline bool check_addr(Owner&& owner, u64 addr, u8 flags = page_readable) noexcept
+	{
+		if (addr < u32{umax} - 4095 && !(~owner->pages[addr / 4096] & (flags | page_allocated)))
 		{
-			// TODO
-			return check_addr(addr, flags, Size);
+			if constexpr (Size > 1)
+			{
+				if (addr % Size && (~owner->pages[(addr + Size - 1) / 4096] & (flags | page_allocated)))
+				{
+					return false;
+				}
+			}
+
+			return true;
 		}
 
-		return !(~g_pages[addr / 4096] & (flags | page_allocated));
+		return false;
 	}
 
 	// Like check_addr but should only be used in lock-free context with care
-	inline std::pair<bool, u8> get_addr_flags(u32 addr) noexcept
+	template <typename Owner>
+	inline std::pair<bool, u8> get_addr_flags(Owner&& owner, u32 addr) noexcept
 	{
-		extern std::array<memory_page, 0x100000000 / 4096> g_pages;
-
-		const u8 flags = g_pages[addr / 4096].load();
+		const u8 flags = owner->pages[addr / 4096].load();
 
 		return std::make_pair(!!(flags & page_allocated), flags);
 	}
@@ -156,6 +214,9 @@ namespace vm
 
 		atomic_t<u64> m_id = 0;
 
+		// Non-owning reference to proces memory
+		ps3_virtual_memory_object* memory_4GB_model{};
+
 		bool try_alloc(u32 addr, u64 bflags, u32 size, std::shared_ptr<utils::shm>&&) const;
 
 		// Unmap block
@@ -163,9 +224,9 @@ namespace vm
 		friend bool _unmap_block(const std::shared_ptr<block_t>&, std::vector<std::pair<u64, u64>>* unmapped);
 
 	public:
-		block_t(u32 addr, u32 size, u64 flags);
+		block_t(ps3_virtual_memory_object* memory_4GB_model, u32 addr, u32 size, u64 flags) noexcept;
 
-		~block_t();
+		~block_t() noexcept;
 
 	public:
 		const u32 addr; // Start address
@@ -200,14 +261,11 @@ namespace vm
 		}
 
 		// Serialization helper for shared memory
-		void get_shared_memory(std::vector<std::pair<utils::shm*, u32>>& shared);
-
-		// Returns sample address for shared memory, 0 on failure
-		u32 get_shm_addr(const std::shared_ptr<utils::shm>& shared);
+		void get_shared_memory(std::vector<std::shared_ptr<utils::shm>>& shared);
 
 		// Serialization
 		void save(utils::serial& ar, std::map<utils::shm*, usz>& shared);
-		block_t(utils::serial& ar, std::vector<std::shared_ptr<utils::shm>>& shared);
+		block_t(utils::serial& ar, ps3_virtual_memory_object* memory_4GB_model, std::vector<std::shared_ptr<utils::shm>>& shared);
 	};
 
 	// Create new memory block with specified parameters and return it
@@ -373,9 +431,6 @@ namespace vm
 
 	void load(utils::serial& ar);
 	void save(utils::serial& ar);
-
-	// Returns sample address for shared memory, 0 on failure (wraps block_t::get_shm_addr)
-	u32 get_shm_addr(const std::shared_ptr<utils::shm>& shared);
 
 	template <typename T, typename AT>
 	class _ptr_base;

@@ -14,7 +14,9 @@ namespace rsx
 
 		inline void lock_range(u32 addr, u32 length)
 		{
-			if (!get_current_renderer()->iomap_table.lock<IsFullLock, Stride>(addr, length, get_current_cpu_thread()))
+			const auto context = get_rsx_process_context();
+
+			if (!context || !context->iomap_table.lock<IsFullLock, Stride>(addr, length, get_current_cpu_thread()))
 			{
 				length = 0;
 			}
@@ -107,7 +109,7 @@ namespace rsx
 				return;
 			}
 
-			get_current_renderer()->iomap_table.unlock<IsFullLock, Stride>(addr, length);
+			get_rsx_process_context()->iomap_table.unlock<IsFullLock, Stride>(addr, length);
 
 			if (!destructor)
 			{

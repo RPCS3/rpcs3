@@ -139,7 +139,7 @@ class ppu_thread : public cpu_thread
 public:
 	static const u32 id_base = 0x01000000; // TODO (used to determine thread type)
 	static const u32 id_step = 1;
-	static const u32 id_count = 100;
+	static const u32 id_count = 256;
 	static constexpr std::pair<u32, u32> id_invl_range = {12, 12};
 
 	virtual void dump_regs(std::string&, std::any& custom_data) const override;
@@ -260,6 +260,32 @@ public:
 	// Optimization: precomputed java-mode mask for handling denormals
 	u32 jm_mask = 0x7f80'0000;
 
+	// JIT vm::g_base_addr / vm::g_exec_addr accessibles
+	u8* vm_base = nullptr;
+	u8* vm_sudo = nullptr;
+	const void* vm_exec = nullptr;
+
+	std::shared_ptr<vm::ps3_virtual_memory_object> vm_owner;
+
+	// Convert specified VM address to process-local memory pointer
+	template<typename T>
+	to_be_t<T>* _ptr(u32 addr) const
+	{
+		return reinterpret_cast<to_be_t<T>*>(vm_base + addr);
+	}
+
+	template<typename T>
+	to_be_t<T>* _sudo(u32 addr) const
+	{
+		return reinterpret_cast<to_be_t<T>*>(vm_sudo + addr);
+	}
+
+	template<typename T>
+	to_be_t<T>& _ref(u32 addr) const
+	{
+		return *_ptr<T>(addr);
+	}
+
 	u32 raddr{0}; // Reservation addr
 	u64 rtime{0};
 	alignas(64) std::byte rdata[128]{}; // Reservation data
@@ -320,6 +346,13 @@ public:
 
 	// Hypervisor context data
 	rpcs3::hypervisor_context_t hv_ctx; // HV context for gate enter exit. Keep at a low struct offset.
+
+	u32 sdk_version = umax; // Local copy of lv2_process::sdk_ver
+	bool has_root_perm = false; // Local copy of lv2_process::has_root_perm
+	bool has_debug_or_root_perm = false; // Local copy of lv2_process::debug_or_root
+	bool has_ppc_seg = false; // Local copy of lv2_process::ppc_seg
+	u32 proc_id = 0;
+	class ppu_function_manager* exports_table = nullptr;
 
 	u64 last_ftsc = 0;
 	u64 last_ftime = 0;

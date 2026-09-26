@@ -21,7 +21,7 @@ void init_system_shared_memory()
 	{
 		ensure(idm::import<lv2_obj, lv2_memory>([&]() -> shared_ptr<lv2_memory>
 		{
-			auto memory = make_shared<lv2_memory>(0x10000, 0x10000, 0x200, key, true, nullptr);
+			auto memory = make_shared<lv2_memory>(0x10000, 0x10000, 0x200, key, true, 0, nullptr);
 			memory->system_handle = idm::last_id<lv2_memory>();
 			return lv2_obj::load(key, std::move(memory));
 		}));
@@ -43,12 +43,13 @@ void fmt_class_string<lv2_mem_container_id>::format(std::string& out, u64 arg)
 	});
 }
 
-lv2_memory::lv2_memory(u32 size, u32 align, u64 flags, u64 key, bool pshared, lv2_memory_container* ct)
+lv2_memory::lv2_memory(u32 size, u32 align, u64 flags, u64 key, bool pshared, u64 authid, lv2_memory_container* ct)
 	: size(size)
 	, align(align)
 	, flags(flags)
 	, key(key)
 	, pshared(pshared)
+	, authid(authid)
 	, ct(ct)
 	, shm(null_ptr)
 {
@@ -60,15 +61,20 @@ lv2_memory::lv2_memory(utils::serial& ar)
 	, flags(ar)
 	, key(ar)
 	, pshared(ar)
-	, ct([&](u32 id) -> lv2_memory_container*
+	, authid(ar)
+	, ct(lv2_memory_container::search(ar.pop<u32>()))
+	, shm([&](u32 mem_index) -> shared_ptr<std::shared_ptr<utils::shm>>
 	{
-		return id ? ensure(lv2_memory_container::search(id)) : nullptr;
+		if (mem_index != umax)
+		{
+			return make_single_value(::at32(g_fxo->get<vm::ps3_physical_memory_entries>().shm_list, mem_index));
+		}
+
+		return null_ptr;
 	}(ar.pop<u32>()))
 	, system_handle(ar)
-	, shm(null_ptr)
 {
 	const u32 addr{ar};
-	counter = ar.pop<u32>();
 	external_refs = ar.pop<u32>();
 
 	if (addr)
@@ -81,6 +87,18 @@ lv2_memory::lv2_memory(utils::serial& ar)
 		ar(std::span<u8>(ensure(data->map_self()), size));
 		shm = make_single_value(std::move(data));
 	}
+
+	ar(counters);
+}
+
+static std::string make_named_allocation(u64 id, u64 key)
+{
+	if (key)
+	{
+		return fmt::format("sys_mmapper: IPC 0x%x", key);
+	}
+
+	return fmt::format("sys_mmapper: id 0x%x", id);
 }
 
 CellError lv2_memory::on_id_create()
@@ -88,9 +106,16 @@ CellError lv2_memory::on_id_create()
 	if (!exists && !external_refs && ct && !ct->take(size))
 	{
 		sys_mmapper.error("lv2_memory::on_id_create(): Cannot allocate 0x%x bytes (0x%x available)", size, ct->size - ct->used);
+
 		return CELL_ENOMEM;
 	}
 
+	if (!exists && ct)
+	{
+		ct->take_named(make_named_allocation(idm::last_id(), key), size);
+	}
+
+	counters.emplace(id_manager::g_process, 0);
 	exists++;
 	return {};
 }
@@ -139,13 +164,11 @@ void lv2_memory::save_data(utils::serial& ar)
 {
 	USING_SERIALIZATION_VERSION(lv2_memory);
 
-	ar(size, align, flags, key, pshared, ct ? static_cast<u32>(ct->id) : 0, system_handle);
+	ar(size, align, flags, key, pshared, authid, ct ? static_cast<u32>(ct->id) : 0, system_handle);
 	const auto data = shm.load();
-	const u32 addr = data ? vm::get_shm_addr(*data) : 0;
-	ar(addr);
-	ar(counter, external_refs);
+	ar(external_refs);
 
-	if (!addr)
+	if (counters.empty())
 	{
 		ar(static_cast<bool>(data));
 
@@ -153,13 +176,21 @@ void lv2_memory::save_data(utils::serial& ar)
 		{
 			ar(std::span<u8>(ensure((*data)->map_self()), size));
 		}
+		else
+		{
+			ar(::narrow<u32>(::at32(g_fxo->get<vm::ps3_physical_memory_entries>().map_lookup, data->get())));
+		}
 	}
+
+	ar(counters);
 }
 
 void lv2_memory::release_memory()
 {
+	counters.erase(id_manager::g_process);
+
 	// the caller holds the id manager lock
-	if (exists || external_refs)
+	if (exists || external_refs || !counters.empty())
 	{
 		return;
 	}
@@ -185,24 +216,61 @@ void page_fault_notification_entries::save(utils::serial& ar)
 	ar(entries);
 }
 
-template <bool exclusive = false>
+template <bool exclusive_syscall_only = false>
 error_code create_lv2_shm(bool pshared, u64 ipc_key, u64 size, u32 align, u64 flags, lv2_memory_container* ct)
 {
 	const u32 _pshared = pshared ? SYS_SYNC_PROCESS_SHARED : SYS_SYNC_NOT_PROCESS_SHARED;
-	const s32 create_mode = exclusive || (flags & 0xc000) == 0xc000 ? SYS_SYNC_NEWLY_CREATED
+	const s32 create_mode = exclusive_syscall_only || (flags & 0xc000) == 0xc000 ? SYS_SYNC_NEWLY_CREATED
 		: (flags & 0x8000) ? SYS_SYNC_NOT_CARE : SYS_SYNC_NOT_CREATE;
+
+	u64 authid = 0;
 
 	if (!pshared)
 	{
 		ipc_key = 0;
 	}
-
-	shared_ptr<lv2_memory> created;
-	return lv2_obj::create<lv2_memory>(_pshared, ipc_key, create_mode, [&]()
+	else
 	{
-		created = make_shared<lv2_memory>(static_cast<u32>(size), align, flags, ipc_key, pshared, ct);
-		return created;
-	}, false, size, align, created);
+		authid = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->self_info.prog_id_hdr.program_authority_id; 
+	}
+
+	u32 creation_policy = exclusive_syscall_only ? SYS_SYNC_NEWLY_CREATED : SYS_SYNC_NOT_CARE;
+
+	if (pshared && !exclusive_syscall_only)
+	{
+		if (flags & SYS_MMAPPER_SHM_CAN_CREATE)
+		{
+			if (flags & SYS_MMAPPER_SHM_MUST_CREATE)
+			{
+				creation_policy = SYS_SYNC_NEWLY_CREATED;
+			}
+			else
+			{
+				creation_policy = SYS_SYNC_NOT_CARE;
+			}
+		}
+		else
+		{
+			creation_policy = SYS_SYNC_NOT_PROCESS_SHARED;
+		}
+	}
+
+	if (auto error = lv2_obj::create<lv2_memory>(_pshared, ipc_key, creation_policy, [&]()
+	{
+		return make_shared<lv2_memory>(
+			static_cast<u32>(size),
+			align,
+			flags,
+			ipc_key,
+			pshared,
+			authid,
+			ct);
+	}, false))
+	{
+		return error;
+	}
+
+	return CELL_OK;
 }
 
 error_code sys_mmapper_allocate_address(ppu_thread& ppu, u64 size, u64 flags, u64 alignment, vm::ptr<u32> alloc_addr)
@@ -313,7 +381,7 @@ error_code sys_mmapper_allocate_shared_memory(ppu_thread& ppu, u64 ipc_key, u64 
 	}
 
 	// Get "default" memory container
-	auto& dct = g_fxo->get<lv2_memory_container>();
+	auto& dct = *idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->parent_memory_container;
 
 	if (auto error = create_lv2_shm(ipc_key != SYS_MMAPPER_NO_SHM_KEY, ipc_key, size, flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 : 0x100000, flags, &dct))
 	{
@@ -322,6 +390,12 @@ error_code sys_mmapper_allocate_shared_memory(ppu_thread& ppu, u64 ipc_key, u64 
 
 	ppu.check_state();
 	*mem_id = idm::last_id<lv2_memory>();
+
+	if (ipc_key != SYS_MMAPPER_NO_SHM_KEY)
+	{
+		sys_mmapper.warning("sys_mmapper_allocate_shared_memory(): Allocated memory ID 0x%x for IPC 0x%x", idm::last_id(), ipc_key);
+	}
+
 	return CELL_OK;
 }
 
@@ -391,6 +465,12 @@ error_code sys_mmapper_allocate_shared_memory_from_container(ppu_thread& ppu, u6
 
 	ppu.check_state();
 	*mem_id = idm::last_id<lv2_memory>();
+
+	if (ipc_key != SYS_MMAPPER_NO_SHM_KEY)
+	{
+		sys_mmapper.warning("sys_mmapper_allocate_shared_memory_from_container(): Allocated memory ID 0x%x for IPC 0x%x", idm::last_id(), ipc_key);
+	}
+
 	return CELL_OK;
 }
 
@@ -481,7 +561,7 @@ error_code sys_mmapper_allocate_shared_memory_ext(ppu_thread& ppu, u64 ipc_key, 
 
 		if (to_perm_check)
 		{
-			if (flags != SYS_MEMORY_PAGE_SIZE_64K || !g_ps3_process_info.debug_or_root())
+			if (flags != SYS_MEMORY_PAGE_SIZE_64K || !ppu.has_debug_or_root_perm)
 			{
 				return CELL_EPERM;
 			}
@@ -489,7 +569,7 @@ error_code sys_mmapper_allocate_shared_memory_ext(ppu_thread& ppu, u64 ipc_key, 
 	}
 
 	// Get "default" memory container
-	auto& dct = g_fxo->get<lv2_memory_container>();
+	auto& dct = *idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->parent_memory_container;
 
 	if (auto error = create_lv2_shm<true>(true, ipc_key, size, flags & SYS_MEMORY_PAGE_SIZE_64K ? 0x10000 : 0x100000, flags, &dct))
 	{
@@ -498,6 +578,8 @@ error_code sys_mmapper_allocate_shared_memory_ext(ppu_thread& ppu, u64 ipc_key, 
 
 	ppu.check_state();
 	*mem_id = idm::last_id<lv2_memory>();
+
+	sys_mmapper.warning("sys_mmapper_allocate_shared_memory_ext(): Allocated memory ID 0x%x for IPC 0x%x", idm::last_id(), ipc_key);
 	return CELL_OK;
 }
 
@@ -588,7 +670,7 @@ error_code sys_mmapper_allocate_shared_memory_from_container_ext(ppu_thread& ppu
 
 		if (to_perm_check)
 		{
-			if (flags != SYS_MEMORY_PAGE_SIZE_64K || !g_ps3_process_info.debug_or_root())
+			if (flags != SYS_MEMORY_PAGE_SIZE_64K || !ppu.has_debug_or_root_perm)
 			{
 				return CELL_EPERM;
 			}
@@ -609,6 +691,25 @@ error_code sys_mmapper_allocate_shared_memory_from_container_ext(ppu_thread& ppu
 
 	ppu.check_state();
 	*mem_id = idm::last_id<lv2_memory>();
+
+	sys_mmapper.warning("sys_mmapper_allocate_shared_memory_from_container_ext(): Allocated memory ID 0x%x for IPC 0x%x", idm::last_id(), ipc_key);
+	return CELL_OK;
+}
+
+error_code sys_mmapper_shared_memory_get_auth_id(ppu_thread& ppu, u32 mem_id, vm::ptr<u64> out_authid)
+{
+	ppu.state += cpu_flag::wait;
+
+	sys_mmapper.warning("sys_mmapper_shared_memory_get_auth_id(mem_id=0x%x, out_authid=0x%x)", mem_id, out_authid);
+
+	const auto mem = idm::get_unlocked<lv2_obj, lv2_memory>(mem_id);
+
+	if (!mem)
+	{
+		return CELL_EINVAL;
+	}
+
+	*out_authid = mem->authid;
 	return CELL_OK;
 }
 
@@ -701,13 +802,18 @@ error_code sys_mmapper_free_shared_memory(ppu_thread& ppu, u32 mem_id)
 			return CELL_ESRCH;
 		}
 
-		if (mem.counter)
+		if (atomic_storage<u32>::load(::at32(mem.counters, id_manager::g_process)))
 		{
 			return CELL_EBUSY;
 		}
 
-		lv2_obj::on_id_destroy(mem, mem.key, false);
+		lv2_obj::on_id_destroy(mem, mem.key, +mem.pshared);
 		mem.release_memory();
+
+		if (mem.ct && !mem.exists)
+		{
+			mem.ct->free_named(make_named_allocation(mem_id, mem.key), mem.size);
+		}
 
 		return {};
 	});
@@ -737,6 +843,8 @@ error_code sys_mmapper_map_shared_memory(ppu_thread& ppu, u32 addr, u32 mem_id, 
 	{
 		return CELL_EINVAL;
 	}
+
+	u32* alloc_ctr = nullptr;
 
 	const auto mem = idm::get<lv2_obj, lv2_memory>(mem_id, [&](lv2_memory& mem) -> CellError
 	{
@@ -773,7 +881,8 @@ error_code sys_mmapper_map_shared_memory(ppu_thread& ppu, u32 addr, u32 mem_id, 
 			}
 		}
 
-		mem.counter++;
+		alloc_ctr = &::at32(mem.counters, id_manager::g_process);
+		(*alloc_ctr)++;
 		return {};
 	});
 
@@ -791,7 +900,7 @@ error_code sys_mmapper_map_shared_memory(ppu_thread& ppu, u32 addr, u32 mem_id, 
 
 	if (!area->falloc(addr, mem->size, &shm_ptr, mem->align == 0x10000 ? SYS_MEMORY_PAGE_SIZE_64K : SYS_MEMORY_PAGE_SIZE_1M))
 	{
-		mem->counter--;
+		atomic_storage<u32>::fetch_dec(*alloc_ctr);
 
 		if (!area->is_valid())
 		{
@@ -817,6 +926,8 @@ error_code sys_mmapper_search_and_map(ppu_thread& ppu, u32 start_addr, u32 mem_i
 	{
 		return {CELL_EINVAL, start_addr};
 	}
+
+	u32* alloc_ctr = nullptr;
 
 	const auto mem = idm::get<lv2_obj, lv2_memory>(mem_id, [&](lv2_memory& mem) -> CellError
 	{
@@ -848,7 +959,8 @@ error_code sys_mmapper_search_and_map(ppu_thread& ppu, u32 start_addr, u32 mem_i
 			}
 		}
 
-		mem.counter++;
+		alloc_ctr = &::at32(mem.counters, id_manager::g_process);
+		(*alloc_ctr)++;
 		return {};
 	});
 
@@ -868,7 +980,7 @@ error_code sys_mmapper_search_and_map(ppu_thread& ppu, u32 start_addr, u32 mem_i
 
 	if (!addr)
 	{
-		mem->counter--;
+		atomic_storage<u32>::fetch_dec(*alloc_ctr);
 
 		if (!area->is_valid())
 		{
@@ -931,7 +1043,7 @@ error_code sys_mmapper_unmap_shared_memory(ppu_thread& ppu, u32 addr, vm::ptr<u3
 	*mem_id = mem.ret;
 
 	// Acknowledge
-	mem->counter--;
+	atomic_storage<u32>::fetch_dec(::at32(mem->counters, id_manager::g_process));
 
 	return CELL_OK;
 }

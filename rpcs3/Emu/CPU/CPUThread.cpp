@@ -9,6 +9,7 @@
 #include "Emu/IdManager.h"
 #include "Emu/GDB.h"
 #include "Emu/Cell/lv2/sys_spu.h"
+#include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/RSX/RSXThread.h"
@@ -651,6 +652,8 @@ namespace cpu_counter
 
 void cpu_thread::operator()()
 {
+	const auto vm_globals_access = lv2_process::acquire_globals(id_manager::g_process);
+
 	const auto old_prefix = g_tls_log_prefix;
 
 	g_tls_this_thread = this;
@@ -732,12 +735,12 @@ void cpu_thread::operator()()
 			{
 				cleanup();
 
-				auto log_thread = named_thread("CPU Thread Cleanup Logger", [name = name]()
+				/*auto log_thread = named_thread("CPU Thread Cleanup Logger", [name = name]()
 				{
 					sys_log.warning("CPU Thread '%s' terminated abnormally!", name);
 				});
 
-				log_thread();
+				log_thread();*/
 			}
 		}
 	} cleanup;
@@ -1256,7 +1259,7 @@ std::string cpu_thread::get_name() const
 
 		if (get_class() == thread_class::rsx)
 		{
-			return fmt::format("rsx::thread");
+			return fmt::format("RSX[0x%x]", static_cast<const rsx::thread*>(this)->lv2_context_id);
 		}
 
 		return fmt::format("Invalid cpu_thread type (0x%x)", id_type());

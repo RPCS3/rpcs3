@@ -431,6 +431,17 @@ namespace asmjit
 		c.bind(next);
 	}
 #endif
+
+	inline const asmjit::BaseReg& get_return_int64_register()
+	{
+	#if defined(ARCH_ARM64)
+		return a64::x0;
+	#elif defined(_M_X64) || defined(__x86_64__)
+		return x86::rax;
+	#else
+	#error Unsupported architecture
+	#endif
+	}
 }
 
 #ifdef __APPLE__

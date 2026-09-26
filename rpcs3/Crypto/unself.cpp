@@ -1132,6 +1132,51 @@ const NPD_HEADER* SELFDecrypter::GetNPDHeader() const
 	return nullptr;
 }
 
+usz SELFDecrypter::get_npdrm_self_header_offset()
+{
+	// Read control info.
+	std::vector<supplemental_header> sup_hdr;
+	const usz self_size = self_f.size();
+	self_f.seek(m_ext_hdr.supplemental_hdr_offset);
+
+	usz found_offs = umax;
+
+	for (u64 i = 0; i < m_ext_hdr.supplemental_hdr_size;)
+	{
+		if (self_f.pos() >= self_size)
+		{
+			// Read out of bounds (file is truncated or corrupted)
+			return umax;
+		}
+
+		const usz offset = self_f.pos();
+		supplemental_header& cinfo = sup_hdr.emplace_back();
+		cinfo.Load(self_f);
+		i += cinfo.size;
+
+		if (cinfo.type == 3)
+		{
+			if (found_offs != umax)
+			{
+				self_log.error("Multiple NPDRM headers found! Report to the developers!");
+			}
+
+			found_offs = offset + 16;
+		}
+	}
+
+	if (found_offs != umax)
+	{
+		self_log.success("Found NPDRM header offset (offset=0x%x)", found_offs);
+	}
+	else
+	{
+		self_log.error("Did not found NPDRM haeder offset");
+	}
+
+	return found_offs;
+}
+
 bool SELFDecrypter::LoadMetadata(const u8* klic_key)
 {
 	aes_context aes;
@@ -1481,7 +1526,92 @@ fs::file decrypt_self(const fs::file& elf_or_self, const u8* klic_key, SelfAddit
 		// Make a new ELF file from this SELF.
 		return self_dec.MakeElf(isElf32);
 	}
-	else if (Emu.GetBoot().ends_with(".elf") || Emu.GetBoot().ends_with(".ELF"))
+	else if (file_type == "\177ELF"_u32)
+	{
+		// Write the file back if the main executable is not signed
+		fs::file e = fs::make_stream<std::vector<u8>>();
+
+		// Copy the data.
+		std::vector<u8> buf(std::min<usz>(elf_or_self.size(), 4096));
+
+		usz read_pos = 0;
+		while (const u64 size = elf_or_self.read_at(read_pos, buf.data(), buf.size()))
+		{
+			e.write(buf.data(), size);
+			read_pos += size;
+		}
+
+		return e;
+	}
+
+	return {};
+}
+
+fs::file unlicense_self(const fs::file& elf_or_self, const u8* klic_key, std::span<const u8> replacement_license)
+{
+	if (!elf_or_self)
+	{
+		return fs::file{};
+	}
+
+	elf_or_self.seek(0);
+
+	// Check SELF header first. Check for a debug SELF.
+	u32 file_type = umax;
+	elf_or_self.read_at(0, &file_type, sizeof(file_type));
+
+	if (file_type == "SCE\0"_u32)
+	{
+		if (fs::file res = CheckDebugSelf(elf_or_self))
+		{
+			// TODO: Decrypt
+			return res;
+		}
+
+		// Check the ELF file class (32 or 64 bit).
+		const bool isElf32 = IsSelfElf32(elf_or_self);
+
+		// Start the decrypter on this SELF file.
+		SELFDecrypter self_dec(elf_or_self);
+
+		// Load the SELF file headers.
+		if (!self_dec.LoadHeaders(isElf32, nullptr))
+		{
+			self_log.error("Failed to load SELF file headers!");
+			return fs::file{};
+		}
+
+		// Load and decrypt the SELF file metadata.
+		if (!self_dec.LoadMetadata(klic_key))
+		{
+			(klic_key ? self_log.notice : self_log.error)("Failed to load SELF file metadata!");
+			return fs::file{};
+		}
+
+		// Write the file back if the main executable is not signed
+		fs::file e = fs::make_stream<std::vector<u8>>();
+
+		// Copy the data.
+		std::vector<u8> buf(std::min<usz>(elf_or_self.size(), 4096));
+
+		usz read_pos = 0;
+		while (const u64 size = elf_or_self.read_at(read_pos, buf.data(), buf.size()))
+		{
+			e.write(buf.data(), size);
+			read_pos += size;
+		}
+
+		if (usz pos = self_dec.get_npdrm_self_header_offset(); pos != umax)
+		{
+			e.seek(pos);
+			ensure(replacement_license.size() == 0x80);
+			e.write(replacement_license.data(), replacement_license.size());
+		}
+
+		// Make a new SELF file from this SELF.
+		return e;
+	}
+	else if (file_type == "\177ELF"_u32)
 	{
 		// Write the file back if the main executable is not signed
 		fs::file e = fs::make_stream<std::vector<u8>>();

@@ -25,15 +25,17 @@ struct lv2_memory : lv2_obj
 	const u64 flags;
 	const u64 key; // IPC key
 	const bool pshared; // Process shared flag
+	const u64 authid;
 	lv2_memory_container* const ct; // null for system memory
 	u32 system_handle = 0; // stands in for the vsh handle
 	atomic_ptr<std::shared_ptr<utils::shm>> shm;
 
-	atomic_t<u32> counter{0};
 	// the game can drop its handle while audio still needs the buffer
 	atomic_t<u32> external_refs{0};
+	// Per-process allocations counter
+	std::map<u32, u32> counters;
 
-	lv2_memory(u32 size, u32 align, u64 flags, u64 key, bool pshared, lv2_memory_container* ct);
+	lv2_memory(u32 size, u32 align, u64 flags, u64 key, bool pshared, u64 authid, lv2_memory_container* ct);
 
 	lv2_memory(utils::serial& ar);
 	static std::function<void(void*)> load(utils::serial& ar);
@@ -55,6 +57,12 @@ enum : u64
 enum : u64
 {
 	SYS_MMAPPER_NO_SHM_KEY = 0xffff000000000000ull, // Unofficial name
+};
+
+enum : u64
+{
+	SYS_MMAPPER_SHM_CAN_CREATE = 0x8000,
+	SYS_MMAPPER_SHM_MUST_CREATE = 0x4000,
 };
 
 enum : u64
@@ -117,6 +125,7 @@ error_code sys_mmapper_allocate_shared_memory(ppu_thread&, u64 ipc_key, u64 size
 error_code sys_mmapper_allocate_shared_memory_from_container(ppu_thread&, u64 ipc_key, u64 size, u32 cid, u64 flags, vm::ptr<u32> mem_id);
 error_code sys_mmapper_allocate_shared_memory_ext(ppu_thread&, u64 ipc_key, u64 size, u32 flags, vm::ptr<mmapper_unk_entry_struct0> entries, s32 entry_count, vm::ptr<u32> mem_id);
 error_code sys_mmapper_allocate_shared_memory_from_container_ext(ppu_thread&, u64 ipc_key, u64 size, u64 flags, u32 cid, vm::ptr<mmapper_unk_entry_struct0> entries, s32 entry_count, vm::ptr<u32> mem_id);
+error_code sys_mmapper_shared_memory_get_auth_id(ppu_thread&, u32 mem_id, vm::ptr<u64> out_authid);
 error_code sys_mmapper_change_address_access_right(ppu_thread&, u32 addr, u64 flags);
 error_code sys_mmapper_free_address(ppu_thread&, u32 addr);
 error_code sys_mmapper_free_shared_memory(ppu_thread&, u32 mem_id);

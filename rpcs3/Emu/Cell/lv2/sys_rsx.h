@@ -1,7 +1,9 @@
 #pragma once
 
 #include "Emu/Memory/vm_ptr.h"
+#include "Emu/Cell/lv2/sys_sync.h"
 #include "Emu/Cell/ErrorCodes.h"
+#include "Emu/RSX/Core/RSXIOMap.hpp"
 
 class cpu_thread;
 
@@ -123,6 +125,80 @@ struct RsxDisplayInfo
 		return height != 0u && width != 0u;
 	}
 };
+
+struct GcmTileInfo;
+struct GcmZcullInfo;
+
+namespace rsx
+{
+	struct GCM_tile_reference;
+	struct rsx_state;
+}
+
+namespace utils
+{
+	template <typename T>
+	class address_range;
+
+	using address_range32 = address_range<u32>;
+}
+
+struct lv2_rsx_context
+{
+	// TODO: LV1 does 0x55555555 XOR (internal index) for ID creation
+	// So the first context is 0x55555555, then 0x55555554, then 0x55555557 until 0x5555555A lastly
+	// Whereas IDM cannot do that yet
+	static constexpr u32 id_base = 0x55555550;
+	static constexpr u32 id_count = 16;
+	static constexpr u32 id_step = 1;
+
+	SAVESTATE_INIT_POS(56);
+
+	atomic_t<bool> inited = false;
+
+	rsx::rsx_iomap_table iomap_table;
+	
+	// Vector for incomplete typename
+	std::vector<struct GcmTileInfo> tiles;
+	std::vector<struct GcmZcullInfo> zculls;
+	
+	RsxDisplayInfo display_buffers[8];
+	u32 display_buffers_count{ 0 };
+	u32 current_display_buffer{ 0 };
+	
+	u32 dma_address{ 0 };
+	u32 label_addr{ 0 };
+	u32 main_mem_size{ 0 };
+	u32 rsx_event_port{ 0 };
+	u32 driver_info{ 0 };
+
+	//atomic_t<bool> requested_vsync = false;
+	atomic_t<bool> enable_second_vhandler = false;
+	atomic_t<u64> unsent_gcm_events = 0; // Unsent event bits when aborting RSX/VBLANK thread (will be sent on savestate load)
+
+	std::shared_ptr<rsx::rsx_state> method_regs;
+
+	u32 belonging_process = umax; // Debug information
+
+	atomic_t<u64> new_get_put = umax;
+
+	lv2_rsx_context() noexcept;
+	lv2_rsx_context(utils::serial& ar) noexcept;
+	void save(utils::serial& ar) noexcept;
+
+	rsx::GCM_tile_reference get_tiled_memory_region(const utils::address_range32& range) const;
+};
+
+// Process-specific RSX information (each process has one and it is not realy regulated by ID by CellOS)
+struct lv2_rsx_process_info
+{
+	u32 device_addr[16]{ 0 };
+	u32 local_mem_size{ 0 };
+
+	shared_mutex mutex;
+};
+
+
 
 // SysCalls
 error_code sys_rsx_device_open(cpu_thread& cpu);

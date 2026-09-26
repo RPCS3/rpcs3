@@ -2,8 +2,12 @@
 
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/ErrorCodes.h"
+#include "Utilities/mutex.h"
 
-u32 allocate_user_memory(u32 size, u32 align);
+#include <map>
+
+struct lv2_process;
+u32 allocate_user_memory(lv2_process* process, u32 size, u32 align);
 
 class cpu_thread;
 class ppu_thread;
@@ -73,13 +77,16 @@ struct lv2_memory_container
 	const lv2_mem_container_id id; // ID of the container in if placed at IDM, otherwise SYS_MEMORY_CONTAINER_ID_INVALID
 	atomic_t<u32> used{}; // Amount of "physical" memory currently used
 
-	SAVESTATE_INIT_POS(1);
+	SAVESTATE_INIT_POS(1.1);
 
 	lv2_memory_container(u32 size, bool from_idm = false) noexcept;
 	lv2_memory_container(utils::serial& ar, bool from_idm = false) noexcept;
 	static std::function<void(void*)> load(utils::serial& ar);
 	void save(utils::serial& ar);
 	static lv2_memory_container* search(u32 id);
+
+	shared_mutex m_allocations_mtx;
+	std::multimap<std::string, u32> m_allocations;
 
 	// Try to get specified amount of "physical" memory
 	// Values greater than UINT32_MAX will fail
@@ -101,7 +108,7 @@ struct lv2_memory_container
 
 	u32 free(u64 amount)
 	{
-		auto [_, result] = used.fetch_op([&](u32& value) -> u32
+		auto [old_used, result] = used.fetch_op([&](u32& value) -> u32
 		{
 			if (value >= amount)
 			{
@@ -115,7 +122,32 @@ struct lv2_memory_container
 		// Sanity check
 		ensure(result == amount);
 
-		return result;
+		return old_used - amount;
+	}
+
+	void take_named(const std::string& name, u32 amount)
+	{
+		std::lock_guard lock(m_allocations_mtx);
+
+		m_allocations.emplace(name, amount);
+	}
+
+	void free_named(const std::string& name, u32 amount)
+	{
+		std::lock_guard lock(m_allocations_mtx);
+
+		if (auto it = m_allocations.find(name); it == m_allocations.end())
+		{
+			ensure(false);
+		}
+		else if (it->second != amount)
+		{
+			ensure(false);
+		}
+		else
+		{
+			m_allocations.erase(it);
+		}
 	}
 };
 
@@ -138,6 +170,7 @@ error_code sys_memory_get_page_attribute(ppu_thread& cpu, u32 addr, vm::ptr<sys_
 error_code sys_memory_get_user_memory_size(cpu_thread& cpu, vm::ptr<sys_memory_info_t> mem_info);
 error_code sys_memory_get_user_memory_stat(cpu_thread& cpu, vm::ptr<sys_memory_user_memory_stat_t> mem_stat);
 error_code sys_memory_container_create(cpu_thread& cpu, vm::ptr<u32> cid, u64 size);
+error_code sys_memory_container_create_child_container(cpu_thread& cpu, vm::ptr<u32> cid, u32 parent_mc_id, u32 size);
 error_code sys_memory_container_destroy(cpu_thread& cpu, u32 cid);
 error_code sys_memory_container_get_size(cpu_thread& cpu, vm::ptr<sys_memory_info_t> mem_info, u32 cid);
 error_code sys_memory_container_destroy_parent_with_childs(cpu_thread& cpu, u32 cid, u32 must_0, vm::ptr<u32> mc_child);

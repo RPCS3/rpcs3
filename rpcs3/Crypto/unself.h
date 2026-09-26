@@ -479,6 +479,7 @@ public:
 	bool DecryptNPDRM(u8 *metadata, u32 metadata_size);
 	const NPD_HEADER* GetNPDHeader() const;
 	static bool GetKeyFromRap(std::string_view content_id, u8 *npdrm_key);
+	usz get_npdrm_self_header_offset();
 
 private:
 	template<typename EHdr, typename SHdr, typename PHdr>
@@ -571,6 +572,7 @@ private:
 };
 
 fs::file decrypt_self(const fs::file& elf_or_self, const u8* klic_key = nullptr, SelfAdditionalInfo* additional_info = nullptr);
+fs::file unlicense_self(const fs::file& elf_or_self, const u8* klic_key, std::span<const u8> replacement_license);
 bool verify_npdrm_self_headers(const fs::file& self, u8* klic_key = nullptr, NPD_HEADER* npd_out = nullptr);
 bool get_npdrm_self_header(const fs::file& self, NPD_HEADER& npd);
 

@@ -77,9 +77,8 @@ void fmt_class_string<lv2_file>::format(std::string& out, u64 arg)
 			break;
 		}
 		case 20: fmt::append(size_str, "%gMB", size / (1024. * 1024)); break;
-
-		default:
 		case 30: fmt::append(size_str, "%gGB", size / (1024. * 1024 * 1024)); break;
+		default: break;
 		}
 
 		const usz must_be_larger = size_str.ends_with("B") ? 5 : 3;
@@ -121,7 +120,7 @@ void fmt_class_string<lv2_dir>::format(std::string& out, u64 arg)
 bool has_fs_write_rights(std::string_view vpath)
 {
 	// VSH has access to everything
-	const bool has_root_perm = g_ps3_process_info.has_root_perm();
+	const bool has_root_perm = lv2_process::has_process_root_perm();
 
 	const auto parent_dir = fs::get_parent_dir_view(vpath);
 	const auto [dev_root, trail] = lv2_fs_object::get_path_root_and_trail(parent_dir);
@@ -628,7 +627,14 @@ u64 lv2_file::op_write(const fs::file& file, vm::cptr<void> buf, u64 size)
 
 	while (result < size)
 	{
-		const u64 block = std::min<u64>(size - result, local_buf.size());
+		const u64 block = std::min<u64>({ size - result, local_buf.size(), 65536 - buf.addr() % 65536 });
+
+		if (!vm::check_addr(buf.addr() + result, vm::page_readable, block))
+		{
+			// Returns EFAULT later
+			return result;
+		}
+
 		std::memcpy(local_buf.data(), static_cast<const uchar*>(buf.get_ptr()) + result, block);
 		const u64 nwrite = file.write(+local_buf.data(), block);
 		result += nwrite;
@@ -1285,6 +1291,32 @@ error_code sys_fs_open(ppu_thread& ppu, vm::cptr<char> path, s32 flags, vm::ptr<
 
 	auto [error, ppath, real, file, type] = lv2_file::open(vpath, flags, mode, arg.get_ptr(), size);
 
+	if (vpath.ends_with("EBOOT.BIN") && Emu.IsVsh())
+	{
+		static const unsigned char npd_data[] =
+		{
+			0x4E, 0x50, 0x44, 0x00, 0x00, 0x00, 0x00, 0x01,
+			0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01,
+			0x45, 0x50, 0x39, 0x30, 0x30, 0x30, 0x2D, 0x4E,
+			0x50, 0x45, 0x41, 0x30, 0x30, 0x33, 0x37, 0x34,
+			0x5F, 0x30, 0x30, 0x2D, 0x53, 0x49, 0x4E, 0x47,
+			0x53, 0x54, 0x41, 0x52, 0x50, 0x53, 0x33, 0x56,
+			0x30, 0x31, 0x30, 0x30, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0xA6, 0x66, 0x64, 0xEF, 0xC4, 0xD6, 0x29, 0x70,
+			0x99, 0x47, 0x18, 0x06, 0x91, 0x6A, 0x66, 0x3D,
+			0x8D, 0xF2, 0xD7, 0x64, 0x2E, 0xD4, 0x68, 0xCD,
+			0x7C, 0x91, 0xBF, 0xF1, 0xFC, 0x7B, 0xB4, 0xCF,
+			0x0B, 0xF0, 0xF8, 0x1E, 0x11, 0x4F, 0x2D, 0x8C,
+			0xD0, 0xD6, 0x64, 0xC9, 0x90, 0x15, 0x40, 0xE8,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		};
+
+		file = unlicense_self(file, nullptr, std::span(npd_data, 0x80));
+		ensure(file);
+	}
+
 	if (error)
 	{
 		if (error == CELL_EEXIST)
@@ -1380,6 +1412,14 @@ error_code sys_fs_read(ppu_thread& ppu, u32 fd, vm::ptr<void> buf, u64 nbytes, v
 
 	file->reads_total += read_bytes;
 
+	std::string file_debug_info;
+
+	if (file->real_path.ends_with("EBOOT.BIN") || file->real_path.ends_with("PARAM.SFO"))
+	{
+		fmt::append(file_debug_info, "sys_fs_read(fd=%d, buf=*0x%x, nbytes=0x%llx, nread=*0x%x): file-state:\n%s\n", fd, buf, nbytes, nread, *file);
+		fmt::append(file_debug_info, "Callstack:%s", ppu.dump_callstack());
+	}
+
 	lock.unlock();
 	ppu.check_state();
 
@@ -1389,6 +1429,44 @@ error_code sys_fs_read(ppu_thread& ppu, u32 fd, vm::ptr<void> buf, u64 nbytes, v
 	{
 		// EDATA corruption perhaps
 		return CELL_EFSSPECIFIC;
+	}
+
+	if (!file_debug_info.empty())
+	{
+		fmt::append(file_debug_info, "\nOutput:\n%s", std::span<const u8>(static_cast<const u8*>(buf.get_ptr()), std::min<usz>(nbytes, 128)));
+		sys_fs.todo("%s", file_debug_info);
+	}
+
+	if (read_bytes >= 0x10 && !file_debug_info.empty())
+	{
+		be_t<u64> sample;
+		std::memcpy(&sample, buf.get_ptr(), 8);
+
+		if (sample == 0x4E50440000000001)
+		{
+			//ppu.state += cpu_flag::dbg_pause;
+
+			// static const unsigned char npd_data[] =
+			// {
+			// 	0x4E, 0x50, 0x44, 0x00, 0x00, 0x00, 0x00, 0x01,
+			// 	0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01,
+			// 	0x45, 0x50, 0x39, 0x30, 0x30, 0x30, 0x2D, 0x4E,
+			// 	0x50, 0x45, 0x41, 0x30, 0x30, 0x33, 0x37, 0x34,
+			// 	0x5F, 0x30, 0x30, 0x2D, 0x53, 0x49, 0x4E, 0x47,
+			// 	0x53, 0x54, 0x41, 0x52, 0x50, 0x53, 0x33, 0x56,
+			// 	0x30, 0x31, 0x30, 0x30, 0x00, 0x00, 0x00, 0x00,
+			// 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			// 	0xA6, 0x66, 0x64, 0xEF, 0xC4, 0xD6, 0x29, 0x70,
+			// 	0x99, 0x47, 0x18, 0x06, 0x91, 0x6A, 0x66, 0x3D,
+			// 	0x8D, 0xF2, 0xD7, 0x64, 0x2E, 0xD4, 0x68, 0xCD,
+			// 	0x7C, 0x91, 0xBF, 0xF1, 0xFC, 0x7B, 0xB4, 0xCF,
+			// 	0x0B, 0xF0, 0xF8, 0x1E, 0x11, 0x4F, 0x2D, 0x8C,
+			// 	0xD0, 0xD6, 0x64, 0xC9, 0x90, 0x15, 0x40, 0xE8,
+			// 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			// 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			// };
+			// std::memcpy(static_cast<u8*>(buf.get_ptr()), npd_data, sizeof(npd_data));
+		}
 	}
 
 	return CELL_OK;
@@ -1475,6 +1553,12 @@ error_code sys_fs_write(ppu_thread& ppu, u32 fd, vm::cptr<void> buf, u64 nbytes,
 	ppu.check_state();
 
 	*nwrite = written;
+
+	if (written != nbytes)
+	{
+		//return { CELL_EFAULT, written };
+	}
+
 	return CELL_OK;
 }
 
@@ -1912,6 +1996,19 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 	{
 		// Remove write permissions
 		mode &= ~0222;
+	}
+
+	if (mp == &g_mp_sys_dev_hdd0)
+	{
+		const auto [root_name, trail] = lv2_fs_object::get_path_root_and_trail(vpath);
+
+		if (trail != "game" && !trail.starts_with("game/") && !trail.starts_with("tmp/"))
+		{
+			// Leave only "other" permissions
+			// User and group permissions removed
+			// This seems to be standard across HDD0 non-game files
+			mode &= ~0077;
+		}
 	}
 
 	sb->mode = mode;
@@ -3597,9 +3694,12 @@ error_code sys_fs_newfs(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char>
 
 	std::string vfs_path;
 	const auto mp = lv2_fs_object::get_mp(device_name, &vfs_path);
+
+	const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
+
 	std::unique_lock lock(mp->mutex, std::defer_lock);
 
-	if (!g_ps3_process_info.has_root_perm() && mp != &g_mp_sys_dev_usb)
+	if (!ppu.has_root_perm && mp != &g_mp_sys_dev_usb)
 		return {CELL_EPERM, device_name};
 
 	if (mp == &g_mp_sys_no_device)
@@ -3616,7 +3716,7 @@ error_code sys_fs_newfs(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char>
 
 	if (mp == &g_mp_sys_dev_hdd1)
 	{
-		const std::string_view appname = g_ps3_process_info.get_cellos_appname();
+		const std::string_view appname = process->get_cellos_appname();
 		vfs_path = fmt::format("%s/caches/%s", vfs_path, appname.substr(0, appname.find_last_of('.')));
 	}
 
@@ -3659,11 +3759,13 @@ error_code sys_fs_mount(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char>
 
 	const auto [root_name, trail] = lv2_fs_object::get_path_root_and_trail(path_sv);
 
+	const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
+
 	std::string vfs_path;
 	const auto mp = lv2_fs_object::get_mp(device_name, &vfs_path);
 	std::unique_lock lock(mp->mutex, std::defer_lock);
 
-	if (!g_ps3_process_info.has_root_perm() && mp != &g_mp_sys_dev_usb)
+	if (!process->has_root_perm() && mp != &g_mp_sys_dev_usb)
 		return {CELL_EPERM, device_name};
 
 	if (mp == &g_mp_sys_no_device)
@@ -3673,14 +3775,23 @@ error_code sys_fs_mount(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char>
 		return {CELL_EBUSY, device_name};
 
 	if (vfs_path.empty())
-		return {CELL_ENOTSUP, device_name};
+		return {0, device_name};
 
-	if (root_name.empty() || !vfs::get(path_sv).empty())
+	if (root_name.empty())
 		return {CELL_EEXIST, path_sv};
 
+	if (!vfs::get(path_sv).empty())
+	{
+		if (path_sv == "/dev_hdd0" || path_sv == "/dev_bdvd")
+		{
+			return CELL_OK;
+		}
+
+		return {CELL_EEXIST, path_sv};
+	}
 	if (mp == &g_mp_sys_dev_hdd1)
 	{
-		const std::string_view appname = g_ps3_process_info.get_cellos_appname();
+		const std::string_view appname = process->get_cellos_appname();
 		vfs_path = fmt::format("%s/caches/%s", vfs_path, appname.substr(0, appname.find_last_of('.')));
 	}
 
@@ -3729,7 +3840,6 @@ error_code sys_fs_mount(ppu_thread& ppu, vm::cptr<char> dev_name, vm::cptr<char>
 	}
 
 	g_fxo->get<lv2_fs_mount_info_map>().add("/" + std::string{root_name}, mp, device_name, filesystem, prot);
-
 	return CELL_OK;
 }
 
@@ -3749,7 +3859,7 @@ error_code sys_fs_unmount(ppu_thread& ppu, vm::cptr<char> path, s32 unk1, s32 fo
 	const auto& mp = g_fxo->get<lv2_fs_mount_info_map>().lookup(vpath);
 	std::unique_lock lock(mp->mutex, std::defer_lock);
 
-	if (!g_ps3_process_info.has_root_perm() && mp != &g_mp_sys_dev_usb)
+	if (!ppu.has_root_perm && mp != &g_mp_sys_dev_usb)
 		return {CELL_EPERM, vpath};
 
 	if (mp == &g_mp_sys_no_device)

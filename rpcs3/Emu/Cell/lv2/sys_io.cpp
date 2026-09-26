@@ -26,7 +26,7 @@ error_code sys_io_buffer_create(u32 block_count, u32 block_size, u32 blocks, u32
 	return CELL_ESRCH;
 }
 
-error_code sys_io_buffer_destroy(u32 handle)
+error_code sys_io_buffer_destroy(ppu_thread& ppu, u32 handle)
 {
 	sys_io.todo("sys_io_buffer_destroy(handle=0x%x)", handle);
 

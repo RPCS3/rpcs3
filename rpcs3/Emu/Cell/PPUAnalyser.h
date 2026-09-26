@@ -132,7 +132,6 @@ struct ppu_module : public Type
 	std::string path{}; // Filepath
 	s64 offset = 0; // Offset of file
 	mutable bs_t<ppu_attr> attr{}; // Shared module attributes
-	std::string cache{}; // Cache file path
 	std::vector<ppu_reloc> relocs{}; // Relocations
 	std::vector<ppu_segment> segs{}; // Segments
 	std::vector<ppu_segment> secs{}; // Segment sections
@@ -263,17 +262,6 @@ struct ppu_module : public Type
 		fmt::throw_exception("get_ref(): Failure! (addr=0x%x)%s", (addr + index).addr(), src_loc);
 		return *std::add_pointer_t<to_be_t<T>>{};
 	}
-};
-
-template <typename T>
-struct main_ppu_module : public ppu_module<T>
-{
-	u32 elf_entry{};
-	u32 seg0_code_end{};
-
-	// Disable inherited savestate ordering
-	void save(utils::serial&) = delete;
-	static constexpr double savestate_init_pos = double{};
 };
 
 // Aux
