@@ -1589,7 +1589,7 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			if (a_it == blist.end() && b_it == blist.end())
 			{
 				// Order alphabetically for old saves
-				return a.name.compare(b.name);
+				return a.name < b.name;
 			}
 
 			return a_it < b_it;

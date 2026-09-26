@@ -132,7 +132,8 @@ enum : u32
 	// tag at its initial value and looks untouched forever, which silences it while buffering is enabled.
 	// These extra marks sit on the front right channel, which any audio content writes, and are only used to
 	// tell "the game wrote nothing" apart from "the game wrote the front channels only". They carry no state:
-	// a mark counts as written when it no longer is the negative zero that tag() put there.
+	// a mark counts as written when it no longer is the negative zero that tag() put there. On a two channel
+	// port they coincide with the tags, so only wider ports carry their own.
 	PORT_BUFFER_MARK_CHANNEL = 1,
 	PORT_BUFFER_MARK_DELTA_SAMPLE = (AUDIO_BUFFER_SAMPLES - 1) / (PORT_BUFFER_TAG_COUNT - 1),
 
@@ -457,6 +458,11 @@ public:
 	// see PORT_FRONT_ONLY_SETTLE_PERIODS. Deliberately not serialized: it starts at zero, which is the
 	// conservative end, and settles again within a few periods.
 	std::array<u8, AUDIO_PORT_COUNT> m_periods_without_tag{};
+
+	// Whether the marks have shown that a port only ever fills its front channels; cleared when a tag moves.
+	// They only describe the current block, so without this a port fed in bursts would look untouched
+	// between its writes and stall the thread on a timeout. Not serialized: it settles again in a few periods.
+	std::array<bool, AUDIO_PORT_COUNT> m_front_only_port{};
 
 	void operator()();
 
