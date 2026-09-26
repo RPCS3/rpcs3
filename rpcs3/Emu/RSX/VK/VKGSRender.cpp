@@ -594,8 +594,13 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	null_buffer = std::make_unique<vk::buffer>(*m_device, 32, memory_map.device_local, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, 0, VMM_ALLOCATION_POOL_UNDEFINED);
 	null_buffer_view = std::make_unique<vk::buffer_view>(*m_device, null_buffer->value, VK_FORMAT_R8_UINT, 0, 32);
 
+	// Initialize the shader compiler stack
+	const int preferred_compiler_threads = g_cfg.video.shader_compiler_threads_count == 0
+		? utils::get_thread_count()                   // We spawn the initial pipe compiler with all threads during the boot sequence by default.
+		: g_cfg.video.shader_compiler_threads_count;  // Respect user override if set
+
 	spirv::initialize_compiler_context();
-	vk::initialize_pipe_compiler(g_cfg.video.shader_compiler_threads_count);
+	vk::initialize_pipe_compiler(preferred_compiler_threads);
 
 	m_prog_buffer = std::make_unique<vk::program_cache>
 	(
@@ -1266,6 +1271,12 @@ void VKGSRender::on_init_thread()
 			// TODO: Handle window resize messages during loading on GPUs without OUT_OF_DATE_KHR support
 			m_shaders_cache->load(&dlg);
 		}
+	}
+
+	// Now we properly initialize the pipe compiler as per the user's configuration
+	if (!g_cfg.video.shader_compiler_threads_count)
+	{
+		vk::resize_pipe_compiler(g_cfg.video.shader_compiler_threads_count);
 	}
 }
 
