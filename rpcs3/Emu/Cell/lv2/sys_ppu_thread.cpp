@@ -598,10 +598,25 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 	thread->cmd_notify.store(1);
 	thread->cmd_notify.notify_one();
 
-	if (is_lower_prio && cpu_flag::suspend - ppu.state && cpu_flag::suspend - thread->state)
+	if (is_lower_prio)
 	{
-		// Check if the thread had executed an observable PPU schedular change while it is(was) running, making its execution advantage revoked
-		for (const u64 start = get_system_time(); cpu_flag::suspend - ppu.state && cpu_flag::suspend - thread->state && !ppu.is_stopped() && get_system_time() - start < 1000;)
+		// The new thread has higher priority: wait until it has started and stops running, blocked or preempted (bounded)
+		// A preempted thread stays ahead of the caller in the scheduler queue, so there is no need to wait for it to block
+		const auto is_running = [&]()
+		{
+			return lv2_obj::ppu_state(thread.ptr.get()).first == PPU_THREAD_STATUS_ONPROC;
+		};
+
+		// Keep waiting when the caller is suspended: another thread leaving its hardware thread may resume it before the new thread starts
+		for (const u64 start = get_system_time(); (thread->cmd_queue.size() || is_running()) && !ppu.is_stopped() && get_system_time() - start < 5000;)
+		{
+			std::this_thread::yield();
+		}
+	}
+	else
+	{
+		// The new thread has lower or equal priority: if it got a free hardware thread, wait until it has taken the entry command (bounded)
+		for (const u64 start = get_system_time(); thread->cmd_queue.size() && cpu_flag::suspend - thread->state && cpu_flag::suspend - ppu.state && !ppu.is_stopped() && get_system_time() - start < 5000;)
 		{
 			std::this_thread::yield();
 		}
