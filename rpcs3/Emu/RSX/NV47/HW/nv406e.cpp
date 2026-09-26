@@ -128,13 +128,21 @@ namespace rsx
 				return;
 			}
 
-			if (addr == RSX(ctx)->device_addr + 0x30 && !arg)
+			// HW flip synchronization: writing 0 marks the queued flip as not yet displayed, and the display sets it back to 1 once the flip is done.
+			// With vsync the flip is done on the next vblank (see post_vblank_event), so a following acquire of 1 stalls the FIFO until then.
+			const bool is_flip_queue_sema = addr == RSX(ctx)->device_addr + 0x30 && !arg;
+
+			if (is_flip_queue_sema && !RSX(ctx)->requested_vsync)
 			{
-				// HW flip synchronization related, 1 is not written without display queue command (TODO: make it behave as real hw)
 				arg = 1;
 			}
 
 			util::write_gcm_label<false, true>(ctx, reg, addr, arg);
+
+			if (is_flip_queue_sema && !arg)
+			{
+				RSX(ctx)->flip_sema_pending.release(true);
+			}
 		}
 	}
 }

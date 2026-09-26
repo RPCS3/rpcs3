@@ -238,6 +238,9 @@ namespace rsx
 		atomic_t<bool> requested_vsync{true};
 		atomic_t<bool> enable_second_vhandler{false};
 
+		// A vsync flip was queued through the DEVICE 0x30 semaphore and is completed on the next vblank
+		atomic_t<bool> flip_sema_pending{false};
+
 		bool send_event(u64, u64, u64);
 
 		std::array<bool, 16> m_textures_dirty;

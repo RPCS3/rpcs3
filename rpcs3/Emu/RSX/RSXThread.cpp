@@ -1032,6 +1032,12 @@ namespace rsx
 	{
 		vblank_count++;
 
+		if (flip_sema_pending.exchange(false))
+		{
+			// The display has completed the queued vsync flip
+			vm::_ptr<atomic_be_t<u32>>(device_addr + 0x30)->release(1);
+		}
+
 		if (isHLE)
 		{
 			if (auto ptr = vblank_handler)
