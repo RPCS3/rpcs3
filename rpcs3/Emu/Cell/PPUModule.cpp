@@ -354,7 +354,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link, utils::serial* ar = n
 	if (!hle_funcs_addr)
 		hle_funcs_addr = vm::alloc(::size32(hle_funcs) * 8, vm::main);
 	else
-		vm::page_protect(hle_funcs_addr, utils::align(::size32(hle_funcs) * 8, 0x1000), 0, vm::page_writable);
+		vm::page_protect(hle_funcs_addr, utils::align(::size32(hle_funcs) * 8, 0x10000), 0, vm::page_writable);
 
 	// Initialize as PPU executable code
 	ppu_register_range(hle_funcs_addr, ::size32(hle_funcs) * 8);
@@ -371,7 +371,7 @@ static void ppu_initialize_modules(ppu_linkage_info* link, utils::serial* ar = n
 	}
 
 	// Set memory protection to read-only
-	vm::page_protect(hle_funcs_addr, utils::align(::size32(hle_funcs) * 8, 0x1000), 0, 0, vm::page_writable);
+	vm::page_protect(hle_funcs_addr, utils::align(::size32(hle_funcs) * 8, 0x10000), 0, 0, vm::page_writable);
 
 	// Initialize function names
 	const bool is_first = g_ppu_function_names.empty();
@@ -2247,7 +2247,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 
 	if (has_private_ppu_executable_area)
 	{
-		if (!vm::reserve_map(vm::any, 0x10000, 0x0FFF0000, vm::page_size_64k))
+		if (!vm::reserve_map(vm::any, 0x10000, 0x0FFF0000, vm::block_size_64k))
 		{
 			ppu_loader.error("ppu_load_exec(): Failed to map PPU_PRIVATE (sdk_version=0x%x)", sdk_version);
 			return false;
@@ -2258,7 +2258,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 
 	if (is_vm_main_512)
 	{
-		if (!vm::reserve_map(vm::main, has_private_ppu_executable_area ? 0x10000000 : 0x10000, 0x1FFF0000 + (has_private_ppu_executable_area ? 0x10000 : 0), vm::page_size_64k))
+		if (!vm::reserve_map(vm::main, has_private_ppu_executable_area ? 0x10000000 : 0x10000, 0x1FFF0000 + (has_private_ppu_executable_area ? 0x10000 : 0), vm::block_size_64k))
 		{
 			ppu_loader.error("ppu_load_exec(): Failed to map vm::main (sdk_version=0x%x)", sdk_version);
 			return false;
@@ -2271,7 +2271,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 			ppu_loader.error("ppu_load_exec(): Unexpected segments state, report to developers!");
 		}
 
-		if (!vm::reserve_map(vm::main, has_private_ppu_executable_area ? 0x10000000 : 0x10000, 0x0FFF0000 + (has_private_ppu_executable_area ? 0x10000 : 0), vm::page_size_64k))
+		if (!vm::reserve_map(vm::main, has_private_ppu_executable_area ? 0x10000000 : 0x10000, 0x0FFF0000 + (has_private_ppu_executable_area ? 0x10000 : 0), vm::block_size_64k))
 		{
 			ppu_loader.error("ppu_load_exec(): Failed to map vm::main (sdk_version=0x%x)", sdk_version);
 			return false;
@@ -2374,7 +2374,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 			else if (![&]() -> bool
 			{
 				// 1M pages if it is RSX shared
-				const u32 area_flags = (_seg.flags >> 28) ? vm::page_size_1m : vm::page_size_64k;
+				const u32 area_flags = (_seg.flags >> 28) ? vm::block_size_1m : vm::block_size_64k;
 				const u32 alloc_at = has_private_ppu_executable_area && addr >= 0x10000000 ? 0x10000000 : std::max<u32>(addr & -0x10000000, 0x10000);
 
 				const auto area = vm::reserve_map(vm::any, alloc_at, 0x10000000, area_flags);
