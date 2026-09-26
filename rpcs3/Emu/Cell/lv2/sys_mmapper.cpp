@@ -235,7 +235,7 @@ error_code sys_mmapper_allocate_address(ppu_thread& ppu, u64 size, u64 flags, u6
 	case 0x40000000:
 	case 0x80000000:
 	{
-		if (const auto area = vm::find_map(static_cast<u32>(size), static_cast<u32>(alignment), flags & SYS_MEMORY_PAGE_SIZE_MASK))
+		if (const auto area = vm::find_map(static_cast<u32>(size), static_cast<u32>(alignment), vm::mapping_comp | (flags & SYS_MEMORY_PAGE_SIZE_MASK)))
 		{
 			sys_mmapper.warning("sys_mmapper_allocate_address(): Found VM 0x%x area (vsize=0x%x)", area->addr, size);
 
@@ -638,7 +638,7 @@ error_code sys_mmapper_free_address(ppu_thread& ppu, u32 addr)
 
 	const auto mem = vm::get(vm::any, addr);
 
-	if (!mem || mem->addr != addr)
+	if (!mem || mem->addr != addr || !(mem->flags & vm::mapping_comp))
 	{
 		return {CELL_EINVAL, addr};
 	}
@@ -733,7 +733,7 @@ error_code sys_mmapper_map_shared_memory(ppu_thread& ppu, u32 addr, u32 mem_id, 
 
 	const auto area = vm::get(vm::any, addr);
 
-	if (!area || addr < 0x20000000 || addr >= 0xC0000000)
+	if (!area || !(area->flags & vm::mapping_comp))
 	{
 		return CELL_EINVAL;
 	}
@@ -813,7 +813,7 @@ error_code sys_mmapper_search_and_map(ppu_thread& ppu, u32 start_addr, u32 mem_i
 
 	const auto area = vm::get(vm::any, start_addr);
 
-	if (!area || start_addr != area->addr || start_addr < 0x20000000 || start_addr >= 0xC0000000)
+	if (!area || start_addr != area->addr || !(area->flags & vm::mapping_comp))
 	{
 		return {CELL_EINVAL, start_addr};
 	}
@@ -894,7 +894,7 @@ error_code sys_mmapper_unmap_shared_memory(ppu_thread& ppu, u32 addr, vm::ptr<u3
 
 	const auto area = vm::get(vm::any, addr);
 
-	if (!area || addr < 0x20000000 || addr >= 0xC0000000)
+	if (!area || !(area->flags & vm::mapping_comp))
 	{
 		return {CELL_EINVAL, addr};
 	}
@@ -943,7 +943,7 @@ error_code sys_mmapper_enable_page_fault_notification(ppu_thread& ppu, u32 start
 	sys_mmapper.warning("sys_mmapper_enable_page_fault_notification(start_addr=0x%x, event_queue_id=0x%x)", start_addr, event_queue_id);
 
 	auto mem = vm::get(vm::any, start_addr);
-	if (!mem || start_addr != mem->addr || start_addr < 0x20000000 || start_addr >= 0xC0000000)
+	if (!mem || start_addr != mem->addr || !(mem->flags & vm::mapping_comp))
 	{
 		return {CELL_EINVAL, start_addr};
 	}

@@ -1286,7 +1286,7 @@ namespace vm
 		return true;
 	}
 
-	static constexpr u64 process_block_flags(u64 flags)
+	static constexpr u64 process_block_flags(u64 flags, bool is_savestate = false, u32 addr = 0)
 	{
 		if ((flags & block_size_mask) == 0)
 		{
@@ -1300,6 +1300,20 @@ namespace vm
 		else
 		{
 			flags &= ~stack_guarded;
+		}
+
+		if (is_savestate)
+		{
+			// For backwards compatibility
+			const s32 version = GET_SERIALIZATION_VERSION(lv2_memory);
+
+			if (version < 4)
+			{
+				if (addr >= 0x20000000 && addr < 0xC0000000)
+				{
+					flags |= mapping_comp;
+				}
+			}
 		}
 
 		return flags;
@@ -1811,6 +1825,8 @@ namespace vm
 
 	void block_t::save(utils::serial& ar, std::map<utils::shm*, usz>& shared)
 	{
+		USING_SERIALIZATION_VERSION(lv2_memory);
+
 		auto& m_map = (m.*block_map)();
 
 		ar(addr, size, flags);
@@ -1853,7 +1869,7 @@ namespace vm
 		: m_id(init_block_id())
 		, addr(ar)
 		, size(ar)
-		, flags(process_block_flags(ar.pop<u64>()))
+		, flags(process_block_flags(ar.pop<u64>(), true, addr))
 	{
 		if (flags & preallocated)
 		{
