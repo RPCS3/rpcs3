@@ -897,6 +897,25 @@ namespace vm
 			return true;
 		}
 
+		const u8 first_flag = g_pages[addr / 4096];
+
+		if (first_flag & page_1m_size)
+		{
+			size = utils::align(size, 0x100000);
+		}
+		else if (first_flag & page_64k_size)
+		{
+			size = utils::align(size, 0x10000);
+		}
+
+		flags_test |= (first_flag & (page_1m_size | page_64k_size));
+
+		// Check memory consistency
+		if (!size || !check_addr(addr, flags_test, size))
+		{
+			return false;
+		}
+
 		// Choose some impossible value (not valid without page_allocated)
 		u8 start_value = page_executable;
 
