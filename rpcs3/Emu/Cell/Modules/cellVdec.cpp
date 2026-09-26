@@ -23,6 +23,7 @@ extern "C"
 #include "libavutil/imgutils.h"
 #include "libswscale/swscale.h"
 }
+constexpr int averror_eof = AVERROR_EOF; // workaround for old-style-cast error
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else
@@ -119,6 +120,7 @@ enum class vdec_cmd_type : u32
 	close,
 	au_decode,
 	framerate,
+	drain, // Outputs the pictures still held by the decoder before the sequence ends
 };
 
 struct vdec_cmd
@@ -210,6 +212,7 @@ struct vdec_context final
 	u32 frc_set{}; // Frame Rate Override
 	u64 next_pts{};
 	u64 next_dts{};
+	u64 last_au_usrd{}; // Userdata of the last decoded AU, used for the drained pictures
 	atomic_t<u32> ppu_tid{};
 
 	std::deque<vdec_frame> out_queue;
@@ -395,6 +398,7 @@ struct vdec_context final
 				lv2_obj::sleep(ppu);
 				break;
 			}
+			case vdec_cmd_type::drain:
 			case vdec_cmd_type::au_decode:
 			{
 				AVPacket packet{};
@@ -402,12 +406,15 @@ struct vdec_context final
 
 				u64 au_usrd{};
 
+				// When draining, the command has no AU. Sending a null packet makes the decoder output the pictures it still holds.
+				const bool drain = cmd->type == vdec_cmd_type::drain;
+
 				const u32 au_mode = cmd->mode;
 				const u32 au_addr = cmd->au.startAddr;
 				const u32 au_size = cmd->au.size;
 				const u64 au_pts = u64{cmd->au.pts.upper} << 32 | cmd->au.pts.lower;
 				const u64 au_dts = u64{cmd->au.dts.upper} << 32 | cmd->au.dts.lower;
-				au_usrd = cmd->au.userData;
+				au_usrd = drain ? last_au_usrd : cmd->au.userData.value();
 
 				packet.data = vm::_ptr<u8>(au_addr);
 				packet.size = au_size;
@@ -436,10 +443,12 @@ struct vdec_context final
 				{
 					cellVdec.trace("AU decoding: handle=0x%x, seq_id=%d, cmd_id=%d, size=0x%x, pts=0x%llx, dts=0x%llx, userdata=0x%llx", handle, cmd->seq_id, cmd->id, au_size, au_pts, au_dts, au_usrd);
 
-					if (int ret = avcodec_send_packet(ctx, &packet); ret < 0)
+					if (int ret = avcodec_send_packet(ctx, drain ? nullptr : &packet); ret < 0)
 					{
 						fmt::throw_exception("AU queuing error (handle=0x%x, seq_id=%d, cmd_id=%d, error=0x%x): %s", handle, cmd->seq_id, cmd->id, ret, utils::av_error_to_string(ret));
 					}
+
+					last_au_usrd = au_usrd;
 
 					while (!abort_decode && seq_id == cmd->seq_id)
 					{
@@ -456,7 +465,7 @@ struct vdec_context final
 
 						if (int ret = avcodec_receive_frame(ctx, frame.avf.get()); ret < 0)
 						{
-							if (ret == AVERROR(EAGAIN) || ret == AVERROR(EOF))
+							if (ret == AVERROR(EAGAIN) || ret == averror_eof)
 							{
 								break;
 							}
@@ -571,11 +580,15 @@ struct vdec_context final
 				if (thread_ctrl::state() != thread_state::aborting)
 				{
 					// Send AUDONE even if the current sequence was reset and a new sequence was started.
-					cellVdec.trace("Sending CELL_VDEC_MSG_TYPE_AUDONE (handle=0x%x, seq_id=%d, cmd_id=%d)", handle, cmd->seq_id, cmd->id);
-					ensure(au_count.try_dec(0));
+					// A drain command has no AU, so there is nothing to report.
+					if (!drain)
+					{
+						cellVdec.trace("Sending CELL_VDEC_MSG_TYPE_AUDONE (handle=0x%x, seq_id=%d, cmd_id=%d)", handle, cmd->seq_id, cmd->id);
+						ensure(au_count.try_dec(0));
 
-					cb_func(ppu, vid, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, cb_arg);
-					lv2_obj::sleep(ppu);
+						cb_func(ppu, vid, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, cb_arg);
+						lv2_obj::sleep(ppu);
+					}
 
 					while (!decoded_frames.empty() && seq_id == cmd->seq_id)
 					{
@@ -1620,6 +1633,13 @@ error_code cellVdecEndSeq(ppu_thread& ppu, u32 handle)
 	}
 
 	const u64 seq_id = vdec->seq_id;
+
+	// Output the pictures still held by the decoder before ending the sequence
+	const u64 drain_cmd_id = vdec->next_cmd_id++;
+	cellVdec.trace("Adding drain cmd (handle=0x%x, seq_id=%d, cmd_id=%d)", handle, seq_id, drain_cmd_id);
+
+	vdec->in_cmd.push(vdec_cmd(vdec_cmd_type::drain, seq_id, drain_cmd_id));
+
 	const u64 cmd_id = vdec->next_cmd_id++;
 	cellVdec.trace("Adding end cmd (handle=0x%x, seq_id=%d, cmd_id=%d)", handle, seq_id, cmd_id);
 
