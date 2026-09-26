@@ -182,8 +182,44 @@ namespace gl
 
 	void texture_cache::initialize_subresource_from_memory(gl::command_context& cmd, gl::texture* dst, const deferred_subresource& desc, rsx::texture_dimension_extended type) const
 	{
-		const auto subresources_layout = rsx::get_subresources_layout(desc, type);
-		gl::upload_texture(cmd, dst, desc.gcm_format, desc.swizzled, subresources_layout);
+		// desc width/height describe the destination image, which may be resolution-scaled.
+		// Guest memory can only be interpreted with the dimensions that match desc.pitch.
+		const auto guest_attrs = desc.guest_attributes();
+		const auto subresources_layout = rsx::get_subresources_layout(guest_attrs, type);
+
+		if (!desc.is_scaled()) [[likely]]
+		{
+			gl::upload_texture(cmd, dst, guest_attrs.gcm_format, guest_attrs.swizzled, subresources_layout);
+			return;
+		}
+
+		auto staging = std::make_unique<gl::texture>(
+			static_cast<GLenum>(dst->get_target()),
+			guest_attrs.width, guest_attrs.height, dst->depth(), dst->levels(), 1,
+			static_cast<GLenum>(dst->get_internal_format()), dst->format_class());
+
+		gl::upload_texture(cmd, staging.get(), guest_attrs.gcm_format, guest_attrs.swizzled, subresources_layout);
+
+		const bool is_3d = type == rsx::texture_dimension_extended::texture_dimension_3d;
+		const bool linear = !(dst->aspect() & gl::image_aspect::depth);
+		const auto mip_extent = [](u32 value, u16 level) { return std::max<s32>(value >> level, 1); };
+
+		for (const auto& layout : subresources_layout)
+		{
+			const s32 depth = is_3d ? mip_extent(dst->depth(), layout.level) : 1;
+
+			gl::g_hw_blitter->scale_image(cmd, staging.get(), dst,
+				coord3i{ 0, 0, 0, mip_extent(guest_attrs.width, layout.level), mip_extent(guest_attrs.height, layout.level), depth },
+				coord3i{ 0, 0, 0, mip_extent(dst->width(), layout.level), mip_extent(dst->height(), layout.level), depth },
+				linear, {},
+				rsx::image_copy_subresource_layers{
+					.src_mip_level = ::narrow<u8>(layout.level),
+					.dst_mip_level = ::narrow<u8>(layout.level),
+					.mipmap_count = 1,
+					.src_layer = is_3d ? u8{0} : ::narrow<u8>(layout.layer),
+					.dst_layer = is_3d ? u8{0} : ::narrow<u8>(layout.layer),
+					.layer_count = 1 });
+		}
 	}
 
 	void texture_cache::copy_transfer_regions_impl(gl::command_context& cmd, gl::texture* dst_image, const rsx::simple_array<copy_region_descriptor>& sources) const

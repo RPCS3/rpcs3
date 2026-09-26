@@ -705,7 +705,7 @@ namespace vk
 				image_type,
 				format,
 				width, height, depth, mips, layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-				VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, image_flags | VK_IMAGE_CREATE_ALLOW_NULL_RPCS3,
+				VK_IMAGE_TILING_OPTIMAL, usage_flags | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, image_flags | VK_IMAGE_CREATE_ALLOW_NULL_RPCS3,
 				VMM_ALLOCATION_POOL_TEXTURE_CACHE, format_class);
 
 			if (!image->value)
@@ -993,12 +993,60 @@ namespace vk
 		vk::get_resource_manager()->dispose(disposable);
 	}
 
-	void texture_cache::initialize_subresource_from_memory(vk::command_buffer& cmd, vk::image* dst, const deferred_subresource& desc, rsx::texture_dimension_extended type) const
+	void texture_cache::initialize_subresource_from_memory(vk::command_buffer& cmd, vk::image* dst, const deferred_subresource& desc, rsx::texture_dimension_extended type)
 	{
-		const auto subresources_layout = rsx::get_subresources_layout(desc, type);
+		// desc width/height describe the destination image, which may be resolution-scaled.
+		// Guest memory can only be interpreted with the dimensions that match desc.pitch.
+		const auto guest_attrs = desc.guest_attributes();
+		const auto subresources_layout = rsx::get_subresources_layout(guest_attrs, type);
 		const u16 layer_count = (type == rsx::texture_dimension_extended::texture_dimension_cubemap) ? 6 : 1;
-		vk::upload_image(cmd, dst, subresources_layout, desc.gcm_format, desc.swizzled, layer_count,
-			dst->aspect(), *vk::get_upload_heap(), desc.pitch, vk::upload_contents_inline);
+
+		if (!desc.is_scaled()) [[likely]]
+		{
+			vk::upload_image(cmd, dst, subresources_layout, guest_attrs.gcm_format, guest_attrs.swizzled, layer_count,
+				dst->aspect(), *vk::get_upload_heap(), guest_attrs.pitch, vk::upload_contents_inline);
+			return;
+		}
+
+		auto staging = create_temporary_subresource_storage(dst->format_class(), dst->format(),
+			guest_attrs.width, guest_attrs.height, ::narrow<u16>(dst->depth()), layer_count, ::narrow<u8>(dst->mipmaps()),
+			dst->type(), dst->info.flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
+			VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+
+		if (!staging)
+		{
+			// The gathered sections are still written by the caller.
+			rsx_log.warning("Could not allocate scratch storage for a scaled memory load. Texture background data will be missing.");
+			return;
+		}
+
+		vk::change_image_layout(cmd, staging.get(), VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		vk::upload_image(cmd, staging.get(), subresources_layout, guest_attrs.gcm_format, guest_attrs.swizzled, layer_count,
+			staging->aspect(), *vk::get_upload_heap(), guest_attrs.pitch, vk::upload_contents_inline);
+		vk::change_image_layout(cmd, staging.get(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+		const bool is_3d = dst->type() == VK_IMAGE_TYPE_3D;
+		const auto filter = (dst->aspect() & VK_IMAGE_ASPECT_DEPTH_BIT) ? VK_FILTER_NEAREST : VK_FILTER_LINEAR;
+		const auto mip_extent = [](u32 value, u16 level) { return std::max<s32>(value >> level, 1); };
+
+		for (const auto& layout : subresources_layout)
+		{
+			const s32 depth = is_3d ? mip_extent(dst->depth(), layout.level) : 1;
+
+			vk::copy_scaled_image(cmd, staging.get(), dst,
+				coord3i{ { 0, 0, 0 }, { mip_extent(guest_attrs.width, layout.level), mip_extent(guest_attrs.height, layout.level), depth } },
+				coord3i{ { 0, 0, 0 }, { mip_extent(dst->width(), layout.level), mip_extent(dst->height(), layout.level), depth } },
+				rsx::image_copy_subresource_layers{
+					.src_mip_level = ::narrow<u8>(layout.level),
+					.dst_mip_level = ::narrow<u8>(layout.level),
+					.mipmap_count = 1,
+					.src_layer = is_3d ? u8{0} : ::narrow<u8>(layout.layer),
+					.dst_layer = is_3d ? u8{0} : ::narrow<u8>(layout.layer),
+					.layer_count = 1 },
+				true, filter);
+		}
+
+		dispose_reusable_image(staging);
 	}
 
 	void texture_cache::update_image_contents(vk::command_buffer& cmd, vk::image_view* dst_view, const deferred_subresource& desc)

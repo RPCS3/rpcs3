@@ -897,6 +897,8 @@ namespace rsx
 			// If this method was called, there is no easy solution, likely means atlas gather is needed
 			const auto& scaling_config = rsx::get_current_renderer()->resolution_scaling_config;
 			const auto [scaled_w, scaled_h] = rsx::apply_resolution_scale(scaling_config, attr2.width, attr2.height);
+			const u16 guest_w = attr2.width;
+			const u16 guest_h = attr2.height;
 			const auto format_class = classify_format(attr2.gcm_format);
 			const auto upload_context = (fbos.empty()) ? texture_upload_context::shader_read : texture_upload_context::framebuffer_storage;
 
@@ -908,9 +910,12 @@ namespace rsx
 				transfer_sections_list_t sections;
 				const bool complete = gather_texture_slices(cmd, sections, fbos, local, attr, 6, is_depth);
 
+				auto desc = deferred_subresource_type::create_cubemap_gather(attr2, std::move(sections), decoded_remap, !complete);
+				desc.set_guest_dimensions(guest_w, guest_h);
+
 				return
 				{
-					deferred_subresource_type::create_cubemap_gather(attr2, std::move(sections), decoded_remap, !complete),
+					std::move(desc),
 					upload_context, format_class, scale,
 					rsx::texture_dimension_extended::texture_dimension_cubemap,
 					attr.address
@@ -924,9 +929,12 @@ namespace rsx
 				transfer_sections_list_t sections;
 				const bool complete = gather_texture_slices(cmd, sections, fbos, local, attr, attr.depth, is_depth);
 
+				auto desc = deferred_subresource_type::create_3d_gather(attr2, std::move(sections), decoded_remap, !complete);
+				desc.set_guest_dimensions(guest_w, guest_h);
+
 				return
 				{
-					deferred_subresource_type::create_3d_gather(attr2, std::move(sections), decoded_remap, !complete),
+					std::move(desc),
 					upload_context, format_class, scale,
 					rsx::texture_dimension_extended::texture_dimension_3d,
 					attr.address
@@ -947,9 +955,12 @@ namespace rsx
 			typename deferred_subresource_type::section_array_type sections;
 			const bool complete = gather_texture_slices(cmd, sections, fbos, local, attr, 1, is_depth);
 
+			auto desc = deferred_subresource_type::create_atlas_gather(attr2, std::move(sections), decoded_remap, !complete);
+			desc.set_guest_dimensions(guest_w, guest_h);
+
 			sampled_image_descriptor result =
 			{
-				deferred_subresource_type::create_atlas_gather(attr2, std::move(sections), decoded_remap, !complete),
+				std::move(desc),
 				upload_context, format_class, scale,
 				rsx::texture_dimension_extended::texture_dimension_2d,
 				attr.address
