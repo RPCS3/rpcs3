@@ -1202,7 +1202,7 @@ audio_port* cell_audio_thread::open_port()
 error_code cell_audio_thread::allocate_port(ppu_thread& ppu, audio_port& port)
 {
 	const u32 size = std::max<u32>(0x10000, utils::align(port.size, 0x10000));
-	auto* ct = g_ps3_process_info.sdk_ver > 0x21ffff ? &g_fxo->get<lv2_memory_container>() : nullptr;
+	auto* ct = ppu.sdk_version > 0x21ffff ? &g_fxo->get<lv2_memory_container>() : nullptr;
 
 	for (u64 key = SYS_MMAPPER_MIO_SHM_KEY + 2;; key++)
 	{
@@ -1213,7 +1213,7 @@ error_code cell_audio_thread::allocate_port(ppu_thread& ppu, audio_port& port)
 
 		const auto result = lv2_obj::create<lv2_memory>(SYS_SYNC_PROCESS_SHARED, key, SYS_SYNC_NEWLY_CREATED, [&]()
 		{
-			return make_shared<lv2_memory>(size, 0x10000, 0x200, key, true, ct);
+			return make_shared<lv2_memory>(size, 0x10000, 0x200, key, true, 0, ct);
 		});
 
 		if (result + 0u == CELL_EEXIST)
@@ -1520,7 +1520,7 @@ error_code cellAudioInit(ppu_thread& ppu)
 		return CELL_AUDIO_ERROR_TRANS_EVENT;
 	}
 
-	const u32 port_count = g_ps3_process_info.sdk_ver <= 0x35ffff ? CELL_AUDIO_MAX_PORT : CELL_AUDIO_MAX_PORT_2;
+	const u32 port_count = ppu.sdk_version <= 0x35ffff ? CELL_AUDIO_MAX_PORT : CELL_AUDIO_MAX_PORT_2;
 	g_audio.free_port_count = port_count;
 
 	for (u32 i = 0; i < AUDIO_PORT_COUNT; i++)

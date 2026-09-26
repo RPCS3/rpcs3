@@ -6,7 +6,8 @@
 
 #include <map>
 
-u32 allocate_user_memory(u32 size, u32 align);
+struct lv2_process;
+u32 allocate_user_memory(lv2_process* process, u32 size, u32 align);
 
 class cpu_thread;
 class ppu_thread;

@@ -904,7 +904,7 @@ namespace vm
 			return true;
 		}
 
-		const u8 first_flag = g_pages[addr / 4096];
+		const u8 first_flag = memory_4GB_model->pages[addr / 4096];
 
 		if (first_flag & page_1m_size)
 		{
@@ -998,7 +998,7 @@ namespace vm
 				break;
 			}
 
-			const u8 page_flags = g_pages[i] & ~(page_writable | page_readable);
+			const u8 page_flags = memory_4GB_model->pages[i] & ~(page_writable | page_readable);
 
 			if (size && map_flags != page_flags)
 			{
@@ -1411,7 +1411,7 @@ namespace vm
 							// count this block separately, vm::unmap removes it from g_locations before calling us
 							count_refs(m_map);
 
-							for (const auto& block : g_locations)
+							for (const auto& block : memory_4GB_model->locations)
 							{
 								if (block && block.get() != this)
 								{
@@ -2173,7 +2173,7 @@ namespace vm
 				if (location == vm::main || addr == 0x00010000)
 				{
 					// Special
-					loc = std::make_shared<block_t>(addr, area_size, block_size_64k | preallocated);
+					loc = std::make_shared<block_t>(memory_4GB_model.get(), addr, area_size, block_size_64k | preallocated);
 				}
 				else
 				{
@@ -2421,13 +2421,13 @@ namespace vm
 
 		ptr->locations =
 		{
-			std::make_shared<block_t>(ptr, 0x00010000, 0x0FFF0000, page_size_64k | preallocated), // main
+			nullptr, // main
 			nullptr,		                                                                 // user 64k pages
 			nullptr,                                                                         // user 1m pages
 			nullptr,                                                                         // rsx context
-			std::make_shared<block_t>(ptr, 0xC0000000, 0x10000000, page_size_64k | preallocated), // video
-			std::make_shared<block_t>(ptr, 0xD0000000, 0x10000000, page_size_4k  | preallocated | stack_guarded | bf0_0x1), // stack
-			std::make_shared<block_t>(ptr, 0xE0000000, 0x20000000, page_size_64k),                // SPU reserved
+			std::make_shared<block_t>(ptr, 0xC0000000, 0x10000000, block_size_64k | preallocated), // video
+			std::make_shared<block_t>(ptr, 0xD0000000, 0x10000000, block_size_4k  | preallocated | stack_guarded | bf0_0x1), // stack
+			std::make_shared<block_t>(ptr, 0xE0000000, 0x20000000, block_size_64k),                // SPU reserved
 		};
 
 

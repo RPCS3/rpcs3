@@ -78,23 +78,7 @@ void fmt_class_string<lv2_file>::format(std::string& out, u64 arg)
 		}
 		case 20: fmt::append(size_str, "%gMB", size / (1024. * 1024)); break;
 		case 30: fmt::append(size_str, "%gGB", size / (1024. * 1024 * 1024)); break;
-		default:
-		}
-
-		const usz must_be_larger = size_str.ends_with("B") ? 5 : 3;
-
-		if (usz dot_pos = size_str.find_first_of("."); size_str.size() >= must_be_larger && dot_pos < size_str.size() - must_be_larger)
-		{
-			const usz dig_pos = dot_pos + 1;
-
-			if (must_be_larger == 5)
-			{
-				size_str.erase(size_str.begin() + dig_pos + 3, size_str.begin() + (size_str.size() - 2));
-			}
-			else
-			{
-				size_str.erase(size_str.begin() + dig_pos + 3, size_str.end());
-			}
+		default: break;
 		}
 
 		const usz must_be_larger = size_str.ends_with("B") ? 5 : 3;

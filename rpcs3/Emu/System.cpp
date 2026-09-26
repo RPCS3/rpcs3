@@ -1882,7 +1882,6 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 		{
 			m_state = system_state::ready;
 			g_emu_callbacks.on_ready();
-			GetCallbacks().on_ready();
 
 			ensure(g_fxo->init<id_manager::id_map<named_thread<ppu_thread>>>());
 			ensure(g_fxo->init<id_manager::id_map<lv2_obj>>());

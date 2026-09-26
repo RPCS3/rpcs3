@@ -28,7 +28,6 @@ struct lv2_memory : lv2_obj
 	const u64 authid;
 	lv2_memory_container* const ct; // null for system memory
 	u32 system_handle = 0; // stands in for the vsh handle
-	lv2_memory_container* const ct; // Associated memory container
 	atomic_ptr<std::shared_ptr<utils::shm>> shm;
 
 	// the game can drop its handle while audio still needs the buffer

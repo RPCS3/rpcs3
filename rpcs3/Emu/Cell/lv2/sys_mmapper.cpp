@@ -21,7 +21,7 @@ void init_system_shared_memory()
 	{
 		ensure(idm::import<lv2_obj, lv2_memory>([&]() -> shared_ptr<lv2_memory>
 		{
-			auto memory = make_shared<lv2_memory>(0x10000, 0x10000, 0x200, key, true, nullptr);
+			auto memory = make_shared<lv2_memory>(0x10000, 0x10000, 0x200, key, true, 0, nullptr);
 			memory->system_handle = idm::last_id<lv2_memory>();
 			return lv2_obj::load(key, std::move(memory));
 		}));
@@ -73,7 +73,6 @@ lv2_memory::lv2_memory(utils::serial& ar)
 		return null_ptr;
 	}(ar.pop<u32>()))
 	, system_handle(ar)
-	, shm(null_ptr)
 {
 	const u32 addr{ar};
 	external_refs = ar.pop<u32>();
@@ -111,7 +110,7 @@ CellError lv2_memory::on_id_create()
 		return CELL_ENOMEM;
 	}
 
-	if (!exists)
+	if (!exists && ct)
 	{
 		ct->take_named(make_named_allocation(idm::last_id(), key), size);
 	}
@@ -167,8 +166,7 @@ void lv2_memory::save_data(utils::serial& ar)
 
 	ar(size, align, flags, key, pshared, authid, ct ? static_cast<u32>(ct->id) : 0, system_handle);
 	const auto data = shm.load();
-	ar(addr);
-	ar(counter, external_refs);
+	ar(external_refs);
 
 	if (counters.empty())
 	{
@@ -183,12 +181,16 @@ void lv2_memory::save_data(utils::serial& ar)
 			ar(::narrow<u32>(::at32(g_fxo->get<vm::ps3_physical_memory_entries>().map_lookup, data->get())));
 		}
 	}
+
+	ar(counters);
 }
 
 void lv2_memory::release_memory()
 {
+	counters.erase(id_manager::g_process);
+
 	// the caller holds the id manager lock
-	if (exists || external_refs)
+	if (exists || external_refs || !counters.empty())
 	{
 		return;
 	}
@@ -218,7 +220,7 @@ template <bool exclusive_syscall_only = false>
 error_code create_lv2_shm(bool pshared, u64 ipc_key, u64 size, u32 align, u64 flags, lv2_memory_container* ct)
 {
 	const u32 _pshared = pshared ? SYS_SYNC_PROCESS_SHARED : SYS_SYNC_NOT_PROCESS_SHARED;
-	const s32 create_mode = exclusive || (flags & 0xc000) == 0xc000 ? SYS_SYNC_NEWLY_CREATED
+	const s32 create_mode = exclusive_syscall_only || (flags & 0xc000) == 0xc000 ? SYS_SYNC_NEWLY_CREATED
 		: (flags & 0x8000) ? SYS_SYNC_NOT_CARE : SYS_SYNC_NOT_CREATE;
 
 	u64 authid = 0;
@@ -255,7 +257,7 @@ error_code create_lv2_shm(bool pshared, u64 ipc_key, u64 size, u32 align, u64 fl
 
 	if (auto error = lv2_obj::create<lv2_memory>(_pshared, ipc_key, creation_policy, [&]()
 	{
-		created = make_shared<lv2_memory>(
+		return make_shared<lv2_memory>(
 			static_cast<u32>(size),
 			align,
 			flags,
@@ -263,7 +265,6 @@ error_code create_lv2_shm(bool pshared, u64 ipc_key, u64 size, u32 align, u64 fl
 			pshared,
 			authid,
 			ct);
-		return created;
 	}, false))
 	{
 		return error;
@@ -808,12 +809,9 @@ error_code sys_mmapper_free_shared_memory(ppu_thread& ppu, u32 mem_id)
 
 		lv2_obj::on_id_destroy(mem, mem.key, +mem.pshared);
 		mem.release_memory();
-		mem.counters.erase(id_manager::g_process);
 
-		if (!mem.exists)
+		if (mem.ct && !mem.exists)
 		{
-			// Return "physical memory" to the memory container
-			mem.ct->free(mem.size);
 			mem.ct->free_named(make_named_allocation(mem_id, mem.key), mem.size);
 		}
 

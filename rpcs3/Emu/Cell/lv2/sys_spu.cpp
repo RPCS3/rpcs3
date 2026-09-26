@@ -95,7 +95,7 @@ bool sys_spu_image::load(const fs::file& stream)
 	const s32 nsegs = sys_spu_image::get_nsegs(obj.progs);
 
 	const u32 mem_size = nsegs * sizeof(sys_spu_segment) + ::size32(stream);
-	const vm::ptr<sys_spu_segment> segs = vm::cast(allocate_user_memory(mem_size, 0x10000));
+	const vm::ptr<sys_spu_segment> segs = vm::cast(allocate_user_memory(idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process).get(), mem_size, 0x10000));
 
 	//const u32 entry = obj.header.e_entry;
 

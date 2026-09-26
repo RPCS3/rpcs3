@@ -184,16 +184,14 @@ struct sys_memory_address_table
 	}
 };
 
-u32 allocate_user_memory(u32 size, u32 align);
+u32 allocate_user_memory(lv2_process* process, u32 size, u32 align)
+{
+	return process->local_typemap->get<sys_memory_address_table>().allocate(size, align);
+}
 
 extern void clean_sys_memory(lv2_process* process)
 {
 	process->local_typemap->get<sys_memory_address_table>() = thread_state::finished;
-}
-
-std::shared_ptr<vm::block_t> reserve_map(u32 alloc_size, u32 align)
-{
-	return g_fxo->get<sys_memory_address_table>().allocate(size, align);
 }
 
 static std::string make_named_allocation(u32 addr, [[maybe_unused]] u32 amount)
@@ -239,30 +237,19 @@ error_code sys_memory_allocate(cpu_thread& cpu, u64 size, u64 flags, vm::ptr<u32
 		return {CELL_ENOMEM, dct.size - dct.used};
 	}
 
-	if (const u32 addr = allocate_user_memory(static_cast<u32>(size), align))
+	if (const u32 addr = allocate_user_memory(idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process).get(), static_cast<u32>(size), align))
 	{
-		ensure(!g_fxo->get<sys_memory_address_table>().addrs[addr >> 16].exchange(&dct));
-
 		if (alloc_addr)
 		{
-			sys_memory.notice("sys_memory_allocate(): Allocated 0x%x address (size=0x%x)", addr, size);
-
 			ensure(!lv2_process::get_typemap()->get<sys_memory_address_table>().addrs[addr >> 16].exchange(&dct));
 
-			if (alloc_addr)
-			{
-				dct.take_named(make_named_allocation(addr, size), size);
-				sys_memory.notice("sys_memory_allocate(): Allocated 0x%x address (size=0x%x)", addr, size);
+			dct.take_named(make_named_allocation(addr, size), size);
+			sys_memory.notice("sys_memory_allocate(): Allocated 0x%x address (size=0x%x)", addr, size);
 
-				vm::lock_sudo(addr, static_cast<u32>(size));
-				cpu.check_state();
-				*alloc_addr = addr;
-				return CELL_OK;
-			}
-
-			// Dealloc using the syscall
-			sys_memory_free(cpu, addr);
-			return CELL_EFAULT;
+			vm::lock_sudo(addr, static_cast<u32>(size));
+			cpu.check_state();
+			*alloc_addr = addr;
+			return CELL_OK;
 		}
 
 		sys_memory_free(cpu, addr);
@@ -321,30 +308,21 @@ error_code sys_memory_allocate_from_container(cpu_thread& cpu, u64 size, u32 cid
 		return {ct.ret, ct->size - ct->used};
 	}
 
-	if (const u32 addr = allocate_user_memory(static_cast<u32>(size), align))
+	if (const u32 addr = allocate_user_memory(idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process).get(), static_cast<u32>(size), align))
 	{
-		ensure(!g_fxo->get<sys_memory_address_table>().addrs[addr >> 16].exchange(ct.ptr.get()));
-
 		if (alloc_addr)
 		{
 			sys_memory.notice("sys_memory_allocate_from_container(): Allocated 0x%x address (size=0x%x)", addr, size);
 
 			ensure(!lv2_process::get_typemap()->get<sys_memory_address_table>().addrs[addr >> 16].exchange(ct.ptr.get()));
 
-			if (alloc_addr)
-			{
-				ct->take_named(make_named_allocation(addr, size), size);
-				sys_memory.notice("sys_memory_allocate_from_container(): Allocated 0x%x address (size=0x%x)", addr, size);
+			ct->take_named(make_named_allocation(addr, size), size);
+			sys_memory.notice("sys_memory_allocate_from_container(): Allocated 0x%x address (size=0x%x)", addr, size);
 
-				vm::lock_sudo(addr, static_cast<u32>(size));
-				cpu.check_state();
-				*alloc_addr = addr;
-				return CELL_OK;
-			}
-
-			// Dealloc using the syscall
-			sys_memory_free(cpu, addr);
-			return CELL_EFAULT;
+			vm::lock_sudo(addr, static_cast<u32>(size));
+			cpu.check_state();
+			*alloc_addr = addr;
+			return CELL_OK;
 		}
 
 		sys_memory_free(cpu, addr);

@@ -170,7 +170,7 @@ bool rsx::thread::send_event(lv2_rsx_context* context, u64 data1, u64 event_flag
 
 void _sys_rsx_drain_event_queue(rsx::thread* rsxthr, u64 event_flags = umax, u64 wait_timeout_ms = 1000ull)
 {
-	const auto& driverInfo = *vm::_ptr<RsxDriverInfo>(rsxthr->driver_info);
+	const auto& driverInfo = *vm::_ptr<RsxDriverInfo>(rsxthr->lv2_context->driver_info);
 	const u32 rsx_queue_id = driverInfo.handler_queue;
 
 	if (const auto enabled_events = static_cast<u64>(driverInfo.handlers) | (0xffff'ffffull << 32);

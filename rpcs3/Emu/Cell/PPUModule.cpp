@@ -786,16 +786,16 @@ extern u32 ppu_get_exported_func_addr(u32 fnid, const std::string& module_name)
 {
 	const auto process = get_my_process();
 	auto& link = process->local_typemap->get<ppu_linkage_info>();
-	std::shared_lock lock(link.mutex);
+	std::lock_guard lock(link.mutex);
 
-	const auto module = link.modules.find(module_name);
+	const auto module = link.find(module_name);
 
 	if (module == link.modules.end())
 	{
 		return 0;
 	}
 
-	return link.find_or_construct(module_name, ensure(id_manager::g_process)).functions[fnid].export_addr;
+	return module->second.functions[fnid].export_addr;
 }
 
 extern bool ppu_register_library_lock(std::string_view libname, bool lock_lib, bool is_mutex_locked)
@@ -2242,6 +2242,18 @@ shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2
 		}
 	}
 
+
+	if (!ar)
+	{
+		if (!Emu.init_mem_containers)
+		{
+			g_fxo->init<id_manager::id_map<lv2_memory_container>>();
+		}
+
+		g_fxo->init<id_manager::id_map<named_thread<ppu_thread>>>();
+		g_fxo->init<id_manager::id_map<lv2_obj>>();
+	}
+
 	// Process information
 	u32 sdk_version = SYS_PROCESS_PARAM_SDK_VERSION_UNKNOWN;
 	s32 primary_prio = 1001;
@@ -2252,6 +2264,41 @@ shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2
 	// Something that is exclusive for very old SDKs
 	// Another 256MB for PPU private area, but allocated at the front instead of after vm::main
 	bool has_private_ppu_executable_area = false;
+
+	// Set for delayed initialization in ppu_initialize()
+	const u32 parent_process = cpu_thread::get_current() ? id_manager::g_process : u32{umax};
+	const auto process_ptr = ar ? ensure(idm::get_unlocked<lv2_obj, lv2_process>(idm::last_id<lv2_process>())) : idm::make_ptr<lv2_obj, lv2_process>();
+
+	id_manager::g_process = idm::last_id<lv2_process>();
+	const auto vm_globals = process_ptr->acquire_globals(idm::last_id<lv2_process>());
+
+	// Read control flags (0 if doesn't exist)
+	process_ptr->ctrl_flags1 = 0;
+
+	static_assert(std::is_copy_constructible_v<SelfAdditionalInfo>);
+
+	process_ptr->self_info = *ensure(elf.get_encrypted_layer_data<SelfAdditionalInfo>());
+
+	if (bool not_found = process_ptr->self_info.valid)
+	{
+		for (const auto& ctrl : process_ptr->self_info.supplemental_hdr)
+		{
+			if (ctrl.type == 1)
+			{
+				if (!std::exchange(not_found, false))
+				{
+					ppu_loader.error("More than one control flags header found! (flags1=0x%x)",
+						ctrl.PS3_plaintext_capability_header.ctrl_flag1);
+					break;
+				}
+
+				process_ptr->ctrl_flags1 |= ctrl.PS3_plaintext_capability_header.ctrl_flag1;
+			}
+		}
+
+		ppu_loader.notice("SELF header information found: ctrl_flags1=0x%x, authid=0x%llx",
+			process_ptr->ctrl_flags1, process_ptr->self_info.prog_id_hdr.program_authority_id);
+	}
 
 	// Fetch information needed for allocating memory segmnents
 	for (auto& prog : elf.progs)
@@ -2309,7 +2356,7 @@ shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2
 					sdk_version = info.sdk_version;
 
 					if (s32 prio = info.primary_prio; prio < 3072
-						&& (prio >= (g_ps3_process_info.debug_or_root() ? 0 : -512)))
+						&& (prio >= (process_ptr->debug_or_root() ? 0 : -512)))
 					{
 						primary_prio = prio;
 					}
@@ -2351,7 +2398,7 @@ shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2
 		if (!vm::reserve_map(vm::any, 0x10000, 0x0FFF0000, vm::block_size_64k))
 		{
 			ppu_loader.error("ppu_load_exec(): Failed to map PPU_PRIVATE (sdk_version=0x%x)", sdk_version);
-			return false;
+			return {};
 		}
 	}
 
@@ -2362,7 +2409,7 @@ shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2
 		if (!vm::reserve_map(vm::main, has_private_ppu_executable_area ? 0x10000000 : 0x10000, 0x1FFF0000 + (has_private_ppu_executable_area ? 0x10000 : 0), vm::block_size_64k))
 		{
 			ppu_loader.error("ppu_load_exec(): Failed to map vm::main (sdk_version=0x%x)", sdk_version);
-			return false;
+			return {};
 		}
 	}
 	else
@@ -2375,27 +2422,9 @@ shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2
 		if (!vm::reserve_map(vm::main, has_private_ppu_executable_area ? 0x10000000 : 0x10000, 0x0FFF0000 + (has_private_ppu_executable_area ? 0x10000 : 0), vm::block_size_64k))
 		{
 			ppu_loader.error("ppu_load_exec(): Failed to map vm::main (sdk_version=0x%x)", sdk_version);
-			return false;
+			return {};
 		}
 	}
-
-	if (!ar)
-	{
-		if (!Emu.init_mem_containers)
-		{
-			g_fxo->init<id_manager::id_map<lv2_memory_container>>();
-		}
-
-		g_fxo->init<id_manager::id_map<named_thread<ppu_thread>>>();
-		g_fxo->init<id_manager::id_map<lv2_obj>>();
-	}
-
-	// Set for delayed initialization in ppu_initialize()
-	const u32 parent_process = cpu_thread::get_current() ? id_manager::g_process : u32{umax};
-	const auto process_ptr = ar ? ensure(idm::get_unlocked<lv2_obj, lv2_process>(idm::last_id<lv2_process>())) : idm::make_ptr<lv2_obj, lv2_process>();
-
-	id_manager::g_process = idm::last_id<lv2_process>();
-	const auto vm_globals = process_ptr->acquire_globals(idm::last_id<lv2_process>());
 
 	if (!ar)
 	{
@@ -2700,34 +2729,6 @@ shared_ptr<lv2_process> ppu_load_self(const ppu_exec_object& elf, shared_ptr<lv2
 			vm::cptr<u8> _ptr = vm::cast(i);
 			shle->check_against_patterns(_ptr, (_main.segs[0].addr + _main.segs[0].size) - i, i);
 		}
-	}
-
-	// Read control flags (0 if doesn't exist)
-	process_ptr->ctrl_flags1 = 0;
-
-	static_assert(std::is_copy_constructible_v<SelfAdditionalInfo>);
-
-	process_ptr->self_info = *ensure(elf.get_encrypted_layer_data<SelfAdditionalInfo>());
-
-	if (bool not_found = process_ptr->self_info.valid)
-	{
-		for (const auto& ctrl : process_ptr->self_info.supplemental_hdr)
-		{
-			if (ctrl.type == 1)
-			{
-				if (!std::exchange(not_found, false))
-				{
-					ppu_loader.error("More than one control flags header found! (flags1=0x%x)",
-						ctrl.PS3_plaintext_capability_header.ctrl_flag1);
-					break;
-				}
-
-				process_ptr->ctrl_flags1 |= ctrl.PS3_plaintext_capability_header.ctrl_flag1;
-			}
-		}
-
-		ppu_loader.notice("SELF header information found: ctrl_flags1=0x%x, authid=0x%llx",
-			process_ptr->ctrl_flags1, process_ptr->self_info.prog_id_hdr.program_authority_id);
 	}
 
 	// Load other programs

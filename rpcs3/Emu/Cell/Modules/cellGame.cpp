@@ -338,7 +338,7 @@ void disc_change_manager::eject_disc()
 	{
 		signal_sys_storage_about_BDVD_eject();
 		state = eject_state::ejected;
-		Emu.GetCallbacks().enable_disc_insert(true);
+		g_emu_callbacks.enable_disc_insert(true);
 	}
 
 	const auto cb_func = eject_callback;
@@ -403,7 +403,7 @@ void disc_change_manager::insert_disc(u32 disc_type, std::string title_id)
 	{
 		signal_sys_storage_about_BDVD_insert();
 		state = eject_state::inserted;
-		Emu.GetCallbacks().enable_disc_eject(true);
+		g_emu_callbacks.enable_disc_eject(true);
 	}
 
 	const auto cb_func = insert_callback;
