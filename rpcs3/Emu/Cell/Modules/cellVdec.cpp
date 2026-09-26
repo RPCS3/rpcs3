@@ -299,8 +299,14 @@ struct vdec_context final
 
 	~vdec_context()
 	{
+		release_decoder();
+	}
+
+	// Frees the FFmpeg decoder, which may take milliseconds
+	void release_decoder()
+	{
 		avcodec_free_context(&ctx);
-		sws_freeContext(sws);
+		sws_freeContext(std::exchange(sws, nullptr));
 	}
 
 	static u32 freq_to_framerate_code(f64 freq)
@@ -653,8 +659,8 @@ struct vdec_context final
 	}
 };
 
-// Destroys closed decoder contexts on a host thread.
-// Freeing the FFmpeg decoder and the frames it still holds takes milliseconds, which would otherwise delay the guest thread closing the decoder.
+// Frees the FFmpeg decoders of closed contexts on a host thread.
+// Freeing a decoder takes milliseconds, which would otherwise delay the guest thread closing it.
 struct vdec_context_reaper
 {
 	lf_queue<shared_ptr<vdec_context>> contexts;
@@ -668,8 +674,17 @@ struct vdec_context_reaper
 			// Let the closing sequence of the caller complete first: freeing this much memory slows down the other threads
 			thread_ctrl::wait_for(100'000);
 
-			// Dropping the popped contexts destroys them
-			contexts.pop_all();
+			for (auto&& vdec : contexts.pop_all())
+			{
+				if (vdec.use_count() > 1)
+				{
+					// Still used by an HLE call in progress, retry later
+					contexts.push(std::move(vdec));
+					continue;
+				}
+
+				vdec->release_decoder();
+			}
 		}
 	}
 
