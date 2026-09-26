@@ -3,6 +3,8 @@
 #include "Emu/IdManager.h"
 #include "Emu/System.h"
 
+#include "Utilities/StrUtil.h"
+
 #include "cellGame.h"
 
 LOG_CHANNEL(cellGameExec);
@@ -108,7 +110,8 @@ error_code cellGameGetBootGameInfo(vm::ptr<u32> type, vm::ptr<char> dirName, vm:
 
 	if (source_type == CELL_GAME_GAMETYPE_HDD)
 	{
-		const std::string dir_name = Emu.GetDir();
+		const std::string_view boot_dir = fmt::trim_back_sv(Emu.GetDir(), fs::delim);
+		const std::string dir_name{boot_dir.substr(boot_dir.find_last_of(fs::delim) + 1)};
 
 		if (dir_name.size() >= CELL_GAME_DIRNAME_SIZE)
 		{
