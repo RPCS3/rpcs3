@@ -471,7 +471,7 @@ void main_window::OnPlayOrPause()
 			if (const auto error = Emu.Load(); error != game_boot_result::no_errors)
 			{
 				gui_log.error("Boot failed: reason: %s, path: %s", error, path);
-				show_boot_error(error);
+				show_boot_error(error, path);
 			}
 		}
 		else if (!m_recent_game.actions.isEmpty())
@@ -486,7 +486,7 @@ void main_window::OnPlayOrPause()
 	}
 }
 
-void main_window::show_boot_error(game_boot_result status)
+void main_window::show_boot_error(game_boot_result status, const std::string& path)
 {
 	QString message;
 	switch (status)
@@ -515,6 +515,11 @@ void main_window::show_boot_error(game_boot_result status)
 	case game_boot_result::unsupported_disc_type:
 		message = tr("This disc type is not supported yet.");
 		break;
+	case game_boot_result::disc_key_missing:
+	case game_boot_result::disc_key_invalid:
+		// These get a dialog of their own: the user is one file away from booting the game, so point them at the folder it goes in
+		gui::utils::show_disc_key_error(this, tr("Boot Failed"), path, status == game_boot_result::disc_key_invalid);
+		return;
 	case game_boot_result::savestate_corrupted:
 		message = tr("Savestate data is corrupted or it's not an RPCS3 savestate.");
 		break;
@@ -596,7 +601,7 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 	if (const auto error = Emu.BootGame(path, title_id, direct, config_mode, config_path, db_config); error != game_boot_result::no_errors)
 	{
 		gui_log.error("Boot failed: reason: %s, path: %s", error, path);
-		show_boot_error(error);
+		show_boot_error(error, path);
 		return;
 	}
 
@@ -4494,7 +4499,7 @@ void main_window::dropEvent(QDropEvent* event)
 		if (const auto error = Emu.BootGame(path, "", true); error != game_boot_result::no_errors)
 		{
 			gui_log.error("Boot failed: reason: %s, path: %s", error, path);
-			show_boot_error(error);
+			show_boot_error(error, path);
 			return;
 		}
 
