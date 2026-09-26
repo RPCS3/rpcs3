@@ -11,6 +11,7 @@
 #include <QSpinBox>
 #include <QTimer>
 #include <QScreen>
+#include <QShortcut>
 #include <QStyleFactory>
 
 #include "gui_settings.h"
@@ -236,6 +237,26 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		ui->buttonBox->button(QDialogButtonBox::StandardButton::Close)->setFocus();
 	});
+
+	// Qt only cycles tabs on Ctrl+Tab/Ctrl+Shift+Tab while the tab widget itself has focus, so it stops
+	// working as soon as a widget inside the current tab (or the Close button above) grabs focus. Use
+	// dedicated window-wide shortcuts instead, so tab cycling keeps working no matter what has focus.
+	const auto cycle_tab = [this](int direction)
+	{
+		QTabWidget* const tabs = ui->tab_widget_settings;
+		if (const int count = tabs->count())
+		{
+			tabs->setCurrentIndex((tabs->currentIndex() + direction + count) % count);
+		}
+	};
+
+	QShortcut* const next_tab_shortcut = new QShortcut(QKeySequence("Ctrl+Tab"), this);
+	next_tab_shortcut->setContext(Qt::WindowShortcut);
+	connect(next_tab_shortcut, &QShortcut::activated, this, [cycle_tab]() { cycle_tab(1); });
+
+	QShortcut* const prev_tab_shortcut = new QShortcut(QKeySequence("Ctrl+Shift+Tab"), this);
+	prev_tab_shortcut->setContext(Qt::WindowShortcut);
+	connect(prev_tab_shortcut, &QShortcut::activated, this, [cycle_tab]() { cycle_tab(-1); });
 
 	//     _____ _____  _    _   _______    _
 	//    / ____|  __ \| |  | | |__   __|  | |
