@@ -741,9 +741,6 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		}
 	}
 
-	// There is a lot going on in this function, ensure function log and past log commands have completed for ease of debugging
-	logs::listener::sync_all();
-
 	if (const auto ecode = savedata_check_args(operation, version, dirName, errDialog, setList, setBuf, funcList, funcFixed, funcStat,
 		funcFile, container, unk_op_flags, userdata, userId, funcDone))
 	{
@@ -764,6 +761,10 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	{
 		return CELL_SAVEDATA_ERROR_BUSY;
 	}
+
+	// There is a lot going on in this function, ensure function log and past log commands have completed for ease of debugging
+	// Done after taking the lock: the flush can take milliseconds and must not let a later concurrent call win the lock
+	logs::listener::sync_all();
 
 	// Simulate idle time while data is being sent to VSH
 	const auto lv2_sleep = [](ppu_thread& ppu, usz sleep_time)
