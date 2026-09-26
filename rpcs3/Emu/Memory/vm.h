@@ -131,6 +131,7 @@ namespace vm
 
 		bf0_0x1 = 0x1, // TODO: document
 		bf0_0x2 = 0x2, // TODO: document
+		rsx_incomp = 0x4, // Block is not compatible for RSX mappings, despite 1MB pages
 
 		bf0_mask = bf0_0x1 | bf0_0x2,
 	};
