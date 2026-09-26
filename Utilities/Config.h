@@ -150,6 +150,13 @@ namespace cfg
 			return m_nodes;
 		}
 
+		// Create a child entry with the given name while parsing a config.
+		// Only implemented by nodes that contain dynamic entries.
+		virtual _base* create_node(const std::string& /*name*/)
+		{
+			return nullptr;
+		}
+
 		// Serialize node
 		std::string to_string() const override;
 
@@ -164,6 +171,10 @@ namespace cfg
 
 		// Try to convert from string and validate
 		bool validate(std::string_view value);
+
+	protected:
+		// Unregister a child entry. Only useful for nodes that contain dynamic entries.
+		void remove_node(const _base* node);
 	};
 
 	class _bool final : public _base
