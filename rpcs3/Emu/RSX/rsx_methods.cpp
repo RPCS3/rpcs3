@@ -67,6 +67,9 @@ namespace rsx
 
 	void user_command(context* ctx, u32, u32 arg)
 	{
+		// USER_COMMAND induces a full drain of the backend and frontend.
+		RSX(ctx)->sync();
+
 		if (!RSX(ctx)->isHLE)
 		{
 			sys_rsx_context_attribute(0x55555555, 0xFEF, 0, arg, 0, 0);
