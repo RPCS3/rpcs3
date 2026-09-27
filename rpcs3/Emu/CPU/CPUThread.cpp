@@ -732,12 +732,11 @@ void cpu_thread::operator()()
 			{
 				cleanup();
 
-				auto log_thread = named_thread("CPU Thread Cleanup Logger", [name = name]()
+				// Log from a detached thread: TLS may already be destroyed here, and joining would deadlock on the Windows loader lock
+				std::thread{[name = std::move(name)]()
 				{
 					sys_log.warning("CPU Thread '%s' terminated abnormally!", name);
-				});
-
-				log_thread();
+				}}.detach();
 			}
 		}
 	} cleanup;
