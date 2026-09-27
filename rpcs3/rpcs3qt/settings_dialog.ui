@@ -2552,6 +2552,13 @@
                    </widget>
                   </item>
                   <item>
+                   <widget class="QCheckBox" name="emulateHddSpeed">
+                    <property name="text">
+                     <string>Emulate HDD Read Speed</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
                    <widget class="QCheckBox" name="enableSpuEventsBusyLoop">
                     <property name="text">
                      <string>Enable SPU Events Busy Loop</string>

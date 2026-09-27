@@ -5,6 +5,7 @@
 #include "util/asm.hpp"
 
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/Cell/timers.hpp"
 #include "Crypto/unedat.h"
 #include "Emu/system_config.h"
 #include "Emu/VFS.h"
@@ -32,6 +33,11 @@ lv2_fs_mount_point g_mp_sys_app_home{"/app_home", "CELL_FS_DUMMYFS", "CELL_FS_DU
 lv2_fs_mount_point g_mp_sys_dev_root{"/", "CELL_FS_ADMINFS", "CELL_FS_ADMINFS:", 512, 0x100, 512, lv2_mp_flag::read_only + lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid, &g_mp_sys_app_home};
 lv2_fs_mount_point g_mp_sys_no_device{};
 lv2_fs_mount_info  g_mi_sys_not_found{}; // wrapper for &g_mp_sys_no_device
+
+struct hdd_read_state
+{
+	atomic_t<u64> busy_until = 0;
+};
 
 template<>
 void fmt_class_string<lv2_file_type>::format(std::string& out, u64 arg)
@@ -577,6 +583,28 @@ lv2_fs_object::lv2_fs_object(utils::serial& ar, bool)
 	: name(ar.pop<decltype(name)>())
 	, mp(g_fxo->get<lv2_fs_mount_info_map>().lookup(name.data()))
 {
+}
+
+void lv2_file::wait_read(ppu_thread& ppu, u64 size, u64 start) const
+{
+	if (!size || start == umax)
+	{
+		return;
+	}
+
+	// Measured on a stock PS3 HDD
+	const u64 duration = 70 + size * 1'000'000 / (63'000 * 1024);
+
+	const u64 end = g_fxo->get<hdd_read_state>().busy_until.atomic_op([&](u64& until)
+	{
+		until = std::max(until, start) + duration;
+		return until;
+	});
+
+	if (const u64 now = get_guest_system_time(); end > now)
+	{
+		lv2_obj::wait_timeout(end - now, &ppu);
+	}
 }
 
 u64 lv2_file::op_read(const fs::file& file, vm::ptr<void> buf, u64 size, u64 opt_pos)
@@ -1375,12 +1403,15 @@ error_code sys_fs_read(ppu_thread& ppu, u32 fd, vm::ptr<void> buf, u64 nbytes, v
 		return CELL_EIO;
 	}
 
+	const u64 read_start = (g_cfg.vfs.emulate_hdd_speed && (file->mp == &g_mp_sys_dev_hdd0 || file->mp == &g_mp_sys_dev_hdd1))
+		? get_guest_system_time() : umax;
 	const u64 read_bytes = file->op_read(buf, nbytes);
 	const bool failure = !read_bytes && file->file.pos() < file->file.size();
 
 	file->reads_total += read_bytes;
 
 	lock.unlock();
+	file->wait_read(ppu, read_bytes, read_start);
 	ppu.check_state();
 
 	*nread = read_bytes;
@@ -2381,6 +2412,8 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			file->file.seek(op_pos);
 		}
 
+		const u64 op_start = (op == 0x8000000a && g_cfg.vfs.emulate_hdd_speed && (file->mp == &g_mp_sys_dev_hdd0 || file->mp == &g_mp_sys_dev_hdd1))
+			? get_guest_system_time() : umax;
 		const u64 done_size = op == 0x8000000a
 			? file->op_read(arg->buf, arg->size, op_pos)
 			: file->op_write(arg->buf, arg->size);
@@ -2390,6 +2423,11 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 		if (op == 0x8000000b)
 		{
 			ensure(old_pos == file->file.seek(old_pos));
+		}
+		else
+		{
+			rlock.unlock();
+			file->wait_read(ppu, done_size, op_start);
 		}
 
 		(op == 0x8000000a ? &file->reads_total : &file->writes_total)->fetch_add(done_size);
