@@ -2788,6 +2788,13 @@
                    </widget>
                   </item>
                   <item>
+                   <widget class="QCheckBox" name="blitEngineScaling">
+                    <property name="text">
+                     <string>Disable Blit Engine Upscaling</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
                    <widget class="QCheckBox" name="disableMslFastMath">
                     <property name="text">
                      <string>Disable MSL Fast Math</string>
@@ -4463,13 +4470,6 @@
                    <string>Disable Asynchronous Memory Manager</string>
                   </property>
                  </widget>
-                </item>
-                <item>
-                  <widget class="QCheckBox" name="blitEngineScaling">
-                  <property name="text">
-                    <string>Disable Blit Engine Upscaling</string>
-                  </property>
-                  </widget>
                 </item>
                 <item>
                  <widget class="QCheckBox" name="disableFIFOReordering">
