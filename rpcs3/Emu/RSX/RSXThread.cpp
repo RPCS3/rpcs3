@@ -1032,6 +1032,12 @@ namespace rsx
 	{
 		vblank_count++;
 
+		if (device_addr)
+		{
+			// Complete the vsync flip queued on the DEVICE 0x30 semaphore (0 = queued, 1 = displayed)
+			vm::_ptr<atomic_be_t<u32>>(device_addr + 0x30)->compare_and_swap_test(0, 1);
+		}
+
 		if (isHLE)
 		{
 			if (auto ptr = vblank_handler)
