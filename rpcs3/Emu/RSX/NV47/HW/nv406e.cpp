@@ -128,8 +128,7 @@ namespace rsx
 				return;
 			}
 
-			// DEVICE 0x30 is the flip queue semaphore: 0 = flip queued, 1 = flip displayed
-			// With vsync the display completes the flip on the next vblank (see post_vblank_event)
+			// With vsync the 0 is kept until the next vblank (see post_vblank_event)
 			if (addr == RSX(ctx)->device_addr + 0x30 && !arg && !RSX(ctx)->requested_vsync)
 			{
 				// HW flip synchronization related, 1 is not written without display queue command (TODO: make it behave as real hw)

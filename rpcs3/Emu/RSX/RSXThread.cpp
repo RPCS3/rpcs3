@@ -1034,7 +1034,7 @@ namespace rsx
 
 		if (device_addr)
 		{
-			// Complete the vsync flip queued on the DEVICE 0x30 semaphore (0 = queued, 1 = displayed)
+			// Release the DEVICE 0x30 flip semaphore held at 0 by a vsync flip
 			vm::_ptr<atomic_be_t<u32>>(device_addr + 0x30)->compare_and_swap_test(0, 1);
 		}
 
