@@ -80,7 +80,7 @@ class SPUDisAsm final : public PPCDisAsm
 {
 	std::shared_ptr<utils::shm> m_shm;
 public:
-	SPUDisAsm(cpu_disasm_mode mode, const u8* offset, u32 start_pc = 0) : PPCDisAsm(mode, offset, start_pc)
+	SPUDisAsm(cpu_disasm_mode mode, const u8* offset, u32 start_pc = 0) : PPCDisAsm(mode, offset, nullptr, start_pc)
 	{
 	}
 

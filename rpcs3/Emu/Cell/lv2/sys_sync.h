@@ -86,7 +86,7 @@ private:
 	}
 
 public:
-	SAVESTATE_INIT_POS(4); // Dependency on PPUs
+	SAVESTATE_INIT_POS(4); // Dependancy on PPUs
 
 	lv2_obj() noexcept = default;
 	lv2_obj(u32 i) noexcept : exists{ i } {}
@@ -433,10 +433,18 @@ public:
 		{
 			g_fxo->need<ipc_manager<T, u64>>();
 
-			g_fxo->get<ipc_manager<T, u64>>().add(ipc_key, [&]()
+			const auto [added, old_ptr] = g_fxo->get<ipc_manager<T, u64>>().add(ipc_key, [&]()
 			{
 				return make;
 			});
+
+			if (!added)
+			{
+				ensure(old_ptr);
+				ensure(!old_ptr->on_id_create());
+				return old_ptr;
+
+			}
 		}
 
 		// Ensure no error

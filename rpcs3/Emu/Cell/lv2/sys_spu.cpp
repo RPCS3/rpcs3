@@ -95,7 +95,7 @@ bool sys_spu_image::load(const fs::file& stream)
 	const s32 nsegs = sys_spu_image::get_nsegs(obj.progs);
 
 	const u32 mem_size = nsegs * sizeof(sys_spu_segment) + ::size32(stream);
-	const vm::ptr<sys_spu_segment> segs = vm::cast(allocate_user_memory(mem_size, 0x10000));
+	const vm::ptr<sys_spu_segment> segs = vm::cast(allocate_user_memory(idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process).get(), mem_size, 0x10000));
 
 	//const u32 entry = obj.header.e_entry;
 
@@ -943,7 +943,7 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 
 	sys_spu.warning("sys_spu_thread_group_create(id=*0x%x, num=%d, prio=%d, attr=*0x%x)", id, num, prio, attr);
 
-	const s32 min_prio = g_ps3_process_info.has_root_perm() ? 0 : 16;
+	const s32 min_prio = ppu.has_root_perm ? 0 : 16;
 
 	sys_spu_thread_group_attribute attr_data{};
 	{
@@ -1085,7 +1085,7 @@ error_code sys_spu_thread_group_create(ppu_thread& ppu, vm::ptr<u32> id, u32 num
 	}
 	else
 	{
-		ct = &g_fxo->get<lv2_memory_container>();
+		ct = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->parent_memory_container.get();
 
 		if (ct->take(mem_size) != mem_size)
 		{
@@ -1739,7 +1739,7 @@ error_code sys_spu_thread_group_set_priority(ppu_thread& ppu, u32 id, s32 priori
 		return CELL_ESRCH;
 	}
 
-	if (!group->has_scheduler_context || priority < (g_ps3_process_info.has_root_perm() ? 0 : 16) || priority > 255)
+	if (!group->has_scheduler_context || priority < (ppu.has_root_perm ? 0 : 16) || priority > 255)
 	{
 		return CELL_EINVAL;
 	}
@@ -1813,6 +1813,62 @@ error_code sys_spu_thread_group_set_cooperative_victims(ppu_thread& ppu, u32 id,
 	}
 
 	// TODO
+
+	return CELL_OK;
+}
+
+error_code sys_spu_thread_group_syscall_248(ppu_thread& ppu, u32 id, u32 arg1, u32 arg2, u32 arg3, u32 arg4)
+{
+	if (!ppu.has_root_perm)
+	{
+		return CELL_ENOSYS;
+	}
+
+	const auto group = idm::get_unlocked<lv2_spu_group>(id);
+
+	if (!group)
+	{
+		return CELL_ESRCH;
+	}
+
+	lv2_obj::prepare_for_sleep(ppu);
+
+	std::unique_lock lock(group->mutex);
+
+	const auto state = +group->run_state;
+
+	if (state == SPU_THREAD_GROUP_STATUS_DESTROYED)
+	{
+		return CELL_ESRCH;
+	}
+
+	if (state < SPU_THREAD_GROUP_STATUS_INITIALIZED)
+	{
+		return CELL_ESTAT;
+	}
+
+	if (group->waiter)
+	{
+		// another PPU thread is joining this thread group
+		return CELL_EBUSY;
+	}
+
+	return CELL_OK;
+}
+
+error_code sys_spu_thread_group_syscall_249(ppu_thread& ppu, u32 id)
+{
+	if (!ppu.has_root_perm)
+	{
+		return CELL_ENOSYS;
+	}
+
+	const auto group = idm::get_unlocked<lv2_spu_group>(id);
+
+	if (!group)
+	{
+		return CELL_ESRCH;
+	}
 
 	return CELL_OK;
 }
@@ -2669,7 +2725,7 @@ error_code raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 /*hwthread*/, 
 		return CELL_EINVAL;
 	}
 
-	CellError error = {};
+	CellError error = CELL_EAGAIN;
 
 	const auto tag = idm::import<lv2_obj, lv2_int_tag>([&]()
 	{
@@ -2696,8 +2752,10 @@ error_code raw_spu_create_interrupt_tag(u32 id, u32 class_id, u32 /*hwthread*/, 
 		return result;
 	});
 
-	if (tag)
+	if (tag != id_manager::id_traits<lv2_int_tag>::invalid)
 	{
+		(class_id == 2 ? sys_spu.warning : sys_spu.trace)("raw_spu_create_interrupt_tag(): SPU=%d: tag=0x%x", id, tag);
+
 		cpu_thread::get_current()->check_state();
 		*intrtag = tag;
 		return CELL_OK;

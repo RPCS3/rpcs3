@@ -800,7 +800,7 @@ error_code _CellAdecCoreOpOpenExt_atracx(ppu_thread& ppu, vm::ptr<AtracXdecConte
 	ensure(lv2_syscall<sys_mutex_unlock>(ppu, handle->output_mutex) == CELL_OK);
 
 	const vm::var<char[]> _name = vm::make_str("HLE ATRAC3plus decoder");
-	const auto entry = g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(atracXdecEntry));
+	const auto entry = ppu.exports_table->func_addr(FIND_FUNC(atracXdecEntry));
 	ppu_execute<&sys_ppu_thread_create>(ppu, handle.ptr(&AtracXdecContext::thread_id), entry, handle.addr(), +res->ppuThreadPriority, +res->ppuThreadStackSize, SYS_PPU_THREAD_CREATE_JOINABLE, +_name);
 
 	return CELL_OK;

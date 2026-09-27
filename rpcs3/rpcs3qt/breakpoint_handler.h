@@ -14,6 +14,8 @@ enum class breakpoint_types
 	__bitset_enum_max
 };
 
+struct lv2_process;
+
 /*
 * This class acts as a layer between the UI and Emu for breakpoints.
 */
@@ -31,24 +33,28 @@ public:
 	* Returns true iff breakpoint exists at loc.
 	* TODO: Add arg for flags, gameid, and maybe even thread if it should be thread local breakpoint.... breakpoint struct is probably what'll happen
 	*/
-	bool HasBreakpoint(u32 loc, bs_t<breakpoint_types> type);
+	bool HasBreakpoint(lv2_process* process, u64 unique_process_key, u32 loc, bs_t<breakpoint_types> type);
 
 	/**
 	* Returns true if added successfully. TODO: flags
 	*/
-	bool AddBreakpoint(u32 loc, bs_t<breakpoint_types> type);
+	bool AddBreakpoint(lv2_process* process, u64 unique_process_key, u32 loc, bs_t<breakpoint_types> type);
 
 	/**
 	* Returns true if removed breakpoint at loc successfully.
 	*/
-	bool RemoveBreakpoint(u32 loc);
+	bool RemoveBreakpoint(lv2_process* process, u64 unique_process_key, u32 loc);
+
+	bool AddBreakpoint(u32 loc, bs_t<breakpoint_types> type) { return ensure(false); }
+	bool RemoveBreakpoint(u32 loc) { return ensure(false); }
+	bool HasBreakpoint(u32 loc, bs_t<breakpoint_types> type) { return false; }
 
 private:
 	// TODO : generalize to hold multiple games and handle flags.Probably do : std::map<std::string (gameid), std::set<breakpoint>>.
 	// Although, externally, they'll only be accessed by loc (I think) so a map of maps may also do?
 	shared_mutex mutex_breakpoints;
 	std::atomic<bool> m_empty{true};
-	std::map<u32, bs_t<breakpoint_types>> m_breakpoints; //! Holds all breakpoints.
+	std::map<u64, std::map<u32, bs_t<breakpoint_types>>> m_breakpoints; //! Holds all breakpoints.
 	bool m_break_on_bpm = false;
 };
 

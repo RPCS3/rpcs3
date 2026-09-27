@@ -102,7 +102,7 @@ namespace rsx
 	};
 
 	// TODO: This class is a mess, this needs to be broken into smaller chunks, like I did for RSXFIFO and RSXZCULL (kd)
-	class thread : public cpu_thread, public GCM_context, public GRAPH_backend
+	class thread : public cpu_thread, public GRAPH_backend
 	{
 		u64 timestamp_ctrl = 0;
 		u64 timestamp_subvalue = 0;
@@ -123,9 +123,12 @@ namespace rsx
 		// FIFO
 	public:
 		std::unique_ptr<FIFO::FIFO_control> fifo_ctrl;
-		atomic_t<bool> rsx_thread_running{ false };
 		std::vector<std::pair<u32, u32>> dump_callstack_list() const override;
 		void dump_misc(std::string& ret, std::any& custom_data) const override;
+		struct ::lv2_rsx_context* lv2_context = nullptr;
+		struct ::lv2_rsx_process_info* lv2_rsx_process = nullptr;
+		u32 lv2_context_id = 0;
+		RsxDmaControl* ctrl = nullptr;
 
 	protected:
 		FIFO::flattening_helper m_flattener;
@@ -133,6 +136,9 @@ namespace rsx
 		u32 saved_fifo_ret = RSX_CALL_STACK_EMPTY;
 		u32 restore_fifo_cmd = 0;
 		u32 restore_fifo_count = 0;
+
+		void decide_rsx_context_queue(u64 game_priority, u64 operating_system_priority);
+		std::map<u32, u32> rsx_context_queue;
 
 		// Occlusion query
 		bool zcull_surface_active = false;
@@ -171,10 +177,10 @@ namespace rsx
 		draw_command_processor m_draw_processor;
 
 	public:
-		atomic_t<u64> new_get_put = u64{umax};
 		u32 restore_point = 0;
 		u32 dbg_step_pc = 0;
 		u32 last_known_code_start = 0;
+		shared_mutex sys_rsx_mtx;
 		atomic_t<u32> external_interrupt_lock{ 0 };
 		atomic_t<bool> external_interrupt_ack{ false };
 		atomic_t<u32> is_initialized{0};
@@ -238,7 +244,7 @@ namespace rsx
 		atomic_t<bool> requested_vsync{true};
 		atomic_t<bool> enable_second_vhandler{false};
 
-		bool send_event(u64, u64, u64);
+		bool send_event(lv2_rsx_context*, u64, u64, u64);
 
 		std::array<bool, 16> m_textures_dirty;
 		std::array<bool, 4> m_vertex_textures_dirty;
@@ -389,6 +395,11 @@ namespace rsx
 		virtual void sync_hint(FIFO::interrupt_hint hint, reports::sync_hint_payload_t payload);
 		virtual bool release_GCM_label(u32 /*type*/, u32 /*address*/, u32 /*value*/) { return false; }
 
+		bool has_urgent_interrupts() const
+		{
+			return !!(m_eng_interrupt_mask & rsx::dma_control_interrupt);
+		}
+
 	protected:
 
 		/**
@@ -451,7 +462,7 @@ namespace rsx
 
 	public:
 		void reset();
-		void init(u32 ctrlAddress);
+		void init(shared_ptr<lv2_rsx_context> _lv2_context, std::shared_ptr<lv2_rsx_process_info> _lv2_rsx_process, u32 id);
 
 		// Emu App/Game flip, only immediately flips when called from rsxthread
 		bool request_emu_flip(u32 buffer);
@@ -476,6 +487,24 @@ namespace rsx
 	inline thread* get_current_renderer()
 	{
 		return g_fxo->try_get<rsx::thread>();
+	}
+
+	void get_rsx_process_context(shared_ptr<lv2_rsx_context>& to_put);
+
+	inline lv2_rsx_context* get_rsx_process_context()
+	{
+		thread_local lv2_rsx_context* g_ptr = nullptr;
+		thread_local shared_ptr<lv2_rsx_context> g_owner_ptr;
+
+		if (auto ret = g_ptr) [[likely]]
+		{
+			return ret;
+		}
+
+		g_owner_ptr.reset();
+		get_rsx_process_context(g_owner_ptr);
+		g_ptr = g_owner_ptr.get();
+		return g_ptr;
 	}
 
 	inline const backend_configuration& get_renderer_backend_config()

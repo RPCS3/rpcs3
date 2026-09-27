@@ -3,10 +3,18 @@
 #include "Crypto/unself.h"
 #include "Emu/Memory/vm_ptr.h"
 #include "Emu/Cell/ErrorCodes.h"
+#include "Emu/Cell/PPUAnalyser.h"
+
+#include "sys_sync.h"
+
+#include "util/fixed_typemap.hpp"
 
 // Process Local Object Type
 enum : u32
 {
+	SYS_SPU_THREAD_GROUP_OBJECT      = 0x04,
+	SYS_PROCESS_OBJECT               = 0x01,
+	SYS_CONFIG_OBJECT                = 0x41,
 	SYS_MEM_OBJECT                   = 0x08,
 	SYS_MUTEX_OBJECT                 = 0x85,
 	SYS_COND_OBJECT                  = 0x86,
@@ -83,27 +91,118 @@ struct sys_exit2_param
 	vm::bpptr<char, u64, u64> args;
 };
 
-struct ps3_process_info_t
+enum ps3_process_state : u32
 {
-	u32 sdk_ver;
-	u32 ppc_seg;
-	SelfAdditionalInfo self_info;
+	PS3_PROCESS_RUNNING = 0x1234, // TODO
+	PS3_PROCESS_ZOMBIE = 3, // Correct value
+ 
+	// Made up values for the upper 16-bites which are used for something else on firmware
+	PS3_PROCESS_IS_BEING_JOINED = 0x10000,
+	PS3_PROCESS_IS_DETACHED = 0x20000,
+	PS3_PROCESS_IS_DESTROYED = 0x30000,
+};
+
+namespace vm
+{
+	struct ps3_virtual_memory_object;
+};
+
+class ppu_function_manager;
+struct lv2_memory_container;
+struct lv2_rsx_process_info;
+
+enum class thread_state : u32;
+
+struct lv2_process : public ppu_module<lv2_obj>
+{
+	static constexpr u32 id_base = 0x01000000;
+
+	u32 self_id = umax;
+
+	u32 seg0_code_end = 0;
+	u32 elf_entry = 0;
+
+	u32 sdk_ver = umax;
+	u32 ppc_seg = 0;
+	SelfAdditionalInfo self_info{};
 	u32 ctrl_flags1 = 0;
 
+	std::string ELF_file_path;
+	std::string supposed_param_sfo_path;
+	std::string supposed_app_home_path;
+	std::string supposed_title_id;
+	std::string supposed_cat;
+	std::array<u8, 256> ELF_file_hash{};
+	std::unique_ptr<std::array<u8, 0x40>> provided_paramsfo;
+
+	u32 parent_process = umax;
+	u32 exit_code = umax;
+	atomic_t<u32> state{PS3_PROCESS_RUNNING};
+
+	atomic_t<bool> is_terminating = false;
+	atomic_t<u32> is_terminated = 0;
+
+	// shared_ptr so it will be initialized externally (incomplete typename)
+	std::shared_ptr<vm::ps3_virtual_memory_object> memory_4GB_model;
+
+	// Parent memory container (default for sys_memory_allocate etc)
+	// Current process is oblivious to its ID
+	shared_ptr<lv2_memory_container> parent_memory_container;
+
+	// Mmmory to return when process is killed to the parent memory container
+	u32 used_memory = 0;
+
+	// RSX proces-local information
+	std::shared_ptr<lv2_rsx_process_info> rsx_info;
+
+	// Preallocate 1 MiB
+	std::unique_ptr<stx::manual_typemap<lv2_process, 0x2'00000, 128>> local_typemap;
+
 	bool has_root_perm() const;
+	static bool has_process_root_perm();
 	bool has_debug_perm() const;
 	bool debug_or_root() const;
 	std::string_view get_cellos_appname() const;
-};
 
-extern ps3_process_info_t  g_ps3_process_info;
+	lv2_process() noexcept;
+	lv2_process(shared_ptr<lv2_memory_container> pp_memory) noexcept;
+	lv2_process(utils::serial&) noexcept;
+	~lv2_process() noexcept;
+	void save(utils::serial&) noexcept;
+	u64 ki11_self();
+	u64 get_unique_key() const;
+	int operator=(thread_state s) noexcept;
+	static std::shared_ptr<void> acquire_globals(u32 proc_id);
+	static void release_globals();
+
+	struct cleanup_t
+	{
+		cleanup_t() = default;
+
+		cleanup_t(const cleanup_t&) = delete;
+		int operator=(const cleanup_t&) = delete;
+
+		~cleanup_t() noexcept
+		{
+			lv2_process::release_globals();
+		}
+	};
+
+	static shared_ptr<lv2_memory_container> get_default_memory_container();
+	static stx::manual_typemap<lv2_process, 0x2'00000, 128>* get_typemap(u32 proc_id = umax);
+};
 
 class ppu_thread;
 
 // Auxiliary functions
 s32 process_getpid();
 s32 process_get_sdk_version(u32 pid, s32& ver);
-void lv2_exitspawn(ppu_thread& ppu, std::vector<std::string>& argv, std::vector<std::string>& envp, std::vector<u8>& data);
+void lv2_exitspawn(ppu_thread& ppu, bool exit_current, shared_ptr<lv2_memory_container> pp_mem, std::vector<std::string>& argv, std::vector<std::string>& envp, std::vector<u8>& data, std::vector<u8>& lv2_paramsfo);
+
+namespace vm
+{
+	std::shared_ptr<vm::ps3_virtual_memory_object> get_current_memory_object();
+}
 
 enum CellError : u32;
 CellError process_is_spu_lock_line_reservation_address(u32 addr, u64 flags);
@@ -116,13 +215,13 @@ error_code sys_process_get_id(u32 object, vm::ptr<u32> buffer, u32 size, vm::ptr
 error_code sys_process_get_id2(u32 object, vm::ptr<u32> buffer, u32 size, vm::ptr<u32> set_size);
 error_code _sys_process_get_paramsfo(vm::ptr<char> buffer);
 error_code sys_process_get_sdk_version(u32 pid, vm::ptr<s32> version);
-error_code sys_process_get_status(u64 unk);
+error_code sys_process_get_status(ppu_thread& ppu, u32 pid);
 error_code sys_process_is_spu_lock_line_reservation_address(ppu_thread& ppu, u32 addr, u64 flags);
-error_code sys_process_kill(u32 pid);
-error_code sys_process_wait_for_child(u32 pid, vm::ptr<u32> status, u64 unk);
-error_code sys_process_wait_for_child2(u64 unk1, u64 unk2, u64 unk3, u64 unk4, u64 unk5, u64 unk6);
-error_code sys_process_detach_child(u64 unk);
+error_code sys_process_kill(ppu_thread& ppu, u32 pid);
+error_code sys_process_wait_for_child(ppu_thread& ppu, vm::ptr<u32> target_pid, vm::ptr<u32> status, u64 flags);
+error_code sys_process_wait_for_child2(ppu_thread& ppu, vm::ptr<u32> target_pid, vm::ptr<u32> process_status, vm::ptr<void> data_returned, u64 data_size, vm::ptr<u32> data_written, u64 flags);
+error_code sys_process_detach_child(ppu_thread& ppu, u32 pid);
 void _sys_process_exit(ppu_thread& ppu, s32 status, u32 arg2, u32 arg3);
 void _sys_process_exit2(ppu_thread& ppu, s32 status, vm::ptr<sys_exit2_param> arg, u32 arg_size, u32 arg4);
 void sys_process_exit3(ppu_thread& ppu, s32 status);
-error_code sys_process_spawns_a_self2(vm::ptr<u32> pid, u32 primary_prio, u64 flags, vm::ptr<void> stack, u32 stack_size, u32 mem_id, vm::ptr<void> param_sfo, vm::ptr<void> dbg_data);
+error_code sys_process_spawns_a_self2(ppu_thread& ppu, vm::ptr<u32> pid, u32 primary_prio, u64 flags, vm::ptr<void> stack, u32 stack_size, u32 mem_id, vm::ptr<void> param_sfo, vm::ptr<void> dbg_data);

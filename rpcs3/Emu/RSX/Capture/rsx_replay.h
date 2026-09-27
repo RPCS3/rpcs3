@@ -153,7 +153,7 @@ namespace rsx
 			tile_map.clear();
 			memory_map.clear();
 			replay_commands.clear();
-			reg_state = method_registers;
+			reg_state = *method_registers;
 		}
 	};
 

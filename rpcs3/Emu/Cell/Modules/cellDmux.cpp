@@ -379,9 +379,9 @@ static error_code open(ppu_thread& ppu, vm::cptr<CellDmuxType> demuxerType, vm::
 		res_spurs->maxContention = demuxerResourceEx->maxContention;
 	}
 
-	const auto demux_done_func = vm::bptr<DmuxNotifyDemuxDone>::make(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(notify_demux_done)));
-	const auto prog_end_code_func = vm::bptr<DmuxNotifyProgEndCode>::make(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(notify_prog_end_code)));
-	const auto fatal_err_func = vm::bptr<DmuxNotifyFatalErr>::make(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(notify_fatal_err)));
+	const auto demux_done_func = vm::bptr<DmuxNotifyDemuxDone>::make(ppu.exports_table->func_addr(FIND_FUNC(notify_demux_done)));
+	const auto prog_end_code_func = vm::bptr<DmuxNotifyProgEndCode>::make(ppu.exports_table->func_addr(FIND_FUNC(notify_prog_end_code)));
+	const auto fatal_err_func = vm::bptr<DmuxNotifyFatalErr>::make(ppu.exports_table->func_addr(FIND_FUNC(notify_fatal_err)));
 	const vm::var<DmuxCb<DmuxNotifyDemuxDone>> cb_demux_done{{ .cbFunc = demux_done_func, .cbArg = handle }};
 	const vm::var<DmuxCb<DmuxNotifyProgEndCode>> cb_prog_end_code{{ .cbFunc = prog_end_code_func, .cbArg = handle }};
 	const vm::var<DmuxCb<DmuxNotifyFatalErr>> cb_fatal_err{{ .cbFunc = fatal_err_func, .cbArg = handle }};
@@ -854,8 +854,8 @@ error_code cellDmuxEnableEs(ppu_thread& ppu, vm::ptr<DmuxContext> demuxerHandle,
 		return ret;
 	}
 
-	const auto au_found_func = vm::bptr<DmuxEsNotifyAuFound>::make(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(notify_es_au_found)));
-	const auto flush_done_func = vm::bptr<DmuxEsNotifyFlushDone>::make(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(notify_es_flush_done)));
+	const auto au_found_func = vm::bptr<DmuxEsNotifyAuFound>::make(ppu.exports_table->func_addr(FIND_FUNC(notify_es_au_found)));
+	const auto flush_done_func = vm::bptr<DmuxEsNotifyFlushDone>::make(ppu.exports_table->func_addr(FIND_FUNC(notify_es_flush_done)));
 	const vm::var<DmuxCb<DmuxEsNotifyAuFound>> cb_au_found{{ .cbFunc = au_found_func, .cbArg = es_handle }};
 	const vm::var<DmuxCb<DmuxEsNotifyFlushDone>> cb_flush_done{{ .cbFunc = flush_done_func, .cbArg = es_handle }};
 

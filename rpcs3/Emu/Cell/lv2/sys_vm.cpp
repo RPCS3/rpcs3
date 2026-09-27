@@ -65,14 +65,14 @@ error_code sys_vm_memory_map(ppu_thread& ppu, u64 vsize, u64 psize, u32 cid, u64
 
 	const auto idm_ct = idm::get_unlocked<lv2_memory_container>(cid);
 
-	const auto ct = cid == SYS_MEMORY_CONTAINER_ID_INVALID ? &g_fxo->get<lv2_memory_container>() : idm_ct.get();
+	const auto ct = cid == SYS_MEMORY_CONTAINER_ID_INVALID ? idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process)->parent_memory_container.get() : idm_ct.get();
 
 	if (!ct)
 	{
 		return CELL_ESRCH;
 	}
 
-	if (!g_fxo->get<sys_vm_global_t>().total_vsize.fetch_op([vsize, has_root = g_ps3_process_info.has_root_perm()](u32& size)
+	if (!g_fxo->get<sys_vm_global_t>().total_vsize.fetch_op([vsize, has_root = lv2_process::has_process_root_perm()](u32& size)
 	{
 		// A single process can hold up to 256MB of virtual memory, even on DECR
 		// VSH can hold more

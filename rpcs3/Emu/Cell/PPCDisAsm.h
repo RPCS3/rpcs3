@@ -5,7 +5,7 @@
 class PPCDisAsm : public CPUDisAsm
 {
 protected:
-	PPCDisAsm(cpu_disasm_mode mode, const u8* offset, u32 start_pc = 0) : CPUDisAsm(mode, offset, start_pc)
+	PPCDisAsm(cpu_disasm_mode mode, const u8* offset, const cpu_thread* cpu, u32 start_pc = 0) : CPUDisAsm(mode, offset, start_pc, cpu)
 	{
 	}
 

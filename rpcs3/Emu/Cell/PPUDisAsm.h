@@ -6,7 +6,8 @@
 class PPUDisAsm final : public PPCDisAsm
 {
 public:
-	PPUDisAsm(cpu_disasm_mode mode, const u8* offset) : PPCDisAsm(mode, offset)
+	PPUDisAsm(cpu_disasm_mode mode, const u8* offset, const cpu_thread* cpu)
+		: PPCDisAsm(mode, offset, cpu)
 	{
 	}
 

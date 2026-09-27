@@ -125,13 +125,23 @@ enum cpu_threads_emulation_info_dump_t : u32 {};
 
 std::string dump_useful_thread_info()
 {
-	std::string result;
+	// Protection against crash inside the function itself
+	thread_local volatile bool in_session = false;
 
+	if (in_session)
+	{
+		return {};
+	}
+
+	in_session = true;
+
+	std::string result;
 	if (auto cpu = get_current_cpu_thread())
 	{
 		fmt::append(result, "%s", cpu_threads_emulation_info_dump_t{cpu->id});
 	}
 
+	in_session = false;
 	return result;
 }
 
@@ -2759,6 +2769,12 @@ void thread_base::start()
 #ifdef _WIN32
 	m_thread = ::_beginthreadex(nullptr, 0, entry_point, this, CREATE_SUSPENDED, nullptr);
 	ensure(m_thread);
+
+	if (SetThreadDescriptionImport)
+	{
+		SetThreadDescriptionImport(reinterpret_cast<HANDLE>(+m_thread), utf8_to_wchar(*m_tname.load()).c_str());
+	}
+
 	ensure(::ResumeThread(reinterpret_cast<HANDLE>(+m_thread)) != static_cast<DWORD>(-1));
 #elif defined(__APPLE__)
 	pthread_attr_t attrs;
@@ -3244,9 +3260,10 @@ std::string thread_ctrl::get_name_cached()
 	return *name_cache;
 }
 
-thread_base::thread_base(native_entry entry, std::string name) noexcept
+thread_base::thread_base(native_entry entry, std::string name, std::shared_ptr<utils::serial> serial) noexcept
 	: entry_point(entry)
 	, m_tname(make_single_value(std::move(name)))
+	, m_serial(std::move(serial))
 {
 }
 

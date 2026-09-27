@@ -4,6 +4,7 @@
 #include "Emu/CPU/CPUDisAsm.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
+#include "Emu/Cell/lv2/sys_process.h"
 #include "rpcs3qt/debugger_add_bp_window.h"
 
 #include <QMenu>
@@ -41,11 +42,15 @@ void breakpoint_list::UpdateCPUData(std::shared_ptr<CPUDisAsm> disasm)
 
 void breakpoint_list::ClearBreakpoints()
 {
+	const auto ppu = m_disasm ? m_disasm->get_cpu() : nullptr;
+	const u32 process_id = ppu->try_get<ppu_thread>() ? ppu->try_get<ppu_thread>()->proc_id : 0;
+	const shared_ptr<lv2_process> process = process_id ? idm::get_unlocked<lv2_obj, lv2_process>(process_id) : null_ptr;
+
 	while (count())
 	{
 		auto* currentItem = takeItem(0);
 		const u32 loc = currentItem->data(Qt::UserRole).value<u32>();
-		m_ppu_breakpoint_handler->RemoveBreakpoint(loc);
+		m_ppu_breakpoint_handler->RemoveBreakpoint(process.get(), process->get_unique_key(), loc);
 		delete currentItem;
 	}
 
@@ -54,7 +59,11 @@ void breakpoint_list::ClearBreakpoints()
 
 void breakpoint_list::RemoveBreakpoint(u32 addr)
 {
-	m_ppu_breakpoint_handler->RemoveBreakpoint(addr);
+	const auto cpu = m_disasm ? m_disasm->get_cpu() : nullptr;
+	const u32 process_id = cpu && cpu->try_get<ppu_thread>() ? cpu->try_get<ppu_thread>()->proc_id : 0;
+	const shared_ptr<lv2_process> process = process_id ? idm::get_unlocked<lv2_obj, lv2_process>(process_id) : null_ptr;
+
+	m_ppu_breakpoint_handler->RemoveBreakpoint(process.get(), process->get_unique_key(), addr);
 
 	for (int i = 0; i < count(); i++)
 	{
@@ -75,7 +84,11 @@ void breakpoint_list::RemoveBreakpoint(u32 addr)
 
 bool breakpoint_list::AddBreakpoint(u32 pc, bs_t<breakpoint_types> type)
 {
-	if (!m_ppu_breakpoint_handler->AddBreakpoint(pc, type))
+	const auto cpu = m_disasm ? m_disasm->get_cpu() : nullptr;
+	const u32 process_id = cpu && cpu->try_get<ppu_thread>() ? cpu->try_get<ppu_thread>()->proc_id : 0;
+	const shared_ptr<lv2_process> process = process_id ? idm::get_unlocked<lv2_obj, lv2_process>(process_id) : null_ptr;
+
+	if (!m_ppu_breakpoint_handler->AddBreakpoint(process.get(), process->get_unique_key(), pc, type))
 	{
 		return false;
 	}
@@ -118,8 +131,10 @@ bool breakpoint_list::AddBreakpoint(u32 pc, bs_t<breakpoint_types> type)
 void breakpoint_list::HandleBreakpointRequest(u32 loc, bool only_add)
 {
 	const auto cpu = m_disasm ? m_disasm->get_cpu() : nullptr;
+	const u32 process_id = cpu && cpu->try_get<ppu_thread>() ? cpu->try_get<ppu_thread>()->proc_id : 0;
+	const shared_ptr<lv2_process> process = process_id ? idm::get_unlocked<lv2_obj, lv2_process>(process_id) : null_ptr;
 
-	if (!cpu || cpu->state & cpu_flag::exit)
+	if (!process || cpu->state & cpu_flag::exit)
 	{
 		return;
 	}
@@ -179,13 +194,13 @@ void breakpoint_list::HandleBreakpointRequest(u32 loc, bool only_add)
 		return;
 	}
 
-	if (!vm::check_addr(loc, vm::page_executable))
+	if (!vm::check_addr(process->memory_4GB_model, loc, vm::page_executable))
 	{
 		QMessageBox::warning(this, tr("Invalid Memory For Breakpoints!"), tr("Cannot set breakpoints on non-executable memory!"));
 		return;
 	}
 
-	if (m_ppu_breakpoint_handler->HasBreakpoint(loc, breakpoint_types::bp_exec))
+	if (m_ppu_breakpoint_handler->HasBreakpoint(process.get(), process->get_unique_key(), loc, breakpoint_types::bp_exec))
 	{
 		if (!only_add)
 		{

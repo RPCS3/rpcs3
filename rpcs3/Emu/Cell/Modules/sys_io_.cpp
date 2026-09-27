@@ -165,7 +165,7 @@ error_code sys_config_start(ppu_thread& ppu)
 		ppu.check_state();
 		cfg.queue_id = *queue_id;
 
-		ensure(CELL_OK == ppu_execute<&sys_ppu_thread_create>(ppu, +_tid, g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(config_event_entry)), 0, 512, 0x2000, SYS_PPU_THREAD_CREATE_JOINABLE, +_name));
+		ensure(CELL_OK == ppu_execute<&sys_ppu_thread_create>(ppu, +_tid, ppu.exports_table->func_addr(FIND_FUNC(config_event_entry)), 0, 512, 0x2000, SYS_PPU_THREAD_CREATE_JOINABLE, +_name));
 		ppu.check_state();
 
 		cfg.ppu_id = static_cast<u32>(*_tid);

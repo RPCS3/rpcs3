@@ -352,7 +352,7 @@ error_code cellPadClearBuf(u32 port_no)
 	return CELL_OK;
 }
 
-void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
+extern void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 {
 	auto& config = g_fxo->get<pad_info>();
 	const auto handler = pad::get_pad_thread();
@@ -369,6 +369,23 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 	bool btnChanged = false;
 
 	CellPadData& output = pad->data;
+
+	using pad_t = decltype(pad);
+
+	struct debug_outyput_t
+	{
+		CellPadData* data{};
+		pad_t pad{};
+		pad_info* config{};
+
+		~debug_outyput_t() noexcept
+		{
+			if (data && g_cfg.io.pad_debug_overlay && !g_cfg.video.debug_overlay)
+			{
+				show_debug_overlay(*data, *pad, *config);
+			}
+		}
+	} out_obj{port_no == 0 ? data : nullptr, pad, &config};
 
 	if (rinfo.ignore_input || !is_input_allowed())
 	{
@@ -717,12 +734,6 @@ error_code cellPadGetData(u32 port_no, vm::ptr<CellPadData> data)
 		return not_an_error(CELL_PAD_ERROR_NO_DEVICE);
 
 	pad_get_data(port_no, data.get_ptr());
-
-	if (g_cfg.io.pad_debug_overlay && !g_cfg.video.debug_overlay && port_no == 0)
-	{
-		show_debug_overlay(*data, *pad, config);
-	}
-
 	return CELL_OK;
 }
 
@@ -864,7 +875,7 @@ error_code cellPadGetDataExtra(u32 port_no, vm::ptr<u32> device_type, vm::ptr<Ce
 	return CELL_OK;
 }
 
-error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
+error_code cellPadSetActDirect([[maybe_unused]] ppu_thread& ppu, u32 port_no, vm::ptr<CellPadActParam> param)
 {
 	cellPad.trace("cellPadSetActDirect(port_no=%d, param=*0x%x)", port_no, param);
 
@@ -879,7 +890,7 @@ error_code cellPadSetActDirect(u32 port_no, vm::ptr<CellPadActParam> param)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
 	// Note: signed check unlike the usual unsigned check
-	if (static_cast<s32>(g_ps3_process_info.sdk_ver) > 0x1FFFFF)
+	//if (static_cast<s32>(ppu.sdk_version) > 0x1FFFFF)
 	{
 		// make sure reserved bits are 0
 		for (int i = 0; i < 6; i++)

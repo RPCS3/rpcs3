@@ -488,7 +488,7 @@ namespace utils
 	inline void trap()
 	{
 #ifdef _M_X64
-		__debugbreak();
+::		__debugbreak();
 #elif defined(ARCH_X64)
 		__asm__ volatile("int3");
 #elif defined(ARCH_ARM64)

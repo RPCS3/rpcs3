@@ -116,7 +116,7 @@ error_code sys_ss_random_number_generator(u64 pkg_id, vm::ptr<void> buf, u64 siz
 	{
 		if (pkg_id == 1)
 		{
-			if (!g_ps3_process_info.has_root_perm())
+			if (!lv2_process::has_process_root_perm())
 			{
 				return CELL_ENOSYS;
 			}
@@ -159,14 +159,16 @@ error_code sys_ss_access_control_engine(u64 pkg_id, u64 a2, u64 a3)
 {
 	sys_ss.success("sys_ss_access_control_engine(pkg_id=0x%llx, a2=0x%llx, a3=0x%llx)", pkg_id, a2, a3);
 
-	const u64 authid = g_ps3_process_info.self_info.valid ?
-		g_ps3_process_info.self_info.prog_id_hdr.program_authority_id : 0;
+	const auto process = idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process);
+
+	const u64 authid = process->self_info.valid ?
+		process->self_info.prog_id_hdr.program_authority_id : 0;
 
 	switch (pkg_id)
 	{
 	case 0x1:
 	{
-		if (!g_ps3_process_info.debug_or_root())
+		if (!process->debug_or_root())
 		{
 			return not_an_error(CELL_ENOSYS);
 		}
@@ -187,7 +189,7 @@ error_code sys_ss_access_control_engine(u64 pkg_id, u64 a2, u64 a3)
 	}
 	case 0x3:
 	{
-		if (!g_ps3_process_info.debug_or_root())
+		if (!process->debug_or_root())
 		{
 			return CELL_ENOSYS;
 		}
@@ -195,7 +197,9 @@ error_code sys_ss_access_control_engine(u64 pkg_id, u64 a2, u64 a3)
 		break;
 	}
 	default:
+	{
 		return 0x8001051du;
+	}
 	}
 
 	return CELL_OK;
@@ -224,7 +228,7 @@ error_code sys_ss_appliance_info_manager(u32 code, vm::ptr<u8> buffer)
 {
 	sys_ss.notice("sys_ss_appliance_info_manager(code=0x%x, buffer=*0x%x)", code, buffer);
 
-	if (!g_ps3_process_info.has_root_perm())
+	if (!lv2_process::has_process_root_perm())
 		return CELL_ENOSYS;
 
 	if (!buffer)
@@ -362,7 +366,7 @@ error_code sys_ss_update_manager(ppu_thread& ppu, u64 pkg_id, u64 a1, u64 a2, u6
 {
 	sys_ss.notice("sys_ss_update_manager(pkg=0x%x, a1=0x%x, a2=0x%x, a3=0x%x, a4=0x%x, a5=0x%x, a6=0x%x)", pkg_id, a1, a2, a3, a4, a5, a6);
 
-	if (!g_ps3_process_info.has_root_perm())
+	if (!lv2_process::has_process_root_perm())
 		return CELL_ENOSYS;
 
 	auto& update_manager = g_fxo->get<lv2_update_manager>();
@@ -559,6 +563,25 @@ error_code sys_ss_update_manager(ppu_thread& ppu, u64 pkg_id, u64 a1, u64 a2, u6
 	return CELL_OK;
 }
 
+error_code sys_ss_sec_hw_framework(ppu_thread& ppu, u64 pkg_id, u64 a1)
+{
+	sys_ss.todo("sys_ss_sec_hw_framework(pkg=0x%llx, a1=0x%llx)", pkg_id, a1);
+	sys_ss.todo("Callstack:\n%s", ppu.dump_callstack());
+
+	switch (pkg_id)
+	{
+	case 0x5004: return CELL_OK;
+	case 0x5007:
+	{
+		sys_ss.todo("sys_ss_sec_hw_framework(0x5007): input: %s", std::span<u8>(ppu._sudo<u8>(a1), 0x18));
+		return CELL_OK;
+	}
+	default: break;
+	}
+
+	return 0x8001051D;
+}
+
 error_code sys_ss_virtual_trm_manager(u64 pkg_id, u64 a1, u64 a2, u64 a3, u64 a4)
 {
 	sys_ss.todo("sys_ss_virtual_trm_manager(pkg=0x%llx, a1=0x%llx, a2=0x%llx, a3=0x%llx, a4=0x%llx)", pkg_id, a1, a2, a3, a4);
@@ -585,4 +608,16 @@ error_code sys_ss_individual_info_manager(u64 pkg_id, u64 a2, vm::ptr<u64> out_s
 	}
 
 	return CELL_OK;
+}
+
+error_code sys_npdrm_check_ekc(ppu_thread& ppu, u32 arg_1, vm::ptr<void> some_struct)
+{
+	sys_ss.warning("sys_npdrm_regist_ekc(arg_1=0x%X, some_struct=0x%x)", arg_1, some_struct);
+	return not_an_error(1);
+}
+
+error_code sys_npdrm_regist_ekc(ppu_thread& ppu)
+{
+	sys_ss.warning("sys_npdrm_regist_ekc()");
+	return not_an_error(CELL_EINVAL);
 }

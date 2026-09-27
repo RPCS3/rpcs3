@@ -383,6 +383,8 @@ error_code sys_spu_thread_group_connect_event_all_threads(ppu_thread&, u32 id, u
 error_code sys_spu_thread_group_disconnect_event_all_threads(ppu_thread&, u32 id, u32 spup);
 error_code sys_spu_thread_group_set_cooperative_victims(ppu_thread&, u32 id, u32 threads_mask);
 error_code sys_spu_thread_group_syscall_253(ppu_thread& ppu, u32 id, vm::ptr<sys_spu_thread_group_syscall_253_info> info);
+error_code sys_spu_thread_group_syscall_248(ppu_thread& ppu, u32 id, u32 arg1, u32 arg2, u32 arg3, u32 arg4);
+error_code sys_spu_thread_group_syscall_249(ppu_thread& ppu, u32 id);
 error_code sys_spu_thread_group_log(ppu_thread&, s32 command, vm::ptr<s32> stat);
 error_code sys_spu_thread_write_ls(ppu_thread&, u32 id, u32 lsa, u64 value, u32 type);
 error_code sys_spu_thread_read_ls(ppu_thread&, u32 id, u32 lsa, vm::ptr<u64> value, u32 type);

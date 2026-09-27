@@ -318,8 +318,15 @@ public:
 	// Allocation address
 	u32 addr = 0;
 
-	void save(utils::serial& ar);
-	ppu_function_manager(utils::serial& ar);
+	u32 save_addr()
+	{
+		return addr;
+	}
+
+	void init_addr(u32 addr0)
+	{
+		addr = ensure(addr0);
+	}
 };
 
 template<typename T, T Func>

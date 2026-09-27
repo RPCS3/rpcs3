@@ -176,8 +176,7 @@ extern const std::map<std::string_view, int> g_prx_list
 	{ "libwmadec.sprx", 0 },
 };
 
-bool ppu_register_library_lock(std::string_view libname, bool lock_lib);
-
+#pragma optimize("", off)
 extern error_code sysmoduleModuleStart(ppu_thread& ppu, u32 args, vm::ptr<void> argp);
 extern error_code sysmoduleModuleStop(ppu_thread& ppu);
 extern bool sysutilModuleInit(lv2_prx& prx);
@@ -191,7 +190,7 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 			return CELL_EINVAL;
 		}
 
-		if (flags & SYS_PRX_LOAD_MODULE_FLAGS_FIXEDADDR && !g_ps3_process_info.ppc_seg)
+		if (flags & SYS_PRX_LOAD_MODULE_FLAGS_FIXEDADDR && !cpu_thread::get_current<ppu_thread>()->has_ppc_seg)
 		{
 			return CELL_ENOSYS;
 		}
@@ -210,7 +209,12 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 
 	if (is_firmware_sprx)
 	{
-		if (g_cfg.core.libraries_control.get_set().count(name + ":lle"))
+		if (Emu.IsVsh() || Emu.GetDir().starts_with("/dev_flash/"))
+		{
+			// No HLE at all with in VSH
+			ignore = false;
+		}
+		else if (g_cfg.core.libraries_control.get_set().count(name + ":lle"))
 		{
 			// Force LLE
 			ignore = false;
@@ -236,11 +240,12 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 	auto hle_load = [&]() -> error_code
 	{
 		const auto prx = idm::make_ptr<lv2_obj, lv2_prx>();
+		const auto& funcs = ensure(idm::get_unlocked<lv2_obj, lv2_process>(id_manager::g_process))->local_typemap->get<ppu_function_manager>();
 
 		if (name == "libsysmodule.sprx")
 		{
-			prx->start = vm::cast(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(sysmoduleModuleStart)));
-			prx->stop = vm::cast(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(sysmoduleModuleStop)));
+			prx->start = vm::cast(funcs.func_addr(FIND_FUNC(sysmoduleModuleStart)));
+			prx->stop = vm::cast(funcs.func_addr(FIND_FUNC(sysmoduleModuleStop)));
 		}
 		else if (name == "libsysutil.sprx")
 		{
@@ -483,7 +488,7 @@ static error_code prx_load_module_list(ppu_thread& ppu, s32 count, vm::cpptr<cha
 			return CELL_EINVAL;
 		}
 
-		if (flags & SYS_PRX_LOAD_MODULE_FLAGS_FIXEDADDR && !g_ps3_process_info.ppc_seg)
+		if (flags & SYS_PRX_LOAD_MODULE_FLAGS_FIXEDADDR && !ppu.has_ppc_seg)
 		{
 			return CELL_ENOSYS;
 		}

@@ -133,7 +133,7 @@ error_code sys_overlay_load_module(ppu_thread& ppu, vm::ptr<u32> ovlmid, vm::cpt
 
 	sys_overlay.warning("sys_overlay_load_module(ovlmid=*0x%x, path=%s, flags=0x%x, entry=*0x%x)", ovlmid, path, flags, entry);
 
-	if (!g_ps3_process_info.ppc_seg)
+	if (!ppu.has_ppc_seg)
 	{
 		// Process not permitted
 		return CELL_ENOSYS;
@@ -153,7 +153,7 @@ error_code sys_overlay_load_module_by_fd(ppu_thread& ppu, vm::ptr<u32> ovlmid, u
 
 	sys_overlay.warning("sys_overlay_load_module_by_fd(ovlmid=*0x%x, fd=%d, offset=0x%llx, flags=0x%x, entry=*0x%x)", ovlmid, fd, offset, flags, entry);
 
-	if (!g_ps3_process_info.ppc_seg)
+	if (!ppu.has_ppc_seg)
 	{
 		// Process not permitted
 		return CELL_ENOSYS;
@@ -187,7 +187,7 @@ error_code sys_overlay_unload_module(ppu_thread& ppu, u32 ovlmid)
 
 	sys_overlay.warning("sys_overlay_unload_module(ovlmid=0x%x)", ovlmid);
 
-	if (!g_ps3_process_info.ppc_seg)
+	if (!ppu.has_ppc_seg)
 	{
 		// Process not permitted
 		return CELL_ENOSYS;
