@@ -36,7 +36,21 @@ lv2_fs_mount_info  g_mi_sys_not_found{}; // wrapper for &g_mp_sys_no_device
 
 struct hdd_read_state
 {
-	atomic_t<u64> busy_until = 0;
+	shared_mutex mutex;
+	u64 busy_until = 0;
+
+	struct cached_block
+	{
+		std::string path;
+		u64 offset = 0;
+		u64 age = 0;
+	};
+
+	std::array<cached_block, 96> cache;
+	u64 age = 0;
+	std::string last_path;
+	u64 last_end_offset = 0;
+	u64 last_end_time = 0;
 };
 
 template<>
@@ -585,21 +599,95 @@ lv2_fs_object::lv2_fs_object(utils::serial& ar, bool)
 {
 }
 
-void lv2_file::wait_read(ppu_thread& ppu, u64 size, u64 start) const
+u64 lv2_file::schedule_read(u64 size, u64 start, u64 offset) const
 {
 	if (!size || start == umax)
 	{
-		return;
+		return 0;
 	}
 
 	// Measured on a stock PS3 HDD
-	const u64 duration = 70 + size * 1'000'000 / (63'000 * 1024);
+	constexpr u64 transfer_rate = 63'000 * 1024;
+	constexpr u64 block_size = 0x10000;
+	constexpr u64 read_ahead_size = 0x100000;
+	u64 duration = 70 + size * 1'000'000 / transfer_rate;
+	auto& hdd = g_fxo->get<hdd_read_state>();
+	std::lock_guard lock(hdd.mutex);
+	bool cached = true;
 
-	const u64 end = g_fxo->get<hdd_read_state>().busy_until.atomic_op([&](u64& until)
+	if (type == lv2_file_type::regular)
 	{
-		until = std::max(until, start) + duration;
-		return until;
-	});
+		const bool hdd0 = mp == &g_mp_sys_dev_hdd0;
+		std::span<hdd_read_state::cached_block> cache(hdd.cache.data() + (hdd0 ? 0 : 32), hdd0 ? 32 : 64);
+		const u64 first = offset & ~(block_size - 1);
+		const u64 last = (offset + size - 1) & ~(block_size - 1);
+		const u64 count = (last - first) / block_size + 1;
+		u64 first_missing = umax;
+
+		for (u64 i = 0; i < std::min<u64>(count, cache.size() + 1); i++)
+		{
+			const u64 block = first + i * block_size;
+			if (std::none_of(cache.begin(), cache.end(), [&](const auto& entry)
+			{
+				return entry.age && entry.offset == block && entry.path == real_path;
+			}))
+			{
+				first_missing = std::max(block, offset);
+				break;
+			}
+		}
+
+		cached = first_missing == umax;
+
+		for (u64 remaining = std::min<u64>(count, cache.size()); remaining; remaining--)
+		{
+			const u64 block = last - (remaining - 1) * block_size;
+			auto it = std::find_if(cache.begin(), cache.end(), [&](const auto& entry)
+			{
+				return entry.age && entry.offset == block && entry.path == real_path;
+			});
+			if (it == cache.end())
+			{
+				it = std::min_element(cache.begin(), cache.end(), [](const auto& a, const auto& b)
+				{
+					return a.age < b.age;
+				});
+				it->path = real_path;
+				it->offset = block;
+			}
+			it->age = ++hdd.age;
+		}
+
+		if (!cached)
+		{
+			u64 seek = hdd0 ? 20'000 : 10'000;
+			if (hdd.last_path == real_path && first_missing >= hdd.last_end_offset && first_missing - hdd.last_end_offset < read_ahead_size)
+			{
+				const u64 skipped = (first_missing - hdd.last_end_offset) * 1'000'000 / transfer_rate;
+				const u64 idle = start > hdd.last_end_time ? start - hdd.last_end_time : 0;
+				seek = skipped > idle ? skipped - idle : 0;
+			}
+			duration += seek;
+		}
+	}
+
+	const u64 end = std::max(hdd.busy_until, start) + duration;
+	hdd.busy_until = end;
+	if (!cached)
+	{
+		hdd.last_path = real_path;
+		hdd.last_end_offset = offset + size;
+		hdd.last_end_time = end;
+	}
+	return end;
+}
+
+void lv2_file::wait_read(ppu_thread& ppu, u64 end)
+{
+	if (!end)
+	{
+		return;
+	}
 
 	if (const u64 now = get_guest_system_time(); end > now)
 	{
@@ -1405,13 +1493,15 @@ error_code sys_fs_read(ppu_thread& ppu, u32 fd, vm::ptr<void> buf, u64 nbytes, v
 
 	const u64 read_start = (g_cfg.vfs.emulate_hdd_speed && (file->mp == &g_mp_sys_dev_hdd0 || file->mp == &g_mp_sys_dev_hdd1))
 		? get_guest_system_time() : umax;
+	const u64 read_offset = read_start != umax ? file->file.pos() : 0;
 	const u64 read_bytes = file->op_read(buf, nbytes);
 	const bool failure = !read_bytes && file->file.pos() < file->file.size();
 
 	file->reads_total += read_bytes;
 
+	const u64 read_end = file->schedule_read(read_bytes, read_start, read_offset);
 	lock.unlock();
-	file->wait_read(ppu, read_bytes, read_start);
+	lv2_file::wait_read(ppu, read_end);
 	ppu.check_state();
 
 	*nread = read_bytes;
@@ -2426,8 +2516,9 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 		}
 		else
 		{
+			const u64 read_end = file->schedule_read(done_size, op_start, op_pos);
 			rlock.unlock();
-			file->wait_read(ppu, done_size, op_start);
+			lv2_file::wait_read(ppu, read_end);
 		}
 
 		(op == 0x8000000a ? &file->reads_total : &file->writes_total)->fetch_add(done_size);
