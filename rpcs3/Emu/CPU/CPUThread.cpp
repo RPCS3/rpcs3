@@ -691,7 +691,6 @@ void cpu_thread::operator()()
 	static thread_local struct thread_cleanup_t
 	{
 		cpu_thread* _this = nullptr;
-		std::string name;
 		std::string(*log_prefix)() = nullptr;
 
 		void cleanup()
@@ -728,22 +727,11 @@ void cpu_thread::operator()()
 
 		~thread_cleanup_t()
 		{
-			if (_this)
-			{
-				cleanup();
-
-				auto log_thread = named_thread("CPU Thread Cleanup Logger", [name = name]()
-				{
-					sys_log.warning("CPU Thread '%s' terminated abnormally!", name);
-				});
-
-				log_thread();
-			}
+			cleanup();
 		}
 	} cleanup;
 
 	cleanup._this = this;
-	cleanup.name = thread_ctrl::get_name();
 	cleanup.log_prefix = old_prefix;
 
 	// Check thread status
