@@ -691,7 +691,6 @@ void cpu_thread::operator()()
 	static thread_local struct thread_cleanup_t
 	{
 		cpu_thread* _this = nullptr;
-		std::string name;
 		std::string(*log_prefix)() = nullptr;
 
 		void cleanup()
@@ -728,21 +727,11 @@ void cpu_thread::operator()()
 
 		~thread_cleanup_t()
 		{
-			if (_this)
-			{
-				cleanup();
-
-				// Log from a detached thread: TLS may already be destroyed here, and joining would deadlock on the Windows loader lock
-				std::thread{[name = std::move(name)]()
-				{
-					sys_log.warning("CPU Thread '%s' terminated abnormally!", name);
-				}}.detach();
-			}
+			cleanup();
 		}
 	} cleanup;
 
 	cleanup._this = this;
-	cleanup.name = thread_ctrl::get_name();
 	cleanup.log_prefix = old_prefix;
 
 	// Check thread status
