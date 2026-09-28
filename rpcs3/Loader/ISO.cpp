@@ -10,7 +10,6 @@
 #include <codecvt>
 #include <algorithm>
 #include <cmath>
-#include <filesystem>
 #include <stack>
 #include <span>
 #include <cstdlib>
@@ -28,6 +27,9 @@ struct iso_sector
 	u64 size_aligned = 0;
 };
 
+// How much of a raw device is read per request: one ISO_SECTOR_SIZE at a time costs a command, and often a seek, per sector
+constexpr u64 ISO_RAW_READ_SIZE = ISO_SECTOR_SIZE * 512; // 1 MB
+
 static void* get_aligned_buf()
 {
 	static thread_local struct aligned_buf
@@ -37,11 +39,11 @@ static void* get_aligned_buf()
 		aligned_buf() noexcept
 		{
 			// IMPORTANT NOTE: it must be aligned on the sector size of the volume to support a raw device, otherwise any read from
-			// file will fail (an optical medium always uses ISO_SECTOR_SIZE, so allocating a sector aligned on itself is enough)
+			// file will fail (an optical medium always uses ISO_SECTOR_SIZE, so aligning it on a sector is enough)
 #if defined(_WIN32)
-			buf = _aligned_malloc(ISO_SECTOR_SIZE, ISO_SECTOR_SIZE);
+			buf = _aligned_malloc(ISO_RAW_READ_SIZE, ISO_SECTOR_SIZE);
 #else
-			buf = std::aligned_alloc(ISO_SECTOR_SIZE, ISO_SECTOR_SIZE);
+			buf = std::aligned_alloc(ISO_SECTOR_SIZE, ISO_RAW_READ_SIZE);
 #endif
 		}
 
@@ -732,14 +734,18 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 		}
 		else
 		{
-			u64 inner_sector_offset = 0;
+			const u64 inner_sector_size = (sector_count - 2) * ISO_SECTOR_SIZE;
 
-			for (u64 i = 0; i < sector_count - 2; i++, inner_sector_offset += ISO_SECTOR_SIZE)
+			for (u64 inner_sector_offset = 0; inner_sector_offset < inner_sector_size;)
 			{
-				total_read += m_file.read_at(first_sec.lba_address + ISO_SECTOR_SIZE + inner_sector_offset, aligned_buf, ISO_SECTOR_SIZE);
+				const u64 block_size = std::min<u64>(inner_sector_size - inner_sector_offset, ISO_RAW_READ_SIZE);
 
-				m_dec->decrypt(first_sec.lba_address + ISO_SECTOR_SIZE + inner_sector_offset, {reinterpret_cast<u8*>(aligned_buf), ISO_SECTOR_SIZE}, m_meta.name);
-				std::memcpy(&reinterpret_cast<u8*>(buffer)[first_sec.size + inner_sector_offset], aligned_buf, ISO_SECTOR_SIZE);
+				total_read += m_file.read_at(first_sec.lba_address + ISO_SECTOR_SIZE + inner_sector_offset, aligned_buf, block_size);
+
+				m_dec->decrypt(first_sec.lba_address + ISO_SECTOR_SIZE + inner_sector_offset, {reinterpret_cast<u8*>(aligned_buf), block_size}, m_meta.name);
+				std::memcpy(&reinterpret_cast<u8*>(buffer)[first_sec.size + inner_sector_offset], aligned_buf, block_size);
+
+				inner_sector_offset += block_size;
 			}
 		}
 	}
@@ -1144,14 +1150,13 @@ iso_archive::iso_archive(const std::string& path)
 	}
 }
 
-iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
+iso_fs_node* iso_archive::retrieve(const std::string& path)
 {
-	if (passed_path.empty() || !is_valid())
+	if (path.empty() || !is_valid())
 	{
 		return nullptr;
 	}
 
-	const std::string path = std::filesystem::path(passed_path).string();
 	const std::string_view path_sv = path;
 
 	usz start = 0;
@@ -1495,13 +1500,17 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 
 	if (sector_count > 2) // If inner sector(s) are present
 	{
-		u64 sector_offset = 0;
+		const u64 inner_sector_size = (sector_count - 2) * ISO_SECTOR_SIZE;
 
-		for (u64 i = 0; i < sector_count - 2; i++, sector_offset += ISO_SECTOR_SIZE)
+		for (u64 sector_offset = 0; sector_offset < inner_sector_size;)
 		{
-			total_read += m_file.read_at(first_sec.lba_address + ISO_SECTOR_SIZE + sector_offset, aligned_buf, ISO_SECTOR_SIZE);
+			const u64 block_size = std::min<u64>(inner_sector_size - sector_offset, ISO_RAW_READ_SIZE);
 
-			std::memcpy(&reinterpret_cast<u8*>(buffer)[first_sec.size + sector_offset], aligned_buf, ISO_SECTOR_SIZE);
+			total_read += m_file.read_at(first_sec.lba_address + ISO_SECTOR_SIZE + sector_offset, aligned_buf, block_size);
+
+			std::memcpy(&reinterpret_cast<u8*>(buffer)[first_sec.size + sector_offset], aligned_buf, block_size);
+
+			sector_offset += block_size;
 		}
 	}
 
@@ -1608,9 +1617,24 @@ void iso_dir::rewind()
 	m_pos = 0;
 }
 
+// Cuts the device prefix off a path the virtual file system handed down, leaving the part that names a node of
+// the image
+static std::string strip_device_prefix(std::string_view path, std::string_view fs_prefix)
+{
+	if (path.starts_with(fs_prefix))
+	{
+		path.remove_prefix(fs_prefix.size());
+	}
+
+	path = fmt::trim_sv(path, fs::delim);
+
+	// The prefix on its own is the root of the image, the node retrieve() reaches through "."
+	return path.empty() ? "."s : std::string{path};
+}
+
 bool iso_device::stat(const std::string& path, fs::stat_t& info)
 {
-	const auto relative_path = std::filesystem::relative(std::filesystem::path(path), std::filesystem::path(fs_prefix)).string();
+	const std::string relative_path = strip_device_prefix(path, fs_prefix);
 
 	const auto node = m_archive.retrieve(relative_path);
 
@@ -1638,7 +1662,7 @@ bool iso_device::stat(const std::string& path, fs::stat_t& info)
 
 bool iso_device::statfs(const std::string& path, fs::device_stat& info)
 {
-	const auto relative_path = std::filesystem::relative(std::filesystem::path(path), std::filesystem::path(fs_prefix)).string();
+	const std::string relative_path = strip_device_prefix(path, fs_prefix);
 
 	const auto node = m_archive.retrieve(relative_path);
 
@@ -1663,7 +1687,7 @@ bool iso_device::statfs(const std::string& path, fs::device_stat& info)
 
 std::unique_ptr<fs::file_base> iso_device::open(const std::string& path, bs_t<fs::open_mode> mode)
 {
-	const auto relative_path = std::filesystem::relative(std::filesystem::path(path), std::filesystem::path(fs_prefix)).string();
+	const std::string relative_path = strip_device_prefix(path, fs_prefix);
 
 	const auto node = m_archive.retrieve(relative_path);
 
@@ -1684,7 +1708,7 @@ std::unique_ptr<fs::file_base> iso_device::open(const std::string& path, bs_t<fs
 
 std::unique_ptr<fs::dir_base> iso_device::open_dir(const std::string& path)
 {
-	const auto relative_path = std::filesystem::relative(std::filesystem::path(path), std::filesystem::path(fs_prefix)).string();
+	const std::string relative_path = strip_device_prefix(path, fs_prefix);
 
 	const auto node = m_archive.retrieve(relative_path);
 
