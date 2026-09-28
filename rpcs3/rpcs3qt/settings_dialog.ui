@@ -2510,6 +2510,13 @@
                    </widget>
                   </item>
                   <item>
+                   <widget class="QCheckBox" name="accurateSpuReservations">
+                    <property name="text">
+                     <string>Accurate SPU Reservations</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
                    <widget class="QCheckBox" name="debugConsoleMode">
                     <property name="text">
                      <string>Debug Console Mode</string>
@@ -2519,7 +2526,7 @@
                   <item>
                    <widget class="QCheckBox" name="mfcDelayCommand">
                     <property name="text">
-                     <string>Delay each odd MFC Command</string>
+                     <string>Delay Each Odd MFC Command</string>
                     </property>
                    </widget>
                   </item>
@@ -2533,7 +2540,7 @@
                   <item>
                    <widget class="QCheckBox" name="spuLoopDetection">
                     <property name="text">
-                     <string>Enable SPU loop detection</string>
+                     <string>Enable SPU Loop Detection</string>
                     </property>
                    </widget>
                   </item>
@@ -2541,13 +2548,6 @@
                    <widget class="QCheckBox" name="ppuReservationPrority">
                     <property name="text">
                      <string>PPU Reservation Priority</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
-                   <widget class="QCheckBox" name="accurateSpuReservations">
-                    <property name="text">
-                     <string>Accurate SPU Reservations</string>
                     </property>
                    </widget>
                   </item>
