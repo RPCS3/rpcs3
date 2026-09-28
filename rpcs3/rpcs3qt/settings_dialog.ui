@@ -2517,13 +2517,6 @@
                    </widget>
                   </item>
                   <item>
-                   <widget class="QCheckBox" name="setDAZandFTZ">
-                    <property name="text">
-                     <string>PPU Set DAZ and FTZ</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
                    <widget class="QCheckBox" name="mfcDelayCommand">
                     <property name="text">
                      <string>Delay each odd MFC Command</string>
@@ -4623,6 +4616,13 @@
                  <widget class="QCheckBox" name="ppuDebug">
                   <property name="text">
                    <string>PPU Debug</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QCheckBox" name="setDAZandFTZ">
+                  <property name="text">
+                   <string>PPU Set DAZ and FTZ</string>
                   </property>
                  </widget>
                 </item>
