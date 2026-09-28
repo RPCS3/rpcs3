@@ -2,6 +2,7 @@
 
 #include "simple_array.hpp"
 #include "TextureUtils.h"
+#include "Emu/RSX/RSXThread.h"
 #include "../Utils/rsx_utils.h"
 
 namespace rsx
