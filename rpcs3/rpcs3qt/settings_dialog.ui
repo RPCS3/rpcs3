@@ -1856,13 +1856,6 @@
                  </widget>
                 </item>
                 <item>
-                 <widget class="QCheckBox" name="loadSdlMappings">
-                  <property name="text">
-                   <string>Use SDL GameController Database</string>
-                  </property>
-                 </widget>
-                </item>
-                <item>
                  <widget class="QCheckBox" name="mouseBasedGyroBox">
                   <property name="text">
                    <string>Enable Mouse-based Gyro</string>

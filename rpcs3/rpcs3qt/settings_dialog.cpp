@@ -1171,12 +1171,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	EnhanceCheckBox(emu_settings_type::LockOvlIptToP1, ui->lockOverlayInputToPlayerOne, tooltips.settings.lock_overlay_input_to_player_one);
 	EnhanceCheckBox(emu_settings_type::MouseBasedGyro, ui->mouseBasedGyroBox, tooltips.settings.mouse_based_gyro);
 
-#if HAVE_SDL3
-	EnhanceCheckBox(emu_settings_type::SDLMappings, ui->loadSdlMappings, tooltips.settings.sdl_mappings);
-#else
-	ui->loadSdlMappings->setVisible(false);
-#endif
-
 #ifndef _WIN32
 	// Remove raw mouse handler
 	remove_item(ui->mouseHandlerBox, static_cast<int>(mouse_handler::raw), static_cast<int>(g_cfg.io.mouse.def));
