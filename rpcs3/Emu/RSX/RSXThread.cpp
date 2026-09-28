@@ -1563,10 +1563,6 @@ namespace rsx
 					{
 						depth_buffer_unused = false;
 					}
-					else if (rsx::method_registers.registers[NV4097_SET_ZPASS_PIXEL_COUNT_ENABLE])
-					{
-						depth_buffer_unused = false;
-					}
 				}
 			}
 
