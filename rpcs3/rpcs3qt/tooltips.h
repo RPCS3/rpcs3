@@ -96,6 +96,7 @@ public:
 		const QString preferred_spu_threads     = tr("Some SPU stages are sensitive to race conditions and allowing a limited number at a time helps alleviate performance stalls.\nSetting this to a smaller value might improve performance and reduce stuttering in some games.\nLeave this on auto if performance is negatively affected when setting a small value.");
 		const QString max_cpu_preempt           = tr("Reduces CPU usage and power consumption, improving battery life on mobile devices. (0 means disabled)\nHigher values cause a more pronounced effect, but may cause audio or performance issues. A value of 50 or less is recommended.\nThis option forces an FPS limit because it's active when framerate is stable.\nThe lighter the game is on the hardware, the more power is saved by it. (until the preemption count barrier is reached)");
 		const QString ppu_reservation_priority  = tr("Give PPUs an execution advantage when the SPUs are using reservations.\nThis setting is recommended only for a few game for improving performance.\nDO NOT use it without being advised to due to potential performance degradation.");
+		const QString accurate_spu_reservations = tr("Accurately emulates SPU reservations.\nDisabling it can greatly improve performance.\nStability may be compromised in some games but not in others, disable only if advised.");
 
 		// debug
 
@@ -218,7 +219,7 @@ public:
 
 		const QString texture_lod_bias = tr("Changes Texture sampling accuracy. (Small changes have a big effect.)\nAvoid using values outside the range of -12 to +12 if you're unsure.\n-3 to +3 is plenty for most usecases");
 
-		const QString blit_engine_scaling = tr("Disable upscaling on the RSX image scaling and rotation engine (NV3089) output images.\nThis may fix some bugs that are present when upscaling is being used, but some games will appear as if they're running at 100% resolution regardless of the real setting.");
+		const QString blit_engine_scaling = tr("Disable upscaling on the RSX image scaling and rotation engine (NV3089) outputs.\nThis may fix some crashes and visual bugs in some games (e.g GT5, DJH2) that happen only when upscaling is being used.\nHowever, some games will appear as if they're running at 100% resolution regardless of the upscaling ratio used if this option is enabled.");
 
 		// gui
 
