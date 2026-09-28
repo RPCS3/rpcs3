@@ -23,7 +23,6 @@ extern "C"
 #include "libavutil/imgutils.h"
 #include "libswscale/swscale.h"
 }
-constexpr int averror_eof = AVERROR_EOF; // workaround for old-style-cast error
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else
@@ -49,6 +48,8 @@ constexpr int averror_eof = AVERROR_EOF; // workaround for old-style-cast error
 #include "util/asm.hpp"
 
 std::mutex g_mutex_avcodec_open2;
+
+constexpr int averror_eof = AVERROR_EOF; // workaround for old-style-cast error
 
 LOG_CHANNEL(cellVdec);
 
@@ -1256,7 +1257,7 @@ error_code cellVdecQueryAttrEx(ppu_thread& ppu, vm::cptr<CellVdecTypeEx> type, v
 		return CELL_VDEC_ERROR_ARG;
 	}
 
-	VdecDecoderAttr decoder_attr;
+	VdecDecoderAttr decoder_attr {};
 
 	if (get_decoder_specific_ops(type->codecType).query_attr(ppu, decoder_attr, type->profileLevel, type->codecSpecificInfo ? type->codecSpecificInfo.get_ptr() : nullptr) != CELL_OK)
 	{
@@ -1430,7 +1431,7 @@ static error_code vdecOpen(ppu_thread& ppu, T type, U res, vm::cptr<CellVdecCb> 
 		spec = type->codecSpecificInfo ? type->codecSpecificInfo.get_ptr() : nullptr;
 	}
 
-	VdecDecoderAttr attr;
+	VdecDecoderAttr attr {};
 	const error_code err = get_decoder_specific_ops(type->codecType).query_attr(ppu, attr, type->profileLevel, spec);
 	if (err != CELL_OK)
 	{
