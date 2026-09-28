@@ -703,6 +703,18 @@ namespace rsx
 		void set_zcull_pixel_count_enable(context* ctx, u32, u32)
 		{
 			RSX(ctx)->notify_zcull_info_changed();
+
+			if (RSX(ctx)->m_graphics_state.test(rsx::rtt_config_dirty) || !RSX(ctx)->m_graphics_state.test(rsx::rtt_config_contested))
+			{
+				return;
+			}
+
+			if (RSX(ctx)->check_depth_buffer_active())
+			{
+				return;
+			}
+
+			RSX(ctx)->m_graphics_state.set(rsx::rtt_config_dirty);
 		}
 
 		///// Misc (sync objects, etc)
