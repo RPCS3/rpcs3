@@ -785,13 +785,6 @@
                    <widget class="QComboBox" name="outputScalingMode"/>
                   </item>
                   <item>
-                   <widget class="Line" name="line">
-                    <property name="orientation">
-                     <enum>Qt::Orientation::Horizontal</enum>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
                    <widget class="QWidget" name="fsrSharpeningStrengthWidget" native="true">
                     <layout class="QVBoxLayout" name="fsrSharpeningWidgetLayout">
                      <property name="leftMargin">
