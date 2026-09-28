@@ -23,7 +23,7 @@
 // See Arm C Language Extensions Documentation
 // Currently there is no feature macro for LSE2 specifically so we define it ourself
 // Unfortunately the __ARM_ARCH integer macro isn't universally defined so we use this hack instead
-#if defined(__ARM_ARCH_8_4__) || defined(__ARM_ARCH_8_5__) || defined(__ARM_ARCH_8_6__) || defined(__ARM_ARCH_9__)
+#if defined(__APPLE__) || (__ARM_ARCH_8_4__) || defined(__ARM_ARCH_8_5__) || defined(__ARM_ARCH_8_6__) || defined(__ARM_ARCH_9__)
 #define ARM_FEATURE_LSE2 1
 #endif
 #endif
