@@ -991,6 +991,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	connect(ui->combo_audio_format, &QComboBox::currentIndexChanged, this, [this](int index)
 	{
 		const auto [text, value] = get_data(ui->combo_audio_format, index);
+		ui->list_audio_formats->setVisible(static_cast<audio_format>(value) == audio_format::manual);
 		ui->list_audio_formats->setEnabled(static_cast<audio_format>(value) == audio_format::manual);
 	});
 	EnhanceComboBox(emu_settings_type::AudioFormat, ui->combo_audio_format, tooltips.settings.audio_format, ui->gb_audio_format);
