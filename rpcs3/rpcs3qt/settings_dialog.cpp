@@ -564,10 +564,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			const auto [text, value] = get_data(ui->resBox, ui->resBox->currentIndex());
 			const bool stereo_allowed = value == static_cast<int>(video_resolution::_720p);
 			const bool stereo_enabled = ui->stereoRenderEnabled->checkState() == Qt::CheckState::Checked;
-			ui->stereoRenderMode->setEnabled(stereo_allowed && stereo_enabled);
 			ui->stereoRenderEnabled->setEnabled(stereo_allowed);
-			ui->gb_screen_size->setEnabled(stereo_allowed && stereo_enabled);
-			ui->gb_anaglyph_settings->setEnabled(stereo_allowed && stereo_enabled);
+			ui->stereoRenderMode->setVisible(stereo_allowed && stereo_enabled);
+			ui->gb_screen_size->setVisible(stereo_allowed && stereo_enabled);
+			ui->gb_anaglyph_settings->setVisible(stereo_allowed && stereo_enabled);
 		};
 		connect(ui->resBox, &QComboBox::currentIndexChanged, this, [enable_3D_modes](int){ enable_3D_modes(); });
 		connect(ui->stereoRenderEnabled, &QCheckBox::checkStateChanged, this, [enable_3D_modes](Qt::CheckState){ enable_3D_modes(); });
@@ -582,8 +582,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		ui->stereoRenderMode->setCurrentIndex(find_item(ui->stereoRenderMode, static_cast<int>(g_cfg.video.stereo_render_mode.def)));
 		ui->stereoRenderEnabled->setChecked(false);
+		ui->stereoRenderMode->setVisible(false);
+		ui->gb_screen_size->setVisible(false);
+		ui->gb_anaglyph_settings->setVisible(false);
 		ui->gb_stereo->setEnabled(false);
-		ui->gb_anaglyph_settings->setEnabled(false);
 	}
 
 	// Checkboxes: main options
