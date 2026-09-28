@@ -4649,13 +4649,6 @@
                   </property>
                   <layout class="QVBoxLayout" name="gb_debug_cpu_layout">
                    <item>
-                    <widget class="QCheckBox" name="accurateDFMA">
-                     <property name="text">
-                      <string>Accurate PPU/SPU Double-Precision FMA</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
                     <widget class="QCheckBox" name="accurateClineStores">
                      <property name="text">
                       <string>Accurate PPU/SPU Cache Line Stores</string>
