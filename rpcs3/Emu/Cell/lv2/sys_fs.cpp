@@ -47,6 +47,7 @@ struct hdd_read_state
 	};
 
 	std::array<cached_block, 96> cache;
+	std::array<cached_block, 24> lookup_cache;
 	u64 age = 0;
 	std::string last_path;
 	u64 last_end_offset = 0;
@@ -619,36 +620,26 @@ u64 lv2_file::schedule_read(u64 size, u64 start, u64 offset) const
 	{
 		const bool hdd0 = mp == &g_mp_sys_dev_hdd0;
 		std::span<hdd_read_state::cached_block> cache(hdd.cache.data() + (hdd0 ? 0 : 32), hdd0 ? 32 : 64);
+		std::span<hdd_read_state::cached_block> lookup_cache(hdd.lookup_cache);
 		const u64 first = offset & ~(block_size - 1);
 		const u64 last = (offset + size - 1) & ~(block_size - 1);
 		const u64 count = (last - first) / block_size + 1;
 		u64 first_missing = umax;
 
-		for (u64 i = 0; i < std::min<u64>(count, cache.size() + 1); i++)
+		const auto find_block = [&](std::span<hdd_read_state::cached_block> entries, u64 block)
 		{
-			const u64 block = first + i * block_size;
-			if (std::none_of(cache.begin(), cache.end(), [&](const auto& entry)
-			{
-				return entry.age && entry.offset == block && entry.path == real_path;
-			}))
-			{
-				first_missing = std::max(block, offset);
-				break;
-			}
-		}
-
-		cached = first_missing == umax;
-
-		for (u64 remaining = std::min<u64>(count, cache.size()); remaining; remaining--)
-		{
-			const u64 block = last - (remaining - 1) * block_size;
-			auto it = std::find_if(cache.begin(), cache.end(), [&](const auto& entry)
+			return std::find_if(entries.begin(), entries.end(), [&](const auto& entry)
 			{
 				return entry.age && entry.offset == block && entry.path == real_path;
 			});
-			if (it == cache.end())
+		};
+
+		const auto cache_block = [&](std::span<hdd_read_state::cached_block> entries, u64 block)
+		{
+			auto it = find_block(entries, block);
+			if (it == entries.end())
 			{
-				it = std::min_element(cache.begin(), cache.end(), [](const auto& a, const auto& b)
+				it = std::min_element(entries.begin(), entries.end(), [](const auto& a, const auto& b)
 				{
 					return a.age < b.age;
 				});
@@ -656,11 +647,58 @@ u64 lv2_file::schedule_read(u64 size, u64 start, u64 offset) const
 				it->offset = block;
 			}
 			it->age = ++hdd.age;
+		};
+
+		for (u64 i = 0; i < count; i++)
+		{
+			const u64 block = first + i * block_size;
+			if (find_block(cache, block) == cache.end())
+			{
+				if (first_missing == umax)
+				{
+					first_missing = std::max(block, offset);
+				}
+
+				// UFS needs indirect blocks to locate data beyond the first 12 blocks
+				if (hdd0 && block >= 12 * 0x4000)
+				{
+					std::array<u64, 3> missing{};
+					u64 missing_count = 0;
+					u64 index = (block / 0x4000 - 12) / 2048;
+					for (u64 level = 1; level <= missing.size(); level++)
+					{
+						const u64 key = (1ull << 63) | (index << 2) | level;
+						if (find_block(lookup_cache, key) != lookup_cache.end())
+						{
+							cache_block(lookup_cache, key);
+							break;
+						}
+						missing[missing_count++] = key;
+						if (!index)
+						{
+							break;
+						}
+						index = (index - 1) / 2048;
+					}
+					while (missing_count)
+					{
+						cache_block(lookup_cache, missing[--missing_count]);
+						duration += 11'111;
+					}
+				}
+				if (hdd0)
+				{
+					cache_block(lookup_cache, block);
+				}
+			}
+			cache_block(cache, block);
 		}
+
+		cached = first_missing == umax;
 
 		if (!cached)
 		{
-			u64 seek = hdd0 ? 20'000 : 10'000;
+			u64 seek = hdd0 ? 13'000 : 10'000;
 			if (hdd.last_path == real_path && first_missing >= hdd.last_end_offset && first_missing - hdd.last_end_offset < read_ahead_size)
 			{
 				const u64 skipped = (first_missing - hdd.last_end_offset) * 1'000'000 / transfer_rate;
