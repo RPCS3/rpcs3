@@ -275,6 +275,11 @@ struct vdec_context final
 			fmt::throw_exception("avcodec_alloc_context3() failed (type=0x%x)", type);
 		}
 
+#ifdef AV_CODEC_FLAG_COPY_OPAQUE
+		// Carry the AU userdata from each packet to the picture decoded from it, across the frame reordering
+		ctx->flags |= AV_CODEC_FLAG_COPY_OPAQUE;
+#endif
+
 		AVDictionary* opts = nullptr;
 
 		std::lock_guard lock(g_mutex_avcodec_open2);
@@ -420,6 +425,7 @@ struct vdec_context final
 				packet.size = au_size;
 				packet.pts = au_pts != umax ? au_pts : s64{smin};
 				packet.dts = au_dts != umax ? au_dts : s64{smin};
+				packet.opaque = reinterpret_cast<void*>(au_usrd);
 
 				if (next_pts == 0 && au_pts != umax)
 				{
@@ -508,7 +514,11 @@ struct vdec_context final
 
 						frame.pts = next_pts;
 						frame.dts = next_dts;
+#ifdef AV_CODEC_FLAG_COPY_OPAQUE
+						frame.userdata = reinterpret_cast<u64>(frame->opaque);
+#else
 						frame.userdata = au_usrd;
+#endif
 						frame.attr = attr;
 
 						u64 amend = 0;
