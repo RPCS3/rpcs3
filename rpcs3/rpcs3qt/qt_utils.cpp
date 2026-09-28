@@ -12,6 +12,7 @@
 #include <QScreen>
 #include <QUrl>
 
+#include "Emu/System.h"
 #include "Emu/system_utils.hpp"
 #include "Utilities/File.h"
 #include "Loader/ISO.h"
@@ -607,6 +608,76 @@ namespace gui
 				}
 			});
 
+			msg->open();
+		}
+
+		void show_boot_error(QWidget* parent, game_boot_result status, const std::string& path)
+		{
+			QString message;
+			switch (status)
+			{
+			case game_boot_result::nothing_to_boot:
+				message = QObject::tr("No bootable content was found.");
+				break;
+			case game_boot_result::wrong_disc_location:
+				message = QObject::tr("Disc could not be mounted properly. Make sure the disc is not in the dev_hdd0/game folder.");
+				break;
+			case game_boot_result::invalid_file_or_folder:
+				message = QObject::tr("The selected file or folder is invalid or corrupted.");
+				break;
+			case game_boot_result::invalid_bdvd_folder:
+				message = QObject::tr("The virtual dev_bdvd folder does not exist or is not empty.");
+				break;
+			case game_boot_result::install_failed:
+				message = QObject::tr("Additional content could not be installed.");
+				break;
+			case game_boot_result::decryption_error:
+				message = QObject::tr("Digital content could not be decrypted. This is usually caused by a missing or invalid license (RAP) file.");
+				break;
+			case game_boot_result::file_creation_error:
+				message = QObject::tr("The emulator could not create files required for booting.");
+				break;
+			case game_boot_result::unsupported_disc_type:
+				message = QObject::tr("This disc type is not supported yet.");
+				break;
+			case game_boot_result::disc_key_missing:
+			case game_boot_result::disc_key_invalid:
+				// These get a dialog of their own: the user is one file away from booting the game, so point them at the folder it goes in
+				show_disc_key_error(parent, QObject::tr("Boot Failed"), path, status == game_boot_result::disc_key_invalid);
+				return;
+			case game_boot_result::savestate_corrupted:
+				message = QObject::tr("Savestate data is corrupted or it's not an RPCS3 savestate.");
+				break;
+			case game_boot_result::savestate_version_unsupported:
+				message = QObject::tr("Savestate versioning data differs from your RPCS3 build.");
+				break;
+			case game_boot_result::still_running:
+				message = QObject::tr("A game or PS3 application is still running or has yet to be fully stopped.");
+				break;
+			case game_boot_result::firmware_version:
+				message = QObject::tr("The game or PS3 application needs a more recent firmware version.");
+				break;
+			case game_boot_result::database_config_missing:
+				message = QObject::tr("Could not find any configuration for this game in the database.");
+				break;
+			case game_boot_result::firmware_missing: // Handled elsewhere
+			case game_boot_result::already_added: // Handled elsewhere
+			case game_boot_result::currently_restricted:
+			case game_boot_result::no_errors:
+				return;
+			case game_boot_result::generic_error:
+				message = QObject::tr("Unknown error.");
+				break;
+			}
+			const QString link = QObject::tr("<br /><br />For information on setting up the emulator and dumping your PS3 games, read the <a %0 href=\"https://rpcs3.net/quickstart\">quickstart guide</a>.").arg(get_link_style());
+
+			QMessageBox* msg = new QMessageBox(parent);
+			msg->setWindowTitle(QObject::tr("Boot Failed"));
+			msg->setIcon(QMessageBox::Critical);
+			msg->setTextFormat(Qt::RichText);
+			msg->setStandardButtons(QMessageBox::Ok);
+			msg->setText(QObject::tr("Booting failed: %1 %2").arg(message).arg(link));
+			msg->setAttribute(Qt::WA_DeleteOnClose);
 			msg->open();
 		}
 

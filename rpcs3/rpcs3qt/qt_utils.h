@@ -20,6 +20,9 @@
 #include <string>
 #include <map>
 
+
+enum class game_boot_result : u32;
+
 namespace gui
 {
 	namespace utils
@@ -167,6 +170,9 @@ namespace gui
 		// "key_invalid" tells a key file belonging to another disc from no key file at all, and "prefix" is put
 		// before the text (rich text, as the whole dialog is) for a caller that needs a heading of its own
 		void show_disc_key_error(QWidget* parent, const QString& title, const std::string& path, bool key_invalid, const QString& prefix = {});
+
+		// Shows the error dialog of a failed boot of "path"
+		void show_boot_error(QWidget* parent, game_boot_result status, const std::string& path = {});
 
 		// Finds a child of a QTreeWidgetItem with given text
 		QTreeWidgetItem* find_child(QTreeWidgetItem* parent, const QString& text);
