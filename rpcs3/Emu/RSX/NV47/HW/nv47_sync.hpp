@@ -11,10 +11,10 @@ namespace rsx
 	namespace util
 	{
 		template <bool FlushDMA, bool FlushPipe>
-		static void write_gcm_label(context* ctx, u32 type, u32 address, u32 data, u32 post_fifo_get)
+		static void write_gcm_label(context* ctx, u32 type, u32 address, u32 data)
 		{
-			// Advance FIFO GET before writing labels
-			ensure(ctx->rsxthr->ctrl)->get.store(post_fifo_get);
+			// Ensure atomic seq-cst memory ordering for FIFO GET updates
+			atomic_fence_seq_cst();
 
 			const bool is_flip_sema = (address == (RSX(ctx)->label_addr + 0x10) || address == (RSX(ctx)->device_addr + 0x30));
 			if (!is_flip_sema)
