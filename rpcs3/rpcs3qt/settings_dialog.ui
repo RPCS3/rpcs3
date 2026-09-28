@@ -1835,16 +1835,16 @@
                  </widget>
                 </item>
                 <item>
-                 <widget class="QCheckBox" name="padConnectionBox">
+                 <widget class="QCheckBox" name="mouseBasedGyroBox">
                   <property name="text">
-                   <string>Keep Pads Connected</string>
+                   <string>Enable Mouse-based Gyro</string>
                   </property>
                  </widget>
                 </item>
                 <item>
-                 <widget class="QCheckBox" name="showMoveCursorBox">
+                 <widget class="QCheckBox" name="padConnectionBox">
                   <property name="text">
-                   <string>Show PS Move Cursor</string>
+                   <string>Keep Pads Connected</string>
                   </property>
                  </widget>
                 </item>
@@ -1856,9 +1856,9 @@
                  </widget>
                 </item>
                 <item>
-                 <widget class="QCheckBox" name="mouseBasedGyroBox">
+                 <widget class="QCheckBox" name="showMoveCursorBox">
                   <property name="text">
-                   <string>Enable Mouse-based Gyro</string>
+                   <string>Show PS Move Cursor</string>
                   </property>
                  </widget>
                 </item>
