@@ -811,11 +811,25 @@ namespace rsx
 			{
 				ar(u32{0});
 			}
+
+			ar(fifo_ctrl ? fifo_ctrl->get_pos() : 0);
 		}
-		else if (u32 count{ar})
+		else
 		{
-			restore_fifo_count = count;
-			ar(restore_fifo_cmd);
+			if (u32 count{ar})
+			{
+				restore_fifo_count = count;
+				ar(restore_fifo_cmd);
+			}
+
+			if (version >= 4)
+			{
+				ar(restore_fifo_position);
+			}
+			else
+			{
+				restore_fifo_position = vm::_ptr<RsxDmaControl>(dma_address)->get;
+			}
 		}
 	}
 
@@ -1141,9 +1155,9 @@ namespace rsx
 
 		vblank_count = 0;
 
-		if (restore_fifo_count)
+		if (serialized)
 		{
-			fifo_ctrl->restore_state(restore_fifo_cmd, restore_fifo_count);
+			fifo_ctrl->restore_state(restore_fifo_cmd, restore_fifo_count, restore_fifo_position);
 		}
 
 		if (!send_event(0, event_flags, 0))
