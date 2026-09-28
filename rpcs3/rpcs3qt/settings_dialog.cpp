@@ -1420,7 +1420,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	ui->accurateDFMA->setDisabled(utils::has_fma3() || utils::has_fma4());
 	EnhanceCheckBox(emu_settings_type::AccurateRSXAccess, ui->accurateRSXAccess, tooltips.settings.accurate_rsx_access);
 	EnhanceCheckBox(emu_settings_type::AccurateSpuDMA, ui->accurateSpuDMA, tooltips.settings.accurate_spu_dma);
-	EnhanceCheckBox(emu_settings_type::PPUVNANFixup, ui->PPUVNANfixup, tooltips.settings.fixup_ppuvnan);
 	EnhanceCheckBox(emu_settings_type::LLVMPrecompilation, ui->llvmPrecompilation, tooltips.settings.llvm_precompilation);
 	EnhanceCheckBox(emu_settings_type::SuspendEmulationSavestateMode, ui->antiCheatSavestates, tooltips.settings.anti_cheat_savestates);
 	EnhanceCheckBox(emu_settings_type::CompatibleEmulationSavestateMode, ui->compatibleSavestates, tooltips.settings.compatible_savestates);
