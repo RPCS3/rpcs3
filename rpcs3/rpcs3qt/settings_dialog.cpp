@@ -1426,7 +1426,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	EnhanceCheckBox(emu_settings_type::WriteDepthBuffer, ui->dumpDepth, tooltips.settings.dump_depth);
 	EnhanceCheckBox(emu_settings_type::HandleRSXTiledMemory, ui->handleTiledMemory, tooltips.settings.handle_tiled_memory);
 	EnhanceCheckBox(emu_settings_type::SetDAZandFTZ, ui->setDAZandFTZ, tooltips.settings.set_daz_and_ftz);
-	EnhanceCheckBox(emu_settings_type::VBlankNTSCFixup, ui->vblankNTSCFixup, {});
 
 	ui->mfcDelayCommand->setChecked(m_emu_settings->GetSetting(emu_settings_type::MFCCommandsShuffling) == "1");
 	SubscribeTooltip(ui->mfcDelayCommand, tooltips.settings.mfc_delay_command);
@@ -1517,7 +1516,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	}
 	else
 	{
-		SubscribeTooltip(ui->vblankNTSCFixup, tooltips.settings.vblank_ntsc_fixup);
 		SubscribeTooltip(ui->gb_vblank, tooltips.settings.vblank_rate);
 		SubscribeTooltip(ui->gb_clockScale, tooltips.settings.clocks_scale);
 		SubscribeTooltip(ui->gb_wakeupDelay, tooltips.settings.wake_up_delay);

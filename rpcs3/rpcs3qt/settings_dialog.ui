@@ -2959,13 +2959,6 @@
                     </item>
                    </layout>
                   </item>
-                  <item>
-                   <widget class="QCheckBox" name="vblankNTSCFixup">
-                    <property name="text">
-                     <string>VBlank NTSC Fixup</string>
-                    </property>
-                   </widget>
-                  </item>
                  </layout>
                 </widget>
                </item>
