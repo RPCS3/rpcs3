@@ -2158,7 +2158,7 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 			{
 				auto& [work_pc, modified_stack, restored_stack] = workload[wi];
 
-				for (usz inst_pc = work_pc;;)
+				for (u32 inst_pc = work_pc;;)
 				{
 					be_t<u32>& opcode = get_inst(inst_pc, func_call_before_target);
 
@@ -2308,7 +2308,7 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 			{
 				auto& [work_pc, modified_stack, restored_stack] = workload[wi];
 
-				for (usz inst_pc = work_pc;;)
+				for (u32 inst_pc = work_pc;;)
 				{
 					if (inst_pc == func_call_next)
 					{
