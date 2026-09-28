@@ -2510,13 +2510,6 @@
                    </widget>
                   </item>
                   <item>
-                   <widget class="QCheckBox" name="antiCheatSavestates">
-                    <property name="text">
-                     <string>Anti-Cheat Savestates Mode</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
                    <widget class="QCheckBox" name="debugConsoleMode">
                     <property name="text">
                      <string>Debug Console Mode</string>
@@ -2576,6 +2569,28 @@
                    <widget class="QCheckBox" name="silenceAllLogs">
                     <property name="text">
                      <string>Silence All Logs</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </item>
+              <item>
+                <widget class="QGroupBox" name="gb_advanced_savestates">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="title">
+                  <string>Savestates</string>
+                 </property>
+                 <layout class="QVBoxLayout" name="gb_advanced_savestates_layout">
+                  <item>
+                   <widget class="QCheckBox" name="antiCheatSavestates">
+                    <property name="text">
+                     <string>Anti-Cheat Savestates Mode</string>
                     </property>
                    </widget>
                   </item>
