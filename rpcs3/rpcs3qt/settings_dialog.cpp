@@ -1447,7 +1447,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	EnhanceCheckBox(emu_settings_type::DisableAsyncHostMM, ui->disableAsyncHostMM, tooltips.settings.disable_async_host_mm);
 	EnhanceCheckBox(emu_settings_type::DisableSpinOptimization, ui->disableSpinOptimization, tooltips.settings.disable_spin_optimization);
-	EnhanceCheckBox(emu_settings_type::EnabledSPUEventsBusyLoop, ui->enableSpuEventsBusyLoop, tooltips.settings.enable_spu_events_busy_loop);
 	EnhanceCheckBox(emu_settings_type::DisableHWTexelRemapping, ui->disableHardwareTexelRemapping, tooltips.settings.disable_hw_texel_remapping);
 	EnhanceCheckBox(emu_settings_type::DisableHWBlending, ui->disableHardwareBlending, tooltips.settings.disable_hw_blending);
 
@@ -2265,6 +2264,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	EnhanceCheckBox(emu_settings_type::AccurateClineStores, ui->accurateClineStores, tooltips.settings.accurate_cache_line_stores);
 	EnhanceCheckBox(emu_settings_type::HookStaticFuncs, ui->hookStFunc, tooltips.settings.hook_static_functions);
 	EnhanceCheckBox(emu_settings_type::PerformanceReport, ui->perfReport, tooltips.settings.enable_performance_report);
+	EnhanceCheckBox(emu_settings_type::EnabledSPUEventsBusyLoop, ui->enableSpuEventsBusyLoop, tooltips.settings.enable_spu_events_busy_loop);
 
 	// Checkboxes: IO debug options
 	EnhanceCheckBox(emu_settings_type::IoDebugOverlay, ui->debugOverlayIO, tooltips.settings.debug_overlay_io);

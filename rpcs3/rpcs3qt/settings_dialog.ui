@@ -2552,13 +2552,6 @@
                    </widget>
                   </item>
                   <item>
-                   <widget class="QCheckBox" name="enableSpuEventsBusyLoop">
-                    <property name="text">
-                     <string>Enable SPU Events Busy Loop</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item>
                    <widget class="QCheckBox" name="spuLoopDetection">
                     <property name="text">
                      <string>Enable SPU loop detection</string>
@@ -4594,6 +4587,13 @@
                  <widget class="QCheckBox" name="perfReport">
                   <property name="text">
                    <string>Enable performance report</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QCheckBox" name="enableSpuEventsBusyLoop">
+                  <property name="text">
+                   <string>Enable SPU Events Busy Loop</string>
                   </property>
                  </widget>
                 </item>
