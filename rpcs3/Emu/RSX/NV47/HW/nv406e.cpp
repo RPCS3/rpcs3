@@ -17,7 +17,7 @@ namespace rsx
 
 			// Write ref+get (get will be written again with the same value at command end)
 			auto& dma = *vm::_ptr<RsxDmaControl>(RSX(ctx)->dma_address);
-			dma.get.release(RSX(ctx)->fifo_ctrl->get_pos());
+			dma.get.store(RSX(ctx)->fifo_ctrl->get_pos() + 4);
 			dma.ref.store(arg);
 		}
 
@@ -134,7 +134,7 @@ namespace rsx
 				arg = 1;
 			}
 
-			util::write_gcm_label<false, true>(ctx, reg, addr, arg);
+			util::write_gcm_label<false, true>(ctx, reg, addr, arg, RSX(ctx)->fifo_ctrl->get_pos() + 4);
 		}
 	}
 }
