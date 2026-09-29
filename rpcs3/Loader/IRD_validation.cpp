@@ -206,46 +206,6 @@ static std::string resolve_iso_game_dir(const disc_content_list& files)
 	return {};
 }
 
-// Tells whether the files of an ISO image can be read back at all. An image whose key is missing still lists its
-// files just fine (the file system of a PS3 disc lies in the clear, and so does its "PARAM.SFO" more often than
-// not), but hands out nothing but noise for whatever sits in an encrypted region: without this, the check would
-// read the whole image only to call every single one of its files wrong.
-// The files below are the very ones the key detection of "iso_file_decryption" relies on, so their magic is the
-// same yardstick used there
-static bool iso_content_is_readable(iso_archive& archive, const disc_content_list& content, const std::string& game_dir)
-{
-	static const std::array<std::pair<std::string, std::string>, 2> known_magics
-	{{
-		{"/USRDIR/EBOOT.BIN", "SCE"},
-		{"/LICDIR/LIC.DAT", "PS3LICDA"}
-	}};
-
-	const std::string upper_game_dir = "/" + fmt::to_upper(game_dir);
-
-	for (const auto& [suffix, magic] : known_magics)
-	{
-		const auto found = content.find(upper_game_dir + suffix);
-
-		if (found == content.cend() || !found->second.node || found->second.size < magic.size())
-		{
-			continue;
-		}
-
-		const fs::file file(archive.get_iso_file(archive.path(), fs::read, *found->second.node));
-		std::string head(magic.size(), '\0');
-
-		if (!file || file.read(head.data(), head.size()) != head.size())
-		{
-			return false;
-		}
-
-		return head == magic;
-	}
-
-	// Neither file is there to tell: whatever the image holds, it is not for this check to refuse it
-	return true;
-}
-
 disc_check_status content_validation::check_ird_content(const std::string& game_path, const std::string& ird_path,
 	disc_check_report& report)
 {
@@ -272,8 +232,6 @@ disc_check_status content_validation::check_ird_content(const std::string& game_
 
 	if (report.is_iso)
 	{
-		// The whole file system of the image is walked once here: every file is then read back through the node it
-		// is listed with, and an encrypted image (3k3y, Redump) is decrypted on the fly while doing so
 		archive = std::make_unique<iso_archive>(game_path);
 
 		if (!archive->is_valid())
@@ -282,7 +240,49 @@ disc_check_status content_validation::check_ird_content(const std::string& game_
 			report.status = disc_check_status::ERROR_OPENING_ISO;
 			return report.status;
 		}
+	}
 
+	sys_log.notice("check_ird_content: Checking the %s '%s' against the IRD file '%s'", report.is_iso ? "ISO file" : "JB folder", game_path, ird_path);
+
+	// The IRD comes first since, besides the hashes, it carries the key of the disc: an encrypted image whose key
+	// file is missing is read back through that one
+	const ird_file ird(ird_path);
+
+	if (!ird.is_valid())
+	{
+		sys_log.error("check_ird_content: Failed to parse IRD file: %s", ird_path);
+		report.status = disc_check_status::ERROR_PARSING_IRD;
+		return report.status;
+	}
+
+	// Caught before anything is hashed: reading an encrypted image no key was found for would take as long as
+	// reading the whole disc, only to report every single one of its files as invalid. The image itself is what
+	// answers, through the very check the emulator makes before booting one, so nothing is read twice here
+	if (const iso_key_status key_status = report.is_iso ? archive->get_key_status() : iso_key_status::OK;
+		key_status != iso_key_status::OK)
+	{
+		if (!archive->set_disc_key(ird.get_disc_key()))
+		{
+			sys_log.error("check_ird_content: The ISO file is encrypted and neither a key file nor the key stored in the "
+				"IRD file can read it back: %s", game_path);
+
+			// Told apart the way the boot path tells them apart, since the way out is not the same one: a key file
+			// that belongs to another disc has to be replaced, a missing one has to be put there to begin with
+			report.status = key_status == iso_key_status::INVALID ?
+				disc_check_status::ERROR_KEY_INVALID : disc_check_status::ERROR_KEY_MISSING;
+
+			return report.status;
+		}
+
+		report.decrypted_with_ird_key = true;
+		sys_log.success("check_ird_content: The ISO file is decrypted through the key stored in the IRD file: %s", game_path);
+	}
+
+	// Walked only now that the image is known to be readable, so a check that was never going to hash anything
+	// lists nothing either. The file system of the image is walked once here: every file is then read back
+	// through the node it is listed with, and an encrypted image (3k3y, Redump) is decrypted on the fly
+	if (report.is_iso)
+	{
 		list_iso_files(archive->root(), "", content);
 		game_dir = resolve_iso_game_dir(content);
 	}
@@ -301,35 +301,6 @@ disc_check_status content_validation::check_ird_content(const std::string& game_
 		sys_log.error("check_ird_content: No 'PS3_GAME/PARAM.SFO' file found: %s", game_path);
 		report.status = disc_check_status::ERROR_NOT_A_PS3_GAME;
 		return report.status;
-	}
-
-	sys_log.notice("check_ird_content: Checking the %s '%s' against the IRD file '%s'", report.is_iso ? "ISO file" : "JB folder", game_path, ird_path);
-
-	// The IRD comes first since, besides the hashes, it carries the key of the disc: an encrypted image whose key
-	// file is missing is read back through that one
-	const ird_file ird(ird_path);
-
-	if (!ird.is_valid())
-	{
-		sys_log.error("check_ird_content: Failed to parse IRD file: %s", ird_path);
-		report.status = disc_check_status::ERROR_PARSING_IRD;
-		return report.status;
-	}
-
-	// Caught before anything is hashed: reading an encrypted image no key was found for would take as long as
-	// reading the whole disc, only to report every single one of its files as invalid
-	if (report.is_iso && !iso_content_is_readable(*archive, content, game_dir))
-	{
-		if (!archive->set_disc_key(ird.get_disc_key()) || !iso_content_is_readable(*archive, content, game_dir))
-		{
-			sys_log.error("check_ird_content: The ISO file is encrypted and neither a key file nor the key stored in the "
-				"IRD file can read it back: %s", game_path);
-			report.status = disc_check_status::ERROR_ISO_ENCRYPTED;
-			return report.status;
-		}
-
-		report.decrypted_with_ird_key = true;
-		sys_log.success("check_ird_content: The ISO file is decrypted through the key stored in the IRD file: %s", game_path);
 	}
 
 	// The game is recognized the very same way the dumping tools do: through the "PARAM.SFO" of its game directory
@@ -430,6 +401,11 @@ disc_check_status content_validation::check_ird_content(const std::string& game_
 	// to read: whatever gives up before this point never pays for it
 	std::vector<u8> buffer;
 
+	// One handle on the image serves every file of it as well, since only the node it is pointed at changes:
+	// opening it per file would ask the host for a handle, and a drive for a seek, thousands of times over
+	fs::file iso_handle;
+	iso_file* iso_reader = nullptr;
+
 	const auto listed = std::chrono::steady_clock::now();
 
 	usz file_index = 0;
@@ -458,11 +434,23 @@ disc_check_status content_validation::check_ird_content(const std::string& game_
 			{
 				std::string hash;
 
-				const fs::file file = content_file->node ?
-					fs::file(archive->get_iso_file(archive->path(), fs::read, *content_file->node)) :
-					fs::file(root + content_file->path);
+				fs::file folder_file;
 
-				if (!hash_file(file, allow_rebuild ? disc_file->size : 0, buffer, hash))
+				if (!content_file->node)
+				{
+					folder_file = fs::file(root + content_file->path);
+				}
+				else if (iso_reader)
+				{
+					iso_reader->rebind(*content_file->node);
+				}
+				else if (std::unique_ptr<fs::file_base> base = archive->get_iso_file(archive->path(), fs::read, *content_file->node))
+				{
+					iso_reader = static_cast<iso_file*>(base.get());
+					iso_handle = fs::file(std::move(base));
+				}
+
+				if (!hash_file(content_file->node ? iso_handle : folder_file, allow_rebuild ? disc_file->size : 0, buffer, hash))
 				{
 					if (m_status == content_hash_status::ABORTED)
 					{

@@ -216,6 +216,14 @@ bool content_validation::hash_file(const fs::file& file, u64 padded_size, std::v
 		m_bytes_read += read;
 	}
 
+	// Content that stopped coming before its end leaves the hash of a part of it, which passes for the hash of
+	// something else entirely: an unreadable sector of a disc has to fail the check, not answer it wrongly
+	if (m_status != content_hash_status::ABORTED && size != file.size())
+	{
+		sys_log.error("hash_file: Failed to read the whole content: %s (%d/%d)", m_name, size, file.size());
+		return false;
+	}
+
 	// A file shorter than the one on the disc can only match once its missing tail is hashed as zeros: that is how
 	// a "PS3UPDAT.PUP" downloaded apart is turned back into the 256 MB one the disc holds
 	if (padded_size > size)

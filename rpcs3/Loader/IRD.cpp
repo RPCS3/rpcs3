@@ -433,7 +433,7 @@ bool ird_file::parse_iso_header(const std::vector<u8>& header, const std::map<u6
 	fs::file stream = fs::make_stream<std::vector<u8>>(std::vector<u8>(header));
 	iso_fs_node root{};
 
-	if (!iso_parse_file_system(stream, root, m_path))
+	if (!iso_archive::iso_parse_file_system(stream, root, m_path))
 	{
 		return false;
 	}

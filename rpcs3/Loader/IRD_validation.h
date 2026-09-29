@@ -31,7 +31,8 @@ enum class disc_check_status
 	ABORTED,              // Validation aborted by the user
 	ERROR_NOT_A_PS3_GAME, // No "PS3_GAME/PARAM.SFO" file found
 	ERROR_OPENING_ISO,    // The ISO file could not be opened or recognized
-	ERROR_ISO_ENCRYPTED,  // The ISO file is encrypted and no key to read it back was found
+	ERROR_KEY_MISSING,    // The ISO file is encrypted and no key to read it back was found
+	ERROR_KEY_INVALID,    // A key file was found for the ISO file, but it belongs to another disc
 	ERROR_PARSING_IRD     // The IRD file could not be read
 };
 

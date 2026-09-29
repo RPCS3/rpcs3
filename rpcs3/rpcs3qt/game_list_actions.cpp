@@ -8,11 +8,9 @@
 
 #include "Utilities/Thread.h"
 #include "Utilities/File.h"
-#include "Loader/ISO.h"
 
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
-#include "Emu/VFS.h"
 
 #include "Input/pad_thread.h"
 
@@ -698,23 +696,14 @@ void game_list_actions::ShowIrdIntegrityDialog(const std::string& game_path)
 			break;
 		case disc_check_status::ERROR_NOT_A_PS3_GAME:
 			text_dialog = tr("Integrity check failed!\n\n'%0' does not hold a PS3 game").arg(QString::fromStdString(game_path));
-
-			// The file system of a disc lies in the clear even on an encrypted image, while its "PARAM.SFO" does
-			// not: an image whose files are listed but unreadable is one no key was found for
-			if (report.is_iso)
-			{
-				text_dialog += tr("\n\nNOTE: if the image is encrypted, check that its key file (.dkey or .key) is next "
-					"to it or in the Redump keys folder");
-			}
-
 			break;
 		case disc_check_status::ERROR_OPENING_ISO:
 			text_dialog = tr("Integrity check failed!\n\nFailed to open the ISO file: '%0'").arg(QString::fromStdString(game_path));
 			break;
-		case disc_check_status::ERROR_ISO_ENCRYPTED:
-			text_dialog = tr("Integrity check failed!\n\nThe ISO file is encrypted and no key to read it back was found:\n'%0'\n\n"
-				"Put its key file (.dkey or .key), named after the image, next to it or in the Redump keys folder")
-				.arg(QString::fromStdString(game_path));
+		// Both are shown through the dialog the boot path puts an unreadable image in, which names the key file that
+		// is being looked for and opens the folder it goes in
+		case disc_check_status::ERROR_KEY_MISSING:
+		case disc_check_status::ERROR_KEY_INVALID:
 			break;
 		case disc_check_status::ERROR_PARSING_IRD:
 			text_dialog = tr("Integrity check failed!\n\nFailed to parse the IRD file: '%0'").arg(ird_path);
@@ -729,8 +718,15 @@ void game_list_actions::ShowIrdIntegrityDialog(const std::string& game_path)
 		// Tell the progress bar thread to terminate
 		m_game_validator->set_count(0);
 
-		Emu.CallFromMainThread([this, text_dialog, text_details, info_dialog]()
+		Emu.CallFromMainThread([this, text_dialog, text_details, info_dialog, status = report.status, game_path]()
 		{
+			if (status == disc_check_status::ERROR_KEY_MISSING || status == disc_check_status::ERROR_KEY_INVALID)
+			{
+				gui::utils::show_disc_key_error(m_game_list_frame, tr("Game Integrity"), game_path,
+					status == disc_check_status::ERROR_KEY_INVALID, tr("Integrity check failed!<br><br>"));
+				return;
+			}
+
 			QMessageBox mb(info_dialog ? QMessageBox::Information : QMessageBox::Critical, tr("Game Integrity"),
 				text_dialog, QMessageBox::Ok, m_game_list_frame);
 
