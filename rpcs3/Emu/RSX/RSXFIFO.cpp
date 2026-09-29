@@ -211,6 +211,7 @@ namespace rsx
 
 				// Update FIFO GET
 				sync_get();
+				atomic_fence_seq_cst();
 			}
 
 			const auto ret = read_from_ptr_unsafe<be_t<u32>>(+m_cache[0], addr - m_cache_addr);
