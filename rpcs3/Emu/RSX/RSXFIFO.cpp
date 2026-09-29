@@ -438,7 +438,8 @@ namespace rsx
 
 			if (!count)
 			{
-				m_ctrl->get.release(m_fifo_pos += 4);
+				m_fifo_pos += 4;
+				sync_get();
 				data.reg = FIFO_NOP;
 				return;
 			}
