@@ -2573,6 +2573,13 @@
                    </widget>
                   </item>
                   <item>
+                   <widget class="QCheckBox" name="accurateSpuReservations">
+                    <property name="text">
+                     <string>Accurate SPU Reservations</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
                    <widget class="QCheckBox" name="llvmPrecompilation">
                     <property name="text">
                      <string>PPU/SPU LLVM Precompilation</string>
@@ -2770,6 +2777,13 @@
                    <widget class="QCheckBox" name="allowHostGPULabels">
                     <property name="text">
                      <string>Allow Host GPU Labels (Experimental)</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QCheckBox" name="blitEngineScaling">
+                    <property name="text">
+                     <string>Disable Blit Engine Upscaling</string>
                     </property>
                    </widget>
                   </item>
@@ -4449,13 +4463,6 @@
                    <string>Disable Asynchronous Memory Manager</string>
                   </property>
                  </widget>
-                </item>
-                <item>
-                  <widget class="QCheckBox" name="blitEngineScaling">
-                  <property name="text">
-                    <string>Disable Blit Engine Upscaling</string>
-                  </property>
-                  </widget>
                 </item>
                 <item>
                  <widget class="QCheckBox" name="disableFIFOReordering">

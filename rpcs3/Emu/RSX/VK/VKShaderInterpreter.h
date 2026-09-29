@@ -23,7 +23,6 @@ namespace vk
 		using async_build_fn_callback = std::function<void(std::shared_ptr<glsl::program>&)>;
 
 		VkDevice m_device = VK_NULL_HANDLE;
-		VkPipelineCache m_driver_pipeline_cache = VK_NULL_HANDLE;
 
 		struct pipeline_key
 		{

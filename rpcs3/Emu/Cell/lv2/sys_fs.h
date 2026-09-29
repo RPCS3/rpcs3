@@ -135,6 +135,7 @@ enum class lv2_mp_flag
 	no_uid_gid,
 	strict_get_block_size,
 	cache,
+	reflection,
 
 	__bitset_enum_max
 };
