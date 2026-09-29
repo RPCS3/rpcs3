@@ -420,7 +420,7 @@ bool lv2_socket_p2ps::handle_connected(p2ps_encapsulated_tcp* tcp_header, u8* da
 				return true;
 			}
 
-			if (!received_data.count(tcp_header->seq))
+			if (!received_data.count(tcp_header->seq) && tcp_header->length != 0u)
 			{
 				// New data
 				received_data.emplace(tcp_header->seq, std::vector<u8>(data, data + tcp_header->length));
