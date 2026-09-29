@@ -978,6 +978,9 @@ namespace utils
 			void* opaque = nullptr;
 			while (const AVCodec* codec = av_codec_iterate(&opaque))
 			{
+				if (!av_codec_is_encoder(codec))
+					continue;
+
 				if (codec->type == AVMediaType::AVMEDIA_TYPE_AUDIO)
 				{
 					media_log.notice("video_encoder: Found audio codec %d = %s", static_cast<int>(codec->id), codec->name);
