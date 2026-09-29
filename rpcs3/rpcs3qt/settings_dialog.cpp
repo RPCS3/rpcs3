@@ -101,9 +101,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	ui->tab_widget_settings->setUsesScrollButtons(false);
 	ui->tab_widget_settings->tabBar()->setObjectName("tab_bar_settings");
 
-	// Enter closes the dialog without saving
-	ui->buttonBox->button(QDialogButtonBox::StandardButton::Cancel)->setDefault(true);
-
 	if (!m_gui_settings->GetValue(gui::m_showDebugTab).toBool())
 	{
 		ui->tab_widget_settings->removeTab(9);
