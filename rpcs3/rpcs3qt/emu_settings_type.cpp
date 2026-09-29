@@ -242,6 +242,7 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::EmptyHdd0Tmp,          get_cfg_location(local_cfg.vfs.empty_hdd0_tmp) },
 	{ emu_settings_type::LimitCacheSize,        get_cfg_location(local_cfg.vfs.limit_cache_size) },
 	{ emu_settings_type::MaximumCacheSize,      get_cfg_location(local_cfg.vfs.cache_max_size) },
+	{ emu_settings_type::EmulateHddSpeed,       get_cfg_location(local_cfg.vfs.emulate_hdd_speed) },
 
 	// Savestates
 	{ emu_settings_type::SuspendEmulationSavestateMode,       get_cfg_location(local_cfg.savestate.suspend_emu) },

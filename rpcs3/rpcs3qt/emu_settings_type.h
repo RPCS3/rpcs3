@@ -234,6 +234,7 @@ enum class emu_settings_type
 	EmptyHdd0Tmp,
 	LimitCacheSize,
 	MaximumCacheSize,
+	EmulateHddSpeed,
 
 	// Log
 	Log,
