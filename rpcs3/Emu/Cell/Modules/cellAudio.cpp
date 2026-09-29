@@ -436,22 +436,31 @@ namespace
 	// Locks the audio mutex from a guest thread. Its holder can wait for a cpu_thread::suspend_all inside the
 	// mmapper syscalls, so a waiter must acknowledge the suspend with cpu_flag::wait instead of blocking silently.
 	// Only for functions accessing VM memory under the lock, the others simply set cpu_flag::wait on entry.
+	// check_state() may block, so it is performed while the mutex is not owned.
 	std::unique_lock<shared_mutex> lock_audio(shared_mutex& mutex)
 	{
 		std::unique_lock lock(mutex, std::try_to_lock);
 
-		if (!lock)
+		if (lock)
 		{
-			cpu_thread* cpu = cpu_thread::get_current();
-			const bool had_wait = !cpu || cpu->state.test_and_set(cpu_flag::wait);
-
-			lock.lock();
-
-			if (!had_wait)
-			{
-				cpu->check_state();
-			}
+			return lock;
 		}
+
+		cpu_thread* cpu = cpu_thread::get_current();
+
+		if (!cpu || cpu->state & cpu_flag::wait)
+		{
+			lock.lock();
+			return lock;
+		}
+
+		do
+		{
+			cpu->state += cpu_flag::wait;
+			mutex.lock_unlock();
+			cpu->check_state();
+		}
+		while (!lock.try_lock());
 
 		return lock;
 	}
@@ -2367,11 +2376,17 @@ error_code cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 	return CELL_OK;
 }
 
-error_code cellAudioMiscSetAccessoryVolume(u32 devNum, float volume)
+error_code cellAudioMiscSetAccessoryVolume(ppu_thread& ppu, u32 devNum, float volume)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellAudio.todo("cellAudioMiscSetAccessoryVolume(devNum=%d, volume=%f)", devNum, volume);
 
-	if (!g_fxo->get<cell_audio>().init)
+	auto& g_audio = g_fxo->get<cell_audio>();
+
+	std::unique_lock lock(g_audio.mutex);
+
+	if (!g_audio.init)
 	{
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
@@ -2410,11 +2425,17 @@ error_code cellAudioSendAck(ppu_thread& ppu, u64 data3)
 	return CELL_OK;
 }
 
-error_code cellAudioSetPersonalDevice(s32 iPersonalStream, s32 iDevice)
+error_code cellAudioSetPersonalDevice(ppu_thread& ppu, s32 iPersonalStream, s32 iDevice)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellAudio.todo("cellAudioSetPersonalDevice(iPersonalStream=%d, iDevice=%d)", iPersonalStream, iDevice);
 
-	if (!g_fxo->get<cell_audio>().init)
+	auto& g_audio = g_fxo->get<cell_audio>();
+
+	std::unique_lock lock(g_audio.mutex);
+
+	if (!g_audio.init)
 	{
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
@@ -2430,11 +2451,17 @@ error_code cellAudioSetPersonalDevice(s32 iPersonalStream, s32 iDevice)
 	return CELL_OK;
 }
 
-error_code cellAudioUnsetPersonalDevice(s32 iPersonalStream)
+error_code cellAudioUnsetPersonalDevice(ppu_thread& ppu, s32 iPersonalStream)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellAudio.todo("cellAudioUnsetPersonalDevice(iPersonalStream=%d)", iPersonalStream);
 
-	if (!g_fxo->get<cell_audio>().init)
+	auto& g_audio = g_fxo->get<cell_audio>();
+
+	std::unique_lock lock(g_audio.mutex);
+
+	if (!g_audio.init)
 	{
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
