@@ -35,6 +35,9 @@ namespace rsx
 			const auto& sema = vm::_ref<RsxSemaphore>(addr);
 			const auto& atomic_sema = vm::_ref<atomic_t<RsxSemaphore>>(addr);
 
+			RSX(ctx)->last_sema_cmd = RSX(ctx)->fifo_ctrl->get_pos() - 4;
+			RSX(ctx)->last_sema_addr = addr;
+
 			if (sema == arg)
 			{
 				// Flip semaphore doesnt need wake-up delay

@@ -176,6 +176,9 @@ namespace rsx
 		u32 restore_point = 0;
 		u32 dbg_step_pc = 0;
 		u32 last_known_code_start = 0;
+		u32 last_code_jump = 0;
+		u32 last_sema_cmd = 0;
+		u32 last_sema_addr = 0;
 		atomic_t<u32> external_interrupt_lock{ 0 };
 		atomic_t<bool> external_interrupt_ack{ false };
 		atomic_t<u32> is_initialized{0};
