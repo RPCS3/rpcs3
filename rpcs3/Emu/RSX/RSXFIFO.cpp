@@ -222,6 +222,8 @@ namespace rsx
 		{
 			invalidate_cache();
 
+			m_thread->last_code_jump = m_fifo_pos;
+
 			if (spin_cmd && m_fifo_pos == get)
 			{
 				m_memwatch_addr = get;
@@ -777,7 +779,7 @@ namespace rsx
 				}
 
 				fifo_ctrl->set_get(std::exchange(fifo_ret_addr, RSX_CALL_STACK_EMPTY));
-				last_known_code_start = ctrl->get;
+				last_known_code_start = fifo_ctrl->get_pos();
 				return;
 			}
 
