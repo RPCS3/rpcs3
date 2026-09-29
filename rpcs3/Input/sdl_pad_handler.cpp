@@ -160,6 +160,19 @@ void sdl_pad_handler::init_config(cfg_pad* cfg)
 	cfg->from_default();
 }
 
+namespace
+{
+	// GUIDs are produced by SDL_GUIDToString().
+	// SDL only promotes a device to a gamepad when it has a mapping for it; without one
+	// the device is still reachable through SDL_GetJoysticks(), but never appears through
+	// SDL_GetGamepads() and therefore cannot be used by this handler at all.
+	const char* g_builtin_sdl_mappings[] =
+	{
+		// GameSir Nova Lite, D-input mode (VID 0x3537, PID 0x1041)
+		"0300ff0a373500004110000000010000,GameSir Nova Lite,a:b0,b:b1,x:b3,y:b4,back:b10,guide:b12,start:b11,leftstick:b13,rightstick:b14,leftshoulder:b6,rightshoulder:b7,dpup:h0.1,dpright:h0.2,dpdown:h0.4,dpleft:h0.8,lefttrigger:a4,righttrigger:a5,leftx:a0,lefty:a1,rightx:a2,righty:a3,platform:macOS",
+	};
+}
+
 bool sdl_pad_handler::Init()
 {
 	if (m_is_init)
@@ -183,6 +196,16 @@ bool sdl_pad_handler::Init()
 		else
 		{
 			sdl_log.warning("Could not add mappings from file '%s'! File does not exist!", db_path);
+		}
+	}
+
+	// Register built-in mappings for devices SDL does not know about, so they are
+	// promoted to gamepads and work out of the box.
+	for (const char* mapping : g_builtin_sdl_mappings)
+	{
+		if (SDL_AddGamepadMapping(mapping) < 0)
+		{
+			sdl_log.error("Could not add built-in mapping! SDL Error: %s", SDL_GetError());
 		}
 	}
 
