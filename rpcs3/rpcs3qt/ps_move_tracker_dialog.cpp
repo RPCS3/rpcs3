@@ -3,7 +3,6 @@
 #include "ui_ps_move_tracker_dialog.h"
 #include "Emu/Cell/Modules/cellCamera.h"
 #include "qt_camera_handler.h"
-#include "qt_utils.h"
 #include "Input/ps_move_handler.h"
 #include "Input/ps_move_config.h"
 #include "Input/ps_move_tracker.h"
@@ -265,8 +264,6 @@ ps_move_tracker_dialog::ps_move_tracker_dialog(QWidget* parent)
 	}
 
 	ui->imageLabel->installEventFilter(this);
-
-	gui::utils::keep_tab_bar_focused(ui->settingsTabWidget);
 }
 
 ps_move_tracker_dialog::~ps_move_tracker_dialog()

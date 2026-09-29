@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "recording_settings_dialog.h"
 #include "ui_recording_settings_dialog.h"
-#include "qt_utils.h"
 
 #include <QPushButton>
 
@@ -263,8 +262,6 @@ recording_settings_dialog::recording_settings_dialog(QWidget* parent)
 
 	update_ui();
 	update_preset();
-
-	gui::utils::keep_tab_bar_focused(ui->tabWidget);
 }
 
 recording_settings_dialog::~recording_settings_dialog()
