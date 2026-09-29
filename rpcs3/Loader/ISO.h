@@ -103,6 +103,12 @@ public:
 
 	bool init(const std::string& path, iso_archive* archive = nullptr);
 
+	// Sets the decryption key out of the "D1" of the disc, for an encrypted image no key file was found for
+	// (an IRD file stores that very field, so a game checked against one can be read back without a ".dkey").
+	// The key is put through the very same test a key file goes through, so one belonging to another disc is
+	// refused instead of turning every read into garbage
+	bool set_key_from_d1(iso_archive& archive, const std::array<u8, 16>& disc_key);
+
 	iso_encryption_type get_enc_type() const { return m_enc_type; }
 
 	// Tells whether the content of the image can be read back at all, and if not what is wrong with its key.

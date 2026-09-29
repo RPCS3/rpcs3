@@ -683,6 +683,53 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 	return true;
 }
 
+bool iso_file_decryption::set_key_from_d1(iso_archive& archive, const std::array<u8, 16>& disc_key)
+{
+	// The "D1" of a disc is not the key itself: the key comes out of encrypting it with the very same constants
+	// the 3k3y watermark path above uses, since both carry that same field of the disc
+	static constexpr u8 key_d1[] = {0x38, 0x0b, 0xcf, 0x0b, 0x53, 0x45, 0x5b, 0x3c, 0x78, 0x17, 0xab, 0x4f, 0xa3, 0xba, 0x90, 0xed};
+	static constexpr u8 iv_d1[] = {0x69, 0x47, 0x47, 0x72, 0xaf, 0x6f, 0xda, 0xb3, 0x42, 0x74, 0x3a, 0xef, 0xaa, 0x18, 0x62, 0x87};
+
+	u8 key[16];
+	u8 iv[16];
+
+	std::memcpy(key, disc_key.data(), sizeof(key));
+	std::memcpy(iv, iv_d1, sizeof(iv));
+
+	aes_context aes_d1;
+
+	if (aes_setkey_enc(&aes_d1, key_d1, 128) != 0 || aes_crypt_cbc(&aes_d1, AES_ENCRYPT, sizeof(key), iv, key, key) != 0 ||
+		aes_setkey_dec(&m_aes_dec, key, 128) != 0)
+	{
+		iso_log.error("set_key_from_d1: Failed to derive the decryption key from the disc key");
+		return false;
+	}
+
+	const iso_encryption_type prev_enc_type = m_enc_type;
+	const std::optional<iso_key_status> prev_key_status = m_key_status;
+
+	// The regions of the image are already known: only its type was left as "not encrypted" for the lack of a key
+	m_enc_type = iso_encryption_type::REDUMP;
+	m_key_status = iso_key_status::OK;
+
+	std::vector<iso_magic_block> blocks;
+
+	// Nothing else tells a "D1" belonging to another disc apart from the right one, and an image read back
+	// through a wrong key hands out noise for every single one of its files
+	if (m_region_info.size() > 1 && read_magic_blocks(archive, blocks) == iso_type_status::REDUMP_ISO &&
+		!decrypts_all_blocks(m_aes_dec, blocks))
+	{
+		m_enc_type = prev_enc_type;
+		m_key_status = prev_key_status;
+
+		iso_log.error("set_key_from_d1: The disc key does not decrypt the image: '%s'", archive.path());
+
+		return false;
+	}
+
+	return !m_region_info.empty();
+}
+
 iso_key_status iso_file_decryption::get_key_status(iso_archive& archive)
 {
 	if (m_key_status)
@@ -1316,6 +1363,11 @@ iso_archive::iso_archive(const std::string& path)
 		invalidate();
 		return;
 	}
+}
+
+bool iso_archive::set_disc_key(const std::array<u8, 16>& disc_key)
+{
+	return m_dec && m_dec->set_key_from_d1(*this, disc_key);
 }
 
 iso_fs_node* iso_archive::retrieve(const std::string& path)
