@@ -4,8 +4,8 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/lv2/sys_rsx.h"
 
-
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/RSX/NV47/HW/nv47.h"
 #include "Emu/RSX/NV47/HW/nv47_sync.hpp"
 #include "Emu/RSX/NV47/HW/context_accessors.define.h" // TODO: Context objects belong in FW not HW
@@ -67,6 +67,9 @@ namespace rsx
 
 	void user_command(context* ctx, u32, u32 arg)
 	{
+		// USER_COMMAND induces a full drain of the backend and frontend.
+		RSX(ctx)->sync();
+
 		if (!RSX(ctx)->isHLE)
 		{
 			sys_rsx_context_attribute(0x55555555, 0xFEF, 0, arg, 0, 0);

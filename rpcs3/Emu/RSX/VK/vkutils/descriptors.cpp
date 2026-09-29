@@ -1,6 +1,7 @@
 #include "Emu/IdManager.h"
 #include "descriptors.h"
 #include "garbage_collector.h"
+#include "util/logs.hpp"
 
 namespace vk
 {

@@ -10,6 +10,7 @@
 
 #include "util/sysinfo.hpp"
 #include "util/asm.hpp"
+#include "util/logs.hpp"
 
 namespace vk
 {

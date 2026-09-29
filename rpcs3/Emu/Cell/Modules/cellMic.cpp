@@ -208,6 +208,8 @@ u32 mic_context::register_device(const std::string& device_name)
 	case microphone_handler::standard:
 	case microphone_handler::real_singstar:
 	case microphone_handler::rocksmith:
+	case microphone_handler::eye_toy:
+	case microphone_handler::ps_eye:
 	{
 		microphone_device& device = ::at32(mic_list, index);
 		device = microphone_device(g_cfg.audio.microphone_type.get());
@@ -328,6 +330,8 @@ error_code microphone_device::open_microphone(const u8 type, const u32 dsp_r, co
 	switch (device_type)
 	{
 	case microphone_handler::standard:
+	case microphone_handler::eye_toy:
+	case microphone_handler::ps_eye:
 		break;
 	case microphone_handler::singstar:
 	case microphone_handler::real_singstar:
@@ -729,6 +733,8 @@ void microphone_device::get_data(const u32 num_samples)
 	}
 	case microphone_handler::standard:
 	case microphone_handler::rocksmith:
+	case microphone_handler::eye_toy:
+	case microphone_handler::ps_eye:
 	{
 		constexpr u8 channel_size = bit_resolution / 8;
 		const usz bufsize = num_samples * sample_size;
@@ -1458,7 +1464,15 @@ error_code cellMicGetType(s32 dev_num, vm::ptr<s32> ptr_type)
 		return CELL_MICIN_ERROR_NOT_INIT;
 
 	// TODO: get proper type (log message is trace because of massive spam)
-	*ptr_type = CELLMIC_TYPE_USBAUDIO; // Needed for Guitar Hero: Warriors of Rock (BLUS30487)
+	if (dev_num < static_cast<s32>(mic_thr.mic_list.size()))
+	{
+		const microphone_device& device = ::at32(mic_thr.mic_list, dev_num);
+		*ptr_type = device.get_mic_type();
+	}
+	else
+	{
+		*ptr_type = CELLMIC_TYPE_UNDEF;
+	}
 
 	return CELL_OK;
 }

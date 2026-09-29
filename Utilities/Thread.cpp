@@ -6,6 +6,7 @@
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/RSX/RSXThread.h"
+#include "Emu/system_config.h"
 #include "Thread.h"
 #include "Utilities/JIT.h"
 #include <cfenv>
@@ -96,6 +97,7 @@ DYNAMIC_IMPORT_RENAME("Kernel32.dll", SetThreadDescriptionImport, "SetThreadDesc
 #include "util/asm.hpp"
 #include "util/v128.hpp"
 #include "util/simd.hpp"
+#include "util/cctype.hpp"
 #include "util/sysinfo.hpp"
 #include "Emu/Memory/vm_locking.h"
 
@@ -185,9 +187,9 @@ bool IsDebuggerPresent()
 
 	for (const char* cp = status.data() + found + 10; cp <= status.data() + num_read; ++cp)
 	{
-		if (!std::isspace(*cp))
+		if (!utils::isspace(*cp))
 		{
-			return std::isdigit(*cp) != 0 && *cp != '0';
+			return utils::isdigit(*cp) != 0 && *cp != '0';
 		}
 	}
 
@@ -2806,6 +2808,14 @@ void thread_base::initialize(void (*error_cb)())
 	if (!m_thread && !m_thread.compare_and_swap_test(0, new_tid))
 	{
 		ensure(m_thread == new_tid);
+	}
+#endif
+
+#if !defined(ANDROID) && (defined(__linux__) || defined(__DragonFly__) || defined(__FreeBSD__))
+	// A new thread inherits its creator's affinity mask (e.g. compile workers spawned by a pinned PPU thread): reset it to the process mask
+	if (g_cfg.core.thread_scheduler != thread_scheduler_mode::os)
+	{
+		thread_ctrl::set_thread_affinity_mask(0);
 	}
 #endif
 

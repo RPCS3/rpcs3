@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "Emu/System.h"
-#include "Emu/system_config.h"
 #include "Emu/Audio/audio_utils.h"
 #include "qt_video_source.h"
 #include "gui_settings.h"

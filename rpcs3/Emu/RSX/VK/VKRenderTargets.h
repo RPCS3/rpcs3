@@ -365,12 +365,30 @@ namespace vk
 			return ds;
 		}
 
+		static bool is_reusable_surface(const vk::render_target* surface, const vk::render_target* ref)
+		{
+			return surface->value && surface->format() == ref->format() &&
+				surface->info.usage == ref->info.usage && surface->info.flags == ref->info.flags;
+		}
+
+		static void prepare_for_reuse(vk::command_buffer&, vk::render_target* surface)
+		{
+			surface->reset_surface_counters();
+			surface->last_rw_access_tag = 0;
+		}
+
 		static void clone_surface(
 			vk::command_buffer& cmd,
 			std::unique_ptr<vk::render_target>& sink, vk::render_target* ref,
 			u32 address, barrier_descriptor_t& prev,
 			const rsx::surface_scaling_config_t& scaling_config)
 		{
+			const bool initialize = !sink || !sink->has_refs();
+			if (sink && initialize)
+			{
+				prepare_for_reuse(cmd, sink.get());
+			}
+
 			if (!sink)
 			{
 				const auto [new_w, new_h] = rsx::apply_resolution_scale<true>(
@@ -392,6 +410,12 @@ namespace vk
 					VMM_ALLOCATION_POOL_SURFACE_CACHE,
 					ref->format_class());
 
+			}
+
+			if (initialize)
+			{
+				sink->reset();
+				sink->msaa_flags = rsx::surface_state_flags::ready;
 				sink->add_ref();
 
 				sink->sample_layout = ref->sample_layout;
@@ -401,7 +425,11 @@ namespace vk
 				sink->format_info = ref->format_info;
 				sink->memory_usage_flags = rsx::surface_usage_flags::storage;
 				sink->state_flags = rsx::surface_state_flags::erase_bkgnd;
-				sink->native_component_map = ref->native_component_map;
+				sink->set_native_component_layout(ref->native_component_map);
+				if (sink->resolve_surface)
+				{
+					sink->resolve_surface->set_native_component_layout(ref->native_component_map);
+				}
 				sink->sample_layout = ref->sample_layout;
 				sink->stencil_init_flags = ref->stencil_init_flags;
 				sink->native_pitch = static_cast<u32>(prev.width) * ref->get_bpp() * ref->samples_x;

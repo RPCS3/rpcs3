@@ -2,8 +2,6 @@
 #include "ShaderParam.h"
 #include "RSXFragmentProgram.h"
 
-#include "Assembler/CFG.h"
-
 #include <sstream>
 #include <unordered_map>
 

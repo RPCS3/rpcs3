@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "VKCommonDecompiler.h"
+#include "util/cctype.hpp"
 
 namespace vk
 {
@@ -50,7 +51,7 @@ namespace vk
 
 		for (int char_idx = name_length - max_index_length; char_idx < name_length; ++char_idx)
 		{
-			if (std::isdigit(name[char_idx]))
+			if (utils::isdigit(name[char_idx]))
 			{
 				index += name[char_idx];
 			}

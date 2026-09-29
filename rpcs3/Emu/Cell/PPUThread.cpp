@@ -54,7 +54,6 @@
 #endif
 
 #include <cfenv>
-#include <cctype>
 #include <span>
 #include <optional>
 #include <charconv>
@@ -65,6 +64,7 @@
 #include "util/simd.hpp"
 #include "util/sysinfo.hpp"
 #include "util/fnv_hash.hpp"
+#include "util/cctype.hpp"
 
 #include "Utilities/sema.h"
 
@@ -1481,7 +1481,7 @@ void ppu_thread::dump_regs(std::string& ret, std::any& custom_data) const
 			// NTS: size of 3 and above is required
 			// If ends with a newline, only one character is required
 			else if ((sv.size() == buf_tmp.size() || (sv.size() >= (buf_tmp[sv.size()] == '\n' ? 1 : 3))) &&
-				std::all_of(sv.begin(), sv.end(), [](u8 c){ return std::isprint(c); }))
+				std::all_of(sv.begin(), sv.end(), [](u8 c){ return utils::isprint(c); }))
 			{
 				fmt::append(ret, " -> \"%s\"", sv);
 			}
@@ -2158,7 +2158,7 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 			{
 				auto& [work_pc, modified_stack, restored_stack] = workload[wi];
 
-				for (usz inst_pc = work_pc;;)
+				for (u32 inst_pc = work_pc;;)
 				{
 					be_t<u32>& opcode = get_inst(inst_pc, func_call_before_target);
 
@@ -2308,7 +2308,7 @@ std::vector<std::pair<u32, u32>> ppu_thread::dump_callstack_list() const
 			{
 				auto& [work_pc, modified_stack, restored_stack] = workload[wi];
 
-				for (usz inst_pc = work_pc;;)
+				for (u32 inst_pc = work_pc;;)
 				{
 					if (inst_pc == func_call_next)
 					{
@@ -2663,6 +2663,7 @@ void ppu_thread::cpu_sleep()
 		ptr->compare_and_swap(this, nullptr);
 	}
 
+	hw_sleep_time = 0;
 	lv2_obj::awake(this);
 }
 
@@ -2723,6 +2724,7 @@ void ppu_thread::cpu_wait(bs_t<cpu_flag> old)
 		return;
 	}
 
+	hw_sleep_time = 0;
 	state.wait(old);
 }
 

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/localized_string.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/VFS.h"
@@ -18,6 +19,7 @@
 #include "Utilities/StrUtil.h"
 #include "util/init_mutex.hpp"
 #include "util/asm.hpp"
+#include "util/cctype.hpp"
 #include "Crypto/utils.h"
 
 #include <span>
@@ -228,26 +230,26 @@ static bool check_system_ver(vm::cptr<char> systemVersion)
 	return (
 		systemVersion &&
 		std::strlen(systemVersion.get_ptr()) == 7 &&
-		std::isdigit(systemVersion[0]) &&
-		std::isdigit(systemVersion[1]) &&
+		utils::isdigit(systemVersion[0]) &&
+		utils::isdigit(systemVersion[1]) &&
 		systemVersion[2] == '.' &&
-		std::isdigit(systemVersion[3]) &&
-		std::isdigit(systemVersion[4]) &&
-		std::isdigit(systemVersion[5]) &&
-		std::isdigit(systemVersion[6])
+		utils::isdigit(systemVersion[3]) &&
+		utils::isdigit(systemVersion[4]) &&
+		utils::isdigit(systemVersion[5]) &&
+		utils::isdigit(systemVersion[6])
 	);
 }
 
 disc_change_manager::disc_change_manager()
 {
-	Emu.GetCallbacks().enable_disc_eject(false);
-	Emu.GetCallbacks().enable_disc_insert(false);
+	g_emu_callbacks.enable_disc_eject(false);
+	g_emu_callbacks.enable_disc_insert(false);
 }
 
 disc_change_manager::~disc_change_manager()
 {
-	Emu.GetCallbacks().enable_disc_eject(false);
-	Emu.GetCallbacks().enable_disc_insert(false);
+	g_emu_callbacks.enable_disc_eject(false);
+	g_emu_callbacks.enable_disc_insert(false);
 }
 
 error_code disc_change_manager::register_callbacks(vm::ptr<CellGameDiscEjectCallback> func_eject, vm::ptr<CellGameDiscInsertCallback> func_insert)
@@ -264,8 +266,8 @@ error_code disc_change_manager::register_callbacks(vm::ptr<CellGameDiscEjectCall
 		state = is_disc_mounted ? eject_state::inserted : eject_state::ejected;
 	}
 
-	Emu.GetCallbacks().enable_disc_eject(!!func_eject && is_disc_mounted);
-	Emu.GetCallbacks().enable_disc_insert(!!func_insert && !is_disc_mounted);
+	g_emu_callbacks.enable_disc_eject(!!func_eject && is_disc_mounted);
+	g_emu_callbacks.enable_disc_insert(!!func_insert && !is_disc_mounted);
 
 	return CELL_OK;
 }
@@ -277,8 +279,8 @@ error_code disc_change_manager::unregister_callbacks()
 		eject_callback = vm::null;
 		insert_callback = vm::null;
 
-		Emu.GetCallbacks().enable_disc_eject(false);
-		Emu.GetCallbacks().enable_disc_insert(false);
+		g_emu_callbacks.enable_disc_eject(false);
+		g_emu_callbacks.enable_disc_insert(false);
 	};
 
 	if (is_inserting)
@@ -309,7 +311,7 @@ void disc_change_manager::eject_disc()
 	}
 
 	state = eject_state::busy;
-	Emu.GetCallbacks().enable_disc_eject(false);
+	g_emu_callbacks.enable_disc_eject(false);
 
 	ensure(eject_callback);
 
@@ -326,7 +328,7 @@ void disc_change_manager::eject_disc()
 		dcm.state = eject_state::ejected;
 
 		// Re-enable disc insertion only if the callback is still registered
-		Emu.GetCallbacks().enable_disc_insert(!!dcm.insert_callback);
+		g_emu_callbacks.enable_disc_insert(!!dcm.insert_callback);
 
 		return CELL_OK;
 	});
@@ -345,7 +347,7 @@ void disc_change_manager::insert_disc(u32 disc_type, std::string title_id)
 	}
 
 	state = eject_state::busy;
-	Emu.GetCallbacks().enable_disc_insert(false);
+	g_emu_callbacks.enable_disc_insert(false);
 
 	ensure(insert_callback);
 
@@ -371,7 +373,7 @@ void disc_change_manager::insert_disc(u32 disc_type, std::string title_id)
 		dcm.state = eject_state::inserted;
 
 		// Re-enable disc ejection only if the callback is still registered
-		Emu.GetCallbacks().enable_disc_eject(!!dcm.eject_callback);
+		g_emu_callbacks.enable_disc_eject(!!dcm.eject_callback);
 
 		dcm.is_inserting = false;
 

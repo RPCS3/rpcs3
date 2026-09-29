@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/VFS.h"
@@ -25,6 +26,7 @@
 #include <functional>
 #include <shared_mutex>
 #include "util/asm.hpp"
+#include "util/cctype.hpp"
 
 LOG_CHANNEL(sceNpTrophy);
 
@@ -254,7 +256,7 @@ void fmt_class_string<SceNpCommunicationId>::format(std::string& out, u64 arg)
 	const auto& id = get_object(arg);
 
 	const u8 term = id.data[9];
-	fmt::append(out, "{ data='%s', term='%s' (0x%x), num=%d, dummy=%d }", id.data, std::isprint(term) ? fmt::format("%c", term) : "", term, id.num, id.dummy);
+	fmt::append(out, "{ data='%s', term='%s' (0x%x), num=%d, dummy=%d }", id.data, utils::isprint(term) ? fmt::format("%c", term) : "", term, id.num, id.dummy);
 }
 
 // Helpers
@@ -277,7 +279,7 @@ static void show_trophy_notification(const trophy_context_t* ctxt, s32 trophyId)
 		sceNpTrophy.error("Failed to get info for trophy dialog. Error code 0x%x", +ret);
 	}
 
-	if (auto trophy_notification_dialog = Emu.GetCallbacks().get_trophy_notification_dialog())
+	if (auto trophy_notification_dialog = g_emu_callbacks.get_trophy_notification_dialog())
 	{
 		trophy_notification_dialog->ShowTrophyNotification(details, trophy_icon_data);
 	}
@@ -513,6 +515,7 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 	*context = idm::last_id();
 
 	// set current trophy name for trophy list overlay
+	if (!ctxt->read_only)
 	{
 		current_trophy_name& current_id = g_fxo->get<current_trophy_name>();
 		std::lock_guard lock(current_id.mtx);

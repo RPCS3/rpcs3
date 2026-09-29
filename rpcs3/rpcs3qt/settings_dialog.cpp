@@ -28,6 +28,7 @@
 
 #include "Emu/NP/rpcn_countries.h"
 #include "Emu/GameInfo.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/title.h"
@@ -246,6 +247,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	EnhanceCheckBox(emu_settings_type::SPULoopDetection, ui->spuLoopDetection, tooltips.settings.spu_loop_detection);
 	EnhanceCheckBox(emu_settings_type::PPUReservationPriorityOverSPUs, ui->ppuReservationPrority, tooltips.settings.ppu_reservation_priority);
+	EnhanceCheckBox(emu_settings_type::AccurateSpuReservations, ui->accurateSpuReservations, tooltips.settings.accurate_spu_reservations);
 
 	// Comboboxes
 	EnhanceComboBox(emu_settings_type::XFloatAccuracy, ui->xfloatAccuracy, tooltips.settings.xfloat, ui->gb_xfloat_accuracy);
@@ -561,10 +563,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			const auto [text, value] = get_data(ui->resBox, ui->resBox->currentIndex());
 			const bool stereo_allowed = value == static_cast<int>(video_resolution::_720p);
 			const bool stereo_enabled = ui->stereoRenderEnabled->checkState() == Qt::CheckState::Checked;
-			ui->stereoRenderMode->setEnabled(stereo_allowed && stereo_enabled);
 			ui->stereoRenderEnabled->setEnabled(stereo_allowed);
-			ui->gb_screen_size->setEnabled(stereo_allowed && stereo_enabled);
-			ui->gb_anaglyph_settings->setEnabled(stereo_allowed && stereo_enabled);
+			ui->stereoRenderMode->setVisible(stereo_allowed && stereo_enabled);
+			ui->gb_screen_size->setVisible(stereo_allowed && stereo_enabled);
+			ui->gb_anaglyph_settings->setVisible(stereo_allowed && stereo_enabled);
 		};
 		connect(ui->resBox, &QComboBox::currentIndexChanged, this, [enable_3D_modes](int){ enable_3D_modes(); });
 		connect(ui->stereoRenderEnabled, &QCheckBox::checkStateChanged, this, [enable_3D_modes](Qt::CheckState){ enable_3D_modes(); });
@@ -579,8 +581,10 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		ui->stereoRenderMode->setCurrentIndex(find_item(ui->stereoRenderMode, static_cast<int>(g_cfg.video.stereo_render_mode.def)));
 		ui->stereoRenderEnabled->setChecked(false);
+		ui->stereoRenderMode->setVisible(false);
+		ui->gb_screen_size->setVisible(false);
+		ui->gb_anaglyph_settings->setVisible(false);
 		ui->gb_stereo->setEnabled(false);
-		ui->gb_anaglyph_settings->setEnabled(false);
 	}
 
 	// Checkboxes: main options
@@ -837,8 +841,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	{
 		const auto [text, value] = get_data(ui->outputScalingMode, ui->outputScalingMode->currentIndex());
 		const bool fsr_selected = static_cast<output_scaling_mode>(value) == output_scaling_mode::fsr;
-		ui->fsrSharpeningStrength->setEnabled(fsr_selected);
-		ui->fsrSharpeningStrengthReset->setEnabled(fsr_selected);
+		ui->fsrSharpeningStrengthWidget->setVisible(fsr_selected);
 	};
 
 	// Handle connects to disable specific checkboxes that depend on GUI state.
@@ -878,6 +881,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 			break;
 		case microphone_handler::real_singstar:
 		case microphone_handler::rocksmith:
+		case microphone_handler::eye_toy:
+		case microphone_handler::ps_eye:
 			max = 1;
 			break;
 		case microphone_handler::null:
@@ -926,7 +931,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	const auto get_audio_output_devices = [this](bool keep_old = true)
 	{
 		const auto [text, value] = get_data(ui->audioOutBox, ui->audioOutBox->currentIndex());
-		auto dev_enum = Emu.GetCallbacks().get_audio_enumerator(value);
+		auto dev_enum = g_emu_callbacks.get_audio_enumerator(value);
 		std::vector<audio_device_enumerator::audio_device> dev_array = dev_enum->get_output_devices();
 
 		ui->audioDeviceBox->clear();
@@ -986,6 +991,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	connect(ui->combo_audio_format, &QComboBox::currentIndexChanged, this, [this](int index)
 	{
 		const auto [text, value] = get_data(ui->combo_audio_format, index);
+		ui->list_audio_formats->setVisible(static_cast<audio_format>(value) == audio_format::manual);
 		ui->list_audio_formats->setEnabled(static_cast<audio_format>(value) == audio_format::manual);
 	});
 	EnhanceComboBox(emu_settings_type::AudioFormat, ui->combo_audio_format, tooltips.settings.audio_format, ui->gb_audio_format);
@@ -1165,12 +1171,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	EnhanceCheckBox(emu_settings_type::ShowMoveCursor, ui->showMoveCursorBox, tooltips.settings.show_move_cursor);
 	EnhanceCheckBox(emu_settings_type::LockOvlIptToP1, ui->lockOverlayInputToPlayerOne, tooltips.settings.lock_overlay_input_to_player_one);
 	EnhanceCheckBox(emu_settings_type::MouseBasedGyro, ui->mouseBasedGyroBox, tooltips.settings.mouse_based_gyro);
-
-#if HAVE_SDL3
-	EnhanceCheckBox(emu_settings_type::SDLMappings, ui->loadSdlMappings, tooltips.settings.sdl_mappings);
-#else
-	ui->loadSdlMappings->setVisible(false);
-#endif
 
 #ifndef _WIN32
 	// Remove raw mouse handler
@@ -1411,11 +1411,8 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	// Checkboxes
 
 	EnhanceCheckBox(emu_settings_type::DebugConsoleMode, ui->debugConsoleMode, tooltips.settings.debug_console_mode);
-	EnhanceCheckBox(emu_settings_type::AccurateDFMA, ui->accurateDFMA, tooltips.settings.accurate_dfma);
-	ui->accurateDFMA->setDisabled(utils::has_fma3() || utils::has_fma4());
 	EnhanceCheckBox(emu_settings_type::AccurateRSXAccess, ui->accurateRSXAccess, tooltips.settings.accurate_rsx_access);
 	EnhanceCheckBox(emu_settings_type::AccurateSpuDMA, ui->accurateSpuDMA, tooltips.settings.accurate_spu_dma);
-	EnhanceCheckBox(emu_settings_type::PPUVNANFixup, ui->PPUVNANfixup, tooltips.settings.fixup_ppuvnan);
 	EnhanceCheckBox(emu_settings_type::LLVMPrecompilation, ui->llvmPrecompilation, tooltips.settings.llvm_precompilation);
 	EnhanceCheckBox(emu_settings_type::SuspendEmulationSavestateMode, ui->antiCheatSavestates, tooltips.settings.anti_cheat_savestates);
 	EnhanceCheckBox(emu_settings_type::CompatibleEmulationSavestateMode, ui->compatibleSavestates, tooltips.settings.compatible_savestates);
@@ -1426,7 +1423,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	EnhanceCheckBox(emu_settings_type::WriteDepthBuffer, ui->dumpDepth, tooltips.settings.dump_depth);
 	EnhanceCheckBox(emu_settings_type::HandleRSXTiledMemory, ui->handleTiledMemory, tooltips.settings.handle_tiled_memory);
 	EnhanceCheckBox(emu_settings_type::SetDAZandFTZ, ui->setDAZandFTZ, tooltips.settings.set_daz_and_ftz);
-	EnhanceCheckBox(emu_settings_type::VBlankNTSCFixup, ui->vblankNTSCFixup, {});
 
 	ui->mfcDelayCommand->setChecked(m_emu_settings->GetSetting(emu_settings_type::MFCCommandsShuffling) == "1");
 	SubscribeTooltip(ui->mfcDelayCommand, tooltips.settings.mfc_delay_command);
@@ -1443,7 +1439,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	EnhanceCheckBox(emu_settings_type::DisableAsyncHostMM, ui->disableAsyncHostMM, tooltips.settings.disable_async_host_mm);
 	EnhanceCheckBox(emu_settings_type::DisableSpinOptimization, ui->disableSpinOptimization, tooltips.settings.disable_spin_optimization);
-	EnhanceCheckBox(emu_settings_type::EnabledSPUEventsBusyLoop, ui->enableSpuEventsBusyLoop, tooltips.settings.enable_spu_events_busy_loop);
+	EnhanceCheckBox(emu_settings_type::EmulateHddSpeed, ui->emulateHddSpeed, tooltips.settings.emulate_hdd_speed);
 	EnhanceCheckBox(emu_settings_type::DisableHWTexelRemapping, ui->disableHardwareTexelRemapping, tooltips.settings.disable_hw_texel_remapping);
 	EnhanceCheckBox(emu_settings_type::DisableHWBlending, ui->disableHardwareBlending, tooltips.settings.disable_hw_blending);
 
@@ -1518,7 +1514,6 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	}
 	else
 	{
-		SubscribeTooltip(ui->vblankNTSCFixup, tooltips.settings.vblank_ntsc_fixup);
 		SubscribeTooltip(ui->gb_vblank, tooltips.settings.vblank_rate);
 		SubscribeTooltip(ui->gb_clockScale, tooltips.settings.clocks_scale);
 		SubscribeTooltip(ui->gb_wakeupDelay, tooltips.settings.wake_up_delay);
@@ -1677,7 +1672,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	EnhanceCheckBox(emu_settings_type::PauseOnFocusLoss, ui->pauseOnFocusLoss, tooltips.settings.pause_on_focus_loss);
 	EnhanceCheckBox(emu_settings_type::StartGameFullscreen, ui->startGameFullscreen, tooltips.settings.start_game_fullscreen);
 	EnhanceCheckBox(emu_settings_type::PreventDisplaySleep, ui->preventDisplaySleep, tooltips.settings.prevent_display_sleep);
-	ui->preventDisplaySleep->setEnabled(Emu.GetCallbacks().display_sleep_control_supported());
+	ui->preventDisplaySleep->setEnabled(g_emu_callbacks.display_sleep_control_supported());
 
 	EnhanceCheckBox(emu_settings_type::ShowTrophyPopups, ui->showTrophyPopups, tooltips.settings.show_trophy_popups);
 	EnhanceCheckBox(emu_settings_type::ShowRpcnPopups, ui->showRpcnPopups, tooltips.settings.show_rpcn_popups);
@@ -2261,6 +2256,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	EnhanceCheckBox(emu_settings_type::AccurateClineStores, ui->accurateClineStores, tooltips.settings.accurate_cache_line_stores);
 	EnhanceCheckBox(emu_settings_type::HookStaticFuncs, ui->hookStFunc, tooltips.settings.hook_static_functions);
 	EnhanceCheckBox(emu_settings_type::PerformanceReport, ui->perfReport, tooltips.settings.enable_performance_report);
+	EnhanceCheckBox(emu_settings_type::EnabledSPUEventsBusyLoop, ui->enableSpuEventsBusyLoop, tooltips.settings.enable_spu_events_busy_loop);
 
 	// Checkboxes: IO debug options
 	EnhanceCheckBox(emu_settings_type::IoDebugOverlay, ui->debugOverlayIO, tooltips.settings.debug_overlay_io);
