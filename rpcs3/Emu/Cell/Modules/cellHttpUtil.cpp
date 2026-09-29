@@ -507,14 +507,14 @@ error_code cellHttpUtilEscapeUri(vm::ptr<char> out, u32 outSize, vm::cptr<u8> in
 
 	u32 size_needed = 0;
 	u32 out_pos = 0;
-	s32 rindex = 0;
+	u32 in_size = 0;
 
 	if (const u32 end = in.addr() + inSize; end && end >= in.addr())
 	{
-		rindex = inSize;
+		in_size = inSize;
 	}
 
-	for (u32 pos = 0; rindex >= 0; rindex--, pos++)
+	for (u32 pos = 0; pos < in_size; pos++)
 	{
 		const char c1 = in[pos];
 
