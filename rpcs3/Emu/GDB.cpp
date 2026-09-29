@@ -698,7 +698,7 @@ bool gdb_thread::cmd_write_memory(gdb_cmd& cmd)
 		{
 			u8 val;
 			int res = sscanf_s(data_ptr, "%02hhX", &val);
-			if (!res)
+			if (res <= 0)
 			{
 				GDB.warning("Couldn't read u8 from string '%s'.", data_ptr);
 				return send_cmd_ack("E02");
