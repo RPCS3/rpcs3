@@ -480,7 +480,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 				// Tail call to the real function
 				call_function(pfinfo->fn, true);
 
-				if (!result->getTerminator())
+				if (!llvm_has_terminator(result))
 					ret_function();
 			}
 			else
@@ -2664,7 +2664,7 @@ public:
 
 										m_ir->SetInsertPoint(cblock);
 
-										ensure(bfound->second.block_end->getTerminator());
+										ensure(llvm_has_terminator(bfound->second.block_end));
 									}
 
 									_phi->addIncoming(value, bfound->second.block_end);
@@ -3100,7 +3100,7 @@ public:
 						fmt::throw_exception("LLVM: Reduced Loop Pattern: Exit(2) too early at 0x%x", m_pos);
 					}
 
-					if (m_ir->GetInsertBlock()->getTerminator())
+					if (llvm_has_terminator(m_ir->GetInsertBlock()))
 					{
 						fmt::throw_exception("LLVM: Reduced Loop Pattern: Exit(3) too early at 0x%x", m_pos);
 					}
@@ -3253,7 +3253,7 @@ public:
 				m_reduced_loop_info = nullptr;
 
 				// Emit instructions
-				for (m_pos = baddr; m_pos >= start && m_pos < end && !m_ir->GetInsertBlock()->getTerminator(); m_pos += 4)
+				for (m_pos = baddr; m_pos >= start && m_pos < end && !llvm_has_terminator(m_ir->GetInsertBlock()); m_pos += 4)
 				{
 					if (m_pos != baddr && m_block_info[m_pos / 4])
 					{
@@ -3299,7 +3299,7 @@ public:
 				}
 
 				// Finalize block with fallthrough if necessary
-				if (!m_ir->GetInsertBlock()->getTerminator())
+				if (!llvm_has_terminator(m_ir->GetInsertBlock()))
 				{
 					const u32 target = m_pos == baddr ? baddr : m_pos & 0x3fffc;
 
@@ -4274,7 +4274,7 @@ public:
 						}
 					}
 
-					if (!m_ir->GetInsertBlock()->getTerminator())
+					if (!llvm_has_terminator(m_ir->GetInsertBlock()))
 					{
 						if (check)
 						{
@@ -4298,7 +4298,7 @@ public:
 							// Normal instruction.
 							(this->*decode(op))({op});
 
-							if (check && !m_ir->GetInsertBlock()->getTerminator())
+							if (check && !llvm_has_terminator(m_ir->GetInsertBlock()))
 							{
 								call("spu_interp_check", &interp_check, m_thread, m_ir->getTrue());
 							}
@@ -4366,7 +4366,7 @@ public:
 							m_ir->CreateRetVoid();
 						}
 
-						if (!m_ir->GetInsertBlock()->getTerminator())
+						if (!llvm_has_terminator(m_ir->GetInsertBlock()))
 						{
 							// Call next instruction.
 							const auto _stop = BasicBlock::Create(m_context, "", f);

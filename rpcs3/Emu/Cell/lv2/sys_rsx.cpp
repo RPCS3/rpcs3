@@ -142,6 +142,68 @@ bool rsx::thread::send_event(u64 data1, u64 event_flags, u64 data3)
 	return true;
 }
 
+void _sys_rsx_drain_event_queue(rsx::thread* rsxthr, u64 event_flags = umax, u64 wait_timeout_ms = 1000ull)
+{
+	const auto& driverInfo = *vm::_ptr<RsxDriverInfo>(rsxthr->driver_info);
+	const u32 rsx_queue_id = driverInfo.handler_queue;
+
+	if (const auto enabled_events = static_cast<u64>(driverInfo.handlers) | (0xffff'ffffull << 32);
+		!(enabled_events & event_flags))
+	{
+		// sys_rsx.trace("Event flag not set.");
+		return;
+	}
+
+	const auto queue = idm::get_unlocked<lv2_obj, lv2_event_queue>(rsx_queue_id);
+	if (!queue)
+	{
+		sys_rsx.error("Failed to get RSX event queue.");
+		return;
+	}
+
+	u64 start_ts = get_system_time();
+	while (true)
+	{
+		// First check if the queue is empty. This is the most likely scenario.
+		{
+			std::lock_guard lock(queue->mutex);
+			if (!queue->exists || (queue->events.empty() && queue->pq))
+			{
+				break;
+			}
+		}
+
+		// Emulator still running?
+		if (Emu.IsStopped())
+		{
+			break;
+		}
+
+		// Wait
+		thread_ctrl::wait_for(100);
+
+		// Check for timeout
+		if (wait_timeout_ms == umax)
+		{
+			continue;
+		}
+
+		// If paused, reset the timeout
+		if (Emu.IsPaused())
+		{
+			start_ts = get_system_time();
+			continue;
+		}
+
+		const auto elapsed_ms = (get_system_time() - start_ts) / 1000ull;
+		if (elapsed_ms > wait_timeout_ms)
+		{
+			sys_rsx.error("RSX queue appears to be stuck. We have been waiting for %llums already. Aborting wait...", elapsed_ms);
+			break;
+		}
+	}
+}
+
 error_code sys_rsx_device_open(cpu_thread& cpu)
 {
 	cpu.state += cpu_flag::wait;
@@ -933,10 +995,17 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 
 	case 0xFEF: // hack: user command
 	{
-		// 'custom' invalid package id for now
-		// as i think we need custom lv1 interrupts to handle this accurately
-		// this also should probly be set by rsxthread
-		driverInfo.userCmdParam = static_cast<u32>(a4);
+		// NOTE: Hardware tests show that back-to-back user_cmd events execute in-order.
+		// The invocation is non-blocking but also very quick to fire.
+		const auto intr_cause = static_cast<u32>(a4);
+		if (intr_cause != driverInfo.userCmdParam)
+		{
+			// Drain the event queue to make sure any previous callbacks have fired.
+			// The userCmdParam object is shared and we do not want to clobber it.
+			_sys_rsx_drain_event_queue(render, SYS_RSX_EVENT_USER_CMD);
+			driverInfo.userCmdParam = intr_cause;
+		}
+
 		render->send_event(0, SYS_RSX_EVENT_USER_CMD, 0);
 		break;
 	}

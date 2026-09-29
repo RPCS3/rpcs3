@@ -200,6 +200,8 @@ usb_device_mic::usb_device_mic(u32 controller_index, const std::array<u8, 7>& lo
 		break;
 	}
 	case MicType::Logitech:
+	case MicType::EyeToy:
+	case MicType::PsEye:
 	{
 		device = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE,
 			UsbDeviceDescriptor {
@@ -499,21 +501,6 @@ usb_device_mic::usb_device_mic(u32 controller_index, const std::array<u8, 7>& lo
 		break;
 	}
 	}
-}
-
-std::shared_ptr<usb_device> usb_device_mic::make_singstar(u32 controller_index, const std::array<u8, 7>& location)
-{
-	return std::make_shared<usb_device_mic>(controller_index, location, MicType::SingStar);
-}
-
-std::shared_ptr<usb_device> usb_device_mic::make_logitech(u32 controller_index, const std::array<u8, 7>& location)
-{
-	return std::make_shared<usb_device_mic>(controller_index, location, MicType::Logitech);
-}
-
-std::shared_ptr<usb_device> usb_device_mic::make_rocksmith(u32 controller_index, const std::array<u8, 7>& location)
-{
-	return std::make_shared<usb_device_mic>(controller_index, location, MicType::Rocksmith);
 }
 
 u16 usb_device_mic::get_num_emu_devices()
