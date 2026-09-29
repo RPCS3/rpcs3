@@ -1140,7 +1140,12 @@ error_code sys_fs_test(ppu_thread&, u32 arg1, u32 arg2, vm::ptr<u32> arg3, u32 a
 		}
 	}
 
-	buf[buf_size - 1] = 0;
+	// TODO: maybe buf_size == 0 returns an error ?
+	if (buf_size > 0)
+	{
+		buf[buf_size - 1] = 0;
+	}
+
 	return CELL_OK;
 }
 
