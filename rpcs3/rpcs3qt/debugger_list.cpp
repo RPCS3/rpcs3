@@ -489,6 +489,7 @@ void debugger_list::resizeEvent(QResizeEvent* event)
 		for (u32 i = old_size - 1; i >= m_item_count; --i)
 		{
 			delete takeItem(i);
+			if (i == 0) break;
 		}
 	}
 }
