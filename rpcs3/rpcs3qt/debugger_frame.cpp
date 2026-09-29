@@ -826,7 +826,7 @@ cpu_thread* debugger_frame::get_cpu()
 		}
 	}
 
-	if (!!m_disasm != !!m_cpu)
+	if (!!m_disasm != !!m_cpu && !m_rsx)
 	{
 		// Fixup for HW PPU viewer
 		if (m_cpu)
