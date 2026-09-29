@@ -186,12 +186,14 @@ namespace rsx
 			{
 				hash = rpcs3::hash64(hash, *reinterpret_cast<const u32*>(src));
 				src += 4;
+				rem -= 4;
 			}
 
 			if (rem > 2)
 			{
 				hash = rpcs3::hash64(hash, *reinterpret_cast<const u16*>(src));
 				src += 2;
+				rem -= 2;
 			}
 
 			while (rem--)
