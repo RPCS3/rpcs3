@@ -391,6 +391,24 @@ bool utils::has_neon()
 	return g_value;
 }
 
+#if !defined(ARM_FEATURE_LSE2)
+bool utils::has_lse2()
+{
+	static const bool g_value = []() -> bool
+	{
+		// All Apple Silicon Macs have LSE2
+#if defined(__linux__)
+		return (getauxval(AT_HWCAP) & HWCAP_USCAT) != 0;
+#elif defined(_WIN32)
+		return IsProcessorFeaturePresent(PF_ARM_LSE2_AVAILABLE) != 0;
+#else
+		return false;
+#endif
+	}();
+	return g_value;
+}
+#endif
+
 bool utils::has_sha3()
 {
 	static const bool g_value = []() -> bool
