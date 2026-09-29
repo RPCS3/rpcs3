@@ -28,8 +28,6 @@ class gui_pad_thread;
 
 struct gui_game_info;
 
-enum class game_boot_result : u32;
-
 namespace compat
 {
 	struct package_info;
@@ -111,7 +109,6 @@ private Q_SLOTS:
 	void BootSavestate();
 	void BootRsxCapture(std::string path = "");
 	void DecryptSPRXLibraries();
-	void show_boot_error(game_boot_result status);
 
 	void SaveWindowState() const;
 	void SetIconSizeActions(int idx) const;
