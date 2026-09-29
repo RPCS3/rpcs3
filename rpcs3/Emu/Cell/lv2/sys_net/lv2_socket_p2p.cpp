@@ -219,6 +219,10 @@ s32 lv2_socket_p2p::setsockopt(s32 level, s32 optname, const std::vector<u8>& op
 	{
 		so_nbio = native_int;
 	}
+	else if (level == SYS_NET_SOL_SOCKET && optname == SYS_NET_SO_BROADCAST)
+	{
+		so_broadcast = native_int;
+	}
 
 	const u64 key = (static_cast<u64>(level) << 32) | static_cast<u64>(optname);
 	sockopt_cache cache{};
@@ -283,6 +287,12 @@ std::optional<s32> lv2_socket_p2p::sendto(s32 flags, const std::vector<u8>& buf,
 	char ip_str[16];
 	inet_ntop(AF_INET, &native_addr.sin_addr, ip_str, sizeof(ip_str));
 	sys_net.trace("[P2P] Sending a packet to %s:%d:%d", ip_str, p2p_port, p2p_vport);
+
+	if (native_addr.sin_addr.s_addr == 0xFFFFFFFF && !so_broadcast)
+	{
+		sys_net.error("[P2P] Tried to send to broadcast address without SO_BROADCAST");
+		return {-SYS_NET_EACCES};
+	}
 
 	std::vector<u8> p2p_data(buf.size() + VPORT_P2P_HEADER_SIZE);
 	const le_t<u16> p2p_vport_le = p2p_vport;

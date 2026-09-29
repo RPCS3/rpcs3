@@ -4,6 +4,7 @@
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/system_config.h"
 
 #include <algorithm>
 #include <cmath>

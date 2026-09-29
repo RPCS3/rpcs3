@@ -619,6 +619,7 @@
     <ClInclude Include="Emu\config_mode.h" />
     <ClInclude Include="Emu\CPU\Hypervisor.h" />
     <ClInclude Include="Emu\CPU\sse2neon.h" />
+    <ClInclude Include="Emu\emu_callbacks.h" />
     <ClInclude Include="Emu\games_config.h" />
     <ClInclude Include="Emu\game_enumeration.h" />
     <ClInclude Include="Emu\Io\Buzz.h" />
@@ -805,6 +806,7 @@
     <ClInclude Include="util\atomic.hpp" />
     <ClInclude Include="util\bit_set.hpp" />
     <ClInclude Include="util\bless.hpp" />
+    <ClInclude Include="util\cctype.hpp" />
     <ClInclude Include="util\pair.hpp" />
     <ClInclude Include="util\tuple.hpp" />
     <ClInclude Include="util\video_sink.h" />

@@ -31,8 +31,6 @@ ps_move_tracker<DiagnosticsEnabled>::ps_move_tracker()
 	m_vc_attr.red_gain = 1.0f;
 	m_vc_attr.green_gain = 1.0f;
 	m_vc_attr.blue_gain = 1.0f;
-
-	init_workers();
 }
 
 template <bool DiagnosticsEnabled>
@@ -40,14 +38,7 @@ ps_move_tracker<DiagnosticsEnabled>::~ps_move_tracker()
 {
 	for (u32 index = 0; index < CELL_GEM_MAX_NUM; index++)
 	{
-		if (auto& worker = m_workers[index])
-		{
-			auto& thread = *worker;
-			thread = thread_state::aborting;
-			m_wake_up_workers[index].release(1);
-			m_wake_up_workers[index].notify_one();
-			thread();
-		}
+		join_worker(index);
 	}
 }
 
@@ -139,52 +130,61 @@ void ps_move_tracker<DiagnosticsEnabled>::set_saturation_threshold(u32 index, u1
 }
 
 template <bool DiagnosticsEnabled>
-void ps_move_tracker<DiagnosticsEnabled>::init_workers()
+void ps_move_tracker<DiagnosticsEnabled>::init_worker(u32 index)
 {
-	for (u32 index = 0; index < CELL_GEM_MAX_NUM; index++)
+	auto& worker = ::at32(m_workers, index);
+	if (worker) return;
+
+	worker = std::make_unique<named_thread<std::function<void()>>>(fmt::format("PS Move Worker %d", index), [this, index]()
 	{
-		if (m_workers[index])
+		while (thread_ctrl::state() != thread_state::aborting)
 		{
-			continue;
-		}
+			// Wait for work
+			m_wake_up_workers[index].wait(0);
+			m_wake_up_workers[index].release(0);
 
-		m_workers[index] = std::make_unique<named_thread<std::function<void()>>>(fmt::format("PS Move Worker %d", index), [this, index]()
-		{
-			while (thread_ctrl::state() != thread_state::aborting)
+			if (thread_ctrl::state() == thread_state::aborting)
 			{
-				// Notify that all work is done
-				m_workers_finished[index].release(1);
-				m_workers_finished[index].notify_one();
-
-				// Wait for work
-				m_wake_up_workers[index].wait(0);
-				m_wake_up_workers[index].release(0);
-
-				if (thread_ctrl::state() == thread_state::aborting)
-				{
-					break;
-				}
-
-				// Find contours
-				ps_move_info& info = m_info[index];
-				ps_move_info new_info = info;
-				process_contours(new_info, index);
-
-				if (new_info.valid)
-				{
-					info = std::move(new_info);
-				}
-				else
-				{
-					info.valid = false;
-				}
+				break;
 			}
 
-			// Notify one last time that all work is done
+			// Find contours
+			ps_move_info& info = m_info[index];
+			ps_move_info new_info = info;
+			process_contours(new_info, index);
+
+			if (new_info.valid)
+			{
+				info = std::move(new_info);
+			}
+			else
+			{
+				info.valid = false;
+			}
+
+			// Notify that all work is done
 			m_workers_finished[index].release(1);
 			m_workers_finished[index].notify_one();
-		});
-	}
+		}
+
+		// Notify one last time that all work is done
+		m_workers_finished[index].release(1);
+		m_workers_finished[index].notify_one();
+	});
+}
+
+template <bool DiagnosticsEnabled>
+void ps_move_tracker<DiagnosticsEnabled>::join_worker(u32 index)
+{
+	auto& worker = ::at32(m_workers, index);
+	if (!worker) return;
+
+	auto& thread = *worker;
+	thread = thread_state::aborting;
+	m_wake_up_workers[index].release(1);
+	m_wake_up_workers[index].notify_one();
+	thread();
+	worker.reset();
 }
 
 template <bool DiagnosticsEnabled>
@@ -204,10 +204,12 @@ void ps_move_tracker<DiagnosticsEnabled>::process_image()
 
 		if (config.active)
 		{
+			init_worker(index);
 			active_devices.push_back(index);
 		}
 		else
 		{
+			join_worker(index);
 			ps_move_info& info = m_info[index];
 			info.valid = false;
 			m_fail_count[index] = 0;

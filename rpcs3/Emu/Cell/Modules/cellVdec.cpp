@@ -23,6 +23,7 @@ extern "C"
 #include "libavutil/imgutils.h"
 #include "libswscale/swscale.h"
 }
+constexpr int averror_eof = AVERROR_EOF; // workaround for old-style-cast error
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else
@@ -119,6 +120,7 @@ enum class vdec_cmd_type : u32
 	close,
 	au_decode,
 	framerate,
+	drain, // Outputs the pictures still held by the decoder before the sequence ends
 };
 
 struct vdec_cmd
@@ -272,6 +274,9 @@ struct vdec_context final
 			fmt::throw_exception("avcodec_alloc_context3() failed (type=0x%x)", type);
 		}
 
+		// Carry the AU userdata from each packet to the picture decoded from it, across the frame reordering
+		ctx->flags |= AV_CODEC_FLAG_COPY_OPAQUE;
+
 		AVDictionary* opts = nullptr;
 
 		std::lock_guard lock(g_mutex_avcodec_open2);
@@ -299,8 +304,14 @@ struct vdec_context final
 
 	~vdec_context()
 	{
+		release_decoder();
+	}
+
+	// Frees the FFmpeg decoder, which may take milliseconds
+	void release_decoder()
+	{
 		avcodec_free_context(&ctx);
-		sws_freeContext(sws);
+		sws_freeContext(std::exchange(sws, nullptr));
 	}
 
 	static u32 freq_to_framerate_code(f64 freq)
@@ -389,12 +400,16 @@ struct vdec_context final
 				lv2_obj::sleep(ppu);
 				break;
 			}
+			case vdec_cmd_type::drain:
 			case vdec_cmd_type::au_decode:
 			{
 				AVPacket packet{};
 				packet.pos = -1;
 
 				u64 au_usrd{};
+
+				// When draining, the command has no AU. Sending a null packet makes the decoder output the pictures it still holds.
+				const bool drain = cmd->type == vdec_cmd_type::drain;
 
 				const u32 au_mode = cmd->mode;
 				const u32 au_addr = cmd->au.startAddr;
@@ -407,6 +422,7 @@ struct vdec_context final
 				packet.size = au_size;
 				packet.pts = au_pts != umax ? au_pts : s64{smin};
 				packet.dts = au_dts != umax ? au_dts : s64{smin};
+				packet.opaque = reinterpret_cast<void*>(au_usrd);
 
 				if (next_pts == 0 && au_pts != umax)
 				{
@@ -430,7 +446,7 @@ struct vdec_context final
 				{
 					cellVdec.trace("AU decoding: handle=0x%x, seq_id=%d, cmd_id=%d, size=0x%x, pts=0x%llx, dts=0x%llx, userdata=0x%llx", handle, cmd->seq_id, cmd->id, au_size, au_pts, au_dts, au_usrd);
 
-					if (int ret = avcodec_send_packet(ctx, &packet); ret < 0)
+					if (int ret = avcodec_send_packet(ctx, drain ? nullptr : &packet); ret < 0)
 					{
 						fmt::throw_exception("AU queuing error (handle=0x%x, seq_id=%d, cmd_id=%d, error=0x%x): %s", handle, cmd->seq_id, cmd->id, ret, utils::av_error_to_string(ret));
 					}
@@ -450,7 +466,7 @@ struct vdec_context final
 
 						if (int ret = avcodec_receive_frame(ctx, frame.avf.get()); ret < 0)
 						{
-							if (ret == AVERROR(EAGAIN) || ret == AVERROR(EOF))
+							if (ret == AVERROR(EAGAIN) || ret == averror_eof)
 							{
 								break;
 							}
@@ -493,7 +509,7 @@ struct vdec_context final
 
 						frame.pts = next_pts;
 						frame.dts = next_dts;
-						frame.userdata = au_usrd;
+						frame.userdata = reinterpret_cast<u64>(frame->opaque);
 						frame.attr = attr;
 
 						u64 amend = 0;
@@ -565,11 +581,15 @@ struct vdec_context final
 				if (thread_ctrl::state() != thread_state::aborting)
 				{
 					// Send AUDONE even if the current sequence was reset and a new sequence was started.
-					cellVdec.trace("Sending CELL_VDEC_MSG_TYPE_AUDONE (handle=0x%x, seq_id=%d, cmd_id=%d)", handle, cmd->seq_id, cmd->id);
-					ensure(au_count.try_dec(0));
+					// A drain command has no AU, so there is nothing to report.
+					if (!drain)
+					{
+						cellVdec.trace("Sending CELL_VDEC_MSG_TYPE_AUDONE (handle=0x%x, seq_id=%d, cmd_id=%d)", handle, cmd->seq_id, cmd->id);
+						ensure(au_count.try_dec(0));
 
-					cb_func(ppu, vid, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, cb_arg);
-					lv2_obj::sleep(ppu);
+						cb_func(ppu, vid, CELL_VDEC_MSG_TYPE_AUDONE, CELL_OK, cb_arg);
+						lv2_obj::sleep(ppu);
+					}
 
 					while (!decoded_frames.empty() && seq_id == cmd->seq_id)
 					{
@@ -651,6 +671,38 @@ struct vdec_context final
 		std::lock_guard lock{mutex};
 		seq_state = sequence_state::closed;
 	}
+};
+
+// Frees the FFmpeg decoders of closed contexts on a host thread.
+// Freeing a decoder takes milliseconds, which would otherwise delay the guest thread closing it.
+struct vdec_context_reaper
+{
+	lf_queue<shared_ptr<vdec_context>> contexts;
+
+	void operator()()
+	{
+		while (thread_ctrl::state() != thread_state::aborting)
+		{
+			thread_ctrl::wait_on(contexts);
+
+			// Let the closing sequence of the caller complete first: freeing this much memory slows down the other threads
+			thread_ctrl::wait_for(100'000);
+
+			for (auto&& vdec : contexts.pop_all())
+			{
+				if (vdec.use_count() > 1)
+				{
+					// Still used by an HLE call in progress, retry later
+					contexts.push(std::move(vdec));
+					continue;
+				}
+
+				vdec->release_decoder();
+			}
+		}
+	}
+
+	static constexpr auto thread_name = "HLE Video Decoder Reaper"sv;
 };
 
 extern bool check_if_vdec_contexts_exist()
@@ -1493,11 +1545,14 @@ error_code cellVdecClose(ppu_thread& ppu, u32 handle)
 	vdec->seq_state = sequence_state::closed;
 	vdec->mutex.lock_unlock();
 
-	if (!idm::remove_verify<vdec_context>(handle, std::move(vdec)))
+	if (!idm::remove_verify<vdec_context>(handle, vdec))
 	{
 		// Other thread removed it beforehead
 		return { CELL_VDEC_ERROR_ARG, "remove_verify failed" };
 	}
+
+	// Let the reaper free the decoder so that the caller does not pay for it
+	g_fxo->get<named_thread<vdec_context_reaper>>().contexts.push(std::move(vdec));
 
 	return CELL_OK;
 }
@@ -1579,6 +1634,13 @@ error_code cellVdecEndSeq(ppu_thread& ppu, u32 handle)
 	}
 
 	const u64 seq_id = vdec->seq_id;
+
+	// Output the pictures still held by the decoder before ending the sequence
+	const u64 drain_cmd_id = vdec->next_cmd_id++;
+	cellVdec.trace("Adding drain cmd (handle=0x%x, seq_id=%d, cmd_id=%d)", handle, seq_id, drain_cmd_id);
+
+	vdec->in_cmd.push(vdec_cmd(vdec_cmd_type::drain, seq_id, drain_cmd_id));
+
 	const u64 cmd_id = vdec->next_cmd_id++;
 	cellVdec.trace("Adding end cmd (handle=0x%x, seq_id=%d, cmd_id=%d)", handle, seq_id, cmd_id);
 

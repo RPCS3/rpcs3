@@ -5,6 +5,7 @@
 #include "../VKResourceManager.h"
 
 #include <util/asm.hpp>
+#include "util/logs.hpp"
 
 namespace vk
 {

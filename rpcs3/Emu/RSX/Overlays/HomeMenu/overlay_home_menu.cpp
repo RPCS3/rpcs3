@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "overlay_home_menu.h"
 #include "../overlay_manager.h"
+#include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Utilities/date_time.h"
 

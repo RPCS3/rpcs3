@@ -208,6 +208,16 @@ QComboBox {
 	padding-bottom: 0.2em;
 	padding-left: 0.4em;
 }
+QComboBox QAbstractItemView {
+	background-color: #323232;
+	color: #fff;
+	border: 0.05em solid #1e1e1e;
+}
+QComboBox QAbstractItemView::item:selected,
+QComboBox QAbstractItemView::item:hover {
+	background-color: #444444;
+	color: #fff;
+}
 QComboBox::disabled {
 	background-color: #828790;
 	color: #fff;

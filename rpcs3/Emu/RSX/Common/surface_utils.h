@@ -5,6 +5,7 @@
 #include "TextureUtils.h"
 #include "../Utils/rsx_utils.h"
 #include "Emu/Memory/vm.h"
+#include "Emu/system_config.h"
 
 #define ENABLE_SURFACE_CACHE_DEBUG 0
 

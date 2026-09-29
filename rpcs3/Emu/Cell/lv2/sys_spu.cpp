@@ -95,7 +95,7 @@ bool sys_spu_image::load(const fs::file& stream)
 	const s32 nsegs = sys_spu_image::get_nsegs(obj.progs);
 
 	const u32 mem_size = nsegs * sizeof(sys_spu_segment) + ::size32(stream);
-	const vm::ptr<sys_spu_segment> segs = vm::cast(vm::reserve_map(vm::user64k, 0, 0x10000000)->alloc(mem_size));
+	const vm::ptr<sys_spu_segment> segs = vm::cast(allocate_user_memory(mem_size, 0x10000));
 
 	//const u32 entry = obj.header.e_entry;
 
@@ -116,7 +116,7 @@ bool sys_spu_image::load(const fs::file& stream)
 	this->nsegs = 0;
 	this->segs = vm::null;
 
-	vm::page_protect(segs.addr(), utils::align(mem_size, 4096), 0, 0, vm::page_writable);
+	vm::page_protect(segs.addr(), utils::align(mem_size, 0x10000), 0, 0, vm::page_writable);
 	return true;
 }
 
@@ -622,7 +622,7 @@ error_code _sys_spu_image_close(ppu_thread& ppu, vm::ptr<sys_spu_image> img)
 		return CELL_ESRCH;
 	}
 
-	ensure(vm::dealloc(handle->segs.addr(), vm::user64k));
+	ensure(vm::dealloc(handle->segs.addr()));
 	return CELL_OK;
 }
 
@@ -867,7 +867,7 @@ error_code sys_spu_thread_initialize(ppu_thread& ppu, vm::ptr<u32> thread, u32 g
 
 	// alloc_hidden indicates falloc to allocate page with no access rights in base memory
 	auto& spu = group->threads[inited];
-	ensure(vm::get(vm::spu)->falloc(spu->vm_offset(), SPU_LS_SIZE, &spu->shm, static_cast<u64>(vm::page_size_64k) | static_cast<u64>(vm::alloc_hidden)));
+	ensure(vm::get(vm::spu)->falloc(spu->vm_offset(), SPU_LS_SIZE, &spu->shm, static_cast<u64>(vm::block_size_64k) | static_cast<u64>(vm::alloc_hidden)));
 	spu->map_ls(*spu->shm, spu->ls);
 
 	group->args[inited] = {args.arg1, args.arg2, args.arg3, args.arg4};
@@ -2484,7 +2484,7 @@ error_code sys_raw_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<void> at
 	}
 
 	const auto spu = idm::make_ptr<named_thread<spu_thread>>(nullptr, index, "", index);
-	ensure(vm::get(vm::spu)->falloc(spu->vm_offset(), SPU_LS_SIZE, &spu->shm, vm::page_size_64k));
+	ensure(vm::get(vm::spu)->falloc(spu->vm_offset(), SPU_LS_SIZE, &spu->shm, vm::block_size_64k));
 	spu->map_ls(*spu->shm, spu->ls);
 
 	spu_thread::g_raw_spu_id[index] = idm::last_id();
@@ -2543,7 +2543,7 @@ error_code sys_isolated_spu_create(ppu_thread& ppu, vm::ptr<u32> id, vm::ptr<voi
 
 	const auto thread = idm::make_ptr<named_thread<spu_thread>>(nullptr, index, "", index, true);
 
-	ensure(vm::get(vm::spu)->falloc(thread->vm_offset(), SPU_LS_SIZE, &thread->shm, vm::page_size_64k));
+	ensure(vm::get(vm::spu)->falloc(thread->vm_offset(), SPU_LS_SIZE, &thread->shm, vm::block_size_64k));
 	thread->map_ls(*thread->shm, thread->ls);
 
 	thread->gpr[3] = v128::from64(0, arg1);

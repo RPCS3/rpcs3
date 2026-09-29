@@ -8,6 +8,7 @@
 
 #include "Utilities/StrUtil.h"
 #include "util/asm.hpp"
+#include "util/logs.hpp"
 
 #include <unordered_map>
 

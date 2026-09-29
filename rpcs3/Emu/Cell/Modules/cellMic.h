@@ -2,6 +2,7 @@
 
 #include "Utilities/Thread.h"
 #include "Utilities/mutex.h"
+#include "Emu/system_config_types.h"
 
 #include "alc.h"
 
@@ -113,8 +114,8 @@ enum CellMicType : s32
 {
 	CELLMIC_TYPE_UNDEF     = -1,
 	CELLMIC_TYPE_UNKNOWN   = 0,
-	CELLMIC_TYPE_EYETOY1   = 1,
-	CELLMIC_TYPE_EYETOY2   = 2,
+	CELLMIC_TYPE_EYETOY1   = 1, // EyeToy
+	CELLMIC_TYPE_EYETOY2   = 2, // PS EYE
 	CELLMIC_TYPE_USBAUDIO  = 3,
 	CELLMIC_TYPE_BLUETOOTH = 4,
 	CELLMIC_TYPE_A2DP      = 5,
@@ -308,6 +309,15 @@ public:
 			return 0; // LE
 		default:
 			return 1; // BE
+		}
+	}
+	s32 get_mic_type() const
+	{
+		switch(device_type)
+		{
+		case microphone_handler::eye_toy: return CELLMIC_TYPE_EYETOY1;
+		case microphone_handler::ps_eye: return CELLMIC_TYPE_EYETOY2;
+		default: return CELLMIC_TYPE_USBAUDIO; // Needed for Guitar Hero: Warriors of Rock (BLUS30487)
 		}
 	}
 

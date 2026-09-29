@@ -2,8 +2,8 @@
 #include "Emu/IdManager.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
-
 #include "Emu/Io/KeyboardHandler.h"
+#include "util/cctype.hpp"
 #include "cellKb.h"
 
 error_code sys_config_start(ppu_thread& ppu);
@@ -198,7 +198,7 @@ u16 cellKbCnvRawCode(u32 arrange, u32 mkey, u32 led, u16 rawcode)
 	const auto get_ascii = [&](u16 raw, u16 shifted = 0, u16 altered = 0)
 	{
 		// Usually caps lock only applies uppercase to letters, but some layouts treat it as shift lock for all keys.
-		if ((is_shift || (is_caps_lock && (is_shift_lock || std::isalpha(raw)))) && shifted)
+		if ((is_shift || (is_caps_lock && (is_shift_lock || utils::isalpha(raw)))) && shifted)
 		{
 			return shifted;
 		}

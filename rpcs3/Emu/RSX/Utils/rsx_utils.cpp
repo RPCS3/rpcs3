@@ -2,6 +2,7 @@
 #include "rsx_utils.h"
 #include "Emu/RSX/rsx_methods.h"
 #include "Emu/Cell/Modules/cellVideoOut.h"
+#include "Emu/system_config.h"
 
 #ifdef _MSC_VER
 #pragma warning(push, 0)
