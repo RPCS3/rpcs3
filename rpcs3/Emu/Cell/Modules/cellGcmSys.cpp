@@ -941,10 +941,9 @@ void cellGcmSetQueueHandler(vm::ptr<void(u32)> handler)
 	}
 }
 
-error_code cellGcmSetSecondVHandler(vm::ptr<void(u32)> handler)
+void cellGcmSetSecondVHandler(vm::ptr<void(u32)> handler)
 {
 	cellGcmSys.todo("cellGcmSetSecondVHandler(handler=0x%x)", handler);
-	return CELL_OK;
 }
 
 void cellGcmSetVBlankFrequency(u32 freq)
