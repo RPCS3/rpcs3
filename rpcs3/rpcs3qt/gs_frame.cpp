@@ -6,6 +6,7 @@
 #include "Utilities/date_time.h"
 #include "Utilities/File.h"
 #include "util/video_provider.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/system_progress.hpp"
@@ -100,7 +101,6 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 
 	// NOTE: You cannot safely create a wayland window that has hidden initial status and perform any changes on the window while it is still hidden.
 	// Doing this will create a surface with deferred commands that require a buffer. When binding to your session, this may assert in your compositor due to protocol restrictions.
-	Visibility startup_visibility = Hidden;
 #ifndef _WIN32
 	if (const char* session_type = ::getenv("XDG_SESSION_TYPE"))
 	{
@@ -109,7 +109,7 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 			// Start windowed. This is a featureless rectangle on-screen with no window decorations.
 			// It does not even resemble a window until the WM attaches later on.
 			// Fullscreen could technically work with some fiddling, but easily breaks depending on geometry input.
-			startup_visibility = Windowed;
+			m_startup_visibility = Windowed;
 		}
 	}
 #endif
@@ -124,7 +124,7 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 	{
 		// Do not display the window before OpenGL is configured!
 		// This works fine in windows and X11 but wayland-egl will crash later.
-		setVisibility(startup_visibility);
+		setVisibility(m_startup_visibility);
 		create();
 	}
 
@@ -483,7 +483,7 @@ void gs_frame::toggle_recording()
 		// Play a sound
 		if (const std::string sound_path = fs::get_config_dir() + "sounds/snd_recording.wav"; fs::is_file(sound_path))
 		{
-			Emu.GetCallbacks().play_sound(sound_path, std::nullopt);
+			g_emu_callbacks.play_sound(sound_path, std::nullopt);
 		}
 		else
 		{
@@ -1074,7 +1074,7 @@ void gs_frame::take_screenshot(std::vector<u8>&& data, u32 sshot_width, u32 ssho
 					}
 				}
 
-				const std::string cell_sshot_filename = Emu.GetCallbacks().get_photo_path(manager.get_photo_title() + ".png");
+				const std::string cell_sshot_filename = g_emu_callbacks.get_photo_path(manager.get_photo_title() + ".png");
 				const std::string cell_sshot_dir      = fs::get_parent_dir(cell_sshot_filename);
 
 				screenshot_log.notice("Saving cell screenshot to %s", cell_sshot_filename);
@@ -1104,7 +1104,7 @@ void gs_frame::take_screenshot(std::vector<u8>&& data, u32 sshot_width, u32 ssho
 			{
 				if (const std::string sound_path = fs::get_config_dir() + "sounds/snd_screenshot.wav"; fs::is_file(sound_path))
 				{
-					Emu.GetCallbacks().play_sound(sound_path, std::nullopt);
+					g_emu_callbacks.play_sound(sound_path, std::nullopt);
 				}
 				else
 				{

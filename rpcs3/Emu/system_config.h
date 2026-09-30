@@ -106,6 +106,7 @@ struct cfg_root : cfg::node
 		cfg::_bool limit_cache_size{ this, "Limit disk cache size", false };
 		cfg::_int<0, 10240> cache_max_size{ this, "Disk cache maximum size (MB)", 5120 };
 		cfg::_bool empty_hdd0_tmp{ this, "Empty /dev_hdd0/tmp/", true };
+		cfg::_bool emulate_hdd_speed{ this, "Emulate HDD Read Speed", false, true };
 
 	} vfs{ this };
 
@@ -171,7 +172,7 @@ struct cfg_root : cfg::node
 		cfg::_int<0, 30000000> driver_recovery_timeout{ this, "Driver Recovery Timeout", 1000000, true };
 		cfg::uint<0, 16667> driver_wakeup_delay{ this, "Driver Wake-Up Delay", 0, true };
 		cfg::_int<1, 6000> vblank_rate{ this, "Vblank Rate", 60, true }; // Changing this from 60 may affect game speed in unexpected ways
-		cfg::_bool vblank_ntsc{ this, "Vblank NTSC Fixup", false, true };
+		cfg::_bool vblank_ntsc{ this, "Vblank NTSC Fixup", true, true };
 		cfg::_bool decr_memory_layout{ this, "DECR memory layout", false}; // Force enable increased allowed main memory range as DECR console
 		cfg::_bool host_label_synchronization{ this, "Allow Host GPU Labels", false };
 		cfg::_bool disable_msl_fast_math{ this, "Disable MSL Fast Math", false };
@@ -224,6 +225,13 @@ struct cfg_root : cfg::node
 			cfg::_bool use_window_space{this, "Use Window Space", false, true};
 
 		} perf_overlay{ this };
+
+		struct native_ui : cfg::node
+		{
+			native_ui(cfg::node* _this) : cfg::node(_this, "Native UI") {}
+
+			cfg::string default_font{ this, "Default Font", "Arial", false };
+		} ui{ this };
 
 		struct node_shader_preloading_dialog : cfg::node
 		{

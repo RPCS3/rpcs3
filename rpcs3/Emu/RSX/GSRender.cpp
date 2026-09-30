@@ -1,11 +1,12 @@
 #include "stdafx.h"
 
-#include "Emu/System.h"
+#include "Emu/emu_callbacks.h"
+#include "Emu/system_config.h"
 #include "GSRender.h"
 
 GSRender::GSRender(utils::serial* ar) noexcept : rsx::thread(ar)
 {
-	if (auto gs_frame = Emu.GetCallbacks().get_gs_frame())
+	if (auto gs_frame = g_emu_callbacks.get_gs_frame())
 	{
 		m_frame = gs_frame.release();
 	}

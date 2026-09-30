@@ -2,6 +2,7 @@
 #include "device.h"
 #include "shared.h"
 #include "sync.h"
+#include "util/logs.hpp"
 
 namespace vk
 {

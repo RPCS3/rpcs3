@@ -13,6 +13,7 @@
 #include "hex_validator.h"
 
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/IdManager.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/lv2/sys_sync.h"

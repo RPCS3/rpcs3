@@ -27,6 +27,7 @@
 
 #include "util/logs.hpp"
 #include "util/asm.hpp"
+#include "util/cctype.hpp"
 #include "debugger_frame.h"
 
 LOG_CHANNEL(gui_log, "GUI");
@@ -876,7 +877,7 @@ void memory_viewer_panel::ShowMemory()
 
 				for (auto& ch : str)
 				{
-					if (!std::isprint(static_cast<u8>(ch))) ch = '.';
+					if (!utils::isprint(ch)) ch = '.';
 				}
 
 				t_mem_ascii_str += QString::fromStdString(std::move(str));

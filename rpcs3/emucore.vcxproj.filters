@@ -2349,9 +2349,6 @@
     <ClInclude Include="util\init_mutex.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
-    <ClInclude Include="util\slow_mutex.hpp">
-      <Filter>Utilities</Filter>
-    </ClInclude>
     <ClInclude Include="util\fifo_mutex.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
@@ -3024,6 +3021,12 @@
     </ClInclude>
     <ClInclude Include="Emu\Cell\lv2\sys_bluetooth.h">
       <Filter>Emu\Cell\lv2</Filter>
+    </ClInclude>
+    <ClInclude Include="util\cctype.hpp">
+      <Filter>Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\emu_callbacks.h">
+      <Filter>Emu</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

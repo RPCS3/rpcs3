@@ -135,6 +135,7 @@ enum class lv2_mp_flag
 	no_uid_gid,
 	strict_get_block_size,
 	cache,
+	reflection,
 
 	__bitset_enum_max
 };
@@ -280,6 +281,8 @@ struct lv2_file final : lv2_fs_object
 	const s32 flags;
 	std::string real_path;
 	const lv2_file_type type;
+	atomic_t<u64> reads_total{};
+	atomic_t<u64> writes_total{};
 
 	// IO Container
 	u32 ct_id{}, ct_used{};
@@ -345,6 +348,10 @@ struct lv2_file final : lv2_fs_object
 		return op_read(file, buf, size, opt_pos);
 	}
 
+	// caller must hold the mount lock
+	u64 schedule_read(u64 size, u64 start, u64 offset) const;
+	static void wait_read(ppu_thread& ppu, u64 end);
+
 	// File writing with intermediate buffer
 	static u64 op_write(const fs::file& file, vm::cptr<void> buf, u64 size);
 
@@ -364,7 +371,7 @@ struct lv2_dir final : lv2_fs_object
 {
 	static constexpr u32 id_type = 2;
 
-	const std::vector<fs::dir_entry> entries;
+	std::vector<fs::dir_entry> entries;
 
 	// Current reading position
 	atomic_t<u64> pos{0};
