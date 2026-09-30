@@ -304,6 +304,8 @@ public:
 	cmd64 cmd_get(u32 index) { return cmd_queue[cmd_queue.peek() + index].load(); }
 	atomic_t<u32> cmd_notify = 0;
 
+	atomic_t<u32> start_gate_caller = 0; // Caller of sys_ppu_thread_start waiting for this thread to reach its entry command, cleared by this thread
+
 	alignas(64) const ppu_func_opd_t entry_func;
 	u64 start_time{0}; // Sleep start timepoint
 	u64 end_time{umax}; // Sleep end timepoint

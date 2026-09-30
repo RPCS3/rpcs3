@@ -2543,6 +2543,40 @@ void ppu_thread::cpu_task()
 		}
 		case ppu_cmd::entry_call:
 		{
+			if (const u32 caller_id = start_gate_caller.exchange(0))
+			{
+				// The caller of sys_ppu_thread_start has higher or equal priority and waits for the exchange above:
+				// let it leave the syscall and run its first instructions before this thread starts
+				if (const auto caller = idm::get_unlocked<named_thread<ppu_thread>>(caller_id))
+				{
+					while (!is_stopped())
+					{
+						const auto caller_state = +caller->state;
+
+						// Cannot run anyway: nothing to wait for
+						if (caller_state.all_of(cpu_flag::suspend) || ::is_stopped(caller_state))
+						{
+							break;
+						}
+
+						// Left the syscall: heuristic margin, as the first instructions it runs are not observable
+						if (caller_state.none_of(cpu_flag::wait))
+						{
+							constexpr u64 caller_head_start_us = 10;
+
+							for (const u64 start = get_system_time(); !is_stopped() && get_system_time() - start < caller_head_start_us;)
+							{
+								std::this_thread::yield();
+							}
+
+							break;
+						}
+
+						std::this_thread::yield();
+					}
+				}
+			}
+
 			cmd_pop(), fast_call(entry_func.addr, entry_func.rtoc, true);
 			break;
 		}
