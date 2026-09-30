@@ -5,12 +5,14 @@
 #include "util/asm.hpp"
 
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/Cell/timers.hpp"
 #include "Crypto/unedat.h"
 #include "Emu/system_config.h"
 #include "Emu/VFS.h"
 #include "Emu/vfs_config.h"
 #include "Emu/IdManager.h"
 #include "Emu/system_utils.hpp"
+#include "Emu/System.h"
 #include "Emu/Cell/lv2/sys_process.h"
 
 #include <span>
@@ -27,10 +29,30 @@ lv2_fs_mount_point g_mp_sys_dev_flash3{"/dev_flash3", "CELL_FS_FAT", "CELL_FS_IO
 lv2_fs_mount_point g_mp_sys_dev_flash2{"/dev_flash2", "CELL_FS_FAT", "CELL_FS_IOS:BUILTIN_FLSH2", 512, 0x8000, 8192, lv2_mp_flag::no_uid_gid, &g_mp_sys_dev_flash3}; // TODO confirm
 lv2_fs_mount_point g_mp_sys_dev_flash{"/dev_flash", "CELL_FS_FAT", "CELL_FS_IOS:BUILTIN_FLSH1", 512, 0x63E00, 8192, lv2_mp_flag::no_uid_gid, &g_mp_sys_dev_flash2};
 lv2_fs_mount_point g_mp_sys_host_root{"/host_root", "CELL_FS_DUMMYFS", "CELL_FS_DUMMY:/", 512, 0x100, 512, lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid, &g_mp_sys_dev_flash};
-lv2_fs_mount_point g_mp_sys_app_home{"/app_home", "CELL_FS_DUMMYFS", "CELL_FS_DUMMY:", 512, 0x100, 512, lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid, &g_mp_sys_host_root};
+lv2_fs_mount_point g_mp_sys_app_home{"/app_home", "CELL_FS_DUMMYFS", "CELL_FS_DUMMY:", 512, 0x100, 512, lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid + lv2_mp_flag::reflection, &g_mp_sys_host_root};
 lv2_fs_mount_point g_mp_sys_dev_root{"/", "CELL_FS_ADMINFS", "CELL_FS_ADMINFS:", 512, 0x100, 512, lv2_mp_flag::read_only + lv2_mp_flag::strict_get_block_size + lv2_mp_flag::no_uid_gid, &g_mp_sys_app_home};
 lv2_fs_mount_point g_mp_sys_no_device{};
 lv2_fs_mount_info  g_mi_sys_not_found{}; // wrapper for &g_mp_sys_no_device
+
+struct hdd_read_state
+{
+	shared_mutex mutex;
+	u64 busy_until = 0;
+
+	struct cached_block
+	{
+		std::string path;
+		u64 offset = 0;
+		u64 age = 0;
+	};
+
+	std::array<cached_block, 96> cache;
+	std::array<cached_block, 24> lookup_cache;
+	u64 age = 0;
+	std::string last_path;
+	u64 last_end_offset = 0;
+	u64 last_end_time = 0;
+};
 
 template<>
 void fmt_class_string<lv2_file_type>::format(std::string& out, u64 arg)
@@ -326,13 +348,25 @@ const lv2_fs_mount_info& lv2_fs_mount_info_map::lookup(std::string_view path, bo
 	{
 		constexpr std::string_view cell_fs_path = "CELL_FS_PATH:"sv;
 
+		const lv2_fs_mount_info* ret = nullptr;
+
 		if (no_cell_fs_path && iterator->second.device.starts_with(cell_fs_path))
-			return lookup(iterator->second.device.substr(cell_fs_path.size()), no_cell_fs_path, mount_path); // Recursively look up the parent mount info
+			ret = &lookup(iterator->second.device.substr(cell_fs_path.size()), no_cell_fs_path, mount_path); // Recursively look up the parent mount info
 
-		if (mount_path)
-			*mount_path = iterator->first;
+		if (!ret)
+		{
+			if (mount_path)
+				*mount_path = iterator->first;
 
-		return iterator->second;
+			ret = &iterator->second;
+		}
+
+		if (ret->mp->flags & lv2_mp_flag::reflection)
+		{
+			ret = &lookup(Emu.GetDir(), false, nullptr);
+		}
+
+		return *ret;
 	}
 
 	return g_mi_sys_not_found;
@@ -353,7 +387,7 @@ u64 lv2_fs_mount_info_map::get_all(CellFsMountInfo* info, u64 len) const
 		strcpy_trunc(info[count].mount_path, path);
 		strcpy_trunc(info[count].filesystem, mount_info.file_system);
 		strcpy_trunc(info[count].dev_name, mount_info.device);
-		if (mount_info.read_only)
+		if (mount_info.read_only || mount_info.mp->flags & lv2_mp_flag::read_only)
 			info[count].unk[4] |= 0x10000000;
 
 		count++;
@@ -566,6 +600,139 @@ lv2_fs_object::lv2_fs_object(utils::serial& ar, bool)
 {
 }
 
+u64 lv2_file::schedule_read(u64 size, u64 start, u64 offset) const
+{
+	if (!size || start == umax)
+	{
+		return 0;
+	}
+
+	// Measured on a stock PS3 HDD
+	constexpr u64 transfer_rate = 63'000 * 1024;
+	constexpr u64 block_size = 0x10000;
+	constexpr u64 read_ahead_size = 0x100000;
+	u64 duration = 70 + size * 1'000'000 / transfer_rate;
+	auto& hdd = g_fxo->get<hdd_read_state>();
+	std::lock_guard lock(hdd.mutex);
+	bool cached = true;
+
+	if (type == lv2_file_type::regular)
+	{
+		const bool hdd0 = mp == &g_mp_sys_dev_hdd0;
+		std::span<hdd_read_state::cached_block> cache(hdd.cache.data() + (hdd0 ? 0 : 32), hdd0 ? 32 : 64);
+		std::span<hdd_read_state::cached_block> lookup_cache(hdd.lookup_cache);
+		const u64 first = offset & ~(block_size - 1);
+		const u64 last = (offset + size - 1) & ~(block_size - 1);
+		const u64 count = (last - first) / block_size + 1;
+		u64 first_missing = umax;
+
+		const auto find_block = [&](std::span<hdd_read_state::cached_block> entries, u64 block)
+		{
+			return std::find_if(entries.begin(), entries.end(), [&](const auto& entry)
+			{
+				return entry.age && entry.offset == block && entry.path == real_path;
+			});
+		};
+
+		const auto cache_block = [&](std::span<hdd_read_state::cached_block> entries, u64 block)
+		{
+			auto it = find_block(entries, block);
+			if (it == entries.end())
+			{
+				it = std::min_element(entries.begin(), entries.end(), [](const auto& a, const auto& b)
+				{
+					return a.age < b.age;
+				});
+				it->path = real_path;
+				it->offset = block;
+			}
+			it->age = ++hdd.age;
+		};
+
+		for (u64 i = 0; i < count; i++)
+		{
+			const u64 block = first + i * block_size;
+			if (find_block(cache, block) == cache.end())
+			{
+				if (first_missing == umax)
+				{
+					first_missing = std::max(block, offset);
+				}
+
+				// UFS needs indirect blocks to locate data beyond the first 12 blocks
+				if (hdd0 && block >= 12 * 0x4000)
+				{
+					std::array<u64, 3> missing{};
+					u64 missing_count = 0;
+					u64 index = (block / 0x4000 - 12) / 2048;
+					for (u64 level = 1; level <= missing.size(); level++)
+					{
+						const u64 key = (1ull << 63) | (index << 2) | level;
+						if (find_block(lookup_cache, key) != lookup_cache.end())
+						{
+							cache_block(lookup_cache, key);
+							break;
+						}
+						missing[missing_count++] = key;
+						if (!index)
+						{
+							break;
+						}
+						index = (index - 1) / 2048;
+					}
+					while (missing_count)
+					{
+						cache_block(lookup_cache, missing[--missing_count]);
+						duration += 11'111;
+					}
+				}
+				if (hdd0)
+				{
+					cache_block(lookup_cache, block);
+				}
+			}
+			cache_block(cache, block);
+		}
+
+		cached = first_missing == umax;
+
+		if (!cached)
+		{
+			u64 seek = hdd0 ? 13'000 : 10'000;
+			if (hdd.last_path == real_path && first_missing >= hdd.last_end_offset && first_missing - hdd.last_end_offset < read_ahead_size)
+			{
+				const u64 skipped = (first_missing - hdd.last_end_offset) * 1'000'000 / transfer_rate;
+				const u64 idle = start > hdd.last_end_time ? start - hdd.last_end_time : 0;
+				seek = skipped > idle ? skipped - idle : 0;
+			}
+			duration += seek;
+		}
+	}
+
+	const u64 end = std::max(hdd.busy_until, start) + duration;
+	hdd.busy_until = end;
+	if (!cached)
+	{
+		hdd.last_path = real_path;
+		hdd.last_end_offset = offset + size;
+		hdd.last_end_time = end;
+	}
+	return end;
+}
+
+void lv2_file::wait_read(ppu_thread& ppu, u64 end)
+{
+	if (!end)
+	{
+		return;
+	}
+
+	if (const u64 now = get_guest_system_time(); end > now)
+	{
+		lv2_obj::wait_timeout(end - now, &ppu);
+	}
+}
+
 u64 lv2_file::op_read(const fs::file& file, vm::ptr<void> buf, u64 size, u64 opt_pos)
 {
 	if (u64 region = buf.addr() >> 28, region_end = (buf.addr() + size) >> 28;
@@ -700,7 +867,7 @@ void lv2_file::save(utils::serial& ar)
 		file.reset(std::move(file_ptr));
 	}
 
-	if (!mp.read_only && flags & CELL_FS_O_ACCMODE)
+	if (!mp.read_only && !(mp.mp->flags & lv2_mp_flag::read_only) && flags & CELL_FS_O_ACCMODE)
 	{
 		// Ensure accurate timestamps and content on disk
 		file.sync();
@@ -710,7 +877,7 @@ void lv2_file::save(utils::serial& ar)
 	// descriptors shall keep the data in memory in this case
 	const bool in_mem = [&]()
 	{
-		if (mp.read_only)
+		if (mp.read_only || mp.mp->flags & lv2_mp_flag::read_only)
 		{
 			return false;
 		}
@@ -780,6 +947,23 @@ lv2_dir::lv2_dir(utils::serial& ar)
 	}())
 	, pos(ar.pop<u64>())
 {
+	// Every lv2_dir carries . and .., so supply the ones the saved listing lacks
+	// Taken in reverse, because each one is pushed to the front and . has to end up ahead of ..
+	for (std::string_view name : {".."sv, "."sv})
+	{
+		if (std::none_of(entries.cbegin(), entries.cend(), FN(x.name == name)))
+		{
+			fs::dir_entry& entry = *entries.emplace(entries.begin());
+			entry.name = name;
+			entry.is_directory = true;
+
+			// Each insertion shifts every index, so an enumeration already under way follows along
+			if (pos.raw())
+			{
+				pos.raw()++;
+			}
+		}
+	}
 }
 
 void lv2_dir::save(utils::serial& ar)
@@ -979,7 +1163,7 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 	default: break;
 	}
 
-	if (mp.read_only)
+	if (mp.read_only || mp.mp->flags & lv2_mp_flag::read_only)
 	{
 		if ((flags & CELL_FS_O_ACCMODE) != CELL_FS_O_RDONLY && fs::is_file(local_path))
 		{
@@ -987,7 +1171,7 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 		}
 	}
 
-	if (flags & CELL_FS_O_CREAT && !mp.read_only)
+	if (flags & CELL_FS_O_CREAT && (!mp.read_only && !(mp.mp->flags & lv2_mp_flag::read_only)))
 	{
 		open_mode += fs::create;
 
@@ -997,7 +1181,7 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 		}
 	}
 
-	if (flags & CELL_FS_O_TRUNC && !mp.read_only)
+	if (flags & CELL_FS_O_TRUNC && (!mp.read_only && !(mp.mp->flags & lv2_mp_flag::read_only)))
 	{
 		open_mode += fs::trunc;
 	}
@@ -1018,7 +1202,7 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 		sys_fs.warning("lv2_file::open() called with CELL_FS_O_UNK flag enabled. FLAGS: %#o", flags);
 	}
 
-	if (mp.read_only || !has_write_access)
+	if (mp.read_only || mp.mp->flags & lv2_mp_flag::read_only || !has_write_access)
 	{
 		// Deactivate mutating flags on read-only FS
 		open_mode = fs::read;
@@ -1070,12 +1254,12 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 
 	if (!file)
 	{
-		if (mp.read_only || !has_write_access)
+		if (mp.read_only || mp.mp->flags & lv2_mp_flag::read_only || !has_write_access)
 		{
 			// Failed to create file on read-only FS (file doesn't exist)
 			if (flags & CELL_FS_O_CREAT)
 			{
-				return {mp.read_only ? CELL_EPERM : CELL_EACCES};
+				return {(mp.read_only || mp.mp->flags & lv2_mp_flag::read_only) ? CELL_EPERM : CELL_EACCES};
 			}
 		}
 
@@ -1101,9 +1285,9 @@ lv2_file::open_raw_result_t lv2_file::open_raw(const std::string& local_path, s3
 		}
 	}
 
-	if (flags & CELL_FS_O_TRUNC && (mp.read_only || !has_write_access))
+	if (flags & CELL_FS_O_TRUNC && (mp.read_only || mp.mp->flags & lv2_mp_flag::read_only || !has_write_access))
 	{
-		return {mp.read_only ? CELL_EPERM : CELL_EACCES};
+		return {(mp.read_only || mp.mp->flags & lv2_mp_flag::read_only) ? CELL_EPERM : CELL_EACCES};
 	}
 
 	if (flags & CELL_FS_O_MSELF && !verify_mself(file))
@@ -1345,12 +1529,17 @@ error_code sys_fs_read(ppu_thread& ppu, u32 fd, vm::ptr<void> buf, u64 nbytes, v
 		return CELL_EIO;
 	}
 
+	const u64 read_start = (g_cfg.vfs.emulate_hdd_speed && (file->mp == &g_mp_sys_dev_hdd0 || file->mp == &g_mp_sys_dev_hdd1))
+		? get_guest_system_time() : umax;
+	const u64 read_offset = read_start != umax ? file->file.pos() : 0;
 	const u64 read_bytes = file->op_read(buf, nbytes);
 	const bool failure = !read_bytes && file->file.pos() < file->file.size();
 
 	file->reads_total += read_bytes;
 
+	const u64 read_end = file->schedule_read(read_bytes, read_start, read_offset);
 	lock.unlock();
+	lv2_file::wait_read(ppu, read_end);
 	ppu.check_state();
 
 	*nread = read_bytes;
@@ -1408,7 +1597,7 @@ error_code sys_fs_write(ppu_thread& ppu, u32 fd, vm::cptr<void> buf, u64 nbytes,
 		sys_fs.error("%s type: Writing %u bytes to FD=%d (path=%s)", file->type, nbytes, fd, file->name.data());
 	}
 
-	if (file->mp.read_only)
+	if (file->mp.read_only || file->mp.mp->flags & lv2_mp_flag::read_only)
 	{
 		nwrite.try_write(0);
 		return CELL_EROFS;
@@ -1567,7 +1756,11 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 		{
 		case fs::error::noent:
 		{
-			if (ext.empty())
+			// A Win32 search matching nothing fails like a missing path, which is how an empty volume root looks:
+			// only a stat tells the two apart, and it reports a directory through a broken reparse point as well
+			fs::stat_t info{};
+
+			if (ext.empty() && !(fs::get_stat(local_path, info) && info.is_directory && !info.is_symlink))
 			{
 				return {mp == &g_mp_sys_dev_hdd1 ? sys_fs.warning : sys_fs.error, CELL_ENOENT, path};
 			}
@@ -1590,6 +1783,20 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 		}
 	}
 
+	// A split file arrives as the parts ".66600" to ".66699", which lv2_file::open_raw gathers back into one
+	// This matches all but the first, the part whose name a game asks for
+	const auto is_split_file_tail = [](std::string_view name)
+	{
+		if (name.size() <= 6 || !name.substr(name.size() - 6).starts_with(".666"sv))
+		{
+			return false;
+		}
+
+		const std::string_view index = name.substr(name.size() - 2);
+
+		return index != "00"sv && index[0] >= '0' && index[0] <= '9' && index[1] >= '0' && index[1] <= '9';
+	};
+
 	// Build directory as a vector of entries
 	std::vector<fs::dir_entry> data;
 
@@ -1608,22 +1815,27 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 				continue;
 			}
 
-			// Add additional entries for split file candidates (while ends with .66600)
-			while (mp.mp != &g_mp_sys_dev_hdd1 && data.back().name.ends_with(".66600"))
+			if (mp.mp != &g_mp_sys_dev_hdd1 && !data.back().is_directory)
 			{
-				fs::dir_entry copy = data.back();
-				data.emplace_back(copy).name.resize(copy.name.size() - 6);
+				std::string& name = data.back().name;
+
+				// Drop the suffix off the first part, again if what is left ends in one too
+				// A name made of nothing but a suffix keeps it, since there is no name underneath
+				while (name.size() > 6 && name.ends_with(".66600"))
+				{
+					name.resize(name.size() - 6);
+				}
+
+				if (is_split_file_tail(name))
+				{
+					// Only the first part stands for the file
+					data.resize(data.size() - 1);
+					continue;
+				}
 			}
 		}
 
 		data.resize(data.size() - 1);
-	}
-	else
-	{
-		data.emplace_back().name += '.';
-		data.back().is_directory = true;
-		data.emplace_back().name = "..";
-		data.back().is_directory = true;
 	}
 
 	// Add mount points (TODO)
@@ -1631,6 +1843,27 @@ error_code sys_fs_opendir(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u32> fd)
 	{
 		data.emplace_back().name = std::move(ex);
 		data.back().is_directory = true;
+	}
+
+	// Pull . and .. to the front, where the PS3 has them, and supply them to a Win32 volume root, which lists neither
+	usz at = 0;
+
+	for (std::string_view name : {"."sv, ".."sv})
+	{
+		const auto found = std::find_if(data.begin() + at, data.end(), FN(x.name == name));
+
+		if (found == data.end())
+		{
+			fs::dir_entry& entry = *data.emplace(data.begin() + at);
+			entry.name = name;
+			entry.is_directory = true;
+		}
+		else
+		{
+			std::rotate(data.begin() + at, found, found + 1);
+		}
+
+		at++;
 	}
 
 	// Sort files, keeping . and ..
@@ -1683,8 +1916,10 @@ error_code sys_fs_readdir(ppu_thread& ppu, u32 fd, vm::ptr<CellFsDirent> dir, vm
 	else
 	{
 		// It does actually write polling the last entry. Seems consistent across HDD0 and HDD1 (TODO: check more partitions)
+		// Every lv2_dir carries . and .., so there is always an entry to poll
+		ensure(!directory->entries.empty());
+
 		info = &directory->entries.back();
-		nread_to_write = 0;
 	}
 
 	CellFsDirent dir_write{};
@@ -1832,7 +2067,7 @@ error_code sys_fs_stat(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<CellFsStat>
 
 	s32 mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
 
-	if (mp.read_only)
+	if (mp.read_only || mp.mp->flags & lv2_mp_flag::read_only)
 	{
 		// Remove write permissions
 		mode &= ~0222;
@@ -1881,7 +2116,7 @@ error_code sys_fs_fstat(ppu_thread& ppu, u32 fd, vm::ptr<CellFsStat> sb)
 
 	s32 mode = info.is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
 
-	if (file->mp.read_only)
+	if ((file->mp.read_only || file->mp.mp->flags & lv2_mp_flag::read_only))
 	{
 		// Remove write permissions
 		mode &= ~0222;
@@ -1932,7 +2167,7 @@ error_code sys_fs_mkdir(ppu_thread& ppu, vm::cptr<char> path, s32 mode)
 		return {CELL_ENOTMOUNTED, path};
 	}
 
-	if (mp.read_only)
+	if (mp.read_only || mp.mp->flags & lv2_mp_flag::read_only)
 	{
 		return {CELL_EROFS, path};
 	}
@@ -2017,7 +2252,7 @@ error_code sys_fs_rename(ppu_thread& ppu, vm::cptr<char> from, vm::cptr<char> to
 		return CELL_EXDEV;
 	}
 
-	if (mp.read_only)
+	if (mp.read_only || mp.mp->flags & lv2_mp_flag::read_only)
 	{
 		return CELL_EROFS;
 	}
@@ -2075,7 +2310,7 @@ error_code sys_fs_rmdir(ppu_thread& ppu, vm::cptr<char> path)
 		return {CELL_ENOTMOUNTED, vpath};
 	}
 
-	if (mp.read_only)
+	if (mp.read_only || mp.mp->flags & lv2_mp_flag::read_only)
 	{
 		return {CELL_EROFS, vpath};
 	}
@@ -2143,7 +2378,7 @@ error_code sys_fs_unlink(ppu_thread& ppu, vm::cptr<char> path)
 		return {CELL_EISDIR, path};
 	}
 
-	if (mp.read_only)
+	if (mp.read_only || mp.mp->flags & lv2_mp_flag::read_only)
 	{
 		return {CELL_EROFS, path};
 	}
@@ -2252,7 +2487,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			return CELL_EBADF;
 		}
 
-		if (op == 0x8000000b && file->mp.read_only)
+		if (op == 0x8000000b && (file->mp.read_only || file->mp.mp->flags & lv2_mp_flag::read_only))
 		{
 			return CELL_EROFS;
 		}
@@ -2305,6 +2540,8 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			file->file.seek(op_pos);
 		}
 
+		const u64 op_start = (op == 0x8000000a && g_cfg.vfs.emulate_hdd_speed && (file->mp == &g_mp_sys_dev_hdd0 || file->mp == &g_mp_sys_dev_hdd1))
+			? get_guest_system_time() : umax;
 		const u64 done_size = op == 0x8000000a
 			? file->op_read(arg->buf, arg->size, op_pos)
 			: file->op_write(arg->buf, arg->size);
@@ -2314,6 +2551,12 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 		if (op == 0x8000000b)
 		{
 			ensure(old_pos == file->file.seek(old_pos));
+		}
+		else
+		{
+			const u64 read_end = file->schedule_read(done_size, op_start, op_pos);
+			rlock.unlock();
+			lv2_file::wait_read(ppu, read_end);
 		}
 
 		(op == 0x8000000a ? &file->reads_total : &file->writes_total)->fetch_add(done_size);
@@ -2721,7 +2964,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 
 				s32 mode = info->is_directory ? CELL_FS_S_IFDIR | 0777 : CELL_FS_S_IFREG | 0666;
 
-				if (directory->mp.read_only)
+				if (directory->mp.read_only || directory->mp.mp->flags & lv2_mp_flag::read_only)
 				{
 					// Remove write permissions
 					mode &= ~0222;
@@ -3060,7 +3303,7 @@ error_code sys_fs_truncate(ppu_thread& ppu, vm::cptr<char> path, u64 size)
 		return {CELL_ENOTMOUNTED, path};
 	}
 
-	if (mp.read_only)
+	if (mp.read_only || mp.mp->flags & lv2_mp_flag::read_only)
 	{
 		return {CELL_EROFS, path};
 	}
@@ -3107,7 +3350,7 @@ error_code sys_fs_ftruncate(ppu_thread& ppu, u32 fd, u64 size)
 		return CELL_EBADF;
 	}
 
-	if (file->mp.read_only)
+	if (file->mp.read_only || file->mp.mp->flags & lv2_mp_flag::read_only)
 	{
 		return CELL_EROFS;
 	}
@@ -3267,7 +3510,7 @@ error_code sys_fs_disk_free(ppu_thread& ppu, vm::cptr<char> path, vm::ptr<u64> t
 		return {CELL_ENOTSUP, path};
 	}
 
-	if (mp.read_only)
+	if (mp.read_only || mp.mp->flags & lv2_mp_flag::read_only)
 	{
 		// TODO: check /dev_bdvd
 		ppu.check_state();
@@ -3327,7 +3570,7 @@ error_code sys_fs_utime(ppu_thread& ppu, vm::cptr<char> path, vm::cptr<CellFsUti
 		return {CELL_ENOTMOUNTED, path};
 	}
 
-	if (mp.read_only)
+	if (mp.read_only || mp.mp->flags & lv2_mp_flag::read_only)
 	{
 		return {CELL_EROFS, path};
 	}

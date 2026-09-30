@@ -64,7 +64,7 @@ namespace rsx
 
 				padding->set_size(1, 1);
 				title->set_size(available_width, menu_entry_height);
-				title->set_font("Arial", 16);
+				title->set_font(16);
 				title->set_wrap_text(true);
 				title->align_text(text_align::left);
 
