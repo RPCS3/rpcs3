@@ -55,7 +55,8 @@ namespace utils
 	int compare_versions(const std::string& v1, const std::string& v2, bool& ok)
 	{
 		// Check if both version strings are valid
-		ok = std::regex_match(v1, std::regex("[0-9.]*")) && std::regex_match(v2, std::regex("[0-9.]*"));
+		static const std::regex comp = std::regex("[0-9.]*");
+		ok = std::regex_match(v1, comp) && std::regex_match(v2, comp);
 
 		if (!ok)
 		{

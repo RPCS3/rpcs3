@@ -498,13 +498,20 @@ PadHandlerBase::connection sdl_pad_handler::update_connection(const std::shared_
 			dev->sdl.gamepad = nullptr;
 		}
 
-		// Try to reconnect
+		// Try to reconnect every now and then.
+		const steady_clock::time_point now = steady_clock::now();
+		const s64 elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - dev->last_update).count();
+
+		if (elapsed_ms < 1000)
+			return connection::disconnected;
+
+		dev->last_update = now;
 
 		int count = 0;
 		SDL_JoystickID* gamepads = SDL_GetGamepads(&count);
 		for (int i = 0; i < count; i++)
 		{
-			// Get game pad
+			// Get game pad (open/close is ref-counted, so we need to close after use)
 			SDL_Gamepad* gamepad = SDL_OpenGamepad(gamepads[i]);
 			if (!gamepad)
 			{
@@ -513,15 +520,10 @@ PadHandlerBase::connection sdl_pad_handler::update_connection(const std::shared_
 
 			// Find out if we already know this controller
 			std::shared_ptr<SDLDevice> sdl_device = get_device_by_gamepad(gamepad);
-			if (!sdl_device)
-			{
-				// Close the game pad if we don't know it.
-				SDL_CloseGamepad(gamepad);
-				continue;
-			}
+			SDL_CloseGamepad(gamepad);
 
 			// Re-attach the controller if the device matches the current one
-			if (sdl_device.get() == dev)
+			if (sdl_device && sdl_device.get() == dev)
 			{
 				if (SDLDevice::sdl_info info = get_sdl_info(gamepads[i]); info.gamepad)
 				{
