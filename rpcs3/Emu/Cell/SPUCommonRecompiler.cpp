@@ -1257,7 +1257,7 @@ void spu_cache::initialize(bool build_existing_cache)
 				{
 					new_entry = start_new;
 
-					while (new_entry < next_func && (ls[start_new / 4] < 0x3fffc || !spu_thread::is_exec_code(new_entry, { reinterpret_cast<const u8*>(ls.data()), SPU_LS_SIZE }, 0, true)))
+					while (new_entry < next_func && (ls[new_entry / 4] < 0x3fffc || !spu_thread::is_exec_code(new_entry, { reinterpret_cast<const u8*>(ls.data()), SPU_LS_SIZE }, 0, true)))
 					{
 						new_entry += 4;
 					}
@@ -2478,7 +2478,7 @@ std::vector<u32> spu_thread::discover_functions(u32 base_addr, std::span<const u
 				continue;
 			}
 
-			const u32 target = op_branch_targets(next, op)[0];
+			const u32 target = op_branch_targets(next, test_op)[0];
 
 			if (target == umax || addr + 4 == target || target == addr || std::count(addrs.begin(), addrs.end(), target))
 			{

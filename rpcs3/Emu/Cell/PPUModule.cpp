@@ -1233,7 +1233,7 @@ static void ppu_check_patch_spu_images(const ppu_module<lv2_obj>& mod, const ppu
 
 				for (u32 search = index & -16, tries = 16 * 64; tries && search >= lower_bound && search < (upper_bound & -16); tries = tries - 1, search = advance_index < 0 ? utils::sub_saturate<u32>(search, 0 - advance_index) : search + advance_index)
 				{
-					if (seg_view[search] != 0x42 && seg_view[search] != 0x43)
+					if (data_span[search] != 0x42 && data_span[search] != 0x43)
 					{
 						if (search == 0 && advance_index <= 0)
 						{
@@ -1572,7 +1572,7 @@ struct prx_names_table
 				ppu_loader.error("Skipping PRX name registeration: %s, max=0x%x", name, max0 << 16);
 			}
 
-			for (u32 i = seg.addr >> 16; i <= max; i++)
+			for (u32 i = seg.addr >> 16; i < max; i++)
 			{
 				lut[i].release(ptr);
 			}
