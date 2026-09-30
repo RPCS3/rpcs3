@@ -327,6 +327,11 @@ public:
 
 				for (auto& [device_type_id, new_joystick_state] : new_joystick_states)
 				{
+					if (!m_mapping_in_progress)
+					{
+						break;
+					}
+
 					const auto last_joystick_state = m_last_joystick_states.find(device_type_id);
 					if (last_joystick_state == m_last_joystick_states.cend())
 					{

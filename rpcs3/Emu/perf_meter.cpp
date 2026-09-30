@@ -29,43 +29,43 @@ void perf_stat_base::print(const char* name) const noexcept
 	{
 		perf_log.notice(u8"Perf stats for %s: total events: %u (total time %.4fs, avg %.4fus)", name, num_total, m_log[65].load() / 1000'000'000., m_log[65].load() / 1000. / num_total);
 
-		for (u32 i = 0; i < 13; i++)
+		for (u32 i = 0; i < 14; i++)
 		{
 			if (u64 count = m_log[i + 1].load())
 			{
-				perf_log.notice(u8"Perf stats for %s: events < %.3fus: %u", name, std::pow(2., i) / 1000., count);
+				perf_log.notice(u8"Perf stats for %s: events < %.3fus: %u", name, std::pow(2., i + 1) / 1000., count);
 			}
 		}
 
-		for (u32 i = 14; i < 23; i++)
+		for (u32 i = 14; i < 24; i++)
 		{
 			if (u64 count = m_log[i + 1].load()) [[unlikely]]
 			{
-				perf_log.notice("Perf stats for %s: events < %.3fms: %u", name, std::pow(2., i) / 1000'000., count);
+				perf_log.notice("Perf stats for %s: events < %.3fms: %u", name, std::pow(2., i + 1) / 1000'000., count);
 			}
 		}
 
-		for (u32 i = 24; i < 33; i++)
+		for (u32 i = 24; i < 34; i++)
 		{
 			if (u64 count = m_log[i + 1].load()) [[unlikely]]
 			{
-				perf_log.notice("Perf stats for %s: events < %.3fs: %u", name, std::pow(2., i) / 1000'000'000., count);
+				perf_log.notice("Perf stats for %s: events < %.3fs: %u", name, std::pow(2., i + 1) / 1000'000'000., count);
 			}
 		}
 
-		for (u32 i = 34; i < 43; i++)
+		for (u32 i = 34; i < 44; i++)
 		{
 			if (u64 count = m_log[i + 1].load()) [[unlikely]]
 			{
-				perf_log.notice("Perf stats for %s: events < %.0f SEC: %u", name, std::pow(2., i) / 1000'000'000., count);
+				perf_log.notice("Perf stats for %s: events < %.0f SEC: %u", name, std::pow(2., i + 1) / 1000'000'000., count);
 			}
 		}
 
-		for (u32 i = 44; i < 63; i++)
+		for (u32 i = 44; i < 64; i++)
 		{
 			if (u64 count = m_log[i + 1].load()) [[unlikely]]
 			{
-				perf_log.notice("Perf stats for %s: events < %.0f MIN: %u", name, std::pow(2., i) / 60'000'000'000., count);
+				perf_log.notice("Perf stats for %s: events < %.0f MIN: %u", name, std::pow(2., i + 1) / 60'000'000'000., count);
 			}
 		}
 	}

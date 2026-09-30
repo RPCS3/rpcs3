@@ -32,7 +32,7 @@ public:
 
 			const auto expected_time = now + rtt.rtt_time;
 
-			msgs.insert(std::make_pair(expected_time, std::move(msg)));
+			msgs.emplace(expected_time, std::move(msg));
 		}
 		wakey.release(1);
 		wakey.notify_one(); // TODO: Should be improved to only wake if new timeout < old timeout
@@ -57,7 +57,7 @@ public:
 					const auto cur_rtt    = rtts[sock_id].rtt_time;
 					if (cur_rtt > actual_rtt)
 					{
-						rtts[sock_id].rtt_time = (actual_rtt + cur_rtt) / 2;
+						rtts[sock_id].rtt_time = std::max((actual_rtt + cur_rtt) / 2, 1ms);
 					}
 				}
 				it = msgs.erase(it);
@@ -222,7 +222,7 @@ private:
 		u64 seq = 0;
 		steady_clock::time_point initial_sendtime{};
 	};
-	std::map<steady_clock::time_point, message> msgs; // (wakeup time, msg)
+	std::multimap<steady_clock::time_point, message> msgs; // (wakeup time, msg)
 	// List of rtts
 	struct rtt_info
 	{
