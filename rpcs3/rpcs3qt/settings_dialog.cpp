@@ -97,7 +97,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	, m_emu_settings(std::move(emu_settings))
 {
 	ui->setupUi(this);
-	ui->buttonBox->button(QDialogButtonBox::StandardButton::Close)->setFocus();
+	ui->buttonBox->button(QDialogButtonBox::StandardButton::Cancel)->setFocus();
 	ui->tab_widget_settings->setUsesScrollButtons(false);
 	ui->tab_widget_settings->tabBar()->setObjectName("tab_bar_settings");
 
@@ -234,7 +234,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 
 	connect(ui->tab_widget_settings, &QTabWidget::currentChanged, this, [this]()
 	{
-		ui->buttonBox->button(QDialogButtonBox::StandardButton::Close)->setFocus();
+		ui->buttonBox->button(QDialogButtonBox::StandardButton::Cancel)->setFocus();
 	});
 
 	//     _____ _____  _    _   _______    _
