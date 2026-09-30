@@ -106,6 +106,7 @@ struct cfg_root : cfg::node
 		cfg::_bool limit_cache_size{ this, "Limit disk cache size", false };
 		cfg::_int<0, 10240> cache_max_size{ this, "Disk cache maximum size (MB)", 5120 };
 		cfg::_bool empty_hdd0_tmp{ this, "Empty /dev_hdd0/tmp/", true };
+		cfg::_bool emulate_hdd_speed{ this, "Emulate HDD Read Speed", false, true };
 
 	} vfs{ this };
 
@@ -224,6 +225,13 @@ struct cfg_root : cfg::node
 			cfg::_bool use_window_space{this, "Use Window Space", false, true};
 
 		} perf_overlay{ this };
+
+		struct native_ui : cfg::node
+		{
+			native_ui(cfg::node* _this) : cfg::node(_this, "Native UI") {}
+
+			cfg::string default_font{ this, "Default Font", "Arial", false };
+		} ui{ this };
 
 		struct node_shader_preloading_dialog : cfg::node
 		{

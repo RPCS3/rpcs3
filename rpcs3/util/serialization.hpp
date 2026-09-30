@@ -211,7 +211,7 @@ public:
 		{
 			using unsigned_type = std::make_unsigned_t<T>;
 			unsigned_type result{};
-			constexpr u32 bit_width = MaxBits ? sizeof(T) * 8 : MaxBits;
+			constexpr u32 bit_width = MaxBits ? MaxBits : (sizeof(T) * 8);
 			value = {};
 
 			for (u32 i = 0;; i += 7)
