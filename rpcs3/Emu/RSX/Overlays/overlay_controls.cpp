@@ -509,10 +509,13 @@ namespace rsx
 		{
 			if (font_name.empty())
 			{
-				font_name = g_cfg.video.ui.default_font.get();
+				font_ref = fontmgr::get(g_cfg.video.ui.default_font.get(), font_size);
+			}
+			else
+			{
+				font_ref = fontmgr::get(font_name, font_size);
 			}
 
-			font_ref = fontmgr::get(font_name, font_size);
 			m_is_compiled = false;
 		}
 
