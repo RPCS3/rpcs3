@@ -839,7 +839,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 		}
 		else
 		{
-			const auto subranges = draw_call.get_subranges();
+			const auto& subranges = draw_call.get_subranges();
 			const auto draw_count = subranges.size();
 			const u32 type_scale = (index_type == GL_UNSIGNED_SHORT) ? 1 : 2;
 			uptr index_ptr = index_offset;
@@ -849,7 +849,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 			const GLvoid** offsets = utils::bless<const GLvoid*>(counts + draw_count);
 			int dst_index = 0;
 
-			for (const auto &range : subranges)
+			for (const auto& range : subranges)
 			{
 				const auto index_size = get_index_count(draw_call.primitive, range.count);
 				counts[dst_index] = index_size;
