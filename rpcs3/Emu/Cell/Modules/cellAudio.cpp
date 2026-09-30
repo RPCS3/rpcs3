@@ -433,6 +433,38 @@ namespace
 		return memory;
 	}
 
+	// Locks the audio mutex from a guest thread. Its holder can wait for a cpu_thread::suspend_all inside the
+	// mmapper syscalls, so a waiter must acknowledge the suspend with cpu_flag::wait instead of blocking silently.
+	// Only for functions accessing VM memory under the lock, the others simply set cpu_flag::wait on entry.
+	// check_state() may block, so it is performed while the mutex is not owned.
+	std::unique_lock<shared_mutex> lock_audio(shared_mutex& mutex)
+	{
+		std::unique_lock lock(mutex, std::try_to_lock);
+
+		if (lock)
+		{
+			return lock;
+		}
+
+		cpu_thread* cpu = cpu_thread::get_current();
+
+		if (!cpu || cpu->state & cpu_flag::wait)
+		{
+			lock.lock();
+			return lock;
+		}
+
+		do
+		{
+			cpu->state += cpu_flag::wait;
+			mutex.lock_unlock();
+			cpu->check_state();
+		}
+		while (!lock.try_lock());
+
+		return lock;
+	}
+
 	shared_ptr<lv2_memory> acquire_audio_memory(u32 id)
 	{
 		return idm::get<lv2_obj, lv2_memory>(id, [](lv2_memory& memory)
@@ -1458,7 +1490,7 @@ error_code cellAudioInit(ppu_thread& ppu)
 	}
 
 	auto& g_audio = g_fxo->get<cell_audio>();
-	std::lock_guard lock(g_audio.mutex);
+	auto lock = lock_audio(g_audio.mutex);
 
 	if (g_audio.init)
 	{
@@ -1555,7 +1587,7 @@ error_code cellAudioQuit(ppu_thread& ppu)
 	}
 
 	auto& g_audio = g_fxo->get<cell_audio>();
-	std::lock_guard lock(g_audio.mutex);
+	auto lock = lock_audio(g_audio.mutex);
 
 	if (!g_audio.init)
 	{
@@ -1659,7 +1691,7 @@ error_code cellAudioPortOpen(ppu_thread& ppu, vm::ptr<CellAudioPortParam> audioP
 	// Waiting for VSH and doing some more things
 	lv2_sleep(200);
 
-	std::lock_guard lock(g_audio.mutex);
+	auto lock = lock_audio(g_audio.mutex);
 
 	if (!g_audio.init)
 	{
@@ -1709,7 +1741,7 @@ error_code cellAudioGetPortConfig(u32 portNum, vm::ptr<CellAudioPortConfig> port
 
 	auto& g_audio = g_fxo->get<cell_audio>();
 
-	std::lock_guard lock(g_audio.mutex);
+	auto lock = lock_audio(g_audio.mutex);
 
 	if (!g_audio.init)
 	{
@@ -1767,7 +1799,7 @@ error_code cellAudioPortStart(u32 portNum)
 	// Waiting for VSH
 	lv2_sleep(30);
 
-	std::lock_guard lock(g_audio.mutex);
+	auto lock = lock_audio(g_audio.mutex);
 
 	if (!g_audio.init)
 	{
@@ -1802,7 +1834,7 @@ error_code cellAudioPortClose(ppu_thread& ppu, u32 portNum)
 
 	auto& g_audio = g_fxo->get<cell_audio>();
 
-	std::lock_guard lock(g_audio.mutex);
+	auto lock = lock_audio(g_audio.mutex);
 
 	if (!g_audio.init)
 	{
@@ -1825,8 +1857,10 @@ error_code cellAudioPortClose(ppu_thread& ppu, u32 portNum)
 	return CELL_OK;
 }
 
-error_code cellAudioPortStop(u32 portNum)
+error_code cellAudioPortStop(ppu_thread& ppu, u32 portNum)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellAudio.warning("cellAudioPortStop(portNum=%d)", portNum);
 
 	auto& g_audio = g_fxo->get<cell_audio>();
@@ -1858,7 +1892,7 @@ error_code cellAudioGetPortTimestamp(u32 portNum, u64 tag, vm::ptr<u64> stamp)
 
 	auto& g_audio = g_fxo->get<cell_audio>();
 
-	std::lock_guard lock(g_audio.mutex);
+	auto lock = lock_audio(g_audio.mutex);
 
 	if (!g_audio.init)
 	{
@@ -1897,7 +1931,7 @@ error_code cellAudioGetPortBlockTag(u32 portNum, u64 blockNo, vm::ptr<u64> tag)
 
 	auto& g_audio = g_fxo->get<cell_audio>();
 
-	std::lock_guard lock(g_audio.mutex);
+	auto lock = lock_audio(g_audio.mutex);
 
 	if (!g_audio.init)
 	{
@@ -1927,8 +1961,10 @@ error_code cellAudioGetPortBlockTag(u32 portNum, u64 blockNo, vm::ptr<u64> tag)
 	return CELL_OK;
 }
 
-error_code cellAudioSetPortLevel(u32 portNum, float level)
+error_code cellAudioSetPortLevel(ppu_thread& ppu, u32 portNum, float level)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellAudio.trace("cellAudioSetPortLevel(portNum=%d, level=%f)", portNum, level);
 
 	auto& g_audio = g_fxo->get<cell_audio>();
@@ -2179,15 +2215,19 @@ error_code AudioRemoveNotifyEventQueue(u64 key, u32 iFlags)
 	return CELL_AUDIO_ERROR_TRANS_EVENT;
 }
 
-error_code cellAudioRemoveNotifyEventQueue(u64 key)
+error_code cellAudioRemoveNotifyEventQueue(ppu_thread& ppu, u64 key)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellAudio.warning("cellAudioRemoveNotifyEventQueue(key=0x%llx)", key);
 
 	return AudioRemoveNotifyEventQueue(key, 0);
 }
 
-error_code cellAudioRemoveNotifyEventQueueEx(u64 key, u32 iFlags)
+error_code cellAudioRemoveNotifyEventQueueEx(ppu_thread& ppu, u64 key, u32 iFlags)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellAudio.todo("cellAudioRemoveNotifyEventQueueEx(key=0x%llx, iFlags=0x%x)", key, iFlags);
 
 	if (iFlags & (~0u >> 5))
@@ -2204,7 +2244,7 @@ error_code cellAudioAddData(u32 portNum, vm::ptr<float> src, u32 samples, float 
 
 	auto& g_audio = g_fxo->get<cell_audio>();
 
-	std::lock_guard lock(g_audio.mutex);
+	auto lock = lock_audio(g_audio.mutex);
 
 	if (!g_audio.init)
 	{
@@ -2241,7 +2281,7 @@ error_code cellAudioAdd2chData(u32 portNum, vm::ptr<float> src, u32 samples, flo
 
 	auto& g_audio = g_fxo->get<cell_audio>();
 
-	std::lock_guard lock(g_audio.mutex);
+	auto lock = lock_audio(g_audio.mutex);
 
 	if (!g_audio.init)
 	{
@@ -2295,7 +2335,7 @@ error_code cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 
 	auto& g_audio = g_fxo->get<cell_audio>();
 
-	std::lock_guard lock(g_audio.mutex);
+	auto lock = lock_audio(g_audio.mutex);
 
 	if (!g_audio.init)
 	{
@@ -2336,8 +2376,10 @@ error_code cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 	return CELL_OK;
 }
 
-error_code cellAudioMiscSetAccessoryVolume(u32 devNum, float volume)
+error_code cellAudioMiscSetAccessoryVolume(ppu_thread& ppu, u32 devNum, float volume)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellAudio.todo("cellAudioMiscSetAccessoryVolume(devNum=%d, volume=%f)", devNum, volume);
 
 	auto& g_audio = g_fxo->get<cell_audio>();
@@ -2354,13 +2396,15 @@ error_code cellAudioMiscSetAccessoryVolume(u32 devNum, float volume)
 	return CELL_OK;
 }
 
-error_code cellAudioSendAck(u64 data3)
+error_code cellAudioSendAck(ppu_thread& ppu, u64 data3)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellAudio.trace("cellAudioSendAck(data3=0x%llx)", data3);
 
 	auto& g_audio = g_fxo->get<cell_audio>();
 
-	std::unique_lock lock(g_audio.mutex);
+	std::lock_guard lock(g_audio.mutex);
 
 	if (!g_audio.init)
 	{
@@ -2381,8 +2425,10 @@ error_code cellAudioSendAck(u64 data3)
 	return CELL_OK;
 }
 
-error_code cellAudioSetPersonalDevice(s32 iPersonalStream, s32 iDevice)
+error_code cellAudioSetPersonalDevice(ppu_thread& ppu, s32 iPersonalStream, s32 iDevice)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellAudio.todo("cellAudioSetPersonalDevice(iPersonalStream=%d, iDevice=%d)", iPersonalStream, iDevice);
 
 	auto& g_audio = g_fxo->get<cell_audio>();
@@ -2405,8 +2451,10 @@ error_code cellAudioSetPersonalDevice(s32 iPersonalStream, s32 iDevice)
 	return CELL_OK;
 }
 
-error_code cellAudioUnsetPersonalDevice(s32 iPersonalStream)
+error_code cellAudioUnsetPersonalDevice(ppu_thread& ppu, s32 iPersonalStream)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellAudio.todo("cellAudioUnsetPersonalDevice(iPersonalStream=%d)", iPersonalStream);
 
 	auto& g_audio = g_fxo->get<cell_audio>();
