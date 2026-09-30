@@ -613,7 +613,7 @@ jobs:
           envs: 'QT_VER_MAIN LLVM_COMPILER_VER CCACHE_DIR CC CXX LLVM_CONFIG'
           usesh: true
           copyback: false
-          release: "14.4"
+          release: "14.5"
           run: .ci/install-freebsd.sh && .ci/build-freebsd.sh
 
       - name: Save Build Ccache
