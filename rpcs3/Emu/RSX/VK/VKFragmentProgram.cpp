@@ -96,6 +96,15 @@ void VKFragmentDecompilerThread::prepareBindingTable()
 	{
 		vk_prog->binding_table.frag_depth_input_location = location++;
 	}
+
+	std::memset(vk_prog->binding_table.frag_src_location, 0xff, sizeof(vk_prog->binding_table.frag_src_location));
+	if (m_prog.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING)
+	{
+		for (u32 i = 0; i < m_prog.mrt_buffers_count; ++i)
+		{
+			vk_prog->binding_table.frag_src_location[i] = location++;
+		}
+	}
 }
 
 void VKFragmentDecompilerThread::insertHeader(std::stringstream & OS)
@@ -247,7 +256,7 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 
 	if (m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE)
 	{
-		const auto frag_depth_type = (m_prog.ctrl & RSX_SHADER_CONTROL_MULTISAMPLED_ZBUFFER)
+		const auto frag_depth_type = (m_prog.ctrl & RSX_SHADER_CONTROL_ROP_MULTISAMPLED)
 			? "sampler2DMS"
 			: "sampler2D";
 
@@ -260,6 +269,26 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 			vk::glsl::binding_set_index_fragment,
 			vk_prog->binding_table.frag_depth_input_location
 		));
+	}
+
+	if (m_prog.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING)
+	{
+		const std::string_view att_type = (m_prog.ctrl & RSX_SHADER_CONTROL_ROP_MULTISAMPLED)
+			? "subpassInputMS"sv
+			: "subpassInput"sv;
+
+		for (u32 i = 0; i < m_prog.mrt_buffers_count; ++i)
+		{
+			OS << "layout(input_attachment_index= " << i << ", set=" << vk::glsl::binding_set_index_fragment << ", binding=" << vk_prog->binding_table.frag_src_location[i] << ") uniform " << att_type << " frag_src_" << i << ";\n";
+
+			inputs.push_back(vk::glsl::program_input::make(
+				glsl::glsl_fragment_program,
+				fmt::format("frag_src_%u", i),
+				vk::glsl::input_type_attachment,
+				vk::glsl::binding_set_index_fragment,
+				vk_prog->binding_table.frag_src_location[i]
+			));
+		}
 	}
 
 	// Draw params are always provided by vertex program. Instead of pointer chasing, they're provided as varyings.
@@ -299,6 +328,29 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	OS << "{\n";
 	OS << "	uvec4 stipple_pattern[];\n";
 	OS << "};\n\n";
+
+	if (m_prog.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING)
+	{
+		OS <<
+			"layout(push_constant) uniform push_constants_block\n"
+			"{\n"
+			"	layout(offset = 4) uint blend_eqn;\n"
+			"	uint blend_sfactors;\n"
+			"	uint blend_dfactors;\n"
+			"	vec4 blend_constants;\n"
+			"};\n\n";
+
+		vk::glsl::program_input push_constants
+		{
+			.domain = glsl::glsl_fragment_program,
+			.type = vk::glsl::input_type_push_constant,
+			.bound_data = vk::glsl::push_constant_ref{ .offset = 4, .size = 28 },
+			.set = vk::glsl::binding_set_index_fragment,
+			.location = umax,
+			.name = "push_constants_block"
+		};
+		inputs.push_back(std::move(push_constants));
+	}
 
 	vk::glsl::program_input in
 	{
@@ -357,6 +409,7 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.ROP_polygon_stipple_test = !!(m_prog.ctrl & RSX_SHADER_CONTROL_POLYGON_STIPPLE);
 	m_shader_props.ROP_discard = !!(m_prog.ctrl & RSX_SHADER_CONTROL_USES_KIL);
 	m_shader_props.ROP_channel_remap = !!(m_prog.ctrl & RSX_SHADER_CONTROL_ROP_OUTPUT_REMAP);
+	m_shader_props.ROP_programmable_blend = !!(m_prog.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING);
 
 	m_shader_props.require_tex1D_ops = properties.has_tex1D;
 	m_shader_props.require_tex2D_ops = properties.has_tex2D;
@@ -365,7 +418,7 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.require_alpha_kill = !!(m_prog.ctrl & RSX_SHADER_CONTROL_TEXTURE_ALPHA_KILL);
 	m_shader_props.require_color_format_convert = !!(m_prog.ctrl & RSX_SHADER_CONTROL_TEXTURE_FORMAT_CONVERT);
 	m_shader_props.emulate_depth_compare = !!(m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE);
-	m_shader_props.depth_buffer_multisampled = !!(m_prog.ctrl & RSX_SHADER_CONTROL_MULTISAMPLED_ZBUFFER);
+	m_shader_props.ROP_output_multisampled = !!(m_prog.ctrl & RSX_SHADER_CONTROL_ROP_MULTISAMPLED);
 
 	// Declare global constants
 	if (m_shader_props.require_fog_read)
@@ -490,16 +543,25 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 	OS << "void main()\n";
 	OS << "{\n";
 
-	if ((m_prog.ctrl & RSX_SHADER_CONTROL_ALPHA_TEST) ||
-		(m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE) ||
-		(m_prog.ctrl & RSX_SHADER_CONTROL_ROP_OUTPUT_REMAP))
+	constexpr u32 ROP_control_access_options =
+		RSX_SHADER_CONTROL_ALPHA_TEST |
+		RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE |
+		RSX_SHADER_CONTROL_ROP_OUTPUT_REMAP |
+		RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
+
+	if (m_prog.ctrl & ROP_control_access_options)
 	{
-		OS <<
-			"	const uint rop_control = fs_contexts[_fs_context_offset].rop_control;\n"
-			"	const float alpha_ref = fs_contexts[_fs_context_offset].alpha_ref;\n\n";
+		OS << "	const uint rop_control = fs_contexts[_fs_context_offset].rop_control;\n";
+
+		if (m_prog.ctrl & RSX_SHADER_CONTROL_ALPHA_TEST)
+		{
+			OS << "	const float alpha_ref = fs_contexts[_fs_context_offset].alpha_ref;\n";
+		}
+
+		OS << "\n";
 	}
 
-	::glsl::insert_rop_init(OS);
+	::glsl::insert_rop_init(OS, m_prog.mrt_buffers_count);
 
 	OS << "\n" << "	fs_main();\n\n";
 

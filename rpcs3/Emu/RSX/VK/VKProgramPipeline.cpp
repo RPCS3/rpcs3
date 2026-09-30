@@ -60,6 +60,8 @@ namespace vk
 				return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 			case input_type_storage_texture:
 				return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+			case input_type_attachment:
+				return VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
 			default:
 				fmt::throw_exception("Unexpected program input type %d", static_cast<int>(type));
 			}
@@ -201,7 +203,7 @@ namespace vk
 			return *this;
 		}
 
-		program& program::link(bool separate_objects)
+		program& program::link(VkPipelineCache pipeline_cache, bool separate_objects)
 		{
 			auto p_graphics_info = std::get_if<VkGraphicsPipelineCreateInfo>(&m_info);
 			auto p_compute_info = !p_graphics_info ? std::get_if<VkComputePipelineCreateInfo>(&m_info) : nullptr;
@@ -269,13 +271,13 @@ namespace vk
 			{
 				VkGraphicsPipelineCreateInfo create_info = *p_graphics_info;
 				create_info.layout = m_pipeline_layout;
-				CHECK_RESULT(vkCreateGraphicsPipelines(m_device, nullptr, 1, &create_info, nullptr, &m_pipeline));
+				CHECK_RESULT(vkCreateGraphicsPipelines(m_device, pipeline_cache, 1, &create_info, nullptr, &m_pipeline));
 			}
 			else
 			{
 				VkComputePipelineCreateInfo create_info = *p_compute_info;
 				create_info.layout = m_pipeline_layout;
-				CHECK_RESULT(vkCreateComputePipelines(m_device, nullptr, 1, &create_info, nullptr, &m_pipeline));
+				CHECK_RESULT(vkCreateComputePipelines(m_device, pipeline_cache, 1, &create_info, nullptr, &m_pipeline));
 			}
 
 			m_linked = true;

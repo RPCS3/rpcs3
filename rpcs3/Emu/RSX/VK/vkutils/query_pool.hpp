@@ -1,8 +1,7 @@
 #pragma once
 
-#include "../VulkanAPI.h"
-#include "../../rsx_utils.h"
 #include "shared.h"
+#include "../../Utils/rsx_utils.h"
 
 namespace vk
 {

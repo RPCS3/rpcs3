@@ -1,7 +1,8 @@
 #include "stdafx.h"
 #include "rsx_utils.h"
-#include "rsx_methods.h"
+#include "Emu/RSX/rsx_methods.h"
 #include "Emu/Cell/Modules/cellVideoOut.h"
+#include "Emu/system_config.h"
 
 #ifdef _MSC_VER
 #pragma warning(push, 0)
@@ -88,7 +89,7 @@ namespace rsx
 			u16 blend_color_b = rsx::method_registers.blend_color_16b_b();
 			u16 blend_color_a = rsx::method_registers.blend_color_16b_a();
 
-			return { blend_color_r / 65535.f, blend_color_g / 65535.f, blend_color_b / 65535.f, blend_color_a / 65535.f };
+			return { decode_fp16(blend_color_r), decode_fp16(blend_color_g), decode_fp16(blend_color_b), decode_fp16(blend_color_a) };
 		}
 		else
 		{

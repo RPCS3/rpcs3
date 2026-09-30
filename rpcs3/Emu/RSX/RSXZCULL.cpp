@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Core/RSXEngLock.hpp"
 #include "Core/RSXReservationLock.hpp"
+#include "Host/MM.h"
 #include "RSXThread.h"
 
 namespace rsx
@@ -155,6 +156,9 @@ namespace rsx
 
 				if (m_pending_writes.empty())
 				{
+					// Immediate write, flush MM queue
+					rsx::mm_flush();
+
 					// No need to queue this if there is no pending request in the pipeline anyway
 					write(sink, ptimer->timestamp(), type, m_statistics_map[m_statistics_tag_id].result);
 					return;
@@ -173,6 +177,7 @@ namespace rsx
 					It->counter_tag = m_statistics_tag_id;
 					It->sink = sink;
 					It->type = type;
+					It->sync_tag = rsx::get_shared_tag();
 
 					if (forwarder != &(*It))
 					{
@@ -369,6 +374,9 @@ namespace rsx
 
 		void ZCULL_control::write(queued_report_write* writer, u64 timestamp, u32 value)
 		{
+			// Reports are strongly ordered.
+			rsx::mm_flush_partial(writer->sync_tag);
+
 			write(writer->sink, timestamp, writer->type, value);
 			on_report_completed(writer->sink);
 
@@ -799,6 +807,8 @@ namespace rsx
 		u32 ZCULL_control::copy_reports_to(u32 start, u32 range, u32 dest)
 		{
 			u32 bytes_to_write = 0;
+			std::unordered_set<u32> unique_addresses;
+
 			const auto memory_range = utils::address_range32::start_length(start, range);
 			for (auto& writer : m_pending_writes)
 			{
@@ -807,8 +817,14 @@ namespace rsx
 
 				if (!writer.forwarder && memory_range.overlaps(writer.sink))
 				{
-					u32 address = (writer.sink - start) + dest;
+					const u32 address = (writer.sink - start) + dest;
 					writer.sink_alias.push_back(vm::cast(address));
+
+					if (!unique_addresses.contains(address))
+					{
+						bytes_to_write += sizeof(RsxReport);
+						unique_addresses.insert(address);
+					}
 				}
 			}
 

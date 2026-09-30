@@ -1572,18 +1572,24 @@ public:
 		return true;
 	}
 
-	bool set_image(u32 addr)
+	bool set_image(vm::cptr<void> buf)
 	{
-		if (!addr)
+		if (!buf)
 			return false;
 
 		auto& g_camera = g_fxo->get<camera_thread>();
 		std::lock_guard lock(g_camera.mutex);
 		m_camera_info = g_camera.info;
 
-		if (m_camera_info.buffer.addr() != addr && m_camera_info.pbuf[0].addr() != addr && m_camera_info.pbuf[1].addr() != addr)
+		if (m_camera_info.buffer.addr() != buf.addr() && m_camera_info.pbuf[0].addr() != buf.addr() && m_camera_info.pbuf[1].addr() != buf.addr())
 		{
-			cellGem.error("gem_tracker: unexpected image address: addr=0x%x, expected one of: 0x%x, 0x%x, 0x%x", addr, m_camera_info.buffer.addr(), m_camera_info.pbuf[0].addr(), m_camera_info.pbuf[1].addr());
+			// The game passes its own buffer. Let's just ignore this and log a warning. We use our own camera buffer for tracking for now anyway.
+			cellGem.warning("gem_tracker: unexpected image address: addr=0x%x, expected one of: 0x%x, 0x%x, 0x%x", buf.addr(), m_camera_info.buffer.addr(), m_camera_info.pbuf[0].addr(), m_camera_info.pbuf[1].addr());
+		}
+
+		if (!m_camera_info.buffer)
+		{
+			cellGem.error("gem_tracker: camer buffer not set");
 			return false;
 		}
 
@@ -4176,7 +4182,7 @@ error_code cellGemUpdateStart(vm::cptr<void> camera_frame, u64 timestamp)
 
 	gem.camera_frame = camera_frame.addr();
 
-	const bool image_set = tracker.set_image(gem.camera_frame);
+	const bool image_set = tracker.set_image(camera_frame);
 
 	tracker.wake_up_tracker();
 

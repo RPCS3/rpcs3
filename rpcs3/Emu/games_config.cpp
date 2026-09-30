@@ -55,6 +55,14 @@ games_config::result games_config::add_game(const std::string& key, const std::s
 		return add_game(key, iso_dev->get_loaded_iso());
 	}
 
+	if (fs::is_drive_name(path))
+	{
+		// Restore the trailing delimiter trimmed by the caller if the game is on the root of a raw device (e.g. "E:/"),
+		// which is also the form provided by "rpcs3::utils::get_games_dir()" and the one built by "GetBdvdDir()", so
+		// that the same title is always registered with the very same path
+		return add_game(key, path + '/');
+	}
+
 	std::lock_guard lock(m_mutex);
 
 	// Access or create node if does not exist

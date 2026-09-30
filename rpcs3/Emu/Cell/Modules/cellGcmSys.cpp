@@ -1103,7 +1103,7 @@ error_code cellGcmMapMainMemory(ppu_thread& ppu, u32 ea, u32 size, vm::ptr<u32> 
 	std::lock_guard lock(gcm_cfg.gcmio_mutex);
 
 	// Use the offset table to find the next free io address
-	for (u32 io = 0, end = (rsx::get_current_renderer()->main_mem_size - gcm_cfg.reserved_size) >> 20, unmap_count = 1; io < end; unmap_count++)
+	for (u32 io = 0, end = (rsx::get_current_renderer()->main_mem_size - gcm_cfg.reserved_size) >> 20, unmap_count = 1; unmap_count + io <= end; unmap_count++)
 	{
 		if (gcm_cfg.offsetTable.eaAddress[io + unmap_count - 1] > 0xBFF)
 		{

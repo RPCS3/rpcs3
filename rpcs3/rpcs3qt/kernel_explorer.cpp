@@ -350,14 +350,15 @@ void kernel_explorer::update()
 		{
 			auto& mem = static_cast<lv2_memory&>(obj);
 			const f64 size_mb = mem.size * 1. / (1024 * 1024);
+			const std::string container = mem.ct ? fmt::format("%s", mem.ct->id) : "System";
 
 			if (mem.pshared)
 			{
-				add_leaf(node, QString::fromStdString(fmt::format("Shared Mem 0x%08x: Size: 0x%x (%0.2f MB), Chunk: %s, Mappings: %u, Mem Container: %s, Key: %#llx", id, mem.size, size_mb, mem.align == 0x10000u ? "64K" : "1MB", +mem.counter, mem.ct->id, mem.key)));
+				add_leaf(node, QString::fromStdString(fmt::format("Shared Mem 0x%08x: Size: 0x%x (%0.2f MB), Chunk: %s, Mappings: %u, Mem Container: %s, Key: %#llx", id, mem.size, size_mb, mem.align == 0x10000u ? "64K" : "1MB", +mem.counter, container, mem.key)));
 				break;
 			}
 
-			add_leaf(node, QString::fromStdString(fmt::format("Shared Mem 0x%08x: Size: 0x%x (%0.2f MB), Chunk: %s, Mem Container: %s, Mappings: %u", id, mem.size, size_mb, mem.align == 0x10000u ? "64K" : "1MB", mem.ct->id, +mem.counter)));
+			add_leaf(node, QString::fromStdString(fmt::format("Shared Mem 0x%08x: Size: 0x%x (%0.2f MB), Chunk: %s, Mem Container: %s, Mappings: %u", id, mem.size, size_mb, mem.align == 0x10000u ? "64K" : "1MB", container, +mem.counter)));
 			break;
 		}
 		case SYS_MUTEX_OBJECT:
@@ -916,7 +917,7 @@ void kernel_explorer::update()
 			if (zc.bound)
 			{
 				add_leaf(zc_tree, QString::fromStdString(fmt::format("O: %07x, W: %u, H: %u, Zformat: 0x%x, AAformat: 0x%x, Dir: 0x%x, sFunc: 0x%x, sRef: %02x, sMask: %02x"
-					, zc.offset, zc.height, zc.width, zc.zFormat, zc.aaFormat, zc.zcullDir, zc.sFunc, zc.sRef, zc.sMask)));
+					, zc.offset, zc.width, zc.height, zc.zFormat, zc.aaFormat, zc.zcullDir, zc.sFunc, zc.sRef, zc.sMask)));
 			}
 		}
 
@@ -925,7 +926,7 @@ void kernel_explorer::update()
 			if (db.valid())
 			{
 				add_leaf(db_tree, QString::fromStdString(fmt::format("Offset: %07x, Width: %u, Height: %u, Pitch: %u"
-					, db.offset, db.height, db.width, db.pitch)));
+					, db.offset, db.width, db.height, db.pitch)));
 			}
 		}
 	}

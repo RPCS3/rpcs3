@@ -744,7 +744,7 @@ namespace vm
 		}
 
 		// If native page size exceeds 4096, don't map native pages (expected to be always mapped in this case)
-		const bool is_noop = bflags & page_size_4k && utils::get_page_size() > 4096;
+		const bool is_noop = bflags & block_size_4k && utils::get_page_size() > 4096;
 
 		// Lock range being mapped
 		auto range_lock = _lock_main_range_lock(range_allocation, addr, size);
@@ -805,7 +805,10 @@ namespace vm
 		//       the RSX might try to invalidate memory that got unmapped and remapped
 		if (const auto rsxthr = g_fxo->try_get<rsx::thread>())
 		{
-			rsxthr->on_notify_memory_mapped(addr, size);
+			if (flags & page_1m_size && ~bflags & rsx_incomp)
+			{
+				rsxthr->on_notify_memory_mapped(addr, size);
+			}
 		}
 
 		auto prot = utils::protection::rw;
@@ -894,6 +897,25 @@ namespace vm
 			return true;
 		}
 
+		const u8 first_flag = g_pages[addr / 4096];
+
+		if (first_flag & page_1m_size)
+		{
+			size = utils::align(size, 0x100000);
+		}
+		else if (first_flag & page_64k_size)
+		{
+			size = utils::align(size, 0x10000);
+		}
+
+		flags_test |= (first_flag & (page_1m_size | page_64k_size));
+
+		// Check memory consistency
+		if (!size || !check_addr(addr, flags_test, size))
+		{
+			return false;
+		}
+
 		// Choose some impossible value (not valid without page_allocated)
 		u8 start_value = page_executable;
 
@@ -956,11 +978,11 @@ namespace vm
 		}
 
 		// If native page size exceeds 4096, don't unmap native pages (always mapped)
-		const bool is_noop = bflags & page_size_4k && utils::get_page_size() > 4096;
+		const bool is_noop = bflags & block_size_4k && utils::get_page_size() > 4096;
 
 		// Determine deallocation size
 		u32 size = 0;
-		bool is_exec = false;
+		u8 map_flags = 0;
 
 		for (u32 i = addr / 4096; i < addr / 4096 + max_size / 4096; i++)
 		{
@@ -969,18 +991,23 @@ namespace vm
 				break;
 			}
 
-			if (size == 0)
+			const u8 page_flags = g_pages[i] & ~(page_writable | page_readable);
+
+			if (size && map_flags != page_flags)
 			{
-				is_exec = !!(g_pages[i] & page_executable);
-			}
-			else
-			{
-				// Must be consistent
-				ensure(is_exec == !!(g_pages[i] & page_executable));
+				fmt::throw_exception("_page_unmap(): Memory inconsistency found! (addr=0x%x, flags: 0x%x vs 0x%x)", addr, map_flags, page_flags);
 			}
 
+			map_flags = page_flags;
 			size += 4096;
 		}
+
+		if (!size)
+		{
+			fmt::throw_exception("_page_unmap(): No mapping was found! (addr=0x%x)", addr);
+		}
+
+		const bool is_exec = !!(map_flags & page_executable);
 
 		// Protect range locks from actual memory protection changes
 		auto range_lock = _lock_main_range_lock(range_allocation, addr, size);
@@ -1010,7 +1037,10 @@ namespace vm
 		//       the RSX might try to call VirtualProtect on memory that is already unmapped
 		if (auto rsxthr = g_fxo->try_get<rsx::thread>())
 		{
-			rsxthr->on_notify_pre_memory_unmapped(addr, size, unmap_events);
+			if ((addr >> 28 << 28) == 0xC0000000 || (map_flags & page_1m_size && ~bflags & rsx_incomp))
+			{
+				rsxthr->on_notify_pre_memory_unmapped(addr, size, unmap_events);
+			}
 		}
 
 		// Deregister PPU related data
@@ -1186,11 +1216,11 @@ namespace vm
 			flags |= page_executable;
 		}
 
-		if ((bflags & page_size_mask) == page_size_64k)
+		if ((bflags & block_size_mask) == block_size_64k)
 		{
 			flags |= page_64k_size;
 		}
-		else if (!(bflags & (page_size_mask & ~page_size_1m)))
+		else if (!(bflags & (block_size_mask & ~block_size_1m)))
 		{
 			flags |= page_1m_size;
 		}
@@ -1210,7 +1240,7 @@ namespace vm
 			std::remove_reference_t<decltype(map)>::value_type* result = nullptr;
 
 			// Check eligibility
-			if (!_this || !(page_size_mask & _this->flags) || _this->addr < 0x20000000 || _this->addr >= 0xC0000000)
+			if (!_this || !(block_size_mask & _this->flags) || _this->addr < 0x20000000 || _this->addr >= 0xC0000000)
 			{
 				return result;
 			}
@@ -1256,20 +1286,34 @@ namespace vm
 		return true;
 	}
 
-	static constexpr u64 process_block_flags(u64 flags)
+	static constexpr u64 process_block_flags(u64 flags, bool is_savestate = false, u32 addr = 0)
 	{
-		if ((flags & page_size_mask) == 0)
+		if ((flags & block_size_mask) == 0)
 		{
-			flags |= page_size_1m;
+			flags |= block_size_1m;
 		}
 
-		if (flags & page_size_4k)
+		if (flags & block_size_4k)
 		{
 			flags |= preallocated;
 		}
 		else
 		{
 			flags &= ~stack_guarded;
+		}
+
+		if (is_savestate)
+		{
+			// For backwards compatibility
+			const s32 version = GET_SERIALIZATION_VERSION(lv2_memory);
+
+			if (version < 4)
+			{
+				if (addr >= 0x20000000 && addr < 0xC0000000)
+				{
+					flags |= mapping_comp;
+				}
+			}
 		}
 
 		return flags;
@@ -1307,7 +1351,7 @@ namespace vm
 			// Special path for whole-allocated areas allowing 4k granularity
 			m_common = std::make_shared<utils::shm>(size, fmt::format("_block_x%08x", addr));
 
-			if (!map_critical(vm::_ptr<u8>(addr), this->flags & page_size_4k && utils::get_page_size() > 4096 ? utils::protection::rw : utils::protection::no) || !map_critical(vm::get_super_ptr(addr), utils::protection::rw))
+			if (!map_critical(vm::_ptr<u8>(addr), this->flags & block_size_4k && utils::get_page_size() > 4096 ? utils::protection::rw : utils::protection::no) || !map_critical(vm::get_super_ptr(addr), utils::protection::rw))
 			{
 				fmt::throw_exception("Memory mapping failed (addr=0x%x, size=0x%x, flags=0x%x): %s", addr, size, flags, map_error);
 			}
@@ -1320,6 +1364,8 @@ namespace vm
 
 		if (m_id.exchange(0))
 		{
+			std::unordered_map<const utils::shm*, s64> mapping_refs;
+
 			// Deallocate all memory
 			for (auto it = m_map.begin(), end = m_map.end(); it != end;)
 			{
@@ -1333,7 +1379,40 @@ namespace vm
 				{
 					if (it->second.second.use_count() != 1)
 					{
-						fmt::throw_exception("External memory usage at block 0x%x (addr=0x%x, size=0x%x)", this->addr, it->first, size);
+						if (mapping_refs.empty())
+						{
+							const auto count_refs = [&mapping_refs](const auto& map)
+							{
+								for (const auto& entry : map)
+								{
+									if (entry.second.second)
+									{
+										mapping_refs[entry.second.second.get()]++;
+									}
+								}
+							};
+
+							// count this block separately, vm::unmap removes it from g_locations before calling us
+							count_refs(m_map);
+
+							for (const auto& block : g_locations)
+							{
+								if (block && block.get() != this)
+								{
+									count_refs((block->m.*block_map)());
+								}
+							}
+						}
+
+						if (it->second.second.use_count() != mapping_refs.at(it->second.second.get()))
+						{
+							fmt::throw_exception("External memory usage at block 0x%x (addr=0x%x, size=0x%x)", this->addr, it->first, size);
+						}
+					}
+
+					if (!mapping_refs.empty())
+					{
+						mapping_refs.at(it->second.second.get())--;
 					}
 
 					it->second.second.reset();
@@ -1373,7 +1452,7 @@ namespace vm
 		}
 
 		// Determine minimal alignment
-		const u32 min_page_size = flags & page_size_4k ? 0x1000 : 0x10000;
+		const u32 min_page_size = flags & block_size_4k ? 0x1000 : 0x10000;
 
 		// Align to minimal page size
 		const u32 size = utils::align(orig_size, min_page_size) + (flags & stack_guarded ? 0x2000 : 0);
@@ -1445,7 +1524,7 @@ namespace vm
 		}
 
 		// Determine minimal alignment
-		const u32 min_page_size = flags & page_size_4k ? 0x1000 : 0x10000;
+		const u32 min_page_size = flags & block_size_4k ? 0x1000 : 0x10000;
 
 		// Take address misalignment into account
 		const u32 size0 = orig_size + addr % min_page_size;
@@ -1746,6 +1825,8 @@ namespace vm
 
 	void block_t::save(utils::serial& ar, std::map<utils::shm*, usz>& shared)
 	{
+		USING_SERIALIZATION_VERSION(lv2_memory);
+
 		auto& m_map = (m.*block_map)();
 
 		ar(addr, size, flags);
@@ -1788,12 +1869,12 @@ namespace vm
 		: m_id(init_block_id())
 		, addr(ar)
 		, size(ar)
-		, flags(ar)
+		, flags(process_block_flags(ar.pop<u64>(), true, addr))
 	{
 		if (flags & preallocated)
 		{
 			m_common = std::make_shared<utils::shm>(size, fmt::format("_block_x%08x", addr));
-			m_common->map_critical(vm::base(addr), this->flags & page_size_4k && utils::get_page_size() > 4096 ? utils::protection::rw : utils::protection::no);
+			m_common->map_critical(vm::base(addr), this->flags & block_size_4k && utils::get_page_size() > 4096 ? utils::protection::rw : utils::protection::no);
 			m_common->map_critical(vm::get_super_ptr(addr));
 		}
 
@@ -1829,13 +1910,13 @@ namespace vm
 				pflags |= alloc_hidden;
 			}
 
-			if ((flags & page_size_64k) == page_size_64k)
+			if ((flags & block_size_64k) == block_size_64k)
 			{
-				pflags |= page_size_64k;
+				pflags |= block_size_64k;
 			}
-			else if (!(flags & (page_size_mask & ~page_size_1m)))
+			else if (!(flags & (block_size_mask & ~block_size_1m)))
 			{
-				pflags |= page_size_1m;
+				pflags |= block_size_1m;
 			}
 
 			// Map the memory through the same method as alloc() and falloc()
@@ -2080,8 +2161,16 @@ namespace vm
 
 			if (!loc)
 			{
-				// Deferred allocation
-				loc = _find_map(area_size, 0x10000000, flags);
+				if (location == vm::main || addr == 0x00010000)
+				{
+					// Special
+					loc = std::make_shared<block_t>(addr, area_size, block_size_64k | preallocated);
+				}
+				else
+				{
+					// Deferred allocation
+					loc = _find_map(area_size, 0x10000000, flags);
+				}
 			}
 
 			return loc;
@@ -2229,13 +2318,13 @@ namespace vm
 
 			g_locations =
 			{
-				std::make_shared<block_t>(0x00010000, 0x0FFF0000, page_size_64k | preallocated), // main
+				nullptr,                                                                         // main
 				nullptr,		                                                                 // user 64k pages
 				nullptr,                                                                         // user 1m pages
 				nullptr,                                                                         // rsx context
-				std::make_shared<block_t>(0xC0000000, 0x10000000, page_size_64k | preallocated), // video
-				std::make_shared<block_t>(0xD0000000, 0x10000000, page_size_4k  | preallocated | stack_guarded | bf0_0x1), // stack
-				std::make_shared<block_t>(0xE0000000, 0x20000000, page_size_64k),                // SPU reserved
+				std::make_shared<block_t>(0xC0000000, 0x10000000, block_size_64k | preallocated), // video
+				std::make_shared<block_t>(0xD0000000, 0x10000000, block_size_4k  | preallocated | stack_guarded | bf0_0x1), // stack
+				std::make_shared<block_t>(0xE0000000, 0x20000000, block_size_64k),                // SPU reserved
 			};
 
 			std::memset(g_reservations, 0, sizeof(g_reservations));
@@ -2294,29 +2383,10 @@ namespace vm
 
 		std::map<utils::shm*, usz> shared_map;
 
-#ifndef _MSC_VER
-		shared.erase(std::unique(shared.begin(), shared.end(), [](auto& a, auto& b) { return a.first == b.first; }), shared.end());
-#else
-		// Workaround for bugged std::unique
-		for (auto it = shared.begin(); it != shared.end();)
+		std::erase_if(shared, [&](const auto& memory)
 		{
-			if (shared_map.count(it->first))
-			{
-				it = shared.erase(it);
-				continue;
-			}
-
-			shared_map.emplace(it->first, 0);
-			it++;
-		}
-
-		shared_map.clear();
-#endif
-
-		for (auto& p : shared)
-		{
-			shared_map.emplace(p.first, &p - shared.data());
-		}
+			return !shared_map.emplace(memory.first, shared_map.size()).second;
+		});
 
 		// TODO: proper serialization of std::map
 		ar(static_cast<usz>(shared_map.size()));
@@ -2452,6 +2522,12 @@ namespace vm
 		// Non-null terminated but terminated by size limit (so the string may continue)
 		return size == max_size;
 	}
+}
+
+template <>
+void fmt_class_string<vm::addr_t>::format(std::string& out, u64 arg)
+{
+	fmt_class_string<u32>::format(out, arg);
 }
 
 void fmt_class_string<vm::_ptr_base<const void, u32>>::format(std::string& out, u64 arg)

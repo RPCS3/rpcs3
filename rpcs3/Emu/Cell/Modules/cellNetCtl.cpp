@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "Emu/system_config.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/IdManager.h"
 
