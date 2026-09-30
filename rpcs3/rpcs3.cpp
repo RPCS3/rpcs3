@@ -1250,7 +1250,8 @@ int run_rpcs3(int argc, char** argv)
 	}
 	else if (const QStringList args = parser.positionalArguments(); (!args.isEmpty() || !emu_argv.empty()) && !is_updating && !parser.isSet(arg_installfw) && !parser.isSet(arg_installpkg))
 	{
-		std::string spath = (args.isEmpty() ? emu_argv[0] : ::at32(args, 0).toStdString());
+		u32 emu_argv_pos = 0;
+		std::string spath = (args.isEmpty() ? emu_argv[emu_argv_pos++] : ::at32(args, 0).toStdString());
 
 		if (spath.starts_with(Emulator::vfs_boot_prefix))
 		{
@@ -1287,7 +1288,7 @@ int run_rpcs3(int argc, char** argv)
 		}
 
 		// Additional arguments passed after "--"
-		if (emu_argv.size() > (args.isEmpty() ? 1 : 0))
+		if (emu_argv_pos < emu_argv.size())
 		{
 			// Reserve empty string for executable path
 			if (rpcs3_argv.empty())
@@ -1297,12 +1298,12 @@ int run_rpcs3(int argc, char** argv)
 
 			rpcs3_argv.emplace_back();
 
-			for (usz i = args.isEmpty() ? 1 : 0; i != emu_argv.size(); i++)
+			for (; emu_argv_pos < emu_argv.size(); emu_argv_pos++)
 			{
-				const std::string arg = args[i].toStdString();
+				const std::string arg = emu_argv[emu_argv_pos];
 				rpcs3_argv.emplace_back(arg);
 
-				sys_log.success("Optional command line argument %d: %s", i, arg);
+				sys_log.success("Optional command line argument %d: %s", emu_argv_pos, arg);
 			}
 		}
 

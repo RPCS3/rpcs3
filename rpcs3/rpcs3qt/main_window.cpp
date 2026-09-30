@@ -4205,7 +4205,7 @@ void main_window::AddGamesFromDirs(QStringList&& paths)
 
 						if (!resolved_path.empty() && !claimed_paths.count(resolved_path))
 						{
-							claimed_paths.emplace(game->path);
+							claimed_paths.emplace(std::move(resolved_path));
 							paths_added.emplace(game->path, QString::fromStdString(game->serial));
 						}
 

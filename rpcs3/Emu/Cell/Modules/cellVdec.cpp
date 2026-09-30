@@ -23,7 +23,6 @@ extern "C"
 #include "libavutil/imgutils.h"
 #include "libswscale/swscale.h"
 }
-constexpr int averror_eof = AVERROR_EOF; // workaround for old-style-cast error
 #ifdef _MSC_VER
 #pragma warning(pop)
 #else
@@ -49,6 +48,8 @@ constexpr int averror_eof = AVERROR_EOF; // workaround for old-style-cast error
 #include "util/asm.hpp"
 
 std::mutex g_mutex_avcodec_open2;
+
+constexpr int averror_eof = AVERROR_EOF; // workaround for old-style-cast error
 
 LOG_CHANNEL(cellVdec);
 
@@ -1256,7 +1257,7 @@ error_code cellVdecQueryAttrEx(ppu_thread& ppu, vm::cptr<CellVdecTypeEx> type, v
 		return CELL_VDEC_ERROR_ARG;
 	}
 
-	VdecDecoderAttr decoder_attr;
+	VdecDecoderAttr decoder_attr {};
 
 	if (get_decoder_specific_ops(type->codecType).query_attr(ppu, decoder_attr, type->profileLevel, type->codecSpecificInfo ? type->codecSpecificInfo.get_ptr() : nullptr) != CELL_OK)
 	{
@@ -1430,7 +1431,7 @@ static error_code vdecOpen(ppu_thread& ppu, T type, U res, vm::cptr<CellVdecCb> 
 		spec = type->codecSpecificInfo ? type->codecSpecificInfo.get_ptr() : nullptr;
 	}
 
-	VdecDecoderAttr attr;
+	VdecDecoderAttr attr {};
 	const error_code err = get_decoder_specific_ops(type->codecType).query_attr(ppu, attr, type->profileLevel, spec);
 	if (err != CELL_OK)
 	{
@@ -1826,12 +1827,14 @@ error_code cellVdecGetPictureExt(ppu_thread& ppu, u32 handle, vm::cptr<CellVdecP
 
 		AVPixelFormat out_f = AV_PIX_FMT_YUV420P;
 
-		std::unique_ptr<u8[]> alpha_plane;
+		thread_local std::vector<u8> alpha_plane;
+		thread_local u8 alpha = 0;
+		bool use_alpha = false;
 
 		switch (const u32 type = format->formatType)
 		{
-		case CELL_VDEC_PICFMT_ARGB32_ILV: out_f = AV_PIX_FMT_ARGB; alpha_plane.reset(new u8[w * h]); break;
-		case CELL_VDEC_PICFMT_RGBA32_ILV: out_f = AV_PIX_FMT_RGBA; alpha_plane.reset(new u8[w * h]); break;
+		case CELL_VDEC_PICFMT_ARGB32_ILV: out_f = AV_PIX_FMT_ARGB; use_alpha = true; break;
+		case CELL_VDEC_PICFMT_RGBA32_ILV: out_f = AV_PIX_FMT_RGBA; use_alpha = true; break;
 		case CELL_VDEC_PICFMT_UYVY422_ILV: out_f = AV_PIX_FMT_UYVY422; break;
 		case CELL_VDEC_PICFMT_YUV420_PLANAR: out_f = AV_PIX_FMT_YUV420P; break;
 		default:
@@ -1842,9 +1845,11 @@ error_code cellVdecGetPictureExt(ppu_thread& ppu, u32 handle, vm::cptr<CellVdecP
 
 		// TODO: color matrix
 
-		if (alpha_plane)
+		if (use_alpha && (alpha != format->alpha || static_cast<s32>(alpha_plane.size()) != w * h))
 		{
-			std::memset(alpha_plane.get(), format->alpha, w * h);
+			alpha = format->alpha;
+			alpha_plane.resize(w * h, alpha);
+			std::memset(alpha_plane.data(), format->alpha, alpha_plane.size());
 		}
 
 		AVPixelFormat in_f = AV_PIX_FMT_YUV420P;
@@ -1855,17 +1860,17 @@ error_code cellVdecGetPictureExt(ppu_thread& ppu, u32 handle, vm::cptr<CellVdecP
 			cellVdec.error("cellVdecGetPictureExt: experimental AVPixelFormat (handle=0x%x, seq_id=%d, cmd_id=%d, format=%d). This may cause suboptimal video quality.", handle, frame.seq_id, frame.cmd_id, frame->format);
 			[[fallthrough]];
 		case AV_PIX_FMT_YUV420P:
-			in_f = alpha_plane ? AV_PIX_FMT_YUVA420P : static_cast<AVPixelFormat>(frame->format);
+			in_f = false ? AV_PIX_FMT_YUVA420P : static_cast<AVPixelFormat>(frame->format);
 			break;
 		default:
 			fmt::throw_exception("cellVdecGetPictureExt: Unknown frame format (%d)", frame->format);
 		}
 
-		cellVdec.trace("cellVdecGetPictureExt: handle=0x%x, seq_id=%d, cmd_id=%d, w=%d, h=%d, frameFormat=%d, formatType=%d, in_f=%d, out_f=%d, alpha_plane=%d, alpha=%d, colorMatrixType=%d", handle, frame.seq_id, frame.cmd_id, w, h, frame->format, format->formatType, +in_f, +out_f, !!alpha_plane, format->alpha, format->colorMatrixType);
+		cellVdec.trace("cellVdecGetPictureExt: handle=0x%x, seq_id=%d, cmd_id=%d, w=%d, h=%d, frameFormat=%d, formatType=%d, in_f=%d, out_f=%d, use_alpha=%d, alpha=%d, colorMatrixType=%d", handle, frame.seq_id, frame.cmd_id, w, h, frame->format, format->formatType, +in_f, +out_f, use_alpha, format->alpha, format->colorMatrixType);
 
 		vdec->sws = sws_getCachedContext(vdec->sws, w, h, in_f, w, h, out_f, SWS_POINT, nullptr, nullptr, nullptr);
 
-		const u8* in_data[4] = { frame->data[0], frame->data[1], frame->data[2], alpha_plane.get() };
+		const u8* in_data[4] = { frame->data[0], frame->data[1], frame->data[2], use_alpha ? alpha_plane.data() : nullptr };
 		const int in_line[4] = { frame->linesize[0], frame->linesize[1], frame->linesize[2], w * 1 };
 		u8* out_data[4] = { outBuff.get_ptr() };
 		int out_line[4] = { w * 4 }; // RGBA32 or ARGB32
@@ -1874,7 +1879,7 @@ error_code cellVdecGetPictureExt(ppu_thread& ppu, u32 handle, vm::cptr<CellVdecP
 		// It's possible that we need to align the pitch to 128 here.
 		// PS HOME seems to rely on this somehow in certain cases.
 
-		if (!alpha_plane)
+		if (!use_alpha)
 		{
 			// YUV420P or UYVY422
 			out_data[1] = out_data[0] + w * h;
