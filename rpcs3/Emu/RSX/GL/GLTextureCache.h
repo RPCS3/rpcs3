@@ -945,9 +945,9 @@ namespace gl
 
 			if (result.succeeded)
 			{
-				if (result.real_dst_size)
+				if (result.dst_range.valid())
 				{
-					flush_if_cache_miss_likely(cmd, result.to_address_range());
+					flush_if_cache_miss_likely(cmd, result.dst_range);
 				}
 
 				return true;

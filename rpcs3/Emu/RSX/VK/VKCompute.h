@@ -1,12 +1,14 @@
 #pragma once
-#include "Emu/RSX/VK/VKProgramPipeline.h"
+#include "VKProgramPipeline.h"
 #include "vkutils/descriptors.h"
 #include "vkutils/buffer_object.h"
 
 #include "Emu/IdManager.h"
+#include "Emu/RSX/Utils/algorithm.hpp"
 
 #include "Utilities/StrUtil.h"
 #include "util/asm.hpp"
+#include "util/logs.hpp"
 
 #include <unordered_map>
 

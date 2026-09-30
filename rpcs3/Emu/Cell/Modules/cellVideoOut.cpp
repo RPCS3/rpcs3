@@ -1,9 +1,10 @@
 #include "stdafx.h"
+#include "Emu/system_config.h"
 #include "Emu/system_config_types.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/IdManager.h"
-#include "Emu/RSX/rsx_utils.h"
+#include "Emu/RSX/Utils/rsx_utils.h"
 #include "Emu/RSX/RSXThread.h"
 
 #include "cellVideoOut.h"

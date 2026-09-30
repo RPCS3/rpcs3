@@ -2024,7 +2024,7 @@ fs::file::file(const std::string& path, bs_t<open_mode> mode)
 		return;
 	}
 
-	if (info.dwFileAttributes & FILE_ATTRIBUTE_SYSTEM)
+	if ((mode & fs::write) && (info.dwFileAttributes & FILE_ATTRIBUTE_SYSTEM))
 	{
 		CloseHandle(handle);
 		g_tls_error = fs::error::acces;
@@ -2529,6 +2529,7 @@ const std::string& fs::get_config_dir([[maybe_unused]] bool get_config_subdirect
 				// Clear buffer on failure and notify user
 				MessageBoxA(nullptr, fmt::format("GetEnvironmentVariable(RPCS3_CONFIG_DIR) failed: error: %s", fmt::win_error{GetLastError(), nullptr}).c_str(), "fs::get_config_dir()", MB_ICONERROR);
 				buf.clear();
+				size = 0;
 			}
 		}
 

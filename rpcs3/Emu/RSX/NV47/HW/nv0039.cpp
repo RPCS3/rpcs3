@@ -107,7 +107,7 @@ namespace rsx
 				result == rsx::result_zcull_intr)
 			{
 				// This transfer overlaps will zcull data pool
-				if (RSX(ctx)->copy_zcull_stats(read_address, read_length, write_address) == write_length)
+				if (RSX(ctx)->copy_zcull_stats(read_address, read_length, write_address) >= write_length)
 				{
 					// All writes deferred
 					return;
@@ -126,7 +126,7 @@ namespace rsx
 			u8* dst = vm::_ptr<u8>(write_address);
 			const u8* src = vm::_ptr<u8>(read_address);
 
-			rsx::simple_array<utils::address_range64> flush_mm_ranges =
+			const rsx::simple_array<utils::address_range64> flush_mm_ranges =
 			{
 				utils::address_range64::start_length(reinterpret_cast<u64>(dst), write_length),
 				utils::address_range64::start_length(reinterpret_cast<u64>(src), read_length)

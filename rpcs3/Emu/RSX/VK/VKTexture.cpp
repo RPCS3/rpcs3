@@ -11,7 +11,7 @@
 #include "VKGSRender.h"
 
 #include "../GCM.h"
-#include "../rsx_utils.h"
+#include "../Utils/rsx_utils.h"
 #include "Utilities/deferred_op.hpp"
 
 #include "util/asm.hpp"

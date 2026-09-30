@@ -80,7 +80,20 @@ s32 sys_process_getppid()
 template <typename T, typename Get>
 u32 idm_get_count()
 {
-	return idm::select<T, Get>([&](u32, Get&) {});
+	u32 count = 0;
+	idm::select<T, Get>([&](u32 id, Get& obj)
+	{
+		if constexpr (std::is_same_v<Get, lv2_memory>)
+		{
+			if (id == obj.system_handle)
+			{
+				return;
+			}
+		}
+
+		count++;
+	});
+	return count;
 }
 
 error_code sys_process_get_number_of_object(u32 object, vm::ptr<u32> nump)
@@ -123,8 +136,16 @@ error_code sys_process_get_number_of_object(u32 object, vm::ptr<u32> nump)
 template <typename T, typename Get>
 void idm_get_set(std::set<u32>& out)
 {
-	idm::select<T, Get>([&](u32 id, Get&)
+	idm::select<T, Get>([&](u32 id, Get& obj)
 	{
+		if constexpr (std::is_same_v<Get, lv2_memory>)
+		{
+			if (id == obj.system_handle)
+			{
+				return;
+			}
+		}
+
 		out.emplace(id);
 	});
 }

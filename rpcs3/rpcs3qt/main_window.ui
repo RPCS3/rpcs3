@@ -109,7 +109,7 @@
      <property name="bottomMargin">
       <number>0</number>
      </property>
-     <item>
+     <item alignment="Qt::AlignVCenter">
       <widget class="QSlider" name="sizeSlider">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Expanding" vsizetype="Preferred">

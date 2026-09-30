@@ -7,7 +7,6 @@
 #include "Emu/RSX/Overlays/Trophies/overlay_trophy_list_dialog.h"
 #include "Emu/RSX/Overlays/overlay_manager.h"
 #include "Emu/System.h"
-#include "Emu/system_config.h"
 #include "Emu/Cell/Modules/sceNpTrophy.h"
 
 extern atomic_t<bool> g_user_asked_for_recording;

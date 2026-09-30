@@ -8,11 +8,9 @@
 
 #include "Utilities/Thread.h"
 #include "Utilities/File.h"
-#include "Loader/ISO.h"
 
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
-#include "Emu/VFS.h"
 
 #include "Input/pad_thread.h"
 

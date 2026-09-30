@@ -2,6 +2,7 @@
 #include "Emu/system_config.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/timers.hpp"
+#include "util/cctype.hpp"
 
 #include "sys_tty.h"
 
@@ -115,7 +116,7 @@ error_code sys_tty_write([[maybe_unused]] ppu_thread& ppu, s32 ch, vm::cptr<char
 
 		if (index != umax && index >= 1u)
 		{
-			return std::tolower(static_cast<u8>(msg[index - 1])) == word[0];
+			return utils::tolower(msg[index - 1]) == word[0];
 		}
 
 		return false;

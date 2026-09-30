@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "IdManager.h"
+#include "emu_callbacks.h"
 #include "System.h"
 #include "VFS.h"
 
@@ -7,6 +8,7 @@
 
 #include "Utilities/mutex.h"
 #include "Utilities/StrUtil.h"
+#include "util/cctype.hpp"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -69,7 +71,7 @@ bool vfs::mount(std::string_view vpath, std::string_view path, bool is_dir)
 		if (pos == umax)
 		{
 			// Mounting completed; fixup for directories due to resolve_path messing with trailing /
-			list.back()->path = Emu.GetCallbacks().resolve_path(path);
+			list.back()->path = g_emu_callbacks.resolve_path(path);
 			if (list.back()->path.empty())
 				list.back()->path = std::string(path); // Fallback when resolving failed
 			if (is_dir && !list.back()->path.ends_with('/'))
@@ -399,7 +401,7 @@ std::string vfs::retrieve(std::string_view path, const vfs_directory* node, std:
 
 		std::vector<std::string_view> mount_path_empty;
 
-		const std::string rpath = Emu.GetCallbacks().resolve_path_may_not_exist(path);
+		const std::string rpath = g_emu_callbacks.resolve_path_may_not_exist(path);
 
 		if (!rpath.empty())
 		{
@@ -499,6 +501,45 @@ std::string vfs::retrieve(std::string_view path, const vfs_directory* node, std:
 	return result;
 }
 
+// Size of the well formed UTF-8 sequence starting at "pos", or 0 when the bytes there are not one (a bad leading
+// byte, a truncated sequence, an overlong encoding, half a surrogate pair)
+static usz utf8_sequence_size(std::string_view name, usz pos)
+{
+	auto byte = [&](usz i) -> uchar { return i < name.size() ? static_cast<uchar>(name[i]) : 0; };
+
+	const uchar b0 = byte(pos);
+
+	if (b0 < 0x80)
+	{
+		return 1;
+	}
+
+	// The second byte carries the exceptions: overlong (0xe0, 0xf0), surrogate (0xed), past U+10FFFF (0xf4).
+	// Read past the end it comes back as 0, which no rule below accepts
+	const uchar b1 = byte(pos + 1);
+	usz size = 0;
+
+	if (b0 >= 0xc2 && b0 <= 0xdf && b1 >= 0x80 && b1 <= 0xbf) size = 2;
+	else if (b0 == 0xe0 && b1 >= 0xa0 && b1 <= 0xbf) size = 3;
+	else if (b0 == 0xed && b1 >= 0x80 && b1 <= 0x9f) size = 3;
+	else if (b0 >= 0xe1 && b0 <= 0xef && b1 >= 0x80 && b1 <= 0xbf) size = 3;
+	else if (b0 == 0xf0 && b1 >= 0x90 && b1 <= 0xbf) size = 4;
+	else if (b0 == 0xf4 && b1 >= 0x80 && b1 <= 0x8f) size = 4;
+	else if (b0 >= 0xf1 && b0 <= 0xf3 && b1 >= 0x80 && b1 <= 0xbf) size = 4;
+	else return 0;
+
+	// Whatever the leading byte allows, every byte after the second one is a plain continuation
+	for (usz i = 2; i < size; i++)
+	{
+		if (const uchar b = byte(pos + i); b < 0x80 || b > 0xbf)
+		{
+			return 0;
+		}
+	}
+
+	return size;
+}
+
 std::string vfs::escape(std::string_view name, bool escape_slash)
 {
 	std::string result;
@@ -527,7 +568,7 @@ std::string vfs::escape(std::string_view name, bool escape_slash)
 	if (name.size() > 2)
 	{
 		// Pack first 3 characters
-		const u32 triple = std::bit_cast<le_t<u32>, u32>(toupper(name[0]) | toupper(name[1]) << 8 | toupper(name[2]) << 16);
+		const u32 triple = std::bit_cast<le_t<u32>, u32>(utils::toupper(name[0]) | utils::toupper(name[1]) << 8 | utils::toupper(name[2]) << 16);
 
 		switch (triple)
 		{
@@ -562,9 +603,38 @@ std::string vfs::escape(std::string_view name, bool escape_slash)
 
 	result.reserve(result.size() + name.size());
 
+	// Bytes left of the sequence being copied through: a byte on its own does not say whether it belongs to one
+	usz utf8_left = 0;
+
 	for (usz i = 0, s = name.size(); i < s; i++)
 	{
-		switch (char2 c = name[i])
+		const uchar b = name[i];
+
+		// One test is all an ASCII name pays: "utf8_left" can only stand on a byte of 0x80 and above
+		if (b >= 0x80)
+		{
+			if (utf8_left)
+			{
+				utf8_left--;
+			}
+			else if (const usz size = utf8_sequence_size(name, i))
+			{
+				utf8_left = size - 1;
+			}
+			else
+			{
+				// A byte no sequence accounts for, written as "％" and its two hex digits: macOS refuses a name that is
+				// not valid UTF-8, and writing it as it comes leaves one that cannot be told from these very escapes
+				constexpr char hex[] = "0123456789ABCDEF";
+
+				result += reinterpret_cast<const char*>(u8"％");
+				result += hex[b >> 4];
+				result += hex[b & 0xf];
+				continue;
+			}
+		}
+
+		switch (char2 c = static_cast<char2>(b))
 		{
 		case 0:
 		case 1:
@@ -769,7 +839,7 @@ std::string vfs::unescape(std::string_view name)
 					{
 						result += static_cast<char>(c3);
 						result.back() -= u8"０"[2];
-						continue;
+						break;
 					}
 					case char2{u8"Ａ"[2]}:
 					case char2{u8"Ｂ"[2]}:
@@ -797,7 +867,7 @@ std::string vfs::unescape(std::string_view name)
 						result += static_cast<char>(c3);
 						result.back() -= u8"Ａ"[2];
 						result.back() += 10;
-						continue;
+						break;
 					}
 					case char2{u8"！"[2]}:
 					{
@@ -813,6 +883,30 @@ std::string vfs::unescape(std::string_view name)
 
 						i += 3;
 						continue;
+					}
+					case char2{u8"％"[2]}:
+					{
+						// A byte written as its two hex digits (see "vfs::escape")
+						auto digit = [](char2 h) -> int
+						{
+							if (h >= '0' && h <= '9') return h - '0';
+							if (h >= 'A' && h <= 'F') return h - 'A' + 10;
+							return -1;
+						};
+
+						const int hi = digit(get_char(i + 3));
+						const int lo = digit(get_char(i + 4));
+
+						if (hi >= 0 && lo >= 0)
+						{
+							result += static_cast<char>(hi * 16 + lo);
+
+							i += 4;
+							continue;
+						}
+
+						// Not what "vfs::escape" wrote: dropped like any other unknown escape character
+						break;
 					}
 					case char2{u8"＿"[2]}:
 					{
@@ -968,7 +1062,7 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 		return false;
 	}
 
-	const auto escaped_from = Emu.GetCallbacks().resolve_path(from);
+	const auto escaped_from = g_emu_callbacks.resolve_path(from);
 
 	auto check_path = [&](std::string_view path)
 	{
@@ -982,7 +1076,7 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 			return;
 		}
 
-		std::string escaped = Emu.GetCallbacks().resolve_path(file.real_path);
+		std::string escaped = g_emu_callbacks.resolve_path(file.real_path);
 
 		if (check_path(escaped))
 		{

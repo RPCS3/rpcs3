@@ -662,7 +662,7 @@ bool gdb_thread::cmd_read_memory(gdb_cmd& cmd)
 	result.reserve(len * 2);
 	for (u32 i = 0; i < len; ++i)
 	{
-		if (vm::check_addr(addr))
+		if (vm::check_addr(addr + i))
 		{
 			result += to_hexbyte(vm::read8(addr + i));
 		}
@@ -698,7 +698,7 @@ bool gdb_thread::cmd_write_memory(gdb_cmd& cmd)
 		{
 			u8 val;
 			int res = sscanf_s(data_ptr, "%02hhX", &val);
-			if (!res)
+			if (res <= 0)
 			{
 				GDB.warning("Couldn't read u8 from string '%s'.", data_ptr);
 				return send_cmd_ack("E02");
@@ -817,14 +817,21 @@ bool gdb_thread::cmd_vcont(gdb_cmd& cmd)
 
 		if (ppu)
 		{
-			bs_t<cpu_flag> add_flags{};
-
-			if (cmd.data[1] == 's')
+			ppu->state.atomic_op([&](bs_t<cpu_flag>& state)
 			{
-				add_flags += cpu_flag::dbg_step;
-			}
+				state -= cpu_flag::dbg_pause;
 
-			ppu->add_remove_flags(add_flags, cpu_flag::dbg_pause);
+				if (cmd.data[1] == 's')
+				{
+					if (u32* ptr = ppu->get_pc2())
+					{
+						state += cpu_flag::dbg_step;
+						*ptr = ppu->get_pc();
+					}
+				}
+			});
+
+			ppu->state.notify_one();
 		}
 
 		//special case if app didn't start yet (only loaded)
