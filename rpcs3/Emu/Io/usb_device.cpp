@@ -188,8 +188,8 @@ void usb_device_passthrough::read_descriptors()
 	// Directly getting configuration descriptors from the device instead of going through libusb parsing functions as they're not needed
 	for (u8 index = 0; index < device._device.bNumConfigurations; index++)
 	{
-		u8 buf[1000];
-		int ssize = libusb_control_transfer(lusb_handle, +LIBUSB_ENDPOINT_IN | +LIBUSB_REQUEST_TYPE_STANDARD | +LIBUSB_RECIPIENT_DEVICE, LIBUSB_REQUEST_GET_DESCRIPTOR, 0x0200 | index, 0, buf, 1000, 0);
+		std::array<u8, 1000> buf{};
+		const int ssize = libusb_control_transfer(lusb_handle, +LIBUSB_ENDPOINT_IN | +LIBUSB_REQUEST_TYPE_STANDARD | +LIBUSB_RECIPIENT_DEVICE, LIBUSB_REQUEST_GET_DESCRIPTOR, 0x0200 | index, 0, buf.data(), buf.size(), 0);
 		if (ssize < 0)
 		{
 			sys_usbd.fatal("Couldn't get the config from the device: %d(%s)", ssize, libusb_error_name(ssize));
@@ -199,10 +199,12 @@ void usb_device_passthrough::read_descriptors()
 		// Minimalistic parse
 		auto& conf = device.add_node(UsbDescriptorNode(buf[0], buf[1], &buf[2]));
 
-		for (int index = buf[0]; index < ssize;)
+		for (int idx = buf[0]; (idx + 2) <= ssize;)
 		{
-			conf.add_node(UsbDescriptorNode(buf[index], buf[index + 1], &buf[index + 2]));
-			index += buf[index];
+			const u8 len = buf[idx];
+			ensure(len > 0);
+			conf.add_node(UsbDescriptorNode(len, buf[idx + 1], &buf[idx + 2]));
+			idx += len;
 		}
 	}
 	patch_descriptors();
@@ -268,7 +270,7 @@ void usb_device_passthrough::isochronous_transfer(UsbTransfer* transfer)
 
 	for (u32 index = 0; index < transfer->iso_request.num_packets; index++)
 	{
-		transfer->transfer->iso_packet_desc[index].length = transfer->iso_request.packets[index];
+		transfer->transfer->iso_packet_desc[index].length = ::at32(transfer->iso_request.packets, index);
 	}
 
 	send_libusb_transfer(transfer->transfer);
