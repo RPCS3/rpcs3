@@ -2396,8 +2396,7 @@ namespace rsx
 					if (It->second.first.remap.encoded != desc.remap.encoded)
 					{
 						auto image = static_cast<viewable_image_type>(It->second.second->image());
-						It->second.second = image->get_view(desc.remap);
-						It->second.first.remap = desc.remap;
+						return image->get_view(desc.remap);
 					}
 
 					return It->second.second;
