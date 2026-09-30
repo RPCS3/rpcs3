@@ -200,6 +200,8 @@ usb_device_mic::usb_device_mic(u32 controller_index, const std::array<u8, 7>& lo
 		break;
 	}
 	case MicType::Logitech:
+	case MicType::EyeToy:
+	case MicType::PsEye:
 	{
 		device = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE,
 			UsbDeviceDescriptor {
@@ -501,21 +503,6 @@ usb_device_mic::usb_device_mic(u32 controller_index, const std::array<u8, 7>& lo
 	}
 }
 
-std::shared_ptr<usb_device> usb_device_mic::make_singstar(u32 controller_index, const std::array<u8, 7>& location)
-{
-	return std::make_shared<usb_device_mic>(controller_index, location, MicType::SingStar);
-}
-
-std::shared_ptr<usb_device> usb_device_mic::make_logitech(u32 controller_index, const std::array<u8, 7>& location)
-{
-	return std::make_shared<usb_device_mic>(controller_index, location, MicType::Logitech);
-}
-
-std::shared_ptr<usb_device> usb_device_mic::make_rocksmith(u32 controller_index, const std::array<u8, 7>& location)
-{
-	return std::make_shared<usb_device_mic>(controller_index, location, MicType::Rocksmith);
-}
-
 u16 usb_device_mic::get_num_emu_devices()
 {
 	return 1;
@@ -677,7 +664,7 @@ void usb_device_mic::isochronous_transfer(UsbTransfer* transfer)
 	u8* buf = static_cast<u8*>(transfer->iso_request.buf.get_ptr());
 	for (u32 index = 0; index < transfer->iso_request.num_packets; index++)
 	{
-		const u16 inlen = transfer->iso_request.packets[index] >> 4;
+		const u16 inlen = ::at32(transfer->iso_request.packets, index) >> 4;
 		ensure(inlen >= (stereo ? 192 : 96));
 		const u32 outlen = device.read_raw(buf, stereo ? 192 : 96);
 		buf += outlen;
