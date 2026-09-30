@@ -200,9 +200,9 @@ bool evdev_joystick_handler::update_device(const std::shared_ptr<PadDevice>& dev
 			libevdev_free(dev);
 			close(fd);
 			dev = nullptr;
+			evdev_log.error("Joystick %s is not present or accessible anymore", path.c_str());
 		}
 
-		evdev_log.error("Joystick %s is not present or accessible [previous status: %d]", path.c_str(), was_connected ? 1 : 0);
 		return false;
 	}
 
