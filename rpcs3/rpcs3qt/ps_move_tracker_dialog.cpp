@@ -49,7 +49,7 @@ ps_move_tracker_dialog::ps_move_tracker_dialog(QWidget* parent)
 		{
 			g_cfg_move.save();
 		}
-		else if (button == ui->buttonBox->button(QDialogButtonBox::Close))
+		else if (button == ui->buttonBox->button(QDialogButtonBox::Cancel))
 		{
 			if (!g_cfg_move.load())
 			{
