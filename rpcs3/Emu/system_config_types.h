@@ -171,6 +171,12 @@ enum class ghltar_handler
 	two_controllers,
 };
 
+enum class usio_handler_mode
+{
+	fighting_games,
+	shooter_games
+};
+
 enum class microphone_handler
 {
 	null,

@@ -519,6 +519,21 @@ void fmt_class_string<ghltar_handler>::format(std::string& out, u64 arg)
 }
 
 template <>
+void fmt_class_string<usio_handler_mode>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](auto value)
+		{
+			switch (value)
+			{
+			case usio_handler_mode::fighting_games: return "Fighting Games";
+			case usio_handler_mode::shooter_games: return "Shooter Games";
+			}
+
+			return unknown;
+		});
+}
+
+template <>
 void fmt_class_string<ppu_decoder_type>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](ppu_decoder_type type)

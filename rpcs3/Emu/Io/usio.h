@@ -39,6 +39,8 @@ private:
 		bool card_tapped = false;
 		le_t<u16> coin_counter = 0;
 		usz card_index = 0;
+		s8 vital_sensors[2] = {0, 0};
+		s8 wheel_rotation = 0;
 	};
 
 	std::array<io_status, 2> m_io_status;
