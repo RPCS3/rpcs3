@@ -427,7 +427,7 @@ void signaling_handler::operator()()
 				auto retire_info = sig.sig_info;
 				sign_log.notice("Timeout disconnection");
 				update_si_status(retire_info, SCE_NP_SIGNALING_CONN_STATUS_INACTIVE, SCE_NP_SIGNALING_ERROR_TIMEOUT);
-				retire_packet(retire_info, signal_ping); // Retire ping packet if necessary
+				retire_all_packets(retire_info); // A connect_ack and/or ping may still be in queue
 				break; // qpackets has been emptied of all packets for this user so we're requeuing
 			}
 

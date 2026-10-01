@@ -1635,6 +1635,7 @@ namespace np
 			cur_status->hasData = 1;
 			cur_status->lastChangedDate.tick = cur_pb_status.lastchangeddate();
 			string_to_npid(cur_pb_status.lastchangedauthorid(), cur_status->lastChangedAuthorId);
+			ensure(cur_pb_status.info().size() <= SCE_NP_TUS_DATA_INFO_MAX_SIZE);
 			cur_status->info.infoSize = ::narrow<u32>(cur_pb_status.info().size());
 			memcpy(cur_status->info.data, cur_pb_status.info().data(), cur_pb_status.info().size());
 		}
@@ -1872,8 +1873,9 @@ namespace np
 			string_to_npid(pb_status.lastchangedauthorid(), data_status->lastChangedAuthorId);
 			data_status->data = tdata->data;
 			data_status->dataSize = ::narrow<u32>(pb_data->data().size());
+			ensure(pb_status.info().size() <= SCE_NP_TUS_DATA_INFO_MAX_SIZE);
 			data_status->info.infoSize = ::narrow<u32>(pb_status.info().size());
-			memcpy(data_status->info.data, pb_data->status().info().data(), std::min(pb_data->status().info().size(), sizeof(data_status->info.data)));
+			memcpy(data_status->info.data, pb_status.info().data(), pb_status.info().size());
 
 			const u32 to_copy = std::min<u32>(data_status->dataSize, tdata->recvSize);
 			memcpy(data, pb_data->data().data(), to_copy);
