@@ -664,7 +664,7 @@ void usb_device_mic::isochronous_transfer(UsbTransfer* transfer)
 	u8* buf = static_cast<u8*>(transfer->iso_request.buf.get_ptr());
 	for (u32 index = 0; index < transfer->iso_request.num_packets; index++)
 	{
-		const u16 inlen = transfer->iso_request.packets[index] >> 4;
+		const u16 inlen = ::at32(transfer->iso_request.packets, index) >> 4;
 		ensure(inlen >= (stereo ? 192 : 96));
 		const u32 outlen = device.read_raw(buf, stereo ? 192 : 96);
 		buf += outlen;

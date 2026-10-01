@@ -575,6 +575,12 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 		}
 
 		is_lower_prio = thread.is_lower_priority_than(ppu);
+
+		if (!is_lower_prio)
+		{
+			thread.start_gate_caller = ppu.id;
+		}
+
 		ensure(lv2_obj::awake(&thread));
 
 		thread.cmd_list
@@ -615,8 +621,9 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 	}
 	else
 	{
-		// The new thread has lower or equal priority: if it got a free hardware thread, wait until it has taken the entry command (bounded)
-		for (const u64 start = get_system_time(); thread->cmd_queue.size() && cpu_flag::suspend - thread->state && cpu_flag::suspend - ppu.state && !ppu.is_stopped() && get_system_time() - start < 5000;)
+		// The new thread has lower or equal priority: if it got a free hardware thread, wait until it reaches its entry command (bounded)
+		// It then waits in turn for this caller to leave the syscall before running (see ppu_cmd::entry_call)
+		for (const u64 start = get_system_time(); thread->start_gate_caller && cpu_flag::suspend - thread->state && cpu_flag::suspend - ppu.state && !ppu.is_stopped() && get_system_time() - start < 5000;)
 		{
 			std::this_thread::yield();
 		}
