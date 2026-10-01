@@ -162,6 +162,10 @@ struct vdec_cmd
 		: type(_type), seq_id(_seq_id), id(_id), mode(_mode), au(std::move(_au))
 	{
 		ensure(_type == vdec_cmd_type::au_decode);
+
+		// Copy the AU now: the game may refill its buffer before the decoder thread gets to this AU
+		const u8* data = vm::_ptr<const u8>(au.startAddr);
+		au_data.assign(data, data + au.size);
 	}
 
 	explicit vdec_cmd(vdec_cmd_type _type, u64 _seq_id, u64 _id, s32 _framerate)
@@ -176,6 +180,7 @@ struct vdec_cmd
 	s32 mode{};
 	s32 framerate{};
 	CellVdecAuInfo au{};
+	std::vector<u8> au_data;
 };
 
 struct vdec_frame
@@ -290,13 +295,13 @@ struct vdec_context final
 
 		codec_desc = avcodec_descriptor_get(codec->id);
 
-		// Only these decoders are checked for a sequence header before an AU is passed to them
-		sequence_header_found = codec->id != AV_CODEC_ID_MPEG2VIDEO && codec->id != AV_CODEC_ID_MPEG4;
-
 		if (!codec_desc)
 		{
 			fmt::throw_exception("avcodec_descriptor_get() failed (type=0x%x)", type);
 		}
+
+		// Only these decoders are checked for a sequence header before an AU is passed to them
+		sequence_header_found = codec->id != AV_CODEC_ID_MPEG2VIDEO && codec->id != AV_CODEC_ID_MPEG4;
 
 		ctx = avcodec_alloc_context3(codec);
 
@@ -443,13 +448,12 @@ struct vdec_context final
 				const bool drain = cmd->type == vdec_cmd_type::drain;
 
 				const u32 au_mode = cmd->mode;
-				const u32 au_addr = cmd->au.startAddr;
 				const u32 au_size = cmd->au.size;
 				const u64 au_pts = u64{cmd->au.pts.upper} << 32 | cmd->au.pts.lower;
 				const u64 au_dts = u64{cmd->au.dts.upper} << 32 | cmd->au.dts.lower;
 				au_usrd = cmd->au.userData;
 
-				packet.data = vm::_ptr<u8>(au_addr);
+				packet.data = cmd->au_data.data();
 				packet.size = au_size;
 				packet.pts = au_pts != umax ? au_pts : s64{smin};
 				packet.dts = au_dts != umax ? au_dts : s64{smin};

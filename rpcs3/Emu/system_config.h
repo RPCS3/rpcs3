@@ -107,6 +107,7 @@ struct cfg_root : cfg::node
 		cfg::_int<0, 10240> cache_max_size{ this, "Disk cache maximum size (MB)", 5120 };
 		cfg::_bool empty_hdd0_tmp{ this, "Empty /dev_hdd0/tmp/", true };
 		cfg::_bool emulate_hdd_speed{ this, "Emulate HDD Read Speed", false, true };
+		cfg::_bool emulate_bdvd_speed{ this, "Emulate BD-ROM Read Speed", false, true };
 
 	} vfs{ this };
 
