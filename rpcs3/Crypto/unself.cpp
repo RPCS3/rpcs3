@@ -735,7 +735,7 @@ bool SCEDecrypter::DecryptData()
 		if (hdr.encrypted == 3)
 		{
 			// Make sure the key and iv are not out of boundaries.
-			if ((hdr.key_idx < meta_hdr.key_count) && (hdr.iv_idx <= meta_hdr.key_count))
+			if ((hdr.key_idx < meta_hdr.key_count) && (hdr.iv_idx < meta_hdr.key_count))
 			{
 				// Get the key and iv from the previously stored key buffer.
 				const std::array<u8, 0x10> data_key = read_from_ptr<std::array<u8, 0x10>>(data_keys, static_cast<usz>(hdr.key_idx) * 0x10);
@@ -1237,7 +1237,7 @@ bool SELFDecrypter::DecryptData()
 	{
 		if (hdr.encrypted == 3)
 		{
-			if ((hdr.key_idx < meta_hdr.key_count) && (hdr.iv_idx <= meta_hdr.key_count))
+			if ((hdr.key_idx < meta_hdr.key_count) && (hdr.iv_idx < meta_hdr.key_count))
 				data_buf_length += ::narrow<u32>(hdr.data_size);
 		}
 	}
@@ -1259,7 +1259,7 @@ bool SELFDecrypter::DecryptData()
 		if (hdr.encrypted == 3)
 		{
 			// Make sure the key and iv are not out of boundaries.
-			if ((hdr.key_idx < meta_hdr.key_count) && (hdr.iv_idx <= meta_hdr.key_count))
+			if ((hdr.key_idx < meta_hdr.key_count) && (hdr.iv_idx < meta_hdr.key_count))
 			{
 				// Get the key and iv from the previously stored key buffer.
 				const std::array<u8, 0x10> data_key = read_from_ptr<std::array<u8, 0x10>>(data_keys, static_cast<usz>(hdr.key_idx) * 0x10);

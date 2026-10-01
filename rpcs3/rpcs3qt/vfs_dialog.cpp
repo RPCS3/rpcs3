@@ -46,9 +46,8 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> _gui_settings, QWidget* par
 	tabs->addTab(games_tab, "games");
 
 	// Create buttons
-	QDialogButtonBox* buttons = new QDialogButtonBox(QDialogButtonBox::Close | QDialogButtonBox::Save | QDialogButtonBox::RestoreDefaults);
+	QDialogButtonBox* buttons = new QDialogButtonBox(QDialogButtonBox::Cancel | QDialogButtonBox::Save | QDialogButtonBox::RestoreDefaults);
 	buttons->button(QDialogButtonBox::RestoreDefaults)->setText(tr("Reset Directories"));
-	buttons->button(QDialogButtonBox::Save)->setDefault(true);
 
 	connect(buttons, &QDialogButtonBox::clicked, this, [this, buttons, tabs](QAbstractButton* button)
 	{
@@ -104,7 +103,7 @@ vfs_dialog::vfs_dialog(std::shared_ptr<gui_settings> _gui_settings, QWidget* par
 
 			accept();
 		}
-		else if (button == buttons->button(QDialogButtonBox::Close))
+		else if (button == buttons->button(QDialogButtonBox::Cancel))
 		{
 			reject();
 		}

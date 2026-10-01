@@ -77,6 +77,7 @@ public:
 	bool led_is_on = true;
 	bool led_is_blinking = false;
 	steady_clock::time_point led_timestamp{};
+	steady_clock::time_point last_update{};
 };
 
 class sdl_pad_handler : public PadHandlerBase

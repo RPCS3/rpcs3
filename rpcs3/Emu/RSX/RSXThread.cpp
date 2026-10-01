@@ -3219,7 +3219,7 @@ namespace rsx
 
 							if (ea < (rsx::constants::local_mem_base >> 20))
 							{
-								cfg.offsetTable.eaAddress[ea] = null_entry;
+								cfg.offsetTable.ioAddress[ea] = null_entry;
 							}
 						}
 
