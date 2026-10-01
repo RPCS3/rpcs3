@@ -196,7 +196,7 @@ namespace rsx
 
 			if (!dst_address)
 			{
-				rsx_log.error("NV3089_IMAGE_IN_SIZE: Unmapped dst_address (dst_offset=0x%x, dst_dma=0x%dx)", dst_offset, dst_dma);
+				rsx_log.error("NV3089_IMAGE_IN_SIZE: Unmapped dst_address (dst_offset=0x%x, dst_dma=0x%x)", dst_offset, dst_dma);
 				RSX(ctx)->recover_fifo();
 				return { false, src_info, dst_info };
 			}

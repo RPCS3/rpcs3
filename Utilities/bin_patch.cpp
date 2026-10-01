@@ -1190,7 +1190,7 @@ static usz apply_modification(std::vector<u32>& applied, patch_engine::patch_inf
 
 			if (!addr)
 			{
-				patch_log.error("Failed to allocate 0x%x bytes for code (entry=0x%x)", alloc_size, addr, out_branch);
+				patch_log.error("Failed to allocate 0x%x bytes for code (entry=0x%x)", alloc_size, out_branch);
 				continue;
 			}
 
@@ -1436,7 +1436,7 @@ static usz apply_modification(std::vector<u32>& applied, patch_engine::patch_inf
 
 			if (dest_path.empty())
 			{
-				patch_log.error("Failed to patch file path at '%s': destination is not mounted", original_vfs_path, dest_vfs_path);
+				patch_log.error("Failed to patch file path at '%s': destination is not mounted", original_vfs_path);
 				continue;
 			}
 

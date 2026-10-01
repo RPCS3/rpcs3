@@ -3085,7 +3085,7 @@ error_code cellGemGetAccelerometerPositionInDevice(u32 gem_num, vm::ptr<f32> pos
 
 error_code cellGemGetAllTrackableHues(vm::ptr<u8> hues)
 {
-	cellGem.todo("cellGemGetAllTrackableHues(hues=*0x%x)");
+	cellGem.todo("cellGemGetAllTrackableHues(hues=*0x%x)", hues);
 
 	auto& gem = g_fxo->get<gem_config>();
 

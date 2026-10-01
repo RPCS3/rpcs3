@@ -790,7 +790,7 @@ namespace rsx
 		{
 			if (methods[id] && state_signals[id])
 			{
-				rsx_log.error("FIXME: Method register 0x%x is registered as a method and signal. The signal will be ignored.");
+				rsx_log.error("FIXME: Method register 0x%x is registered as a method and signal. The signal will be ignored.", id);
 			}
 		}
 	}

@@ -790,7 +790,7 @@ error_code sys_net_bnet_recvfrom(ppu_thread& ppu, s32 s, vm::ptr<void> buf, u32 
 
 	if (flags & ~(SYS_NET_MSG_PEEK | SYS_NET_MSG_DONTWAIT | SYS_NET_MSG_WAITALL | SYS_NET_MSG_USECRYPTO | SYS_NET_MSG_USESIGNATURE))
 	{
-		fmt::throw_exception("sys_net_bnet_recvfrom(s=%d): unknown flags (0x%x)", flags);
+		fmt::throw_exception("sys_net_bnet_recvfrom(s=%d): unknown flags (0x%x)", s, flags);
 	}
 
 	s32 result = 0;
@@ -919,7 +919,7 @@ error_code sys_net_bnet_sendmsg(ppu_thread& ppu, s32 s, vm::cptr<sys_net_msghdr>
 
 	if (flags & ~(SYS_NET_MSG_DONTWAIT | SYS_NET_MSG_WAITALL | SYS_NET_MSG_USECRYPTO | SYS_NET_MSG_USESIGNATURE))
 	{
-		fmt::throw_exception("sys_net_bnet_sendmsg(s=%d): unknown flags (0x%x)", flags);
+		fmt::throw_exception("sys_net_bnet_sendmsg(s=%d): unknown flags (0x%x)", s, flags);
 	}
 
 	s32 result{};
@@ -998,7 +998,7 @@ error_code sys_net_bnet_sendto(ppu_thread& ppu, s32 s, vm::cptr<void> buf, u32 l
 
 	if (flags & ~(SYS_NET_MSG_DONTWAIT | SYS_NET_MSG_WAITALL | SYS_NET_MSG_USECRYPTO | SYS_NET_MSG_USESIGNATURE))
 	{
-		fmt::throw_exception("sys_net_bnet_sendto(s=%d): unknown flags (0x%x)", flags);
+		fmt::throw_exception("sys_net_bnet_sendto(s=%d): unknown flags (0x%x)", s, flags);
 	}
 
 	if (addr && addrlen < sizeof(sys_net_sockaddr))
