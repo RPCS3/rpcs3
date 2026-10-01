@@ -1313,7 +1313,7 @@ error_code cellSearchStartSceneSearch(CellSearchSceneSearchType searchType, vm::
 
 		for (u32 n = 0; n < tagNum; n++)
 		{
-			if (!tags[tagNum] || !memchr(&tags[tagNum], '\0', CELL_SEARCH_TAG_LEN_MAX))
+			if (!tags[n] || !memchr(tags[n].get_ptr(), '\0', CELL_SEARCH_TAG_LEN_MAX))
 			{
 				return CELL_SEARCH_ERROR_TAG;
 			}
