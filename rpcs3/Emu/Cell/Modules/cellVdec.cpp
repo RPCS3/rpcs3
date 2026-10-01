@@ -53,6 +53,45 @@ constexpr int averror_eof = AVERROR_EOF; // workaround for old-style-cast error
 
 LOG_CHANNEL(cellVdec);
 
+// [VDEC_DIAG] measurement probe: FFmpeg errors and AU memory rewritten after cellVdecDecodeAu. Remove after the test.
+static atomic_t<u64> g_vdec_diag_ffmpeg_errors = 0;
+static atomic_t<u64> g_vdec_diag_checked = 0;
+static atomic_t<u64> g_vdec_diag_rewritten = 0;
+
+static void vdec_diag_av_log(void* avcl, int level, const char* fmt, va_list vl)
+{
+	if (level > AV_LOG_WARNING)
+	{
+		return;
+	}
+
+	if (level <= AV_LOG_ERROR)
+	{
+		g_vdec_diag_ffmpeg_errors++;
+	}
+
+	char line[1024]{};
+	int print_prefix = 1;
+
+	if (av_log_format_line2(avcl, level, fmt, vl, line, sizeof(line), &print_prefix) < 0)
+	{
+		return;
+	}
+
+	std::string msg = line;
+	cellVdec.error("[VDEC_DIAG] av_log(%d): %s", level, fmt::trim_back_sv(msg, "\n\r\t "));
+}
+
+static u64 vdec_diag_hash(const u8* data, u32 size)
+{
+	u64 h = 0xcbf29ce484222325ull;
+	for (u32 i = 0; i < size; i++)
+	{
+		h = (h ^ data[i]) * 0x100000001b3ull;
+	}
+	return h;
+}
+
 // Checks whether the AU holds a header that tells the decoder the picture size:
 // MPEG-2: sequence header; MPEG-4 Part 2: Video Object Layer header, or a short video header (H.263 picture start code) at the start of the AU
 static bool au_has_sequence_header(AVCodecID codec_id, const u8* data, u32 size)
@@ -313,6 +352,10 @@ struct vdec_context final
 		// Carry the AU userdata from each packet to the picture decoded from it, across the frame reordering
 		ctx->flags |= AV_CODEC_FLAG_COPY_OPAQUE;
 
+		// [VDEC_DIAG]
+		av_log_set_callback(vdec_diag_av_log);
+		av_log_set_level(AV_LOG_WARNING);
+
 		AVDictionary* opts = nullptr;
 
 		std::lock_guard lock(g_mutex_avcodec_open2);
@@ -424,6 +467,9 @@ struct vdec_context final
 			}
 			case vdec_cmd_type::end_sequence:
 			{
+				// [VDEC_DIAG]
+				cellVdec.error("[VDEC_DIAG] summary at EndSeq (handle=0x%x): AUs checked=%d, AU memory rewritten after DecodeAu=%d, FFmpeg errors=%d", handle, g_vdec_diag_checked.load(), g_vdec_diag_rewritten.load(), g_vdec_diag_ffmpeg_errors.load());
+
 				cellVdec.trace("End sequence... (handle=0x%x, seq_id=%d, cmd_id=%d)", handle, cmd->seq_id, cmd->id);
 
 				{
@@ -454,6 +500,17 @@ struct vdec_context final
 				au_usrd = cmd->au.userData;
 
 				packet.data = cmd->au_data.data();
+
+				// [VDEC_DIAG] Has the game rewritten the AU memory since cellVdecDecodeAu? (decoding uses the copy)
+				if (!drain && !cmd->au_data.empty())
+				{
+					g_vdec_diag_checked++;
+
+					if (vdec_diag_hash(vm::_ptr<const u8>(cmd->au.startAddr), au_size) != vdec_diag_hash(cmd->au_data.data(), au_size) && g_vdec_diag_rewritten++ < 64)
+					{
+						cellVdec.error("[VDEC_DIAG] AU memory rewritten after DecodeAu, decoded from the copy (handle=0x%x, cmd_id=%d, addr=0x%x, size=0x%x, rewritten=%d of %d)", handle, cmd->id, cmd->au.startAddr, au_size, g_vdec_diag_rewritten.load(), g_vdec_diag_checked.load());
+					}
+				}
 				packet.size = au_size;
 				packet.pts = au_pts != umax ? au_pts : s64{smin};
 				packet.dts = au_dts != umax ? au_dts : s64{smin};
