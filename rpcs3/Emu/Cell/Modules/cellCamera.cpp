@@ -1998,7 +1998,7 @@ bool camera_context::on_handler_state(camera_handler_base::camera_handler_state 
 	{
 		if (!is_attached)
 		{
-			cellCamera.warning("Camera handler not attached. Sending attach event...", static_cast<int>(state));
+			cellCamera.warning("Camera handler not attached (state=%d). Sending attach event...", static_cast<int>(state));
 			is_attached = true;
 			is_attached_dirty = true;
 		}
