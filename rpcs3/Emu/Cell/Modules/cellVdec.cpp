@@ -53,6 +53,26 @@ constexpr int averror_eof = AVERROR_EOF; // workaround for old-style-cast error
 
 LOG_CHANNEL(cellVdec);
 
+// MPEG-4 Part 2: checks whether the AU holds a Video Object Layer header, or starts with a short video header (H.263 picture start code).
+// The decoder needs one of them to know the picture size.
+static bool mpeg4_au_has_sequence_header(const u8* data, u32 size)
+{
+	if (size >= 3 && data[0] == 0 && data[1] == 0 && (data[2] & 0xfc) == 0x80)
+	{
+		return true;
+	}
+
+	for (u32 i = 0; i + 3 < size; i++)
+	{
+		if (data[i] == 0 && data[i + 1] == 0 && data[i + 2] == 1 && (data[i + 3] & 0xf0) == 0x20)
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
 template<>
 void fmt_class_string<CellVdecError>::format(std::string& out, u64 arg)
 {
@@ -224,6 +244,7 @@ struct vdec_context final
 
 	AVRational log_time_base{}; // Used to reduce log spam
 	AVRational log_framerate{}; // Used to reduce log spam
+	u32 skipped_au_count{}; // Used to reduce log spam
 
 	vdec_context(s32 type, u32 /*profile*/, u32 addr, u32 size, vm::ptr<CellVdecCbMsg> func, u32 arg)
 		: type(type)
@@ -447,7 +468,15 @@ struct vdec_context final
 				{
 					cellVdec.trace("AU decoding: handle=0x%x, seq_id=%d, cmd_id=%d, size=0x%x, pts=0x%llx, dts=0x%llx, userdata=0x%llx", handle, cmd->seq_id, cmd->id, au_size, au_pts, au_dts, au_usrd);
 
-					if (int ret = avcodec_send_packet(ctx, drain ? nullptr : &packet); ret < 0)
+					if (!drain && codec->id == AV_CODEC_ID_MPEG4 && !ctx->width && !mpeg4_au_has_sequence_header(packet.data, au_size))
+					{
+						// The decoder cannot use an AU before a sequence header (e.g. a stream continued on a new decoder): skip it
+						if (skipped_au_count++ == 0)
+						{
+							cellVdec.warning("No MPEG-4 sequence header yet, skipping AUs until one arrives (handle=0x%x, seq_id=%d, cmd_id=%d)", handle, cmd->seq_id, cmd->id);
+						}
+					}
+					else if (int ret = avcodec_send_packet(ctx, drain ? nullptr : &packet); ret < 0)
 					{
 						fmt::throw_exception("AU queuing error (handle=0x%x, seq_id=%d, cmd_id=%d, error=0x%x): %s", handle, cmd->seq_id, cmd->id, ret, utils::av_error_to_string(ret));
 					}
@@ -577,6 +606,12 @@ struct vdec_context final
 
 						decoded_frames.push_back(std::move(frame));
 					}
+
+					if (skipped_au_count && !decoded_frames.empty())
+					{
+						cellVdec.warning("Decoder output resumed after %d skipped AUs (handle=0x%x, seq_id=%d, cmd_id=%d)", skipped_au_count, handle, cmd->seq_id, cmd->id);
+						skipped_au_count = 0;
+					}
 				}
 
 				if (thread_ctrl::state() != thread_state::aborting)
@@ -610,16 +645,21 @@ struct vdec_context final
 
 							thread_ctrl::wait_for(10000);
 
-							if (elapsed++ >= 500) // 5 seconds
+							// Report a wait once: a game may keep the pictures of a decoder it does not display for a long time
+							if (++elapsed == 500) // 5 seconds
 							{
-								cellVdec.error("Video au decode has been waiting for a consumer for 5 seconds. (handle=0x%x, seq_id=%d, cmd_id=%d, queue_size=%d)", handle, cmd->seq_id, cmd->id, out_queue.size());
-								elapsed = 0;
+								cellVdec.warning("Video au decode has been waiting for a consumer for 5 seconds. (handle=0x%x, seq_id=%d, cmd_id=%d, queue_size=%d)", handle, cmd->seq_id, cmd->id, out_queue.size());
 							}
 						}
 
 						if (thread_ctrl::state() == thread_state::aborting || abort_decode || seq_id != cmd->seq_id)
 						{
 							break;
+						}
+
+						if (elapsed >= 500)
+						{
+							cellVdec.notice("Video au decode resumed after waiting %d seconds for a consumer. (handle=0x%x, seq_id=%d, cmd_id=%d)", elapsed / 100, handle, cmd->seq_id, cmd->id);
 						}
 
 						{
@@ -1685,7 +1725,8 @@ error_code cellVdecDecodeAu(ppu_thread& ppu, u32 handle, CellVdecDecodeMode mode
 
 	if (!vdec->au_count.try_inc(4))
 	{
-		return CELL_VDEC_ERROR_BUSY;
+		// The AU queue is full: BUSY asks the caller to retry, it is not an error
+		return not_an_error(CELL_VDEC_ERROR_BUSY);
 	}
 
 	const u64 seq_id = vdec->seq_id;
@@ -1732,7 +1773,8 @@ error_code cellVdecDecodeAuEx2(ppu_thread& ppu, u32 handle, CellVdecDecodeMode m
 
 	if (!vdec->au_count.try_inc(4))
 	{
-		return CELL_VDEC_ERROR_BUSY;
+		// The AU queue is full: BUSY asks the caller to retry, it is not an error
+		return not_an_error(CELL_VDEC_ERROR_BUSY);
 	}
 
 	CellVdecAuInfo au_info{};
