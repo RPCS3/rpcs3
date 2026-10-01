@@ -323,7 +323,7 @@ public:
 			{
 				const auto& pad = ::at32(handler->GetPads(), pad_num(i));
 				const bool connected = pad && pad->is_connected() && !pad->is_copilot() && i < attribute.max_connect;
-				const bool is_real_move = g_cfg.io.move != move_handler::real || pad->m_pad_handler == pad_handler::move;
+				const bool is_real_move = g_cfg.io.move != move_handler::real || (pad && pad->m_pad_handler == pad_handler::move);
 
 				update_connection(i, connected && is_real_move);
 			}
@@ -2166,12 +2166,12 @@ static const std::unordered_map<gem_btn, u16> ext_btn_indices =
 	{ gem_btn::racing_wheel_l2, 1 },
 	{ gem_btn::racing_wheel_r2, 2 },
 	{ gem_btn::racing_wheel_paddle_l, 3 },
-	{ gem_btn::racing_wheel_paddle_r, 4 },
+	{ gem_btn::racing_wheel_paddle_r, 3 },
 	{ gem_btn::combo_racing_wheel_throttle, 0 },
 	{ gem_btn::combo_racing_wheel_l2, 1 },
 	{ gem_btn::combo_racing_wheel_r2, 2 },
 	{ gem_btn::combo_racing_wheel_paddle_l, 3 },
-	{ gem_btn::combo_racing_wheel_paddle_r, 4 },
+	{ gem_btn::combo_racing_wheel_paddle_r, 3 },
 };
 
 static u32 ext_device_id(gem_ext_id id)
@@ -2282,23 +2282,23 @@ static void input_to_ext(u32 external_device_id, CellGemExtPortData& ext, std::s
 		{
 			switch (value.btn)
 			{
-			case gem_btn::combo_racing_wheel_throttle:
-			case gem_btn::combo_racing_wheel_l2:
-			case gem_btn::combo_racing_wheel_r2:
+			case gem_btn::racing_wheel_throttle:
+			case gem_btn::racing_wheel_l2:
+			case gem_btn::racing_wheel_r2:
 				ext.custom[::at32(ext_btn_indices, value.btn)] = static_cast<u8>(value.value);
 				break;
-			case gem_btn::combo_racing_wheel_paddle_l:
-			case gem_btn::combo_racing_wheel_paddle_r:
+			case gem_btn::racing_wheel_paddle_l:
+			case gem_btn::racing_wheel_paddle_r:
 				ext.custom[::at32(ext_btn_indices, value.btn)] |= ::at32(ext_btn_map, value.btn);
 				break;
-			case gem_btn::combo_racing_wheel_d_pad_up:
-			case gem_btn::combo_racing_wheel_d_pad_right:
-			case gem_btn::combo_racing_wheel_d_pad_down:
-			case gem_btn::combo_racing_wheel_d_pad_left:
+			case gem_btn::racing_wheel_d_pad_up:
+			case gem_btn::racing_wheel_d_pad_right:
+			case gem_btn::racing_wheel_d_pad_down:
+			case gem_btn::racing_wheel_d_pad_left:
 				ext.digital1 |= ::at32(ext_btn_map, value.btn);
 				break;
-			case gem_btn::combo_racing_wheel_l1:
-			case gem_btn::combo_racing_wheel_r1:
+			case gem_btn::racing_wheel_l1:
+			case gem_btn::racing_wheel_r1:
 				ext.digital2 |= ::at32(ext_btn_map, value.btn);
 				break;
 			default:

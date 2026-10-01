@@ -1275,7 +1275,7 @@ void usb_device_logitech_g27::interrupt_transfer(u32 buf_size, u8* buf, u32 endp
 				// Change device mode
 				u8 cmd = buf[1];
 				u8 arg = buf[2];
-				if (buf[8] == 0xf8) // we have 2 commands back to back
+				if (buf_size >= 11 && buf[8] == 0xf8) // we have 2 commands back to back
 				{
 					cmd = buf[9];
 					arg = buf[10];
