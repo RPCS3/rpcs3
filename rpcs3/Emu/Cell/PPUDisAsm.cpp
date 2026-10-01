@@ -2321,7 +2321,7 @@ void PPUDisAsm::STDBRX(ppu_opcode_t op)
 
 void PPUDisAsm::STSWX(ppu_opcode_t op)
 {
-	DisAsm_R3("swswx", op.rs, op.ra, op.rb);
+	DisAsm_R3("stswx", op.rs, op.ra, op.rb);
 }
 
 void PPUDisAsm::STWBRX(ppu_opcode_t op)
