@@ -53,20 +53,25 @@ constexpr int averror_eof = AVERROR_EOF; // workaround for old-style-cast error
 
 LOG_CHANNEL(cellVdec);
 
-// MPEG-4 Part 2: checks whether the AU holds a Video Object Layer header, or starts with a short video header (H.263 picture start code).
-// The decoder needs one of them to know the picture size.
-static bool mpeg4_au_has_sequence_header(const u8* data, u32 size)
+// Checks whether the AU holds a header that tells the decoder the picture size:
+// MPEG-2: sequence header; MPEG-4 Part 2: Video Object Layer header, or a short video header (H.263 picture start code) at the start of the AU
+static bool au_has_sequence_header(AVCodecID codec_id, const u8* data, u32 size)
 {
-	if (size >= 3 && data[0] == 0 && data[1] == 0 && (data[2] & 0xfc) == 0x80)
+	if (codec_id == AV_CODEC_ID_MPEG4 && size >= 3 && data[0] == 0 && data[1] == 0 && (data[2] & 0xfc) == 0x80)
 	{
 		return true;
 	}
 
 	for (u32 i = 0; i + 3 < size; i++)
 	{
-		if (data[i] == 0 && data[i + 1] == 0 && data[i + 2] == 1 && (data[i + 3] & 0xf0) == 0x20)
+		if (data[i] == 0 && data[i + 1] == 0 && data[i + 2] == 1)
 		{
-			return true;
+			const u8 code = data[i + 3];
+
+			if (codec_id == AV_CODEC_ID_MPEG2VIDEO ? code == 0xb3 : (code & 0xf0) == 0x20)
+			{
+				return true;
+			}
 		}
 	}
 
@@ -245,6 +250,7 @@ struct vdec_context final
 	AVRational log_time_base{}; // Used to reduce log spam
 	AVRational log_framerate{}; // Used to reduce log spam
 	u32 skipped_au_count{}; // Used to reduce log spam
+	bool sequence_header_found = false;
 
 	vdec_context(s32 type, u32 /*profile*/, u32 addr, u32 size, vm::ptr<CellVdecCbMsg> func, u32 arg)
 		: type(type)
@@ -283,6 +289,9 @@ struct vdec_context final
 		}
 
 		codec_desc = avcodec_descriptor_get(codec->id);
+
+		// Only these decoders are checked for a sequence header before an AU is passed to them
+		sequence_header_found = codec->id != AV_CODEC_ID_MPEG2VIDEO && codec->id != AV_CODEC_ID_MPEG4;
 
 		if (!codec_desc)
 		{
@@ -468,17 +477,22 @@ struct vdec_context final
 				{
 					cellVdec.trace("AU decoding: handle=0x%x, seq_id=%d, cmd_id=%d, size=0x%x, pts=0x%llx, dts=0x%llx, userdata=0x%llx", handle, cmd->seq_id, cmd->id, au_size, au_pts, au_dts, au_usrd);
 
-					if (!drain && codec->id == AV_CODEC_ID_MPEG4 && !ctx->width && !mpeg4_au_has_sequence_header(packet.data, au_size))
+					if (!drain && !sequence_header_found && !au_has_sequence_header(codec->id, packet.data, au_size))
 					{
-						// The decoder cannot use an AU before a sequence header (e.g. a stream continued on a new decoder): skip it
+						// The decoder cannot use an AU before a sequence header (e.g. a stream continued on a new decoder,
+						// or one that sends its sequence header after its first pictures): skip it
 						if (skipped_au_count++ == 0)
 						{
-							cellVdec.warning("No MPEG-4 sequence header yet, skipping AUs until one arrives (handle=0x%x, seq_id=%d, cmd_id=%d)", handle, cmd->seq_id, cmd->id);
+							cellVdec.warning("No sequence header yet, skipping AUs until one arrives (handle=0x%x, seq_id=%d, cmd_id=%d)", handle, cmd->seq_id, cmd->id);
 						}
 					}
 					else if (int ret = avcodec_send_packet(ctx, drain ? nullptr : &packet); ret < 0)
 					{
 						fmt::throw_exception("AU queuing error (handle=0x%x, seq_id=%d, cmd_id=%d, error=0x%x): %s", handle, cmd->seq_id, cmd->id, ret, utils::av_error_to_string(ret));
+					}
+					else
+					{
+						sequence_header_found = true;
 					}
 
 					while (!abort_decode && seq_id == cmd->seq_id)
