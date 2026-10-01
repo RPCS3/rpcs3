@@ -1907,7 +1907,7 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 	gem_state->quat[3] = quat.w();
 
 	// Calculate handle position based on our world coordinate and the current orientation
-	constexpr ps_move_data::vect<3> offset_local_mm({0.f, 0.f, -45.f}); // handle is ~45 mm below sphere
+	constexpr ps_move_data::vect<3> offset_local_mm({0.f, 0.f, 45.f}); // handle is ~45 mm below sphere
 	const ps_move_data::vect<3> offset_world = ps_move_data::rotate_vector(quat, offset_local_mm);
 
 	gem_state->handle_pos[0] = gem_state->pos[0] - offset_world.x(); // Flip x offset
