@@ -81,6 +81,7 @@ namespace vk
 
 			VkDescriptorSetLayoutBindingFlagsCreateInfo binding_infos = {};
 			rsx::simple_array<VkDescriptorBindingFlags> binding_flags;
+			VkFlags layout_flags = 0;
 
 			const auto deferred_mask = g_render_device->get_descriptor_update_after_bind_support();
 			binding_flags.resize(::size32(bindings));
@@ -89,12 +90,13 @@ namespace vk
 			{
 				if ((1ull << bindings[i].descriptorType) & ~deferred_mask)
 				{
+					// Not supported for UAB
 					binding_flags[i] = 0u;
+					continue;
 				}
-				else
-				{
-					binding_flags[i] = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT;
-				}
+
+				binding_flags[i] = VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT;
+				layout_flags |= VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
 			}
 
 			binding_infos.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO;
@@ -103,7 +105,7 @@ namespace vk
 			binding_infos.pBindingFlags = binding_flags.data();
 
 			infos.pNext = &binding_infos;
-			infos.flags |= VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+			infos.flags |= layout_flags;
 
 			VkDescriptorSetLayout result;
 			CHECK_RESULT(vkCreateDescriptorSetLayout(*g_render_device, &infos, nullptr, &result));
