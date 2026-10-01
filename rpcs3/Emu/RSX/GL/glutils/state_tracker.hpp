@@ -9,15 +9,19 @@ namespace gl
 {
 	class driver_state
 	{
-		const u32 DEPTH_BOUNDS       = 0xFFFF0001;
-		const u32 CLIP_PLANES        = 0xFFFF0002;
-		const u32 DEPTH_RANGE        = 0xFFFF0004;
-		const u32 STENCIL_FRONT_FUNC = 0xFFFF0005;
-		const u32 STENCIL_BACK_FUNC  = 0xFFFF0006;
-		const u32 STENCIL_FRONT_OP   = 0xFFFF0007;
-		const u32 STENCIL_BACK_OP    = 0xFFFF0008;
-		const u32 STENCIL_BACK_MASK  = 0xFFFF0009;
-		const u32 POLYGON_MODE       = 0xFFFF000A;
+		enum : u32
+		{
+			DEPTH_BOUNDS = 0xFFFF0001,
+			CLIP_PLANES = 0xFFFF0002,
+			DEPTH_RANGE = 0xFFFF0004,
+			STENCIL_FRONT_FUNC = 0xFFFF0005,
+			STENCIL_BACK_FUNC = 0xFFFF0006,
+			STENCIL_FRONT_OP = 0xFFFF0007,
+			STENCIL_BACK_OP = 0xFFFF0008,
+			STENCIL_BACK_MASK = 0xFFFF0009,
+			POLYGON_MODE = 0xFFFF000A,
+			POLYGON_OFFSET = 0xFFFF000B,
+		};
 
 		std::unordered_map<GLenum, u64> properties = {};
 		std::unordered_map<GLenum, std::array<u64, 4>> indexed_properties = {};
@@ -304,7 +308,7 @@ namespace gl
 		void polygon_offset(float factor, float units)
 		{
 			const u64 value = (static_cast<u64>(std::bit_cast<u32>(units)) << 32) | std::bit_cast<u32>(factor);
-			if (!test_and_set_property(GL_POLYGON_OFFSET_FILL, value))
+			if (!test_and_set_property(POLYGON_OFFSET, value))
 			{
 				glPolygonOffset(factor, units);
 			}
