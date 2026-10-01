@@ -1047,9 +1047,11 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 
 	std::unique_lock mp_lock(mp->mutex, std::defer_lock);
 
-	if (lock)
+	if (lock && !mp_lock.try_lock())
 	{
+		vfs_log.warning("vfs::host::rename(): Waiting for mount point lock (from='%s', to='%s')", from, to);
 		mp_lock.lock();
+		vfs_log.warning("vfs::host::rename(): Acquired mount point lock (from='%s')", from);
 	}
 
 	if (fs::rename(from, to, overwrite))
@@ -1092,7 +1094,13 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 		}
 	});
 
+	vfs_log.notice("vfs::host::rename(): Access denied, retrying after closing %u files (from='%s', to='%s')", escaped_real.size(), from, to);
+
 	bool res = false;
+
+	const auto retry_start = std::chrono::steady_clock::now();
+	auto retry_report = retry_start;
+	u64 retry_count = 0;
 
 	for (;; std::this_thread::yield())
 	{
@@ -1107,9 +1115,21 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 			res = false;
 			break;
 		}
+
+		retry_count++;
+
+		// Report a retry loop which is taking long, it may never end if the error is persistent
+		if (const auto now = std::chrono::steady_clock::now(); now - retry_report >= std::chrono::seconds(1))
+		{
+			retry_report = now;
+			vfs_log.warning("vfs::host::rename(): Still retrying after %u attempts and %u ms (from='%s', to='%s', error=%s)", retry_count,
+				static_cast<u64>(std::chrono::duration_cast<std::chrono::milliseconds>(now - retry_start).count()), from, to, fs::g_tls_error);
+		}
 	}
 
 	const auto fs_error = fs::g_tls_error;
+
+	vfs_log.notice("vfs::host::rename(): Retry finished after %u attempts (from='%s', result=%s, error=%s)", retry_count, from, res, fs_error);
 
 	for (const auto& [file_ptr, real_path] : escaped_real)
 	{
