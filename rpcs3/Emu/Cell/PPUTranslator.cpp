@@ -2116,7 +2116,7 @@ void PPUTranslator::VSUM2SWS(ppu_opcode_t op)
 	const auto [a, b] = get_vrs<s64[2]>(op.va, op.vb);
 	const auto x = a << 32 >> 32;
 	const auto y = a >> 32;
-	const auto z = b >> 32;
+	const auto z = b << 32 >> 32;
 	const auto sum = x + y + z;
 	const auto r = min(max(sum, splat<s64[2]>(-0x8000'0000ll)), splat<s64[2]>(0x7fff'ffff));
 	set_vr(op.vd, zshuffle(bitcast<u32[4]>(r), 0, 4, 2, 4));
