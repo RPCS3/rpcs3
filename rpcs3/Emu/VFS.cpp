@@ -1094,6 +1094,10 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 
 	bool res = false;
 
+	const auto retry_start = std::chrono::steady_clock::now();
+	auto retry_report = retry_start;
+	u64 retry_count = 0;
+
 	for (;; std::this_thread::yield())
 	{
 		if (fs::rename(from, to, overwrite))
@@ -1106,6 +1110,16 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 		{
 			res = false;
 			break;
+		}
+
+		retry_count++;
+
+		// Report a retry loop which is taking long, it may never end if the error is persistent
+		if (const auto now = std::chrono::steady_clock::now(); now - retry_report >= std::chrono::seconds(1))
+		{
+			retry_report = now;
+			vfs_log.warning("vfs::host::rename(): Still retrying after %u attempts and %u ms (from='%s', to='%s', error=%s)", retry_count,
+				static_cast<u64>(std::chrono::duration_cast<std::chrono::milliseconds>(now - retry_start).count()), from, to, fs::g_tls_error);
 		}
 	}
 
