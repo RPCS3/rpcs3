@@ -686,34 +686,33 @@ void GLGSRender::clear_surface(u32 arg)
 				clear_cmd.clear_stencil.value = rsx::method_registers.stencil_clear_value();
 				clear_cmd.aspect_mask |= gl::image_aspect::stencil;
 			}
+		}
 
-			if (const auto ds_mask = (arg & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK);
-				ds_mask != RSX_GCM_CLEAR_DEPTH_STENCIL_MASK || !full_frame)
+		if (clear_cmd.aspect_mask && (clear_cmd.aspect_mask != ds->aspect() || !full_frame))
+		{
+			const auto ds_mask = (arg & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK);
+
+			if (ds->state_flags & rsx::surface_state_flags::erase_bkgnd &&  // Needs initialization
+				ds->old_contents.empty() && !g_cfg.video.read_depth_buffer) // No way to load data from memory, so no initialization given
 			{
-				ensure(clear_cmd.aspect_mask);
-
-				if (ds->state_flags & rsx::surface_state_flags::erase_bkgnd &&  // Needs initialization
-					ds->old_contents.empty() && !g_cfg.video.read_depth_buffer) // No way to load data from memory, so no initialization given
+				// Only one aspect was cleared. Make sure to memory initialize the other before removing dirty flag
+				if (ds_mask == RSX_GCM_CLEAR_DEPTH_BIT)
 				{
-					// Only one aspect was cleared. Make sure to memory initialize the other before removing dirty flag
-					if (ds_mask == RSX_GCM_CLEAR_DEPTH_BIT)
-					{
-						// Depth was cleared, initialize stencil
-						clear_cmd.clear_stencil.mask = 0xff;
-						clear_cmd.clear_stencil.value = 0xff;
-						clear_cmd.aspect_mask |= gl::image_aspect::stencil;
-					}
-					else if (ds_mask == RSX_GCM_CLEAR_STENCIL_BIT)
-					{
-						// Stencil was cleared, initialize depth
-						clear_cmd.clear_depth.value = 1.f;
-						clear_cmd.aspect_mask |= gl::image_aspect::depth;
-					}
+					// Depth was cleared, initialize stencil
+					clear_cmd.clear_stencil.mask = 0xff;
+					clear_cmd.clear_stencil.value = 0xff;
+					clear_cmd.aspect_mask |= gl::image_aspect::stencil;
 				}
-				else
+				else if (ds_mask == RSX_GCM_CLEAR_STENCIL_BIT)
 				{
-					ds->write_barrier(cmd);
+					// Stencil was cleared, initialize depth
+					clear_cmd.clear_depth.value = 1.f;
+					clear_cmd.aspect_mask |= gl::image_aspect::depth;
 				}
+			}
+			else
+			{
+				ds->write_barrier(cmd);
 			}
 		}
 
