@@ -2106,9 +2106,10 @@ void PPUTranslator::VSUMSWS(ppu_opcode_t op)
 	const auto y = sext<s64[2]>(zshuffle(a, 2, 3));
 	const auto z = sext<s64[2]>(zshuffle(b, 0, 4));
 	const auto s = eval(x + y + z);
-	const auto r = min(max(zshuffle(s, 0, 2) + zshuffle(s, 1, 2), splat<s64[2]>(-0x8000'0000ll)), splat<s64[2]>(0x7fff'ffff));
+	const auto q = zshuffle(s, 0, 2) + zshuffle(s, 1, 2);
+	const auto r = min(max(q, splat<s64[2]>(-0x8000'0000ll)), splat<s64[2]>(0x7fff'ffff));
 	set_vr(op.vd, zshuffle(bitcast<u32[4]>(r), 0, 4, 4, 4));
-	set_sat(bitcast<u64[2]>(r + 0x8000'0000) >> 32);
+	set_sat(q ^ r);
 }
 
 void PPUTranslator::VSUM2SWS(ppu_opcode_t op)
