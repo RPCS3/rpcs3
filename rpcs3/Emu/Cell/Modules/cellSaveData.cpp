@@ -2146,18 +2146,6 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 	// Write PARAM.SFO and savedata
 	if (!psf.empty() && has_modified)
 	{
-		// Trace each commit step: a step which never returns is the one after the last printed message
-		u64 commit_step_time = get_system_time();
-
-		const auto log_commit_step = [&](std::string_view step)
-		{
-			const u64 now = get_system_time();
-			cellSaveData.notice("savedata_op(): Commit: %s (previous step took %u us)", step, now - commit_step_time);
-			commit_step_time = now;
-		};
-
-		log_commit_step(fmt::format("creating temporary directory '%s'", new_path));
-
 		// First, create temporary directory
 		if (fs::create_dir(new_path) || fs::g_tls_error == fs::error::exist)
 		{
@@ -2172,8 +2160,6 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		std::string final_blist;
 		final_blist = fmt::merge(blist, "/");
 		psf::assign(psf, "RPCS3_BLIST", psf::string(utils::align(::size32(final_blist) + 1, 4), final_blist));
-
-		log_commit_step(fmt::format("writing %u files to temporary directory", all_files.size() + 1));
 
 		// Write all files in temporary directory
 		auto& fsfo = all_files["PARAM.SFO"];
@@ -2195,21 +2181,14 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			}
 		}
 
-		log_commit_step(fmt::format("restoring times of %u files", all_times.size()));
-
 		for (auto&& pair : all_times)
 		{
 			// Restore atime/mtime for files which have not been modified
 			fs::utime(new_path + vfs::escape(pair.first), pair.second.first, pair.second.second);
 		}
 
-		log_commit_step(fmt::format("removing old backup '%s'", old_path));
-
 		// Remove old backup
 		fs::remove_all(old_path);
-
-		log_commit_step("syncing filesystem");
-
 		fs::sync(new_path);
 
 #ifndef _WIN32
@@ -2219,15 +2198,11 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 		}
 #endif
 
-		log_commit_step(fmt::format("moving '%s' to '%s'", dir_path, old_path));
-
 		// Backup old savedata
 		if (!vfs::host::rename(dir_path, old_path, &g_mp_sys_dev_hdd0, false))
 		{
 			fmt::throw_exception("Failed to move directory %s (%s)", dir_path, fs::g_tls_error);
 		}
-
-		log_commit_step(fmt::format("moving '%s' to '%s'", new_path, dir_path));
 
 		// Commit new savedata
 		if (!vfs::host::rename(new_path, dir_path, &g_mp_sys_dev_hdd0, false))
@@ -2236,12 +2211,8 @@ static NEVER_INLINE error_code savedata_op(ppu_thread& ppu, u32 operation, u32 v
 			fmt::throw_exception("Failed to move directory %s (%s)", new_path, fs::g_tls_error);
 		}
 
-		log_commit_step(fmt::format("removing backup '%s'", old_path));
-
 		// Remove backup again (TODO: may be changed to persistent backup implementation)
 		fs::remove_all(old_path);
-
-		log_commit_step("done");
 	}
 
 	if (show_auto_indicator)

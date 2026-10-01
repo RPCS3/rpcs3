@@ -1047,11 +1047,9 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 
 	std::unique_lock mp_lock(mp->mutex, std::defer_lock);
 
-	if (lock && !mp_lock.try_lock())
+	if (lock)
 	{
-		vfs_log.warning("vfs::host::rename(): Waiting for mount point lock (from='%s', to='%s')", from, to);
 		mp_lock.lock();
-		vfs_log.warning("vfs::host::rename(): Acquired mount point lock (from='%s')", from);
 	}
 
 	if (fs::rename(from, to, overwrite))
@@ -1094,8 +1092,6 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 		}
 	});
 
-	vfs_log.notice("vfs::host::rename(): Access denied, retrying after closing %u files (from='%s', to='%s')", escaped_real.size(), from, to);
-
 	bool res = false;
 
 	const auto retry_start = std::chrono::steady_clock::now();
@@ -1128,8 +1124,6 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 	}
 
 	const auto fs_error = fs::g_tls_error;
-
-	vfs_log.notice("vfs::host::rename(): Retry finished after %u attempts (from='%s', result=%s, error=%s)", retry_count, from, res, fs_error);
 
 	for (const auto& [file_ptr, real_path] : escaped_real)
 	{
