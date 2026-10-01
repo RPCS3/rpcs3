@@ -1403,7 +1403,7 @@ error_code cellSearchGetContentInfoByOffset(CellSearchId searchId, s32 offset, v
 			if (infoBuffer) std::memcpy(infoBuffer.get_ptr(), &content_info->data.photo, sizeof(content_info->data.photo));
 			break;
 		case CELL_SEARCH_CONTENTTYPE_VIDEO:
-			if (infoBuffer) std::memcpy(infoBuffer.get_ptr(), &content_info->data.video, sizeof(content_info->data.photo));
+			if (infoBuffer) std::memcpy(infoBuffer.get_ptr(), &content_info->data.video, sizeof(content_info->data.video));
 			break;
 		case CELL_SEARCH_CONTENTTYPE_MUSICLIST:
 			if (infoBuffer) std::memcpy(infoBuffer.get_ptr(), &content_info->data.music_list, sizeof(content_info->data.music_list));
