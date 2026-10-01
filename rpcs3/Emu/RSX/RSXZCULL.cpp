@@ -755,11 +755,11 @@ namespace rsx
 		query_search_result ZCULL_control::find_query(vm::addr_t sink_address, bool all)
 		{
 			query_search_result result{};
-			u32 stat_id = 0;
+			u32 stat_id = umax;
 
 			for (auto It = m_pending_writes.crbegin(); It != m_pending_writes.crend(); ++It)
 			{
-				if (stat_id) [[unlikely]]
+				if (stat_id != umax) [[unlikely]]
 				{
 					if (It->counter_tag != stat_id)
 					{
