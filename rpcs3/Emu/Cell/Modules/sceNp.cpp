@@ -570,7 +570,7 @@ void fmt_class_string<SceNpError>::format(std::string& out, u64 arg)
 
 void message_data::print() const
 {
-	sceNp.notice("commId: %s, msgId: %d, mainType: %d, subType: %d, subject: %s, body: %s, data_size: %d", static_cast<const char *>(commId.data), msgId, mainType, subType, subject, body, data.size());
+	sceNp.notice("commId: %s, msgId: %d, mainType: %d, subType: %d, msgFeatures: 0x%x, subject: %s, body: %s, data_size: %d", static_cast<const char *>(commId.data), msgId, mainType, subType, msgFeatures, subject, body, data.size());
 }
 
 extern void lv2_sleep(u64 timeout, ppu_thread* ppu = nullptr);
@@ -1592,20 +1592,6 @@ error_code sceNpBasicRecvMessageCustom(ppu_thread& ppu, u16 mainType, u32 recvOp
 	if ((recvOptions & ~SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_ALL_OPTIONS))
 	{
 		return SCE_NP_BASIC_ERROR_INVALID_ARGUMENT;
-	}
-
-	const auto pending_invitation = nph.take_pending_custom_menu_invitation();
-
-	if (mainType == SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE && pending_invitation)
-	{
-		// The user already selected and accepted this invitation in the home menu. Complete that
-		// selection only after the game's custom menu handler requests the invitation receive flow.
-		if (nph.complete_message_selection(*pending_invitation, mainType, SCE_NP_BASIC_MESSAGE_ACTION_ACCEPT, recvOptions))
-		{
-			return CELL_OK;
-		}
-
-		return not_an_error(SCE_NP_BASIC_ERROR_CANCEL);
 	}
 
 	return recv_message_gui(ppu, mainType, recvOptions);
@@ -3008,15 +2994,10 @@ error_code sceNpCustomMenuRegisterActions(vm::cptr<SceNpCustomMenu> menu, vm::pt
 		actions.push_back(std::move(action));
 	}
 
-	// TODO: add the custom menu to the friendlist and profile dialogs
+	// Local-user actions are exposed by the Friends overlay.
+	// TODO: expose FRIEND/PLAYER actions in their respective profile contexts.
 	std::lock_guard lock(nph.mutex_custom_menu);
-	nph.custom_menu_handler = handler;
-	nph.custom_menu_user_arg = userArg;
-	nph.custom_menu_actions = std::move(actions);
-	nph.custom_menu_registered = true;
-	nph.custom_menu_activation = {};
-	nph.custom_menu_exception_list = {};
-	nph.pending_custom_menu_invitation.reset();
+	nph.custom_menu.register_actions(std::move(actions), handler, userArg);
 
 	return CELL_OK;
 }
@@ -3036,7 +3017,7 @@ error_code sceNpCustomMenuActionSetActivation(vm::cptr<SceNpCustomMenuIndexArray
 
 	std::lock_guard lock(nph.mutex_custom_menu);
 
-	if (!nph.custom_menu_registered)
+	if (!nph.custom_menu.registered)
 	{
 		return SCE_NP_CUSTOM_MENU_ERROR_NOT_REGISTERED;
 	}
@@ -3046,7 +3027,7 @@ error_code sceNpCustomMenuActionSetActivation(vm::cptr<SceNpCustomMenuIndexArray
 		return SCE_NP_CUSTOM_MENU_ERROR_INVALID_ARGUMENT;
 	}
 
-	nph.custom_menu_activation = *array;
+	nph.custom_menu.activation = *array;
 
 	return CELL_OK;
 }
@@ -3066,7 +3047,7 @@ error_code sceNpCustomMenuRegisterExceptionList(vm::cptr<SceNpCustomMenuActionEx
 
 	std::lock_guard lock(nph.mutex_custom_menu);
 
-	if (!nph.custom_menu_registered)
+	if (!nph.custom_menu.registered)
 	{
 		return SCE_NP_CUSTOM_MENU_ERROR_NOT_REGISTERED;
 	}
@@ -3081,12 +3062,12 @@ error_code sceNpCustomMenuRegisterExceptionList(vm::cptr<SceNpCustomMenuActionEx
 		return SCE_NP_CUSTOM_MENU_ERROR_INVALID_ARGUMENT;
 	}
 
-	nph.custom_menu_exception_list.clear();
+	nph.custom_menu.exception_list.clear();
 
 	for (u32 i = 0; i < numItems; i++)
 	{
 		// TODO: Are the exceptions checked ?
-		nph.custom_menu_exception_list.push_back(items[i]);
+		nph.custom_menu.exception_list.push_back(items[i]);
 	}
 
 	return CELL_OK;

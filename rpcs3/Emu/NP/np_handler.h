@@ -16,6 +16,7 @@
 #include "Emu/NP/np_gui_cache.h"
 #include "Emu/NP/np_event_data.h"
 #include "Emu/NP/np_contexts.h"
+#include "Emu/NP/np_custom_menu.h"
 #include "Emu/NP/upnp_handler.h"
 
 namespace np
@@ -282,23 +283,13 @@ namespace np
 		void upnp_remove_port_mapping(u16 internal_port, std::string_view protocol);
 
 		// For custom menu
-		struct custom_menu_action
-		{
-			s32 id   = 0;
-			u32 mask = SCE_NP_CUSTOM_MENU_ACTION_MASK_ME;
-			std::string name;
-		};
+		using custom_menu_action = np::custom_menu_action;
 		shared_mutex mutex_custom_menu;
-		bool custom_menu_registered = false;
-		vm::ptr<SceNpCustomMenuEventHandler> custom_menu_handler{};
-		vm::ptr<void> custom_menu_user_arg{};
-		std::vector<custom_menu_action> custom_menu_actions;
-		SceNpCustomMenuIndexArray custom_menu_activation{};
-		std::vector<SceNpCustomMenuActionExceptions> custom_menu_exception_list{};
-		std::optional<u64> pending_custom_menu_invitation;
+		custom_menu_state custom_menu;
 
-		bool invoke_custom_menu_invitation_action(u64 msg_id);
-		std::optional<u64> take_pending_custom_menu_invitation();
+		// Actions on the local user's profile, exposed separately from received invitations.
+		std::vector<custom_menu_action> get_custom_menu_actions();
+		void invoke_custom_menu_action(const custom_menu_action& action);
 
 		// Mutex for NP status change
 		shared_mutex mutex_status;

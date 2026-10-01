@@ -866,13 +866,7 @@ namespace np
 
 		{
 			std::lock_guard lock(mutex_custom_menu);
-			custom_menu_registered = false;
-			custom_menu_handler = {};
-			custom_menu_user_arg = {};
-			custom_menu_actions.clear();
-			custom_menu_activation = {};
-			custom_menu_exception_list.clear();
-			pending_custom_menu_invitation.reset();
+			custom_menu.reset();
 		}
 
 		{
@@ -1122,77 +1116,34 @@ namespace np
 		get_rpcn()->mark_message_used(msg_id);
 	}
 
-	bool np_handler::invoke_custom_menu_invitation_action(u64 msg_id)
+	std::vector<np_handler::custom_menu_action> np_handler::get_custom_menu_actions()
 	{
-		const auto message = get_message(msg_id);
+		std::lock_guard lock(mutex_custom_menu);
+		return custom_menu.get_local_actions();
+	}
 
-		if (!message || message.value()->second.mainType != SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE)
+	void np_handler::invoke_custom_menu_action(const custom_menu_action& action)
+	{
+		sysutil_register_cb([this, action](ppu_thread& ppu) -> s32
 		{
-			return false;
-		}
+			std::optional<custom_menu_state::selection> selection;
 
-		vm::ptr<SceNpCustomMenuEventHandler> handler;
-		vm::ptr<void> user_arg;
-		u32 action_index = 0;
-		u32 action_count = 0;
-
-		{
-			std::lock_guard lock(mutex_custom_menu);
-
-			if (!custom_menu_registered)
 			{
-				return false;
-			}
+				std::lock_guard lock(mutex_custom_menu);
 
-			for (const auto& action : custom_menu_actions)
-			{
-				const u32 index = action.id;
-
-				if ((action.mask & SCE_NP_CUSTOM_MENU_ACTION_MASK_ME) && index < SCE_NP_CUSTOM_MENU_INDEX_SETSIZE &&
-					SCE_NP_CUSTOM_MENU_INDEX_ISSET(index, &custom_menu_activation))
+				// The game may replace or disable its menu while the home menu is closing.
+				selection = custom_menu.resolve_local_action(action);
+				if (!selection)
 				{
-					action_index = index;
-					action_count++;
+					rpcn_log.notice("Custom menu action is no longer available: index=%d", action.id);
+					return CELL_OK;
 				}
 			}
 
-			// There is no reliable way to choose between multiple actions without presenting them to the user.
-			if (action_count != 1)
-			{
-				return false;
-			}
-
-			handler = custom_menu_handler;
-			user_arg = custom_menu_user_arg;
-		}
-
-		sysutil_register_cb([this, handler, user_arg, action_index, msg_id, npid = get_npid()](ppu_thread& ppu) -> s32
-		{
-			{
-				std::lock_guard lock(mutex_custom_menu);
-				pending_custom_menu_invitation = msg_id;
-			}
-
-			const vm::var<SceNpId> selected_npid(npid);
-			const s32 result = handler(ppu, CELL_OK, action_index, selected_npid, SCE_NP_CUSTOM_MENU_SELECTED_TYPE_ME, user_arg);
-
-			if (result != CELL_OK)
-			{
-				std::lock_guard lock(mutex_custom_menu);
-				pending_custom_menu_invitation.reset();
-			}
-
-			return result;
+			// Invoke guest code without holding the menu lock: it may register new actions.
+			const vm::var<SceNpId> selected_npid(get_npid());
+			return selection->handler(ppu, CELL_OK, selection->index, selected_npid, SCE_NP_CUSTOM_MENU_SELECTED_TYPE_ME, selection->user_arg);
 		});
-
-		rpcn_log.notice("Forwarding invitation %d through custom menu action %u", msg_id, action_index);
-		return true;
-	}
-
-	std::optional<u64> np_handler::take_pending_custom_menu_invitation()
-	{
-		std::lock_guard lock(mutex_custom_menu);
-		return std::exchange(pending_custom_menu_invitation, std::nullopt);
 	}
 
 	bool np_handler::complete_message_selection(u64 msg_id, u16 main_type, u32 recv_result, u32 recv_options)
@@ -1275,7 +1226,7 @@ namespace np
 	{
 		const auto message = get_message(msg_id);
 
-		if (!message || message.value()->second.mainType != SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE)
+		if (!message || !message.value()->second.is_bootable_invitation())
 		{
 			rpcn_log.error("Cannot select invalid invitation: msg_id=%d", msg_id);
 			return false;
