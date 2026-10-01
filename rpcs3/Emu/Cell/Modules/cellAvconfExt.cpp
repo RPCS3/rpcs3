@@ -274,7 +274,7 @@ error_code cellAudioInGetDeviceInfo(u32 deviceNumber, u32 deviceIndex, vm::ptr<C
 	std::lock_guard lock(av_manager.mutex);
 
 	if (deviceNumber >= av_manager.devices.size())
-		return CELL_AUDIO_OUT_ERROR_DEVICE_NOT_FOUND;
+		return CELL_AUDIO_IN_ERROR_DEVICE_NOT_FOUND;
 
 	av_manager.copy_device_info(deviceNumber, info);
 
