@@ -82,6 +82,7 @@ namespace vk
 			if (m_query_pool_cache.size() > 0)
 			{
 				m_current_query_pool = std::move(m_query_pool_cache.front());
+				m_current_query_pool->reset_refs();
 				m_query_pool_cache.pop_front();
 			}
 			else

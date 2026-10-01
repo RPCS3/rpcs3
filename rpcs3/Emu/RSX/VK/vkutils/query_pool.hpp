@@ -23,13 +23,18 @@ namespace vk
 			info.queryCount = size;
 			CHECK_RESULT(vkCreateQueryPool(dev, &info, nullptr, &m_query_pool));
 
-			// Take 'size' references on this object
-			ref_count.release(static_cast<s32>(size));
+			reset_refs();
 		}
 
 		~query_pool()
 		{
 			vkDestroyQueryPool(m_device, m_query_pool, nullptr);
+		}
+
+		void reset_refs()
+		{
+			// Take 'size' references on this object
+			ref_count.release(static_cast<s32>(m_size));
 		}
 
 		operator VkQueryPool()
