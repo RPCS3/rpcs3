@@ -743,7 +743,7 @@ namespace rsx
 
 		// indirection table size
 		const auto full_reupload = !prog || prog->has_indexed_constants;
-		const auto reloc_table = full_reupload ? decltype(prog->constant_ids){} : prog->constant_ids;
+		const auto reloc_table = full_reupload ? std::span<const u16>{} : std::span<const u16>(prog->constant_ids);
 		const auto redirection_table_size = full_reupload ? 468u : ::size32(prog->constant_ids);
 		instancing_indirection_table.resize(redirection_table_size);
 

@@ -101,7 +101,6 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 
 	// NOTE: You cannot safely create a wayland window that has hidden initial status and perform any changes on the window while it is still hidden.
 	// Doing this will create a surface with deferred commands that require a buffer. When binding to your session, this may assert in your compositor due to protocol restrictions.
-	Visibility startup_visibility = Hidden;
 #ifndef _WIN32
 	if (const char* session_type = ::getenv("XDG_SESSION_TYPE"))
 	{
@@ -110,7 +109,7 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 			// Start windowed. This is a featureless rectangle on-screen with no window decorations.
 			// It does not even resemble a window until the WM attaches later on.
 			// Fullscreen could technically work with some fiddling, but easily breaks depending on geometry input.
-			startup_visibility = Windowed;
+			m_startup_visibility = Windowed;
 		}
 	}
 #endif
@@ -125,7 +124,7 @@ gs_frame::gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon,
 	{
 		// Do not display the window before OpenGL is configured!
 		// This works fine in windows and X11 but wayland-egl will crash later.
-		setVisibility(startup_visibility);
+		setVisibility(m_startup_visibility);
 		create();
 	}
 

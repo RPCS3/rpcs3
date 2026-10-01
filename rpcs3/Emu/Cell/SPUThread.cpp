@@ -3475,6 +3475,14 @@ bool spu_thread::do_putllc(const spu_mfc_cmd& args)
 		auto& super_data = *vm::get_super_ptr<spu_rdata_t>(addr);
 		const bool success = [&]()
 		{
+			if (!g_cfg.core.spu_accurate_reservations && diff16_pos != umax)
+			{
+				vm::range_lock<128>(range_lock, addr, 128);
+				const bool ok = cmp_rdata(rdata, super_data) && atomic_storage<u128>::compare_exchange(*cast_as(super_data, diff16_pos), *cast_as(rdata, diff16_pos), *cast_as_const(to_write, diff16_pos));
+				range_lock->release(0);
+				return ok;
+			}
+
 			// Full lock (heavyweight)
 			// TODO: vm::check_addr
 			vm::writer_lock lock(addr, range_lock);
