@@ -788,9 +788,9 @@ namespace rsx
 
 			if (sanitize)
 			{
-				//Convert NaNs and Infs to 0
+				// Zero NaNs as a host driver workaround, realhw keeps NaN and Inf as is
 				const auto masked = _mm_and_si128(shuffled_vector, _mm_set1_epi32(0x7fffffff));
-				const auto valid = _mm_cmplt_epi32(masked, _mm_set1_epi32(0x7f800000));
+				const auto valid = _mm_cmplt_epi32(masked, _mm_set1_epi32(0x7f800001));
 				const auto result = _mm_and_si128(shuffled_vector, valid);
 				_mm_stream_si128(utils::bless<__m128i>(dst), result);
 			}
@@ -816,7 +816,7 @@ namespace rsx
 				const u32 value = reinterpret_cast<const u32*>(data)[i];
 				const u32 shuffled = ((value >> 8) & 0xff00ff) | ((value << 8) & 0xff00ff00);
 
-				if (sanitize && (shuffled & 0x7fffffff) >= 0x7f800000)
+				if (sanitize && (shuffled & 0x7fffffff) > 0x7f800000)
 				{
 					dst[i] = 0.f;
 				}
