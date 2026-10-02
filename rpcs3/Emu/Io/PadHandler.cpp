@@ -1009,23 +1009,26 @@ void PadDevice::update_orientation(ps_move_data& move_data)
 		return;
 	}
 
-	// The ps move handler's axis may differ from the Fusion axis, so we have to map them correctly.
-	// Don't ask how the axis work. It's basically been trial and error.
+	// The sensor data in move_data uses the following device frame (see set_raw_orientation and the PS Move handler):
+	//   x: right, y: forward (towards the sphere), z: up (buttons)
+	// The accelerometer, gyro and magnetometer share this frame.
+	// Fusion uses East-North-Up, so we can feed it the device frame as is. The identity orientation is then "flat, pointing forward",
+	// and the accelerometer measures +1g on the z axis at rest, which is what Fusion expects as gravity reference.
 	ensure(ahrs->convention == FusionConvention::FusionConventionEnu); // East-North-Up
 
 	const FusionVector accelerometer{
 		.axis {
-			.x = -move_data.accelerometer.x(),
-			.y = +move_data.accelerometer.y(),
-			.z = +move_data.accelerometer.z()
+			.x = move_data.accelerometer.x(),
+			.y = move_data.accelerometer.y(),
+			.z = move_data.accelerometer.z()
 		}
 	};
 
 	const FusionVector gyroscope{
 		.axis {
-			.x = +PadHandlerBase::rad_to_degree(move_data.gyro.x()),
-			.y = +PadHandlerBase::rad_to_degree(move_data.gyro.z()),
-			.z = -PadHandlerBase::rad_to_degree(move_data.gyro.y())
+			.x = PadHandlerBase::rad_to_degree(move_data.gyro.x()),
+			.y = PadHandlerBase::rad_to_degree(move_data.gyro.y()),
+			.z = PadHandlerBase::rad_to_degree(move_data.gyro.z())
 		}
 	};
 
@@ -1033,10 +1036,11 @@ void PadDevice::update_orientation(ps_move_data& move_data)
 
 	if (move_data.magnetometer_enabled)
 	{
+		// The magnetometer y axis is flipped compared to the accelerometer and gyro (see ps move api)
 		magnetometer = FusionVector{
 			.axis {
 				.x = move_data.magnetometer.x(),
-				.y = move_data.magnetometer.y(),
+				.y = -move_data.magnetometer.y(),
 				.z = move_data.magnetometer.z()
 			}
 		};
@@ -1063,9 +1067,13 @@ void PadDevice::update_orientation(ps_move_data& move_data)
 		return;
 	}
 
-	move_data.quaternion[0] = quaternion.array[1];
-	move_data.quaternion[1] = quaternion.array[2];
-	move_data.quaternion[2] = quaternion.array[3];
-	move_data.quaternion[3] = quaternion.array[0];
+	// Convert the quaternion from the device frame (x: right, y: forward, z: up) to the cellGem frame (x: right, y: up, z: backward).
+	// The cellGem identity orientation is "facing the camera with buttons up", which is the same pose as our "flat, pointing forward".
+	// The change of basis is a proper rotation C with (x, y, z) -> (x, z, -y), so q' = C * q * C^-1 = (w, C * v).
+	// This is the same transform that ps move api uses for its OpenGL sensor basis.
+	move_data.quaternion[0] = quaternion.array[1];  // x =  x
+	move_data.quaternion[1] = quaternion.array[3];  // y =  z
+	move_data.quaternion[2] = -quaternion.array[2]; // z = -y
+	move_data.quaternion[3] = quaternion.array[0];  // w
 	move_data.update_orientation(elapsed_sec);
 }
