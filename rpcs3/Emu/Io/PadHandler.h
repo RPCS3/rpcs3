@@ -53,8 +53,25 @@ public:
 	std::shared_ptr<FusionAhrs> ahrs; // Used to calculate quaternions from sensor data
 	u64 last_ahrs_update_time_us = 0; // Last ahrs update
 
+	// Sensor samples (accelerometer in G, gyro in rad/s) for the next orientation update.
+	// By default, update_orientation uses the current values in move_data and the time since the last update.
+	// Handlers that set queues_imu_samples queue their own samples instead (e.g. once per input report).
+	struct imu_sample
+	{
+		ps_move_data::vect<3> accelerometer{};
+		ps_move_data::vect<3> gyro{};
+	};
+	bool queues_imu_samples = false;
+	std::array<imu_sample, 2> imu_samples{};
+	u32 imu_sample_count = 0;
+	f32 imu_sample_delta_time = 0.0f; // Seconds per sample
+
 	void update_orientation(ps_move_data& move_data);
 	void reset_orientation();
+
+private:
+	// Feeds one sensor sample to the AHRS and updates move_data.quaternion. Returns false if the sample was discarded.
+	bool update_ahrs(ps_move_data& move_data, const imu_sample& sample, f32 elapsed_sec);
 };
 
 struct pad_ensemble
