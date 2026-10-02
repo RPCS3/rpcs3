@@ -971,16 +971,24 @@ void PadHandlerBase::get_orientation(const pad_ensemble& binding) const
 	device->update_orientation(pad->move_data);
 }
 
+static void set_fusion_settings(FusionAhrs* ahrs, f32 sample_rate)
+{
+	FusionAhrsSettings settings = fusionAhrsDefaultSettings;
+	settings.sampleRate = sample_rate;
+	settings.convention = FusionConvention::FusionConventionEnu;
+	settings.gain = 0.0f; // If gain is set, the algorithm tries to adjust the orientation over time.
+	FusionAhrsSetSettings(ahrs, &settings);
+}
+
 void PadDevice::reset_orientation()
 {
 	// Initialize Fusion
 	ahrs = std::make_shared<FusionAhrs>();
 	FusionAhrsInitialise(ahrs.get());
+	set_fusion_settings(ahrs.get(), fusionAhrsDefaultSettings.sampleRate);
 
-	FusionAhrsSettings settings = fusionAhrsDefaultSettings;
-	settings.convention = FusionConvention::FusionConventionEnu;
-	settings.gain = 0.0f; // If gain is set, the algorithm tries to adjust the orientation over time.
-	FusionAhrsSetSettings(ahrs.get(), &settings);
+	// Start measuring the sample period from scratch
+	last_ahrs_update_time_us = 0;
 }
 
 void PadDevice::update_orientation(ps_move_data& move_data)
@@ -994,6 +1002,12 @@ void PadDevice::update_orientation(ps_move_data& move_data)
 	const u64 now_us = get_system_time();
 	const f32 elapsed_sec = (last_ahrs_update_time_us == 0) ? 0.0f : ((now_us - last_ahrs_update_time_us) / 1'000'000.0f);
 	last_ahrs_update_time_us = now_us;
+
+	// We need a valid sample period. Skip the first update after a reset.
+	if (elapsed_sec <= 0.0f)
+	{
+		return;
+	}
 
 	// The ps move handler's axis may differ from the Fusion axis, so we have to map them correctly.
 	// Don't ask how the axis work. It's basically been trial and error.
@@ -1031,8 +1045,11 @@ void PadDevice::update_orientation(ps_move_data& move_data)
 	// Keep a backup in case the update yields an invalid orientation (e.g. due to garbage sensor data)
 	const FusionAhrs ahrs_backup = *ahrs;
 
-	// Update Fusion
-	FusionAhrsSetSamplePeriod(ahrs.get(), elapsed_sec);
+	// Update Fusion.
+	// We have to update the settings with the measured sample rate instead of just setting the sample period,
+	// because the startup gain ramp (which uses the accelerometer to find the initial inclination) is calculated per sample.
+	// Otherwise the startup period would depend on how often we get here.
+	set_fusion_settings(ahrs.get(), 1.0f / elapsed_sec);
 	FusionAhrsUpdate(ahrs.get(), gyroscope, accelerometer, magnetometer);
 
 	// Get quaternion
