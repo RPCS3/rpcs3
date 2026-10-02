@@ -237,9 +237,39 @@ void psmove_calibration_get_usb_gyro_values(const reports::ps_move_calibration_b
 	}
 }
 
-void psmove_parse_calibration(const reports::ps_move_calibration_blob& calibration, ps_move_device& device)
+static bool psmove_calibration_is_sane(const ps_move_calibration& calibration)
+{
+	const auto is_valid_factor = [](f32 value)
+	{
+		return std::isfinite(value) && value != 0.0f;
+	};
+
+	return is_valid_factor(calibration.accel_x_factor) &&
+	       is_valid_factor(calibration.accel_y_factor) &&
+	       is_valid_factor(calibration.accel_z_factor) &&
+	       std::isfinite(calibration.accel_x_offset) &&
+	       std::isfinite(calibration.accel_y_offset) &&
+	       std::isfinite(calibration.accel_z_offset) &&
+	       is_valid_factor(calibration.gyro_x_gain) &&
+	       is_valid_factor(calibration.gyro_y_gain) &&
+	       is_valid_factor(calibration.gyro_z_gain) &&
+	       std::isfinite(calibration.gyro_x_offset) &&
+	       std::isfinite(calibration.gyro_y_offset) &&
+	       std::isfinite(calibration.gyro_z_offset);
+}
+
+bool psmove_parse_calibration(const reports::ps_move_calibration_blob& calibration, ps_move_device& device)
 {
 	psmove_dump_calibration(calibration, device);
 	psmove_calibration_get_usb_accel_values(calibration, device);
 	psmove_calibration_get_usb_gyro_values(calibration, device);
+
+	if (!psmove_calibration_is_sane(device.calibration))
+	{
+		move_log.error("psmove_parse_calibration: Invalid calibration data. Falling back to uncalibrated values.");
+		device.calibration = {};
+		return false;
+	}
+
+	return true;
 }
