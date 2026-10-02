@@ -777,7 +777,14 @@ error_code sys_rsx_context_attribute(u32 context_id, u32 package_id, u64 a3, u64
 		});
 		break;
 	}
-	case 0x10D: // Called by cellGcmInitCursor
+	case 0x10b:
+		// when a4=3, cellGcmSetCursorPosition(a5=xpos, a6=ypos)
+		// when a4=2, cellGcmSetCursorImageOffset(a5=offset)
+	case 0x10c:
+		// when a4=1, cellGcmSetCursorEnable()
+		// when a4=2, cellGcmSetCursorDisable()
+	case 0x10d:
+		// cellGcmInitCursor(a3=1, a4=1, a5=0, a6=0)
 		break;
 
 	case 0x300: // Tiles
