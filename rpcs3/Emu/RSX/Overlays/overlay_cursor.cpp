@@ -157,12 +157,24 @@ namespace rsx
 
 		void bitmap_cursor::enable()
 		{
+			std::lock_guard lock(m_mutex);
+
 			m_visible = true;
 		}
 
 		void bitmap_cursor::disable()
 		{
+			std::lock_guard lock(m_mutex);
+
 			m_visible = false;
+		}
+
+		void bitmap_cursor::set_screen_size(u16 w, u16 h)
+		{
+			std::lock_guard lock(m_mutex);
+
+			m_virtual_width = w;
+			m_virtual_height = h;
 		}
 
 		void bitmap_cursor::set_pos(s32 x, s32 y)
