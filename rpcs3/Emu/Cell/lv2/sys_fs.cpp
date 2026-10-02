@@ -363,7 +363,10 @@ const lv2_fs_mount_info& lv2_fs_mount_info_map::lookup(std::string_view path, bo
 
 		if (ret->mp->flags & lv2_mp_flag::reflection)
 		{
-			ret = &lookup(Emu.GetDir(), false, nullptr);
+			if (const std::string& dir = Emu.GetDir(); lv2_fs_object::get_path_root_and_trail(dir).first != dev_root)
+			{
+				ret = &lookup(dir, false, nullptr);
+			}
 		}
 
 		return *ret;
@@ -2499,7 +2502,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 
 		if (op == 0x8000000b && file->type != lv2_file_type::regular && arg->size)
 		{
-			sys_fs.error("%s type: Writing %u bytes to FD=%d (path=%s)", file->type, arg->size, file->name.data());
+			sys_fs.error("%s type: Writing %u bytes to FD=%d (path=%s)", file->type, arg->size, fd, file->name.data());
 		}
 
 		if (op == 0x8000000a && file->type != lv2_file_type::regular && arg->size >= 0x100000)
