@@ -284,6 +284,7 @@ void ps_move_handler::check_add_device(hid_device* hidDevice, hid_enumerated_dev
 	device->path = path;
 
 	// Get calibration
+	device->calibration = {};
 	device->calibration.is_valid = true;
 
 	ps_move_calibration_blob calibration {};
@@ -293,7 +294,7 @@ void ps_move_handler::check_add_device(hid_device* hidDevice, hid_enumerated_dev
 		std::array<u8, PSMOVE_CALIBRATION_SIZE> cal {};
 		cal[0] = 0x10;
 		const int res = hid_get_feature_report(device->hidDevice, cal.data(), cal.size());
-		if (res < 0)
+		if (res != PSMOVE_CALIBRATION_SIZE)
 		{
 			move_log.error("connect_move_device: hid_get_feature_report 0x10 (calibration) failed! result=%d, error=%s", res, hid_error(device->hidDevice));
 			device->calibration.is_valid = false;
@@ -328,7 +329,7 @@ void ps_move_handler::check_add_device(hid_device* hidDevice, hid_enumerated_dev
 
 	if (device->calibration.is_valid)
 	{
-		psmove_parse_calibration(calibration, *device);
+		device->calibration.is_valid = psmove_parse_calibration(calibration, *device);
 	}
 
 	// Activate
