@@ -1855,7 +1855,8 @@ namespace rsx
 		{
 			if (layout.zeta_address == m_depth_surface_info.address &&
 				layout.depth_format == m_depth_surface_info.depth_format &&
-				sample_count == m_depth_surface_info.samples)
+				sample_count == m_depth_surface_info.samples &&
+				(!layout.zeta_address || (m_depth_surface_info.width == layout.width && m_depth_surface_info.height == layout.height)))
 			{
 				// Same target is reused
 				return;
