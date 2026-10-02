@@ -62,7 +62,7 @@ namespace
 		vk::data_heap& m_index_buffer_ring_info)
 	{
 		u32 index_count = get_index_count(clause.primitive, vertex_count);
-		u32 upload_size = index_count * sizeof(u16);
+		u32 upload_size = index_count * sizeof(u32);
 
 		VkDeviceSize offset_in_index_buffer = m_index_buffer_ring_info.alloc<256>(upload_size);
 		void* buf = m_index_buffer_ring_info.map(offset_in_index_buffer, upload_size);
@@ -71,7 +71,7 @@ namespace
 
 		m_index_buffer_ring_info.unmap();
 		return std::make_tuple(
-			index_count, std::make_tuple(offset_in_index_buffer, VK_INDEX_TYPE_UINT16));
+			index_count, std::make_tuple(offset_in_index_buffer, VK_INDEX_TYPE_UINT32));
 	}
 
 	struct vertex_input_state
