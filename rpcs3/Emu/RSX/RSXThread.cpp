@@ -811,11 +811,25 @@ namespace rsx
 			{
 				ar(u32{0});
 			}
+
+			ar(fifo_ctrl ? fifo_ctrl->get_pos() : 0);
 		}
-		else if (u32 count{ar})
+		else
 		{
-			restore_fifo_count = count;
-			ar(restore_fifo_cmd);
+			if (u32 count{ar})
+			{
+				restore_fifo_count = count;
+				ar(restore_fifo_cmd);
+			}
+
+			if (version >= 4)
+			{
+				ar(restore_fifo_position);
+			}
+			else
+			{
+				restore_fifo_position = vm::_ptr<RsxDmaControl>(dma_address)->get;
+			}
 		}
 	}
 
@@ -1141,9 +1155,9 @@ namespace rsx
 
 		vblank_count = 0;
 
-		if (restore_fifo_count)
+		if (serialized)
 		{
-			fifo_ctrl->restore_state(restore_fifo_cmd, restore_fifo_count);
+			fifo_ctrl->restore_state(restore_fifo_cmd, restore_fifo_count, restore_fifo_position);
 		}
 
 		if (!send_event(0, event_flags, 0))
@@ -2866,9 +2880,8 @@ namespace rsx
 
 	void thread::flush_fifo()
 	{
-		// Make sure GET value is exposed before sync points
-		fifo_ctrl->sync_get();
 		fifo_ctrl->invalidate_cache();
+		fifo_ctrl->fetch_u32(fifo_ctrl->get_pos());
 	}
 
 	std::pair<u32, u32> thread::try_get_pc_of_x_cmds_backwards(s32 count, u32 get) const
@@ -2960,7 +2973,7 @@ namespace rsx
 
 	void thread::recover_fifo(std::source_location src_loc)
 	{
-		bool kill_itself = g_cfg.core.rsx_fifo_accuracy == rsx_fifo_mode::as_ps3;
+		bool kill_itself = g_cfg.core.rsx_fifo_accuracy >= rsx_fifo_mode::atomic;
 
 		const u64 current_time = get_system_time();
 
@@ -3097,6 +3110,8 @@ namespace rsx
 		if (ctrl)
 		{
 			fmt::append(result, "FIFO: GET=0x%07x, PUT=0x%07x, REF=0x%08x\n", +ctrl->get, +ctrl->put, +ctrl->ref);
+			fmt::append(result, "FIFO: RET-ADDR=0x%x, Code=0x%x, Jump=0x%x\n", fifo_ret_addr, last_known_code_start, last_code_jump);
+			fmt::append(result, "FIFO: Semaphore Acquire: pos=0x%x, address=0x%x\n", last_sema_cmd, last_sema_addr);
 		}
 
 		for (u32 i = 0; i < 1 << 14; i++)
