@@ -396,6 +396,10 @@ ps_move_handler::DataStatus ps_move_handler::get_data(ps_move_device* device)
 	if (res != static_cast<int>(report_size))
 		return DataStatus::NoNewData;
 
+	// Ignore anything that isn't an input report
+	if (buf[0] != reportId)
+		return DataStatus::NoNewData;
+
 	if (std::memcmp(report, buf.data(), report_size) == 0)
 		return DataStatus::NoNewData;
 
