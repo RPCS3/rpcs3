@@ -231,7 +231,7 @@ namespace rsx
 		case index_emulate:
 			ensure(writing);
 			address = m_current_job->dst;
-			range = get_index_count(static_cast<rsx::primitive_type>(m_current_job->aux_param0), m_current_job->length);
+			range = get_index_count(static_cast<rsx::primitive_type>(m_current_job->aux_param0), m_current_job->length) * sizeof(u16);
 			break;
 		default:
 			fmt::throw_exception("Unreachable");
