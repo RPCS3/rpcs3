@@ -289,7 +289,12 @@ void ps_move_handler::check_add_device(hid_device* hidDevice, hid_enumerated_dev
 
 	ps_move_calibration_blob calibration {};
 
-	for (int i = 0; i < 2; i++)
+	// The calibration data is split into multiple blocks. Each read returns the next block, so the first block we get isn't necessarily the first one.
+	const u32 block_count = device->model == ps_move_model::ZCM1 ? 3 : 2;
+	const u32 all_blocks_mask = (1u << block_count) - 1;
+	u32 received_blocks_mask = 0;
+
+	for (u32 i = 0; i < block_count * 2 && received_blocks_mask != all_blocks_mask; i++)
 	{
 		std::array<u8, PSMOVE_CALIBRATION_SIZE> cal {};
 		cal[0] = 0x10;
@@ -301,6 +306,7 @@ void ps_move_handler::check_add_device(hid_device* hidDevice, hid_enumerated_dev
 			break;
 		}
 
+		u32 block = 0;
 		int src_offset = 0;
 		int dest_offset = 0;
 
@@ -308,12 +314,14 @@ void ps_move_handler::check_add_device(hid_device* hidDevice, hid_enumerated_dev
 			(cal[1] == 0x81 && device->model == ps_move_model::ZCM2))
 		{
 			// This is the second block
+			block = 1;
 			dest_offset = PSMOVE_CALIBRATION_SIZE;
 			src_offset = 2;
 		}
 		else if (cal[1] == 0x82 && device->model == ps_move_model::ZCM1)
 		{
 			// This is the third block
+			block = 2;
 			dest_offset = 2 * PSMOVE_CALIBRATION_SIZE - 2;
 			src_offset = 2;
 		}
@@ -325,6 +333,13 @@ void ps_move_handler::check_add_device(hid_device* hidDevice, hid_enumerated_dev
 		}
 
 		std::memcpy(&calibration.data[dest_offset], &cal[src_offset], cal.size() - src_offset);
+		received_blocks_mask |= 1u << block;
+	}
+
+	if (device->calibration.is_valid && received_blocks_mask != all_blocks_mask)
+	{
+		move_log.error("connect_move_device: Failed to read all calibration blocks: received_blocks_mask=0x%x, expected=0x%x", received_blocks_mask, all_blocks_mask);
+		device->calibration.is_valid = false;
 	}
 
 	if (device->calibration.is_valid)
