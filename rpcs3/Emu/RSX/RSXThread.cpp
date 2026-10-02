@@ -2975,7 +2975,7 @@ namespace rsx
 
 	void thread::recover_fifo(std::source_location src_loc)
 	{
-		bool kill_itself = g_cfg.core.rsx_fifo_accuracy >= rsx_fifo_mode::atomic;
+		bool kill_itself = g_cfg.core.rsx_fifo_accuracy == rsx_fifo_mode::as_ps3;
 
 		const u64 current_time = get_system_time();
 
