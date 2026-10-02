@@ -50,6 +50,24 @@ namespace rsx
 			std::map<u32, cursor_item> m_cursors;
 		};
 
+		class bitmap_cursor final : public overlay
+		{
+		public:
+			void enable();
+			void disable();
+			void set_pos(s32 x, s32 y);
+			void set_bitmap(u32 address);
+			compiled_resource get_compiled() override;
+
+		private:
+			bool m_visible = false;
+			position2_base<s16> m_position = {};
+			std::unique_ptr<overlays::image_view> m_bitmap;
+			overlays::memory_image_info m_image_storage;
+
+			shared_mutex m_mutex;
+		};
+
 		void set_cursor(u32 id, s16 x, s16 y, const color4f& color, u64 duration_us, bool force_update);
 
 	} // namespace overlays
