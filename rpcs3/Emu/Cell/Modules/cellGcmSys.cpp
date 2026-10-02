@@ -389,6 +389,8 @@ u32 g_defaultCommandBufferBegin, g_defaultCommandBufferFragmentCount;
 // Called by cellGcmInit
 error_code _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSize, u32 ioAddress)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellGcmSys.warning("_cellGcmInitBody(context=**0x%x, cmdSize=0x%x, ioSize=0x%x, ioAddress=0x%x)", context, cmdSize, ioSize, ioAddress);
 
 	auto& gcm_cfg = g_fxo->get<gcm_config>();
