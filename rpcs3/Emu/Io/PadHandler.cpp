@@ -971,12 +971,27 @@ void PadHandlerBase::get_orientation(const pad_ensemble& binding) const
 	device->update_orientation(pad->move_data);
 }
 
-static void set_fusion_settings(FusionAhrs* ahrs, f32 sample_rate)
+static void set_fusion_settings(FusionAhrs* ahrs, f32 sample_rate, bool drift_correction)
 {
 	FusionAhrsSettings settings = fusionAhrsDefaultSettings;
 	settings.sampleRate = sample_rate;
 	settings.convention = FusionConvention::FusionConventionEnu;
-	settings.gain = 0.0f; // If gain is set, the algorithm tries to adjust the orientation over time.
+
+	if (drift_correction)
+	{
+		// Continuously pull the inclination towards the gravity measured by the accelerometer.
+		// The accelerometer is ignored while the device is accelerated (e.g. swung), unless that lasts longer than the rejection timeout.
+		settings.gain = 0.5f;
+		settings.accelerationRejection = 10.0f; // degrees
+		settings.magneticRejection = 10.0f;     // degrees
+		settings.rejectionTimeout = 5.0f;       // seconds
+	}
+	else
+	{
+		// Only use the accelerometer during the startup period. Afterwards we only integrate the gyro.
+		settings.gain = 0.0f;
+	}
+
 	FusionAhrsSetSettings(ahrs, &settings);
 }
 
@@ -985,7 +1000,10 @@ void PadDevice::reset_orientation()
 	// Initialize Fusion
 	ahrs = std::make_shared<FusionAhrs>();
 	FusionAhrsInitialise(ahrs.get());
-	set_fusion_settings(ahrs.get(), fusionAhrsDefaultSettings.sampleRate);
+
+	ahrs_sample_rate = fusionAhrsDefaultSettings.sampleRate;
+	ahrs_measured_sample_rate = 0.0f;
+	set_fusion_settings(ahrs.get(), ahrs_sample_rate, ahrs_drift_correction);
 
 	// Start measuring the sample period from scratch and discard samples from before the reset
 	last_ahrs_update_time_us = 0;
@@ -1045,7 +1063,7 @@ bool PadDevice::update_ahrs(ps_move_data& move_data, const imu_sample& sample, f
 
 	// The sensor data in move_data uses the following device frame (see set_raw_orientation and the PS Move handler):
 	//   x: right, y: forward (towards the sphere), z: up (buttons)
-	// The accelerometer, gyro and magnetometer share this frame.
+	// The accelerometer and gyro share this frame.
 	// Fusion uses East-North-Up, so we can feed it the device frame as is. The identity orientation is then "flat, pointing forward",
 	// and the accelerometer measures +1g on the z axis at rest, which is what Fusion expects as gravity reference.
 	ensure(ahrs->convention == FusionConvention::FusionConventionEnu); // East-North-Up
@@ -1066,29 +1084,26 @@ bool PadDevice::update_ahrs(ps_move_data& move_data, const imu_sample& sample, f
 		}
 	};
 
-	FusionVector magnetometer {};
-
-	if (move_data.magnetometer_enabled)
-	{
-		// The magnetometer y axis is flipped compared to the accelerometer and gyro (see ps move api)
-		magnetometer = FusionVector{
-			.axis {
-				.x = move_data.magnetometer.x(),
-				.y = -move_data.magnetometer.y(),
-				.z = move_data.magnetometer.z()
-			}
-		};
-	}
-
 	// Keep a backup in case the update yields an invalid orientation (e.g. due to garbage sensor data)
 	const FusionAhrs ahrs_backup = *ahrs;
 
-	// Update Fusion.
-	// We have to update the settings with the measured sample rate instead of just setting the sample period,
-	// because the startup gain ramp (which uses the accelerometer to find the initial inclination) is calculated per sample.
+	// The startup gain ramp and the rejection timeout are calculated per sample, so the settings have to match the actual sample rate.
 	// Otherwise the startup period would depend on how often we get here.
-	set_fusion_settings(ahrs.get(), 1.0f / elapsed_sec);
-	FusionAhrsUpdate(ahrs.get(), gyroscope, accelerometer, magnetometer);
+	// Applying the settings also resets the internal rejection state, so we only do it if the sample rate changed noticeably.
+	const f32 sample_rate = 1.0f / elapsed_sec;
+	ahrs_measured_sample_rate = (ahrs_measured_sample_rate > 0.0f) ? (ahrs_measured_sample_rate * 0.9f + sample_rate * 0.1f) : sample_rate;
+
+	if (std::abs(ahrs_measured_sample_rate - ahrs_sample_rate) > ahrs_sample_rate * 0.25f)
+	{
+		ahrs_sample_rate = ahrs_measured_sample_rate;
+		set_fusion_settings(ahrs.get(), ahrs_sample_rate, ahrs_drift_correction);
+	}
+
+	// Update Fusion.
+	// We don't use the magnetometer. It would need a proper calibration and would make the heading absolute instead of relative to the calibration pose.
+	// Note: FusionAhrsUpdateNoMagnetometer would also lock the heading during the startup period, so we pass a zero vector instead.
+	FusionAhrsSetSamplePeriod(ahrs.get(), elapsed_sec);
+	FusionAhrsUpdate(ahrs.get(), gyroscope, accelerometer, FusionVector{});
 
 	// Get quaternion
 	const FusionQuaternion quaternion = FusionAhrsGetQuaternion(ahrs.get());
