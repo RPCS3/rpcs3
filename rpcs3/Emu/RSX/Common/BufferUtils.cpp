@@ -6,6 +6,8 @@
 #include "util/v128.hpp"
 #include "util/simd.hpp"
 
+#include <numeric>
+
 #if defined(ARCH_X64)
 #include "BufferUtils_avx512.h"
 #endif
@@ -514,25 +516,6 @@ namespace
 		return primitive_restart_impl::upload_untouched(src, dst, static_cast<U>(primitive_restart_index));
 	}
 
-	void iota16(u16* dst, u32 count)
-	{
-		unsigned i = 0;
-#if defined(ARCH_X64) || defined(ARCH_ARM64)
-		const unsigned step = 8;                          // We do 8 entries per step
-		const __m128i vec_step = _mm_set1_epi16(8);     // Constant to increment the raw values
-		__m128i values = _mm_set_epi16(7, 6, 5, 4, 3, 2, 1, 0);
-		__m128i* vec_ptr = utils::bless<__m128i>(dst);
-
-		for (; (i + step) <= count; i += step, vec_ptr++)
-		{
-			_mm_stream_si128(vec_ptr, values);
-			values = _mm_add_epi16(values,  vec_step);
-		}
-#endif
-		for (; i < count; ++i)
-			dst[i] = i;
-	}
-
 	template<typename T>
 	std::tuple<T, T, u32> expand_indexed_triangle_fan(std::span<to_be_t<const T>> src, std::span<T> dst, bool is_primitive_restart_enabled, u32 primitive_restart_index)
 	{
@@ -697,11 +680,11 @@ u32 get_index_type_size(rsx::index_array_type type)
 
 void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst, rsx::primitive_type draw_mode, unsigned count)
 {
-	auto typedDst = reinterpret_cast<u16*>(dst);
+	auto typedDst = reinterpret_cast<u32*>(dst);
 	switch (draw_mode)
 	{
 	case rsx::primitive_type::line_loop:
-		iota16(typedDst, count);
+		std::iota(typedDst, typedDst + count, 0u);
 		typedDst[count] = 0;
 		return;
 	case rsx::primitive_type::triangle_fan:
