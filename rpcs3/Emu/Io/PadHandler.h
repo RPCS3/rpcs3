@@ -52,6 +52,9 @@ public:
 
 	std::shared_ptr<FusionAhrs> ahrs; // Used to calculate quaternions from sensor data
 	u64 last_ahrs_update_time_us = 0; // Last ahrs update
+	bool ahrs_drift_correction = false; // Continuously correct the inclination using the accelerometer
+	f32 ahrs_sample_rate = 0.0f; // Sample rate that the AHRS settings were applied with
+	f32 ahrs_measured_sample_rate = 0.0f; // Smoothed measured sample rate
 
 	// Sensor samples (accelerometer in G, gyro in rad/s) for the next orientation update.
 	// By default, update_orientation uses the current values in move_data and the time since the last update.
