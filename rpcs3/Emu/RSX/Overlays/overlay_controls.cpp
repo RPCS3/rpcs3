@@ -109,7 +109,7 @@ namespace rsx
 			load_data(bytes, grayscaled);
 		}
 
-		image_info::image_info(const std::vector<u8>& bytes, bool grayscaled)
+		image_info::image_info(const std::span<const u8>& bytes, bool grayscaled)
 		{
 			load_data(bytes, grayscaled);
 		}
@@ -119,7 +119,7 @@ namespace rsx
 			if (data) stbi_image_free(data);
 		}
 
-		void image_info::load_data(const std::vector<u8>& bytes, bool grayscaled)
+		void image_info::load_data(const std::span<const u8>& bytes, bool grayscaled)
 		{
 			data = stbi_load_from_memory(bytes.data(), ::narrow<int>(bytes.size()), &w, &h, &bpp, grayscaled ? STBI_grey_alpha : STBI_rgb_alpha);
 			channels = grayscaled ? 2 : 4;
