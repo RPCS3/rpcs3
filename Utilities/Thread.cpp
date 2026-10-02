@@ -386,7 +386,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, usz
 
 		case 0x67: // group 4
 		{
-			sig_log.error("decode_x64_reg_op(%016llxh): address-size override prefix found", code - out_length, prefix);
+			sig_log.error("decode_x64_reg_op(%016llxh): address-size override prefix found", code - out_length);
 			out_op = X64OP_NONE;
 			out_reg = X64_NOT_SET;
 			out_size = 0;

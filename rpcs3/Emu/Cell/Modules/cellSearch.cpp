@@ -1313,7 +1313,7 @@ error_code cellSearchStartSceneSearch(CellSearchSceneSearchType searchType, vm::
 
 		for (u32 n = 0; n < tagNum; n++)
 		{
-			if (!tags[tagNum] || !memchr(&tags[tagNum], '\0', CELL_SEARCH_TAG_LEN_MAX))
+			if (!tags[n] || !memchr(tags[n].get_ptr(), '\0', CELL_SEARCH_TAG_LEN_MAX))
 			{
 				return CELL_SEARCH_ERROR_TAG;
 			}
@@ -1403,7 +1403,7 @@ error_code cellSearchGetContentInfoByOffset(CellSearchId searchId, s32 offset, v
 			if (infoBuffer) std::memcpy(infoBuffer.get_ptr(), &content_info->data.photo, sizeof(content_info->data.photo));
 			break;
 		case CELL_SEARCH_CONTENTTYPE_VIDEO:
-			if (infoBuffer) std::memcpy(infoBuffer.get_ptr(), &content_info->data.video, sizeof(content_info->data.photo));
+			if (infoBuffer) std::memcpy(infoBuffer.get_ptr(), &content_info->data.video, sizeof(content_info->data.video));
 			break;
 		case CELL_SEARCH_CONTENTTYPE_MUSICLIST:
 			if (infoBuffer) std::memcpy(infoBuffer.get_ptr(), &content_info->data.music_list, sizeof(content_info->data.music_list));
@@ -1808,7 +1808,7 @@ error_code cellSearchGetMusicSelectionContext(CellSearchId searchId, vm::cptr<Ce
 	context.create_playlist(music_selection_context::get_next_hash());
 	*outContext = context.get();
 
-	cellSearch.success("cellSearchGetMusicSelectionContext: found selection context: %d", context.to_string());
+	cellSearch.success("cellSearchGetMusicSelectionContext: found selection context: %s", context.to_string());
 
 	return CELL_OK;
 }
