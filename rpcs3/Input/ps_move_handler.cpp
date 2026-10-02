@@ -200,7 +200,7 @@ hid_device* ps_move_handler::connect_move_device(ps_move_device* device, std::st
 	device->hidDevice = hid_open_path(path.data());
 	if (!device->hidDevice)
 	{
-		move_log.error("%s hid_open_path failed! error='%s', path='%s'", m_type, hid_error(device->bt_device), path);
+		move_log.error("%s hid_open_path failed! error='%s', path='%s'", m_type, hid_error(device->hidDevice), path);
 		device->close();
 		return nullptr;
 	}
@@ -673,34 +673,34 @@ void ps_move_handler::get_extended_info(const pad_ensemble& binding)
 		gyro_z  = decode_16bit(input.gyro_z_1);
 	}
 
+	// Apply calibration. We need the calibrated values for the sixaxis sensors as well, regardless of the orientation setting.
+	if (dev->calibration.is_valid)
+	{
+		accel_x = accel_x * dev->calibration.accel_x_factor + dev->calibration.accel_x_offset;
+		accel_y = accel_y * dev->calibration.accel_y_factor + dev->calibration.accel_y_offset;
+		accel_z = accel_z * dev->calibration.accel_z_factor + dev->calibration.accel_z_offset;
+		gyro_x = (gyro_x - dev->calibration.gyro_x_offset) * dev->calibration.gyro_x_gain;
+		gyro_y = (gyro_y - dev->calibration.gyro_y_offset) * dev->calibration.gyro_y_gain;
+		gyro_z = (gyro_z - dev->calibration.gyro_z_offset) * dev->calibration.gyro_z_gain;
+	}
+	else
+	{
+		constexpr f32 MOVE_ONE_G = 4096.0f; // This is just a rough estimate and probably depends on the device
+
+		accel_x /= MOVE_ONE_G;
+		accel_y /= MOVE_ONE_G;
+		accel_z /= MOVE_ONE_G;
+		gyro_x /= MOVE_ONE_G;
+		gyro_y /= MOVE_ONE_G;
+		gyro_z /= MOVE_ONE_G;
+	}
+
 	if (!device->config || !device->config->orientation_enabled)
 	{
 		pad->move_data.reset_sensors();
 	}
 	else
 	{
-		// Apply calibration
-		if (dev->calibration.is_valid)
-		{
-			accel_x = accel_x * dev->calibration.accel_x_factor + dev->calibration.accel_x_offset;
-			accel_y = accel_y * dev->calibration.accel_y_factor + dev->calibration.accel_y_offset;
-			accel_z = accel_z * dev->calibration.accel_z_factor + dev->calibration.accel_z_offset;
-			gyro_x = (gyro_x - dev->calibration.gyro_x_offset) * dev->calibration.gyro_x_gain;
-			gyro_y = (gyro_y - dev->calibration.gyro_y_offset) * dev->calibration.gyro_y_gain;
-			gyro_z = (gyro_z - dev->calibration.gyro_z_offset) * dev->calibration.gyro_z_gain;
-		}
-		else
-		{
-			constexpr f32 MOVE_ONE_G = 4096.0f; // This is just a rough estimate and probably depends on the device
-
-			accel_x /= MOVE_ONE_G;
-			accel_y /= MOVE_ONE_G;
-			accel_z /= MOVE_ONE_G;
-			gyro_x /= MOVE_ONE_G;
-			gyro_y /= MOVE_ONE_G;
-			gyro_z /= MOVE_ONE_G;
-		}
-
 		pad->move_data.accelerometer.x() = accel_x;
 		pad->move_data.accelerometer.y() = accel_y;
 		pad->move_data.accelerometer.z() = accel_z;
