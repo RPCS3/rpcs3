@@ -170,8 +170,8 @@ void psmove_calibration_get_usb_accel_values(const reports::ps_move_calibration_
 	device.calibration.accel_z_factor = 2.0f / static_cast<float>(z2 - z1);
 
 	device.calibration.accel_x_offset = -(device.calibration.accel_x_factor * static_cast<float>(x1)) - 1.0f;
-	device.calibration.accel_y_offset = -(device.calibration.accel_y_factor * static_cast<float>(x1)) - 1.0f;
-	device.calibration.accel_z_offset = -(device.calibration.accel_z_factor * static_cast<float>(x1)) - 1.0f;
+	device.calibration.accel_y_offset = -(device.calibration.accel_y_factor * static_cast<float>(y1)) - 1.0f;
+	device.calibration.accel_z_offset = -(device.calibration.accel_z_factor * static_cast<float>(z1)) - 1.0f;
 }
 
 void psmove_calibration_get_usb_gyro_values(const reports::ps_move_calibration_blob& calibration, ps_move_device& device)
