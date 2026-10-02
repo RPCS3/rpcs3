@@ -72,6 +72,26 @@ namespace rsx
 			static std::unique_ptr<image_info> load_icon(const std::string& icon_path, const std::string& archive_path);
 		};
 
+		struct memory_image_info : public image_info_base
+		{
+		public:
+			memory_image_info() = default;
+
+			memory_image_info(u16 w, u16 h, u8 bpp, const u8* data)
+			{
+				this->w = w;
+				this->h = h;
+				this->bpp = bpp;
+				this->m_data_ptr = data;
+			}
+
+			const u8* get_data() const override { return m_data_ptr; }
+			usz size_bytes() const override { return static_cast<usz>(w * h * bpp); }
+
+		private:
+			const u8* m_data_ptr = nullptr;
+		};
+
 		struct resource_config
 		{
 			enum standard_image_resource : u8
