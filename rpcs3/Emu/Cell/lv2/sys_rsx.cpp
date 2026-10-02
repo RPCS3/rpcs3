@@ -56,7 +56,13 @@ void _sys_rsx_init_cursor_overlay()
 {
 	if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 	{
-		manager->create<rsx::overlays::bitmap_cursor>();
+		auto cursor = manager->create<rsx::overlays::bitmap_cursor>();
+		if (const auto avconfig = g_fxo->try_get<rsx::avconf>())
+		{
+			cursor->set_screen_size(
+				::narrow<u16>(avconfig->resolution_x),
+				::narrow<u16>(avconfig->resolution_y));
+		}
 	}
 }
 

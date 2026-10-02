@@ -57,13 +57,20 @@ namespace rsx
 			void disable();
 			void set_pos(s32 x, s32 y);
 			void set_bitmap(u32 address);
+			void set_screen_size(u16 w, u16 h);
+
 			compiled_resource get_compiled() override;
+			u16 get_virtual_width() const override { return m_virtual_width; }
+			u16 get_virtual_height() const override { return m_virtual_height; }
 
 		private:
 			bool m_visible = false;
 			position2_base<s16> m_position = {};
 			std::unique_ptr<overlays::image_view> m_bitmap;
 			overlays::memory_image_info m_image_storage;
+
+			u16 m_virtual_width = 1280;
+			u16 m_virtual_height = 720;
 
 			shared_mutex m_mutex;
 		};
