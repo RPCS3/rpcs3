@@ -137,6 +137,9 @@ public:
 	u32 external_device_id = 0;
 	ps_move_calibration calibration{};
 
+	bool has_new_input_report = false; // Set by get_data, consumed by get_extended_info
+	u64 last_input_report_time_us = 0;
+
 	const reports::ps_move_input_report_common& input_report_common() const;
 };
 

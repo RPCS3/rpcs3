@@ -3,6 +3,7 @@
 #include "ps_move_calibration.h"
 #include "Emu/Io/pad_config.h"
 #include "Emu/Cell/Modules/cellGem.h"
+#include "Emu/Cell/timers.hpp"
 
 LOG_CHANNEL(move_log, "Move");
 
@@ -347,6 +348,12 @@ void ps_move_handler::check_add_device(hid_device* hidDevice, hid_enumerated_dev
 		device->calibration.is_valid = psmove_parse_calibration(calibration, *device);
 	}
 
+	// We queue the IMU samples once per input report (see get_extended_info)
+	device->queues_imu_samples = true;
+	device->has_new_input_report = false;
+	device->last_input_report_time_us = 0;
+	device->imu_sample_count = 0;
+
 	// Activate
 	if (send_output_report(device) == -1)
 	{
@@ -405,6 +412,7 @@ ps_move_handler::DataStatus ps_move_handler::get_data(ps_move_device* device)
 
 	// Get the new data
 	std::memcpy(report, buf.data(), report_size);
+	device->has_new_input_report = true;
 
 	//move_log.error("%s", fmt::buf_to_hexstring(buf.data(), buf.size(), 64));
 
@@ -665,68 +673,115 @@ void ps_move_handler::get_extended_info(const pad_ensemble& binding)
 
 	const ps_move_input_report_common& input = dev->input_report_common();
 
+	// Get the time since the last input report. We only queue new IMU samples once per report.
+	// Skip the first report and long gaps (e.g. reconnects), since there is no meaningful delta.
+	f32 report_delta_time = 0.0f;
+
+	if (std::exchange(dev->has_new_input_report, false))
+	{
+		const u64 now_us = get_system_time();
+		const u64 last_us = std::exchange(dev->last_input_report_time_us, now_us);
+
+		if (last_us != 0 && (now_us - last_us) <= 250'000)
+		{
+			report_delta_time = (now_us - last_us) / 1'000'000.0f;
+		}
+	}
+
 	// The default position is flat on the ground, pointing forward.
 	// The accelerometers constantly measure G forces.
 	// The gyros measure changes in orientation and will reset when the device isn't moved anymore.
-	f32 accel_x = input.accel_x_1; // Increases if the device is rolled to the left
-	f32 accel_y = input.accel_y_1; // Increases if the device is pitched upwards
-	f32 accel_z = input.accel_z_1; // Increases if the device is moved upwards
-	f32 gyro_x = input.gyro_x_1;   // Increases if the device is pitched upwards
-	f32 gyro_y = input.gyro_y_1;   // Increases if the device is rolled to the right
-	f32 gyro_z = input.gyro_z_1;   // Increases if the device is yawed to the left
-
-	if (dev->model == ps_move_model::ZCM1)
+	//   accel x: Increases if the device is rolled to the left
+	//   accel y: Increases if the device is pitched upwards
+	//   accel z: Increases if the device is moved upwards
+	//   gyro  x: Increases if the device is pitched upwards
+	//   gyro  y: Increases if the device is rolled to the right
+	//   gyro  z: Increases if the device is yawed to the left
+	const auto get_calibrated_sample = [dev](s16 ax, s16 ay, s16 az, s16 gx, s16 gy, s16 gz)
 	{
-		const auto decode_16bit = [](s16 val)
+		const auto decode = [model = dev->model](s16 val)
 		{
+			if (model != ps_move_model::ZCM1)
+			{
+				// The ZCM2 uses two's complement
+				return static_cast<f32>(val);
+			}
+
+			// The ZCM1 uses an offset of 0x8000
 			const u8* data = reinterpret_cast<const u8*>(&val);
 			const u8 low = data[0] & 0xFF;
 			const u8 high = data[1] & 0xFF;
 			const s32 res = (low | (high << 8)) - zero_shift;
 			return static_cast<f32>(res);
 		};
-		accel_x = decode_16bit(input.accel_x_1);
-		accel_y = decode_16bit(input.accel_y_1);
-		accel_z = decode_16bit(input.accel_z_1);
-		gyro_x  = decode_16bit(input.gyro_x_1);
-		gyro_y  = decode_16bit(input.gyro_y_1);
-		gyro_z  = decode_16bit(input.gyro_z_1);
-	}
 
-	// Apply calibration. We need the calibrated values for the sixaxis sensors as well, regardless of the orientation setting.
-	if (dev->calibration.is_valid)
-	{
-		accel_x = accel_x * dev->calibration.accel_x_factor + dev->calibration.accel_x_offset;
-		accel_y = accel_y * dev->calibration.accel_y_factor + dev->calibration.accel_y_offset;
-		accel_z = accel_z * dev->calibration.accel_z_factor + dev->calibration.accel_z_offset;
-		gyro_x = (gyro_x - dev->calibration.gyro_x_offset) * dev->calibration.gyro_x_gain;
-		gyro_y = (gyro_y - dev->calibration.gyro_y_offset) * dev->calibration.gyro_y_gain;
-		gyro_z = (gyro_z - dev->calibration.gyro_z_offset) * dev->calibration.gyro_z_gain;
-	}
-	else
-	{
-		constexpr f32 MOVE_ONE_G = 4096.0f; // This is just a rough estimate and probably depends on the device
+		f32 accel_x = decode(ax);
+		f32 accel_y = decode(ay);
+		f32 accel_z = decode(az);
+		f32 gyro_x  = decode(gx);
+		f32 gyro_y  = decode(gy);
+		f32 gyro_z  = decode(gz);
 
-		accel_x /= MOVE_ONE_G;
-		accel_y /= MOVE_ONE_G;
-		accel_z /= MOVE_ONE_G;
-		gyro_x /= MOVE_ONE_G;
-		gyro_y /= MOVE_ONE_G;
-		gyro_z /= MOVE_ONE_G;
-	}
+		// Apply calibration. We need the calibrated values for the sixaxis sensors as well, regardless of the orientation setting.
+		if (dev->calibration.is_valid)
+		{
+			accel_x = accel_x * dev->calibration.accel_x_factor + dev->calibration.accel_x_offset;
+			accel_y = accel_y * dev->calibration.accel_y_factor + dev->calibration.accel_y_offset;
+			accel_z = accel_z * dev->calibration.accel_z_factor + dev->calibration.accel_z_offset;
+			gyro_x = (gyro_x - dev->calibration.gyro_x_offset) * dev->calibration.gyro_x_gain;
+			gyro_y = (gyro_y - dev->calibration.gyro_y_offset) * dev->calibration.gyro_y_gain;
+			gyro_z = (gyro_z - dev->calibration.gyro_z_offset) * dev->calibration.gyro_z_gain;
+		}
+		else
+		{
+			constexpr f32 MOVE_ONE_G = 4096.0f; // This is just a rough estimate and probably depends on the device
+
+			accel_x /= MOVE_ONE_G;
+			accel_y /= MOVE_ONE_G;
+			accel_z /= MOVE_ONE_G;
+			gyro_x /= MOVE_ONE_G;
+			gyro_y /= MOVE_ONE_G;
+			gyro_z /= MOVE_ONE_G;
+		}
+
+		ps_move_device::imu_sample sample{};
+		sample.accelerometer = ps_move_data::vect<3>({accel_x, accel_y, accel_z});
+		sample.gyro = ps_move_data::vect<3>({gyro_x, gyro_y, gyro_z});
+		return sample;
+	};
+
+	// The ZCM1 reports two half-frames per report. The 1st half-frame contains slightly older data than the 2nd half-frame.
+	// The ZCM2 only has one frame. Its second set of values is just a copy of the first one.
+	const bool has_two_half_frames = dev->model == ps_move_model::ZCM1;
+
+	const ps_move_device::imu_sample sample_1 = get_calibrated_sample(input.accel_x_1, input.accel_y_1, input.accel_z_1, input.gyro_x_1, input.gyro_y_1, input.gyro_z_1);
+	const ps_move_device::imu_sample sample_2 = has_two_half_frames
+		? get_calibrated_sample(input.accel_x_2, input.accel_y_2, input.accel_z_2, input.gyro_x_2, input.gyro_y_2, input.gyro_z_2)
+		: sample_1;
+
+	// Use the latest sample for everything that only needs the current state
+	const f32 accel_x = sample_2.accelerometer.x();
+	const f32 accel_y = sample_2.accelerometer.y();
+	const f32 accel_z = sample_2.accelerometer.z();
+	const f32 gyro_z = sample_2.gyro.z();
 
 	if (!device->config || !device->config->orientation_enabled)
 	{
 		pad->move_data.reset_sensors();
+		dev->imu_sample_count = 0;
 	}
 	else
 	{
-		pad->move_data.accelerometer.x() = accel_x;
-		pad->move_data.accelerometer.y() = accel_y;
-		pad->move_data.accelerometer.z() = accel_z;
-		pad->move_data.gyro.x() = gyro_x;
-		pad->move_data.gyro.y() = gyro_y;
-		pad->move_data.gyro.z() = gyro_z;
+		pad->move_data.accelerometer = sample_2.accelerometer;
+		pad->move_data.gyro = sample_2.gyro;
+
+		// Queue the samples of this report for the orientation update. Each half-frame covers half of the report interval.
+		if (report_delta_time > 0.0f)
+		{
+			dev->imu_samples = { sample_1, sample_2 };
+			dev->imu_sample_count = has_two_half_frames ? 2 : 1;
+			dev->imu_sample_delta_time = report_delta_time / dev->imu_sample_count;
+		}
 
 		if (dev->model == ps_move_model::ZCM1)
 		{
