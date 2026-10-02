@@ -987,8 +987,9 @@ void PadDevice::reset_orientation()
 	FusionAhrsInitialise(ahrs.get());
 	set_fusion_settings(ahrs.get(), fusionAhrsDefaultSettings.sampleRate);
 
-	// Start measuring the sample period from scratch
+	// Start measuring the sample period from scratch and discard samples from before the reset
 	last_ahrs_update_time_us = 0;
+	imu_sample_count = 0;
 }
 
 void PadDevice::update_orientation(ps_move_data& move_data)
@@ -998,16 +999,49 @@ void PadDevice::update_orientation(ps_move_data& move_data)
 		reset_orientation();
 	}
 
-	// Get elapsed time since last update
-	const u64 now_us = get_system_time();
-	const f32 elapsed_sec = (last_ahrs_update_time_us == 0) ? 0.0f : ((now_us - last_ahrs_update_time_us) / 1'000'000.0f);
-	last_ahrs_update_time_us = now_us;
-
-	// We need a valid sample period. Skip the first update after a reset.
-	if (elapsed_sec <= 0.0f)
+	if (!queues_imu_samples)
 	{
-		return;
+		// Use the current sensor values and the elapsed time since the last update
+		const u64 now_us = get_system_time();
+		const f32 elapsed_sec = (last_ahrs_update_time_us == 0) ? 0.0f : ((now_us - last_ahrs_update_time_us) / 1'000'000.0f);
+		last_ahrs_update_time_us = now_us;
+
+		// We need a valid sample period. Skip the first update after a reset.
+		if (elapsed_sec > 0.0f)
+		{
+			imu_samples[0] = { move_data.accelerometer, move_data.gyro };
+			imu_sample_count = 1;
+			imu_sample_delta_time = elapsed_sec;
+		}
 	}
+
+	// Feed each queued sample to the AHRS
+	const u32 sample_count = std::exchange(imu_sample_count, 0);
+	f32 elapsed_sec = 0.0f;
+
+	for (u32 i = 0; i < sample_count; i++)
+	{
+		if (update_ahrs(move_data, ::at32(imu_samples, i), imu_sample_delta_time))
+		{
+			elapsed_sec += imu_sample_delta_time;
+		}
+	}
+
+	if (elapsed_sec > 0.0f)
+	{
+		move_data.update_orientation(elapsed_sec);
+	}
+}
+
+bool PadDevice::update_ahrs(ps_move_data& move_data, const imu_sample& sample, f32 elapsed_sec)
+{
+	if (!ahrs || !(elapsed_sec > 0.0f))
+	{
+		return false;
+	}
+
+	const ps_move_data::vect<3>& accel = sample.accelerometer;
+	const ps_move_data::vect<3>& gyro = sample.gyro;
 
 	// The sensor data in move_data uses the following device frame (see set_raw_orientation and the PS Move handler):
 	//   x: right, y: forward (towards the sphere), z: up (buttons)
@@ -1018,17 +1052,17 @@ void PadDevice::update_orientation(ps_move_data& move_data)
 
 	const FusionVector accelerometer{
 		.axis {
-			.x = move_data.accelerometer.x(),
-			.y = move_data.accelerometer.y(),
-			.z = move_data.accelerometer.z()
+			.x = accel.x(),
+			.y = accel.y(),
+			.z = accel.z()
 		}
 	};
 
 	const FusionVector gyroscope{
 		.axis {
-			.x = PadHandlerBase::rad_to_degree(move_data.gyro.x()),
-			.y = PadHandlerBase::rad_to_degree(move_data.gyro.y()),
-			.z = PadHandlerBase::rad_to_degree(move_data.gyro.z())
+			.x = PadHandlerBase::rad_to_degree(gyro.x()),
+			.y = PadHandlerBase::rad_to_degree(gyro.y()),
+			.z = PadHandlerBase::rad_to_degree(gyro.z())
 		}
 	};
 
@@ -1064,7 +1098,7 @@ void PadDevice::update_orientation(ps_move_data& move_data)
 	{
 		// Discard this update and keep the last valid orientation
 		*ahrs = ahrs_backup;
-		return;
+		return false;
 	}
 
 	// Convert the quaternion from the device frame (x: right, y: forward, z: up) to the cellGem frame (x: right, y: up, z: backward).
@@ -1075,5 +1109,6 @@ void PadDevice::update_orientation(ps_move_data& move_data)
 	move_data.quaternion[1] = quaternion.array[3];  // y =  z
 	move_data.quaternion[2] = -quaternion.array[2]; // z = -y
 	move_data.quaternion[3] = quaternion.array[0];  // w
-	move_data.update_orientation(elapsed_sec);
+
+	return true;
 }
