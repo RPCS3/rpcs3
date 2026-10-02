@@ -107,11 +107,12 @@ static void psmove_dump_calibration(const reports::ps_move_calibration_blob& cal
 		fmt::append(msg, "float @0x7a: %f\n", psmove_calibration_decode_float(data, 0x7a));
 		break;
 	case ps_move_model::ZCM2:
+		// The ZCM2 has no temperature value before the accelerometer data, so it starts at 0x02 (unlike the ZCM1, and unlike ps move api's dump)
 		for (int orientation = 0; orientation < 6; orientation++)
 		{
-			x = psmove_calibration_decode_16bit_signed(data, 0x04 + 6 * orientation);
-			y = psmove_calibration_decode_16bit_signed(data, 0x04 + 6 * orientation + 2);
-			z = psmove_calibration_decode_16bit_signed(data, 0x04 + 6 * orientation + 4);
+			x = psmove_calibration_decode_16bit_signed(data, 0x02 + 6 * orientation);
+			y = psmove_calibration_decode_16bit_signed(data, 0x02 + 6 * orientation + 2);
+			z = psmove_calibration_decode_16bit_signed(data, 0x02 + 6 * orientation + 4);
 			fmt::append(msg, "Orientation #%d:      (%5d | %5d | %5d)\n", orientation, x, y, z);
 		}
 
