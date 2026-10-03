@@ -1492,6 +1492,12 @@
     <ClCompile Include="Emu\Cell\lv2\sys_bluetooth.cpp">
       <Filter>Emu\Cell\lv2</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\NV47\FW\GRAPH_backend.cpp">
+      <Filter>Emu\GPU\RSX\NV47\FW</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\RSX\Core\RSXFrameBuffer.cpp">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Crypto\aes.h">

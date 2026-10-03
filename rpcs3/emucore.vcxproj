@@ -127,10 +127,12 @@
     <ClCompile Include="Emu\RSX\Core\RSXContext.cpp" />
     <ClCompile Include="Emu\RSX\Core\RSXDisplay.cpp" />
     <ClCompile Include="Emu\RSX\Core\RSXDrawCommands.cpp" />
+    <ClCompile Include="Emu\RSX\Core\RSXFrameBuffer.cpp" />
     <ClCompile Include="Emu\RSX\GSFrameBase.cpp" />
     <ClCompile Include="Emu\RSX\Host\MM.cpp" />
     <ClCompile Include="Emu\RSX\Host\RSXDMAWriter.cpp" />
     <ClCompile Include="Emu\RSX\NV47\FW\draw_call.cpp" />
+    <ClCompile Include="Emu\RSX\NV47\FW\GRAPH_backend.cpp" />
     <ClCompile Include="Emu\RSX\NV47\FW\reg_context.cpp" />
     <ClCompile Include="Emu\RSX\NV47\HW\common.cpp" />
     <ClCompile Include="Emu\RSX\NV47\HW\nv0039.cpp" />
