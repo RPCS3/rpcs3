@@ -323,7 +323,7 @@ public:
 			{
 				const auto& pad = ::at32(handler->GetPads(), pad_num(i));
 				const bool connected = pad && pad->is_connected() && !pad->is_copilot() && i < attribute.max_connect;
-				const bool is_real_move = g_cfg.io.move != move_handler::real || pad->m_pad_handler == pad_handler::move;
+				const bool is_real_move = g_cfg.io.move != move_handler::real || (pad && pad->m_pad_handler == pad_handler::move);
 
 				update_connection(i, connected && is_real_move);
 			}
@@ -1907,7 +1907,7 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 	gem_state->quat[3] = quat.w();
 
 	// Calculate handle position based on our world coordinate and the current orientation
-	constexpr ps_move_data::vect<3> offset_local_mm({0.f, 0.f, -45.f}); // handle is ~45 mm below sphere
+	constexpr ps_move_data::vect<3> offset_local_mm({0.f, 0.f, 45.f}); // handle is ~45 mm below sphere
 	const ps_move_data::vect<3> offset_world = ps_move_data::rotate_vector(quat, offset_local_mm);
 
 	gem_state->handle_pos[0] = gem_state->pos[0] - offset_world.x(); // Flip x offset
@@ -2166,12 +2166,12 @@ static const std::unordered_map<gem_btn, u16> ext_btn_indices =
 	{ gem_btn::racing_wheel_l2, 1 },
 	{ gem_btn::racing_wheel_r2, 2 },
 	{ gem_btn::racing_wheel_paddle_l, 3 },
-	{ gem_btn::racing_wheel_paddle_r, 4 },
+	{ gem_btn::racing_wheel_paddle_r, 3 },
 	{ gem_btn::combo_racing_wheel_throttle, 0 },
 	{ gem_btn::combo_racing_wheel_l2, 1 },
 	{ gem_btn::combo_racing_wheel_r2, 2 },
 	{ gem_btn::combo_racing_wheel_paddle_l, 3 },
-	{ gem_btn::combo_racing_wheel_paddle_r, 4 },
+	{ gem_btn::combo_racing_wheel_paddle_r, 3 },
 };
 
 static u32 ext_device_id(gem_ext_id id)
@@ -2282,23 +2282,23 @@ static void input_to_ext(u32 external_device_id, CellGemExtPortData& ext, std::s
 		{
 			switch (value.btn)
 			{
-			case gem_btn::combo_racing_wheel_throttle:
-			case gem_btn::combo_racing_wheel_l2:
-			case gem_btn::combo_racing_wheel_r2:
+			case gem_btn::racing_wheel_throttle:
+			case gem_btn::racing_wheel_l2:
+			case gem_btn::racing_wheel_r2:
 				ext.custom[::at32(ext_btn_indices, value.btn)] = static_cast<u8>(value.value);
 				break;
-			case gem_btn::combo_racing_wheel_paddle_l:
-			case gem_btn::combo_racing_wheel_paddle_r:
+			case gem_btn::racing_wheel_paddle_l:
+			case gem_btn::racing_wheel_paddle_r:
 				ext.custom[::at32(ext_btn_indices, value.btn)] |= ::at32(ext_btn_map, value.btn);
 				break;
-			case gem_btn::combo_racing_wheel_d_pad_up:
-			case gem_btn::combo_racing_wheel_d_pad_right:
-			case gem_btn::combo_racing_wheel_d_pad_down:
-			case gem_btn::combo_racing_wheel_d_pad_left:
+			case gem_btn::racing_wheel_d_pad_up:
+			case gem_btn::racing_wheel_d_pad_right:
+			case gem_btn::racing_wheel_d_pad_down:
+			case gem_btn::racing_wheel_d_pad_left:
 				ext.digital1 |= ::at32(ext_btn_map, value.btn);
 				break;
-			case gem_btn::combo_racing_wheel_l1:
-			case gem_btn::combo_racing_wheel_r1:
+			case gem_btn::racing_wheel_l1:
+			case gem_btn::racing_wheel_r1:
 				ext.digital2 |= ::at32(ext_btn_map, value.btn);
 				break;
 			default:
@@ -3085,7 +3085,7 @@ error_code cellGemGetAccelerometerPositionInDevice(u32 gem_num, vm::ptr<f32> pos
 
 error_code cellGemGetAllTrackableHues(vm::ptr<u8> hues)
 {
-	cellGem.todo("cellGemGetAllTrackableHues(hues=*0x%x)");
+	cellGem.todo("cellGemGetAllTrackableHues(hues=*0x%x)", hues);
 
 	auto& gem = g_fxo->get<gem_config>();
 
@@ -3593,12 +3593,19 @@ error_code cellGemHSVtoRGB(f32 h, f32 s, f32 v, vm::ptr<f32> r, vm::ptr<f32> g, 
 {
 	cellGem.warning("cellGemHSVtoRGB(h=%f, s=%f, v=%f, r=*0x%x, g=*0x%x, b=*0x%x)", h, s, v, r, g, b);
 
-	if (s < 0.0f || s > 1.0f || v < 0.0f || v > 1.0f || !r || !g || !b)
+	if (!r || !g || !b)
 	{
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	h = std::clamp(h, 0.0f, 360.0f);
+	h = std::fmod(h, 360.0f);
+	s = std::clamp(s, 0.0f, 1.0f);
+	v = std::clamp(v, 0.0f, 1.0f);
+
+	if (h < 0.0)
+	{
+		h += 360.0f;
+	}
 
 	const f32 c = v * s;
 	const f32 x = c * (1.0f - fabs(fmod(h / 60.0f, 2.0f) - 1.0f));
@@ -3639,9 +3646,9 @@ error_code cellGemHSVtoRGB(f32 h, f32 s, f32 v, vm::ptr<f32> r, vm::ptr<f32> g, 
 		b_tmp = x;
 	}
 
-	*r = (r_tmp + m) * 255.0f;
-	*g = (g_tmp + m) * 255.0f;
-	*b = (b_tmp + m) * 255.0f;
+	*r = std::clamp(r_tmp + m, 0.0f, 1.0f);
+	*g = std::clamp(g_tmp + m, 0.0f, 1.0f);
+	*b = std::clamp(b_tmp + m, 0.0f, 1.0f);
 
 	return CELL_OK;
 }

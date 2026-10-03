@@ -84,8 +84,6 @@ void GLGSRender::update_draw_state()
 	{
 		// Z-buffer is active.
 		gl_state.depth_mask(rsx::method_registers.depth_write_enabled());
-		gl_state.stencil_mask(rsx::method_registers.stencil_mask());
-
 		gl_state.enable(rsx::method_registers.depth_clamp_enabled() || !rsx::method_registers.depth_clip_enabled(), GL_DEPTH_CLAMP);
 
 		if (gl_state.enable(rsx::method_registers.depth_test_enabled(), GL_DEPTH_TEST))
@@ -105,14 +103,19 @@ void GLGSRender::update_draw_state()
 
 		if (gl_state.enable(rsx::method_registers.stencil_test_enabled(), GL_STENCIL_TEST))
 		{
-			gl_state.stencil_func(gl::comparison_op(rsx::method_registers.stencil_func()),
+			gl_state.stencil_front_mask(rsx::method_registers.stencil_mask());
+
+			gl_state.stencil_front_func(
+				gl::comparison_op(rsx::method_registers.stencil_func()),
 				rsx::method_registers.stencil_func_ref(),
 				rsx::method_registers.stencil_func_mask());
 
-			gl_state.stencil_op(gl::stencil_op(rsx::method_registers.stencil_op_fail()), gl::stencil_op(rsx::method_registers.stencil_op_zfail()),
+			gl_state.stencil_front_op(
+				gl::stencil_op(rsx::method_registers.stencil_op_fail()),
+				gl::stencil_op(rsx::method_registers.stencil_op_zfail()),
 				gl::stencil_op(rsx::method_registers.stencil_op_zpass()));
 
-			if (rsx::method_registers.two_sided_stencil_test_enabled())
+			if (rsx::method_registers.two_sided_stencil_test_enabled()) [[ unlikely ]]
 			{
 				gl_state.stencil_back_mask(rsx::method_registers.back_stencil_mask());
 
@@ -121,6 +124,21 @@ void GLGSRender::update_draw_state()
 
 				gl_state.stencil_back_op(gl::stencil_op(rsx::method_registers.back_stencil_op_fail()),
 					gl::stencil_op(rsx::method_registers.back_stencil_op_zfail()), gl::stencil_op(rsx::method_registers.back_stencil_op_zpass()));
+			}
+			else
+			{
+				// Reuse front values
+				gl_state.stencil_back_mask(rsx::method_registers.stencil_mask());
+
+				gl_state.stencil_back_func(
+					gl::comparison_op(rsx::method_registers.stencil_func()),
+					rsx::method_registers.stencil_func_ref(),
+					rsx::method_registers.stencil_func_mask());
+
+				gl_state.stencil_back_op(
+					gl::stencil_op(rsx::method_registers.stencil_op_fail()),
+					gl::stencil_op(rsx::method_registers.stencil_op_zfail()),
+					gl::stencil_op(rsx::method_registers.stencil_op_zpass()));
 			}
 		}
 	}
@@ -839,7 +857,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 		}
 		else
 		{
-			const auto subranges = draw_call.get_subranges();
+			const auto& subranges = draw_call.get_subranges();
 			const auto draw_count = subranges.size();
 			const u32 type_scale = (index_type == GL_UNSIGNED_SHORT) ? 1 : 2;
 			uptr index_ptr = index_offset;
@@ -849,7 +867,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 			const GLvoid** offsets = utils::bless<const GLvoid*>(counts + draw_count);
 			int dst_index = 0;
 
-			for (const auto &range : subranges)
+			for (const auto& range : subranges)
 			{
 				const auto index_size = get_index_count(draw_call.primitive, range.count);
 				counts[dst_index] = index_size;
