@@ -891,6 +891,12 @@
     <ClCompile Include="Emu\Io\Skylander.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Io\SkylanderPortalIPC.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\SkylanderPortalIPC_config.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Io\KamenRider.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
@@ -2203,6 +2209,12 @@
       <Filter>Emu\Io</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Io\Skylander.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\SkylanderPortalIPC.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\SkylanderPortalIPC_config.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Io\KamenRider.h">
