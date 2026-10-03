@@ -109,28 +109,21 @@ int evdev_gun_handler::get_button(u32 gunno, gun_button button) const
 	return 0;
 }
 
-int evdev_gun_handler::get_axis_x(u32 gunno) const
+f32 evdev_gun_handler::get_axis(u32 gunno, int code) const
 {
-	const evdev_axis& axis = ::at32(::at32(m_devices, gunno).axis, ABS_X);
-	return axis.value - axis.min;
+	const evdev_axis& axis = ::at32(::at32(m_devices, gunno).axis, code);
+	const int range = axis.max - axis.min;
+	return range == 0 ? 0.0f : std::clamp((axis.value - axis.min) / static_cast<f32>(range), 0.0f, 1.0f);
 }
 
-int evdev_gun_handler::get_axis_y(u32 gunno) const
+f32 evdev_gun_handler::get_axis_x(u32 gunno) const
 {
-	const evdev_axis& axis = ::at32(::at32(m_devices, gunno).axis, ABS_Y);
-	return axis.value - axis.min;
+	return get_axis(gunno, ABS_X);
 }
 
-int evdev_gun_handler::get_axis_x_max(u32 gunno) const
+f32 evdev_gun_handler::get_axis_y(u32 gunno) const
 {
-	const evdev_axis& axis = ::at32(::at32(m_devices, gunno).axis, ABS_X);
-	return axis.max - axis.min;
-}
-
-int evdev_gun_handler::get_axis_y_max(u32 gunno) const
-{
-	const evdev_axis& axis = ::at32(::at32(m_devices, gunno).axis, ABS_Y);
-	return axis.max - axis.min;
+	return get_axis(gunno, ABS_Y);
 }
 
 void evdev_gun_handler::poll(u32 index)

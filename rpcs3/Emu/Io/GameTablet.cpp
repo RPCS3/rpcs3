@@ -292,19 +292,14 @@ void usb_device_gametablet::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endp
 	}
 
 	const Mouse& mouse_data = ::at32(mouse_handler.GetMice(), mouse_index);
-	if (mouse_data.x_max <= 0 || mouse_data.y_max <= 0)
-	{
-		std::memcpy(buf, &gt, sizeof(GameTablet_data));
-		return;
-	}
 
 	static u8 noise_x = 0; // Toggle the LSB to simulate a noisy signal, Instant Artist dislikes a pen held perfectly still
 	static u8 noise_y = 0;
 	constexpr s32 tablet_max_x = 1920;
 	constexpr s32 tablet_max_y = 1080;
 
-	const s32 tablet_x_pos = (mouse_data.x_pos * tablet_max_x / mouse_data.x_max) ^ noise_x;
-	const s32 tablet_y_pos = (mouse_data.y_pos * tablet_max_y / mouse_data.y_max) ^ noise_y;
+	const s32 tablet_x_pos = static_cast<s32>(mouse_data.x_pos * tablet_max_x) ^ noise_x;
+	const s32 tablet_y_pos = static_cast<s32>(mouse_data.y_pos * tablet_max_y) ^ noise_y;
 	noise_x ^= 0x1;
 	noise_y ^= 0x1;
 

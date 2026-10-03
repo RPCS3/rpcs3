@@ -270,7 +270,7 @@ void usb_device_guncon3::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint,
 
 		mouse_handler.Init(4);
 
-		const u32 mouse_index = g_cfg.io.mouse == mouse_handler::basic ? 0 : m_controller_index;
+		const usz mouse_index = g_cfg.io.mouse == mouse_handler::basic ? 0 : m_controller_index;
 		if (mouse_index >= mouse_handler.GetMice().size())
 		{
 			guncon3_encode(&gc, buf, m_key.data());
@@ -280,15 +280,9 @@ void usb_device_guncon3::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint,
 		const Mouse& mouse_data = ::at32(mouse_handler.GetMice(), mouse_index);
 		cfg->handle_input(mouse_data, input_callback);
 
-		if (mouse_data.x_max <= 0 || mouse_data.y_max <= 0)
-		{
-			guncon3_encode(&gc, buf, m_key.data());
-			return;
-		}
-
 		// Expand 0..+wh to -32767..+32767
-		gc.gun_x = (mouse_data.x_pos * USHRT_MAX / mouse_data.x_max) - SHRT_MAX;
-		gc.gun_y = (mouse_data.y_pos * -USHRT_MAX / mouse_data.y_max) + SHRT_MAX;
+		gc.gun_x = static_cast<s32>(mouse_data.x_pos * USHRT_MAX) - SHRT_MAX;
+		gc.gun_y = static_cast<s32>(mouse_data.y_pos * -USHRT_MAX) + SHRT_MAX;
 	}
 
 	guncon3_encode(&gc, buf, m_key.data());
