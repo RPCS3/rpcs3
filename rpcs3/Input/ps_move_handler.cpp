@@ -200,7 +200,7 @@ hid_device* ps_move_handler::connect_move_device(ps_move_device* device, std::st
 	device->hidDevice = hid_open_path(path.data());
 	if (!device->hidDevice)
 	{
-		move_log.error("%s hid_open_path failed! error='%s', path='%s'", m_type, hid_error(device->bt_device), path);
+		move_log.error("%s hid_open_path failed! error='%s', path='%s'", m_type, hid_error(device->hidDevice), path);
 		device->close();
 		return nullptr;
 	}
@@ -284,22 +284,29 @@ void ps_move_handler::check_add_device(hid_device* hidDevice, hid_enumerated_dev
 	device->path = path;
 
 	// Get calibration
+	device->calibration = {};
 	device->calibration.is_valid = true;
 
 	ps_move_calibration_blob calibration {};
 
-	for (int i = 0; i < 2; i++)
+	// The calibration data is split into multiple blocks. Each read returns the next block, so the first block we get isn't necessarily the first one.
+	const u32 block_count = device->model == ps_move_model::ZCM1 ? 3 : 2;
+	const u32 all_blocks_mask = (1u << block_count) - 1;
+	u32 received_blocks_mask = 0;
+
+	for (u32 i = 0; i < block_count * 2 && received_blocks_mask != all_blocks_mask; i++)
 	{
 		std::array<u8, PSMOVE_CALIBRATION_SIZE> cal {};
 		cal[0] = 0x10;
 		const int res = hid_get_feature_report(device->hidDevice, cal.data(), cal.size());
-		if (res < 0)
+		if (res != PSMOVE_CALIBRATION_SIZE)
 		{
 			move_log.error("connect_move_device: hid_get_feature_report 0x10 (calibration) failed! result=%d, error=%s", res, hid_error(device->hidDevice));
 			device->calibration.is_valid = false;
 			break;
 		}
 
+		u32 block = 0;
 		int src_offset = 0;
 		int dest_offset = 0;
 
@@ -307,12 +314,14 @@ void ps_move_handler::check_add_device(hid_device* hidDevice, hid_enumerated_dev
 			(cal[1] == 0x81 && device->model == ps_move_model::ZCM2))
 		{
 			// This is the second block
+			block = 1;
 			dest_offset = PSMOVE_CALIBRATION_SIZE;
 			src_offset = 2;
 		}
 		else if (cal[1] == 0x82 && device->model == ps_move_model::ZCM1)
 		{
 			// This is the third block
+			block = 2;
 			dest_offset = 2 * PSMOVE_CALIBRATION_SIZE - 2;
 			src_offset = 2;
 		}
@@ -324,11 +333,18 @@ void ps_move_handler::check_add_device(hid_device* hidDevice, hid_enumerated_dev
 		}
 
 		std::memcpy(&calibration.data[dest_offset], &cal[src_offset], cal.size() - src_offset);
+		received_blocks_mask |= 1u << block;
+	}
+
+	if (device->calibration.is_valid && received_blocks_mask != all_blocks_mask)
+	{
+		move_log.error("connect_move_device: Failed to read all calibration blocks: received_blocks_mask=0x%x, expected=0x%x", received_blocks_mask, all_blocks_mask);
+		device->calibration.is_valid = false;
 	}
 
 	if (device->calibration.is_valid)
 	{
-		psmove_parse_calibration(calibration, *device);
+		device->calibration.is_valid = psmove_parse_calibration(calibration, *device);
 	}
 
 	// Activate
@@ -378,6 +394,10 @@ ps_move_handler::DataStatus ps_move_handler::get_data(ps_move_device* device)
 	}
 
 	if (res != static_cast<int>(report_size))
+		return DataStatus::NoNewData;
+
+	// Ignore anything that isn't an input report
+	if (buf[0] != reportId)
 		return DataStatus::NoNewData;
 
 	if (std::memcmp(report, buf.data(), report_size) == 0)
@@ -673,34 +693,34 @@ void ps_move_handler::get_extended_info(const pad_ensemble& binding)
 		gyro_z  = decode_16bit(input.gyro_z_1);
 	}
 
+	// Apply calibration. We need the calibrated values for the sixaxis sensors as well, regardless of the orientation setting.
+	if (dev->calibration.is_valid)
+	{
+		accel_x = accel_x * dev->calibration.accel_x_factor + dev->calibration.accel_x_offset;
+		accel_y = accel_y * dev->calibration.accel_y_factor + dev->calibration.accel_y_offset;
+		accel_z = accel_z * dev->calibration.accel_z_factor + dev->calibration.accel_z_offset;
+		gyro_x = (gyro_x - dev->calibration.gyro_x_offset) * dev->calibration.gyro_x_gain;
+		gyro_y = (gyro_y - dev->calibration.gyro_y_offset) * dev->calibration.gyro_y_gain;
+		gyro_z = (gyro_z - dev->calibration.gyro_z_offset) * dev->calibration.gyro_z_gain;
+	}
+	else
+	{
+		constexpr f32 MOVE_ONE_G = 4096.0f; // This is just a rough estimate and probably depends on the device
+
+		accel_x /= MOVE_ONE_G;
+		accel_y /= MOVE_ONE_G;
+		accel_z /= MOVE_ONE_G;
+		gyro_x /= MOVE_ONE_G;
+		gyro_y /= MOVE_ONE_G;
+		gyro_z /= MOVE_ONE_G;
+	}
+
 	if (!device->config || !device->config->orientation_enabled)
 	{
 		pad->move_data.reset_sensors();
 	}
 	else
 	{
-		// Apply calibration
-		if (dev->calibration.is_valid)
-		{
-			accel_x = accel_x * dev->calibration.accel_x_factor + dev->calibration.accel_x_offset;
-			accel_y = accel_y * dev->calibration.accel_y_factor + dev->calibration.accel_y_offset;
-			accel_z = accel_z * dev->calibration.accel_z_factor + dev->calibration.accel_z_offset;
-			gyro_x = (gyro_x - dev->calibration.gyro_x_offset) * dev->calibration.gyro_x_gain;
-			gyro_y = (gyro_y - dev->calibration.gyro_y_offset) * dev->calibration.gyro_y_gain;
-			gyro_z = (gyro_z - dev->calibration.gyro_z_offset) * dev->calibration.gyro_z_gain;
-		}
-		else
-		{
-			constexpr f32 MOVE_ONE_G = 4096.0f; // This is just a rough estimate and probably depends on the device
-
-			accel_x /= MOVE_ONE_G;
-			accel_y /= MOVE_ONE_G;
-			accel_z /= MOVE_ONE_G;
-			gyro_x /= MOVE_ONE_G;
-			gyro_y /= MOVE_ONE_G;
-			gyro_z /= MOVE_ONE_G;
-		}
-
 		pad->move_data.accelerometer.x() = accel_x;
 		pad->move_data.accelerometer.y() = accel_y;
 		pad->move_data.accelerometer.z() = accel_z;

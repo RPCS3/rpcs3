@@ -1028,12 +1028,24 @@ void PadDevice::update_orientation(ps_move_data& move_data)
 		};
 	}
 
+	// Keep a backup in case the update yields an invalid orientation (e.g. due to garbage sensor data)
+	const FusionAhrs ahrs_backup = *ahrs;
+
 	// Update Fusion
 	FusionAhrsSetSamplePeriod(ahrs.get(), elapsed_sec);
 	FusionAhrsUpdate(ahrs.get(), gyroscope, accelerometer, magnetometer);
 
 	// Get quaternion
 	const FusionQuaternion quaternion = FusionAhrsGetQuaternion(ahrs.get());
+
+	if (!std::isfinite(quaternion.array[0]) || !std::isfinite(quaternion.array[1]) ||
+		!std::isfinite(quaternion.array[2]) || !std::isfinite(quaternion.array[3]))
+	{
+		// Discard this update and keep the last valid orientation
+		*ahrs = ahrs_backup;
+		return;
+	}
+
 	move_data.quaternion[0] = quaternion.array[1];
 	move_data.quaternion[1] = quaternion.array[2];
 	move_data.quaternion[2] = quaternion.array[3];

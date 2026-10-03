@@ -439,7 +439,7 @@ void usb_device_usio::translate_input_tekken()
 		auto& status = m_io_status[io_index];
 		auto& input = digital_input[io_index];
 
-		const u32 mouse_index = g_cfg.io.mouse == mouse_handler::basic ? 0 : mouse_number;
+		const usz mouse_index = g_cfg.io.mouse == mouse_handler::basic ? 0 : mouse_number;
 		if (!is_input_allowed() || mouse_index >= mouse_handler.GetMice().size())
 			return;
 
@@ -460,8 +460,8 @@ void usb_device_usio::translate_input_tekken()
 		status.vital_sensors[player_index] += current_wheel;
 		status.wheel_rotation += current_wheel; // Multiple players can collaborate on turning the wheel
 
-		const le_t<s16> positions[2] = {::narrow<s16>(mouse_data.x_pos), ::narrow<s16>(mouse_data.y_pos)};
-		std::memcpy(input_buf.data() - io_index * 0x80 + 0x100 + 32 + player_index * sizeof(s32), &positions, sizeof(s32));
+		const le_t<u16> positions[2] = {static_cast<u16>(mouse_data.x_pos * USHRT_MAX), static_cast<u16>(mouse_data.y_pos * USHRT_MAX)};
+		std::memcpy(input_buf.data() - io_index * 0x80 + 0x100 + 32 + player_index * sizeof(u32), &positions, sizeof(u32));
 		std::memcpy(input_buf.data() - io_index * 0x80 + 0x100 + 41 + player_index * sizeof(s16), &status.vital_sensors[player_index], sizeof(s8));
 		std::memcpy(input_buf.data() - io_index * 0x80 + 0x100 + 48, &status.wheel_rotation, sizeof(s8));
 
