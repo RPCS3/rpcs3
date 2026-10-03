@@ -16,6 +16,7 @@
 #include "Emu/NP/np_gui_cache.h"
 #include "Emu/NP/np_event_data.h"
 #include "Emu/NP/np_contexts.h"
+#include "Emu/NP/np_custom_menu.h"
 #include "Emu/NP/upnp_handler.h"
 
 namespace np
@@ -151,9 +152,11 @@ namespace np
 
 		// Messages-related functions
 		std::optional<shared_ptr<std::pair<std::string, message_data>>> get_message(u64 id);
-		void set_message_selected(SceNpBasicAttachmentDataId id, u64 msg_id);
+		void set_message_selected(SceNpBasicAttachmentDataId id, shared_ptr<std::pair<std::string, message_data>> message);
 		std::optional<shared_ptr<std::pair<std::string, message_data>>> get_message_selected(SceNpBasicAttachmentDataId id);
 		void clear_message_selected(SceNpBasicAttachmentDataId id);
+		void mark_message_used(u64 msg_id);
+		bool complete_message_selection(u64 msg_id, u16 main_type, u32 recv_result, u32 recv_options);
 		void send_message(const message_data& msg_data, const std::set<std::string>& npids);
 		bool select_invitation(u64 msg_id);
 
@@ -280,19 +283,13 @@ namespace np
 		void upnp_remove_port_mapping(u16 internal_port, std::string_view protocol);
 
 		// For custom menu
-		struct custom_menu_action
-		{
-			s32 id   = 0;
-			u32 mask = SCE_NP_CUSTOM_MENU_ACTION_MASK_ME;
-			std::string name;
-		};
+		using custom_menu_action = np::custom_menu_action;
 		shared_mutex mutex_custom_menu;
-		bool custom_menu_registered = false;
-		vm::ptr<SceNpCustomMenuEventHandler> custom_menu_handler{};
-		vm::ptr<void> custom_menu_user_arg{};
-		std::vector<custom_menu_action> custom_menu_actions;
-		SceNpCustomMenuIndexArray custom_menu_activation{};
-		std::vector<SceNpCustomMenuActionExceptions> custom_menu_exception_list{};
+		custom_menu_state custom_menu;
+
+		// Actions on the local user's profile, exposed separately from received invitations.
+		std::vector<custom_menu_action> get_custom_menu_actions();
+		void invoke_custom_menu_action(const custom_menu_action& action);
 
 		// Mutex for NP status change
 		shared_mutex mutex_status;
@@ -447,8 +444,8 @@ namespace np
 
 		// Messages related
 		shared_mutex m_mutex_selected_messages;
-		std::optional<u64> selected_invite_id{};
-		std::optional<u64> selected_message_id{};
+		shared_ptr<std::pair<std::string, message_data>> selected_invite{};
+		shared_ptr<std::pair<std::string, message_data>> selected_message{};
 
 		// Misc
 		s64 network_time_offset = 0;

@@ -570,7 +570,7 @@ void fmt_class_string<SceNpError>::format(std::string& out, u64 arg)
 
 void message_data::print() const
 {
-	sceNp.notice("commId: %s, msgId: %d, mainType: %d, subType: %d, subject: %s, body: %s, data_size: %d", static_cast<const char *>(commId.data), msgId, mainType, subType, subject, body, data.size());
+	sceNp.notice("commId: %s, msgId: %d, mainType: %d, subType: %d, msgFeatures: 0x%x, subject: %s, body: %s, data_size: %d", static_cast<const char *>(commId.data), msgId, mainType, subType, msgFeatures, subject, body, data.size());
 }
 
 extern void lv2_sleep(u64 timeout, ppu_thread* ppu = nullptr);
@@ -1631,72 +1631,11 @@ error_code recv_message_gui(ppu_thread& ppu, u16 mainType, u32 recvOptions)
 		return not_an_error(SCE_NP_BASIC_ERROR_CANCEL);
 	}
 
-	const auto opt_msg = nph.get_message(chosen_msg_id);
-
-	if (!opt_msg)
+	if (!nph.complete_message_selection(chosen_msg_id, mainType, recv_result, recvOptions))
 	{
 		sceNp.fatal("sceNpBasicRecvMessageCustom: message is invalid: chosen_msg_id=%d", chosen_msg_id);
 		return SCE_NP_BASIC_ERROR_CANCEL;
 	}
-
-	const auto msg_pair = opt_msg.value();
-	const auto& msg     = msg_pair->second;
-
-	u32 event_to_send;
-	SceNpBasicAttachmentData data{};
-	data.size = static_cast<u32>(msg.data.size());
-
-	switch (mainType)
-	{
-	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_DATA_ATTACHMENT:
-		event_to_send = SCE_NP_BASIC_EVENT_RECV_ATTACHMENT_RESULT;
-		data.id = SCE_NP_BASIC_SELECTED_MESSAGE_DATA;
-		break;
-	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_INVITE:
-		event_to_send = SCE_NP_BASIC_EVENT_RECV_INVITATION_RESULT;
-		data.id = SCE_NP_BASIC_SELECTED_INVITATION_DATA;
-		break;
-	case SCE_NP_BASIC_MESSAGE_MAIN_TYPE_CUSTOM_DATA:
-		event_to_send = SCE_NP_BASIC_EVENT_RECV_CUSTOM_DATA_RESULT;
-		data.id = SCE_NP_BASIC_SELECTED_MESSAGE_DATA;
-		break;
-	default:
-		fmt::throw_exception("recv_message_gui: Unexpected main type %d", mainType);
-	}
-
-	np::basic_event to_add{};
-	to_add.event = event_to_send;
-	strcpy_trunc(to_add.from.userId.handle.data, msg_pair->first);
-	strcpy_trunc(to_add.from.name.data, msg_pair->first);
-
-	if (mainType == SCE_NP_BASIC_MESSAGE_MAIN_TYPE_DATA_ATTACHMENT)
-	{
-		to_add.data.resize(sizeof(SceNpBasicAttachmentData));
-		SceNpBasicAttachmentData* att_data = reinterpret_cast<SceNpBasicAttachmentData*>(to_add.data.data());
-		*att_data = data;
-
-		extra_nps::print_SceNpBasicAttachmentData(att_data);
-	}
-	else
-	{
-		to_add.data.resize(sizeof(SceNpBasicExtendedAttachmentData));
-		SceNpBasicExtendedAttachmentData* att_data = reinterpret_cast<SceNpBasicExtendedAttachmentData*>(to_add.data.data());
-		att_data->flags                            = 0; // ?
-		att_data->msgId                            = chosen_msg_id;
-		att_data->data                             = data;
-		att_data->userAction                       = recv_result;
-		att_data->markedAsUsed                     = (recvOptions & SCE_NP_BASIC_RECV_MESSAGE_OPTIONS_PRESERVE) ? 0 : 1;
-
-		extra_nps::print_SceNpBasicExtendedAttachmentData(att_data);
-	}
-
-	nph.set_message_selected(data.id, chosen_msg_id);
-
-	// Is this sent if used from home menu but not from sceNpBasicRecvMessageCustom, not sure
-	// sysutil_send_system_cmd(CELL_SYSUTIL_NP_INVITATION_SELECTED, 0);
-
-	nph.queue_basic_event(to_add);
-	nph.send_basic_event(event_to_send, 0, 0);
 
 	return CELL_OK;
 }
@@ -3055,14 +2994,10 @@ error_code sceNpCustomMenuRegisterActions(vm::cptr<SceNpCustomMenu> menu, vm::pt
 		actions.push_back(std::move(action));
 	}
 
-	// TODO: add the custom menu to the friendlist and profile dialogs
+	// Local-user actions are exposed by the Friends overlay.
+	// TODO: expose FRIEND/PLAYER actions in their respective profile contexts.
 	std::lock_guard lock(nph.mutex_custom_menu);
-	nph.custom_menu_handler = handler;
-	nph.custom_menu_user_arg = userArg;
-	nph.custom_menu_actions = std::move(actions);
-	nph.custom_menu_registered = true;
-	nph.custom_menu_activation = {};
-	nph.custom_menu_exception_list = {};
+	nph.custom_menu.register_actions(std::move(actions), handler, userArg);
 
 	return CELL_OK;
 }
@@ -3082,7 +3017,7 @@ error_code sceNpCustomMenuActionSetActivation(vm::cptr<SceNpCustomMenuIndexArray
 
 	std::lock_guard lock(nph.mutex_custom_menu);
 
-	if (!nph.custom_menu_registered)
+	if (!nph.custom_menu.registered)
 	{
 		return SCE_NP_CUSTOM_MENU_ERROR_NOT_REGISTERED;
 	}
@@ -3092,7 +3027,7 @@ error_code sceNpCustomMenuActionSetActivation(vm::cptr<SceNpCustomMenuIndexArray
 		return SCE_NP_CUSTOM_MENU_ERROR_INVALID_ARGUMENT;
 	}
 
-	nph.custom_menu_activation = *array;
+	nph.custom_menu.activation = *array;
 
 	return CELL_OK;
 }
@@ -3112,7 +3047,7 @@ error_code sceNpCustomMenuRegisterExceptionList(vm::cptr<SceNpCustomMenuActionEx
 
 	std::lock_guard lock(nph.mutex_custom_menu);
 
-	if (!nph.custom_menu_registered)
+	if (!nph.custom_menu.registered)
 	{
 		return SCE_NP_CUSTOM_MENU_ERROR_NOT_REGISTERED;
 	}
@@ -3127,12 +3062,12 @@ error_code sceNpCustomMenuRegisterExceptionList(vm::cptr<SceNpCustomMenuActionEx
 		return SCE_NP_CUSTOM_MENU_ERROR_INVALID_ARGUMENT;
 	}
 
-	nph.custom_menu_exception_list.clear();
+	nph.custom_menu.exception_list.clear();
 
 	for (u32 i = 0; i < numItems; i++)
 	{
 		// TODO: Are the exceptions checked ?
-		nph.custom_menu_exception_list.push_back(items[i]);
+		nph.custom_menu.exception_list.push_back(items[i]);
 	}
 
 	return CELL_OK;
