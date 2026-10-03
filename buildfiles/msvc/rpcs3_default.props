@@ -84,6 +84,7 @@
         LLVMFuzzMutate.lib;
         LLVMGlobalISel.lib;
         LLVMHipStdPar.lib;
+        LLVMHTTP.lib;
         LLVMInstCombine.lib;
         LLVMInstrumentation.lib;
         LLVMIntelJITEvents.lib;
