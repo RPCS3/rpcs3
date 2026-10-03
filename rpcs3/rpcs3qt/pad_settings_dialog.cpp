@@ -1176,7 +1176,10 @@ bool pad_settings_dialog::eventFilter(QObject* object, QEvent* event)
 	case QEvent::MouseButtonPress:
 	{
 		// Save object on rightclick if we are not remapping a button in order to allow clearing a binding
-		m_clear_binding_object = (m_button_id == button_ids::id_pad_begin && static_cast<QMouseEvent*>(event)->button() == Qt::RightButton) ? object : nullptr;
+		if (const auto button = qobject_cast<QPushButton*>(object); button && button->isEnabled() && m_cfg_entries.contains(m_pad_buttons->id(button)))
+		{
+			m_clear_binding_object = (m_button_id == button_ids::id_pad_begin && static_cast<QMouseEvent*>(event)->button() == Qt::RightButton) ? object : nullptr;
+		}
 		break;
 	}
 	case QEvent::MouseButtonRelease:
