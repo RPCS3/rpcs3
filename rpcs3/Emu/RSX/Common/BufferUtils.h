@@ -43,3 +43,7 @@ extern void(*const copy_data_swap_u32)(u32* dst, const u32* src, u32 count);
 
 // Copy and swap data in 32-bit units, return true if changed
 extern bool(*const copy_data_swap_u32_cmp)(u32* dst, const u32* src, u32 count);
+
+void iota16(u16* dst, u32 count);
+
+void iota32(u32* dst, u32 count);
