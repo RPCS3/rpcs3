@@ -4017,14 +4017,6 @@ error_code cellGemSetYaw(u32 gem_num, v128 z_direction)
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	// The game tells us that the motion controller currently points towards the given point in world coordinates (mm).
-	// So far we've only seen points on the camera axis (e.g. 0,0,1), which means that the controller points at the camera.
-	// That's our default orientation, so we simply reset the orientation.
-	if (z_direction_x != 0.0f || z_direction_y != 0.0f)
-	{
-		cellGem.warning("cellGemSetYaw: Unexpected direction (x=%f, y=%f, z=%f). Resetting the orientation to face the camera anyway.", z_direction_x, z_direction_y, z_direction_z);
-	}
-
 	if (g_cfg.io.move != move_handler::real)
 	{
 		return CELL_OK;
@@ -4036,6 +4028,13 @@ error_code cellGemSetYaw(u32 gem_num, v128 z_direction)
 
 	if (pad && pad->m_pad_handler == pad_handler::move && !pad->is_copilot())
 	{
+		// z_direction is the direction of the controller's z axis (sphere -> handle) in world coordinates.
+		// This function is usually used when the game wants to re-orient the ps move towards the camera, e.g. during calibration or as a surrogate for it.
+		// So far we've seen:
+		// A: (0,0,1,0): The controller points straight at the camera along the camera axis. This is our default orientation.
+		// B: The current sphere position (CellGemState.pos) while pointing at the camera.
+		//    This is equal to A if the controller is on the camera axis. Otherwise the correct yaw would be atan2(x, z).
+		// For now we simply reset the orientation (including pitch and roll) instead of only adjusting the yaw.
 		pad->move_data.orientation_reset_requested = true;
 	}
 
