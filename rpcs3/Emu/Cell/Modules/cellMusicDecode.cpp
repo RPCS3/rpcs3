@@ -566,6 +566,8 @@ error_code cellMusicDecodeSetDecodeCommand2(s32 command)
 	if (!dec.func)
 		return CELL_MUSIC_DECODE_ERROR_GENERIC;
 
+	const s32 old_status = dec.decode_status;
+
 	error_code result = CELL_OK;
 	{
 		std::scoped_lock slock(dec.decoder.m_mtx);
@@ -577,6 +579,17 @@ error_code cellMusicDecodeSetDecodeCommand2(s32 command)
 		dec.func(ppu, CELL_MUSIC_DECODE_EVENT_SET_DECODE_COMMAND_RESULT, vm::addr_t(s32{result}), dec.userData);
 		return CELL_OK;
 	});
+
+	// Some games only restart the decoding after they were notified that the status changed
+	if (const s32 new_status = dec.decode_status; new_status != old_status)
+	{
+		sysutil_register_cb([&dec, new_status](ppu_thread& ppu) -> s32
+		{
+			cellMusicDecode.notice("Sending status notification %d", new_status);
+			dec.func(ppu, CELL_MUSIC_DECODE_EVENT_STATUS_NOTIFICATION, vm::addr_t(new_status), dec.userData);
+			return CELL_OK;
+		});
+	}
 
 	return CELL_OK;
 }
