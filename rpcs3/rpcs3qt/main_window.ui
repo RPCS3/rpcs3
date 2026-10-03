@@ -1625,12 +1625,12 @@
   </action>
   <action name="addIsoGamesAct">
    <property name="text">
-    <string>Add ISO Games</string>
+    <string>Add Disc Image Games</string>
    </property>
   </action>
   <action name="bootIsoAct">
    <property name="text">
-    <string>Boot ISO</string>
+    <string>Boot Disc Image</string>
    </property>
   </action>
   <action name="playHoverMusicAct">
