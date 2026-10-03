@@ -434,6 +434,15 @@ PadHandlerBase::connection ps_move_handler::update_connection(const std::shared_
 
 	if (move_device->hidDevice == nullptr)
 	{
+		// Try to reconnect every now and then.
+		const steady_clock::time_point now = steady_clock::now();
+		const s64 elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - move_device->last_reconnect_attempt).count();
+
+		if (elapsed_ms < 1000)
+			return connection::disconnected;
+
+		move_device->last_reconnect_attempt = now;
+
 		// try to reconnect
 #ifdef _WIN32
 		if (hid_device* dev = connect_move_device(move_device, move_device->path))

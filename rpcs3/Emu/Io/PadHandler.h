@@ -51,6 +51,8 @@ public:
 	bool enable_player_leds{};
 	bool update_player_leds{true};
 
+	steady_clock::time_point last_reconnect_attempt{};
+
 	std::shared_ptr<FusionAhrs> ahrs; // Used to calculate quaternions from sensor data
 	u64 last_ahrs_update_time_us = 0; // Last ahrs update
 	bool ahrs_drift_correction = false; // Continuously correct the inclination using the accelerometer and estimate the gyro bias

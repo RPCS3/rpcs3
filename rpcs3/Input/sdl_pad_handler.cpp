@@ -500,12 +500,12 @@ PadHandlerBase::connection sdl_pad_handler::update_connection(const std::shared_
 
 		// Try to reconnect every now and then.
 		const steady_clock::time_point now = steady_clock::now();
-		const s64 elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - dev->last_update).count();
+		const s64 elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - dev->last_reconnect_attempt).count();
 
 		if (elapsed_ms < 1000)
 			return connection::disconnected;
 
-		dev->last_update = now;
+		dev->last_reconnect_attempt = now;
 
 		int count = 0;
 		SDL_JoystickID* gamepads = SDL_GetGamepads(&count);
