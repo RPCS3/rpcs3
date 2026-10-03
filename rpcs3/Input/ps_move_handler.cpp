@@ -354,6 +354,9 @@ void ps_move_handler::check_add_device(hid_device* hidDevice, hid_enumerated_dev
 	// Correct the orientation drift with the accelerometer. Recreate the AHRS so that the settings are applied.
 	device->ahrs_drift_correction = true;
 	device->ahrs.reset();
+
+	// This might be a different controller, so we have to learn the gyro offset from scratch
+	device->gyro_bias_initialized = false;
 	device->has_new_input_report = false;
 	device->last_input_report_time_us = 0;
 	device->imu_sample_count = 0;

@@ -11,6 +11,7 @@
 #endif
 extern "C" {
 #include "3rdparty/fusion/fusion/Fusion/FusionAhrs.h"
+#include "3rdparty/fusion/fusion/Fusion/FusionBias.h"
 }
 #ifndef _MSC_VER
 #pragma GCC diagnostic pop
@@ -52,9 +53,14 @@ public:
 
 	std::shared_ptr<FusionAhrs> ahrs; // Used to calculate quaternions from sensor data
 	u64 last_ahrs_update_time_us = 0; // Last ahrs update
-	bool ahrs_drift_correction = false; // Continuously correct the inclination using the accelerometer
+	bool ahrs_drift_correction = false; // Continuously correct the inclination using the accelerometer and estimate the gyro bias
 	f32 ahrs_sample_rate = 0.0f; // Sample rate that the AHRS settings were applied with
 	f32 ahrs_measured_sample_rate = 0.0f; // Smoothed measured sample rate
+
+	// Run-time estimation of the gyro offset (only used with drift correction).
+	// This is a sensor property, so it is kept across orientation resets. Reset it if a different device is connected.
+	FusionBias gyro_bias{};
+	bool gyro_bias_initialized = false;
 
 	// Sensor samples (accelerometer in G, gyro in rad/s) for the next orientation update.
 	// By default, update_orientation uses the current values in move_data and the time since the last update.
