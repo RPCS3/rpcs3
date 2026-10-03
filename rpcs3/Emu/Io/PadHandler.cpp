@@ -960,6 +960,14 @@ void PadHandlerBase::get_orientation(const pad_ensemble& binding) const
 		return;
 	}
 
+	// The game told us that the controller currently points at the camera (see cellGemSetYaw)
+	if (std::exchange(pad->move_data.orientation_reset_requested, false))
+	{
+		device->reset_orientation();
+		pad->move_data.quaternion = ps_move_data::default_quaternion;
+		return;
+	}
+
 	if (!pad->move_data.orientation_enabled || pad->get_orientation_reset_button_active())
 	{
 		// This can be called extensively in quick succession, so let's just reset the pointer instead of creating a new object.

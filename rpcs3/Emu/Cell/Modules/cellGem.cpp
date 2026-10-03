@@ -3993,9 +3993,9 @@ error_code cellGemSetRumble(u32 gem_num, u8 rumble)
 	return CELL_OK;
 }
 
-error_code cellGemSetYaw(u32 gem_num, vm::ptr<f32> z_direction)
+error_code cellGemSetYaw(u32 gem_num, f32 z_direction_x, f32 z_direction_y, f32 z_direction_z, f32 z_direction_w)
 {
-	cellGem.todo("cellGemSetYaw(gem_num=%d, z_direction=*0x%x)", gem_num, z_direction);
+	cellGem.warning("cellGemSetYaw(gem_num=%d, z_direction_x=%f, z_direction_y=%f, z_direction_z=%f, z_direction_w=%f)", gem_num, z_direction_x, z_direction_y, z_direction_z, z_direction_w);
 
 	auto& gem = g_fxo->get<gem_config>();
 
@@ -4006,12 +4006,32 @@ error_code cellGemSetYaw(u32 gem_num, vm::ptr<f32> z_direction)
 		return CELL_GEM_ERROR_UNINITIALIZED;
 	}
 
-	if (!z_direction || !check_gem_num(gem_num))
+	if (!check_gem_num(gem_num))
 	{
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	// TODO
+	// The game tells us that the motion controller currently points towards the given point in world coordinates (mm).
+	// So far we've only seen points on the camera axis (e.g. 0,0,1), which means that the controller points at the camera.
+	// That's our default orientation, so we simply reset the orientation.
+	if (z_direction_x != 0.0f || z_direction_y != 0.0f)
+	{
+		cellGem.warning("cellGemSetYaw: Unexpected direction (x=%f, y=%f, z=%f). Resetting the orientation to face the camera anyway.", z_direction_x, z_direction_y, z_direction_z);
+	}
+
+	if (g_cfg.io.move != move_handler::real)
+	{
+		return CELL_OK;
+	}
+
+	std::lock_guard pad_lock(pad::g_pad_mutex);
+	const auto handler = pad::get_pad_thread();
+	const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
+
+	if (pad && pad->m_pad_handler == pad_handler::move && !pad->is_copilot())
+	{
+		pad->move_data.orientation_reset_requested = true;
+	}
 
 	return CELL_OK;
 }
