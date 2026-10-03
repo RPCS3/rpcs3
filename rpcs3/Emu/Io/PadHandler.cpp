@@ -1076,7 +1076,7 @@ bool PadDevice::update_ahrs(ps_move_data& move_data, const imu_sample& sample, f
 		}
 	};
 
-	const FusionVector gyroscope{
+	FusionVector gyroscope{
 		.axis {
 			.x = PadHandlerBase::rad_to_degree(gyro.x()),
 			.y = PadHandlerBase::rad_to_degree(gyro.y()),
@@ -1084,8 +1084,20 @@ bool PadDevice::update_ahrs(ps_move_data& move_data, const imu_sample& sample, f
 		}
 	};
 
+	if (!std::isfinite(gyroscope.axis.x) || !std::isfinite(gyroscope.axis.y) || !std::isfinite(gyroscope.axis.z))
+	{
+		return false;
+	}
+
+	if (ahrs_drift_correction && !gyro_bias_initialized)
+	{
+		FusionBiasInitialise(&gyro_bias);
+		gyro_bias_initialized = true;
+	}
+
 	// Keep a backup in case the update yields an invalid orientation (e.g. due to garbage sensor data)
 	const FusionAhrs ahrs_backup = *ahrs;
+	const FusionBias gyro_bias_backup = gyro_bias;
 
 	// The startup gain ramp and the rejection timeout are calculated per sample, so the settings have to match the actual sample rate.
 	// Otherwise the startup period would depend on how often we get here.
@@ -1097,6 +1109,21 @@ bool PadDevice::update_ahrs(ps_move_data& move_data, const imu_sample& sample, f
 	{
 		ahrs_sample_rate = ahrs_measured_sample_rate;
 		set_fusion_settings(ahrs.get(), ahrs_sample_rate, ahrs_drift_correction);
+	}
+
+	// Remove the gyro offset. The offset is learned while the device is stationary.
+	// The stationary period and the filter are also calculated per sample, so the settings have to match the sample rate as well.
+	if (ahrs_drift_correction)
+	{
+		if (gyro_bias.settings.sampleRate != ahrs_sample_rate)
+		{
+			FusionBiasSettings bias_settings = fusionBiasDefaultSettings;
+			bias_settings.sampleRate = ahrs_sample_rate;
+			bias_settings.stationaryThreshold = 10.0f;
+			FusionBiasSetSettings(&gyro_bias, &bias_settings);
+		}
+
+		gyroscope = FusionBiasUpdate(&gyro_bias, gyroscope);
 	}
 
 	// Update Fusion.
@@ -1113,6 +1140,7 @@ bool PadDevice::update_ahrs(ps_move_data& move_data, const imu_sample& sample, f
 	{
 		// Discard this update and keep the last valid orientation
 		*ahrs = ahrs_backup;
+		gyro_bias = gyro_bias_backup;
 		return false;
 	}
 
