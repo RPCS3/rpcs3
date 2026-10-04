@@ -77,9 +77,12 @@ vec4 _fetch_constant(const in uint base_offset)
 	return _fetch_constant(int(base_offset));
 }
 #elif defined(VULKAN)
-#define _fetch_constant(x) vc[x + xform_constants_offset]
+#define _fetch_constant(x) vc[(x) + xform_constants_offset]
 #else
 #define _fetch_constant(x) vc[x]
 #endif
+
+// Indexed access needs bounds checking
+#define _fetch_indexed_constant(x) (((x) < 468) ? _fetch_constant(x) : vec4(0.))
 
 )"
