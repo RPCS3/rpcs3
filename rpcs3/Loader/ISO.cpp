@@ -1394,7 +1394,8 @@ iso_fs_node* iso_archive::retrieve(const std::string& path)
 
 		bool found = false;
 
-		if (path_component == ".")
+		// An empty component comes out of repeated delimiters (e.g. "PS3_GAME//PIC1.PNG"), which name the same node
+		if (path_component.empty() || path_component == ".")
 		{
 			found = true;
 		}

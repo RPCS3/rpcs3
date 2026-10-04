@@ -3,8 +3,7 @@
 #include "game_source_dialog.h"
 
 #include "qt_utils.h"
-#include "Loader/ISO.h"
-#include "Loader/ZAR.h"
+#include "Loader/ZAR_ISO.h"
 #include "Utilities/File.h"
 #include "Utilities/Thread.h"
 
@@ -158,25 +157,6 @@ disc_compression_manager_dialog::~disc_compression_manager_dialog()
 	}
 }
 
-QString disc_compression_manager_dialog::format_description(const iso_archive& archive) const
-{
-	switch (archive.source_type())
-	{
-	case iso_archive_source_type::decrypted_iso:
-		return tr("Decrypted ISO");
-	case iso_archive_source_type::encrypted_iso:
-		return tr("Encrypted ISO");
-	case iso_archive_source_type::zar_decrypted_iso:
-		return tr("ZAR (Decrypted ISO)");
-	case iso_archive_source_type::zar_encrypted_iso:
-		return tr("ZAR (Encrypted ISO)");
-	case iso_archive_source_type::zar_jb:
-		return tr("ZAR (JB)");
-	}
-
-	return {};
-}
-
 void disc_compression_manager_dialog::closeEvent(QCloseEvent* event)
 {
 	if (!m_running)
@@ -254,19 +234,19 @@ void disc_compression_manager_dialog::add_source(const QString& source)
 	else if (info.suffix().toLower() == "zar")
 	{
 		std::string error;
-		const std::shared_ptr<zar_disc_container> container = zar_disc_container::open(absolute.toStdString(), &error);
+		const std::shared_ptr<zar_iso_container> container = zar_iso_container::open(absolute.toStdString(), &error);
 		if (!container)
 		{
 			QMessageBox::warning(this, tr("Invalid ZArchive"), tr("The selected ZArchive is invalid or is not a PS3 disc game:\n%1\n\n%2").arg(absolute, QString::fromStdString(error)));
 			return;
 		}
 
-		item.format = container->is_iso_layout() ? tr("ZArchive (ISO)") : tr("ZArchive (JB)");
+		item.format = container->is_image() ? tr("ZArchive (ISO)") : tr("ZArchive (JB)");
 		item.input_size = static_cast<u64>(info.size());
 		item.base_status = tr("Already compressed");
 		item.compressible = false;
 
-		if (!container->is_iso_layout())
+		if (!container->is_image())
 		{
 			item.key_text = tr("Not required");
 		}
@@ -301,7 +281,17 @@ void disc_compression_manager_dialog::add_source(const QString& source)
 			return;
 		}
 
-		item.format = format_description(archive);
+		switch (archive.get_enc_type())
+		{
+		case iso_encryption_type::REDUMP:
+		case iso_encryption_type::ENC_3K3Y:
+			item.format = tr("Encrypted ISO");
+			break;
+		default:
+			item.format = tr("Decrypted ISO");
+			break;
+		}
+
 		item.input_size = static_cast<u64>(info.size());
 		item.compressible = true;
 

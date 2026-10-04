@@ -15,7 +15,6 @@ class QProgressBar;
 class QPushButton;
 class QTableWidget;
 class QThread;
-class iso_archive;
 
 class disc_compression_manager_dialog final : public QDialog
 {
@@ -52,7 +51,6 @@ private:
 	void start_compression();
 	void set_running(bool running);
 	QString output_path_for(const queue_item& item) const;
-	QString format_description(const iso_archive& archive) const;
 
 	QTableWidget* m_table = nullptr;
 	QLineEdit* m_output_directory = nullptr;

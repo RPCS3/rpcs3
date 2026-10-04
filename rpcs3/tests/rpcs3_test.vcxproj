@@ -110,7 +110,6 @@
     <ClCompile Include="test_sys_fs.cpp" />
     <ClCompile Include="test_iso_open.cpp" />
     <ClCompile Include="test_iso_extent.cpp" />
-    <ClCompile Include="test_zar_iso.cpp" />
     <ClCompile Include="test_tuple.cpp" />
     <ClCompile Include="test_pair.cpp" />
     <ClCompile Include="test_types_util.cpp" />
