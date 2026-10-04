@@ -204,6 +204,22 @@ namespace rsx
 
 		struct set_transform_constant
 		{
+			// Helper for write commands
+			struct write_range
+			{
+				u32 first_word = 0;
+				u32 word_count = 0;
+			};
+
+			// Only constants [0, 467] are writable. Hardware ignores writes beyond that.
+			static constexpr u32 max_transform_constants = 468u;
+
+			static u32* get_constants_ptr(context* ctx, u32 word);
+
+			static write_range compute_write_range(context* ctx, u32 reg, u32 count);
+
+			static void write_constants(context* ctx, u32 first_word, const u32* src, u32 count);
+
 			static void impl(context* ctx, u32 reg, u32 arg);
 
 			static void decode_one(context* ctx, u32 reg, u32 arg);
