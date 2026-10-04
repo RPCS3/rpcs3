@@ -311,7 +311,8 @@ void usb_device_usio::translate_input_tekken()
 
 	const auto translate_from_pad = [&](usz pad_number, usz player)
 	{
-		const usz shift = (player % 2) * 24ULL;
+		const usz player_index = player % 2;
+		const usz shift = (player_index) * 24ULL;
 		const usz io_index = player / 2;
 		auto& status = m_io_status[io_index];
 		auto& input = digital_input[io_index];
@@ -324,21 +325,21 @@ void usb_device_usio::translate_input_tekken()
 				switch (value.btn)
 				{
 				case usio_btn::test:
-					if (player % 2 != 0)
+					if (player_index != 0)
 						break;
 					if (value.pressed && !status.test_key_pressed) // Solve the need to hold the Test button
 						status.test_on = !status.test_on;
 					status.test_key_pressed = value.pressed;
 					break;
 				case usio_btn::coin:
-					if (player % 2 != 0)
+					if (player_index != 0)
 						break;
 					if (value.pressed && !status.coin_key_pressed) // Ensure only one coin is inserted each time the Coin button is pressed
 						status.coin_counter++;
 					status.coin_key_pressed = value.pressed;
 					break;
 				case usio_btn::service:
-					if (player % 2 == 0 && value.pressed)
+					if (player_index && value.pressed)
 						input |= 0x4000;
 					break;
 				case usio_btn::enter:
@@ -368,7 +369,7 @@ void usb_device_usio::translate_input_tekken()
 				case usio_btn::left:
 					if (value.pressed)
 					{
-						input |= g_cfg.io.usio_mode == usio_handler_mode::shooter_games ? (player % 2 == 0 ? 0x800000ULL : 0x100000ULL) : (0x80000ULL << shift);
+						input |= g_cfg.io.usio_mode == usio_handler_mode::shooter_games ? (player_index == 0 ? 0x800000ULL : 0x100000ULL) : (0x80000ULL << shift);
 						if (player == 0)
 							digital_input_lm |= 0x2000;
 					}
@@ -376,7 +377,7 @@ void usb_device_usio::translate_input_tekken()
 				case usio_btn::right:
 					if (value.pressed)
 					{
-						input |= g_cfg.io.usio_mode == usio_handler_mode::shooter_games ? (player % 2 == 0 ? 0x400000ULL : 0x80000ULL) : (0x40000ULL << shift);
+						input |= g_cfg.io.usio_mode == usio_handler_mode::shooter_games ? (player_index == 0 ? 0x400000ULL : 0x80000ULL) : (0x40000ULL << shift);
 						if (player == 0)
 							digital_input_lm |= 0x4000;
 					}
@@ -391,7 +392,7 @@ void usb_device_usio::translate_input_tekken()
 					break;
 				case usio_btn::tekken_button2: // or "Start" button for shooter games
 					if (value.pressed)
-						input |= g_cfg.io.usio_mode == usio_handler_mode::shooter_games ? (player % 2 == 0 ? 0x200000ULL : 0x40000ULL) : (0x10000ULL << shift);
+						input |= g_cfg.io.usio_mode == usio_handler_mode::shooter_games ? (player_index == 0 ? 0x200000ULL : 0x40000ULL) : (0x10000ULL << shift);
 					break;
 				case usio_btn::tekken_button3:
 					if (value.pressed)
@@ -413,9 +414,17 @@ void usb_device_usio::translate_input_tekken()
 					break;
 				}
 			});
+
+			const bool is_ctrl_ls = g_cfg.io.usio_gun_handler == usio_gun_handler::controller_ls;
+			const bool is_ctrl_rs = g_cfg.io.usio_gun_handler == usio_gun_handler::controller_rs;
+			if (g_cfg.io.usio_mode == usio_handler_mode::shooter_games && (is_ctrl_ls || is_ctrl_rs))
+			{
+				const le_t<u16> positions[2] = {static_cast<u16>(pad->m_sticks[is_ctrl_ls ? 0 : 2].m_value * USHRT_MAX / 0xff), static_cast<u16>(pad->m_sticks[is_ctrl_ls ? 1 : 3].m_value * USHRT_MAX / 0xff)};
+				std::memcpy(input_buf.data() - io_index * 0x80 + 0x100 + 32 + player_index * sizeof(u32), &positions, sizeof(u32));
+			}
 		}
 
-		if (player % 2 == 0 && status.test_on)
+		if (player_index == 0 && status.test_on)
 		{
 			input |= 0x80;
 			if (player == 0)
@@ -479,7 +488,7 @@ void usb_device_usio::translate_input_tekken()
 	{
 		translate_from_pad(i, i);
 
-		if (g_cfg.io.usio_mode == usio_handler_mode::shooter_games)
+		if (g_cfg.io.usio_mode == usio_handler_mode::shooter_games && g_cfg.io.usio_gun_handler == usio_gun_handler::mouse)
 			translate_from_mouse(i, i);
 	}
 
