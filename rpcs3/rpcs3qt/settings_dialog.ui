@@ -2533,14 +2533,14 @@
                   <item>
                    <widget class="QCheckBox" name="emulateHddSpeed">
                     <property name="text">
-                     <string>Emulate HDD Read Speed</string>
+                     <string>Emulate PS3 HDD Read Speed</string>
                     </property>
                    </widget>
                   </item>
                   <item>
                    <widget class="QCheckBox" name="emulateBdvdSpeed">
                     <property name="text">
-                     <string>Emulate BD-ROM Read Speed</string>
+                     <string>Emulate PS3 BD-ROM Read Speed</string>
                     </property>
                    </widget>
                   </item>
