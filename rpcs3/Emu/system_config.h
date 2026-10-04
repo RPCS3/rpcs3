@@ -309,7 +309,8 @@ struct cfg_root : cfg::node
 		cfg::_bool mouse_debug_overlay{ this, "Mouse Debug overlay", false, true };
 		cfg::uint<1, 180> fake_move_rotation_cone_h{ this, "Fake Move Rotation Cone", 10, true };
 		cfg::uint<1, 180> fake_move_rotation_cone_v{ this, "Fake Move Rotation Cone (Vertical)", 10, true };
-		cfg::_enum<usio_handler_mode> usio_mode{this, "USIO handler mode", usio_handler_mode::fighting_games };
+		cfg::_enum<usio_handler_mode> usio_mode{ this, "USIO handler mode", usio_handler_mode::fighting_games };
+		cfg::_enum<usio_gun_handler> usio_gun_handler{ this, "USIO gun handler", usio_gun_handler::mouse };
 
 	} io{ this };
 
