@@ -526,6 +526,7 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 
 		if (!vm::read_string(threadname.addr(), max_size, ppu_name, true))
 		{
+			vm::dealloc(stack_base);
 			dct.free(stack_size);
 			return CELL_EFAULT;
 		}

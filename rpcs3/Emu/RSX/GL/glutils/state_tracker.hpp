@@ -9,15 +9,20 @@ namespace gl
 {
 	class driver_state
 	{
-		const u32 DEPTH_BOUNDS       = 0xFFFF0001;
-		const u32 CLIP_PLANES        = 0xFFFF0002;
-		const u32 DEPTH_RANGE        = 0xFFFF0004;
-		const u32 STENCIL_FRONT_FUNC = 0xFFFF0005;
-		const u32 STENCIL_BACK_FUNC  = 0xFFFF0006;
-		const u32 STENCIL_FRONT_OP   = 0xFFFF0007;
-		const u32 STENCIL_BACK_OP    = 0xFFFF0008;
-		const u32 STENCIL_BACK_MASK  = 0xFFFF0009;
-		const u32 POLYGON_MODE       = 0xFFFF000A;
+		enum : u32
+		{
+			DEPTH_BOUNDS = 0xFFFF0001,
+			CLIP_PLANES = 0xFFFF0002,
+			DEPTH_RANGE = 0xFFFF0004,
+			STENCIL_FRONT_FUNC = 0xFFFF0005,
+			STENCIL_BACK_FUNC = 0xFFFF0006,
+			STENCIL_FRONT_OP = 0xFFFF0007,
+			STENCIL_BACK_OP = 0xFFFF0008,
+			STENCIL_FRONT_MASK = 0xFFFF0009,
+			STENCIL_BACK_MASK = 0xFFFF000A,
+			POLYGON_MODE = 0xFFFF000B,
+			POLYGON_OFFSET = 0xFFFF000C,
+		};
 
 		std::unordered_map<GLenum, u64> properties = {};
 		std::unordered_map<GLenum, std::array<u64, 4>> indexed_properties = {};
@@ -142,11 +147,11 @@ namespace gl
 			}
 		}
 
-		void stencil_mask(GLuint mask)
+		void stencil_front_mask(GLuint mask)
 		{
-			if (!test_and_set_property(GL_STENCIL_WRITEMASK, mask))
+			if (!test_and_set_property(STENCIL_FRONT_MASK, mask))
 			{
-				glStencilMask(mask);
+				glStencilMaskSeparate(GL_FRONT, mask);
 			}
 		}
 
@@ -167,12 +172,12 @@ namespace gl
 			}
 		}
 
-		void stencil_func(GLenum func, GLint ref, GLuint mask)
+		void stencil_front_func(GLenum func, GLint ref, GLuint mask)
 		{
 			const u32 value = func | ref << 16u | mask << 24;
 			if (!test_and_set_property(STENCIL_FRONT_FUNC, value))
 			{
-				glStencilFunc(func, ref, mask);
+				glStencilFuncSeparate(GL_FRONT, func, ref, mask);
 			}
 		}
 
@@ -181,16 +186,16 @@ namespace gl
 			const u32 value = func | ref << 16u | mask << 24;
 			if (!test_and_set_property(STENCIL_BACK_FUNC, value))
 			{
-				glStencilFunc(func, ref, mask);
+				glStencilFuncSeparate(GL_BACK, func, ref, mask);
 			}
 		}
 
-		void stencil_op(GLenum fail, GLenum zfail, GLenum zpass)
+		void stencil_front_op(GLenum fail, GLenum zfail, GLenum zpass)
 		{
 			const u64 value = static_cast<u64>(fail) << 32 | static_cast<u64>(zfail) << 16 | static_cast<u64>(zpass);
 			if (!test_and_set_property(STENCIL_FRONT_OP, value))
 			{
-				glStencilOp(fail, zfail, zpass);
+				glStencilOpSeparate(GL_FRONT, fail, zfail, zpass);
 			}
 		}
 
@@ -201,6 +206,24 @@ namespace gl
 			{
 				glStencilOpSeparate(GL_BACK, fail, zfail, zpass);
 			}
+		}
+
+		void stencil_mask(GLuint mask)
+		{
+			stencil_front_mask(mask);
+			stencil_back_mask(mask);
+		}
+
+		void stencil_func(GLenum func, GLint ref, GLuint mask)
+		{
+			stencil_front_func(func, ref, mask);
+			stencil_back_func(func, ref, mask);
+		}
+
+		void stencil_op(GLenum fail, GLenum zfail, GLenum zpass)
+		{
+			stencil_front_op(fail, zfail, zpass);
+			stencil_back_op(fail, zfail, zpass);
 		}
 
 		void color_maski(GLint index, u32 mask)
@@ -304,7 +327,7 @@ namespace gl
 		void polygon_offset(float factor, float units)
 		{
 			const u64 value = (static_cast<u64>(std::bit_cast<u32>(units)) << 32) | std::bit_cast<u32>(factor);
-			if (!test_and_set_property(GL_POLYGON_OFFSET_FILL, value))
+			if (!test_and_set_property(POLYGON_OFFSET, value))
 			{
 				glPolygonOffset(factor, units);
 			}
