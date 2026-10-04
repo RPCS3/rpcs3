@@ -17,6 +17,10 @@
 
 #include "Utilities/StrUtil.h"
 
+#ifdef RPCS3_RA_ENABLED
+#include "Emu/ra_config.h"
+#endif
+
 #include "Emu/Cell/lv2/sys_event.h"
 #include "Emu/Cell/lv2/sys_fs.h"
 
@@ -1060,6 +1064,14 @@ error_code sceNpTrophyUnlockTrophy(ppu_thread& ppu, u32 context, u32 handle, s32
 	{
 		return SCE_NP_TROPHY_ERROR_ALREADY_UNLOCKED;
 	}
+
+#ifdef RPCS3_RA_ENABLED
+	if (!g_cfg_ra.native_trophies.get())
+	{
+		if (platinumId) *platinumId = SCE_NP_TROPHY_INVALID_TROPHY_ID;
+		return CELL_OK;
+	}
+#endif
 
 	vm::var<CellRtcTick> tick;
 	if (error_code error = cellRtcGetCurrentTick(ppu, tick))

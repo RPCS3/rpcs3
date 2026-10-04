@@ -2,6 +2,8 @@
 #include "overlay_message.h"
 #include "Emu/Cell/timers.hpp"
 
+namespace rsx::overlays { bool native_trophy_notification_active(); }
+
 namespace rsx
 {
 	namespace overlays
@@ -52,13 +54,9 @@ namespace rsx
 			if (icon)
 			{
 				m_icon = icon;
-				// Icon on the left, text to the right (PS3 trophy style)
-				const s16 icon_x = m_margin;
-				const s16 icon_y = m_margin;
-				m_icon->set_pos(icon_x, icon_y);
-				m_text.set_pos(icon_x + static_cast<s16>(m_icon->w) + 8, icon_y);
-
 				set_size(m_margin + m_icon->w + 8 + m_text.w + m_margin, m_margin + std::max(m_text.h, m_icon->h) + m_margin);
+				m_slide_animation.duration_sec = 1.5f;
+				m_slide_animation.type = animation_type::ease_in_out_cubic;
 			}
 			else
 			{
@@ -128,27 +126,30 @@ namespace rsx
 				return compiled_resources;
 			}
 
-			// Disable caching
 			m_is_compiled = false;
 
-			compiled_resources = rounded_rect::get_compiled();
-			compiled_resources.add(m_text.get_compiled());
+			const f32 slide_x = m_slide_animation.active ? m_slide_animation.current.x : 0.f;
+
+			rounded_rect::get_compiled();
+
+			compiled_resource result;
+			result.add(compiled_resources, slide_x, 0.f);
+			result.add(m_text.get_compiled(), slide_x, 0.f);
 			if (m_icon)
-			{
-				compiled_resources.add(m_icon->get_compiled());
-			}
+				result.add(m_icon->get_compiled(), slide_x, 0.f);
 
 			auto& current_animation = m_fade_in_animation.active
 				? m_fade_in_animation
 				: m_fade_out_animation;
+			current_animation.apply(result);
 
-			current_animation.apply(compiled_resources);
+			compiled_resources = std::move(result);
 			return compiled_resources;
 		}
 
 		void message_item::update(usz index, u64 timestamp_us, s16 x_offset, s16 y_offset)
 		{
-			if (m_cur_pos != index)
+			if (m_cur_pos != index || x != x_offset || y != y_offset)
 			{
 				m_cur_pos = index;
 				set_pos(x_offset, y_offset);
@@ -157,6 +158,24 @@ namespace rsx
 			if (!m_processed)
 			{
 				m_expiration_time = get_expiration_time(m_visible_duration);
+				if (m_icon)
+				{
+					m_slide_animation.current = {-f32(x + w), 0.f, 0.f};
+					m_slide_animation.end = {0.f, 0.f, 0.f};
+					m_slide_animation.active = true;
+				}
+			}
+
+			if (m_slide_animation.active)
+			{
+				m_slide_animation.update(timestamp_us);
+			}
+			else if (m_icon && !m_slide_out_started && timestamp_us + u64(m_slide_animation.duration_sec * 1'000'000) > get_expiration())
+			{
+				m_slide_out_started = true;
+				m_slide_animation.end = {-f32(x + w), 0.f, 0.f};
+				m_slide_animation.active = true;
+				m_slide_animation.update(timestamp_us);
 			}
 
 			if (m_fade_in_animation.active)
@@ -226,8 +245,9 @@ namespace rsx
 
 			// Render reversed list. Oldest entries are furthest from the border
 			constexpr u16 spacing = 4;
-			s16 x_offset = 10;
-			s16 y_offset = 8;
+			// top_left mirrors the native PS3 trophy notification position (68, 55)
+			s16 x_offset = (origin == message_pin_location::top_left) ? 68 : 10;
+			s16 y_offset = (origin == message_pin_location::top_left) ? 55 : 8;
 			usz index = 0;
 
 			for (auto it = vis_set.rbegin(); it != vis_set.rend(); ++it, ++index)
@@ -247,9 +267,14 @@ namespace rsx
 					y_offset += (spacing + it->h);
 					break;
 				case message_pin_location::top_left:
-					it->update(index, cur_time, x_offset, y_offset);
+				{
+					const s16 actual_x = native_trophy_notification_active()
+						? static_cast<s16>(virtual_width - x_offset - it->w)
+						: x_offset;
+					it->update(index, cur_time, actual_x, y_offset);
 					y_offset += (spacing + it->h);
 					break;
+				}
 				}
 			}
 		}

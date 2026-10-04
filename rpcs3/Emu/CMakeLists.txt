@@ -718,6 +718,9 @@ target_link_libraries(rpcs3_emu
 )
 
 if(RPCS3_RA_ENABLED)
+    target_sources(rpcs3_emu PRIVATE
+        RSX/Overlays/overlay_ra_achievement_list.cpp
+    )
     target_link_libraries(rpcs3_emu PRIVATE 3rdparty::rcheevos)
 endif()
 

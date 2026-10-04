@@ -7,6 +7,8 @@ namespace rsx
 {
 	namespace overlays
 	{
+		bool native_trophy_notification_active();
+
 		struct trophy_notification : public user_interface
 		{
 		private:

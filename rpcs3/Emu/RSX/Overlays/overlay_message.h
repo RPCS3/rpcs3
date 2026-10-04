@@ -41,11 +41,13 @@ namespace rsx
 			std::shared_ptr<overlay_element> m_icon{};
 			animation_color_interpolate m_fade_in_animation;
 			animation_color_interpolate m_fade_out_animation;
+			animation_translate m_slide_animation;
 
 			u64 m_expiration_time = 0;
 			u64 m_visible_duration = 0;
 			std::shared_ptr<atomic_t<u32>> m_refs;
 			bool m_processed = false;
+			bool m_slide_out_started = false;
 			usz m_cur_pos = umax;
 			static constexpr u16 m_margin = 6;
 		};

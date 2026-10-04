@@ -70,10 +70,6 @@ include(CheckCXXCompilerFlag)
 
 get_property(IS_MULTI_CONFIG GLOBAL PROPERTY GENERATOR_IS_MULTI_CONFIG)
 if(IS_MULTI_CONFIG)
-    # TODO(cjj19970505@live.cn)
-    # Currently DicordRPC is included as a binary compiled with /MT flag.
-    # We need all 4 binaries(/MT /MTd /MD /MDd) or including the source instead of binary.
-    set(USE_DISCORD_RPC OFF CACHE BOOL "Discord RPC is only avaliable with single-config generator" FORCE)
 else()
     if(NOT CMAKE_BUILD_TYPE)
         message(STATUS "No build type selected, default to Release")

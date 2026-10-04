@@ -338,7 +338,6 @@
     <addaction name="actionManage_RAP_Licenses"/>
     <addaction name="confSavedataManagerAct"/>
     <addaction name="actionManage_Trophy_Data"/>
-    <addaction name="confRetroAchievementsAct"/>
     <addaction name="actionManage_Savestates"/>
     <addaction name="separator"/>
     <addaction name="actionManage_Cheats"/>
@@ -440,6 +439,11 @@
     <addaction name="separator"/>
     <addaction name="refreshGameListAct"/>
    </widget>
+   <widget class="QMenu" name="menuRetroAchievements">
+    <property name="title">
+     <string>RetroAchievements</string>
+    </property>
+   </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
      <string>Help</string>
@@ -471,6 +475,7 @@
    <addaction name="menuManage"/>
    <addaction name="menuUtilities"/>
    <addaction name="menuView"/>
+   <addaction name="menuRetroAchievements"/>
    <addaction name="menuHelp"/>
    <addaction name="menuUpdate_Available"/>
   </widget>

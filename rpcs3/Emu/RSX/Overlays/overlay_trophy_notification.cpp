@@ -30,6 +30,12 @@ namespace rsx
 		};
 
 		static ticket_semaphore_t s_trophy_semaphore;
+		static atomic_t<u32> s_native_trophy_count{0};
+
+		bool native_trophy_notification_active()
+		{
+			return s_native_trophy_count > 0;
+		}
 
 		trophy_notification::trophy_notification()
 		{
@@ -83,6 +89,7 @@ namespace rsx
 					sliding_animation.end = { -f32(frame.x + frame.w), 0, 0 };
 					sliding_animation.on_finish = [this]
 					{
+						s_native_trophy_count--;
 						s_trophy_semaphore.release();
 						close(false, false);
 					};
@@ -138,6 +145,8 @@ namespace rsx
 
 		s32 trophy_notification::show(const SceNpTrophyDetails& trophy, const std::vector<uchar>& trophy_icon_buffer)
 		{
+			s_native_trophy_count++;
+
 			// Schedule to display this trophy
 			display_sched_id = s_trophy_semaphore.enqueue();
 			visible = false;

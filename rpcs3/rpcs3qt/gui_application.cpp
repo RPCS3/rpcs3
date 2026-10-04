@@ -1103,6 +1103,12 @@ void gui_application::UpdatePlaytime()
 
 	m_persistent_settings->AddPlaytime(serial, m_timer_playtime.restart(), false);
 	m_persistent_settings->SetLastPlayed(serial, QDateTime::currentDateTime().toString(gui::persistent::last_played_date_format), true);
+
+#if defined(WITH_DISCORD_RPC) && defined(RPCS3_RA_ENABLED)
+	const std::string ra_state = rpcs3::ra::get_discord_state();
+	if (!ra_state.empty() && m_gui_settings->GetValue(gui::m_richPresence).toBool())
+		discord::update_presence(ra_state, Emu.GetTitle(), false);
+#endif
 }
 
 void gui_application::StopPlaytime()

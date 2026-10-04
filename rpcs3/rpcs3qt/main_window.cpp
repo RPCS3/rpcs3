@@ -67,6 +67,7 @@
 #include "rpcs3_version.h"
 #ifdef RPCS3_RA_ENABLED
 #include "Emu/RetroAchievements.h"
+#include "Emu/ra_config.h"
 #endif
 #include "Emu/IdManager.h"
 #include "Emu/VFS.h"
@@ -266,9 +267,7 @@ bool main_window::Init([[maybe_unused]] bool with_cli_boot)
 #endif
 
 #ifdef RPCS3_RA_ENABLED
-	m_ra_menu = new QMenu(tr("RetroAchievements"), this);
-	ui->menuBar->insertMenu(ui->menuHelp->menuAction(), m_ra_menu);
-	connect(m_ra_menu, &QMenu::aboutToShow, this, &main_window::UpdateRAIntegrationMenu);
+	connect(ui->menuRetroAchievements, &QMenu::aboutToShow, this, &main_window::UpdateRAMenu);
 #endif
 
 #ifdef RPCS3_UPDATE_SUPPORTED
@@ -556,30 +555,78 @@ void main_window::open_ra_settings()
 }
 
 #ifdef RPCS3_RA_ENABLED
-void main_window::UpdateRAIntegrationMenu()
+void main_window::UpdateRAMenu()
 {
-	m_ra_menu->clear();
+	ui->menuRetroAchievements->clear();
+
+	QAction* login_action = ui->menuRetroAchievements->addAction(rpcs3::ra::is_active() ? tr("Settings") : tr("Login"));
+	connect(login_action, &QAction::triggered, this, &main_window::open_ra_settings);
+
 #ifdef RC_CLIENT_SUPPORTS_RAINTEGRATION
 	namespace RA = rpcs3::ra;
-	const auto items = RA::get_menu_items();
-	for (const auto& item : items)
+	if (RA::is_integration_loaded())
 	{
-		if (item.id == 0)
+		const auto items = RA::get_menu_items();
+		if (!items.empty())
+			ui->menuRetroAchievements->addSeparator();
+		for (const auto& item : items)
 		{
-			m_ra_menu->addSeparator();
-			continue;
+			if (item.id == 0)
+			{
+				ui->menuRetroAchievements->addSeparator();
+				continue;
+			}
+			QAction* action = ui->menuRetroAchievements->addAction(QString::fromStdString(item.label));
+			action->setEnabled(item.enabled);
+			if (item.checked)
+			{
+				action->setCheckable(true);
+				action->setChecked(true);
+			}
+			const uint32_t id = item.id;
+			const bool is_hc_toggle = (item.label == "&Hardcore Mode");
+			connect(action, &QAction::triggered, this, [this, id, is_hc_toggle]()
+			{
+				if (is_hc_toggle && !rpcs3::ra::get_hardcore_mode() && !Emu.IsStopped())
+				{
+					const auto result = QMessageBox::question(this,
+						tr("Hardcore Mode"),
+						tr("Enabling Hardcore Mode will restart the game.\nUnsaved progress will be lost.\n\nContinue?"),
+						QMessageBox::Yes | QMessageBox::No,
+						QMessageBox::No);
+					if (result == QMessageBox::No)
+						return;
+					g_cfg_ra.hardcore.set(true);
+					g_cfg_ra.save();
+					rpcs3::ra::set_hardcore(true);
+					rpcs3::ra::consume_pending_hc_restart();
+					Emu.Restart(false);
+					return;
+				}
+				RA::activate_menu_item(id);
+				if (is_hc_toggle)
+				{
+					const bool client_hc = RA::query_client_hardcore_state();
+					if (client_hc != g_cfg_ra.hardcore.get())
+					{
+						g_cfg_ra.hardcore.set(client_hc);
+						g_cfg_ra.save();
+					}
+				}
+				if (rpcs3::ra::consume_pending_hc_restart())
+				{
+					const auto result = QMessageBox::question(this,
+						tr("Hardcore Mode"),
+						tr("Enabling Hardcore Mode will restart the game.\nUnsaved progress will be lost.\n\nContinue?"),
+						QMessageBox::Yes | QMessageBox::No,
+						QMessageBox::No);
+					if (result == QMessageBox::Yes)
+						Emu.Restart(false);
+					else
+						rpcs3::ra::cancel_hc_enable();
+				}
+			});
 		}
-		QAction* action = m_ra_menu->addAction(QString::fromStdString(item.label));
-		if (item.checked)
-		{
-			action->setCheckable(true);
-			action->setChecked(true);
-		}
-		const uint32_t id = item.id;
-		connect(action, &QAction::triggered, this, [id]()
-		{
-			RA::activate_menu_item(id);
-		});
 	}
 #endif
 }
