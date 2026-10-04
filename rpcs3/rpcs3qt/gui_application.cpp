@@ -54,6 +54,7 @@
 #include <QStyleHints>
 
 #include <clocale>
+#include <ctime>
 
 #include "Emu/RSX/Null/NullGSRender.h"
 #include "Emu/RSX/GL/GLGSRender.h"
@@ -486,12 +487,14 @@ void gui_application::InitializeConnects()
 		// Discord Rich Presence Integration
 		if (m_gui_settings->GetValue(gui::m_richPresence).toBool())
 		{
+			m_discord_start_timestamp = std::time(nullptr);
 			discord::update_presence(Emu.GetTitleID(), Emu.GetTitle());
 		}
 	});
 	connect(this, &gui_application::OnEmulatorStop, [this]()
 	{
 		// Discord Rich Presence Integration
+		m_discord_start_timestamp = 0;
 		if (m_gui_settings->GetValue(gui::m_richPresence).toBool())
 		{
 			discord::update_presence(m_gui_settings->GetValue(gui::m_discordState).toString().toStdString());
@@ -1105,9 +1108,14 @@ void gui_application::UpdatePlaytime()
 	m_persistent_settings->SetLastPlayed(serial, QDateTime::currentDateTime().toString(gui::persistent::last_played_date_format), true);
 
 #if defined(WITH_DISCORD_RPC) && defined(RPCS3_RA_ENABLED)
-	const std::string ra_state = rpcs3::ra::get_discord_state();
-	if (!ra_state.empty() && m_gui_settings->GetValue(gui::m_richPresence).toBool())
-		discord::update_presence(ra_state, Emu.GetTitle(), false);
+	if (m_gui_settings->GetValue(gui::m_richPresence).toBool() && m_discord_start_timestamp != 0)
+	{
+		const std::string ra_state = rpcs3::ra::get_discord_state();
+		if (!ra_state.empty())
+			discord::update_presence(ra_state, Emu.GetTitle(), false, m_discord_start_timestamp);
+		else
+			discord::update_presence(Emu.GetTitleID(), Emu.GetTitle(), false, m_discord_start_timestamp);
+	}
 #endif
 }
 

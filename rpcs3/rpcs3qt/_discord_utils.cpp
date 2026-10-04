@@ -18,7 +18,7 @@ namespace discord
 		Discord_Shutdown();
 	}
 
-	void update_presence(const std::string& state, const std::string& details, bool reset_timer)
+	void update_presence(const std::string& state, const std::string& details, bool reset_timer, int64_t start_timestamp)
 	{
 		DiscordRichPresence discordPresence = {};
 		discordPresence.details = details.c_str();
@@ -26,10 +26,10 @@ namespace discord
 		discordPresence.largeImageKey = "rpcs3_logo";
 		discordPresence.largeImageText = "RPCS3 is the world's first PlayStation 3 emulator.";
 
-		if (reset_timer)
-		{
+		if (start_timestamp != 0)
+			discordPresence.startTimestamp = start_timestamp;
+		else if (reset_timer)
 			discordPresence.startTimestamp = std::time(nullptr);
-		}
 
 		Discord_UpdatePresence(&discordPresence);
 	}

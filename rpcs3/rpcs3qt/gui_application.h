@@ -108,6 +108,7 @@ private:
 
 	QTimer m_timer;
 	QElapsedTimer m_timer_playtime;
+	int64_t m_discord_start_timestamp = 0;
 
 	std::deque<std::unique_ptr<QSoundEffect>> m_sound_effects{};
 

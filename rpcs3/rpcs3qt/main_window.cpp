@@ -585,8 +585,22 @@ void main_window::UpdateRAMenu()
 			}
 			const uint32_t id = item.id;
 			const bool is_hc_toggle = (item.label == "&Hardcore Mode");
-			connect(action, &QAction::triggered, this, [this, id, is_hc_toggle]()
+			// IDs from RAIntegration/src/RA_Resource.h that call WarnDisableHardcoreMode internally
+			const bool is_dev_tool = (id == 1703 || id == 1705 || id == 1708 || id == 1709 ||
+			                          id == 1719 || id == 1720 || id == 1721);
+			connect(action, &QAction::triggered, this, [this, id, is_hc_toggle, is_dev_tool]()
 			{
+				if (is_dev_tool && rpcs3::ra::get_hardcore_mode() && !Emu.IsStopped())
+				{
+					const auto result = QMessageBox::question(this,
+						tr("Hardcore Mode"),
+						tr("This tool is not available in Hardcore Mode.\nDisable Hardcore Mode?"),
+						QMessageBox::Yes | QMessageBox::No,
+						QMessageBox::No);
+					if (result == QMessageBox::No)
+						return;
+					rpcs3::ra::cancel_hc_enable();
+				}
 				if (is_hc_toggle && !rpcs3::ra::get_hardcore_mode() && !Emu.IsStopped())
 				{
 					const auto result = QMessageBox::question(this,

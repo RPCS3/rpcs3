@@ -132,8 +132,7 @@ ra_settings_dialog::ra_settings_dialog(QWidget* parent)
 		"Enables Hardcore Mode.\n\n"
 		"In Hardcore Mode, features that give an advantage over console players are disabled:\n"
 		"  - Loading save states\n"
-		"  - Emulator speeds below 100%\n"
-		"  - Cheats and memory patches\n\n"
+		"  - Cheat patches\n\n"
 		"Leaderboards require Hardcore Mode. RA rankings also emphasize Hardcore points.\n\n"
 		"Enabling while a game is running will restart the game.\n"
 		"Disabling takes effect immediately. No restart required."));
