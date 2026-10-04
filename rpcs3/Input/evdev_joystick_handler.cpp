@@ -1310,15 +1310,19 @@ void evdev_joystick_handler::apply_input_events(const std::shared_ptr<Pad>& pad)
 	}
 
 	u16 lx, ly, rx, ry;
+	f32 l_angle, l_distance_to_center, r_angle, r_distance_to_center;
 
 	// Normalize and apply pad squircling
-	convert_stick_values(lx, ly, stick_val[0], stick_val[1], cfg->lstickdeadzone, cfg->lstick_anti_deadzone, cfg->lpadsquircling);
-	convert_stick_values(rx, ry, stick_val[2], stick_val[3], cfg->rstickdeadzone, cfg->rstick_anti_deadzone, cfg->rpadsquircling);
+	convert_stick_values(lx, ly, stick_val[0], stick_val[1], cfg->lstickdeadzone, cfg->lstick_anti_deadzone, cfg->lpadsquircling, l_angle, l_distance_to_center);
+	convert_stick_values(rx, ry, stick_val[2], stick_val[3], cfg->rstickdeadzone, cfg->rstick_anti_deadzone, cfg->rpadsquircling, r_angle, r_distance_to_center);
 
 	pad->m_sticks[0].m_value = lx;
 	pad->m_sticks[1].m_value = 255 - ly;
 	pad->m_sticks[2].m_value = rx;
 	pad->m_sticks[3].m_value = 255 - ry;
+
+	pad->m_angles[0] = ConvertAngleToU8(l_angle, l_distance_to_center);
+	pad->m_angles[1] = ConvertAngleToU8(r_angle, r_distance_to_center);
 }
 
 void evdev_joystick_handler::apply_pad_data(const pad_ensemble& binding)

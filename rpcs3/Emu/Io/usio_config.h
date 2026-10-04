@@ -31,8 +31,8 @@ struct cfg_usio final : public emulated_pad_config<usio_btn>
 	cfg_usio(node* owner, const std::string& name) : emulated_pad_config(owner, name) {}
 
 	cfg_pad_btn<usio_btn> test{ this, "Test", usio_btn::test, pad_button::select };
-	cfg_pad_btn<usio_btn> coin{ this, "Coin", usio_btn::coin, pad_button::L3 };
-	cfg_pad_btn<usio_btn> service{this, "Service", usio_btn::service, pad_button::R3};
+	cfg_pad_btn<usio_btn> coin{ this, "Coin", usio_btn::coin, pad_button::L2 };
+	cfg_pad_btn<usio_btn> service{this, "Service", usio_btn::service, pad_button::R2};
 	cfg_pad_btn<usio_btn> enter{ this, "Enter/Start", usio_btn::enter, pad_button::start };
 	cfg_pad_btn<usio_btn> up{ this, "Up", usio_btn::up, pad_button::dpad_up };
 	cfg_pad_btn<usio_btn> down{ this, "Down", usio_btn::down, pad_button::dpad_down };
