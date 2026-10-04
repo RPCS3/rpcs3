@@ -4,6 +4,7 @@
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/system_config.h"
 
 #include <algorithm>
 #include <cmath>
@@ -239,7 +240,7 @@ namespace rsx
 
 		void perf_metrics_overlay::reset_body()
 		{
-			m_body.set_font(m_font.c_str(), m_font_size);
+			m_body.set_font(m_font_size, m_font);
 			m_body.fore_color = convert_color_code(m_color_body, m_opacity);
 			m_body.back_color = convert_color_code(m_background_body, m_opacity);
 			reset_transform(m_body);
@@ -247,7 +248,7 @@ namespace rsx
 
 		void perf_metrics_overlay::reset_titles()
 		{
-			m_titles.set_font(m_font.c_str(), m_font_size);
+			m_titles.set_font(m_font_size, m_font);
 			m_titles.fore_color = convert_color_code(m_color_title, m_opacity);
 			m_titles.back_color = convert_color_code(m_background_title, m_opacity);
 			reset_transform(m_titles);
@@ -689,7 +690,7 @@ namespace rsx
 
 		graph::graph()
 		{
-			m_label.set_font("e046323ms.ttf", 8);
+			m_label.set_font(8, "e046323ms.ttf");
 			m_label.alignment = text_align::center;
 			m_label.fore_color = { 1.f, 1.f, 1.f, 1.f };
 			m_label.back_color = { 0.f, 0.f, 0.f, .7f };
@@ -709,20 +710,20 @@ namespace rsx
 			overlay_element::set_size(_w, _h);
 		}
 
-		void graph::set_title(const char* title)
+		void graph::set_title(std::string&& title)
 		{
-			m_title = title;
+			m_title = std::move(title);
 		}
 
-		void graph::set_font(const char* font_name, u16 font_size)
+		void graph::set_font(u16 font_size, std::string_view font_name)
 		{
-			m_label.set_font(font_name, font_size);
+			m_label.set_font(font_size, font_name);
 		}
 
 		void graph::set_font_size(u16 font_size)
 		{
 			const auto font_name = m_label.get_font()->get_name().data();
-			m_label.set_font(font_name, font_size);
+			m_label.set_font(font_size, font_name);
 		}
 
 		void graph::set_count(u32 datapoint_count)

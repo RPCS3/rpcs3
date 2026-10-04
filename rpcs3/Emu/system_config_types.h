@@ -171,6 +171,12 @@ enum class ghltar_handler
 	two_controllers,
 };
 
+enum class usio_handler_mode
+{
+	fighting_games,
+	shooter_games
+};
+
 enum class microphone_handler
 {
 	null,
@@ -178,6 +184,8 @@ enum class microphone_handler
 	singstar,
 	real_singstar,
 	rocksmith,
+	eye_toy,
+	ps_eye,
 };
 
 enum class pad_handler_mode

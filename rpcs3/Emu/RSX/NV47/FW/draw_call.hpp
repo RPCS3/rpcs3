@@ -4,6 +4,7 @@
 
 #include "Emu/RSX/Common/simple_array.hpp"
 #include "Emu/RSX/gcm_enums.h"
+#include "util/logs.hpp"
 
 namespace rsx
 {

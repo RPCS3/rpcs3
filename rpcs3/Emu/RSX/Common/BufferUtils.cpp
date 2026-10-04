@@ -514,25 +514,6 @@ namespace
 		return primitive_restart_impl::upload_untouched(src, dst, static_cast<U>(primitive_restart_index));
 	}
 
-	void iota16(u16* dst, u32 count)
-	{
-		unsigned i = 0;
-#if defined(ARCH_X64) || defined(ARCH_ARM64)
-		const unsigned step = 8;                          // We do 8 entries per step
-		const __m128i vec_step = _mm_set1_epi16(8);     // Constant to increment the raw values
-		__m128i values = _mm_set_epi16(7, 6, 5, 4, 3, 2, 1, 0);
-		__m128i* vec_ptr = utils::bless<__m128i>(dst);
-
-		for (; (i + step) <= count; i += step, vec_ptr++)
-		{
-			_mm_stream_si128(vec_ptr, values);
-			values = _mm_add_epi16(values,  vec_step);
-		}
-#endif
-		for (; i < count; ++i)
-			dst[i] = i;
-	}
-
 	template<typename T>
 	std::tuple<T, T, u32> expand_indexed_triangle_fan(std::span<to_be_t<const T>> src, std::span<T> dst, bool is_primitive_restart_enabled, u32 primitive_restart_index)
 	{
@@ -627,6 +608,161 @@ namespace
 	}
 }
 
+#if defined(ARCH_X64)
+namespace
+{
+	AVX2_FUNC void iota16_avx2(u16* dst, u32 count)
+	{
+		u32 i = 0;
+
+		// Force 32-byte alignment
+		const uptr mem_addr = reinterpret_cast<uptr>(dst);
+		const u32 head = std::min<u32>(count, ((0 - mem_addr) & 31) / sizeof(u16));
+		for (; i < head; ++i)
+		{
+			dst[i] = i;
+		}
+
+		constexpr u32 step = 32;                          // We do 32 entries per step
+		const __m256i vec_step = _mm256_set1_epi16(32);   // Constant to increment the raw values
+		__m256i values0 = _mm256_add_epi16(_mm256_set_epi16(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0), _mm256_set1_epi16(static_cast<s16>(i)));
+		__m256i values1 = _mm256_add_epi16(values0, _mm256_set1_epi16(16));
+		__m256i* vec_ptr = utils::bless<__m256i>(dst + i);
+
+		for (; (i + step) <= count; i += step, vec_ptr += 2)
+		{
+			_mm256_store_si256(vec_ptr, values0);
+			_mm256_store_si256(vec_ptr + 1, values1);
+			values0 = _mm256_add_epi16(values0, vec_step);
+			values1 = _mm256_add_epi16(values1, vec_step);
+		}
+
+		// Half-line remainder
+		if ((i + step / 2) <= count)
+		{
+			_mm256_store_si256(vec_ptr, values0);
+			i += step / 2;
+		}
+
+		_mm256_zeroupper();
+
+		for (; i < count; ++i)
+			dst[i] = i;
+	}
+
+	AVX2_FUNC void iota32_avx2(u32* dst, u32 count)
+	{
+		u32 i = 0;
+
+		// Force 32-byte alignment
+		const uptr mem_addr = reinterpret_cast<uptr>(dst);
+		const u32 head = std::min<u32>(count, ((0 - mem_addr) & 31) / sizeof(u32));
+		for (; i < head; ++i)
+		{
+			dst[i] = i;
+		}
+
+		constexpr u32 step = 16;                          // We do 16 entries per step
+		const __m256i vec_step = _mm256_set1_epi32(16);   // Constant to increment the raw values
+		__m256i values0 = _mm256_add_epi32(_mm256_set_epi32(7, 6, 5, 4, 3, 2, 1, 0), _mm256_set1_epi32(i));
+		__m256i values1 = _mm256_add_epi32(values0, _mm256_set1_epi32(8));
+		__m256i* vec_ptr = utils::bless<__m256i>(dst + i);
+
+		for (; (i + step) <= count; i += step, vec_ptr += 2)
+		{
+			_mm256_store_si256(vec_ptr, values0);
+			_mm256_store_si256(vec_ptr + 1, values1);
+			values0 = _mm256_add_epi32(values0, vec_step);
+			values1 = _mm256_add_epi32(values1, vec_step);
+		}
+
+		// Half-line remainder
+		if ((i + step / 2) <= count)
+		{
+			_mm256_store_si256(vec_ptr, values0);
+			i += step / 2;
+		}
+
+		_mm256_zeroupper();
+
+		for (; i < count; ++i)
+			dst[i] = i;
+	}
+}
+#endif
+
+void iota16(u16* dst, u32 count)
+{
+#if defined(ARCH_X64)
+	if (s_use_avx2)
+	{
+		iota16_avx2(dst, count);
+		return;
+	}
+#endif
+
+	u32 i = 0;
+#if defined(ARCH_X64) || defined(ARCH_ARM64)
+	// Force 16-byte alignment
+	const uptr mem_addr = reinterpret_cast<uptr>(dst);
+	const u32 head = std::min<u32>(count, ((0 - mem_addr) & 15) / sizeof(u16));
+	for (; i < head; ++i)
+	{
+		dst[i] = i;
+	}
+
+	constexpr u32 step = 8;                         // We do 8 entries per step
+	const __m128i vec_step = _mm_set1_epi16(8);     // Constant to increment the raw values
+	__m128i values = _mm_set_epi16(7, 6, 5, 4, 3, 2, 1, 0);
+	__m128i* vec_ptr = utils::bless<__m128i>(dst + i);
+
+	values = _mm_add_epi16(values, _mm_set1_epi16(static_cast<s16>(i)));
+	for (; (i + step) <= count; i += step, vec_ptr++)
+	{
+		_mm_store_si128(vec_ptr, values);
+		values = _mm_add_epi16(values, vec_step);
+	}
+#endif
+	for (; i < count; ++i)
+		dst[i] = i;
+}
+
+void iota32(u32* dst, u32 count)
+{
+#if defined(ARCH_X64)
+	if (s_use_avx2)
+	{
+		iota32_avx2(dst, count);
+		return;
+	}
+#endif
+
+	u32 i = 0;
+#if defined(ARCH_X64) || defined(ARCH_ARM64)
+	// Force 16-byte alignment
+	const uptr mem_addr = reinterpret_cast<uptr>(dst);
+	const u32 head = std::min<u32>(count, ((0 - mem_addr) & 15) / sizeof(u32));
+	for (; i < head; ++i)
+	{
+		dst[i] = i;
+	}
+
+	constexpr u32 step = 4;                           // We do 4 entries per step
+	const __m128i vec_step = _mm_set1_epi32(4);       // Constant to increment the raw values
+	__m128i values = _mm_set_epi32(3, 2, 1, 0);
+	__m128i* vec_ptr = utils::bless<__m128i>(dst + i);
+
+	values = _mm_add_epi32(values, _mm_set1_epi32(i));
+	for (; (i + step) <= count; i += step, vec_ptr++)
+	{
+		_mm_store_si128(vec_ptr, values);
+		values = _mm_add_epi32(values, vec_step);
+	}
+#endif
+	for (; i < count; ++i)
+		dst[i] = i;
+}
+
 // Only handle quads and triangle fan now
 bool is_primitive_native(rsx::primitive_type draw_mode)
 {
@@ -697,11 +833,11 @@ u32 get_index_type_size(rsx::index_array_type type)
 
 void write_index_array_for_non_indexed_non_native_primitive_to_buffer(char* dst, rsx::primitive_type draw_mode, unsigned count)
 {
-	auto typedDst = reinterpret_cast<u16*>(dst);
+	auto typedDst = reinterpret_cast<u32*>(dst);
 	switch (draw_mode)
 	{
 	case rsx::primitive_type::line_loop:
-		iota16(typedDst, count);
+		iota32(typedDst, count);
 		typedDst[count] = 0;
 		return;
 	case rsx::primitive_type::triangle_fan:

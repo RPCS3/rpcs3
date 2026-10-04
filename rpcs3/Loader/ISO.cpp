@@ -1,7 +1,6 @@
 #include "stdafx.h"
 
 #include "ISO.h"
-#include "ZAR.h"
 #include "Emu/VFS.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/System.h"
@@ -11,7 +10,6 @@
 #include <codecvt>
 #include <algorithm>
 #include <cmath>
-#include <filesystem>
 #include <stack>
 #include <span>
 #include <cstdlib>
@@ -29,6 +27,9 @@ struct iso_sector
 	u64 size_aligned = 0;
 };
 
+// How much of a raw device is read per request: one ISO_SECTOR_SIZE at a time costs a command, and often a seek, per sector
+constexpr u64 ISO_RAW_READ_SIZE = ISO_SECTOR_SIZE * 512; // 1 MB
+
 static void* get_aligned_buf()
 {
 	static thread_local struct aligned_buf
@@ -38,11 +39,11 @@ static void* get_aligned_buf()
 		aligned_buf() noexcept
 		{
 			// IMPORTANT NOTE: it must be aligned on the sector size of the volume to support a raw device, otherwise any read from
-			// file will fail (an optical medium always uses ISO_SECTOR_SIZE, so allocating a sector aligned on itself is enough)
+			// file will fail (an optical medium always uses ISO_SECTOR_SIZE, so aligning it on a sector is enough)
 #if defined(_WIN32)
-			buf = _aligned_malloc(ISO_SECTOR_SIZE, ISO_SECTOR_SIZE);
+			buf = _aligned_malloc(ISO_RAW_READ_SIZE, ISO_SECTOR_SIZE);
 #else
-			buf = std::aligned_alloc(ISO_SECTOR_SIZE, ISO_SECTOR_SIZE);
+			buf = std::aligned_alloc(ISO_SECTOR_SIZE, ISO_RAW_READ_SIZE);
 #endif
 		}
 
@@ -96,21 +97,14 @@ bool is_iso_file(const std::string& path, u64* size, bool* is_raw_device)
 		return false;
 	}
 
-	if (zar_disc_container::has_zar_extension(path) && fs::is_file(path))
+	// Recognizing a container fully means reading its whole index: what it holds is checked once it is opened
+	if (is_iso_container(path))
 	{
-		std::string error;
-		const auto container = zar_disc_container::open(path, &error);
-		if (!container)
-		{
-			iso_log.warning("Invalid PS3 ZArchive '%s': %s", path, error);
-			return false;
-		}
-
 		if (size)
 		{
-			fs::file archive_file(path, fs::read);
-			*size = archive_file ? archive_file.size() : 0;
+			*size = fs::file(path).size();
 		}
+
 		return true;
 	}
 
@@ -228,20 +222,111 @@ static bool decrypt_data(aes_context& aes, u64 offset, const std::span<u8> buffe
 	return true;
 }
 
-iso_type_status iso_file_decryption::get_key(const std::string& key_path, aes_context* aes_ctx)
+// Only the leading AES block of a file has to be read and decrypted to check its magic value: in CBC the first 16
+// bytes of plaintext come out of the first 16 bytes of ciphertext and the IV alone, and every magic value is
+// shorter than that. The IV is the one of the sector, never the block before it, since a file begins where an
+// extent does, which is always a sector boundary
+constexpr u64 ISO_MAGIC_BLOCK_SIZE = 16;
+
+// The leading bytes of a well known file of the image, the ones its magic value lies in once properly decrypted
+struct iso_magic_block
 {
-	fs::file key_file(key_path);
-	return get_key(key_file, aes_ctx);
+	std::string_view magic;                       // What those bytes must read as
+	std::array<u8, ISO_MAGIC_BLOCK_SIZE> data {}; // The bytes as they lie on the disc
+	u64 offset = 0;                               // Where they start, which the decryption IV is built out of
+};
+
+static iso_type_status read_magic_blocks(iso_archive& archive, std::vector<iso_magic_block>& blocks)
+{
+	//
+	// Read the leading bytes of every file of the archive present on the list of well known encrypted files: those are
+	// the bytes a candidate key is tested against
+	//
+
+	// Built once: the paths are looked up as they are, so keeping them as strings spares an allocation on every call.
+	// Every one the image holds is read, since an install disc has no EBOOT.BIN while a disc always carries a LIC.DAT
+	static const std::array<std::pair<std::string, std::string_view>, 2> dec_magics {{
+		{"PS3_GAME/LICDIR/LIC.DAT", "PS3LICDA"},
+		{"PS3_GAME/USRDIR/EBOOT.BIN", "SCE"}
+	}};
+
+	// One handle serves every block: it is pointed at each of the files in turn, which costs nothing but the
+	// metadata of the node, while building a file object per node would open the image again for each of them
+	iso_file iso_file = archive.open_image();
+
+	if (!iso_file)
+	{
+		return iso_type_status::NOT_ISO;
+	}
+
+	blocks.reserve(dec_magics.size());
+
+	for (const auto& [file_path, magic] : dec_magics)
+	{
+		const iso_fs_node* node = archive.retrieve(file_path);
+
+		if (!node || node->metadata.extents.empty())
+		{
+			continue;
+		}
+
+		// Only the leading block is ever decrypted to check a magic value, so none of them may outgrow it
+		ensure(magic.size() <= ISO_MAGIC_BLOCK_SIZE);
+
+		// Where the file begins in the image, which is what the decryption builds its IV out of
+		iso_magic_block block {.magic = magic, .offset = node->metadata.extents.front().start * ISO_SECTOR_SIZE};
+
+		iso_file.rebind(*node);
+
+		if (iso_file.read(block.data.data(), block.data.size()) != block.data.size())
+		{
+			return iso_type_status::NOT_ISO;
+		}
+
+		blocks.emplace_back(std::move(block));
+	}
+
+	return blocks.empty() ? iso_type_status::ERROR_OPENING_KEY : iso_type_status::REDUMP_ISO;
 }
 
-iso_type_status iso_file_decryption::get_key(fs::file& key_file, aes_context* aes_ctx)
+// True when any of the well known files does not carry its magic value in the clear, which only a still encrypted
+// image can do: a decrypted one has every one of them readable just as it lies on the disc
+static bool is_any_block_encrypted(const std::vector<iso_magic_block>& blocks)
 {
+	return std::any_of(blocks.begin(), blocks.end(), [](const iso_magic_block& block)
+	{
+		return std::memcmp(block.magic.data(), block.data.data(), block.magic.size()) != 0;
+	});
+}
+
+// A key is only the right one once it decrypts every well known file the image holds. Trusting a single one would be
+// far too easy to hit by chance on a magic value as short as the three bytes of an "EBOOT.BIN"
+static bool decrypts_all_blocks(aes_context& aes_ctx, std::vector<iso_magic_block>& blocks)
+{
+	// The plaintext of every block lands here in turn, and always whole: nothing of the previous one is left
+	// behind to be compared by mistake
+	std::array<u8, ISO_MAGIC_BLOCK_SIZE> dec_blk;
+
+	return std::all_of(blocks.begin(), blocks.end(), [&aes_ctx, &dec_blk](iso_magic_block& block)
+	{
+		return decrypt_data(aes_ctx, block.offset, block.data, dec_blk, ISO_MAGIC_BLOCK_SIZE) &&
+			std::memcmp(block.magic.data(), dec_blk.data(), block.magic.size()) == 0;
+	});
+}
+
+iso_type_status iso_file_decryption::get_key(const std::string& key_path, aes_context* aes_ctx)
+{
+	return get_key(fs::file(key_path), key_path, aes_ctx);
+}
+
+iso_type_status iso_file_decryption::get_key(const fs::file& key_file, std::string_view key_name, aes_context* aes_ctx)
+{
+	// If no ".dkey" and ".key" file exists
 	if (!key_file)
 	{
 		return iso_type_status::ERROR_OPENING_KEY;
 	}
 
-	key_file.seek(0, fs::seek_set);
 	std::array<char, 32> key_str {};
 	std::array<u8, 16> key {};
 
@@ -262,7 +347,7 @@ iso_type_status iso_file_decryption::get_key(fs::file& key_file, aes_context* ae
 
 			if (!error.empty())
 			{
-				iso_log.error("get_key: %s", error);
+				iso_log.error("get_key(%s): %s", key_name, error);
 				return iso_type_status::ERROR_PROCESSING_KEY;
 			}
 		}
@@ -286,74 +371,52 @@ iso_type_status iso_file_decryption::get_key(fs::file& key_file, aes_context* ae
 	return iso_type_status::ERROR_PROCESSING_KEY;
 }
 
-iso_type_status iso_file_decryption::retrieve_key(iso_archive& archive, std::string& key_path, aes_context& aes_ctx)
+iso_type_status iso_file_decryption::retrieve_key(iso_archive& archive, std::string& key_path, aes_context& aes_ctx, bool& content_encrypted)
 {
-	//
-	// Find the first existing file in the archive present on the list of well known encrypted files to use for testing a matching key
-	//
+	std::vector<iso_magic_block> blocks;
 
-	const std::map<std::string, std::string> dec_magics {
-		{"PS3_GAME/LICDIR/LIC.DAT", "PS3LICDA"},
-		{"PS3_GAME/USRDIR/EBOOT.BIN", "SCE"}
-	};
+	content_encrypted = false;
 
-	iso_fs_node* node = nullptr;
-	std::string magic_value;
-
-	for (const auto& magic : dec_magics)
+	if (const iso_type_status status = read_magic_blocks(archive, blocks); status != iso_type_status::REDUMP_ISO)
 	{
-		if (iso_fs_node* _node = archive.retrieve(magic.first))
-		{
-			magic_value = magic.second;
-			node = _node;
-			break;
-		}
+		return status;
 	}
 
-	if (!node)
+	// The very same blocks tell an image that needs no key at all from one whose key is simply missing: a decrypted
+	// image carries its magic values in the clear. No key can ever match such an image, so the scan below is
+	// pointless on it, and skipping it spares opening every file of a folder that commonly holds thousands of them
+	content_encrypted = is_any_block_encrypted(blocks);
+
+	if (!content_encrypted)
 	{
 		return iso_type_status::ERROR_OPENING_KEY;
 	}
 
 	//
-	// Read the first encrypted sector to use for testing a matching key
+	// Scan all the key files present in the redump keys folder, decrypt the blocks read above and test them for a
+	// match with the magic value of the file each of them comes from
 	//
 
-	std::array<u8, ISO_SECTOR_SIZE> enc_sec;
-	std::array<u8, ISO_SECTOR_SIZE> dec_sec;
-	std::unique_ptr<iso_file> source;
-	if (archive.is_zar())
-		source = std::make_unique<iso_file>(archive.open_backing_file(), archive.path(), *node);
-	else
-		source = std::make_unique<iso_file>(archive.path(), fs::read, *node);
-
-	if (!*source || source->read(enc_sec.data(), ISO_SECTOR_SIZE) != ISO_SECTOR_SIZE)
-	{
-		return iso_type_status::NOT_ISO;
-	}
-
-	//
-	// Scan all the key files present in the redump keys folder, decrypt the read sector and test for a match with file's magic value
-	//
+	// A keys folder commonly holds thousands of files: build its path once instead of on every entry
+	const std::string key_dir = rpcs3::utils::get_redump_key_dir();
 
 	std::vector<fs::dir_entry> entries;
 
-	for (auto&& dir_entry : fs::dir(rpcs3::utils::get_redump_key_dir()))
+	for (auto&& dir_entry : fs::dir(key_dir))
 	{
 		// Prefetch entries, it is unsafe to keep fs::dir for a long time or for many operations
 		entries.emplace_back(std::move(dir_entry));
 	}
 
-	for (auto path_it = entries.begin(); path_it != entries.end(); path_it++)
+	for (const fs::dir_entry& dir_entry : entries)
 	{
-		const fs::dir_entry dir_entry = std::move(*path_it);
-
-		if (dir_entry.name == "." || dir_entry.name == ".." || dir_entry.is_directory)
+		if (dir_entry.is_directory || dir_entry.name == "." || dir_entry.name == "..")
 		{
 			continue;
 		}
 
-		key_path = rpcs3::utils::get_redump_key_dir() + dir_entry.name;
+		// Assigning in place keeps the buffer the previous entry already grew
+		key_path.assign(key_dir).append(dir_entry.name);
 
 		// If no valid key is present on the file
 		if (get_key(key_path, &aes_ctx) != iso_type_status::REDUMP_ISO)
@@ -361,61 +424,49 @@ iso_type_status iso_file_decryption::retrieve_key(iso_archive& archive, std::str
 			continue;
 		}
 
-		// If the decryption fails
-		if (!decrypt_data(aes_ctx, source->file_offset(0), enc_sec, dec_sec, ISO_SECTOR_SIZE))
-		{
-			continue;
-		}
-
-		// If the decrypted data match the magic value
-		if (std::memcmp(magic_value.data(), dec_sec.data(), magic_value.size()) == 0)
+		if (decrypts_all_blocks(aes_ctx, blocks))
 		{
 			return iso_type_status::REDUMP_ISO;
 		}
 	}
 
+	// Nothing matched: leave no path behind, or the caller would report the last file tried as the key it missed
+	key_path.clear();
+
 	return iso_type_status::ERROR_OPENING_KEY;
 }
 
-iso_type_status iso_file_decryption::find_key(const std::string& image_path, std::string* key_path, aes_context* aes_ctx)
+void iso_file_decryption::verify_key_file(iso_archive& archive)
 {
-	if (key_path)
+	std::vector<iso_magic_block> blocks;
+
+	if (m_region_info.size() <= 1 || read_magic_blocks(archive, blocks) != iso_type_status::REDUMP_ISO)
 	{
-		key_path->clear();
+		return;
 	}
 
-	// Remove the image/archive extension. This intentionally works for both .iso and .zar so
-	// an encrypted ISO stored without an embedded key can use Game.dkey/Game.key next to Game.zar.
-	const usz ext_pos = image_path.rfind('.');
-	const std::string name_path = ext_pos == umax ? image_path : image_path.substr(0, ext_pos);
-
-	// Detect the base file name without parent directories or extension.
-	const usz name_pos = name_path.find_last_of("/\\");
-	const std::string name = name_pos == umax ? name_path : name_path.substr(name_pos + 1);
-
-	const std::array<std::string, 4> key_paths {
-		name_path + ".dkey",
-		name_path + ".key",
-		rpcs3::utils::get_redump_key_dir() + name + ".dkey",
-		rpcs3::utils::get_redump_key_dir() + name + ".key"
-	};
-
-	for (const std::string& candidate : key_paths)
+	if (!is_any_block_encrypted(blocks))
 	{
-		if (!fs::is_file(candidate))
-		{
-			continue;
-		}
+		// The content lies in the clear, so the key is not needed: keeping it would run every read through the
+		// decryption and turn readable data into garbage, which is what a key file left next to a decrypted dump does
+		iso_log.warning("verify_key_file: The image is not encrypted, the key file found for it is ignored: '%s'", archive.path());
 
-		if (key_path)
-		{
-			*key_path = candidate;
-		}
+		m_enc_type = iso_encryption_type::NONE; // RESET ENCRYPTION TYPE: NONE
+		m_key_status = iso_key_status::OK;
 
-		return get_key(candidate, aes_ctx);
+		return;
 	}
 
-	return iso_type_status::ERROR_OPENING_KEY;
+	if (decrypts_all_blocks(m_aes_dec, blocks))
+	{
+		m_key_status = iso_key_status::OK;
+
+		return;
+	}
+
+	m_key_status = iso_key_status::INVALID;
+
+	iso_log.error("verify_key_file: The key file found for the image does not decrypt it: '%s'", archive.path());
 }
 
 iso_type_status iso_file_decryption::check_type(const std::string& path, std::string* key_path, aes_context* aes_ctx)
@@ -428,6 +479,39 @@ iso_type_status iso_file_decryption::check_type(const std::string& path, std::st
 	return find_key(path, key_path, aes_ctx);
 }
 
+iso_type_status iso_file_decryption::find_key(const std::string& path, std::string* key_path, aes_context* aes_ctx)
+{
+	// Remove file extension from file path
+	const usz ext_pos = path.rfind('.');
+	const std::string name_path = ext_pos == umax ? path : path.substr(0, ext_pos);
+
+	// Detect file name (with no parent folder and no file extension)
+	const usz name_pos = name_path.rfind('/');
+	const std::string name = name_pos == umax ? name_path : name_path.substr(name_pos);
+
+	const std::array<std::string, 4> key_paths {
+		name_path + ".dkey",
+		name_path + ".key",
+		rpcs3::utils::get_redump_key_dir() + name + ".dkey",
+		rpcs3::utils::get_redump_key_dir() + name + ".key"
+	};
+
+	for (const std::string& path : key_paths)
+	{
+		if (fs::is_file(path))
+		{
+			if (key_path)
+			{
+				*key_path = path;
+			}
+
+			return get_key(path, aes_ctx);
+		}
+	}
+
+	return iso_type_status::ERROR_OPENING_KEY;
+}
+
 bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 {
 	// Reset attributes first
@@ -438,26 +522,26 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 	// Store the ISO region information (needed by both the "Redump" type (only on "decrypt()" method) and "3k3y" type)
 	//
 
-	::iso_file source = archive && archive->is_zar() ? ::iso_file(archive->open_backing_file(), path) : ::iso_file(path);
+	iso_file iso_file = archive ? archive->open_image() : ::iso_file(path);
 
-	if (!is_iso_file(source))
+	if (!is_iso_file(iso_file))
 	{
 		iso_log.error("init: Failed to recognize ISO file: '%s'", path);
 		return false;
 	}
 
 	// Reset the file position after it was changed by is_iso_file()
-	source.seek(0, fs::seek_set);
+	iso_file.seek(0, fs::seek_set);
 
 	std::array<u8, ISO_SECTOR_SIZE * 2> sec0_sec1;
 
-	if (source.size() < sec0_sec1.size())
+	if (iso_file.size() < sec0_sec1.size())
 	{
-		iso_log.error("init: Found only %llu sector(s) (minimum required is 2): '%s'", source.size(), path);
+		iso_log.error("init: Found only %llu sector(s) (minimum required is 2): '%s'", iso_file.size(), path);
 		return false;
 	}
 
-	if (source.read(sec0_sec1.data(), sec0_sec1.size()) != sec0_sec1.size())
+	if (iso_file.read(sec0_sec1.data(), sec0_sec1.size()) != sec0_sec1.size())
 	{
 		iso_log.error("init: Failed to read file: '%s'", path);
 		return false;
@@ -495,36 +579,29 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 	iso_type_status status;
 	std::string key_path;
 
+	// Set by the key search below, which reads a sector off the image anyway, so that the content is never read twice
+	bool content_encrypted = false;
+
 	// If raw device and requested by the caller ("archive" provided), scan the redump keys folder and retrieve
 	// (if present) the first key that allows decrypting a sector of the ISO file
-	if (archive && archive->is_zar())
+	const bool scan_keys_folder = fs::is_optical_raw_device(path) && archive;
+
+	// A key stored in the container of the image comes first, then the key files found the same way as for an image
+	const fs::file container_key = archive && archive->container() ? archive->container()->open_key() : fs::file();
+
+	if (scan_keys_folder)
 	{
-		fs::file key_file = archive->open_embedded_key();
-		key_path = archive->embedded_key_name();
-
-		if (key_file)
-		{
-			status = get_key(key_file, &m_aes_dec);
-		}
-		else
-		{
-			// Keep the same external key lookup behavior as a normal ISO
-			status = find_key(path, &key_path, &m_aes_dec);
-
-			if (status == iso_type_status::ERROR_OPENING_KEY)
-			{
-				status = retrieve_key(*archive, key_path, m_aes_dec);
-			}
-		}
+		status = retrieve_key(*archive, key_path, m_aes_dec, content_encrypted);
 	}
-	else if (fs::is_optical_raw_device(path) && archive)
+	else if (container_key)
 	{
-		status = retrieve_key(*archive, key_path, m_aes_dec);
+		key_path = path + " (stored key)";
+		status = get_key(container_key, key_path, &m_aes_dec);
 	}
 	else
 	{
 		// Try to detect the Redump type. If so, the decryption context is set into "m_aes_dec"
-		status = check_type(path, &key_path, &m_aes_dec);
+		status = find_key(path, &key_path, &m_aes_dec);
 	}
 
 	switch (status)
@@ -537,7 +614,14 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 		m_enc_type = iso_encryption_type::REDUMP; // SET ENCRYPTION TYPE: REDUMP
 		break;
 	case iso_type_status::ERROR_OPENING_KEY:
-		iso_log.warning("init: Failed to open, or missing, key file: '%s'", key_path);
+		if (!key_path.empty())
+		{
+			iso_log.warning("init: Failed to open key file: '%s'", key_path);
+		}
+		else
+		{
+			iso_log.warning("init: Missing key file for ISO file: '%s'", path);
+		}
 		break;
 	case iso_type_status::ERROR_PROCESSING_KEY:
 		iso_log.error("init: Failed to process key file: '%s'", key_path);
@@ -592,6 +676,21 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 		}
 	}
 
+	// An image needing no key at all and one whose key is simply missing both end up with no encryption type set.
+	// The key search told the two apart out of the blocks it read anyway, and whatever key it did settle on was
+	// tested against them, so that answer is kept here; every other path leaves it unset and only pays if asked
+	if (scan_keys_folder)
+	{
+		m_key_status = m_enc_type == iso_encryption_type::NONE && content_encrypted ? iso_key_status::MISSING : iso_key_status::OK;
+	}
+	else if (m_enc_type == iso_encryption_type::REDUMP && archive)
+	{
+		// "check_type" takes a key file at face value for carrying the name of the image. Putting it to the test
+		// cannot wait for someone to ask, the way the question below can: whether that key is used at all decides
+		// how every later read of the image behaves
+		verify_key_file(*archive);
+	}
+
 	switch (m_enc_type)
 	{
 	case iso_encryption_type::REDUMP:
@@ -609,6 +708,31 @@ bool iso_file_decryption::init(const std::string& path, iso_archive* archive)
 	}
 
 	return true;
+}
+
+iso_key_status iso_file_decryption::get_key_status(iso_archive& archive)
+{
+	if (m_key_status)
+	{
+		return *m_key_status;
+	}
+
+	m_key_status = iso_key_status::OK;
+
+	std::vector<iso_magic_block> blocks;
+
+	// Only an image left with no key at all can still be hiding something: the key file of one that has it was put to
+	// the test back when it was set up, since that decides how every read behaves. A single region means the image
+	// declares nothing but region 0, and the even ones are never encrypted, so there is nothing to look at there
+	if (m_enc_type == iso_encryption_type::NONE && m_region_info.size() > 1 &&
+		read_magic_blocks(archive, blocks) == iso_type_status::REDUMP_ISO && is_any_block_encrypted(blocks))
+	{
+		m_key_status = iso_key_status::MISSING;
+
+		iso_log.error("get_key_status: The image is encrypted and no matching decryption key was found: '%s'", archive.path());
+	}
+
+	return *m_key_status;
 }
 
 bool iso_file_decryption::decrypt(u64 offset, const std::span<u8> buffer, const std::string& name)
@@ -797,14 +921,18 @@ u64 iso_file_encrypted::read_at(u64 offset, void* buffer, u64 size)
 		}
 		else
 		{
-			u64 inner_sector_offset = 0;
+			const u64 inner_sector_size = (sector_count - 2) * ISO_SECTOR_SIZE;
 
-			for (u64 i = 0; i < sector_count - 2; i++, inner_sector_offset += ISO_SECTOR_SIZE)
+			for (u64 inner_sector_offset = 0; inner_sector_offset < inner_sector_size;)
 			{
-				total_read += m_file.read_at(first_sec.lba_address + ISO_SECTOR_SIZE + inner_sector_offset, aligned_buf, ISO_SECTOR_SIZE);
+				const u64 block_size = std::min<u64>(inner_sector_size - inner_sector_offset, ISO_RAW_READ_SIZE);
 
-				m_dec->decrypt(first_sec.lba_address + ISO_SECTOR_SIZE + inner_sector_offset, {reinterpret_cast<u8*>(aligned_buf), ISO_SECTOR_SIZE}, m_meta.name);
-				std::memcpy(&reinterpret_cast<u8*>(buffer)[first_sec.size + inner_sector_offset], aligned_buf, ISO_SECTOR_SIZE);
+				total_read += m_file.read_at(first_sec.lba_address + ISO_SECTOR_SIZE + inner_sector_offset, aligned_buf, block_size);
+
+				m_dec->decrypt(first_sec.lba_address + ISO_SECTOR_SIZE + inner_sector_offset, {reinterpret_cast<u8*>(aligned_buf), block_size}, m_meta.name);
+				std::memcpy(&reinterpret_cast<u8*>(buffer)[first_sec.size + inner_sector_offset], aligned_buf, block_size);
+
+				inner_sector_offset += block_size;
 			}
 		}
 	}
@@ -877,6 +1005,7 @@ static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, 
 	read_error = true;
 	const auto start_pos = entry.pos();
 	u8 entry_length = 0;
+
 	if (!entry.read(entry_length))
 	{
 		return std::nullopt;
@@ -915,6 +1044,7 @@ static std::optional<iso_fs_metadata> iso_read_directory_entry(fs::file& entry, 
 	static_assert(sizeof(iso_entry_header) == 32);
 
 	iso_entry_header header{};
+
 	if (entry_length < 1 + sizeof(header) || !entry.read(header)
 		|| header.file_name_length > entry_length - 1 - sizeof(header))
 	{
@@ -1028,10 +1158,12 @@ static bool iso_form_hierarchy(fs::file& file, iso_fs_node& node, bool use_ucs2_
 	const auto& directory_extent = ::at32(node.metadata.extents, 0);
 	const u64 start_pos = directory_extent.start * ISO_SECTOR_SIZE;
 	const u64 size = file.size();
+
 	if (start_pos > size || directory_extent.size > size - start_pos)
 	{
 		return false;
 	}
+
 	const u64 end_pos = start_pos + directory_extent.size;
 
 	file.seek(start_pos);
@@ -1040,6 +1172,7 @@ static bool iso_form_hierarchy(fs::file& file, iso_fs_node& node, bool use_ucs2_
 	{
 		bool read_error = false;
 		auto entry = iso_read_directory_entry(file, read_error, use_ucs2_decoding);
+
 		if (read_error || file.pos() > end_pos)
 		{
 			return false;
@@ -1112,169 +1245,53 @@ u64 iso_fs_metadata::size() const
 	return total_size;
 }
 
-namespace
-{
-	bool form_zar_jb_hierarchy(const zar_disc_container& archive, iso_fs_node& parent, const std::string& parent_path, u32 depth, u64& node_count)
-	{
-		constexpr u32 max_depth = 128;
-		constexpr u64 max_nodes = 1'000'000;
-		if (depth > max_depth || node_count > max_nodes)
-		{
-			iso_log.error("ZArchive JB hierarchy exceeds safety limits (depth=%u, nodes=%llu)", depth, node_count);
-			return false;
-		}
-
-		const u32 dir_node = archive.lookup(parent_path, false, true);
-		if (dir_node == 0xffffffffu || !archive.is_directory(dir_node))
-			return false;
-
-		const u32 count = archive.dir_entry_count(dir_node);
-		constexpr u32 pseudo_entry_count = 2; // "." and ".."
-		if (count > max_nodes || node_count + count + pseudo_entry_count > max_nodes)
-		{
-			iso_log.error("ZArchive JB directory has too many entries (%u)", count);
-			return false;
-		}
-
-		parent.children.reserve(parent.children.size() + count + pseudo_entry_count);
-		for (const char* pseudo_name : {".", ".."})
-		{
-			auto pseudo = std::make_unique<iso_fs_node>();
-			pseudo->metadata.name = pseudo_name;
-			pseudo->metadata.time = archive.source_mtime();
-			pseudo->metadata.is_directory = true;
-			pseudo->metadata.extents.push_back({0, ISO_SECTOR_SIZE});
-			parent.children.emplace_back(std::move(pseudo));
-			node_count++;
-		}
-
-		for (u32 i = 0; i < count; i++)
-		{
-			zar_dir_entry entry{};
-			if (!archive.dir_entry(dir_node, i, entry) || entry.name.empty() || entry.name == "." || entry.name == ".." ||
-				entry.name.find('/') != std::string::npos || entry.name.find('\\') != std::string::npos || entry.name.find('\0') != std::string::npos || entry.is_file == entry.is_directory)
-			{
-				iso_log.error("Invalid ZArchive JB directory entry at '%s' index %u", parent_path, i);
-				return false;
-			}
-
-			const std::string child_path = parent_path.empty() ? entry.name : parent_path + "/" + entry.name;
-			const u32 child_handle = archive.lookup(child_path, entry.is_file, entry.is_directory);
-			if (child_handle == 0xffffffffu || archive.is_file(child_handle) != entry.is_file || archive.is_directory(child_handle) != entry.is_directory)
-			{
-				iso_log.error("Invalid ZArchive JB node '%s'", child_path);
-				return false;
-			}
-
-			auto child = std::make_unique<iso_fs_node>();
-			child->metadata.name = entry.name;
-			child->metadata.time = archive.source_mtime();
-			child->metadata.is_directory = entry.is_directory;
-			child->metadata.archive_node = child_handle;
-			if (entry.is_directory)
-				child->metadata.extents.push_back({0, ISO_SECTOR_SIZE});
-			else
-			{
-				const u64 size = archive.file_size(child_handle);
-				child->metadata.extents.push_back({0, size});
-			}
-
-			node_count++;
-			if (entry.is_directory && !form_zar_jb_hierarchy(archive, *child, child_path, depth + 1, node_count))
-				return false;
-			parent.children.emplace_back(std::move(child));
-		}
-		return true;
-	}
-}
-
 iso_archive::iso_archive(const std::string& path)
 {
 	m_path = path;
+	m_container = open_iso_container(path);
 
-	if (zar_disc_container::has_zar_extension(path))
+	if (m_container && !m_container->is_image())
 	{
-		std::string error;
-		m_zar = zar_disc_container::open(path, &error);
-		if (!m_zar)
+		if (!m_container->form_hierarchy(m_root))
 		{
-			iso_log.error("iso_archive: Invalid PS3 ZArchive '%s': %s", path, error);
+			iso_log.error("iso_archive: Corrupt container '%s': Failed to form hierarchy", path);
 			invalidate();
 			return;
 		}
+
+		// The files of a disc folder layout are never encrypted
+		m_dec = std::make_shared<iso_file_decryption>();
+		return;
 	}
-	else
+
+	if (!m_container)
 	{
 		// "m_path" is updated with the raw device path in case "path" points to a BD drive
 		fs::get_optical_raw_device(path, &m_path);
 	}
 
-	if (m_zar && m_zar->is_jb_layout())
+	// NOTE: the file is opened once here and then handed over to the parsing below. Recognizing the ISO through its
+	//       path (i.e. "is_iso_file(m_path)") would open it and read its volume descriptor a second time, which is a
+	//       physical read when the path points to an optical drive
+	auto file = std::make_unique<iso_file>(open_image());
+
+	if (!is_iso_file(*file))
 	{
-		m_root.metadata.name = ".";
-		m_root.metadata.time = m_zar->source_mtime();
-		m_root.metadata.is_directory = true;
-		m_root.metadata.extents.push_back({0, ISO_SECTOR_SIZE});
-		m_root.metadata.archive_node = m_zar->lookup("", false, true);
-
-		u64 node_count = 1;
-		if (m_root.metadata.archive_node == 0xffffffffu || !form_zar_jb_hierarchy(*m_zar, m_root, "", 0, node_count))
-		{
-			iso_log.error("iso_archive: Invalid ZArchive JB hierarchy: '%s'", path);
-			invalidate();
-			return;
-		}
-
-		if (!retrieve("PS3_DISC.SFB") || !retrieve("PS3_GAME/PARAM.SFO"))
-		{
-			iso_log.error("iso_archive: ZArchive JB layout is missing required PS3 disc files: '%s'", path);
-			invalidate();
-			return;
-		}
-
-		m_dec = std::make_shared<iso_file_decryption>();
+		iso_log.error("iso_archive: Failed to recognize ISO file: '%s'", path);
+		invalidate();
 		return;
 	}
 
-	fs::file iso_file;
-
-	if (m_zar)
-	{
-		// The embedded ISO was already validated when opening the ZArchive container.
-		iso_file = m_zar->open_iso();
-		if (!iso_file)
-		{
-			iso_log.error("iso_archive: Failed to open ISO backing stream: '%s'", path);
-			invalidate();
-			return;
-		}
-	}
-	else
-	{
-		// NOTE: the file is opened once here and then handed over to the parsing below. Recognizing the ISO through its
-		//       path (i.e. "is_iso_file(m_path)") would open it and read its volume descriptor a second time, which is a
-		//       physical read when the path points to an optical drive
-		auto file = std::make_unique<::iso_file>(m_path);
-
-		if (!is_iso_file(*file))
-		{
-			iso_log.error("iso_archive: Failed to recognize ISO file: '%s'", path);
-			invalidate();
-			return;
-		}
-
-		// NOTE: "is_iso_file()" reads through "read_at()", which does not move the position, so the file is still at its
-		//       beginning here
-		iso_file = fs::file(std::move(file));
-	}
-
+	// NOTE: "is_iso_file()" reads through "read_at()", which does not move the position, so the file is still at its
+	//       beginning here
+	fs::file iso_file(std::move(file));
 
 	u8 descriptor_type = -2;
 	bool use_ucs2_decoding = false;
 
 	// Skip the system area: scanning it sector by sector would read 16 sectors (a physical read each, on an optical
 	// drive) only to find boot data, which could even be mistaken for a volume descriptor.
-	// NOTE: the standard identifier was already verified either above or while opening the ZArchive container
+	// NOTE: "is_iso_file()" above already verified the standard identifier is right here
 	iso_file.seek(ISO_DESCRIPTORS_OFFSET);
 
 	do
@@ -1343,79 +1360,13 @@ iso_archive::iso_archive(const std::string& path)
 	}
 }
 
-bool iso_archive::is_zar_iso() const
+iso_fs_node* iso_archive::retrieve(const std::string& path)
 {
-	return m_zar && m_zar->is_iso_layout();
-}
-
-bool iso_archive::is_zar_jb() const
-{
-	return m_zar && m_zar->is_jb_layout();
-}
-
-iso_archive_source_type iso_archive::source_type() const
-{
-	if (is_zar_jb())
-	{
-		return iso_archive_source_type::zar_jb;
-	}
-
-	const iso_encryption_type enc_type = m_dec ? m_dec->get_enc_type() : iso_encryption_type::NONE;
-	const bool encrypted = enc_type == iso_encryption_type::REDUMP || enc_type == iso_encryption_type::ENC_3K3Y;
-
-	if (is_zar_iso())
-	{
-		return encrypted ? iso_archive_source_type::zar_encrypted_iso : iso_archive_source_type::zar_decrypted_iso;
-	}
-
-	return encrypted ? iso_archive_source_type::encrypted_iso : iso_archive_source_type::decrypted_iso;
-}
-
-const char* iso_archive::source_description() const
-{
-	switch (source_type())
-	{
-	case iso_archive_source_type::decrypted_iso:
-		return "Decrypted ISO";
-	case iso_archive_source_type::encrypted_iso:
-		return "Encrypted ISO";
-	case iso_archive_source_type::zar_decrypted_iso:
-		return "ZAR (Decrypted ISO)";
-	case iso_archive_source_type::zar_encrypted_iso:
-		return "ZAR (Encrypted ISO)";
-	case iso_archive_source_type::zar_jb:
-		return "ZAR (JB)";
-	}
-
-	fmt::throw_exception("Unknown ISO archive source type");
-}
-
-fs::file iso_archive::open_backing_file() const
-{
-	if (m_zar)
-		return m_zar->is_iso_layout() ? m_zar->open_iso() : fs::file{};
-	return fs::file(m_path, fs::read);
-}
-
-fs::file iso_archive::open_embedded_key() const
-{
-	return m_zar ? m_zar->open_key() : fs::file{};
-}
-
-const std::string& iso_archive::embedded_key_name() const
-{
-	static const std::string empty;
-	return m_zar ? m_zar->key_name() : empty;
-}
-
-iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
-{
-	if (passed_path.empty() || !is_valid())
+	if (path.empty() || !is_valid())
 	{
 		return nullptr;
 	}
 
-	const std::string path = std::filesystem::path(passed_path).string();
 	const std::string_view path_sv = path;
 
 	usz start = 0;
@@ -1485,6 +1436,11 @@ iso_fs_node* iso_archive::retrieve(const std::string& passed_path)
 	return search_stack.top();
 }
 
+iso_file iso_archive::open_image() const
+{
+	return m_container ? iso_file(m_container->open_image(), m_path) : iso_file(m_path);
+}
+
 void iso_archive::invalidate()
 {
 	m_root = {};
@@ -1520,26 +1476,25 @@ std::unique_ptr<fs::file_base> iso_archive::get_iso_file(const std::string& path
 		return nullptr;
 	}
 
-	if (m_zar)
+	if (m_container)
 	{
-		if (m_zar->is_jb_layout())
+		if (mode & (fs::write + fs::append + fs::create + fs::trunc))
 		{
-			if (mode & (fs::write + fs::append + fs::create + fs::trunc))
-			{
-				fs::g_tls_error = fs::error::readonly;
-				return nullptr;
-			}
-			fs::file file = m_zar->open_file(node.metadata.archive_node, node.metadata.name);
-			return file ? file.release() : nullptr;
+			fs::g_tls_error = fs::error::readonly;
+			return nullptr;
 		}
 
-		fs::file backing = open_backing_file();
-		if (!backing)
-			return nullptr;
+		if (!m_container->is_image())
+		{
+			return m_container->open_file(node).release();
+		}
 
 		if (m_dec->get_enc_type() == iso_encryption_type::NONE)
-			return std::make_unique<iso_file>(std::move(backing), path, node);
-		return std::make_unique<iso_file_encrypted>(std::move(backing), path, node, m_dec);
+		{
+			return std::make_unique<iso_file>(m_container->open_image(), path, node);
+		}
+
+		return std::make_unique<iso_file_encrypted>(m_container->open_image(), path, node, m_dec);
 	}
 
 	if (m_dec->get_enc_type() == iso_encryption_type::NONE)
@@ -1563,7 +1518,6 @@ std::unique_ptr<fs::file_base> iso_archive::open(const std::string& path)
 	return get_iso_file(m_path, fs::read, *node);
 }
 
-
 psf::registry iso_archive::open_psf(const std::string& path)
 {
 	const auto node = retrieve(path);
@@ -1579,39 +1533,15 @@ psf::registry iso_archive::open_psf(const std::string& path)
 }
 
 iso_file::iso_file(const std::string& path, bs_t<fs::open_mode> mode)
+	: iso_file(fs::file(path, mode), path)
 {
-	m_file = fs::file(path, mode);
-
-	if (!m_file)
-	{
-		// Should never happen... TODO: throw something?
-		iso_log.error("iso_file: Failed to open file: '%s'", path);
-		return;
-	}
-
-	m_meta.name = path;
-	m_meta.extents.push_back({0, m_file.size()});
-
-	m_file.seek(m_meta.extents[0].start * ISO_SECTOR_SIZE);
-
-	m_raw_device = fs::is_optical_raw_device(path);
+	m_raw_device = m_file && fs::is_optical_raw_device(path);
 }
 
 iso_file::iso_file(const std::string& path, bs_t<fs::open_mode> mode, const iso_fs_node& node)
-	: m_meta(node.metadata)
+	: iso_file(fs::file(path, mode), path, node)
 {
-	m_file = fs::file(path, mode);
-
-	if (!m_file)
-	{
-		// Should never happen... TODO: throw something?
-		iso_log.error("iso_file: Failed to open file: '%s'", path);
-		return;
-	}
-
-	m_file.seek(::at32(m_meta.extents, 0).start * ISO_SECTOR_SIZE);
-
-	m_raw_device = fs::is_optical_raw_device(path);
+	m_raw_device = m_file && fs::is_optical_raw_device(path);
 }
 
 iso_file::iso_file(fs::file&& file, const std::string& name)
@@ -1619,12 +1549,15 @@ iso_file::iso_file(fs::file&& file, const std::string& name)
 {
 	if (!m_file)
 	{
-		iso_log.error("iso_file: Failed to open backing stream: '%s'", name);
+		// Should never happen... TODO: throw something?
+		iso_log.error("iso_file: Failed to open file: '%s'", name);
 		return;
 	}
+
 	m_meta.name = name;
 	m_meta.extents.push_back({0, m_file.size()});
-	m_file.seek(0, fs::seek_set);
+
+	m_file.seek(m_meta.extents[0].start * ISO_SECTOR_SIZE);
 }
 
 iso_file::iso_file(fs::file&& file, const std::string& name, const iso_fs_node& node)
@@ -1632,10 +1565,23 @@ iso_file::iso_file(fs::file&& file, const std::string& name, const iso_fs_node& 
 {
 	if (!m_file)
 	{
-		iso_log.error("iso_file: Failed to open backing stream: '%s'", name);
+		// Should never happen... TODO: throw something?
+		iso_log.error("iso_file: Failed to open file: '%s'", name);
 		return;
 	}
+
 	m_file.seek(::at32(m_meta.extents, 0).start * ISO_SECTOR_SIZE);
+}
+
+void iso_file::rebind(const iso_fs_node& node)
+{
+	m_meta = node.metadata;
+	m_pos = 0;
+
+	if (m_file && !m_meta.extents.empty())
+	{
+		m_file.seek(m_meta.extents.front().start * ISO_SECTOR_SIZE);
+	}
 }
 
 fs::stat_t iso_file::get_stat()
@@ -1806,13 +1752,17 @@ u64 iso_file::read_at(u64 offset, void* buffer, u64 size)
 
 	if (sector_count > 2) // If inner sector(s) are present
 	{
-		u64 sector_offset = 0;
+		const u64 inner_sector_size = (sector_count - 2) * ISO_SECTOR_SIZE;
 
-		for (u64 i = 0; i < sector_count - 2; i++, sector_offset += ISO_SECTOR_SIZE)
+		for (u64 sector_offset = 0; sector_offset < inner_sector_size;)
 		{
-			total_read += m_file.read_at(first_sec.lba_address + ISO_SECTOR_SIZE + sector_offset, aligned_buf, ISO_SECTOR_SIZE);
+			const u64 block_size = std::min<u64>(inner_sector_size - sector_offset, ISO_RAW_READ_SIZE);
 
-			std::memcpy(&reinterpret_cast<u8*>(buffer)[first_sec.size + sector_offset], aligned_buf, ISO_SECTOR_SIZE);
+			total_read += m_file.read_at(first_sec.lba_address + ISO_SECTOR_SIZE + sector_offset, aligned_buf, block_size);
+
+			std::memcpy(&reinterpret_cast<u8*>(buffer)[first_sec.size + sector_offset], aligned_buf, block_size);
+
+			sector_offset += block_size;
 		}
 	}
 
@@ -1919,60 +1869,26 @@ void iso_dir::rewind()
 	m_pos = 0;
 }
 
-
-namespace
+// Cuts the device prefix off a path the virtual file system handed down, leaving the part that names a node of
+// the image
+static std::string strip_device_prefix(std::string_view path, std::string_view fs_prefix)
 {
-	bool get_iso_device_relative_path(const std::string& path, const std::string& prefix, std::string& out)
+	if (path.starts_with(fs_prefix))
 	{
-		if (!path.starts_with(prefix))
-			return false;
-		if (path.size() > prefix.size() && path[prefix.size()] != '/' && path[prefix.size()] != '\\')
-			return false;
-
-		std::string_view relative(path);
-		relative.remove_prefix(prefix.size());
-		while (!relative.empty() && (relative.front() == '/' || relative.front() == '\\'))
-			relative.remove_prefix(1);
-		while (!relative.empty() && (relative.back() == '/' || relative.back() == '\\'))
-			relative.remove_suffix(1);
-
-		out.clear();
-		out.reserve(relative.size());
-
-		bool previous_was_delimiter = false;
-		for (const char ch : relative)
-		{
-			const bool is_delimiter = ch == '/' || ch == '\\';
-			if (is_delimiter)
-			{
-				if (!out.empty() && !previous_was_delimiter)
-					out += '/';
-				previous_was_delimiter = true;
-			}
-			else
-			{
-				out += ch;
-				previous_was_delimiter = false;
-			}
-		}
-
-		while (!out.empty() && out.back() == '/')
-			out.pop_back();
-
-		return true;
+		path.remove_prefix(fs_prefix.size());
 	}
+
+	path = fmt::trim_sv(path, fs::delim);
+
+	// The prefix on its own is the root of the image, the node retrieve() reaches through "."
+	return path.empty() ? "."s : std::string{path};
 }
 
 bool iso_device::stat(const std::string& path, fs::stat_t& info)
 {
-	std::string relative_path;
-	if (!get_iso_device_relative_path(path, fs_prefix, relative_path))
-	{
-		fs::g_tls_error = fs::error::noent;
-		return false;
-	}
+	const std::string relative_path = strip_device_prefix(path, fs_prefix);
 
-	const auto node = m_archive.retrieve(relative_path.empty() ? "." : relative_path);
+	const auto node = m_archive.retrieve(relative_path);
 
 	if (!node)
 	{
@@ -1981,6 +1897,7 @@ bool iso_device::stat(const std::string& path, fs::stat_t& info)
 	}
 
 	const auto& meta = node->metadata;
+
 	info = fs::stat_t
 	{
 		.is_directory = meta.is_directory,
@@ -1997,14 +1914,10 @@ bool iso_device::stat(const std::string& path, fs::stat_t& info)
 
 bool iso_device::statfs(const std::string& path, fs::device_stat& info)
 {
-	std::string relative_path;
-	if (!get_iso_device_relative_path(path, fs_prefix, relative_path))
-	{
-		fs::g_tls_error = fs::error::noent;
-		return false;
-	}
+	const std::string relative_path = strip_device_prefix(path, fs_prefix);
 
-	const auto node = m_archive.retrieve(relative_path.empty() ? "." : relative_path);
+	const auto node = m_archive.retrieve(relative_path);
+
 	if (!node)
 	{
 		fs::g_tls_error = fs::error::noent;
@@ -2026,14 +1939,9 @@ bool iso_device::statfs(const std::string& path, fs::device_stat& info)
 
 std::unique_ptr<fs::file_base> iso_device::open(const std::string& path, bs_t<fs::open_mode> mode)
 {
-	std::string relative_path;
-	if (!get_iso_device_relative_path(path, fs_prefix, relative_path))
-	{
-		fs::g_tls_error = fs::error::noent;
-		return nullptr;
-	}
+	const std::string relative_path = strip_device_prefix(path, fs_prefix);
 
-	const auto node = m_archive.retrieve(relative_path.empty() ? "." : relative_path);
+	const auto node = m_archive.retrieve(relative_path);
 
 	if (!node)
 	{
@@ -2052,14 +1960,9 @@ std::unique_ptr<fs::file_base> iso_device::open(const std::string& path, bs_t<fs
 
 std::unique_ptr<fs::dir_base> iso_device::open_dir(const std::string& path)
 {
-	std::string relative_path;
-	if (!get_iso_device_relative_path(path, fs_prefix, relative_path))
-	{
-		fs::g_tls_error = fs::error::noent;
-		return nullptr;
-	}
+	const std::string relative_path = strip_device_prefix(path, fs_prefix);
 
-	const auto node = m_archive.retrieve(relative_path.empty() ? "." : relative_path);
+	const auto node = m_archive.retrieve(relative_path);
 
 	if (!node)
 	{
@@ -2069,6 +1972,7 @@ std::unique_ptr<fs::dir_base> iso_device::open_dir(const std::string& path)
 
 	if (!node->metadata.is_directory)
 	{
+		// fs::dir::open -> ::readdir should return ENOTDIR when path is pointing to a file instead of a folder.
 		fs::g_tls_error = fs::error::notdir;
 		return nullptr;
 	}
@@ -2076,19 +1980,32 @@ std::unique_ptr<fs::dir_base> iso_device::open_dir(const std::string& path)
 	return std::make_unique<iso_dir>(*node);
 }
 
+// Set while an image is loaded, so that a boot failing over its decryption key can be told apart
+static atomic_t<iso_key_status> s_iso_key_status = iso_key_status::OK;
+
 void load_iso(const std::string& path)
 {
-	auto device = stx::make_shared<iso_device>(path);
+	sys_log.notice("Loading ISO '%s'", path);
 
-	fs::set_virtual_device("iso_overlay_fs_dev", device);
+	stx::shared_ptr<iso_device> device = stx::make_shared<iso_device>(path);
+
+	s_iso_key_status = device->get_key_status();
+
+	fs::set_virtual_device("iso_overlay_fs_dev", std::move(device));
+
 	vfs::mount("/dev_bdvd/"sv, iso_device::virtual_device_name + "/");
-
-	sys_log.notice("Loading %s '%s'", device->get_source_description(), path);
 }
 
 void unload_iso()
 {
 	sys_log.notice("Unloading ISO");
 
+	s_iso_key_status = iso_key_status::OK;
+
 	fs::set_virtual_device("iso_overlay_fs_dev", stx::shared_ptr<iso_device>());
+}
+
+iso_key_status get_iso_key_status()
+{
+	return s_iso_key_status;
 }

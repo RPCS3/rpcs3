@@ -25,6 +25,8 @@ enum CellAudioInDeviceMode
 
 enum CellAudioInPortType
 {
+	CELL_AUDIO_IN_PORT_EYETOY1   = 1, // speculative, EyeToy
+	CELL_AUDIO_IN_PORT_EYETOY2   = 2, // speculative, PS EYE
 	CELL_AUDIO_IN_PORT_USB       = 3,
 	CELL_AUDIO_IN_PORT_BLUETOOTH = 4,
 };

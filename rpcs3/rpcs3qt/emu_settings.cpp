@@ -1142,6 +1142,8 @@ QString emu_settings::GetLocalizedSetting(const QString& original, emu_settings_
 		case microphone_handler::singstar: return tr("SingStar", "Microphone handler");
 		case microphone_handler::real_singstar: return tr("Real SingStar", "Microphone handler");
 		case microphone_handler::rocksmith: return tr("Rocksmith", "Microphone handler");
+		case microphone_handler::eye_toy: return tr("Eye Toy", "Microphone handler");
+		case microphone_handler::ps_eye: return tr("PS Eye", "Microphone handler");
 		}
 		break;
 	case emu_settings_type::KeyboardHandler:

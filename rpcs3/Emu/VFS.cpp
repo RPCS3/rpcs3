@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "IdManager.h"
+#include "emu_callbacks.h"
 #include "System.h"
 #include "VFS.h"
 
@@ -70,7 +71,7 @@ bool vfs::mount(std::string_view vpath, std::string_view path, bool is_dir)
 		if (pos == umax)
 		{
 			// Mounting completed; fixup for directories due to resolve_path messing with trailing /
-			list.back()->path = Emu.GetCallbacks().resolve_path(path);
+			list.back()->path = g_emu_callbacks.resolve_path(path);
 			if (list.back()->path.empty())
 				list.back()->path = std::string(path); // Fallback when resolving failed
 			if (is_dir && !list.back()->path.ends_with('/'))
@@ -400,7 +401,7 @@ std::string vfs::retrieve(std::string_view path, const vfs_directory* node, std:
 
 		std::vector<std::string_view> mount_path_empty;
 
-		const std::string rpath = Emu.GetCallbacks().resolve_path_may_not_exist(path);
+		const std::string rpath = g_emu_callbacks.resolve_path_may_not_exist(path);
 
 		if (!rpath.empty())
 		{
@@ -500,8 +501,8 @@ std::string vfs::retrieve(std::string_view path, const vfs_directory* node, std:
 	return result;
 }
 
-// Size of the well formed UTF-8 sequence starting at "pos", or 0 when the bytes there are not one: an invalid
-// leading byte, a truncated sequence, an overlong encoding or half a surrogate pair, which UTF-8 never carries
+// Size of the well formed UTF-8 sequence starting at "pos", or 0 when the bytes there are not one (a bad leading
+// byte, a truncated sequence, an overlong encoding, half a surrogate pair)
 static usz utf8_sequence_size(std::string_view name, usz pos)
 {
 	auto byte = [&](usz i) -> uchar { return i < name.size() ? static_cast<uchar>(name[i]) : 0; };
@@ -513,9 +514,8 @@ static usz utf8_sequence_size(std::string_view name, usz pos)
 		return 1;
 	}
 
-	// The second byte is the one carrying the exceptions: it is what tells an overlong encoding (0xe0, 0xf0), a
-	// surrogate half (0xed) and a code point past U+10FFFF (0xf4) from a well formed sequence. A byte read past
-	// the end of the name comes back as 0, which no rule below accepts
+	// The second byte carries the exceptions: overlong (0xe0, 0xf0), surrogate (0xed), past U+10FFFF (0xf4).
+	// Read past the end it comes back as 0, which no rule below accepts
 	const uchar b1 = byte(pos + 1);
 	usz size = 0;
 
@@ -603,16 +603,14 @@ std::string vfs::escape(std::string_view name, bool escape_slash)
 
 	result.reserve(result.size() + name.size());
 
-	// Bytes left of the UTF-8 sequence being copied through: a name is only valid UTF-8 as a whole, so whether
-	// a byte belongs to a sequence or is trash of its own cannot be told by looking at that byte alone
+	// Bytes left of the sequence being copied through: a byte on its own does not say whether it belongs to one
 	usz utf8_left = 0;
 
 	for (usz i = 0, s = name.size(); i < s; i++)
 	{
 		const uchar b = name[i];
 
-		// A name is ASCII nearly every time, and every byte of a sequence is outside it, so this one test is all
-		// such a name pays: "utf8_left" can only be standing on a byte of 0x80 and above
+		// One test is all an ASCII name pays: "utf8_left" can only stand on a byte of 0x80 and above
 		if (b >= 0x80)
 		{
 			if (utf8_left)
@@ -625,9 +623,8 @@ std::string vfs::escape(std::string_view name, bool escape_slash)
 			}
 			else
 			{
-				// A byte no sequence can account for, written as "％" and its two hex digits: a host refusing a name
-				// that is not valid UTF-8 (macOS does) would turn the file away outright, and one writing it as it
-				// comes leaves a name that cannot be told from the escape characters this very function produces
+				// A byte no sequence accounts for, written as "％" and its two hex digits: macOS refuses a name that is
+				// not valid UTF-8, and writing it as it comes leaves one that cannot be told from these very escapes
 				constexpr char hex[] = "0123456789ABCDEF";
 
 				result += reinterpret_cast<const char*>(u8"％");
@@ -889,7 +886,7 @@ std::string vfs::unescape(std::string_view name)
 					}
 					case char2{u8"％"[2]}:
 					{
-						// A byte no UTF-8 sequence could account for, written as its two hex digits (see "vfs::escape")
+						// A byte written as its two hex digits (see "vfs::escape")
 						auto digit = [](char2 h) -> int
 						{
 							if (h >= '0' && h <= '9') return h - '0';
@@ -908,7 +905,7 @@ std::string vfs::unescape(std::string_view name)
 							continue;
 						}
 
-						// Not what this function wrote: dropped like any other escape character it does not know
+						// Not what "vfs::escape" wrote: dropped like any other unknown escape character
 						break;
 					}
 					case char2{u8"＿"[2]}:
@@ -1065,7 +1062,7 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 		return false;
 	}
 
-	const auto escaped_from = Emu.GetCallbacks().resolve_path(from);
+	const auto escaped_from = g_emu_callbacks.resolve_path(from);
 
 	auto check_path = [&](std::string_view path)
 	{
@@ -1079,7 +1076,7 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 			return;
 		}
 
-		std::string escaped = Emu.GetCallbacks().resolve_path(file.real_path);
+		std::string escaped = g_emu_callbacks.resolve_path(file.real_path);
 
 		if (check_path(escaped))
 		{
@@ -1097,6 +1094,10 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 
 	bool res = false;
 
+	const auto retry_start = std::chrono::steady_clock::now();
+	auto retry_report = retry_start;
+	u64 retry_count = 0;
+
 	for (;; std::this_thread::yield())
 	{
 		if (fs::rename(from, to, overwrite))
@@ -1109,6 +1110,16 @@ bool vfs::host::rename(const std::string& from, const std::string& to, const lv2
 		{
 			res = false;
 			break;
+		}
+
+		retry_count++;
+
+		// Report a retry loop which is taking long, it may never end if the error is persistent
+		if (const auto now = std::chrono::steady_clock::now(); now - retry_report >= std::chrono::seconds(1))
+		{
+			retry_report = now;
+			vfs_log.warning("vfs::host::rename(): Still retrying after %u attempts and %u ms (from='%s', to='%s', error=%s)", retry_count,
+				static_cast<u64>(std::chrono::duration_cast<std::chrono::milliseconds>(now - retry_start).count()), from, to, fs::g_tls_error);
 		}
 	}
 

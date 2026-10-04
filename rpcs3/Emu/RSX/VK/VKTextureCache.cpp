@@ -16,18 +16,19 @@ namespace vk
 		* 00-08: Format  (Max 255)
 		* 08-24: Width   (Max 64K)
 		* 24-40: Height  (Max 64K)
-		* 40-48: Depth   (Max 255)
-		* 48-54: Mipmaps (Max 63)   <- We have some room here, it is not possible to have more than 12 mip levels on PS3 and 16 on PC is pushing it.
+		* 40-49: Depth   (Max 512)  <- Encoded as depth - 1 since depth is always in the range [1, 512]
+		* 49-54: Mipmaps (Max 31)   <- We have some room here, it is not possible to have more than 12 mip levels on PS3 and 16 on PC is pushing it.
 		* 54-56: Type    (Max 3)
 		* 56-57: Sharing (Max 1)    <- Boolean. Exclusive = 0, shared = 1
 		* 57-64: Flags   (Max 127)  <- We have some room here, we only care about a small subset of create flags.
 		*/
 		ensure(static_cast<u32>(format) < 0xFF);
+		ensure(d >= 1 && d <= 512);
 		return (static_cast<u64>(format) & 0xFF) |
 			(static_cast<u64>(w) << 8) |
 			(static_cast<u64>(h) << 24) |
-			(static_cast<u64>(d) << 40) |
-			(static_cast<u64>(mipmaps) << 48) |
+			(static_cast<u64>(d - 1) << 40) |
+			(static_cast<u64>(mipmaps) << 49) |
 			(static_cast<u64>(type) << 54) |
 			(static_cast<u64>(sharing_mode) << 56) |
 			(static_cast<u64>(create_flags) << 57);
@@ -1686,9 +1687,9 @@ namespace vk
 
 		if (reply.succeeded)
 		{
-			if (reply.real_dst_size)
+			if (reply.dst_range.valid())
 			{
-				flush_if_cache_miss_likely(cmd, reply.to_address_range());
+				flush_if_cache_miss_likely(cmd, reply.dst_range);
 			}
 
 			return true;

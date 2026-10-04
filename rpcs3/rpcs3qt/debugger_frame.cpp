@@ -13,6 +13,7 @@
 #include "hex_validator.h"
 
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/IdManager.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/lv2/sys_sync.h"
@@ -825,7 +826,7 @@ cpu_thread* debugger_frame::get_cpu()
 		}
 	}
 
-	if (!!m_disasm != !!m_cpu)
+	if (!!m_disasm != !!m_cpu && !m_rsx)
 	{
 		// Fixup for HW PPU viewer
 		if (m_cpu)
@@ -1402,7 +1403,7 @@ void debugger_frame::OnSelectSPUDisassembler()
 
 		for (u32 passed = spu_base; passed < SPU_LS_SIZE; passed += 4096)
 		{
-			if (!vm::check_addr(spu_addr + passed))
+			if (!vm::check_addr(spu_addr + passed - spu_base))
 			{
 				if (passed == spu_base)
 				{

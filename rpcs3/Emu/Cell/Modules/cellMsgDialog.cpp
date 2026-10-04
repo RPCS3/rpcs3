@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/PPUThread.h"
@@ -75,7 +76,7 @@ struct msg_info
 			return nullptr;
 		}
 
-		dlg = Emu.GetCallbacks().get_msg_dialog();
+		dlg = g_emu_callbacks.get_msg_dialog();
 
 		return dlg;
 	}

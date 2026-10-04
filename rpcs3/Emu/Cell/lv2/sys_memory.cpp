@@ -107,7 +107,7 @@ struct sys_memory_address_table
 	{
 		constexpr u32 _256mb = 0x10000000;
 		const auto location = align == 0x10000 ? vm::user64k : vm::user1m;
-		const u64 flags = (align == 0x10000 ? vm::page_size_64k : vm::page_size_1m) | vm::bf0_0x1;
+		const u64 flags = (align == 0x10000 ? vm::block_size_64k : vm::block_size_1m) | vm::bf0_0x1;
 		const u32 area_size = utils::align(size, _256mb);
 		const auto area = vm::reserve_map(location, 0, area_size, flags);
 

@@ -480,7 +480,7 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 				// Tail call to the real function
 				call_function(pfinfo->fn, true);
 
-				if (!result->getTerminator())
+				if (!llvm_has_terminator(result))
 					ret_function();
 			}
 			else
@@ -2664,7 +2664,7 @@ public:
 
 										m_ir->SetInsertPoint(cblock);
 
-										ensure(bfound->second.block_end->getTerminator());
+										ensure(llvm_has_terminator(bfound->second.block_end));
 									}
 
 									_phi->addIncoming(value, bfound->second.block_end);
@@ -3100,7 +3100,7 @@ public:
 						fmt::throw_exception("LLVM: Reduced Loop Pattern: Exit(2) too early at 0x%x", m_pos);
 					}
 
-					if (m_ir->GetInsertBlock()->getTerminator())
+					if (llvm_has_terminator(m_ir->GetInsertBlock()))
 					{
 						fmt::throw_exception("LLVM: Reduced Loop Pattern: Exit(3) too early at 0x%x", m_pos);
 					}
@@ -3253,7 +3253,7 @@ public:
 				m_reduced_loop_info = nullptr;
 
 				// Emit instructions
-				for (m_pos = baddr; m_pos >= start && m_pos < end && !m_ir->GetInsertBlock()->getTerminator(); m_pos += 4)
+				for (m_pos = baddr; m_pos >= start && m_pos < end && !llvm_has_terminator(m_ir->GetInsertBlock()); m_pos += 4)
 				{
 					if (m_pos != baddr && m_block_info[m_pos / 4])
 					{
@@ -3299,7 +3299,7 @@ public:
 				}
 
 				// Finalize block with fallthrough if necessary
-				if (!m_ir->GetInsertBlock()->getTerminator())
+				if (!llvm_has_terminator(m_ir->GetInsertBlock()))
 				{
 					const u32 target = m_pos == baddr ? baddr : m_pos & 0x3fffc;
 
@@ -3875,6 +3875,18 @@ public:
 			fpm.run(*f, fam);
 		}
 
+		if (m_test_state->use_empty())
+		{
+			m_test_state->eraseFromParent();
+			m_test_state = nullptr;
+		}
+
+		if (m_dispatch->use_empty())
+		{
+			m_dispatch->eraseFromParent();
+			m_dispatch = nullptr;
+		}
+
 		// Clear context (TODO)
 		m_blocks.clear();
 		m_block_queue.clear();
@@ -4262,7 +4274,7 @@ public:
 						}
 					}
 
-					if (!m_ir->GetInsertBlock()->getTerminator())
+					if (!llvm_has_terminator(m_ir->GetInsertBlock()))
 					{
 						if (check)
 						{
@@ -4286,7 +4298,7 @@ public:
 							// Normal instruction.
 							(this->*decode(op))({op});
 
-							if (check && !m_ir->GetInsertBlock()->getTerminator())
+							if (check && !llvm_has_terminator(m_ir->GetInsertBlock()))
 							{
 								call("spu_interp_check", &interp_check, m_thread, m_ir->getTrue());
 							}
@@ -4354,7 +4366,7 @@ public:
 							m_ir->CreateRetVoid();
 						}
 
-						if (!m_ir->GetInsertBlock()->getTerminator())
+						if (!llvm_has_terminator(m_ir->GetInsertBlock()))
 						{
 							// Call next instruction.
 							const auto _stop = BasicBlock::Create(m_context, "", f);
@@ -7811,9 +7823,9 @@ public:
 		{
 			idx_consts = eval(sub_sat(c, splat<u8[16]>(0x60)) & 0x80);
 		}
-		else if (m_use_gfni)
+		else if (m_use_gfni && !(or_combine_safe && !m_use_avx512))
 		{
-			// TODO: Due to vpblendvb, the pshufb OR combine path is one fewer micro-ops post Rocket Lake. Check if it is faster.
+			// Keep OR combine due to slow blend on later Intel (AVX512 uses faster kmask method)
 			const auto gfni = gf2p8affineqb(c, build<u8[16]>(0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x40, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20), 0x7f);
 			idx_consts = eval(select(noncast<s8[16]>(gfni) >= 0, splat<u8[16]>(0), gfni));
 			
@@ -9226,7 +9238,12 @@ public:
 			}
 
 			r.value = m_ir->CreateFPToSI(a.value, get_type<s32[4]>());
+#if defined(ARCH_ARM64)
+			set_vr(op.rt, select(fcmp_ord(a >= fsplat<f64[4]>(std::exp2(31.f))), splat<s32[4]>(0x7fffffff),
+				select(fcmp_ord(a < fsplat<f64[4]>(-std::exp2(31.f))), splat<s32[4]>(0x80000000), r)));
+#else
 			set_vr(op.rt, r ^ sext<s32[4]>(fcmp_ord(a >= fsplat<f64[4]>(std::exp2(31.f)))));
+#endif
 		}
 		else
 		{
@@ -9241,7 +9258,12 @@ public:
 
 			value_t<s32[4]> r;
 			r.value = m_ir->CreateFPToSI(a.value, get_type<s32[4]>());
+#if defined(ARCH_ARM64)
+			const auto sat_hi = bitcast<s32[4]>(a) > splat<s32[4]>(((31 + 127) << 23) - 1);
+			set_vr(op.rt, select(sat_hi, splat<s32[4]>(0x7fffffff), select(fcmp_uno(a != a), splat<s32[4]>(0x80000000), r)));
+#else
 			set_vr(op.rt, r ^ sext<s32[4]>(bitcast<s32[4]>(a) > splat<s32[4]>(((31 + 127) << 23) - 1)));
+#endif
 		}
 	}
 
