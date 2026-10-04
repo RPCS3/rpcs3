@@ -223,7 +223,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			case RSX_VEC_OPCODE_TXL:
 			{
 				result.referenced_textures_mask |= (1 << d2.tex_num);
-				break;
+				[[ fallthrough ]];
 			}
 			default:
 			{
