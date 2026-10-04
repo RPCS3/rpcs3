@@ -54,6 +54,12 @@ struct hdd_read_state
 	u64 last_end_time = 0;
 };
 
+struct bdvd_read_state
+{
+	shared_mutex mutex;
+	u64 busy_until = 0;
+};
+
 template<>
 void fmt_class_string<lv2_file_type>::format(std::string& out, u64 arg)
 {
@@ -608,6 +614,17 @@ u64 lv2_file::schedule_read(u64 size, u64 start, u64 offset) const
 	if (!size || start == umax)
 	{
 		return 0;
+	}
+
+	if (mp == &g_mp_sys_dev_bdvd)
+	{
+		// Nominal 2x BD-ROM transfer rate (72 Mbit/s), not measured on a PS3
+		constexpr u64 bdvd_transfer_rate = 9'000'000;
+		auto& bdvd = g_fxo->get<bdvd_read_state>();
+		std::lock_guard lock(bdvd.mutex);
+		const u64 end = std::max(bdvd.busy_until, start) + size * 1'000'000 / bdvd_transfer_rate;
+		bdvd.busy_until = end;
+		return end;
 	}
 
 	// Measured on a stock PS3 HDD
@@ -1537,7 +1554,7 @@ error_code sys_fs_read(ppu_thread& ppu, u32 fd, vm::ptr<void> buf, u64 nbytes, v
 		return CELL_EIO;
 	}
 
-	const u64 read_start = (g_cfg.vfs.emulate_hdd_speed && (file->mp == &g_mp_sys_dev_hdd0 || file->mp == &g_mp_sys_dev_hdd1))
+	const u64 read_start = ((g_cfg.vfs.emulate_hdd_speed && (file->mp == &g_mp_sys_dev_hdd0 || file->mp == &g_mp_sys_dev_hdd1)) || (g_cfg.vfs.emulate_bdvd_speed && file->mp == &g_mp_sys_dev_bdvd))
 		? get_guest_system_time() : umax;
 	const u64 read_offset = read_start != umax ? file->file.pos() : 0;
 	const u64 read_bytes = file->op_read(buf, nbytes);
@@ -2548,7 +2565,7 @@ error_code sys_fs_fcntl(ppu_thread& ppu, u32 fd, u32 op, vm::ptr<void> _arg, u32
 			file->file.seek(op_pos);
 		}
 
-		const u64 op_start = (op == 0x8000000a && g_cfg.vfs.emulate_hdd_speed && (file->mp == &g_mp_sys_dev_hdd0 || file->mp == &g_mp_sys_dev_hdd1))
+		const u64 op_start = (op == 0x8000000a && ((g_cfg.vfs.emulate_hdd_speed && (file->mp == &g_mp_sys_dev_hdd0 || file->mp == &g_mp_sys_dev_hdd1)) || (g_cfg.vfs.emulate_bdvd_speed && file->mp == &g_mp_sys_dev_bdvd)))
 			? get_guest_system_time() : umax;
 		const u64 done_size = op == 0x8000000a
 			? file->op_read(arg->buf, arg->size, op_pos)
