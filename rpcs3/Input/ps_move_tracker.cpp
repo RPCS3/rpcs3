@@ -359,16 +359,20 @@ void ps_move_tracker<DiagnosticsEnabled>::draw_sphere_size_range(f32 result_radi
 template <bool DiagnosticsEnabled>
 void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u32 index)
 {
+	const u32 width = m_width;
+	const u32 height = m_height;
+
+	if (width == 0 || height == 0)
+	{
+		set_valid(info, index, false);
+		return;
+	}
+
 	const ps_move_config& config = ::at32(m_config, index);
 	const std::vector<u8>& image_hsv = m_image_hsv;
 	std::vector<u8>& image_binary = ::at32(m_image_binary, index);
 
-	const u32 width = m_width;
-	const u32 height = m_height;
 	const bool wrapped_hue = config.min_hue > config.max_hue; // e.g. min=355, max=5 (red)
-
-	info.x_max = width;
-	info.y_max = height;
 
 	// Map memory
 	cv::Mat binary(cv::Size(width, height), CV_8UC1, image_binary.data(), 0);
@@ -525,14 +529,14 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 	const f32 max_distance = info.radius * 8.0f;
 	const f32 max_distance_squared = max_distance * max_distance;
 	const bool shape_matches = std::abs(info.radius - sphere_radius_pixels) < (info.radius * 2) &&
-	                           distance_squared(info.x_pos, info.y_pos, x_pos, y_pos) < max_distance_squared;
+	                           distance_squared(static_cast<s32>(info.x_pos * width), static_cast<s32>(info.y_pos * height), x_pos, y_pos) < max_distance_squared;
 
 	if (shape_matches || ++m_shape_fail_count[index] >= 3)
 	{
 		info.distance_mm = distance_mm;
 		info.radius = sphere_radius_pixels;
-		info.x_pos = x_pos;
-		info.y_pos = y_pos;
+		info.x_pos = std::clamp(x_pos / static_cast<f32>(width), 0.0f, 1.0f);
+		info.y_pos = std::clamp(y_pos / static_cast<f32>(height), 0.0f, 1.0f);
 
 		m_shape_fail_count[index] = 0; // Reset fail count
 	}
@@ -586,12 +590,7 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 {
 	ensure(index < m_config.size());
 
-	const u32 width = m_width;
-	const u32 height = m_height;
-
 	info.valid = false;
-	info.x_max = width;
-	info.y_max = height;
 
 	ps_move.error("The tracker is not implemented for this operating system.");
 }
