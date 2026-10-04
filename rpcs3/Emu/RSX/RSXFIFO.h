@@ -142,6 +142,7 @@ namespace rsx
 			u32 m_remaining_commands = 0;
 			u32 m_args_ptr = 0;
 			u32 m_cmd = ~0u;
+			u32 m_next_cmd_entry = ~0u;
 
 			u32 m_cache_addr = 0;
 			u32 m_cache_size = 0;
