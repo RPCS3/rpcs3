@@ -3996,10 +3996,10 @@ error_code cellGemSetRumble(u32 gem_num, u8 rumble)
 error_code cellGemSetYaw(u32 gem_num, v128 z_direction)
 {
 	// Unpack vector argument
-	const f32 z_direction_x = z_direction._f[0];
-	const f32 z_direction_y = z_direction._f[1];
-	const f32 z_direction_z = z_direction._f[2];
-	const f32 z_direction_w = z_direction._f[3];
+	const f32 z_direction_x = z_direction.fr[0];
+	const f32 z_direction_y = z_direction.fr[1];
+	const f32 z_direction_z = z_direction.fr[2];
+	const f32 z_direction_w = z_direction.fr[3];
 
 	cellGem.warning("cellGemSetYaw(gem_num=%d, z_direction_x=%f, z_direction_y=%f, z_direction_z=%f, z_direction_w=%f)", gem_num, z_direction_x, z_direction_y, z_direction_z, z_direction_w);
 
