@@ -181,11 +181,22 @@ u16 PadHandlerBase::ConvertAxis(f32 value)
 	return static_cast<u16>((value + 1.0) * (255.0 / 2.0));
 }
 
-void PadHandlerBase::ConvertToSquirclePoint(u16& inX, u16& inY, u32 squircle_factor)
+u8 PadHandlerBase::ConvertAngleToU8(f32 angle, f32 distance_to_center)
 {
-	if (!squircle_factor)
-		return;
+	if (distance_to_center < 0.5f)
+		return 0;
 
+	constexpr f32 two_pi = std::numbers::pi_v<f32> * 2;
+	angle = -angle;
+
+	if (angle < 0)
+		angle += two_pi;
+
+	return static_cast<u8>(std::round(angle / two_pi * 0x100));
+}
+
+std::tuple<f32, f32> PadHandlerBase::ConvertToSquirclePoint(u16& inX, u16& inY, u32 squircle_factor)
+{
 	constexpr f32 radius = 127.5f;
 
 	// convert inX and Y to a (-1, 1) vector;
@@ -196,13 +207,18 @@ void PadHandlerBase::ConvertToSquirclePoint(u16& inX, u16& inY, u32 squircle_fac
 	const f32 angle = std::atan2(y, x);
 	const f32 distance_to_center = std::min(1.0f, std::sqrt(std::pow(x, 2.f) + std::pow(y, 2.f)));
 
-	// now find len/point on the given squircle from our current angle and radius in polar coords
-	// https://thatsmaths.com/2016/07/14/squircles/
-	const f32 new_len = (1 + std::pow(std::sin(2 * angle), 2.f) / (squircle_factor / 1000.f)) * distance_to_center;
+	if (squircle_factor)
+	{
+		// now find len/point on the given squircle from our current angle and radius in polar coords
+		// https://thatsmaths.com/2016/07/14/squircles/
+		const f32 new_len = (1 + std::pow(std::sin(2 * angle), 2.f) / (squircle_factor / 1000.f)) * distance_to_center;
 
-	// we now have len and angle, convert to cartesian
-	inX = Clamp0To255(std::round(((new_len * std::cos(angle)) + 1) * radius));
-	inY = Clamp0To255(std::round(((new_len * std::sin(angle)) + 1) * radius));
+		// we now have len and angle, convert to cartesian
+		inX = Clamp0To255(std::round(((new_len * std::cos(angle)) + 1) * radius));
+		inY = Clamp0To255(std::round(((new_len * std::sin(angle)) + 1) * radius));
+	}
+
+	return std::tuple<f32, f32>(angle, distance_to_center);
 }
 
 void PadHandlerBase::init_configs()
@@ -422,16 +438,13 @@ void PadHandlerBase::get_motion_sensors(const std::string& pad_id, const motion_
 	callback(pad_id, std::move(preview_values));
 }
 
-void PadHandlerBase::convert_stick_values(u16& x_out, u16& y_out, s32 x_in, s32 y_in, u32 deadzone, u32 anti_deadzone, u32 padsquircling) const
+void PadHandlerBase::convert_stick_values(u16& x_out, u16& y_out, s32 x_in, s32 y_in, u32 deadzone, u32 anti_deadzone, u32 padsquircling, f32& angle, f32& distance_to_center) const
 {
 	// Normalize our stick axis based on the deadzone
 	std::tie(x_out, y_out) = NormalizeStickDeadzone(x_in, y_in, deadzone, anti_deadzone);
 
 	// Apply pad squircling if necessary
-	if (padsquircling != 0)
-	{
-		ConvertToSquirclePoint(x_out, y_out, padsquircling);
-	}
+	std::tie(angle, distance_to_center) = ConvertToSquirclePoint(x_out, y_out, padsquircling);
 }
 
 // Update the pad button values based on their type and thresholds. With this you can use axis or triggers as buttons or vice versa
@@ -774,10 +787,11 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 	}
 
 	u16 lx, ly, rx, ry;
+	f32 l_angle, l_distance_to_center, r_angle, r_distance_to_center;
 
 	// Normalize and apply pad squircling
-	convert_stick_values(lx, ly, stick_val[0], stick_val[1], cfg->lstickdeadzone, cfg->lstick_anti_deadzone, cfg->lpadsquircling);
-	convert_stick_values(rx, ry, stick_val[2], stick_val[3], cfg->rstickdeadzone, cfg->rstick_anti_deadzone, cfg->rpadsquircling);
+	convert_stick_values(lx, ly, stick_val[0], stick_val[1], cfg->lstickdeadzone, cfg->lstick_anti_deadzone, cfg->lpadsquircling, l_angle, l_distance_to_center);
+	convert_stick_values(rx, ry, stick_val[2], stick_val[3], cfg->rstickdeadzone, cfg->rstick_anti_deadzone, cfg->rpadsquircling, r_angle, r_distance_to_center);
 
 	if (m_type == pad_handler::ds4)
 	{
@@ -799,6 +813,9 @@ void PadHandlerBase::get_mapping(const pad_ensemble& binding)
 		pad->m_sticks[2].m_value = rx;
 		pad->m_sticks[3].m_value = 255 - ry;
 	}
+
+	pad->m_angles[0] = ConvertAngleToU8(l_angle, l_distance_to_center);
+	pad->m_angles[1] = ConvertAngleToU8(r_angle, r_distance_to_center);
 }
 
 void PadHandlerBase::process()
