@@ -994,7 +994,8 @@ void pad_settings_dialog::RepaintPreviewLabel(QLabel* label, int deadzone, int a
 			const u16 normal_y = m_handler->NormalizeStickInput(static_cast<u16>(std::abs(y)), deadzone, m_in, true);
 			const s32 x_in = x >= 0 ? normal_x : 0 - normal_x;
 			const s32 y_in = y >= 0 ? normal_y : 0 - normal_y;
-			m_handler->convert_stick_values(real_x, real_y, x_in, y_in, deadzone, anti_deadzone, squircle);
+			[[maybe_unused]] f32 angle, distance_to_center;
+			m_handler->convert_stick_values(real_x, real_y, x_in, y_in, deadzone, anti_deadzone, squircle, angle, distance_to_center);
 		}
 
 		constexpr qreal real_max = 126;
