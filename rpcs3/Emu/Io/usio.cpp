@@ -35,23 +35,8 @@ void fmt_class_string<usio_btn>::format(std::string& out, u64 arg)
 		case usio_btn::tekken_button4: return "Tekken Button 4";
 		case usio_btn::tekken_button5: return "Tekken Button 5";
 		case usio_btn::card_tapping: return "Card Tapping";
+		case usio_btn::gun: return "Gun";
 		case usio_btn::count: return "Count";
-		}
-
-		return unknown;
-	});
-}
-
-template <>
-void fmt_class_string<usio_gun>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](usio_gun value)
-	{
-		switch (value)
-		{
-		case usio_gun::mouse: return "Mouse";
-		case usio_gun::controller_ls: return "Controller Left Stick";
-		case usio_gun::controller_rs: return "Controller Right Stick";
 		}
 
 		return unknown;
@@ -325,18 +310,25 @@ void usb_device_usio::translate_input_tekken()
 	le_t<u64> digital_input[2]{};
 	le_t<u16> digital_input_lm = 0;
 
-	const auto translate_from_pad = [&](usz pad_number, usz player)
+	auto& mouse_handler = g_fxo->get<MouseHandlerBase>();
+	std::lock_guard mouse_lock(mouse_handler.mutex);
+	mouse_handler.Init(4);
+
+	const auto translate_input = [&](usz player)
 	{
+		if (!is_input_allowed())
+		{
+			return;
+		}
+
 		const usz player_index = player % 2;
 		const usz shift = (player_index) * 24ULL;
 		const usz io_index = player / 2;
 		auto& status = m_io_status[io_index];
 		auto& input = digital_input[io_index];
+		const auto& cfg = ::at32(g_cfg_usio.players, player);
 
-		if (const auto& pad = ::at32(handler->GetPads(), pad_number); pad->is_connected() && !pad->is_copilot() && is_input_allowed())
-		{
-			const auto& cfg = ::at32(g_cfg_usio.players, pad_number);
-			cfg->handle_input(pad, false, [&](const auto& value, bool& /*abort*/)
+		const auto input_callback = [&](const auto& value, bool& /*abort*/)
 			{
 				switch (value.btn)
 				{
@@ -429,10 +421,22 @@ void usb_device_usio::translate_input_tekken()
 				default:
 					break;
 				}
-			});
+			};
 
-			const bool is_ctrl_ls = cfg->gun == usio_gun::controller_ls;
-			const bool is_ctrl_rs = cfg->gun == usio_gun::controller_rs;
+		const auto write_gun_data = [&](u16 x, u16 y)
+		{
+			const le_t<u16> positions[2] = {x, y};
+			std::memcpy(input_buf.data() - io_index * 0x80 + 0x100 + 32 + player_index * sizeof(u32), &positions, sizeof(u32));
+			std::memcpy(input_buf.data() - io_index * 0x80 + 0x100 + 41 + player_index * sizeof(s16), &status.vital_sensors[player_index], sizeof(s8));
+			std::memcpy(input_buf.data() - io_index * 0x80 + 0x100 + 48, &status.wheel_rotation, sizeof(s8));
+		};
+
+		if (const auto& pad = ::at32(handler->GetPads(), player); pad->is_connected() && !pad->is_copilot())
+		{
+			cfg->handle_input(pad, false, input_callback);
+
+			const bool is_ctrl_ls = cfg->gun == pad_button::left_stick;
+			const bool is_ctrl_rs = cfg->gun == pad_button::right_stick;
 			if (g_cfg.io.usio_mode == usio_handler_mode::shooter_games && (is_ctrl_ls || is_ctrl_rs))
 			{
 				const s8 angle = pad->m_angles[is_ctrl_ls ? 0 : 1];
@@ -440,10 +444,30 @@ void usb_device_usio::translate_input_tekken()
 				status.vital_sensors[player_index] = angle;
 				status.wheel_rotation += angle_delta; // Multiple players can collaborate on turning the wheel
 
-				const le_t<u16> positions[2] = {static_cast<u16>(pad->m_sticks[is_ctrl_ls ? 0 : 2].m_value * USHRT_MAX / 0xff), static_cast<u16>(pad->m_sticks[is_ctrl_ls ? 1 : 3].m_value * USHRT_MAX / 0xff)};
-				std::memcpy(input_buf.data() - io_index * 0x80 + 0x100 + 32 + player_index * sizeof(u32), &positions, sizeof(u32));
-				std::memcpy(input_buf.data() - io_index * 0x80 + 0x100 + 41 + player_index * sizeof(s16), &status.vital_sensors[player_index], sizeof(s8));
-				std::memcpy(input_buf.data() - io_index * 0x80 + 0x100 + 48, &status.wheel_rotation, sizeof(s8));
+				write_gun_data(static_cast<u16>(pad->m_sticks[is_ctrl_ls ? 0 : 2].m_value * USHRT_MAX / 0xff), static_cast<u16>(pad->m_sticks[is_ctrl_ls ? 1 : 3].m_value * USHRT_MAX / 0xff));
+			}
+		}
+		
+		const usz mouse_index = g_cfg.io.mouse == mouse_handler::basic ? 0 : player;
+		if (mouse_index < mouse_handler.GetMice().size())
+		{
+			const Mouse& mouse_data = ::at32(mouse_handler.GetMice(), mouse_index);
+			cfg->handle_input(mouse_data, input_callback);
+
+			if (cfg->gun == pad_button::mouse)
+			{
+				s8 current_wheel = 0;
+				MouseDataList& data_list = mouse_handler.GetDataList(mouse_index);
+				if (!data_list.empty())
+				{
+					const MouseData& current_data = data_list.front();
+					current_wheel = current_data.wheel * 0x10;
+					data_list.pop_front();
+				}
+				status.vital_sensors[player_index] += current_wheel;
+				status.wheel_rotation += current_wheel; // Multiple players can collaborate on turning the wheel
+
+				write_gun_data(static_cast<u16>(mouse_data.x_pos * USHRT_MAX), static_cast<u16>(mouse_data.y_pos * USHRT_MAX));
 			}
 		}
 
@@ -455,68 +479,11 @@ void usb_device_usio::translate_input_tekken()
 		}
 	};
 
-	auto& mouse_handler = g_fxo->get<MouseHandlerBase>();
-	std::unique_lock mouse_lock(mouse_handler.mutex, std::defer_lock);
-
-	if (g_cfg.io.usio_mode == usio_handler_mode::shooter_games)
-	{
-		mouse_lock.lock();
-		mouse_handler.Init(4);
-	}
-
-	const auto translate_from_mouse = [&](usz mouse_number, usz player)
-	{
-		const auto& cfg = ::at32(g_cfg_usio.players, mouse_number);
-		if (cfg->gun != usio_gun::mouse)
-			return;
-
-		const usz player_index = player % 2;
-		const usz io_index = player / 2;
-		auto& status = m_io_status[io_index];
-		auto& input = digital_input[io_index];
-
-		const usz mouse_index = g_cfg.io.mouse == mouse_handler::basic ? 0 : mouse_number;
-		if (!is_input_allowed() || mouse_index >= mouse_handler.GetMice().size())
-			return;
-
-		const Mouse& mouse_data = ::at32(mouse_handler.GetMice(), mouse_index);
-		const auto is_pressed = [&mouse_data](MouseButtonCodes button) -> bool
-		{
-			return !!(mouse_data.buttons & button);
-		};
-
-		s8 current_wheel = 0;
-		MouseDataList& data_list = mouse_handler.GetDataList(mouse_index);
-		if (!data_list.empty())
-		{
-			const MouseData& current_data = data_list.front();
-			current_wheel = current_data.wheel * 0x10;
-			data_list.pop_front();
-		}
-		status.vital_sensors[player_index] += current_wheel;
-		status.wheel_rotation += current_wheel; // Multiple players can collaborate on turning the wheel
-
-		const le_t<u16> positions[2] = {static_cast<u16>(mouse_data.x_pos * USHRT_MAX), static_cast<u16>(mouse_data.y_pos * USHRT_MAX)};
-		std::memcpy(input_buf.data() - io_index * 0x80 + 0x100 + 32 + player_index * sizeof(u32), &positions, sizeof(u32));
-		std::memcpy(input_buf.data() - io_index * 0x80 + 0x100 + 41 + player_index * sizeof(s16), &status.vital_sensors[player_index], sizeof(s8));
-		std::memcpy(input_buf.data() - io_index * 0x80 + 0x100 + 48, &status.wheel_rotation, sizeof(s8));
-
-		if (is_pressed(CELL_MOUSE_BUTTON_1))
-			input |= player_index == 0 ? 0x800000ULL : 0x100000ULL; // Gun Trigger Left
-		if (is_pressed(CELL_MOUSE_BUTTON_2))
-			input |= player_index == 0 ? 0x400000ULL : 0x80000ULL; // Gun Trigger Right
-		if (is_pressed(CELL_MOUSE_BUTTON_3))
-			input |= player_index == 0 ? 0x200000ULL : 0x40000ULL; // Start
-	};
-
 	for (usz i = 0; i < m_io_status.size(); i++)
 		m_io_status[i].card_tapped = false;
 	for (usz i = 0; i < g_cfg_usio.players.size(); i++)
 	{
-		translate_from_pad(i, i);
-
-		if (g_cfg.io.usio_mode == usio_handler_mode::shooter_games)
-			translate_from_mouse(i, i);
+		translate_input(i);
 	}
 
 	for (usz i = 0; i < 2; i++)
