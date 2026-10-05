@@ -1432,10 +1432,21 @@ namespace rsx
 
 			if (result.size() > 1)
 			{
-				result.sort([](const auto &a, const auto &b)
+				result.sort([texaddr](const auto &a, const auto &b)
 				{
 					if (a.surface->last_use_tag == b.surface->last_use_tag)
 					{
+						// Surfaces written by the same draw cannot both own the overlapping memory, e.g. a color target and
+						// a depth target whose declared clip extends past the area actually drawn and runs into the color target.
+						// Prefer the surface that starts at the requested address.
+						const bool a_is_exact = (a.base_address == texaddr);
+						const bool b_is_exact = (b.base_address == texaddr);
+
+						if (a_is_exact != b_is_exact)
+						{
+							return b_is_exact;
+						}
+
 						const auto area_a = a.dst_area.width * a.dst_area.height;
 						const auto area_b = b.dst_area.width * b.dst_area.height;
 
