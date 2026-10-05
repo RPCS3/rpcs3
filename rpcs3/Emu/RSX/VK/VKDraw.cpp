@@ -796,6 +796,14 @@ bool VKGSRender::bind_texture_env()
 		for (u32 i = 0; i < current_fragment_program.mrt_buffers_count; ++i)
 		{
 			auto viewable = static_cast<vk::viewable_image*>(m_fbo_images[i]);
+			if (viewable->current_layout != VK_IMAGE_LAYOUT_GENERAL &&
+				viewable->current_layout != VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT)
+			{
+				// Renderpass key is derived from the current layout, regenerate it after the transition
+				vk::as_rtt(viewable)->texture_barrier(*m_current_command_buffer);
+				invalidate_render_pass();
+			}
+
 			const auto view = viewable->get_view(remap);
 			m_program->bind_uniform(*view, vk::glsl::binding_set_index_fragment, m_fs_binding_table->frag_src_location[i]);
 		}
