@@ -256,27 +256,39 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 			combo->setItemData(index, static_cast<int>(pad_button::pad_button_max_enum), button_role::button);
 			combo->setItemData(index, i, button_role::emulated_button);
 
-			if (m_type != pad_type::mousegem)
+			const auto add_button = [&combo, i](int p)
 			{
-				for (int p = 0; p < static_cast<int>(pad_button::pad_button_max_enum); p++)
+				const QString translated = localized_emu::translated_pad_button(static_cast<pad_button>(p));
+				combo->addItem(translated);
+				const int index = combo->findText(translated);
+				combo->setItemData(index, p, button_role::button);
+				combo->setItemData(index, i, button_role::emulated_button);
+			};
+
+			const bool is_usio_gun = std::is_same_v<T, usio_btn> && static_cast<usio_btn>(id) == usio_btn::gun;
+
+			if (is_usio_gun)
+			{
+				for (int p = static_cast<int>(pad_button::mouse); p <= static_cast<int>(pad_button::right_stick); p++)
 				{
-					const QString translated = localized_emu::translated_pad_button(static_cast<pad_button>(p));
-					combo->addItem(translated);
-					const int index = combo->findText(translated);
-					combo->setItemData(index, p, button_role::button);
-					combo->setItemData(index, i, button_role::emulated_button);
+					add_button(p);
 				}
 			}
 
-			if (std::is_same_v<T, guncon3_btn> || std::is_same_v<T, topshotelite_btn> || std::is_same_v<T, topshotfearmaster_btn> || m_type == pad_type::mousegem)
+			if (m_type != pad_type::mousegem && !is_usio_gun)
+			{
+				for (int p = 0; p < static_cast<int>(pad_button::pad_button_max_enum); p++)
+				{
+					add_button(p);
+				}
+			}
+
+			if (std::is_same_v<T, guncon3_btn> || std::is_same_v<T, topshotelite_btn> || std::is_same_v<T, topshotfearmaster_btn> ||
+				(std::is_same_v<T, usio_btn> && !is_usio_gun) || m_type == pad_type::mousegem)
 			{
 				for (int p = static_cast<int>(pad_button::mouse_button_1); p <= static_cast<int>(pad_button::mouse_button_8); p++)
 				{
-					const QString translated = localized_emu::translated_pad_button(static_cast<pad_button>(p));
-					combo->addItem(translated);
-					const int index = combo->findText(translated);
-					combo->setItemData(index, p, button_role::button);
-					combo->setItemData(index, i, button_role::emulated_button);
+					add_button(p);
 				}
 			}
 
@@ -285,11 +297,7 @@ void emulated_pad_settings_dialog::add_tabs(QTabWidget* tabs)
 			{
 				for (int p = static_cast<int>(pad_button::motion_x); p < static_cast<int>(pad_button::pad_motion_max_enum); p++)
 				{
-					const QString translated = localized_emu::translated_pad_button(static_cast<pad_button>(p));
-					combo->addItem(translated);
-					const int index = combo->findText(translated);
-					combo->setItemData(index, p, button_role::button);
-					combo->setItemData(index, i, button_role::emulated_button);
+					add_button(p);
 				}
 			}
 

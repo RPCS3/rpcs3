@@ -60,6 +60,11 @@ enum class pad_button : u8
 	mouse_button_6,
 	mouse_button_7,
 	mouse_button_8,
+
+	// Special "buttons" that map behaviour
+	mouse,
+	left_stick,
+	right_stick
 };
 
 u32 pad_button_offset(pad_button button);
