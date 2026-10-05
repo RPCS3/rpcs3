@@ -28,7 +28,7 @@ ZIP_URL="https://github.com/RPCS3/rpcs3_translations/releases/latest/download/RP
 echo "Downloading translations from: $ZIP_URL"
 if curl -fsSL --retry 3 --retry-delay 60 "$ZIP_URL" -o "translations.zip"; then
   echo "Successfully downloaded translations."
-  if unzip -o translations.zip -d "rpcs3.app/Contents/translations" >/dev/null 2>&1; then
+  if unzip -o translations.zip -d "rpcs3.app/Contents/Resources/translations" >/dev/null 2>&1; then
     rm -f translations.zip
   else
     echo "Failed to extract translations.zip. Continuing without translations."
