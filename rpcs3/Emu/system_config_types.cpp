@@ -534,22 +534,6 @@ void fmt_class_string<usio_handler_mode>::format(std::string& out, u64 arg)
 }
 
 template <>
-void fmt_class_string<usio_gun_handler>::format(std::string& out, u64 arg)
-{
-	format_enum(out, arg, [](auto value)
-		{
-			switch (value)
-			{
-			case usio_gun_handler::mouse: return "Mouse";
-			case usio_gun_handler::controller_ls: return "Controller Left Stick";
-			case usio_gun_handler::controller_rs: return "Controller Right Stick";
-			}
-
-			return unknown;
-		});
-}
-
-template <>
 void fmt_class_string<ppu_decoder_type>::format(std::string& out, u64 arg)
 {
 	format_enum(out, arg, [](ppu_decoder_type type)

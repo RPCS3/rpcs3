@@ -177,13 +177,6 @@ enum class usio_handler_mode
 	shooter_games
 };
 
-enum class usio_gun_handler
-{
-	mouse,
-	controller_ls,
-	controller_rs
-};
-
 enum class microphone_handler
 {
 	null,
