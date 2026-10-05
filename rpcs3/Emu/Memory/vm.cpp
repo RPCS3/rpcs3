@@ -1283,9 +1283,10 @@ namespace vm
 		// Fill stack guards with STACKGRD
 		if (this->flags & stack_guarded)
 		{
-			auto fill64 = [](u8* ptr, u64 data, usz count)
+			const auto fill64 = [](u8* ptr, u64 data, usz count)
 			{
-				std::fill(ptr, ptr + count, data);
+				u64* dst = reinterpret_cast<u64*>(ptr);
+				std::fill(dst, dst + count, data);
 			};
 
 			const u32 enda = addr + size - 4096;
