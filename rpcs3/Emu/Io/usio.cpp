@@ -42,6 +42,22 @@ void fmt_class_string<usio_btn>::format(std::string& out, u64 arg)
 	});
 }
 
+template <>
+void fmt_class_string<usio_gun>::format(std::string& out, u64 arg)
+{
+	format_enum(out, arg, [](usio_gun value)
+	{
+		switch (value)
+		{
+		case usio_gun::mouse: return "Mouse";
+		case usio_gun::controller_ls: return "Controller Left Stick";
+		case usio_gun::controller_rs: return "Controller Right Stick";
+		}
+
+		return unknown;
+	});
+}
+
 struct usio_memory
 {
 	std::vector<u8> backup_memory;
@@ -415,8 +431,8 @@ void usb_device_usio::translate_input_tekken()
 				}
 			});
 
-			const bool is_ctrl_ls = g_cfg.io.usio_gun == usio_gun_handler::controller_ls;
-			const bool is_ctrl_rs = g_cfg.io.usio_gun == usio_gun_handler::controller_rs;
+			const bool is_ctrl_ls = cfg->gun == usio_gun::controller_ls;
+			const bool is_ctrl_rs = cfg->gun == usio_gun::controller_rs;
 			if (g_cfg.io.usio_mode == usio_handler_mode::shooter_games && (is_ctrl_ls || is_ctrl_rs))
 			{
 				const s8 angle = pad->m_angles[is_ctrl_ls ? 0 : 1];
@@ -450,6 +466,10 @@ void usb_device_usio::translate_input_tekken()
 
 	const auto translate_from_mouse = [&](usz mouse_number, usz player)
 	{
+		const auto& cfg = ::at32(g_cfg_usio.players, mouse_number);
+		if (cfg->gun != usio_gun::mouse)
+			return;
+
 		const usz player_index = player % 2;
 		const usz io_index = player / 2;
 		auto& status = m_io_status[io_index];
@@ -466,7 +486,7 @@ void usb_device_usio::translate_input_tekken()
 		};
 
 		s8 current_wheel = 0;
-		MouseDataList& data_list = mouse_handler.GetDataList(mouse_number);
+		MouseDataList& data_list = mouse_handler.GetDataList(mouse_index);
 		if (!data_list.empty())
 		{
 			const MouseData& current_data = data_list.front();
@@ -495,7 +515,7 @@ void usb_device_usio::translate_input_tekken()
 	{
 		translate_from_pad(i, i);
 
-		if (g_cfg.io.usio_mode == usio_handler_mode::shooter_games && g_cfg.io.usio_gun == usio_gun_handler::mouse)
+		if (g_cfg.io.usio_mode == usio_handler_mode::shooter_games)
 			translate_from_mouse(i, i);
 	}
 
