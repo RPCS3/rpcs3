@@ -40,7 +40,7 @@ static std::array<serial_ver_t, 34> s_serial_versions;
 		return ::s_serial_versions[identifier].current_version;\
 	}
 
-SERIALIZATION_VER(global_version, 0,                            24) // For stuff not listed here
+SERIALIZATION_VER(global_version, 0,                            25) // For stuff not listed here
 SERIALIZATION_VER(ppu, 1,                                       1, 2/*PPU sleep order*/, 3/*PPU FNID and module*/)
 SERIALIZATION_VER(spu, 2,                                       1)
 SERIALIZATION_VER(lv2_sync, 3,                                  1)
@@ -48,12 +48,17 @@ SERIALIZATION_VER(lv2_vm, 4,                                    1)
 SERIALIZATION_VER(lv2_net, 5,                                   1, 2/*TCP Feign conection loss*/, 3/*P2PS stream_disconnected status*/)
 SERIALIZATION_VER(lv2_fs, 6,                                    1, 2/*NPDRM key saving*/)
 SERIALIZATION_VER(lv2_prx_overlay, 7,                           2)
-SERIALIZATION_VER(lv2_memory, 8,                                3)
+SERIALIZATION_VER(lv2_memory, 8,                                3, 4/*sys_mmapper strict mapping*/)
 SERIALIZATION_VER(lv2_config, 9,                                1)
+
+namespace vm
+{
+	SERIALIZATION_VER(lv2_memory, 8,                            3, 4/*sys_mmapper string mapping*/)
+}
 
 namespace rsx
 {
-	SERIALIZATION_VER(rsx, 10,                                  1, 2/*Pending flip*/, 3/*avconf scan_mode*/)
+	SERIALIZATION_VER(rsx, 10,                                  1, 2/*Pending flip*/, 3/*avconf scan_mode*/, 4/*FIFO Position*/)
 }
 
 namespace np

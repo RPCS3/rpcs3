@@ -135,6 +135,7 @@ enum class lv2_mp_flag
 	no_uid_gid,
 	strict_get_block_size,
 	cache,
+	reflection,
 
 	__bitset_enum_max
 };
@@ -346,6 +347,10 @@ struct lv2_file final : lv2_fs_object
 	{
 		return op_read(file, buf, size, opt_pos);
 	}
+
+	// caller must hold the mount lock
+	u64 schedule_read(u64 size, u64 start, u64 offset) const;
+	static void wait_read(ppu_thread& ppu, u64 end);
 
 	// File writing with intermediate buffer
 	static u64 op_write(const fs::file& file, vm::cptr<void> buf, u64 size);

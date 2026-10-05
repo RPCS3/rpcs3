@@ -389,6 +389,8 @@ u32 g_defaultCommandBufferBegin, g_defaultCommandBufferFragmentCount;
 // Called by cellGcmInit
 error_code _cellGcmInitBody(ppu_thread& ppu, vm::pptr<CellGcmContextData> context, u32 cmdSize, u32 ioSize, u32 ioAddress)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellGcmSys.warning("_cellGcmInitBody(context=**0x%x, cmdSize=0x%x, ioSize=0x%x, ioAddress=0x%x)", context, cmdSize, ioSize, ioAddress);
 
 	auto& gcm_cfg = g_fxo->get<gcm_config>();
@@ -1103,7 +1105,7 @@ error_code cellGcmMapMainMemory(ppu_thread& ppu, u32 ea, u32 size, vm::ptr<u32> 
 	std::lock_guard lock(gcm_cfg.gcmio_mutex);
 
 	// Use the offset table to find the next free io address
-	for (u32 io = 0, end = (rsx::get_current_renderer()->main_mem_size - gcm_cfg.reserved_size) >> 20, unmap_count = 1; io < end; unmap_count++)
+	for (u32 io = 0, end = (rsx::get_current_renderer()->main_mem_size - gcm_cfg.reserved_size) >> 20, unmap_count = 1; unmap_count + io <= end; unmap_count++)
 	{
 		if (gcm_cfg.offsetTable.eaAddress[io + unmap_count - 1] > 0xBFF)
 		{

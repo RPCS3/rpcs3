@@ -386,7 +386,7 @@ void decode_x64_reg_op(const u8* code, x64_op_t& out_op, x64_reg_t& out_reg, usz
 
 		case 0x67: // group 4
 		{
-			sig_log.error("decode_x64_reg_op(%016llxh): address-size override prefix found", code - out_length, prefix);
+			sig_log.error("decode_x64_reg_op(%016llxh): address-size override prefix found", code - out_length);
 			out_op = X64OP_NONE;
 			out_reg = X64_NOT_SET;
 			out_size = 0;
@@ -2808,6 +2808,14 @@ void thread_base::initialize(void (*error_cb)())
 	if (!m_thread && !m_thread.compare_and_swap_test(0, new_tid))
 	{
 		ensure(m_thread == new_tid);
+	}
+#endif
+
+#if !defined(ANDROID) && (defined(__linux__) || defined(__DragonFly__) || defined(__FreeBSD__))
+	// A new thread inherits its creator's affinity mask (e.g. compile workers spawned by a pinned PPU thread): reset it to the process mask
+	if (g_cfg.core.thread_scheduler != thread_scheduler_mode::os)
+	{
+		thread_ctrl::set_thread_affinity_mask(0);
 	}
 #endif
 

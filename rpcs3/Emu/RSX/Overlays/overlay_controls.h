@@ -63,13 +63,33 @@ namespace rsx
 			using image_info_base::image_info_base;
 			image_info(image_info&) = delete;
 			image_info(const std::string& filename, bool grayscaled = false);
-			image_info(const std::vector<u8>& bytes, bool grayscaled = false);
+			image_info(const std::span<const u8>& bytes, bool grayscaled = false);
 			virtual ~image_info();
 
-			void load_data(const std::vector<u8>& bytes, bool grayscaled = false);
+			void load_data(const std::span<const u8>& bytes, bool grayscaled = false);
 			const u8* get_data() const override { return channels == 4 ? data : data_grey.empty() ? nullptr : data_grey.data(); }
 
 			static std::unique_ptr<image_info> load_icon(const std::string& icon_path, const std::string& archive_path);
+		};
+
+		struct memory_image_info : public image_info_base
+		{
+		public:
+			memory_image_info() = default;
+
+			memory_image_info(u16 w, u16 h, u8 bpp, const u8* data)
+			{
+				this->w = w;
+				this->h = h;
+				this->bpp = bpp;
+				this->m_data_ptr = data;
+			}
+
+			const u8* get_data() const override { return m_data_ptr; }
+			usz size_bytes() const override { return static_cast<usz>(w * h * bpp); }
+
+		private:
+			const u8* m_data_ptr = nullptr;
 		};
 
 		struct resource_config
@@ -252,7 +272,7 @@ namespace rsx
 			virtual void set_unicode_text(std::u32string_view text);
 			void set_text(localized_string_id id);
 			void set_text(const localized_string& container);
-			virtual void set_font(const char* font_name, u16 font_size);
+			virtual void set_font(u16 font_size, std::string_view font_name = {});
 			virtual void align_text(text_align align);
 			virtual void set_wrap_text(bool state);
 			virtual font* get_font() const;
@@ -447,8 +467,8 @@ namespace rsx
 			graph();
 			void set_pos(s16 _x, s16 _y) override;
 			void set_size(u16 _w, u16 _h) override;
-			void set_title(const char* title);
-			void set_font(const char* font_name, u16 font_size) override;
+			void set_title(std::string&& title);
+			void set_font(u16 font_size, std::string_view font_name = {}) override;
 			void set_font_size(u16 font_size);
 			void set_count(u32 datapoint_count);
 			void set_color(color4f color);
