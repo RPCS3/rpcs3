@@ -1289,8 +1289,9 @@ namespace vm
 				std::fill(dst, dst + count, data);
 			};
 
-			const u32 enda = addr + size - 4096;
-			fill64(g_sudo_addr + addr, "STACKGRD"_u64, 4096 / sizeof(u64));
+			const u32 begina = addr - 4096;
+			const u32 enda = addr + size;
+			fill64(g_sudo_addr + begina, "STACKGRD"_u64, 4096 / sizeof(u64));
 			fill64(g_sudo_addr + enda, "UNDERFLO"_u64, 4096 / sizeof(u64));
 		}
 
