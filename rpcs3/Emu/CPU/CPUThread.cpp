@@ -1270,8 +1270,8 @@ u32 cpu_thread::get_pc() const
 	}
 	case thread_class::rsx:
 	{
-		const auto ctrl = static_cast<const rsx::thread*>(this)->ctrl;
-		return ctrl ? ctrl->get.load() : umax;
+		const auto& ctrl = static_cast<const rsx::thread*>(this)->fifo_ctrl;
+		return ctrl ? ctrl->get_pos() : umax;
 	}
 	default: break;
 	}

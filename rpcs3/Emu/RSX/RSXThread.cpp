@@ -3109,9 +3109,9 @@ namespace rsx
 
 	void thread::dump_regs(std::string& result, std::any& /*custom_data*/) const
 	{
-		if (ctrl)
+		if (ctrl && fifo_ctrl)
 		{
-			fmt::append(result, "FIFO: GET=0x%07x, PUT=0x%07x, REF=0x%08x\n", +ctrl->get, +ctrl->put, +ctrl->ref);
+			fmt::append(result, "FIFO: EXEC=0x%x, GET=0x%07x, PUT=0x%07x, REF=0x%08x\n", fifo_ctrl->get_pos(), +ctrl->get, +ctrl->put, +ctrl->ref);
 			fmt::append(result, "FIFO: RET-ADDR=0x%x, Code=0x%x, Jump=0x%x\n", fifo_ret_addr, last_known_code_start, last_code_jump);
 			fmt::append(result, "FIFO: Semaphore Acquire: pos=0x%x, address=0x%x\n", last_sema_cmd, last_sema_addr);
 		}
