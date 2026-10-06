@@ -27,10 +27,8 @@ namespace rsx
 			const u32 constant_id = index / 4;
 			const u8 subreg = index % 4;
 			const u32 load = REGS(ctx)->transform_constant_load();
-			const u32 load_offset = load + constant_id;
 
-			ensure(load_offset < 468);
-			REGS(ctx)->transform_constants[load_offset][subreg] = arg;
+			REGS(ctx)->transform_constants[load + constant_id][subreg] = arg;
 		}
 
 		void set_transform_constant::batch_decode(context* ctx, u32 reg, const std::span<const u32>& args, const std::function<bool(context*, u32, u32)>& notify)
@@ -39,14 +37,12 @@ namespace rsx
 			const u32 constant_id = index / 4;
 			const u8 subreg = index % 4;
 			const u32 load = REGS(ctx)->transform_constant_load();
-			const u32 load_offset = load + constant_id;
-			const u32 last_constant_id = ((reg + ::size32(args) + 3) - NV4097_SET_TRANSFORM_CONSTANT) / 4; // Aligned div
 
-			ensure(load < 468 && (load + last_constant_id) <= 468);
-			auto dst = &REGS(ctx)->transform_constants[load_offset][subreg];
+			auto dst = &REGS(ctx)->transform_constants[load + constant_id][subreg];
 			copy_data_swap_u32(dst, args.data(), ::size32(args));
 
 			// Notify
+			const u32 last_constant_id = ((reg + ::size32(args) + 3) - NV4097_SET_TRANSFORM_CONSTANT) / 4; // Aligned div
 			const u32 load_index = load + constant_id;
 			const u32 load_count = last_constant_id - constant_id;
 
@@ -70,12 +66,12 @@ namespace rsx
 
 			// Get limit imposed by FIFO PUT (if put is behind get it will result in a number ignored by min)
 			const u32 fifo_read_limit = static_cast<u32>(((RSX(ctx)->ctrl->put & ~3ull) - (RSX(ctx)->fifo_ctrl->get_pos())) / 4);
+
 			const u32 count = std::min<u32>({ fifo_args_cnt, fifo_read_limit, method_range });
+
 			const u32 load = REGS(ctx)->transform_constant_load();
 
-			ensure(load + constant_id < 468);
 			u32 rcount = count;
-
 			if (const u32 max = (load + constant_id) * 4 + count + subreg, limit = 468 * 4; max > limit)
 			{
 				// Ignore addresses outside the usable [0, 467] range

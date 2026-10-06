@@ -26,7 +26,7 @@ namespace
 		const auto element_count = get_index_count(primitive_mode, vertex_count);
 		ensure(!gl::is_primitive_native(primitive_mode));
 
-		auto mapping = dst.alloc_from_heap(element_count * sizeof(u16), 256);
+		auto mapping = dst.alloc_from_heap(element_count * sizeof(u32), 256);
 		auto mapped_buffer = static_cast<char*>(mapping.first);
 
 		write_index_array_for_non_indexed_non_native_primitive_to_buffer(mapped_buffer, primitive_mode, vertex_count);
@@ -77,7 +77,7 @@ namespace
 					rsx::method_registers.current_draw_clause.primitive, m_index_ring_buffer,
 					rsx::method_registers.current_draw_clause.get_elements_count());
 
-				return{ false, min_index, max_index, index_count, 0, std::make_tuple(static_cast<GLenum>(GL_UNSIGNED_SHORT), offset_in_index_buffer) };
+				return{ false, min_index, max_index, index_count, 0, std::make_tuple(static_cast<GLenum>(GL_UNSIGNED_INT), offset_in_index_buffer) };
 			}
 
 			return{ false, min_index, max_index, vertex_count, 0, std::optional<std::tuple<GLenum, u32>>() };
@@ -138,7 +138,7 @@ namespace
 				std::tie(index_count, offset_in_index_buffer) = get_index_array_for_emulated_non_indexed_draw(
 					rsx::method_registers.current_draw_clause.primitive, m_index_ring_buffer, vertex_count);
 
-				return{ false, 0, vertex_count, index_count, 0, std::make_tuple(static_cast<GLenum>(GL_UNSIGNED_SHORT), offset_in_index_buffer) };
+				return{ false, 0, vertex_count, index_count, 0, std::make_tuple(static_cast<GLenum>(GL_UNSIGNED_INT), offset_in_index_buffer) };
 			}
 
 			return{ false, 0, vertex_count, vertex_count, 0, std::optional<std::tuple<GLenum, u32>>() };

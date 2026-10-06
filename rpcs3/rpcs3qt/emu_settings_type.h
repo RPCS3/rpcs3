@@ -179,6 +179,7 @@ enum class emu_settings_type
 	Buzz,
 	Turntable,
 	GHLtar,
+	USIO,
 	MidiDevices,
 	SDLMappings,
 	MouseBasedGyro,
@@ -235,6 +236,7 @@ enum class emu_settings_type
 	LimitCacheSize,
 	MaximumCacheSize,
 	EmulateHddSpeed,
+	EmulateBdvdSpeed,
 
 	// Log
 	Log,

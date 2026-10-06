@@ -1776,10 +1776,10 @@ static bool check_gem_num(u32 gem_num)
 	return gem_num < CELL_GEM_MAX_NUM;
 }
 
-static inline void draw_overlay_cursor(u32 gem_num, const gem_config::gem_controller&, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max)
+static inline void draw_overlay_cursor(u32 gem_num, const gem_config::gem_controller&, f32 x_pos, f32 y_pos)
 {
-	const s16 x = static_cast<s16>(x_pos / (x_max / static_cast<f32>(rsx::overlays::overlay::virtual_width)));
-	const s16 y = static_cast<s16>(y_pos / (y_max / static_cast<f32>(rsx::overlays::overlay::virtual_height)));
+	const s16 x = static_cast<s16>(x_pos * rsx::overlays::overlay::virtual_width);
+	const s16 y = static_cast<s16>(y_pos * rsx::overlays::overlay::virtual_height);
 
 	// Note: We shouldn't use sphere_rgb here. The game will set it to black in many cases.
 	const gem_config_data::gem_color& rgb = gem_config_data::gem_color::get_default_color(gem_num);
@@ -1788,30 +1788,24 @@ static inline void draw_overlay_cursor(u32 gem_num, const gem_config::gem_contro
 	rsx::overlays::set_cursor(rsx::overlays::cursor_offset::cell_gem + gem_num, x, y, color, 2'000'000, false);
 }
 
-static inline void pos_to_gem_image_state(u32 gem_num, gem_config::gem_controller& controller, vm::ptr<CellGemImageState>& gem_image_state, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max)
+static inline void pos_to_gem_image_state(u32 gem_num, gem_config::gem_controller& controller, vm::ptr<CellGemImageState>& gem_image_state, f32 x_pos, f32 y_pos)
 {
 	const auto& shared_data = g_fxo->get<gem_camera_shared>();
 
-	if (x_max <= 0) x_max = shared_data.width;
-	if (y_max <= 0) y_max = shared_data.height;
-
 	// Move the cursor out of the screen if we're at the screen border (Time Crisis 4 needs this)
-	if (x_pos <= 0) x_pos -= x_max / 10; else if (x_pos >= x_max) x_pos += x_max / 10;
-	if (y_pos <= 0) y_pos -= y_max / 10; else if (y_pos >= y_max) y_pos += y_max / 10;
-
-	const f32 scaling_width = x_max / static_cast<f32>(shared_data.width);
-	const f32 scaling_height = y_max / static_cast<f32>(shared_data.height);
-	const f32 mmPerPixel = controller.radius <= 0.0f ? 0.0f : (CELL_GEM_SPHERE_RADIUS_MM / controller.radius);
+	if (x_pos <= 0) x_pos -= 0.1f; else if (x_pos >= 1.0f) x_pos += 0.1f;
+	if (y_pos <= 0) y_pos -= 0.1f; else if (y_pos >= 1.0f) y_pos += 0.1f;
 
 	// Image coordinates in pixels
-	const f32 image_x = static_cast<f32>(x_pos) / scaling_width;
-	const f32 image_y = static_cast<f32>(y_pos) / scaling_height;
+	const f32 image_x = x_pos * shared_data.width;
+	const f32 image_y = y_pos * shared_data.height;
 
 	// Centered image coordinates in pixels
 	const f32 centered_x = image_x - (shared_data.width / 2.f);
 	const f32 centered_y = (shared_data.height / 2.f) - image_y; // Image coordinates increase downwards, so we have to invert this
 
 	// Camera coordinates in mm (centered, so it's the same as world coordinates)
+	const f32 mmPerPixel = controller.radius <= 0.0f ? 0.0f : (CELL_GEM_SPHERE_RADIUS_MM / controller.radius);
 	const f32 camera_x = centered_x * mmPerPixel;
 	const f32 camera_y = centered_y * mmPerPixel;
 
@@ -1827,12 +1821,12 @@ static inline void pos_to_gem_image_state(u32 gem_num, gem_config::gem_controlle
 	if (g_cfg.io.move != move_handler::real)
 	{
 		// Let's say the sphere is not visible if the position is at the edge of the screen
-		controller.radius_valid = x_pos > 0 && x_pos < x_max && y_pos > 0 && y_pos < y_max;
+		controller.radius_valid = x_pos > 0.0f && x_pos < 1.0f && y_pos > 0.0f && y_pos < 1.0f;
 	}
 
 	if (g_cfg.io.show_move_cursor)
 	{
-		draw_overlay_cursor(gem_num, controller, x_pos, y_pos, x_max, y_max);
+		draw_overlay_cursor(gem_num, controller, x_pos, y_pos);
 	}
 
 	if (g_cfg.io.paint_move_spheres)
@@ -1841,24 +1835,17 @@ static inline void pos_to_gem_image_state(u32 gem_num, gem_config::gem_controlle
 	}
 }
 
-static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& controller, vm::ptr<CellGemState>& gem_state, s32 x_pos, s32 y_pos, s32 x_max, s32 y_max, ps_move_data& move_data)
+static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& controller, vm::ptr<CellGemState>& gem_state, f32 x_pos, f32 y_pos, ps_move_data& move_data)
 {
 	const auto& shared_data = g_fxo->get<gem_camera_shared>();
 
-	if (x_max <= 0) x_max = shared_data.width;
-	if (y_max <= 0) y_max = shared_data.height;
-
 	// Move the cursor out of the screen if we're at the screen border (Time Crisis 4 needs this)
-	if (x_pos <= 0) x_pos -= x_max / 10; else if (x_pos >= x_max) x_pos += x_max / 10;
-	if (y_pos <= 0) y_pos -= y_max / 10; else if (y_pos >= y_max) y_pos += y_max / 10;
-
-	const f32 scaling_width = x_max / static_cast<f32>(shared_data.width);
-	const f32 scaling_height = y_max / static_cast<f32>(shared_data.height);
-	const f32 mmPerPixel = controller.radius <= 0.0f ? 0.0f : (CELL_GEM_SPHERE_RADIUS_MM / controller.radius);
+	if (x_pos <= 0.0f) x_pos -= 0.1f; else if (x_pos >= 1.0f) x_pos += 0.1f;
+	if (y_pos <= 0.0f) y_pos -= 0.1f; else if (y_pos >= 1.0f) y_pos += 0.1f;
 
 	// Image coordinates in pixels
-	const f32 image_x = static_cast<f32>(x_pos) / scaling_width;
-	const f32 image_y = static_cast<f32>(y_pos) / scaling_height;
+	const f32 image_x = x_pos * shared_data.width;
+	const f32 image_y = y_pos * shared_data.height;
 
 	// Half of the camera image
 	const f32 half_width = shared_data.width / 2.f;
@@ -1869,6 +1856,7 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 	const f32 centered_y = half_height - image_y; // Image coordinates increase downwards, so we have to invert this
 
 	// Camera coordinates in mm (centered, so it's the same as world coordinates)
+	const f32 mmPerPixel = controller.radius <= 0.0f ? 0.0f : (CELL_GEM_SPHERE_RADIUS_MM / controller.radius);
 	const f32 camera_x = centered_x * mmPerPixel;
 	const f32 camera_y = centered_y * mmPerPixel;
 
@@ -1935,12 +1923,12 @@ static inline void pos_to_gem_state(u32 gem_num, gem_config::gem_controller& con
 	if (g_cfg.io.move != move_handler::real)
 	{
 		// Let's say the sphere is not visible if the position is at the edge of the screen
-		controller.radius_valid = x_pos > 0 && x_pos < x_max && y_pos > 0 && y_pos < y_max;
+		controller.radius_valid = x_pos > 0.0f && x_pos < 1.0f && y_pos > 0.0f && y_pos < 1.0f;
 	}
 
 	if (g_cfg.io.show_move_cursor)
 	{
-		draw_overlay_cursor(gem_num, controller, x_pos, y_pos, x_max, y_max);
+		draw_overlay_cursor(gem_num, controller, x_pos, y_pos);
 	}
 
 	if (g_cfg.io.paint_move_spheres)
@@ -2026,13 +2014,10 @@ static void ds3_input_to_pad(const u32 gem_num, be_t<u16>& digital_buttons, be_t
 	}
 }
 
-constexpr u16 ds3_max_x = 255;
-constexpr u16 ds3_max_y = 255;
-
-static inline void ds3_get_stick_values(u32 gem_num, const std::shared_ptr<Pad>& pad, s32& x_pos, s32& y_pos)
+static inline void ds3_get_stick_values(u32 gem_num, const std::shared_ptr<Pad>& pad, f32& x_pos, f32& y_pos)
 {
-	x_pos = 0;
-	y_pos = 0;
+	x_pos = 0.0f;
+	y_pos = 0.0f;
 
 	const auto& cfg = ::at32(g_cfg_gem_fake.players, gem_num);
 	cfg->handle_input(pad, true, [&](const auto& value, bool& /*abort*/)
@@ -2042,8 +2027,8 @@ static inline void ds3_get_stick_values(u32 gem_num, const std::shared_ptr<Pad>&
 
 		switch (value.btn)
 		{
-		case gem_btn::x_axis: x_pos = value.value; break;
-		case gem_btn::y_axis: y_pos = value.value; break;
+		case gem_btn::x_axis: x_pos = value.value / 255.0f; break;
+		case gem_btn::y_axis: y_pos = value.value / 255.0f; break;
 		default: break;
 		}
 	});
@@ -2067,16 +2052,16 @@ static void ds3_pos_to_gem_state(u32 gem_num, gem_config::gem_controller& contro
 		return;
 	}
 
-	s32 ds3_pos_x, ds3_pos_y;
+	f32 ds3_pos_x, ds3_pos_y;
 	ds3_get_stick_values(gem_num, pad, ds3_pos_x, ds3_pos_y);
 
 	if constexpr (std::is_same_v<T, vm::ptr<CellGemState>>)
 	{
-		pos_to_gem_state(gem_num, controller, gem_state, ds3_pos_x, ds3_pos_y, ds3_max_x, ds3_max_y, pad->move_data);
+		pos_to_gem_state(gem_num, controller, gem_state, ds3_pos_x, ds3_pos_y, pad->move_data);
 	}
 	else if constexpr (std::is_same_v<T, vm::ptr<CellGemImageState>>)
 	{
-		pos_to_gem_image_state(gem_num, controller, gem_state, ds3_pos_x, ds3_pos_y, ds3_max_x, ds3_max_y);
+		pos_to_gem_image_state(gem_num, controller, gem_state, ds3_pos_x, ds3_pos_y);
 	}
 }
 
@@ -2116,11 +2101,11 @@ static void ps_move_pos_to_gem_state(u32 gem_num, gem_config::gem_controller& co
 			gem_state->angaccel[i] = pad->move_data.angaccel_world[i];
 		}
 
-		pos_to_gem_state(gem_num, controller, gem_state, info.x_pos, info.y_pos, info.x_max, info.y_max, pad->move_data);
+		pos_to_gem_state(gem_num, controller, gem_state, info.x_pos, info.y_pos, pad->move_data);
 	}
 	else if constexpr (std::is_same_v<T, vm::ptr<CellGemImageState>>)
 	{
-		pos_to_gem_image_state(gem_num, controller, gem_state, info.x_pos, info.y_pos, info.x_max, info.y_max);
+		pos_to_gem_image_state(gem_num, controller, gem_state, info.x_pos, info.y_pos);
 	}
 }
 
@@ -2652,11 +2637,11 @@ static void mouse_pos_to_gem_state(u32 mouse_no, gem_config::gem_controller& con
 	if constexpr (std::is_same_v<T, vm::ptr<CellGemState>>)
 	{
 		ps_move_data& move_data = ::at32(g_fxo->get<gem_config>().fake_move_data, mouse_no);
-		pos_to_gem_state(mouse_no, controller, gem_state, mouse.x_pos, mouse.y_pos, mouse.x_max, mouse.y_max, move_data);
+		pos_to_gem_state(mouse_no, controller, gem_state, mouse.x_pos, mouse.y_pos, move_data);
 	}
 	else if constexpr (std::is_same_v<T, vm::ptr<CellGemImageState>>)
 	{
-		pos_to_gem_image_state(mouse_no, controller, gem_state, mouse.x_pos, mouse.y_pos, mouse.x_max, mouse.y_max);
+		pos_to_gem_image_state(mouse_no, controller, gem_state, mouse.x_pos, mouse.y_pos);
 	}
 }
 
@@ -2707,25 +2692,23 @@ static void gun_pos_to_gem_state(u32 gem_no, gem_config::gem_controller& control
 	if (!gem_state || !is_input_allowed())
 		return;
 
-	int x_pos, y_pos, x_max, y_max;
+	f32 x_pos, y_pos;
 	{
 		gun_thread& gun = g_fxo->get<gun_thread>();
 		std::scoped_lock lock(gun.handler.mutex);
 
 		x_pos = gun.handler.get_axis_x(gem_no);
 		y_pos = gun.handler.get_axis_y(gem_no);
-		x_max = gun.handler.get_axis_x_max(gem_no);
-		y_max = gun.handler.get_axis_y_max(gem_no);
 	}
 
 	if constexpr (std::is_same_v<T, vm::ptr<CellGemState>>)
 	{
 		ps_move_data& move_data = ::at32(g_fxo->get<gem_config>().fake_move_data, gem_no);
-		pos_to_gem_state(gem_no, controller, gem_state, x_pos, y_pos, x_max, y_max, move_data);
+		pos_to_gem_state(gem_no, controller, gem_state, x_pos, y_pos, move_data);
 	}
 	else if constexpr (std::is_same_v<T, vm::ptr<CellGemImageState>>)
 	{
-		pos_to_gem_image_state(gem_no, controller, gem_state, x_pos, y_pos, x_max, y_max);
+		pos_to_gem_image_state(gem_no, controller, gem_state, x_pos, y_pos);
 	}
 }
 #endif
@@ -4010,9 +3993,15 @@ error_code cellGemSetRumble(u32 gem_num, u8 rumble)
 	return CELL_OK;
 }
 
-error_code cellGemSetYaw(u32 gem_num, vm::ptr<f32> z_direction)
+error_code cellGemSetYaw(u32 gem_num, v128 z_direction)
 {
-	cellGem.todo("cellGemSetYaw(gem_num=%d, z_direction=*0x%x)", gem_num, z_direction);
+	// Unpack vector argument
+	const f32 z_direction_x = z_direction.fr[0];
+	const f32 z_direction_y = z_direction.fr[1];
+	const f32 z_direction_z = z_direction.fr[2];
+	const f32 z_direction_w = z_direction.fr[3];
+
+	cellGem.warning("cellGemSetYaw(gem_num=%d, z_direction_x=%f, z_direction_y=%f, z_direction_z=%f, z_direction_w=%f)", gem_num, z_direction_x, z_direction_y, z_direction_z, z_direction_w);
 
 	auto& gem = g_fxo->get<gem_config>();
 
@@ -4023,12 +4012,31 @@ error_code cellGemSetYaw(u32 gem_num, vm::ptr<f32> z_direction)
 		return CELL_GEM_ERROR_UNINITIALIZED;
 	}
 
-	if (!z_direction || !check_gem_num(gem_num))
+	if (!check_gem_num(gem_num))
 	{
 		return CELL_GEM_ERROR_INVALID_PARAMETER;
 	}
 
-	// TODO
+	if (g_cfg.io.move != move_handler::real)
+	{
+		return CELL_OK;
+	}
+
+	std::lock_guard pad_lock(pad::g_pad_mutex);
+	const auto handler = pad::get_pad_thread();
+	const auto& pad = ::at32(handler->GetPads(), pad_num(gem_num));
+
+	if (pad && pad->m_pad_handler == pad_handler::move && !pad->is_copilot())
+	{
+		// z_direction is the direction of the controller's z axis (sphere -> handle) in world coordinates.
+		// This function is usually used when the game wants to re-orient the ps move towards the camera, e.g. during calibration or as a surrogate for it.
+		// So far we've seen:
+		// A: (0,0,1,0): The controller points straight at the camera along the camera axis. This is our default orientation.
+		// B: The current sphere position (CellGemState.pos) while pointing at the camera.
+		//    This is equal to A if the controller is on the camera axis. Otherwise the correct yaw would be atan2(x, z).
+		// For now we simply reset the orientation (including pitch and roll) instead of only adjusting the yaw.
+		pad->move_data.orientation_reset_requested = true;
+	}
 
 	return CELL_OK;
 }
