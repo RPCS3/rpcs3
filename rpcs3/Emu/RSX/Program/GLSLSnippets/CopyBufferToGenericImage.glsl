@@ -126,7 +126,7 @@ float readE4M12(const in uint address)
 {
 	const uint value = readUint16(address);
 	const uint bits = (value << 11) & 0x07FFF800u;
-	return uintBitsToFloat(bits) * uintBitsToFloat(0x7B800000u);
+	return uintBitsToFloat(bits) * uintBitsToFloat(0x77000000u); // Rebias by 2^111: unsigned E4M12 with bias 16, see E4M12Conversion.glsl
 }
 
 #define readFixed16(address) readUint16(uint(address)) / 65535.f
