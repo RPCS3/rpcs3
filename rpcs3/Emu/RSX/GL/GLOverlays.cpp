@@ -576,7 +576,18 @@ namespace gl
 		const u32 src_offset, const coordu& dst_region,
 		const pixel_buffer_layout& layout)
 	{
-		const u32 bpp = dst->image()->pitch() / dst->image()->width();
+		u32 bpp;
+		switch (dst->image()->get_internal_format())
+		{
+		case gl::texture::internal_format::depth32f:
+			bpp = 2; break; // D16F emulation
+		case gl::texture::internal_format::depth32f_stencil8:
+			bpp = 4; break; // D24S8 emulation
+		default:
+			bpp = dst->image()->pitch() / dst->image()->width();
+			break;
+		}
+
 		const u32 aligned_width = utils::align(dst_region.width * bpp, std::max<int>(layout.alignment, 1)) / bpp;
 		const u32 row_length = layout.row_length ? layout.row_length : aligned_width;
 
