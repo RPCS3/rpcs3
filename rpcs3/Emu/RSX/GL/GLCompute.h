@@ -111,28 +111,6 @@ namespace gl
 	{
 		u32 m_ssbo_length = 0;
 
-		void declare_f16_expansion()
-		{
-			method_declarations +=
-				"uvec2 unpack_e4m12_pack16(const in uint value)\n"
-				"{\n"
-				"	uvec2 result = uvec2(bitfieldExtract(value, 0, 16), bitfieldExtract(value, 16, 16));\n"
-				"	result <<= 11;\n"
-				"	result += (120 << 23);\n"
-				"	return result;\n"
-				"}\n\n";
-		}
-
-		void declare_f16_contraction()
-		{
-			method_declarations +=
-				"uint pack_e4m12_pack16(const in uvec2 value)\n"
-				"{\n"
-				"	uvec2 result = (value - (120 << 23)) >> 11;\n"
-				"	return (result.x & 0xFFFF) | (result.y << 16);\n"
-				"}\n\n";
-		}
-
 		cs_fconvert_task()
 		{
 			uniforms =
@@ -151,9 +129,9 @@ namespace gl
 					"		if ((index * 2) >= block_length)\n"
 					"			return;\n";
 
-				static_assert(sizeof(To) == 2);
-				declare_f16_contraction();
+				method_declarations += "#define _CONVERT_F32_TO_E4M12 1\n";
 
+				static_assert(sizeof(To) == 2);
 				work_kernel +=
 					"		const uint src_offset = (index * 2) + in_offset;\n"
 					"		const uint dst_offset = index + out_offset;\n"
@@ -183,8 +161,6 @@ namespace gl
 					"			return;\n";
 
 				static_assert(sizeof(To) == 4);
-				declare_f16_expansion();
-
 				work_kernel +=
 					"		const uint src_offset = index + in_offset;\n"
 					"		const uint dst_offset = (index * 2) + out_offset;\n"
@@ -208,6 +184,10 @@ namespace gl
 					"		data[dst_offset] = tmp.y;\n"
 					"		data[dst_offset + 1] = tmp.z;\n";
 			}
+
+			method_declarations +=
+				#include "Emu/RSX/Program/GLSLSnippets/E4M12Conversion.glsl"
+				;
 
 			cs_shuffle_base::build("");
 		}
