@@ -82,4 +82,5 @@ namespace np
 
 	void close_socket(socket_type socket);
 	void set_socket_non_blocking(socket_type socket);
+	void set_dgram_socket_disable_connreset(socket_type socket);
 } // namespace np

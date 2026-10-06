@@ -64,6 +64,7 @@ private:
 	void set_socket(socket_type native_socket, lv2_socket_family family, lv2_socket_type type, lv2_ip_protocol protocol);
 	void set_default_buffers();
 	void set_non_blocking();
+	void set_dgram_disable_connreset();
 
 private:
 	// Value keepers
