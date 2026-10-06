@@ -238,6 +238,8 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::DateFormat,            get_cfg_location(local_cfg.sys.date_fmt) },
 	{ emu_settings_type::TimeFormat,            get_cfg_location(local_cfg.sys.time_fmt) },
 	{ emu_settings_type::ConsoleTimeOffset,     get_cfg_location(local_cfg.sys.console_time_offset) },
+	{ emu_settings_type::HDDModelName,          get_cfg_location(local_cfg.sys.hdd_model) },
+	{ emu_settings_type::HDDSerialNumber,       get_cfg_location(local_cfg.sys.hdd_serial) },
 
 	{ emu_settings_type::EnableHostRoot,        get_cfg_location(local_cfg.vfs.host_root) },
 	{ emu_settings_type::EmptyHdd0Tmp,          get_cfg_location(local_cfg.vfs.empty_hdd0_tmp) },

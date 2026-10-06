@@ -1350,6 +1350,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceRadioButton(enter_button_assignment_bg, emu_settings_type::EnterButtonAssignment);
 	SubscribeTooltip(ui->gb_enterButtonAssignment, tooltips.settings.enter_button_assignment);
 
+	// Edits
+
+	m_emu_settings->EnhanceLineEdit(ui->edit_hdd_model, emu_settings_type::HDDModelName);
+	SubscribeTooltip(ui->gb_edit_hdd_model, tooltips.settings.hdd_model);
+
+	m_emu_settings->EnhanceLineEdit(ui->edit_hdd_serial, emu_settings_type::HDDSerialNumber);
+	SubscribeTooltip(ui->gb_edit_hdd_serial, tooltips.settings.hdd_serial);
+
 	//    _   _      _                      _      _______    _
 	//   | \ | |    | |                    | |    |__   __|  | |
 	//   |  \| | ___| |___      _____  _ __| | __    | | __ _| |__
