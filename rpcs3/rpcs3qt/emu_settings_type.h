@@ -229,6 +229,8 @@ enum class emu_settings_type
 	DateFormat,
 	TimeFormat,
 	ConsoleTimeOffset,
+	HDDModelName,
+	HDDSerialNumber,
 
 	// VFS
 	EnableHostRoot,
