@@ -160,11 +160,11 @@ namespace vk
 			const u32 packed32_length = out_w * out_h * 4;
 			const u32 packed16_length = out_w * out_h * 2;
 
-			const auto allocation_end = region.bufferOffset + packed32_length + packed16_length;
-			ensure(dst->size() >= allocation_end);
-
 			const auto data_offset = u32(region.bufferOffset);
 			const auto z32_offset = utils::align<u32>(data_offset + packed16_length, 256);
+
+			const auto allocation_end = z32_offset + packed32_length;
+			ensure(dst->size() >= allocation_end);
 
 			// 1. Copy the depth to buffer
 			VkBufferImageCopy region2;
@@ -214,12 +214,12 @@ namespace vk
 			const u32 in_depth_size = packed_length;
 			const u32 in_stencil_size = out_w * out_h;
 
-			const auto allocation_end = region.bufferOffset + packed_length + in_depth_size + in_stencil_size;
-			ensure(dst->size() >= allocation_end);
-
 			const auto data_offset = u32(region.bufferOffset);
 			const auto z_offset = utils::align<u32>(data_offset + packed_length, 256);
 			const auto s_offset = utils::align<u32>(z_offset + in_depth_size, 256);
+
+			const auto allocation_end = s_offset + in_stencil_size;
+			ensure(dst->size() >= allocation_end);
 
 			// 1. Copy the depth and stencil blocks to separate banks
 			VkBufferImageCopy sub_regions[2];
@@ -263,9 +263,14 @@ namespace vk
 				}
 			}
 
-			vk::insert_buffer_memory_barrier(cmd, dst->value, z_offset, in_depth_size + in_stencil_size,
-				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+			vk::insert_buffer_memory_barrier(cmd,
+				dst->value,
+				z_offset,
+				(s_offset + in_stencil_size) - z_offset,
+				VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+				VK_ACCESS_TRANSFER_WRITE_BIT,
+				VK_ACCESS_SHADER_READ_BIT);
 
 			job->run(cmd, dst, data_offset, packed_length, z_offset, s_offset);
 
@@ -282,7 +287,7 @@ namespace vk
 			}
 			break;
 		}
-		}
+		} // switch
 	}
 
 	void copy_buffer_to_image(const vk::command_buffer& cmd, const vk::buffer* src, const vk::image* dst, const VkBufferImageCopy& region)
@@ -312,16 +317,22 @@ namespace vk
 			const u32 packed32_length = out_w * out_h * 4;
 			const u32 packed16_length = out_w * out_h * 2;
 
-			const auto allocation_end = region.bufferOffset + packed32_length + packed16_length;
-			ensure(src->size() >= allocation_end);
-
 			const auto data_offset = u32(region.bufferOffset);
 			const auto z32_offset = utils::align<u32>(data_offset + packed16_length, 256);
 
+			const auto allocation_end = z32_offset + packed32_length;
+			ensure(src->size() >= allocation_end);
+
 			// 1. Pre-compute barrier
-			vk::insert_buffer_memory_barrier(cmd, src->value, z32_offset, packed32_length,
-				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+			vk::insert_buffer_memory_barrier(
+				cmd,
+				src->value,
+				data_offset,
+				packed16_length,
+				VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+				VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+				VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT,
+				VK_ACCESS_SHADER_READ_BIT);
 
 			// 2. Do conversion with byteswap [D16F->D32F]
 			auto job = vk::get_compute_task<vk::cs_fconvert_task<f16, f32>>();
@@ -347,19 +358,25 @@ namespace vk
 			const u32 in_depth_size = packed_length;
 			const u32 in_stencil_size = out_w * out_h;
 
-			const auto allocation_end = region.bufferOffset + packed_length + in_depth_size + in_stencil_size;
-			ensure(src->size() >= allocation_end); // "Out of memory (compute heap). Lower your resolution scale setting."
-
 			const auto data_offset = u32(region.bufferOffset);
 			const auto z_offset = utils::align<u32>(data_offset + packed_length, 256);
 			const auto s_offset = utils::align<u32>(z_offset + in_depth_size, 256);
 
+			const auto allocation_end = s_offset + in_stencil_size;
+			ensure(src->size() >= allocation_end); // "Out of memory (compute heap). Lower your resolution scale setting."
+
 			// Zero out the stencil block
 			vkCmdFillBuffer(cmd, src->value, s_offset, utils::align(in_stencil_size, 4), 0);
 
-			vk::insert_buffer_memory_barrier(cmd, src->value, s_offset, in_stencil_size,
-				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
+			vk::insert_buffer_memory_barrier(
+				cmd,
+				src->value,
+				data_offset,
+				(s_offset + in_stencil_size) - data_offset,
+				VK_PIPELINE_STAGE_TRANSFER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+				VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+				VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_SHADER_WRITE_BIT,
+				VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT);
 
 			// 1. Scatter the interleaved data into separate depth and stencil blocks
 			vk::cs_interleave_task *job;
@@ -378,7 +395,11 @@ namespace vk
 
 			job->run(cmd, src, data_offset, packed_length, z_offset, s_offset);
 
-			vk::insert_buffer_memory_barrier(cmd, src->value, z_offset, in_depth_size + in_stencil_size,
+			vk::insert_buffer_memory_barrier(
+				cmd,
+				src->value,
+				z_offset,
+				(s_offset + in_stencil_size) - z_offset,
 				VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 				VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
 

@@ -1124,6 +1124,7 @@
     <None Include="Emu\RSX\Program\GLSLSnippets\CopyBufferToGenericImage.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\CopyD24x8ToBuffer.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\CopyRGBA8ToBuffer.glsl" />
+    <None Include="Emu\RSX\Program\GLSLSnippets\E4M12Conversion.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\GenericVSPassthrough.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\GPUDeswizzle.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\OverlayRenderFS.glsl" />
