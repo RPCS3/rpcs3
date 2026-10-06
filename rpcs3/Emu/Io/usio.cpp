@@ -216,7 +216,7 @@ void usb_device_usio::translate_input_taiko()
 	std::lock_guard lock(pad::g_pad_mutex);
 	const auto handler = pad::get_pad_thread();
 
-	std::vector<u8> input_buf(0x60);
+	response.assign(0x60, 0);
 	constexpr le_t<u16> c_hit = 0x1800;
 	le_t<u16> digital_input = 0;
 
@@ -262,19 +262,19 @@ void usb_device_usio::translate_input_taiko()
 					break;
 				case usio_btn::taiko_hit_side_left:
 					if (value.pressed)
-						std::memcpy(input_buf.data() + 32 + offset, &c_hit, sizeof(u16));
+						std::memcpy(response.data() + 32 + offset, &c_hit, sizeof(u16));
 					break;
 				case usio_btn::taiko_hit_center_right:
 					if (value.pressed)
-						std::memcpy(input_buf.data() + 36 + offset, &c_hit, sizeof(u16));
+						std::memcpy(response.data() + 36 + offset, &c_hit, sizeof(u16));
 					break;
 				case usio_btn::taiko_hit_side_right:
 					if (value.pressed)
-						std::memcpy(input_buf.data() + 38 + offset, &c_hit, sizeof(u16));
+						std::memcpy(response.data() + 38 + offset, &c_hit, sizeof(u16));
 					break;
 				case usio_btn::taiko_hit_center_left:
 					if (value.pressed)
-						std::memcpy(input_buf.data() + 34 + offset, &c_hit, sizeof(u16));
+						std::memcpy(response.data() + 34 + offset, &c_hit, sizeof(u16));
 					break;
 				case usio_btn::card_tapping:
 					if (value.pressed)
@@ -295,10 +295,8 @@ void usb_device_usio::translate_input_taiko()
 	for (usz i = 0; i < g_cfg_usio.players.size(); i++)
 		translate_from_pad(i, i);
 
-	std::memcpy(input_buf.data(), &digital_input, sizeof(u16));
-	std::memcpy(input_buf.data() + 16, &m_io_status[0].coin_counter, sizeof(u16));
-
-	response = std::move(input_buf);
+	std::memcpy(response.data(), &digital_input, sizeof(u16));
+	std::memcpy(response.data() + 16, &m_io_status[0].coin_counter, sizeof(u16));
 }
 
 void usb_device_usio::translate_input_tekken()
@@ -306,7 +304,7 @@ void usb_device_usio::translate_input_tekken()
 	std::lock_guard lock(pad::g_pad_mutex);
 	const auto handler = pad::get_pad_thread();
 
-	std::vector<u8> input_buf(0x180);
+	response.assign(0x180, 0);
 	le_t<u64> digital_input[2]{};
 	le_t<u16> digital_input_lm = 0;
 
@@ -426,9 +424,9 @@ void usb_device_usio::translate_input_tekken()
 		const auto write_gun_data = [&](u16 x, u16 y)
 		{
 			const le_t<u16> positions[2] = {x, y};
-			std::memcpy(input_buf.data() - io_index * 0x80 + 0x100 + 32 + player_index * sizeof(u32), &positions, sizeof(u32));
-			std::memcpy(input_buf.data() - io_index * 0x80 + 0x100 + 41 + player_index * sizeof(s16), &status.vital_sensors[player_index], sizeof(s8));
-			std::memcpy(input_buf.data() - io_index * 0x80 + 0x100 + 48, &status.wheel_rotation, sizeof(s8));
+			std::memcpy(response.data() - io_index * 0x80 + 0x100 + 32 + player_index * sizeof(u32), &positions, sizeof(u32));
+			std::memcpy(response.data() - io_index * 0x80 + 0x100 + 41 + player_index * sizeof(s16), &status.vital_sensors[player_index], sizeof(s8));
+			std::memcpy(response.data() - io_index * 0x80 + 0x100 + 48, &status.wheel_rotation, sizeof(s8));
 		};
 
 		if (const auto& pad = ::at32(handler->GetPads(), player); pad->is_connected() && !pad->is_copilot())
@@ -488,15 +486,13 @@ void usb_device_usio::translate_input_tekken()
 
 	for (usz i = 0; i < 2; i++)
 	{
-		std::memcpy(input_buf.data() - i * 0x80 + 0x100, &digital_input[i], sizeof(u64));
-		std::memcpy(input_buf.data() - i * 0x80 + 0x100 + 0x10, &m_io_status[i].coin_counter, sizeof(u16));
+		std::memcpy(response.data() - i * 0x80 + 0x100, &digital_input[i], sizeof(u64));
+		std::memcpy(response.data() - i * 0x80 + 0x100 + 0x10, &m_io_status[i].coin_counter, sizeof(u16));
 	}
 
-	std::memcpy(input_buf.data(), &digital_input_lm, sizeof(u16));
+	std::memcpy(response.data(), &digital_input_lm, sizeof(u16));
 
-	input_buf[2] = 0b00010000; // DIP switches, 8 in total
-
-	response = std::move(input_buf);
+	response[2] = 0b00010000; // DIP switches, 8 in total
 }
 
 void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
@@ -536,8 +532,8 @@ void usb_device_usio::emulate_card_reader(std::vector<u8>& buf, u16 reg)
 	case 0x7800:
 	{
 		reader_index = reg == 0x7000 ? 0 : 1;
-		buf = std::move(pending_response[reader_index]);
-		pending_response[reader_index].clear(); // Ensure its empty state after being moved
+		buf.assign(pending_response[reader_index].begin(), pending_response[reader_index].end());
+		pending_response[reader_index].clear();
 		break;
 	}
 	case 0x7400:
