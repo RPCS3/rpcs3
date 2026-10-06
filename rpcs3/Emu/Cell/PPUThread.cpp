@@ -2547,9 +2547,10 @@ void ppu_thread::cpu_task()
 			{
 				// The caller of sys_ppu_thread_start has higher or equal priority and waits for the exchange above:
 				// let it leave the syscall and run its first instructions before this thread starts
+				// Bounded, as it may enter another syscall right away (e.g. joining this thread), and ended on suspension, which cannot be acknowledged here
 				if (const auto caller = idm::get_unlocked<named_thread<ppu_thread>>(caller_id))
 				{
-					while (!is_stopped())
+					for (const u64 wait_start = get_system_time(); !is_stopped() && cpu_flag::suspend - state && get_system_time() - wait_start < 1000;)
 					{
 						const auto caller_state = +caller->state;
 
@@ -2564,7 +2565,7 @@ void ppu_thread::cpu_task()
 						{
 							constexpr u64 caller_head_start_us = 10;
 
-							for (const u64 start = get_system_time(); !is_stopped() && get_system_time() - start < caller_head_start_us;)
+							for (const u64 start = get_system_time(); !is_stopped() && cpu_flag::suspend - state && get_system_time() - start < caller_head_start_us;)
 							{
 								std::this_thread::yield();
 							}
