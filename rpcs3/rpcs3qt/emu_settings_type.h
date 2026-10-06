@@ -179,6 +179,7 @@ enum class emu_settings_type
 	Buzz,
 	Turntable,
 	GHLtar,
+	USIO,
 	MidiDevices,
 	SDLMappings,
 	MouseBasedGyro,
