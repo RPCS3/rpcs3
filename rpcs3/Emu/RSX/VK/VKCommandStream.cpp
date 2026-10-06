@@ -96,6 +96,12 @@ namespace vk
 
 	void driver_manager_t::notify_completed(u64 eid)
 	{
+		if (!m_enabled)
+		{
+			// Do not wake
+			return;
+		}
+
 		m_eid_ctr.atomic_op([eid](u64& value)
 		{
 			value = std::max(value, eid);
@@ -132,5 +138,10 @@ namespace vk
 			// Wait for worker thread.
 			thread_ctrl::wait_on(m_completed_signal, completion_token);
 		}
+	}
+
+	void driver_manager_t::set_enabled(bool state)
+	{
+		m_enabled.store(state);
 	}
 }
