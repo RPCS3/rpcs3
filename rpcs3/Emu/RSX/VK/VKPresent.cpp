@@ -773,9 +773,11 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	if (!image_to_flip || aspect_ratio.x1 || aspect_ratio.y1)
 	{
 		// Clear the window background to black
+		target_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		VkClearColorValue clear_black {};
-		vk::change_image_layout(*m_current_command_buffer, target_image, present_layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
-		vkCmdClearColorImage(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_black, 1, &subresource_range);
+
+		vk::change_image_layout(*m_current_command_buffer, target_image, present_layout, target_layout, subresource_range);
+		vkCmdClearColorImage(*m_current_command_buffer, target_image, target_layout, &clear_black, 1, &subresource_range);
 
 		// Prevent WAW on transfer writes
 		vk::insert_image_memory_barrier(
@@ -789,8 +791,6 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			VK_ACCESS_TRANSFER_WRITE_BIT,
 			subresource_range
 		);
-
-		target_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	}
 
 	const output_scaling_mode output_scaling = g_cfg.video.output_scaling.get();

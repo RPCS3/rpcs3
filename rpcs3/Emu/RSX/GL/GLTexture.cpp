@@ -175,9 +175,9 @@ namespace gl
 		case texture::internal_format::rgb565:
 			return { .format = GL_RGB, .type = GL_UNSIGNED_SHORT_5_6_5, .block_size = 2, .swap_bytes = true };
 		case texture::internal_format::rgb5a1:
-			return { .format = GL_RGB, .type = GL_UNSIGNED_SHORT_5_5_5_1, .block_size = 2, .swap_bytes = true };
+			return { .format = GL_RGBA, .type = GL_UNSIGNED_SHORT_5_5_5_1, .block_size = 2, .swap_bytes = true };
 		case texture::internal_format::bgr5a1:
-			return { .format = GL_RGB, .type = GL_UNSIGNED_SHORT_1_5_5_5_REV, .block_size = 2, .swap_bytes = true };
+			return { .format = GL_BGRA, .type = GL_UNSIGNED_SHORT_1_5_5_5_REV, .block_size = 2, .swap_bytes = true };
 		case texture::internal_format::rgba4:
 			return { .format = GL_BGRA, .type = GL_UNSIGNED_SHORT_4_4_4_4, .block_size = 2, .swap_bytes = false };
 		case texture::internal_format::rgba8:

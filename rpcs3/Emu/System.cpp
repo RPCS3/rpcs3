@@ -935,7 +935,7 @@ bool Emulator::BootRsxCapture(const std::string& path)
 	g_cfg.video.disable_on_disk_shader_cache.set(true);
 
 	vm::init();
-	vm::reserve_map(vm::main, 0, 0x1FFF0000, vm::page_64k_size);
+	vm::reserve_map(vm::main, 0x10000, 0x1FFF0000, vm::page_64k_size);
 	g_fxo->init(false);
 
 	// Initialize progress dialog
@@ -996,7 +996,7 @@ bool Emulator::BootBigPictureMode()
 	g_cfg.video.disable_on_disk_shader_cache.set(true);
 
 	vm::init();
-	vm::reserve_map(vm::main, 0, 0x1FFF0000, vm::page_64k_size);
+	vm::reserve_map(vm::main, 0x10000, 0x1FFF0000, vm::page_64k_size);
 	g_fxo->init(false);
 
 	// Initialize progress dialog
@@ -1532,7 +1532,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			if (m_title_id.size() < 3 && m_title_id.find_first_not_of('.') == umax)
 			{
 				// Do not allow if TITLE_ID result in path redirection
-				sys_log.fatal("Game directory not found using GAMEID token. (m_path='%s', title_id='%s')", m_title_id);
+				sys_log.fatal("Game directory not found using GAMEID token. (m_path='%s', title_id='%s')", m_path, m_title_id);
 				return game_boot_result::invalid_file_or_folder;
 			}
 
@@ -1931,7 +1931,7 @@ game_boot_result Emulator::Load(const std::string& title_id, bool is_disc_patch,
 			g_emu_callbacks.on_ready();
 			ensure(g_fxo->init<main_ppu_module<lv2_obj>>());
 			vm::init();
-			vm::reserve_map(vm::main, 0, 0x1FFF0000, vm::page_64k_size);
+			vm::reserve_map(vm::main, 0x10000, 0x1FFF0000, vm::page_64k_size);
 			m_force_boot = false;
 
 			// Force LLVM recompiler

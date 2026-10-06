@@ -71,8 +71,8 @@ void MouseHandlerBase::Button(u32 index, u8 button, bool pressed)
 		MouseData new_data{};
 		new_data.update = CELL_MOUSE_DATA_UPDATE;
 		new_data.buttons = mouse.buttons;
-		new_data.pixel_x = mouse.x_pos;
-		new_data.pixel_y = mouse.y_pos;
+		new_data.pixel_x = mouse.x_pos_pixels;
+		new_data.pixel_y = mouse.y_pos_pixels;
 
 		datalist.push_back(std::move(new_data));
 	}
@@ -102,8 +102,8 @@ void MouseHandlerBase::Scroll(u32 index, s8 x, s8 y)
 		new_data.buttons = mouse.buttons;
 		new_data.wheel = y;
 		new_data.tilt = x;
-		new_data.pixel_x = mouse.x_pos;
-		new_data.pixel_y = mouse.y_pos;
+		new_data.pixel_x = mouse.x_pos_pixels;
+		new_data.pixel_y = mouse.y_pos_pixels;
 
 		datalist.push_back(std::move(new_data));
 	}
@@ -135,8 +135,8 @@ void MouseHandlerBase::Move(u32 index, s32 x_pos_new, s32 y_pos_new, s32 x_max, 
 		if (!is_relative)
 		{
 			// The PS3 expects relative mouse movement, so we have to calculate it with the last absolute position.
-			x_delta = x_pos_new - mouse.x_pos;
-			y_delta = y_pos_new - mouse.y_pos;
+			x_delta = x_pos_new - mouse.x_pos_pixels;
+			y_delta = y_pos_new - mouse.y_pos_pixels;
 		}
 
 		new_data.x_axis = static_cast<s8>(std::clamp(x_delta, -127, 128));
@@ -144,10 +144,10 @@ void MouseHandlerBase::Move(u32 index, s32 x_pos_new, s32 y_pos_new, s32 x_max, 
 		new_data.pixel_x = x_pos_new;
 		new_data.pixel_y = y_pos_new;
 
-		mouse.x_max = x_max;
-		mouse.y_max = y_max;
-		mouse.x_pos = x_pos_new;
-		mouse.y_pos = y_pos_new;
+		mouse.x_pos = x_max == 0 ? 0.0f : std::clamp(x_pos_new / static_cast<f32>(x_max), 0.0f, 1.0f);
+		mouse.y_pos = y_max == 0 ? 0.0f : std::clamp(y_pos_new / static_cast<f32>(y_max), 0.0f, 1.0f);
+		mouse.x_pos_pixels = x_pos_new;
+		mouse.y_pos_pixels = y_pos_new;
 
 		//CellMouseRawData& rawdata = GetRawData(p);
 		//rawdata.data[rawdata.len % CELL_MOUSE_MAX_CODES] = 0; // (TODO)

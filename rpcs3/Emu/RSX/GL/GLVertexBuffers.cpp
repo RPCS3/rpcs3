@@ -26,7 +26,7 @@ namespace
 		const auto element_count = get_index_count(primitive_mode, vertex_count);
 		ensure(!gl::is_primitive_native(primitive_mode));
 
-		auto mapping = dst.alloc_from_heap(element_count * sizeof(u16), 256);
+		auto mapping = dst.alloc_from_heap(element_count * sizeof(u32), 256);
 		auto mapped_buffer = static_cast<char*>(mapping.first);
 
 		write_index_array_for_non_indexed_non_native_primitive_to_buffer(mapped_buffer, primitive_mode, vertex_count);
@@ -77,7 +77,7 @@ namespace
 					rsx::method_registers.current_draw_clause.primitive, m_index_ring_buffer,
 					rsx::method_registers.current_draw_clause.get_elements_count());
 
-				return{ false, min_index, max_index, index_count, 0, std::make_tuple(static_cast<GLenum>(GL_UNSIGNED_SHORT), offset_in_index_buffer) };
+				return{ false, min_index, max_index, index_count, 0, std::make_tuple(static_cast<GLenum>(GL_UNSIGNED_INT), offset_in_index_buffer) };
 			}
 
 			return{ false, min_index, max_index, vertex_count, 0, std::optional<std::tuple<GLenum, u32>>() };
@@ -86,6 +86,7 @@ namespace
 		vertex_input_state operator()(const rsx::draw_indexed_array_command& command)
 		{
 			u32 min_index = 0, max_index = 0;
+			const auto primitive = rsx::method_registers.current_draw_clause.primitive;
 
 			rsx::index_array_type type = rsx::method_registers.current_draw_clause.is_immediate_draw?
 				rsx::index_array_type::u32:
@@ -96,8 +97,8 @@ namespace
 			const u32 vertex_count = rsx::method_registers.current_draw_clause.get_elements_count();
 			u32 index_count = vertex_count;
 
-			if (!gl::is_primitive_native(rsx::method_registers.current_draw_clause.primitive))
-				index_count = static_cast<u32>(get_index_count(rsx::method_registers.current_draw_clause.primitive, vertex_count));
+			if (!gl::is_primitive_native(primitive))
+				index_count = static_cast<u32>(get_index_count(primitive, vertex_count));
 
 			u32 max_size               = index_count * type_size;
 			auto mapping               = m_index_ring_buffer.alloc_from_heap(max_size, 256);
@@ -107,14 +108,15 @@ namespace
 			std::tie(min_index, max_index, index_count) = write_index_array_data_to_buffer(
 				{ reinterpret_cast<std::byte*>(ptr), max_size },
 				command.raw_index_buffer, type,
-				rsx::method_registers.current_draw_clause.primitive,
+				primitive,
 				rsx::method_registers.restart_index_enabled(),
 				rsx::method_registers.restart_index(),
 				[](auto prim) { return !gl::is_primitive_native(prim); });
 
-			if (min_index >= max_index)
+			if (min_index > max_index ||
+				(min_index == max_index && primitive != rsx::primitive_type::points))
 			{
-				//empty set, do not draw
+				// empty set, do not draw
 				return{ false, 0, 0, 0, 0, std::make_tuple(get_index_type(type), offset_in_index_buffer) };
 			}
 
@@ -136,7 +138,7 @@ namespace
 				std::tie(index_count, offset_in_index_buffer) = get_index_array_for_emulated_non_indexed_draw(
 					rsx::method_registers.current_draw_clause.primitive, m_index_ring_buffer, vertex_count);
 
-				return{ false, 0, vertex_count, index_count, 0, std::make_tuple(static_cast<GLenum>(GL_UNSIGNED_SHORT), offset_in_index_buffer) };
+				return{ false, 0, vertex_count, index_count, 0, std::make_tuple(static_cast<GLenum>(GL_UNSIGNED_INT), offset_in_index_buffer) };
 			}
 
 			return{ false, 0, vertex_count, vertex_count, 0, std::optional<std::tuple<GLenum, u32>>() };

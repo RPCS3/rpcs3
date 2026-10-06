@@ -1419,7 +1419,7 @@ error_code cellCameraReadEx(s32 dev_num, vm::ptr<CellCameraReadEx> read)
 			u64 frame_number{};
 			u64 bytes_read{};
 
-			if (!g_camera.get_camera_frame(g_camera.info.buffer.get_ptr(), width, height, frame_number, bytes_read))
+			if (!g_camera.get_camera_frame(g_camera.info.buffer ? g_camera.info.buffer.get_ptr() : nullptr, width, height, frame_number, bytes_read))
 			{
 				return CELL_CAMERA_ERROR_DEVICE_NOT_FOUND;
 			}
@@ -1998,7 +1998,7 @@ bool camera_context::on_handler_state(camera_handler_base::camera_handler_state 
 	{
 		if (!is_attached)
 		{
-			cellCamera.warning("Camera handler not attached. Sending attach event...", static_cast<int>(state));
+			cellCamera.warning("Camera handler not attached (state=%d). Sending attach event...", static_cast<int>(state));
 			is_attached = true;
 			is_attached_dirty = true;
 		}
