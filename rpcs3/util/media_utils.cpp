@@ -764,7 +764,11 @@ namespace utils
 				media_log.notice("audio_decoder: shuffling initial playlist...");
 				std::random_device rd;
 				auto engine = std::default_random_engine{rd()};
-				std::shuffle(std::begin(m_context.playlist), std::end(m_context.playlist), engine);
+
+				// Keep the selected track as the first one, so that the whole shuffled playlist is played before the next shuffle
+				std::swap(m_context.playlist.front(), ::at32(m_context.playlist, m_context.current_track));
+				std::shuffle(std::begin(m_context.playlist) + 1, std::end(m_context.playlist), engine);
+				m_context.current_track = 0;
 			}
 
 			while (thread_ctrl::state() != thread_state::aborting)
