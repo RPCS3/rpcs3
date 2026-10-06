@@ -52,7 +52,7 @@ namespace rsx
 			m_cmd = cmd;
 			m_command_inc = ((m_cmd & RSX_METHOD_NON_INCREMENT_CMD_MASK) == RSX_METHOD_NON_INCREMENT_CMD) ? 0 : 4;
 			m_remaining_commands = count;
-			m_fifo_pos = position - 4;
+			m_fifo_pos = position - (count ? 4 : 0);
 			m_args_ptr = m_iotable->get_addr(m_fifo_pos);
 			m_command_reg = (m_cmd & 0xffff) + m_command_inc * (((m_cmd >> 18) - count) & 0x7ff) - m_command_inc;
 		}
@@ -362,7 +362,12 @@ namespace rsx
 			if (m_remaining_commands)
 			{
 				// Previous block aborted to wait for PUT pointer
-				read_unsafe(data);
+				if (!read_unsafe(data))
+				{
+					// failed reads leave data unchanged
+					data.reg = FIFO_EMPTY;
+				}
+
 				return;
 			}
 

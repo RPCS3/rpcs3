@@ -245,8 +245,7 @@ void _sys_rsx_drain_event_queue(rsx::thread* rsxthr, u64 event_flags = umax, u64
 			break;
 		}
 
-		// Wait
-		thread_ctrl::wait_for(100);
+		utils::spin_on_cacheline_once(queue->mutex.raw(), 0u, 100);
 
 		// Check for timeout
 		if (wait_timeout_ms == umax)

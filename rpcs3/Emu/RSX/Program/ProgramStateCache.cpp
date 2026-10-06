@@ -142,14 +142,14 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 	bit_set<rsx::max_vertex_program_instructions> instructions_to_patch;
 	std::pair<u32, u32> instruction_range{ umax, 0 };
 	bool has_branch_instruction = false;
-	std::stack<u32> call_stack;
+	std::stack<u32, std::vector<u32>> call_stack;
 
 	D3 d3{};
 	D2 d2{};
 	D1 d1{};
 	D0 d0{};
 
-	std::function<void(u32, bool)> walk_function = [&](u32 start, bool fast_exit)
+	auto walk_function = [&](auto&& self, u32 start, bool fast_exit) -> void
 	{
 		u32 current_instruction = start;
 		std::set<u32> conditional_targets;
@@ -223,7 +223,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			case RSX_VEC_OPCODE_TXL:
 			{
 				result.referenced_textures_mask |= (1 << d2.tex_num);
-				break;
+				[[ fallthrough ]];
 			}
 			default:
 			{
@@ -333,7 +333,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 		{
 			if (!result.instruction_mask[target])
 			{
-				walk_function(target, true);
+				self(self, target, true);
 			}
 		}
 	};
@@ -346,7 +346,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 		dump.close();
 	}
 
-	walk_function(entry, false);
+	walk_function(walk_function, entry, false);
 
 	const u32 instruction_count = (instruction_range.second - instruction_range.first + 1);
 	result.ucode_length = instruction_count * 16;
