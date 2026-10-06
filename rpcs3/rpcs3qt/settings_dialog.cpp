@@ -1187,6 +1187,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	EnhanceComboBox(emu_settings_type::Buzz, ui->buzzBox, tooltips.settings.buzz, ui->gb_buzz_emulated);
 	EnhanceComboBox(emu_settings_type::Turntable, ui->turntableBox, tooltips.settings.turntable, ui->gb_turntable_emulated);
 	EnhanceComboBox(emu_settings_type::GHLtar, ui->ghltarBox, tooltips.settings.ghltar, ui->gb_ghltar_emulated);
+	EnhanceComboBox(emu_settings_type::USIO, ui->usioBox, tooltips.settings.usio, ui->gb_usio_emulated);
 
 	EnhanceCheckBox(emu_settings_type::BackgroundInput, ui->backgroundInputBox, tooltips.settings.background_input);
 	EnhanceCheckBox(emu_settings_type::PadConnection, ui->padConnectionBox, tooltips.settings.pad_connection);

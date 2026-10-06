@@ -187,6 +187,7 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::Buzz,                    get_cfg_location(local_cfg.io.buzz) },
 	{ emu_settings_type::Turntable,               get_cfg_location(local_cfg.io.turntable) },
 	{ emu_settings_type::GHLtar,                  get_cfg_location(local_cfg.io.ghltar) },
+	{ emu_settings_type::USIO,                    get_cfg_location(local_cfg.io.usio_mode) },
 	{ emu_settings_type::MidiDevices,             get_cfg_location(local_cfg.io.midi_devices) },
 	{ emu_settings_type::SDLMappings,             get_cfg_location(local_cfg.io.load_sdl_mappings) },
 	{ emu_settings_type::MouseBasedGyro,          get_cfg_location(local_cfg.io.mouse_based_gyro_enabled) },
