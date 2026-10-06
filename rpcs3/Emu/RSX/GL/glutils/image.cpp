@@ -39,7 +39,7 @@ namespace gl
 		case texture::type::uint_10_10_10_2: return "GL_UNSIGNED_INT_10_10_10_2";
 		case texture::type::uint_2_10_10_10_rev: return "GL_UNSIGNED_INT_2_10_10_10_REV";
 		case texture::type::uint_24_8: return "GL_UNSIGNED_INT_24_8";
-		case texture::type::float32_uint8: return "GL_FLOAT_32_UNSIGNED_INT_24_8_REV";
+		case texture::type::f32_uint8: return "GL_FLOAT_32_UNSIGNED_INT_24_8_REV";
 		case texture::type::sbyte: return "GL_BYTE";
 		case texture::type::sshort: return "GL_SHORT";
 		case texture::type::sint: return "GL_INT";

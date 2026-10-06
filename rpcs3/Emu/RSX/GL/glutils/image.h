@@ -106,7 +106,7 @@ namespace gl
 			uint_10_10_10_2 = GL_UNSIGNED_INT_10_10_10_2,
 			uint_2_10_10_10_rev = GL_UNSIGNED_INT_2_10_10_10_REV,
 			uint_24_8 = GL_UNSIGNED_INT_24_8,
-			float32_uint8 = GL_FLOAT_32_UNSIGNED_INT_24_8_REV,
+			f32_uint8 = GL_FLOAT_32_UNSIGNED_INT_24_8_REV,
 
 			sbyte = GL_BYTE,
 			sshort = GL_SHORT,
