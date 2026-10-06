@@ -437,7 +437,7 @@ void usb_device_usio::translate_input_tekken()
 
 			const bool is_ctrl_ls = cfg->gun == pad_button::left_stick;
 			const bool is_ctrl_rs = cfg->gun == pad_button::right_stick;
-			if (g_cfg.io.usio_mode == usio_handler_mode::shooter_games && (is_ctrl_ls || is_ctrl_rs))
+			if (is_ctrl_ls || is_ctrl_rs)
 			{
 				const s8 angle = pad->m_angles[is_ctrl_ls ? 0 : 1];
 				const s8 angle_delta = angle - status.vital_sensors[player_index];
