@@ -507,6 +507,8 @@ namespace utils
 
 	void audio_decoder::set_context(music_selection_context&& context)
 	{
+		// The decode thread reads the context while it runs
+		stop();
 		m_context = std::move(context);
 	}
 
@@ -519,6 +521,9 @@ namespace utils
 	{
 		media_log.notice("audio_decoder: Clear data...");
 
+		// Callers of clear() and stop() must not hold m_mtx: stop() joins the decode thread, which locks it for every decoded frame
+		std::scoped_lock lock(m_mtx);
+
 		track_fully_decoded = 0;
 		track_fully_consumed = 0;
 		has_error = false;
@@ -529,17 +534,20 @@ namespace utils
 
 	void audio_decoder::stop()
 	{
+		// Data and errors are only produced by the decode thread, so there is nothing to stop or clear without it
+		if (!m_thread)
+		{
+			return;
+		}
+
 		media_log.notice("audio_decoder: Stop decoding...");
 
-		if (m_thread)
-		{
-			auto& thread = *m_thread;
-			thread = thread_state::aborting;
-			track_fully_consumed = 1;
-			track_fully_consumed.notify_one();
-			thread();
-			m_thread.reset();
-		}
+		auto& thread = *m_thread;
+		thread = thread_state::aborting;
+		track_fully_consumed = 1;
+		track_fully_consumed.notify_one();
+		thread();
+		m_thread.reset();
 
 		clear();
 	}

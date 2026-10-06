@@ -188,7 +188,7 @@ error_code cell_music_decode_read(vm::ptr<void> buf, vm::ptr<u32> startTime, u64
 
 	auto& dec = g_fxo->get<Music_Decode>();
 	std::lock_guard lock(dec.mutex);
-	std::scoped_lock slock(dec.decoder.m_mtx);
+	std::unique_lock slock(dec.decoder.m_mtx);
 
 	if (dec.decoder.has_error)
 	{
@@ -258,6 +258,9 @@ error_code cell_music_decode_read(vm::ptr<void> buf, vm::ptr<u32> startTime, u64
 	}
 
 	*startTime = static_cast<u32>(start_time_ms); // startTime is milliseconds
+
+	// Stopping or clearing the decoder below locks decoder.m_mtx itself
+	slock.unlock();
 
 	switch (*position)
 	{
@@ -375,11 +378,7 @@ error_code cellMusicDecodeSetDecodeCommand(s32 command)
 	if (!dec.func)
 		return CELL_MUSIC_DECODE_ERROR_GENERIC;
 
-	error_code result = CELL_OK;
-	{
-		std::scoped_lock slock(dec.decoder.m_mtx);
-		result = dec.set_decode_command(command);
-	}
+	const error_code result = dec.set_decode_command(command);
 
 	sysutil_register_cb([&dec, result](ppu_thread& ppu) -> s32
 	{
@@ -566,11 +565,7 @@ error_code cellMusicDecodeSetDecodeCommand2(s32 command)
 	if (!dec.func)
 		return CELL_MUSIC_DECODE_ERROR_GENERIC;
 
-	error_code result = CELL_OK;
-	{
-		std::scoped_lock slock(dec.decoder.m_mtx);
-		result = dec.set_decode_command(command);
-	}
+	const error_code result = dec.set_decode_command(command);
 
 	sysutil_register_cb([&dec, result](ppu_thread& ppu) -> s32
 	{
