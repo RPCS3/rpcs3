@@ -3030,6 +3030,9 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
+    <None Include="Emu\RSX\Program\GLSLSnippets\E4M12Conversion.glsl">
+      <Filter>Emu\GPU\RSX\Program\Snippets</Filter>
+    </None>
     <None Include="Emu\RSX\Program\GLSLSnippets\GPUDeswizzle.glsl">
       <Filter>Emu\GPU\RSX\Program\Snippets</Filter>
     </None>
