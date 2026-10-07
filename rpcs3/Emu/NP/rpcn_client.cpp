@@ -1018,11 +1018,42 @@ namespace rpcn
 				return false;
 			}
 
-			wolfSSL_CTX_set_verify(wssl_ctx, SSL_VERIFY_NONE, nullptr);
+			const bool verify_certificate = fmt::to_lower(hostname) == "np.rpcs3.net";
+
+			if (verify_certificate && wolfSSL_CTX_load_system_CA_certs(wssl_ctx) != SSL_SUCCESS)
+			{
+				rpcn_log.error("connect: Failed to load the system certificate authorities");
+				state = rpcn_state::failure_wolfssl;
+				return false;
+			}
+
+			wolfSSL_CTX_set_verify(wssl_ctx, verify_certificate ? SSL_VERIFY_PEER : SSL_VERIFY_NONE, nullptr);
+
+			if (!verify_certificate)
+			{
+				rpcn_log.warning("connect: TLS certificate verification is disabled for custom RPCN server %s", hostname);
+			}
 
 			if ((read_wssl = wolfSSL_new(wssl_ctx)) == nullptr)
 			{
 				rpcn_log.error("connect: Failed to create wolfssl object");
+				state = rpcn_state::failure_wolfssl;
+				return false;
+			}
+
+			in_addr hostname_addr{};
+			const bool hostname_is_ipv4 = inet_pton(AF_INET, hostname.c_str(), &hostname_addr) == 1;
+
+			if (verify_certificate && wolfSSL_check_domain_name(read_wssl, hostname.c_str()) != WOLFSSL_SUCCESS)
+			{
+				rpcn_log.error("connect: Failed to configure certificate hostname verification");
+				state = rpcn_state::failure_wolfssl;
+				return false;
+			}
+
+			if (!hostname_is_ipv4 && wolfSSL_UseSNI(read_wssl, WOLFSSL_SNI_HOST_NAME, hostname.data(), ::narrow<word16>(hostname.size())) != WOLFSSL_SUCCESS)
+			{
+				rpcn_log.error("connect: Failed to configure TLS server name indication");
 				state = rpcn_state::failure_wolfssl;
 				return false;
 			}

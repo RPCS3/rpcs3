@@ -1,8 +1,9 @@
 if(USE_SYSTEM_WOLFSSL)
 	message(STATUS "RPCS3: using shared wolfssl")
-	pkg_check_modules(WolfSSL REQUIRED IMPORTED_TARGET wolfssl>=4.7.0)
+	pkg_check_modules(WolfSSL REQUIRED IMPORTED_TARGET wolfssl>=5.5.2)
 	add_library(wolfssl INTERFACE)
 	target_link_libraries(wolfssl INTERFACE PkgConfig::WolfSSL)
+	target_compile_definitions(wolfssl INTERFACE WOLFSSL_USE_OPTIONS_H)
 else()
 	set(WOLFSSL_TLS13 ON CACHE INTERNAL "" FORCE)
 	set(WOLFSSL_SHA3 ON CACHE INTERNAL "")
@@ -18,6 +19,7 @@ else()
 	set(WOLFSSL_SNI ON CACHE INTERNAL "")
 	set(WOLFSSL_OPENSSLEXTRA ON CACHE INTERNAL "")
 	set(WOLFSSL_ALT_CERT_CHAINS ON CACHE INTERNAL "")
+	set(WOLFSSL_SYS_CA_CERTS ON CACHE INTERNAL "" FORCE)
 
 	add_subdirectory(wolfssl EXCLUDE_FROM_ALL)
 
