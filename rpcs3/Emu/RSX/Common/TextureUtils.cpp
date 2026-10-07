@@ -1851,6 +1851,23 @@ namespace rsx
 		}
 	}
 
+	// Hardware behaves as if each depth bound is converted into the surface's depth encoding, clamped to the format's range.
+	f32 clamp_depth_bounds_value(rsx::surface_depth_format2 format, f32 value)
+	{
+		switch (format)
+		{
+		case rsx::surface_depth_format2::z16_uint:
+		case rsx::surface_depth_format2::z24s8_uint:
+			return std::clamp(value, 0.f, 1.f);
+		case rsx::surface_depth_format2::z16_float:
+			return std::clamp(value, 0.f, decode_e4m12(0xFFFF));
+		case rsx::surface_depth_format2::z24s8_float:
+			return std::max(value, 0.f);
+		default:
+				fmt::throw_exception("Unreachable");
+		}
+	}
+
 	bool is_texcoord_wrapping_mode(rsx::texture_wrap_mode mode)
 	{
 		switch (mode)
