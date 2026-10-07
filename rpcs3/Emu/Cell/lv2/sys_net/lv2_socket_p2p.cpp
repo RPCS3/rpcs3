@@ -213,6 +213,11 @@ s32 lv2_socket_p2p::setsockopt(s32 level, s32 optname, const std::vector<u8>& op
 {
 	std::lock_guard lock(mutex);
 
+	if (optval.size() > sizeof(sockopt_data))
+	{
+		return -SYS_NET_EINVAL;
+	}
+
 	int native_int = *reinterpret_cast<const be_t<s32>*>(optval.data());
 
 	if (level == SYS_NET_SOL_SOCKET && optname == SYS_NET_SO_NBIO)
