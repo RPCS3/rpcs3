@@ -165,12 +165,25 @@ namespace
 			}
 		}
 
-		alignas(32) T min_lanes[lanes];
-		alignas(32) T max_lanes[lanes];
-		_mm256_store_si256(reinterpret_cast<__m256i*>(min_lanes), min);
-		_mm256_store_si256(reinterpret_cast<__m256i*>(max_lanes), max);
-		T min_index = *std::min_element(std::begin(min_lanes), std::end(min_lanes));
-		T max_index = *std::max_element(std::begin(max_lanes), std::end(max_lanes));
+		T min_index, max_index;
+		if constexpr (sizeof(T) == 2)
+		{
+			const auto min128 = _mm_min_epu16(_mm256_castsi256_si128(min), _mm256_extracti128_si256(min, 1));
+			const auto max128 = _mm_max_epu16(_mm256_castsi256_si128(max), _mm256_extracti128_si256(max, 1));
+			min_index = static_cast<T>(_mm_cvtsi128_si32(_mm_minpos_epu16(min128)));
+			max_index = static_cast<T>(~_mm_cvtsi128_si32(_mm_minpos_epu16(_mm_xor_si128(max128, _mm_set1_epi32(-1)))));
+		}
+		else
+		{
+			auto min128 = _mm_min_epu32(_mm256_castsi256_si128(min), _mm256_extracti128_si256(min, 1));
+			auto max128 = _mm_max_epu32(_mm256_castsi256_si128(max), _mm256_extracti128_si256(max, 1));
+			min128 = _mm_min_epu32(min128, _mm_shuffle_epi32(min128, _MM_SHUFFLE(1, 0, 3, 2)));
+			max128 = _mm_max_epu32(max128, _mm_shuffle_epi32(max128, _MM_SHUFFLE(1, 0, 3, 2)));
+			min128 = _mm_min_epu32(min128, _mm_shuffle_epi32(min128, _MM_SHUFFLE(2, 3, 0, 1)));
+			max128 = _mm_max_epu32(max128, _mm_shuffle_epi32(max128, _MM_SHUFFLE(2, 3, 0, 1)));
+			min_index = static_cast<T>(_mm_cvtsi128_si32(min128));
+			max_index = static_cast<T>(_mm_cvtsi128_si32(max128));
+		}
 
 		for (; i < count; ++i)
 		{
