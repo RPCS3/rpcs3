@@ -52,6 +52,7 @@ GLGSRender::GLGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	backend_config.supports_hw_instanced_rendering = true;
 	// OpenGL 3.2+ defaults to GL_LAST_VERTEX_CONVENTION.
 	backend_config.supports_last_provoking_vertex = true;
+	backend_config.supports_extended_depth_range = gl::get_driver_caps().NV_depth_buffer_float_supported;
 
 	if (g_cfg.video.antialiasing_level != msaa_level::none)
 	{
@@ -673,6 +674,11 @@ void GLGSRender::clear_surface(u32 arg)
 		{
 			const u32 clear_depth_bits = REGS(m_ctx)->z_clear_value(is_depth_stencil_format(surface_depth_format));
 			clear_cmd.clear_depth.value = rsx::get_depth_clear_value(surface_depth_format, clear_depth_bits);
+
+			if (gl::emulate_extended_depth_range() && rsx::is_float_depth_format(surface_depth_format)) [[ unlikely ]]
+			{
+				clear_cmd.clear_depth.value = rsx::encode_emulated_depth(clear_cmd.clear_depth.value);
+			}
 			clear_cmd.aspect_mask |= gl::image_aspect::depth;
 		}
 

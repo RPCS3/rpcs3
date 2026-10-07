@@ -696,6 +696,15 @@ namespace rsx
 			rop_control.set_blend_target_mask(blend_enable_mask);
 		}
 
+		if (fragment_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE)
+		{
+			// Hardware clipping is disabled for these draws, see the fragment epilogue
+			if (REGS(m_ctx)->depth_clamp_enabled() || !REGS(m_ctx)->depth_clip_enabled())
+			{
+				rop_control.enable_depth_clamp();
+			}
+		}
+
 		// Generate wpos coefficients
 		// wpos equation is now as follows (ignoring pixel center offset):
 		// wpos.y = (frag_coord / resolution_scale) * ((window_origin!=top)?-1.: 1.) + ((window_origin!=top)? window_height : 0)

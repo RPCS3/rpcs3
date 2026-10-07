@@ -2,6 +2,7 @@
 #include "VKProgramPipeline.h"
 #include "vkutils/descriptors.h"
 #include "vkutils/buffer_object.h"
+#include "VKHelpers.h"
 
 #include "Emu/IdManager.h"
 #include "Emu/RSX/Utils/algorithm.hpp"
@@ -182,8 +183,10 @@ namespace vk
 			}
 			else
 			{
-				work_kernel +=
-				"		depth = f32_to_d24f(data[index + z_offset]);\n";
+				// With depth range emulation, float depth surfaces hold the emulated encoding (half the bit pattern)
+				work_kernel += !vk::emulate_extended_depth_range()
+					? "		depth = f32_to_d24f(data[index + z_offset]);\n"
+					: "		depth = f32_to_d24f(data[index + z_offset] << 1);\n";
 			}
 
 			work_kernel +=
@@ -231,8 +234,9 @@ namespace vk
 			}
 			else
 			{
-				work_kernel +=
-				"		data[index + z_offset] = d24f_to_f32(value >> 8);\n";
+				work_kernel += !vk::emulate_extended_depth_range()
+					? "		data[index + z_offset] = d24f_to_f32(value >> 8);\n"
+					: "		data[index + z_offset] = d24f_to_f32(value >> 8) >> 1;\n";
 			}
 
 			work_kernel +=

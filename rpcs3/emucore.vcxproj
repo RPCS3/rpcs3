@@ -1131,6 +1131,7 @@
     <None Include="Emu\RSX\Program\GLSLSnippets\OverlayRenderVS.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\RSXMemoryTiling.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXDefines2.glsl" />
+    <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXFragmentEpilogue.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXFragmentPrologue.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXFragmentTextureDepthConversion.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXFragmentTextureMSAAOps.glsl" />

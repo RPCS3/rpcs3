@@ -775,7 +775,7 @@ namespace rsx
 			state_signals[NV4097_SET_DEPTH_BOUNDS_MIN] = rsx::depth_bounds_state_dirty;
 			state_signals[NV4097_SET_DEPTH_BOUNDS_MAX] = rsx::depth_bounds_state_dirty;
 			state_signals[NV4097_SET_CULL_FACE_ENABLE] = rsx::pipeline_config_dirty;
-			state_signals[NV4097_SET_ZMIN_MAX_CONTROL] = rsx::pipeline_config_dirty;
+			state_signals[NV4097_SET_ZMIN_MAX_CONTROL] = rsx::pipeline_config_dirty | rsx::fragment_state_dirty;
 			state_signals[NV4097_SET_LOGIC_OP_ENABLE] = rsx::pipeline_config_dirty;
 			state_signals[NV4097_SET_LOGIC_OP] = rsx::pipeline_config_dirty;
 			state_signals[NV4097_SET_BLEND_ENABLE] = rsx::pipeline_config_dirty | rsx::blend_config_dirty;

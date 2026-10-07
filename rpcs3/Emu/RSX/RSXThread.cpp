@@ -127,7 +127,8 @@ namespace rsx
 	constexpr u32 fs_export_config_mask =
 		RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE |
 		RSX_SHADER_CONTROL_ROP_MULTISAMPLED |
-		RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
+		RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING |
+		RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE;
 
 	rsx_iomap_table::rsx_iomap_table() noexcept
 		: ea(fill_array(-1))
@@ -2137,6 +2138,11 @@ namespace rsx
 			expected_ctrl |= RSX_SHADER_CONTROL_ROP_MULTISAMPLED;
 		}
 
+		if (requires_depth_range_emulation()) [[ unlikely ]]
+		{
+			expected_ctrl |= RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE;
+		}
+
 		// Depth compare
 		if (!g_cfg.video.emulate_depth_compare) [[ likely ]]
 		{
@@ -2164,6 +2170,16 @@ namespace rsx
 		}
 
 		return expected_ctrl;
+	}
+
+	bool thread::requires_depth_range_emulation() const
+	{
+		if (backend_config.supports_extended_depth_range || !g_cfg.video.emulate_extended_depth_range) [[ likely ]]
+		{
+			return false;
+		}
+
+		return m_framebuffer_layout.zeta_address && rsx::is_float_depth_format(REGS(m_ctx)->surface_depth_fmt());
 	}
 
 	void thread::prefetch_fragment_program()
@@ -2288,6 +2304,13 @@ namespace rsx
 			m_graphics_state.clear(rsx::pipeline_state::xform_instancing_state_dirty);
 
 			// Emit invalidate here in case ucode is actually clean
+			m_program_cache_hint.invalidate_vertex_program(current_vertex_program);
+		}
+
+		if (const bool emulate_depth_range = requires_depth_range_emulation();
+			emulate_depth_range != !!(current_vertex_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE))
+		{
+			current_vertex_program.ctrl ^= RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE;
 			m_program_cache_hint.invalidate_vertex_program(current_vertex_program);
 		}
 

@@ -92,6 +92,7 @@ namespace rsx
 		bool supports_host_gpu_labels;         // Advanced host synchronization
 		bool supports_normalized_barycentrics; // Basically all GPUs except NVIDIA have properly normalized barycentrics
 		bool supports_last_provoking_vertex;   // Flat shading using RSX's last-vertex convention
+		bool supports_extended_depth_range;    // Depth values above 1 can be stored and tested. Float depth targets are emulated otherwise.
 		bool supports_programmable_blending;   // Can handle programmable blending requests
 	};
 
@@ -289,6 +290,7 @@ namespace rsx
 
 		// Update fragment program export configuration. Can invalidate the current program.
 		rsx::flags32_t get_fragment_program_export_config();
+		bool requires_depth_range_emulation() const;
 
 		// Gets the current vertex program and associated state. Can invalidate the bound progam.
 		void get_current_vertex_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count>& sampler_descriptors);
