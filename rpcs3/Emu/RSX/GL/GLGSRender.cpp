@@ -642,7 +642,7 @@ void GLGSRender::clear_surface(u32 arg)
 	if (skip_current_frame) return;
 
 	// If stencil write mask is disabled, remove clear_stencil bit
-	if (!rsx::method_registers.stencil_mask()) arg &= ~RSX_GCM_CLEAR_STENCIL_BIT;
+	if (!REGS(m_ctx)->stencil_mask()) arg &= ~RSX_GCM_CLEAR_STENCIL_BIT;
 
 	// Ignore invalid clear flags
 	if ((arg & RSX_GCM_CLEAR_ANY_MASK) == 0) return;
@@ -659,22 +659,20 @@ void GLGSRender::clear_surface(u32 arg)
 
 	gl::command_context cmd{ gl_state };
 	const bool full_frame =
-		rsx::method_registers.scissor_origin_x() == 0 &&
-		rsx::method_registers.scissor_origin_y() == 0 &&
-		rsx::method_registers.scissor_width() >= rsx::method_registers.surface_clip_width() &&
-		rsx::method_registers.scissor_height() >= rsx::method_registers.surface_clip_height();
+		REGS(m_ctx)->scissor_origin_x() == 0 &&
+		REGS(m_ctx)->scissor_origin_y() == 0 &&
+		REGS(m_ctx)->scissor_width() >= REGS(m_ctx)->surface_clip_width() &&
+		REGS(m_ctx)->scissor_height() >= REGS(m_ctx)->surface_clip_height();
 
 	bool update_color = false, update_z = false;
-	rsx::surface_depth_format2 surface_depth_format = rsx::method_registers.surface_depth_fmt();
+	rsx::surface_depth_format2 surface_depth_format = REGS(m_ctx)->surface_depth_fmt();
 
 	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); arg & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK)
 	{
 		if (arg & RSX_GCM_CLEAR_DEPTH_BIT)
 		{
-			u32 max_depth_value = get_max_depth_value(surface_depth_format);
-			u32 clear_depth = rsx::method_registers.z_clear_value(is_depth_stencil_format(surface_depth_format));
-
-			clear_cmd.clear_depth.value = f32(clear_depth) / max_depth_value;
+			const u32 clear_depth_bits = REGS(m_ctx)->z_clear_value(is_depth_stencil_format(surface_depth_format));
+			clear_cmd.clear_depth.value = rsx::get_depth_clear_value(surface_depth_format, clear_depth_bits);
 			clear_cmd.aspect_mask |= gl::image_aspect::depth;
 		}
 
@@ -682,8 +680,8 @@ void GLGSRender::clear_surface(u32 arg)
 		{
 			if (arg & RSX_GCM_CLEAR_STENCIL_BIT)
 			{
-				clear_cmd.clear_stencil.mask = rsx::method_registers.stencil_mask();
-				clear_cmd.clear_stencil.value = rsx::method_registers.stencil_clear_value();
+				clear_cmd.clear_stencil.mask = REGS(m_ctx)->stencil_mask();
+				clear_cmd.clear_stencil.value = REGS(m_ctx)->stencil_clear_value();
 				clear_cmd.aspect_mask |= gl::image_aspect::stencil;
 			}
 		}
@@ -725,12 +723,12 @@ void GLGSRender::clear_surface(u32 arg)
 
 	if (auto colormask = (arg & 0xf0))
 	{
-		u8 clear_a = rsx::method_registers.clear_color_a();
-		u8 clear_r = rsx::method_registers.clear_color_r();
-		u8 clear_g = rsx::method_registers.clear_color_g();
-		u8 clear_b = rsx::method_registers.clear_color_b();
+		u8 clear_a = REGS(m_ctx)->clear_color_a();
+		u8 clear_r = REGS(m_ctx)->clear_color_r();
+		u8 clear_g = REGS(m_ctx)->clear_color_g();
+		u8 clear_b = REGS(m_ctx)->clear_color_b();
 
-		switch (rsx::method_registers.surface_color())
+		switch (REGS(m_ctx)->surface_color())
 		{
 		case rsx::surface_color_format::x32:
 		case rsx::surface_color_format::w16z16y16x16:

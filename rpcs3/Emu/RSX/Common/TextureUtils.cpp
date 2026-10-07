@@ -1827,9 +1827,28 @@ namespace rsx
 		}
 	}
 
-	u32 get_max_depth_value(rsx::surface_depth_format2 format)
+	f32 decode_e4m12(u32 value)
 	{
-		return get_format_block_size_in_bytes(format) == 2 ? 0xFFFF : 0xFFFFFF;
+		// Rebias by 2^111: unsigned E4M12 with bias 16, see E4M12Conversion.glsl
+		const uint bits = (value << 11) & 0x07FFF800u;
+		return std::bit_cast<f32>(bits) * std::bit_cast<f32>(0x77000000u);
+	}
+
+	f32 get_depth_clear_value(rsx::surface_depth_format2 format, u32 raw)
+	{
+		switch (format)
+		{
+		case rsx::surface_depth_format2::z16_uint:
+			return float(raw) / 0xFFFF;
+		case rsx::surface_depth_format2::z24s8_uint:
+			return float(raw) / 0xFFFFFF;
+		case rsx::surface_depth_format2::z16_float:
+			return decode_e4m12(raw);
+		case rsx::surface_depth_format2::z24s8_float:
+			return std::bit_cast<f32>(raw << 7);
+		default:
+				fmt::throw_exception("Unreachable");
+		}
 	}
 
 	bool is_texcoord_wrapping_mode(rsx::texture_wrap_mode mode)
