@@ -62,7 +62,7 @@ public:
 	static constexpr u32 id_type = 2;
 
 	lv2_socket_p2ps(lv2_socket_family family, lv2_socket_type type, lv2_ip_protocol protocol);
-	lv2_socket_p2ps(socket_type socket, u16 port, u16 vport, u32 op_addr, u16 op_port, u16 op_vport, u64 cur_seq, u64 data_beg_seq, s32 so_nbio);
+	lv2_socket_p2ps(socket_type socket, u16 port, u16 vport, u32 op_addr, u16 op_port, u16 op_vport, u64 cur_seq, u64 data_beg_seq, s32 so_nbio, s32 so_rcvbuf);
 	lv2_socket_p2ps(utils::serial& ar, lv2_socket_type type);
 	void save(utils::serial& ar);
 
@@ -100,8 +100,6 @@ private:
 	void close_stream_nl(nt_p2p_port* p2p_port);
 
 private:
-	static constexpr usz MAX_RECEIVED_BUFFER = (1024 * 1024 * 10);
-
 	p2ps_stream_status status = p2ps_stream_status::stream_closed;
 
 	usz max_backlog = 0; // set on listen
@@ -113,6 +111,7 @@ private:
 	u64 data_beg_seq   = 0;                       // Seq of first byte of received_data
 	u64 data_available = 0;                       // Amount of continuous data available(calculated on ACK send)
 	std::map<u64, std::vector<u8>> received_data; // holds seq/data of data received
+	usz received_data_size = 0;
 
 	u64 cur_seq = 0; // SEQ of next packet to be sent
 };
