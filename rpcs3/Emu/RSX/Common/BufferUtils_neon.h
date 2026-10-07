@@ -122,22 +122,4 @@ namespace
 
 		return (u64{max_index} << 32) | min_index;
 	}
-
-	void iota16_neon(u16* dst, u32 count)
-	{
-		const u16 initial[] = {0, 1, 2, 3, 4, 5, 6, 7};
-		auto value = vld1q_u16(initial);
-		u32 i = 0;
-
-		for (; count - i >= 8; i += 8)
-		{
-			vst1q_u16(dst + i, value);
-			value = vaddq_u16(value, vdupq_n_u16(8));
-		}
-
-		for (; i < count; ++i)
-		{
-			dst[i] = static_cast<u16>(i);
-		}
-	}
 } // namespace
