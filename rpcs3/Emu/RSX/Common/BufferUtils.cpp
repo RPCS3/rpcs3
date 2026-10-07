@@ -470,7 +470,7 @@ namespace
 #if defined(ARCH_X64)
 	const upload_untouched_skip_restart_dispatch s_avx512_upload_untouched_skip_restart_dispatch =
 	{
-		s_use_avx2 ? upload_swapped_avx2_skip_restart<u16> : upload_untouched_skip_restart<u16>,
+		upload_swapped_avx2_skip_restart<u16>,
 		upload_u32_swapped_avx3_skip_restart,
 	};
 
@@ -748,13 +748,10 @@ void iota16(u16* dst, u32 count)
 		iota16_avx2(dst, count);
 		return;
 	}
-#elif defined(ARCH_ARM64)
-	iota16_neon(dst, count);
-	return;
 #endif
 
 	u32 i = 0;
-#if defined(ARCH_X64)
+#if defined(ARCH_X64) || defined(ARCH_ARM64)
 	// Force 16-byte alignment
 	const uptr mem_addr = reinterpret_cast<uptr>(dst);
 	const u32 head = std::min<u32>(count, ((0 - mem_addr) & 15) / sizeof(u16));
