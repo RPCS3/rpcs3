@@ -1328,18 +1328,14 @@ void VKGSRender::clear_surface(u32 mask)
 
 	const bool full_frame = (scissor_w == fb_width && scissor_h == fb_height);
 	bool update_color = false, update_z = false;
-	auto surface_depth_format = rsx::method_registers.surface_depth_fmt();
+	auto surface_depth_format = REGS(m_ctx)->surface_depth_fmt();
 
 	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil); mask & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK)
 	{
 		if (mask & RSX_GCM_CLEAR_DEPTH_BIT)
 		{
-			u32 max_depth_value = get_max_depth_value(surface_depth_format);
-
-			u32 clear_depth = rsx::method_registers.z_clear_value(is_depth_stencil_format(surface_depth_format));
-			float depth_clear = static_cast<float>(clear_depth) / max_depth_value;
-
-			depth_stencil_clear_values.depthStencil.depth = depth_clear;
+			const u32 clear_depth_bits = REGS(m_ctx)->z_clear_value(is_depth_stencil_format(surface_depth_format));
+			depth_stencil_clear_values.depthStencil.depth = rsx::get_depth_clear_value(surface_depth_format, clear_depth_bits);
 			depth_stencil_clear_values.depthStencil.stencil = stencil_clear;
 
 			depth_stencil_mask |= VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -1349,7 +1345,7 @@ void VKGSRender::clear_surface(u32 mask)
 		{
 			if (mask & RSX_GCM_CLEAR_STENCIL_BIT)
 			{
-				u8 clear_stencil = rsx::method_registers.stencil_clear_value();
+				u8 clear_stencil = REGS(m_ctx)->stencil_clear_value();
 				depth_stencil_clear_values.depthStencil.stencil = clear_stencil;
 
 				depth_stencil_mask |= VK_IMAGE_ASPECT_STENCIL_BIT;
@@ -1398,12 +1394,12 @@ void VKGSRender::clear_surface(u32 mask)
 		if (!m_draw_buffers.empty())
 		{
 			bool use_fast_clear = (colormask == RSX_GCM_CLEAR_COLOR_RGBA_MASK);;
-			u8 clear_a = rsx::method_registers.clear_color_a();
-			u8 clear_r = rsx::method_registers.clear_color_r();
-			u8 clear_g = rsx::method_registers.clear_color_g();
-			u8 clear_b = rsx::method_registers.clear_color_b();
+			u8 clear_a = REGS(m_ctx)->clear_color_a();
+			u8 clear_r = REGS(m_ctx)->clear_color_r();
+			u8 clear_g = REGS(m_ctx)->clear_color_g();
+			u8 clear_b = REGS(m_ctx)->clear_color_b();
 
-			switch (rsx::method_registers.surface_color())
+			switch (REGS(m_ctx)->surface_color())
 			{
 			case rsx::surface_color_format::x32:
 			case rsx::surface_color_format::w16z16y16x16:
@@ -1502,7 +1498,7 @@ void VKGSRender::clear_surface(u32 mask)
 	if (depth_stencil_mask)
 	{
 		if ((depth_stencil_mask & VK_IMAGE_ASPECT_STENCIL_BIT) &&
-			rsx::method_registers.stencil_mask() != 0xff)
+			REGS(m_ctx)->stencil_mask() != 0xff)
 		{
 			// Partial stencil clear. Disables fast stencil clear
 			auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
@@ -1512,7 +1508,7 @@ void VKGSRender::clear_surface(u32 mask)
 			vk::get_overlay_pass<vk::stencil_clear_pass>()->run(
 				*m_current_command_buffer, ds, region.rect,
 				depth_stencil_clear_values.depthStencil.stencil,
-				rsx::method_registers.stencil_mask(), renderpass);
+				REGS(m_ctx)->stencil_mask(), renderpass);
 
 			depth_stencil_mask &= ~VK_IMAGE_ASPECT_STENCIL_BIT;
 		}
