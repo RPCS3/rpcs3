@@ -2132,10 +2132,10 @@ error_code music_selection_context::find_content_id(vm::ptr<CellSearchContentId>
 
 	for (usz i = 0; i < playlist.size(); i++)
 	{
-		const std::string& track = ::at32(playlist, (start + i) % playlist.size());
+		const std::string_view track = ::at32(playlist, (start + i) % playlist.size());
 
 		// The tracks of a music list share the hash of their directory
-		const u64 track_hash = content_type == CELL_SEARCH_CONTENTTYPE_MUSICLIST ? std::hash<std::string_view>()(fs::get_parent_dir_view(track)) : std::hash<std::string>()(track);
+		const u64 track_hash = std::hash<std::string_view>()(content_type == CELL_SEARCH_CONTENTTYPE_MUSICLIST ? fs::get_parent_dir_view(track) : track);
 
 		if (i > 0 && track_hash == last_hash)
 		{
@@ -2144,17 +2144,17 @@ error_code music_selection_context::find_content_id(vm::ptr<CellSearchContentId>
 
 		last_hash = track_hash;
 
-		if (i == 0)
-		{
-			// Look for the selected track below if no content is found
-			hash = track_hash;
-		}
-
 		if (auto found = content_map.map.find(track_hash); found != content_map.map.end())
 		{
 			hash = track_hash;
 			found_content = found->second;
 			break;
+		}
+
+		if (i == 0)
+		{
+			// Look for the selected track below if no content is found
+			hash = track_hash;
 		}
 	}
 
