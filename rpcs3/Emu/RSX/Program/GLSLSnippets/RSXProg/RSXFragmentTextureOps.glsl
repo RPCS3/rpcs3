@@ -55,6 +55,24 @@ R"(
 #define TEX_NAME(index) tex##index
 #define TEX_NAME_STENCIL(index) tex##index##_stencil
 
+#ifdef _EMULATED_DEPTH_STORAGE
+// Float depth surfaces hold the emulated encoding; recover the depth value when they are sampled directly
+vec4 _decode_depth_texel(const in vec4 texel, const in uint flags)
+{
+	if (!_test_bit(flags, DEPTH_FLOAT))
+	{
+		return texel;
+	}
+
+	// Depth views replicate the depth channel; leave constant channels alone
+	const vec4 depth = vec4(decode_emulated_depth(texel.x));
+	return mix(texel, depth, equal(texel, vec4(texel.x)));
+}
+#define _DEPTH_DECODE(index, texel) _decode_depth_texel(texel, TEX_PARAM(index).flags)
+#else
+#define _DEPTH_DECODE(index, texel) texel
+#endif
+
 #define COORD_SCALE1(index, coord1) _texcoord_xform(coord1, TEX_PARAM(index))
 #define COORD_SCALE2(index, coord2) _texcoord_xform(coord2, TEX_PARAM(index))
 #define COORD_SCALE3(index, coord3) _texcoord_xform(coord3, TEX_PARAM(index))
@@ -63,19 +81,19 @@ R"(
 #define COORD_PROJ3(index, coord4) COORD_SCALE3(index, coord4.xyz / coord4.w)
 
 #ifdef _ENABLE_TEX1D
-#define TEX1D(index, coord1) _process_texel(texture(TEX_NAME(index), COORD_SCALE1(index, coord1)), TEX_FLAGS(index))
-#define TEX1D_BIAS(index, coord1, bias) _process_texel(texture(TEX_NAME(index), COORD_SCALE1(index, coord1), bias), TEX_FLAGS(index))
-#define TEX1D_LOD(index, coord1, lod) _process_texel(textureLod(TEX_NAME(index), COORD_SCALE1(index, coord1), lod), TEX_FLAGS(index))
-#define TEX1D_GRAD(index, coord1, dpdx, dpdy) _process_texel(textureGrad(TEX_NAME(index), COORD_SCALE1(index, coord1), dpdx, dpdy), TEX_FLAGS(index))
-#define TEX1D_PROJ(index, coord4) _process_texel(texture(TEX_NAME(index), COORD_PROJ1(index, coord4.xw)), TEX_FLAGS(index))
+#define TEX1D(index, coord1) _process_texel(_DEPTH_DECODE(index, texture(TEX_NAME(index), COORD_SCALE1(index, coord1))), TEX_FLAGS(index))
+#define TEX1D_BIAS(index, coord1, bias) _process_texel(_DEPTH_DECODE(index, texture(TEX_NAME(index), COORD_SCALE1(index, coord1), bias)), TEX_FLAGS(index))
+#define TEX1D_LOD(index, coord1, lod) _process_texel(_DEPTH_DECODE(index, textureLod(TEX_NAME(index), COORD_SCALE1(index, coord1), lod)), TEX_FLAGS(index))
+#define TEX1D_GRAD(index, coord1, dpdx, dpdy) _process_texel(_DEPTH_DECODE(index, textureGrad(TEX_NAME(index), COORD_SCALE1(index, coord1), dpdx, dpdy)), TEX_FLAGS(index))
+#define TEX1D_PROJ(index, coord4) _process_texel(_DEPTH_DECODE(index, texture(TEX_NAME(index), COORD_PROJ1(index, coord4.xw))), TEX_FLAGS(index))
 #endif
 
 #ifdef _ENABLE_TEX2D
-#define TEX2D(index, coord2) _process_texel(texture(TEX_NAME(index), COORD_SCALE2(index, coord2)), TEX_FLAGS(index))
-#define TEX2D_BIAS(index, coord2, bias) _process_texel(texture(TEX_NAME(index), COORD_SCALE2(index, coord2), bias), TEX_FLAGS(index))
-#define TEX2D_LOD(index, coord2, lod) _process_texel(textureLod(TEX_NAME(index), COORD_SCALE2(index, coord2), lod), TEX_FLAGS(index))
-#define TEX2D_GRAD(index, coord2, dpdx, dpdy) _process_texel(textureGrad(TEX_NAME(index), COORD_SCALE2(index, coord2), dpdx, dpdy), TEX_FLAGS(index))
-#define TEX2D_PROJ(index, coord4) _process_texel(texture(TEX_NAME(index), COORD_PROJ2(index, coord4.xyw)), TEX_FLAGS(index))
+#define TEX2D(index, coord2) _process_texel(_DEPTH_DECODE(index, texture(TEX_NAME(index), COORD_SCALE2(index, coord2))), TEX_FLAGS(index))
+#define TEX2D_BIAS(index, coord2, bias) _process_texel(_DEPTH_DECODE(index, texture(TEX_NAME(index), COORD_SCALE2(index, coord2), bias)), TEX_FLAGS(index))
+#define TEX2D_LOD(index, coord2, lod) _process_texel(_DEPTH_DECODE(index, textureLod(TEX_NAME(index), COORD_SCALE2(index, coord2), lod)), TEX_FLAGS(index))
+#define TEX2D_GRAD(index, coord2, dpdx, dpdy) _process_texel(_DEPTH_DECODE(index, textureGrad(TEX_NAME(index), COORD_SCALE2(index, coord2), dpdx, dpdy)), TEX_FLAGS(index))
+#define TEX2D_PROJ(index, coord4) _process_texel(_DEPTH_DECODE(index, texture(TEX_NAME(index), COORD_PROJ2(index, coord4.xyw))), TEX_FLAGS(index))
 #endif
 
 #ifdef _ENABLE_SHADOW
@@ -96,11 +114,11 @@ R"(
 #endif
 
 #ifdef _ENABLE_TEX3D
-#define TEX3D(index, coord3) _process_texel(texture(TEX_NAME(index), COORD_SCALE3(index, coord3)), TEX_FLAGS(index))
-#define TEX3D_BIAS(index, coord3, bias) _process_texel(texture(TEX_NAME(index), COORD_SCALE3(index, coord3), bias), TEX_FLAGS(index))
-#define TEX3D_LOD(index, coord3, lod) _process_texel(textureLod(TEX_NAME(index), COORD_SCALE3(index, coord3), lod), TEX_FLAGS(index))
-#define TEX3D_GRAD(index, coord3, dpdx, dpdy) _process_texel(textureGrad(TEX_NAME(index), COORD_SCALE3(index, coord3), dpdx, dpdy), TEX_FLAGS(index))
-#define TEX3D_PROJ(index, coord4) _process_texel(texture(TEX_NAME(index), COORD_PROJ3(index, coord4).xyz), TEX_FLAGS(index))
+#define TEX3D(index, coord3) _process_texel(_DEPTH_DECODE(index, texture(TEX_NAME(index), COORD_SCALE3(index, coord3))), TEX_FLAGS(index))
+#define TEX3D_BIAS(index, coord3, bias) _process_texel(_DEPTH_DECODE(index, texture(TEX_NAME(index), COORD_SCALE3(index, coord3), bias)), TEX_FLAGS(index))
+#define TEX3D_LOD(index, coord3, lod) _process_texel(_DEPTH_DECODE(index, textureLod(TEX_NAME(index), COORD_SCALE3(index, coord3), lod)), TEX_FLAGS(index))
+#define TEX3D_GRAD(index, coord3, dpdx, dpdy) _process_texel(_DEPTH_DECODE(index, textureGrad(TEX_NAME(index), COORD_SCALE3(index, coord3), dpdx, dpdy)), TEX_FLAGS(index))
+#define TEX3D_PROJ(index, coord4) _process_texel(_DEPTH_DECODE(index, texture(TEX_NAME(index), COORD_PROJ3(index, coord4).xyz)), TEX_FLAGS(index))
 #endif
 
 #ifdef _ENABLE_TEX1D
@@ -160,7 +178,12 @@ vec3 _texcoord_xform_shadow(const in vec3 coord3, const in sampler_info params)
 	if (_test_bit(params.flags, DEPTH_FLOAT))
 	{
 		// Depth-float buffer, extended range supported
+#ifdef _EMULATED_DEPTH_STORAGE
+		// The stored values are encoded; the encoding is monotonic so the hardware compare still holds
+		result.z = encode_emulated_depth(coord3.z);
+#else
 		result.z = coord3.z;
+#endif
 	}
 	else
 	{
@@ -180,7 +203,11 @@ vec4 _texcoord_xform_shadow(const in vec4 coord4, const in sampler_info params)
 	if (_test_bit(params.flags, DEPTH_FLOAT))
 	{
 		// Depth-float buffer, extended range supported
+#ifdef _EMULATED_DEPTH_STORAGE
+		result.w = encode_emulated_depth(coord4.w);
+#else
 		result.w = coord4.w;
+#endif
 	}
 	else
 	{

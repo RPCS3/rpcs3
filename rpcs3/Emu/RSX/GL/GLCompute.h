@@ -144,6 +144,12 @@ namespace gl
 						"		tmp = bswap_u32(tmp);\n";
 				}
 
+				if (gl::emulate_extended_depth_range())
+				{
+					// Float depth surfaces hold the emulated encoding (half the bit pattern)
+					work_kernel += "		tmp.xy <<= 1;\n";
+				}
+
 				// Convert
 				work_kernel += "		tmp.z = pack_e4m12_pack16(tmp.xy);\n";
 
@@ -174,6 +180,11 @@ namespace gl
 
 				// Convert
 				work_kernel += "		tmp.yz = unpack_e4m12_pack16(tmp.x);\n";
+
+				if (gl::emulate_extended_depth_range())
+				{
+					work_kernel += "		tmp.yz >>= 1;\n";
+				}
 
 				if constexpr (_SwapDst)
 				{

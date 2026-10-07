@@ -402,7 +402,7 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.require_srgb_to_linear = properties.has_upg;
 	m_shader_props.require_linear_to_srgb = properties.has_pkg;
 	m_shader_props.require_fog_read = properties.in_register_mask & in_fogc;
-	m_shader_props.emulate_shadow_compare = device_props.emulate_depth_compare;
+	m_shader_props.emulate_shadow_compare = device_props.emulate_depth_compare || device_props.emulated_depth_storage;
 
 	m_shader_props.low_precision_tests = device_props.has_low_precision_rounding && !(m_prog.ctrl & RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION);
 	m_shader_props.disable_early_discard = !vk::is_NVIDIA(vk::get_driver_vendor());
