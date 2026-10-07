@@ -21,7 +21,7 @@ vec4 round_to_8bit(const in vec4 v4)
 #ifndef _32_BIT_OUTPUT
 f16vec4 round_to_8bit(const in f16vec4 v4)
 {
-	const uvec4 raw = uvec4(max(floor(fma(_fx12_truncate(vec4(v4)), f16vec4(255.), f16vec4(0.5))), vec4(0.)));
+	const uvec4 raw = uvec4(max(floor(fma(_fx12_truncate(vec4(v4)), vec4(255.), vec4(0.5))), vec4(0.)));
 	return f16vec4(raw) / f16vec4(255.);
 }
 #endif
