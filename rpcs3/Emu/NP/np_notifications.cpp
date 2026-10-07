@@ -229,6 +229,30 @@ namespace np
 			return;
 		}
 
+		const u32 cast_type = message_info->casttype().value();
+		const int dst_size = message_info->dst_size();
+		bool valid_destination = false;
+
+		switch (cast_type)
+		{
+		case SCE_NP_MATCHING2_CASTTYPE_BROADCAST:
+			valid_destination = dst_size == 0;
+			break;
+		case SCE_NP_MATCHING2_CASTTYPE_UNICAST:
+		case SCE_NP_MATCHING2_CASTTYPE_MULTICAST_TEAM:
+			valid_destination = dst_size == 1;
+			break;
+		case SCE_NP_MATCHING2_CASTTYPE_MULTICAST:
+			valid_destination = dst_size > 0 && dst_size <= SCE_NP_MATCHING2_ROOM_MAX_SLOT;
+			break;
+		}
+
+		if (!valid_destination || message_info->msg().size() > SCE_NP_MATCHING2_BIN_MSG_MAX_SIZE)
+		{
+			rpcn_log.error("Received malformed RoomMessageReceived notification");
+			return;
+		}
+
 		const u32 event_key = get_event_key();
 		auto [include_onlinename, include_avatarurl] = get_match2_context_options(room_event_cb_ctx);
 
