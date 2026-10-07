@@ -3697,6 +3697,12 @@ namespace rsx
 					auto& section = *It;
 					if (!section.is_flushable())
 					{
+						// The blit result stays GPU-side, so textures uploaded from this memory will not see it through
+						// memory protection. Drop them so the next read uploads again after flushing the blit target.
+						if (section.get_context() == rsx::texture_upload_context::shader_read && !section.is_dirty())
+						{
+							section.set_dirty(true);
+						}
 						continue;
 					}
 
