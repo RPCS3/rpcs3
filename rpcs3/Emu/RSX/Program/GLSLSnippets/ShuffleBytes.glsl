@@ -13,7 +13,7 @@ layout(%set, binding=%loc, std430) buffer ssbo{ uint data[]; };
 
 // Depth format conversions
 #define d24_to_f32(bits)             floatBitsToUint(float(bits) / 16777215.f)
-#define f32_to_d24(bits)             uint(uintBitsToFloat(bits) * 16777215.f)
+#define f32_to_d24(bits)             f32_to_unorm24(uintBitsToFloat(bits))
 #define d24f_to_f32(bits)            (bits << 7)
 #define f32_to_d24f(bits)            (bits >> 7)
 #define d24x8_to_f32(bits)           d24_to_f32(bits >> 8)
@@ -24,6 +24,16 @@ uint linear_invocation_id()
 {
 	uint size_in_x = (gl_NumWorkGroups.x * gl_WorkGroupSize.x);
 	return (gl_GlobalInvocationID.y * size_in_x) + gl_GlobalInvocationID.x;
+}
+
+uint f32_to_unorm24(const in float value)
+{
+	// Round to nearest.
+	// NOTE: Above value = 0.5, we run into FP32 precision issues and the fractional part is lost.
+	// Trying to round using floor(x * s + 0.5) then fails because x * s + 0.5 randomly becomes x * s + 1 or x * s (even steps).
+	// Instead we use the algorithm  v < 0.5 ? uint(x * s + 0.5) : uint(x * s) which matches what RSX does closely enough.
+	const float scaled = value * 16777215.f;
+	return uint(scaled) + uint(fract(scaled) >= 0.5f);
 }
 
 %md

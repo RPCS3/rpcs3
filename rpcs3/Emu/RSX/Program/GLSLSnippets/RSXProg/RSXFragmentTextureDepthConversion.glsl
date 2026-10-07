@@ -11,7 +11,9 @@ vec4 decode_depth24(const in float depth_value, const in bool depth_float)
 	uint value;
 	if (!depth_float)
 	{
-		value = uint(depth_value * 16777215.);
+		// Round to nearest. See f32_to_unorm24 in ShuffleBytes.glsl.
+		const float scaled = depth_value * 16777215.;
+		value = uint(scaled) + uint(fract(scaled) >= 0.5);
 	}
 	else
 	{
