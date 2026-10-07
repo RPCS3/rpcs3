@@ -142,9 +142,11 @@ namespace rsx
 			u32 m_remaining_commands = 0;
 			u32 m_args_ptr = 0;
 			u32 m_cmd = ~0u;
+			u32 m_next_header_pos = 0;
 
 			u32 m_cache_addr = 0;
 			u32 m_cache_size = 0;
+			u32 m_cache_exposed_size = 0; // Part of the cache that can be exposed through GET (stops at flow control)
 			alignas(64) std::byte m_cache[8][128];
 
 		public:
@@ -154,7 +156,7 @@ namespace rsx
 			u32 translate_address(u32 addr) const;
 
 			std::pair<bool, u32> fetch_u32(u32 addr);
-			void invalidate_cache() { m_cache_size = 0; }
+			void invalidate_cache() { m_cache_size = 0; m_cache_exposed_size = 0; }
 
 			u32 get_pos() const { return m_fifo_pos; }
 			u32 last_cmd() const { return m_cmd; }

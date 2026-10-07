@@ -1282,7 +1282,8 @@ namespace rsx
 			// Note a possible rollback address
 			if (sync_point_request && !in_begin_end)
 			{
-				restore_point = ctrl->get;
+				// Use the execution position, the exposed GET may point ahead of it (atomic FIFO prefetch)
+				restore_point = fifo_ctrl->get_pos();
 				saved_fifo_ret = fifo_ret_addr;
 				sync_point_request.release(false);
 			}
