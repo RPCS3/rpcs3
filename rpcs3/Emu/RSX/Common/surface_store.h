@@ -1436,20 +1436,10 @@ namespace rsx
 				{
 					if (a.surface->last_use_tag == b.surface->last_use_tag)
 					{
-						// Surfaces written by the same draw cannot both own the overlapping memory, e.g. a color target and
-						// a depth target whose declared clip extends past the area actually drawn and runs into the color target.
-						// Prefer the surface that starts at the requested address.
+						// Prefer exact address match
 						ensure(a.base_address != b.base_address);
-
-						if (a.base_address == texaddr)
-						{
-							return false;
-						}
-
-						if (b.base_address == texaddr)
-						{
-							return true;
-						}
+						if (a.base_address == texaddr) return false;
+						if (b.base_address == texaddr) return true;
 
 						const auto area_a = a.dst_area.width * a.dst_area.height;
 						const auto area_b = b.dst_area.width * b.dst_area.height;
