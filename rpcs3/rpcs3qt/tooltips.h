@@ -255,6 +255,7 @@ public:
 		const QString buzz              = tr("Buzz! support.\nSelect 1 or 2 controllers if the game requires Buzz! controllers and you don't have real controllers.\nSelect Null if the game has support for DualShock or if you have real Buzz! controllers.");
 		const QString turntable         = tr("DJ Hero Turntable controller support.\nSelect 1 or 2 controllers if the game requires DJ Hero Turntable controllers and you don't have real turntable controllers.\nSelect Null if the game has support for DualShock or if you have real turntable controllers.\nA real turntable controller can be used at the same time as an emulated turntable controller.");
 		const QString ghltar            = tr("Guitar Hero Live (GHL) Guitar controller support.\nSelect 1 or 2 controllers if the game requires GHL Guitar controllers and you don't have real guitar controllers.\nSelect Null if the game has support for DualShock or if you have real guitar controllers.\nA real guitar controller can be used at the same time as an emulated guitar controller.");
+		const QString usio              = tr("USIO support.\nFighting Games: Emulate USIO for fighting games.\nShooter Games: Emulate USIO for shooter games.\nNote that rhythm games (such as Taiko no Tatsujin series) are always supported no matter which of the 2 options above is chosen.");
 		const QString background_input  = tr("Allows pad and keyboard input while the game window is unfocused.");
 		const QString show_move_cursor  = tr("Shows the raw position of the PS Move input.\nThis can be very helpful during calibration screens.");
 		const QString midi_devices      = tr("Select up to 3 emulated MIDI devices and their types.");
@@ -286,6 +287,8 @@ public:
 		const QString empty_hdd0_tmp          = tr("Required for some Homebrew or Game Mods.\nIf unsure, do not use this option");
 		const QString limit_cache_size        = tr("Automatically removes older files from disk cache on boot if it grows larger than the specified value.\nGames can use the cache folder to temporarily store data outside of system memory. It is not used for long-term storage.\n\nThis setting is only available in the global configuration.");
 		const QString console_time_offset     = tr("Sets the time to be used within the console. This will be applied as an offset that tracks wall clock time.\nCan be reset to current wall clock time by clicking \"Set to Now\".");
+		const QString hdd_model               = tr("Set the Model Name for the emulated HDD.\nChecked by System 357 games.\nIf unsure, leave this field empty.");
+		const QString hdd_serial              = tr("Set the Serial Number for the emulated HDD.\nChecked by System 357 games.\nIf unsure, leave this field empty.");
 	} settings;
 
 	const struct gamepad_settings
