@@ -3249,10 +3249,19 @@ namespace rpcn
 			return;
 		}
 
+		const u32 main_type = pb_mdata->maintype().value();
+		const u32 sub_type = pb_mdata->subtype().value();
+
+		if (main_type > std::numeric_limits<u16>::max() || sub_type > std::numeric_limits<u16>::max())
+		{
+			rpcn_log.warning("Discarded message with invalid type! (main_type=%u, sub_type=%u)", main_type, sub_type);
+			return;
+		}
+
 		message_data mdata = {
 			.msgId = message_counter,
-			.mainType = ::narrow<u16>(pb_mdata->maintype().value()),
-			.subType = ::narrow<u16>(pb_mdata->subtype().value()),
+			.mainType = static_cast<u16>(main_type),
+			.subType = static_cast<u16>(sub_type),
 			.msgFeatures = pb_mdata->msgfeatures(),
 			.subject = pb_mdata->subject(),
 			.body = pb_mdata->body()};
