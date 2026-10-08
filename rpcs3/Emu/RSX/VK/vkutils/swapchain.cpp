@@ -289,7 +289,7 @@ namespace vk
 		// of the game's (VKPresent.cpp): every image the display has (five), so
 		// that beside the one on screen and one perhaps still waiting for its
 		// refresh, three go up without waiting for an image to come free (with
-		// three made between, the fourth waits a refresh). Without it, one fewer,
+		// three made between, one may find none and is dropped). Without it, one fewer,
 		// as before: a game that outruns the display queues no further ahead
 		if (g_cfg.video.frame_generation && surface_descriptors.maxImageCount > nb_swap_images)
 		{

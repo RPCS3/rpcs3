@@ -8,10 +8,16 @@
 
 #include "util/asm.hpp"
 
-// PS5: the frames made since the title started, and the time the RSX thread
-// spent making and showing them (VKPresent.cpp), for the trace's status line
+// PS5: for the trace's status line, since the title started: the frames made;
+// the RSX thread's time making and showing them, and in it waiting for the
+// GPU (VKPresent.cpp); the frames made but dropped, no image free to show
+// them in; and the RSX thread's time waiting for an image to show the game's
+// own frames [0] and those made [1] in
 atomic_t<u64> g_ps5_frames_generated = 0;
 atomic_t<u64> g_ps5_frame_gen_us = 0;
+atomic_t<u64> g_ps5_frame_gen_gpu_wait_us = 0;
+atomic_t<u64> g_ps5_frames_dropped = 0;
+atomic_t<u64> g_ps5_image_wait_us[2] = {};
 
 namespace vk
 {

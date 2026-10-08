@@ -73,12 +73,13 @@ private:
 	output_scaling_mode m_output_scaling{output_scaling_mode::bilinear};
 
 #ifdef __PROSPERO__
-	// PS5: frame generation (VKFrameGen.h); when the game's last frame came; the
-	// display's refreshes since then not yet given a frame (less those given
-	// one too many); and whether the swapchain has frame generation's images
+	// PS5: frame generation (VKFrameGen.h); when the game's last frame came;
+	// when the display will have taken the last frame presented off its queue
+	// (an estimate, in get_system_time's µs); and whether the swapchain has
+	// frame generation's images
 	std::unique_ptr<vk::frame_generator> m_frame_generator;
 	u64 m_last_game_flip_us = 0;
-	f64 m_frame_gen_refreshes = 0.;
+	f64 m_display_taken_at_us = 0.;
 	bool m_frame_gen_swapchain = false;
 #endif
 

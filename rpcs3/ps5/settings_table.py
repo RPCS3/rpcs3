@@ -58,10 +58,11 @@ PS5_EXTRA = [
      "screen a refresh (17 ms) later for each frame made before it, and fast motion, text and the HUD "
      "can shimmer or smear."),
     ("FrameGeneration", "GPU", "FrameGenerationFrames", "Frames made between",
-     "The most frames made between two of the game's. They go up one a refresh, and only as many as the "
-     "time between the game's frames has refreshes for, so the display is never sent more than it can "
-     "show: at 24 fps, 1 shows 48 frames a second and Auto (up to 3) all 60, making one and two by turns. "
-     "Each frame made puts the game's own a refresh (17 ms) later."),
+     "The most frames made between two of the game's. They go up one a refresh, only as many as the time "
+     "between the game's frames has room for beside what the screen still has waiting, and a frame that "
+     "would have to wait for the screen is dropped, so the game is not held back. At 24 fps, 1 shows about "
+     "48 frames a second and Auto (up to 3) nearly 60. Each frame made puts the game's own a refresh (17 ms) "
+     "later."),
     ("FrameGenerationFrames", "GPU", "FrameGenerationQuality", "Frame generation quality",
      "How hard frame generation looks for motion: Fast follows it in a copy of the picture 480 pixels "
      "across, Balanced 640, Quality 960, reaching further for quick camera turns. Higher follows the "
