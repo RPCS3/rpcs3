@@ -27,6 +27,9 @@ namespace vk
 	// 16-21 sample_counts
 	// 22-36 current layouts
 	// 37-41 input attachments
+	// 42-59 reserved
+	// 60-63 flags. Allocated from bit 63 downwards.
+	// NOTE: Keys are persisted in the pipeline cache. Existing fields must not move.
 	union renderpass_key_blob
 	{
 	private:
@@ -62,6 +65,12 @@ namespace vk
 		}
 
 	public:
+		// Flags relative to the flags field
+		enum : u64
+		{
+			flag_no_attachments = (1ull << 3), // Bit 63. Renderpass has no attachments
+		};
+
 		u64 encoded;
 
 		struct
@@ -71,6 +80,8 @@ namespace vk
 			u64 sample_count  : 6;
 			u64 layout_blob   : 15;
 			u64 input_attachments_mask : 5;
+			u64 reserved      : 18;
+			u64 flags         : 4;
 		};
 
 		renderpass_key_blob(u64 encoded_) : encoded(encoded_)
@@ -167,10 +178,20 @@ namespace vk
 
 			return result;
 		}
+
+		inline bool has_no_attachments() const
+		{
+			return !!(flags & flag_no_attachments);
+		}
 	};
+
+	static_assert(sizeof(renderpass_key_blob) == sizeof(u64));
 
 	u64 get_renderpass_key(const std::vector<vk::image*>& images, const std::vector<u8>& input_attachment_ids)
 	{
+		// Use get_renderpass_key_no_attachments for passes without attachments
+		ensure(!images.empty());
+
 		renderpass_key_blob key(0);
 
 		for (u32 i = 0; i < ::size32(images); ++i)
@@ -259,6 +280,14 @@ namespace vk
 		return key.encoded;
 	}
 
+	u64 get_renderpass_key_no_attachments(u8 sample_count)
+	{
+		renderpass_key_blob key(0);
+		key.sample_count = sample_count;
+		key.flags = renderpass_key_blob::flag_no_attachments;
+		return key.encoded;
+	}
+
 	VkRenderPass get_renderpass(VkDevice dev, u64 renderpass_key)
 	{
 		// 99.999% of checks will go through this block once on-disk shader cache has loaded
@@ -289,6 +318,12 @@ namespace vk
 
 		VkFormat color_format = static_cast<VkFormat>(key.color_format);
 		VkFormat depth_format = static_cast<VkFormat>(key.depth_format);
+
+		if (key.has_no_attachments())
+		{
+			// Raster-only pass. Only the sample count is meaningful, the rest decodes to an empty subpass.
+			ensure(!color_format && !depth_format && !key.layout_blob && !key.input_attachments_mask);
+		}
 
 		std::vector<VkAttachmentDescription> attachments = {};
 		std::vector<VkAttachmentReference> attachment_references;
@@ -377,6 +412,12 @@ namespace vk
 	{
 		renderpass_key_blob key(renderpass_key);
 		return key.input_attachments_mask != 0u;
+	}
+
+	bool renderpass_has_no_attachments(u64 renderpass_key)
+	{
+		renderpass_key_blob key(renderpass_key);
+		return key.has_no_attachments();
 	}
 
 	void clear_renderpass_cache(VkDevice dev)
