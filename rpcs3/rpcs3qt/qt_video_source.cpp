@@ -415,33 +415,18 @@ void qt_video_source::get_image(std::vector<u8>& data, int& w, int& h, int& ch, 
 	std::memcpy(data.data(), m_image.constBits(), data.size());
 }
 
-qt_video_source_wrapper::~qt_video_source_wrapper()
+// All wrapper calls are queued to the main thread without emu state tracking, so none of them gets skipped.
+// This keeps the order of the calls (the source is created first and destroyed last) and ensures the source only lives on the main thread.
+static void call_from_main_thread(std::function<void()>&& func)
 {
-	Emu.BlockingCallFromMainThread([this]()
-	{
-		m_qt_video_source.reset();
-	});
+	Emu.CallFromMainThread(std::move(func), nullptr, false);
 }
 
-void qt_video_source_wrapper::init_video_source()
+qt_video_source_wrapper::qt_video_source_wrapper()
 {
-	if (!m_qt_video_source)
+	call_from_main_thread([this]()
 	{
 		m_qt_video_source = std::make_unique<qt_video_source>(true);
-	}
-}
-
-void qt_video_source_wrapper::set_iso_path(const std::string& iso_path)
-{
-	m_qt_video_source->set_iso_path(iso_path);
-}
-
-void qt_video_source_wrapper::set_video_path(const std::string& video_path, bool video_in_archive)
-{
-	Emu.CallFromMainThread([this, video_in_archive, path = video_path]()
-	{
-		init_video_source();
-
 		m_qt_video_source->m_image_change_callback = [this](const QVideoFrame& frame)
 		{
 			std::unique_lock lock(m_qt_video_source->m_image_mutex);
@@ -469,39 +454,58 @@ void qt_video_source_wrapper::set_video_path(const std::string& video_path, bool
 
 			notify_update();
 		};
+		m_ready = true;
+	});
+}
+
+qt_video_source_wrapper::~qt_video_source_wrapper()
+{
+	Emu.BlockingCallFromMainThread([this]()
+	{
+		m_qt_video_source.reset();
+	}, false);
+}
+
+void qt_video_source_wrapper::set_iso_path(const std::string& iso_path)
+{
+	call_from_main_thread([this, path = iso_path]()
+	{
+		m_qt_video_source->set_iso_path(path);
+	});
+}
+
+void qt_video_source_wrapper::set_video_path(const std::string& video_path, bool video_in_archive)
+{
+	call_from_main_thread([this, video_in_archive, path = video_path]()
+	{
 		m_qt_video_source->set_video_path(path, video_in_archive);
 	});
 }
 
 void qt_video_source_wrapper::set_audio_path(const std::string& audio_path, bool audio_in_archive)
 {
-	Emu.CallFromMainThread([this, audio_in_archive, path = audio_path]()
+	call_from_main_thread([this, audio_in_archive, path = audio_path]()
 	{
-		init_video_source();
-
 		m_qt_video_source->set_audio_path(path, audio_in_archive);
 	});
 }
 
 void qt_video_source_wrapper::set_active(bool active)
 {
-	Emu.CallFromMainThread([this, active]()
+	call_from_main_thread([this, active]()
 	{
-		ensure(m_qt_video_source);
 		m_qt_video_source->set_active(active);
 	});
 }
 
-bool qt_video_source_wrapper::get_active() const
-{
-	ensure(m_qt_video_source);
-
-	return m_qt_video_source->get_active();
-}
-
 void qt_video_source_wrapper::get_image(std::vector<u8>& data, int& w, int& h, int& ch, int& bpp)
 {
-	ensure(m_qt_video_source);
+	if (qt_video_source* source = get_ready_source())
+	{
+		source->get_image(data, w, h, ch, bpp);
+		return;
+	}
 
-	m_qt_video_source->get_image(data, w, h, ch, bpp);
+	w = h = ch = bpp = 0;
+	data.clear();
 }
