@@ -4,7 +4,7 @@
 // Big Picture Mode's dialog (Emulator::BootBigPictureMode runs it).
 //
 // Home: the selected game's own art (PS3_GAME/PIC1.PNG) behind its name and
-// Play now / Game settings, over a row of the games' ICON0.PNG tiles.
+// Play now / Game settings / Patches, over a row of the games' ICON0.PNG tiles.
 // Library: Big Picture Mode's game grid. Settings: RPCS3's settings pages.
 // L1 / R1 change tabs.
 
@@ -19,6 +19,11 @@
 #include <vector>
 
 struct cfg_root;
+
+namespace ps5_patches
+{
+	struct game;
+}
 
 namespace rsx::overlays
 {
@@ -93,6 +98,7 @@ namespace rsx::overlays
 			tiles,
 			play,
 			settings,
+			patches,
 			remove
 		};
 
@@ -174,11 +180,15 @@ namespace rsx::overlays
 		ellipse m_settings_button;
 		image_view m_settings_icon;
 		label m_settings_label;
+		ellipse m_patches_button;
+		image_view m_patches_icon;
+		label m_patches_label;
 		ellipse m_delete_button;
 		image_view m_delete_icon;
 		label m_delete_label;
 		std::unique_ptr<image_info> m_play_icon_data;
 		std::unique_ptr<image_info> m_settings_icon_data;
+		std::unique_ptr<image_info> m_patches_icon_data;
 		std::unique_ptr<image_info> m_delete_icon_data;
 
 		// The games row
@@ -227,6 +237,36 @@ namespace rsx::overlays
 		void close_game_settings();
 		void layout_game_settings();
 		void handle_game_settings(pad_button button_press);
+
+		// Patches: the selected game's patches from RPCS3's patch files
+		// (ps5_patches.h), read on a thread of their own, turned on and off
+		// here, and saved to patch_config.yml when the page closes
+		struct patch_row
+		{
+			std::string heading; // a heading when not empty
+			s32 patch = -1;      // the patch, in m_pt's list
+			s32 value = -1;      // one of its values, or -1 for the patch itself
+		};
+
+		bool m_pt_open = false;
+		u64 m_pt_open_us = 0;
+		std::string m_pt_name;
+		std::unique_ptr<ps5_patches::game> m_pt;
+		std::unique_ptr<named_thread<std::function<void()>>> m_pt_thread;
+		u32 m_pt_generation = 0; // which opening the thread reads for
+		std::mutex m_pt_result_mutex;
+		std::unique_ptr<ps5_patches::game> m_pt_result; // what the thread read, for update() to take
+		u32 m_pt_result_generation = 0;
+		std::vector<patch_row> m_pt_rows;
+		s32 m_pt_selected = 0;
+		s32 m_pt_scroll = 0;
+		std::vector<std::unique_ptr<overlay_element>> m_pt_items;
+
+		void open_patches();
+		void close_patches();
+		void build_patch_rows();
+		void layout_patches();
+		void handle_patches(pad_button button_press);
 
 		// The Library: the covers in a row that slides to the selection
 		f32 m_flow_pos = 0.f;

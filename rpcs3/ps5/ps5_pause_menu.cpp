@@ -35,8 +35,8 @@ namespace rsx::overlays
 		// The tabs' line, the rows under it, and the words under them
 		constexpr f32 c_tabs_mid = c_card_y + 146.f;
 		constexpr s16 c_rows_top = c_card_y + 186;
-		constexpr f32 c_row_h = 42.f;
-		constexpr s32 c_visible_rows = 7;
+		constexpr f32 c_row_h = 38.f;
+		constexpr s32 c_visible_rows = 8;
 		constexpr s16 c_help_top = c_rows_top + static_cast<s16>(c_visible_rows * c_row_h) + 14;
 		constexpr f32 c_hints_mid = c_card_y + c_card_h - 30.f;
 
@@ -55,6 +55,7 @@ namespace rsx::overlays
 		{
 			{"Video/Performance Overlay", "Enabled", "Performance overlay"},
 			{"Video", "Frame limit", "Frame limit"},
+			{"Video", "Vblank Rate", "Vblank rate"},
 			{"Video", "Frame Generation", "Frame generation"},
 			{"Audio", "Master Volume", "Volume"},
 		};

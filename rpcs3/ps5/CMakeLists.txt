@@ -12,6 +12,7 @@ add_library(rpcs3_ps5 STATIC
     ps5_launcher.cpp
     ps5_ui.cpp
     ps5_pause_menu.cpp
+    ps5_patches.cpp
     ps5_fdtrack.cpp
     ps5_sound.cpp
     ../rpcs3qt/emu_settings_type.cpp
@@ -39,7 +40,7 @@ add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/ps5_localized.cpp
 target_sources(rpcs3_ps5 PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/ps5_localized.cpp)
 target_include_directories(rpcs3_ps5 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
-target_link_libraries(rpcs3_ps5 PUBLIC rpcs3_emu 3rdparty::fusion 3rdparty::zlib) # Fusion: the pad thread's motion filter; zlib: the SCE decrypter (firmware)
+target_link_libraries(rpcs3_ps5 PUBLIC rpcs3_emu 3rdparty::fusion 3rdparty::zlib 3rdparty::yaml-cpp) # Fusion: the pad thread's motion filter; zlib: the SCE decrypter (firmware); yaml-cpp: the patch engine's header (ps5_patches.h)
 target_compile_options(rpcs3_ps5 PRIVATE "SHELL:-include ${PS5_VOLK_DIR}/volk.h")
 # std::terminate's report rethrows the exception for its message: the one unit
 # built with exceptions (ps5_terminate.cpp)

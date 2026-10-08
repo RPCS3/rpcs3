@@ -10,6 +10,7 @@
 #include "ps5_launcher.h"
 #include "ps5_ui.h"
 #include "ps5_pad_handler.h"
+#include "ps5_patches.h"
 
 #include "Emu/RSX/Overlays/overlay_manager.h"
 #include "Emu/RSX/Overlays/BigPicture/overlay_big_picture.h"
@@ -591,6 +592,7 @@ namespace rsx::overlays
 	ps5_launcher_dialog::~ps5_launcher_dialog()
 	{
 		m_delete_thread.reset();
+		m_pt_thread.reset();
 
 		if (m_enumeration_thread)
 		{
@@ -785,6 +787,7 @@ namespace rsx::overlays
 			style_label(text, caption, 12, f_medium, c_text);
 		};
 		round_button(m_settings_button, m_settings_icon, m_settings_icon_data, "home/32/settings.png", m_settings_label, "Game settings");
+		round_button(m_patches_button, m_patches_icon, m_patches_icon_data, "/app0/assets/launcher/patch.png", m_patches_label, "Patches");
 		round_button(m_delete_button, m_delete_icon, m_delete_icon_data, "/app0/assets/launcher/trash.png", m_delete_label, "Delete");
 
 		// The delete confirmation, centred over a dimmed screen
@@ -870,6 +873,25 @@ namespace rsx::overlays
 			hints.emplace_back(static_cast<u8>(resource_config::standard_image_resource::L1), "");
 			hints.emplace_back(static_cast<u8>(resource_config::standard_image_resource::R1), "Sections");
 		}
+		else if (m_pt_open)
+		{
+			const patch_row* row = m_pt && m_pt_selected >= 0 && static_cast<usz>(m_pt_selected) < m_pt_rows.size() ? &m_pt_rows[m_pt_selected] : nullptr;
+			if (row && row->value < 0)
+			{
+				hints.emplace_back(resource_config::confirm_button_resource(), m_pt->patches[row->patch].enabled ? "Turn off" : "Turn on");
+			}
+			else if (row)
+			{
+				hints.emplace_back(resource_config::confirm_button_resource(), "Change");
+				hints.emplace_back(static_cast<u8>(resource_config::standard_image_resource::square), "Default");
+			}
+			hints.emplace_back(resource_config::cancel_button_resource(), "Save and close");
+			if (std::count_if(m_pt_rows.begin(), m_pt_rows.end(), [](const patch_row& r) { return !r.heading.empty(); }) > 1)
+			{
+				hints.emplace_back(static_cast<u8>(resource_config::standard_image_resource::L1), "");
+				hints.emplace_back(static_cast<u8>(resource_config::standard_image_resource::R1), "Sections");
+			}
+		}
 		else if (m_tab == tab::library && m_detail)
 		{
 			hints.emplace_back(resource_config::confirm_button_resource(), "Select");
@@ -898,7 +920,7 @@ namespace rsx::overlays
 			hints.emplace_back(resource_config::confirm_button_resource(), "Open");
 			hints.emplace_back(resource_config::cancel_button_resource(), "Home");
 		}
-		if (!m_gs_open)
+		if (!m_gs_open && !m_pt_open)
 		{
 			hints.emplace_back(static_cast<u8>(resource_config::standard_image_resource::L1), "");
 			hints.emplace_back(static_cast<u8>(resource_config::standard_image_resource::R1), "Tabs");
@@ -1017,12 +1039,16 @@ namespace rsx::overlays
 		m_settings_icon.set_pos(static_cast<s16>(m_settings_button.x + 12), static_cast<s16>(y + 12));
 		place(m_settings_label, static_cast<s16>(m_settings_button.x + 44 + 14), mid);
 
-		m_delete_button.set_pos(static_cast<s16>(m_settings_label.x + m_settings_label.w + 30), y);
+		m_patches_button.set_pos(static_cast<s16>(m_settings_label.x + m_settings_label.w + 30), y);
+		m_patches_icon.set_pos(static_cast<s16>(m_patches_button.x + 12), static_cast<s16>(y + 12));
+		place(m_patches_label, static_cast<s16>(m_patches_button.x + 44 + 14), mid);
+
+		m_delete_button.set_pos(static_cast<s16>(m_patches_label.x + m_patches_label.w + 30), y);
 		m_delete_icon.set_pos(static_cast<s16>(m_delete_button.x + 12), static_cast<s16>(y + 12));
 		place(m_delete_label, static_cast<s16>(m_delete_button.x + 44 + 14), mid);
 
 		for (overlay_element* element : std::initializer_list<overlay_element*>{&m_title, &m_play_button, &m_play_icon, &m_play_label, &m_settings_button,
-				&m_settings_icon, &m_settings_label, &m_delete_button, &m_delete_icon, &m_delete_label})
+				&m_settings_icon, &m_settings_label, &m_patches_button, &m_patches_icon, &m_patches_label, &m_delete_button, &m_delete_icon, &m_delete_label})
 		{
 			element->refresh();
 		}
@@ -1120,6 +1146,7 @@ namespace rsx::overlays
 		};
 		outline(m_play_button, m_focus == focus::play, 0, c_glass_border);
 		outline(m_settings_button, m_focus == focus::settings, 1, c_glass_border);
+		outline(m_patches_button, m_focus == focus::patches, 1, c_glass_border);
 		outline(m_delete_button, m_focus == focus::remove, 1, c_glass_border);
 
 		m_highlight.back_color = m_focus == focus::tiles ? c_accent : color4f(c_accent.r, c_accent.g, c_accent.b, 0.3f);
@@ -1673,6 +1700,524 @@ namespace rsx::overlays
 			panel_ref.set_size(panel_w, static_cast<u16>(line2 + 26 - list_top));
 			panel_ref.refresh();
 		}
+	}
+
+	void ps5_launcher_dialog::open_patches()
+	{
+		if (m_selected < 0 || static_cast<usz>(m_selected) >= m_games.size())
+		{
+			return;
+		}
+
+		const big_picture_game_info& info = m_games[m_selected].info;
+		if (info.serial.empty())
+		{
+			return;
+		}
+
+		m_pt_name = info.name.empty() ? info.serial : info.name;
+		m_pt.reset();
+		m_pt_rows.clear();
+		m_pt_selected = 0;
+		m_pt_scroll = 0;
+		m_pt_open = true;
+		m_pt_open_us = m_now_us;
+		play_sound(sound_effect::accept);
+
+		// RPCS3's patch.yml is a few megabytes of YAML: read on a thread, and
+		// taken up by update(). A thread still reading for an earlier opening
+		// finishes first (it never takes m_mutex)
+		m_pt_thread.reset();
+		{
+			std::lock_guard lock(m_pt_result_mutex);
+			m_pt_result.reset();
+		}
+		const u32 generation = ++m_pt_generation;
+		m_pt_thread = std::make_unique<named_thread<std::function<void()>>>("Launcher Patches", [this, generation, serial = info.serial, version = info.app_ver]()
+		{
+			auto patches = std::make_unique<ps5_patches::game>(ps5_patches::read(serial, version));
+			std::lock_guard lock(m_pt_result_mutex);
+			m_pt_result = std::move(patches);
+			m_pt_result_generation = generation;
+		});
+
+		layout_patches();
+		layout_hints();
+	}
+
+	void ps5_launcher_dialog::close_patches()
+	{
+		if (m_pt && m_pt->changed)
+		{
+			std::vector<std::string> on;
+			for (const ps5_patches::patch& p : m_pt->patches)
+			{
+				if (p.enabled)
+				{
+					on.push_back(p.description);
+				}
+			}
+			ps5_patches::write(*m_pt);
+			launcher_log.notice("Patches for %s saved: %s", m_pt->serial, on.empty() ? std::string("none on") : fmt::merge(on, "; "));
+		}
+
+		m_pt_open = false;
+		m_pt.reset();
+		m_pt_rows.clear();
+		m_pt_items.clear();
+		play_sound(sound_effect::cancel);
+		layout_hints();
+	}
+
+	void ps5_launcher_dialog::build_patch_rows()
+	{
+		m_pt_rows.clear();
+		m_pt_selected = 0;
+		m_pt_scroll = 0;
+		if (!m_pt)
+		{
+			return;
+		}
+
+		bool game_heading = false;
+		bool every_heading = false;
+		for (usz i = 0; i < m_pt->patches.size(); i++)
+		{
+			const ps5_patches::patch& p = m_pt->patches[i];
+			if (!p.every_game && !std::exchange(game_heading, true))
+			{
+				m_pt_rows.push_back({"For this game"});
+			}
+			if (p.every_game && !std::exchange(every_heading, true))
+			{
+				m_pt_rows.push_back({"For every game"});
+			}
+			m_pt_rows.push_back({"", static_cast<s32>(i), -1});
+			for (usz v = 0; v < p.values.size(); v++)
+			{
+				m_pt_rows.push_back({"", static_cast<s32>(i), static_cast<s32>(v)});
+			}
+		}
+
+		while (static_cast<usz>(m_pt_selected) < m_pt_rows.size() && !m_pt_rows[m_pt_selected].heading.empty())
+		{
+			m_pt_selected++;
+		}
+	}
+
+	void ps5_launcher_dialog::handle_patches(pad_button button_press)
+	{
+		const bool up = button_press == pad_button::dpad_up || button_press == pad_button::ls_up;
+		const bool down = button_press == pad_button::dpad_down || button_press == pad_button::ls_down;
+		const bool left = button_press == pad_button::dpad_left || button_press == pad_button::ls_left;
+		const bool right = button_press == pad_button::dpad_right || button_press == pad_button::ls_right;
+
+		if (button_press == pad_button::circle || button_press == pad_button::triangle)
+		{
+			close_patches();
+			return;
+		}
+
+		const s32 count = static_cast<s32>(m_pt_rows.size());
+		if (!m_pt || m_pt_selected < 0 || m_pt_selected >= count)
+		{
+			return;
+		}
+
+		if (button_press == pad_button::L1 || button_press == pad_button::R1)
+		{
+			// The first row of the section before or after this one
+			s32 heading = m_pt_selected;
+			while (heading > 0 && m_pt_rows[heading].heading.empty()) heading--;
+			s32 next = heading;
+			if (button_press == pad_button::L1)
+			{
+				do next--; while (next > 0 && m_pt_rows[next].heading.empty());
+			}
+			else
+			{
+				do next++; while (next < count && m_pt_rows[next].heading.empty());
+			}
+			if (next >= 0 && next + 1 < count && !m_pt_rows[next].heading.empty())
+			{
+				m_pt_selected = next + 1;
+				play_sound(sound_effect::cursor);
+				layout_patches();
+				layout_hints();
+			}
+			return;
+		}
+
+		if (up || down)
+		{
+			s32 next = m_pt_selected;
+			do
+			{
+				next += up ? -1 : 1;
+			}
+			while (next >= 0 && next < count && !m_pt_rows[next].heading.empty());
+
+			if (next >= 0 && next < count)
+			{
+				m_pt_selected = next;
+				play_sound(sound_effect::cursor);
+				layout_patches();
+				layout_hints();
+			}
+			return;
+		}
+
+		const patch_row& row = m_pt_rows[m_pt_selected];
+		ps5_patches::patch& p = m_pt->patches[row.patch];
+		bool changed = false;
+
+		if (row.value < 0)
+		{
+			// The patch itself: on and off
+			if (button_press == pad_button::cross || left || right)
+			{
+				const bool enable = button_press == pad_button::cross ? !p.enabled : right;
+				if (enable != p.enabled)
+				{
+					ps5_patches::set_enabled(*m_pt, row.patch, enable);
+					play_sound(enable ? sound_effect::accept : sound_effect::cancel);
+					changed = true;
+				}
+			}
+		}
+		else if (left || right || button_press == pad_button::cross || button_press == pad_button::L2 || button_press == pad_button::R2)
+		{
+			// One of its values: a step, or ten with L2 / R2
+			const s32 direction = (left || button_press == pad_button::L2) ? -1 : 1;
+			const bool big = button_press == pad_button::L2 || button_press == pad_button::R2;
+			const f64 before = p.values[row.value].current.value;
+			ps5_patches::step_value(*m_pt, row.patch, row.value, direction, big);
+			if (p.values[row.value].current.value != before)
+			{
+				play_sound(sound_effect::cursor);
+				changed = true;
+			}
+		}
+		else if (button_press == pad_button::square)
+		{
+			const f64 before = p.values[row.value].current.value;
+			ps5_patches::reset_value(*m_pt, row.patch, row.value);
+			if (p.values[row.value].current.value != before)
+			{
+				play_sound(sound_effect::cancel);
+				changed = true;
+			}
+		}
+
+		if (changed)
+		{
+			layout_patches();
+			layout_hints();
+		}
+	}
+
+	void ps5_launcher_dialog::layout_patches()
+	{
+		m_pt_items.clear();
+		const auto add = [this](std::unique_ptr<overlay_element> item) -> overlay_element&
+		{
+			m_pt_items.push_back(std::move(item));
+			return *m_pt_items.back();
+		};
+		const auto wrapped = [&](std::string_view text, u16 size, std::string_view font, const color4f& color, s16 x, s16 y, u16 w, u16 max_h) -> overlay_element&
+		{
+			auto words = make_label("", size, font, color);
+			words->set_wrap_text(true);
+			words->set_text(text);
+			words->set_pos(x, y);
+			words->set_size(w, max_h);
+			words->auto_resize(false, w, max_h);
+			return add(std::move(words));
+		};
+
+		auto veil = std::make_unique<overlay_element>();
+		veil->set_size(virtual_width, virtual_height);
+		veil->back_color = color4f(c_backdrop.r, c_backdrop.g, c_backdrop.b, 0.55f);
+		add(std::move(veil));
+
+		// Heading
+		auto kicker = make_label(spaced("PATCHES"), 10, f_semibold, c_text_dim);
+		place(*kicker, c_hero_x, 104);
+		add(std::move(kicker));
+
+		auto title = make_label("", 24, f_bold, c_text);
+		fit_text(*title, m_pt_name, 760);
+		place(*title, c_hero_x, 136);
+		add(std::move(title));
+
+		constexpr s16 list_x = c_hero_x - 12;
+		constexpr u16 list_w = 760;
+		constexpr s16 list_top = 192;
+		constexpr s16 list_bottom = 650;
+		constexpr s16 row_h = 38;
+		constexpr s16 heading_h = 34;
+
+		const ps5_patches::game* game = m_pt.get();
+		std::string note;
+		if (!game)
+		{
+			note = "Reading RPCS3's patch files...";
+		}
+		else if (!game->unpacked.empty())
+		{
+			note = game->unpacked + ".";
+		}
+		else
+		{
+			const std::string version = game->app_version.empty() || game->app_version == "Unknown" ? "" : " v" + game->app_version;
+			note = fmt::format("%s%s. A patch turned on here is applied the next time the game starts.", game->serial, version);
+		}
+		auto note_label = make_label("", 11, f_regular, game && !game->unpacked.empty() ? c_accent : c_text_dim);
+		fit_text(*note_label, note, 760);
+		place(*note_label, c_hero_x, 166);
+		add(std::move(note_label));
+
+		// Nothing to list: why, and what to do
+		if (!game || m_pt_rows.empty())
+		{
+			std::string heading;
+			std::string body;
+			if (!game)
+			{
+				heading = "Reading the patches...";
+			}
+			else if (game->files == 0)
+			{
+				heading = "No patch files yet";
+				body = fmt::format("Put RPCS3's patch.yml in %s over FTP, then open this page again.\n\n"
+					"From RPCS3 on a PC: Manage > Game Patches > Download latest patches, then copy patch.yml from its patches folder.\n\n"
+					"Or open https://rpcs3.net/compatibility?patch&api=v1&v=%s in a browser, save the page, and put the saved file in the same folder: this page unpacks it into patch.yml.",
+					ps5_patches::ftp_folder(), patch_engine_version);
+			}
+			else
+			{
+				const std::string version = game->app_version.empty() || game->app_version == "Unknown" ? "" : " version " + game->app_version;
+				heading = "No patches for this game";
+				body = fmt::format("The %u patches in %u patch file%s have none for %s%s.", game->total, game->files, game->files == 1 ? "" : "s", game->serial, version);
+				if (!game->other_versions.empty())
+				{
+					body += fmt::format("\n\nThey have some for version %s of it. A patch is made for one version of a game's code: install the game's update to that version to use them.",
+						fmt::merge(game->other_versions, ", "));
+				}
+				body += fmt::format("\n\nA newer patch.yml may have some: put it in %s over FTP.", ps5_patches::ftp_folder());
+			}
+			if (game && !game->broken.empty())
+			{
+				body += fmt::format("\n\nRPCS3 found errors in %s and skipped what it could not read.", fmt::merge(game->broken, ", "));
+			}
+
+			auto big = make_label(heading, 17, f_semibold, c_text);
+			place(*big, c_hero_x, list_top + 28.f);
+			add(std::move(big));
+			if (!body.empty())
+			{
+				wrapped(body, 12, f_regular, c_text_dim, c_hero_x, list_top + 50, 700, 360);
+			}
+			return;
+		}
+
+		// The list, scrolled to keep the selection in view
+		std::vector<s16> tops;
+		s16 y = 0;
+		for (const patch_row& row : m_pt_rows)
+		{
+			tops.push_back(y);
+			y = static_cast<s16>(y + (row.heading.empty() ? row_h : heading_h));
+		}
+		if (m_pt_selected >= 0 && static_cast<usz>(m_pt_selected) < tops.size())
+		{
+			const s16 top = tops[m_pt_selected];
+			const s16 visible = list_bottom - list_top;
+			const s16 want_top = m_pt_selected > 0 && !m_pt_rows[m_pt_selected - 1].heading.empty() ? tops[m_pt_selected - 1] : top;
+			if (want_top < m_pt_scroll) m_pt_scroll = want_top;
+			if (top + row_h > m_pt_scroll + visible) m_pt_scroll = top + row_h - visible;
+		}
+
+		for (usz i = 0; i < m_pt_rows.size(); i++)
+		{
+			const patch_row& row = m_pt_rows[i];
+			const s16 top = static_cast<s16>(list_top + tops[i] - m_pt_scroll);
+			const s16 h = row.heading.empty() ? row_h : heading_h;
+			if (top < list_top || top + h > list_bottom)
+			{
+				continue;
+			}
+
+			if (!row.heading.empty())
+			{
+				auto heading = make_label(spaced(row.heading), 9, f_semibold, c_accent);
+				place(*heading, static_cast<s16>(list_x + 12), top + 22.f);
+				add(std::move(heading));
+				continue;
+			}
+
+			const ps5_patches::patch& p = game->patches[row.patch];
+			const bool selected = static_cast<s32>(i) == m_pt_selected;
+			const f32 mid = top + h / 2.f;
+
+			if (selected)
+			{
+				auto bar = std::make_unique<rounded_rect>();
+				bar->set_pos(list_x, static_cast<s16>(top + 2));
+				bar->set_size(list_w, static_cast<u16>(h - 4));
+				bar->border_radius = 10;
+				bar->back_color = color4f(1.f, 1.f, 1.f, 0.1f);
+				bar->border_size = 2;
+				bar->border_color = c_accent;
+				add(std::move(bar));
+			}
+			else
+			{
+				auto rule = std::make_unique<overlay_element>();
+				rule->set_pos(static_cast<s16>(list_x + 12), static_cast<s16>(top + h - 1));
+				rule->set_size(static_cast<u16>(list_w - 24), 1);
+				rule->back_color = color4f(1.f, 1.f, 1.f, 0.07f);
+				add(std::move(rule));
+			}
+
+			if (row.value < 0)
+			{
+				// The patch's name, and its switch on the right
+				auto name = make_label("", 13, selected || p.enabled ? f_semibold : f_medium, selected || p.enabled ? c_text : c_text_dim);
+				fit_text(*name, p.description, list_w - 110);
+				place(*name, static_cast<s16>(list_x + 18), mid);
+				add(std::move(name));
+
+				constexpr u16 switch_w = 40;
+				constexpr u16 switch_h = 22;
+				const s16 switch_x = static_cast<s16>(list_x + list_w - 18 - switch_w);
+				auto track = std::make_unique<rounded_rect>();
+				track->set_pos(switch_x, static_cast<s16>(mid - switch_h / 2.f));
+				track->set_size(switch_w, switch_h);
+				track->border_radius = switch_h / 2;
+				track->back_color = p.enabled ? c_accent : color4f(1.f, 1.f, 1.f, 0.16f);
+				add(std::move(track));
+				auto knob = std::make_unique<ellipse>();
+				knob->set_size(16, 16);
+				knob->set_pos(static_cast<s16>(p.enabled ? switch_x + switch_w - 19 : switch_x + 3), static_cast<s16>(mid - 8));
+				knob->back_color = p.enabled ? c_button_text : color4f(1.f, 1.f, 1.f, 0.85f);
+				add(std::move(knob));
+
+				auto state = make_label(p.enabled ? "On" : "Off", 11, f_semibold, p.enabled ? c_accent : c_text_dim);
+				place(*state, static_cast<s16>(switch_x - 10 - state->w), mid);
+				add(std::move(state));
+				continue;
+			}
+
+			// One of its values, under it
+			const ps5_patches::value& v = p.values[row.value];
+			const bool own = v.current.value != v.default_value;
+			const color4f dim = p.enabled ? c_text_dim : color4f(1.f, 1.f, 1.f, 0.4f);
+
+			auto branch = make_label("→", 11, f_medium, dim);
+			place(*branch, static_cast<s16>(list_x + 30), mid);
+			add(std::move(branch));
+
+			auto name = make_label("", 12, selected ? f_semibold : f_medium, selected ? c_text : dim);
+			fit_text(*name, v.key, list_w - 300);
+			place(*name, static_cast<s16>(list_x + 50), mid);
+			add(std::move(name));
+
+			auto value = make_label(ps5_patches::value_text(v), 12, own ? f_semibold : f_medium, own && p.enabled ? c_accent : (selected ? c_text : dim));
+			const s16 value_right = static_cast<s16>(list_x + list_w - (selected ? 34 : 18));
+			place(*value, static_cast<s16>(value_right - value->w), mid);
+			const s16 value_x = value->x;
+			add(std::move(value));
+
+			if (selected)
+			{
+				auto less = make_label("‹", 15, f_semibold, c_text);
+				place(*less, static_cast<s16>(value_x - 16), mid);
+				add(std::move(less));
+				auto more = make_label("›", 15, f_semibold, c_text);
+				place(*more, static_cast<s16>(value_right + 10), mid);
+				add(std::move(more));
+			}
+		}
+
+		// The selected patch, or value, explained on the right
+		if (m_pt_selected < 0 || static_cast<usz>(m_pt_selected) >= m_pt_rows.size() || !m_pt_rows[m_pt_selected].heading.empty())
+		{
+			return;
+		}
+		const patch_row& row = m_pt_rows[m_pt_selected];
+		const ps5_patches::patch& p = game->patches[row.patch];
+		constexpr s16 panel_x = 852;
+		constexpr u16 panel_w = 388;
+		constexpr s16 inner_x = panel_x + 24;
+		constexpr u16 inner_w = panel_w - 48;
+
+		auto panel = std::make_unique<rounded_rect>();
+		panel->set_pos(panel_x, list_top);
+		panel->border_radius = 16;
+		panel->back_color = color4f(0.03f, 0.04f, 0.09f, 0.72f);
+		panel->border_size = 1;
+		panel->border_color = c_glass_border;
+		overlay_element& panel_ref = add(std::move(panel));
+
+		std::vector<std::pair<std::string, std::string>> lines;
+		std::string name;
+		std::string help;
+		if (row.value < 0)
+		{
+			name = p.description;
+			help = p.notes.empty() ? "Its author left no notes." : p.notes;
+			lines.emplace_back("Turned", p.enabled ? "On" : "Off");
+			if (!p.author.empty()) lines.emplace_back("By", p.author);
+			if (!p.patch_version.empty()) lines.emplace_back("Patch version", p.patch_version);
+			lines.emplace_back("For", p.every_game ? "Every game" : p.every_version ? "Every version" : "Version " + game->app_version);
+			if (!p.group.empty()) lines.emplace_back("Group", p.group);
+			if (!p.values.empty()) lines.emplace_back("Values", fmt::format("%u, under it", p.values.size()));
+		}
+		else
+		{
+			const ps5_patches::value& v = p.values[row.value];
+			name = v.key;
+			const bool choices = v.current.type == patch_configurable_type::double_enum || v.current.type == patch_configurable_type::long_enum;
+			help = choices ? fmt::format("One of %u choices, for the patch \"%s\".", v.current.allowed_values.size(), p.description)
+				: fmt::format("From %s to %s, for the patch \"%s\". L2 and R2 change it ten steps at a time.",
+					ps5_patches::value_text(v, v.current.min), ps5_patches::value_text(v, v.current.max), p.description);
+			if (!p.enabled)
+			{
+				help += " It is used once the patch is turned on.";
+			}
+			lines.emplace_back("Default", ps5_patches::value_text(v, v.default_value));
+			lines.emplace_back("Set to", ps5_patches::value_text(v));
+		}
+
+		overlay_element& title_ref = wrapped(name, 15, f_semibold, c_text, inner_x, list_top + 22, inner_w, 60);
+		const s16 help_top = static_cast<s16>(title_ref.y + title_ref.h + 8);
+		overlay_element& help_ref = wrapped(help, 11, f_regular, c_text_dim, inner_x, help_top, inner_w, 220);
+		const s16 help_bottom = static_cast<s16>(help_ref.y + help_ref.h);
+
+		auto rule = std::make_unique<overlay_element>();
+		rule->set_pos(inner_x, static_cast<s16>(help_bottom + 16));
+		rule->set_size(inner_w, 1);
+		rule->back_color = color4f(1.f, 1.f, 1.f, 0.12f);
+		add(std::move(rule));
+
+		f32 line_y = help_bottom + 38.f;
+		for (const auto& [caption, text] : lines)
+		{
+			auto left_label = make_label(caption, 12, f_medium, c_text_dim);
+			place(*left_label, inner_x, line_y);
+			const s16 caption_w = left_label->w;
+			add(std::move(left_label));
+			const bool accent = caption == "Turned" ? p.enabled : caption == "Set to";
+			auto right_label = make_label("", 12, f_semibold, accent ? c_accent : c_text);
+			fit_text(*right_label, text, static_cast<u16>(inner_w - caption_w - 16));
+			place(*right_label, static_cast<s16>(inner_x + inner_w - right_label->w), line_y);
+			add(std::move(right_label));
+			line_y += 26.f;
+		}
+
+		panel_ref.set_size(panel_w, static_cast<u16>(std::min<f32>(line_y + 2 - list_top, list_bottom - list_top)));
+		panel_ref.refresh();
 	}
 
 	void ps5_launcher_dialog::open_settings_tab()
@@ -2330,7 +2875,7 @@ namespace rsx::overlays
 				break;
 			case pad_button::dpad_down:
 			case pad_button::ls_down:
-				if (m_detail_option < 4)
+				if (m_detail_option < 5)
 				{
 					m_detail_option++;
 					play_sound(sound_effect::cursor);
@@ -2341,8 +2886,9 @@ namespace rsx::overlays
 				{
 				case 0: boot_selected(); break;
 				case 1: open_game_settings(); break;
-				case 2: m_flipped = !m_flipped; play_sound(sound_effect::cursor); break;
-				case 3: ask_delete(); break;
+				case 2: open_patches(); break;
+				case 3: m_flipped = !m_flipped; play_sound(sound_effect::cursor); break;
+				case 4: ask_delete(); break;
 				default: m_detail = false; play_sound(sound_effect::cancel); layout_hints(); break;
 				}
 				break;
@@ -2876,14 +3422,16 @@ namespace rsx::overlays
 				{
 					{"Play", "Start the game", m_play_icon_data.get()},
 					{"Game settings", "Its own settings, over the global ones", m_settings_icon_data.get()},
+					{"Patches", "RPCS3's patches for it: more frames, fixes", m_patches_icon_data.get()},
 					{m_flipped ? "Look at the front" : "Look at the back", "Turn the case round (R3)", m_flip_icon_data.get()},
 					{"Delete game", "Remove its files from the console", m_delete_icon_data.get()},
 					{"Back to library", "", m_back_icon_data.get()},
 				};
-				constexpr f32 pill_h = 52.f;
-				constexpr f32 pill_gap = 8.f;
+				constexpr f32 pill_h = 48.f;
+				constexpr f32 pill_gap = 6.f;
 				std::vector<std::unique_ptr<overlay_element>> rows;
-				for (int o = 0; o < 5; o++)
+				constexpr int option_count = static_cast<int>(std::size(options));
+				for (int o = 0; o < option_count; o++)
 				{
 					const bool selected = o == m_detail_option;
 					const f32 row_y = y + o * (pill_h + pill_gap);
@@ -2899,7 +3447,7 @@ namespace rsx::overlays
 					// The icon in a disc of its own
 					auto disc = std::make_unique<ellipse>();
 					disc->set_size(36, 36);
-					disc->set_pos(left - 4, static_cast<s16>(row_y + 8));
+					disc->set_pos(left - 4, static_cast<s16>(row_y + 6));
 					disc->back_color = selected ? color4f(1.f, 1.f, 1.f, 0.35f) : color4f(1.f, 1.f, 1.f, 0.08f);
 					rows.push_back(std::move(disc));
 					if (options[o].icon)
@@ -2907,7 +3455,7 @@ namespace rsx::overlays
 						auto icon = std::make_unique<image_view>();
 						icon->set_raw_image(options[o].icon);
 						icon->set_size(18, 18);
-						icon->set_pos(left + 5, static_cast<s16>(row_y + 17));
+						icon->set_pos(left + 5, static_cast<s16>(row_y + 15));
 						icon->back_color.a = 0.f;
 						icon->fore_color = ink;
 						rows.push_back(std::move(icon));
@@ -2915,12 +3463,12 @@ namespace rsx::overlays
 
 					const bool noted = selected && options[o].note[0];
 					auto text = make_label(options[o].text, 14, selected ? f_bold : f_medium, ink);
-					place(*text, left + 46, row_y + (noted ? 19.f : pill_h / 2.f));
+					place(*text, left + 46, row_y + (noted ? 17.f : pill_h / 2.f));
 					rows.push_back(std::move(text));
 					if (noted)
 					{
 						auto note = make_label(options[o].note, 10, f_medium, color4f(c_button_text.r, c_button_text.g, c_button_text.b, 0.7f));
-						place(*note, left + 46, row_y + 36.f);
+						place(*note, left + 46, row_y + 33.f);
 						rows.push_back(std::move(note));
 					}
 					if (selected)
@@ -2931,7 +3479,7 @@ namespace rsx::overlays
 					}
 				}
 
-				const f32 bottom = y + 5 * (pill_h + pill_gap) + 18.f;
+				const f32 bottom = y + option_count * (pill_h + pill_gap) + 18.f;
 				auto tip = make_label("Right stick turns the case  \u00b7  R3 turns it round", 10, f_medium, c_text_dim);
 				place(*tip, left, bottom + 8.f);
 
@@ -2969,6 +3517,26 @@ namespace rsx::overlays
 			if (m_play_intro && intro_seconds() >= c_intro_end + 1.f)
 			{
 				m_play_intro = false;
+			}
+
+			// The game's patches, once read
+			std::unique_ptr<ps5_patches::game> patches;
+			{
+				std::lock_guard result_lock(m_pt_result_mutex);
+				if (m_pt_result && m_pt_result_generation == m_pt_generation)
+				{
+					patches = std::move(m_pt_result);
+				}
+			}
+			if (patches && m_pt_open)
+			{
+				launcher_log.notice("Patches for %s v%s: %u listed, %u on, of %u in %u files%s%s", patches->serial, patches->app_version, patches->patches.size(),
+					std::count_if(patches->patches.begin(), patches->patches.end(), [](const ps5_patches::patch& p) { return p.enabled; }), patches->total, patches->files,
+					patches->broken.empty() ? "" : " (errors in " + fmt::merge(patches->broken, ", ") + ")", patches->unpacked.empty() ? "" : "; " + patches->unpacked);
+				m_pt = std::move(patches);
+				build_patch_rows();
+				layout_patches();
+				layout_hints();
 			}
 		}
 
@@ -3088,6 +3656,11 @@ namespace rsx::overlays
 			handle_game_settings(button_press);
 			return;
 		}
+		if (m_pt_open)
+		{
+			handle_patches(button_press);
+			return;
+		}
 
 		// Tabs change from anywhere at the top level
 		if (button_press == pad_button::L1 || button_press == pad_button::R1)
@@ -3140,11 +3713,11 @@ namespace rsx::overlays
 		}
 
 		// The buttons' row
-		constexpr focus order[] = {focus::play, focus::settings, focus::remove};
+		constexpr focus order[] = {focus::play, focus::settings, focus::patches, focus::remove};
 		const s32 at = static_cast<s32>(std::find(std::begin(order), std::end(order), m_focus) - std::begin(order));
 
 		if (left && at > 0) set_focus(order[at - 1]);
-		else if (right && at < 2) set_focus(order[at + 1]);
+		else if (right && at + 1 < static_cast<s32>(std::size(order))) set_focus(order[at + 1]);
 		else if (down || button_press == pad_button::circle) set_focus(focus::tiles);
 		else if (button_press == pad_button::cross)
 		{
@@ -3152,6 +3725,7 @@ namespace rsx::overlays
 			{
 			case focus::play: boot_selected(); break;
 			case focus::settings: open_game_settings(); break;
+			case focus::patches: open_patches(); break;
 			case focus::remove: ask_delete(); break;
 			default: break;
 			}
@@ -3175,7 +3749,7 @@ namespace rsx::overlays
 
 		compiled_resource result;
 		result.add(m_backdrop.get_compiled());
-		if (m_tab == tab::home || m_gs_open)
+		if (m_tab == tab::home || m_gs_open || m_pt_open)
 		{
 			compiled_resource art;
 			if (m_background_fading)
@@ -3189,7 +3763,7 @@ namespace rsx::overlays
 			add_animated(result, art, step(0.f, 0.7f));
 		}
 		result.add(m_wash.get_compiled());
-		if (m_tab == tab::home || m_gs_open)
+		if (m_tab == tab::home || m_gs_open || m_pt_open)
 		{
 			result.add(m_fade_left.get_compiled());
 		}
@@ -3201,6 +3775,16 @@ namespace rsx::overlays
 			const f32 page = ease_out(progress((m_now_us - m_gs_open_us) / 1'000'000.f, 0.f, 0.3f));
 			compiled_resource items;
 			for (const auto& item : m_gs_items)
+			{
+				items.add(item->get_compiled());
+			}
+			add_animated(result, items, page, 0.f, 14.f * (1.f - page));
+		}
+		else if (m_pt_open)
+		{
+			const f32 page = ease_out(progress((m_now_us - m_pt_open_us) / 1'000'000.f, 0.f, 0.3f));
+			compiled_resource items;
+			for (const auto& item : m_pt_items)
 			{
 				items.add(item->get_compiled());
 			}
@@ -3226,7 +3810,7 @@ namespace rsx::overlays
 			{
 				compiled_resource row;
 				for (overlay_element* element : std::initializer_list<overlay_element*>{&m_play_button, &m_play_icon, &m_play_label, &m_settings_button,
-						&m_settings_icon, &m_settings_label, &m_delete_button, &m_delete_icon, &m_delete_label})
+						&m_settings_icon, &m_settings_label, &m_patches_button, &m_patches_icon, &m_patches_label, &m_delete_button, &m_delete_icon, &m_delete_label})
 				{
 					row.add(element->get_compiled());
 				}

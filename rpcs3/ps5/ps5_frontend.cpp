@@ -24,6 +24,7 @@ std::string ps5_open_files_report(); // ps5_fdtrack.cpp
 #include "util/sysinfo.hpp"
 #include "Utilities/Thread.h"
 #include "Utilities/File.h"
+#include "Utilities/bin_patch.h"
 #include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
@@ -870,6 +871,25 @@ int run(const char* boot_path)
 	const usz opened = (::chmod("/app0/rpcs3", 0777) == 0) + open_to_ftp("/app0/rpcs3", seen, refused);
 	trace("frontend: /app0/rpcs3: %u files and folders, %u opened to FTP, %u refused (%s)", seen, opened, refused, refused ? fmt::format("errno %d", errno) : std::string("none"));
 	trace("frontend: %u of %u overlay images written to /app0/rpcs3/Icons/ui/", install_embedded_files("/app0/rpcs3/Icons/ui/"), ps5_embedded_file_count);
+
+	// RPCS3's patch files go here over FTP (the launcher's Patches page), and
+	// the patch engine reads them when a game boots
+	{
+		const std::string patches = patch_engine::get_patches_path();
+		fs::create_path(patches);
+		std::vector<std::string> names;
+		if (fs::dir dir{patches})
+		{
+			for (const fs::dir_entry& entry : dir)
+			{
+				if (!entry.is_directory)
+				{
+					names.push_back(fmt::format("%s (%u KiB)", entry.name, entry.size / 1024));
+				}
+			}
+		}
+		trace("frontend: %s: %s", patches, names.empty() ? std::string("no patch files") : fmt::merge(names, ", "));
+	}
 
 	// The fault handler's readable copy of the title's code (Utilities/Thread.cpp)
 	if (ps5_load_code_copy("/app0/rpcs3-code.bin"))
