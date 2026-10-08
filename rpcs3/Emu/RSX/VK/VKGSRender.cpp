@@ -677,6 +677,21 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 		backend_config.supports_hw_a2one = m_device->get_alpha_to_one_support();
 	}
 
+	// Framebufferless rendering. Zero-attachment subpasses can only rasterize at the sample counts reported for them.
+	const VkSampleCountFlags required_sample_counts = (g_cfg.video.antialiasing_level == msaa_level::_auto)
+		? VK_SAMPLE_COUNT_1_BIT | VK_SAMPLE_COUNT_2_BIT | VK_SAMPLE_COUNT_4_BIT
+		: VK_SAMPLE_COUNT_1_BIT;
+
+	if (const auto supported_sample_counts = m_device->gpu().get_limits().framebufferNoAttachmentsSampleCounts & required_sample_counts;
+		supported_sample_counts == required_sample_counts)
+	{
+		backend_config.supports_framebufferless_rendering = true;
+	}
+	else
+	{
+		rsx_log.warning("Framebufferless rendering is not supported with the current MSAA configuration. Some occlusion queries may return incorrect results.");
+	}
+
 	// NOTE: On NVIDIA cards going back decades (including the PS3) there is a slight normalization inaccuracy in compressed formats.
 	// Confirmed in BLES01916 (The Evil Within) which uses RGB565 for some virtual texturing data.
 	backend_config.supports_hw_renormalization = vk::is_NVIDIA(vk::get_driver_vendor());
@@ -1299,7 +1314,7 @@ void VKGSRender::on_exit()
 
 void VKGSRender::clear_surface(u32 mask)
 {
-	if (skip_current_frame || swapchain_unavailable) return;
+	if (skip_current_frame) return;
 
 	// If stencil write mask is disabled, remove clear_stencil bit
 	if (!rsx::method_registers.stencil_mask()) mask &= ~RSX_GCM_CLEAR_STENCIL_BIT;
@@ -2709,7 +2724,19 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		std::iota(input_attachments.begin(), input_attachments.end(), 0);
 	}
 
-	m_current_renderpass_key = vk::get_renderpass_key(m_fbo_images, input_attachments);
+	if (m_graphics_state.test(rsx::rtt_config_no_attachments))
+	{
+		// Framebufferless rendering. The raster sample count must match what real surfaces would have used.
+		ensure(m_fbo_images.empty() && input_attachments.empty());
+
+		const u8 raster_samples = (g_cfg.video.antialiasing_level == msaa_level::_auto) ? samples : 1;
+		m_current_renderpass_key = vk::get_renderpass_key_no_attachments(raster_samples);
+	}
+	else
+	{
+		m_current_renderpass_key = vk::get_renderpass_key(m_fbo_images, input_attachments);
+	}
+
 	m_cached_renderpass = vk::get_renderpass(*m_device, m_current_renderpass_key);
 
 	// Search old framebuffers for this same configuration
@@ -2749,9 +2776,6 @@ void VKGSRender::renderctl(u32 request_code, void* args)
 
 bool VKGSRender::scaled_image_from_memory(const rsx::blit_src_info& src, const rsx::blit_dst_info& dst, bool interpolate)
 {
-	if (swapchain_unavailable)
-		return false;
-
 	if (m_texture_cache.blit(src, dst, interpolate, m_rtts, *m_current_command_buffer))
 	{
 		m_samplers_dirty.store(true);
