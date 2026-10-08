@@ -1005,6 +1005,22 @@ namespace rsx
 		while (method_registers.current_draw_clause.next());
 	}
 
+	bool thread::should_skip_draw() const
+	{
+		if (skip_current_frame || !m_graphics_state.test(rsx::rtt_config_valid) || cond_render_ctrl.disable_rendering())
+		{
+			return true;
+		}
+
+		if (m_graphics_state.test(rsx::rtt_config_no_attachments) &&
+			(g_cfg.video.disable_zcull_queries || !zcull_ctrl->has_active_queries()))
+		{
+			return true;
+		}
+
+		return false;
+	}
+
 	void thread::cpu_task()
 	{
 		while (Emu.IsReady())
@@ -1461,7 +1477,7 @@ namespace rsx
 		layout.width = rsx::method_registers.surface_clip_width();
 		layout.height = rsx::method_registers.surface_clip_height();
 
-		m_graphics_state.clear(rsx::rtt_config_contested | rsx::rtt_config_valid);
+		m_graphics_state.clear(rsx::rtt_config_contested | rsx::rtt_config_valid | rsx::rtt_config_no_attachments);
 		m_current_framebuffer_context = context;
 
 		if (layout.width == 0 || layout.height == 0)
@@ -1785,7 +1801,7 @@ namespace rsx
 			}
 
 			// Context must be draw now...
-			// TODO: Also disable rendering if ZPASS stat counting is not enabled (side-effect)
+			m_graphics_state.set(rsx::rtt_config_no_attachments);
 		}
 
 		// At least one attachment exists
