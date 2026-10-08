@@ -29,8 +29,28 @@ jobs:
       actions: write
       contents: read
       pull-requests: read
+    outputs:
+      skip_ccache: ${{ steps.pr_labels.outputs.skip_ccache }}
     steps:
-      - name: Look for the 'Shaders' label on the merged PR
+      - name: "Look for the 'CI: Disable Build Caches' label on the PR"
+        id: pr_labels
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Query the live labels so adding the label and re-running all jobs works without a new push
+          labels=$(gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}" --jq '.labels[].name' 2>/dev/null) \
+            || labels=$(jq -r '.pull_request.labels[]?.name' "$GITHUB_EVENT_PATH")
+          echo "Labels: ${labels:-<none>}"
+          skip=false
+          if grep -qix 'ci: disable build caches' <<< "$labels"; then
+            skip=true
+            echo "Builds will not restore ccache because of the 'CI: Disable Build Caches' label." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "skip_ccache=$skip" >> "$GITHUB_OUTPUT"
+
+      - name: "Look for the 'Shaders' or 'CI: Disable Build Caches' label on the merged PR"
         id: labels
         if: github.event_name == 'push' && github.repository == 'RPCS3/rpcs3' && github.ref_name == 'master'
         continue-on-error: true
@@ -41,14 +61,14 @@ jobs:
           for sha in $(jq -r '[.after, (.commits[]?.id)] | map(select(. != null)) | unique[]' "$GITHUB_EVENT_PATH"); do
             labels=$(gh api "repos/${{ github.repository }}/commits/$sha/pulls" --jq '.[].labels[].name' 2>/dev/null || true)
             echo "$sha: ${labels:-<no associated PR>}"
-            if grep -qix 'shaders' <<< "$labels"; then
+            if grep -qixE 'shaders|ci: disable build caches' <<< "$labels"; then
               found=true
             fi
           done
-          echo "shaders=$found" >> "$GITHUB_OUTPUT"
+          echo "clean=$found" >> "$GITHUB_OUTPUT"
 
       - name: Remove all code caches
-        if: steps.labels.outputs.shaders == 'true'
+        if: steps.labels.outputs.clean == 'true'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
@@ -63,7 +83,7 @@ jobs:
             echo "Removing $key (id $id)"
             gh api -X DELETE "repos/${{ github.repository }}/actions/caches/$id" --silent
           done < code_caches.tsv
-          echo "Removed $(wc -l < code_caches.tsv) code cache(s) after a 'Shaders' PR merge." >> "$GITHUB_STEP_SUMMARY"
+          echo "Removed $(wc -l < code_caches.tsv) code cache(s) after merging a 'Shaders' or 'CI: Disable Build Caches' PR." >> "$GITHUB_STEP_SUMMARY"
 
   Linux_Build:
     # Only run push event on master branch of main repo, but run all PRs
@@ -112,6 +132,7 @@ jobs:
           fetch-depth: 0
 
       - name: Restore build Ccache
+        if: needs.Clean_Code_Caches.outputs.skip_ccache != 'true'
         uses: actions/cache/restore@main
         id: restore-build-ccache
         with:
@@ -198,6 +219,7 @@ jobs:
             cache: 'disable'
 
       - name: Restore Build Ccache
+        if: needs.Clean_Code_Caches.outputs.skip_ccache != 'true'
         uses: actions/cache/restore@main
         id: restore-build-ccache
         with:
@@ -303,6 +325,7 @@ jobs:
         run: .ci/get_keys-windows.sh
 
       - name: Restore Build Ccache
+        if: needs.Clean_Code_Caches.outputs.skip_ccache != 'true'
         uses: actions/cache/restore@main
         id: restore-build-ccache
         with:
@@ -427,6 +450,7 @@ jobs:
         run: .ci/get_keys-windows.sh
 
       - name: Restore Build Ccache
+        if: needs.Clean_Code_Caches.outputs.skip_ccache != 'true'
         uses: actions/cache/restore@main
         id: restore-build-ccache
         with:
@@ -529,6 +553,7 @@ jobs:
             p7zip
 
       - name: Restore build Ccache
+        if: needs.Clean_Code_Caches.outputs.skip_ccache != 'true'
         uses: actions/cache/restore@main
         id: restore-build-ccache
         with:
@@ -599,6 +624,7 @@ jobs:
           fetch-depth: 0
 
       - name: Restore Build Ccache
+        if: needs.Clean_Code_Caches.outputs.skip_ccache != 'true'
         uses: actions/cache/restore@main
         id: restore-build-ccache
         with:
