@@ -365,6 +365,7 @@ namespace rsx
 		virtual void begin();
 		virtual void end();
 		virtual void execute_nop_draw();
+		bool should_skip_draw() const;
 
 		virtual void on_init_thread() = 0;
 		virtual void on_frame_end(u32 buffer, bool forced = false);
