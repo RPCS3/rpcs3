@@ -129,6 +129,8 @@ namespace rsx
 #elif defined(_WIN32)
 				// Covers symbol blocks (e.g. Roman numerals) that plain Arial may be missing glyphs for.
 				result.font_names.emplace_back("tahoma.ttf");
+				// Covers symbol blocks (e.g. U+2600-26FF Miscellaneous Symbols) that Arial and Tahoma lack.
+				result.font_names.emplace_back("seguisym.ttf");
 #else
 				result.font_names.emplace_back("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"); // ubuntu
 				result.font_names.emplace_back("/usr/share/fonts/TTF/DejaVuSans.ttf");             // arch
