@@ -109,6 +109,8 @@ enum class emu_settings_type
 	DisableMSLFastMath,
 	OutputScalingMode,
 	FrameGeneration, // PS5: frame generation (VKFrameGen.h)
+	FrameGenerationFrames, // PS5: the most frames made between two of the game's
+	FrameGenerationQuality, // PS5: frame generation's motion search
 	DisableSamplingSkip, // PS5: offered in the launcher's Audio tab
 	LateAudioWait, // PS5: cellAudio's wait for a late game's sound
 	SPUOwnCore, // PS5: a one-SPU SPURS kernel alone on a core

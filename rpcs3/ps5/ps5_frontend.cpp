@@ -93,6 +93,7 @@ extern atomic_t<u64> g_ps5_getllar_waits[64][2]; // SPUThread.cpp: each SPU slot
 extern atomic_t<u32> g_ps5_spu_cpus[64][16]; // SPUThread.cpp: each SPU slot's polls by the CPU it was on
 u32 ps5_spu_slot(u32 id); // SPUThread.cpp: an SPU thread's slot in those counts
 extern atomic_t<u64> g_ps5_frames_generated; // VKFrameGen.cpp: frames made between the game's
+extern atomic_t<u64> g_ps5_frame_gen_us; // VKFrameGen.cpp: the RSX thread's time making and showing them
 
 namespace
 {
@@ -1293,8 +1294,18 @@ int run(const char* boot_path)
 						else if (S_ISSOCK(info.st_mode)) sockets++;
 						else others++;
 					}
-					trace("status %ds: state %d, RSX flips %d (%u made between); heap %d MiB (peak %d), free direct %d MiB, flexible %d MiB; progress '%s' modules %u/%u files %u/%u; open: %u files, %u folders, %u sockets, %u other (%u by fs); %d PPU threads:%s", seconds + 1,
-						static_cast<u32>(Emu.GetStatus()), flips, static_cast<u32>(g_ps5_frames_generated.load()), heap.mapped_bytes >> 20, heap.peak_bytes >> 20, direct >> 20,
+					// Frame generation's settings while it is on (VKFrameGen.h)
+					std::string frame_gen;
+					if (g_cfg.video.frame_generation)
+					{
+						const u32 most = static_cast<u32>(g_cfg.video.frame_generation_frames);
+						const u32 quality = static_cast<u32>(g_cfg.video.frame_generation_quality);
+						frame_gen = fmt::format(", up to %s a frame, %s", most ? std::to_string(most) : std::string("Auto"),
+							quality == 0 ? "Fast" : quality == 2 ? "Quality" : "Balanced");
+					}
+					trace("status %ds: state %d, RSX flips %d (%u made between in %u ms%s); heap %d MiB (peak %d), free direct %d MiB, flexible %d MiB; progress '%s' modules %u/%u files %u/%u; open: %u files, %u folders, %u sockets, %u other (%u by fs); %d PPU threads:%s", seconds + 1,
+						static_cast<u32>(Emu.GetStatus()), flips, static_cast<u32>(g_ps5_frames_generated.load()),
+						static_cast<u32>(g_ps5_frame_gen_us.load() / 1000), frame_gen, heap.mapped_bytes >> 20, heap.peak_bytes >> 20, direct >> 20,
 						flexible >> 20, progress_text, +g_progr_pdone, +g_progr_ptotal, +g_progr_fdone, +g_progr_ftotal, regular, folders, sockets, others, static_cast<u32>(fs::ps5_open_tracked()), count, ppus);
 					// Near the limit, which ones (once per 40 more)
 					static u32 s_reported = 0;

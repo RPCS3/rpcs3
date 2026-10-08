@@ -8,15 +8,17 @@
 
 #include "util/asm.hpp"
 
-// PS5: the frames made since the title started, for the trace's status line
+// PS5: the frames made since the title started, and the time the RSX thread
+// spent making and showing them (VKPresent.cpp), for the trace's status line
 atomic_t<u64> g_ps5_frames_generated = 0;
+atomic_t<u64> g_ps5_frame_gen_us = 0;
 
 namespace vk
 {
 	namespace
 	{
 		// Every pass: 8x8 invocations a group, three inputs sampled (unused ones
-		// bound to the first), one output written, eight numbers pushed
+		// bound to the first), one output written, twelve numbers pushed
 		constexpr const char* c_header = R"(
 #version 450
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
@@ -24,8 +26,19 @@ layout(set = 0, binding = 0) uniform sampler2D tex0;
 layout(set = 0, binding = 1) uniform sampler2D tex1;
 layout(set = 0, binding = 2) uniform sampler2D tex2;
 layout(set = 0, binding = 3, %FORMAT%) uniform writeonly image2D dst;
-layout(push_constant) uniform push_block { vec4 p0; vec4 p1; };
+layout(push_constant) uniform push_block { vec4 p0; vec4 p1; vec4 p2; };
 )";
+
+		// The Quality setting's levels: the working size's width at most, and
+		// how far the coarse search reaches, in quarter-size texels (about 100
+		// pixels of a 1280-wide frame at each: a quick camera turn at 30 fps)
+		struct quality_level
+		{
+			const char* name;
+			u32 width;
+			u32 reach;
+		};
+		constexpr quality_level c_quality[] = { { "Fast", 480, 9 }, { "Balanced", 640, 12 }, { "Quality", 960, 20 } };
 
 		enum pass_kind : int
 		{
@@ -81,18 +94,19 @@ void main()
 }
 )",
 			// pass_coarse_search: tex0 the last frame's quarter brightness, tex1
-			// this one's; p0 = (the quarter size, its 4x4 block grid). Each block
-			// of this frame is sought in the last one up to 12 texels away (48 at
-			// the working size: a quick camera turn at 30 fps; at 6, synthetic
-			// pans of 40 lost to a plain blend); the vector points from here to
-			// there, its z the mean difference per texel, a little in favour of
-			// short vectors
+			// this one's; p0 = (the quarter size, its 4x4 block grid), p1.x the
+			// reach. Each block of this frame is sought in the last one up to
+			// the reach away (12 texels at Balanced, 48 at the working size: a
+			// quick camera turn at 30 fps; at 6, synthetic pans of 40 lost to a
+			// plain blend); the vector points from here to there, its z the mean
+			// difference per texel, a little in favour of short vectors
 			R"(
 void main()
 {
 	const ivec2 p = ivec2(gl_GlobalInvocationID.xy);
 	if (p.x >= int(p0.z) || p.y >= int(p0.w)) return;
 	const ivec2 lim = ivec2(p0.xy) - 1;
+	const int reach = int(p1.x);
 	const ivec2 base = p * 4;
 	float cur[16];
 	for (int k = 0; k < 16; k++)
@@ -108,9 +122,9 @@ void main()
 		best += abs(cur[k] - texelFetch(tex0, min(base + ivec2(k & 3, k >> 2), lim), 0).r) / 16.0;
 	}
 	vec2 best_v = vec2(0.0);
-	for (int dy = -12; dy <= 12; dy++)
+	for (int dy = -reach; dy <= reach; dy++)
 	{
-		for (int dx = -12; dx <= 12; dx++)
+		for (int dx = -reach; dx <= reach; dx++)
 		{
 			float s = 0.0;
 			for (int k = 0; k < 16; k++)
@@ -234,23 +248,27 @@ void main()
 			// pass_between: tex0 the last frame (its own size), tex1 this one,
 			// tex2 the vectors; p0 = (this frame's used part as a share of its
 			// texture, the output size), p1 = (the working size, the share of
-			// the vector grid it covers). Half way along each vector in both
-			// frames, averaged where the two agree closely. Anywhere else this
-			// frame as it is: where the block matched poorly, where the two
-			// disagree (GTA IV's shadows shimmer by themselves, and averaging two
-			// patterns softened every other frame's on my console, build 94), and
-			// where the pixel is the same in both frames unmoved (the HUD, the
-			// radar's frame and text, which the world's vectors dragged along)
+			// the vector grid it covers), p2.x the time t from the last frame
+			// (0) to this one (1). Each vector, from a point of this frame to
+			// where it was in the last, is followed t of the way back from here
+			// in the last frame and 1 - t of the way on in this one, and the two
+			// blended by t where they agree closely. Anywhere else the frame
+			// nearer in time as it is: where the block matched poorly, where the
+			// two disagree (GTA IV's shadows shimmer by themselves, and averaging
+			// two patterns softened every other frame's on my console, build 94),
+			// and where the pixel is the same in both frames unmoved (the HUD,
+			// the radar's frame and text, which the world's vectors dragged along)
 			R"(
 void main()
 {
 	const ivec2 p = ivec2(gl_GlobalInvocationID.xy);
 	if (p.x >= int(p0.z) || p.y >= int(p0.w)) return;
+	const float t = p2.x;
 	const vec2 uv = (vec2(p) + 0.5) / p0.zw;
 	const vec4 mv = texture(tex2, uv * p1.zw);
 	const vec2 d = mv.xy / p1.xy;
-	const vec3 last = texture(tex0, uv + 0.5 * d).rgb;
-	const vec3 next = texture(tex1, (uv - 0.5 * d) * p0.xy).rgb;
+	const vec3 last = texture(tex0, uv + t * d).rgb;
+	const vec3 next = texture(tex1, (uv - (1.0 - t) * d) * p0.xy).rgb;
 	const vec3 here = texture(tex1, uv * p0.xy).rgb;
 	const vec3 there = texture(tex0, uv).rgb;
 	const vec3 moved_gap = abs(last - next);
@@ -258,8 +276,9 @@ void main()
 	const float trust = 1.0 - smoothstep(0.035, 0.11, mv.z);
 	const float agree = 1.0 - smoothstep(0.03, 0.1, max(max(moved_gap.r, moved_gap.g), moved_gap.b));
 	const float still = 1.0 - smoothstep(0.012, 0.04, max(max(still_gap.r, still_gap.g), still_gap.b));
-	const vec3 between = mix(here, 0.5 * (last + next), trust * agree);
-	imageStore(dst, p, vec4(mix(between, here, still), 1.0));
+	const vec3 nearer = t < 0.5 ? there : here;
+	const vec3 between = mix(nearer, mix(last, next, t), trust * agree);
+	imageStore(dst, p, vec4(mix(between, nearer, still), 1.0));
 }
 )",
 			// pass_keep: tex0 the frame; p0 = (its used part as a share of its
@@ -290,7 +309,7 @@ void main()
 
 				ssbo_count = 0;
 				use_push_constants = true;
-				push_constants_size = 32;
+				push_constants_size = 48;
 				create();
 			}
 
@@ -322,7 +341,7 @@ void main()
 				m_program->bind_uniform({ *m_output }, 0, 3);
 			}
 
-			void run(const vk::command_buffer& cmd, std::initializer_list<vk::viewable_image*> inputs, vk::viewable_image* output, u32 width, u32 height, const std::array<f32, 8>& params)
+			void run(const vk::command_buffer& cmd, std::initializer_list<vk::viewable_image*> inputs, vk::viewable_image* output, u32 width, u32 height, const std::array<f32, 12>& params)
 			{
 				const auto view = [](vk::viewable_image* image) { return image->get_view(rsx::default_remap_vector.with_encoding(VK_REMAP_IDENTITY)); };
 				u32 i = 0;
@@ -372,10 +391,10 @@ void main()
 			return image;
 		}
 
-		// The working size: at most 640 across, the frame's shape kept
-		void working_size(u32 width, u32 height, u32& work_w, u32& work_h)
+		// The working size: at most the quality's width across, the frame's shape kept
+		void working_size(u32 width, u32 height, u32 quality, u32& work_w, u32& work_h)
 		{
-			work_w = std::min(width, 640u);
+			work_w = std::min(width, c_quality[quality].width);
 			work_h = std::max(1u, static_cast<u32>(std::lround(static_cast<f64>(height) * work_w / width)));
 		}
 	}
@@ -400,21 +419,26 @@ void main()
 		drop(m_vectors_coarse);
 		drop(m_vectors);
 		drop(m_vectors_smooth);
-		drop(m_output);
+		for (auto& image : m_output) drop(image);
 		m_width = m_height = 0;
 		m_have_prev = false;
 	}
 
-	void frame_generator::allocate(u32 width, u32 height)
+	void frame_generator::allocate(u32 width, u32 height, u32 quality)
 	{
 		dispose();
 
-		working_size(width, height, m_work_w, m_work_h);
+		working_size(width, height, quality, m_work_w, m_work_h);
 		const u32 coarse_w = utils::aligned_div(m_work_w, 4u);
 		const u32 coarse_h = utils::aligned_div(m_work_h, 4u);
 
 		m_prev_color = make_image(width, height, VK_FORMAT_R8G8B8A8_UNORM);
-		m_output = make_image(width, height, VK_FORMAT_R8G8B8A8_UNORM);
+		bool outputs = true;
+		for (auto& image : m_output)
+		{
+			image = make_image(width, height, VK_FORMAT_R8G8B8A8_UNORM);
+			outputs = outputs && image;
+		}
 		for (u32 i = 0; i < 2; i++)
 		{
 			m_luma[i] = make_image(m_work_w, m_work_h, VK_FORMAT_R32_SFLOAT);
@@ -424,7 +448,7 @@ void main()
 		m_vectors = make_image(utils::aligned_div(m_work_w, 8u), utils::aligned_div(m_work_h, 8u), VK_FORMAT_R16G16B16A16_SFLOAT);
 		m_vectors_smooth = make_image(utils::aligned_div(m_work_w, 8u), utils::aligned_div(m_work_h, 8u), VK_FORMAT_R16G16B16A16_SFLOAT);
 
-		if (!m_prev_color || !m_output || !m_luma[0] || !m_luma[1] || !m_luma_coarse[0] || !m_luma_coarse[1] || !m_vectors_coarse || !m_vectors || !m_vectors_smooth)
+		if (!m_prev_color || !outputs || !m_luma[0] || !m_luma[1] || !m_luma_coarse[0] || !m_luma_coarse[1] || !m_vectors_coarse || !m_vectors || !m_vectors_smooth)
 		{
 			rsx_log.warning("Frame generation: no memory for its images at %ux%u", width, height);
 			dispose();
@@ -433,7 +457,8 @@ void main()
 
 		m_width = width;
 		m_height = height;
-		rsx_log.notice("Frame generation: %ux%u, motion at %ux%u", width, height, m_work_w, m_work_h);
+		m_quality = quality;
+		rsx_log.notice("Frame generation: %ux%u, motion at %ux%u (%s)", width, height, m_work_w, m_work_h, c_quality[quality].name);
 	}
 
 	void frame_generator::reset()
@@ -441,30 +466,33 @@ void main()
 		m_have_prev = false;
 	}
 
-	vk::viewable_image* frame_generator::process(const vk::command_buffer& cmd, vk::viewable_image* cur, u32 width, u32 height, bool generate)
+	u32 frame_generator::process(const vk::command_buffer& cmd, vk::viewable_image* cur, u32 width, u32 height, u32 count, u32 quality,
+		vk::viewable_image* (&out)[max_frames])
 	{
 		if (!cur || !width || !height)
 		{
-			return nullptr;
+			return 0;
 		}
 		width = std::min<u32>(width, cur->width());
 		height = std::min<u32>(height, cur->height());
+		quality = std::min<u32>(quality, static_cast<u32>(std::size(c_quality)) - 1);
+		count = std::min(count, max_frames);
 
-		if (width != m_width || height != m_height)
+		if (width != m_width || height != m_height || quality != m_quality)
 		{
-			allocate(width, height);
+			allocate(width, height, quality);
 			if (!m_width)
 			{
-				return nullptr;
+				return 0;
 			}
-			for (auto* image : { m_prev_color.get(), m_output.get(), m_luma[0].get(), m_luma[1].get(), m_luma_coarse[0].get(), m_luma_coarse[1].get(),
-				m_vectors_coarse.get(), m_vectors.get(), m_vectors_smooth.get() })
+			for (auto* image : { m_prev_color.get(), m_output[0].get(), m_output[1].get(), m_output[2].get(), m_luma[0].get(), m_luma[1].get(),
+				m_luma_coarse[0].get(), m_luma_coarse[1].get(), m_vectors_coarse.get(), m_vectors.get(), m_vectors_smooth.get() })
 			{
 				image->change_layout(cmd, VK_IMAGE_LAYOUT_GENERAL);
 			}
 		}
 
-		const bool make = generate && m_have_prev;
+		const bool make = count && m_have_prev;
 		const f32 uv_x = static_cast<f32>(width) / cur->width();
 		const f32 uv_y = static_cast<f32>(height) / cur->height();
 		const f32 work_w = static_cast<f32>(m_work_w);
@@ -483,49 +511,58 @@ void main()
 
 		// This frame's brightness, at the working size and a quarter of it
 		vk::get_compute_task<frame_generation_pass<pass_brightness>>()->run(cmd, { cur }, m_luma[1].get(), m_work_w, m_work_h,
-			{ uv_x, uv_y, work_w, work_h, 0.f, 0.f, 0.f, 0.f });
+			{ uv_x, uv_y, work_w, work_h });
 		barrier(cmd);
 		vk::get_compute_task<frame_generation_pass<pass_quarter>>()->run(cmd, { m_luma[1].get() }, m_luma_coarse[1].get(), coarse_w, coarse_h,
-			{ work_w, work_h, static_cast<f32>(coarse_w), static_cast<f32>(coarse_h), 0.f, 0.f, 0.f, 0.f });
+			{ work_w, work_h, static_cast<f32>(coarse_w), static_cast<f32>(coarse_h) });
 		barrier(cmd);
 
-		vk::viewable_image* result = nullptr;
+		u32 made = 0;
 		if (make)
 		{
 			vk::get_compute_task<frame_generation_pass<pass_coarse_search>>()->run(cmd, { m_luma_coarse[0].get(), m_luma_coarse[1].get() }, m_vectors_coarse.get(), coarse_grid_w, coarse_grid_h,
-				{ static_cast<f32>(coarse_w), static_cast<f32>(coarse_h), static_cast<f32>(coarse_grid_w), static_cast<f32>(coarse_grid_h), 0.f, 0.f, 0.f, 0.f });
+				{ static_cast<f32>(coarse_w), static_cast<f32>(coarse_h), static_cast<f32>(coarse_grid_w), static_cast<f32>(coarse_grid_h),
+				  static_cast<f32>(c_quality[quality].reach) });
 			barrier(cmd);
 			vk::get_compute_task<frame_generation_pass<pass_fine_search>>()->run(cmd, { m_luma[0].get(), m_luma[1].get(), m_vectors_coarse.get() }, m_vectors.get(), grid_w, grid_h,
-				{ work_w, work_h, static_cast<f32>(grid_w), static_cast<f32>(grid_h), static_cast<f32>(coarse_grid_w), static_cast<f32>(coarse_grid_h), 0.f, 0.f });
+				{ work_w, work_h, static_cast<f32>(grid_w), static_cast<f32>(grid_h), static_cast<f32>(coarse_grid_w), static_cast<f32>(coarse_grid_h) });
 			barrier(cmd);
 			vk::get_compute_task<frame_generation_pass<pass_median>>()->run(cmd, { m_vectors.get() }, m_vectors_smooth.get(), grid_w, grid_h,
-				{ static_cast<f32>(grid_w), static_cast<f32>(grid_h), 0.f, 0.f, 0.f, 0.f, 0.f, 0.f });
+				{ static_cast<f32>(grid_w), static_cast<f32>(grid_h) });
 			barrier(cmd);
-			vk::get_compute_task<frame_generation_pass<pass_between>>()->run(cmd, { m_prev_color.get(), cur, m_vectors_smooth.get() }, m_output.get(), width, height,
-				{ uv_x, uv_y, static_cast<f32>(width), static_cast<f32>(height), work_w, work_h, work_w / (grid_w * 8.f), work_h / (grid_h * 8.f) });
-			result = m_output.get();
-			g_ps5_frames_generated++;
+
+			// The frames between, each at its time: with three, a quarter, a half
+			// and three quarters of the way from the last frame to this one
+			for (u32 k = 0; k < count; k++)
+			{
+				const f32 t = static_cast<f32>(k + 1) / static_cast<f32>(count + 1);
+				vk::get_compute_task<frame_generation_pass<pass_between>>()->run(cmd, { m_prev_color.get(), cur, m_vectors_smooth.get() }, m_output[k].get(), width, height,
+					{ uv_x, uv_y, static_cast<f32>(width), static_cast<f32>(height), work_w, work_h, work_w / (grid_w * 8.f), work_h / (grid_h * 8.f), t });
+				out[k] = m_output[k].get();
+			}
+			made = count;
+			g_ps5_frames_generated += count;
 		}
 
 		// This frame becomes the last one: its picture, and its brightness.
-		// (The frame between has read the last picture by now)
+		// (The frames between have read the last picture by now)
 		barrier(cmd);
 		vk::get_compute_task<frame_generation_pass<pass_keep>>()->run(cmd, { cur }, m_prev_color.get(), width, height,
-			{ uv_x, uv_y, static_cast<f32>(width), static_cast<f32>(height), 0.f, 0.f, 0.f, 0.f });
+			{ uv_x, uv_y, static_cast<f32>(width), static_cast<f32>(height) });
 		cur->pop_layout(cmd);
 		barrier(cmd);
 		std::swap(m_luma[0], m_luma[1]);
 		std::swap(m_luma_coarse[0], m_luma_coarse[1]);
 		m_have_prev = true;
 
-		if (result)
+		if (made)
 		{
-			// The frame between, written, for the presentation to read
+			// The frames between, written, for the presentation to read
 			VkMemoryBarrier memory = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
 			memory.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
 			memory.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT;
 			vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 1, &memory, 0, nullptr, 0, nullptr);
 		}
-		return result;
+		return made;
 	}
 }

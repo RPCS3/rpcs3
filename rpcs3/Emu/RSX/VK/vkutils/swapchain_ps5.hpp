@@ -18,6 +18,10 @@ namespace vk
 	// is the base class, which reports that it is not implemented.
 	using swapchain_NATIVE = native_swapchain_base;
 
+	// The display's refresh rate in mHz, as its mode reports it: frame
+	// generation's frames go up one a refresh (VKPresent.cpp)
+	inline u32 g_ps5_refresh_millihertz = 59940;
+
 	[[maybe_unused]] static
 	VkSurfaceKHR make_WSI_surface(VkInstance vk_instance, display_handle_t /*window_handle*/, WSI_config* /*config*/)
 	{
@@ -124,6 +128,10 @@ namespace vk
 
 		rsx_log.notice("PS5: presenting to display plane %u at %ux%u, %u mHz", plane_index,
 			create_info.imageExtent.width, create_info.imageExtent.height, best->parameters.refreshRate);
+		if (best->parameters.refreshRate)
+		{
+			g_ps5_refresh_millihertz = best->parameters.refreshRate;
+		}
 
 		CHECK_RESULT(vkCreateDisplayPlaneSurfaceKHR(vk_instance, &create_info, nullptr, &result));
 		return result;

@@ -53,9 +53,19 @@ PS5_EXTRA = [
      "(its sound and more), and the game waits for it. Off, the console's system places every thread, and "
      "two busy ones can share a core. Takes effect when the game starts."),
     ("OutputScalingMode", "GPU", "FrameGeneration", "Frame generation",
-     "Shows a frame made between each two of the game's, when the game runs slower than about 37 fps: "
-     "motion looks about twice as smooth. The game itself runs no faster, each of its frames reaches "
-     "the screen one refresh (17 ms) later, and fast motion, text and the HUD can shimmer or smear."),
+     "Shows frames made between the game's own when the game runs slower than the display's 60 frames a "
+     "second: motion looks smoother. The game itself runs no faster, each of its frames reaches the "
+     "screen a refresh (17 ms) later for each frame made before it, and fast motion, text and the HUD "
+     "can shimmer or smear."),
+    ("FrameGeneration", "GPU", "FrameGenerationFrames", "Frames made between",
+     "The most frames made between two of the game's. They go up one a refresh, and only as many as the "
+     "time between the game's frames has refreshes for, so the display is never sent more than it can "
+     "show: at 24 fps, 1 shows 48 frames a second and Auto (up to 3) all 60, making one and two by turns. "
+     "Each frame made puts the game's own a refresh (17 ms) later."),
+    ("FrameGenerationFrames", "GPU", "FrameGenerationQuality", "Frame generation quality",
+     "How hard frame generation looks for motion: Fast follows it in a copy of the picture 480 pixels "
+     "across, Balanced 640, Quality 960, reaching further for quick camera turns. Higher follows the "
+     "edges of moving things more closely and takes more of the GPU's time."),
     ("TimeStretchingThreshold", "Audio", "DisableSamplingSkip", "Disable sampling skip",
      "When a game is late with its sound, the emulator waits for it a little (about 11 ms) before skipping "
      "that bit of the sound. On, it never waits: the sound keeps strict time, and every late moment is "

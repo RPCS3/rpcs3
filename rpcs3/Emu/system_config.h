@@ -184,7 +184,9 @@ struct cfg_root : cfg::node
 		cfg::_bool disable_hardware_blending{ this, "Disable Hardware Blending", false, true };
 		cfg::_bool disable_hardware_texel_remapping{ this, "Disable Hardware ColorSpace Remapping", false, true };
 		cfg::uint<0, 100> rcas_sharpening_intensity{ this, "FidelityFX CAS Sharpening Intensity", 50, true };
-		cfg::_bool frame_generation{ this, "Frame Generation", false, true }; // PS5: a frame made between each two of the game's (VKFrameGen.h)
+		cfg::_bool frame_generation{ this, "Frame Generation", false, true }; // PS5: frames made between each two of the game's (VKFrameGen.h)
+		cfg::uint<0, 3> frame_generation_frames{ this, "Frame Generation Frames", 1, true }; // PS5: the most made between two of the game's; 0 as many as the display has refreshes for
+		cfg::uint<0, 2> frame_generation_quality{ this, "Frame Generation Quality", 1, true }; // PS5: 0 Fast, 1 Balanced, 2 Quality: the motion search's working size and reach
 		cfg::_bool disable_blit_engine_upscaling{ this, "Disable Blit Engine Upscaling", false, true };
 
 		struct node_vk : cfg::node

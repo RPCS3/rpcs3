@@ -57,6 +57,8 @@ namespace rsx::overlays
 			{"Video", "Frame limit", "Frame limit"},
 			{"Video", "Vblank Rate", "Vblank rate"},
 			{"Video", "Frame Generation", "Frame generation"},
+			{"Video", "Frame Generation Frames", "Frames made between"},
+			{"Video", "Frame Generation Quality", "Frame generation quality"},
 			{"Audio", "Master Volume", "Volume"},
 		};
 

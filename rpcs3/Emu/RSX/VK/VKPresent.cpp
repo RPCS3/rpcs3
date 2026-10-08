@@ -14,6 +14,9 @@
 
 extern atomic_t<bool> g_user_asked_for_screenshot;
 extern atomic_t<recording_mode> g_recording_mode;
+#ifdef __PROSPERO__
+extern atomic_t<u64> g_ps5_frame_gen_us; // VKFrameGen.cpp
+#endif
 
 namespace
 {
@@ -146,6 +149,9 @@ bool VKGSRender::reinitialize_swapchain()
 	swapchain_unavailable = false;
 	should_reinitialize_swapchain = false;
 	m_vsync_mode = g_cfg.video.vsync;
+#ifdef __PROSPERO__
+	m_frame_gen_swapchain = g_cfg.video.frame_generation.get();
+#endif
 	return true;
 }
 
@@ -442,6 +448,15 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		swapchain_unavailable = true;
 	}
 
+#ifdef __PROSPERO__
+	// PS5: frame generation turned on or off: its swapchain has more images
+	// (vkutils/swapchain.cpp)
+	if (m_frame_gen_swapchain != g_cfg.video.frame_generation.get())
+	{
+		should_reinitialize_swapchain = true;
+	}
+#endif
+
 	if (swapchain_unavailable || should_reinitialize_swapchain)
 	{
 		// Reinitializing the swapchain is a failable operation. However, not all failures are fatal (e.g minimized window).
@@ -591,8 +606,8 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	}
 
 	// Draws image_to_flip (and the second eye's) on a swapchain image, the
-	// overlays over it, and presents it. PS5: twice for a game's frame with frame
-	// generation, first the frame made between its last one and it
+	// overlays over it, and presents it. PS5: more than once for a game's frame
+	// with frame generation, first the frames made between its last one and it
 	const auto present_source = [&](vk::viewable_image* image_to_flip, vk::viewable_image* image_to_flip2, [[maybe_unused]] bool generated_frame)
 	{
 	// Prepare surface for new frame. Set no timeout here so that we wait for the next image if need be
@@ -984,11 +999,15 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	};
 
 #ifdef __PROSPERO__
-	// PS5: frame generation. The frame made between the game's last frame and
-	// this one goes up first, a refresh before this one: only when the game came
-	// more than 1.6 refreshes (at 60 Hz) after its last frame, so that two
-	// presents a frame never hold back a game that keeps up with the display,
-	// and not after a long gap (a load, a pause), with nothing to move between
+	// PS5: frame generation. The frames made between the game's last frame and
+	// this one go up first, one a refresh, then this one. As many as the time
+	// since the game's last frame has refreshes for, less one for this frame,
+	// counted on from what earlier frames left over: at 24 fps (2.5 refreshes
+	// a frame) one and two by turns, filling every refresh. So the display is
+	// never given more frames than it has refreshes for, and up to two made
+	// between go up without waiting for a free image (vkutils/swapchain.cpp).
+	// At most the setting's number (Auto: up to three), and none after a long
+	// gap (a load, a pause), with nothing to move between
 	if (info.emu_flip && image_to_flip)
 	{
 		const u64 now = get_system_time();
@@ -1002,10 +1021,32 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 				m_frame_generator = std::make_unique<vk::frame_generator>();
 			}
 
-			const bool due = since >= 26'700 && since <= 150'000;
-			if (vk::viewable_image* between = m_frame_generator->process(*m_current_command_buffer, image_to_flip, buffer_width, buffer_height, due))
+			u32 count = 0;
+			const bool paced = since && since <= 150'000;
+			if (paced)
 			{
-				present_source(between, nullptr, true);
+				m_frame_gen_refreshes += static_cast<f64>(since) * vk::g_ps5_refresh_millihertz / 1e9;
+
+				// A little slack, so that a game at 30 fps whose frame came a
+				// moment early still gets its one
+				const f64 fit = std::floor(m_frame_gen_refreshes + 0.15);
+				const u32 setting = g_cfg.video.frame_generation_frames;
+				const u32 most = setting ? setting : vk::frame_generator::max_frames;
+				count = fit >= 2. ? std::min(static_cast<u32>(fit) - 1, most) : 0;
+			}
+
+			vk::viewable_image* between[vk::frame_generator::max_frames]{};
+			const u32 made = m_frame_generator->process(*m_current_command_buffer, image_to_flip, buffer_width, buffer_height, count,
+				g_cfg.video.frame_generation_quality, between);
+
+			// Refreshes this frame's turn leaves over: a refresh at most, as the
+			// fraction of one the next frame's time adds to; or a refresh owed,
+			// when the game came early
+			m_frame_gen_refreshes = paced ? std::clamp(m_frame_gen_refreshes - (made + 1), -1., 1.) : 0.;
+
+			for (u32 k = 0; k < made; k++)
+			{
+				present_source(between[k], nullptr, true);
 
 				// The next frame context, as after back-to-back flips
 				if (m_current_frame->swap_command_buffer)
@@ -1013,10 +1054,12 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 					frame_context_cleanup(m_current_frame);
 				}
 			}
+			g_ps5_frame_gen_us += get_system_time() - now;
 		}
 		else if (m_frame_generator)
 		{
 			m_frame_generator->reset();
+			m_frame_gen_refreshes = 0.;
 		}
 	}
 #endif

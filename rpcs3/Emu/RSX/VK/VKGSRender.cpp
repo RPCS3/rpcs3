@@ -479,6 +479,9 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	{
 		swapchain_unavailable = true;
 	}
+#ifdef __PROSPERO__
+	m_frame_gen_swapchain = g_cfg.video.frame_generation.get();
+#endif
 
 	// create command buffer...
 	m_command_buffer_pool.create((*m_device), m_device->get_graphics_queue_family());
