@@ -245,6 +245,8 @@ namespace np
 		case SCE_NP_MATCHING2_CASTTYPE_MULTICAST:
 			valid_destination = dst_size > 0 && dst_size <= SCE_NP_MATCHING2_ROOM_MAX_SLOT;
 			break;
+		default:
+			break;
 		}
 
 		if (!valid_destination || message_info->msg().size() > SCE_NP_MATCHING2_BIN_MSG_MAX_SIZE)

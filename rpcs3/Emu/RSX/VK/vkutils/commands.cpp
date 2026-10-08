@@ -82,6 +82,7 @@ namespace vk
 		m_bound_pipelines[0] = VK_NULL_HANDLE;
 		m_bound_pipelines[1] = VK_NULL_HANDLE;
 		m_bound_descriptor_sets[0] = VK_NULL_HANDLE;
+		m_renderpass_info = {};
 	}
 
 	void command_buffer::begin()

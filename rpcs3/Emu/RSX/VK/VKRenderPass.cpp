@@ -8,15 +8,8 @@
 
 namespace vk
 {
-	struct active_renderpass_info_t
-	{
-		VkRenderPass pass = VK_NULL_HANDLE;
-		VkFramebuffer fbo = VK_NULL_HANDLE;
-	};
-
 	atomic_t<u64> g_cached_renderpass_key = 0;
 	VkRenderPass  g_cached_renderpass = VK_NULL_HANDLE;
-	rsx::unordered_map<VkCommandBuffer, active_renderpass_info_t>  g_current_renderpass;
 
 	shared_mutex g_renderpass_cache_mutex;
 	rsx::unordered_map<u64, VkRenderPass> g_renderpass_cache;
@@ -384,7 +377,6 @@ namespace vk
 		// Wipe current status
 		g_cached_renderpass_key = 0;
 		g_cached_renderpass = VK_NULL_HANDLE;
-		g_current_renderpass.clear();
 
 		// Destroy cache
 		for (const auto &renderpass : g_renderpass_cache)
@@ -397,12 +389,13 @@ namespace vk
 
 	void begin_renderpass(const vk::command_buffer& cmd, VkRenderPass pass, VkFramebuffer target, const coordu& framebuffer_region)
 	{
-		auto& renderpass_info = g_current_renderpass[cmd];
+		auto& renderpass_info = cmd.renderpass_info();
 		if (renderpass_info.pass == pass && renderpass_info.fbo == target)
 		{
 			return;
 		}
-		else if (renderpass_info.pass != VK_NULL_HANDLE)
+
+		if (renderpass_info.pass != VK_NULL_HANDLE)
 		{
 			end_renderpass(cmd);
 		}
@@ -434,17 +427,17 @@ namespace vk
 	void end_renderpass(const vk::command_buffer& cmd)
 	{
 		vkCmdEndRenderPass(cmd);
-		g_current_renderpass[cmd] = {};
+		cmd.renderpass_info() = {};
 	}
 
 	bool is_renderpass_open(const vk::command_buffer& cmd)
 	{
-		return g_current_renderpass[cmd].pass != VK_NULL_HANDLE;
+		return cmd.renderpass_info().pass != VK_NULL_HANDLE;
 	}
 
 	void renderpass_op(const vk::command_buffer& cmd, const renderpass_op_callback_t& op)
 	{
-		const auto& active = g_current_renderpass[cmd];
+		const auto& active = cmd.renderpass_info();
 		op(cmd, active.pass, active.fbo);
 	}
 }

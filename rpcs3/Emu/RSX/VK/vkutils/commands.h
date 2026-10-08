@@ -61,6 +61,12 @@ namespace vk
 		}
 	};
 
+	struct active_renderpass_info_t
+	{
+		VkRenderPass pass = VK_NULL_HANDLE;
+		VkFramebuffer fbo = VK_NULL_HANDLE;
+	};
+
 	class command_buffer
 	{
 	protected:
@@ -74,6 +80,7 @@ namespace vk
 		// State cache
 		mutable std::array<VkDescriptorSet, 2> m_bound_descriptor_sets {{ VK_NULL_HANDLE }};
 		mutable std::array<VkPipeline, 2> m_bound_pipelines{{ VK_NULL_HANDLE }};
+		mutable active_renderpass_info_t m_renderpass_info {};
 
 		void clear_state_cache();
 
@@ -115,6 +122,7 @@ namespace vk
 		void bind_descriptor_sets(const std::span<VkDescriptorSet>& sets, const std::span<u32>& dynamic_offsets, VkPipelineBindPoint bind_point, VkPipelineLayout pipe_layout) const;
 
 		// Properties
+		active_renderpass_info_t& renderpass_info() const { return m_renderpass_info; }
 		command_pool& get_command_pool() const { return *pool; }
 		u32 get_queue_family() const { return pool->get_queue_family(); }
 		bool is_recording() const { return is_open; }
