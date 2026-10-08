@@ -1477,7 +1477,8 @@ namespace rsx
 		layout.width = rsx::method_registers.surface_clip_width();
 		layout.height = rsx::method_registers.surface_clip_height();
 
-		m_graphics_state.clear(rsx::rtt_config_contested | rsx::rtt_config_valid | rsx::rtt_config_no_attachments);
+		// NOTE: rtt_config_no_attachments is intentionally not reset.
+		m_graphics_state.clear(rsx::rtt_config_contested | rsx::rtt_config_valid);
 		m_current_framebuffer_context = context;
 
 		if (layout.width == 0 || layout.height == 0)
@@ -1801,7 +1802,22 @@ namespace rsx
 			}
 
 			// Context must be draw now...
-			m_graphics_state.set(rsx::rtt_config_no_attachments);
+		}
+
+		if (framebufferless != m_graphics_state.test(rsx::rtt_config_no_attachments))
+		{
+			// Programmable blending reads back from the color attachments and is disabled when there are none.
+			// Force the blend configuration to be re-evaluated when moving in or out of this state.
+			if (framebufferless)
+			{
+				m_graphics_state.set(rsx::rtt_config_no_attachments);
+			}
+			else
+			{
+				m_graphics_state.clear(rsx::rtt_config_no_attachments);
+			}
+
+			m_graphics_state.set(rsx::pipeline_config_dirty);
 		}
 
 		// At least one attachment exists
@@ -2145,8 +2161,9 @@ namespace rsx
 	{
 		u32 expected_ctrl = 0;
 
-		// Programmable blending
-		if (backend_config.supports_programmable_blending)
+		// Programmable blending. Requires color attachments to read from.
+		if (backend_config.supports_programmable_blending &&
+			!m_graphics_state.test(rsx::rtt_config_no_attachments))
 		{
 			expected_ctrl = current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
 
