@@ -873,12 +873,13 @@ int run(const char* boot_path)
 	trace("frontend: %u of %u overlay images written to /app0/rpcs3/Icons/ui/", install_embedded_files("/app0/rpcs3/Icons/ui/"), ps5_embedded_file_count);
 
 	// RPCS3's patch files go here over FTP (the launcher's Patches page), and
-	// the patch engine reads them when a game boots
+	// the patch engine reads them when a game boots; PS3 packages and
+	// licences go in packages/ (the launcher's Install tab)
+	for (const std::string& folder : {patch_engine::get_patches_path(), fs::get_config_dir() + "packages/"})
 	{
-		const std::string patches = patch_engine::get_patches_path();
-		fs::create_path(patches);
+		fs::create_path(folder);
 		std::vector<std::string> names;
-		if (fs::dir dir{patches})
+		if (fs::dir dir{folder})
 		{
 			for (const fs::dir_entry& entry : dir)
 			{
@@ -888,7 +889,7 @@ int run(const char* boot_path)
 				}
 			}
 		}
-		trace("frontend: %s: %s", patches, names.empty() ? std::string("no patch files") : fmt::merge(names, ", "));
+		trace("frontend: %s: %s", folder, names.empty() ? std::string("empty") : fmt::merge(names, ", "));
 	}
 
 	// The fault handler's readable copy of the title's code (Utilities/Thread.cpp)

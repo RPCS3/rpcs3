@@ -6,12 +6,13 @@
 // Home: the selected game's own art (PS3_GAME/PIC1.PNG) behind its name and
 // Play now / Game settings / Patches, over a row of the games' ICON0.PNG tiles.
 // Library: Big Picture Mode's game grid. Settings: RPCS3's settings pages.
-// L1 / R1 change tabs.
+// Install: PS3 packages put in the title's folder over FTP. L1 / R1 change tabs.
 
 #include "Emu/RSX/Overlays/overlays.h"
 #include "Emu/RSX/Overlays/BigPicture/overlay_big_picture_game_info.h"
 #include "Emu/game_enumeration.h"
 #include "ps5_ui.h"
+#include "ps5_packages.h"
 
 #include <map>
 #include <memory>
@@ -89,7 +90,8 @@ namespace rsx::overlays
 		{
 			home,
 			library,
-			settings
+			settings,
+			install
 		};
 
 		// What the D-pad has on Home: the games row, or one of the buttons
@@ -307,6 +309,21 @@ namespace rsx::overlays
 		void handle_settings(pad_button button_press);
 		void compile_settings(compiled_resource& result);
 		void compile_intro_white(compiled_resource& result, f32 intro);
+
+		// The Install tab: the packages folder's .pkg, .rap and .edat files
+		// (ps5_packages.h), chosen and installed with RPCS3's installer, with
+		// their progress; the tabs wait while it installs
+		std::vector<ps5_packages::file> m_in_files;
+		std::unique_ptr<ps5_packages::installer> m_installer;
+		bool m_in_delete = false;   // a file is deleted once it has installed
+		bool m_in_reported = false; // the finished installation was logged, and the Library read again
+		s32 m_in_row = 0;           // in the list: three actions, then the files
+		s32 m_in_job_row = 0;       // in an installation's files
+		s32 m_in_scroll = 0;
+		void open_install_tab();
+		void handle_install(pad_button button_press);
+		void compile_install(compiled_resource& result);
+		bool installing() const;
 
 		animation_color_interpolate m_fade_animation{};
 

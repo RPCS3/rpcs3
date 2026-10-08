@@ -593,6 +593,7 @@ namespace rsx::overlays
 	{
 		m_delete_thread.reset();
 		m_pt_thread.reset();
+		m_installer.reset();
 
 		if (m_enumeration_thread)
 		{
@@ -699,7 +700,7 @@ namespace rsx::overlays
 		m_bar_divider.set_size(1, 24);
 		m_bar_divider.back_color = color4f(1.f, 1.f, 1.f, 0.28f);
 
-		for (const char* name : {"Home", "Library", "Settings"})
+		for (const char* name : {"Home", "Library", "Settings", "Install"})
 		{
 			m_tab_labels.push_back(make_label(name, 13, f_medium, c_text_dim));
 		}
@@ -892,6 +893,21 @@ namespace rsx::overlays
 				hints.emplace_back(static_cast<u8>(resource_config::standard_image_resource::R1), "Sections");
 			}
 		}
+		else if (m_tab == tab::install && m_installer && !m_installer->done())
+		{
+			hints.emplace_back(resource_config::cancel_button_resource(), m_installer->cancelled() ? "Stopping..." : "Stop");
+		}
+		else if (m_tab == tab::install && m_installer)
+		{
+			hints.emplace_back(resource_config::confirm_button_resource(), "Done");
+		}
+		else if (m_tab == tab::install)
+		{
+			const s32 files = static_cast<s32>(m_in_files.size());
+			const bool on_file = m_in_row >= 3 && m_in_row - 3 < files;
+			hints.emplace_back(resource_config::confirm_button_resource(), m_in_row == 0 ? "Install" : m_in_row == 1 ? "Change" : m_in_row == 2 ? "Look again" : on_file && m_in_files[m_in_row - 3].chosen ? "Leave out" : "Choose");
+			hints.emplace_back(resource_config::cancel_button_resource(), "Home");
+		}
 		else if (m_tab == tab::library && m_detail)
 		{
 			hints.emplace_back(resource_config::confirm_button_resource(), "Select");
@@ -920,7 +936,7 @@ namespace rsx::overlays
 			hints.emplace_back(resource_config::confirm_button_resource(), "Open");
 			hints.emplace_back(resource_config::cancel_button_resource(), "Home");
 		}
-		if (!m_gs_open && !m_pt_open)
+		if (!m_gs_open && !m_pt_open && !installing())
 		{
 			hints.emplace_back(static_cast<u8>(resource_config::standard_image_resource::L1), "");
 			hints.emplace_back(static_cast<u8>(resource_config::standard_image_resource::R1), "Tabs");
@@ -1391,6 +1407,10 @@ namespace rsx::overlays
 		else if (m_tab == tab::settings)
 		{
 			open_settings_tab();
+		}
+		else if (m_tab == tab::install)
+		{
+			open_install_tab();
 		}
 	}
 
@@ -2218,6 +2238,497 @@ namespace rsx::overlays
 
 		panel_ref.set_size(panel_w, static_cast<u16>(std::min<f32>(line_y + 2 - list_top, list_bottom - list_top)));
 		panel_ref.refresh();
+	}
+
+	bool ps5_launcher_dialog::installing() const
+	{
+		return m_installer && !m_installer->done();
+	}
+
+	void ps5_launcher_dialog::open_install_tab()
+	{
+		m_in_files = ps5_packages::scan();
+		m_in_row = std::clamp(m_in_row, 0, static_cast<s32>(m_in_files.size()) + 2);
+		m_in_scroll = 0;
+		launcher_log.notice("Install: %u files in %s", m_in_files.size(), ps5_packages::folder());
+		layout_hints();
+	}
+
+	void ps5_launcher_dialog::handle_install(pad_button button_press)
+	{
+		const bool up = button_press == pad_button::dpad_up || button_press == pad_button::ls_up;
+		const bool down = button_press == pad_button::dpad_down || button_press == pad_button::ls_down;
+		const bool left = button_press == pad_button::dpad_left || button_press == pad_button::ls_left;
+		const bool right = button_press == pad_button::dpad_right || button_press == pad_button::ls_right;
+
+		// An installation: its files can be looked through; it stops, or once
+		// it has ended goes away
+		if (m_installer)
+		{
+			const s32 count = static_cast<s32>(m_installer->files().size());
+			if ((up && m_in_job_row > 0) || (down && m_in_job_row + 1 < count))
+			{
+				m_in_job_row += up ? -1 : 1;
+				play_sound(sound_effect::cursor);
+			}
+			else if (!m_installer->done())
+			{
+				if (button_press == pad_button::circle && !m_installer->cancelled())
+				{
+					launcher_log.notice("Install: stopped by the player");
+					m_installer->cancel();
+					play_sound(sound_effect::cancel);
+					layout_hints();
+				}
+			}
+			else if (button_press == pad_button::cross || button_press == pad_button::circle)
+			{
+				m_installer.reset();
+				play_sound(sound_effect::accept);
+				open_install_tab();
+			}
+			return;
+		}
+
+		const s32 count = static_cast<s32>(m_in_files.size()) + 3;
+		if (up || down)
+		{
+			const s32 next = m_in_row + (up ? -1 : 1);
+			if (next >= 0 && next < count)
+			{
+				m_in_row = next;
+				play_sound(sound_effect::cursor);
+				layout_hints();
+			}
+			return;
+		}
+		if (button_press == pad_button::circle)
+		{
+			set_tab(tab::home);
+			return;
+		}
+
+		const bool act = button_press == pad_button::cross;
+		if (m_in_row == 0 && act)
+		{
+			std::vector<ps5_packages::file> chosen;
+			for (const ps5_packages::file& f : m_in_files)
+			{
+				if (f.chosen)
+				{
+					chosen.push_back(f);
+				}
+			}
+			if (chosen.empty())
+			{
+				return;
+			}
+			launcher_log.notice("Install: %u files, %s", chosen.size(), m_in_delete ? "each deleted once installed" : "kept");
+			m_installer = std::make_unique<ps5_packages::installer>(std::move(chosen), m_in_delete);
+			m_in_reported = false;
+			m_in_job_row = 0;
+			play_sound(sound_effect::accept);
+			layout_hints();
+		}
+		else if (m_in_row == 1 && (act || left || right))
+		{
+			m_in_delete = !m_in_delete;
+			play_sound(sound_effect::cursor);
+		}
+		else if (m_in_row == 2 && act)
+		{
+			play_sound(sound_effect::accept);
+			open_install_tab();
+		}
+		else if (m_in_row >= 3 && m_in_row < count && (act || left || right))
+		{
+			ps5_packages::file& f = m_in_files[m_in_row - 3];
+			const bool choose = act ? !f.chosen : right;
+			if (f.type != ps5_packages::kind::unreadable && choose != f.chosen)
+			{
+				f.chosen = choose;
+				play_sound(sound_effect::cursor);
+				layout_hints();
+			}
+		}
+	}
+
+	void ps5_launcher_dialog::compile_install(compiled_resource& result)
+	{
+		// The Settings tab's deep blue, glow and cards
+		{
+			overlay_element base;
+			base.set_size(virtual_width, virtual_height);
+			base.back_color = c_library_blue;
+			result.add(base.get_compiled());
+		}
+		const auto glow = [&](s16 cx, s16 cy, u16 w, u16 h, const color4f& color)
+		{
+			image_view view;
+			view.set_raw_image(m_glow_image.get());
+			view.back_color.a = 0.f;
+			view.fore_color = color;
+			view.set_pos(static_cast<s16>(cx - w / 2), static_cast<s16>(cy - h / 2));
+			view.set_size(w, h);
+			result.add(view.get_compiled());
+		};
+		glow(640, 340, 1600, 1000, color4f(0.1f, 0.2f, 0.65f, 0.34f));
+		glow(620, 360, 900, 700, color4f(c_accent.r, c_accent.g, c_accent.b, 0.06f));
+
+		const auto card = [&](s16 x, s16 y, u16 w, u16 h)
+		{
+			rounded_rect panel;
+			panel.set_pos(x, y);
+			panel.set_size(w, h);
+			panel.border_radius = 24;
+			panel.back_color = color4f(0.02f, 0.04f, 0.16f, 0.78f);
+			result.add(panel.get_compiled());
+			rounded_rect edge;
+			edge.set_pos(static_cast<s16>(x + 24), y);
+			edge.set_size(static_cast<u16>(w - 48), 3);
+			edge.border_radius = 2;
+			edge.back_color = c_accent;
+			result.add(edge.get_compiled());
+		};
+		const auto text = [&](std::string_view s, u16 size, std::string_view font_name, const color4f& colour, s16 x, f32 mid, u16 max_w = 0) -> std::unique_ptr<label>
+		{
+			auto l = make_label("", size, font_name, colour);
+			if (max_w)
+			{
+				fit_text(*l, s, max_w);
+			}
+			else
+			{
+				l->set_text(s);
+				l->auto_resize();
+			}
+			place(*l, x, mid);
+			result.add(l->get_compiled());
+			return l;
+		};
+		const auto wrapped = [&](std::string_view s, u16 size, std::string_view font_name, const color4f& colour, s16 x, s16 y, u16 w, u16 max_h) -> s16
+		{
+			label words;
+			words.set_font(size, font_name);
+			words.fore_color = colour;
+			words.back_color.a = 0.f;
+			words.set_padding(0);
+			words.set_wrap_text(true);
+			words.set_text(s);
+			words.set_pos(x, y);
+			words.set_size(w, max_h);
+			words.auto_resize(false, w, max_h);
+			result.add(words.get_compiled());
+			return static_cast<s16>(words.y + words.h);
+		};
+		const auto bar = [&](s16 x, s16 y, u16 w, u16 h, f32 fraction)
+		{
+			rounded_rect track;
+			track.set_pos(x, y);
+			track.set_size(w, h);
+			track.border_radius = h / 2;
+			track.back_color = color4f(1.f, 1.f, 1.f, 0.12f);
+			result.add(track.get_compiled());
+			if (const u16 filled = static_cast<u16>(std::lround(w * std::clamp(fraction, 0.f, 1.f))); filled >= h)
+			{
+				rounded_rect fill;
+				fill.set_pos(x, y);
+				fill.set_size(filled, h);
+				fill.border_radius = h / 2;
+				fill.back_color = c_accent;
+				result.add(fill.get_compiled());
+			}
+		};
+		const color4f c_fail(1.f, 0.48f, 0.42f, 1.f);
+
+		constexpr s16 top = 96;
+		constexpr u16 height = 552;
+
+		// What goes where, on the left
+		{
+			card(40, top, 250, height);
+			text(spaced("INSTALL"), 9, f_semibold, c_accent, 66, top + 38.f);
+			text("Packages", 22, f_bold, c_text, 64, top + 68.f);
+			s16 y = wrapped("PS3 packages (.pkg) and licences (.rap, .edat), put over FTP in", 11, f_regular, c_text_dim, 64, top + 90, 204, 60);
+			const std::string where = ps5_packages::ftp_folder();
+			const usz split = where.find("/rpcs3/");
+			text(where.substr(0, split + 1), 10, f_semibold, c_text, 64, y + 14.f);
+			text(split == umax ? "" : where.substr(split + 1), 10, f_semibold, c_text, 64, y + 30.f);
+			y = wrapped("A game installs into the Library. An update or an add-on goes into its game's folder: install a game's updates oldest first, each on the one before it.", 11, f_regular, c_text_dim, 64, static_cast<s16>(y + 50), 204, 120);
+			wrapped("The console's storage writes slowly after about a gigabyte, so a big game takes a long time here: RPCS3 on a PC installs it faster, and its dev_hdd0/game folder can be copied over.", 10, f_regular, c_text_dim, 64, static_cast<s16>(y + 14), 204, 140);
+		}
+
+		// The list, in the middle
+		constexpr s16 list_x = 310;
+		constexpr u16 list_w = 600;
+		card(list_x, top, list_w, height);
+		constexpr s16 row_left = list_x + 22;
+		constexpr u16 row_w = list_w - 44;
+		constexpr f32 row_h = 44.f;
+
+		// A file's two lines: its title, and what it is
+		const auto file_lines = [&](const ps5_packages::file& f, f32 mid, bool selected, bool lit, u16 room)
+		{
+			const color4f ink = lit ? c_button_text : (selected ? c_text : c_text_dim);
+			text(f.title, 13, selected ? f_semibold : f_medium, f.type == ps5_packages::kind::unreadable && !lit ? color4f(1.f, 1.f, 1.f, 0.45f) : ink, row_left + 16, mid - 8.f, room);
+			std::vector<std::string> parts;
+			if (!f.title_id.empty()) parts.push_back(f.title_id);
+			parts.push_back(ps5_packages::kind_text(f));
+			parts.push_back(ps5_packages::size_text(f.size));
+			text(fmt::merge(parts, "  ·  "), 10, f_medium, lit ? color4f(c_button_text.r, c_button_text.g, c_button_text.b, 0.7f) : color4f(1.f, 1.f, 1.f, 0.5f), row_left + 16, mid + 10.f, room);
+		};
+
+		const ps5_packages::file* shown = nullptr; // the selected file, for the right
+		std::string shown_message;
+		std::string action_help;
+
+		if (m_installer)
+		{
+			// An installation: everything's progress, then each file's
+			const auto& files = m_installer->files();
+			const s32 count = static_cast<s32>(files.size());
+			usz finished = 0;
+			for (usz i = 0; i < files.size(); i++)
+			{
+				const auto state = m_installer->state_of(i);
+				finished += state != ps5_packages::installer::state::waiting && state != ps5_packages::installer::state::installing;
+			}
+			const bool done = m_installer->done();
+			const f32 overall = m_installer->progress();
+			text(done ? (m_installer->cancelled() ? "Stopped" : "Finished") : (m_installer->cancelled() ? "Stopping..." : "Installing"), 22, f_bold, c_text, list_x + 32, top + 44.f);
+			text(done ? fmt::format("%u of %u files done. The Library has been read again.", finished, count) : fmt::format("%u of %u files done  ·  %d%%", finished, count, static_cast<int>(overall * 100.f)), 11, f_regular, c_text_dim, list_x + 32, top + 72.f);
+			bar(list_x + 32, top + 86, list_w - 64, 6, overall);
+
+			constexpr s32 visible = 9;
+			if (m_in_job_row < m_in_scroll) m_in_scroll = m_in_job_row;
+			if (m_in_job_row >= m_in_scroll + visible) m_in_scroll = m_in_job_row - visible + 1;
+			for (s32 r = m_in_scroll; r < count && r < m_in_scroll + visible; r++)
+			{
+				const ps5_packages::file& f = files[r];
+				const f32 y = top + 104.f + (r - m_in_scroll) * row_h;
+				const f32 mid = y + row_h / 2.f;
+				const bool selected = r == m_in_job_row;
+				if (selected)
+				{
+					rounded_rect pill;
+					pill.set_pos(row_left, static_cast<s16>(y + 2));
+					pill.set_size(row_w, static_cast<u16>(row_h - 4));
+					pill.border_radius = 12;
+					pill.back_color = color4f(1.f, 1.f, 1.f, 0.1f);
+					pill.border_size = 2;
+					pill.border_color = c_accent;
+					result.add(pill.get_compiled());
+				}
+				file_lines(f, mid, selected, false, row_w - 190);
+
+				const auto state = m_installer->state_of(r);
+				const s16 right = static_cast<s16>(row_left + row_w - 16);
+				switch (state)
+				{
+				case ps5_packages::installer::state::waiting:
+				{
+					auto l = make_label(m_installer->cancelled() ? "Not installed" : "Waiting", 11, f_medium, c_text_dim);
+					place(*l, static_cast<s16>(right - l->w), mid);
+					result.add(l->get_compiled());
+					break;
+				}
+				case ps5_packages::installer::state::installing:
+				{
+					const f32 fraction = m_installer->progress_of(r);
+					auto l = make_label(fmt::format("%d%%", static_cast<int>(fraction * 100.f)), 11, f_semibold, c_accent);
+					place(*l, static_cast<s16>(right - l->w), mid);
+					result.add(l->get_compiled());
+					bar(static_cast<s16>(right - 150), static_cast<s16>(mid - 3), 100, 6, fraction);
+					break;
+				}
+				case ps5_packages::installer::state::installed:
+				case ps5_packages::installer::state::failed:
+				case ps5_packages::installer::state::cancelled:
+				{
+					const bool ok = state == ps5_packages::installer::state::installed;
+					const bool failed = state == ps5_packages::installer::state::failed;
+					auto l = make_label(ok ? "Installed" : failed ? "Failed" : "Not installed", 11, f_semibold, ok ? c_accent : failed ? c_fail : c_text_dim);
+					place(*l, static_cast<s16>(right - l->w), mid);
+					result.add(l->get_compiled());
+					break;
+				}
+				}
+			}
+
+			if (m_in_job_row >= 0 && m_in_job_row < count)
+			{
+				shown = &files[m_in_job_row];
+				shown_message = m_installer->message_of(m_in_job_row);
+			}
+		}
+		else
+		{
+			// The folder: three actions, then its files
+			usz chosen = 0, licences = 0;
+			u64 bytes = 0;
+			for (const ps5_packages::file& f : m_in_files)
+			{
+				chosen += f.chosen;
+				licences += f.type == ps5_packages::kind::licence;
+				bytes += f.size;
+			}
+			const usz packages = m_in_files.size() - licences;
+			text("In the folder", 22, f_bold, c_text, list_x + 32, top + 44.f);
+			text(m_in_files.empty() ? std::string("Nothing yet.") : fmt::format("%u package%s, %u licence%s  ·  %s", packages, packages == 1 ? "" : "s", licences, licences == 1 ? "" : "s", ps5_packages::size_text(bytes)),
+				11, f_regular, c_text_dim, list_x + 32, top + 72.f);
+
+			const s32 count = static_cast<s32>(m_in_files.size()) + 3;
+			constexpr s32 visible = 10;
+			if (m_in_row < m_in_scroll) m_in_scroll = m_in_row;
+			if (m_in_row >= m_in_scroll + visible) m_in_scroll = m_in_row - visible + 1;
+			for (s32 r = m_in_scroll; r < count && r < m_in_scroll + visible; r++)
+			{
+				const f32 y = top + 96.f + (r - m_in_scroll) * row_h;
+				const f32 mid = y + row_h / 2.f;
+				const bool selected = r == m_in_row;
+				const bool action = r < 3;
+				if (selected)
+				{
+					rounded_rect pill;
+					pill.set_pos(row_left, static_cast<s16>(y + 2));
+					pill.set_size(row_w, static_cast<u16>(row_h - 4));
+					pill.border_radius = action ? static_cast<u16>((row_h - 4) / 2) : 12;
+					pill.back_color = action ? c_accent : color4f(1.f, 1.f, 1.f, 0.1f);
+					pill.border_size = action ? 0 : 2;
+					pill.border_color = c_accent;
+					result.add(pill.get_compiled());
+				}
+				if (r == 3)
+				{
+					overlay_element rule;
+					rule.set_pos(row_left + 16, static_cast<s16>(y - 1));
+					rule.set_size(row_w - 32, 1);
+					rule.back_color = color4f(1.f, 1.f, 1.f, 0.14f);
+					result.add(rule.get_compiled());
+				}
+
+				if (action)
+				{
+					const color4f ink = selected ? c_button_text : c_text;
+					const char* const names[] = {"Install the chosen files", "Delete each file once installed", "Look in the folder again"};
+					text(names[r], 14, selected ? f_bold : f_medium, ink, row_left + 16, mid);
+					std::string value;
+					if (r == 0) value = chosen ? fmt::format("%u chosen", chosen) : "Nothing chosen";
+					if (r == 1) value = m_in_delete ? "On" : "Off";
+					if (!value.empty())
+					{
+						auto l = make_label(value, 13, f_semibold, selected ? c_button_text : (r == 1 && m_in_delete ? c_accent : c_text_dim));
+						place(*l, static_cast<s16>(row_left + row_w - 18 - l->w), mid);
+						result.add(l->get_compiled());
+					}
+					continue;
+				}
+
+				const ps5_packages::file& f = m_in_files[r - 3];
+				file_lines(f, mid, selected, false, row_w - 110);
+				if (f.type == ps5_packages::kind::unreadable)
+				{
+					continue;
+				}
+
+				// Chosen or not: the Patches page's switch
+				constexpr u16 switch_w = 40;
+				constexpr u16 switch_h = 22;
+				const s16 switch_x = static_cast<s16>(row_left + row_w - 16 - switch_w);
+				rounded_rect track;
+				track.set_pos(switch_x, static_cast<s16>(mid - switch_h / 2.f));
+				track.set_size(switch_w, switch_h);
+				track.border_radius = switch_h / 2;
+				track.back_color = f.chosen ? c_accent : color4f(1.f, 1.f, 1.f, 0.16f);
+				result.add(track.get_compiled());
+				ellipse knob;
+				knob.set_size(16, 16);
+				knob.set_pos(static_cast<s16>(f.chosen ? switch_x + switch_w - 19 : switch_x + 3), static_cast<s16>(mid - 8));
+				knob.back_color = f.chosen ? c_button_text : color4f(1.f, 1.f, 1.f, 0.85f);
+				result.add(knob.get_compiled());
+			}
+			if (m_in_files.empty())
+			{
+				wrapped("No packages here yet. Put .pkg files in the folder over FTP, then choose Look in the folder again.", 12, f_regular, c_text_dim, row_left + 16, static_cast<s16>(top + 96 + 3 * row_h + 18), row_w - 32, 80);
+			}
+
+			if (m_in_row >= 3 && m_in_row - 3 < static_cast<s32>(m_in_files.size()))
+			{
+				shown = &m_in_files[m_in_row - 3];
+			}
+			else if (m_in_row == 0)
+			{
+				action_help = "Installs the chosen files in the order listed: licences, then games, then each game's updates and add-ons, oldest first. A file that fails does not stop the ones after it.";
+			}
+			else if (m_in_row == 1)
+			{
+				action_help = "Deletes each file from the packages folder once it has installed, to give its space back. A file that fails to install is kept.";
+			}
+			else
+			{
+				action_help = "Reads the packages folder again, after files were added or removed over FTP.";
+			}
+		}
+
+		// The selected file, or action, on the right
+		constexpr s16 panel_x = 930;
+		constexpr u16 panel_w = 310;
+		constexpr s16 inner_x = panel_x + 24;
+		constexpr u16 inner_w = panel_w - 48;
+		card(panel_x, top, panel_w, height);
+		if (!shown)
+		{
+			text(spaced("ABOUT"), 9, f_semibold, c_accent, inner_x, top + 38.f);
+			wrapped(action_help, 12, f_regular, c_text_dim, inner_x, top + 60, inner_w, 300);
+			return;
+		}
+
+		text(spaced(ps5_packages::kind_text(*shown)), 9, f_semibold, shown->type == ps5_packages::kind::unreadable ? c_fail : c_accent, inner_x, top + 38.f, inner_w);
+		s16 y = wrapped(shown->title, 15, f_semibold, c_text, inner_x, top + 54, inner_w, 64);
+
+		std::vector<std::pair<std::string, std::string>> lines;
+		if (!shown->title_id.empty()) lines.emplace_back("ID", shown->title_id);
+		if (!shown->version.empty()) lines.emplace_back("Version", shown->version);
+		if (!shown->target_version.empty()) lines.emplace_back("Goes on version", shown->target_version);
+		if (shown->type == ps5_packages::kind::update || shown->type == ps5_packages::kind::addon)
+		{
+			lines.emplace_back("Installed now", shown->installed_version.empty() ? "No update yet" : "Version " + shown->installed_version);
+		}
+		lines.emplace_back("Size", ps5_packages::size_text(shown->size));
+		lines.emplace_back("File", shown->name);
+
+		f32 line_y = y + 30.f;
+		for (const auto& [caption, value] : lines)
+		{
+			auto left_label = text(caption, 11, f_medium, c_text_dim, inner_x, line_y);
+			auto right_label = make_label("", 11, f_semibold, c_text);
+			fit_text(*right_label, value, static_cast<u16>(inner_w - left_label->w - 14));
+			place(*right_label, static_cast<s16>(inner_x + inner_w - right_label->w), line_y);
+			result.add(right_label->get_compiled());
+			line_y += 24.f;
+		}
+
+		std::string note = shown_message;
+		if (note.empty() && !m_installer)
+		{
+			if (shown->type == ps5_packages::kind::unreadable)
+			{
+				note = "RPCS3 could not read this file as a PS3 package. It may be cut short (copy it again), or be another console's.";
+			}
+			else if (shown->type == ps5_packages::kind::update && !shown->target_version.empty() && shown->installed_version != shown->target_version)
+			{
+				note = fmt::format("This update goes on version %s. Install the updates up to that version first: chosen together, they install in order.", shown->target_version);
+			}
+		}
+		if (!note.empty())
+		{
+			overlay_element rule;
+			rule.set_pos(inner_x, static_cast<s16>(line_y - 4));
+			rule.set_size(inner_w, 1);
+			rule.back_color = color4f(1.f, 1.f, 1.f, 0.12f);
+			result.add(rule.get_compiled());
+			wrapped(note, 11, f_regular, c_text_dim, inner_x, static_cast<s16>(line_y + 8), inner_w, static_cast<u16>(std::max(40.f, top + height - 20.f - (line_y + 8))));
+		}
 	}
 
 	void ps5_launcher_dialog::open_settings_tab()
@@ -3519,6 +4030,24 @@ namespace rsx::overlays
 				m_play_intro = false;
 			}
 
+			// An installation that has ended: logged, and the Library read again
+			if (m_installer && m_installer->done() && !std::exchange(m_in_reported, true))
+			{
+				usz installed = 0, failed = 0, stopped = 0;
+				for (usz i = 0; i < m_installer->files().size(); i++)
+				{
+					switch (m_installer->state_of(i))
+					{
+					case ps5_packages::installer::state::installed: installed++; break;
+					case ps5_packages::installer::state::failed: failed++; break;
+					default: stopped++; break;
+					}
+				}
+				launcher_log.notice("Install: ended, %u installed, %u failed, %u not installed", installed, failed, stopped);
+				m_reload_requested = true;
+				layout_hints();
+			}
+
 			// The game's patches, once read
 			std::unique_ptr<ps5_patches::game> patches;
 			{
@@ -3662,11 +4191,17 @@ namespace rsx::overlays
 			return;
 		}
 
-		// Tabs change from anywhere at the top level
-		if (button_press == pad_button::L1 || button_press == pad_button::R1)
+		// Tabs change from anywhere at the top level, except while packages install
+		if ((button_press == pad_button::L1 || button_press == pad_button::R1) && !installing())
 		{
 			const s32 step = button_press == pad_button::L1 ? -1 : 1;
-			set_tab(static_cast<tab>(std::clamp(static_cast<s32>(m_tab) + step, 0, 2)));
+			set_tab(static_cast<tab>(std::clamp(static_cast<s32>(m_tab) + step, 0, static_cast<s32>(tab::install))));
+			return;
+		}
+
+		if (m_tab == tab::install)
+		{
+			handle_install(button_press);
 			return;
 		}
 
@@ -3850,9 +4385,13 @@ namespace rsx::overlays
 		{
 			compile_library(result);
 		}
-		else
+		else if (m_tab == tab::settings)
 		{
 			compile_settings(result);
+		}
+		else
+		{
+			compile_install(result);
 		}
 
 		// The top bar comes down after the logo has arrived

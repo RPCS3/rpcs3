@@ -13,6 +13,7 @@ add_library(rpcs3_ps5 STATIC
     ps5_ui.cpp
     ps5_pause_menu.cpp
     ps5_patches.cpp
+    ps5_packages.cpp
     ps5_fdtrack.cpp
     ps5_sound.cpp
     ../rpcs3qt/emu_settings_type.cpp
