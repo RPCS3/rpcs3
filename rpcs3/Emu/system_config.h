@@ -274,6 +274,7 @@ struct cfg_root : cfg::node
 		cfg::_int <4, 250> desired_buffer_duration{ this, "Desired Audio Buffer Duration", 34, true };
 		cfg::_bool enable_time_stretching{ this, "Enable Time Stretching", false, true };
 		cfg::_bool disable_sampling_skip{ this, "Disable Sampling Skip", false, true };
+		cfg::uint<0, 200> late_audio_wait{ this, "Late Audio Wait", 0, true }; // PS5: ms waited for a late game's sound beyond cellAudio's own timeouts
 		cfg::_int<0, 100> time_stretching_threshold{ this, "Time Stretching Threshold", 75, true };
 		cfg::_enum<microphone_handler> microphone_type{ this, "Microphone Type", microphone_handler::null };
 		cfg::string microphone_devices{ this, "Microphone Devices", "@@@@@@@@@@@@" };

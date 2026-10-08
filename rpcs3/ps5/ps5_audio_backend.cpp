@@ -10,6 +10,7 @@
 #include "stdafx.h"
 #include "ps5_audio_backend.h"
 #include "Utilities/Thread.h"
+#include "Emu/system_config.h"
 
 #include <algorithm>
 #include <chrono>
@@ -23,6 +24,7 @@ LOG_CHANNEL(ps5_audio, "PS5Audio");
 // cellAudio.cpp: the audio periods the game was late for (its own stutter)
 extern atomic_t<u32> g_ps5_audio_periods_skipped;
 extern atomic_t<u32> g_ps5_audio_periods_partial;
+extern atomic_t<u32> g_ps5_audio_periods_saved;
 
 extern "C"
 {
@@ -177,9 +179,11 @@ void ps5_audio_backend::output_loop()
 			if (grains)
 			{
 				// And the game's side: periods of its audio skipped or mixed partly
-				// silent because it was late (RPCS3's sampling skip)
-				ps5_audio.notice("Port %d: %u grains in 10 s, %u short and %u empty from the emulator, longest wait %.1f ms; the game late for %u periods (skipped), %u more partly silent",
-					m_port, grains, short_reads, empty, longest_us / 1000., g_ps5_audio_periods_skipped.exchange(0), g_ps5_audio_periods_partial.exchange(0));
+				// silent because it was late (RPCS3's sampling skip), and those
+				// Late Audio Wait waited for
+				ps5_audio.notice("Port %d: %u grains in 10 s, %u short and %u empty from the emulator, longest wait %.1f ms; the game late for %u periods (skipped), %u more partly silent, %u saved by Late Audio Wait (%u ms)",
+					m_port, grains, short_reads, empty, longest_us / 1000., g_ps5_audio_periods_skipped.exchange(0), g_ps5_audio_periods_partial.exchange(0),
+					g_ps5_audio_periods_saved.exchange(0), g_cfg.audio.late_audio_wait.get());
 			}
 			grains = short_reads = empty = 0;
 			longest_us = 0;

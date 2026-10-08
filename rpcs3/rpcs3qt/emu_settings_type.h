@@ -110,6 +110,7 @@ enum class emu_settings_type
 	OutputScalingMode,
 	FrameGeneration, // PS5: frame generation (VKFrameGen.h)
 	DisableSamplingSkip, // PS5: offered in the launcher's Audio tab
+	LateAudioWait, // PS5: cellAudio's wait for a late game's sound
 	ForceHwMSAAResolve,
 	DisableAsyncHostMM,
 	UseReBAR,

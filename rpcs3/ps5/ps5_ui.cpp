@@ -238,6 +238,7 @@ namespace rsx::overlays::ps5ui
 			// Adjusted 20 to 40 µs at a time, as RPCS3's tooltip says
 			{"Driver Wake-Up Delay", {"0", "20", "40", "60", "80", "100", "150", "200", "300", "400", "500", "750", "1000", "1500", "2000", "3000", "5000"}},
 			{"Vblank Rate", {"30", "50", "60", "75", "90", "100", "120", "144", "165", "180", "240", "300", "360", "480", "600"}},
+			{"Late Audio Wait", {"0", "10", "20", "30", "40", "50", "60", "80", "100"}},
 			{"Max LLVM Compile Threads", {"0", "1", "2", "3", "4", "6", "8", "10", "12", "16"}},
 		};
 		if (const auto it = offered.find(key); it != offered.end())
@@ -368,6 +369,7 @@ namespace rsx::overlays::ps5ui
 		if (key == "Desired Audio Buffer Duration" || key == "Metrics update interval (ms)") return value + " ms";
 		if (key == "Driver Wake-Up Delay") return value + " µs";
 		if (key == "Vblank Rate") return value + " Hz";
+		if (key == "Late Audio Wait") return value == "0" ? std::string("Off") : value + " ms";
 		if (key == "Opacity (%)") return value + "%";
 		return value;
 	}

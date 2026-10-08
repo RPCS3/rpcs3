@@ -52,9 +52,15 @@ PS5_EXTRA = [
      "motion looks about twice as smooth. The game itself runs no faster, each of its frames reaches "
      "the screen one refresh (17 ms) later, and fast motion, text and the HUD can shimmer or smear."),
     ("TimeStretchingThreshold", "Audio", "DisableSamplingSkip", "Disable sampling skip",
-     "When a game is late with its sound, the emulator normally skips that bit of sound, which is heard "
-     "as stutter. On, it waits for the game instead: with time stretching on, the sound is stretched "
-     "over the wait rather than cut. Can slow a game that is late with its sound often."),
+     "When a game is late with its sound, the emulator waits for it a little (about 11 ms) before skipping "
+     "that bit of the sound. On, it never waits: the sound keeps strict time, and every late moment is "
+     "skipped, heard as stutter. GTA IV on the console skipped 8 to 17 bits every 10 s with it on, 0 to 3 "
+     "with it off. Some games that slow down waiting for their sound run better with it on."),
+    ("DisableSamplingSkip", "Audio", "LateAudioWait", "Wait for late game sound",
+     "How much longer than the emulator's own wait (about 11 ms) to wait for a game that is late with its "
+     "sound, before skipping that bit of it (heard as a click or stutter). The sound already buffered "
+     "plays on meanwhile, so a wait shorter than the audio buffer should not be heard. Off is RPCS3's own "
+     "behaviour. Has no effect while Disable sampling skip is on."),
 ]
 
 # Labels clearer alone than under the dialog's shared group boxes

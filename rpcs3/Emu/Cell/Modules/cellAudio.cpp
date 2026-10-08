@@ -225,6 +225,7 @@ float* audio_ringbuffer::get_current_buffer() const
 // and cleared every ten seconds
 atomic_t<u32> g_ps5_audio_periods_skipped = 0; // every port untouched past the timeout: time advanced, nothing mixed
 atomic_t<u32> g_ps5_audio_periods_partial = 0; // some ports untouched past the timeout: mixed, silence for those
+atomic_t<u32> g_ps5_audio_periods_saved = 0; // late past the timeout, but in time for Late Audio Wait: mixed whole
 #endif
 
 u64 audio_ringbuffer::get_enqueued_samples() const
@@ -931,6 +932,11 @@ void cell_audio_thread::operator()()
 
 	u32 loop_count = 0;
 
+#ifdef __PROSPERO__
+	// PS5: this period is already past the timeouts above, and only Late Audio Wait still waits for it
+	bool ps5_waiting_late = false;
+#endif
+
 	// Main cellAudio loop
 	while (thread_ctrl::state() != thread_state::aborting)
 	{
@@ -1126,13 +1132,23 @@ void cell_audio_thread::operator()()
 
 			if (untouched > untouched_expected)
 			{
+#ifdef __PROSPERO__
+				// PS5: Late Audio Wait, on top of both timeouts: a game whose sound is often a little late
+				// (GTA IV's, on the console) has it mixed whole instead of skipped, while the buffer covers the wait
+				const u64 late_wait = g_cfg.audio.late_audio_wait * 1000ull;
+#else
+				constexpr u64 late_wait = 0;
+#endif
 				// Games may sometimes "skip" audio periods entirely if they're falling behind (a sort of "frameskip" for audio)
 				// As such, if the game doesn't touch buffers for too long we stop waiting for them
 				if (
-					(untouched == active_ports && time_since_last_period > cfg.fully_untouched_timeout) ||
-					(time_since_last_period > cfg.partially_untouched_timeout) || g_cfg.audio.disable_sampling_skip
+					(untouched == active_ports && time_since_last_period > cfg.fully_untouched_timeout + late_wait) ||
+					(time_since_last_period > cfg.partially_untouched_timeout + late_wait) || g_cfg.audio.disable_sampling_skip
 				   )
 				{
+#ifdef __PROSPERO__
+					ps5_waiting_late = false;
+#endif
 					expect_untouched(untouched);
 
 					if (untouched >= active_ports)
@@ -1158,6 +1174,10 @@ void cell_audio_thread::operator()()
 				}
 				else
 				{
+#ifdef __PROSPERO__
+					ps5_waiting_late = ps5_waiting_late || (untouched == active_ports && time_since_last_period > cfg.fully_untouched_timeout) ||
+						time_since_last_period > cfg.partially_untouched_timeout;
+#endif
 					cellAudio.trace("waiting: untouched=%u/%u (expected=%u), enqueued_buffers=%llu", untouched, active_ports, untouched_expected, enqueued_buffers);
 					thread_ctrl::wait_for(1000);
 					continue;
@@ -1175,6 +1195,14 @@ void cell_audio_thread::operator()()
 				advance(timestamp);
 				continue;
 			}
+
+#ifdef __PROSPERO__
+			// The game's sound came in during Late Audio Wait: a period not skipped
+			if (std::exchange(ps5_waiting_late, false) && !waited_long_enough)
+			{
+				g_ps5_audio_periods_saved++;
+			}
+#endif
 
 			// Wait for buffer(s) to be completely filled
 			if (!waited_long_enough && in_progress > 0)
