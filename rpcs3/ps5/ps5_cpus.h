@@ -35,3 +35,7 @@ std::string ps5_cpu_own_core_text();
 
 // The CPU the calling thread runs on now
 s32 ps5_current_cpu();
+
+// Whether a thread put on one CPU stays there, by each of the console's ways
+// of putting it there: what each did, for the trace
+std::string ps5_test_pinning();

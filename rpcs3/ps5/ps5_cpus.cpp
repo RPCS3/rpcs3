@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cerrno>
 #include <bit>
 #include <chrono>
 #include <thread>
@@ -113,6 +114,131 @@ namespace
 s32 ps5_current_cpu()
 {
 	return sceKernelGetCurrentCpu();
+}
+
+// The console's other ways to keep a thread on a CPU, bound by name: an
+// attribute at creation, and FreeBSD's cpuset_setaffinity (libkernel exports
+// both, beside the scePthreadSetaffinity the platform layer calls)
+extern "C" int ps5_attr_setaffinity(pthread_attr_t* attr, size_t size, const void* set) __asm__("pthread_attr_setaffinity_np");
+extern "C" int ps5_cpuset_setaffinity(int level, int which, s64 id, size_t size, const void* set) __asm__("cpuset_setaffinity");
+
+namespace
+{
+	// Where a spinning thread runs, sampled for `ms`
+	struct cpu_samples
+	{
+		u32 counts[64]{};
+		u32 total = 0;
+
+		void take(f64 ms)
+		{
+			const auto end = std::chrono::steady_clock::now() + std::chrono::duration<f64, std::milli>(ms);
+			for (u32 round = 1;; round++)
+			{
+				for (u32 i = 0; i < 2048; i++)
+				{
+					__asm__ volatile("" ::: "memory");
+				}
+				const s32 cpu = sceKernelGetCurrentCpu();
+				counts[cpu >= 0 && cpu < 64 ? cpu : 63]++;
+				total++;
+				if (round % 64 == 0 && std::chrono::steady_clock::now() >= end)
+				{
+					break;
+				}
+			}
+		}
+
+		std::string describe(s32 target) const
+		{
+			if (!total)
+			{
+				return "no samples";
+			}
+			u32 seen = 0;
+			s32 top = 0;
+			for (s32 cpu = 0; cpu < 64; cpu++)
+			{
+				seen += counts[cpu] != 0;
+				top = counts[cpu] > counts[top] ? cpu : top;
+			}
+			std::string text = target >= 0 ? fmt::format("on CPU %d %.0f%% of the time", target, 100.0 * counts[target] / total) : fmt::format("on %u CPUs", seen);
+			if (target < 0 || counts[target] < total)
+			{
+				fmt::append(text, " (%u CPUs, CPU %d the commonest at %.0f%%)", seen, top, 100.0 * counts[top] / total);
+			}
+			return text;
+		}
+	};
+
+	struct pin_test
+	{
+		s32 target;
+		int how; // 0 none, 1 scePthreadSetaffinity once running, 2 an attribute at creation, 3 cpuset_setaffinity once running
+		int result = -1;
+		cpu_samples samples;
+	};
+
+	void* pin_test_body(void* opaque)
+	{
+		pin_test& test = *static_cast<pin_test*>(opaque);
+		const u64 mask = 1ull << test.target;
+		if (test.how == 1)
+		{
+			test.result = ps5_pthread_setaffinity_np(pthread_self(), sizeof(mask), &mask);
+		}
+		else if (test.how == 3)
+		{
+			// CPU_LEVEL_WHICH, CPU_WHICH_TID, this thread; FreeBSD's cpuset_t is 32 bytes
+			u64 set[4]{mask};
+			test.result = ps5_cpuset_setaffinity(3, 1, -1, sizeof(set), set);
+			if (test.result != 0)
+			{
+				test.result = ps5_cpuset_setaffinity(3, 1, -1, sizeof(mask), &mask) == 0 ? 0 : (errno ? errno : -1);
+			}
+		}
+		test.samples.take(250.0);
+		return nullptr;
+	}
+}
+
+std::string ps5_test_pinning()
+{
+	u64 mask = 0;
+	if (ps5_pthread_getaffinity_np(pthread_self(), sizeof(mask), &mask) != 0 || !mask)
+	{
+		return "the title's CPUs could not be read";
+	}
+	const s32 target = 63 - std::countl_zero(mask);
+	std::string out;
+	for (int how = 0; how < 4; how++)
+	{
+		pin_test test{how ? target : -1, how};
+		pthread_attr_t attr;
+		pthread_attr_init(&attr);
+		if (how == 2)
+		{
+			const u64 one = 1ull << target;
+			test.result = ps5_attr_setaffinity(&attr, sizeof(one), &one);
+		}
+		pthread_t thread;
+		const int created = pthread_create(&thread, &attr, pin_test_body, &test);
+		pthread_attr_destroy(&attr);
+		if (created != 0)
+		{
+			fmt::append(out, "%stest %d: no thread (%d)", out.empty() ? "" : "; ", how, created);
+			continue;
+		}
+		pthread_join(thread, nullptr);
+		static constexpr const char* names[] = {"unpinned", "scePthreadSetaffinity once running", "an affinity attribute at creation", "cpuset_setaffinity once running"};
+		fmt::append(out, "%s%s", out.empty() ? "" : "; ", names[how]);
+		if (how)
+		{
+			fmt::append(out, " (result %d)", test.result);
+		}
+		fmt::append(out, ": %s", test.samples.describe(test.target));
+	}
+	return out;
 }
 
 std::string ps5_measure_cpus()

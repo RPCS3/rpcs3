@@ -920,6 +920,7 @@ int run(const char* boot_path)
 
 	// Which of the title's CPUs share a core, for "Own core for the busy SPU" (ps5_cpus.h)
 	trace("frontend: CPUs: %s", ps5_measure_cpus());
+	trace("frontend: a thread put on one CPU: %s", ps5_test_pinning());
 
 	// The fault handler's readable copy of the title's code (Utilities/Thread.cpp)
 	if (ps5_load_code_copy("/app0/rpcs3-code.bin"))
