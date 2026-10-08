@@ -77,21 +77,19 @@ protected:
 class qt_video_source_wrapper : public video_source
 {
 public:
-	qt_video_source_wrapper();
+	qt_video_source_wrapper() : video_source() {}
 	virtual ~qt_video_source_wrapper();
 
 	void set_iso_path(const std::string& iso_path) override;
 	void set_video_path(const std::string& video_path, bool video_in_archive) override;
 	void set_audio_path(const std::string& audio_path, bool audio_in_archive) override;
 	void set_active(bool active) override;
-	bool get_active() const override { const qt_video_source* source = get_ready_source(); return source && source->get_active(); }
-	bool has_new() const override { const qt_video_source* source = get_ready_source(); return source && source->has_new(); }
+	bool get_active() const override;
+	bool has_new() const override { return m_qt_video_source && m_qt_video_source->has_new(); }
 	void get_image(std::vector<u8>& data, int& w, int& h, int& ch, int& bpp) override;
 
 private:
-	// The source is created asynchronously on the main thread, so emulator threads have to check if it's ready
-	qt_video_source* get_ready_source() const { return m_ready ? m_qt_video_source.get() : nullptr; }
+	void init_video_source();
 
 	std::unique_ptr<qt_video_source> m_qt_video_source;
-	atomic_t<bool> m_ready = false;
 };
