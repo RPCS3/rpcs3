@@ -192,6 +192,11 @@ void GLGSRender::on_init_thread()
 		backend_config.supports_hw_instanced_rendering = false;
 	}
 
+	if (gl_caps.ARB_framebuffer_no_attachments_supported)
+	{
+		backend_config.supports_framebufferless_rendering = true;
+	}
+
 	if (!gl_caps.ARB_bindless_texture_supported)
 	{
 		switch (shadermode)

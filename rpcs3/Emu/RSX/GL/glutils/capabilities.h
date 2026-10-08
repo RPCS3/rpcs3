@@ -44,6 +44,7 @@ namespace gl
 		bool ARB_shader_texture_image_samples_supported = false;
 		bool EXT_texture_compression_s3tc_supported = false;
 		bool ARB_shader_storage_buffer_object_supported = false;
+		bool ARB_framebuffer_no_attachments_supported = false;
 
 		bool vendor_INTEL = false;  // has broken GLSL compiler
 		bool vendor_AMD = false;    // has broken ARB_multidraw

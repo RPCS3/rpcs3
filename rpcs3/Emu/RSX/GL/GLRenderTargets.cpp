@@ -268,6 +268,18 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 
 	ensure(m_draw_fbo);
 
+	if (!depth_stencil_target &&
+		std::all_of(color_targets.begin(), color_targets.end(), FN(x == GL_NONE)))
+	{
+		// Framebufferless rendering. Raster dimensions must be supplied explicitly and match what real surfaces would have used.
+		const auto [raster_width, raster_height] = rsx::apply_resolution_scale<true>(
+			resolution_scaling_config, m_framebuffer_layout.width, m_framebuffer_layout.height);
+
+		const GLint raster_samples = (g_cfg.video.antialiasing_level == msaa_level::_auto) ? samples : 1;
+		m_draw_fbo->set_default_extents({ raster_width, raster_height });
+		m_draw_fbo->set_default_samples(raster_samples);
+	}
+
 	switch (rsx::method_registers.surface_color_target())
 	{
 	case rsx::surface_target::none: break;

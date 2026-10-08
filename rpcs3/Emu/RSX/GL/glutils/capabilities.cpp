@@ -96,6 +96,8 @@ namespace gl
 
 		CHECK_EXTENSION_SUPPORT(ARB_shader_storage_buffer_object);
 
+		CHECK_EXTENSION_SUPPORT(ARB_framebuffer_no_attachments);
+
 #undef CHECK_EXTENSION_SUPPORT
 
 		// Set GLSL version
