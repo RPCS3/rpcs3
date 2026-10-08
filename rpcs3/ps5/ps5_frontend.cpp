@@ -18,6 +18,7 @@ std::string ps5_open_files_report(); // ps5_fdtrack.cpp
 #include "ps5_firmware.h"
 #include "ps5_embedded_files.h"
 #include "ps5_audio_backend.h"
+#include "ps5_cpus.h"
 #include "Input/pad_thread.h"
 
 #include "util/logs.hpp"
@@ -89,6 +90,7 @@ std::u32string utf8_to_u32string(std::string_view utf8_string);
 
 u32 spu_accurate_xfloat_functions(); // SPULLVMRecompiler.cpp: collision functions compiled with accurate xfloat
 extern atomic_t<u64> g_ps5_getllar_waits[64][2]; // SPUThread.cpp: each SPU slot's GETLLAR polls answered by busy waiting, and by sleeping
+extern atomic_t<u32> g_ps5_spu_cpus[64][16]; // SPUThread.cpp: each SPU slot's polls by the CPU it was on
 extern atomic_t<u64> g_ps5_frames_generated; // VKFrameGen.cpp: frames made between the game's
 
 namespace
@@ -202,6 +204,7 @@ namespace
 		const f64 window = s_last_us ? (now_us - s_last_us) / 1e6 : 5.0;
 		s_last_us = now_us;
 		u64 waits[64][2]{};
+		u32 spu_cpus[64][16]{};
 		for (u32 slot = 0; slot < 64; slot++)
 		{
 			for (u32 kind = 0; kind < 2; kind++)
@@ -209,6 +212,10 @@ namespace
 				const u64 count = g_ps5_getllar_waits[slot][kind].load();
 				waits[slot][kind] = count - s_waits[slot][kind];
 				s_waits[slot][kind] = count;
+			}
+			for (u32 cpu = 0; cpu < 16; cpu++)
+			{
+				spu_cpus[slot][cpu] = g_ps5_spu_cpus[slot][cpu].exchange(0);
 			}
 		}
 
@@ -232,7 +239,26 @@ namespace
 					fmt::append(name, " 0x%x %.0f%%", pcs[i].first, 100.0 * pcs[i].second / load.samples);
 				}
 				const u64* counts = waits[load.spu_index % 64];
-				fmt::append(name, "; polls spun %.0f/s, slept %.0f/s)", counts[0] / window, counts[1] / window);
+				fmt::append(name, "; polls spun %.0f/s, slept %.0f/s", counts[0] / window, counts[1] / window);
+
+				// And the CPUs it polled on, the two commonest
+				std::pair<u32, u32> cpus[16];
+				u64 polls = 0;
+				for (u32 cpu = 0; cpu < 16; cpu++)
+				{
+					cpus[cpu] = {spu_cpus[load.spu_index % 64][cpu], cpu};
+					polls += cpus[cpu].first;
+				}
+				if (polls)
+				{
+					std::sort(std::begin(cpus), std::end(cpus), [](const auto& a, const auto& b) { return a.first > b.first; });
+					fmt::append(name, "; on CPU %u %.0f%%", cpus[0].second, 100.0 * cpus[0].first / polls);
+					if (cpus[1].first)
+					{
+						fmt::append(name, ", %u %.0f%%", cpus[1].second, 100.0 * cpus[1].first / polls);
+					}
+				}
+				name += ")";
 			}
 			loads.emplace_back(share, std::move(name));
 		}
@@ -891,6 +917,9 @@ int run(const char* boot_path)
 		}
 		trace("frontend: %s: %s", folder, names.empty() ? std::string("empty") : fmt::merge(names, ", "));
 	}
+
+	// Which of the title's CPUs share a core, for "Own core for the busy SPU" (ps5_cpus.h)
+	trace("frontend: CPUs: %s", ps5_measure_cpus());
 
 	// The fault handler's readable copy of the title's code (Utilities/Thread.cpp)
 	if (ps5_load_code_copy("/app0/rpcs3-code.bin"))

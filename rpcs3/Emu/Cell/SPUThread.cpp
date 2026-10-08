@@ -52,6 +52,9 @@
 // as running, or by sleeping until the reservation changes. The trace's
 // busiest-threads line reports them (ps5_frontend.cpp)
 atomic_t<u64> g_ps5_getllar_waits[64][2]{};
+atomic_t<u32> g_ps5_spu_cpus[64][16]{}; // each SPU slot's polls by the CPU it was on (ps5_frontend.cpp's status lines)
+s32 ps5_cpu_take_own_core(); // rpcs3/ps5/ps5_cpus.cpp
+s32 ps5_current_cpu();
 #endif
 
 // LUTs for SPU instructions
@@ -1507,6 +1510,14 @@ void spu_thread::cpu_task()
 		if (const auto name = spu_tname.load(); name && name->find("CellSpursKernel") != umax)
 		{
 			thread_ctrl::set_native_priority(1);
+
+			// And with "Own core for the busy SPU", alone on one CPU of a core
+			// the rest keep off (ps5_cpus.h)
+			if (const s32 cpu = ps5_cpu_take_own_core(); cpu >= 0)
+			{
+				thread_ctrl::set_thread_affinity_mask(1ull << cpu);
+				spu_log.success("'%s' runs alone on CPU %d (now on %d); the other threads keep off its core", *name, cpu, ps5_current_cpu());
+			}
 		}
 	}
 #endif
@@ -4428,6 +4439,7 @@ bool spu_thread::process_mfc_cmd()
 							{
 #ifdef __PROSPERO__
 								g_ps5_getllar_waits[index % 64][0].raw()++;
+								g_ps5_spu_cpus[index % 64][ps5_current_cpu() & 15].raw()++;
 #endif
 								getllar_wait_time[(addr % SPU_LS_SIZE) / 128].front() = 0;
 
@@ -4475,6 +4487,7 @@ bool spu_thread::process_mfc_cmd()
 						// Spinning, might as well yield cpu resources
 #ifdef __PROSPERO__
 						g_ps5_getllar_waits[index % 64][1].raw()++;
+						g_ps5_spu_cpus[index % 64][ps5_current_cpu() & 15].raw()++;
 #endif
 						state += cpu_flag::wait;
 

@@ -104,6 +104,8 @@ DYNAMIC_IMPORT_RENAME("Kernel32.dll", SetThreadDescriptionImport, "SetThreadDesc
 #include <ps5platform/kernel.h>
 #include <ps5platform/libc.h>
 
+u64 ps5_cpu_kept_mask(); // rpcs3/ps5/ps5_cpus.cpp: the core kept for one busy SPU
+
 // PS5: a thread's end runs its C++ thread_local destructors before libkernel's
 // key destructors, while its thread-local storage (emulated) is whole. Plain
 // pthread_exit ran them after emulated TLS had freed it: the PS3 home menu's
@@ -3052,6 +3054,14 @@ void thread_base::initialize(void (*error_cb)())
 	}
 #endif
 
+#ifdef __PROSPERO__
+	// PS5: the core kept for one busy SPU, with "Own core for the busy SPU" on, is kept free of every other thread (rpcs3/ps5/ps5_cpus.h)
+	if (const u64 kept = ps5_cpu_kept_mask(); kept && (thread_ctrl::process_affinity_mask & ~kept))
+	{
+		thread_ctrl::set_thread_affinity_mask(thread_ctrl::process_affinity_mask & ~kept);
+	}
+#endif
+
 	// Initialize TLS variables
 	thread_ctrl::g_tls_this_thread = this;
 
@@ -4171,6 +4181,17 @@ void thread_ctrl::set_thread_affinity_mask(u64 mask)
 	thread_affinity_policy_data_t policy = { static_cast<integer_t>(std::countr_zero(mask)) };
 	thread_port_t mach_thread = pthread_mach_thread_np(pthread_self());
 	thread_policy_set(mach_thread, THREAD_AFFINITY_POLICY, reinterpret_cast<thread_policy_t>(&policy), !mask ? 0 : 1);
+#elif defined(__PROSPERO__)
+	// PS5: through the platform layer, which takes a set of any size: libc's refuses FreeBSD's 32-byte cpuset_t (ERANGE)
+	if (!mask)
+	{
+		mask = process_affinity_mask;
+	}
+
+	if (int err = ps5_pthread_setaffinity_np(pthread_self(), sizeof(mask), &mask))
+	{
+		sig_log.error("Failed to set thread affinity 0x%x: error %d.", mask, err);
+	}
 #elif !defined(ANDROID) && (defined(__linux__) || defined(__DragonFly__) || defined(__FreeBSD__))
 	if (!mask)
 	{
@@ -4223,6 +4244,16 @@ u64 thread_ctrl::get_thread_affinity_mask()
 
 	sig_log.error("Failed to get thread affinity mask.");
 	return 0;
+#elif defined(__PROSPERO__)
+	// PS5: as set_thread_affinity_mask; thirteen CPUs, 0x1fff, on the console
+	u64 mask = 0;
+	if (int err = ps5_pthread_getaffinity_np(pthread_self(), sizeof(mask), &mask); err || !mask)
+	{
+		sig_log.error("Failed to get thread affinity mask: error %d.", err);
+		return 0;
+	}
+
+	return mask;
 #elif !defined(ANDROID) && (defined(__linux__) || defined(__DragonFly__) || defined(__FreeBSD__))
 	cpu_set_t cs;
 	CPU_ZERO(&cs);

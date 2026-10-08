@@ -47,6 +47,11 @@ EXTRA = [
 # The PS5 port's own settings, which the desktop dialog lacks:
 # (after this one, tab, setting, label, help)
 PS5_EXTRA = [
+    ("PreferredSPUThreads", "CPU", "SPUOwnCore", "Own core for the busy SPU",
+     "Runs the kernel of a SPURS instance of one SPU alone on one of the console's CPU cores, and keeps "
+     "every other emulator thread off that core. In GTA IV it is the busiest thread of all in busy streets "
+     "(its sound and more), and the game waits for it. Off, the console's system places every thread, and "
+     "two busy ones can share a core. Takes effect when the game starts."),
     ("OutputScalingMode", "GPU", "FrameGeneration", "Frame generation",
      "Shows a frame made between each two of the game's, when the game runs slower than about 37 fps: "
      "motion looks about twice as smooth. The game itself runs no faster, each of its frames reaches "
