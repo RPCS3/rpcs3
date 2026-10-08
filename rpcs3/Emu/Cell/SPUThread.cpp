@@ -54,14 +54,16 @@
 atomic_t<u64> g_ps5_getllar_waits[64][2]{};
 atomic_t<u32> g_ps5_spu_cpus[64][16]{}; // each SPU slot's polls by the CPU it was on (ps5_frontend.cpp's status lines)
 
-// An SPU thread's slot in the counts above, from its ID: its group's and its
-// own number. Its index alone is its number in its group, which a thread of
-// each group shares: GTA IV's secondary SPURS kernel and the primary
-// instance's first counted together, and the first's polls (about thirty
-// times as many) hid where the other ran (build 101's traces)
+// An SPU thread's slot in the counts above: its thread ID's low bits, the
+// number idm gave it, which no other SPU thread has (an SPU thread's ID is
+// 0x02000000 and that number). Its index is its number in its group, which a
+// thread of each group shares: GTA IV's secondary SPURS kernel and the
+// primary instance's first counted together, and the first's polls (about
+// thirty times as many) hid where the other ran (build 101's traces); and a
+// slot made of the ID's middle bits put every SPU in one (builds 103 and 104)
 u32 ps5_spu_slot(u32 id)
 {
-	return ((id >> 8) * 8 + (id >> 24)) % 64;
+	return id % 64;
 }
 s32 ps5_cpu_take_own_core(std::string_view thread); // rpcs3/ps5/ps5_cpus.cpp
 s32 ps5_current_cpu();
