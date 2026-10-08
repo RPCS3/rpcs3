@@ -174,7 +174,7 @@ namespace
 		{
 			sample(1, id, spu, [&] { return "SPU " + spu.get_name(); });
 			sampled_load& load = g_loads[u64{1} << 32 | id];
-			load.spu_index = ps5_spu_slot(id);
+			load.spu_index = ps5_spu_slot(spu.id); // its own ID, as SPUThread.cpp counts it: idm's ID for it differs, and put every SPU in one slot (build 103's trace)
 			if (is_running(spu) && load.spu_pcs.size() < 256)
 			{
 				load.spu_pcs[spu.pc]++;
@@ -921,7 +921,6 @@ int run(const char* boot_path)
 
 	// Which of the title's CPUs share a core, for "Own core for the busy SPU" (ps5_cpus.h)
 	trace("frontend: CPUs: %s", ps5_measure_cpus());
-	trace("frontend: a thread put on one CPU: %s", ps5_test_pinning());
 
 	// The fault handler's readable copy of the title's code (Utilities/Thread.cpp)
 	if (ps5_load_code_copy("/app0/rpcs3-code.bin"))

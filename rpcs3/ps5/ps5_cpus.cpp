@@ -287,7 +287,8 @@ std::string ps5_measure_cpus()
 				continue;
 			}
 			const f64 kept = static_cast<f64>(beside) / alone;
-			if (kept < 0.75)
+			// Beside its sibling build 103's loop kept 74-75% on my console, beside the others nearly all
+			if (kept < 0.85)
 			{
 				g_sibling[cpu] = static_cast<s8>(other);
 				g_sibling[other] = static_cast<s8>(cpu);
