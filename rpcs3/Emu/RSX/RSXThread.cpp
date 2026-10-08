@@ -2459,8 +2459,10 @@ namespace rsx
 
 			if (raw_format & CELL_GCM_TEXTURE_UN)
 			{
-				if (tex.min_filter() == rsx::texture_minify_filter::nearest ||
-					tex.mag_filter() == rsx::texture_magnify_filter::nearest)
+				const bool point_min = tex.min_filter() == rsx::texture_minify_filter::nearest;
+				const bool point_mag = tex.mag_filter() == rsx::texture_magnify_filter::nearest;
+
+				if (point_min || point_mag)
 				{
 					// Subpixel offset so that (X + bias) * scale will round correctly.
 					// This is done to work around fdiv precision issues in some GPUs (NVIDIA)
@@ -2469,6 +2471,16 @@ namespace rsx
 					current_fragment_program.texture_params[i].bias[0] += (subpixel_bias * current_fragment_program.texture_params[i].scale[0]);
 					current_fragment_program.texture_params[i].bias[1] += (subpixel_bias * current_fragment_program.texture_params[i].scale[1]);
 					current_fragment_program.texture_params[i].bias[2] += (subpixel_bias * current_fragment_program.texture_params[i].scale[2]);
+
+					if (point_min && point_mag &&
+						sampler_descriptors[i]->upload_context == rsx::texture_upload_context::shader_read)
+					{
+						// The subpixel bias alone moves the texel boundary away from floor(X), so shaders that pair
+						// a point-sampled lookup with FLR/FRC of the same coordinate see the next texel on a thin band.
+						// Limited to CPU-uploaded images: surfaces and blit targets can be resolution-scaled, and snapping
+						// to the guest texel center would collapse their upscaled texels.
+						texture_control |= (1 << texture_control_bits::SNAP_TEXCOORDS_BIT);
+					}
 				}
 			}
 
