@@ -53,7 +53,7 @@
 // busiest-threads line reports them (ps5_frontend.cpp)
 atomic_t<u64> g_ps5_getllar_waits[64][2]{};
 atomic_t<u32> g_ps5_spu_cpus[64][16]{}; // each SPU slot's polls by the CPU it was on (ps5_frontend.cpp's status lines)
-s32 ps5_cpu_take_own_core(); // rpcs3/ps5/ps5_cpus.cpp
+s32 ps5_cpu_take_own_core(std::string_view thread); // rpcs3/ps5/ps5_cpus.cpp
 s32 ps5_current_cpu();
 #endif
 
@@ -1513,7 +1513,7 @@ void spu_thread::cpu_task()
 
 			// And with "Own core for the busy SPU", alone on one CPU of a core
 			// the rest keep off (ps5_cpus.h)
-			if (const s32 cpu = ps5_cpu_take_own_core(); cpu >= 0)
+			if (const s32 cpu = ps5_cpu_take_own_core(*name); cpu >= 0)
 			{
 				thread_ctrl::set_thread_affinity_mask(1ull << cpu);
 				spu_log.success("'%s' runs alone on CPU %d (now on %d); the other threads keep off its core", *name, cpu, ps5_current_cpu());

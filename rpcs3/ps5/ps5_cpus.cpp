@@ -27,6 +27,10 @@ namespace
 	std::atomic<u64> g_cpus = 0;    // the title's CPUs, once measured
 	s8 g_sibling[64];               // each one's SMT sibling among them, or -1; written once, before g_cpus
 	atomic_t<u64> g_own_core_run = 0; // the emulation whose SPU took the core
+	std::string g_layout;           // what the measurement found, for the status lines; written once, before g_cpus
+	shared_mutex g_own_core_mutex;
+	std::string g_own_core_thread;  // the SPU on the kept core, and its CPU
+	s32 g_own_core_cpu = -1;
 
 	bool pin_self(s32 cpu)
 	{
@@ -62,19 +66,28 @@ namespace
 			while (!go.load(std::memory_order_acquire))
 			{
 			}
+			// Eight independent products an iteration keep the core's
+			// multiplier busy, so its other thread's loop takes half of it.
+			// One chain of products waits on each result, leaves the
+			// multiplier mostly idle, and kept nearly all its speed beside its
+			// sibling: build 100 found no shared core that way (as
+			// PS5_PayloadSDK's topology probe says, src/probe_threads.c)
 			const auto end = std::chrono::steady_clock::now() + std::chrono::duration<f64, std::milli>(ms);
 			u64 n = 0;
-			u32 x = 1;
+			u64 v[8]{1, 2, 3, 4, 5, 6, 7, 8};
 			do
 			{
-				for (u32 i = 0; i < 1024; i++)
+				for (u32 k = 0; k < 256; k++)
 				{
-					x = x * 1103515245u + 12345u;
+					for (u32 i = 0; i < 8; i++)
+					{
+						v[i] = v[i] * 6364136223846793005ull + i;
+					}
 				}
 				n++;
 			}
 			while (std::chrono::steady_clock::now() < end);
-			count = n + (x == 0); // x kept alive
+			count = n + ((v[0] ^ v[1] ^ v[2] ^ v[3] ^ v[4] ^ v[5] ^ v[6] ^ v[7]) == 42); // the products kept alive
 		};
 
 		std::thread first(loop, cpu, std::ref(counts[0]));
@@ -160,7 +173,6 @@ std::string ps5_measure_cpus()
 
 	// Back on every CPU it had
 	ps5_pthread_setaffinity_np(pthread_self(), sizeof(mask), &mask);
-	g_cpus = mask;
 
 	std::string cores, alone;
 	for (s32 cpu = 0; cpu < 64; cpu++)
@@ -193,12 +205,15 @@ std::string ps5_measure_cpus()
 		fmt::append(result, ", %.0f-%.0f%% beside the others", others_low * 100, others_high * 100);
 	}
 	fmt::append(result, "%s (%.2f s)", refused ? "; some CPUs refused a thread" : "", seconds);
+	g_layout = cores.empty() ? "no shared core found" : "cores shared:" + cores;
+	g_cpus = mask;
 	return result;
 }
 
 namespace
 {
-	// The kept core: the last pair of siblings among the title's CPUs
+	// The kept core: the last pair of siblings among the title's CPUs; with
+	// none found, the last CPU alone, so the SPU at least stays on one
 	std::pair<s32, s32> kept_core()
 	{
 		const u64 cpus = g_cpus.load();
@@ -208,6 +223,11 @@ namespace
 			{
 				return {std::min<s32>(cpu, g_sibling[cpu]), std::max<s32>(cpu, g_sibling[cpu])};
 			}
+		}
+		if (cpus)
+		{
+			const s32 last = 63 - std::countl_zero(cpus);
+			return {last, last};
 		}
 		return {-1, -1};
 	}
@@ -223,7 +243,7 @@ u64 ps5_cpu_kept_mask()
 	return first < 0 ? 0 : (1ull << first | 1ull << second);
 }
 
-s32 ps5_cpu_take_own_core()
+s32 ps5_cpu_take_own_core(std::string_view thread)
 {
 	if (!ps5_cpu_kept_mask())
 	{
@@ -234,5 +254,33 @@ s32 ps5_cpu_take_own_core()
 	{
 		return -1;
 	}
-	return kept_core().first;
+	const s32 cpu = kept_core().first;
+	std::lock_guard lock(g_own_core_mutex);
+	g_own_core_thread = thread;
+	g_own_core_cpu = cpu;
+	return cpu;
+}
+
+std::string ps5_cpu_own_core_text()
+{
+	if (!g_cfg.core.spu_own_core)
+	{
+		return "own core off";
+	}
+	if (!g_cpus.load())
+	{
+		return "own core on, CPUs not measured";
+	}
+	const auto [first, second] = kept_core();
+	std::string text = first == second ? fmt::format("own core on: CPU %d, alone (%s)", first, g_layout) : fmt::format("own core on: CPU %d, %d kept free (%s)", first, second, g_layout);
+	reader_lock lock(g_own_core_mutex);
+	if (g_own_core_run == static_cast<u64>(Emu.GetEmulationIdentifier()) && !g_own_core_thread.empty())
+	{
+		fmt::append(text, ", for %s", g_own_core_thread);
+	}
+	else
+	{
+		text += ", no SPU took it";
+	}
+	return text;
 }

@@ -1225,7 +1225,7 @@ int run(const char* boot_path)
 					// The busiest of the PS3's threads over these five seconds
 					if (const std::string busiest = take_thread_loads(); !busiest.empty())
 					{
-						trace("busiest threads (share of the time each was running):%s; collision functions compiled accurate: %u", busiest, spu_accurate_xfloat_functions());
+						trace("busiest threads (share of the time each was running):%s; collision functions compiled accurate: %u; %s", busiest, spu_accurate_xfloat_functions(), ps5_cpu_own_core_text());
 					}
 
 					// RSX's flips and where the PPU threads are, read on the main

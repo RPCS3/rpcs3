@@ -18,6 +18,7 @@
 #include "util/types.hpp"
 
 #include <string>
+#include <string_view>
 
 // Measures which of the title's CPUs share a core; returns what it found, for the trace
 std::string ps5_measure_cpus();
@@ -25,9 +26,12 @@ std::string ps5_measure_cpus();
 // The CPUs every new emulator thread keeps off, while the setting is on: 0 for none
 u64 ps5_cpu_kept_mask();
 
-// The CPU the calling SPU kernel thread is to run alone on: once for each
-// emulation, -1 when the setting is off or the core is taken
-s32 ps5_cpu_take_own_core();
+// The CPU the calling SPU kernel thread (named `thread`) is to run alone on:
+// once for each emulation, -1 when the setting is off or the core is taken
+s32 ps5_cpu_take_own_core(std::string_view thread);
+
+// The setting's state for the status lines: off, or the core and its SPU
+std::string ps5_cpu_own_core_text();
 
 // The CPU the calling thread runs on now
 s32 ps5_current_cpu();
