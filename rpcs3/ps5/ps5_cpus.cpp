@@ -54,9 +54,18 @@ namespace
 	{
 		std::atomic<int> ready = 0;
 		std::atomic<bool> go = false;
+		std::atomic<bool> stop = false;
 		std::atomic<bool> placed = true;
 		u64 counts[2]{};
 
+		// Eight independent products an iteration keep the core's multiplier
+		// busy, so its other thread's loop takes half of it, as PS5_PayloadSDK's
+		// topology probe has it (src/probe_threads.c); and the loop runs until
+		// told to stop, looking at nothing else. Build 100's one chain of
+		// products left the multiplier mostly idle, and build 101's loop asked
+		// the clock every two thousand products, a call into the kernel that
+		// took most of its time: neither slowed beside its sibling (92-100%,
+		// on my console)
 		const auto loop = [&](s32 on, u64& count)
 		{
 			if (!pin_self(on))
@@ -67,16 +76,9 @@ namespace
 			while (!go.load(std::memory_order_acquire))
 			{
 			}
-			// Eight independent products an iteration keep the core's
-			// multiplier busy, so its other thread's loop takes half of it.
-			// One chain of products waits on each result, leaves the
-			// multiplier mostly idle, and kept nearly all its speed beside its
-			// sibling: build 100 found no shared core that way (as
-			// PS5_PayloadSDK's topology probe says, src/probe_threads.c)
-			const auto end = std::chrono::steady_clock::now() + std::chrono::duration<f64, std::milli>(ms);
 			u64 n = 0;
 			u64 v[8]{1, 2, 3, 4, 5, 6, 7, 8};
-			do
+			while (!stop.load(std::memory_order_relaxed))
 			{
 				for (u32 k = 0; k < 256; k++)
 				{
@@ -87,7 +89,6 @@ namespace
 				}
 				n++;
 			}
-			while (std::chrono::steady_clock::now() < end);
 			count = n + ((v[0] ^ v[1] ^ v[2] ^ v[3] ^ v[4] ^ v[5] ^ v[6] ^ v[7]) == 42); // the products kept alive
 		};
 
@@ -102,6 +103,8 @@ namespace
 			std::this_thread::yield();
 		}
 		go.store(true, std::memory_order_release);
+		std::this_thread::sleep_for(std::chrono::duration<f64, std::milli>(ms));
+		stop.store(true, std::memory_order_relaxed);
 		first.join();
 		if (second.joinable())
 		{

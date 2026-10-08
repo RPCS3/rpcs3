@@ -47,12 +47,22 @@
 #endif
 
 #ifdef __PROSPERO__
-// PS5: how each SPU's GETLLAR polling was answered, by the SPU's index (its
-// slot, index % 64): by busy waiting, which the trace's load sampler counts
+// PS5: how each SPU's GETLLAR polling was answered, by the SPU's slot
+// (ps5_spu_slot, below): by busy waiting, which the trace's load sampler counts
 // as running, or by sleeping until the reservation changes. The trace's
 // busiest-threads line reports them (ps5_frontend.cpp)
 atomic_t<u64> g_ps5_getllar_waits[64][2]{};
 atomic_t<u32> g_ps5_spu_cpus[64][16]{}; // each SPU slot's polls by the CPU it was on (ps5_frontend.cpp's status lines)
+
+// An SPU thread's slot in the counts above, from its ID: its group's and its
+// own number. Its index alone is its number in its group, which a thread of
+// each group shares: GTA IV's secondary SPURS kernel and the primary
+// instance's first counted together, and the first's polls (about thirty
+// times as many) hid where the other ran (build 101's traces)
+u32 ps5_spu_slot(u32 id)
+{
+	return ((id >> 8) * 8 + (id >> 24)) % 64;
+}
 s32 ps5_cpu_take_own_core(std::string_view thread); // rpcs3/ps5/ps5_cpus.cpp
 s32 ps5_current_cpu();
 #endif
@@ -4438,8 +4448,8 @@ bool spu_thread::process_mfc_cmd()
 							if (getllar_busy_waiting_switch == 1)
 							{
 #ifdef __PROSPERO__
-								g_ps5_getllar_waits[index % 64][0].raw()++;
-								g_ps5_spu_cpus[index % 64][ps5_current_cpu() & 15].raw()++;
+								g_ps5_getllar_waits[ps5_spu_slot(id)][0].raw()++;
+								g_ps5_spu_cpus[ps5_spu_slot(id)][ps5_current_cpu() & 15].raw()++;
 #endif
 								getllar_wait_time[(addr % SPU_LS_SIZE) / 128].front() = 0;
 
@@ -4486,8 +4496,8 @@ bool spu_thread::process_mfc_cmd()
 
 						// Spinning, might as well yield cpu resources
 #ifdef __PROSPERO__
-						g_ps5_getllar_waits[index % 64][1].raw()++;
-						g_ps5_spu_cpus[index % 64][ps5_current_cpu() & 15].raw()++;
+						g_ps5_getllar_waits[ps5_spu_slot(id)][1].raw()++;
+						g_ps5_spu_cpus[ps5_spu_slot(id)][ps5_current_cpu() & 15].raw()++;
 #endif
 						state += cpu_flag::wait;
 

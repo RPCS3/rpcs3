@@ -91,6 +91,7 @@ std::u32string utf8_to_u32string(std::string_view utf8_string);
 u32 spu_accurate_xfloat_functions(); // SPULLVMRecompiler.cpp: collision functions compiled with accurate xfloat
 extern atomic_t<u64> g_ps5_getllar_waits[64][2]; // SPUThread.cpp: each SPU slot's GETLLAR polls answered by busy waiting, and by sleeping
 extern atomic_t<u32> g_ps5_spu_cpus[64][16]; // SPUThread.cpp: each SPU slot's polls by the CPU it was on
+u32 ps5_spu_slot(u32 id); // SPUThread.cpp: an SPU thread's slot in those counts
 extern atomic_t<u64> g_ps5_frames_generated; // VKFrameGen.cpp: frames made between the game's
 
 namespace
@@ -127,7 +128,7 @@ namespace
 		std::string name;
 		u32 running = 0;
 		u32 samples = 0;
-		u32 spu_index = umax;          // an SPU's index, for its GETLLAR counts
+		u32 spu_index = umax;          // an SPU's slot, for its GETLLAR counts (ps5_spu_slot)
 		std::map<u32, u32> spu_pcs;    // where an SPU was when sampled running, by local storage address
 	};
 
@@ -173,7 +174,7 @@ namespace
 		{
 			sample(1, id, spu, [&] { return "SPU " + spu.get_name(); });
 			sampled_load& load = g_loads[u64{1} << 32 | id];
-			load.spu_index = spu.index;
+			load.spu_index = ps5_spu_slot(id);
 			if (is_running(spu) && load.spu_pcs.size() < 256)
 			{
 				load.spu_pcs[spu.pc]++;
