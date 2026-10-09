@@ -972,6 +972,14 @@ int run(const char* boot_path)
 	static_cast<void>(named_thread("", [](int) {}));
 	trace("frontend: config %s, cache %s", fs::get_config_dir(), fs::get_cache_dir());
 
+	// The last run's log is kept beside the new one: a run that ended in a
+	// crash was followed by a launch, and the launch's new log replaced the
+	// crash's (God of War: Ascension, build 109)
+	if (fs::is_file(fs::get_cache_dir() + "RPCS3.log"))
+	{
+		fs::rename(fs::get_cache_dir() + "RPCS3.log", fs::get_cache_dir() + "RPCS3.old.log", true);
+	}
+
 	// Listeners stay in RPCS3's list for the life of the process
 	static klog_listener klog;
 	logs::listener::add(&klog);

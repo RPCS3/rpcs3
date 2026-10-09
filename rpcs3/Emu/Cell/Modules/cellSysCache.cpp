@@ -77,6 +77,21 @@ struct syscache_info
 		// Find existing cache at startup
 		const std::string prefix = Emu.GetTitleID() + '_';
 
+#ifdef __PROSPERO__
+		// PS5: the caches are in memory, so another game's goes now. RPCS3
+		// keeps a game's cache when the game exits by itself, for its next
+		// boot: God of War: Ascension's 650 MiB stayed after a quit to the
+		// library (build 109), and would have for the rest of the session had
+		// another game run next. The library's own boot clears them all
+		for (auto&& entry : fs::dir(cache_root))
+		{
+			if (entry.is_directory && entry.name != "." && entry.name != ".." && !entry.name.starts_with(prefix))
+			{
+				fs::remove_all(cache_root + entry.name);
+			}
+		}
+#endif
+
 		for (auto&& entry : fs::dir(cache_root))
 		{
 			if (entry.is_directory && entry.name.starts_with(prefix))
