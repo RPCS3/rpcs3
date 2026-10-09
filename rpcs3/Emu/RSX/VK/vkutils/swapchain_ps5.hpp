@@ -7,7 +7,12 @@
 
 #include "swapchain_core.h"
 #include "util/logs.hpp"
+#include "Utilities/File.h"
+#include "Utilities/StrFmt.h"
 
+#include <algorithm>
+#include <cstdlib>
+#include <string>
 #include <vector>
 
 namespace vk
@@ -128,6 +133,39 @@ namespace vk
 
 		rsx_log.notice("PS5: presenting to display plane %u at %ux%u, %u mHz", plane_index,
 			create_info.imageExtent.width, create_info.imageExtent.height, best->parameters.refreshRate);
+
+		// Why not 119.88 Hz, when it is not: the driver offers that mode only
+		// where the title declares it (param.json's attribute3 0x40), VideoOut
+		// takes its high-frame-rate output and the display then refreshes at it
+		// (PS5_Mesa's wsi_common_videoout.c, whose own line in klog says which
+		// step failed)
+		std::string offered;
+		u32 fastest = 0;
+		for (const auto& mode : modes)
+		{
+			const auto& p = mode.parameters;
+			offered += fmt::format("%s%ux%u at %u mHz", offered.empty() ? "" : ", ", p.visibleRegion.width, p.visibleRegion.height, p.refreshRate);
+			fastest = std::max(fastest, p.refreshRate);
+		}
+		rsx_log.notice("PS5: the display's modes: %s", offered);
+		if (fastest < 100'000)
+		{
+			bool declared = false;
+			if (fs::file param{"/app0/sce_sys/param.json"})
+			{
+				const std::string text = param.to_string();
+				if (const usz at = text.find("\"attribute3\""); at != umax)
+				{
+					if (const usz colon = text.find(':', at); colon != umax)
+					{
+						declared = (std::strtoul(text.c_str() + colon + 1, nullptr, 0) & 0x40) != 0;
+					}
+				}
+			}
+			rsx_log.warning("PS5: no 119.88 Hz mode offered: %s", declared
+				? "the title declares it (attribute3 0x40), so VideoOut refused it or the display kept refreshing at 60 Hz. The console's 120 Hz output setting (Screen and Video > Video Output) and the display decide it; klog's wsi/videoout line says which"
+				: "the title's param.json does not declare high-frame-rate output (attribute3 0x40)");
+		}
 		if (best->parameters.refreshRate)
 		{
 			g_ps5_refresh_millihertz = best->parameters.refreshRate;

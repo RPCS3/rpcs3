@@ -593,6 +593,7 @@ namespace rsx::overlays
 	{
 		m_delete_thread.reset();
 		m_pt_thread.reset();
+		m_tr_thread.reset();
 		m_installer.reset();
 
 		if (m_enumeration_thread)
@@ -700,7 +701,7 @@ namespace rsx::overlays
 		m_bar_divider.set_size(1, 24);
 		m_bar_divider.back_color = color4f(1.f, 1.f, 1.f, 0.28f);
 
-		for (const char* name : {"Home", "Library", "Settings", "Install"})
+		for (const char* name : {"Home", "Library", "Trophies", "Settings", "Install"})
 		{
 			m_tab_labels.push_back(make_label(name, 13, f_medium, c_text_dim));
 		}
@@ -832,6 +833,8 @@ namespace rsx::overlays
 		style_label(m_placeholder, "Looking for games...", 13, f_regular, c_text_dim);
 		place(m_placeholder, c_margin, c_row_y + 40);
 
+		build_trophies_static();
+
 		layout_tabs();
 		layout_home();
 	}
@@ -908,6 +911,24 @@ namespace rsx::overlays
 			hints.emplace_back(resource_config::confirm_button_resource(), m_in_row == 0 ? "Install" : m_in_row == 1 ? "Change" : m_in_row == 2 ? "Look again" : on_file && m_in_files[m_in_row - 3].chosen ? "Leave out" : "Choose");
 			hints.emplace_back(resource_config::cancel_button_resource(), "Home");
 		}
+		else if (m_tab == tab::trophies && m_tr_open)
+		{
+			hints.emplace_back(static_cast<u8>(resource_config::standard_image_resource::square), "Sort");
+			hints.emplace_back(resource_config::cancel_button_resource(), "Close");
+			if (m_tr_games.size() > 1)
+			{
+				hints.emplace_back(static_cast<u8>(resource_config::standard_image_resource::L1), "");
+				hints.emplace_back(static_cast<u8>(resource_config::standard_image_resource::R1), "Games");
+			}
+		}
+		else if (m_tab == tab::trophies)
+		{
+			if (!m_tr_games.empty() && !m_tr_loading)
+			{
+				hints.emplace_back(resource_config::confirm_button_resource(), "Show trophies");
+			}
+			hints.emplace_back(resource_config::cancel_button_resource(), "Home");
+		}
 		else if (m_tab == tab::library && m_detail)
 		{
 			hints.emplace_back(resource_config::confirm_button_resource(), "Select");
@@ -936,7 +957,7 @@ namespace rsx::overlays
 			hints.emplace_back(resource_config::confirm_button_resource(), "Open");
 			hints.emplace_back(resource_config::cancel_button_resource(), "Home");
 		}
-		if (!m_gs_open && !m_pt_open && !installing())
+		if (!m_gs_open && !m_pt_open && !m_tr_open && !installing())
 		{
 			hints.emplace_back(static_cast<u8>(resource_config::standard_image_resource::L1), "");
 			hints.emplace_back(static_cast<u8>(resource_config::standard_image_resource::R1), "Tabs");
@@ -1407,6 +1428,10 @@ namespace rsx::overlays
 		else if (m_tab == tab::settings)
 		{
 			open_settings_tab();
+		}
+		else if (m_tab == tab::trophies)
+		{
+			open_trophies_tab();
 		}
 		else if (m_tab == tab::install)
 		{
@@ -4057,6 +4082,9 @@ namespace rsx::overlays
 					patches = std::move(m_pt_result);
 				}
 			}
+			// The trophies, or the open set's icons, once read
+			take_trophies();
+
 			if (patches && m_pt_open)
 			{
 				launcher_log.notice("Patches for %s v%s: %u listed, %u on, of %u in %u files%s%s", patches->serial, patches->app_version, patches->patches.size(),
@@ -4140,6 +4168,14 @@ namespace rsx::overlays
 			{
 				m_flow_pos = target;
 			}
+
+			// The Trophies tab's cards, the same way
+			const f32 cards = trophy_row_target();
+			m_tr_flow += (cards - m_tr_flow) * (1.f - std::exp(-dt * 11.f));
+			if (std::abs(cards - m_tr_flow) < 0.001f)
+			{
+				m_tr_flow = cards;
+			}
 		}
 
 	}
@@ -4190,6 +4226,12 @@ namespace rsx::overlays
 			handle_patches(button_press);
 			return;
 		}
+		if (m_tr_open)
+		{
+			// The trophy box takes L1 and R1 too, for the set before and after
+			handle_trophies(button_press);
+			return;
+		}
 
 		// Tabs change from anywhere at the top level, except while packages install
 		if ((button_press == pad_button::L1 || button_press == pad_button::R1) && !installing())
@@ -4202,6 +4244,12 @@ namespace rsx::overlays
 		if (m_tab == tab::install)
 		{
 			handle_install(button_press);
+			return;
+		}
+
+		if (m_tab == tab::trophies)
+		{
+			handle_trophies(button_press);
 			return;
 		}
 
@@ -4388,6 +4436,10 @@ namespace rsx::overlays
 		else if (m_tab == tab::settings)
 		{
 			compile_settings(result);
+		}
+		else if (m_tab == tab::trophies)
+		{
+			compile_trophies(result);
 		}
 		else
 		{

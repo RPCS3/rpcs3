@@ -5,14 +5,17 @@
 //
 // Home: the selected game's own art (PS3_GAME/PIC1.PNG) behind its name and
 // Play now / Game settings / Patches, over a row of the games' ICON0.PNG tiles.
-// Library: Big Picture Mode's game grid. Settings: RPCS3's settings pages.
-// Install: PS3 packages put in the title's folder over FTP. L1 / R1 change tabs.
+// Library: Big Picture Mode's game grid. Trophies: the user's trophy sets in
+// a row, each opening into a box of its trophies. Settings: RPCS3's settings
+// pages. Install: PS3 packages put in the title's folder over FTP. L1 / R1
+// change tabs.
 
 #include "Emu/RSX/Overlays/overlays.h"
 #include "Emu/RSX/Overlays/BigPicture/overlay_big_picture_game_info.h"
 #include "Emu/game_enumeration.h"
 #include "ps5_ui.h"
 #include "ps5_packages.h"
+#include "ps5_trophies.h"
 
 #include <map>
 #include <memory>
@@ -90,6 +93,7 @@ namespace rsx::overlays
 		{
 			home,
 			library,
+			trophies,
 			settings,
 			install
 		};
@@ -324,6 +328,54 @@ namespace rsx::overlays
 		void handle_install(pad_button button_press);
 		void compile_install(compiled_resource& result);
 		bool installing() const;
+
+		// The Trophies tab: the user's trophy sets in a row (ps5_trophies.h),
+		// read on a thread of their own each time the tab opens; a set opens
+		// into a box of its trophies, whose icons are read on that thread too.
+		// The icons go into images of one size each that are kept and filled
+		// again (the renderer keeps a texture for every image's address, of
+		// the size it first had)
+		struct trophy_icon
+		{
+			std::vector<u8> pixels;
+			std::unique_ptr<memory_image_info> image;
+			bool filled = false;
+		};
+		struct trophy_result
+		{
+			u32 generation = 0;
+			bool sets = false; // the sets and their icons, else the open set's trophies' icons
+			std::vector<ps5_trophies::game> games;
+			std::vector<std::vector<u8>> pixels; // empty where there is no icon
+		};
+		std::vector<ps5_trophies::game> m_tr_games;
+		std::vector<std::unique_ptr<trophy_icon>> m_tr_set_icons; // the sets' ICON0.PNG
+		std::vector<std::unique_ptr<trophy_icon>> m_tr_icons;     // the open set's TROPnnn.PNG
+		bool m_tr_loading = false;
+		s32 m_tr_selected = 0;
+		f32 m_tr_flow = 0.f;       // the row's scroll, in cards, easing to the selection
+		bool m_tr_open = false;    // the box
+		u64 m_tr_open_us = 0;
+		s32 m_tr_row = 0;          // in the box's list
+		s32 m_tr_scroll = 0;
+		u8 m_tr_sort = 1;          // earned first
+		std::vector<s32> m_tr_order; // the open set's trophies, as sorted
+		std::unique_ptr<named_thread<std::function<void()>>> m_tr_thread;
+		std::mutex m_tr_result_mutex;
+		std::unique_ptr<trophy_result> m_tr_result;
+		u32 m_tr_generation = 0;
+		std::unique_ptr<image_info> m_tr_cup_data;
+		std::vector<u8> m_tr_lock_pixels;
+		std::unique_ptr<memory_image_info> m_tr_lock_image;
+		void build_trophies_static();
+		void open_trophies_tab();
+		void open_trophy_box();
+		void close_trophy_box();
+		void sort_trophies();
+		f32 trophy_row_target() const; // the first card wholly in view
+		void take_trophies();
+		void handle_trophies(pad_button button_press);
+		void compile_trophies(compiled_resource& result);
 
 		animation_color_interpolate m_fade_animation{};
 
