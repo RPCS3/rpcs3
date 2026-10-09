@@ -113,6 +113,7 @@ enum class emu_settings_type
 	FrameGenerationQuality, // PS5: frame generation's motion search
 	DisableSamplingSkip, // PS5: offered in the launcher's Audio tab
 	LateAudioWait, // PS5: cellAudio's wait for a late game's sound
+	MenuSoundVolume, // PS5: the menus' sounds
 	SPUOwnCore, // PS5: a one-SPU SPURS kernel alone on a core
 	ForceHwMSAAResolve,
 	DisableAsyncHostMM,

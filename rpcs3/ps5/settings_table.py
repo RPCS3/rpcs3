@@ -78,6 +78,11 @@ PS5_EXTRA = [
      "sound, before skipping that bit of it (heard as a click or stutter). The sound already buffered "
      "plays on meanwhile, so a wait shorter than the audio buffer should not be heard. Off is RPCS3's own "
      "behaviour. Has no effect while Disable sampling skip is on."),
+    ("LateAudioWait", "Audio", "MenuSoundVolume", "Menu sounds",
+     "How loud the menus' sounds are: moving, choosing, going back, messages and trophies, in the library, "
+     "the pause menu and RPCS3's own dialogs. Off for none. To use sounds of your own, put WAV files named "
+     "snd_cursor, snd_decide, snd_cancel, snd_system_ok, snd_system_ng, snd_oskenter, snd_oskcancel and "
+     "snd_trophy (.wav) in the title's rpcs3/sounds folder over FTP; any you leave out keep the title's own."),
 ]
 
 # Labels clearer alone than under the dialog's shared group boxes

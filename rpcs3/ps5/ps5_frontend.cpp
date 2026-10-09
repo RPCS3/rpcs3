@@ -82,6 +82,7 @@ bool ps5_load_code_copy(const char* path);
 
 // ps5_terminate.cpp
 void ps5_set_terminate_handler();
+void ps5_play_menu_sound(const std::string& path, f32 volume); // ps5_sound.cpp: the menus' sounds
 
 // ps5_localized.cpp (localized_strings.py): the English, or nullptr
 const char* ps5_localized_string(localized_string_id id);
@@ -804,7 +805,11 @@ namespace
 		{
 			return fs::get_config_dir() + "photos/" + std::string(title) + "/";
 		};
-		g_emu_callbacks.play_sound = [](const std::string&, std::optional<f32>) {};
+		// The menus' sounds, at the launcher's Menu sounds volume
+		g_emu_callbacks.play_sound = [](const std::string& path, std::optional<f32> volume)
+		{
+			ps5_play_menu_sound(path, volume.value_or(1.f) * static_cast<f32>(g_cfg.audio.menu_sound_volume.get()) / 100.f);
+		};
 		g_emu_callbacks.get_image_info = [](const std::string&, std::string&, s32&, s32&, s32&) { return false; };
 		g_emu_callbacks.get_scaled_image = [](const std::string&, s32, s32, s32&, s32&, u8*, bool) { return false; };
 		// The title's fonts (the launcher's Inter); the overlays' default is still
