@@ -491,16 +491,12 @@ Value* PPUTranslator::VecHandleResult(Value* val, bool flush_denormals_manually)
 
 Value* PPUTranslator::VecEstimate(StringRef name, u32 vr)
 {
-	const auto b = GetVr(vr, VrType::vi32);
-	const auto nj = ZExt(RegLoad(m_nj), GetType<u32>());
-	Value* result = GetUndef<u32[4]>();
+	auto& entry = m_function->getEntryBlock();
+	const auto data = IRBuilder<>(&entry, entry.getFirstInsertionPt()).CreateAlloca(GetType<u32[4]>());
 
-	for (u32 i = 0; i < 4; i++)
-	{
-		result = m_ir->CreateInsertElement(result, Call(GetType<u32>(), m_pure_attr, name, m_ir->CreateExtractElement(b, i), nj), i);
-	}
-
-	return result;
+	m_ir->CreateStore(GetVr(vr, VrType::vi32), data);
+	Call(GetType<void>(), name, data, ZExt(RegLoad(m_nj), GetType<u32>()));
+	return m_ir->CreateLoad(GetType<u32[4]>(), data);
 }
 
 Value* PPUTranslator::GetAddr(u64 _add)
