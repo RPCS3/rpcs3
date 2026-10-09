@@ -49,13 +49,11 @@ namespace vk
 		// spaced in time, into `out` in the order they are to be shown; and in
 		// any case what the next frame needs of this one. `quality` is the
 		// setting's (0 Fast, 1 Balanced, 2 Quality), `step` the Step aside
-		// setting's (0 never, 1 quick moves, 2 most moves), `method` the Method
-		// setting's (0 as build 115, 1 as build 117 but its searches, 2 as build
-		// 117, 3 build 120's: motion that agrees with its neighbours, blended).
-		// Returns how many frames it made: none for the first frame, a new size
-		// or quality, or none asked for
+		// setting's (0 never, 1 quick moves, 2 most moves). Returns how many
+		// frames it made: none for the first frame, a new size or quality, or
+		// none asked for
 		u32 process(const vk::command_buffer& cmd, vk::viewable_image* cur, u32 width, u32 height, u32 count, u32 quality, u32 step,
-			u32 method, vk::viewable_image* (&out)[max_frames]);
+			vk::viewable_image* (&out)[max_frames]);
 
 		// Forgets the last frame: the next one is a first one
 		void reset();
@@ -71,7 +69,7 @@ namespace vk
 		// one picture a moment to rpcs3/captures/: a strip saying what it is,
 		// then the frames top to bottom in time order (a chat takes a few
 		// pictures at a time, not a folder of files)
-		void record_capture(const vk::command_buffer& cmd, vk::viewable_image* cur, u32 width, u32 height, u32 count, u32 quality, u32 step, u32 method);
+		void record_capture(const vk::command_buffer& cmd, vk::viewable_image* cur, u32 width, u32 height, u32 count, u32 quality, u32 step);
 		void take_capture();
 		u32 m_capture_sets = 0;   // still to take
 		u32 m_capture_set = 0;    // the next one's number
@@ -91,6 +89,7 @@ namespace vk
 		bool m_have_prev = false;
 
 		std::unique_ptr<vk::viewable_image> m_prev_color;        // the last frame, at its own size
+		std::unique_ptr<vk::viewable_image> m_prev_hud;          // the same, its alpha where the HUD stands still (pass_hud)
 		std::unique_ptr<vk::viewable_image> m_luma[2];           // brightness at the working size: [0] the last frame's, [1] this one's
 		std::unique_ptr<vk::viewable_image> m_luma_coarse[2];    // and at a quarter of it
 		std::unique_ptr<vk::viewable_image> m_luma_rough[2];     // and at a sixteenth
@@ -103,7 +102,7 @@ namespace vk
 		std::unique_ptr<vk::viewable_image> m_vectors_coarse;    // a vector per 4x4 block at the coarse size
 		std::unique_ptr<vk::viewable_image> m_vectors;           // a vector per 8x8 block at the working size
 		std::unique_ptr<vk::viewable_image> m_vectors_smooth;    // the same, outliers removed
-		std::unique_ptr<vk::viewable_image> m_vectors_refined[2]; // build 120's rounds of agreeing with the neighbours, in turn
+		std::unique_ptr<vk::viewable_image> m_vectors_refined[2]; // the rounds of agreeing with the neighbours, in turn
 		std::unique_ptr<vk::viewable_image> m_output[max_frames]; // the frames between
 	};
 }

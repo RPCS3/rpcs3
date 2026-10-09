@@ -62,7 +62,6 @@ namespace rsx::overlays
 			{"Video", "Frame Generation Frames", "Frames made between"},
 			{"Video", "Frame Generation Quality", "Frame generation quality"},
 			{"Video", "Frame Generation Step Aside", "Frame generation steps aside"},
-			{"Video", "Frame Generation Method", "Frame generation method"},
 			{"Audio", "Master Volume", "Volume"},
 		};
 

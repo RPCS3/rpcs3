@@ -73,13 +73,6 @@ PS5_EXTRA = [
      "when the camera moves more than about 6% of the screen between two of the game's frames (a quick "
      "turn), where frames made between break apart. Most moves: from about 3%, fewer odd frames while "
      "moving but less smoothing. Never: frames are always made."),
-    ("FrameGenerationStepAside", "GPU", "FrameGenerationMethod", "Frame generation method",
-     "Which build's way of making frames between, to compare them in the same place. Build 120: the "
-     "picture's motion made to agree with its neighbours, and each spot a blend of the motions around it, "
-     "so a wrong guess blurs rather than tears (fewer broken squares flickering). Build 115: a pixel follows "
-     "the motion its two frames agree on best, else shows the nearer real frame. Build 117: a pixel keeps "
-     "to its own block's motion, and where the frames disagree takes the one that sees the spot; faint "
-     "ground (asphalt) is followed too. Build 117, searches as 115: the same, but faint ground as in build 115."),
     ("TimeStretchingThreshold", "Audio", "DisableSamplingSkip", "Disable sampling skip",
      "When a game is late with its sound, the emulator waits for it a little (about 11 ms) before skipping "
      "that bit of the sound. On, it never waits: the sound keeps strict time, and every late moment is "

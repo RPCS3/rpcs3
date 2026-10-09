@@ -55,6 +55,7 @@ atomic_t<u64> g_ps5_frames_camera_field = 0;
 
 // The pause menu's Save frame generation's frames: the sets wanted
 atomic_t<u32> g_ps5_frame_gen_capture = 0;
+const std::string& ps5_title_build(); // ps5_frontend.cpp: the title's build, for a capture's header
 
 namespace vk
 {
@@ -96,16 +97,16 @@ layout(push_constant) uniform push_block { vec4 p0; vec4 p1; vec4 p2; };
 			pass_coarse_search,  // a vector per 4x4 block of the quarter size
 			pass_fine_search,    // a vector per 8x8 block of the working size, from the coarse ones
 			pass_median,         // the vectors' 3x3 median
-			pass_between,        // the frame between
 			pass_keep,           // the frame, kept for the next one
 			pass_motion,         // the camera's motion, voted from the rough vectors
 			pass_camera,         // the camera's motion as one smooth field over the frame
 			pass_camera_check,   // each block: whether it moved with that field
-			pass_refine,         // the vectors, made to agree with their neighbours (Method 3)
-			pass_between_soft,   // the frame between, the blocks around blended (Method 3)
+			pass_refine,         // the vectors, made to agree with their neighbours
+			pass_hud,            // the last frame, with where the HUD stands still
+			pass_between,        // the frame between
 		};
 
-		constexpr const char* c_formats[] = { "r32f", "r32f", "rgba16f", "rgba16f", "rgba16f", "rgba8", "rgba8", "rgba32f", "rgba32f", "r32f", "rgba16f", "rgba8" };
+		constexpr const char* c_formats[] = { "r32f", "r32f", "rgba16f", "rgba16f", "rgba16f", "rgba8", "rgba32f", "rgba32f", "r32f", "rgba16f", "rgba8", "rgba8" };
 
 		constexpr const char* c_bodies[] =
 		{
@@ -157,15 +158,7 @@ void main()
 			// favoured, but only a little: at build 107's 0.0015 a quarter texel
 			// the favour outweighed a true match 14 texels away (0.0005 now).
 			// Also run at a sixteenth of the working size (0.002 a texel there,
-			// the same per pixel), for the camera's motion (pass_motion). The
-			// margin no motion keeps and the favour both shrink with the block's
-			// contrast (its texels' mean distance from their mean), to 15% of
-			// themselves below 0.06: GTA IV's asphalt is that faint, a true move
-			// beat no motion there by less than the margin, and in the model of
-			// these passes (a street driven at 0.7 and 1.4 metres a game frame)
-			// the road stood still between the frames while its markings moved;
-			// so scaled, the road gained 2.4 to 3 dB. Only with p1.z set (the
-			// Method setting's Build 117)
+			// the same per pixel), for the camera's motion (pass_motion)
 			R"(
 void main()
 {
@@ -175,19 +168,11 @@ void main()
 	const int reach = int(p1.x);
 	const ivec2 base = p * 4;
 	float cur[16];
-	float mean = 0.0;
 	for (int k = 0; k < 16; k++)
 	{
 		cur[k] = texelFetch(tex1, min(base + ivec2(k & 3, k >> 2), lim), 0).r;
-		mean += cur[k] / 16.0;
 	}
-	float contrast = 0.0;
-	for (int k = 0; k < 16; k++)
-	{
-		contrast += abs(cur[k] - mean) / 16.0;
-	}
-	const float scale = p1.z > 0.5 ? clamp(contrast / 0.06, 0.15, 1.0) : 1.0;
-	const float favour = p1.y * scale;
+	const float favour = p1.y;
 	// No motion first, and kept unless another vector is clearly better: in
 	// flat, plain areas (the ground under a shadow) every vector matches about
 	// as well, and the best by a hair is noise
@@ -197,7 +182,7 @@ void main()
 		error += abs(cur[k] - texelFetch(tex0, min(base + ivec2(k & 3, k >> 2), lim), 0).r) / 16.0;
 	}
 	const float still_error = error;
-	float best = error - 0.006 * scale;
+	float best = error - 0.006;
 	vec2 best_v = vec2(0.0);
 	for (int dy = -reach; dy <= reach; dy++)
 	{
@@ -230,8 +215,7 @@ void main()
 			// the frames between trust a vector by it, and with the favour in it
 			// (build 107) every long vector looked like a poor match. Its w how
 			// much better it matched than no motion (pass_camera weighs it by
-			// that). The margin and the favour scale with the block's contrast,
-			// as in the coarse search, with p1.z set
+			// that)
 			R"(
 void main()
 {
@@ -241,19 +225,11 @@ void main()
 	const ivec2 coarse_lim = ivec2(p1.xy) - 1;
 	const ivec2 base = p * 8;
 	float cur[64];
-	float mean = 0.0;
 	for (int k = 0; k < 64; k++)
 	{
 		cur[k] = texelFetch(tex1, min(base + ivec2(k & 7, k >> 3), lim), 0).r;
-		mean += cur[k] / 64.0;
 	}
-	float contrast = 0.0;
-	for (int k = 0; k < 64; k++)
-	{
-		contrast += abs(cur[k] - mean) / 64.0;
-	}
-	const float scale = p1.z > 0.5 ? clamp(contrast / 0.06, 0.15, 1.0) : 1.0;
-	const float favour = 0.0003 * scale;
+	const float favour = 0.0003;
 	const ivec2 cb = p / 2;
 	ivec2 starts[6];
 	starts[0] = ivec2(0);
@@ -269,7 +245,7 @@ void main()
 		error += abs(cur[k] - texelFetch(tex0, min(base + ivec2(k & 7, k >> 3), lim), 0).r) / 64.0;
 	}
 	const float still_error = error;
-	float best = error - 0.006 * scale;
+	float best = error - 0.006;
 	vec2 best_v = vec2(0.0);
 	for (int c = 0; c < 6; c++)
 	{
@@ -298,17 +274,9 @@ void main()
 }
 )",
 			// pass_median: tex0 the vectors, tex1 each block's check against the
-			// camera's field (pass_camera_check), tex2 the last frame's working
-			// brightness, tex3 this one's; p0 = (their grid, the working size).
-			// Each vector's parts become the medians of its 3x3 neighbourhood's,
-			// which drops lone wrong ones; but a block keeps its own where it
-			// matches its block clearly better than the median does (by 0.01 a
-			// texel): a thing a block or two across moving its own way, the
-			// player's head in a camera turn, lost its vectors to the
-			// background's, and GTA IV's radar turning in its ring too (in the
-			// model of these passes, the radar 3.5 to 4.5 dB better so); with
-			// p1.x set (the Method setting's Builds 117). The match error stays
-			// its own, and w is the check
+			// camera's field (pass_camera_check); p0.xy their grid. Each vector's
+			// parts become the medians of its 3x3 neighbourhood's, which drops
+			// lone wrong ones. The match error stays its own, and w is the check
 			R"(
 void main()
 {
@@ -347,171 +315,7 @@ void main()
 		}
 		ys[b + 1] = y;
 	}
-	const vec4 own = texelFetch(tex0, p, 0);
-	vec2 v = vec2(xs[4], ys[4]);
-	if (p1.x > 0.5)
-	{
-		const ivec2 median = ivec2(round(v));
-		const ivec2 work_lim = ivec2(p0.zw) - 1;
-		const ivec2 base = p * 8;
-		float median_error = 0.0;
-		for (int k = 0; k < 64; k++)
-		{
-			const ivec2 q = base + ivec2(k & 7, k >> 3);
-			median_error += abs(texelFetch(tex3, min(q, work_lim), 0).r - texelFetch(tex2, clamp(q + median, ivec2(0), work_lim), 0).r);
-		}
-		median_error /= 64.0;
-		v = own.z + 0.01 < median_error ? own.xy : v;
-	}
-	imageStore(dst, p, vec4(v, own.z, texelFetch(tex1, p, 0).r));
-}
-)",
-			// pass_between: tex0 the last frame (its own size), tex1 this one,
-			// tex2 the vectors, tex3 the camera's field (pass_camera); p0 =
-			// (this frame's used part as a share of its
-			// texture, the output size), p1 = (the working size, the share of
-			// the vector grid it covers), p2.x the time t from the last frame
-			// (0) to this one (1). Each vector, from a point of this frame to
-			// where it was in the last, is followed t of the way back from here
-			// in the last frame and 1 - t of the way on in this one, and the two
-			// blended by t where they agree closely. Which vector: of the one
-			// blended between the four nearest blocks' and those four, the one
-			// whose two ends agree best (the blended one a little favoured): at
-			// a moving thing's edge the blend of its vector and the background's
-			// belongs to neither and smeared the edge (build 106 on my console;
-			// in a model of these passes, picking per pixel gained about 1 dB
-			// overall and up to 1.6 dB at a moving object's edges). Anywhere else
-			// the frame nearer in time as it is: where the block matched poorly,
-			// and where the pixel is the same in both frames unmoved
-			// (the HUD, the radar's frame and text, which the world's vectors
-			// dragged along) beside a block that did not move: without that
-			// block, a thin thing crossing a plain background (a lamp post over
-			// the sky) was erased, both frames showing the sky where it was to
-			// be, and lamp posts would flicker in a turn (in the model of these
-			// passes, a city turned 1.5 to 4.5 degrees a game frame: the posts
-			// kept 35-74% of their pixels, 51-78% with it; the HUD exact either
-			// way). And the frame nearer in time as it is everywhere while the
-			// camera moves too quickly (pass_motion, carried in tex3's third
-			// texel). The camera's field is a sixth candidate, favoured over the
-			// rest, beside a block that moved with it (the vectors' w): on a
-			// building's rows of windows the blocks' own vectors are often a
-			// window off, and the frame between jumped half a window and back
-			// (GTA IV's buildings looked off and zigzagged on my console, build
-			// 114); the field is the whole frame's motion, fitted to a fraction
-			// of a texel. Not where no block moved with it: GTA IV's radar turns
-			// within its ring, and the field pulled the world's motion into it.
-			// A seventh, favoured well over all (0.04): the block the pixel is
-			// in, as the field where that block moved with it, else as its own
-			// vector. Picking by the two ends alone, a walking player's head lost
-			// to the wall behind it, whose ends agree where an animated head's
-			// never quite do (GTA IV, Niko's head gone in turns, build 115 on my
-			// console; in the model of these passes, a head over a wall in a
-			// turn of 3 and 6 degrees a game frame: 75% and 70% of it right,
-			// 87% and 83% with this and the median that keeps a block's own).
-			// And where the chosen vector's two ends disagree, the one that sees
-			// the point, not the nearer frame as it is: if the thing at the
-			// point's place in this frame moves with the vector, this frame sees
-			// it and the last frame's view was covered (beside the player in a
-			// turn, the wall the player hid); else the last frame's end, if the
-			// thing at its place there moves with the vector in this frame too
-			// (else a thing standing still covers both, and the last frame's
-			// end drew a copy of a piece of the player beside the player in the
-			// model); else the nearer frame. Either end
-			// is one frame's own picture, never two blended where they disagree
-			// (GTA IV's shadows shimmer by themselves, and averaging two patterns
-			// softened every other frame's on my console, build 94). In the
-			// model the walls of a turn gained 0.4 to 2.7 dB so, and the outline
-			// of the player no longer showed in them. The seventh candidate and
-			// the ends that see only with p2.y set (the Method setting's Builds
-			// 117); else as build 115, the nearer frame wherever the ends disagree
-			R"(
-void main()
-{
-	const ivec2 p = ivec2(gl_GlobalInvocationID.xy);
-	if (p.x >= int(p0.z) || p.y >= int(p0.w)) return;
-	const float t = p2.x;
-	const vec2 uv = (vec2(p) + 0.5) / p0.zw;
-	const vec2 grid_uv = uv * p1.zw;
-	const ivec2 grid = textureSize(tex2, 0);
-	const ivec2 near = ivec2(floor(grid_uv * vec2(grid) - 0.5));
-	const vec4 camera = texelFetch(tex3, ivec2(2, 0), 0);
-	const bool holds = camera.x > 0.5;
-	// The field here, in working texels, x and y from the frame's centre in
-	// half widths; its w marks it as the field
-	const vec4 m0 = texelFetch(tex3, ivec2(0, 0), 0);
-	const vec4 m1 = texelFetch(tex3, ivec2(1, 0), 0);
-	const float fx = 2.0 * uv.x - 1.0;
-	const float fy = (2.0 * uv.y - 1.0) * p1.y / p1.x;
-	const vec4 field = vec4(m0.x + m0.y * fx + m0.z * fy + m1.z * fx * fx + m1.w * fx * fy,
-		m0.w + m1.x * fx + m1.y * fy + m1.z * fx * fy + m1.w * fy * fy, 0.0, 2.0);
-	const vec4 own = texelFetch(tex2, clamp(ivec2(floor(grid_uv * vec2(grid))), ivec2(0), grid - 1), 0);
-	vec4 mv = vec4(0.0);
-	vec3 last = vec3(0.0);
-	vec3 next = vec3(0.0);
-	float best = 1e9;
-	bool beside_still = false;
-	bool beside_camera = false;
-	const bool keeps_own = p2.y > 0.5;
-	for (int c = 0; c < (keeps_own ? 7 : 6); c++)
-	{
-		vec4 v;
-		float favour = c == 0 ? 0.0 : 0.004;
-		if (c < 5)
-		{
-			v = c == 0 ? texture(tex2, grid_uv)
-				: texelFetch(tex2, clamp(near + ivec2((c - 1) & 1, (c - 1) >> 1), ivec2(0), grid - 1), 0);
-			beside_still = beside_still || (c > 0 && length(v.xy) <= 1.0);
-			beside_camera = beside_camera || (c > 0 && v.w > 0.5);
-		}
-		else if (c == 5)
-		{
-			if (!holds || !beside_camera)
-			{
-				continue;
-			}
-			v = field;
-			favour = -0.006;
-		}
-		else
-		{
-			v = holds && own.w > 0.5 ? field : own;
-			favour = -0.04;
-		}
-		const vec2 d = v.xy / p1.xy;
-		const vec3 l = texture(tex0, uv + t * d).rgb;
-		const vec3 n = texture(tex1, (uv - (1.0 - t) * d) * p0.xy).rgb;
-		const vec3 g = abs(l - n);
-		const float s = max(max(g.r, g.g), g.b) + favour;
-		if (s < best)
-		{
-			best = s;
-			mv = v;
-			last = l;
-			next = n;
-		}
-	}
-	const vec3 here = texture(tex1, uv * p0.xy).rgb;
-	const vec3 there = texture(tex0, uv).rgb;
-	const vec3 moved_gap = abs(last - next);
-	const vec3 still_gap = abs(there - here);
-	const float trust = 1.0 - smoothstep(0.035, 0.11, mv.z);
-	const float agree = 1.0 - smoothstep(0.03, 0.1, max(max(moved_gap.r, moved_gap.g), moved_gap.b));
-	const float still = beside_still ? 1.0 - smoothstep(0.012, 0.04, max(max(still_gap.r, still_gap.g), still_gap.b)) : 0.0;
-	const vec3 nearer = t < 0.5 ? there : here;
-	// The end that sees the point, for where the two disagree: whether the
-	// block at its place in this frame moves with the vector; else whether
-	// the block at its place in the last frame does, here (else a thing
-	// standing still covers it in both, and neither end shows it)
-	const vec2 d = mv.xy / p1.xy;
-	const float tolerance = 1.5 + 0.1 * length(mv.xy);
-	const vec4 at = texelFetch(tex2, clamp(ivec2(floor((uv - (1.0 - t) * d) * p1.zw * vec2(grid))), ivec2(0), grid - 1), 0);
-	const vec4 at_last = texelFetch(tex2, clamp(ivec2(floor((uv + t * d) * p1.zw * vec2(grid))), ivec2(0), grid - 1), 0);
-	const bool sees = length(at.xy - mv.xy) <= tolerance || (holds && mv.w > 1.5 && at.w > 0.5);
-	const bool last_sees = length(at_last.xy - mv.xy) <= tolerance || (holds && mv.w > 1.5 && at_last.w > 0.5);
-	const vec3 moved = mix(sees ? next : last_sees ? last : nearer, mix(last, next, t), agree);
-	const vec3 between = keeps_own ? mix(nearer, moved, trust) : mix(nearer, mix(last, next, t), trust * agree);
-	const bool quick = camera.w > 0.5;
-	imageStore(dst, p, vec4(quick ? nearer : mix(between, nearer, still), 1.0));
+	imageStore(dst, p, vec4(xs[4], ys[4], texelFetch(tex0, p, 0).z, texelFetch(tex1, p, 0).r));
 }
 )",
 			// pass_keep: tex0 the frame; p0 = (its used part as a share of its
@@ -928,93 +732,22 @@ void main()
 	imageStore(dst, p, vec4(vec2(best_v), error / 64.0, 0.0));
 }
 )",
-			// pass_between_soft: as pass_between's inputs and push constants.
-			// Each pixel blends what the 16 blocks around it predict (each the
-			// two frames along its vector, blended by t), weighted by a tent
-			// two blocks wide over the block grid, by how well its two ends
-			// agree here (exp(-(gap / 0.05)^2)) and by how well the block
-			// matched; and the camera's field where it holds, weighted by the
-			// blocks' check. Where none agree well (the best under 0.15 to 0.6),
-			// a crossfade of the two frames. Picking one vector a pixel turned a
-			// wrong one into a sharp wrong patch, which flickered as each frame
-			// between picked again; blended, a wrong vector blurs. HUD rule as
-			// pass_between's and one more for HUD the blocks miss (below);
-			// stepping aside as pass_between
+			// pass_hud: tex0 the last frame, tex1 this one; p0 = (this frame's
+			// used part as a share of its texture, the output size). The last
+			// frame as it is, its alpha where a picture drawn on the screen (the
+			// radar's ring, text) stands still over a moving world: the blocks it
+			// shares with the world carry the world's motion, so none is still. A
+			// pixel that repeats exactly, inside some 3x3 patch that repeats
+			// exactly and has an edge in it. A plain patch matches itself however
+			// the picture moves (a pole crossing the sky), so only one with
+			// something drawn in it counts. Once a game frame, for pass_between:
+			// the pixel keeps the frame nearer in time there, and nothing is
+			// carried from there to elsewhere
 			R"(
 void main()
 {
 	const ivec2 p = ivec2(gl_GlobalInvocationID.xy);
 	if (p.x >= int(p0.z) || p.y >= int(p0.w)) return;
-	const float t = p2.x;
-	const vec2 uv = (vec2(p) + 0.5) / p0.zw;
-	const vec2 grid_uv = uv * p1.zw;
-	const ivec2 grid = textureSize(tex2, 0);
-	const vec2 g = grid_uv * vec2(grid) - 0.5;
-	const ivec2 near = ivec2(floor(g));
-	const vec2 f = g - vec2(near);
-	const vec4 camera = texelFetch(tex3, ivec2(2, 0), 0);
-	vec3 sum = vec3(0.0);
-	float weight = 0.0;
-	float best_agree = 0.0;
-	bool beside_still = false;
-	for (int oy = -1; oy <= 2; oy++)
-	{
-		for (int ox = -1; ox <= 2; ox++)
-		{
-			const vec4 v = texelFetch(tex2, clamp(near + ivec2(ox, oy), ivec2(0), grid - 1), 0);
-			const float spatial = max(0.0, 1.0 - abs(f.x - float(ox)) * 0.5) * max(0.0, 1.0 - abs(f.y - float(oy)) * 0.5);
-			if (ox >= 0 && ox <= 1 && oy >= 0 && oy <= 1)
-			{
-				beside_still = beside_still || length(v.xy) <= 1.0;
-			}
-			const vec2 d = v.xy / p1.xy;
-			const vec3 l = texture(tex0, uv + t * d).rgb;
-			const vec3 n = texture(tex1, (uv - (1.0 - t) * d) * p0.xy).rgb;
-			const vec3 gaps = abs(l - n);
-			const float gap = max(max(gaps.r, gaps.g), gaps.b) / 0.05;
-			const float agree = exp(-gap * gap);
-			const float trust = 1.0 - smoothstep(0.035, 0.11, v.z);
-			const float w = spatial * agree * trust + 1e-6 * spatial;
-			sum += w * mix(l, n, t);
-			weight += w;
-			if (spatial > 0.0)
-			{
-				best_agree = max(best_agree, agree * trust);
-			}
-		}
-	}
-	if (camera.x > 0.5)
-	{
-		const vec4 m0 = texelFetch(tex3, ivec2(0, 0), 0);
-		const vec4 m1 = texelFetch(tex3, ivec2(1, 0), 0);
-		const float fx = 2.0 * uv.x - 1.0;
-		const float fy = (2.0 * uv.y - 1.0) * p1.y / p1.x;
-		const vec2 d = vec2(m0.x + m0.y * fx + m0.z * fy + m1.z * fx * fx + m1.w * fx * fy,
-			m0.w + m1.x * fx + m1.y * fy + m1.z * fx * fy + m1.w * fy * fy) / p1.xy;
-		const vec3 l = texture(tex0, uv + t * d).rgb;
-		const vec3 n = texture(tex1, (uv - (1.0 - t) * d) * p0.xy).rgb;
-		const vec3 gaps = abs(l - n);
-		const float gap = max(max(gaps.r, gaps.g), gaps.b) / 0.05;
-		const float agree = exp(-gap * gap);
-		const float check = texture(tex2, grid_uv).w;
-		sum += check * agree * mix(l, n, t);
-		weight += check * agree;
-		if (check > 0.5)
-		{
-			best_agree = max(best_agree, agree);
-		}
-	}
-	const vec3 moved = sum / weight;
-	const vec3 here = texture(tex1, uv * p0.xy).rgb;
-	const vec3 there = texture(tex0, uv).rgb;
-	const vec3 still_gap = abs(there - here);
-	float still = beside_still ? 1.0 - smoothstep(0.012, 0.04, max(max(still_gap.r, still_gap.g), still_gap.b)) : 0.0;
-	// A picture drawn on the screen (the radar's ring, text) over a moving
-	// world: the blocks it shares with the world carry the world's motion, so
-	// none is still. A pixel that repeats exactly, inside some 3x3 patch that
-	// repeats exactly and has an edge in it, stays put. A plain patch matches
-	// itself however the picture moves (a pole crossing the sky), so only one
-	// with something drawn in it counts
 	const ivec2 lim = ivec2(p0.zw) - 1;
 	float gaps[25];
 	float lumas[25];
@@ -1045,9 +778,155 @@ void main()
 			drawn = max(drawn, (1.0 - smoothstep(0.004, 0.01, worst)) * smoothstep(0.04, 0.1, hi - lo));
 		}
 	}
-	still = max(still, drawn * (1.0 - smoothstep(0.004, 0.01, gaps[12])));
+	imageStore(dst, p, vec4(texelFetch(tex0, p, 0).rgb, drawn * (1.0 - smoothstep(0.004, 0.01, gaps[12]))));
+}
+)",
+			// pass_between: tex0 the last frame (its own size) with its HUD
+			// (pass_hud), tex1 this one, tex2 the vectors (pass_median), tex3
+			// the camera's field (pass_camera); p0 = (this frame's used part as a
+			// share of its texture, the output size), p1 = (the working size, the
+			// share of the vector grid it covers), p2.x the time t from the last
+			// frame (0) to this one (1). Each vector, from a point of this frame to where it
+			// was in the last, is followed t of the way back from here in the last
+			// frame and 1 - t of the way on in this one, and the two blended by t.
+			// Each pixel blends what the 16 blocks round it predict so, weighted
+			// by a tent two blocks wide over the grid, by how well each one's two
+			// ends agree here (exp(-(gap / 0.05)^2)) and by how well the block
+			// matched; and the camera's field where it holds, weighted by the
+			// blocks' check. Picking one vector a pixel (builds 106 to 117) turned
+			// a wrong one into a sharp wrong patch, which flickered as each frame
+			// between picked again; blended, a wrong vector blurs.
+			// Where none agree well (the best under 0.15 to 0.6): both frames
+			// carried along the blocks' vectors averaged over the same tent
+			// (weighted by how well each matched), each end weighed by how much it
+			// looks like what this spot shows in either frame, and where the two
+			// ends still disagree no better than the frames do unmoved, the frames
+			// crossfaded where they are. Build 120 crossfaded them in any case: in
+			// GTA IV's quick turns, the game at 15 to 20 fps, the picture moved 120
+			// to 190 pixels a game frame, the frames' motion blur differs, and
+			// most of the frame fell back to two pictures 100 pixels apart torn
+			// along the blocks (build 120's frames saved on my console; a dense
+			// optical flow did no better there). The averaged motion is nobody's
+			// where the blocks round about disagree (the player's edge, the HUD's):
+			// a spread of 4 to 16 texels leaves those in place. The end that looks
+			// like the spot: where the world's motion reaches into the HUD, one end
+			// shows the radar and the other the street, and the street belongs
+			// here. In the model of these passes, a city turned 6 and 10 degrees a
+			// game frame went from 21.9 to 22.1 dB and 20.2 to 20.4, a street
+			// driven 1.4 metres a game frame from 27.3 to 27.7 (its radar 26.2 to
+			// 27.0); on the frames saved in GTA IV, the buildings and the road
+			// stayed whole.
+			// The HUD: where the pixel is the same in both frames beside a block
+			// that did not move, the frame nearer in time as it is (the radar's
+			// frame and text, which the world's vectors dragged along); without
+			// that block, a thin thing crossing a plain background (a lamp post
+			// over the sky) was erased. And where pass_hud found the HUD standing
+			// still, which the carried ends never take either. The frame nearer
+			// in time as it is everywhere while the camera moves too quickly
+			// (pass_motion, carried in tex3's third texel), with the Step aside
+			// setting
+			R"(
+float largest(const vec3 c)
+{
+	return max(max(c.r, c.g), c.b);
+}
+
+void main()
+{
+	const ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+	if (p.x >= int(p0.z) || p.y >= int(p0.w)) return;
+	const float t = p2.x;
+	const vec2 uv = (vec2(p) + 0.5) / p0.zw;
+	const vec2 grid_uv = uv * p1.zw;
+	const ivec2 grid = textureSize(tex2, 0);
+	const vec2 g = grid_uv * vec2(grid) - 0.5;
+	const ivec2 near = ivec2(floor(g));
+	const vec2 f = g - vec2(near);
+	const vec4 camera = texelFetch(tex3, ivec2(2, 0), 0);
+	vec3 sum = vec3(0.0);
+	float weight = 0.0;
+	float best_agree = 0.0;
+	bool beside_still = false;
+	vec2 motion_sum = vec2(0.0);
+	float motion_weight = 0.0;
+	float motion_square = 0.0;
+	for (int oy = -1; oy <= 2; oy++)
+	{
+		for (int ox = -1; ox <= 2; ox++)
+		{
+			const vec4 v = texelFetch(tex2, clamp(near + ivec2(ox, oy), ivec2(0), grid - 1), 0);
+			const float spatial = max(0.0, 1.0 - abs(f.x - float(ox)) * 0.5) * max(0.0, 1.0 - abs(f.y - float(oy)) * 0.5);
+			if (ox >= 0 && ox <= 1 && oy >= 0 && oy <= 1)
+			{
+				beside_still = beside_still || length(v.xy) <= 1.0;
+			}
+			const vec2 d = v.xy / p1.xy;
+			const vec3 l = texture(tex0, uv + t * d).rgb;
+			const vec3 n = texture(tex1, (uv - (1.0 - t) * d) * p0.xy).rgb;
+			const float gap = largest(abs(l - n)) / 0.05;
+			const float agree = exp(-gap * gap);
+			const float trust = 1.0 - smoothstep(0.035, 0.11, v.z);
+			const float w = spatial * agree * trust + 1e-6 * spatial;
+			sum += w * mix(l, n, t);
+			weight += w;
+			const float mw = spatial * trust + 1e-6 * spatial;
+			motion_sum += mw * v.xy;
+			motion_weight += mw;
+			motion_square += mw * dot(v.xy, v.xy);
+			if (spatial > 0.0)
+			{
+				best_agree = max(best_agree, agree * trust);
+			}
+		}
+	}
+	if (camera.x > 0.5)
+	{
+		const vec4 m0 = texelFetch(tex3, ivec2(0, 0), 0);
+		const vec4 m1 = texelFetch(tex3, ivec2(1, 0), 0);
+		const float fx = 2.0 * uv.x - 1.0;
+		const float fy = (2.0 * uv.y - 1.0) * p1.y / p1.x;
+		const vec2 d = vec2(m0.x + m0.y * fx + m0.z * fy + m1.z * fx * fx + m1.w * fx * fy,
+			m0.w + m1.x * fx + m1.y * fy + m1.z * fx * fy + m1.w * fy * fy) / p1.xy;
+		const vec3 l = texture(tex0, uv + t * d).rgb;
+		const vec3 n = texture(tex1, (uv - (1.0 - t) * d) * p0.xy).rgb;
+		const float gap = largest(abs(l - n)) / 0.05;
+		const float agree = exp(-gap * gap);
+		const float check = texture(tex2, grid_uv).w;
+		sum += check * agree * mix(l, n, t);
+		weight += check * agree;
+		if (check > 0.5)
+		{
+			best_agree = max(best_agree, agree);
+		}
+	}
+	const vec3 moved = sum / weight;
+	const vec3 here = texture(tex1, uv * p0.xy).rgb;
+	const vec4 hud = texture(tex0, uv);
+	const vec3 there = hud.rgb;
+	// Where none agree: the frames carried along the motion round about,
+	// each end as much as it looks like this spot; or left where they are
+	const vec2 motion = motion_sum / motion_weight;
+	const float spread = sqrt(max(motion_square / motion_weight - dot(motion, motion), 0.0));
+	const vec2 dm = motion / p1.xy;
+	const vec4 ml_hud = texture(tex0, uv + t * dm);
+	const vec3 ml = ml_hud.rgb;
+	const vec3 mn = texture(tex1, (uv - (1.0 - t) * dm) * p0.xy).rgb;
+	const float like_l = min(largest(abs(ml - there)), largest(abs(ml - here))) / 0.1;
+	const float like_n = min(largest(abs(mn - there)), largest(abs(mn - here))) / 0.1;
+	const float wl = (1.0 - t) * (exp(-like_l * like_l) + 0.001) * (1.0 - ml_hud.a) + 1e-6;
+	const float wn = t * (exp(-like_n * like_n) + 0.001) * (1.0 - texture(tex0, uv - (1.0 - t) * dm).a) + 1e-6;
+	const vec3 carried = (wl * ml + wn * mn) / (wl + wn);
+	const float gap_carried = largest(abs(ml - mn)) / 0.1;
+	const float gap_unmoved = largest(abs(there - here)) / 0.1;
+	const float agree_carried = exp(-gap_carried * gap_carried);
+	const float agree_unmoved = exp(-gap_unmoved * gap_unmoved);
+	const float carry = (agree_carried + 0.001) / (agree_carried + agree_unmoved + 0.002) * (1.0 - smoothstep(4.0, 16.0, spread));
+	const vec3 fallback = mix(mix(there, here, t), carried, carry);
+	const vec3 still_gap = abs(there - here);
+	float still = beside_still ? 1.0 - smoothstep(0.012, 0.04, largest(still_gap)) : 0.0;
+	still = max(still, hud.a);
 	const vec3 nearer = t < 0.5 ? there : here;
-	const vec3 between = mix(mix(there, here, t), moved, smoothstep(0.15, 0.6, best_agree));
+	const vec3 between = mix(fallback, moved, smoothstep(0.15, 0.6, best_agree));
 	imageStore(dst, p, vec4(camera.w > 0.5 ? nearer : mix(between, nearer, still), 1.0));
 }
 )",
@@ -1222,6 +1101,7 @@ void main()
 			}
 		};
 		drop(m_prev_color);
+		drop(m_prev_hud);
 		for (auto& image : m_luma) drop(image);
 		for (auto& image : m_luma_coarse) drop(image);
 		for (auto& image : m_luma_rough) drop(image);
@@ -1256,6 +1136,7 @@ void main()
 		const u32 rough_h = utils::aligned_div(coarse_h, 4u);
 
 		m_prev_color = make_image(width, height, VK_FORMAT_R8G8B8A8_UNORM);
+		m_prev_hud = make_image(width, height, VK_FORMAT_R8G8B8A8_UNORM);
 		bool outputs = true;
 		for (auto& image : m_output)
 		{
@@ -1288,7 +1169,7 @@ void main()
 			image = make_image(utils::aligned_div(m_work_w, 8u), utils::aligned_div(m_work_h, 8u), VK_FORMAT_R16G16B16A16_SFLOAT);
 		}
 
-		if (!m_prev_color || !outputs || !m_luma[0] || !m_luma[1] || !m_luma_coarse[0] || !m_luma_coarse[1] || !m_luma_rough[0] || !m_luma_rough[1] ||
+		if (!m_prev_color || !m_prev_hud || !outputs || !m_luma[0] || !m_luma[1] || !m_luma_coarse[0] || !m_luma_coarse[1] || !m_luma_rough[0] || !m_luma_rough[1] ||
 			!m_vectors_rough || !m_motion || !m_camera || !m_camera_moved || !m_motion_mapped || !m_vectors_coarse || !m_vectors || !m_vectors_smooth ||
 			!m_vectors_refined[0] || !m_vectors_refined[1])
 		{
@@ -1308,7 +1189,7 @@ void main()
 		m_have_prev = false;
 	}
 
-	void frame_generator::record_capture(const vk::command_buffer& cmd, vk::viewable_image* cur, u32 width, u32 height, u32 count, u32 quality, u32 step, u32 method)
+	void frame_generator::record_capture(const vk::command_buffer& cmd, vk::viewable_image* cur, u32 width, u32 height, u32 count, u32 quality, u32 step)
 	{
 		const auto pdev = vk::get_current_renderer();
 		const u32 grid_w = utils::aligned_div(m_work_w, 8u);
@@ -1398,10 +1279,9 @@ void main()
 			order += fmt::format(", made at %.2f of the way", static_cast<f32>(k + 1) / static_cast<f32>(count + 1));
 		}
 		order += ", the game's frame after";
-		m_capture_info = fmt::format("%s | %ux%u, %s (motion at %ux%u) | method: %s | steps aside: %s\n%s",
+		m_capture_info = fmt::format("%s | %ux%u, %s (motion at %ux%u) | build %s | steps aside: %s\n%s",
 			Emu.GetTitleID(), width, height, c_quality[quality].name, m_work_w, m_work_h,
-			method == 3 ? "as build 120" : method == 2 ? "as build 117" : method == 1 ? "117, searches as 115" : "as build 115",
-			step == 0 ? "never" : step == 2 ? "in most moves" : "in quick moves", order);
+			ps5_title_build().empty() ? "unknown" : ps5_title_build(), step == 0 ? "never" : step == 2 ? "in most moves" : "in quick moves", order);
 	}
 
 	void frame_generator::take_capture()
@@ -1493,7 +1373,7 @@ void main()
 	}
 
 	u32 frame_generator::process(const vk::command_buffer& cmd, vk::viewable_image* cur, u32 width, u32 height, u32 count, u32 quality, u32 step,
-		u32 method, vk::viewable_image* (&out)[max_frames])
+		vk::viewable_image* (&out)[max_frames])
 	{
 		take_capture();
 
@@ -1505,14 +1385,6 @@ void main()
 		height = std::min<u32>(height, cur->height());
 		quality = std::min<u32>(quality, static_cast<u32>(std::size(c_quality)) - 1);
 		count = std::min(count, max_frames);
-		// The Method setting: 0 as build 115; 1 a block's own vector kept and
-		// favoured, and the ends that see; 2 also the searches' margins by
-		// contrast; 3 (build 120) the searches as 115's, the vectors made to
-		// agree with their neighbours (pass_refine), and the blocks around each
-		// pixel blended (pass_between_soft)
-		const bool steady = method == 3;
-		const f32 keeps_own = method == 1 || method == 2 ? 1.f : 0.f;
-		const f32 by_contrast = method == 2 ? 1.f : 0.f;
 
 		if (width != m_width || height != m_height || quality != m_quality)
 		{
@@ -1521,7 +1393,7 @@ void main()
 			{
 				return 0;
 			}
-			for (auto* image : { m_prev_color.get(), m_output[0].get(), m_output[1].get(), m_output[2].get(), m_luma[0].get(), m_luma[1].get(),
+			for (auto* image : { m_prev_color.get(), m_prev_hud.get(), m_output[0].get(), m_output[1].get(), m_output[2].get(), m_luma[0].get(), m_luma[1].get(),
 				m_luma_coarse[0].get(), m_luma_coarse[1].get(), m_luma_rough[0].get(), m_luma_rough[1].get(), m_vectors_rough.get(), m_motion.get(),
 				m_camera.get(), m_camera_moved.get(),
 				m_vectors_coarse.get(), m_vectors.get(), m_vectors_smooth.get(), m_vectors_refined[0].get(), m_vectors_refined[1].get() })
@@ -1577,16 +1449,16 @@ void main()
 		{
 			vk::get_compute_task<frame_generation_pass<pass_coarse_search>>()->run(cmd, { m_luma_coarse[0].get(), m_luma_coarse[1].get() }, m_vectors_coarse.get(), coarse_grid_w, coarse_grid_h,
 				{ static_cast<f32>(coarse_w), static_cast<f32>(coarse_h), static_cast<f32>(coarse_grid_w), static_cast<f32>(coarse_grid_h),
-				  static_cast<f32>(c_quality[quality].reach), 0.0005f, by_contrast });
+				  static_cast<f32>(c_quality[quality].reach), 0.0005f });
 			barrier(cmd);
 			vk::get_compute_task<frame_generation_pass<pass_fine_search>>()->run(cmd, { m_luma[0].get(), m_luma[1].get(), m_vectors_coarse.get() }, m_vectors.get(), grid_w, grid_h,
-				{ work_w, work_h, static_cast<f32>(grid_w), static_cast<f32>(grid_h), static_cast<f32>(coarse_grid_w), static_cast<f32>(coarse_grid_h), by_contrast });
+				{ work_w, work_h, static_cast<f32>(grid_w), static_cast<f32>(grid_h), static_cast<f32>(coarse_grid_w), static_cast<f32>(coarse_grid_h) });
 			barrier(cmd);
 			// The camera's motion: the rough vectors (a block of 64 working texels,
 			// up to a quarter of the reach in sixteenth texels), voted
 			vk::get_compute_task<frame_generation_pass<pass_coarse_search>>()->run(cmd, { m_luma_rough[0].get(), m_luma_rough[1].get() }, m_vectors_rough.get(), rough_grid_w, rough_grid_h,
 				{ static_cast<f32>(rough_w), static_cast<f32>(rough_h), static_cast<f32>(rough_grid_w), static_cast<f32>(rough_grid_h),
-				  static_cast<f32>(std::max(1u, c_quality[quality].reach / 4)), 0.002f, by_contrast });
+				  static_cast<f32>(std::max(1u, c_quality[quality].reach / 4)), 0.002f });
 			barrier(cmd);
 			// Stepping aside beyond 6% of the frame's width a game frame (Quick
 			// moves), 3% (Most moves), or never
@@ -1611,21 +1483,20 @@ void main()
 			host.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 			host.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
 			vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0, 1, &host, 0, nullptr, 0, nullptr);
-			// Build 120's: four rounds of agreeing with the neighbours
+			// Four rounds of agreeing with the neighbours
 			vk::viewable_image* vectors = m_vectors.get();
-			if (steady)
+			for (u32 round = 0; round < 4; round++)
 			{
-				for (u32 round = 0; round < 4; round++)
-				{
-					vk::viewable_image* next = m_vectors_refined[round & 1].get();
-					vk::get_compute_task<frame_generation_pass<pass_refine>>()->run(cmd, { m_luma[0].get(), m_luma[1].get(), vectors, m_vectors.get() }, next, grid_w, grid_h,
-						{ work_w, work_h, static_cast<f32>(grid_w), static_cast<f32>(grid_h) });
-					barrier(cmd);
-					vectors = next;
-				}
+				vk::viewable_image* next = m_vectors_refined[round & 1].get();
+				vk::get_compute_task<frame_generation_pass<pass_refine>>()->run(cmd, { m_luma[0].get(), m_luma[1].get(), vectors, m_vectors.get() }, next, grid_w, grid_h,
+					{ work_w, work_h, static_cast<f32>(grid_w), static_cast<f32>(grid_h) });
+				barrier(cmd);
+				vectors = next;
 			}
-			vk::get_compute_task<frame_generation_pass<pass_median>>()->run(cmd, { vectors, m_camera_moved.get(), m_luma[0].get(), m_luma[1].get() }, m_vectors_smooth.get(), grid_w, grid_h,
-				{ static_cast<f32>(grid_w), static_cast<f32>(grid_h), work_w, work_h, keeps_own });
+			vk::get_compute_task<frame_generation_pass<pass_median>>()->run(cmd, { vectors, m_camera_moved.get() }, m_vectors_smooth.get(), grid_w, grid_h,
+				{ static_cast<f32>(grid_w), static_cast<f32>(grid_h) });
+			vk::get_compute_task<frame_generation_pass<pass_hud>>()->run(cmd, { m_prev_color.get(), cur }, m_prev_hud.get(), width, height,
+				{ uv_x, uv_y, static_cast<f32>(width), static_cast<f32>(height) });
 			barrier(cmd);
 
 			// The frames between, each at its time: with three, a quarter, a half
@@ -1633,15 +1504,8 @@ void main()
 			for (u32 k = 0; k < count; k++)
 			{
 				const f32 t = static_cast<f32>(k + 1) / static_cast<f32>(count + 1);
-				const std::array<f32, 12> between = { uv_x, uv_y, static_cast<f32>(width), static_cast<f32>(height), work_w, work_h, work_w / (grid_w * 8.f), work_h / (grid_h * 8.f), t, keeps_own };
-				if (steady)
-				{
-					vk::get_compute_task<frame_generation_pass<pass_between_soft>>()->run(cmd, { m_prev_color.get(), cur, m_vectors_smooth.get(), m_camera.get() }, m_output[k].get(), width, height, between);
-				}
-				else
-				{
-					vk::get_compute_task<frame_generation_pass<pass_between>>()->run(cmd, { m_prev_color.get(), cur, m_vectors_smooth.get(), m_camera.get() }, m_output[k].get(), width, height, between);
-				}
+				vk::get_compute_task<frame_generation_pass<pass_between>>()->run(cmd, { m_prev_hud.get(), cur, m_vectors_smooth.get(), m_camera.get() }, m_output[k].get(), width, height,
+					{ uv_x, uv_y, static_cast<f32>(width), static_cast<f32>(height), work_w, work_h, work_w / (grid_w * 8.f), work_h / (grid_h * 8.f), t });
 				out[k] = m_output[k].get();
 			}
 			made = count;
@@ -1650,7 +1514,7 @@ void main()
 			// A capture's set, before the last frame's picture is replaced
 			if (m_capture_sets && !m_capture_event && get_system_time() >= m_capture_next_us)
 			{
-				record_capture(cmd, cur, width, height, count, quality, step, method);
+				record_capture(cmd, cur, width, height, count, quality, step);
 			}
 		}
 
