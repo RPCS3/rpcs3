@@ -20,6 +20,7 @@
 #include "PPUAnalyser.h"
 #include "PPUModule.h"
 #include "PPUDisAsm.h"
+#include "Common.h"
 #include "SPURecompiler.h"
 #include "timers.hpp"
 #include "lv2/sys_sync.h"
@@ -4967,6 +4968,10 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 			{ "__escape", reinterpret_cast<u64>(+ppu_escape) },
 			{ "__read_maybe_mmio32", reinterpret_cast<u64>(+ppu_read_mmio_aware_u32) },
 			{ "__write_maybe_mmio32", reinterpret_cast<u64>(+ppu_write_mmio_aware_u32) },
+			{ "__vrefp", reinterpret_cast<u64>(+[](u32 x, u32 nj) { return ppu_vrefp(x, nj != 0); }) },
+			{ "__vrsqrtefp", reinterpret_cast<u64>(+[](u32 x, u32 nj) { return ppu_vrsqrtefp(x, nj != 0); }) },
+			{ "__vexptefp", reinterpret_cast<u64>(+[](u32 x, u32 nj) { return ppu_vexptefp(x, nj != 0); }) },
+			{ "__vlogefp", reinterpret_cast<u64>(+[](u32 x, u32 nj) { return ppu_vlogefp(x, nj != 0); }) },
 		};
 
 		for (u64 index = 0; index < 1024; index++)
@@ -5587,7 +5592,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				settings += ppu_settings::daz_and_ftz;
 
 			// Write version, hash, CPU, settings
-			fmt::append(obj_name, "v8-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu.to_string()));
+			fmt::append(obj_name, "v9-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu.to_string()));
 		}
 
 		if (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped())
