@@ -258,12 +258,19 @@ void main()
 			// (0) to this one (1). Each vector, from a point of this frame to
 			// where it was in the last, is followed t of the way back from here
 			// in the last frame and 1 - t of the way on in this one, and the two
-			// blended by t where they agree closely. Anywhere else the frame
-			// nearer in time as it is: where the block matched poorly, where the
-			// two disagree (GTA IV's shadows shimmer by themselves, and averaging
-			// two patterns softened every other frame's on my console, build 94),
-			// and where the pixel is the same in both frames unmoved (the HUD,
-			// the radar's frame and text, which the world's vectors dragged along)
+			// blended by t where they agree closely. Which vector: of the one
+			// blended between the four nearest blocks' and those four, the one
+			// whose two ends agree best (the blended one a little favoured): at
+			// a moving thing's edge the blend of its vector and the background's
+			// belongs to neither and smeared the edge (build 106 on my console;
+			// in a model of these passes, picking per pixel gained about 1 dB
+			// overall and up to 1.6 dB at a moving object's edges). Anywhere else
+			// the frame nearer in time as it is: where the block matched poorly,
+			// where the two disagree (GTA IV's shadows shimmer by themselves, and
+			// averaging two patterns softened every other frame's on my console,
+			// build 94), and where the pixel is the same in both frames unmoved
+			// (the HUD, the radar's frame and text, which the world's vectors
+			// dragged along)
 			R"(
 void main()
 {
@@ -271,10 +278,30 @@ void main()
 	if (p.x >= int(p0.z) || p.y >= int(p0.w)) return;
 	const float t = p2.x;
 	const vec2 uv = (vec2(p) + 0.5) / p0.zw;
-	const vec4 mv = texture(tex2, uv * p1.zw);
-	const vec2 d = mv.xy / p1.xy;
-	const vec3 last = texture(tex0, uv + t * d).rgb;
-	const vec3 next = texture(tex1, (uv - (1.0 - t) * d) * p0.xy).rgb;
+	const vec2 grid_uv = uv * p1.zw;
+	const ivec2 grid = textureSize(tex2, 0);
+	const ivec2 near = ivec2(floor(grid_uv * vec2(grid) - 0.5));
+	vec4 mv = vec4(0.0);
+	vec3 last = vec3(0.0);
+	vec3 next = vec3(0.0);
+	float best = 1e9;
+	for (int c = 0; c < 5; c++)
+	{
+		const vec4 v = c == 0 ? texture(tex2, grid_uv)
+			: texelFetch(tex2, clamp(near + ivec2((c - 1) & 1, (c - 1) >> 1), ivec2(0), grid - 1), 0);
+		const vec2 d = v.xy / p1.xy;
+		const vec3 l = texture(tex0, uv + t * d).rgb;
+		const vec3 n = texture(tex1, (uv - (1.0 - t) * d) * p0.xy).rgb;
+		const vec3 g = abs(l - n);
+		const float s = max(max(g.r, g.g), g.b) + (c == 0 ? 0.0 : 0.004);
+		if (s < best)
+		{
+			best = s;
+			mv = v;
+			last = l;
+			next = n;
+		}
+	}
 	const vec3 here = texture(tex1, uv * p0.xy).rgb;
 	const vec3 there = texture(tex0, uv).rgb;
 	const vec3 moved_gap = abs(last - next);

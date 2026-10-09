@@ -11,8 +11,9 @@
 // across, by the Quality setting), blocks matched at a quarter of that and
 // refined at full working size, the vectors' outliers removed by a median;
 // then each pixel of a frame between, at a time t from the last frame (0) to
-// this one (1), is taken that far along its vector from both frames and
-// blended by t. Where a block matched badly, or the two frames disagree
+// this one (1), is taken that far along a vector from both frames and blended
+// by t: of the nearest blocks' vectors and their blend, the one whose two ends
+// agree best. Where a block matched badly, or the two frames disagree
 // there, it takes the frame nearer in time, so a wrong vector costs
 // smoothness rather than smearing the picture.
 
