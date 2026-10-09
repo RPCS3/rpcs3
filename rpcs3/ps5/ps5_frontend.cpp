@@ -29,6 +29,7 @@ std::string ps5_open_files_report(); // ps5_fdtrack.cpp
 #include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
+#include "ps5_memory_cache.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/system_progress.hpp"
 #include "Emu/vfs_config.h"
@@ -739,7 +740,27 @@ namespace
 		g_emu_callbacks.get_recvmessage_dialog = []() -> std::shared_ptr<RecvMessageDialogBase> { return {}; };
 		g_emu_callbacks.get_trophy_notification_dialog = []() -> std::unique_ptr<TrophyNotificationBase> { return std::make_unique<ps5_trophy_notification>(); };
 
-		g_emu_callbacks.on_run = [](bool) {};
+		// The settings a game runs with, at each boot: the trace takes RPCS3's
+		// notices only until the first game runs, so RPCS3.log's "Used
+		// configuration" alone had them (God of War: Ascension's Accurate RSX
+		// reservation access, build 108)
+		g_emu_callbacks.on_run = [](bool)
+		{
+			if (Emu.GetTitleID().empty())
+			{
+				return;
+			}
+			const auto& core = g_cfg.core;
+			const auto& video = g_cfg.video;
+			const char* zcull = video.relaxed_zcull_sync ? "Relaxed" : video.precise_zpass_count ? "Precise" : "Approximate";
+			trace("settings for %s: SPU block size %s, Max SPURS %s, SPU loop detection %s, accurate SPU reservations %s, accurate RSX reservation access %s, XFloat %s; "
+				"frame limit %s, vblank %s Hz, resolution %s at %s%%, ZCULL %s, write color buffers %s, multithreaded RSX %s; late audio wait %s ms; frame generation %s (%s, quality %s)",
+				Emu.GetTitleID(), core.spu_block_size.to_string(), core.max_spurs_threads.to_string(), core.spu_loop_detection.to_string(),
+				core.spu_accurate_reservations.to_string(), core.rsx_accurate_res_access.to_string(), core.spu_xfloat_accuracy.to_string(),
+				video.frame_limit.to_string(), video.vblank_rate.to_string(), video.resolution.to_string(), video.resolution_scale_percent.to_string(), zcull,
+				video.write_color_buffers.to_string(), video.multithreaded_rsx.to_string(), g_cfg.audio.late_audio_wait.to_string(),
+				video.frame_generation.to_string(), video.frame_generation_frames.to_string(), video.frame_generation_quality.to_string());
+		};
 		g_emu_callbacks.on_pause = []() {};
 		g_emu_callbacks.on_resume = []() {};
 		g_emu_callbacks.on_stop = []() {};
@@ -1306,10 +1327,10 @@ int run(const char* boot_path)
 						frame_gen = fmt::format(", up to %s a frame, %s", most ? std::to_string(most) : std::string("Auto"),
 							quality == 0 ? "Fast" : quality == 2 ? "Quality" : "Balanced");
 					}
-					trace("status %ds: state %d, RSX flips %d (%u made between, %u dropped, in %u ms: %u ms waiting for the GPU; waiting for an image: %u ms for the game's frames, %u ms for those made%s); heap %d MiB (peak %d), free direct %d MiB, flexible %d MiB; progress '%s' modules %u/%u files %u/%u; open: %u files, %u folders, %u sockets, %u other (%u by fs); %d PPU threads:%s", seconds + 1,
+					trace("status %ds: state %d, RSX flips %d (%u made between, %u dropped, in %u ms: %u ms waiting for the GPU; waiting for an image: %u ms for the game's frames, %u ms for those made%s); heap %d MiB (peak %d), system cache %u MiB in memory, free direct %d MiB, flexible %d MiB; progress '%s' modules %u/%u files %u/%u; open: %u files, %u folders, %u sockets, %u other (%u by fs); %d PPU threads:%s", seconds + 1,
 						static_cast<u32>(Emu.GetStatus()), flips, static_cast<u32>(g_ps5_frames_generated.load()), static_cast<u32>(g_ps5_frames_dropped.load()),
 						static_cast<u32>(g_ps5_frame_gen_us.load() / 1000), static_cast<u32>(g_ps5_frame_gen_gpu_wait_us.load() / 1000),
-						static_cast<u32>(g_ps5_image_wait_us[0].load() / 1000), static_cast<u32>(g_ps5_image_wait_us[1].load() / 1000), frame_gen, heap.mapped_bytes >> 20, heap.peak_bytes >> 20, direct >> 20,
+						static_cast<u32>(g_ps5_image_wait_us[0].load() / 1000), static_cast<u32>(g_ps5_image_wait_us[1].load() / 1000), frame_gen, heap.mapped_bytes >> 20, heap.peak_bytes >> 20, static_cast<u32>(ps5_syscache_bytes() >> 20), direct >> 20,
 						flexible >> 20, progress_text, +g_progr_pdone, +g_progr_ptotal, +g_progr_fdone, +g_progr_ftotal, regular, folders, sockets, others, static_cast<u32>(fs::ps5_open_tracked()), count, ppus);
 					// Near the limit, which ones (once per 40 more)
 					static u32 s_reported = 0;

@@ -33,9 +33,18 @@ extern lv2_fs_mount_point g_mp_sys_dev_hdd1;
 
 extern std::string get_syscache_state_corruption_indicator_file_path(std::string_view dir_path);
 
+#ifdef __PROSPERO__
+// PS5: the caches are kept in memory (ps5/ps5_memory_cache.h)
+extern const std::string& ps5_syscache_root();
+#endif
+
 struct syscache_info
 {
+#ifdef __PROSPERO__
+	const std::string cache_root = ps5_syscache_root();
+#else
 	const std::string cache_root = rpcs3::utils::get_hdd1_dir() + "/caches/";
+#endif
 
 	stx::init_mutex init;
 
@@ -141,7 +150,11 @@ extern std::string get_syscache_state_corruption_indicator_file_path(std::string
 
 	if (dir_path.empty())
 	{
+#ifdef __PROSPERO__
+		return ps5_syscache_root() + ensure(g_fxo->try_get<syscache_info>())->cache_id + "/" + filename.data();
+#else
 		return rpcs3::utils::get_hdd1_dir() + "/caches/" + ensure(g_fxo->try_get<syscache_info>())->cache_id + "/" + filename.data();
+#endif
 	}
 
 	return std::string{dir_path} + filename.data();
