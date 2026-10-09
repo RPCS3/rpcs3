@@ -867,12 +867,16 @@ bool GLGSRender::load_program()
 		}
 
 		void* pipeline_properties = nullptr;
+		// The shader interpreter does not emulate the depth range; compile those programs synchronously instead
+		const bool allow_async = shadermode != shader_mode::recompiler &&
+			!(current_fragment_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE);
+
 		std::tie(m_program, m_vertex_prog, m_fragment_prog) = m_prog_buffer.get_graphics_pipeline(
 			&m_program_cache_hint,
 			current_vertex_program,
 			current_fragment_program,
 			pipeline_properties,
-			shadermode != shader_mode::recompiler, true);
+			allow_async, true);
 
 		if (m_prog_buffer.check_cache_missed())
 		{

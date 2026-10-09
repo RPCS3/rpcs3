@@ -8,8 +8,8 @@ R"(
 	}
 
 #ifdef _ENABLE_DEPTH_EXPORT
-	// Depth writes are clamped to [0, 1] even in depth float mode
-	float emulated_depth = encode_emulated_depth(_saturate(r1.z));
+	// Hardware tests show exported depth is not clamped to 1 on float depth surfaces
+	float emulated_depth = encode_emulated_depth(r1.z);
 #else
 	float emulated_depth = encode_emulated_depth(depth_range.x + _saturate(gl_FragCoord.z) * (depth_range.y - depth_range.x));
 #endif
