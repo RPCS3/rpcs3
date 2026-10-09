@@ -292,8 +292,14 @@ void main()
 			// averaging two patterns softened every other frame's on my console,
 			// build 94), and where the pixel is the same in both frames unmoved
 			// (the HUD, the radar's frame and text, which the world's vectors
-			// dragged along). And the frame nearer in time as it is everywhere
-			// while the camera moves too quickly (the vectors' w, pass_motion)
+			// dragged along) beside a block that did not move: without that
+			// block, a thin thing crossing a plain background (a lamp post over
+			// the sky) was erased, both frames showing the sky where it was to
+			// be, and lamp posts would flicker in a turn (in the model of these
+			// passes, a city turned 1.5 to 4.5 degrees a game frame: the posts
+			// kept 35-74% of their pixels, 51-78% with it; the HUD exact either
+			// way). And the frame nearer in time as it is everywhere while the
+			// camera moves too quickly (the vectors' w, pass_motion)
 			R"(
 void main()
 {
@@ -308,10 +314,12 @@ void main()
 	vec3 last = vec3(0.0);
 	vec3 next = vec3(0.0);
 	float best = 1e9;
+	bool beside_still = false;
 	for (int c = 0; c < 5; c++)
 	{
 		const vec4 v = c == 0 ? texture(tex2, grid_uv)
 			: texelFetch(tex2, clamp(near + ivec2((c - 1) & 1, (c - 1) >> 1), ivec2(0), grid - 1), 0);
+		beside_still = beside_still || (c > 0 && length(v.xy) <= 1.0);
 		const vec2 d = v.xy / p1.xy;
 		const vec3 l = texture(tex0, uv + t * d).rgb;
 		const vec3 n = texture(tex1, (uv - (1.0 - t) * d) * p0.xy).rgb;
@@ -331,7 +339,7 @@ void main()
 	const vec3 still_gap = abs(there - here);
 	const float trust = 1.0 - smoothstep(0.035, 0.11, mv.z);
 	const float agree = 1.0 - smoothstep(0.03, 0.1, max(max(moved_gap.r, moved_gap.g), moved_gap.b));
-	const float still = 1.0 - smoothstep(0.012, 0.04, max(max(still_gap.r, still_gap.g), still_gap.b));
+	const float still = beside_still ? 1.0 - smoothstep(0.012, 0.04, max(max(still_gap.r, still_gap.g), still_gap.b)) : 0.0;
 	const vec3 nearer = t < 0.5 ? there : here;
 	const vec3 between = mix(nearer, mix(last, next, t), trust * agree);
 	const bool quick = texelFetch(tex2, ivec2(0), 0).w > 0.5;
