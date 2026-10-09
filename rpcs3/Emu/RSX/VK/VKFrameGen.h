@@ -51,8 +51,9 @@ namespace vk
 		// setting's (0 Fast, 1 Balanced, 2 Quality), `step` the Step aside
 		// setting's (0 never, 1 quick moves, 2 most moves), `method` the Method
 		// setting's (0 as build 115, 1 as build 117 but its searches, 2 as build
-		// 117). Returns how many frames it made: none for the first frame, a new
-		// size or quality, or none asked for
+		// 117, 3 build 120's: motion that agrees with its neighbours, blended).
+		// Returns how many frames it made: none for the first frame, a new size
+		// or quality, or none asked for
 		u32 process(const vk::command_buffer& cmd, vk::viewable_image* cur, u32 width, u32 height, u32 count, u32 quality, u32 step,
 			u32 method, vk::viewable_image* (&out)[max_frames]);
 
@@ -102,6 +103,7 @@ namespace vk
 		std::unique_ptr<vk::viewable_image> m_vectors_coarse;    // a vector per 4x4 block at the coarse size
 		std::unique_ptr<vk::viewable_image> m_vectors;           // a vector per 8x8 block at the working size
 		std::unique_ptr<vk::viewable_image> m_vectors_smooth;    // the same, outliers removed
+		std::unique_ptr<vk::viewable_image> m_vectors_refined[2]; // build 120's rounds of agreeing with the neighbours, in turn
 		std::unique_ptr<vk::viewable_image> m_output[max_frames]; // the frames between
 	};
 }

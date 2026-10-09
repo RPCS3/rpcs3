@@ -101,9 +101,11 @@ layout(push_constant) uniform push_block { vec4 p0; vec4 p1; vec4 p2; };
 			pass_motion,         // the camera's motion, voted from the rough vectors
 			pass_camera,         // the camera's motion as one smooth field over the frame
 			pass_camera_check,   // each block: whether it moved with that field
+			pass_refine,         // the vectors, made to agree with their neighbours (Method 3)
+			pass_between_soft,   // the frame between, the blocks around blended (Method 3)
 		};
 
-		constexpr const char* c_formats[] = { "r32f", "r32f", "rgba16f", "rgba16f", "rgba16f", "rgba8", "rgba8", "rgba32f", "rgba32f", "r32f" };
+		constexpr const char* c_formats[] = { "r32f", "r32f", "rgba16f", "rgba16f", "rgba16f", "rgba8", "rgba8", "rgba32f", "rgba32f", "r32f", "rgba16f", "rgba8" };
 
 		constexpr const char* c_bodies[] =
 		{
@@ -843,6 +845,212 @@ void main()
 	imageStore(dst, p, vec4(moved_with));
 }
 )",
+			// pass_refine: tex0 the last frame's working brightness, tex1 this
+			// one's, tex2 the vectors so far, tex3 the fine search's own; p0 =
+			// (the working size, its 8x8 block grid). One round of motion that
+			// agrees with its neighbours, as TV frame-rate converters search
+			// (recursive search): of its eight neighbours' vectors, its own so
+			// far, the fine search's (charged 0.003), no motion (0.004) and its
+			// own a texel off each way (0.004), the one that matches the 16x16
+			// window round the block best once charged. A block keeps to its
+			// neighbours unless the picture clearly says otherwise. Run four
+			// times. The fine search alone took each block's best match by
+			// itself: on GTA IV's road under the elevated railway (shadows in a
+			// grid, dark asphalt) neighbouring blocks took vectors a stripe
+			// apart or none, the frames between chopped the shadows, and as
+			// each pair of frames chose afresh it flickered like static (build
+			// 117's frames saved on my console). z the chosen vector's error
+			// over its own 8x8 block, as the fine search's
+			R"(
+float window_error(const ivec2 base, const ivec2 v, const ivec2 lim)
+{
+	float s = 0.0;
+	for (int k = 0; k < 256; k++)
+	{
+		const ivec2 q = base + ivec2(k & 15, k >> 4);
+		s += abs(texelFetch(tex1, clamp(q, ivec2(0), lim), 0).r - texelFetch(tex0, clamp(q + v, ivec2(0), lim), 0).r);
+	}
+	return s / 256.0;
+}
+
+void main()
+{
+	const ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+	if (p.x >= int(p0.z) || p.y >= int(p0.w)) return;
+	const ivec2 lim = ivec2(p0.xy) - 1;
+	const ivec2 grid_lim = ivec2(p0.zw) - 1;
+	const ivec2 base = p * 8 - ivec2(4);
+	const ivec2 current = ivec2(round(texelFetch(tex2, p, 0).xy));
+	const ivec2 neighbours[8] = ivec2[](ivec2(1, 0), ivec2(-1, 0), ivec2(0, 1), ivec2(0, -1), ivec2(1, 1), ivec2(-1, -1), ivec2(-1, 1), ivec2(1, -1));
+	float best = 1e9;
+	ivec2 best_v = current;
+	for (int c = 0; c < 15; c++)
+	{
+		ivec2 v;
+		float charge = 0.0;
+		if (c < 8)
+		{
+			v = ivec2(round(texelFetch(tex2, clamp(p + neighbours[c], ivec2(0), grid_lim), 0).xy));
+		}
+		else if (c == 8)
+		{
+			v = current;
+		}
+		else if (c == 9)
+		{
+			v = ivec2(round(texelFetch(tex3, p, 0).xy));
+			charge = 0.003;
+		}
+		else if (c == 10)
+		{
+			v = ivec2(0);
+			charge = 0.004;
+		}
+		else
+		{
+			const ivec2 updates[4] = ivec2[](ivec2(1, 0), ivec2(-1, 0), ivec2(0, 1), ivec2(0, -1));
+			v = current + updates[c - 11];
+			charge = 0.004;
+		}
+		const float cost = window_error(base, v, lim) + charge;
+		if (cost < best)
+		{
+			best = cost;
+			best_v = v;
+		}
+	}
+	float error = 0.0;
+	for (int k = 0; k < 64; k++)
+	{
+		const ivec2 q = p * 8 + ivec2(k & 7, k >> 3);
+		error += abs(texelFetch(tex1, min(q, lim), 0).r - texelFetch(tex0, clamp(q + best_v, ivec2(0), lim), 0).r);
+	}
+	imageStore(dst, p, vec4(vec2(best_v), error / 64.0, 0.0));
+}
+)",
+			// pass_between_soft: as pass_between's inputs and push constants.
+			// Each pixel blends what the 16 blocks around it predict (each the
+			// two frames along its vector, blended by t), weighted by a tent
+			// two blocks wide over the block grid, by how well its two ends
+			// agree here (exp(-(gap / 0.05)^2)) and by how well the block
+			// matched; and the camera's field where it holds, weighted by the
+			// blocks' check. Where none agree well (the best under 0.15 to 0.6),
+			// a crossfade of the two frames. Picking one vector a pixel turned a
+			// wrong one into a sharp wrong patch, which flickered as each frame
+			// between picked again; blended, a wrong vector blurs. HUD rule as
+			// pass_between's and one more for HUD the blocks miss (below);
+			// stepping aside as pass_between
+			R"(
+void main()
+{
+	const ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+	if (p.x >= int(p0.z) || p.y >= int(p0.w)) return;
+	const float t = p2.x;
+	const vec2 uv = (vec2(p) + 0.5) / p0.zw;
+	const vec2 grid_uv = uv * p1.zw;
+	const ivec2 grid = textureSize(tex2, 0);
+	const vec2 g = grid_uv * vec2(grid) - 0.5;
+	const ivec2 near = ivec2(floor(g));
+	const vec2 f = g - vec2(near);
+	const vec4 camera = texelFetch(tex3, ivec2(2, 0), 0);
+	vec3 sum = vec3(0.0);
+	float weight = 0.0;
+	float best_agree = 0.0;
+	bool beside_still = false;
+	for (int oy = -1; oy <= 2; oy++)
+	{
+		for (int ox = -1; ox <= 2; ox++)
+		{
+			const vec4 v = texelFetch(tex2, clamp(near + ivec2(ox, oy), ivec2(0), grid - 1), 0);
+			const float spatial = max(0.0, 1.0 - abs(f.x - float(ox)) * 0.5) * max(0.0, 1.0 - abs(f.y - float(oy)) * 0.5);
+			if (ox >= 0 && ox <= 1 && oy >= 0 && oy <= 1)
+			{
+				beside_still = beside_still || length(v.xy) <= 1.0;
+			}
+			const vec2 d = v.xy / p1.xy;
+			const vec3 l = texture(tex0, uv + t * d).rgb;
+			const vec3 n = texture(tex1, (uv - (1.0 - t) * d) * p0.xy).rgb;
+			const vec3 gaps = abs(l - n);
+			const float gap = max(max(gaps.r, gaps.g), gaps.b) / 0.05;
+			const float agree = exp(-gap * gap);
+			const float trust = 1.0 - smoothstep(0.035, 0.11, v.z);
+			const float w = spatial * agree * trust + 1e-6 * spatial;
+			sum += w * mix(l, n, t);
+			weight += w;
+			if (spatial > 0.0)
+			{
+				best_agree = max(best_agree, agree * trust);
+			}
+		}
+	}
+	if (camera.x > 0.5)
+	{
+		const vec4 m0 = texelFetch(tex3, ivec2(0, 0), 0);
+		const vec4 m1 = texelFetch(tex3, ivec2(1, 0), 0);
+		const float fx = 2.0 * uv.x - 1.0;
+		const float fy = (2.0 * uv.y - 1.0) * p1.y / p1.x;
+		const vec2 d = vec2(m0.x + m0.y * fx + m0.z * fy + m1.z * fx * fx + m1.w * fx * fy,
+			m0.w + m1.x * fx + m1.y * fy + m1.z * fx * fy + m1.w * fy * fy) / p1.xy;
+		const vec3 l = texture(tex0, uv + t * d).rgb;
+		const vec3 n = texture(tex1, (uv - (1.0 - t) * d) * p0.xy).rgb;
+		const vec3 gaps = abs(l - n);
+		const float gap = max(max(gaps.r, gaps.g), gaps.b) / 0.05;
+		const float agree = exp(-gap * gap);
+		const float check = texture(tex2, grid_uv).w;
+		sum += check * agree * mix(l, n, t);
+		weight += check * agree;
+		if (check > 0.5)
+		{
+			best_agree = max(best_agree, agree);
+		}
+	}
+	const vec3 moved = sum / weight;
+	const vec3 here = texture(tex1, uv * p0.xy).rgb;
+	const vec3 there = texture(tex0, uv).rgb;
+	const vec3 still_gap = abs(there - here);
+	float still = beside_still ? 1.0 - smoothstep(0.012, 0.04, max(max(still_gap.r, still_gap.g), still_gap.b)) : 0.0;
+	// A picture drawn on the screen (the radar's ring, text) over a moving
+	// world: the blocks it shares with the world carry the world's motion, so
+	// none is still. A pixel that repeats exactly, inside some 3x3 patch that
+	// repeats exactly and has an edge in it, stays put. A plain patch matches
+	// itself however the picture moves (a pole crossing the sky), so only one
+	// with something drawn in it counts
+	const ivec2 lim = ivec2(p0.zw) - 1;
+	float gaps[25];
+	float lumas[25];
+	for (int k = 0; k < 25; k++)
+	{
+		const ivec2 q = clamp(p + ivec2(k % 5 - 2, k / 5 - 2), ivec2(0), lim);
+		const vec3 a = texelFetch(tex0, q, 0).rgb;
+		const vec3 b = texelFetch(tex1, q, 0).rgb;
+		const vec3 gap = abs(a - b);
+		gaps[k] = max(max(gap.r, gap.g), gap.b);
+		lumas[k] = dot(b, vec3(1.0 / 3.0));
+	}
+	float drawn = 0.0;
+	for (int cy = 1; cy <= 3; cy++)
+	{
+		for (int cx = 1; cx <= 3; cx++)
+		{
+			float worst = 0.0;
+			float lo = 1.0;
+			float hi = 0.0;
+			for (int k = 0; k < 9; k++)
+			{
+				const int i = (cy + k / 3 - 1) * 5 + cx + k % 3 - 1;
+				worst = max(worst, gaps[i]);
+				lo = min(lo, lumas[i]);
+				hi = max(hi, lumas[i]);
+			}
+			drawn = max(drawn, (1.0 - smoothstep(0.004, 0.01, worst)) * smoothstep(0.04, 0.1, hi - lo));
+		}
+	}
+	still = max(still, drawn * (1.0 - smoothstep(0.004, 0.01, gaps[12])));
+	const vec3 nearer = t < 0.5 ? there : here;
+	const vec3 between = mix(mix(there, here, t), moved, smoothstep(0.15, 0.6, best_agree));
+	imageStore(dst, p, vec4(camera.w > 0.5 ? nearer : mix(between, nearer, still), 1.0));
+}
+)",
 		};
 
 		template <int Kind>
@@ -1030,6 +1238,7 @@ void main()
 		drop(m_vectors_coarse);
 		drop(m_vectors);
 		drop(m_vectors_smooth);
+		for (auto& image : m_vectors_refined) drop(image);
 		drop(m_capture_cur);
 		for (auto& image : m_output) drop(image);
 		m_width = m_height = 0;
@@ -1074,9 +1283,14 @@ void main()
 		m_vectors_coarse = make_image(utils::aligned_div(coarse_w, 4u), utils::aligned_div(coarse_h, 4u), VK_FORMAT_R16G16B16A16_SFLOAT);
 		m_vectors = make_image(utils::aligned_div(m_work_w, 8u), utils::aligned_div(m_work_h, 8u), VK_FORMAT_R16G16B16A16_SFLOAT);
 		m_vectors_smooth = make_image(utils::aligned_div(m_work_w, 8u), utils::aligned_div(m_work_h, 8u), VK_FORMAT_R16G16B16A16_SFLOAT);
+		for (auto& image : m_vectors_refined)
+		{
+			image = make_image(utils::aligned_div(m_work_w, 8u), utils::aligned_div(m_work_h, 8u), VK_FORMAT_R16G16B16A16_SFLOAT);
+		}
 
 		if (!m_prev_color || !outputs || !m_luma[0] || !m_luma[1] || !m_luma_coarse[0] || !m_luma_coarse[1] || !m_luma_rough[0] || !m_luma_rough[1] ||
-			!m_vectors_rough || !m_motion || !m_camera || !m_camera_moved || !m_motion_mapped || !m_vectors_coarse || !m_vectors || !m_vectors_smooth)
+			!m_vectors_rough || !m_motion || !m_camera || !m_camera_moved || !m_motion_mapped || !m_vectors_coarse || !m_vectors || !m_vectors_smooth ||
+			!m_vectors_refined[0] || !m_vectors_refined[1])
 		{
 			rsx_log.warning("Frame generation: no memory for its images at %ux%u", width, height);
 			dispose();
@@ -1186,7 +1400,7 @@ void main()
 		order += ", the game's frame after";
 		m_capture_info = fmt::format("%s | %ux%u, %s (motion at %ux%u) | method: %s | steps aside: %s\n%s",
 			Emu.GetTitleID(), width, height, c_quality[quality].name, m_work_w, m_work_h,
-			method == 2 ? "as build 117" : method == 1 ? "117, searches as 115" : "as build 115",
+			method == 3 ? "as build 120" : method == 2 ? "as build 117" : method == 1 ? "117, searches as 115" : "as build 115",
 			step == 0 ? "never" : step == 2 ? "in most moves" : "in quick moves", order);
 	}
 
@@ -1292,9 +1506,13 @@ void main()
 		quality = std::min<u32>(quality, static_cast<u32>(std::size(c_quality)) - 1);
 		count = std::min(count, max_frames);
 		// The Method setting: 0 as build 115; 1 a block's own vector kept and
-		// favoured, and the ends that see; 2 also the searches' margins by contrast
-		const f32 keeps_own = method >= 1 ? 1.f : 0.f;
-		const f32 by_contrast = method >= 2 ? 1.f : 0.f;
+		// favoured, and the ends that see; 2 also the searches' margins by
+		// contrast; 3 (build 120) the searches as 115's, the vectors made to
+		// agree with their neighbours (pass_refine), and the blocks around each
+		// pixel blended (pass_between_soft)
+		const bool steady = method == 3;
+		const f32 keeps_own = method == 1 || method == 2 ? 1.f : 0.f;
+		const f32 by_contrast = method == 2 ? 1.f : 0.f;
 
 		if (width != m_width || height != m_height || quality != m_quality)
 		{
@@ -1306,7 +1524,7 @@ void main()
 			for (auto* image : { m_prev_color.get(), m_output[0].get(), m_output[1].get(), m_output[2].get(), m_luma[0].get(), m_luma[1].get(),
 				m_luma_coarse[0].get(), m_luma_coarse[1].get(), m_luma_rough[0].get(), m_luma_rough[1].get(), m_vectors_rough.get(), m_motion.get(),
 				m_camera.get(), m_camera_moved.get(),
-				m_vectors_coarse.get(), m_vectors.get(), m_vectors_smooth.get() })
+				m_vectors_coarse.get(), m_vectors.get(), m_vectors_smooth.get(), m_vectors_refined[0].get(), m_vectors_refined[1].get() })
 			{
 				image->change_layout(cmd, VK_IMAGE_LAYOUT_GENERAL);
 			}
@@ -1393,7 +1611,20 @@ void main()
 			host.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 			host.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
 			vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0, 1, &host, 0, nullptr, 0, nullptr);
-			vk::get_compute_task<frame_generation_pass<pass_median>>()->run(cmd, { m_vectors.get(), m_camera_moved.get(), m_luma[0].get(), m_luma[1].get() }, m_vectors_smooth.get(), grid_w, grid_h,
+			// Build 120's: four rounds of agreeing with the neighbours
+			vk::viewable_image* vectors = m_vectors.get();
+			if (steady)
+			{
+				for (u32 round = 0; round < 4; round++)
+				{
+					vk::viewable_image* next = m_vectors_refined[round & 1].get();
+					vk::get_compute_task<frame_generation_pass<pass_refine>>()->run(cmd, { m_luma[0].get(), m_luma[1].get(), vectors, m_vectors.get() }, next, grid_w, grid_h,
+						{ work_w, work_h, static_cast<f32>(grid_w), static_cast<f32>(grid_h) });
+					barrier(cmd);
+					vectors = next;
+				}
+			}
+			vk::get_compute_task<frame_generation_pass<pass_median>>()->run(cmd, { vectors, m_camera_moved.get(), m_luma[0].get(), m_luma[1].get() }, m_vectors_smooth.get(), grid_w, grid_h,
 				{ static_cast<f32>(grid_w), static_cast<f32>(grid_h), work_w, work_h, keeps_own });
 			barrier(cmd);
 
@@ -1402,8 +1633,15 @@ void main()
 			for (u32 k = 0; k < count; k++)
 			{
 				const f32 t = static_cast<f32>(k + 1) / static_cast<f32>(count + 1);
-				vk::get_compute_task<frame_generation_pass<pass_between>>()->run(cmd, { m_prev_color.get(), cur, m_vectors_smooth.get(), m_camera.get() }, m_output[k].get(), width, height,
-					{ uv_x, uv_y, static_cast<f32>(width), static_cast<f32>(height), work_w, work_h, work_w / (grid_w * 8.f), work_h / (grid_h * 8.f), t, keeps_own });
+				const std::array<f32, 12> between = { uv_x, uv_y, static_cast<f32>(width), static_cast<f32>(height), work_w, work_h, work_w / (grid_w * 8.f), work_h / (grid_h * 8.f), t, keeps_own };
+				if (steady)
+				{
+					vk::get_compute_task<frame_generation_pass<pass_between_soft>>()->run(cmd, { m_prev_color.get(), cur, m_vectors_smooth.get(), m_camera.get() }, m_output[k].get(), width, height, between);
+				}
+				else
+				{
+					vk::get_compute_task<frame_generation_pass<pass_between>>()->run(cmd, { m_prev_color.get(), cur, m_vectors_smooth.get(), m_camera.get() }, m_output[k].get(), width, height, between);
+				}
 				out[k] = m_output[k].get();
 			}
 			made = count;

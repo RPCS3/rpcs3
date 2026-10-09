@@ -243,7 +243,7 @@ namespace rsx::overlays::ps5ui
 			{"Frame Generation Frames", {"0", "1", "2", "3"}},
 			{"Frame Generation Quality", {"0", "1", "2"}},
 			{"Frame Generation Step Aside", {"0", "1", "2"}},
-			{"Frame Generation Method", {"0", "1", "2"}},
+			{"Frame Generation Method", {"3", "0", "1", "2"}},
 			{"Max LLVM Compile Threads", {"0", "1", "2", "3", "4", "6", "8", "10", "12", "16"}},
 		};
 		if (const auto it = offered.find(key); it != offered.end())
@@ -379,7 +379,7 @@ namespace rsx::overlays::ps5ui
 		if (key == "Frame Generation Frames") return value == "0" ? std::string("Auto") : value;
 		if (key == "Frame Generation Quality") return value == "0" ? std::string("Fast") : value == "2" ? std::string("Quality") : std::string("Balanced");
 		if (key == "Frame Generation Step Aside") return value == "0" ? std::string("Never") : value == "2" ? std::string("Most moves") : std::string("Quick moves");
-		if (key == "Frame Generation Method") return value == "2" ? std::string("Build 117") : value == "1" ? std::string("117, searches as 115") : std::string("Build 115");
+		if (key == "Frame Generation Method") return value == "3" ? std::string("Build 120") : value == "2" ? std::string("Build 117") : value == "1" ? std::string("117, searches as 115") : std::string("Build 115");
 		if (key == "Opacity (%)") return value + "%";
 		return value;
 	}
