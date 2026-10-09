@@ -188,76 +188,70 @@ error_code cell_music_decode_read(vm::ptr<void> buf, vm::ptr<u32> startTime, u64
 
 	auto& dec = g_fxo->get<Music_Decode>();
 	std::lock_guard lock(dec.mutex);
-	std::scoped_lock slock(dec.decoder.m_mtx);
 
-	if (dec.decoder.has_error)
+	if (dec.decoder.has_error())
 	{
 		return CELL_MUSIC_DECODE_ERROR_DECODE_FAILURE;
 	}
 
-	if (dec.decoder.m_size == 0)
 	{
-		return { CELL_MUSIC_DECODE_ERROR_NO_LPCM_DATA, "m_size == 0" };
-	}
+		std::scoped_lock data_lock(dec.decoder.data_mutex());
+		const u64 size = dec.decoder.size();
 
-	ensure(dec.decoder.m_size >= dec.read_pos);
-	const u64 size_left = dec.decoder.m_size - dec.read_pos;
-
-	if (dec.read_pos == 0)
-	{
-		cellMusicDecode.trace("cell_music_decode_read: position=CELL_MUSIC_DECODE_POSITION_START, read_pos=%d, reqSize=%d, m_size=%d", dec.read_pos, reqSize, dec.decoder.m_size.load());
-		*position = CELL_MUSIC_DECODE_POSITION_START;
-	}
-	else if (!dec.decoder.track_fully_decoded || size_left > reqSize) // track_fully_decoded is not guarded by a mutex, but since it is set to true after the decode, it should be fine.
-	{
-		cellMusicDecode.trace("cell_music_decode_read: position=CELL_MUSIC_DECODE_POSITION_MID, read_pos=%d, reqSize=%d, m_size=%d", dec.read_pos, reqSize, dec.decoder.m_size.load());
-		*position = CELL_MUSIC_DECODE_POSITION_MID;
-	}
-	else
-	{
-		if (dec.decoder.set_next_index(true) == umax)
+		if (size == 0)
 		{
-			cellMusicDecode.trace("cell_music_decode_read: position=CELL_MUSIC_DECODE_POSITION_END_LIST_END, read_pos=%d, reqSize=%d, m_size=%d", dec.read_pos, reqSize, dec.decoder.m_size.load());
-			*position = CELL_MUSIC_DECODE_POSITION_END_LIST_END;
+			return { CELL_MUSIC_DECODE_ERROR_NO_LPCM_DATA, "size == 0" };
+		}
+
+		ensure(size >= dec.read_pos);
+		const u64 size_left = size - dec.read_pos;
+
+		if (dec.read_pos == 0)
+		{
+			cellMusicDecode.trace("cell_music_decode_read: position=CELL_MUSIC_DECODE_POSITION_START, read_pos=%d, reqSize=%d, size=%d", dec.read_pos, reqSize, size);
+			*position = CELL_MUSIC_DECODE_POSITION_START;
+		}
+		else if (!dec.decoder.track_fully_decoded() || size_left > reqSize) // track_fully_decoded is not guarded by a mutex, but since it is set to true after the decode, it should be fine.
+		{
+			cellMusicDecode.trace("cell_music_decode_read: position=CELL_MUSIC_DECODE_POSITION_MID, read_pos=%d, reqSize=%d, size=%d", dec.read_pos, reqSize, size);
+			*position = CELL_MUSIC_DECODE_POSITION_MID;
 		}
 		else
 		{
-			cellMusicDecode.trace("cell_music_decode_read: position=CELL_MUSIC_DECODE_POSITION_END, read_pos=%d, reqSize=%d, m_size=%d", dec.read_pos, reqSize, dec.decoder.m_size.load());
-			*position = CELL_MUSIC_DECODE_POSITION_END;
+			if (dec.decoder.set_next_index(true) == umax)
+			{
+				cellMusicDecode.trace("cell_music_decode_read: position=CELL_MUSIC_DECODE_POSITION_END_LIST_END, read_pos=%d, reqSize=%d, size=%d", dec.read_pos, reqSize, size);
+				*position = CELL_MUSIC_DECODE_POSITION_END_LIST_END;
+			}
+			else
+			{
+				cellMusicDecode.trace("cell_music_decode_read: position=CELL_MUSIC_DECODE_POSITION_END, read_pos=%d, reqSize=%d, size=%d", dec.read_pos, reqSize, size);
+				*position = CELL_MUSIC_DECODE_POSITION_END;
+			}
 		}
-	}
 
-	const u64 size_to_read = std::min(reqSize, size_left);
-	*readSize = size_to_read;
+		const u64 read_size = dec.decoder.read(buf.get_ptr(), dec.read_pos, reqSize);
+		*readSize = read_size;
 
-	if (size_to_read == 0)
-	{
-		return { CELL_MUSIC_DECODE_ERROR_NO_LPCM_DATA, "size_to_read == 0" }; // TODO: speculative
-	}
-
-	std::memcpy(buf.get_ptr(), &::at32(dec.decoder.data, dec.read_pos), size_to_read);
-
-	if (size_to_read < reqSize)
-	{
-		// Set the rest of the buffer to zero to prevent loud pops at the end of the stream if the game ignores the readSize.
-		std::memset(vm::static_ptr_cast<u8>(buf).get_ptr() + size_to_read, 0, reqSize - size_to_read);
-	}
-
-	dec.read_pos += size_to_read;
-
-	s64 start_time_ms = 0;
-
-	if (!dec.decoder.timestamps_ms.empty())
-	{
-		start_time_ms = dec.decoder.timestamps_ms.front().second;
-
-		while (dec.decoder.timestamps_ms.size() > 1 && dec.read_pos >= ::at32(dec.decoder.timestamps_ms, 1).first)
+		if (read_size == 0)
 		{
-			dec.decoder.timestamps_ms.pop_front();
+			return { CELL_MUSIC_DECODE_ERROR_NO_LPCM_DATA, "read_size == 0" }; // TODO: speculative
 		}
-	}
 
-	*startTime = static_cast<u32>(start_time_ms); // startTime is milliseconds
+		if (read_size < reqSize)
+		{
+			// Set the rest of the buffer to zero to prevent loud pops at the end of the stream if the game ignores the readSize.
+			std::memset(vm::static_ptr_cast<u8>(buf).get_ptr() + read_size, 0, reqSize - read_size);
+		}
+
+		dec.read_pos += read_size;
+
+		const s64 start_time_ms = dec.decoder.get_start_time_ms(dec.read_pos);
+
+		*startTime = static_cast<u32>(start_time_ms); // startTime is milliseconds
+
+		cellMusicDecode.trace("cell_music_decode_read(read_size=%d, samples=%d, start_time_ms=%d)", read_size, read_size / sizeof(u64), start_time_ms);
+	}
 
 	switch (*position)
 	{
@@ -272,8 +266,7 @@ error_code cell_music_decode_read(vm::ptr<void> buf, vm::ptr<u32> startTime, u64
 	{
 		dec.read_pos = 0;
 		dec.decoder.clear();
-		dec.decoder.track_fully_consumed = 1;
-		dec.decoder.track_fully_consumed.notify_one();
+		dec.decoder.wake_up();
 		break;
 	}
 	default:
@@ -281,8 +274,6 @@ error_code cell_music_decode_read(vm::ptr<void> buf, vm::ptr<u32> startTime, u64
 		break;
 	}
 	}
-
-	cellMusicDecode.trace("cell_music_decode_read(size_to_read=%d, samples=%d, start_time_ms=%d)", size_to_read, size_to_read / sizeof(u64), start_time_ms);
 
 	return CELL_OK;
 }
@@ -375,11 +366,7 @@ error_code cellMusicDecodeSetDecodeCommand(s32 command)
 	if (!dec.func)
 		return CELL_MUSIC_DECODE_ERROR_GENERIC;
 
-	error_code result = CELL_OK;
-	{
-		std::scoped_lock slock(dec.decoder.m_mtx);
-		result = dec.set_decode_command(command);
-	}
+	const error_code result = dec.set_decode_command(command);
 
 	sysutil_register_cb([&dec, result](ppu_thread& ppu) -> s32
 	{
@@ -566,11 +553,7 @@ error_code cellMusicDecodeSetDecodeCommand2(s32 command)
 	if (!dec.func)
 		return CELL_MUSIC_DECODE_ERROR_GENERIC;
 
-	error_code result = CELL_OK;
-	{
-		std::scoped_lock slock(dec.decoder.m_mtx);
-		result = dec.set_decode_command(command);
-	}
+	const error_code result = dec.set_decode_command(command);
 
 	sysutil_register_cb([&dec, result](ppu_thread& ppu) -> s32
 	{
