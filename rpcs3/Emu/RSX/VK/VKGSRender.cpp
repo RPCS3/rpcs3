@@ -251,7 +251,8 @@ namespace vk
 		u8 num_draw_buffers,
 		u8 num_rasterization_samples,
 		bool depth_bounds_support,
-		bool force_disable_blending)
+		bool force_disable_blending,
+		bool force_depth_clamp)
 	{
 		vk::pipeline_props properties{};
 
@@ -262,7 +263,7 @@ namespace vk
 		// Rasterizer state
 		properties.state.set_attachment_count(num_draw_buffers);
 		properties.state.set_front_face(vk::get_front_face(REGS(ctx)->front_face_mode()));
-		if (!vk::emulate_extended_depth_range() || !ds || !rsx::is_float_depth_format(REGS(ctx)->surface_depth_fmt())) [[ likely ]]
+		if (!force_depth_clamp) [[ likely ]]
 		{
 			properties.state.enable_depth_clamp(REGS(ctx)->depth_clamp_enabled() || !REGS(ctx)->depth_clip_enabled());
 		}
@@ -1871,7 +1872,8 @@ bool VKGSRender::load_program()
 			static_cast<u8>(m_draw_buffers.size()),
 			u8((m_current_renderpass_key >> 16) & 0xF),
 			m_device->get_depth_bounds_support(),
-			!!(current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING)
+			!!(current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING),
+			!!(current_fragment_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE)
 		);
 
 		properties.renderpass_key = m_current_renderpass_key;
