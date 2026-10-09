@@ -1071,7 +1071,7 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 			vk::viewable_image* between[vk::frame_generator::max_frames]{};
 			const u32 made = m_frame_generator->process(*m_current_command_buffer, image_to_flip, buffer_width, buffer_height, count,
-				g_cfg.video.frame_generation_quality, g_cfg.video.frame_generation_step_aside, between);
+				g_cfg.video.frame_generation_quality, g_cfg.video.frame_generation_step_aside, g_cfg.video.frame_generation_method, between);
 
 			for (u32 k = 0; k < made; k++)
 			{

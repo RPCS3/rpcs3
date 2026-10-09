@@ -42,7 +42,8 @@ namespace rsx::overlays
 			none,
 			resume,
 			restart,
-			quit
+			quit,
+			capture
 		};
 
 		// A row of a tab: an action, or a setting (an index into m_settings)

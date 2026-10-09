@@ -16,6 +16,8 @@
 
 LOG_CHANNEL(pause_log, "PauseMenu");
 
+extern atomic_t<u32> g_ps5_frame_gen_capture; // VKFrameGen.cpp: the capture's sets wanted
+
 namespace rsx::overlays
 {
 	extern void reset_performance_overlay(); // overlay_perf_metrics.cpp
@@ -60,6 +62,7 @@ namespace rsx::overlays
 			{"Video", "Frame Generation Frames", "Frames made between"},
 			{"Video", "Frame Generation Quality", "Frame generation quality"},
 			{"Video", "Frame Generation Step Aside", "Frame generation steps aside"},
+			{"Video", "Frame Generation Method", "Frame generation method"},
 			{"Audio", "Master Volume", "Volume"},
 		};
 
@@ -116,7 +119,8 @@ namespace rsx::overlays
 				}
 			}
 		}
-		game.rows.push_back({action::restart, -1, "Restart game", "Starts it again, with the settings changed here", "home/32/rotate-left-solid.png", true});
+		game.rows.push_back({action::capture, -1, "Save frame generation's frames", "For a report: from 2 seconds after the game resumes, 4 moments half a second apart, the game's frames and those made between, to rpcs3/captures", "home/32/screenshot.png", true});
+		game.rows.push_back({action::restart, -1, "Restart game", "Starts it again, with the settings changed here", "home/32/rotate-left-solid.png", false});
 		game.rows.push_back({action::quit, -1, "Quit to library", "Ends the game and goes back to your games", "home/32/circle-left-solid.png", false});
 		m_tabs.push_back(std::move(game));
 
@@ -330,6 +334,17 @@ namespace rsx::overlays
 				Emu.SetContinuousMode(true);
 				Emu.Restart(true);
 			});
+			break;
+		case action::capture:
+			if (g_cfg.video.frame_generation)
+			{
+				pause_log.notice("Back to the game, frame generation's frames to be saved");
+				g_ps5_frame_gen_capture = 4;
+			}
+			else
+			{
+				pause_log.notice("Back to the game; frame generation is off, so no frames to save");
+			}
 			break;
 		case action::quit:
 			pause_log.notice("Quitting to the library");

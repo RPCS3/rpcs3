@@ -6,7 +6,35 @@
 #include "vkutils/barriers.h"
 #include "vkutils/device.h"
 
+#include "Emu/System.h"
+#include "Emu/Cell/timers.hpp"
+#include "Utilities/File.h"
 #include "util/asm.hpp"
+
+#include <ctime>
+#include <thread>
+#include <sys/stat.h>
+
+// The frames a capture writes, as PNG (stb_image_write, its own here)
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_STATIC
+#ifdef _MSC_VER
+#pragma warning(push, 0)
+#include <stb_image_write.h>
+#pragma warning(pop)
+#else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wall"
+#pragma GCC diagnostic ignored "-Wextra"
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+#include <stb_image_write.h>
+#pragma GCC diagnostic pop
+#endif
 
 // PS5: for the trace's status line, since the title started: the frames made;
 // the RSX thread's time making and showing them, and in it waiting for the
@@ -22,6 +50,9 @@ atomic_t<u64> g_ps5_frames_dropped = 0;
 atomic_t<u64> g_ps5_image_wait_us[2] = {};
 atomic_t<u64> g_ps5_frames_quick_moves = 0;
 atomic_t<u64> g_ps5_frames_camera_field = 0;
+
+// The pause menu's Save frame generation's frames: the sets wanted
+atomic_t<u32> g_ps5_frame_gen_capture = 0;
 
 namespace vk
 {
@@ -129,7 +160,8 @@ void main()
 			// beat no motion there by less than the margin, and in the model of
 			// these passes (a street driven at 0.7 and 1.4 metres a game frame)
 			// the road stood still between the frames while its markings moved;
-			// so scaled, the road gained 2.4 to 3 dB
+			// so scaled, the road gained 2.4 to 3 dB. Only with p1.z set (the
+			// Method setting's Build 117)
 			R"(
 void main()
 {
@@ -150,7 +182,7 @@ void main()
 	{
 		contrast += abs(cur[k] - mean) / 16.0;
 	}
-	const float scale = clamp(contrast / 0.06, 0.15, 1.0);
+	const float scale = p1.z > 0.5 ? clamp(contrast / 0.06, 0.15, 1.0) : 1.0;
 	const float favour = p1.y * scale;
 	// No motion first, and kept unless another vector is clearly better: in
 	// flat, plain areas (the ground under a shadow) every vector matches about
@@ -195,7 +227,7 @@ void main()
 			// (build 107) every long vector looked like a poor match. Its w how
 			// much better it matched than no motion (pass_camera weighs it by
 			// that). The margin and the favour scale with the block's contrast,
-			// as in the coarse search
+			// as in the coarse search, with p1.z set
 			R"(
 void main()
 {
@@ -216,7 +248,7 @@ void main()
 	{
 		contrast += abs(cur[k] - mean) / 64.0;
 	}
-	const float scale = clamp(contrast / 0.06, 0.15, 1.0);
+	const float scale = p1.z > 0.5 ? clamp(contrast / 0.06, 0.15, 1.0) : 1.0;
 	const float favour = 0.0003 * scale;
 	const ivec2 cb = p / 2;
 	ivec2 starts[6];
@@ -270,8 +302,9 @@ void main()
 			// texel): a thing a block or two across moving its own way, the
 			// player's head in a camera turn, lost its vectors to the
 			// background's, and GTA IV's radar turning in its ring too (in the
-			// model of these passes, the radar 3.5 to 4.5 dB better so). The
-			// match error stays its own, and w is the check
+			// model of these passes, the radar 3.5 to 4.5 dB better so); with
+			// p1.x set (the Method setting's Builds 117). The match error stays
+			// its own, and w is the check
 			R"(
 void main()
 {
@@ -311,17 +344,21 @@ void main()
 		ys[b + 1] = y;
 	}
 	const vec4 own = texelFetch(tex0, p, 0);
-	const ivec2 median = ivec2(round(vec2(xs[4], ys[4])));
-	const ivec2 work_lim = ivec2(p0.zw) - 1;
-	const ivec2 base = p * 8;
-	float median_error = 0.0;
-	for (int k = 0; k < 64; k++)
+	vec2 v = vec2(xs[4], ys[4]);
+	if (p1.x > 0.5)
 	{
-		const ivec2 q = base + ivec2(k & 7, k >> 3);
-		median_error += abs(texelFetch(tex3, min(q, work_lim), 0).r - texelFetch(tex2, clamp(q + median, ivec2(0), work_lim), 0).r);
+		const ivec2 median = ivec2(round(v));
+		const ivec2 work_lim = ivec2(p0.zw) - 1;
+		const ivec2 base = p * 8;
+		float median_error = 0.0;
+		for (int k = 0; k < 64; k++)
+		{
+			const ivec2 q = base + ivec2(k & 7, k >> 3);
+			median_error += abs(texelFetch(tex3, min(q, work_lim), 0).r - texelFetch(tex2, clamp(q + median, ivec2(0), work_lim), 0).r);
+		}
+		median_error /= 64.0;
+		v = own.z + 0.01 < median_error ? own.xy : v;
 	}
-	median_error /= 64.0;
-	const vec2 v = own.z + 0.01 < median_error ? own.xy : vec2(xs[4], ys[4]);
 	imageStore(dst, p, vec4(v, own.z, texelFetch(tex1, p, 0).r));
 }
 )",
@@ -380,7 +417,9 @@ void main()
 			// (GTA IV's shadows shimmer by themselves, and averaging two patterns
 			// softened every other frame's on my console, build 94). In the
 			// model the walls of a turn gained 0.4 to 2.7 dB so, and the outline
-			// of the player no longer showed in them
+			// of the player no longer showed in them. The seventh candidate and
+			// the ends that see only with p2.y set (the Method setting's Builds
+			// 117); else as build 115, the nearer frame wherever the ends disagree
 			R"(
 void main()
 {
@@ -408,7 +447,8 @@ void main()
 	float best = 1e9;
 	bool beside_still = false;
 	bool beside_camera = false;
-	for (int c = 0; c < 7; c++)
+	const bool keeps_own = p2.y > 0.5;
+	for (int c = 0; c < (keeps_own ? 7 : 6); c++)
 	{
 		vec4 v;
 		float favour = c == 0 ? 0.0 : 0.004;
@@ -465,7 +505,7 @@ void main()
 	const bool sees = length(at.xy - mv.xy) <= tolerance || (holds && mv.w > 1.5 && at.w > 0.5);
 	const bool last_sees = length(at_last.xy - mv.xy) <= tolerance || (holds && mv.w > 1.5 && at_last.w > 0.5);
 	const vec3 moved = mix(sees ? next : last_sees ? last : nearer, mix(last, next, t), agree);
-	const vec3 between = mix(nearer, moved, trust);
+	const vec3 between = keeps_own ? mix(nearer, moved, trust) : mix(nearer, mix(last, next, t), trust * agree);
 	const bool quick = camera.w > 0.5;
 	imageStore(dst, p, vec4(quick ? nearer : mix(between, nearer, still), 1.0));
 }
@@ -939,6 +979,7 @@ void main()
 		drop(m_vectors_coarse);
 		drop(m_vectors);
 		drop(m_vectors_smooth);
+		drop(m_capture_cur);
 		for (auto& image : m_output) drop(image);
 		m_width = m_height = 0;
 		m_have_prev = false;
@@ -1002,9 +1043,184 @@ void main()
 		m_have_prev = false;
 	}
 
-	u32 frame_generator::process(const vk::command_buffer& cmd, vk::viewable_image* cur, u32 width, u32 height, u32 count, u32 quality, u32 step,
-		vk::viewable_image* (&out)[max_frames])
+	void frame_generator::record_capture(const vk::command_buffer& cmd, vk::viewable_image* cur, u32 width, u32 height, u32 count, u32 quality, u32 step, u32 method)
 	{
+		const auto pdev = vk::get_current_renderer();
+		const u32 grid_w = utils::aligned_div(m_work_w, 8u);
+		const u32 grid_h = utils::aligned_div(m_work_h, 8u);
+		const usz frame_bytes = usz{width} * height * 4;
+		const usz vectors_bytes = usz{grid_w} * grid_h * 8;
+		const usz total = frame_bytes * (2 + count) + vectors_bytes + 64;
+
+		if (m_capture_cur && (m_capture_cur->width() != width || m_capture_cur->height() != height))
+		{
+			vk::get_resource_manager()->dispose(m_capture_cur);
+		}
+		if (!m_capture_cur)
+		{
+			m_capture_cur = make_image(width, height, VK_FORMAT_R8G8B8A8_UNORM);
+			if (!m_capture_cur)
+			{
+				rsx_log.warning("Frame generation: no memory for a capture at %ux%u", width, height);
+				m_capture_sets = 0;
+				return;
+			}
+			m_capture_cur->change_layout(cmd, VK_IMAGE_LAYOUT_GENERAL);
+		}
+		if (m_capture_buffer && m_capture_buffer->size() < total)
+		{
+			vk::get_resource_manager()->dispose(m_capture_buffer);
+		}
+		if (!m_capture_buffer)
+		{
+			m_capture_buffer = std::make_unique<vk::buffer>(*pdev, frame_bytes * (2 + max_frames) + vectors_bytes + 64, pdev->get_memory_mapping().host_visible_coherent,
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0, VMM_ALLOCATION_POOL_UNDEFINED);
+			if (m_capture_buffer->value == VK_NULL_HANDLE)
+			{
+				rsx_log.warning("Frame generation: no memory for a capture's copy");
+				m_capture_buffer.reset();
+				m_capture_sets = 0;
+				return;
+			}
+		}
+
+		// This frame as RGBA8 (the game's own buffer may be in another format),
+		// then everything copied: the last frame, this one, the frames between,
+		// the vectors, the camera's field and its motion
+		barrier(cmd);
+		vk::get_compute_task<frame_generation_pass<pass_keep>>()->run(cmd, { cur }, m_capture_cur.get(), width, height,
+			{ static_cast<f32>(width) / cur->width(), static_cast<f32>(height) / cur->height(), static_cast<f32>(width), static_cast<f32>(height) });
+		barrier(cmd);
+		usz at = 0;
+		const auto copy = [&](vk::viewable_image* image, u32 w, u32 h, usz bytes)
+		{
+			const VkBufferImageCopy region = { at, 0, 0, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 }, { 0, 0, 0 }, { w, h, 1 } };
+			vkCmdCopyImageToBuffer(cmd, image->value, VK_IMAGE_LAYOUT_GENERAL, m_capture_buffer->value, 1, &region);
+			at += bytes;
+		};
+		copy(m_prev_color.get(), width, height, frame_bytes);
+		copy(m_capture_cur.get(), width, height, frame_bytes);
+		for (u32 k = 0; k < count; k++)
+		{
+			copy(m_output[k].get(), width, height, frame_bytes);
+		}
+		copy(m_vectors_smooth.get(), grid_w, grid_h, vectors_bytes);
+		copy(m_camera.get(), 3, 1, 48);
+		copy(m_motion.get(), 1, 1, 16);
+
+		const VkBufferMemoryBarrier2KHR copied =
+		{
+			.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2_KHR,
+			.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT_KHR,
+			.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT_KHR,
+			.dstStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT_KHR,
+			.dstAccessMask = 0,
+			.buffer = m_capture_buffer->value,
+			.offset = 0,
+			.size = total
+		};
+		m_capture_event = std::make_unique<vk::event>(*pdev, sync_domain::host);
+		m_capture_event->signal(cmd, { .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO, .bufferMemoryBarrierCount = 1, .pBufferMemoryBarriers = &copied });
+
+		m_capture_w = width;
+		m_capture_h = height;
+		m_capture_count = count;
+		m_capture_grid_w = grid_w;
+		m_capture_grid_h = grid_h;
+		std::string times;
+		for (u32 k = 0; k < count; k++)
+		{
+			times += fmt::format("%s%.4f", k ? ", " : "", static_cast<f32>(k + 1) / static_cast<f32>(count + 1));
+		}
+		m_capture_info = fmt::format("game %s\nframe %ux%u, working size %ux%u (%s), vector grid %ux%u\nframes between %u, at t = %s (0 the last frame, 1 this one)\n"
+			"method %u (0 as build 115, 1 as 117 but its searches, 2 as 117), step aside %u (0 never, 1 quick moves, 2 most moves)\n",
+			Emu.GetTitleID(), width, height, m_work_w, m_work_h, c_quality[quality].name, grid_w, grid_h, count, times, method, step);
+	}
+
+	void frame_generator::take_capture()
+	{
+		if (const u32 asked = g_ps5_frame_gen_capture.exchange(0))
+		{
+			m_capture_sets = asked;
+			m_capture_set = 1;
+			m_capture_run = static_cast<u32>(std::time(nullptr));
+			m_capture_next_us = get_system_time() + 2'000'000;
+			rsx_log.notice("Frame generation: capturing %u sets of frames, 2 seconds from now", asked);
+		}
+		if (!m_capture_event || m_capture_event->status() != VK_EVENT_SET)
+		{
+			return;
+		}
+
+		const usz frame_bytes = usz{m_capture_w} * m_capture_h * 4;
+		const usz vectors_bytes = usz{m_capture_grid_w} * m_capture_grid_h * 8;
+		const usz total = frame_bytes * (2 + m_capture_count) + vectors_bytes + 64;
+		std::vector<u8> data(total);
+		std::memcpy(data.data(), m_capture_buffer->map(0, total), total);
+		m_capture_buffer->unmap();
+		vk::get_resource_manager()->dispose(m_capture_event);
+
+		const std::string dir = fmt::format("%scaptures/fg-%s-%u-%u/", fs::get_config_dir(), Emu.GetTitleID(), m_capture_run, m_capture_set);
+		rsx_log.notice("Frame generation: capture %u written to %s", m_capture_set, dir);
+		m_capture_sets--;
+		m_capture_set++;
+		m_capture_next_us = get_system_time() + 500'000;
+
+		// PNG and the rest, on a thread of their own: the frames take a while
+		std::thread([dir, data = std::move(data), w = m_capture_w, h = m_capture_h, count = m_capture_count, gw = m_capture_grid_w, gh = m_capture_grid_h,
+			info = m_capture_info, frame_bytes, vectors_bytes]()
+		{
+			const std::string captures = fs::get_config_dir() + "captures";
+			fs::create_path(dir);
+			::chmod(captures.c_str(), 0777);
+			::chmod(dir.c_str(), 0777);
+			const auto write = [&](const std::string& name, const void* bytes, usz size)
+			{
+				const std::string path = dir + name;
+				fs::write_file(path, fs::rewrite, bytes, size);
+				::chmod(path.c_str(), 0666);
+			};
+			const auto png = [&](const std::string& name, const u8* rgba)
+			{
+				std::vector<u8> rgb(usz{w} * h * 3);
+				for (usz i = 0; i < usz{w} * h; i++)
+				{
+					rgb[i * 3 + 0] = rgba[i * 4 + 0];
+					rgb[i * 3 + 1] = rgba[i * 4 + 1];
+					rgb[i * 3 + 2] = rgba[i * 4 + 2];
+				}
+				std::vector<u8> out;
+				stbi_write_png_to_func([](void* context, void* bytes, int size)
+				{
+					auto& sink = *static_cast<std::vector<u8>*>(context);
+					sink.insert(sink.end(), static_cast<u8*>(bytes), static_cast<u8*>(bytes) + size);
+				}, &out, static_cast<int>(w), static_cast<int>(h), 3, rgb.data(), static_cast<int>(w * 3));
+				write(name, out.data(), out.size());
+			};
+			usz at = 0;
+			png("last.png", data.data() + at); at += frame_bytes;
+			png("this.png", data.data() + at); at += frame_bytes;
+			for (u32 k = 0; k < count; k++)
+			{
+				png(fmt::format("between-%u.png", k + 1), data.data() + at);
+				at += frame_bytes;
+			}
+			write("vectors.bin", data.data() + at, vectors_bytes); at += vectors_bytes;
+			write("camera.bin", data.data() + at, 64);
+			const std::string text = info + fmt::format(
+				"files: last.png and this.png, the game's two frames; between-N.png, the frames made between them;\n"
+				"vectors.bin, %ux%u RGBA half floats, a block of this frame each: x, y to where it was in the last frame, in working\n"
+				"texels; z its match error; w whether it moved with the camera's field. camera.bin, 4 RGBA floats: the field's a0-a3,\n"
+				"a4-a7, then whether it holds, its share, its weight, the quick-move verdict; then the camera's motion (x, y, support, quick)\n", gw, gh);
+			write("info.txt", text.data(), text.size());
+		}).detach();
+	}
+
+	u32 frame_generator::process(const vk::command_buffer& cmd, vk::viewable_image* cur, u32 width, u32 height, u32 count, u32 quality, u32 step,
+		u32 method, vk::viewable_image* (&out)[max_frames])
+	{
+		take_capture();
+
 		if (!cur || !width || !height)
 		{
 			return 0;
@@ -1013,6 +1229,10 @@ void main()
 		height = std::min<u32>(height, cur->height());
 		quality = std::min<u32>(quality, static_cast<u32>(std::size(c_quality)) - 1);
 		count = std::min(count, max_frames);
+		// The Method setting: 0 as build 115; 1 a block's own vector kept and
+		// favoured, and the ends that see; 2 also the searches' margins by contrast
+		const f32 keeps_own = method >= 1 ? 1.f : 0.f;
+		const f32 by_contrast = method >= 2 ? 1.f : 0.f;
 
 		if (width != m_width || height != m_height || quality != m_quality)
 		{
@@ -1077,16 +1297,16 @@ void main()
 		{
 			vk::get_compute_task<frame_generation_pass<pass_coarse_search>>()->run(cmd, { m_luma_coarse[0].get(), m_luma_coarse[1].get() }, m_vectors_coarse.get(), coarse_grid_w, coarse_grid_h,
 				{ static_cast<f32>(coarse_w), static_cast<f32>(coarse_h), static_cast<f32>(coarse_grid_w), static_cast<f32>(coarse_grid_h),
-				  static_cast<f32>(c_quality[quality].reach), 0.0005f });
+				  static_cast<f32>(c_quality[quality].reach), 0.0005f, by_contrast });
 			barrier(cmd);
 			vk::get_compute_task<frame_generation_pass<pass_fine_search>>()->run(cmd, { m_luma[0].get(), m_luma[1].get(), m_vectors_coarse.get() }, m_vectors.get(), grid_w, grid_h,
-				{ work_w, work_h, static_cast<f32>(grid_w), static_cast<f32>(grid_h), static_cast<f32>(coarse_grid_w), static_cast<f32>(coarse_grid_h) });
+				{ work_w, work_h, static_cast<f32>(grid_w), static_cast<f32>(grid_h), static_cast<f32>(coarse_grid_w), static_cast<f32>(coarse_grid_h), by_contrast });
 			barrier(cmd);
 			// The camera's motion: the rough vectors (a block of 64 working texels,
 			// up to a quarter of the reach in sixteenth texels), voted
 			vk::get_compute_task<frame_generation_pass<pass_coarse_search>>()->run(cmd, { m_luma_rough[0].get(), m_luma_rough[1].get() }, m_vectors_rough.get(), rough_grid_w, rough_grid_h,
 				{ static_cast<f32>(rough_w), static_cast<f32>(rough_h), static_cast<f32>(rough_grid_w), static_cast<f32>(rough_grid_h),
-				  static_cast<f32>(std::max(1u, c_quality[quality].reach / 4)), 0.002f });
+				  static_cast<f32>(std::max(1u, c_quality[quality].reach / 4)), 0.002f, by_contrast });
 			barrier(cmd);
 			// Stepping aside beyond 6% of the frame's width a game frame (Quick
 			// moves), 3% (Most moves), or never
@@ -1112,7 +1332,7 @@ void main()
 			host.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
 			vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0, 1, &host, 0, nullptr, 0, nullptr);
 			vk::get_compute_task<frame_generation_pass<pass_median>>()->run(cmd, { m_vectors.get(), m_camera_moved.get(), m_luma[0].get(), m_luma[1].get() }, m_vectors_smooth.get(), grid_w, grid_h,
-				{ static_cast<f32>(grid_w), static_cast<f32>(grid_h), work_w, work_h });
+				{ static_cast<f32>(grid_w), static_cast<f32>(grid_h), work_w, work_h, keeps_own });
 			barrier(cmd);
 
 			// The frames between, each at its time: with three, a quarter, a half
@@ -1121,11 +1341,17 @@ void main()
 			{
 				const f32 t = static_cast<f32>(k + 1) / static_cast<f32>(count + 1);
 				vk::get_compute_task<frame_generation_pass<pass_between>>()->run(cmd, { m_prev_color.get(), cur, m_vectors_smooth.get(), m_camera.get() }, m_output[k].get(), width, height,
-					{ uv_x, uv_y, static_cast<f32>(width), static_cast<f32>(height), work_w, work_h, work_w / (grid_w * 8.f), work_h / (grid_h * 8.f), t });
+					{ uv_x, uv_y, static_cast<f32>(width), static_cast<f32>(height), work_w, work_h, work_w / (grid_w * 8.f), work_h / (grid_h * 8.f), t, keeps_own });
 				out[k] = m_output[k].get();
 			}
 			made = count;
 			g_ps5_frames_generated += count;
+
+			// A capture's set, before the last frame's picture is replaced
+			if (m_capture_sets && !m_capture_event && get_system_time() >= m_capture_next_us)
+			{
+				record_capture(cmd, cur, width, height, count, quality, step, method);
+			}
 		}
 
 		// This frame becomes the last one: its picture, and its brightness.

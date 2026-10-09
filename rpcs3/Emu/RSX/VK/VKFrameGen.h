@@ -29,8 +29,10 @@
 #include "vkutils/buffer_object.h"
 #include "vkutils/image.h"
 #include "vkutils/sampler.h"
+#include "vkutils/sync.h"
 
 #include <memory>
+#include <string>
 
 namespace vk
 {
@@ -47,11 +49,12 @@ namespace vk
 		// spaced in time, into `out` in the order they are to be shown; and in
 		// any case what the next frame needs of this one. `quality` is the
 		// setting's (0 Fast, 1 Balanced, 2 Quality), `step` the Step aside
-		// setting's (0 never, 1 quick moves, 2 most moves). Returns how many frames
-		// it made: none for the first frame, a new size or quality, or none
-		// asked for
+		// setting's (0 never, 1 quick moves, 2 most moves), `method` the Method
+		// setting's (0 as build 115, 1 as build 117 but its searches, 2 as build
+		// 117). Returns how many frames it made: none for the first frame, a new
+		// size or quality, or none asked for
 		u32 process(const vk::command_buffer& cmd, vk::viewable_image* cur, u32 width, u32 height, u32 count, u32 quality, u32 step,
-			vk::viewable_image* (&out)[max_frames]);
+			u32 method, vk::viewable_image* (&out)[max_frames]);
 
 		// Forgets the last frame: the next one is a first one
 		void reset();
@@ -59,6 +62,23 @@ namespace vk
 	private:
 		void allocate(u32 width, u32 height, u32 quality);
 		void dispose();
+
+		// A capture, for a report (the pause menu's Save frame generation's
+		// frames: g_ps5_frame_gen_capture, the sets wanted): sets of the last
+		// frame, this one, the frames between, the vectors and the camera's
+		// field, copied to host memory with the frame's work and written to
+		// rpcs3/captures/ on a thread once the GPU has done them
+		void record_capture(const vk::command_buffer& cmd, vk::viewable_image* cur, u32 width, u32 height, u32 count, u32 quality, u32 step, u32 method);
+		void take_capture();
+		u32 m_capture_sets = 0;   // still to take
+		u32 m_capture_set = 0;    // the next one's number
+		u32 m_capture_run = 0;    // the request's time, in the folders' names
+		u64 m_capture_next_us = 0;
+		std::unique_ptr<vk::viewable_image> m_capture_cur; // this frame, as RGBA8
+		std::unique_ptr<vk::buffer> m_capture_buffer;
+		std::unique_ptr<vk::event> m_capture_event;        // the copies done
+		u32 m_capture_w = 0, m_capture_h = 0, m_capture_count = 0, m_capture_grid_w = 0, m_capture_grid_h = 0;
+		std::string m_capture_info;
 
 		u32 m_width = 0;
 		u32 m_height = 0;

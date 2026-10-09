@@ -188,6 +188,7 @@ struct cfg_root : cfg::node
 		cfg::uint<0, 3> frame_generation_frames{ this, "Frame Generation Frames", 1, true }; // PS5: the most made between two of the game's; 0 as many as the display has refreshes for
 		cfg::uint<0, 2> frame_generation_quality{ this, "Frame Generation Quality", 1, true }; // PS5: 0 Fast, 1 Balanced, 2 Quality: the motion search's working size and reach
 		cfg::uint<0, 2> frame_generation_step_aside{ this, "Frame Generation Step Aside", 1, true }; // PS5: 0 never, 1 quick moves (6% of the width a game frame), 2 most moves (3%)
+		cfg::uint<0, 2> frame_generation_method{ this, "Frame Generation Method", 0, true }; // PS5: 0 as build 115, 1 as build 117 but its searches, 2 as build 117 (VKFrameGen.h)
 		cfg::_bool disable_blit_engine_upscaling{ this, "Disable Blit Engine Upscaling", false, true };
 
 		struct node_vk : cfg::node
