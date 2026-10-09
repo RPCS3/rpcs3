@@ -195,6 +195,7 @@ public:
 		bool has_native_half_support = false;
 		bool emulate_depth_compare = false;
 		bool has_low_precision_rounding = false;
+		bool emulated_depth_storage = false;
 	}
 	device_props;
 

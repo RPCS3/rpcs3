@@ -298,6 +298,12 @@ void VKFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 			"layout(location=" << vk::get_varying_register_location("usr") << ") in flat uvec4 draw_params_payload;\n\n";
 	}
 
+	if (m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE)
+	{
+		OS <<
+			"layout(location=" << vk::get_varying_register_location("depth_range") << ") in flat vec2 depth_range;\n\n";
+	}
+
 	OS <<
 		"#define _fs_constants_offset draw_params_payload.x\n"
 		"#define _fs_context_offset draw_params_payload.y\n"
@@ -396,7 +402,7 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.require_srgb_to_linear = properties.has_upg;
 	m_shader_props.require_linear_to_srgb = properties.has_pkg;
 	m_shader_props.require_fog_read = properties.in_register_mask & in_fogc;
-	m_shader_props.emulate_shadow_compare = device_props.emulate_depth_compare;
+	m_shader_props.emulate_shadow_compare = device_props.emulate_depth_compare || device_props.emulated_depth_storage;
 
 	m_shader_props.low_precision_tests = device_props.has_low_precision_rounding && !(m_prog.ctrl & RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION);
 	m_shader_props.disable_early_discard = !vk::is_NVIDIA(vk::get_driver_vendor());
@@ -419,6 +425,9 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.require_color_format_convert = !!(m_prog.ctrl & RSX_SHADER_CONTROL_TEXTURE_FORMAT_CONVERT);
 	m_shader_props.emulate_depth_compare = !!(m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE);
 	m_shader_props.ROP_output_multisampled = !!(m_prog.ctrl & RSX_SHADER_CONTROL_ROP_MULTISAMPLED);
+	m_shader_props.ROP_emulate_depth_range = !!(m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE);
+	m_shader_props.ROP_depth_export = !!(m_prog.ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT) && m_shader_props.ROP_emulate_depth_range;
+	m_shader_props.emulated_depth_storage = device_props.emulated_depth_storage;
 
 	// Declare global constants
 	if (m_shader_props.require_fog_read)
@@ -547,7 +556,8 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 		RSX_SHADER_CONTROL_ALPHA_TEST |
 		RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE |
 		RSX_SHADER_CONTROL_ROP_OUTPUT_REMAP |
-		RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
+		RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING |
+		RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE;
 
 	if (m_prog.ctrl & ROP_control_access_options)
 	{
@@ -593,6 +603,8 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 		}
 	}
 
+	glsl::insert_fragment_epilogue(OS, m_shader_props);
+
 	OS << "}\n";
 }
 
@@ -622,6 +634,7 @@ void VKFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 	}
 
 	decompiler.device_props.emulate_depth_compare = !pdev->get_formats_support().d24_unorm_s8;
+	decompiler.device_props.emulated_depth_storage = vk::emulate_extended_depth_range();
 	decompiler.device_props.has_low_precision_rounding = vk::is_NVIDIA(vk::get_driver_vendor());
 	decompiler.Task();
 

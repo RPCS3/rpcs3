@@ -272,6 +272,22 @@ namespace rsx
 			RSX(ctx)->m_graphics_state.clear(rtt_config_contested);
 		}
 
+		void set_zmin_max_control(context* ctx, u32 /*reg*/, u32 arg)
+		{
+			if (arg == REGS(ctx)->latch)
+			{
+				return;
+			}
+
+			RSX(ctx)->m_graphics_state |= rsx::pipeline_state::pipeline_config_dirty;
+
+			// Depth clip and clamp are read by the fragment epilogue when the depth range is emulated
+			if (!RSX(ctx)->get_backend_config().supports_extended_depth_range && g_cfg.video.emulate_extended_depth_range)
+			{
+				RSX(ctx)->m_graphics_state |= rsx::pipeline_state::fragment_state_dirty;
+			}
+		}
+
 		void set_surface_format(context* ctx, u32 reg, u32 arg)
 		{
 			// The high bits of this register are just log2(dimension), ignore them

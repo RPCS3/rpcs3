@@ -20,7 +20,8 @@ namespace gl
 		{"tc6", 12},
 		{"tc7", 13},
 		{"tc8", 14},
-		{"tc9", 15}
+		{"tc9", 15},
+		{"depth_range", 16} // clip range for depth range emulation
 	 }};
 
 	int get_varying_register_location(std::string_view varying_register_name)

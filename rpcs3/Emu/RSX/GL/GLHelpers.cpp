@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/system_config.h"
 #include "GLHelpers.h"
 #include "GLCompute.h"
 #include "util/logs.hpp"
@@ -185,5 +186,10 @@ namespace gl
 		default:
 			fmt::throw_exception("unknown primitive type");
 		}
+	}
+
+	bool emulate_extended_depth_range()
+	{
+		return !get_driver_caps().NV_depth_buffer_float_supported && g_cfg.video.emulate_extended_depth_range;
 	}
 }

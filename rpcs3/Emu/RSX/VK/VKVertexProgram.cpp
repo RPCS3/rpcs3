@@ -321,6 +321,11 @@ void VKVertexDecompilerThread::insertOutputs(std::stringstream& OS, const std::v
 	{
 		OS << "layout(location=" << vk::get_varying_register_location("usr") << ") out flat uvec4 draw_params_payload;\n";
 	}
+
+	if (m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE)
+	{
+		OS << "layout(location=" << vk::get_varying_register_location("depth_range") << ") out flat vec2 depth_range;\n";
+	}
 }
 
 void VKVertexDecompilerThread::insertFSExport(std::stringstream& OS)
@@ -346,6 +351,7 @@ void VKVertexDecompilerThread::insertMainStart(std::stringstream& OS)
 	properties2.low_precision_tests = vk::is_NVIDIA(vk::get_driver_vendor());
 	properties2.require_explicit_invariance = (vk::is_NVIDIA(vk::get_driver_vendor()) && g_cfg.video.shader_precision != gpu_preset_level::low);
 	properties2.require_instanced_render = !!(m_prog.ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS);
+	properties2.emulate_depth_range = !!(m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE);
 
 	glsl::insert_glsl_legacy_function(OS, properties2);
 	glsl::insert_vertex_input_fetch(OS, glsl::glsl_rules_vulkan);
@@ -477,7 +483,18 @@ void VKVertexDecompilerThread::insertMainEnd(std::stringstream& OS)
 	}
 
 	OS << "	gl_Position = gl_Position * scale_offset_mat;\n";
-	OS << "	gl_Position = apply_zclip_xform(gl_Position, z_near, z_far);\n";
+
+	if (!(m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE)) [[ likely ]]
+	{
+		OS << "	gl_Position = apply_zclip_xform(gl_Position, z_near, z_far);\n";
+	}
+	else
+	{
+		OS <<
+			"	depth_range = vec2(min(z_near, z_far), max(z_near, z_far));\n"
+			"	gl_Position = apply_depth_range_xform(gl_Position, depth_range);\n";
+	}
+
 	OS << "}\n";
 }
 

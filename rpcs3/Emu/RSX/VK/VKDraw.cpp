@@ -253,8 +253,14 @@ void VKGSRender::update_draw_state()
 			bounds_max = std::max(1.f, rsx::method_registers.clip_max());
 		}
 
-		if (!m_device->get_unrestricted_depth_range_support())
+		if (!backend_config.supports_extended_depth_range)
 		{
+			if (rsx::method_registers.depth_bounds_test_enabled() && requires_depth_range_emulation()) [[ unlikely ]]
+			{
+				bounds_min = rsx::encode_emulated_depth(bounds_min);
+				bounds_max = rsx::encode_emulated_depth(bounds_max);
+			}
+
 			bounds_min = std::clamp(bounds_min, 0.f, 1.f);
 			bounds_max = std::clamp(bounds_max, 0.f, 1.f);
 		}
