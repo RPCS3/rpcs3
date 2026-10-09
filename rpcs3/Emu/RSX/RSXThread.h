@@ -266,6 +266,7 @@ namespace rsx
 	protected:
 		void get_framebuffer_layout(rsx::framebuffer_creation_context context, framebuffer_layout &layout);
 		bool get_scissor(areau& region, bool clip_viewport);
+		bool requires_depth_range_emulation() const;
 
 		// Notify framebuffer layout has been committed.
 		// FIXME: This should not be here
@@ -290,7 +291,6 @@ namespace rsx
 
 		// Update fragment program export configuration. Can invalidate the current program.
 		rsx::flags32_t get_fragment_program_export_config();
-		bool requires_depth_range_emulation() const;
 
 		// Gets the current vertex program and associated state. Can invalidate the bound progam.
 		void get_current_vertex_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count>& sampler_descriptors);

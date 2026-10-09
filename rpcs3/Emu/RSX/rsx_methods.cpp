@@ -775,7 +775,6 @@ namespace rsx
 			state_signals[NV4097_SET_DEPTH_BOUNDS_MIN] = rsx::depth_bounds_state_dirty;
 			state_signals[NV4097_SET_DEPTH_BOUNDS_MAX] = rsx::depth_bounds_state_dirty;
 			state_signals[NV4097_SET_CULL_FACE_ENABLE] = rsx::pipeline_config_dirty;
-			state_signals[NV4097_SET_ZMIN_MAX_CONTROL] = rsx::pipeline_config_dirty | rsx::fragment_state_dirty;
 			state_signals[NV4097_SET_LOGIC_OP_ENABLE] = rsx::pipeline_config_dirty;
 			state_signals[NV4097_SET_LOGIC_OP] = rsx::pipeline_config_dirty;
 			state_signals[NV4097_SET_BLEND_ENABLE] = rsx::pipeline_config_dirty | rsx::blend_config_dirty;
@@ -1621,6 +1620,7 @@ namespace rsx
 
 		// NV4097
 		bind(NV4097_SET_CULL_FACE, nv4097::set_face_property);
+		bind(NV4097_SET_ZMIN_MAX_CONTROL, nv4097::set_zmin_max_control);
 		bind(NV4097_SET_FRONT_FACE, nv4097::set_face_property);
 		bind(NV4097_TEXTURE_READ_SEMAPHORE_RELEASE, nv4097::texture_read_semaphore_release);
 		bind(NV4097_BACK_END_WRITE_SEMAPHORE_RELEASE, nv4097::back_end_write_semaphore_release);

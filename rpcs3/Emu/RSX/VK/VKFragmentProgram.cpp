@@ -426,7 +426,7 @@ void VKFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.emulate_depth_compare = !!(m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE);
 	m_shader_props.ROP_output_multisampled = !!(m_prog.ctrl & RSX_SHADER_CONTROL_ROP_MULTISAMPLED);
 	m_shader_props.ROP_emulate_depth_range = !!(m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE);
-	m_shader_props.ROP_depth_export = !!(m_prog.ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT) && m_parr.HasParam(PF_PARAM_NONE, "vec4", "r1");
+	m_shader_props.ROP_depth_export = !!(m_prog.ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT) && m_shader_props.ROP_emulate_depth_range;
 	m_shader_props.emulated_depth_storage = device_props.emulated_depth_storage;
 
 	// Declare global constants

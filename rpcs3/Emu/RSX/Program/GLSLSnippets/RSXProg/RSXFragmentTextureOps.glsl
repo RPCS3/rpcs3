@@ -57,18 +57,19 @@ R"(
 
 #ifdef _EMULATED_DEPTH_STORAGE
 // Float depth surfaces hold the emulated encoding; recover the depth value when they are sampled directly
-vec4 _decode_depth_texel(const in vec4 texel, const in uint flags)
+vec4 _decode_depth_texel(const in vec4 texel, const in uint flags, const in uint remap)
 {
 	if (!_test_bit(flags, DEPTH_FLOAT))
 	{
 		return texel;
 	}
 
-	// Depth views replicate the depth channel; leave constant channels alone
-	const vec4 depth = vec4(decode_emulated_depth(texel.x));
-	return mix(texel, depth, equal(texel, vec4(texel.x)));
+	// Only channels sourced from the texture (remap select == 2) hold encoded depth
+	const uvec4 remap_select = (uvec4(remap) >> uvec4(10, 12, 14, 8)) & 3u;
+	const vec4 decoded = uintBitsToFloat(floatBitsToUint(texel) << 1u);
+	return _select(texel, decoded, equal(remap_select, uvec4(2u)));
 }
-#define _DEPTH_DECODE(index, texel) _decode_depth_texel(texel, TEX_PARAM(index).flags)
+#define _DEPTH_DECODE(index, texel) _decode_depth_texel(texel, TEX_PARAM(index).flags, TEX_PARAM(index).remap)
 #else
 #define _DEPTH_DECODE(index, texel) texel
 #endif
