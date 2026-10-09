@@ -12,12 +12,14 @@
 // the RSX thread's time making and showing them, and in it waiting for the
 // GPU (VKPresent.cpp); the frames made but dropped, no image free to show
 // them in; and the RSX thread's time waiting for an image to show the game's
-// own frames [0] and those made [1] in
+// own frames [0] and those made [1] in; and the game's frames whose camera
+// moved too quickly for frames between, shown as the real ones instead
 atomic_t<u64> g_ps5_frames_generated = 0;
 atomic_t<u64> g_ps5_frame_gen_us = 0;
 atomic_t<u64> g_ps5_frame_gen_gpu_wait_us = 0;
 atomic_t<u64> g_ps5_frames_dropped = 0;
 atomic_t<u64> g_ps5_image_wait_us[2] = {};
+atomic_t<u64> g_ps5_frames_quick_moves = 0;
 
 namespace vk
 {
@@ -60,9 +62,10 @@ layout(push_constant) uniform push_block { vec4 p0; vec4 p1; vec4 p2; };
 			pass_median,         // the vectors' 3x3 median
 			pass_between,        // the frame between
 			pass_keep,           // the frame, kept for the next one
+			pass_motion,         // the camera's motion, voted from the rough vectors
 		};
 
-		constexpr const char* c_formats[] = { "r32f", "r32f", "rgba16f", "rgba16f", "rgba16f", "rgba8", "rgba8" };
+		constexpr const char* c_formats[] = { "r32f", "r32f", "rgba16f", "rgba16f", "rgba16f", "rgba8", "rgba8", "rgba32f" };
 
 		constexpr const char* c_bodies[] =
 		{
@@ -106,11 +109,15 @@ void main()
 )",
 			// pass_coarse_search: tex0 the last frame's quarter brightness, tex1
 			// this one's; p0 = (the quarter size, its 4x4 block grid), p1.x the
-			// reach. Each block of this frame is sought in the last one up to
-			// the reach away (c_quality); the vector points from here to there,
-			// its z the mean difference per texel. Shorter vectors are a little
-			// favoured, but only a little: at build 107's 0.0015 a texel the
-			// favour outweighed a true match 14 texels away
+			// reach, p1.y the favour shorter vectors get a texel. Each block of
+			// this frame is sought in the last one up to the reach away
+			// (c_quality); the vector points from here to there, its z the mean
+			// difference per texel, its w how much better it matched than no
+			// motion (how clearly the block moved). Shorter vectors are a little
+			// favoured, but only a little: at build 107's 0.0015 a quarter texel
+			// the favour outweighed a true match 14 texels away (0.0005 now).
+			// Also run at a sixteenth of the working size (0.002 a texel there,
+			// the same per pixel), for the camera's motion (pass_motion)
 			R"(
 void main()
 {
@@ -132,6 +139,7 @@ void main()
 	{
 		error += abs(cur[k] - texelFetch(tex0, min(base + ivec2(k & 3, k >> 2), lim), 0).r) / 16.0;
 	}
+	const float still_error = error;
 	float best = error - 0.006;
 	vec2 best_v = vec2(0.0);
 	for (int dy = -reach; dy <= reach; dy++)
@@ -144,16 +152,16 @@ void main()
 				s += abs(cur[k] - texelFetch(tex0, clamp(base + ivec2(k & 3, k >> 2) + ivec2(dx, dy), ivec2(0), lim), 0).r);
 			}
 			s /= 16.0;
-			if (s + 0.0005 * float(abs(dx) + abs(dy)) < best)
+			if (s + p1.y * float(abs(dx) + abs(dy)) < best)
 			{
-				best = s + 0.0005 * float(abs(dx) + abs(dy));
+				best = s + p1.y * float(abs(dx) + abs(dy));
 				error = s;
 				best_v = vec2(dx, dy);
 			}
 		}
 	}
 	// The match's own error, without the favours
-	imageStore(dst, p, vec4(best_v, error, 0.0));
+	imageStore(dst, p, vec4(best_v, error, still_error - error));
 }
 )",
 			// pass_fine_search: tex0 the last frame's working brightness, tex1
@@ -219,9 +227,11 @@ void main()
 	imageStore(dst, p, vec4(best_v, error, 0.0));
 }
 )",
-			// pass_median: tex0 the vectors; p0.xy their grid. Each vector's
-			// parts become the medians of its 3x3 neighbourhood's, which drops
-			// lone wrong ones; the match error stays its own
+			// pass_median: tex0 the vectors, tex1 the camera's motion
+			// (pass_motion); p0.xy their grid. Each vector's parts become the
+			// medians of its 3x3 neighbourhood's, which drops lone wrong ones;
+			// the match error stays its own, and w says whether the camera moved
+			// too quickly for frames between (pass_between)
 			R"(
 void main()
 {
@@ -260,7 +270,7 @@ void main()
 		}
 		ys[b + 1] = y;
 	}
-	imageStore(dst, p, vec4(xs[4], ys[4], texelFetch(tex0, p, 0).z, 0.0));
+	imageStore(dst, p, vec4(xs[4], ys[4], texelFetch(tex0, p, 0).z, texelFetch(tex1, ivec2(0), 0).w));
 }
 )",
 			// pass_between: tex0 the last frame (its own size), tex1 this one,
@@ -270,56 +280,21 @@ void main()
 			// (0) to this one (1). Each vector, from a point of this frame to
 			// where it was in the last, is followed t of the way back from here
 			// in the last frame and 1 - t of the way on in this one, and the two
-			// blended by t where they agree closely. Which vector: the one
-			// blended between the four nearest blocks', those four, and those of
-			// the blocks 8, 16 and 24 away in the four directions, the one whose
-			// two ends agree best, less its block's own match error (nearer ones
-			// a little favoured): at a moving thing's edge the blend of its
-			// vector and the background's belongs to neither and smeared the
-			// edge (build 106 on my console), and where the world comes into the
-			// frame no block's own vector is right: what came in was not in the
-			// last frame. An end holds where it falls inside its frame, on a
-			// block moving with the vector or one that matched worse than it
-			// (which says nothing): in a camera turn round the player, the end
-			// that falls on the player (a block still, and sure of it) is where
-			// the world was hidden. With both ends holding, they are blended as
-			// before; with one, that end alone, and with both but apart, the one
-			// nearer in time, each moved along its vector. Build 110 put the
-			// nearer frame unmoved there, and a quick camera turn in GTA IV
-			// looked wrong on my console: in the model of these passes the
-			// screen's sides, the world beside the player and the radar, and
-			// every patch matched poorly stood still while the rest moved, as
-			// if torn off it. In the model, a
-			// turn of 40-120 texels a game frame at the working size went from
-			// 18.8-24.4 dB to 27.9-33.1, the side the world comes in at from
-			// 15.1-15.7 to 33.8-40.7, and round the player from 17.0-20.6 to
-			// 19.6-31.6; the earlier scenes' whole frames -0.5 to +4.7 dB (most
-			// gained), the HUD exact as before. The end alone is read unfiltered,
-			// its texel as it is: a filtered read between texels softened GTA
-			// IV's dithered shadows' grain (contrast 0.116-0.149 in the model, the
-			// real frames' 0.157-0.159; read as texels 0.137-0.156, build 110's
-			// 0.140-0.158). The frame nearer in time as it is where the
-			// pixel is the same in both frames unmoved (the HUD, the radar's
-			// frame and text, which the world's vectors dragged along), or where
-			// neither end of any vector holds
+			// blended by t where they agree closely. Which vector: of the one
+			// blended between the four nearest blocks' and those four, the one
+			// whose two ends agree best (the blended one a little favoured): at
+			// a moving thing's edge the blend of its vector and the background's
+			// belongs to neither and smeared the edge (build 106 on my console;
+			// in a model of these passes, picking per pixel gained about 1 dB
+			// overall and up to 1.6 dB at a moving object's edges). Anywhere else
+			// the frame nearer in time as it is: where the block matched poorly,
+			// where the two disagree (GTA IV's shadows shimmer by themselves, and
+			// averaging two patterns softened every other frame's on my console,
+			// build 94), and where the pixel is the same in both frames unmoved
+			// (the HUD, the radar's frame and text, which the world's vectors
+			// dragged along). And the frame nearer in time as it is everywhere
+			// while the camera moves too quickly (the vectors' w, pass_motion)
 			R"(
-ivec2 block_of(const vec2 frame_uv, const ivec2 grid)
-{
-	return clamp(ivec2(floor(frame_uv * p1.zw * vec2(grid))), ivec2(0), grid - 1);
-}
-
-// The end at frame_uv holds: in the frame, and on a block moving with v, or on
-// one whose own match was worse than v's
-bool holds(const vec2 frame_uv, const vec4 v, const ivec2 grid)
-{
-	if (any(lessThan(frame_uv, vec2(0.0))) || any(greaterThan(frame_uv, vec2(1.0))))
-	{
-		return false;
-	}
-	const vec4 b = texelFetch(tex2, block_of(frame_uv, grid), 0);
-	return length(b.xy - v.xy) <= 2.0 + 0.15 * length(v.xy) || b.z > v.z + 0.01;
-}
-
 void main()
 {
 	const ivec2 p = ivec2(gl_GlobalInvocationID.xy);
@@ -329,72 +304,38 @@ void main()
 	const vec2 grid_uv = uv * p1.zw;
 	const ivec2 grid = textureSize(tex2, 0);
 	const ivec2 near = ivec2(floor(grid_uv * vec2(grid) - 0.5));
-	const ivec2 own = clamp(ivec2(floor(grid_uv * vec2(grid))), ivec2(0), grid - 1);
 	vec4 mv = vec4(0.0);
 	vec3 last = vec3(0.0);
 	vec3 next = vec3(0.0);
-	vec2 last_uv = uv;
-	vec2 next_uv = uv;
-	bool last_holds = false;
-	bool next_holds = false;
 	float best = 1e9;
-	for (int c = 0; c < 17; c++)
+	for (int c = 0; c < 5; c++)
 	{
-		vec4 v;
-		float favour;
-		if (c == 0)
-		{
-			v = texture(tex2, grid_uv);
-			favour = 0.0;
-		}
-		else if (c < 5)
-		{
-			v = texelFetch(tex2, clamp(near + ivec2((c - 1) & 1, (c - 1) >> 1), ivec2(0), grid - 1), 0);
-			favour = 0.004;
-		}
-		else
-		{
-			const int k = c - 5;
-			const ivec2 dir = (k & 3) == 0 ? ivec2(1, 0) : (k & 3) == 1 ? ivec2(-1, 0) : (k & 3) == 2 ? ivec2(0, 1) : ivec2(0, -1);
-			v = texelFetch(tex2, clamp(own + dir * (8 * ((k >> 2) + 1)), ivec2(0), grid - 1), 0);
-			favour = 0.008;
-		}
+		const vec4 v = c == 0 ? texture(tex2, grid_uv)
+			: texelFetch(tex2, clamp(near + ivec2((c - 1) & 1, (c - 1) >> 1), ivec2(0), grid - 1), 0);
 		const vec2 d = v.xy / p1.xy;
-		const vec2 lu = uv + t * d;
-		const vec2 nu = uv - (1.0 - t) * d;
-		const vec3 l = texture(tex0, lu).rgb;
-		const vec3 n = texture(tex1, nu * p0.xy).rgb;
-		const bool lh = holds(lu, v, grid);
-		const bool nh = holds(nu, v, grid);
+		const vec3 l = texture(tex0, uv + t * d).rgb;
+		const vec3 n = texture(tex1, (uv - (1.0 - t) * d) * p0.xy).rgb;
 		const vec3 g = abs(l - n);
-		const float s = (lh && nh ? max(max(g.r, g.g), g.b) : lh || nh ? 0.06 : 1.0) + favour + v.z;
+		const float s = max(max(g.r, g.g), g.b) + (c == 0 ? 0.0 : 0.004);
 		if (s < best)
 		{
 			best = s;
 			mv = v;
 			last = l;
 			next = n;
-			last_uv = lu;
-			next_uv = nu;
-			last_holds = lh;
-			next_holds = nh;
 		}
 	}
 	const vec3 here = texture(tex1, uv * p0.xy).rgb;
 	const vec3 there = texture(tex0, uv).rgb;
-	const vec3 nearer = t < 0.5 ? there : here;
-	const ivec2 size0 = textureSize(tex0, 0);
-	const ivec2 size1 = textureSize(tex1, 0);
-	const vec3 last_texel = texelFetch(tex0, clamp(ivec2(floor(last_uv * vec2(size0))), ivec2(0), size0 - 1), 0).rgb;
-	const vec3 next_texel = texelFetch(tex1, clamp(ivec2(floor(next_uv * p0.xy * vec2(size1))), ivec2(0), size1 - 1), 0).rgb;
-	const vec3 one_end = last_holds && next_holds ? (t < 0.5 ? last_texel : next_texel) : last_holds ? last_texel : next_holds ? next_texel : nearer;
 	const vec3 moved_gap = abs(last - next);
 	const vec3 still_gap = abs(there - here);
 	const float trust = 1.0 - smoothstep(0.035, 0.11, mv.z);
 	const float agree = 1.0 - smoothstep(0.03, 0.1, max(max(moved_gap.r, moved_gap.g), moved_gap.b));
 	const float still = 1.0 - smoothstep(0.012, 0.04, max(max(still_gap.r, still_gap.g), still_gap.b));
-	const vec3 between = mix(one_end, mix(last, next, t), last_holds && next_holds ? trust * agree : 0.0);
-	imageStore(dst, p, vec4(mix(between, nearer, still), 1.0));
+	const vec3 nearer = t < 0.5 ? there : here;
+	const vec3 between = mix(nearer, mix(last, next, t), trust * agree);
+	const bool quick = texelFetch(tex2, ivec2(0), 0).w > 0.5;
+	imageStore(dst, p, vec4(quick ? nearer : mix(between, nearer, still), 1.0));
 }
 )",
 			// pass_keep: tex0 the frame; p0 = (its used part as a share of its
@@ -406,6 +347,78 @@ void main()
 	const ivec2 p = ivec2(gl_GlobalInvocationID.xy);
 	if (p.x >= int(p0.z) || p.y >= int(p0.w)) return;
 	imageStore(dst, p, vec4(texture(tex0, (vec2(p) + 0.5) / p0.zw * p0.xy).rgb, 1.0));
+}
+)",
+			// pass_motion: tex0 the rough vectors (pass_coarse_search at a
+			// sixteenth of the working size, 64 working texels a block); p0.x how
+			// far the camera may move between two game frames, in sixteenth
+			// texels, for frames between. One group of 64. The camera's motion
+			// is the rough vector with the most support: the clearness (w) of
+			// every block whose vector is within a texel of it; none when no
+			// block moved clearly. At a sixteenth, a building's rows of windows
+			// average away, where the quarter size matched them a row or a
+			// column off in a camera turn. Beyond p0.x (6% of the frame's width)
+			// the frames between show the real frames as they are: GTA IV's
+			// quick turns broke apart on my console, and in the model of these
+			// passes (a city turned through 3, 6 and 12 degrees a game frame:
+			// rows of windows, poles, a road, the player, the radar) the vectors
+			// were right for 62%, 28% and 20% of the blocks that could be
+			// matched; a search led by the camera's motion got 84%, 80% and 73%,
+			// yet from 6 degrees on its walls, poles and road markings still
+			// broke up in places, and it garbled the turning radar. 6% of the
+			// width is about 5 degrees a game frame at 70 degrees across. w = 1
+			// when it is beyond; z the support
+			R"(
+shared vec4 s_rough[256];
+shared float s_support[64];
+shared vec2 s_best[64];
+
+void main()
+{
+	const int id = int(gl_LocalInvocationIndex);
+	const ivec2 grid = textureSize(tex0, 0);
+	const int n = min(grid.x * grid.y, 256);
+	for (int k = id; k < n; k += 64)
+	{
+		s_rough[k] = texelFetch(tex0, ivec2(k % grid.x, k / grid.x), 0);
+	}
+	barrier();
+	float best_support = 0.0;
+	vec2 best = vec2(0.0);
+	for (int k = id; k < n; k += 64)
+	{
+		const vec2 v = s_rough[k].xy;
+		float support = 0.0;
+		for (int m = 0; m < n; m++)
+		{
+			const vec4 o = s_rough[m];
+			if (max(abs(o.x - v.x), abs(o.y - v.y)) <= 1.0)
+			{
+				support += max(o.w, 0.0);
+			}
+		}
+		if (support > best_support)
+		{
+			best_support = support;
+			best = v;
+		}
+	}
+	s_support[id] = best_support;
+	s_best[id] = best;
+	barrier();
+	if (id == 0)
+	{
+		for (int k = 1; k < 64; k++)
+		{
+			if (s_support[k] > best_support)
+			{
+				best_support = s_support[k];
+				best = s_best[k];
+			}
+		}
+		const vec2 motion = best_support > 0.02 ? best : vec2(0.0);
+		imageStore(dst, ivec2(0), vec4(motion, best_support, length(motion) >= p0.x ? 1.0 : 0.0));
+	}
 }
 )",
 		};
@@ -532,6 +545,15 @@ void main()
 		drop(m_prev_color);
 		for (auto& image : m_luma) drop(image);
 		for (auto& image : m_luma_coarse) drop(image);
+		for (auto& image : m_luma_rough) drop(image);
+		drop(m_vectors_rough);
+		drop(m_motion);
+		if (m_motion_read)
+		{
+			m_motion_read->unmap();
+			m_motion_mapped = nullptr;
+			vk::get_resource_manager()->dispose(m_motion_read);
+		}
 		drop(m_vectors_coarse);
 		drop(m_vectors);
 		drop(m_vectors_smooth);
@@ -547,6 +569,8 @@ void main()
 		working_size(width, height, quality, m_work_w, m_work_h);
 		const u32 coarse_w = utils::aligned_div(m_work_w, 4u);
 		const u32 coarse_h = utils::aligned_div(m_work_h, 4u);
+		const u32 rough_w = utils::aligned_div(coarse_w, 4u);
+		const u32 rough_h = utils::aligned_div(coarse_h, 4u);
 
 		m_prev_color = make_image(width, height, VK_FORMAT_R8G8B8A8_UNORM);
 		bool outputs = true;
@@ -559,12 +583,24 @@ void main()
 		{
 			m_luma[i] = make_image(m_work_w, m_work_h, VK_FORMAT_R32_SFLOAT);
 			m_luma_coarse[i] = make_image(coarse_w, coarse_h, VK_FORMAT_R32_SFLOAT);
+			m_luma_rough[i] = make_image(rough_w, rough_h, VK_FORMAT_R32_SFLOAT);
+		}
+		m_vectors_rough = make_image(utils::aligned_div(rough_w, 4u), utils::aligned_div(rough_h, 4u), VK_FORMAT_R16G16B16A16_SFLOAT);
+		m_motion = make_image(1, 1, VK_FORMAT_R32G32B32A32_SFLOAT);
+		const auto pdev = vk::get_current_renderer();
+		m_motion_read = std::make_unique<vk::buffer>(*pdev, 16, pdev->get_memory_mapping().host_visible_coherent,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0, VMM_ALLOCATION_POOL_UNDEFINED);
+		if (m_motion_read->value != VK_NULL_HANDLE)
+		{
+			m_motion_mapped = static_cast<const f32*>(m_motion_read->map(0, 16));
+			std::memset(const_cast<f32*>(m_motion_mapped), 0, 16);
 		}
 		m_vectors_coarse = make_image(utils::aligned_div(coarse_w, 4u), utils::aligned_div(coarse_h, 4u), VK_FORMAT_R16G16B16A16_SFLOAT);
 		m_vectors = make_image(utils::aligned_div(m_work_w, 8u), utils::aligned_div(m_work_h, 8u), VK_FORMAT_R16G16B16A16_SFLOAT);
 		m_vectors_smooth = make_image(utils::aligned_div(m_work_w, 8u), utils::aligned_div(m_work_h, 8u), VK_FORMAT_R16G16B16A16_SFLOAT);
 
-		if (!m_prev_color || !outputs || !m_luma[0] || !m_luma[1] || !m_luma_coarse[0] || !m_luma_coarse[1] || !m_vectors_coarse || !m_vectors || !m_vectors_smooth)
+		if (!m_prev_color || !outputs || !m_luma[0] || !m_luma[1] || !m_luma_coarse[0] || !m_luma_coarse[1] || !m_luma_rough[0] || !m_luma_rough[1] ||
+			!m_vectors_rough || !m_motion || !m_motion_mapped || !m_vectors_coarse || !m_vectors || !m_vectors_smooth)
 		{
 			rsx_log.warning("Frame generation: no memory for its images at %ux%u", width, height);
 			dispose();
@@ -602,7 +638,8 @@ void main()
 				return 0;
 			}
 			for (auto* image : { m_prev_color.get(), m_output[0].get(), m_output[1].get(), m_output[2].get(), m_luma[0].get(), m_luma[1].get(),
-				m_luma_coarse[0].get(), m_luma_coarse[1].get(), m_vectors_coarse.get(), m_vectors.get(), m_vectors_smooth.get() })
+				m_luma_coarse[0].get(), m_luma_coarse[1].get(), m_luma_rough[0].get(), m_luma_rough[1].get(), m_vectors_rough.get(), m_motion.get(),
+				m_vectors_coarse.get(), m_vectors.get(), m_vectors_smooth.get() })
 			{
 				image->change_layout(cmd, VK_IMAGE_LAYOUT_GENERAL);
 			}
@@ -617,6 +654,10 @@ void main()
 		const u32 coarse_h = utils::aligned_div(m_work_h, 4u);
 		const u32 coarse_grid_w = utils::aligned_div(coarse_w, 4u);
 		const u32 coarse_grid_h = utils::aligned_div(coarse_h, 4u);
+		const u32 rough_w = utils::aligned_div(coarse_w, 4u);
+		const u32 rough_h = utils::aligned_div(coarse_h, 4u);
+		const u32 rough_grid_w = utils::aligned_div(rough_w, 4u);
+		const u32 rough_grid_h = utils::aligned_div(rough_h, 4u);
 		const u32 grid_w = utils::aligned_div(m_work_w, 8u);
 		const u32 grid_h = utils::aligned_div(m_work_h, 8u);
 
@@ -625,12 +666,21 @@ void main()
 
 		cur->push_layout(cmd, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-		// This frame's brightness, at the working size and a quarter of it
+		// The camera's motion the last time frames were made, as the trace counts it
+		if (make && m_motion_mapped[3] > 0.5f)
+		{
+			g_ps5_frames_quick_moves++;
+		}
+
+		// This frame's brightness, at the working size, a quarter and a sixteenth of it
 		vk::get_compute_task<frame_generation_pass<pass_brightness>>()->run(cmd, { cur }, m_luma[1].get(), m_work_w, m_work_h,
 			{ uv_x, uv_y, work_w, work_h });
 		barrier(cmd);
 		vk::get_compute_task<frame_generation_pass<pass_quarter>>()->run(cmd, { m_luma[1].get() }, m_luma_coarse[1].get(), coarse_w, coarse_h,
 			{ work_w, work_h, static_cast<f32>(coarse_w), static_cast<f32>(coarse_h) });
+		barrier(cmd);
+		vk::get_compute_task<frame_generation_pass<pass_quarter>>()->run(cmd, { m_luma_coarse[1].get() }, m_luma_rough[1].get(), rough_w, rough_h,
+			{ static_cast<f32>(coarse_w), static_cast<f32>(coarse_h), static_cast<f32>(rough_w), static_cast<f32>(rough_h) });
 		barrier(cmd);
 
 		u32 made = 0;
@@ -638,12 +688,27 @@ void main()
 		{
 			vk::get_compute_task<frame_generation_pass<pass_coarse_search>>()->run(cmd, { m_luma_coarse[0].get(), m_luma_coarse[1].get() }, m_vectors_coarse.get(), coarse_grid_w, coarse_grid_h,
 				{ static_cast<f32>(coarse_w), static_cast<f32>(coarse_h), static_cast<f32>(coarse_grid_w), static_cast<f32>(coarse_grid_h),
-				  static_cast<f32>(c_quality[quality].reach) });
+				  static_cast<f32>(c_quality[quality].reach), 0.0005f });
 			barrier(cmd);
 			vk::get_compute_task<frame_generation_pass<pass_fine_search>>()->run(cmd, { m_luma[0].get(), m_luma[1].get(), m_vectors_coarse.get() }, m_vectors.get(), grid_w, grid_h,
 				{ work_w, work_h, static_cast<f32>(grid_w), static_cast<f32>(grid_h), static_cast<f32>(coarse_grid_w), static_cast<f32>(coarse_grid_h) });
 			barrier(cmd);
-			vk::get_compute_task<frame_generation_pass<pass_median>>()->run(cmd, { m_vectors.get() }, m_vectors_smooth.get(), grid_w, grid_h,
+			// The camera's motion: the rough vectors (a block of 64 working texels,
+			// up to a quarter of the reach in sixteenth texels), voted
+			vk::get_compute_task<frame_generation_pass<pass_coarse_search>>()->run(cmd, { m_luma_rough[0].get(), m_luma_rough[1].get() }, m_vectors_rough.get(), rough_grid_w, rough_grid_h,
+				{ static_cast<f32>(rough_w), static_cast<f32>(rough_h), static_cast<f32>(rough_grid_w), static_cast<f32>(rough_grid_h),
+				  static_cast<f32>(std::max(1u, c_quality[quality].reach / 4)), 0.002f });
+			barrier(cmd);
+			vk::get_compute_task<frame_generation_pass<pass_motion>>()->run(cmd, { m_vectors_rough.get() }, m_motion.get(), 1, 1,
+				{ 0.06f * work_w / 16.f });
+			barrier(cmd);
+			const VkBufferImageCopy region = { 0, 0, 0, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 }, { 0, 0, 0 }, { 1, 1, 1 } };
+			vkCmdCopyImageToBuffer(cmd, m_motion->value, VK_IMAGE_LAYOUT_GENERAL, m_motion_read->value, 1, &region);
+			VkMemoryBarrier host = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
+			host.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			host.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
+			vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0, 1, &host, 0, nullptr, 0, nullptr);
+			vk::get_compute_task<frame_generation_pass<pass_median>>()->run(cmd, { m_vectors.get(), m_motion.get() }, m_vectors_smooth.get(), grid_w, grid_h,
 				{ static_cast<f32>(grid_w), static_cast<f32>(grid_h) });
 			barrier(cmd);
 
@@ -669,6 +734,7 @@ void main()
 		barrier(cmd);
 		std::swap(m_luma[0], m_luma[1]);
 		std::swap(m_luma_coarse[0], m_luma_coarse[1]);
+		std::swap(m_luma_rough[0], m_luma_rough[1]);
 		m_have_prev = true;
 
 		if (made)

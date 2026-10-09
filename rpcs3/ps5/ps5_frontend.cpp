@@ -98,6 +98,7 @@ extern atomic_t<u64> g_ps5_frame_gen_us; // VKFrameGen.cpp: the RSX thread's tim
 extern atomic_t<u64> g_ps5_frame_gen_gpu_wait_us; // and in it waiting for the GPU; frames made but dropped;
 extern atomic_t<u64> g_ps5_frames_dropped; // and the time waiting for an image for the game's own frames
 extern atomic_t<u64> g_ps5_image_wait_us[2]; // and for those made
+extern atomic_t<u64> g_ps5_frames_quick_moves; // and the game's frames whose camera moved too quickly for frames between
 
 namespace
 {
@@ -1335,9 +1336,9 @@ int run(const char* boot_path)
 						frame_gen = fmt::format(", up to %s a frame, %s", most ? std::to_string(most) : std::string("Auto"),
 							quality == 0 ? "Fast" : quality == 2 ? "Quality" : "Balanced");
 					}
-					trace("status %ds: state %d, RSX flips %d (%u made between, %u dropped, in %u ms: %u ms waiting for the GPU; waiting for an image: %u ms for the game's frames, %u ms for those made%s); heap %d MiB (peak %d), system cache %u MiB in memory, free direct %d MiB, flexible %d MiB; progress '%s' modules %u/%u files %u/%u; open: %u files, %u folders, %u sockets, %u other (%u by fs); %d PPU threads:%s", seconds + 1,
+					trace("status %ds: state %d, RSX flips %d (%u made between, %u dropped, %u game frames moving too quickly for them, in %u ms: %u ms waiting for the GPU; waiting for an image: %u ms for the game's frames, %u ms for those made%s); heap %d MiB (peak %d), system cache %u MiB in memory, free direct %d MiB, flexible %d MiB; progress '%s' modules %u/%u files %u/%u; open: %u files, %u folders, %u sockets, %u other (%u by fs); %d PPU threads:%s", seconds + 1,
 						static_cast<u32>(Emu.GetStatus()), flips, static_cast<u32>(g_ps5_frames_generated.load()), static_cast<u32>(g_ps5_frames_dropped.load()),
-						static_cast<u32>(g_ps5_frame_gen_us.load() / 1000), static_cast<u32>(g_ps5_frame_gen_gpu_wait_us.load() / 1000),
+						static_cast<u32>(g_ps5_frames_quick_moves.load()), static_cast<u32>(g_ps5_frame_gen_us.load() / 1000), static_cast<u32>(g_ps5_frame_gen_gpu_wait_us.load() / 1000),
 						static_cast<u32>(g_ps5_image_wait_us[0].load() / 1000), static_cast<u32>(g_ps5_image_wait_us[1].load() / 1000), frame_gen, heap.mapped_bytes >> 20, heap.peak_bytes >> 20, static_cast<u32>(ps5_syscache_bytes() >> 20), direct >> 20,
 						flexible >> 20, progress_text, +g_progr_pdone, +g_progr_ptotal, +g_progr_fdone, +g_progr_ftotal, regular, folders, sockets, others, static_cast<u32>(fs::ps5_open_tracked()), count, ppus);
 					// Near the limit, which ones (once per 40 more)

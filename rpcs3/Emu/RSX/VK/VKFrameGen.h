@@ -16,9 +16,13 @@
 // by t: of the nearest blocks' vectors and their blend, the one whose two ends
 // agree best. Where a block matched badly, or the two frames disagree
 // there, it takes the frame nearer in time, so a wrong vector costs
-// smoothness rather than smearing the picture.
+// smoothness rather than smearing the picture. And while the camera moves
+// too quickly (more than 6% of the frame's width between two game frames,
+// voted from blocks matched at a sixteenth of the working size), every frame
+// between is the nearer real frame: such motion broke apart.
 
 #include "VKCompute.h"
+#include "vkutils/buffer_object.h"
 #include "vkutils/image.h"
 #include "vkutils/sampler.h"
 
@@ -61,6 +65,11 @@ namespace vk
 		std::unique_ptr<vk::viewable_image> m_prev_color;        // the last frame, at its own size
 		std::unique_ptr<vk::viewable_image> m_luma[2];           // brightness at the working size: [0] the last frame's, [1] this one's
 		std::unique_ptr<vk::viewable_image> m_luma_coarse[2];    // and at a quarter of it
+		std::unique_ptr<vk::viewable_image> m_luma_rough[2];     // and at a sixteenth
+		std::unique_ptr<vk::viewable_image> m_vectors_rough;     // a vector per 4x4 block at the sixteenth size
+		std::unique_ptr<vk::viewable_image> m_motion;            // the camera's motion: one texel
+		std::unique_ptr<vk::buffer> m_motion_read;               // a copy of it the CPU reads, for the trace
+		const f32* m_motion_mapped = nullptr;
 		std::unique_ptr<vk::viewable_image> m_vectors_coarse;    // a vector per 4x4 block at the coarse size
 		std::unique_ptr<vk::viewable_image> m_vectors;           // a vector per 8x8 block at the working size
 		std::unique_ptr<vk::viewable_image> m_vectors_smooth;    // the same, outliers removed
