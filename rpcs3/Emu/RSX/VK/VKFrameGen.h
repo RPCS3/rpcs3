@@ -8,7 +8,8 @@
 //
 // Motion is estimated from the pictures alone (a PS3 game gives no motion
 // vectors): both frames' brightness at a working size (480, 640 or 960
-// across, by the Quality setting), blocks matched at a quarter of that and
+// across, by the Quality setting), blocks matched at a quarter of that (up to
+// about a fifth of the frame away) and
 // refined at full working size, the vectors' outliers removed by a median;
 // then each pixel of a frame between, at a time t from the last frame (0) to
 // this one (1), is taken that far along a vector from both frames and blended

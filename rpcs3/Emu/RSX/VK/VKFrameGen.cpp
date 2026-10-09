@@ -36,15 +36,20 @@ layout(push_constant) uniform push_block { vec4 p0; vec4 p1; vec4 p2; };
 )";
 
 		// The Quality setting's levels: the working size's width at most, and
-		// how far the coarse search reaches, in quarter-size texels (about 100
-		// pixels of a 1280-wide frame at each: a quick camera turn at 30 fps)
+		// how far the coarse search reaches, in quarter-size texels: about 256
+		// pixels of a 1280-wide frame at each, a quick camera turn with the game
+		// at 15 fps (build 107's reach, about 100 pixels, lost GTA IV's frames
+		// between to the nearer real frame when it fell to 11-16 fps in busy
+		// streets; in the model of these passes a 55-pixel move at the working
+		// size went from 14.0 to 21.8 dB, 80 from 14.0 to 20.1, 110 from 13.9
+		// to 18.1, and small moves stayed as they were)
 		struct quality_level
 		{
 			const char* name;
 			u32 width;
 			u32 reach;
 		};
-		constexpr quality_level c_quality[] = { { "Fast", 480, 9 }, { "Balanced", 640, 12 }, { "Quality", 960, 20 } };
+		constexpr quality_level c_quality[] = { { "Fast", 480, 24 }, { "Balanced", 640, 32 }, { "Quality", 960, 48 } };
 
 		enum pass_kind : int
 		{
@@ -102,10 +107,10 @@ void main()
 			// pass_coarse_search: tex0 the last frame's quarter brightness, tex1
 			// this one's; p0 = (the quarter size, its 4x4 block grid), p1.x the
 			// reach. Each block of this frame is sought in the last one up to
-			// the reach away (12 texels at Balanced, 48 at the working size: a
-			// quick camera turn at 30 fps; at 6, synthetic pans of 40 lost to a
-			// plain blend); the vector points from here to there, its z the mean
-			// difference per texel, a little in favour of short vectors
+			// the reach away (c_quality); the vector points from here to there,
+			// its z the mean difference per texel. Shorter vectors are a little
+			// favoured, but only a little: at build 107's 0.0015 a texel the
+			// favour outweighed a true match 14 texels away
 			R"(
 void main()
 {
@@ -122,11 +127,12 @@ void main()
 	// No motion first, and kept unless another vector is clearly better: in
 	// flat, plain areas (the ground under a shadow) every vector matches about
 	// as well, and the best by a hair is noise
-	float best = -0.006;
+	float error = 0.0;
 	for (int k = 0; k < 16; k++)
 	{
-		best += abs(cur[k] - texelFetch(tex0, min(base + ivec2(k & 3, k >> 2), lim), 0).r) / 16.0;
+		error += abs(cur[k] - texelFetch(tex0, min(base + ivec2(k & 3, k >> 2), lim), 0).r) / 16.0;
 	}
+	float best = error - 0.006;
 	vec2 best_v = vec2(0.0);
 	for (int dy = -reach; dy <= reach; dy++)
 	{
@@ -137,23 +143,27 @@ void main()
 			{
 				s += abs(cur[k] - texelFetch(tex0, clamp(base + ivec2(k & 3, k >> 2) + ivec2(dx, dy), ivec2(0), lim), 0).r);
 			}
-			s = s / 16.0 + 0.0015 * float(abs(dx) + abs(dy));
-			if (s < best)
+			s /= 16.0;
+			if (s + 0.0005 * float(abs(dx) + abs(dy)) < best)
 			{
-				best = s;
+				best = s + 0.0005 * float(abs(dx) + abs(dy));
+				error = s;
 				best_v = vec2(dx, dy);
 			}
 		}
 	}
-	// The error stored without no motion's head start
-	imageStore(dst, p, vec4(best_v, best + (best_v == vec2(0.0) ? 0.006 : 0.0), 0.0));
+	// The match's own error, without the favours
+	imageStore(dst, p, vec4(best_v, error, 0.0));
 }
 )",
 			// pass_fine_search: tex0 the last frame's working brightness, tex1
 			// this one's, tex2 the coarse vectors; p0 = (the working size, its
 			// 8x8 block grid), p1.xy the coarse grid. Each block starts from no
 			// motion and from the coarse vectors of its coarse block and its four
-			// neighbours (four times as long here), and looks 2 texels around each
+			// neighbours (four times as long here), and looks 2 texels around each.
+			// Its z the match's own error, without the favour shorter vectors get:
+			// the frames between trust a vector by it, and with the favour in it
+			// (build 107) every long vector looked like a poor match
 			R"(
 void main()
 {
@@ -176,11 +186,12 @@ void main()
 	starts[4] = ivec2(round(texelFetch(tex2, clamp(cb + ivec2(0, 1), ivec2(0), coarse_lim), 0).xy * 4.0));
 	starts[5] = ivec2(round(texelFetch(tex2, clamp(cb - ivec2(0, 1), ivec2(0), coarse_lim), 0).xy * 4.0));
 	// No motion first, kept unless another vector is clearly better (as in the coarse search)
-	float best = -0.006;
+	float error = 0.0;
 	for (int k = 0; k < 64; k++)
 	{
-		best += abs(cur[k] - texelFetch(tex0, min(base + ivec2(k & 7, k >> 3), lim), 0).r) / 64.0;
+		error += abs(cur[k] - texelFetch(tex0, min(base + ivec2(k & 7, k >> 3), lim), 0).r) / 64.0;
 	}
+	float best = error - 0.006;
 	vec2 best_v = vec2(0.0);
 	for (int c = 0; c < 6; c++)
 	{
@@ -194,17 +205,18 @@ void main()
 				{
 					s += abs(cur[k] - texelFetch(tex0, clamp(base + ivec2(k & 7, k >> 3) + v, ivec2(0), lim), 0).r);
 				}
-				s = s / 64.0 + 0.0008 * float(abs(v.x) + abs(v.y));
-				if (s < best)
+				s /= 64.0;
+				if (s + 0.0003 * float(abs(v.x) + abs(v.y)) < best)
 				{
-					best = s;
+					best = s + 0.0003 * float(abs(v.x) + abs(v.y));
+					error = s;
 					best_v = vec2(v);
 				}
 			}
 		}
 	}
-	// The error stored without no motion's head start
-	imageStore(dst, p, vec4(best_v, best + (best_v == vec2(0.0) ? 0.006 : 0.0), 0.0));
+	// The match's own error, without the favours
+	imageStore(dst, p, vec4(best_v, error, 0.0));
 }
 )",
 			// pass_median: tex0 the vectors; p0.xy their grid. Each vector's
