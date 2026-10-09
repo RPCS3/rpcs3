@@ -152,7 +152,6 @@ namespace vk
 		}
 		case VK_FORMAT_D32_SFLOAT:
 		{
-			rsx_log.error("Unsupported transfer (D16_FLOAT)"); // Need real games to test this.
 			ensure(region.imageSubresource.aspectMask == VK_IMAGE_ASPECT_DEPTH_BIT);
 
 			const u32 out_w = region.bufferRowLength ? region.bufferRowLength : region.imageExtent.width;
@@ -309,7 +308,6 @@ namespace vk
 		}
 		case VK_FORMAT_D32_SFLOAT:
 		{
-			rsx_log.error("Unsupported transfer (D16_FLOAT)");
 			ensure(region.imageSubresource.aspectMask == VK_IMAGE_ASPECT_DEPTH_BIT);
 
 			const u32 out_w = region.bufferRowLength ? region.bufferRowLength : region.imageExtent.width;
