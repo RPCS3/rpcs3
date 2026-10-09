@@ -270,20 +270,56 @@ void main()
 			// (0) to this one (1). Each vector, from a point of this frame to
 			// where it was in the last, is followed t of the way back from here
 			// in the last frame and 1 - t of the way on in this one, and the two
-			// blended by t where they agree closely. Which vector: of the one
-			// blended between the four nearest blocks' and those four, the one
-			// whose two ends agree best (the blended one a little favoured): at
-			// a moving thing's edge the blend of its vector and the background's
-			// belongs to neither and smeared the edge (build 106 on my console;
-			// in a model of these passes, picking per pixel gained about 1 dB
-			// overall and up to 1.6 dB at a moving object's edges). Anywhere else
-			// the frame nearer in time as it is: where the block matched poorly,
-			// where the two disagree (GTA IV's shadows shimmer by themselves, and
-			// averaging two patterns softened every other frame's on my console,
-			// build 94), and where the pixel is the same in both frames unmoved
-			// (the HUD, the radar's frame and text, which the world's vectors
-			// dragged along)
+			// blended by t where they agree closely. Which vector: the one
+			// blended between the four nearest blocks', those four, and those of
+			// the blocks 8, 16 and 24 away in the four directions, the one whose
+			// two ends agree best, less its block's own match error (nearer ones
+			// a little favoured): at a moving thing's edge the blend of its
+			// vector and the background's belongs to neither and smeared the
+			// edge (build 106 on my console), and where the world comes into the
+			// frame no block's own vector is right: what came in was not in the
+			// last frame. An end holds where it falls inside its frame, on a
+			// block moving with the vector or one that matched worse than it
+			// (which says nothing): in a camera turn round the player, the end
+			// that falls on the player (a block still, and sure of it) is where
+			// the world was hidden. With both ends holding, they are blended as
+			// before; with one, that end alone, and with both but apart, the one
+			// nearer in time, each moved along its vector. Build 110 put the
+			// nearer frame unmoved there, and a quick camera turn in GTA IV
+			// looked wrong on my console: in the model of these passes the
+			// screen's sides, the world beside the player and the radar, and
+			// every patch matched poorly stood still while the rest moved, as
+			// if torn off it. In the model, a
+			// turn of 40-120 texels a game frame at the working size went from
+			// 18.8-24.4 dB to 27.9-33.1, the side the world comes in at from
+			// 15.1-15.7 to 33.8-40.7, and round the player from 17.0-20.6 to
+			// 19.6-31.6; the earlier scenes' whole frames -0.5 to +4.7 dB (most
+			// gained), the HUD exact as before. The end alone is read unfiltered,
+			// its texel as it is: a filtered read between texels softened GTA
+			// IV's dithered shadows' grain (contrast 0.116-0.149 in the model, the
+			// real frames' 0.157-0.159; read as texels 0.137-0.156, build 110's
+			// 0.140-0.158). The frame nearer in time as it is where the
+			// pixel is the same in both frames unmoved (the HUD, the radar's
+			// frame and text, which the world's vectors dragged along), or where
+			// neither end of any vector holds
 			R"(
+ivec2 block_of(const vec2 frame_uv, const ivec2 grid)
+{
+	return clamp(ivec2(floor(frame_uv * p1.zw * vec2(grid))), ivec2(0), grid - 1);
+}
+
+// The end at frame_uv holds: in the frame, and on a block moving with v, or on
+// one whose own match was worse than v's
+bool holds(const vec2 frame_uv, const vec4 v, const ivec2 grid)
+{
+	if (any(lessThan(frame_uv, vec2(0.0))) || any(greaterThan(frame_uv, vec2(1.0))))
+	{
+		return false;
+	}
+	const vec4 b = texelFetch(tex2, block_of(frame_uv, grid), 0);
+	return length(b.xy - v.xy) <= 2.0 + 0.15 * length(v.xy) || b.z > v.z + 0.01;
+}
+
 void main()
 {
 	const ivec2 p = ivec2(gl_GlobalInvocationID.xy);
@@ -293,36 +329,71 @@ void main()
 	const vec2 grid_uv = uv * p1.zw;
 	const ivec2 grid = textureSize(tex2, 0);
 	const ivec2 near = ivec2(floor(grid_uv * vec2(grid) - 0.5));
+	const ivec2 own = clamp(ivec2(floor(grid_uv * vec2(grid))), ivec2(0), grid - 1);
 	vec4 mv = vec4(0.0);
 	vec3 last = vec3(0.0);
 	vec3 next = vec3(0.0);
+	vec2 last_uv = uv;
+	vec2 next_uv = uv;
+	bool last_holds = false;
+	bool next_holds = false;
 	float best = 1e9;
-	for (int c = 0; c < 5; c++)
+	for (int c = 0; c < 17; c++)
 	{
-		const vec4 v = c == 0 ? texture(tex2, grid_uv)
-			: texelFetch(tex2, clamp(near + ivec2((c - 1) & 1, (c - 1) >> 1), ivec2(0), grid - 1), 0);
+		vec4 v;
+		float favour;
+		if (c == 0)
+		{
+			v = texture(tex2, grid_uv);
+			favour = 0.0;
+		}
+		else if (c < 5)
+		{
+			v = texelFetch(tex2, clamp(near + ivec2((c - 1) & 1, (c - 1) >> 1), ivec2(0), grid - 1), 0);
+			favour = 0.004;
+		}
+		else
+		{
+			const int k = c - 5;
+			const ivec2 dir = (k & 3) == 0 ? ivec2(1, 0) : (k & 3) == 1 ? ivec2(-1, 0) : (k & 3) == 2 ? ivec2(0, 1) : ivec2(0, -1);
+			v = texelFetch(tex2, clamp(own + dir * (8 * ((k >> 2) + 1)), ivec2(0), grid - 1), 0);
+			favour = 0.008;
+		}
 		const vec2 d = v.xy / p1.xy;
-		const vec3 l = texture(tex0, uv + t * d).rgb;
-		const vec3 n = texture(tex1, (uv - (1.0 - t) * d) * p0.xy).rgb;
+		const vec2 lu = uv + t * d;
+		const vec2 nu = uv - (1.0 - t) * d;
+		const vec3 l = texture(tex0, lu).rgb;
+		const vec3 n = texture(tex1, nu * p0.xy).rgb;
+		const bool lh = holds(lu, v, grid);
+		const bool nh = holds(nu, v, grid);
 		const vec3 g = abs(l - n);
-		const float s = max(max(g.r, g.g), g.b) + (c == 0 ? 0.0 : 0.004);
+		const float s = (lh && nh ? max(max(g.r, g.g), g.b) : lh || nh ? 0.06 : 1.0) + favour + v.z;
 		if (s < best)
 		{
 			best = s;
 			mv = v;
 			last = l;
 			next = n;
+			last_uv = lu;
+			next_uv = nu;
+			last_holds = lh;
+			next_holds = nh;
 		}
 	}
 	const vec3 here = texture(tex1, uv * p0.xy).rgb;
 	const vec3 there = texture(tex0, uv).rgb;
+	const vec3 nearer = t < 0.5 ? there : here;
+	const ivec2 size0 = textureSize(tex0, 0);
+	const ivec2 size1 = textureSize(tex1, 0);
+	const vec3 last_texel = texelFetch(tex0, clamp(ivec2(floor(last_uv * vec2(size0))), ivec2(0), size0 - 1), 0).rgb;
+	const vec3 next_texel = texelFetch(tex1, clamp(ivec2(floor(next_uv * p0.xy * vec2(size1))), ivec2(0), size1 - 1), 0).rgb;
+	const vec3 one_end = last_holds && next_holds ? (t < 0.5 ? last_texel : next_texel) : last_holds ? last_texel : next_holds ? next_texel : nearer;
 	const vec3 moved_gap = abs(last - next);
 	const vec3 still_gap = abs(there - here);
 	const float trust = 1.0 - smoothstep(0.035, 0.11, mv.z);
 	const float agree = 1.0 - smoothstep(0.03, 0.1, max(max(moved_gap.r, moved_gap.g), moved_gap.b));
 	const float still = 1.0 - smoothstep(0.012, 0.04, max(max(still_gap.r, still_gap.g), still_gap.b));
-	const vec3 nearer = t < 0.5 ? there : here;
-	const vec3 between = mix(nearer, mix(last, next, t), trust * agree);
+	const vec3 between = mix(one_end, mix(last, next, t), last_holds && next_holds ? trust * agree : 0.0);
 	imageStore(dst, p, vec4(mix(between, nearer, still), 1.0));
 }
 )",
