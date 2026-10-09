@@ -91,9 +91,13 @@ void GLGSRender::update_draw_state()
 			gl_state.depth_func(gl::comparison_op(rsx::method_registers.depth_func()));
 		}
 
-		if (gl::get_driver_caps().EXT_depth_bounds_test_supported && (gl_state.enable(rsx::method_registers.depth_bounds_test_enabled(), GL_DEPTH_BOUNDS_TEST_EXT)))
+		if (gl::get_driver_caps().EXT_depth_bounds_test_supported &&
+			(gl_state.enable(REGS(m_ctx)->depth_bounds_test_enabled(), GL_DEPTH_BOUNDS_TEST_EXT)))
 		{
-			gl_state.depth_bounds(rsx::method_registers.depth_bounds_min(), rsx::method_registers.depth_bounds_max());
+			const auto depth_format = REGS(m_ctx)->surface_depth_fmt();
+			gl_state.depth_bounds(
+				rsx::clamp_depth_bounds_value(depth_format, REGS(m_ctx)->depth_bounds_min()),
+				rsx::clamp_depth_bounds_value(depth_format, REGS(m_ctx)->depth_bounds_max()));
 		}
 
 		if (gl::get_driver_caps().NV_depth_buffer_float_supported)

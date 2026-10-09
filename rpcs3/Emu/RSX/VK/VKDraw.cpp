@@ -9,6 +9,8 @@
 #include "vkutils/chip_class.h"
 #include <vulkan/vulkan_core.h>
 
+#include "Emu/RSX/NV47/HW/context_accessors.define.h"
+
 namespace vk
 {
 	VkImageViewType get_view_type(rsx::texture_dimension_extended type)
@@ -237,11 +239,12 @@ void VKGSRender::update_draw_state()
 	if (m_device->get_depth_bounds_support())
 	{
 		f32 bounds_min, bounds_max;
-		if (rsx::method_registers.depth_bounds_test_enabled())
+		if (REGS(m_ctx)->depth_bounds_test_enabled())
 		{
-			// Update depth bounds min/max
-			bounds_min = rsx::method_registers.depth_bounds_min();
-			bounds_max = rsx::method_registers.depth_bounds_max();
+			// Update depth bounds min/max, saturated into the RSX depth format's range as hardware does
+			const auto depth_format = REGS(m_ctx)->surface_depth_fmt();
+			bounds_min = rsx::clamp_depth_bounds_value(depth_format, REGS(m_ctx)->depth_bounds_min());
+			bounds_max = rsx::clamp_depth_bounds_value(depth_format, REGS(m_ctx)->depth_bounds_max());
 		}
 		else
 		{
@@ -796,6 +799,14 @@ bool VKGSRender::bind_texture_env()
 		for (u32 i = 0; i < current_fragment_program.mrt_buffers_count; ++i)
 		{
 			auto viewable = static_cast<vk::viewable_image*>(m_fbo_images[i]);
+			if (viewable->current_layout != VK_IMAGE_LAYOUT_GENERAL &&
+				viewable->current_layout != VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT)
+			{
+				// Renderpass key is derived from the current layout, regenerate it after the transition
+				vk::as_rtt(viewable)->texture_barrier(*m_current_command_buffer);
+				invalidate_render_pass();
+			}
+
 			const auto view = viewable->get_view(remap);
 			m_program->bind_uniform(*view, vk::glsl::binding_set_index_fragment, m_fs_binding_table->frag_src_location[i]);
 		}

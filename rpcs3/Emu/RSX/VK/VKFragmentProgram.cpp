@@ -583,9 +583,8 @@ void VKFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 			// NOTE: Depth writes are always from a fp32 register. See issues section on nvidia's NV_fragment_program spec
 			// https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt
 
-			// NOTE: Depth writes in OpenGL (and by extension RSX) are clamped to 0,1 range.
-			// Indeed, hardware tests on realhw prove that even in depth float mode, values outside this range are clamped.
-			OS << "	gl_FragDepth = _saturate(r1.z);\n";
+			// NOTE: Depth writes are unclamped. Targeted hardware tests disprove the theory that depth must be clamped.
+			OS << "	gl_FragDepth = r1.z;\n";
 		}
 		else
 		{
