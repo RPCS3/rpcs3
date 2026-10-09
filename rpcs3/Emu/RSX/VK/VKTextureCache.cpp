@@ -1282,8 +1282,12 @@ namespace vk
 		auto p_subresource_layout = &subresource_layout;
 		u32 heap_align = upload_heap_align_default;
 
-		if (auto tiled_region = rsx::get_current_renderer()->get_tiled_memory_region(rsx_range);
-			context == rsx::texture_upload_context::blit_engine_src && tiled_region)
+		// Detile blit sources and single-level 2D shader reads that live in a tiled main memory region
+		const bool detile_context =
+			context == rsx::texture_upload_context::blit_engine_src ||
+			(context == rsx::texture_upload_context::shader_read && mipmaps == 1 && depth == 1 && type != rsx::texture_dimension_extended::texture_dimension_cubemap);
+
+		if (const auto tiled_region = detile_context ? rsx::get_current_renderer()->get_tiled_memory_region(rsx_range) : rsx::GCM_tile_reference{})
 		{
 			if (mipmaps > 1)
 			{
@@ -1301,6 +1305,9 @@ namespace vk
 				subres.pitch_in_block = width;
 				upload_command_flags |= source_is_gpu_resident;
 				heap_align = width * bpp;
+
+				// The detiled data lives in a scratch buffer written on this command buffer
+				upload_command_flags &= ~upload_contents_async;
 
 				tmp.push_back(std::move(subres));
 				p_subresource_layout = &tmp;
