@@ -16,10 +16,14 @@
 // by t: of the nearest blocks' vectors and their blend, the one whose two ends
 // agree best. Where a block matched badly, or the two frames disagree
 // there, it takes the frame nearer in time, so a wrong vector costs
-// smoothness rather than smearing the picture. And while the camera moves
-// too quickly (more than 6% of the frame's width between two game frames,
-// voted from blocks matched at a sixteenth of the working size), every frame
-// between is the nearer real frame: such motion broke apart.
+// smoothness rather than smearing the picture. The camera's motion is also
+// fitted as one smooth field over the frame (pass_camera), and offered as a
+// favoured candidate beside the blocks that moved with it: on rows of windows
+// the blocks' own vectors are often a window off. And while the camera moves
+// too quickly (by the Step aside setting: more than 6% or 3% of the frame's
+// width between two game frames, voted from blocks matched at a sixteenth of
+// the working size), every frame between is the nearer real frame: such
+// motion broke apart.
 
 #include "VKCompute.h"
 #include "vkutils/buffer_object.h"
@@ -42,10 +46,11 @@ namespace vk
 		// height texels): `count` frames between it and the last one, evenly
 		// spaced in time, into `out` in the order they are to be shown; and in
 		// any case what the next frame needs of this one. `quality` is the
-		// setting's (0 Fast, 1 Balanced, 2 Quality). Returns how many frames
+		// setting's (0 Fast, 1 Balanced, 2 Quality), `step` the Step aside
+		// setting's (0 never, 1 quick moves, 2 most moves). Returns how many frames
 		// it made: none for the first frame, a new size or quality, or none
 		// asked for
-		u32 process(const vk::command_buffer& cmd, vk::viewable_image* cur, u32 width, u32 height, u32 count, u32 quality,
+		u32 process(const vk::command_buffer& cmd, vk::viewable_image* cur, u32 width, u32 height, u32 count, u32 quality, u32 step,
 			vk::viewable_image* (&out)[max_frames]);
 
 		// Forgets the last frame: the next one is a first one
@@ -68,6 +73,8 @@ namespace vk
 		std::unique_ptr<vk::viewable_image> m_luma_rough[2];     // and at a sixteenth
 		std::unique_ptr<vk::viewable_image> m_vectors_rough;     // a vector per 4x4 block at the sixteenth size
 		std::unique_ptr<vk::viewable_image> m_motion;            // the camera's motion: one texel
+		std::unique_ptr<vk::viewable_image> m_camera;            // the camera's field: three texels
+		std::unique_ptr<vk::viewable_image> m_camera_moved;      // each block: whether it moved with the field
 		std::unique_ptr<vk::buffer> m_motion_read;               // a copy of it the CPU reads, for the trace
 		const f32* m_motion_mapped = nullptr;
 		std::unique_ptr<vk::viewable_image> m_vectors_coarse;    // a vector per 4x4 block at the coarse size

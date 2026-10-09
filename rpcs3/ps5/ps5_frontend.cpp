@@ -100,6 +100,7 @@ extern atomic_t<u64> g_ps5_frame_gen_gpu_wait_us; // and in it waiting for the G
 extern atomic_t<u64> g_ps5_frames_dropped; // and the time waiting for an image for the game's own frames
 extern atomic_t<u64> g_ps5_image_wait_us[2]; // and for those made
 extern atomic_t<u64> g_ps5_frames_quick_moves; // and the game's frames whose camera moved too quickly for frames between
+extern atomic_t<u64> g_ps5_frames_camera_field; // and those whose camera's field held
 
 namespace
 {
@@ -756,12 +757,13 @@ namespace
 			const auto& video = g_cfg.video;
 			const char* zcull = video.relaxed_zcull_sync ? "Relaxed" : video.precise_zpass_count ? "Precise" : "Approximate";
 			trace("settings for %s: SPU block size %s, Max SPURS %s, SPU loop detection %s, accurate SPU reservations %s, accurate RSX reservation access %s, XFloat %s; "
-				"frame limit %s, vblank %s Hz, resolution %s at %s%%, ZCULL %s, write color buffers %s, multithreaded RSX %s; late audio wait %s ms; frame generation %s (%s, quality %s)",
+				"frame limit %s, vblank %s Hz, resolution %s at %s%%, ZCULL %s, write color buffers %s, multithreaded RSX %s; late audio wait %s ms; frame generation %s (%s, quality %s, steps aside %s)",
 				Emu.GetTitleID(), core.spu_block_size.to_string(), core.max_spurs_threads.to_string(), core.spu_loop_detection.to_string(),
 				core.spu_accurate_reservations.to_string(), core.rsx_accurate_res_access.to_string(), core.spu_xfloat_accuracy.to_string(),
 				video.frame_limit.to_string(), video.vblank_rate.to_string(), video.resolution.to_string(), video.resolution_scale_percent.to_string(), zcull,
 				video.write_color_buffers.to_string(), video.multithreaded_rsx.to_string(), g_cfg.audio.late_audio_wait.to_string(),
-				video.frame_generation.to_string(), video.frame_generation_frames.to_string(), video.frame_generation_quality.to_string());
+				video.frame_generation.to_string(), video.frame_generation_frames.to_string(), video.frame_generation_quality.to_string(),
+				video.frame_generation_step_aside.to_string());
 		};
 		g_emu_callbacks.on_pause = []() {};
 		g_emu_callbacks.on_resume = []() {};
@@ -1338,12 +1340,13 @@ int run(const char* boot_path)
 					{
 						const u32 most = static_cast<u32>(g_cfg.video.frame_generation_frames);
 						const u32 quality = static_cast<u32>(g_cfg.video.frame_generation_quality);
-						frame_gen = fmt::format(", up to %s a frame, %s", most ? std::to_string(most) : std::string("Auto"),
-							quality == 0 ? "Fast" : quality == 2 ? "Quality" : "Balanced");
+						const u32 step = static_cast<u32>(g_cfg.video.frame_generation_step_aside);
+						frame_gen = fmt::format(", up to %s a frame, %s, stepping aside %s", most ? std::to_string(most) : std::string("Auto"),
+							quality == 0 ? "Fast" : quality == 2 ? "Quality" : "Balanced", step == 0 ? "never" : step == 2 ? "in most moves" : "in quick moves");
 					}
-					trace("status %ds: state %d, RSX flips %d (%u made between, %u dropped, %u game frames moving too quickly for them, in %u ms: %u ms waiting for the GPU; waiting for an image: %u ms for the game's frames, %u ms for those made%s); heap %d MiB (peak %d), system cache %u MiB in memory, free direct %d MiB, flexible %d MiB; progress '%s' modules %u/%u files %u/%u; open: %u files, %u folders, %u sockets, %u other (%u by fs); %d PPU threads:%s", seconds + 1,
+					trace("status %ds: state %d, RSX flips %d (%u made between, %u dropped, %u game frames moving too quickly for them, %u with the camera's field, in %u ms: %u ms waiting for the GPU; waiting for an image: %u ms for the game's frames, %u ms for those made%s); heap %d MiB (peak %d), system cache %u MiB in memory, free direct %d MiB, flexible %d MiB; progress '%s' modules %u/%u files %u/%u; open: %u files, %u folders, %u sockets, %u other (%u by fs); %d PPU threads:%s", seconds + 1,
 						static_cast<u32>(Emu.GetStatus()), flips, static_cast<u32>(g_ps5_frames_generated.load()), static_cast<u32>(g_ps5_frames_dropped.load()),
-						static_cast<u32>(g_ps5_frames_quick_moves.load()), static_cast<u32>(g_ps5_frame_gen_us.load() / 1000), static_cast<u32>(g_ps5_frame_gen_gpu_wait_us.load() / 1000),
+						static_cast<u32>(g_ps5_frames_quick_moves.load()), static_cast<u32>(g_ps5_frames_camera_field.load()), static_cast<u32>(g_ps5_frame_gen_us.load() / 1000), static_cast<u32>(g_ps5_frame_gen_gpu_wait_us.load() / 1000),
 						static_cast<u32>(g_ps5_image_wait_us[0].load() / 1000), static_cast<u32>(g_ps5_image_wait_us[1].load() / 1000), frame_gen, heap.mapped_bytes >> 20, heap.peak_bytes >> 20, static_cast<u32>(ps5_syscache_bytes() >> 20), direct >> 20,
 						flexible >> 20, progress_text, +g_progr_pdone, +g_progr_ptotal, +g_progr_fdone, +g_progr_ftotal, regular, folders, sockets, others, static_cast<u32>(fs::ps5_open_tracked()), count, ppus);
 					// Near the limit, which ones (once per 40 more)

@@ -242,6 +242,7 @@ namespace rsx::overlays::ps5ui
 			{"Menu Sound Volume", {"0", "10", "25", "40", "55", "70", "85", "100"}},
 			{"Frame Generation Frames", {"0", "1", "2", "3"}},
 			{"Frame Generation Quality", {"0", "1", "2"}},
+			{"Frame Generation Step Aside", {"0", "1", "2"}},
 			{"Max LLVM Compile Threads", {"0", "1", "2", "3", "4", "6", "8", "10", "12", "16"}},
 		};
 		if (const auto it = offered.find(key); it != offered.end())
@@ -376,6 +377,7 @@ namespace rsx::overlays::ps5ui
 		if (key == "Menu Sound Volume") return value == "0" ? std::string("Off") : value + "%";
 		if (key == "Frame Generation Frames") return value == "0" ? std::string("Auto") : value;
 		if (key == "Frame Generation Quality") return value == "0" ? std::string("Fast") : value == "2" ? std::string("Quality") : std::string("Balanced");
+		if (key == "Frame Generation Step Aside") return value == "0" ? std::string("Never") : value == "2" ? std::string("Most moves") : std::string("Quick moves");
 		if (key == "Opacity (%)") return value + "%";
 		return value;
 	}

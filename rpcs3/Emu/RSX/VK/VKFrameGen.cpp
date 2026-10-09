@@ -12,20 +12,22 @@
 // the RSX thread's time making and showing them, and in it waiting for the
 // GPU (VKPresent.cpp); the frames made but dropped, no image free to show
 // them in; and the RSX thread's time waiting for an image to show the game's
-// own frames [0] and those made [1] in; and the game's frames whose camera
-// moved too quickly for frames between, shown as the real ones instead
+// own frames [0] and those made [1] in; the game's frames whose camera
+// moved too quickly for frames between, shown as the real ones instead; and
+// those whose camera's field held (pass_camera)
 atomic_t<u64> g_ps5_frames_generated = 0;
 atomic_t<u64> g_ps5_frame_gen_us = 0;
 atomic_t<u64> g_ps5_frame_gen_gpu_wait_us = 0;
 atomic_t<u64> g_ps5_frames_dropped = 0;
 atomic_t<u64> g_ps5_image_wait_us[2] = {};
 atomic_t<u64> g_ps5_frames_quick_moves = 0;
+atomic_t<u64> g_ps5_frames_camera_field = 0;
 
 namespace vk
 {
 	namespace
 	{
-		// Every pass: 8x8 invocations a group, three inputs sampled (unused ones
+		// Every pass: 8x8 invocations a group, four inputs sampled (unused ones
 		// bound to the first), one output written, twelve numbers pushed
 		constexpr const char* c_header = R"(
 #version 450
@@ -33,7 +35,8 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 layout(set = 0, binding = 0) uniform sampler2D tex0;
 layout(set = 0, binding = 1) uniform sampler2D tex1;
 layout(set = 0, binding = 2) uniform sampler2D tex2;
-layout(set = 0, binding = 3, %FORMAT%) uniform writeonly image2D dst;
+layout(set = 0, binding = 3) uniform sampler2D tex3;
+layout(set = 0, binding = 4, %FORMAT%) uniform writeonly image2D dst;
 layout(push_constant) uniform push_block { vec4 p0; vec4 p1; vec4 p2; };
 )";
 
@@ -63,9 +66,11 @@ layout(push_constant) uniform push_block { vec4 p0; vec4 p1; vec4 p2; };
 			pass_between,        // the frame between
 			pass_keep,           // the frame, kept for the next one
 			pass_motion,         // the camera's motion, voted from the rough vectors
+			pass_camera,         // the camera's motion as one smooth field over the frame
+			pass_camera_check,   // each block: whether it moved with that field
 		};
 
-		constexpr const char* c_formats[] = { "r32f", "r32f", "rgba16f", "rgba16f", "rgba16f", "rgba8", "rgba8", "rgba32f" };
+		constexpr const char* c_formats[] = { "r32f", "r32f", "rgba16f", "rgba16f", "rgba16f", "rgba8", "rgba8", "rgba32f", "rgba32f", "r32f" };
 
 		constexpr const char* c_bodies[] =
 		{
@@ -171,7 +176,8 @@ void main()
 			// neighbours (four times as long here), and looks 2 texels around each.
 			// Its z the match's own error, without the favour shorter vectors get:
 			// the frames between trust a vector by it, and with the favour in it
-			// (build 107) every long vector looked like a poor match
+			// (build 107) every long vector looked like a poor match. Its w how
+			// much better it matched than no motion (pass_camera weighs it by that)
 			R"(
 void main()
 {
@@ -199,6 +205,7 @@ void main()
 	{
 		error += abs(cur[k] - texelFetch(tex0, min(base + ivec2(k & 7, k >> 3), lim), 0).r) / 64.0;
 	}
+	const float still_error = error;
 	float best = error - 0.006;
 	vec2 best_v = vec2(0.0);
 	for (int c = 0; c < 6; c++)
@@ -223,15 +230,14 @@ void main()
 			}
 		}
 	}
-	// The match's own error, without the favours
-	imageStore(dst, p, vec4(best_v, error, 0.0));
+	// The match's own error, without the favours; and how clearly it moved
+	imageStore(dst, p, vec4(best_v, error, still_error - error));
 }
 )",
-			// pass_median: tex0 the vectors, tex1 the camera's motion
-			// (pass_motion); p0.xy their grid. Each vector's parts become the
-			// medians of its 3x3 neighbourhood's, which drops lone wrong ones;
-			// the match error stays its own, and w says whether the camera moved
-			// too quickly for frames between (pass_between)
+			// pass_median: tex0 the vectors, tex1 each block's check against the
+			// camera's field (pass_camera_check); p0.xy their grid. Each vector's
+			// parts become the medians of its 3x3 neighbourhood's, which drops
+			// lone wrong ones; the match error stays its own, and w is the check
 			R"(
 void main()
 {
@@ -270,11 +276,12 @@ void main()
 		}
 		ys[b + 1] = y;
 	}
-	imageStore(dst, p, vec4(xs[4], ys[4], texelFetch(tex0, p, 0).z, texelFetch(tex1, ivec2(0), 0).w));
+	imageStore(dst, p, vec4(xs[4], ys[4], texelFetch(tex0, p, 0).z, texelFetch(tex1, p, 0).r));
 }
 )",
 			// pass_between: tex0 the last frame (its own size), tex1 this one,
-			// tex2 the vectors; p0 = (this frame's used part as a share of its
+			// tex2 the vectors, tex3 the camera's field (pass_camera); p0 =
+			// (this frame's used part as a share of its
 			// texture, the output size), p1 = (the working size, the share of
 			// the vector grid it covers), p2.x the time t from the last frame
 			// (0) to this one (1). Each vector, from a point of this frame to
@@ -299,7 +306,15 @@ void main()
 			// passes, a city turned 1.5 to 4.5 degrees a game frame: the posts
 			// kept 35-74% of their pixels, 51-78% with it; the HUD exact either
 			// way). And the frame nearer in time as it is everywhere while the
-			// camera moves too quickly (the vectors' w, pass_motion)
+			// camera moves too quickly (pass_motion, carried in tex3's third
+			// texel). The camera's field is a sixth candidate, favoured over the
+			// rest, beside a block that moved with it (the vectors' w): on a
+			// building's rows of windows the blocks' own vectors are often a
+			// window off, and the frame between jumped half a window and back
+			// (GTA IV's buildings looked off and zigzagged on my console, build
+			// 114); the field is the whole frame's motion, fitted to a fraction
+			// of a texel. Not where no block moved with it: GTA IV's radar turns
+			// within its ring, and the field pulled the world's motion into it
 			R"(
 void main()
 {
@@ -310,21 +325,44 @@ void main()
 	const vec2 grid_uv = uv * p1.zw;
 	const ivec2 grid = textureSize(tex2, 0);
 	const ivec2 near = ivec2(floor(grid_uv * vec2(grid) - 0.5));
+	const vec4 camera = texelFetch(tex3, ivec2(2, 0), 0);
 	vec4 mv = vec4(0.0);
 	vec3 last = vec3(0.0);
 	vec3 next = vec3(0.0);
 	float best = 1e9;
 	bool beside_still = false;
-	for (int c = 0; c < 5; c++)
+	bool beside_camera = false;
+	for (int c = 0; c < 6; c++)
 	{
-		const vec4 v = c == 0 ? texture(tex2, grid_uv)
-			: texelFetch(tex2, clamp(near + ivec2((c - 1) & 1, (c - 1) >> 1), ivec2(0), grid - 1), 0);
-		beside_still = beside_still || (c > 0 && length(v.xy) <= 1.0);
+		vec4 v;
+		float favour = c == 0 ? 0.0 : 0.004;
+		if (c < 5)
+		{
+			v = c == 0 ? texture(tex2, grid_uv)
+				: texelFetch(tex2, clamp(near + ivec2((c - 1) & 1, (c - 1) >> 1), ivec2(0), grid - 1), 0);
+			beside_still = beside_still || (c > 0 && length(v.xy) <= 1.0);
+			beside_camera = beside_camera || (c > 0 && v.w > 0.5);
+		}
+		else
+		{
+			if (camera.x < 0.5 || !beside_camera)
+			{
+				break;
+			}
+			// The field here, in working texels, x and y from the frame's centre in half widths
+			const vec4 m0 = texelFetch(tex3, ivec2(0, 0), 0);
+			const vec4 m1 = texelFetch(tex3, ivec2(1, 0), 0);
+			const float x = 2.0 * uv.x - 1.0;
+			const float y = (2.0 * uv.y - 1.0) * p1.y / p1.x;
+			v = vec4(m0.x + m0.y * x + m0.z * y + m1.z * x * x + m1.w * x * y,
+				m0.w + m1.x * x + m1.y * y + m1.z * x * y + m1.w * y * y, 0.0, 0.0);
+			favour = -0.006;
+		}
 		const vec2 d = v.xy / p1.xy;
 		const vec3 l = texture(tex0, uv + t * d).rgb;
 		const vec3 n = texture(tex1, (uv - (1.0 - t) * d) * p0.xy).rgb;
 		const vec3 g = abs(l - n);
-		const float s = max(max(g.r, g.g), g.b) + (c == 0 ? 0.0 : 0.004);
+		const float s = max(max(g.r, g.g), g.b) + favour;
 		if (s < best)
 		{
 			best = s;
@@ -342,7 +380,7 @@ void main()
 	const float still = beside_still ? 1.0 - smoothstep(0.012, 0.04, max(max(still_gap.r, still_gap.g), still_gap.b)) : 0.0;
 	const vec3 nearer = t < 0.5 ? there : here;
 	const vec3 between = mix(nearer, mix(last, next, t), trust * agree);
-	const bool quick = texelFetch(tex2, ivec2(0), 0).w > 0.5;
+	const bool quick = camera.w > 0.5;
 	imageStore(dst, p, vec4(quick ? nearer : mix(between, nearer, still), 1.0));
 }
 )",
@@ -429,12 +467,260 @@ void main()
 	}
 }
 )",
+			// pass_camera: tex0 the fine vectors (w how clearly each block moved),
+			// tex1 the camera's rough motion (pass_motion); p0.xy the working
+			// size. One group of 64. The camera's motion as one smooth field,
+			// the 8-parameter quadratic flow of a camera turning (or of a plane):
+			//   u = a0 + a1 x + a2 y + a6 x^2 + a7 x y
+			//   v = a3 + a4 x + a5 y + a6 x y + a7 y^2
+			// in working texels, x and y a block's place from the frame's centre
+			// in half widths. Fitted to the blocks' vectors weighted by how
+			// clearly each moved, from the rough motion's translation, five times
+			// over with a reach that narrows from 24 texels to 2 (a block further
+			// off weighs nothing, nearer ones less as they near it), which drops
+			// the blocks matched a window off and the things moving their own
+			// way. Then measured: what share of the clearly moving blocks it puts
+			// within 2 texels. Out: texel 0 (a0, a1, a2, a3), texel 1 (a4, a5,
+			// a6, a7), texel 2 (whether it holds: a share of 30% or more; that
+			// share; the clearness it was fitted to; and pass_motion's verdict on
+			// the camera's speed, carried for pass_between). In the model of these
+			// passes (a city turned 1.5, 3 and 4.5 degrees a game frame) it held
+			// for 38-73%, the vectors right for as few as 38% at Quality
+			R"(
+shared float s_sums[64 * 45];
+shared float s_total[45];
+shared float s_model[8];
+shared int s_failed;
+
+void main()
+{
+	const int id = int(gl_LocalInvocationIndex);
+	const ivec2 grid = textureSize(tex0, 0);
+	const int n = grid.x * grid.y;
+	const vec2 work = p0.xy;
+	const float half_w = work.x * 0.5;
+	const vec4 rough = texelFetch(tex1, ivec2(0), 0);
+	if (id < 8)
+	{
+		s_model[id] = id == 0 ? rough.x * 16.0 : id == 3 ? rough.y * 16.0 : 0.0;
+	}
+	if (id == 0)
+	{
+		s_failed = 0;
+	}
+	barrier();
+	const float reaches[5] = float[](24.0, 12.0, 6.0, 3.0, 2.0);
+	// Five fits, then a measure
+	for (int round_ = 0; round_ < 6; round_++)
+	{
+		float sums[45];
+		for (int i = 0; i < 45; i++)
+		{
+			sums[i] = 0.0;
+		}
+		float m[8];
+		for (int i = 0; i < 8; i++)
+		{
+			m[i] = s_model[i];
+		}
+		for (int k = id; k < n; k += 64)
+		{
+			const ivec2 b = ivec2(k % grid.x, k / grid.x);
+			const vec2 c = (vec2(b) + 0.5) * 8.0;
+			if (c.x > work.x || c.y > work.y)
+			{
+				continue;
+			}
+			const vec4 v = texelFetch(tex0, b, 0);
+			const float clear = max(v.w, 0.0);
+			if (clear <= 0.0)
+			{
+				continue;
+			}
+			const float x = (c.x - half_w) / half_w;
+			const float y = (c.y - work.y * 0.5) / half_w;
+			const float pu[8] = float[](1.0, x, y, 0.0, 0.0, 0.0, x * x, x * y);
+			const float pv[8] = float[](0.0, 0.0, 0.0, 1.0, x, y, x * y, y * y);
+			float mu = 0.0;
+			float mv = 0.0;
+			for (int i = 0; i < 8; i++)
+			{
+				mu += pu[i] * m[i];
+				mv += pv[i] * m[i];
+			}
+			const float r = length(v.xy - vec2(mu, mv));
+			if (round_ == 5)
+			{
+				sums[0] += clear;
+				sums[1] += r < 2.0 ? clear : 0.0;
+				continue;
+			}
+			const float reach = reaches[round_];
+			if (r >= reach)
+			{
+				continue;
+			}
+			const float q = 1.0 - (r / reach) * (r / reach);
+			const float w = clear * q * q;
+			int at = 0;
+			for (int i = 0; i < 8; i++)
+			{
+				for (int j = i; j < 8; j++)
+				{
+					sums[at] += w * (pu[i] * pu[j] + pv[i] * pv[j]);
+					at++;
+				}
+			}
+			for (int i = 0; i < 8; i++)
+			{
+				sums[36 + i] += w * (pu[i] * v.x + pv[i] * v.y);
+			}
+			sums[44] += w;
+		}
+		for (int i = 0; i < 45; i++)
+		{
+			s_sums[id * 45 + i] = sums[i];
+		}
+		barrier();
+		if (id < 45)
+		{
+			float total = 0.0;
+			for (int k = 0; k < 64; k++)
+			{
+				total += s_sums[k * 45 + id];
+			}
+			s_total[id] = total;
+		}
+		barrier();
+		if (id == 0 && round_ < 5)
+		{
+			if (s_total[44] <= 1e-6)
+			{
+				s_failed = 1;
+			}
+			else
+			{
+				// The normal equations, a little ridge so that they always solve,
+				// by elimination with partial pivoting
+				float a[8][9];
+				int at = 0;
+				for (int i = 0; i < 8; i++)
+				{
+					for (int j = i; j < 8; j++)
+					{
+						a[i][j] = s_total[at];
+						a[j][i] = s_total[at];
+						at++;
+					}
+					a[i][8] = s_total[36 + i];
+				}
+				float trace = 0.0;
+				for (int i = 0; i < 8; i++)
+				{
+					trace += a[i][i];
+				}
+				for (int i = 0; i < 8; i++)
+				{
+					a[i][i] += 1e-4 * trace / 8.0 + 1e-9;
+				}
+				for (int col = 0; col < 8; col++)
+				{
+					int pivot = col;
+					for (int r = col + 1; r < 8; r++)
+					{
+						if (abs(a[r][col]) > abs(a[pivot][col]))
+						{
+							pivot = r;
+						}
+					}
+					for (int j = 0; j < 9; j++)
+					{
+						const float swap = a[col][j];
+						a[col][j] = a[pivot][j];
+						a[pivot][j] = swap;
+					}
+					for (int r = col + 1; r < 8; r++)
+					{
+						const float f = a[r][col] / a[col][col];
+						for (int j = col; j < 9; j++)
+						{
+							a[r][j] -= f * a[col][j];
+						}
+					}
+				}
+				for (int i = 7; i >= 0; i--)
+				{
+					float v = a[i][8];
+					for (int j = i + 1; j < 8; j++)
+					{
+						v -= a[i][j] * s_model[j];
+					}
+					s_model[i] = v / a[i][i];
+				}
+			}
+		}
+		barrier();
+	}
+	if (id == 0)
+	{
+		const float share = s_total[0] > 0.0 ? s_total[1] / s_total[0] : 0.0;
+		const bool holds = s_failed == 0 && share >= 0.3 && s_total[0] >= 0.5;
+		imageStore(dst, ivec2(0, 0), vec4(s_model[0], s_model[1], s_model[2], s_model[3]));
+		imageStore(dst, ivec2(1, 0), vec4(s_model[4], s_model[5], s_model[6], s_model[7]));
+		imageStore(dst, ivec2(2, 0), vec4(holds ? 1.0 : 0.0, share, s_total[0], rough.w));
+	}
+}
+)",
+			// pass_camera_check: tex0 the last frame's working brightness, tex1
+			// this one's, tex2 the camera's field (pass_camera); p0 = (the
+			// working size, its 8x8 block grid). Each block: whether it matched
+			// clearly better moved with the field than unmoved (by 0.01 a texel)
+			// and matched well so (under 0.08): the walls that turned with the
+			// camera do; the HUD, the radar's turning map, the player and plain
+			// areas do not. In the model of these passes the field so placed kept
+			// all its gain on the walls and lamp posts, and the radar as it was
+			// (a field used everywhere took 1 to 6.5 dB off it)
+			R"(
+void main()
+{
+	const ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+	if (p.x >= int(p0.z) || p.y >= int(p0.w)) return;
+	const vec4 holds = texelFetch(tex2, ivec2(2, 0), 0);
+	float moved_with = 0.0;
+	if (holds.x > 0.5)
+	{
+		const vec4 m0 = texelFetch(tex2, ivec2(0, 0), 0);
+		const vec4 m1 = texelFetch(tex2, ivec2(1, 0), 0);
+		const float half_w = p0.x * 0.5;
+		const vec2 c = (vec2(p) + 0.5) * 8.0;
+		const float x = (c.x - half_w) / half_w;
+		const float y = (c.y - p0.y * 0.5) / half_w;
+		const ivec2 d = ivec2(round(vec2(m0.x + m0.y * x + m0.z * y + m1.z * x * x + m1.w * x * y,
+			m0.w + m1.x * x + m1.y * y + m1.z * x * y + m1.w * y * y)));
+		const ivec2 lim = ivec2(p0.xy) - 1;
+		const ivec2 base = p * 8;
+		float moved = 0.0;
+		float still = 0.0;
+		for (int k = 0; k < 64; k++)
+		{
+			const ivec2 q = base + ivec2(k & 7, k >> 3);
+			const float cur = texelFetch(tex1, min(q, lim), 0).r;
+			moved += abs(cur - texelFetch(tex0, clamp(q + d, ivec2(0), lim), 0).r);
+			still += abs(cur - texelFetch(tex0, min(q, lim), 0).r);
+		}
+		moved /= 64.0;
+		still /= 64.0;
+		moved_with = moved + 0.01 < still && moved < 0.08 ? 1.0 : 0.0;
+	}
+	imageStore(dst, p, vec4(moved_with));
+}
+)",
 		};
 
 		template <int Kind>
 		struct frame_generation_pass : compute_task
 		{
-			const vk::image_view* m_inputs[3]{};
+			const vk::image_view* m_inputs[4]{};
 			const vk::image_view* m_output = nullptr;
 			std::unique_ptr<vk::sampler> m_sampler;
 
@@ -453,11 +739,11 @@ void main()
 			std::vector<glsl::program_input> get_inputs() override
 			{
 				auto result = compute_task::get_inputs();
-				for (u32 i = 0; i < 3; i++)
+				for (u32 i = 0; i < 4; i++)
 				{
 					result.push_back(glsl::program_input::make(::glsl::program_domain::glsl_compute_program, "tex" + std::to_string(i), vk::glsl::input_type_texture, 0, i));
 				}
-				result.push_back(glsl::program_input::make(::glsl::program_domain::glsl_compute_program, "dst", vk::glsl::input_type_storage_texture, 0, 3));
+				result.push_back(glsl::program_input::make(::glsl::program_domain::glsl_compute_program, "dst", vk::glsl::input_type_storage_texture, 0, 4));
 				return result;
 			}
 
@@ -471,11 +757,11 @@ void main()
 						VK_FALSE, 0.f, 1.f, 0.f, 0.f, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST, VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK);
 				}
 
-				for (u32 i = 0; i < 3; i++)
+				for (u32 i = 0; i < 4; i++)
 				{
 					m_program->bind_uniform({ *m_inputs[i], *m_sampler }, 0, i);
 				}
-				m_program->bind_uniform({ *m_output }, 0, 3);
+				m_program->bind_uniform({ *m_output }, 0, 4);
 			}
 
 			void run(const vk::command_buffer& cmd, std::initializer_list<vk::viewable_image*> inputs, vk::viewable_image* output, u32 width, u32 height, const std::array<f32, 12>& params)
@@ -486,7 +772,7 @@ void main()
 				{
 					m_inputs[i++] = view(input);
 				}
-				for (; i < 3; i++)
+				for (; i < 4; i++)
 				{
 					m_inputs[i] = m_inputs[0];
 				}
@@ -556,6 +842,8 @@ void main()
 		for (auto& image : m_luma_rough) drop(image);
 		drop(m_vectors_rough);
 		drop(m_motion);
+		drop(m_camera);
+		drop(m_camera_moved);
 		if (m_motion_read)
 		{
 			m_motion_read->unmap();
@@ -595,20 +883,22 @@ void main()
 		}
 		m_vectors_rough = make_image(utils::aligned_div(rough_w, 4u), utils::aligned_div(rough_h, 4u), VK_FORMAT_R16G16B16A16_SFLOAT);
 		m_motion = make_image(1, 1, VK_FORMAT_R32G32B32A32_SFLOAT);
+		m_camera = make_image(3, 1, VK_FORMAT_R32G32B32A32_SFLOAT);
+		m_camera_moved = make_image(utils::aligned_div(m_work_w, 8u), utils::aligned_div(m_work_h, 8u), VK_FORMAT_R32_SFLOAT);
 		const auto pdev = vk::get_current_renderer();
-		m_motion_read = std::make_unique<vk::buffer>(*pdev, 16, pdev->get_memory_mapping().host_visible_coherent,
+		m_motion_read = std::make_unique<vk::buffer>(*pdev, 32, pdev->get_memory_mapping().host_visible_coherent,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, VK_BUFFER_USAGE_TRANSFER_DST_BIT, 0, VMM_ALLOCATION_POOL_UNDEFINED);
 		if (m_motion_read->value != VK_NULL_HANDLE)
 		{
-			m_motion_mapped = static_cast<const f32*>(m_motion_read->map(0, 16));
-			std::memset(const_cast<f32*>(m_motion_mapped), 0, 16);
+			m_motion_mapped = static_cast<const f32*>(m_motion_read->map(0, 32));
+			std::memset(const_cast<f32*>(m_motion_mapped), 0, 32);
 		}
 		m_vectors_coarse = make_image(utils::aligned_div(coarse_w, 4u), utils::aligned_div(coarse_h, 4u), VK_FORMAT_R16G16B16A16_SFLOAT);
 		m_vectors = make_image(utils::aligned_div(m_work_w, 8u), utils::aligned_div(m_work_h, 8u), VK_FORMAT_R16G16B16A16_SFLOAT);
 		m_vectors_smooth = make_image(utils::aligned_div(m_work_w, 8u), utils::aligned_div(m_work_h, 8u), VK_FORMAT_R16G16B16A16_SFLOAT);
 
 		if (!m_prev_color || !outputs || !m_luma[0] || !m_luma[1] || !m_luma_coarse[0] || !m_luma_coarse[1] || !m_luma_rough[0] || !m_luma_rough[1] ||
-			!m_vectors_rough || !m_motion || !m_motion_mapped || !m_vectors_coarse || !m_vectors || !m_vectors_smooth)
+			!m_vectors_rough || !m_motion || !m_camera || !m_camera_moved || !m_motion_mapped || !m_vectors_coarse || !m_vectors || !m_vectors_smooth)
 		{
 			rsx_log.warning("Frame generation: no memory for its images at %ux%u", width, height);
 			dispose();
@@ -626,7 +916,7 @@ void main()
 		m_have_prev = false;
 	}
 
-	u32 frame_generator::process(const vk::command_buffer& cmd, vk::viewable_image* cur, u32 width, u32 height, u32 count, u32 quality,
+	u32 frame_generator::process(const vk::command_buffer& cmd, vk::viewable_image* cur, u32 width, u32 height, u32 count, u32 quality, u32 step,
 		vk::viewable_image* (&out)[max_frames])
 	{
 		if (!cur || !width || !height)
@@ -647,6 +937,7 @@ void main()
 			}
 			for (auto* image : { m_prev_color.get(), m_output[0].get(), m_output[1].get(), m_output[2].get(), m_luma[0].get(), m_luma[1].get(),
 				m_luma_coarse[0].get(), m_luma_coarse[1].get(), m_luma_rough[0].get(), m_luma_rough[1].get(), m_vectors_rough.get(), m_motion.get(),
+				m_camera.get(), m_camera_moved.get(),
 				m_vectors_coarse.get(), m_vectors.get(), m_vectors_smooth.get() })
 			{
 				image->change_layout(cmd, VK_IMAGE_LAYOUT_GENERAL);
@@ -679,6 +970,10 @@ void main()
 		{
 			g_ps5_frames_quick_moves++;
 		}
+		if (make && m_motion_mapped[4] > 0.5f)
+		{
+			g_ps5_frames_camera_field++;
+		}
 
 		// This frame's brightness, at the working size, a quarter and a sixteenth of it
 		vk::get_compute_task<frame_generation_pass<pass_brightness>>()->run(cmd, { cur }, m_luma[1].get(), m_work_w, m_work_h,
@@ -707,16 +1002,30 @@ void main()
 				{ static_cast<f32>(rough_w), static_cast<f32>(rough_h), static_cast<f32>(rough_grid_w), static_cast<f32>(rough_grid_h),
 				  static_cast<f32>(std::max(1u, c_quality[quality].reach / 4)), 0.002f });
 			barrier(cmd);
+			// Stepping aside beyond 6% of the frame's width a game frame (Quick
+			// moves), 3% (Most moves), or never
+			const f32 step_aside = step == 0 ? 1e9f : step == 2 ? 0.03f : 0.06f;
 			vk::get_compute_task<frame_generation_pass<pass_motion>>()->run(cmd, { m_vectors_rough.get() }, m_motion.get(), 1, 1,
-				{ 0.06f * work_w / 16.f });
+				{ step_aside * work_w / 16.f });
 			barrier(cmd);
-			const VkBufferImageCopy region = { 0, 0, 0, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 }, { 0, 0, 0 }, { 1, 1, 1 } };
-			vkCmdCopyImageToBuffer(cmd, m_motion->value, VK_IMAGE_LAYOUT_GENERAL, m_motion_read->value, 1, &region);
+			// The camera's field, and each block checked against it
+			vk::get_compute_task<frame_generation_pass<pass_camera>>()->run(cmd, { m_vectors.get(), m_motion.get() }, m_camera.get(), 1, 1,
+				{ work_w, work_h });
+			barrier(cmd);
+			vk::get_compute_task<frame_generation_pass<pass_camera_check>>()->run(cmd, { m_luma[0].get(), m_luma[1].get(), m_camera.get() }, m_camera_moved.get(), grid_w, grid_h,
+				{ work_w, work_h, static_cast<f32>(grid_w), static_cast<f32>(grid_h) });
+			barrier(cmd);
+			// For the trace: the motion's verdict, and whether the field held
+			const VkBufferImageCopy regions[2] = {
+				{ 0, 0, 0, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 }, { 0, 0, 0 }, { 1, 1, 1 } },
+				{ 16, 0, 0, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 }, { 2, 0, 0 }, { 1, 1, 1 } } };
+			vkCmdCopyImageToBuffer(cmd, m_motion->value, VK_IMAGE_LAYOUT_GENERAL, m_motion_read->value, 1, &regions[0]);
+			vkCmdCopyImageToBuffer(cmd, m_camera->value, VK_IMAGE_LAYOUT_GENERAL, m_motion_read->value, 1, &regions[1]);
 			VkMemoryBarrier host = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
 			host.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 			host.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
 			vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0, 1, &host, 0, nullptr, 0, nullptr);
-			vk::get_compute_task<frame_generation_pass<pass_median>>()->run(cmd, { m_vectors.get(), m_motion.get() }, m_vectors_smooth.get(), grid_w, grid_h,
+			vk::get_compute_task<frame_generation_pass<pass_median>>()->run(cmd, { m_vectors.get(), m_camera_moved.get() }, m_vectors_smooth.get(), grid_w, grid_h,
 				{ static_cast<f32>(grid_w), static_cast<f32>(grid_h) });
 			barrier(cmd);
 
@@ -725,7 +1034,7 @@ void main()
 			for (u32 k = 0; k < count; k++)
 			{
 				const f32 t = static_cast<f32>(k + 1) / static_cast<f32>(count + 1);
-				vk::get_compute_task<frame_generation_pass<pass_between>>()->run(cmd, { m_prev_color.get(), cur, m_vectors_smooth.get() }, m_output[k].get(), width, height,
+				vk::get_compute_task<frame_generation_pass<pass_between>>()->run(cmd, { m_prev_color.get(), cur, m_vectors_smooth.get(), m_camera.get() }, m_output[k].get(), width, height,
 					{ uv_x, uv_y, static_cast<f32>(width), static_cast<f32>(height), work_w, work_h, work_w / (grid_w * 8.f), work_h / (grid_h * 8.f), t });
 				out[k] = m_output[k].get();
 			}

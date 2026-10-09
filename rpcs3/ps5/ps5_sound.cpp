@@ -17,6 +17,7 @@
 #include <cstring>
 #include <map>
 #include <mutex>
+#include <set>
 #include <thread>
 
 LOG_CHANNEL(ps5_sound, "PS5Sound");
@@ -325,6 +326,13 @@ void ps5_play_menu_sound(const std::string& path, f32 volume)
 		chosen = "/app0/assets/launcher/sounds/" + path.substr(path.find_last_of('/') + 1);
 		if (!fs::get_stat(chosen, stat) || stat.is_directory)
 		{
+			// Said once for each: the title's sounds not installed, and none of the player's
+			static std::set<std::string> s_missing;
+			std::lock_guard lock(g_menu_mutex);
+			if (s_missing.insert(chosen).second)
+			{
+				ps5_sound.error("Menu sound: no %s, nor %s", path, chosen);
+			}
 			return;
 		}
 	}

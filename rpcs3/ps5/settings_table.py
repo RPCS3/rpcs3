@@ -68,6 +68,11 @@ PS5_EXTRA = [
      "across, Balanced 640, Quality 960. Each follows moves of up to about a fifth of the screen between "
      "two of the game's frames; higher follows the edges of moving things more closely and takes more of "
      "the GPU's time."),
+    ("FrameGenerationQuality", "GPU", "FrameGenerationStepAside", "Frame generation steps aside",
+     "When frame generation shows the game's own frames instead of making frames between them. Quick moves: "
+     "when the camera moves more than about 6% of the screen between two of the game's frames (a quick "
+     "turn), where frames made between break apart. Most moves: from about 3%, fewer odd frames while "
+     "moving but less smoothing. Never: frames are always made."),
     ("TimeStretchingThreshold", "Audio", "DisableSamplingSkip", "Disable sampling skip",
      "When a game is late with its sound, the emulator waits for it a little (about 11 ms) before skipping "
      "that bit of the sound. On, it never waits: the sound keeps strict time, and every late moment is "
