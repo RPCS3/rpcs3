@@ -674,12 +674,12 @@ void GLGSRender::clear_surface(u32 arg)
 		{
 			const u32 clear_depth_bits = REGS(m_ctx)->z_clear_value(is_depth_stencil_format(surface_depth_format));
 			clear_cmd.clear_depth.value = rsx::get_depth_clear_value(surface_depth_format, clear_depth_bits);
+      clear_cmd.aspect_mask |= gl::image_aspect::depth;
 
 			if (gl::emulate_extended_depth_range() && rsx::is_float_depth_format(surface_depth_format)) [[ unlikely ]]
 			{
 				clear_cmd.clear_depth.value = rsx::encode_emulated_depth(clear_cmd.clear_depth.value);
 			}
-			clear_cmd.aspect_mask |= gl::image_aspect::depth;
 		}
 
 		if (is_depth_stencil_format(surface_depth_format))

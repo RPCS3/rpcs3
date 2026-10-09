@@ -1345,7 +1345,6 @@ void VKGSRender::clear_surface(u32 mask)
 		{
 			const u32 clear_depth_bits = REGS(m_ctx)->z_clear_value(is_depth_stencil_format(surface_depth_format));
 			f32 depth_clear = rsx::get_depth_clear_value(surface_depth_format, clear_depth_bits);
-
 			if (vk::emulate_extended_depth_range() && rsx::is_float_depth_format(surface_depth_format)) [[ unlikely ]]
 			{
 				depth_clear = rsx::encode_emulated_depth(depth_clear);
