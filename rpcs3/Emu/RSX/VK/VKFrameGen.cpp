@@ -21,6 +21,7 @@
 #ifdef _MSC_VER
 #pragma warning(push, 0)
 #include <stb_image_write.h>
+#include <stb_truetype.h>
 #pragma warning(pop)
 #else
 #pragma GCC diagnostic push
@@ -33,6 +34,7 @@
 #pragma GCC diagnostic ignored "-Wunused-function"
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 #include <stb_image_write.h>
+#include <stb_truetype.h>
 #pragma GCC diagnostic pop
 #endif
 
@@ -940,6 +942,55 @@ void main()
 			return image;
 		}
 
+		// A capture's header text, white on its dark strip, in the title's font
+		// (ASCII only); nothing where the font is missing
+		void draw_text(std::vector<u8>& rgb, u32 w, u32 h, s32 x, s32 baseline, std::string_view text, f32 pixels, const std::vector<u8>& font_data)
+		{
+			stbtt_fontinfo font;
+			if (font_data.empty() || !stbtt_InitFont(&font, font_data.data(), stbtt_GetFontOffsetForIndex(font_data.data(), 0)))
+			{
+				return;
+			}
+			const f32 scale = stbtt_ScaleForPixelHeight(&font, pixels);
+			f32 pen = static_cast<f32>(x);
+			for (usz i = 0; i < text.size(); i++)
+			{
+				const int c = static_cast<u8>(text[i]);
+				int x0, y0, x1, y1;
+				stbtt_GetCodepointBitmapBox(&font, c, scale, scale, &x0, &y0, &x1, &y1);
+				const int gw = x1 - x0, gh = y1 - y0;
+				if (gw > 0 && gh > 0)
+				{
+					std::vector<u8> mask(static_cast<usz>(gw) * gh);
+					stbtt_MakeCodepointBitmap(&font, mask.data(), gw, gh, gw, scale, scale, c);
+					for (int j = 0; j < gh; j++)
+					{
+						for (int i2 = 0; i2 < gw; i2++)
+						{
+							const s32 px = static_cast<s32>(pen) + x0 + i2, py = baseline + y0 + j;
+							if (px < 0 || py < 0 || px >= static_cast<s32>(w) || py >= static_cast<s32>(h))
+							{
+								continue;
+							}
+							u8* out = &rgb[(static_cast<usz>(py) * w + px) * 3];
+							const u32 a = mask[static_cast<usz>(j) * gw + i2];
+							for (int k = 0; k < 3; k++)
+							{
+								out[k] = static_cast<u8>((255 * a + out[k] * (255 - a)) / 255);
+							}
+						}
+					}
+				}
+				int advance, bearing;
+				stbtt_GetCodepointHMetrics(&font, c, &advance, &bearing);
+				pen += advance * scale;
+				if (i + 1 < text.size())
+				{
+					pen += stbtt_GetCodepointKernAdvance(&font, c, static_cast<u8>(text[i + 1])) * scale;
+				}
+			}
+		}
+
 		// The working size: at most the quality's width across, the frame's shape kept
 		void working_size(u32 width, u32 height, u32 quality, u32& work_w, u32& work_h)
 		{
@@ -1127,14 +1178,16 @@ void main()
 		m_capture_count = count;
 		m_capture_grid_w = grid_w;
 		m_capture_grid_h = grid_h;
-		std::string times;
+		std::string order = "Top to bottom: the game's frame before";
 		for (u32 k = 0; k < count; k++)
 		{
-			times += fmt::format("%s%.4f", k ? ", " : "", static_cast<f32>(k + 1) / static_cast<f32>(count + 1));
+			order += fmt::format(", made at %.2f of the way", static_cast<f32>(k + 1) / static_cast<f32>(count + 1));
 		}
-		m_capture_info = fmt::format("game %s\nframe %ux%u, working size %ux%u (%s), vector grid %ux%u\nframes between %u, at t = %s (0 the last frame, 1 this one)\n"
-			"method %u (0 as build 115, 1 as 117 but its searches, 2 as 117), step aside %u (0 never, 1 quick moves, 2 most moves)\n",
-			Emu.GetTitleID(), width, height, m_work_w, m_work_h, c_quality[quality].name, grid_w, grid_h, count, times, method, step);
+		order += ", the game's frame after";
+		m_capture_info = fmt::format("%s | %ux%u, %s (motion at %ux%u) | method: %s | steps aside: %s\n%s",
+			Emu.GetTitleID(), width, height, c_quality[quality].name, m_work_w, m_work_h,
+			method == 2 ? "as build 117" : method == 1 ? "117, searches as 115" : "as build 115",
+			step == 0 ? "never" : step == 2 ? "in most moves" : "in quick moves", order);
 	}
 
 	void frame_generator::take_capture()
@@ -1160,59 +1213,68 @@ void main()
 		m_capture_buffer->unmap();
 		vk::get_resource_manager()->dispose(m_capture_event);
 
-		const std::string dir = fmt::format("%scaptures/fg-%s-%u-%u/", fs::get_config_dir(), Emu.GetTitleID(), m_capture_run, m_capture_set);
-		rsx_log.notice("Frame generation: capture %u written to %s", m_capture_set, dir);
+		const std::string path = fmt::format("%scaptures/%s-%u-%u.png", fs::get_config_dir(), Emu.GetTitleID(), m_capture_run, m_capture_set);
+		const std::string header = fmt::format("Moment %u of %u | %s", m_capture_set, m_capture_set + m_capture_sets - 1, m_capture_info);
+		rsx_log.notice("Frame generation: capture %u written to %s", m_capture_set, path);
 		m_capture_sets--;
 		m_capture_set++;
 		m_capture_next_us = get_system_time() + 500'000;
 
-		// PNG and the rest, on a thread of their own: the frames take a while
-		std::thread([dir, data = std::move(data), w = m_capture_w, h = m_capture_h, count = m_capture_count, gw = m_capture_grid_w, gh = m_capture_grid_h,
-			info = m_capture_info, frame_bytes, vectors_bytes]()
+		// One picture for the moment, so a report is a few pictures: a strip
+		// saying what it is, then the frames in time order, the game's before,
+		// those made between, the game's after. On a thread of its own: PNG
+		// takes a while
+		std::thread([path, header, data = std::move(data), w = m_capture_w, h = m_capture_h, count = m_capture_count, frame_bytes]()
 		{
-			const std::string captures = fs::get_config_dir() + "captures";
-			fs::create_path(dir);
-			::chmod(captures.c_str(), 0777);
-			::chmod(dir.c_str(), 0777);
-			const auto write = [&](const std::string& name, const void* bytes, usz size)
+			constexpr u32 strip = 56;
+			const u32 frames = 2 + count;
+			const u32 total_h = strip + frames * h;
+			std::vector<u8> rgb(usz{w} * total_h * 3, 0);
+			for (usz i = 0; i < usz{w} * strip; i++)
 			{
-				const std::string path = dir + name;
-				fs::write_file(path, fs::rewrite, bytes, size);
-				::chmod(path.c_str(), 0666);
-			};
-			const auto png = [&](const std::string& name, const u8* rgba)
+				rgb[i * 3 + 0] = 16;
+				rgb[i * 3 + 1] = 18;
+				rgb[i * 3 + 2] = 30;
+			}
+			// In the copy: the last frame, this one, then those made between
+			const auto place = [&](u32 slot, const u8* rgba)
 			{
-				std::vector<u8> rgb(usz{w} * h * 3);
+				u8* out = &rgb[(usz{strip} + usz{slot} * h) * w * 3];
 				for (usz i = 0; i < usz{w} * h; i++)
 				{
-					rgb[i * 3 + 0] = rgba[i * 4 + 0];
-					rgb[i * 3 + 1] = rgba[i * 4 + 1];
-					rgb[i * 3 + 2] = rgba[i * 4 + 2];
+					out[i * 3 + 0] = rgba[i * 4 + 0];
+					out[i * 3 + 1] = rgba[i * 4 + 1];
+					out[i * 3 + 2] = rgba[i * 4 + 2];
 				}
-				std::vector<u8> out;
-				stbi_write_png_to_func([](void* context, void* bytes, int size)
-				{
-					auto& sink = *static_cast<std::vector<u8>*>(context);
-					sink.insert(sink.end(), static_cast<u8*>(bytes), static_cast<u8*>(bytes) + size);
-				}, &out, static_cast<int>(w), static_cast<int>(h), 3, rgb.data(), static_cast<int>(w * 3));
-				write(name, out.data(), out.size());
 			};
-			usz at = 0;
-			png("last.png", data.data() + at); at += frame_bytes;
-			png("this.png", data.data() + at); at += frame_bytes;
+			place(0, data.data());
+			place(frames - 1, data.data() + frame_bytes);
 			for (u32 k = 0; k < count; k++)
 			{
-				png(fmt::format("between-%u.png", k + 1), data.data() + at);
-				at += frame_bytes;
+				place(1 + k, data.data() + frame_bytes * (2 + k));
 			}
-			write("vectors.bin", data.data() + at, vectors_bytes); at += vectors_bytes;
-			write("camera.bin", data.data() + at, 64);
-			const std::string text = info + fmt::format(
-				"files: last.png and this.png, the game's two frames; between-N.png, the frames made between them;\n"
-				"vectors.bin, %ux%u RGBA half floats, a block of this frame each: x, y to where it was in the last frame, in working\n"
-				"texels; z its match error; w whether it moved with the camera's field. camera.bin, 4 RGBA floats: the field's a0-a3,\n"
-				"a4-a7, then whether it holds, its share, its weight, the quick-move verdict; then the camera's motion (x, y, support, quick)\n", gw, gh);
-			write("info.txt", text.data(), text.size());
+
+			std::vector<u8> font;
+			if (fs::file file{"/app0/assets/fonts/Inter-SemiBold.ttf"})
+			{
+				file.read(font, file.size());
+			}
+			const usz split = header.find('\n');
+			draw_text(rgb, w, total_h, 14, 23, header.substr(0, split), 17.f, font);
+			draw_text(rgb, w, total_h, 14, 47, split == umax ? std::string() : header.substr(split + 1), 17.f, font);
+
+			std::vector<u8> out;
+			stbi_write_png_to_func([](void* context, void* bytes, int size)
+			{
+				auto& sink = *static_cast<std::vector<u8>*>(context);
+				sink.insert(sink.end(), static_cast<u8*>(bytes), static_cast<u8*>(bytes) + size);
+			}, &out, static_cast<int>(w), static_cast<int>(total_h), 3, rgb.data(), static_cast<int>(w * 3));
+
+			const std::string captures = fs::get_config_dir() + "captures";
+			fs::create_path(captures);
+			::chmod(captures.c_str(), 0777);
+			fs::write_file(path, fs::rewrite, out.data(), out.size());
+			::chmod(path.c_str(), 0666);
 		}).detach();
 	}
 

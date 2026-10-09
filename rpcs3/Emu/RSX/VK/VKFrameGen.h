@@ -64,10 +64,12 @@ namespace vk
 		void dispose();
 
 		// A capture, for a report (the pause menu's Save frame generation's
-		// frames: g_ps5_frame_gen_capture, the sets wanted): sets of the last
-		// frame, this one, the frames between, the vectors and the camera's
-		// field, copied to host memory with the frame's work and written to
-		// rpcs3/captures/ on a thread once the GPU has done them
+		// frames: g_ps5_frame_gen_capture, the moments wanted): the last frame,
+		// this one and the frames between, copied to host memory with the
+		// frame's work and, once the GPU has done them, written on a thread as
+		// one picture a moment to rpcs3/captures/: a strip saying what it is,
+		// then the frames top to bottom in time order (a chat takes a few
+		// pictures at a time, not a folder of files)
 		void record_capture(const vk::command_buffer& cmd, vk::viewable_image* cur, u32 width, u32 height, u32 count, u32 quality, u32 step, u32 method);
 		void take_capture();
 		u32 m_capture_sets = 0;   // still to take
