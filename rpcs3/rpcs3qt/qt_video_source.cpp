@@ -433,10 +433,7 @@ void qt_video_source_wrapper::init_video_source()
 
 void qt_video_source_wrapper::set_iso_path(const std::string& iso_path)
 {
-	Emu.BlockingCallFromMainThread([this, &iso_path]()
-	{
-		m_qt_video_source->set_iso_path(iso_path);
-	}, false);
+	m_qt_video_source->set_iso_path(iso_path);
 }
 
 void qt_video_source_wrapper::set_video_path(const std::string& video_path, bool video_in_archive)
