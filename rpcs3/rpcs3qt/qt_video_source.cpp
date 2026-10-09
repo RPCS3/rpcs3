@@ -420,7 +420,7 @@ qt_video_source_wrapper::~qt_video_source_wrapper()
 	Emu.BlockingCallFromMainThread([this]()
 	{
 		m_qt_video_source.reset();
-	}, false);
+	});
 }
 
 void qt_video_source_wrapper::init_video_source()
@@ -470,7 +470,7 @@ void qt_video_source_wrapper::set_video_path(const std::string& video_path, bool
 			notify_update();
 		};
 		m_qt_video_source->set_video_path(video_path, video_in_archive);
-	}, false);
+	});
 }
 
 void qt_video_source_wrapper::set_audio_path(const std::string& audio_path, bool audio_in_archive)
@@ -480,7 +480,7 @@ void qt_video_source_wrapper::set_audio_path(const std::string& audio_path, bool
 		init_video_source();
 
 		m_qt_video_source->set_audio_path(audio_path, audio_in_archive);
-	}, false);
+	});
 }
 
 void qt_video_source_wrapper::set_active(bool active)
@@ -489,7 +489,7 @@ void qt_video_source_wrapper::set_active(bool active)
 	{
 		ensure(m_qt_video_source);
 		m_qt_video_source->set_active(active);
-	}, false);
+	});
 }
 
 bool qt_video_source_wrapper::get_active() const
