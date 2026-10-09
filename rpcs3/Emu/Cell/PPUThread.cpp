@@ -4888,6 +4888,15 @@ extern void ppu_initialize()
 	}
 }
 
+template <u32 (*Estimate)(u32, bool)>
+static void ppu_vec_estimate(v128& v, u32 nj)
+{
+	for (u32 i = 0; i < 4; i++)
+	{
+		v._u32[i] = Estimate(v._u32[i], nj != 0);
+	}
+}
+
 bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_size)
 {
 	ppu_log.notice("Entering ppu_initialize(const ppu_module&..)");
@@ -4968,10 +4977,10 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 			{ "__escape", reinterpret_cast<u64>(+ppu_escape) },
 			{ "__read_maybe_mmio32", reinterpret_cast<u64>(+ppu_read_mmio_aware_u32) },
 			{ "__write_maybe_mmio32", reinterpret_cast<u64>(+ppu_write_mmio_aware_u32) },
-			{ "__vrefp", reinterpret_cast<u64>(+[](u32 x, u32 nj) { return ppu_vrefp(x, nj != 0); }) },
-			{ "__vrsqrtefp", reinterpret_cast<u64>(+[](u32 x, u32 nj) { return ppu_vrsqrtefp(x, nj != 0); }) },
-			{ "__vexptefp", reinterpret_cast<u64>(+[](u32 x, u32 nj) { return ppu_vexptefp(x, nj != 0); }) },
-			{ "__vlogefp", reinterpret_cast<u64>(+[](u32 x, u32 nj) { return ppu_vlogefp(x, nj != 0); }) },
+			{ "__vrefp", reinterpret_cast<u64>(&ppu_vec_estimate<ppu_vrefp>) },
+			{ "__vrsqrtefp", reinterpret_cast<u64>(&ppu_vec_estimate<ppu_vrsqrtefp>) },
+			{ "__vexptefp", reinterpret_cast<u64>(&ppu_vec_estimate<ppu_vexptefp>) },
+			{ "__vlogefp", reinterpret_cast<u64>(&ppu_vec_estimate<ppu_vlogefp>) },
 		};
 
 		for (u64 index = 0; index < 1024; index++)
