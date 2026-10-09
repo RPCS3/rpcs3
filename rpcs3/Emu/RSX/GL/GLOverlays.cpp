@@ -560,7 +560,8 @@ namespace gl
 			{ "%loc", std::to_string(GL_COMPUTE_BUFFER_SLOT(0)) },
 			{ "%push_block", fmt::format("binding=%d, std140", GL_COMPUTE_BUFFER_SLOT(1)) },
 			{ "%stencil_export_supported", stencil_export_supported ? "1" : "0" },
-			{ "%legacy_format_support", legacy_format_support ? "1" : "0" }
+			{ "%legacy_format_support", legacy_format_support ? "1" : "0" },
+			{ "%emulated_depth_storage", gl::emulate_extended_depth_range() ? "1" : "0" }
 		};
 
 		fs_src = fmt::replace_all(fs_src, repl_list);
@@ -594,6 +595,11 @@ namespace gl
 		program_handle.uniforms["src_pitch"] = row_length;
 		program_handle.uniforms["swap_bytes"] = layout.swap_bytes;
 		program_handle.uniforms["format"] = static_cast<GLenum>(dst->image()->get_internal_format());
+
+		if (gl::emulate_extended_depth_range())
+		{
+			program_handle.uniforms["depth_float"] = (dst->image()->format_class() & RSX_FORMAT_CLASS_DEPTH_FLOAT_MASK) ? 1u : 0u;
+		}
 		src->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(0), src_offset, row_length * bpp * dst_region.height);
 
 		cmd->stencil_mask(0xFF);

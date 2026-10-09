@@ -251,7 +251,8 @@ namespace vk
 		u8 num_draw_buffers,
 		u8 num_rasterization_samples,
 		bool depth_bounds_support,
-		bool force_disable_blending)
+		bool force_disable_blending,
+		bool force_depth_clamp)
 	{
 		vk::pipeline_props properties{};
 
@@ -262,7 +263,15 @@ namespace vk
 		// Rasterizer state
 		properties.state.set_attachment_count(num_draw_buffers);
 		properties.state.set_front_face(vk::get_front_face(REGS(ctx)->front_face_mode()));
-		properties.state.enable_depth_clamp(REGS(ctx)->depth_clamp_enabled() || !REGS(ctx)->depth_clip_enabled());
+		if (!force_depth_clamp) [[ likely ]]
+		{
+			properties.state.enable_depth_clamp(REGS(ctx)->depth_clamp_enabled() || !REGS(ctx)->depth_clip_enabled());
+		}
+		else
+		{
+			// Depth clip and clamp are emulated in the fragment shader
+			properties.state.enable_depth_clamp(true);
+		}
 		properties.state.enable_depth_bias(true);
 		properties.state.enable_depth_bounds_test(depth_bounds_support);
 
@@ -645,6 +654,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	backend_config.supports_hw_instanced_rendering = true;
 	backend_config.supports_programmable_blending = true;
 
+	backend_config.supports_extended_depth_range = m_device->get_unrestricted_depth_range_support();
 	backend_config.supports_last_provoking_vertex = m_device->get_provoking_vertex_last_support();
 	if (!backend_config.supports_last_provoking_vertex)
 	{
@@ -1335,7 +1345,13 @@ void VKGSRender::clear_surface(u32 mask)
 		if (mask & RSX_GCM_CLEAR_DEPTH_BIT)
 		{
 			const u32 clear_depth_bits = REGS(m_ctx)->z_clear_value(is_depth_stencil_format(surface_depth_format));
-			depth_stencil_clear_values.depthStencil.depth = rsx::get_depth_clear_value(surface_depth_format, clear_depth_bits);
+			f32 depth_clear = rsx::get_depth_clear_value(surface_depth_format, clear_depth_bits);
+			if (vk::emulate_extended_depth_range() && rsx::is_float_depth_format(surface_depth_format)) [[ unlikely ]]
+			{
+				depth_clear = rsx::encode_emulated_depth(depth_clear);
+			}
+
+			depth_stencil_clear_values.depthStencil.depth = depth_clear;
 			depth_stencil_clear_values.depthStencil.stencil = stencil_clear;
 
 			depth_stencil_mask |= VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -1856,7 +1872,8 @@ bool VKGSRender::load_program()
 			static_cast<u8>(m_draw_buffers.size()),
 			u8((m_current_renderpass_key >> 16) & 0xF),
 			m_device->get_depth_bounds_support(),
-			!!(current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING)
+			!!(current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING),
+			!!(current_fragment_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE)
 		);
 
 		properties.renderpass_key = m_current_renderpass_key;
@@ -1901,12 +1918,16 @@ bool VKGSRender::load_program()
 		}
 
 		// Load current program from cache
+		// The shader interpreter does not emulate the depth range; compile those programs synchronously instead
+		const bool allow_async = shadermode != shader_mode::recompiler &&
+			!(fragment_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE);
+
 		std::tie(m_program, m_vertex_prog, m_fragment_prog) = m_prog_buffer->get_graphics_pipeline(
 			&m_program_cache_hint,
 			vertex_program,
 			fragment_program,
 			m_pipeline_properties,
-			shadermode != shader_mode::recompiler, true);
+			allow_async, true);
 
 		vk::leave_uninterruptible();
 

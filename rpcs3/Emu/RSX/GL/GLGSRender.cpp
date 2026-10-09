@@ -52,6 +52,7 @@ GLGSRender::GLGSRender(utils::serial* ar) noexcept : GSRender(ar)
 	backend_config.supports_hw_instanced_rendering = true;
 	// OpenGL 3.2+ defaults to GL_LAST_VERTEX_CONVENTION.
 	backend_config.supports_last_provoking_vertex = true;
+	backend_config.supports_extended_depth_range = gl::get_driver_caps().NV_depth_buffer_float_supported;
 
 	if (g_cfg.video.antialiasing_level != msaa_level::none)
 	{
@@ -673,7 +674,12 @@ void GLGSRender::clear_surface(u32 arg)
 		{
 			const u32 clear_depth_bits = REGS(m_ctx)->z_clear_value(is_depth_stencil_format(surface_depth_format));
 			clear_cmd.clear_depth.value = rsx::get_depth_clear_value(surface_depth_format, clear_depth_bits);
-			clear_cmd.aspect_mask |= gl::image_aspect::depth;
+      clear_cmd.aspect_mask |= gl::image_aspect::depth;
+
+			if (gl::emulate_extended_depth_range() && rsx::is_float_depth_format(surface_depth_format)) [[ unlikely ]]
+			{
+				clear_cmd.clear_depth.value = rsx::encode_emulated_depth(clear_cmd.clear_depth.value);
+			}
 		}
 
 		if (is_depth_stencil_format(surface_depth_format))
@@ -861,12 +867,16 @@ bool GLGSRender::load_program()
 		}
 
 		void* pipeline_properties = nullptr;
+		// The shader interpreter does not emulate the depth range; compile those programs synchronously instead
+		const bool allow_async = shadermode != shader_mode::recompiler &&
+			!(current_fragment_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE);
+
 		std::tie(m_program, m_vertex_prog, m_fragment_prog) = m_prog_buffer.get_graphics_pipeline(
 			&m_program_cache_hint,
 			current_vertex_program,
 			current_fragment_program,
 			pipeline_properties,
-			shadermode != shader_mode::recompiler, true);
+			allow_async, true);
 
 		if (m_prog_buffer.check_cache_missed())
 		{

@@ -92,6 +92,7 @@ namespace rsx
 		bool supports_host_gpu_labels;         // Advanced host synchronization
 		bool supports_normalized_barycentrics; // Basically all GPUs except NVIDIA have properly normalized barycentrics
 		bool supports_last_provoking_vertex;   // Flat shading using RSX's last-vertex convention
+		bool supports_extended_depth_range;    // Depth values above 1 can be stored and tested. Float depth targets are emulated otherwise.
 		bool supports_programmable_blending;   // Can handle programmable blending requests
 	};
 
@@ -265,6 +266,7 @@ namespace rsx
 	protected:
 		void get_framebuffer_layout(rsx::framebuffer_creation_context context, framebuffer_layout &layout);
 		bool get_scissor(areau& region, bool clip_viewport);
+		bool requires_depth_range_emulation() const;
 
 		// Notify framebuffer layout has been committed.
 		// FIXME: This should not be here
