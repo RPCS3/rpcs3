@@ -2182,6 +2182,36 @@ namespace rsx
 		return m_framebuffer_layout.zeta_address && rsx::is_float_depth_format(REGS(m_ctx)->surface_depth_fmt());
 	}
 
+	bool thread::fragment_program_output_unused(const program_hash_util::fragment_program_utils::fragment_program_metadata& metadata) const
+	{
+		if (metadata.has_kil_instructions ||
+			(REGS(m_ctx)->shader_control() & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT) ||
+			REGS(m_ctx)->alpha_test_enabled() ||
+			REGS(m_ctx)->msaa_alpha_to_coverage_enabled())
+		{
+			return false;
+		}
+
+		for (const auto& index : rsx::utility::get_rtt_indexes(REGS(m_ctx)->surface_color_target()))
+		{
+			if (REGS(m_ctx)->color_write_enabled(index))
+			{
+				return false;
+			}
+		}
+
+		for (u32 textures_ref = metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
+		{
+			const auto& tex = REGS(m_ctx)->fragment_textures[i];
+			if ((textures_ref & 1) && tex.enabled() && tex.alpha_kill_enabled())
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
 	void thread::prefetch_fragment_program()
 	{
 		if (!m_graphics_state.test(rsx::pipeline_state::fragment_program_ucode_dirty))
@@ -2200,10 +2230,22 @@ namespace rsx
 		auto data_ptr = vm::base(rsx::get_address(program_offset, program_location));
 		current_fp_metadata = program_hash_util::fragment_program_utils::analyse_fragment_program(data_ptr);
 
+		m_guest_fp_metadata = current_fp_metadata;
+		m_fragment_program_output_unused = fragment_program_output_unused(current_fp_metadata);
+
+		if (m_fragment_program_output_unused)
+		{
+			// Depth and stencil results cannot depend on the program, so every such draw shares one empty program.
+			// Some titles leave the program address pointing at arbitrary data for these passes.
+			alignas(16) static constexpr u32 s_null_program[4] = { 0x100, 0, 0, 0 };
+			data_ptr = const_cast<u32*>(s_null_program);
+			current_fp_metadata = program_hash_util::fragment_program_utils::analyse_fragment_program(data_ptr);
+		}
+
 		current_fragment_program.data = (static_cast<u8*>(data_ptr) + current_fp_metadata.program_start_offset);
 		current_fragment_program.offset = program_offset + current_fp_metadata.program_start_offset;
 		current_fragment_program.ucode_length = current_fp_metadata.program_ucode_length;
-		current_fragment_program.total_length = current_fp_metadata.program_ucode_length + current_fp_metadata.program_start_offset;
+		current_fragment_program.total_length = m_guest_fp_metadata.program_ucode_length + m_guest_fp_metadata.program_start_offset;
 		current_fragment_program.texture_state.import(current_fp_texture_state, current_fp_metadata.referenced_textures_mask);
 		current_fragment_program.valid = true;
 
@@ -2274,6 +2316,13 @@ namespace rsx
 
 	void thread::analyse_current_rsx_pipeline()
 	{
+		if (!m_graphics_state.test(rsx::pipeline_state::fragment_program_ucode_dirty) &&
+			fragment_program_output_unused(m_guest_fp_metadata) != m_fragment_program_output_unused)
+		{
+			// Swap between the guest program and the null program
+			m_graphics_state.set(rsx::pipeline_state::fragment_program_ucode_dirty);
+		}
+
 		m_program_cache_hint.invalidate(m_graphics_state.load());
 
 		if (u32 export_ctrl = get_fragment_program_export_config();

@@ -268,6 +268,11 @@ namespace rsx
 		bool get_scissor(areau& region, bool clip_viewport);
 		bool requires_depth_range_emulation() const;
 
+		// True when nothing the fragment program computes can reach the framebuffer
+		bool fragment_program_output_unused(const program_hash_util::fragment_program_utils::fragment_program_metadata& metadata) const;
+		program_hash_util::fragment_program_utils::fragment_program_metadata m_guest_fp_metadata = {};
+		bool m_fragment_program_output_unused = false;
+
 		// Notify framebuffer layout has been committed.
 		// FIXME: This should not be here
 		void on_framebuffer_layout_updated();
