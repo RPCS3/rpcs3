@@ -122,7 +122,14 @@ void main()
 			// favoured, but only a little: at build 107's 0.0015 a quarter texel
 			// the favour outweighed a true match 14 texels away (0.0005 now).
 			// Also run at a sixteenth of the working size (0.002 a texel there,
-			// the same per pixel), for the camera's motion (pass_motion)
+			// the same per pixel), for the camera's motion (pass_motion). The
+			// margin no motion keeps and the favour both shrink with the block's
+			// contrast (its texels' mean distance from their mean), to 15% of
+			// themselves below 0.06: GTA IV's asphalt is that faint, a true move
+			// beat no motion there by less than the margin, and in the model of
+			// these passes (a street driven at 0.7 and 1.4 metres a game frame)
+			// the road stood still between the frames while its markings moved;
+			// so scaled, the road gained 2.4 to 3 dB
 			R"(
 void main()
 {
@@ -132,10 +139,19 @@ void main()
 	const int reach = int(p1.x);
 	const ivec2 base = p * 4;
 	float cur[16];
+	float mean = 0.0;
 	for (int k = 0; k < 16; k++)
 	{
 		cur[k] = texelFetch(tex1, min(base + ivec2(k & 3, k >> 2), lim), 0).r;
+		mean += cur[k] / 16.0;
 	}
+	float contrast = 0.0;
+	for (int k = 0; k < 16; k++)
+	{
+		contrast += abs(cur[k] - mean) / 16.0;
+	}
+	const float scale = clamp(contrast / 0.06, 0.15, 1.0);
+	const float favour = p1.y * scale;
 	// No motion first, and kept unless another vector is clearly better: in
 	// flat, plain areas (the ground under a shadow) every vector matches about
 	// as well, and the best by a hair is noise
@@ -145,7 +161,7 @@ void main()
 		error += abs(cur[k] - texelFetch(tex0, min(base + ivec2(k & 3, k >> 2), lim), 0).r) / 16.0;
 	}
 	const float still_error = error;
-	float best = error - 0.006;
+	float best = error - 0.006 * scale;
 	vec2 best_v = vec2(0.0);
 	for (int dy = -reach; dy <= reach; dy++)
 	{
@@ -157,9 +173,9 @@ void main()
 				s += abs(cur[k] - texelFetch(tex0, clamp(base + ivec2(k & 3, k >> 2) + ivec2(dx, dy), ivec2(0), lim), 0).r);
 			}
 			s /= 16.0;
-			if (s + p1.y * float(abs(dx) + abs(dy)) < best)
+			if (s + favour * float(abs(dx) + abs(dy)) < best)
 			{
-				best = s + p1.y * float(abs(dx) + abs(dy));
+				best = s + favour * float(abs(dx) + abs(dy));
 				error = s;
 				best_v = vec2(dx, dy);
 			}
@@ -177,7 +193,9 @@ void main()
 			// Its z the match's own error, without the favour shorter vectors get:
 			// the frames between trust a vector by it, and with the favour in it
 			// (build 107) every long vector looked like a poor match. Its w how
-			// much better it matched than no motion (pass_camera weighs it by that)
+			// much better it matched than no motion (pass_camera weighs it by
+			// that). The margin and the favour scale with the block's contrast,
+			// as in the coarse search
 			R"(
 void main()
 {
@@ -187,10 +205,19 @@ void main()
 	const ivec2 coarse_lim = ivec2(p1.xy) - 1;
 	const ivec2 base = p * 8;
 	float cur[64];
+	float mean = 0.0;
 	for (int k = 0; k < 64; k++)
 	{
 		cur[k] = texelFetch(tex1, min(base + ivec2(k & 7, k >> 3), lim), 0).r;
+		mean += cur[k] / 64.0;
 	}
+	float contrast = 0.0;
+	for (int k = 0; k < 64; k++)
+	{
+		contrast += abs(cur[k] - mean) / 64.0;
+	}
+	const float scale = clamp(contrast / 0.06, 0.15, 1.0);
+	const float favour = 0.0003 * scale;
 	const ivec2 cb = p / 2;
 	ivec2 starts[6];
 	starts[0] = ivec2(0);
@@ -206,7 +233,7 @@ void main()
 		error += abs(cur[k] - texelFetch(tex0, min(base + ivec2(k & 7, k >> 3), lim), 0).r) / 64.0;
 	}
 	const float still_error = error;
-	float best = error - 0.006;
+	float best = error - 0.006 * scale;
 	vec2 best_v = vec2(0.0);
 	for (int c = 0; c < 6; c++)
 	{
@@ -221,9 +248,9 @@ void main()
 					s += abs(cur[k] - texelFetch(tex0, clamp(base + ivec2(k & 7, k >> 3) + v, ivec2(0), lim), 0).r);
 				}
 				s /= 64.0;
-				if (s + 0.0003 * float(abs(v.x) + abs(v.y)) < best)
+				if (s + favour * float(abs(v.x) + abs(v.y)) < best)
 				{
-					best = s + 0.0003 * float(abs(v.x) + abs(v.y));
+					best = s + favour * float(abs(v.x) + abs(v.y));
 					error = s;
 					best_v = vec2(v);
 				}
@@ -235,9 +262,16 @@ void main()
 }
 )",
 			// pass_median: tex0 the vectors, tex1 each block's check against the
-			// camera's field (pass_camera_check); p0.xy their grid. Each vector's
-			// parts become the medians of its 3x3 neighbourhood's, which drops
-			// lone wrong ones; the match error stays its own, and w is the check
+			// camera's field (pass_camera_check), tex2 the last frame's working
+			// brightness, tex3 this one's; p0 = (their grid, the working size).
+			// Each vector's parts become the medians of its 3x3 neighbourhood's,
+			// which drops lone wrong ones; but a block keeps its own where it
+			// matches its block clearly better than the median does (by 0.01 a
+			// texel): a thing a block or two across moving its own way, the
+			// player's head in a camera turn, lost its vectors to the
+			// background's, and GTA IV's radar turning in its ring too (in the
+			// model of these passes, the radar 3.5 to 4.5 dB better so). The
+			// match error stays its own, and w is the check
 			R"(
 void main()
 {
@@ -276,7 +310,19 @@ void main()
 		}
 		ys[b + 1] = y;
 	}
-	imageStore(dst, p, vec4(xs[4], ys[4], texelFetch(tex0, p, 0).z, texelFetch(tex1, p, 0).r));
+	const vec4 own = texelFetch(tex0, p, 0);
+	const ivec2 median = ivec2(round(vec2(xs[4], ys[4])));
+	const ivec2 work_lim = ivec2(p0.zw) - 1;
+	const ivec2 base = p * 8;
+	float median_error = 0.0;
+	for (int k = 0; k < 64; k++)
+	{
+		const ivec2 q = base + ivec2(k & 7, k >> 3);
+		median_error += abs(texelFetch(tex3, min(q, work_lim), 0).r - texelFetch(tex2, clamp(q + median, ivec2(0), work_lim), 0).r);
+	}
+	median_error /= 64.0;
+	const vec2 v = own.z + 0.01 < median_error ? own.xy : vec2(xs[4], ys[4]);
+	imageStore(dst, p, vec4(v, own.z, texelFetch(tex1, p, 0).r));
 }
 )",
 			// pass_between: tex0 the last frame (its own size), tex1 this one,
@@ -295,9 +341,7 @@ void main()
 			// in a model of these passes, picking per pixel gained about 1 dB
 			// overall and up to 1.6 dB at a moving object's edges). Anywhere else
 			// the frame nearer in time as it is: where the block matched poorly,
-			// where the two disagree (GTA IV's shadows shimmer by themselves, and
-			// averaging two patterns softened every other frame's on my console,
-			// build 94), and where the pixel is the same in both frames unmoved
+			// and where the pixel is the same in both frames unmoved
 			// (the HUD, the radar's frame and text, which the world's vectors
 			// dragged along) beside a block that did not move: without that
 			// block, a thin thing crossing a plain background (a lamp post over
@@ -314,7 +358,29 @@ void main()
 			// (GTA IV's buildings looked off and zigzagged on my console, build
 			// 114); the field is the whole frame's motion, fitted to a fraction
 			// of a texel. Not where no block moved with it: GTA IV's radar turns
-			// within its ring, and the field pulled the world's motion into it
+			// within its ring, and the field pulled the world's motion into it.
+			// A seventh, favoured well over all (0.04): the block the pixel is
+			// in, as the field where that block moved with it, else as its own
+			// vector. Picking by the two ends alone, a walking player's head lost
+			// to the wall behind it, whose ends agree where an animated head's
+			// never quite do (GTA IV, Niko's head gone in turns, build 115 on my
+			// console; in the model of these passes, a head over a wall in a
+			// turn of 3 and 6 degrees a game frame: 75% and 70% of it right,
+			// 87% and 83% with this and the median that keeps a block's own).
+			// And where the chosen vector's two ends disagree, the one that sees
+			// the point, not the nearer frame as it is: if the thing at the
+			// point's place in this frame moves with the vector, this frame sees
+			// it and the last frame's view was covered (beside the player in a
+			// turn, the wall the player hid); else the last frame's end, if the
+			// thing at its place there moves with the vector in this frame too
+			// (else a thing standing still covers both, and the last frame's
+			// end drew a copy of a piece of the player beside the player in the
+			// model); else the nearer frame. Either end
+			// is one frame's own picture, never two blended where they disagree
+			// (GTA IV's shadows shimmer by themselves, and averaging two patterns
+			// softened every other frame's on my console, build 94). In the
+			// model the walls of a turn gained 0.4 to 2.7 dB so, and the outline
+			// of the player no longer showed in them
 			R"(
 void main()
 {
@@ -326,13 +392,23 @@ void main()
 	const ivec2 grid = textureSize(tex2, 0);
 	const ivec2 near = ivec2(floor(grid_uv * vec2(grid) - 0.5));
 	const vec4 camera = texelFetch(tex3, ivec2(2, 0), 0);
+	const bool holds = camera.x > 0.5;
+	// The field here, in working texels, x and y from the frame's centre in
+	// half widths; its w marks it as the field
+	const vec4 m0 = texelFetch(tex3, ivec2(0, 0), 0);
+	const vec4 m1 = texelFetch(tex3, ivec2(1, 0), 0);
+	const float fx = 2.0 * uv.x - 1.0;
+	const float fy = (2.0 * uv.y - 1.0) * p1.y / p1.x;
+	const vec4 field = vec4(m0.x + m0.y * fx + m0.z * fy + m1.z * fx * fx + m1.w * fx * fy,
+		m0.w + m1.x * fx + m1.y * fy + m1.z * fx * fy + m1.w * fy * fy, 0.0, 2.0);
+	const vec4 own = texelFetch(tex2, clamp(ivec2(floor(grid_uv * vec2(grid))), ivec2(0), grid - 1), 0);
 	vec4 mv = vec4(0.0);
 	vec3 last = vec3(0.0);
 	vec3 next = vec3(0.0);
 	float best = 1e9;
 	bool beside_still = false;
 	bool beside_camera = false;
-	for (int c = 0; c < 6; c++)
+	for (int c = 0; c < 7; c++)
 	{
 		vec4 v;
 		float favour = c == 0 ? 0.0 : 0.004;
@@ -343,20 +419,19 @@ void main()
 			beside_still = beside_still || (c > 0 && length(v.xy) <= 1.0);
 			beside_camera = beside_camera || (c > 0 && v.w > 0.5);
 		}
+		else if (c == 5)
+		{
+			if (!holds || !beside_camera)
+			{
+				continue;
+			}
+			v = field;
+			favour = -0.006;
+		}
 		else
 		{
-			if (camera.x < 0.5 || !beside_camera)
-			{
-				break;
-			}
-			// The field here, in working texels, x and y from the frame's centre in half widths
-			const vec4 m0 = texelFetch(tex3, ivec2(0, 0), 0);
-			const vec4 m1 = texelFetch(tex3, ivec2(1, 0), 0);
-			const float x = 2.0 * uv.x - 1.0;
-			const float y = (2.0 * uv.y - 1.0) * p1.y / p1.x;
-			v = vec4(m0.x + m0.y * x + m0.z * y + m1.z * x * x + m1.w * x * y,
-				m0.w + m1.x * x + m1.y * y + m1.z * x * y + m1.w * y * y, 0.0, 0.0);
-			favour = -0.006;
+			v = holds && own.w > 0.5 ? field : own;
+			favour = -0.04;
 		}
 		const vec2 d = v.xy / p1.xy;
 		const vec3 l = texture(tex0, uv + t * d).rgb;
@@ -379,7 +454,18 @@ void main()
 	const float agree = 1.0 - smoothstep(0.03, 0.1, max(max(moved_gap.r, moved_gap.g), moved_gap.b));
 	const float still = beside_still ? 1.0 - smoothstep(0.012, 0.04, max(max(still_gap.r, still_gap.g), still_gap.b)) : 0.0;
 	const vec3 nearer = t < 0.5 ? there : here;
-	const vec3 between = mix(nearer, mix(last, next, t), trust * agree);
+	// The end that sees the point, for where the two disagree: whether the
+	// block at its place in this frame moves with the vector; else whether
+	// the block at its place in the last frame does, here (else a thing
+	// standing still covers it in both, and neither end shows it)
+	const vec2 d = mv.xy / p1.xy;
+	const float tolerance = 1.5 + 0.1 * length(mv.xy);
+	const vec4 at = texelFetch(tex2, clamp(ivec2(floor((uv - (1.0 - t) * d) * p1.zw * vec2(grid))), ivec2(0), grid - 1), 0);
+	const vec4 at_last = texelFetch(tex2, clamp(ivec2(floor((uv + t * d) * p1.zw * vec2(grid))), ivec2(0), grid - 1), 0);
+	const bool sees = length(at.xy - mv.xy) <= tolerance || (holds && mv.w > 1.5 && at.w > 0.5);
+	const bool last_sees = length(at_last.xy - mv.xy) <= tolerance || (holds && mv.w > 1.5 && at_last.w > 0.5);
+	const vec3 moved = mix(sees ? next : last_sees ? last : nearer, mix(last, next, t), agree);
+	const vec3 between = mix(nearer, moved, trust);
 	const bool quick = camera.w > 0.5;
 	imageStore(dst, p, vec4(quick ? nearer : mix(between, nearer, still), 1.0));
 }
@@ -1025,8 +1111,8 @@ void main()
 			host.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 			host.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
 			vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT, 0, 1, &host, 0, nullptr, 0, nullptr);
-			vk::get_compute_task<frame_generation_pass<pass_median>>()->run(cmd, { m_vectors.get(), m_camera_moved.get() }, m_vectors_smooth.get(), grid_w, grid_h,
-				{ static_cast<f32>(grid_w), static_cast<f32>(grid_h) });
+			vk::get_compute_task<frame_generation_pass<pass_median>>()->run(cmd, { m_vectors.get(), m_camera_moved.get(), m_luma[0].get(), m_luma[1].get() }, m_vectors_smooth.get(), grid_w, grid_h,
+				{ static_cast<f32>(grid_w), static_cast<f32>(grid_h), work_w, work_h });
 			barrier(cmd);
 
 			// The frames between, each at its time: with three, a quarter, a half
