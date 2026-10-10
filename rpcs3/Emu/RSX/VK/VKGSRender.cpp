@@ -223,13 +223,13 @@ namespace vk
 		VkBool32 restart_index_enabled;
 	};
 
-	vertex_input_assembly_state decode_vertex_input_assembly_state()
+	vertex_input_assembly_state decode_vertex_input_assembly_state(rsx::context* ctx)
 	{
 		vertex_input_assembly_state state{};
-		const auto& current_draw = rsx::method_registers.current_draw_clause;
+		const auto& current_draw = REGS(ctx)->current_draw_clause;
 		const auto [primitive, emulated_primitive] = vk::get_appropriate_topology(current_draw.primitive);
 
-		if (rsx::method_registers.restart_index_enabled() &&
+		if (REGS(ctx)->restart_index_enabled() &&
 			!current_draw.is_disjoint_primitive &&
 			current_draw.command == rsx::draw_command::indexed &&
 			!emulated_primitive &&
@@ -415,6 +415,9 @@ u64 VKGSRender::get_cycles()
 
 VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 {
+	m_rtts.set_context(m_ctx);
+	m_vertex_layout.set_context(m_ctx);
+
 	// Initialize dependencies
 	g_fxo->need<rsx::dma_manager>();
 	g_fxo->need<vk::driver_manager_thread>();
@@ -647,7 +650,7 @@ VKGSRender::VKGSRender(utils::serial* ar) noexcept : GSRender(ar)
 
 	if (shadermode == shader_mode::async_with_interpreter || shadermode == shader_mode::interpreter_only)
 	{
-		m_shader_interpreter.init(*m_device);
+		m_shader_interpreter.init(m_ctx, *m_device);
 	}
 
 	backend_config.supports_multidraw = true;
@@ -1076,8 +1079,8 @@ bool VKGSRender::on_vram_exhausted(rsx::problem_severity severity)
 				}
 			};
 
-			scan_array(rsx::method_registers.fragment_textures);
-			scan_array(rsx::method_registers.vertex_textures);
+			scan_array(REGS(m_ctx)->fragment_textures);
+			scan_array(REGS(m_ctx)->vertex_textures);
 
 			// Hold the secondary lock guard to prevent threads from trying to touch access violation handler stuff
 			std::lock_guard lock(m_secondary_cb_guard);
@@ -1142,8 +1145,8 @@ bool VKGSRender::on_vram_exhausted(rsx::problem_severity severity)
 			}
 		};
 
-		scan_array(rsx::method_registers.fragment_textures, fs_sampler_state);
-		scan_array(rsx::method_registers.vertex_textures, vs_sampler_state);
+		scan_array(REGS(m_ctx)->fragment_textures, fs_sampler_state);
+		scan_array(REGS(m_ctx)->vertex_textures, vs_sampler_state);
 
 		if (invalidate_samplers)
 		{
@@ -1204,10 +1207,10 @@ void VKGSRender::set_viewport()
 {
 	const auto [clip_width, clip_height] = rsx::apply_resolution_scale<true>(
 		resolution_scaling_config,
-		rsx::method_registers.surface_clip_width(), rsx::method_registers.surface_clip_height());
+		REGS(m_ctx)->surface_clip_width(), REGS(m_ctx)->surface_clip_height());
 
-	const auto zclip_near = rsx::method_registers.clip_min();
-	const auto zclip_far = rsx::method_registers.clip_max();
+	const auto zclip_near = REGS(m_ctx)->clip_min();
+	const auto zclip_far = REGS(m_ctx)->clip_max();
 
 	//NOTE: The scale_offset matrix already has viewport matrix factored in
 	m_viewport.x = 0;
@@ -1250,8 +1253,8 @@ void VKGSRender::bind_viewport()
 	{
 		if (m_device->get_unrestricted_depth_range_support())
 		{
-			m_viewport.minDepth = rsx::method_registers.clip_min();
-			m_viewport.maxDepth = rsx::method_registers.clip_max();
+			m_viewport.minDepth = REGS(m_ctx)->clip_min();
+			m_viewport.maxDepth = REGS(m_ctx)->clip_max();
 		}
 
 		m_graphics_state.clear(rsx::pipeline_state::zclip_config_state_dirty);
@@ -1317,7 +1320,7 @@ void VKGSRender::clear_surface(u32 mask)
 	if (skip_current_frame) return;
 
 	// If stencil write mask is disabled, remove clear_stencil bit
-	if (!rsx::method_registers.stencil_mask()) mask &= ~RSX_GCM_CLEAR_STENCIL_BIT;
+	if (!REGS(m_ctx)->stencil_mask()) mask &= ~RSX_GCM_CLEAR_STENCIL_BIT;
 
 	// Ignore invalid clear flags
 	if (!(mask & RSX_GCM_CLEAR_ANY_MASK)) return;
@@ -1833,7 +1836,7 @@ bool VKGSRender::load_program()
 	const auto shadermode = g_cfg.video.shadermode.get();
 
 	// TODO: EXT_dynamic_state should get rid of this sillyness soon (kd)
-	const auto vertex_state = vk::decode_vertex_input_assembly_state();
+	const auto vertex_state = vk::decode_vertex_input_assembly_state(m_ctx);
 
 	if (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
 	{
@@ -2349,7 +2352,7 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 		blend_config[1] = REGS(m_ctx)->registers[NV4097_SET_BLEND_FUNC_SFACTOR];
 		blend_config[2] = REGS(m_ctx)->registers[NV4097_SET_BLEND_FUNC_DFACTOR];
 
-		const auto blend_colors = rsx::get_constant_blend_colors();
+		const auto blend_colors = rsx::get_constant_blend_colors(m_ctx);
 		blend_config[3] = std::bit_cast<u32>(blend_colors[0]);
 		blend_config[4] = std::bit_cast<u32>(blend_colors[1]);
 		blend_config[5] = std::bit_cast<u32>(blend_colors[2]);

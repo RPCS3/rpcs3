@@ -4,8 +4,7 @@
 #include "Emu/RSX/Common/TextureUtils.h"
 #include "Emu/RSX/RSXThread.h"
 
-#define RSX(ctx) ctx->rsxthr
-#define REGS(ctx) (&rsx::method_registers)
+#include "context_accessors.define.h"
 
 namespace rsx
 {
