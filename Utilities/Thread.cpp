@@ -2763,15 +2763,8 @@ void thread_base::start()
 #elif defined(__APPLE__)
 	pthread_attr_t attrs;
 	pthread_t thread_id{};
-	struct sched_param sp;
-	memset(&sp, 0, sizeof(struct sched_param));
-	sp.sched_priority=99;
 	pthread_attr_init(&attrs);
 	pthread_attr_setstacksize(&attrs, 0x800000);
-	
-	pthread_attr_set_qos_class_np(&attrs, QOS_CLASS_USER_INTERACTIVE, 0);
-	pthread_attr_setschedpolicy(&attrs, SCHED_RR);
-	pthread_attr_setschedparam(&attrs, &sp);
 	ensure(pthread_create(&thread_id, &attrs, entry_point, this) == 0);
 #else
 	pthread_t thread_id{};
@@ -3827,6 +3820,16 @@ u64 thread_ctrl::get_affinity_mask(thread_class group)
 
 	return -1;
 }
+		
+#ifdef __APPLE__
+void thread_ctrl::set_QoS_policy(qos_class_t qosClass, int priority)
+{
+	if (int err = pthread_set_qos_class_self_np(qosClass, priority))
+	{
+		sig_log.error("pthread_set_qos_class_self_np() failed: %d", err);
+	}
+}
+#endif
 
 void thread_ctrl::set_native_priority(int priority)
 {
@@ -3842,6 +3845,28 @@ void thread_ctrl::set_native_priority(int priority)
 	if (!SetThreadPriority(_this_thread, native_priority))
 	{
 		sig_log.error("SetThreadPriority() failed: %s", fmt::win_error{GetLastError(), nullptr});
+	}
+#elif defined(__APPLE__)
+	// Opt into RR scheduling if a thread must go down the route of
+	// setting high priority this way (e.g. audio, RSX).
+	// On Mac OS X, QoS priorities should be used otherwise, including
+	// for threads that need to be set to a low priority (Utility QoS class
+	// makes sense here).
+	// TODO: Does Linux/other POSIX support a QoS-like SCHED_OTHER policy?
+	if (priority > 0) {
+		struct sched_param param;
+		memset(&param, 0, sizeof(struct sched_param));
+		param.sched_priority = sched_get_priority_max(SCHED_RR);
+		param.sched_priority = sched_get_priority_min(SCHED_RR);
+		
+		if (int err = pthread_setschedparam(pthread_self(), SCHED_RR, &param))
+		{
+			sig_log.error("pthread_setschedparam() failed: %d", err);
+		}
+	}
+	else if (priority < 0) {
+		// Set a 'Utility' QoS priority & class.
+		set_QoS_policy(QOS_CLASS_UTILITY, QOS_MIN_RELATIVE_PRIORITY);
 	}
 #else
 	int policy;

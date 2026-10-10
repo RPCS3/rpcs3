@@ -2488,6 +2488,11 @@ void ppu_thread::cpu_task()
 {
 	std::fesetround(FE_TONEAREST);
 
+#ifdef __APPLE__
+	// Raise priority above other threads
+	thread_ctrl::set_QoS_policy(QOS_CLASS_USER_INTERACTIVE, QOS_MIN_RELATIVE_PRIORITY);
+#endif
+
 	if (g_cfg.core.set_daz_and_ftz)
 	{
 		gv_set_zeroing_denormals();
