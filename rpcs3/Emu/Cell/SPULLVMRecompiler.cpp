@@ -3237,6 +3237,10 @@ public:
 					check_state(baddr);
 				}
 
+				// PS5 fork: the block the SPU is in, for the trace's load sampler
+				// (ps5_frontend.cpp): a store the optimiser keeps
+				spu_context_attr(m_ir->CreateStore(m_ir->getInt32(baddr), spu_ptr(&spu_thread::ps5_block)))->setVolatile(true);
+
 				const bool is_reduced_loop = m_inst_attrs[(baddr - start) / 4] == inst_attr::reduced_loop;
 				m_reduced_loop_info = is_reduced_loop ? std::static_pointer_cast<reduced_loop_t>(ensure(m_patterns.at(baddr - start).info_ptr)) : nullptr;
 

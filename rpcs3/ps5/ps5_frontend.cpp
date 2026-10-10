@@ -8,6 +8,7 @@
 
 #include "stdafx.h"
 #include <map>
+#include <set>
 #include "ps5_frontend.h"
 
 #include <sys/stat.h>
@@ -37,6 +38,8 @@ std::string ps5_open_files_report(); // ps5_fdtrack.cpp
 #include "Emu/Memory/vm.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/SPUThread.h"
+#include "Emu/Cell/SPUDisAsm.h"
+#include "Emu/Cell/SPUAnalyser.h"
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Io/pad_config.h"
 #include "Emu/Io/KeyboardHandler.h"
@@ -94,6 +97,7 @@ std::string spu_collision_tick(u32 seconds, bool running); // SPULLVMRecompiler.
 extern atomic_t<u64> g_ps5_getllar_waits[64][2]; // SPUThread.cpp: each SPU slot's GETLLAR polls answered by busy waiting, and by sleeping
 extern atomic_t<u32> g_ps5_spu_cpus[64][16]; // SPUThread.cpp: each SPU slot's polls by the CPU it was on
 u32 ps5_spu_slot(u32 id); // SPUThread.cpp: an SPU thread's slot in those counts
+const extern spu_decoder<spu_itype> g_spu_itype; // SPUAnalyser.cpp
 extern atomic_t<u64> g_ps5_frames_generated; // VKFrameGen.cpp: frames made between the game's
 extern atomic_t<u64> g_ps5_frame_gen_us; // VKFrameGen.cpp: the RSX thread's time making and showing them,
 extern atomic_t<u64> g_ps5_frame_gen_gpu_wait_us; // and in it waiting for the GPU; frames made but dropped;
@@ -167,6 +171,39 @@ namespace
 	atomic_t<bool> g_sample_posted = false; // one sample waiting for the main thread at most
 	atomic_t<f32> g_group_load[2]{};      // each group's running threads as a share of the hardware threads, over the last five seconds
 
+	// Each SPU thread's blocks since the game started, sampled where recompiled
+	// code last entered one (spu_thread::ps5_block), with the code of the commonest
+	// (under g_loads_mutex): where the busiest SPU spends its time, in RPCS3.log
+	// every 30 seconds (GTA IV's SecondaryCellSpursKernel0 ran at 98-100% in busy
+	// streets, build 126, and the PC it leaves behind says only which program)
+	struct block_profile
+	{
+		std::string name;
+		u32 running = 0;
+		std::map<u32, u32> blocks;
+		std::map<u32, std::string> code; // disassembled as a block reaches 30 samples
+		std::set<u32> logged;
+	};
+	std::map<u32, block_profile> g_block_profiles; // by idm's ID
+
+	// A block's instructions from local storage, to its branch, 48 at most
+	std::string disassemble_block(const spu_thread& spu, u32 addr)
+	{
+		SPUDisAsm dis_asm(cpu_disasm_mode::normal, spu._ptr<u8>(0));
+		std::string text;
+		for (u32 pc = addr, n = 0; n < 48 && pc < SPU_LS_SIZE; pc += 4, n++)
+		{
+			dis_asm.disasm(pc);
+			fmt::append(text, "\n  %05x: %s", pc, dis_asm.last_opcode);
+			const spu_itype_t type = g_spu_itype.decode(*spu._ptr<u32>(pc));
+			if (type & spu_itype::branch || type == spu_itype::STOP || type == spu_itype::UNK)
+			{
+				break;
+			}
+		}
+		return text;
+	}
+
 	bool is_running(const cpu_thread& thread)
 	{
 		return !(thread.state & (cpu_flag::wait + cpu_flag::stop + cpu_flag::exit + cpu_flag::suspend + cpu_flag::dbg_global_pause + cpu_flag::dbg_pause));
@@ -200,6 +237,20 @@ namespace
 			if (is_running(spu) && load.spu_pcs.size() < 256)
 			{
 				load.spu_pcs[spu.pc]++;
+			}
+			if (is_running(spu))
+			{
+				block_profile& profile = g_block_profiles[id];
+				if (profile.name.empty())
+				{
+					profile.name = spu.get_name();
+				}
+				profile.running++;
+				const u32 block = spu.ps5_block;
+				if (++profile.blocks[block] == 30 && profile.code.size() < 32 && block < SPU_LS_SIZE)
+				{
+					profile.code[block] = disassemble_block(spu, block);
+				}
 			}
 		});
 		g_group_samples++;
@@ -293,6 +344,45 @@ namespace
 			fmt::append(result, " [%s %.0f%%]", loads[i].second, loads[i].first);
 		}
 		return result;
+	}
+
+	// The busiest SPU thread's commonest blocks since the game started, and the
+	// code of those not written before, for RPCS3.log; empty without samples
+	std::string take_block_profile()
+	{
+		std::lock_guard lock(g_loads_mutex);
+		block_profile* busiest = nullptr;
+		for (auto& [id, profile] : g_block_profiles)
+		{
+			if (!busiest || profile.running > busiest->running)
+			{
+				busiest = &profile;
+			}
+		}
+		if (!busiest || busiest->running < 100)
+		{
+			return {};
+		}
+		std::vector<std::pair<u32, u32>> blocks;
+		for (const auto& [block, count] : busiest->blocks)
+		{
+			blocks.emplace_back(count, block);
+		}
+		std::sort(blocks.begin(), blocks.end(), std::greater<>());
+		std::string text = fmt::format("SPU blocks of %s, where it ran in %u samples since the game started:", busiest->name, busiest->running);
+		for (usz i = 0; i < blocks.size() && i < 16; i++)
+		{
+			fmt::append(text, " 0x%05x %.1f%%", blocks[i].second, 100.0 * blocks[i].first / busiest->running);
+		}
+		for (usz i = 0; i < blocks.size() && i < 10; i++)
+		{
+			const u32 block = blocks[i].second;
+			if (const auto it = busiest->code.find(block); it != busiest->code.end() && busiest->logged.insert(block).second)
+			{
+				fmt::append(text, "\nSPU block 0x%05x of %s (%.1f%%):%s", block, busiest->name, 100.0 * blocks[i].first / busiest->running, it->second);
+			}
+		}
+		return text;
 	}
 
 	// Every file and folder under path made readable and writable by all, and
@@ -1273,6 +1363,7 @@ int run(const char* boot_path)
 					{
 						std::lock_guard lock(g_loads_mutex);
 						g_loads.clear();
+						g_block_profiles.clear();
 					}
 					if (seconds % 5 != 4)
 					{
@@ -1289,6 +1380,14 @@ int run(const char* boot_path)
 					if (const std::string busiest = take_thread_loads(); !busiest.empty())
 					{
 						trace_logged("busiest threads (share of the time each was running):%s; %s; %s", busiest, collision.empty() ? std::string("no collision code") : collision, ps5_cpu_own_core_text());
+					}
+					// And where the busiest SPU spends its time, every 30 seconds, in RPCS3.log
+					if (seconds % 30 == 29)
+					{
+						if (const std::string blocks = take_block_profile(); !blocks.empty())
+						{
+							ps5_log.notice("%s", blocks);
+						}
 					}
 
 					// RSX's flips and where the PPU threads are, read on the main

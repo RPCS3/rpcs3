@@ -671,6 +671,9 @@ public:
 	// May be used internally by recompilers.
 	u32 base_pc = 0;
 
+	// PS5 fork: the block recompiled code last entered (SPULLVMRecompiler.cpp), for the trace's load sampler
+	u32 ps5_block = 0;
+
 	// May be used by recompilers.
 	u8* memory_base_addr = vm::g_base_addr;
 	u8* memory_sudo_addr = vm::g_sudo_addr;
