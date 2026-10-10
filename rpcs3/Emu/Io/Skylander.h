@@ -27,7 +27,8 @@ public:
 	void write_block(u8 sky_num, u8 block, const u8* to_write_buf, u8* reply_buf);
 
 	bool remove_skylander(u8 sky_num);
-	u8 load_skylander(const std::array<u8, 0x40 * 0x10>& data, fs::file in_file);
+	u8 load_skylander(const std::array<u8, 0x40 * 0x10>& data, fs::file in_file, int requested_slot = -1);
+	void get_figure_info(u8 sky_num, u8& out_status, u16& out_id, u16& out_variant);
 
 protected:
 	shared_mutex sky_mutex;
@@ -40,6 +41,8 @@ protected:
 };
 
 extern sky_portal g_skyportal;
+
+u16 skylander_crc16(u16 init_value, const u8* buffer, u32 size);
 
 class usb_device_skylander : public usb_device_emulated
 {
