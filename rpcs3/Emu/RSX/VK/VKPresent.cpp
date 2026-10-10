@@ -751,7 +751,9 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 
 		vk::image* image_to_copy = image_to_flip;
 
-		if (g_cfg.video.record_with_overlays && has_overlay)
+		// PS5 fork: a screenshot is the game's frame alone: the pause menu asks for
+		// it as it opens (ps5/ps5_screenshots.h), and would be in it
+		if (g_cfg.video.record_with_overlays && has_overlay && !user_asked_for_screenshot)
 		{
 			const auto key = vk::get_renderpass_key(m_swapchain->get_surface_format());
 			single_target_pass = vk::get_renderpass(*m_device, key);

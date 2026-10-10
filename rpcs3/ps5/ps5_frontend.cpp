@@ -64,6 +64,7 @@ std::string ps5_open_files_report(); // ps5_fdtrack.cpp
 #include "ps5_trophy_popup.h"
 #include "ps5_perf.h"
 #include "ps5_library.h"
+#include "ps5_pad_remap.h"
 #include "Emu/Cell/Modules/sceNp.h"
 #include "util/video_source.h"
 
@@ -898,8 +899,11 @@ namespace
 			{
 				return;
 			}
-			// Last played: now (the launcher's Recently played order)
+			// Last played: now (the launcher's Recently played order); and the
+			// game's own controls, if it has any (ps5_pad_remap.h)
 			ps5_library::started(Emu.GetTitleID());
+			ps5_pad_remap::set_active(ps5_pad_remap::load(Emu.GetTitleID()));
+			ps5_pad_remap::hold_off(false);
 			const auto& core = g_cfg.core;
 			const auto& video = g_cfg.video;
 			const char* zcull = video.relaxed_zcull_sync ? "Relaxed" : video.precise_zpass_count ? "Precise" : "Approximate";
@@ -1585,6 +1589,9 @@ int run(const char* boot_path)
 			// stop ends the title only if nothing runs once that call is done
 			g_emu_callbacks.on_stop = []()
 			{
+				// The launcher reads the controller as it is
+				ps5_pad_remap::set_active(ps5_pad_remap::identity());
+				ps5_pad_remap::hold_off(false);
 				if (!Emu.after_kill_callback)
 				{
 					g_main.stop_pending = true;

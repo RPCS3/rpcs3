@@ -7,6 +7,7 @@
 #include "ps5_pause_menu.h"
 
 #include "Emu/RSX/Overlays/overlay_manager.h"
+#include "ps5_screenshots.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Utilities/Config.h"
@@ -103,6 +104,15 @@ namespace rsx::overlays
 
 		m_glow = make_glow(m_glow_pixels);
 
+		// The game as it is now, without this menu and before it shows its own
+		// pause screen: read back with its next frame, for Save screenshot
+		ps5_screenshots::hold_next();
+
+		// The controller as it is while the menu reads it; the game's controls
+		// for the Controls tab
+		ps5_pad_remap::hold_off(true);
+		m_remap = ps5_pad_remap::load(m_serial);
+
 		// The game's settings as it runs with them, a tab for each of the
 		// desktop dialog's tabs
 		m_settings = read_game_settings(m_serial, true);
@@ -125,7 +135,8 @@ namespace rsx::overlays
 				}
 			}
 		}
-		game.rows.push_back({action::capture, -1, "Save frame generation's frames", "For a report: from 2 seconds after the game resumes, 4 moments half a second apart, the game's frames and those made between, to rpcs3/captures", "home/32/screenshot.png", true});
+		game.rows.push_back({action::screenshot, -1, "Save screenshot", fmt::format("The game as it was when this menu opened, without the menu, to rpcs3/screenshots/%s. The launcher's Gallery shows them", m_serial.empty() ? std::string("unknown") : m_serial), "home/32/screenshot.png", true});
+		game.rows.push_back({action::capture, -1, "Save frame generation's frames", "For a report: from 2 seconds after the game resumes, 4 moments half a second apart, the game's frames and those made between, to rpcs3/captures", "home/32/video-camera.png", false});
 		game.rows.push_back({action::restart, -1, "Restart game", "Starts it again, with the settings changed here", "home/32/rotate-left-solid.png", false});
 		game.rows.push_back({action::quit, -1, "Quit to library", "Ends the game and goes back to your games", "home/32/circle-left-solid.png", false});
 		m_tabs.push_back(std::move(game));
@@ -171,6 +182,23 @@ namespace rsx::overlays
 				metric(perf_memory, "Memory", nullptr, m_perf_before.collision.empty());
 			}
 			m_tabs.push_back(std::move(perf));
+		}
+
+		// Controls: for each of the PS3's buttons, the controller's that presses it
+		if (!m_serial.empty())
+		{
+			tab controls;
+			controls.name = "Controls";
+			controls.rows.push_back({action::reset_controls, -1, "Use the controller's own", "Each of the PS3's buttons pressed by the same button on the controller again", "home/32/gamepad-solid.png", false});
+			for (u8 i = 0; i < ps5_pad_remap::count; i++)
+			{
+				row r;
+				r.label = fmt::format("PS3 %s", ps5_pad_remap::ps3_name(i));
+				r.remap = i;
+				r.rule_before = i == 0;
+				controls.rows.push_back(std::move(r));
+			}
+			m_tabs.push_back(std::move(controls));
 		}
 
 		for (usz i = 0; i < m_settings.size(); i++)
@@ -255,6 +283,15 @@ namespace rsx::overlays
 	void ps5_pause_menu::change(s32 direction)
 	{
 		const row& current = m_tabs[m_tab].rows[m_row];
+		if (current.remap >= 0)
+		{
+			// The next of the controller's buttons, or nothing
+			u8& source = m_remap[current.remap];
+			source = static_cast<u8>((source + (direction < 0 ? ps5_pad_remap::count : 1)) % (ps5_pad_remap::count + 1));
+			m_remap_changed = true;
+			play_sound(sound_effect::cursor);
+			return;
+		}
 		if (current.setting < 0)
 		{
 			return;
@@ -337,8 +374,32 @@ namespace rsx::overlays
 			{
 				return;
 			}
-			const row& current = m_tabs[m_tab].rows[m_row];
-			if (current.act != action::none)
+			row& current = m_tabs[m_tab].rows[m_row];
+			if (current.act == action::reset_controls)
+			{
+				if (!ps5_pad_remap::is_identity(m_remap))
+				{
+					m_remap = ps5_pad_remap::identity();
+					m_remap_changed = true;
+					play_sound(sound_effect::cancel);
+				}
+			}
+			else if (current.act == action::screenshot)
+			{
+				// Saved where it stands, the menu open still
+				if (const std::string path = ps5_screenshots::save_held(m_serial); !path.empty())
+				{
+					current.note = "Saved, as " + path.substr(path.find("screenshots/")) + ". Again for another copy of the same moment";
+					play_sound(sound_effect::accept);
+					pause_log.notice("Screenshot saved as %s", path);
+				}
+				else
+				{
+					current.note = "Not yet: the game has not drawn a frame since this menu opened. Try again in a moment";
+					play_sound(sound_effect::dialog_error);
+				}
+			}
+			else if (current.act != action::none)
 			{
 				play_sound(current.act == action::resume ? sound_effect::cancel : sound_effect::accept);
 				begin_close(current.act);
@@ -352,7 +413,13 @@ namespace rsx::overlays
 		case pad_button::square:
 		{
 			const row& current = m_tabs[m_tab].rows[m_row];
-			if (current.setting >= 0)
+			if (current.remap >= 0 && m_remap[current.remap] != current.remap)
+			{
+				m_remap[current.remap] = static_cast<u8>(current.remap);
+				m_remap_changed = true;
+				play_sound(sound_effect::cancel);
+			}
+			else if (current.setting >= 0)
 			{
 				setting_row& setting = m_settings[current.setting];
 				if (setting.value != setting.global)
@@ -419,6 +486,17 @@ namespace rsx::overlays
 
 	void ps5_pause_menu::finish_close()
 	{
+		// The moment held for a screenshot goes with the menu; the game's
+		// controls, changed or not, apply again
+		ps5_screenshots::drop_held();
+		if (m_remap_changed)
+		{
+			ps5_pad_remap::save(m_serial, m_remap);
+			ps5_pad_remap::set_active(m_remap);
+			pause_log.notice("Controls for %s: %s", m_serial, ps5_pad_remap::is_identity(m_remap) ? "the controller's own" : "remapped");
+		}
+		ps5_pad_remap::hold_off(false);
+
 		// The changes are the game's own from now on
 		if (m_changed && !m_serial.empty())
 		{
@@ -677,7 +755,30 @@ namespace rsx::overlays
 			}
 
 			s16 name_room = static_cast<s16>(c_inner_right - name_x);
-			if (entry.perf >= 0)
+			if (entry.remap >= 0)
+			{
+				// The controller's button that presses it, accent when not its own
+				const bool moved = m_remap[entry.remap] != entry.remap;
+				if (moved && !selected)
+				{
+					ellipse dot;
+					dot.set_size(6, 6);
+					dot.set_pos(c_left - 4, static_cast<s16>(std::lround(mid - 3.f)));
+					dot.back_color = c_accent;
+					card.add(dot.get_compiled());
+				}
+				auto value = make_label(ps5_pad_remap::source_name(m_remap[entry.remap]), 13, f_semibold, selected ? c_button_text : (moved ? c_accent : c_text_dim));
+				const s16 right = static_cast<s16>(c_inner_right - (selected ? 18 : 0));
+				place(*value, static_cast<s16>(right - value->w), mid);
+				card.add(value->get_compiled());
+				if (selected)
+				{
+					text("‹", 16, f_bold, c_button_text, static_cast<s16>(value->x - 18), mid);
+					text("›", 16, f_bold, c_button_text, static_cast<s16>(right + 8), mid);
+				}
+				name_room = static_cast<s16>(value->x - (selected ? 30 : 16) - name_x);
+			}
+			else if (entry.perf >= 0)
 			{
 				// A measurement: the five seconds' before the menu opened
 				auto value = make_label("", 13, f_semibold, selected ? c_button_text : c_accent);
@@ -749,6 +850,11 @@ namespace rsx::overlays
 					when += "  Global: " + setting_text(setting.key, setting.global) + ".";
 				}
 			}
+			else if (entry.remap >= 0)
+			{
+				help = fmt::format("Which of the controller's buttons presses the PS3's %s in this game. L1 + R1 + the touch pad's click opens this menu whatever is chosen, and the menu reads the controller as it is.", ps5_pad_remap::ps3_name(static_cast<u8>(entry.remap)));
+				when = "Takes effect when the game resumes; kept for this game.";
+			}
 			else if (entry.perf >= 0)
 			{
 				// What it measures, and the same now, under the menu (measured
@@ -792,11 +898,15 @@ namespace rsx::overlays
 				x += 26.f + l->w + 26.f;
 			};
 			const row& entry = current_tab.rows[std::clamp(m_row, 0, count - 1)];
-			prompt(resource_config::confirm_button_resource(), entry.setting >= 0 ? "Change" : "Select");
+			prompt(resource_config::confirm_button_resource(), (entry.setting >= 0 || entry.remap >= 0) ? "Change" : "Select");
 			prompt(resource_config::cancel_button_resource(), "Resume");
 			if (entry.setting >= 0 && m_settings[entry.setting].value != m_settings[entry.setting].global)
 			{
 				prompt(static_cast<u8>(resource_config::standard_image_resource::square), "Global value");
+			}
+			if (entry.remap >= 0 && m_remap[entry.remap] != entry.remap)
+			{
+				prompt(static_cast<u8>(resource_config::standard_image_resource::square), "Its own button");
 			}
 
 			auto tabs = make_label("Tabs", 12, f_semibold, c_text_dim);

@@ -596,6 +596,8 @@ namespace rsx::overlays
 		m_delete_thread.reset();
 		m_pt_thread.reset();
 		m_tr_thread.reset();
+		m_ga_thread.reset();
+		m_ga_image_thread.reset();
 		m_installer.reset();
 
 		if (m_enumeration_thread)
@@ -706,7 +708,7 @@ namespace rsx::overlays
 		m_bar_divider.set_size(1, 24);
 		m_bar_divider.back_color = color4f(1.f, 1.f, 1.f, 0.28f);
 
-		for (const char* name : {"Home", "Library", "Trophies", "Settings", "Install"})
+		for (const char* name : {"Home", "Library", "Trophies", "Gallery", "Settings", "Install"})
 		{
 			m_tab_labels.push_back(make_label(name, 13, f_medium, c_text_dim));
 		}
@@ -934,6 +936,20 @@ namespace rsx::overlays
 			}
 			hints.emplace_back(resource_config::cancel_button_resource(), "Home");
 		}
+		else if (m_tab == tab::gallery && m_ga_view)
+		{
+			hints.emplace_back(static_cast<u8>(resource_config::standard_image_resource::L2), "");
+			hints.emplace_back(static_cast<u8>(resource_config::standard_image_resource::R2), "Previous, next");
+			hints.emplace_back(resource_config::cancel_button_resource(), "Back");
+		}
+		else if (m_tab == tab::gallery)
+		{
+			if (!m_ga_shots.empty())
+			{
+				hints.emplace_back(resource_config::confirm_button_resource(), "View");
+			}
+			hints.emplace_back(resource_config::cancel_button_resource(), "Home");
+		}
 		else if (m_tab == tab::library && m_detail)
 		{
 			hints.emplace_back(resource_config::confirm_button_resource(), "Select");
@@ -963,7 +979,7 @@ namespace rsx::overlays
 			hints.emplace_back(resource_config::confirm_button_resource(), "Open");
 			hints.emplace_back(resource_config::cancel_button_resource(), "Home");
 		}
-		if (!m_gs_open && !m_pt_open && !m_tr_open && !installing())
+		if (!m_gs_open && !m_pt_open && !m_tr_open && !m_ga_view && !installing())
 		{
 			hints.emplace_back(static_cast<u8>(resource_config::standard_image_resource::L1), "");
 			hints.emplace_back(static_cast<u8>(resource_config::standard_image_resource::R1), "Tabs");
@@ -1495,6 +1511,10 @@ namespace rsx::overlays
 		else if (m_tab == tab::trophies)
 		{
 			open_trophies_tab();
+		}
+		else if (m_tab == tab::gallery)
+		{
+			open_gallery_tab();
 		}
 		else if (m_tab == tab::install)
 		{
@@ -4254,8 +4274,9 @@ namespace rsx::overlays
 					patches = std::move(m_pt_result);
 				}
 			}
-			// The trophies, or the open set's icons, once read
+			// The trophies, or the open set's icons, once read; and the Gallery's
 			take_trophies();
+			take_gallery();
 
 			if (patches && m_pt_open)
 			{
@@ -4404,6 +4425,12 @@ namespace rsx::overlays
 			handle_trophies(button_press);
 			return;
 		}
+		if (m_ga_view)
+		{
+			// So does a screenshot at its full size
+			handle_gallery(button_press);
+			return;
+		}
 
 		// Tabs change from anywhere at the top level, except while packages install
 		if ((button_press == pad_button::L1 || button_press == pad_button::R1) && !installing())
@@ -4422,6 +4449,12 @@ namespace rsx::overlays
 		if (m_tab == tab::trophies)
 		{
 			handle_trophies(button_press);
+			return;
+		}
+
+		if (m_tab == tab::gallery)
+		{
+			handle_gallery(button_press);
 			return;
 		}
 
@@ -4612,6 +4645,10 @@ namespace rsx::overlays
 		else if (m_tab == tab::trophies)
 		{
 			compile_trophies(result);
+		}
+		else if (m_tab == tab::gallery)
+		{
+			compile_gallery(result);
 		}
 		else
 		{

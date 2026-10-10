@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "ps5_pad_handler.h"
+#include "ps5_pad_remap.h"
 #include "Emu/Io/pad_config.h"
 
 #include <algorithm>
@@ -178,13 +179,69 @@ void ps5_pad_handler::process()
 		// while they are held together
 		u32 buttons = in.buttons;
 		constexpr u32 home_combo = RPCS3_PS5_L1 | RPCS3_PS5_R1 | RPCS3_PS5_SELECT;
-		if ((buttons & home_combo) == home_combo)
+		const bool home = (buttons & home_combo) == home_combo;
+		if (home)
 		{
 			buttons = (buttons & ~home_combo) | RPCS3_PS5_PS;
 		}
 
+		// The game's controls (ps5_pad_remap.h), from the buttons as they are:
+		// each of the controller's, pressed and how far (the triggers), in the
+		// map's order; then each of the PS3's from the one its map names. Not
+		// player 1's while the pause menu reads the pad, nor other players'
+		static constexpr u32 c_bits[ps5_pad_remap::count] = {RPCS3_PS5_CROSS, RPCS3_PS5_CIRCLE, RPCS3_PS5_SQUARE, RPCS3_PS5_TRIANGLE, RPCS3_PS5_L1, RPCS3_PS5_R1, 0, 0,
+			RPCS3_PS5_L3, RPCS3_PS5_R3, RPCS3_PS5_START, RPCS3_PS5_SELECT, RPCS3_PS5_UP, RPCS3_PS5_DOWN, RPCS3_PS5_LEFT, RPCS3_PS5_RIGHT};
+		const bool remapped = player == 0 && !ps5_pad_remap::held_off();
+		const ps5_pad_remap::map map = remapped ? ps5_pad_remap::active() : ps5_pad_remap::identity();
+		u16 source_value[ps5_pad_remap::count + 1]{};
+		for (u8 i = 0; i < ps5_pad_remap::count; i++)
+		{
+			source_value[i] = c_bits[i] ? ((buttons & c_bits[i]) ? 255 : 0) : trigger_to_ps3(i == 6 ? in.l2 : in.r2);
+		}
+		const auto output_of = [](u32 offset, u32 code) -> u8
+		{
+			if (offset == CELL_PAD_BTN_OFFSET_DIGITAL1)
+			{
+				switch (code)
+				{
+				case CELL_PAD_CTRL_UP: return 12;
+				case CELL_PAD_CTRL_DOWN: return 13;
+				case CELL_PAD_CTRL_LEFT: return 14;
+				case CELL_PAD_CTRL_RIGHT: return 15;
+				case CELL_PAD_CTRL_L3: return 8;
+				case CELL_PAD_CTRL_R3: return 9;
+				case CELL_PAD_CTRL_START: return 10;
+				case CELL_PAD_CTRL_SELECT: return 11;
+				default: return 0xff;
+				}
+			}
+			switch (code)
+			{
+			case CELL_PAD_CTRL_CROSS: return 0;
+			case CELL_PAD_CTRL_CIRCLE: return 1;
+			case CELL_PAD_CTRL_SQUARE: return 2;
+			case CELL_PAD_CTRL_TRIANGLE: return 3;
+			case CELL_PAD_CTRL_L1: return 4;
+			case CELL_PAD_CTRL_R1: return 5;
+			case CELL_PAD_CTRL_L2: return 6;
+			case CELL_PAD_CTRL_R2: return 7;
+			default: return 0xff;
+			}
+		};
+
 		for (Button& button : pad->m_buttons)
 		{
+			if (const u8 out = output_of(button.m_offset, button.m_outKeyCode); out < ps5_pad_remap::count && (remapped || out == 6 || out == 7))
+			{
+				// From its source: a trigger's pull as it is, a button full or not at all
+				const u8 source = std::min<u8>(map[out], ps5_pad_remap::count);
+				const u16 value = source_value[source];
+				const bool analog_source = source == 6 || source == 7;
+				button.m_pressed = analog_source ? value >= trigger_to_ps3(trigger_press) : value != 0;
+				button.m_value = (out == 6 || out == 7) ? value : (button.m_pressed ? 255 : 0);
+				continue;
+			}
+
 			u32 bit = 0;
 			u16 analog = 0;
 			if (button.m_offset == CELL_PAD_BTN_OFFSET_DIGITAL1)

@@ -114,6 +114,10 @@ namespace rsx::overlays::ps5ui
 		void add(compiled_resource& out, f32 seconds, f32 alpha = 1.f) const;
 	};
 
+	// An image fitted into a w x h RGBA canvas, clear around it, smoothly
+	// shrunk (the trophies' icons, the Gallery's thumbnails)
+	std::vector<u8> fit_pixels(const image_info_base& src, u16 w, u16 h);
+
 	// A five-pointed star, white on clear, its edges smoothed: a favourite's
 	std::unique_ptr<memory_image_info> make_star(std::vector<u8>& pixels);
 

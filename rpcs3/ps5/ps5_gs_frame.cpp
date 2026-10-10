@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "ps5_gs_frame.h"
+#include "ps5_screenshots.h"
 
 LOG_CHANNEL(ps5_log, "PS5");
 
@@ -35,9 +36,10 @@ display_handle_t ps5_gs_frame::handle() const
 bool ps5_gs_frame::can_consume_frame() const { return false; }
 void ps5_gs_frame::present_frame(std::vector<u8>&&, u32, u32, u32, bool) const {}
 
-void ps5_gs_frame::take_screenshot(std::vector<u8>&&, u32 sshot_width, u32 sshot_height, bool)
+// The frame the pause menu asked for as it opened, held for its Save screenshot (ps5_screenshots.h)
+void ps5_gs_frame::take_screenshot(std::vector<u8>&& sshot_data, u32 sshot_width, u32 sshot_height, bool is_bgra)
 {
-	ps5_log.warning("Screenshots are not saved yet (%ux%u)", sshot_width, sshot_height);
+	ps5_screenshots::take(std::move(sshot_data), sshot_width, sshot_height, is_bgra);
 }
 
 void ps5_gs_frame::update_title(double fps)

@@ -6,7 +6,8 @@
 // Home: the selected game's own art (PS3_GAME/PIC1.PNG) behind its name and
 // Play now / Game settings / Patches, over a row of the games' ICON0.PNG tiles.
 // Library: Big Picture Mode's game grid. Trophies: the user's trophy sets in
-// a row, each opening into a box of its trophies. Settings: RPCS3's settings
+// a row, each opening into a box of its trophies. Gallery: the screenshots the
+// pause menu saved, each opening at its full size. Settings: RPCS3's settings
 // pages. Install: PS3 packages put in the title's folder over FTP. L1 / R1
 // change tabs.
 
@@ -16,6 +17,7 @@
 #include "ps5_ui.h"
 #include "ps5_packages.h"
 #include "ps5_trophies.h"
+#include "ps5_screenshots.h"
 
 #include <map>
 #include <memory>
@@ -94,6 +96,7 @@ namespace rsx::overlays
 			home,
 			library,
 			trophies,
+			gallery,
 			settings,
 			install
 		};
@@ -388,6 +391,46 @@ namespace rsx::overlays
 		// A favourite's star
 		std::vector<u8> m_star_pixels;
 		std::unique_ptr<memory_image_info> m_star_image;
+
+		// The Gallery tab: the screenshots the pause menu saved
+		// (ps5_screenshots.h), the latest first, as thumbnails read on a thread
+		// of their own each time the tab opens (into images kept and filled
+		// again, as the trophies' icons); one opens over the page at its full
+		// size, read on a thread of its own too
+		struct gallery_result
+		{
+			u32 generation = 0;
+			std::vector<ps5_screenshots::shot> shots;
+			std::vector<std::vector<u8>> thumbs; // empty where one could not be read
+		};
+		struct gallery_image
+		{
+			u32 generation = 0;
+			s32 index = -1;
+			std::unique_ptr<image_info> image;
+		};
+		std::vector<ps5_screenshots::shot> m_ga_shots;
+		std::vector<std::unique_ptr<trophy_icon>> m_ga_thumbs;
+		bool m_ga_loading = false;
+		s32 m_ga_selected = 0;
+		s32 m_ga_scroll = 0;    // the first row in view
+		bool m_ga_view = false; // one at its full size
+		u64 m_ga_view_us = 0;
+		s32 m_ga_image_index = -1;
+		std::unique_ptr<image_info> m_ga_image;
+		std::unique_ptr<named_thread<std::function<void()>>> m_ga_thread;
+		std::unique_ptr<named_thread<std::function<void()>>> m_ga_image_thread;
+		std::mutex m_ga_result_mutex;
+		std::unique_ptr<gallery_result> m_ga_result;
+		std::unique_ptr<gallery_image> m_ga_image_result;
+		u32 m_ga_generation = 0;
+		u32 m_ga_image_generation = 0;
+		void open_gallery_tab();
+		void open_gallery_image(s32 index);
+		void take_gallery();
+		void handle_gallery(pad_button button_press);
+		void compile_gallery(compiled_resource& result);
+		std::string game_name(const std::string& serial) const;
 
 		animation_color_interpolate m_fade_animation{};
 

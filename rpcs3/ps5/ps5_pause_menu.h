@@ -8,8 +8,9 @@
 // Game: resume, the settings reached for while playing, restart, back to the
 // library. Performance: the game's frames a second, the busiest threads and
 // more, as measured over the five seconds before the menu opened (and now,
-// under it), to say what was happening when something looked wrong. The
-// other tabs: every setting the desktop dialog offers, by its
+// under it), to say what was happening when something looked wrong. Controls:
+// which of the controller's buttons presses each of the PS3's, in this game
+// (ps5_pad_remap.h). The other tabs: every setting the desktop dialog offers, by its
 // tabs, as the launcher's Game settings has them. A change is the game's own
 // (its custom config, written as the menu closes), and a setting the
 // emulator reads as it runs takes effect at once; the others from the
@@ -20,6 +21,7 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "ps5_ui.h"
 #include "ps5_perf.h"
+#include "ps5_pad_remap.h"
 
 #include <functional>
 #include <map>
@@ -47,7 +49,9 @@ namespace rsx::overlays
 			resume,
 			restart,
 			quit,
-			capture
+			capture,
+			screenshot,    // saves, and the menu stays
+			reset_controls // the controller's own, and the menu stays
 		};
 
 		// A row of a tab: an action, or a setting (an index into m_settings), or
@@ -61,6 +65,7 @@ namespace rsx::overlays
 			const char* icon = nullptr;
 			bool rule_before = false;
 			s32 perf = -1;
+			s32 remap = -1; // one of the PS3's buttons, on the Controls tab
 		};
 
 		// The Performance tab's measurements
@@ -103,6 +108,8 @@ namespace rsx::overlays
 		bool m_changed = false;
 
 		ps5_perf m_perf_before; // the five seconds before the menu opened
+		ps5_pad_remap::map m_remap = ps5_pad_remap::identity(); // this game's controls
+		bool m_remap_changed = false;
 
 		std::vector<u8> m_glow_pixels;
 		std::unique_ptr<memory_image_info> m_glow;

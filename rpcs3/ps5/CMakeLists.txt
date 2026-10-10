@@ -6,14 +6,17 @@ add_library(rpcs3_ps5 STATIC
     ps5_frontend.cpp
     ps5_gs_frame.cpp
     ps5_pad_handler.cpp
+    ps5_pad_remap.cpp
     ps5_firmware.cpp
     ps5_terminate.cpp
     ps5_audio_backend.cpp
     ps5_launcher.cpp
     ps5_launcher_trophies.cpp
+    ps5_launcher_gallery.cpp
     ps5_trophies.cpp
     ps5_trophy_popup.cpp
     ps5_library.cpp
+    ps5_screenshots.cpp
     ps5_ui.cpp
     ps5_pause_menu.cpp
     ps5_patches.cpp
