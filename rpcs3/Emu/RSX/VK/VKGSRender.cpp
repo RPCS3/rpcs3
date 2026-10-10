@@ -1191,25 +1191,12 @@ void VKGSRender::set_viewport()
 		resolution_scaling_config,
 		rsx::method_registers.surface_clip_width(), rsx::method_registers.surface_clip_height());
 
-	const auto zclip_near = rsx::method_registers.clip_min();
-	const auto zclip_far = rsx::method_registers.clip_max();
-
 	//NOTE: The scale_offset matrix already has viewport matrix factored in
 	m_viewport.x = 0;
 	m_viewport.y = 0;
 	m_viewport.width = clip_width;
 	m_viewport.height = clip_height;
-
-	if (m_device->get_unrestricted_depth_range_support())
-	{
-		m_viewport.minDepth = zclip_near;
-		m_viewport.maxDepth = zclip_far;
-	}
-	else
-	{
-		m_viewport.minDepth = 0.f;
-		m_viewport.maxDepth = 1.f;
-	}
+	std::tie(m_viewport.minDepth, m_viewport.maxDepth) = get_viewport_depth_range();
 
 	m_current_command_buffer->flags |= vk::command_buffer::cb_reload_dynamic_state;
 	m_graphics_state.clear(rsx::pipeline_state::zclip_config_state_dirty);
@@ -1233,17 +1220,35 @@ void VKGSRender::bind_viewport()
 {
 	if (m_graphics_state & rsx::pipeline_state::zclip_config_state_dirty)
 	{
-		if (m_device->get_unrestricted_depth_range_support())
-		{
-			m_viewport.minDepth = rsx::method_registers.clip_min();
-			m_viewport.maxDepth = rsx::method_registers.clip_max();
-		}
-
+		std::tie(m_viewport.minDepth, m_viewport.maxDepth) = get_viewport_depth_range();
 		m_graphics_state.clear(rsx::pipeline_state::zclip_config_state_dirty);
 	}
 
 	vkCmdSetViewport(*m_current_command_buffer, 0, 1, &m_viewport);
 	vkCmdSetScissor(*m_current_command_buffer, 0, 1, &m_scissor);
+}
+
+std::pair<f32, f32> VKGSRender::get_viewport_depth_range() const
+{
+	const f32 zclip_near = rsx::method_registers.clip_min();
+	const f32 zclip_far = rsx::method_registers.clip_max();
+
+	if (m_device->get_unrestricted_depth_range_support()) [[ likely ]]
+	{
+		return { zclip_near, zclip_far };
+	}
+
+	// The vertex shader's zclip transform relies on the viewport using the clip range, which is legal here as long as it lies within [0, 1]
+	const bool range_fits_viewport =
+		zclip_near >= 0.f && zclip_near <= 1.f &&
+		zclip_far >= 0.f && zclip_far <= 1.f;
+
+	if (range_fits_viewport && !requires_depth_range_emulation())
+	{
+		return { zclip_near, zclip_far };
+	}
+
+	return { 0.f, 1.f };
 }
 
 void VKGSRender::on_init_thread()
