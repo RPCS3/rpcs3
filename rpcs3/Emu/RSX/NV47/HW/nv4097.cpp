@@ -536,7 +536,7 @@ namespace rsx
 				}
 
 				// Notify the backend if the drawing style changes (instanced vs non-instanced)
-				if (REGS(ctx)->current_draw_clause.is_trivial_instanced_draw != RSX(ctx)->is_current_vertex_program_instanced())
+				if (REGS(ctx)->current_draw_clause.is_trivial_instanced_draw != ctx->program.is_vertex_program_instanced())
 				{
 					ctx->graphics_state |= rsx::pipeline_state::xform_instancing_state_dirty;
 				}

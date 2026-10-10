@@ -309,7 +309,7 @@ void GLGSRender::update_draw_state()
 	}
 
 	// Clip planes
-	gl_state.clip_planes((current_vertex_program.output_mask >> CELL_GCM_ATTRIB_OUTPUT_UC0) & 0x3F);
+	gl_state.clip_planes((m_ctx->program.vertex_program.output_mask >> CELL_GCM_ATTRIB_OUTPUT_UC0) & 0x3F);
 
 	// Polygon mode. We can only have one polygon mode active at one time, so we need to determine if any face is currently culled.
 	const bool show_back = REGS(m_ctx)->cull_face_enabled() && REGS(m_ctx)->cull_face_mode() == rsx::cull_face::front;
@@ -336,7 +336,7 @@ void GLGSRender::load_texture_env()
 	gl::command_context cmd{ gl_state };
 	std::lock_guard lock(m_sampler_mutex);
 
-	for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
+	for (u32 textures_ref = m_ctx->program.fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
 		if (!(textures_ref & 1))
 		{
@@ -394,7 +394,7 @@ void GLGSRender::load_texture_env()
 		if (sampler_state->format_ex.texel_remap_control &&
 			sampler_state->image_handle &&
 			sampler_state->upload_context == rsx::texture_upload_context::shader_read &&
-			(current_fp_metadata.bx2_texture_reads_mask & (1u << i)) == 0 &&
+			(m_ctx->program.fp_metadata.bx2_texture_reads_mask & (1u << i)) == 0 &&
 			!g_cfg.video.disable_hardware_texel_remapping) [[ unlikely ]]
 		{
 			// Check if we need to override the view format
@@ -470,7 +470,7 @@ void GLGSRender::load_texture_env()
 		}
 	}
 
-	for (u32 textures_ref = current_vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
+	for (u32 textures_ref = m_ctx->program.vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
 		if (!(textures_ref & 1))
 		{
@@ -585,7 +585,7 @@ void GLGSRender::bind_texture_env()
 		return image->get_view(decoded_remap, base->aspect());
 	};
 
-	for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
+	for (u32 textures_ref = m_ctx->program.fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
 		if (!(textures_ref & 1))
 		{
@@ -605,10 +605,10 @@ void GLGSRender::bind_texture_env()
 			}
 		}
 
-		if (const bool is_redirected = (current_fragment_program.texture_state.redirected_textures & (1 << i));
+		if (const bool is_redirected = (m_ctx->program.fragment_program.texture_state.redirected_textures & (1 << i));
 			!primary_view)
 		{
-			const auto target = gl::get_target(current_fragment_program.get_texture_dimension(i));
+			const auto target = gl::get_target(m_ctx->program.fragment_program.get_texture_dimension(i));
 			primary_view = m_null_textures[target]->get_view(rsx::default_remap_vector);
 
 			if (is_redirected)
@@ -629,8 +629,8 @@ void GLGSRender::bind_texture_env()
 			if (primary_view->aspect() != gl::image_aspect::color || primary_view->image()->samples() != 1)
 			{
 				const auto mask = (1u << i);
-				const bool is_redirected = !!(current_fragment_program.texture_state.redirected_textures & mask);
-				const bool is_msaa = !!(current_fragment_program.texture_state.multisampled_textures & mask);
+				const bool is_redirected = !!(m_ctx->program.fragment_program.texture_state.redirected_textures & mask);
+				const bool is_msaa = !!(m_ctx->program.fragment_program.texture_state.multisampled_textures & mask);
 				if (is_redirected || is_msaa)
 				{
 					view = decay_view_for_interpreter(
@@ -655,7 +655,7 @@ void GLGSRender::bind_texture_env()
 		}
 	}
 
-	for (u32 textures_ref = current_vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
+	for (u32 textures_ref = m_ctx->program.vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
 		if (!(textures_ref & 1))
 		{
@@ -686,18 +686,18 @@ void GLGSRender::bind_texture_env()
 
 	if (is_interpreter)
 	{
-		if (current_fp_metadata.referenced_textures_mask)
+		if (m_ctx->program.fp_metadata.referenced_textures_mask)
 		{
 			m_shader_interpreter.flush_fragment_texture_bindings();
 		}
 
-		if (current_vp_metadata.referenced_textures_mask)
+		if (m_ctx->program.vp_metadata.referenced_textures_mask)
 		{
 			m_shader_interpreter.flush_vertex_texture_bindings();
 		}
 	}
 
-	if (current_fragment_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE)
+	if (m_ctx->program.fragment_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE)
 	{
 		ensure(m_rtts.m_bound_depth_stencil.first, "Invalid FBO setup");
 		gl::insert_texture_barrier();
@@ -731,7 +731,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 
 	if (vertex_state & rsx::vertex_arrays_changed)
 	{
-		m_draw_processor.analyse_inputs_interleaved(m_vertex_layout, current_vp_metadata);
+		m_draw_processor.analyse_inputs_interleaved(m_vertex_layout, m_ctx->program.vp_metadata);
 	}
 	else if (vertex_state & rsx::vertex_base_changed)
 	{

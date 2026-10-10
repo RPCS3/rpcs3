@@ -150,7 +150,7 @@ void VKGSRender::invalidate_render_pass()
 {
 	// Regenerate renderpass key for the next draw call
 	std::vector<u8> input_attachments{};
-	if (current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING)
+	if (m_ctx->program.fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING)
 	{
 		input_attachments.resize(m_draw_buffers.size());
 		std::iota(input_attachments.begin(), input_attachments.end(), 0);
@@ -301,7 +301,7 @@ void VKGSRender::load_texture_env()
 
 	std::lock_guard lock(m_sampler_mutex);
 
-	for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
+	for (u32 textures_ref = m_ctx->program.fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
 		if (!(textures_ref & 1))
 		{
@@ -364,7 +364,7 @@ void VKGSRender::load_texture_env()
 		if (sampler_state->format_ex.texel_remap_control &&
 			sampler_state->image_handle &&
 			sampler_state->upload_context == rsx::texture_upload_context::shader_read &&
-			(current_fp_metadata.bx2_texture_reads_mask & (1u << i)) == 0 &&
+			(m_ctx->program.fp_metadata.bx2_texture_reads_mask & (1u << i)) == 0 &&
 			!g_cfg.video.disable_hardware_texel_remapping) [[ unlikely ]]
 		{
 			// Check if we need to override the view format
@@ -534,7 +534,7 @@ void VKGSRender::load_texture_env()
 			border_color, compare_enabled, depth_compare_mode);
 	}
 
-	for (u32 textures_ref = current_vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
+	for (u32 textures_ref = m_ctx->program.vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
 		if (!(textures_ref & 1))
 		{
@@ -621,7 +621,7 @@ void VKGSRender::load_texture_env()
 
 	m_samplers_dirty.store(false);
 
-	if (current_fragment_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE)
+	if (m_ctx->program.fragment_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE)
 	{
 		// Transition our FBO to a loop-friendly format.
 		// We can also convert it into an input attachment, but for now this is easier.
@@ -659,7 +659,7 @@ bool VKGSRender::bind_texture_env()
 {
 	bool out_of_memory = false;
 
-	for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
+	for (u32 textures_ref = m_ctx->program.fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
 		if (!(textures_ref & 1))
 		{
@@ -699,7 +699,7 @@ bool VKGSRender::bind_texture_env()
 				vk::glsl::binding_set_index_fragment,
 				m_fs_binding_table->ftex_location[i]);
 
-			if (current_fragment_program.texture_state.redirected_textures & (1 << i))
+			if (m_ctx->program.fragment_program.texture_state.redirected_textures & (1 << i))
 			{
 				// Stencil mirror required
 				auto root_image = static_cast<vk::viewable_image*>(view->image());
@@ -723,13 +723,13 @@ bool VKGSRender::bind_texture_env()
 		}
 		else
 		{
-			const VkImageViewType view_type = vk::get_view_type(current_fragment_program.get_texture_dimension(i));
+			const VkImageViewType view_type = vk::get_view_type(m_ctx->program.fragment_program.get_texture_dimension(i));
 			const VkDescriptorImageInfoEx desc = { *vk::null_image_view(*m_current_command_buffer, view_type), vk::null_sampler() };
 			m_program->bind_uniform(desc,
 				vk::glsl::binding_set_index_fragment,
 				m_fs_binding_table->ftex_location[i]);
 
-			if (current_fragment_program.texture_state.redirected_textures & (1 << i))
+			if (m_ctx->program.fragment_program.texture_state.redirected_textures & (1 << i))
 			{
 				m_program->bind_uniform(desc,
 					vk::glsl::binding_set_index_fragment,
@@ -738,7 +738,7 @@ bool VKGSRender::bind_texture_env()
 		}
 	}
 
-	for (u32 textures_ref = current_vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
+	for (u32 textures_ref = m_ctx->program.vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
 		if (!(textures_ref & 1))
 		{
@@ -754,7 +754,7 @@ bool VKGSRender::bind_texture_env()
 
 		if (!REGS(m_ctx)->vertex_textures[i].enabled())
 		{
-			const auto view_type = vk::get_view_type(current_vertex_program.get_texture_dimension(i));
+			const auto view_type = vk::get_view_type(m_ctx->program.vertex_program.get_texture_dimension(i));
 			m_program->bind_uniform({ *vk::null_image_view(*m_current_command_buffer, view_type), vk::null_sampler() },
 				vk::glsl::binding_set_index_vertex,
 				m_vs_binding_table->vtex_location[i]);
@@ -776,7 +776,7 @@ bool VKGSRender::bind_texture_env()
 		if (!image_ptr)
 		{
 			rsx_log.error("Texture upload failed to vtexture index %d. Binding null sampler.", i);
-			const auto view_type = vk::get_view_type(current_vertex_program.get_texture_dimension(i));
+			const auto view_type = vk::get_view_type(m_ctx->program.vertex_program.get_texture_dimension(i));
 
 			m_program->bind_uniform({ *vk::null_image_view(*m_current_command_buffer, view_type), vk::null_sampler() },
 				vk::glsl::binding_set_index_vertex,
@@ -792,19 +792,19 @@ bool VKGSRender::bind_texture_env()
 			m_vs_binding_table->vtex_location[i]);
 	}
 
-	if (current_fragment_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE)
+	if (m_ctx->program.fragment_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE)
 	{
 		auto ds = ensure(m_rtts.m_bound_depth_stencil.second);
 		auto view = ds->get_view(rsx::default_remap_vector, VK_IMAGE_ASPECT_DEPTH_BIT);
 		m_program->bind_uniform({ *view, vk::null_sampler() }, vk::glsl::binding_set_index_fragment, m_fs_binding_table->frag_depth_input_location);
 	}
 
-	if (current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING)
+	if (m_ctx->program.fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING)
 	{
-		ensure(current_fragment_program.mrt_buffers_count == m_draw_buffers.size());
+		ensure(m_ctx->program.fragment_program.mrt_buffers_count == m_draw_buffers.size());
 		const auto remap = rsx::default_remap_vector.with_encoding(vk::VK_REMAP_IDENTITY);
 
-		for (u32 i = 0; i < current_fragment_program.mrt_buffers_count; ++i)
+		for (u32 i = 0; i < m_ctx->program.fragment_program.mrt_buffers_count; ++i)
 		{
 			auto viewable = static_cast<vk::viewable_image*>(m_fbo_images[i]);
 			if (viewable->current_layout != VK_IMAGE_LAYOUT_GENERAL &&
@@ -825,7 +825,7 @@ bool VKGSRender::bind_texture_env()
 
 bool VKGSRender::bind_interpreter_texture_env()
 {
-	if (current_fp_metadata.referenced_textures_mask == 0)
+	if (m_ctx->program.fp_metadata.referenced_textures_mask == 0)
 	{
 		// Nothing to do
 		return false;
@@ -921,7 +921,7 @@ bool VKGSRender::bind_interpreter_texture_env()
 		return image->get_view(decoded_remap, base->info.subresourceRange.aspectMask);
 	};
 
-	for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
+	for (u32 textures_ref = m_ctx->program.fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 	{
 		if (!(textures_ref & 1))
 			continue;
@@ -954,8 +954,8 @@ bool VKGSRender::bind_interpreter_texture_env()
 		if (view->image()->samples() > 1 || view->info.subresourceRange.aspectMask != VK_IMAGE_ASPECT_COLOR_BIT)
 		{
 			const auto mask = (1u << i);
-			const bool is_redirected = !!(current_fragment_program.texture_state.redirected_textures & mask);
-			const bool is_msaa = !!(current_fragment_program.texture_state.multisampled_textures & mask);
+			const bool is_redirected = !!(m_ctx->program.fragment_program.texture_state.redirected_textures & mask);
+			const bool is_msaa = !!(m_ctx->program.fragment_program.texture_state.multisampled_textures & mask);
 			if (is_redirected || is_msaa)
 			{
 				view = decay_view_for_interpreter(
@@ -999,7 +999,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 
 	if (state_flags & rsx::vertex_arrays_changed)
 	{
-		m_draw_processor.analyse_inputs_interleaved(m_vertex_layout, current_vp_metadata);
+		m_draw_processor.analyse_inputs_interleaved(m_vertex_layout, m_ctx->program.vp_metadata);
 	}
 	else if (state_flags & rsx::vertex_base_changed)
 	{
@@ -1127,10 +1127,10 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		reload_state = true;
 	});
 
-	if (current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING)
+	if (m_ctx->program.fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING)
 	{
 		// Subpass inter-draw dependency for input attachment reads. Preserves open renderpasses.
-		for (u32 i = 0; i < current_fragment_program.mrt_buffers_count; ++i)
+		for (u32 i = 0; i < m_ctx->program.fragment_program.mrt_buffers_count; ++i)
 		{
 			vk::insert_image_memory_barrier(
 				*m_current_command_buffer,

@@ -714,6 +714,7 @@
     <ClInclude Include="Emu\RSX\Core\RSXDriverState.h" />
     <ClInclude Include="Emu\RSX\Core\RSXEngLock.hpp" />
     <ClInclude Include="Emu\RSX\Core\RSXFrameBuffer.h" />
+    <ClInclude Include="Emu\RSX\Core\RSXProgramState.h" />
     <ClInclude Include="Emu\RSX\Core\RSXDisplay.h" />
     <ClInclude Include="Emu\RSX\Core\RSXReservationLock.hpp" />
     <ClInclude Include="Emu\RSX\Core\RSXVertexTypes.h" />
