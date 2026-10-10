@@ -4,6 +4,7 @@
 #include "upscalers/bilinear_pass.hpp"
 #include "upscalers/fsr_pass.h"
 #include "upscalers/nearest_pass.hpp"
+#include "upscalers/sharp_bilinear_pass.hpp"
 
 #include "Emu/Cell/Modules/cellVideoOut.h"
 #include "Emu/RSX/Overlays/overlay_manager.h"
@@ -407,6 +408,9 @@ void GLGSRender::flip(const rsx::display_flip_info_t& info)
 				break;
 			case output_scaling_mode::fsr:
 				m_upscaler = std::make_unique<gl::fsr_upscale_pass>();
+				break;
+			case output_scaling_mode::sharp_bilinear:
+				m_upscaler = std::make_unique<gl::sharp_bilinear_upscale_pass>();
 				break;
 			case output_scaling_mode::bilinear:
 			default:
