@@ -246,7 +246,7 @@ namespace rsx
 		// This whole thing becomes a mess if we don't have a provoking attribute.
 		const auto vertex_id = m_vertex_push_buffers[0].get_vertex_id();
 		m_vertex_push_buffers[attribute].set_vertex_data(attribute, vertex_id, subreg_index, type, size, value);
-		RSX(m_ctx)->m_graphics_state |= rsx::pipeline_state::push_buffer_arrays_dirty;
+		m_ctx->graphics_state |= rsx::pipeline_state::push_buffer_arrays_dirty;
 	}
 
 	u32 draw_command_processor::get_push_buffer_vertex_count() const
@@ -270,7 +270,7 @@ namespace rsx
 
 	void draw_command_processor::clear_push_buffers()
 	{
-		auto& graphics_state = RSX(m_ctx)->m_graphics_state;
+		auto& graphics_state = m_ctx->graphics_state;
 		if (graphics_state & rsx::pipeline_state::push_buffer_arrays_dirty)
 		{
 			for (auto& push_buf : m_vertex_push_buffers)
