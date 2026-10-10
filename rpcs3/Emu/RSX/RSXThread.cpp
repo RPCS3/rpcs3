@@ -1003,6 +1003,19 @@ namespace rsx
 			method_registers.current_draw_clause.execute_pipeline_dependencies(m_ctx);
 		}
 		while (method_registers.current_draw_clause.next());
+
+		// Resolve open queries if no target surface is available.
+		if (!m_graphics_state.test(rtt_config_valid) &&
+			m_framebuffer_layout.width &&
+			m_framebuffer_layout.height &&
+			m_framebuffer_layout.all_attachments_count() == 0 &&
+			zcull_ctrl->has_active_queries() &&
+			zcull_ctrl->is_zpass_count_active() &&
+			!cond_render_ctrl.disable_rendering()) [[ unlikely ]]
+		{
+			// We couldn't render anything because we have no surface, but we need ZPASS evaluated.
+			evaluate_zcount_on_null_draw(m_ctx);
+		}
 	}
 
 	bool thread::should_skip_draw() const
@@ -2805,9 +2818,9 @@ namespace rsx
 
 	void thread::check_zcull_status(bool framebuffer_swap)
 	{
-		const bool zcull_rendering_enabled = !!method_registers.registers[NV4097_SET_ZCULL_EN];
-		const bool zcull_stats_enabled = !!method_registers.registers[NV4097_SET_ZCULL_STATS_ENABLE];
-		const bool zcull_pixel_cnt_enabled = !!method_registers.registers[NV4097_SET_ZPASS_PIXEL_COUNT_ENABLE];
+		const bool zcull_rendering_enabled = REGS(m_ctx)->registers[NV4097_SET_ZCULL_EN];
+		const bool zcull_stats_enabled = REGS(m_ctx)->registers[NV4097_SET_ZCULL_STATS_ENABLE];
+		const bool zcull_pixel_cnt_enabled = REGS(m_ctx)->registers[NV4097_SET_ZPASS_PIXEL_COUNT_ENABLE];
 
 		if (framebuffer_swap)
 		{

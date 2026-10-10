@@ -231,6 +231,8 @@ namespace rsx
 
 		const draw_command_processor* draw_processor() const { return &m_draw_processor; }
 
+		const reports::ZCULL_control* get_zcull_ctrl() const { return zcull_ctrl.get(); }
+
 	public:
 		shared_ptr<named_thread<ppu_thread>> intr_thread;
 
