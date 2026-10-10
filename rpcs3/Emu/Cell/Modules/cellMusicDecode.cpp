@@ -49,6 +49,7 @@ struct music_decode
 	s32 decode_status = CELL_MUSIC_DECODE_STATUS_DORMANT;
 	s32 decode_command = CELL_MUSIC_DECODE_CMD_STOP;
 	u64 read_pos = 0;
+	music_selection_context decoding_context{}; // Selection context of the playlist that is being decoded
 	utils::audio_decoder decoder{};
 
 	shared_mutex mutex;
@@ -67,11 +68,24 @@ struct music_decode
 		}
 		case CELL_MUSIC_DECODE_CMD_START:
 		{
-			decode_status = CELL_MUSIC_DECODE_STATUS_DECODING;
-			read_pos = 0;
+			// Some games answer the DECODING status notification with another START.
+			// Restarting would throw away the track that is being decoded, so keep decoding unless the selection changed.
+			const auto& ctx = current_selection_context;
+
+			if (decode_status == CELL_MUSIC_DECODE_STATUS_DECODING && !decoder.has_error() &&
+				ctx.first_track == decoding_context.first_track && ctx.context_option == decoding_context.context_option &&
+				ctx.repeat_mode == decoding_context.repeat_mode && ctx.playlist == decoding_context.playlist)
+			{
+				cellMusicDecode.notice("set_decode_command(START): already decoding the same context. Ignoring command.");
+				break;
+			}
 
 			// Decode data. The format of the decoded data is 48kHz, float 32bit, 2ch LPCM data interleaved in order from left to right.
-			cellMusicDecode.notice("set_decode_command(START): context: %s", current_selection_context.to_string());
+			cellMusicDecode.notice("set_decode_command(START): context: %s", ctx.to_string());
+
+			decoding_context = ctx;
+			decode_status = CELL_MUSIC_DECODE_STATUS_DECODING;
+			read_pos = 0;
 
 			music_selection_context context = current_selection_context;
 			context.current_track = context.first_track;
@@ -553,6 +567,8 @@ error_code cellMusicDecodeSetDecodeCommand2(s32 command)
 	if (!dec.func)
 		return CELL_MUSIC_DECODE_ERROR_GENERIC;
 
+	const s32 old_status = dec.decode_status;
+
 	const error_code result = dec.set_decode_command(command);
 
 	sysutil_register_cb([&dec, result](ppu_thread& ppu) -> s32
@@ -560,6 +576,17 @@ error_code cellMusicDecodeSetDecodeCommand2(s32 command)
 		dec.func(ppu, CELL_MUSIC_DECODE_EVENT_SET_DECODE_COMMAND_RESULT, vm::addr_t(s32{result}), dec.userData);
 		return CELL_OK;
 	});
+
+	// Some games only restart the decoding after they were notified that the status changed
+	if (const s32 new_status = dec.decode_status; new_status != old_status)
+	{
+		sysutil_register_cb([&dec, new_status](ppu_thread& ppu) -> s32
+		{
+			cellMusicDecode.notice("Sending status notification %d", new_status);
+			dec.func(ppu, CELL_MUSIC_DECODE_EVENT_STATUS_NOTIFICATION, vm::addr_t(new_status), dec.userData);
+			return CELL_OK;
+		});
+	}
 
 	return CELL_OK;
 }
