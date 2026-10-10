@@ -3,6 +3,7 @@
 #include <util/types.hpp>
 #include "Emu/Cell/lv2/sys_rsx.h"
 #include "Emu/RSX/GCM.h"
+#include "Emu/RSX/NV47/HW/context.h"
 #include "RSXIOMap.hpp"
 
 namespace rsx
@@ -26,7 +27,7 @@ namespace rsx
 			return !!tile;
 		}
 
-		utils::address_range32 tile_align(const rsx::address_range32& range) const;
+		utils::address_range32 tile_align(const utils::address_range32& range) const;
 	};
 
 	struct GCM_context
@@ -53,5 +54,27 @@ namespace rsx
 		atomic_t<u64> unsent_gcm_events = 0; // Unsent event bits when aborting RSX/VBLANK thread (will be sent on savestate load)
 
 		GCM_tile_reference get_tiled_memory_region(const utils::address_range32& range) const;
+	};
+
+	class thread;
+	struct rsx_state;
+
+	// Master RSX context. Aggregates the domain-specific sub-objects from HW and FW context information.
+	struct context
+	{
+		thread* rsxthr = nullptr;
+		rsx_state* register_state = nullptr;
+
+		context(u32 id, thread* owner);
+		~context();
+
+		context(const context&) = delete;
+		context& operator=(const context&) = delete;
+
+		// Stable identity. 0 is reserved for the primary context.
+		u32 id() const { return m_id; }
+
+	private:
+		u32 m_id = 0;
 	};
 }
