@@ -395,7 +395,7 @@ namespace rsx
 				write(writer, ptimer->timestamp(), value);
 			}
 
-			if (writer->query && writer->query->sync_tag == ptimer->cond_render_ctrl.eval_sync_tag)
+			if (writer->query && writer->query->sync_tag == ptimer->get_context()->cond_render.eval_sync_tag)
 			{
 				bool eval_failed;
 				if (!writer->forwarder) [[likely]]
@@ -411,7 +411,7 @@ namespace rsx
 					eval_failed = (vm::_ref<CellGcmReportData>(writer->sink).value == 0u);
 				}
 
-				ptimer->cond_render_ctrl.set_eval_result(ptimer, eval_failed);
+				ptimer->get_context()->cond_render.set_eval_result(ptimer, eval_failed);
 			}
 		}
 

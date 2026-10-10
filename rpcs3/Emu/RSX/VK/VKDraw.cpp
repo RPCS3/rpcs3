@@ -205,7 +205,7 @@ void VKGSRender::update_draw_state()
 	if (!(m_current_command_buffer->flags & vk::command_buffer::cb_reload_dynamic_state))
 	{
 		// Dynamic state already set
-		m_frame_stats.setup_time += m_profiler.duration();
+		m_ctx->stats.setup_time += m_profiler.duration();
 		return;
 	}
 
@@ -274,7 +274,7 @@ void VKGSRender::update_draw_state()
 
 	m_current_command_buffer->flags &= ~vk::command_buffer::cb_reload_dynamic_state;
 	m_ctx->graphics_state.clear(rsx::pipeline_state::polygon_offset_state_dirty | rsx::pipeline_state::depth_bounds_state_dirty);
-	m_frame_stats.setup_time += m_profiler.duration();
+	m_ctx->stats.setup_time += m_profiler.duration();
 }
 
 void VKGSRender::load_texture_env()
@@ -1042,7 +1042,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		return;
 	}
 
-	m_frame_stats.vertex_upload_time += m_profiler.duration();
+	m_ctx->stats.vertex_upload_time += m_profiler.duration();
 
 	// Faults are allowed during vertex upload. Ensure consistent CB state after uploads.
 	// Queries are spawned and closed outside render pass scope for consistency reasons.
@@ -1157,7 +1157,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		update_draw_state();
 		begin_render_pass();
 
-		if (cond_render_ctrl.hw_cond_active && m_device->get_conditional_render_support())
+		if (m_ctx->cond_render.hw_cond_active && m_device->get_conditional_render_support())
 		{
 			// It is inconvenient that conditional rendering breaks other things like compute dispatch
 			// TODO: If this is heavy, add refactor the resources into global and add checks around compute dispatch
@@ -1171,7 +1171,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 	}
 
 	// Bind the new set of descriptors for use with this draw call
-	m_frame_stats.setup_time += m_profiler.duration();
+	m_ctx->stats.setup_time += m_profiler.duration();
 
 	if (!upload_info.index_info)
 	{
@@ -1252,7 +1252,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 		}
 	}
 
-	m_frame_stats.draw_exec_time += m_profiler.duration();
+	m_ctx->stats.draw_exec_time += m_profiler.duration();
 }
 
 void VKGSRender::begin()
@@ -1262,8 +1262,8 @@ void VKGSRender::begin()
 
 	rsx::thread::begin();
 
-	if (skip_current_frame ||
-		cond_render_ctrl.disable_rendering())
+	if (m_ctx->frame_skip.skip_current_frame ||
+		m_ctx->cond_render.disable_rendering())
 	{
 		return;
 	}
@@ -1308,10 +1308,10 @@ void VKGSRender::end()
 
 	analyse_current_rsx_pipeline();
 
-	m_frame_stats.setup_time += m_profiler.duration();
+	m_ctx->stats.setup_time += m_profiler.duration();
 
 	load_texture_env();
-	m_frame_stats.textures_upload_time += m_profiler.duration();
+	m_ctx->stats.textures_upload_time += m_profiler.duration();
 
 	if (!load_program())
 	{
@@ -1325,7 +1325,7 @@ void VKGSRender::end()
 
 	// Load program execution environment
 	load_program_env();
-	m_frame_stats.setup_time += m_profiler.duration();
+	m_ctx->stats.setup_time += m_profiler.duration();
 
 	// Apply write memory barriers
 	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
@@ -1355,7 +1355,7 @@ void VKGSRender::end()
 
 	m_ctx->graphics_state.clear(rsx::zeta_address_cyclic_barrier);
 
-	m_frame_stats.setup_time += m_profiler.duration();
+	m_ctx->stats.setup_time += m_profiler.duration();
 
 	// Now bind the shader resources. It is important that this takes place after the barriers so that we don't end up with stale descriptors
 	for (int retry = 0; retry < 3; ++retry)
@@ -1391,7 +1391,7 @@ void VKGSRender::end()
 	}
 
 	m_texture_cache.release_uncached_temporary_subresources();
-	m_frame_stats.textures_upload_time += m_profiler.duration();
+	m_ctx->stats.textures_upload_time += m_profiler.duration();
 
 	u32 sub_index = 0;               // RSX subdraw ID
 	m_current_draw.subdraw_id = 0;   // Host subdraw ID. Invalid RSX subdraws do not increment this value

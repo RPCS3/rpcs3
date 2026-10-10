@@ -1317,7 +1317,7 @@ void VKGSRender::on_exit()
 
 void VKGSRender::clear_surface(u32 mask)
 {
-	if (skip_current_frame) return;
+	if (m_ctx->frame_skip.skip_current_frame) return;
 
 	// If stencil write mask is disabled, remove clear_stencil bit
 	if (!REGS(m_ctx)->stencil_mask()) mask &= ~RSX_GCM_CLEAR_STENCIL_BIT;
@@ -1924,14 +1924,14 @@ bool VKGSRender::load_program()
 
 		if (g_cfg.video.debug_overlay)
 		{
-			m_frame_stats.program_cache_lookups_total += 2;
+			m_ctx->stats.program_cache_lookups_total += 2;
 			if (m_ctx->program.cache_hint.has_fragment_program())
 			{
-				m_frame_stats.program_cache_lookups_ellided++;
+				m_ctx->stats.program_cache_lookups_ellided++;
 			}
 			if (m_ctx->program.cache_hint.has_vertex_program())
 			{
-				m_frame_stats.program_cache_lookups_ellided++;
+				m_ctx->stats.program_cache_lookups_ellided++;
 			}
 		}
 
@@ -2221,7 +2221,7 @@ void VKGSRender::load_program_env()
 	if (vk::emulate_conditional_rendering())
 	{
 		const vk::buffer& predicate = m_cond_render_buffer ? *m_cond_render_buffer : *vk::get_scratch_buffer(*m_current_command_buffer, 4, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_ACCESS_NONE);
-		const u32 offset = cond_render_ctrl.hw_cond_active ? 0 : 4;
+		const u32 offset = m_ctx->cond_render.hw_cond_active ? 0 : 4;
 		m_program->bind_uniform({ predicate, offset, 4 }, vk::glsl::binding_set_index_vertex, m_vs_binding_table->cr_pred_buffer_location);
 	}
 

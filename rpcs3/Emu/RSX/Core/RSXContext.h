@@ -5,6 +5,8 @@
 #include "Emu/RSX/Common/bitfield.hpp"
 #include "Emu/RSX/NV47/FW/context.h"
 #include "Emu/RSX/NV47/HW/context.h"
+#include "Emu/RSX/RSXZCULL.h"
+#include "RSXDisplay.h"
 #include "RSXDriverState.h"
 #include "RSXFrameBuffer.h"
 #include "RSXProgramState.h"
@@ -29,6 +31,10 @@ namespace rsx
 		framebuffer_state fb;
 		program_state program;
 		texture_state textures;
+		reports::conditional_render_eval cond_render;
+
+		frame_statistics_t stats{};
+		frame_skip_state frame_skip;
 
 		context(u32 id, thread* owner);
 		~context();

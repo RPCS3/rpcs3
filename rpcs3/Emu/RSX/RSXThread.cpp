@@ -919,9 +919,9 @@ namespace rsx
 
 	void thread::begin()
 	{
-		if (cond_render_ctrl.hw_cond_active)
+		if (m_ctx->cond_render.hw_cond_active)
 		{
-			if (!cond_render_ctrl.eval_pending())
+			if (!m_ctx->cond_render.eval_pending())
 			{
 				// End conditional rendering if still active
 				end_conditional_rendering();
@@ -929,23 +929,23 @@ namespace rsx
 
 			// If hw cond render is enabled and evalutation is still pending, do nothing
 		}
-		else if (cond_render_ctrl.eval_pending())
+		else if (m_ctx->cond_render.eval_pending())
 		{
 			// Evaluate conditional rendering test or enable hw cond render until results are available
 			if (backend_config.supports_hw_conditional_render)
 			{
 				// In this mode, it is possible to skip the cond render while the backend is still processing data.
 				// The backend guarantees that any draw calls emitted during this time will NOT generate any ROP writes
-				ensure(!cond_render_ctrl.hw_cond_active);
+				ensure(!m_ctx->cond_render.hw_cond_active);
 
 				// Pending evaluation, use hardware test
-				begin_conditional_rendering(cond_render_ctrl.eval_sources);
+				begin_conditional_rendering(m_ctx->cond_render.eval_sources);
 			}
 			else
 			{
 				// NOTE: eval_sources list is reversed with newest query first
-				zcull_ctrl->read_barrier(this, cond_render_ctrl.eval_address, cond_render_ctrl.eval_sources.front());
-				ensure(!cond_render_ctrl.eval_pending());
+				zcull_ctrl->read_barrier(this, m_ctx->cond_render.eval_address, m_ctx->cond_render.eval_sources.front());
+				ensure(!m_ctx->cond_render.eval_pending());
 			}
 		}
 
@@ -972,7 +972,7 @@ namespace rsx
 		}
 
 		m_ctx->in_begin_end = false;
-		m_frame_stats.draw_calls++;
+		m_ctx->stats.draw_calls++;
 
 		REGS(m_ctx)->current_draw_clause.post_execute_cleanup(m_ctx);
 
@@ -1003,7 +1003,7 @@ namespace rsx
 
 	bool thread::should_skip_draw() const
 	{
-		if (skip_current_frame || !m_ctx->graphics_state.test(rsx::rtt_config_valid) || cond_render_ctrl.disable_rendering())
+		if (m_ctx->frame_skip.skip_current_frame || !m_ctx->graphics_state.test(rsx::rtt_config_valid) || m_ctx->cond_render.disable_rendering())
 		{
 			return true;
 		}
@@ -1862,7 +1862,7 @@ namespace rsx
 		// Log this to frame stats
 		if (layout.target != rsx::surface_target::none)
 		{
-			m_frame_stats.framebuffer_stats.add(layout.width, layout.height, aa_mode);
+			m_ctx->stats.framebuffer_stats.add(layout.width, layout.height, aa_mode);
 		}
 
 		// Check if anything has changed
@@ -2872,42 +2872,42 @@ namespace rsx
 
 	void thread::enable_conditional_rendering(vm::addr_t ref)
 	{
-		cond_render_ctrl.enable_conditional_render(this, ref);
+		m_ctx->cond_render.enable_conditional_render(this, ref);
 
 		auto result = zcull_ctrl->find_query(ref, true);
 		if (result.found)
 		{
 			if (!result.queries.empty())
 			{
-				cond_render_ctrl.set_eval_sources(result.queries);
-				sync_hint(FIFO::interrupt_hint::conditional_render_eval, { .query = cond_render_ctrl.eval_sources.front(), .address = ref });
+				m_ctx->cond_render.set_eval_sources(result.queries);
+				sync_hint(FIFO::interrupt_hint::conditional_render_eval, { .query = m_ctx->cond_render.eval_sources.front(), .address = ref });
 			}
 			else
 			{
 				bool failed = (result.raw_zpass_result == 0);
-				cond_render_ctrl.set_eval_result(this, failed);
+				m_ctx->cond_render.set_eval_result(this, failed);
 			}
 		}
 		else
 		{
-			cond_render_ctrl.eval_result(this);
+			m_ctx->cond_render.eval_result(this);
 		}
 	}
 
 	void thread::disable_conditional_rendering()
 	{
-		cond_render_ctrl.disable_conditional_render(this);
+		m_ctx->cond_render.disable_conditional_render(this);
 	}
 
 	void thread::begin_conditional_rendering(const std::vector<reports::occlusion_query_info*>& /*sources*/)
 	{
-		cond_render_ctrl.hw_cond_active = true;
-		cond_render_ctrl.eval_sources.clear();
+		m_ctx->cond_render.hw_cond_active = true;
+		m_ctx->cond_render.eval_sources.clear();
 	}
 
 	void thread::end_conditional_rendering()
 	{
-		cond_render_ctrl.hw_cond_active = false;
+		m_ctx->cond_render.hw_cond_active = false;
 	}
 
 	void thread::sync()
@@ -3517,9 +3517,9 @@ namespace rsx
 		}
 
 		// Save current state
-		m_queued_flip.stats = m_frame_stats;
+		m_queued_flip.stats = m_ctx->stats;
 		m_queued_flip.push(buffer);
-		m_queued_flip.skip_frame = skip_current_frame;
+		m_queued_flip.skip_frame = m_ctx->frame_skip.skip_current_frame;
 
 		if (!forced) [[likely]]
 		{
@@ -3527,17 +3527,17 @@ namespace rsx
 			{
 				// Try to enable FIFO optimizations
 				// Only rarely useful for some games like RE4
-				m_flattener.evaluate_performance(m_frame_stats.draw_calls);
+				m_flattener.evaluate_performance(m_ctx->stats.draw_calls);
 			}
 
 			if (g_cfg.video.frame_skip_enabled)
 			{
-				m_skip_frame_ctr++;
+				m_ctx->frame_skip.skip_frame_ctr++;
 
-				if (m_skip_frame_ctr >= g_cfg.video.consecutive_frames_to_draw)
-					m_skip_frame_ctr = -g_cfg.video.consecutive_frames_to_skip;
+				if (m_ctx->frame_skip.skip_frame_ctr >= g_cfg.video.consecutive_frames_to_draw)
+					m_ctx->frame_skip.skip_frame_ctr = -g_cfg.video.consecutive_frames_to_skip;
 
-				skip_current_frame = (m_skip_frame_ctr < 0);
+				m_ctx->frame_skip.skip_current_frame = (m_ctx->frame_skip.skip_frame_ctr < 0);
 			}
 		}
 		else
@@ -3561,7 +3561,7 @@ namespace rsx
 		}
 
 		// Reset current stats
-		m_frame_stats = {};
+		m_ctx->stats = {};
 		m_profiler.enabled = !!g_cfg.video.debug_overlay;
 	}
 
