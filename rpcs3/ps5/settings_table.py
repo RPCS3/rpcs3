@@ -52,6 +52,11 @@ PS5_EXTRA = [
      "every other emulator thread off that core. In GTA IV it is the busiest thread of all in busy streets "
      "(its sound and more), and the game waits for it. Off, the console's system places every thread, and "
      "two busy ones can share a core. Takes effect when the game starts."),
+    ("SPUOwnCore", "CPU", "SPUFastCollision", "Fast collision (GTA IV)",
+     "Compiles GTA IV's collision code on the SPUs with the same float accuracy as the rest of the game, "
+     "not the accurate one it needs. Faster: the SPUs that run it work noticeably less. But cars and Niko "
+     "can fall through the ground. For measuring how much speed accurate collision costs, then turning it "
+     "off again. Takes effect when the game starts."),
     ("OutputScalingMode", "GPU", "FrameGeneration", "Frame generation",
      "Shows frames made between the game's own when the game runs slower than the display's 60 frames a "
      "second: motion looks smoother. The game itself runs no faster, each of its frames reaches the "

@@ -36,6 +36,7 @@ struct cfg_root : cfg::node
 		cfg::_bool spu_loop_detection{ this, "SPU loop detection", false }; // Try to detect wait loops and trigger thread yield
 		cfg::_int<1, 6> max_spurs_threads{ this, "Max SPURS Threads", 6, true }; // HACK. If less then 6, max number of running SPURS threads in each thread group.
 		cfg::_bool spu_own_core{ this, "SPU Own Core", false }; // PS5: a one-SPU SPURS kernel alone on a core (rpcs3/ps5/ps5_cpus.h)
+		cfg::_bool spu_fast_collision{ this, "SPU Fast Collision", false }; // PS5: GTA IV's collision programs at the configured xfloat accuracy, not accurate (SPULLVMRecompiler.cpp)
 		cfg::_enum<spu_block_size_type> spu_block_size{ this, "SPU Block Size", spu_block_size_type::safe };
 		cfg::_bool spu_accurate_dma{ this, "Accurate SPU DMA", false };
 		cfg::_bool spu_accurate_reservations{ this, "Accurate SPU Reservations", true };

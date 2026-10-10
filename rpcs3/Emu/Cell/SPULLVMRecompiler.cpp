@@ -120,7 +120,7 @@ namespace
 
 	bool needs_accurate_xfloat(const spu_program& func)
 	{
-		if (g_accurate_xfloat_off)
+		if (g_accurate_xfloat_off || g_cfg.core.spu_fast_collision)
 		{
 			return false;
 		}
@@ -165,11 +165,11 @@ void spu_note_program_image(std::string_view name, u32 vaddr, const void* data, 
 	{
 		return;
 	}
-	if (!config_switch("collision-test-off").empty())
+	if (g_cfg.core.spu_fast_collision || !config_switch("collision-test-off").empty())
 	{
 		if (!g_accurate_xfloat_off.exchange(true))
 		{
-			spu_log.success("SPU program '%s': accurate xfloat off for this run (collision-test-off)", name);
+			spu_log.success("SPU program '%s': accurate xfloat off for this run (%s)", name, g_cfg.core.spu_fast_collision ? "the Fast collision setting" : "collision-test-off");
 		}
 		return;
 	}
