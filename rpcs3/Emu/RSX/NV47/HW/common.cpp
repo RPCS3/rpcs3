@@ -70,7 +70,7 @@ namespace rsx
 
 			RSX(ctx)->m_textures_dirty[index] = true;
 
-			if (RSX(ctx)->current_fp_metadata.referenced_textures_mask & (1 << index))
+			if (ctx->program.fp_metadata.referenced_textures_mask & (1 << index))
 			{
 				ctx->graphics_state |= rsx::pipeline_state::fragment_program_state_dirty;
 			}
@@ -80,7 +80,7 @@ namespace rsx
 		{
 			RSX(ctx)->m_vertex_textures_dirty[index] = true;
 
-			if (RSX(ctx)->current_vp_metadata.referenced_textures_mask & (1 << index))
+			if (ctx->program.vp_metadata.referenced_textures_mask & (1 << index))
 			{
 				ctx->graphics_state |= rsx::pipeline_state::vertex_program_state_dirty;
 			}

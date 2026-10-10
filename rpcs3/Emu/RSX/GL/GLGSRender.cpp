@@ -835,7 +835,7 @@ bool GLGSRender::load_program()
 	if (m_ctx->graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
 	{
 		get_current_fragment_program(fs_sampler_state);
-		ensure(current_fragment_program.valid);
+		ensure(m_ctx->program.fragment_program.valid);
 
 		get_current_vertex_program(vs_sampler_state);
 	}
@@ -849,9 +849,9 @@ bool GLGSRender::load_program()
 		if (shadermode == shader_mode::interpreter_only)
 		{
 			m_program = m_shader_interpreter.get(
-				current_fp_metadata,
-				current_vertex_program.ctrl,
-				current_fragment_program.ctrl);
+				m_ctx->program.fp_metadata,
+				m_ctx->program.vertex_program.ctrl,
+				m_ctx->program.fragment_program.ctrl);
 			return true;
 		}
 	}
@@ -864,11 +864,11 @@ bool GLGSRender::load_program()
 		if (g_cfg.video.debug_overlay)
 		{
 			m_frame_stats.program_cache_lookups_total += 2;
-			if (m_program_cache_hint.has_fragment_program())
+			if (m_ctx->program.cache_hint.has_fragment_program())
 			{
 				m_frame_stats.program_cache_lookups_ellided++;
 			}
-			if (m_program_cache_hint.has_vertex_program())
+			if (m_ctx->program.cache_hint.has_vertex_program())
 			{
 				m_frame_stats.program_cache_lookups_ellided++;
 			}
@@ -877,12 +877,12 @@ bool GLGSRender::load_program()
 		void* pipeline_properties = nullptr;
 		// The shader interpreter does not emulate the depth range; compile those programs synchronously instead
 		const bool allow_async = shadermode != shader_mode::recompiler &&
-			!(current_fragment_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE);
+			!(m_ctx->program.fragment_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE);
 
 		std::tie(m_program, m_vertex_prog, m_fragment_prog) = m_prog_buffer.get_graphics_pipeline(
-			&m_program_cache_hint,
-			current_vertex_program,
-			current_fragment_program,
+			&m_ctx->program.cache_hint,
+			m_ctx->program.vertex_program,
+			m_ctx->program.fragment_program,
 			pipeline_properties,
 			allow_async, true);
 
@@ -914,9 +914,9 @@ bool GLGSRender::load_program()
 		if (!m_program)
 		{
 			m_program = m_shader_interpreter.get(
-				current_fp_metadata,
-				current_vertex_program.ctrl,
-				current_fragment_program.ctrl);
+				m_ctx->program.fp_metadata,
+				m_ctx->program.vertex_program.ctrl,
+				m_ctx->program.fragment_program.ctrl);
 
 			// Program has changed, reupload
 			m_interpreter_state = rsx::invalidate_pipeline_bits;
@@ -946,7 +946,7 @@ void GLGSRender::load_program_env()
 		fmt::throw_exception("Unreachable right now");
 	}
 
-	const u32 fragment_constants_size = current_fp_metadata.program_constants_buffer_length;
+	const u32 fragment_constants_size = m_ctx->program.fp_metadata.program_constants_buffer_length;
 
 	const bool update_transform_constants = m_ctx->graphics_state & rsx::pipeline_state::transform_constants_dirty;
 	const bool update_fragment_constants = (m_ctx->graphics_state & rsx::pipeline_state::fragment_constants_dirty) && fragment_constants_size;
@@ -970,7 +970,7 @@ void GLGSRender::load_program_env()
 		if (update_instruction_buffers)
 		{
 			m_vertex_instructions_buffer->reserve_storage_on_heap(513 * 16);
-			m_fragment_instructions_buffer->reserve_storage_on_heap(current_fp_metadata.program_ucode_length);
+			m_fragment_instructions_buffer->reserve_storage_on_heap(m_ctx->program.fp_metadata.program_ucode_length);
 		}
 	}
 
@@ -1043,7 +1043,7 @@ void GLGSRender::load_program_env()
 		auto buf = static_cast<u8*>(mapping.first);
 
 		m_prog_buffer.fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), fragment_constants_size },
-			*ensure(m_fragment_prog), current_fragment_program, true);
+			*ensure(m_fragment_prog), m_ctx->program.fragment_program, true);
 
 		m_fragment_constants_buffer->bind_range(GL_FRAGMENT_CONSTANT_BUFFERS_BIND_SLOT, mapping.second, fragment_constants_size);
 	}
@@ -1053,7 +1053,7 @@ void GLGSRender::load_program_env()
 		// Fragment state
 		auto mapping = m_fragment_env_buffer->alloc_from_heap(32, m_uniform_buffer_offset_align);
 		auto buf = static_cast<u8*>(mapping.first);
-		m_draw_processor.fill_fragment_state_buffer(buf, current_fragment_program);
+		m_draw_processor.fill_fragment_state_buffer(buf, m_ctx->program.fragment_program);
 
 		m_fragment_env_buffer->bind_range(GL_FRAGMENT_STATE_BIND_SLOT, mapping.second, 32);
 	}
@@ -1062,7 +1062,7 @@ void GLGSRender::load_program_env()
 	{
 		// Fragment texture parameters
 		auto mapping = m_texture_parameters_buffer->alloc_from_heap(768, m_uniform_buffer_offset_align);
-		current_fragment_program.texture_params.write_to(mapping.first, current_fp_metadata.referenced_textures_mask);
+		m_ctx->program.fragment_program.texture_params.write_to(mapping.first, m_ctx->program.fp_metadata.referenced_textures_mask);
 
 		m_texture_parameters_buffer->bind_range(GL_FRAGMENT_TEXTURE_PARAMS_BIND_SLOT, mapping.second, 768);
 	}
@@ -1082,17 +1082,17 @@ void GLGSRender::load_program_env()
 		if (m_interpreter_state & rsx::vertex_program_dirty)
 		{
 			// Attach vertex buffer data
-			const auto vp_block_length = current_vp_metadata.ucode_length + 16;
+			const auto vp_block_length = m_ctx->program.vp_metadata.ucode_length + 16;
 			auto vp_mapping = m_vertex_instructions_buffer->alloc_from_heap(vp_block_length, 16);
 			auto vp_buf = static_cast<u8*>(vp_mapping.first);
 
 			auto vp_config = reinterpret_cast<u32*>(vp_buf);
-			vp_config[0] = current_vertex_program.base_address;
-			vp_config[1] = current_vertex_program.entry;
-			vp_config[2] = current_vertex_program.output_mask;
+			vp_config[0] = m_ctx->program.vertex_program.base_address;
+			vp_config[1] = m_ctx->program.vertex_program.entry;
+			vp_config[2] = m_ctx->program.vertex_program.output_mask;
 			vp_config[3] = REGS(m_ctx)->two_side_light_en() ? 1u : 0u;
 
-			std::memcpy(vp_buf + 16, current_vertex_program.data.data(), current_vp_metadata.ucode_length);
+			std::memcpy(vp_buf + 16, m_ctx->program.vertex_program.data.data(), m_ctx->program.vp_metadata.ucode_length);
 
 			m_vertex_instructions_buffer->bind_range(GL_INTERPRETER_VERTEX_BLOCK, vp_mapping.second, vp_block_length);
 			m_vertex_instructions_buffer->notify();
@@ -1101,17 +1101,17 @@ void GLGSRender::load_program_env()
 		if (m_interpreter_state & rsx::fragment_program_dirty)
 		{
 			// Attach fragment buffer data
-			const auto fp_block_length = current_fp_metadata.program_ucode_length + 16;
+			const auto fp_block_length = m_ctx->program.fp_metadata.program_ucode_length + 16;
 			auto fp_mapping = m_fragment_instructions_buffer->alloc_from_heap(fp_block_length, 16);
 			auto fp_buf = static_cast<u8*>(fp_mapping.first);
 
 			// Control mask
 			const auto control_masks = reinterpret_cast<u32*>(fp_buf);
 			control_masks[0] = REGS(m_ctx)->shader_control();
-			control_masks[1] = current_fragment_program.texture_state.texture_dimensions;
-			control_masks[2] = current_fp_metadata.referenced_textures_mask;
+			control_masks[1] = m_ctx->program.fragment_program.texture_state.texture_dimensions;
+			control_masks[2] = m_ctx->program.fp_metadata.referenced_textures_mask;
 
-			std::memcpy(fp_buf + 16, current_fragment_program.get_data(), current_fragment_program.ucode_length);
+			std::memcpy(fp_buf + 16, m_ctx->program.fragment_program.get_data(), m_ctx->program.fragment_program.ucode_length);
 
 			m_fragment_instructions_buffer->bind_range(GL_INTERPRETER_FRAGMENT_BLOCK, fp_mapping.second, fp_block_length);
 			m_fragment_instructions_buffer->notify();
@@ -1192,7 +1192,7 @@ void GLGSRender::update_vertex_env(const gl::vertex_upload_info& upload_info)
 
 	m_draw_processor.fill_vertex_layout_state(
 		m_vertex_layout,
-		current_vp_metadata,
+		m_ctx->program.vp_metadata,
 		upload_info.first_vertex,
 		upload_info.allocated_vertex_count,
 		reinterpret_cast<s32*>(buf),
