@@ -1780,7 +1780,13 @@ void PPUTranslator::VPKUWUS(ppu_opcode_t op)
 
 void PPUTranslator::VREFP(ppu_opcode_t op)
 {
-	SetVr(op.vd, VecEstimate("__vrefp", op.vb));
+	if (g_cfg.core.ppu_set_vest)
+	{
+		SetVr(op.vd, VecEstimate("__vrefp", op.vb));
+		return;
+	}
+
+	set_vr(op.vd, vec_handle_result(fsplat<f32[4]>(1.0) / get_vr<f32[4]>(op.vb)));
 }
 
 void PPUTranslator::VRFIM(ppu_opcode_t op)
@@ -1823,7 +1829,13 @@ void PPUTranslator::VRLW(ppu_opcode_t op)
 
 void PPUTranslator::VRSQRTEFP(ppu_opcode_t op)
 {
-	SetVr(op.vd, VecEstimate("__vrsqrtefp", op.vb));
+	if (g_cfg.core.ppu_set_vest)
+	{
+		SetVr(op.vd, VecEstimate("__vrsqrtefp", op.vb));
+		return;
+	}
+
+	set_vr(op.vd, vec_handle_result(fsplat<f32[4]>(1.0) / callf<f32[4]>(get_intrinsic<f32[4]>(Intrinsic::sqrt), get_vr<f32[4]>(op.vb))));
 }
 
 void PPUTranslator::VSEL(ppu_opcode_t op)
