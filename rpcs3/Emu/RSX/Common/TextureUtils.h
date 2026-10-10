@@ -364,8 +364,13 @@ namespace rsx
 
 	bool is_compressed_host_format(const texture_uploader_capabilities& caps, u32 format); // Returns true for host-compressed formats (DXT)
 	u8 get_format_sample_count(rsx::surface_antialiasing antialias);
-	u32 get_max_depth_value(rsx::surface_depth_format2 format);
+	f32 get_depth_clear_value(rsx::surface_depth_format2 format, u32 raw);
+	f32 clamp_depth_bounds_value(rsx::surface_depth_format2 format, f32 value);
 	bool is_depth_stencil_format(rsx::surface_depth_format2 format);
+	bool is_float_depth_format(rsx::surface_depth_format2 format);
+
+	// Storage encoding of float depth when the host cannot hold depth values above 1. Must match encode_emulated_depth in GLSL.
+	f32 encode_emulated_depth(f32 depth);
 
 	/**
 	* Format feature support. There is not simple format to determine what is supported here, results are from hw tests
