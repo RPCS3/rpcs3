@@ -664,8 +664,8 @@ auto MFVSCR()
 		u32 sat_bit = 0;
 		if constexpr (((Flags == set_sat) || ...))
 			sat_bit = !gv_testz(sat); //!!sat._u;
-		d._u64[0] = 0;
-		d._u64[1] = u64(sat_bit | (u32{nj} << 16)) << 32;
+		d._u64[0] = sat_bit | (u32{nj} << 16);
+		d._u64[1] = 0;
 	};
 
 	RETURN_(ppu.vr[op.vd], ppu.sat, ppu.nj);
@@ -679,7 +679,7 @@ auto MTVSCR()
 
 	static const auto exec = [](auto&& sat, auto&& nj, auto&& jm_mask, auto&& b)
 	{
-		const u32 vscr = b._u32[3];
+		const u32 vscr = b._u32[0];
 		if constexpr (((Flags == set_sat) || ...))
 			sat._u = vscr & 1;
 		if constexpr (((Flags == use_nj || Flags == fix_nj) || ...))
