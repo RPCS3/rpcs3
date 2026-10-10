@@ -310,7 +310,7 @@ void usb_device_usio::translate_input_tekken()
 
 	auto& mouse_handler = g_fxo->get<MouseHandlerBase>();
 	std::lock_guard mouse_lock(mouse_handler.mutex);
-	mouse_handler.Init(g_cfg_usio.players.size());
+	mouse_handler.Init(static_cast<u32>(g_cfg_usio.players.size()));
 
 	const auto translate_input = [&](usz player)
 	{
