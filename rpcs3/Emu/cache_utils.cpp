@@ -24,6 +24,47 @@ namespace rpcs3::cache
 		return _main->cache;
 	}
 
+	std::string get_shader_cache()
+	{
+		const auto _main = g_fxo->try_get<main_ppu_module<lv2_obj>>();
+
+		if (!_main || _main->cache.empty())
+		{
+			ppu_log.error("PPU Cache location not initialized.");
+			return {};
+		}
+
+		// The shader cache does not depend on the executable, so it should survive game updates.
+		// Store it next to the PPU-specific folders (cache/TITLEID/shaders_cache/) when a title id is available.
+		// Otherwise (vsh, standalone ELFs, PS1 classics) keep it inside the PPU-specific folder.
+		const std::string cache_root = rpcs3::utils::get_cache_dir();
+		const std::string title_dir = rpcs3::utils::get_cache_dir(_main->path);
+
+		if (title_dir == cache_root || title_dir == cache_root + "vsh/")
+		{
+			return _main->cache + "shaders_cache/";
+		}
+
+		const std::string shared_path = title_dir + "shaders_cache/";
+		const std::string legacy_path = _main->cache + "shaders_cache/";
+
+		// Reuse the existing cache of the current executable if there is no shared cache yet
+		if (!fs::is_dir(shared_path) && fs::is_dir(legacy_path))
+		{
+			if (fs::rename(legacy_path, shared_path, false))
+			{
+				sys_log.notice("Moved shader cache '%s' to '%s'", legacy_path, shared_path);
+			}
+			else
+			{
+				sys_log.error("Failed to move shader cache '%s' to '%s' (%s)", legacy_path, shared_path, fs::g_tls_error);
+				return legacy_path;
+			}
+		}
+
+		return shared_path;
+	}
+
 	void limit_cache_size()
 	{
 		const std::string cache_location = rpcs3::utils::get_hdd1_dir() + "/caches";

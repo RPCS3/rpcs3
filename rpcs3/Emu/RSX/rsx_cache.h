@@ -215,10 +215,7 @@ namespace rsx
 		{
 			if (!g_cfg.video.disable_on_disk_shader_cache)
 			{
-				if (std::string cache_path = rpcs3::cache::get_ppu_cache(); !cache_path.empty())
-				{
-					root_path = std::move(cache_path) + "shaders_cache/";
-				}
+				root_path = rpcs3::cache::get_shader_cache();
 			}
 		}
 
