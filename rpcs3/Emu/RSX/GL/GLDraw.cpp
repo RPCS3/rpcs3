@@ -1002,7 +1002,7 @@ void GLGSRender::end()
 	}
 	while (draw_call.next());
 
-	m_rtts.on_write(m_framebuffer_layout.color_write_enabled, m_framebuffer_layout.zeta_write_enabled);
+	m_rtts.on_write(m_ctx->fb.layout.color_write_enabled, m_ctx->fb.layout.zeta_write_enabled);
 
 	m_attrib_ring_buffer->notify();
 	m_index_ring_buffer->notify();

@@ -2526,7 +2526,7 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 {
 	const bool clipped_scissor = (context == rsx::framebuffer_creation_context::context_draw);
-	if (m_current_framebuffer_context == context && !m_ctx->graphics_state.test(rsx::rtt_config_dirty) && m_draw_fbo)
+	if (m_ctx->fb.current_context == context && !m_ctx->graphics_state.test(rsx::rtt_config_dirty) && m_draw_fbo)
 	{
 		// Fast path
 		// Framebuffer usage has not changed, framebuffer exists and config regs have not changed
@@ -2540,13 +2540,13 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		rsx::rtt_config_valid |
 		rsx::rtt_cache_state_dirty);
 
-	get_framebuffer_layout(context, m_framebuffer_layout);
+	get_framebuffer_layout(context, m_ctx->fb.layout);
 	if (!m_ctx->graphics_state.test(rsx::rtt_config_valid))
 	{
 		return;
 	}
 
-	if (m_draw_fbo && m_framebuffer_layout.ignore_change)
+	if (m_draw_fbo && m_ctx->fb.layout.ignore_change)
 	{
 		// Nothing has changed, we're still using the same framebuffer
 		// Update flags to match current
@@ -2555,54 +2555,54 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	}
 
 	m_rtts.prepare_render_target(*m_current_command_buffer,
-		m_framebuffer_layout.color_format, m_framebuffer_layout.depth_format,
-		m_framebuffer_layout.width, m_framebuffer_layout.height,
-		m_framebuffer_layout.target, m_framebuffer_layout.aa_mode, m_framebuffer_layout.raster_type,
-		m_framebuffer_layout.color_addresses, m_framebuffer_layout.zeta_address,
-		m_framebuffer_layout.actual_color_pitch, m_framebuffer_layout.actual_zeta_pitch,
+		m_ctx->fb.layout.color_format, m_ctx->fb.layout.depth_format,
+		m_ctx->fb.layout.width, m_ctx->fb.layout.height,
+		m_ctx->fb.layout.target, m_ctx->fb.layout.aa_mode, m_ctx->fb.layout.raster_type,
+		m_ctx->fb.layout.color_addresses, m_ctx->fb.layout.zeta_address,
+		m_ctx->fb.layout.actual_color_pitch, m_ctx->fb.layout.actual_zeta_pitch,
 		resolution_scaling_config);
 
 	// Reset framebuffer information
-	const auto color_bpp = get_format_block_size_in_bytes(m_framebuffer_layout.color_format);
-	const auto samples = get_format_sample_count(m_framebuffer_layout.aa_mode);
+	const auto color_bpp = get_format_block_size_in_bytes(m_ctx->fb.layout.color_format);
+	const auto samples = get_format_sample_count(m_ctx->fb.layout.aa_mode);
 
 	for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
 	{
 		// Flush old address if we keep missing it
-		if (m_surface_info[i].pitch && g_cfg.video.write_color_buffers)
+		if (m_ctx->fb.surface_info[i].pitch && g_cfg.video.write_color_buffers)
 		{
-			const utils::address_range32 rsx_range = m_surface_info[i].get_memory_range();
+			const utils::address_range32 rsx_range = m_ctx->fb.surface_info[i].get_memory_range();
 			m_texture_cache.set_memory_read_flags(rsx_range, rsx::memory_read_flags::flush_once);
 			m_texture_cache.flush_if_cache_miss_likely(*m_current_command_buffer, rsx_range);
 		}
 
-		m_surface_info[i].address = m_surface_info[i].pitch = 0;
-		m_surface_info[i].width = m_framebuffer_layout.width;
-		m_surface_info[i].height = m_framebuffer_layout.height;
-		m_surface_info[i].color_format = m_framebuffer_layout.color_format;
-		m_surface_info[i].bpp = color_bpp;
-		m_surface_info[i].samples = samples;
+		m_ctx->fb.surface_info[i].address = m_ctx->fb.surface_info[i].pitch = 0;
+		m_ctx->fb.surface_info[i].width = m_ctx->fb.layout.width;
+		m_ctx->fb.surface_info[i].height = m_ctx->fb.layout.height;
+		m_ctx->fb.surface_info[i].color_format = m_ctx->fb.layout.color_format;
+		m_ctx->fb.surface_info[i].bpp = color_bpp;
+		m_ctx->fb.surface_info[i].samples = samples;
 	}
 
 	// Process depth surface as well
 	{
-		if (m_depth_surface_info.pitch && g_cfg.video.write_depth_buffer)
+		if (m_ctx->fb.depth_surface_info.pitch && g_cfg.video.write_depth_buffer)
 		{
-			const utils::address_range32 surface_range = m_depth_surface_info.get_memory_range();
+			const utils::address_range32 surface_range = m_ctx->fb.depth_surface_info.get_memory_range();
 			m_texture_cache.set_memory_read_flags(surface_range, rsx::memory_read_flags::flush_once);
 			m_texture_cache.flush_if_cache_miss_likely(*m_current_command_buffer, surface_range);
 		}
 
-		m_depth_surface_info.address = m_depth_surface_info.pitch = 0;
-		m_depth_surface_info.width = m_framebuffer_layout.width;
-		m_depth_surface_info.height = m_framebuffer_layout.height;
-		m_depth_surface_info.depth_format = m_framebuffer_layout.depth_format;
-		m_depth_surface_info.bpp = get_format_block_size_in_bytes(m_framebuffer_layout.depth_format);
-		m_depth_surface_info.samples = samples;
+		m_ctx->fb.depth_surface_info.address = m_ctx->fb.depth_surface_info.pitch = 0;
+		m_ctx->fb.depth_surface_info.width = m_ctx->fb.layout.width;
+		m_ctx->fb.depth_surface_info.height = m_ctx->fb.layout.height;
+		m_ctx->fb.depth_surface_info.depth_format = m_ctx->fb.layout.depth_format;
+		m_ctx->fb.depth_surface_info.bpp = get_format_block_size_in_bytes(m_ctx->fb.layout.depth_format);
+		m_ctx->fb.depth_surface_info.samples = samples;
 	}
 
 	// Bind created rtts as current fbo...
-	const auto draw_buffers = rsx::utility::get_rtt_indexes(m_framebuffer_layout.target);
+	const auto draw_buffers = rsx::utility::get_rtt_indexes(m_ctx->fb.layout.target);
 	m_draw_buffers.clear();
 	m_fbo_images.clear();
 
@@ -2612,11 +2612,11 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		{
 			m_fbo_images.push_back(surface);
 
-			m_surface_info[index].address = m_framebuffer_layout.color_addresses[index];
-			m_surface_info[index].pitch = m_framebuffer_layout.actual_color_pitch[index];
-			ensure(surface->rsx_pitch == m_framebuffer_layout.actual_color_pitch[index]);
+			m_ctx->fb.surface_info[index].address = m_ctx->fb.layout.color_addresses[index];
+			m_ctx->fb.surface_info[index].pitch = m_ctx->fb.layout.actual_color_pitch[index];
+			ensure(surface->rsx_pitch == m_ctx->fb.layout.actual_color_pitch[index]);
 
-			m_texture_cache.notify_surface_changed(m_surface_info[index].get_memory_range(m_framebuffer_layout.aa_factors));
+			m_texture_cache.notify_surface_changed(m_ctx->fb.surface_info[index].get_memory_range(m_ctx->fb.layout.aa_factors));
 			m_draw_buffers.push_back(index);
 		}
 	}
@@ -2626,11 +2626,11 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		auto ds = std::get<1>(m_rtts.m_bound_depth_stencil);
 		m_fbo_images.push_back(ds);
 
-		m_depth_surface_info.address = m_framebuffer_layout.zeta_address;
-		m_depth_surface_info.pitch = m_framebuffer_layout.actual_zeta_pitch;
-		ensure(ds->rsx_pitch == m_framebuffer_layout.actual_zeta_pitch);
+		m_ctx->fb.depth_surface_info.address = m_ctx->fb.layout.zeta_address;
+		m_ctx->fb.depth_surface_info.pitch = m_ctx->fb.layout.actual_zeta_pitch;
+		ensure(ds->rsx_pitch == m_ctx->fb.layout.actual_zeta_pitch);
 
-		m_texture_cache.notify_surface_changed(m_depth_surface_info.get_memory_range(m_framebuffer_layout.aa_factors));
+		m_texture_cache.notify_surface_changed(m_ctx->fb.depth_surface_info.get_memory_range(m_ctx->fb.layout.aa_factors));
 	}
 
 	// Before messing with memory properties, flush command queue if there are dma transfers queued up
@@ -2687,14 +2687,14 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 	for (u8 index : m_draw_buffers)
 	{
-		if (!m_surface_info[index].address || !m_surface_info[index].pitch) continue;
+		if (!m_ctx->fb.surface_info[index].address || !m_ctx->fb.surface_info[index].pitch) continue;
 
-		const utils::address_range32 surface_range = m_surface_info[index].get_memory_range();
+		const utils::address_range32 surface_range = m_ctx->fb.surface_info[index].get_memory_range();
 		if (g_cfg.video.write_color_buffers)
 		{
 			m_texture_cache.lock_memory_region(
 				*m_current_command_buffer, m_rtts.m_bound_render_targets[index].second, surface_range, true,
-				m_surface_info[index].width, m_surface_info[index].height, m_framebuffer_layout.actual_color_pitch[index],
+				m_ctx->fb.surface_info[index].width, m_ctx->fb.surface_info[index].height, m_ctx->fb.layout.actual_color_pitch[index],
 				m_rtts.m_bound_render_targets[index].second);
 		}
 		else
@@ -2703,14 +2703,14 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		}
 	}
 
-	if (m_depth_surface_info.address && m_depth_surface_info.pitch)
+	if (m_ctx->fb.depth_surface_info.address && m_ctx->fb.depth_surface_info.pitch)
 	{
-		const utils::address_range32 surface_range = m_depth_surface_info.get_memory_range();
+		const utils::address_range32 surface_range = m_ctx->fb.depth_surface_info.get_memory_range();
 		if (g_cfg.video.write_depth_buffer)
 		{
 			m_texture_cache.lock_memory_region(
 				*m_current_command_buffer, m_rtts.m_bound_depth_stencil.second, surface_range, true,
-				m_depth_surface_info.width, m_depth_surface_info.height, m_framebuffer_layout.actual_zeta_pitch,
+				m_ctx->fb.depth_surface_info.width, m_ctx->fb.depth_surface_info.height, m_ctx->fb.layout.actual_zeta_pitch,
 				m_rtts.m_bound_depth_stencil.second);
 		}
 		else
@@ -2743,7 +2743,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	m_cached_renderpass = vk::get_renderpass(*m_device, m_current_renderpass_key);
 
 	// Search old framebuffers for this same configuration
-	const auto [fbo_width, fbo_height] = rsx::apply_resolution_scale<true>(resolution_scaling_config, m_framebuffer_layout.width, m_framebuffer_layout.height);
+	const auto [fbo_width, fbo_height] = rsx::apply_resolution_scale<true>(resolution_scaling_config, m_ctx->fb.layout.width, m_ctx->fb.layout.height);
 
 	if (m_draw_fbo)
 	{
