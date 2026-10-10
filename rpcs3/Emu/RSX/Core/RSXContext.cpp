@@ -12,6 +12,9 @@ namespace rsx
 		register_state = m_owned_register_state.get();
 		register_state->init();
 
+		textures.fragment_textures_dirty.fill(true);
+		textures.vertex_textures_dirty.fill(true);
+
 		graphics_state |= pipeline_state::all_dirty;
 	}
 
