@@ -83,6 +83,8 @@ namespace aarch64
         { 0x61, 0x25, "armv8.5-a", "M1 Pro", "Icestorm" },
         { 0x61, 0x32, "armv8.5-a", "M2", "Avalanche" },
         { 0x61, 0x33, "armv8.5-a", "M2", "Blizzard" },
+        { 0x61, 0x38, "armv8.5-a+fp16+bf16+i8mm+dotprod", "M2 Pro/Max", "Avalanche" },
+        { 0x61, 0x39, "armv8.5-a+fp16+bf16+i8mm+dotprod", "M2 Pro/Max", "Blizzard" },
 
         // QUALCOMM
         { 0x51, 0x01, "armv8.5-a", "Snapdragon", "X-Elite" },
@@ -136,7 +138,9 @@ namespace aarch64
 #endif
     }
 
-    std::string get_cpu_name()
+    // Resolve the representative CPU part entry for this machine (the "lowest" core in a
+    // big.LITTLE layout), or nullptr if the layout can't be fully identified.
+    static const cpu_entry_t* get_cpu_part_info()
     {
         std::map<u64, int> core_layout;
         for (u32 i = 0; i < std::thread::hardware_concurrency(); ++i)
@@ -152,10 +156,10 @@ namespace aarch64
 
         if (core_layout.empty())
         {
-            return {};
+            return nullptr;
         }
 
-        const cpu_entry_t* lowest_part_info = nullptr; 
+        const cpu_entry_t* lowest_part_info = nullptr;
         for (const auto& [midr, count] : core_layout)
         {
             const auto implementer_id = (midr >> 24) & 0xff;
@@ -164,7 +168,7 @@ namespace aarch64
             const auto part_info = find_cpu_part(implementer_id, part_id);
             if (!part_info)
             {
-                return {};
+                return nullptr;
             }
 
             if (lowest_part_info == nullptr || lowest_part_info > part_info)
@@ -173,7 +177,13 @@ namespace aarch64
             }
         }
 
-        return lowest_part_info ? lowest_part_info->name : "";
+        return lowest_part_info;
+    }
+
+    std::string get_cpu_name()
+    {
+        const auto part_info = get_cpu_part_info();
+        return part_info ? part_info->name : "";
     }
 
     std::string get_cpu_brand()
@@ -239,6 +249,27 @@ namespace aarch64
         result += suffix;
         return result;
     }
+
+    std::string get_cpu_llvm_name()
+    {
+        const auto part_info = get_cpu_part_info();
+
+        // Only Apple silicon (implementer 0x61) gets a hand-picked -mcpu for now. The family
+        // field holds the SoC generation ("M2", "M2 Pro/Max", ...) whose first token maps
+        // directly onto the LLVM "apple-mN" targets (and auto-extends to future generations).
+        if (!part_info || part_info->vendor != 0x61 || !part_info->family || !part_info->family[0])
+        {
+            return {};
+        }
+
+        const auto tokens = fmt::split_sv(part_info->family, {" "});
+        if (tokens.empty())
+        {
+            return {};
+        }
+
+        return fmt::format("apple-%s", fmt::to_lower(tokens.front()));
+    }
 #else
     static std::string sysctl_s(const std::string_view& variable_name)
     {
@@ -296,6 +327,29 @@ namespace aarch64
         }
 
         return fmt::format("%s (%lluP+%lluE)", brand, pcores, ecores);
+    }
+
+    std::string get_cpu_llvm_name()
+    {
+        // machdep.cpu.brand_string on Apple silicon is "Apple <family>", e.g. "Apple M2 Max",
+        // "Apple M1 Pro", "Apple M4". The generation token after the "Apple " vendor prefix maps
+        // directly onto the LLVM "apple-mN"/"apple-aN" targets.
+        const auto brand = sysctl_s("machdep.cpu.brand_string");
+
+        std::string_view family = brand;
+        if (!family.starts_with("Apple "))
+        {
+            return {};
+        }
+        family.remove_prefix(6);
+
+        const auto tokens = fmt::split_sv(family, {" "});
+        if (tokens.empty())
+        {
+            return {};
+        }
+
+        return fmt::format("apple-%s", fmt::to_lower(tokens.front()));
     }
 #endif
 }
