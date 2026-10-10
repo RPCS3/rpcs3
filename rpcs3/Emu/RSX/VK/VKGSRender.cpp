@@ -960,7 +960,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 
 			g_fxo->get<rsx::dma_manager>().set_mem_fault_flag();
 			m_queue_status |= flush_queue_state::deadlock;
-			m_eng_interrupt_mask |= rsx::backend_interrupt;
+			m_ctx->eng_interrupt_mask |= rsx::backend_interrupt;
 
 			// Wait for deadlock to clear
 			while (m_queue_status & flush_queue_state::deadlock)
@@ -983,7 +983,7 @@ bool VKGSRender::on_access_violation(u32 address, bool is_writing)
 			std::lock_guard lock(m_flush_queue_mutex);
 
 			m_flush_requests.post(false);
-			m_eng_interrupt_mask |= rsx::backend_interrupt;
+			m_ctx->eng_interrupt_mask |= rsx::backend_interrupt;
 			has_queue_ref = true;
 		}
 		else
@@ -1230,7 +1230,7 @@ void VKGSRender::set_viewport()
 	}
 
 	m_current_command_buffer->flags |= vk::command_buffer::cb_reload_dynamic_state;
-	m_graphics_state.clear(rsx::pipeline_state::zclip_config_state_dirty);
+	m_ctx->graphics_state.clear(rsx::pipeline_state::zclip_config_state_dirty);
 }
 
 void VKGSRender::set_scissor(bool clip_viewport)
@@ -1249,7 +1249,7 @@ void VKGSRender::set_scissor(bool clip_viewport)
 
 void VKGSRender::bind_viewport()
 {
-	if (m_graphics_state & rsx::pipeline_state::zclip_config_state_dirty)
+	if (m_ctx->graphics_state & rsx::pipeline_state::zclip_config_state_dirty)
 	{
 		if (m_device->get_unrestricted_depth_range_support())
 		{
@@ -1257,7 +1257,7 @@ void VKGSRender::bind_viewport()
 			m_viewport.maxDepth = REGS(m_ctx)->clip_max();
 		}
 
-		m_graphics_state.clear(rsx::pipeline_state::zclip_config_state_dirty);
+		m_ctx->graphics_state.clear(rsx::pipeline_state::zclip_config_state_dirty);
 	}
 
 	vkCmdSetViewport(*m_current_command_buffer, 0, 1, &m_viewport);
@@ -1330,7 +1330,7 @@ void VKGSRender::clear_surface(u32 mask)
 	if (mask & RSX_GCM_CLEAR_DEPTH_STENCIL_MASK) ctx |= rsx::framebuffer_creation_context::context_clear_depth;
 	init_buffers(rsx::framebuffer_creation_context{ctx});
 
-	if (!m_graphics_state.test(rsx::rtt_config_valid))
+	if (!m_ctx->graphics_state.test(rsx::rtt_config_valid))
 	{
 		return;
 	}
@@ -1791,14 +1791,14 @@ void VKGSRender::do_local_task(rsx::FIFO::state state)
 			m_flush_queue_mutex.unlock();
 		}
 	}
-	else if (!in_begin_end && state != rsx::FIFO::state::lock_wait)
+	else if (!m_ctx->in_begin_end && state != rsx::FIFO::state::lock_wait)
 	{
-		if (m_graphics_state & rsx::pipeline_state::framebuffer_reads_dirty)
+		if (m_ctx->graphics_state & rsx::pipeline_state::framebuffer_reads_dirty)
 		{
 			//This will re-engage locks and break the texture cache if another thread is waiting in access violation handler!
 			//Only call when there are no waiters
 			m_texture_cache.do_update();
-			m_graphics_state.clear(rsx::pipeline_state::framebuffer_reads_dirty);
+			m_ctx->graphics_state.clear(rsx::pipeline_state::framebuffer_reads_dirty);
 		}
 	}
 
@@ -1820,7 +1820,7 @@ void VKGSRender::do_local_task(rsx::FIFO::state state)
 
 	if (m_overlay_manager)
 	{
-		const auto should_ignore = in_begin_end && state != rsx::FIFO::state::empty;
+		const auto should_ignore = m_ctx->in_begin_end && state != rsx::FIFO::state::empty;
 		if ((async_flip_requested & flip_request::native_ui) && !should_ignore && !is_stopped())
 		{
 			flush_command_queue(true);
@@ -1838,16 +1838,16 @@ bool VKGSRender::load_program()
 	// TODO: EXT_dynamic_state should get rid of this sillyness soon (kd)
 	const auto vertex_state = vk::decode_vertex_input_assembly_state(m_ctx);
 
-	if (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
+	if (m_ctx->graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
 	{
 		get_current_fragment_program(fs_sampler_state);
 		ensure(current_fragment_program.valid);
 
 		get_current_vertex_program(vs_sampler_state);
 
-		m_graphics_state.clear(rsx::pipeline_state::invalidate_pipeline_bits);
+		m_ctx->graphics_state.clear(rsx::pipeline_state::invalidate_pipeline_bits);
 	}
-	else if (!(m_graphics_state & rsx::pipeline_state::pipeline_config_dirty) &&
+	else if (!(m_ctx->graphics_state & rsx::pipeline_state::pipeline_config_dirty) &&
 		m_program &&
 		m_pipeline_properties.state.ia.topology == vertex_state.primitive &&
 		m_pipeline_properties.state.ia.primitiveRestartEnable == vertex_state.restart_index_enabled)
@@ -1880,7 +1880,7 @@ bool VKGSRender::load_program()
 	auto &vertex_program = current_vertex_program;
 	auto &fragment_program = current_fragment_program;
 
-	if (m_graphics_state & rsx::pipeline_state::pipeline_config_dirty)
+	if (m_ctx->graphics_state & rsx::pipeline_state::pipeline_config_dirty)
 	{
 		vk::pipeline_props properties = vk::decode_rsx_state(
 			m_ctx,
@@ -1905,7 +1905,7 @@ bool VKGSRender::load_program()
 
 		// Fallthrough
 		m_pipeline_properties = properties;
-		m_graphics_state.clear(rsx::pipeline_state::pipeline_config_dirty);
+		m_ctx->graphics_state.clear(rsx::pipeline_state::pipeline_config_dirty);
 	}
 	else
 	{
@@ -1989,12 +1989,12 @@ bool VKGSRender::load_program()
 		if (is_interpreter != was_interpreter)
 		{
 			// Always reupload transform constants when going between interpreter and recompiler
-			m_graphics_state |= rsx::transform_constants_dirty;
+			m_ctx->graphics_state |= rsx::transform_constants_dirty;
 
 			// Always reload fragment constansts when moving from interpreter back to recompiler.
 			if (was_interpreter)
 			{
-				m_graphics_state |= rsx::fragment_constants_dirty;
+				m_ctx->graphics_state |= rsx::fragment_constants_dirty;
 			}
 		}
 	}
@@ -2025,13 +2025,13 @@ void VKGSRender::load_program_env()
 	const u32 fragment_constants_size = current_fp_metadata.program_constants_buffer_length;
 	const bool is_interpreter = m_shader_interpreter.is_interpreter(m_program);
 
-	const bool update_transform_constants = !!(m_graphics_state & rsx::pipeline_state::transform_constants_dirty);
-	const bool update_fragment_constants = !!(m_graphics_state & rsx::pipeline_state::fragment_constants_dirty);
-	const bool update_vertex_env = !!(m_graphics_state & rsx::pipeline_state::vertex_state_dirty);
-	const bool update_fragment_env = !!(m_graphics_state & rsx::pipeline_state::fragment_state_dirty);
-	const bool update_fragment_texture_env = !!(m_graphics_state & rsx::pipeline_state::fragment_texture_state_dirty);
+	const bool update_transform_constants = !!(m_ctx->graphics_state & rsx::pipeline_state::transform_constants_dirty);
+	const bool update_fragment_constants = !!(m_ctx->graphics_state & rsx::pipeline_state::fragment_constants_dirty);
+	const bool update_vertex_env = !!(m_ctx->graphics_state & rsx::pipeline_state::vertex_state_dirty);
+	const bool update_fragment_env = !!(m_ctx->graphics_state & rsx::pipeline_state::fragment_state_dirty);
+	const bool update_fragment_texture_env = !!(m_ctx->graphics_state & rsx::pipeline_state::fragment_texture_state_dirty);
 	const bool update_instruction_buffers = (!!m_interpreter_state && is_interpreter);
-	const bool update_raster_env = (ctx->polygon_stipple_enabled() && !!(m_graphics_state & rsx::pipeline_state::polygon_stipple_pattern_dirty));
+	const bool update_raster_env = (ctx->polygon_stipple_enabled() && !!(m_ctx->graphics_state & rsx::pipeline_state::polygon_stipple_pattern_dirty));
 	const bool update_instancing_data = ctx->current_draw_clause.is_trivial_instanced_draw;
 
 	if (update_vertex_env)
@@ -2154,7 +2154,7 @@ void VKGSRender::load_program_env()
 		std::memcpy(buf, ctx->polygon_stipple_pattern(), 128);
 		m_raster_env_ring_info.unmap();
 
-		m_graphics_state.clear(rsx::pipeline_state::polygon_stipple_pattern_dirty);
+		m_ctx->graphics_state.clear(rsx::pipeline_state::polygon_stipple_pattern_dirty);
 	}
 
 	if (update_instruction_buffers)
@@ -2252,7 +2252,7 @@ void VKGSRender::load_program_env()
 		ensure(m_vertex_constants_buffer_info.range >= 468 * 16);
 	}
 
-	m_graphics_state.clear(handled_flags);
+	m_ctx->graphics_state.clear(handled_flags);
 }
 
 std::pair<const vs_binding_table_t*, const fs_binding_table_t*> VKGSRender::get_binding_table() const
@@ -2385,7 +2385,7 @@ void VKGSRender::patch_transform_constants(rsx::context* /*ctx*/, u32 index, u32
 	if (!m_program || !m_vertex_prog)
 	{
 		// Shouldn't be reachable, but handle it correctly anyway
-		m_graphics_state |= rsx::pipeline_state::transform_constants_dirty;
+		m_ctx->graphics_state |= rsx::pipeline_state::transform_constants_dirty;
 		return;
 	}
 
@@ -2526,7 +2526,7 @@ void VKGSRender::close_and_submit_command_buffer(vk::fence* pFence, VkSemaphore 
 void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 {
 	const bool clipped_scissor = (context == rsx::framebuffer_creation_context::context_draw);
-	if (m_current_framebuffer_context == context && !m_graphics_state.test(rsx::rtt_config_dirty) && m_draw_fbo)
+	if (m_current_framebuffer_context == context && !m_ctx->graphics_state.test(rsx::rtt_config_dirty) && m_draw_fbo)
 	{
 		// Fast path
 		// Framebuffer usage has not changed, framebuffer exists and config regs have not changed
@@ -2534,14 +2534,14 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 		return;
 	}
 
-	m_graphics_state.clear(
+	m_ctx->graphics_state.clear(
 		rsx::rtt_config_dirty |
 		rsx::rtt_config_contested |
 		rsx::rtt_config_valid |
 		rsx::rtt_cache_state_dirty);
 
 	get_framebuffer_layout(context, m_framebuffer_layout);
-	if (!m_graphics_state.test(rsx::rtt_config_valid))
+	if (!m_ctx->graphics_state.test(rsx::rtt_config_valid))
 	{
 		return;
 	}
@@ -2721,13 +2721,13 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 
 	std::vector<u8> input_attachments{};
 	if ((current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING) &&
-		!m_graphics_state.test(rsx::pipeline_state::fragment_program_state_dirty))
+		!m_ctx->graphics_state.test(rsx::pipeline_state::fragment_program_state_dirty))
 	{
 		input_attachments.resize(m_draw_buffers.size());
 		std::iota(input_attachments.begin(), input_attachments.end(), 0);
 	}
 
-	if (m_graphics_state.test(rsx::rtt_config_no_attachments))
+	if (m_ctx->graphics_state.test(rsx::rtt_config_no_attachments))
 	{
 		// Framebufferless rendering. The raster sample count must match what real surfaces would have used.
 		ensure(m_fbo_images.empty() && input_attachments.empty());

@@ -55,17 +55,6 @@ namespace rsx
 		context_clear_all = context_clear_color | context_clear_depth
 	};
 
-	enum eng_interrupt_reason : u32
-	{
-		backend_interrupt       = 0x0001,        // Backend-related interrupt
-		memory_config_interrupt = 0x0002,        // Memory configuration changed
-		display_interrupt       = 0x0004,        // Display handling
-		pipe_flush_interrupt    = 0x0008,        // Flush pipelines
-		dma_control_interrupt   = 0x0010,        // DMA interrupt
-
-		all_interrupt_bits = memory_config_interrupt | backend_interrupt | display_interrupt | pipe_flush_interrupt
-	};
-
 	enum result_flags: u8
 	{
 		result_none = 0,
@@ -253,9 +242,6 @@ namespace rsx
 		std::array<bool, 4> m_vertex_textures_dirty;
 		rsx::framebuffer_creation_context m_current_framebuffer_context = rsx::framebuffer_creation_context::context_draw;
 
-		rsx::atomic_bitmask_t<rsx::eng_interrupt_reason> m_eng_interrupt_mask;
-		rsx::bitmask_t<rsx::pipeline_state> m_graphics_state;
-
 		u64 ROP_sync_timestamp = 0;
 
 		program_hash_util::fragment_program_utils::fragment_program_metadata current_fp_metadata = {};
@@ -326,7 +312,6 @@ namespace rsx
 	public:
 		atomic_t<bool> sync_point_request = false;
 		atomic_t<bool> pause_on_draw = false;
-		bool in_begin_end = false;
 
 		std::queue<desync_fifo_cmd_info> recovered_fifo_cmds_history;
 		std::deque<frame_time_t> frame_times;
