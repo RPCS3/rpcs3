@@ -59,15 +59,7 @@ namespace rsx::overlays
 
 		const color4f& grade_colour(ps5_trophies::grade kind)
 		{
-			static const color4f colours[] =
-			{
-				{0.80f, 0.88f, 1.00f, 1.f}, // platinum
-				{0.98f, 0.78f, 0.30f, 1.f}, // gold
-				{0.80f, 0.82f, 0.87f, 1.f}, // silver
-				{0.86f, 0.55f, 0.33f, 1.f}, // bronze
-				{1.f, 1.f, 1.f, 0.6f},
-			};
-			return colours[std::min<usz>(static_cast<usz>(kind), 4)];
+			return trophy_grade_colour(static_cast<u8>(kind));
 		}
 
 		// An image fitted into a w x h RGBA canvas, clear around it: bilinear,
@@ -474,8 +466,8 @@ namespace rsx::overlays
 	{
 		compiled_resource* target = &result;
 
-		// The Settings tab's deep blue and glow, with the selected set's icon,
-		// blurred, washed over it
+		// The Settings tab's deep blue, glow and texture (the selected set's
+		// icon, blurred over the whole screen behind, looked odd: build 128)
 		{
 			overlay_element base;
 			base.set_size(virtual_width, virtual_height);
@@ -495,19 +487,9 @@ namespace rsx::overlays
 		const bool have_sets = !m_tr_games.empty();
 		const ps5_trophies::game* set = have_sets && m_tr_selected >= 0 && static_cast<usz>(m_tr_selected) < m_tr_games.size() ? &m_tr_games[m_tr_selected] : nullptr;
 		const trophy_icon* set_icon = set && static_cast<usz>(m_tr_selected) < m_tr_set_icons.size() && m_tr_set_icons[m_tr_selected]->filled ? m_tr_set_icons[m_tr_selected].get() : nullptr;
-		if (set_icon)
-		{
-			image_view art;
-			art.set_raw_image(set_icon->image.get());
-			art.back_color.a = 0.f;
-			art.fore_color = color4f(1.f, 1.f, 1.f, 0.32f);
-			art.set_blur_strength(60);
-			art.set_pos(-80, -60);
-			art.set_size(virtual_width + 160, virtual_height + 120);
-			result.add(art.get_compiled());
-		}
 		glow(640, 340, 1600, 1000, color4f(0.1f, 0.2f, 0.65f, 0.30f));
 		glow(640, 380, 1100, 640, color4f(c_accent.r, c_accent.g, c_accent.b, 0.05f));
+		m_texture.add(result, texture_seconds());
 
 		const auto text = [&](std::string_view s, u16 size, std::string_view font_name, const color4f& colour, s16 x, f32 mid, u16 max_w = 0) -> std::unique_ptr<label>
 		{

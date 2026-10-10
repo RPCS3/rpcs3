@@ -79,7 +79,11 @@ vec4 SDF_blend(
 {
 	// Crucially, we need to get the derivative without subracting the border width.
 	// Subtracting the border width makes the function non-continuous and makes the jaggies hard to get rid of.
-	float fw = fwidth(sd);
+	// PS5 fork: never zero. Inside a box, along the crease that runs from a corner at 45 degrees
+	// (where the distance is the larger of the two axes'), a 2x2 quad can see no change in either
+	// direction: both transitions then divided by zero, and the fill along that line took the border's
+	// colour, a hairline across whatever the box was drawn over (the launcher's trophy cards)
+	float fw = max(fwidth(sd), 0.0001);
 
 	// Compute the two transition points. The inner edge is of course biased by the border amount as the clamping point
 	// Treat smoothstep as fancy clamp where e0 < x < e1

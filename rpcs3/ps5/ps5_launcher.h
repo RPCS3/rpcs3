@@ -110,6 +110,8 @@ namespace rsx::overlays
 
 		void start_reload();
 		void select_game(s32 index);
+		void order_games(); // by the chosen order (ps5_library.h), the selected game kept
+		void show_toast(std::string text);
 		void set_tab(tab next);
 		void set_focus(focus next);
 		void boot_selected();
@@ -295,6 +297,8 @@ namespace rsx::overlays
 		s32 m_detail_option = 0;
 		std::vector<u8> m_glow_pixels;
 		std::unique_ptr<memory_image_info> m_glow_image;
+		ps5ui::backdrop_texture m_texture; // over the deep blue of the Library, Trophies, Settings and Install
+		f32 texture_seconds() const;
 		void handle_library(pad_button button_press);
 		void compile_library(compiled_resource& result);
 
@@ -376,6 +380,14 @@ namespace rsx::overlays
 		void take_trophies();
 		void handle_trophies(pad_button button_press);
 		void compile_trophies(compiled_resource& result);
+
+		// A short message in a pill under the tabs ("Sorted: A to Z")
+		std::string m_toast;
+		u64 m_toast_us = 0;
+
+		// A favourite's star
+		std::vector<u8> m_star_pixels;
+		std::unique_ptr<memory_image_info> m_star_image;
 
 		animation_color_interpolate m_fade_animation{};
 

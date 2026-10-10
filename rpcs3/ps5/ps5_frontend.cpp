@@ -61,6 +61,9 @@ std::string ps5_open_files_report(); // ps5_fdtrack.cpp
 #include "Emu/RSX/Overlays/overlay_manager.h"
 #include "Emu/RSX/Overlays/overlay_save_dialog.h"
 #include "Emu/RSX/Overlays/overlay_trophy_notification.h"
+#include "ps5_trophy_popup.h"
+#include "ps5_perf.h"
+#include "ps5_library.h"
 #include "Emu/Cell/Modules/sceNp.h"
 #include "util/video_source.h"
 
@@ -94,6 +97,7 @@ const char* ps5_localized_string(localized_string_id id);
 std::u32string utf8_to_u32string(std::string_view utf8_string);
 
 std::string spu_collision_tick(u32 seconds, bool running); // SPULLVMRecompiler.cpp: learnt collision accuracy, gathered and written; the trace's words
+std::string spu_collision_status(); // SPULLVMRecompiler.cpp: the collision setting's state, a sentence (empty without collision code)
 extern atomic_t<u64> g_ps5_getllar_waits[64][2]; // SPUThread.cpp: each SPU slot's GETLLAR polls answered by busy waiting, and by sleeping
 extern atomic_t<u32> g_ps5_spu_cpus[64][16]; // SPUThread.cpp: each SPU slot's polls by the CPU it was on
 u32 ps5_spu_slot(u32 id); // SPUThread.cpp: an SPU thread's slot in those counts
@@ -256,9 +260,35 @@ namespace
 		g_group_samples++;
 	}
 
+	// A thread's name without its ID ("SPU SecondaryCellSpursKernel0", "PPU main_thread")
+	std::string friendly_thread_name(std::string name)
+	{
+		for (const std::string_view tag : {std::string_view("SPU[0x"), std::string_view("PPU[0x")})
+		{
+			if (const usz at = name.find(tag); at != umax)
+			{
+				if (const usz end = name.find("] ", at); end != umax)
+				{
+					name.erase(at, end + 2 - at);
+				}
+			}
+		}
+		if (const usz at = name.find("Thread ("); at != umax && name.ends_with(')'))
+		{
+			name.pop_back();
+			name.erase(at, 8);
+		}
+		return name;
+	}
+
+	// The latest five seconds' measurements (ps5_perf.h)
+	std::mutex g_perf_mutex;
+	ps5_perf g_perf;
+
 	// The busiest since the last call, by the share of the time each ran, and
-	// the groups' loads for the overlay; the counts begin again
-	std::string take_thread_loads()
+	// the groups' loads for the overlay; the counts begin again. `simple` gets
+	// the busiest by their plain names, for the pause menu
+	std::string take_thread_loads(std::vector<std::pair<std::string, f32>>* simple = nullptr)
 	{
 		std::lock_guard lock(g_loads_mutex);
 		const f32 hardware = static_cast<f32>(std::max<u32>(1, utils::get_thread_count()));
@@ -294,6 +324,7 @@ namespace
 		}
 
 		std::vector<std::pair<f64, std::string>> loads;
+		std::vector<std::pair<f64, std::string>> plain;
 		for (const auto& [key, load] : g_loads)
 		{
 			if (!load.samples)
@@ -301,6 +332,7 @@ namespace
 				continue;
 			}
 			const f64 share = 100.0 * load.running / load.samples;
+			plain.emplace_back(share, friendly_thread_name(load.name));
 			std::string name = load.name;
 			if (load.spu_index != umax && share >= 50.0)
 			{
@@ -338,6 +370,15 @@ namespace
 		}
 		g_loads.clear();
 		std::sort(loads.begin(), loads.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
+		if (simple)
+		{
+			std::sort(plain.begin(), plain.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
+			simple->clear();
+			for (usz i = 0; i < plain.size() && i < 8 && plain[i].first >= 5.0; i++)
+			{
+				simple->emplace_back(plain[i].second, static_cast<f32>(plain[i].first));
+			}
+		}
 		std::string result;
 		for (usz i = 0; i < loads.size() && i < 10 && loads[i].first >= 5.0; i++)
 		{
@@ -551,16 +592,16 @@ namespace
 		}
 	};
 
-	// Trophy pop-ups, by the same overlay, as the desktop's
-	// trophy_notification_helper shows them
+	// Trophy pop-ups, as the desktop's trophy_notification_helper shows them,
+	// but drawn in the launcher's style (ps5_trophy_popup.h)
 	struct ps5_trophy_notification final : TrophyNotificationBase
 	{
 		s32 ShowTrophyNotification(const SceNpTrophyDetails& trophy, const std::vector<uchar>& trophy_icon_buffer) override
 		{
 			if (auto manager = g_fxo->try_get<rsx::overlays::display_manager>())
 			{
-				// More than one at a time: the notification schedules them
-				auto popup = std::make_shared<rsx::overlays::trophy_notification>();
+				// More than one at a time: the pop-ups take turns
+				auto popup = std::make_shared<rsx::overlays::ps5_trophy_popup>();
 				return manager->add(popup, false)->show(trophy, trophy_icon_buffer);
 			}
 
@@ -857,6 +898,8 @@ namespace
 			{
 				return;
 			}
+			// Last played: now (the launcher's Recently played order)
+			ps5_library::started(Emu.GetTitleID());
 			const auto& core = g_cfg.core;
 			const auto& video = g_cfg.video;
 			const char* zcull = video.relaxed_zcull_sync ? "Relaxed" : video.precise_zpass_count ? "Precise" : "Approximate";
@@ -1365,6 +1408,16 @@ int run(const char* boot_path)
 						g_loads.clear();
 						g_block_profiles.clear();
 					}
+					// The game's play time, a second at a time (ps5_library.h); written
+					// once a minute, and as it stops
+					if (running_for)
+					{
+						ps5_library::add_play(Emu.GetTitleID(), 1);
+					}
+					else
+					{
+						ps5_library::flush();
+					}
 					if (seconds % 5 != 4)
 					{
 						continue;
@@ -1377,7 +1430,8 @@ int run(const char* boot_path)
 						continue;
 					}
 					// The busiest of the PS3's threads over these five seconds
-					if (const std::string busiest = take_thread_loads(); !busiest.empty())
+					std::vector<std::pair<std::string, f32>> busiest_plain;
+					if (const std::string busiest = take_thread_loads(&busiest_plain); !busiest.empty())
 					{
 						trace_logged("busiest threads (share of the time each was running):%s; %s; %s", busiest, collision.empty() ? std::string("no collision code") : collision, ps5_cpu_own_core_text());
 					}
@@ -1477,6 +1531,36 @@ int run(const char* boot_path)
 						static_cast<u32>(g_ps5_frames_quick_moves.load()), static_cast<u32>(g_ps5_frames_camera_field.load()), static_cast<u32>(g_ps5_frame_gen_us.load() / 1000), static_cast<u32>(g_ps5_frame_gen_gpu_wait_us.load() / 1000),
 						static_cast<u32>(g_ps5_image_wait_us[0].load() / 1000), static_cast<u32>(g_ps5_image_wait_us[1].load() / 1000), frame_gen, heap.mapped_bytes >> 20, heap.peak_bytes >> 20, static_cast<u32>(ps5_syscache_bytes() >> 20), direct >> 20,
 						flexible >> 20, progress_text, +g_progr_pdone, +g_progr_ptotal, +g_progr_fdone, +g_progr_ftotal, regular, folders, sockets, others, static_cast<u32>(fs::ps5_open_tracked()), count, ppus);
+					// The same, for the pause menu's Performance tab: the frame counts
+					// are totals since the boot, so these five seconds' are differences
+					{
+						static u64 s_last_made = 0, s_last_dropped = 0, s_last_gpu_us = 0, s_last_us = 0;
+						const u64 made = g_ps5_frames_generated.load(), dropped = g_ps5_frames_dropped.load(), gpu_us = g_ps5_frame_gen_gpu_wait_us.load();
+						const f64 window = s_last_us && flips_us > s_last_us ? (flips_us - s_last_us) / 1e6 : 5.0;
+						ps5_perf perf;
+						perf.valid = seen && Emu.IsRunning();
+						perf.at_us = flips_us;
+						perf.game_fps = static_cast<f32>(game_fps);
+						perf.made_fps = made >= s_last_made && s_last_us ? static_cast<f32>((made - s_last_made) / window) : 0.f;
+						perf.dropped_fps = dropped >= s_last_dropped && s_last_us ? static_cast<f32>((dropped - s_last_dropped) / window) : 0.f;
+						perf.gpu_wait_ms = gpu_us >= s_last_gpu_us && s_last_us ? static_cast<f32>((gpu_us - s_last_gpu_us) / 1000.0 / window) : 0.f;
+						perf.ppu_load = g_group_load[0].load();
+						perf.spu_load = g_group_load[1].load();
+						perf.busiest = std::move(busiest_plain);
+						perf.collision = spu_collision_status();
+						if (perf.collision.starts_with("Now: "))
+						{
+							perf.collision.erase(0, 5);
+						}
+						perf.heap_mib = static_cast<u32>(heap.mapped_bytes >> 20);
+						perf.free_mib = static_cast<u32>(direct >> 20);
+						s_last_made = made;
+						s_last_dropped = dropped;
+						s_last_gpu_us = gpu_us;
+						s_last_us = flips_us;
+						std::lock_guard lock(g_perf_mutex);
+						g_perf = std::move(perf);
+					}
 					// Near the limit, which ones (once per 40 more)
 					static u32 s_reported = 0;
 					if (const u32 open = regular + folders; open >= 150 && open >= s_reported + 40)
@@ -1485,8 +1569,9 @@ int run(const char* boot_path)
 						trace("open files: %s; %s", fs::ps5_open_report(), ps5_open_files_report());
 					}
 				}
-				// The title ends: what was learnt since the last write
+				// The title ends: what was learnt since the last write, and the play time
 				spu_collision_tick(0, false);
+				ps5_library::flush();
 			});
 
 			// Until the game stops and RPCS3 asks to quit
@@ -1530,4 +1615,10 @@ int run(const char* boot_path)
 f32 ps5_sampled_load(u32 group)
 {
 	return group < 2 ? g_group_load[group].load() : 0.f;
+}
+
+ps5_perf ps5_perf_latest()
+{
+	std::lock_guard lock(g_perf_mutex);
+	return g_perf;
 }

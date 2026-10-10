@@ -12,6 +12,8 @@ add_library(rpcs3_ps5 STATIC
     ps5_launcher.cpp
     ps5_launcher_trophies.cpp
     ps5_trophies.cpp
+    ps5_trophy_popup.cpp
+    ps5_library.cpp
     ps5_ui.cpp
     ps5_pause_menu.cpp
     ps5_patches.cpp

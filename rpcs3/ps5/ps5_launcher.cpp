@@ -8,6 +8,7 @@
 
 #include "stdafx.h"
 #include "ps5_launcher.h"
+#include "ps5_library.h"
 #include "ps5_ui.h"
 #include "ps5_pad_handler.h"
 #include "ps5_patches.h"
@@ -567,6 +568,7 @@ namespace rsx::overlays
 		constexpr f32 c_diamond_y = 300.f;
 		constexpr f32 c_diamond_r = 170.f;
 		constexpr u16 c_mark_size = 150;
+		const color4f c_intro_paper(0.91f, 0.905f, 0.89f, 1.f); // a little dimmer than white
 
 		// Each opening's own, from when the list is read (and the splash allows)
 		constexpr f32 c_content_end = 1.3f;
@@ -635,6 +637,9 @@ namespace rsx::overlays
 
 		// The Library's glow: a soft disc, tinted and stretched behind the covers
 		m_glow_image = make_glow(m_glow_pixels);
+		// The texture over the deep blue, and a favourite's star
+		m_texture.build();
+		m_star_image = make_star(m_star_pixels);
 		// The cases' sheen: a soft diagonal band of light, slid across the front
 		// as the case turns
 		{
@@ -691,7 +696,7 @@ namespace rsx::overlays
 
 		// The intro's white screen and its words
 		m_mark_data = load_image("/app0/assets/launcher/mark.png");
-		style_label(m_intro_name, spaced("KONGATIME"), 20, f_semibold, color4f(0.05f, 0.1f, 0.3f, 1.f));
+		style_label(m_intro_name, spaced("KONGATIME"), 20, f_semibold, color4f(0.12f, 0.11f, 0.11f, 1.f));
 		m_intro_name.set_pos(static_cast<s16>((virtual_width - m_intro_name.w) / 2), 0);
 		place(m_intro_name, m_intro_name.x, c_diamond_y + c_diamond_r + 52.f);
 		style_label(m_intro_print, "RPCS3 is free software, under the GNU General Public License, version 2.", 10, f_regular, color4f(0.6f, 0.63f, 0.72f, 1.f));
@@ -938,7 +943,8 @@ namespace rsx::overlays
 		{
 			hints.emplace_back(resource_config::confirm_button_resource(), "Open");
 			hints.emplace_back(static_cast<u8>(resource_config::standard_image_resource::triangle), "Settings");
-			hints.emplace_back(static_cast<u8>(resource_config::standard_image_resource::square), "Delete");
+			hints.emplace_back(static_cast<u8>(resource_config::standard_image_resource::select), "Favourite");
+			hints.emplace_back(static_cast<u8>(resource_config::standard_image_resource::start), "Sort");
 		}
 		else if (m_tab != tab::settings && !m_games.empty())
 		{
@@ -1047,6 +1053,9 @@ namespace rsx::overlays
 			else if (game->info.category == "HG") chips.push_back("Digital");
 			if (!game->info.serial.empty()) chips.push_back(game->info.serial);
 			if (!game->info.app_ver.empty() && game->info.app_ver != "Unknown") chips.push_back("Version " + game->info.app_ver);
+			const ps5_library::entry record = ps5_library::get(game->info.serial);
+			if (record.favourite) chips.push_back("Favourite");
+			if (record.play_seconds) chips.push_back("Played " + ps5_library::play_text(record.play_seconds));
 
 			s16 x = c_hero_x;
 			for (const std::string& text : chips)
@@ -1363,6 +1372,7 @@ namespace rsx::overlays
 			}
 			m_enumeration.clear(true);
 
+			// By name here; in the chosen order once they are the list (order_games)
 			std::sort(games.begin(), games.end(), [](const ps5_launcher_game& a, const ps5_launcher_game& b)
 			{
 				return a.info.name < b.info.name;
@@ -1381,9 +1391,62 @@ namespace rsx::overlays
 			m_games = std::move(games);
 			m_selected = 0;
 			m_first_visible = 0;
+			order_games();
+			m_selected = 0;
+			m_first_visible = 0;
 			m_loading = false;
 			layout_home();
 		});
+	}
+
+	void ps5_launcher_dialog::order_games()
+	{
+		const std::string kept = m_selected >= 0 && static_cast<usz>(m_selected) < m_games.size() ? m_games[m_selected].info.path : std::string();
+		const ps5_library::order order = ps5_library::get_order();
+
+		// Each game's record and its name for comparing, read once
+		std::map<std::string, std::pair<ps5_library::entry, std::string>> keys;
+		for (const ps5_launcher_game& game : m_games)
+		{
+			std::string name = game.info.name.empty() ? game.info.serial : game.info.name;
+			std::transform(name.begin(), name.end(), name.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+			keys[game.info.path] = {ps5_library::get(game.info.serial), std::move(name)};
+		}
+		const auto by_name = [&](const ps5_launcher_game& a, const ps5_launcher_game& b) { return keys[a.info.path].second < keys[b.info.path].second; };
+		const auto by_recent = [&](const ps5_launcher_game& a, const ps5_launcher_game& b)
+		{
+			const u64 la = keys[a.info.path].first.last_played, lb = keys[b.info.path].first.last_played;
+			return la != lb ? la > lb : by_name(a, b);
+		};
+		std::stable_sort(m_games.begin(), m_games.end(), [&](const ps5_launcher_game& a, const ps5_launcher_game& b)
+		{
+			const ps5_library::entry& ea = keys[a.info.path].first;
+			const ps5_library::entry& eb = keys[b.info.path].first;
+			switch (order)
+			{
+			case ps5_library::order::name: return by_name(a, b);
+			case ps5_library::order::most_played: return ea.play_seconds != eb.play_seconds ? ea.play_seconds > eb.play_seconds : by_name(a, b);
+			case ps5_library::order::favourites: return ea.favourite != eb.favourite ? ea.favourite : by_recent(a, b);
+			default: return by_recent(a, b);
+			}
+		});
+
+		m_selected = 0;
+		for (usz i = 0; i < m_games.size(); i++)
+		{
+			if (m_games[i].info.path == kept)
+			{
+				m_selected = static_cast<s32>(i);
+			}
+		}
+		m_flow_pos = static_cast<f32>(m_selected);
+		layout_home();
+	}
+
+	void ps5_launcher_dialog::show_toast(std::string text)
+	{
+		m_toast = std::move(text);
+		m_toast_us = m_now_us;
 	}
 
 	void ps5_launcher_dialog::select_game(s32 index)
@@ -2399,6 +2462,7 @@ namespace rsx::overlays
 		};
 		glow(640, 340, 1600, 1000, color4f(0.1f, 0.2f, 0.65f, 0.34f));
 		glow(620, 360, 900, 700, color4f(c_accent.r, c_accent.g, c_accent.b, 0.06f));
+		m_texture.add(result, texture_seconds());
 
 		const auto card = [&](s16 x, s16 y, u16 w, u16 h)
 		{
@@ -2888,8 +2952,10 @@ namespace rsx::overlays
 	}
 
 	// The intro's white screen: eight shards that fly in turning and lock into
-	// a diamond around the mark, a flash and a gold rim as they do, and the
-	// maker's name under it
+	// a diamond around the mark, a flash and a rim as they do, and the maker's
+	// name under it. The diamond takes the PS1's start screen's warm colours,
+	// yellow where the light falls to deep orange, and the white is a little
+	// dimmer than pure white (asked for after build 127)
 	void ps5_launcher_dialog::compile_intro_white(compiled_resource& result, f32 intro)
 	{
 		const f32 out = 1.f - ease_in_out(progress(intro, c_intro_white_out, 0.5f));
@@ -2897,7 +2963,7 @@ namespace rsx::overlays
 
 		overlay_element paper;
 		paper.set_size(virtual_width, virtual_height);
-		paper.back_color = color4f(1.f, 1.f, 1.f, 1.f);
+		paper.back_color = c_intro_paper;
 		add_animated(result, paper.get_compiled(), ease_out(progress(intro, 0.f, c_intro_white_in)) * out);
 
 		const auto shape = [&](std::initializer_list<std::pair<f32, f32>> points, const color4f& color)
@@ -2921,14 +2987,23 @@ namespace rsx::overlays
 		const f32 fly = ease_out(progress(intro, c_intro_shards, c_intro_lock - c_intro_shards));
 		const f32 pop = 1.f + 0.06f * locked * (1.f - ease_out(progress(intro, c_intro_lock, 0.4f)));
 		const f32 shards_alpha = progress(intro, c_intro_shards, 0.3f) * out;
-		const f32 flash = 0.75f * locked * (1.f - ease_out(progress(intro, c_intro_lock, 0.45f))) * out;
+		const f32 flash = 0.6f * locked * (1.f - ease_out(progress(intro, c_intro_lock, 0.45f))) * out;
 
 		// The facets: from the centre to the corners and the middles of the
 		// sides, shaded as a cut stone lit from the top left
 		constexpr f32 r = c_diamond_r;
 		static constexpr std::pair<f32, f32> rim[8]{{0.f, -r}, {r / 2, -r / 2}, {r, 0.f}, {r / 2, r / 2}, {0.f, r}, {-r / 2, r / 2}, {-r, 0.f}, {-r / 2, -r / 2}};
-		const color4f deep(0.03f, 0.09f, 0.36f, 1.f);
-		const color4f bright(0.36f, 0.68f, 1.f, 1.f);
+		// Three stops, from the facets in shadow to those in the light
+		const color4f deep(0.80f, 0.18f, 0.04f, 1.f);
+		const color4f middle(0.97f, 0.50f, 0.08f, 1.f);
+		const color4f bright(1.f, 0.86f, 0.25f, 1.f);
+		const auto shade = [&](f32 light, f32 alpha)
+		{
+			const color4f& a = light < 0.5f ? deep : middle;
+			const color4f& b = light < 0.5f ? middle : bright;
+			const f32 t = light < 0.5f ? light * 2.f : light * 2.f - 1.f;
+			return color4f(a.r + (b.r - a.r) * t, a.g + (b.g - a.g) * t, a.b + (b.b - a.b) * t, alpha);
+		};
 		for (int i = 0; i < 8; i++)
 		{
 			const auto [ax, ay] = rim[i];
@@ -2949,7 +3024,7 @@ namespace rsx::overlays
 				return {c_diamond_x + (mx + lx * cs - ly * sn + dx) * pop, c_diamond_y + (my + lx * sn + ly * cs + dy) * pop};
 			};
 
-			const color4f color(deep.r + (bright.r - deep.r) * light, deep.g + (bright.g - deep.g) * light, deep.b + (bright.b - deep.b) * light, shards_alpha);
+			const color4f color = shade(light, shards_alpha);
 			shape({at(0.f, 0.f), at(ax, ay), at(bx, by)}, color);
 			if (flash > 0.f)
 			{
@@ -2957,10 +3032,10 @@ namespace rsx::overlays
 			}
 		}
 
-		// The gold rim, drawn on as they lock
+		// The rim, a deeper orange, drawn on as they lock
 		if (const f32 rim_alpha = ease_out(progress(intro, c_intro_lock, 0.3f)) * out; rim_alpha > 0.f)
 		{
-			const color4f gold(0.98f, 0.76f, 0.24f, rim_alpha);
+			const color4f rim_colour(0.62f, 0.22f, 0.03f, rim_alpha);
 			constexpr f32 width = 3.f;
 			for (int i = 0; i < 8; i += 2)
 			{
@@ -2974,7 +3049,7 @@ namespace rsx::overlays
 				// Each side a little long, so the corners close
 				const f32 sx = x0 - ux * width / 2.f, sy = y0 - uy * width / 2.f;
 				const f32 ex = x1 + ux * width / 2.f, ey = y1 + uy * width / 2.f;
-				shape({{sx + nx, sy + ny}, {sx - nx, sy - ny}, {ex + nx, ey + ny}, {ex - nx, ey - ny}}, gold);
+				shape({{sx + nx, sy + ny}, {sx - nx, sy - ny}, {ex + nx, ey + ny}, {ex - nx, ey - ny}}, rim_colour);
 			}
 		}
 
@@ -3017,6 +3092,7 @@ namespace rsx::overlays
 		};
 		glow(640, 340, 1600, 1000, color4f(0.1f, 0.2f, 0.65f, 0.34f));
 		glow(620, 360, 900, 700, color4f(c_accent.r, c_accent.g, c_accent.b, 0.06f));
+		m_texture.add(result, texture_seconds());
 
 		const auto card = [&](s16 x, s16 y, u16 w, u16 h)
 		{
@@ -3241,6 +3317,11 @@ namespace rsx::overlays
 				}
 			}
 		}
+	}
+
+	f32 ps5_launcher_dialog::texture_seconds() const
+	{
+		return m_intro_start_us ? static_cast<f32>((m_now_us - m_intro_start_us) / 1'000'000.0) : 0.f;
 	}
 
 	f32 ps5_launcher_dialog::intro_seconds() const
@@ -3481,6 +3562,80 @@ namespace rsx::overlays
 			m_flipped = !m_flipped;
 			play_sound(sound_effect::cursor);
 			break;
+		case pad_button::start:
+		{
+			// The next order, for the Library and Home alike
+			const auto next = static_cast<ps5_library::order>((static_cast<u8>(ps5_library::get_order()) + 1) % static_cast<u8>(ps5_library::order::count));
+			ps5_library::set_order(next);
+			order_games();
+			show_toast(next == ps5_library::order::name ? fmt::format("Sorted: %s   ·   Up and down jump a letter", ps5_library::order_text(next)) : fmt::format("Sorted: %s", ps5_library::order_text(next)));
+			play_sound(sound_effect::cursor);
+			layout_hints();
+			break;
+		}
+		case pad_button::select:
+		{
+			// A favourite, or not
+			const std::string serial = m_games[m_selected].info.serial;
+			if (serial.empty())
+			{
+				break;
+			}
+			const bool favourite = !ps5_library::get(serial).favourite;
+			ps5_library::set_favourite(serial, favourite);
+			if (ps5_library::get_order() == ps5_library::order::favourites)
+			{
+				order_games();
+			}
+			show_toast(favourite ? "Added to favourites" : "Taken out of favourites");
+			play_sound(favourite ? sound_effect::accept : sound_effect::cancel);
+			layout_home();
+			break;
+		}
+		case pad_button::dpad_up:
+		case pad_button::ls_up:
+		case pad_button::dpad_down:
+		case pad_button::ls_down:
+		{
+			// A to Z: to the first game of the letter before or after
+			if (ps5_library::get_order() != ps5_library::order::name)
+			{
+				break;
+			}
+			const auto letter = [&](s32 i)
+			{
+				const std::string& name = m_games[i].info.name.empty() ? m_games[i].info.serial : m_games[i].info.name;
+				for (const char c : name)
+				{
+					if (std::isalpha(static_cast<unsigned char>(c))) return static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+					if (std::isdigit(static_cast<unsigned char>(c))) return '#';
+				}
+				return '#';
+			};
+			const s32 count = static_cast<s32>(m_games.size());
+			s32 target = m_selected;
+			if (button_press == pad_button::dpad_down || button_press == pad_button::ls_down)
+			{
+				while (target < count && letter(target) == letter(m_selected)) target++;
+				if (target >= count) break;
+			}
+			else
+			{
+				// The start of this letter, or of the one before when already there
+				while (target > 0 && letter(target - 1) == letter(m_selected)) target--;
+				if (target == m_selected && target > 0)
+				{
+					target--;
+					while (target > 0 && letter(target - 1) == letter(target)) target--;
+				}
+			}
+			if (target != m_selected)
+			{
+				select_game(target);
+				show_toast(std::string(1, letter(target)));
+			}
+			break;
+		}
 		default:
 			break;
 		}
@@ -3507,6 +3662,7 @@ namespace rsx::overlays
 			result.add(view.get_compiled());
 		};
 		glow(640, 320, 1600, 1000, color4f(0.1f, 0.2f, 0.65f, 0.34f));
+		m_texture.add(result, texture_seconds());
 
 		const f32 detail = m_detail_t * m_detail_t * (3.f - 2.f * m_detail_t);
 		const f32 floor_y = c_case_h / 2.f + 6.f;
@@ -3830,6 +3986,9 @@ namespace rsx::overlays
 			if (info.category == "DG") facts.push_back("Disc");
 			else if (info.category == "HG") facts.push_back("Digital");
 			if (!info.app_ver.empty() && info.app_ver != "Unknown") facts.push_back("v" + info.app_ver);
+			const ps5_library::entry record = ps5_library::get(info.serial);
+			if (record.play_seconds) facts.push_back("Played " + ps5_library::play_text(record.play_seconds));
+			if (record.last_played) facts.push_back("Last played " + ps5_library::date_text(record.last_played));
 			const bool own_settings = !info.serial.empty() && fs::is_file(rpcs3::utils::get_custom_config_path(info.serial));
 			const std::string name_text = info.name.empty() ? info.serial : info.name;
 
@@ -3840,8 +3999,21 @@ namespace rsx::overlays
 				label name;
 				style_label(name, "", 22, f_semibold, c_text);
 				fit_text(name, name_text, 1000);
-				place(name, static_cast<s16>(640 - name.w / 2), 596.f);
+				// A favourite's star before it, the pair centred
+				const u16 star = record.favourite && m_star_image ? 22 : 0;
+				const s16 name_x = static_cast<s16>(640 - (name.w + (star ? star + 10 : 0)) / 2 + (star ? star + 10 : 0));
+				place(name, name_x, 596.f);
 				caption.add(name.get_compiled());
+				if (star)
+				{
+					image_view mark;
+					mark.set_raw_image(m_star_image.get());
+					mark.back_color.a = 0.f;
+					mark.fore_color = color4f(0.98f, 0.78f, 0.30f, 1.f);
+					mark.set_pos(static_cast<s16>(name_x - star - 10), static_cast<s16>(596 - star / 2 - 1));
+					mark.set_size(star, star);
+					caption.add(mark.get_compiled());
+				}
 
 				std::vector<std::unique_ptr<label>> parts;
 				for (usz i = 0; i < facts.size(); i++)
@@ -4517,6 +4689,32 @@ namespace rsx::overlays
 		else
 		{
 			result.add(m_logo_data ? m_logo.get_compiled() : m_logo_text.get_compiled());
+		}
+
+		// The message pill, under the tabs: in, a moment, and out
+		if (!m_toast.empty() && m_toast_us)
+		{
+			const f32 t = (m_now_us - m_toast_us) / 1'000'000.f;
+			const f32 alpha = ease_out(progress(t, 0.f, 0.15f)) * (1.f - ease_in_out(progress(t, 1.6f, 0.3f)));
+			if (alpha > 0.f)
+			{
+				compiled_resource toast;
+				auto words = make_label(m_toast, 13, f_semibold, c_button_text);
+				const u16 w = static_cast<u16>(words->w + 44);
+				rounded_rect pill;
+				pill.set_pos(static_cast<s16>(640 - w / 2), 86);
+				pill.set_size(w, 34);
+				pill.border_radius = 17;
+				pill.back_color = c_accent;
+				toast.add(pill.get_compiled());
+				place(*words, static_cast<s16>(640 - w / 2 + 22), 103.f);
+				toast.add(words->get_compiled());
+				add_animated(result, toast, alpha, 0.f, -6.f * (1.f - alpha));
+			}
+			else if (t > 2.f)
+			{
+				m_toast.clear();
+			}
 		}
 
 		if (m_confirm_delete || m_deleting || !m_delete_result.empty())

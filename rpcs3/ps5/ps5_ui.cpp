@@ -135,6 +135,68 @@ namespace rsx::overlays::ps5ui
 		return image;
 	}
 
+	std::unique_ptr<memory_image_info> make_star(std::vector<u8>& pixels)
+	{
+		constexpr u16 n = 64;
+		constexpr int samples = 4; // a side, for its edges
+		// Its ten corners, the points on a circle and the notches inside
+		f32 cx[10], cy[10];
+		for (int i = 0; i < 10; i++)
+		{
+			const f32 angle = -1.5707963f + i * 0.62831853f;
+			const f32 radius = (i % 2 ? 0.40f : 0.98f) * n / 2.f;
+			cx[i] = n / 2.f + radius * std::cos(angle);
+			cy[i] = n / 2.f + 1.5f + radius * std::sin(angle);
+		}
+		// Inside: an even-odd crossing count of the outline
+		const auto inside = [&](f32 x, f32 y)
+		{
+			bool in = false;
+			for (int i = 0, j = 9; i < 10; j = i++)
+			{
+				if ((cy[i] > y) != (cy[j] > y) && x < (cx[j] - cx[i]) * (y - cy[i]) / (cy[j] - cy[i]) + cx[i])
+				{
+					in = !in;
+				}
+			}
+			return in;
+		};
+		pixels.resize(usz{n} * n * 4);
+		for (u16 yy = 0; yy < n; yy++)
+		{
+			for (u16 xx = 0; xx < n; xx++)
+			{
+				int hits = 0;
+				for (int sy = 0; sy < samples; sy++)
+				{
+					for (int sx = 0; sx < samples; sx++)
+					{
+						hits += inside(xx + (sx + 0.5f) / samples, yy + (sy + 0.5f) / samples);
+					}
+				}
+				u8* px = &pixels[(usz{yy} * n + xx) * 4];
+				px[0] = px[1] = px[2] = 255;
+				px[3] = static_cast<u8>(255 * hits / (samples * samples));
+			}
+		}
+		auto image = std::make_unique<memory_image_info>(n, n, u8{4}, pixels.data());
+		image->dirty = true;
+		return image;
+	}
+
+	const color4f& trophy_grade_colour(u8 grade)
+	{
+		static const color4f colours[] =
+		{
+			{0.80f, 0.88f, 1.00f, 1.f}, // platinum
+			{0.98f, 0.78f, 0.30f, 1.f}, // gold
+			{0.80f, 0.82f, 0.87f, 1.f}, // silver
+			{0.86f, 0.55f, 0.33f, 1.f}, // bronze
+			{1.f, 1.f, 1.f, 0.6f},
+		};
+		return colours[std::min<usz>(grade, 4)];
+	}
+
 	std::unique_ptr<memory_image_info> make_glow(std::vector<u8>& pixels)
 	{
 		constexpr u16 n = 128;
@@ -155,6 +217,139 @@ namespace rsx::overlays::ps5ui
 		auto image = std::make_unique<memory_image_info>(n, n, u8{4}, pixels.data());
 		image->dirty = true;
 		return image;
+	}
+
+	namespace
+	{
+		// The wave's band: its top and height in the 1280x720 space, and its
+		// textures' pixels to each of the space's (finer than the space, as the
+		// overlays are drawn at 3840x2160)
+		constexpr f32 c_wave_top = 400.f;
+		constexpr u16 c_wave_h = 256;
+		constexpr u16 c_wave_lines_scale = 2;
+		constexpr u16 c_wave_ribbon_scale = 1;
+		constexpr u16 c_grain_tile = 256;
+		constexpr u16 c_grain_texels = 512;
+	}
+
+	void backdrop_texture::build()
+	{
+		constexpr f32 two_pi = 6.2831853f;
+
+		// The sheet: fourteen lines a little apart, each a sum of waves that
+		// repeat across the width (so the band can slide and wrap), brightest
+		// in the middle of the sheet
+		{
+			constexpr u32 tw = 1280 * c_wave_lines_scale, th = c_wave_h * c_wave_lines_scale;
+			std::vector<f32> alpha(usz{tw} * th, 0.f);
+			constexpr f32 sigma = 1.0f * c_wave_lines_scale;
+			for (u32 i = 0; i < 14; i++)
+			{
+				const f32 f = i / 13.f;
+				const f32 peak = 0.5f + 0.5f * std::sin(3.14159265f * f);
+				for (u32 x = 0; x < tw; x++)
+				{
+					const f32 u = static_cast<f32>(x) / tw;
+					const f32 yc = (98.f + 60.f * f + 38.f * std::sin(two_pi * u + 0.9f * f + 1.3f * f) + 22.f * std::sin(two_pi * 2.f * u + 2.1f * f) +
+						10.f * std::sin(two_pi * 3.f * u)) * c_wave_lines_scale;
+					const s32 y0 = static_cast<s32>(yc) - 6, y1 = static_cast<s32>(yc) + 7;
+					for (s32 y = std::max(y0, 0); y <= std::min<s32>(y1, th - 1); y++)
+					{
+						const f32 d = (y + 0.5f - yc) / sigma;
+						alpha[usz{static_cast<u32>(y)} * tw + x] += peak * std::exp(-d * d);
+					}
+				}
+			}
+			lines_pixels.resize(alpha.size() * 4);
+			for (usz i = 0; i < alpha.size(); i++)
+			{
+				lines_pixels[i * 4 + 0] = lines_pixels[i * 4 + 1] = lines_pixels[i * 4 + 2] = 255;
+				lines_pixels[i * 4 + 3] = static_cast<u8>(std::lround(255.f * std::min(alpha[i], 1.f)));
+			}
+			lines = std::make_unique<memory_image_info>(tw, th, u8{4}, lines_pixels.data());
+			lines->dirty = true;
+		}
+
+		// The ribbon under it: a broad soft band
+		{
+			constexpr u32 tw = 1280 * c_wave_ribbon_scale, th = c_wave_h * c_wave_ribbon_scale;
+			ribbon_pixels.resize(usz{tw} * th * 4);
+			constexpr f32 sigma = 55.f * c_wave_ribbon_scale;
+			for (u32 x = 0; x < tw; x++)
+			{
+				const f32 u = static_cast<f32>(x) / tw;
+				const f32 yc = (120.f + 50.f * std::sin(two_pi * u + 0.4f) + 25.f * std::sin(two_pi * 2.f * u - 1.f)) * c_wave_ribbon_scale;
+				for (u32 y = 0; y < th; y++)
+				{
+					const f32 d = (y + 0.5f - yc) / sigma;
+					u8* px = &ribbon_pixels[(usz{y} * tw + x) * 4];
+					px[0] = px[1] = px[2] = 255;
+					px[3] = static_cast<u8>(std::lround(255.f * std::exp(-d * d)));
+				}
+			}
+			ribbon = std::make_unique<memory_image_info>(tw, th, u8{4}, ribbon_pixels.data());
+			ribbon->dirty = true;
+		}
+
+		// The grain: half the texels lit a little, at random, the same each run
+		{
+			constexpr u32 n = c_grain_texels;
+			grain_pixels.resize(usz{n} * n * 4);
+			u32 state = 0x9e3779b9u;
+			for (usz i = 0; i < usz{n} * n; i++)
+			{
+				// xorshift, then the sum of two uniform draws for a softer spread
+				state ^= state << 13; state ^= state >> 17; state ^= state << 5;
+				const f32 a = (state & 0xffff) / 65535.f;
+				state ^= state << 13; state ^= state >> 17; state ^= state << 5;
+				const f32 b = (state & 0xffff) / 65535.f;
+				const f32 v = std::max(0.f, a + b - 1.f); // 0 for half, rising to 1
+				grain_pixels[i * 4 + 0] = grain_pixels[i * 4 + 1] = grain_pixels[i * 4 + 2] = 255;
+				grain_pixels[i * 4 + 3] = static_cast<u8>(std::lround(255.f * v));
+			}
+			grain = std::make_unique<memory_image_info>(n, n, u8{4}, grain_pixels.data());
+			grain->dirty = true;
+		}
+	}
+
+	void backdrop_texture::add(compiled_resource& out, f32 seconds, f32 alpha) const
+	{
+		if (!lines || !ribbon || !grain || alpha <= 0.f)
+		{
+			return;
+		}
+
+		// A band twice, side by side, slid by `offset` and wrapping
+		const auto band = [&](const memory_image_info* image, f32 offset, const color4f& tint)
+		{
+			const f32 shift = std::fmod(offset, 1280.f) + (offset < 0.f ? 1280.f : 0.f);
+			for (const f32 x : {-shift, 1280.f - shift})
+			{
+				image_view view;
+				view.set_raw_image(image);
+				view.back_color.a = 0.f;
+				view.fore_color = tint;
+				view.set_pos(static_cast<s16>(std::lround(x)), static_cast<s16>(c_wave_top));
+				view.set_size(1280, c_wave_h);
+				out.add(view.get_compiled());
+			}
+		};
+		band(ribbon.get(), -seconds * 5.f, color4f(0.55f, 0.75f, 1.f, 0.10f * alpha));
+		band(lines.get(), seconds * 9.f, color4f(0.55f, 0.75f, 1.f, 0.20f * alpha));
+
+		for (u16 y = 0; y < 720; y = static_cast<u16>(y + c_grain_tile))
+		{
+			for (u16 x = 0; x < 1280; x = static_cast<u16>(x + c_grain_tile))
+			{
+				image_view view;
+				view.set_raw_image(grain.get());
+				view.back_color.a = 0.f;
+				view.fore_color = color4f(1.f, 1.f, 1.f, 0.035f * alpha);
+				view.set_pos(static_cast<s16>(x), static_cast<s16>(y));
+				view.set_size(c_grain_tile, c_grain_tile);
+				out.add(view.get_compiled());
+			}
+		}
 	}
 
 	// The opening's curves: how far a step of it is, at `now` seconds, for a

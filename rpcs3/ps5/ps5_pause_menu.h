@@ -6,7 +6,10 @@
 // along the top (L1 / R1), and a tab's rows in cyan-lit pills.
 //
 // Game: resume, the settings reached for while playing, restart, back to the
-// library. The other tabs: every setting the desktop dialog offers, by its
+// library. Performance: the game's frames a second, the busiest threads and
+// more, as measured over the five seconds before the menu opened (and now,
+// under it), to say what was happening when something looked wrong. The
+// other tabs: every setting the desktop dialog offers, by its
 // tabs, as the launcher's Game settings has them. A change is the game's own
 // (its custom config, written as the menu closes), and a setting the
 // emulator reads as it runs takes effect at once; the others from the
@@ -16,6 +19,7 @@
 #include "Emu/RSX/Overlays/overlays.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "ps5_ui.h"
+#include "ps5_perf.h"
 
 #include <functional>
 #include <map>
@@ -46,7 +50,8 @@ namespace rsx::overlays
 			capture
 		};
 
-		// A row of a tab: an action, or a setting (an index into m_settings)
+		// A row of a tab: an action, or a setting (an index into m_settings), or
+		// a measurement (perf_metric)
 		struct row
 		{
 			action act = action::none;
@@ -55,7 +60,24 @@ namespace rsx::overlays
 			std::string note;
 			const char* icon = nullptr;
 			bool rule_before = false;
+			s32 perf = -1;
 		};
+
+		// The Performance tab's measurements
+		enum perf_metric : s32
+		{
+			perf_game_fps,
+			perf_shown_fps,
+			perf_made,
+			perf_gpu_wait,
+			perf_ppu,
+			perf_spu,
+			perf_busiest, // and the next ones, a thread each
+			perf_collision = perf_busiest + 8,
+			perf_memory,
+		};
+		std::string perf_value(const ps5_perf& perf, s32 metric) const;
+		std::string perf_note(s32 metric) const;
 
 		struct tab
 		{
@@ -79,6 +101,8 @@ namespace rsx::overlays
 		s32 m_row = 0;
 		s32 m_scroll = 0;
 		bool m_changed = false;
+
+		ps5_perf m_perf_before; // the five seconds before the menu opened
 
 		std::vector<u8> m_glow_pixels;
 		std::unique_ptr<memory_image_info> m_glow;

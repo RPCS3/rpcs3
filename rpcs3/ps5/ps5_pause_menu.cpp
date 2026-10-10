@@ -130,6 +130,49 @@ namespace rsx::overlays
 		game.rows.push_back({action::quit, -1, "Quit to library", "Ends the game and goes back to your games", "home/32/circle-left-solid.png", false});
 		m_tabs.push_back(std::move(game));
 
+		// Performance: what the five seconds before the menu measured
+		m_perf_before = ps5_perf_latest();
+		{
+			tab perf;
+			perf.name = "Performance";
+			const auto metric = [&](s32 which, std::string label, const char* icon = nullptr, bool rule = false)
+			{
+				row r;
+				r.label = std::move(label);
+				r.icon = icon;
+				r.rule_before = rule;
+				r.perf = which;
+				perf.rows.push_back(std::move(r));
+			};
+			if (!m_perf_before.valid)
+			{
+				perf.rows.push_back({action::none, -1, "Still measuring", "The game's frames a second and its busiest threads are measured every 5 seconds while it runs. Open this menu again in a few seconds.", "home/32/gauge-solid.png", false});
+			}
+			else
+			{
+				const bool frame_gen = m_perf_before.made_fps > 0.f || g_cfg.video.frame_generation;
+				metric(perf_game_fps, "Game's frames a second", "home/32/gauge-solid.png");
+				if (frame_gen)
+				{
+					metric(perf_shown_fps, "Frames shown a second");
+					metric(perf_made, "Made between by frame generation");
+					metric(perf_gpu_wait, "Waiting for the GPU");
+				}
+				metric(perf_ppu, "PPU threads (the PS3's main processor)", nullptr, true);
+				metric(perf_spu, "SPU threads (the PS3's co-processors)");
+				for (usz i = 0; i < m_perf_before.busiest.size() && i < 5; i++)
+				{
+					metric(static_cast<s32>(perf_busiest + i), m_perf_before.busiest[i].first, nullptr, i == 0);
+				}
+				if (!m_perf_before.collision.empty())
+				{
+					metric(perf_collision, "Collision accuracy", nullptr, true);
+				}
+				metric(perf_memory, "Memory", nullptr, m_perf_before.collision.empty());
+			}
+			m_tabs.push_back(std::move(perf));
+		}
+
 		for (usz i = 0; i < m_settings.size(); i++)
 		{
 			if (m_settings[i].heading)
@@ -142,6 +185,60 @@ namespace rsx::overlays
 			}
 		}
 		std::erase_if(m_tabs, [](const tab& each) { return each.rows.empty(); });
+	}
+
+	std::string ps5_pause_menu::perf_value(const ps5_perf& perf, s32 metric) const
+	{
+		if (!perf.valid)
+		{
+			return "-";
+		}
+		switch (metric)
+		{
+		case perf_game_fps: return fmt::format("%.1f", perf.game_fps);
+		case perf_shown_fps: return fmt::format("%.1f", perf.game_fps + std::max(0.f, perf.made_fps - perf.dropped_fps));
+		case perf_made: return perf.dropped_fps >= 0.05f ? fmt::format("%.1f a second, %.1f dropped", perf.made_fps, perf.dropped_fps) : fmt::format("%.1f a second", perf.made_fps);
+		case perf_gpu_wait: return fmt::format("%.0f ms a second", perf.gpu_wait_ms);
+		case perf_ppu: return fmt::format("%.0f%% of the CPU", perf.ppu_load);
+		case perf_spu: return fmt::format("%.0f%% of the CPU", perf.spu_load);
+		case perf_collision: return perf.collision;
+		case perf_memory: return fmt::format("%u MiB used, %u MiB free", perf.heap_mib, perf.free_mib);
+		default: break;
+		}
+		if (metric >= perf_busiest && metric < perf_collision)
+		{
+			// The same thread, by its name, in these measurements
+			const usz index = static_cast<usz>(metric - perf_busiest);
+			if (index < m_perf_before.busiest.size())
+			{
+				for (const auto& [name, share] : perf.busiest)
+				{
+					if (name == m_perf_before.busiest[index].first)
+					{
+						return fmt::format("%.0f%% of the time", share);
+					}
+				}
+				return "under 5% of the time";
+			}
+		}
+		return "-";
+	}
+
+	std::string ps5_pause_menu::perf_note(s32 metric) const
+	{
+		switch (metric)
+		{
+		case perf_game_fps: return "The game's own frames, measured over the 5 seconds before this menu opened.";
+		case perf_shown_fps: return "The game's frames and those frame generation made between them that reached the screen.";
+		case perf_made: return "Frames frame generation made between the game's own; dropped ones were made but would have reached the screen too late.";
+		case perf_gpu_wait: return "How long the emulator waited each second for the GPU to finish frame generation's work.";
+		case perf_ppu: return "The PPU threads' running time, as a share of all of the console's CPU threads.";
+		case perf_spu: return "The SPU threads' running time, as a share of all of the console's CPU threads.";
+		case perf_collision: return "GTA IV's collision code: what the Collision accuracy setting is doing.";
+		case perf_memory: return "The emulator's memory, and the console's left for it.";
+		default: break;
+		}
+		return "How much of the time this thread was running. One near 100% is likely what holds the game back: the rest wait for it.";
 	}
 
 	void ps5_pause_menu::move_to(s32 next)
@@ -580,7 +677,17 @@ namespace rsx::overlays
 			}
 
 			s16 name_room = static_cast<s16>(c_inner_right - name_x);
-			if (setting)
+			if (entry.perf >= 0)
+			{
+				// A measurement: the five seconds' before the menu opened
+				auto value = make_label("", 13, f_semibold, selected ? c_button_text : c_accent);
+				fit_text(*value, perf_value(m_perf_before, entry.perf), 300);
+				const s16 right = static_cast<s16>(c_inner_right - (selected ? 10 : 0));
+				place(*value, static_cast<s16>(right - value->w), mid);
+				card.add(value->get_compiled());
+				name_room = static_cast<s16>(value->x - 16 - name_x);
+			}
+			else if (setting)
 			{
 				auto value = make_label("", 13, f_semibold, selected ? c_button_text : (changed ? c_accent : c_text_dim));
 				fit_text(*value, setting_text(setting->key, setting->value), 280);
@@ -640,6 +747,17 @@ namespace rsx::overlays
 				if (setting.value != setting.global)
 				{
 					when += "  Global: " + setting_text(setting.key, setting.global) + ".";
+				}
+			}
+			else if (entry.perf >= 0)
+			{
+				// What it measures, and the same now, under the menu (measured
+				// every 5 seconds: the game is usually paused by now)
+				const ps5_perf now = ps5_perf_latest();
+				help = perf_note(entry.perf);
+				if (now.valid && now.at_us != m_perf_before.at_us)
+				{
+					when = "Now, under this menu: " + perf_value(now, entry.perf);
 				}
 			}
 			else

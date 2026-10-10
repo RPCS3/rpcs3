@@ -35,6 +35,9 @@ namespace rsx::overlays::ps5ui
 	inline const color4f c_backdrop{0.02f, 0.03f, 0.08f, 1.f};
 	inline const color4f c_library_blue{0.003f, 0.006f, 0.135f, 1.f}; // #010222, a shade darker than the first #01022F
 
+	// A trophy grade's colour: 0 platinum, 1 gold, 2 silver, 3 bronze, else unknown
+	const color4f& trophy_grade_colour(u8 grade);
+
 	// The title's fonts (/app0/assets/fonts, the frontend's font folder);
 	// characters they lack come from the PS3's own font
 	inline constexpr std::string_view f_regular = "Inter-Regular";
@@ -92,6 +95,27 @@ namespace rsx::overlays::ps5ui
 	// A soft white disc, its alpha falling to 0 at its edge: tinted and
 	// stretched, a glow
 	std::unique_ptr<memory_image_info> make_glow(std::vector<u8>& pixels);
+
+	// The deep blue's texture (the Library, Trophies, Settings and Install
+	// tabs): the PS3's wave, a sheet of fine lines and a soft ribbon under it
+	// drifting apart so its shape keeps changing, and a fine grain
+	struct backdrop_texture
+	{
+		std::vector<u8> lines_pixels;
+		std::vector<u8> ribbon_pixels;
+		std::vector<u8> grain_pixels;
+		std::unique_ptr<memory_image_info> lines;
+		std::unique_ptr<memory_image_info> ribbon;
+		std::unique_ptr<memory_image_info> grain;
+
+		void build();
+
+		// Over the blue, at `seconds` into the page's life
+		void add(compiled_resource& out, f32 seconds, f32 alpha = 1.f) const;
+	};
+
+	// A five-pointed star, white on clear, its edges smoothed: a favourite's
+	std::unique_ptr<memory_image_info> make_star(std::vector<u8>& pixels);
 
 	// The curves: how far a step is, at `now` seconds, for a step from `start` lasting `length`
 	f32 progress(f32 now, f32 start, f32 length);
