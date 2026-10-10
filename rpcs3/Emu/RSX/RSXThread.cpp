@@ -41,6 +41,8 @@ class GSRender;
 
 atomic_t<bool> g_user_asked_for_recording = false;
 atomic_t<bool> g_user_asked_for_screenshot = false;
+atomic_t<u32> g_ps5_rsx_cpus[16]{}; // PS5 fork: the CPUs the RSX thread ended its frames on (ps5_frontend.cpp's status lines)
+s32 ps5_current_cpu(); // PS5 fork: ps5/ps5_cpus.cpp
 atomic_t<bool> g_user_asked_for_frame_capture = false;
 atomic_t<bool> g_disable_frame_limit = false;
 rsx::frame_trace_data frame_debug;
@@ -3390,6 +3392,9 @@ namespace rsx
 
 	void thread::on_frame_end(u32 buffer, bool forced)
 	{
+		// PS5 fork: the CPU the RSX thread is on, a count a frame, for the trace (ps5_frontend.cpp)
+		g_ps5_rsx_cpus[ps5_current_cpu() & 15]++;
+
 		bool pause_emulator = false;
 
 		// MM sync. This is a pre-emptive operation, so we can use a deferred request.
@@ -3617,6 +3622,7 @@ namespace rsx
 					const auto delay_us = target_rsx_flip_time - time;
 					lv2_obj::wait_timeout(delay_us, nullptr, false);
 					performance_counters.idle_time += delay_us;
+					performance_counters.ps5_idle_total += delay_us; // PS5 fork
 				}
 			}
 

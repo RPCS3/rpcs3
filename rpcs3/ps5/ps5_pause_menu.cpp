@@ -169,7 +169,8 @@ namespace rsx::overlays
 					metric(perf_made, "Made between by frame generation");
 					metric(perf_gpu_wait, "Waiting for the GPU");
 				}
-				metric(perf_ppu, "PPU threads (the PS3's main processor)", nullptr, true);
+				metric(perf_rsx, "RSX thread (the PS3's GPU, emulated)", nullptr, true);
+				metric(perf_ppu, "PPU threads (the PS3's main processor)");
 				metric(perf_spu, "SPU threads (the PS3's co-processors)");
 				for (usz i = 0; i < m_perf_before.busiest.size() && i < 5; i++)
 				{
@@ -227,6 +228,7 @@ namespace rsx::overlays
 		case perf_shown_fps: return fmt::format("%.1f", perf.game_fps + std::max(0.f, perf.made_fps - perf.dropped_fps));
 		case perf_made: return perf.dropped_fps >= 0.05f ? fmt::format("%.1f a second, %.1f dropped", perf.made_fps, perf.dropped_fps) : fmt::format("%.1f a second", perf.made_fps);
 		case perf_gpu_wait: return fmt::format("%.0f ms a second", perf.gpu_wait_ms);
+		case perf_rsx: return fmt::format("%.0f%% busy", perf.rsx_load);
 		case perf_ppu: return fmt::format("%.0f%% of the CPU", perf.ppu_load);
 		case perf_spu: return fmt::format("%.0f%% of the CPU", perf.spu_load);
 		case perf_collision: return perf.collision;
@@ -260,6 +262,7 @@ namespace rsx::overlays
 		case perf_shown_fps: return "The game's frames and those frame generation made between them that reached the screen.";
 		case perf_made: return "Frames frame generation made between the game's own; dropped ones were made but would have reached the screen too late.";
 		case perf_gpu_wait: return "How long the emulator waited each second for the GPU to finish frame generation's work.";
+		case perf_rsx: return "How much of the time the emulated GPU's thread was working on the game's drawing, not waiting for it. Near 100% means the game waits for it.";
 		case perf_ppu: return "The PPU threads' running time, as a share of all of the console's CPU threads.";
 		case perf_spu: return "The SPU threads' running time, as a share of all of the console's CPU threads.";
 		case perf_collision: return "GTA IV's collision code: what the Collision accuracy setting is doing.";

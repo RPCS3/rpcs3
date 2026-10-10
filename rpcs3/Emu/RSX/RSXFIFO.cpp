@@ -219,6 +219,7 @@ namespace rsx
 						const auto then = std::exchange(now, get_system_time());
 						start_time = now;
 						m_thread->performance_counters.idle_time += now - then;
+						m_thread->performance_counters.ps5_idle_total += now - then; // PS5 fork
 					}
 					else
 					{
@@ -828,7 +829,9 @@ namespace rsx
 			}
 
 			// Update performance counters with time spent in idle mode
-			performance_counters.idle_time += (get_system_time() - performance_counters.FIFO_idle_timestamp);
+			const u64 idle_us = get_system_time() - performance_counters.FIFO_idle_timestamp;
+			performance_counters.idle_time += idle_us;
+			performance_counters.ps5_idle_total += idle_us; // PS5 fork
 		}
 
 		do

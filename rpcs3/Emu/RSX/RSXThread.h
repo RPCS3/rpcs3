@@ -203,6 +203,7 @@ namespace rsx
 		struct
 		{
 			atomic_t<u64> idle_time{ 0 };  // Time spent idling in microseconds
+			atomic_t<u64> ps5_idle_total{ 0 }; // PS5 fork: the same, never reset (get_load resets idle_time), for the trace's RSX load
 			u64 last_update_timestamp = 0; // Timestamp of last load update
 			u64 FIFO_idle_timestamp = 0;   // Timestamp of when FIFO queue becomes idle
 			FIFO::state state = FIFO::state::running;

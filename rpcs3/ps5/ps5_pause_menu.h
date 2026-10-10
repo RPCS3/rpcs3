@@ -75,6 +75,7 @@ namespace rsx::overlays
 			perf_shown_fps,
 			perf_made,
 			perf_gpu_wait,
+			perf_rsx,
 			perf_ppu,
 			perf_spu,
 			perf_busiest, // and the next ones, a thread each

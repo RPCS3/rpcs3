@@ -102,6 +102,7 @@ std::string spu_collision_status(); // SPULLVMRecompiler.cpp: the collision sett
 extern atomic_t<u64> g_ps5_getllar_waits[64][2]; // SPUThread.cpp: each SPU slot's GETLLAR polls answered by busy waiting, and by sleeping
 extern atomic_t<u32> g_ps5_spu_cpus[64][16]; // SPUThread.cpp: each SPU slot's polls by the CPU it was on
 u32 ps5_spu_slot(u32 id); // SPUThread.cpp: an SPU thread's slot in those counts
+extern atomic_t<u32> g_ps5_rsx_cpus[16]; // RSXThread.cpp: the CPUs the RSX thread ended its frames on
 const extern spu_decoder<spu_itype> g_spu_itype; // SPUAnalyser.cpp
 extern atomic_t<u64> g_ps5_frames_generated; // VKFrameGen.cpp: frames made between the game's
 extern atomic_t<u64> g_ps5_frame_gen_us; // VKFrameGen.cpp: the RSX thread's time making and showing them,
@@ -1455,6 +1456,7 @@ int run(const char* boot_path)
 					{
 						atomic_t<u32> done = 0;
 						u64 flips = 0;
+						u64 rsx_idle_us = 0; // the RSX thread's idle time since the boot (RSXThread.h)
 						u32 count = 0;
 						std::string ppus;
 					};
@@ -1466,6 +1468,7 @@ int run(const char* boot_path)
 							if (const auto render = rsx::get_current_renderer())
 							{
 								view->flips = render->int_flip_index;
+								view->rsx_idle_us = render->performance_counters.ps5_idle_total.load();
 							}
 							view->count = idm::select<named_thread<ppu_thread>>([&](u32, ppu_thread& ppu)
 							{
@@ -1489,6 +1492,28 @@ int run(const char* boot_path)
 					static u64 s_last_flips_us = 0;
 					const u64 flips_us = get_system_time();
 					const f64 game_fps = s_last_flips_us && flips >= s_last_flips && flips_us > s_last_flips_us ? static_cast<f64>(flips - s_last_flips) * 1e6 / static_cast<f64>(flips_us - s_last_flips_us) : 0.0;
+					// And the RSX thread's busy share of the same time (its FIFO not idle,
+					// waiting for the game's commands), with the CPUs it ran on
+					static u64 s_last_rsx_idle = 0;
+					const u64 rsx_idle = seen ? view->rsx_idle_us : s_last_rsx_idle;
+					const f64 rsx_busy = s_last_flips_us && rsx_idle >= s_last_rsx_idle && flips_us > s_last_flips_us && flips > s_last_flips ?
+						std::clamp(100.0 * (1.0 - static_cast<f64>(rsx_idle - s_last_rsx_idle) / static_cast<f64>(flips_us - s_last_flips_us)), 0.0, 100.0) : 0.0;
+					s_last_rsx_idle = rsx_idle;
+					{
+						std::pair<u32, u32> cpus[16];
+						u32 frames = 0;
+						for (u32 cpu = 0; cpu < 16; cpu++)
+						{
+							cpus[cpu] = {g_ps5_rsx_cpus[cpu].exchange(0), cpu};
+							frames += cpus[cpu].first;
+						}
+						std::sort(std::begin(cpus), std::end(cpus), [](const auto& a, const auto& b) { return a.first > b.first; });
+						if (frames && rsx_busy > 0.0)
+						{
+							trace_logged("RSX thread: busy %.0f%% of the time (frames ended on CPU %u %.0f%%%s)", rsx_busy, cpus[0].second, 100.0 * cpus[0].first / frames,
+								cpus[1].first ? fmt::format(", %u %.0f%%", cpus[1].second, 100.0 * cpus[1].first / frames) : std::string());
+						}
+					}
 					s_last_flips = flips;
 					s_last_flips_us = flips_us;
 					const u32 count = seen ? view->count : 0;
@@ -1548,6 +1573,7 @@ int run(const char* boot_path)
 						perf.made_fps = made >= s_last_made && s_last_us ? static_cast<f32>((made - s_last_made) / window) : 0.f;
 						perf.dropped_fps = dropped >= s_last_dropped && s_last_us ? static_cast<f32>((dropped - s_last_dropped) / window) : 0.f;
 						perf.gpu_wait_ms = gpu_us >= s_last_gpu_us && s_last_us ? static_cast<f32>((gpu_us - s_last_gpu_us) / 1000.0 / window) : 0.f;
+						perf.rsx_load = static_cast<f32>(rsx_busy);
 						perf.ppu_load = g_group_load[0].load();
 						perf.spu_load = g_group_load[1].load();
 						perf.busiest = std::move(busiest_plain);
