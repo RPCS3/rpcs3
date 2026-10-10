@@ -1187,6 +1187,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	EnhanceComboBox(emu_settings_type::Buzz, ui->buzzBox, tooltips.settings.buzz, ui->gb_buzz_emulated);
 	EnhanceComboBox(emu_settings_type::Turntable, ui->turntableBox, tooltips.settings.turntable, ui->gb_turntable_emulated);
 	EnhanceComboBox(emu_settings_type::GHLtar, ui->ghltarBox, tooltips.settings.ghltar, ui->gb_ghltar_emulated);
+	EnhanceComboBox(emu_settings_type::USIO, ui->usioBox, tooltips.settings.usio, ui->gb_usio_emulated);
 
 	EnhanceCheckBox(emu_settings_type::BackgroundInput, ui->backgroundInputBox, tooltips.settings.background_input);
 	EnhanceCheckBox(emu_settings_type::PadConnection, ui->padConnectionBox, tooltips.settings.pad_connection);
@@ -1349,6 +1350,14 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	m_emu_settings->EnhanceRadioButton(enter_button_assignment_bg, emu_settings_type::EnterButtonAssignment);
 	SubscribeTooltip(ui->gb_enterButtonAssignment, tooltips.settings.enter_button_assignment);
 
+	// Edits
+
+	m_emu_settings->EnhanceLineEdit(ui->edit_hdd_model, emu_settings_type::HDDModelName);
+	SubscribeTooltip(ui->gb_edit_hdd_model, tooltips.settings.hdd_model);
+
+	m_emu_settings->EnhanceLineEdit(ui->edit_hdd_serial, emu_settings_type::HDDSerialNumber);
+	SubscribeTooltip(ui->gb_edit_hdd_serial, tooltips.settings.hdd_serial);
+
 	//    _   _      _                      _      _______    _
 	//   | \ | |    | |                    | |    |__   __|  | |
 	//   |  \| | ___| |___      _____  _ __| | __    | | __ _| |__
@@ -1462,6 +1471,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	EnhanceCheckBox(emu_settings_type::DisableAsyncHostMM, ui->disableAsyncHostMM, tooltips.settings.disable_async_host_mm);
 	EnhanceCheckBox(emu_settings_type::DisableSpinOptimization, ui->disableSpinOptimization, tooltips.settings.disable_spin_optimization);
 	EnhanceCheckBox(emu_settings_type::EmulateHddSpeed, ui->emulateHddSpeed, tooltips.settings.emulate_hdd_speed);
+	EnhanceCheckBox(emu_settings_type::EmulateBdvdSpeed, ui->emulateBdvdSpeed, tooltips.settings.emulate_bdvd_speed);
 	EnhanceCheckBox(emu_settings_type::DisableHWTexelRemapping, ui->disableHardwareTexelRemapping, tooltips.settings.disable_hw_texel_remapping);
 	EnhanceCheckBox(emu_settings_type::DisableHWBlending, ui->disableHardwareBlending, tooltips.settings.disable_hw_blending);
 

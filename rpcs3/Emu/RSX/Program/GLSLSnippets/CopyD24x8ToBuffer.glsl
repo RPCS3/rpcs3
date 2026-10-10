@@ -49,6 +49,13 @@ uint input_coord_to_output_id(ivec2 coord)
 	return coord.y * output_pitch + coord.x;
 }
 
+uint f32_to_unorm24(const in float value)
+{
+	// Round to nearest. See f32_to_unorm24 in ShuffleBytes.glsl.
+	const float scaled = value * 16777215.f;
+	return uint(scaled) + uint(fract(scaled) >= 0.5f);
+}
+
 void main()
 {
 	uint index = linear_invocation_id() * KERNEL_SIZE;
@@ -63,7 +70,7 @@ void main()
 		ivec2 coord = linear_id_to_input_coord(index);
 		float depth = texelFetch(depthData, coord, 0).x;
 		uint stencil = texelFetch(stencilData, coord, 0).x;
-		uint depth_bytes = uint(depth * 0xffffff);
+		uint depth_bytes = f32_to_unorm24(depth);
 		uint value = (depth_bytes << 8) | stencil;
 
 		if (swap_bytes != 0)

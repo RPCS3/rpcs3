@@ -18,6 +18,7 @@ extern "C" {
 #include "libavformat/avformat.h"
 #include "libavutil/dict.h"
 #include "libavutil/imgutils.h"
+#include "libavutil/mathematics.h"
 #include "libswscale/swscale.h"
 #include "libswresample/swresample.h"
 }
@@ -507,6 +508,7 @@ namespace utils
 
 	void audio_decoder::set_context(music_selection_context&& context)
 	{
+		stop();
 		m_context = std::move(context);
 	}
 
@@ -519,12 +521,13 @@ namespace utils
 	{
 		media_log.notice("audio_decoder: Clear data...");
 
-		track_fully_decoded = 0;
-		track_fully_consumed = 0;
-		has_error = false;
-		m_size = 0;
-		timestamps_ms.clear();
-		data.clear();
+		m_track_fully_decoded = 0;
+		m_track_fully_consumed = 0;
+		m_has_error = false;
+
+		std::scoped_lock lock(m_data_mtx);
+		m_timestamps_ms.clear();
+		m_data.clear();
 	}
 
 	void audio_decoder::stop()
@@ -535,13 +538,18 @@ namespace utils
 		{
 			auto& thread = *m_thread;
 			thread = thread_state::aborting;
-			track_fully_consumed = 1;
-			track_fully_consumed.notify_one();
+			wake_up();
 			thread();
 			m_thread.reset();
 		}
 
 		clear();
+	}
+
+	void audio_decoder::wake_up()
+	{
+		m_track_fully_consumed = 1;
+		m_track_fully_consumed.notify_one();
 	}
 
 	void audio_decoder::decode()
@@ -565,13 +573,13 @@ namespace utils
 			if (int err = avformat_open_input(&av.format_context, path.c_str(), nullptr, nullptr); err < 0)
 			{
 				media_log.error("audio_decoder: Could not open file '%s'. Error: %d='%s'", path, err, av_error_to_string(err));
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 			if (int err = avformat_find_stream_info(av.format_context, nullptr); err < 0)
 			{
 				media_log.error("audio_decoder: Could not retrieve stream info from file '%s'. Error: %d='%s'", path, err, av_error_to_string(err));
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 
@@ -589,7 +597,7 @@ namespace utils
 			if (!stream)
 			{
 				media_log.error("audio_decoder: Could not retrieve audio stream from file '%s'", path);
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 
@@ -598,7 +606,7 @@ namespace utils
 			if (!av.audio.codec)
 			{
 				media_log.error("audio_decoder: Failed to find decoder for stream #%u in file '%s'", stream_index, path);
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 
@@ -607,7 +615,7 @@ namespace utils
 			if (!av.audio.context)
 			{
 				media_log.error("audio_decoder: Failed to allocate context for stream #%u in file '%s'", stream_index, path);
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 
@@ -615,7 +623,7 @@ namespace utils
 			if (int err = avcodec_open2(av.audio.context, av.audio.codec, nullptr); err < 0)
 			{
 				media_log.error("audio_decoder: Failed to open decoder for stream #%u in file '%s'. Error: %d='%s'", stream_index, path, err, av_error_to_string(err));
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 
@@ -630,21 +638,21 @@ namespace utils
 			if (set_err < 0)
 			{
 				media_log.error("audio_decoder: Failed to set resampler options: Error: %d='%s'", set_err, av_error_to_string(set_err));
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 
 			if (!av.swr)
 			{
 				media_log.error("audio_decoder: Failed to allocate resampler for stream #%u in file '%s'", stream_index, path);
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 
 			if (int err = swr_init(av.swr); err < 0 || !swr_is_initialized(av.swr))
 			{
 				media_log.error("audio_decoder: Resampler has not been properly initialized: %d='%s'", err, av_error_to_string(err));
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 
@@ -653,7 +661,7 @@ namespace utils
 			if (!av.audio.frame)
 			{
 				media_log.error("audio_decoder: Error allocating the frame");
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 
@@ -661,19 +669,120 @@ namespace utils
 			if (!packet)
 			{
 				media_log.error("audio_decoder: Error allocating the packet");
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 
 			std::unique_ptr<AVPacket, decltype(free_packet)> packet_(packet);
 			bool is_first_error = true;
+			s64 last_timestamp_ms = 0;
 
-			// Iterate through frames
-			while (thread_ctrl::state() != thread_state::aborting && av_read_frame(av.format_context, packet) >= 0)
+			const int in_rate = stream->codecpar->sample_rate;
+			const AVRational time_base = stream->time_base;
+			const int bytes_per_sample = dst_channels * static_cast<int>(sizeof(f32));
+
+			// A whole track ends up in our data, so reserve it in one go instead of letting it grow piecewise.
+			if (const s64 duration = av.format_context->duration; duration > 0)
 			{
-				if (int err = avcodec_send_packet(av.audio.context, packet); err < 0)
+				constexpr u64 max_reserve = 256 * 1024 * 1024; // Don't trust the header blindly
+				const u64 expected_size = static_cast<u64>(av_rescale(duration, sample_rate * bytes_per_sample, AV_TIME_BASE));
+
+				std::scoped_lock lock(m_data_mtx);
+				m_data.reserve(std::min<u64>(expected_size, max_reserve));
+			}
+
+			// The output buffer is reused by every frame. Only its size may grow.
+			const auto free_av_buffer = [](u8* buf) { av_free(buf); };
+			std::unique_ptr<u8, decltype(free_av_buffer)> buffer(nullptr, free_av_buffer);
+			int buffer_samples = 0;
+
+			// Resamples the given frame and appends the result to our data.
+			// Pass a null frame in order to flush the samples that are still pending in the resampler.
+			const auto resample_and_append = [&](const AVFrame* frame) -> bool
+			{
+				const int in_samples = frame ? frame->nb_samples : 0;
+
+				// The resampler buffers samples internally, so we also have to make room for the ones that are still pending.
+				// Otherwise they pile up and we lose the tail of the track whenever the file's sample rate differs from ours.
+				const int out_samples = in_rate > 0
+					? static_cast<int>(av_rescale_rnd(swr_get_delay(av.swr, in_rate) + in_samples, sample_rate, in_rate, AV_ROUND_UP))
+					: in_samples;
+
+				if (out_samples <= 0)
 				{
-					if (is_first_error)
+					return true;
+				}
+
+				if (out_samples > buffer_samples)
+				{
+					u8* new_buffer = nullptr;
+					const int align = 0; // Let FFmpeg align the buffer, so the resampler can take its SIMD paths
+					const int buffer_size = av_samples_alloc(&new_buffer, nullptr, dst_channels, out_samples, dst_format, align);
+					if (buffer_size < 0)
+					{
+						media_log.error("audio_decoder: Error allocating buffer: %d='%s'", buffer_size, av_error_to_string(buffer_size));
+						m_has_error = true;
+						return false;
+					}
+
+					buffer.reset(new_buffer);
+					buffer_samples = out_samples;
+				}
+
+				u8* out_buffer = buffer.get();
+
+				const int frame_count = swr_convert(av.swr, &out_buffer, out_samples, frame ? const_cast<const uint8_t**>(frame->data) : nullptr, in_samples);
+				if (frame_count < 0)
+				{
+					media_log.error("audio_decoder: Error converting frame: %d='%s'", frame_count, av_error_to_string(frame_count));
+					m_has_error = true;
+					return false;
+				}
+
+				if (frame_count == 0)
+				{
+					// Nothing came out of the resampler yet.
+					return true;
+				}
+
+				// Only the samples that were actually written are valid. The rest of the buffer is left over from previous frames.
+				const u64 size = static_cast<u64>(frame_count) * bytes_per_sample;
+
+				if (frame)
+				{
+					last_timestamp_ms = time_base.den ? (1000 * frame->best_effort_timestamp * time_base.num) / time_base.den : 0;
+				}
+
+				// The format is float 32bit per channel. Swap it in place, so we can append the buffer as-is.
+				if (m_swap_endianness)
+				{
+					copy_samples<f32>(out_buffer, out_buffer, size / sizeof(f32), true);
+				}
+
+				// Append resampled frames to data
+				{
+					std::scoped_lock lock(m_data_mtx);
+					m_timestamps_ms.push_back({m_data.size(), last_timestamp_ms});
+					m_data.insert(m_data.cend(), out_buffer, out_buffer + size);
+				}
+
+				media_log.trace("audio_decoder: decoded frame_count=%d size=%d timestamp_ms=%d", frame_count, size, last_timestamp_ms);
+				return true;
+			};
+
+			// Sends the given packet to the decoder and appends every frame it produces.
+			// Pass a null packet in order to flush the frames that are still pending in the decoder.
+			const auto decode_packet = [&](AVPacket* pkt) -> bool
+			{
+				if (int err = avcodec_send_packet(av.audio.context, pkt); err < 0)
+				{
+					if (!pkt && err == averror_eof)
+					{
+						// The decoder was already flushed.
+						return true;
+					}
+
+					if (is_first_error && pkt)
 					{
 						is_first_error = false;
 
@@ -682,12 +791,13 @@ namespace utils
 							// Some mp3s contain some invalid data at the beginning of the stream. They work fine if we just ignore them.
 							// So let's skip the first invalid data error. Maybe there is a better way, but let's just roll with it for now.
 							media_log.warning("audio_decoder: Ignoring first error: %d='%s'", err, av_error_to_string(err));
-							continue;
+							return true;
 						}
 					}
+
 					media_log.error("audio_decoder: Queuing error: %d='%s'", err, av_error_to_string(err));
-					has_error = true;
-					return;
+					m_has_error = true;
+					return false;
 				}
 
 				while (thread_ctrl::state() != thread_state::aborting)
@@ -698,49 +808,37 @@ namespace utils
 							break;
 
 						media_log.error("audio_decoder: Decoding error: %d='%s'", err, av_error_to_string(err));
-						has_error = true;
-						return;
+						m_has_error = true;
+						return false;
 					}
 
-					// Resample frames
-					u8* buffer = nullptr;
-					const int align = 1;
-					const int buffer_size = av_samples_alloc(&buffer, nullptr, dst_channels, av.audio.frame->nb_samples, dst_format, align);
-					if (buffer_size < 0)
+					if (!resample_and_append(av.audio.frame))
 					{
-						media_log.error("audio_decoder: Error allocating buffer: %d='%s'", buffer_size, av_error_to_string(buffer_size));
-						has_error = true;
-						return;
+						return false;
 					}
-
-					const int frame_count = swr_convert(av.swr, &buffer, av.audio.frame->nb_samples, const_cast<const uint8_t**>(av.audio.frame->data), av.audio.frame->nb_samples);
-					if (frame_count < 0)
-					{
-						media_log.error("audio_decoder: Error converting frame: %d='%s'", frame_count, av_error_to_string(frame_count));
-						has_error = true;
-						if (buffer)
-							av_freep(&buffer);
-						return;
-					}
-
-					// Append resampled frames to data
-					{
-						std::scoped_lock lock(m_mtx);
-						data.resize(m_size + buffer_size);
-
-						// The format is float 32bit per channel.
-						copy_samples<f32>(buffer, &data[m_size], buffer_size / sizeof(f32), m_swap_endianness);
-
-						const s64 timestamp_ms = stream->time_base.den ? (1000 * av.audio.frame->best_effort_timestamp * stream->time_base.num) / stream->time_base.den : 0;
-						timestamps_ms.push_back({m_size, timestamp_ms});
-						m_size += buffer_size;
-					}
-
-					if (buffer)
-						av_freep(&buffer);
-
-					media_log.trace("audio_decoder: decoded frame_count=%d buffer_size=%d timestamp_us=%d", frame_count, buffer_size, av.audio.frame->best_effort_timestamp);
 				}
+
+				return true;
+			};
+
+			// Iterate through frames
+			while (thread_ctrl::state() != thread_state::aborting && av_read_frame(av.format_context, packet) >= 0)
+			{
+				if (!decode_packet(packet))
+				{
+					return;
+				}
+			}
+
+			if (thread_ctrl::state() == thread_state::aborting)
+			{
+				return;
+			}
+
+			// Flush the decoder and the resampler, otherwise we lose the tail of the track.
+			if (!decode_packet(nullptr) || !resample_and_append(nullptr))
+			{
+				return;
 			}
 		};
 
@@ -754,7 +852,7 @@ namespace utils
 			if (m_context.playlist.empty())
 			{
 				media_log.error("audio_decoder: Can not play empty playlist");
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 
@@ -764,7 +862,11 @@ namespace utils
 				media_log.notice("audio_decoder: shuffling initial playlist...");
 				std::random_device rd;
 				auto engine = std::default_random_engine{rd()};
-				std::shuffle(std::begin(m_context.playlist), std::end(m_context.playlist), engine);
+
+				// Keep the selected track as the first one, so that the whole shuffled playlist is played before the next shuffle
+				std::swap(m_context.playlist.front(), ::at32(m_context.playlist, m_context.current_track));
+				std::shuffle(std::begin(m_context.playlist) + 1, std::end(m_context.playlist), engine);
+				m_context.current_track = 0;
 			}
 
 			while (thread_ctrl::state() != thread_state::aborting)
@@ -772,9 +874,9 @@ namespace utils
 				media_log.notice("audio_decoder: about to decode: %s (index=%d)", ::at32(m_context.playlist, m_context.current_track), m_context.current_track);
 
 				decode_track(::at32(m_context.playlist, m_context.current_track));
-				track_fully_decoded = 1;
+				m_track_fully_decoded = 1;
 
-				if (has_error)
+				if (m_has_error)
 				{
 					media_log.notice("audio_decoder: stopping with error...");
 					break;
@@ -783,11 +885,11 @@ namespace utils
 				// Let's only decode one track at a time. Wait for the consumer to finish reading the track.
 				media_log.notice("audio_decoder: waiting until track is consumed...");
 
-				while (thread_ctrl::state() != thread_state::aborting && !track_fully_consumed)
+				while (thread_ctrl::state() != thread_state::aborting && !m_track_fully_consumed)
 				{
-					thread_ctrl::wait_on(track_fully_consumed, 0);
+					thread_ctrl::wait_on(m_track_fully_consumed, 0);
 				}
-				track_fully_consumed = 0;
+				m_track_fully_consumed = 0;
 			}
 
 			media_log.notice("audio_decoder: finished playlist");
@@ -797,6 +899,35 @@ namespace utils
 	u32 audio_decoder::set_next_index(bool next)
 	{
 		return m_context.step_track(next);
+	}
+
+	s64 audio_decoder::get_start_time_ms(u64 read_pos)
+	{
+		if (m_timestamps_ms.empty()) return 0;
+
+		const s64 start_time_ms = m_timestamps_ms.front().second;
+
+		while (m_timestamps_ms.size() > 1 && read_pos >= ::at32(m_timestamps_ms, 1).first)
+		{
+			m_timestamps_ms.pop_front();
+		}
+
+		return start_time_ms;
+	}
+
+	u64 audio_decoder::read(void* dst, u64 read_pos, u64 read_size)
+	{
+		if (!dst || read_pos >= m_data.size()) return 0;
+
+		const u64 size_left = m_data.size() - read_pos;
+		const u64 size_to_read = std::min(read_size, size_left);
+
+		if (size_to_read > 0)
+		{
+			std::memcpy(dst, &m_data[read_pos], size_to_read);
+		}
+
+		return size_to_read;
 	}
 
 	video_encoder::video_encoder()

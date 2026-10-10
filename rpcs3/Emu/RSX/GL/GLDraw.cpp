@@ -84,16 +84,36 @@ void GLGSRender::update_draw_state()
 	{
 		// Z-buffer is active.
 		gl_state.depth_mask(rsx::method_registers.depth_write_enabled());
-		gl_state.enable(rsx::method_registers.depth_clamp_enabled() || !rsx::method_registers.depth_clip_enabled(), GL_DEPTH_CLAMP);
+		const bool emulate_depth_range = requires_depth_range_emulation();
+		if (!emulate_depth_range) [[ likely ]]
+		{
+			gl_state.enable(rsx::method_registers.depth_clamp_enabled() || !rsx::method_registers.depth_clip_enabled(), GL_DEPTH_CLAMP);
+		}
+		else
+		{
+			// Depth clip and clamp are emulated in the fragment shader
+			gl_state.enable(GL_DEPTH_CLAMP);
+		}
 
 		if (gl_state.enable(rsx::method_registers.depth_test_enabled(), GL_DEPTH_TEST))
 		{
 			gl_state.depth_func(gl::comparison_op(rsx::method_registers.depth_func()));
 		}
 
-		if (gl::get_driver_caps().EXT_depth_bounds_test_supported && (gl_state.enable(rsx::method_registers.depth_bounds_test_enabled(), GL_DEPTH_BOUNDS_TEST_EXT)))
+		if (gl::get_driver_caps().EXT_depth_bounds_test_supported &&
+			(gl_state.enable(REGS(m_ctx)->depth_bounds_test_enabled(), GL_DEPTH_BOUNDS_TEST_EXT)))
 		{
-			gl_state.depth_bounds(rsx::method_registers.depth_bounds_min(), rsx::method_registers.depth_bounds_max());
+			const auto depth_format = REGS(m_ctx)->surface_depth_fmt();
+			f32 bounds_min = rsx::clamp_depth_bounds_value(depth_format, REGS(m_ctx)->depth_bounds_min());
+			f32 bounds_max = rsx::clamp_depth_bounds_value(depth_format, REGS(m_ctx)->depth_bounds_max());
+
+			if (emulate_depth_range) [[ unlikely ]]
+			{
+				bounds_min = rsx::encode_emulated_depth(bounds_min);
+				bounds_max = rsx::encode_emulated_depth(bounds_max);
+			}
+
+			gl_state.depth_bounds(bounds_min, bounds_max);
 		}
 
 		if (gl::get_driver_caps().NV_depth_buffer_float_supported)
@@ -909,7 +929,7 @@ void GLGSRender::end()
 {
 	m_profiler.start();
 
-	if (skip_current_frame || !m_graphics_state.test(rsx::rtt_config_valid) || cond_render_ctrl.disable_rendering())
+	if (should_skip_draw())
 	{
 		execute_nop_draw();
 		rsx::thread::end();
