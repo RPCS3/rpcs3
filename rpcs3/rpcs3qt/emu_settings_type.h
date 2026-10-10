@@ -47,6 +47,7 @@ enum class emu_settings_type
 	AccuratePPUNJ,
 	AccuratePPUVNAN,
 	AccuratePPUFPCC,
+	AccuratePPUVEST,
 	MaxPreemptCount,
 	SPUProfiler,
 	DisableSpinOptimization,

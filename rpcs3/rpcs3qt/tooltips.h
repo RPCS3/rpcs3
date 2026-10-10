@@ -26,6 +26,7 @@ public:
 		const QString lib_default_lle              = tr("Select to HLE. (LLE by default)");
 
 		const QString debug_console_mode           = tr("Increases the amount of usable system memory to match a DECR console and more.\nCauses some software to behave differently than on retail hardware.");
+		const QString accurate_ppuvest             = tr("Computes PPU vector reciprocal and reciprocal square root estimates exactly as the PS3 does.\nSome games compare these results with a real console, for example in online play. Comes at a performance cost.\nIf unsure, do not modify this setting.");
 		const QString accurate_rsx_access          = tr("Forces RSX pauses on SPU MFC_GETLLAR and SPU MFC_PUTLLUC operations.");
 		const QString accurate_spu_dma             = tr("Accurately processes SPU DMA operations.");
 		const QString silence_all_logs             = tr("Stop writing any logs after game startup. Don't use unless you believe it's necessary.");

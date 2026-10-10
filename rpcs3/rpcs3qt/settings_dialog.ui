@@ -2539,6 +2539,13 @@
                  </property>
                  <layout class="QVBoxLayout" name="gb_advanced_core_layout">
                   <item>
+                   <widget class="QCheckBox" name="accuratePPUVEST">
+                    <property name="text">
+                     <string>Accurate PPU Vector Estimates</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
                    <widget class="QCheckBox" name="accurateRSXAccess">
                     <property name="text">
                      <string>Accurate RSX Reservation Access</string>

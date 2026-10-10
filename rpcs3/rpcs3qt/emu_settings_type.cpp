@@ -53,6 +53,7 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::AccuratePPUNJ,              get_cfg_location(local_cfg.core.ppu_use_nj_bit) },
 	{ emu_settings_type::AccuratePPUVNAN,            get_cfg_location(local_cfg.core.ppu_set_vnan) },
 	{ emu_settings_type::AccuratePPUFPCC,            get_cfg_location(local_cfg.core.ppu_set_fpcc) },
+	{ emu_settings_type::AccuratePPUVEST,            get_cfg_location(local_cfg.core.ppu_set_vest) },
 	{ emu_settings_type::MaxPreemptCount,            get_cfg_location(local_cfg.core.max_cpu_preempt_count_per_frame) },
 	{ emu_settings_type::SPUProfiler,                get_cfg_location(local_cfg.core.spu_prof) },
 	{ emu_settings_type::DisableSpinOptimization,    get_cfg_location(local_cfg.core.spu_getllar_spin_optimization_disabled) },
