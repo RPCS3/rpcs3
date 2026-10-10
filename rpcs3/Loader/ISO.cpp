@@ -1843,6 +1843,12 @@ u64 iso_file::seek(s64 offset, fs::seek_mode whence)
 		return -1;
 	}
 
+	if (file_offset(new_pos) > static_cast<u64>(s64{smax}))
+	{
+		fs::g_tls_error = fs::error::inval;
+		return -1;
+	}
+
 	m_pos = new_pos;
 	return m_pos;
 }
