@@ -11,6 +11,7 @@
 #endif
 extern "C" {
 #include "3rdparty/fusion/fusion/Fusion/FusionAhrs.h"
+#include "3rdparty/fusion/fusion/Fusion/FusionBias.h"
 }
 #ifndef _MSC_VER
 #pragma GCC diagnostic pop
@@ -50,11 +51,38 @@ public:
 	bool enable_player_leds{};
 	bool update_player_leds{true};
 
+	steady_clock::time_point last_reconnect_attempt{};
+
 	std::shared_ptr<FusionAhrs> ahrs; // Used to calculate quaternions from sensor data
 	u64 last_ahrs_update_time_us = 0; // Last ahrs update
+	bool ahrs_drift_correction = false; // Continuously correct the inclination using the accelerometer and estimate the gyro bias
+	f32 ahrs_sample_rate = 0.0f; // Sample rate that the AHRS settings were applied with
+	f32 ahrs_measured_sample_rate = 0.0f; // Smoothed measured sample rate
+
+	// Run-time estimation of the gyro offset (only used with drift correction).
+	// This is a sensor property, so it is kept across orientation resets. Reset it if a different device is connected.
+	FusionBias gyro_bias{};
+	bool gyro_bias_initialized = false;
+
+	// Sensor samples (accelerometer in G, gyro in rad/s) for the next orientation update.
+	// By default, update_orientation uses the current values in move_data and the time since the last update.
+	// Handlers that set queues_imu_samples queue their own samples instead (e.g. once per input report).
+	struct imu_sample
+	{
+		ps_move_data::vect<3> accelerometer{};
+		ps_move_data::vect<3> gyro{};
+	};
+	bool queues_imu_samples = false;
+	std::array<imu_sample, 2> imu_samples{};
+	u32 imu_sample_count = 0;
+	f32 imu_sample_delta_time = 0.0f; // Seconds per sample
 
 	void update_orientation(ps_move_data& move_data);
 	void reset_orientation();
+
+private:
+	// Feeds one sensor sample to the AHRS and updates move_data.quaternion. Returns false if the sample was discarded.
+	bool update_ahrs(ps_move_data& move_data, const imu_sample& sample, f32 elapsed_sec);
 };
 
 struct pad_ensemble
@@ -231,11 +259,14 @@ public:
 	// input has to be [-1,1]. result will be [0,255]
 	static u16 ConvertAxis(f32 value);
 
+	// Convert analog stick angle to a value ranging from 0 to 255
+	static u8 ConvertAngleToU8(f32 angle, f32 distance_to_center);
+
 	// The DS3, (and i think xbox controllers) give a 'square-ish' type response, so that the corners will give (almost)max x/y instead of the ~30x30 from a perfect circle
 	// using a simple scale/sensitivity increase would *work* although it eats a chunk of our usable range in exchange
 	// this might be the best for now, in practice it seems to push the corners to max of 20x20, with a squircle_factor of ~4000
 	// This function assumes inX and inY is already in 0-255
-	static void ConvertToSquirclePoint(u16& inX, u16& inY, u32 squircle_factor);
+	static std::tuple<f32, f32> ConvertToSquirclePoint(u16& inX, u16& inY, u32 squircle_factor);
 
 	// u32 thumb_min = 0; // Unused. Make sure all handlers report 0+ values for sticks in get_button_values.
 	u32 thumb_max = 255;
@@ -273,7 +304,7 @@ public:
 	virtual pad_capabilities get_capabilities(const std::string& /*pad_id*/);
 
 	u16 NormalizeStickInput(u16 raw_value, s32 threshold, s32 multiplier, bool ignore_threshold = false) const;
-	void convert_stick_values(u16& x_out, u16& y_out, s32 x_in, s32 y_in, u32 deadzone, u32 anti_deadzone, u32 padsquircling) const;
+	void convert_stick_values(u16& x_out, u16& y_out, s32 x_in, s32 y_in, u32 deadzone, u32 anti_deadzone, u32 padsquircling, f32& angle, f32& distance_to_center) const;
 	void set_trigger_recognition_mode(trigger_recognition_mode mode) { m_trigger_recognition_mode = mode; }
 
 	virtual bool Init() { return true; }

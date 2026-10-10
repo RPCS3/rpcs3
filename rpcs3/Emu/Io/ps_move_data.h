@@ -62,6 +62,8 @@ struct ps_move_data
 	bool calibration_requested = false;
 	bool calibration_succeeded = false;
 
+	bool orientation_reset_requested = false; // Reset the orientation to the default (facing the camera). See cellGemSetYaw.
+
 	bool magnetometer_enabled = false;
 	bool orientation_enabled = false;
 

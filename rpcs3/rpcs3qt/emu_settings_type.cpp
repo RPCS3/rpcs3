@@ -187,6 +187,7 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::Buzz,                    get_cfg_location(local_cfg.io.buzz) },
 	{ emu_settings_type::Turntable,               get_cfg_location(local_cfg.io.turntable) },
 	{ emu_settings_type::GHLtar,                  get_cfg_location(local_cfg.io.ghltar) },
+	{ emu_settings_type::USIO,                    get_cfg_location(local_cfg.io.usio_mode) },
 	{ emu_settings_type::MidiDevices,             get_cfg_location(local_cfg.io.midi_devices) },
 	{ emu_settings_type::SDLMappings,             get_cfg_location(local_cfg.io.load_sdl_mappings) },
 	{ emu_settings_type::MouseBasedGyro,          get_cfg_location(local_cfg.io.mouse_based_gyro_enabled) },
@@ -237,12 +238,15 @@ const std::map<emu_settings_type, cfg_location> settings_location =
 	{ emu_settings_type::DateFormat,            get_cfg_location(local_cfg.sys.date_fmt) },
 	{ emu_settings_type::TimeFormat,            get_cfg_location(local_cfg.sys.time_fmt) },
 	{ emu_settings_type::ConsoleTimeOffset,     get_cfg_location(local_cfg.sys.console_time_offset) },
+	{ emu_settings_type::HDDModelName,          get_cfg_location(local_cfg.sys.hdd_model) },
+	{ emu_settings_type::HDDSerialNumber,       get_cfg_location(local_cfg.sys.hdd_serial) },
 
 	{ emu_settings_type::EnableHostRoot,        get_cfg_location(local_cfg.vfs.host_root) },
 	{ emu_settings_type::EmptyHdd0Tmp,          get_cfg_location(local_cfg.vfs.empty_hdd0_tmp) },
 	{ emu_settings_type::LimitCacheSize,        get_cfg_location(local_cfg.vfs.limit_cache_size) },
 	{ emu_settings_type::MaximumCacheSize,      get_cfg_location(local_cfg.vfs.cache_max_size) },
 	{ emu_settings_type::EmulateHddSpeed,       get_cfg_location(local_cfg.vfs.emulate_hdd_speed) },
+	{ emu_settings_type::EmulateBdvdSpeed,      get_cfg_location(local_cfg.vfs.emulate_bdvd_speed) },
 
 	// Savestates
 	{ emu_settings_type::SuspendEmulationSavestateMode,       get_cfg_location(local_cfg.savestate.suspend_emu) },

@@ -349,7 +349,9 @@ bool dynamic_branch()
 	if (d0.cond == 0) return false;
 
 	return any(test_cond(get_cond(), d0.cond));
-}
+})"
+
+R"(
 
 vec4 read_src(const in int index)
 {
@@ -389,11 +391,15 @@ vec4 read_src(const in int index)
 	case RSX_VP_REGISTER_TYPE_CONSTANT:
 		if (d3.index_const)
 		{
-			value = _fetch_constant(d1.const_src + ref(a[d0.addr_reg_sel_1], d0.addr_swz));
+			value = _fetch_constant((d1.const_src + ref(a[d0.addr_reg_sel_1], d0.addr_swz)) & 511);
+		}
+		else if (d1.const_src < 468)
+		{
+			value = _fetch_constant(d1.const_src);
 		}
 		else
 		{
-			value = _fetch_constant(d1.const_src);
+			value = vec4(0.f);
 		}
 		break;
 	}

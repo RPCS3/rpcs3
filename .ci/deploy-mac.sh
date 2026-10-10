@@ -23,12 +23,12 @@ rm -rf "rpcs3.app/Contents/Frameworks/QtPdf.framework" \
 ../../.ci/optimize-mac.sh rpcs3.app
 
 # Download translations
-mkdir -p "rpcs3.app/Contents/translations"
+mkdir -p "rpcs3.app/Contents/Resources/translations"
 ZIP_URL="https://github.com/RPCS3/rpcs3_translations/releases/latest/download/RPCS3-languages.zip"
 echo "Downloading translations from: $ZIP_URL"
 if curl -fsSL --retry 3 --retry-delay 60 "$ZIP_URL" -o "translations.zip"; then
   echo "Successfully downloaded translations."
-  if unzip -o translations.zip -d "rpcs3.app/Contents/translations" >/dev/null 2>&1; then
+  if unzip -o translations.zip -d "rpcs3.app/Contents/Resources/translations" >/dev/null 2>&1; then
     rm -f translations.zip
   else
     echo "Failed to extract translations.zip. Continuing without translations."
@@ -40,10 +40,10 @@ fi
 
 # Copy Qt translations manually
 QT_TRANS="$WORKDIR/qt-downloader/$QT_VER/clang_64/translations"
-cp $QT_TRANS/qt_*.qm rpcs3.app/Contents/translations
-cp $QT_TRANS/qtbase_*.qm rpcs3.app/Contents/translations
-cp $QT_TRANS/qtmultimedia_*.qm rpcs3.app/Contents/translations
-rm -f rpcs3.app/Contents/translations/qt_help_*.qm || true
+cp $QT_TRANS/qt_*.qm rpcs3.app/Contents/Resources/translations
+cp $QT_TRANS/qtbase_*.qm rpcs3.app/Contents/Resources/translations
+cp $QT_TRANS/qtmultimedia_*.qm rpcs3.app/Contents/Resources/translations
+rm -f rpcs3.app/Contents/Resources/translations/qt_help_*.qm || true
 
 # Need to do this rename hack due to case insensitive filesystem
 mv rpcs3.app RPCS3_.app

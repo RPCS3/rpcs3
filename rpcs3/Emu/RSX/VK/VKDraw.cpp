@@ -9,6 +9,8 @@
 #include "vkutils/chip_class.h"
 #include <vulkan/vulkan_core.h>
 
+#include "Emu/RSX/NV47/HW/context_accessors.define.h"
+
 namespace vk
 {
 	VkImageViewType get_view_type(rsx::texture_dimension_extended type)
@@ -217,7 +219,9 @@ void VKGSRender::update_draw_state()
 		const auto polygon_offset_scale = rsx::method_registers.poly_offset_scale();
 		auto polygon_offset_bias = rsx::method_registers.poly_offset_bias();
 
-		if (m_draw_fbo->depth_format() == VK_FORMAT_D24_UNORM_S8_UINT && is_NVIDIA(vk::get_chip_family()))
+		if (!m_draw_fbo->attachments.empty() &&
+			m_draw_fbo->depth_format() == VK_FORMAT_D24_UNORM_S8_UINT &&
+			is_NVIDIA(vk::get_chip_family()))
 		{
 			// Empirically derived to be 0.5 * (2^24 - 1) for fixed type on Pascal. The same seems to apply for other NVIDIA GPUs.
 			// RSX seems to be using 2^24 - 1 instead making the biases twice as large when using fixed type Z-buffer on NVIDIA.
@@ -237,11 +241,12 @@ void VKGSRender::update_draw_state()
 	if (m_device->get_depth_bounds_support())
 	{
 		f32 bounds_min, bounds_max;
-		if (rsx::method_registers.depth_bounds_test_enabled())
+		if (REGS(m_ctx)->depth_bounds_test_enabled())
 		{
-			// Update depth bounds min/max
-			bounds_min = rsx::method_registers.depth_bounds_min();
-			bounds_max = rsx::method_registers.depth_bounds_max();
+			// Update depth bounds min/max, saturated into the RSX depth format's range as hardware does
+			const auto depth_format = REGS(m_ctx)->surface_depth_fmt();
+			bounds_min = rsx::clamp_depth_bounds_value(depth_format, REGS(m_ctx)->depth_bounds_min());
+			bounds_max = rsx::clamp_depth_bounds_value(depth_format, REGS(m_ctx)->depth_bounds_max());
 		}
 		else
 		{
@@ -250,8 +255,14 @@ void VKGSRender::update_draw_state()
 			bounds_max = std::max(1.f, rsx::method_registers.clip_max());
 		}
 
-		if (!m_device->get_unrestricted_depth_range_support())
+		if (!backend_config.supports_extended_depth_range)
 		{
+			if (rsx::method_registers.depth_bounds_test_enabled() && requires_depth_range_emulation()) [[ unlikely ]]
+			{
+				bounds_min = rsx::encode_emulated_depth(bounds_min);
+				bounds_max = rsx::encode_emulated_depth(bounds_max);
+			}
+
 			bounds_min = std::clamp(bounds_min, 0.f, 1.f);
 			bounds_max = std::clamp(bounds_max, 0.f, 1.f);
 		}
@@ -796,6 +807,14 @@ bool VKGSRender::bind_texture_env()
 		for (u32 i = 0; i < current_fragment_program.mrt_buffers_count; ++i)
 		{
 			auto viewable = static_cast<vk::viewable_image*>(m_fbo_images[i]);
+			if (viewable->current_layout != VK_IMAGE_LAYOUT_GENERAL &&
+				viewable->current_layout != VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT)
+			{
+				// Renderpass key is derived from the current layout, regenerate it after the transition
+				vk::as_rtt(viewable)->texture_barrier(*m_current_command_buffer);
+				invalidate_render_pass();
+			}
+
 			const auto view = viewable->get_view(remap);
 			m_program->bind_uniform(*view, vk::glsl::binding_set_index_fragment, m_fs_binding_table->frag_src_location[i]);
 		}
@@ -1244,7 +1263,6 @@ void VKGSRender::begin()
 	rsx::thread::begin();
 
 	if (skip_current_frame ||
-		swapchain_unavailable ||
 		cond_render_ctrl.disable_rendering())
 	{
 		return;
@@ -1262,7 +1280,7 @@ void VKGSRender::begin()
 
 void VKGSRender::end()
 {
-	if (skip_current_frame || !m_graphics_state.test(rsx::rtt_config_valid) || swapchain_unavailable || cond_render_ctrl.disable_rendering())
+	if (should_skip_draw())
 	{
 		execute_nop_draw();
 		rsx::thread::end();

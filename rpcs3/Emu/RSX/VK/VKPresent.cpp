@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "VKCommandStream.h"
 #include "VKGSRender.h"
 #include "vkutils/buffer_object.h"
 #include "vkutils/memory.h"
@@ -752,14 +753,21 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 		vk::copy_image_to_buffer(*m_current_command_buffer, image_to_copy, &sshot_vkbuf, copy_info);
 		image_to_copy->pop_layout(*m_current_command_buffer);
 
+		// We need to disable the driver manager temporarily as this next section is out of sequence.
+		// We're not supposed to be halting the GPU here and we certainly do not want to run driver management as we will end up deleting temp resources too early.
+		auto& driver_manager = g_fxo->get<vk::driver_manager_thread>();
+		driver_manager.set_enabled(false);
+
 		flush_command_queue(true);
 		const auto src = sshot_vkbuf.map(0, sshot_size);
 		std::vector<u8> sshot_frame(sshot_size);
 		memcpy(sshot_frame.data(), src, sshot_size);
 		sshot_vkbuf.unmap();
 
-		const bool is_bgra = image_to_copy->format() == VK_FORMAT_B8G8R8A8_UNORM;
+		// Restore the driver manager state to keep things from crashing...
+		driver_manager.set_enabled(true);
 
+		const bool is_bgra = image_to_copy->format() == VK_FORMAT_B8G8R8A8_UNORM;
 		if (user_asked_for_screenshot)
 		{
 			m_frame->take_screenshot(std::move(sshot_frame), buffer_width, buffer_height, is_bgra);
@@ -773,9 +781,11 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 	if (!image_to_flip || aspect_ratio.x1 || aspect_ratio.y1)
 	{
 		// Clear the window background to black
+		target_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		VkClearColorValue clear_black {};
-		vk::change_image_layout(*m_current_command_buffer, target_image, present_layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, subresource_range);
-		vkCmdClearColorImage(*m_current_command_buffer, target_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &clear_black, 1, &subresource_range);
+
+		vk::change_image_layout(*m_current_command_buffer, target_image, present_layout, target_layout, subresource_range);
+		vkCmdClearColorImage(*m_current_command_buffer, target_image, target_layout, &clear_black, 1, &subresource_range);
 
 		// Prevent WAW on transfer writes
 		vk::insert_image_memory_barrier(
@@ -789,8 +799,6 @@ void VKGSRender::flip(const rsx::display_flip_info_t& info)
 			VK_ACCESS_TRANSFER_WRITE_BIT,
 			subresource_range
 		);
-
-		target_layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 	}
 
 	const output_scaling_mode output_scaling = g_cfg.video.output_scaling.get();

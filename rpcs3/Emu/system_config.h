@@ -107,6 +107,7 @@ struct cfg_root : cfg::node
 		cfg::_int<0, 10240> cache_max_size{ this, "Disk cache maximum size (MB)", 5120 };
 		cfg::_bool empty_hdd0_tmp{ this, "Empty /dev_hdd0/tmp/", true };
 		cfg::_bool emulate_hdd_speed{ this, "Emulate HDD Read Speed", false, true };
+		cfg::_bool emulate_bdvd_speed{ this, "Emulate BD-ROM Read Speed", false, true };
 
 	} vfs{ this };
 
@@ -148,6 +149,7 @@ struct cfg_root : cfg::node
 		cfg::_bool disable_vertex_cache{ this, "Disable Vertex Cache", false };
 		cfg::_bool disable_FIFO_reordering{ this, "Disable FIFO Reordering", false };
 		cfg::_bool emulate_depth_compare{ this, "Emulate Special Depth Comparison", false };
+		cfg::_bool emulate_extended_depth_range{ this, "Emulate Extended Depth Range", false };
 		cfg::_bool frame_skip_enabled{ this, "Enable Frame Skip", false, true };
 		cfg::_bool force_cpu_blit_processing{ this, "Force CPU Blit", false, true }; // Debugging option
 		cfg::_bool disable_on_disk_shader_cache{ this, "Disable On-Disk Shader Cache", false };
@@ -308,6 +310,7 @@ struct cfg_root : cfg::node
 		cfg::_bool mouse_debug_overlay{ this, "Mouse Debug overlay", false, true };
 		cfg::uint<1, 180> fake_move_rotation_cone_h{ this, "Fake Move Rotation Cone", 10, true };
 		cfg::uint<1, 180> fake_move_rotation_cone_v{ this, "Fake Move Rotation Cone (Vertical)", 10, true };
+		cfg::_enum<usio_handler_mode> usio_mode{ this, "USIO handler mode", usio_handler_mode::fighting_games };
 
 	} io{ this };
 

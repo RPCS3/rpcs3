@@ -20,11 +20,11 @@ color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_forma
 	// All XBGR formats will have remapping before they can be read back in shaders as DRGB8
 	// Prefix o = 1, z = 0
 	case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
-		return{ ::gl::texture::type::ushort_5_5_5_1, ::gl::texture::format::rgb, ::gl::texture::internal_format::bgr5a1, true,
+		return{ ::gl::texture::type::ushort_1_5_5_5_rev, ::gl::texture::format::bgra, ::gl::texture::internal_format::bgr5a1, true,
 		{ ::gl::texture::channel::one, ::gl::texture::channel::r, ::gl::texture::channel::g, ::gl::texture::channel::b } };
 
 	case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
-		return{ ::gl::texture::type::ushort_5_5_5_1, ::gl::texture::format::rgb, ::gl::texture::internal_format::bgr5a1, true,
+		return{ ::gl::texture::type::ushort_1_5_5_5_rev, ::gl::texture::format::bgra, ::gl::texture::internal_format::bgr5a1, true,
 		{ ::gl::texture::channel::zero, ::gl::texture::channel::r, ::gl::texture::channel::g, ::gl::texture::channel::b } };
 
 	case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
@@ -84,7 +84,7 @@ depth_format rsx::internals::surface_depth_format_to_gl(rsx::surface_depth_forma
 		else
 			return{ ::gl::texture::type::uint_24_8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth24_stencil8 };
 	case rsx::surface_depth_format2::z24s8_float:
-		return{ ::gl::texture::type::float32_uint8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth32f_stencil8 };
+		return{ ::gl::texture::type::f32_uint8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth32f_stencil8 };
 
 	default:
 		fmt::throw_exception("Unsupported depth format 0x%x", static_cast<u32>(depth_format));
@@ -267,6 +267,17 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 	}
 
 	ensure(m_draw_fbo);
+
+	if (m_graphics_state.test(rsx::rtt_config_no_attachments))
+	{
+		// Framebufferless rendering. Raster dimensions must be supplied explicitly and match what real surfaces would have used.
+		const auto [raster_width, raster_height] = rsx::apply_resolution_scale<true>(
+			resolution_scaling_config, m_framebuffer_layout.width, m_framebuffer_layout.height);
+
+		const GLint raster_samples = (g_cfg.video.antialiasing_level == msaa_level::_auto) ? samples : 1;
+		m_draw_fbo->set_default_extents({ raster_width, raster_height });
+		m_draw_fbo->set_default_samples(raster_samples);
+	}
 
 	switch (rsx::method_registers.surface_color_target())
 	{
