@@ -508,6 +508,7 @@ target_sources(rpcs3_emu PRIVATE
     RSX/Host/MM.cpp
     RSX/Host/RSXDMAWriter.cpp
     RSX/Null/NullGSRender.cpp
+    RSX/NV47/FW/context.cpp
     RSX/NV47/FW/draw_call.cpp
     RSX/NV47/FW/reg_context.cpp
     RSX/NV47/HW/common.cpp
