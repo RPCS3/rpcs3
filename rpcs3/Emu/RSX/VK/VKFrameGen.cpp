@@ -105,11 +105,12 @@ layout(push_constant) uniform push_block { vec4 p0; vec4 p1; vec4 p2; };
 			pass_camera_check,   // each block: whether it moved with that field
 			pass_refine,         // the vectors, made to agree with their neighbours
 			pass_hud,            // the last frame, with where the HUD stands still
-			pass_blur,           // a frame at half size, softened, for judging matches
+			pass_hud_strong,     // where the HUD stands still and the world under it moves
+			pass_blur,           // a frame at half size, softened, for judging matches; the HUD's band
 			pass_between,        // the frame between
 		};
 
-		constexpr const char* c_formats[] = { "r32f", "r32f", "rgba16f", "rgba16f", "rgba16f", "rgba8", "rgba32f", "rgba32f", "r32f", "rgba16f", "rgba8", "rgba8", "rgba8" };
+		constexpr const char* c_formats[] = { "r32f", "r32f", "rgba16f", "rgba16f", "rgba16f", "rgba8", "rgba32f", "rgba32f", "r32f", "rgba16f", "rgba8", "r32f", "rgba8", "rgba8" };
 
 		constexpr const char* c_bodies[] =
 		{
@@ -784,13 +785,48 @@ void main()
 	imageStore(dst, p, vec4(texelFetch(tex0, p, 0).rgb, drawn * (1.0 - smoothstep(0.004, 0.01, gaps[12]))));
 }
 )",
-			// pass_blur: tex0 a frame; p0 = (its used size, the half size). Each
-			// texel the mean of the 4x4 pixels round it, for pass_between to judge
-			// how well two ends agree on: judged pixel by pixel, two neighbouring
-			// pixels on an edge or a texture weighed the 16 blocks' vectors very
-			// differently, and the frame between was a scatter of fragments, each
-			// from another vector: like a TV's static on my console (build 121's
-			// frames saved in GTA IV)
+			// pass_hud_strong: tex0 the last frame with its HUD (pass_hud), tex1
+			// this one, tex2 the vectors (pass_median); p0 = (this frame's used
+			// part as a share of its texture, the output size), p1 = (the working
+			// size, the share of the vector grid it covers). Of the HUD that
+			// stands still, what the world's motion would not have put there:
+			// where the block's vector moves (by 1 to 2 texels), the last frame
+			// moved along it must differ from this one (by 0.03 to 0.08), else
+			// the pixel repeats because a pattern repeats along the motion (a row
+			// of windows), and it is the world's
+			R"(
+void main()
+{
+	const ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+	if (p.x >= int(p0.z) || p.y >= int(p0.w)) return;
+	const vec2 uv = (vec2(p) + 0.5) / p0.zw;
+	const ivec2 grid = textureSize(tex2, 0);
+	const vec2 v = texelFetch(tex2, clamp(ivec2(floor(uv * p1.zw * vec2(grid))), ivec2(0), grid - 1), 0).xy;
+	const vec3 moved = texture(tex0, uv + v / p1.xy).rgb;
+	const vec3 here = texture(tex1, uv * p0.xy).rgb;
+	const vec3 gap = abs(moved - here);
+	const float differs = smoothstep(0.03, 0.08, max(max(gap.r, gap.g), gap.b));
+	const float moving = smoothstep(1.0, 2.0, length(v));
+	imageStore(dst, p, vec4(texelFetch(tex0, p, 0).a * (1.0 - moving * (1.0 - differs))));
+}
+)",
+			// pass_blur: tex0 a frame, tex1 the HUD that stands still
+			// (pass_hud_strong), tex2 the camera's motion (pass_motion); p0 = (its
+			// used size, the half size). Each texel the mean of the 4x4 pixels
+			// round it, for pass_between to judge how well two ends agree on:
+			// judged pixel by pixel, two neighbouring pixels on an edge or a
+			// texture weighed the 16 blocks' vectors very differently, and the
+			// frame between was a scatter of fragments, each from another vector:
+			// like a TV's static on my console (build 121's frames saved in GTA
+			// IV). Its alpha the HUD's band: the most of that HUD over the 10x10
+			// pixels round the texel, fading from 1.5 to 5.5 pixels away (a hard
+			// edge left a box round the area name, where the street under it held
+			// still), while the camera moves (a sixteenth-size texel or more a
+			// game frame). GTA IV's area name and radar have soft
+			// dark shadows; over a moving street their pixels change, so they are
+			// not the HUD that stands still, the world's motion carried them, and
+			// the area name left dark copies of itself above and below it and the
+			// radar dark smears beside it (build 122's frames saved on my console)
 			R"(
 void main()
 {
@@ -802,7 +838,15 @@ void main()
 	{
 		sum += texelFetch(tex0, clamp(p * 2 + ivec2((k & 3) - 1, (k >> 2) - 1), ivec2(0), lim), 0).rgb;
 	}
-	imageStore(dst, p, vec4(sum / 16.0, 1.0));
+	float band = 0.0;
+	for (int k = 0; k < 100; k++)
+	{
+		const ivec2 o = ivec2(k % 10 - 4, k / 10 - 4);
+		const float fade = 1.0 - smoothstep(1.5, 5.5, length(vec2(o) - 0.5));
+		band = max(band, fade * texelFetch(tex1, clamp(p * 2 + o, ivec2(0), lim), 0).r);
+	}
+	const float moving = smoothstep(0.25, 0.75, length(texelFetch(tex2, ivec2(0), 0).xy));
+	imageStore(dst, p, vec4(sum / 16.0, band * moving));
 }
 )",
 			// pass_between: tex0 the last frame (its own size) with its HUD
@@ -859,7 +903,8 @@ void main()
 			// frame and text, which the world's vectors dragged along); without
 			// that block, a thin thing crossing a plain background (a lamp post
 			// over the sky) was erased. And where pass_hud found the HUD standing
-			// still, which the carried ends never take either. The frame nearer
+			// still, and in its band (pass_blur's alpha), which no end takes
+			// either. The frame nearer
 			// in time as it is everywhere while the camera moves too quickly
 			// (pass_motion, carried in tex3's third texel), with the Step aside
 			// setting
@@ -908,8 +953,10 @@ void main()
 			const vec2 at_n = uv - (1.0 - t) * d;
 			const vec3 l = texture(tex0, at_l).rgb;
 			const vec3 n = texture(tex1, at_n * p0.xy).rgb;
-			const float gap = largest(abs(texture(tex4, at_l).rgb - texture(tex5, at_n).rgb)) / 0.12;
-			const float agree = exp(-gap * gap) * inside(at_l) * inside(at_n);
+			const vec4 soft_l = texture(tex4, at_l);
+			const vec4 soft_n = texture(tex5, at_n);
+			const float gap = largest(abs(soft_l.rgb - soft_n.rgb)) / 0.12;
+			const float agree = exp(-gap * gap) * inside(at_l) * inside(at_n) * (1.0 - soft_l.a) * (1.0 - soft_n.a);
 			const float trust = 1.0 - smoothstep(0.035, 0.11, v.z);
 			const float w = spatial * agree * trust + 1e-6 * spatial;
 			sum += w * mix(l, n, t);
@@ -936,8 +983,10 @@ void main()
 		const vec2 at_n = uv - (1.0 - t) * d;
 		const vec3 l = texture(tex0, at_l).rgb;
 		const vec3 n = texture(tex1, at_n * p0.xy).rgb;
-		const float gap = largest(abs(texture(tex4, at_l).rgb - texture(tex5, at_n).rgb)) / 0.12;
-		const float agree = exp(-gap * gap) * inside(at_l) * inside(at_n);
+		const vec4 soft_l = texture(tex4, at_l);
+		const vec4 soft_n = texture(tex5, at_n);
+		const float gap = largest(abs(soft_l.rgb - soft_n.rgb)) / 0.12;
+		const float agree = exp(-gap * gap) * inside(at_l) * inside(at_n) * (1.0 - soft_l.a) * (1.0 - soft_n.a);
 		const float check = texture(tex2, grid_uv).w;
 		sum += check * agree * mix(l, n, t);
 		weight += check * agree;
@@ -962,14 +1011,14 @@ void main()
 	const vec3 mn = texture(tex1, at_mn * p0.xy).rgb;
 	const float like_l = min(largest(abs(ml - there)), largest(abs(ml - here))) / 0.1;
 	const float like_n = min(largest(abs(mn - there)), largest(abs(mn - here))) / 0.1;
-	const float wl = (1.0 - t) * (exp(-like_l * like_l) + 0.05) * (1.0 - ml_hud.a) * inside(at_ml) + 1e-6;
-	const float wn = t * (exp(-like_n * like_n) + 0.05) * (1.0 - texture(tex0, at_mn).a) * inside(at_mn) + 1e-6;
+	const float wl = (1.0 - t) * (exp(-like_l * like_l) + 0.05) * (1.0 - max(ml_hud.a, texture(tex4, at_ml).a)) * inside(at_ml) + 1e-6;
+	const float wn = t * (exp(-like_n * like_n) + 0.05) * (1.0 - max(texture(tex0, at_mn).a, texture(tex5, at_mn).a)) * inside(at_mn) + 1e-6;
 	const vec3 carried = (wl * ml + wn * mn) / (wl + wn);
 	const float carry = (1.0 - smoothstep(0.0, 0.1, largest(abs(ml - mn)) - largest(abs(there - here)))) * (1.0 - smoothstep(4.0, 16.0, spread));
 	const vec3 fallback = mix(mix(there, here, t), carried, carry);
 	const vec3 still_gap = abs(there - here);
 	float still = beside_still ? 1.0 - smoothstep(0.012, 0.04, largest(still_gap)) : 0.0;
-	still = max(still, hud.a);
+	still = max(still, max(hud.a, texture(tex4, uv).a));
 	const vec3 nearer = t < 0.5 ? there : here;
 	const vec3 between = mix(fallback, moved, smoothstep(0.15, 0.6, best_agree));
 	imageStore(dst, p, vec4(camera.w > 0.5 ? nearer : mix(between, nearer, still), 1.0));
@@ -1148,6 +1197,7 @@ void main()
 		drop(m_prev_color);
 		drop(m_prev_hud);
 		for (auto& image : m_blur) drop(image);
+		drop(m_hud_strong);
 		for (auto& image : m_luma) drop(image);
 		for (auto& image : m_luma_coarse) drop(image);
 		for (auto& image : m_luma_rough) drop(image);
@@ -1187,6 +1237,7 @@ void main()
 		{
 			image = make_image(utils::aligned_div(width, 2u), utils::aligned_div(height, 2u), VK_FORMAT_R8G8B8A8_UNORM);
 		}
+		m_hud_strong = make_image(width, height, VK_FORMAT_R32_SFLOAT);
 		bool outputs = true;
 		for (auto& image : m_output)
 		{
@@ -1219,7 +1270,7 @@ void main()
 			image = make_image(utils::aligned_div(m_work_w, 8u), utils::aligned_div(m_work_h, 8u), VK_FORMAT_R16G16B16A16_SFLOAT);
 		}
 
-		if (!m_prev_color || !m_prev_hud || !m_blur[0] || !m_blur[1] || !outputs || !m_luma[0] || !m_luma[1] || !m_luma_coarse[0] || !m_luma_coarse[1] || !m_luma_rough[0] || !m_luma_rough[1] ||
+		if (!m_prev_color || !m_prev_hud || !m_blur[0] || !m_blur[1] || !m_hud_strong || !outputs || !m_luma[0] || !m_luma[1] || !m_luma_coarse[0] || !m_luma_coarse[1] || !m_luma_rough[0] || !m_luma_rough[1] ||
 			!m_vectors_rough || !m_motion || !m_camera || !m_camera_moved || !m_motion_mapped || !m_vectors_coarse || !m_vectors || !m_vectors_smooth ||
 			!m_vectors_refined[0] || !m_vectors_refined[1])
 		{
@@ -1443,7 +1494,7 @@ void main()
 			{
 				return 0;
 			}
-			for (auto* image : { m_prev_color.get(), m_prev_hud.get(), m_blur[0].get(), m_blur[1].get(), m_output[0].get(), m_output[1].get(), m_output[2].get(), m_luma[0].get(), m_luma[1].get(),
+			for (auto* image : { m_prev_color.get(), m_prev_hud.get(), m_blur[0].get(), m_blur[1].get(), m_hud_strong.get(), m_output[0].get(), m_output[1].get(), m_output[2].get(), m_luma[0].get(), m_luma[1].get(),
 				m_luma_coarse[0].get(), m_luma_coarse[1].get(), m_luma_rough[0].get(), m_luma_rough[1].get(), m_vectors_rough.get(), m_motion.get(),
 				m_camera.get(), m_camera_moved.get(),
 				m_vectors_coarse.get(), m_vectors.get(), m_vectors_smooth.get(), m_vectors_refined[0].get(), m_vectors_refined[1].get() })
@@ -1547,11 +1598,15 @@ void main()
 				{ static_cast<f32>(grid_w), static_cast<f32>(grid_h) });
 			vk::get_compute_task<frame_generation_pass<pass_hud>>()->run(cmd, { m_prev_color.get(), cur }, m_prev_hud.get(), width, height,
 				{ uv_x, uv_y, static_cast<f32>(width), static_cast<f32>(height) });
+			barrier(cmd);
+			vk::get_compute_task<frame_generation_pass<pass_hud_strong>>()->run(cmd, { m_prev_hud.get(), cur, m_vectors_smooth.get() }, m_hud_strong.get(), width, height,
+				{ uv_x, uv_y, static_cast<f32>(width), static_cast<f32>(height), work_w, work_h, work_w / (grid_w * 8.f), work_h / (grid_h * 8.f) });
+			barrier(cmd);
 			const u32 half_w = utils::aligned_div(width, 2u);
 			const u32 half_h = utils::aligned_div(height, 2u);
-			vk::get_compute_task<frame_generation_pass<pass_blur>>()->run(cmd, { m_prev_color.get() }, m_blur[0].get(), half_w, half_h,
+			vk::get_compute_task<frame_generation_pass<pass_blur>>()->run(cmd, { m_prev_color.get(), m_hud_strong.get(), m_motion.get() }, m_blur[0].get(), half_w, half_h,
 				{ static_cast<f32>(width), static_cast<f32>(height), static_cast<f32>(half_w), static_cast<f32>(half_h) });
-			vk::get_compute_task<frame_generation_pass<pass_blur>>()->run(cmd, { cur }, m_blur[1].get(), half_w, half_h,
+			vk::get_compute_task<frame_generation_pass<pass_blur>>()->run(cmd, { cur, m_hud_strong.get(), m_motion.get() }, m_blur[1].get(), half_w, half_h,
 				{ static_cast<f32>(width), static_cast<f32>(height), static_cast<f32>(half_w), static_cast<f32>(half_h) });
 			barrier(cmd);
 
