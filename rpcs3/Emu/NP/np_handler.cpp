@@ -33,14 +33,16 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <ifaddrs.h>
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
 #endif
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
-#include <ifaddrs.h>
 #include <net/if_dl.h>
+#include <net/route.h>
+#include <sys/sysctl.h>
 #endif
 
 #include "util/yaml.hpp"
@@ -479,6 +481,8 @@ namespace np
 			if (bind_ip)
 				local_ip_addr = bind_ip;
 
+			discover_route();
+
 			if (g_cfg.net.upnp_enabled)
 				upnp.upnp_enable();
 		}
@@ -497,6 +501,8 @@ namespace np
 		}
 
 		ar(is_NP_Lookup_init, is_NP_Score_init, is_NP2_init, is_NP2_Match2_init, is_NP_Auth_init, manager_cb, manager_cb_arg, std::as_bytes(std::span(&basic_handler, 1)), is_connected, is_psn_active, hostname, ether_address, local_ip_addr, public_ip_addr, dns_ip);
+
+		discover_route();
 
 		// Call init func if needed (np_memory is unaffected when an empty pool is provided)
 		init_NP(0, vm::null);
@@ -700,6 +706,124 @@ namespace np
 		return false;
 	}
 
+	void np_handler::discover_route()
+	{
+		const u32 ip = local_ip_addr;
+		u32 mask = 0;
+		u32 gateway = 0;
+
+#ifdef _WIN32
+		std::vector<u8> adapter_infos(sizeof(IP_ADAPTER_INFO));
+		ULONG size_infos = sizeof(IP_ADAPTER_INFO);
+
+		if (GetAdaptersInfo(reinterpret_cast<PIP_ADAPTER_INFO>(adapter_infos.data()), &size_infos) == ERROR_BUFFER_OVERFLOW)
+			adapter_infos.resize(size_infos);
+
+		if (GetAdaptersInfo(reinterpret_cast<PIP_ADAPTER_INFO>(adapter_infos.data()), &size_infos) == NO_ERROR && size_infos)
+		{
+			for (PIP_ADAPTER_INFO info = reinterpret_cast<PIP_ADAPTER_INFO>(adapter_infos.data()); info && !mask; info = info->Next)
+			{
+				for (PIP_ADDR_STRING addr = &info->IpAddressList; addr; addr = addr->Next)
+				{
+					in_addr conv{};
+
+					if (inet_pton(AF_INET, addr->IpAddress.String, &conv) != 1 || conv.s_addr != ip)
+						continue;
+
+					if (inet_pton(AF_INET, addr->IpMask.String, &conv) == 1)
+						mask = conv.s_addr;
+
+					if (inet_pton(AF_INET, info->GatewayList.IpAddress.String, &conv) == 1)
+						gateway = conv.s_addr;
+
+					break;
+				}
+			}
+		}
+#else
+		std::string ifname;
+		ifaddrs* ifap;
+
+		if (getifaddrs(&ifap) == 0)
+		{
+			for (ifaddrs* p = ifap; p; p = p->ifa_next)
+			{
+				if (p->ifa_addr && p->ifa_netmask && p->ifa_addr->sa_family == AF_INET && reinterpret_cast<sockaddr_in*>(p->ifa_addr)->sin_addr.s_addr == ip)
+				{
+					mask = reinterpret_cast<sockaddr_in*>(p->ifa_netmask)->sin_addr.s_addr;
+					ifname = p->ifa_name;
+					break;
+				}
+			}
+
+			freeifaddrs(ifap);
+		}
+
+#if defined(__FreeBSD__) || defined(__APPLE__)
+		int mib[] = {CTL_NET, PF_ROUTE, 0, AF_INET, NET_RT_FLAGS, RTF_GATEWAY};
+		usz size = 0;
+
+		if (!ifname.empty() && sysctl(mib, 6, nullptr, &size, nullptr, 0) == 0 && size)
+		{
+			std::vector<u8> routes(size);
+			const u32 ifindex = if_nametoindex(ifname.c_str());
+
+			if (sysctl(mib, 6, routes.data(), &size, nullptr, 0) == 0)
+			{
+#ifdef __APPLE__
+				constexpr usz align = sizeof(u32);
+#else
+				constexpr usz align = sizeof(long);
+#endif
+				for (usz pos = 0; pos + sizeof(rt_msghdr) <= size;)
+				{
+					const auto rtm = reinterpret_cast<const rt_msghdr*>(routes.data() + pos);
+					pos += rtm->rtm_msglen;
+
+					if (!rtm->rtm_msglen || rtm->rtm_index != ifindex || (rtm->rtm_addrs & (RTA_DST | RTA_GATEWAY)) != (RTA_DST | RTA_GATEWAY))
+						continue;
+
+					const auto dst = reinterpret_cast<const sockaddr*>(rtm + 1);
+					const auto gw = reinterpret_cast<const sockaddr*>(reinterpret_cast<const u8*>(dst) + (dst->sa_len ? utils::align<usz>(dst->sa_len, align) : align));
+
+					if (dst->sa_family == AF_INET && gw->sa_family == AF_INET && reinterpret_cast<const sockaddr_in*>(dst)->sin_addr.s_addr == 0)
+					{
+						gateway = reinterpret_cast<const sockaddr_in*>(gw)->sin_addr.s_addr;
+						break;
+					}
+				}
+			}
+		}
+#elif defined(__linux__)
+		if (fs::file route{"/proc/net/route"})
+		{
+			for (const std::string& line : fmt::split(route.to_string(), {"\n"}))
+			{
+				char name[IFNAMSIZ + 1]{};
+				u32 dest = 0;
+				u32 gw = 0;
+
+				if (std::sscanf(line.c_str(), "%16s %x %x", name, &dest, &gw) == 3 && dest == 0 && ifname == name)
+				{
+					gateway = gw;
+					break;
+				}
+			}
+		}
+#endif
+#endif
+
+		if (!mask)
+			mask = std::bit_cast<u32, be_t<u32>>(0xffffff00);
+
+		if (!gateway)
+			gateway = (ip & mask) | std::bit_cast<u32, be_t<u32>>(1);
+
+		netmask = mask;
+		default_route = gateway;
+		nph_log.notice("discover_route: netmask %s, default route %s", ip_to_string(mask), ip_to_string(gateway));
+	}
+
 	const std::array<u8, 6>& np_handler::get_ether_addr() const
 	{
 		return ether_address;
@@ -728,6 +852,16 @@ namespace np
 	u32 np_handler::get_bind_ip() const
 	{
 		return bind_ip;
+	}
+
+	u32 np_handler::get_netmask() const
+	{
+		return netmask;
+	}
+
+	u32 np_handler::get_default_route() const
+	{
+		return default_route;
 	}
 
 	s32 np_handler::get_net_status() const
