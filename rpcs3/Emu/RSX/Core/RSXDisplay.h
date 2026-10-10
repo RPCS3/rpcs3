@@ -67,6 +67,12 @@ namespace rsx
 		framebuffer_statistics_t framebuffer_stats;
 	};
 
+	struct frame_skip_state
+	{
+		bool skip_current_frame = false;
+		s32 skip_frame_ctr = 0;
+	};
+
 	struct frame_time_t
 	{
 		u64 preempt_count;
