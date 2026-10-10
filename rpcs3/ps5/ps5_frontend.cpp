@@ -122,6 +122,20 @@ namespace
 		}
 	}
 
+	// A trace line RPCS3.log has too, as a notice (which the trace stops taking
+	// from it once a game runs, so it is not traced twice): the status lines,
+	// for a player who can send RPCS3.log but not the trace (GTA IV, build 125)
+	template <usz N, typename... Args>
+	void trace_logged(const char (&format)[N], const Args&... args)
+	{
+		const std::string line = fmt::format(format, args...);
+		if (g_trace)
+		{
+			g_trace(line.c_str());
+		}
+		ps5_log.notice("%s", line);
+	}
+
 	// The PS3's threads' loads, sampled. The console reports no CPU time per
 	// thread or for the process: a thread's CPU clock runs with the wall clock
 	// whether the thread works or waits (build 81's overlay read 18/16, 6/16
@@ -1274,7 +1288,7 @@ int run(const char* boot_path)
 					// The busiest of the PS3's threads over these five seconds
 					if (const std::string busiest = take_thread_loads(); !busiest.empty())
 					{
-						trace("busiest threads (share of the time each was running):%s; %s; %s", busiest, collision.empty() ? std::string("no collision code") : collision, ps5_cpu_own_core_text());
+						trace_logged("busiest threads (share of the time each was running):%s; %s; %s", busiest, collision.empty() ? std::string("no collision code") : collision, ps5_cpu_own_core_text());
 					}
 
 					// RSX's flips and where the PPU threads are, read on the main
@@ -1359,7 +1373,7 @@ int run(const char* boot_path)
 						frame_gen = fmt::format(", up to %s a frame, %s, stepping aside %s", most ? std::to_string(most) : std::string("Auto"),
 							quality == 0 ? "Fast" : quality == 2 ? "Quality" : "Balanced", step == 0 ? "never" : step == 2 ? "in most moves" : "in quick moves");
 					}
-					trace("status %ds: state %d, RSX flips %d (%.1f a second; %u made between, %u dropped, %u game frames moving too quickly for them, %u with the camera's field, in %u ms: %u ms waiting for the GPU; waiting for an image: %u ms for the game's frames, %u ms for those made%s); heap %d MiB (peak %d), system cache %u MiB in memory, free direct %d MiB, flexible %d MiB; progress '%s' modules %u/%u files %u/%u; open: %u files, %u folders, %u sockets, %u other (%u by fs); %d PPU threads:%s", seconds + 1,
+					trace_logged("status %ds: state %d, RSX flips %d (%.1f a second; %u made between, %u dropped, %u game frames moving too quickly for them, %u with the camera's field, in %u ms: %u ms waiting for the GPU; waiting for an image: %u ms for the game's frames, %u ms for those made%s); heap %d MiB (peak %d), system cache %u MiB in memory, free direct %d MiB, flexible %d MiB; progress '%s' modules %u/%u files %u/%u; open: %u files, %u folders, %u sockets, %u other (%u by fs); %d PPU threads:%s", seconds + 1,
 						static_cast<u32>(Emu.GetStatus()), flips, game_fps, static_cast<u32>(g_ps5_frames_generated.load()), static_cast<u32>(g_ps5_frames_dropped.load()),
 						static_cast<u32>(g_ps5_frames_quick_moves.load()), static_cast<u32>(g_ps5_frames_camera_field.load()), static_cast<u32>(g_ps5_frame_gen_us.load() / 1000), static_cast<u32>(g_ps5_frame_gen_gpu_wait_us.load() / 1000),
 						static_cast<u32>(g_ps5_image_wait_us[0].load() / 1000), static_cast<u32>(g_ps5_image_wait_us[1].load() / 1000), frame_gen, heap.mapped_bytes >> 20, heap.peak_bytes >> 20, static_cast<u32>(ps5_syscache_bytes() >> 20), direct >> 20,
