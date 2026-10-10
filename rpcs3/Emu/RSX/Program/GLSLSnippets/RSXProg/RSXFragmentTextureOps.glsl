@@ -125,7 +125,9 @@ vec4 _decode_depth_texel(const in vec4 texel, const in uint flags, const in uint
 #ifdef _ENABLE_TEX1D
 float _texcoord_xform(const in float coord, const in sampler_info params)
 {
-	float result = fma(coord, params.scale_x, params.bias_x);
+	// Point-sampled unnormalized access: select the texel the same way FLR does, then sample its center
+	const float texel_coord = _test_bit(params.flags, SNAP_COORDS_BIT) ? (floor(coord) + 0.5) : coord;
+	float result = fma(texel_coord, params.scale_x, params.bias_x);
 	if (_test_bit(params.flags, CLAMP_COORDS_BIT))
 	{
 		result = clamp(result, params.clamp_min_x, params.clamp_max_x);
@@ -138,8 +140,10 @@ float _texcoord_xform(const in float coord, const in sampler_info params)
 #ifdef _ENABLE_TEX2D
 vec2 _texcoord_xform(const in vec2 coord, const in sampler_info params)
 {
+	// Point-sampled unnormalized access: select the texel the same way FLR does, then sample its center
+	const vec2 texel_coord = _test_bit(params.flags, SNAP_COORDS_BIT) ? (floor(coord) + 0.5) : coord;
 	vec2 result = fma(
-		coord,
+		texel_coord,
 		vec2(params.scale_x, params.scale_y),
 		vec2(params.bias_x, params.bias_y)
 	);
