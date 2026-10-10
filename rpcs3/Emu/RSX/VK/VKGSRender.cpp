@@ -1841,7 +1841,7 @@ bool VKGSRender::load_program()
 	if (m_ctx->graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
 	{
 		get_current_fragment_program(fs_sampler_state);
-		ensure(current_fragment_program.valid);
+		ensure(m_ctx->program.fragment_program.valid);
 
 		get_current_vertex_program(vs_sampler_state);
 
@@ -1861,24 +1861,24 @@ bool VKGSRender::load_program()
 		{
 			m_program = m_shader_interpreter.get(
 				m_pipeline_properties,
-				current_fp_metadata,
-				current_vp_metadata,
-				current_vertex_program.ctrl,
-				current_fragment_program.ctrl);
+				m_ctx->program.fp_metadata,
+				m_ctx->program.vp_metadata,
+				m_ctx->program.vertex_program.ctrl,
+				m_ctx->program.fragment_program.ctrl);
 
 			std::tie(m_vs_binding_table, m_fs_binding_table) = get_binding_table();
 			return true;
 		}
 	}
 
-	if (!!(current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING) !=
+	if (!!(m_ctx->program.fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING) !=
 		vk::renderpass_has_input_attachments(m_current_renderpass_key))
 	{
 		invalidate_render_pass();
 	}
 
-	auto &vertex_program = current_vertex_program;
-	auto &fragment_program = current_fragment_program;
+	auto &vertex_program = m_ctx->program.vertex_program;
+	auto &fragment_program = m_ctx->program.fragment_program;
 
 	if (m_ctx->graphics_state & rsx::pipeline_state::pipeline_config_dirty)
 	{
@@ -1890,8 +1890,8 @@ bool VKGSRender::load_program()
 			static_cast<u8>(m_draw_buffers.size()),
 			u8((m_current_renderpass_key >> 16) & 0xF),
 			m_device->get_depth_bounds_support(),
-			!!(current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING),
-			!!(current_fragment_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE)
+			!!(m_ctx->program.fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING),
+			!!(m_ctx->program.fragment_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE)
 		);
 
 		properties.renderpass_key = m_current_renderpass_key;
@@ -1925,11 +1925,11 @@ bool VKGSRender::load_program()
 		if (g_cfg.video.debug_overlay)
 		{
 			m_frame_stats.program_cache_lookups_total += 2;
-			if (m_program_cache_hint.has_fragment_program())
+			if (m_ctx->program.cache_hint.has_fragment_program())
 			{
 				m_frame_stats.program_cache_lookups_ellided++;
 			}
-			if (m_program_cache_hint.has_vertex_program())
+			if (m_ctx->program.cache_hint.has_vertex_program())
 			{
 				m_frame_stats.program_cache_lookups_ellided++;
 			}
@@ -1941,7 +1941,7 @@ bool VKGSRender::load_program()
 			!(fragment_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE);
 
 		std::tie(m_program, m_vertex_prog, m_fragment_prog) = m_prog_buffer->get_graphics_pipeline(
-			&m_program_cache_hint,
+			&m_ctx->program.cache_hint,
 			vertex_program,
 			fragment_program,
 			m_pipeline_properties,
@@ -1976,10 +1976,10 @@ bool VKGSRender::load_program()
 		{
 			m_program = m_shader_interpreter.get(
 				m_pipeline_properties,
-				current_fp_metadata,
-				current_vp_metadata,
-				current_vertex_program.ctrl,
-				current_fragment_program.ctrl);
+				m_ctx->program.fp_metadata,
+				m_ctx->program.vp_metadata,
+				m_ctx->program.vertex_program.ctrl,
+				m_ctx->program.fragment_program.ctrl);
 
 			// Program has changed, reupload
 			m_interpreter_state = rsx::invalidate_pipeline_bits;
@@ -2022,7 +2022,7 @@ void VKGSRender::load_program_env()
 	const auto& ctx = REGS(m_ctx);
 	const auto& gpu_limits = m_device->gpu().get_limits();
 
-	const u32 fragment_constants_size = current_fp_metadata.program_constants_buffer_length;
+	const u32 fragment_constants_size = m_ctx->program.fp_metadata.program_constants_buffer_length;
 	const bool is_interpreter = m_shader_interpreter.is_interpreter(m_program);
 
 	const bool update_transform_constants = !!(m_ctx->graphics_state & rsx::pipeline_state::transform_constants_dirty);
@@ -2113,7 +2113,7 @@ void VKGSRender::load_program_env()
 			auto buf = m_fragment_constants_ring_info.map(m_fragment_constants_dynamic_offset, fragment_constants_size);
 
 			m_prog_buffer->fill_fragment_constants_buffer({ reinterpret_cast<float*>(buf), fragment_constants_size },
-				*ensure(m_fragment_prog), current_fragment_program, true);
+				*ensure(m_fragment_prog), m_ctx->program.fragment_program, true);
 
 			m_fragment_constants_ring_info.unmap();
 
@@ -2127,7 +2127,7 @@ void VKGSRender::load_program_env()
 		m_fragment_env_dynamic_offset = m_fragment_env_ring_info.static_alloc<32>();
 		auto buf = m_fragment_env_ring_info.map(m_fragment_env_dynamic_offset, 32);
 
-		m_draw_processor.fill_fragment_state_buffer(buf, current_fragment_program);
+		m_draw_processor.fill_fragment_state_buffer(buf, m_ctx->program.fragment_program);
 		m_fragment_env_ring_info.unmap();
 
 		m_fragment_env_buffer_info = m_fragment_env_ring_info.window<32>(m_fragment_env_dynamic_offset, 32, gpu_limits.maxUniformBufferRange);
@@ -2139,7 +2139,7 @@ void VKGSRender::load_program_env()
 		m_texture_parameters_dynamic_offset = m_fragment_texture_params_ring_info.static_alloc<256, 768>();
 		auto buf = m_fragment_texture_params_ring_info.map(m_texture_parameters_dynamic_offset, 768);
 
-		current_fragment_program.texture_params.write_to(buf, current_fp_metadata.referenced_textures_mask);
+		m_ctx->program.fragment_program.texture_params.write_to(buf, m_ctx->program.fp_metadata.referenced_textures_mask);
 		m_fragment_texture_params_ring_info.unmap();
 
 		m_fragment_texture_params_buffer_info = m_fragment_texture_params_ring_info.window<768>(m_texture_parameters_dynamic_offset, 768, gpu_limits.maxUniformBufferRange);
@@ -2162,17 +2162,17 @@ void VKGSRender::load_program_env()
 		if (m_interpreter_state & rsx::vertex_program_dirty)
 		{
 			// Attach vertex buffer data
-			const auto vp_block_length = current_vp_metadata.ucode_length + 16;
+			const auto vp_block_length = m_ctx->program.vp_metadata.ucode_length + 16;
 			auto vp_mapping = m_vertex_instructions_buffer.alloc<256>(vp_block_length);
 			auto vp_buf = static_cast<u8*>(m_vertex_instructions_buffer.map(vp_mapping, vp_block_length));
 
 			auto vp_config = reinterpret_cast<u32*>(vp_buf);
-			vp_config[0] = current_vertex_program.base_address;
-			vp_config[1] = current_vertex_program.entry;
-			vp_config[2] = current_vertex_program.output_mask;
+			vp_config[0] = m_ctx->program.vertex_program.base_address;
+			vp_config[1] = m_ctx->program.vertex_program.entry;
+			vp_config[2] = m_ctx->program.vertex_program.output_mask;
 			vp_config[3] = ctx->two_side_light_en()? 1u: 0u;
 
-			std::memcpy(vp_buf + 16, current_vertex_program.data.data(), current_vp_metadata.ucode_length);
+			std::memcpy(vp_buf + 16, m_ctx->program.vertex_program.data.data(), m_ctx->program.vp_metadata.ucode_length);
 			m_vertex_instructions_buffer.unmap();
 
 			m_vertex_instructions_buffer_info = { *m_vertex_instructions_buffer.heap, vp_mapping, vp_block_length };
@@ -2181,16 +2181,16 @@ void VKGSRender::load_program_env()
 		if (m_interpreter_state & rsx::fragment_program_dirty)
 		{
 			// Attach fragment buffer data
-			const auto fp_block_length = current_fp_metadata.program_ucode_length + 16;
+			const auto fp_block_length = m_ctx->program.fp_metadata.program_ucode_length + 16;
 			auto fp_mapping = m_fragment_instructions_buffer.alloc<256>(fp_block_length);
 			auto fp_buf = static_cast<u8*>(m_fragment_instructions_buffer.map(fp_mapping, fp_block_length));
 
 			// Control mask
 			const auto control_masks = reinterpret_cast<u32*>(fp_buf);
 			control_masks[0] = ctx->shader_control();
-			control_masks[1] = current_fragment_program.texture_state.texture_dimensions;
+			control_masks[1] = m_ctx->program.fragment_program.texture_state.texture_dimensions;
 
-			std::memcpy(fp_buf + 16, current_fragment_program.get_data(), current_fragment_program.ucode_length);
+			std::memcpy(fp_buf + 16, m_ctx->program.fragment_program.get_data(), m_ctx->program.fragment_program.ucode_length);
 			m_fragment_instructions_buffer.unmap();
 
 			m_fragment_instructions_buffer_info = { *m_fragment_instructions_buffer.heap, fp_mapping, fp_block_length };
@@ -2225,7 +2225,7 @@ void VKGSRender::load_program_env()
 		m_program->bind_uniform({ predicate, offset, 4 }, vk::glsl::binding_set_index_vertex, m_vs_binding_table->cr_pred_buffer_location);
 	}
 
-	if (current_vertex_program.ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS)
+	if (m_ctx->program.vertex_program.ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS)
 	{
 		m_program->bind_uniform(m_instancing_indirection_buffer_info, vk::glsl::binding_set_index_vertex, m_vs_binding_table->instanced_lut_buffer_location);
 		m_program->bind_uniform(m_instancing_constants_array_buffer_info, vk::glsl::binding_set_index_vertex, m_vs_binding_table->instanced_cbuf_location);
@@ -2344,7 +2344,7 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 		4,
 		&push_val);
 
-	if (current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING)
+	if (m_ctx->program.fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING)
 	{
 		// TODO: This should be cached aggressively.
 		u32 blend_config[7];
@@ -2370,7 +2370,7 @@ void VKGSRender::update_vertex_env(u32 id, const vk::vertex_upload_info& vertex_
 	// Now actually fill in the data
 	m_draw_processor.fill_vertex_layout_state(
 		m_vertex_layout,
-		current_vp_metadata,
+		m_ctx->program.vp_metadata,
 		vertex_info.first_vertex,
 		vertex_info.allocated_vertex_count,
 		dst->attrib_data,
@@ -2720,7 +2720,7 @@ void VKGSRender::prepare_rtts(rsx::framebuffer_creation_context context)
 	}
 
 	std::vector<u8> input_attachments{};
-	if ((current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING) &&
+	if ((m_ctx->program.fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING) &&
 		!m_ctx->graphics_state.test(rsx::pipeline_state::fragment_program_state_dirty))
 	{
 		input_attachments.resize(m_draw_buffers.size());

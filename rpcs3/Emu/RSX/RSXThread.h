@@ -99,8 +99,6 @@ namespace rsx
 		s32 m_skip_frame_ctr = 0;
 		bool skip_current_frame = false;
 
-		primitive_class m_current_draw_mode = primitive_class::polygon;
-
 		backend_configuration backend_config{};
 
 		// FIFO
@@ -229,9 +227,6 @@ namespace rsx
 
 		u64 ROP_sync_timestamp = 0;
 
-		program_hash_util::fragment_program_utils::fragment_program_metadata current_fp_metadata = {};
-		program_hash_util::vertex_program_utils::vertex_program_metadata current_vp_metadata = {};
-
 		std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count> fs_sampler_state = {};
 		std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count> vs_sampler_state = {};
 
@@ -246,14 +241,6 @@ namespace rsx
 		// Notify framebuffer layout has been committed.
 		// FIXME: This should not be here
 		void on_framebuffer_layout_updated();
-
-		RSXVertexProgram current_vertex_program = {};
-		RSXFragmentProgram current_fragment_program = {};
-
-		vertex_program_texture_state current_vp_texture_state = {};
-		fragment_program_texture_state current_fp_texture_state = {};
-
-		program_cache_hint_t m_program_cache_hint;
 
 		// Runs shader prefetch and resolves pipeline status flags
 		void analyse_current_rsx_pipeline();
@@ -425,8 +412,6 @@ namespace rsx
 
 		// Program public "get" handlers
 		virtual std::pair<std::string, std::string> get_programs() const { return std::make_pair("", ""); }
-
-		bool is_current_vertex_program_instanced() const { return !!(current_vertex_program.ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS); }
 
 		virtual bool is_current_program_interpreted() const { return false; }
 

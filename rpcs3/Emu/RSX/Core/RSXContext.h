@@ -7,6 +7,7 @@
 #include "Emu/RSX/NV47/HW/context.h"
 #include "RSXDriverState.h"
 #include "RSXFrameBuffer.h"
+#include "RSXProgramState.h"
 
 namespace rsx
 {
@@ -25,6 +26,7 @@ namespace rsx
 		bool in_begin_end = false;
 
 		framebuffer_state fb;
+		program_state program;
 
 		context(u32 id, thread* owner);
 		~context();
