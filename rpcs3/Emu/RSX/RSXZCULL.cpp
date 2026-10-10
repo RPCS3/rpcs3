@@ -955,7 +955,7 @@ namespace rsx
 				std::scoped_lock lock(m_pages_mutex);
 				disable_optimizations(thr, location);
 
-				thr->m_eng_interrupt_mask |= rsx::pipe_flush_interrupt;
+				thr->get_context()->eng_interrupt_mask |= rsx::pipe_flush_interrupt;
 				return true;
 			}
 

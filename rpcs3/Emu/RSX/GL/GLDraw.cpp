@@ -325,7 +325,7 @@ void GLGSRender::update_draw_state()
 	//NV4097_SET_CLIP_ID_TEST_ENABLE
 
 	// For OGL Z range is updated every draw as it is separate from viewport config
-	m_graphics_state.clear(rsx::pipeline_state::zclip_config_state_dirty);
+	m_ctx->graphics_state.clear(rsx::pipeline_state::zclip_config_state_dirty);
 
 	m_frame_stats.setup_time += m_profiler.duration();
 }
@@ -379,7 +379,7 @@ void GLGSRender::load_texture_env()
 			if (sampler_state->format_class != previous_format_class)
 			{
 				// Host details changed but RSX is not aware
-				m_graphics_state |= rsx::fragment_program_state_dirty;
+				m_ctx->graphics_state |= rsx::fragment_program_state_dirty;
 			}
 
 			if (sampler_state->format_ex)
@@ -515,7 +515,7 @@ void GLGSRender::load_texture_env()
 		}
 		else if (sampler_state->format_class != previous_format_class)
 		{
-			m_graphics_state |= rsx::vertex_program_state_dirty;
+			m_ctx->graphics_state |= rsx::vertex_program_state_dirty;
 		}
 	}
 
@@ -906,7 +906,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 void GLGSRender::begin()
 {
 	// Save shader state now before prefetch and loading happens
-	m_interpreter_state = (m_graphics_state.load() & rsx::pipeline_state::invalidate_pipeline_bits);
+	m_interpreter_state = (m_ctx->graphics_state.load() & rsx::pipeline_state::invalidate_pipeline_bits);
 
 	rsx::thread::begin();
 
@@ -917,7 +917,7 @@ void GLGSRender::begin()
 
 	init_buffers(rsx::framebuffer_creation_context::context_draw);
 
-	if (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
+	if (m_ctx->graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
 	{
 		// Shaders need to be reloaded.
 		m_prev_program = m_program;
@@ -978,7 +978,7 @@ void GLGSRender::end()
 		}
 	}
 
-	m_graphics_state.clear(rsx::zeta_address_cyclic_barrier);
+	m_ctx->graphics_state.clear(rsx::zeta_address_cyclic_barrier);
 
 	update_draw_state();
 

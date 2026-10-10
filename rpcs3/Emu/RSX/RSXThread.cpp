@@ -300,8 +300,8 @@ namespace rsx
 
 	static bool evaluate_programmable_blending_state(rsx::context* ctx, u32& fragment_ctrl)
 	{
-		const bool is_blend_config_dirty = RSX(ctx)->m_graphics_state.test(rsx::blend_config_dirty);
-		RSX(ctx)->m_graphics_state.clear(rsx::blend_config_dirty);
+		const bool is_blend_config_dirty = ctx->graphics_state.test(rsx::blend_config_dirty);
+		ctx->graphics_state.clear(rsx::blend_config_dirty);
 
 		const auto blend_enable_mask = REGS(ctx)->blend_enabled_mask() & REGS(ctx)->surface_color_target_mask();
 		const bool programmable_blend_active = !!(fragment_ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING);
@@ -405,7 +405,7 @@ namespace rsx
 
 		if (need_programmable_blending && is_blend_config_dirty)
 		{
-			RSX(ctx)->m_graphics_state.set(rsx::fragment_state_dirty);
+			ctx->graphics_state.set(rsx::fragment_state_dirty);
 		}
 
 		if (need_programmable_blending == programmable_blend_active)
@@ -773,7 +773,7 @@ namespace rsx
 		ar(dma_address, iomap_table, restore_point, tiles, zculls, display_buffers, display_buffers_count, current_display_buffer);
 		ar(enable_second_vhandler, requested_vsync);
 		ar(device_addr, label_addr, main_mem_size, local_mem_size, rsx_event_port, driver_info);
-		ar(in_begin_end);
+		ar(m_ctx->in_begin_end);
 		ar(display_buffers, display_buffers_count, current_display_buffer);
 		ar(unsent_gcm_events, REGS(m_ctx)->current_draw_clause);
 
@@ -846,8 +846,6 @@ namespace rsx
 
 		m_textures_dirty.fill(true);
 		m_vertex_textures_dirty.fill(true);
-
-		m_graphics_state |= pipeline_state::all_dirty;
 
 		g_user_asked_for_frame_capture = false;
 
@@ -961,12 +959,12 @@ namespace rsx
 			const auto current_mode = REGS(m_ctx)->current_draw_clause.classify_mode();
 			if (current_mode != m_current_draw_mode)
 			{
-				m_graphics_state |= (rsx::vertex_program_state_dirty | rsx::fragment_program_state_dirty);
+				m_ctx->graphics_state |= (rsx::vertex_program_state_dirty | rsx::fragment_program_state_dirty);
 				m_current_draw_mode = current_mode;
 			}
 		}
 
-		in_begin_end = true;
+		m_ctx->in_begin_end = true;
 	}
 
 	void thread::end()
@@ -976,13 +974,13 @@ namespace rsx
 			capture::capture_draw_memory(this);
 		}
 
-		in_begin_end = false;
+		m_ctx->in_begin_end = false;
 		m_frame_stats.draw_calls++;
 
 		REGS(m_ctx)->current_draw_clause.post_execute_cleanup(m_ctx);
 
-		m_graphics_state |= rsx::pipeline_state::framebuffer_reads_dirty;
-		m_eng_interrupt_mask |= rsx::backend_interrupt;
+		m_ctx->graphics_state |= rsx::pipeline_state::framebuffer_reads_dirty;
+		m_ctx->eng_interrupt_mask |= rsx::backend_interrupt;
 		ROP_sync_timestamp = rsx::get_shared_tag();
 
 		m_draw_processor.clear_push_buffers();
@@ -1008,12 +1006,12 @@ namespace rsx
 
 	bool thread::should_skip_draw() const
 	{
-		if (skip_current_frame || !m_graphics_state.test(rsx::rtt_config_valid) || cond_render_ctrl.disable_rendering())
+		if (skip_current_frame || !m_ctx->graphics_state.test(rsx::rtt_config_valid) || cond_render_ctrl.disable_rendering())
 		{
 			return true;
 		}
 
-		if (m_graphics_state.test(rsx::rtt_config_no_attachments) &&
+		if (m_ctx->graphics_state.test(rsx::rtt_config_no_attachments) &&
 			(g_cfg.video.disable_zcull_queries || !zcull_ctrl->has_active_queries()))
 		{
 			return true;
@@ -1108,7 +1106,7 @@ namespace rsx
 			g_fxo->get<rsx::dma_manager>().init();
 			on_init_thread();
 
-			if (in_begin_end)
+			if (m_ctx->in_begin_end)
 			{
 				// on_init_thread should have prepared the backend resources
 				// Run draw call warmup again if the savestate happened mid-draw
@@ -1298,7 +1296,7 @@ namespace rsx
 			}
 
 			// Note a possible rollback address
-			if (sync_point_request && !in_begin_end)
+			if (sync_point_request && !m_ctx->in_begin_end)
 			{
 				restore_point = fifo_ctrl->get_pos();
 				saved_fifo_ret = fifo_ret_addr;
@@ -1308,7 +1306,7 @@ namespace rsx
 			// Update sub-units every 64 cycles. The local handler is invoked for other functions externally on-demand anyway.
 			// This avoids expensive calls to check timestamps which involves reading some values from TLS storage on windows.
 			// If something is going on in the backend that requires an update, set the interrupt bit explicitly.
-			if ((m_cycles_counter++ & 63) == 0 || m_eng_interrupt_mask)
+			if ((m_cycles_counter++ & 63) == 0 || m_ctx->eng_interrupt_mask)
 			{
 				// Execute backend-local tasks first
 				do_local_task(performance_counters.state);
@@ -1386,7 +1384,7 @@ namespace rsx
 
 	void thread::do_local_task(FIFO::state state)
 	{
-		m_eng_interrupt_mask.clear(rsx::backend_interrupt);
+		m_ctx->eng_interrupt_mask.clear(rsx::backend_interrupt);
 
 		if (async_flip_requested & flip_request::emu_requested)
 		{
@@ -1397,7 +1395,7 @@ namespace rsx
 
 		if (state != FIFO::state::lock_wait)
 		{
-			if (!in_begin_end && atomic_storage<u32>::load(m_invalidated_memory_range.end) != 0)
+			if (!m_ctx->in_begin_end && atomic_storage<u32>::load(m_invalidated_memory_range.end) != 0)
 			{
 				std::lock_guard lock(m_mtx_task);
 
@@ -1407,7 +1405,7 @@ namespace rsx
 				}
 			}
 
-			if (m_eng_interrupt_mask & rsx::dma_control_interrupt && !is_stopped())
+			if (m_ctx->eng_interrupt_mask & rsx::dma_control_interrupt && !is_stopped())
 			{
 				if (const u64 get_put = new_get_put.exchange(u64{umax});
 					get_put != umax)
@@ -1420,11 +1418,11 @@ namespace rsx
 					sync_point_request.release(true);
 				}
 
-				m_eng_interrupt_mask.clear(rsx::dma_control_interrupt);
+				m_ctx->eng_interrupt_mask.clear(rsx::dma_control_interrupt);
 			}
 		}
 
-		if (m_eng_interrupt_mask & rsx::pipe_flush_interrupt)
+		if (m_ctx->eng_interrupt_mask & rsx::pipe_flush_interrupt)
 		{
 			sync();
 		}
@@ -1479,7 +1477,7 @@ namespace rsx
 		layout.height = REGS(m_ctx)->surface_clip_height();
 
 		// NOTE: rtt_config_no_attachments is intentionally not reset.
-		m_graphics_state.clear(rsx::rtt_config_contested | rsx::rtt_config_valid);
+		m_ctx->graphics_state.clear(rsx::rtt_config_contested | rsx::rtt_config_valid);
 		m_current_framebuffer_context = context;
 
 		if (layout.width == 0 || layout.height == 0)
@@ -1602,7 +1600,7 @@ namespace rsx
 			color_buffer_unused = !color_write_enabled || layout.target == rsx::surface_target::none;
 			if (color_buffer_unused || depth_buffer_unused)
 			{
-				m_graphics_state.set(rsx::rtt_config_contested);
+				m_ctx->graphics_state.set(rsx::rtt_config_contested);
 			}
 			break;
 		default:
@@ -1749,7 +1747,7 @@ namespace rsx
 				rsx_log.warning("Framebuffer at 0x%X has aliasing color/depth targets, color_index=%d, zeta_pitch = %d, color_pitch=%d, context=%d",
 					layout.zeta_address, index, layout.zeta_pitch, layout.color_pitch[index], static_cast<u32>(context));
 
-				m_graphics_state.set(rsx::rtt_config_contested);
+				m_ctx->graphics_state.set(rsx::rtt_config_contested);
 
 				if (g_cfg.video.fb_aliasing_bias == framebuffer_aliasing_bias::prefer_color
 					&& layout.color_write_enabled[index]
@@ -1788,10 +1786,10 @@ namespace rsx
 				layout.actual_color_pitch[index] = layout.color_pitch[index];
 			}
 
-			m_graphics_state.set(rsx::rtt_config_valid);
+			m_ctx->graphics_state.set(rsx::rtt_config_valid);
 		}
 
-		const bool framebufferless = !m_graphics_state.test(rsx::rtt_config_valid) && !layout.zeta_address;
+		const bool framebufferless = !m_ctx->graphics_state.test(rsx::rtt_config_valid) && !layout.zeta_address;
 		if (framebufferless)
 		{
 			// No attachments. The hardware still rasterizes in this case and side effects such as ZPASS counters are still updated.
@@ -1805,24 +1803,24 @@ namespace rsx
 			// Context must be draw now...
 		}
 
-		if (framebufferless != m_graphics_state.test(rsx::rtt_config_no_attachments))
+		if (framebufferless != m_ctx->graphics_state.test(rsx::rtt_config_no_attachments))
 		{
 			// Programmable blending reads back from the color attachments and is disabled when there are none.
 			// Force the blend configuration to be re-evaluated when moving in or out of this state.
 			if (framebufferless)
 			{
-				m_graphics_state.set(rsx::rtt_config_no_attachments);
+				m_ctx->graphics_state.set(rsx::rtt_config_no_attachments);
 			}
 			else
 			{
-				m_graphics_state.clear(rsx::rtt_config_no_attachments);
+				m_ctx->graphics_state.clear(rsx::rtt_config_no_attachments);
 			}
 
-			m_graphics_state.set(rsx::pipeline_config_dirty);
+			m_ctx->graphics_state.set(rsx::pipeline_config_dirty);
 		}
 
 		// At least one attachment exists
-		m_graphics_state.set(rsx::rtt_config_valid);
+		m_ctx->graphics_state.set(rsx::rtt_config_valid);
 
 		// Window (raster) offsets
 		const auto window_offset_x = REGS(m_ctx)->window_offset_x();
@@ -1912,7 +1910,7 @@ namespace rsx
 
 	void thread::on_framebuffer_options_changed(u32 opt)
 	{
-		if (m_graphics_state & rsx::rtt_config_dirty)
+		if (m_ctx->graphics_state & rsx::rtt_config_dirty)
 		{
 			// Nothing to do
 			return;
@@ -1925,9 +1923,9 @@ namespace rsx
 				return;
 			}
 
-			if (m_graphics_state & rsx::zeta_address_is_cyclic)
+			if (m_ctx->graphics_state & rsx::zeta_address_is_cyclic)
 			{
-				m_graphics_state |= rsx::fragment_program_state_dirty;
+				m_ctx->graphics_state |= rsx::fragment_program_state_dirty;
 			}
 			m_framebuffer_layout.zeta_write_enabled = state;
 		};
@@ -2015,9 +2013,9 @@ namespace rsx
 		{
 			evaluate_depth_buffer_state();
 
-			if (m_graphics_state.test(rsx::rtt_config_contested) && evaluate_depth_buffer_contested())
+			if (m_ctx->graphics_state.test(rsx::rtt_config_contested) && evaluate_depth_buffer_contested())
 			{
-				m_graphics_state.set(rsx::rtt_config_dirty);
+				m_ctx->graphics_state.set(rsx::rtt_config_dirty);
 			}
 			break;
 		}
@@ -2040,16 +2038,16 @@ namespace rsx
 				evaluate_stencil_buffer_state();
 			}
 
-			if (m_graphics_state.test(rsx::rtt_config_contested) && evaluate_depth_buffer_contested())
+			if (m_ctx->graphics_state.test(rsx::rtt_config_contested) && evaluate_depth_buffer_contested())
 			{
-				m_graphics_state.set(rsx::rtt_config_dirty);
+				m_ctx->graphics_state.set(rsx::rtt_config_dirty);
 			}
 			break;
 		}
 		case NV4097_SET_COLOR_MASK:
 		case NV4097_SET_COLOR_MASK_MRT:
 		{
-			if (!m_graphics_state.test(rsx::rtt_config_contested)) [[likely]]
+			if (!m_ctx->graphics_state.test(rsx::rtt_config_contested)) [[likely]]
 			{
 				// Update write masks and continue
 				evaluate_color_buffer_state();
@@ -2066,7 +2064,7 @@ namespace rsx
 				if (!old_state && new_state)
 				{
 					// Color buffers now in use
-					m_graphics_state.set(rsx::rtt_config_dirty);
+					m_ctx->graphics_state.set(rsx::rtt_config_dirty);
 				}
 			}
 			break;
@@ -2079,7 +2077,7 @@ namespace rsx
 
 	void thread::on_framebuffer_layout_updated()
 	{
-		if (m_graphics_state.test(rsx::fragment_program_state_dirty))
+		if (m_ctx->graphics_state.test(rsx::fragment_program_state_dirty))
 		{
 			return;
 		}
@@ -2090,21 +2088,21 @@ namespace rsx
 			return;
 		}
 
-		m_graphics_state |= rsx::fragment_program_state_dirty;
+		m_ctx->graphics_state |= rsx::fragment_program_state_dirty;
 	}
 
 	bool thread::get_scissor(areau& region, bool clip_viewport)
 	{
-		if (!m_graphics_state.test(rsx::pipeline_state::scissor_config_state_dirty))
+		if (!m_ctx->graphics_state.test(rsx::pipeline_state::scissor_config_state_dirty))
 		{
-			if (clip_viewport == m_graphics_state.test(rsx::pipeline_state::scissor_setup_clipped))
+			if (clip_viewport == m_ctx->graphics_state.test(rsx::pipeline_state::scissor_setup_clipped))
 			{
 				// Nothing to do
 				return false;
 			}
 		}
 
-		m_graphics_state.clear(rsx::pipeline_state::scissor_config_state_dirty | rsx::pipeline_state::scissor_setup_clipped);
+		m_ctx->graphics_state.clear(rsx::pipeline_state::scissor_config_state_dirty | rsx::pipeline_state::scissor_setup_clipped);
 
 		u16 x1, x2, y1, y2;
 
@@ -2126,7 +2124,7 @@ namespace rsx
 			x2 = std::min(scissor_x + scissor_w, raster_x + raster_w);
 			y2 = std::min(scissor_y + scissor_h, raster_y + raster_h);
 
-			m_graphics_state |= rsx::pipeline_state::scissor_setup_clipped;
+			m_ctx->graphics_state |= rsx::pipeline_state::scissor_setup_clipped;
 		}
 		else
 		{
@@ -2141,15 +2139,15 @@ namespace rsx
 			x1 >= REGS(m_ctx)->window_clip_horizontal() ||
 			y1 >= REGS(m_ctx)->window_clip_vertical())
 		{
-			m_graphics_state |= rsx::pipeline_state::scissor_setup_invalid;
-			m_graphics_state.clear(rsx::rtt_config_valid);
+			m_ctx->graphics_state |= rsx::pipeline_state::scissor_setup_invalid;
+			m_ctx->graphics_state.clear(rsx::rtt_config_valid);
 			return false;
 		}
 
-		if (m_graphics_state & rsx::pipeline_state::scissor_setup_invalid)
+		if (m_ctx->graphics_state & rsx::pipeline_state::scissor_setup_invalid)
 		{
-			m_graphics_state.clear(rsx::pipeline_state::scissor_setup_invalid);
-			m_graphics_state.set(rsx::rtt_config_valid);
+			m_ctx->graphics_state.clear(rsx::pipeline_state::scissor_setup_invalid);
+			m_ctx->graphics_state.set(rsx::rtt_config_valid);
 		}
 
 		std::tie(region.x1, region.y1) = rsx::apply_resolution_scale<false>(resolution_scaling_config, x1, y1, m_framebuffer_layout.width, m_framebuffer_layout.height);
@@ -2164,11 +2162,11 @@ namespace rsx
 
 		// Programmable blending. Requires color attachments to read from.
 		if (backend_config.supports_programmable_blending &&
-			!m_graphics_state.test(rsx::rtt_config_no_attachments))
+			!m_ctx->graphics_state.test(rsx::rtt_config_no_attachments))
 		{
 			expected_ctrl = current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
 
-			if (m_graphics_state.test(rsx::pipeline_config_dirty))
+			if (m_ctx->graphics_state.test(rsx::pipeline_config_dirty))
 			{
 				evaluate_programmable_blending_state(m_ctx, expected_ctrl);
 			}
@@ -2228,15 +2226,15 @@ namespace rsx
 
 	void thread::prefetch_fragment_program()
 	{
-		if (!m_graphics_state.test(rsx::pipeline_state::fragment_program_ucode_dirty))
+		if (!m_ctx->graphics_state.test(rsx::pipeline_state::fragment_program_ucode_dirty))
 		{
 			return;
 		}
 
-		m_graphics_state.clear(rsx::pipeline_state::fragment_program_ucode_dirty);
+		m_ctx->graphics_state.clear(rsx::pipeline_state::fragment_program_ucode_dirty);
 
 		// Request for update of fragment constants if the program block is invalidated
-		m_graphics_state |= rsx::pipeline_state::fragment_constants_dirty;
+		m_ctx->graphics_state |= rsx::pipeline_state::fragment_constants_dirty;
 
 		const auto [program_offset, program_location] = REGS(m_ctx)->shader_program_address();
 		const auto prev_textures_reference_mask = current_fp_metadata.referenced_textures_mask;
@@ -2251,7 +2249,7 @@ namespace rsx
 		current_fragment_program.texture_state.import(current_fp_texture_state, current_fp_metadata.referenced_textures_mask);
 		current_fragment_program.valid = true;
 
-		if (!m_graphics_state.test(rsx::pipeline_state::fragment_program_state_dirty))
+		if (!m_ctx->graphics_state.test(rsx::pipeline_state::fragment_program_state_dirty))
 		{
 			// Verify current texture state is valid
 			for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
@@ -2260,32 +2258,32 @@ namespace rsx
 
 				if (m_textures_dirty[i])
 				{
-					m_graphics_state |= rsx::pipeline_state::fragment_program_state_dirty;
+					m_ctx->graphics_state |= rsx::pipeline_state::fragment_program_state_dirty;
 					break;
 				}
 			}
 		}
 
-		if (!m_graphics_state.test(rsx::pipeline_state::fragment_program_state_dirty) &&
+		if (!m_ctx->graphics_state.test(rsx::pipeline_state::fragment_program_state_dirty) &&
 			(prev_textures_reference_mask != current_fp_metadata.referenced_textures_mask))
 		{
 			// If different textures are used, upload their coefficients.
 			// The texture parameters transfer routine is optimized and only writes data for textures consumed by the ucode.
-			m_graphics_state |= rsx::pipeline_state::fragment_texture_state_dirty;
+			m_ctx->graphics_state |= rsx::pipeline_state::fragment_texture_state_dirty;
 		}
 	}
 
 	void thread::prefetch_vertex_program()
 	{
-		if (!m_graphics_state.test(rsx::pipeline_state::vertex_program_ucode_dirty))
+		if (!m_ctx->graphics_state.test(rsx::pipeline_state::vertex_program_ucode_dirty))
 		{
 			return;
 		}
 
-		m_graphics_state.clear(rsx::pipeline_state::vertex_program_ucode_dirty);
+		m_ctx->graphics_state.clear(rsx::pipeline_state::vertex_program_ucode_dirty);
 
 		// Reload transform constants unconditionally for now
-		m_graphics_state |= rsx::pipeline_state::transform_constants_dirty;
+		m_ctx->graphics_state |= rsx::pipeline_state::transform_constants_dirty;
 
 		const u32 transform_program_start = REGS(m_ctx)->transform_program_start();
 		current_vertex_program.data.reserve(512 * 4);
@@ -2300,7 +2298,7 @@ namespace rsx
 
 		current_vertex_program.texture_state.import(current_vp_texture_state, current_vp_metadata.referenced_textures_mask);
 
-		if (!m_graphics_state.test(rsx::pipeline_state::vertex_program_state_dirty))
+		if (!m_ctx->graphics_state.test(rsx::pipeline_state::vertex_program_state_dirty))
 		{
 			// Verify current texture state is valid
 			for (u32 textures_ref = current_vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
@@ -2309,7 +2307,7 @@ namespace rsx
 
 				if (m_vertex_textures_dirty[i])
 				{
-					m_graphics_state |= rsx::pipeline_state::vertex_program_state_dirty;
+					m_ctx->graphics_state |= rsx::pipeline_state::vertex_program_state_dirty;
 					break;
 				}
 			}
@@ -2318,7 +2316,7 @@ namespace rsx
 
 	void thread::analyse_current_rsx_pipeline()
 	{
-		m_program_cache_hint.invalidate(m_graphics_state.load());
+		m_program_cache_hint.invalidate(m_ctx->graphics_state.load());
 
 		if (u32 export_ctrl = get_fragment_program_export_config();
 			(current_fragment_program.ctrl & fs_export_config_mask) != export_ctrl)
@@ -2328,7 +2326,7 @@ namespace rsx
 			current_fragment_program.ctrl |= export_ctrl;
 
 			// Signal backend to reload pipeline
-			m_graphics_state.set(rsx::pipeline_state::fragment_program_state_dirty);
+			m_ctx->graphics_state.set(rsx::pipeline_state::fragment_program_state_dirty);
 		}
 
 		prefetch_vertex_program();
@@ -2337,7 +2335,7 @@ namespace rsx
 
 	void thread::get_current_vertex_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count>& sampler_descriptors)
 	{
-		if (m_graphics_state.test(rsx::pipeline_state::xform_instancing_state_dirty))
+		if (m_ctx->graphics_state.test(rsx::pipeline_state::xform_instancing_state_dirty))
 		{
 			current_vertex_program.ctrl &= ~RSX_SHADER_CONTROL_INSTANCED_CONSTANTS;
 			if (REGS(m_ctx)->current_draw_clause.is_trivial_instanced_draw)
@@ -2345,7 +2343,7 @@ namespace rsx
 				current_vertex_program.ctrl |= RSX_SHADER_CONTROL_INSTANCED_CONSTANTS;
 			}
 
-			m_graphics_state.clear(rsx::pipeline_state::xform_instancing_state_dirty);
+			m_ctx->graphics_state.clear(rsx::pipeline_state::xform_instancing_state_dirty);
 
 			// Emit invalidate here in case ucode is actually clean
 			m_program_cache_hint.invalidate_vertex_program(current_vertex_program);
@@ -2358,12 +2356,12 @@ namespace rsx
 			m_program_cache_hint.invalidate_vertex_program(current_vertex_program);
 		}
 
-		if (!m_graphics_state.test(rsx::pipeline_state::vertex_program_dirty))
+		if (!m_ctx->graphics_state.test(rsx::pipeline_state::vertex_program_dirty))
 		{
 			return;
 		}
 
-		ensure(!m_graphics_state.test(rsx::pipeline_state::vertex_program_ucode_dirty));
+		ensure(!m_ctx->graphics_state.test(rsx::pipeline_state::vertex_program_ucode_dirty));
 		current_vertex_program.output_mask = REGS(m_ctx)->vertex_attrib_output_mask();
 
 		current_vertex_program.ctrl &= ~RSX_SHADER_CONTROL_FLAT_SHADING;
@@ -2398,14 +2396,14 @@ namespace rsx
 
 	void thread::get_current_fragment_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count>& sampler_descriptors)
 	{
-		if (!m_graphics_state.test(rsx::pipeline_state::fragment_program_dirty))
+		if (!m_ctx->graphics_state.test(rsx::pipeline_state::fragment_program_dirty))
 		{
 			return;
 		}
 
-		ensure(!m_graphics_state.test(rsx::pipeline_state::fragment_program_ucode_dirty));
+		ensure(!m_ctx->graphics_state.test(rsx::pipeline_state::fragment_program_ucode_dirty));
 
-		m_graphics_state.clear(rsx::pipeline_state::fragment_program_dirty);
+		m_ctx->graphics_state.clear(rsx::pipeline_state::fragment_program_dirty);
 
 		current_fragment_program.ctrl &= fs_export_config_mask;
 		current_fragment_program.ctrl |= REGS(m_ctx)->shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT | RSX_SHADER_CONTROL_USES_KIL);
@@ -2476,8 +2474,8 @@ namespace rsx
 			break;
 		}
 
-		const bool zeta_was_cyclic = m_graphics_state & rsx::zeta_address_is_cyclic;
-		m_graphics_state.clear(rsx::zeta_address_is_cyclic);
+		const bool zeta_was_cyclic = m_ctx->graphics_state & rsx::zeta_address_is_cyclic;
+		m_ctx->graphics_state.clear(rsx::zeta_address_is_cyclic);
 
 		for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 		{
@@ -2498,7 +2496,7 @@ namespace rsx
 
 			current_fragment_program.texture_params[i].remap = tex.remap();
 
-			m_graphics_state |= rsx::pipeline_state::fragment_texture_state_dirty;
+			m_ctx->graphics_state |= rsx::pipeline_state::fragment_texture_state_dirty;
 
 			u32 texture_control = 0;
 			current_fp_texture_state.set_dimension(sampler_descriptors[i]->image_type, i);
@@ -2615,7 +2613,7 @@ namespace rsx
 					!g_cfg.video.strict_rendering_mode &&
 					g_cfg.video.shader_precision != gpu_preset_level::low)
 				{
-					m_graphics_state |= rsx::zeta_address_is_cyclic;
+					m_ctx->graphics_state |= rsx::zeta_address_is_cyclic;
 
 					if (!(current_fragment_program.ctrl & (CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT | RSX_SHADER_CONTROL_META_USES_DISCARD | RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE)) &&
 						m_framebuffer_layout.zeta_write_enabled)
@@ -2686,11 +2684,11 @@ namespace rsx
 
 		m_program_cache_hint.invalidate_fragment_program(current_fragment_program);
 
-		if (zeta_was_cyclic && zeta_was_cyclic != m_graphics_state.test(rsx::zeta_address_is_cyclic))
+		if (zeta_was_cyclic && zeta_was_cyclic != m_ctx->graphics_state.test(rsx::zeta_address_is_cyclic))
 		{
 			// Forced "fall-out" barrier. This is a special case for Z buffers because they can be cyclic without writes.
 			// That condition can cause early-Z in a later call to introduce data hazard in previous cyclic draws.
-			m_graphics_state |= rsx::zeta_address_cyclic_barrier;
+			m_ctx->graphics_state |= rsx::zeta_address_cyclic_barrier;
 		}
 	}
 
@@ -2717,7 +2715,7 @@ namespace rsx
 		}
 
 		// Data overlaps. Force ucode reload.
-		m_graphics_state |= rsx::pipeline_state::fragment_program_ucode_dirty;
+		m_ctx->graphics_state |= rsx::pipeline_state::fragment_program_ucode_dirty;
 		return true;
 	}
 
@@ -2726,7 +2724,7 @@ namespace rsx
 		REGS(m_ctx)->reset();
 		check_zcull_status(false);
 		nv4097::set_render_mode(m_ctx, 0, REGS(m_ctx)->registers[NV4097_SET_RENDER_ENABLE]);
-		m_graphics_state |= pipeline_state::all_dirty;
+		m_ctx->graphics_state |= pipeline_state::all_dirty;
 	}
 
 	void thread::init(u32 ctrlAddress)
@@ -2776,7 +2774,7 @@ namespace rsx
 
 	void thread::flip(const display_flip_info_t& info)
 	{
-		m_eng_interrupt_mask.clear(rsx::display_interrupt);
+		m_ctx->eng_interrupt_mask.clear(rsx::display_interrupt);
 
 		if (async_flip_requested & flip_request::any)
 		{
@@ -2917,7 +2915,7 @@ namespace rsx
 
 	void thread::sync()
 	{
-		m_eng_interrupt_mask.clear(rsx::pipe_flush_interrupt);
+		m_ctx->eng_interrupt_mask.clear(rsx::pipe_flush_interrupt);
 
 		mm_flush();
 
@@ -2927,7 +2925,7 @@ namespace rsx
 		}
 
 		// Fragment constants may have been updated
-		m_graphics_state |= rsx::pipeline_state::fragment_constants_dirty;
+		m_ctx->graphics_state |= rsx::pipeline_state::fragment_constants_dirty;
 
 		// DMA sync; if you need this, don't use MTRSX
 		// g_fxo->get<rsx::dma_manager>().sync();
@@ -3074,7 +3072,7 @@ namespace rsx
 		std::this_thread::sleep_for(2ms);
 		fifo_ctrl->abort();
 
-		if (std::exchange(in_begin_end, false) && !REGS(m_ctx)->current_draw_clause.empty())
+		if (std::exchange(m_ctx->in_begin_end, false) && !REGS(m_ctx)->current_draw_clause.empty())
 		{
 			execute_nop_draw();
 			rsx::thread::end();
@@ -3346,7 +3344,7 @@ namespace rsx
 				m_invalidated_memory_range = unmap_range;
 			}
 
-			m_eng_interrupt_mask |= rsx::memory_config_interrupt;
+			m_ctx->eng_interrupt_mask |= rsx::memory_config_interrupt;
 		}
 	}
 
@@ -3362,7 +3360,7 @@ namespace rsx
 	void thread::handle_invalidated_memory_range()
 	{
 		AUDIT(!m_mtx_task.is_free());
-		m_eng_interrupt_mask.clear(rsx::memory_config_interrupt);
+		m_ctx->eng_interrupt_mask.clear(rsx::memory_config_interrupt);
 
 		if (!m_invalidated_memory_range.valid())
 		{
@@ -3621,7 +3619,7 @@ namespace rsx
 			async_flip_buffer = buffer;
 			async_flip_requested |= flip_request::emu_requested;
 
-			m_eng_interrupt_mask |= rsx::display_interrupt;
+			m_ctx->eng_interrupt_mask |= rsx::display_interrupt;
 
 			if (state & cpu_flag::exit)
 			{

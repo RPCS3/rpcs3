@@ -118,7 +118,7 @@ namespace rsx
 	{
 		void draw_barrier(context* ctx, u32, u32)
 		{
-			if (RSX(ctx)->in_begin_end)
+			if (ctx->in_begin_end)
 			{
 				if (!REGS(ctx)->current_draw_clause.is_disjoint_primitive)
 				{

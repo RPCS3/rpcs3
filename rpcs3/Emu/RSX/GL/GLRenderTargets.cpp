@@ -106,7 +106,7 @@ u8 rsx::internals::get_pixel_size(rsx::surface_depth_format format)
 void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*skip_reading*/)
 {
 	const bool clipped_scissor = (context == rsx::framebuffer_creation_context::context_draw);
-	if (m_current_framebuffer_context == context && !m_graphics_state.test(rsx::rtt_config_dirty) && m_draw_fbo)
+	if (m_current_framebuffer_context == context && !m_ctx->graphics_state.test(rsx::rtt_config_dirty) && m_draw_fbo)
 	{
 		// Fast path
 		// Framebuffer usage has not changed, framebuffer exists and config regs have not changed
@@ -114,7 +114,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 		return;
 	}
 
-	m_graphics_state.clear(
+	m_ctx->graphics_state.clear(
 		rsx::rtt_config_dirty |
 		rsx::rtt_config_contested |
 		rsx::rtt_config_valid |
@@ -122,7 +122,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 		rsx::pipeline_config_dirty);
 
 	get_framebuffer_layout(context, m_framebuffer_layout);
-	if (!m_graphics_state.test(rsx::rtt_config_valid))
+	if (!m_ctx->graphics_state.test(rsx::rtt_config_valid))
 	{
 		return;
 	}
@@ -214,7 +214,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 		m_depth_surface_info = {};
 	}
 
-	m_graphics_state.clear(rsx::rtt_config_valid);
+	m_ctx->graphics_state.clear(rsx::rtt_config_valid);
 
 	if (m_draw_fbo)
 	{
@@ -232,12 +232,12 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 			m_draw_fbo->bind();
 			m_draw_fbo->set_extents({ m_framebuffer_layout.width, m_framebuffer_layout.height });
 
-			m_graphics_state.set(rsx::rtt_config_valid);
+			m_ctx->graphics_state.set(rsx::rtt_config_valid);
 			break;
 		}
 	}
 
-	if (!m_graphics_state.test(rsx::rtt_config_valid))
+	if (!m_ctx->graphics_state.test(rsx::rtt_config_valid))
 	{
 		m_framebuffer_cache.emplace_back();
 		m_framebuffer_cache.back().add_ref();
@@ -270,7 +270,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 
 	ensure(m_draw_fbo);
 
-	if (m_graphics_state.test(rsx::rtt_config_no_attachments))
+	if (m_ctx->graphics_state.test(rsx::rtt_config_no_attachments))
 	{
 		// Framebufferless rendering. Raster dimensions must be supplied explicitly and match what real surfaces would have used.
 		const auto [raster_width, raster_height] = rsx::apply_resolution_scale<true>(
@@ -313,11 +313,11 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 
 	if (!m_draw_fbo->check())
 	{
-		m_graphics_state.clear(rsx::rtt_config_valid);
+		m_ctx->graphics_state.clear(rsx::rtt_config_valid);
 		return;
 	}
 
-	m_graphics_state.set(rsx::rtt_config_valid);
+	m_ctx->graphics_state.set(rsx::rtt_config_valid);
 	on_framebuffer_layout_updated();
 
 	check_zcull_status(true);

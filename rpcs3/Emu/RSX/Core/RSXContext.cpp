@@ -11,6 +11,8 @@ namespace rsx
 	{
 		register_state = m_owned_register_state.get();
 		register_state->init();
+
+		graphics_state |= pipeline_state::all_dirty;
 	}
 
 	context::~context() = default;
