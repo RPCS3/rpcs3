@@ -769,7 +769,7 @@ namespace rsx
 			ar(v.attr, v.size, v.type, v.vertex_count, v.dword_count, v.data);
 		}
 
-		ar(m_draw_processor.m_element_push_buffer, fifo_ret_addr, saved_fifo_ret, zcull_surface_active, m_surface_info, m_depth_surface_info, m_framebuffer_layout);
+		ar(m_draw_processor.m_element_push_buffer, fifo_ret_addr, saved_fifo_ret, m_ctx->fb.zcull_surface_active, m_ctx->fb.surface_info, m_ctx->fb.depth_surface_info, m_ctx->fb.layout);
 		ar(dma_address, iomap_table, restore_point, tiles, zculls, display_buffers, display_buffers_count, current_display_buffer);
 		ar(enable_second_vhandler, requested_vsync);
 		ar(device_addr, label_addr, main_mem_size, local_mem_size, rsx_event_port, driver_info);
@@ -1478,7 +1478,7 @@ namespace rsx
 
 		// NOTE: rtt_config_no_attachments is intentionally not reset.
 		m_ctx->graphics_state.clear(rsx::rtt_config_contested | rsx::rtt_config_valid);
-		m_current_framebuffer_context = context;
+		m_ctx->fb.current_context = context;
 
 		if (layout.width == 0 || layout.height == 0)
 		{
@@ -1873,7 +1873,7 @@ namespace rsx
 
 		for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
 		{
-			if (m_surface_info[i].address != layout.color_addresses[i])
+			if (m_ctx->fb.surface_info[i].address != layout.color_addresses[i])
 			{
 				really_changed = true;
 				break;
@@ -1881,10 +1881,10 @@ namespace rsx
 
 			if (layout.color_addresses[i])
 			{
-				if (m_surface_info[i].width != layout.width ||
-					m_surface_info[i].height != layout.height ||
-					m_surface_info[i].color_format != layout.color_format ||
-					m_surface_info[i].samples != sample_count)
+				if (m_ctx->fb.surface_info[i].width != layout.width ||
+					m_ctx->fb.surface_info[i].height != layout.height ||
+					m_ctx->fb.surface_info[i].color_format != layout.color_format ||
+					m_ctx->fb.surface_info[i].samples != sample_count)
 				{
 					really_changed = true;
 					break;
@@ -1895,10 +1895,10 @@ namespace rsx
 		// Framebufferless setups have no surface info to compare against. Always rebuild.
 		if (!really_changed && !framebufferless)
 		{
-			if (layout.zeta_address == m_depth_surface_info.address &&
-				layout.depth_format == m_depth_surface_info.depth_format &&
-				sample_count == m_depth_surface_info.samples &&
-				(!layout.zeta_address || (m_depth_surface_info.width == layout.width && m_depth_surface_info.height == layout.height)))
+			if (layout.zeta_address == m_ctx->fb.depth_surface_info.address &&
+				layout.depth_format == m_ctx->fb.depth_surface_info.depth_format &&
+				sample_count == m_ctx->fb.depth_surface_info.samples &&
+				(!layout.zeta_address || (m_ctx->fb.depth_surface_info.width == layout.width && m_ctx->fb.depth_surface_info.height == layout.height)))
 			{
 				// Same target is reused
 				return;
@@ -1918,7 +1918,7 @@ namespace rsx
 
 		auto set_zeta_write_enabled = [&](bool state)
 		{
-			if (state == m_framebuffer_layout.zeta_write_enabled)
+			if (state == m_ctx->fb.layout.zeta_write_enabled)
 			{
 				return;
 			}
@@ -1927,7 +1927,7 @@ namespace rsx
 			{
 				m_ctx->graphics_state |= rsx::fragment_program_state_dirty;
 			}
-			m_framebuffer_layout.zeta_write_enabled = state;
+			m_ctx->fb.layout.zeta_write_enabled = state;
 		};
 
 		auto evaluate_depth_buffer_state = [&]()
@@ -1938,9 +1938,9 @@ namespace rsx
 
 		auto evaluate_stencil_buffer_state = [&]()
 		{
-			if (!m_framebuffer_layout.zeta_write_enabled &&
+			if (!m_ctx->fb.layout.zeta_write_enabled &&
 				REGS(m_ctx)->stencil_test_enabled() &&
-				is_depth_stencil_format(m_framebuffer_layout.depth_format))
+				is_depth_stencil_format(m_ctx->fb.layout.depth_format))
 			{
 				// Check if stencil data is modified
 				auto mask = REGS(m_ctx)->stencil_mask();
@@ -1962,8 +1962,8 @@ namespace rsx
 
 		auto evaluate_color_buffer_state = [&]() -> bool
 		{
-			m_framebuffer_layout.color_write_enabled = {};
-			const auto mrt_buffers = rsx::utility::get_rtt_indexes(m_framebuffer_layout.target);
+			m_ctx->fb.layout.color_write_enabled = {};
+			const auto mrt_buffers = rsx::utility::get_rtt_indexes(m_ctx->fb.layout.target);
 			bool any_found = false;
 
 			for (uint i = 0; i < mrt_buffers.size(); ++i)
@@ -1971,7 +1971,7 @@ namespace rsx
 				if (REGS(m_ctx)->color_write_enabled(i))
 				{
 					const auto real_index = mrt_buffers[i];
-					m_framebuffer_layout.color_write_enabled[real_index] = true;
+					m_ctx->fb.layout.color_write_enabled[real_index] = true;
 					any_found = true;
 				}
 			}
@@ -1982,21 +1982,21 @@ namespace rsx
 
 		auto evaluate_depth_buffer_contested = [&]()
 		{
-			if (m_framebuffer_layout.zeta_address) [[likely]]
+			if (m_ctx->fb.layout.zeta_address) [[likely]]
 			{
 				// Nothing to do, depth buffer already exists
 				return false;
 			}
 
 			// Check if depth read/write is enabled
-			if (m_framebuffer_layout.zeta_write_enabled ||
+			if (m_ctx->fb.layout.zeta_write_enabled ||
 				REGS(m_ctx)->depth_test_enabled())
 			{
 				return true;
 			}
 
 			// Check if stencil read is enabled
-			if (is_depth_stencil_format(m_framebuffer_layout.depth_format) &&
+			if (is_depth_stencil_format(m_ctx->fb.layout.depth_format) &&
 				REGS(m_ctx)->stencil_test_enabled())
 			{
 				return true;
@@ -2033,7 +2033,7 @@ namespace rsx
 			// Stencil takes a back seat to depth buffer stuff
 			evaluate_depth_buffer_state();
 
-			if (!m_framebuffer_layout.zeta_write_enabled)
+			if (!m_ctx->fb.layout.zeta_write_enabled)
 			{
 				evaluate_stencil_buffer_state();
 			}
@@ -2055,7 +2055,7 @@ namespace rsx
 			else
 			{
 				bool old_state = false;
-				for (const auto& enabled : m_framebuffer_layout.color_write_enabled)
+				for (const auto& enabled : m_ctx->fb.layout.color_write_enabled)
 				{
 					if (old_state = enabled; old_state) break;
 				}
@@ -2150,8 +2150,8 @@ namespace rsx
 			m_ctx->graphics_state.set(rsx::rtt_config_valid);
 		}
 
-		std::tie(region.x1, region.y1) = rsx::apply_resolution_scale<false>(resolution_scaling_config, x1, y1, m_framebuffer_layout.width, m_framebuffer_layout.height);
-		std::tie(region.x2, region.y2) = rsx::apply_resolution_scale<true>(resolution_scaling_config, x2, y2, m_framebuffer_layout.width, m_framebuffer_layout.height);
+		std::tie(region.x1, region.y1) = rsx::apply_resolution_scale<false>(resolution_scaling_config, x1, y1, m_ctx->fb.layout.width, m_ctx->fb.layout.height);
+		std::tie(region.x2, region.y2) = rsx::apply_resolution_scale<true>(resolution_scaling_config, x2, y2, m_ctx->fb.layout.width, m_ctx->fb.layout.height);
 
 		return true;
 	}
@@ -2196,7 +2196,7 @@ namespace rsx
 			return expected_ctrl;
 		}
 
-		if (m_framebuffer_layout.zeta_address &&
+		if (m_ctx->fb.layout.zeta_address &&
 			REGS(m_ctx)->depth_test_enabled() &&
 			REGS(m_ctx)->depth_func() == rsx::comparison_function::equal)
 		{
@@ -2221,7 +2221,7 @@ namespace rsx
 			return false;
 		}
 
-		return m_framebuffer_layout.zeta_address && rsx::is_float_depth_format(REGS(m_ctx)->surface_depth_fmt());
+		return m_ctx->fb.layout.zeta_address && rsx::is_float_depth_format(REGS(m_ctx)->surface_depth_fmt());
 	}
 
 	void thread::prefetch_fragment_program()
@@ -2609,14 +2609,14 @@ namespace rsx
 				}
 
 				if (sampler_descriptors[i]->is_cyclic_reference &&
-					m_framebuffer_layout.zeta_address != 0 &&
+					m_ctx->fb.layout.zeta_address != 0 &&
 					!g_cfg.video.strict_rendering_mode &&
 					g_cfg.video.shader_precision != gpu_preset_level::low)
 				{
 					m_ctx->graphics_state |= rsx::zeta_address_is_cyclic;
 
 					if (!(current_fragment_program.ctrl & (CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT | RSX_SHADER_CONTROL_META_USES_DISCARD | RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE)) &&
-						m_framebuffer_layout.zeta_write_enabled)
+						m_ctx->fb.layout.zeta_write_enabled)
 					{
 						current_fragment_program.ctrl |= RSX_SHADER_CONTROL_DISABLE_EARLY_Z;
 					}
@@ -2810,8 +2810,8 @@ namespace rsx
 
 		if (framebuffer_swap)
 		{
-			zcull_surface_active = false;
-			const u32 zeta_address = m_depth_surface_info.address;
+			m_ctx->fb.zcull_surface_active = false;
+			const u32 zeta_address = m_ctx->fb.depth_surface_info.address;
 
 			if (zeta_address)
 			{
@@ -2819,13 +2819,13 @@ namespace rsx
 				for (const auto& zcull : zculls)
 				{
 					if (zcull.bound &&
-						rsx::to_surface_depth_format(zcull.zFormat) == m_depth_surface_info.depth_format &&
+						rsx::to_surface_depth_format(zcull.zFormat) == m_ctx->fb.depth_surface_info.depth_format &&
 						rsx::to_surface_antialiasing(zcull.aaFormat) == REGS(m_ctx)->surface_antialias())
 					{
 						const u32 rsx_address = rsx::get_address(zcull.offset, CELL_GCM_LOCATION_LOCAL);
 						if (rsx_address == zeta_address)
 						{
-							zcull_surface_active = true;
+							m_ctx->fb.zcull_surface_active = true;
 							break;
 						}
 					}
@@ -2834,7 +2834,7 @@ namespace rsx
 		}
 
 		zcull_ctrl->set_enabled(this, zcull_rendering_enabled);
-		zcull_ctrl->set_status(this, zcull_surface_active, zcull_pixel_cnt_enabled, zcull_stats_enabled);
+		zcull_ctrl->set_status(this, m_ctx->fb.zcull_surface_active, zcull_pixel_cnt_enabled, zcull_stats_enabled);
 	}
 
 	void thread::clear_zcull_stats(u32 type)

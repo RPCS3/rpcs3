@@ -47,14 +47,6 @@ namespace rsx
 		class display_manager;
 	}
 
-	enum framebuffer_creation_context : u8
-	{
-		context_draw = 0,
-		context_clear_color = 1,
-		context_clear_depth = 2,
-		context_clear_all = context_clear_color | context_clear_depth
-	};
-
 	enum result_flags: u8
 	{
 		result_none = 0,
@@ -127,13 +119,7 @@ namespace rsx
 		u32 restore_fifo_position  = 0;
 
 		// Occlusion query
-		bool zcull_surface_active = false;
 		std::unique_ptr<reports::ZCULL_control> zcull_ctrl;
-
-		// Framebuffer setup
-		rsx::gcm_framebuffer_info m_surface_info[rsx::limits::color_buffers_count];
-		rsx::gcm_framebuffer_info m_depth_surface_info;
-		framebuffer_layout m_framebuffer_layout{};
 
 		// Overlays
 		rsx::overlays::display_manager* m_overlay_manager = nullptr;
@@ -240,7 +226,6 @@ namespace rsx
 
 		std::array<bool, 16> m_textures_dirty;
 		std::array<bool, 4> m_vertex_textures_dirty;
-		rsx::framebuffer_creation_context m_current_framebuffer_context = rsx::framebuffer_creation_context::context_draw;
 
 		u64 ROP_sync_timestamp = 0;
 
