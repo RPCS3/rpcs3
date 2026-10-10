@@ -159,13 +159,12 @@ protected:
 public:
 	iso_file(const std::string& path, bs_t<fs::open_mode> mode = fs::read);
 	iso_file(const std::string& path, bs_t<fs::open_mode> mode, const iso_fs_node& node);
+	iso_file(std::shared_ptr<fs::file> source, bool raw_device, const iso_fs_metadata& metadata);
 
 	// Points the object at another node of the same image, keeping the handle it already holds open: a caller
 	// walking many files of an image pays for a single open instead of one per file, which on a disc held by a
 	// drive is what the whole walk costs
 	void rebind(const iso_fs_node& node);
-
-	iso_file(std::shared_ptr<fs::file> source, bool raw_device, const iso_fs_metadata& metadata);
 
 	explicit operator bool() const { return m_file && *m_file; }
 
@@ -189,7 +188,6 @@ private:
 
 public:
 	iso_file_encrypted(const std::string& path, bs_t<fs::open_mode> mode, const iso_fs_node& node, std::shared_ptr<iso_file_decryption> dec);
-
 	iso_file_encrypted(std::shared_ptr<fs::file> source, bool raw_device, const iso_fs_metadata& metadata, std::shared_ptr<iso_file_decryption> dec);
 
 	u64 read_at(u64 offset, void* buffer, u64 size) override;
