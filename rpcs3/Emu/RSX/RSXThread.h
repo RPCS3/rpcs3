@@ -104,7 +104,7 @@ namespace rsx
 	};
 
 	// TODO: This class is a mess, this needs to be broken into smaller chunks, like I did for RSXFIFO and RSXZCULL (kd)
-	class thread : public cpu_thread, public GCM_context, public GRAPH_backend
+	class thread : public cpu_thread, public fw_context, public GRAPH_backend
 	{
 		u64 timestamp_ctrl = 0;
 		u64 timestamp_subvalue = 0;

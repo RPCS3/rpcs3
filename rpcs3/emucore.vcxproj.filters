@@ -1318,6 +1318,9 @@
     <ClCompile Include="Emu\RSX\NV47\FW\draw_call.cpp">
       <Filter>Emu\GPU\RSX\NV47\FW</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\RSX\NV47\FW\context.cpp">
+      <Filter>Emu\GPU\RSX\NV47\FW</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Io\mouse_config.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
@@ -2620,8 +2623,8 @@
     <ClInclude Include="Emu\Io\recording_config.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
-    <ClInclude Include="Emu\RSX\Core\RSXIOMap.hpp">
-      <Filter>Emu\GPU\RSX\Core</Filter>
+    <ClInclude Include="Emu\RSX\NV47\FW\RSXIOMap.hpp">
+      <Filter>Emu\GPU\RSX\NV47\FW</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\Core\RSXDisplay.h">
       <Filter>Emu\GPU\RSX\Core</Filter>
@@ -2813,6 +2816,9 @@
       <Filter>Emu</Filter>
     </ClInclude>
     <ClInclude Include="Emu\RSX\NV47\FW\GRAPH_backend.h">
+      <Filter>Emu\GPU\RSX\NV47\FW</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\NV47\FW\context.h">
       <Filter>Emu\GPU\RSX\NV47\FW</Filter>
     </ClInclude>
     <ClInclude Include="Emu\CPU\Hypervisor.h">

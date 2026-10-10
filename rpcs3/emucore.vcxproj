@@ -132,6 +132,7 @@
     <ClCompile Include="Emu\RSX\GSFrameBase.cpp" />
     <ClCompile Include="Emu\RSX\Host\MM.cpp" />
     <ClCompile Include="Emu\RSX\Host\RSXDMAWriter.cpp" />
+    <ClCompile Include="Emu\RSX\NV47\FW\context.cpp" />
     <ClCompile Include="Emu\RSX\NV47\FW\draw_call.cpp" />
     <ClCompile Include="Emu\RSX\NV47\FW\reg_context.cpp" />
     <ClCompile Include="Emu\RSX\NV47\HW\common.cpp" />
@@ -713,16 +714,17 @@
     <ClInclude Include="Emu\RSX\Core\RSXDriverState.h" />
     <ClInclude Include="Emu\RSX\Core\RSXEngLock.hpp" />
     <ClInclude Include="Emu\RSX\Core\RSXFrameBuffer.h" />
-    <ClInclude Include="Emu\RSX\Core\RSXIOMap.hpp" />
     <ClInclude Include="Emu\RSX\Core\RSXDisplay.h" />
     <ClInclude Include="Emu\RSX\Core\RSXReservationLock.hpp" />
     <ClInclude Include="Emu\RSX\Core\RSXVertexTypes.h" />
     <ClInclude Include="Emu\RSX\Host\MM.h" />
     <ClInclude Include="Emu\RSX\Host\RSXDMAWriter.h" />
+    <ClInclude Include="Emu\RSX\NV47\FW\context.h" />
     <ClInclude Include="Emu\RSX\NV47\FW\draw_call.hpp" />
     <ClInclude Include="Emu\RSX\NV47\FW\draw_call.inc.h" />
     <ClInclude Include="Emu\RSX\NV47\FW\GRAPH_backend.h" />
     <ClInclude Include="Emu\RSX\NV47\FW\reg_context.h" />
+    <ClInclude Include="Emu\RSX\NV47\FW\RSXIOMap.hpp" />
     <ClInclude Include="Emu\RSX\NV47\HW\context.h" />
     <ClInclude Include="Emu\RSX\NV47\HW\context_accessors.define.h" />
     <ClInclude Include="Emu\RSX\NV47\HW\context_accessors.undef.h" />
