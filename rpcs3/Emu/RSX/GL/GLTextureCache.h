@@ -185,6 +185,12 @@ namespace gl
 				format = static_cast<gl::texture::format>(format_info.format);
 				type = static_cast<gl::texture::type>(format_info.type);
 				pack_unpack_swap_bytes = format_info.swap_bytes;
+
+				if (src->get_internal_format() == texture::internal_format::depth32f_stencil8)
+				{
+					// FIXME: Hacky. We should split get_format_type by upload and download
+					type = texture::type::f32_uint8;
+				}
 			}
 
 			real_pitch = src->pitch();
@@ -219,19 +225,34 @@ namespace gl
 
 						pack_info.format = static_cast<GLenum>(format);
 						pack_info.type = static_cast<GLenum>(type);
-						pack_info.block_size = (src->aspect() & image_aspect::stencil) ? 4 : 2;
+
+						u8 host_block_size = 0;
+						switch (type)
+						{
+						case texture::type::ushort:
+							pack_info.block_size = host_block_size = 2;
+							break;
+						case texture::type::f32:
+							pack_info.block_size = 2;
+							host_block_size = 4;
+							break;
+						case texture::type::uint_24_8:
+							pack_info.block_size = host_block_size = 4;
+							break;
+						case texture::type::f32_uint8:
+							pack_info.block_size = 4;
+							host_block_size = 8;
+							break;
+						default:
+							fmt::throw_exception("Unsupported depth readback type %u", pack_info.type);
+						}
+
 						pack_info.swap_bytes = true;
 						pack_info.row_length = rsx_pitch / pack_info.block_size;
 
 						mem_info.image_size_in_texels = pack_info.row_length * src_area.height();
-						mem_info.image_size_in_bytes = rsx_pitch * src_area.height();
+						mem_info.image_size_in_bytes = mem_info.image_size_in_texels * host_block_size;
 						mem_info.memory_required = 0;
-
-						if (pack_info.type == GL_FLOAT_32_UNSIGNED_INT_24_8_REV)
-						{
-							// D32FS8 can be read back as D24S8 or D32S8X24. In case of the latter, double memory requirements
-							mem_info.image_size_in_bytes *= 2;
-						}
 
 						void* out_offset = copy_image_to_buffer(cmd, pack_info, src, &scratch_mem, 0, 0, src_rgn, &mem_info);
 						real_pitch = rsx_pitch;
@@ -239,7 +260,7 @@ namespace gl
 						glBindBuffer(GL_SHADER_STORAGE_BUFFER, GL_NONE);
 						glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
 
-						const u64 data_length = mem_info.image_size_in_bytes - rsx_pitch + (src_area.width() * pack_info.block_size);
+						const u64 data_length = static_cast<u64>(rsx_pitch) * (src_area.height() - 1) + src_area.width() * pack_info.block_size;
 						ensure(data_length + pbo_offset <= static_cast<u64>(pbo.size()), "Memory allocation cannot fit image contents. Report to developers.");
 
 						scratch_mem.copy_to(&pbo, reinterpret_cast<u64>(out_offset), pbo_offset, data_length);
@@ -263,14 +284,29 @@ namespace gl
 
 				const auto bpp = src->pitch() / src->width();
 				real_pitch = rsx_pitch;
-				ensure((real_pitch % bpp) == 0);
+
+				// NOTE: Without compute shaders, we cannot do any advanced conversions.
+				// That means everything here is best-effort.
+				auto pack_type = type;
+				u32 pack_bpp = src->pitch() / src->width();
+				if (type == texture::type::f32_uint8)
+				{
+					// 4 bytes/texel, D24 unorm
+					pack_type = texture::type::uint_24_8;
+				}
+				else if (type == texture::type::f32) 
+				{
+					// 2 bytes/texel, read as f16 [e5m10] which is incorrect for most values.
+					pack_type = texture::type::f16;
+					pack_bpp = 2;
+				}
 
 				pixel_pack_settings pack_settings;
 				pack_settings.alignment(1);
 				pack_settings.swap_bytes(pack_unpack_swap_bytes);
-				pack_settings.row_length(rsx_pitch / bpp);
+				pack_settings.row_length(rsx_pitch / pack_bpp);
 
-				src->copy_to(pbo, pbo_offset, format, type, 0, src_rgn, pack_settings);
+				src->copy_to(pbo, pbo_offset, format, pack_type, 0, src_rgn, pack_settings);
 			}
 
 			if (auto error = glGetError())

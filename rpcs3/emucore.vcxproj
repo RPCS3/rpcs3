@@ -1127,12 +1127,14 @@
     <None Include="Emu\RSX\Program\GLSLSnippets\CopyBufferToGenericImage.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\CopyD24x8ToBuffer.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\CopyRGBA8ToBuffer.glsl" />
+    <None Include="Emu\RSX\Program\GLSLSnippets\E4M12Conversion.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\GenericVSPassthrough.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\GPUDeswizzle.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\OverlayRenderFS.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\OverlayRenderVS.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\RSXMemoryTiling.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXDefines2.glsl" />
+    <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXFragmentEpilogue.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXFragmentPrologue.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXFragmentTextureDepthConversion.glsl" />
     <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXFragmentTextureMSAAOps.glsl" />

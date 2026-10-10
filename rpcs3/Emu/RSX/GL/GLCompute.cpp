@@ -213,7 +213,7 @@ namespace gl
 	template <bool SwapBytes>
 	cs_shuffle_d32fx8_to_x8d24f<SwapBytes>::cs_shuffle_d32fx8_to_x8d24f()
 	{
-		uniforms = "uniform uint in_ptr, out_ptr;\n";
+		uniforms = "uniform uint texel_count, in_ptr, out_ptr;\n";
 
 		variables =
 			"	uint in_offset = in_ptr >> 2;\n"
@@ -221,15 +221,22 @@ namespace gl
 			"	uint depth, stencil;\n";
 
 		work_kernel =
+			"		if (index >= texel_count) return;\n"
 			"		depth = data[index * 2 + in_offset];\n"
 			"		stencil = data[index * 2 + (in_offset + 1)] & 0xFFu;\n"
 			"		value = f32_to_d24f(depth) << 8;\n"
 			"		value |= stencil;\n"
-			"		data[index + out_ptr] = bswap_u32(value);\n";
+			"		data[index + out_offset] = bswap_u32(value);\n";
 
 		if constexpr (!SwapBytes)
 		{
 			work_kernel = fmt::replace_all(work_kernel, "bswap_u32(value)", "value", 1);
+		}
+
+		if (gl::emulate_extended_depth_range())
+		{
+			// Float depth surfaces hold the emulated encoding (half the bit pattern)
+			work_kernel = fmt::replace_all(work_kernel, "f32_to_d24f(depth)", "f32_to_d24f(depth << 1)");
 		}
 
 		cs_shuffle_base::build("");
@@ -256,6 +263,7 @@ namespace gl
 			m_ssbo_length = (dst_offset + num_texels * 4) - data_offset;
 		}
 
+		m_program.uniforms["texel_count"] = num_texels;
 		m_program.uniforms["in_ptr"] = src_offset - data_offset;
 		m_program.uniforms["out_ptr"] = dst_offset - data_offset;
 		cs_shuffle_base::run(cmd, data, num_texels * 4, data_offset);
@@ -275,6 +283,7 @@ namespace gl
 			"	uint depth, stencil;\n";
 
 		work_kernel =
+			"		if (index >= texel_count) return;\n"
 			"		value = data[index + in_offset];\n"
 			"		value = bswap_u32(value);\n"
 			"		stencil = (value & 0xFFu);\n"
@@ -285,6 +294,11 @@ namespace gl
 		if constexpr (!SwapBytes)
 		{
 			work_kernel = fmt::replace_all(work_kernel, "value = bswap_u32(value)", "// value = bswap_u32(value)", 1);
+		}
+
+		if (gl::emulate_extended_depth_range())
+		{
+			work_kernel = fmt::replace_all(work_kernel, "d24f_to_f32(depth)", "(d24f_to_f32(depth) >> 1)");
 		}
 
 		cs_shuffle_base::build("");
@@ -311,6 +325,7 @@ namespace gl
 			m_ssbo_length = (dst_offset + num_texels * 8) - data_offset;
 		}
 
+		m_program.uniforms["texel_count"] = num_texels;
 		m_program.uniforms["in_ptr"] = src_offset - data_offset;
 		m_program.uniforms["out_ptr"] = dst_offset - data_offset;
 		cs_shuffle_base::run(cmd, data, num_texels * 4, data_offset);
