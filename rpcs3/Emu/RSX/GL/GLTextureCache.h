@@ -282,7 +282,6 @@ namespace gl
 					pack_unpack_swap_bytes = false;
 				}
 
-				const auto bpp = src->pitch() / src->width();
 				real_pitch = rsx_pitch;
 
 				// NOTE: Without compute shaders, we cannot do any advanced conversions.
