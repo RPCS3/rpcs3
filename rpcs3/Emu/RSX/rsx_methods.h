@@ -9,6 +9,7 @@
 #include "Program/program_util.h"
 
 #include "NV47/FW/draw_call.hpp"
+#include "NV47/HW/context.h"
 
 namespace rsx
 {
@@ -75,12 +76,10 @@ namespace rsx
 		}
 	};
 
-	struct rsx_state
+	// Firmware view of the hardware register state. Mostly state decoders wrappers.
+	struct rsx_state : public hw_context
 	{
 	public:
-		std::array<u32, 0x10000 / 4> registers{};
-		u32 latch{};
-
 		template<u32 opcode>
 		using decoded_type = typename registers_decoder<opcode>::decoded_type;
 
@@ -117,10 +116,6 @@ namespace rsx
 
 		std::array<fragment_texture, 16> fragment_textures;
 		std::array<vertex_texture, 4> vertex_textures;
-
-
-		std::array<u32, max_vertex_program_instructions * 4> transform_program{};
-		std::array<u32[4], 512> transform_constants{};
 
 		draw_clause current_draw_clause{};
 

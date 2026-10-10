@@ -2,10 +2,20 @@
 #include "Emu/RSX/Utils/algorithm.hpp"
 #include "Emu/RSX/Utils/rsx_utils.h"
 #include "Emu/system_config.h"
+#include "Emu/RSX/rsx_methods.h"
 #include "RSXContext.h"
 
 namespace rsx
 {
+	context::context(u32 id, thread* owner)
+		: rsxthr(owner)
+		, register_state(&method_registers)
+		, m_id(id)
+	{
+	}
+
+	context::~context() = default;
+
 	GCM_tile_reference GCM_context::get_tiled_memory_region(const utils::address_range32& range) const
 	{
 		if (rsx::get_location(range.start) != CELL_GCM_LOCATION_MAIN)

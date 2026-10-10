@@ -165,6 +165,7 @@ namespace rsx
 		u32 m_pause_after_x_flips = 0;
 
 		// Context
+		std::unique_ptr<context> m_primary_ctx;
 		context* m_ctx = nullptr;
 
 		// Host DMA
@@ -230,6 +231,8 @@ namespace rsx
 		const backend_configuration& get_backend_config() const { return backend_config; }
 
 		const draw_command_processor* draw_processor() const { return &m_draw_processor; }
+
+		context* get_context() const { return m_ctx; }
 
 	public:
 		shared_ptr<named_thread<ppu_thread>> intr_thread;

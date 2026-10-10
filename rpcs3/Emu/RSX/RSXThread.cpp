@@ -121,9 +121,6 @@ namespace rsx
 {
 	std::function<bool(u32 addr, bool is_writing)> g_access_violation_handler;
 
-	// TODO: Proper context manager
-	static rsx::context s_ctx{ .rsxthr = nullptr, .register_state = &method_registers };
-
 	constexpr u32 fs_export_config_mask =
 		RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE |
 		RSX_SHADER_CONTROL_ROP_MULTISAMPLED |
@@ -849,9 +846,8 @@ namespace rsx
 
 		g_user_asked_for_frame_capture = false;
 
-		// TODO: Proper context management in the driver
-		s_ctx.rsxthr = this;
-		m_ctx = &s_ctx;
+		m_primary_ctx = std::make_unique<context>(0, this);
+		m_ctx = m_primary_ctx.get();
 
 		m_draw_processor.init(m_ctx);
 
