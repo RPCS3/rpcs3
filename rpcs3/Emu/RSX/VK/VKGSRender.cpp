@@ -1145,8 +1145,8 @@ bool VKGSRender::on_vram_exhausted(rsx::problem_severity severity)
 			}
 		};
 
-		scan_array(REGS(m_ctx)->fragment_textures, fs_sampler_state);
-		scan_array(REGS(m_ctx)->vertex_textures, vs_sampler_state);
+		scan_array(REGS(m_ctx)->fragment_textures, m_ctx->textures.fs_sampler_state);
+		scan_array(REGS(m_ctx)->vertex_textures, m_ctx->textures.vs_sampler_state);
 
 		if (invalidate_samplers)
 		{
@@ -1840,10 +1840,10 @@ bool VKGSRender::load_program()
 
 	if (m_ctx->graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
 	{
-		get_current_fragment_program(fs_sampler_state);
+		get_current_fragment_program(m_ctx->textures.fs_sampler_state);
 		ensure(m_ctx->program.fragment_program.valid);
 
-		get_current_vertex_program(vs_sampler_state);
+		get_current_vertex_program(m_ctx->textures.vs_sampler_state);
 
 		m_ctx->graphics_state.clear(rsx::pipeline_state::invalidate_pipeline_bits);
 	}

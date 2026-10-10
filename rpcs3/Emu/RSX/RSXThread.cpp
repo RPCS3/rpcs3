@@ -844,9 +844,6 @@ namespace rsx
 			return on_access_violation(address, is_writing);
 		};
 
-		m_textures_dirty.fill(true);
-		m_vertex_textures_dirty.fill(true);
-
 		g_user_asked_for_frame_capture = false;
 
 		m_primary_ctx = std::make_unique<context>(0, this);
@@ -2256,7 +2253,7 @@ namespace rsx
 			{
 				if (!(textures_ref & 1)) continue;
 
-				if (m_textures_dirty[i])
+				if (m_ctx->textures.fragment_textures_dirty[i])
 				{
 					m_ctx->graphics_state |= rsx::pipeline_state::fragment_program_state_dirty;
 					break;
@@ -2305,7 +2302,7 @@ namespace rsx
 			{
 				if (!(textures_ref & 1)) continue;
 
-				if (m_vertex_textures_dirty[i])
+				if (m_ctx->textures.vertex_textures_dirty[i])
 				{
 					m_ctx->graphics_state |= rsx::pipeline_state::vertex_program_state_dirty;
 					break;
