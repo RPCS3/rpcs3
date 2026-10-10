@@ -6258,7 +6258,7 @@ template <u32 Build, ppu_exec_bit... Flags>
 auto FMADDS()
 {
 	if constexpr (Build == 0xf1a6)
-		return ppu_exec_select<Flags...>::template select<set_fpcc>();
+		return ppu_exec_select<Flags...>::template select<set_fpcc, use_dfma>();
 
 	static const auto exec = [](ppu_thread& ppu, ppu_opcode_t op) {
 	if constexpr (((Flags == use_dfma) || ...))
