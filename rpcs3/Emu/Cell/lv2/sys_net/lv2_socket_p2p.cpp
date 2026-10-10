@@ -9,22 +9,44 @@ LOG_CHANNEL(sys_net);
 lv2_socket_p2p::lv2_socket_p2p(lv2_socket_family family, lv2_socket_type type, lv2_ip_protocol protocol)
 	: lv2_socket(family, type, protocol)
 {
+	initialize_socket_options(type);
+}
+
+void lv2_socket_p2p::initialize_socket_options(lv2_socket_type type)
+{
 	sockopt_cache cache_type;
-	cache_type.data._int = SYS_NET_SOCK_DGRAM_P2P;
+	cache_type.data._int = type;
 	cache_type.len = 4;
 
 	sockopts[(static_cast<u64>(SYS_NET_SOL_SOCKET) << 32ull) | SYS_NET_SO_TYPE] = cache_type;
+
+	// DGRAM-P2P uses the value observed on hardware. STREAM-P2P uses the regular stream default.
+	sockopt_cache cache_rcvbuf;
+	cache_rcvbuf.data._int = type == SYS_NET_SOCK_DGRAM_P2P ? 131072 : 65535;
+	cache_rcvbuf.len = 4;
+
+	sockopts[(static_cast<u64>(SYS_NET_SOL_SOCKET) << 32ull) | SYS_NET_SO_RCVBUF] = cache_rcvbuf;
 }
 
 lv2_socket_p2p::lv2_socket_p2p(utils::serial& ar, lv2_socket_type type)
 	: lv2_socket(stx::make_exact(ar), type)
 {
+	initialize_socket_options(type);
 	ar(port, vport, bound_addr);
 
 	auto data_dequeue = ar.pop<std::deque<std::pair<sys_net_sockaddr_in_p2p, std::vector<u8>>>>();
 
 	for (; !data_dequeue.empty(); data_dequeue.pop_front())
 	{
+		const usz packet_size = sizeof(sys_net_sockaddr_in_p2p) + data_dequeue.front().second.size();
+
+		// Socket options are not serialized, so only apply the host safety limits while restoring queued data.
+		if (data.size() >= MAX_RECEIVED_PACKETS || data_size >= MAX_RECEIVED_BUFFER || packet_size > MAX_RECEIVED_BUFFER - data_size)
+		{
+			continue;
+		}
+
+		data_size += packet_size;
 		data.push(std::move(data_dequeue.front()));
 	}
 }
@@ -48,7 +70,17 @@ void lv2_socket_p2p::handle_new_data(sys_net_sockaddr_in_p2p p2p_addr, std::vect
 {
 	std::lock_guard lock(mutex);
 
+	const usz packet_size = sizeof(p2p_addr) + p2p_data.size();
+	const usz receive_buffer_size = get_receive_buffer_size();
+
+	if (data.size() >= MAX_RECEIVED_PACKETS || data_size >= receive_buffer_size || packet_size > receive_buffer_size - data_size)
+	{
+		sys_net.trace("Received P2P packet for vport %d but the receive queue is full", p2p_addr.sin_vport);
+		return;
+	}
+
 	sys_net.trace("Received a P2P packet for vport %d and saved it", p2p_addr.sin_vport);
+	data_size += packet_size;
 	data.push(std::make_pair(std::move(p2p_addr), std::move(p2p_data)));
 
 	// Check if poll is happening
@@ -209,6 +241,15 @@ std::tuple<s32, lv2_socket::sockopt_data, u32> lv2_socket_p2p::getsockopt(s32 le
 	return {CELL_OK, cache.data, cache.len};
 }
 
+usz lv2_socket_p2p::get_receive_buffer_size() const
+{
+	const u64 key = (static_cast<u64>(SYS_NET_SOL_SOCKET) << 32) | SYS_NET_SO_RCVBUF;
+	const auto& cache = ::at32(sockopts, key);
+	const s32 size = cache.data._int;
+
+	return size > 0 ? std::min<usz>(size, MAX_RECEIVED_BUFFER) : 0;
+}
+
 s32 lv2_socket_p2p::setsockopt(s32 level, s32 optname, const std::vector<u8>& optval)
 {
 	std::lock_guard lock(mutex);
@@ -262,6 +303,7 @@ std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> lv2_socket_p2p
 	sys_net_sockaddr sn_addr;
 	memcpy(&sn_addr, &p2p_data.first, sizeof(sn_addr));
 
+	data_size -= sizeof(p2p_data.first) + p2p_data.second.size();
 	data.pop();
 
 	return {{native_result, res_buf, sn_addr}};
