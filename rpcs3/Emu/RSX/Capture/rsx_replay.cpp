@@ -11,6 +11,8 @@
 
 #include <thread>
 
+#include "Emu/RSX/NV47/HW/context_accessors.define.h"
+
 namespace rsx
 {
 	be_t<u32> rsx_replay_thread::allocate_context()
@@ -179,14 +181,15 @@ namespace rsx
 
 		while (thread_ctrl::state() != thread_state::aborting)
 		{
+			auto render = get_current_renderer();
+
 			// Load registers while the RSX is still idle
-			method_registers = frame->reg_state;
+			*REGS(render->get_context()) = frame->reg_state;
 			atomic_fence_seq_cst();
 
 			// start up fifo buffer by dumping the put ptr to first stop
 			sys_rsx_context_attribute(context_id, 0x001, 0x10000000, fifo_stops[0], 0, 0);
 
-			auto render = get_current_renderer();
 			auto last_flip = render->int_flip_index;
 
 			usz stopIdx = 0;
