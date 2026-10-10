@@ -1502,6 +1502,24 @@ namespace rsx
 		}
 	}
 
+	bool is_float_depth_format(rsx::surface_depth_format2 format)
+	{
+		switch (format)
+		{
+		case rsx::surface_depth_format2::z16_float:
+		case rsx::surface_depth_format2::z24s8_float:
+			return true;
+		default:
+			return false;
+		}
+	}
+
+	f32 encode_emulated_depth(f32 depth)
+	{
+		// Halving the IEEE bit pattern of a non-negative float is monotonic and maps every finite value below 1
+		return std::bit_cast<f32>((std::bit_cast<u32>(std::max(depth, 0.f)) & 0x7fffffffu) >> 1);
+	}
+
 	/**
 	 * Returns number of texel lines decoded in one pitch-length number of bytes
 	 */

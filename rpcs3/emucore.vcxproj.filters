@@ -1686,6 +1686,15 @@
     <ClInclude Include="Emu\RSX\Common\BufferUtils_avx512.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\BufferUtils_neon.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\BufferUtils_sve.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\BufferUtils_compact.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
     <ClInclude Include="util\types.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
@@ -3062,6 +3071,9 @@
     </None>
     <None Include="Emu\RSX\Program\GLSLSnippets\OverlayRenderFS.glsl">
       <Filter>Emu\GPU\RSX\Program\Snippets</Filter>
+    </None>
+    <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXFragmentEpilogue.glsl">
+      <Filter>Emu\GPU\RSX\Program\Snippets\RSXProg</Filter>
     </None>
     <None Include="Emu\RSX\Program\GLSLSnippets\RSXProg\RSXFragmentPrologue.glsl">
       <Filter>Emu\GPU\RSX\Program\Snippets\RSXProg</Filter>
