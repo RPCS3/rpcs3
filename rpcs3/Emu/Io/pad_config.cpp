@@ -127,6 +127,178 @@ u8 cfg_pad::get_small_motor_speed(std::array<VibrateMotor, 2>& motors) const
 	return get_motor_speed(motors[switch_vibration_motors ? 0 : 1], multiplier_vibration_motor_small / 100.0f);
 }
 
+// Check if a config node still contains nothing but the current defaults
+static bool is_default_config(const cfg::node& node, const cfg::_base* ignored_0 = nullptr, const cfg::_base* ignored_1 = nullptr)
+{
+	for (const cfg::_base* entry : node.get_nodes())
+	{
+		if (entry == ignored_0 || entry == ignored_1)
+		{
+			continue;
+		}
+
+		if (entry->get_type() == cfg::type::node)
+		{
+			if (!is_default_config(static_cast<const cfg::node&>(*entry)))
+			{
+				return false;
+			}
+		}
+		else if (entry->to_string() != entry->def_to_string())
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+// Copy all values of a config node to another node of the exact same type
+static void copy_config(cfg::node& dst, const cfg::node& src)
+{
+	const std::vector<cfg::_base*>& dst_entries = dst.get_nodes();
+	const std::vector<cfg::_base*>& src_entries = src.get_nodes();
+
+	ensure(dst_entries.size() == src_entries.size());
+
+	for (usz i = 0; i < src_entries.size(); i++)
+	{
+		cfg::_base* dst_entry = dst_entries[i];
+		const cfg::_base* src_entry = src_entries[i];
+
+		ensure(dst_entry->get_type() == src_entry->get_type());
+
+		if (src_entry->get_type() == cfg::type::node)
+		{
+			copy_config(static_cast<cfg::node&>(*dst_entry), static_cast<const cfg::node&>(*src_entry));
+		}
+		else
+		{
+			dst_entry->from_string(src_entry->to_string());
+		}
+	}
+}
+
+cfg_saved_config* cfg_saved_configs::find(pad_handler type) const
+{
+	for (const std::unique_ptr<cfg_saved_config>& config : m_configs)
+	{
+		if (config->type == type)
+		{
+			return config.get();
+		}
+	}
+
+	return nullptr;
+}
+
+cfg_saved_config& cfg_saved_configs::add(pad_handler type)
+{
+	if (cfg_saved_config* config = find(type))
+	{
+		return *config;
+	}
+
+	// The new config registers itself as a child node of this node
+	return *m_configs.emplace_back(std::make_unique<cfg_saved_config>(this, fmt::format("%s", type), type));
+}
+
+void cfg_saved_configs::remove(pad_handler type)
+{
+	for (auto it = m_configs.cbegin(); it != m_configs.cend(); it++)
+	{
+		if ((*it)->type == type)
+		{
+			remove_node(it->get());
+			m_configs.erase(it);
+			return;
+		}
+	}
+}
+
+void cfg_saved_configs::from_default()
+{
+	for (const std::unique_ptr<cfg_saved_config>& config : m_configs)
+	{
+		remove_node(config.get());
+	}
+
+	m_configs.clear();
+}
+
+cfg::_base* cfg_saved_configs::create_node(const std::string& name)
+{
+	u64 type{};
+
+	if (!cfg::try_to_enum_value(&type, &fmt_class_string<pad_handler>::format, name, get_name()))
+	{
+		return nullptr;
+	}
+
+	const pad_handler handler_type = static_cast<pad_handler>(type);
+
+	// There is never a saved config for the null handler
+	if (handler_type == pad_handler::null)
+	{
+		return nullptr;
+	}
+
+	return &add(handler_type);
+}
+
+void cfg_player::backup_config(std::string_view default_device)
+{
+	// There is nothing worth saving for the null handler
+	if (handler.get() == pad_handler::null)
+	{
+		return;
+	}
+
+	const std::string current_device = device.to_string();
+	const std::string current_buddy_device = buddy_device.to_string();
+
+	// A device the user picked has to be kept even if nothing else was configured
+	const bool has_default_device = current_device.empty() || current_device == default_device || current_device == device.def;
+	const bool has_default_buddy_device = current_buddy_device.empty() || current_buddy_device == buddy_device.def;
+
+	// Don't waste any space on a config that the user never touched.
+	// The device identity says nothing about that: the pad dialog always writes the ids of a concrete product,
+	// and the standard device class only contains one, so picking another one always changes the class as well.
+	if (has_default_device && has_default_buddy_device && is_default_config(config, &config.vendor_id, &config.product_id))
+	{
+		saved_configs.remove(handler.get());
+		return;
+	}
+
+	input_log.notice("Saving input configuration of handler '%s' for later use", handler.to_string());
+
+	cfg_saved_config& saved_config = saved_configs.add(handler.get());
+	saved_config.device.from_string(current_device);
+	saved_config.buddy_device.from_string(current_buddy_device);
+	copy_config(saved_config.config, config);
+}
+
+bool cfg_player::restore_config(pad_handler type)
+{
+	cfg_saved_config* saved_config = saved_configs.find(type);
+
+	if (!saved_config)
+	{
+		return false;
+	}
+
+	input_log.notice("Restoring saved input configuration of handler '%s'", type);
+
+	device.from_string(saved_config->device.to_string());
+	buddy_device.from_string(saved_config->buddy_device.to_string());
+	copy_config(config, saved_config->config);
+
+	// The saved config is active again, so we don't need the backup anymore
+	saved_configs.remove(type);
+
+	return true;
+}
+
 bool cfg_input::load(const std::string& title_id, const std::string& config_file, bool strict)
 {
 	input_log.notice("Loading pad config (title_id='%s', config_file='%s', strict=%d)", title_id, config_file, strict);
