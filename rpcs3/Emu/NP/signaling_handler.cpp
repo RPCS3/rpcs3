@@ -75,12 +75,14 @@ void signaling_handler::remove_match2_ctx(u16 ctx_id)
 {
 	std::lock_guard lock(data_mutex);
 	match2_ctx_lst.erase(ctx_id);
+	std::erase_if(pending_sig2_starts, [ctx_id](const auto& entry) { return entry.second.ctx_id == ctx_id; });
 }
 
 void signaling_handler::clear_match2_ctx()
 {
 	std::lock_guard lock(data_mutex);
 	match2_ctx_lst.clear();
+	pending_sig2_starts.clear();
 }
 
 void signaling_handler::signal_sig_callback(u32 conn_id, s32 event, s32 error_code)
@@ -147,10 +149,11 @@ void signaling_handler::signal_sig2_callback(u64 room_id, u16 member_id, SceNpMa
 			{
 				sysutil_register_cb([sig2_cb = ctx->signaling_cb, sig2_cb_ctx = ctx_id, room_id, member_id, event, error_code, sig2_cb_arg = ctx->signaling_cb_arg](ppu_thread& cb_ppu) -> s32
 					{
+						sign_log.notice("Calling sig2 CB: 0x%x (room_id: %d, member_id: %d)", event, room_id, member_id);
 						sig2_cb(cb_ppu, sig2_cb_ctx, room_id, member_id, event, error_code, sig2_cb_arg);
 						return 0;
 					});
-				sign_log.notice("Called sig2 CB: 0x%x (room_id: %d, member_id: %d)", event, room_id, member_id);
+				sign_log.trace("Queued sig2 CB: 0x%x (room_id: %d, member_id: %d)", event, room_id, member_id);
 			}
 		}
 	}
@@ -703,6 +706,11 @@ std::shared_ptr<signaling_info> signaling_handler::get_signaling_ptr(const signa
 void signaling_handler::start_sig(u32 conn_id, u32 addr, u16 port)
 {
 	std::lock_guard lock(data_mutex);
+	start_sig_nl(conn_id, addr, port);
+}
+
+void signaling_handler::start_sig_nl(u32 conn_id, u32 addr, u16 port)
+{
 	auto& sent_packet = sig_packet;
 	sent_packet.command = signal_connect;
 	sent_packet.timestamp_sender = get_micro_timestamp(steady_clock::now());
@@ -762,6 +770,7 @@ void signaling_handler::stop_sig(u32 conn_id, bool forceful)
 void signaling_handler::disconnect_sig2_users(u64 room_id)
 {
 	std::lock_guard lock(data_mutex);
+	std::erase_if(pending_sig2_starts, [room_id](const auto& entry) { return entry.second.room_id == room_id; });
 
 	for (auto& [conn_id, si] : sig_peers)
 	{
@@ -826,9 +835,45 @@ u32 signaling_handler::init_sig1(const SceNpId& npid)
 	return conn_id;
 }
 
-u32 signaling_handler::init_sig2(const SceNpId& npid, u64 room_id, u16 member_id)
+u64 signaling_handler::prepare_sig2(u16 ctx_id, const SceNpId& npid, u64 room_id, u16 member_id, u32 addr, u16 port)
 {
 	std::lock_guard lock(data_mutex);
+	// A replacement for the same member must not revive the earlier queued start.
+	std::erase_if(pending_sig2_starts, [room_id, member_id](const auto& entry)
+	{
+		return entry.second.room_id == room_id && entry.second.member_id == member_id;
+	});
+	const u64 pending_id = next_pending_sig2_id++;
+	pending_sig2_starts.emplace(pending_id, pending_sig2_start{ctx_id, npid, room_id, member_id, addr, port});
+	return pending_id;
+}
+
+bool signaling_handler::start_sig2(u64 pending_id)
+{
+	std::lock_guard lock(data_mutex);
+	const auto entry = pending_sig2_starts.find(pending_id);
+	if (entry == pending_sig2_starts.end())
+		return false;
+
+	const auto peer = entry->second;
+	pending_sig2_starts.erase(entry);
+	// Keep validation and both operations atomic with room/member cancellation.
+	const u32 conn_id = init_sig2_nl(peer.npid, peer.room_id, peer.member_id);
+	start_sig_nl(conn_id, peer.addr, peer.port);
+	return true;
+}
+
+void signaling_handler::cancel_pending_sig2(u64 room_id, u16 member_id)
+{
+	std::lock_guard lock(data_mutex);
+	std::erase_if(pending_sig2_starts, [room_id, member_id](const auto& entry)
+	{
+		return entry.second.room_id == room_id && entry.second.member_id == member_id;
+	});
+}
+
+u32 signaling_handler::init_sig2_nl(const SceNpId& npid, u64 room_id, u16 member_id)
+{
 	u32 conn_id = get_always_conn_id(npid);
 	auto& si = ::at32(sig_peers, conn_id);
 	si->room_id = room_id;

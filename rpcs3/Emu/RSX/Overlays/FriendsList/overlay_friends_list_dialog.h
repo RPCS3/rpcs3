@@ -5,6 +5,7 @@
 #include "../HomeMenu/overlay_home_menu_message_box.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/NP/rpcn_client.h"
+#include "Emu/NP/np_custom_menu.h"
 
 namespace rsx
 {
@@ -47,6 +48,7 @@ namespace rsx
 
 			std::shared_ptr<rpcn::rpcn_client> m_rpcn;
 			rpcn::friend_data m_friend_data;
+			std::vector<np::custom_menu_action> m_custom_menu_actions;
 			std::vector<game_invite> m_game_invite_messages;
 			std::vector<game_invite> m_game_invites;
 			atomic_t<bool> m_list_dirty { true };

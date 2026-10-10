@@ -2872,6 +2872,9 @@
     <ClInclude Include="Emu\NP\np_contexts.h">
       <Filter>Emu\NP</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\NP\np_custom_menu.h">
+      <Filter>Emu\NP</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\NP\np_gui_cache.h">
       <Filter>Emu\NP</Filter>
     </ClInclude>
