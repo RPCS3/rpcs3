@@ -40,6 +40,9 @@ u64 GLGSRender::get_cycles()
 
 GLGSRender::GLGSRender(utils::serial* ar) noexcept : GSRender(ar)
 {
+	m_rtts.set_context(m_ctx);
+	m_vertex_layout.set_context(m_ctx);
+
 	m_shaders_cache = std::make_unique<gl::shader_cache>(m_prog_buffer, "opengl", "v1.95");
 
 	if (g_cfg.video.disable_vertex_cache)
@@ -81,7 +84,7 @@ void GLGSRender::set_viewport()
 	// NOTE: scale offset matrix already contains the viewport transformation
 	const auto [clip_width, clip_height] = rsx::apply_resolution_scale<true>(
 		resolution_scaling_config,
-		rsx::method_registers.surface_clip_width(), rsx::method_registers.surface_clip_height());
+		REGS(m_ctx)->surface_clip_width(), REGS(m_ctx)->surface_clip_height());
 
 	glViewport(0, 0, clip_width, clip_height);
 }
@@ -441,7 +444,7 @@ void GLGSRender::on_init_thread()
 		std::unique_ptr<rsx::shader_loading_dialog> dlg = m_overlay_manager
 			? std::make_unique<rsx::shader_loading_dialog_native>(this)
 			: std::make_unique<rsx::shader_loading_dialog>();
-		m_shader_interpreter.create(dlg.get());
+		m_shader_interpreter.create(m_ctx, dlg.get());
 		dlg->close();
 	}
 
@@ -978,10 +981,10 @@ void GLGSRender::load_program_env()
 		auto buf = static_cast<u8*>(mapping.first);
 		m_draw_processor.fill_scale_offset_data(buf, false);
 		m_draw_processor.fill_user_clip_data(buf + 64);
-		*(reinterpret_cast<u32*>(buf + 68)) = rsx::method_registers.transform_branch_bits();
-		*(reinterpret_cast<f32*>(buf + 72)) = rsx::method_registers.point_size() * resolution_scaling_config.scale_factor();
-		*(reinterpret_cast<f32*>(buf + 76)) = rsx::method_registers.clip_min();
-		*(reinterpret_cast<f32*>(buf + 80)) = rsx::method_registers.clip_max();
+		*(reinterpret_cast<u32*>(buf + 68)) = REGS(m_ctx)->transform_branch_bits();
+		*(reinterpret_cast<f32*>(buf + 72)) = REGS(m_ctx)->point_size() * resolution_scaling_config.scale_factor();
+		*(reinterpret_cast<f32*>(buf + 76)) = REGS(m_ctx)->clip_min();
+		*(reinterpret_cast<f32*>(buf + 80)) = REGS(m_ctx)->clip_max();
 
 		m_vertex_env_buffer->bind_range(GL_VERTEX_PARAMS_BIND_SLOT, mapping.second, 96);
 	}
@@ -1068,7 +1071,7 @@ void GLGSRender::load_program_env()
 	{
 		auto mapping = m_raster_env_ring_buffer->alloc_from_heap(128, m_uniform_buffer_offset_align);
 
-		std::memcpy(mapping.first, rsx::method_registers.polygon_stipple_pattern(), 128);
+		std::memcpy(mapping.first, REGS(m_ctx)->polygon_stipple_pattern(), 128);
 		m_raster_env_ring_buffer->bind_range(GL_RASTERIZER_STATE_BIND_SLOT, mapping.second, 128);
 
 		m_graphics_state.clear(rsx::pipeline_state::polygon_stipple_pattern_dirty);
@@ -1087,7 +1090,7 @@ void GLGSRender::load_program_env()
 			vp_config[0] = current_vertex_program.base_address;
 			vp_config[1] = current_vertex_program.entry;
 			vp_config[2] = current_vertex_program.output_mask;
-			vp_config[3] = rsx::method_registers.two_side_light_en() ? 1u : 0u;
+			vp_config[3] = REGS(m_ctx)->two_side_light_en() ? 1u : 0u;
 
 			std::memcpy(vp_buf + 16, current_vertex_program.data.data(), current_vp_metadata.ucode_length);
 
@@ -1104,7 +1107,7 @@ void GLGSRender::load_program_env()
 
 			// Control mask
 			const auto control_masks = reinterpret_cast<u32*>(fp_buf);
-			control_masks[0] = rsx::method_registers.shader_control();
+			control_masks[0] = REGS(m_ctx)->shader_control();
 			control_masks[1] = current_fragment_program.texture_state.texture_dimensions;
 			control_masks[2] = current_fp_metadata.referenced_textures_mask;
 

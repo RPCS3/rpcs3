@@ -8,6 +8,8 @@
 namespace rsx
 {
 
+struct context;
+
 struct data_array_format_info
 {
 private:
@@ -63,6 +65,8 @@ struct push_buffer_vertex_info
 	u32 vertex_count = 0;
 	u32 dword_count = 0;
 	rsx::simple_array<u32> data;
+
+	context* ctx = nullptr; // Owning context
 
 	push_buffer_vertex_info() = default;
 	~push_buffer_vertex_info() = default;

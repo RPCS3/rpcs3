@@ -41,6 +41,11 @@ namespace rsx
 		void init(context* ctx)
 		{
 			m_ctx = ctx;
+
+			for (auto& buffer : m_vertex_push_buffers)
+			{
+				buffer.ctx = ctx;
+			}
 		}
 
 		// Analyze vertex inputs and group all interleaved blocks

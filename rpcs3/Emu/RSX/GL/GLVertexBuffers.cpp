@@ -4,6 +4,8 @@
 #include "GLGSRender.h"
 #include "GLHelpers.h"
 
+#include "Emu/RSX/NV47/HW/context_accessors.define.h"
+
 namespace
 {
 	[[maybe_unused]] constexpr std::array<const char*, 16> s_reg_table =
@@ -58,24 +60,25 @@ namespace
 
 	struct draw_command_visitor
 	{
-		draw_command_visitor(gl::ring_buffer& index_ring_buffer, rsx::vertex_input_layout& vertex_layout)
-			: m_index_ring_buffer(index_ring_buffer)
+		draw_command_visitor(rsx::context* ctx, gl::ring_buffer& index_ring_buffer, rsx::vertex_input_layout& vertex_layout)
+			: m_ctx(ctx)
+			, m_index_ring_buffer(index_ring_buffer)
 			, m_vertex_layout(vertex_layout)
 		{}
 
 		vertex_input_state operator()(const rsx::draw_array_command& /*command*/)
 		{
-			const u32 vertex_count = rsx::method_registers.current_draw_clause.get_elements_count();
-			const u32 min_index    = rsx::method_registers.current_draw_clause.min_index();
+			const u32 vertex_count = REGS(m_ctx)->current_draw_clause.get_elements_count();
+			const u32 min_index    = REGS(m_ctx)->current_draw_clause.min_index();
 			const u32 max_index    = (min_index + vertex_count) - 1;
 
-			if (!gl::is_primitive_native(rsx::method_registers.current_draw_clause.primitive))
+			if (!gl::is_primitive_native(REGS(m_ctx)->current_draw_clause.primitive))
 			{
 				u32 index_count;
 				u32 offset_in_index_buffer;
 				std::tie(index_count, offset_in_index_buffer) = get_index_array_for_emulated_non_indexed_draw(
-					rsx::method_registers.current_draw_clause.primitive, m_index_ring_buffer,
-					rsx::method_registers.current_draw_clause.get_elements_count());
+					REGS(m_ctx)->current_draw_clause.primitive, m_index_ring_buffer,
+					REGS(m_ctx)->current_draw_clause.get_elements_count());
 
 				return{ false, min_index, max_index, index_count, 0, std::make_tuple(static_cast<GLenum>(GL_UNSIGNED_INT), offset_in_index_buffer) };
 			}
@@ -86,15 +89,15 @@ namespace
 		vertex_input_state operator()(const rsx::draw_indexed_array_command& command)
 		{
 			u32 min_index = 0, max_index = 0;
-			const auto primitive = rsx::method_registers.current_draw_clause.primitive;
+			const auto primitive = REGS(m_ctx)->current_draw_clause.primitive;
 
-			rsx::index_array_type type = rsx::method_registers.current_draw_clause.is_immediate_draw?
+			rsx::index_array_type type = REGS(m_ctx)->current_draw_clause.is_immediate_draw?
 				rsx::index_array_type::u32:
-				rsx::method_registers.index_type();
+				REGS(m_ctx)->index_type();
 
 			u32 type_size              = get_index_type_size(type);
 
-			const u32 vertex_count = rsx::method_registers.current_draw_clause.get_elements_count();
+			const u32 vertex_count = REGS(m_ctx)->current_draw_clause.get_elements_count();
 			u32 index_count = vertex_count;
 
 			if (!gl::is_primitive_native(primitive))
@@ -109,8 +112,8 @@ namespace
 				{ reinterpret_cast<std::byte*>(ptr), max_size },
 				command.raw_index_buffer, type,
 				primitive,
-				rsx::method_registers.restart_index_enabled(),
-				rsx::method_registers.restart_index(),
+				REGS(m_ctx)->restart_index_enabled(),
+				REGS(m_ctx)->restart_index(),
 				[](auto prim) { return !gl::is_primitive_native(prim); });
 
 			if (min_index > max_index ||
@@ -122,21 +125,21 @@ namespace
 
 			// Prefer only reading the vertices that are referenced in the index buffer itself
 			// Offset data source by min_index verts, but also notify the shader to offset the vertexID (important for modulo op)
-			const auto index_offset = rsx::method_registers.vertex_data_base_index();
+			const auto index_offset = REGS(m_ctx)->vertex_data_base_index();
 			return{ true, min_index, max_index, index_count, index_offset, std::make_tuple(get_index_type(type), offset_in_index_buffer) };
 		}
 
 		vertex_input_state operator()(const rsx::draw_inlined_array& /*command*/)
 		{
-			const auto stream_length = rsx::method_registers.current_draw_clause.inline_vertex_array.size();
+			const auto stream_length = REGS(m_ctx)->current_draw_clause.inline_vertex_array.size();
 			const u32 vertex_count = u32(stream_length * sizeof(u32)) / m_vertex_layout.interleaved_blocks[0]->attribute_stride;
 
-			if (!gl::is_primitive_native(rsx::method_registers.current_draw_clause.primitive))
+			if (!gl::is_primitive_native(REGS(m_ctx)->current_draw_clause.primitive))
 			{
 				u32 offset_in_index_buffer;
 				u32 index_count;
 				std::tie(index_count, offset_in_index_buffer) = get_index_array_for_emulated_non_indexed_draw(
-					rsx::method_registers.current_draw_clause.primitive, m_index_ring_buffer, vertex_count);
+					REGS(m_ctx)->current_draw_clause.primitive, m_index_ring_buffer, vertex_count);
 
 				return{ false, 0, vertex_count, index_count, 0, std::make_tuple(static_cast<GLenum>(GL_UNSIGNED_INT), offset_in_index_buffer) };
 			}
@@ -145,6 +148,7 @@ namespace
 		}
 
 	private:
+		rsx::context* m_ctx;
 		gl::ring_buffer& m_index_ring_buffer;
 		rsx::vertex_input_layout& m_vertex_layout;
 	};
@@ -155,7 +159,7 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 	m_profiler.start();
 
 	//Write index buffers and count verts
-	auto result = std::visit(draw_command_visitor(*m_index_ring_buffer, m_vertex_layout), m_draw_processor.get_draw_command(rsx::method_registers));
+	auto result = std::visit(draw_command_visitor(m_ctx, *m_index_ring_buffer, m_vertex_layout), m_draw_processor.get_draw_command(*REGS(m_ctx)));
 
 	const u32 vertex_count = (result.max_index - result.min_index) + 1;
 	u32 vertex_base = result.min_index;
@@ -163,7 +167,7 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 
 	if (result.index_rebase)
 	{
-		vertex_base = rsx::get_index_from_base(vertex_base, rsx::method_registers.vertex_data_base_index());
+		vertex_base = rsx::get_index_from_base(vertex_base, REGS(m_ctx)->vertex_data_base_index());
 		index_base = result.min_index;
 	}
 
@@ -192,7 +196,7 @@ gl::vertex_upload_info GLGSRender::set_vertex_buffer()
 		u32  storage_address = -1;
 
 		if (m_vertex_layout.interleaved_blocks.size() == 1 &&
-			rsx::method_registers.current_draw_clause.command != rsx::draw_command::inlined_array)
+			REGS(m_ctx)->current_draw_clause.command != rsx::draw_command::inlined_array)
 		{
 			const auto data_offset = (vertex_base * m_vertex_layout.interleaved_blocks[0]->attribute_stride);
 			storage_address = m_vertex_layout.interleaved_blocks[0]->real_offset_address + data_offset;

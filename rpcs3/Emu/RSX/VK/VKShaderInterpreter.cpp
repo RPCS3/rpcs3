@@ -11,8 +11,11 @@
 #include "Emu/RSX/Program/ShaderInterpreter.h"
 #include "Emu/RSX/rsx_methods.h"
 #include "Emu/localized_string.h"
+#include "Emu/RSX/Core/RSXContext.h"
 
 #include <thread>
+
+#include "Emu/RSX/NV47/HW/context_accessors.define.h"
 
 namespace vk
 {
@@ -456,8 +459,9 @@ namespace vk
 		return vk_prog;
 	}
 
-	void shader_interpreter::init(const vk::render_device& dev)
+	void shader_interpreter::init(rsx::context* ctx, const vk::render_device& dev)
 	{
+		m_ctx = ctx;
 		m_device = dev;
 	}
 
@@ -548,9 +552,9 @@ namespace vk
 		key.compiler_opt = 0;
 		key.properties = properties;
 
-		if (rsx::method_registers.alpha_test_enabled()) [[unlikely]]
+		if (fp_ctrl & RSX_SHADER_CONTROL_ALPHA_TEST) [[unlikely]]
 		{
-			switch (rsx::method_registers.alpha_func())
+			switch (REGS(m_ctx)->alpha_func())
 			{
 			case rsx::comparison_function::always:
 				break;
@@ -584,7 +588,7 @@ namespace vk
 		if (fp_metadata.referenced_textures_mask) key.compiler_opt |= COMPILER_OPT_ENABLE_TEXTURES;
 		if (fp_metadata.has_branch_instructions) key.compiler_opt |= COMPILER_OPT_ENABLE_FLOW_CTRL;
 		if (fp_metadata.has_pack_instructions) key.compiler_opt |= COMPILER_OPT_ENABLE_PACKING;
-		if (rsx::method_registers.polygon_stipple_enabled()) key.compiler_opt |= COMPILER_OPT_ENABLE_STIPPLING;
+		if (fp_ctrl & RSX_SHADER_CONTROL_POLYGON_STIPPLE) key.compiler_opt |= COMPILER_OPT_ENABLE_STIPPLING;
 		if (vp_ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS) key.compiler_opt |= COMPILER_OPT_ENABLE_INSTANCING;
 		if (vp_metadata.referenced_textures_mask) key.compiler_opt |= COMPILER_OPT_ENABLE_VTX_TEXTURES;
 

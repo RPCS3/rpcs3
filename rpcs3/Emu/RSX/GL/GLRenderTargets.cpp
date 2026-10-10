@@ -5,6 +5,8 @@
 
 #include <span>
 
+#include "Emu/RSX/NV47/HW/context_accessors.define.h"
+
 color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_format color_format)
 {
 	//color format
@@ -279,7 +281,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 		m_draw_fbo->set_default_samples(raster_samples);
 	}
 
-	switch (rsx::method_registers.surface_color_target())
+	switch (REGS(m_ctx)->surface_color_target())
 	{
 	case rsx::surface_target::none: break;
 

@@ -11,6 +11,8 @@
 
 namespace rsx
 {
+	struct context;
+
 	enum surface_state_flags : u32
 	{
 		ready               = 0x00,
@@ -129,6 +131,7 @@ namespace rsx
 	template <typename image_storage_type>
 	struct render_target_descriptor : public rsx::ref_counted
 	{
+		rsx::context* ctx = nullptr; // Context owning the surface cache this surface belongs to
 		u64 last_use_tag = 0;         // tag indicating when this block was last confirmed to have been written to
 		u32 base_addr = 0;
 
