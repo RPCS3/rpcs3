@@ -18,6 +18,8 @@
 #include "SPUAnalyser.h"
 #include "SPUInterpreter.h"
 #include <algorithm>
+#include <set>
+#include <sstream>
 #include <thread>
 
 #include "util/v128.hpp"
@@ -78,12 +80,26 @@ void spu_llvm_set_compile_context(spu_llvm_compile_context* context) noexcept
 #endif
 
 // PS5 fork: SPU float accuracy by program. GTA IV's collision (its
-// SpuCollide task) needs accurate xfloat, or vehicles fall through the ground,
-// and with the whole game accurate its audio mixing on the SPUs fell behind
-// and stuttered, on my console. SPU images named for collision, found in the
-// PPU executable (PPUModule.cpp), are recorded here; a function whose code is
-// one of theirs, at the same place in local storage, is compiled accurate
-// while the rest keeps the configured accuracy
+// SpuCollide task) needs accurate xfloat, or vehicles and Niko fall through the
+// ground, and with the whole game accurate its audio mixing on the SPUs fell
+// behind and stuttered, on my console. SPU images named for collision, found in
+// the PPU executable (PPUModule.cpp), are recorded here; a function whose code
+// is one of theirs, at the same place in local storage, is a collision function.
+//
+// The SPU Collision Accuracy setting chooses how they are compiled: 0 all
+// accurate; 2 with the configured accuracy (a test: Niko falls); 1, the
+// default, accurate only where learnt. Accurate collision cost the five SPURS
+// kernels that run it about 20 points of their time each, and what it gives
+// over the approximate mode is floats of the extended range (exponent 255, past
+// what an x86 float holds), which only some functions meet. While it learns,
+// every collision function not yet seen meeting one is compiled accurate and
+// watched: a flag set when it runs, and one when a value it converts, or a
+// result it makes, is 2^128 or more. Once five minutes of collision have run,
+// the last three with no function new to running or meeting, the next boot
+// compiles the functions that ran and met none with the configured accuracy,
+// and the rest accurate (still watched while never seen running). What was
+// learnt is kept for each game in the config folder (collision-<title id>.txt),
+// with the hashes of the images it was learnt on
 namespace
 {
 	struct accurate_xfloat_image
@@ -93,18 +109,53 @@ namespace
 	};
 
 	shared_mutex g_accurate_xfloat_lock;
-	std::vector<accurate_xfloat_image> g_accurate_xfloat_images;
+	std::vector<accurate_xfloat_image> g_accurate_xfloat_images; // this boot's
 
 	// Test switches, read as a game boots, from the config folder (/app0/rpcs3/,
 	// with or without a .txt the console's FTP clients add):
 	// - collision-test-off: its collision programs keep the configured
-	//   accuracy, to measure what accurate collision costs;
+	//   accuracy, as the setting's 2;
 	// - collision-ranges: hex ranges of local storage ("0x3000-0x11000 ..."),
-	//   and only the collision functions whose entry is in one are compiled
-	//   accurate, to find the ones collision needs it for
+	//   and only the collision functions whose entry is in one are treated as
+	//   collision
 	atomic_t<bool> g_accurate_xfloat_off = false;
 	std::vector<std::pair<u32, u32>> g_accurate_xfloat_ranges; // empty: all; under g_accurate_xfloat_lock
 	atomic_t<u32> g_accurate_xfloat_functions = 0;
+	atomic_t<u32> g_fast_xfloat_functions = 0;
+
+	// The watch: a slot for each collision function compiled watched this boot
+	constexpr u32 c_xfloat_slots = 4096;
+	atomic_t<u8> g_xfloat_ran[c_xfloat_slots]{};
+	atomic_t<u8> g_xfloat_met[c_xfloat_slots]{};
+	atomic_t<u32> g_xfloat_entry[c_xfloat_slots]{};
+	atomic_t<u32> g_xfloat_next_slot = 0;
+
+	// What was learnt, under g_accurate_xfloat_lock
+	constexpr u32 c_learn_seconds = 300; // of collision running
+	constexpr u32 c_quiet_seconds = 180; // the last of them with nothing new
+	constexpr u32 c_write_seconds = 30;
+	struct collision_learning
+	{
+		std::string path; // empty: no collision images this boot
+		std::set<std::string> images; // hashes of the images it was learnt on
+		std::vector<std::string> boot_images; // this boot's
+		std::set<u32> ran; // entries of functions seen running
+		std::set<u32> met; // and seen meeting extended floats
+		u32 seconds = 0;
+		u32 quiet = 0;
+		u32 mode = 0; // the setting, as this boot started
+		bool learnt_at_boot = false; // what this boot's compiles use
+		bool dirty = false;
+		u32 clock = 0; // seconds of this boot, by the ticks
+		u32 written_at = 0;
+
+		bool learnt() const
+		{
+			return seconds >= c_learn_seconds && quiet >= c_quiet_seconds;
+		}
+	};
+	collision_learning g_learning;
+	u64 g_learning_boot = umax;
 
 	std::string config_switch(std::string_view name)
 	{
@@ -118,14 +169,112 @@ namespace
 		return {};
 	}
 
-	bool needs_accurate_xfloat(const spu_program& func)
+	std::string learning_text(const collision_learning& learning)
 	{
-		if (g_accurate_xfloat_off || g_cfg.core.spu_fast_collision)
+		std::string text = "# PS5: what GTA IV's collision functions met while the SPU Collision Accuracy setting learnt (SPULLVMRecompiler.cpp)\nimages";
+		for (const std::string& image : learning.images)
 		{
-			return false;
+			text += " " + image;
+		}
+		fmt::append(text, "\nseconds %u\nquiet %u\nran", learning.seconds, learning.quiet);
+		for (const u32 entry : learning.ran)
+		{
+			fmt::append(text, " 0x%x", entry);
+		}
+		text += "\nmet";
+		for (const u32 entry : learning.met)
+		{
+			fmt::append(text, " 0x%x", entry);
+		}
+		text += "\n";
+		return text;
+	}
+
+	void read_learning(collision_learning& learning)
+	{
+		const fs::file file(learning.path);
+		if (!file)
+		{
+			return;
+		}
+		std::istringstream lines(file.to_string());
+		for (std::string line; std::getline(lines, line);)
+		{
+			std::istringstream words(line);
+			std::string key;
+			words >> key;
+			for (std::string word; words >> word;)
+			{
+				const u32 number = static_cast<u32>(std::strtoul(word.c_str(), nullptr, 0));
+				if (key == "images") learning.images.insert(word);
+				else if (key == "seconds") learning.seconds = number;
+				else if (key == "quiet") learning.quiet = number;
+				else if (key == "ran") learning.ran.insert(number);
+				else if (key == "met") learning.met.insert(number);
+			}
+		}
+	}
+
+	// A new boot's state, at its first collision image (under the lock): its
+	// switches, an empty watch, and what was learnt for the game
+	void begin_collision_boot()
+	{
+		g_accurate_xfloat_images.clear();
+		g_accurate_xfloat_functions = 0;
+		g_fast_xfloat_functions = 0;
+		g_accurate_xfloat_off = !config_switch("collision-test-off").empty();
+		if (g_accurate_xfloat_off)
+		{
+			spu_log.success("SPU collision: accurate xfloat off for this run (collision-test-off)");
 		}
 
-		reader_lock lock(g_accurate_xfloat_lock);
+		g_accurate_xfloat_ranges.clear();
+		if (const std::string path = config_switch("collision-ranges"); !path.empty())
+		{
+			std::string text = fs::file(path).to_string();
+			std::string said;
+			// Each range two 0x numbers with a dash between; anything else is skipped
+			for (usz at = text.find("0x"); at != umax;)
+			{
+				char* end = nullptr;
+				const u32 low = static_cast<u32>(std::strtoul(text.c_str() + at, &end, 16));
+				const usz dash = text.find('-', static_cast<usz>(end - text.c_str()));
+				const usz next = dash == umax ? umax : text.find("0x", dash);
+				if (next == umax)
+				{
+					break;
+				}
+				const u32 high = static_cast<u32>(std::strtoul(text.c_str() + next, &end, 16));
+				if (low < high)
+				{
+					g_accurate_xfloat_ranges.emplace_back(low, high);
+					fmt::append(said, " 0x%x-0x%x", low, high);
+				}
+				at = text.find("0x", static_cast<usz>(end - text.c_str()));
+			}
+			spu_log.success("SPU collision: only functions in%s", said.empty() ? " (no ranges read)" : said.c_str());
+		}
+
+		for (u32 i = 0; i < c_xfloat_slots; i++)
+		{
+			g_xfloat_ran[i].release(0);
+			g_xfloat_met[i].release(0);
+			g_xfloat_entry[i].release(0);
+		}
+		g_xfloat_next_slot = 0;
+
+		g_learning = {};
+		const std::string title = Emu.GetTitleID();
+		g_learning.path = fs::get_config_dir() + "collision-" + (title.empty() ? std::string("unknown") : title) + ".txt";
+		g_learning.mode = g_cfg.core.spu_collision_accuracy;
+		read_learning(g_learning);
+		g_learning.learnt_at_boot = g_learning.learnt();
+		spu_log.success("SPU collision accuracy %u; learning (%s): %u s, %u s quiet, %u functions ran, %u met extended floats%s", g_learning.mode, g_learning.path,
+			g_learning.seconds, g_learning.quiet, g_learning.ran.size(), g_learning.met.size(), g_learning.learnt_at_boot ? "; learnt" : "");
+	}
+
+	bool is_collision_function(const spu_program& func)
+	{
 		if (!g_accurate_xfloat_ranges.empty() && std::none_of(g_accurate_xfloat_ranges.begin(), g_accurate_xfloat_ranges.end(),
 			[&](const std::pair<u32, u32>& range) { return func.entry_point >= range.first && func.entry_point < range.second; }))
 		{
@@ -157,6 +306,46 @@ namespace
 		}
 		return false;
 	}
+
+	enum class collision_compile
+	{
+		not_collision, // the configured accuracy
+		fast, // the configured accuracy
+		accurate,
+		watched, // accurate, with a slot
+	};
+
+	// How a function is compiled, and its slot when watched
+	collision_compile choose_collision(const spu_program& func, u32& slot)
+	{
+		slot = umax;
+		reader_lock lock(g_accurate_xfloat_lock);
+		if (!is_collision_function(func))
+		{
+			return collision_compile::not_collision;
+		}
+		if (g_accurate_xfloat_off || g_learning.mode == 2)
+		{
+			return collision_compile::fast;
+		}
+		const u32 entry = func.entry_point;
+		if (g_learning.mode == 0 || g_learning.met.contains(entry))
+		{
+			return collision_compile::accurate;
+		}
+		if (g_learning.learnt_at_boot && g_learning.ran.contains(entry))
+		{
+			return collision_compile::fast;
+		}
+		const u32 index = g_xfloat_next_slot++;
+		if (index >= c_xfloat_slots)
+		{
+			return collision_compile::accurate;
+		}
+		g_xfloat_entry[index].release(entry);
+		slot = index;
+		return collision_compile::watched;
+	}
 }
 
 void spu_note_program_image(std::string_view name, u32 vaddr, const void* data, u32 size)
@@ -165,46 +354,12 @@ void spu_note_program_image(std::string_view name, u32 vaddr, const void* data, 
 	{
 		return;
 	}
-	if (g_cfg.core.spu_fast_collision || !config_switch("collision-test-off").empty())
-	{
-		if (!g_accurate_xfloat_off.exchange(true))
-		{
-			spu_log.success("SPU program '%s': accurate xfloat off for this run (%s)", name, g_cfg.core.spu_fast_collision ? "the Fast collision setting" : "collision-test-off");
-		}
-		return;
-	}
-	g_accurate_xfloat_off = false;
 	std::lock_guard lock(g_accurate_xfloat_lock);
-
-	// The ranges, read again at each boot
-	g_accurate_xfloat_ranges.clear();
-	g_accurate_xfloat_functions = 0;
-	if (const std::string path = config_switch("collision-ranges"); !path.empty())
+	if (const u64 boot = static_cast<u64>(Emu.GetEmulationIdentifier()); boot != g_learning_boot)
 	{
-		std::string text = fs::file(path).to_string();
-		std::string said;
-		// Each range two 0x numbers with a dash between; anything else is skipped
-		for (usz at = text.find("0x"); at != umax;)
-		{
-			char* end = nullptr;
-			const u32 low = static_cast<u32>(std::strtoul(text.c_str() + at, &end, 16));
-			const usz dash = text.find('-', static_cast<usz>(end - text.c_str()));
-			const usz next = dash == umax ? umax : text.find("0x", dash);
-			if (next == umax)
-			{
-				break;
-			}
-			const u32 high = static_cast<u32>(std::strtoul(text.c_str() + next, &end, 16));
-			if (low < high)
-			{
-				g_accurate_xfloat_ranges.emplace_back(low, high);
-				fmt::append(said, " 0x%x-0x%x", low, high);
-			}
-			at = text.find("0x", static_cast<usz>(end - text.c_str()));
-		}
-		spu_log.success("SPU program '%s': accurate xfloat only for collision functions in%s", name, said.empty() ? " (no ranges read)" : said.c_str());
+		g_learning_boot = boot;
+		begin_collision_boot();
 	}
-
 
 	for (const accurate_xfloat_image& image : g_accurate_xfloat_images)
 	{
@@ -215,19 +370,159 @@ void spu_note_program_image(std::string_view name, u32 vaddr, const void* data, 
 	}
 	const u8* bytes = static_cast<const u8*>(data);
 	g_accurate_xfloat_images.push_back({vaddr, std::vector<u8>(bytes, bytes + size)});
-	spu_log.success("SPU program '%s' (LS 0x%x, 0x%x bytes) is compiled with accurate xfloat", name, vaddr, size);
+	spu_log.success("SPU program '%s' (LS 0x%x, 0x%x bytes) is collision", name, vaddr, size);
+
+	// Learnt on other code (another version of the game): learnt again
+	u8 sha[20];
+	sha1(bytes, size, sha);
+	const std::string hash = fmt::format("%s", fmt::base57(sha));
+	g_learning.boot_images.push_back(hash);
+	if (!g_learning.images.contains(hash))
+	{
+		if (g_learning.seconds || !g_learning.ran.empty())
+		{
+			spu_log.warning("SPU collision: what was learnt was on other code; learning again");
+			g_learning.ran.clear();
+			g_learning.met.clear();
+			g_learning.seconds = 0;
+			g_learning.quiet = 0;
+			g_learning.learnt_at_boot = false;
+		}
+		g_learning.images = std::set<std::string>(g_learning.boot_images.begin(), g_learning.boot_images.end());
+		g_learning.dirty = true;
+	}
 }
 
-// The collision functions compiled accurate since the game booted (the trace's status)
-u32 spu_accurate_xfloat_functions()
+// Every few seconds, from the PS5 frontend's status thread: what the watched
+// functions did since the last call, gathered into what is learnt and written
+// to the game's file (at once for 0 seconds, as the title ends). `running`:
+// the game ran over them. Returns the trace's words for it (empty without
+// collision code this boot)
+std::string spu_collision_tick(u32 seconds, bool running)
 {
-	return g_accurate_xfloat_functions;
+	std::string text;
+	std::string path;
+	std::string write;
+	{
+		std::lock_guard lock(g_accurate_xfloat_lock);
+		collision_learning& learning = g_learning;
+		if (learning.path.empty())
+		{
+			return {};
+		}
+		learning.clock += seconds;
+
+		bool active = false;
+		bool fresh = false;
+		const u32 slots = std::min(+g_xfloat_next_slot, c_xfloat_slots);
+		for (u32 i = 0; i < slots; i++)
+		{
+			const u32 entry = g_xfloat_entry[i];
+			if (g_xfloat_ran[i])
+			{
+				g_xfloat_ran[i].release(0);
+				active = true;
+				fresh |= learning.ran.insert(entry).second;
+			}
+			if (g_xfloat_met[i])
+			{
+				fresh |= learning.met.insert(entry).second;
+			}
+		}
+		learning.dirty |= fresh;
+
+		const bool learning_now = learning.mode == 1 && !g_accurate_xfloat_off && !learning.learnt_at_boot;
+		bool done_now = false;
+		if (learning_now && running && active && !learning.learnt())
+		{
+			learning.seconds += seconds;
+			learning.quiet = fresh ? 0 : learning.quiet + seconds;
+			done_now = learning.learnt();
+			learning.dirty = true;
+			if (done_now)
+			{
+				spu_log.success("SPU collision: learnt (%u functions ran, %u met extended floats); used from the next boot", learning.ran.size(), learning.met.size());
+			}
+		}
+
+		// Written after the game stops too, but described only while it runs
+		const bool this_boot = g_learning_boot == static_cast<u64>(Emu.GetEmulationIdentifier());
+
+		if (learning.dirty && (done_now || !seconds || learning.clock - learning.written_at >= c_write_seconds))
+		{
+			learning.dirty = false;
+			learning.written_at = learning.clock;
+			path = learning.path;
+			write = learning_text(learning);
+		}
+
+		if (!this_boot)
+		{
+		}
+		else if (g_accurate_xfloat_off || learning.mode == 2)
+		{
+			fmt::append(text, "collision: fast (%u functions)", +g_fast_xfloat_functions);
+		}
+		else if (learning.mode == 0)
+		{
+			fmt::append(text, "collision: accurate (%u functions)", +g_accurate_xfloat_functions);
+		}
+		else
+		{
+			const u32 watched = std::min(+g_xfloat_next_slot, c_xfloat_slots);
+			fmt::append(text, "collision: %s, %u s run (%u s with nothing new), %u functions ran, %u met extended floats; this boot %u fast, %u accurate (%u watched)",
+				learning.learnt_at_boot ? "learnt" : learning.learnt() ? "learnt, from the next boot" : "learning", learning.seconds, learning.quiet,
+				learning.ran.size(), learning.met.size(), +g_fast_xfloat_functions, +g_accurate_xfloat_functions, watched);
+		}
+	}
+
+	if (!write.empty())
+	{
+		fs::pending_file file(path);
+		if (!file.file || file.file.write(write.data(), write.size()) < write.size() || !file.commit())
+		{
+			spu_log.error("SPU collision: could not write %s: %s", path, fs::g_tls_error);
+		}
+	}
+	return text;
+}
+
+// The setting's state, a sentence for the pause menu (empty without collision
+// code this boot)
+std::string spu_collision_status()
+{
+	reader_lock lock(g_accurate_xfloat_lock);
+	const collision_learning& learning = g_learning;
+	if (learning.path.empty() || g_learning_boot != static_cast<u64>(Emu.GetEmulationIdentifier()))
+	{
+		return {};
+	}
+	if (g_accurate_xfloat_off || learning.mode == 2)
+	{
+		return "Now: fast; cars and Niko can fall through the ground.";
+	}
+	if (learning.mode == 0)
+	{
+		return "Now: all of it accurate.";
+	}
+	if (learning.learnt_at_boot)
+	{
+		return fmt::format("Now: learnt; %u of %u collision functions fast.", +g_fast_xfloat_functions, +g_fast_xfloat_functions + +g_accurate_xfloat_functions);
+	}
+	if (learning.learnt())
+	{
+		return "Now: learnt; restart the game to run with it.";
+	}
+	return fmt::format("Now: learning, %u of at least %u minutes of play.", learning.seconds / 60, c_learn_seconds / 60);
 }
 
 class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 {
-	// The accuracy this function is compiled with (see needs_accurate_xfloat)
+	// The accuracy this function is compiled with (see choose_collision)
 	xfloat_accuracy m_xfloat = xfloat_accuracy::approximate;
+
+	// Its slot in the watch, while collision accuracy is learnt (umax: not watched)
+	u32 m_xfloat_slot = umax;
 
 	// JIT Instance
 	jit_compiler m_jit{{}, jit_compiler::cpu(g_cfg.core.llvm_cpu.to_string())};
@@ -853,6 +1148,29 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 		return bitcast<f64[4]>(val);
 	}
 
+	// PS5 fork: a flag set when `cond` is true, with no store when it is not
+	// (the watch on a collision function, see choose_collision): a masked
+	// store of one lane, which LLVM makes a branch around a byte store
+	void set_flag_if(llvm::Value* cond, atomic_t<u8>* flag)
+	{
+		const auto mask = m_ir->CreateVectorSplat(1, cond);
+		const auto one = llvm::ConstantVector::getSplat(llvm::ElementCount::getFixed(1), m_ir->getInt8(1));
+		const auto ptr = m_ir->CreateIntToPtr(m_ir->getInt64(reinterpret_cast<u64>(flag)), get_type<u8*>());
+		const auto store = m_ir->CreateMaskedStore(one, ptr, llvm::Align(1), mask);
+
+		// Neither the SPU's memory nor its context: their accesses keep their optimisations
+		store->setMetadata(llvm::LLVMContext::MD_noalias, llvm::MDNode::concatenate(m_md_spu_memory_domain, m_md_spu_context_domain));
+	}
+
+	// PS5 fork: in a watched function, a lane of `lanes` met an extended float
+	void note_extended(llvm::Value* lanes)
+	{
+		if (m_xfloat_slot < c_xfloat_slots)
+		{
+			set_flag_if(m_ir->CreateOrReduce(lanes), &g_xfloat_met[m_xfloat_slot]);
+		}
+	}
+
 	llvm::Value* double_to_xfloat(llvm::Value* val)
 	{
 		ensure(val && val->getType() == get_type<f64[4]>());
@@ -867,6 +1185,9 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	llvm::Value* xfloat_to_double(llvm::Value* val)
 	{
 		ensure(val && val->getType() == get_type<u32[4]>());
+
+		// PS5 fork: exponent 255
+		note_extended(m_ir->CreateICmpEQ(m_ir->CreateAnd(val, 0x7f800000), llvm::ConstantInt::get(val->getType(), 0x7f800000)));
 
 		const auto x = m_ir->CreateZExt(val, get_type<u64[4]>());
 
@@ -894,6 +1215,9 @@ class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
 	llvm::Value* xfloat_in_double(llvm::Value* val)
 	{
 		ensure(val && val->getType() == get_type<f64[4]>());
+
+		// PS5 fork: 2^128 or more, beyond an x86 float (exponent 255 once clamped)
+		note_extended(m_ir->CreateICmpUGE(m_ir->CreateAnd(double_as_uint64(val), 0x7fffffffffffffff), llvm::ConstantInt::get(get_type<u64[4]>(), 0x47f0000000000000)));
 
 #ifdef ARCH_X64
 		// Use integer operations here so LLVM can fold the masks into VPTERNLOG
@@ -1815,6 +2139,7 @@ public:
 	virtual spu_function_t compile(spu_program&& _func) override
 	{
 		m_xfloat = g_cfg.core.spu_xfloat_accuracy;
+		m_xfloat_slot = umax;
 
 		if (_func.data.empty() && m_interp_magn)
 		{
@@ -1833,13 +2158,6 @@ public:
 
 		const spu_program& func = add_loc->data;
 
-		if (m_xfloat != xfloat_accuracy::accurate && needs_accurate_xfloat(func))
-		{
-			m_xfloat = xfloat_accuracy::accurate;
-			g_accurate_xfloat_functions++;
-			spu_log.notice("Function 0x%x (size %u) is compiled with accurate xfloat", func.entry_point, func.data.size());
-		}
-
 		if (func.entry_point != start0)
 		{
 			// Wait for the duplicate
@@ -1849,6 +2167,26 @@ public:
 			}
 
 			return add_loc->compiled;
+		}
+
+		// PS5 fork: collision functions' accuracy (see choose_collision)
+		if (m_xfloat != xfloat_accuracy::accurate)
+		{
+			switch (choose_collision(func, m_xfloat_slot))
+			{
+			case collision_compile::not_collision:
+				break;
+			case collision_compile::fast:
+				g_fast_xfloat_functions++;
+				spu_log.notice("Collision function 0x%x (size %u) is compiled with the configured accuracy", func.entry_point, func.data.size());
+				break;
+			case collision_compile::accurate:
+			case collision_compile::watched:
+				m_xfloat = xfloat_accuracy::accurate;
+				g_accurate_xfloat_functions++;
+				spu_log.notice("Collision function 0x%x (size %u) is compiled with accurate xfloat%s", func.entry_point, func.data.size(), m_xfloat_slot != umax ? ", watched" : "");
+				break;
+			}
 		}
 
 		bool add_to_file = false;
@@ -2626,8 +2964,17 @@ public:
 #endif
 		}
 
-		// Increase block counter with statistics
 		m_ir->SetInsertPoint(label_body);
+
+		// PS5 fork: a watched function ran (cleared by spu_collision_tick)
+		if (m_xfloat_slot < c_xfloat_slots)
+		{
+			atomic_t<u8>* const ran = &g_xfloat_ran[m_xfloat_slot];
+			const auto ptr = m_ir->CreateIntToPtr(m_ir->getInt64(reinterpret_cast<u64>(ran)), get_type<u8*>());
+			set_flag_if(m_ir->CreateICmpEQ(m_ir->CreateLoad(get_type<u8>(), ptr), m_ir->getInt8(0)), ran);
+		}
+
+		// Increase block counter with statistics
 		const auto pbcount = spu_ptr(&spu_thread::block_counter);
 		m_ir->CreateStore(m_ir->CreateAdd(m_ir->CreateLoad(get_type<u64>(), pbcount), m_ir->getInt64(check_iterations)), pbcount);
 

@@ -90,7 +90,7 @@ const char* ps5_localized_string(localized_string_id id);
 // Emu/RSX/Overlays/overlay_utils.cpp
 std::u32string utf8_to_u32string(std::string_view utf8_string);
 
-u32 spu_accurate_xfloat_functions(); // SPULLVMRecompiler.cpp: collision functions compiled with accurate xfloat
+std::string spu_collision_tick(u32 seconds, bool running); // SPULLVMRecompiler.cpp: learnt collision accuracy, gathered and written; the trace's words
 extern atomic_t<u64> g_ps5_getllar_waits[64][2]; // SPUThread.cpp: each SPU slot's GETLLAR polls answered by busy waiting, and by sleeping
 extern atomic_t<u32> g_ps5_spu_cpus[64][16]; // SPUThread.cpp: each SPU slot's polls by the CPU it was on
 u32 ps5_spu_slot(u32 id); // SPUThread.cpp: an SPU thread's slot in those counts
@@ -757,13 +757,13 @@ namespace
 			const auto& video = g_cfg.video;
 			const char* zcull = video.relaxed_zcull_sync ? "Relaxed" : video.precise_zpass_count ? "Precise" : "Approximate";
 			trace("settings for %s: SPU block size %s, Max SPURS %s, SPU loop detection %s, accurate SPU reservations %s, accurate RSX reservation access %s, XFloat %s; "
-				"frame limit %s, vblank %s Hz, resolution %s at %s%%, ZCULL %s, write color buffers %s, multithreaded RSX %s; late audio wait %s ms; frame generation %s (%s, quality %s, steps aside %s); own core %s, fast collision %s",
+				"frame limit %s, vblank %s Hz, resolution %s at %s%%, ZCULL %s, write color buffers %s, multithreaded RSX %s; late audio wait %s ms; frame generation %s (%s, quality %s, steps aside %s); own core %s, collision accuracy %s",
 				Emu.GetTitleID(), core.spu_block_size.to_string(), core.max_spurs_threads.to_string(), core.spu_loop_detection.to_string(),
 				core.spu_accurate_reservations.to_string(), core.rsx_accurate_res_access.to_string(), core.spu_xfloat_accuracy.to_string(),
 				video.frame_limit.to_string(), video.vblank_rate.to_string(), video.resolution.to_string(), video.resolution_scale_percent.to_string(), zcull,
 				video.write_color_buffers.to_string(), video.multithreaded_rsx.to_string(), g_cfg.audio.late_audio_wait.to_string(),
 				video.frame_generation.to_string(), video.frame_generation_frames.to_string(), video.frame_generation_quality.to_string(),
-				video.frame_generation_step_aside.to_string(), core.spu_own_core.to_string(), core.spu_fast_collision.to_string());
+				video.frame_generation_step_aside.to_string(), core.spu_own_core.to_string(), core.spu_collision_accuracy.to_string());
 		};
 		g_emu_callbacks.on_pause = []() {};
 		g_emu_callbacks.on_resume = []() {};
@@ -1260,14 +1260,21 @@ int run(const char* boot_path)
 						std::lock_guard lock(g_loads_mutex);
 						g_loads.clear();
 					}
-					if (seconds % 5 != 4 || Emu.IsStopped())
+					if (seconds % 5 != 4)
+					{
+						continue;
+					}
+					// What GTA IV's watched collision functions did, learnt (with or
+					// without the trace), and written down while the game stops too
+					const std::string collision = spu_collision_tick(5, running_for > 0);
+					if (Emu.IsStopped())
 					{
 						continue;
 					}
 					// The busiest of the PS3's threads over these five seconds
 					if (const std::string busiest = take_thread_loads(); !busiest.empty())
 					{
-						trace("busiest threads (share of the time each was running):%s; collision functions compiled accurate: %u%s; %s", busiest, spu_accurate_xfloat_functions(), g_cfg.core.spu_fast_collision ? " (Fast collision on)" : "", ps5_cpu_own_core_text());
+						trace("busiest threads (share of the time each was running):%s; %s; %s", busiest, collision.empty() ? std::string("no collision code") : collision, ps5_cpu_own_core_text());
 					}
 
 					// RSX's flips and where the PPU threads are, read on the main
@@ -1365,6 +1372,8 @@ int run(const char* boot_path)
 						trace("open files: %s; %s", fs::ps5_open_report(), ps5_open_files_report());
 					}
 				}
+				// The title ends: what was learnt since the last write
+				spu_collision_tick(0, false);
 			});
 
 			// Until the game stops and RPCS3 asks to quit

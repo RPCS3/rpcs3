@@ -17,6 +17,7 @@
 LOG_CHANNEL(pause_log, "PauseMenu");
 
 extern atomic_t<u32> g_ps5_frame_gen_capture; // VKFrameGen.cpp: the capture's sets wanted
+std::string spu_collision_status(); // SPULLVMRecompiler.cpp: the collision setting's state (empty without collision code)
 
 namespace rsx::overlays
 {
@@ -63,6 +64,8 @@ namespace rsx::overlays
 			{"Video", "Frame Generation Quality", "Frame generation quality"},
 			{"Video", "Frame Generation Step Aside", "Frame generation steps aside"},
 			{"Audio", "Master Volume", "Volume"},
+			// Only for a game with collision code it applies to (GTA IV)
+			{"Core", "SPU Collision Accuracy", "Collision accuracy"},
 		};
 
 		// A tooltip's first paragraph, short enough for the lines under the rows
@@ -109,6 +112,10 @@ namespace rsx::overlays
 		game.rows.push_back({action::resume, -1, "Resume", "Back to the game", "home/32/play-button-arrowhead.png", false});
 		for (const quick_setting& quick : c_quick_settings)
 		{
+			if (std::string_view(quick.key) == "SPU Collision Accuracy" && spu_collision_status().empty())
+			{
+				continue;
+			}
 			for (usz i = 0; i < m_settings.size(); i++)
 			{
 				if (!m_settings[i].heading && m_settings[i].section == quick.section && m_settings[i].key == quick.key)
@@ -625,7 +632,9 @@ namespace rsx::overlays
 			if (entry.setting >= 0)
 			{
 				const setting_row& setting = m_settings[entry.setting];
-				help = short_help(setting.help);
+				// The collision setting's: what it does now, then its tooltip
+				const std::string status = setting.key == "SPU Collision Accuracy" ? spu_collision_status() : std::string();
+				help = short_help(status.empty() ? setting.help : status + " " + setting.help);
 				const cfg::_base* live = find_setting(g_cfg, setting.section, setting.key);
 				when = (live && live->get_is_dynamic()) ? "Takes effect now." : "Takes effect after a restart of the game.";
 				if (setting.value != setting.global)
