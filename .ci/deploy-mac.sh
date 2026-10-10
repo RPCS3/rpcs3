@@ -5,11 +5,18 @@ cd build || exit 1
 
 cd bin
 mkdir -p "rpcs3.app/Contents/Resources/vulkan/icd.d" || true
-wget https://github.com/KhronosGroup/MoltenVK/releases/download/v1.4.2/MoltenVK-macos-privateapi.tar
-tar -xvf MoltenVK-macos-privateapi.tar
-cp "MoltenVK/MoltenVK/dynamic/dylib/macOS/libMoltenVK.dylib" "rpcs3.app/Contents/Frameworks/libMoltenVK.dylib"
-cp "MoltenVK/MoltenVK/dynamic/dylib/macOS/MoltenVK_icd.json" "rpcs3.app/Contents/Resources/vulkan/icd.d/MoltenVK_icd.json"
-sed -i '' "s/.\//..\/..\/..\/Frameworks\//g" "rpcs3.app/Contents/Resources/vulkan/icd.d/MoltenVK_icd.json"
+if [ "$BUILD_MAC_KK" -eq 1 ]; then
+  cp "$(realpath /opt/local/lib/libvulkan_kosmickrisp.dylib)" "rpcs3.app/Contents/Frameworks/libvulkan_kosmickrisp.dylib"
+  cp "$(realpath /opt/local/share/vulkan/icd.d/kosmickrisp_mesa_icd.aarch64.json)" "rpcs3.app/Contents/Resources/vulkan/icd.d/kosmickrisp_mesa_icd.aarch64.json"
+  cp "$(realpath /opt/local/lib/libSPIRV-Tools.dylib)" "rpcs3.app/Contents/Frameworks/libSPIRV-Tools.dylib"
+  sed -i '' "s/\/opt\/local\/lib\//..\/..\/..\/Frameworks\//g" "rpcs3.app/Contents/Resources/vulkan/icd.d/kosmickrisp_mesa_icd.aarch64.json"
+else
+  wget https://github.com/KhronosGroup/MoltenVK/releases/download/v1.4.2/MoltenVK-macos-privateapi.tar
+  tar -xvf MoltenVK-macos-privateapi.tar
+  cp "MoltenVK/MoltenVK/dynamic/dylib/macOS/libMoltenVK.dylib" "rpcs3.app/Contents/Frameworks/libMoltenVK.dylib"
+  cp "MoltenVK/MoltenVK/dynamic/dylib/macOS/MoltenVK_icd.json" "rpcs3.app/Contents/Resources/vulkan/icd.d/MoltenVK_icd.json"
+  sed -i '' "s/.\//..\/..\/..\/Frameworks\//g" "rpcs3.app/Contents/Resources/vulkan/icd.d/MoltenVK_icd.json"
+fi
 
 rm -rf "rpcs3.app/Contents/Frameworks/QtPdf.framework" \
 "rpcs3.app/Contents/Frameworks/QtQml.framework" \
