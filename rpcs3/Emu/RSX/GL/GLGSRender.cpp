@@ -648,7 +648,7 @@ void GLGSRender::update_swap_interval()
 
 void GLGSRender::clear_surface(u32 arg)
 {
-	if (skip_current_frame) return;
+	if (m_ctx->frame_skip.skip_current_frame) return;
 
 	// If stencil write mask is disabled, remove clear_stencil bit
 	if (!REGS(m_ctx)->stencil_mask()) arg &= ~RSX_GCM_CLEAR_STENCIL_BIT;
@@ -863,14 +863,14 @@ bool GLGSRender::load_program()
 	{
 		if (g_cfg.video.debug_overlay)
 		{
-			m_frame_stats.program_cache_lookups_total += 2;
+			m_ctx->stats.program_cache_lookups_total += 2;
 			if (m_ctx->program.cache_hint.has_fragment_program())
 			{
-				m_frame_stats.program_cache_lookups_ellided++;
+				m_ctx->stats.program_cache_lookups_ellided++;
 			}
 			if (m_ctx->program.cache_hint.has_vertex_program())
 			{
-				m_frame_stats.program_cache_lookups_ellided++;
+				m_ctx->stats.program_cache_lookups_ellided++;
 			}
 		}
 

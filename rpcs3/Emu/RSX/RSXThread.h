@@ -96,9 +96,6 @@ namespace rsx
 		void cpu_task() override;
 	protected:
 
-		s32 m_skip_frame_ctr = 0;
-		bool skip_current_frame = false;
-
 		backend_configuration backend_config{};
 
 		// FIFO
@@ -132,7 +129,6 @@ namespace rsx
 
 		// Profiler
 		rsx::profiling_timer m_profiler;
-		frame_statistics_t m_frame_stats{};
 
 		// Savestates related
 		u32 m_pause_after_x_flips = 0;
@@ -286,8 +282,6 @@ namespace rsx
 
 		atomic_t<s32> async_tasks_pending{ 0 };
 
-		reports::conditional_render_eval cond_render_ctrl;
-
 		virtual u64 get_cycles() = 0;
 		virtual ~thread();
 
@@ -424,7 +418,7 @@ namespace rsx
 		u32 get_load();
 
 		// Get stats object
-		frame_statistics_t& get_stats() { return m_frame_stats; }
+		frame_statistics_t& get_stats() { return m_ctx->stats; }
 
 		// Returns true if the current thread is the active RSX thread
 		inline bool is_current_thread() const

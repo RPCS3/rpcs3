@@ -327,7 +327,7 @@ void GLGSRender::update_draw_state()
 	// For OGL Z range is updated every draw as it is separate from viewport config
 	m_ctx->graphics_state.clear(rsx::pipeline_state::zclip_config_state_dirty);
 
-	m_frame_stats.setup_time += m_profiler.duration();
+	m_ctx->stats.setup_time += m_profiler.duration();
 }
 
 void GLGSRender::load_texture_env()
@@ -789,7 +789,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 	const GLenum draw_mode = gl::draw_mode(draw_call.primitive);
 	update_vertex_env(upload_info);
 
-	m_frame_stats.vertex_upload_time += m_profiler.duration();
+	m_ctx->stats.vertex_upload_time += m_profiler.duration();
 
 	gl_state.use_program(m_program->id());
 
@@ -900,7 +900,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 		}
 	}
 
-	m_frame_stats.draw_exec_time += m_profiler.duration();
+	m_ctx->stats.draw_exec_time += m_profiler.duration();
 }
 
 void GLGSRender::begin()
@@ -910,7 +910,7 @@ void GLGSRender::begin()
 
 	rsx::thread::begin();
 
-	if (skip_current_frame || cond_render_ctrl.disable_rendering())
+	if (m_ctx->frame_skip.skip_current_frame || m_ctx->cond_render.disable_rendering())
 	{
 		return;
 	}
@@ -938,11 +938,11 @@ void GLGSRender::end()
 
 	analyse_current_rsx_pipeline();
 
-	m_frame_stats.setup_time += m_profiler.duration();
+	m_ctx->stats.setup_time += m_profiler.duration();
 
 	// Active texture environment is used to decode shaders
 	load_texture_env();
-	m_frame_stats.textures_upload_time += m_profiler.duration();
+	m_ctx->stats.textures_upload_time += m_profiler.duration();
 
 	// NOTE: Due to common OpenGL driver architecture, vertex data has to be uploaded as far away from the draw as possible
 	// TODO: Implement shaders cache prediction to avoid uploading vertex data if draw is going to skip
@@ -958,11 +958,11 @@ void GLGSRender::end()
 
 	// Load program execution environment
 	load_program_env();
-	m_frame_stats.setup_time += m_profiler.duration();
+	m_ctx->stats.setup_time += m_profiler.duration();
 
 	bind_texture_env();
 	m_gl_texture_cache.release_uncached_temporary_subresources();
-	m_frame_stats.textures_upload_time += m_profiler.duration();
+	m_ctx->stats.textures_upload_time += m_profiler.duration();
 
 	gl::command_context cmd{ gl_state };
 	if (auto ds = std::get<1>(m_rtts.m_bound_depth_stencil))
@@ -1014,7 +1014,7 @@ void GLGSRender::end()
 	m_transform_constants_buffer->notify();
 	m_instancing_ring_buffer->notify();
 
-	m_frame_stats.setup_time += m_profiler.duration();
+	m_ctx->stats.setup_time += m_profiler.duration();
 
 	rsx::thread::end();
 }
