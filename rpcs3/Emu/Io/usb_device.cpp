@@ -4,7 +4,6 @@
 #include "Emu/Cell/lv2/sys_usbd.h"
 #include "Emu/Io/usb_device.h"
 #include "Utilities/StrUtil.h"
-#include <libusb.h>
 
 LOG_CHANNEL(sys_usbd);
 
@@ -24,6 +23,22 @@ void usb_device::get_location(u8* location) const
 	memcpy(location, this->location.data(), 7);
 }
 
+const UsbDeviceEndpoint* usb_device::find_endpoint(u8 endpoint_addr) const
+{
+	for (const auto& config_node : device.subnodes)
+	{
+		if (config_node.bDescriptorType != USB_DESCRIPTOR_CONFIG)
+			continue;
+
+		for (const auto& node : config_node.subnodes)
+		{
+			if (node.bDescriptorType == USB_DESCRIPTOR_ENDPOINT && node._endpoint.bEndpointAddress == endpoint_addr)
+				return &node._endpoint;
+		}
+	}
+	return nullptr;
+}
+
 void usb_device::read_descriptors()
 {
 }
@@ -40,9 +55,10 @@ bool usb_device::set_configuration(u8 cfg_num)
 	return true;
 }
 
-bool usb_device::set_interface(u8 int_num)
+bool usb_device::set_interface(u8 int_num, u8 alt_num)
 {
 	current_interface = int_num;
+	current_altsetting = alt_num;
 	return true;
 }
 
@@ -59,6 +75,58 @@ usb_device_passthrough::usb_device_passthrough(libusb_device* _device, libusb_de
 {
 	device = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE, UsbDeviceDescriptor{desc.bcdUSB, desc.bDeviceClass, desc.bDeviceSubClass, desc.bDeviceProtocol, desc.bMaxPacketSize0, desc.idVendor, desc.idProduct,
 														  desc.bcdDevice, desc.iManufacturer, desc.iProduct, desc.iSerialNumber, desc.bNumConfigurations});
+	patch_descriptors();
+}
+
+void usb_device_passthrough::patch_descriptors()
+{
+	// Patch Wii vids and pids so they are presented to the console as PS3 instruments
+	if (device._device.idVendor == 0x1BAD) // Harmonix
+	{
+		switch (device._device.idProduct)
+		{
+			case 0x0004: // Harmonix RB1 Guitar - Wii
+			case 0x3010: // Harmonix RB2 Guitar - Wii
+				device._device.idVendor = 0x12BA; // SCEA
+				device._device.idProduct = 0x0200; // Harmonix Guitar
+				break;
+			case 0x0005: // Harmonix RB1 Drums - Wii
+			case 0x3110: // Harmonix RB2 Drums - Wii
+				device._device.idVendor = 0x12BA; // SCEA
+				device._device.idProduct = 0x0210; // Harmonix Drums
+				break;
+			case 0x3330: // Harmonix Keyboard - Wii
+				device._device.idVendor = 0x12BA; // SCEA
+				device._device.idProduct = 0x2330; // Harmonix Keyboard
+				break;
+			case 0x3430: // Harmonix Button Guitar - Wii
+				device._device.idVendor = 0x12BA; // SCEA
+				device._device.idProduct = 0x2430; // Harmonix Button Guitar
+				break;
+			case 0x3530: // Harmonix Real Guitar - Wii
+				device._device.idVendor = 0x12BA; // SCEA
+				device._device.idProduct = 0x2530; // Harmonix Real Guitar
+				break;
+			case 0x3138: // Harmonix MPA in Drums Mode - Wii
+				device._device.idVendor = 0x12BA; // SCEA
+				device._device.idProduct = 0x0218; // Harmonix MPA in Drums Mode
+				break;
+			case 0x3338: // Harmonix MPA in Keyboard Mode - Wii
+				device._device.idVendor = 0x12BA; // SCEA
+				device._device.idProduct = 0x2338; // Harmonix MPA in Keyboard Mode
+				break;
+			case 0x3438: // Harmonix MPA in Button Guitar Mode - Wii
+				device._device.idVendor = 0x12BA; // SCEA
+				device._device.idProduct = 0x2438; // Harmonix MPA in Button Guitar Mode
+				break;
+			case 0x3538: // Harmonix MPA in Real Guitar Mode - Wii
+				device._device.idVendor = 0x12BA; // SCEA
+				device._device.idProduct = 0x2538; // Harmonix MPA in Real Guitar Mode
+				break;
+			default:
+				break;
+		}
+	}
 }
 
 usb_device_passthrough::~usb_device_passthrough()
@@ -87,6 +155,15 @@ void usb_device_passthrough::send_libusb_transfer(libusb_transfer* transfer)
 		default:
 		{
 			sys_usbd.error("Unexpected error from libusb_submit_transfer: %d(%s)", res, libusb_error_name(res));
+
+			// Mark as a failed fake transfer so the USB manager processes a completion
+			// instead of leaving the request stuck in the busy state forever.
+			UsbTransfer* usbd_transfer = static_cast<UsbTransfer*>(transfer->user_data);
+			usbd_transfer->busy = true;
+			usbd_transfer->fake = true;
+			usbd_transfer->expected_result = EHCI_CC_HALTED;
+			usbd_transfer->expected_count = 0;
+			usbd_transfer->expected_time = get_timestamp();
 			return;
 		}
 		}
@@ -111,8 +188,8 @@ void usb_device_passthrough::read_descriptors()
 	// Directly getting configuration descriptors from the device instead of going through libusb parsing functions as they're not needed
 	for (u8 index = 0; index < device._device.bNumConfigurations; index++)
 	{
-		u8 buf[1000];
-		int ssize = libusb_control_transfer(lusb_handle, +LIBUSB_ENDPOINT_IN | +LIBUSB_REQUEST_TYPE_STANDARD | +LIBUSB_RECIPIENT_DEVICE, LIBUSB_REQUEST_GET_DESCRIPTOR, 0x0200 | index, 0, buf, 1000, 0);
+		std::array<u8, 1000> buf{};
+		const int ssize = libusb_control_transfer(lusb_handle, +LIBUSB_ENDPOINT_IN | +LIBUSB_REQUEST_TYPE_STANDARD | +LIBUSB_RECIPIENT_DEVICE, LIBUSB_REQUEST_GET_DESCRIPTOR, 0x0200 | index, 0, buf.data(), static_cast<u16>(buf.size()), 0);
 		if (ssize < 0)
 		{
 			sys_usbd.fatal("Couldn't get the config from the device: %d(%s)", ssize, libusb_error_name(ssize));
@@ -122,12 +199,15 @@ void usb_device_passthrough::read_descriptors()
 		// Minimalistic parse
 		auto& conf = device.add_node(UsbDescriptorNode(buf[0], buf[1], &buf[2]));
 
-		for (int index = buf[0]; index < ssize;)
+		for (int idx = buf[0]; (idx + 2) <= ssize;)
 		{
-			conf.add_node(UsbDescriptorNode(buf[index], buf[index + 1], &buf[index + 2]));
-			index += buf[index];
+			const u8 len = buf[idx];
+			ensure(len > 0);
+			conf.add_node(UsbDescriptorNode(len, buf[idx + 1], &buf[idx + 2]));
+			idx += len;
 		}
 	}
+	patch_descriptors();
 }
 
 u32 usb_device_passthrough::get_configuration(u8* buf)
@@ -141,9 +221,9 @@ bool usb_device_passthrough::set_configuration(u8 cfg_num)
 	return (libusb_set_configuration(lusb_handle, cfg_num) == LIBUSB_SUCCESS);
 };
 
-bool usb_device_passthrough::set_interface(u8 int_num)
+bool usb_device_passthrough::set_interface(u8 int_num, u8 alt_num)
 {
-	usb_device::set_interface(int_num);
+	usb_device::set_interface(int_num, alt_num);
 	return (libusb_claim_interface(lusb_handle, int_num) == LIBUSB_SUCCESS);
 }
 
@@ -162,7 +242,23 @@ void usb_device_passthrough::control_transfer(u8 bmRequestType, u8 bRequest, u16
 
 void usb_device_passthrough::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer)
 {
-	libusb_fill_interrupt_transfer(transfer->transfer, lusb_handle, endpoint, buf, buf_size, callback_transfer, transfer, 0);
+	// Pick the libusb helper matching the endpoint's actual transfer type. The PS3 USB
+	// stack routes both bulk and interrupt transfers through this method, but submitting
+	// an interrupt URB to a bulk endpoint fails with EINVAL on Linux.
+	const UsbDeviceEndpoint* ep_desc = find_endpoint(static_cast<u8>(endpoint));
+	const bool is_bulk = ep_desc && (ep_desc->bmAttributes & LIBUSB_TRANSFER_TYPE_MASK) == LIBUSB_TRANSFER_TYPE_BULK;
+
+	sys_usbd.trace("USIO debug: submitting passthrough transfer endpoint=0x%x dir=%s size=0x%x type=%s",
+		endpoint, (endpoint & LIBUSB_ENDPOINT_IN) ? "IN" : "OUT", buf_size, is_bulk ? "bulk" : "interrupt");
+
+	if (is_bulk)
+	{
+		libusb_fill_bulk_transfer(transfer->transfer, lusb_handle, endpoint, buf, buf_size, callback_transfer, transfer, 0);
+	}
+	else
+	{
+		libusb_fill_interrupt_transfer(transfer->transfer, lusb_handle, endpoint, buf, buf_size, callback_transfer, transfer, 0);
+	}
 	send_libusb_transfer(transfer->transfer);
 }
 
@@ -174,7 +270,7 @@ void usb_device_passthrough::isochronous_transfer(UsbTransfer* transfer)
 
 	for (u32 index = 0; index < transfer->iso_request.num_packets; index++)
 	{
-		transfer->transfer->iso_packet_desc[index].length = transfer->iso_request.packets[index];
+		transfer->transfer->iso_packet_desc[index].length = ::at32(transfer->iso_request.packets, index);
 	}
 
 	send_libusb_transfer(transfer->transfer);
@@ -290,7 +386,7 @@ void usb_device_emulated::control_transfer(u8 bmRequestType, u8 bRequest, u16 wV
 	case 0U /*silences warning*/ | LIBUSB_ENDPOINT_OUT | LIBUSB_REQUEST_TYPE_STANDARD | LIBUSB_RECIPIENT_INTERFACE: // 0x01
 		switch (bRequest)
 		{
-		case LIBUSB_REQUEST_SET_INTERFACE: usb_device::set_interface(::narrow<u8>(wIndex)); break;
+		case LIBUSB_REQUEST_SET_INTERFACE: usb_device::set_interface(::narrow<u8>(wIndex), ::narrow<u8>(wValue)); break;
 		default: sys_usbd.error("Unhandled control transfer(0x%02x): 0x%02x", bmRequestType, bRequest); break;
 		}
 		break;

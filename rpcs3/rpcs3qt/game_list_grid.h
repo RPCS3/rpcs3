@@ -12,14 +12,17 @@ class game_list_grid : public flow_widget, public game_list_base
 public:
 	explicit game_list_grid();
 
+	void stop_movie();
+
 	void clear_list() override;
 
 	void populate(
 		const std::vector<game_info>& game_data,
 		const std::map<QString, QString>& notes_map,
 		const std::map<QString, QString>& title_map,
-		const std::string& selected_item_id,
-		bool play_hover_movies) override;
+		const std::set<std::string>& selected_item_ids,
+		bool play_hover_movies,
+		bool play_hover_music) override;
 
 	void repaint_icons(std::vector<game_info>& game_data, const QColor& icon_color, const QSize& icon_size, qreal device_pixel_ratio) override;
 

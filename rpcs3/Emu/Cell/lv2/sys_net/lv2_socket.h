@@ -104,8 +104,10 @@ public:
 	virtual void close()          = 0;
 	virtual s32 shutdown(s32 how) = 0;
 
-	virtual s32 poll(sys_net_pollfd& sn_pfd, pollfd& native_pfd)                           = 0;
+	virtual void poll(sys_net_pollfd& sn_pfd, pollfd& native_pfd) = 0;
 	virtual std::tuple<bool, bool, bool> select(bs_t<poll_t> selected, pollfd& native_pfd) = 0;
+
+	virtual void get_sockinfo(sys_net_sockinfo_t& info) = 0;
 
 	error_code abort_socket(s32 flags);
 
@@ -136,6 +138,8 @@ protected:
 	// Socket options value keepers
 	// Non-blocking IO option
 	s32 so_nbio = 0;
+	// Broadcast option
+	s32 so_broadcast = 0;
 	// Error, only used for connection result for non blocking stream sockets
 	s32 so_error = 0;
 	// Unsupported option

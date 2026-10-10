@@ -2,10 +2,19 @@
 #include "Emu/Memory/vm.h"
 #include "TextureUtils.h"
 #include "../RSXThread.h"
-#include "../rsx_utils.h"
+#include "../Utils/rsx_utils.h"
+#include "../Utils/color_utils.hpp"
+#include "../Utils/image_utils.hpp"
+
 #include "3rdparty/bcdec/bcdec.hpp"
 
 #include "util/asm.hpp"
+
+// Unaligned u128 alias
+union x128
+{
+	u8 _u8[16];
+};
 
 namespace utils
 {
@@ -25,7 +34,7 @@ namespace utils
 namespace
 {
 
-#ifndef __APPLE__
+#if !defined(__APPLE__) || !defined(ARCH_X64)
 u16 convert_rgb655_to_rgb565(const u16 bits)
 {
 	// g6 = g5
@@ -228,49 +237,42 @@ struct copy_unmodified_block_swizzled
 		if (std::is_same_v<T, U> && dst_pitch_in_block == width_in_block && words_per_block == 1 && !border)
 		{
 			rsx::convert_linear_swizzle_3d<T>(src.data(), dst.data(), width_in_block, row_count, depth);
+			return;
+		}
+
+		u32 padded_width, padded_height;
+		if (border)
+		{
+			padded_width = rsx::next_pow2(width_in_block + border + border);
+			padded_height = rsx::next_pow2(row_count + border + border);
 		}
 		else
 		{
-			u32 padded_width, padded_height;
-			if (border)
-			{
-				padded_width = rsx::next_pow2(width_in_block + border + border);
-				padded_height = rsx::next_pow2(row_count + border + border);
-			}
-			else
-			{
-				padded_width = width_in_block;
-				padded_height = row_count;
-			}
-
-			const u32 size_in_block = padded_width * padded_height * depth * 2;
-			rsx::simple_array<U> tmp(size_in_block * words_per_block);
-
-			if (words_per_block == 1) [[likely]]
-			{
-				rsx::convert_linear_swizzle_3d<T>(src.data(), tmp.data(), padded_width, padded_height, depth);
-			}
-			else
-			{
-				switch (words_per_block * sizeof(T))
-				{
-				case 4:
-					rsx::convert_linear_swizzle_3d<u32>(src.data(), tmp.data(), padded_width, padded_height, depth);
-					break;
-				case 8:
-					rsx::convert_linear_swizzle_3d<u64>(src.data(), tmp.data(), padded_width, padded_height, depth);
-					break;
-				case 16:
-					rsx::convert_linear_swizzle_3d<u128>(src.data(), tmp.data(), padded_width, padded_height, depth);
-					break;
-				default:
-					fmt::throw_exception("Failed to decode swizzled format, words_per_block=%d, src_type_size=%d", words_per_block, sizeof(T));
-				}
-			}
-
-			std::span<const U> src_span = tmp;
-			copy_unmodified_block::copy_mipmap_level(dst, src_span, words_per_block, width_in_block, row_count, depth, border, dst_pitch_in_block, padded_width);
+			padded_width = width_in_block;
+			padded_height = row_count;
 		}
+
+		const u32 size_in_block = padded_width * padded_height * depth * 2;
+		rsx::simple_array<U, sizeof(u128)> tmp(size_in_block * words_per_block);
+
+		switch (const u16 block_size = words_per_block * sizeof(T))
+		{
+		case 1:
+			rsx::convert_linear_swizzle_3d<u8>(src.data(), tmp.data(), padded_width, padded_height, depth);
+			break;
+		case 2:
+			rsx::convert_linear_swizzle_3d<u16>(src.data(), tmp.data(), padded_width, padded_height, depth);
+			break;
+		case 4:
+		case 8:
+		case 16:
+			// Maximum block size on RSX is 4 bytes. Wider blocks are stored as multiple texels.
+			rsx::convert_linear_swizzle_3d<u32>(src.data(), tmp.data(), padded_width * (block_size / 4), padded_height, depth);
+			break;
+		}
+
+		std::span<const U> src_span = tmp;
+		copy_unmodified_block::copy_mipmap_level(dst, src_span, words_per_block, width_in_block, row_count, depth, border, dst_pitch_in_block, padded_width);
 	}
 };
 
@@ -520,14 +522,14 @@ struct copy_decoded_bc1_block
 
 struct copy_decoded_bc2_block
 {
-	static void copy_mipmap_level(std::span<u32> dst, std::span<const u128> src, u16 width_in_block, u32 row_count, u16 depth, u32 dst_pitch_in_block, u32 src_pitch_in_block)
+	static void copy_mipmap_level(std::span<u32> dst, std::span<const x128> src, u16 width_in_block, u32 row_count, u16 depth, u32 dst_pitch_in_block, u32 src_pitch_in_block)
 	{
 		u32 src_offset = 0, dst_offset = 0, destinationPitch = dst_pitch_in_block * 4;
 		for (u32 row = 0; row < row_count * depth; row++)
 		{
 			for (u32 col = 0; col < width_in_block; col++)
 			{
-				const u8* compressedBlock = reinterpret_cast<const u8*>(&src[src_offset + col]);
+				const u8* compressedBlock = src[src_offset + col]._u8;
 				u8* decompressedBlock = reinterpret_cast<u8*>(&dst[dst_offset + col * 4]);
 				bcdec_bc2(compressedBlock, decompressedBlock, destinationPitch);
 			}
@@ -540,14 +542,14 @@ struct copy_decoded_bc2_block
 
 struct copy_decoded_bc3_block
 {
-	static void copy_mipmap_level(std::span<u32> dst, std::span<const u128> src, u16 width_in_block, u32 row_count, u16 depth, u32 dst_pitch_in_block, u32 src_pitch_in_block)
+	static void copy_mipmap_level(std::span<u32> dst, std::span<const x128> src, u16 width_in_block, u32 row_count, u16 depth, u32 dst_pitch_in_block, u32 src_pitch_in_block)
 	{
 		u32 src_offset = 0, dst_offset = 0, destinationPitch = dst_pitch_in_block * 4;
 		for (u32 row = 0; row < row_count * depth; row++)
 		{
 			for (u32 col = 0; col < width_in_block; col++)
 			{
-				const u8* compressedBlock = reinterpret_cast<const u8*>(&src[src_offset + col]);
+				const u8* compressedBlock = src[src_offset + col]._u8;
 				u8* decompressedBlock = reinterpret_cast<u8*>(&dst[dst_offset + col * 4]);
 				bcdec_bc3(compressedBlock, decompressedBlock, destinationPitch);
 			}
@@ -596,8 +598,7 @@ namespace
 
 			for (int row = 0; row < row_count; ++row)
 			{
-				rsx::memory_transfer_cmd cmd{ dst_, src_, width_in_bytes };
-				result.push_back(cmd);
+				result.push_back(rsx::memory_transfer_cmd{ dst_, src_, width_in_bytes });
 				src_ += src_pitch_in_bytes;
 				dst_ += dst_pitch_in_bytes;
 			}
@@ -751,27 +752,15 @@ std::tuple<u16, u16, u8> get_height_depth_layer(const RsxTextureType &tex)
 	}
 	fmt::throw_exception("Unsupported texture dimension");
 }
-}
 
-template<typename RsxTextureType>
-std::vector<rsx::subresource_layout> get_subresources_layout_impl(const RsxTextureType &texture)
+// Common implementation for packing texture definitions into subresource layout arrays
+std::vector<rsx::subresource_layout> get_subresources_layout_impl(
+	const std::byte* pixels,
+	u32 format,
+	u16 w, u16 h, u16 depth,
+	u8 layer, u16 mipmap_count, u32 pitch,
+	bool is_swizzled, bool has_border)
 {
-	u16 w = texture.width();
-	u16 h;
-	u16 depth;
-	u8 layer;
-
-	std::tie(h, depth, layer) = get_height_depth_layer(texture);
-
-	const auto format = texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
-	auto pitch = texture.pitch();
-
-	const u32 texaddr = rsx::get_address(texture.offset(), texture.location());
-	auto pixels = vm::_ptr<const std::byte>(texaddr);
-
-	const bool is_swizzled = !(texture.format() & CELL_GCM_TEXTURE_LN);
-	const bool has_border = !texture.border_type();
-
 	if (!is_swizzled)
 	{
 		if (const auto packed_pitch = rsx::get_format_packed_pitch(format, w, has_border, false); pitch < packed_pitch) [[unlikely]]
@@ -792,10 +781,10 @@ std::vector<rsx::subresource_layout> get_subresources_layout_impl(const RsxTextu
 	switch (format)
 	{
 	case CELL_GCM_TEXTURE_B8:
-		return get_subresources_layout_impl<1, u8>(pixels, w, h, depth, layer, texture.get_exact_mipmap_count(), pitch, !is_swizzled, has_border);
+		return get_subresources_layout_impl<1, u8>(pixels, w, h, depth, layer, mipmap_count, pitch, !is_swizzled, has_border);
 	case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
 	case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
-		return get_subresources_layout_impl<2, u32>(pixels, w, h, depth, layer, texture.get_exact_mipmap_count(), pitch, !is_swizzled, has_border);
+		return get_subresources_layout_impl<2, u32>(pixels, w, h, depth, layer, mipmap_count, pitch, !is_swizzled, has_border);
 	case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
 	case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
 	case CELL_GCM_TEXTURE_DEPTH16:
@@ -808,7 +797,7 @@ std::vector<rsx::subresource_layout> get_subresources_layout_impl(const RsxTextu
 	case CELL_GCM_TEXTURE_R6G5B5:
 	case CELL_GCM_TEXTURE_G8B8:
 	case CELL_GCM_TEXTURE_X16:
-		return get_subresources_layout_impl<1, u16>(pixels, w, h, depth, layer, texture.get_exact_mipmap_count(), pitch, !is_swizzled, has_border);
+		return get_subresources_layout_impl<1, u16>(pixels, w, h, depth, layer, mipmap_count, pitch, !is_swizzled, has_border);
 	case CELL_GCM_TEXTURE_DEPTH24_D8: // Untested
 	case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT: // Untested
 	case CELL_GCM_TEXTURE_D8R8G8B8:
@@ -816,18 +805,35 @@ std::vector<rsx::subresource_layout> get_subresources_layout_impl(const RsxTextu
 	case CELL_GCM_TEXTURE_Y16_X16:
 	case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
 	case CELL_GCM_TEXTURE_X32_FLOAT:
-		return get_subresources_layout_impl<1, u32>(pixels, w, h, depth, layer, texture.get_exact_mipmap_count(), pitch, !is_swizzled, has_border);
+		return get_subresources_layout_impl<1, u32>(pixels, w, h, depth, layer, mipmap_count, pitch, !is_swizzled, has_border);
 	case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
-		return get_subresources_layout_impl<1, u64>(pixels, w, h, depth, layer, texture.get_exact_mipmap_count(), pitch, !is_swizzled, has_border);
+		return get_subresources_layout_impl<1, u64>(pixels, w, h, depth, layer, mipmap_count, pitch, !is_swizzled, has_border);
 	case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
-		return get_subresources_layout_impl<1, u128>(pixels, w, h, depth, layer, texture.get_exact_mipmap_count(), pitch, !is_swizzled, has_border);
+		return get_subresources_layout_impl<1, u128>(pixels, w, h, depth, layer, mipmap_count, pitch, !is_swizzled, has_border);
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
-		return get_subresources_layout_impl<4, u64>(pixels, w, h, depth, layer, texture.get_exact_mipmap_count(), pitch, !is_swizzled, false);
+		return get_subresources_layout_impl<4, u64>(pixels, w, h, depth, layer, mipmap_count, pitch, !is_swizzled, false);
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
 	case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
-		return get_subresources_layout_impl<4, u128>(pixels, w, h, depth, layer, texture.get_exact_mipmap_count(), pitch, !is_swizzled, false);
+		return get_subresources_layout_impl<4, u128>(pixels, w, h, depth, layer, mipmap_count, pitch, !is_swizzled, false);
 	}
 	fmt::throw_exception("Wrong format 0x%x", format);
+}
+}
+
+template<typename RsxTextureType>
+std::vector<rsx::subresource_layout> get_subresources_layout_impl(const RsxTextureType &texture)
+{
+	const auto [h, depth, layer] = get_height_depth_layer(texture);
+	const u32 texaddr = rsx::get_address(texture.offset(), texture.location());
+
+	return get_subresources_layout_impl(
+		vm::_ptr<const std::byte>(texaddr),
+		texture.format() & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN),
+		texture.width(), h, depth, layer,
+		texture.get_exact_mipmap_count(),
+		texture.pitch(),
+		!(texture.format() & CELL_GCM_TEXTURE_LN),
+		!texture.border_type());
 }
 
 namespace rsx
@@ -847,6 +853,17 @@ namespace rsx
 		}
 	}
 
+	bool texture_format_ex::hw_SNORM_possible() const
+	{
+		return (texel_remap_control & SEXT_MASK) == (get_host_format_snorm_mask(format()) << SEXT_OFFSET);
+	}
+
+	bool texture_format_ex::hw_SRGB_possible() const
+	{
+		return encoded_remap == RSX_TEXTURE_REMAP_IDENTITY &&
+			(texel_remap_control & GAMMA_CTRL_MASK) == GAMMA_RGB_MASK;
+	}
+
 	std::vector<rsx::subresource_layout> get_subresources_layout(const rsx::fragment_texture& texture)
 	{
 		return get_subresources_layout_impl(texture);
@@ -855,6 +872,40 @@ namespace rsx
 	std::vector<rsx::subresource_layout> get_subresources_layout(const rsx::vertex_texture& texture)
 	{
 		return get_subresources_layout_impl(texture);
+	}
+
+	std::vector<rsx::subresource_layout> get_subresources_layout(const rsx::image_section_attributes_t& attrs, rsx::texture_dimension_extended type)
+	{
+		u16 height = attrs.height;
+		u16 depth = 1;
+		u8 layer = 1;
+
+		switch (type)
+		{
+		case rsx::texture_dimension_extended::texture_dimension_1d:
+			height = 1;
+			break;
+		case rsx::texture_dimension_extended::texture_dimension_2d:
+			break;
+		case rsx::texture_dimension_extended::texture_dimension_cubemap:
+			layer = 6;
+			break;
+		case rsx::texture_dimension_extended::texture_dimension_3d:
+			depth = attrs.depth;
+			break;
+		default:
+			fmt::throw_exception("Unsupported texture dimension");
+		}
+
+		// NOTE: This variant goes through the hv pointer.
+		return get_subresources_layout_impl(
+			vm::get_super_ptr<const std::byte>(attrs.address),
+			attrs.gcm_format,
+			attrs.width, height, depth, layer,
+			attrs.mipmaps,
+			attrs.pitch,
+			attrs.swizzled,
+			false);
 	}
 
 	texture_memory_info upload_texture_subresource(rsx::io_buffer& dst_buffer, const rsx::subresource_layout& src_layout, int format, bool is_swizzled, texture_uploader_capabilities& caps)
@@ -896,7 +947,7 @@ namespace rsx
 			break;
 		}
 
-#ifndef __APPLE__
+#if !defined(__APPLE__) || !defined(ARCH_X64)
 		case CELL_GCM_TEXTURE_R6G5B5:
 		{
 			if (is_swizzled)
@@ -1028,22 +1079,25 @@ namespace rsx
 				// This is only supported using Nvidia OpenGL.
 				// Remove the VTC tiling to support ATI and Vulkan.
 				copy_unmodified_block_vtc::copy_mipmap_level(dst_buffer.as_span<u64>(), src_layout.data.as_span<const u64>(), w, h, depth, get_row_pitch_in_block<u64>(w, caps.alignment), src_layout.pitch_in_block);
+				break;
 			}
-			else if (is_3d && !is_po2 && caps.supports_vtc_decoding)
+
+			if (is_3d && !is_po2 && caps.supports_vtc_decoding)
 			{
 				// In this case, hardware expects us to feed it a VTC input, but on PS3 we only have a linear one.
 				// We need to compress the 2D-planar DXT input into a VTC output
 				copy_linear_block_to_vtc::copy_mipmap_level(dst_buffer.as_span<u64>(), src_layout.data.as_span<const u64>(), w, h, depth, get_row_pitch_in_block<u64>(w, caps.alignment), src_layout.pitch_in_block);
+				break;
 			}
-			else if (caps.supports_zero_copy)
+
+			if (caps.supports_zero_copy)
 			{
 				result.require_upload = true;
 				result.deferred_cmds = build_transfer_cmds(src_layout.data.data(), 8, w, h, depth, 0, get_row_pitch_in_block<u64>(w, caps.alignment), src_layout.pitch_in_block);
+				break;
 			}
-			else
-			{
-				copy_unmodified_block::copy_mipmap_level(dst_buffer.as_span<u64>(), src_layout.data.as_span<const u64>(), 1, w, h, depth, 0, get_row_pitch_in_block<u64>(w, caps.alignment), src_layout.pitch_in_block);
-			}
+
+			copy_unmodified_block::copy_mipmap_level(dst_buffer.as_span<u64>(), src_layout.data.as_span<const u64>(), 1, w, h, depth, 0, get_row_pitch_in_block<u64>(w, caps.alignment), src_layout.pitch_in_block);
 			break;
 		}
 
@@ -1051,7 +1105,7 @@ namespace rsx
 		{
 			if (!caps.supports_dxt)
 			{
-				copy_decoded_bc2_block::copy_mipmap_level(dst_buffer.as_span<u32>(), src_layout.data.as_span<const u128>(), w, h, depth, get_row_pitch_in_block<u32>(w, caps.alignment), src_layout.pitch_in_block);
+				copy_decoded_bc2_block::copy_mipmap_level(dst_buffer.as_span<u32>(), src_layout.data.as_span<const x128>(), w, h, depth, get_row_pitch_in_block<u32>(w, caps.alignment), src_layout.pitch_in_block);
 				break;
 			}
 			[[fallthrough]];
@@ -1060,7 +1114,7 @@ namespace rsx
 		{
 			if (!caps.supports_dxt)
 			{
-				copy_decoded_bc3_block::copy_mipmap_level(dst_buffer.as_span<u32>(), src_layout.data.as_span<const u128>(), w, h, depth, get_row_pitch_in_block<u32>(w, caps.alignment), src_layout.pitch_in_block);
+				copy_decoded_bc3_block::copy_mipmap_level(dst_buffer.as_span<u32>(), src_layout.data.as_span<const x128>(), w, h, depth, get_row_pitch_in_block<u32>(w, caps.alignment), src_layout.pitch_in_block);
 				break;
 			}
 
@@ -1072,23 +1126,44 @@ namespace rsx
 				// PS3 uses the Nvidia VTC memory layout for compressed 3D textures.
 				// This is only supported using Nvidia OpenGL.
 				// Remove the VTC tiling to support ATI and Vulkan.
-				copy_unmodified_block_vtc::copy_mipmap_level(dst_buffer.as_span<u128>(), src_layout.data.as_span<const u128>(), w, h, depth, get_row_pitch_in_block<u128>(w, caps.alignment), src_layout.pitch_in_block);
+				if (src_layout.data.is_naturally_aligned<u128>())
+				{
+					copy_unmodified_block_vtc::copy_mipmap_level(dst_buffer.as_span<u128>(), src_layout.data.as_span<const u128>(), w, h, depth, get_row_pitch_in_block<u128>(w, caps.alignment), src_layout.pitch_in_block);
+					break;
+				}
+
+				copy_unmodified_block_vtc::copy_mipmap_level(dst_buffer.as_span<x128>(), src_layout.data.as_span<const x128>(), w, h, depth, get_row_pitch_in_block<u128>(w, caps.alignment), src_layout.pitch_in_block);
+				break;
 			}
-			else if (is_3d && !is_po2 && caps.supports_vtc_decoding)
+
+			if (is_3d && !is_po2 && caps.supports_vtc_decoding)
 			{
 				// In this case, hardware expects us to feed it a VTC input, but on PS3 we only have a linear one.
 				// We need to compress the 2D-planar DXT input into a VTC output
-				copy_linear_block_to_vtc::copy_mipmap_level(dst_buffer.as_span<u128>(), src_layout.data.as_span<const u128>(), w, h, depth, get_row_pitch_in_block<u128>(w, caps.alignment), src_layout.pitch_in_block);
+				if (src_layout.data.is_naturally_aligned<u128>())
+				{
+					copy_linear_block_to_vtc::copy_mipmap_level(dst_buffer.as_span<u128>(), src_layout.data.as_span<const u128>(), w, h, depth, get_row_pitch_in_block<u128>(w, caps.alignment), src_layout.pitch_in_block);
+					break;
+				}
+
+				copy_linear_block_to_vtc::copy_mipmap_level(dst_buffer.as_span<x128>(), src_layout.data.as_span<const x128>(), w, h, depth, get_row_pitch_in_block<u128>(w, caps.alignment), src_layout.pitch_in_block);
+				break;
 			}
-			else if (caps.supports_zero_copy)
+
+			if (caps.supports_zero_copy)
 			{
 				result.require_upload = true;
 				result.deferred_cmds = build_transfer_cmds(src_layout.data.data(), 16, w, h, depth, 0, get_row_pitch_in_block<u128>(w, caps.alignment), src_layout.pitch_in_block);
+				break;
 			}
-			else
+
+			if (src_layout.data.is_naturally_aligned<u128>())
 			{
 				copy_unmodified_block::copy_mipmap_level(dst_buffer.as_span<u128>(), src_layout.data.as_span<const u128>(), 1, w, h, depth, 0, get_row_pitch_in_block<u128>(w, caps.alignment), src_layout.pitch_in_block);
+				break;
 			}
+
+			copy_unmodified_block::copy_mipmap_level(dst_buffer.as_span<x128>(), src_layout.data.as_span<const x128>(), 1, w, h, depth, 0, get_row_pitch_in_block<u128>(w, caps.alignment), src_layout.pitch_in_block);
 			break;
 		}
 
@@ -1096,80 +1171,65 @@ namespace rsx
 			fmt::throw_exception("Wrong format 0x%x", format);
 		}
 
-		if (word_size)
+		if (!word_size)
 		{
-			if (word_size == 1)
+			return result;
+		}
+
+		result.element_size = word_size;
+		result.block_length = words_per_block;
+
+		bool require_cpu_swizzle = !caps.supports_hw_deswizzle && is_swizzled;
+		bool require_cpu_byteswap = word_size > 1 && !caps.supports_byteswap;
+
+		if (is_swizzled && caps.supports_hw_deswizzle)
+		{
+			result.require_deswizzle = true;
+		}
+
+		if (!require_cpu_byteswap && !require_cpu_swizzle)
+		{
+			result.require_swap = (word_size > 1);
+
+			if (caps.supports_zero_copy)
 			{
-				if (is_swizzled)
-				{
-					copy_unmodified_block_swizzled::copy_mipmap_level(dst_buffer.as_span<u8>(), src_layout.data.as_span<const u8>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
-				}
-				else if (caps.supports_zero_copy)
-				{
-					result.require_upload = true;
-					result.deferred_cmds = build_transfer_cmds(src_layout.data.data(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
-				}
-				else
-				{
-					copy_unmodified_block::copy_mipmap_level(dst_buffer.as_span<u8>(), src_layout.data.as_span<const u8>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
-				}
+				result.require_upload = true;
+				result.deferred_cmds = build_transfer_cmds(src_layout.data.data(), word_size * words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
 			}
+			else if (word_size == 1)
+			{
+				copy_unmodified_block::copy_mipmap_level(dst_buffer.as_span<u8>(), src_layout.data.as_span<const u8>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
+			}
+			else if (word_size == 2)
+			{
+				copy_unmodified_block::copy_mipmap_level(dst_buffer.as_span<u16>(), src_layout.data.as_span<const u16>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
+			}
+			else if (word_size == 4)
+			{
+				copy_unmodified_block::copy_mipmap_level(dst_buffer.as_span<u32>(), src_layout.data.as_span<const u32>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
+			}
+
+			return result;
+		}
+
+		if (word_size == 1)
+		{
+			ensure(is_swizzled);
+			copy_unmodified_block_swizzled::copy_mipmap_level(dst_buffer.as_span<u8>(), src_layout.data.as_span<const u8>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
+		}
+		else if (word_size == 2)
+		{
+			if (is_swizzled)
+				copy_unmodified_block_swizzled::copy_mipmap_level(dst_buffer.as_span<u16>(), src_layout.data.as_span<const be_t<u16>>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
 			else
-			{
-				result.element_size = word_size;
-				result.block_length = words_per_block;
-
-				bool require_cpu_swizzle = !caps.supports_hw_deswizzle && is_swizzled;
-				bool require_cpu_byteswap = !caps.supports_byteswap;
-
-				if (is_swizzled && caps.supports_hw_deswizzle)
-				{
-					if (word_size == 4 || (((word_size * words_per_block) & 3) == 0))
-					{
-						result.require_deswizzle = true;
-					}
-					else
-					{
-						require_cpu_swizzle = true;
-					}
-				}
-
-				if (!require_cpu_byteswap && !require_cpu_swizzle)
-				{
-					result.require_swap = true;
-
-					if (caps.supports_zero_copy)
-					{
-						result.require_upload = true;
-						result.deferred_cmds = build_transfer_cmds(src_layout.data.data(), word_size * words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
-					}
-					else if (word_size == 2)
-					{
-						copy_unmodified_block::copy_mipmap_level(dst_buffer.as_span<u16>(), src_layout.data.as_span<const u16>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
-					}
-					else if (word_size == 4)
-					{
-						copy_unmodified_block::copy_mipmap_level(dst_buffer.as_span<u32>(), src_layout.data.as_span<const u32>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
-					}
-				}
-				else
-				{
-					if (word_size == 2)
-					{
-						if (is_swizzled)
-							copy_unmodified_block_swizzled::copy_mipmap_level(dst_buffer.as_span<u16>(), src_layout.data.as_span<const be_t<u16>>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
-						else
-							copy_unmodified_block::copy_mipmap_level(dst_buffer.as_span<u16>(), src_layout.data.as_span<const be_t<u16>>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
-					}
-					else if (word_size == 4)
-					{
-						if (is_swizzled)
-							copy_unmodified_block_swizzled::copy_mipmap_level(dst_buffer.as_span<u32>(), src_layout.data.as_span<const be_t<u32>>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
-						else
-							copy_unmodified_block::copy_mipmap_level(dst_buffer.as_span<u32>(), src_layout.data.as_span<const be_t<u32>>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
-					}
-				}
-			}
+				copy_unmodified_block::copy_mipmap_level(dst_buffer.as_span<u16>(), src_layout.data.as_span<const be_t<u16>>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
+		}
+		else if (word_size == 4)
+		{
+			if (is_swizzled)
+				copy_unmodified_block_swizzled::copy_mipmap_level(dst_buffer.as_span<u32>(), src_layout.data.as_span<const be_t<u32>>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block);
+			else
+				copy_unmodified_block::copy_mipmap_level(dst_buffer.as_span<u32>(), src_layout.data.as_span<const be_t<u32>>(), words_per_block, w, h, depth, src_layout.border, dst_pitch_in_block, src_layout.pitch_in_block);
 		}
 
 		return result;
@@ -1215,26 +1275,84 @@ namespace rsx
 		fmt::throw_exception("Unknown format 0x%x", texture_format);
 	}
 
-	bool is_int8_remapped_format(u32 format)
+	rsx::flags32_t get_format_features(u32 texture_format)
 	{
-		switch (format)
+		switch (texture_format)
 		{
+		case CELL_GCM_TEXTURE_B8:
+		case CELL_GCM_TEXTURE_A1R5G5B5:
+		case CELL_GCM_TEXTURE_A4R4G4B4:
+		case CELL_GCM_TEXTURE_R5G6B5:
+		case CELL_GCM_TEXTURE_A8R8G8B8:
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT1:
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT23:
+		case CELL_GCM_TEXTURE_COMPRESSED_DXT45:
+		case CELL_GCM_TEXTURE_G8B8:
+		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
+		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
+		case CELL_GCM_TEXTURE_R6G5B5:
+		case CELL_GCM_TEXTURE_R5G5B5A1:
+		case CELL_GCM_TEXTURE_D1R5G5B5:
+		case CELL_GCM_TEXTURE_D8R8G8B8:
+			// Base texture formats - everything is supported
+			return RSX_FORMAT_FEATURE_SIGNED_COMPONENTS | RSX_FORMAT_FEATURE_GAMMA_CORRECTION | RSX_FORMAT_FEATURE_BIASED_NORMALIZATION;
+
 		case CELL_GCM_TEXTURE_DEPTH24_D8:
 		case CELL_GCM_TEXTURE_DEPTH24_D8_FLOAT:
 		case CELL_GCM_TEXTURE_DEPTH16:
 		case CELL_GCM_TEXTURE_DEPTH16_FLOAT:
+			// Depth textures will hang the hardware if BX2 or GAMMA is active. ARGB8_SIGNED has no impact.
+			// UNSIGNED_REMAP=BIASED works on all formats including the float variants.
+			return RSX_FORMAT_FEATURE_BIASED_NORMALIZATION;
+
 		case CELL_GCM_TEXTURE_X16:
+			// X16 - GAMMA causes hangs. ARGB8_SIGNED is ignored. UNSIGNED_REMAP=BIASED works.
+			return RSX_FORMAT_FEATURE_BIASED_NORMALIZATION | RSX_FORMAT_FEATURE_16BIT_CHANNELS;
 		case CELL_GCM_TEXTURE_Y16_X16:
+			// X16 | Y16 - GAMMA causes hangs. ARGB8_SIGNED works. UNSIGNED_REMAP=BIASED also works.
+			return RSX_FORMAT_FEATURE_SIGNED_COMPONENTS | RSX_FORMAT_FEATURE_BIASED_NORMALIZATION | RSX_FORMAT_FEATURE_16BIT_CHANNELS;
+
 		case CELL_GCM_TEXTURE_COMPRESSED_HILO8:
+			// GAMMA causes GPU hangs. ARGB8_SIGNED is ignored. UNSIGNED_REMAP=BIASED works.
+			return RSX_FORMAT_FEATURE_BIASED_NORMALIZATION;
+
 		case CELL_GCM_TEXTURE_COMPRESSED_HILO_S8:
+			// GAMMA causes hangs. Other flags ignored.
+			return 0;
+
 		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
 		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
 		case CELL_GCM_TEXTURE_X32_FLOAT:
 		case CELL_GCM_TEXTURE_Y16_X16_FLOAT:
-			// NOTE: Special data formats (XY, HILO, DEPTH) are not RGB formats
-			return false;
+			// Floating point textures. Nothing works.
+			return 0;
+		}
+		fmt::throw_exception("Unknown format 0x%x", texture_format);
+	}
+
+	/**
+	 * Returns a channel mask in ARGB that can be SNORM-converted
+	 * Some formats have a hardcoded constant in one lane which we cannot SNORM-interpret in hardware.
+	 */
+	u32 get_host_format_snorm_mask(u32 format)
+	{
+		switch (format)
+		{
+		case CELL_GCM_TEXTURE_B8:
+		case CELL_GCM_TEXTURE_R5G6B5:
+		case CELL_GCM_TEXTURE_R6G5B5:
+		case CELL_GCM_TEXTURE_D1R5G5B5:
+		case CELL_GCM_TEXTURE_D8R8G8B8:
+		case CELL_GCM_TEXTURE_COMPRESSED_B8R8_G8R8:
+		case CELL_GCM_TEXTURE_COMPRESSED_R8B8_R8G8:
+			// Hardcoded alpha formats
+			return 0b1110;
+
+		case CELL_GCM_TEXTURE_X16:
+			// This one is a mess. X and Z are hardcoded. Not supported.
+			// Fall through instead of throw
 		default:
-			return true;
+			return 0b1111;
 		}
 	}
 
@@ -1384,6 +1502,24 @@ namespace rsx
 		}
 	}
 
+	bool is_float_depth_format(rsx::surface_depth_format2 format)
+	{
+		switch (format)
+		{
+		case rsx::surface_depth_format2::z16_float:
+		case rsx::surface_depth_format2::z24s8_float:
+			return true;
+		default:
+			return false;
+		}
+	}
+
+	f32 encode_emulated_depth(f32 depth)
+	{
+		// Halving the IEEE bit pattern of a non-negative float is monotonic and maps every finite value below 1
+		return std::bit_cast<f32>((std::bit_cast<u32>(std::max(depth, 0.f)) & 0x7fffffffu) >> 1);
+	}
+
 	/**
 	 * Returns number of texel lines decoded in one pitch-length number of bytes
 	 */
@@ -1455,6 +1591,7 @@ namespace rsx
 		const auto gcm_format = format & ~(CELL_GCM_TEXTURE_LN | CELL_GCM_TEXTURE_UN);
 		const bool packed = !(format & CELL_GCM_TEXTURE_LN);
 		const auto texel_rows_per_line = get_format_texel_rows_per_line(gcm_format);
+		const bool has_border = !!border;
 
 		if (!pitch && !packed)
 		{
@@ -1465,7 +1602,7 @@ namespace rsx
 					width, height, format, gcm_format);
 			}
 
-			pitch = get_format_packed_pitch(gcm_format, width, !!border, packed);
+			pitch = get_format_packed_pitch(gcm_format, width, has_border, packed);
 		}
 
 		u32 size = 0;
@@ -1476,10 +1613,14 @@ namespace rsx
 			for (u32 layer = 0; layer < layers; ++layer)
 			{
 				u32 mip_height = internal_height;
+				u32 mip_depth = depth;
+
 				for (u32 mipmap = 0; mipmap < mipmaps && mip_height > 0; ++mipmap)
 				{
-					size += pitch * mip_height * depth;
+					const auto padded_h = has_border ? (mip_height + 2u) : mip_height;
+					size += pitch * padded_h * mip_depth;
 					mip_height = std::max(mip_height / 2u, 1u);
+					mip_depth  = std::max(mip_depth / 2u, 1u);
 				}
 			}
 		}
@@ -1491,15 +1632,22 @@ namespace rsx
 
 			const u32 internal_height = (height + texel_rows_per_line - 1) / texel_rows_per_line;  // Convert texels to blocks
 			const u32 internal_width = (width + texels_per_block - 1) / texels_per_block;          // Convert texels to blocks
+
 			for (u32 layer = 0; layer < layers; ++layer)
 			{
 				u32 mip_height = internal_height;
 				u32 mip_width = internal_width;
+				u32 mip_depth = depth;
+
 				for (u32 mipmap = 0; mipmap < mipmaps && mip_height > 0; ++mipmap)
 				{
-					size += (mip_width * bytes_per_block * mip_height * depth);
+					const auto padded_w = has_border ? rsx::next_pow2(mip_width + 8u) : mip_width;
+					const auto padded_h = has_border ? rsx::next_pow2(mip_height + 8u) : mip_height;
+					size += (padded_w * bytes_per_block * padded_h * mip_depth);
+
 					mip_height = std::max(mip_height / 2u, 1u);
 					mip_width = std::max(mip_width / 2u, 1u);
+					mip_depth  = std::max(mip_depth / 2u, 1u);
 				}
 			}
 		}
@@ -1507,18 +1655,45 @@ namespace rsx
 		return size;
 	}
 
-	usz get_texture_size(const rsx::fragment_texture& texture)
+	usz get_texture_size_with_mipmaps(const RSXTexture auto& texture, u16 mipmaps)
 	{
 		return get_texture_size(texture.format(), texture.width(), texture.height(), texture.depth(),
-			texture.pitch(), texture.get_exact_mipmap_count(), texture.cubemap() ? 6 : 1,
+			texture.pitch(), mipmaps, texture.cubemap() ? 6 : 1,
 			texture.border_type() ^ 1);
 	}
 
-	usz get_texture_size(const rsx::vertex_texture& texture)
+	usz get_texture_size_impl(const RSXTexture auto& texture, u8 mip_level)
 	{
-		return get_texture_size(texture.format(), texture.width(), texture.height(), texture.depth(),
-			texture.pitch(), texture.get_exact_mipmap_count(), texture.cubemap() ? 6 : 1,
-			texture.border_type() ^ 1);
+		const auto max_levels = texture.get_exact_mipmap_count();
+		if (mip_level != RSX_GCM_MIP_LEVEL_IGNORED &&
+			mip_level >= max_levels)
+		{
+			// Mip level out of bounds
+			return 0;
+		}
+
+		const auto base_levels = (mip_level != RSX_GCM_MIP_LEVEL_IGNORED)
+			? static_cast<u16>(mip_level + 1)
+			: max_levels;
+
+		const auto base_size = get_texture_size_with_mipmaps(texture, base_levels);
+		if (mip_level == 0 || mip_level == RSX_GCM_MIP_LEVEL_IGNORED)
+		{
+			return base_size;
+		}
+
+		const auto leading_size = get_texture_size_with_mipmaps(texture, base_levels - 1);
+		return base_size - leading_size;
+	}
+
+	usz get_texture_size(const rsx::fragment_texture& texture, u8 mip_level)
+	{
+		return get_texture_size_impl(texture, mip_level);
+	}
+
+	usz get_texture_size(const rsx::vertex_texture& texture, u8 mip_level)
+	{
+		return get_texture_size_impl(texture, mip_level);
 	}
 
 	u32 get_remap_encoding(const texture_channel_remap_t& remap)
@@ -1538,15 +1713,16 @@ namespace rsx
 
 	std::pair<u32, bool> get_compatible_gcm_format(rsx::surface_color_format format)
 	{
+		// NOTE: HW tests prove that all multibyte formats need to swap bytes
 		switch (format)
 		{
 		case rsx::surface_color_format::r5g6b5:
-			return{ CELL_GCM_TEXTURE_R5G6B5, false };
+			return{ CELL_GCM_TEXTURE_R5G6B5, true };
 
 		case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
 		case rsx::surface_color_format::x8r8g8b8_o8r8g8b8:
 		case rsx::surface_color_format::a8r8g8b8:
-			return{ CELL_GCM_TEXTURE_A8R8G8B8, true }; //verified
+			return{ CELL_GCM_TEXTURE_A8R8G8B8, true };
 
 		case rsx::surface_color_format::x8b8g8r8_o8b8g8r8:
 		case rsx::surface_color_format::x8b8g8r8_z8b8g8r8:
@@ -1561,7 +1737,7 @@ namespace rsx
 
 		case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
 		case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
-			return{ CELL_GCM_TEXTURE_A1R5G5B5, false };
+			return{ CELL_GCM_TEXTURE_A1R5G5B5, true };
 
 		case rsx::surface_color_format::b8:
 			return{ CELL_GCM_TEXTURE_B8, false };
@@ -1570,7 +1746,7 @@ namespace rsx
 			return{ CELL_GCM_TEXTURE_G8B8, true };
 
 		case rsx::surface_color_format::x32:
-			return{ CELL_GCM_TEXTURE_X32_FLOAT, true }; //verified
+			return{ CELL_GCM_TEXTURE_X32_FLOAT, true };
 		default:
 			fmt::throw_exception("Unhandled surface format 0x%x", static_cast<u32>(format));
 		}
@@ -1627,9 +1803,87 @@ namespace rsx
 		}
 	}
 
-	u32 get_max_depth_value(rsx::surface_depth_format2 format)
+	rsx::surface_color_format get_compatible_surface_color_format(u32 gcm_format)
 	{
-		return get_format_block_size_in_bytes(format) == 2 ? 0xFFFF : 0xFFFFFF;
+		switch (gcm_format)
+		{
+		case CELL_GCM_TEXTURE_R5G6B5:
+			return rsx::surface_color_format::r5g6b5;
+		case CELL_GCM_TEXTURE_A8R8G8B8:
+			return rsx::surface_color_format::a8r8g8b8;
+		case CELL_GCM_TEXTURE_W16_Z16_Y16_X16_FLOAT:
+			return rsx::surface_color_format::w16z16y16x16;
+		case CELL_GCM_TEXTURE_W32_Z32_Y32_X32_FLOAT:
+			return rsx::surface_color_format::w32z32y32x32;
+		case CELL_GCM_TEXTURE_A1R5G5B5:
+			return rsx::surface_color_format::x1r5g5b5_o1r5g5b5;
+		case CELL_GCM_TEXTURE_B8:
+			return rsx::surface_color_format::b8;
+		case CELL_GCM_TEXTURE_G8B8:
+			return rsx::surface_color_format::g8b8;
+		case CELL_GCM_TEXTURE_X32_FLOAT:
+			return rsx::surface_color_format::x32;
+		default:
+			fmt::throw_exception("Unhandled surface format 0x%x", gcm_format);
+		}
+	}
+
+	rsx::surface_depth_format2 get_compatible_surface_depth_format(u32 gcm_format)
+	{
+		switch (gcm_format)
+		{
+		case RSX_FORMAT_CLASS_DEPTH16_UNORM:
+			return rsx::surface_depth_format2::z16_uint;
+		case RSX_FORMAT_CLASS_DEPTH24_UNORM_X8_PACK32:
+			return rsx::surface_depth_format2::z24s8_uint;
+		case RSX_FORMAT_CLASS_DEPTH16_FLOAT:
+			return rsx::surface_depth_format2::z16_float;
+		case RSX_FORMAT_CLASS_DEPTH24_FLOAT_X8_PACK32:
+			return rsx::surface_depth_format2::z24s8_float;
+		default:
+			fmt::throw_exception("Invalid depth format 0x%x", gcm_format);
+		}
+	}
+
+	f32 decode_e4m12(u32 value)
+	{
+		// Rebias by 2^111: unsigned E4M12 with bias 16, see E4M12Conversion.glsl
+		const uint bits = (value << 11) & 0x07FFF800u;
+		return std::bit_cast<f32>(bits) * std::bit_cast<f32>(0x77000000u);
+	}
+
+	f32 get_depth_clear_value(rsx::surface_depth_format2 format, u32 raw)
+	{
+		switch (format)
+		{
+		case rsx::surface_depth_format2::z16_uint:
+			return float(raw) / 0xFFFF;
+		case rsx::surface_depth_format2::z24s8_uint:
+			return float(raw) / 0xFFFFFF;
+		case rsx::surface_depth_format2::z16_float:
+			return decode_e4m12(raw);
+		case rsx::surface_depth_format2::z24s8_float:
+			return std::bit_cast<f32>(raw << 7);
+		default:
+				fmt::throw_exception("Unreachable");
+		}
+	}
+
+	// Hardware behaves as if each depth bound is converted into the surface's depth encoding, clamped to the format's range.
+	f32 clamp_depth_bounds_value(rsx::surface_depth_format2 format, f32 value)
+	{
+		switch (format)
+		{
+		case rsx::surface_depth_format2::z16_uint:
+		case rsx::surface_depth_format2::z24s8_uint:
+			return std::clamp(value, 0.f, 1.f);
+		case rsx::surface_depth_format2::z16_float:
+			return std::clamp(value, 0.f, decode_e4m12(0xFFFF));
+		case rsx::surface_depth_format2::z24s8_float:
+			return std::max(value, 0.f);
+		default:
+				fmt::throw_exception("Unreachable");
+		}
 	}
 
 	bool is_texcoord_wrapping_mode(rsx::texture_wrap_mode mode)
@@ -1672,6 +1926,27 @@ namespace rsx
 			return wrap_s == rsx::texture_wrap_mode::border || wrap_t == rsx::texture_wrap_mode::border || wrap_r == rsx::texture_wrap_mode::border;
 		default:
 			return false;
+		}
+	}
+
+	u32 get_ROP_output_shuffle_index(rsx::surface_color_format format)
+	{
+		switch (format)
+		{
+		case surface_color_format::b8:
+			return static_cast<u32>(ROP_channel_remap::BBBB);
+		case surface_color_format::g8b8:
+			return static_cast<u32>(ROP_channel_remap::GBGB);
+		case surface_color_format::x1r5g5b5_z1r5g5b5:
+		case surface_color_format::x8r8g8b8_z8r8g8b8:
+		case surface_color_format::x8b8g8r8_z8b8g8r8:
+			return static_cast<u32>(ROP_channel_remap::RGB0);
+		case surface_color_format::x1r5g5b5_o1r5g5b5:
+		case surface_color_format::x8r8g8b8_o8r8g8b8:
+		case surface_color_format::x8b8g8r8_o8b8g8r8:
+			return static_cast<u32>(ROP_channel_remap::RGB1);
+		default:
+			return static_cast<u32>(ROP_channel_remap::RGBA);
 		}
 	}
 }

@@ -24,9 +24,6 @@ namespace gui
 			// main window toolbar icon color
 			"QLabel#toolbar_icon_color { color: #5b5b5b; }"
 
-			// thumbnail icon color
-			"QLabel#thumbnail_icon_color { color: rgba(0, 100, 231, 255); }"
-
 			// game list icon color
 			"QLabel#gamelist_icon_background_color { color: rgba(240, 240, 240, 255); }"
 

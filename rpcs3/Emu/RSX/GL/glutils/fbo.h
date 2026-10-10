@@ -123,13 +123,32 @@ namespace gl
 				return 0;
 			}
 
-			void operator = (const texture& rhs)
+			// Attach a specific mipmap level of a flat 2D image.
+			void bind(const texture& rhs, GLint level = 0)
 			{
 				ensure(rhs.get_target() == texture::target::texture2D ||
 					rhs.get_target() == texture::target::texture2DMS);
 
 				m_parent.m_resource_bindings[m_id] = rhs.id();
-				DSA_CALL2(NamedFramebufferTexture, m_parent.id(), m_id, rhs.id(), 0);
+				DSA_CALL2(NamedFramebufferTexture, m_parent.id(), m_id, rhs.id(), level);
+			}
+
+			// Attach one slice of a layered image. Cubemap faces are addressed as array layers.
+			void bind_layer(const texture& rhs, GLint level, GLint layer)
+			{
+				ensure(rhs.get_target() == texture::target::texture3D ||
+					rhs.get_target() == texture::target::texture2DArray ||
+					rhs.get_target() == texture::target::textureCUBE);
+
+				ensure(layer < 6 || rhs.get_target() != texture::target::textureCUBE);
+
+				m_parent.m_resource_bindings[m_id] = rhs.id();
+				DSA_CALL2(NamedFramebufferTextureLayer, m_parent.id(), m_id, rhs.id(), level, layer);
+			}
+
+			void operator = (const texture& rhs)
+			{
+				bind(rhs, 0);
 			}
 
 			void operator = (const GLuint rhs)
@@ -237,6 +256,9 @@ namespace gl
 
 		void set_extents(const size2i& extents);
 		size2i get_extents() const;
+
+		void set_default_extents(const size2i& extents) const;
+		void set_default_samples(GLint samples) const;
 
 		bool matches(const std::array<GLuint, 4>& color_targets, GLuint depth_stencil_target) const;
 		bool references_any(const std::vector<GLuint>& resources) const;

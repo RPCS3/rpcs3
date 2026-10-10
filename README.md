@@ -9,7 +9,7 @@ The world's first free and open-source PlayStation 3 emulator/debugger, written 
 You can find some basic information on our [**website**](https://rpcs3.net/). Game info is being populated on the [**Wiki**](https://wiki.rpcs3.net/).
 For discussion about this emulator, PS3 emulation, and game compatibility reports, please visit our [**forums**](https://forums.rpcs3.net) and our [**Discord server**](https://discord.gg/RPCS3).
 
-[**Support Lead Developers Nekotekina and kd-11 on Patreon**](https://www.patreon.com/Nekotekina)
+[**Support the Lead Developers on Patreon**](https://rpcs3.net/patreon)
 
 ## Contributing
 
@@ -22,6 +22,16 @@ If you want to contribute as a developer, please take a look at the following pa
 * [Developer Information](https://github.com/RPCS3/rpcs3/wiki/Developer-Information)
 
 You should also contact any of the developers in the forums or in the Discord server to learn more about the current state of the emulator.
+
+### AI Use
+
+Use of AI tools for research and reverse engineering purposes is permitted. However, contributors are expected to fully own and understand all code they submit. Any communication with the team — including code, code comments, and GitHub comments — must come from the human contributor, not an AI agent acting autonomously.
+
+We have unfortunately seen a rise in untested and unverified AI-generated slop being submitted to this project. This wastes maintainer time and, in worse cases, such changes get merged and break functionality for all users. Repeated violations will result in a ban from the repository. Please be respectful of everyone's time.
+
+**Pull requests opened by AI agents or automated tools must include a disclosure in the PR description** stating the scope of AI involvement — which parts were AI-generated and what human testing or review was performed prior to submission. PRs that omit this disclosure may be closed without review.
+
+If you are unsure about your work, open a discussion issue to talk it through with the team, or reach out to a maintainer on [Discord](https://discord.gg/RPCS3).
 
 ## Building
 

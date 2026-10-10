@@ -6,6 +6,7 @@
 #include "Utilities/bit_set.h"
 #include "config_mode.h"
 #include "games_config.h"
+
 #include <functional>
 #include <memory>
 #include <string>
@@ -14,18 +15,12 @@
 
 void init_fxo_for_exec(utils::serial*, bool);
 
-enum class localized_string_id;
 enum class video_renderer;
 
 class spu_thread;
 
 template <typename T>
 class named_thread;
-
-namespace cfg
-{
-	class _base;
-}
 
 enum class system_state : u32
 {
@@ -53,11 +48,14 @@ enum class game_boot_result : u32
 	firmware_missing,
 	firmware_version,
 	unsupported_disc_type,
+	disc_key_missing,
+	disc_key_invalid,
 	savestate_corrupted,
 	savestate_version_unsupported,
 	still_running,
 	already_added,
 	currently_restricted,
+	database_config_missing,
 };
 
 constexpr bool is_error(game_boot_result res)
@@ -65,66 +63,19 @@ constexpr bool is_error(game_boot_result res)
 	return res != game_boot_result::no_errors;
 }
 
-struct EmuCallbacks
-{
-	std::function<void(std::function<void()>, atomic_t<u32>*)> call_from_main_thread;
-	std::function<void(bool)> on_run; // (start_playtime) continuing or going ingame, so start the clock
-	std::function<void()> on_pause;
-	std::function<void()> on_resume;
-	std::function<void()> on_stop;
-	std::function<void()> on_ready;
-	std::function<void()> on_missing_fw;
-	std::function<void(std::shared_ptr<atomic_t<bool>>, int)> on_emulation_stop_no_response;
-	std::function<void(std::shared_ptr<atomic_t<bool>>, stx::shared_ptr<utils::serial>, stx::atomic_ptr<std::string>*, std::shared_ptr<void>)> on_save_state_progress;
-	std::function<void(bool enabled)> enable_disc_eject;
-	std::function<void(bool enabled)> enable_disc_insert;
-	std::function<bool(bool, std::function<void()>)> try_to_quit; // (force_quit, on_exit) Try to close RPCS3
-	std::function<void(s32, s32)> handle_taskbar_progress; // (type, value) type: 0 for reset, 1 for increment, 2 for set_limit, 3 for set_value
-	std::function<void()> init_kb_handler;
-	std::function<void()> init_mouse_handler;
-	std::function<void(std::string_view title_id)> init_pad_handler;
-	std::function<void()> update_emu_settings;
-	std::function<void()> save_emu_settings;
-	std::function<void()> close_gs_frame;
-	std::function<std::unique_ptr<class GSFrameBase>()> get_gs_frame;
-	std::function<std::shared_ptr<class camera_handler_base>()> get_camera_handler;
-	std::function<std::shared_ptr<class music_handler_base>()> get_music_handler;
-	std::function<void(utils::serial*)> init_gs_render;
-	std::function<std::shared_ptr<class AudioBackend>()> get_audio;
-	std::function<std::shared_ptr<class audio_device_enumerator>(u64)> get_audio_enumerator; // (audio_renderer)
-	std::function<std::shared_ptr<class MsgDialogBase>()> get_msg_dialog;
-	std::function<std::shared_ptr<class OskDialogBase>()> get_osk_dialog;
-	std::function<std::unique_ptr<class SaveDialogBase>()> get_save_dialog;
-	std::function<std::shared_ptr<class SendMessageDialogBase>()> get_sendmessage_dialog;
-	std::function<std::shared_ptr<class RecvMessageDialogBase>()> get_recvmessage_dialog;
-	std::function<std::unique_ptr<class TrophyNotificationBase>()> get_trophy_notification_dialog;
-	std::function<std::string(localized_string_id, const char*)> get_localized_string;
-	std::function<std::u32string(localized_string_id, const char*)> get_localized_u32string;
-	std::function<std::string(const cfg::_base*, u32)> get_localized_setting;
-	std::function<void(const std::string&)> play_sound;
-	std::function<bool(const std::string&, std::string&, s32&, s32&, s32&)> get_image_info; // (filename, sub_type, width, height, CellSearchOrientation)
-	std::function<bool(const std::string&, s32, s32, s32&, s32&, u8*, bool)> get_scaled_image; // (filename, target_width, target_height, width, height, dst, force_fit)
-	std::string(*resolve_path)(std::string_view) = [](std::string_view arg){ return std::string{arg}; }; // Resolve path using Qt
-	std::function<std::vector<std::string>()> get_font_dirs;
-	std::function<bool(const std::vector<std::string>&)> on_install_pkgs;
-	std::function<void(u32)> add_breakpoint;
-	std::function<bool()> display_sleep_control_supported;
-	std::function<void(bool)> enable_display_sleep;
-	std::function<void()> check_microphone_permissions;
-	std::function<std::unique_ptr<class video_source>()> make_video_source;
-	std::function<void(bool)> enable_gamemode;
-};
-
 namespace utils
 {
 	struct serial;
 };
 
+struct emu_precompilation_option_t
+{
+	bool is_fast = false;
+};
+
 class Emulator final
 {
 	atomic_t<system_state> m_state{system_state::stopped};
-
-	EmuCallbacks m_cb;
 
 	atomic_t<u64> m_pause_start_time{0}; // set when paused
 	atomic_t<u64> m_pause_amend_time{0}; // increased when resumed
@@ -134,14 +85,17 @@ class Emulator final
 
 	games_config m_games_config;
 
+	std::set<video_renderer> m_supported_renderers;
 	video_renderer m_default_renderer;
 	std::string m_default_graphics_adapter;
 
 	cfg_mode m_config_mode = cfg_mode::custom;
 	std::string m_config_path;
+	std::optional<std::string> m_db_config; // std::nullopt means it has not been retrieved yet
 	std::string m_path;
 	std::string m_path_old;
 	std::string m_path_original;
+	std::string m_path_real;
 	std::string m_title_id;
 	std::string m_title;
 	std::string m_localized_title;
@@ -162,6 +116,8 @@ class Emulator final
 
 	bool m_continuous_mode = false;
 	bool m_has_gui = true;
+	bool m_headless = false;
+	bool m_add_database_config = false;
 
 	bool m_state_inspection_savestate = false;
 
@@ -188,23 +144,18 @@ class Emulator final
 	};
 
 	bs_t<SaveStateExtentionFlags1> m_savestate_extension_flags1{};
+	emu_precompilation_option_t m_precompilation_option{};
 
 public:
 	static constexpr std::string_view game_id_boot_prefix = "%RPCS3_GAMEID%:";
 	static constexpr std::string_view vfs_boot_prefix = "%RPCS3_VFS%:";
 
-	Emulator() noexcept = default;
-	~Emulator() noexcept = default;
+	Emulator() noexcept;
+	~Emulator() noexcept;
 
-	void SetCallbacks(EmuCallbacks&& cb)
-	{
-		m_cb = std::move(cb);
-	}
+	static bool IsAvailable() noexcept;
 
-	const auto& GetCallbacks() const
-	{
-		return m_cb;
-	}
+	void SetGameDir(const std::string& game_dir) { m_game_dir = game_dir; }
 
 	// Call from the GUI thread
 	void CallFromMainThread(std::function<void()>&& func, atomic_t<u32>* wake_up = nullptr, bool track_emu_state = true, u64 stop_ctr = umax,
@@ -245,6 +196,11 @@ public:
 		m_state = system_state::running;
 	}
 
+	void SetPrecompileCacheOption(emu_precompilation_option_t option)
+	{
+		m_precompilation_option = option;
+	}
+
 	void Init();
 
 	std::vector<std::string> argv;
@@ -258,7 +214,7 @@ public:
 
 	u32 m_boot_source_type = 0; // CELL_GAME_GAMETYPE_SYS
 
-	const u32& GetBootSourceType() const
+	u32 GetBootSourceType() const
 	{
 		return m_boot_source_type;
 	}
@@ -351,6 +307,12 @@ public:
 		return m_config_path;
 	}
 
+	const std::string& GetUsedDatabaseConfig() const
+	{
+		static std::string empty_db_config;
+		return m_db_config ? *m_db_config : empty_db_config;
+	}
+
 	bool IsChildProcess() const
 	{
 		return m_config_mode == cfg_mode::continuous;
@@ -381,7 +343,7 @@ public:
 		{
 			if (active)
 			{
-				_this->m_restrict_emu_state_change--;
+				_this->m_restrict_emu_state_change.try_dec(0);
 			}
 		}
 
@@ -400,8 +362,13 @@ public:
 		return emulation_state_guard_t{this};
 	}
 
-	game_boot_result BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "");
+	game_boot_result BootGame(const std::string& path, const std::string& title_id = "", bool direct = false, cfg_mode config_mode = cfg_mode::custom, const std::string& config_path = "", const std::optional<std::string>& db_config = std::nullopt);
 	bool BootRsxCapture(const std::string& path);
+
+	// Boots a minimal shell (no PS3 executable) that hosts the RSX-overlay-based Big Picture Mode game grid.
+	bool BootBigPictureMode();
+	// Cancel any pending return to Big Picture Mode, e.g. when a game is booted manually and bypasses the shell.
+	void DeactivateBigPictureMode() const;
 
 	void SetForceBoot(bool force_boot);
 	void SetContinuousMode(bool continuous_mode);
@@ -421,7 +388,7 @@ private:
 	struct savestate_stage
 	{
 		bool prepared = false;
-		std::vector<std::pair<shared_ptr<named_thread<spu_thread>>, u32>> paused_spus;
+		std::vector<std::pair<stx::shared_ptr<named_thread<spu_thread>>, u32>> paused_spus;
 	};
 public:
 
@@ -429,7 +396,7 @@ public:
 	void Resume();
 	void GracefulShutdown(bool allow_autoexit = true, bool async_op = false, bool savestate = false, bool continuous_mode = false);
 	void Kill(bool allow_autoexit = true, bool savestate = false, savestate_stage* stage = nullptr);
-	game_boot_result Restart(bool graceful = true);
+	game_boot_result Restart(bool graceful = true, bool reset_path = true);
 	bool Quit(bool force_quit);
 	static void CleanUp();
 
@@ -439,11 +406,19 @@ public:
 	bool IsStopped(bool test_fully = false) const { return test_fully ? m_state == system_state::stopped : m_state <= system_state::stopping; }
 	bool IsReady()   const { return m_state == system_state::ready; }
 	bool IsStarting() const { return m_state == system_state::starting; }
+	void WaitReady() const { m_state.wait(system_state::ready); }
 	auto GetStatus(bool fixup = true) const { system_state state = m_state; return fixup && state == system_state::frozen ? system_state::paused : fixup && state == system_state::stopping ? system_state::stopped : state; }
 
 	bool HasGui() const { return m_has_gui; }
 	void SetHasGui(bool has_gui) { m_has_gui = has_gui; }
 
+	bool IsHeadless() const { return m_headless; }
+	void SetHeadless(bool headless) { m_headless = headless; }
+
+	const std::set<video_renderer>& GetSupportedRenderers() const { return m_supported_renderers; }
+	void SetSupportedRenderers(std::set<video_renderer> renderers) { m_supported_renderers = std::move(renderers); }
+
+	video_renderer GetDefaultRenderer() const { return m_default_renderer; }
 	void SetDefaultRenderer(video_renderer renderer) { m_default_renderer = renderer; }
 	void SetDefaultGraphicsAdapter(std::string adapter) { m_default_graphics_adapter = std::move(adapter); }
 
@@ -452,15 +427,18 @@ public:
 	void ConfigurePPUCache() const;
 
 	std::set<std::string> GetGameDirs() const;
-	u32 AddGamesFromDir(const std::string& path);
-	game_boot_result AddGame(const std::string& path);
-	game_boot_result AddGameToYml(const std::string& path);
+	u32 AddGamesFromDir(std::string path);
+
+	// "is_iso" tells the caller has already recognized the path as an ISO file (or as a raw device holding a disc):
+	// checking it again would read its volume descriptor once more, which is a physical read on an optical drive
+	game_boot_result AddGame(std::string path, bool is_iso = false);
+	game_boot_result AddGameToYml(std::string path, bool is_iso = false);
 	u32 RemoveGamesFromDir(const std::string& games_dir, const std::vector<std::string>& serials_to_remove_from_yml = {}, bool save_on_disk = true);
 	u32 RemoveGames(const std::vector<std::string>& title_id_list, bool save_on_disk = true);
 	game_boot_result RemoveGameFromYml(const std::string& title_id);
 
 	// Check if path is inside the specified directory
-	bool IsPathInsideDir(std::string_view path, std::string_view dir) const;
+	bool IsPathInsideDir(std::string_view path, std::string_view dir, bool check_if_exists = true) const;
 	game_boot_result VerifyPathCasing(std::string_view path, std::string_view dir, bool from_dir) const;
 
 	void EjectDisc();
@@ -473,11 +451,7 @@ public:
 	static bool IsVsh();
 	static bool IsValidSfb(const std::string& path);
 
-	static void SaveSettings(const std::string& settings, const std::string& title_id);
+	static void SaveSettings(std::string_view settings, const std::string& title_id);
 };
 
 extern Emulator Emu;
-
-extern bool g_use_rtm;
-extern u64 g_rtm_tx_limit1;
-extern u64 g_rtm_tx_limit2;

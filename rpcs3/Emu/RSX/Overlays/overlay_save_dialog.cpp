@@ -2,18 +2,18 @@
 #include "overlay_save_dialog.h"
 #include "overlay_video.h"
 #include "Utilities/date_time.h"
-#include "Emu/System.h"
 
 namespace rsx
 {
 	namespace overlays
 	{
-		save_dialog::save_dialog_entry::save_dialog_entry(const std::string& text1, const std::string& text2, const std::string& text3, u8 resource_id, const std::vector<u8>& icon_buf, const std::string& video_path)
+		save_dialog::save_dialog_entry::save_dialog_entry(std::string_view text1, std::string_view text2, std::string_view text3, u8 resource_id, const std::vector<u8>& icon_buf, const std::string& video_path)
 		{
+			const std::string audio_path; // no audio here
 			std::unique_ptr<overlay_element> image = resource_id != image_resource_id::raw_image
-				? std::make_unique<video_view>(video_path, resource_id)
-				: !icon_buf.empty() ? std::make_unique<video_view>(video_path, icon_buf)
-				                    : std::make_unique<video_view>(video_path, resource_config::standard_image_resource::save); // Fallback
+				? std::make_unique<video_view>(video_path, audio_path, resource_id)
+				: !icon_buf.empty() ? std::make_unique<video_view>(video_path, audio_path, icon_buf)
+				                    : std::make_unique<video_view>(video_path, audio_path, resource_config::standard_image_resource::save); // Fallback
 			image->set_size(160, 110);
 			image->set_padding(36, 36, 11, 11); // Square image, 88x88
 
@@ -29,11 +29,11 @@ namespace rsx
 
 			padding->set_size(1, 1);
 			header_text->set_size(800, 40);
-			header_text->set_font("Arial", 16);
+			header_text->set_font(16);
 			header_text->set_wrap_text(true);
 
 			subtext->set_size(800, 0);
-			subtext->set_font("Arial", 14);
+			subtext->set_font(14);
 			subtext->set_wrap_text(true);
 			static_cast<label*>(subtext.get())->auto_resize(true);
 
@@ -51,7 +51,7 @@ namespace rsx
 				// Detail info actually exists
 				std::unique_ptr<overlay_element> detail = std::make_unique<label>(text3);
 				detail->set_size(800, 0);
-				detail->set_font("Arial", 12);
+				detail->set_font(12);
 				detail->set_wrap_text(true);
 				detail->back_color.a = 0.f;
 				static_cast<label*>(detail.get())->auto_resize(true);
@@ -90,11 +90,11 @@ namespace rsx
 
 			m_list->set_pos(20, 85);
 
-			m_description->set_font("Arial", 20);
+			m_description->set_font(20);
 			m_description->set_pos(20, 37);
 			m_description->set_text(localized_string_id::RSX_OVERLAYS_SAVE_DIALOG_TITLE);
 
-			m_time_thingy->set_font("Arial", 14);
+			m_time_thingy->set_font(14);
 			m_time_thingy->set_pos(1000, 30);
 			m_time_thingy->set_text(date_time::current_time());
 
@@ -133,11 +133,11 @@ namespace rsx
 				if (m_no_saves)
 					break;
 				return_code = m_list->get_selected_index();
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_decide.wav");
+				play_sound(sound_effect::accept);
 				close_dialog = true;
 				break;
 			case pad_button::circle:
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cancel.wav");
+				play_sound(sound_effect::cancel);
 				close_dialog = true;
 				break;
 			case pad_button::dpad_up:
@@ -173,7 +173,7 @@ namespace rsx
 			// Play a sound unless this is a fast auto repeat which would induce a nasty noise
 			else if (!is_auto_repeat || m_auto_repeat_ms_interval >= m_auto_repeat_ms_interval_default)
 			{
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cursor.wav");
+				play_sound(sound_effect::cursor);
 			}
 		}
 
@@ -287,7 +287,7 @@ namespace rsx
 			if (m_list->m_items.empty())
 			{
 				m_no_saves_text = std::make_unique<label>(get_localized_string(localized_string_id::CELL_SAVEDATA_NO_DATA));
-				m_no_saves_text->set_font("Arial", 20);
+				m_no_saves_text->set_font(20);
 				m_no_saves_text->align_text(overlay_element::text_align::center);
 				m_no_saves_text->set_pos(m_list->x, m_list->y + m_list->h / 2);
 				m_no_saves_text->set_size(m_list->w, 30);

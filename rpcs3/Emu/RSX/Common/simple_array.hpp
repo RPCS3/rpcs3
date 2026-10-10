@@ -4,6 +4,7 @@
 #include <functional>
 #include <algorithm>
 
+#include "aligned_malloc.hpp"
 #include "reverse_ptr.hpp"
 
 namespace rsx
@@ -15,8 +16,14 @@ namespace rsx
 			{ c.size() } -> std::integral;
 	};
 
-	template <typename Ty>
-		requires std::is_trivially_destructible_v<Ty>
+	template <typename T, typename U>
+	concept is_trivially_comparable_v =
+		requires (T t1, U t2) {
+			{ t1 == t2 } -> std::same_as<bool>;
+	};
+
+	template <typename Ty, size_t Align=alignof(Ty)>
+		requires std::is_trivially_destructible_v<Ty> && std::is_trivially_copyable_v<Ty>
 	struct simple_array
 	{
 	public:
@@ -28,7 +35,7 @@ namespace rsx
 
 	private:
 		static constexpr u32 _local_capacity = std::max<u32>(64u / sizeof(Ty), 1u);
-		char _local_storage[_local_capacity * sizeof(Ty)];
+		alignas(Align) char _local_storage[_local_capacity * sizeof(Ty)];
 
 		u32 _capacity = _local_capacity;
 		Ty* _data = _local_capacity ? reinterpret_cast<Ty*>(_local_storage) : nullptr;
@@ -128,7 +135,7 @@ namespace rsx
 			{
 				if (!is_local_storage())
 				{
-					free(_data);
+					aligned_allocator::free(_data);
 				}
 
 				_data = nullptr;
@@ -196,13 +203,13 @@ namespace rsx
 			if (is_local_storage())
 			{
 				// Switch to heap storage
-				_data = static_cast<Ty*>(std::malloc(sizeof(Ty) * size));
+				ensure(_data = static_cast<Ty*>(aligned_allocator::malloc<Align>(sizeof(Ty) * size)));
 				std::memcpy(static_cast<void*>(_data), _local_storage, size_bytes());
 			}
 			else
 			{
 				// Extend heap storage
-				ensure(_data = static_cast<Ty*>(std::realloc(_data, sizeof(Ty) * size))); // "realloc() failed!"
+				ensure(_data = static_cast<Ty*>(aligned_allocator::realloc<Align>(_data, size_bytes(), sizeof(Ty) * size))); // "realloc() failed!"
 			}
 
 			_capacity = size;
@@ -272,7 +279,7 @@ namespace rsx
 			AUDIT(_loc < _size);
 
 			const auto remaining = (_size - _loc);
-			memmove(pos + 1, pos, remaining * sizeof(Ty));
+			std::memmove(pos + 1, pos, remaining * sizeof(Ty));
 
 			*pos = val;
 			_size++;
@@ -300,12 +307,37 @@ namespace rsx
 			AUDIT(_loc < _size);
 
 			const u32 remaining = (_size - _loc);
-			memmove(pos + 1, pos, remaining * sizeof(Ty));
+			std::memmove(pos + 1, pos, remaining * sizeof(Ty));
 
 			*pos = val;
 			_size++;
 
 			return pos;
+		}
+
+		iterator insert(iterator where, span_like<Ty> auto const& values)
+		{
+			ensure(where >= _data);
+			const auto _loc = offset(where);
+			const auto in_size = static_cast<u32>(values.size());
+			const auto in_size_bytes = in_size * sizeof(Ty);
+
+			reserve(_size + in_size);
+
+			if (_loc >= _size)
+			{
+				where = _data + _size;
+				std::memcpy(where, values.data(), in_size_bytes);
+				_size += in_size;
+				return where;
+			}
+
+			const u32 remaining_bytes = (_size - _loc) * sizeof(Ty);
+			where = _data + _loc;
+			std::memmove(where + in_size, where, remaining_bytes);
+			std::memmove(where, values.data(), in_size_bytes);
+			_size += in_size;
+			return where;
 		}
 
 		void operator += (const rsx::simple_array<Ty>& that)
@@ -457,6 +489,50 @@ namespace rsx
 			return false;
 		}
 
+		/**
+		 * Note that find and find_if return pointers to objects and not iterators for simplified usage.
+		 * It is functionally equivalent to retrieve a nullptr meaning empty object stored and nullptr meaning not found for all practical uses of this container.
+		 */
+		template <typename T = Ty>
+			requires is_trivially_comparable_v<Ty, T>
+		Ty* find(const T& value)
+		{
+			for (auto it = begin(); it != end(); ++it)
+			{
+				if (*it == value)
+				{
+					return &(*it);
+				}
+			}
+			return nullptr;
+		}
+
+		// Remove when we switch to C++23
+		template <typename T = Ty>
+			requires is_trivially_comparable_v<Ty, T>
+		const Ty* find(const T& value) const
+		{
+			return const_cast<simple_array<Ty, Align>*>(this)->find(value);
+		}
+
+		Ty* find_if(std::predicate<const Ty&> auto predicate)
+		{
+			for (auto it = begin(); it != end(); ++it)
+			{
+				if (std::invoke(predicate, *it))
+				{
+					return &(*it);
+				}
+			}
+			return nullptr;
+		}
+
+		// Remove with C++23
+		const Ty* find_if(std::predicate<const Ty&> auto predicate) const
+		{
+			return const_cast<simple_array<Ty, Align>*>(this)->find_if(predicate);
+		}
+
 		bool erase_if(std::predicate<const Ty&> auto predicate)
 		{
 			if (!_size)
@@ -491,6 +567,21 @@ namespace rsx
 			}
 
 			return ret;
+		}
+
+		simple_array<Ty> filter(std::predicate<const Ty&> auto predicate) const
+		{
+			simple_array<Ty> result;
+			result.reserve(size());
+
+			for (auto it = begin(); it != end(); ++it)
+			{
+				if (predicate(*it))
+				{
+					result.push_back(*it);
+				}
+			}
+			return result;
 		}
 
 		simple_array<Ty>& sort(std::predicate<const Ty&, const Ty&> auto predicate)
@@ -542,6 +633,12 @@ namespace rsx
 				accumulate = reducer(accumulate, *it);
 			}
 			return accumulate;
+		}
+
+		template <typename F>
+		void for_each(F&& func)
+		{
+			std::for_each(begin(), end(), func);
 		}
 	};
 }

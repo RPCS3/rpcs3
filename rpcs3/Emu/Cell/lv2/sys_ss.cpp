@@ -4,6 +4,7 @@
 #include "sys_process.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/timers.hpp"
+#include "Emu/Cell/PPUThread.h"
 #include "Emu/system_config.h"
 #include "util/sysinfo.hpp"
 
@@ -18,13 +19,13 @@
 
 struct lv2_update_manager
 {
-	lv2_update_manager()
+	lv2_update_manager() noexcept
 	{
 		std::string version_str = utils::get_firmware_version();
 
 		// For example, 4.90 should be converted to 0x4900000000000
 		std::erase(version_str, '.');
-		if (std::from_chars(version_str.data(), version_str.data() + version_str.size(), system_sw_version, 16).ec != std::errc{})
+		if (std::from_chars(version_str.data(), version_str.data() + version_str.size(), system_sw_version, 16).ec == std::errc{})
 			system_sw_version <<= 40;
 		else
 			system_sw_version = 0;
@@ -79,6 +80,7 @@ struct lv2_update_manager
 
 		if (malloc_set.count(addr))
 		{
+			malloc_set.erase(addr);
 			return vm::dealloc(addr, vm::main);
 		}
 
@@ -356,7 +358,7 @@ error_code sys_ss_get_boot_device(vm::ptr<u64> dev)
 	return CELL_OK;
 }
 
-error_code sys_ss_update_manager(u64 pkg_id, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 a6)
+error_code sys_ss_update_manager(ppu_thread& ppu, u64 pkg_id, u64 a1, u64 a2, u64 a3, u64 a4, u64 a5, u64 a6)
 {
 	sys_ss.notice("sys_ss_update_manager(pkg=0x%x, a1=0x%x, a2=0x%x, a3=0x%x, a4=0x%x, a5=0x%x, a6=0x%x)", pkg_id, a1, a2, a3, a4, a5, a6);
 
@@ -427,20 +429,29 @@ error_code sys_ss_update_manager(u64 pkg_id, u64 a1, u64 a2, u64 a3, u64 a4, u64
 	}
 	case 0x600B:
 	{
+		ppu.state += cpu_flag::wait;
+
 		// read eeprom
 		const auto offset = ::narrow<u32>(a1);
 		const auto value_ptr = ::narrow<u32>(a2);
 
 		if (!value_ptr)
+		{
 			return CELL_EFAULT;
+		}
 
-		std::shared_lock shared_lock(update_manager.eeprom_mutex);
+		u8 value_out = 0xFF; // 0xFF if not set
+		{
+			std::shared_lock shared_lock(update_manager.eeprom_mutex);
 
-		if (const auto iterator = update_manager.eeprom_map.find(offset); iterator != update_manager.eeprom_map.end())
-			vm::write8(value_ptr, iterator->second);
-		else
-			vm::write8(value_ptr, 0xFF); // 0xFF if not set
+			if (const auto iterator = update_manager.eeprom_map.find(offset); iterator != update_manager.eeprom_map.end())
+			{
+				value_out = iterator->second;
+			}
+		}
 
+		static_cast<void>(ppu.test_stopped());
+		vm::write8(value_ptr, value_out);
 		break;
 	}
 	case 0x600C:
@@ -449,6 +460,7 @@ error_code sys_ss_update_manager(u64 pkg_id, u64 a1, u64 a2, u64 a3, u64 a4, u64
 		const auto offset = ::narrow<u32>(a1);
 		const auto value = ::narrow<u8>(a2);
 
+		ppu.state += cpu_flag::wait;
 		std::unique_lock unique_lock(update_manager.eeprom_mutex);
 
 		if (value != 0xFF)
@@ -472,7 +484,9 @@ error_code sys_ss_update_manager(u64 pkg_id, u64 a1, u64 a2, u64 a3, u64 a4, u64
 		if (!addr_ptr)
 			return CELL_EFAULT;
 
+		ppu.state += cpu_flag::wait;
 		const auto addr = update_manager.allocate(size);
+		static_cast<void>(ppu.test_stopped());
 
 		if (!addr)
 			return CELL_ENOMEM;
@@ -486,6 +500,7 @@ error_code sys_ss_update_manager(u64 pkg_id, u64 a1, u64 a2, u64 a3, u64 a4, u64
 		// release buffer
 		const auto addr = ::narrow<u32>(a1);
 
+		ppu.state += cpu_flag::wait;
 		if (!update_manager.deallocate(addr))
 			return CELL_ENOMEM;
 
@@ -518,7 +533,9 @@ error_code sys_ss_update_manager(u64 pkg_id, u64 a1, u64 a2, u64 a3, u64 a4, u64
 		if (!addr_ptr)
 			return CELL_EFAULT;
 
+		ppu.state += cpu_flag::wait;
 		const auto addr = update_manager.allocate(size);
+		static_cast<void>(ppu.test_stopped());
 
 		if (!addr)
 			return CELL_ENOMEM;

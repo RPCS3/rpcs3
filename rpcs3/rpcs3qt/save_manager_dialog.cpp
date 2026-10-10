@@ -32,7 +32,7 @@
 
 LOG_CHANNEL(gui_log, "GUI");
 
-enum SaveColumns
+enum class SaveColumns
 {
 	Icon = 0,
 	Name = 1,
@@ -60,29 +60,25 @@ save_manager_dialog::save_manager_dialog(std::shared_ptr<gui_settings> gui_setti
 	setMinimumSize(QSize(400, 400));
 	setAttribute(Qt::WA_DeleteOnClose);
 
-	Init();
-}
-
-/*
- * Future proofing.  Makes it easier in future if I add ability to change directories
- */
-void save_manager_dialog::Init()
-{
 	// Table
 	m_list = new game_list();
 	m_list->setItemDelegate(new game_list_delegate(m_list));
 	m_list->setSelectionMode(QAbstractItemView::SelectionMode::ExtendedSelection);
 	m_list->setSelectionBehavior(QAbstractItemView::SelectRows);
 	m_list->setContextMenuPolicy(Qt::CustomContextMenu);
-	m_list->setColumnCount(SaveColumns::Count);
+	m_list->setColumnCount(static_cast<int>(SaveColumns::Count));
 	m_list->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
 	m_list->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
 	m_list->verticalScrollBar()->setSingleStep(20);
 	m_list->horizontalScrollBar()->setSingleStep(10);
-	m_list->setHorizontalHeaderLabels(QStringList() << tr("Icon") << tr("Title & Subtitle") << tr("Last Modified") << tr("Save ID") << tr("Notes"));
 	m_list->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Fixed);
 	m_list->horizontalHeader()->setStretchLastSection(true);
 	m_list->setMouseTracking(true);
+
+	for (int column = 0; column < static_cast<int>(SaveColumns::Count); column++)
+	{
+		m_list->setHorizontalHeaderItem(column, new QTableWidgetItem(get_header_text(column)));
+	}
 
 	// Bottom bar
 	const int icon_size = m_gui_settings->GetValue(gui::sd_icon_size).toInt();
@@ -113,7 +109,7 @@ void save_manager_dialog::Init()
 	m_button_delete = new QPushButton(tr("Delete Selection"), this);
 	m_button_delete->setDisabled(true);
 	m_button_folder = new QPushButton(tr("View Folder"), this);
-	m_button_delete->setDisabled(true);
+	m_button_folder->setDisabled(true);
 
 	// Details layout
 	QVBoxLayout *vbox_details = new QVBoxLayout();
@@ -162,7 +158,7 @@ void save_manager_dialog::Init()
 	connect(m_button_folder, &QAbstractButton::clicked, [this]()
 	{
 		const int idx = m_list->currentRow();
-		QTableWidgetItem* item = m_list->item(idx, SaveColumns::Name);
+		QTableWidgetItem* item = m_list->item(idx, static_cast<int>(SaveColumns::Name));
 		if (!item)
 		{
 			return;
@@ -176,12 +172,12 @@ void save_manager_dialog::Init()
 	connect(m_list, &QTableWidget::customContextMenuRequested, this, &save_manager_dialog::ShowContextMenu);
 	connect(m_list, &QTableWidget::cellChanged, [&](int row, int col)
 	{
-		if (col != SaveColumns::Note)
+		if (col != static_cast<int>(SaveColumns::Note))
 		{
 			return;
 		}
-		QTableWidgetItem* user_item = m_list->item(row, SaveColumns::Name);
-		QTableWidgetItem* text_item = m_list->item(row, SaveColumns::Note);
+		QTableWidgetItem* user_item = m_list->item(row, static_cast<int>(SaveColumns::Name));
+		QTableWidgetItem* text_item = m_list->item(row, static_cast<int>(SaveColumns::Note));
 		if (!user_item || !text_item)
 		{
 			return;
@@ -196,13 +192,27 @@ void save_manager_dialog::Init()
 	connect(m_list, &QTableWidget::itemSelectionChanged, this, &save_manager_dialog::UpdateDetails);
 	connect(this, &save_manager_dialog::IconReady, this, [this](int index, const QPixmap& pixmap)
 	{
-		if (movie_item* item = static_cast<movie_item*>(m_list->item(index, SaveColumns::Icon)))
+		if (movie_item* item = static_cast<movie_item*>(m_list->item(index, static_cast<int>(SaveColumns::Icon))))
 		{
 			item->setData(SaveUserRole::PixmapScaled, pixmap);
 			item->image_change_callback();
 		}
 	});
 	connect(search_bar, &QLineEdit::textChanged, this, &save_manager_dialog::text_changed);
+}
+
+QString save_manager_dialog::get_header_text(int col) const
+{
+	switch (static_cast<SaveColumns>(col))
+	{
+	case SaveColumns::Icon:  return tr("Icon");
+	case SaveColumns::Name:  return tr("Title & Subtitle");
+	case SaveColumns::Time:  return tr("Last Modified");
+	case SaveColumns::Dir:   return tr("Save ID");
+	case SaveColumns::Note:  return tr("Notes");
+	case SaveColumns::Count: break;
+	}
+	return {};
 }
 
 /**
@@ -300,6 +310,15 @@ void save_manager_dialog::UpdateList()
 	m_list->clearContents();
 	m_list->setRowCount(static_cast<int>(m_save_entries.size()));
 
+	// Update headers
+	for (int col = 0; col < m_list->horizontalHeader()->count(); col++)
+	{
+		if (auto item = m_list->horizontalHeaderItem(col))
+		{
+			item->setText(get_header_text(col));
+		}
+	}
+
 	const QVariantMap notes = m_persistent_settings->GetValue(gui::persistent::save_notes).toMap();
 
 	if (m_gui_settings->GetValue(gui::m_enableUIColors).toBool())
@@ -334,11 +353,16 @@ void save_manager_dialog::UpdateList()
 
 		if (const std::string movie_path = dir_path + localized_movie; fs::is_file(movie_path))
 		{
-			icon_item->set_video_path(movie_path);
+			icon_item->set_video_path(movie_path, false);
 		}
 		else if (const std::string movie_path = dir_path + "ICON1.PAM"; fs::is_file(movie_path))
 		{
-			icon_item->set_video_path(movie_path);
+			icon_item->set_video_path(movie_path, false);
+		}
+
+		if (const std::string audio_path = dir_path + "SND0.AT3"; fs::is_file(audio_path))
+		{
+			icon_item->set_audio_path(audio_path, false);
 		}
 
 		icon_item->set_image_change_callback([this, icon_item](const QVideoFrame& frame)
@@ -358,20 +382,20 @@ void save_manager_dialog::UpdateList()
 				icon_item->stop_movie();
 			}
 		});
-		m_list->setItem(i, SaveColumns::Icon, icon_item);
+		m_list->setItem(i, static_cast<int>(SaveColumns::Icon), icon_item);
 
 		custom_table_widget_item* titleItem = new custom_table_widget_item(title);
 		titleItem->setData(Qt::UserRole, i); // For sorting to work properly
 		titleItem->setFlags(titleItem->flags() & ~Qt::ItemIsEditable);
-		m_list->setItem(i, SaveColumns::Name, titleItem);
+		m_list->setItem(i, static_cast<int>(SaveColumns::Name), titleItem);
 
 		custom_table_widget_item* timeItem = new custom_table_widget_item(gui::utils::format_timestamp(entry.mtime));
 		timeItem->setFlags(timeItem->flags() & ~Qt::ItemIsEditable);
-		m_list->setItem(i, SaveColumns::Time, timeItem);
+		m_list->setItem(i, static_cast<int>(SaveColumns::Time), timeItem);
 
 		custom_table_widget_item* dirNameItem = new custom_table_widget_item(dir_name);
 		dirNameItem->setFlags(dirNameItem->flags() & ~Qt::ItemIsEditable);
-		m_list->setItem(i, SaveColumns::Dir, dirNameItem);
+		m_list->setItem(i, static_cast<int>(SaveColumns::Dir), dirNameItem);
 
 		custom_table_widget_item* noteItem = new custom_table_widget_item();
 		noteItem->setFlags(noteItem->flags() | Qt::ItemIsEditable);
@@ -379,7 +403,7 @@ void save_manager_dialog::UpdateList()
 		{
 			noteItem->setText(notes[dir_name].toString());
 		}
-		m_list->setItem(i, SaveColumns::Note, noteItem);
+		m_list->setItem(i, static_cast<int>(SaveColumns::Note), noteItem);
 	}
 
 	m_list->setSortingEnabled(true); // Enable sorting only after using setItem calls
@@ -422,7 +446,7 @@ void save_manager_dialog::UpdateIcons()
 
 	for (int i = 0; i < m_list->rowCount(); ++i)
 	{
-		if (movie_item* icon_item = static_cast<movie_item*>(m_list->item(i, SaveColumns::Icon)))
+		if (movie_item* icon_item = static_cast<movie_item*>(m_list->item(i, static_cast<int>(SaveColumns::Icon))))
 		{
 			icon_item->setData(SaveUserRole::PixmapScaled, placeholder);
 			icon_item->setData(Qt::DecorationRole, placeholder);
@@ -430,14 +454,14 @@ void save_manager_dialog::UpdateIcons()
 	}
 
 	m_list->resizeRowsToContents();
-	m_list->resizeColumnToContents(SaveColumns::Icon);
+	m_list->resizeColumnToContents(static_cast<int>(SaveColumns::Icon));
 
 	const s32 language_index = gui_application::get_language_id();
 	const std::string localized_icon = fmt::format("ICON0_%02d.PNG", language_index);
 
 	for (int i = 0; i < m_list->rowCount(); ++i)
 	{
-		if (movie_item* icon_item = static_cast<movie_item*>(m_list->item(i, SaveColumns::Icon)))
+		if (movie_item* icon_item = static_cast<movie_item*>(m_list->item(i, static_cast<int>(SaveColumns::Icon))))
 		{
 			icon_item->set_icon_load_func([this, cancel = icon_item->icon_loading_aborted(), dpr, localized_icon](int index)
 			{
@@ -448,12 +472,12 @@ void save_manager_dialog::UpdateIcons()
 
 				QPixmap icon;
 
-				if (movie_item* item = static_cast<movie_item*>(m_list->item(index, SaveColumns::Icon)))
+				if (movie_item* item = static_cast<movie_item*>(m_list->item(index, static_cast<int>(SaveColumns::Icon))))
 				{
 					if (!item->data(SaveUserRole::PixmapLoaded).toBool())
 					{
 						// Load game icon
-						if (QTableWidgetItem* user_item = m_list->item(index, SaveColumns::Name))
+						if (QTableWidgetItem* user_item = m_list->item(index, static_cast<int>(SaveColumns::Name)))
 						{
 							const int idx_real = user_item->data(Qt::UserRole).toInt();
 							const SaveDataEntry& entry = ::at32(m_save_entries, idx_real);
@@ -534,7 +558,7 @@ void save_manager_dialog::OnSort(int logicalIndex)
 // Remove a save file, need to be confirmed.
 void save_manager_dialog::OnEntryRemove(int row, bool user_interaction)
 {
-	if (QTableWidgetItem* item = m_list->item(row, SaveColumns::Name))
+	if (QTableWidgetItem* item = m_list->item(row, static_cast<int>(SaveColumns::Name)))
 	{
 		const int idx_real = item->data(Qt::UserRole).toInt();
 		const SaveDataEntry& entry = ::at32(m_save_entries, idx_real);
@@ -549,26 +573,36 @@ void save_manager_dialog::OnEntryRemove(int row, bool user_interaction)
 
 void save_manager_dialog::OnEntriesRemove()
 {
-	QModelIndexList selection(m_list->selectionModel()->selectedRows());
-	if (selection.empty())
+	const QModelIndexList selected_rows(m_list->selectionModel()->selectedRows());
+	if (selected_rows.empty())
 	{
 		return;
+	}
+
+	// Collect row indices as plain ints BEFORE any model modification.
+	// QModelIndex references can become stale after removeRow() below.
+	std::vector<int> rows;
+	rows.reserve(selected_rows.size());
+	for (const QModelIndex& index : selected_rows)
+	{
+		rows.push_back(index.row());
 	}
 
 	WaitForRepaintThreads(false);
 
-	if (selection.size() == 1)
+	if (rows.size() == 1)
 	{
-		OnEntryRemove(selection.first().row(), true);
+		OnEntryRemove(rows.front(), true);
 		return;
 	}
 
-	if (QMessageBox::question(this, tr("Delete Confirmation"), tr("Are you sure you want to delete these %n items?", "", selection.size()), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
+	if (QMessageBox::question(this, tr("Delete Confirmation"), tr("Are you sure you want to delete these %n items?", "", static_cast<int>(rows.size())), QMessageBox::Yes, QMessageBox::No) == QMessageBox::Yes)
 	{
-		std::sort(selection.rbegin(), selection.rend());
-		for (const QModelIndex& index : selection)
+		// Sort descending so removeRow() doesn't shift remaining indices.
+		std::sort(rows.begin(), rows.end(), std::greater<int>());
+		for (int row : rows)
 		{
-			OnEntryRemove(index.row(), false);
+			OnEntryRemove(row, false);
 		}
 	}
 }
@@ -599,7 +633,7 @@ void save_manager_dialog::ShowContextMenu(const QPoint& pos)
 	connect(removeAct, &QAction::triggered, this, &save_manager_dialog::OnEntriesRemove); // entriesremove handles case of one as well
 	connect(showDirAct, &QAction::triggered, [this, idx]()
 	{
-		QTableWidgetItem* item = m_list->item(idx, SaveColumns::Name);
+		QTableWidgetItem* item = m_list->item(idx, static_cast<int>(SaveColumns::Name));
 		if (!item)
 		{
 			return;
@@ -655,8 +689,8 @@ void save_manager_dialog::UpdateDetails()
 		WaitForRepaintThreads(false);
 
 		const int row = m_list->currentRow();
-		QTableWidgetItem* item = m_list->item(row, SaveColumns::Name);
-		movie_item* icon_item = static_cast<movie_item*>(m_list->item(row, SaveColumns::Icon));
+		QTableWidgetItem* item = m_list->item(row, static_cast<int>(SaveColumns::Name));
+		movie_item* icon_item = static_cast<movie_item*>(m_list->item(row, static_cast<int>(SaveColumns::Icon)));
 
 		if (!item || !icon_item)
 		{
@@ -666,7 +700,8 @@ void save_manager_dialog::UpdateDetails()
 		const int idx = item->data(Qt::UserRole).toInt();
 		const SaveDataEntry& save = ::at32(m_save_entries, idx);
 
-		m_details_icon->set_video_path(icon_item->video_path().toStdString());
+		m_details_icon->set_video_path(icon_item->video_path().toStdString(), false);
+		m_details_icon->set_audio_path(icon_item->audio_path().toStdString(), false);
 		m_details_icon->set_thumbnail(icon_item->data(SaveUserRole::Pixmap).value<QPixmap>());
 		m_details_icon->set_active(false);
 
@@ -692,7 +727,7 @@ void save_manager_dialog::WaitForRepaintThreads(bool abort)
 {
 	for (int i = 0; i < m_list->rowCount(); i++)
 	{
-		if (movie_item* item = static_cast<movie_item*>(m_list->item(i, SaveColumns::Icon)))
+		if (movie_item* item = static_cast<movie_item*>(m_list->item(i, static_cast<int>(SaveColumns::Icon))))
 		{
 			item->wait_for_icon_loading(abort);
 		}
@@ -706,7 +741,7 @@ void save_manager_dialog::text_changed(const QString& text)
 		if (text.isEmpty())
 			return true;
 
-		for (int col = SaveColumns::Name; col < SaveColumns::Count; col++)
+		for (int col = static_cast<int>(SaveColumns::Name); col < static_cast<int>(SaveColumns::Count); col++)
 		{
 			const QTableWidgetItem* item = m_list->item(row, col);
 
@@ -728,7 +763,7 @@ void save_manager_dialog::text_changed(const QString& text)
 		if (is_hidden != hide)
 		{
 			m_list->setRowHidden(i, hide);
-			new_row_visible = !hide;
+			new_row_visible |= !hide;
 		}
 	}
 

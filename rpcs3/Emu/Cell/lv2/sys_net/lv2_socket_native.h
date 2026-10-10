@@ -50,8 +50,9 @@ public:
 	std::optional<s32> sendto(s32 flags, const std::vector<u8>& buf, std::optional<sys_net_sockaddr> opt_sn_addr, bool is_lock = true) override;
 	std::optional<s32> sendmsg(s32 flags, const sys_net_msghdr& msg, bool is_lock = true) override;
 
-	s32 poll(sys_net_pollfd& sn_pfd, pollfd& native_pfd) override;
+	void poll(sys_net_pollfd& sn_pfd, pollfd& native_pfd) override;
 	std::tuple<bool, bool, bool> select(bs_t<poll_t> selected, pollfd& native_pfd) override;
+	void get_sockinfo(sys_net_sockinfo_t& info) override;
 
 	bool is_socket_connected();
 
@@ -63,6 +64,7 @@ private:
 	void set_socket(socket_type native_socket, lv2_socket_family family, lv2_socket_type type, lv2_ip_protocol protocol);
 	void set_default_buffers();
 	void set_non_blocking();
+	void set_dgram_disable_connreset();
 
 private:
 	// Value keepers
@@ -70,6 +72,10 @@ private:
 	s32 so_reuseaddr = 0;
 	s32 so_reuseport = 0;
 #endif
+	// Those values come from FreeBSD
+	s32 min_ttl = 1;
+	s32 max_ttl = 64;
+
 	u16 bound_port = 0;
 	bool feign_tcp_conn_failure = false; // Savestate load related
 };

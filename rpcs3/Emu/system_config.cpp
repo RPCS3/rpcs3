@@ -1,17 +1,10 @@
 #include "stdafx.h"
 #include "system_config.h"
 
-#include "util/sysinfo.hpp"
-
 #include <random>
 
 cfg_root g_cfg{};
 cfg_root g_backup_cfg{};
-
-bool cfg_root::node_core::enable_tsx_by_default()
-{
-	return utils::has_rtm() && utils::has_mpx() && !utils::has_tsx_force_abort();
-}
 
 std::string cfg_root::node_sys::get_random_system_name()
 {

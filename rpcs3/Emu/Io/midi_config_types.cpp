@@ -27,11 +27,11 @@ void fmt_class_string<midi_device>::format(std::string& out, u64 arg)
 	fmt::append(out, "%sßßß%s", obj.type, obj.name);
 }
 
-midi_device midi_device::from_string(const std::string& str)
+midi_device midi_device::from_string(std::string_view str)
 {
 	midi_device res{};
 
-	if (const std::vector<std::string> parts = fmt::split(str, {"ßßß"}); !parts.empty())
+	if (const std::vector<std::string_view> parts = fmt::split_sv(str, {"ßßß"}); !parts.empty())
 	{
 		u64 result;
 

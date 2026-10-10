@@ -6,6 +6,7 @@
 #include <QVariant>
 #include <QSize>
 #include <QColor>
+#include <QSet>
 #include <QMessageBox>
 #include <QWindow>
 
@@ -13,6 +14,7 @@ namespace gui
 {
 	extern QString stylesheet;
 	extern bool custom_stylesheet_active;
+	extern f32 volume;
 
 	enum custom_roles
 	{
@@ -50,6 +52,7 @@ namespace gui
 		id = 5,
 		platinum_link = 6,
 		time_unlocked = 7,
+		trophy_set = 8,
 
 		count
 	};
@@ -60,6 +63,11 @@ namespace gui
 		name = 1,
 		progress = 2,
 		trophies = 3,
+		bronze = 4,
+		silver = 5,
+		gold = 6,
+		platinum = 7,
+		comm_id = 8,
 
 		count
 	};
@@ -108,29 +116,36 @@ namespace gui
 		return q_string_pair(path, title.simplified()); // simplified() forces single line text
 	}
 
+	QString window_states_to_string(Qt::WindowStates states);
+	Qt::WindowState string_to_window_states(const QString& state);
+
+	QString visibility_to_string(QWindow::Visibility visibility);
+	QWindow::Visibility string_to_visibility(const QString& visibility);
+
 	const QString Settings          = "CurrentSettings";
 	const QString DefaultStylesheet = "default";
 	const QString NoStylesheet      = "none";
 	const QString NativeStylesheet  = "native";
 	const QString DarkStylesheet    = "Darker Style by TheMitoSan";
 
-	const QString main_window  = "main_window";
-	const QString game_list    = "GameList";
-	const QString logger       = "Logger";
-	const QString debugger     = "Debugger";
-	const QString rsx          = "RSX_Debugger";
-	const QString meta         = "Meta";
-	const QString fs           = "FileSystem";
-	const QString gs_frame     = "GSFrame";
-	const QString trophy       = "Trophy";
-	const QString patches      = "Patches";
-	const QString localization = "Localization";
-	const QString pad_settings = "PadSettings";
-	const QString config       = "Config";
-	const QString log_viewer   = "LogViewer";
-	const QString sc           = "Shortcuts";
-	const QString navigation   = "PadNavigation";
-	const QString savestate    = "Savestate";
+	const QString main_window     = "main_window";
+	const QString game_list       = "GameList";
+	const QString game_collection = "GameCollection";
+	const QString logger          = "Logger";
+	const QString debugger        = "Debugger";
+	const QString rsx             = "RSX_Debugger";
+	const QString meta            = "Meta";
+	const QString fs              = "FileSystem";
+	const QString gs_frame        = "GSFrame";
+	const QString trophy          = "Trophy";
+	const QString patches         = "Patches";
+	const QString localization    = "Localization";
+	const QString pad_settings    = "PadSettings";
+	const QString config          = "Config";
+	const QString log_viewer      = "LogViewer";
+	const QString sc              = "Shortcuts";
+	const QString navigation      = "PadNavigation";
+	const QString savestate       = "Savestate";
 
 	const QString update_on   = "true";
 	const QString update_off  = "false";
@@ -138,6 +153,8 @@ namespace gui
 	const QString update_bkg  = "background";
 
 	const QColor gl_icon_color = QColor(240, 240, 240, 255);
+
+	const gui_save gui_volume = gui_save(main_window, "guiVolume", 1.0f);
 
 	const gui_save rg_freeze  = gui_save(main_window, "recentGamesFrozen", false);
 	const gui_save rg_entries = gui_save(main_window, "recentGamesNames",  QVariant::fromValue(q_pair_list()));
@@ -156,6 +173,8 @@ namespace gui
 	const gui_save ib_restart_hint = gui_save(main_window, "confirmationRestart",      true);
 
 	const gui_save fd_install_pkg  = gui_save(main_window, "lastExplorePathPKG",  "");
+	const gui_save fd_add_games    = gui_save(main_window, "lastExplorePathADDGAMES", "");
+	const gui_save fd_add_iso      = gui_save(main_window, "lastExplorePathADDISO",   "");
 	const gui_save fd_install_pup  = gui_save(main_window, "lastExplorePathPUP",  "");
 	const gui_save fd_boot_elf     = gui_save(main_window, "lastExplorePathELF",  "");
 	const gui_save fd_boot_game    = gui_save(main_window, "lastExplorePathGAME", "");
@@ -170,13 +189,14 @@ namespace gui
 	const gui_save fd_save_log     = gui_save(main_window, "lastExplorePathSaveLog", "");
 
 	const gui_save mw_debugger         = gui_save(main_window, "debuggerVisible",  false);
-	const gui_save mw_logger           = gui_save(main_window, "loggerVisible",    true);
+	const gui_save mw_logger           = gui_save(main_window, "loggerVisible",    false);
 	const gui_save mw_gamelist         = gui_save(main_window, "gamelistVisible",  true);
 	const gui_save mw_toolBarVisible   = gui_save(main_window, "toolBarVisible",   true);
-	const gui_save mw_titleBarsVisible = gui_save(main_window, "titleBarsVisible", true);
+	const gui_save mw_titleBarsVisible = gui_save(main_window, "titleBarsVisible", false);
 	const gui_save mw_geometry         = gui_save(main_window, "geometry",         QByteArray());
 	const gui_save mw_windowState      = gui_save(main_window, "windowState",      QByteArray());
 	const gui_save mw_mwState          = gui_save(main_window, "mwState",          QByteArray());
+	const gui_save mw_visibility       = gui_save(main_window, "visibility",       window_states_to_string(Qt::WindowNoState));
 
 	const gui_save cat_hdd_game    = gui_save(game_list, "categoryVisibleHDDGame",    true);
 	const gui_save cat_disc_game   = gui_save(game_list, "categoryVisibleDiscGame",   true);
@@ -212,11 +232,19 @@ namespace gui
 	const gui_save gl_textFactor   = gui_save(game_list, "textFactor",   qreal{2.0});
 	const gui_save gl_marginFactor = gui_save(game_list, "marginFactor", qreal{0.09});
 	const gui_save gl_show_hidden  = gui_save(game_list, "show_hidden",  false);
+	const gui_save gl_show_broken  = gui_save(game_list, "show_broken",  false);
+	const gui_save gl_show_completed = gui_save(game_list, "show_completed", false);
 	const gui_save gl_hidden_list  = gui_save(game_list, "hidden_list",  QStringList());
+	const gui_save gl_broken_list  = gui_save(game_list, "broken_list",  QStringList());
+	const gui_save gl_completed_list = gui_save(game_list, "completed_list", QStringList());
 	const gui_save gl_draw_compat  = gui_save(game_list, "draw_compat",  false);
 	const gui_save gl_pref_gd_icon = gui_save(game_list, "pref_gd_icon", false);
 	const gui_save gl_custom_icon  = gui_save(game_list, "custom_icon",  true);
 	const gui_save gl_hover_gifs   = gui_save(game_list, "hover_gifs",   true);
+	const gui_save gl_hover_music  = gui_save(game_list, "hover_music",  true);
+
+	const gui_save gc_collections = gui_save(game_collection, "collections", QStringList());
+	const gui_save gc_current     = gui_save(game_collection, "current",    "");
 
 	const gui_save fs_emulator_dir_list = gui_save(fs, "emulator_dir_list", QStringList());
 	const gui_save fs_dev_hdd0_list     = gui_save(fs, "dev_hdd0_list",     QStringList());
@@ -237,6 +265,7 @@ namespace gui
 	const gui_save l_ansi_code = gui_save(logger, "ANSI_code", true);
 	const gui_save l_limit     = gui_save(logger, "limit",     1000);
 	const gui_save l_limit_tty = gui_save(logger, "TTY_limit", 1000);
+	const gui_save l_log_hide  = gui_save(logger, "Log hide",  false);
 
 	const gui_save d_splitterState = gui_save(debugger, "splitterState", QByteArray());
 
@@ -255,7 +284,7 @@ namespace gui
 	const gui_save m_discordState      = gui_save(meta, "discordState",      "");
 	const gui_save m_check_upd_start   = gui_save(meta, "checkUpdateStart",  update_on);
 
-	const gui_save gs_disableMouse      = gui_save(gs_frame, "disableMouse",          false);
+	const gui_save gs_disableMouse      = gui_save(gs_frame, "disableMouse",          true);
 	const gui_save gs_disableKbHotkeys  = gui_save(gs_frame, "disableKbHotkeys",      false);
 	const gui_save gs_showMouseFs       = gui_save(gs_frame, "showMouseInFullscreen", false);
 	const gui_save gs_lockMouseFs       = gui_save(gs_frame, "lockMouseInFullscreen", true);
@@ -267,7 +296,7 @@ namespace gui
 	const gui_save gs_hideMouseIdle     = gui_save(gs_frame, "hideMouseOnIdle",       false);
 	const gui_save gs_hideMouseIdleTime = gui_save(gs_frame, "hideMouseOnIdleTime",   2000);
 	const gui_save gs_geometry          = gui_save(gs_frame, "geometry",              QRect());
-	const gui_save gs_visibility        = gui_save(gs_frame, "visibility",            QWindow::Visibility::AutomaticVisibility);
+	const gui_save gs_visibility        = gui_save(gs_frame, "visibility",            visibility_to_string(QWindow::Visibility::AutomaticVisibility));
 
 	const gui_save ss_icon_color      = gui_save(trophy, "icon_color",    gl_icon_color);
 	const gui_save ss_game_icon_size  = gui_save(trophy, "game_icon_size",  25);
@@ -279,9 +308,12 @@ namespace gui
 	const gui_save tr_icon_color    = gui_save(trophy, "icon_color",    gl_icon_color);
 	const gui_save tr_icon_height   = gui_save(trophy, "icon_height",   75);
 	const gui_save tr_game_iconSize = gui_save(trophy, "game_iconSize", 25);
+	const gui_save tr_game_icon_width = gui_save(trophy, "game_icon_width", 0);
 	const gui_save tr_show_locked   = gui_save(trophy, "show_locked",   true);
 	const gui_save tr_show_unlocked = gui_save(trophy, "show_unlocked", true);
 	const gui_save tr_show_hidden   = gui_save(trophy, "show_hidden",   false);
+	const gui_save tr_show_broken   = gui_save(trophy, "show_broken",   false);
+	const gui_save tr_show_completed = gui_save(trophy, "show_completed", false);
 	const gui_save tr_show_bronze   = gui_save(trophy, "show_bronze",   true);
 	const gui_save tr_show_silver   = gui_save(trophy, "show_silver",   true);
 	const gui_save tr_show_gold     = gui_save(trophy, "show_gold",     true);
@@ -314,7 +346,7 @@ namespace gui
 
 	const gui_save sc_shortcuts = gui_save(sc, "shortcuts", QVariantMap());
 
-	const gui_save nav_enabled = gui_save(navigation, "pad_input_enabled",      false);
+	const gui_save nav_enabled = gui_save(navigation, "pad_input_enabled",      true);
 	const gui_save nav_global  = gui_save(navigation, "allow_global_pad_input", false);
 }
 
@@ -343,6 +375,36 @@ public:
 	QStringList GetStylesheetEntries() const;
 	QStringList GetGameListCategoryFilters(bool is_list_mode) const;
 
+	/** User defined game collections, stored in the GameCollection section of CurrentSettings.ini.
+	    An empty collection name stands for "All Games" throughout: no selection, and no membership. */
+	QStringList GetGameCollections() const;
+	bool AddGameCollection(const QString& name) const;
+	bool RenameGameCollection(const QString& from, const QString& to) const;
+	bool RemoveGameCollection(const QString& name) const;
+	QString GetCurrentGameCollection() const;
+	void SetCurrentGameCollection(const QString& name, bool sync = true) const;
+	QSet<QString> GetGamesInCollection(const QString& name) const;
+
+	/** Cleans up all game collections according to the provided serials.
+	    Returns whether anything actually changed. */
+	bool CleanupCollections(const QSet<QString>& serials) const;
+
+	/** Puts the given games in a game collection or takes them out of it, leaving every collection they
+	    already belong to alone. Returns whether anything actually changed. */
+	bool SetGameCollectionMembership(const QSet<QString>& serials, const QString& name, bool add) const;
+
+	/** Label of the default game collection entry. Reserved, so it can never name a real collection. */
+	static QString GetAllGamesCollectionLabel();
+
+	/** Returns true if the name may be used as a game collection name and as an ini key */
+	static bool IsValidGameCollectionName(const QString& name);
+
+	/** Spells out the rule enforced by IsValidGameCollectionName(), for error messages */
+	static QString GetGameCollectionNameHint();
+
+	/** Returns true if the name is taken by the default entry of the game collection menus */
+	static bool IsReservedGameCollectionName(const QString& name);
+
 	static QSize SizeFromSlider(int pos);
 
 	/** Sets the visibility of the chosen category. */
@@ -357,6 +419,9 @@ public:
 	void SetCustomColor(int col, const QColor& val) const;
 
 private:
+	/** Writes the members of a game collection, dropping the key when empty. Batched: the caller flushes with sync(). */
+	void SetGamesInCollection(const QString& name, const QSet<QString>& serials) const;
+
 	static gui_save GetGuiSaveForSavestateGameColumn(gui::savestate_game_list_columns col);
 	static gui_save GetGuiSaveForSavestateColumn(gui::savestate_list_columns col);
 	static gui_save GetGuiSaveForTrophyGameColumn(gui::trophy_game_list_columns col);

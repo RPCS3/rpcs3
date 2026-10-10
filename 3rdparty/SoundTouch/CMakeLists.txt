@@ -11,11 +11,11 @@ add_library(soundtouch STATIC EXCLUDE_FROM_ALL
 	soundtouch/source/SoundTouch/TDStretch.cpp
 )
 
-target_include_directories(soundtouch PRIVATE
+target_include_directories(soundtouch SYSTEM PRIVATE
 	soundtouch/source/SoundTouch
 	soundtouch/include)
 
-target_include_directories(soundtouch INTERFACE
+target_include_directories(soundtouch SYSTEM INTERFACE
 	$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/soundtouch/include>
 	$<INSTALL_INTERFACE:/soundtouch/include>)
 

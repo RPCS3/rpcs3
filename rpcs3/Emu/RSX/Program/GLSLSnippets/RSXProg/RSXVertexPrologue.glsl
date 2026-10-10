@@ -55,6 +55,20 @@ vec4 apply_zclip_xform(
 }
 #endif
 
+#ifdef _EMULATE_DEPTH_RANGE
+// The host viewport only holds [0, 1] while float depth targets store window Z far above 1.
+// Map the clip range linearly onto the viewport instead; the fragment stage recovers the window Z.
+vec4 apply_depth_range_xform(const in vec4 pos, const in vec2 range)
+{
+	if (range.y <= range.x)
+	{
+		return pos;
+	}
+
+	return vec4(pos.xy, (pos.z - range.x * pos.w) / (range.y - range.x), pos.w);
+}
+#endif
+
 #if defined(_ENABLE_INSTANCED_CONSTANTS)
 // Workaround for GL vs VK builtin variable naming
 #ifdef VULKAN
@@ -77,9 +91,12 @@ vec4 _fetch_constant(const in uint base_offset)
 	return _fetch_constant(int(base_offset));
 }
 #elif defined(VULKAN)
-#define _fetch_constant(x) vc[x + xform_constants_offset]
+#define _fetch_constant(x) vc[(x) + xform_constants_offset]
 #else
 #define _fetch_constant(x) vc[x]
 #endif
+
+// Indexed access needs bounds checking
+#define _fetch_indexed_constant(x) (((x) < 468) ? _fetch_constant(x) : vec4(0.))
 
 )"

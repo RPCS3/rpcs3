@@ -1,6 +1,7 @@
 #include "shortcut_dialog.h"
 #include "ui_shortcut_dialog.h"
 #include "shortcut_settings.h"
+#include "gui_settings.h"
 
 #include <QDialogButtonBox>
 #include <QPushButton>
@@ -39,6 +40,7 @@ shortcut_dialog::shortcut_dialog(const std::shared_ptr<gui_settings> gui_setting
 		key_sequence_edit->setObjectName(shortcut.name);
 		key_sequence_edit->setMinimumWidth(label->sizeHint().width());
 		key_sequence_edit->setKeySequence(key_sequence);
+		key_sequence_edit->setClearButtonEnabled(true);
 
 		m_values[shortcut.name] = key_sequence.toString();
 

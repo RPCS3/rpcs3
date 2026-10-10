@@ -49,6 +49,9 @@
     </ClCompile>
     <ClCompile Include="Emu\RSX\GL\GLDMA.cpp" />
     <ClCompile Include="Emu\RSX\GL\GLResolveHelper.cpp" />
+    <ClCompile Include="Emu\RSX\GL\glutils\ex.cpp">
+      <Filter>glutils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Emu\RSX\GL\GLTexture.h" />
@@ -122,6 +125,12 @@
     </ClInclude>
     <ClInclude Include="Emu\RSX\GL\GLDMA.h" />
     <ClInclude Include="Emu\RSX\GL\GLResolveHelper.h" />
+    <ClInclude Include="Emu\RSX\GL\glutils\barriers.h">
+      <Filter>glutils</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\GL\glutils\ex.h">
+      <Filter>glutils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="glutils">

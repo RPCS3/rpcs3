@@ -4,6 +4,7 @@
 #include "Emu/Cell/PPUCallback.h"
 #include "Emu/IdManager.h"
 #include "Emu/Cell/Modules/cellSysutil.h"
+#include "np_helpers.h"
 
 LOG_CHANNEL(sceNp2);
 
@@ -16,10 +17,15 @@ generic_async_transaction_context::generic_async_transaction_context(const SceNp
 generic_async_transaction_context::~generic_async_transaction_context()
 {
 	if (thread.joinable())
-		thread.join();
+	{
+		if (std::this_thread::get_id() == thread.get_id())
+			thread.detach();
+		else
+			thread.join();
+	}
 }
 
-std::optional<s32> generic_async_transaction_context::get_transaction_status()
+std::optional<s32> generic_async_transaction_context::get_transaction_status() const
 {
 	std::lock_guard lock(mutex);
 	return result;
@@ -40,7 +46,7 @@ error_code generic_async_transaction_context::wait_for_completion()
 		return *result;
 	}
 
-	completion_cond.wait(lock);
+	completion_cond.wait(lock, [this] { return result.has_value(); });
 
 	return *result;
 }
@@ -53,7 +59,7 @@ void generic_async_transaction_context::set_result_and_wake(error_code err)
 
 tus_ctx::tus_ctx(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase)
 {
-	ensure(!communicationId->data[9] && strlen(communicationId->data) == 9);
+	ensure(communicationId && np::validate_communication_id(*communicationId), "tus_ctx::tus_ctx: Invalid SceNpCommunicationId");
 	memcpy(&this->communicationId, communicationId.get_ptr(), sizeof(SceNpCommunicationId));
 	memcpy(&this->passphrase, passphrase.get_ptr(), sizeof(SceNpCommunicationPassphrase));
 }
@@ -96,7 +102,7 @@ bool destroy_tus_transaction_context(s32 ctx_id)
 
 score_ctx::score_ctx(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase)
 {
-	ensure(!communicationId->data[9] && strlen(communicationId->data) == 9);
+	ensure(communicationId && np::validate_communication_id(*communicationId), "score_ctx::score_ctx: Invalid SceNpCommunicationId");
 	memcpy(&this->communicationId, communicationId.get_ptr(), sizeof(SceNpCommunicationId));
 	memcpy(&this->passphrase, passphrase.get_ptr(), sizeof(SceNpCommunicationPassphrase));
 }
@@ -140,7 +146,7 @@ bool destroy_score_transaction_context(s32 ctx_id)
 
 match2_ctx::match2_ctx(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase, s32 option)
 {
-	ensure(!communicationId->data[9] && strlen(communicationId->data) == 9);
+	ensure(communicationId && np::validate_communication_id(*communicationId), "match2_ctx::match2_ctx: Invalid SceNpCommunicationId");
 	memcpy(&this->communicationId, communicationId.get_ptr(), sizeof(SceNpCommunicationId));
 	memcpy(&this->passphrase, passphrase.get_ptr(), sizeof(SceNpCommunicationPassphrase));
 
@@ -149,7 +155,7 @@ match2_ctx::match2_ctx(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<
 }
 u16 create_match2_context(vm::cptr<SceNpCommunicationId> communicationId, vm::cptr<SceNpCommunicationPassphrase> passphrase, s32 option)
 {
-	sceNp2.notice("Creating match2 context with communicationId: <%s>", static_cast<const char*>(communicationId->data));
+	sceNp2.notice("Creating match2 context with communicationId: <%s>", std::string_view(communicationId->data, 9));
 	return static_cast<u16>(idm::make<match2_ctx>(communicationId, passphrase, option));
 }
 bool destroy_match2_context(u16 ctx_id)
@@ -167,7 +173,7 @@ shared_ptr<match2_ctx> get_match2_context(u16 ctx_id)
 
 lookup_title_ctx::lookup_title_ctx(vm::cptr<SceNpCommunicationId> communicationId)
 {
-	ensure(!communicationId->data[9] && strlen(communicationId->data) == 9);
+	ensure(communicationId && np::validate_communication_id(*communicationId), "lookup_title_ctx::lookup_title_ctx: Invalid SceNpCommunicationId");
 	memcpy(&this->communicationId, communicationId.get_ptr(), sizeof(SceNpCommunicationId));
 }
 s32 create_lookup_title_context(vm::cptr<SceNpCommunicationId> communicationId)

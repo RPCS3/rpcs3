@@ -119,7 +119,8 @@ echo -e "\n\nResult:\n"
 
 # Find the max length of the paths (before '->')
 max_len=0
-while IFS='->' read -r left _; do
+while read -r line; do
+    left="${line%%->*}"
     len=$(echo -n "$left" | wc -c)
     if (( len > max_len )); then
         max_len=$len
@@ -127,8 +128,10 @@ while IFS='->' read -r left _; do
 done < "$resultfile"
 
 # Print with padding so '->' lines up
-while IFS='->' read -r left right; do
-    right=$(echo "$right" | sed 's/^[[:space:]]*>*[[:space:]]*//')
+while read -r line; do
+    left="${line%%->*}"
+    right="${line#*->}"
+    right=$(echo "$right" | sed 's/^[[:space:]]*//')
     printf "%-${max_len}s -> %s\n" "$left" "$right"
 done < "$resultfile"
 

@@ -8,6 +8,7 @@
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/PPUCallback.h"
 #include "Emu/Cell/PPUOpcodes.h"
+#include "Emu/Cell/timers.hpp"
 #include "Emu/Memory/vm_locking.h"
 #include "sys_event.h"
 #include "sys_process.h"
@@ -305,6 +306,7 @@ error_code sys_ppu_thread_detach(ppu_thread& ppu, u32 thread_id)
 		{
 			// Join and notify thread (it is detached from IDM now so it must be done explicitly now)
 			*ptr = thread_state::finished;
+			return CELL_OK;
 		}
 
 		return result;
@@ -468,11 +470,11 @@ error_code sys_ppu_thread_restart(ppu_thread& ppu)
 	return CELL_OK;
 }
 
-error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::ptr<ppu_thread_param_t> param, u64 arg, u64 unk, s32 prio, u32 _stacksz, u64 flags, vm::cptr<char> threadname)
+error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::ptr<ppu_thread_param_t> param, u64 arg, u64 unk, s32 prio, u64 _stacksz, u64 flags, vm::cptr<char> threadname)
 {
 	ppu.state += cpu_flag::wait;
 
-	sys_ppu_thread.warning("_sys_ppu_thread_create(thread_id=*0x%x, param=*0x%x, arg=0x%llx, unk=0x%llx, prio=%d, stacksize=0x%x, flags=0x%llx, threadname=*0x%x)",
+	sys_ppu_thread.warning("_sys_ppu_thread_create(thread_id=*0x%x, param=*0x%x, arg=0x%llx, unk=0x%llx, prio=%d, stacksize=0x%llx, flags=0x%llx, threadname=*0x%x)",
 		thread_id, param, arg, unk, prio, _stacksz, flags, threadname);
 
 	// thread_id is checked for null in stub -> CELL_ENOMEM
@@ -497,7 +499,8 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 	const u32 tls = param->tls;
 
 	// Compute actual stack size and allocate
-	const u32 stack_size = utils::align<u32>(std::max<u32>(_stacksz, 4096), 4096);
+	// 0 and UINT64_MAX both convert to 4096
+	const u64 stack_size = FN(x ? x : 4096)(utils::align<u64>(_stacksz, 4096));
 
 	auto& dct = g_fxo->get<lv2_memory_container>();
 
@@ -507,7 +510,7 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 		return {CELL_ENOMEM, dct.size - dct.used};
 	}
 
-	const vm::addr_t stack_base{vm::alloc(stack_size, vm::stack, 4096)};
+	const vm::addr_t stack_base{vm::alloc(static_cast<u32>(stack_size), vm::stack, 4096)};
 
 	if (!stack_base)
 	{
@@ -523,6 +526,7 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 
 		if (!vm::read_string(threadname.addr(), max_size, ppu_name, true))
 		{
+			vm::dealloc(stack_base);
 			dct.free(stack_size);
 			return CELL_EFAULT;
 		}
@@ -532,7 +536,7 @@ error_code _sys_ppu_thread_create(ppu_thread& ppu, vm::ptr<u64> thread_id, vm::p
 	{
 		ppu_thread_params p;
 		p.stack_addr = stack_base;
-		p.stack_size = stack_size;
+		p.stack_size = static_cast<u32>(stack_size);
 		p.tls_addr = tls;
 		p.entry = entry;
 		p.arg0 = arg;
@@ -561,12 +565,21 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 
 	sys_ppu_thread.trace("sys_ppu_thread_start(thread_id=0x%x)", thread_id);
 
+	bool is_lower_prio = false;
+
 	const auto thread = idm::get<named_thread<ppu_thread>>(thread_id, [&, notify = lv2_obj::notify_all_t()](ppu_thread& thread) -> CellError
 	{
 		if (!thread.state.test_and_reset(cpu_flag::stop))
 		{
 			// Already started
 			return CELL_EBUSY;
+		}
+
+		is_lower_prio = thread.is_lower_priority_than(ppu);
+
+		if (!is_lower_prio)
+		{
+			thread.start_gate_caller = ppu.id;
 		}
 
 		ensure(lv2_obj::awake(&thread));
@@ -588,10 +601,33 @@ error_code sys_ppu_thread_start(ppu_thread& ppu, u32 thread_id)
 	{
 		return thread.ret;
 	}
+
+	thread->cmd_notify.store(1);
+	thread->cmd_notify.notify_one();
+
+	if (is_lower_prio)
+	{
+		// The new thread has higher priority: wait until it has started and stops running, blocked or preempted (bounded)
+		// A preempted thread stays ahead of the caller in the scheduler queue, so there is no need to wait for it to block
+		const auto is_running = [&]()
+		{
+			return lv2_obj::ppu_state(thread.ptr.get()).first == PPU_THREAD_STATUS_ONPROC;
+		};
+
+		// Keep waiting when the caller is suspended: another thread leaving its hardware thread may resume it before the new thread starts
+		for (const u64 start = get_system_time(); (thread->cmd_queue.size() || is_running()) && !ppu.is_stopped() && get_system_time() - start < 5000;)
+		{
+			std::this_thread::yield();
+		}
+	}
 	else
 	{
-		thread->cmd_notify.store(1);
-		thread->cmd_notify.notify_one();
+		// The new thread has lower or equal priority: if it got a free hardware thread, wait until it reaches its entry command (bounded)
+		// It then waits in turn for this caller to leave the syscall before running (see ppu_cmd::entry_call)
+		for (const u64 start = get_system_time(); thread->start_gate_caller && cpu_flag::suspend - thread->state && cpu_flag::suspend - ppu.state && !ppu.is_stopped() && get_system_time() - start < 5000;)
+		{
+			std::this_thread::yield();
+		}
 	}
 
 	return CELL_OK;

@@ -1,15 +1,17 @@
 #include "stdafx.h"
 #include "Emu/Memory/vm.h"
 #include "Emu/IdManager.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
-#include "Emu//Audio/audio_utils.h"
+#include "Emu/Audio/audio_utils.h"
+#include "Emu/Cell/PPUThread.h"
+#include "util/bit_set.hpp"
 #include "util/video_provider.h"
 
 #include "sys_rsxaudio.h"
 
 #include <cmath>
-#include <bitset>
 #include <optional>
 
 #ifdef __linux__
@@ -46,14 +48,14 @@ namespace rsxaudio_ringbuf_reader
 	static void set_timestamp(rsxaudio_shmem::ringbuf_t& ring_buf, u64 timestamp)
 	{
 		const s32 entry_idx_raw = (ring_buf.read_idx + ring_buf.rw_max_idx - (ring_buf.rw_max_idx > 2) - 1) % ring_buf.rw_max_idx;
-		const s32 entry_idx = std::clamp<s32>(entry_idx_raw, 0, SYS_RSXAUDIO_RINGBUF_SZ);
+		const s32 entry_idx = std::clamp<s32>(entry_idx_raw, 0, SYS_RSXAUDIO_RINGBUF_SZ - 1);
 
 		ring_buf.entries[entry_idx].timestamp = convert_to_timebased_time(timestamp);
 	}
 
 	static std::tuple<bool /*notify*/, u64 /*blk_idx*/, u64 /*timestamp*/> update_status(rsxaudio_shmem::ringbuf_t& ring_buf)
 	{
-		const s32 read_idx = std::clamp<s32>(ring_buf.read_idx, 0, SYS_RSXAUDIO_RINGBUF_SZ);
+		const s32 read_idx = std::clamp<s32>(ring_buf.read_idx, 0, SYS_RSXAUDIO_RINGBUF_SZ - 1);
 
 		if ((ring_buf.entries[read_idx].valid & 1) == 0U)
 		{
@@ -61,7 +63,7 @@ namespace rsxaudio_ringbuf_reader
 		}
 
 		const s32 entry_idx_raw = (ring_buf.read_idx + ring_buf.rw_max_idx - (ring_buf.rw_max_idx > 2)) % ring_buf.rw_max_idx;
-		const s32 entry_idx = std::clamp<s32>(entry_idx_raw, 0, SYS_RSXAUDIO_RINGBUF_SZ);
+		const s32 entry_idx = std::clamp<s32>(entry_idx_raw, 0, SYS_RSXAUDIO_RINGBUF_SZ - 1);
 
 		ring_buf.entries[read_idx].valid = 0;
 		ring_buf.queue_notify_idx = (ring_buf.queue_notify_idx + 1) % ring_buf.queue_notify_step;
@@ -72,7 +74,7 @@ namespace rsxaudio_ringbuf_reader
 
 	static std::pair<bool /*entry_valid*/, u32 /*addr*/> get_addr(const rsxaudio_shmem::ringbuf_t& ring_buf)
 	{
-		const s32 read_idx = std::clamp<s32>(ring_buf.read_idx, 0, SYS_RSXAUDIO_RINGBUF_SZ);
+		const s32 read_idx = std::clamp<s32>(ring_buf.read_idx, 0, SYS_RSXAUDIO_RINGBUF_SZ - 1);
 
 		if (ring_buf.entries[read_idx].valid & 1)
 		{
@@ -138,9 +140,11 @@ void lv2_rsxaudio::save(utils::serial& ar)
 	}
 }
 
-error_code sys_rsxaudio_initialize(vm::ptr<u32> handle)
+error_code sys_rsxaudio_initialize(ppu_thread& ppu, vm::ptr<u32> handle)
 {
-	sys_rsxaudio.trace("sys_rsxaudio_initialize(handle=*0x%x)", handle);
+	ppu.state += cpu_flag::wait;
+
+	sys_rsxaudio.notice("sys_rsxaudio_initialize(handle=*0x%x)", handle);
 
 	auto& rsxaudio_thread = g_fxo->get<rsx_audio_data>();
 
@@ -196,9 +200,11 @@ error_code sys_rsxaudio_initialize(vm::ptr<u32> handle)
 	return CELL_OK;
 }
 
-error_code sys_rsxaudio_finalize(u32 handle)
+error_code sys_rsxaudio_finalize(ppu_thread& ppu, u32 handle)
 {
-	sys_rsxaudio.trace("sys_rsxaudio_finalize(handle=0x%x)", handle);
+	ppu.state += cpu_flag::wait;
+
+	sys_rsxaudio.notice("sys_rsxaudio_finalize(handle=0x%x)", handle);
 
 	const auto rsxaudio_obj = idm::get_unlocked<lv2_obj, lv2_rsxaudio>(handle);
 
@@ -230,9 +236,11 @@ error_code sys_rsxaudio_finalize(u32 handle)
 	return CELL_OK;
 }
 
-error_code sys_rsxaudio_import_shared_memory(u32 handle, vm::ptr<u64> addr)
+error_code sys_rsxaudio_import_shared_memory(ppu_thread& ppu, u32 handle, vm::ptr<u64> addr)
 {
-	sys_rsxaudio.trace("sys_rsxaudio_import_shared_memory(handle=0x%x, addr=*0x%x)", handle, addr);
+	ppu.state += cpu_flag::wait;
+
+	sys_rsxaudio.notice("sys_rsxaudio_import_shared_memory(handle=0x%x, addr=*0x%x)", handle, addr);
 
 	const auto rsxaudio_obj = idm::get_unlocked<lv2_obj, lv2_rsxaudio>(handle);
 
@@ -259,9 +267,11 @@ error_code sys_rsxaudio_import_shared_memory(u32 handle, vm::ptr<u64> addr)
 	return CELL_OK;
 }
 
-error_code sys_rsxaudio_unimport_shared_memory(u32 handle, vm::ptr<u64> addr /* unused */)
+error_code sys_rsxaudio_unimport_shared_memory(ppu_thread& ppu, u32 handle, vm::ptr<u64> addr /* unused */)
 {
-	sys_rsxaudio.trace("sys_rsxaudio_unimport_shared_memory(handle=0x%x, addr=*0x%x)", handle, addr);
+	ppu.state += cpu_flag::wait;
+
+	sys_rsxaudio.notice("sys_rsxaudio_unimport_shared_memory(handle=0x%x, addr=*0x%x)", handle, addr);
 
 	const auto rsxaudio_obj = idm::get_unlocked<lv2_obj, lv2_rsxaudio>(handle);
 
@@ -1240,7 +1250,9 @@ bool rsxaudio_data_thread::enqueue_data(RsxaudioPort dst, bool silence, const vo
 {
 	auto& backend_thread = g_fxo->get<rsx_audio_backend>();
 
-	if (dst == RsxaudioPort::SERIAL)
+	switch (dst)
+	{
+	case RsxaudioPort::SERIAL:
 	{
 		if (!silence)
 		{
@@ -1258,7 +1270,7 @@ bool rsxaudio_data_thread::enqueue_data(RsxaudioPort dst, bool silence, const vo
 		backend_thread.add_data(cont);
 		return cont.data_was_used();
 	}
-	else if (dst == RsxaudioPort::SPDIF_0)
+	case RsxaudioPort::SPDIF_0:
 	{
 		if (!silence)
 		{
@@ -1273,7 +1285,7 @@ bool rsxaudio_data_thread::enqueue_data(RsxaudioPort dst, bool silence, const vo
 		backend_thread.add_data(cont);
 		return cont.data_was_used();
 	}
-	else if (dst == RsxaudioPort::SPDIF_1)
+	case RsxaudioPort::SPDIF_1:
 	{
 		if (!silence)
 		{
@@ -1287,6 +1299,11 @@ bool rsxaudio_data_thread::enqueue_data(RsxaudioPort dst, bool silence, const vo
 		rsxaudio_data_container cont{hwp, output_buf, false, false, true};
 		backend_thread.add_data(cont);
 		return cont.data_was_used();
+	}
+	case RsxaudioPort::INVALID:
+	{
+		break;
+	}
 	}
 
 	return false;
@@ -1361,7 +1378,7 @@ u8 rsxaudio_backend_thread::get_channel_count() const
 rsxaudio_backend_thread::emu_audio_cfg rsxaudio_backend_thread::get_emu_cfg()
 {
 	// Get max supported channel count
-	AudioChannelCnt out_ch_cnt = AudioBackend::get_max_channel_count(0); // CELL_AUDIO_OUT_PRIMARY
+	const AudioChannelCnt out_ch_cnt = AudioBackend::get_max_channel_count(0); // CELL_AUDIO_OUT_PRIMARY
 
 	emu_audio_cfg cfg =
 	{
@@ -1392,9 +1409,9 @@ void rsxaudio_backend_thread::operator()()
 		return;
 	}
 
-	static rsxaudio_state ra_state{};
-	static emu_audio_cfg emu_cfg{};
-	static bool backend_failed = false;
+	rsxaudio_state ra_state{};
+	emu_audio_cfg emu_cfg{};
+	bool backend_failed = false;
 
 	for (;;)
 	{
@@ -1413,6 +1430,20 @@ void rsxaudio_backend_thread::operator()()
 				{
 					lock.unlock();
 					backend_stop();
+
+					// Destroy the backend on this thread, the one that created it in backend_init().
+					// The backend's ctor calls CoInitializeEx here on Windows; if it is instead released
+					// by ~rsxaudio_backend_thread() (which runs on the GUI thread via g_fxo->clear()
+					// during Kill()), the matching CoUninitialize lands on the GUI thread, draining its
+					// OLE reference and silently breaking the main window's file drag&drop. Keep COM
+					// init/teardown balanced on this thread.
+					if (backend)
+					{
+						backend->Close();
+						backend->SetWriteCallback(nullptr);
+						backend->SetStateCallback(nullptr);
+						backend = nullptr;
+					}
 					return;
 				}
 
@@ -1651,13 +1682,13 @@ void rsxaudio_backend_thread::set_mute_state(avport_bit muted_avports)
 
 u8 rsxaudio_backend_thread::gen_mute_state(avport_bit avports)
 {
-	std::bitset<SYS_RSXAUDIO_AVPORT_CNT> mute_state{0};
+	bit_set<SYS_RSXAUDIO_AVPORT_CNT> mute_state{0};
 
-	if (avports.hdmi_0)  mute_state[static_cast<u8>(RsxaudioAvportIdx::HDMI_0)]  = true;
-	if (avports.hdmi_1)  mute_state[static_cast<u8>(RsxaudioAvportIdx::HDMI_1)]  = true;
-	if (avports.avmulti) mute_state[static_cast<u8>(RsxaudioAvportIdx::AVMULTI)] = true;
-	if (avports.spdif_0) mute_state[static_cast<u8>(RsxaudioAvportIdx::SPDIF_0)] = true;
-	if (avports.spdif_1) mute_state[static_cast<u8>(RsxaudioAvportIdx::SPDIF_1)] = true;
+	if (avports.hdmi_0)  mute_state.set(static_cast<u8>(RsxaudioAvportIdx::HDMI_0),  true);
+	if (avports.hdmi_1)  mute_state.set(static_cast<u8>(RsxaudioAvportIdx::HDMI_1),  true);
+	if (avports.avmulti) mute_state.set(static_cast<u8>(RsxaudioAvportIdx::AVMULTI), true);
+	if (avports.spdif_0) mute_state.set(static_cast<u8>(RsxaudioAvportIdx::SPDIF_0), true);
+	if (avports.spdif_1) mute_state.set(static_cast<u8>(RsxaudioAvportIdx::SPDIF_1), true);
 
 	return static_cast<u8>(mute_state.to_ulong());
 }
@@ -1720,7 +1751,7 @@ void rsxaudio_backend_thread::backend_init(const rsxaudio_state& ra_state, const
 	if (reset_backend || !backend)
 	{
 		backend = nullptr;
-		backend = Emu.GetCallbacks().get_audio();
+		backend = g_emu_callbacks.get_audio();
 		backend->SetWriteCallback(std::bind(&rsxaudio_backend_thread::write_data_callback, this, std::placeholders::_1, std::placeholders::_2));
 		backend->SetStateCallback(std::bind(&rsxaudio_backend_thread::state_changed_callback, this, std::placeholders::_1));
 	}
@@ -1832,7 +1863,7 @@ u32 rsxaudio_backend_thread::write_data_callback(u32 bytes, void* buf)
 		return val;
 	});
 
-	const std::bitset<SYS_RSXAUDIO_AVPORT_CNT> mute_state{cb_cfg.mute_state};
+	const bit_set<SYS_RSXAUDIO_AVPORT_CNT> mute_state{cb_cfg.mute_state};
 
 	if (cb_cfg.ready && !mute_state[static_cast<u8>(cb_cfg.avport_idx)] && Emu.IsRunning())
 	{
@@ -2018,7 +2049,7 @@ void rsxaudio_periodic_tmr::cancel_timer_unlocked()
 	{
 		const u64 flag = 1;
 		const auto wr_res = write(cancel_event, &flag, sizeof(flag));
-		ensure(wr_res == sizeof(flag) || wr_res == -EAGAIN);
+		ensure(wr_res == sizeof(flag) || errno == EAGAIN);
 	}
 #elif defined(BSD) || defined(__APPLE__)
 	handle[TIMER_ID].flags = (handle[TIMER_ID].flags & ~EV_ENABLE) | EV_DISABLE;
@@ -2271,9 +2302,9 @@ void rsxaudio_periodic_tmr::cancel_wait()
 
 void rsxaudio_periodic_tmr::enable_vtimer(u32 vtimer_id, u32 rate, u64 crnt_time)
 {
-	ensure(vtimer_id < VTIMER_MAX && rate);
+	ensure(rate);
 
-	vtimer& vtimer = vtmr_pool[vtimer_id];
+	vtimer& vtimer = ::at32(vtmr_pool, vtimer_id);
 	const f64 new_blk_time = get_blk_time(rate);
 
 	// Avoid timer reset when possible
@@ -2288,26 +2319,20 @@ void rsxaudio_periodic_tmr::enable_vtimer(u32 vtimer_id, u32 rate, u64 crnt_time
 
 void rsxaudio_periodic_tmr::disable_vtimer(u32 vtimer_id)
 {
-	ensure(vtimer_id < VTIMER_MAX);
-
-	vtimer& vtimer = vtmr_pool[vtimer_id];
+	vtimer& vtimer = ::at32(vtmr_pool, vtimer_id);
 	vtimer.active = false;
 }
 
 bool rsxaudio_periodic_tmr::is_vtimer_behind(u32 vtimer_id, u64 crnt_time) const
 {
-	ensure(vtimer_id < VTIMER_MAX);
-
-	const vtimer& vtimer = vtmr_pool[vtimer_id];
+	const vtimer& vtimer = ::at32(vtmr_pool, vtimer_id);
 
 	return is_vtimer_behind(vtimer, crnt_time);
 }
 
 void rsxaudio_periodic_tmr::vtimer_skip_periods(u32 vtimer_id, u64 crnt_time)
 {
-	ensure(vtimer_id < VTIMER_MAX);
-
-	vtimer& vtimer = vtmr_pool[vtimer_id];
+	vtimer& vtimer = ::at32(vtmr_pool, vtimer_id);
 
 	if (is_vtimer_behind(vtimer, crnt_time))
 	{
@@ -2317,9 +2342,7 @@ void rsxaudio_periodic_tmr::vtimer_skip_periods(u32 vtimer_id, u64 crnt_time)
 
 void rsxaudio_periodic_tmr::vtimer_incr(u32 vtimer_id, u64 crnt_time)
 {
-	ensure(vtimer_id < VTIMER_MAX);
-
-	vtimer& vtimer = vtmr_pool[vtimer_id];
+	vtimer& vtimer = ::at32(vtmr_pool, vtimer_id);
 
 	if (is_vtimer_behind(vtimer, crnt_time))
 	{
@@ -2329,18 +2352,14 @@ void rsxaudio_periodic_tmr::vtimer_incr(u32 vtimer_id, u64 crnt_time)
 
 bool rsxaudio_periodic_tmr::is_vtimer_active(u32 vtimer_id) const
 {
-	ensure(vtimer_id < VTIMER_MAX);
-
-	const vtimer& vtimer = vtmr_pool[vtimer_id];
+	const vtimer& vtimer = ::at32(vtmr_pool, vtimer_id);
 
 	return vtimer.active;
 }
 
 u64 rsxaudio_periodic_tmr::vtimer_get_sched_time(u32 vtimer_id) const
 {
-	ensure(vtimer_id < VTIMER_MAX);
-
-	const vtimer& vtimer = vtmr_pool[vtimer_id];
+	const vtimer& vtimer = ::at32(vtmr_pool, vtimer_id);
 
 	return static_cast<u64>(vtimer.blk_cnt * vtimer.blk_time);
 }

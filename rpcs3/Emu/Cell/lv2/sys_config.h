@@ -296,10 +296,9 @@ private:
 
 	// The service listener owns the service events - service events will not be freed as long as their corresponding listener exists
 	// This has been confirmed to be the case in realhw
+	shared_mutex mutex_service_events;
 	std::vector<shared_ptr<lv2_config_service_event>> service_events;
 	shared_ptr<lv2_config_handle> handle;
-
-	bool notify(const shared_ptr<lv2_config_service_event>& event);
 
 public:
 	const sys_config_service_id service_id;
@@ -370,14 +369,14 @@ public:
 	// This has been confirmed to be the case in realhw
 	const shared_ptr<lv2_config_handle> handle;
 	const shared_ptr<lv2_config_service> service;
-	const lv2_config_service_listener& listener;
+	const u32 listener_id;
 
 	// Constructors (should not be used directly)
 	lv2_config_service_event(shared_ptr<lv2_config_handle> _handle, shared_ptr<lv2_config_service> _service, const lv2_config_service_listener& _listener) noexcept
 		: id(get_next_id())
 		, handle(std::move(_handle))
 		, service(std::move(_service))
-		, listener(_listener)
+		, listener_id(_listener.get_id())
 	{
 	}
 

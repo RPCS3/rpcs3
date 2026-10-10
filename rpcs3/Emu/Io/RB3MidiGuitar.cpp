@@ -6,7 +6,7 @@
 
 LOG_CHANNEL(rb3_midi_guitar_log);
 
-usb_device_rb3_midi_guitar::usb_device_rb3_midi_guitar(const std::array<u8, 7>& location, const std::string& device_name, bool twentytwo_fret)
+usb_device_rb3_midi_guitar::usb_device_rb3_midi_guitar(const std::array<u8, 7>& location, std::string_view device_name, bool twentytwo_fret)
 	: usb_device_emulated(location)
 {
 	// For the 22-fret guitar (Fender Squier), the only thing that's different
@@ -100,7 +100,10 @@ usb_device_rb3_midi_guitar::usb_device_rb3_midi_guitar(const std::array<u8, 7>& 
 
 usb_device_rb3_midi_guitar::~usb_device_rb3_midi_guitar()
 {
-	rtmidi_in_free(midi_in);
+	if (midi_in)
+	{
+		rtmidi_in_free(midi_in);
+	}
 }
 
 static const std::array<u8, 40> disabled_response = {
@@ -265,7 +268,16 @@ void usb_device_rb3_midi_guitar::parse_midi_message(u8* msg, usz size)
 	// read strings
 	if (size == 8 && msg[0] == 0xF0 && msg[4] == 0x05)
 	{
-		button_state.string_velocities[msg[5] - 1] = msg[6];
+        // if the velocity remains the same, the game does not know that you've just played a string
+        u8& velocity = ::at32(button_state.string_velocities, msg[5] - 1);
+        if (msg[6] != 0 && msg[6] == velocity)
+        {
+		    velocity = msg[6] ^ 1;  // to be sure to change the velocity
+        }
+        else
+        {
+		    velocity = msg[6];
+        }
 	}
 
 	// read buttons

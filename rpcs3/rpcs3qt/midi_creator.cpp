@@ -8,24 +8,57 @@
 
 LOG_CHANNEL(cfg_log, "CFG");
 
+inline constexpr auto midi_deleter = [](RtMidiWrapper* ptr) { if (ptr) rtmidi_in_free(ptr); };
+using midi_ptr = std::unique_ptr<RtMidiWrapper, decltype(midi_deleter)>;
+
+std::mutex midi_creator::m_midi_init_mutex = {};
+std::unique_ptr<std::thread> midi_creator::m_midi_init_thread = {};
+
 midi_creator::midi_creator()
 {
 	setObjectName("midi_creator");
+
+	// Initialize rtmidi async. This can take 10+ seconds on a cold start.
+	std::lock_guard lock(m_midi_init_mutex);
+	if (!m_midi_init_thread)
+	{
+		m_midi_init_thread = std::make_unique<std::thread>([]
+		{
+			[[maybe_unused]] midi_ptr midi_in(rtmidi_in_create_default());
+		});
+	}
+}
+
+midi_creator::~midi_creator()
+{
+	std::lock_guard lock(m_midi_init_mutex);
+	if (m_midi_init_thread && m_midi_init_thread->joinable())
+	{
+		m_midi_init_thread->join();
+	}
 }
 
 // We need to recreate the localized string because the midi creator is currently only created once.
-QString midi_creator::get_none()
+QString midi_creator::get_none() const
 {
 	return tr("None", "MIDI device");
 }
 
 void midi_creator::refresh_list()
 {
+	// Wait for initial initialization
+	{
+		std::lock_guard lock(m_midi_init_mutex);
+		if (m_midi_init_thread && m_midi_init_thread->joinable())
+		{
+			m_midi_init_thread->join();
+		}
+	}
+
 	m_midi_list.clear();
 	m_midi_list.append(get_none());
 
-	const auto deleter = [](RtMidiWrapper* ptr) { if (ptr) rtmidi_in_free(ptr); };
-	std::unique_ptr<RtMidiWrapper, decltype(deleter)> midi_in(rtmidi_in_create_default());
+	midi_ptr midi_in(rtmidi_in_create_default());
 	ensure(midi_in);
 
 	if (!midi_in->ok)
@@ -74,12 +107,12 @@ void midi_creator::refresh_list()
 	}
 }
 
-QStringList midi_creator::get_midi_list() const
+const QStringList& midi_creator::get_midi_list() const
 {
 	return m_midi_list;
 }
 
-std::array<midi_device, max_midi_devices> midi_creator::get_selection_list() const
+const std::array<midi_device, max_midi_devices>& midi_creator::get_selection_list() const
 {
 	return m_sel_list;
 }
@@ -104,11 +137,11 @@ std::string midi_creator::set_device(u32 num, const midi_device& device)
 	return result;
 }
 
-void midi_creator::parse_devices(const std::string& list)
+void midi_creator::parse_devices(std::string_view list)
 {
 	m_sel_list = {};
 
-	const std::vector<std::string> devices_list = fmt::split(list, { "@@@" });
+	const std::vector<std::string_view> devices_list = fmt::split_sv(list, { "@@@" });
 	for (usz index = 0; index < std::min(m_sel_list.size(), devices_list.size()); index++)
 	{
 		m_sel_list[index] = midi_device::from_string(devices_list[index]);

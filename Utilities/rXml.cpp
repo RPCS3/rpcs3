@@ -10,6 +10,19 @@ rXmlNode::rXmlNode(const pugi::xml_node& node)
 	handle = node;
 }
 
+std::shared_ptr<rXmlNode> rXmlNode::GetChild(std::string_view name)
+{
+	if (handle)
+	{
+		if (const pugi::xml_node child = handle.child(name))
+		{
+			return std::make_shared<rXmlNode>(child);
+		}
+	}
+
+	return nullptr;
+}
+
 std::shared_ptr<rXmlNode> rXmlNode::GetChildren()
 {
 	if (handle)

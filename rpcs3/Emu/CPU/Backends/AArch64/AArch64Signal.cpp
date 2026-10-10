@@ -39,7 +39,7 @@ namespace aarch64
 
             if (head->magic == ESR_CTX_MAGIC)
             {
-                return reinterpret_cast<const aarch64_esr_ctx*>(head);
+                return utils::bless<const aarch64_esr_ctx>(head);
             }
 
             offset += head->size;

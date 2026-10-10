@@ -14,7 +14,7 @@ namespace rsx
 			dlg->callback_handler(std::move(new_msg), msg_id);
 		}
 
-		recvmessage_dialog::list_entry::list_entry(const std::string& name, const std::string& subj, const std::string& body)
+		recvmessage_dialog::list_entry::list_entry(std::string_view name, std::string_view subj, std::string_view body)
 		{
 			std::unique_ptr<overlay_element> prefix_stack = std::make_unique<vertical_layout>();
 			std::unique_ptr<overlay_element> text_stack = std::make_unique<vertical_layout>();
@@ -25,25 +25,25 @@ namespace rsx
 			std::unique_ptr<overlay_element> subj_prefix_label = std::make_unique<label>(get_localized_string(localized_string_id::CELL_NP_RECVMESSAGE_DIALOG_SUBJECT));
 
 			name_prefix_label->set_size(0, 40);
-			name_prefix_label->set_font("Arial", 16);
+			name_prefix_label->set_font(16);
 			name_prefix_label->set_wrap_text(false);
 			static_cast<label*>(name_prefix_label.get())->auto_resize(true);
 
 			subj_prefix_label->set_size(0, 40);
-			subj_prefix_label->set_font("Arial", 16);
+			subj_prefix_label->set_font(16);
 			subj_prefix_label->set_wrap_text(false);
 			static_cast<label*>(subj_prefix_label.get())->auto_resize(true);
 
 			name_label->set_size(200, 40);
-			name_label->set_font("Arial", 16);
+			name_label->set_font(16);
 			name_label->set_wrap_text(false);
 
 			subj_label->set_size(600, 40);
-			subj_label->set_font("Arial", 16);
+			subj_label->set_font(16);
 			subj_label->set_wrap_text(false);
 
 			body_label->set_size(800, 0);
-			body_label->set_font("Arial", 16);
+			body_label->set_font(16);
 			body_label->set_wrap_text(true);
 			static_cast<label*>(body_label.get())->auto_resize(true);
 
@@ -85,7 +85,7 @@ namespace rsx
 			m_list->set_pos(20, 85);
 
 			m_description = std::make_unique<label>();
-			m_description->set_font("Arial", 20);
+			m_description->set_font(20);
 			m_description->set_pos(20, 37);
 			m_description->set_text(get_localized_string(localized_string_id::CELL_NP_RECVMESSAGE_DIALOG_TITLE));
 			m_description->auto_resize();
@@ -127,11 +127,11 @@ namespace rsx
 				{
 					return_code = selection_code::error;
 				}
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_decide.wav");
+				play_sound(sound_effect::accept);
 				close_dialog = true;
 				break;
 			case pad_button::circle:
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cancel.wav");
+				play_sound(sound_effect::cancel);
 				close_dialog = true;
 				break;
 			case pad_button::dpad_up:
@@ -167,7 +167,7 @@ namespace rsx
 			// Play a sound unless this is a fast auto repeat which would induce a nasty noise
 			else if (!is_auto_repeat || m_auto_repeat_ms_interval >= m_auto_repeat_ms_interval_default)
 			{
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cursor.wav");
+				play_sound(sound_effect::cursor);
 			}
 		}
 

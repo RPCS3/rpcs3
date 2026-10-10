@@ -36,9 +36,15 @@ namespace rsx
 		rtt_config_dirty              = (1 << 21), // Render target configuration changed
 		rtt_config_contested          = (1 << 22), // Render target configuration is indeterminate
 		rtt_config_valid              = (1 << 23), // Render target configuration is valid
-		rtt_cache_state_dirty         = (1 << 24), // Texture cache state is indeterminate
+		rtt_config_no_attachments     = (1 << 24), // Render target configuration has no attachments
+		rtt_cache_state_dirty         = (1 << 25), // Texture cache state is indeterminate
 
-		xform_instancing_state_dirty  = (1 << 25), // Transform instancing state has changed
+		xform_instancing_state_dirty  = (1 << 26), // Transform instancing state has changed
+
+		zeta_address_is_cyclic        = (1 << 27), // The currently bound Z buffer is active for R/W in a cyclic manner
+		zeta_address_cyclic_barrier   = (1 << 28), // A memory barrier is required to "end" the Z buffer cyclic state
+
+		blend_config_dirty            = (1 << 29), // Blending configuration has been updated. Only matters when programmable blending is in use.
 
 		// TODO - Should signal that we simply need to do a FP compare before the next draw call and invalidate the ucode if the content has changed.
 		// Marking as dirty to invalidate hot cache also works, it's not like there's tons of barriers per frame anyway.

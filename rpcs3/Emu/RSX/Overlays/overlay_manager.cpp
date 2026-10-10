@@ -1,6 +1,5 @@
 #include "stdafx.h"
 #include "overlay_manager.h"
-#include "Emu/System.h"
 #include <util/asm.hpp>
 
 namespace rsx
@@ -68,7 +67,7 @@ namespace rsx
 			m_list_mutex.unlock_shared();
 		}
 
-		std::shared_ptr<overlay> display_manager::get(u32 uid)
+		std::shared_ptr<overlay> display_manager::get(u32 uid) const
 		{
 			reader_lock lock(m_list_mutex);
 
@@ -164,6 +163,29 @@ namespace rsx
 			{
 				remove_type(type_id);
 				m_pending_removals_count--;
+			}
+		}
+
+		void display_manager::start_audio(const std::string& audio_path)
+		{
+			if (audio_path.empty())
+			{
+				m_audio_player.reset();
+				return;
+			}
+
+			rsx_log.notice("display_manager::start_audio: path='%s'", audio_path);
+
+			m_audio_player = std::make_unique<audio_player>(audio_path, false, "");
+			m_audio_player->set_active(true);
+		}
+
+		void display_manager::stop_audio()
+		{
+			if (m_audio_player)
+			{
+				rsx_log.notice("display_manager::stop_audio");
+				m_audio_player.reset();
 			}
 		}
 

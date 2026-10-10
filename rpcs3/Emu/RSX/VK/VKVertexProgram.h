@@ -25,21 +25,21 @@ struct VKVertexDecompilerThread : public VertexProgramDecompiler
 protected:
 	std::string getFloatTypeName(usz elementCount) override;
 	std::string getIntTypeName(usz elementCount) override;
-	std::string getFunction(FUNCTION) override;
-	std::string compareFunction(COMPARE, const std::string&, const std::string&, bool scalar) override;
+	std::string getFunction(FUNCTION f) override;
+	std::string compareFunction(COMPARE f, std::string_view Op0, std::string_view Op1, bool scalar) override;
 
-	void insertHeader(std::stringstream &OS) override;
-	void insertInputs(std::stringstream &OS, const std::vector<ParamType> &inputs) override;
-	void insertConstants(std::stringstream &OS, const std::vector<ParamType> &constants) override;
-	void insertOutputs(std::stringstream &OS, const std::vector<ParamType> &outputs) override;
-	void insertMainStart(std::stringstream &OS) override;
-	void insertMainEnd(std::stringstream &OS) override;
+	void insertHeader(std::stringstream& OS) override;
+	void insertInputs(std::stringstream& OS, const std::vector<ParamType>& inputs) override;
+	void insertConstants(std::stringstream& OS, const std::vector<ParamType>& constants) override;
+	void insertOutputs(std::stringstream& OS, const std::vector<ParamType>& outputs) override;
+	void insertMainStart(std::stringstream& OS) override;
+	void insertMainEnd(std::stringstream& OS) override;
 
 	void prepareBindingTable();
 
 	const RSXVertexProgram &rsx_vertex_program;
 public:
-	VKVertexDecompilerThread(const RSXVertexProgram &prog, std::string& shader, ParamArray&, class VKVertexProgram &dst)
+	VKVertexDecompilerThread(const RSXVertexProgram& prog, std::string& shader, ParamArray&, class VKVertexProgram& dst)
 		: VertexProgramDecompiler(prog)
 		, m_shader(shader)
 		, vk_prog(&dst)
@@ -81,6 +81,10 @@ public:
 	void Compile();
 	void SetInputs(std::vector<vk::glsl::program_input>& inputs);
 
+	u32 Flags() const { return m_ctrl; }
+
 private:
 	void Delete();
+
+	u32 m_ctrl = 0u;
 };

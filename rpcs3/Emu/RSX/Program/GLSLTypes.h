@@ -9,7 +9,7 @@ namespace glsl
 		glsl_compute_program = 2,
 
 		// Meta
-		glsl_invalid_program = 0xff
+		glsl_invalid_program = 7
 	};
 
 	enum glsl_rules : unsigned char
@@ -29,6 +29,7 @@ namespace glsl
 		bool require_clip_plane_functions : 1;
 		bool emulate_zclip_transform : 1;
 		bool emulate_depth_clip_only : 1;
+		bool emulate_depth_range : 1;
 
 		// Only relevant for fragment programs
 		bool fp32_outputs : 1;
@@ -36,12 +37,25 @@ namespace glsl
 		bool require_srgb_to_linear : 1;
 		bool require_linear_to_srgb : 1;
 		bool require_fog_read : 1;
-		bool emulate_coverage_tests : 1;
 		bool emulate_shadow_compare : 1;
+		bool emulate_depth_compare : 1;
 		bool low_precision_tests : 1;
 		bool disable_early_discard : 1;
 		bool supports_native_fp16 : 1;
+		bool emulated_depth_storage : 1;      // Float depth surfaces hold encode_emulated_depth(z)
+
+		// ROP control flags
+		bool ROP_output_multisampled : 1;
 		bool ROP_output_rounding : 1;
+		bool ROP_sRGB_packing : 1;
+		bool ROP_alpha_test : 1;
+		bool ROP_alpha_to_coverage_test : 1;
+		bool ROP_polygon_stipple_test : 1;
+		bool ROP_discard : 1;
+		bool ROP_channel_remap : 1;
+		bool ROP_programmable_blend : 1;
+		bool ROP_emulate_depth_range : 1;
+		bool ROP_depth_export : 1;
 
 		// Texturing spec
 		bool require_texture_ops : 1;           // Global switch to enable/disable all texture code
@@ -53,5 +67,7 @@ namespace glsl
 		bool require_tex2D_ops : 1;             // Include 2D texture stuff
 		bool require_tex3D_ops : 1;             // Include 3D texture stuff (including cubemap)
 		bool require_shadowProj_ops : 1;        // Include shadow2DProj projection textures (1D is unsupported anyway)
+		bool require_alpha_kill : 1;            // Include alpha kill checking code
+		bool require_color_format_convert : 1;  // Include colorspace conversion code
 	};
 };

@@ -1,11 +1,12 @@
 #pragma once
 
+#include "util/types.hpp"
+
 #include <memory>
 
-#include <QJsonObject>
+#include <QObject>
 
 class downloader;
-class gui_settings;
 
 namespace compat
 {
@@ -34,7 +35,7 @@ namespace compat
 		std::vector<pkg_changelog> changelogs;
 		std::vector<pkg_title> titles;
 
-		std::string get_changelog(const std::string& type) const
+		std::string get_changelog(std::string_view type) const
 		{
 			if (const auto it = std::find_if(changelogs.cbegin(), changelogs.cend(), [type](const pkg_changelog& cl) { return cl.type == type; });
 				it != changelogs.cend())
@@ -49,7 +50,7 @@ namespace compat
 			return "";
 		}
 
-		std::string get_title(const std::string& type) const
+		std::string get_title(std::string_view type) const
 		{
 			if (const auto it = std::find_if(titles.cbegin(), titles.cend(), [type](const pkg_title& t) { return t.type == type; });
 				it != titles.cend())
@@ -108,6 +109,7 @@ namespace compat
 		QString version;     // May be empty
 		QString category;    // HG, DG, GD etc.
 		QString local_cat;   // Localized category
+		u64 data_size = 0;   // Installation size
 
 		package_type type = package_type::other; // The type of package (Update, DLC or other)
 	};
@@ -117,41 +119,21 @@ class game_compatibility : public QObject
 {
 	Q_OBJECT
 
-private:
-	const std::map<QString, compat::status> Status_Data =
-	{
-		{ "Playable", { 0, "", "#1ebc61", tr("Playable"),         tr("Games that can be properly played from start to finish") } },
-		{ "Ingame",   { 1, "", "#f9b32f", tr("Ingame"),           tr("Games that either can't be finished, have serious glitches or have insufficient performance") } },
-		{ "Intro",    { 2, "", "#e08a1e", tr("Intro"),            tr("Games that display image but don't make it past the menus") } },
-		{ "Loadable", { 3, "", "#e74c3c", tr("Loadable"),         tr("Games that display a black screen with a framerate on the window's title") } },
-		{ "Nothing",  { 4, "", "#455556", tr("Nothing"),          tr("Games that don't initialize properly, not loading at all and/or crashing the emulator") } },
-		{ "NoResult", { 5, "", "",        tr("No results found"), tr("There is no entry for this game or application in the compatibility database yet.") } },
-		{ "NoData",   { 6, "", "",        tr("Database missing"), tr("Right click here and download the current database.\nMake sure you are connected to the internet.") } },
-		{ "Download", { 7, "", "",        tr("Retrieving..."),    tr("Downloading the compatibility database. Please wait...") } }
-	};
-	std::shared_ptr<gui_settings> m_gui_settings;
-	QString m_filepath;
-	downloader* m_downloader = nullptr;
-	std::map<std::string, compat::status> m_compat_database;
-
-	/** Creates new map from the database */
-	bool ReadJSON(const QJsonObject& json_data, bool after_download);
-
 public:
 	/** Handles reads, writes and downloads for the compatibility database */
-	game_compatibility(std::shared_ptr<gui_settings> settings, QWidget* parent);
+	game_compatibility(QWidget* parent);
 
 	/** Reads database. If online set to true: Downloads and writes the database to file */
 	void RequestCompatibility(bool online = false);
 
 	/** Returns the compatibility status for the requested title */
-	compat::status GetCompatibility(const std::string& title_id);
+	compat::status GetCompatibility(const std::string& title_id) const;
 
 	/** Returns the data for the requested status */
 	compat::status GetStatusData(const QString& status) const;
 
 	/** Returns package information like title, version, changelog etc. */
-	static compat::package_info GetPkgInfo(const QString& pkg_path, game_compatibility* compat);
+	static compat::package_info GetPkgInfo(const QString& pkg_path, const game_compatibility* compat);
 
 Q_SIGNALS:
 	void DownloadStarted();
@@ -163,4 +145,23 @@ private Q_SLOTS:
 	void handle_download_error(const QString& error);
 	void handle_download_finished(const QByteArray& content);
 	void handle_download_canceled();
+
+private:
+	/** Creates new map from the database */
+	bool handle_json(const QByteArray& data, bool after_download);
+
+	const std::map<QString, compat::status> Status_Data =
+	{
+		{ "Playable", { 0, "", "#1ebc61", tr("Playable"),         tr("Games that can be properly played from start to finish") } },
+		{ "Ingame",   { 1, "", "#f9b32f", tr("Ingame"),           tr("Games that either can't be finished, have serious glitches or have insufficient performance") } },
+		{ "Intro",    { 2, "", "#e08a1e", tr("Intro"),            tr("Games that display image but don't make it past the menus") } },
+		{ "Loadable", { 3, "", "#e74c3c", tr("Loadable"),         tr("Games that display a black screen with a framerate on the window's title") } },
+		{ "Nothing",  { 4, "", "#455556", tr("Nothing"),          tr("Games that don't initialize properly, not loading at all and/or crashing the emulator") } },
+		{ "NoResult", { 5, "", "",        tr("No results found"), tr("There is no entry for this game or application in the compatibility database yet.") } },
+		{ "NoData",   { 6, "", "",        tr("Database missing"), tr("Right click here and download the current database.\nMake sure you are connected to the internet.") } },
+		{ "Download", { 7, "", "",        tr("Retrieving..."),    tr("Downloading the compatibility database. Please wait...") } }
+	};
+	QString m_filepath;
+	downloader* m_downloader = nullptr;
+	std::map<std::string, compat::status> m_compat_database;
 };

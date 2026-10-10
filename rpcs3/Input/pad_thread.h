@@ -5,6 +5,7 @@
 #include "Emu/Io/pad_types.h"
 #include "Emu/Io/pad_config.h"
 #include "Emu/Io/pad_config_types.h"
+#include "Input/mouse_gyro_handler.h"
 #include "Utilities/mutex.h"
 
 #include <map>
@@ -41,6 +42,8 @@ public:
 
 	static auto constexpr thread_name = "Pad Thread"sv;
 
+	mouse_gyro_handler& get_mouse_gyro() { return m_mouse_gyro; }
+
 protected:
 	void Init();
 	void InitLddPad(u32 handle, const u32* port_status);
@@ -67,6 +70,8 @@ private:
 	bool m_resume_emulation_flag = false;
 	bool m_ps_button_pressed = false;
 	atomic_t<bool> m_home_menu_open = false;
+
+	mouse_gyro_handler m_mouse_gyro;
 };
 
 namespace pad

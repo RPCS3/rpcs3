@@ -6,7 +6,7 @@
 #include "VulkanAPI.h"
 #include "Utilities/geometry.h"
 #include "Emu/RSX/Common/TextureUtils.h"
-#include "Emu/RSX/rsx_utils.h"
+#include "Emu/RSX/Utils/rsx_utils.h"
 
 #define OCCLUSION_MAX_POOL_SIZE   DESCRIPTOR_MAX_DRAW_CALLS
 
@@ -54,6 +54,7 @@ namespace vk
 	bool sanitize_fp_values();
 	bool fence_reset_disabled();
 	bool emulate_conditional_rendering();
+	bool emulate_extended_depth_range();
 	bool use_strict_query_scopes();
 	bool force_reuse_query_pools();
 	VkFlags get_heap_compatible_buffer_types();
@@ -71,10 +72,11 @@ namespace vk
 
 	enum image_upload_options
 	{
-		upload_contents_async   = 1,
-		initialize_image_layout = 2,
-		preserve_image_layout   = 4,
-		source_is_gpu_resident  = 8,
+		upload_contents_async   = 0x0001,
+		initialize_image_layout = 0x0002,
+		preserve_image_layout   = 0x0004,
+		source_is_gpu_resident  = 0x0008,
+		source_is_userptr       = 0x0010,
 
 		// meta-flags
 		upload_contents_inline    = 0,
@@ -94,16 +96,21 @@ namespace vk
 	void copy_buffer_to_image(const vk::command_buffer& cmd, const vk::buffer* src, const vk::image* dst, const VkBufferImageCopy& region);
 	u64  calculate_working_buffer_size(u64 base_size, VkImageAspectFlags aspect);
 
-	void copy_image_typeless(const command_buffer &cmd, image *src, image *dst, const areai& src_rect, const areai& dst_rect,
-		u32 mipmaps, VkImageAspectFlags src_transfer_mask = 0xFF, VkImageAspectFlags dst_transfer_mask = 0xFF);
-
-	void copy_image(const vk::command_buffer& cmd, vk::image* src, vk::image* dst,
-			const areai& src_rect, const areai& dst_rect, u32 mipmaps,
+	void copy_image_typeless(const command_buffer &cmd, image *src, image *dst,
+			const coord3i& src_rect, const coord3i& dst_rect,
+			const rsx::image_copy_subresource_layers& mip_layers = {},
 			VkImageAspectFlags src_transfer_mask = 0xFF, VkImageAspectFlags dst_transfer_mask = 0xFF);
 
-	void copy_scaled_image(const vk::command_buffer& cmd, vk::image* src, vk::image* dst,
-			const areai& src_rect, const areai& dst_rect, u32 mipmaps,
-			bool compatible_formats, VkFilter filter = VK_FILTER_LINEAR);
+	void copy_image(const vk::command_buffer& cmd, vk::image* src, vk::image* dst,
+			const coord3i& src_rect, const coord3i& dst_rect,
+			const rsx::image_copy_subresource_layers& mip_layers = {},
+			VkImageAspectFlags src_transfer_mask = 0xFF, VkImageAspectFlags dst_transfer_mask = 0xFF);
+
+	void copy_scaled_image(const vk::command_buffer& cmd,
+			vk::image* src, vk::image* dst,
+			const coord3i& src_rect, const coord3i& dst_rect,
+			const rsx::image_copy_subresource_layers& mip_layers = {},
+			bool compatible_formats = false, VkFilter filter = VK_FILTER_LINEAR);
 
 	std::pair<VkFormat, VkComponentMapping> get_compatible_surface_format(rsx::surface_color_format color_format);
 

@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/VFS.h"
@@ -14,6 +15,7 @@
 #include "sceNp.h"
 #include "sceNpTrophy.h"
 #include "cellSysutil.h"
+#include "Emu/NP/np_handler.h"
 
 #include "Utilities/StrUtil.h"
 
@@ -24,6 +26,7 @@
 #include <functional>
 #include <shared_mutex>
 #include "util/asm.hpp"
+#include "util/cctype.hpp"
 
 LOG_CHANNEL(sceNpTrophy);
 
@@ -39,6 +42,7 @@ struct trophy_context_t
 	SAVESTATE_INIT_POS(42);
 
 	std::string trp_name;
+	SceNpCommunicationId comm_id{};   // set at CreateContext, not serialized
 	std::unique_ptr<TROPUSRLoader> tropusr;
 	bool read_only = false;
 
@@ -166,7 +170,7 @@ struct sce_np_trophy_manager
 	sce_np_trophy_manager() = default;
 
 	sce_np_trophy_manager(utils::serial& ar)
-		: is_initialized(ar)
+		: is_initialized(ar.pop<bool>())
 	{
 	}
 
@@ -252,7 +256,7 @@ void fmt_class_string<SceNpCommunicationId>::format(std::string& out, u64 arg)
 	const auto& id = get_object(arg);
 
 	const u8 term = id.data[9];
-	fmt::append(out, "{ data='%s', term='%s' (0x%x), num=%d, dummy=%d }", id.data, std::isprint(term) ? fmt::format("%c", term) : "", term, id.num, id.dummy);
+	fmt::append(out, "{ data='%s', term='%s' (0x%x), num=%d, dummy=%d }", id.data, utils::isprint(term) ? fmt::format("%c", term) : "", term, id.num, id.dummy);
 }
 
 // Helpers
@@ -275,7 +279,7 @@ static void show_trophy_notification(const trophy_context_t* ctxt, s32 trophyId)
 		sceNpTrophy.error("Failed to get info for trophy dialog. Error code 0x%x", +ret);
 	}
 
-	if (auto trophy_notification_dialog = Emu.GetCallbacks().get_trophy_notification_dialog())
+	if (auto trophy_notification_dialog = g_emu_callbacks.get_trophy_notification_dialog())
 	{
 		trophy_notification_dialog->ShowTrophyNotification(details, trophy_icon_data);
 	}
@@ -506,10 +510,12 @@ error_code sceNpTrophyCreateContext(vm::ptr<u32> context, vm::cptr<SceNpCommunic
 
 	// set trophy context parameters (could be passed to constructor through make_ptr call)
 	ctxt->trp_name = name;
+	ctxt->comm_id  = *commId;  // stored for RPCN trophy sync/unlock
 	ctxt->read_only = !!(options & SCE_NP_TROPHY_OPTIONS_CREATE_CONTEXT_READ_ONLY);
 	*context = idm::last_id();
 
 	// set current trophy name for trophy list overlay
+	if (!ctxt->read_only)
 	{
 		current_trophy_name& current_id = g_fxo->get<current_trophy_name>();
 		std::lock_guard lock(current_id.mtx);
@@ -714,7 +720,46 @@ error_code sceNpTrophyRegisterContext(ppu_thread& ppu, u32 context, u32 handle, 
 
 	ensure(tropusr->Load(trophyUsrPath, trophyConfPath).success);
 
-	lock2.unlock();
+	if (g_cfg.net.psn_status == np_psn_status::psn_rpcn)
+	{
+		const SceNpCommunicationId ctx_comm_id = ctxt->comm_id;
+		const u32 trophy_count = tropusr->GetTrophiesCount();
+
+		std::vector<std::pair<s32, s64>> local_unlocked;
+		local_unlocked.reserve(trophy_count);
+		for (u32 i = 0; i < trophy_count; i++)
+		{
+			if (tropusr->GetTrophyUnlockState(static_cast<s32>(i)))
+			{
+				local_unlocked.emplace_back(
+					static_cast<s32>(i),
+					static_cast<s64>(tropusr->GetTrophyTimestamp(static_cast<s32>(i))));
+			}
+		}
+
+		// Release lock before the blocking network call
+		lock2.unlock();
+
+		auto& np = g_fxo->get<named_thread<np::np_handler>>();
+		std::vector<std::pair<s32, s64>> srv_trophies = np.rpcn_trophy_sync(ctx_comm_id, local_unlocked);
+
+		bool changed = false;
+		for (const auto& [tid, ts] : srv_trophies)
+		{
+			if (tid >= 0 && tid < static_cast<s32>(trophy_count) && ts >= 0 && !tropusr->GetTrophyUnlockState(tid))
+			{
+				static_cast<void>(tropusr->UnlockTrophy(tid, static_cast<u64>(ts), static_cast<u64>(ts)));
+				changed = true;
+			}
+		}
+
+		if (changed && !tropusr->Save(trophyUsrPath))
+			sceNpTrophy.error("sceNpTrophyRegisterContext(): Failed to save trophy data after RPCN sync");
+	}
+	else
+	{
+		lock2.unlock();
+	}
 
 	lv2_obj::sleep(ppu);
 	{
@@ -1026,14 +1071,14 @@ error_code sceNpTrophyUnlockTrophy(ppu_thread& ppu, u32 context, u32 handle, s32
 
 	auto& trophy_manager = g_fxo->get<sce_np_trophy_manager>();
 
-	reader_lock lock(trophy_manager.mtx);
+	std::scoped_lock lock(trophy_manager.mtx);
 
 	if (!trophy_manager.is_initialized)
 	{
 		return SCE_NP_TROPHY_ERROR_NOT_INITIALIZED;
 	}
 
-	const auto [ctxt, error] = trophy_manager.get_context_ex(context, handle);
+	const auto [ctxt, error] = trophy_manager.get_context_ex(context, handle, true);
 
 	if (error)
 	{
@@ -1110,6 +1155,15 @@ error_code sceNpTrophyUnlockTrophy(ppu_thread& ppu, u32 context, u32 handle, s32
 		}
 	}
 
+	if (g_cfg.net.psn_status == np_psn_status::psn_rpcn)
+	{
+		auto& np = g_fxo->get<named_thread<np::np_handler>>();
+		np.rpcn_trophy_unlock(ctxt->comm_id, trophyId, static_cast<s64>(tick->tick));
+
+		if (unlocked_platinum_id != SCE_NP_TROPHY_INVALID_TROPHY_ID)
+			np.rpcn_trophy_unlock(ctxt->comm_id, static_cast<s32>(unlocked_platinum_id), static_cast<s64>(tick->tick));
+	}
+
 	return CELL_OK;
 }
 
@@ -1172,10 +1226,14 @@ error_code sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceN
 
 	ensure(tropusr);
 
-	const u32 count_ = tropusr->GetTrophiesCount();
+	u32 count_ = tropusr->GetTrophiesCount();
 	*count = count_;
+
 	if (count_ > 128)
-		sceNpTrophy.error("sceNpTrophyGetTrophyUnlockState: More than 128 trophies detected!");
+	{
+		sceNpTrophy.error("sceNpTrophyGetTrophyUnlockState: More than 128 trophies detected! (count=%d)", count_);
+		count_ = 128;
+	}
 
 	// Needs hw testing
 	*flags = {};
@@ -1184,9 +1242,9 @@ error_code sceNpTrophyGetTrophyUnlockState(u32 context, u32 handle, vm::ptr<SceN
 	for (u32 id = 0; id < count_; id++)
 	{
 		if (tropusr->GetTrophyUnlockState(id))
-			flags->flag_bits[id / 32] |= 1 << (id % 32);
+			flags->flag_bits[id / 32] |= 1u << (id % 32);
 		else
-			flags->flag_bits[id / 32] &= ~(1 << (id % 32));
+			flags->flag_bits[id / 32] &= ~(1u << (id % 32));
 	}
 
 	return CELL_OK;
@@ -1529,6 +1587,11 @@ error_code sceNpTrophyGetTrophyIcon(u32 context, u32 handle, s32 trophyId, vm::p
 	return CELL_OK;
 }
 
+error_code sceNpTrophyNetworkSync()
+{
+	UNIMPLEMENTED_FUNC(sceNpTrophy);
+	return CELL_OK;
+}
 
 DECLARE(ppu_module_manager::sceNpTrophy)("sceNpTrophy", []()
 {
@@ -1553,4 +1616,5 @@ DECLARE(ppu_module_manager::sceNpTrophy)("sceNpTrophy", []()
 	REG_FUNC(sceNpTrophy, sceNpTrophyGetTrophyDetails);
 	REG_FUNC(sceNpTrophy, sceNpTrophyGetTrophyInfo);
 	REG_FUNC(sceNpTrophy, sceNpTrophyGetGameIcon);
+	REG_FUNC(sceNpTrophy, sceNpTrophyNetworkSync);
 });

@@ -213,7 +213,7 @@ namespace gl
 	template <bool SwapBytes>
 	cs_shuffle_d32fx8_to_x8d24f<SwapBytes>::cs_shuffle_d32fx8_to_x8d24f()
 	{
-		uniforms = "uniform uint in_ptr, out_ptr;\n";
+		uniforms = "uniform uint texel_count, in_ptr, out_ptr;\n";
 
 		variables =
 			"	uint in_offset = in_ptr >> 2;\n"
@@ -221,15 +221,22 @@ namespace gl
 			"	uint depth, stencil;\n";
 
 		work_kernel =
+			"		if (index >= texel_count) return;\n"
 			"		depth = data[index * 2 + in_offset];\n"
 			"		stencil = data[index * 2 + (in_offset + 1)] & 0xFFu;\n"
 			"		value = f32_to_d24f(depth) << 8;\n"
 			"		value |= stencil;\n"
-			"		data[index + out_ptr] = bswap_u32(value);\n";
+			"		data[index + out_offset] = bswap_u32(value);\n";
 
 		if constexpr (!SwapBytes)
 		{
 			work_kernel = fmt::replace_all(work_kernel, "bswap_u32(value)", "value", 1);
+		}
+
+		if (gl::emulate_extended_depth_range())
+		{
+			// Float depth surfaces hold the emulated encoding (half the bit pattern)
+			work_kernel = fmt::replace_all(work_kernel, "f32_to_d24f(depth)", "f32_to_d24f(depth << 1)");
 		}
 
 		cs_shuffle_base::build("");
@@ -256,6 +263,7 @@ namespace gl
 			m_ssbo_length = (dst_offset + num_texels * 4) - data_offset;
 		}
 
+		m_program.uniforms["texel_count"] = num_texels;
 		m_program.uniforms["in_ptr"] = src_offset - data_offset;
 		m_program.uniforms["out_ptr"] = dst_offset - data_offset;
 		cs_shuffle_base::run(cmd, data, num_texels * 4, data_offset);
@@ -275,6 +283,7 @@ namespace gl
 			"	uint depth, stencil;\n";
 
 		work_kernel =
+			"		if (index >= texel_count) return;\n"
 			"		value = data[index + in_offset];\n"
 			"		value = bswap_u32(value);\n"
 			"		stencil = (value & 0xFFu);\n"
@@ -285,6 +294,11 @@ namespace gl
 		if constexpr (!SwapBytes)
 		{
 			work_kernel = fmt::replace_all(work_kernel, "value = bswap_u32(value)", "// value = bswap_u32(value)", 1);
+		}
+
+		if (gl::emulate_extended_depth_range())
+		{
+			work_kernel = fmt::replace_all(work_kernel, "d24f_to_f32(depth)", "(d24f_to_f32(depth) >> 1)");
 		}
 
 		cs_shuffle_base::build("");
@@ -311,6 +325,7 @@ namespace gl
 			m_ssbo_length = (dst_offset + num_texels * 8) - data_offset;
 		}
 
+		m_program.uniforms["texel_count"] = num_texels;
 		m_program.uniforms["in_ptr"] = src_offset - data_offset;
 		m_program.uniforms["out_ptr"] = dst_offset - data_offset;
 		cs_shuffle_base::run(cmd, data, num_texels * 4, data_offset);
@@ -340,7 +355,8 @@ namespace gl
 
 	void cs_d24x8_to_ssbo::run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout)
 	{
-		const auto row_pitch = region.width;
+		const auto row_pitch = layout.row_length ? layout.row_length : region.width;
+		ensure(row_pitch >= region.width);
 
 		m_program.uniforms["swap_bytes"] = layout.swap_bytes;
 		m_program.uniforms["output_pitch"] = row_pitch;
@@ -390,14 +406,15 @@ namespace gl
 
 	void cs_rgba8_to_ssbo::run(gl::command_context& cmd, gl::viewable_image* src, const gl::buffer* dst, u32 out_offset, const coordu& region, const gl::pixel_buffer_layout& layout)
 	{
-		const auto row_pitch = region.width;
+		const auto row_pitch = layout.row_length ? layout.row_length : region.width;
+		ensure(row_pitch >= region.width);
 
 		m_program.uniforms["swap_bytes"] = layout.swap_bytes;
 		m_program.uniforms["output_pitch"] = row_pitch;
 		m_program.uniforms["region_offset"] = color2i(region.x, region.y);
 		m_program.uniforms["region_size"] = color2i(region.width, region.height);
 		m_program.uniforms["is_bgra"] = (layout.format == static_cast<GLenum>(gl::texture::format::bgra));
-		m_program.uniforms["block_width"] = static_cast<u32>(layout.size);
+		m_program.uniforms["block_width"] = static_cast<u32>(layout.block_size);
 
 		auto data_view = src->get_view(rsx::default_remap_vector.with_encoding(GL_REMAP_IDENTITY), gl::image_aspect::color);
 
@@ -441,6 +458,7 @@ namespace gl
 	{
 		const u32 bpp = dst->image()->pitch() / dst->image()->width();
 		const u32 row_length = utils::align(dst_region.width * bpp, std::max<int>(layout.alignment, 1)) / bpp;
+		ensure(row_length >= dst_region.width);
 
 		m_program.uniforms["swap_bytes"] = layout.swap_bytes;
 		m_program.uniforms["src_pitch"] = row_length;

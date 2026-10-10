@@ -448,7 +448,7 @@ figure_creator_dialog::figure_creator_dialog(QWidget* parent, u8 slot)
 		for (const auto& [figure, entry] : list_figures)
 		{
 			const auto& [num, figure_name] = entry;
-			
+
 			// Apply series filter (0 = all, 1-3 = specific series)
 			if (series_filter != 0 && num != series_filter)
 				continue;
@@ -486,7 +486,7 @@ figure_creator_dialog::figure_creator_dialog(QWidget* parent, u8 slot)
 		co_compl->setFilterMode(Qt::MatchContains);
 		combo_figlist->setCompleter(co_compl);
 
-		connect(co_compl, QOverload<const QString&>::of(&QCompleter::activated), [=](const QString& text)
+		connect(co_compl, qOverload<const QString&>(&QCompleter::activated), [=](const QString& text)
 		{
 			combo_figlist->setCurrentIndex(combo_figlist->findText(text));
 		});
@@ -536,12 +536,12 @@ figure_creator_dialog::figure_creator_dialog(QWidget* parent, u8 slot)
 	filter_group->addButton(btn_series2, 2);    // ID 2 for series 2
 	filter_group->addButton(btn_series3, 3);    // ID 3 for series 3
 
-	connect(filter_group, QOverload<int>::of(&QButtonGroup::idClicked), [=](int id)
+	connect(filter_group, &QButtonGroup::idClicked, [=](int id)
 	{
 		populate_combo(id);
 	});
 
-	connect(combo_figlist, QOverload<int>::of(&QComboBox::currentIndexChanged), [=](int index)
+	connect(combo_figlist, &QComboBox::currentIndexChanged, [=](int index)
 	{
 		const u32 fig_info = combo_figlist->itemData(index).toUInt();
 		if (fig_info != 0xFFFFFFFF)
@@ -626,7 +626,7 @@ bool figure_creator_dialog::create_blank_figure(u32 character, u8 series)
 	std::array<u8, 16> uid_data = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x89, 0x44, 0x00, 0xC2};
 	for (u8 i = 0; i < 7; i++)
 	{
-		u8 random = rand() % 255;
+		const u8 random = rand() % 255;
 		sha1_calc.push_back(random);
 		uid_data[i] = random;
 	}
@@ -659,7 +659,7 @@ bool figure_creator_dialog::create_blank_figure(u32 character, u8 series)
 		figure_data[6] = 0x1C;
 	}
 
-	u32 checksum = infinity_crc32(0, figure_data.data(), 12);
+	const u32 checksum = infinity_crc32(0, figure_data.data(), 12);
 	for (s8 i = 0; i < 4; i++)
 	{
 		figure_data[12 + i] = u8((checksum >> (3 - i) * 8) & 0xFF);

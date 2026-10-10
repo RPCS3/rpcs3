@@ -3,6 +3,7 @@
 #include "nv47_sync.hpp"
 
 #include "Emu/RSX/RSXThread.h"
+#include "Emu/system_config.h"
 
 #include "context_accessors.define.h"
 
@@ -16,7 +17,7 @@ namespace rsx
 
 			// Write ref+get (get will be written again with the same value at command end)
 			auto& dma = *vm::_ptr<RsxDmaControl>(RSX(ctx)->dma_address);
-			dma.get.release(RSX(ctx)->fifo_ctrl->get_pos());
+			//dma.get.store(RSX(ctx)->fifo_ctrl->get_pos() + 4);
 			dma.ref.store(arg);
 		}
 
@@ -28,14 +29,21 @@ namespace rsx
 			// Syncronization point, may be associated with memory changes without actually changing addresses
 			RSX(ctx)->m_graphics_state |= rsx::pipeline_state::fragment_program_needs_rehash;
 
+			// Ensure atomic seq-cst memory ordering for FIFO GET update
+			atomic_fence_seq_cst();
+
 			const auto& sema = vm::_ref<RsxSemaphore>(addr);
+			const auto& atomic_sema = vm::_ref<atomic_t<RsxSemaphore>>(addr);
+
+			RSX(ctx)->last_sema_cmd = RSX(ctx)->fifo_ctrl->get_pos() - 4;
+			RSX(ctx)->last_sema_addr = addr;
 
 			if (sema == arg)
 			{
 				// Flip semaphore doesnt need wake-up delay
 				if (addr != RSX(ctx)->label_addr + 0x10)
 				{
-					RSX(ctx)->flush_fifo();
+					//RSX(ctx)->flush_fifo();
 					RSX(ctx)->fifo_wake_delay(2);
 				}
 
@@ -43,7 +51,7 @@ namespace rsx
 			}
 			else
 			{
-				RSX(ctx)->flush_fifo();
+				//RSX(ctx)->flush_fifo();
 			}
 
 			u64 start = get_system_time();
@@ -79,14 +87,24 @@ namespace rsx
 					}
 				}
 
-				RSX(ctx)->cpu_wait({});
+				if (RSX(ctx)->external_interrupt_lock ||
+					(RSX(ctx)->state & (cpu_flag::dbg_global_pause + cpu_flag::exit)) == cpu_flag::dbg_global_pause)
+				{
+					RSX(ctx)->cpu_wait({});
+					continue;
+				}
+
+				RSX(ctx)->on_semaphore_acquire_wait();
+
+				// Wait until the value changes or until 100us pass.
+				utils::spin_on_cacheline_once(atomic_sema, sema, 100);
 			}
 
 			RSX(ctx)->fifo_wake_delay();
 			RSX(ctx)->performance_counters.idle_time += (get_system_time() - start);
 		}
 
-		void semaphore_release(context* ctx, u32 /*reg*/, u32 arg)
+		void semaphore_release(context* ctx, u32 reg, u32 arg)
 		{
 			const u32 offset = REGS(ctx)->semaphore_offset_406e();
 
@@ -122,7 +140,7 @@ namespace rsx
 				arg = 1;
 			}
 
-			util::write_gcm_label<false, true>(ctx, addr, arg);
+			util::write_gcm_label<false, true>(ctx, reg, addr, arg);
 		}
 	}
 }

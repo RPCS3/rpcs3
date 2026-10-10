@@ -18,7 +18,7 @@ namespace rsx
 			dlg->callback_handler(ntype, username, status);
 		}
 
-		sendmessage_dialog::list_entry::list_entry(const std::string& msg)
+		sendmessage_dialog::list_entry::list_entry(std::string_view msg)
 		{
 			std::unique_ptr<overlay_element> text_stack  = std::make_unique<vertical_layout>();
 			std::unique_ptr<overlay_element> padding     = std::make_unique<spacer>();
@@ -26,7 +26,7 @@ namespace rsx
 
 			padding->set_size(1, 1);
 			text_label->set_size(800, 40);
-			text_label->set_font("Arial", 16);
+			text_label->set_font(16);
 			text_label->set_wrap_text(true);
 
 			// Make back color transparent for text
@@ -48,7 +48,7 @@ namespace rsx
 			m_dim_background->back_color.a = 0.5f;
 
 			m_description = std::make_unique<label>();
-			m_description->set_font("Arial", 20);
+			m_description->set_font(20);
 			m_description->set_pos(20, 37);
 			m_description->set_text(get_localized_string(localized_string_id::CELL_NP_SENDMESSAGE_DIALOG_TITLE));
 			m_description->auto_resize();
@@ -82,7 +82,7 @@ namespace rsx
 				if (m_list->m_items.empty() || is_auto_repeat)
 					break;
 
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_decide.wav");
+				play_sound(sound_effect::accept);
 
 				if (!get_current_selection().empty())
 				{
@@ -95,7 +95,7 @@ namespace rsx
 				close_dialog = true;
 				break;
 			case pad_button::circle:
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cancel.wav");
+				play_sound(sound_effect::cancel);
 				close_dialog = true;
 				break;
 			case pad_button::dpad_up:
@@ -131,7 +131,7 @@ namespace rsx
 			// Play a sound unless this is a fast auto repeat which would induce a nasty noise
 			else if (!is_auto_repeat || m_auto_repeat_ms_interval >= m_auto_repeat_ms_interval_default)
 			{
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cursor.wav");
+				play_sound(sound_effect::cursor);
 			}
 		}
 
@@ -336,7 +336,7 @@ namespace rsx
 			return {};
 		}
 
-		void sendmessage_dialog::reload(const std::string& previous_selection)
+		void sendmessage_dialog::reload(std::string_view previous_selection)
 		{
 			if (m_list)
 			{

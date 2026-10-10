@@ -98,8 +98,7 @@ std::string CgBinaryDisasm::GetCondDisAsm() const
 	else if (swizzle == ".yyyy"sv) swizzle = ".y";
 	else if (swizzle == ".zzzz"sv) swizzle = ".z";
 	else if (swizzle == ".wwww"sv) swizzle = ".w";
-
-	if (swizzle == ".xyzw"sv)
+	else if (swizzle == ".xyzw"sv)
 	{
 		swizzle.clear();
 	}
@@ -229,7 +228,7 @@ template<typename T> std::string CgBinaryDisasm::GetSrcDisAsm(T src)
 void CgBinaryDisasm::TaskFP()
 {
 	m_size = 0;
-	u32* data = reinterpret_cast<u32*>(&m_buffer[m_offset]);
+	const u32* data = reinterpret_cast<const u32*>(&m_buffer[m_offset]);
 	ensure((m_buffer.size() - m_offset) % sizeof(u32) == 0);
 
 	enum
@@ -273,7 +272,7 @@ void CgBinaryDisasm::TaskFP()
 		src2.HEX = GetData(data[3]);
 
 		m_step = 4 * sizeof(u32);
-		m_opcode = dst.opcode | (src1.opcode_is_branch << 6);
+		m_opcode = dst.opcode | (src1.opcode_hi << 6);
 
 		auto SCT = [&]()
 		{
@@ -403,12 +402,12 @@ void CgBinaryDisasm::TaskFP()
 			{
 				if (!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt)
 				{
-					AddCodeAsm(fmt::format("{ %u, %u, %u }", src1.end_counter, src1.init_counter, src1.increment));
+					AddCodeAsm(fmt::format("{ %u, %u, %u }", src1.rep_count, src1.init_counter, src1.increment));
 				}
 				else
 				{
 					m_loop_end_offsets.push_back(src2.end_offset << 2);
-					AddCodeAsm(fmt::format("{ %u, %u, %u }", src1.end_counter, src1.init_counter, src1.increment));
+					AddCodeAsm(fmt::format("{ %u, %u, %u }", src1.rep_count, src1.init_counter, src1.increment));
 				}
 				break;
 			}

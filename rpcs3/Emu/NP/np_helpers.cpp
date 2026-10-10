@@ -1,11 +1,15 @@
+#include "Emu/Cell/Modules/sceNp.h"
 #include "stdafx.h"
 #include "util/types.hpp"
+#include "util/cctype.hpp"
 #include "Utilities/StrUtil.h"
 #include "rpcn_client.h"
 
 #ifdef _WIN32
 #include <WS2tcpip.h>
 #endif
+
+LOG_CHANNEL(rpcn_log, "rpcn");
 
 namespace np
 {
@@ -17,14 +21,38 @@ namespace np
 		return std::string(ip_str);
 	}
 
-	std::string ether_to_string(std::array<u8, 6>& ether)
+	std::string ether_to_string(const std::array<u8, 6>& ether)
 	{
 		return fmt::format("%02X:%02X:%02X:%02X:%02X:%02X", ether[0], ether[1], ether[2], ether[3], ether[4], ether[5]);
 	}
 
+	bool validate_communication_id(const SceNpCommunicationId& com_id)
+	{
+		return std::all_of(com_id.data, com_id.data + 9, [](char c) { return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z'); }) && com_id.num <= 99;
+	}
+
 	std::string communication_id_to_string(const SceNpCommunicationId& communicationId)
 	{
-		return fmt::format("%s_%02d", communicationId.data, communicationId.num);
+		std::string_view com_id_data(communicationId.data, 9);
+		return fmt::format("%s_%02d", com_id_data, communicationId.num);
+	}
+
+	std::optional<SceNpCommunicationId> string_to_communication_id(std::string_view str)
+	{
+		SceNpCommunicationId id{};
+
+		const auto split_id = fmt::split_sv(str, {"_"});
+
+		if (split_id.size() != 2 || split_id[0].length() != 9 || split_id[1].length() != 2 || !utils::isdigit(split_id[1][0]) || !utils::isdigit(split_id[1][1]))
+		{
+			rpcn_log.error("Tried to parse an invalid communication_id!");
+			return std::nullopt;
+		}
+
+		strcpy_trunc(id.data, split_id[0]);
+		id.num = std::stoi(std::string(split_id[1]));
+
+		return id;
 	}
 
 	void strings_to_userinfo(std::string_view npid, std::string_view online_name, std::string_view avatar_url, SceNpUserInfo& user_info)
@@ -62,6 +90,13 @@ namespace np
 		// npid->reserved[0] = 1;
 	}
 
+	std::string npid_to_string(const SceNpId& npid)
+	{
+		char npid_str[17]{};
+		std::memcpy(npid_str, npid.handle.data, 16);
+		return std::string(npid_str);
+	}
+
 	void string_to_online_name(std::string_view str, SceNpOnlineName& online_name)
 	{
 		memset(&online_name, 0, sizeof(online_name));
@@ -74,15 +109,9 @@ namespace np
 		strcpy_trunc(avatar_url.data, str);
 	}
 
-	void string_to_communication_id(std::string_view str, SceNpCommunicationId& comm_id)
-	{
-		memset(&comm_id, 0, sizeof(comm_id));
-		strcpy_trunc(comm_id.data, str);
-	}
-
 	bool is_valid_npid(const SceNpId& npid)
 	{
-		if (!std::all_of(npid.handle.data, npid.handle.data + 16, [](char c) { return std::isalnum(c) || c == '-' || c == '_' || c == 0; } )
+		if (!std::all_of(npid.handle.data, npid.handle.data + 16, [](char c) { return utils::isalnum(c) || c == '-' || c == '_' || c == 0; } )
 			|| npid.handle.data[16] != 0
 			|| !std::all_of(npid.handle.dummy, npid.handle.dummy + 3, [](char val) { return val == 0; }) )
 		{

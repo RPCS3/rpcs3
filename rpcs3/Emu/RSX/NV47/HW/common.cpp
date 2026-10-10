@@ -58,19 +58,8 @@ namespace rsx
 
 		u32 get_report_data_impl([[maybe_unused]] rsx::context* ctx, u32 offset)
 		{
-			u32 location = 0;
 			blit_engine::context_dma report_dma = REGS(ctx)->context_dma_report();
-
-			switch (report_dma)
-			{
-			case blit_engine::context_dma::to_memory_get_report: location = CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_LOCAL; break;
-			case blit_engine::context_dma::report_location_main: location = CELL_GCM_CONTEXT_DMA_REPORT_LOCATION_MAIN; break;
-			case blit_engine::context_dma::memory_host_buffer: location = CELL_GCM_CONTEXT_DMA_MEMORY_HOST_BUFFER; break;
-			default:
-				return vm::addr_t(0);
-			}
-
-			return vm::cast(get_address(offset, location));
+			return vm::cast(get_address(offset, static_cast<u32>(report_dma)));
 		}
 
 		void set_fragment_texture_dirty_bit(rsx::context* ctx, u32 arg, u32 index)

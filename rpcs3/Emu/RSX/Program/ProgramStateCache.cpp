@@ -139,17 +139,17 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 	//u32 last_instruction_address = 0;
 	//u32 first_instruction_address = entry;
 
-	std::bitset<rsx::max_vertex_program_instructions> instructions_to_patch;
+	bit_set<rsx::max_vertex_program_instructions> instructions_to_patch;
 	std::pair<u32, u32> instruction_range{ umax, 0 };
 	bool has_branch_instruction = false;
-	std::stack<u32> call_stack;
+	std::stack<u32, std::vector<u32>> call_stack;
 
 	D3 d3{};
 	D2 d2{};
 	D1 d1{};
 	D0 d0{};
 
-	std::function<void(u32, bool)> walk_function = [&](u32 start, bool fast_exit)
+	auto walk_function = [&](auto&& self, u32 start, bool fast_exit) -> void
 	{
 		u32 current_instruction = start;
 		std::set<u32> conditional_targets;
@@ -177,7 +177,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			d3.HEX = instruction._u32[3];
 
 			// Touch current instruction
-			result.instruction_mask[current_instruction] = true;
+			result.instruction_mask.set(current_instruction, true);
 			instruction_range.first = std::min(current_instruction, instruction_range.first);
 			instruction_range.second = std::max(current_instruction, instruction_range.second);
 
@@ -223,7 +223,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			case RSX_VEC_OPCODE_TXL:
 			{
 				result.referenced_textures_mask |= (1 << d2.tex_num);
-				break;
+				[[ fallthrough ]];
 			}
 			default:
 			{
@@ -257,7 +257,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 			case RSX_SCA_OPCODE_CLB:
 			{
 				// Need to patch the jump address to be consistent wherever the program is located
-				instructions_to_patch[current_instruction] = true;
+				instructions_to_patch.set(current_instruction, true);
 				has_branch_instruction = true;
 
 				d0.HEX = instruction._u32[0];
@@ -333,7 +333,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 		{
 			if (!result.instruction_mask[target])
 			{
-				walk_function(target, true);
+				self(self, target, true);
 			}
 		}
 	};
@@ -346,7 +346,7 @@ vertex_program_utils::vertex_program_metadata vertex_program_utils::analyse_vert
 		dump.close();
 	}
 
-	walk_function(entry, false);
+	walk_function(walk_function, entry, false);
 
 	const u32 instruction_count = (instruction_range.second - instruction_range.first + 1);
 	result.ucode_length = instruction_count * 16;
@@ -637,58 +637,52 @@ fragment_program_utils::fragment_program_metadata fragment_program_utils::analys
 	while (true)
 	{
 		const auto inst = v128::loadu(instBuffer, index);
+		const auto d0 = OPDEST::from_be32(inst._u32[0]);
+		const auto opcode = static_cast<rsx::assembler::FP_opcode>(d0.opcode);
 
-		// Check for opcode high bit which indicates a branch instructions (opcode 0x40...0x45)
-		if (inst._u32[2] & (1 << 23))
+		switch (opcode)
 		{
+		case RSX_FP_OPCODE_TEX:
+		case RSX_FP_OPCODE_TEXBEM:
+		case RSX_FP_OPCODE_TXP:
+		case RSX_FP_OPCODE_TXPBEM:
+		case RSX_FP_OPCODE_TXD:
+		case RSX_FP_OPCODE_TXB:
+		case RSX_FP_OPCODE_TXL:
+			result.referenced_textures_mask |= (1 << d0.tex_num);
+			result.bx2_texture_reads_mask |= ((d0.exp_tex ? 1u : 0u) << d0.tex_num);
+			break;
+		case RSX_FP_OPCODE_PK4:
+		case RSX_FP_OPCODE_UP4:
+		case RSX_FP_OPCODE_PK2:
+		case RSX_FP_OPCODE_UP2:
+		case RSX_FP_OPCODE_PKB:
+		case RSX_FP_OPCODE_UPB:
+		case RSX_FP_OPCODE_PK16:
+		case RSX_FP_OPCODE_UP16:
+		case RSX_FP_OPCODE_PKG:
+		case RSX_FP_OPCODE_UPG:
+			result.has_pack_instructions = true;
+			break;
+		case RSX_FP_OPCODE_BRK:
+		case RSX_FP_OPCODE_CAL:
+		case RSX_FP_OPCODE_IFE:
+		case RSX_FP_OPCODE_LOOP:
+		case RSX_FP_OPCODE_REP:
+		case RSX_FP_OPCODE_RET:
 			// NOTE: Jump instructions are not yet proved to work outside of loops and if/else blocks
 			// Otherwise we would need to follow the execution chain
 			result.has_branch_instructions = true;
+			break;
+		default:
+			break;
 		}
-		else
-		{
-			const u32 opcode = (inst._u32[0] >> 16) & 0x3F;
-			if (opcode)
-			{
-				switch (opcode)
-				{
-				case RSX_FP_OPCODE_TEX:
-				case RSX_FP_OPCODE_TEXBEM:
-				case RSX_FP_OPCODE_TXP:
-				case RSX_FP_OPCODE_TXPBEM:
-				case RSX_FP_OPCODE_TXD:
-				case RSX_FP_OPCODE_TXB:
-				case RSX_FP_OPCODE_TXL:
-				{
-					//Bits 17-20 of word 1, swapped within u16 sections
-					//Bits 16-23 are swapped into the upper 8 bits (24-31)
-					const u32 tex_num = (inst._u32[0] >> 25) & 15;
-					result.referenced_textures_mask |= (1 << tex_num);
-					break;
-				}
-				case RSX_FP_OPCODE_PK4:
-				case RSX_FP_OPCODE_UP4:
-				case RSX_FP_OPCODE_PK2:
-				case RSX_FP_OPCODE_UP2:
-				case RSX_FP_OPCODE_PKB:
-				case RSX_FP_OPCODE_UPB:
-				case RSX_FP_OPCODE_PK16:
-				case RSX_FP_OPCODE_UP16:
-				case RSX_FP_OPCODE_PKG:
-				case RSX_FP_OPCODE_UPG:
-				{
-					result.has_pack_instructions = true;
-					break;
-				}
-				}
-			}
 
-			if (is_any_src_constant(inst))
-			{
-				//Instruction references constant, skip one slot occupied by data
-				index++;
-				result.program_constants_buffer_length += 16;
-			}
+		if (is_any_src_constant(inst))
+		{
+			// Instruction references constant, skip one slot occupied by data
+			index++;
+			result.program_constants_buffer_length += 16;
 		}
 
 		index++;
@@ -794,9 +788,9 @@ namespace rsx
 
 			if (sanitize)
 			{
-				//Convert NaNs and Infs to 0
+				// Zero NaNs as a host driver workaround, realhw keeps NaN and Inf as is
 				const auto masked = _mm_and_si128(shuffled_vector, _mm_set1_epi32(0x7fffffff));
-				const auto valid = _mm_cmplt_epi32(masked, _mm_set1_epi32(0x7f800000));
+				const auto valid = _mm_cmplt_epi32(masked, _mm_set1_epi32(0x7f800001));
 				const auto result = _mm_and_si128(shuffled_vector, valid);
 				_mm_stream_si128(utils::bless<__m128i>(dst), result);
 			}
@@ -822,7 +816,7 @@ namespace rsx
 				const u32 value = reinterpret_cast<const u32*>(data)[i];
 				const u32 shuffled = ((value >> 8) & 0xff00ff) | ((value << 8) & 0xff00ff00);
 
-				if (sanitize && (shuffled & 0x7fffffff) >= 0x7f800000)
+				if (sanitize && (shuffled & 0x7fffffff) > 0x7f800000)
 				{
 					dst[i] = 0.f;
 				}

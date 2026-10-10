@@ -12,6 +12,8 @@
 #include <QPlainTextEdit>
 #include <QActionGroup>
 
+class AnsiHighlighter;
+
 class gui_settings;
 
 class log_frame : public custom_dock_widget
@@ -69,6 +71,7 @@ private:
 	QPlainTextEdit* m_tty = nullptr;
 	QLineEdit* m_tty_input = nullptr;
 	int m_tty_channel = -1;
+	AnsiHighlighter* m_tty_ansi_highlighter = nullptr;
 
 	QAction* m_clear_act = nullptr;
 	QAction* m_clear_tty_act = nullptr;
@@ -92,6 +95,7 @@ private:
 	QAction* m_stack_act_err = nullptr;
 
 	QAction* m_show_prefix_act = nullptr;
+	QAction* m_log_while_hidden_act = nullptr;
 
 	QAction* m_tty_act = nullptr;
 

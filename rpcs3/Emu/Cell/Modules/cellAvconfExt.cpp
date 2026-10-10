@@ -2,7 +2,7 @@
 #include "Emu/system_config.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/IdManager.h"
-#include "Emu/RSX/rsx_utils.h"
+#include "Emu/RSX/Utils/rsx_utils.h"
 #include "Utilities/StrUtil.h"
 
 #include "cellMic.h"
@@ -73,6 +73,50 @@ avconf_manager::avconf_manager()
 			{
 				device_info device {};
 				device.info.portType                  = CELL_AUDIO_IN_PORT_USB;
+				device.info.availableModeCount        = 1;
+				device.info.state                     = CELL_AUDIO_IN_DEVICE_STATE_AVAILABLE;
+				device.info.deviceId                  = 0xE11CC0DE + curindex;
+				device.info.type                      = 0xC0DEE11C;
+				device.info.availableModes[0].type    = CELL_AUDIO_IN_CODING_TYPE_LPCM;
+				device.info.availableModes[0].channel = CELL_AUDIO_IN_CHNUM_2;
+				device.info.availableModes[0].fs      = CELL_AUDIO_IN_FS_8KHZ | CELL_AUDIO_IN_FS_12KHZ | CELL_AUDIO_IN_FS_16KHZ | CELL_AUDIO_IN_FS_24KHZ | CELL_AUDIO_IN_FS_32KHZ | CELL_AUDIO_IN_FS_48KHZ;
+				device.info.deviceNumber              = curindex;
+				device.full_device_name               = mic_list[index];
+				strcpy_trunc(device.info.name, device.full_device_name);
+
+				devices.push_back(std::move(device));
+				curindex++;
+			}
+			break;
+		}
+		case microphone_handler::eye_toy:
+		{
+			for (u32 index = 0; index < mic_list.size(); index++)
+			{
+				device_info device {};
+				device.info.portType                  = CELL_AUDIO_IN_PORT_EYETOY1;
+				device.info.availableModeCount        = 1;
+				device.info.state                     = CELL_AUDIO_IN_DEVICE_STATE_AVAILABLE;
+				device.info.deviceId                  = 0xE11CC0DE + curindex;
+				device.info.type                      = 0xC0DEE11C;
+				device.info.availableModes[0].type    = CELL_AUDIO_IN_CODING_TYPE_LPCM;
+				device.info.availableModes[0].channel = CELL_AUDIO_IN_CHNUM_2;
+				device.info.availableModes[0].fs      = CELL_AUDIO_IN_FS_8KHZ | CELL_AUDIO_IN_FS_12KHZ | CELL_AUDIO_IN_FS_16KHZ | CELL_AUDIO_IN_FS_24KHZ | CELL_AUDIO_IN_FS_32KHZ | CELL_AUDIO_IN_FS_48KHZ;
+				device.info.deviceNumber              = curindex;
+				device.full_device_name               = mic_list[index];
+				strcpy_trunc(device.info.name, device.full_device_name);
+
+				devices.push_back(std::move(device));
+				curindex++;
+			}
+			break;
+		}
+		case microphone_handler::ps_eye:
+		{
+			for (u32 index = 0; index < mic_list.size(); index++)
+			{
+				device_info device {};
+				device.info.portType                  = CELL_AUDIO_IN_PORT_EYETOY2;
 				device.info.availableModeCount        = 1;
 				device.info.state                     = CELL_AUDIO_IN_DEVICE_STATE_AVAILABLE;
 				device.info.deviceId                  = 0xE11CC0DE + curindex;
@@ -230,7 +274,7 @@ error_code cellAudioInGetDeviceInfo(u32 deviceNumber, u32 deviceIndex, vm::ptr<C
 	std::lock_guard lock(av_manager.mutex);
 
 	if (deviceNumber >= av_manager.devices.size())
-		return CELL_AUDIO_OUT_ERROR_DEVICE_NOT_FOUND;
+		return CELL_AUDIO_IN_ERROR_DEVICE_NOT_FOUND;
 
 	av_manager.copy_device_info(deviceNumber, info);
 
@@ -524,19 +568,11 @@ error_code cellVideoOutGetScreenSize(u32 videoOut, vm::ptr<f32> screenSize)
 	{
 		// Return Playstation 3D display value
 		// Some games call this function when 3D is enabled
-		*screenSize = 24.f;
+		*screenSize = static_cast<f32>(g_cfg.video.screen_size.get());
 		return CELL_OK;
 	}
 
-	//	TODO: Use virtual screen size
-#ifdef _WIN32
-	//	HDC screen = GetDC(NULL);
-	//	float diagonal = roundf(sqrtf((powf(float(GetDeviceCaps(screen, HORZSIZE)), 2) + powf(float(GetDeviceCaps(screen, VERTSIZE)), 2))) * 0.0393f);
-#else
-	// TODO: Linux implementation, without using wx
-	// float diagonal = roundf(sqrtf((powf(wxGetDisplaySizeMM().GetWidth(), 2) + powf(wxGetDisplaySizeMM().GetHeight(), 2))) * 0.0393f);
-#endif
-
+	// Let's just return not set for now
 	return CELL_VIDEO_OUT_ERROR_VALUE_IS_NOT_SET;
 }
 

@@ -33,37 +33,17 @@ std::string screenshot_info::get_overlay_path() const
 
 std::string screenshot_info::get_photo_title() const
 {
-	std::string photo = photo_title;
-	if (photo.empty())
-		photo = Emu.GetTitle();
-	return photo;
+	return photo_title.empty() ? Emu.GetTitle() : photo_title;
 }
 
 std::string screenshot_info::get_game_title() const
 {
-	std::string game = game_title;
-	if (game.empty())
-		game = Emu.GetTitle();
-	return game;
+	return game_title.empty() ? Emu.GetTitle() : game_title;
 }
 
 std::string screenshot_info::get_game_comment() const
 {
 	return game_comment;
-}
-
-std::string screenshot_info::get_screenshot_path(const std::string& date_path) const
-{
-	u32 counter = 0;
-	std::string path = vfs::get("/dev_hdd0/photo/" + date_path + "/" + get_photo_title());
-	std::string suffix = ".png";
-
-	while (!Emu.IsStopped() && fs::is_file(path + suffix))
-	{
-		suffix = fmt::format("_%d.png", ++counter);
-	}
-
-	return path + suffix;
 }
 
 

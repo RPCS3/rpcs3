@@ -23,7 +23,8 @@ namespace rsx
 			{
 				fragment_clip_bit = 0,
 				pulse_glow_bit = 1,
-				sampling_mode_bit = 2
+				sampling_mode_bit = 2,
+				sdf_func_offset_bit = 4
 			};
 
 		public:
@@ -51,6 +52,13 @@ namespace rsx
 				return *this;
 			}
 
+			fragment_options& set_sdf(sdf_function func)
+			{
+				value &= ~(0x3 << e_offsets::sdf_func_offset_bit);
+				value |= (static_cast<u32>(func) << e_offsets::sdf_func_offset_bit);
+				return *this;
+			}
+
 			u32 get() const
 			{
 				return value;
@@ -59,12 +67,38 @@ namespace rsx
 
 		class vertex_options
 		{
+		private:
 			u32 value = 0;
+
+			void set_bit(u32 bit, bool enable)
+			{
+				if (enable)
+				{
+					value |= (1u << bit);
+				}
+				else
+				{
+					value &= ~(1u << bit);
+				}
+			}
+
+			void set_bits(u32 offset, u32 count, u32 set)
+			{
+				const u32 mask = (0xffffffffu >> (32 - count)) << offset;
+				value &= ~mask;
+				value |= set;
+			}
 
 		public:
 			vertex_options& disable_vertex_snap(bool enable)
 			{
-				value = enable ? 1 : 0;
+				set_bit(0, enable);
+				return *this;
+			}
+
+			vertex_options& enable_vertical_flip(bool enable)
+			{
+				set_bit(1, enable);
 				return *this;
 			}
 

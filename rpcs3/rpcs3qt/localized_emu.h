@@ -38,11 +38,16 @@ private:
 	{
 		switch (id)
 		{
+		case localized_string_id::RSX_OVERLAYS_SPINNER_NO_TEXT: return "";
 		case localized_string_id::RSX_OVERLAYS_TROPHY_BRONZE: return tr("You have earned a bronze trophy.\n%0", "Trophy text").arg(std::forward<Args>(args)...);
 		case localized_string_id::RSX_OVERLAYS_TROPHY_SILVER: return tr("You have earned a silver trophy.\n%0", "Trophy text").arg(std::forward<Args>(args)...);
 		case localized_string_id::RSX_OVERLAYS_TROPHY_GOLD: return tr("You have earned a gold trophy.\n%0", "Trophy text").arg(std::forward<Args>(args)...);
 		case localized_string_id::RSX_OVERLAYS_TROPHY_PLATINUM: return tr("You have earned a platinum trophy.\n%0", "Trophy text").arg(std::forward<Args>(args)...);
-		case localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS: return tr("Compiling shaders");
+		case localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS: return tr("Precompiling shader interpreter variants.\nPlease wait...");
+		case localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_TITLE: return tr("Shader Compilation");
+		case localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_VULKAN: return tr("Building base variant %0...").arg(std::forward<Args>(args)...);
+		case localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_OPENGL_BUILD: return tr("Building variant %0...").arg(std::forward<Args>(args)...);
+		case localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_OPENGL_LINK: return tr("Linking variant %0...").arg(std::forward<Args>(args)...);
 		case localized_string_id::RSX_OVERLAYS_COMPILING_PPU_MODULES: return tr("Compiling PPU Modules");
 		case localized_string_id::RSX_OVERLAYS_MSG_DIALOG_YES: return tr("Yes", "Message Dialog");
 		case localized_string_id::RSX_OVERLAYS_MSG_DIALOG_NO: return tr("No", "Message Dialog");
@@ -180,6 +185,8 @@ private:
 		case localized_string_id::CELL_NP_SENDMESSAGE_DIALOG_CONFIRMATION: return tr("Send message to %0 ?\n\nSubject:", "SENDMESSAGE_DIALOG").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_NP_SENDMESSAGE_DIALOG_CONFIRMATION_INVITE: return tr("Send invite to %0 ?\n\nSubject:", "SENDMESSAGE_DIALOG").arg(std::forward<Args>(args)...);
 		case localized_string_id::CELL_NP_SENDMESSAGE_DIALOG_CONFIRMATION_ADD_FRIEND: return tr("Send friend request to %0 ?\n\nSubject:", "SENDMESSAGE_DIALOG").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_NP_MESSAGE_INVITE_RECEIVED: return tr("Received an invite from %0").arg(std::forward<Args>(args)...);
+		case localized_string_id::CELL_NP_MESSAGE_OTHER_RECEIVED: return tr("Received a message from %0").arg(std::forward<Args>(args)...);
 		case localized_string_id::RECORDING_ABORTED: return tr("Recording aborted!");
 		case localized_string_id::RPCN_NO_ERROR: return tr("RPCN: No Error");
 		case localized_string_id::RPCN_ERROR_INVALID_INPUT: return tr("RPCN: Invalid Input (Wrong Host/Port)");
@@ -205,6 +212,7 @@ private:
 		case localized_string_id::HOME_MENU_RESUME: return tr("Resume Game");
 		case localized_string_id::HOME_MENU_FRIENDS: return tr("Friends");
 		case localized_string_id::HOME_MENU_FRIENDS_REQUESTS: return tr("Pending Friend Requests");
+		case localized_string_id::HOME_MENU_FRIENDS_GAME_INVITES: return tr("Game Invitations");
 		case localized_string_id::HOME_MENU_FRIENDS_BLOCKED: return tr("Blocked Users");
 		case localized_string_id::HOME_MENU_FRIENDS_STATUS_ONLINE: return tr("Online");
 		case localized_string_id::HOME_MENU_FRIENDS_STATUS_OFFLINE: return tr("Offline");
@@ -218,6 +226,9 @@ private:
 		case localized_string_id::HOME_MENU_FRIENDS_CANCEL_REQUEST_MSG: return tr("Cancel Request?\n\n%0").arg(std::forward<Args>(args)...);
 		case localized_string_id::HOME_MENU_FRIENDS_REJECT_REQUEST_MSG: return tr("Reject Request?\n\n%0").arg(std::forward<Args>(args)...);
 		case localized_string_id::HOME_MENU_FRIENDS_REJECT_REQUEST: return tr("Reject Request");
+		case localized_string_id::HOME_MENU_FRIENDS_ACCEPT_GAME_INVITE_MSG: return tr("Accept game invitation from %0?").arg(std::forward<Args>(args)...);
+		case localized_string_id::HOME_MENU_FRIENDS_REJECT_GAME_INVITE_MSG: return tr("Reject game invitation from %0?").arg(std::forward<Args>(args)...);
+		case localized_string_id::HOME_MENU_FRIENDS_REJECT_GAME_INVITE: return tr("Reject Invitation");
 		case localized_string_id::HOME_MENU_FRIENDS_NEXT_LIST: return tr("Next list");
 		case localized_string_id::HOME_MENU_RESTART: return tr("Restart Game");
 		case localized_string_id::HOME_MENU_SETTINGS: return tr("Settings");
@@ -225,6 +236,7 @@ private:
 		case localized_string_id::HOME_MENU_SETTINGS_SAVE_BUTTON: return tr("Save");
 		case localized_string_id::HOME_MENU_SETTINGS_DISCARD: return tr("Discard the current settings' changes?");
 		case localized_string_id::HOME_MENU_SETTINGS_DISCARD_BUTTON: return tr("Discard");
+		case localized_string_id::HOME_MENU_SETTINGS_RESET_BUTTON: return tr("To default");
 		case localized_string_id::HOME_MENU_SETTINGS_AUDIO: return tr("Audio");
 		case localized_string_id::HOME_MENU_SETTINGS_AUDIO_MASTER_VOLUME: return tr("Master Volume", "Audio");
 		case localized_string_id::HOME_MENU_SETTINGS_AUDIO_BACKEND: return tr("Audio Backend", "Audio");
@@ -233,10 +245,13 @@ private:
 		case localized_string_id::HOME_MENU_SETTINGS_AUDIO_TIME_STRETCHING: return tr("Enable Time Stretching", "Audio");
 		case localized_string_id::HOME_MENU_SETTINGS_AUDIO_TIME_STRETCHING_THRESHOLD: return tr("Time Stretching Threshold", "Audio");
 		case localized_string_id::HOME_MENU_SETTINGS_VIDEO: return tr("Video");
+		case localized_string_id::HOME_MENU_SETTINGS_VIDEO_VSYNC: return tr("VSync", "Video");
 		case localized_string_id::HOME_MENU_SETTINGS_VIDEO_FRAME_LIMIT: return tr("Frame Limit", "Video");
 		case localized_string_id::HOME_MENU_SETTINGS_VIDEO_ANISOTROPIC_OVERRIDE: return tr("Anisotropic Filter Override", "Video");
 		case localized_string_id::HOME_MENU_SETTINGS_VIDEO_OUTPUT_SCALING: return tr("Output Scaling", "Video");
 		case localized_string_id::HOME_MENU_SETTINGS_VIDEO_RCAS_SHARPENING: return tr("FidelityFX CAS Sharpening Intensity", "Video");
+		case localized_string_id::HOME_MENU_SETTINGS_VIDEO_RESOLUTION_SCALE_PERCENT: return tr("Resolution Scale", "Video");
+		case localized_string_id::HOME_MENU_SETTINGS_VIDEO_RESOLUTION_SCALE_THRESHOLD: return tr("Resolution Scale Threshold", "Video");
 		case localized_string_id::HOME_MENU_SETTINGS_VIDEO_STRETCH_TO_DISPLAY: return tr("Stretch To Display Area", "Video");
 		case localized_string_id::HOME_MENU_SETTINGS_VIDEO_STEREO_MODE: return tr("Stereo Mode", "Video");
 		case localized_string_id::HOME_MENU_SETTINGS_INPUT: return tr("Input");
@@ -253,6 +268,7 @@ private:
 		case localized_string_id::HOME_MENU_SETTINGS_ADVANCED_MAX_CPU_PREEMPTIONS: return tr("Max Power Saving CPU-Preemptions", "Advanced");
 		case localized_string_id::HOME_MENU_SETTINGS_ADVANCED_ACCURATE_RSX_RESERVATION_ACCESS: return tr("Accurate RSX reservation access", "Advanced");
 		case localized_string_id::HOME_MENU_SETTINGS_ADVANCED_SLEEP_TIMERS_ACCURACY: return tr("Sleep Timers Accuracy", "Advanced");
+		case localized_string_id::HOME_MENU_SETTINGS_ADVANCED_RSX_MEMORY_TILING: return tr("Handle RSX Memory Tiling", "Advanced");
 		case localized_string_id::HOME_MENU_SETTINGS_ADVANCED_MAX_SPURS_THREADS: return tr("Max SPURS Threads", "Advanced");
 		case localized_string_id::HOME_MENU_SETTINGS_ADVANCED_DRIVER_WAKE_UP_DELAY: return tr("Driver Wake-Up Delay", "Advanced");
 		case localized_string_id::HOME_MENU_SETTINGS_ADVANCED_VBLANK_FREQUENCY: return tr("VBlank Frequency", "Advanced");
@@ -266,6 +282,9 @@ private:
 		case localized_string_id::HOME_MENU_SETTINGS_OVERLAYS_SHOW_PRESSURE_INTENSITY_TOGGLE_HINT: return tr("Show Pressure Intensity Toggle Hint", "Overlays");
 		case localized_string_id::HOME_MENU_SETTINGS_OVERLAYS_SHOW_ANALOG_LIMITER_TOGGLE_HINT: return tr( "Show Analog Limiter Toggle Hint", "Overlays");
 		case localized_string_id::HOME_MENU_SETTINGS_OVERLAYS_SHOW_MOUSE_AND_KB_TOGGLE_HINT: return tr("Show Mouse And Keyboard Toggle Hint", "Overlays");
+		case localized_string_id::HOME_MENU_SETTINGS_OVERLAYS_SHOW_FATAL_ERROR_HINTS: return tr("Show Fatal Error Hints", "Overlays");
+		case localized_string_id::HOME_MENU_SETTINGS_OVERLAYS_RECORD_WITH_OVERLAYS: return tr("Record With Overlays", "Overlays");
+		case localized_string_id::HOME_MENU_SETTINGS_OVERLAYS_PLAY_MUSIC_DURING_BOOT: return tr("Play music during boot sequence.", "Overlays");
 		case localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY: return tr("Performance Overlay");
 		case localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_ENABLE: return tr("Enable Performance Overlay", "Performance Overlay");
 		case localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_ENABLE_FRAMERATE_GRAPH: return tr("Enable Framerate Graph", "Performance Overlay");
@@ -283,17 +302,23 @@ private:
 		case localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_MARGIN_Y: return tr("Vertical Margin", "Performance Overlay");
 		case localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_FONT_SIZE: return tr("Font Size", "Performance Overlay");
 		case localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_OPACITY: return tr("Opacity", "Performance Overlay");
+		case localized_string_id::HOME_MENU_SETTINGS_PERFORMANCE_OVERLAY_USE_WINDOW_SPACE: return tr("Use Window Space", "Performance Overlay");
 		case localized_string_id::HOME_MENU_SETTINGS_DEBUG: return tr("Debug");
 		case localized_string_id::HOME_MENU_SETTINGS_DEBUG_OVERLAY: return tr("Debug Overlay", "Debug");
 		case localized_string_id::HOME_MENU_SETTINGS_DEBUG_INPUT_OVERLAY: return tr("Input Debug Overlay", "Debug");
 		case localized_string_id::HOME_MENU_SETTINGS_MOUSE_DEBUG_INPUT_OVERLAY: return tr("Mouse Debug Overlay", "Debug");
 		case localized_string_id::HOME_MENU_SETTINGS_DEBUG_DISABLE_VIDEO_OUTPUT: return tr("Disable Video Output", "Debug");
 		case localized_string_id::HOME_MENU_SETTINGS_DEBUG_TEXTURE_LOD_BIAS: return tr("Texture LOD Bias Addend", "Debug");
+		case localized_string_id::HOME_MENU_SETTINGS_SYSTEM_START_BIG_PICTURE_MODE: return tr("Open Big Picture Mode On Boot", "System");
 		case localized_string_id::HOME_MENU_SCREENSHOT: return tr("Take Screenshot");
 		case localized_string_id::HOME_MENU_SAVESTATE: return tr("SaveState");
 		case localized_string_id::HOME_MENU_SAVESTATE_SAVE: return tr("Save Emulation State");
 		case localized_string_id::HOME_MENU_SAVESTATE_AND_EXIT: return tr("Save Emulation State And Exit");
 		case localized_string_id::HOME_MENU_RELOAD_SAVESTATE: return tr("Reload Last Emulation State");
+		case localized_string_id::HOME_MENU_RELOAD_SECOND_SAVESTATE: return tr("Reload Second-To-Last Emulation State");
+		case localized_string_id::HOME_MENU_RELOAD_THIRD_SAVESTATE: return tr("Reload Third-To-Last Emulation State");
+		case localized_string_id::HOME_MENU_RELOAD_FOURTH_SAVESTATE: return tr("Reload Fourth-To-Last Emulation State");
+		case localized_string_id::HOME_MENU_TOGGLE_FULLSCREEN: return tr("Toggle Fullscreen");
 		case localized_string_id::HOME_MENU_RECORDING: return tr("Start/Stop Recording");
 		case localized_string_id::HOME_MENU_TROPHIES: return tr("Trophies");
 		case localized_string_id::HOME_MENU_TROPHY_LIST_TITLE: return tr("Trophy Progress: %0").arg(std::forward<Args>(args)...);
@@ -307,6 +332,14 @@ private:
 		case localized_string_id::HOME_MENU_TROPHY_GRADE_SILVER: return tr("Silver", "Trophy type");
 		case localized_string_id::HOME_MENU_TROPHY_GRADE_GOLD: return tr("Gold", "Trophy type");
 		case localized_string_id::HOME_MENU_TROPHY_GRADE_PLATINUM: return tr("Platinum", "Trophy type");
+		case localized_string_id::HOME_MENU_TROPHY_SYNC_TROPHIES: return tr("Sync trophies");
+		case localized_string_id::HOME_MENU_TROPHY_SYNCING_TROPHIES: return tr("Syncing...");
+		case localized_string_id::HOME_MENU_TROPHY_SYNC_SUCCESS: return tr("Synced!");
+		case localized_string_id::HOME_MENU_TROPHY_SYNC_FAILED: return tr("Sync failed");
+		case localized_string_id::HOME_MENU_TROPHY_SORT_GAME_DEFAULT: return tr("Sort: Game Default");
+		case localized_string_id::HOME_MENU_TROPHY_SORT_NOT_EARNED: return tr("Sort: Not Earned");
+		case localized_string_id::HOME_MENU_TROPHY_SORT_EARNED_DATE: return tr("Sort: Earned Date");
+		case localized_string_id::HOME_MENU_TROPHY_SORT_GRADE: return tr("Sort: Grade");
 		case localized_string_id::AUDIO_MUTED: return tr("Audio muted", "Audio");
 		case localized_string_id::AUDIO_UNMUTED: return tr("Audio unmuted", "Audio");
 		case localized_string_id::AUDIO_CHANGED: return tr("Volume changed to %0", "Audio").arg(std::forward<Args>(args)...);
@@ -332,9 +365,17 @@ private:
 		case localized_string_id::EMULATION_RESUMING: return tr("Resuming...!");
 		case localized_string_id::EMULATION_FROZEN: return tr("The PS3 application has likely crashed, you can close it.");
 		case localized_string_id::SAVESTATE_FAILED_DUE_TO_SAVEDATA: return tr("SaveState failed: Game saving is in progress, wait until finished.");
-		case localized_string_id::SAVESTATE_FAILED_DUE_TO_VDEC: return tr("SaveState failed: VDEC-base video/cutscenes are in order, wait for them to end or enable libvdec.sprx.");
+		case localized_string_id::SAVESTATE_FAILED_DUE_TO_VDEC: return tr("SaveState failed: VDEC-based video/cutscenes are in order, wait for them to end or enable libvdec.sprx.");
 		case localized_string_id::SAVESTATE_FAILED_DUE_TO_MISSING_SPU_SETTING: return tr("SaveState failed: Failed to lock SPU state, enabling SPU-Compatible mode may fix it.");
 		case localized_string_id::SAVESTATE_FAILED_DUE_TO_SPU: return tr("SaveState failed: Failed to lock SPU state, using SPU ASMJIT will fix it.");
+		case localized_string_id::BIG_PICTURE_MODE_TITLE: return tr("Big Picture Mode");
+		case localized_string_id::BIG_PICTURE_MENU_GAMES: return tr("Games");
+		case localized_string_id::BIG_PICTURE_MENU_EXIT: return tr("Exit Big Picture Mode");
+		case localized_string_id::BIG_PICTURE_NO_GAMES_FOUND: return tr("No games found.\nAdd games in the main RPCS3 window.");
+		case localized_string_id::BIG_PICTURE_LOADING: return tr("Loading games...");
+		case localized_string_id::BIG_PICTURE_GAME_DETAILS_START: return tr("Start");
+		case localized_string_id::BIG_PICTURE_HINT_BACK: return tr("Back");
+		case localized_string_id::BIG_PICTURE_HINT_SELECT: return tr("Select");
 		case localized_string_id::INVALID: return tr("Invalid");
 		default: return tr("Unknown");
 		}

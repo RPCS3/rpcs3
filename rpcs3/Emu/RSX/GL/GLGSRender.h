@@ -6,6 +6,7 @@
 #include "GLOverlays.h"
 #include "GLShaderInterpreter.h"
 #include "Emu/RSX/rsx_cache.h"
+#include "util/asm.hpp"
 
 #include <optional>
 #include <unordered_map>
@@ -45,16 +46,16 @@ namespace gl
 		u32  address_to_flush = 0;
 		gl::texture_cache::thrashed_set section_data;
 
-		volatile bool processed = false;
+		atomic_t<bool> processed = false;
 		volatile bool result = false;
-		volatile bool received = false;
+		atomic_t<bool> received = false;
 
 		void producer_wait()
 		{
-			while (!processed)
+			utils::spin_wait(processed, [](auto v)
 			{
-				std::this_thread::yield();
-			}
+				return v;
+			});
 
 			received = true;
 		}
@@ -137,6 +138,8 @@ class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 	std::unique_ptr<gl::texture> m_flip_tex_color[2];
 
 	// Present
+	gl::fbo m_sshot_fbo;
+	std::unique_ptr<gl::texture> m_sshot_tex;
 	std::unique_ptr<gl::upscaler> m_upscaler;
 	output_scaling_mode m_output_scaling = output_scaling_mode::bilinear;
 
@@ -145,7 +148,7 @@ class GLGSRender : public GSRender, public ::rsx::reports::ZCULL_control
 
 	shared_mutex m_sampler_mutex;
 	atomic_t<bool> m_samplers_dirty = {true};
-	std::unordered_map<GLenum, std::unique_ptr<gl::texture>> m_null_textures;
+	std::unordered_map<GLenum, std::unique_ptr<gl::viewable_image>> m_null_textures;
 	rsx::simple_array<u8> m_scratch_buffer;
 
 	// Occlusion query type, can be SAMPLES_PASSED or ANY_SAMPLES_PASSED
@@ -184,13 +187,19 @@ private:
 
 	gl::texture* get_present_source(gl::present_surface_info* info, const rsx::avconf& avconfig);
 
+	void update_swap_interval();
+
 public:
 	void set_viewport();
 	void set_scissor(bool clip_viewport);
 
 	gl::work_item& post_flush_request(u32 address, gl::texture_cache::thrashed_set& flush_data);
 
+	// NV3089
 	bool scaled_image_from_memory(const rsx::blit_src_info& src_info, const rsx::blit_dst_info& dst_info, bool interpolate) override;
+
+	// Sync
+	void write_barrier(u32 address, u32 range) override;
 
 	// ZCULL
 	void begin_occlusion_query(rsx::reports::occlusion_query_info* query) override;
@@ -200,7 +209,7 @@ public:
 	void discard_occlusion_query(rsx::reports::occlusion_query_info* query) override;
 
 	// DMA
-	bool release_GCM_label(u32 address, u32 data) override;
+	bool release_GCM_label(u32 type, u32 address, u32 data) override;
 	void enqueue_host_context_write(u32 offset, u32 size, const void* data);
 	void on_guest_texture_read();
 

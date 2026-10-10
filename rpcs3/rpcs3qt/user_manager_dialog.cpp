@@ -229,7 +229,7 @@ void user_manager_dialog::OnUserRemove()
 	}
 }
 
-void user_manager_dialog::GenerateUser(const std::string& user_id, const std::string& username)
+void user_manager_dialog::GenerateUser(const std::string& user_id, std::string_view username)
 {
 	ensure(rpcs3::utils::check_user(user_id) > 0);
 
@@ -365,7 +365,7 @@ void user_manager_dialog::OnUserLogin()
 	const u32 key = GetUserKey();
 	const std::string new_user = m_user_list[key].GetUserId();
 
-	main_application::InitializeEmulator(new_user, Emu.HasGui());
+	main_application::InitializeEmulator(new_user, Emu.HasGui(), Emu.IsHeadless());
 
 	m_active_user = new_user;
 	m_persistent_settings->SetValue(gui::persistent::active_user, QString::fromStdString(m_active_user));

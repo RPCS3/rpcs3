@@ -6,7 +6,7 @@
 
 #include "Utilities/mutex.h"
 
-#include "rsx_utils.h"
+#include "Utils/rsx_utils.h"
 
 #include <vector>
 #include <stack>
@@ -46,6 +46,7 @@ namespace rsx
 		{
 			u32 type = CELL_GCM_ZPASS_PIXEL_CNT;
 			u32 counter_tag;
+			u64 sync_tag;
 			occlusion_query_info* query;
 			queued_report_write* forwarder;
 
@@ -109,7 +110,7 @@ namespace rsx
 		protected:
 
 			bool unit_enabled = false;           // The ZCULL unit is on
-			bool write_enabled = false;          // A surface in the ZCULL-monitored tile region has been loaded for rasterization
+			bool surface_active = false;         // A surface in the ZCULL-monitored tile region has been loaded for rasterization
 			bool stats_enabled = false;          // Collecting of ZCULL statistics is enabled (not same as pixels passing Z test!)
 			bool zpass_count_enabled = false;    // Collecting of ZPASS statistics is enabled. If this is off, the counter does not increment
 			bool host_queries_active = false;    // The backend/host is gathering Z data for the ZCULL unit
@@ -185,6 +186,15 @@ namespace rsx
 
 			// Check for pending writes
 			bool has_pending() const { return !m_pending_writes.empty(); }
+
+			// Check if queries are currently active
+			bool has_active_queries() const { return host_queries_active; }
+
+			// Check if ZPASS_COUNT stats are running
+			bool is_zpass_count_active() const { return zpass_count_enabled; }
+
+			// Grab the currently active query block
+			occlusion_query_info* get_current_query_task() const { return m_current_task; }
 
 			// Search for query synchronized at address
 			query_search_result find_query(vm::addr_t sink_address, bool all);

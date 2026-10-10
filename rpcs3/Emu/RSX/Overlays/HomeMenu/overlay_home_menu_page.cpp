@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "overlay_home_menu_page.h"
-#include "Emu/System.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/system_config.h"
 
 namespace rsx
@@ -11,6 +11,7 @@ namespace rsx
 			: list_view(width, height, use_separators)
 			, parent(parent)
 			, title(title)
+			, m_reset_btn(120, 30)
 			, m_save_btn(120, 30)
 			, m_discard_btn(120, 30)
 		{
@@ -19,20 +20,40 @@ namespace rsx
 				m_message_box = parent->m_message_box;
 				m_config_changed = parent->m_config_changed;
 			}
+			else
+			{
+				m_config_changed = std::make_shared<bool>(g_backup_cfg.to_string() != g_cfg.to_string());
+				m_message_box = std::make_shared<home_menu_message_box>(x, y, width, height);
+				m_message_box->visible = false;
+			}
 
+			m_reset_btn.set_image_resource(resource_config::standard_image_resource::select);
 			m_save_btn.set_image_resource(resource_config::standard_image_resource::square);
 			m_discard_btn.set_image_resource(resource_config::standard_image_resource::triangle);
 
+			m_reset_btn.set_pos((width - 120) / 2, height + 20);
 			m_save_btn.set_pos(width - 2 * (30 + 120), height + 20);
 			m_discard_btn.set_pos(width - (30 + 120), height + 20);
 
+			m_reset_btn.set_text(localized_string_id::HOME_MENU_SETTINGS_RESET_BUTTON);
 			m_save_btn.set_text(localized_string_id::HOME_MENU_SETTINGS_SAVE_BUTTON);
 			m_discard_btn.set_text(localized_string_id::HOME_MENU_SETTINGS_DISCARD_BUTTON);
 
-			m_save_btn.set_font("Arial", 16);
-			m_discard_btn.set_font("Arial", 16);
+			m_reset_btn.set_font(16);
+			m_save_btn.set_font(16);
+			m_discard_btn.set_font(16);
 
 			set_pos(x, y);
+		}
+
+		void home_menu_page::on_activate()
+		{
+			hide_row_highliter(false);
+		}
+
+		void home_menu_page::on_deactivate()
+		{
+			hide_row_highliter(true);
 		}
 
 		void home_menu_page::set_current_page(home_menu_page* page)
@@ -42,6 +63,7 @@ namespace rsx
 				is_current_page = false;
 				page->is_current_page = true;
 				rsx_log.notice("Home menu: changing current page from '%s' to '%s'", title, page->title);
+				refresh();
 			}
 		}
 
@@ -71,10 +93,10 @@ namespace rsx
 			return nullptr;
 		}
 
-		void home_menu_page::add_page(std::shared_ptr<home_menu_page> page)
+		void home_menu_page::add_page(home_menu::fa_icon icon, std::shared_ptr<home_menu_page> page)
 		{
 			ensure(page);
-			std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_entry>(page->title);
+			std::unique_ptr<overlay_element> elem = std::make_unique<home_menu_entry>(icon, page->title, w);
 			m_pages.push_back(page);
 
 			add_item(elem, [this, page](pad_button btn) -> page_navigation
@@ -93,31 +115,48 @@ namespace rsx
 			m_entries.push_back(std::move(element));
 		}
 
+		void home_menu_page::add_item(home_menu::fa_icon icon, std::string_view title, std::function<page_navigation(pad_button)> callback)
+		{
+			std::unique_ptr<overlay_element> title_element = std::make_unique<home_menu_entry>(icon, title.data(), w);
+			add_item(title_element, callback);
+		}
+
 		void home_menu_page::apply_layout(bool center_vertically)
 		{
-			// Center vertically if necessary
-			if (center_vertically)
+			if (!m_items.empty())
 			{
-				usz total_height = 0;
+				m_entries = std::move(m_items);
+			}
 
-				for (auto& entry : m_entries)
-				{
-					total_height += entry->h;
-				}
+			clear_items();
 
-				if (total_height < h)
-				{
-					advance_pos = (h - ::narrow<u16>(total_height)) / 2;
-				}
+			usz total_height = 0;
+
+			for (auto& entry : m_entries)
+			{
+				total_height += entry->h;
+			}
+
+			// Center vertically if necessary
+			if (total_height < h && center_vertically)
+			{
+				advance_pos = (h - ::narrow<u16>(total_height)) / 2;
+			}
+			else
+			{
+				advance_pos = menu_entry_margin;
 			}
 
 			for (auto& entry : m_entries)
 			{
+				entry->set_pos(0, 0);
 				add_entry(entry);
 			}
+
+			refresh();
 		}
 
-		void home_menu_page::show_dialog(const std::string& text, std::function<void()> on_accept, std::function<void()> on_cancel)
+		void home_menu_page::show_dialog(std::string_view text, std::function<void()> on_accept, std::function<void()> on_cancel)
 		{
 			if (m_message_box && !m_message_box->visible)
 			{
@@ -145,6 +184,16 @@ namespace rsx
 				return page->handle_button_press(button_press, is_auto_repeat, auto_repeat_interval_ms);
 			}
 
+			if (m_popup && m_popup.input_hook)
+			{
+				auto popup_action = m_popup.input_hook(button_press);
+				if (popup_action == page_navigation::exit)
+				{
+					m_popup.dismiss();
+				}
+				return page_navigation::stay;
+			}
+
 			switch (button_press)
 			{
 			case pad_button::dpad_left:
@@ -152,6 +201,7 @@ namespace rsx
 			case pad_button::ls_left:
 			case pad_button::ls_right:
 			case pad_button::cross:
+			case pad_button::select:
 			{
 				if (const usz index = static_cast<usz>(get_selected_index()); index < m_callbacks.size())
 				{
@@ -160,7 +210,7 @@ namespace rsx
 						// Play a sound unless this is a fast auto repeat which would induce a nasty noise
 						if (!is_auto_repeat || auto_repeat_interval_ms >= user_interface::m_auto_repeat_ms_interval_default)
 						{
-							Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_decide.wav");
+							play_sound(sound_effect::accept);
 						}
 						return func(button_press);
 					}
@@ -169,7 +219,7 @@ namespace rsx
 			}
 			case pad_button::circle:
 			{
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cancel.wav");
+				play_sound(sound_effect::cancel);
 				if (parent)
 				{
 					set_current_page(parent);
@@ -188,8 +238,9 @@ namespace rsx
 						if (m_config_changed && *m_config_changed)
 						{
 							g_cfg.from_string(g_backup_cfg.to_string());
-							Emu.GetCallbacks().update_emu_settings();
+							g_emu_callbacks.update_emu_settings();
 							*m_config_changed = false;
+							refresh();
 						}
 					});
 				}
@@ -202,11 +253,12 @@ namespace rsx
 					show_dialog(get_localized_string(localized_string_id::HOME_MENU_SETTINGS_SAVE), [this]()
 					{
 						rsx_log.notice("home_menu_page: saving settings...");
-						Emu.GetCallbacks().save_emu_settings();
+						g_emu_callbacks.save_emu_settings();
 
 						if (m_config_changed)
 						{
 							*m_config_changed = false;
+							refresh();
 						}
 					});
 				}
@@ -215,12 +267,30 @@ namespace rsx
 			case pad_button::dpad_up:
 			case pad_button::ls_up:
 			{
+				if (get_selected_index() <= 0)
+				{
+					if (!is_auto_repeat)
+					{
+						select_entry(get_elements_count() - 1);
+					}
+					break;
+				}
+
 				select_previous();
 				break;
 			}
 			case pad_button::dpad_down:
 			case pad_button::ls_down:
 			{
+				if (get_selected_index() >= (get_elements_count() - 1))
+				{
+					if (!is_auto_repeat)
+					{
+						select_entry(0);
+					}
+					break;
+				}
+
 				select_next();
 				break;
 			}
@@ -244,7 +314,7 @@ namespace rsx
 			// Play a sound unless this is a fast auto repeat which would induce a nasty noise
 			if (!is_auto_repeat || auto_repeat_interval_ms >= user_interface::m_auto_repeat_ms_interval_default)
 			{
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_cursor.wav");
+				play_sound(sound_effect::cursor);
 			}
 			return page_navigation::stay;
 		}
@@ -252,38 +322,75 @@ namespace rsx
 		void home_menu_page::translate(s16 _x, s16 _y)
 		{
 			list_view::translate(_x, _y);
-			m_save_btn.translate(_x, _y);
-			m_discard_btn.translate(_x, _y);
+
+			m_reset_btn.set_pos(x + w - 3 * (50 + 120), y + h + 20);
+			m_save_btn.set_pos(x + w - 2 * (30 + 120), y + h + 20);
+			m_discard_btn.set_pos(x + w - (30 + 120), y + h + 20);
+		}
+
+		void home_menu_page::set_size(u16 _w, u16 _h)
+		{
+			list_view::set_size(_w, _h);
+
+			for (auto& entry : m_items)
+			{
+				entry->set_size(_w, entry->h);
+			}
+
+			m_reset_btn.set_pos(x + w - 3 * (50 + 120), y + h + 20);
+			m_save_btn.set_pos(x + w - 2 * (30 + 120), y + h + 20);
+			m_discard_btn.set_pos(x + w - (30 + 120), y + h + 20);
+
+			apply_layout();
 		}
 
 		compiled_resource& home_menu_page::get_compiled()
 		{
-			if (!is_compiled() || (m_message_box && !m_message_box->is_compiled()))
+			if (m_popup)
 			{
 				m_is_compiled = false;
-
-				if (home_menu_page* page = get_current_page(false))
-				{
-					compiled_resources = page->get_compiled();
-				}
-				else
-				{
-					compiled_resources = list_view::get_compiled();
-
-					if (m_message_box && m_message_box->visible)
-					{
-						compiled_resources.add(m_message_box->get_compiled());
-					}
-					else if (m_config_changed && *m_config_changed)
-					{
-						compiled_resources.add(m_save_btn.get_compiled());
-						compiled_resources.add(m_discard_btn.get_compiled());
-					}
-				}
-
-				m_is_compiled = true;
 			}
 
+			if (m_message_box && !m_message_box->is_compiled())
+			{
+				m_is_compiled = false;
+			}
+
+			if (is_compiled())
+			{
+				return compiled_resources;
+			}
+
+			if (home_menu_page* page = get_current_page(false))
+			{
+				compiled_resources = page->get_compiled();
+			}
+			else if (is_visible())
+			{
+				compiled_resources = list_view::get_compiled();
+
+				if (m_message_box && m_message_box->is_visible())
+				{
+					compiled_resources.add(m_message_box->get_compiled());
+				}
+				else if (m_config_changed && *m_config_changed)
+				{
+					if (show_reset_button())
+					{
+						compiled_resources.add(m_reset_btn.get_compiled());
+					}
+
+					compiled_resources.add(m_save_btn.get_compiled());
+					compiled_resources.add(m_discard_btn.get_compiled());
+				}
+			}
+
+			if (m_popup)
+			{
+				compiled_resources.add(m_popup.get_compiled());
+			}
+
+			m_is_compiled = true;
 			return compiled_resources;
 		}
 	}

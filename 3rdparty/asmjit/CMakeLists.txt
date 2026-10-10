@@ -9,7 +9,7 @@ set(ASMJIT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/asmjit" CACHE PATH "Location of 'asm
 include("${ASMJIT_DIR}/CMakeLists.txt")
 
 add_library(asmjit ${ASMJIT_SRC})
-target_include_directories(asmjit PUBLIC ${ASMJIT_DIR}/src)
+target_include_directories(asmjit SYSTEM PUBLIC ${ASMJIT_DIR}/src)
 target_link_libraries(asmjit PRIVATE ${ASMJIT_DEPS})
 
 # ASMJIT should have a option for disabling installing and this wouldnt

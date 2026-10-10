@@ -8,38 +8,39 @@ Other instructions may be found [here](https://wiki.rpcs3.net/index.php?title=Bu
 ### Windows 10 or later
 
 The following tools are required to build RPCS3 on Windows 10 or later:
-- [Visual Studio 2022](https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=Community)
+- [Visual Studio 2022/2026](https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=Community)
 - **Optional** - [CMake 3.28.0+](https://www.cmake.org/download/) (add to PATH)
 
   **NOTES:**
-  - **Visual Studio 2022** integrates **CMake 3.29+** and it also supports both the `sln` solution (`.sln`, `.vcxproj`) and `CMake` solution (`CMakeLists.txt`, `CMakePresets.json`).
+  - **Visual Studio 2026** needs at least **CMake 4.2.0+**.
+  - **Visual Studio 2022/2026** integrates **CMake 3.29+** and it also supports both the `sln` solution (`.sln`, `.vcxproj`) and `CMake` solution (`CMakeLists.txt`, `CMakePresets.json`).
     See sections [Building with Visual Studio sln solution](#building-with-visual-studio-sln-solution) and [Building with Visual Studio CMake solution](#building-with-visual-studio-cmake-solution)
     on how to build the project with **Visual Studio**.
   - Install and use this standalone **CMake** tool just in case of your preference. See section [Building with standalone CMake tool](#building-with-standalone-cmake-tool) on how to build the project
     with standalone **CMake** tool.
 
 - [Python 3.6+](https://www.python.org/downloads/) (add to PATH)
-- [Qt 6.10.0](https://www.qt.io/download-qt-installer) In case you can't download from the official installer, you can use [Another Qt installer](https://github.com/miurahr/aqtinstall) (In that case you will need to manually add the "qtmultimedia" module when installing Qt)
-- [Vulkan SDK 1.3.268.0](https://vulkan.lunarg.com/sdk/home) (see "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/windows/getting_started.html)) for now future SDKs don't work. You need precisely 1.3.268.0.
+- [Qt 6.12.0](https://www.qt.io/download-qt-installer) In case you can't download from the official installer, you can use [Another Qt installer](https://github.com/miurahr/aqtinstall) (In that case you will need to manually add the "qtmultimedia" module when installing Qt)
+- [Vulkan SDK 1.4.341.1](https://vulkan.lunarg.com/sdk/home) (see "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/windows/getting_started.html)). Note that future SDKs may not work.
 
 The `sln` solution available only on **Visual Studio** is the preferred building solution. It easily allows to build the **RPCS3** application in `Release` and `Debug` mode.
 
 In order to build **RPCS3** with the `sln` solution (with **Visual Studio**), **Qt** libs need to be detected. To detect the libs:
-- add and set the `QTDIR` environment variable, e.g. `<QtInstallFolder>\6.10.0\msvc2022_64\`
+- add and set the `QTDIR` environment variable, e.g. `<QtInstallFolder>\6.12.0\msvc2022_64\`
 - or use the [Visual Studio Qt Plugin](https://marketplace.visualstudio.com/items?itemName=TheQtCompany.QtVisualStudioTools2022)
 
   **NOTE:** If you have issues with the **Visual Studio Qt Plugin**, you may want to uninstall it and install the [Legacy Qt Plugin](https://marketplace.visualstudio.com/items?itemName=TheQtCompany.LEGACYQtVisualStudioTools2022) instead.
 
 In order to build **RPCS3** with the `CMake` solution (with both **Visual Studio** and standalone **CMake** tool):
-- add and set the `Qt6_ROOT` environment variable to the **Qt** libs path, e.g. `<QtInstallFolder>\6.10.0\msvc2022_64\`
+- add and set the `Qt6_ROOT` environment variable to the **Qt** libs path, e.g. `<QtInstallFolder>\6.12.0\msvc2022_64\`
 
 ### Linux
 
 These are the essentials tools to build RPCS3 on Linux. Some of them can be installed through your favorite package manager:
 - Clang 17+ or GCC 13+
 - [CMake 3.28.0+](https://www.cmake.org/download/)
-- [Qt 6.10.0](https://www.qt.io/download-qt-installer)
-- [Vulkan SDK 1.3.268.0](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/linux/getting_started.html)) for now future SDKs don't work. You need precisely 1.3.268.0.
+- [Qt 6.12.0](https://www.qt.io/download-qt-installer)
+- [Vulkan SDK 1.4.341.1](https://vulkan.lunarg.com/sdk/home) (See "Install the SDK" [here](https://vulkan.lunarg.com/doc/sdk/latest/linux/getting_started.html)). Note that future SDKs may not work.
 - [SDL3](https://github.com/libsdl-org/SDL/releases) (for the FAudio backend)
 
 **If you have an NVIDIA GPU, you may need to install the libglvnd package.**
@@ -50,7 +51,7 @@ These are the essentials tools to build RPCS3 on Linux. Some of them can be inst
 
 #### Debian & Ubuntu
 
-    sudo apt-get install build-essential ninja-build libasound2-dev libpulse-dev libopenal-dev libglew-dev zlib1g-dev libedit-dev libvulkan-dev libudev-dev git libevdev-dev libsdl3-3.2 libsdl3-dev libjack-dev libsndio-dev
+    sudo apt-get install build-essential ninja-build libasound2-dev libpulse-dev libopenal-dev libglew-dev zlib1g-dev libedit-dev libvulkan-dev libudev-dev git libevdev-dev libsdl3-dev libjack-dev libsndio-dev libcurl4-openssl-dev qt6-base-dev qt6-base-private-dev qt6-multimedia-dev qt6-svg-dev libxkbcommon-dev
 
 Ubuntu is usually horrendously out of date, and some packages need to be downloaded by hand. This part is for Qt, GCC, Vulkan, and CMake
 
@@ -71,14 +72,7 @@ You can either use `update-alternatives` to setup `gcc-13`/`g++-13` as your defa
 
 ##### Vulkan SDK
 
-For Ubuntu systems, it is strongly recommended to use the PPA from [LunarG](https://packages.lunarg.com/) which will provide a compatible Vulkan SDK to compile RPCS3. If your Vulkan SDK is older, it can lead to compilation errors.
-```
-. /etc/os-release
-wget -qO - https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -
-sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.3.268-$UBUNTU_CODENAME.list https://packages.lunarg.com/vulkan/1.3.268/lunarg-vulkan-1.3.268-$UBUNTU_CODENAME.list
-sudo apt update
-sudo apt install vulkan-sdk
-```
+For Ubuntu systems, it is strongly recommended to use the official [Linux Tarball Vulkan SDK](https://vulkan.lunarg.com/doc/view/1.4.341.0/linux/getting_started.html) which will provide a compatible Vulkan SDK to compile RPCS3. If your Vulkan SDK is older, it can lead to compilation errors.
 
 ##### CMake
 
@@ -94,7 +88,7 @@ sudo apt-get install cmake
 
 #### Fedora
 
-    sudo dnf install alsa-lib-devel cmake ninja-build glew glew-devel libatomic libevdev-devel libudev-devel openal-devel qt6-qtbase-devel qt6-qtbase-private-devel vulkan-devel pipewire-jack-audio-connection-kit-devel qt6-qtmultimedia-devel qt6-qtsvg-devel llvm-devel
+    sudo dnf install alsa-lib-devel cmake ninja-build glew glew-devel libatomic libevdev-devel libudev-devel openal-soft-devel qt6-qtbase-devel qt6-qtbase-private-devel vulkan-devel pipewire-jack-audio-connection-kit-devel qt6-qtmultimedia-devel qt6-qtsvg-devel llvm-devel libcurl-devel
 
 #### OpenSUSE
 
@@ -107,9 +101,10 @@ Clone and initialize the repository
 ```bash
 git clone --recurse-submodules https://github.com/RPCS3/rpcs3.git
 cd rpcs3
+git submodule sync
 # This is automatically done by `git clone --recurse-submodules`,
 # but in case you forgot it, you can manually fetch submodules this way:
-git submodule update --init
+git submodule update --init --recursive
 ```
 
 ### Windows
@@ -121,7 +116,7 @@ Start **Visual Studio**, click on `Open a project or solution` and select the `r
 ##### Configuring the Qt Plugin (if used)
 
 1) go to `Extensions->Qt VS Tools->Qt Versions`
-2) add the path to your Qt installation with compiler e.g. `<QtInstallFolder>\6.10.0\msvc2022_64`, version will fill in automatically
+2) add the path to your Qt installation with compiler e.g. `<QtInstallFolder>\6.12.0\msvc2022_64`, version will fill in automatically
 3) go to `Extensions->Qt VS Tools->Options->Legacy Project Format`. (Only available in the **Legacy Qt Plugin**)
 4) set `Build: Run pre-build setup` to `true`. (Only available in the **Legacy Qt Plugin**)
 
@@ -130,7 +125,7 @@ Start **Visual Studio**, click on `Open a project or solution` and select the `r
 **NOTE:** The recommended build configuration is `Release`. (On older revisions: `Release - LLVM`)
 
 To speed up the compilation time, you may want to download and extract to `<rpcs3_root>\build\lib_ext\<$(Configuration)>-x64` (e.g. `c:\rpcs3\build\lib_ext\Release-x64`; the path needs to be created) the following precompiled lib:
-- [LLVM libs](https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win-19.1.7/llvmlibs_mt.7z)
+- [LLVM libs](https://github.com/RPCS3/llvm-mirror/releases/download/custom-build-win-22.1.8/llvmlibs_mt.7z)
 
 **NOTES:**
 - `<$(Configuration)>` can assume values `Release` or `Debug`.
@@ -176,6 +171,22 @@ In case you preferred to install and use the standalone **CMake** tool:
    cmake --build --preset msvc-release
    ```
 3) once the build is completed, the **RPCS3** application will be available under the `<rpcs3_root>\build-msvc\bin` folder
+
+#### Building with the PowerShell script
+
+As an alternative to building through Visual Studio, run the PowerShell helper from the repository root:
+
+```powershell
+.\scripts\win_build.ps1
+```
+
+The script locates a supported Visual Studio installation, finds Qt from `Qt6_ROOT` or a standard `C:\Qt` installation, configures a Release Ninja Multi-Config build, and then builds it. Pass `-Cores <count>` to set the parallel build count; by default it uses all logical processors:
+
+```powershell
+.\scripts\win_build.ps1 -Cores 8
+```
+
+The resulting application is placed in `<rpcs3_root>\build\bin`.
 
 ### Linux
 

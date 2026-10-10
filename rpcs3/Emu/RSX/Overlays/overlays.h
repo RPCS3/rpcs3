@@ -17,6 +17,21 @@ namespace rsx
 {
 	namespace overlays
 	{
+		enum class sound_effect
+		{
+			cursor,
+			accept,
+			cancel,
+			osk_accept,
+			osk_cancel,
+			dialog_ok,
+			dialog_error,
+			trophy,
+		};
+
+		std::string get_sound_filepath(sound_effect sound);
+		void play_sound(sound_effect sound, std::optional<f32> volume = std::nullopt);
+
 		// Bitfield of UI signals to overlay manager
 		enum status_bits : u32
 		{
@@ -31,6 +46,7 @@ namespace rsx
 
 			static constexpr u16 virtual_width = 1280;
 			static constexpr u16 virtual_height = 720;
+			bool use_window_space = false;
 
 			u32 min_refresh_duration_us = 16600;
 			atomic_t<bool> visible = false;
@@ -42,6 +58,9 @@ namespace rsx
 			virtual compiled_resource get_compiled() = 0;
 
 			void refresh() const;
+			virtual u16 get_virtual_width() const { return virtual_width; }
+			virtual u16 get_virtual_height() const { return virtual_height; }
+			virtual void set_render_viewport(u16 /*width*/, u16 /*height*/) {}
 		};
 
 		// Interactable UI element

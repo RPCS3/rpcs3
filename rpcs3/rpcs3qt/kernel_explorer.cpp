@@ -316,7 +316,7 @@ void kernel_explorer::update()
 
 	add_solid_node(find_node(root, additional_nodes::process_info), QString::fromStdString(fmt::format("Process Info, Sdk Version: 0x%08x, PPC SEG: %#x, SFO Category: %s (Fake: %s)", g_ps3_process_info.sdk_ver, g_ps3_process_info.ppc_seg, Emu.GetCat(), Emu.GetFakeCat())));
 
-	auto display_program_segments = [this](QTreeWidgetItem* tree, const ppu_module<lv2_obj>& m)
+	auto display_program_segments = [](QTreeWidgetItem* tree, const ppu_module<lv2_obj>& m)
 	{
 		for (usz i = 0; i < m.segs.size(); i++)
 		{
@@ -350,14 +350,15 @@ void kernel_explorer::update()
 		{
 			auto& mem = static_cast<lv2_memory&>(obj);
 			const f64 size_mb = mem.size * 1. / (1024 * 1024);
+			const std::string container = mem.ct ? fmt::format("%s", mem.ct->id) : "System";
 
 			if (mem.pshared)
 			{
-				add_leaf(node, QString::fromStdString(fmt::format("Shared Mem 0x%08x: Size: 0x%x (%0.2f MB), Chunk: %s, Mappings: %u, Mem Container: %s, Key: %#llx", id, mem.size, size_mb, mem.align == 0x10000u ? "64K" : "1MB", +mem.counter, mem.ct->id, mem.key)));
+				add_leaf(node, QString::fromStdString(fmt::format("Shared Mem 0x%08x: Size: 0x%x (%0.2f MB), Chunk: %s, Mappings: %u, Mem Container: %s, Key: %#llx", id, mem.size, size_mb, mem.align == 0x10000u ? "64K" : "1MB", +mem.counter, container, mem.key)));
 				break;
 			}
 
-			add_leaf(node, QString::fromStdString(fmt::format("Shared Mem 0x%08x: Size: 0x%x (%0.2f MB), Chunk: %s, Mem Container: %s, Mappings: %u", id, mem.size, size_mb, mem.align == 0x10000u ? "64K" : "1MB", mem.ct->id, +mem.counter)));
+			add_leaf(node, QString::fromStdString(fmt::format("Shared Mem 0x%08x: Size: 0x%x (%0.2f MB), Chunk: %s, Mem Container: %s, Mappings: %u", id, mem.size, size_mb, mem.align == 0x10000u ? "64K" : "1MB", container, +mem.counter)));
 			break;
 		}
 		case SYS_MUTEX_OBJECT:
@@ -651,14 +652,28 @@ void kernel_explorer::update()
 		return fmt::format(" (%.1fs)", wait_time);
 	};
 
+	std::vector<std::pair<s32, std::string>> ppu_threads;
+
 	idm::select<named_thread<ppu_thread>>([&](u32 id, ppu_thread& ppu)
 	{
 		const auto func = ppu.last_function;
 		const ppu_thread_status status = lv2_obj::ppu_state(&ppu, false, false).first;
 
-		add_leaf(find_node(root, additional_nodes::ppu_threads), QString::fromStdString(fmt::format(u8"PPU 0x%07x: “%s”, PRIO: %d, Joiner: %s, Status: %s, State: %s, %s func: “%s”%s", id, *ppu.ppu_tname.load(), ppu.prio.load().prio, ppu.joiner.load(), status, ppu.state.load()
-			, ppu.ack_suspend ? "After" : (ppu.current_function ? "In" : "Last"), func ? func : "", get_wait_time_str(ppu.start_time))));
+		const s32 prio = ppu.prio.load().prio;
+		std::string prio_text = fmt::format("%4d", prio);
+		prio_text = fmt::replace_all(prio_text, " ", " ");
+
+		ppu_threads.emplace_back(prio, fmt::format(u8"PPU 0x%07x: PRIO: %s, “%s”Joiner: %s, Status: %s, State: %s, %s func: “%s”%s", id, prio_text, *ppu.ppu_tname.load(), ppu.joiner.load(), status, ppu.state.load()
+			, ppu.ack_suspend ? "After" : (ppu.current_function ? "In" : "Last"), func ? func : "", get_wait_time_str(ppu.start_time)));
 	}, idm::unlocked);
+
+	// Sort by priority
+	std::stable_sort(ppu_threads.begin(), ppu_threads.end(), FN(x.first < y.first));
+
+	for (const auto& [prio, text] : ppu_threads)
+	{
+		add_leaf(find_node(root, additional_nodes::ppu_threads), QString::fromStdString(text));
+	}
 
 	lock_idm_lv2.reset();
 
@@ -902,7 +917,7 @@ void kernel_explorer::update()
 			if (zc.bound)
 			{
 				add_leaf(zc_tree, QString::fromStdString(fmt::format("O: %07x, W: %u, H: %u, Zformat: 0x%x, AAformat: 0x%x, Dir: 0x%x, sFunc: 0x%x, sRef: %02x, sMask: %02x"
-					, zc.offset, zc.height, zc.width, zc.zFormat, zc.aaFormat, zc.zcullDir, zc.sFunc, zc.sRef, zc.sMask)));
+					, zc.offset, zc.width, zc.height, zc.zFormat, zc.aaFormat, zc.zcullDir, zc.sFunc, zc.sRef, zc.sMask)));
 			}
 		}
 
@@ -911,7 +926,7 @@ void kernel_explorer::update()
 			if (db.valid())
 			{
 				add_leaf(db_tree, QString::fromStdString(fmt::format("Offset: %07x, Width: %u, Height: %u, Pitch: %u"
-					, db.offset, db.height, db.width, db.pitch)));
+					, db.offset, db.width, db.height, db.pitch)));
 			}
 		}
 	}

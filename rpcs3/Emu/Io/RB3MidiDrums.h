@@ -109,7 +109,7 @@ enum class Note : u8
 class usb_device_rb3_midi_drums : public usb_device_emulated
 {
 public:
-	usb_device_rb3_midi_drums(const std::array<u8, 7>& location, const std::string& device_name);
+	usb_device_rb3_midi_drums(const std::array<u8, 7>& location, std::string_view device_name);
 	~usb_device_rb3_midi_drums();
 
 	void control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer) override;

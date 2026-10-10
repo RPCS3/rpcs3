@@ -79,14 +79,17 @@ public:
 	bool get_mouse_lock_state();
 
 	bool can_consume_frame() const override;
-	void present_frame(std::vector<u8>& data, u32 pitch, u32 width, u32 height, bool is_bgra) const override;
+	void present_frame(std::vector<u8>&& data, u32 pitch, u32 width, u32 height, bool is_bgra) const override;
 	void take_screenshot(std::vector<u8>&& data, u32 sshot_width, u32 sshot_height, bool is_bgra) override;
+
+	void update_title(double fps = 0.0) override;
 
 protected:
 	video_renderer m_renderer;
+	Visibility m_startup_visibility = Visibility::Hidden;
 
-	void paintEvent(QPaintEvent *event) override;
-	void showEvent(QShowEvent *event) override;
+	void paintEvent(QPaintEvent* event) override;
+	void showEvent(QShowEvent* event) override;
 
 	void close() override;
 	void reset() override;

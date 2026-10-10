@@ -5,6 +5,7 @@
 #include "Emu/CPU/CPUThread.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Emu/Cell/SPUThread.h"
+#include "Emu/Cell/PPUThread.h"
 #include "Emu/IdManager.h"
 
 #include "util/asm.hpp"
@@ -13,6 +14,18 @@ LOG_CHANNEL(sys_memory);
 
 //
 static shared_mutex s_memstats_mtx;
+
+// This struct is for reduced logging repetition
+struct last_reported_memory_stats
+{
+	struct inner_body
+	{
+		u32 prev_total = umax;
+		u32 prev_avail = umax;
+	};
+
+	atomic_t<inner_body> body{};
+};
 
 lv2_memory_container::lv2_memory_container(u32 size, bool from_idm) noexcept
 	: size(size)
@@ -23,7 +36,7 @@ lv2_memory_container::lv2_memory_container(u32 size, bool from_idm) noexcept
 lv2_memory_container::lv2_memory_container(utils::serial& ar, bool from_idm) noexcept
 	: size(ar)
 	, id{from_idm ? idm::last_id() : SYS_MEMORY_CONTAINER_ID_INVALID}
-	, used(ar)
+	, used(ar.pop<s32>())
 {
 }
 
@@ -54,6 +67,8 @@ lv2_memory_container* lv2_memory_container::search(u32 id)
 struct sys_memory_address_table
 {
 	atomic_t<lv2_memory_container*> addrs[65536]{};
+	std::array<u32, 2> secondary_areas{};
+	std::mutex mutex;
 
 	sys_memory_address_table() = default;
 
@@ -63,7 +78,7 @@ struct sys_memory_address_table
 	{
 		// First: address, second: conatiner ID (SYS_MEMORY_CONTAINER_ID_INVALID for global FXO memory container)
 		std::unordered_map<u16, u32> mm;
-		ar(mm);
+		ar(mm, secondary_areas);
 
 		for (const auto& [addr, id] : mm)
 		{
@@ -73,6 +88,8 @@ struct sys_memory_address_table
 
 	void save(utils::serial& ar)
 	{
+		USING_SERIALIZATION_VERSION(lv2_memory);
+
 		std::unordered_map<u16, u32> mm;
 
 		for (auto& ctr : addrs)
@@ -83,14 +100,70 @@ struct sys_memory_address_table
 			}
 		}
 
-		ar(mm);
+		ar(mm, secondary_areas);
+	}
+
+	u32 allocate(u32 size, u32 align)
+	{
+		constexpr u32 _256mb = 0x10000000;
+		const auto location = align == 0x10000 ? vm::user64k : vm::user1m;
+		const u64 flags = (align == 0x10000 ? vm::block_size_64k : vm::block_size_1m) | vm::bf0_0x1;
+		const u32 area_size = utils::align(size, _256mb);
+		const auto area = vm::reserve_map(location, 0, area_size, flags);
+
+		if (!area)
+		{
+			return 0;
+		}
+
+		if (u32 addr = area->alloc(size, nullptr, align))
+		{
+			return addr;
+		}
+
+		// Check if secondary area is mapped already
+		if (u32 base_non0 = atomic_storage<u32>::load(secondary_areas[align == 0x10000 ? 0 : 1]))
+		{
+			if (u32 addr = ensure(vm::get(vm::any, base_non0))->alloc(size, nullptr, align))
+			{
+				return addr;
+			}
+
+			fmt::throw_exception("Uncharted area of allocations (size=0x%x, align=0x%x)", size, align);
+		}
+
+		if (size > _256mb)
+		{
+			fmt::throw_exception("Uncharted area of allocations (size=0x%x, align=0x%x)", size, align);
+		}
+
+		std::lock_guard lock(mutex);
+		auto& base = secondary_areas[align == 0x10000 ? 0 : 1];
+		const auto secondary = base ? vm::get(vm::any, base) : vm::find_map(area_size, _256mb, flags);
+
+		if (!secondary)
+		{
+			return 0;
+		}
+
+		if (!base)
+		{
+			atomic_storage<u32>::store(base, secondary->addr);
+		}
+
+		if (u32 addr = secondary->alloc(size, nullptr, align))
+		{
+			return addr;
+		}
+
+		fmt::throw_exception("Uncharted area of allocations (size=0x%x, align=0x%x)", size, align);
+		return 0;
 	}
 };
 
-std::shared_ptr<vm::block_t> reserve_map(u32 alloc_size, u32 align)
+u32 allocate_user_memory(u32 size, u32 align)
 {
-	return vm::reserve_map(align == 0x10000 ? vm::user64k : vm::user1m, 0, align == 0x10000 ? 0x20000000 : utils::align(alloc_size, 0x10000000)
-		, align == 0x10000 ? (vm::page_size_64k | vm::bf0_0x1) : (vm::page_size_1m | vm::bf0_0x1));
+	return g_fxo->get<sys_memory_address_table>().allocate(size, align);
 }
 
 // Todo: fix order of error checks
@@ -131,26 +204,22 @@ error_code sys_memory_allocate(cpu_thread& cpu, u64 size, u64 flags, vm::ptr<u32
 		return {CELL_ENOMEM, dct.size - dct.used};
 	}
 
-	if (const auto area = reserve_map(static_cast<u32>(size), align))
+	if (const u32 addr = allocate_user_memory(static_cast<u32>(size), align))
 	{
-		if (const u32 addr = area->alloc(static_cast<u32>(size), nullptr, align))
+		ensure(!g_fxo->get<sys_memory_address_table>().addrs[addr >> 16].exchange(&dct));
+
+		if (alloc_addr)
 		{
-			ensure(!g_fxo->get<sys_memory_address_table>().addrs[addr >> 16].exchange(&dct));
+			sys_memory.notice("sys_memory_allocate(): Allocated 0x%x address (size=0x%x)", addr, size);
 
-			if (alloc_addr)
-			{
-				sys_memory.notice("sys_memory_allocate(): Allocated 0x%x address (size=0x%x)", addr, size);
-
-				vm::lock_sudo(addr, static_cast<u32>(size));
-				cpu.check_state();
-				*alloc_addr = addr;
-				return CELL_OK;
-			}
-
-			// Dealloc using the syscall
-			sys_memory_free(cpu, addr);
-			return CELL_EFAULT;
+			vm::lock_sudo(addr, static_cast<u32>(size));
+			cpu.check_state();
+			*alloc_addr = addr;
+			return CELL_OK;
 		}
+
+		sys_memory_free(cpu, addr);
+		return CELL_EFAULT;
 	}
 
 	dct.free(size);
@@ -205,24 +274,22 @@ error_code sys_memory_allocate_from_container(cpu_thread& cpu, u64 size, u32 cid
 		return {ct.ret, ct->size - ct->used};
 	}
 
-	if (const auto area = reserve_map(static_cast<u32>(size), align))
+	if (const u32 addr = allocate_user_memory(static_cast<u32>(size), align))
 	{
-		if (const u32 addr = area->alloc(static_cast<u32>(size)))
+		ensure(!g_fxo->get<sys_memory_address_table>().addrs[addr >> 16].exchange(ct.ptr.get()));
+
+		if (alloc_addr)
 		{
-			ensure(!g_fxo->get<sys_memory_address_table>().addrs[addr >> 16].exchange(ct.ptr.get()));
+			sys_memory.notice("sys_memory_allocate_from_container(): Allocated 0x%x address (size=0x%x)", addr, size);
 
-			if (alloc_addr)
-			{
-				vm::lock_sudo(addr, static_cast<u32>(size));
-				cpu.check_state();
-				*alloc_addr = addr;
-				return CELL_OK;
-			}
-
-			// Dealloc using the syscall
-			sys_memory_free(cpu, addr);
-			return CELL_EFAULT;
+			vm::lock_sudo(addr, static_cast<u32>(size));
+			cpu.check_state();
+			*alloc_addr = addr;
+			return CELL_OK;
 		}
+
+		sys_memory_free(cpu, addr);
+		return CELL_EFAULT;
 	}
 
 	ct->free(size);
@@ -247,17 +314,37 @@ error_code sys_memory_free(cpu_thread& cpu, u32 addr)
 	return CELL_OK;
 }
 
-error_code sys_memory_get_page_attribute(cpu_thread& cpu, u32 addr, vm::ptr<sys_page_attr_t> attr)
+error_code sys_memory_get_page_attribute(ppu_thread& ppu, u32 addr, vm::ptr<sys_page_attr_t> attr)
 {
-	cpu.state += cpu_flag::wait;
+	ppu.state += cpu_flag::wait;
 
 	sys_memory.trace("sys_memory_get_page_attribute(addr=0x%x, attr=*0x%x)", addr, attr);
 
-	vm::writer_lock rlock;
-
-	if (!vm::check_addr(addr) || addr >= SPU_FAKE_BASE_ADDR)
+	if ((addr >> 28) == (ppu.stack_addr >> 28))
 	{
-		return CELL_EINVAL;
+		// Stack address: fast path
+		if (!(addr >= ppu.stack_addr && addr < ppu.stack_addr + ppu.stack_size) && !vm::check_addr(addr))
+		{
+			return { CELL_EINVAL, addr };
+		}
+
+		if (!vm::check_addr(attr.addr(), vm::page_readable, attr.size()))
+		{
+			return CELL_EFAULT;
+		}
+
+		attr->attribute = 0x40000ull; // SYS_MEMORY_PROT_READ_WRITE
+		attr->access_right = SYS_MEMORY_ACCESS_RIGHT_PPU_THR;
+		attr->page_size = 4096;
+		attr->pad = 0; // Always write 0
+		return CELL_OK;
+	}
+
+	const auto [ok, vm_flags] = vm::get_addr_flags(addr);
+
+	if (!ok || addr >= SPU_FAKE_BASE_ADDR)
+	{
+		return { CELL_EINVAL, addr };
 	}
 
 	if (!vm::check_addr(attr.addr(), vm::page_readable, attr.size()))
@@ -266,19 +353,20 @@ error_code sys_memory_get_page_attribute(cpu_thread& cpu, u32 addr, vm::ptr<sys_
 	}
 
 	attr->attribute = 0x40000ull; // SYS_MEMORY_PROT_READ_WRITE (TODO)
-	attr->access_right = addr >> 28 == 0xdu ? SYS_MEMORY_ACCESS_RIGHT_PPU_THR : SYS_MEMORY_ACCESS_RIGHT_ANY;// (TODO)
+	attr->access_right = SYS_MEMORY_ACCESS_RIGHT_ANY; // TODO: Report accurately
 
-	if (vm::check_addr(addr, vm::page_1m_size))
+	if (vm_flags & vm::page_1m_size)
 	{
 		attr->page_size = 0x100000;
 	}
-	else if (vm::check_addr(addr, vm::page_64k_size))
+	else if (vm_flags & vm::page_64k_size)
 	{
 		attr->page_size = 0x10000;
 	}
 	else
 	{
-		attr->page_size = 4096;
+		//attr->page_size = 4096;
+		fmt::throw_exception("Unreachable");
 	}
 
 	attr->pad = 0; // Always write 0
@@ -288,8 +376,6 @@ error_code sys_memory_get_page_attribute(cpu_thread& cpu, u32 addr, vm::ptr<sys_
 error_code sys_memory_get_user_memory_size(cpu_thread& cpu, vm::ptr<sys_memory_info_t> mem_info)
 {
 	cpu.state += cpu_flag::wait;
-
-	sys_memory.warning("sys_memory_get_user_memory_size(mem_info=*0x%x)", mem_info);
 
 	// Get "default" memory container
 	auto& dct = g_fxo->get<lv2_memory_container>();
@@ -306,6 +392,22 @@ error_code sys_memory_get_user_memory_size(cpu_thread& cpu, vm::ptr<sys_memory_i
 		{
 			out.total_user_memory -= ct.size;
 		});
+	}
+
+	typename last_reported_memory_stats::inner_body now;
+	now.prev_total = out.total_user_memory;
+	now.prev_avail = out.available_user_memory;
+
+	now = g_fxo->get<last_reported_memory_stats>().body.exchange(now);
+
+	if (now.prev_total != out.total_user_memory || now.prev_avail != out.available_user_memory)
+	{
+		// Log on change
+		sys_memory.warning("sys_memory_get_user_memory_size(mem_info=*0x%x): Avail=0x%x, Total=0x%x", mem_info, out.available_user_memory, out.total_user_memory);
+	}
+	else
+	{
+		sys_memory.trace("sys_memory_get_user_memory_size(mem_info=*0x%x): Avail=0x%x, Total=0x%x", mem_info, out.available_user_memory, out.total_user_memory);
 	}
 
 	cpu.check_state();

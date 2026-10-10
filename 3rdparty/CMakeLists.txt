@@ -25,18 +25,8 @@ add_subdirectory(zstd EXCLUDE_FROM_ALL)
 # 7zip sdk
 add_subdirectory(7zip EXCLUDE_FROM_ALL)
 
-add_library(3rdparty_flatbuffers INTERFACE)
-if (USE_SYSTEM_FLATBUFFERS)
-	pkg_check_modules(FLATBUFFERS REQUIRED IMPORTED_TARGET flatbuffers>=2.0.0)
-	target_link_libraries(3rdparty_flatbuffers INTERFACE PkgConfig::FLATBUFFERS)
-	set(FBS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../rpcs3/Emu/NP/generated/")
-	execute_process(COMMAND flatc --cpp -o "${FBS_DIR}" "${FBS_DIR}/np2_structs.fbs" RESULT_VARIABLE FBS_CMD_ERROR)
-	if(FBS_CMD_ERROR AND NOT FBS_CMD_ERROR EQUAL 0)
-		message(FATAL_ERROR "flatc failed to regenerate flatbuffers headers.")
-	endif()
-else()
-	target_include_directories(3rdparty_flatbuffers INTERFACE flatbuffers/include)
-endif()
+# Protobuf
+add_subdirectory(protobuf EXCLUDE_FROM_ALL)
 
 # libPNG
 add_subdirectory(libpng EXCLUDE_FROM_ALL)
@@ -56,7 +46,7 @@ if (USE_SYSTEM_VULKAN_MEMORY_ALLOCATOR)
 	add_library(3rdparty::vulkanmemoryallocator ALIAS GPUOpen::VulkanMemoryAllocator)
 else()
 	add_library(3rdparty_vulkanmemoryallocator INTERFACE)
-	target_include_directories(3rdparty_vulkanmemoryallocator INTERFACE GPUOpen/VulkanMemoryAllocator/include)
+	target_include_directories(3rdparty_vulkanmemoryallocator SYSTEM INTERFACE GPUOpen/VulkanMemoryAllocator/include)
 	add_library(3rdparty::vulkanmemoryallocator ALIAS 3rdparty_vulkanmemoryallocator)
 endif()
 
@@ -107,11 +97,11 @@ add_subdirectory(yaml-cpp)
 
 # OpenGL
 
-if (NOT ANDROID)
+if (NOT ANDROID AND NOT APPLE)
 	find_package(OpenGL REQUIRED OPTIONAL_COMPONENTS EGL)
 
 	add_library(3rdparty_opengl INTERFACE)
-	target_include_directories(3rdparty_opengl INTERFACE GL)
+	target_include_directories(3rdparty_opengl SYSTEM INTERFACE GL)
 
 	if (WIN32)
 		if(NOT MSVC)
@@ -119,8 +109,6 @@ if (NOT ANDROID)
 		else()
 			target_link_libraries(3rdparty_opengl INTERFACE dxgi.lib d2d1.lib dwrite.lib)
 		endif()
-	elseif(APPLE)
-		target_link_libraries(3rdparty_opengl INTERFACE OpenGL::GL OpenGL::GLU)
 	else()
 		target_link_libraries(3rdparty_opengl INTERFACE OpenGL::GL OpenGL::GLU OpenGL::GLX)
 	endif()
@@ -204,7 +192,7 @@ if(USE_VULKAN)
 			find_package(Wayland)
 			if (WAYLAND_FOUND)
 				target_include_directories(3rdparty_vulkan
-					INTERFACE ${WAYLAND_INCLUDE_DIR})
+					SYSTEM INTERFACE ${WAYLAND_INCLUDE_DIR})
 			endif()
 		endif()
 
@@ -278,7 +266,7 @@ if(USE_FAUDIO)
 			target_compile_definitions(FAudio-static INTERFACE -DHAVE_FAUDIO)
 			set(FAUDIO_TARGET FAudio-static)
 		else()
-			message(FATAL_ERROR
+			message(WARNING
 				"-- RPCS3: 3rdparty FAudio requires SDL 3.2.0 or newer. Since a valid SDL3"
 				">=3.2.0 version cannot be found, building with FAudio will be skipped.")
 			set(USE_FAUDIO OFF CACHE BOOL "Disabled FAudio with SDL < 3.2.0" FORCE)
@@ -298,7 +286,7 @@ if(NOT ANDROID)
 		message(STATUS "RPCS3: using shared ffmpeg")
 		find_package(FFMPEG REQUIRED)
 
-		target_include_directories(3rdparty_ffmpeg INTERFACE ${FFMPEG_INCLUDE_DIR})
+		target_include_directories(3rdparty_ffmpeg SYSTEM INTERFACE ${FFMPEG_INCLUDE_DIR})
 		target_link_libraries(3rdparty_ffmpeg INTERFACE ${FFMPEG_LIBRARIES})
 	else()
 		message(STATUS "RPCS3: using builtin ffmpeg")
@@ -328,14 +316,14 @@ if(NOT ANDROID)
 			${FFMPEG_LIB_SWSCALE}
 			${FFMPEG_LIB_SWRESAMPLE}
 		)
-		target_include_directories(3rdparty_ffmpeg INTERFACE "ffmpeg/include")
+		target_include_directories(3rdparty_ffmpeg SYSTEM INTERFACE "ffmpeg/include")
 	endif()
 endif()
 
 
 # GLEW
 add_library(3rdparty_glew INTERFACE)
-if(NOT MSVC AND NOT ANDROID)
+if(NOT MSVC AND NOT ANDROID AND NOT APPLE)
 	find_package(GLEW REQUIRED)
 	target_link_libraries(3rdparty_glew INTERFACE GLEW::GLEW)
 endif()
@@ -374,7 +362,7 @@ endif()
 add_library(3rdparty::zlib ALIAS 3rdparty_zlib)
 add_library(3rdparty::zstd ALIAS 3rdparty_zstd)
 add_library(3rdparty::7zip ALIAS 3rdparty_7zip)
-add_library(3rdparty::flatbuffers ALIAS 3rdparty_flatbuffers)
+add_library(3rdparty::protobuf ALIAS 3rdparty_protobuf)
 add_library(3rdparty::pugixml ALIAS pugixml)
 add_library(3rdparty::glslang ALIAS 3rdparty_glslang)
 add_library(3rdparty::yaml-cpp ALIAS yaml-cpp)

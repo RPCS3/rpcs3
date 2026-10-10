@@ -128,9 +128,9 @@ public:
 
 	KbInfo& GetInfo() { return m_info; }
 	std::vector<Keyboard>& GetKeyboards() { return m_keyboards; }
-	KbData& GetData(const u32 keyboard) { return m_keyboards[keyboard].m_data; }
-	KbExtraData& GetExtraData(const u32 keyboard) { return m_keyboards[keyboard].m_extra_data; }
-	KbConfig& GetConfig(const u32 keyboard) { return m_keyboards[keyboard].m_config; }
+	KbData& GetData(const u32 keyboard) { return ::at32(m_keyboards, keyboard).m_data; }
+	KbExtraData& GetExtraData(const u32 keyboard) { return ::at32(m_keyboards, keyboard).m_extra_data; }
+	KbConfig& GetConfig(const u32 keyboard) { return ::at32(m_keyboards, keyboard).m_config; }
 	identifier id() const { return m_id; }
 
 	void ReleaseAllKeys();

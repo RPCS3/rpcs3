@@ -192,10 +192,10 @@ struct AtracXdecDecoder
 
 	// HLE exclusive
 	b8 config_is_set = false; // For savestates
-	const AVCodec* codec;
-	AVCodecContext* ctx;
-	AVPacket* packet;
-	AVFrame* frame;
+	const AVCodec* codec = nullptr;
+	AVCodecContext* ctx = nullptr;
+	AVPacket* packet = nullptr;
+	AVFrame* frame = nullptr;
 
 	u8 spurs_stuff[84]; // 120 bytes on LLE, pointers to CellSpurs, CellSpursTaskset, etc.
 

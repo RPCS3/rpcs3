@@ -4,6 +4,7 @@
 
 #include "vkutils/descriptors.h"
 #include "vkutils/data_heap.h"
+#include "vkutils/ex.h"
 #include "vkutils/instance.h"
 #include "vkutils/sync.h"
 #include "vkutils/swapchain.h"
@@ -121,33 +122,35 @@ private:
 	u64 m_last_heap_sync_time = 0;
 	u32 m_texbuffer_view_size = 0;
 
-	vk::data_heap m_attrib_ring_info;                  // Vertex data
-	vk::data_heap m_fragment_constants_ring_info;      // Fragment program constants
-	vk::data_heap m_transform_constants_ring_info;     // Transform program constants
-	vk::data_heap m_fragment_env_ring_info;            // Fragment environment params
-	vk::data_heap m_vertex_env_ring_info;              // Vertex environment params
-	vk::data_heap m_fragment_texture_params_ring_info; // Fragment texture params
-	vk::data_heap m_vertex_layout_ring_info;           // Vertex layout structure
-	vk::data_heap m_index_buffer_ring_info;            // Index data
-	vk::data_heap m_texture_upload_buffer_ring_info;   // Texture upload heap
-	vk::data_heap m_raster_env_ring_info;              // Raster control such as polygon and line stipple
-	vk::data_heap m_instancing_buffer_ring_info;       // Instanced rendering data (constants indirection table + instanced constants)
+	vk::data_heap m_attrib_ring_info;                         // Vertex data
+	vk::data_heap m_fragment_constants_ring_info;             // Fragment program constants
+	vk::data_heap m_transform_constants_ring_info;            // Transform program constants
+	vk::data_heap m_fragment_env_ring_info;                   // Fragment environment params
+	vk::data_heap m_vertex_env_ring_info;                     // Vertex environment params
+	vk::data_heap m_fragment_texture_params_ring_info;        // Fragment texture params
+	vk::data_heap m_vertex_layout_ring_info;                  // Vertex layout structure
+	vk::data_heap m_index_buffer_ring_info;                   // Index data
+	vk::data_heap m_texture_upload_buffer_ring_info;          // Texture upload heap
+	vk::data_heap m_raster_env_ring_info;                     // Raster control such as polygon and line stipple
+	vk::data_heap m_instancing_buffer_ring_info;              // Instanced rendering data (constants indirection table + instanced constants)
 
-	vk::data_heap m_fragment_instructions_buffer;
-	vk::data_heap m_vertex_instructions_buffer;
+	vk::data_heap m_fragment_instructions_buffer;             // Interpreter FP block
+	vk::data_heap m_vertex_instructions_buffer;               // Interpreter VP block
 
-	VkDescriptorBufferInfo m_vertex_env_buffer_info {};
-	VkDescriptorBufferInfo m_fragment_env_buffer_info {};
-	VkDescriptorBufferInfo m_vertex_layout_stream_info {};
-	VkDescriptorBufferInfo m_vertex_constants_buffer_info {};
-	VkDescriptorBufferInfo m_fragment_constants_buffer_info {};
-	VkDescriptorBufferInfo m_fragment_texture_params_buffer_info {};
-	VkDescriptorBufferInfo m_raster_env_buffer_info {};
-	VkDescriptorBufferInfo m_instancing_indirection_buffer_info {};
-	VkDescriptorBufferInfo m_instancing_constants_array_buffer_info{};
+	rsx::simple_array<vk::data_heap*> m_flushable_data_heaps; // List of heaps that can be 'dirty' and need manual flush
 
-	VkDescriptorBufferInfo m_vertex_instructions_buffer_info {};
-	VkDescriptorBufferInfo m_fragment_instructions_buffer_info {};
+	VkDescriptorBufferInfoEx m_vertex_env_buffer_info {};
+	VkDescriptorBufferInfoEx m_fragment_env_buffer_info {};
+	VkDescriptorBufferInfoEx m_vertex_layout_stream_info {};
+	VkDescriptorBufferInfoEx m_vertex_constants_buffer_info {};
+	VkDescriptorBufferInfoEx m_fragment_constants_buffer_info {};
+	VkDescriptorBufferInfoEx m_fragment_texture_params_buffer_info {};
+	VkDescriptorBufferInfoEx m_raster_env_buffer_info {};
+	VkDescriptorBufferInfoEx m_instancing_indirection_buffer_info {};
+	VkDescriptorBufferInfoEx m_instancing_constants_array_buffer_info{};
+
+	VkDescriptorBufferInfoEx m_vertex_instructions_buffer_info {};
+	VkDescriptorBufferInfoEx m_fragment_instructions_buffer_info {};
 
 	rsx::simple_array<u8> m_multidraw_parameters_buffer;
 	u64 m_xform_constants_dynamic_offset = 0;          // We manage transform_constants dynamic offset manually to alleviate performance penalty of doing a hot-patch of constants.
@@ -158,8 +161,13 @@ private:
 	u64 m_texture_parameters_dynamic_offset = 0;
 	u64 m_stipple_array_dynamic_offset = 0;
 
-	std::array<vk::frame_context_t, VK_MAX_ASYNC_FRAMES> frame_context_storage;
-	//Temp frame context to use if the real frame queue is overburdened. Only used for storage
+	std::unique_ptr<rsx::data_heap::bulk_allocator<256, 96>> m_vertex_env_allocator;
+	std::unique_ptr<rsx::data_heap::bulk_allocator<256, 16>> m_transform_constants_allocator;
+	std::unique_ptr<rsx::data_heap::bulk_allocator<256, 16>> m_fragment_constants_allocator;
+
+	std::vector<vk::frame_context_t> m_frame_context_storage;
+	u32 m_max_async_frames = 0u;
+	// Temp frame context to use if the real frame queue is overburdened. Only used for storage
 	vk::frame_context_t m_aux_frame_context;
 
 	u32 m_current_queue_index = 0;
@@ -185,6 +193,8 @@ private:
 	u64 m_current_renderpass_key = 0;
 	VkRenderPass m_cached_renderpass = VK_NULL_HANDLE;
 	std::vector<vk::image*> m_fbo_images;
+
+	std::unique_ptr<vk::image> m_overlay_recording_img;
 
 	//Vertex layout
 	rsx::vertex_input_layout m_vertex_layout;
@@ -217,13 +227,14 @@ private:
 	void frame_context_cleanup(vk::frame_context_t *ctx);
 	void advance_queued_frames();
 	void present(vk::frame_context_t *ctx);
-	void reinitialize_swapchain();
+	bool reinitialize_swapchain();
 
 	vk::viewable_image* get_present_source(vk::present_surface_info* info, const rsx::avconf& avconfig);
 
 	void begin_render_pass();
 	void close_render_pass();
 	VkRenderPass get_render_pass();
+	void invalidate_render_pass();
 
 	void update_draw_state();
 	void check_present_status();
@@ -246,8 +257,10 @@ public:
 	void set_scissor(bool clip_viewport);
 	void bind_viewport();
 
+	// Sync
+	void write_barrier(u32 address, u32 range) override;
 	void sync_hint(rsx::FIFO::interrupt_hint hint, rsx::reports::sync_hint_payload_t payload) override;
-	bool release_GCM_label(u32 address, u32 data) override;
+	bool release_GCM_label(u32 type, u32 address, u32 data) override;
 
 	void begin_occlusion_query(rsx::reports::occlusion_query_info* query) override;
 	void end_occlusion_query(rsx::reports::occlusion_query_info* query) override;

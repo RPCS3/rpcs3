@@ -26,11 +26,15 @@ namespace utils
 		rx, // Read + execute
 	};
 
-	/**
-	* Reserve `size` bytes of virtual memory and returns it.
-	* The memory should be committed before usage.
-	*/
-	void* memory_reserve(usz size, void* use_addr = nullptr, bool is_memory_mapping = false);
+	// Reserve `size` bytes of virtual memory and returns it.
+	// The memory should be committed before usage.
+	void* memory_reserve(usz size, void* use_addr, bool is_memory_mapping = false, bool can_be_jit = false);
+
+	// Non-fixed address memory_reserve usage
+	inline void* memory_reserve(usz size, bool can_be_jit = false)
+	{
+		return memory_reserve(size, nullptr, false, can_be_jit);
+	}
 
 	/**
 	* Commit `size` bytes of virtual memory starting at pointer.
@@ -40,10 +44,15 @@ namespace utils
 	void memory_commit(void* pointer, usz size, protection prot = protection::rw);
 
 	// Decommit all memory committed via commit_page_memory.
-	void memory_decommit(void* pointer, usz size);
+	void memory_decommit(void* pointer, usz size, bool can_be_jit = false);
 
 	// Decommit all memory and commit it again.
-	void memory_reset(void* pointer, usz size, protection prot = protection::rw);
+	void memory_reset(void* pointer, usz size, protection prot = protection::rw, bool can_be_jit = false);
+
+	inline void memory_reset(void* pointer, usz size, bool can_be_jit = false)
+	{
+		return memory_reset(pointer, size, protection::rw, can_be_jit);
+	}
 
 	// Free memory after reserved by memory_reserve, should specify original size
 	void memory_release(void* pointer, usz size);

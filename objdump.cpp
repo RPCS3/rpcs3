@@ -25,6 +25,7 @@
 #include <string>
 #include <vector>
 #include <charconv>
+#include <string_view>
 
 std::string to_hex(std::uint64_t value, bool prfx = true)
 {
@@ -85,7 +86,7 @@ int main(int argc, char* argv[])
 			// Decode address and try to find the object
 			std::uint64_t addr = -1;
 
-			std::from_chars(arg.data() + strlen("--start-address=0x"), arg.data() + arg.size(), addr, 16);
+			std::from_chars(arg.data() + ("--start-address=0x"sv).size(), arg.data() + arg.size(), addr, 16);
 
 			for (int j = 0; j < 0x100'0000; j++)
 			{

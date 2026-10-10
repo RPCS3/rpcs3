@@ -4,6 +4,8 @@
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/RSX/Core/RSXReservationLock.hpp"
 #include "Emu/RSX/Common/tiled_dma_copy.hpp"
+#include "Emu/RSX/Host/MM.h"
+#include "Emu/RSX/Utils/image_utils.hpp"
 
 #include "context_accessors.define.h"
 
@@ -187,19 +189,26 @@ namespace rsx
 			const u32 in_offset = in_x * in_bpp + in_pitch * in_y;
 			const u32 out_offset = out_x * out_bpp + out_pitch * out_y;
 
-			const u32 src_line_length = (in_w * in_bpp);
+			const u32 src_line_length = (std::min<u32>(in_w, in_x + static_cast<u32>(std::ceil(clip_w / scale_x))) * in_bpp);
 
 			u32 src_address = 0;
 			const u32 dst_address = get_address(dst_offset, dst_dma, 1); // TODO: Add size
+
+			if (!dst_address)
+			{
+				rsx_log.error("NV3089_IMAGE_IN_SIZE: Unmapped dst_address (dst_offset=0x%x, dst_dma=0x%x)", dst_offset, dst_dma);
+				RSX(ctx)->recover_fifo();
+				return { false, src_info, dst_info };
+			}
 
 			if (is_block_transfer && (clip_h == 1 || (in_pitch == out_pitch && src_line_length == in_pitch)))
 			{
 				const u32 nb_lines = std::min(clip_h, in_h);
 				const u32 data_length = nb_lines * src_line_length;
 
-				if (src_address = get_address(src_offset, src_dma, data_length);
-					!src_address || !dst_address)
+				if (src_address = get_address(src_offset, src_dma, data_length); !src_address)
 				{
+					rsx_log.error("NV3089_IMAGE_IN_SIZE: Unmapped src_address for in block transfer (src_offset=0x%x, src_dma=0x%x, data_length=0x%x)", src_offset, src_dma, data_length);
 					RSX(ctx)->recover_fifo();
 					return { false, src_info, dst_info };
 				}
@@ -209,7 +218,7 @@ namespace rsx
 				if (const auto result = RSX(ctx)->read_barrier(src_address, data_length, false);
 					result == rsx::result_zcull_intr)
 				{
-					if (RSX(ctx)->copy_zcull_stats(src_address, data_length, dst_address) == data_length)
+					if (RSX(ctx)->copy_zcull_stats(src_address, data_length, dst_address) >= data_length)
 					{
 						// All writes deferred
 						return { false, src_info, dst_info };
@@ -218,12 +227,12 @@ namespace rsx
 			}
 			else
 			{
-				const u16 read_h = std::min(static_cast<u16>(clip_h / scale_y), in_h);
+				const u16 read_h = std::max<u16>(std::min(static_cast<u16>(clip_h / scale_y), in_h), 1);
 				const u32 data_length = in_pitch * (read_h - 1) + src_line_length;
 
-				if (src_address = get_address(src_offset, src_dma, data_length);
-					!src_address || !dst_address)
+				if (src_address = get_address(src_offset, src_dma, data_length); !src_address)
 				{
+					rsx_log.error("NV3089_IMAGE_IN_SIZE: Unmapped src_address (src_offset=0x%x, src_dma=0x%x, data_length=0x%x)", src_offset, src_dma, data_length);
 					RSX(ctx)->recover_fifo();
 					return { false, src_info, dst_info };
 				}
@@ -333,68 +342,68 @@ namespace rsx
 					return src_range.overlaps(dst_range);
 				}();
 
-					if (is_overlapping) [[ unlikely ]]
+				if (is_overlapping) [[ unlikely ]]
+				{
+					if (need_clip)
 					{
-						if (need_clip)
-						{
-							temp2.resize(dst.pitch * dst.clip_height);
-							clip_image_may_overlap(dst.pixels, src.pixels, dst.clip_x, dst.clip_y, dst.clip_width, dst.clip_height, dst.bpp, src.pitch, dst.pitch, temp2.data());
-							return;
-						}
-
-						if (dst.pitch != src.pitch || dst.pitch != dst.bpp * out_w)
-						{
-							const u32 buffer_pitch = dst.bpp * out_w;
-							temp2.resize(buffer_pitch * out_h);
-							std::add_pointer_t<u8> buf = temp2.data(), pixels = src.pixels;
-
-							// Read the whole buffer from source
-							for (u32 y = 0; y < out_h; ++y)
-							{
-								std::memcpy(buf, pixels, buffer_pitch);
-								pixels += src.pitch;
-								buf += buffer_pitch;
-							}
-
-							buf = temp2.data(), pixels = dst.pixels;
-
-							// Write to destination
-							for (u32 y = 0; y < out_h; ++y)
-							{
-								std::memcpy(pixels, buf, buffer_pitch);
-								pixels += dst.pitch;
-								buf += buffer_pitch;
-							}
-
-							return;
-						}
-
-						std::memmove(dst.pixels, src.pixels, dst.pitch * out_h);
+						temp2.resize(dst.pitch * dst.clip_height);
+						clip_image_may_overlap(dst.pixels, src.pixels, dst.clip_x, dst.clip_y, dst.clip_width, dst.clip_height, dst.bpp, src.pitch, dst.pitch, temp2.data());
 						return;
 					}
 
-					if (need_clip) [[ unlikely ]]
+					if (dst.pitch != src.pitch || dst.pitch != dst.bpp * out_w)
 					{
-						clip_image(dst.pixels, src.pixels, dst.clip_x, dst.clip_y, dst.clip_width, dst.clip_height, dst.bpp, src.pitch, dst.pitch);
-						return;
-					}
+						const u32 buffer_pitch = dst.bpp * out_w;
+						temp2.resize(buffer_pitch * out_h);
+						std::add_pointer_t<u8> buf = temp2.data(), pixels = src.pixels;
 
-					if (dst.pitch != src.pitch || dst.pitch != dst.bpp * out_w) [[ unlikely ]]
-					{
-						u8* dst_pixels = dst.pixels, * src_pixels = src.pixels;
-
+						// Read the whole buffer from source
 						for (u32 y = 0; y < out_h; ++y)
 						{
-							std::memcpy(dst_pixels, src_pixels, out_w * dst.bpp);
-							dst_pixels += dst.pitch;
-							src_pixels += src.pitch;
+							std::memcpy(buf, pixels, buffer_pitch);
+							pixels += src.pitch;
+							buf += buffer_pitch;
+						}
+
+						buf = temp2.data(), pixels = dst.pixels;
+
+						// Write to destination
+						for (u32 y = 0; y < out_h; ++y)
+						{
+							std::memcpy(pixels, buf, buffer_pitch);
+							pixels += dst.pitch;
+							buf += buffer_pitch;
 						}
 
 						return;
 					}
 
-					std::memcpy(dst.pixels, src.pixels, dst.pitch * out_h);
+					std::memmove(dst.pixels, src.pixels, dst.pitch * out_h);
 					return;
+				}
+
+				if (need_clip) [[ unlikely ]]
+				{
+					clip_image(dst.pixels, src.pixels, dst.clip_x, dst.clip_y, dst.clip_width, dst.clip_height, dst.bpp, src.pitch, dst.pitch);
+					return;
+				}
+
+				if (dst.pitch != src.pitch || dst.pitch != dst.bpp * out_w) [[ unlikely ]]
+				{
+					u8* dst_pixels = dst.pixels, * src_pixels = src.pixels;
+
+					for (u32 y = 0; y < out_h; ++y)
+					{
+						std::memcpy(dst_pixels, src_pixels, out_w * dst.bpp);
+						dst_pixels += dst.pitch;
+						src_pixels += src.pitch;
+					}
+
+					return;
+				}
+
+				std::memcpy(dst.pixels, src.pixels, dst.pitch * out_h);
+				return;
 			}
 
 			if (need_clip) [[ unlikely ]]
@@ -574,9 +583,11 @@ namespace rsx
 			const u16 out_h = REGS(ctx)->blit_engine_output_height();
 
 			// Lock here. RSX cannot execute any locking operations from this point, including ZCULL read barriers
+			const u32 read_length = src.pitch * src.height;
+			const u32 write_length = dst.pitch * dst.clip_height;
 			auto res = ::rsx::reservation_lock<true>(
-				dst.rsx_address, dst.pitch * dst.clip_height,
-				src.rsx_address, src.pitch * src.height);
+				dst.rsx_address, write_length,
+				src.rsx_address, read_length);
 
 			if (!g_cfg.video.force_cpu_blit_processing &&
 				(dst.dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER || src.dma == CELL_GCM_CONTEXT_DMA_MEMORY_FRAME_BUFFER) &&
@@ -585,6 +596,14 @@ namespace rsx
 				// HW-accelerated blit
 				return;
 			}
+
+			// Conservative MM flush
+			rsx::simple_array<utils::address_range64> flush_mm_ranges =
+			{
+				utils::address_range64::start_length(reinterpret_cast<u64>(dst.pixels), write_length),
+				utils::address_range64::start_length(reinterpret_cast<u64>(src.pixels), read_length)
+			};
+			rsx::mm_flush(flush_mm_ranges);
 
 			std::vector<u8> mirror_tmp;
 			bool src_is_temp = false;
@@ -612,7 +631,7 @@ namespace rsx
 			const bool interpolate = in_inter == blit_engine::transfer_interpolator::foh;
 
 			auto real_dst = dst.pixels;
-			const auto tiled_region = RSX(ctx)->get_tiled_memory_region(utils::address_range32::start_length(dst.rsx_address, dst.pitch * dst.clip_height));
+			const auto tiled_region = RSX(ctx)->get_tiled_memory_region(utils::address_range32::start_length(dst.rsx_address, write_length));
 			std::vector<u8> tmp;
 
 			if (tiled_region)

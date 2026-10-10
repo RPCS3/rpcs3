@@ -55,6 +55,8 @@ namespace rsx
 
 		void set_render_mode(context* ctx, u32, u32 arg);
 
+		void set_shading_mode(context* ctx, u32 reg, u32 arg);
+
 		void set_zcull_render_enable(context* ctx, u32, u32);
 
 		void set_zcull_stats_enable(context* ctx, u32, u32);
@@ -66,6 +68,8 @@ namespace rsx
 		void set_shader_program_dirty(context* ctx, u32, u32);
 
 		void set_surface_dirty_bit(context* ctx, u32 reg, u32 arg);
+
+		void set_zmin_max_control(context* ctx, u32 reg, u32 arg);
 
 		void set_surface_format(context* ctx, u32 reg, u32 arg);
 
@@ -86,6 +90,8 @@ namespace rsx
 		void set_blend_factor(context* ctx, u32 reg, u32 arg);
 
 		void set_transform_constant_load(context* ctx, u32 reg, u32 arg);
+
+		void set_aa_control(context* ctx, u32 reg, u32 arg);
 
 #define RSX(ctx) ctx->rsxthr
 #define REGS(ctx) (&rsx::method_registers)
@@ -200,6 +206,22 @@ namespace rsx
 
 		struct set_transform_constant
 		{
+			// Helper for write commands
+			struct write_range
+			{
+				u32 first_word = 0;
+				u32 word_count = 0;
+			};
+
+			// Only constants [0, 467] are writable. Hardware ignores writes beyond that.
+			static constexpr u32 max_transform_constants = 468u;
+
+			static u32* get_constants_ptr(context* ctx, u32 word);
+
+			static write_range compute_write_range(context* ctx, u32 reg, u32 count);
+
+			static void write_constants(context* ctx, u32 first_word, const u32* src, u32 count);
+
 			static void impl(context* ctx, u32 reg, u32 arg);
 
 			static void decode_one(context* ctx, u32 reg, u32 arg);

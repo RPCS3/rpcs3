@@ -41,7 +41,7 @@ private:
 	void write_state(u8* buf);
 
 public:
-	usb_device_rb3_midi_keyboard(const std::array<u8, 7>& location, const std::string& device_name);
+	usb_device_rb3_midi_keyboard(const std::array<u8, 7>& location, std::string_view device_name);
 	~usb_device_rb3_midi_keyboard();
 
 	void control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer) override;

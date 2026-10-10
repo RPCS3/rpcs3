@@ -6,13 +6,13 @@
 #include "RSXFIFO.h"
 #include "RSXOffload.h"
 #include "RSXZCULL.h"
-#include "rsx_utils.h"
 #include "Common/bitfield.hpp"
 #include "Common/profiling_timer.hpp"
 #include "Common/texture_cache_types.h"
 #include "Common/TextureUtils.h"
 #include "Program/RSXVertexProgram.h"
 #include "Program/RSXFragmentProgram.h"
+#include "Utils/rsx_utils.h"
 
 #include "Utilities/Thread.h"
 #include "Utilities/geometry.h"
@@ -79,17 +79,22 @@ namespace rsx
 
 	struct backend_configuration
 	{
-		bool supports_multidraw;               // Draw call batching
-		bool supports_hw_a2c;                  // Alpha to coverage
-		bool supports_hw_a2c_1spp;             // Alpha to coverage at 1 sample per pixel
-		bool supports_hw_renormalization;      // Should be true on NV hardware which matches PS3 texture renormalization behaviour
-		bool supports_hw_msaa;                 // MSAA support
-		bool supports_hw_a2one;                // Alpha to one
-		bool supports_hw_conditional_render;   // Conditional render
-		bool supports_passthrough_dma;         // DMA passthrough
-		bool supports_asynchronous_compute;    // Async compute
-		bool supports_host_gpu_labels;         // Advanced host synchronization
-		bool supports_normalized_barycentrics; // Basically all GPUs except NVIDIA have properly normalized barycentrics
+		bool supports_multidraw;                 // Draw call batching
+		bool supports_hw_a2c;                    // Alpha to coverage
+		bool supports_hw_a2c_1spp;               // Alpha to coverage at 1 sample per pixel
+		bool supports_hw_renormalization;        // Should be true on NV hardware which matches PS3 texture renormalization behaviour
+		bool supports_hw_msaa;                   // MSAA support
+		bool supports_hw_a2one;                  // Alpha to one
+		bool supports_hw_conditional_render;     // Conditional render
+		bool supports_hw_instanced_rendering;    // Instanced draws
+		bool supports_passthrough_dma;           // DMA passthrough
+		bool supports_asynchronous_compute;      // Async compute
+		bool supports_host_gpu_labels;           // Advanced host synchronization
+		bool supports_normalized_barycentrics;   // Basically all GPUs except NVIDIA have properly normalized barycentrics
+		bool supports_last_provoking_vertex;     // Flat shading using RSX's last-vertex convention
+		bool supports_programmable_blending;     // Can handle programmable blending requests
+		bool supports_extended_depth_range;      // Depth values above 1 can be stored and tested. Float depth targets are emulated otherwise.
+		bool supports_framebufferless_rendering; // Can rasterize without any attachments bound (e.g for occlusion queries)
 	};
 
 	struct desync_fifo_cmd_info
@@ -122,7 +127,7 @@ namespace rsx
 		std::unique_ptr<FIFO::FIFO_control> fifo_ctrl;
 		atomic_t<bool> rsx_thread_running{ false };
 		std::vector<std::pair<u32, u32>> dump_callstack_list() const override;
-		std::string dump_misc() const override;
+		void dump_misc(std::string& ret, std::any& custom_data) const override;
 
 	protected:
 		FIFO::flattening_helper m_flattener;
@@ -130,6 +135,7 @@ namespace rsx
 		u32 saved_fifo_ret = RSX_CALL_STACK_EMPTY;
 		u32 restore_fifo_cmd = 0;
 		u32 restore_fifo_count = 0;
+		u32 restore_fifo_position  = 0;
 
 		// Occlusion query
 		bool zcull_surface_active = false;
@@ -172,6 +178,9 @@ namespace rsx
 		u32 restore_point = 0;
 		u32 dbg_step_pc = 0;
 		u32 last_known_code_start = 0;
+		u32 last_code_jump = 0;
+		u32 last_sema_cmd = 0;
+		u32 last_sema_addr = 0;
 		atomic_t<u32> external_interrupt_lock{ 0 };
 		atomic_t<bool> external_interrupt_ack{ false };
 		atomic_t<u32> is_initialized{0};
@@ -215,7 +224,9 @@ namespace rsx
 		atomic_bitmask_t<flip_request> async_flip_requested{};
 		u8 async_flip_buffer{ 0 };
 
-		void capture_frame(const std::string& name);
+		surface_scaling_config_t resolution_scaling_config{};
+
+		void capture_frame(const std::string& name) const;
 		const backend_configuration& get_backend_config() const { return backend_config; }
 
 		const draw_command_processor* draw_processor() const { return &m_draw_processor; }
@@ -256,6 +267,11 @@ namespace rsx
 	protected:
 		void get_framebuffer_layout(rsx::framebuffer_creation_context context, framebuffer_layout &layout);
 		bool get_scissor(areau& region, bool clip_viewport);
+		bool requires_depth_range_emulation() const;
+
+		// Notify framebuffer layout has been committed.
+		// FIXME: This should not be here
+		void on_framebuffer_layout_updated();
 
 		RSXVertexProgram current_vertex_program = {};
 		RSXFragmentProgram current_fragment_program = {};
@@ -274,11 +290,13 @@ namespace rsx
 		// Prefetch and analyze the currently active vertex program ucode
 		void prefetch_vertex_program();
 
+		// Update fragment program export configuration. Can invalidate the current program.
+		rsx::flags32_t get_fragment_program_export_config();
+
+		// Gets the current vertex program and associated state. Can invalidate the bound progam.
 		void get_current_vertex_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count>& sampler_descriptors);
 
-		/**
-		 * Gets current fragment program and associated fragment state
-		 */
+		// Gets current fragment program and associated fragment state. Can invalidate the bound program.
 		void get_current_fragment_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count>& sampler_descriptors);
 
 	public:
@@ -347,6 +365,7 @@ namespace rsx
 		virtual void begin();
 		virtual void end();
 		virtual void execute_nop_draw();
+		bool should_skip_draw() const;
 
 		virtual void on_init_thread() = 0;
 		virtual void on_frame_end(u32 buffer, bool forced = false);
@@ -374,8 +393,9 @@ namespace rsx
 		// sync
 		void sync();
 		flags32_t read_barrier(u32 memory_address, u32 memory_range, bool unconditional);
+		virtual void write_barrier(u32 /*memory_address*/, u32 /*memory_range*/) {}
 		virtual void sync_hint(FIFO::interrupt_hint hint, reports::sync_hint_payload_t payload);
-		virtual bool release_GCM_label(u32 /*address*/, u32 /*value*/) { return false; }
+		virtual bool release_GCM_label(u32 /*type*/, u32 /*address*/, u32 /*value*/) { return false; }
 
 	protected:
 

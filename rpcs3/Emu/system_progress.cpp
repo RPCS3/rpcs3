@@ -6,7 +6,9 @@
 #include "Emu/RSX/Overlays/overlay_message_dialog.h"
 #include "Emu/RSX/Overlays/overlay_message.h"
 #include "Emu/RSX/Overlays/overlay_compile_notification.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 
 #include "util/asm.hpp"
 
@@ -150,7 +152,7 @@ void progress_dialog_server::operator()()
 
 		create_native_dialog(text0, &show_overlay_message);
 
-		if (!show_overlay_message && !native_dlg && (dlg = Emu.GetCallbacks().get_msg_dialog()))
+		if (!show_overlay_message && !native_dlg && (dlg = g_emu_callbacks.get_msg_dialog()))
 		{
 			dlg->type.se_normal          = true;
 			dlg->type.bg_invisible       = true;

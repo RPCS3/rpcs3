@@ -814,7 +814,7 @@ void compressed_zstd_serialization_file_handler::initialize(utils::serial& ar)
 
 		// Make sure at least one thread is free
 		// Limit thread count in order to make sure memory limits are under control (TODO: scale with RAM size)
-		const usz thread_count = std::min<u32>(std::max<u32>(utils::get_thread_count(), 2) - 1, 16);
+		const usz thread_count = std::min<u32>(std::max<u32>(utils::get_thread_count(), 2) - 1, 32);
 
 		for (usz i = 0; i < thread_count; i++)
 		{
@@ -1132,50 +1132,37 @@ void compressed_zstd_serialization_file_handler::finalize(utils::serial& ar)
 	const stx::shared_ptr<std::vector<u8>> empty_data = stx::make_single<std::vector<u8>>();
 	const stx::shared_ptr<std::vector<u8>> null_ptr = stx::null_ptr;
 
-	for (auto& context : m_compression_threads)
+	for (bool has_pending_threads = true; has_pending_threads; thread_ctrl::wait_for(500))
 	{
-		// Try to notify all on the first iteration
-		if (context.m_input.compare_and_swap_test(null_ptr, empty_data))
+		has_pending_threads = false;
+
+		// Try to notify all in bulk
+		for (auto& context : m_compression_threads)
 		{
-			context.notified = true;
-			context.m_input.notify_one();
+			if (!context.notified && !context.m_input && context.m_input.compare_and_swap_test(null_ptr, empty_data))
+			{
+				context.notify_pending = true;
+			}
 		}
-	}
 
-	for (auto& context : m_compression_threads)
-	{
-		// Notify to abort
-		while (!context.notified)
+		for (auto& context : m_compression_threads)
 		{
-			const auto data = context.m_input.compare_and_swap(null_ptr, empty_data);
-
-			if (!data)
+			if (context.notify_pending)
 			{
 				context.notified = true;
-				context.m_input.notify_one();
-				break;
+				context.notify_pending = false;
+				context.m_input.notify_all();
 			}
-
-			// Wait until valid input is processed
-			thread_ctrl::wait_for(1000);
 		}
-	}
 
-	for (auto& context : m_compression_threads)
-	{
-		// Wait for notification to be consumed
-		while (context.m_input)
+		for (auto& context : m_compression_threads)
 		{
-			thread_ctrl::wait_for(1000);
-		}
-	}
-
-	for (auto& context : m_compression_threads)
-	{
-		// Wait for data to be writen to be read by the thread
-		while (context.m_output)
-		{
-			thread_ctrl::wait_for(1000);
+			// Wait for notification to be sent and received
+			// And wait for data to be written to be read by the thread
+			if (!context.notified || context.m_input || context.m_output)
+			{
+				has_pending_threads = true;
+			}
 		}
 	}
 

@@ -9,9 +9,18 @@
 class downloader;
 class gui_settings;
 
-class update_manager final :  public QObject
+class update_manager final : public QObject
 {
 	Q_OBJECT
+
+public:
+	update_manager(QObject* parent, std::shared_ptr<gui_settings> gui_settings);
+	void check_for_updates(bool automatic, bool check_only, bool auto_accept, QWidget* parent = nullptr);
+	void update(bool auto_accept, bool is_first_call);
+
+Q_SIGNALS:
+	void signal_update_available(bool update_available);
+	void signal_download_additional_files(bool auto_accept);
 
 private:
 	downloader* m_downloader = nullptr;
@@ -19,30 +28,31 @@ private:
 
 	std::shared_ptr<gui_settings> m_gui_settings;
 
-	// This message is empty if there is no download available
-	QString m_update_message;
-
 	struct changelog_data
 	{
+		int pr = 0;
 		QString version;
 		QString title;
 	};
-	std::vector<changelog_data> m_changelog;
+
+	struct update_info
+	{
+		bool update_found = false;
+		bool hash_found = false;
+		qint64 diff_msec = 0;
+		QString cur_date;
+		QString lts_date;
+		QString old_version;
+		QString new_version;
+		std::vector<changelog_data> changelog;
+	};
+
+	update_info m_update_info {};
 
 	std::string m_request_url;
 	std::string m_expected_hash;
-	std::string m_old_version;
-	std::string m_new_version;
 	u64 m_expected_size = 0;
 
 	bool handle_json(bool automatic, bool check_only, bool auto_accept, const QByteArray& data);
 	bool handle_rpcs3(const QByteArray& data, bool auto_accept);
-
-public:
-	update_manager(QObject* parent, std::shared_ptr<gui_settings> gui_settings);
-	void check_for_updates(bool automatic, bool check_only, bool auto_accept, QWidget* parent = nullptr);
-	void update(bool auto_accept);
-
-Q_SIGNALS:
-	void signal_update_available(bool update_available);
 };

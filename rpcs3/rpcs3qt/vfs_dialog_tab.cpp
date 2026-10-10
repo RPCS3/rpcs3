@@ -1,4 +1,5 @@
 #include "vfs_dialog_tab.h"
+#include "gui_settings.h"
 #include "Utilities/Config.h"
 
 vfs_dialog_tab::vfs_dialog_tab(const QString& name, gui_save list_location, cfg::string* cfg_node, std::shared_ptr<gui_settings> _gui_settings, QWidget* parent)

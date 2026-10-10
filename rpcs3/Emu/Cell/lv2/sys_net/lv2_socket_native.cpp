@@ -96,6 +96,7 @@ void lv2_socket_native::set_socket(socket_type native_socket, lv2_socket_family 
 
 	set_default_buffers();
 	set_non_blocking();
+	set_dgram_disable_connreset();
 }
 
 std::tuple<bool, s32, shared_ptr<lv2_socket>, sys_net_sockaddr> lv2_socket_native::accept(bool is_lock)
@@ -551,12 +552,14 @@ std::tuple<s32, lv2_socket::sockopt_data, u32> lv2_socket_native::getsockopt(s32
 		}
 		case SYS_NET_IP_TTLCHK:
 		{
-			sys_net.error("sys_net_bnet_getsockopt(IPPROTO_IP, SYS_NET_IP_TTLCHK): stubbed option");
+			out_val._int = min_ttl;
+			out_len = sizeof(s32);
 			return {CELL_OK, out_val, out_len};
 		}
 		case SYS_NET_IP_MAXTTL:
 		{
-			sys_net.error("sys_net_bnet_getsockopt(IPPROTO_IP, SYS_NET_IP_MAXTTL): stubbed option");
+			out_val._int = max_ttl;
+			out_len = sizeof(s32);
 			return {CELL_OK, out_val, out_len};
 		}
 		case SYS_NET_IP_DONTFRAG:
@@ -834,13 +837,13 @@ s32 lv2_socket_native::setsockopt(s32 level, s32 optname, const std::vector<u8>&
 		}
 		case SYS_NET_IP_TTLCHK:
 		{
-			sys_net.error("sys_net_bnet_setsockopt(s=%d, IPPROTO_IP): Stubbed option (0x%x) (SYS_NET_IP_TTLCHK)", lv2_id, optname);
-			break;
+			min_ttl = native_int;
+			return {};
 		}
 		case SYS_NET_IP_MAXTTL:
 		{
-			sys_net.error("sys_net_bnet_setsockopt(s=%d, IPPROTO_IP): Stubbed option (0x%x) (SYS_NET_IP_MAXTTL)", lv2_id, optname);
-			break;
+			max_ttl = native_int;
+			return {};
 		}
 		case SYS_NET_IP_DONTFRAG:
 		{
@@ -910,7 +913,7 @@ std::optional<std::tuple<s32, std::vector<u8>, sys_net_sockaddr>> lv2_socket_nat
 	{
 		auto& nph         = g_fxo->get<named_thread<np::np_handler>>();
 		const auto packet = dnshook.get_dns_packet(lv2_id);
-		ensure(packet.size() < len);
+		ensure(packet.size() <= len);
 		memcpy(res_buf.data(), packet.data(), packet.size());
 		native_addr.ss_family                                             = AF_INET;
 		(reinterpret_cast<::sockaddr_in*>(&native_addr))->sin_port        = std::bit_cast<u16, be_t<u16>>(53); // htons(53)
@@ -1069,18 +1072,20 @@ std::optional<s32> lv2_socket_native::sendmsg(s32 flags, const sys_net_msghdr& m
 		return {-SYS_NET_ECONNRESET};
 	}
 
+	std::vector<u8> buf_copy;
 	for (int i = 0; i < msg.msg_iovlen; i++)
 	{
 		auto iov_base = msg.msg_iov[i].iov_base;
 		const u32 len = msg.msg_iov[i].iov_len;
-		const std::vector<u8> buf_copy(vm::_ptr<const char>(iov_base.addr()), vm::_ptr<const char>(iov_base.addr()) + len);
+		const auto* src = vm::_ptr<const char>(iov_base.addr());
+		buf_copy.insert(buf_copy.end(), src, src + len);
+	}
 
-		native_result = ::send(native_socket, reinterpret_cast<const char*>(buf_copy.data()), ::narrow<int>(buf_copy.size()), native_flags);
+	native_result = ::send(native_socket, reinterpret_cast<const char*>(buf_copy.data()), ::narrow<int>(buf_copy.size()), native_flags);
 
-		if (native_result >= 0)
-		{
-			return {native_result};
-		}
+	if (native_result >= 0)
+	{
+		return {native_result};
 	}
 
 	result = get_last_error(!so_nbio && (flags & SYS_NET_MSG_DONTWAIT) == 0);
@@ -1143,14 +1148,14 @@ s32 lv2_socket_native::shutdown(s32 how)
 	return -get_last_error(false);
 }
 
-s32 lv2_socket_native::poll(sys_net_pollfd& sn_pfd, pollfd& native_pfd)
+void lv2_socket_native::poll(sys_net_pollfd& sn_pfd, pollfd& native_pfd)
 {
 	// Check for fake packet for dns interceptions
 	auto& dnshook = g_fxo->get<np::dnshook>();
 	if (sn_pfd.events & SYS_NET_POLLIN && dnshook.is_dns(sn_pfd.fd) && dnshook.is_dns_queue(sn_pfd.fd))
 	{
 		sn_pfd.revents |= SYS_NET_POLLIN;
-		return 1;
+		return;
 	}
 	if (sn_pfd.events & ~(SYS_NET_POLLIN | SYS_NET_POLLOUT | SYS_NET_POLLERR))
 	{
@@ -1167,8 +1172,6 @@ s32 lv2_socket_native::poll(sys_net_pollfd& sn_pfd, pollfd& native_pfd)
 	{
 		native_pfd.events |= POLLOUT;
 	}
-
-	return 0;
 }
 
 std::tuple<bool, bool, bool> lv2_socket_native::select(bs_t<lv2_socket::poll_t> selected, pollfd& native_pfd)
@@ -1209,6 +1212,44 @@ void lv2_socket_native::set_non_blocking()
 	np::set_socket_non_blocking(native_socket);
 }
 
+void lv2_socket_native::set_dgram_disable_connreset()
+{
+	if (type == SYS_NET_SOCK_DGRAM)
+	{
+		np::set_dgram_socket_disable_connreset(native_socket);	
+	}
+}
+
+void lv2_socket_native::get_sockinfo(sys_net_sockinfo_t& info)
+{
+	if (type != SYS_NET_SOCK_STREAM)
+	{
+		info.state = info.local_port ? SYS_NET_STATE_OPENED : SYS_NET_STATE_CREATED;
+		return;
+	}
+
+	if (info.remote_port)
+	{
+		info.state = SYS_NET_STATE_ESTABLISHED;
+		return;
+	}
+
+	{
+		std::lock_guard lock(mutex);
+
+		int listening = 0;
+		socklen_t len = sizeof(listening);
+
+		if (::getsockopt(native_socket, SOL_SOCKET, SO_ACCEPTCONN, reinterpret_cast<char*>(&listening), &len) == 0 && listening)
+		{
+			info.state = SYS_NET_STATE_LISTEN;
+			return;
+		}
+	}
+
+	info.state = info.local_port ? SYS_NET_STATE_OPENED : SYS_NET_STATE_CREATED;
+}
+
 bool lv2_socket_native::is_socket_connected()
 {
 	if (type != SYS_NET_SOCK_STREAM)
@@ -1232,16 +1273,16 @@ bool lv2_socket_native::is_socket_connected()
 		return false;
 	}
 
-	fd_set readfds, writefds;
-	struct timeval timeout{0, 0}; // Zero timeout
+	pollfd pfd{};
+	pfd.fd     = native_socket;
+	pfd.events = POLLIN | POLLOUT;
 
-	FD_ZERO(&readfds);
-	FD_ZERO(&writefds);
-	FD_SET(native_socket, &readfds);
-	FD_SET(native_socket, &writefds);
-
-	// Use select to check for readability and writability
-	const int result = ::select(1, &readfds, &writefds, NULL, &timeout);
+	// Use poll to check for readability and writability
+#ifdef _WIN32
+	const int result = WSAPoll(&pfd, 1, 0);
+#else
+	const int result = ::poll(&pfd, 1, 0);
+#endif
 
 	if (result < 0)
 	{
@@ -1250,5 +1291,5 @@ bool lv2_socket_native::is_socket_connected()
 	}
 
 	// Socket is connected if it's readable or writable
-	return FD_ISSET(native_socket, &readfds) || FD_ISSET(native_socket, &writefds);
+	return (pfd.revents & (POLLIN | POLLOUT)) != 0;
 }

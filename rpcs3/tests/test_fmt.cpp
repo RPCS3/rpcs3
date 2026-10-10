@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <gtest/gtest.h>
 #include "Utilities/StrUtil.h"
 
@@ -25,6 +26,26 @@ namespace fmt
 		EXPECT_EQ("b"s, fmt::trim("    aba    ", " a"));
 	}
 
+	TEST(StrUtil, TrimSv)
+	{
+		EXPECT_EQ(""sv, fmt::trim_sv("", ""));
+		EXPECT_EQ(""sv, fmt::trim_sv("", " "));
+		EXPECT_EQ(""sv, fmt::trim_sv("", "a "));
+		EXPECT_EQ(" "sv, fmt::trim_sv(" ", ""));
+		EXPECT_EQ(""sv, fmt::trim_sv(" ", " "));
+		EXPECT_EQ("a"sv, fmt::trim_sv("a ", " "));
+		EXPECT_EQ("a"sv, fmt::trim_sv(" a", " "));
+		EXPECT_EQ("a a"sv, fmt::trim_sv("a a", " "));
+		EXPECT_EQ("a a"sv, fmt::trim_sv("a a ", " "));
+		EXPECT_EQ("a a"sv, fmt::trim_sv(" a a", " "));
+		EXPECT_EQ("a a"sv, fmt::trim_sv(" a a ", " "));
+		EXPECT_EQ("a a"sv, fmt::trim_sv("a a    ", " "));
+		EXPECT_EQ("a a"sv, fmt::trim_sv("    a a    ", " "));
+		EXPECT_EQ("a a"sv, fmt::trim_sv("    a a", " "));
+		EXPECT_EQ(""sv, fmt::trim_sv("    a a    ", " a"));
+		EXPECT_EQ("b"sv, fmt::trim_sv("    aba    ", " a"));
+	}
+
 	TEST(StrUtil, TrimFront)
 	{
 		EXPECT_EQ(""s, fmt::trim_front("", ""));
@@ -43,6 +64,26 @@ namespace fmt
 		EXPECT_EQ("a a"s, fmt::trim_front("    a a", " "));
 		EXPECT_EQ(""s, fmt::trim_front("    a a    ", " a"));
 		EXPECT_EQ("ba    "s, fmt::trim_front("    aba    ", " a"));
+	}
+
+	TEST(StrUtil, TrimFrontSv)
+	{
+		EXPECT_EQ(""sv, fmt::trim_front_sv("", ""));
+		EXPECT_EQ(""sv, fmt::trim_front_sv("", " "));
+		EXPECT_EQ(""sv, fmt::trim_front_sv("", "a "));
+		EXPECT_EQ(" "sv, fmt::trim_front_sv(" ", ""));
+		EXPECT_EQ(""sv, fmt::trim_front_sv(" ", " "));
+		EXPECT_EQ("a "sv, fmt::trim_front_sv("a ", " "));
+		EXPECT_EQ("a"sv, fmt::trim_front_sv(" a", " "));
+		EXPECT_EQ("a a"sv, fmt::trim_front_sv("a a", " "));
+		EXPECT_EQ("a a "sv, fmt::trim_front_sv("a a ", " "));
+		EXPECT_EQ("a a"sv, fmt::trim_front_sv(" a a", " "));
+		EXPECT_EQ("a a "sv, fmt::trim_front_sv(" a a ", " "));
+		EXPECT_EQ("a a    "sv, fmt::trim_front_sv("a a    ", " "));
+		EXPECT_EQ("a a    "sv, fmt::trim_front_sv("    a a    ", " "));
+		EXPECT_EQ("a a"sv, fmt::trim_front_sv("    a a", " "));
+		EXPECT_EQ(""sv, fmt::trim_front_sv("    a a    ", " a"));
+		EXPECT_EQ("ba    "sv, fmt::trim_front_sv("    aba    ", " a"));
 	}
 
 	TEST(StrUtil, TrimBack)
@@ -110,6 +151,26 @@ namespace fmt
 		str = "    aba    ";
 		fmt::trim_back(str, " a");
 		EXPECT_EQ("    ab"s, str);
+	}
+
+	TEST(StrUtil, TrimBackSv)
+	{
+		EXPECT_EQ(""sv, fmt::trim_back_sv({}, ""));
+		EXPECT_EQ(""sv, fmt::trim_back_sv({}, " "));
+		EXPECT_EQ(""sv, fmt::trim_back_sv({}, "a "));
+		EXPECT_EQ(" "sv, fmt::trim_back_sv(" ", ""));
+		EXPECT_EQ(""sv, fmt::trim_back_sv(" ", " "));
+		EXPECT_EQ("a"sv, fmt::trim_back_sv("a ", " "));
+		EXPECT_EQ(" a"sv, fmt::trim_back_sv(" a", " "));
+		EXPECT_EQ("a a"sv, fmt::trim_back_sv("a a", " "));
+		EXPECT_EQ("a a"sv, fmt::trim_back_sv("a a ", " "));
+		EXPECT_EQ(" a a"sv, fmt::trim_back_sv(" a a", " "));
+		EXPECT_EQ(" a a"sv, fmt::trim_back_sv(" a a ", " "));
+		EXPECT_EQ("a a"sv, fmt::trim_back_sv("a a    ", " "));
+		EXPECT_EQ("    a a"sv, fmt::trim_back_sv("    a a    ", " "));
+		EXPECT_EQ("    a a"sv, fmt::trim_back_sv("    a a", " "));
+		EXPECT_EQ(""sv, fmt::trim_back_sv("    a a    ", " a"));
+		EXPECT_EQ("    ab"sv, fmt::trim_back_sv("    aba    ", " a"));
 	}
 
 	TEST(StrUtil, ToUpperToLower)
@@ -340,6 +401,155 @@ namespace fmt
 		EXPECT_EQ(vec({"This", "is", "test!"}), fmt::split(" This is a test! ", {"a", " ", "b"}, true));
 	}
 
+	TEST(StrUtil, SplitSv)
+	{
+		using vec = std::vector<std::string_view>;
+
+		EXPECT_EQ(vec{""}, fmt::split_sv("", {}, false));
+		EXPECT_EQ(vec{""}, fmt::split_sv("", {""}, false));
+		EXPECT_EQ(vec{""}, fmt::split_sv("", {" "}, false));
+		EXPECT_EQ(vec{""}, fmt::split_sv("", {"a"}, false));
+		EXPECT_EQ(vec{""}, fmt::split_sv("", {"a "}, false));
+		EXPECT_EQ(vec{""}, fmt::split_sv("", {"a b"}, false));
+		EXPECT_EQ(vec{""}, fmt::split_sv("", {"a", " "}, false));
+		EXPECT_EQ(vec{""}, fmt::split_sv("", {"a", " ", "b"}, false));
+
+		EXPECT_EQ(vec{" "}, fmt::split_sv(" ", {}, false));
+		EXPECT_EQ(vec{" "}, fmt::split_sv(" ", {""}, false));
+		EXPECT_EQ(vec{""}, fmt::split_sv(" ", {" "}, false));
+		EXPECT_EQ(vec{" "}, fmt::split_sv(" ", {"a"}, false));
+		EXPECT_EQ(vec{" "}, fmt::split_sv(" ", {"a "}, false));
+		EXPECT_EQ(vec{" "}, fmt::split_sv(" ", {"a b"}, false));
+		EXPECT_EQ(vec{""}, fmt::split_sv(" ", {"a", " "}, false));
+		EXPECT_EQ(vec{""}, fmt::split_sv(" ", {"a", " ", "b"}, false));
+
+		EXPECT_EQ(vec{"  "}, fmt::split_sv("  ", {}, false));
+		EXPECT_EQ(vec{"  "}, fmt::split_sv("  ", {""}, false));
+		EXPECT_EQ(vec({"", ""}), fmt::split_sv("  ", {" "}, false));
+		EXPECT_EQ(vec{"  "}, fmt::split_sv("  ", {"a"}, false));
+		EXPECT_EQ(vec{"  "}, fmt::split_sv("  ", {"a "}, false));
+		EXPECT_EQ(vec{"  "}, fmt::split_sv("  ", {"a b"}, false));
+		EXPECT_EQ(vec({"", ""}), fmt::split_sv("  ", {"a", " "}, false));
+		EXPECT_EQ(vec({"", ""}), fmt::split_sv("  ", {"a", " ", "b"}, false));
+
+		EXPECT_EQ(vec{"a"}, fmt::split_sv("a", {}, false));
+		EXPECT_EQ(vec{"a"}, fmt::split_sv("a", {""}, false));
+		EXPECT_EQ(vec{"a"}, fmt::split_sv("a", {" "}, false));
+		EXPECT_EQ(vec{""}, fmt::split_sv("a", {"a"}, false));
+		EXPECT_EQ(vec{"a"}, fmt::split_sv("a", {"a "}, false));
+		EXPECT_EQ(vec{"a"}, fmt::split_sv("a", {"a b"}, false));
+		EXPECT_EQ(vec{""}, fmt::split_sv("a", {"a", " "}, false));
+		EXPECT_EQ(vec{""}, fmt::split_sv("a", {"a", " ", "b"}, false));
+
+		EXPECT_EQ(vec{"aa"}, fmt::split_sv("aa", {}, false));
+		EXPECT_EQ(vec{"aa"}, fmt::split_sv("aa", {""}, false));
+		EXPECT_EQ(vec{"aa"}, fmt::split_sv("aa", {" "}, false));
+		EXPECT_EQ(vec({"", ""}), fmt::split_sv("aa", {"a"}, false));
+		EXPECT_EQ(vec{"aa"}, fmt::split_sv("aa", {"a "}, false));
+		EXPECT_EQ(vec{"aa"}, fmt::split_sv("aa", {"a b"}, false));
+		EXPECT_EQ(vec({"", ""}), fmt::split_sv("aa", {"a", " "}, false));
+		EXPECT_EQ(vec({"", ""}), fmt::split_sv("aa", {"a", " ", "b"}, false));
+
+		EXPECT_EQ(vec{"a b"}, fmt::split_sv("a b", {}, false));
+		EXPECT_EQ(vec{"a b"}, fmt::split_sv("a b", {""}, false));
+		EXPECT_EQ(vec({"a", "b"}), fmt::split_sv("a b", {" "}, false));
+		EXPECT_EQ(vec({"", " b"}), fmt::split_sv("a b", {"a"}, false));
+		EXPECT_EQ(vec({"", "b"}), fmt::split_sv("a b", {"a "}, false));
+		EXPECT_EQ(vec{""}, fmt::split_sv("a b", {"a b"}, false));
+		EXPECT_EQ(vec({"", "", "b"}), fmt::split_sv("a b", {"a", " "}, false));
+		EXPECT_EQ(vec({"", "", ""}), fmt::split_sv("a b", {"a", " ", "b"}, false));
+
+		EXPECT_EQ(vec{"a b c c b a"}, fmt::split_sv("a b c c b a", {}, false));
+		EXPECT_EQ(vec{"a b c c b a"}, fmt::split_sv("a b c c b a", {""}, false));
+		EXPECT_EQ(vec({"a", "b", "c", "c", "b", "a"}), fmt::split_sv("a b c c b a", {" "}, false));
+		EXPECT_EQ(vec({"", " b c c b "}), fmt::split_sv("a b c c b a", {"a"}, false));
+		EXPECT_EQ(vec({"", "b c c b a"}), fmt::split_sv("a b c c b a", {"a "}, false));
+		EXPECT_EQ(vec({"", " c c b a"}), fmt::split_sv("a b c c b a", {"a b"}, false));
+		EXPECT_EQ(vec({"", "", "b", "c", "c", "b", ""}), fmt::split_sv("a b c c b a", {"a", " "}, false));
+		EXPECT_EQ(vec({"", "", "", "", "c", "c", "", "", ""}), fmt::split_sv("a b c c b a", {"a", " ", "b"}, false));
+
+		EXPECT_EQ(vec{" This is a test! "}, fmt::split_sv(" This is a test! ", {}, false));
+		EXPECT_EQ(vec{" This is a test! "}, fmt::split_sv(" This is a test! ", {""}, false));
+		EXPECT_EQ(vec({"", "This", "is", "a", "test!"}), fmt::split_sv(" This is a test! ", {" "}, false));
+		EXPECT_EQ(vec({" This is ", " test! "}), fmt::split_sv(" This is a test! ", {"a"}, false));
+		EXPECT_EQ(vec({" This is ", "test! "}), fmt::split_sv(" This is a test! ", {"a "}, false));
+		EXPECT_EQ(vec{" This is a test! "}, fmt::split_sv(" This is a test! ", {"a b"}, false));
+		EXPECT_EQ(vec({"", "This", "is", "", "", "test!"}), fmt::split_sv(" This is a test! ", {"a", " "}, false));
+		EXPECT_EQ(vec({"", "This", "is", "", "", "test!"}), fmt::split_sv(" This is a test! ", {"a", " ", "b"}, false));
+
+		EXPECT_EQ(vec{}, fmt::split_sv("", {}, true));
+		EXPECT_EQ(vec{}, fmt::split_sv("", {""}, true));
+		EXPECT_EQ(vec{}, fmt::split_sv("", {" "}, true));
+		EXPECT_EQ(vec{}, fmt::split_sv("", {"a"}, true));
+		EXPECT_EQ(vec{}, fmt::split_sv("", {"a "}, true));
+		EXPECT_EQ(vec{}, fmt::split_sv("", {"a b"}, true));
+		EXPECT_EQ(vec{}, fmt::split_sv("", {"a", " "}, true));
+		EXPECT_EQ(vec{}, fmt::split_sv("", {"a", " ", "b"}, true));
+
+		EXPECT_EQ(vec{" "}, fmt::split_sv(" ", {}, true));
+		EXPECT_EQ(vec{" "}, fmt::split_sv(" ", {""}, true));
+		EXPECT_EQ(vec{}, fmt::split_sv(" ", {" "}, true));
+		EXPECT_EQ(vec{" "}, fmt::split_sv(" ", {"a"}, true));
+		EXPECT_EQ(vec{" "}, fmt::split_sv(" ", {"a "}, true));
+		EXPECT_EQ(vec{" "}, fmt::split_sv(" ", {"a b"}, true));
+		EXPECT_EQ(vec{}, fmt::split_sv(" ", {"a", " "}, true));
+		EXPECT_EQ(vec{}, fmt::split_sv(" ", {"a", " ", "b"}, true));
+
+		EXPECT_EQ(vec{"  "}, fmt::split_sv("  ", {}, true));
+		EXPECT_EQ(vec{"  "}, fmt::split_sv("  ", {""}, true));
+		EXPECT_EQ(vec{}, fmt::split_sv("  ", {" "}, true));
+		EXPECT_EQ(vec{"  "}, fmt::split_sv("  ", {"a"}, true));
+		EXPECT_EQ(vec{"  "}, fmt::split_sv("  ", {"a "}, true));
+		EXPECT_EQ(vec{"  "}, fmt::split_sv("  ", {"a b"}, true));
+		EXPECT_EQ(vec{}, fmt::split_sv("  ", {"a", " "}, true));
+		EXPECT_EQ(vec{}, fmt::split_sv("  ", {"a", " ", "b"}, true));
+
+		EXPECT_EQ(vec{"a"}, fmt::split_sv("a", {}, true));
+		EXPECT_EQ(vec{"a"}, fmt::split_sv("a", {""}, true));
+		EXPECT_EQ(vec{"a"}, fmt::split_sv("a", {" "}, true));
+		EXPECT_EQ(vec{}, fmt::split_sv("a", {"a"}, true));
+		EXPECT_EQ(vec{"a"}, fmt::split_sv("a", {"a "}, true));
+		EXPECT_EQ(vec{"a"}, fmt::split_sv("a", {"a b"}, true));
+		EXPECT_EQ(vec{}, fmt::split_sv("a", {"a", " "}, true));
+		EXPECT_EQ(vec{}, fmt::split_sv("a", {"a", " ", "b"}, true));
+
+		EXPECT_EQ(vec{"aa"}, fmt::split_sv("aa", {}, true));
+		EXPECT_EQ(vec{"aa"}, fmt::split_sv("aa", {""}, true));
+		EXPECT_EQ(vec{"aa"}, fmt::split_sv("aa", {" "}, true));
+		EXPECT_EQ(vec{}, fmt::split_sv("aa", {"a"}, true));
+		EXPECT_EQ(vec{"aa"}, fmt::split_sv("aa", {"a "}, true));
+		EXPECT_EQ(vec{"aa"}, fmt::split_sv("aa", {"a b"}, true));
+		EXPECT_EQ(vec{}, fmt::split_sv("aa", {"a", " "}, true));
+		EXPECT_EQ(vec{}, fmt::split_sv("aa", {"a", " ", "b"}, true));
+
+		EXPECT_EQ(vec{"a b"}, fmt::split_sv("a b", {}, true));
+		EXPECT_EQ(vec{"a b"}, fmt::split_sv("a b", {""}, true));
+		EXPECT_EQ(vec({"a", "b"}), fmt::split_sv("a b", {" "}, true));
+		EXPECT_EQ(vec{" b"}, fmt::split_sv("a b", {"a"}, true));
+		EXPECT_EQ(vec{"b"}, fmt::split_sv("a b", {"a "}, true));
+		EXPECT_EQ(vec{}, fmt::split_sv("a b", {"a b"}, true));
+		EXPECT_EQ(vec{"b"}, fmt::split_sv("a b", {"a", " "}, true));
+		EXPECT_EQ(vec{}, fmt::split_sv("a b", {"a", " ", "b"}, true));
+
+		EXPECT_EQ(vec{"a b c c b a"}, fmt::split_sv("a b c c b a", {}, true));
+		EXPECT_EQ(vec{"a b c c b a"}, fmt::split_sv("a b c c b a", {""}, true));
+		EXPECT_EQ(vec({"a", "b", "c", "c", "b", "a"}), fmt::split_sv("a b c c b a", {" "}, true));
+		EXPECT_EQ(vec{" b c c b "}, fmt::split_sv("a b c c b a", {"a"}, true));
+		EXPECT_EQ(vec{"b c c b a"}, fmt::split_sv("a b c c b a", {"a "}, true));
+		EXPECT_EQ(vec{" c c b a"}, fmt::split_sv("a b c c b a", {"a b"}, true));
+		EXPECT_EQ(vec({"b", "c", "c", "b"}), fmt::split_sv("a b c c b a", {"a", " "}, true));
+		EXPECT_EQ(vec({"c", "c"}), fmt::split_sv("a b c c b a", {"a", " ", "b"}, true));
+
+		EXPECT_EQ(vec{" This is a test! "}, fmt::split_sv(" This is a test! ", {}, true));
+		EXPECT_EQ(vec{" This is a test! "}, fmt::split_sv(" This is a test! ", {""}, true));
+		EXPECT_EQ(vec({"This", "is", "a", "test!"}), fmt::split_sv(" This is a test! ", {" "}, true));
+		EXPECT_EQ(vec({" This is ", " test! "}), fmt::split_sv(" This is a test! ", {"a"}, true));
+		EXPECT_EQ(vec({" This is ", "test! "}), fmt::split_sv(" This is a test! ", {"a "}, true));
+		EXPECT_EQ(vec{" This is a test! "}, fmt::split_sv(" This is a test! ", {"a b"}, true));
+		EXPECT_EQ(vec({"This", "is", "test!"}), fmt::split_sv(" This is a test! ", {"a", " "}, true));
+		EXPECT_EQ(vec({"This", "is", "test!"}), fmt::split_sv(" This is a test! ", {"a", " ", "b"}, true));
+	}
+
 	TEST(StrUtil, Merge)
 	{
 		using vec = std::vector<std::string>;
@@ -361,10 +571,35 @@ namespace fmt
 		EXPECT_EQ("a"s, fmt::merge(vec{"a"}, "-"));
 		EXPECT_EQ("a"s, fmt::merge(vec{"a"}, " *-* "));
 
+		EXPECT_EQ("a"s, fmt::merge(vec{"a", ""}, ""));
+		EXPECT_EQ("a "s, fmt::merge(vec{"a", ""}, " "));
+		EXPECT_EQ("a-"s, fmt::merge(vec{"a", ""}, "-"));
+		EXPECT_EQ("a *-* "s, fmt::merge(vec{"a", ""}, " *-* "));
+
+		EXPECT_EQ("a"s, fmt::merge(vec{"a", "", ""}, ""));
+		EXPECT_EQ("a  "s, fmt::merge(vec{"a", "", ""}, " "));
+		EXPECT_EQ("a--"s, fmt::merge(vec{"a", "", ""}, "-"));
+		EXPECT_EQ("a *-*  *-* "s, fmt::merge(vec{"a", "", ""}, " *-* "));
+
+		EXPECT_EQ("a"s, fmt::merge(vec{"", "a"}, ""));
+		EXPECT_EQ(" a"s, fmt::merge(vec{"", "a"}, " "));
+		EXPECT_EQ("-a"s, fmt::merge(vec{"", "a"}, "-"));
+		EXPECT_EQ(" *-* a"s, fmt::merge(vec{"", "a"}, " *-* "));
+
 		EXPECT_EQ("ab"s, fmt::merge(vec{"a", "b"}, ""));
 		EXPECT_EQ("a b"s, fmt::merge(vec{"a", "b"}, " "));
 		EXPECT_EQ("a-b"s, fmt::merge(vec{"a", "b"}, "-"));
 		EXPECT_EQ("a *-* b"s, fmt::merge(vec{"a", "b"}, " *-* "));
+
+		EXPECT_EQ("ab"s, fmt::merge(vec{"a", "", "b"}, ""));
+		EXPECT_EQ("a  b"s, fmt::merge(vec{"a", "", "b"}, " "));
+		EXPECT_EQ("a--b"s, fmt::merge(vec{"a", "", "b"}, "-"));
+		EXPECT_EQ("a *-*  *-* b"s, fmt::merge(vec{"a", "", "b"}, " *-* "));
+
+		EXPECT_EQ("ab"s, fmt::merge(vec{"a", "", "", "b"}, ""));
+		EXPECT_EQ("a   b"s, fmt::merge(vec{"a", "", "", "b"}, " "));
+		EXPECT_EQ("a---b"s, fmt::merge(vec{"a", "", "", "b"}, "-"));
+		EXPECT_EQ("a *-*  *-*  *-* b"s, fmt::merge(vec{"a", "", "", "b"}, " *-* "));
 
 		EXPECT_EQ("abc"s, fmt::merge(vec{"a", "b", "c"}, ""));
 		EXPECT_EQ("a b c"s, fmt::merge(vec{"a", "b", "c"}, " "));
@@ -387,6 +622,16 @@ namespace fmt
 		EXPECT_EQ("a"s, fmt::merge(lst{vec{"a"}}, "-"));
 		EXPECT_EQ("a"s, fmt::merge(lst{vec{"a"}}, " *-* "));
 
+		EXPECT_EQ("a"s, fmt::merge(lst{vec{"a"}, vec{}}, ""));
+		EXPECT_EQ("a"s, fmt::merge(lst{vec{"a"}, vec{}}, " "));
+		EXPECT_EQ("a"s, fmt::merge(lst{vec{"a"}, vec{}}, "-"));
+		EXPECT_EQ("a"s, fmt::merge(lst{vec{"a"}, vec{}}, " *-* "));
+
+		EXPECT_EQ("a"s, fmt::merge(lst{vec{}, vec{"a"}}, ""));
+		EXPECT_EQ("a"s, fmt::merge(lst{vec{}, vec{"a"}}, " "));
+		EXPECT_EQ("a"s, fmt::merge(lst{vec{}, vec{"a"}}, "-"));
+		EXPECT_EQ("a"s, fmt::merge(lst{vec{}, vec{"a"}}, " *-* "));
+
 		EXPECT_EQ("ab"s, fmt::merge(lst{vec{"a", "b"}}, ""));
 		EXPECT_EQ("a b"s, fmt::merge(lst{vec{"a", "b"}}, " "));
 		EXPECT_EQ("a-b"s, fmt::merge(lst{vec{"a", "b"}}, "-"));
@@ -402,6 +647,11 @@ namespace fmt
 		EXPECT_EQ("a-b"s, fmt::merge(lst{vec{"a"}, vec{"b"}}, "-"));
 		EXPECT_EQ("a *-* b"s, fmt::merge(lst{vec{"a"}, vec{"b"}}, " *-* "));
 
+		EXPECT_EQ("ab"s, fmt::merge(lst{vec{"a"}, vec{}, vec{"b"}}, ""));
+		EXPECT_EQ("a b"s, fmt::merge(lst{vec{"a"}, vec{}, vec{"b"}}, " "));
+		EXPECT_EQ("a-b"s, fmt::merge(lst{vec{"a"}, vec{}, vec{"b"}}, "-"));
+		EXPECT_EQ("a *-* b"s, fmt::merge(lst{vec{"a"}, vec{}, vec{"b"}}, " *-* "));
+
 		EXPECT_EQ("abc"s, fmt::merge(lst{vec{"a"}, vec{"b"}, vec{"c"}}, ""));
 		EXPECT_EQ("a b c"s, fmt::merge(lst{vec{"a"}, vec{"b"}, vec{"c"}}, " "));
 		EXPECT_EQ("a-b-c"s, fmt::merge(lst{vec{"a"}, vec{"b"}, vec{"c"}}, "-"));
@@ -411,6 +661,129 @@ namespace fmt
 		EXPECT_EQ("a 1 b 2"s, fmt::merge(lst{vec{"a", "1"}, vec{"b", "2"}}, " "));
 		EXPECT_EQ("a-1-b-2"s, fmt::merge(lst{vec{"a", "1"}, vec{"b", "2"}}, "-"));
 		EXPECT_EQ("a *-* 1 *-* b *-* 2"s, fmt::merge(lst{vec{"a", "1"}, vec{"b", "2"}}, " *-* "));
+
+		EXPECT_EQ("a1b2"s, fmt::merge(lst{vec{"a", "", "1"}, vec{"b", "2", ""}}, ""));
+		EXPECT_EQ("a  1 b 2 "s, fmt::merge(lst{vec{"a", "", "1"}, vec{"b", "2", ""}}, " "));
+		EXPECT_EQ("a--1-b-2-"s, fmt::merge(lst{vec{"a", "", "1"}, vec{"b", "2", ""}}, "-"));
+		EXPECT_EQ("a *-*  *-* 1 *-* b *-* 2 *-* "s, fmt::merge(lst{vec{"a", "", "1"}, vec{"b", "2", ""}}, " *-* "));
+	}
+
+	TEST(StrUtil, Merge_SkipEmpty)
+	{
+		using vec = std::vector<std::string>;
+		using lst = std::initializer_list<std::vector<std::string>>;
+
+		// Vector of strings
+		EXPECT_EQ(""s, fmt::merge(vec{}, "", true));
+		EXPECT_EQ(""s, fmt::merge(vec{}, " ", true));
+		EXPECT_EQ(""s, fmt::merge(vec{}, "-", true));
+		EXPECT_EQ(""s, fmt::merge(vec{}, " *-* ", true));
+
+		EXPECT_EQ(""s, fmt::merge(vec{""}, "", true));
+		EXPECT_EQ(""s, fmt::merge(vec{""}, " ", true));
+		EXPECT_EQ(""s, fmt::merge(vec{""}, "-", true));
+		EXPECT_EQ(""s, fmt::merge(vec{""}, " *-* ", true));
+
+		EXPECT_EQ("a"s, fmt::merge(vec{"a"}, "", true));
+		EXPECT_EQ("a"s, fmt::merge(vec{"a"}, " ", true));
+		EXPECT_EQ("a"s, fmt::merge(vec{"a"}, "-", true));
+		EXPECT_EQ("a"s, fmt::merge(vec{"a"}, " *-* ", true));
+
+		EXPECT_EQ("a"s, fmt::merge(vec{"a", ""}, "", true));
+		EXPECT_EQ("a"s, fmt::merge(vec{"a", ""}, " ", true));
+		EXPECT_EQ("a"s, fmt::merge(vec{"a", ""}, "-", true));
+		EXPECT_EQ("a"s, fmt::merge(vec{"a", ""}, " *-* ", true));
+
+		EXPECT_EQ("a"s, fmt::merge(vec{"a", "", ""}, "", true));
+		EXPECT_EQ("a"s, fmt::merge(vec{"a", "", ""}, " ", true));
+		EXPECT_EQ("a"s, fmt::merge(vec{"a", "", ""}, "-", true));
+		EXPECT_EQ("a"s, fmt::merge(vec{"a", "", ""}, " *-* ", true));
+
+		EXPECT_EQ("a"s, fmt::merge(vec{"", "a"}, "", true));
+		EXPECT_EQ("a"s, fmt::merge(vec{"", "a"}, " ", true));
+		EXPECT_EQ("a"s, fmt::merge(vec{"", "a"}, "-", true));
+		EXPECT_EQ("a"s, fmt::merge(vec{"", "a"}, " *-* ", true));
+
+		EXPECT_EQ("ab"s, fmt::merge(vec{"a", "b"}, "", true));
+		EXPECT_EQ("a b"s, fmt::merge(vec{"a", "b"}, " ", true));
+		EXPECT_EQ("a-b"s, fmt::merge(vec{"a", "b"}, "-", true));
+		EXPECT_EQ("a *-* b"s, fmt::merge(vec{"a", "b"}, " *-* ", true));
+
+		EXPECT_EQ("ab"s, fmt::merge(vec{"a", "", "b"}, "", true));
+		EXPECT_EQ("a b"s, fmt::merge(vec{"a", "", "b"}, " ", true));
+		EXPECT_EQ("a-b"s, fmt::merge(vec{"a", "", "b"}, "-", true));
+		EXPECT_EQ("a *-* b"s, fmt::merge(vec{"a", "", "b"}, " *-* ", true));
+
+		EXPECT_EQ("ab"s, fmt::merge(vec{"a", "", "", "b"}, "", true));
+		EXPECT_EQ("a b"s, fmt::merge(vec{"a", "", "", "b"}, " ", true));
+		EXPECT_EQ("a-b"s, fmt::merge(vec{"a", "", "", "b"}, "-", true));
+		EXPECT_EQ("a *-* b"s, fmt::merge(vec{"a", "", "", "b"}, " *-* ", true));
+
+		EXPECT_EQ("abc"s, fmt::merge(vec{"a", "b", "c"}, "", true));
+		EXPECT_EQ("a b c"s, fmt::merge(vec{"a", "b", "c"}, " ", true));
+		EXPECT_EQ("a-b-c"s, fmt::merge(vec{"a", "b", "c"}, "-", true));
+		EXPECT_EQ("a *-* b *-* c"s, fmt::merge(vec{"a", "b", "c"}, " *-* ", true));
+
+		// Initializer list of vector of strings
+		EXPECT_EQ(""s, fmt::merge(lst{}, "", true));
+		EXPECT_EQ(""s, fmt::merge(lst{}, " ", true));
+		EXPECT_EQ(""s, fmt::merge(lst{}, "-", true));
+		EXPECT_EQ(""s, fmt::merge(lst{}, " *-* ", true));
+
+		EXPECT_EQ(""s, fmt::merge(lst{vec{}}, "", true));
+		EXPECT_EQ(""s, fmt::merge(lst{vec{}}, " ", true));
+		EXPECT_EQ(""s, fmt::merge(lst{vec{}}, "-", true));
+		EXPECT_EQ(""s, fmt::merge(lst{vec{}}, " *-* ", true));
+
+		EXPECT_EQ("a"s, fmt::merge(lst{vec{"a"}}, "", true));
+		EXPECT_EQ("a"s, fmt::merge(lst{vec{"a"}}, " ", true));
+		EXPECT_EQ("a"s, fmt::merge(lst{vec{"a"}}, "-", true));
+		EXPECT_EQ("a"s, fmt::merge(lst{vec{"a"}}, " *-* ", true));
+
+		EXPECT_EQ("a"s, fmt::merge(lst{vec{"a"}, vec{}}, "", true));
+		EXPECT_EQ("a"s, fmt::merge(lst{vec{"a"}, vec{}}, " ", true));
+		EXPECT_EQ("a"s, fmt::merge(lst{vec{"a"}, vec{}}, "-", true));
+		EXPECT_EQ("a"s, fmt::merge(lst{vec{"a"}, vec{}}, " *-* ", true));
+
+		EXPECT_EQ("a"s, fmt::merge(lst{vec{}, vec{"a"}}, "", true));
+		EXPECT_EQ("a"s, fmt::merge(lst{vec{}, vec{"a"}}, " ", true));
+		EXPECT_EQ("a"s, fmt::merge(lst{vec{}, vec{"a"}}, "-", true));
+		EXPECT_EQ("a"s, fmt::merge(lst{vec{}, vec{"a"}}, " *-* ", true));
+
+		EXPECT_EQ("ab"s, fmt::merge(lst{vec{"a", "b"}}, "", true));
+		EXPECT_EQ("a b"s, fmt::merge(lst{vec{"a", "b"}}, " ", true));
+		EXPECT_EQ("a-b"s, fmt::merge(lst{vec{"a", "b"}}, "-", true));
+		EXPECT_EQ("a *-* b"s, fmt::merge(lst{vec{"a", "b"}}, " *-* ", true));
+
+		EXPECT_EQ("abc"s, fmt::merge(lst{vec{"a", "b", "c"}}, "", true));
+		EXPECT_EQ("a b c"s, fmt::merge(lst{vec{"a", "b", "c"}}, " ", true));
+		EXPECT_EQ("a-b-c"s, fmt::merge(lst{vec{"a", "b", "c"}}, "-", true));
+		EXPECT_EQ("a *-* b *-* c"s, fmt::merge(lst{vec{"a", "b", "c"}}, " *-* ", true));
+
+		EXPECT_EQ("ab"s, fmt::merge(lst{vec{"a"}, vec{"b"}}, "", true));
+		EXPECT_EQ("a b"s, fmt::merge(lst{vec{"a"}, vec{"b"}}, " ", true));
+		EXPECT_EQ("a-b"s, fmt::merge(lst{vec{"a"}, vec{"b"}}, "-", true));
+		EXPECT_EQ("a *-* b"s, fmt::merge(lst{vec{"a"}, vec{"b"}}, " *-* ", true));
+
+		EXPECT_EQ("ab"s, fmt::merge(lst{vec{"a"}, vec{}, vec{"b"}}, "", true));
+		EXPECT_EQ("a b"s, fmt::merge(lst{vec{"a"}, vec{}, vec{"b"}}, " ", true));
+		EXPECT_EQ("a-b"s, fmt::merge(lst{vec{"a"}, vec{}, vec{"b"}}, "-", true));
+		EXPECT_EQ("a *-* b"s, fmt::merge(lst{vec{"a"}, vec{}, vec{"b"}}, " *-* ", true));
+
+		EXPECT_EQ("abc"s, fmt::merge(lst{vec{"a"}, vec{"b"}, vec{"c"}}, "", true));
+		EXPECT_EQ("a b c"s, fmt::merge(lst{vec{"a"}, vec{"b"}, vec{"c"}}, " ", true));
+		EXPECT_EQ("a-b-c"s, fmt::merge(lst{vec{"a"}, vec{"b"}, vec{"c"}}, "-", true));
+		EXPECT_EQ("a *-* b *-* c"s, fmt::merge(lst{vec{"a"}, vec{"b"}, vec{"c"}}, " *-* ", true));
+
+		EXPECT_EQ("a1b2"s, fmt::merge(lst{vec{"a", "1"}, vec{"b", "2"}}, "", true));
+		EXPECT_EQ("a 1 b 2"s, fmt::merge(lst{vec{"a", "1"}, vec{"b", "2"}}, " ", true));
+		EXPECT_EQ("a-1-b-2"s, fmt::merge(lst{vec{"a", "1"}, vec{"b", "2"}}, "-", true));
+		EXPECT_EQ("a *-* 1 *-* b *-* 2"s, fmt::merge(lst{vec{"a", "1"}, vec{"b", "2"}}, " *-* ", true));
+
+		EXPECT_EQ("a1b2"s, fmt::merge(lst{vec{"a", "", "1"}, vec{"b", "2", ""}}, "", true));
+		EXPECT_EQ("a 1 b 2"s, fmt::merge(lst{vec{"a", "", "1"}, vec{"b", "2", ""}}, " ", true));
+		EXPECT_EQ("a-1-b-2"s, fmt::merge(lst{vec{"a", "", "1"}, vec{"b", "2", ""}}, "-", true));
+		EXPECT_EQ("a *-* 1 *-* b *-* 2"s, fmt::merge(lst{vec{"a", "", "1"}, vec{"b", "2", ""}}, " *-* ", true));
 	}
 
 	TEST(StrUtil, GetFileExtension)

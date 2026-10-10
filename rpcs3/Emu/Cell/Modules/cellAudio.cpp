@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Emu/Audio/audio_utils.h"
@@ -6,6 +7,13 @@
 #include "Emu/Cell/timers.hpp"
 #include "Emu/Cell/lv2/sys_process.h"
 #include "Emu/Cell/lv2/sys_event.h"
+#include "Emu/Cell/lv2/sys_mmapper.h"
+#include "Emu/Cell/lv2/sys_memory.h"
+#include "Emu/Memory/vm_var.h"
+#include "Emu/savestate_utils.hpp"
+#include "util/asm.hpp"
+#include "util/vm.hpp"
+#include "sysPrxForUser.h"
 #include "cellAudio.h"
 #include "util/video_provider.h"
 
@@ -16,16 +24,6 @@ LOG_CHANNEL(cellAudio);
 extern atomic_t<recording_mode> g_recording_mode;
 
 extern void lv2_sleep(u64 timeout, ppu_thread* ppu = nullptr);
-
-vm::gvar<char, AUDIO_PORT_OFFSET * AUDIO_PORT_COUNT> g_audio_buffer;
-
-struct alignas(16) aligned_index_t
-{
-	be_t<u64> index;
-	u8 pad[8];
-};
-
-vm::gvar<aligned_index_t, AUDIO_PORT_COUNT> g_audio_indices;
 
 template <>
 void fmt_class_string<CellAudioError>::format(std::string& out, u64 arg)
@@ -66,7 +64,7 @@ void cell_audio_config::reset(bool backend_changed)
 	if (!backend || backend_changed)
 	{
 		backend.reset();
-		backend = Emu.GetCallbacks().get_audio();
+		backend = g_emu_callbacks.get_audio();
 	}
 
 	cellAudio.notice("cellAudio initializing. Backend: %s", backend->GetName());
@@ -366,10 +364,8 @@ u64 audio_ringbuffer::update(bool emu_is_paused)
 	return timestamp;
 }
 
-void audio_port::tag(s32 offset)
+void audio_port::tag(be_t<f32>* port_buf)
 {
-	auto port_buf = get_vm_ptr(offset);
-
 	// This tag will be used to make sure that the game has finished writing the audio for the next audio period
 	// We use -0.0f in case games check if the buffer is empty. -0.0f == 0.0f evaluates to true, but std::signbit can be used to distinguish them
 	const f32 tag = -0.0f;
@@ -383,13 +379,116 @@ void audio_port::tag(s32 offset)
 		last_tag_value[tag_nr] = -0.0f;
 	}
 
+	// Mark the front right channel as well, see PORT_BUFFER_MARK_CHANNEL
+	if (num_channels != 2)
+	{
+		for (u32 tag_nr = 0; tag_nr < PORT_BUFFER_TAG_COUNT; tag_nr++)
+		{
+			port_buf[mark_position(tag_nr)] = tag;
+		}
+	}
+
 	prev_touched_tag_nr = -1;
+}
+
+namespace
+{
+	void save_audio_memory(utils::serial& ar, const shared_ptr<lv2_memory>& memory)
+	{
+		ar(static_cast<bool>(memory));
+
+		if (!memory)
+		{
+			return;
+		}
+
+		const bool registered = memory->exists || memory->key == SYS_MMAPPER_MIO_SHM_KEY;
+		ar(registered);
+
+		if (registered)
+		{
+			ar(memory->key);
+		}
+		else
+		{
+			memory->save_data(ar);
+		}
+	}
+
+	shared_ptr<lv2_memory> load_audio_memory(utils::serial& ar)
+	{
+		if (!ar.pop<bool>())
+		{
+			return {};
+		}
+
+		if (ar.pop<bool>())
+		{
+			return ensure(g_fxo->get<ipc_manager<lv2_memory, u64>>().get(ar.pop<u64>()));
+		}
+
+		auto memory = make_shared<lv2_memory>(stx::exact_t<utils::serial&>(ar));
+		ensure(memory->external_refs);
+		ensure((g_fxo->get<ipc_manager<lv2_memory, u64>>().add(memory->key, [&] { return memory; }).first));
+		return memory;
+	}
+
+	// Locks the audio mutex from a guest thread. Its holder can wait for a cpu_thread::suspend_all inside the
+	// mmapper syscalls, so a waiter must acknowledge the suspend with cpu_flag::wait instead of blocking silently.
+	// Only for functions accessing VM memory under the lock, the others simply set cpu_flag::wait on entry.
+	// check_state() may block, so it is performed while the mutex is not owned.
+	std::unique_lock<shared_mutex> lock_audio(shared_mutex& mutex)
+	{
+		std::unique_lock lock(mutex, std::try_to_lock);
+
+		if (lock)
+		{
+			return lock;
+		}
+
+		cpu_thread* cpu = cpu_thread::get_current();
+
+		if (!cpu || cpu->state & cpu_flag::wait)
+		{
+			lock.lock();
+			return lock;
+		}
+
+		do
+		{
+			cpu->state += cpu_flag::wait;
+			mutex.lock_unlock();
+			cpu->check_state();
+		}
+		while (!lock.try_lock());
+
+		return lock;
+	}
+
+	shared_ptr<lv2_memory> acquire_audio_memory(u32 id)
+	{
+		return idm::get<lv2_obj, lv2_memory>(id, [](lv2_memory& memory)
+		{
+			memory.external_refs++;
+		});
+	}
+
+	void release_audio_memory(shared_ptr<lv2_memory>& memory)
+	{
+		if (memory)
+		{
+			std::lock_guard lock(id_manager::g_mutex);
+			ensure(memory->external_refs--);
+			memory->release_memory();
+			memory.reset();
+		}
+	}
 }
 
 cell_audio_thread::cell_audio_thread(utils::serial& ar)
 	: cell_audio_thread()
 {
-	ar(init);
+	ar(init, shared_area, shared_address, shared_refs, ports);
 
 	if (!init)
 	{
@@ -398,7 +497,7 @@ cell_audio_thread::cell_audio_thread(utils::serial& ar)
 
 	ar(key_count, event_period);
 
-	keys.resize(ar);
+	keys.resize(ar.pop<u64>());
 
 	for (key_info& k : keys)
 	{
@@ -406,22 +505,28 @@ cell_audio_thread::cell_audio_thread(utils::serial& ar)
 		k.port = lv2_event_queue::load_ptr(ar, k.port, "audio");
 	}
 
-	ar(ports);
+	ar(free_port_count, free_ports, free_indices);
+	shared_memory = load_audio_memory(ar);
+	for (auto& memory : port_memories)
+	{
+		memory = load_audio_memory(ar);
+	}
 }
 
 void cell_audio_thread::save(utils::serial& ar)
 {
-	ar(init);
+	USING_SERIALIZATION_VERSION(cellAudio);
+
+	// closed ports keep their descriptor after audio quits
+	ar(init, shared_area, shared_address, shared_refs, ports);
 
 	if (!init)
 	{
 		return;
 	}
 
-	USING_SERIALIZATION_VERSION(cellAudio);
-
 	ar(key_count, event_period);
-	ar(keys.size());
+	ar(static_cast<u64>(keys.size()));
 
 	for (const key_info& k : keys)
 	{
@@ -429,11 +534,24 @@ void cell_audio_thread::save(utils::serial& ar)
 		lv2_event_queue::save_ptr(ar, k.port.get());
 	}
 
-	ar(ports);
+	ar(free_port_count, free_ports, free_indices);
+	save_audio_memory(ar, shared_memory);
+	for (const auto& memory : port_memories)
+	{
+		save_audio_memory(ar, memory);
+	}
+}
+
+be_t<f32>* cell_audio_thread::get_buffer(const audio_port& port, s32 offset) const
+{
+	// caller holds the audio mutex, port_memories keeps the buffer alive after the game unmaps it
+	return reinterpret_cast<be_t<f32>*>((*port_memories[port.number]->shm.observe())->get()) + port.position(offset) * port.block_size();
 }
 
 std::tuple<u32, u32, u32, u32> cell_audio_thread::count_port_buffer_tags()
 {
+	std::lock_guard lock(mutex);
+
 	AUDIT(cfg.buffering_enabled);
 
 	u32 active = 0;
@@ -441,12 +559,16 @@ std::tuple<u32, u32, u32, u32> cell_audio_thread::count_port_buffer_tags()
 	u32 untouched = 0;
 	u32 incomplete = 0;
 
-	for (audio_port& port : ports)
+	for (u32 port_index = 0; port_index < ports.size(); port_index++)
 	{
+		audio_port& port = ports[port_index];
+
 		if (port.state != audio_port_state::started) continue;
 		active++;
 
-		auto port_buf = port.get_vm_ptr();
+		if (!port.num_channels) continue;
+
+		auto port_buf = get_buffer(port);
 
 		// Find the last tag that has been touched
 		const u32 tag_first_pos = port.num_channels == 2 ? PORT_BUFFER_TAG_FIRST_2CH : PORT_BUFFER_TAG_FIRST_8CH;
@@ -454,6 +576,7 @@ std::tuple<u32, u32, u32, u32> cell_audio_thread::count_port_buffer_tags()
 
 		u32 last_touched_tag_nr = port.prev_touched_tag_nr;
 		bool retouched = false;
+		bool tag_moved = false;
 		for (u32 tag_pos = tag_first_pos, tag_nr = 0; tag_nr < PORT_BUFFER_TAG_COUNT; tag_pos += tag_delta, tag_nr++)
 		{
 			const f32 val = port_buf[tag_pos];
@@ -465,14 +588,59 @@ std::tuple<u32, u32, u32, u32> cell_audio_thread::count_port_buffer_tags()
 
 				retouched |= (tag_nr <= port.prev_touched_tag_nr) && port.prev_touched_tag_nr != umax;
 				last_touched_tag_nr = tag_nr;
+				tag_moved = true;
 			}
+		}
+
+		if (tag_moved)
+		{
+			// This port reaches its surround channels, so its tags track it on their own and the marks below
+			// are never consulted for it.
+			m_periods_without_tag[port_index] = 0;
+			m_front_only_port[port_index] = false;
 		}
 
 		// Decide whether the buffer is untouched, in progress, incomplete, or complete
 		if (last_touched_tag_nr == umax)
 		{
-			// no tag has been touched yet
-			untouched++;
+			// No tag has been touched yet. That normally means the buffer is untouched, but it also happens
+			// when the game filled the front channels only: no tag can ever move then, and the port would
+			// stay silent forever. The marks tell the two apart. They are only consulted once this port has
+			// gone long enough without moving a tag to rule out a game writing the buffer one channel at a
+			// time, which looks identical in between its front right and its center pass.
+			bool& front_only = m_front_only_port[port_index];
+
+			if (!front_only && port.num_channels != 2 && m_periods_without_tag[port_index] > PORT_FRONT_ONLY_SETTLE_PERIODS)
+			{
+				for (u32 tag_nr = 0; tag_nr < PORT_BUFFER_TAG_COUNT; tag_nr++)
+				{
+					const f32 val = port_buf[port.mark_position(tag_nr)];
+
+					if (val != -0.0f || !std::signbit(val))
+					{
+						front_only = true;
+						break;
+					}
+				}
+
+				if (front_only && !m_front_only_reported[port_index])
+				{
+					m_front_only_reported[port_index] = true;
+					cellAudio.notice("Port %u carries front channel audio only (num_channels=%u). Its buffer tags all sit on surround channels and can never move, so the front channel marks decide whether it is silent.", port.number, port.num_channels);
+				}
+			}
+
+			if (!front_only)
+			{
+				// nothing has been written at all, or this port has not settled yet
+				untouched++;
+			}
+			else
+			{
+				// The game only ever fills the front channels of this port, so the block is as complete as it
+				// is ever going to get. Incomplete is the verdict that says so, and it still gets mixed.
+				incomplete++;
+			}
 		}
 		else if (last_touched_tag_nr == PORT_BUFFER_TAG_COUNT - 1)
 		{
@@ -512,15 +680,25 @@ std::tuple<u32, u32, u32, u32> cell_audio_thread::count_port_buffer_tags()
 void cell_audio_thread::reset_ports(s32 offset)
 {
 	// Memset buffer to 0 and tag
-	for (audio_port& port : ports)
+	for (u32 port_index = 0; port_index < ports.size(); port_index++)
 	{
+		audio_port& port = ports[port_index];
+
 		if (port.state != audio_port_state::started) continue;
 
-		memset(port.get_vm_ptr(offset), 0, port.block_size() * sizeof(float));
+		auto* buffer = get_buffer(port, offset);
+		memset(buffer, 0, port.block_size() * sizeof(float));
 
-		if (cfg.buffering_enabled)
+		if (cfg.buffering_enabled && port.num_channels)
 		{
-			port.tag(offset);
+			port.tag(buffer);
+
+			// One period is about to elapse for this port. count_port_buffer_tags() zeroes this again as
+			// soon as it sees a tag move, so it counts periods during which none did.
+			if (m_periods_without_tag[port_index] < 0xFF)
+			{
+				m_periods_without_tag[port_index]++;
+			}
 		}
 	}
 }
@@ -534,6 +712,8 @@ void cell_audio_thread::advance(u64 timestamp)
 	// update ports
 	reset_ports(0);
 
+	be_t<u64>* indices = nullptr;
+
 	for (audio_port& port : ports)
 	{
 		if (port.state != audio_port_state::started) continue;
@@ -543,7 +723,13 @@ void cell_audio_thread::advance(u64 timestamp)
 		port.timestamp = timestamp;
 
 		port.cur_pos = port.position(1);
-		*port.index = port.cur_pos;
+
+		if (!indices)
+		{
+			indices = reinterpret_cast<be_t<u64>*>((*shared_memory->shm.observe())->get());
+		}
+
+		indices[port.server_index * 2] = port.cur_pos;
 	}
 
 	if (cfg.buffering_enabled)
@@ -710,6 +896,30 @@ void cell_audio_thread::operator()()
 	}
 
 	u32 untouched_expected = 0;
+
+	// A port the game feeds irregularly - the audio port of a movie that has just been started and whose
+	// decoder is still spinning up, typically - makes untouched oscillate. Without hysteresis the
+	// expectation follows it straight back down, so the next period re-arms the wait below and the thread
+	// stalls again, up to partially_untouched_timeout every time. Hold the expectation for a while instead:
+	// keeping it high only ever means "I already know that port is quiet, do not wait for it".
+	u64 untouched_hold_until = 0;
+
+	// Long enough to outlast the few-period oscillation a decoder produces while it spins up, short enough
+	// that a port going quiet for good is noticed promptly.
+	const u64 untouched_hold_periods = 340'000 / std::max<u32>(1, cfg.audio_block_period);
+
+	const auto expect_untouched = [&](u32 count)
+	{
+		if (count >= untouched_expected)
+		{
+			untouched_expected = count;
+			untouched_hold_until = m_counter + untouched_hold_periods;
+		}
+		else if (m_counter >= untouched_hold_until)
+		{
+			untouched_expected = count;
+		}
+	};
 
 	u32 loop_count = 0;
 
@@ -904,40 +1114,56 @@ void cell_audio_thread::operator()()
 
 			// Wait until buffers have been touched
 			//cellAudio.error("active=%u, in_progress=%u, untouched=%u, incomplete=%u", active_ports, in_progress, untouched, incomplete);
+			bool waited_long_enough = false;
+
 			if (untouched > untouched_expected)
 			{
 				// Games may sometimes "skip" audio periods entirely if they're falling behind (a sort of "frameskip" for audio)
-				// As such, if the game doesn't touch buffers for too long we advance time hoping the game recovers
+				// As such, if the game doesn't touch buffers for too long we stop waiting for them
 				if (
 					(untouched == active_ports && time_since_last_period > cfg.fully_untouched_timeout) ||
 					(time_since_last_period > cfg.partially_untouched_timeout) || g_cfg.audio.disable_sampling_skip
 				   )
 				{
-					// There's no audio in the buffers, simply advance time and hope the game recovers
-					cellAudio.trace("advancing time: untouched=%u/%u (expected=%u), enqueued_buffers=%llu", untouched, active_ports, untouched_expected, enqueued_buffers);
-					untouched_expected = untouched;
-					advance(timestamp);
+					expect_untouched(untouched);
+
+					if (untouched >= active_ports)
+					{
+						// There's no audio in any buffer, simply advance time and hope the game recovers
+						cellAudio.trace("advancing time: untouched=%u/%u (expected=%u), enqueued_buffers=%llu", untouched, active_ports, untouched_expected, enqueued_buffers);
+						advance(timestamp);
+						continue;
+					}
+
+					// Some ports do hold audio for this period. Advancing without enqueueing would throw that
+					// away as well, one block at a time, for as long as a port keeps alternating between
+					// touched and untouched. Mix what is there instead: the untouched ports were memset, so
+					// they contribute silence, which is exactly what they hold.
+					cellAudio.trace("mixing partially untouched buffers: untouched=%u/%u, enqueued_buffers=%llu", untouched, active_ports, enqueued_buffers);
+					waited_long_enough = true;
+				}
+				else
+				{
+					cellAudio.trace("waiting: untouched=%u/%u (expected=%u), enqueued_buffers=%llu", untouched, active_ports, untouched_expected, enqueued_buffers);
+					thread_ctrl::wait_for(1000);
 					continue;
 				}
-
-				cellAudio.trace("waiting: untouched=%u/%u (expected=%u), enqueued_buffers=%llu", untouched, active_ports, untouched_expected, enqueued_buffers);
-				thread_ctrl::wait_for(1000);
-				continue;
 			}
 
 			// Fast-path for when there is no audio in the buffers
+			// (unreachable once we waited long enough: that path only runs with untouched < active_ports)
 			if (untouched == active_ports)
 			{
 				// There's no audio in the buffers, simply advance time
 				cellAudio.trace("enqueuing silence: untouched=%u/%u (expected=%u), enqueued_buffers=%llu", untouched, active_ports, untouched_expected, enqueued_buffers);
 				ringbuffer->enqueue_silence();
-				untouched_expected = untouched;
+				expect_untouched(untouched);
 				advance(timestamp);
 				continue;
 			}
 
 			// Wait for buffer(s) to be completely filled
-			if (in_progress > 0)
+			if (!waited_long_enough && in_progress > 0)
 			{
 				cellAudio.trace("waiting: in_progress=%u/%u, enqueued_buffers=%u", in_progress, active_ports, enqueued_buffers);
 				thread_ctrl::wait_for(500);
@@ -947,7 +1173,7 @@ void cell_audio_thread::operator()()
 			//cellAudio.error("active=%u, untouched=%u, in_progress=%d, incomplete=%d, enqueued_buffers=%u", active_ports, untouched, in_progress, incomplete, enqueued_buffers);
 
 			// Store number of untouched buffers for future reference
-			untouched_expected = untouched;
+			expect_untouched(untouched);
 
 			// Log if we enqueued untouched/incomplete buffers
 			if (untouched > 0 || incomplete > 0)
@@ -1019,24 +1245,121 @@ void cell_audio_thread::operator()()
 
 	// Destroy ringbuffer
 	ringbuffer.reset();
+
+	// Destroy the audio backend on this thread (the one that created it in cfg.reset()).
+	// The backend's ctor calls CoInitializeEx here on Windows; releasing it on a different
+	// thread (g_fxo->clear() runs on the GUI thread during Kill()) would land the matching
+	// CoUninitialize on the GUI thread, draining its OLE reference and silently breaking the
+	// main window's file drag&drop. Keep COM init/teardown balanced on this thread.
+	cfg.backend.reset();
 }
 
 audio_port* cell_audio_thread::open_port()
 {
-	for (u32 i = 0; i < AUDIO_PORT_COUNT; i++)
+	if (!free_port_count)
 	{
-		if (ports[i].state.compare_and_swap_test(audio_port_state::closed, audio_port_state::opened))
-		{
-			return &ports[i];
-		}
+		return nullptr;
 	}
 
-	return nullptr;
+	const u32 index = --free_port_count;
+	auto& port = ports[free_ports[index]];
+	port.server_index = free_indices[index];
+	port.state = audio_port_state::opened;
+	m_front_only_reported[port.number] = false;
+	m_periods_without_tag[port.number] = 0;
+	m_front_only_port[port.number] = false;
+	return &port;
+}
+
+error_code cell_audio_thread::allocate_port(ppu_thread& ppu, audio_port& port)
+{
+	const u32 size = std::max<u32>(0x10000, utils::align(port.size, 0x10000));
+	auto* ct = g_ps3_process_info.sdk_ver > 0x21ffff ? &g_fxo->get<lv2_memory_container>() : nullptr;
+
+	for (u64 key = SYS_MMAPPER_MIO_SHM_KEY + 2;; key++)
+	{
+		if (g_fxo->get<ipc_manager<lv2_memory, u64>>().get(key))
+		{
+			continue;
+		}
+
+		const auto result = lv2_obj::create<lv2_memory>(SYS_SYNC_PROCESS_SHARED, key, SYS_SYNC_NEWLY_CREATED, [&]()
+		{
+			return make_shared<lv2_memory>(size, 0x10000, 0x200, key, true, ct);
+		});
+
+		if (result + 0u == CELL_EEXIST)
+		{
+			continue;
+		}
+
+		if (result)
+		{
+			close_port(ppu, port);
+			return CELL_AUDIO_ERROR_SHAREDMEMORY;
+		}
+
+		const u32 memory_id = idm::last_id<lv2_memory>();
+		const vm::var<u32> address;
+		auto memory = acquire_audio_memory(memory_id);
+
+		if (!memory || sys_mmapper_search_and_map(ppu, shared_area, memory_id, 0x40000, address))
+		{
+			sys_mmapper_free_shared_memory(ppu, memory_id);
+			release_audio_memory(memory);
+			close_port(ppu, port);
+			return CELL_AUDIO_ERROR_SHAREDMEMORY;
+		}
+
+		port_memories[port.number] = std::move(memory);
+		port.addr = vm::cast(*address);
+		port.mapped = true;
+		port.index = vm::cast(shared_address + port.server_index * 16);
+		std::memset(port.addr.get_ptr(), 0, size);
+		break;
+	}
+
+	return CELL_OK;
+}
+
+void cell_audio_thread::close_port(ppu_thread& ppu, audio_port& port)
+{
+	port.state = audio_port_state::closed;
+	const vm::var<u32> memory_id;
+
+	if (port.mapped && !sys_mmapper_unmap_shared_memory(ppu, port.addr.addr(), memory_id))
+	{
+		// an extra mapping can keep the handle alive after the port closes
+		sys_mmapper_free_shared_memory(ppu, *memory_id);
+	}
+
+	port.mapped = false;
+	release_audio_memory(port_memories[port.number]);
+	free_ports[free_port_count] = port.number;
+	free_indices[free_port_count] = port.server_index;
+	free_port_count++;
+}
+
+void cell_audio_thread::release_shared_memory(ppu_thread& ppu)
+{
+	if (--shared_refs || !shared_address)
+	{
+		return;
+	}
+
+	const vm::var<u32> memory_id;
+
+	if (!sys_mmapper_unmap_shared_memory(ppu, shared_address, memory_id))
+	{
+		sys_mmapper_free_shared_memory(ppu, *memory_id);
+	}
 }
 
 template <AudioChannelCnt channels, AudioChannelCnt downmix>
 void cell_audio_thread::mix(float* out_buffer, s32 offset)
 {
+	std::lock_guard lock(mutex);
+
 	AUDIT(out_buffer != nullptr);
 
 	constexpr u32 out_channels = static_cast<u32>(channels);
@@ -1052,7 +1375,7 @@ void cell_audio_thread::mix(float* out_buffer, s32 offset)
 	{
 		if (port.state != audio_port_state::started) continue;
 
-		auto buf = port.get_vm_ptr(offset);
+		auto buf = get_buffer(port, offset);
 
 		static constexpr float minus_3db = 0.707f; // value taken from https://www.dolby.com/us/en/technologies/a-guide-to-dolby-metadata.pdf
 		float m = master_volume;
@@ -1161,6 +1484,17 @@ void cell_audio_thread::mix(float* out_buffer, s32 offset)
 				}
 			}
 		}
+		else if (!port.num_channels)
+		{
+			for (u32 out = 0, in = 0; out < out_buffer_sz; out += out_channels, in++)
+			{
+				step_volume(port);
+
+				const float sample = buf[in] * m;
+				out_buffer[out + 0] += sample;
+				out_buffer[out + 1] += sample;
+			}
+		}
 		else
 		{
 			fmt::throw_exception("Unknown channel count (port=%u, channel=%d)", port.number, port.num_channels);
@@ -1170,6 +1504,8 @@ void cell_audio_thread::mix(float* out_buffer, s32 offset)
 
 void cell_audio_thread::finish_port_volume_stepping()
 {
+	std::lock_guard lock(mutex);
+
 	// part of cellAudioSetPortLevel functionality
 	for (audio_port& port : ports)
 	{
@@ -1181,57 +1517,149 @@ void cell_audio_thread::finish_port_volume_stepping()
 	}
 }
 
-error_code cellAudioInit()
+error_code cellAudioInit(ppu_thread& ppu)
 {
 	cellAudio.warning("cellAudioInit()");
 
-	auto& g_audio = g_fxo->get<cell_audio>();
+	const std::unique_lock savestate_lock{ g_fxo->get<hle_locks_t>(), std::try_to_lock };
 
-	std::lock_guard lock(g_audio.mutex);
+	if (!savestate_lock)
+	{
+		ppu.state += cpu_flag::again;
+		return {};
+	}
+
+	auto& g_audio = g_fxo->get<cell_audio>();
+	auto lock = lock_audio(g_audio.mutex);
 
 	if (g_audio.init)
 	{
 		return CELL_AUDIO_ERROR_ALREADY_INIT;
 	}
 
-	std::memset(g_audio_buffer.get_ptr(), 0, g_audio_buffer.alloc_size);
-	std::memset(g_audio_indices.get_ptr(), 0, g_audio_indices.alloc_size);
+	if (!g_audio.shared_refs++)
+	{
+		g_audio.shared_address = 0;
+		const vm::var<u32> memory_id;
+		const auto result = sys_mmapper_allocate_shared_memory(ppu, SYS_MMAPPER_MIO_SHM_KEY, 0x10000, 0x200, memory_id);
+
+		if (result)
+		{
+			g_audio.release_shared_memory(ppu);
+
+			// mio and audio both release this on an already open handle
+			if (result + 0u == CELL_EEXIST)
+			{
+				g_audio.release_shared_memory(ppu);
+				return CELL_AUDIO_ERROR_TRANS_EVENT;
+			}
+
+			return result;
+		}
+
+		const vm::var<u32> area;
+		const vm::var<u32> address;
+		auto memory = acquire_audio_memory(*memory_id);
+
+		if (!memory)
+		{
+			g_audio.release_shared_memory(ppu);
+			return CELL_ESRCH;
+		}
+
+		auto mapping_result = sys_mmapper_get_shared_memory_area(ppu, 0x20full, +area);
+
+		if (!mapping_result)
+		{
+			mapping_result = sys_mmapper_search_and_map(ppu, *area, *memory_id, 0x40000, address);
+		}
+
+		if (mapping_result)
+		{
+			sys_mmapper_free_shared_memory(ppu, *memory_id);
+			release_audio_memory(memory);
+			g_audio.release_shared_memory(ppu);
+			return mapping_result;
+		}
+
+		g_audio.shared_memory = std::move(memory);
+		g_audio.shared_area = *area;
+		g_audio.shared_address = *address;
+	}
+	else
+	{
+		g_audio.release_shared_memory(ppu);
+		return CELL_AUDIO_ERROR_TRANS_EVENT;
+	}
+
+	const u32 port_count = g_ps3_process_info.sdk_ver <= 0x35ffff ? CELL_AUDIO_MAX_PORT : CELL_AUDIO_MAX_PORT_2;
+	g_audio.free_port_count = port_count;
 
 	for (u32 i = 0; i < AUDIO_PORT_COUNT; i++)
 	{
+		g_audio.ports[i].state = audio_port_state::closed;
+		g_audio.ports[i].mapped = false;
 		g_audio.ports[i].number = i;
-		g_audio.ports[i].addr   = g_audio_buffer + AUDIO_PORT_OFFSET * i;
-		g_audio.ports[i].index  = (g_audio_indices + i).ptr(&aligned_index_t::index);
-		g_audio.ports[i].state  = audio_port_state::closed;
+		// closed ports keep their buffer fields and their slot in the new index mapping
+		g_audio.ports[i].index = vm::cast(g_audio.shared_address + g_audio.ports[i].server_index * 16);
+
+		if (i < port_count)
+		{
+			g_audio.free_ports[i] = port_count - i - 1;
+			g_audio.free_indices[i] = port_count - i;
+		}
 	}
 
 	g_audio.init = 1;
-
 	return CELL_OK;
 }
 
-error_code cellAudioQuit()
+error_code cellAudioQuit(ppu_thread& ppu)
 {
 	cellAudio.warning("cellAudioQuit()");
 
-	auto& g_audio = g_fxo->get<cell_audio>();
+	const std::unique_lock savestate_lock{ g_fxo->get<hle_locks_t>(), std::try_to_lock };
 
-	std::lock_guard lock(g_audio.mutex);
+	if (!savestate_lock)
+	{
+		ppu.state += cpu_flag::again;
+		return {};
+	}
+
+	auto& g_audio = g_fxo->get<cell_audio>();
+	auto lock = lock_audio(g_audio.mutex);
 
 	if (!g_audio.init)
 	{
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
 
+	for (auto& port : g_audio.ports)
+	{
+		if (port.state != audio_port_state::closed)
+		{
+			g_audio.close_port(ppu, port);
+		}
+	}
+
+	g_audio.release_shared_memory(ppu);
+	release_audio_memory(g_audio.shared_memory);
 	// NOTE: Do not clear event queues here. They are handled independently.
 	g_audio.init = 0;
-
 	return CELL_OK;
 }
 
-error_code cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32> portNum)
+error_code cellAudioPortOpen(ppu_thread& ppu, vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32> portNum)
 {
 	cellAudio.warning("cellAudioPortOpen(audioParam=*0x%x, portNum=*0x%x)", audioParam, portNum);
+
+	const std::unique_lock savestate_lock{ g_fxo->get<hle_locks_t>(), std::try_to_lock };
+
+	if (!savestate_lock)
+	{
+		ppu.state += cpu_flag::again;
+		return {};
+	}
 
 	auto& g_audio = g_fxo->get<cell_audio>();
 
@@ -1303,7 +1731,7 @@ error_code cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32
 	// Waiting for VSH and doing some more things
 	lv2_sleep(200);
 
-	std::lock_guard lock(g_audio.mutex);
+	auto lock = lock_audio(g_audio.mutex);
 
 	if (!g_audio.init)
 	{
@@ -1318,13 +1746,10 @@ error_code cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32
 		return CELL_AUDIO_ERROR_PORT_FULL;
 	}
 
-	// TODO: is this necessary in any way? (Based on libaudio.prx)
-	//const u64 num_channels_non_0 = std::max<u64>(1, num_channels);
-
 	port->num_channels   = ::narrow<u32>(num_channels);
 	port->num_blocks     = ::narrow<u32>(num_blocks);
 	port->attr           = attr;
-	port->size           = ::narrow<u32>(num_channels * num_blocks * AUDIO_BUFFER_SAMPLES * sizeof(f32));
+	port->size           = ::narrow<u32>(std::max<u64>(1, num_channels) * num_blocks * AUDIO_BUFFER_SAMPLES * sizeof(f32));
 	port->cur_pos        = 0;
 	port->global_counter = g_audio.m_counter;
 	port->active_counter = 0;
@@ -1341,9 +1766,9 @@ error_code cellAudioPortOpen(vm::ptr<CellAudioPortParam> audioParam, vm::ptr<u32
 
 	port->level_set.store({ port->level, 0.0f });
 
-	if (port->level <= -1.0f)
+	if (auto result = g_audio.allocate_port(ppu, *port))
 	{
-		return CELL_AUDIO_ERROR_PORT_OPEN;
+		return result;
 	}
 
 	*portNum = port->number;
@@ -1356,7 +1781,7 @@ error_code cellAudioGetPortConfig(u32 portNum, vm::ptr<CellAudioPortConfig> port
 
 	auto& g_audio = g_fxo->get<cell_audio>();
 
-	std::lock_guard lock(g_audio.mutex);
+	auto lock = lock_audio(g_audio.mutex);
 
 	if (!g_audio.init)
 	{
@@ -1414,29 +1839,42 @@ error_code cellAudioPortStart(u32 portNum)
 	// Waiting for VSH
 	lv2_sleep(30);
 
-	std::lock_guard lock(g_audio.mutex);
+	auto lock = lock_audio(g_audio.mutex);
 
 	if (!g_audio.init)
 	{
 		return CELL_AUDIO_ERROR_NOT_INIT;
 	}
 
-	switch (audio_port_state state = g_audio.ports[portNum].state.compare_and_swap(audio_port_state::opened, audio_port_state::started))
+	auto& port = g_audio.ports[portNum];
+
+	switch (audio_port_state state = port.state)
 	{
 	case audio_port_state::closed: return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
 	case audio_port_state::started: return CELL_AUDIO_ERROR_PORT_ALREADY_RUN;
-	case audio_port_state::opened: return CELL_OK;
+	case audio_port_state::opened:
+		std::memset(port.addr.get_ptr(), 0, port.size);
+		port.state = audio_port_state::started;
+		return CELL_OK;
 	default: fmt::throw_exception("Invalid port state (%d: %d)", portNum, static_cast<u32>(state));
 	}
 }
 
-error_code cellAudioPortClose(u32 portNum)
+error_code cellAudioPortClose(ppu_thread& ppu, u32 portNum)
 {
 	cellAudio.warning("cellAudioPortClose(portNum=%d)", portNum);
 
+	const std::unique_lock savestate_lock{ g_fxo->get<hle_locks_t>(), std::try_to_lock };
+
+	if (!savestate_lock)
+	{
+		ppu.state += cpu_flag::again;
+		return {};
+	}
+
 	auto& g_audio = g_fxo->get<cell_audio>();
 
-	std::lock_guard lock(g_audio.mutex);
+	auto lock = lock_audio(g_audio.mutex);
 
 	if (!g_audio.init)
 	{
@@ -1448,17 +1886,21 @@ error_code cellAudioPortClose(u32 portNum)
 		return CELL_AUDIO_ERROR_PARAM;
 	}
 
-	switch (audio_port_state state = g_audio.ports[portNum].state.exchange(audio_port_state::closed))
+	auto& port = g_audio.ports[portNum];
+
+	if (port.state == audio_port_state::closed)
 	{
-	case audio_port_state::closed: return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
-	case audio_port_state::started: return CELL_OK;
-	case audio_port_state::opened: return CELL_OK;
-	default: fmt::throw_exception("Invalid port state (%d: %d)", portNum, static_cast<u32>(state));
+		return CELL_AUDIO_ERROR_PORT_NOT_OPEN;
 	}
+
+	g_audio.close_port(ppu, port);
+	return CELL_OK;
 }
 
-error_code cellAudioPortStop(u32 portNum)
+error_code cellAudioPortStop(ppu_thread& ppu, u32 portNum)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellAudio.warning("cellAudioPortStop(portNum=%d)", portNum);
 
 	auto& g_audio = g_fxo->get<cell_audio>();
@@ -1490,7 +1932,7 @@ error_code cellAudioGetPortTimestamp(u32 portNum, u64 tag, vm::ptr<u64> stamp)
 
 	auto& g_audio = g_fxo->get<cell_audio>();
 
-	std::lock_guard lock(g_audio.mutex);
+	auto lock = lock_audio(g_audio.mutex);
 
 	if (!g_audio.init)
 	{
@@ -1529,7 +1971,7 @@ error_code cellAudioGetPortBlockTag(u32 portNum, u64 blockNo, vm::ptr<u64> tag)
 
 	auto& g_audio = g_fxo->get<cell_audio>();
 
-	std::lock_guard lock(g_audio.mutex);
+	auto lock = lock_audio(g_audio.mutex);
 
 	if (!g_audio.init)
 	{
@@ -1559,8 +2001,10 @@ error_code cellAudioGetPortBlockTag(u32 portNum, u64 blockNo, vm::ptr<u64> tag)
 	return CELL_OK;
 }
 
-error_code cellAudioSetPortLevel(u32 portNum, float level)
+error_code cellAudioSetPortLevel(ppu_thread& ppu, u32 portNum, float level)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellAudio.trace("cellAudioSetPortLevel(portNum=%d, level=%f)", portNum, level);
 
 	auto& g_audio = g_fxo->get<cell_audio>();
@@ -1662,36 +2106,35 @@ error_code AudioSetNotifyEventQueue(ppu_thread& ppu, u64 key, u32 iFlags)
 	lv2_sleep(20, &ppu);
 
 	// Dirty hack for sound: confirm the creation of _mxr000 event queue by _cellsurMixerMain thread
-	constexpr u64 c_mxr000 = 0x8000cafe0246030;
+	constexpr u64 c_mxr000 = 0x8000cafe02460300;
 
 	if (key == c_mxr000 || key == 0)
 	{
-		bool has_sur_mixer_thread = false;
-
-		for (usz count = 0; !lv2_event_queue::find(c_mxr000) && count < 100; count++)
+		const bool has_sur_mixer_thread = idm::select<named_thread<ppu_thread>>([&](u32 id, named_thread<ppu_thread>& test_ppu)
 		{
-			if (has_sur_mixer_thread || idm::select<named_thread<ppu_thread>>([&](u32 id, named_thread<ppu_thread>& test_ppu)
+			// Confirm thread existence
+			if (id == ppu.id)
 			{
-				// Confirm thread existence
-				if (id == ppu.id)
-				{
-					return false;
-				}
-
-				const auto ptr = test_ppu.ppu_tname.load();
-
-				if (!ptr)
-				{
-					return false;
-				}
-
-				return *ptr == "_cellsurMixerMain"sv;
-			}).ret)
-			{
-				has_sur_mixer_thread = true;
+				return false;
 			}
-			else
+
+			const auto ptr = test_ppu.ppu_tname.load();
+
+			if (!ptr)
 			{
+				return false;
+			}
+
+			return *ptr == "_cellsurMixerMain"sv;
+		}).ret;
+
+		bool was_mxr000_queue_found = false;
+
+		for (usz count = 0; has_sur_mixer_thread && count < 100; count++)
+		{
+			if (lv2_event_queue::find(c_mxr000))
+			{
+				was_mxr000_queue_found = true;
 				break;
 			}
 
@@ -1701,13 +2144,14 @@ error_code AudioSetNotifyEventQueue(ppu_thread& ppu, u64 key, u32 iFlags)
 				return {};
 			}
 
-			cellAudio.error("AudioSetNotifyEventQueue(): Waiting for _mxr000. x%d", count);
+			(count < 3 ? cellAudio.warning : cellAudio.error)("AudioSetNotifyEventQueue(): Waiting for _mxr000. x%d", count);
 
 			lv2_sleep(50'000, &ppu);
 		}
 
-		if (has_sur_mixer_thread && lv2_event_queue::find(c_mxr000))
+		if (key == 0 && was_mxr000_queue_found)
 		{
+			// Correct key value argument
 			key = c_mxr000;
 		}
 	}
@@ -1811,15 +2255,19 @@ error_code AudioRemoveNotifyEventQueue(u64 key, u32 iFlags)
 	return CELL_AUDIO_ERROR_TRANS_EVENT;
 }
 
-error_code cellAudioRemoveNotifyEventQueue(u64 key)
+error_code cellAudioRemoveNotifyEventQueue(ppu_thread& ppu, u64 key)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellAudio.warning("cellAudioRemoveNotifyEventQueue(key=0x%llx)", key);
 
 	return AudioRemoveNotifyEventQueue(key, 0);
 }
 
-error_code cellAudioRemoveNotifyEventQueueEx(u64 key, u32 iFlags)
+error_code cellAudioRemoveNotifyEventQueueEx(ppu_thread& ppu, u64 key, u32 iFlags)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellAudio.todo("cellAudioRemoveNotifyEventQueueEx(key=0x%llx, iFlags=0x%x)", key, iFlags);
 
 	if (iFlags & (~0u >> 5))
@@ -1836,7 +2284,7 @@ error_code cellAudioAddData(u32 portNum, vm::ptr<float> src, u32 samples, float 
 
 	auto& g_audio = g_fxo->get<cell_audio>();
 
-	std::unique_lock lock(g_audio.mutex);
+	auto lock = lock_audio(g_audio.mutex);
 
 	if (!g_audio.init)
 	{
@@ -1850,9 +2298,12 @@ error_code cellAudioAddData(u32 portNum, vm::ptr<float> src, u32 samples, float 
 
 	const audio_port& port = g_audio.ports[portNum];
 
-	const auto dst = port.get_vm_ptr();
+	if (!port.num_channels)
+	{
+		return CELL_OK;
+	}
 
-	lock.unlock();
+	const auto dst = port.get_vm_ptr();
 
 	volume = std::isfinite(volume) ? std::clamp(volume, -16.f, 16.f) : 0.f;
 
@@ -1870,7 +2321,7 @@ error_code cellAudioAdd2chData(u32 portNum, vm::ptr<float> src, u32 samples, flo
 
 	auto& g_audio = g_fxo->get<cell_audio>();
 
-	std::unique_lock lock(g_audio.mutex);
+	auto lock = lock_audio(g_audio.mutex);
 
 	if (!g_audio.init)
 	{
@@ -1885,8 +2336,6 @@ error_code cellAudioAdd2chData(u32 portNum, vm::ptr<float> src, u32 samples, flo
 	const audio_port& port = g_audio.ports[portNum];
 
 	const auto dst = port.get_vm_ptr();
-
-	lock.unlock();
 
 	volume = std::isfinite(volume) ? std::clamp(volume, -16.f, 16.f) : 0.f;
 
@@ -1926,7 +2375,7 @@ error_code cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 
 	auto& g_audio = g_fxo->get<cell_audio>();
 
-	std::unique_lock lock(g_audio.mutex);
+	auto lock = lock_audio(g_audio.mutex);
 
 	if (!g_audio.init)
 	{
@@ -1941,8 +2390,6 @@ error_code cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 	const audio_port& port = g_audio.ports[portNum];
 
 	const auto dst = port.get_vm_ptr();
-
-	lock.unlock();
 
 	volume = std::isfinite(volume) ? std::clamp(volume, -16.f, 16.f) : 0.f;
 
@@ -1969,8 +2416,10 @@ error_code cellAudioAdd6chData(u32 portNum, vm::ptr<float> src, float volume)
 	return CELL_OK;
 }
 
-error_code cellAudioMiscSetAccessoryVolume(u32 devNum, float volume)
+error_code cellAudioMiscSetAccessoryVolume(ppu_thread& ppu, u32 devNum, float volume)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellAudio.todo("cellAudioMiscSetAccessoryVolume(devNum=%d, volume=%f)", devNum, volume);
 
 	auto& g_audio = g_fxo->get<cell_audio>();
@@ -1987,13 +2436,15 @@ error_code cellAudioMiscSetAccessoryVolume(u32 devNum, float volume)
 	return CELL_OK;
 }
 
-error_code cellAudioSendAck(u64 data3)
+error_code cellAudioSendAck(ppu_thread& ppu, u64 data3)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellAudio.trace("cellAudioSendAck(data3=0x%llx)", data3);
 
 	auto& g_audio = g_fxo->get<cell_audio>();
 
-	std::unique_lock lock(g_audio.mutex);
+	std::lock_guard lock(g_audio.mutex);
 
 	if (!g_audio.init)
 	{
@@ -2014,8 +2465,10 @@ error_code cellAudioSendAck(u64 data3)
 	return CELL_OK;
 }
 
-error_code cellAudioSetPersonalDevice(s32 iPersonalStream, s32 iDevice)
+error_code cellAudioSetPersonalDevice(ppu_thread& ppu, s32 iPersonalStream, s32 iDevice)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellAudio.todo("cellAudioSetPersonalDevice(iPersonalStream=%d, iDevice=%d)", iPersonalStream, iDevice);
 
 	auto& g_audio = g_fxo->get<cell_audio>();
@@ -2038,8 +2491,10 @@ error_code cellAudioSetPersonalDevice(s32 iPersonalStream, s32 iDevice)
 	return CELL_OK;
 }
 
-error_code cellAudioUnsetPersonalDevice(s32 iPersonalStream)
+error_code cellAudioUnsetPersonalDevice(ppu_thread& ppu, s32 iPersonalStream)
 {
+	ppu.state += cpu_flag::wait;
+
 	cellAudio.todo("cellAudioUnsetPersonalDevice(iPersonalStream=%d)", iPersonalStream);
 
 	auto& g_audio = g_fxo->get<cell_audio>();
@@ -2063,10 +2518,6 @@ error_code cellAudioUnsetPersonalDevice(s32 iPersonalStream)
 
 DECLARE(ppu_module_manager::cellAudio)("cellAudio", []()
 {
-	// Private variables
-	REG_VAR(cellAudio, g_audio_buffer).flag(MFF_HIDDEN);
-	REG_VAR(cellAudio, g_audio_indices).flag(MFF_HIDDEN);
-
 	REG_FUNC(cellAudio, cellAudioInit);
 	REG_FUNC(cellAudio, cellAudioPortClose);
 	REG_FUNC(cellAudio, cellAudioPortStop);

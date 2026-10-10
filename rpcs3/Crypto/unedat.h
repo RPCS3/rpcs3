@@ -49,12 +49,18 @@ struct NPD_HEADER
 	u8 dev_hash[0x10];
 	s64 activate_time;
 	s64 expire_time;
+
+	std::string get_content_id() const
+	{
+		const std::string_view id{content_id, sizeof(content_id)};
+		return std::string{id.substr(0, id.find_first_of('\0'))};
+	}
 };
 
 struct EDAT_HEADER
 {
 	s32 flags;
-	s32 block_size;
+	u32 block_size;
 	u64 file_size;
 };
 
@@ -62,7 +68,7 @@ struct EDAT_HEADER
 extern fs::file DecryptEDAT(const fs::file& input, const std::string& input_file_name, int mode, u8 *custom_klic);
 
 extern void read_npd_edat_header(const fs::file* input, NPD_HEADER& NPD, EDAT_HEADER& EDAT);
-extern bool VerifyEDATHeaderWithKLicense(const fs::file& input, const std::string& input_file_name, const u8* custom_klic, NPD_HEADER *npd_out = nullptr);
+extern bool VerifyEDATHeaderWithKLicense(const fs::file& input, std::string_view input_file_name, const u8* custom_klic, NPD_HEADER *npd_out = nullptr);
 
 u128 GetEdatRifKeyFromRapFile(const fs::file& rap_file);
 
@@ -101,9 +107,10 @@ public:
 	{
 	}
 
-	// false if invalid
-	bool ReadHeader();
-	u64 ReadData(u64 pos, u8* data, u64 size);
+	// false if invalid. Clearing "verbose" mutes the log of a key that does not fit, which for a caller
+	// trying one candidate after another is an answer rather than a failure
+	bool ReadHeader(bool verbose = true);
+	u64 ReadData(u64 pos, u8* data, u64 size, bool verbose = true);
 
 	fs::stat_t get_stat() override
 	{

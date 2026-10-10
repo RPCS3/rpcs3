@@ -5,10 +5,11 @@
 #include "ranged_map.hpp"
 #include "surface_cache_dma.hpp"
 #include "../gcm_enums.h"
-#include "../rsx_utils.h"
+#include "../Utils/rsx_utils.h"
 #include <list>
 
 #include "util/asm.hpp"
+#include "util/pair.hpp"
 
 namespace rsx
 {
@@ -85,6 +86,38 @@ namespace rsx
 		surface_store(const surface_store&) = delete;
 
 	private:
+		surface_storage_type find_reusable_matching_surface(surface_type ref, u16 width, u16 height, surface_type excluded_surface)
+		{
+			const auto [new_w, new_h] = rsx::apply_resolution_scale<true>(
+				ref->resolution_scaling_config, width, height,
+				ref->template get_surface_width<rsx::surface_metrics::pixels>(),
+				ref->template get_surface_height<rsx::surface_metrics::pixels>());
+
+			for (auto it = invalidated_resources.begin(); it != invalidated_resources.end(); ++it)
+			{
+				auto& surface = *it;
+				if (surface.get() == ref || surface.get() == excluded_surface ||
+					surface->has_refs() || !surface->old_contents.empty())
+				{
+					continue;
+				}
+
+				if (surface->width() != new_w || surface->height() != new_h ||
+					surface->samples() != ref->samples() || surface->get_spp() != ref->get_spp() ||
+					surface->format_class() != ref->format_class() ||
+					!Traits::is_reusable_surface(surface.get(), ref))
+				{
+					continue;
+				}
+
+				auto result = std::move(surface);
+				invalidated_resources.erase(it);
+				return result;
+			}
+
+			return {};
+		}
+
 		template <bool is_depth_surface>
 		void split_surface_region(command_list_type cmd, u32 address, surface_type prev_surface, u16 width, u16 height, u8 bpp, rsx::surface_antialiasing aa)
 		{
@@ -111,11 +144,21 @@ namespace rsx
 					}
 					else
 					{
+						const bool is_pitch_compatible = Traits::surface_is_pitch_compatible(found->second, prev_surface->get_rsx_pitch());
+						if (!is_pitch_compatible && found->second->last_use_tag >= prev_surface->last_use_tag) [[unlikely]]
+						{
+							// HACK: A newer surface with an incompatible pitch owns the memory, do not evict.
+							// TODO: Pitch conversion is required to resolve this properly.
+							rsx_log.warning("[SURFACE CACHE] Discarding block at 0x%x from surface at 0x%x (pitch=%u); block is owned by a newer surface with pitch=%u.",
+								new_address, prev_surface->base_addr, prev_surface->get_rsx_pitch(), found->second->get_rsx_pitch());
+							return;
+						}
+
 						invalidate(found->second);
 						data.erase(new_address);
 
 						auto &old = invalidated_resources.back();
-						if (Traits::surface_is_pitch_compatible(old, prev_surface->get_rsx_pitch()))
+						if (is_pitch_compatible)
 						{
 							if (old->last_use_tag >= prev_surface->last_use_tag) [[unlikely]]
 							{
@@ -130,8 +173,12 @@ namespace rsx
 					// Memory requirements can be altered when cloning
 					free_rsx_memory(Traits::get(sink));
 				}
+				else
+				{
+					sink = find_reusable_matching_surface(region.source, region.width, region.height, invalidated);
+				}
 
-				Traits::clone_surface(cmd, sink, region.source, new_address, region);
+				Traits::clone_surface(cmd, sink, region.source, new_address, region, region.source->resolution_scaling_config);
 				allocate_rsx_memory(Traits::get(sink));
 
 				if (invalidated) [[unlikely]]
@@ -244,10 +291,9 @@ namespace rsx
 		template <bool is_depth_surface>
 		void intersect_surface_region(command_list_type cmd, u32 address, surface_type new_surface, surface_type prev_surface)
 		{
-			auto scan_list = [&new_surface, address](const rsx::address_range32& mem_range,
-				surface_ranged_map& data) -> rsx::simple_array<std::pair<u32, surface_type>>
+			auto scan_list = [&new_surface, address](const rsx::address_range32& mem_range, surface_ranged_map& data)
 			{
-				rsx::simple_array<std::pair<u32, surface_type>> result;
+				rsx::simple_array<utils::pair<u32, surface_type>> result;
 				for (auto it = data.begin_range(mem_range); it != data.end(); ++it)
 				{
 					auto surface = Traits::get(it->second);
@@ -314,7 +360,7 @@ namespace rsx
 				}
 			}
 
-			rsx::simple_array<std::pair<u32, surface_type>> surface_info;
+			rsx::simple_array<utils::pair<u32, surface_type>> surface_info;
 			if (list1.empty())
 			{
 				surface_info = std::move(list2);
@@ -398,6 +444,7 @@ namespace rsx
 			surface_antialiasing antialias,
 			usz width, usz height, usz pitch,
 			u8 bpp,
+			const rsx::surface_scaling_config_t& scaling_config,
 			Args&&... extra_params)
 		{
 			surface_storage_type old_surface_storage;
@@ -448,7 +495,7 @@ namespace rsx
 					}
 				}
 
-				if (Traits::surface_matches_properties(surface, format, width, height, antialias))
+				if (Traits::surface_matches_properties(surface, format, width, height, antialias, scaling_config))
 				{
 					if (!pitch_compatible)
 					{
@@ -495,7 +542,7 @@ namespace rsx
 				for (auto It = invalidated_resources.begin(); It != invalidated_resources.end(); It++)
 				{
 					auto &surface = *It;
-					if (Traits::surface_matches_properties(surface, format, width, height, antialias, true))
+					if (Traits::surface_matches_properties(surface, format, width, height, antialias, scaling_config, true))
 					{
 						new_surface_storage = std::move(surface);
 						Traits::notify_surface_reused(new_surface_storage);
@@ -531,7 +578,7 @@ namespace rsx
 			if (!new_surface)
 			{
 				ensure(store);
-				new_surface_storage = Traits::create_new_surface(address, format, width, height, pitch, antialias, std::forward<Args>(extra_params)...);
+				new_surface_storage = Traits::create_new_surface(command_list, address, format, width, height, pitch, antialias, scaling_config, std::forward<Args>(extra_params)...);
 				new_surface = Traits::get(new_surface_storage);
 				Traits::prepare_surface_for_drawing(command_list, new_surface);
 				allocate_rsx_memory(new_surface);
@@ -712,50 +759,49 @@ namespace rsx
 
 			u32 removed_count = 0;
 
-			auto compare_and_tag_row = [&](const u32 offset, u32 length) -> bool
+			auto compare_and_tag_row = [&](u32 offset, u32 length) -> bool
 			{
 				u64 mask = 0;
-				u8* dst_ptr = marker.data() + offset;
 
 				while (length >= 8)
 				{
-					const u64 value = read_from_ptr<u64>(dst_ptr);
+					const u64 value = read_from_ptr<u64>(marker, offset);
 					const u64 block_mask = ~value;              // If the value is not all 1s, set valid to true
 					mask |= block_mask;
-					write_to_ptr<u64>(dst_ptr, umax);
+					write_to_ptr<u64>(marker, offset, umax);
 
-					dst_ptr += 8;
+					offset += 8;
 					length -= 8;
 				}
 
 				if (length >= 4)
 				{
-					const u32 value = read_from_ptr<u32>(dst_ptr);
+					const u32 value = read_from_ptr<u32>(marker, offset);
 					const u32 block_mask = ~value;
 					mask |= block_mask;
-					write_to_ptr<u32>(dst_ptr, umax);
+					write_to_ptr<u32>(marker, offset, umax);
 
-					dst_ptr += 4;
+					offset += 4;
 					length -= 4;
 				}
 
 				if (length >= 2)
 				{
-					const u16 value = read_from_ptr<u16>(dst_ptr);
+					const u16 value = read_from_ptr<u16>(marker, offset);
 					const u16 block_mask = ~value;
 					mask |= block_mask;
-					write_to_ptr<u16>(dst_ptr, umax);
+					write_to_ptr<u16>(marker, offset, umax);
 
-					dst_ptr += 2;
+					offset += 2;
 					length -= 2;
 				}
 
 				if (length)
 				{
-					const u8 value = *dst_ptr;
+					const u8 value = read_from_ptr<u8>(marker, offset);
 					const u8 block_mask = ~value;
 					mask |= block_mask;
-					*dst_ptr = umax;
+					write_to_ptr<u8>(marker, offset, umax);
 				}
 
 				return !!mask;
@@ -842,11 +888,13 @@ namespace rsx
 			surface_color_format color_format,
 			surface_antialiasing antialias,
 			usz width, usz height, usz pitch,
+			const rsx::surface_scaling_config_t& scaling_config,
 			Args&&... extra_params)
 		{
 			return bind_surface_address<false>(
 				command_list, address, color_format, antialias,
 				width, height, pitch, get_format_block_size_in_bytes(color_format),
+				scaling_config,
 				std::forward<Args>(extra_params)...);
 		}
 
@@ -857,12 +905,14 @@ namespace rsx
 			surface_depth_format2 depth_format,
 			surface_antialiasing antialias,
 			usz width, usz height, usz pitch,
+			const rsx::surface_scaling_config_t& scaling_config,
 			Args&&... extra_params)
 		{
 			return bind_surface_address<true>(
 				command_list, address, depth_format, antialias,
 				width, height, pitch,
 				get_format_block_size_in_bytes(depth_format),
+				scaling_config,
 				std::forward<Args>(extra_params)...);
 		}
 
@@ -969,6 +1019,7 @@ namespace rsx
 			surface_raster_type raster_type,
 			const std::array<u32, 4> &surface_addresses, u32 address_z,
 			const std::array<u32, 4> &surface_pitch, u32 zeta_pitch,
+			const rsx::surface_scaling_config_t& scaling_config,
 			Args&&... extra_params)
 		{
 			u32 clip_width = clip_horizontal_reg;
@@ -998,7 +1049,7 @@ namespace rsx
 
 					m_bound_render_targets[surface_index] = std::make_pair(surface_addresses[surface_index],
 						bind_address_as_render_targets(command_list, surface_addresses[surface_index], color_format, antialias,
-							clip_width, clip_height, surface_pitch[surface_index], std::forward<Args>(extra_params)...));
+							clip_width, clip_height, surface_pitch[surface_index], scaling_config, std::forward<Args>(extra_params)...));
 
 					m_bound_render_target_ids.push_back(surface_index);
 				}
@@ -1014,12 +1065,95 @@ namespace rsx
 			{
 				m_bound_depth_stencil = std::make_pair(address_z,
 					bind_address_as_depth_stencil(command_list, address_z, depth_format, antialias,
-						clip_width, clip_height, zeta_pitch, std::forward<Args>(extra_params)...));
+						clip_width, clip_height, zeta_pitch, scaling_config, std::forward<Args>(extra_params)...));
 			}
 			else
 			{
 				m_bound_depth_stencil = std::make_pair(0, nullptr);
 			}
+		}
+
+		// Prepare a render target surface for drawing without binding it to the current RTV/DSV set.
+		// Useful for transfer operations to ensure watertight writes.
+		template <typename ...Args>
+		void prepare_transfer_target(
+			command_list_type command_list,
+			surface_type surface,
+			rsx::surface_access access,
+			Args&&... extra_params)
+		{
+			// We need to reintersect the surface against the surface hierarchy tree to avoid data loss
+			if (!surface->is_depth_surface()) [[ likely ]]
+			{
+				bind_address_as_render_targets(
+					command_list,
+					surface->base_addr,
+					surface->format_info.gcm_color_format,
+					surface->get_aa_mode(),
+					surface->get_surface_width(),
+					surface->get_surface_height(),
+					surface->get_rsx_pitch(),
+					surface->get_resolution_scaling_config(),
+					std::forward<Args>(extra_params)...);
+			}
+			else
+			{
+				bind_address_as_depth_stencil(
+					command_list,
+					surface->base_addr,
+					surface->format_info.gcm_depth_format,
+					surface->get_aa_mode(),
+					surface->get_surface_width(),
+					surface->get_surface_height(),
+					surface->get_rsx_pitch(),
+					surface->get_resolution_scaling_config(),
+					std::forward<Args>(extra_params)...);
+			}
+
+			ensure(access.is_transfer());
+			surface->memory_barrier(command_list, access);
+		}
+
+		// Create surface on-demand from an RSX image description
+		template <typename ...Args>
+		surface_type create_surface_from_rsx_section(
+			command_list_type command_list,
+			const rsx::image_section_attributes_t& attributes,
+			const rsx::surface_scaling_config_t& scaling_config,
+			Args&&... extra_params)
+		{
+			cache_tag = rsx::get_shared_tag();
+			surface_type result;
+
+			if (rsx::classify_format(attributes.gcm_format) == RSX_FORMAT_CLASS_COLOR)
+			{
+				result = bind_address_as_render_targets(
+					command_list,
+					attributes.address,
+					rsx::get_compatible_surface_color_format(attributes.gcm_format),
+					rsx::surface_antialiasing::center_1_sample,
+					attributes.width,
+					attributes.height,
+					attributes.pitch,
+					scaling_config,
+					std::forward<Args>(extra_params)...);
+			}
+			else
+			{
+				result = bind_address_as_depth_stencil(
+					command_list,
+					attributes.address,
+					rsx::get_compatible_surface_depth_format(attributes.gcm_format),
+					rsx::surface_antialiasing::center_1_sample,
+					attributes.width,
+					attributes.height,
+					attributes.pitch,
+					{},
+					std::forward<Args>(extra_params)...);
+			}
+
+			result->raster_type = attributes.swizzled ? surface_raster_type::swizzle : surface_raster_type::linear;
+			return result;
 		}
 
 		u8 get_color_surface_count() const
@@ -1038,6 +1172,69 @@ namespace rsx
 				return Traits::get(_It->second);
 
 			return nullptr;
+		}
+
+		// Workaround to handle overlapping surfaces with differing pitch
+		// For a surface region defined by range [address, length] and pitch, we return the max length we can write without clobbering a surface of different pitch.
+		// TODO: Re-evaluate usefulness once pitch-conversion work is completed.
+		u32 truncate_memory_range_by_pitch(u32 address, u32 pitch, u32 length, u64 reference_tag)
+		{
+			if (!length || !pitch)
+			{
+				return length;
+			}
+
+			const auto test_range = rsx::address_range32::start_length(address, length);
+			const auto test_height = static_cast<u16>(utils::aligned_div(length, pitch));
+			u32 limit = address + length;
+
+			auto process_list_function = [&](surface_ranged_map& data)
+			{
+				for (auto it = data.begin_range(test_range); it != data.end(); ++it)
+				{
+					// Only a surface that begins after us can shorten the length. An exact address match is (hackishly) handled in bind_surface_address instead.
+					const auto base_address = it->first;
+					if (base_address <= address || base_address >= limit)
+					{
+						continue;
+					}
+
+					const auto surface = Traits::get(it->second);
+					if (!surface->get_memory_range().overlaps(test_range))
+					{
+						continue;
+					}
+
+					if (rsx::pitch_compatible(surface, pitch, test_height))
+					{
+						// Normal inheritance resolves this overlap. Nothing to do.
+						continue;
+					}
+
+					if (surface->last_use_tag <= reference_tag)
+					{
+						// Stale data, safe to swallow.
+						continue;
+					}
+
+					// min() is already handled in the original address bounds check
+					limit = base_address;
+				}
+			};
+
+			if (m_render_targets_memory_range.valid() &&
+				test_range.overlaps(m_render_targets_memory_range))
+			{
+				process_list_function(m_render_targets_storage);
+			}
+
+			if (m_depth_stencil_memory_range.valid() &&
+				test_range.overlaps(m_depth_stencil_memory_range))
+			{
+				process_list_function(m_depth_stencil_storage);
+			}
+
+			return limit - address;
 		}
 
 		/**
@@ -1088,22 +1285,29 @@ namespace rsx
 		}
 
 		template <typename commandbuffer_type>
-		rsx::simple_array<surface_overlap_info> get_merged_texture_memory_region(commandbuffer_type& cmd, u32 texaddr, u32 required_width, u32 required_height, u32 required_pitch, u8 required_bpp, rsx::surface_access access)
+		rsx::simple_array<surface_overlap_info> get_merged_texture_memory_region(
+			commandbuffer_type& cmd,
+			u32 texaddr,
+			u32 required_width,
+			u32 required_height,
+			u32 required_pitch,
+			u8 required_bpp,
+			rsx::surface_access access)
 		{
 			rsx::simple_array<surface_overlap_info> result;
-			rsx::simple_array<std::pair<u32, bool>> dirty;
+			rsx::simple_array<utils::pair<u32, bool>> dirty;
 
-			const auto surface_internal_pitch = (required_width * required_bpp);
+			const u32 required_width_in_bytes = (required_width * required_bpp);
 
 			// Sanity check
-			if (surface_internal_pitch > required_pitch) [[unlikely]]
+			if (required_width_in_bytes > required_pitch) [[unlikely]]
 			{
 				rsx_log.warning("Invalid 2D region descriptor. w=%d, h=%d, bpp=%d, pitch=%d",
 							required_width, required_height, required_bpp, required_pitch);
 				return {};
 			}
 
-			const auto test_range = utils::address_range32::start_length(texaddr, (required_pitch * required_height) - (required_pitch - surface_internal_pitch));
+			const auto test_range = utils::address_range32::start_length(texaddr, (required_pitch * required_height) - (required_pitch - required_width_in_bytes));
 
 			auto process_list_function = [&](surface_ranged_map& data, bool is_depth)
 			{
@@ -1123,51 +1327,63 @@ namespace rsx
 					if (!rsx::pitch_compatible(surface, required_pitch, required_height))
 						continue;
 
-					surface_overlap_info info;
-					u32 width, height;
-					info.surface = surface;
-					info.base_address = range.start;
-					info.is_depth = is_depth;
+					// 2D tests are done in format-agnostic rectangles (1bpp)
+					const u32 surface_width_in_bytes = surface->template get_surface_width<rsx::surface_metrics::bytes>();
+					const u32 surface_height = surface->template get_surface_height<rsx::surface_metrics::samples>();
+					const u32 surface_bpp = surface->get_bpp();
 
-					const u32 normalized_surface_width = surface->template get_surface_width<rsx::surface_metrics::bytes>() / required_bpp;
-					const u32 normalized_surface_height = surface->template get_surface_height<rsx::surface_metrics::samples>();
+					u32 src_x, src_y, dst_x, dst_y, width_in_bytes, height;
 
 					if (range.start >= texaddr) [[likely]]
 					{
+						// The surface begins somewhere inside the requested region
 						const auto offset = range.start - texaddr;
-						info.dst_area.y = (offset / required_pitch);
-						info.dst_area.x = (offset % required_pitch) / required_bpp;
+						dst_y = (offset / required_pitch);
+						dst_x = (offset % required_pitch);
 
-						if (info.dst_area.x >= required_width || info.dst_area.y >= required_height) [[unlikely]]
+						if (dst_x >= required_width_in_bytes || dst_y >= required_height) [[unlikely]]
 						{
 							// Out of bounds
 							continue;
 						}
 
-						info.src_area.x = 0;
-						info.src_area.y = 0;
-						width = std::min<u32>(normalized_surface_width, required_width - info.dst_area.x);
-						height = std::min<u32>(normalized_surface_height, required_height - info.dst_area.y);
+						src_x = 0;
+						src_y = 0;
+						width_in_bytes = std::min<u32>(surface_width_in_bytes, required_width_in_bytes - dst_x);
+						height = std::min<u32>(surface_height, required_height - dst_y);
 					}
 					else
 					{
-						const auto pitch = surface->get_rsx_pitch();
+						// The requested region begins somewhere inside the surface
+						const auto surface_pitch = surface->get_rsx_pitch();
 						const auto offset = texaddr - range.start;
-						info.src_area.y = (offset / pitch);
-						info.src_area.x = (offset % pitch) / required_bpp;
+						src_y = (offset / surface_pitch);
+						src_x = (offset % surface_pitch);
 
-						if (info.src_area.x >= normalized_surface_width || info.src_area.y >= normalized_surface_height) [[unlikely]]
+						if (src_x >= surface_width_in_bytes || src_y >= surface_height) [[unlikely]]
 						{
 							// Region lies outside the actual texture area, but inside the 'tile'
 							// In this case, a small region lies to the top-left corner, partially occupying the  target
 							continue;
 						}
 
-						info.dst_area.x = 0;
-						info.dst_area.y = 0;
-						width = std::min<u32>(required_width, normalized_surface_width - info.src_area.x);
-						height = std::min<u32>(required_height, normalized_surface_height - info.src_area.y);
+						dst_x = 0;
+						dst_y = 0;
+						width_in_bytes = std::min<u32>(required_width_in_bytes, surface_width_in_bytes - src_x);
+						height = std::min<u32>(required_height, surface_height - src_y);
 					}
+
+					if (width_in_bytes < required_bpp) [[unlikely]]
+					{
+						// There is nothing transferable here; less than 1 pixel available.
+						continue;
+					}
+
+					// Drop any excess subpixels on the requester side if any. Ensures division generates a perfect fitting rect without rounding bugs.
+					width_in_bytes -= (width_in_bytes % required_bpp);
+
+					// We need to track if this surface is reloaded from CPU during this next step.
+					const bool needs_reload = surface->needs_cpu_upload();
 
 					// Delay this as much as possible to avoid side-effects of spamming barrier
 					if (surface->memory_barrier(cmd, access); !surface->test())
@@ -1176,22 +1392,26 @@ namespace rsx
 						continue;
 					}
 
-					info.is_clipped = (width < required_width || height < required_height);
-					info.src_area.height = info.dst_area.height = height;
-					info.dst_area.width = width;
+					surface_overlap_info info;
+					info.surface = surface;
+					info.base_address = range.start;
+					info.is_depth = is_depth;
+					info.is_clipped = (width_in_bytes < required_width_in_bytes || height < required_height);
+					info.is_reloaded = needs_reload;
 
-					if (auto surface_bpp = surface->get_bpp(); surface_bpp != required_bpp) [[unlikely]]
-					{
-						// Width is calculated in the coordinate-space of the requester; normalize
-						info.src_area.x = (info.src_area.x * required_bpp) / surface_bpp;
-						info.src_area.width = utils::align(width * required_bpp, surface_bpp) / surface_bpp;
-					}
-					else
-					{
-						info.src_area.width = width;
-					}
+					// Decode source
+					info.src_area.x = src_x / surface_bpp;
+					info.src_area.y = src_y;
+					info.src_area.width = utils::aligned_div(width_in_bytes, surface_bpp);
+					info.src_area.height = height;
 
-					result.push_back(info);
+					// Decode dest
+					info.dst_area.x = dst_x / required_bpp;
+					info.dst_area.y = dst_y;
+					info.dst_area.width = width_in_bytes / required_bpp;
+					info.dst_area.height = height;
+
+					result.push_back(std::move(info));
 				}
 			};
 
@@ -1219,17 +1439,35 @@ namespace rsx
 
 			if (result.size() > 1)
 			{
-				std::sort(result.begin(), result.end(), [](const auto &a, const auto &b)
+				result.sort([texaddr](const auto &a, const auto &b)
 				{
-					if (a.surface->last_use_tag == b.surface->last_use_tag)
+					// Check for the common case first. 99.99% of lookups end here.
+					if (a.surface->last_use_tag != b.surface->last_use_tag) [[ likely ]]
 					{
-						const auto area_a = a.dst_area.width * a.dst_area.height;
-						const auto area_b = b.dst_area.width * b.dst_area.height;
-
-						return area_a < area_b;
+						return a.surface->last_use_tag < b.surface->last_use_tag;
 					}
 
-					return a.surface->last_use_tag < b.surface->last_use_tag;
+					// Surfaces are aliasing. We need a tie-breaker
+					if (a.is_depth != b.is_depth &&
+						g_cfg.video.fb_aliasing_bias != framebuffer_aliasing_bias::_auto)
+					{
+						// User-defined preference for mismatched depth/color aliasing. This is the most common aliasing cause.
+						// Preferred aspect goes last.
+						const bool prefer_color = g_cfg.video.fb_aliasing_bias == framebuffer_aliasing_bias::prefer_color;
+						return prefer_color ? a.is_depth : b.is_depth;
+					}
+
+					// Check if we have a perfect match and make it go last
+					if (a.base_address == texaddr && !a.is_clipped) return false;
+					if (b.base_address == texaddr && !b.is_clipped) return true;
+
+					// Check if one of the two is able to serve the full request better than the other.
+					if (a.is_clipped != b.is_clipped) return a.is_clipped;
+
+					// Compare available area if nothing else could break the tie
+					const auto area_a = a.dst_area.width * a.dst_area.height;
+					const auto area_b = b.dst_area.width * b.dst_area.height;
+					return area_a < area_b;
 				});
 			}
 
@@ -1461,6 +1699,114 @@ namespace rsx
 					// We didn't release enough resources, scan the active RTTs as well
 					collapse_dirty_surfaces(cmd, memory_pressure);
 				}
+			}
+		}
+
+		void sync_scaling_config(command_list_type cmd, const rsx::surface_scaling_config_t& active_config)
+		{
+			auto process_list_function = [&](surface_ranged_map& data, const utils::address_range32& range)
+			{
+				std::vector<surface_type> surfaces_to_clone;
+
+				for (auto It = data.begin_range(range); It != data.end();)
+				{
+					auto surface = Traits::get(It->second);
+					if (surface->get_resolution_scaling_config() == active_config)
+					{
+						++It;
+						continue;
+					}
+
+					// Perform a test scaling and check if anything is different after scaling
+					// There are many cases where this will avoid creating new surfaces
+					const auto [new_w, new_h] = rsx::apply_resolution_scale<true>(
+						active_config,
+						surface->template get_surface_width<>(),
+						surface->template get_surface_height<>());
+
+					if (new_w == surface->width() && new_h == surface->height())
+					{
+						// Not affected by resolution scale. Just update the details and move on.
+						surface->resolution_scaling_config = active_config;
+						++It;
+						continue;
+					}
+
+					surfaces_to_clone.push_back(surface);
+
+					// Invalidate the previous surface
+					invalidate(It->second);
+					It = data.erase(It);
+				}
+
+				for (auto& surface : surfaces_to_clone)
+				{
+					// Enqueue the memory transfer
+					surface_storage_type sink{};
+					deferred_clipped_region<surface_type> copy{};
+					copy.width = surface->template get_surface_width<>();
+					copy.height = surface->template get_surface_height<>();
+					copy.transfer_scale_x = 1.f;
+					copy.transfer_scale_y = 1.f;
+					copy.target = nullptr;
+					copy.source = surface;
+
+					Traits::clone_surface(cmd, sink, surface, surface->base_addr, copy, active_config);
+					allocate_rsx_memory(Traits::get(sink));
+
+					// Replace with the new one
+					auto new_surface = Traits::get(sink);
+					ensure(copy.target == new_surface);
+					data.emplace(surface->get_memory_range(), std::move(sink));
+
+					// Force barrier to reduce VRAM pressure
+					new_surface->memory_barrier(cmd, rsx::surface_access::memory_read);
+				}
+			};
+
+			const auto rtt_bind_backup = m_bound_render_targets;
+			const auto dsv_bind_backup = m_bound_depth_stencil;
+
+			// Unbind everything. We'll restore it later
+			for (auto& rtt_bind : m_bound_render_targets)
+			{
+				rtt_bind = {};
+			}
+
+			m_bound_depth_stencil = {};
+
+			process_list_function(m_render_targets_storage, m_render_targets_memory_range);
+			process_list_function(m_depth_stencil_storage, m_depth_stencil_memory_range);
+
+			// Restore bindings.
+			for (int i = 0; i < 4; ++i)
+			{
+				const auto address = rtt_bind_backup[i].first;
+				if (!address)
+				{
+					continue;
+				}
+
+				auto rtt = m_render_targets_storage.find(address);
+				ensure(rtt != m_render_targets_storage.end());
+
+				m_bound_render_targets[i] =
+				{
+					address,
+					Traits::get(rtt->second)
+				};
+			}
+
+			if (const auto ds_address = dsv_bind_backup.first)
+			{
+				auto ds = m_depth_stencil_storage.find(ds_address);
+				ensure(ds != m_depth_stencil_storage.end());
+
+				m_bound_depth_stencil =
+				{
+					ds_address,
+					Traits::get(ds->second)
+				};
 			}
 		}
 	};

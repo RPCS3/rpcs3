@@ -70,11 +70,11 @@ raw_mouse_settings_dialog::raw_mouse_settings_dialog(QWidget* parent)
 	g_raw_mouse_handler = std::make_unique<raw_mouse_handler>();
 	g_raw_mouse_handler->set_is_for_gui(true);
 	g_raw_mouse_handler->Init(std::max(max_devices, ::size32(g_cfg_raw_mouse.players)));
-	g_raw_mouse_handler->set_mouse_press_callback([this](const std::string& device_name, s32 button_code, bool pressed)
+	g_raw_mouse_handler->set_mouse_press_callback([this](std::string_view device_name, s32 button_code, bool pressed)
 	{
 		mouse_press(device_name, button_code, pressed);
 	});
-	g_raw_mouse_handler->set_key_press_callback([this](const std::string& device_name, s32 scan_code, bool pressed)
+	g_raw_mouse_handler->set_key_press_callback([this](std::string_view device_name, s32 scan_code, bool pressed)
 	{
 		key_press(device_name, scan_code, pressed);
 	});
@@ -225,7 +225,7 @@ void raw_mouse_settings_dialog::add_tabs(QTabWidget* tabs)
 
 		update_combo_box(player);
 
-		connect(combo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this, player, combo](int index)
+		connect(combo, &QComboBox::currentIndexChanged, this, [this, player, combo](int index)
 		{
 			if (index < 0 || !combo)
 				return;
@@ -281,7 +281,7 @@ void raw_mouse_settings_dialog::add_tabs(QTabWidget* tabs)
 		m_accel_spin_boxes.push_back(mouse_acceleration_spin_box);
 		mouse_acceleration_spin_box->setRange(0.1, 10.0);
 		mouse_acceleration_spin_box->setValue(config->mouse_acceleration.get() / 100.0);
-		connect(mouse_acceleration_spin_box, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, [player](double value)
+		connect(mouse_acceleration_spin_box, &QDoubleSpinBox::valueChanged, this, [player](double value)
 		{
 			auto& config = ::at32(g_cfg_raw_mouse.players, player)->mouse_acceleration;
 			config.set(std::clamp(value * 100.0, config.min, config.max));
@@ -350,7 +350,7 @@ void raw_mouse_settings_dialog::reset_config()
 	}
 }
 
-void raw_mouse_settings_dialog::mouse_press(const std::string& device_name, s32 button_code, bool pressed)
+void raw_mouse_settings_dialog::mouse_press(std::string_view device_name, s32 button_code, bool pressed)
 {
 	if (m_button_id < 0 || pressed) // Let's only react to mouse releases
 	{
@@ -378,7 +378,7 @@ void raw_mouse_settings_dialog::mouse_press(const std::string& device_name, s32 
 	reactivate_buttons();
 }
 
-void raw_mouse_settings_dialog::key_press(const std::string& device_name, s32 scan_code, bool pressed)
+void raw_mouse_settings_dialog::key_press(std::string_view device_name, s32 scan_code, bool pressed)
 {
 	if (m_button_id < 0 || !pressed) // Let's only react to key presses
 	{
@@ -404,7 +404,7 @@ void raw_mouse_settings_dialog::key_press(const std::string& device_name, s32 sc
 	reactivate_buttons();
 }
 
-void raw_mouse_settings_dialog::handle_device_change(const std::string& device_name)
+void raw_mouse_settings_dialog::handle_device_change(std::string_view device_name)
 {
 	if (is_device_active(device_name))
 	{
@@ -419,7 +419,7 @@ void raw_mouse_settings_dialog::handle_device_change(const std::string& device_n
 	}
 }
 
-bool raw_mouse_settings_dialog::is_device_active(const std::string& device_name)
+bool raw_mouse_settings_dialog::is_device_active(std::string_view device_name)
 {
 	if (!g_raw_mouse_handler || device_name.empty())
 	{

@@ -3,6 +3,7 @@
 #include "ps_move_calibration.h"
 #include "Emu/Io/pad_config.h"
 #include "Emu/Cell/Modules/cellGem.h"
+#include "Emu/Cell/timers.hpp"
 
 LOG_CHANNEL(move_log, "Move");
 
@@ -12,37 +13,6 @@ namespace
 {
 	constexpr id_pair MOVE_ID_ZCM1 = {0x054C, 0x03D5};
 	constexpr id_pair MOVE_ID_ZCM2 = {0x054C, 0x0c5e};
-
-	enum button_flags : u16
-	{
-		select   = 0x01,
-		start    = 0x08,
-		triangle = 0x10,
-		circle   = 0x20,
-		cross    = 0x40,
-		square   = 0x80,
-		ps       = 0x0001,
-		move     = 0x4008,
-		t        = 0x8010,
-		ext_dev  = 0x1000,
-
-		// Sharpshooter
-		ss_firing_mode_1 = 0x01,
-		ss_firing_mode_2 = 0x02,
-		ss_firing_mode_3 = 0x04,
-		ss_trigger       = 0x40,
-		ss_reload        = 0x80,
-
-		// Racing Wheel
-		rw_d_pad_up    = 0x10,
-		rw_d_pad_right = 0x20,
-		rw_d_pad_down  = 0x40,
-		rw_d_pad_left  = 0x80,
-		rw_l1          = 0x04,
-		rw_r1          = 0x08,
-		rw_paddle_l    = 0x01,
-		rw_paddle_r    = 0x02,
-	};
 
 	enum battery_status : u8
 	{
@@ -152,7 +122,7 @@ void ps_move_handler::init_config(cfg_pad* cfg)
 	cfg->rs_up.def    = ::at32(button_list, ps_move_key_codes::none);
 	cfg->start.def    = ::at32(button_list, ps_move_key_codes::start);
 	cfg->select.def   = ::at32(button_list, ps_move_key_codes::select);
-	cfg->ps.def       = ::at32(button_list, ps_move_key_codes::ps);
+	cfg->ps.def       = cfg_pad::make_button_string(button_list, {{ps_move_key_codes::ps}, {ps_move_key_codes::start, ps_move_key_codes::select}});
 	cfg->square.def   = ::at32(button_list, ps_move_key_codes::square);
 	cfg->cross.def    = ::at32(button_list, ps_move_key_codes::cross);
 	cfg->circle.def   = ::at32(button_list, ps_move_key_codes::circle);
@@ -175,6 +145,9 @@ void ps_move_handler::init_config(cfg_pad* cfg)
 	cfg->rstickdeadzone.def    = 40; // between 0 and 255
 	cfg->ltriggerthreshold.def = 0;  // between 0 and 255
 	cfg->rtriggerthreshold.def = 0;  // between 0 and 255
+
+	// We have to enable orientation by default
+	cfg->orientation_enabled.def = true;
 
 	// apply defaults
 	cfg->from_default();
@@ -228,7 +201,7 @@ hid_device* ps_move_handler::connect_move_device(ps_move_device* device, std::st
 	device->hidDevice = hid_open_path(path.data());
 	if (!device->hidDevice)
 	{
-		move_log.error("%s hid_open_path failed! error='%s', path='%s'", m_type, hid_error(device->bt_device), path);
+		move_log.error("%s hid_open_path failed! error='%s', path='%s'", m_type, hid_error(device->hidDevice), path);
 		device->close();
 		return nullptr;
 	}
@@ -312,22 +285,29 @@ void ps_move_handler::check_add_device(hid_device* hidDevice, hid_enumerated_dev
 	device->path = path;
 
 	// Get calibration
+	device->calibration = {};
 	device->calibration.is_valid = true;
 
 	ps_move_calibration_blob calibration {};
 
-	for (int i = 0; i < 2; i++)
+	// The calibration data is split into multiple blocks. Each read returns the next block, so the first block we get isn't necessarily the first one.
+	const u32 block_count = device->model == ps_move_model::ZCM1 ? 3 : 2;
+	const u32 all_blocks_mask = (1u << block_count) - 1;
+	u32 received_blocks_mask = 0;
+
+	for (u32 i = 0; i < block_count * 2 && received_blocks_mask != all_blocks_mask; i++)
 	{
 		std::array<u8, PSMOVE_CALIBRATION_SIZE> cal {};
 		cal[0] = 0x10;
 		const int res = hid_get_feature_report(device->hidDevice, cal.data(), cal.size());
-		if (res < 0)
+		if (res != PSMOVE_CALIBRATION_SIZE)
 		{
 			move_log.error("connect_move_device: hid_get_feature_report 0x10 (calibration) failed! result=%d, error=%s", res, hid_error(device->hidDevice));
 			device->calibration.is_valid = false;
 			break;
 		}
 
+		u32 block = 0;
 		int src_offset = 0;
 		int dest_offset = 0;
 
@@ -335,12 +315,14 @@ void ps_move_handler::check_add_device(hid_device* hidDevice, hid_enumerated_dev
 			(cal[1] == 0x81 && device->model == ps_move_model::ZCM2))
 		{
 			// This is the second block
+			block = 1;
 			dest_offset = PSMOVE_CALIBRATION_SIZE;
 			src_offset = 2;
 		}
 		else if (cal[1] == 0x82 && device->model == ps_move_model::ZCM1)
 		{
 			// This is the third block
+			block = 2;
 			dest_offset = 2 * PSMOVE_CALIBRATION_SIZE - 2;
 			src_offset = 2;
 		}
@@ -352,12 +334,32 @@ void ps_move_handler::check_add_device(hid_device* hidDevice, hid_enumerated_dev
 		}
 
 		std::memcpy(&calibration.data[dest_offset], &cal[src_offset], cal.size() - src_offset);
+		received_blocks_mask |= 1u << block;
+	}
+
+	if (device->calibration.is_valid && received_blocks_mask != all_blocks_mask)
+	{
+		move_log.error("connect_move_device: Failed to read all calibration blocks: received_blocks_mask=0x%x, expected=0x%x", received_blocks_mask, all_blocks_mask);
+		device->calibration.is_valid = false;
 	}
 
 	if (device->calibration.is_valid)
 	{
-		psmove_parse_calibration(calibration, *device);
+		device->calibration.is_valid = psmove_parse_calibration(calibration, *device);
 	}
+
+	// We queue the IMU samples once per input report (see get_extended_info)
+	device->queues_imu_samples = true;
+
+	// Correct the orientation drift with the accelerometer. Recreate the AHRS so that the settings are applied.
+	device->ahrs_drift_correction = true;
+	device->ahrs.reset();
+
+	// This might be a different controller, so we have to learn the gyro offset from scratch
+	device->gyro_bias_initialized = false;
+	device->has_new_input_report = false;
+	device->last_input_report_time_us = 0;
+	device->imu_sample_count = 0;
 
 	// Activate
 	if (send_output_report(device) == -1)
@@ -408,11 +410,16 @@ ps_move_handler::DataStatus ps_move_handler::get_data(ps_move_device* device)
 	if (res != static_cast<int>(report_size))
 		return DataStatus::NoNewData;
 
+	// Ignore anything that isn't an input report
+	if (buf[0] != reportId)
+		return DataStatus::NoNewData;
+
 	if (std::memcmp(report, buf.data(), report_size) == 0)
 		return DataStatus::NoNewData;
 
 	// Get the new data
 	std::memcpy(report, buf.data(), report_size);
+	device->has_new_input_report = true;
 
 	//move_log.error("%s", fmt::buf_to_hexstring(buf.data(), buf.size(), 64));
 
@@ -427,6 +434,15 @@ PadHandlerBase::connection ps_move_handler::update_connection(const std::shared_
 
 	if (move_device->hidDevice == nullptr)
 	{
+		// Try to reconnect every now and then.
+		const steady_clock::time_point now = steady_clock::now();
+		const s64 elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - move_device->last_reconnect_attempt).count();
+
+		if (elapsed_ms < 1000)
+			return connection::disconnected;
+
+		move_device->last_reconnect_attempt = now;
+
 		// try to reconnect
 #ifdef _WIN32
 		if (hid_device* dev = connect_move_device(move_device, move_device->path))
@@ -577,21 +593,21 @@ void ps_move_handler::handle_external_device(const pad_ensemble& binding)
 	move_data.external_device_write_requested = false;
 }
 
-bool ps_move_handler::get_is_left_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
+bool ps_move_handler::get_is_left_trigger(const std::shared_ptr<PadDevice>& /*device*/, u32 keyCode)
 {
 	// We also report the T button as left trigger
 	return keyCode == ps_move_key_codes::L2 || keyCode == ps_move_key_codes::t;
 }
 
-bool ps_move_handler::get_is_right_trigger(const std::shared_ptr<PadDevice>& /*device*/, u64 keyCode)
+bool ps_move_handler::get_is_right_trigger(const std::shared_ptr<PadDevice>& /*device*/, u32 keyCode)
 {
 	// We also report the Throttle button as right trigger
 	return keyCode == ps_move_key_codes::R2 || keyCode == ps_move_key_codes::throttle;
 }
 
-std::unordered_map<u64, u16> ps_move_handler::get_button_values(const std::shared_ptr<PadDevice>& device)
+std::unordered_map<u32, u16> ps_move_handler::get_button_values(const std::shared_ptr<PadDevice>& device)
 {
-	std::unordered_map<u64, u16> key_buf;
+	std::unordered_map<u32, u16> key_buf;
 	ps_move_device* dev = static_cast<ps_move_device*>(device.get());
 	if (!dev)
 		return key_buf;
@@ -608,7 +624,17 @@ std::unordered_map<u64, u16> ps_move_handler::get_button_values(const std::share
 	const u16 extra_buttons = input.sequence_number << 8 | input.buttons_3;
 	key_buf[ps_move_key_codes::ps]   = (extra_buttons & button_flags::ps)   ? 255 : 0;
 	key_buf[ps_move_key_codes::move] = (extra_buttons & button_flags::move) ? 255 : 0;
-	key_buf[ps_move_key_codes::t]    = (extra_buttons & button_flags::t)    ? input.trigger_2 : 0;
+
+	u16 trigger = 0;
+	if (extra_buttons & button_flags::t)
+	{
+		switch (dev->model)
+		{
+		case ps_move_model::ZCM1: trigger = (input.trigger_1 + input.trigger_2) / 2; break;
+		case ps_move_model::ZCM2: trigger = input.trigger_1; break;
+		}
+	}
+	key_buf[ps_move_key_codes::t] = trigger;
 
 	dev->battery_level = input.battery_level;
 
@@ -663,33 +689,56 @@ void ps_move_handler::get_extended_info(const pad_ensemble& binding)
 
 	const ps_move_input_report_common& input = dev->input_report_common();
 
+	// Get the time since the last input report. We only queue new IMU samples once per report.
+	// Skip the first report and long gaps (e.g. reconnects), since there is no meaningful delta.
+	f32 report_delta_time = 0.0f;
+
+	if (std::exchange(dev->has_new_input_report, false))
+	{
+		const u64 now_us = get_system_time();
+		const u64 last_us = std::exchange(dev->last_input_report_time_us, now_us);
+
+		if (last_us != 0 && (now_us - last_us) <= 250'000)
+		{
+			report_delta_time = (now_us - last_us) / 1'000'000.0f;
+		}
+	}
+
 	// The default position is flat on the ground, pointing forward.
 	// The accelerometers constantly measure G forces.
 	// The gyros measure changes in orientation and will reset when the device isn't moved anymore.
-	f32 accel_x = input.accel_x_1; // Increases if the device is rolled to the left
-	f32 accel_y = input.accel_y_1; // Increases if the device is pitched upwards
-	f32 accel_z = input.accel_z_1; // Increases if the device is moved upwards
-	f32 gyro_x = input.gyro_x_1;   // Increases if the device is pitched upwards
-	f32 gyro_y = input.gyro_y_1;   // Increases if the device is rolled to the right
-	f32 gyro_z = input.gyro_z_1;   // Increases if the device is yawed to the left
+	//   accel x: Increases if the device is rolled to the left
+	//   accel y: Increases if the device is pitched upwards
+	//   accel z: Increases if the device is moved upwards
+	//   gyro  x: Increases if the device is pitched upwards
+	//   gyro  y: Increases if the device is rolled to the right
+	//   gyro  z: Increases if the device is yawed to the left
+	const auto get_calibrated_sample = [dev](s16 ax, s16 ay, s16 az, s16 gx, s16 gy, s16 gz)
+	{
+		const auto decode = [model = dev->model](s16 val)
+		{
+			if (model != ps_move_model::ZCM1)
+			{
+				// The ZCM2 uses two's complement
+				return static_cast<f32>(val);
+			}
 
-	if (dev->model == ps_move_model::ZCM1)
-	{
-		accel_x -= static_cast<f32>(zero_shift);
-		accel_y -= static_cast<f32>(zero_shift);
-		accel_z -= static_cast<f32>(zero_shift);
-		gyro_x -= static_cast<f32>(zero_shift);
-		gyro_y -= static_cast<f32>(zero_shift);
-		gyro_z -= static_cast<f32>(zero_shift);
-	}
+			// The ZCM1 uses an offset of 0x8000
+			const u8* data = reinterpret_cast<const u8*>(&val);
+			const u8 low = data[0] & 0xFF;
+			const u8 high = data[1] & 0xFF;
+			const s32 res = (low | (high << 8)) - zero_shift;
+			return static_cast<f32>(res);
+		};
 
-	if (!device->config || !device->config->orientation_enabled)
-	{
-		pad->move_data.reset_sensors();
-	}
-	else
-	{
-		// Apply calibration
+		f32 accel_x = decode(ax);
+		f32 accel_y = decode(ay);
+		f32 accel_z = decode(az);
+		f32 gyro_x  = decode(gx);
+		f32 gyro_y  = decode(gy);
+		f32 gyro_z  = decode(gz);
+
+		// Apply calibration. We need the calibrated values for the sixaxis sensors as well, regardless of the orientation setting.
 		if (dev->calibration.is_valid)
 		{
 			accel_x = accel_x * dev->calibration.accel_x_factor + dev->calibration.accel_x_offset;
@@ -711,21 +760,53 @@ void ps_move_handler::get_extended_info(const pad_ensemble& binding)
 			gyro_z /= MOVE_ONE_G;
 		}
 
-		pad->move_data.accelerometer_x = accel_x;
-		pad->move_data.accelerometer_y = accel_y;
-		pad->move_data.accelerometer_z = accel_z;
-		pad->move_data.gyro_x = gyro_x;
-		pad->move_data.gyro_y = gyro_y;
-		pad->move_data.gyro_z = gyro_z;
+		ps_move_device::imu_sample sample{};
+		sample.accelerometer = ps_move_data::vect<3>({accel_x, accel_y, accel_z});
+		sample.gyro = ps_move_data::vect<3>({gyro_x, gyro_y, gyro_z});
+		return sample;
+	};
+
+	// The ZCM1 reports two half-frames per report. The 1st half-frame contains slightly older data than the 2nd half-frame.
+	// The ZCM2 only has one frame. Its second set of values is just a copy of the first one.
+	const bool has_two_half_frames = dev->model == ps_move_model::ZCM1;
+
+	const ps_move_device::imu_sample sample_1 = get_calibrated_sample(input.accel_x_1, input.accel_y_1, input.accel_z_1, input.gyro_x_1, input.gyro_y_1, input.gyro_z_1);
+	const ps_move_device::imu_sample sample_2 = has_two_half_frames
+		? get_calibrated_sample(input.accel_x_2, input.accel_y_2, input.accel_z_2, input.gyro_x_2, input.gyro_y_2, input.gyro_z_2)
+		: sample_1;
+
+	// Use the latest sample for everything that only needs the current state
+	const f32 accel_x = sample_2.accelerometer.x();
+	const f32 accel_y = sample_2.accelerometer.y();
+	const f32 accel_z = sample_2.accelerometer.z();
+	const f32 gyro_z = sample_2.gyro.z();
+
+	if (!device->config || !device->config->orientation_enabled)
+	{
+		pad->move_data.reset_sensors();
+		dev->imu_sample_count = 0;
+	}
+	else
+	{
+		pad->move_data.accelerometer = sample_2.accelerometer;
+		pad->move_data.gyro = sample_2.gyro;
+
+		// Queue the samples of this report for the orientation update. Each half-frame covers half of the report interval.
+		if (report_delta_time > 0.0f)
+		{
+			dev->imu_samples = { sample_1, sample_2 };
+			dev->imu_sample_count = has_two_half_frames ? 2 : 1;
+			dev->imu_sample_delta_time = report_delta_time / dev->imu_sample_count;
+		}
 
 		if (dev->model == ps_move_model::ZCM1)
 		{
 			const ps_move_input_report_ZCM1& input_zcm1 = dev->input_report_ZCM1;
 
 			#define TWELVE_BIT_SIGNED(x) (((x) & 0x800) ? (-(((~(x)) & 0xFFF) + 1)) : (x))
-			pad->move_data.magnetometer_x = static_cast<f32>(TWELVE_BIT_SIGNED(((input.magnetometer_x & 0x0F) << 8) | input_zcm1.magnetometer_x2));
-			pad->move_data.magnetometer_y = static_cast<f32>(TWELVE_BIT_SIGNED((input_zcm1.magnetometer_y << 4) | (input_zcm1.magnetometer_yz & 0xF0) >> 4));
-			pad->move_data.magnetometer_z = static_cast<f32>(TWELVE_BIT_SIGNED(((input_zcm1.magnetometer_yz & 0x0F) << 8) | input_zcm1.magnetometer_z));
+			pad->move_data.magnetometer.x() = static_cast<f32>(TWELVE_BIT_SIGNED(((input.magnetometer_x & 0x0F) << 8) | input_zcm1.magnetometer_x2));
+			pad->move_data.magnetometer.y() = static_cast<f32>(TWELVE_BIT_SIGNED((input_zcm1.magnetometer_y << 4) | (input_zcm1.magnetometer_yz & 0xF0) >> 4));
+			pad->move_data.magnetometer.z() = static_cast<f32>(TWELVE_BIT_SIGNED(((input_zcm1.magnetometer_yz & 0x0F) << 8) | input_zcm1.magnetometer_z));
 		}
 	}
 
@@ -739,7 +820,7 @@ void ps_move_handler::get_extended_info(const pad_ensemble& binding)
 	handle_external_device(binding);
 }
 
-pad_preview_values ps_move_handler::get_preview_values(const std::unordered_map<u64, u16>& data)
+pad_preview_values ps_move_handler::get_preview_values(const std::unordered_map<u32, u16>& data, const std::vector<std::string>& /*buttons*/)
 {
 	return {
 		std::max(::at32(data, ps_move_key_codes::L2), ::at32(data, ps_move_key_codes::t)),

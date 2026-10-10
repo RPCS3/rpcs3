@@ -17,7 +17,7 @@ public:
 	bool eventFilter(QObject* watched, QEvent* event) override;
 	void keyPressEvent(QKeyEvent* event);
 	void keyReleaseEvent(QKeyEvent* event);
-	static s32 getUnmodifiedKey(QKeyEvent* event);
+	static s32 get_unmodified_key(QKeyEvent* event);
 
 private:
 	void LoadSettings(Keyboard& keyboard);

@@ -3,8 +3,8 @@
 
 #include "Emu/system_config.h"
 #include "GLCommonDecompiler.h"
+#include "GLHelpers.h"
 #include "../Program/GLSLCommon.h"
-#include "../RSXThread.h"
 
 std::string GLFragmentDecompilerThread::getFloatTypeName(usz elementCount)
 {
@@ -21,7 +21,7 @@ std::string GLFragmentDecompilerThread::getFunction(FUNCTION f)
 	return glsl::getFunctionImpl(f);
 }
 
-std::string GLFragmentDecompilerThread::compareFunction(COMPARE f, const std::string &Op0, const std::string &Op1)
+std::string GLFragmentDecompilerThread::compareFunction(COMPARE f, std::string_view Op0, std::string_view Op1)
 {
 	return glsl::compareFunctionImpl(f, Op0, Op1);
 }
@@ -87,24 +87,40 @@ void GLFragmentDecompilerThread::insertInputs(std::stringstream & OS)
 		},
 		gl::get_varying_register_location
 	);
+
+	if (m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE)
+	{
+		OS << "layout(location=" << gl::get_varying_register_location("depth_range") << ") in flat vec2 depth_range;\n";
+	}
 }
 
 void GLFragmentDecompilerThread::insertOutputs(std::stringstream & OS)
 {
 	const std::pair<std::string, std::string> table[] =
 	{
-		{ "ocol0", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r0" : "h0" },
-		{ "ocol1", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r2" : "h4" },
-		{ "ocol2", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r3" : "h6" },
-		{ "ocol3", m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r4" : "h8" },
+		{ "ocol0", m_prog.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r0" : "h0" },
+		{ "ocol1", m_prog.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r2" : "h4" },
+		{ "ocol2", m_prog.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r3" : "h6" },
+		{ "ocol3", m_prog.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS ? "r4" : "h8" },
 	};
 
-	const bool float_type = (m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) || !device_props.has_native_half_support;
+	const bool float_type = (m_prog.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) || !device_props.has_native_half_support;
 	const auto reg_type = float_type ? "vec4" : getHalfTypeName(4);
 	for (uint i = 0; i < std::size(table); ++i)
 	{
-		if (m_parr.HasParam(PF_PARAM_NONE, reg_type, table[i].second))
-			OS << "layout(location=" << i << ") out vec4 " << table[i].first << ";\n";
+		if (!m_parr.HasParam(PF_PARAM_NONE, reg_type, table[i].second))
+		{
+			continue;
+		}
+
+		if (i >= m_prog.mrt_buffers_count)
+		{
+			// Dead writes. Declare as temp variables for DCE to clean up.
+			OS << "vec4 " << table[i].first << "; // Unused\n";
+			continue;
+		}
+
+		OS << "layout(location=" << i << ") out vec4 " << table[i].first << ";\n";
 	}
 }
 
@@ -156,6 +172,15 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 		}
 	}
 
+	if (m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE)
+	{
+		const auto frag_depth_type = (m_prog.ctrl & RSX_SHADER_CONTROL_ROP_MULTISAMPLED)
+			? "sampler2DMS"
+			: "sampler2D";
+
+		OS << "uniform " << frag_depth_type << " frag_depth;\n";
+	}
+
 	OS << "\n";
 
 	if (!properties.constant_offsets.empty())
@@ -175,10 +200,9 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	"	float fog_param1;\n"
 	"	uint rop_control;\n"
 	"	float alpha_ref;\n"
-	"	uint reserved;\n"
 	"	uint fog_mode;\n"
 	"	float wpos_scale;\n"
-	"	float wpos_bias;\n"
+	"	vec2 wpos_bias;\n"
 	"};\n\n"
 
 	"layout(std140, binding = " << GL_FRAGMENT_TEXTURE_PARAMS_BIND_SLOT << ") uniform TextureParametersBuffer\n"
@@ -191,7 +215,8 @@ void GLFragmentDecompilerThread::insertConstants(std::stringstream & OS)
 	"	uvec4 stipple_pattern[8];\n"
 	"};\n\n"
 
-	"#define texture_base_index 0\n\n";
+	"#define texture_base_index 0\n"
+	"#define TEX_PARAM(index) texture_parameters[index]\n\n";
 }
 
 void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
@@ -208,16 +233,31 @@ void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 	m_shader_props.require_srgb_to_linear = properties.has_upg;
 	m_shader_props.require_linear_to_srgb = properties.has_pkg;
 	m_shader_props.require_fog_read = properties.in_register_mask & in_fogc;
-	m_shader_props.emulate_coverage_tests = !rsx::get_renderer_backend_config().supports_hw_a2c_1spp;
-	m_shader_props.emulate_shadow_compare = device_props.emulate_depth_compare;
+	m_shader_props.emulate_shadow_compare = device_props.emulate_depth_compare || device_props.emulated_depth_storage;
+
 	m_shader_props.low_precision_tests = ::gl::get_driver_caps().vendor_NVIDIA && !(m_prog.ctrl & RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION);
 	m_shader_props.disable_early_discard = !::gl::get_driver_caps().vendor_NVIDIA;
 	m_shader_props.supports_native_fp16 = device_props.has_native_half_support;
-	m_shader_props.ROP_output_rounding = g_cfg.video.shader_precision != gpu_preset_level::low;
+
+	m_shader_props.ROP_output_rounding = (g_cfg.video.shader_precision != gpu_preset_level::low) && !!(m_prog.ctrl & RSX_SHADER_CONTROL_8BIT_FRAMEBUFFER);
+	m_shader_props.ROP_sRGB_packing = !!(m_prog.ctrl & RSX_SHADER_CONTROL_SRGB_FRAMEBUFFER);
+	m_shader_props.ROP_alpha_test = !!(m_prog.ctrl & RSX_SHADER_CONTROL_ALPHA_TEST);
+	m_shader_props.ROP_alpha_to_coverage_test = !!(m_prog.ctrl & RSX_SHADER_CONTROL_ALPHA_TO_COVERAGE);
+	m_shader_props.ROP_polygon_stipple_test = !!(m_prog.ctrl & RSX_SHADER_CONTROL_POLYGON_STIPPLE);
+	m_shader_props.ROP_discard = !!(m_prog.ctrl & RSX_SHADER_CONTROL_USES_KIL);
+	m_shader_props.ROP_channel_remap = !!(m_prog.ctrl & RSX_SHADER_CONTROL_ROP_OUTPUT_REMAP);
+
 	m_shader_props.require_tex1D_ops = properties.has_tex1D;
 	m_shader_props.require_tex2D_ops = properties.has_tex2D;
 	m_shader_props.require_tex3D_ops = properties.has_tex3D;
 	m_shader_props.require_shadowProj_ops = properties.shadow_sampler_mask != 0 && properties.has_texShadowProj;
+	m_shader_props.require_alpha_kill = !!(m_prog.ctrl & RSX_SHADER_CONTROL_TEXTURE_ALPHA_KILL);
+	m_shader_props.require_color_format_convert = !!(m_prog.ctrl & RSX_SHADER_CONTROL_TEXTURE_FORMAT_CONVERT);
+	m_shader_props.emulate_depth_compare = !!(m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE);
+	m_shader_props.ROP_output_multisampled = !!(m_prog.ctrl & RSX_SHADER_CONTROL_ROP_MULTISAMPLED);
+	m_shader_props.ROP_emulate_depth_range = !!(m_prog.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE);
+	m_shader_props.ROP_depth_export = !!(m_prog.ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT) && m_shader_props.ROP_emulate_depth_range;
+	m_shader_props.emulated_depth_storage = device_props.emulated_depth_storage;
 
 	glsl::insert_glsl_legacy_function(OS, m_shader_props);
 }
@@ -225,7 +265,7 @@ void GLFragmentDecompilerThread::insertGlobalFunctions(std::stringstream &OS)
 void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 {
 	std::set<std::string> output_registers;
-	if (m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS)
+	if (m_prog.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS)
 	{
 		output_registers = { "r0", "r2", "r3", "r4" };
 	}
@@ -234,7 +274,7 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 		output_registers = { "h0", "h4", "h6", "h8" };
 	}
 
-	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
+	if (m_prog.ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 	{
 		output_registers.insert("r1");
 	}
@@ -298,10 +338,10 @@ void GLFragmentDecompilerThread::insertMainStart(std::stringstream & OS)
 	if (m_prog.two_sided_lighting)
 	{
 		if (properties.in_register_mask & in_diff_color)
-			OS << "	vec4 diff_color = gl_FrontFacing ? diff_color1 : diff_color0;\n";
+			OS << "	vec4 diff_color = gl_FrontFacing ? diff_color0 : diff_color1;\n";
 
 		if (properties.in_register_mask & in_spec_color)
-			OS << "	vec4 spec_color = gl_FrontFacing ? spec_color1 : spec_color0;\n";
+			OS << "	vec4 spec_color = gl_FrontFacing ? spec_color0 : spec_color1;\n";
 	}
 }
 
@@ -312,26 +352,36 @@ void GLFragmentDecompilerThread::insertMainEnd(std::stringstream & OS)
 	OS << "void main()\n";
 	OS << "{\n";
 
-	::glsl::insert_rop_init(OS);
+	::glsl::insert_rop_init(OS, m_prog.mrt_buffers_count);
 
 	OS << "\n" << "	fs_main();\n\n";
 
+	if (m_prog.ctrl & RSX_SHADER_CONTROL_DISABLE_EARLY_Z)
+	{
+		// This is effectively pointless code, but good enough to trick the GPU to skip early Z
+		OS <<
+			"	// Insert pseudo-barrier sequence to disable early-Z\n"
+			"	gl_FragDepth = gl_FragCoord.z;\n\n";
+	}
+
 	glsl::insert_rop(OS, m_shader_props);
 
-	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
+	if (m_prog.ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 	{
 		if (m_parr.HasParam(PF_PARAM_NONE, "vec4", "r1"))
 		{
-			//Depth writes are always from a fp32 register. See issues section on nvidia's NV_fragment_program spec
-			//https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt
+			// Depth writes are always from a fp32 register. See issues section on nvidia's NV_fragment_program spec
+			// https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt
 			OS << "	gl_FragDepth = r1.z;\n";
 		}
 		else
 		{
-			//Input not declared. Leave commented to assist in debugging the shader
-			OS << "	//gl_FragDepth = r1.z;\n";
+			// Input not declared. Leave commented to assist in debugging the shader
+			OS << "	// gl_FragDepth = r1.z;\n";
 		}
 	}
+
+	glsl::insert_fragment_epilogue(OS, m_shader_props);
 
 	OS << "}\n";
 }
@@ -361,6 +411,7 @@ void GLFragmentProgram::Decompile(const RSXFragmentProgram& prog)
 		decompiler.device_props.has_low_precision_rounding = driver_caps.vendor_NVIDIA;
 	}
 
+	decompiler.device_props.emulated_depth_storage = gl::emulate_extended_depth_range();
 	decompiler.Task();
 
 	constant_offsets = std::move(decompiler.properties.constant_offsets);

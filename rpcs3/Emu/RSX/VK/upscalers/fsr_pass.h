@@ -17,7 +17,7 @@ namespace vk
 			const vk::image_view* m_output_image = nullptr;
 			size2u m_input_size;
 			size2u m_output_size;
-			u32 m_constants_buf[20];
+			std::array<u32, 20> m_constants_buf {};
 
 			std::vector<glsl::program_input> get_inputs() override;
 			void bind_resources(const vk::command_buffer&) override;

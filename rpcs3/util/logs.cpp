@@ -89,8 +89,8 @@ namespace logs
 		z_stream m_zs{};
 		shared_mutex m_m{};
 
-		atomic_t<u64, 64> m_buf{0}; // MSB (39 bits): push begin, LSB (25 bis): push size
-		atomic_t<u64, 64> m_out{0}; // Amount of bytes written to file
+		atomic_t<u64, 128> m_buf{0}; // MSB (39 bits): push begin, LSB (25 bis): push size
+		atomic_t<u64, 128> m_out{0}; // Amount of bytes written to file
 
 		uchar m_zout[65536]{};
 
@@ -202,7 +202,7 @@ namespace logs
 
 		for (auto&& pair : get_logger()->channels)
 		{
-			pair.second->enabled.release(level::notice);
+			pair.second->enabled.release(level::_default);
 		}
 	}
 
@@ -257,10 +257,8 @@ namespace logs
 		{
 			return found.first->second->enabled.observe();
 		}
-		else
-		{
-			return level::always;
-		}
+
+		return level::always;
 	}
 
 	void set_channel_levels(const std::map<std::string, logs::level, std::less<>>& map)
@@ -271,18 +269,17 @@ namespace logs
 		}
 	}
 
-	std::vector<std::string> get_channels()
+	std::set<std::string> get_channels()
 	{
-		std::vector<std::string> result;
+		std::set<std::string> result;
 
 		std::lock_guard lock(g_mutex);
 
 		for (auto&& p : get_logger()->channels)
 		{
-			// Copy names removing duplicates
-			if (result.empty() || result.back() != p.first)
+			if (!p.first.empty())
 			{
-				result.push_back(p.first);
+				result.insert(p.first);
 			}
 		}
 
@@ -370,6 +367,16 @@ void logs::listener::sync_all()
 	for (listener* lis = get_logger(); lis; lis = lis->m_next)
 	{
 		lis->sync();
+	}
+}
+
+void logs::listener::shutdown_all()
+{
+	std::lock_guard lock(g_mutex);
+
+	for (listener* lis = get_logger()->m_next.exchange(nullptr); lis;)
+	{
+		lis = lis->m_next.exchange(nullptr);
 	}
 }
 

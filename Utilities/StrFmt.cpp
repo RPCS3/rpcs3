@@ -3,6 +3,7 @@
 #include "cfmt.h"
 #include "util/endian.hpp"
 #include "util/v128.hpp"
+#include "util/cctype.hpp"
 
 #include <locale>
 #include <codecvt>
@@ -16,12 +17,12 @@
 #include <errno.h>
 #endif
 
-#ifdef _MSC_VER
-#pragma warning(push)
-#pragma warning(disable : 4996)
-#elif defined(__clang__)
+#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#elif defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4996)
 #else
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -83,7 +84,8 @@ std::string fmt::win_error_to_string(unsigned long error, void* module_handle)
 	if (FormatMessageW((module_handle ? FORMAT_MESSAGE_FROM_HMODULE : FORMAT_MESSAGE_FROM_SYSTEM) | FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_IGNORE_INSERTS,
 			module_handle, error, 0, reinterpret_cast<LPWSTR>(&message_buffer), 0, nullptr))
 	{
-		message = fmt::format("%s (0x%x)", fmt::trim(wchar_to_utf8(message_buffer), " \t\n\r\f\v"), error);
+		const std::string utf8 = wchar_to_utf8(message_buffer);
+		message = fmt::format("%s (0x%x)", fmt::trim_sv(utf8, " \t\n\r\f\v"), error);
 	}
 	else
 	{
@@ -197,12 +199,12 @@ fmt::base57_result fmt::base57_result::from_string(std::string_view str)
 			{
 				auto to_val = [](u8 c) -> u64
 				{
-					if (std::isdigit(c))
+					if (utils::isdigit(c))
 					{
 						return c - '0';
 					}
 
-					if (std::isupper(c))
+					if (utils::isupper(c))
 					{
 						// Omitted characters
 						if (c == 'B' || c == 'D' || c == 'I' || c == 'O')
@@ -230,7 +232,7 @@ fmt::base57_result fmt::base57_result::from_string(std::string_view str)
 						return c - 'A' + 10;
 					}
 
-					if (std::islower(c))
+					if (utils::islower(c))
 					{
 						// Omitted characters
 						if (c == 'l')
@@ -610,7 +612,7 @@ void fmt_class_string<std::source_location>::format(std::string& out, u64 arg)
 #ifdef _WIN32
 	if (DWORD error = GetLastError())
 	{
-		fmt::append(out, " (error=%s)", error, fmt::win_error_to_string(error));
+		fmt::append(out, " (error=%s)", fmt::win_error_to_string(error));
 	}
 #else
 	if (int error = errno)
@@ -626,6 +628,13 @@ namespace fmt
 	{
 		std::string out;
 		fmt::append(out, "%s (object: 0x%x)%s", msg ? msg : u8"Verification failed", object, loc);
+		thread_ctrl::emergency_exit(out);
+	}
+
+	[[noreturn]] void raw_verify_error(std::source_location loc, std::source_location propagated_loc, const char8_t* msg, usz object)
+	{
+		std::string out;
+		fmt::append(out, "%s (object: 0x%x)%s%s", msg ? msg : u8"Verification failed", object, loc, propagated_loc);
 		thread_ctrl::emergency_exit(out);
 	}
 
@@ -823,7 +832,66 @@ std::vector<std::string> fmt::split(std::string_view source, std::initializer_li
 	return result;
 }
 
+std::vector<std::string_view> fmt::split_sv(std::string_view source, std::initializer_list<std::string_view> separators, bool is_skip_empty)
+{
+	std::vector<std::string_view> result;
+
+	for (usz index = 0; index < source.size();)
+	{
+		usz pos = -1;
+		usz sep_size = 0;
+
+		for (auto& separator : separators)
+		{
+			if (usz pos0 = source.find(separator, index); pos0 < pos)
+			{
+				pos = pos0;
+				sep_size = separator.size();
+			}
+		}
+
+		if (!sep_size)
+		{
+			result.emplace_back(&source[index], source.size() - index);
+			return result;
+		}
+
+		std::string_view piece = {&source[index], pos - index};
+
+		index = pos + sep_size;
+
+		if (piece.empty() && is_skip_empty)
+		{
+			continue;
+		}
+
+		result.emplace_back(std::move(piece));
+	}
+
+	if (result.empty() && !is_skip_empty)
+	{
+		result.emplace_back();
+	}
+
+	return result;
+}
+
 std::string fmt::trim(const std::string& source, std::string_view values)
+{
+	const usz begin = source.find_first_not_of(values);
+
+	if (begin == source.npos)
+		return {};
+
+	const usz end = source.find_last_not_of(values);
+
+	if (end == source.npos)
+		return source.substr(begin);
+
+	return source.substr(begin, end + 1 - begin);
+}
+
+std::string_view fmt::trim_sv(std::string_view source, std::string_view values)
 {
 	const usz begin = source.find_first_not_of(values);
 
@@ -848,17 +916,44 @@ std::string fmt::trim_front(const std::string& source, std::string_view values)
 	return source.substr(begin);
 }
 
+std::string_view fmt::trim_front_sv(std::string_view source, std::string_view values)
+{
+	const usz begin = source.find_first_not_of(values);
+
+	if (begin == source.npos)
+		return {};
+
+	return source.substr(begin);
+}
+
 void fmt::trim_back(std::string& source, std::string_view values)
 {
 	const usz index = source.find_last_not_of(values);
+
+	if (index == source.npos)
+	{
+		source.clear();
+		return;
+	}
+
 	source.resize(index + 1);
+}
+
+std::string_view fmt::trim_back_sv(std::string_view source, std::string_view values)
+{
+	const usz index = source.find_last_not_of(values);
+	if (index == std::string_view::npos)
+		return {};
+
+	source.remove_suffix(source.size() - (index + 1));
+	return source;
 }
 
 std::string fmt::to_upper(std::string_view string)
 {
 	std::string result;
 	result.resize(string.size());
-	std::transform(string.begin(), string.end(), result.begin(), ::toupper);
+	std::transform(string.begin(), string.end(), result.begin(), utils::toupper<char>);
 	return result;
 }
 
@@ -866,7 +961,7 @@ std::string fmt::to_lower(std::string_view string)
 {
 	std::string result;
 	result.resize(string.size());
-	std::transform(string.begin(), string.end(), result.begin(), ::tolower);
+	std::transform(string.begin(), string.end(), result.begin(), utils::tolower<char>);
 	return result;
 }
 

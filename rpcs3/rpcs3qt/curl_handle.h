@@ -2,9 +2,6 @@
 
 #include <array>
 
-#ifndef CURL_STATICLIB
-#define CURL_STATICLIB
-#endif
 #include <curl/curl.h>
 
 namespace rpcs3::curl
@@ -30,7 +27,7 @@ public:
 private:
 	CURL* m_curl = nullptr;
 	bool m_uses_error_buffer = false;
-	std::array<char, CURL_ERROR_SIZE> m_error_buffer;
+	std::array<char, CURL_ERROR_SIZE> m_error_buffer {};
 };
 
 }

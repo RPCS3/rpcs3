@@ -25,12 +25,12 @@ std::string VertexProgramDecompiler::GetMask(bool is_sca) const
 	return ret.empty() || ret == "xyzw" ? "" : ("." + ret);
 }
 
-std::string VertexProgramDecompiler::GetVecMask()
+std::string VertexProgramDecompiler::GetVecMask() const
 {
 	return GetMask(false);
 }
 
-std::string VertexProgramDecompiler::GetScaMask()
+std::string VertexProgramDecompiler::GetScaMask() const
 {
 	return GetMask(true);
 }
@@ -126,19 +126,35 @@ std::string VertexProgramDecompiler::GetSRC(const u32 n)
 		}
 		break;
 	case RSX_VP_REGISTER_TYPE_CONSTANT:
+		// Hardware tests show that d1.const_src beyond 467 returns vec4(0).
+		// Indexed reads however read out of bounds and can access arbitrary data but wrap around 512.
+		if (const auto constant_id = static_cast<u16>(d1.const_src);
+			!d3.index_const) [[ likely ]]
+		{
+			if (constant_id < 468)
+			{
+				m_constant_ids.insert(constant_id);
+				fmt::append(ret, "_fetch_constant(%u)", constant_id);
+			}
+			else
+			{
+				// OOB read embedded. Always returns 0
+				return getFloatTypeName(4) + "(0.f)";
+			}
+		}
+		else
+		{
+			properties.has_indexed_constants = true;
+			fmt::append(ret, "_fetch_indexed_constant((%s+%u) & 511)", AddAddrReg(), constant_id);
+		}
 		m_parr.AddParam(PF_PARAM_UNIFORM, float4, std::string("vc[468]"));
-		properties.has_indexed_constants |= !!d3.index_const;
-		m_constant_ids.insert(static_cast<u16>(d1.const_src));
-		fmt::append(ret, "_fetch_constant(%u%s)", d1.const_src, (d3.index_const ? " + " + AddAddrReg() : ""));
 		break;
-
 	default:
 		rsx_log.fatal("Bad src%u reg type: %d", n, u32{ src[n].reg_type });
 		break;
 	}
 
 	static const std::string f = "xyzw";
-
 	std::string swizzle;
 
 	swizzle += f[src[n].swz_x];
@@ -149,7 +165,6 @@ std::string VertexProgramDecompiler::GetSRC(const u32 n)
 	if (swizzle != f) ret += '.' + swizzle;
 
 	bool abs = false;
-
 	switch (n)
 	{
 	default:
@@ -486,7 +501,7 @@ std::string VertexProgramDecompiler::Decompile()
 	{
 		// Call function
 		// NOTE: Addresses are assumed to have been patched
-		m_call_stack.push(i+1);
+		m_call_stack.push(i + 1);
 		AddCode(condition);
 		AddCode("{");
 		m_cur_instr->open_scopes++;
@@ -660,7 +675,7 @@ std::string VertexProgramDecompiler::Decompile()
 		case RSX_SCA_OPCODE_EXP: SetDSTSca("exp($s)"); break;
 		case RSX_SCA_OPCODE_LOG: SetDSTSca("log($s)"); break;
 		case RSX_SCA_OPCODE_LIT:
-			SetDSTSca("lit_legacy($s)");
+			SetDSTSca("_builtin_lit($s)");
 			properties.has_lit_op = true;
 			break;
 		case RSX_SCA_OPCODE_BRA:
@@ -680,8 +695,8 @@ std::string VertexProgramDecompiler::Decompile()
 				//TODO
 				rsx_log.error("BRA opcode found in subroutine!");
 			}
+			break;
 		}
-		break;
 		case RSX_SCA_OPCODE_BRI: // works differently (BRI o[1].x(TR) L0;)
 		{
 			if (m_call_stack.empty())
@@ -701,8 +716,8 @@ std::string VertexProgramDecompiler::Decompile()
 				//TODO
 				rsx_log.error("BRI opcode found in subroutine!");
 			}
+			break;
 		}
-		break;
 		case RSX_SCA_OPCODE_CAL:
 			// works same as BRI
 			AddCode("//CAL");

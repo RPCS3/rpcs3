@@ -17,7 +17,7 @@ namespace rsx
 				std::unique_ptr<image_info> icon_data;
 
 			public:
-				user_list_entry(const std::string& username, const std::string& user_id, const std::string& avatar_path);
+				user_list_entry(std::string_view username, std::string_view user_id, const std::string& avatar_path);
 			};
 
 			std::vector<u32> m_entry_ids;
@@ -35,7 +35,7 @@ namespace rsx
 
 			compiled_resource get_compiled() override;
 
-			error_code show(const std::string& title, u32 focused, const std::vector<u32>& user_ids, bool enable_overlay, std::function<void(s32 status)> on_close);
+			error_code show(std::string_view title, u32 focused, const std::vector<u32>& user_ids, bool enable_overlay, std::function<void(s32 status)> on_close);
 		};
 	}
 }

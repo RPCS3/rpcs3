@@ -98,6 +98,8 @@ struct ps3_process_info_t
 
 extern ps3_process_info_t  g_ps3_process_info;
 
+class ppu_thread;
+
 // Auxiliary functions
 s32 process_getpid();
 s32 process_get_sdk_version(u32 pid, s32& ver);
@@ -115,7 +117,7 @@ error_code sys_process_get_id2(u32 object, vm::ptr<u32> buffer, u32 size, vm::pt
 error_code _sys_process_get_paramsfo(vm::ptr<char> buffer);
 error_code sys_process_get_sdk_version(u32 pid, vm::ptr<s32> version);
 error_code sys_process_get_status(u64 unk);
-error_code sys_process_is_spu_lock_line_reservation_address(u32 addr, u64 flags);
+error_code sys_process_is_spu_lock_line_reservation_address(ppu_thread& ppu, u32 addr, u64 flags);
 error_code sys_process_kill(u32 pid);
 error_code sys_process_wait_for_child(u32 pid, vm::ptr<u32> status, u64 unk);
 error_code sys_process_wait_for_child2(u64 unk1, u64 unk2, u64 unk3, u64 unk4, u64 unk5, u64 unk6);

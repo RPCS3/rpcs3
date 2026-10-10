@@ -26,7 +26,6 @@
 #include "Emu/Cell/Modules/sceNp.h"
 #include "Emu/Cell/Modules/sceNp2.h"
 #include "Emu/Cell/Modules/sceNpTus.h"
-#include <flatbuffers/flatbuffers.h>
 
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -68,7 +67,7 @@ public:
 			error = true;
 			return static_cast<T>(0);
 		}
-		T res = read_from_ptr<le_t<T>>(&vec[i]);
+		T res = read_from_ptr<le_t<T>>(vec, i);
 		i += sizeof(T);
 		return res;
 	}
@@ -80,6 +79,14 @@ public:
 			res.push_back(vec[i]);
 			i++;
 		}
+
+		// Make sure we hit terminating 0
+		if (i >= vec.size())
+		{
+			error = true;
+			return {};
+		}
+
 		i++;
 
 		if (!empty && res.empty())
@@ -130,31 +137,21 @@ public:
 	}
 
 	template <typename T>
-	const T* get_flatbuffer()
+	std::unique_ptr<T> get_protobuf()
 	{
 		auto rawdata_vec = get_rawdata();
 
 		if (error)
 			return nullptr;
 
-		if (vec.empty())
+		auto msg = std::make_unique<T>();
+		if (!msg->ParseFromArray(rawdata_vec.data(), static_cast<int>(rawdata_vec.size())))
 		{
 			error = true;
 			return nullptr;
 		}
 
-		const T* ret = flatbuffers::GetRoot<T>(rawdata_vec.data());
-		flatbuffers::Verifier verifier(rawdata_vec.data(), rawdata_vec.size());
-
-		if (!ret->Verify(verifier))
-		{
-			error = true;
-			return nullptr;
-		}
-
-		aligned_bufs.push_back(std::move(rawdata_vec));
-
-		return ret;
+		return msg;
 	}
 
 	// Setters
@@ -169,7 +166,7 @@ public:
 			vec.push_back(*(reinterpret_cast<u8*>(&value) + index));
 		}
 	}
-	void insert_string(const std::string& str) const
+	void insert_string(std::string_view str) const
 	{
 		std::copy(str.begin(), str.end(), std::back_inserter(vec));
 		vec.push_back(0);
@@ -177,7 +174,6 @@ public:
 
 protected:
 	std::vector<u8>& vec;
-	std::vector<std::vector<u8>> aligned_bufs;
 	usz i      = 0;
 	bool error = false;
 };
@@ -246,7 +242,7 @@ namespace rpcn
 		std::mutex mutex_packets_to_send;
 
 		// Friends related
-		shared_mutex mutex_friends;
+		mutable shared_mutex mutex_friends;
 		std::set<std::pair<friend_cb_func, void*>> friend_cbs;
 		friend_data friend_infos;
 
@@ -281,8 +277,8 @@ namespace rpcn
 		bool send_packet(const std::vector<u8>& packet);
 
 	private:
-		bool connect(const std::string& host);
-		bool login(const std::string& npid, const std::string& password, const std::string& token);
+		bool connect(std::string_view host);
+		bool login(std::string_view npid, std::string_view password, std::string_view token);
 		void disconnect();
 
 	public:
@@ -301,25 +297,27 @@ namespace rpcn
 		void remove_friend_cb(friend_cb_func, void* cb_param);
 
 		ErrorType create_user(std::string_view npid, std::string_view password, std::string_view online_name, std::string_view avatar_url, std::string_view email);
-		ErrorType resend_token(const std::string& npid, const std::string& password);
+		ErrorType resend_token(std::string_view npid, std::string_view password);
 		ErrorType send_reset_token(std::string_view npid, std::string_view email);
 		ErrorType reset_password(std::string_view npid, std::string_view token, std::string_view password);
-		bool add_friend(const std::string& friend_username);
-		bool remove_friend(const std::string& friend_username);
+		ErrorType delete_account();
+		ErrorType delete_trophies(std::string_view communication_id = {});
+		std::optional<ErrorType> add_friend(std::string_view friend_username);
+		bool remove_friend(std::string_view friend_username);
 
-		u32 get_num_friends();
-		u32 get_num_blocks();
-		std::optional<std::string> get_friend_by_index(u32 index);
-		std::optional<std::pair<std::string, friend_online_data>> get_friend_presence_by_index(u32 index);
-		std::optional<std::pair<std::string, friend_online_data>> get_friend_presence_by_npid(const std::string& npid);
+		u32 get_num_friends() const;
+		u32 get_num_blocks() const;
+		std::optional<std::string> get_friend_by_index(u32 index) const;
+		std::optional<std::pair<std::string, friend_online_data>> get_friend_presence_by_index(u32 index) const;
+		std::optional<std::pair<std::string, friend_online_data>> get_friend_presence_by_npid(const std::string& npid) const;
 
 		std::vector<std::pair<rpcn::NotificationType, std::vector<u8>>> get_notifications();
-		std::unordered_map<u32, std::pair<rpcn::CommandType, std::vector<u8>>> get_replies();
+		std::map<u32, std::pair<rpcn::CommandType, std::vector<u8>>> get_replies();
 		std::unordered_map<std::string, friend_online_data> get_presence_updates();
 		std::map<std::string, friend_online_data> get_presence_states();
 
 		std::vector<u64> get_new_messages();
-		std::optional<shared_ptr<std::pair<std::string, message_data>>> get_message(u64 id);
+		std::optional<shared_ptr<std::pair<std::string, message_data>>> get_message(u64 id) const;
 		std::vector<std::pair<u64, shared_ptr<std::pair<std::string, message_data>>>> get_messages_and_register_cb(SceNpBasicMessageMainType type, bool include_bootable, message_cb_func cb_func, void* cb_param);
 		void remove_message_cb(message_cb_func cb_func, void* cb_param);
 		void mark_message_used(u64 id);
@@ -340,6 +338,7 @@ namespace rpcn
 		bool leave_room(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2LeaveRoomRequest* req);
 		bool search_room(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SearchRoomRequest* req);
 		bool get_roomdata_external_list(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2GetRoomDataExternalListRequest* req);
+		bool get_room_member_data_external_list(u32 req_id, const SceNpCommunicationId& communication_id, u64 room_id);
 		bool set_roomdata_external(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetRoomDataExternalRequest* req);
 		bool get_roomdata_internal(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2GetRoomDataInternalRequest* req);
 		bool set_roomdata_internal(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetRoomDataInternalRequest* req);
@@ -348,8 +347,8 @@ namespace rpcn
 		bool set_userinfo(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SetUserInfoRequest* req);
 		bool ping_room_owner(u32 req_id, const SceNpCommunicationId& communication_id, u64 room_id);
 		bool send_room_message(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatching2SendRoomMessageRequest* req);
-		bool req_sign_infos(u32 req_id, const std::string& npid);
-		bool req_ticket(u32 req_id, const std::string& service_id, const std::vector<u8>& cookie);
+		bool req_sign_infos(u32 req_id, std::string_view npid);
+		bool req_ticket(u32 req_id, std::string_view service_id, const std::vector<u8>& cookie);
 		bool send_message(const message_data& msg_data, const std::set<std::string>& npids);
 		bool get_board_infos(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id);
 		bool record_score(u32 req_id, const SceNpCommunicationId& communication_id, SceNpScoreBoardId board_id, SceNpScorePcId char_id, SceNpScoreValue score, const std::optional<std::string> comment, const std::optional<std::vector<u8>> score_data);
@@ -372,6 +371,8 @@ namespace rpcn
 		bool tus_get_friends_data_status(u32 req_id, SceNpCommunicationId& communication_id, SceNpTusSlotId slotId, bool includeSelf, s32 sortType, s32 arrayNum);
 		bool tus_delete_multislot_data(u32 req_id, SceNpCommunicationId& communication_id, const SceNpOnlineId& targetNpId, vm::cptr<SceNpTusSlotId> slotIdArray, s32 arrayNum, bool vuser);
 		bool send_presence(const SceNpCommunicationId& pr_com_id, const std::string& pr_title, const std::string& pr_status, const std::string& pr_comment, const std::vector<u8>& pr_data);
+		bool unlock_trophy(const SceNpCommunicationId& communication_id, s32 trophy_id, s64 timestamp);
+		std::vector<std::pair<s32, s64>> sync_trophies(const SceNpCommunicationId& communication_id, const std::vector<std::pair<s32, s64>>& local_unlocked);
 		bool createjoin_room_gui(u32 req_id, const SceNpCommunicationId& communication_id, const SceNpMatchingAttr* attr_list);
 		bool join_room_gui(u32 req_id, const SceNpRoomId& room_id);
 		bool leave_room_gui(u32 req_id, const SceNpRoomId& room_id);
@@ -398,12 +399,12 @@ namespace rpcn
 
 		std::vector<u8> forge_request(rpcn::CommandType command, u64 packet_id, const std::vector<u8>& data) const;
 		bool forge_send(rpcn::CommandType command, u64 packet_id, const std::vector<u8>& data);
-		bool forge_request_with_com_id(const flatbuffers::FlatBufferBuilder& builder, const SceNpCommunicationId& com_id, CommandType command, u64 packet_id);
-		bool forge_request_with_data(const flatbuffers::FlatBufferBuilder& builder, CommandType command, u64 packet_id);
+		bool forge_request_with_com_id(std::string_view serialized_data, const SceNpCommunicationId& com_id, CommandType command, u64 packet_id);
+		bool forge_request_with_data(std::string_view serialized_data, CommandType command, u64 packet_id);
 		bool forge_send_reply(rpcn::CommandType command, u64 packet_id, const std::vector<u8>& data, std::vector<u8>& reply_data);
 
-		bool error_and_disconnect(const std::string& error_mgs);
-		bool error_and_disconnect_notice(const std::string& error_msg);
+		bool error_and_disconnect(std::string_view error_mgs);
+		bool error_and_disconnect_notice(std::string_view error_msg);
 
 		std::string get_wolfssl_error(WOLFSSL* wssl, int error) const;
 
@@ -428,8 +429,8 @@ namespace rpcn
 
 		shared_mutex mutex_notifs, mutex_replies, mutex_replies_sync, mutex_presence_updates;
 		std::vector<std::pair<rpcn::NotificationType, std::vector<u8>>> notifications;       // notif type / data
-		std::unordered_map<u32, std::pair<rpcn::CommandType, std::vector<u8>>> replies;      // req id / (command / data)
-		std::unordered_map<u64, std::pair<rpcn::CommandType, std::vector<u8>>> replies_sync; // same but for sync replies(see handle_input())
+		std::map<u32, std::pair<rpcn::CommandType, std::vector<u8>>> replies;      // req id / (command / data)
+		std::map<u64, std::pair<rpcn::CommandType, std::vector<u8>>> replies_sync; // same but for sync replies(see handle_input())
 		std::unordered_map<std::string, friend_online_data> presence_updates;                // npid / presence data
 
 		// Messages
@@ -447,7 +448,7 @@ namespace rpcn
 				return (void_cb_func < void_other_cb_func) || ((!(void_other_cb_func < void_cb_func)) && (cb_param < other.cb_param));
 			}
 		};
-		shared_mutex mutex_messages;
+		mutable shared_mutex mutex_messages;
 		std::set<message_cb_t> message_cbs;
 		std::unordered_map<u64, shared_ptr<std::pair<std::string, message_data>>> messages; // msg id / (sender / message)
 		std::set<u64> active_messages;                                                           // msg id of messages that have not been discarded

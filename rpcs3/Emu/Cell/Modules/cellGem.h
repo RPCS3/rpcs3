@@ -246,15 +246,15 @@ struct CellGemInfo
 // z increases towards user (away from the camera)
 struct CellGemState
 {
-	be_t<f32> pos[4];          // center of sphere (mm)
-	be_t<f32> vel[4];          // velocity of sphere (mm/s)
-	be_t<f32> accel[4];        // acceleration of sphere (mm/s²)
+	be_t<f32> pos[4];          // center of sphere in world coordinates (mm)
+	be_t<f32> vel[4];          // velocity of sphere in world coordinates (mm/s)
+	be_t<f32> accel[4];        // acceleration of sphere in world coordinates (mm/s²)
 	be_t<f32> quat[4];         // quaternion orientation (x,y,z,w) of controller relative to default (facing the camera with buttons up)
-	be_t<f32> angvel[4];       // angular velocity of controller (radians/s)
-	be_t<f32> angaccel[4];     // angular acceleration of controller (radians/s²)
-	be_t<f32> handle_pos[4];   // center of controller handle (mm)
-	be_t<f32> handle_vel[4];   // velocity of controller handle (mm/s)
-	be_t<f32> handle_accel[4]; // acceleration of controller handle (mm/s²)
+	be_t<f32> angvel[4];       // angular velocity of controller in world coordinates (radians/s)
+	be_t<f32> angaccel[4];     // angular acceleration of controller in world coordinates (radians/s²)
+	be_t<f32> handle_pos[4];   // center of controller handle in world coordinates (mm)
+	be_t<f32> handle_vel[4];   // velocity of controller handle in world coordinates (mm/s)
+	be_t<f32> handle_accel[4]; // acceleration of controller handle in world coordinates (mm/s²)
 	CellGemPadData pad;
 	CellGemExtPortData ext;
 	be_t<u64> timestamp; // system_time_t (microseconds)
@@ -278,3 +278,38 @@ struct CellGemVideoConvertAttribute
 
 	ENABLE_BITWISE_SERIALIZATION;
 };
+
+namespace
+{
+	enum button_flags : u16
+	{
+		select   = 0x01,
+		start    = 0x08,
+		triangle = 0x10,
+		circle   = 0x20,
+		cross    = 0x40,
+		square   = 0x80,
+		ps       = 0x0001,
+		move     = 0x4008,
+		t        = 0x8010,
+		ext_dev  = 0x1000,
+
+		// Sharpshooter
+		ss_firing_mode_1 = 0x01,
+		ss_firing_mode_2 = 0x02,
+		ss_firing_mode_3 = 0x04,
+		ss_firing_mode_mask = ss_firing_mode_1 | ss_firing_mode_2 | ss_firing_mode_3,
+		ss_trigger       = 0x40,
+		ss_reload        = 0x80,
+
+		// Racing Wheel
+		rw_d_pad_up    = 0x10,
+		rw_d_pad_right = 0x20,
+		rw_d_pad_down  = 0x40,
+		rw_d_pad_left  = 0x80,
+		rw_l1          = 0x04,
+		rw_r1          = 0x08,
+		rw_paddle_l    = 0x01,
+		rw_paddle_r    = 0x02,
+	};
+}

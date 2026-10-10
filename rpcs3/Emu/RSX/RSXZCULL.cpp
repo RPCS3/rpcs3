@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Core/RSXEngLock.hpp"
 #include "Core/RSXReservationLock.hpp"
+#include "Host/MM.h"
 #include "RSXThread.h"
 
 namespace rsx
@@ -82,7 +83,7 @@ namespace rsx
 		{
 			// NOTE: Only enable host queries if pixel count is active to save on resources
 			// Can optionally be enabled for either stats enabled or zpass enabled for accuracy
-			const bool data_stream_available = zpass_count_enabled; // write_enabled && (zpass_count_enabled || stats_enabled);
+			const bool data_stream_available = zpass_count_enabled; // surface_active && (zpass_count_enabled || stats_enabled);
 			if (host_queries_active && !data_stream_available)
 			{
 				// Stop
@@ -106,9 +107,9 @@ namespace rsx
 
 		void ZCULL_control::set_status(class ::rsx::thread* ptimer, bool surface_active, bool zpass_active, bool zcull_stats_active, bool flush_queue)
 		{
-			write_enabled = surface_active;
-			zpass_count_enabled = zpass_active;
-			stats_enabled = zcull_stats_active;
+			this->surface_active = surface_active;
+			this->zpass_count_enabled = zpass_active;
+			this->stats_enabled = zcull_stats_active;
 
 			check_state(ptimer, flush_queue);
 
@@ -155,6 +156,9 @@ namespace rsx
 
 				if (m_pending_writes.empty())
 				{
+					// Immediate write, flush MM queue
+					rsx::mm_flush();
+
 					// No need to queue this if there is no pending request in the pipeline anyway
 					write(sink, ptimer->timestamp(), type, m_statistics_map[m_statistics_tag_id].result);
 					return;
@@ -173,6 +177,7 @@ namespace rsx
 					It->counter_tag = m_statistics_tag_id;
 					It->sink = sink;
 					It->type = type;
+					It->sync_tag = rsx::get_shared_tag();
 
 					if (forwarder != &(*It))
 					{
@@ -260,9 +265,20 @@ namespace rsx
 				return;
 			}
 
+			// Discard any running queries. The results will never be read anyway.
+			if (m_current_task && m_current_task->active)
+			{
+				discard_occlusion_query(m_current_task);
+				free_query(m_current_task);
+				m_current_task->active = false;
+
+				allocate_new_query(ptimer);
+				begin_occlusion_query(m_current_task);
+			}
+
 			if (!m_pending_writes.empty())
 			{
-				//Remove any dangling/unclaimed queries as the information is lost anyway
+				// Remove any dangling/unclaimed queries as the information is lost anyway
 				auto valid_size = m_pending_writes.size();
 				for (auto It = m_pending_writes.rbegin(); It != m_pending_writes.rend(); ++It)
 				{
@@ -324,7 +340,7 @@ namespace rsx
 
 			auto scale_result = [](u32 value)
 			{
-				const auto scale = rsx::get_resolution_scale_percent();
+				const auto scale = get_current_renderer()->resolution_scaling_config.scale_percent;
 				const auto result = (value * 10000ull) / (scale * scale);
 				return std::max(1u, static_cast<u32>(result));
 			};
@@ -340,14 +356,14 @@ namespace rsx
 				}
 				break;
 			case CELL_GCM_ZCULL_STATS3:
-				value = (value || !write_enabled || !stats_enabled) ? 0 : u16{ umax };
+				value = (value || !surface_active || !stats_enabled) ? 0 : u16{ umax };
 				break;
 			case CELL_GCM_ZCULL_STATS2:
 			case CELL_GCM_ZCULL_STATS1:
 			case CELL_GCM_ZCULL_STATS:
 			default:
 				// Not implemented
-				value = (write_enabled && stats_enabled) ? -1 : 0;
+				value = (surface_active && stats_enabled) ? -1 : 0;
 				break;
 			}
 
@@ -358,6 +374,9 @@ namespace rsx
 
 		void ZCULL_control::write(queued_report_write* writer, u64 timestamp, u32 value)
 		{
+			// Reports are strongly ordered.
+			rsx::mm_flush_partial(writer->sync_tag);
+
 			write(writer->sink, timestamp, writer->type, value);
 			on_report_completed(writer->sink);
 
@@ -736,11 +755,11 @@ namespace rsx
 		query_search_result ZCULL_control::find_query(vm::addr_t sink_address, bool all)
 		{
 			query_search_result result{};
-			u32 stat_id = 0;
+			u32 stat_id = umax;
 
 			for (auto It = m_pending_writes.crbegin(); It != m_pending_writes.crend(); ++It)
 			{
-				if (stat_id) [[unlikely]]
+				if (stat_id != umax) [[unlikely]]
 				{
 					if (It->counter_tag != stat_id)
 					{
@@ -788,6 +807,8 @@ namespace rsx
 		u32 ZCULL_control::copy_reports_to(u32 start, u32 range, u32 dest)
 		{
 			u32 bytes_to_write = 0;
+			std::unordered_set<u32> unique_addresses;
+
 			const auto memory_range = utils::address_range32::start_length(start, range);
 			for (auto& writer : m_pending_writes)
 			{
@@ -796,8 +817,14 @@ namespace rsx
 
 				if (!writer.forwarder && memory_range.overlaps(writer.sink))
 				{
-					u32 address = (writer.sink - start) + dest;
+					const u32 address = (writer.sink - start) + dest;
 					writer.sink_alias.push_back(vm::cast(address));
+
+					if (!unique_addresses.contains(address))
+					{
+						bytes_to_write += sizeof(RsxReport);
+						unique_addresses.insert(address);
+					}
 				}
 			}
 

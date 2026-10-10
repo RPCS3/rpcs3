@@ -14,6 +14,10 @@
 #define CAN_OVERCOMMIT
 #endif
 
+#if defined(__APPLE__)
+#include <mutex>
+#endif
+
 LOG_CHANNEL(jit_log, "JIT");
 
 void jit_announce(uptr func, usz size, std::string_view name)
@@ -118,7 +122,7 @@ static u8* get_jit_memory()
 	// Reserve 2G memory (magic static)
 	static void* const s_memory2 = []() -> void*
 	{
-		void* ptr = utils::memory_reserve(0x80000000);
+		void* ptr = utils::memory_reserve(0x80000000, true);
 #ifdef CAN_OVERCOMMIT
 		utils::memory_commit(ptr, 0x80000000);
 		utils::memory_protect(ptr, 0x40000000, utils::protection::wx);
@@ -312,10 +316,10 @@ void jit_runtime::finalize() noexcept
 #endif
 	// Reset JIT memory
 #ifdef CAN_OVERCOMMIT
-	utils::memory_reset(get_jit_memory(), 0x80000000);
+	utils::memory_reset(get_jit_memory(), 0x80000000, true);
 	utils::memory_protect(get_jit_memory(), 0x40000000, utils::protection::wx);
 #else
-	utils::memory_decommit(get_jit_memory(), 0x80000000);
+	utils::memory_decommit(get_jit_memory(), 0x80000000, true);
 #endif
 
 	s_code_pos = 0;
@@ -344,7 +348,7 @@ jit_runtime_base& asmjit::get_global_runtime()
 	{
 		custom_runtime() noexcept
 		{
-			ensure(m_pos.raw() = static_cast<uchar*>(utils::memory_reserve(size)));
+			ensure(m_pos.raw() = static_cast<uchar*>(utils::memory_reserve(size, true)));
 
 			// Initialize "end" pointer
 			m_max = m_pos + size;

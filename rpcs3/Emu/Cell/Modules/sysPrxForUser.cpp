@@ -61,7 +61,7 @@ s32 sys_process_is_stack(u32 p)
 	return (p >> 28) == 0xD;
 }
 
-error_code sys_process_get_paramsfo(vm::ptr<char> buffer)
+error_code sys_process_get_paramsfo([[maybe_unused]] ppu_thread& ppu, vm::ptr<char> buffer)
 {
 	sysPrxForUser.warning("sys_process_get_paramsfo(buffer=*0x%x)", buffer);
 

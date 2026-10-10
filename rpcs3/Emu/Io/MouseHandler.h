@@ -112,10 +112,10 @@ using MouseDataList = std::deque<MouseData>;
 
 struct Mouse
 {
-	s32 x_pos = 0;
-	s32 y_pos = 0;
-	s32 x_max = 0;
-	s32 y_max = 0;
+	f32 x_pos = 0.0f;
+	f32 y_pos = 0.0f;
+	s32 x_pos_pixels = 0;
+	s32 y_pos_pixels = 0;
 	u8 buttons = 0; // actual mouse button positions
 
 	MouseTabletDataList m_tablet_datalist{};
@@ -128,7 +128,7 @@ class MouseHandlerBase
 protected:
 	MouseInfo m_info{};
 	std::vector<Mouse> m_mice;
-	steady_clock::time_point last_update{};
+	steady_clock::time_point m_last_update{};
 
 	bool is_time_for_update(double elapsed_time_ms = 10.0); // 4-10 ms, let's use 10 for now
 
@@ -154,9 +154,9 @@ public:
 
 	MouseInfo& GetInfo() { return m_info; }
 	std::vector<Mouse>& GetMice() { return m_mice; }
-	MouseDataList& GetDataList(const u32 mouse) { return m_mice[mouse].m_datalist; }
-	MouseTabletDataList& GetTabletDataList(const u32 mouse) { return m_mice[mouse].m_tablet_datalist; }
-	MouseRawData& GetRawData(const u32 mouse) { return m_mice[mouse].m_rawdata; }
+	MouseDataList& GetDataList(const usz mouse) { return ::at32(m_mice, mouse).m_datalist; }
+	MouseTabletDataList& GetTabletDataList(const usz mouse) { return ::at32(m_mice, mouse).m_tablet_datalist; }
+	MouseRawData& GetRawData(const usz mouse) { return ::at32(m_mice, mouse).m_rawdata; }
 
 	stx::init_mutex init;
 

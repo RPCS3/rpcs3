@@ -15,7 +15,7 @@ namespace rsx
 			struct list_entry : horizontal_layout
 			{
 			public:
-				list_entry(const std::string& msg);
+				list_entry(std::string_view msg);
 			};
 
 			shared_mutex m_mutex;
@@ -29,7 +29,7 @@ namespace rsx
 			animation_color_interpolate fade_animation;
 
 			std::string get_current_selection() const;
-			void reload(const std::string& previous_selection);
+			void reload(std::string_view previous_selection);
 
 		public:
 			sendmessage_dialog();

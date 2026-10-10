@@ -12,6 +12,8 @@ namespace rsx
 {
 	enum class surface_antialiasing : u8;
 
+	struct surface_scaling_config_t;
+
 	struct framebuffer_dimensions_t
 	{
 		u16 width;
@@ -42,7 +44,7 @@ namespace rsx
 		void add(u16 width, u16 height, rsx::surface_antialiasing aa);
 
 		// Returns a formatted string representing the statistics collected over the frame.
-		std::string to_string(bool squash) const;
+		std::string to_string(const surface_scaling_config_t& scaling_config, bool squash) const;
 	};
 
 	struct frame_statistics_t

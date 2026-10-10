@@ -45,7 +45,7 @@ namespace aarch64
             bool use_stack_frames = true;      // Allocate a stack frame for each function. The gateway can alternatively manage a global stack to use as scratch.
             bool optimize = true;              // Optimize instructions when possible. Set to false when debugging.
             u32 hypervisor_context_offset = 0; // Offset within the "thread" object where we can find the hypervisor context (registers configured at gateway).
-            std::function<bool(const std::string&)> exclusion_callback;    // [Optional] Callback run on each function before transform. Return "true" to exclude from frame processing.
+            std::function<bool(std::string_view)> exclusion_callback;      // [Optional] Callback run on each function before transform. Return "true" to exclude from frame processing.
             std::vector<std::pair<std::string, gpr>> base_register_lookup; // [Optional] Function lookup table to determine the location of the "thread" context.
             std::vector<std::string> faux_function_list;                   // [Optional] List of faux block names to treat as untrusted - typically fake functions representing codecaves.
         };
@@ -67,7 +67,7 @@ namespace aarch64
 
         bool is_faux_function(const std::string& function_name);
 
-        gpr get_base_register_for_call(const std::string& callee_name, gpr default_reg = gpr::x19);
+        gpr get_base_register_for_call(std::string_view callee_name, gpr default_reg = gpr::x19);
 
         void process_leaf_function(llvm::IRBuilder<>* irb, llvm::Function& f);
 

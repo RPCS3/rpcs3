@@ -29,9 +29,9 @@ public:
 	explicit settings(QObject* parent = nullptr);
 	~settings();
 
-	void sync();
+	void sync() const;
 
-	QString GetSettingsDir() const;
+	static QString GetSettingsDir();
 
 	QVariant GetValue(const QString& key, const QString& name, const QVariant& def) const;
 	QVariant GetValue(const gui_save& entry) const;
@@ -49,8 +49,5 @@ public Q_SLOTS:
 	void SetValue(const QString& key, const QString& name, const QVariant& value, bool sync = true) const;
 
 protected:
-	static QString ComputeSettingsDir();
-
 	std::unique_ptr<QSettings> m_settings;
-	QDir m_settings_dir;
 };

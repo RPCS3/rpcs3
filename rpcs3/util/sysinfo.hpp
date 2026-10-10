@@ -54,12 +54,41 @@ namespace utils
 	bool has_appropriate_um_wait();
 
 	bool has_um_wait();
+#ifdef ARCH_ARM64
+	bool has_neon();
 
+#if defined(ARM_FEATURE_LSE2)
+	inline constexpr bool has_lse2()
+	{
+		return true;
+	}
+#else
+	bool has_lse2();
+#endif
+
+	bool has_sha3();
+
+	bool has_dotprod();
+
+	bool has_i8mm();
+
+	bool has_sve();
+
+	bool has_sve2();
+
+	bool has_sve2p2();
+
+	int sve_length();
+#endif
 	std::string get_cpu_brand();
+
+	std::string_view get_architecture();
 
 	std::string get_system_info();
 
 	std::string get_firmware_version();
+
+	std::pair<u64, u64> get_memory_usage();
 
 	struct OS_version
 	{
@@ -71,7 +100,9 @@ namespace utils
 	};
 	OS_version get_OS_version();
 
-	std::string get_OS_version_string();
+	std::string get_OS_version_string(bool simple = false);
+
+	std::string get_user_agent();
 
 	int get_maxfiles();
 

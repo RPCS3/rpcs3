@@ -8,6 +8,7 @@
 #include <QFont>
 #include <QIcon>
 #include <QLabel>
+#include <QMessageBox>
 #include <QTableWidget>
 #include <QHeaderView>
 #include <QTreeWidgetItem>
@@ -19,10 +20,27 @@
 #include <string>
 #include <map>
 
+
+enum class game_boot_result : u32;
+
 namespace gui
 {
 	namespace utils
 	{
+		enum class align_h
+		{
+			left,
+			center,
+			right
+		};
+
+		enum class align_v
+		{
+			top,
+			center,
+			bottom
+		};
+
 		class circle_pixmap : public QPixmap
 		{
 		public:
@@ -68,11 +86,14 @@ namespace gui
 		// Returns a list of all base names of files in dir whose complete file names contain one of the given name_filters
 		QStringList get_dir_entries(const QDir& dir, const QStringList& name_filters, bool full_path = false);
 
-		// Returns the foreground color of QLabel with respect to the current light/dark mode.
-		QColor get_foreground_color();
+		// Returns the foreground color of QLabel or the given widget with respect to the current light/dark mode.
+		QColor get_foreground_color(QWidget* widget = nullptr);
 
-		// Returns the background color of QLabel with respect to the current light/dark mode.
-		QColor get_background_color();
+		// Returns the background color of QLabel or the given widget with respect to the current light/dark mode.
+		QColor get_background_color(QWidget* widget = nullptr);
+
+		// Returns an adjusted color with better contrast, depending on the background.
+		QColor adjust_color_for_background(const QColor& fg, const QColor& bg);
 
 		// Returns the color specified by its color_role for the QLabels with object_name
 		QColor get_label_color(const QString& object_name, const QColor& fallback_light, const QColor& fallback_dark, QPalette::ColorRole color_role = QPalette::WindowText);
@@ -101,6 +122,16 @@ namespace gui
 		// Returns a richtext paragraph with white-space: nowrap;
 		QString make_paragraph(QString text, const QString& white_space_style = "nowrap");
 
+		// Doubles the ampersands of a string used as menu or button text, so it is not taken for a mnemonic
+		QString escape_mnemonics(const QString& text);
+
+		// Shows a message box that takes its text literally. Qt detects rich text on its own, so a message
+		// built around a name the user chose turns into HTML as soon as that name looks like a tag, and the
+		// name disappears from the very sentence that is there to report it.
+		QMessageBox::StandardButton plain_message(QWidget* parent, QMessageBox::Icon icon, const QString& title,
+			const QString& text, QMessageBox::StandardButtons buttons = QMessageBox::Ok,
+			QMessageBox::StandardButton default_button = QMessageBox::NoButton);
+
 		template <typename T>
 		void set_font_size(T& qobj, int size)
 		{
@@ -109,14 +140,11 @@ namespace gui
 			qobj.setFont(font);
 		}
 
-		// Returns a scaled, centered QPixmap
-		QPixmap get_centered_pixmap(QPixmap pixmap, const QSize& icon_size, int offset_x, int offset_y, qreal device_pixel_ratio, Qt::TransformationMode mode);
+		// Returns a scaled, aligned QPixmap
+		QPixmap get_aligned_pixmap(QPixmap pixmap, const QSize& icon_size, qreal device_pixel_ratio, Qt::TransformationMode mode, align_h h_alignment, align_v v_alignment);
 
-		// Returns a scaled, centered QPixmap
-		QPixmap get_centered_pixmap(const QString& path, const QSize& icon_size, int offset_x, int offset_y, qreal device_pixel_ratio, Qt::TransformationMode mode);
-
-		// Returns the part of the image loaded from path that is inside the bounding box of its opaque areas
-		QImage get_opaque_image_area(const QString& path);
+		// Returns a scaled, aligned QPixmap
+		QPixmap get_aligned_pixmap(const QString& path, const QSize& icon_size, qreal device_pixel_ratio, Qt::TransformationMode mode, align_h h_alignment, align_v v_alignment);
 
 		// Workaround: resize the dropdown combobox items
 		void resize_combo_box_view(QComboBox* combo);
@@ -135,6 +163,16 @@ namespace gui
 
 		// Open a path in the explorer and mark the file
 		void open_dir(const QString& path);
+
+		// Shows the error dialog of a disc image that cannot be read back, the one an encrypted image whose key
+		// is missing or does not match ends up in: it spells out the key file that is being looked for and the
+		// folder it goes in, and offers to open that folder.
+		// "key_invalid" tells a key file belonging to another disc from no key file at all, and "prefix" is put
+		// before the text (rich text, as the whole dialog is) for a caller that needs a heading of its own
+		void show_disc_key_error(QWidget* parent, const QString& title, const std::string& path, bool key_invalid, const QString& prefix = {});
+
+		// Shows the error dialog of a failed boot of "path"
+		void show_boot_error(QWidget* parent, game_boot_result status, const std::string& path = {});
 
 		// Finds a child of a QTreeWidgetItem with given text
 		QTreeWidgetItem* find_child(QTreeWidgetItem* parent, const QString& text);
@@ -161,7 +199,7 @@ namespace gui
 		QDateTime datetime(s64 time);
 
 		// Convert a QDateTime to a readable string
-		QString format_datetime(const QDateTime& date, const QString& fmt = "yyyy-MM-dd HH:mm:ss");
+		QString format_datetime(const QDateTime& date, const QString& fmt = "yyyy-MM-dd HH:mm:ss", bool is_relative = false, const QString& fmt_relative = "HH:mm:ss");
 
 		// Convert a timestamp to a readable string
 		QString format_timestamp(s64 time, const QString& fmt = "yyyy-MM-dd HH:mm:ss");
@@ -177,6 +215,12 @@ namespace gui
 			// "true" if the default GUI color scheme is dark. "false" otherwise
 			return color_scheme() == Qt::ColorScheme::Dark;
 		}
+
+		// Loads an icon from an (ISO) archive file.
+		bool load_iso_icon(QPixmap& icon, const std::string& icon_path, const std::string& archive_path, const std::string& game_dir = {});
+
+		// Loads an icon (optionally from an (ISO) archive file).
+		bool load_icon(QPixmap& icon, const std::string& icon_path, const std::string& archive_path, const std::string& game_dir = {});
 
 		template <typename T>
 		void stop_future_watcher(QFutureWatcher<T>& watcher, bool cancel, std::shared_ptr<atomic_t<bool>> cancel_flag = nullptr)

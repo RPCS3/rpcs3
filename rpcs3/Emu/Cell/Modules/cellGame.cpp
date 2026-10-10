@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Emu/localized_string.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/system_utils.hpp"
 #include "Emu/VFS.h"
@@ -18,6 +19,7 @@
 #include "Utilities/StrUtil.h"
 #include "util/init_mutex.hpp"
 #include "util/asm.hpp"
+#include "util/cctype.hpp"
 #include "Crypto/utils.h"
 
 #include <span>
@@ -186,6 +188,18 @@ struct content_permission final
 	}
 };
 
+// Content directory of the last cellGameDataCheckCreate2() call, measured by cellGameDataGetSizeKB()
+// A game may check several different directories: Rock Band 2 checks its own game data and then Rock Band's
+// in order to import its songs, so the size always refers to the dirName of the check which asked for it
+struct game_data_check final
+{
+	shared_mutex mutex; // Checks may be issued from more than one thread of the game
+	std::string dir; // "/dev_hdd0/game/" + dirName, empty until the first check
+
+	void set_dir(std::string_view path) { std::lock_guard lock(mutex); dir = path; }
+	std::string get_dir() { reader_lock lock(mutex); return dir; }
+};
+
 template<>
 void fmt_class_string<content_permission::check_mode>::format(std::string& out, u64 arg)
 {
@@ -228,26 +242,26 @@ static bool check_system_ver(vm::cptr<char> systemVersion)
 	return (
 		systemVersion &&
 		std::strlen(systemVersion.get_ptr()) == 7 &&
-		std::isdigit(systemVersion[0]) &&
-		std::isdigit(systemVersion[1]) &&
+		utils::isdigit(systemVersion[0]) &&
+		utils::isdigit(systemVersion[1]) &&
 		systemVersion[2] == '.' &&
-		std::isdigit(systemVersion[3]) &&
-		std::isdigit(systemVersion[4]) &&
-		std::isdigit(systemVersion[5]) &&
-		std::isdigit(systemVersion[6])
+		utils::isdigit(systemVersion[3]) &&
+		utils::isdigit(systemVersion[4]) &&
+		utils::isdigit(systemVersion[5]) &&
+		utils::isdigit(systemVersion[6])
 	);
 }
 
 disc_change_manager::disc_change_manager()
 {
-	Emu.GetCallbacks().enable_disc_eject(false);
-	Emu.GetCallbacks().enable_disc_insert(false);
+	g_emu_callbacks.enable_disc_eject(false);
+	g_emu_callbacks.enable_disc_insert(false);
 }
 
 disc_change_manager::~disc_change_manager()
 {
-	Emu.GetCallbacks().enable_disc_eject(false);
-	Emu.GetCallbacks().enable_disc_insert(false);
+	g_emu_callbacks.enable_disc_eject(false);
+	g_emu_callbacks.enable_disc_insert(false);
 }
 
 error_code disc_change_manager::register_callbacks(vm::ptr<CellGameDiscEjectCallback> func_eject, vm::ptr<CellGameDiscInsertCallback> func_insert)
@@ -264,8 +278,8 @@ error_code disc_change_manager::register_callbacks(vm::ptr<CellGameDiscEjectCall
 		state = is_disc_mounted ? eject_state::inserted : eject_state::ejected;
 	}
 
-	Emu.GetCallbacks().enable_disc_eject(!!func_eject && is_disc_mounted);
-	Emu.GetCallbacks().enable_disc_insert(!!func_insert && !is_disc_mounted);
+	g_emu_callbacks.enable_disc_eject(!!func_eject && is_disc_mounted);
+	g_emu_callbacks.enable_disc_insert(!!func_insert && !is_disc_mounted);
 
 	return CELL_OK;
 }
@@ -277,8 +291,8 @@ error_code disc_change_manager::unregister_callbacks()
 		eject_callback = vm::null;
 		insert_callback = vm::null;
 
-		Emu.GetCallbacks().enable_disc_eject(false);
-		Emu.GetCallbacks().enable_disc_insert(false);
+		g_emu_callbacks.enable_disc_eject(false);
+		g_emu_callbacks.enable_disc_insert(false);
 	};
 
 	if (is_inserting)
@@ -309,7 +323,7 @@ void disc_change_manager::eject_disc()
 	}
 
 	state = eject_state::busy;
-	Emu.GetCallbacks().enable_disc_eject(false);
+	g_emu_callbacks.enable_disc_eject(false);
 
 	ensure(eject_callback);
 
@@ -326,7 +340,7 @@ void disc_change_manager::eject_disc()
 		dcm.state = eject_state::ejected;
 
 		// Re-enable disc insertion only if the callback is still registered
-		Emu.GetCallbacks().enable_disc_insert(!!dcm.insert_callback);
+		g_emu_callbacks.enable_disc_insert(!!dcm.insert_callback);
 
 		return CELL_OK;
 	});
@@ -345,7 +359,7 @@ void disc_change_manager::insert_disc(u32 disc_type, std::string title_id)
 	}
 
 	state = eject_state::busy;
-	Emu.GetCallbacks().enable_disc_insert(false);
+	g_emu_callbacks.enable_disc_insert(false);
 
 	ensure(insert_callback);
 
@@ -371,7 +385,7 @@ void disc_change_manager::insert_disc(u32 disc_type, std::string title_id)
 		dcm.state = eject_state::inserted;
 
 		// Re-enable disc ejection only if the callback is still registered
-		Emu.GetCallbacks().enable_disc_eject(!!dcm.eject_callback);
+		g_emu_callbacks.enable_disc_eject(!!dcm.eject_callback);
 
 		dcm.is_inserting = false;
 
@@ -464,6 +478,8 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 	{
 		get->isNewData = CELL_HDDGAME_ISNEWDATA_NODIR;
 		get->getParam = {};
+
+		cellGame.warning("cellHddGameCheck(): New data.");
 	}
 	else
 	{
@@ -476,13 +492,22 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 		if (psf.contains("RESOLUTION")) get->getParam.resolution = ::at32(psf, "RESOLUTION").as_integer();
 		if (psf.contains("SOUND_FORMAT")) get->getParam.soundFormat = ::at32(psf, "SOUND_FORMAT").as_integer();
 		if (psf.contains("TITLE")) strcpy_trunc(get->getParam.title, ::at32(psf, "TITLE").as_string());
-		if (psf.contains("APP_VER")) strcpy_trunc(get->getParam.dataVersion, ::at32(psf, "APP_VER").as_string());
-		if (psf.contains("TITLE_ID")) strcpy_trunc(get->getParam.titleId, ::at32(psf, "TITLE_ID").as_string());
+
+		// Old games do not have APP_VER key
+		strcpy_trunc(get->getParam.dataVersion, psf::get_string(psf, "APP_VER", psf::get_string(sfo, "VERSION", "")));
+
+		if (psf.contains("TITLE_ID"))
+		{
+			strcpy_trunc(get->getParam.titleId, ::at32(psf, "TITLE_ID").as_string());
+		}
 
 		for (u32 i = 0; i < CELL_HDDGAME_SYSP_LANGUAGE_NUM; i++)
 		{
 			strcpy_trunc(get->getParam.titleLang[i], psf::get_string(psf, fmt::format("TITLE_%02d", i)));
 		}
+
+		cellGame.warning("cellHddGameCheck(): Data exists:\nATTRIBUTE: 0x%x, RESOLUTION: 0x%x, SOUND_FORMAT: 0x%x, dataVersion: %s"
+			, get->getParam.attribute, get->getParam.resolution, get->getParam.soundFormat, std::span<const u8>(reinterpret_cast<const u8*>(get->getParam.dataVersion), 6));
 	}
 
 	// TODO ?
@@ -509,10 +534,11 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 				return CELL_GAMEDATA_ERROR_PARAM;
 			}
 
-			if (!fs::create_path(vfs::get(usrdir)))
-			{
-				return {CELL_GAME_ERROR_ACCESS_ERROR, usrdir};
-			}
+			// Nuked until correctly reversed engineered
+			//if (!fs::create_path(vfs::get(usrdir)))
+			//{
+			//	return {CELL_GAME_ERROR_ACCESS_ERROR, usrdir};
+			//}
 		}
 
 		// Nuked until correctly reversed engineered
@@ -550,7 +576,7 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 
 	case CELL_HDDGAME_CBRESULT_ERR_NOSPACE:
 		cellGame.error("cellHddGameCheck(): callback returned CELL_HDDGAME_CBRESULT_ERR_NOSPACE. Space Needed: %d KB", result->errNeedSizeKB);
-		error_msg = get_localized_string(localized_string_id::CELL_HDD_GAME_CHECK_NOSPACE, fmt::format("%d", result->errNeedSizeKB).c_str());
+		error_msg = get_localized_string(localized_string_id::CELL_HDD_GAME_CHECK_NOSPACE, "%d", result->errNeedSizeKB);
 		break;
 
 	case CELL_HDDGAME_CBRESULT_ERR_BROKEN:
@@ -565,12 +591,12 @@ error_code cellHddGameCheck(ppu_thread& ppu, u32 version, vm::cptr<char> dirName
 
 	case CELL_HDDGAME_CBRESULT_ERR_INVALID:
 		cellGame.error("cellHddGameCheck(): callback returned CELL_HDDGAME_CBRESULT_ERR_INVALID. Error message: %s", result->invalidMsg);
-		error_msg = get_localized_string(localized_string_id::CELL_HDD_GAME_CHECK_INVALID, fmt::format("%s", result->invalidMsg).c_str());
+		error_msg = get_localized_string(localized_string_id::CELL_HDD_GAME_CHECK_INVALID, "%s", result->invalidMsg);
 		break;
 
 	default:
-		cellGame.error("cellHddGameCheck(): callback returned unknown error (code=0x%x). Error message: %s", result->invalidMsg);
-		error_msg = get_localized_string(localized_string_id::CELL_HDD_GAME_CHECK_INVALID, fmt::format("%s", result->invalidMsg).c_str());
+		cellGame.error("cellHddGameCheck(): callback returned unknown error (code=0x%x). Error message: %s", result->result, result->invalidMsg);
+		error_msg = get_localized_string(localized_string_id::CELL_HDD_GAME_CHECK_INVALID, "%s", result->invalidMsg);
 		break;
 	}
 
@@ -679,11 +705,14 @@ error_code cellGameDataGetSizeKB(ppu_thread& ppu, vm::ptr<u32> size)
 		return CELL_GAMEDATA_ERROR_PARAM;
 	}
 
+	const std::string content_dir = g_fxo->get<game_data_check>().get_dir();
+
 	lv2_obj::sleep(ppu);
 
 	const u64 start_sleep = ppu.start_time;
 
-	const std::string local_dir = vfs::get(Emu.GetDir());
+	// Until the first check there is no dirName to go by: the booted directory is the game data itself for an HDD game
+	const std::string local_dir = vfs::get(content_dir.empty() ? Emu.GetDir() : content_dir);
 
 	const auto dirsz = fs::get_dir_size(local_dir, 1024);
 
@@ -695,11 +724,15 @@ error_code cellGameDataGetSizeKB(ppu_thread& ppu, vm::ptr<u32> size)
 	{
 		const auto error = fs::g_tls_error;
 
-		if (fs::exists(local_dir))
+		if (!fs::exists(local_dir))
 		{
-			cellGame.error("cellGameDataGetSizeKB(): Unknown failure on calculating directory '%s' size (%s)", local_dir, error);
+			// The content directory is only created once the status callback has returned
+			ppu.check_state();
+			*size = 0;
+			return CELL_OK;
 		}
 
+		cellGame.error("cellGameDataGetSizeKB(): Unknown failure on calculating directory '%s' size (%s)", local_dir, error);
 		return CELL_GAMEDATA_ERROR_FAILURE;
 	}
 
@@ -1097,6 +1130,9 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 		strcpy_trunc(cbGet->getParam.titleLang[i], psf::get_string(sfo, fmt::format("TITLE_%02d", i)));
 	}
 
+	// The status callback may ask for the size of this directory through cellGameDataGetSizeKB()
+	g_fxo->get<game_data_check>().set_dir(dir);
+
 	lv2_sleep(5000, &ppu);
 
 	funcStat(ppu, cbResult, cbGet, cbSet);
@@ -1169,7 +1205,7 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 	}
 	case CELL_GAMEDATA_CBRESULT_ERR_NOSPACE:
 		cellGame.error("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_ERR_NOSPACE. Space Needed: %d KB", cbResult->errNeedSizeKB);
-		error_msg = get_localized_string(localized_string_id::CELL_GAMEDATA_CHECK_NOSPACE, fmt::format("%d", cbResult->errNeedSizeKB).c_str());
+		error_msg = get_localized_string(localized_string_id::CELL_GAMEDATA_CHECK_NOSPACE, "%d", cbResult->errNeedSizeKB);
 		break;
 
 	case CELL_GAMEDATA_CBRESULT_ERR_BROKEN:
@@ -1184,12 +1220,12 @@ error_code cellGameDataCheckCreate2(ppu_thread& ppu, u32 version, vm::cptr<char>
 
 	case CELL_GAMEDATA_CBRESULT_ERR_INVALID:
 		cellGame.error("cellGameDataCheckCreate2(): callback returned CELL_GAMEDATA_CBRESULT_ERR_INVALID. Error message: %s", cbResult->invalidMsg);
-		error_msg = get_localized_string(localized_string_id::CELL_GAMEDATA_CHECK_INVALID, fmt::format("%s", cbResult->invalidMsg).c_str());
+		error_msg = get_localized_string(localized_string_id::CELL_GAMEDATA_CHECK_INVALID, "%s", cbResult->invalidMsg);
 		break;
 
 	default:
-		cellGame.error("cellGameDataCheckCreate2(): callback returned unknown error (code=0x%x). Error message: %s", cbResult->invalidMsg);
-		error_msg = get_localized_string(localized_string_id::CELL_GAMEDATA_CHECK_INVALID, fmt::format("%s", cbResult->invalidMsg).c_str());
+		cellGame.error("cellGameDataCheckCreate2(): callback returned unknown error (code=0x%x). Error message: %s", cbResult->result, cbResult->invalidMsg);
+		error_msg = get_localized_string(localized_string_id::CELL_GAMEDATA_CHECK_INVALID, "%s", cbResult->invalidMsg);
 		break;
 	}
 
@@ -1301,7 +1337,7 @@ error_code cellGameDeleteGameData(vm::cptr<char> dirName)
 {
 	cellGame.warning("cellGameDeleteGameData(dirName=%s)", dirName);
 
-	if (!dirName)
+	if (!dirName || sysutil_check_name_string(dirName.get_ptr(), 1, CELL_GAME_DIRNAME_SIZE) != 0)
 	{
 		return CELL_GAME_ERROR_PARAM;
 	}
@@ -1313,7 +1349,9 @@ error_code cellGameDeleteGameData(vm::cptr<char> dirName)
 
 	auto remove_gd = [&]() -> error_code
 	{
-		if (Emu.GetCat() == "GD" && Emu.GetDir().substr(Emu.GetDir().find_last_of('/') + 1) == vfs::escape(name))
+		const std::string_view boot_dir = fmt::trim_back_sv(Emu.GetDir(), fs::delim);
+
+		if (Emu.GetCat() == "GD" && boot_dir.substr(boot_dir.find_last_of(fs::delim) + 1) == vfs::escape(name))
 		{
 			// Boot patch cannot delete its own directory
 			return CELL_GAME_ERROR_NOTSUPPORTED;
@@ -1686,7 +1724,7 @@ error_code cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::cptr<char
 		break;
 	case CELL_GAME_ERRDIALOG_NOSPACE:
 		// Not enough available space. The application will continue.
-		error_msg = get_localized_string(localized_string_id::CELL_GAME_ERROR_NOSPACE, fmt::format("%d", errNeedSizeKB).c_str());
+		error_msg = get_localized_string(localized_string_id::CELL_GAME_ERROR_NOSPACE, "%d", errNeedSizeKB);
 		break;
 	case CELL_GAME_ERRDIALOG_BROKEN_EXIT_GAMEDATA:
 		// Game data is corrupted. The application will be terminated.
@@ -1698,7 +1736,7 @@ error_code cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::cptr<char
 		break;
 	case CELL_GAME_ERRDIALOG_NOSPACE_EXIT:
 		// Not enough available space. The application will be terminated.
-		error_msg = get_localized_string(localized_string_id::CELL_GAME_ERROR_NOSPACE_EXIT, fmt::format("%d", errNeedSizeKB).c_str());
+		error_msg = get_localized_string(localized_string_id::CELL_GAME_ERROR_NOSPACE_EXIT, "%d", errNeedSizeKB);
 		break;
 	default:
 		return CELL_GAME_ERROR_PARAM;
@@ -1712,7 +1750,7 @@ error_code cellGameContentErrorDialog(s32 type, s32 errNeedSizeKB, vm::cptr<char
 		}
 
 		error_msg += '\n';
-		error_msg += get_localized_string(localized_string_id::CELL_GAME_ERROR_DIR_NAME, fmt::format("%s", dirName).c_str());
+		error_msg += get_localized_string(localized_string_id::CELL_GAME_ERROR_DIR_NAME, "%s", dirName);
 	}
 
 	return open_exit_dialog(error_msg, type > CELL_GAME_ERRDIALOG_NOSPACE, msg_dialog_source::_cellGame);
@@ -1736,7 +1774,7 @@ error_code cellGameThemeInstall(vm::cptr<char> usrdirPath, vm::cptr<char> fileNa
 	{
 		u32 magic{};
 
-		if (src_path.ends_with(".p3t") || !theme.read(magic) || magic != "P3TF"_u32)
+		if (!fmt::to_lower(src_path).ends_with(".p3t") || !theme.read(magic) || magic != "P3TF"_u32)
 		{
 			return CELL_GAME_ERROR_INVALID_THEME_FILE;
 		}
@@ -1808,7 +1846,7 @@ error_code cellGameThemeInstallFromBuffer(ppu_thread& ppu, u32 fileSize, u32 buf
 				const u32 read_size = std::min(bufSize, fileSize - file_offset);
 				cellGame.notice("cellGameThemeInstallFromBuffer: writing %d bytes at pos %d", read_size, file_offset);
 
-				if (theme.write(reinterpret_cast<u8*>(buf.get_ptr()) + file_offset, read_size) != read_size)
+				if (theme.write(reinterpret_cast<u8*>(buf.get_ptr()), read_size) != read_size)
 				{
 					cellGame.error("cellGameThemeInstallFromBuffer: failed to write to destination file '%s' (error=%s)", dst_path, fs::g_tls_error);
 

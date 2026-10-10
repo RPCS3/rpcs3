@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/emu_callbacks.h"
 #include "Emu/System.h"
 #include "Emu/Cell/PPUModule.h"
 #include "Emu/Cell/PPUThread.h"
@@ -75,7 +76,7 @@ struct msg_info
 			return nullptr;
 		}
 
-		dlg = Emu.GetCallbacks().get_msg_dialog();
+		dlg = g_emu_callbacks.get_msg_dialog();
 
 		return dlg;
 	}
@@ -506,7 +507,7 @@ error_code cellMsgDialogOpenErrorCode(u32 errorCode, vm::ptr<CellMsgDialogCallba
 	default:         string_id = localized_string_id::CELL_MSG_DIALOG_ERROR_DEFAULT;  break; // An error has occurred.
 	}
 
-	const std::string error = get_localized_string(string_id, fmt::format("%08x", errorCode).c_str());
+	const std::string error = get_localized_string(string_id, "%08x", errorCode);
 
 	return cellMsgDialogOpen2(CELL_MSGDIALOG_TYPE_SE_TYPE_ERROR | CELL_MSGDIALOG_TYPE_BUTTON_TYPE_OK, vm::make_str(error), callback, userData, extParam);
 }

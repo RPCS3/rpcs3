@@ -1,6 +1,5 @@
 #pragma once
 #include "ShaderParam.h"
-#include "FragmentProgramRegister.h"
 #include "RSXFragmentProgram.h"
 
 #include <sstream>
@@ -39,20 +38,17 @@ class FragmentProgramDecompiler
 	SRC2 src2;
 	u32  opflags;
 
+	const rsx::assembler::Instruction* m_instruction;
+
 	std::string main;
 	u32& m_size;
 	u32 m_const_index = 0;
-	u32 m_offset;
 	u32 m_location = 0;
 	bool m_is_valid_ucode = true;
 
 	u32 m_loop_count;
 	int m_code_level;
-	std::vector<u32> m_end_offsets;
-	std::vector<u32> m_else_offsets;
 	std::unordered_map<u32, u32> m_constant_offsets;
-
-	std::array<rsx::MixedPrecisionRegister, 64> temp_registers;
 
 	std::string GetMask() const;
 
@@ -101,7 +97,6 @@ class FragmentProgramDecompiler
 
 protected:
 	const RSXFragmentProgram &m_prog;
-	u32 m_ctrl = 0;
 
 	/** returns the type name of float vectors.
 	 */
@@ -114,33 +109,33 @@ protected:
 	/** returns string calling function where arguments are passed via
 	 * $0 $1 $2 substring.
 	 */
-	virtual std::string getFunction(FUNCTION) = 0;
+	virtual std::string getFunction(FUNCTION f) = 0;
 
 	/** returns string calling comparison function on 2 args passed as strings.
 	 */
-	virtual std::string compareFunction(COMPARE, const std::string &, const std::string &) = 0;
+	virtual std::string compareFunction(COMPARE f, std::string_view Op0, std::string_view Op1) = 0;
 
 	/** Insert header of shader file (eg #version, "system constants"...)
 	 */
-	virtual void insertHeader(std::stringstream &OS) = 0;
+	virtual void insertHeader(std::stringstream& OS) = 0;
 	/** Insert global declaration of fragments inputs.
 	 */
-	virtual void insertInputs(std::stringstream &OS) = 0;
+	virtual void insertInputs(std::stringstream& OS) = 0;
 	/** insert global declaration of fragments outputs.
 	*/
-	virtual void insertOutputs(std::stringstream &OS) = 0;
+	virtual void insertOutputs(std::stringstream& OS) = 0;
 	/** insert declaration of shader constants.
 	*/
-	virtual void insertConstants(std::stringstream &OS) = 0;
+	virtual void insertConstants(std::stringstream& OS) = 0;
 	/** insert helper function definitions.
 	*/
-	virtual void insertGlobalFunctions(std::stringstream &OS) = 0;
+	virtual void insertGlobalFunctions(std::stringstream& OS) = 0;
 	/** insert beginning of main (signature, temporary declaration...)
 	*/
-	virtual void insertMainStart(std::stringstream &OS) = 0;
+	virtual void insertMainStart(std::stringstream& OS) = 0;
 	/** insert end of main function (return value, output copy...)
 	 */
-	virtual void insertMainEnd(std::stringstream &OS) = 0;
+	virtual void insertMainEnd(std::stringstream& OS) = 0;
 
 public:
 	enum : u16
@@ -174,7 +169,6 @@ public:
 
 		// Decoded properties (out)
 		bool has_lit_op = false;
-		bool has_gather_op = false;
 		bool has_no_output = false;
 		bool has_discard_op = false;
 		bool has_tex_op = false;
@@ -201,11 +195,12 @@ public:
 		bool has_native_half_support = false;
 		bool emulate_depth_compare = false;
 		bool has_low_precision_rounding = false;
+		bool emulated_depth_storage = false;
 	}
 	device_props;
 
 	ParamArray m_parr;
-	FragmentProgramDecompiler(const RSXFragmentProgram &prog, u32& size);
+	FragmentProgramDecompiler(const RSXFragmentProgram& prog, u32& size);
 	FragmentProgramDecompiler(const FragmentProgramDecompiler&) = delete;
 	FragmentProgramDecompiler(FragmentProgramDecompiler&&) = delete;
 	std::string Decompile();

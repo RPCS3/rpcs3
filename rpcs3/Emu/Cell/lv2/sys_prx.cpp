@@ -8,6 +8,7 @@
 #include "Crypto/unself.h"
 #include "Loader/ELF.h"
 
+#include "Emu/Cell/PPUFunction.h"
 #include "Emu/Cell/PPUThread.h"
 #include "Emu/Cell/ErrorCodes.h"
 #include "Crypto/unedat.h"
@@ -63,8 +64,8 @@ extern const std::map<std::string_view, int> g_prx_list
 	{ "libcelpenc.sprx", 0 },
 	{ "libddpdec.sprx", 0 },
 	{ "libdivxdec.sprx", 0 },
-	{ "libdmux.sprx", 0 },
-	{ "libdmuxpamf.sprx", 0 },
+	{ "libdmux.sprx", 1 },
+	{ "libdmuxpamf.sprx", 1 },
 	{ "libdtslbrdec.sprx", 0 },
 	{ "libfiber.sprx", 0 },
 	{ "libfont.sprx", 0 },
@@ -115,7 +116,7 @@ extern const std::map<std::string_view, int> g_prx_list
 	{ "libssl.sprx", 0 },
 	{ "libsvc1d.sprx", 0 },
 	{ "libsync2.sprx", 0 },
-	{ "libsysmodule.sprx", 0 },
+	{ "libsysmodule.sprx", 1 },
 	{ "libsysutil.sprx", 1 },
 	{ "libsysutil_ap.sprx", 1 },
 	{ "libsysutil_authdialog.sprx", 1 },
@@ -177,6 +178,10 @@ extern const std::map<std::string_view, int> g_prx_list
 
 bool ppu_register_library_lock(std::string_view libname, bool lock_lib);
 
+extern error_code sysmoduleModuleStart(ppu_thread& ppu, u32 args, vm::ptr<void> argp);
+extern error_code sysmoduleModuleStop(ppu_thread& ppu);
+extern bool sysutilModuleInit(lv2_prx& prx);
+
 static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<sys_prx_load_module_option_t> /*pOpt*/, fs::file src = {}, s64 file_offset = 0)
 {
 	if (flags != 0)
@@ -228,16 +233,30 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 		ignore = g_prx_list.count(vpath0) && ::at32(g_prx_list, vpath0);
 	}
 
-	auto hle_load = [&]()
+	auto hle_load = [&]() -> error_code
 	{
 		const auto prx = idm::make_ptr<lv2_obj, lv2_prx>();
+
+		if (name == "libsysmodule.sprx")
+		{
+			prx->start = vm::cast(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(sysmoduleModuleStart)));
+			prx->stop = vm::cast(g_fxo->get<ppu_function_manager>().func_addr(FIND_FUNC(sysmoduleModuleStop)));
+		}
+		else if (name == "libsysutil.sprx")
+		{
+			if (!sysutilModuleInit(*prx))
+			{
+				ensure((idm::remove<lv2_obj, lv2_prx>(idm::last_id<lv2_prx>())));
+				return CELL_ENOMEM;
+			}
+		}
 
 		prx->name = std::move(name);
 		prx->path = std::move(path);
 
 		sys_prx.warning("Ignored module: \"%s\" (id=0x%x)", vpath, idm::last_id());
 
-		return not_an_error(idm::last_id());
+		return not_an_error(idm::last_id<lv2_prx>());
 	};
 
 	if (ignore)
@@ -300,7 +319,7 @@ static error_code prx_load_module(const std::string& vpath, u64 flags, vm::ptr<s
 
 	sys_prx.success("Loaded module: \"%s\" (id=0x%x)", vpath, idm::last_id());
 
-	return not_an_error(idm::last_id());
+	return not_an_error(idm::last_id<lv2_prx>());
 }
 
 fs::file make_file_view(fs::file&& file, u64 offset, u64 size);
@@ -310,11 +329,12 @@ std::function<void(void*)> lv2_prx::load(utils::serial& ar)
 	[[maybe_unused]] const s32 version = GET_SERIALIZATION_VERSION(lv2_prx_overlay);
 
 	const std::string path = vfs::get(ar.pop<std::string>());
-	const s64 offset = ar;
-	const u32 state = ar;
+	const s64 offset{ar};
+	const u32 state{ar};
+	const u32 hle_data{ar};
 
 	usz seg_count = 0;
-	ar.deserialize_vle(seg_count);
+	ar.deserialize_vle<9>(seg_count);
 
 	shared_ptr<lv2_prx> prx;
 
@@ -322,7 +342,14 @@ std::function<void(void*)> lv2_prx::load(utils::serial& ar)
 	{
 		prx = make_shared<lv2_prx>();
 		prx->path = path;
+		prx->hle_data = hle_data;
 		prx->name = path.substr(path.find_last_of(fs::delim) + 1);
+
+		if (!seg_count && prx->name == "libsysutil.sprx")
+		{
+			ensure(prx->hle_data);
+			ensure(sysutilModuleInit(*prx));
+		}
 	};
 
 	if (seg_count)
@@ -337,7 +364,9 @@ std::function<void(void*)> lv2_prx::load(utils::serial& ar)
 		{
 			u128 klic = g_fxo->get<loaded_npdrm_keys>().last_key();
 			file = make_file_view(std::move(file), offset, umax);
-			prx = ppu_load_prx(ppu_prx_object{decrypt_self(std::move(file), reinterpret_cast<u8*>(&klic))}, false, path, 0, &ar);
+			prx = ppu_load_prx(ppu_prx_object{decrypt_self(std::move(file), reinterpret_cast<u8*>(&klic))}, false, path, offset, &ar);
+			ensure(prx);
+
 			prx->m_loaded_flags = std::move(loaded_flags);
 			prx->m_external_loaded_flags = std::move(external_flags);
 
@@ -345,8 +374,6 @@ std::function<void(void*)> lv2_prx::load(utils::serial& ar)
 			{
 				prx->restore_exports();
 			}
-
-			ensure(prx);
 		}
 		else
 		{
@@ -358,7 +385,7 @@ std::function<void(void*)> lv2_prx::load(utils::serial& ar)
 			for (usz i = 0; i < seg_count; i++)
 			{
 				auto& seg = prx->segs.emplace_back();
-				seg.addr = ar;
+				ar(seg.addr);
 				seg.size = 1; // TODO
 			}
 		}
@@ -380,7 +407,9 @@ void lv2_prx::save(utils::serial& ar)
 {
 	USING_SERIALIZATION_VERSION(lv2_prx_overlay);
 
-	ar(vfs::retrieve(path), offset, state);
+	const std::string vpath = vfs::retrieve(path);
+
+	ar(vpath, offset, state, hle_data);
 
 	// Save segments count
 	ar.serialize_vle(segs.size());
@@ -391,10 +420,18 @@ void lv2_prx::save(utils::serial& ar)
 		ar(m_external_loaded_flags);
 	}
 
+	std::string segments;
+
 	for (const ppu_segment& seg : segs)
 	{
-		if (seg.type == 0x1u && seg.size) ar(seg.addr);
+		if (seg.type == 0x1u && seg.size)
+		{
+			fmt::append(segments, " 0x%x", seg.addr);
+			ar(seg.addr);
+		}
 	}
+
+	(vpath.empty() ? sys_prx.error : sys_prx.success)("lv2_prx::save(): vpath='%s', offset=0x%x, state=%x, segments:%s", vpath, offset, +state, segments);
 }
 
 error_code sys_prx_get_ppu_guid(ppu_thread& ppu)
@@ -745,6 +782,11 @@ error_code _sys_prx_unload_module(ppu_thread& ppu, u32 id, u64 flags, vm::ptr<sy
 
 	prx->mutex.lock_unlock();
 
+	if (prx->hle_data)
+	{
+		ensure(vm::dealloc(std::exchange(prx->hle_data, 0), vm::main));
+	}
+
 	ppu_unload_prx(*prx);
 
 	ppu_finalize(*prx);
@@ -899,7 +941,7 @@ error_code _sys_prx_register_library(ppu_thread& ppu, vm::ptr<void> library)
 			{
 				for (u32 lib_addr = prx.exports_start, index = 0; lib_addr < prx.exports_end; index++, lib_addr += vm::read8(lib_addr) ? vm::read8(lib_addr) : sizeof_lib)
 				{
-					if (std::memcpy(vm::base(lib_addr), mem_copy.data(), sizeof_lib) == 0)
+					if (std::memcmp(vm::base(lib_addr), mem_copy.data(), sizeof_lib) == 0)
 					{
 						atomic_storage<char>::release(prx.m_external_loaded_flags[index], true);
 						return true;

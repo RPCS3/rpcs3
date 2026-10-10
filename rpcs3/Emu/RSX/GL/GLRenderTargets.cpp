@@ -16,15 +16,15 @@ color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_forma
 	case rsx::surface_color_format::a8r8g8b8:
 		return{ ::gl::texture::type::uint_8_8_8_8_rev, ::gl::texture::format::bgra, ::gl::texture::internal_format::bgra8, true };
 
-	//These formats discard their alpha component, forced to 0 or 1
-	//All XBGR formats will have remapping before they can be read back in shaders as DRGB8
-	//Prefix o = 1, z = 0
+	// These formats discard their alpha component, forced to 0 or 1
+	// All XBGR formats will have remapping before they can be read back in shaders as DRGB8
+	// Prefix o = 1, z = 0
 	case rsx::surface_color_format::x1r5g5b5_o1r5g5b5:
-		return{ ::gl::texture::type::ushort_5_5_5_1, ::gl::texture::format::rgb, ::gl::texture::internal_format::bgr5a1, true,
+		return{ ::gl::texture::type::ushort_1_5_5_5_rev, ::gl::texture::format::bgra, ::gl::texture::internal_format::bgr5a1, true,
 		{ ::gl::texture::channel::one, ::gl::texture::channel::r, ::gl::texture::channel::g, ::gl::texture::channel::b } };
 
 	case rsx::surface_color_format::x1r5g5b5_z1r5g5b5:
-		return{ ::gl::texture::type::ushort_5_5_5_1, ::gl::texture::format::rgb, ::gl::texture::internal_format::bgr5a1, true,
+		return{ ::gl::texture::type::ushort_1_5_5_5_rev, ::gl::texture::format::bgra, ::gl::texture::internal_format::bgr5a1, true,
 		{ ::gl::texture::channel::zero, ::gl::texture::channel::r, ::gl::texture::channel::g, ::gl::texture::channel::b } };
 
 	case rsx::surface_color_format::x8r8g8b8_z8r8g8b8:
@@ -54,7 +54,7 @@ color_format rsx::internals::surface_color_format_to_gl(rsx::surface_color_forma
 		{ ::gl::texture::channel::one, ::gl::texture::channel::r, ::gl::texture::channel::r, ::gl::texture::channel::r } };
 
 	case rsx::surface_color_format::g8b8:
-		return{ ::gl::texture::type::ubyte, ::gl::texture::format::rg, ::gl::texture::internal_format::rg8, false,
+		return{ ::gl::texture::type::ubyte, ::gl::texture::format::rg, ::gl::texture::internal_format::rg8, true,
 		{ ::gl::texture::channel::g, ::gl::texture::channel::r, ::gl::texture::channel::g, ::gl::texture::channel::r } };
 
 	case rsx::surface_color_format::x32:
@@ -84,7 +84,7 @@ depth_format rsx::internals::surface_depth_format_to_gl(rsx::surface_depth_forma
 		else
 			return{ ::gl::texture::type::uint_24_8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth24_stencil8 };
 	case rsx::surface_depth_format2::z24s8_float:
-		return{ ::gl::texture::type::float32_uint8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth32f_stencil8 };
+		return{ ::gl::texture::type::f32_uint8, ::gl::texture::format::depth_stencil, ::gl::texture::internal_format::depth32f_stencil8 };
 
 	default:
 		fmt::throw_exception("Unsupported depth format 0x%x", static_cast<u32>(depth_format));
@@ -116,7 +116,8 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 		rsx::rtt_config_dirty |
 		rsx::rtt_config_contested |
 		rsx::rtt_config_valid |
-		rsx::rtt_cache_state_dirty);
+		rsx::rtt_cache_state_dirty |
+		rsx::pipeline_config_dirty);
 
 	get_framebuffer_layout(context, m_framebuffer_layout);
 	if (!m_graphics_state.test(rsx::rtt_config_valid))
@@ -141,7 +142,8 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 		m_framebuffer_layout.width, m_framebuffer_layout.height,
 		m_framebuffer_layout.target, m_framebuffer_layout.aa_mode, m_framebuffer_layout.raster_type,
 		m_framebuffer_layout.color_addresses, m_framebuffer_layout.zeta_address,
-		m_framebuffer_layout.actual_color_pitch, m_framebuffer_layout.actual_zeta_pitch);
+		m_framebuffer_layout.actual_color_pitch, m_framebuffer_layout.actual_zeta_pitch,
+		resolution_scaling_config);
 
 	std::array<GLuint, 4> color_targets;
 	GLuint depth_stencil_target;
@@ -218,7 +220,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 		static_cast<gl::framebuffer_holder*>(m_draw_fbo)->release();
 	}
 
-	for (auto &fbo : m_framebuffer_cache)
+	for (auto& fbo : m_framebuffer_cache)
 	{
 		if (fbo.matches(color_targets, depth_stencil_target))
 		{
@@ -264,6 +266,19 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 		}
 	}
 
+	ensure(m_draw_fbo);
+
+	if (m_graphics_state.test(rsx::rtt_config_no_attachments))
+	{
+		// Framebufferless rendering. Raster dimensions must be supplied explicitly and match what real surfaces would have used.
+		const auto [raster_width, raster_height] = rsx::apply_resolution_scale<true>(
+			resolution_scaling_config, m_framebuffer_layout.width, m_framebuffer_layout.height);
+
+		const GLint raster_samples = (g_cfg.video.antialiasing_level == msaa_level::_auto) ? samples : 1;
+		m_draw_fbo->set_default_extents({ raster_width, raster_height });
+		m_draw_fbo->set_default_samples(raster_samples);
+	}
+
 	switch (rsx::method_registers.surface_color_target())
 	{
 	case rsx::surface_target::none: break;
@@ -301,6 +316,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 	}
 
 	m_graphics_state.set(rsx::rtt_config_valid);
+	on_framebuffer_layout_updated();
 
 	check_zcull_status(true);
 	set_viewport();
@@ -320,10 +336,6 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 
 	if (!m_rtts.orphaned_surfaces.empty())
 	{
-		gl::texture::format format;
-		gl::texture::type type;
-		bool swap_bytes;
-
 		for (auto& [base_addr, surface] : m_rtts.orphaned_surfaces)
 		{
 			bool lock = surface->is_depth_surface() ? !!g_cfg.video.write_depth_buffer :
@@ -349,31 +361,15 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 				continue;
 			}
 
-			if (surface->is_depth_surface())
-			{
-				const auto depth_format_gl = rsx::internals::surface_depth_format_to_gl(surface->get_surface_depth_format());
-				format = depth_format_gl.format;
-				type = depth_format_gl.type;
-				swap_bytes = (type != gl::texture::type::uint_24_8);
-			}
-			else
-			{
-				const auto color_format_gl = rsx::internals::surface_color_format_to_gl(surface->get_surface_color_format());
-				format = color_format_gl.format;
-				type = color_format_gl.type;
-				swap_bytes = color_format_gl.swap_bytes;
-			}
-
 			m_gl_texture_cache.lock_memory_region(
 				cmd, surface, surface->get_memory_range(), false,
 				surface->get_surface_width<rsx::surface_metrics::pixels>(), surface->get_surface_height<rsx::surface_metrics::pixels>(), surface->get_rsx_pitch(),
-				format, type, swap_bytes);
+				surface);
 		}
 
 		m_rtts.orphaned_surfaces.clear();
 	}
 
-	const auto color_format = rsx::internals::surface_color_format_to_gl(m_framebuffer_layout.color_format);
 	for (u8 i = 0; i < rsx::limits::color_buffers_count; ++i)
 	{
 		if (!m_surface_info[i].address || !m_surface_info[i].pitch) continue;
@@ -385,7 +381,7 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 			m_gl_texture_cache.lock_memory_region(
 				cmd, m_rtts.m_bound_render_targets[i].second, surface_range, true,
 				m_surface_info[i].width, m_surface_info[i].height, m_surface_info[i].pitch,
-				color_format.format, color_format.type, color_format.swap_bytes);
+				m_rtts.m_bound_render_targets[i].second);
 		}
 		else
 		{
@@ -398,11 +394,10 @@ void GLGSRender::init_buffers(rsx::framebuffer_creation_context context, bool /*
 		const auto surface_range = m_depth_surface_info.get_memory_range();
 		if (g_cfg.video.write_depth_buffer)
 		{
-			const auto depth_format_gl = rsx::internals::surface_depth_format_to_gl(m_framebuffer_layout.depth_format);
 			m_gl_texture_cache.lock_memory_region(
 				cmd, m_rtts.m_bound_depth_stencil.second, surface_range, true,
 				m_depth_surface_info.width, m_depth_surface_info.height, m_depth_surface_info.pitch,
-				depth_format_gl.format, depth_format_gl.type, depth_format_gl.type != gl::texture::type::uint_24_8);
+				m_rtts.m_bound_depth_stencil.second);
 		}
 		else
 		{
@@ -445,7 +440,7 @@ void gl::render_target::load_memory(gl::command_context& cmd)
 	subres.data = { vm::get_super_ptr<const std::byte>(base_addr), static_cast<std::span<const std::byte>::size_type>(rsx_pitch * surface_height * samples_y) };
 
 	// TODO: MSAA support
-	if (g_cfg.video.resolution_scale_percent == 100 && spp == 1) [[likely]]
+	if (resolution_scaling_config.scale_percent == 100 && spp == 1) [[likely]]
 	{
 		gl::upload_texture(cmd, this, get_gcm_format(), is_swizzled, { subres });
 	}
@@ -467,14 +462,16 @@ void gl::render_target::load_memory(gl::command_context& cmd)
 		}
 	}
 
-	state_flags &= ~rsx::surface_state_flags::erase_bkgnd;
+	state_flags &= ~(rsx::surface_state_flags::erase_bkgnd | rsx::surface_state_flags::force_data_load);
 }
 
 void gl::render_target::initialize_memory(gl::command_context& cmd, rsx::surface_access access)
 {
-	const bool memory_load = is_depth_surface() ?
+	const bool read_buffers_config = is_depth_surface() ?
 		!!g_cfg.video.read_depth_buffer :
 		!!g_cfg.video.read_color_buffers;
+
+	const bool memory_load = (state_flags & rsx::surface_state_flags::force_data_load) || read_buffers_config;
 
 	if (!memory_load)
 	{
@@ -686,6 +683,8 @@ gl::viewable_image* gl::render_target::get_resolve_target_safe(gl::command_conte
 			static_cast<GLenum>(get_internal_format()),
 			format_class()
 		));
+
+		resolve_surface->set_name(fmt::format("MSAA_Resolve_%u@0x%x", resolve_surface->id(), base_addr));
 	}
 
 	return static_cast<gl::viewable_image*>(resolve_surface.get());

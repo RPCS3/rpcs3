@@ -5,16 +5,16 @@
 
 LOG_CHANNEL(key_vault_log, "KEY_VAULT");
 
-SELF_KEY::SELF_KEY(u64 ver_start, u64 ver_end, u16 rev, u32 type, const std::string& e, const std::string& r, const std::string& pb, const std::string& pr, u32 ct)
+SELF_KEY::SELF_KEY(u64 ver_start, u64 ver_end, u16 rev, u32 type, std::string_view e, std::string_view r, std::string_view pb, std::string_view pr, u32 ct)
 {
 	version_start = ver_start;
 	version_end   = ver_end;
 	revision      = rev;
 	self_type     = type;
-	hex_to_bytes(erk, e.c_str(), 0);
-	hex_to_bytes(riv, r.c_str(), 0);
-	hex_to_bytes(pub, pb.c_str(), 0);
-	hex_to_bytes(priv, pr.c_str(), 0);
+	hex_to_bytes(erk, e, 0);
+	hex_to_bytes(riv, r, 0);
+	hex_to_bytes(pub, pb, 0);
+	hex_to_bytes(priv, pr, 0);
 	curve_type = ct;
 }
 

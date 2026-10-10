@@ -1,6 +1,7 @@
 #include "GLOverlays.h"
 
 #include "Utilities/StrUtil.h"
+#include "Utilities/stereo_config.h"
 #include "../Program/RSXOverlay.h"
 #include "Emu/Cell/timers.hpp"
 
@@ -176,6 +177,8 @@ namespace gl
 				cmd->disablei(GL_BLEND, 0);
 			}
 
+			cmd->polygon_mode(GL_FILL);
+
 			// Render
 			cmd->use_program(program_handle.id());
 			on_load();
@@ -218,10 +221,10 @@ namespace gl
 		m_input_filter = gl::filter::linear;
 	}
 
-	gl::texture_view* ui_overlay_renderer::load_simple_image(rsx::overlays::image_info_base* desc, bool temp_resource, u32 owner_uid)
+	gl::texture_view* ui_overlay_renderer::load_simple_image(const rsx::overlays::image_info_base* desc, bool temp_resource, u32 owner_uid)
 	{
 		auto tex = std::make_unique<gl::texture>(GL_TEXTURE_2D, desc->w, desc->h, 1, 1, 1, GL_RGBA8, RSX_FORMAT_CLASS_COLOR);
-		tex->copy_from(desc->get_data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
+		tex->copy_from(desc->as_span(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 
 		const GLenum remap[] = { GL_RED, GL_ALPHA, GL_BLUE, GL_GREEN };
 		auto view = std::make_unique<gl::texture_view>(tex.get(), remap);
@@ -234,7 +237,7 @@ namespace gl
 		}
 		else
 		{
-			const u64 key = reinterpret_cast<u64>(desc);
+			const u64 key = reinterpret_cast<uintptr_t>(desc);
 			temp_image_cache[key] = std::make_pair(owner_uid, std::move(tex));
 			temp_view_cache[key] = std::move(view);
 		}
@@ -285,7 +288,7 @@ namespace gl
 		}
 	}
 
-	gl::texture_view* ui_overlay_renderer::find_font(rsx::overlays::font* font)
+	gl::texture_view* ui_overlay_renderer::find_font(const rsx::overlays::font* font)
 	{
 		const auto font_size = font->get_glyph_data_dimensions();
 
@@ -306,7 +309,7 @@ namespace gl
 		const std::vector<u8>& glyph_data = font->get_glyph_data();
 
 		auto tex = std::make_unique<gl::texture>(GL_TEXTURE_2D_ARRAY, font_size.width, font_size.height, font_size.depth, 1, 1, GL_R8, RSX_FORMAT_CLASS_COLOR);
-		tex->copy_from(glyph_data.data(), gl::texture::format::r, gl::texture::type::ubyte, {});
+		tex->copy_from(std::span<const u8>(glyph_data), gl::texture::format::r, gl::texture::type::ubyte, {});
 
 		GLenum remap[] = { GL_RED, GL_RED, GL_RED, GL_RED };
 		auto view = std::make_unique<gl::texture_view>(tex.get(), remap);
@@ -318,7 +321,7 @@ namespace gl
 		return result;
 	}
 
-	gl::texture_view* ui_overlay_renderer::find_temp_image(rsx::overlays::image_info_base* desc, u32 owner_uid)
+	gl::texture_view* ui_overlay_renderer::find_temp_image(const rsx::overlays::image_info_base* desc, u32 owner_uid)
 	{
 		const bool dirty = std::exchange(desc->dirty, false);
 		const u64 key = reinterpret_cast<u64>(desc);
@@ -330,7 +333,7 @@ namespace gl
 
 			if (dirty)
 			{
-				view->image()->copy_from(desc->get_data(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
+				view->image()->copy_from(desc->as_span(), gl::texture::format::rgba, gl::texture::type::uint_8_8_8_8, {});
 			}
 
 			return view;
@@ -395,10 +398,17 @@ namespace gl
 		}
 	}
 
-	void ui_overlay_renderer::run(gl::command_context& cmd_, const areau& viewport, GLuint target, rsx::overlays::overlay& ui)
+	void ui_overlay_renderer::run(gl::command_context& cmd_, const areau& viewport, GLuint target, rsx::overlays::overlay& ui, bool flip_vertically)
 	{
-		program_handle.uniforms["viewport"] = color4f(static_cast<f32>(viewport.width()), static_cast<f32>(viewport.height()), static_cast<f32>(viewport.x1), static_cast<f32>(viewport.y1));
-		program_handle.uniforms["ui_scale"] = color4f(static_cast<f32>(ui.virtual_width), static_cast<f32>(ui.virtual_height), 1.f, 1.f);
+		ui.set_render_viewport(
+		    static_cast<u16>(std::min<u32>(viewport.width(), std::numeric_limits<u16>::max())),
+		    static_cast<u16>(std::min<u32>(viewport.height(), std::numeric_limits<u16>::max()))
+		);
+		const auto ui_scale = color4f(static_cast<f32>(ui.virtual_width), static_cast<f32>(ui.virtual_height), 1.f, 1.f);
+		const auto ui_viewport = color4f(static_cast<f32>(viewport.width()), static_cast<f32>(viewport.height()), static_cast<f32>(viewport.x1), static_cast<f32>(viewport.y1));
+
+		program_handle.uniforms["viewport"] = ui_viewport;
+		program_handle.uniforms["ui_scale"] = ui_scale;
 
 		saved_sampler_state save_30(30, m_sampler);
 		saved_sampler_state save_31(31, m_sampler);
@@ -429,7 +439,7 @@ namespace gl
 			}
 			case rsx::overlays::image_resource_id::raw_image:
 			{
-				cmd_->bind_texture(31, GL_TEXTURE_2D, find_temp_image(static_cast<rsx::overlays::image_info_base*>(cmd.config.external_data_ref), ui.uid)->id());
+				cmd_->bind_texture(31, GL_TEXTURE_2D, find_temp_image(static_cast<const rsx::overlays::image_info_base*>(cmd.config.external_data_ref), ui.uid)->id());
 				break;
 			}
 			case rsx::overlays::image_resource_id::font_file:
@@ -445,22 +455,35 @@ namespace gl
 			}
 			}
 
-			rsx::overlays::vertex_options vert_opts;
+			rsx::overlays::vertex_options vert_opts {};
 			program_handle.uniforms["vertex_config"] = vert_opts
 				.disable_vertex_snap(cmd.config.disable_vertex_snap)
+				.enable_vertical_flip(flip_vertically)
 				.get();
 
-			rsx::overlays::fragment_options draw_opts;
+			rsx::overlays::fragment_options draw_opts {};
 			program_handle.uniforms["fragment_config"] = draw_opts
 				.texture_mode(texture_mode)
 				.clip_fragments(cmd.config.clip_region)
 				.pulse_glow(cmd.config.pulse_glow)
+				.set_sdf(cmd.config.sdf_config.func)
 				.get();
 
 			program_handle.uniforms["timestamp"] = cmd.config.get_sinus_value();
 			program_handle.uniforms["albedo"] = cmd.config.color;
 			program_handle.uniforms["clip_bounds"] = cmd.config.clip_rect;
 			program_handle.uniforms["blur_intensity"] = static_cast<f32>(cmd.config.blur_strength);
+
+			if (cmd.config.sdf_config.func != rsx::overlays::sdf_function::none)
+			{
+				auto sdf_config = cmd.config.sdf_config;
+				sdf_config.transform(static_cast<areaf>(viewport).flipped_vertical(), {ui_scale.x, ui_scale.y});
+
+				program_handle.uniforms["sdf_params"] = color4f(sdf_config.hx, sdf_config.hy, sdf_config.br, sdf_config.bw);
+				program_handle.uniforms["sdf_origin"] = color2f(sdf_config.cx, sdf_config.cy);
+				program_handle.uniforms["sdf_border_color"] = sdf_config.border_color;
+			}
+
 			overlay_pass::run(cmd_, viewport, target, gl::image_aspect::color, true);
 		}
 
@@ -488,7 +511,7 @@ namespace gl
 	}
 
 	void video_out_calibration_pass::run(gl::command_context& cmd, const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb,
-		bool stereo_enabled, stereo_render_mode_options stereo_mode, gl::filter input_filter)
+		bool stereo_enabled, gl::filter input_filter)
 	{
 		if (m_input_filter != input_filter)
 		{
@@ -497,10 +520,16 @@ namespace gl
 			m_sampler.set_parameteri(GL_TEXTURE_MAG_FILTER, static_cast<GLenum>(m_input_filter));
 		}
 
+		static stereo_config stereo_cfg = stereo_config(true);
+		stereo_cfg.update_from_config(stereo_enabled);
+		const auto& matrices = stereo_cfg.matrices();
+
 		program_handle.uniforms["gamma"] = gamma;
 		program_handle.uniforms["limit_range"] = limited_rgb + 0;
-		program_handle.uniforms["stereo_display_mode"] = stereo_enabled ? static_cast<u8>(stereo_mode) : 0;
-		program_handle.uniforms["stereo_image_count"] = (source[1] == GL_NONE? 1 : 2);
+		program_handle.uniforms["stereo_display_mode"] = static_cast<u8>(stereo_cfg.stereo_mode());
+		program_handle.uniforms["stereo_image_count"] = (source[1] == GL_NONE ? 1 : 2);
+		program_handle.uniforms["left_anaglyph_matrix"] = matrices.left;
+		program_handle.uniforms["right_anaglyph_matrix"] = matrices.right;
 
 		saved_sampler_state saved(GL_TEMP_IMAGE_SLOT(0), m_sampler);
 		cmd->bind_texture(GL_TEMP_IMAGE_SLOT(0), GL_TEXTURE_2D, source[0]);
@@ -531,7 +560,8 @@ namespace gl
 			{ "%loc", std::to_string(GL_COMPUTE_BUFFER_SLOT(0)) },
 			{ "%push_block", fmt::format("binding=%d, std140", GL_COMPUTE_BUFFER_SLOT(1)) },
 			{ "%stencil_export_supported", stencil_export_supported ? "1" : "0" },
-			{ "%legacy_format_support", legacy_format_support ? "1" : "0" }
+			{ "%legacy_format_support", legacy_format_support ? "1" : "0" },
+			{ "%emulated_depth_storage", gl::emulate_extended_depth_range() ? "1" : "0" }
 		};
 
 		fs_src = fmt::replace_all(fs_src, repl_list);
@@ -547,12 +577,29 @@ namespace gl
 		const u32 src_offset, const coordu& dst_region,
 		const pixel_buffer_layout& layout)
 	{
-		const u32 bpp = dst->image()->pitch() / dst->image()->width();
-		const u32 row_length = utils::align(dst_region.width * bpp, std::max<int>(layout.alignment, 1)) / bpp;
+		u32 bpp;
+		switch (dst->image()->get_internal_format())
+		{
+		case gl::texture::internal_format::depth32f:
+			bpp = 2; break; // D16F emulation
+		case gl::texture::internal_format::depth32f_stencil8:
+			bpp = 4; break; // D24S8 emulation
+		default:
+			bpp = dst->image()->pitch() / dst->image()->width();
+			break;
+		}
+
+		const u32 aligned_width = utils::align(dst_region.width * bpp, std::max<int>(layout.alignment, 1)) / bpp;
+		const u32 row_length = layout.row_length ? layout.row_length : aligned_width;
 
 		program_handle.uniforms["src_pitch"] = row_length;
 		program_handle.uniforms["swap_bytes"] = layout.swap_bytes;
 		program_handle.uniforms["format"] = static_cast<GLenum>(dst->image()->get_internal_format());
+
+		if (gl::emulate_extended_depth_range())
+		{
+			program_handle.uniforms["depth_float"] = (dst->image()->format_class() & RSX_FORMAT_CLASS_DEPTH_FLOAT_MASK) ? 1u : 0u;
+		}
 		src->bind_range(gl::buffer::target::ssbo, GL_COMPUTE_BUFFER_SLOT(0), src_offset, row_length * bpp * dst_region.height);
 
 		cmd->stencil_mask(0xFF);

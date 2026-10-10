@@ -3,6 +3,19 @@
 #include "util/types.hpp"
 #include <functional>
 
+#if defined(ARCH_ARM64)
+namespace utils
+{
+#if defined(ARM_FEATURE_LSE2)
+	inline constexpr bool g_atomic_lse2 = true;
+#elif defined(__linux__) || defined(_WIN32)
+	extern const bool g_atomic_lse2;
+#else
+	inline constexpr bool g_atomic_lse2 = false;
+#endif
+}
+#endif
+
 #ifndef _MSC_VER
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"
@@ -1011,7 +1024,12 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 	static inline T exchange(T& dest, T value)
 	{
 		__atomic_thread_fence(__ATOMIC_ACQ_REL);
+		// GCC has recently started thinking using this instrinsic is breaking strict aliasing rules
+		// TODO: remove if this ever get fixed in GCC
+		#pragma GCC diagnostic push
+		#pragma GCC diagnostic ignored "-Wstrict-aliasing"
 		return std::bit_cast<T>(__sync_lock_test_and_set(reinterpret_cast<u128*>(&dest), std::bit_cast<u128>(value)));
+		#pragma GCC diagnostic pop
 	}
 
 	static inline void store(T& dest, T value)
@@ -1033,32 +1051,35 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 
 	static inline T load(const T& dest)
 	{
-#if defined(ARM_FEATURE_LSE2)
-		u64 data[2];
-		__asm__ volatile("1:\n"
-			"ldp %x[data0], %x[data1], %[dest]\n"
-			"dmb ish\n"
-			: [data0] "=r"(data[0]), [data1] "=r"(data[1])
-			: [dest] "Q"(dest)
-			: "memory");
-		T result;
-		std::memcpy(&result, data, 16);
-		return result;
-#else
-		u32 tmp;
-		u64 data[2];
-		__asm__ volatile("1:\n"
-			"ldaxp %x[data0], %x[data1], %[dest]\n"
-			"stlxp %w[tmp], %x[data0], %x[data1], %[dest]\n"
-			"cbnz %w[tmp], 1b\n"
-			: [tmp] "=&r" (tmp), [data0] "=&r" (data[0]), [data1] "=&r" (data[1])
-			: [dest] "Q" (dest)
-			: "memory"
-		);
-		T result;
-		std::memcpy(&result, data, 16);
-		return result;
-#endif
+		if (utils::g_atomic_lse2) [[likely]]
+		{
+			u64 data[2];
+			__asm__ volatile("1:\n"
+				"ldp %x[data0], %x[data1], %[dest]\n"
+				"dmb ish\n"
+				: [data0] "=r"(data[0]), [data1] "=r"(data[1])
+				: [dest] "Q"(dest)
+				: "memory");
+			T result;
+			std::memcpy(&result, data, 16);
+			return result;
+		}
+		else
+		{
+			u32 tmp;
+			u64 data[2];
+			__asm__ volatile("1:\n"
+				"ldaxp %x[data0], %x[data1], %[dest]\n"
+				"stlxp %w[tmp], %x[data0], %x[data1], %[dest]\n"
+				"cbnz %w[tmp], 1b\n"
+				: [tmp] "=&r" (tmp), [data0] "=&r" (data[0]), [data1] "=&r" (data[1])
+				: [dest] "Q" (dest)
+				: "memory"
+			);
+			T result;
+			std::memcpy(&result, data, 16);
+			return result;
+		}
 	}
 
 	static inline T observe(const T& dest)
@@ -1120,38 +1141,44 @@ struct atomic_storage<T, 16> : atomic_storage<T, 0>
 	static inline void store(T& dest, T value)
 	{
 		// TODO
-#if defined(ARM_FEATURE_LSE2)
-		u64 src[2];
-		std::memcpy(src, &value, 16);
-		__asm__ volatile("1:\n"
-			"dmb ish\n"
-			"stp %x[data0], %x[data1], %[dest]\n"
-			"dmb ish\n"
-			: [dest] "=Q" (dest)
-			: [data0] "r" (src[0]), [data1] "r" (src[1])
-			: "memory"
-		);
-#else
-		exchange(dest, value);
-#endif
+		if (utils::g_atomic_lse2) [[likely]]
+		{
+			u64 src[2];
+			std::memcpy(src, &value, 16);
+			__asm__ volatile("1:\n"
+				"dmb ish\n"
+				"stp %x[data0], %x[data1], %[dest]\n"
+				"dmb ish\n"
+				: [dest] "=Q" (dest)
+				: [data0] "r" (src[0]), [data1] "r" (src[1])
+				: "memory"
+			);
+		}
+		else
+		{
+			exchange(dest, value);
+		}
 	}
 
 	static inline void release(T& dest, T value)
 	{
-#if defined(ARM_FEATURE_LSE2)
-		u64 src[2];
-		std::memcpy(src, &value, 16);
-		__asm__ volatile("1:\n"
-			 "dmb ish\n"
-			 "stp %x[data0], %x[data1], %[dest]\n"
-			 : [dest] "=Q" (dest)
-			 : [data0] "r" (src[0]), [data1] "r" (src[1])
-			 : "memory"
-		);
-#else
-		// TODO
-		exchange(dest, value);
-#endif
+		if (utils::g_atomic_lse2) [[likely]]
+		{
+			u64 src[2];
+			std::memcpy(src, &value, 16);
+			__asm__ volatile("1:\n"
+				 "dmb ish\n"
+				 "stp %x[data0], %x[data1], %[dest]\n"
+				 : [dest] "=Q" (dest)
+				 : [data0] "r" (src[0]), [data1] "r" (src[1])
+				 : "memory"
+			);
+		}
+		else
+		{
+			// TODO
+			exchange(dest, value);
+		}
 	}
 #endif
 
@@ -1735,6 +1762,11 @@ public:
 	bool load() const noexcept
 	{
 		return base::load() != 0;
+	}
+
+	const uchar& raw() const
+	{
+		return base::raw();
 	}
 
 	// Override implicit conversion from the parent type

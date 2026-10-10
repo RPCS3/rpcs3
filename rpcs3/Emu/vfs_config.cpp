@@ -11,9 +11,9 @@ std::string cfg_vfs::get(const cfg::string& _cfg, std::string_view emu_dir) cons
 	return get(_cfg.to_string(), _cfg.def, emu_dir);
 }
 
-std::string cfg_vfs::get(const std::string& _cfg, const std::string& def, std::string_view emu_dir) const
+std::string cfg_vfs::get(std::string_view _cfg, std::string_view def, std::string_view emu_dir) const
 {
-	std::string path = _cfg;
+	std::string path = std::string(_cfg);
 
 	// Fallback
 	if (path.empty())
@@ -36,10 +36,12 @@ std::string cfg_vfs::get(const std::string& _cfg, const std::string& def, std::s
 
 		if (_emu_dir.empty())
 		{
-			_emu_dir = fs::get_config_dir() + '/';
+			_emu_dir = fs::get_config_dir();
+			ensure(!_emu_dir.empty());
 		}
+
 		// Check if path does not end with a delimiter
-		else if (_emu_dir.back() != fs::delim[0] && _emu_dir.back() != fs::delim[1])
+		if (_emu_dir.back() != fs::delim[0] && _emu_dir.back() != fs::delim[1])
 		{
 			_emu_dir += '/';
 		}

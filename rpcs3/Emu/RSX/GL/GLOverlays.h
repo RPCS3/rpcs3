@@ -75,22 +75,22 @@ namespace gl
 
 		ui_overlay_renderer();
 
-		gl::texture_view* load_simple_image(rsx::overlays::image_info_base* desc, bool temp_resource, u32 owner_uid);
+		gl::texture_view* load_simple_image(const rsx::overlays::image_info_base* desc, bool temp_resource, u32 owner_uid);
 
 		void create();
 		void destroy();
 
 		void remove_temp_resources(u64 key);
 
-		gl::texture_view* find_font(rsx::overlays::font* font);
+		gl::texture_view* find_font(const rsx::overlays::font* font);
 
-		gl::texture_view* find_temp_image(rsx::overlays::image_info_base* desc, u32 owner_uid);
+		gl::texture_view* find_temp_image(const rsx::overlays::image_info_base* desc, u32 owner_uid);
 
 		void set_primitive_type(rsx::overlays::primitive_type type);
 
 		void emit_geometry(gl::command_context& cmd) override;
 
-		void run(gl::command_context& cmd, const areau& viewport, GLuint target, rsx::overlays::overlay& ui);
+		void run(gl::command_context& cmd, const areau& viewport, GLuint target, rsx::overlays::overlay& ui, bool flip_vertically);
 	};
 
 	struct video_out_calibration_pass final : public overlay_pass
@@ -98,7 +98,7 @@ namespace gl
 		video_out_calibration_pass();
 
 		void run(gl::command_context& cmd, const areau& viewport, const rsx::simple_array<GLuint>& source, f32 gamma, bool limited_rgb,
-			bool stereo_enabled, stereo_render_mode_options stereo_mode, gl::filter input_filter);
+			bool stereo_enabled, gl::filter input_filter);
 	};
 
 	struct rp_ssbo_to_generic_texture final : public overlay_pass

@@ -3,6 +3,7 @@
 #include "VKRenderPass.h"
 #include "vkutils/device.h"
 #include "Utilities/Thread.h"
+#include "Emu/system_config.h"
 
 #include "util/sysinfo.hpp"
 
@@ -12,6 +13,7 @@ namespace vk
 	std::unique_ptr<named_thread_group<pipe_compiler>> g_pipe_compilers;
 	int g_num_pipe_compilers = 0;
 	atomic_t<int> g_compiler_index{};
+	VkPipelineCache g_pipeline_cache = VK_NULL_HANDLE;
 
 	pipe_compiler::pipe_compiler()
 	{
@@ -21,11 +23,13 @@ namespace vk
 	pipe_compiler::~pipe_compiler()
 	{
 		// TODO: Destroy and do cleanup
+		m_pipeline_cache = VK_NULL_HANDLE;
 	}
 
-	void pipe_compiler::initialize(const vk::render_device* pdev)
+	void pipe_compiler::initialize(const vk::render_device* pdev, VkPipelineCache pipeline_cache)
 	{
 		m_device = pdev;
+		m_pipeline_cache = pipeline_cache;
 	}
 
 	void pipe_compiler::operator()()
@@ -34,16 +38,22 @@ namespace vk
 		{
 			for (auto&& job : m_work_queue.pop_all())
 			{
-				if (job.is_graphics_job)
-				{
-					auto compiled = int_compile_graphics_pipe(job.graphics_data, job.graphics_modules, job.inputs, {}, job.flags);
-					job.callback_func(compiled);
-				}
-				else
+				if (!job.is_graphics_job)
 				{
 					auto compiled = int_compile_compute_pipe(job.compute_data, job.inputs, job.flags);
 					job.callback_func(compiled);
+					continue;
 				}
+
+				if (job.create_info_func)
+				{
+					auto compiled = int_compile_graphics_pipe(job.create_info_func, job.inputs, {}, job.flags);
+					job.callback_func(compiled);
+					continue;
+				}
+
+				auto compiled = int_compile_graphics_pipe(job.graphics_data, job.graphics_modules, job.inputs, {}, job.flags);
+				job.callback_func(compiled);
 			}
 
 			thread_ctrl::wait_on(m_work_queue);
@@ -56,7 +66,7 @@ namespace vk
 		op_flags flags)
 	{
 		auto program = std::make_unique<glsl::program>(*m_device, create_info, cs_inputs);
-		program->link(flags & SEPARATE_SHADER_OBJECTS);
+		program->link(m_pipeline_cache, flags & SEPARATE_SHADER_OBJECTS);
 		return program;
 	}
 
@@ -67,7 +77,7 @@ namespace vk
 		op_flags flags)
 	{
 		auto program = std::make_unique<glsl::program>(*m_device, create_info, vs_inputs, fs_inputs);
-		program->link(flags & SEPARATE_SHADER_OBJECTS);
+		program->link(m_pipeline_cache, flags & SEPARATE_SHADER_OBJECTS);
 		return program;
 	}
 
@@ -153,11 +163,22 @@ namespace vk
 		VkPipelineColorBlendStateCreateInfo cs = create_info.state.cs;
 		cs.pAttachments = create_info.state.att_state;
 
+		VkPipelineRasterizationStateCreateInfo rs = create_info.state.rs;
+		VkPipelineRasterizationProvokingVertexStateCreateInfoEXT provoking_vertex_state{};
+		if (flags & USE_LAST_PROVOKING_VERTEX)
+		{
+			ensure(m_device->get_provoking_vertex_last_support());
+			provoking_vertex_state.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_PROVOKING_VERTEX_STATE_CREATE_INFO_EXT;
+			provoking_vertex_state.pNext = rs.pNext;
+			provoking_vertex_state.provokingVertexMode = VK_PROVOKING_VERTEX_MODE_LAST_VERTEX_EXT;
+			rs.pNext = &provoking_vertex_state;
+		}
+
 		VkGraphicsPipelineCreateInfo info = {};
 		info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 		info.pVertexInputState = &vi;
 		info.pInputAssemblyState = &create_info.state.ia;
-		info.pRasterizationState = &create_info.state.rs;
+		info.pRasterizationState = &rs;
 		info.pColorBlendState = &cs;
 		info.pMultisampleState = pmss;
 		info.pViewportState = &vp;
@@ -171,6 +192,16 @@ namespace vk
 		info.renderPass = vk::get_renderpass(*m_device, create_info.renderpass_key);
 
 		return int_compile_graphics_pipe(info, vs_inputs, fs_inputs, flags);
+	}
+
+	std::unique_ptr<glsl::program> pipe_compiler::int_compile_graphics_pipe(
+		graphics_pipe_create_callback_t pipe_info_create_fn,
+		const std::vector<glsl::program_input>& vs_inputs,
+		const std::vector<glsl::program_input>& fs_inputs,
+		op_flags flags)
+	{
+		VkGraphicsPipelineCreateInfo create_info = pipe_info_create_fn();
+		return int_compile_graphics_pipe(create_info, vs_inputs, fs_inputs, flags);
 	}
 
 	std::unique_ptr<glsl::program> pipe_compiler::compile(
@@ -194,7 +225,7 @@ namespace vk
 		const std::vector<glsl::program_input>& fs_inputs)
 	{
 		// It is very inefficient to defer this as all pointers need to be saved
-		ensure(flags & COMPILE_INLINE);
+		ensure(flags & COMPILE_INLINE, "Asynchronous compilation is not allowed for raw graphics pipeline input");
 		return int_compile_graphics_pipe(create_info, vs_inputs, fs_inputs, flags);
 	}
 
@@ -216,13 +247,39 @@ namespace vk
 		return {};
 	}
 
-	void initialize_pipe_compiler(int num_worker_threads)
+	std::unique_ptr<glsl::program> pipe_compiler::compile(
+		graphics_pipe_create_callback_t get_create_info,
+		op_flags flags, callback_t callback,
+		const std::vector<glsl::program_input>& vs_inputs,
+		const std::vector<glsl::program_input>& fs_inputs)
 	{
-		if (num_worker_threads == 0)
+		if (flags & COMPILE_INLINE)
 		{
-			// Select optimal number of compiler threads
+			return int_compile_graphics_pipe(get_create_info, vs_inputs, fs_inputs, flags);
+		}
+
+		m_work_queue.push(get_create_info, vs_inputs, fs_inputs, flags, callback);
+		return {};
+	}
+
+	int decay_num_worker_threads(int num_worker_threads)
+	{
+		if (num_worker_threads <= 0)
+		{
+			// Select a conservative but modern default for async pipeline compilation.
+			// Older heuristics topped out too early on high-core CPUs and left large
+			// shader bursts queued longer than necessary.
 			const auto hw_threads = utils::get_thread_count();
-			if (hw_threads > 12)
+
+			if (hw_threads >= 24)
+			{
+				num_worker_threads = 12;
+			}
+			else if (hw_threads >= 16)
+			{
+				num_worker_threads = 8;
+			}
+			else if (hw_threads > 12)
 			{
 				num_worker_threads = 6;
 			}
@@ -238,10 +295,31 @@ namespace vk
 			{
 				num_worker_threads = 1;
 			}
+
+			rsx_log.notice("Async pipeline compiler auto-selected %d worker(s) for %u host thread(s).",
+				num_worker_threads, hw_threads);
 		}
+
+		return num_worker_threads;
+	}
+
+	void initialize_pipe_compiler(int num_worker_threads, VkPipelineCache pipe_cache)
+	{
+		num_worker_threads = decay_num_worker_threads(num_worker_threads);
 
 		ensure(num_worker_threads >= 1);
 		ensure(g_render_device); // "Cannot initialize pipe compiler before creating a logical device"
+
+		// Create the shared pipeline cache
+		if (!pipe_cache)
+		{
+			VkPipelineCacheCreateInfo drv_cache_info{ VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
+			vkCreatePipelineCache(*g_render_device, &drv_cache_info, nullptr, &g_pipeline_cache);
+		}
+		else
+		{
+			g_pipeline_cache = pipe_cache;
+		}
 
 		// Create the thread pool
 		g_pipe_compilers = std::make_unique<named_thread_group<pipe_compiler>>("RSX.W", num_worker_threads);
@@ -250,13 +328,36 @@ namespace vk
 		// Initialize the workers. At least one inline compiler shall exist (doesn't actually run)
 		for (pipe_compiler& compiler : *g_pipe_compilers.get())
 		{
-			compiler.initialize(g_render_device);
+			compiler.initialize(g_render_device, g_pipeline_cache);
 		}
+	}
+
+	void resize_pipe_compiler(int num_worker_threads)
+	{
+		num_worker_threads = decay_num_worker_threads(num_worker_threads);
+		if (static_cast<u32>(num_worker_threads) <= g_pipe_compilers->size())
+		{
+			// Just lie about how many compilers we have
+			g_num_pipe_compilers = num_worker_threads;
+			return;
+		}
+
+		// We need a bigger thread pool. Very unlikely but provided for correctness.
+		g_pipe_compilers.reset();
+		g_num_pipe_compilers = 0;
+
+		initialize_pipe_compiler(num_worker_threads, g_pipeline_cache);
 	}
 
 	void destroy_pipe_compiler()
 	{
 		g_pipe_compilers.reset();
+
+		if (g_pipeline_cache)
+		{
+			vkDestroyPipelineCache(*g_render_device, g_pipeline_cache, nullptr);
+			g_pipeline_cache = VK_NULL_HANDLE;
+		}
 	}
 
 	pipe_compiler* get_pipe_compiler()

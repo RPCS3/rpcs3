@@ -12,18 +12,48 @@ game_list::game_list() : QTableWidget(), game_list_base()
 	{
 		Q_EMIT IconReady(game, item);
 	};
+
+	// Activate video/music preview on selection change (keyboard/pad navigation)
+	connect(this, &QTableWidget::currentCellChanged, this, [this](int row, int /*column*/, int prev_row, int /*prev_column*/)
+	{
+		if (row == prev_row)
+			return;
+
+		if (m_last_hover_item)
+		{
+			m_last_hover_item->set_active(false);
+		}
+
+		movie_item* new_item = static_cast<movie_item*>(item(row, 0));
+
+		if (new_item && isActiveWindow())
+		{
+			new_item->set_active(true);
+		}
+
+		m_last_hover_item = new_item;
+	});
 }
 
-void game_list::sync_header_actions(QList<QAction*>& actions, std::function<bool(int)> get_visibility)
+void game_list::stop_movie()
+{
+	if (m_last_hover_item)
+	{
+		m_last_hover_item->set_active(false);
+		m_last_hover_item = nullptr;
+	}
+}
+
+void game_list::sync_header_actions(std::map<int, QAction*>& actions, std::function<bool(int)> get_visibility)
 {
 	ensure(get_visibility);
 
 	bool is_dirty = false;
 
-	for (int col = 0; col < actions.count(); ++col)
+	for (auto& [col, action] : actions)
 	{
 		const bool is_hidden = !get_visibility(col);
-		actions[col]->setChecked(!is_hidden);
+		action->setChecked(!is_hidden);
 
 		if (isColumnHidden(col) != is_hidden)
 		{
@@ -38,7 +68,7 @@ void game_list::sync_header_actions(QList<QAction*>& actions, std::function<bool
 	}
 }
 
-void game_list::create_header_actions(QList<QAction*>& actions, std::function<bool(int)> get_visibility, std::function<void(int, bool)> set_visibility)
+void game_list::create_header_actions(std::map<int, QAction*>& actions, std::function<bool(int)> get_visibility, std::function<void(int, bool)> set_visibility)
 {
 	ensure(get_visibility);
 	ensure(set_visibility);
@@ -48,27 +78,30 @@ void game_list::create_header_actions(QList<QAction*>& actions, std::function<bo
 	connect(horizontalHeader(), &QHeaderView::customContextMenuRequested, this, [this, &actions](const QPoint& pos)
 	{
 		QMenu* configure = new QMenu(this);
-		configure->addActions(actions);
+		for (auto& [col, action] : actions)
+		{
+			configure->addAction(action);
+		}
 		configure->exec(horizontalHeader()->viewport()->mapToGlobal(pos));
 	});
 
-	for (int col = 0; col < actions.count(); ++col)
+	for (auto& [col, action] : actions)
 	{
-		actions[col]->setCheckable(true);
+		action->setCheckable(true);
 
-		connect(actions[col], &QAction::triggered, this, [this, &actions, get_visibility, set_visibility, col](bool checked)
+		connect(action, &QAction::triggered, this, [this, &actions, get_visibility, set_visibility, col](bool checked)
 		{
 			if (!checked) // be sure to have at least one column left so you can call the context menu at all time
 			{
 				int c = 0;
-				for (int i = 0; i < actions.count(); ++i)
+				for (auto& [col, action] : actions)
 				{
-					if (get_visibility(i) && ++c > 1)
+					if (get_visibility(col) && ++c > 1)
 						break;
 				}
 				if (c < 2)
 				{
-					actions[col]->setChecked(true); // re-enable the checkbox if we don't change the actual state
+					::at32(actions, col)->setChecked(true); // re-enable the checkbox if we don't change the actual state
 					return;
 				}
 			}
@@ -114,7 +147,8 @@ void game_list::fix_narrow_columns()
 
 void game_list::mousePressEvent(QMouseEvent* event)
 {
-	if (QTableWidgetItem* item = itemAt(event->pos()); !item || !item->data(Qt::UserRole).isValid())
+	// Handle deselction when clicking on empty space in the table
+	if (!itemAt(event->pos()))
 	{
 		clearSelection();
 		setCurrentItem(nullptr); // Needed for currentItemChanged
@@ -132,7 +166,7 @@ void game_list::mouseMoveEvent(QMouseEvent* event)
 		{
 			m_last_hover_item->set_active(false);
 		}
-		if (new_item)
+		if (new_item && isActiveWindow())
 		{
 			new_item->set_active(true);
 		}

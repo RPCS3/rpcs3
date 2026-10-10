@@ -1,5 +1,19 @@
 R"(
 
+#ifdef _EMULATED_DEPTH_STORAGE
+// Halving the IEEE bit pattern of a non-negative float is monotonic and maps every finite value below 1.
+// The host depth test keeps working on the encoded values.
+float encode_emulated_depth(const in float depth)
+{
+	return uintBitsToFloat((floatBitsToUint(max(depth, 0.)) & 0x7fffffffu) >> 1);
+}
+
+float decode_emulated_depth(const in float stored)
+{
+	return uintBitsToFloat(floatBitsToUint(stored) << 1);
+}
+#endif
+
 #ifdef _32_BIT_OUTPUT
 // Everything is fp32 on ouput channels
 #define _mrt_color_t(expr) expr
@@ -15,16 +29,24 @@ R"(
 // Default. Used when we're not utilizing native fp16
 vec4 round_to_8bit(const in vec4 v4)
 {
-	uvec4 raw = uvec4(floor(fma(_fx12_truncate(v4), vec4(255.), vec4(0.5))));
+	const uvec4 raw = uvec4(max(floor(fma(_fx12_truncate(v4), vec4(255.), vec4(0.5))), vec4(0.)));
 	return vec4(raw) / vec4(255.);
 }
 #ifndef _32_BIT_OUTPUT
 f16vec4 round_to_8bit(const in f16vec4 v4)
 {
-	uvec4 raw = uvec4(floor(fma(_fx12_truncate(vec4(v4)), f16vec4(255.), f16vec4(0.5))));
+	const uvec4 raw = uvec4(max(floor(fma(_fx12_truncate(vec4(v4)), vec4(255.), vec4(0.5))), vec4(0.)));
 	return f16vec4(raw) / f16vec4(255.);
 }
 #endif
+
+// Scalar variant of 8-bit rounding is only available for f32.
+float round_to_8bit(const in float v)
+{
+	const uint raw = uint(max(floor(fma(_fx12_truncate(v), 255.f, 0.5f)), 0.f));
+	return float(raw) / 255.f;
+}
+
 #endif
 
 #ifdef _DISABLE_EARLY_DISCARD
@@ -38,7 +60,7 @@ bool _fragment_discard = false;
 vec4 get_wpos()
 {
 	float abs_scale = abs(wpos_scale);
-	return (gl_FragCoord * vec4(abs_scale, wpos_scale, 1., 1.)) + vec4(0., wpos_bias, 0., 0.);
+	return (gl_FragCoord * vec4(abs_scale, wpos_scale, 1., 1.)) + vec4(wpos_bias, 0., 0.);
 }
 #endif
 
@@ -81,7 +103,7 @@ vec4 fetch_fog_value(const in uint mode)
 }
 #endif
 
-#ifdef _EMULATE_COVERAGE_TEST
+#ifdef _ENABLE_ALPHA_TO_COVERAGE_TEST
 // Purely stochastic
 bool coverage_test_passes(const in vec4 _sample)
 {
@@ -109,6 +131,7 @@ vec4 srgb_to_linear(const in vec4 cs)
 }
 #endif
 
+#ifdef _ENABLE_COMPARISON_FUNC
 // Required by all fragment shaders for alpha test
 bool comparison_passes(const in float a, const in float b, const in uint func)
 {
@@ -125,5 +148,76 @@ bool comparison_passes(const in float a, const in float b, const in uint func)
 		case 7: return true; //always
 	}
 }
+#endif
+
+#ifdef _ENABLE_COLOR_CHANNEL_REMAPPING
+vec4 remap_vector(const in vec4 color, const in uint remap)
+{
+	vec4 result;
+	if (_get_bits(remap, 0, 8) == 0xE4)
+	{
+		result = color;
+	}
+	else
+	{
+		uvec4 remap_channel = uvec4(remap) >> uvec4(2, 4, 6, 0);
+		remap_channel &= 3;
+		remap_channel = (remap_channel + 3) % 4; // Map A-R-G-B to R-G-B-A
+
+		// Generate remapped result
+		result.a = color[remap_channel.a];
+		result.r = color[remap_channel.r];
+		result.g = color[remap_channel.g];
+		result.b = color[remap_channel.b];
+	}
+
+	if (_get_bits(remap, 8, 8) == 0xAA)
+		return result;
+
+	uvec4 remap_select = uvec4(remap) >> uvec4(10, 12, 14, 8);
+	remap_select &= 3;
+	bvec4 choice = lessThan(remap_select, uvec4(2));
+	return _select(result, vec4(remap_select), choice);
+}
+#endif
+
+#ifdef _ENABLE_ROP_CHANNEL_REMAPPING
+#define get_ROP_channel_remap() _get_bits(rop_control, MRT_CHANNEL_REMAP_OFFSET, MRT_CHANNEL_REMAP_LENGTH)
+vec4 remap_ROP_output(const in vec4 col, const in uint remap_index)
+{
+	switch (remap_index)
+	{
+	default:
+	case ROP_REMAP_SWIZZLE_RGBA: // RGBA
+		return col;
+	case ROP_REMAP_SWIZZLE_BBBB: // B8
+		return col.bbbb;
+	case ROP_REMAP_SWIZZLE_GBGB: // G8B8
+		return col.bgbg;
+	case ROP_REMAP_SWIZZLE_RGB1: // RGB1
+		return vec4(col.rgb, 1.f);
+	case ROP_REMAP_SWIZZLE_RGB0: // RGB0
+		return vec4(col.rgb, 0.f);
+	}
+}
+vec4 remap_ROP_input(const in vec4 col, const in uint remap_index)
+{
+	switch (remap_index)
+	{
+	default:
+	case ROP_REMAP_SWIZZLE_RGBA: // RGBA
+		return col;
+	case ROP_REMAP_SWIZZLE_BBBB: // B8
+		return col.rrrr;
+	case ROP_REMAP_SWIZZLE_GBGB: // G8B8
+		return col.rgrg;
+	case ROP_REMAP_SWIZZLE_RGB1: // RGB1
+	case ROP_REMAP_SWIZZLE_RGB0: // RGB0
+		// This seems completely wrong but hwtest shows that blending with DST_ALPHA reads 1 for all XRGB8 formats regardless of the 0/1 values.
+		// Lucky for us this opens up the optimization opportunity to not need PB for such formats when only DST_A is referenced. SRC_A is another matter altogether.
+		return vec4(col.rgb, 1.f);
+	}
+}
+#endif
 
 )"

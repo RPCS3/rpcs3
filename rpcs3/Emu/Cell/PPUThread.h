@@ -145,7 +145,7 @@ public:
 	virtual void dump_regs(std::string&, std::any& custom_data) const override;
 	virtual std::string dump_callstack() const override;
 	virtual std::vector<std::pair<u32, u32>> dump_callstack_list() const override;
-	virtual std::string dump_misc() const override;
+	virtual void dump_misc(std::string& ret, std::any& custom_data) const override;
 	virtual void dump_all(std::string&) const override;
 	virtual void cpu_task() override final;
 	virtual void cpu_sleep() override;
@@ -278,6 +278,17 @@ public:
 	};
 
 	atomic_t<ppu_prio_t> prio{};
+
+	bool is_lower_priority_than(ppu_thread& other) const
+	{
+		return prio.load().prio < other.prio.load().prio;
+	}
+
+	bool is_lower_priority_than(s32 _prio) const
+	{
+		return prio.load().prio < _prio;
+	}
+
 	const u32 stack_size; // Stack size
 	const u32 stack_addr; // Stack address
 
@@ -292,6 +303,8 @@ public:
 	cmd64 cmd_wait(); // Empty command means caller must return, like true from cpu_thread::check_status().
 	cmd64 cmd_get(u32 index) { return cmd_queue[cmd_queue.peek() + index].load(); }
 	atomic_t<u32> cmd_notify = 0;
+
+	atomic_t<u32> start_gate_caller = 0; // Caller of sys_ppu_thread_start waiting for this thread to reach its entry command, cleared by this thread
 
 	alignas(64) const ppu_func_opd_t entry_func;
 	u64 start_time{0}; // Sleep start timepoint
@@ -431,20 +444,6 @@ struct ppu_gpr_cast_impl<vm::_ptr_base<T, AT>>
 	}
 
 	static inline vm::_ptr_base<T, AT> from(const u64 reg)
-	{
-		return vm::cast(ppu_gpr_cast_impl<AT>::from(reg));
-	}
-};
-
-template <typename T, typename AT>
-struct ppu_gpr_cast_impl<vm::_ref_base<T, AT>>
-{
-	static inline u64 to(const vm::_ref_base<T, AT>& value)
-	{
-		return ppu_gpr_cast_impl<AT>::to(value.addr());
-	}
-
-	static inline vm::_ref_base<T, AT> from(const u64 reg)
 	{
 		return vm::cast(ppu_gpr_cast_impl<AT>::from(reg));
 	}

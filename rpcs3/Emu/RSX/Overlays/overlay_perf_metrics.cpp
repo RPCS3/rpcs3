@@ -4,8 +4,10 @@
 #include "Emu/RSX/RSXThread.h"
 #include "Emu/Cell/SPUThread.h"
 #include "Emu/Cell/PPUThread.h"
+#include "Emu/system_config.h"
 
 #include <algorithm>
+#include <cmath>
 #include <utility>
 
 #include "util/cpu_stats.hpp"
@@ -93,7 +95,6 @@ namespace rsx
 		{
 			// left, top, right, bottom
 			const areau padding { m_padding, m_padding - std::min<u32>(4, m_padding), m_padding, m_padding };
-			const positionu margin { m_margin_x, m_margin_y };
 			positionu pos;
 
 			u16 graph_width = 0;
@@ -116,6 +117,26 @@ namespace rsx
 				graph_height += m_padding;
 			}
 
+			const u16 overlay_width = std::max(m_body.w, graph_width);
+			const u16 overlay_height = static_cast<u16>(m_body.h + graph_height);
+			const auto percent_to_margin_px = [](f32 margin_percent, u16 virtual_size, u16 overlay_size) -> u32
+			{
+				if (overlay_size >= virtual_size)
+				{
+					return 0;
+				}
+
+				const u32 max_margin = virtual_size - overlay_size;
+				const u32 margin_px = static_cast<u32>(std::lround((std::clamp(margin_percent, 0.0f, 100.0f) / 100.0f) * max_margin));
+				return std::min(margin_px, max_margin);
+			};
+
+			const positionu margin
+			{
+				percent_to_margin_px(m_margin_x, m_virtual_width, overlay_width),
+				percent_to_margin_px(m_margin_y, m_virtual_height, overlay_height)
+			};
+
 			switch (m_quadrant)
 			{
 			case screen_quadrant::top_left:
@@ -123,27 +144,27 @@ namespace rsx
 				pos.y = margin.y;
 				break;
 			case screen_quadrant::top_right:
-				pos.x = virtual_width - std::max(m_body.w, graph_width) - margin.x;
+				pos.x = m_virtual_width - overlay_width - margin.x;
 				pos.y = margin.y;
 				break;
 			case screen_quadrant::bottom_left:
 				pos.x = margin.x;
-				pos.y = virtual_height - m_body.h - graph_height - margin.y;
+				pos.y = m_virtual_height - overlay_height - margin.y;
 				break;
 			case screen_quadrant::bottom_right:
-				pos.x = virtual_width - std::max(m_body.w, graph_width) - margin.x;
-				pos.y = virtual_height - m_body.h - graph_height - margin.y;
+				pos.x = m_virtual_width - overlay_width - margin.x;
+				pos.y = m_virtual_height - overlay_height - margin.y;
 				break;
 			}
 
 			if (m_center_x)
 			{
-				pos.x = (virtual_width - std::max(m_body.w, graph_width)) / 2;
+				pos.x = overlay_width >= m_virtual_width ? 0 : (m_virtual_width - overlay_width) / 2;
 			}
 
 			if (m_center_y)
 			{
-				pos.y = (virtual_height - m_body.h - graph_height) / 2;
+				pos.y = overlay_height >= m_virtual_height ? 0 : (m_virtual_height - overlay_height) / 2;
 			}
 
 			elm.set_pos(pos.x, pos.y);
@@ -219,7 +240,7 @@ namespace rsx
 
 		void perf_metrics_overlay::reset_body()
 		{
-			m_body.set_font(m_font.c_str(), m_font_size);
+			m_body.set_font(m_font_size, m_font);
 			m_body.fore_color = convert_color_code(m_color_body, m_opacity);
 			m_body.back_color = convert_color_code(m_background_body, m_opacity);
 			reset_transform(m_body);
@@ -227,7 +248,7 @@ namespace rsx
 
 		void perf_metrics_overlay::reset_titles()
 		{
-			m_titles.set_font(m_font.c_str(), m_font_size);
+			m_titles.set_font(m_font_size, m_font);
 			m_titles.fore_color = convert_color_code(m_color_title, m_opacity);
 			m_titles.back_color = convert_color_code(m_background_title, m_opacity);
 			reset_transform(m_titles);
@@ -381,7 +402,7 @@ namespace rsx
 			m_force_repaint = true;
 		}
 
-		void perf_metrics_overlay::set_margins(u32 margin_x, u32 margin_y, bool center_x, bool center_y)
+		void perf_metrics_overlay::set_margins(f32 margin_x, f32 margin_y, bool center_x, bool center_y)
 		{
 			if (m_margin_x == margin_x && m_margin_y == margin_y && m_center_x == center_x && m_center_y == center_y)
 				return;
@@ -429,6 +450,38 @@ namespace rsx
 		void perf_metrics_overlay::force_next_update()
 		{
 			m_force_update = true;
+		}
+
+		void perf_metrics_overlay::set_render_viewport(u16 width, u16 height)
+		{
+			u16 new_virtual_width = virtual_width;
+			u16 new_virtual_height = virtual_height;
+
+			if (use_window_space && width > 0 && height > 0)
+			{
+				const double scale_x = static_cast<double>(width) / virtual_width;
+				const double scale_y = static_cast<double>(height) / virtual_height;
+				const double scale = std::min(scale_x, scale_y);
+
+				new_virtual_width = static_cast<u16>(std::min<u32>(
+					static_cast<u32>(std::lround(width / scale)),
+					std::numeric_limits<u16>::max()));
+
+				new_virtual_height = static_cast<u16>(std::min<u32>(
+					static_cast<u32>(std::lround(height / scale)),
+					std::numeric_limits<u16>::max()));
+			}
+
+			if (m_virtual_width == new_virtual_width && m_virtual_height == new_virtual_height)
+				return;
+
+			m_virtual_width = new_virtual_width;
+			m_virtual_height = new_virtual_height;
+
+			if (m_is_initialised)
+			{
+				reset_transforms();
+			}
 		}
 
 		void perf_metrics_overlay::update(u64 /*timestamp_us*/)
@@ -637,7 +690,7 @@ namespace rsx
 
 		graph::graph()
 		{
-			m_label.set_font("e046323ms.ttf", 8);
+			m_label.set_font(8, "e046323ms.ttf");
 			m_label.alignment = text_align::center;
 			m_label.fore_color = { 1.f, 1.f, 1.f, 1.f };
 			m_label.back_color = { 0.f, 0.f, 0.f, .7f };
@@ -657,20 +710,20 @@ namespace rsx
 			overlay_element::set_size(_w, _h);
 		}
 
-		void graph::set_title(const char* title)
+		void graph::set_title(std::string&& title)
 		{
-			m_title = title;
+			m_title = std::move(title);
 		}
 
-		void graph::set_font(const char* font_name, u16 font_size)
+		void graph::set_font(u16 font_size, std::string_view font_name)
 		{
-			m_label.set_font(font_name, font_size);
+			m_label.set_font(font_size, font_name);
 		}
 
 		void graph::set_font_size(u16 font_size)
 		{
 			const auto font_name = m_label.get_font()->get_name().data();
-			m_label.set_font(font_name, font_size);
+			m_label.set_font(font_size, font_name);
 		}
 
 		void graph::set_count(u32 datapoint_count)
@@ -754,7 +807,7 @@ namespace rsx
 			// Make sure min/max reflects the data being displayed, not the entire datapoints vector
 			for (usz i = m_datapoints.size() - m_datapoint_count; i < m_datapoints.size(); i++)
 			{
-				const f32& dp = m_datapoints[i];
+				const f32 dp = m_datapoints[i];
 
 				if (dp < 0) continue; // Skip initial negative values. They don't count.
 
@@ -882,7 +935,7 @@ namespace rsx
 				auto& perf_settings = g_cfg.video.perf_overlay;
 				auto perf_overlay = manager->get<rsx::overlays::perf_metrics_overlay>();
 
-				if (perf_settings.perf_overlay_enabled)
+				if (perf_settings.enabled)
 				{
 					if (!perf_overlay)
 					{
@@ -896,7 +949,8 @@ namespace rsx
 					perf_overlay->set_update_interval(perf_settings.update_interval);
 					perf_overlay->set_font(perf_settings.font);
 					perf_overlay->set_font_size(perf_settings.font_size);
-					perf_overlay->set_margins(perf_settings.margin_x, perf_settings.margin_y, perf_settings.center_x.get(), perf_settings.center_y.get());
+					perf_overlay->set_margins(static_cast<f32>(perf_settings.margin_x.get()), static_cast<f32>(perf_settings.margin_y.get()), perf_settings.center_x.get(), perf_settings.center_y.get());
+					perf_overlay->use_window_space = perf_settings.use_window_space.get();
 					perf_overlay->set_opacity(perf_settings.opacity / 100.f);
 					perf_overlay->set_body_colors(perf_settings.color_body, perf_settings.background_body);
 					perf_overlay->set_title_colors(perf_settings.color_title, perf_settings.background_title);

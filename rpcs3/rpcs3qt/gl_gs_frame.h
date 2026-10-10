@@ -6,8 +6,8 @@
 
 struct GLContext
 {
-	QSurface *surface = nullptr;
-	QOpenGLContext *handle = nullptr;
+	QSurface* surface = nullptr;
+	QOpenGLContext* handle = nullptr;
 	bool owner = false;
 };
 
@@ -15,7 +15,7 @@ class gl_gs_frame : public gs_frame
 {
 private:
 	QSurfaceFormat m_format;
-	GLContext *m_primary_context = nullptr;
+	GLContext* m_primary_context = nullptr;
 
 public:
 	explicit gl_gs_frame(QScreen* screen, const QRect& geometry, const QIcon& appIcon, std::shared_ptr<gui_settings> gui_settings, bool force_fullscreen);

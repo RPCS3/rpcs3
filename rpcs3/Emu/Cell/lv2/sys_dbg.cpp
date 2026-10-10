@@ -28,6 +28,7 @@ error_code sys_dbg_read_process_memory(s32 pid, u32 address, u32 size, vm::ptr<v
 		return CELL_LV2DBG_ERROR_DEINVALIDARGUMENTS;
 	}
 
+	ensure(cpu_thread::get_current())->state += cpu_flag::wait;
 	vm::writer_lock lock;
 
 	// Check if data destination is writable
@@ -74,6 +75,7 @@ error_code sys_dbg_write_process_memory(s32 pid, u32 address, u32 size, vm::cptr
 		return CELL_EFAULT;
 	}
 
+	ensure(cpu_thread::get_current())->state += cpu_flag::wait;
 	vm::writer_lock lock;
 
 	// Again
@@ -105,7 +107,7 @@ error_code sys_dbg_write_process_memory(s32 pid, u32 address, u32 size, vm::cptr
 			i += op_size;
 		}
 
-		if (!is_exec || i >= end)
+		if ((!is_exec || i >= end) && exec_update_size > 0)
 		{
 			// Commit executable data update
 			// The read memory is also super ptr so memmove can work correctly on all implementations

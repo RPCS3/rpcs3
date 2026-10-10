@@ -95,12 +95,12 @@ namespace rsx
 			}
 		}
 
-		void edit_text::set_text(const std::string& text)
+		void edit_text::set_text(std::string_view text)
 		{
 			set_unicode_text(utf8_to_u32string(text));
 		}
 
-		void edit_text::set_unicode_text(const std::u32string& text)
+		void edit_text::set_unicode_text(std::u32string_view text)
 		{
 			value = text;
 
@@ -199,7 +199,10 @@ namespace rsx
 			if (!is_compiled())
 			{
 				auto renderer = get_font();
-				const auto [caret_x, caret_y] = renderer->get_char_offset(text.c_str(), caret_position, clip_text ? w : -1, wrap_text);
+
+				f32 caret_x {};
+				f32 caret_y {};
+				renderer->get_char_offset(caret_x, caret_y, text.c_str(), caret_position, clip_text ? w : -1, wrap_text);
 
 				overlay_element caret;
 				caret.set_pos(static_cast<u16>(caret_x) + padding_left + x, static_cast<u16>(caret_y) + padding_top + y);

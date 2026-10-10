@@ -298,9 +298,11 @@ error_code _sys_lwcond_signal(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id, u6
 				{
 					return CELL_OK;
 				}
+
+				return not_an_error(CELL_EPERM);
 			}
 
-			return not_an_error(CELL_EPERM);
+			return { CELL_EPERM, ppu_thread_id };
 		}
 
 		return CELL_OK;
@@ -487,6 +489,8 @@ error_code _sys_lwcond_queue_wait(ppu_thread& ppu, u32 lwcond_id, u32 lwmutex_id
 				{
 					ensure(cond.unqueue(cond.sq, &ppu));
 					ppu.state += cpu_flag::again;
+					cond.lwmutex_waiters--;
+					mutex->lwcond_waiters--;
 					return;
 				}
 

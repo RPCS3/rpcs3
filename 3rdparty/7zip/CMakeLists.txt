@@ -59,11 +59,11 @@ if(WIN32 OR APPLE)
 		7zip/C/XzEnc.c
 		7zip/C/XzIn.c
 		7zip/C/ZstdDec.c)
-	target_include_directories(3rdparty_7zip INTERFACE
+	target_include_directories(3rdparty_7zip SYSTEM INTERFACE
 		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/7zip/C>
 		$<INSTALL_INTERFACE:/7zip/C>)
 
-	target_include_directories(3rdparty_7zip INTERFACE 7zip)
+	target_include_directories(3rdparty_7zip SYSTEM INTERFACE 7zip)
 
 	set_property(TARGET 3rdparty_7zip PROPERTY FOLDER "3rdparty/")
 

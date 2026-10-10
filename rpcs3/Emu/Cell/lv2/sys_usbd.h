@@ -56,7 +56,7 @@ struct UsbDeviceRequest
 
 struct UsbDeviceIsoRequest
 {
-	vm::ptr<void> buf;
+	vm::bptr<void> buf;
 	be_t<u32> start_frame;
 	be_t<u32> num_packets;
 	be_t<u16> packets[8];
@@ -88,5 +88,9 @@ error_code sys_usbd_get_device_speed(ppu_thread& ppu);
 error_code sys_usbd_register_extra_ldd(ppu_thread& ppu, u32 handle, vm::cptr<char> s_product, u16 slen_product, u16 id_vendor, u16 id_product_min, u16 id_product_max);
 error_code sys_usbd_unregister_extra_ldd(ppu_thread& ppu, u32 handle, vm::cptr<char> s_product, u16 slen_product);
 
+class usb_device;
+
 void connect_usb_controller(u8 index, input::product_type);
-void handle_hotplug_event(bool connected);
+void reconnect_usb(u32 assigned_number);
+void set_usb_device_attached(usb_device* dev, bool attached);
+void handle_hotplug_event(bool connected, bool source_is_libusb);

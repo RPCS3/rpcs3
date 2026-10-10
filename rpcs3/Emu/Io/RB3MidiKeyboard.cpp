@@ -6,7 +6,7 @@
 
 LOG_CHANNEL(rb3_midi_keyboard_log);
 
-usb_device_rb3_midi_keyboard::usb_device_rb3_midi_keyboard(const std::array<u8, 7>& location, const std::string& device_name)
+usb_device_rb3_midi_keyboard::usb_device_rb3_midi_keyboard(const std::array<u8, 7>& location, std::string_view device_name)
 	: usb_device_emulated(location)
 {
 	device = UsbDescriptorNode(USB_DESCRIPTOR_DEVICE, UsbDeviceDescriptor{0x0200, 0x00, 0x00, 0x00, 64, 0x12ba, 0x2338, 0x01, 0x01, 0x02, 0x00, 0x01});
@@ -86,7 +86,10 @@ usb_device_rb3_midi_keyboard::usb_device_rb3_midi_keyboard(const std::array<u8, 
 
 usb_device_rb3_midi_keyboard::~usb_device_rb3_midi_keyboard()
 {
-	rtmidi_in_free(midi_in);
+	if (midi_in)
+	{
+		rtmidi_in_free(midi_in);
+	}
 }
 
 static const std::array<u8, 40> disabled_response = {

@@ -8,6 +8,14 @@ namespace vk::data_heap_manager
 {
 	std::unordered_set<vk::data_heap*> g_managed_heaps;
 
+	rsx::simple_array<vk::data_heap*> to_list()
+	{
+		rsx::simple_array<vk::data_heap*> result;
+		result.resize(::size32(g_managed_heaps));
+		std::copy(g_managed_heaps.begin(), g_managed_heaps.end(), result.begin());
+		return result;
+	}
+
 	void register_ring_buffer(vk::data_heap& heap)
 	{
 		g_managed_heaps.insert(&heap);

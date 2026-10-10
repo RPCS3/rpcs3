@@ -24,7 +24,7 @@ namespace program_hash_util
 	{
 		struct vertex_program_metadata
 		{
-			std::bitset<rsx::max_vertex_program_instructions> instruction_mask;
+			bit_set<rsx::max_vertex_program_instructions> instruction_mask;
 			u32 ucode_length;
 			u32 referenced_textures_mask;
 			u16 referenced_inputs_mask;
@@ -56,6 +56,7 @@ namespace program_hash_util
 			u32 program_ucode_length;
 			u32 program_constants_buffer_length;
 			u16 referenced_textures_mask;
+			u16 bx2_texture_reads_mask;
 
 			bool has_pack_instructions;
 			bool has_branch_instructions;

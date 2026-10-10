@@ -25,18 +25,30 @@
 #define GL_COMPUTE_BUFFER_SLOT(index)          SSBO_SLOT(2 + index)
 #define GL_COMPUTE_IMAGE_SLOT(index)           SSBO_SLOT(index)
 
-//Function call wrapped in ARB_DSA vs EXT_DSA compat check
+// Function call wrapped in ARB_DSA vs EXT_DSA compat check
 #define DSA_CALL(func, object_name, target, ...)\
 	if (::gl::get_driver_caps().ARB_direct_state_access_supported)\
 		gl##func(object_name, __VA_ARGS__);\
 	else\
 		gl##func##EXT(object_name, target, __VA_ARGS__);
 
+#define DSA_CALL_EX(func, object_name, target, ...)\
+	if (::gl::get_driver_caps().ARB_direct_state_access_supported)\
+		gl##func(object_name, __VA_ARGS__);\
+	else\
+		gl##func##EX(object_name, target, __VA_ARGS__);
+
 #define DSA_CALL2(func, ...)\
 	if (::gl::get_driver_caps().ARB_direct_state_access_supported)\
 		gl##func(__VA_ARGS__);\
 	else\
 		gl##func##EXT(__VA_ARGS__);
+
+#define DSA_CALL2_EX(func, ...)\
+	if (::gl::get_driver_caps().ARB_direct_state_access_supported)\
+		gl##func(__VA_ARGS__);\
+	else\
+		gl##func##EX(__VA_ARGS__);
 
 #define DSA_CALL2_RET(func, ...)\
 	(::gl::get_driver_caps().ARB_direct_state_access_supported) ?\
@@ -53,6 +65,7 @@ namespace gl
 {
 	using flags32_t = u32;
 	using handle32_t = u32;
+	using handle64_t = u64;
 
 	template<typename Type, uint BindId, uint GetStateId>
 	class save_binding_state_base
@@ -76,10 +89,33 @@ namespace gl
 		}
 	};
 
-	// Very useful util when capturing traces with RenderDoc
-	static inline void push_debug_label(const char* label)
+	template <GLenum Ns>
+	struct named_object
 	{
-		glInsertEventMarkerEXT(static_cast<GLsizei>(strlen(label)), label);
+	protected:
+		GLuint m_id = GL_NONE;
+		std::string m_name = "Unnamed";
+
+	public:
+		void set_name(std::string_view name)
+		{
+			m_name = name.data();
+			glObjectLabel(Ns, m_id, static_cast<GLsizei>(name.length()), name.data());
+		}
+
+		std::string_view name() const
+		{
+			return m_name;
+		}
+	};
+
+	// Very useful util when capturing traces with RenderDoc
+	static inline void push_debug_label(std::string_view label)
+	{
+		if (glInsertEventMarkerEXT)
+		{
+			glInsertEventMarkerEXT(static_cast<GLsizei>(label.size()), label.data());
+		}
 	}
 
 	// Checks if GL state is still valid

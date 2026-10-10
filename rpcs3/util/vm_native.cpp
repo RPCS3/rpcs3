@@ -222,7 +222,7 @@ namespace utils
 		return _prot;
 	}
 
-	void* memory_reserve(usz size, void* use_addr, [[maybe_unused]] bool is_memory_mapping)
+	void* memory_reserve(usz size, void* use_addr, [[maybe_unused]] bool is_memory_mapping, [[maybe_unused]] bool can_be_jit)
 	{
 #ifdef _WIN32
 		if (is_memory_mapping && has_win10_memory_mapping_api())
@@ -251,11 +251,15 @@ namespace utils
 			size += 0x10000;
 		}
 
+		// Memory mapping regions will be replaced by file-backed MAP_FIXED mappings
+		// (via shm::map), which is incompatible with MAP_JIT. Only use MAP_JIT for
+		// non-mapping regions that need JIT executable support.
 #ifdef __APPLE__
+		const int jit_flag = is_memory_mapping || !can_be_jit ? 0 : MAP_JIT;
 #ifdef ARCH_ARM64
-		auto ptr = ::mmap(use_addr, size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE | MAP_JIT | c_map_noreserve, -1, 0);
+		auto ptr = ::mmap(use_addr, size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE | jit_flag | c_map_noreserve, -1, 0);
 #else
-		auto ptr = ::mmap(use_addr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE | MAP_JIT | c_map_noreserve, -1, 0);
+		auto ptr = ::mmap(use_addr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE | jit_flag | c_map_noreserve, -1, 0);
 #endif
 #else
 		auto ptr = ::mmap(use_addr, size, PROT_NONE, MAP_ANON | MAP_PRIVATE | c_map_noreserve, -1, 0);
@@ -331,7 +335,7 @@ namespace utils
 #endif
 	}
 
-	void memory_decommit(void* pointer, usz size)
+	void memory_decommit(void* pointer, usz size, [[maybe_unused]] bool can_be_jit)
 	{
 		if (!size)
 		{
@@ -348,7 +352,7 @@ namespace utils
 		// The Xcode manpage says the pointer is a hint and the OS will try to map at the hint location
 		// so this isn't completely undefined behavior.
 		ensure(::munmap(pointer, size) != -1);
-		ensure(::mmap(pointer, size, PROT_NONE,  MAP_ANON | MAP_PRIVATE | MAP_JIT, -1, 0) == pointer);
+		ensure(::mmap(pointer, size, PROT_NONE,  MAP_ANON | MAP_PRIVATE | (can_be_jit ? MAP_JIT : 0), -1, 0) == pointer);
 #else
 		ensure(::mmap(pointer, size, PROT_NONE, MAP_FIXED | MAP_ANON | MAP_PRIVATE | c_map_noreserve, -1, 0) != reinterpret_cast<void*>(uptr{umax}));
 #endif
@@ -364,7 +368,7 @@ namespace utils
 #endif
 	}
 
-	void memory_reset(void* pointer, usz size, protection prot)
+	void memory_reset(void* pointer, usz size, protection prot, [[maybe_unused]] bool can_be_jit)
 	{
 		if (!size)
 		{
@@ -378,7 +382,7 @@ namespace utils
 		const u64 ptr64 = reinterpret_cast<u64>(pointer);
 #if defined(__APPLE__) && defined(ARCH_ARM64)
 		ensure(::munmap(pointer, size) != -1);
-		ensure(::mmap(pointer, size, +prot,  MAP_ANON | MAP_PRIVATE | MAP_JIT, -1, 0) == pointer);
+		ensure(::mmap(pointer, size, +prot,  MAP_ANON | MAP_PRIVATE | (can_be_jit ? MAP_JIT : 0), -1, 0) == pointer);
 #else
 		ensure(::mmap(pointer, size, +prot, MAP_FIXED | MAP_ANON | MAP_PRIVATE, -1, 0) != reinterpret_cast<void*>(uptr{umax}));
 #endif
@@ -905,9 +909,14 @@ namespace utils
 
 #ifdef _WIN32
 		::MEMORY_BASIC_INFORMATION mem{};
-		if (!::VirtualQuery(target, &mem, sizeof(mem)) || mem.State != MEM_RESERVE)
+		if (!::VirtualQuery(target, &mem, sizeof(mem)))
 		{
-			return {nullptr, fmt::format("VirtualQuery() Unexpceted memory info: state=0x%x, %s", mem.State, std::as_bytes(std::span(&mem, 1)))};
+			return {nullptr, fmt::format("VirtualQuery() Failed with %s", fmt::win_error{GetLastError(), nullptr})};
+		}
+
+		if (mem.State != MEM_RESERVE)
+		{
+			return {nullptr, fmt::format("VirtualQuery() reported unexpected memory info: state=0x%x, %s", mem.State, std::as_bytes(std::span(&mem, 1)))};
 		}
 
 		const auto base = static_cast<u8*>(mem.AllocationBase);
@@ -973,8 +982,14 @@ namespace utils
 			return {nullptr, "VirtualAlloc() failed to reserve allocation end"};
 		}
 #endif
+		const auto mapped_addr = this->map(target, prot, cow);
 
-		return {this->map(target, prot, cow), "Failed to map"};
+		if (!mapped_addr)
+		{
+			return {nullptr, "Failed to map"};
+		}
+
+		return {mapped_addr, {}};
 	}
 
 	u8* shm::map_self(protection prot)
@@ -986,6 +1001,16 @@ namespace utils
 			if (!mapped)
 			{
 				mapped = this->map(nullptr, prot);
+
+				if (!mapped)
+				{
+					if ((ptr = m_ptr))
+					{
+						break;
+					}
+
+					return nullptr;
+				}
 			}
 
 			// Install mapped memory

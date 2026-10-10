@@ -18,25 +18,26 @@ namespace vk
 		{
 			const auto ptr = std::get_if<VkDescriptorImageInfoEx>(&a);
 			return !!ptr &&
-				ptr->imageView == b.imageView &&
 				ptr->resourceId == b.resourceId &&
+				ptr->imageView == b.imageView &&
 				ptr->sampler == b.sampler &&
 				ptr->imageLayout == b.imageLayout;
 		}
 
-		bool operator == (const descriptor_slot_t& a, const VkDescriptorBufferInfo& b)
+		bool operator == (const descriptor_slot_t& a, const VkDescriptorBufferInfoEx& b)
 		{
-			const auto ptr = std::get_if<VkDescriptorBufferInfo>(&a);
+			const auto ptr = std::get_if<VkDescriptorBufferInfoEx>(&a);
 			return !!ptr &&
+				ptr->resourceId == b.resourceId &&
 				ptr->buffer == b.buffer &&
 				ptr->offset == b.offset &&
 				ptr->range == b.range;
 		}
 
-		bool operator == (const descriptor_slot_t& a, const VkBufferView& b)
+		bool operator == (const descriptor_slot_t& a, const VkDescriptorBufferViewEx& b)
 		{
-			const auto ptr = std::get_if<VkBufferView>(&a);
-			return !!ptr && *ptr == b;
+			const auto ptr = std::get_if<VkDescriptorBufferViewEx>(&a);
+			return !!ptr && ptr->resourceId == b.resourceId;
 		}
 
 		bool operator == (const descriptor_slot_t& a, const std::span<const VkDescriptorImageInfoEx>& b)
@@ -59,6 +60,8 @@ namespace vk
 				return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 			case input_type_storage_texture:
 				return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+			case input_type_attachment:
+				return VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
 			default:
 				fmt::throw_exception("Unexpected program input type %d", static_cast<int>(type));
 			}
@@ -200,7 +203,7 @@ namespace vk
 			return *this;
 		}
 
-		program& program::link(bool separate_objects)
+		program& program::link(VkPipelineCache pipeline_cache, bool separate_objects)
 		{
 			auto p_graphics_info = std::get_if<VkGraphicsPipelineCreateInfo>(&m_info);
 			auto p_compute_info = !p_graphics_info ? std::get_if<VkComputePipelineCreateInfo>(&m_info) : nullptr;
@@ -268,20 +271,20 @@ namespace vk
 			{
 				VkGraphicsPipelineCreateInfo create_info = *p_graphics_info;
 				create_info.layout = m_pipeline_layout;
-				CHECK_RESULT(vkCreateGraphicsPipelines(m_device, nullptr, 1, &create_info, nullptr, &m_pipeline));
+				CHECK_RESULT(vkCreateGraphicsPipelines(m_device, pipeline_cache, 1, &create_info, nullptr, &m_pipeline));
 			}
 			else
 			{
 				VkComputePipelineCreateInfo create_info = *p_compute_info;
 				create_info.layout = m_pipeline_layout;
-				CHECK_RESULT(vkCreateComputePipelines(m_device, nullptr, 1, &create_info, nullptr, &m_pipeline));
+				CHECK_RESULT(vkCreateComputePipelines(m_device, pipeline_cache, 1, &create_info, nullptr, &m_pipeline));
 			}
 
 			m_linked = true;
 			return *this;
 		}
 
-		bool program::has_uniform(program_input_type type, const std::string& uniform_name)
+		bool program::has_uniform(program_input_type type, std::string_view uniform_name)
 		{
 			for (auto& set : m_sets)
 			{
@@ -295,7 +298,7 @@ namespace vk
 			return false;
 		}
 
-		std::pair<u32, u32> program::get_uniform_location(::glsl::program_domain domain, program_input_type type, const std::string& uniform_name)
+		std::pair<u32, u32> program::get_uniform_location(::glsl::program_domain domain, program_input_type type, std::string_view uniform_name)
 		{
 			for (unsigned i = 0; i < ::size32(m_sets); ++i)
 			{
@@ -324,7 +327,7 @@ namespace vk
 			m_sets[set_id].notify_descriptor_slot_updated(binding_point, image_descriptor);
 		}
 
-		void program::bind_uniform(const VkDescriptorBufferInfo &buffer_descriptor, u32 set_id, u32 binding_point)
+		void program::bind_uniform(const VkDescriptorBufferInfoEx &buffer_descriptor, u32 set_id, u32 binding_point)
 		{
 			if (m_sets[set_id].m_descriptor_slots[binding_point] == buffer_descriptor)
 			{
@@ -334,7 +337,7 @@ namespace vk
 			m_sets[set_id].notify_descriptor_slot_updated(binding_point, buffer_descriptor);
 		}
 
-		void program::bind_uniform(const VkBufferView &buffer_view, u32 set_id, u32 binding_point)
+		void program::bind_uniform(const VkDescriptorBufferViewEx& buffer_view, u32 set_id, u32 binding_point)
 		{
 			if (m_sets[set_id].m_descriptor_slots[binding_point] == buffer_view)
 			{
@@ -452,7 +455,7 @@ namespace vk
 			}
 
 			m_descriptor_slots.resize(bind_slots_count);
-			std::memset(m_descriptor_slots.data(), 0, sizeof(descriptor_slot_t) * bind_slots_count);
+			std::fill(m_descriptor_slots.begin(), m_descriptor_slots.end(), descriptor_slot_t{});
 
 			m_descriptors_dirty.resize(bind_slots_count);
 			std::fill(m_descriptors_dirty.begin(), m_descriptors_dirty.end(), false);
@@ -486,22 +489,25 @@ namespace vk
 					return;
 				}
 
-				if (auto ptr = std::get_if<VkDescriptorBufferInfo>(&slot))
+				if (auto ptr = std::get_if<VkDescriptorBufferInfoEx>(&slot))
 				{
 					m_descriptor_set.push(*ptr, type, idx);
 					return;
 				}
 
-				if (auto ptr = std::get_if<VkBufferView>(&slot))
+				if (auto ptr = std::get_if<VkDescriptorBufferViewEx>(&slot))
 				{
-					m_descriptor_set.push(*ptr, type, idx);
+					m_descriptor_set.push(ptr->view, type, idx);
 					return;
 				}
 
 				if (auto ptr = std::get_if<descriptor_image_array_t>(&slot))
 				{
+					// We need to convert the VkDescriptorImageInfoEx entries back to the native vulkan variants since we're going to be flushing an array with no stride check
+					auto vk_data = ptr->map(FN(static_cast<VkDescriptorImageInfo>(x)));
+
 					writer.descriptorCount = ptr->size();
-					m_descriptor_set.push(ptr->data(), ptr->size(), type, idx);
+					m_descriptor_set.push(vk_data.data(), vk_data.size(), type, idx);
 					return;
 				}
 
@@ -530,29 +536,30 @@ namespace vk
 			auto update_descriptor_slot = [this](unsigned idx)
 			{
 				const auto& slot = m_descriptor_slots[idx];
-				const VkDescriptorType type = m_descriptor_types[idx];
+
 				if (auto ptr = std::get_if<VkDescriptorImageInfoEx>(&slot))
 				{
 					m_descriptor_template[idx].pImageInfo = m_descriptor_set.store(*ptr);
 					return;
 				}
 
-				if (auto ptr = std::get_if<VkDescriptorBufferInfo>(&slot))
+				if (auto ptr = std::get_if<VkDescriptorBufferInfoEx>(&slot))
 				{
 					m_descriptor_template[idx].pBufferInfo = m_descriptor_set.store(*ptr);
 					return;
 				}
 
-				if (auto ptr = std::get_if<VkBufferView>(&slot))
+				if (auto ptr = std::get_if<VkDescriptorBufferViewEx>(&slot))
 				{
-					m_descriptor_template[idx].pTexelBufferView = m_descriptor_set.store(*ptr);
+					m_descriptor_template[idx].pTexelBufferView = m_descriptor_set.store(ptr->view);
 					return;
 				}
 
 				if (auto ptr = std::get_if<descriptor_image_array_t>(&slot))
 				{
+					auto vk_data = ptr->map(FN(static_cast<VkDescriptorImageInfo>(x))); // This can be optimized to update only changed ids but this is an interpreter-only feature for now
 					ensure(m_descriptor_template[idx].descriptorCount == ptr->size());
-					m_descriptor_template[idx].pImageInfo = m_descriptor_set.store(*ptr);
+					m_descriptor_template[idx].pImageInfo = m_descriptor_set.store(vk_data);
 					return;
 				}
 
@@ -627,7 +634,7 @@ namespace vk
 
 			std::unordered_map<u32, VkDescriptorType> descriptor_type_map;
 
-			auto descriptor_count = [](const std::string& name) -> u32
+			auto descriptor_count = [](std::string_view name) -> u32
 			{
 				const auto start = name.find_last_of("[");
 				if (start == std::string::npos)
@@ -638,8 +645,8 @@ namespace vk
 				const auto end = name.find_last_of("]");
 				ensure(end != std::string::npos && start < end, "Invalid variable name");
 
-				const std::string array_size = name.substr(start + 1, end - start - 1);
-				if (const auto count = std::atoi(array_size.c_str());
+				const std::string_view array_size = name.substr(start + 1, end - start - 1);
+				if (const auto count = std::atoi(array_size.data());
 					count > 0)
 				{
 					return count;
@@ -691,7 +698,7 @@ namespace vk
 		void descriptor_table_t::create_descriptor_pool()
 		{
 			m_descriptor_pool = std::make_unique<descriptor_pool>();
-			m_descriptor_pool->create(*vk::g_render_device, m_descriptor_pool_sizes);
+			m_descriptor_pool->create(*vk::g_render_device, m_descriptor_pool_sizes, 16u, 4096u);
 		}
 
 		void descriptor_table_t::validate() const

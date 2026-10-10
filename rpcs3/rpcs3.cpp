@@ -26,11 +26,13 @@
 #include "Utilities/sema.h"
 #include "Utilities/date_time.h"
 #include "util/console.h"
+#include "util/asm.hpp"
 #include "Crypto/decrypt_binaries.h"
 #ifdef _WIN32
 #include "module_verifier.hpp"
 #include "util/dyn_lib.hpp"
 #include <shellapi.h>
+#include <process.h>
 
 // TODO(cjj19970505@live.cn)
 // When compiling with WIN32_LEAN_AND_MEAN definition
@@ -67,9 +69,14 @@ DYNAMIC_IMPORT("ntdll.dll", NtSetTimerResolution, NTSTATUS(ULONG DesiredResoluti
 #include "util/media_utils.h"
 #include "rpcs3_version.h"
 #include "Emu/System.h"
+#include "Emu/system_config.h"
 #include "Emu/system_utils.hpp"
+#include "Emu/savestate_utils.hpp"
+#include "Emu/RSX/Overlays/overlay_message.h"
+
 #include <thread>
 #include <charconv>
+#include <regex>
 
 #include "util/sysinfo.hpp"
 
@@ -82,7 +89,7 @@ static const bool s_init_locale = []()
 
 static semaphore<> s_qt_init;
 
-static atomic_t<bool> s_headless = false;
+atomic_t<bool> g_headless = false;
 static atomic_t<bool> s_no_gui = false;
 static atomic_t<char*> s_argv0 = nullptr;
 static bool s_is_error_launch = false;
@@ -130,7 +137,7 @@ std::set<std::string> get_one_drive_paths()
 		do
 		{
 			path_buffer.resize(path_buffer.size() + MAX_PATH);
-			DWORD buffer_size = static_cast<DWORD>(path_buffer.size() - 1);
+			DWORD buffer_size = static_cast<DWORD>((path_buffer.size() - 1) * sizeof(wchar_t));
 			status = RegQueryValueExW(hkey, L"UserFolder", NULL, &type, reinterpret_cast<LPBYTE>(path_buffer.data()), &buffer_size);
 		}
 		while (status == ERROR_MORE_DATA);
@@ -182,25 +189,36 @@ std::set<std::string> get_one_drive_paths()
 			fmt::append(buf, "\nSerialized Object: %s", g_tls_serialize_name);
 		}
 
-		const system_state state = Emu.GetStatus(false);
-
-		if (state == system_state::stopped)
+		if (Emulator::IsAvailable())
 		{
-			fmt::append(buf, "\nEmulation is stopped");
+			const system_state state = Emu.GetStatus(false);
+
+			if (state == system_state::stopped)
+			{
+				fmt::append(buf, "\nEmulation is stopped");
+			}
+			else
+			{
+				const std::string name = Emu.GetTitleAndTitleID();
+				fmt::append(buf, "\nTitle: \"%s\" (emulation is %s)", name.empty() ? "N/A" : name.c_str(), state == system_state::stopping ? "stopping" : "running");
+			}
 		}
 		else
 		{
-			const std::string& name = Emu.GetTitleAndTitleID();
-			fmt::append(buf, "\nTitle: \"%s\" (emulation is %s)", name.empty() ? "N/A" : name.data(), state == system_state::stopping ? "stopping" : "running");
+			fmt::append(buf, "\nEmulation object is unavailable (process teardown)");
 		}
 
 		fmt::append(buf, "\nBuild: \"%s\"", rpcs3::get_verbose_version());
 		fmt::append(buf, "\nDate: \"%s\"", std::chrono::system_clock::now());
+
+		const auto [total, current] = utils::get_memory_usage();
+
+		fmt::append(buf, "\nRAM Usage: %dMB/%dMB (%dMB free)", current / (1024 * 1024), total / (1024 * 1024), (total - current) / (1024 * 1024));
 	}
 
 	std::string_view text = s_is_error_launch ? _text : buf;
 
-	if (s_headless)
+	if (g_headless)
 	{
 		utils::attach_console(utils::console_stream::std_err, true);
 
@@ -307,7 +325,8 @@ public:
 	{
 		if (msg == logs::level::fatal || (msg == logs::level::always && m_log_always))
 		{
-			std::string _msg = "RPCS3: ";
+			static const std::string rpcs3_prefix =  "RPCS3: ";
+			std::string _msg = rpcs3_prefix;
 
 			if (!prefix.empty())
 			{
@@ -346,6 +365,13 @@ public:
 #endif
 			if (msg == logs::level::fatal)
 			{
+				if (g_cfg.misc.show_fatal_error_hints)
+				{
+					std::string overlay_msg = "Fatal error: " + _msg.substr(rpcs3_prefix.size());
+					fmt::trim_back(overlay_msg, " \t\n");
+					rsx::overlays::queue_message(overlay_msg, umax);
+				}
+
 				// Pause emulation if fatal error encountered
 				Emu.Pause(true);
 			}
@@ -362,36 +388,38 @@ private:
 };
 
 // Arguments that force a headless application (need to be checked in create_application)
-constexpr auto arg_headless     = "headless";
-constexpr auto arg_decrypt      = "decrypt";
+constexpr auto arg_headless       = "headless";
+constexpr auto arg_decrypt        = "decrypt";
 
 // Arguments that can be used with a gui application
-constexpr auto arg_no_gui       = "no-gui";
-constexpr auto arg_fullscreen   = "fullscreen"; // only useful with no-gui
-constexpr auto arg_gs_screen    = "game-screen";
-constexpr auto arg_high_dpi     = "hidpi";
-constexpr auto arg_rounding     = "dpi-rounding";
-constexpr auto arg_styles       = "styles";
-constexpr auto arg_style        = "style";
-constexpr auto arg_stylesheet   = "stylesheet";
-constexpr auto arg_config       = "config";
-constexpr auto arg_input_config = "input-config"; // only useful with no-gui
-constexpr auto arg_q_debug      = "qDebug";
-constexpr auto arg_error        = "error";
-constexpr auto arg_updating     = "updating";
-constexpr auto arg_user_id      = "user-id";
-constexpr auto arg_installfw    = "installfw";
-constexpr auto arg_installpkg   = "installpkg";
-constexpr auto arg_savestate    = "savestate";
-constexpr auto arg_rsx_capture  = "rsx-capture";
-constexpr auto arg_timer        = "high-res-timer";
-constexpr auto arg_verbose_curl = "verbose-curl";
-constexpr auto arg_any_location = "allow-any-location";
-constexpr auto arg_codecs       = "codecs";
+constexpr auto arg_no_gui         = "no-gui";
+constexpr auto arg_fullscreen     = "fullscreen"; // only useful with no-gui
+constexpr auto arg_big_picture    = "big-picture";
+constexpr auto arg_gs_screen      = "game-screen";
+constexpr auto arg_high_dpi       = "hidpi";
+constexpr auto arg_rounding       = "dpi-rounding";
+constexpr auto arg_styles         = "styles";
+constexpr auto arg_style          = "style";
+constexpr auto arg_stylesheet     = "stylesheet";
+constexpr auto arg_config         = "config";
+constexpr auto arg_input_config   = "input-config"; // only useful with no-gui
+constexpr auto arg_q_debug        = "qDebug";
+constexpr auto arg_error          = "error";
+constexpr auto arg_updating       = "updating";
+constexpr auto arg_user_id        = "user-id";
+constexpr auto arg_installfw      = "installfw";
+constexpr auto arg_installpkg     = "installpkg";
+constexpr auto arg_savestate      = "savestate";
+constexpr auto arg_last_savestate = "last-savestate";
+constexpr auto arg_rsx_capture    = "rsx-capture";
+constexpr auto arg_timer          = "high-res-timer";
+constexpr auto arg_verbose_curl   = "verbose-curl";
+constexpr auto arg_any_location   = "allow-any-location";
+constexpr auto arg_codecs         = "codecs";
 
 #ifdef _WIN32
-constexpr auto arg_stdout       = "stdout";
-constexpr auto arg_stderr       = "stderr";
+constexpr auto arg_stdout         = "stdout";
+constexpr auto arg_stderr         = "stderr";
 #endif
 
 constexpr auto arg_emulation_barrier = "";
@@ -435,6 +463,12 @@ QCoreApplication* create_application(std::span<char* const> qt_argv)
 	{
 		qputenv("QT_AUTO_SCREEN_SCALE_FACTOR", "0");
 	}
+#elif __APPLE__
+	// set the QT_MTL_NO_TRANSACTION variable in order to prevent Qt GUI freeze
+	qputenv("QT_MTL_NO_TRANSACTION", "1");
+
+	// set the QT_MAC_NO_CONTAINER_LAYER variable in order to prevent swapchain crash
+	qputenv("QT_MAC_NO_CONTAINER_LAYER", "1");
 #endif
 
 	bool use_high_dpi = true;
@@ -622,20 +656,12 @@ int run_rpcs3(int argc, char** argv)
 	}
 #endif
 
-#if defined(__APPLE__) && defined(__x86_64__)
-	if (const utils::OS_version os = utils::get_OS_version();
-		os.version_major == 14 && os.version_minor < 3 && (utils::get_cpu_brand().rfind("VirtualApple", 0) == 0))
-	{
-		report_fatal_error(fmt::format("RPCS3 requires macOS 14.3.0 or later.\nYou're currently using macOS %i.%i.%i.\nPlease update macOS from System Settings.\n\n", os.version_major, os.version_minor, os.version_patch));
-	}
-#endif
-
 	ensure(thread_ctrl::is_main(), "Not main thread");
 
 	// Initialize thread pool finalizer (on first use)
 	static_cast<void>(named_thread("", [](int) {}));
 
-	static std::unique_ptr<logs::listener> log_file;
+	std::unique_ptr<logs::listener> log_file;
 	{
 		// Check free space
 		fs::device_stat stats{};
@@ -648,13 +674,25 @@ int run_rpcs3(int argc, char** argv)
 		log_file = logs::make_file_listener(log_name, stats.avail_free / 4);
 	}
 
-	static std::unique_ptr<fatal_error_listener> fatal_listener = std::make_unique<fatal_error_listener>();
+	auto fatal_listener = std::make_unique<fatal_error_listener>();
 	logs::listener::add(fatal_listener.get());
+
+	struct log_listener_shutdown_guard
+	{
+		~log_listener_shutdown_guard()
+		{
+			logs::listener::shutdown_all();
+		}
+	} log_listener_shutdown;
 
 	{
 		// Write RPCS3 version
 		logs::stored_message ver{sys_log.always()};
 		ver.text = fmt::format("RPCS3 v%s", rpcs3::get_verbose_version());
+
+		// Write Architecture
+		logs::stored_message arch{sys_log.always()};
+		arch.text = fmt::format("Architecture: %s", utils::get_architecture());
 
 		// Write System information
 		logs::stored_message sys{sys_log.always()};
@@ -672,8 +710,12 @@ int run_rpcs3(int argc, char** argv)
 		logs::stored_message time{sys_log.always()};
 		time.text = fmt::format("Current Time: %s", std::chrono::system_clock::now());
 
-		logs::set_init({std::move(ver), std::move(sys), std::move(os), std::move(qt), std::move(time)});
+		logs::set_init({std::move(ver), std::move(arch), std::move(sys), std::move(os), std::move(qt), std::move(time)});
 	}
+
+#ifdef ARCH_ARM64
+	utils::init_arm_timer_scale();
+#endif
 
 #ifdef _WIN32
 	sys_log.notice("Initialization times before main(): %fGc", intro_cycles / 1000000000.);
@@ -774,6 +816,7 @@ int run_rpcs3(int argc, char** argv)
 	parser.addOption(QCommandLineOption(arg_headless, "Run RPCS3 in headless mode."));
 	parser.addOption(QCommandLineOption(arg_no_gui, "Run RPCS3 without its GUI."));
 	parser.addOption(QCommandLineOption(arg_fullscreen, "Run games in fullscreen mode. Only used when no-gui is set."));
+	parser.addOption(QCommandLineOption(arg_big_picture, "Run RPCS3 in Big Picture Mode on startup."));
 	const QCommandLineOption screen_option(arg_gs_screen, "Forces the emulator to use the specified screen for the game window.", "index", "");
 	parser.addOption(screen_option);
 	parser.addOption(QCommandLineOption(arg_high_dpi, "Enables Qt High Dpi Scaling.", "enabled", "1"));
@@ -795,6 +838,8 @@ int run_rpcs3(int argc, char** argv)
 	parser.addOption(user_id_option);
 	const QCommandLineOption savestate_option(arg_savestate, "Path for directly loading a savestate.", "path", "");
 	parser.addOption(savestate_option);
+	const QCommandLineOption last_savestate_option(arg_last_savestate, "Loading the last savestate of a game.", "path", "Title-ID or path");
+	parser.addOption(last_savestate_option);
 	const QCommandLineOption rsx_capture_option(arg_rsx_capture, "Path for directly loading an rsx capture.", "path", "");
 	parser.addOption(rsx_capture_option);
 	parser.addOption(QCommandLineOption(arg_q_debug, "Log qDebug to RPCS3.log."));
@@ -814,6 +859,11 @@ int run_rpcs3(int argc, char** argv)
 	parser.addOption(QCommandLineOption("N/A", "Arguments after \"--\" are considered emulation arguments."));
 
 	parser.process(app->arguments());
+
+	for (const auto& opt : parser.optionNames())
+	{
+		sys_log.notice("Option passed via command line: %s %s", opt, parser.value(opt));
+	}
 
 	// Don't start up the full rpcs3 gui if we just want the version or help.
 	if (parser.isSet(version_option) || parser.isSet(help_option))
@@ -929,23 +979,14 @@ int run_rpcs3(int argc, char** argv)
 			gui_app->SetGameScreenIndex(game_screen_index);
 		}
 
-		if (!gui_app->Init())
-		{
-			Emu.Quit(true);
-			return 0;
-		}
+		gui_app->Init();
 	}
 	else if (headless_application* headless_app = qobject_cast<headless_application*>(app.data()))
 	{
-		s_headless = true;
+		g_headless = true;
 
 		headless_app->SetActiveUser(active_user);
-
-		if (!headless_app->Init())
-		{
-			Emu.Quit(true);
-			return 0;
-		}
+		headless_app->Init();
 	}
 	else
 	{
@@ -1119,11 +1160,11 @@ int run_rpcs3(int argc, char** argv)
 				}
 				else if (parser.isSet(arg_installfw))
 				{
-					gui_app->m_main_window->InstallPup(parser.value(installfw_option));
+					main_window::InstallPup(gui_app->m_main_window, parser.value(installfw_option));
 				}
 				else
 				{
-					gui_app->m_main_window->InstallPackages({parser.value(installpkg_option)});
+					main_window::InstallPackages(gui_app->m_main_window, {parser.value(installpkg_option)});
 				}
 			}
 			else
@@ -1133,23 +1174,40 @@ int run_rpcs3(int argc, char** argv)
 		}
 		else
 		{
-			report_fatal_error("Cannot perform installation in headless mode!");
+			if (parser.isSet(arg_installfw))
+			{
+				main_window::InstallPup(nullptr, parser.value(installfw_option));
+			}
+
+			if (parser.isSet(arg_installpkg))
+			{
+				main_window::InstallPackages(nullptr, {parser.value(installpkg_option)});
+			}
+
+			return 0;
 		}
 	}
 
-	for (const auto& opt : parser.optionNames())
+	if (parser.isSet(arg_savestate) || parser.isSet(arg_last_savestate))
 	{
-		sys_log.notice("Option passed via command line: %s %s", opt, parser.value(opt));
-	}
+		std::string savestate_path;
 
-	if (parser.isSet(arg_savestate))
-	{
-		const std::string savestate_path = parser.value(savestate_option).toStdString();
-		sys_log.notice("Booting savestate from command line: %s", savestate_path);
-
-		if (!fs::is_file(savestate_path))
+		if (parser.isSet(arg_savestate))
 		{
-			report_fatal_error(fmt::format("No savestate file found: %s", savestate_path));
+			savestate_path = parser.value(savestate_option).toStdString();
+			sys_log.notice("Booting savestate from command line: path='%s'", savestate_path);
+		}
+		else
+		{
+			const std::string serial_or_path = parser.value(last_savestate_option).toStdString();
+			const bool is_serial = std::regex_match(serial_or_path, std::regex(R"(^[A-Z]{4}\d{5}$)"));
+			savestate_path = get_savestate_file(is_serial ? serial_or_path : "", is_serial ? "" : serial_or_path, 1);
+			sys_log.notice("Booting last savestate from command line: game='%s', path='%s'", serial_or_path, savestate_path);
+		}
+
+		if (!is_savestate_compatible(savestate_path))
+		{
+			report_fatal_error(fmt::format("No savestate file found or savestate not compatible: path='%s'", savestate_path));
 		}
 
 		Emu.CallFromMainThread([path = savestate_path]()
@@ -1160,7 +1218,7 @@ int run_rpcs3(int argc, char** argv)
 			{
 				sys_log.error("Booting savestate '%s' failed: reason: %s", path, error);
 
-				if (s_headless || s_no_gui)
+				if (g_headless || s_no_gui)
 				{
 					report_fatal_error(fmt::format("Booting savestate '%s' failed!\n\nReason: %s", path, error));
 				}
@@ -1183,7 +1241,7 @@ int run_rpcs3(int argc, char** argv)
 			{
 				sys_log.error("Booting rsx capture '%s' failed", path);
 
-				if (s_headless || s_no_gui)
+				if (g_headless || s_no_gui)
 				{
 					report_fatal_error(fmt::format("Booting rsx capture '%s' failed!", path));
 				}
@@ -1192,7 +1250,8 @@ int run_rpcs3(int argc, char** argv)
 	}
 	else if (const QStringList args = parser.positionalArguments(); (!args.isEmpty() || !emu_argv.empty()) && !is_updating && !parser.isSet(arg_installfw) && !parser.isSet(arg_installpkg))
 	{
-		std::string spath = (args.isEmpty() ? emu_argv[0] : ::at32(args, 0).toStdString());
+		u32 emu_argv_pos = 0;
+		std::string spath = (args.isEmpty() ? emu_argv[emu_argv_pos++] : ::at32(args, 0).toStdString());
 
 		if (spath.starts_with(Emulator::vfs_boot_prefix))
 		{
@@ -1229,7 +1288,7 @@ int run_rpcs3(int argc, char** argv)
 		}
 
 		// Additional arguments passed after "--"
-		if (emu_argv.size() > (args.isEmpty() ? 1 : 0))
+		if (emu_argv_pos < emu_argv.size())
 		{
 			// Reserve empty string for executable path
 			if (rpcs3_argv.empty())
@@ -1239,12 +1298,12 @@ int run_rpcs3(int argc, char** argv)
 
 			rpcs3_argv.emplace_back();
 
-			for (usz i = args.isEmpty() ? 1 : 0; i != emu_argv.size(); i++)
+			for (; emu_argv_pos < emu_argv.size(); emu_argv_pos++)
 			{
-				const std::string arg = args[i].toStdString();
+				const std::string arg = emu_argv[emu_argv_pos];
 				rpcs3_argv.emplace_back(arg);
 
-				sys_log.success("Optional command line argument %d: %s", i, arg);
+				sys_log.success("Optional command line argument %d: %s", emu_argv_pos, arg);
 			}
 		}
 
@@ -1292,20 +1351,20 @@ int run_rpcs3(int argc, char** argv)
 			{
 				sys_log.error("Booting '%s' with cli argument failed: reason: %s", path, error);
 
-				if (s_headless || s_no_gui)
+				if (g_headless || s_no_gui)
 				{
 					report_fatal_error(fmt::format("Booting '%s' failed!\n\nReason: %s", path, error));
 				}
 			}
 		});
 	}
-	else if (s_headless || s_no_gui)
+	else if (g_headless || s_no_gui)
 	{
 		// If launched from CMD
 		utils::attach_console(utils::console_stream::std_out | utils::console_stream::std_err, false);
 
-		sys_log.error("Cannot run %s mode without boot target. Terminating...", s_headless ? "headless" : "no-gui");
-		fprintf(stderr, "Cannot run %s mode without boot target. Terminating...\n", s_headless ? "headless" : "no-gui");
+		sys_log.error("Cannot run %s mode without boot target. Terminating...", g_headless ? "headless" : "no-gui");
+		fprintf(stderr, "Cannot run %s mode without boot target. Terminating...\n", g_headless ? "headless" : "no-gui");
 
 		if (s_no_gui)
 		{
@@ -1315,7 +1374,20 @@ int run_rpcs3(int argc, char** argv)
 		Emu.Quit(true);
 		return 0;
 	}
+	else if (g_cfg.misc.start_big_picture_mode || parser.isSet(arg_big_picture))
+	{
+		Emu.CallFromMainThread([]()
+		{
+			Emu.BootBigPictureMode();
+		});
+	}
 
 	// run event loop (maybe only needed for the gui application)
+	if (gui_application* gui_app = qobject_cast<gui_application*>(app.data()))
+	{
+		// call gui_application::exec
+		return gui_app->exec();
+	}
+
 	return app->exec();
 }

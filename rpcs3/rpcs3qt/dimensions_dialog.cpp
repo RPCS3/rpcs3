@@ -433,7 +433,7 @@ minifig_creator_dialog::minifig_creator_dialog(QWidget* parent)
 
 	setLayout(vbox_panel);
 
-	connect(combo_figlist, QOverload<int>::of(&QComboBox::currentIndexChanged), [=](int index)
+	connect(combo_figlist, &QComboBox::currentIndexChanged, [=](int index)
 		{
 			const u16 fig_info = combo_figlist->itemData(index).toUInt();
 			if (fig_info != 0xFFFF)
@@ -486,7 +486,7 @@ minifig_creator_dialog::minifig_creator_dialog(QWidget* parent)
 
 	connect(btn_cancel, &QAbstractButton::clicked, this, &QDialog::reject);
 
-	connect(co_compl, QOverload<const QString&>::of(&QCompleter::activated), [=](const QString& text)
+	connect(co_compl, qOverload<const QString&>(&QCompleter::activated), [=](const QString& text)
 		{
 			combo_figlist->setCurrentIndex(combo_figlist->findText(text));
 		});

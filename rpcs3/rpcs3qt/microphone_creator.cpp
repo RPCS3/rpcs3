@@ -14,7 +14,7 @@ microphone_creator::microphone_creator()
 }
 
 // We need to recreate the localized string because the microphone creator is currently only created once.
-QString microphone_creator::get_none()
+QString microphone_creator::get_none() const
 {
 	return tr("None", "Microphone device");
 }
@@ -49,35 +49,35 @@ void microphone_creator::refresh_list()
 	}
 }
 
-QStringList microphone_creator::get_microphone_list() const
+const QStringList& microphone_creator::get_microphone_list() const
 {
 	return m_microphone_list;
 }
 
-std::array<std::string, 4> microphone_creator::get_selection_list() const
+const std::array<std::string, 4>& microphone_creator::get_selection_list() const
 {
 	return m_sel_list;
 }
 
 std::string microphone_creator::set_device(u32 num, const QString& text)
 {
-	ensure(num < m_sel_list.size());
+	std::string& device = ::at32(m_sel_list, num);
 
 	if (text == get_none())
-		m_sel_list[num].clear();
+		device.clear();
 	else
-		m_sel_list[num] = text.toStdString();
+		device = text.toStdString();
 
 	return m_sel_list[0] + "@@@" + m_sel_list[1] + "@@@" + m_sel_list[2] + "@@@" + m_sel_list[3] + "@@@";
 }
 
-void microphone_creator::parse_devices(const std::string& list)
+void microphone_creator::parse_devices(std::string_view list)
 {
 	m_sel_list = {};
 
-	const std::vector<std::string> devices_list = fmt::split(list, { "@@@" });
+	std::vector<std::string> devices_list = fmt::split(list, { "@@@" });
 	for (usz index = 0; index < std::min(m_sel_list.size(), devices_list.size()); index++)
 	{
-		m_sel_list[index] = devices_list[index];
+		m_sel_list[index] = std::move(devices_list[index]);
 	}
 }

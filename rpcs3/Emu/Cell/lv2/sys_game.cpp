@@ -48,12 +48,12 @@ public:
 		return true;
 	}
 
-	bool write(u8* buffer)
+	bool write(const u8* buffer)
 	{
 		if (!buffer)
 			return false;
 
-		storage.store(read_from_ptr<be_t<v128>>(buffer));
+		storage.store(read_from_ptr_unsafe<be_t<v128>>(buffer));
 		written = true;
 
 		return true;

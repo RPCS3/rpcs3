@@ -93,6 +93,16 @@ namespace vk
 			return true;
 		}
 
+		bool references(VkImage handle) const
+		{
+			return !!handle && std::ranges::find_if(attachments, FN(x->info.image == handle)) != attachments.end();
+		}
+
+		bool references(const vk::image* image) const
+		{
+			return !!image && references(image->value);
+		}
+
 		framebuffer(const framebuffer&) = delete;
 		framebuffer(framebuffer&&) = delete;
 

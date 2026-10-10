@@ -1,8 +1,8 @@
 #pragma once
 
-#include "gui_settings.h"
-
 #include <QDialog>
+
+class gui_settings;
 
 namespace Ui
 {

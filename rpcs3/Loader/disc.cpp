@@ -96,7 +96,7 @@ namespace disc
 
 		for (usz i = 0; i < lines.size(); i++)
 		{
-			const std::string& line = lines[i];
+			const std::string_view line = lines[i];
 			const usz pos = line.find('=');
 
 			if (pos == umax)
@@ -104,12 +104,12 @@ namespace disc
 				continue;
 			}
 
-			const std::string key = fmt::trim(line.substr(0, pos));
-			std::string value;
+			const std::string_view key = fmt::trim_sv(line.substr(0, pos));
+			std::string_view value;
 
 			if (pos != (line.size() - 1))
 			{
-				value = fmt::trim(line.substr(pos + 1));
+				value = fmt::trim_sv(line.substr(pos + 1));
 			}
 
 			if (value.empty() && i != (lines.size() - 1) && line.size() != 1)

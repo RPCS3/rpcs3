@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Emu/Cell/lv2/sys_usbd.h"
+
 #ifdef _MSC_VER
 #pragma warning(push, 0)
 #else
@@ -14,8 +16,6 @@
 #else
 #pragma GCC diagnostic pop
 #endif
-
-#include "Emu/Cell/lv2/sys_usbd.h"
 
 struct UsbTransfer;
 
@@ -84,6 +84,54 @@ struct UsbDeviceHID
 	u8 bNumDescriptors;
 	u8 bDescriptorType;
 	le_t<u16, 1> wDescriptorLength;
+};
+
+struct UsbAudioInputTerminal
+{
+	u8 bDescriptorSubtype;
+	u8 bTerminalID;
+	le_t<u16, 1> wTerminalType;
+	u8 bAssocTerminal;
+	u8 bNrChannels;
+	le_t<u16, 1> wChannelConfig;
+	u8 iChannelNames;
+	u8 iTerminal;
+};
+
+struct UsbAudioOutputTerminal
+{
+	u8 bDescriptorSubtype;
+	u8 bTerminalID;
+	le_t<u16, 1> wTerminalType;
+	u8 bAssocTerminal;
+	u8 bSourceID;
+	u8 iTerminal;
+};
+
+struct UsbAudioInterface
+{
+	u8 bDescriptorSubtype;
+	u8 bTerminalLink;
+	u8 bDelay;
+	le_t<u16, 1> wFormatTag;
+};
+
+struct UsbAudioEndpoint
+{
+	u8 bEndpointAddress;
+	u8 bmAttributes;
+	le_t<u16, 1> wMaxPacketSize;
+	u8 bInterval;
+	u8 bRefresh;
+    u8 bSynchAddress;
+};
+
+struct UsbAudioStreamingEndpoint
+{
+	u8 bDescriptorSubtype;
+	u8 bmAttributes;
+	u8 bLockDelayUnits;
+	le_t<u16, 1> wLockDelay;
 };
 
 struct UsbTransfer
@@ -178,18 +226,27 @@ public:
 
 	virtual bool open_device() = 0;
 
+	// Emulated devices can decline attachment to the bus, e.g. while the real hardware they are backed by is not connected
+	virtual bool is_attachable() const
+	{
+		return true;
+	}
+
 	void get_location(u8* location) const;
 	virtual void read_descriptors();
 
 	virtual u32 get_configuration(u8* buf);
 	virtual bool set_configuration(u8 cfg_num);
-	virtual bool set_interface(u8 int_num);
+	virtual bool set_interface(u8 int_num, u8 alt_num);
 
 	virtual void control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer) = 0;
 	virtual void interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer)                                                     = 0;
 	virtual void isochronous_transfer(UsbTransfer* transfer)                                                                                        = 0;
 
 public:
+	// Look up an endpoint descriptor by address in the descriptor tree
+	const UsbDeviceEndpoint* find_endpoint(u8 endpoint_addr) const;
+
 	// device ID if the device has been ldded(0 otherwise)
 	u32 assigned_number = 0;
 	// base device descriptor, every other descriptor is a subnode
@@ -198,6 +255,7 @@ public:
 protected:
 	u8 current_config    = 1;
 	u8 current_interface = 0;
+	u8 current_altsetting = 0;
 	std::array<u8, 7> location{};
 
 protected:
@@ -214,7 +272,7 @@ public:
 	void read_descriptors() override;
 	u32 get_configuration(u8* buf) override;
 	bool set_configuration(u8 cfg_num) override;
-	bool set_interface(u8 int_num) override;
+	bool set_interface(u8 int_num, u8 alt_num) override;
 	void control_transfer(u8 bmRequestType, u8 bRequest, u16 wValue, u16 wIndex, u16 wLength, u32 buf_size, u8* buf, UsbTransfer* transfer) override;
 	void interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint, UsbTransfer* transfer) override;
 	void isochronous_transfer(UsbTransfer* transfer) override;
@@ -225,6 +283,9 @@ protected:
 protected:
 	libusb_device* lusb_device        = nullptr;
 	libusb_device_handle* lusb_handle = nullptr;
+
+private:
+	void patch_descriptors();
 };
 
 class usb_device_emulated : public usb_device

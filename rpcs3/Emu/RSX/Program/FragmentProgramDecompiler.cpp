@@ -1,7 +1,11 @@
 #include "stdafx.h"
 
 #include "FragmentProgramDecompiler.h"
-#include "ProgramStateCache.h"
+
+#include "Assembler/Passes/FP/RegisterAnnotationPass.h"
+#include "Assembler/Passes/FP/RegisterDependencyPass.h"
+
+#include "Emu/system_config.h"
 
 #include <algorithm>
 
@@ -9,6 +13,8 @@ namespace rsx
 {
 	namespace fragment_program
 	{
+		using namespace rsx::assembler;
+
 		static const std::string reg_table[] =
 		{
 			"wpos",
@@ -17,10 +23,33 @@ namespace rsx
 			"tc0", "tc1", "tc2", "tc3", "tc4", "tc5", "tc6", "tc7", "tc8", "tc9",
 			"ssa"
 		};
+
+		static const std::vector<RegisterRef> s_fp32_output_set =
+		{
+			{.reg {.id = 0, .f16 = false }, .mask = 0xf },
+			{.reg {.id = 2, .f16 = false }, .mask = 0xf },
+			{.reg {.id = 3, .f16 = false }, .mask = 0xf },
+			{.reg {.id = 4, .f16 = false }, .mask = 0xf },
+		};
+
+		static const std::vector<RegisterRef> s_fp16_output_set =
+		{
+			{.reg {.id = 0, .f16 = true }, .mask = 0xf },
+			{.reg {.id = 4, .f16 = true }, .mask = 0xf },
+			{.reg {.id = 6, .f16 = true }, .mask = 0xf },
+			{.reg {.id = 8, .f16 = true }, .mask = 0xf },
+		};
+
+		static const RegisterRef s_z_export_reg =
+		{
+			.reg {.id = 1, .f16 = false },
+			.mask = (1u << 2)
+		};
 	}
 }
 
 using namespace rsx::fragment_program;
+using namespace rsx::assembler;
 
 // SIMD vector lanes
 enum VectorLane : u8
@@ -31,10 +60,29 @@ enum VectorLane : u8
 	W = 3,
 };
 
+std::vector<RegisterRef> get_fragment_program_output_set(u32 ctrl, u32 mrt_count)
+{
+	std::vector<RegisterRef> result;
+	if (mrt_count > 0)
+	{
+		result = (ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS)
+			? s_fp32_output_set
+			: s_fp16_output_set;
+
+		result.resize(mrt_count);
+	}
+
+	if (ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
+	{
+		result.push_back(s_z_export_reg);
+	}
+
+	return result;
+}
+
 FragmentProgramDecompiler::FragmentProgramDecompiler(const RSXFragmentProgram &prog, u32& size)
 	: m_size(size)
 	, m_prog(prog)
-	, m_ctrl(prog.ctrl)
 {
 	m_size = 0;
 }
@@ -151,8 +199,6 @@ void FragmentProgramDecompiler::SetDst(std::string code, u32 flags)
 	}
 
 	const u32 reg_index = dst.fp16 ? (dst.dest_reg >> 1) : dst.dest_reg;
-	ensure(reg_index < temp_registers.size());
-
 	if (dst.opcode == RSX_FP_OPCODE_MOV &&
 		src0.reg_type == RSX_FP_REGISTER_TYPE_TEMP &&
 		src0.tmp_reg_index == reg_index)
@@ -165,8 +211,6 @@ void FragmentProgramDecompiler::SetDst(std::string code, u32 flags)
 			return;
 		}
 	}
-
-	temp_registers[reg_index].tag(dst.dest_reg, !!dst.fp16, dst.mask_x, dst.mask_y, dst.mask_z, dst.mask_w);
 }
 
 void FragmentProgramDecompiler::AddFlowOp(const std::string& code)
@@ -234,7 +278,8 @@ std::string FragmentProgramDecompiler::AddCond()
 
 std::string FragmentProgramDecompiler::AddConst()
 {
-	const u32 constant_id = m_size + (4 * sizeof(u32));
+	ensure(m_instruction->length == 8);
+	const u32 constant_id = m_instruction->addr + 16;
 	u32 index = umax;
 
 	if (auto found = m_constant_offsets.find(constant_id);
@@ -248,9 +293,6 @@ std::string FragmentProgramDecompiler::AddConst()
 		properties.constant_offsets.push_back(constant_id);
 		m_constant_offsets[constant_id] = index;
 	}
-
-	// Skip next instruction, its just a literal
-	m_offset = 2 * 4 * sizeof(u32);
 
 	// Return the next offset index
 	return "_fetch_constant(" + std::to_string(index) + ")";
@@ -507,43 +549,28 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 {
 	std::string ret;
 	u32 precision_modifier = 0;
+	u32 register_index = umax;
 
 	if constexpr (std::is_same_v<T, SRC0>)
 	{
 		precision_modifier = src1.src0_prec_mod;
+		register_index = 0;
 	}
 	else if constexpr (std::is_same_v<T, SRC1>)
 	{
 		precision_modifier = src1.src1_prec_mod;
+		register_index = 1;
 	}
 	else if constexpr (std::is_same_v<T, SRC2>)
 	{
 		precision_modifier = src1.src2_prec_mod;
+		register_index = 2;
 	}
 
 	switch (src.reg_type)
 	{
 	case RSX_FP_REGISTER_TYPE_TEMP:
-
-		if (!src.fp16)
-		{
-			if (dst.opcode == RSX_FP_OPCODE_UP16 ||
-				dst.opcode == RSX_FP_OPCODE_UP2 ||
-				dst.opcode == RSX_FP_OPCODE_UP4 ||
-				dst.opcode == RSX_FP_OPCODE_UPB ||
-				dst.opcode == RSX_FP_OPCODE_UPG)
-			{
-				auto &reg = temp_registers[src.tmp_reg_index];
-				if (reg.requires_gather(src.swizzle_x))
-				{
-					properties.has_gather_op = true;
-					AddReg(src.tmp_reg_index, src.fp16);
-					ret = getFloatTypeName(4) + reg.gather_r();
-					break;
-				}
-			}
-		}
-		else if (precision_modifier == RSX_FP_PRECISION_HALF)
+		if (src.fp16 && precision_modifier == RSX_FP_PRECISION_HALF)
 		{
 			// clamp16() is not a cheap operation when emulated; avoid at all costs
 			precision_modifier = RSX_FP_PRECISION_REAL;
@@ -620,18 +647,29 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 		{
 			// TEX0 - TEX9
 			// Texcoord 2d mask seems to reset the last 2 arguments to 0 and w if set
+
+			// Opt: Skip emitting w dependency unless w coord is actually being sampled
+			ensure(register_index != umax);
+			const auto lane_mask = FP::get_src_vector_lane_mask_shuffled(m_prog, m_instruction, register_index);
+			const auto touches_z = !!(lane_mask & (1u << 2));
+			const bool touches_w = !!(lane_mask & (1u << 3));
+
 			const u8 texcoord = u8(register_id) - 4;
 			if (m_prog.texcoord_is_point_coord(texcoord))
 			{
 				// Point sprite coord generation. Stacks with the 2D override mask.
-				if (m_prog.texcoord_is_2d(texcoord))
+				if (!m_prog.texcoord_is_2d(texcoord))
 				{
-					ret += getFloatTypeName(4) + "(gl_PointCoord, 0., in_w)";
-					properties.has_w_access = true;
+					ret += getFloatTypeName(4) + "(gl_PointCoord, 1., 0.)";
+				}
+				else if (!touches_w)
+				{
+					ret += getFloatTypeName(4) + "(gl_PointCoord, 0., 0.)";
 				}
 				else
 				{
-					ret += getFloatTypeName(4) + "(gl_PointCoord, 1., 0.)";
+					ret += getFloatTypeName(4) + "(gl_PointCoord, 0., in_w)";
+					properties.has_w_access = true;
 				}
 			}
 			else if (src2.perspective_corr)
@@ -648,14 +686,19 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 			}
 			else
 			{
-				if (m_prog.texcoord_is_2d(texcoord))
+				const bool skip_zw_load = !touches_z && !touches_w;
+				if (!m_prog.texcoord_is_2d(texcoord) || skip_zw_load)
 				{
-					ret += getFloatTypeName(4) + "(" + reg_var + ".xy, 0., in_w)";
-					properties.has_w_access = true;
+					ret += reg_var;
+				}
+				else if (!touches_w)
+				{
+					ret += getFloatTypeName(4) + "(" + reg_var + ".xy, 0., 0.)";
 				}
 				else
 				{
-					ret += reg_var;
+					ret += getFloatTypeName(4) + "(" + reg_var + ".xy, 0., in_w)";
+					properties.has_w_access = true;
 				}
 			}
 			break;
@@ -717,7 +760,7 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 		break;
 
 	case RSX_FP_REGISTER_TYPE_UNKNOWN: // ??? Used by a few games, what is it?
-		rsx_log.error("Src type 3 used, opcode=0x%X, dst=0x%X s0=0x%X s1=0x%X s2=0x%X",
+		rsx_log.error("[FP] Invalid Src type 3 used, opcode=0x%X, dst=0x%X s0=0x%X s1=0x%X s2=0x%X",
 				dst.opcode, dst.HEX, src0.HEX, src1.HEX, src2.HEX);
 
 		// This is not some special type, it is a bug indicating memory corruption
@@ -748,8 +791,10 @@ template<typename T> std::string FragmentProgramDecompiler::GetSRC(T src)
 	}
 
 	// Warning: Modifier order matters. e.g neg should be applied after precision clamping (tested with Naruto UNS)
+	const bool precision_before_abs = precision_modifier == RSX_FP_PRECISION_SATURATE;
+	if (precision_before_abs) ret = ClampValue(ret, precision_modifier);
 	if (src.abs) ret = "abs(" + ret + ")";
-	if (precision_modifier) ret = ClampValue(ret, precision_modifier);
+	if (precision_modifier && !precision_before_abs) ret = ClampValue(ret, precision_modifier);
 	if (src.neg) ret = "-" + ret;
 
 	return ret;
@@ -760,31 +805,19 @@ std::string FragmentProgramDecompiler::BuildCode()
 	// Shader validation
 	// Shader must at least write to one output for the body to be considered valid
 
-	const bool fp16_out = !(m_ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS);
+	const bool fp16_out = !(m_prog.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS);
 	const std::string float4_type = (fp16_out && device_props.has_native_half_support)? getHalfTypeName(4) : getFloatTypeName(4);
 	const std::string init_value = float4_type + "(0.)";
 	std::array<std::string, 4> output_register_names;
-	std::array<u32, 4> ouput_register_indices = { 0, 2, 3, 4 };
 
 	// Holder for any "cleanup" before exiting main
 	std::stringstream main_epilogue;
 
 	// Check depth export
-	if (m_ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
+	if (m_prog.ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 	{
 		// Hw tests show that the depth export register is default-initialized to 0 and not wpos.z!!
 		m_parr.AddParam(PF_PARAM_NONE, getFloatTypeName(4), "r1", init_value);
-
-		auto& r1 = temp_registers[1];
-		if (r1.requires_gather(VectorLane::Z))
-		{
-			// r1.zw was not written to
-			properties.has_gather_op = true;
-			main_epilogue << "	r1.z = " << float4_type << r1.gather_r() << ".z;\n";
-
-			// Emit debug warning. Useful to diagnose regressions, but should be removed in future.
-			rsx_log.warning("ROP reads from shader depth without writing to it. Final value will be gathered.");
-		}
 	}
 
 	// Add the color output registers. They are statically written to and have guaranteed initialization (except r1.z which == wpos.z)
@@ -812,33 +845,6 @@ std::string FragmentProgramDecompiler::BuildCode()
 			continue;
 		}
 
-		const auto block_index = ouput_register_indices[n];
-		auto& r = temp_registers[block_index];
-
-		if (fp16_out)
-		{
-			// Check if we need a split/extract op
-			if (r.requires_split(0))
-			{
-				main_epilogue << "	" << reg_name << " = " << float4_type << r.split_h0() << ";\n";
-
-				// Emit debug warning. Useful to diagnose regressions, but should be removed in future.
-				rsx_log.warning("ROP reads from %s without writing to it. Final value will be extracted from the 32-bit register.", reg_name);
-			}
-
-			continue;
-		}
-
-		if (!r.requires_gather128())
-		{
-			// Nothing to do
-			continue;
-		}
-
-		// We need to gather the data from existing registers
-		main_epilogue << "	" << reg_name << " = " << float4_type << r.gather_r() << ";\n";
-		properties.has_gather_op = true;
-
 		// Emit debug warning. Useful to diagnose regressions, but should be removed in future.
 		rsx_log.warning("ROP reads from %s without writing to it. Final value will be gathered.", reg_name);
 	}
@@ -863,7 +869,10 @@ std::string FragmentProgramDecompiler::BuildCode()
 	if (!m_is_valid_ucode)
 	{
 		// If the code is broken, do not compile. Simply NOP main and write empty outputs
+		m_parr.params[PF_PARAM_UNIFORM].clear();
 		insertHeader(OS);
+		OS << "\n";
+		insertConstants(OS);
 		OS << "\n";
 		OS << "void main()\n";
 		OS << "{\n";
@@ -952,13 +961,13 @@ std::string FragmentProgramDecompiler::BuildCode()
 	}
 
 	OS <<
-	"#define _builtin_lit lit_legacy\n"
 	"#define _builtin_log2 log2\n"
 	"#define _builtin_normalize(x) (length(x) > 0? normalize(x) : x)\n" // HACK!! Workaround for some games that generate NaNs unless texture filtering exactly matches PS3 (BFBC)
 	"#define _builtin_sqrt(x) sqrt(abs(x))\n"
 	"#define _builtin_rcp(x) (1. / x)\n"
 	"#define _builtin_rsq(x) (1. / _builtin_sqrt(x))\n"
-	"#define _builtin_div(x, y) (x / y)\n";
+	"#define _builtin_div(x, y) (x / y)\n"
+	"#define _builtin_lerp mix\n";
 
 	if (device_props.has_low_precision_rounding)
 	{
@@ -1026,28 +1035,6 @@ std::string FragmentProgramDecompiler::BuildCode()
 		OS << Format(divsq_func);
 	}
 
-	// Declare register gather/merge if needed
-	if (properties.has_gather_op)
-	{
-		std::string float2 = getFloatTypeName(2);
-
-		OS << float4 << " gather(" << float4 << " _h0, " << float4 << " _h1)\n";
-		OS << "{\n";
-		OS << "	float x = uintBitsToFloat(packHalf2x16(_h0.xy));\n";
-		OS << "	float y = uintBitsToFloat(packHalf2x16(_h0.zw));\n";
-		OS << "	float z = uintBitsToFloat(packHalf2x16(_h1.xy));\n";
-		OS << "	float w = uintBitsToFloat(packHalf2x16(_h1.zw));\n";
-		OS << "	return " << float4 << "(x, y, z, w);\n";
-		OS << "}\n\n";
-
-		OS << float2 << " gather(" << float4 << " _h)\n";
-		OS << "{\n";
-		OS << "	float x = uintBitsToFloat(packHalf2x16(_h.xy));\n";
-		OS << "	float y = uintBitsToFloat(packHalf2x16(_h.zw));\n";
-		OS << "	return " << float2 << "(x, y);\n";
-		OS << "}\n\n";
-	}
-
 	if (properties.has_dynamic_register_load)
 	{
 		OS <<
@@ -1102,7 +1089,9 @@ bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 		properties.has_divsq = true;
 		return true;
 	case RSX_FP_OPCODE_DP2: SetDst(getFunction(FUNCTION::DP2), OPFLAGS::op_extern); return true;
-	case RSX_FP_OPCODE_DP3: SetDst(getFunction(FUNCTION::DP3), OPFLAGS::op_extern); return true;
+	case RSX_FP_OPCODE_DP3:
+		SetDst(getFunction(dst.prec == RSX_FP_PRECISION_REAL && g_cfg.video.shader_precision == gpu_preset_level::ultra ? FUNCTION::DP3_PRECISE : FUNCTION::DP3), OPFLAGS::op_extern);
+		return true;
 	case RSX_FP_OPCODE_DP4: SetDst(getFunction(FUNCTION::DP4), OPFLAGS::op_extern); return true;
 	case RSX_FP_OPCODE_DP2A: SetDst(getFunction(FUNCTION::DP2A), OPFLAGS::op_extern); return true;
 	case RSX_FP_OPCODE_MAD: SetDst("fma($0, $1, $2)", OPFLAGS::src_cast_f32); return true;
@@ -1132,8 +1121,11 @@ bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 		SetDst("_builtin_lit($0)");
 		properties.has_lit_op = true;
 		return true;
-	case RSX_FP_OPCODE_LIF: SetDst("$Ty(1.0, $0.y, ($0.y > 0 ? exp2($0.w) : 0.0), 1.0)", OPFLAGS::op_extern); return true;
-	case RSX_FP_OPCODE_LRP: SetDst("$Ty($2 * (1 - $0) + $1 * $0)", OPFLAGS::skip_type_cast); return true;
+	case RSX_FP_OPCODE_LIF:
+		SetDst("_builtin_lif($0)");
+		properties.has_lit_op = true;
+		return true;
+	case RSX_FP_OPCODE_LRP: SetDst("_builtin_lerp($2, $1, $0)", OPFLAGS::skip_type_cast); return true;
 	case RSX_FP_OPCODE_LG2: SetDst("_builtin_log2($0.x).xxxx"); return true;
 	// Pack operations. See https://www.khronos.org/registry/OpenGL/extensions/NV/NV_fragment_program.txt
 	// PK2 = PK2H (2 16-bit floats)
@@ -1151,6 +1143,14 @@ bool FragmentProgramDecompiler::handle_sct_scb(u32 opcode)
 		return true;
 	case RSX_FP_OPCODE_PKB: SetDst(getFloatTypeName(4) + "(uintBitsToFloat(packUnorm4x8($0)))"); return true;
 	case RSX_FP_OPCODE_SIN: SetDst("sin($0.xxxx)"); return true;
+
+	// Custom ISA extensions for 16-bit OR
+	case RSX_FP_OPCODE_OR16_HI:
+		SetDst("$float4(uintBitsToFloat((floatBitsToUint($0.x) & 0x0000ffff) | (packHalf2x16($1.xx) & 0xffff0000)))");
+		return true;
+	case RSX_FP_OPCODE_OR16_LO:
+		SetDst("$float4(uintBitsToFloat((floatBitsToUint($0.x) & 0xffff0000) | (packHalf2x16($1.xx) & 0x0000ffff)))");
+		return true;
 	}
 	return false;
 }
@@ -1201,7 +1201,7 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 		if (dst.exp_tex)
 		{
 			properties.has_exp_tex_op = true;
-			AddCode("_enable_texture_expand();");
+			AddCode("_enable_texture_expand($_i);");
 		}
 
 		// Shadow proj
@@ -1297,167 +1297,239 @@ bool FragmentProgramDecompiler::handle_tex_srb(u32 opcode)
 
 std::string FragmentProgramDecompiler::Decompile()
 {
-	auto data = static_cast<be_t<u32>*>(m_prog.get_data());
+	auto graph = deconstruct_fragment_program(m_prog);
+	m_is_valid_ucode = true;
+
+	if (!graph.blocks.empty())
+	{
+		// The RSX CFG is missing the output block. We inject a fake tail block that ingests the ROP outputs.
+		BasicBlock* rop_block = nullptr;
+		BasicBlock* tail_block = &graph.blocks.back();
+		if (tail_block->instructions.empty())
+		{
+			// Merge block. Use this directly
+			rop_block = tail_block;
+		}
+		else
+		{
+			graph.blocks.push_back({});
+			rop_block = &graph.blocks.back();
+
+			tail_block->insert_succ(rop_block);
+			rop_block->insert_pred(tail_block);
+		}
+
+		const auto rop_inputs = get_fragment_program_output_set(m_prog.ctrl, m_prog.mrt_buffers_count);
+		rop_block->input_list.insert(rop_block->input_list.end(), rop_inputs.begin(), rop_inputs.end());
+
+		FP::RegisterAnnotationPass annotation_pass{ m_prog, { .skip_delay_slots = true } };
+		FP::RegisterDependencyPass dependency_pass{};
+
+		m_is_valid_ucode = m_is_valid_ucode && annotation_pass.run(graph);
+		m_is_valid_ucode = m_is_valid_ucode && dependency_pass.run(graph);
+	}
+
 	m_size = 0;
 	m_location = 0;
 	m_loop_count = 0;
 	m_code_level = 1;
-	m_is_valid_ucode = true;
 	m_constant_offsets.clear();
 
-	enum
+	// For GLSL scope wind/unwind. We store the min scope depth and loop count for each block and "unwind" to it.
+	// This should recover information lost when multiple nodes converge on a single merge node or even skip a merge node as is the case with "ELSE" nodes.
+	std::unordered_map<const BasicBlock*, std::pair<int, u32>> block_data;
+
+	auto push_block_info = [&](const BasicBlock* block)
 	{
-		FORCE_NONE,
-		FORCE_SCT,
-		FORCE_SCB,
+		u32 loop = m_loop_count;
+		int level = m_code_level;
+
+		auto found = block_data.find(block);
+		if (found != block_data.end())
+		{
+			level = std::min(level, found->second.first);
+			loop = std::min(loop, found->second.second);
+		}
+
+		block_data[block] = { level, loop };
 	};
 
-	int forced_unit = FORCE_NONE;
-
-	while (true)
+	auto emit_block = [&](const std::vector<Instruction>& instructions)
 	{
-		for (auto found = std::find(m_end_offsets.begin(), m_end_offsets.end(), m_size);
-			found != m_end_offsets.end();
-			found = std::find(m_end_offsets.begin(), m_end_offsets.end(), m_size))
+		for (auto& inst : instructions)
 		{
-			m_end_offsets.erase(found);
-			m_code_level--;
-			AddCode("}");
-			m_loop_count--;
+			m_instruction = &inst;
+			dst.HEX = inst.bytecode[0];
+			src0.HEX = inst.bytecode[1];
+			src1.HEX = inst.bytecode[2];
+			src2.HEX = inst.bytecode[3];
+
+			ensure(handle_tex_srb(inst.opcode) || handle_sct_scb(inst.opcode), "Unsupported operation");
 		}
+	};
 
-		for (auto found = std::find(m_else_offsets.begin(), m_else_offsets.end(), m_size);
-			found != m_else_offsets.end();
-			found = std::find(m_else_offsets.begin(), m_else_offsets.end(), m_size))
+	for (const auto &block : graph.blocks)
+	{
+		auto found = block_data.find(&block);
+		if (found != block_data.end())
 		{
-			m_else_offsets.erase(found);
-			m_code_level--;
-			AddCode("}");
-			AddCode("else");
-			AddCode("{");
-			m_code_level++;
-		}
-
-		dst.HEX = GetData(data[0]);
-		src0.HEX = GetData(data[1]);
-		src1.HEX = GetData(data[2]);
-		src2.HEX = GetData(data[3]);
-
-		m_offset = 4 * sizeof(u32);
-		opflags = 0;
-
-		const u32 opcode = dst.opcode | (src1.opcode_is_branch << 6);
-
-		auto SIP = [&]()
-		{
-			switch (opcode)
+			const auto [level, loop] = found->second;
+			for (int i = m_code_level; i > level; i--)
 			{
-			case RSX_FP_OPCODE_BRK:
-				if (m_loop_count) AddFlowOp("break");
-				else rsx_log.error("BRK opcode found outside of a loop");
-				break;
-			case RSX_FP_OPCODE_CAL:
-				rsx_log.error("Unimplemented SIP instruction: CAL");
-				break;
-			case RSX_FP_OPCODE_FENCT:
-				AddCode("//FENCT");
-				forced_unit = FORCE_SCT;
-				break;
-			case RSX_FP_OPCODE_FENCB:
-				AddCode("//FENCB");
-				forced_unit = FORCE_SCB;
-				break;
-			case RSX_FP_OPCODE_IFE:
-				AddCode("if($cond)");
-				if (src2.end_offset != src1.else_offset)
-					m_else_offsets.push_back(src1.else_offset << 2);
-				m_end_offsets.push_back(src2.end_offset << 2);
+				m_code_level--;
+				AddCode("}");
+			}
+
+			m_loop_count = loop;
+		}
+
+		if (!block.pred.empty())
+		{
+			// Predecessors are always sorted closest last.
+			// This gives some adjacency info and tells us how the previous block connects to this one.
+			const auto& pred = block.pred.back();
+			switch (pred.type)
+			{
+			case EdgeType::LOOP:
+				m_loop_count++;
+				[[ fallthrough ]];
+			case EdgeType::IF:
 				AddCode("{");
 				m_code_level++;
 				break;
-			case RSX_FP_OPCODE_LOOP:
-				if (!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt)
-				{
-					AddCode(fmt::format("//$ifcond for(int i%u = %u; i%u < %u; i%u += %u) {} //-> %u //LOOP",
-						m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment, src2.end_offset));
-				}
-				else
-				{
-					AddCode(fmt::format("$ifcond for(int i%u = %u; i%u < %u; i%u += %u) //LOOP",
-						m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment));
-					m_loop_count++;
-					m_end_offsets.push_back(src2.end_offset << 2);
-					AddCode("{");
-					m_code_level++;
-				}
+			case EdgeType::ELSE:
+				AddCode("else");
+				AddCode("{");
+				m_code_level++;
 				break;
-			case RSX_FP_OPCODE_REP:
-				if (!src0.exec_if_eq && !src0.exec_if_gr && !src0.exec_if_lt)
-				{
-					AddCode(fmt::format("//$ifcond for(int i%u = %u; i%u < %u; i%u += %u) {} //-> %u //REP",
-						m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment, src2.end_offset));
-				}
-				else
-				{
-					AddCode(fmt::format("if($cond) for(int i%u = %u; i%u < %u; i%u += %u) //REP",
-						m_loop_count, src1.init_counter, m_loop_count, src1.end_counter, m_loop_count, src1.increment));
-					m_loop_count++;
-					m_end_offsets.push_back(src2.end_offset << 2);
-					AddCode("{");
-					m_code_level++;
-				}
+			case EdgeType::ENDIF:
+			case EdgeType::ENDLOOP:
+				// Pure merge block?
 				break;
-			case RSX_FP_OPCODE_RET:
-				AddFlowOp("return");
+			case EdgeType::NONE:
+				ensure(block.instructions.empty());
 				break;
-
 			default:
-				return false;
+				fmt::throw_exception("Unhandled edge type %d", static_cast<int>(pred.type));
+				break;
 			}
-
-			return true;
-		};
-
-		switch (opcode)
-		{
-		case RSX_FP_OPCODE_NOP:
-			break;
-		case RSX_FP_OPCODE_KIL:
-			properties.has_discard_op = true;
-			AddFlowOp("_kill()");
-			break;
-		default:
-			int prev_force_unit = forced_unit;
-
-			// Some instructions do not respect forced unit
-			// Tested with Tales of Vesperia
-			if (SIP()) break;
-			if (handle_tex_srb(opcode)) break;
-
-			// FENCT/FENCB do not actually reject instructions if they dont match the forced unit
-			// Looks like they are optimization hints and not hard-coded forced paths
-			if (handle_sct_scb(opcode)) break;
-			forced_unit = FORCE_NONE;
-
-			rsx_log.error("Unknown/illegal instruction: 0x%x (forced unit %d)", opcode, prev_force_unit);
-			break;
 		}
 
-		m_size += m_offset;
+		if (!block.prologue.empty())
+		{
+			AddCode("// Prologue");
+			emit_block(block.prologue);
+		}
 
-		if (dst.end) break;
+		const bool early_epilogue =
+			!block.epilogue.empty() &&
+			!block.succ.empty() &&
+			(block.succ.front().type == EdgeType::IF || block.succ.front().type == EdgeType::LOOP);
 
-		ensure(m_offset % sizeof(u32) == 0);
-		data += m_offset / sizeof(u32);
+		auto sext8 = [](u32 value) { return static_cast<s32>(value << 24u) >> 24; };
+
+		for (const auto& inst : block.instructions)
+		{
+			if (early_epilogue && &inst == &block.instructions.back())
+			{
+				AddCode("// Epilogue");
+				emit_block(block.epilogue);
+			}
+
+			m_instruction = &inst;
+
+			dst.HEX = inst.bytecode[0];
+			src0.HEX = inst.bytecode[1];
+			src1.HEX = inst.bytecode[2];
+			src2.HEX = inst.bytecode[3];
+
+			opflags = 0;
+
+			auto SIP = [&]()
+			{
+				switch (m_instruction->opcode)
+				{
+				case RSX_FP_OPCODE_BRK:
+					if (m_loop_count) AddFlowOp("break");
+					else rsx_log.error("BRK opcode found outside of a loop");
+					break;
+				case RSX_FP_OPCODE_CAL:
+					rsx_log.error("Unimplemented SIP instruction: CAL");
+					break;
+				case RSX_FP_OPCODE_FENCT:
+					AddCode("// FENCT");
+					break;
+				case RSX_FP_OPCODE_FENCB:
+					AddCode("// FENCB");
+					break;
+				case RSX_FP_OPCODE_IFE:
+					AddCode("if($cond)");
+					break;
+				case RSX_FP_OPCODE_LOOP:
+				case RSX_FP_OPCODE_REP:
+					AddCode(
+						fmt::format("$ifcond for(int i%u = 0; i%u < %u; i%u++) // %s { %u, %d }",
+							m_loop_count,
+							m_loop_count, src1.rep_count,
+							m_loop_count,
+							FP::get_opcode_name(static_cast<FP_opcode>(m_instruction->opcode)),
+							src1.init_counter,
+							sext8(src1.increment))
+					);
+					break;
+				case RSX_FP_OPCODE_RET:
+					AddFlowOp("return");
+					break;
+
+				default:
+					return false;
+				}
+
+				return true;
+			};
+
+			switch (m_instruction->opcode)
+			{
+			case RSX_FP_OPCODE_NOP:
+				break;
+			case RSX_FP_OPCODE_KIL:
+				properties.has_discard_op = true;
+				AddFlowOp("_kill()");
+				break;
+			default:
+				if (SIP()) break;
+				if (handle_tex_srb(m_instruction->opcode)) break;
+				if (handle_sct_scb(m_instruction->opcode)) break;
+				rsx_log.error("Unknown/illegal instruction: 0x%x", m_instruction->opcode);
+				break;
+			}
+
+			m_size += m_instruction->length * 4;
+			if (dst.end) break;
+		}
+
+		if (!early_epilogue && !block.epilogue.empty())
+		{
+			AddCode("// Epilogue");
+			emit_block(block.epilogue);
+		}
+
+		for (auto& succ : block.succ)
+		{
+			switch (succ.type)
+			{
+			case EdgeType::ENDIF:
+			case EdgeType::ENDLOOP:
+			case EdgeType::ELSE:
+				push_block_info(succ.to);
+				break;
+			default:
+				break;
+			}
+		}
 	}
 
-	while (m_code_level > 1)
-	{
-		rsx_log.error("Hanging block found at end of shader. Malformed shader?");
-
-		m_code_level--;
-		AddCode("}");
-	}
+	ensure(m_code_level == 1);
 
 	// flush m_code_level
 	m_code_level = 1;

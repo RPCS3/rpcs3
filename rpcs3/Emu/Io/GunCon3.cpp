@@ -227,12 +227,12 @@ void usb_device_guncon3::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint,
 		return;
 	}
 
-	const auto input_callback = [&gc](guncon3_btn btn, pad_button /*pad_button*/, u16 value, bool pressed, bool& /*abort*/)
+	const auto input_callback = [&gc](const emulated_pad_config<guncon3_btn>::input_value& value, bool& /*abort*/)
 	{
-		if (!pressed)
+		if (!value.pressed)
 			return;
 
-		switch (btn)
+		switch (value.btn)
 		{
 		case guncon3_btn::trigger: gc.btn_trigger |= 1; break;
 		case guncon3_btn::a1: gc.btn_a1 |= 1; break;
@@ -243,10 +243,10 @@ void usb_device_guncon3::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint,
 		case guncon3_btn::b3: gc.btn_b3 |= 1; break;
 		case guncon3_btn::c1: gc.btn_c1 |= 1; break;
 		case guncon3_btn::c2: gc.btn_c2 |= 1; break;
-		case guncon3_btn::as_x: gc.stick_ax = static_cast<uint8_t>(value); break;
-		case guncon3_btn::as_y: gc.stick_ay = static_cast<uint8_t>(value); break;
-		case guncon3_btn::bs_x: gc.stick_bx = static_cast<uint8_t>(value); break;
-		case guncon3_btn::bs_y: gc.stick_by = static_cast<uint8_t>(value); break;
+		case guncon3_btn::as_x: gc.stick_ax = static_cast<uint8_t>(value.value); break;
+		case guncon3_btn::as_y: gc.stick_ay = static_cast<uint8_t>(value.value); break;
+		case guncon3_btn::bs_x: gc.stick_bx = static_cast<uint8_t>(value.value); break;
+		case guncon3_btn::bs_y: gc.stick_by = static_cast<uint8_t>(value.value); break;
 		case guncon3_btn::count: break;
 		}
 	};
@@ -270,7 +270,7 @@ void usb_device_guncon3::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint,
 
 		mouse_handler.Init(4);
 
-		const u32 mouse_index = g_cfg.io.mouse == mouse_handler::basic ? 0 : m_controller_index;
+		const usz mouse_index = g_cfg.io.mouse == mouse_handler::basic ? 0 : m_controller_index;
 		if (mouse_index >= mouse_handler.GetMice().size())
 		{
 			guncon3_encode(&gc, buf, m_key.data());
@@ -280,15 +280,9 @@ void usb_device_guncon3::interrupt_transfer(u32 buf_size, u8* buf, u32 endpoint,
 		const Mouse& mouse_data = ::at32(mouse_handler.GetMice(), mouse_index);
 		cfg->handle_input(mouse_data, input_callback);
 
-		if (mouse_data.x_max <= 0 || mouse_data.y_max <= 0)
-		{
-			guncon3_encode(&gc, buf, m_key.data());
-			return;
-		}
-
 		// Expand 0..+wh to -32767..+32767
-		gc.gun_x = (mouse_data.x_pos * USHRT_MAX / mouse_data.x_max) - SHRT_MAX;
-		gc.gun_y = (mouse_data.y_pos * -USHRT_MAX / mouse_data.y_max) + SHRT_MAX;
+		gc.gun_x = static_cast<s32>(mouse_data.x_pos * USHRT_MAX) - SHRT_MAX;
+		gc.gun_y = static_cast<s32>(mouse_data.y_pos * -USHRT_MAX) + SHRT_MAX;
 	}
 
 	guncon3_encode(&gc, buf, m_key.data());

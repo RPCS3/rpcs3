@@ -67,7 +67,9 @@ public:
 	}
 
 	/** Call this method before calling app.exec */
-	bool Init() override;
+	void Init() override;
+
+	int exec();
 
 	static s32 get_language_id();
 
@@ -81,11 +83,11 @@ private:
 		return thread();
 	}
 
-	void SwitchTranslator(QTranslator& translator, const QString& filename, const QString& language_code);
+	void SwitchTranslator(const QString& language_code);
 	void LoadLanguage(const QString& language_code);
 	static QStringList GetAvailableLanguageCodes();
 
-	void InitializeCallbacks();
+	void create_callbacks() override;
 	void InitializeConnects();
 
 	void StartPlaytime(bool start_playtime);
@@ -101,6 +103,7 @@ private:
 
 	} m_native_event_filter;
 
+	std::vector<QTranslator*> m_qt_translators;
 	QTranslator m_translator;
 	QString m_language_code;
 	static s32 m_language_id;
@@ -126,6 +129,8 @@ private:
 	u64 m_pause_delayed_tag = 0;
 	typename Emulator::stop_counter_t m_emu_focus_out_emulation_id{};
 	bool m_is_pause_on_focus_loss_active = false;
+
+	std::function<void()> m_show_next_dialog;
 
 #ifdef _WIN32
 	void register_device_notification(WId window_id);

@@ -219,7 +219,7 @@ void usb_device_topshotelite::control_transfer(u8 bmRequestType, u8 bRequest, u1
 
 extern bool is_input_allowed();
 
-static void set_sensor_pos(struct TopShotElite_data* ts, s32 led_lx, s32 led_ly, s32 led_rx, s32 led_ry, s32 detect_l, s32 detect_r)
+static void set_sensor_pos(TopShotElite_data* ts, s32 led_lx, s32 led_ly, s32 led_rx, s32 led_ry, s32 detect_l, s32 detect_r)
 {
 	ts->led_lx_hi = led_lx >> 2;
 	ts->led_lx_lo = led_lx & 0x3;
@@ -250,7 +250,7 @@ void usb_device_topshotelite::interrupt_transfer(u32 buf_size, u8* buf, u32 /*en
 	transfer->expected_result = HC_CC_NOERR;
 	transfer->expected_time = get_timestamp() + 4000;
 
-	struct TopShotElite_data ts{};
+	TopShotElite_data ts{};
 	ts.dpad = Dpad_None;
 	ts.stick_lx = ts.stick_ly = ts.stick_rx = ts.stick_ry = 0x7f;
 	if (m_mode)
@@ -274,18 +274,18 @@ void usb_device_topshotelite::interrupt_transfer(u32 buf_size, u8* buf, u32 /*en
 
 	if (m_controller_index >= g_cfg_topshotelite.players.size())
 	{
-		topshotelite_log.warning("Top Shot Fearmaster controllers are only supported for Player1 to Player%d", g_cfg_topshotelite.players.size());
+		topshotelite_log.warning("Top Shot Elite controllers are only supported for Player1 to Player%d", g_cfg_topshotelite.players.size());
 		prepare_data(&ts, buf);
 		return;
 	}
 
 	bool up = false, right = false, down = false, left = false;
-	const auto input_callback = [&ts, &up, &down, &left, &right](topshotelite_btn btn, pad_button /*pad_button*/, u16 value, bool pressed, bool& /*abort*/)
+	const auto input_callback = [&ts, &up, &down, &left, &right](const emulated_pad_config<topshotelite_btn>::input_value& value, bool& /*abort*/)
 	{
-		if (!pressed)
+		if (!value.pressed)
 			return;
 
-		switch (btn)
+		switch (value.btn)
 		{
 		case topshotelite_btn::trigger: ts.btn_trigger |= 1; break;
 		case topshotelite_btn::reload: ts.btn_reload |= 1; break;
@@ -302,11 +302,11 @@ void usb_device_topshotelite::interrupt_transfer(u32 buf_size, u8* buf, u32 /*en
 		case topshotelite_btn::dpad_down: down = true; break;
 		case topshotelite_btn::dpad_left: left = true; break;
 		case topshotelite_btn::dpad_right: right = true; break;
-		case topshotelite_btn::ls_x: ts.stick_lx = static_cast<uint8_t>(value); break;
+		case topshotelite_btn::ls_x: ts.stick_lx = static_cast<uint8_t>(value.value); break;
 		// you know you have a «Top» controller when the games are programmed to ignore a perfect controller, so we have to simulate a drift
-		case topshotelite_btn::ls_y: ts.stick_ly = std::min(0xff, 1 + static_cast<uint8_t>(value)); break;
-		case topshotelite_btn::rs_x: ts.stick_rx = static_cast<uint8_t>(value); break;
-		case topshotelite_btn::rs_y: ts.stick_ry = static_cast<uint8_t>(value); break;
+		case topshotelite_btn::ls_y: ts.stick_ly = std::min(0xff, 1 + static_cast<uint8_t>(value.value)); break;
+		case topshotelite_btn::rs_x: ts.stick_rx = static_cast<uint8_t>(value.value); break;
+		case topshotelite_btn::rs_y: ts.stick_ry = static_cast<uint8_t>(value.value); break;
 		case topshotelite_btn::count: break;
 		}
 	};
@@ -350,7 +350,7 @@ void usb_device_topshotelite::interrupt_transfer(u32 buf_size, u8* buf, u32 /*en
 
 		mouse_handler.Init(4);
 
-		const u32 mouse_index = g_cfg.io.mouse == mouse_handler::basic ? 0 : m_controller_index;
+		const usz mouse_index = g_cfg.io.mouse == mouse_handler::basic ? 0 : m_controller_index;
 		if (mouse_index >= mouse_handler.GetMice().size())
 		{
 			prepare_data(&ts, buf);
@@ -361,17 +361,11 @@ void usb_device_topshotelite::interrupt_transfer(u32 buf_size, u8* buf, u32 /*en
 		cfg->handle_input(mouse_data, input_callback);
 		ts.trigger = ts.btn_trigger ? 0xff : 0x00;
 
-		if (mouse_data.x_max <= 0 || mouse_data.y_max <= 0)
-		{
-			prepare_data(&ts, buf);
-			return;
-		}
+		s32 led_lx = 0x3ff - (TSE_CALIB_RIGHT + static_cast<s32>(mouse_data.x_pos * (TSE_CALIB_LEFT - TSE_CALIB_RIGHT)) + TSE_CALIB_DIST);
+		s32 led_rx = 0x3ff - (TSE_CALIB_RIGHT + static_cast<s32>(mouse_data.x_pos * (TSE_CALIB_LEFT - TSE_CALIB_RIGHT)) - TSE_CALIB_DIST);
 
-		s32 led_lx = 0x3ff - (TSE_CALIB_RIGHT + (mouse_data.x_pos * (TSE_CALIB_LEFT - TSE_CALIB_RIGHT) / mouse_data.x_max) + TSE_CALIB_DIST);
-		s32 led_rx = 0x3ff - (TSE_CALIB_RIGHT + (mouse_data.x_pos * (TSE_CALIB_LEFT - TSE_CALIB_RIGHT) / mouse_data.x_max) - TSE_CALIB_DIST);
-
-		s32 led_ly = TSE_CALIB_TOP + (mouse_data.y_pos * (TSE_CALIB_BOTTOM - TSE_CALIB_TOP) / mouse_data.y_max);
-		s32 led_ry = TSE_CALIB_TOP + (mouse_data.y_pos * (TSE_CALIB_BOTTOM - TSE_CALIB_TOP) / mouse_data.y_max);
+		s32 led_ly = TSE_CALIB_TOP + static_cast<s32>(mouse_data.y_pos * (TSE_CALIB_BOTTOM - TSE_CALIB_TOP));
+		s32 led_ry = TSE_CALIB_TOP + static_cast<s32>(mouse_data.y_pos * (TSE_CALIB_BOTTOM - TSE_CALIB_TOP));
 
 		u8 detect_l = 0x2, detect_r = 0x2; // 0x2 = led detected / 0xf = undetected
 

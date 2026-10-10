@@ -80,7 +80,20 @@ s32 sys_process_getppid()
 template <typename T, typename Get>
 u32 idm_get_count()
 {
-	return idm::select<T, Get>([&](u32, Get&) {});
+	u32 count = 0;
+	idm::select<T, Get>([&](u32 id, Get& obj)
+	{
+		if constexpr (std::is_same_v<Get, lv2_memory>)
+		{
+			if (id == obj.system_handle)
+			{
+				return;
+			}
+		}
+
+		count++;
+	});
+	return count;
 }
 
 error_code sys_process_get_number_of_object(u32 object, vm::ptr<u32> nump)
@@ -123,8 +136,16 @@ error_code sys_process_get_number_of_object(u32 object, vm::ptr<u32> nump)
 template <typename T, typename Get>
 void idm_get_set(std::set<u32>& out)
 {
-	idm::select<T, Get>([&](u32 id, Get&)
+	idm::select<T, Get>([&](u32 id, Get& obj)
 	{
+		if constexpr (std::is_same_v<Get, lv2_memory>)
+		{
+			if (id == obj.system_handle)
+			{
+				return;
+			}
+		}
+
 		out.emplace(id);
 	});
 }
@@ -255,8 +276,10 @@ CellError process_is_spu_lock_line_reservation_address(u32 addr, u64 flags)
 	return {};
 }
 
-error_code sys_process_is_spu_lock_line_reservation_address(u32 addr, u64 flags)
+error_code sys_process_is_spu_lock_line_reservation_address(ppu_thread& ppu, u32 addr, u64 flags)
 {
+	ppu.state += cpu_flag::wait;
+
 	sys_process.warning("sys_process_is_spu_lock_line_reservation_address(addr=0x%x, flags=0x%llx)", addr, flags);
 
 	if (auto err = process_is_spu_lock_line_reservation_address(addr, flags))
@@ -473,7 +496,7 @@ void lv2_exitspawn(ppu_thread& ppu, std::vector<std::string>& argv, std::vector<
 		};
 
 		Emu.after_kill_callback = [func = std::move(func), argv = std::move(argv), envp = std::move(envp), data = std::move(data),
-			disc = std::move(disc), path = std::move(path), hdd1 = std::move(hdd1), old_config = Emu.GetUsedConfig(), klic]() mutable
+			disc = std::move(disc), path = std::move(path), hdd1 = std::move(hdd1), old_config = Emu.GetUsedConfig(), old_db_config = Emu.GetUsedDatabaseConfig(), klic]() mutable
 		{
 			Emu.argv = std::move(argv);
 			Emu.envp = std::move(envp);
@@ -489,7 +512,7 @@ void lv2_exitspawn(ppu_thread& ppu, std::vector<std::string>& argv, std::vector<
 
 			Emu.SetForceBoot(true);
 
-			auto res = Emu.BootGame(path, "", true, cfg_mode::continuous, old_config);
+			auto res = Emu.BootGame(path, "", true, cfg_mode::continuous, old_config, old_db_config);
 
 			if (res != game_boot_result::no_errors)
 			{

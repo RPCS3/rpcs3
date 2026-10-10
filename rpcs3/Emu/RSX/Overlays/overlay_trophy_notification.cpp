@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "overlay_trophy_notification.h"
 #include "Emu/Cell/ErrorCodes.h"
-#include "Emu/System.h"
 
 namespace rsx
 {
@@ -47,7 +46,7 @@ namespace rsx
 
 			text_view.set_pos(139, 69);
 			text_view.set_padding(0, 0, 0, 0);
-			text_view.set_font("Arial", 14);
+			text_view.set_font(14);
 			text_view.align_text(overlay_element::text_align::center);
 			text_view.back_color.a = 0.f;
 
@@ -70,7 +69,7 @@ namespace rsx
 			{
 				// First tick
 				creation_time_us = timestamp_us;
-				Emu.GetCallbacks().play_sound(fs::get_config_dir() + "sounds/snd_trophy.wav");
+				play_sound(sound_effect::trophy);
 				return;
 			}
 

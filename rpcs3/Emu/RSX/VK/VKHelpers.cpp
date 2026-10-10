@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include "Emu/system_config.h"
 #include "VKHelpers.h"
 #include "VKGSRender.h"
 #include "VKCompute.h"
@@ -90,6 +91,7 @@ namespace vk
 		g_drv_no_primitive_restart = false;
 		g_drv_sanitize_fp_values = false;
 		g_drv_disable_fence_reset = false;
+		g_drv_strict_query_scopes = !!g_cfg.video.strict_rendering_mode;
 		g_drv_emulate_cond_render = (g_cfg.video.relaxed_zcull_sync && !g_render_device->get_conditional_render_support());
 		g_num_processed_frames = 0;
 		g_num_total_frames = 0;
@@ -147,6 +149,13 @@ namespace vk
 			break;
 		case driver_vendor::ARM_MALI:
 			// Needs more testing
+			break;
+		case driver_vendor::QUALCOMM:
+			// Needs more testing
+			break;
+		case driver_vendor::TURNIP:
+			// GPU hangs in some titles due to waiting for a query result
+			g_drv_strict_query_scopes = true;
 			break;
 		default:
 			rsx_log.warning("Unsupported device: %s", gpu_name);
@@ -235,6 +244,11 @@ namespace vk
 	bool emulate_conditional_rendering()
 	{
 		return g_drv_emulate_cond_render;
+	}
+
+	bool emulate_extended_depth_range()
+	{
+		return !g_render_device->get_unrestricted_depth_range_support() && g_cfg.video.emulate_extended_depth_range;
 	}
 
 	bool use_strict_query_scopes()

@@ -13,29 +13,29 @@ std::string wchar_to_utf8(std::wstring_view src);
 std::string utf16_to_utf8(std::u16string_view src);
 std::u16string utf8_to_utf16(std::string_view src);
 
-// Copy null-terminated string from a std::string or a char array to a char array with truncation
-template <typename D, typename T>
+// Copy null-terminated string from a std::basic_string or a char array to a char array with truncation
+template <typename D, typename T> requires requires (D& d, T& t) { std::declval<decltype(&t[0])&>() = &d[0]; }
 inline void strcpy_trunc(D&& dst, const T& src)
 {
 	const usz count = std::size(src) >= std::size(dst) ? std::max<usz>(std::size(dst), 1) - 1 : std::size(src);
-	std::memcpy(std::data(dst), std::data(src), count);
-	std::memset(std::data(dst) + count, 0, std::size(dst) - count);
+	std::copy_n(std::data(src), count, std::data(dst));
+	std::fill_n(std::data(dst) + count, std::size(dst) - count, std::remove_cvref_t<decltype(dst[0])>{});
 }
 
 // Convert string to signed integer
-bool try_to_int64(s64* out, std::string_view value, s64 min, s64 max);
+bool try_to_int64(s64* out, std::string_view value, s64 min, s64 max, std::string_view name = {});
 
 // Convert string to unsigned integer
-bool try_to_uint64(u64* out, std::string_view value, u64 min, u64 max);
+bool try_to_uint64(u64* out, std::string_view value, u64 min, u64 max, std::string_view name = {});
 
 // Convert string to unsigned int128_t
-bool try_to_uint128(u128* out, std::string_view value);
+bool try_to_uint128(u128* out, std::string_view value, std::string_view name = {});
 
 // Convert string to float
-bool try_to_float(f64* out, std::string_view value, f64 min, f64 max);
+bool try_to_float(f64* out, std::string_view value, f64 min, f64 max, std::string_view name = {});
 
 // Convert float to string locale independent
-bool try_to_string(std::string* out, const f64& value);
+bool try_to_string(std::string* out, f64 value, std::string_view name = {});
 
 // Get the file extension of a file path ("png", "jpg", etc.)
 std::string get_file_extension(const std::string& file_path);
@@ -139,57 +139,112 @@ namespace fmt
 	// Splits the string into a vector of strings using the separators. The vector may contain empty strings unless is_skip_empty is true.
 	std::vector<std::string> split(std::string_view source, std::initializer_list<std::string_view> separators, bool is_skip_empty = true);
 
+	// Splits the string_view into a vector of string_views using the separators. The vector may contain empty string_views unless is_skip_empty is true.
+	std::vector<std::string_view> split_sv(std::string_view source, std::initializer_list<std::string_view> separators, bool is_skip_empty = true);
+
 	// Removes all preceding and trailing characters specified by 'values' from 'source'.
 	std::string trim(const std::string& source, std::string_view values = " \t");
+
+	// Removes all preceding and trailing characters specified by 'values' from 'source' and returns the result.
+	std::string_view trim_sv(std::string_view source, std::string_view values = " \t");
 
 	// Removes all preceding characters specified by 'values' from 'source'.
 	std::string trim_front(const std::string& source, std::string_view values = " \t");
 
+	// Removes all preceding characters specified by 'values' from 'source' and returns the result.
+	std::string_view trim_front_sv(std::string_view source, std::string_view values = " \t");
+
 	// Removes all trailing characters specified by 'values' from 'source'.
 	void trim_back(std::string& source, std::string_view values = " \t");
 
+	// Removes all trailing characters specified by 'values' from 'source' and returns the result.
+	std::string_view trim_back_sv(std::string_view source, std::string_view values = " \t");
+
 	template <typename T>
-	std::string merge(const T& source, const std::string& separator)
+	std::string merge(const T& source, std::string_view separator, bool is_skip_empty = false)
 	{
 		if (source.empty())
 		{
 			return {};
 		}
 
+		usz total = (source.size() - 1) * separator.size();
+		for (const auto& s : source)
+		{
+			total += s.size();
+		}
+
 		std::string result;
+		result.reserve(total);
 
 		auto it  = source.begin();
 		auto end = source.end();
-		for (--end; it != end; ++it)
+
+		if (is_skip_empty)
 		{
-			result += std::string{*it} + separator;
+			for (; it != end; ++it)
+			{
+				if (it->empty()) continue;
+
+				if (!result.empty() && !separator.empty())
+				{
+					result.append(separator);
+				}
+
+				result.append(*it);
+			}
+
+			return result;
 		}
 
-		return result + std::string{source.back()};
+		for (--end; it != end; ++it)
+		{
+			result.append(*it);
+
+			if (!separator.empty())
+				result.append(separator);
+		}
+
+		return result.append(*end);
 	}
 
 	template <typename T>
-	std::string merge(std::initializer_list<T> sources, const std::string& separator)
+	std::string merge(std::initializer_list<T> sources, std::string_view separator, bool is_skip_empty = false)
 	{
 		if (!sources.size())
 		{
 			return {};
 		}
 
+		usz total = (sources.size() - 1) * separator.size();
+		for (const auto& s : sources)
+		{
+			if (s.empty()) continue;
+			total += s.size() + (s.size() - 1) * separator.size();
+		}
+
 		std::string result;
+		result.reserve(total);
+
 		bool first = true;
 
 		for (const auto& v : sources)
 		{
+			if (v.empty()) continue;
+
+			std::string sub = fmt::merge(v, separator, is_skip_empty);
+			if (sub.empty()) continue;
+
 			if (first)
 			{
-				result = fmt::merge(v, separator);
-				first  = false;
+				first = false;
 			}
-			else
+			else if (!separator.empty())
 			{
-				result += separator + fmt::merge(v, separator);
+				result.append(separator);
 			}
+
+			result.append(std::move(sub));
 		}
 
 		return result;

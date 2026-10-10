@@ -197,7 +197,7 @@ namespace vk
 		const bool supports_dxt = vk::get_current_renderer()->get_texture_compression_bc_support();
 		switch (format)
 		{
-#ifndef __APPLE__
+#if !defined(__APPLE__) || !defined(ARCH_X64)
 		case CELL_GCM_TEXTURE_R5G6B5: return VK_FORMAT_R5G6B5_UNORM_PACK16;
 		case CELL_GCM_TEXTURE_R6G5B5: return VK_FORMAT_R5G6B5_UNORM_PACK16; // Expand, discard high bit?
 		case CELL_GCM_TEXTURE_R5G5B5A1: return VK_FORMAT_R5G5B5A1_UNORM_PACK16;
@@ -205,7 +205,7 @@ namespace vk
 		case CELL_GCM_TEXTURE_A1R5G5B5: return VK_FORMAT_A1R5G5B5_UNORM_PACK16;
 		case CELL_GCM_TEXTURE_A4R4G4B4: return VK_FORMAT_R4G4B4A4_UNORM_PACK16;
 #else
-		// assign B8G8R8A8_UNORM to formats that are not supported by Metal
+		// assign B8G8R8A8_UNORM to formats that are not supported by Metal on non-Apple GPUs
 		case CELL_GCM_TEXTURE_R6G5B5: return VK_FORMAT_B8G8R8A8_UNORM;
 		case CELL_GCM_TEXTURE_R5G6B5: return VK_FORMAT_B8G8R8A8_UNORM;
 		case CELL_GCM_TEXTURE_R5G5B5A1: return VK_FORMAT_B8G8R8A8_UNORM;
@@ -244,8 +244,16 @@ namespace vk
 	{
 		switch (rgb_format)
 		{
+		// 8-bit
+		case VK_FORMAT_R8_UNORM:
+			return VK_FORMAT_R8_SRGB;
+		case VK_FORMAT_R8G8_UNORM:
+			return VK_FORMAT_R8G8_SRGB;
+		case VK_FORMAT_R8G8B8A8_UNORM:
+			return VK_FORMAT_R8G8B8A8_SRGB;
 		case VK_FORMAT_B8G8R8A8_UNORM:
 			return VK_FORMAT_B8G8R8A8_SRGB;
+		// DXT
 		case VK_FORMAT_BC1_RGBA_UNORM_BLOCK:
 			return VK_FORMAT_BC1_RGBA_SRGB_BLOCK;
 		case VK_FORMAT_BC2_UNORM_BLOCK:
@@ -253,7 +261,30 @@ namespace vk
 		case VK_FORMAT_BC3_UNORM_BLOCK:
 			return VK_FORMAT_BC3_SRGB_BLOCK;
 		default:
-			return rgb_format;
+			return VK_FORMAT_UNDEFINED;
+		}
+	}
+
+	VkFormat get_compatible_snorm_format(VkFormat rgb_format)
+	{
+		switch (rgb_format)
+		{
+		// 8-bit
+		case VK_FORMAT_R8_UNORM:
+			return VK_FORMAT_R8_SNORM;
+		case VK_FORMAT_R8G8_UNORM:
+			return VK_FORMAT_R8G8_SNORM;
+		case VK_FORMAT_R8G8B8A8_UNORM:
+			return VK_FORMAT_R8G8B8A8_SNORM;
+		case VK_FORMAT_B8G8R8A8_UNORM:
+			return VK_FORMAT_B8G8R8A8_SNORM;
+		// 16-bit
+		case VK_FORMAT_R16_UNORM:
+			return VK_FORMAT_R16_SNORM;
+		case VK_FORMAT_R16G16_UNORM:
+			return VK_FORMAT_R16G16_SNORM;
+		default:
+			return VK_FORMAT_UNDEFINED;
 		}
 	}
 

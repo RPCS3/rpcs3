@@ -26,6 +26,8 @@
 #pragma clang diagnostic pop
 #endif
 
+#include "Emu/system_config.h"
+
 namespace gl
 {
 	namespace FidelityFX
@@ -152,7 +154,7 @@ namespace gl
 		void rcas_pass::configure()
 		{
 			// 0 is actually the sharpest with 2 being the chosen limit. Each progressive unit 'halves' the sharpening intensity.
-			auto cas_attenuation = 2.f - (g_cfg.video.vk.rcas_sharpening_intensity / 50.f);
+			auto cas_attenuation = 2.f - (g_cfg.video.rcas_sharpening_intensity / 50.f);
 			FsrRcasCon(&m_constants_buf[0], cas_attenuation);
 		}
 	}

@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include "util/pair.hpp"
+
 #define private public
 #include "Emu/RSX/Common/simple_array.hpp"
 #undef private
@@ -179,10 +181,30 @@ namespace rsx
 		EXPECT_FALSE(arr.any([](const int& val) { return val > 5; }));
 	}
 
+	TEST(SimpleArray, Filter)
+	{
+		const rsx::simple_array<int> arr{ 1, 2, 3, 4, 5, 6, 7, 8, 9, -1, -2 };
+		const auto result = arr.filter(FN(x > 5));
+		const auto result2 = arr.filter(FN(x < 0));
+		const auto result3 = arr.filter(FN(x == 10));
+
+		EXPECT_EQ(result.size(), 4);
+		EXPECT_EQ(result[0], 6);
+		EXPECT_EQ(result[1], 7);
+		EXPECT_EQ(result[2], 8);
+		EXPECT_EQ(result[3], 9);
+
+		EXPECT_EQ(result2.size(), 2);
+		EXPECT_EQ(result2[0], -1);
+		EXPECT_EQ(result2[1], -2);
+
+		EXPECT_EQ(result3.size(), 0);
+	}
+
 	TEST(SimpleArray, Sort)
 	{
 		rsx::simple_array<int> arr{ 5, 3, 1, 4, 2 };
-		arr.sort([](const int& a, const int& b) { return a < b; });
+		arr.sort(FN(x < y));
 
 		for (u32 i = 0; i < arr.size(); ++i)
 		{
@@ -239,5 +261,169 @@ namespace rsx
 		}
 
 		EXPECT_EQ(sum, 15);
+	}
+
+	TEST(SimpleArray, SimplePair)
+	{
+		struct some_struct
+		{
+			u64 v {};
+			char s[12] = "Hello World";
+		};
+		some_struct s {};
+
+		rsx::simple_array<utils::pair<int, some_struct>> arr;
+		for (int i = 0; i < 5; ++i)
+		{
+			s.v = i;
+			arr.push_back(utils::pair(i, s));
+		}
+
+		EXPECT_EQ(arr.size(), 5);
+		for (int i = 0; i < 5; ++i)
+		{
+			EXPECT_EQ(arr[i].first, i);
+			EXPECT_EQ(arr[i].second.v, i);
+			EXPECT_EQ(std::memcmp(arr[i].second.s, "Hello World", sizeof(arr[i].second.s)), 0);
+		}
+	}
+
+	TEST(SimpleArray, DataAlignment_SmallVector)
+	{
+		struct alignas(16) some_struct {
+			char data[16];
+		};
+
+		rsx::simple_array<some_struct> arr(2);
+		const auto data_ptr = reinterpret_cast<uintptr_t>(arr.data());
+
+		EXPECT_EQ(data_ptr & 15, 0);
+	}
+
+	TEST(SimpleArray, DataAlignment_HeapAlloc)
+	{
+		struct alignas(16) some_struct {
+			char data[16];
+		};
+
+		rsx::simple_array<some_struct> arr(128);
+		const auto data_ptr = reinterpret_cast<uintptr_t>(arr.data());
+
+		EXPECT_EQ(data_ptr & 15, 0);
+	}
+
+	TEST(SimpleArray, DataAlignment_Overrides)
+	{
+		rsx::simple_array<std::byte, 16> arr(4);
+		rsx::simple_array<std::byte, 128> arr2(4);
+
+		const auto data_ptr1 = reinterpret_cast<uintptr_t>(arr.data());
+		const auto data_ptr2 = reinterpret_cast<uintptr_t>(arr2.data());
+
+		EXPECT_EQ(data_ptr1 & 15, 0);
+		EXPECT_EQ(data_ptr2 & 127, 0);
+	}
+
+	TEST(SimpleArray, Find)
+	{
+		const rsx::simple_array<int> arr{
+			0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+		};
+
+		EXPECT_EQ(*arr.find(8), 8);
+		EXPECT_EQ(arr.find(99), nullptr);
+	}
+
+	TEST(SimpleArray, FindIf)
+	{
+		const rsx::simple_array<int> arr{
+			0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+		};
+
+		EXPECT_EQ(*arr.find_if(FN(x == 8)), 8);
+		EXPECT_EQ(arr.find_if(FN(x == 99)), nullptr);
+	}
+
+	TEST(SimpleArray, InsertArray)
+	{
+		rsx::simple_array<int> arr{
+			0, 1, 2, 6, 7, 8, 9
+		};
+
+		const std::vector<int> tail{
+			10, 11, 12
+		};
+
+		const std::vector<int> mid{
+			3, 4, 5
+		};
+
+		// Insert end
+		arr.insert(arr.end(), tail);
+		EXPECT_EQ(arr.size(), 10);
+
+		// Insert mid
+		auto it = arr.begin();
+		std::advance(it, 3);
+		it = arr.insert(it, mid);
+
+		EXPECT_EQ(arr.size(), 13);
+		EXPECT_EQ(std::distance(arr.begin(), it), 3);
+		EXPECT_EQ(*it, 3);
+
+		// Verify
+		for (unsigned i = 0; i < arr.size(); ++i)
+		{
+			EXPECT_EQ(arr[i], static_cast<int>(i));
+		}
+	}
+
+	TEST(SimpleArray, ForEach)
+	{
+		rsx::simple_array<int> arr{
+			0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+		};
+		arr.for_each(FN(x += 10));
+
+		EXPECT_EQ(arr.size(), 10);
+
+		for (int i = 0; i < 10; ++i)
+		{
+			EXPECT_EQ(arr[i], i + 10);
+		}
+	}
+
+	TEST(AlignedAllocator, Alloc)
+	{
+		auto ptr = rsx::aligned_allocator::malloc<256>(16);
+		const auto ptr_value = reinterpret_cast<uintptr_t>(ptr);
+		rsx::aligned_allocator::free(ptr);
+
+		EXPECT_NE(ptr_value, 0);
+		EXPECT_EQ(ptr_value % 256, 0);
+	}
+
+	TEST(AlignedAllocator, Realloc)
+	{
+		auto ptr = rsx::aligned_allocator::malloc<256>(16);
+		auto ptr2 = rsx::aligned_allocator::realloc<256>(ptr, 16, 32);
+		const auto ptr_value = reinterpret_cast<uintptr_t>(ptr2);
+		rsx::aligned_allocator::free(ptr2);
+
+		EXPECT_NE(ptr_value, 0);
+		EXPECT_EQ(ptr_value % 256, 0);
+	}
+
+	TEST(AlignedAllocator, Realloc_ReturnsPreviousPointerIfFits)
+	{
+		auto ptr = rsx::aligned_allocator::malloc<256>(16);
+		auto ptr2 = rsx::aligned_allocator::realloc<256>(ptr, 16, 8);
+
+		const auto ptr_value = reinterpret_cast<uintptr_t>(ptr);
+		const auto ptr2_value = reinterpret_cast<uintptr_t>(ptr2);
+
+		rsx::aligned_allocator::free(ptr2);
+
+		EXPECT_EQ(ptr_value, ptr2_value);
 	}
 }

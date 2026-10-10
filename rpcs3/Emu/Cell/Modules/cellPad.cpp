@@ -56,9 +56,9 @@ void fmt_class_string<CellPadFilterError>::format(std::string& out, u64 arg)
 extern void sys_io_serialize(utils::serial& ar);
 
 pad_info::pad_info(utils::serial& ar)
-	: max_connect(ar)
-	, port_setting(ar)
-	, reported_info(ar)
+	: max_connect(ar.pop<u32>())
+	, port_setting(ar.pop<decltype(port_setting)>())
+	, reported_info(ar.pop<decltype(reported_info)>())
 {
 	//reported_info = {};
 	sys_io_serialize(ar);
@@ -418,7 +418,7 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 			}
 		};
 
-		for (const Button& button : pad->m_buttons_external)
+		for (const ButtonExternal& button : pad->m_buttons_external)
 		{
 			// here we check btns, and set pad accordingly,
 			// if something changed, set btnChanged
@@ -497,7 +497,7 @@ void pad_get_data(u32 port_no, CellPadData* data, bool get_periph_data = false)
 			}
 		}
 
-		for (const AnalogStick& stick : pad->m_sticks_external)
+		for (const AnalogStickExternal& stick : pad->m_sticks_external)
 		{
 			switch (stick.m_offset)
 			{
@@ -1051,7 +1051,15 @@ error_code cellPadSetPortSetting(u32 port_no, u32 port_setting)
 	if (port_no >= CELL_PAD_MAX_PORT_NUM)
 		return CELL_OK;
 
-	config.port_setting[port_no] = port_setting;
+	if (port_setting & CELL_PAD_SETTING_PRESS_ON)
+		config.port_setting[port_no] |= CELL_PAD_SETTING_PRESS_ON;
+	else
+		config.port_setting[port_no] &= ~CELL_PAD_SETTING_PRESS_ON;
+
+	if (port_setting & CELL_PAD_SETTING_SENSOR_ON)
+		config.port_setting[port_no] |= CELL_PAD_SETTING_SENSOR_ON;
+	else
+		config.port_setting[port_no] &= ~CELL_PAD_SETTING_SENSOR_ON;
 
 	// can also return CELL_PAD_ERROR_UNSUPPORTED_GAMEPAD <- Update: seems to be just internal and ignored
 
@@ -1123,7 +1131,7 @@ error_code cellPadSetPressMode(u32 port_no, u32 mode)
 	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
-	if (port_no >= CELL_PAD_MAX_PORT_NUM)
+	if (port_no >= CELL_MAX_PADS || mode > 1)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
 	// CELL_PAD_ERROR_NO_DEVICE is not returned in this case.
@@ -1157,7 +1165,7 @@ error_code cellPadSetSensorMode(u32 port_no, u32 mode)
 	if (!config.max_connect)
 		return CELL_PAD_ERROR_UNINITIALIZED;
 
-	if (port_no >= CELL_MAX_PADS)
+	if (port_no >= CELL_MAX_PADS || mode > 1)
 		return CELL_PAD_ERROR_INVALID_PARAMETER;
 
 	// CELL_PAD_ERROR_NO_DEVICE is not returned in this case.

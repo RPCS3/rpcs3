@@ -3,22 +3,31 @@
 #include "Utilities/File.h"
 #include "Emu/vfs_config.h"
 #include "Utilities/Thread.h"
+#include "rpcs3_version.h"
 
 #if defined(ARCH_ARM64)
 #include "Emu/CPU/Backends/AArch64/AArch64Common.h"
+#include <arm_sve.h>
 #endif
-
 #ifdef _WIN32
 #include "windows.h"
 #include "sysinfoapi.h"
 #include "subauth.h"
 #include "stringapiset.h"
+#include "util/dyn_lib.hpp"
+DYNAMIC_IMPORT("ntdll.dll", RtlGetVersion, NTSTATUS(OSVERSIONINFOW* lpVersionInformation));
 #else
 #include <unistd.h>
 #include <sys/resource.h>
-#ifndef __APPLE__
+#ifdef __APPLE__
+#include <sys/sysctl.h>
+#else
 #include <sys/utsname.h>
 #include <errno.h>
+#if defined(ARCH_ARM64) && defined(__linux__)
+#include <sys/auxv.h>
+#include <asm/hwcap.h>
+#endif
 #endif
 #endif
 
@@ -70,91 +79,6 @@ namespace Darwin_ProcessInfo
 	extern bool getLowPowerModeEnabled();
 }
 #endif
-
-namespace utils
-{
-#ifdef _WIN32
-	// Some helpers for sanity
-	const auto read_reg_dword = [](HKEY hKey, std::string_view value_name) -> std::pair<bool, DWORD>
-	{
-		DWORD val = 0;
-		DWORD len = sizeof(val);
-		if (ERROR_SUCCESS != RegQueryValueExA(hKey, value_name.data(), nullptr, nullptr, reinterpret_cast<LPBYTE>(&val), &len))
-		{
-			return { false, 0 };
-		}
-		return { true, val };
-	};
-
-	const auto read_reg_sz = [](HKEY hKey, std::string_view value_name) -> std::pair<bool, std::string>
-	{
-		constexpr usz MAX_SZ_LEN = 255;
-		char sz[MAX_SZ_LEN + 1] {};
-		DWORD sz_len = MAX_SZ_LEN;
-
-		// Safety; null terminate
-		sz[0] = 0;
-		sz[MAX_SZ_LEN] = 0;
-
-		// Read string
-		if (ERROR_SUCCESS != RegQueryValueExA(hKey, value_name.data(), nullptr, nullptr, reinterpret_cast<LPBYTE>(sz), &sz_len))
-		{
-			return { false, "" };
-		}
-
-		// Safety, force null terminator
-		if (sz_len < MAX_SZ_LEN)
-		{
-			sz[sz_len] = 0;
-		}
-		return { true, sz };
-	};
-
-#if !defined(ARCH_X64)
-	// Alternative way to read OS version using the registry.
-	static std::string get_fallback_windows_version()
-	{
-		HKEY hKey;
-		if (ERROR_SUCCESS != RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", 0, KEY_READ, &hKey))
-		{
-			return "Unknown Windows";
-		}
-
-		// ProductName (SZ) - Actual windows install name e.g Windows 10 Pro)
-		// CurrentMajorVersionNumber (DWORD) - e.g 10 for windows 10, 11 for windows 11
-		// CurrentMinorVersionNumber (DWORD) - usually 0 for newer windows, pairs with major version
-		// CurrentBuildNumber (SZ) - Windows build number, e.g 19045, used to identify different releases like 23H2, 24H2, etc
-		// CurrentVersion (SZ) - NT kernel version, e.g 6.3 for Windows 10
-		const auto [product_valid, product_name] = read_reg_sz(hKey, "ProductName");
-		if (!product_valid)
-		{
-			RegCloseKey(hKey);
-			return "Unknown Windows";
-		}
-
-		const auto [check_major, version_major] = read_reg_dword(hKey, "CurrentMajorVersionNumber");
-		const auto [check_minor, version_minor] = read_reg_dword(hKey, "CurrentMinorVersionNumber");
-		const auto [check_build_no, build_no] = read_reg_sz(hKey, "CurrentBuildNumber");
-		const auto [check_nt_ver, nt_ver] = read_reg_sz(hKey, "CurrentVersion");
-
-		// Close the registry key
-		RegCloseKey(hKey);
-
-		std::string version_id = "Unknown";
-		if (check_major && check_minor && check_build_no)
-		{
-			version_id = fmt::format("%u.%u.%s", version_major, version_minor, build_no);
-			if (check_nt_ver)
-			{
-				version_id += " NT" + nt_ver;
-			}
-		}
-
-		return fmt::format("Operating system: %s, Version %s", product_name, version_id);
-	}
-#endif
-#endif
-}
 
 bool utils::has_ssse3()
 {
@@ -444,6 +368,169 @@ u32 utils::get_rep_movsb_threshold()
 	return g_value;
 }
 
+#ifdef ARCH_ARM64
+
+bool utils::has_neon()
+{
+	static const bool g_value = []() -> bool
+	{
+#if defined(__linux__)
+		return (getauxval(AT_HWCAP) & HWCAP_ASIMD) != 0;
+#elif defined(__APPLE__)
+		int val = 0;
+		size_t len = sizeof(val);
+		sysctlbyname("hw.optional.AdvSIMD", &val, &len, nullptr, 0);
+		int val_legacy = 0;
+		size_t len_legacy = sizeof(val_legacy);
+		sysctlbyname("hw.optional.neon", &val_legacy, &len_legacy, nullptr, 0);
+		return val != 0 || val_legacy != 0;
+#elif defined(_WIN32)
+		return IsProcessorFeaturePresent(PF_ARM_VFP_32_REGISTERS_AVAILABLE) != 0;
+#endif
+	}();
+	return g_value;
+}
+
+#if !defined(ARM_FEATURE_LSE2)
+bool utils::has_lse2()
+{
+	static const bool g_value = []() -> bool
+	{
+		// All Apple Silicon Macs have LSE2
+#if defined(__linux__)
+		return (getauxval(AT_HWCAP) & HWCAP_USCAT) != 0;
+#elif defined(_WIN32)
+		return IsProcessorFeaturePresent(PF_ARM_LSE2_AVAILABLE) != 0;
+#else
+		return false;
+#endif
+	}();
+	return g_value;
+}
+#endif
+
+bool utils::has_sha3()
+{
+	static const bool g_value = []() -> bool
+	{
+#if defined(__linux__)
+		return (getauxval(AT_HWCAP) & HWCAP_SHA3) != 0;
+#elif defined(__APPLE__)
+		int val = 0;
+		size_t len = sizeof(val);
+		sysctlbyname("hw.optional.arm.FEAT_SHA3", &val, &len, nullptr, 0);
+		return val != 0;
+#elif defined(_WIN32)
+		return IsProcessorFeaturePresent(PF_ARM_SHA3_INSTRUCTIONS_AVAILABLE) != 0;
+#endif
+	}();
+	return g_value;
+}
+
+bool utils::has_dotprod()
+{
+	static const bool g_value = []() -> bool
+	{
+#if defined(__linux__)
+		return (getauxval(AT_HWCAP) & HWCAP_ASIMDDP) != 0;
+#elif defined(__APPLE__)
+		int val = 0;
+		size_t len = sizeof(val);
+		sysctlbyname("hw.optional.arm.FEAT_DotProd", &val, &len, nullptr, 0);
+		return val != 0;
+#elif defined(_WIN32)
+		return IsProcessorFeaturePresent(PF_ARM_V82_DP_INSTRUCTIONS_AVAILABLE) != 0;
+#endif
+	}();
+	return g_value;
+}
+
+bool utils::has_i8mm()
+{
+	static const bool g_value = []() -> bool
+	{
+#if defined(__linux__)
+		return (getauxval(AT_HWCAP2) & HWCAP2_I8MM) != 0;
+#elif defined(__APPLE__)
+		int val = 0;
+		size_t len = sizeof(val);
+		sysctlbyname("hw.optional.arm.FEAT_I8MM", &val, &len, nullptr, 0);
+		return val != 0;
+#elif defined(_WIN32)
+		return IsProcessorFeaturePresent(PF_ARM_V82_I8MM_INSTRUCTIONS_AVAILABLE) != 0;
+#else
+		return false;
+#endif
+	}();
+	return g_value;
+}
+
+bool utils::has_sve()
+{
+	static const bool g_value = []() -> bool
+	{
+#if defined(__linux__)
+		return (getauxval(AT_HWCAP) & HWCAP_SVE) != 0;
+#elif defined(__APPLE__)
+		int val = 0;
+		size_t len = sizeof(val);
+		sysctlbyname("hw.optional.arm.FEAT_SVE", &val, &len, nullptr, 0);
+		return val != 0;
+#elif defined(_WIN32)
+		return IsProcessorFeaturePresent(PF_ARM_SVE_INSTRUCTIONS_AVAILABLE) != 0;
+#endif
+	}();
+	return g_value;
+}
+
+bool utils::has_sve2()
+{
+	static const bool g_value = []() -> bool
+	{
+#if defined(__linux__)
+		return (getauxval(AT_HWCAP2) & HWCAP2_SVE2) != 0;
+#elif defined(__APPLE__)
+		int val = 0;
+		size_t len = sizeof(val);
+		sysctlbyname("hw.optional.arm.FEAT_SVE2", &val, &len, nullptr, 0);
+		return val != 0;
+#elif defined(_WIN32)
+		return IsProcessorFeaturePresent(PF_ARM_SVE2_INSTRUCTIONS_AVAILABLE) != 0;
+#endif
+	}();
+	return g_value;
+}
+
+bool utils::has_sve2p2()
+{
+	static const bool g_value = []() -> bool
+	{
+		// Detection for SVE2.2 is currently only supported on Linux
+#if defined(__linux__)
+		constexpr unsigned long sve2p2 = 1UL << 41;
+		return (getauxval(AT_HWCAP) & (HWCAP_SVE | sve2p2)) == (HWCAP_SVE | sve2p2);
+#else
+		return false;
+#endif
+	}();
+	return g_value;
+}
+
+#if defined(_MSC_VER)
+#define sve_func
+#else
+#define sve_func __attribute__((__target__("+sve")))
+#endif
+
+// svcntb returns sve length in bytes, our function retuns length in bits
+sve_func int utils::sve_length()
+{
+	static const int g_value = static_cast<int>(svcntb() * 8);
+	return g_value;
+}
+
+#endif
+
 std::string utils::get_cpu_brand()
 {
 #if defined(ARCH_X64)
@@ -478,6 +565,17 @@ std::string utils::get_cpu_brand()
 #endif
 }
 
+std::string_view utils::get_architecture()
+{
+#if defined(ARCH_X64)
+    return "x64"sv;
+#elif defined(ARCH_ARM64)
+    return "arm64"sv;
+#else
+    return "unknown"sv;
+#endif
+}
+
 std::string utils::get_system_info()
 {
 	std::string result;
@@ -496,6 +594,22 @@ std::string utils::get_system_info()
 	{
 		fmt::append(result, " | TSC: Disabled");
 	}
+#ifdef ARCH_ARM64
+
+	if (!has_neon())
+	{
+		fmt::throw_exception("Neon support not present");
+	}
+
+	if (has_sve())
+	{
+		fmt::append(result, " | SVE%s-%d", has_sve2p2() ? "2.2" : (has_sve2() ? "2" : ""), sve_length());
+	}
+	else
+	{
+		result += " | Neon";
+	}
+#else
 
 	if (has_avx())
 	{
@@ -562,6 +676,7 @@ std::string utils::get_system_info()
 	{
 		result += " | TSX disabled via microcode";
 	}
+#endif
 
 	return result;
 }
@@ -621,6 +736,39 @@ std::string utils::get_firmware_version()
 	return {};
 }
 
+std::pair<u64, u64> utils::get_memory_usage()
+{
+#ifdef _WIN32
+	::MEMORYSTATUSEX status{};
+	status.dwLength = sizeof(status);
+	::GlobalMemoryStatusEx(&status);
+	return { status.ullTotalPhys, status.ullTotalPhys - status.ullAvailPhys };
+#elif __linux__
+	std::ifstream proc("/proc/meminfo");
+	std::string line;
+	uint64_t mem_total = get_total_memory();
+	uint64_t mem_available = 0;
+
+	while (std::getline(proc, line))
+	{
+		if (line.rfind("MemTotal:", 0) == 0 && line.find("kB") != std::string::npos)
+		{
+			mem_total = std::stoull(line.substr(line.find_first_of("0123456789"))) * 1024;
+		}
+		else if (line.rfind("MemAvailable:", 0) == 0 && line.find("kB") != std::string::npos)
+		{
+			mem_available = std::stoull(line.substr(line.find_first_of("0123456789"))) * 1024;
+			break;
+		}
+	}
+
+	return { mem_total, mem_total - mem_available };
+#else
+	// TODO
+	return { get_total_memory(), 0 };
+#endif
+}
+
 utils::OS_version utils::get_OS_version()
 {
 	OS_version res {};
@@ -646,29 +794,15 @@ utils::OS_version utils::get_OS_version()
 #endif
 
 #ifdef _WIN32
-	// GetVersionEx is deprecated, RtlGetVersion is kernel-mode only and AnalyticsInfo is UWP only.
-	// So we're forced to read PEB instead to get Windows version info. It's ugly but works.
-#if defined(ARCH_X64)
-	constexpr DWORD peb_offset = 0x60;
-	const INT_PTR peb = __readgsqword(peb_offset);
-	res.version_major = *reinterpret_cast<const DWORD*>(peb + 0x118);
-	res.version_minor = *reinterpret_cast<const DWORD*>(peb + 0x11c);
-	res.version_patch = *reinterpret_cast<const WORD*>(peb + 0x120);
-#else
-	HKEY hKey;
-	if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", 0, KEY_READ, &hKey) == ERROR_SUCCESS)
+	if (RtlGetVersion)
 	{
-		const auto [check_major, version_major] = read_reg_dword(hKey, "CurrentMajorVersionNumber");
-		const auto [check_minor, version_minor] = read_reg_dword(hKey, "CurrentMinorVersionNumber");
-		const auto [check_build, version_patch] = read_reg_sz(hKey, "CurrentBuildNumber");
-
-		if (check_major) res.version_major = version_major;
-		if (check_minor) res.version_minor = version_minor;
-		if (check_build) res.version_patch = stoi(version_patch);
-
-		RegCloseKey(hKey);
+	    OSVERSIONINFOW osvi{};
+	    osvi.dwOSVersionInfoSize = sizeof(osvi);
+	    RtlGetVersion(&osvi);
+	    res.version_major = osvi.dwMajorVersion;
+	    res.version_minor = osvi.dwMinorVersion;
+	    res.version_patch = osvi.dwBuildNumber;
 	}
-#endif
 #elif defined (__APPLE__)
 	res.version_major = Darwin_Version::getNSmajorVersion();
 	res.version_minor = Darwin_Version::getNSminorVersion();
@@ -676,7 +810,8 @@ utils::OS_version utils::get_OS_version()
 #else
 	if (struct utsname details = {}; !uname(&details))
 	{
-		const std::vector<std::string> version_list = fmt::split(details.release, { "." });
+		const std::string_view release = details.release;
+		const std::vector<std::string_view> version_list = fmt::split_sv(release, { "." });
 		const auto get_version_part = [&version_list](usz i) -> usz
 		{
 			if (version_list.size() <= i) return 0;
@@ -695,58 +830,72 @@ utils::OS_version utils::get_OS_version()
 	return res;
 }
 
-std::string utils::get_OS_version_string()
+std::string utils::get_OS_version_string(bool simple)
 {
-	std::string output;
 #ifdef _WIN32
-	// GetVersionEx is deprecated, RtlGetVersion is kernel-mode only and AnalyticsInfo is UWP only.
-	// So we're forced to read PEB instead to get Windows version info. It's ugly but works.
-#if defined(ARCH_X64)
-	constexpr DWORD peb_offset = 0x60;
-	const INT_PTR peb = __readgsqword(peb_offset);
-	const DWORD version_major = *reinterpret_cast<const DWORD*>(peb + 0x118);
-	const DWORD version_minor = *reinterpret_cast<const DWORD*>(peb + 0x11c);
-	const WORD build = *reinterpret_cast<const WORD*>(peb + 0x120);
-	const UNICODE_STRING service_pack = *reinterpret_cast<const UNICODE_STRING*>(peb + 0x02E8);
-	const u64 compatibility_mode = *reinterpret_cast<const u64*>(peb + 0x02C8); // Two DWORDs, major & minor version
+	OSVERSIONINFOW osvi{};
+	osvi.dwOSVersionInfoSize = sizeof(osvi);
+	RtlGetVersion(&osvi);
 
-	const bool has_sp = service_pack.Length > 0;
-	std::vector<char> holder(service_pack.Length + 1, '\0');
-	if (has_sp)
+	if (simple)
 	{
-		WideCharToMultiByte(CP_UTF8, 0, service_pack.Buffer, service_pack.Length,
-			static_cast<LPSTR>(holder.data()), static_cast<int>(holder.size()), nullptr, nullptr);
+		return fmt::format("Windows %lu.%lu.%lu", osvi.dwMajorVersion, osvi.dwMinorVersion, osvi.dwBuildNumber);
 	}
 
-	fmt::append(output,
-		"Operating system: Windows, Major: %lu, Minor: %lu, Build: %u, Service Pack: %s, Compatibility mode: %llu",
-		version_major, version_minor, build, has_sp ? holder.data() : "none", compatibility_mode);
-#else
-	// PEB cannot be easily accessed on ARM64, fall back to registry
-	static const auto s_windows_version = utils::get_fallback_windows_version();
-	return s_windows_version;
-#endif
+	const bool has_sp = osvi.szCSDVersion[0] != L'\0';
+	std::vector<char> holder;
+	if (has_sp)
+	{
+		const int len = WideCharToMultiByte(CP_UTF8, 0, osvi.szCSDVersion, -1,
+			nullptr, 0, nullptr, nullptr);
+		holder.resize(len);
+		WideCharToMultiByte(CP_UTF8, 0, osvi.szCSDVersion, -1,
+			holder.data(), len, nullptr, nullptr);
+	}
+
+	return fmt::format("Operating system: Windows, Major: %lu, Minor: %lu, Build: %lu, Service Pack: %s",
+		osvi.dwMajorVersion, osvi.dwMinorVersion, osvi.dwBuildNumber,
+		has_sp ? holder.data() : "none");
 #elif defined (__APPLE__)
 	const int major_version = Darwin_Version::getNSmajorVersion();
 	const int minor_version = Darwin_Version::getNSminorVersion();
 	const int patch_version = Darwin_Version::getNSpatchVersion();
 
-	fmt::append(output, "Operating system: macOS, Version: %d.%d.%d",
-		major_version, minor_version, patch_version);
+	if (simple)
+	{
+		return fmt::format("macOS %d.%d.%d", major_version, minor_version, patch_version);
+	}
+
+	return fmt::format("Operating system: macOS, Version: %d.%d.%d", major_version, minor_version, patch_version);
 #else
 	struct utsname details = {};
 
 	if (!uname(&details))
 	{
-		fmt::append(output, "Operating system: POSIX, Name: %s, Release: %s, Version: %s",
-			details.sysname, details.release, details.version);
+		if (simple)
+		{
+			return fmt::format("%s %s", details.sysname, details.release);
+		}
+
+		return fmt::format("Operating system: POSIX, Name: %s, Release: %s, Version: %s", details.sysname, details.release, details.version);
 	}
-	else
+
+	if (simple)
 	{
-		fmt::append(output, "Operating system: POSIX, Unknown version! (Error: %d)", errno);
+		return "POSIX";
 	}
+
+	return fmt::format("Operating system: POSIX, Unknown version! (Error: %d)", errno);
 #endif
-	return output;
+}
+
+std::string utils::get_user_agent()
+{
+	const std::string user_agent = fmt::format("RPCS3/%s (%s; %s)",
+		rpcs3::get_version().to_string(true),
+		utils::get_OS_version_string(true),
+		utils::get_architecture());
+	return user_agent;
 }
 
 int utils::get_maxfiles()
@@ -812,13 +961,22 @@ static const bool s_tsc_freq_evaluated = []() -> bool
 		}
 
 #ifdef _WIN32
-		LARGE_INTEGER freq;
+		LARGE_INTEGER freq{};
 		if (!QueryPerformanceFrequency(&freq))
 		{
 			return 0;
 		}
 
-		if (freq.QuadPart <= 9'999'999)
+		if (!freq.QuadPart)
+		{
+			return 0;
+		}
+
+		// Theoretical constraint for the function itself to operate properly
+		// Unlikely to be unmet
+		constexpr LONGLONG min_supported_QPC_frequency = 50'000;
+
+		if (freq.QuadPart <= min_supported_QPC_frequency)
 		{
 			return 0;
 		}
@@ -850,7 +1008,7 @@ static const bool s_tsc_freq_evaluated = []() -> bool
 		printf("[TSC calibration] Available clock sources: '%s'\n", clock_sources.c_str());
 
 		// Check if the Kernel has blacklisted the TSC
-		const auto available_clocks = fmt::split(clock_sources, { " " });
+		const auto available_clocks = fmt::split_sv(clock_sources, { " " });
 		const bool tsc_reliable = std::find(available_clocks.begin(), available_clocks.end(), "tsc") != available_clocks.end();
 
 		if (!tsc_reliable)
@@ -890,7 +1048,7 @@ static const bool s_tsc_freq_evaluated = []() -> bool
 		const ullong sec_base = ts0.tv_sec;
 #endif
 
-		constexpr usz sleep_time_ms = 40;
+		const usz sleep_time_ms = timer_freq <= 300'000 ? (300'000 * 50) / timer_freq : 50;
 
 		for (usz sample = 0; sample < sample_count; sample++)
 		{
@@ -944,7 +1102,7 @@ static const bool s_tsc_freq_evaluated = []() -> bool
 			{
 				// Sleep between first and last sample
 #ifdef _WIN32
-				Sleep(sleep_time_ms);
+				Sleep(static_cast<DWORD>(sleep_time_ms));
 #else
 				usleep(sleep_time_ms * 1000);
 #endif
@@ -972,7 +1130,7 @@ static const bool s_tsc_freq_evaluated = []() -> bool
 u64 utils::get_total_memory()
 {
 #ifdef _WIN32
-	::MEMORYSTATUSEX memInfo;
+	::MEMORYSTATUSEX memInfo{};
 	memInfo.dwLength = sizeof(memInfo);
 	::GlobalMemoryStatusEx(&memInfo);
 	return memInfo.ullTotalPhys;

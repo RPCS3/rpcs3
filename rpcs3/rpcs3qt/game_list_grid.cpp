@@ -3,10 +3,10 @@
 #include "game_list_grid_item.h"
 #include "gui_settings.h"
 #include "qt_utils.h"
-#include "Utilities/File.h"
+
+#include "Loader/ISO.h"
 
 #include <QApplication>
-#include <QStringBuilder>
 
 game_list_grid::game_list_grid()
 	: flow_widget(nullptr), game_list_base()
@@ -14,12 +14,14 @@ game_list_grid::game_list_grid()
 	setObjectName("game_list_grid");
 	setContextMenuPolicy(Qt::CustomContextMenu);
 
+	set_multi_selection_enabled(true);
+
 	m_icon_ready_callback = [this](const game_info& game, const movie_item_base* item)
 	{
 		Q_EMIT IconReady(game, item);
 	};
 
-	connect(this, &game_list_grid::IconReady, this, [this](const game_info& game, const movie_item_base* item)
+	connect(this, &game_list_grid::IconReady, this, [](const game_info& game, const movie_item_base* item)
 	{
 		if (game && item && game->item == item) item->image_change_callback();
 	}, Qt::QueuedConnection); // The default 'AutoConnection' doesn't seem to work in this specific case...
@@ -33,6 +35,17 @@ game_list_grid::game_list_grid()
 	});
 }
 
+void game_list_grid::stop_movie()
+{
+	for (flow_widget_item* flow_item : items())
+	{
+		if (game_list_grid_item* item = static_cast<game_list_grid_item*>(flow_item))
+		{
+			item->set_active(false);
+		}
+	}
+}
+
 void game_list_grid::clear_list()
 {
 	clear();
@@ -42,12 +55,13 @@ void game_list_grid::populate(
 	const std::vector<game_info>& game_data,
 	const std::map<QString, QString>& notes_map,
 	const std::map<QString, QString>& title_map,
-	const std::string& selected_item_id,
-	bool play_hover_movies)
+	const std::set<std::string>& selected_item_ids,
+	bool play_hover_movies,
+	bool play_hover_music)
 {
 	clear_list();
 
-	game_list_grid_item* selected_item = nullptr;
+	std::set<flow_widget_item*> selected_items;
 
 	blockSignals(true);
 
@@ -63,8 +77,8 @@ void game_list_grid::populate(
 
 	for (const auto& game : game_data)
 	{
-		const QString serial = QString::fromStdString(game->info.serial);
-		const QString title = get_title(serial, game->info.name);
+		const QString serial = QString::fromStdString(game->serial);
+		const QString title = get_title(serial, game->name);
 
 		game_list_grid_item* item = new game_list_grid_item(this, game, title);
 		item->installEventFilter(this);
@@ -90,7 +104,7 @@ void game_list_grid::populate(
 
 			if (const QPixmap pixmap = item->get_movie_image(frame); item->get_active() && !pixmap.isNull())
 			{
-				item->set_icon(gui::utils::get_centered_pixmap(pixmap, m_icon_size, 0, 0, 1.0, Qt::FastTransformation));
+				item->set_icon(gui::utils::get_aligned_pixmap(pixmap, m_icon_size, 1.0, Qt::FastTransformation, gui::utils::align_h::center, gui::utils::align_v::center));
 				return;
 			}
 
@@ -100,21 +114,35 @@ void game_list_grid::populate(
 			{
 				item->set_icon(game->pxmap);
 
-				if (!game->has_hover_gif && !game->has_hover_pam)
+				if (game->movie_path.empty())
 				{
 					game->pxmap = {};
 				}
 			}
 		});
 
-		if (play_hover_movies && (game->has_hover_gif || game->has_hover_pam))
+		bool check_iso = false;
+
+		if (play_hover_movies && !game->movie_path.empty())
 		{
-			item->set_video_path(game->info.movie_path);
+			item->set_video_path(game->movie_path, game->movie_in_archive);
+			check_iso |= game->movie_in_archive;
 		}
 
-		if (selected_item_id == game->info.path + game->info.icon_path)
+		if (play_hover_music && !game->audio_path.empty())
 		{
-			selected_item = item;
+			item->set_audio_path(game->audio_path, game->audio_in_archive);
+			check_iso |= game->audio_in_archive;
+		}
+
+		if (check_iso && game->is_iso_file && is_iso_file(game->path))
+		{
+			item->set_iso_path(game->path);
+		}
+
+		if (selected_item_ids.contains(game->path + game->icon_path))
+		{
+			selected_items.insert(item);
 		}
 
 		add_widget(item);
@@ -127,7 +155,10 @@ void game_list_grid::populate(
 
 	QApplication::processEvents();
 
-	select_item(selected_item);
+	select_items(selected_items);
+
+	// Prevent playing unwanted movie
+	stop_movie();
 }
 
 void game_list_grid::repaint_icons(std::vector<game_info>& game_data, const QColor& icon_color, const QSize& icon_size, qreal device_pixel_ratio)

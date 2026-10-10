@@ -94,5 +94,8 @@
     <ClCompile Include="yaml-cpp\src\depthguard.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="yaml-cpp\src\fptostring.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

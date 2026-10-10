@@ -13,6 +13,7 @@
 #include <bit>
 #include <string>
 #include <source_location>
+#include <new>
 
 #if defined(__SSE2__) || defined(_M_X64) || defined(_M_AMD64) || defined(__x86_64__) || defined(__amd64__)
 #define ARCH_X64 1
@@ -22,7 +23,7 @@
 // See Arm C Language Extensions Documentation
 // Currently there is no feature macro for LSE2 specifically so we define it ourself
 // Unfortunately the __ARM_ARCH integer macro isn't universally defined so we use this hack instead
-#if defined(__ARM_ARCH_8_4__) || defined(__ARM_ARCH_8_5__) || defined(__ARM_ARCH_8_6__) || defined(__ARM_ARCH_9__)
+#if defined(__APPLE__) || (__ARM_ARCH_8_4__) || defined(__ARM_ARCH_8_5__) || defined(__ARM_ARCH_8_6__) || defined(__ARM_ARCH_9__)
 #define ARM_FEATURE_LSE2 1
 #endif
 #endif
@@ -940,6 +941,7 @@ using const_str = const_str_t<>;
 namespace fmt
 {
 	[[noreturn]] void raw_verify_error(std::source_location loc, const char8_t* msg, usz object);
+	[[noreturn]] void raw_verify_error(std::source_location loc, std::source_location propagated_loc, const char8_t* msg, usz object);
 	[[noreturn]] void raw_range_error(std::source_location loc, std::string_view index, usz container_size);
 	[[noreturn]] void raw_range_error(std::source_location loc, usz index, usz container_size);
 }
@@ -975,6 +977,17 @@ constexpr decltype(auto) ensure(T&& arg, const_str msg = const_str(), std::sourc
 	fmt::raw_verify_error(src_loc, msg, 0);
 }
 
+template <typename T>
+constexpr decltype(auto) ensure(T&& arg, std::source_location propagated_loc, const_str msg = const_str(), std::source_location src_loc = std::source_location::current()) noexcept
+{
+	if (std::forward<T>(arg)) [[likely]]
+	{
+		return std::forward<T>(arg);
+	}
+
+	fmt::raw_verify_error(src_loc, propagated_loc, msg, 0);
+}
+
 template <typename T, typename F> requires (std::is_invocable_v<F, T&&>)
 constexpr decltype(auto) ensure(T&& arg, F&& pred, const_str msg = const_str(), std::source_location src_loc = std::source_location::current()) noexcept
 {
@@ -999,17 +1012,18 @@ template <typename To, typename From> requires (std::is_integral_v<decltype(std:
 	constexpr bool is_from_signed = std::is_signed_v<CommonFrom>;
 	constexpr bool is_to_signed = std::is_signed_v<CommonTo>;
 
-	constexpr auto from_mask = (is_from_signed && !is_to_signed) ? UnFrom{umax} >> 1 : UnFrom{umax};
+	// For unsigned/signed mismatch, create an "unsigned" compatible mask
+	constexpr auto from_mask = (is_from_signed && !is_to_signed && sizeof(CommonFrom) <= sizeof(CommonTo)) ? UnFrom{umax} >> 1 : UnFrom{umax};
 	constexpr auto to_mask = (is_to_signed && !is_from_signed) ? UnTo{umax} >> 1 : UnTo{umax};
 
-	constexpr auto mask = ~(from_mask & to_mask);
+	constexpr auto mask = static_cast<UnFrom>(~(from_mask & to_mask));
 
-	// Signed to unsigned always require test
-	// Otherwise, this is bit-wise narrowing or conversion between types of different signedness of the same size
-	if constexpr ((is_from_signed && !is_to_signed) || to_mask < from_mask)
+	// If destination ("unsigned" compatible) mask is smaller than source ("unsigned" compatible) mask
+	// It requires narrowing.
+	if constexpr (!!mask)
 	{
 		// Try to optimize test if both are of the same signedness
-		if (is_from_signed != is_to_signed ? !!(value & mask) : static_cast<CommonTo>(value) != value) [[unlikely]]
+		if (is_from_signed != is_to_signed ? !!(value & mask) : static_cast<CommonFrom>(static_cast<CommonTo>(value)) != value) [[unlikely]]
 		{
 			fmt::raw_verify_error(src_loc, u8"Narrowing error", +value);
 		}
@@ -1181,38 +1195,102 @@ namespace stx
 	}
 }
 
-// Read object of type T from raw pointer, array, string, vector, or any contiguous container
+// Read object of type T from array, string, vector, or any contiguous container with size boundary checks
 template <typename T, typename U>
-constexpr T read_from_ptr(U&& array, usz pos = 0)
+	requires requires(U&& array) { std::size(array); std::data(array); }
+constexpr T read_from_ptr(U&& array, usz pos = 0, std::source_location src_loc = std::source_location::current())
 {
 	// TODO: ensure array element types are trivial
 	static_assert(sizeof(T) % sizeof(array[0]) == 0);
-	std::decay_t<decltype(array[0])> buf[sizeof(T) / sizeof(array[0])];
+	constexpr usz elements_per_value = sizeof(T) / sizeof(array[0]);
+
+	std::decay_t<decltype(array[0])> buf[elements_per_value];
+
 	if (!std::is_constant_evaluated())
+	{
+		ensure((pos + elements_per_value) <= std::size(array), src_loc);
+
 		std::memcpy(+buf, &array[pos], sizeof(buf));
+	}
 	else
-		for (usz i = 0; i < pos; buf[i] = array[pos + i], i++);
+	{
+		// We could add an ensure or static_assert for OOB, but lucky for us, the [] operator will not compile with OOB.
+		for (usz i = 0; i < elements_per_value; i++)
+		{
+			buf[i] = array[pos + i];
+		}
+	}
+	return std::bit_cast<T>(buf);
+}
+
+// Read object of type T from raw pointer without size boundary checks
+template <typename T, typename U>
+	requires (!requires(U&& array) { std::size(array); std::data(array); })
+constexpr T read_from_ptr_unsafe(U&& array, usz pos = 0)
+{
+	// TODO: ensure array element types are trivial
+	static_assert(sizeof(T) % sizeof(array[0]) == 0);
+	constexpr usz elements_per_value = sizeof(T) / sizeof(array[0]);
+
+	std::decay_t<decltype(array[0])> buf[elements_per_value];
+	std::memcpy(+buf, &array[pos], sizeof(buf));
 	return std::bit_cast<T>(buf);
 }
 
 template <typename T, typename U>
-constexpr void write_to_ptr(U&& array, usz pos, const T& value)
+	requires requires(U&& array) { std::size(array); std::data(array); }
+constexpr void write_to_ptr(U&& array, usz pos, const T& value, std::source_location src_loc = std::source_location::current())
 {
 	static_assert(sizeof(T) % sizeof(array[0]) == 0);
+	constexpr usz elements_per_value = sizeof(T) / sizeof(array[0]);
+
+	ensure((pos + elements_per_value) <= std::size(array), src_loc);
+
 	if (!std::is_constant_evaluated())
+	{
 		std::memcpy(static_cast<void*>(&array[pos]), &value, sizeof(value));
+	}
 	else
+	{
 		ensure(!"Unimplemented");
+	}
 }
 
 template <typename T, typename U>
-constexpr void write_to_ptr(U&& array, const T& value)
+	requires requires(U&& array) { std::size(array); std::data(array); }
+constexpr void write_to_ptr(U&& array, const T& value, std::source_location src_loc = std::source_location::current())
 {
 	static_assert(sizeof(T) % sizeof(array[0]) == 0);
+	constexpr usz elements_per_value = sizeof(T) / sizeof(array[0]);
+
+	ensure(elements_per_value <= std::size(array), src_loc);
+
 	if (!std::is_constant_evaluated())
+	{
 		std::memcpy(static_cast<void*>(&array[0]), &value, sizeof(value));
+	}
 	else
+	{
 		ensure(!"Unimplemented");
+	}
+}
+
+template <typename T, typename U>
+	requires (!requires(U&& array) { std::size(array); std::data(array); })
+constexpr void write_to_ptr_unsafe(U&& array, usz pos, const T& value)
+{
+	static_assert(sizeof(T) % sizeof(array[0]) == 0);
+
+	std::memcpy(static_cast<void*>(&array[pos]), &value, sizeof(value));
+}
+
+template <typename T, typename U>
+	requires (!requires(U&& array) { std::size(array); std::data(array); })
+constexpr void write_to_ptr_unsafe(U&& array, const T& value)
+{
+	static_assert(sizeof(T) % sizeof(array[0]) == 0);
+
+	std::memcpy(static_cast<void*>(&array[0]), &value, sizeof(value));
 }
 
 constexpr struct aref_tag_t{} aref_tag{};
@@ -1236,12 +1314,12 @@ public:
 
 	constexpr T value() const
 	{
-		return read_from_ptr<T>(m_ptr);
+		return read_from_ptr_unsafe<T>(m_ptr);
 	}
 
 	constexpr operator T() const
 	{
-		return read_from_ptr<T>(m_ptr);
+		return read_from_ptr_unsafe<T>(m_ptr);
 	}
 
 	aref& operator=(const aref&) = delete;

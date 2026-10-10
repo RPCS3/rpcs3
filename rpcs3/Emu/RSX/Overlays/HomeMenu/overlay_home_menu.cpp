@@ -1,8 +1,11 @@
 #include "stdafx.h"
 #include "overlay_home_menu.h"
 #include "../overlay_manager.h"
+#include "Emu/System.h"
 #include "Emu/system_config.h"
 #include "Utilities/date_time.h"
+
+extern atomic_t<bool> g_user_asked_for_screenshot;
 
 namespace rsx
 {
@@ -19,15 +22,15 @@ namespace rsx
 			m_allow_input_on_pause = true;
 
 			m_dim_background.set_size(virtual_width, virtual_height);
-			m_dim_background.back_color.a = 0.5f;
+			m_dim_background.back_color.a = 0.85f;
 
-			m_description.set_font("Arial", 20);
+			m_description.set_font(20);
 			m_description.set_pos(20, 37);
 			m_description.set_text(m_main_menu.title);
 			m_description.auto_resize();
 			m_description.back_color.a = 0.f;
 
-			m_time_display.set_font("Arial", 14);
+			m_time_display.set_font(14);
 			m_time_display.set_text(get_time_string());
 			m_time_display.auto_resize();
 			m_time_display.set_pos(virtual_width - (20 + m_time_display.w), (m_description.y + m_description.h) - m_time_display.h);
@@ -54,6 +57,8 @@ namespace rsx
 				m_time_display.auto_resize();
 				last_time = std::move(new_time);
 			}
+
+			m_main_menu.update(timestamp_us);
 		}
 
 		void home_menu_dialog::on_button_pressed(pad_button button_press, bool is_auto_repeat)
@@ -86,6 +91,11 @@ namespace rsx
 					std::string path = page->title;
 					for (home_menu_page* parent = page->parent; parent; parent = parent->parent)
 					{
+						if (parent->title.empty())
+						{
+							break;
+						}
+
 						path = parent->title + "  >  " + path;
 					}
 					m_description.set_text(path);
@@ -94,12 +104,13 @@ namespace rsx
 				break;
 			}
 			case page_navigation::exit:
+			case page_navigation::exit_for_screenshot:
 			{
 				fade_animation.current = color4f(1.f);
 				fade_animation.end = color4f(0.f);
 				fade_animation.active = true;
 
-				fade_animation.on_finish = [this]
+				fade_animation.on_finish = [this, navigation]
 				{
 					close(true, true);
 
@@ -109,6 +120,12 @@ namespace rsx
 						{
 							Emu.Resume();
 						});
+					}
+
+					if (navigation == page_navigation::exit_for_screenshot)
+					{
+						rsx_log.notice("Taking screenshot after exiting home menu");
+						g_user_asked_for_screenshot = true;
 					}
 				};
 				break;

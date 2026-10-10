@@ -4,6 +4,7 @@
 #include "Emu/Cell/ErrorCodes.h"
 #include "Utilities/File.h"
 #include "Utilities/StrUtil.h"
+#include "Utilities/mutex.h"
 
 #include <string>
 
@@ -134,6 +135,7 @@ enum class lv2_mp_flag
 	no_uid_gid,
 	strict_get_block_size,
 	cache,
+	reflection,
 
 	__bitset_enum_max
 };
@@ -245,11 +247,15 @@ public:
 
 	lv2_fs_object& operator=(const lv2_fs_object&) = delete;
 
-	// Normalize a virtual path
-	static std::string get_normalized_path(std::string_view path);
+	// Get the device's root path (e.g. "dev_hdd0") from a given path
+	// Cut the trail and return it in second argument
+	static std::pair<std::string_view, std::string> get_path_root_and_trail(std::string_view path);
 
 	// Get the device's root path (e.g. "/dev_hdd0") from a given path
-	static std::string get_device_root(std::string_view filename);
+	static std::string get_device_root(std::string_view filename)
+	{
+		return std::string{get_path_root_and_trail(filename).first};
+	}
 
 	// Filename can be either a path starting with '/' or a CELL_FS device name
 	// This should be used only when handling devices that are not mounted
@@ -259,14 +265,7 @@ public:
 	static std::array<char, 0x420> get_name(std::string_view filename)
 	{
 		std::array<char, 0x420> name;
-
-		if (filename.size() >= 0x420)
-		{
-			filename = filename.substr(0, 0x420 - 1);
-		}
-
-		filename.copy(name.data(), filename.size());
-		name[filename.size()] = 0;
+		strcpy_trunc(name, filename);
 		return name;
 	}
 
@@ -282,6 +281,8 @@ struct lv2_file final : lv2_fs_object
 	const s32 flags;
 	std::string real_path;
 	const lv2_file_type type;
+	atomic_t<u64> reads_total{};
+	atomic_t<u64> writes_total{};
 
 	// IO Container
 	u32 ct_id{}, ct_used{};
@@ -336,7 +337,7 @@ struct lv2_file final : lv2_fs_object
 	};
 
 	// Open a file with wrapped logic of sys_fs_open
-	static open_raw_result_t open_raw(const std::string& path, s32 flags, s32 mode, lv2_file_type type = lv2_file_type::regular, const lv2_fs_mount_info& mp = g_mi_sys_not_found);
+	static open_raw_result_t open_raw(const std::string& path, s32 flags, bool has_write_access, lv2_file_type type = lv2_file_type::regular, const lv2_fs_mount_info& mp = g_mi_sys_not_found, bool ends_with_dot = false);
 	static open_result_t open(std::string_view vpath, s32 flags, s32 mode, const void* arg = {}, u64 size = 0);
 
 	// File reading with intermediate buffer
@@ -346,6 +347,10 @@ struct lv2_file final : lv2_fs_object
 	{
 		return op_read(file, buf, size, opt_pos);
 	}
+
+	// caller must hold the mount lock
+	u64 schedule_read(u64 size, u64 start, u64 offset) const;
+	static void wait_read(ppu_thread& ppu, u64 end);
 
 	// File writing with intermediate buffer
 	static u64 op_write(const fs::file& file, vm::cptr<void> buf, u64 size);
@@ -366,7 +371,7 @@ struct lv2_dir final : lv2_fs_object
 {
 	static constexpr u32 id_type = 2;
 
-	const std::vector<fs::dir_entry> entries;
+	std::vector<fs::dir_entry> entries;
 
 	// Current reading position
 	atomic_t<u64> pos{0};

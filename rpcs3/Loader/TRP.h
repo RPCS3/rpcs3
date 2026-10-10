@@ -23,10 +23,6 @@ struct TRPEntry
 
 class TRPLoader final
 {
-	const fs::file& trp_f;
-	TRPHeader m_header{};
-	std::vector<TRPEntry> m_entries{};
-
 public:
 	TRPLoader(const fs::file& f);
 
@@ -37,4 +33,9 @@ public:
 	bool ContainsEntry(std::string_view filename);
 	void RemoveEntry(std::string_view filename);
 	void RenameEntry(std::string_view oldname, std::string_view newname);
+
+private:
+	const fs::file& m_file;
+	TRPHeader m_header{};
+	std::vector<TRPEntry> m_entries{};
 };

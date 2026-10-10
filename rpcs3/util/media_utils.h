@@ -63,23 +63,33 @@ namespace utils
 		audio_decoder();
 		~audio_decoder();
 
-		void set_context(music_selection_context context);
+		void set_context(music_selection_context&& context);
 		void set_swap_endianness(bool swapped);
 		void clear();
 		void stop();
+		void wake_up();
 		void decode();
 		u32 set_next_index(bool next);
 
-		shared_mutex m_mtx;
-		static constexpr s32 sample_rate = 48000;
-		std::vector<u8> data;
-		atomic_t<u64> m_size = 0;
-		atomic_t<u32> track_fully_decoded{0};
-		atomic_t<u32> track_fully_consumed{0};
-		atomic_t<bool> has_error{false};
-		std::deque<std::pair<u64, u64>> timestamps_ms;
+		bool has_error() const { return m_has_error; }
+		bool track_fully_decoded() const { return m_track_fully_decoded; }
+
+		u64 size() const { return m_data.size(); }        // caller must hold data_mutex()
+		s64 get_start_time_ms(u64 read_pos);              // caller must hold data_mutex()
+		u64 read(void* dst, u64 read_pos, u64 read_size); // caller must hold data_mutex()
+
+		shared_mutex& data_mutex() { return m_data_mtx; }
 
 	private:
+		shared_mutex m_data_mtx;
+
+		static constexpr s32 sample_rate = 48000;
+		std::vector<u8> m_data;
+		atomic_t<u32> m_track_fully_decoded{0};
+		atomic_t<u32> m_track_fully_consumed{0};
+		atomic_t<bool> m_has_error{false};
+		std::deque<std::pair<u64, s64>> m_timestamps_ms;
+
 		bool m_swap_endianness = false;
 		music_selection_context m_context{};
 		std::unique_ptr<named_thread<std::function<void()>>> m_thread;
@@ -111,13 +121,13 @@ namespace utils
 		void set_framerate(u32 framerate);
 		void set_video_bitrate(u32 bitrate);
 		void set_output_format(frame_format format);
-		void set_video_codec(s32 codec_id);
+		void set_video_codec(s32 codec_id, std::string_view codec_name);
 		void set_max_b_frames(s32 max_b_frames);
 		void set_gop_size(s32 gop_size);
 		void set_sample_rate(u32 sample_rate);
 		void set_audio_channels(u32 channels);
 		void set_audio_bitrate(u32 bitrate);
-		void set_audio_codec(s32 codec_id);
+		void set_audio_codec(s32 codec_id, std::string_view codec_name);
 		void pause(bool flush = true) override;
 		void stop(bool flush = true) override;
 		void resume() override;
@@ -135,6 +145,7 @@ namespace utils
 		// Video parameters
 		u32 m_video_bitrate_bps = 0;
 		s32 m_video_codec_id = 12; // AV_CODEC_ID_MPEG4
+		std::string m_video_codec_name;
 		s32 m_max_b_frames = 2;
 		s32 m_gop_size = 12;
 		frame_format m_out_format{};
@@ -143,5 +154,6 @@ namespace utils
 		u32 m_channels = 2;
 		u32 m_audio_bitrate_bps = 320000;
 		s32 m_audio_codec_id = 86018; // AV_CODEC_ID_AAC
+		std::string m_audio_codec_name;
 	};
 }

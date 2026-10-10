@@ -13,20 +13,19 @@ namespace vk
 		std::vector<glsl::program_input> result;
 		for (unsigned i = 0; i < ssbo_count; ++i)
 		{
-			const auto input = glsl::program_input::make
+			result.push_back(glsl::program_input::make
 			(
 				::glsl::glsl_compute_program,
 				"ssbo" + std::to_string(i),
 				glsl::program_input_type::input_type_storage_buffer,
 				0,
 				i
-			);
-			result.push_back(input);
+			));
 		}
 
 		if (use_push_constants && push_constants_size > 0)
 		{
-			const auto input = glsl::program_input::make
+			result.push_back(glsl::program_input::make
 			(
 				::glsl::glsl_compute_program,
 				"push_constants",
@@ -34,8 +33,7 @@ namespace vk
 				0,
 				0,
 				glsl::push_constant_ref{ .offset = 0, .size = push_constants_size }
-			);
-			result.push_back(input);
+			));
 		}
 
 		return result;
@@ -83,6 +81,13 @@ namespace vk
 				optimal_kernel_size = 1;
 				optimal_group_size = 256;
 				break;
+			case vk::driver_vendor::QUALCOMM:
+			case vk::driver_vendor::TURNIP:
+				// Wavefronts are multiples of 64. (Some generations also support wave128)
+				unroll_loops = true;
+				optimal_kernel_size = 1;
+				optimal_group_size = 64;
+				break;
 			}
 
 			const auto& gpu = vk::g_render_device->gpu();
@@ -110,12 +115,6 @@ namespace vk
 		{
 			m_shader.create(::glsl::program_domain::glsl_compute_program, m_src);
 			auto handle = m_shader.compile();
-
-			VkPipelineShaderStageCreateInfo shader_stage{};
-			shader_stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-			shader_stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-			shader_stage.module = handle;
-			shader_stage.pName = "main";
 
 			VkComputePipelineCreateInfo create_info
 			{
@@ -246,7 +245,7 @@ namespace vk
 	void cs_shuffle_base::bind_resources(const vk::command_buffer& cmd)
 	{
 		set_parameters(cmd);
-		m_program->bind_uniform({ m_data->value, m_data_offset, m_data_length }, 0, 0);
+		m_program->bind_uniform({ *m_data, m_data_offset, m_data_length }, 0, 0);
 	}
 
 	void cs_shuffle_base::set_parameters(const vk::command_buffer& cmd)
@@ -296,7 +295,7 @@ namespace vk
 	void cs_interleave_task::bind_resources(const vk::command_buffer& cmd)
 	{
 		set_parameters(cmd);
-		m_program->bind_uniform({ m_data->value, m_data_offset, m_ssbo_length }, 0, 0);
+		m_program->bind_uniform({ *m_data, m_data_offset, m_ssbo_length }, 0, 0);
 	}
 
 	void cs_interleave_task::run(const vk::command_buffer& cmd, const vk::buffer* data, u32 data_offset, u32 data_length, u32 zeta_offset, u32 stencil_offset)
@@ -355,8 +354,8 @@ namespace vk
 
 	void cs_aggregator::bind_resources(const vk::command_buffer& /*cmd*/)
 	{
-		m_program->bind_uniform({ src->value, 0, block_length }, 0, 0);
-		m_program->bind_uniform({ dst->value, 0, 4 }, 0, 1);
+		m_program->bind_uniform({ *src, 0, block_length }, 0, 0);
+		m_program->bind_uniform({ *dst, 0, 4 }, 0, 1);
 	}
 
 	void cs_aggregator::run(const vk::command_buffer& cmd, const vk::buffer* dst, const vk::buffer* src, u32 num_words)

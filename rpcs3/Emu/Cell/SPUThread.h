@@ -197,11 +197,12 @@ struct alignas(16) spu_channel
 
 public:
 	static constexpr u32 off_wait  = 32;
-	static constexpr u32 off_occupy = 32;
+	static constexpr u32 off_occupy = 33;
 	static constexpr u32 off_count = 63;
 	static constexpr u64 bit_wait  = 1ull << off_wait;
 	static constexpr u64 bit_occupy = 1ull << off_occupy;
 	static constexpr u64 bit_count = 1ull << off_count;
+	static constexpr u64 occupy_ored_wait = bit_wait | bit_occupy; 
 
 	// Returns true on success
 	bool try_push(u32 value)
@@ -252,20 +253,24 @@ public:
 					// Other thread has inserted a value through jostling_value, retry
 					continue;
 				}
+
+				// Turn off waiting bit manually (must succeed because waiting bit can only be resetted by the thread pushed to jostling_value)
+				if (~this->data.fetch_and(~occupy_ored_wait) & bit_wait)
+				{
+					// Could be fatal or at emulation stopping, to be checked by the caller
+					ensure(false);
+				}
+
+				// Fallthrough to notification
+				ensure(old & bit_wait);
 			}
 
 			if (old & bit_wait)
 			{
-				// Turn off waiting bit manually (must succeed because waiting bit can only be resetted by the thread pushed to jostling_value)
-				if (!this->data.bit_test_reset(off_wait))
-				{
-					// Could be fatal or at emulation stopping, to be checked by the caller
-					return { (old & bit_count) == 0, 0, false, false };
-				}
-
 				if (!postpone_notify)
 				{
-					utils::bless<atomic_t<u32>>(&data)[1].notify_one();
+					const usz is_le = std::endian::native == std::endian::little ? 1 : 0;
+					utils::bless<atomic_t<u32>>(&data)[is_le].notify_one();
 				}
 			}
 
@@ -276,7 +281,8 @@ public:
 
 	void notify()
 	{
-		utils::bless<atomic_t<u32>>(&data)[1].notify_one();
+		const usz is_le = std::endian::native == std::endian::little ? 1 : 0;
+		utils::bless<atomic_t<u32>>(&data)[is_le].notify_one();
 	}
 
 	// Returns true on success
@@ -330,7 +336,8 @@ public:
 
 		if (old & bit_wait)
 		{
-			utils::bless<atomic_t<u32>>(&data)[1].notify_one();
+			const usz is_le = std::endian::native == std::endian::little ? 1 : 0;
+			utils::bless<atomic_t<u32>>(&data)[is_le].notify_one();
 		}
 
 		return static_cast<u32>(old);
@@ -630,7 +637,7 @@ public:
 	virtual void dump_regs(std::string&, std::any& custom_data) const override;
 	virtual std::string dump_callstack() const override;
 	virtual std::vector<std::pair<u32, u32>> dump_callstack_list() const override;
-	virtual std::string dump_misc() const override;
+	virtual void dump_misc(std::string& ret, std::any& custom_data) const override;
 	virtual void cpu_task() override final;
 	virtual void cpu_on_stop() override;
 	virtual void cpu_return() override;
@@ -708,7 +715,7 @@ public:
 	const decltype(rdata)* resrv_mem{};
 
 	// Range Lock pointer
-	atomic_t<u64, 64>* range_lock{};
+	atomic_t<u64, 128>* range_lock{};
 
 	u32 srr0 = 0;
 	u32 ch_tag_upd = 0;
@@ -819,6 +826,15 @@ public:
 	u64 mfc_dump_idx = 0;
 	static constexpr u32 max_mfc_dump_idx = 4096;
 
+	struct alignas(16) raw_spu_log_stats_t
+	{
+		u32 mmio_offset = umax;
+		u32 mmio_value = umax;
+		u64 mmio_time = umax;
+	};
+
+	atomic_t<raw_spu_log_stats_t> mmio_stats{};
+
 	bool in_cpu_work = false;
 	bool allow_interrupts_in_cpu_work = false;
 	u8 cpu_work_iteration_count = 0;
@@ -901,8 +917,9 @@ public:
 
 	// Returns true if reservation existed but was just discovered to be lost
 	// It is safe to use on any address, even if not directly accessed by SPU (so it's slower)
-	bool reservation_check(u32 addr, const decltype(rdata)& data) const;
-	static bool reservation_check(u32 addr, u32 hash, atomic_t<u64, 64>* range_lock);
+	// Optionally pass a known allocated address for internal optimization (the current Effective-Address of the MFC command)
+	bool reservation_check(u32 addr, const decltype(rdata)& data, u32 current_eal = 0) const;
+	static bool reservation_check(u32 addr, u32 hash, atomic_t<u64, 128>* range_lock);
 	usz register_cache_line_waiter(u32 addr);
 	void deregister_cache_line_waiter(usz index);
 
@@ -914,7 +931,7 @@ public:
 	static atomic_t<u32> g_raw_spu_id[5];
 	static atomic_t<u32> g_spu_work_count;
 
-	static atomic_t<u64> g_spu_waiters_by_value[6];
+	static atomic_t<u64, 128> g_spu_waiters_by_value[6];
 
 	static u32 find_raw_spu(u32 id)
 	{

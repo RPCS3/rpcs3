@@ -177,7 +177,7 @@ Note str_to_note(const std::string_view name)
 
 std::optional<std::pair<Id, Note>> parse_midi_override(const std::string_view config)
 {
-	auto split = fmt::split(config, {"="});
+	const auto split = fmt::split_sv(config, {"="});
 	if (split.size() != 2)
 	{
 		return {};
@@ -236,8 +236,9 @@ std::unordered_map<Id, Note> create_id_to_note_mapping()
 	};
 
 	// Apply configured overrides.
-	const std::vector<std::string> segments = fmt::split(g_cfg_rb3drums.midi_overrides.to_string(), {","});
-	for (const std::string& segment : segments)
+	const std::string midi_overrides = g_cfg_rb3drums.midi_overrides.to_string();
+	const std::vector<std::string_view> segments = fmt::split_sv(midi_overrides, {","});
+	for (const std::string_view& segment : segments)
 	{
 		if (const auto midi_override = parse_midi_override(segment))
 		{
@@ -259,7 +260,7 @@ std::vector<u8> parse_combo(const std::string_view name, const std::string_view 
 		return {};
 	}
 	std::vector<u8> notes;
-	const auto& note_names = fmt::split(csv, {","});
+	const auto note_names = fmt::split_sv(csv, {","});
 	for (const auto& note_name : note_names)
 	{
 		const auto note = str_to_note(note_name);
@@ -312,7 +313,7 @@ usb_device_rb3_midi_drums::Definition::Definition(std::string name, const std::s
 	, create_state{create_state}
 {}
 
-usb_device_rb3_midi_drums::usb_device_rb3_midi_drums(const std::array<u8, 7>& location, const std::string& device_name)
+usb_device_rb3_midi_drums::usb_device_rb3_midi_drums(const std::array<u8, 7>& location, std::string_view device_name)
 	: usb_device_emulated(location)
 {
 	m_id_to_note_mapping = midi::create_id_to_note_mapping();
@@ -411,7 +412,10 @@ usb_device_rb3_midi_drums::usb_device_rb3_midi_drums(const std::array<u8, 7>& lo
 
 usb_device_rb3_midi_drums::~usb_device_rb3_midi_drums()
 {
-	rtmidi_in_free(midi_in);
+	if (midi_in)
+	{
+		rtmidi_in_free(midi_in);
+	}
 }
 
 static const std::array<u8, 40> disabled_response = {
@@ -559,8 +563,8 @@ void usb_device_rb3_midi_drums::interrupt_transfer(u32 buf_size, u8* buf, u32 /*
 		}
 		else
 		{
-			bool is_cancel = kit_state.snare >= midi::min_velocity();
-			bool is_accept = kit_state.floor_tom >= midi::min_velocity();
+			const bool is_cancel = kit_state.snare >= midi::min_velocity();
+			const bool is_accept = kit_state.floor_tom >= midi::min_velocity();
 			if (hold_kick && (is_cancel || is_accept))
 			{
 				// Hold kick brings up the song category selector menu, which can be dismissed using accept/cancel buttons.

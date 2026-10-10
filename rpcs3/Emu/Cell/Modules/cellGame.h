@@ -224,8 +224,8 @@ enum
 struct CellGameDataSystemFileParam
 {
 	char title[CELL_GAMEDATA_SYSP_TITLE_SIZE];
-	char titleLang[CELL_GAMEDATA_SYSP_LANGUAGE_NUM][CELL_GAMEDATA_SYSP_TITLE_SIZE];
-	char titleId[CELL_GAMEDATA_SYSP_TITLEID_SIZE];
+	char titleLang[CELL_GAMEDATA_SYSP_LANGUAGE_NUM][CELL_GAMEDATA_SYSP_TITLE_SIZE]; // 0x80
+	char titleId[CELL_GAMEDATA_SYSP_TITLEID_SIZE]; // 0xA80
 	char reserved0[2];
 	char dataVersion[CELL_GAMEDATA_SYSP_VERSION_SIZE];
 	char reserved1[2];
@@ -248,13 +248,13 @@ struct CellGameDataStatGet
 {
 	be_t<s32> hddFreeSizeKB;
 	be_t<u32> isNewData;
-	char contentInfoPath[CELL_GAMEDATA_PATH_MAX];
-	char gameDataPath[CELL_GAMEDATA_PATH_MAX];
-	char reserved0[2];
-	be_t<s64> st_atime_;
-	be_t<s64> st_mtime_;
-	be_t<s64> st_ctime_;
-	CellGameDataSystemFileParam getParam;
+	char contentInfoPath[CELL_GAMEDATA_PATH_MAX]; // 0x8
+	char gameDataPath[CELL_GAMEDATA_PATH_MAX]; // 0x427 
+	char reserved0[2]; // 0x846
+	be_t<s64> st_atime_; // 0x848
+	be_t<s64> st_mtime_; // 0x850
+	be_t<s64> st_ctime_; // 0x858
+	CellGameDataSystemFileParam getParam; // 0x860
 	be_t<s32> sizeKB;
 	be_t<s32> sysSizeKB;
 	char reserved1[68];

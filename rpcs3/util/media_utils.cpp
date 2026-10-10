@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "media_utils.h"
-#include "Emu/System.h"
+#include "Emu/emu_callbacks.h"
 
 #include <random>
 #include <thread>
@@ -17,8 +17,8 @@ extern "C" {
 #include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
 #include "libavutil/dict.h"
-#include "libavutil/opt.h"
 #include "libavutil/imgutils.h"
+#include "libavutil/mathematics.h"
 #include "libswscale/swscale.h"
 #include "libswresample/swresample.h"
 }
@@ -82,8 +82,8 @@ namespace utils
 			return;
 		}
 
-		std::string msg = line;
-		fmt::trim_back(msg, "\n\r\t ");
+		std::string msg_buf = line;
+		std::string_view msg = fmt::trim_back_sv(msg_buf, "\n\r\t ");
 
 		if (level <= AV_LOG_ERROR)
 			media_log.error("av_log: %s", msg);
@@ -92,6 +92,13 @@ namespace utils
 		else
 			media_log.notice("av_log: %s", msg);
 	};
+
+	template <typename T>
+	T media_info::get_metadata([[maybe_unused]] const std::string& key, const T& def) const
+	{
+		static_assert("unimplemented");
+		return def;
+	}
 
 	template <>
 	std::string media_info::get_metadata(const std::string& key, const std::string& def) const
@@ -162,7 +169,7 @@ namespace utils
 
 		if (av_media_type == AVMEDIA_TYPE_UNKNOWN) // Let's use this for image info
 		{
-			const bool success = Emu.GetCallbacks().get_image_info(path, info.sub_type, info.width, info.height, info.orientation);
+			const bool success = g_emu_callbacks.get_image_info(path, info.sub_type, info.width, info.height, info.orientation);
 			if (!success) media_log.error("get_media_info: failed to get image info for '%s'", path);
 			return { success, std::move(info) };
 		}
@@ -347,9 +354,22 @@ namespace utils
 	{
 		if (!codec) return false;
 
-		for (const AVSampleFormat* p = codec->sample_fmts; p && *p != AV_SAMPLE_FMT_NONE; p++)
+		const void* sample_formats = nullptr;
+		int num = 0;
+
+		if (const int err = avcodec_get_supported_config(nullptr, codec, AVCodecConfig::AV_CODEC_CONFIG_SAMPLE_FORMAT, 0, &sample_formats, &num))
 		{
-			if (*p == sample_fmt)
+			media_log.error("check_sample_fmt: avcodec_get_supported_config error: %d='%s'", err, av_error_to_string(err));
+			return false;
+		}
+
+		if (!sample_formats)
+			return true; // All supported
+
+		int i = 0;
+		for (const AVSampleFormat* fmt = static_cast<const AVSampleFormat*>(sample_formats); fmt && *fmt != AV_SAMPLE_FMT_NONE && i < num; fmt++, i++)
+		{
+			if (*fmt == sample_fmt)
 			{
 				return true;
 			}
@@ -360,18 +380,67 @@ namespace utils
 	// just pick the highest supported samplerate
 	static int select_sample_rate(const AVCodec* codec)
 	{
-		if (!codec || !codec->supported_samplerates)
-			return 48000;
+		constexpr int default_sample_rate = 48000;
 
-		int best_samplerate = 0;
-		for (const int* samplerate = codec->supported_samplerates; samplerate && *samplerate != 0; samplerate++)
+		if (!codec)
+			return default_sample_rate;
+
+		const void* sample_rates = nullptr;
+		int num = 0;
+
+		if (const int err = avcodec_get_supported_config(nullptr, codec, AVCodecConfig::AV_CODEC_CONFIG_SAMPLE_RATE, 0, &sample_rates, &num))
 		{
-			if (!best_samplerate || abs(48000 - *samplerate) < abs(48000 - best_samplerate))
+			media_log.error("select_sample_rate: avcodec_get_supported_config error: %d='%s'", err, av_error_to_string(err));
+			return default_sample_rate;
+		}
+
+		if (!sample_rates)
+			return default_sample_rate;
+
+		int i = 0;
+		int best_sample_rate = 0;
+		for (const int* sample_rate = static_cast<const int*>(sample_rates); sample_rate && *sample_rate != 0 && i < num; sample_rate++, i++)
+		{
+			if (!best_sample_rate || abs(default_sample_rate - *sample_rate) < abs(default_sample_rate - best_sample_rate))
 			{
-				best_samplerate = *samplerate;
+				best_sample_rate = *sample_rate;
 			}
 		}
-		return best_samplerate;
+		return best_sample_rate;
+	}
+
+	static int select_sample_format(const AVCodec* codec)
+	{
+		constexpr AVSampleFormat default_sample_format = AV_SAMPLE_FMT_FLTP;
+
+		if (!codec)
+			return default_sample_format;
+
+		const void* sample_formats = nullptr;
+		int num = 0;
+
+		if (const int err = avcodec_get_supported_config(nullptr, codec, AVCodecConfig::AV_CODEC_CONFIG_SAMPLE_FORMAT, 0, &sample_formats, &num))
+		{
+			media_log.error("select_sample_format: avcodec_get_supported_config error: %d='%s'", err, av_error_to_string(err));
+			return default_sample_format;
+		}
+
+		if (!sample_formats)
+			return default_sample_format;
+
+		int i = 0;
+		std::set<AVSampleFormat> formats;
+		for (const AVSampleFormat* sample_format = static_cast<const AVSampleFormat*>(sample_formats); sample_format && *sample_format != AV_SAMPLE_FMT_NONE && i < num; sample_format++, i++)
+		{
+			media_log.notice("select_sample_format: found sample format: '%s'", av_get_sample_fmt_name(*sample_format));
+			formats.insert(*sample_format);
+		}
+
+		if (formats.contains(AV_SAMPLE_FMT_FLT)) return AV_SAMPLE_FMT_FLT;
+		if (formats.contains(AV_SAMPLE_FMT_FLTP)) return AV_SAMPLE_FMT_FLTP;
+
+		media_log.warning("select_sample_format: using default sample format: '%s'", av_get_sample_fmt_name(default_sample_format));
+		return default_sample_format;
 	}
 
 	AVChannelLayout get_preferred_channel_layout(int channels)
@@ -397,12 +466,25 @@ namespace utils
 	{
 		if (!codec) return nullptr;
 
+		const void* ch_layouts = nullptr;
+		int num = 0;
+
+		if (const int err = avcodec_get_supported_config(nullptr, codec, AVCodecConfig::AV_CODEC_CONFIG_CHANNEL_LAYOUT, 0, &ch_layouts, &num))
+		{
+			media_log.error("select_channel_layout: avcodec_get_supported_config error: %d='%s'", err, av_error_to_string(err));
+			return nullptr;
+		}
+
+		if (!ch_layouts)
+			return nullptr;
+
 		const AVChannelLayout preferred_ch_layout = get_preferred_channel_layout(channels);
 		const AVChannelLayout* found_ch_layout = nullptr;
 
-		for (const AVChannelLayout* ch_layout = codec->ch_layouts;
-			 ch_layout && memcmp(ch_layout, &empty_ch_layout, sizeof(AVChannelLayout)) != 0;
-			 ch_layout++)
+		int i = 0;
+		for (const AVChannelLayout* ch_layout = static_cast<const AVChannelLayout*>(ch_layouts);
+			 i < num && ch_layout && memcmp(ch_layout, &empty_ch_layout, sizeof(AVChannelLayout)) != 0;
+			 ch_layout++, i++)
 		{
 			media_log.notice("select_channel_layout: listing channel layout '%s' with %d channels", channel_layout_name(*ch_layout), ch_layout->nb_channels);
 
@@ -424,8 +506,9 @@ namespace utils
 		stop();
 	}
 
-	void audio_decoder::set_context(music_selection_context context)
+	void audio_decoder::set_context(music_selection_context&& context)
 	{
+		stop();
 		m_context = std::move(context);
 	}
 
@@ -436,27 +519,37 @@ namespace utils
 
 	void audio_decoder::clear()
 	{
-		track_fully_decoded = 0;
-		track_fully_consumed = 0;
-		has_error = false;
-		m_size = 0;
-		timestamps_ms.clear();
-		data.clear();
+		media_log.notice("audio_decoder: Clear data...");
+
+		m_track_fully_decoded = 0;
+		m_track_fully_consumed = 0;
+		m_has_error = false;
+
+		std::scoped_lock lock(m_data_mtx);
+		m_timestamps_ms.clear();
+		m_data.clear();
 	}
 
 	void audio_decoder::stop()
 	{
+		media_log.notice("audio_decoder: Stop decoding...");
+
 		if (m_thread)
 		{
 			auto& thread = *m_thread;
 			thread = thread_state::aborting;
-			track_fully_consumed = 1;
-			track_fully_consumed.notify_one();
+			wake_up();
 			thread();
 			m_thread.reset();
 		}
 
 		clear();
+	}
+
+	void audio_decoder::wake_up()
+	{
+		m_track_fully_consumed = 1;
+		m_track_fully_consumed.notify_one();
 	}
 
 	void audio_decoder::decode()
@@ -480,13 +573,13 @@ namespace utils
 			if (int err = avformat_open_input(&av.format_context, path.c_str(), nullptr, nullptr); err < 0)
 			{
 				media_log.error("audio_decoder: Could not open file '%s'. Error: %d='%s'", path, err, av_error_to_string(err));
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 			if (int err = avformat_find_stream_info(av.format_context, nullptr); err < 0)
 			{
 				media_log.error("audio_decoder: Could not retrieve stream info from file '%s'. Error: %d='%s'", path, err, av_error_to_string(err));
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 
@@ -504,7 +597,7 @@ namespace utils
 			if (!stream)
 			{
 				media_log.error("audio_decoder: Could not retrieve audio stream from file '%s'", path);
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 
@@ -513,7 +606,7 @@ namespace utils
 			if (!av.audio.codec)
 			{
 				media_log.error("audio_decoder: Failed to find decoder for stream #%u in file '%s'", stream_index, path);
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 
@@ -522,7 +615,7 @@ namespace utils
 			if (!av.audio.context)
 			{
 				media_log.error("audio_decoder: Failed to allocate context for stream #%u in file '%s'", stream_index, path);
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 
@@ -530,16 +623,7 @@ namespace utils
 			if (int err = avcodec_open2(av.audio.context, av.audio.codec, nullptr); err < 0)
 			{
 				media_log.error("audio_decoder: Failed to open decoder for stream #%u in file '%s'. Error: %d='%s'", stream_index, path, err, av_error_to_string(err));
-				has_error = true;
-				return;
-			}
-
-			// Prepare resampler
-			av.swr = swr_alloc();
-			if (!av.swr)
-			{
-				media_log.error("audio_decoder: Failed to allocate resampler for stream #%u in file '%s'", stream_index, path);
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 
@@ -547,25 +631,28 @@ namespace utils
 			const AVChannelLayout dst_channel_layout = AV_CHANNEL_LAYOUT_STEREO;
 			const AVSampleFormat dst_format = AV_SAMPLE_FMT_FLT;
 
-			int set_err = 0;
-			if ((set_err = av_opt_set_int(av.swr, "in_channel_count", stream->codecpar->ch_layout.nb_channels, 0)) ||
-				(set_err = av_opt_set_int(av.swr, "out_channel_count", dst_channels, 0)) ||
-				(set_err = av_opt_set_chlayout(av.swr, "in_channel_layout", &stream->codecpar->ch_layout, 0)) ||
-				(set_err = av_opt_set_chlayout(av.swr, "out_channel_layout", &dst_channel_layout, 0)) ||
-				(set_err = av_opt_set_int(av.swr, "in_sample_rate", stream->codecpar->sample_rate, 0)) ||
-				(set_err = av_opt_set_int(av.swr, "out_sample_rate", sample_rate, 0)) ||
-				(set_err = av_opt_set_sample_fmt(av.swr, "in_sample_fmt", static_cast<AVSampleFormat>(stream->codecpar->format), 0)) ||
-				(set_err = av_opt_set_sample_fmt(av.swr, "out_sample_fmt", dst_format, 0)))
+			const int set_err = swr_alloc_set_opts2(&av.swr, &dst_channel_layout, dst_format,
+				sample_rate, &stream->codecpar->ch_layout,
+				static_cast<AVSampleFormat>(stream->codecpar->format),
+				stream->codecpar->sample_rate, 0, nullptr);
+			if (set_err < 0)
 			{
 				media_log.error("audio_decoder: Failed to set resampler options: Error: %d='%s'", set_err, av_error_to_string(set_err));
-				has_error = true;
+				m_has_error = true;
+				return;
+			}
+
+			if (!av.swr)
+			{
+				media_log.error("audio_decoder: Failed to allocate resampler for stream #%u in file '%s'", stream_index, path);
+				m_has_error = true;
 				return;
 			}
 
 			if (int err = swr_init(av.swr); err < 0 || !swr_is_initialized(av.swr))
 			{
 				media_log.error("audio_decoder: Resampler has not been properly initialized: %d='%s'", err, av_error_to_string(err));
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 
@@ -574,7 +661,7 @@ namespace utils
 			if (!av.audio.frame)
 			{
 				media_log.error("audio_decoder: Error allocating the frame");
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 
@@ -582,19 +669,120 @@ namespace utils
 			if (!packet)
 			{
 				media_log.error("audio_decoder: Error allocating the packet");
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
 
 			std::unique_ptr<AVPacket, decltype(free_packet)> packet_(packet);
 			bool is_first_error = true;
+			s64 last_timestamp_ms = 0;
 
-			// Iterate through frames
-			while (thread_ctrl::state() != thread_state::aborting && av_read_frame(av.format_context, packet) >= 0)
+			const int in_rate = stream->codecpar->sample_rate;
+			const AVRational time_base = stream->time_base;
+			const int bytes_per_sample = dst_channels * static_cast<int>(sizeof(f32));
+
+			// A whole track ends up in our data, so reserve it in one go instead of letting it grow piecewise.
+			if (const s64 duration = av.format_context->duration; duration > 0)
 			{
-				if (int err = avcodec_send_packet(av.audio.context, packet); err < 0)
+				constexpr u64 max_reserve = 256 * 1024 * 1024; // Don't trust the header blindly
+				const u64 expected_size = static_cast<u64>(av_rescale(duration, sample_rate * bytes_per_sample, AV_TIME_BASE));
+
+				std::scoped_lock lock(m_data_mtx);
+				m_data.reserve(std::min<u64>(expected_size, max_reserve));
+			}
+
+			// The output buffer is reused by every frame. Only its size may grow.
+			const auto free_av_buffer = [](u8* buf) { av_free(buf); };
+			std::unique_ptr<u8, decltype(free_av_buffer)> buffer(nullptr, free_av_buffer);
+			int buffer_samples = 0;
+
+			// Resamples the given frame and appends the result to our data.
+			// Pass a null frame in order to flush the samples that are still pending in the resampler.
+			const auto resample_and_append = [&](const AVFrame* frame) -> bool
+			{
+				const int in_samples = frame ? frame->nb_samples : 0;
+
+				// The resampler buffers samples internally, so we also have to make room for the ones that are still pending.
+				// Otherwise they pile up and we lose the tail of the track whenever the file's sample rate differs from ours.
+				const int out_samples = in_rate > 0
+					? static_cast<int>(av_rescale_rnd(swr_get_delay(av.swr, in_rate) + in_samples, sample_rate, in_rate, AV_ROUND_UP))
+					: in_samples;
+
+				if (out_samples <= 0)
 				{
-					if (is_first_error)
+					return true;
+				}
+
+				if (out_samples > buffer_samples)
+				{
+					u8* new_buffer = nullptr;
+					const int align = 0; // Let FFmpeg align the buffer, so the resampler can take its SIMD paths
+					const int buffer_size = av_samples_alloc(&new_buffer, nullptr, dst_channels, out_samples, dst_format, align);
+					if (buffer_size < 0)
+					{
+						media_log.error("audio_decoder: Error allocating buffer: %d='%s'", buffer_size, av_error_to_string(buffer_size));
+						m_has_error = true;
+						return false;
+					}
+
+					buffer.reset(new_buffer);
+					buffer_samples = out_samples;
+				}
+
+				u8* out_buffer = buffer.get();
+
+				const int frame_count = swr_convert(av.swr, &out_buffer, out_samples, frame ? const_cast<const uint8_t**>(frame->data) : nullptr, in_samples);
+				if (frame_count < 0)
+				{
+					media_log.error("audio_decoder: Error converting frame: %d='%s'", frame_count, av_error_to_string(frame_count));
+					m_has_error = true;
+					return false;
+				}
+
+				if (frame_count == 0)
+				{
+					// Nothing came out of the resampler yet.
+					return true;
+				}
+
+				// Only the samples that were actually written are valid. The rest of the buffer is left over from previous frames.
+				const u64 size = static_cast<u64>(frame_count) * bytes_per_sample;
+
+				if (frame)
+				{
+					last_timestamp_ms = time_base.den ? (1000 * frame->best_effort_timestamp * time_base.num) / time_base.den : 0;
+				}
+
+				// The format is float 32bit per channel. Swap it in place, so we can append the buffer as-is.
+				if (m_swap_endianness)
+				{
+					copy_samples<f32>(out_buffer, out_buffer, size / sizeof(f32), true);
+				}
+
+				// Append resampled frames to data
+				{
+					std::scoped_lock lock(m_data_mtx);
+					m_timestamps_ms.push_back({m_data.size(), last_timestamp_ms});
+					m_data.insert(m_data.cend(), out_buffer, out_buffer + size);
+				}
+
+				media_log.trace("audio_decoder: decoded frame_count=%d size=%d timestamp_ms=%d", frame_count, size, last_timestamp_ms);
+				return true;
+			};
+
+			// Sends the given packet to the decoder and appends every frame it produces.
+			// Pass a null packet in order to flush the frames that are still pending in the decoder.
+			const auto decode_packet = [&](AVPacket* pkt) -> bool
+			{
+				if (int err = avcodec_send_packet(av.audio.context, pkt); err < 0)
+				{
+					if (!pkt && err == averror_eof)
+					{
+						// The decoder was already flushed.
+						return true;
+					}
+
+					if (is_first_error && pkt)
 					{
 						is_first_error = false;
 
@@ -603,12 +791,13 @@ namespace utils
 							// Some mp3s contain some invalid data at the beginning of the stream. They work fine if we just ignore them.
 							// So let's skip the first invalid data error. Maybe there is a better way, but let's just roll with it for now.
 							media_log.warning("audio_decoder: Ignoring first error: %d='%s'", err, av_error_to_string(err));
-							continue;
+							return true;
 						}
 					}
+
 					media_log.error("audio_decoder: Queuing error: %d='%s'", err, av_error_to_string(err));
-					has_error = true;
-					return;
+					m_has_error = true;
+					return false;
 				}
 
 				while (thread_ctrl::state() != thread_state::aborting)
@@ -619,49 +808,37 @@ namespace utils
 							break;
 
 						media_log.error("audio_decoder: Decoding error: %d='%s'", err, av_error_to_string(err));
-						has_error = true;
-						return;
+						m_has_error = true;
+						return false;
 					}
 
-					// Resample frames
-					u8* buffer = nullptr;
-					const int align = 1;
-					const int buffer_size = av_samples_alloc(&buffer, nullptr, dst_channels, av.audio.frame->nb_samples, dst_format, align);
-					if (buffer_size < 0)
+					if (!resample_and_append(av.audio.frame))
 					{
-						media_log.error("audio_decoder: Error allocating buffer: %d='%s'", buffer_size, av_error_to_string(buffer_size));
-						has_error = true;
-						return;
+						return false;
 					}
-
-					const int frame_count = swr_convert(av.swr, &buffer, av.audio.frame->nb_samples, const_cast<const uint8_t**>(av.audio.frame->data), av.audio.frame->nb_samples);
-					if (frame_count < 0)
-					{
-						media_log.error("audio_decoder: Error converting frame: %d='%s'", frame_count, av_error_to_string(frame_count));
-						has_error = true;
-						if (buffer)
-							av_freep(&buffer);
-						return;
-					}
-
-					// Append resampled frames to data
-					{
-						std::scoped_lock lock(m_mtx);
-						data.resize(m_size + buffer_size);
-
-						// The format is float 32bit per channel.
-						copy_samples<f32>(buffer, &data[m_size], buffer_size / sizeof(f32), m_swap_endianness);
-
-						const s64 timestamp_ms = stream->time_base.den ? (1000 * av.audio.frame->best_effort_timestamp * stream->time_base.num) / stream->time_base.den : 0;
-						timestamps_ms.push_back({m_size, timestamp_ms});
-						m_size += buffer_size;
-					}
-
-					if (buffer)
-						av_freep(&buffer);
-
-					media_log.notice("audio_decoder: decoded frame_count=%d buffer_size=%d timestamp_us=%d", frame_count, buffer_size, av.audio.frame->best_effort_timestamp);
 				}
+
+				return true;
+			};
+
+			// Iterate through frames
+			while (thread_ctrl::state() != thread_state::aborting && av_read_frame(av.format_context, packet) >= 0)
+			{
+				if (!decode_packet(packet))
+				{
+					return;
+				}
+			}
+
+			if (thread_ctrl::state() == thread_state::aborting)
+			{
+				return;
+			}
+
+			// Flush the decoder and the resampler, otherwise we lose the tail of the track.
+			if (!decode_packet(nullptr) || !resample_and_append(nullptr))
+			{
+				return;
 			}
 		};
 
@@ -675,18 +852,21 @@ namespace utils
 			if (m_context.playlist.empty())
 			{
 				media_log.error("audio_decoder: Can not play empty playlist");
-				has_error = true;
+				m_has_error = true;
 				return;
 			}
-
-			m_context.current_track = m_context.first_track;
 
 			if (m_context.context_option == CELL_SEARCH_CONTEXTOPTION_SHUFFLE && m_context.playlist.size() > 1)
 			{
 				// Shuffle once if necessary
 				media_log.notice("audio_decoder: shuffling initial playlist...");
-				auto engine = std::default_random_engine{};
-				std::shuffle(std::begin(m_context.playlist), std::end(m_context.playlist), engine);
+				std::random_device rd;
+				auto engine = std::default_random_engine{rd()};
+
+				// Keep the selected track as the first one, so that the whole shuffled playlist is played before the next shuffle
+				std::swap(m_context.playlist.front(), ::at32(m_context.playlist, m_context.current_track));
+				std::shuffle(std::begin(m_context.playlist) + 1, std::end(m_context.playlist), engine);
+				m_context.current_track = 0;
 			}
 
 			while (thread_ctrl::state() != thread_state::aborting)
@@ -694,9 +874,9 @@ namespace utils
 				media_log.notice("audio_decoder: about to decode: %s (index=%d)", ::at32(m_context.playlist, m_context.current_track), m_context.current_track);
 
 				decode_track(::at32(m_context.playlist, m_context.current_track));
-				track_fully_decoded = 1;
+				m_track_fully_decoded = 1;
 
-				if (has_error)
+				if (m_has_error)
 				{
 					media_log.notice("audio_decoder: stopping with error...");
 					break;
@@ -704,8 +884,12 @@ namespace utils
 
 				// Let's only decode one track at a time. Wait for the consumer to finish reading the track.
 				media_log.notice("audio_decoder: waiting until track is consumed...");
-				thread_ctrl::wait_on(track_fully_consumed, 0);
-				track_fully_consumed = false;
+
+				while (thread_ctrl::state() != thread_state::aborting && !m_track_fully_consumed)
+				{
+					thread_ctrl::wait_on(m_track_fully_consumed, 0);
+				}
+				m_track_fully_consumed = 0;
 			}
 
 			media_log.notice("audio_decoder: finished playlist");
@@ -715,6 +899,35 @@ namespace utils
 	u32 audio_decoder::set_next_index(bool next)
 	{
 		return m_context.step_track(next);
+	}
+
+	s64 audio_decoder::get_start_time_ms(u64 read_pos)
+	{
+		if (m_timestamps_ms.empty()) return 0;
+
+		const s64 start_time_ms = m_timestamps_ms.front().second;
+
+		while (m_timestamps_ms.size() > 1 && read_pos >= ::at32(m_timestamps_ms, 1).first)
+		{
+			m_timestamps_ms.pop_front();
+		}
+
+		return start_time_ms;
+	}
+
+	u64 audio_decoder::read(void* dst, u64 read_pos, u64 read_size)
+	{
+		if (!dst || read_pos >= m_data.size()) return 0;
+
+		const u64 size_left = m_data.size() - read_pos;
+		const u64 size_to_read = std::min(read_size, size_left);
+
+		if (size_to_read > 0)
+		{
+			std::memcpy(dst, &m_data[read_pos], size_to_read);
+		}
+
+		return size_to_read;
 	}
 
 	video_encoder::video_encoder()
@@ -757,9 +970,10 @@ namespace utils
 		m_out_format = std::move(format);
 	}
 
-	void video_encoder::set_video_codec(s32 codec_id)
+	void video_encoder::set_video_codec(s32 codec_id, std::string_view codec_name)
 	{
 		m_video_codec_id = codec_id;
+		m_video_codec_name = codec_name;
 	}
 
 	void video_encoder::set_max_b_frames(s32 max_b_frames)
@@ -787,9 +1001,10 @@ namespace utils
 		m_audio_bitrate_bps = bitrate;
 	}
 
-	void video_encoder::set_audio_codec(s32 codec_id)
+	void video_encoder::set_audio_codec(s32 codec_id, std::string_view codec_name)
 	{
 		m_audio_codec_id = codec_id;
+		m_audio_codec_name = codec_name;
 	}
 
 	void video_encoder::pause(bool flush)
@@ -894,6 +1109,9 @@ namespace utils
 			void* opaque = nullptr;
 			while (const AVCodec* codec = av_codec_iterate(&opaque))
 			{
+				if (!av_codec_is_encoder(codec))
+					continue;
+
 				if (codec->type == AVMediaType::AVMEDIA_TYPE_AUDIO)
 				{
 					media_log.notice("video_encoder: Found audio codec %d = %s", static_cast<int>(codec->id), codec->name);
@@ -950,9 +1168,32 @@ namespace utils
 				return nullptr;
 			};
 
-			const AVCodecID video_codec = static_cast<AVCodecID>(m_video_codec_id);
-			const AVCodecID audio_codec = static_cast<AVCodecID>(m_audio_codec_id);
-			const AVOutputFormat* out_format = find_format(video_codec, audio_codec);
+			const auto get_codec = [](const std::string& name, AVCodecID fallback, bool is_video)
+			{
+				const AVCodec* codec = name.empty() ? nullptr : avcodec_find_encoder_by_name(name.c_str());
+				if (codec) return codec;
+				media_log.warning("video_encoder: avcodec_find_encoder_by_name('%s') for %s failed or name is empty. Using fallback coded %d", name, is_video ? "video" : "audio", static_cast<int>(fallback));
+				return avcodec_find_encoder(fallback);
+			};
+
+			const AVCodec* selected_video_codec = get_codec(m_video_codec_name, static_cast<AVCodecID>(m_video_codec_id), true);
+			const AVCodec* selected_audio_codec = get_codec(m_audio_codec_name, static_cast<AVCodecID>(m_audio_codec_id), false);
+
+			if (!selected_video_codec)
+			{
+				media_log.error("video_encoder: avcodec_find_encoder for video failed");
+				has_error = true;
+				return;
+			}
+
+			if (!selected_audio_codec)
+			{
+				media_log.error("video_encoder: avcodec_find_encoder for audio failed");
+				has_error = true;
+				return;
+			}
+
+			const AVOutputFormat* out_format = find_format(selected_video_codec->id, selected_audio_codec->id);
 
 			if (out_format)
 			{
@@ -960,7 +1201,7 @@ namespace utils
 			}
 			else
 			{
-				media_log.error("video_encoder: Could not find a format for the requested video_codec %d and audio_codec %d", m_video_codec_id, m_audio_codec_id);
+				media_log.error("video_encoder: Could not find a format for the requested video_codec '%s' (ID=%d) and audio_codec '%s' (ID=%d)", m_video_codec_name, static_cast<int>(selected_video_codec->id), m_audio_codec_name, static_cast<int>(selected_audio_codec->id));
 
 				// Fallback to some other codec
 				for (const AVCodec* video_codec : video_codecs)
@@ -972,6 +1213,8 @@ namespace utils
 						if (out_format)
 						{
 							media_log.success("video_encoder: Found fallback output format '%s'", out_format->name);
+							selected_video_codec = video_codec;
+							selected_audio_codec = audio_codec;
 							break;
 						}
 					}
@@ -1004,27 +1247,11 @@ namespace utils
 				return;
 			}
 
-			const auto create_context = [this, &av](bool is_video) -> bool
+			const auto create_context = [this, &av, &selected_video_codec, &selected_audio_codec](bool is_video) -> bool
 			{
 				const std::string type = is_video ? "video" : "audio";
 				scoped_av::ctx& ctx = is_video ? av.video : av.audio;
-
-				if (is_video)
-				{
-					if (!(ctx.codec = avcodec_find_encoder(av.format_context->oformat->video_codec)))
-					{
-						media_log.error("video_encoder: avcodec_find_encoder for video failed. video_codec=%d", static_cast<int>(av.format_context->oformat->video_codec));
-						return false;
-					}
-				}
-				else
-				{
-					if (!(ctx.codec = avcodec_find_encoder(av.format_context->oformat->audio_codec)))
-					{
-						media_log.error("video_encoder: avcodec_find_encoder for audio failed. audio_codec=%d", static_cast<int>(av.format_context->oformat->audio_codec));
-						return false;
-					}
-				}
+				ctx.codec = is_video ? selected_video_codec : selected_audio_codec;
 
 				if (!(ctx.stream = avformat_new_stream(av.format_context, nullptr)))
 				{
@@ -1108,13 +1335,14 @@ namespace utils
 				}
 
 				m_sample_rate = select_sample_rate(av.audio.codec);
+				m_sample_format = select_sample_format(av.audio.codec);
 
 				av.audio.context->codec_id = av.format_context->oformat->audio_codec;
 				av.audio.context->codec_type = AVMEDIA_TYPE_AUDIO;
 				av.audio.context->bit_rate = m_audio_bitrate_bps;
 				av.audio.context->sample_rate = m_sample_rate;
 				av.audio.context->time_base = {.num = 1, .den = av.audio.context->sample_rate};
-				av.audio.context->sample_fmt = AV_SAMPLE_FMT_FLTP; // AV_SAMPLE_FMT_FLT is not supported in regular AC3
+				av.audio.context->sample_fmt = static_cast<AVSampleFormat>(m_sample_format);
 				av.audio.stream->time_base = av.audio.context->time_base;
 
 				// check that the encoder supports the format
@@ -1146,7 +1374,7 @@ namespace utils
 					return;
 				}
 
-				av.audio.frame->format = AV_SAMPLE_FMT_FLTP;
+				av.audio.frame->format = static_cast<AVSampleFormat>(m_sample_format);
 				av.audio.frame->nb_samples = av.audio.context->frame_size;
 
 				if (int err = av_channel_layout_copy(&av.audio.frame->ch_layout, &av.audio.context->ch_layout); err < 0)

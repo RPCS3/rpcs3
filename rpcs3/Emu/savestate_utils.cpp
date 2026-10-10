@@ -23,7 +23,7 @@ struct serial_ver_t
 	std::set<u16> compatible_versions;
 };
 
-static std::array<serial_ver_t, 27> s_serial_versions;
+static std::array<serial_ver_t, 34> s_serial_versions;
 
 #define SERIALIZATION_VER(name, identifier, ...) \
 \
@@ -40,20 +40,25 @@ static std::array<serial_ver_t, 27> s_serial_versions;
 		return ::s_serial_versions[identifier].current_version;\
 	}
 
-SERIALIZATION_VER(global_version, 0,                            19) // For stuff not listed here
+SERIALIZATION_VER(global_version, 0,                            25) // For stuff not listed here
 SERIALIZATION_VER(ppu, 1,                                       1, 2/*PPU sleep order*/, 3/*PPU FNID and module*/)
 SERIALIZATION_VER(spu, 2,                                       1)
 SERIALIZATION_VER(lv2_sync, 3,                                  1)
 SERIALIZATION_VER(lv2_vm, 4,                                    1)
-SERIALIZATION_VER(lv2_net, 5,                                   1, 2/*TCP Feign conection loss*/)
+SERIALIZATION_VER(lv2_net, 5,                                   1, 2/*TCP Feign conection loss*/, 3/*P2PS stream_disconnected status*/)
 SERIALIZATION_VER(lv2_fs, 6,                                    1, 2/*NPDRM key saving*/)
-SERIALIZATION_VER(lv2_prx_overlay, 7,                           1)
-SERIALIZATION_VER(lv2_memory, 8,                                1)
+SERIALIZATION_VER(lv2_prx_overlay, 7,                           2)
+SERIALIZATION_VER(lv2_memory, 8,                                3, 4/*sys_mmapper strict mapping*/)
 SERIALIZATION_VER(lv2_config, 9,                                1)
+
+namespace vm
+{
+	SERIALIZATION_VER(lv2_memory, 8,                            3, 4/*sys_mmapper string mapping*/)
+}
 
 namespace rsx
 {
-	SERIALIZATION_VER(rsx, 10,                                  1, 2/*Pending flip*/, 3/*avconf scan_mode*/)
+	SERIALIZATION_VER(rsx, 10,                                  1, 2/*Pending flip*/, 3/*avconf scan_mode*/, 4/*FIFO Position*/)
 }
 
 namespace np
@@ -68,7 +73,7 @@ SERIALIZATION_VER(sceNp, 11)
 #endif
 
 SERIALIZATION_VER(cellVdec, 12,                                 1)
-SERIALIZATION_VER(cellAudio, 13,                                1)
+SERIALIZATION_VER(cellAudio, 13,                                2)
 SERIALIZATION_VER(cellCamera, 14,                               1, 2/*gem_camera_shared*/)
 SERIALIZATION_VER(cellGem, 15,                                  1, 2/*calibration_status_flags*/, 3/*video_conversion*/)
 SERIALIZATION_VER(sceNpTrophy, 16,                              1)
@@ -85,6 +90,16 @@ SERIALIZATION_VER(LLE, 24,                                      1)
 SERIALIZATION_VER(HLE, 25,                                      1)
 
 SERIALIZATION_VER(cellSysutil, 26,                              1, 2/*AVC2 Muting,Volume*/)
+SERIALIZATION_VER(cellDmuxPamf, 27,                             1)
+
+// For future modules
+SERIALIZATION_VER(cellReserved1, 27,                             1)
+SERIALIZATION_VER(cellReserved2, 28,                             1)
+SERIALIZATION_VER(cellReserved3, 29,                             1)
+SERIALIZATION_VER(cellReserved4, 30,                             1)
+SERIALIZATION_VER(cellReserved6, 31,                             1)
+SERIALIZATION_VER(cellReserved7, 32,                             1)
+SERIALIZATION_VER(cellReserved8, 33,                             1)
 
 template <>
 void fmt_class_string<std::remove_cvref_t<decltype(s_serial_versions)>>::format(std::string& out, u64 arg)
@@ -315,7 +330,7 @@ std::string get_savestate_file(std::string_view title_id, std::string_view boot_
 					{
 						if (std::all_of(entry.begin() + uc_pos + 1, entry.begin() + dot_idx, [](char c) { return c >= '0' && c <= '9'; }))
 						{
-							save_files.emplace(entry, dir_entry.size);	
+							save_files.emplace(entry, dir_entry.size);
 						}
 					}
 				}
@@ -520,7 +535,7 @@ void clean_savestates(std::string_view title_id, std::string_view boot_path, usz
 		if (to_remove.empty())
 		{
 			break;
-		}	
+		}
 
 		if (!fs::remove_file(to_remove))
 		{
@@ -596,7 +611,7 @@ namespace stx
 		if ((saved ^ tag) & data_mask)
 		{
 			ensure(!ar.is_writing());
-			fmt::throw_exception("serial_breathe_and_tag(%u): %s\nobject: '%s', next-object: '%s', expected/tag: 0x%x != 0x%x,", s_tls_call_count, ar, s_tls_object_name, name, tag, saved);
+			fmt::throw_exception("serial_breathe_and_tag(%u): %s\nobject: '%s', next-object: '%s', expected/tag: 0x%x != 0x%x\nLatest known RPCS3 build working for savestates: 0.0.42-19996", s_tls_call_count, ar, s_tls_object_name, name, tag, saved);
 		}
 
 		s_tls_object_name = name;
@@ -681,4 +696,3 @@ bool hle_locks_t::try_finalize(std::function<bool()> test)
 	lock_val.notify_all();
 	return true;
 }
-

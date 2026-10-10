@@ -1,9 +1,12 @@
 #pragma once
 #include "gcm_enums.h"
-#include "color_utils.h"
+#include "Utils/color_utils.hpp"
 
 namespace rsx
 {
+	struct texture_format_ex;
+	struct image_section_attributes_t;
+
 	class fragment_texture
 	{
 	protected:
@@ -33,6 +36,7 @@ namespace rsx
 		// cubemap as a separate dimension.
 		rsx::texture_dimension_extended get_extended_texture_dimension() const;
 		u8 format() const;
+		texture_format_ex format_ex() const;
 		bool is_compressed_format() const;
 		u16 mipmap() const;
 
@@ -77,11 +81,13 @@ namespace rsx
 		u16 height() const;
 
 		// Border Color
-		u32 border_color() const;
-		color4f remapped_border_color() const;
+		u32 border_color(bool apply_colorspace_remapping = false) const;
+		color4f remapped_border_color(bool apply_colorspace_remapping = false) const;
 
 		u16 depth() const;
 		u32 pitch() const;
+
+		image_section_attributes_t attributes() const;
 	};
 
 	class vertex_texture
@@ -133,8 +139,8 @@ namespace rsx
 		u16 height() const;
 
 		// Border Color
-		u32 border_color() const;
-		color4f remapped_border_color() const;
+		u32 border_color(bool = false) const;
+		color4f remapped_border_color(bool = false) const;
 
 		u16 depth() const;
 		u32 pitch() const;

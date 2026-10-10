@@ -175,6 +175,7 @@ private:
 	{
 		atomic_ptr<std::vector<u8>> m_input;
 		atomic_ptr<std::vector<u8>> m_output;
+		bool notify_pending = false;
 		bool notified = false;
 		std::unique_ptr<named_thread<std::function<void()>>> m_thread;
 	};

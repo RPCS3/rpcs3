@@ -6,7 +6,7 @@
 #include "VKResourceManager.h"
 
 #include "Emu/RSX/Common/simple_array.hpp"
-#include "Emu/RSX/rsx_utils.h"
+#include "Emu/RSX/Utils/rsx_utils.h"
 #include "Emu/RSX/rsx_cache.h"
 #include "Utilities/mutex.h"
 #include "util/asm.hpp"
@@ -23,7 +23,6 @@
 #define VK_INDEX_RING_BUFFER_SIZE_M 16
 
 #define VK_MAX_ASYNC_CB_COUNT 512
-#define VK_MAX_ASYNC_FRAMES 2
 
 #define FRAME_PRESENT_TIMEOUT 10000000ull // 10 seconds
 #define GENERAL_WAIT_TIMEOUT  2000000ull  // 2 seconds
@@ -186,6 +185,20 @@ namespace vk
 		data_heap_manager::managed_heap_snapshot_t heap_snapshot;
 		u64 last_frame_sync_time = 0;
 
+		void init(VkDevice dev)
+		{
+			VkSemaphoreCreateInfo semaphore_info = {};
+			semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+			vkCreateSemaphore(dev, &semaphore_info, nullptr, &present_wait_semaphore);
+			vkCreateSemaphore(dev, &semaphore_info, nullptr, &acquire_signal_semaphore);
+		}
+
+		void destroy(VkDevice dev)
+		{
+			vkDestroySemaphore(dev, present_wait_semaphore, nullptr);
+			vkDestroySemaphore(dev, acquire_signal_semaphore, nullptr);
+		}
+
 		// Copy shareable information
 		void grab_resources(frame_context_t& other)
 		{
@@ -241,18 +254,18 @@ namespace vk
 
 		void consumer_wait() const
 		{
-			while (num_waiters.load() != 0)
+			utils::spin_wait(num_waiters, [](auto v)
 			{
-				utils::pause();
-			}
+				return v == 0;
+			});
 		}
 
 		void producer_wait() const
 		{
-			while (pending_state.load())
+			utils::spin_wait(pending_state, [](auto v)
 			{
-				std::this_thread::yield();
-			}
+				return !v;
+			});
 		}
 	};
 

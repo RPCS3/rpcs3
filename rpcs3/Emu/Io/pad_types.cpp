@@ -40,6 +40,11 @@ void fmt_class_string<pad_button>::format(std::string& out, u64 arg)
 		case pad_button::rs_x: return "Right Stick X-Axis";
 		case pad_button::rs_y: return "Right Stick Y-Axis";
 		case pad_button::pad_button_max_enum: return "";
+		case pad_button::motion_x: return "Motion X";
+		case pad_button::motion_y: return "Motion Y";
+		case pad_button::motion_z: return "Motion Z";
+		case pad_button::motion_g: return "Motion G";
+		case pad_button::pad_motion_max_enum: return "";
 		case pad_button::mouse_button_1: return "Mouse Button 1";
 		case pad_button::mouse_button_2: return "Mouse Button 2";
 		case pad_button::mouse_button_3: return "Mouse Button 3";
@@ -48,6 +53,9 @@ void fmt_class_string<pad_button>::format(std::string& out, u64 arg)
 		case pad_button::mouse_button_6: return "Mouse Button 6";
 		case pad_button::mouse_button_7: return "Mouse Button 7";
 		case pad_button::mouse_button_8: return "Mouse Button 8";
+		case pad_button::mouse: return "Mouse";
+		case pad_button::left_stick: return "Left Stick";
+		case pad_button::right_stick: return "Right Stick";
 		}
 
 		return unknown;
@@ -87,6 +95,11 @@ u32 pad_button_offset(pad_button button)
 	case pad_button::rs_right: return CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X;
 	case pad_button::rs_x: return CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_X;
 	case pad_button::rs_y: return CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y;
+	case pad_button::motion_x: return CELL_PAD_BTN_OFFSET_SENSOR_X;
+	case pad_button::motion_y: return CELL_PAD_BTN_OFFSET_SENSOR_Y;
+	case pad_button::motion_z: return CELL_PAD_BTN_OFFSET_SENSOR_Z;
+	case pad_button::motion_g: return CELL_PAD_BTN_OFFSET_SENSOR_G;
+	case pad_button::pad_motion_max_enum:
 	case pad_button::pad_button_max_enum:
 	case pad_button::mouse_button_1:
 	case pad_button::mouse_button_2:
@@ -96,6 +109,9 @@ u32 pad_button_offset(pad_button button)
 	case pad_button::mouse_button_6:
 	case pad_button::mouse_button_7:
 	case pad_button::mouse_button_8:
+	case pad_button::mouse:
+	case pad_button::left_stick:
+	case pad_button::right_stick:
 		return 0;
 	}
 	return 0;
@@ -135,6 +151,11 @@ u32 pad_button_keycode(pad_button button)
 	case pad_button::rs_x: return static_cast<u32>(axis_direction::both);
 	case pad_button::rs_y: return static_cast<u32>(axis_direction::both);
 	case pad_button::pad_button_max_enum: return 0;
+	case pad_button::motion_x: return 0;
+	case pad_button::motion_y: return 0;
+	case pad_button::motion_z: return 0;
+	case pad_button::motion_g: return 0;
+	case pad_button::pad_motion_max_enum: return 0;
 	case pad_button::mouse_button_1: return 1;
 	case pad_button::mouse_button_2: return 2;
 	case pad_button::mouse_button_3: return 3;
@@ -143,6 +164,9 @@ u32 pad_button_keycode(pad_button button)
 	case pad_button::mouse_button_6: return 6;
 	case pad_button::mouse_button_7: return 7;
 	case pad_button::mouse_button_8: return 8;
+	case pad_button::mouse: return 0;
+	case pad_button::left_stick: return 0;
+	case pad_button::right_stick: return 0;
 	}
 	return 0;
 }
@@ -157,20 +181,6 @@ u32 get_axis_keycode(u32 offset, u16 value)
 	case CELL_PAD_BTN_OFFSET_ANALOG_RIGHT_Y: return static_cast<u32>(value < 128 ? axis_direction::positive : axis_direction::negative);
 	default: return static_cast<u32>(axis_direction::both);
 	}
-}
-
-void ps_move_data::reset_sensors()
-{
-	quaternion = default_quaternion;
-	accelerometer_x = 0.0f;
-	accelerometer_y = 0.0f;
-	accelerometer_z = 0.0f;
-	gyro_x = 0.0f;
-	gyro_y = 0.0f;
-	gyro_z = 0.0f;
-	magnetometer_x = 0.0f;
-	magnetometer_y = 0.0f;
-	magnetometer_z = 0.0f;
 }
 
 bool Pad::get_pressure_intensity_button_active(bool is_toggle_mode, u32 player_id)
@@ -216,6 +226,12 @@ bool Pad::get_analog_limiter_button_active(bool is_toggle_mode, u32 player_id)
 	}
 
 	const Button& analog_limiter_button = m_buttons[m_analog_limiter_button_index];
+
+	if (analog_limiter_button.m_key_combos.empty())
+	{
+		// Active by default if no button was assigned
+		return true;
+	}
 
 	if (is_toggle_mode)
 	{

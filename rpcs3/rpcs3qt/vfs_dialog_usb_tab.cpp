@@ -1,6 +1,7 @@
 #include "vfs_dialog_usb_tab.h"
 #include "vfs_dialog_usb_input.h"
 #include "table_item_delegate.h"
+#include "gui_settings.h"
 #include "Utilities/Config.h"
 
 #include <QVBoxLayout>

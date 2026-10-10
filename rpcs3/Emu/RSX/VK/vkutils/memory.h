@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../VulkanAPI.h"
-#include "../../rsx_utils.h"
 #include "shared.h"
+
+#include "Emu/RSX/Utils/rsx_utils.h"
 
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -49,6 +49,7 @@ namespace vk
 		const_iterator end() const;
 		u32 first() const;
 		size_t count() const;
+		u64 total_bytes() const;
 
 		operator bool() const;
 		bool operator == (const memory_type_info& other) const;
@@ -56,6 +57,23 @@ namespace vk
 		memory_type_info get(const render_device& dev, u32 access_flags, u32 type_mask) const;
 
 		void rebalance();
+	};
+
+	struct memory_heap_info
+	{
+		u32 index;
+		u32 flags;
+		u64 size;
+	};
+
+	struct memory_allocation_request
+	{
+		u64 size = 0;
+		u64 alignment = 1;
+		const memory_type_info* memory_type = nullptr;
+		vmm_allocation_pool pool = VMM_ALLOCATION_POOL_UNDEFINED;
+		bool throw_on_fail = true;
+		bool recover_vmem_on_fail = true;
 	};
 
 	class mem_allocator_base
@@ -68,7 +86,7 @@ namespace vk
 
 		virtual void destroy() = 0;
 
-		virtual mem_handle_t alloc(u64 block_sz, u64 alignment, const memory_type_info& memory_type, vmm_allocation_pool pool, bool throw_on_fail) = 0;
+		virtual mem_handle_t alloc(const memory_allocation_request& request) = 0;
 		virtual void free(mem_handle_t mem_handle) = 0;
 		virtual void* map(mem_handle_t mem_handle, u64 offset, u64 size) = 0;
 		virtual void unmap(mem_handle_t mem_handle) = 0;
@@ -96,7 +114,7 @@ namespace vk
 
 		void destroy() override;
 
-		mem_handle_t alloc(u64 block_sz, u64 alignment, const memory_type_info& memory_type, vmm_allocation_pool pool, bool throw_on_fail) override;
+		mem_handle_t alloc(const memory_allocation_request& request) override;
 
 		void free(mem_handle_t mem_handle) override;
 		void* map(mem_handle_t mem_handle, u64 offset, u64 /*size*/) override;
@@ -112,6 +130,7 @@ namespace vk
 	private:
 		VmaAllocator m_allocator;
 		std::array<VmaBudget, VK_MAX_MEMORY_HEAPS> stats;
+		u32 m_rebar_heap_idx = UINT32_MAX;
 	};
 
 
@@ -125,7 +144,7 @@ namespace vk
 
 		void destroy() override {}
 
-		mem_handle_t alloc(u64 block_sz, u64 /*alignment*/, const memory_type_info& memory_type, vmm_allocation_pool pool, bool throw_on_fail) override;
+		mem_handle_t alloc(const memory_allocation_request& request) override;
 
 		void free(mem_handle_t mem_handle) override;
 		void* map(mem_handle_t mem_handle, u64 offset, u64 size) override;
@@ -138,7 +157,7 @@ namespace vk
 
 	struct memory_block
 	{
-		memory_block(VkDevice dev, u64 block_sz, u64 alignment, const memory_type_info& memory_type, vmm_allocation_pool pool, bool nullable = false);
+		memory_block(VkDevice dev, const memory_allocation_request& alloc_request);
 		virtual ~memory_block();
 
 		virtual VkDeviceMemory get_vk_device_memory();

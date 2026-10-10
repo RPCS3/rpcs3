@@ -6,22 +6,31 @@
 #include <cmath>
 
 #ifdef HAVE_OPENCV
-#include <opencv2/photo.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#if CV_VERSION_MAJOR >= 5
+#include <opencv2/geometry.hpp>
+#endif
 #endif
 
 LOG_CHANNEL(ps_move);
 
 namespace gem
 {
-	extern bool convert_image_format(CellCameraFormat input_format, CellGemVideoConvertFormatEnum output_format,
+	extern bool convert_image_format(CellCameraFormat input_format, const CellGemVideoConvertAttribute& vc,
 	                                 const std::vector<u8>& video_data_in, u32 width, u32 height,
-	                                 u8* video_data_out, u32 video_data_out_size, std::string_view caller);
+	                                 u8* video_data_out, u32 video_data_out_size, u8* buffer_memory,
+	                                 std::string_view caller);
 }
 
 template <bool DiagnosticsEnabled>
 ps_move_tracker<DiagnosticsEnabled>::ps_move_tracker()
 {
-	init_workers();
+	m_vc_attr.alpha = 255;
+	m_vc_attr.gain = 1.0f;
+	m_vc_attr.red_gain = 1.0f;
+	m_vc_attr.green_gain = 1.0f;
+	m_vc_attr.blue_gain = 1.0f;
 }
 
 template <bool DiagnosticsEnabled>
@@ -29,14 +38,7 @@ ps_move_tracker<DiagnosticsEnabled>::~ps_move_tracker()
 {
 	for (u32 index = 0; index < CELL_GEM_MAX_NUM; index++)
 	{
-		if (auto& worker = m_workers[index])
-		{
-			auto& thread = *worker;
-			thread = thread_state::aborting;
-			m_wake_up_workers[index].release(1);
-			m_wake_up_workers[index].notify_one();
-			thread();
-		}
+		join_worker(index);
 	}
 }
 
@@ -58,7 +60,7 @@ void ps_move_tracker<DiagnosticsEnabled>::set_valid(ps_move_info& info, u32 inde
 
 	info.valid = valid;
 	fail_count = 0; // Reset fail count
-};
+}
 
 template <bool DiagnosticsEnabled>
 void ps_move_tracker<DiagnosticsEnabled>::set_image_data(const void* buf, u64 size, u32 width, u32 height, s32 format)
@@ -128,52 +130,61 @@ void ps_move_tracker<DiagnosticsEnabled>::set_saturation_threshold(u32 index, u1
 }
 
 template <bool DiagnosticsEnabled>
-void ps_move_tracker<DiagnosticsEnabled>::init_workers()
+void ps_move_tracker<DiagnosticsEnabled>::init_worker(u32 index)
 {
-	for (u32 index = 0; index < CELL_GEM_MAX_NUM; index++)
+	auto& worker = ::at32(m_workers, index);
+	if (worker) return;
+
+	worker = std::make_unique<named_thread<std::function<void()>>>(fmt::format("PS Move Worker %d", index), [this, index]()
 	{
-		if (m_workers[index])
+		while (thread_ctrl::state() != thread_state::aborting)
 		{
-			continue;
-		}
+			// Wait for work
+			m_wake_up_workers[index].wait(0);
+			m_wake_up_workers[index].release(0);
 
-		m_workers[index] = std::make_unique<named_thread<std::function<void()>>>(fmt::format("PS Move Worker %d", index), [this, index]()
-		{
-			while (thread_ctrl::state() != thread_state::aborting)
+			if (thread_ctrl::state() == thread_state::aborting)
 			{
-				// Notify that all work is done
-				m_workers_finished[index].release(1);
-				m_workers_finished[index].notify_one();
-
-				// Wait for work
-				m_wake_up_workers[index].wait(0);
-				m_wake_up_workers[index].release(0);
-
-				if (thread_ctrl::state() == thread_state::aborting)
-				{
-					break;
-				}
-
-				// Find contours
-				ps_move_info& info = m_info[index];
-				ps_move_info new_info = info;
-				process_contours(new_info, index);
-
-				if (new_info.valid)
-				{
-					info = std::move(new_info);
-				}
-				else
-				{
-					info.valid = false;
-				}
+				break;
 			}
 
-			// Notify one last time that all work is done
+			// Find contours
+			ps_move_info& info = m_info[index];
+			ps_move_info new_info = info;
+			process_contours(new_info, index);
+
+			if (new_info.valid)
+			{
+				info = std::move(new_info);
+			}
+			else
+			{
+				info.valid = false;
+			}
+
+			// Notify that all work is done
 			m_workers_finished[index].release(1);
 			m_workers_finished[index].notify_one();
-		});
-	}
+		}
+
+		// Notify one last time that all work is done
+		m_workers_finished[index].release(1);
+		m_workers_finished[index].notify_one();
+	});
+}
+
+template <bool DiagnosticsEnabled>
+void ps_move_tracker<DiagnosticsEnabled>::join_worker(u32 index)
+{
+	auto& worker = ::at32(m_workers, index);
+	if (!worker) return;
+
+	auto& thread = *worker;
+	thread = thread_state::aborting;
+	m_wake_up_workers[index].release(1);
+	m_wake_up_workers[index].notify_one();
+	thread();
+	worker.reset();
 }
 
 template <bool DiagnosticsEnabled>
@@ -193,10 +204,12 @@ void ps_move_tracker<DiagnosticsEnabled>::process_image()
 
 		if (config.active)
 		{
+			init_worker(index);
 			active_devices.push_back(index);
 		}
 		else
 		{
+			join_worker(index);
 			ps_move_info& info = m_info[index];
 			info.valid = false;
 			m_fail_count[index] = 0;
@@ -238,7 +251,9 @@ void ps_move_tracker<DiagnosticsEnabled>::convert_image(s32 output_format)
 		m_image_binary[index].resize(size);
 	}
 
-	if (gem::convert_image_format(CellCameraFormat{m_format}, CellGemVideoConvertFormatEnum{output_format}, m_image_data, width, height, m_image_rgba.data(), ::size32(m_image_rgba), "gemTracker"))
+	m_vc_attr.output_format = CellGemVideoConvertFormatEnum{output_format};
+
+	if (gem::convert_image_format(CellCameraFormat{m_format}, m_vc_attr, m_image_data, width, height, m_image_rgba.data(), ::size32(m_image_rgba), nullptr, "gemTracker"))
 	{
 		ps_move.trace("Converted video frame of format %s to %s", CellCameraFormat{m_format}, CellGemVideoConvertFormatEnum{output_format});
 	}
@@ -344,16 +359,20 @@ void ps_move_tracker<DiagnosticsEnabled>::draw_sphere_size_range(f32 result_radi
 template <bool DiagnosticsEnabled>
 void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u32 index)
 {
+	const u32 width = m_width;
+	const u32 height = m_height;
+
+	if (width == 0 || height == 0)
+	{
+		set_valid(info, index, false);
+		return;
+	}
+
 	const ps_move_config& config = ::at32(m_config, index);
 	const std::vector<u8>& image_hsv = m_image_hsv;
 	std::vector<u8>& image_binary = ::at32(m_image_binary, index);
 
-	const u32 width = m_width;
-	const u32 height = m_height;
 	const bool wrapped_hue = config.min_hue > config.max_hue; // e.g. min=355, max=5 (red)
-
-	info.x_max = width;
-	info.y_max = height;
 
 	// Map memory
 	cv::Mat binary(cv::Size(width, height), CV_8UC1, image_binary.data(), 0);
@@ -373,7 +392,7 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 			// Simply drop dark and colorless pixels as well as pixels that don't match our hue
 			if ((wrapped_hue ? (hue < config.min_hue && hue > config.max_hue) : (hue < config.min_hue || hue > config.max_hue)) ||
 				saturation < config.saturation_threshold_u8 || saturation > 200 ||
-				value < 150 || value > 255)
+				value < 150)
 			{
 				dst[x] = 0;
 			}
@@ -421,19 +440,24 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 	}
 
 	std::vector<std::vector<cv::Point>> contours;
-	contours.reserve(all_contours.size());
-
 	std::vector<cv::Point2f> centers;
-	centers.reserve(all_contours.size());
-
 	std::vector<f32> radii;
-	radii.reserve(all_contours.size());
+
+	if constexpr (DiagnosticsEnabled)
+	{
+		contours.reserve(all_contours.size());
+		centers.reserve(all_contours.size());
+		radii.reserve(all_contours.size());
+	}
 
 	const f32 min_radius = m_min_radius * width;
 	const f32 max_radius = m_max_radius * width;
 
 	usz best_index = umax;
 	f32 best_area = 0.0f;
+	f32 best_radius = 0.0f;
+	cv::Point2f best_center {};
+
 	for (usz i = 0; i < all_contours.size(); i++)
 	{
 		const std::vector<cv::Point>& contour = all_contours[i];
@@ -450,18 +474,27 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 		if (radius < min_radius || radius > max_radius)
 			continue;
 
-		contours.push_back(std::move(all_contours[i]));
-		centers.push_back(std::move(center));
-		radii.push_back(std::move(radius));
+		if constexpr (DiagnosticsEnabled)
+		{
+			contours.push_back(std::move(all_contours[i]));
+			centers.push_back(center);
+			radii.push_back(radius);
+		}
 
 		if (area > best_area)
 		{
 			best_area = area;
-			best_index = contours.size() - 1;
+			best_center = center;
+			best_radius = radius;
+
+			if constexpr (DiagnosticsEnabled)
+			{
+				best_index = contours.size() - 1;
+			}
 		}
 	}
 
-	if (best_index == umax)
+	if (best_area <= 0.0f)
 	{
 		set_valid(info, index, false);
 
@@ -473,7 +506,7 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 	}
 
 	// Calculate distance from sphere to camera
-	const f32 sphere_radius_pixels = radii[best_index];
+	const f32 sphere_radius_pixels = best_radius;
 	constexpr f32 focal_length_mm = 3.5f; // Based on common webcam specs
 	constexpr f32 sensor_width_mm = 3.6f; // Based on common webcam specs
 	const f32 image_width_pixels = static_cast<f32>(width);
@@ -483,23 +516,27 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 	// Set results
 	set_valid(info, index, true);
 
-	const u32 x_pos = std::clamp(static_cast<u32>(centers[best_index].x), 0u, width);
-	const u32 y_pos = std::clamp(static_cast<u32>(centers[best_index].y), 0u, height);
+	const u32 x_pos = std::clamp(static_cast<u32>(best_center.x), 0u, width);
+	const u32 y_pos = std::clamp(static_cast<u32>(best_center.y), 0u, height);
 
 	// Only set new values if the new shape and position are relatively similar to the old ones.
-	const auto distance_travelled = [](int x1, int y1, int x2, int y2)
+	const auto distance_squared = [](int x1, int y1, int x2, int y2)
 	{
-		return std::sqrt(std::pow(x2 - x1, 2) + pow(y2 - y1, 2));
+		const int dx = x2 - x1;
+		const int dy = y2 - y1;
+		return dx * dx + dy * dy;
 	};
+	const f32 max_distance = info.radius * 8.0f;
+	const f32 max_distance_squared = max_distance * max_distance;
 	const bool shape_matches = std::abs(info.radius - sphere_radius_pixels) < (info.radius * 2) &&
-	                           distance_travelled(info.x_pos, info.y_pos, x_pos, y_pos) < (info.radius * 8);
+	                           distance_squared(static_cast<s32>(info.x_pos * width), static_cast<s32>(info.y_pos * height), x_pos, y_pos) < max_distance_squared;
 
 	if (shape_matches || ++m_shape_fail_count[index] >= 3)
 	{
 		info.distance_mm = distance_mm;
 		info.radius = sphere_radius_pixels;
-		info.x_pos = x_pos;
-		info.y_pos = y_pos;
+		info.x_pos = std::clamp(x_pos / static_cast<f32>(width), 0.0f, 1.0f);
+		info.y_pos = std::clamp(y_pos / static_cast<f32>(height), 0.0f, 1.0f);
 
 		m_shape_fail_count[index] = 0; // Reset fail count
 	}
@@ -519,8 +556,8 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 	{
 		std::vector<cv::Point> contour = std::move(contours[best_index]);
 		contours = { std::move(contour) };
-		centers = { centers[best_index] };
-		radii = { radii[best_index] };
+		centers = { best_center };
+		radii = { best_radius };
 	}
 
 	static const cv::Scalar contour_color(255, 0, 0, 255);
@@ -553,12 +590,7 @@ void ps_move_tracker<DiagnosticsEnabled>::process_contours(ps_move_info& info, u
 {
 	ensure(index < m_config.size());
 
-	const u32 width = m_width;
-	const u32 height = m_height;
-
 	info.valid = false;
-	info.x_max = width;
-	info.y_max = height;
 
 	ps_move.error("The tracker is not implemented for this operating system.");
 }

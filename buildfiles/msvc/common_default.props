@@ -3,6 +3,9 @@
 <!-- Common default props for defining properties without macros. Import right before Microsoft.Cpp.Default.props -->
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <EnableLibUsbWindowsHotplug>true</EnableLibUsbWindowsHotplug>
+  </PropertyGroup>
   <PropertyGroup Label="Globals">
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
@@ -13,7 +16,7 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <LanguageStandard Condition = "'$(VisualStudioVersion.Substring(0,2))'&lt;'17'">stdcpplatest</LanguageStandard>
-      <LanguageStandard Condition = "'$(VisualStudioVersion.Substring(0,2))'&gt;='17'">stdcpp20</LanguageStandard>
+      <LanguageStandard Condition = "'$(VisualStudioVersion.Substring(0,2))'&gt;='17'">stdcpp23</LanguageStandard>
       <PreprocessorDefinitions>_SILENCE_CXX17_ITERATOR_BASE_CLASS_DEPRECATION_WARNING=1;_HAS_EXCEPTIONS=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ExceptionHandling>false</ExceptionHandling>
       <AdditionalOptions>-d2FH4- %(AdditionalOptions)</AdditionalOptions>

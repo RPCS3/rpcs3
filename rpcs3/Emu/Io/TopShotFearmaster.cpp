@@ -247,7 +247,7 @@ static int get_heartrate_sensor_value(u8 heartrate)
 	return sensor_data[heartrate - 30];
 }
 
-static void set_sensor_pos(struct TopShotFearmaster_data* ts, s32 led_lx, s32 led_ly, s32 led_rx, s32 led_ry, s32 detect_l, s32 detect_r)
+static void set_sensor_pos(TopShotFearmaster_data* ts, s32 led_lx, s32 led_ly, s32 led_rx, s32 led_ry, s32 detect_l, s32 detect_r)
 {
 	ts->led_lx_hi = led_lx >> 2;
 	ts->led_lx_lo = led_lx & 0x3;
@@ -278,7 +278,7 @@ void usb_device_topshotfearmaster::interrupt_transfer(u32 buf_size, u8* buf, u32
 	transfer->expected_result = HC_CC_NOERR;
 	transfer->expected_time = get_timestamp() + 4000;
 
-	struct TopShotFearmaster_data ts{};
+	TopShotFearmaster_data ts{};
 	ts.dpad = Dpad_None;
 	ts.stick_lx = ts.stick_ly = ts.stick_rx = ts.stick_ry = 0x7f;
 	if (m_mode)
@@ -308,12 +308,12 @@ void usb_device_topshotfearmaster::interrupt_transfer(u32 buf_size, u8* buf, u32
 	}
 
 	bool up = false, right = false, down = false, left = false;
-	const auto input_callback = [&ts, &up, &down, &left, &right](topshotfearmaster_btn btn, pad_button /*pad_button*/, u16 value, bool pressed, bool& /*abort*/)
+	const auto input_callback = [&ts, &up, &down, &left, &right](const emulated_pad_config<topshotfearmaster_btn>::input_value& value, bool& /*abort*/)
 	{
-		if (!pressed)
+		if (!value.pressed)
 			return;
 
-		switch (btn)
+		switch (value.btn)
 		{
 		case topshotfearmaster_btn::trigger: ts.btn_trigger |= 1; break;
 		case topshotfearmaster_btn::heartrate: ts.btn_heartrate |= 1; break;
@@ -329,8 +329,8 @@ void usb_device_topshotfearmaster::interrupt_transfer(u32 buf_size, u8* buf, u32
 		case topshotfearmaster_btn::dpad_down: down = true; break;
 		case topshotfearmaster_btn::dpad_left: left = true; break;
 		case topshotfearmaster_btn::dpad_right: right = true; break;
-		case topshotfearmaster_btn::ls_x: ts.stick_lx = static_cast<uint8_t>(value); break;
-		case topshotfearmaster_btn::ls_y: ts.stick_ly = static_cast<uint8_t>(value); break;
+		case topshotfearmaster_btn::ls_x: ts.stick_lx = static_cast<uint8_t>(value.value); break;
+		case topshotfearmaster_btn::ls_y: ts.stick_ly = static_cast<uint8_t>(value.value); break;
 		case topshotfearmaster_btn::count: break;
 		}
 	};
@@ -374,7 +374,7 @@ void usb_device_topshotfearmaster::interrupt_transfer(u32 buf_size, u8* buf, u32
 
 		mouse_handler.Init(4);
 
-		const u32 mouse_index = g_cfg.io.mouse == mouse_handler::basic ? 0 : m_controller_index;
+		const usz mouse_index = g_cfg.io.mouse == mouse_handler::basic ? 0 : m_controller_index;
 		if (mouse_index >= mouse_handler.GetMice().size())
 		{
 			prepare_data(&ts, buf);
@@ -386,17 +386,11 @@ void usb_device_topshotfearmaster::interrupt_transfer(u32 buf_size, u8* buf, u32
 		ts.trigger = ts.btn_trigger ? 0xff : 0x00;
 		ts.heartrate = ts.btn_heartrate ? get_heartrate_sensor_value(60) : 0;
 
-		if (mouse_data.x_max <= 0 || mouse_data.y_max <= 0)
-		{
-			prepare_data(&ts, buf);
-			return;
-		}
+		s32 led_lx = 0x3ff - (TSF_CALIB_RIGHT + static_cast<s32>(mouse_data.x_pos * (TSF_CALIB_LEFT - TSF_CALIB_RIGHT)) + TSF_CALIB_DIST);
+		s32 led_rx = 0x3ff - (TSF_CALIB_RIGHT + static_cast<s32>(mouse_data.x_pos * (TSF_CALIB_LEFT - TSF_CALIB_RIGHT)) - TSF_CALIB_DIST);
 
-		s32 led_lx = 0x3ff - (TSF_CALIB_RIGHT + (mouse_data.x_pos * (TSF_CALIB_LEFT - TSF_CALIB_RIGHT) / mouse_data.x_max) + TSF_CALIB_DIST);
-		s32 led_rx = 0x3ff - (TSF_CALIB_RIGHT + (mouse_data.x_pos * (TSF_CALIB_LEFT - TSF_CALIB_RIGHT) / mouse_data.x_max) - TSF_CALIB_DIST);
-
-		s32 led_ly = TSF_CALIB_TOP + (mouse_data.y_pos * (TSF_CALIB_BOTTOM - TSF_CALIB_TOP) / mouse_data.y_max);
-		s32 led_ry = TSF_CALIB_TOP + (mouse_data.y_pos * (TSF_CALIB_BOTTOM - TSF_CALIB_TOP) / mouse_data.y_max);
+		s32 led_ly = TSF_CALIB_TOP + static_cast<s32>(mouse_data.y_pos * (TSF_CALIB_BOTTOM - TSF_CALIB_TOP));
+		s32 led_ry = TSF_CALIB_TOP + static_cast<s32>(mouse_data.y_pos * (TSF_CALIB_BOTTOM - TSF_CALIB_TOP));
 
 		u8 detect_l = 0x2, detect_r = 0x2; // 0x2 = led detected / 0xf = undetected
 

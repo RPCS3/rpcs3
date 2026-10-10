@@ -158,12 +158,12 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint
 	}
 
 	const auto& cfg = ::at32(g_cfg_ghltar.players, m_controller_index);
-	cfg->handle_input(pad, true, [&buf](ghltar_btn btn, pad_button /*pad_btn*/, u16 value, bool pressed, bool& /*abort*/)
+	cfg->handle_input(pad, true, [&buf](const auto& value, bool& /*abort*/)
 		{
-			if (!pressed)
+			if (!value.pressed)
 				return;
 
-			switch (btn)
+			switch (value.btn)
 			{
 			case ghltar_btn::w1:
 				buf[0] += 0x01; // W1
@@ -205,17 +205,18 @@ void usb_device_ghltar::interrupt_transfer(u32 buf_size, u8* buf, u32 /*endpoint
 				buf[1] += 0x04; // GHTV Button
 				break;
 			case ghltar_btn::whammy:
-				buf[6] = ~(value) + 0x01; // Whammy
+				buf[6] = ~(value.to_8bit()) + 0x01; // Whammy
 				break;
 			case ghltar_btn::tilt:
-				buf[19] = static_cast<u8>(value); // Tilt
-				if (buf[19] >= 0xF0)
-					buf[5] = 0xFF;
-				else if (buf[19] <= 0x10)
-					buf[5] = 0x00;
+				buf[19] = value.to_8bit(); // Tilt
 				break;
 			case ghltar_btn::count:
 				break;
 			}
 		});
+
+	if (buf[19] >= 0xF0)
+		buf[5] = 0xFF;
+	else if (buf[19] <= 0x10)
+		buf[5] = 0x00;
 }

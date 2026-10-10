@@ -111,6 +111,7 @@ namespace utils
 		atomic_t<bool> m_flush = false;
 		u32 m_framerate = 30;
 		u32 m_sample_rate = 48000;
+		s32 m_sample_format = -1;
 		static constexpr u32 m_samples_per_block = 256;
 	};
 }

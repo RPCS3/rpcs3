@@ -9,6 +9,7 @@ namespace rpcn
 		Login,
 		Terminate,
 		Create,
+		Delete,
 		SendToken,
 		SendResetToken,
 		ResetPassword,
@@ -67,6 +68,10 @@ namespace rpcn
 		GetRoomInfoGUI,
 		QuickMatchGUI,
 		SearchJoinRoomGUI,
+		GetRoomMemberDataExternalList,
+		UnlockTrophy,
+		SyncTrophies,
+		DeleteTrophies,
 	};
 
 	enum class NotificationType : u16
