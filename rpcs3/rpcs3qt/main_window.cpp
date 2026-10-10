@@ -538,6 +538,19 @@ void main_window::Boot(const std::string& path, const std::string& title_id, boo
 	if (is_savestate_compatible(path))
 	{
 		gui_log.success("Boot of savestate successful.");
+
+		// The savestate path does not point to any game. Now that the savestate has been loaded, we can get the real game path and title id.
+		std::string game_path = Emu.GetBoot();
+		if (game_path.starts_with(iso_device::virtual_device_name))
+		{
+			const auto device = fs::get_virtual_device(iso_device::virtual_device_name + "/");
+			if (const auto iso_dev = dynamic_cast<const iso_device*>(device.get()))
+			{
+				game_path = iso_dev->get_loaded_iso();
+			}
+		}
+		m_app_icon = gui::utils::get_app_icon_from_path(game_path, Emu.GetTitleID());
+
 		AddRecentAction(gui::Recent_Game(QString::fromStdString(path), QString::fromStdString(Emu.GetTitleAndTitleID())), true);
 	}
 	else
