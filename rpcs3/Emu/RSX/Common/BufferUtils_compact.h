@@ -147,9 +147,9 @@ namespace
 				const u32 hi = mask >> 8;
 				const auto a = _mm_shuffle_epi8(_mm256_castsi256_si128(value), _mm_loadu_si128(reinterpret_cast<const __m128i*>(s_compress_u16[lo].data())));
 				const auto b = _mm_shuffle_epi8(_mm256_extracti128_si256(value, 1), _mm_loadu_si128(reinterpret_cast<const __m128i*>(s_compress_u16[hi].data())));
-				_mm_storeu_si128(reinterpret_cast<__m128i*>(dst.data() + written), a);
+				_mm_storeu_si128(utils::bless<__m128i>(dst.data() + written), a);
 				written += std::popcount(lo);
-				_mm_storeu_si128(reinterpret_cast<__m128i*>(dst.data() + written), b);
+				_mm_storeu_si128(utils::bless<__m128i>(dst.data() + written), b);
 				written += std::popcount(hi);
 			}
 			else
