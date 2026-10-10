@@ -891,6 +891,12 @@
     <ClCompile Include="Emu\Io\Skylander.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
+    <ClCompile Include="Emu\Io\SkylanderPortalIPC.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
+    <ClCompile Include="Emu\Io\SkylanderPortalIPC_config.cpp">
+      <Filter>Emu\Io</Filter>
+    </ClCompile>
     <ClCompile Include="Emu\Io\KamenRider.cpp">
       <Filter>Emu\Io</Filter>
     </ClCompile>
@@ -1686,6 +1692,15 @@
     <ClInclude Include="Emu\RSX\Common\BufferUtils_avx512.h">
       <Filter>Emu\GPU\RSX\Common</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\BufferUtils_neon.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\BufferUtils_sve.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\RSX\Common\BufferUtils_compact.h">
+      <Filter>Emu\GPU\RSX\Common</Filter>
+    </ClInclude>
     <ClInclude Include="util\types.hpp">
       <Filter>Utilities</Filter>
     </ClInclude>
@@ -2209,6 +2224,12 @@
       <Filter>Emu\Io</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Io\Skylander.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\SkylanderPortalIPC.h">
+      <Filter>Emu\Io</Filter>
+    </ClInclude>
+    <ClInclude Include="Emu\Io\SkylanderPortalIPC_config.h">
       <Filter>Emu\Io</Filter>
     </ClInclude>
     <ClInclude Include="Emu\Io\KamenRider.h">

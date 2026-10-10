@@ -20,6 +20,7 @@
 #include "PPUAnalyser.h"
 #include "PPUModule.h"
 #include "PPUDisAsm.h"
+#include "Common.h"
 #include "SPURecompiler.h"
 #include "timers.hpp"
 #include "lv2/sys_sync.h"
@@ -4887,6 +4888,15 @@ extern void ppu_initialize()
 	}
 }
 
+template <u32 (*Estimate)(u32, bool)>
+static void ppu_vec_estimate(v128& v, u32 nj)
+{
+	for (u32 i = 0; i < 4; i++)
+	{
+		v._u32[i] = Estimate(v._u32[i], nj != 0);
+	}
+}
+
 bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_size)
 {
 	ppu_log.notice("Entering ppu_initialize(const ppu_module&..)");
@@ -4967,6 +4977,10 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 			{ "__escape", reinterpret_cast<u64>(+ppu_escape) },
 			{ "__read_maybe_mmio32", reinterpret_cast<u64>(+ppu_read_mmio_aware_u32) },
 			{ "__write_maybe_mmio32", reinterpret_cast<u64>(+ppu_write_mmio_aware_u32) },
+			{ "__vrefp", reinterpret_cast<u64>(&ppu_vec_estimate<ppu_vrefp>) },
+			{ "__vrsqrtefp", reinterpret_cast<u64>(&ppu_vec_estimate<ppu_vrsqrtefp>) },
+			{ "__vexptefp", reinterpret_cast<u64>(&ppu_vec_estimate<ppu_vexptefp>) },
+			{ "__vlogefp", reinterpret_cast<u64>(&ppu_vec_estimate<ppu_vlogefp>) },
 		};
 
 		for (u64 index = 0; index < 1024; index++)
@@ -5555,6 +5569,7 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				accurate_nj_mode,
 				contains_symbol_resolver,
 				daz_and_ftz,
+				accurate_vest,
 
 				__bitset_enum_max
 			};
@@ -5585,9 +5600,11 @@ bool ppu_initialize(const ppu_module<lv2_obj>& info, bool check_only, u64 file_s
 				settings += ppu_settings::contains_symbol_resolver; // Avoid invalidating all modules for this purpose
 			if (g_cfg.core.set_daz_and_ftz)
 				settings += ppu_settings::daz_and_ftz;
+			if (g_cfg.core.ppu_set_vest)
+				settings += ppu_settings::accurate_vest;
 
 			// Write version, hash, CPU, settings
-			fmt::append(obj_name, "v8-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu.to_string()));
+			fmt::append(obj_name, "v9-kusa-%s-%s-%s.obj", fmt::base57(output, 16), fmt::base57(settings), jit_compiler::cpu(g_cfg.core.llvm_cpu.to_string()));
 		}
 
 		if (cpu ? cpu->state.all_of(cpu_flag::exit) : Emu.IsStopped())

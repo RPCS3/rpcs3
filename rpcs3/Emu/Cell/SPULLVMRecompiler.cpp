@@ -7603,7 +7603,7 @@ public:
 		const bool perm_or_zero_only = known_idx.Zero[6];
 		const bool consts_only = known_idx.One[7];
 		const bool consts_never_msb = known_idx.Zero[5];
-		const bool consts_never_allones = known_idx.One[5];
+		[[maybe_unused]] const bool consts_never_allones = known_idx.One[5];
 		const bool idx_selects_single = known_idx.extractBits(1, 4).isConstant();
 
 		const auto a = get_vr<u8[16]>(op.ra);

@@ -1442,6 +1442,7 @@ settings_dialog::settings_dialog(std::shared_ptr<gui_settings> gui_settings, std
 	// Checkboxes
 
 	EnhanceCheckBox(emu_settings_type::DebugConsoleMode, ui->debugConsoleMode, tooltips.settings.debug_console_mode);
+	EnhanceCheckBox(emu_settings_type::AccuratePPUVEST, ui->accuratePPUVEST, tooltips.settings.accurate_ppuvest);
 	EnhanceCheckBox(emu_settings_type::AccurateRSXAccess, ui->accurateRSXAccess, tooltips.settings.accurate_rsx_access);
 	EnhanceCheckBox(emu_settings_type::AccurateSpuDMA, ui->accurateSpuDMA, tooltips.settings.accurate_spu_dma);
 	EnhanceCheckBox(emu_settings_type::LLVMPrecompilation, ui->llvmPrecompilation, tooltips.settings.llvm_precompilation);

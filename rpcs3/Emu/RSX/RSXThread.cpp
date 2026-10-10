@@ -1005,6 +1005,22 @@ namespace rsx
 		while (method_registers.current_draw_clause.next());
 	}
 
+	bool thread::should_skip_draw() const
+	{
+		if (skip_current_frame || !m_graphics_state.test(rsx::rtt_config_valid) || cond_render_ctrl.disable_rendering())
+		{
+			return true;
+		}
+
+		if (m_graphics_state.test(rsx::rtt_config_no_attachments) &&
+			(g_cfg.video.disable_zcull_queries || !zcull_ctrl->has_active_queries()))
+		{
+			return true;
+		}
+
+		return false;
+	}
+
 	void thread::cpu_task()
 	{
 		while (Emu.IsReady())
@@ -1461,6 +1477,7 @@ namespace rsx
 		layout.width = rsx::method_registers.surface_clip_width();
 		layout.height = rsx::method_registers.surface_clip_height();
 
+		// NOTE: rtt_config_no_attachments is intentionally not reset.
 		m_graphics_state.clear(rsx::rtt_config_contested | rsx::rtt_config_valid);
 		m_current_framebuffer_context = context;
 
@@ -1773,10 +1790,34 @@ namespace rsx
 			m_graphics_state.set(rsx::rtt_config_valid);
 		}
 
-		if (!m_graphics_state.test(rsx::rtt_config_valid) && !layout.zeta_address)
+		const bool framebufferless = !m_graphics_state.test(rsx::rtt_config_valid) && !layout.zeta_address;
+		if (framebufferless)
 		{
-			rsx_log.warning("Framebuffer setup failed. Draw calls may have been lost");
-			return;
+			// No attachments. The hardware still rasterizes in this case and side effects such as ZPASS counters are still updated.
+			if (context != rsx::framebuffer_creation_context::context_draw ||
+				!backend_config.supports_framebufferless_rendering)
+			{
+				rsx_log.warning("Framebuffer setup failed. Draw calls may have been lost");
+				return;
+			}
+
+			// Context must be draw now...
+		}
+
+		if (framebufferless != m_graphics_state.test(rsx::rtt_config_no_attachments))
+		{
+			// Programmable blending reads back from the color attachments and is disabled when there are none.
+			// Force the blend configuration to be re-evaluated when moving in or out of this state.
+			if (framebufferless)
+			{
+				m_graphics_state.set(rsx::rtt_config_no_attachments);
+			}
+			else
+			{
+				m_graphics_state.clear(rsx::rtt_config_no_attachments);
+			}
+
+			m_graphics_state.set(rsx::pipeline_config_dirty);
 		}
 
 		// At least one attachment exists
@@ -1852,7 +1893,8 @@ namespace rsx
 			}
 		}
 
-		if (!really_changed)
+		// Framebufferless setups have no surface info to compare against. Always rebuild.
+		if (!really_changed && !framebufferless)
 		{
 			if (layout.zeta_address == m_depth_surface_info.address &&
 				layout.depth_format == m_depth_surface_info.depth_format &&
@@ -2119,8 +2161,9 @@ namespace rsx
 	{
 		u32 expected_ctrl = 0;
 
-		// Programmable blending
-		if (backend_config.supports_programmable_blending)
+		// Programmable blending. Requires color attachments to read from.
+		if (backend_config.supports_programmable_blending &&
+			!m_graphics_state.test(rsx::rtt_config_no_attachments))
 		{
 			expected_ctrl = current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
 
