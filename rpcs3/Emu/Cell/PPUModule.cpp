@@ -2231,7 +2231,7 @@ bool ppu_load_exec(const ppu_exec_object& elf, bool virtual_load, const std::str
 		}
 	}
 
-	if (ppc_seg != 0x0 && !ar)
+	if (ppc_seg != 0x0 && !ar && !virtual_load)
 	{
 		if (ppc_seg != 0x1)
 		{
