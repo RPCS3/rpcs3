@@ -12,12 +12,12 @@ namespace rsx
 	{
 		bool is_volatile_TIU(rsx::context* ctx, u32 index)
 		{
-			if (!RSX(ctx)->fs_sampler_state[index])
+			if (!ctx->textures.fs_sampler_state[index])
 			{
 				return false;
 			}
 
-			return RSX(ctx)->fs_sampler_state[index]->upload_context != rsx::texture_upload_context::shader_read;
+			return ctx->textures.fs_sampler_state[index]->upload_context != rsx::texture_upload_context::shader_read;
 		}
 
 		void push_vertex_data(rsx::context* ctx, u32 attrib_index, u32 channel_select, int count, rsx::vertex_base_type vtype, u32 value)
@@ -68,7 +68,7 @@ namespace rsx
 				return;
 			}
 
-			RSX(ctx)->m_textures_dirty[index] = true;
+			ctx->textures.fragment_textures_dirty[index] = true;
 
 			if (ctx->program.fp_metadata.referenced_textures_mask & (1 << index))
 			{
@@ -78,7 +78,7 @@ namespace rsx
 
 		void set_vertex_texture_dirty_bit(rsx::context* ctx, u32 index)
 		{
-			RSX(ctx)->m_vertex_textures_dirty[index] = true;
+			ctx->textures.vertex_textures_dirty[index] = true;
 
 			if (ctx->program.vp_metadata.referenced_textures_mask & (1 << index))
 			{
