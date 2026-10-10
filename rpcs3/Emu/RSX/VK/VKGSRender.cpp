@@ -1230,8 +1230,8 @@ void VKGSRender::bind_viewport()
 
 std::pair<f32, f32> VKGSRender::get_viewport_depth_range() const
 {
-	const f32 zclip_near = rsx::method_registers.clip_min();
-	const f32 zclip_far = rsx::method_registers.clip_max();
+	const f32 zclip_near = REGS(m_ctx)->clip_min();
+	const f32 zclip_far = REGS(m_ctx)->clip_max();
 
 	if (m_device->get_unrestricted_depth_range_support()) [[ likely ]]
 	{
