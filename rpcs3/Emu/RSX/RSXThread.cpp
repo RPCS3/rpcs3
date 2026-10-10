@@ -957,10 +957,10 @@ namespace rsx
 			// Check for mode change between rasterized polys vs lines and points
 			// Luckily this almost never happens in real games
 			const auto current_mode = REGS(m_ctx)->current_draw_clause.classify_mode();
-			if (current_mode != m_current_draw_mode)
+			if (current_mode != m_ctx->program.draw_mode)
 			{
 				m_ctx->graphics_state |= (rsx::vertex_program_state_dirty | rsx::fragment_program_state_dirty);
-				m_current_draw_mode = current_mode;
+				m_ctx->program.draw_mode = current_mode;
 			}
 		}
 
@@ -2083,7 +2083,7 @@ namespace rsx
 		}
 
 		const auto target = REGS(m_ctx)->surface_color_target();
-		if (rsx::utility::get_mrt_buffers_count(target) == current_fragment_program.mrt_buffers_count)
+		if (rsx::utility::get_mrt_buffers_count(target) == m_ctx->program.fragment_program.mrt_buffers_count)
 		{
 			return;
 		}
@@ -2164,7 +2164,7 @@ namespace rsx
 		if (backend_config.supports_programmable_blending &&
 			!m_ctx->graphics_state.test(rsx::rtt_config_no_attachments))
 		{
-			expected_ctrl = current_fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
+			expected_ctrl = m_ctx->program.fragment_program.ctrl & RSX_SHADER_CONTROL_PROGRAMMABLE_BLENDING;
 
 			if (m_ctx->graphics_state.test(rsx::pipeline_config_dirty))
 			{
@@ -2237,22 +2237,22 @@ namespace rsx
 		m_ctx->graphics_state |= rsx::pipeline_state::fragment_constants_dirty;
 
 		const auto [program_offset, program_location] = REGS(m_ctx)->shader_program_address();
-		const auto prev_textures_reference_mask = current_fp_metadata.referenced_textures_mask;
+		const auto prev_textures_reference_mask = m_ctx->program.fp_metadata.referenced_textures_mask;
 
 		auto data_ptr = vm::base(rsx::get_address(program_offset, program_location));
-		current_fp_metadata = program_hash_util::fragment_program_utils::analyse_fragment_program(data_ptr);
+		m_ctx->program.fp_metadata = program_hash_util::fragment_program_utils::analyse_fragment_program(data_ptr);
 
-		current_fragment_program.data = (static_cast<u8*>(data_ptr) + current_fp_metadata.program_start_offset);
-		current_fragment_program.offset = program_offset + current_fp_metadata.program_start_offset;
-		current_fragment_program.ucode_length = current_fp_metadata.program_ucode_length;
-		current_fragment_program.total_length = current_fp_metadata.program_ucode_length + current_fp_metadata.program_start_offset;
-		current_fragment_program.texture_state.import(current_fp_texture_state, current_fp_metadata.referenced_textures_mask);
-		current_fragment_program.valid = true;
+		m_ctx->program.fragment_program.data = (static_cast<u8*>(data_ptr) + m_ctx->program.fp_metadata.program_start_offset);
+		m_ctx->program.fragment_program.offset = program_offset + m_ctx->program.fp_metadata.program_start_offset;
+		m_ctx->program.fragment_program.ucode_length = m_ctx->program.fp_metadata.program_ucode_length;
+		m_ctx->program.fragment_program.total_length = m_ctx->program.fp_metadata.program_ucode_length + m_ctx->program.fp_metadata.program_start_offset;
+		m_ctx->program.fragment_program.texture_state.import(m_ctx->program.fp_texture_state, m_ctx->program.fp_metadata.referenced_textures_mask);
+		m_ctx->program.fragment_program.valid = true;
 
 		if (!m_ctx->graphics_state.test(rsx::pipeline_state::fragment_program_state_dirty))
 		{
 			// Verify current texture state is valid
-			for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
+			for (u32 textures_ref = m_ctx->program.fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 			{
 				if (!(textures_ref & 1)) continue;
 
@@ -2265,7 +2265,7 @@ namespace rsx
 		}
 
 		if (!m_ctx->graphics_state.test(rsx::pipeline_state::fragment_program_state_dirty) &&
-			(prev_textures_reference_mask != current_fp_metadata.referenced_textures_mask))
+			(prev_textures_reference_mask != m_ctx->program.fp_metadata.referenced_textures_mask))
 		{
 			// If different textures are used, upload their coefficients.
 			// The texture parameters transfer routine is optimized and only writes data for textures consumed by the ucode.
@@ -2286,22 +2286,22 @@ namespace rsx
 		m_ctx->graphics_state |= rsx::pipeline_state::transform_constants_dirty;
 
 		const u32 transform_program_start = REGS(m_ctx)->transform_program_start();
-		current_vertex_program.data.reserve(512 * 4);
-		current_vertex_program.jump_table.clear();
+		m_ctx->program.vertex_program.data.reserve(512 * 4);
+		m_ctx->program.vertex_program.jump_table.clear();
 
-		current_vp_metadata = program_hash_util::vertex_program_utils::analyse_vertex_program
+		m_ctx->program.vp_metadata = program_hash_util::vertex_program_utils::analyse_vertex_program
 		(
 			REGS(m_ctx)->transform_program.data(),  // Input raw block
 			transform_program_start,                    // Address of entry point
-			current_vertex_program                      // [out] Program object
+			m_ctx->program.vertex_program                      // [out] Program object
 		);
 
-		current_vertex_program.texture_state.import(current_vp_texture_state, current_vp_metadata.referenced_textures_mask);
+		m_ctx->program.vertex_program.texture_state.import(m_ctx->program.vp_texture_state, m_ctx->program.vp_metadata.referenced_textures_mask);
 
 		if (!m_ctx->graphics_state.test(rsx::pipeline_state::vertex_program_state_dirty))
 		{
 			// Verify current texture state is valid
-			for (u32 textures_ref = current_vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
+			for (u32 textures_ref = m_ctx->program.vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 			{
 				if (!(textures_ref & 1)) continue;
 
@@ -2316,14 +2316,14 @@ namespace rsx
 
 	void thread::analyse_current_rsx_pipeline()
 	{
-		m_program_cache_hint.invalidate(m_ctx->graphics_state.load());
+		m_ctx->program.cache_hint.invalidate(m_ctx->graphics_state.load());
 
 		if (u32 export_ctrl = get_fragment_program_export_config();
-			(current_fragment_program.ctrl & fs_export_config_mask) != export_ctrl)
+			(m_ctx->program.fragment_program.ctrl & fs_export_config_mask) != export_ctrl)
 		{
 			// Update control bits for immediate consumers
-			current_fragment_program.ctrl &= ~fs_export_config_mask;
-			current_fragment_program.ctrl |= export_ctrl;
+			m_ctx->program.fragment_program.ctrl &= ~fs_export_config_mask;
+			m_ctx->program.fragment_program.ctrl |= export_ctrl;
 
 			// Signal backend to reload pipeline
 			m_ctx->graphics_state.set(rsx::pipeline_state::fragment_program_state_dirty);
@@ -2337,23 +2337,23 @@ namespace rsx
 	{
 		if (m_ctx->graphics_state.test(rsx::pipeline_state::xform_instancing_state_dirty))
 		{
-			current_vertex_program.ctrl &= ~RSX_SHADER_CONTROL_INSTANCED_CONSTANTS;
+			m_ctx->program.vertex_program.ctrl &= ~RSX_SHADER_CONTROL_INSTANCED_CONSTANTS;
 			if (REGS(m_ctx)->current_draw_clause.is_trivial_instanced_draw)
 			{
-				current_vertex_program.ctrl |= RSX_SHADER_CONTROL_INSTANCED_CONSTANTS;
+				m_ctx->program.vertex_program.ctrl |= RSX_SHADER_CONTROL_INSTANCED_CONSTANTS;
 			}
 
 			m_ctx->graphics_state.clear(rsx::pipeline_state::xform_instancing_state_dirty);
 
 			// Emit invalidate here in case ucode is actually clean
-			m_program_cache_hint.invalidate_vertex_program(current_vertex_program);
+			m_ctx->program.cache_hint.invalidate_vertex_program(m_ctx->program.vertex_program);
 		}
 
 		if (const bool emulate_depth_range = requires_depth_range_emulation();
-			emulate_depth_range != !!(current_vertex_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE))
+			emulate_depth_range != !!(m_ctx->program.vertex_program.ctrl & RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE))
 		{
-			current_vertex_program.ctrl ^= RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE;
-			m_program_cache_hint.invalidate_vertex_program(current_vertex_program);
+			m_ctx->program.vertex_program.ctrl ^= RSX_SHADER_CONTROL_EMULATE_DEPTH_RANGE;
+			m_ctx->program.cache_hint.invalidate_vertex_program(m_ctx->program.vertex_program);
 		}
 
 		if (!m_ctx->graphics_state.test(rsx::pipeline_state::vertex_program_dirty))
@@ -2362,36 +2362,36 @@ namespace rsx
 		}
 
 		ensure(!m_ctx->graphics_state.test(rsx::pipeline_state::vertex_program_ucode_dirty));
-		current_vertex_program.output_mask = REGS(m_ctx)->vertex_attrib_output_mask();
+		m_ctx->program.vertex_program.output_mask = REGS(m_ctx)->vertex_attrib_output_mask();
 
-		current_vertex_program.ctrl &= ~RSX_SHADER_CONTROL_FLAT_SHADING;
+		m_ctx->program.vertex_program.ctrl &= ~RSX_SHADER_CONTROL_FLAT_SHADING;
 		if (REGS(m_ctx)->shade_mode() == rsx::shading_mode::flat &&
 			backend_config.supports_last_provoking_vertex)
 		{
-			current_vertex_program.ctrl |= RSX_SHADER_CONTROL_FLAT_SHADING;
+			m_ctx->program.vertex_program.ctrl |= RSX_SHADER_CONTROL_FLAT_SHADING;
 		}
 
-		for (u32 textures_ref = current_vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
+		for (u32 textures_ref = m_ctx->program.vp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 		{
 			if (!(textures_ref & 1)) continue;
 
 			const auto &tex = REGS(m_ctx)->vertex_textures[i];
-			if (tex.enabled() && (current_vp_metadata.referenced_textures_mask & (1 << i)))
+			if (tex.enabled() && (m_ctx->program.vp_metadata.referenced_textures_mask & (1 << i)))
 			{
-				current_vp_texture_state.clear(i);
-				current_vp_texture_state.set_dimension(sampler_descriptors[i]->image_type, i);
+				m_ctx->program.vp_texture_state.clear(i);
+				m_ctx->program.vp_texture_state.set_dimension(sampler_descriptors[i]->image_type, i);
 
 				if (backend_config.supports_hw_msaa &&
 					sampler_descriptors[i]->samples > 1)
 				{
-					current_vp_texture_state.multisampled_textures |= (1 << i);
+					m_ctx->program.vp_texture_state.multisampled_textures |= (1 << i);
 				}
 			}
 		}
 
-		current_vertex_program.texture_state.import(current_vp_texture_state, current_vp_metadata.referenced_textures_mask);
+		m_ctx->program.vertex_program.texture_state.import(m_ctx->program.vp_texture_state, m_ctx->program.vp_metadata.referenced_textures_mask);
 
-		m_program_cache_hint.invalidate_vertex_program(current_vertex_program);
+		m_ctx->program.cache_hint.invalidate_vertex_program(m_ctx->program.vertex_program);
 	}
 
 	void thread::get_current_fragment_program(const std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count>& sampler_descriptors)
@@ -2405,40 +2405,40 @@ namespace rsx
 
 		m_ctx->graphics_state.clear(rsx::pipeline_state::fragment_program_dirty);
 
-		current_fragment_program.ctrl &= fs_export_config_mask;
-		current_fragment_program.ctrl |= REGS(m_ctx)->shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT | RSX_SHADER_CONTROL_USES_KIL);
-		current_fragment_program.texcoord_control_mask = REGS(m_ctx)->texcoord_control_mask();
-		current_fragment_program.two_sided_lighting = REGS(m_ctx)->two_side_light_en();
-		current_fragment_program.mrt_buffers_count = rsx::utility::get_mrt_buffers_count(REGS(m_ctx)->surface_color_target());
+		m_ctx->program.fragment_program.ctrl &= fs_export_config_mask;
+		m_ctx->program.fragment_program.ctrl |= REGS(m_ctx)->shader_control() & (CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS | CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT | RSX_SHADER_CONTROL_USES_KIL);
+		m_ctx->program.fragment_program.texcoord_control_mask = REGS(m_ctx)->texcoord_control_mask();
+		m_ctx->program.fragment_program.two_sided_lighting = REGS(m_ctx)->two_side_light_en();
+		m_ctx->program.fragment_program.mrt_buffers_count = rsx::utility::get_mrt_buffers_count(REGS(m_ctx)->surface_color_target());
 
 		if (REGS(m_ctx)->shade_mode() == rsx::shading_mode::flat &&
 			backend_config.supports_last_provoking_vertex)
 		{
-			current_fragment_program.ctrl |= RSX_SHADER_CONTROL_FLAT_SHADING;
+			m_ctx->program.fragment_program.ctrl |= RSX_SHADER_CONTROL_FLAT_SHADING;
 		}
 
 		if (REGS(m_ctx)->current_draw_clause.classify_mode() == primitive_class::polygon)
 		{
 			if (!backend_config.supports_normalized_barycentrics)
 			{
-				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION;
+				m_ctx->program.fragment_program.ctrl |= RSX_SHADER_CONTROL_ATTRIBUTE_INTERPOLATION;
 			}
 
 			if (REGS(m_ctx)->polygon_stipple_enabled())
 			{
-				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_POLYGON_STIPPLE;
+				m_ctx->program.fragment_program.ctrl |= RSX_SHADER_CONTROL_POLYGON_STIPPLE;
 			}
 		}
 		else if (REGS(m_ctx)->point_sprite_enabled() &&
 			REGS(m_ctx)->current_draw_clause.primitive == primitive_type::points)
 		{
 			// Set high word of the control mask to store point sprite control
-			current_fragment_program.texcoord_control_mask |= u32(REGS(m_ctx)->point_sprite_control_mask()) << 16;
+			m_ctx->program.fragment_program.texcoord_control_mask |= u32(REGS(m_ctx)->point_sprite_control_mask()) << 16;
 		}
 
 		if (REGS(m_ctx)->alpha_test_enabled())
 		{
-			current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ALPHA_TEST;
+			m_ctx->program.fragment_program.ctrl |= RSX_SHADER_CONTROL_ALPHA_TEST;
 		}
 
 		if (REGS(m_ctx)->msaa_alpha_to_coverage_enabled())
@@ -2447,7 +2447,7 @@ namespace rsx
 			if (!backend_config.supports_hw_a2c || (!is_multiple_samples && !backend_config.supports_hw_a2c_1spp))
 			{
 				// Emulation required
-				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ALPHA_TO_COVERAGE;
+				m_ctx->program.fragment_program.ctrl |= RSX_SHADER_CONTROL_ALPHA_TO_COVERAGE;
 			}
 		}
 
@@ -2461,15 +2461,15 @@ namespace rsx
 			break;
 		default:
 			// Integer framebuffer formats. These can support sRGB output as well as some special rules for output quantization.
-			current_fragment_program.ctrl |= RSX_SHADER_CONTROL_8BIT_FRAMEBUFFER;
-			if (!(current_fragment_program.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) && // Cannot output sRGB from 32-bit registers
+			m_ctx->program.fragment_program.ctrl |= RSX_SHADER_CONTROL_8BIT_FRAMEBUFFER;
+			if (!(m_ctx->program.fragment_program.ctrl & CELL_GCM_SHADER_CONTROL_32_BITS_EXPORTS) && // Cannot output sRGB from 32-bit registers
 				REGS(m_ctx)->framebuffer_srgb_enabled())
 			{
-				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_SRGB_FRAMEBUFFER;
+				m_ctx->program.fragment_program.ctrl |= RSX_SHADER_CONTROL_SRGB_FRAMEBUFFER;
 			}
 			if (REGS(m_ctx)->surface_is_swizzle_remapped())
 			{
-				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_ROP_OUTPUT_REMAP;
+				m_ctx->program.fragment_program.ctrl |= RSX_SHADER_CONTROL_ROP_OUTPUT_REMAP;
 			}
 			break;
 		}
@@ -2477,12 +2477,12 @@ namespace rsx
 		const bool zeta_was_cyclic = m_ctx->graphics_state & rsx::zeta_address_is_cyclic;
 		m_ctx->graphics_state.clear(rsx::zeta_address_is_cyclic);
 
-		for (u32 textures_ref = current_fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
+		for (u32 textures_ref = m_ctx->program.fp_metadata.referenced_textures_mask, i = 0; textures_ref; textures_ref >>= 1, ++i)
 		{
 			if (!(textures_ref & 1)) continue;
 
 			auto &tex = REGS(m_ctx)->fragment_textures[i];
-			current_fp_texture_state.clear(i);
+			m_ctx->program.fp_texture_state.clear(i);
 
 			if (!tex.enabled() || sampler_descriptors[i]->format_class == RSX_FORMAT_CLASS_UNDEFINED)
 			{
@@ -2490,21 +2490,21 @@ namespace rsx
 			}
 
 			std::memcpy(
-				current_fragment_program.texture_params[i].scale,
+				m_ctx->program.fragment_program.texture_params[i].scale,
 				sampler_descriptors[i]->texcoord_xform.scale,
 				sizeof(sampler_descriptors[i]->texcoord_xform.scale) * 2); // Copy scale and bias together
 
-			current_fragment_program.texture_params[i].remap = tex.remap();
+			m_ctx->program.fragment_program.texture_params[i].remap = tex.remap();
 
 			m_ctx->graphics_state |= rsx::pipeline_state::fragment_texture_state_dirty;
 
 			u32 texture_control = 0;
-			current_fp_texture_state.set_dimension(sampler_descriptors[i]->image_type, i);
+			m_ctx->program.fp_texture_state.set_dimension(sampler_descriptors[i]->image_type, i);
 
 			if (sampler_descriptors[i]->texcoord_xform.clamp)
 			{
 				std::memcpy(
-					current_fragment_program.texture_params[i].clamp_min,
+					m_ctx->program.fragment_program.texture_params[i].clamp_min,
 					sampler_descriptors[i]->texcoord_xform.clamp_min,
 					sizeof(sampler_descriptors[i]->texcoord_xform.clamp_min) * 2); // Copy clamp_min and clamp_max together
 
@@ -2515,7 +2515,7 @@ namespace rsx
 			{
 				//alphakill can be ignored unless a valid comparison function is set
 				texture_control |= (1 << texture_control_bits::ALPHAKILL);
-				current_fragment_program.ctrl |= RSX_SHADER_CONTROL_TEXTURE_ALPHA_KILL;
+				m_ctx->program.fragment_program.ctrl |= RSX_SHADER_CONTROL_TEXTURE_ALPHA_KILL;
 			}
 
 			//const u32 texaddr = rsx::get_address(tex.offset(), tex.location());
@@ -2531,15 +2531,15 @@ namespace rsx
 					// This is done to work around fdiv precision issues in some GPUs (NVIDIA)
 					// We apply the simplification where (x + bias) * z = xz + zbias here.
 					constexpr auto subpixel_bias = 0.01f;
-					current_fragment_program.texture_params[i].bias[0] += (subpixel_bias * current_fragment_program.texture_params[i].scale[0]);
-					current_fragment_program.texture_params[i].bias[1] += (subpixel_bias * current_fragment_program.texture_params[i].scale[1]);
-					current_fragment_program.texture_params[i].bias[2] += (subpixel_bias * current_fragment_program.texture_params[i].scale[2]);
+					m_ctx->program.fragment_program.texture_params[i].bias[0] += (subpixel_bias * m_ctx->program.fragment_program.texture_params[i].scale[0]);
+					m_ctx->program.fragment_program.texture_params[i].bias[1] += (subpixel_bias * m_ctx->program.fragment_program.texture_params[i].scale[1]);
+					m_ctx->program.fragment_program.texture_params[i].bias[2] += (subpixel_bias * m_ctx->program.fragment_program.texture_params[i].scale[2]);
 				}
 			}
 
 			if (backend_config.supports_hw_msaa && sampler_descriptors[i]->samples > 1)
 			{
-				current_fp_texture_state.multisampled_textures |= (1 << i);
+				m_ctx->program.fp_texture_state.multisampled_textures |= (1 << i);
 				texture_control |= (static_cast<u32>(tex.zfunc()) << texture_control_bits::DEPTH_COMPARE_OP);
 				texture_control |= (static_cast<u32>(tex.mag_filter() != rsx::texture_magnify_filter::nearest) << texture_control_bits::FILTERED_MAG);
 				texture_control |= (static_cast<u32>(tex.min_filter() != rsx::texture_minify_filter::nearest) << texture_control_bits::FILTERED_MIN);
@@ -2579,7 +2579,7 @@ namespace rsx
 				case CELL_GCM_TEXTURE_D8R8G8B8:
 				{
 					// Emulate bitcast in shader
-					current_fp_texture_state.redirected_textures |= (1 << i);
+					m_ctx->program.fp_texture_state.redirected_textures |= (1 << i);
 					const auto float_en = (sampler_descriptors[i]->format_class == RSX_FORMAT_CLASS_DEPTH24_FLOAT_X8_PACK32)? 1 : 0;
 					texture_control |= (float_en << texture_control_bits::DEPTH_FLOAT);
 					break;
@@ -2600,7 +2600,7 @@ namespace rsx
 						compare_mode < rsx::comparison_function::always &&
 						compare_mode > rsx::comparison_function::never)
 					{
-						current_fp_texture_state.shadow_textures |= (1 << i);
+						m_ctx->program.fp_texture_state.shadow_textures |= (1 << i);
 					}
 					break;
 				}
@@ -2615,10 +2615,10 @@ namespace rsx
 				{
 					m_ctx->graphics_state |= rsx::zeta_address_is_cyclic;
 
-					if (!(current_fragment_program.ctrl & (CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT | RSX_SHADER_CONTROL_META_USES_DISCARD | RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE)) &&
+					if (!(m_ctx->program.fragment_program.ctrl & (CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT | RSX_SHADER_CONTROL_META_USES_DISCARD | RSX_SHADER_CONTROL_EMULATE_DEPTH_COMPARE)) &&
 						m_ctx->fb.layout.zeta_write_enabled)
 					{
-						current_fragment_program.ctrl |= RSX_SHADER_CONTROL_DISABLE_EARLY_Z;
+						m_ctx->program.fragment_program.ctrl |= RSX_SHADER_CONTROL_DISABLE_EARLY_Z;
 					}
 				}
 			}
@@ -2639,7 +2639,7 @@ namespace rsx
 				case CELL_GCM_TEXTURE_R5G6B5:
 				case CELL_GCM_TEXTURE_R6G5B5:
 					texture_control |= (1 << texture_control_bits::RENORMALIZE);
-					current_fragment_program.ctrl |= RSX_SHADER_CONTROL_TEXTURE_FORMAT_CONVERT;
+					m_ctx->program.fragment_program.ctrl |= RSX_SHADER_CONTROL_TEXTURE_FORMAT_CONVERT;
 					break;
 				default:
 					break;
@@ -2653,27 +2653,27 @@ namespace rsx
 
 				if (format_ex.texel_remap_control)
 				{
-					current_fragment_program.ctrl |= RSX_SHADER_CONTROL_TEXTURE_FORMAT_CONVERT;
+					m_ctx->program.fragment_program.ctrl |= RSX_SHADER_CONTROL_TEXTURE_FORMAT_CONVERT;
 				}
 
-				if (current_fp_metadata.bx2_texture_reads_mask)
+				if (m_ctx->program.fp_metadata.bx2_texture_reads_mask)
 				{
-					current_fragment_program.ctrl |= RSX_SHADER_CONTROL_TEXTURE_FORMAT_CONVERT;
+					m_ctx->program.fragment_program.ctrl |= RSX_SHADER_CONTROL_TEXTURE_FORMAT_CONVERT;
 
 					const u32 remap_hi = tex.decoded_remap().shuffle_mask_bits(0xFu);
-					current_fragment_program.texture_params[i].remap &= ~(0xFu << 16u);
-					current_fragment_program.texture_params[i].remap |= (remap_hi << 16u);
+					m_ctx->program.fragment_program.texture_params[i].remap &= ~(0xFu << 16u);
+					m_ctx->program.fragment_program.texture_params[i].remap |= (remap_hi << 16u);
 				}
 			}
 
-			current_fragment_program.texture_params[i].control = texture_control;
+			m_ctx->program.fragment_program.texture_params[i].control = texture_control;
 		}
 
 		// Update texture configuration
-		current_fragment_program.texture_state.import(current_fp_texture_state, current_fp_metadata.referenced_textures_mask);
+		m_ctx->program.fragment_program.texture_state.import(m_ctx->program.fp_texture_state, m_ctx->program.fp_metadata.referenced_textures_mask);
 
 		//Sanity checks
-		if (current_fragment_program.ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
+		if (m_ctx->program.fragment_program.ctrl & CELL_GCM_SHADER_CONTROL_DEPTH_EXPORT)
 		{
 			//Check that the depth stage is not disabled
 			if (!REGS(m_ctx)->depth_test_enabled())
@@ -2682,7 +2682,7 @@ namespace rsx
 			}
 		}
 
-		m_program_cache_hint.invalidate_fragment_program(current_fragment_program);
+		m_ctx->program.cache_hint.invalidate_fragment_program(m_ctx->program.fragment_program);
 
 		if (zeta_was_cyclic && zeta_was_cyclic != m_ctx->graphics_state.test(rsx::zeta_address_is_cyclic))
 		{
@@ -2694,7 +2694,7 @@ namespace rsx
 
 	bool thread::invalidate_fragment_program(u32 dst_dma, u32 dst_offset, u32 size)
 	{
-		if (!current_fragment_program.total_length)
+		if (!m_ctx->program.fragment_program.total_length)
 		{
 			// No shader loaded
 			return false;
@@ -2707,7 +2707,7 @@ namespace rsx
 			return false;
 		}
 
-		const auto current_fragment_shader_range = address_range32::start_length(shader_offset, current_fragment_program.total_length);
+		const auto current_fragment_shader_range = address_range32::start_length(shader_offset, m_ctx->program.fragment_program.total_length);
 		if (!current_fragment_shader_range.overlaps(address_range32::start_length(dst_offset, size)))
 		{
 			// No range overlap
@@ -3089,8 +3089,8 @@ namespace rsx
 
 		if (is_paused(flags) && flags & cpu_flag::wait)
 		{
-			fmt::append(ret, "\nFragment Program Hash: %X.fp", current_fragment_program.get_data() ? program_hash_util::fragment_program_utils::get_fragment_program_ucode_hash(current_fragment_program) : 0);
-			fmt::append(ret, "\nVertex Program Hash: %X.vp", current_vertex_program.data.empty() ? 0 : program_hash_util::vertex_program_utils::get_vertex_program_ucode_hash(current_vertex_program));
+			fmt::append(ret, "\nFragment Program Hash: %X.fp", m_ctx->program.fragment_program.get_data() ? program_hash_util::fragment_program_utils::get_fragment_program_ucode_hash(m_ctx->program.fragment_program) : 0);
+			fmt::append(ret, "\nVertex Program Hash: %X.vp", m_ctx->program.vertex_program.data.empty() ? 0 : program_hash_util::vertex_program_utils::get_vertex_program_ucode_hash(m_ctx->program.vertex_program));
 		}
 		else
 		{
