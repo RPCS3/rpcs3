@@ -1,7 +1,6 @@
 #pragma once // No BOM and only basic ASCII in this header, or a neko will die
 
 #include <cstdint>
-#include <cstddef>
 #include <cstring>
 #include <type_traits>
 #include <utility>
