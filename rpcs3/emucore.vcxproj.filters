@@ -1423,6 +1423,9 @@
     <ClCompile Include="Loader\IRD_validation.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
+    <ClCompile Include="Loader\CHD.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
     <ClCompile Include="Loader\ISO.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
@@ -2942,6 +2945,9 @@
       <Filter>Loader</Filter>
     </ClInclude>
     <ClInclude Include="Loader\IRD_validation.h">
+      <Filter>Loader</Filter>
+    </ClInclude>
+    <ClInclude Include="Loader\CHD.h">
       <Filter>Loader</Filter>
     </ClInclude>
     <ClInclude Include="Loader\ISO.h">
