@@ -1426,6 +1426,9 @@
     <ClCompile Include="Loader\ISO.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
+    <ClCompile Include="Loader\ZAR_ISO.cpp">
+      <Filter>Loader</Filter>
+    </ClCompile>
     <ClCompile Include="Loader\iso_cache.cpp">
       <Filter>Loader</Filter>
     </ClCompile>
@@ -2945,6 +2948,9 @@
       <Filter>Loader</Filter>
     </ClInclude>
     <ClInclude Include="Loader\ISO.h">
+      <Filter>Loader</Filter>
+    </ClInclude>
+    <ClInclude Include="Loader\ZAR_ISO.h">
       <Filter>Loader</Filter>
     </ClInclude>
     <ClInclude Include="Loader\iso_cache.h">

@@ -672,6 +672,12 @@
     <ClCompile Include="rpcs3qt\dimensions_dialog.cpp">
       <Filter>Gui\dimensions</Filter>
     </ClCompile>
+    <ClCompile Include="rpcs3qt\disc_compression_manager_dialog.cpp">
+      <Filter>Gui\misc dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="rpcs3qt\game_source_dialog.cpp">
+      <Filter>Gui\misc dialogs</Filter>
+    </ClCompile>
     <ClCompile Include="rpcs3qt\infinity_dialog.cpp">
       <Filter>Gui\infinity</Filter>
     </ClCompile>
@@ -792,7 +798,13 @@
     <ClCompile Include="QTGeneratedFiles\Debug\moc_dimensions_dialog.cpp">
       <Filter>Generated Files\Debug</Filter>
     </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Debug\moc_disc_compression_manager_dialog.cpp">
+      <Filter>Generated Files\Debug</Filter>
+    </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Release\moc_dimensions_dialog.cpp">
+      <Filter>Generated Files\Release</Filter>
+    </ClCompile>
+    <ClCompile Include="QTGeneratedFiles\Release\moc_disc_compression_manager_dialog.cpp">
       <Filter>Generated Files\Release</Filter>
     </ClCompile>
     <ClCompile Include="QTGeneratedFiles\Debug\moc_infinity_dialog.cpp">
@@ -1583,6 +1595,9 @@
     <ClInclude Include="rpcs3qt\auto_scroll_label.h">
       <Filter>Gui\widgets</Filter>
     </ClInclude>
+    <ClInclude Include="rpcs3qt\game_source_dialog.h">
+      <Filter>Gui\misc dialogs</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -1770,6 +1785,9 @@
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\dimensions_dialog.h">
       <Filter>Gui\dimensions</Filter>
+    </CustomBuild>
+    <CustomBuild Include="rpcs3qt\disc_compression_manager_dialog.h">
+      <Filter>Gui\misc dialogs</Filter>
     </CustomBuild>
     <CustomBuild Include="rpcs3qt\infinity_dialog.h">
       <Filter>Gui\infinity</Filter>

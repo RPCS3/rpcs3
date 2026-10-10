@@ -112,3 +112,7 @@
 	path = 3rdparty/protobuf/protobuf
 	url = ../../protocolbuffers/protobuf.git
 	ignore = dirty
+[submodule "3rdparty/zarchive/zarchive"]
+	path = 3rdparty/zarchive/zarchive
+	url = ../../Exzap/ZArchive.git
+	ignore = dirty

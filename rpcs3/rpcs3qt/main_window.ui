@@ -210,7 +210,6 @@
      <addaction name="separator"/>
     </widget>
     <addaction name="bootGameAct"/>
-    <addaction name="bootIsoAct"/>
     <addaction name="bootVSHAct"/>
     <addaction name="bootElfMenu"/>
     <addaction name="bootSavestateAct"/>
@@ -218,7 +217,6 @@
     <addaction name="bootRecentMenu"/>
     <addaction name="separator"/>
     <addaction name="addGamesAct"/>
-    <addaction name="addIsoGamesAct"/>
     <addaction name="bootInstallPkgAct"/>
     <addaction name="bootInstallPupAct"/>
     <addaction name="separator"/>
@@ -377,6 +375,7 @@
     <addaction name="toolsVfsDialogAct"/>
     <addaction name="patchCreatorAct"/>
     <addaction name="actionMusic_Player"/>
+    <addaction name="toolsDiscCompressionManagerAct"/>
     <addaction name="separator"/>
     <addaction name="toolsCgDisasmAct"/>
     <addaction name="toolsDecryptSprxLibsAct"/>
@@ -1378,6 +1377,14 @@
     <string>Create RSX Capture</string>
    </property>
   </action>
+  <action name="toolsDiscCompressionManagerAct">
+   <property name="text">
+    <string>Disc Compression Manager</string>
+   </property>
+   <property name="toolTip">
+    <string>Compress PS3 disc games to ZArchive</string>
+   </property>
+  </action>
   <action name="actionCreate_Savestate">
    <property name="enabled">
     <bool>false</bool>
@@ -1621,16 +1628,6 @@
   <action name="actionDownload_Update">
    <property name="text">
     <string>Download Update</string>
-   </property>
-  </action>
-  <action name="addIsoGamesAct">
-   <property name="text">
-    <string>Add ISO Games</string>
-   </property>
-  </action>
-  <action name="bootIsoAct">
-   <property name="text">
-    <string>Boot ISO</string>
    </property>
   </action>
   <action name="playHoverMusicAct">
