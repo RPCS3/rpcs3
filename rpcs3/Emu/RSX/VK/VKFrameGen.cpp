@@ -61,7 +61,7 @@ namespace vk
 {
 	namespace
 	{
-		// Every pass: 8x8 invocations a group, four inputs sampled (unused ones
+		// Every pass: 8x8 invocations a group, six inputs sampled (unused ones
 		// bound to the first), one output written, twelve numbers pushed
 		constexpr const char* c_header = R"(
 #version 450
@@ -70,7 +70,9 @@ layout(set = 0, binding = 0) uniform sampler2D tex0;
 layout(set = 0, binding = 1) uniform sampler2D tex1;
 layout(set = 0, binding = 2) uniform sampler2D tex2;
 layout(set = 0, binding = 3) uniform sampler2D tex3;
-layout(set = 0, binding = 4, %FORMAT%) uniform writeonly image2D dst;
+layout(set = 0, binding = 4) uniform sampler2D tex4;
+layout(set = 0, binding = 5) uniform sampler2D tex5;
+layout(set = 0, binding = 6, %FORMAT%) uniform writeonly image2D dst;
 layout(push_constant) uniform push_block { vec4 p0; vec4 p1; vec4 p2; };
 )";
 
@@ -103,10 +105,11 @@ layout(push_constant) uniform push_block { vec4 p0; vec4 p1; vec4 p2; };
 			pass_camera_check,   // each block: whether it moved with that field
 			pass_refine,         // the vectors, made to agree with their neighbours
 			pass_hud,            // the last frame, with where the HUD stands still
+			pass_blur,           // a frame at half size, softened, for judging matches
 			pass_between,        // the frame between
 		};
 
-		constexpr const char* c_formats[] = { "r32f", "r32f", "rgba16f", "rgba16f", "rgba16f", "rgba8", "rgba32f", "rgba32f", "r32f", "rgba16f", "rgba8", "rgba8" };
+		constexpr const char* c_formats[] = { "r32f", "r32f", "rgba16f", "rgba16f", "rgba16f", "rgba8", "rgba32f", "rgba32f", "r32f", "rgba16f", "rgba8", "rgba8", "rgba8" };
 
 		constexpr const char* c_bodies[] =
 		{
@@ -781,27 +784,62 @@ void main()
 	imageStore(dst, p, vec4(texelFetch(tex0, p, 0).rgb, drawn * (1.0 - smoothstep(0.004, 0.01, gaps[12]))));
 }
 )",
+			// pass_blur: tex0 a frame; p0 = (its used size, the half size). Each
+			// texel the mean of the 4x4 pixels round it, for pass_between to judge
+			// how well two ends agree on: judged pixel by pixel, two neighbouring
+			// pixels on an edge or a texture weighed the 16 blocks' vectors very
+			// differently, and the frame between was a scatter of fragments, each
+			// from another vector: like a TV's static on my console (build 121's
+			// frames saved in GTA IV)
+			R"(
+void main()
+{
+	const ivec2 p = ivec2(gl_GlobalInvocationID.xy);
+	if (p.x >= int(p0.z) || p.y >= int(p0.w)) return;
+	const ivec2 lim = ivec2(p0.xy) - 1;
+	vec3 sum = vec3(0.0);
+	for (int k = 0; k < 16; k++)
+	{
+		sum += texelFetch(tex0, clamp(p * 2 + ivec2((k & 3) - 1, (k >> 2) - 1), ivec2(0), lim), 0).rgb;
+	}
+	imageStore(dst, p, vec4(sum / 16.0, 1.0));
+}
+)",
 			// pass_between: tex0 the last frame (its own size) with its HUD
 			// (pass_hud), tex1 this one, tex2 the vectors (pass_median), tex3
-			// the camera's field (pass_camera); p0 = (this frame's used part as a
-			// share of its texture, the output size), p1 = (the working size, the
-			// share of the vector grid it covers), p2.x the time t from the last
-			// frame (0) to this one (1). Each vector, from a point of this frame to where it
-			// was in the last, is followed t of the way back from here in the last
-			// frame and 1 - t of the way on in this one, and the two blended by t.
-			// Each pixel blends what the 16 blocks round it predict so, weighted
-			// by a tent two blocks wide over the grid, by how well each one's two
-			// ends agree here (exp(-(gap / 0.05)^2)) and by how well the block
-			// matched; and the camera's field where it holds, weighted by the
-			// blocks' check. Picking one vector a pixel (builds 106 to 117) turned
-			// a wrong one into a sharp wrong patch, which flickered as each frame
-			// between picked again; blended, a wrong vector blurs.
+			// the camera's field (pass_camera), tex4 and tex5 the last frame and
+			// this one at half size, softened (pass_blur); p0 = (this frame's used
+			// part as a share of its texture, the output size), p1 = (the working
+			// size, the share of the vector grid it covers), p2.x the time t from
+			// the last frame (0) to this one (1). Each vector, from a point of
+			// this frame to where it was in the last, is followed t of the way
+			// back from here in the last frame and 1 - t of the way on in this
+			// one, and the two blended by t. Each pixel blends what the 16 blocks
+			// round it predict so, weighted by a tent two blocks wide over the
+			// grid, by how well each one's two ends agree here and by how well
+			// the block matched; and the camera's field where it holds, weighted
+			// by the blocks' check. Picking one vector a pixel (builds 106 to 117)
+			// turned a wrong one into a sharp wrong patch, which flickered as each
+			// frame between picked again; blended, a wrong vector blurs. How well
+			// two ends agree: on the softened half-size frames, exp(-(gap /
+			// 0.12)^2) (build 121: on the frames themselves, 0.05), so that
+			// neighbouring pixels weigh the blocks alike; an end off the screen
+			// does not agree (the road leaving the screen's bottom as the player
+			// walks on matched the screen's edge by chance). On the frames saved
+			// in GTA IV, the fine scatter (pixels standing out of their 3x3
+			// neighbourhood) went from 3.3 to 4.8 times the real frames' own to
+			// 1.1 to 1.5 times; in the model of these passes, a city turned 6
+			// degrees a game frame and walked with the camera high went from 22.0
+			// to 22.3 dB and 26.0 to 26.6, the walking player's head kept from 90%
+			// to 92%.
 			// Where none agree well (the best under 0.15 to 0.6): both frames
 			// carried along the blocks' vectors averaged over the same tent
 			// (weighted by how well each matched), each end weighed by how much it
-			// looks like what this spot shows in either frame, and where the two
-			// ends still disagree no better than the frames do unmoved, the frames
-			// crossfaded where they are. Build 120 crossfaded them in any case: in
+			// looks like what this spot shows in either frame (an end off the
+			// screen not at all), and where the frames unmoved agree clearly
+			// better than the carried ends (by 0 to 0.1), the frames crossfaded
+			// where they are. (Build 121 weighed the two by the ratio of their
+			// agreements, which where both were poor flipped from pixel to pixel.) Build 120 crossfaded them in any case: in
 			// GTA IV's quick turns, the game at 15 to 20 fps, the picture moved 120
 			// to 190 pixels a game frame, the frames' motion blur differs, and
 			// most of the frame fell back to two pictures 100 pixels apart torn
@@ -829,6 +867,11 @@ void main()
 float largest(const vec3 c)
 {
 	return max(max(c.r, c.g), c.b);
+}
+
+float inside(const vec2 q)
+{
+	return q.x >= 0.0 && q.y >= 0.0 && q.x <= 1.0 && q.y <= 1.0 ? 1.0 : 0.0;
 }
 
 void main()
@@ -861,10 +904,12 @@ void main()
 				beside_still = beside_still || length(v.xy) <= 1.0;
 			}
 			const vec2 d = v.xy / p1.xy;
-			const vec3 l = texture(tex0, uv + t * d).rgb;
-			const vec3 n = texture(tex1, (uv - (1.0 - t) * d) * p0.xy).rgb;
-			const float gap = largest(abs(l - n)) / 0.05;
-			const float agree = exp(-gap * gap);
+			const vec2 at_l = uv + t * d;
+			const vec2 at_n = uv - (1.0 - t) * d;
+			const vec3 l = texture(tex0, at_l).rgb;
+			const vec3 n = texture(tex1, at_n * p0.xy).rgb;
+			const float gap = largest(abs(texture(tex4, at_l).rgb - texture(tex5, at_n).rgb)) / 0.12;
+			const float agree = exp(-gap * gap) * inside(at_l) * inside(at_n);
 			const float trust = 1.0 - smoothstep(0.035, 0.11, v.z);
 			const float w = spatial * agree * trust + 1e-6 * spatial;
 			sum += w * mix(l, n, t);
@@ -887,10 +932,12 @@ void main()
 		const float fy = (2.0 * uv.y - 1.0) * p1.y / p1.x;
 		const vec2 d = vec2(m0.x + m0.y * fx + m0.z * fy + m1.z * fx * fx + m1.w * fx * fy,
 			m0.w + m1.x * fx + m1.y * fy + m1.z * fx * fy + m1.w * fy * fy) / p1.xy;
-		const vec3 l = texture(tex0, uv + t * d).rgb;
-		const vec3 n = texture(tex1, (uv - (1.0 - t) * d) * p0.xy).rgb;
-		const float gap = largest(abs(l - n)) / 0.05;
-		const float agree = exp(-gap * gap);
+		const vec2 at_l = uv + t * d;
+		const vec2 at_n = uv - (1.0 - t) * d;
+		const vec3 l = texture(tex0, at_l).rgb;
+		const vec3 n = texture(tex1, at_n * p0.xy).rgb;
+		const float gap = largest(abs(texture(tex4, at_l).rgb - texture(tex5, at_n).rgb)) / 0.12;
+		const float agree = exp(-gap * gap) * inside(at_l) * inside(at_n);
 		const float check = texture(tex2, grid_uv).w;
 		sum += check * agree * mix(l, n, t);
 		weight += check * agree;
@@ -908,19 +955,17 @@ void main()
 	const vec2 motion = motion_sum / motion_weight;
 	const float spread = sqrt(max(motion_square / motion_weight - dot(motion, motion), 0.0));
 	const vec2 dm = motion / p1.xy;
-	const vec4 ml_hud = texture(tex0, uv + t * dm);
+	const vec2 at_ml = uv + t * dm;
+	const vec2 at_mn = uv - (1.0 - t) * dm;
+	const vec4 ml_hud = texture(tex0, at_ml);
 	const vec3 ml = ml_hud.rgb;
-	const vec3 mn = texture(tex1, (uv - (1.0 - t) * dm) * p0.xy).rgb;
+	const vec3 mn = texture(tex1, at_mn * p0.xy).rgb;
 	const float like_l = min(largest(abs(ml - there)), largest(abs(ml - here))) / 0.1;
 	const float like_n = min(largest(abs(mn - there)), largest(abs(mn - here))) / 0.1;
-	const float wl = (1.0 - t) * (exp(-like_l * like_l) + 0.001) * (1.0 - ml_hud.a) + 1e-6;
-	const float wn = t * (exp(-like_n * like_n) + 0.001) * (1.0 - texture(tex0, uv - (1.0 - t) * dm).a) + 1e-6;
+	const float wl = (1.0 - t) * (exp(-like_l * like_l) + 0.05) * (1.0 - ml_hud.a) * inside(at_ml) + 1e-6;
+	const float wn = t * (exp(-like_n * like_n) + 0.05) * (1.0 - texture(tex0, at_mn).a) * inside(at_mn) + 1e-6;
 	const vec3 carried = (wl * ml + wn * mn) / (wl + wn);
-	const float gap_carried = largest(abs(ml - mn)) / 0.1;
-	const float gap_unmoved = largest(abs(there - here)) / 0.1;
-	const float agree_carried = exp(-gap_carried * gap_carried);
-	const float agree_unmoved = exp(-gap_unmoved * gap_unmoved);
-	const float carry = (agree_carried + 0.001) / (agree_carried + agree_unmoved + 0.002) * (1.0 - smoothstep(4.0, 16.0, spread));
+	const float carry = (1.0 - smoothstep(0.0, 0.1, largest(abs(ml - mn)) - largest(abs(there - here)))) * (1.0 - smoothstep(4.0, 16.0, spread));
 	const vec3 fallback = mix(mix(there, here, t), carried, carry);
 	const vec3 still_gap = abs(there - here);
 	float still = beside_still ? 1.0 - smoothstep(0.012, 0.04, largest(still_gap)) : 0.0;
@@ -935,7 +980,7 @@ void main()
 		template <int Kind>
 		struct frame_generation_pass : compute_task
 		{
-			const vk::image_view* m_inputs[4]{};
+			const vk::image_view* m_inputs[6]{};
 			const vk::image_view* m_output = nullptr;
 			std::unique_ptr<vk::sampler> m_sampler;
 
@@ -954,11 +999,11 @@ void main()
 			std::vector<glsl::program_input> get_inputs() override
 			{
 				auto result = compute_task::get_inputs();
-				for (u32 i = 0; i < 4; i++)
+				for (u32 i = 0; i < 6; i++)
 				{
 					result.push_back(glsl::program_input::make(::glsl::program_domain::glsl_compute_program, "tex" + std::to_string(i), vk::glsl::input_type_texture, 0, i));
 				}
-				result.push_back(glsl::program_input::make(::glsl::program_domain::glsl_compute_program, "dst", vk::glsl::input_type_storage_texture, 0, 4));
+				result.push_back(glsl::program_input::make(::glsl::program_domain::glsl_compute_program, "dst", vk::glsl::input_type_storage_texture, 0, 6));
 				return result;
 			}
 
@@ -972,11 +1017,11 @@ void main()
 						VK_FALSE, 0.f, 1.f, 0.f, 0.f, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_NEAREST, VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK);
 				}
 
-				for (u32 i = 0; i < 4; i++)
+				for (u32 i = 0; i < 6; i++)
 				{
 					m_program->bind_uniform({ *m_inputs[i], *m_sampler }, 0, i);
 				}
-				m_program->bind_uniform({ *m_output }, 0, 4);
+				m_program->bind_uniform({ *m_output }, 0, 6);
 			}
 
 			void run(const vk::command_buffer& cmd, std::initializer_list<vk::viewable_image*> inputs, vk::viewable_image* output, u32 width, u32 height, const std::array<f32, 12>& params)
@@ -987,7 +1032,7 @@ void main()
 				{
 					m_inputs[i++] = view(input);
 				}
-				for (; i < 4; i++)
+				for (; i < 6; i++)
 				{
 					m_inputs[i] = m_inputs[0];
 				}
@@ -1102,6 +1147,7 @@ void main()
 		};
 		drop(m_prev_color);
 		drop(m_prev_hud);
+		for (auto& image : m_blur) drop(image);
 		for (auto& image : m_luma) drop(image);
 		for (auto& image : m_luma_coarse) drop(image);
 		for (auto& image : m_luma_rough) drop(image);
@@ -1137,6 +1183,10 @@ void main()
 
 		m_prev_color = make_image(width, height, VK_FORMAT_R8G8B8A8_UNORM);
 		m_prev_hud = make_image(width, height, VK_FORMAT_R8G8B8A8_UNORM);
+		for (auto& image : m_blur)
+		{
+			image = make_image(utils::aligned_div(width, 2u), utils::aligned_div(height, 2u), VK_FORMAT_R8G8B8A8_UNORM);
+		}
 		bool outputs = true;
 		for (auto& image : m_output)
 		{
@@ -1169,7 +1219,7 @@ void main()
 			image = make_image(utils::aligned_div(m_work_w, 8u), utils::aligned_div(m_work_h, 8u), VK_FORMAT_R16G16B16A16_SFLOAT);
 		}
 
-		if (!m_prev_color || !m_prev_hud || !outputs || !m_luma[0] || !m_luma[1] || !m_luma_coarse[0] || !m_luma_coarse[1] || !m_luma_rough[0] || !m_luma_rough[1] ||
+		if (!m_prev_color || !m_prev_hud || !m_blur[0] || !m_blur[1] || !outputs || !m_luma[0] || !m_luma[1] || !m_luma_coarse[0] || !m_luma_coarse[1] || !m_luma_rough[0] || !m_luma_rough[1] ||
 			!m_vectors_rough || !m_motion || !m_camera || !m_camera_moved || !m_motion_mapped || !m_vectors_coarse || !m_vectors || !m_vectors_smooth ||
 			!m_vectors_refined[0] || !m_vectors_refined[1])
 		{
@@ -1393,7 +1443,7 @@ void main()
 			{
 				return 0;
 			}
-			for (auto* image : { m_prev_color.get(), m_prev_hud.get(), m_output[0].get(), m_output[1].get(), m_output[2].get(), m_luma[0].get(), m_luma[1].get(),
+			for (auto* image : { m_prev_color.get(), m_prev_hud.get(), m_blur[0].get(), m_blur[1].get(), m_output[0].get(), m_output[1].get(), m_output[2].get(), m_luma[0].get(), m_luma[1].get(),
 				m_luma_coarse[0].get(), m_luma_coarse[1].get(), m_luma_rough[0].get(), m_luma_rough[1].get(), m_vectors_rough.get(), m_motion.get(),
 				m_camera.get(), m_camera_moved.get(),
 				m_vectors_coarse.get(), m_vectors.get(), m_vectors_smooth.get(), m_vectors_refined[0].get(), m_vectors_refined[1].get() })
@@ -1497,6 +1547,12 @@ void main()
 				{ static_cast<f32>(grid_w), static_cast<f32>(grid_h) });
 			vk::get_compute_task<frame_generation_pass<pass_hud>>()->run(cmd, { m_prev_color.get(), cur }, m_prev_hud.get(), width, height,
 				{ uv_x, uv_y, static_cast<f32>(width), static_cast<f32>(height) });
+			const u32 half_w = utils::aligned_div(width, 2u);
+			const u32 half_h = utils::aligned_div(height, 2u);
+			vk::get_compute_task<frame_generation_pass<pass_blur>>()->run(cmd, { m_prev_color.get() }, m_blur[0].get(), half_w, half_h,
+				{ static_cast<f32>(width), static_cast<f32>(height), static_cast<f32>(half_w), static_cast<f32>(half_h) });
+			vk::get_compute_task<frame_generation_pass<pass_blur>>()->run(cmd, { cur }, m_blur[1].get(), half_w, half_h,
+				{ static_cast<f32>(width), static_cast<f32>(height), static_cast<f32>(half_w), static_cast<f32>(half_h) });
 			barrier(cmd);
 
 			// The frames between, each at its time: with three, a quarter, a half
@@ -1504,7 +1560,7 @@ void main()
 			for (u32 k = 0; k < count; k++)
 			{
 				const f32 t = static_cast<f32>(k + 1) / static_cast<f32>(count + 1);
-				vk::get_compute_task<frame_generation_pass<pass_between>>()->run(cmd, { m_prev_hud.get(), cur, m_vectors_smooth.get(), m_camera.get() }, m_output[k].get(), width, height,
+				vk::get_compute_task<frame_generation_pass<pass_between>>()->run(cmd, { m_prev_hud.get(), cur, m_vectors_smooth.get(), m_camera.get(), m_blur[0].get(), m_blur[1].get() }, m_output[k].get(), width, height,
 					{ uv_x, uv_y, static_cast<f32>(width), static_cast<f32>(height), work_w, work_h, work_w / (grid_w * 8.f), work_h / (grid_h * 8.f), t });
 				out[k] = m_output[k].get();
 			}

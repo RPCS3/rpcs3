@@ -90,6 +90,7 @@ namespace vk
 
 		std::unique_ptr<vk::viewable_image> m_prev_color;        // the last frame, at its own size
 		std::unique_ptr<vk::viewable_image> m_prev_hud;          // the same, its alpha where the HUD stands still (pass_hud)
+		std::unique_ptr<vk::viewable_image> m_blur[2];           // the last frame and this one at half size, softened (pass_blur)
 		std::unique_ptr<vk::viewable_image> m_luma[2];           // brightness at the working size: [0] the last frame's, [1] this one's
 		std::unique_ptr<vk::viewable_image> m_luma_coarse[2];    // and at a quarter of it
 		std::unique_ptr<vk::viewable_image> m_luma_rough[2];     // and at a sixteenth
