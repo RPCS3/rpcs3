@@ -517,6 +517,13 @@ namespace rsx
 				}
 
 				linear_pixels = sw_temp.data();
+
+				// The padded buffer is tightly packed at the power-of-two width,
+				// so the swizzle pass must walk it at that pitch, not the original
+				// source pitch. Using linear_pitch here reads past the padded
+				// buffer and crashes the RSX thread (VK_ERROR_DEVICE_LOST on the
+				// GPU path, access violation on the CPU blit path).
+				linear_pitch = sw_width * out_bpp;
 			}
 
 			switch (out_bpp)
