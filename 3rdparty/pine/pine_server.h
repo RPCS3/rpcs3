@@ -56,6 +56,63 @@ namespace pine
 
 	typedef unsigned long long SOCKET;
 
+#ifndef _WIN32
+	inline std::string get_socket_path(std::string_view file_name, int slot, int default_slot)
+	{
+#ifdef __APPLE__
+		const char* runtime_dir = std::getenv("TMPDIR");
+#else
+		const char* runtime_dir = std::getenv("XDG_RUNTIME_DIR");
+#endif
+		// fallback in case macOS or other OSes don't implement the XDG base
+		// spec
+		std::string path = runtime_dir ? std::string(runtime_dir) + '/' : std::string("/tmp/");
+		path += file_name;
+
+		if (slot != default_slot)
+		{
+			fmt::append(path, ".%d", slot);
+		}
+
+		return path;
+	}
+#endif
+
+#ifdef _WIN32
+	inline const char* bind_and_listen(SOCKET sock, u16 port)
+	{
+		const int exclusive = 1;
+		if (setsockopt(sock, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, reinterpret_cast<const char*>(&exclusive), sizeof(exclusive)) != 0)
+			return "setsockopt(SO_EXCLUSIVEADDRUSE) failed";
+
+		sockaddr_in server{};
+		server.sin_family = AF_INET;
+		server.sin_port = htons(port);
+
+		if (inet_pton(AF_INET, "127.0.0.1", &server.sin_addr.s_addr) != 1)
+			return "inet_pton failed";
+#else
+	inline const char* bind_and_listen(int sock, const std::string& socket_path)
+	{
+		sockaddr_un server{};
+
+		if (socket_path.size() >= sizeof(server.sun_path))
+			return "socket path is too long";
+
+		server.sun_family = AF_UNIX;
+		std::memcpy(server.sun_path, socket_path.c_str(), socket_path.size() + 1);
+
+		unlink(socket_path.c_str());
+#endif
+		if (bind(sock, reinterpret_cast<sockaddr*>(&server), sizeof(server)) != 0)
+			return "bind failed";
+
+		if (listen(sock, 4096) != 0)
+			return "listen failed";
+
+		return nullptr;
+	}
+
 	template<typename Impl>
 	class pine_server : public Impl
 	{
@@ -528,7 +585,6 @@ namespace pine
 		{
 #ifdef _WIN32
 			WSADATA wsa {};
-			struct sockaddr_in server {};
 			m_sock = INVALID_SOCKET;
 			m_msgsock = INVALID_SOCKET;
 
@@ -544,45 +600,9 @@ namespace pine
 				return;
 			}
 
-			// yes very good windows s/sun/sin/g sure is fine
-			server.sin_family = AF_INET;
-			// localhost only
-			if (!inet_pton(server.sin_family, "127.0.0.1", &server.sin_addr.s_addr))
-			{
-				fmt::throw_exception("IPC: Failed to convert localhost");
-			}
-			server.sin_port = htons(Impl::get_port());
-
-			if (bind(m_sock, reinterpret_cast<struct sockaddr*>(&server), sizeof(server)) == SOCKET_ERROR)
-			{
-				Impl::error("IPC: Error while binding to socket! Shutting down...");
-				return;
-			}
-
+			const char* failure = bind_and_listen(m_sock, static_cast<u16>(Impl::get_port()));
 #else
-			char* runtime_dir = nullptr;
-#ifdef __APPLE__
-			runtime_dir = std::getenv("TMPDIR");
-#else
-			runtime_dir = std::getenv("XDG_RUNTIME_DIR");
-#endif
-			// fallback in case macOS or other OSes don't implement the XDG base
-			// spec
-			if (runtime_dir == nullptr)
-				m_socket_name = "/tmp/rpcs3.sock";
-			else
-			{
-				m_socket_name = runtime_dir;
-				m_socket_name += "/rpcs3.sock";
-			}
-
-			const int slot = Impl::get_port();
-			if (slot != IPC_DEFAULT_SLOT)
-			{
-				fmt::append(m_socket_name, ".%d", slot);
-			}
-
-			struct sockaddr_un server {};
+			m_socket_name = get_socket_path("rpcs3.sock", Impl::get_port(), IPC_DEFAULT_SLOT);
 
 			m_sock = socket(AF_UNIX, SOCK_STREAM, 0);
 			if (m_sock < 0)
@@ -590,23 +610,13 @@ namespace pine
 				Impl::error("IPC: Cannot open socket! Shutting down...");
 				return;
 			}
-			server.sun_family = AF_UNIX;
-			strcpy(server.sun_path, m_socket_name.c_str());
 
-			// we unlink the socket so that when releasing this thread the socket gets
-			// freed even if we didn't close correctly the loop
-			unlink(m_socket_name.c_str());
-			if (bind(m_sock, std::bit_cast<struct sockaddr*>(&server), sizeof(struct sockaddr_un)))
-			{
-				Impl::error("IPC: Error while binding to socket! Shutting down...");
-				return;
-			}
+			const char* failure = bind_and_listen(m_sock, m_socket_name);
 #endif
-
-			// maximum queue of 4096 commands before refusing, approximated to the
-			// nearest legal value. We do not use SOMAXCONN as windows have this idea
-			// that a "reasonable" value is 5, which is not.
-			listen(m_sock, 4096);
+			if (failure)
+			{
+				Impl::error("IPC: Error while setting up socket (%s)! Shutting down...", failure);
+			}
 		}
 
 		pine_server(const pine_server&) = delete;
