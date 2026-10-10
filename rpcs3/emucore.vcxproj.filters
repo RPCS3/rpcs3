@@ -2638,6 +2638,9 @@
     <ClInclude Include="Emu\RSX\Core\RSXProgramState.h">
       <Filter>Emu\GPU\RSX\Core</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\Core\RSXTextureState.h">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\RSX\Core\RSXReservationLock.hpp">
       <Filter>Emu\GPU\RSX\Core</Filter>
     </ClInclude>

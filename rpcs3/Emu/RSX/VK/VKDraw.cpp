@@ -308,24 +308,24 @@ void VKGSRender::load_texture_env()
 			continue;
 		}
 
-		if (!fs_sampler_state[i])
+		if (!m_ctx->textures.fs_sampler_state[i])
 		{
-			fs_sampler_state[i] = std::make_unique<vk::texture_cache::sampled_image_descriptor>();
+			m_ctx->textures.fs_sampler_state[i] = std::make_unique<vk::texture_cache::sampled_image_descriptor>();
 		}
 
-		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
+		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(m_ctx->textures.fs_sampler_state[i].get());
 		const auto& tex = REGS(m_ctx)->fragment_textures[i];
-		const auto previous_format_class = fs_sampler_state[i]->format_class;
+		const auto previous_format_class = m_ctx->textures.fs_sampler_state[i]->format_class;
 
 		if (!m_samplers_dirty &&
-			!m_textures_dirty[i] &&
+			!m_ctx->textures.fragment_textures_dirty[i] &&
 			check_surface_cache_sampler_valid(sampler_state, tex))
 		{
 			continue;
 		}
 
-		const bool is_sampler_dirty = m_textures_dirty[i];
-		m_textures_dirty[i] = false;
+		const bool is_sampler_dirty = m_ctx->textures.fragment_textures_dirty[i];
+		m_ctx->textures.fragment_textures_dirty[i] = false;
 
 		if (!tex.enabled())
 		{
@@ -541,24 +541,24 @@ void VKGSRender::load_texture_env()
 			continue;
 		}
 
-		if (!vs_sampler_state[i])
+		if (!m_ctx->textures.vs_sampler_state[i])
 		{
-			vs_sampler_state[i] = std::make_unique<vk::texture_cache::sampled_image_descriptor>();
+			m_ctx->textures.vs_sampler_state[i] = std::make_unique<vk::texture_cache::sampled_image_descriptor>();
 		}
 
-		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
+		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(m_ctx->textures.vs_sampler_state[i].get());
 		const auto& tex = REGS(m_ctx)->vertex_textures[i];
 		const auto previous_format_class = sampler_state->format_class;
 
 		if (!m_samplers_dirty &&
-			!m_vertex_textures_dirty[i] &&
+			!m_ctx->textures.vertex_textures_dirty[i] &&
 			check_surface_cache_sampler_valid(sampler_state, tex))
 		{
 			continue;
 		}
 
-		const bool is_sampler_dirty = m_vertex_textures_dirty[i];
-		m_vertex_textures_dirty[i] = false;
+		const bool is_sampler_dirty = m_ctx->textures.vertex_textures_dirty[i];
+		m_ctx->textures.vertex_textures_dirty[i] = false;
 
 		if (!REGS(m_ctx)->vertex_textures[i].enabled())
 		{
@@ -674,7 +674,7 @@ bool VKGSRender::bind_texture_env()
 		}
 
 		vk::image_view* view = nullptr;
-		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
+		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(m_ctx->textures.fs_sampler_state[i].get());
 
 		if (REGS(m_ctx)->fragment_textures[i].enabled() &&
 			sampler_state->validate())
@@ -762,7 +762,7 @@ bool VKGSRender::bind_texture_env()
 			continue;
 		}
 
-		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(vs_sampler_state[i].get());
+		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(m_ctx->textures.vs_sampler_state[i].get());
 		auto image_ptr = sampler_state->image_handle;
 
 		if (!image_ptr && sampler_state->validate())
@@ -927,7 +927,7 @@ bool VKGSRender::bind_interpreter_texture_env()
 			continue;
 
 		vk::image_view* view = nullptr;
-		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(fs_sampler_state[i].get());
+		auto sampler_state = static_cast<vk::texture_cache::sampled_image_descriptor*>(m_ctx->textures.fs_sampler_state[i].get());
 
 		auto& tex = REGS(m_ctx)->fragment_textures[i];
 		if (tex.enabled() && sampler_state->validate())
@@ -1368,8 +1368,8 @@ void VKGSRender::end()
 			// Do not trust fragment/vertex texture state after a texture state reset.
 			// NOTE: We don't want to change the program - it's too late for that now. We just need to harmonize the state.
 			m_ctx->graphics_state |= rsx::vertex_program_state_dirty | rsx::fragment_program_state_dirty;
-			get_current_fragment_program(fs_sampler_state);
-			get_current_vertex_program(vs_sampler_state);
+			get_current_fragment_program(m_ctx->textures.fs_sampler_state);
+			get_current_vertex_program(m_ctx->textures.vs_sampler_state);
 			m_ctx->graphics_state.clear(rsx::pipeline_state::invalidate_pipeline_bits);
 		}
 

@@ -222,13 +222,7 @@ namespace rsx
 
 		bool send_event(u64, u64, u64);
 
-		std::array<bool, 16> m_textures_dirty;
-		std::array<bool, 4> m_vertex_textures_dirty;
-
 		u64 ROP_sync_timestamp = 0;
-
-		std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::fragment_textures_count> fs_sampler_state = {};
-		std::array<std::unique_ptr<rsx::sampled_image_descriptor_base>, rsx::limits::vertex_textures_count> vs_sampler_state = {};
 
 		std::array<u32, 4> get_color_surface_addresses() const;
 		u32 get_zeta_surface_address() const;
