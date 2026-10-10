@@ -36,10 +36,12 @@ namespace rsx
 
 		void FIFO_control::sync_get() const
 		{
-			if (m_fifo_pos - m_cache_addr <= m_cache_size)
+			// Expose the prefetched block up to the nearest obstacle: FIFO PUT (the cache is trimmed to it) or a flow control command
+			// Otherwise GET may point past a JUMP into memory that is never executed (ring wrap or JUMP-chained buffers)
+			if (const u32 offset = m_fifo_pos - m_cache_addr; offset <= m_cache_size)
 			{
 				// Atomic FIFO only path
-				m_ctrl->get.release(m_cache_addr + m_cache_size);
+				m_ctrl->get.release(m_cache_addr + std::max(offset, m_cache_exposed_size));
 			}
 			else
 			{
@@ -53,6 +55,7 @@ namespace rsx
 			m_command_inc = ((m_cmd & RSX_METHOD_NON_INCREMENT_CMD_MASK) == RSX_METHOD_NON_INCREMENT_CMD) ? 0 : 4;
 			m_remaining_commands = count;
 			m_fifo_pos = position - (count ? 4 : 0);
+			m_next_header_pos = position + count * 4;
 			m_args_ptr = m_iotable->get_addr(m_fifo_pos);
 			m_command_reg = (m_cmd & 0xffff) + m_command_inc * (((m_cmd >> 18) - count) & 0x7ff) - m_command_inc;
 		}
@@ -110,7 +113,7 @@ namespace rsx
 
 				if (addr1 == umax)
 				{
-					m_cache_size = 0;
+					invalidate_cache();
 					return {false, FIFO_ERROR};
 				}
 
@@ -209,6 +212,28 @@ namespace rsx
 					}
 				}
 
+				// Find how much of the cache can be exposed through GET: walk packet headers up to the first flow control command
+				// Data past a JUMP/CALL/RET is not going to be executed from this block, and must not be reported as consumed
+				// Unknown packet boundaries (header before the block): do not read ahead
+				u32 exposed = addr - m_cache_addr;
+
+				if (m_next_header_pos >= m_cache_addr)
+				{
+					for (exposed = m_next_header_pos - m_cache_addr; exposed < m_cache_size;)
+					{
+						const u32 cmd = read_from_ptr_unsafe<be_t<u32>>(+m_cache[0], exposed);
+
+						if (cmd & RSX_METHOD_NON_METHOD_CMD_MASK)
+						{
+							break;
+						}
+
+						exposed += 4 + ((cmd >> 18) & 0x7ff) * 4;
+					}
+				}
+
+				m_cache_exposed_size = std::min(exposed, m_cache_size);
+
 				// Update FIFO GET
 				sync_get();
 				atomic_fence_seq_cst();
@@ -223,6 +248,7 @@ namespace rsx
 			invalidate_cache();
 
 			m_thread->last_code_jump = m_fifo_pos;
+			m_next_header_pos = get;
 
 			if (spin_cmd && m_fifo_pos == get)
 			{
@@ -443,6 +469,9 @@ namespace rsx
 
 			ensure(!m_remaining_commands);
 			const u32 count = (m_cmd >> 18) & 0x7ff;
+
+			// Packet boundary used to limit the exposed GET in atomic mode
+			m_next_header_pos = m_fifo_pos + 4 + count * 4;
 
 			if (!count)
 			{
