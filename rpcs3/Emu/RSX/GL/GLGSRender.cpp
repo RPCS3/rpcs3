@@ -662,7 +662,7 @@ void GLGSRender::clear_surface(u32 arg)
 
 	init_buffers(static_cast<rsx::framebuffer_creation_context>(ctx), true);
 
-	if (!m_graphics_state.test(rsx::rtt_config_valid)) return;
+	if (!m_ctx->graphics_state.test(rsx::rtt_config_valid)) return;
 
 	gl::clear_cmd_info clear_cmd{};
 
@@ -832,7 +832,7 @@ bool GLGSRender::load_program()
 {
 	const auto shadermode = g_cfg.video.shadermode.get();
 
-	if (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
+	if (m_ctx->graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
 	{
 		get_current_fragment_program(fs_sampler_state);
 		ensure(current_fragment_program.valid);
@@ -926,12 +926,12 @@ bool GLGSRender::load_program()
 		if (is_interpreter != was_interpreter)
 		{
 			// Always reupload transform constants when going between interpreter and recompiler
-			m_graphics_state |= rsx::transform_constants_dirty;
+			m_ctx->graphics_state |= rsx::transform_constants_dirty;
 
 			// Always reload fragment constansts when moving from interpreter back to recompiler.
 			if (was_interpreter)
 			{
-				m_graphics_state |= rsx::fragment_constants_dirty;
+				m_ctx->graphics_state |= rsx::fragment_constants_dirty;
 			}
 		}
 	}
@@ -948,13 +948,13 @@ void GLGSRender::load_program_env()
 
 	const u32 fragment_constants_size = current_fp_metadata.program_constants_buffer_length;
 
-	const bool update_transform_constants = m_graphics_state & rsx::pipeline_state::transform_constants_dirty;
-	const bool update_fragment_constants = (m_graphics_state & rsx::pipeline_state::fragment_constants_dirty) && fragment_constants_size;
-	const bool update_vertex_env = m_graphics_state & rsx::pipeline_state::vertex_state_dirty;
-	const bool update_fragment_env = m_graphics_state & rsx::pipeline_state::fragment_state_dirty;
-	const bool update_fragment_texture_env = m_graphics_state & rsx::pipeline_state::fragment_texture_state_dirty;
+	const bool update_transform_constants = m_ctx->graphics_state & rsx::pipeline_state::transform_constants_dirty;
+	const bool update_fragment_constants = (m_ctx->graphics_state & rsx::pipeline_state::fragment_constants_dirty) && fragment_constants_size;
+	const bool update_vertex_env = m_ctx->graphics_state & rsx::pipeline_state::vertex_state_dirty;
+	const bool update_fragment_env = m_ctx->graphics_state & rsx::pipeline_state::fragment_state_dirty;
+	const bool update_fragment_texture_env = m_ctx->graphics_state & rsx::pipeline_state::fragment_texture_state_dirty;
 	const bool update_instruction_buffers = !!m_interpreter_state && m_shader_interpreter.is_interpreter(m_program);
-	const bool update_raster_env = REGS(m_ctx)->polygon_stipple_enabled() && (m_graphics_state & rsx::pipeline_state::polygon_stipple_pattern_dirty);
+	const bool update_raster_env = REGS(m_ctx)->polygon_stipple_enabled() && (m_ctx->graphics_state & rsx::pipeline_state::polygon_stipple_pattern_dirty);
 	const bool update_instancing_data = backend_config.supports_hw_instanced_rendering && REGS(m_ctx)->current_draw_clause.is_trivial_instanced_draw;
 
 	if (manually_flush_ring_buffers)
@@ -1074,7 +1074,7 @@ void GLGSRender::load_program_env()
 		std::memcpy(mapping.first, REGS(m_ctx)->polygon_stipple_pattern(), 128);
 		m_raster_env_ring_buffer->bind_range(GL_RASTERIZER_STATE_BIND_SLOT, mapping.second, 128);
 
-		m_graphics_state.clear(rsx::pipeline_state::polygon_stipple_pattern_dirty);
+		m_ctx->graphics_state.clear(rsx::pipeline_state::polygon_stipple_pattern_dirty);
 	}
 
 	if (update_instruction_buffers)
@@ -1151,7 +1151,7 @@ void GLGSRender::load_program_env()
 		ensure(m_transform_constants_buffer->bound_range().second >= 468 * 16);
 	}
 
-	m_graphics_state.clear(handled_flags);
+	m_ctx->graphics_state.clear(handled_flags);
 }
 
 bool GLGSRender::is_current_program_interpreted() const
@@ -1212,7 +1212,7 @@ void GLGSRender::patch_transform_constants(rsx::context* ctx, u32 index, u32 cou
 	if (!m_program || !m_vertex_prog)
 	{
 		// Shouldn't be reachable, but handle it correctly anyway
-		m_graphics_state |= rsx::pipeline_state::transform_constants_dirty;
+		m_ctx->graphics_state |= rsx::pipeline_state::transform_constants_dirty;
 		return;
 	}
 
@@ -1304,7 +1304,7 @@ bool GLGSRender::on_access_violation(u32 address, bool is_writing)
 	{
 		auto &task = post_flush_request(address, result);
 
-		m_eng_interrupt_mask |= rsx::backend_interrupt;
+		m_ctx->eng_interrupt_mask |= rsx::backend_interrupt;
 		vm::temporary_unlock();
 		task.producer_wait();
 	}
@@ -1354,14 +1354,14 @@ void GLGSRender::do_local_task(rsx::FIFO::state state)
 			q.processed = true;
 		}
 	}
-	else if (!in_begin_end && state != rsx::FIFO::state::lock_wait)
+	else if (!m_ctx->in_begin_end && state != rsx::FIFO::state::lock_wait)
 	{
-		if (m_graphics_state & rsx::pipeline_state::framebuffer_reads_dirty)
+		if (m_ctx->graphics_state & rsx::pipeline_state::framebuffer_reads_dirty)
 		{
 			//This will re-engage locks and break the texture cache if another thread is waiting in access violation handler!
 			//Only call when there are no waiters
 			m_gl_texture_cache.do_update();
-			m_graphics_state.clear(rsx::pipeline_state::framebuffer_reads_dirty);
+			m_ctx->graphics_state.clear(rsx::pipeline_state::framebuffer_reads_dirty);
 		}
 	}
 
@@ -1375,7 +1375,7 @@ void GLGSRender::do_local_task(rsx::FIFO::state state)
 
 	if (m_overlay_manager)
 	{
-		const auto should_ignore = in_begin_end && state != rsx::FIFO::state::empty;
+		const auto should_ignore = m_ctx->in_begin_end && state != rsx::FIFO::state::empty;
 		if ((async_flip_requested & flip_request::native_ui) && !should_ignore && !is_stopped())
 		{
 			rsx::display_flip_info_t info{};

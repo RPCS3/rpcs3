@@ -273,7 +273,7 @@ void VKGSRender::update_draw_state()
 	bind_viewport();
 
 	m_current_command_buffer->flags &= ~vk::command_buffer::cb_reload_dynamic_state;
-	m_graphics_state.clear(rsx::pipeline_state::polygon_offset_state_dirty | rsx::pipeline_state::depth_bounds_state_dirty);
+	m_ctx->graphics_state.clear(rsx::pipeline_state::polygon_offset_state_dirty | rsx::pipeline_state::depth_bounds_state_dirty);
 	m_frame_stats.setup_time += m_profiler.duration();
 }
 
@@ -349,7 +349,7 @@ void VKGSRender::load_texture_env()
 			if (sampler_state->format_class != previous_format_class)
 			{
 				// Host details changed but RSX is not aware
-				m_graphics_state |= rsx::fragment_program_state_dirty;
+				m_ctx->graphics_state |= rsx::fragment_program_state_dirty;
 			}
 
 			if (sampler_state->format_ex)
@@ -582,7 +582,7 @@ void VKGSRender::load_texture_env()
 			if (sampler_state->format_class != previous_format_class)
 			{
 				// Host details changed but RSX is not aware
-				m_graphics_state |= rsx::vertex_program_state_dirty;
+				m_ctx->graphics_state |= rsx::vertex_program_state_dirty;
 			}
 
 			if (vs_sampler_handles[i])
@@ -1258,7 +1258,7 @@ void VKGSRender::emit_geometry(u32 sub_index)
 void VKGSRender::begin()
 {
 	// Save shader state now before prefetch and loading happens
-	m_interpreter_state = (m_graphics_state.load() & rsx::pipeline_state::invalidate_pipeline_bits);
+	m_interpreter_state = (m_ctx->graphics_state.load() & rsx::pipeline_state::invalidate_pipeline_bits);
 
 	rsx::thread::begin();
 
@@ -1270,7 +1270,7 @@ void VKGSRender::begin()
 
 	init_buffers(rsx::framebuffer_creation_context::context_draw);
 
-	if (m_graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
+	if (m_ctx->graphics_state & rsx::pipeline_state::invalidate_pipeline_bits)
 	{
 		// Shaders need to be reloaded.
 		m_prev_program = m_program;
@@ -1332,7 +1332,7 @@ void VKGSRender::end()
 	{
 		ds->write_barrier(*m_current_command_buffer);
 
-		if (m_graphics_state.test(rsx::zeta_address_cyclic_barrier) &&
+		if (m_ctx->graphics_state.test(rsx::zeta_address_cyclic_barrier) &&
 			ds->current_layout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
 		{
 			// We actually need to end the subpass as a minimum. Without this, early-Z optimiazations in following draws will clobber reads from previous draws and cause flickering.
@@ -1353,7 +1353,7 @@ void VKGSRender::end()
 		}
 	}
 
-	m_graphics_state.clear(rsx::zeta_address_cyclic_barrier);
+	m_ctx->graphics_state.clear(rsx::zeta_address_cyclic_barrier);
 
 	m_frame_stats.setup_time += m_profiler.duration();
 
@@ -1367,10 +1367,10 @@ void VKGSRender::end()
 
 			// Do not trust fragment/vertex texture state after a texture state reset.
 			// NOTE: We don't want to change the program - it's too late for that now. We just need to harmonize the state.
-			m_graphics_state |= rsx::vertex_program_state_dirty | rsx::fragment_program_state_dirty;
+			m_ctx->graphics_state |= rsx::vertex_program_state_dirty | rsx::fragment_program_state_dirty;
 			get_current_fragment_program(fs_sampler_state);
 			get_current_vertex_program(vs_sampler_state);
-			m_graphics_state.clear(rsx::pipeline_state::invalidate_pipeline_bits);
+			m_ctx->graphics_state.clear(rsx::pipeline_state::invalidate_pipeline_bits);
 		}
 
 		const bool out_of_memory = m_shader_interpreter.is_interpreter(m_program)
@@ -1396,7 +1396,7 @@ void VKGSRender::end()
 	u32 sub_index = 0;               // RSX subdraw ID
 	m_current_draw.subdraw_id = 0;   // Host subdraw ID. Invalid RSX subdraws do not increment this value
 
-	if (m_graphics_state & rsx::pipeline_state::invalidate_vk_dynamic_state)
+	if (m_ctx->graphics_state & rsx::pipeline_state::invalidate_vk_dynamic_state)
 	{
 		m_current_command_buffer->flags |= vk::command_buffer::cb_reload_dynamic_state;
 	}

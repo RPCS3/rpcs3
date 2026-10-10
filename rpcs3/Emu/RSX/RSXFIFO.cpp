@@ -937,13 +937,13 @@ namespace rsx
 				case FIFO::EMIT_END:
 				{
 					// Emit end command to close existing scope
-					AUDIT(in_begin_end);
+					AUDIT(m_ctx->in_begin_end);
 					methods[NV4097_SET_BEGIN_END](m_ctx, NV4097_SET_BEGIN_END, 0);
 					break;
 				}
 				case FIFO::EMIT_BARRIER:
 				{
-					AUDIT(in_begin_end);
+					AUDIT(m_ctx->in_begin_end);
 					methods[NV4097_SET_BEGIN_END](m_ctx, NV4097_SET_BEGIN_END, 0);
 					methods[NV4097_SET_BEGIN_END](m_ctx, NV4097_SET_BEGIN_END, m_flattener.get_primitive());
 					break;
@@ -979,7 +979,7 @@ namespace rsx
 			else if (m_ctx->register_state->latch != value)
 			{
 				// Something changed, set signal flags if any specified
-				m_graphics_state |= state_signals[reg];
+				m_ctx->graphics_state |= state_signals[reg];
 			}
 		}
 		while (fifo_ctrl->read_unsafe(command));
