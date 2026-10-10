@@ -12,8 +12,6 @@
 
 namespace rsx
 {
-	rsx_state method_registers;
-
 	std::array<rsx_method_t, 0x10000 / 4> methods{};
 	std::array<u32, 0x10000 / 4> state_signals{};
 
@@ -1740,9 +1738,6 @@ namespace rsx
 		bind(FIFO::FIFO_DRAW_BARRIER >> 2, fifo::draw_barrier);
 
 		init_state_signals();
-
-		// TODO: Register defaults belong to context construction once contexts own their register state
-		method_registers.init();
 
 		return true;
 	}();

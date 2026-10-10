@@ -9,6 +9,9 @@
 #include "Emu/RSX/Overlays/Shaders/shader_loading_dialog.h"
 #include "Emu/RSX/Program/GLSLCommon.h"
 #include "Emu/localized_string.h"
+#include "Emu/RSX/Core/RSXContext.h"
+
+#include "Emu/RSX/NV47/HW/context_accessors.define.h"
 
 namespace gl
 {
@@ -16,8 +19,10 @@ namespace gl
 	using enum program_common::interpreter::compiler_option;
 	using enum program_common::interpreter::cached_pipeline_flags;
 
-	void shader_interpreter::create(rsx::shader_loading_dialog* dlg)
+	void shader_interpreter::create(rsx::context* ctx, rsx::shader_loading_dialog* dlg)
 	{
+		m_ctx = ctx;
+
 		dlg->create(get_localized_string(localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS), get_localized_string(localized_string_id::RSX_OVERLAYS_COMPILING_SHADERS_TITLE));
 
 		const auto variants = program_common::interpreter::get_interpreter_variants();
@@ -114,9 +119,9 @@ namespace gl
 	{
 		// Build options
 		u64 opt = 0;
-		if (rsx::method_registers.alpha_test_enabled()) [[unlikely]]
+		if (fp_ctrl & RSX_SHADER_CONTROL_ALPHA_TEST) [[unlikely]]
 		{
-			switch (rsx::method_registers.alpha_func())
+			switch (REGS(m_ctx)->alpha_func())
 			{
 			case rsx::comparison_function::always:
 				break;
@@ -150,7 +155,7 @@ namespace gl
 		if (metadata.referenced_textures_mask) opt |= COMPILER_OPT_ENABLE_TEXTURES;
 		if (metadata.has_branch_instructions) opt |= COMPILER_OPT_ENABLE_FLOW_CTRL;
 		if (metadata.has_pack_instructions) opt |= COMPILER_OPT_ENABLE_PACKING;
-		if (rsx::method_registers.polygon_stipple_enabled()) opt |= COMPILER_OPT_ENABLE_STIPPLING;
+		if (fp_ctrl & RSX_SHADER_CONTROL_POLYGON_STIPPLE) opt |= COMPILER_OPT_ENABLE_STIPPLING;
 		if (vp_ctrl & RSX_SHADER_CONTROL_INSTANCED_CONSTANTS) opt |= COMPILER_OPT_ENABLE_INSTANCING;
 
 		auto previous = m_current_interpreter ? m_current_interpreter.get() : nullptr;
