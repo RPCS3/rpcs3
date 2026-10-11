@@ -839,7 +839,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 		const u32 index_offset = std::get<1>(*upload_info.index_info);
 		const bool restarts_valid = gl::is_primitive_native(draw_call.primitive) && !draw_call.is_disjoint_primitive;
 
-		if (gl_state.enable(restarts_valid && REGS(m_ctx)->restart_index_enabled(), GL_PRIMITIVE_RESTART))
+		if (gl_state.enable(restarts_valid && m_ctx->draw_state.input_assembly.restart_index_enabled, GL_PRIMITIVE_RESTART))
 		{
 			glPrimitiveRestartIndex((index_type == GL_UNSIGNED_SHORT) ? 0xffff : 0xffffffff);
 		}

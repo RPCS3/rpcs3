@@ -132,6 +132,20 @@ namespace rsx
 		bool operator==(const viewport_state&) const = default;
 	};
 
+	// The primitive type and the vertex base offset/index are not part of this group.
+	// The primitive comes from the draw clause, and the vertex bases are rewritten between subdraws by draw clause barriers.
+	struct input_assembly_state
+	{
+		// False if the restart index cannot be represented in the bound index type
+		bool restart_index_enabled = false;
+		u32 restart_index = 0;
+
+		// Index type of the bound index array. Immediate (inlined) index draws always use u32.
+		index_array_type index_type{};
+
+		bool operator==(const input_assembly_state&) const = default;
+	};
+
 	// Decoded for every clear command right before the backend's clear() hook. It is not change-tracked.
 	struct clear_state
 	{
@@ -190,6 +204,7 @@ namespace rsx
 		blend_state blend;
 		multisample_state multisample;
 		viewport_state viewport;
+		input_assembly_state input_assembly;
 
 		// Not a group: decoded per clear command
 		clear_state clear;

@@ -89,11 +89,12 @@ namespace
 		vertex_input_state operator()(const rsx::draw_indexed_array_command& command)
 		{
 			u32 min_index = 0, max_index = 0;
+			const auto& input_assembly = m_ctx->draw_state.input_assembly;
 			const auto primitive = REGS(m_ctx)->current_draw_clause.primitive;
 
 			rsx::index_array_type type = REGS(m_ctx)->current_draw_clause.is_immediate_draw?
 				rsx::index_array_type::u32:
-				REGS(m_ctx)->index_type();
+				input_assembly.index_type;
 
 			u32 type_size              = get_index_type_size(type);
 
@@ -112,8 +113,8 @@ namespace
 				{ reinterpret_cast<std::byte*>(ptr), max_size },
 				command.raw_index_buffer, type,
 				primitive,
-				REGS(m_ctx)->restart_index_enabled(),
-				REGS(m_ctx)->restart_index(),
+				input_assembly.restart_index_enabled,
+				input_assembly.restart_index,
 				[](auto prim) { return !gl::is_primitive_native(prim); });
 
 			if (min_index > max_index ||

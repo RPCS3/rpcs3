@@ -229,7 +229,7 @@ namespace vk
 		const auto& current_draw = REGS(ctx)->current_draw_clause;
 		const auto [primitive, emulated_primitive] = vk::get_appropriate_topology(current_draw.primitive);
 
-		if (REGS(ctx)->restart_index_enabled() &&
+		if (ctx->draw_state.input_assembly.restart_index_enabled &&
 			!current_draw.is_disjoint_primitive &&
 			current_draw.command == rsx::draw_command::indexed &&
 			!emulated_primitive &&
