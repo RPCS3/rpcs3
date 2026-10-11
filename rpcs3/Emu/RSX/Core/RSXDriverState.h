@@ -28,8 +28,6 @@ namespace rsx
 
 		push_buffer_arrays_dirty      = (1 << 17),   // Push buffers have data written to them (immediate mode vertex buffers)
 
-		polygon_offset_state_dirty    = (1 << 18), // Polygon offset config was changed
-		depth_bounds_state_dirty      = (1 << 19), // Depth bounds configuration changed
 
 		pipeline_config_dirty         = (1 << 20), // Generic pipeline configuration changes. Shader peek hint.
 
@@ -57,7 +55,6 @@ namespace rsx
 		memory_barrier_bits = framebuffer_reads_dirty,
 
 		// Vulkan-specific signals
-		// Polygon offset and depth bounds changes reach the backend as draw state groups instead
 		invalidate_vk_dynamic_state = zclip_config_state_dirty | scissor_config_state_dirty,
 
 		all_dirty = ~0u
