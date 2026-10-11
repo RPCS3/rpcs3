@@ -637,6 +637,38 @@ namespace rsx
 			region.target = static_cast<T*>(this);
 
 			set_old_contents_region(region, true);
+
+			// Older slices fully covered by the incoming one can never be observed. Release them so that their sources can be recycled.
+			// A section that keeps inheriting newer data without ever being resolved would otherwise keep every source alive.
+			if (old_contents.size() > 1 && old_contents.back().width)
+			{
+				const auto latest = old_contents.back();
+				const auto latest_area = latest.dst_rect();
+				const auto latest_tag = static_cast<const T*>(latest.source)->last_use_tag;
+				old_contents.pop_back();
+
+				std::erase_if(old_contents, [&](const auto& slice)
+				{
+					const auto source = static_cast<T*>(slice.source);
+					if (!slice.width || source->last_use_tag > latest_tag)
+					{
+						return false;
+					}
+
+					const auto area = slice.dst_rect();
+					if (area.x1 < latest_area.x1 || area.y1 < latest_area.y1 ||
+						area.x2 > latest_area.x2 || area.y2 > latest_area.y2)
+					{
+						return false;
+					}
+
+					source->release();
+					return true;
+				});
+
+				old_contents.push_back(latest);
+			}
+
 			return (region.width == parent_w && region.height == parent_h) ?
 				surface_inheritance_result::full :
 				surface_inheritance_result::partial;
