@@ -236,7 +236,7 @@ void GLGSRender::update_draw_state()
 		}
 
 		// Antialias control
-		if (backend_config.supports_hw_msaa)
+		if (m_config.supports_hw_msaa)
 		{
 			gl_state.enable(/*REGS(m_ctx)->msaa_enabled()*/GL_MULTISAMPLE);
 
@@ -250,13 +250,13 @@ void GLGSRender::update_draw_state()
 			gl_state.sample_coverage(1.f);
 		}
 
-		if (backend_config.supports_hw_a2c)
+		if (m_config.supports_hw_a2c)
 		{
-			const bool hw_enable = backend_config.supports_hw_a2c_1spp || REGS(m_ctx)->surface_antialias() != rsx::surface_antialiasing::center_1_sample;
+			const bool hw_enable = m_config.supports_hw_a2c_1spp || REGS(m_ctx)->surface_antialias() != rsx::surface_antialiasing::center_1_sample;
 			gl_state.enable(hw_enable && REGS(m_ctx)->msaa_alpha_to_coverage_enabled(), GL_SAMPLE_ALPHA_TO_COVERAGE);
 		}
 
-		if (backend_config.supports_hw_a2one)
+		if (m_config.supports_hw_a2one)
 		{
 			gl_state.enable(REGS(m_ctx)->msaa_alpha_to_one_enabled(), GL_SAMPLE_ALPHA_TO_ONE);
 		}
@@ -795,7 +795,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 
 	if (!upload_info.index_info)
 	{
-		if (draw_call.is_trivial_instanced_draw && backend_config.supports_hw_instanced_rendering)
+		if (draw_call.is_trivial_instanced_draw && m_config.supports_hw_instanced_rendering)
 		{
 			glDrawArraysInstanced(draw_mode, 0, upload_info.vertex_draw_count, draw_call.pass_count());
 		}
@@ -867,7 +867,7 @@ void GLGSRender::emit_geometry(u32 sub_index)
 
 		m_index_ring_buffer->bind();
 
-		if (draw_call.is_trivial_instanced_draw && backend_config.supports_hw_instanced_rendering)
+		if (draw_call.is_trivial_instanced_draw && m_config.supports_hw_instanced_rendering)
 		{
 			glDrawElementsInstanced(draw_mode, upload_info.vertex_draw_count, index_type, reinterpret_cast<GLvoid*>(u64{ index_offset }), draw_call.pass_count());
 		}
@@ -994,7 +994,7 @@ void GLGSRender::end()
 	{
 		emit_geometry(subdraw++);
 
-		if (draw_call.is_trivial_instanced_draw && backend_config.supports_hw_instanced_rendering)
+		if (draw_call.is_trivial_instanced_draw && m_config.supports_hw_instanced_rendering)
 		{
 			// We already completed. End the draw.
 			draw_call.end();
