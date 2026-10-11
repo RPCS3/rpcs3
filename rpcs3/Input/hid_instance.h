@@ -1,0 +1,32 @@
+#pragma once
+
+#include "util/types.hpp"
+#include <mutex>
+#include <functional>
+#include <hidapi.h>
+
+struct hid_instance
+{
+public:
+	hid_instance() = default;
+	~hid_instance();
+
+	static hid_instance& get_instance()
+	{
+		static hid_instance instance {};
+		return instance;
+	}
+
+	bool initialize();
+
+	static void enumerate_devices(u16 vid, u16 pid, std::function<void(hid_device_info*)> callback);
+
+	static hid_device* open_path(const char* path);
+	static void close(hid_device* dev);
+
+private:
+	bool m_initialized = false;
+	std::mutex m_hid_mutex;
+};
+
+extern std::mutex g_hid_mutex;
