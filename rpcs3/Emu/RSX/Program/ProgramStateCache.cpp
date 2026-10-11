@@ -560,7 +560,17 @@ usz fragment_program_utils::get_fragment_program_ucode_hash(const RSXFragmentPro
 
 usz fragment_program_storage_hash::operator()(const RSXFragmentProgram& program) const
 {
-	const usz ucode_hash = fragment_program_utils::get_fragment_program_ucode_hash(program);
+	usz ucode_hash;
+#ifdef ARCH_X64
+	if (program.ucode_length >= 128 && utils::has_avx512_icl())
+	{
+		ucode_hash = get_fragment_program_ucode_hash_512(program);
+	}
+	else
+#endif
+	{
+		ucode_hash = fragment_program_utils::get_fragment_program_ucode_hash(program);
+	}
 	const u32 state_params[] =
 	{
 		program.ctrl,
@@ -585,6 +595,18 @@ bool fragment_program_compare::operator()(const RSXFragmentProgram& binary1, con
 
 	const void* instBuffer1 = binary1.get_data();
 	const void* instBuffer2 = binary2.get_data();
+#ifdef ARCH_X64
+	if (binary1.ucode_length >= 128 && utils::has_avx512_icl())
+	{
+		const auto inst1 = v128::loadu(instBuffer1, 0);
+		const auto inst2 = v128::loadu(instBuffer2, 0);
+		if (inst1._u ^ inst2._u)
+		{
+			return false;
+		}
+		return compare_fragment_program_ucode_512(instBuffer1, instBuffer2, binary1.ucode_length / 16);
+	}
+#endif
 	for (usz instIndex = 0; instIndex < (binary1.ucode_length / 16); instIndex++)
 	{
 		const auto inst1 = v128::loadu(instBuffer1, instIndex);
