@@ -185,6 +185,7 @@ namespace rsx
 
 			// Load registers while the RSX is still idle
 			*REGS(render->get_context()) = frame->reg_state;
+			render->get_context()->draw_state.pending.set(rsx::draw_state_t::group::all);
 			atomic_fence_seq_cst();
 
 			// start up fifo buffer by dumping the put ptr to first stop

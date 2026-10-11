@@ -22,6 +22,8 @@ namespace rsx
 		bool poly_offset_fill_enabled = false;
 		f32 poly_offset_scale = 0.f;
 		f32 poly_offset_bias = 0.f;
+
+		bool operator==(const raster_state&) const = default;
 	};
 
 	struct stencil_face_state
@@ -33,13 +35,18 @@ namespace rsx
 		stencil_op op_fail{};
 		stencil_op op_zfail{};
 		stencil_op op_zpass{};
+
+		bool operator==(const stencil_face_state&) const = default;
 	};
 
 	struct depth_stencil_state
 	{
 		bool depth_test_enabled = false;
 		bool depth_write_enabled = false;
+
+		// Only decoded while the depth test is enabled
 		comparison_function depth_func{};
+
 		bool depth_clamp_enabled = false;
 		bool depth_clip_enabled = false;
 
@@ -51,8 +58,12 @@ namespace rsx
 
 		bool stencil_test_enabled = false;
 		bool two_sided_stencil_test_enabled = false;
+
+		// Only decoded while the stencil test is enabled. The back face is only decoded for two-sided stencil.
 		stencil_face_state front;
 		stencil_face_state back;
+
+		bool operator==(const depth_stencil_state&) const = default;
 	};
 
 	// Decoded pipeline state shared by every backend.
@@ -75,6 +86,9 @@ namespace rsx
 		};
 
 		bitmask_t<group> dirty;
+
+		// Groups whose source registers changed since they were last decoded. Raised through draw_state_signals.
+		bitmask_t<group> pending;
 
 		raster_state raster;
 		depth_stencil_state depth_stencil;

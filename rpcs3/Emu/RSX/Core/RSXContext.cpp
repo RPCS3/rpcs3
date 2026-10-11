@@ -17,6 +17,7 @@ namespace rsx
 
 		graphics_state.set(pipeline_state::all_dirty);
 		draw_state.dirty.set(draw_state_t::group::all);
+		draw_state.pending.set(draw_state_t::group::all);
 	}
 
 	context::~context() = default;
