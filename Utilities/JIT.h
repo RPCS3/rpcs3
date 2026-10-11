@@ -43,6 +43,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <vector>
 #include <util/v128.hpp>
 
 #if defined(ARCH_X64)
@@ -569,6 +570,21 @@ public:
 
 	// Add module (not cached)
 	void add(std::unique_ptr<llvm::Module> _module);
+
+	// PS5 fork: an object cache kept by the caller (the SPU code pack, one
+	// file for every module rather than a file each). LLVM has no RTTI, so a
+	// subclass of its ObjectCache lives here, in a file built without it
+	struct object_store
+	{
+		// The module's object, into `out`; false when none is kept
+		std::function<bool(const std::string& name, std::vector<u8>& out)> load;
+
+		// A module's object, just compiled
+		std::function<void(const std::string& name, const void* data, usz size)> keep;
+	};
+
+	// Add module (its object loaded from the store when kept there, else compiled and given to it)
+	void add(std::unique_ptr<llvm::Module> _module, const object_store& store);
 
 	// Returns false after LLVM fatal recovery. The compiler must be discarded.
 	bool try_add(std::unique_ptr<llvm::Module> _module, std::string& error);

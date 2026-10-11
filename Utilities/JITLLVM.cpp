@@ -562,6 +562,42 @@ public:
 	}
 };
 
+// PS5 fork: an object cache over a store the caller keeps (jit_compiler::object_store)
+class StoreObjectCache final : public llvm::ObjectCache
+{
+	const jit_compiler::object_store& m_store;
+
+public:
+	StoreObjectCache(const jit_compiler::object_store& store)
+		: m_store(store)
+	{
+	}
+
+	~StoreObjectCache() override = default;
+
+	void notifyObjectCompiled(const llvm::Module* _module, llvm::MemoryBufferRef obj) override
+	{
+		if (obj.getBufferSize())
+		{
+			m_store.keep(_module->getName().str(), obj.getBufferStart(), obj.getBufferSize());
+		}
+	}
+
+	std::unique_ptr<llvm::MemoryBuffer> getObject(const llvm::Module* _module) override
+	{
+		std::vector<u8> data;
+
+		if (!m_store.load(_module->getName().str(), data) || data.empty())
+		{
+			return nullptr;
+		}
+
+		auto buf = llvm::WritableMemoryBuffer::getNewUninitMemBuffer(data.size());
+		std::memcpy(buf->getBufferStart(), data.data(), data.size());
+		return buf;
+	}
+};
+
 std::string jit_compiler::cpu(std::string_view _cpu)
 {
 	std::string m_cpu = std::string(_cpu);
@@ -951,6 +987,23 @@ void jit_compiler::add(std::unique_ptr<llvm::Module> _module)
 	const auto ptr = _module.get();
 	m_engine->addModule(std::move(_module));
 	m_engine->generateCodeForModule(ptr);
+
+	for (auto& func : ptr->functions())
+	{
+		// Delete IR to lower memory consumption
+		func.deleteBody();
+	}
+}
+
+void jit_compiler::add(std::unique_ptr<llvm::Module> _module, const object_store& store)
+{
+	StoreObjectCache cache{store};
+	m_engine->setObjectCache(&cache);
+
+	const auto ptr = _module.get();
+	m_engine->addModule(std::move(_module));
+	m_engine->generateCodeForModule(ptr);
+	m_engine->setObjectCache(nullptr);
 
 	for (auto& func : ptr->functions())
 	{

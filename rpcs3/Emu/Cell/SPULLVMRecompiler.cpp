@@ -160,7 +160,7 @@ namespace
 
 	std::string config_switch(std::string_view name)
 	{
-		for (const std::string path : {fs::get_config_dir() + std::string(name), fs::get_config_dir() + std::string(name) + ".txt"})
+		for (const std::string& path : {fs::get_config_dir() + std::string(name), fs::get_config_dir() + std::string(name) + ".txt"})
 		{
 			if (fs::is_file(path))
 			{
@@ -522,63 +522,73 @@ const std::string& ps5_title_build(); // ps5/ps5_frontend.cpp: the title's build
 // PS5 fork: compiled SPU code kept on disk. RPCS3 keeps the SPU programs a
 // game ran (spu.dat) but compiled every one again at each start: GTA IV's
 // 4839 took about 90 seconds of "Building SPU Cache" on my console (build
-// 127). Each function's machine code is now written beside the game's PPU
-// cache, and LLVM's object cache loads it instead of generating it again (its
-// IR is still built, for the names it links to, but not optimised). Its folder
-// is named for what the code depends on besides the program: the core
-// settings, this title's build, the TSC's frequency (in the decrementer's
-// code) and the CPU it targets; a folder named otherwise is removed. Code that
-// holds per-boot addresses is not kept: the learning watch's functions, and
-// none other (the decrementer reads the timebase offset through a call)
+// 127). Each function's machine code is now kept, and LLVM's object cache
+// loads it instead of generating it again (its IR is still built, for the
+// names it links to, but not optimised). All of it in one file, a record a
+// function appended as each is compiled, read through an index made as the
+// game starts: a file a function, each synced and renamed into place as
+// jit_compiler's own object cache writes them, made that first start take 9
+// minutes and 20 seconds on my console (build 131). The file is named for
+// what the code depends on besides the program: the core settings, this
+// title's build, the TSC's frequency (in the decrementer's code) and the CPU
+// it targets; others are removed. Code holding per-boot addresses is not
+// kept: the learning watch's functions, and none other (the decrementer reads
+// the timebase offset through a call)
 namespace
 {
+	constexpr char c_pack_magic[8] = {'P', 'S', '5', 'S', 'P', 'U', 'C', '1'};
+	constexpr u32 c_record_magic = 0x4f555053; // "SPUO"
+
 	std::mutex g_spu_code_lock;
 	u64 g_spu_code_boot = umax;
-	std::string g_spu_code_dir; // empty: none kept this boot
+	bool g_spu_code_open = false;
+	fs::file g_spu_code_file;
+	std::unordered_map<std::string, std::pair<u64, u32>> g_spu_code_index; // a module's object: its offset and size
+	u64 g_spu_code_end = 0;
 	atomic_t<u32> g_spu_code_loaded = 0;   // functions loaded from disk this boot
 	atomic_t<u32> g_spu_code_written = 0;  // compiled, and written
 	atomic_t<u32> g_spu_code_compiled = 0; // compiled, not kept
 
-	std::string spu_code_dir(const std::string& cache_path)
+	// The pack for this boot's game and settings, opened and read at its first
+	// use (under g_spu_code_lock); false when none is kept
+	bool open_spu_code_pack(const std::string& cache_path)
 	{
-		if (cache_path.empty())
-		{
-			return {};
-		}
 		const u64 boot = static_cast<u64>(Emu.GetEmulationIdentifier());
-		std::lock_guard lock(g_spu_code_lock);
 		if (boot == g_spu_code_boot)
 		{
-			return g_spu_code_dir;
+			return g_spu_code_open;
 		}
 		g_spu_code_boot = boot;
+		g_spu_code_open = false;
+		g_spu_code_file.close();
+		g_spu_code_index.clear();
+		g_spu_code_end = 0;
 		g_spu_code_loaded = 0;
 		g_spu_code_written = 0;
 		g_spu_code_compiled = 0;
-		g_spu_code_dir.clear();
+		if (cache_path.empty())
+		{
+			return false;
+		}
 		if (!config_switch("spu-code-cache-off").empty())
 		{
 			spu_log.success("SPU code cache: off (spu-code-cache-off)");
-			return {};
+			return false;
 		}
 
 		std::string key = g_cfg.core.to_string();
 		fmt::append(key, "|build %s|tsc %u|cpu %s", ps5_title_build(), utils::get_tsc_freq(), jit_compiler::cpu(g_cfg.core.llvm_cpu.to_string()));
 		u8 sha[20];
 		sha1(reinterpret_cast<const u8*>(key.data()), key.size(), sha);
-		const std::string name = fmt::format("spu-code-%s", fmt::base57(reinterpret_cast<const uchar*>(sha), 8));
-		const std::string dir = cache_path + name + "/";
-		if (!fs::create_path(dir))
-		{
-			spu_log.error("SPU code cache: could not make %s: %s", dir, fs::g_tls_error);
-			return {};
-		}
+		const std::string name = fmt::format("spu-code-%s.pack", fmt::base57(reinterpret_cast<const uchar*>(sha), 8));
+		const std::string path = cache_path + name;
 
-		// Folders for other settings or builds: their code would never load again
+		// Others: for other settings or builds, whose code would never load
+		// again, and build 131's folders of a file a function
 		std::vector<std::string> stale;
 		for (const auto& entry : fs::dir(cache_path))
 		{
-			if (entry.is_directory && entry.name.starts_with("spu-code-") && entry.name != name)
+			if (entry.name.starts_with("spu-code-") && entry.name != name)
 			{
 				stale.push_back(cache_path + entry.name);
 			}
@@ -587,17 +597,106 @@ namespace
 		{
 			std::thread([stale]()
 			{
-				for (const std::string& path : stale)
+				for (const std::string& each : stale)
 				{
-					fs::remove_all(path);
+					if (!fs::remove_file(each))
+					{
+						fs::remove_all(each);
+					}
 				}
 			}).detach();
 		}
 
-		spu_log.success("SPU code cache: %s%s", dir, stale.empty() ? "" : fmt::format(" (%u other folders removed)", stale.size()));
-		g_spu_code_dir = dir;
-		return dir;
+		if (!g_spu_code_file.open(path, fs::read + fs::write + fs::create))
+		{
+			spu_log.error("SPU code cache: could not open %s: %s", path, fs::g_tls_error);
+			return false;
+		}
+
+		// The records, up to the last whole one (a stop part-way through
+		// writing one leaves it cut short)
+		const std::vector<u8> data = g_spu_code_file.to_vector<u8>();
+		usz at = 0;
+		if (data.size() >= sizeof(c_pack_magic) && !std::memcmp(data.data(), c_pack_magic, sizeof(c_pack_magic)))
+		{
+			at = sizeof(c_pack_magic);
+			while (at + 12 <= data.size())
+			{
+				u32 head[3];
+				std::memcpy(head, data.data() + at, sizeof(head));
+				if (head[0] != c_record_magic || at + 12 + u64{head[1]} + head[2] > data.size())
+				{
+					break;
+				}
+				const std::string module(reinterpret_cast<const char*>(data.data() + at + 12), head[1]);
+				g_spu_code_index[module] = {at + 12 + head[1], head[2]};
+				at += 12 + usz{head[1]} + head[2];
+			}
+		}
+		else
+		{
+			// New, or not one of ours: begun again
+			g_spu_code_file.trunc(0);
+			g_spu_code_file.seek(0);
+			g_spu_code_file.write(c_pack_magic, sizeof(c_pack_magic));
+			at = sizeof(c_pack_magic);
+		}
+		if (at < data.size())
+		{
+			g_spu_code_file.trunc(at);
+		}
+		g_spu_code_end = at;
+		g_spu_code_open = true;
+		spu_log.success("SPU code cache: %s, %u functions kept (%u KiB)%s", path, g_spu_code_index.size(), at / 1024, stale.empty() ? "" : fmt::format("; %u others removed", stale.size()));
+		return true;
 	}
+
+	bool spu_code_kept(const std::string& module)
+	{
+		std::lock_guard lock(g_spu_code_lock);
+		return g_spu_code_open && g_spu_code_index.contains(module);
+	}
+
+	// LLVM's object cache over the pack (the ObjectCache subclass is
+	// jit_compiler's: LLVM has no RTTI, and this file is built with it)
+	const jit_compiler::object_store g_spu_code_store
+	{
+		.load = [](const std::string& module, std::vector<u8>& out)
+		{
+			std::lock_guard lock(g_spu_code_lock);
+			const auto it = g_spu_code_index.find(module);
+			if (!g_spu_code_open || it == g_spu_code_index.end())
+			{
+				return false;
+			}
+			out.resize(it->second.second);
+			if (g_spu_code_file.read_at(it->second.first, out.data(), out.size()) != out.size())
+			{
+				spu_log.error("SPU code cache: could not read %s", module);
+				return false;
+			}
+			return true;
+		},
+		.keep = [](const std::string& module, const void* data, usz size)
+		{
+			std::lock_guard lock(g_spu_code_lock);
+			if (!g_spu_code_open || g_spu_code_index.contains(module))
+			{
+				return;
+			}
+			const u32 head[3] = {c_record_magic, ::size32(module), static_cast<u32>(size)};
+			g_spu_code_file.seek(g_spu_code_end);
+			if (g_spu_code_file.write(head, sizeof(head)) != sizeof(head) || g_spu_code_file.write(module.data(), module.size()) != module.size() ||
+				g_spu_code_file.write(data, size) != size)
+			{
+				spu_log.error("SPU code cache: could not write %s: %s", module, fs::g_tls_error);
+				g_spu_code_file.trunc(g_spu_code_end);
+				return;
+			}
+			g_spu_code_index[module] = {g_spu_code_end + sizeof(head) + module.size(), head[2]};
+			g_spu_code_end += sizeof(head) + module.size() + size;
+		},
+	};
 }
 
 // The SPU code cache's counts this boot, for the trace (empty while none)
@@ -2367,11 +2466,16 @@ public:
 
 		m_engine->clearAllGlobalMappings();
 
-		// PS5 fork: the folder its machine code is kept in, and whether it is
-		// there already (spu_code_dir); its name says the accuracy it has
-		const std::string code_dir = !g_cfg.core.spu_debug && m_xfloat_slot == umax ? spu_code_dir(m_spurt->get_cache_path()) : std::string();
+		// PS5 fork: whether its machine code is kept, and is there already
+		// (open_spu_code_pack); its name says the accuracy it has
+		bool code_cache = false;
+		if (!g_cfg.core.spu_debug && m_xfloat_slot == umax)
+		{
+			std::lock_guard lock(g_spu_code_lock);
+			code_cache = open_spu_code_pack(m_spurt->get_cache_path());
+		}
 		const std::string module_name = m_hash + (m_xfloat == xfloat_accuracy::accurate ? "-xa" : m_xfloat == xfloat_accuracy::relaxed ? "-xr" : "-xp") + ".obj";
-		const bool code_kept = !code_dir.empty() && (fs::is_file(code_dir + module_name + ".gz") || fs::is_file(code_dir + module_name));
+		const bool code_kept = code_cache && spu_code_kept(module_name);
 
 		// Create LLVM module
 		std::unique_ptr<Module> _module = std::make_unique<Module>(module_name, m_context);
@@ -4606,10 +4710,10 @@ public:
 				// Testing only
 				m_jit.add(std::move(_module), m_spurt->get_cache_path() + "llvm/");
 			}
-			else if (!code_dir.empty())
+			else if (code_cache)
 			{
-				// PS5 fork: loaded from disk when kept there, else compiled and written
-				m_jit.add(std::move(_module), code_dir);
+				// PS5 fork: loaded from the pack when kept there, else compiled and written to it
+				m_jit.add(std::move(_module), g_spu_code_store);
 				(code_kept ? g_spu_code_loaded : g_spu_code_written)++;
 			}
 			else
@@ -5340,7 +5444,7 @@ public:
 #if defined(ARCH_X64) || defined(ARCH_ARM64)
 			if (utils::get_tsc_freq() && !(g_cfg.core.spu_loop_detection) && (g_cfg.core.clocks_scale == 100))
 			{
-				// PS5 fork: through a call, not its address, so the code can be kept on disk (spu_code_dir)
+				// PS5 fork: through a call, not its address, so the code can be kept on disk (open_spu_code_pack)
 				const auto timebase_offs = call("spu_timebase_offs", &exec_timebase_offs);
 				const auto timestamp = m_ir->CreateLoad(get_type<u64>(), spu_ptr(&spu_thread::ch_dec_start_timestamp));
 				const auto dec_value = m_ir->CreateLoad(get_type<u32>(), spu_ptr(&spu_thread::ch_dec_value));
@@ -6172,7 +6276,7 @@ public:
 #if defined(ARCH_X64) || defined(ARCH_ARM64)
 			if (utils::get_tsc_freq() && !(g_cfg.core.spu_loop_detection) && (g_cfg.core.clocks_scale == 100))
 			{
-				// PS5 fork: through a call, not its address, so the code can be kept on disk (spu_code_dir)
+				// PS5 fork: through a call, not its address, so the code can be kept on disk (open_spu_code_pack)
 				const auto timebase_offs = call("spu_timebase_offs", &exec_timebase_offs);
 				const auto tsc = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::readcyclecounter));
 				const auto tscx = m_ir->CreateMul(m_ir->CreateUDiv(tsc, m_ir->getInt64(utils::get_tsc_freq())), m_ir->getInt64(80000000));
