@@ -2641,6 +2641,9 @@
     <ClInclude Include="Emu\RSX\Core\RSXCoreRenderer.h">
       <Filter>Emu\GPU\RSX\Core</Filter>
     </ClInclude>
+    <ClInclude Include="Emu\RSX\Core\RSXDrawState.h">
+      <Filter>Emu\GPU\RSX\Core</Filter>
+    </ClInclude>
     <ClInclude Include="Emu\RSX\Core\RSXProgramState.h">
       <Filter>Emu\GPU\RSX\Core</Filter>
     </ClInclude>
