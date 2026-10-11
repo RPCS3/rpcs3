@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <set>
 #include <sstream>
+#include <mutex>
 #include <thread>
 
 #include "util/v128.hpp"
@@ -514,6 +515,99 @@ std::string spu_collision_status()
 		return "Now: learnt; restart the game to run with it.";
 	}
 	return fmt::format("Now: learning, %u of at least %u minutes of play.", learning.seconds / 60, c_learn_seconds / 60);
+}
+
+const std::string& ps5_title_build(); // ps5/ps5_frontend.cpp: the title's build
+
+// PS5 fork: compiled SPU code kept on disk. RPCS3 keeps the SPU programs a
+// game ran (spu.dat) but compiled every one again at each start: GTA IV's
+// 4839 took about 90 seconds of "Building SPU Cache" on my console (build
+// 127). Each function's machine code is now written beside the game's PPU
+// cache, and LLVM's object cache loads it instead of generating it again (its
+// IR is still built, for the names it links to, but not optimised). Its folder
+// is named for what the code depends on besides the program: the core
+// settings, this title's build, the TSC's frequency (in the decrementer's
+// code) and the CPU it targets; a folder named otherwise is removed. Code that
+// holds per-boot addresses is not kept: the learning watch's functions, and
+// none other (the decrementer reads the timebase offset through a call)
+namespace
+{
+	std::mutex g_spu_code_lock;
+	u64 g_spu_code_boot = umax;
+	std::string g_spu_code_dir; // empty: none kept this boot
+	atomic_t<u32> g_spu_code_loaded = 0;   // functions loaded from disk this boot
+	atomic_t<u32> g_spu_code_written = 0;  // compiled, and written
+	atomic_t<u32> g_spu_code_compiled = 0; // compiled, not kept
+
+	std::string spu_code_dir(const std::string& cache_path)
+	{
+		if (cache_path.empty())
+		{
+			return {};
+		}
+		const u64 boot = static_cast<u64>(Emu.GetEmulationIdentifier());
+		std::lock_guard lock(g_spu_code_lock);
+		if (boot == g_spu_code_boot)
+		{
+			return g_spu_code_dir;
+		}
+		g_spu_code_boot = boot;
+		g_spu_code_loaded = 0;
+		g_spu_code_written = 0;
+		g_spu_code_compiled = 0;
+		g_spu_code_dir.clear();
+		if (!config_switch("spu-code-cache-off").empty())
+		{
+			spu_log.success("SPU code cache: off (spu-code-cache-off)");
+			return {};
+		}
+
+		std::string key = g_cfg.core.to_string();
+		fmt::append(key, "|build %s|tsc %u|cpu %s", ps5_title_build(), utils::get_tsc_freq(), jit_compiler::cpu(g_cfg.core.llvm_cpu.to_string()));
+		u8 sha[20];
+		sha1(reinterpret_cast<const u8*>(key.data()), key.size(), sha);
+		const std::string name = fmt::format("spu-code-%s", fmt::base57(reinterpret_cast<const uchar*>(sha), 8));
+		const std::string dir = cache_path + name + "/";
+		if (!fs::create_path(dir))
+		{
+			spu_log.error("SPU code cache: could not make %s: %s", dir, fs::g_tls_error);
+			return {};
+		}
+
+		// Folders for other settings or builds: their code would never load again
+		std::vector<std::string> stale;
+		for (const auto& entry : fs::dir(cache_path))
+		{
+			if (entry.is_directory && entry.name.starts_with("spu-code-") && entry.name != name)
+			{
+				stale.push_back(cache_path + entry.name);
+			}
+		}
+		if (!stale.empty())
+		{
+			std::thread([stale]()
+			{
+				for (const std::string& path : stale)
+				{
+					fs::remove_all(path);
+				}
+			}).detach();
+		}
+
+		spu_log.success("SPU code cache: %s%s", dir, stale.empty() ? "" : fmt::format(" (%u other folders removed)", stale.size()));
+		g_spu_code_dir = dir;
+		return dir;
+	}
+}
+
+// The SPU code cache's counts this boot, for the trace (empty while none)
+std::string spu_code_cache_text()
+{
+	if (!g_spu_code_loaded && !g_spu_code_written && !g_spu_code_compiled)
+	{
+		return {};
+	}
+	return fmt::format("SPU code: %u functions loaded from disk, %u compiled and written, %u compiled", +g_spu_code_loaded, +g_spu_code_written, +g_spu_code_compiled);
 }
 
 class spu_llvm_recompiler : public spu_recompiler_base, public cpu_translator
@@ -2273,8 +2367,14 @@ public:
 
 		m_engine->clearAllGlobalMappings();
 
+		// PS5 fork: the folder its machine code is kept in, and whether it is
+		// there already (spu_code_dir); its name says the accuracy it has
+		const std::string code_dir = !g_cfg.core.spu_debug && m_xfloat_slot == umax ? spu_code_dir(m_spurt->get_cache_path()) : std::string();
+		const std::string module_name = m_hash + (m_xfloat == xfloat_accuracy::accurate ? "-xa" : m_xfloat == xfloat_accuracy::relaxed ? "-xr" : "-xp") + ".obj";
+		const bool code_kept = !code_dir.empty() && (fs::is_file(code_dir + module_name + ".gz") || fs::is_file(code_dir + module_name));
+
 		// Create LLVM module
-		std::unique_ptr<Module> _module = std::make_unique<Module>(m_hash + ".obj", m_context);
+		std::unique_ptr<Module> _module = std::make_unique<Module>(module_name, m_context);
 		_module->setTargetTriple(Triple(jit_compiler::triple2()));
 		_module->setDataLayout(m_jit.get_engine().getTargetMachine()->createDataLayout());
 		m_module = _module.get();
@@ -4384,6 +4484,11 @@ public:
 
 		for (const auto& func : m_functions)
 		{
+			// PS5 fork: not for code loaded from disk, which this IR does not become
+			if (code_kept)
+			{
+				break;
+			}
 			const auto f = func.second.fn ? func.second.fn : func.second.chunk;
 			fpm.run(*f, fam);
 		}
@@ -4501,9 +4606,16 @@ public:
 				// Testing only
 				m_jit.add(std::move(_module), m_spurt->get_cache_path() + "llvm/");
 			}
+			else if (!code_dir.empty())
+			{
+				// PS5 fork: loaded from disk when kept there, else compiled and written
+				m_jit.add(std::move(_module), code_dir);
+				(code_kept ? g_spu_code_loaded : g_spu_code_written)++;
+			}
 			else
 			{
 				m_jit.add(std::move(_module));
+				g_spu_code_compiled++;
 			}
 
 			m_jit.fin();
@@ -5228,7 +5340,8 @@ public:
 #if defined(ARCH_X64) || defined(ARCH_ARM64)
 			if (utils::get_tsc_freq() && !(g_cfg.core.spu_loop_detection) && (g_cfg.core.clocks_scale == 100))
 			{
-				const auto timebase_offs = m_ir->CreateLoad(get_type<u64>(), m_ir->CreateIntToPtr(m_ir->getInt64(reinterpret_cast<u64>(&g_timebase_offs)), get_type<u64*>()));
+				// PS5 fork: through a call, not its address, so the code can be kept on disk (spu_code_dir)
+				const auto timebase_offs = call("spu_timebase_offs", &exec_timebase_offs);
 				const auto timestamp = m_ir->CreateLoad(get_type<u64>(), spu_ptr(&spu_thread::ch_dec_start_timestamp));
 				const auto dec_value = m_ir->CreateLoad(get_type<u32>(), spu_ptr(&spu_thread::ch_dec_value));
 				const auto tsc = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::readcyclecounter));
@@ -5298,6 +5411,12 @@ public:
 	static u32 exec_rchcnt(spu_thread* _spu, u32 ch)
 	{
 		return _spu->get_ch_count(ch);
+	}
+
+	// PS5 fork: the timebase offset, for the decrementer's code
+	static u64 exec_timebase_offs()
+	{
+		return g_timebase_offs;
 	}
 
 	static u32 exec_get_events(spu_thread* _spu, u32 mask)
@@ -6053,7 +6172,8 @@ public:
 #if defined(ARCH_X64) || defined(ARCH_ARM64)
 			if (utils::get_tsc_freq() && !(g_cfg.core.spu_loop_detection) && (g_cfg.core.clocks_scale == 100))
 			{
-				const auto timebase_offs = m_ir->CreateLoad(get_type<u64>(), m_ir->CreateIntToPtr(m_ir->getInt64(reinterpret_cast<u64>(&g_timebase_offs)), get_type<u64*>()));
+				// PS5 fork: through a call, not its address, so the code can be kept on disk (spu_code_dir)
+				const auto timebase_offs = call("spu_timebase_offs", &exec_timebase_offs);
 				const auto tsc = m_ir->CreateCall(get_intrinsic(llvm::Intrinsic::readcyclecounter));
 				const auto tscx = m_ir->CreateMul(m_ir->CreateUDiv(tsc, m_ir->getInt64(utils::get_tsc_freq())), m_ir->getInt64(80000000));
 				const auto tscm = m_ir->CreateUDiv(m_ir->CreateMul(m_ir->CreateURem(tsc, m_ir->getInt64(utils::get_tsc_freq())), m_ir->getInt64(80000000)), m_ir->getInt64(utils::get_tsc_freq()));

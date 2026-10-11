@@ -99,6 +99,7 @@ std::u32string utf8_to_u32string(std::string_view utf8_string);
 
 std::string spu_collision_tick(u32 seconds, bool running); // SPULLVMRecompiler.cpp: learnt collision accuracy, gathered and written; the trace's words
 std::string spu_collision_status(); // SPULLVMRecompiler.cpp: the collision setting's state, a sentence (empty without collision code)
+std::string spu_code_cache_text(); // SPULLVMRecompiler.cpp: SPU functions loaded from disk and compiled this boot
 extern atomic_t<u64> g_ps5_getllar_waits[64][2]; // SPUThread.cpp: each SPU slot's GETLLAR polls answered by busy waiting, and by sleeping
 extern atomic_t<u32> g_ps5_spu_cpus[64][16]; // SPUThread.cpp: each SPU slot's polls by the CPU it was on
 u32 ps5_spu_slot(u32 id); // SPUThread.cpp: an SPU thread's slot in those counts
@@ -1438,7 +1439,8 @@ int run(const char* boot_path)
 					std::vector<std::pair<std::string, f32>> busiest_plain;
 					if (const std::string busiest = take_thread_loads(&busiest_plain); !busiest.empty())
 					{
-						trace_logged("busiest threads (share of the time each was running):%s; %s; %s", busiest, collision.empty() ? std::string("no collision code") : collision, ps5_cpu_own_core_text());
+						const std::string code = spu_code_cache_text();
+						trace_logged("busiest threads (share of the time each was running):%s; %s; %s%s", busiest, collision.empty() ? std::string("no collision code") : collision, ps5_cpu_own_core_text(), code.empty() ? std::string() : "; " + code);
 					}
 					// And where the busiest SPU spends its time, every 30 seconds, in RPCS3.log
 					if (seconds % 30 == 29)
