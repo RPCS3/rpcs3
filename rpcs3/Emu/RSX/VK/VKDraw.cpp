@@ -170,6 +170,7 @@ void VKGSRender::update_draw_state()
 
 	const auto& raster = m_ctx->draw_state.raster;
 	const auto& depth_stencil = m_ctx->draw_state.depth_stencil;
+	const auto& blend = m_ctx->draw_state.blend;
 
 	// Update conditional dynamic state
 	if (REGS(m_ctx)->current_draw_clause.primitive >= rsx::primitive_type::points &&   // AMD/AMDVLK driver does not like it if you render points without setting line width for some reason
@@ -180,11 +181,10 @@ void VKGSRender::update_draw_state()
 		vkCmdSetLineWidth(*m_current_command_buffer, actual_line_width);
 	}
 
-	if (REGS(m_ctx)->blend_enabled_mask())
+	if (blend.enable_mask)
 	{
 		// Update blend constants
-		auto blend_colors = rsx::get_constant_blend_colors(m_ctx);
-		vkCmdSetBlendConstants(*m_current_command_buffer, blend_colors.data());
+		vkCmdSetBlendConstants(*m_current_command_buffer, blend.constant_color.data());
 	}
 
 	if (depth_stencil.stencil_test_enabled)

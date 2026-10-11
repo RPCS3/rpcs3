@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "rsx_utils.h"
 #include "Emu/RSX/rsx_methods.h"
-#include "Emu/RSX/Core/RSXContext.h"
 #include "Emu/Cell/Modules/cellVideoOut.h"
 #include "Emu/system_config.h"
 
@@ -25,8 +24,6 @@ extern "C"
 #endif
 
 #include "util/sysinfo.hpp"
-
-#include "Emu/RSX/NV47/HW/context_accessors.define.h"
 
 namespace rsx
 {
@@ -82,29 +79,6 @@ namespace rsx
 	}
 
 	//Convert decoded integer values for CONSTANT_BLEND_FACTOR into f32 array in 0-1 range
-	std::array<float, 4> get_constant_blend_colors(context* ctx)
-	{
-		//TODO: check another color formats (probably all integer formats with > 8-bits wide channels)
-		if (REGS(ctx)->surface_color() == rsx::surface_color_format::w16z16y16x16)
-		{
-			u16 blend_color_r = REGS(ctx)->blend_color_16b_r();
-			u16 blend_color_g = REGS(ctx)->blend_color_16b_g();
-			u16 blend_color_b = REGS(ctx)->blend_color_16b_b();
-			u16 blend_color_a = REGS(ctx)->blend_color_16b_a();
-
-			return { decode_fp16(blend_color_r), decode_fp16(blend_color_g), decode_fp16(blend_color_b), decode_fp16(blend_color_a) };
-		}
-		else
-		{
-			u8 blend_color_r = REGS(ctx)->blend_color_8b_r();
-			u8 blend_color_g = REGS(ctx)->blend_color_8b_g();
-			u8 blend_color_b = REGS(ctx)->blend_color_8b_b();
-			u8 blend_color_a = REGS(ctx)->blend_color_8b_a();
-
-			return { blend_color_r / 255.f, blend_color_g / 255.f, blend_color_b / 255.f, blend_color_a / 255.f };
-		}
-	}
-
 	// Fit a aspect-correct rectangle within a frame of wxh dimensions
 	template <typename T>
 	area_base<T> convert_aspect_ratio_impl(const size2_base<T>& output_dimensions, double aspect)

@@ -79,9 +79,11 @@ void GLGSRender::update_draw_state()
 
 	const auto& raster = m_ctx->draw_state.raster;
 	const auto& depth_stencil = m_ctx->draw_state.depth_stencil;
+	const auto& blend = m_ctx->draw_state.blend;
+	const auto& multisample = m_ctx->draw_state.multisample;
 
 	gl_state.enable(GL_SCISSOR_TEST);
-	gl_state.enable(REGS(m_ctx)->dither_enabled(), GL_DITHER);
+	gl_state.enable(blend.dither_enabled, GL_DITHER);
 
 	if (m_rtts.m_bound_depth_stencil.first)
 	{
@@ -168,39 +170,17 @@ void GLGSRender::update_draw_state()
 	if (m_rtts.get_color_surface_count())
 	{
 		// Color buffer is active
-		const auto host_write_mask = rsx::get_write_output_mask(REGS(m_ctx)->surface_color());
 		for (int index = 0; index < m_rtts.get_color_surface_count(); ++index)
 		{
-			bool color_mask_b = REGS(m_ctx)->color_mask_b(index);
-			bool color_mask_g = REGS(m_ctx)->color_mask_g(index);
-			bool color_mask_r = REGS(m_ctx)->color_mask_r(index);
-			bool color_mask_a = REGS(m_ctx)->color_mask_a(index);
-
-			switch (REGS(m_ctx)->surface_color())
-			{
-			case rsx::surface_color_format::b8:
-				rsx::get_b8_colormask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
-				break;
-			case rsx::surface_color_format::g8b8:
-				rsx::get_g8b8_r8g8_colormask(color_mask_r, color_mask_g, color_mask_b, color_mask_a);
-				break;
-			default:
-				break;
-			}
-
-			gl_state.color_maski(
-				index,
-				color_mask_r && host_write_mask[0],
-				color_mask_g && host_write_mask[1],
-				color_mask_b && host_write_mask[2],
-				color_mask_a && host_write_mask[3]);
+			const auto& color_mask = blend.color_mask[index];
+			gl_state.color_maski(index, color_mask.r, color_mask.g, color_mask.b, color_mask.a);
 		}
 
 		// LogicOp and Blend are mutually exclusive. If both are enabled, LogicOp takes precedence.
 		// In OpenGL, this behavior is enforced in spec, but let's enforce it at renderer level as well.
-		if (gl_state.enable(REGS(m_ctx)->logic_op_enabled(), GL_COLOR_LOGIC_OP))
+		if (gl_state.enable(blend.logic_op_enabled, GL_COLOR_LOGIC_OP))
 		{
-			gl_state.logic_op(gl::logic_op(REGS(m_ctx)->logic_operation()));
+			gl_state.logic_op(gl::logic_op(blend.logic_operation));
 
 			gl_state.enablei(GL_FALSE, GL_BLEND, 0);
 			gl_state.enablei(GL_FALSE, GL_BLEND, 1);
@@ -209,26 +189,26 @@ void GLGSRender::update_draw_state()
 		}
 		else
 		{
-			bool mrt_blend_enabled[] =
+			const bool mrt_blend_enabled[] =
 			{
-				REGS(m_ctx)->blend_enabled(),
-				REGS(m_ctx)->blend_enabled_surface_1(),
-				REGS(m_ctx)->blend_enabled_surface_2(),
-				REGS(m_ctx)->blend_enabled_surface_3()
+				!!(blend.enable_mask & 1),
+				!!(blend.enable_mask & 2),
+				!!(blend.enable_mask & 4),
+				!!(blend.enable_mask & 8)
 			};
 
-			if (mrt_blend_enabled[0] || mrt_blend_enabled[1] || mrt_blend_enabled[2] || mrt_blend_enabled[3])
+			if (blend.enable_mask)
 			{
-				glBlendFuncSeparate(gl::blend_factor(REGS(m_ctx)->blend_func_sfactor_rgb()),
-					gl::blend_factor(REGS(m_ctx)->blend_func_dfactor_rgb()),
-					gl::blend_factor(REGS(m_ctx)->blend_func_sfactor_a()),
-					gl::blend_factor(REGS(m_ctx)->blend_func_dfactor_a()));
+				glBlendFuncSeparate(gl::blend_factor(blend.sfactor_rgb),
+					gl::blend_factor(blend.dfactor_rgb),
+					gl::blend_factor(blend.sfactor_a),
+					gl::blend_factor(blend.dfactor_a));
 
-				auto blend_colors = rsx::get_constant_blend_colors(m_ctx);
+				const auto& blend_colors = blend.constant_color;
 				glBlendColor(blend_colors[0], blend_colors[1], blend_colors[2], blend_colors[3]);
 
-				glBlendEquationSeparate(gl::blend_equation(REGS(m_ctx)->blend_equation_rgb()),
-					gl::blend_equation(REGS(m_ctx)->blend_equation_a()));
+				glBlendEquationSeparate(gl::blend_equation(blend.equation_rgb),
+					gl::blend_equation(blend.equation_a));
 			}
 
 			gl_state.enablei(mrt_blend_enabled[0], GL_BLEND, 0);
@@ -243,7 +223,7 @@ void GLGSRender::update_draw_state()
 			gl_state.enable(/*REGS(m_ctx)->msaa_enabled()*/GL_MULTISAMPLE);
 
 			gl_state.enable(GL_SAMPLE_MASK);
-			gl_state.sample_mask(REGS(m_ctx)->msaa_sample_mask());
+			gl_state.sample_mask(multisample.sample_mask);
 
 			gl_state.enable(GL_SAMPLE_SHADING);
 			gl_state.min_sample_shading_rate(1.f);
@@ -254,13 +234,13 @@ void GLGSRender::update_draw_state()
 
 		if (m_config.supports_hw_a2c)
 		{
-			const bool hw_enable = m_config.supports_hw_a2c_1spp || REGS(m_ctx)->surface_antialias() != rsx::surface_antialiasing::center_1_sample;
-			gl_state.enable(hw_enable && REGS(m_ctx)->msaa_alpha_to_coverage_enabled(), GL_SAMPLE_ALPHA_TO_COVERAGE);
+			const bool hw_enable = m_config.supports_hw_a2c_1spp || multisample.antialias != rsx::surface_antialiasing::center_1_sample;
+			gl_state.enable(hw_enable && multisample.alpha_to_coverage_enabled, GL_SAMPLE_ALPHA_TO_COVERAGE);
 		}
 
 		if (m_config.supports_hw_a2one)
 		{
-			gl_state.enable(REGS(m_ctx)->msaa_alpha_to_one_enabled(), GL_SAMPLE_ALPHA_TO_ONE);
+			gl_state.enable(multisample.alpha_to_one_enabled, GL_SAMPLE_ALPHA_TO_ONE);
 		}
 	}
 
